@@ -1,0 +1,79 @@
+/* ANDRIK Player R125 — компактный выбор альбома/коллекции */
+.collection-actions{
+  display:grid!important;
+  grid-template-columns:minmax(128px,.9fr) minmax(0,1.1fr)!important;
+  align-items:center!important;
+  gap:9px!important;
+}
+.collection-switch-r125{
+  position:relative;
+  display:grid;
+  grid-template-columns:22px minmax(0,1fr);
+  align-items:center;
+  min-width:0;
+  min-height:42px;
+  padding:0 10px;
+  border:1px solid rgba(122,211,255,.24);
+  border-radius:999px;
+  background:linear-gradient(145deg,rgba(10,28,40,.88),rgba(4,14,22,.96));
+  color:#dff5ff;
+  box-shadow:inset 0 0 18px rgba(71,183,235,.04);
+}
+.collection-switch-r125>span{
+  display:grid;
+  place-items:center;
+  color:#8edcff;
+  font-size:.9rem;
+  pointer-events:none;
+}
+.collection-switch-r125 select{
+  width:100%;
+  min-width:0;
+  height:40px;
+  padding:0 24px 0 2px;
+  border:0;
+  outline:0;
+  appearance:auto;
+  background:transparent;
+  color:#edfaff;
+  font:800 .72rem/1 system-ui,-apple-system,Segoe UI,sans-serif;
+  text-overflow:ellipsis;
+  cursor:pointer;
+}
+.collection-switch-r125 select option{
+  background:#07131c;
+  color:#effaff;
+}
+.collection-actions .collection-meta{
+  display:none!important;
+}
+.collection-actions .open-youtube{
+  width:100%!important;
+  justify-content:center!important;
+  min-width:0!important;
+}
+@media(max-width:390px){
+  .collection-actions{
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;
+    gap:7px!important;
+  }
+  .collection-switch-r125{
+    min-height:38px;
+    padding-inline:8px;
+    grid-template-columns:18px minmax(0,1fr);
+  }
+  .collection-switch-r125 select{
+    height:36px;
+    padding-right:16px;
+    font-size:.64rem;
+  }
+  .collection-actions .open-youtube{
+    min-height:38px!important;
+    padding-inline:8px!important;
+    font-size:.61rem!important;
+  }
+  .collection-actions .open-youtube span{
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+}

@@ -551,3 +551,16 @@
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
   X-Robots-Tag: noindex, nofollow, noarchive
 
+# R125 — collapsed mini-player + collection selector
+/assets/control-player-bridge-r125.js
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/assets/control-player-bridge-r125.css
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/assets/player-v54-27-r125.js
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/assets/player-r125-collection-switch.css
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/cache-reset-v55-00-final-r125.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+  X-Robots-Tag: noindex, nofollow, noarchive
+
