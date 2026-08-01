@@ -639,3 +639,24 @@
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
   X-Robots-Tag: noindex, nofollow,noarchive
 
+# R132 — mini-player visibility setting + landscape lower-left anchor
+/service-admin.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/admin-sections.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/assets/service-mini-player-settings-r132.css
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/assets/service-mini-player-settings-r132.js
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/assets/unified-glow-r132.css
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/assets/unified-glow-r132.js
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/assets/control-player-bridge-r132.css
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/assets/control-player-bridge-r132.js
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/cache-reset-v55-00-final-r132.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+  X-Robots-Tag: noindex, nofollow,noarchive
+
