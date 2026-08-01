@@ -601,3 +601,24 @@
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
   X-Robots-Tag: noindex, nofollow, noarchive
 
+# R130 — map player position + persistent button + hidden Control shell player
+/admin-sections.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/player.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/assets/unified-glow-r130.css
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/assets/unified-glow-r130.js
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/assets/control-player-bridge-r130.css
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/assets/control-player-bridge-r130.js
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/assets/player-v54-27-r130.js
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/assets/player-r130-control-shell.css
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/cache-reset-v55-00-final-r130.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+  X-Robots-Tag: noindex, nofollow,noarchive
+
