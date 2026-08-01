@@ -1,6 +1,6 @@
 'use strict';
 
-const VERSION = '55.00-r122';
+const VERSION = '55.00-r120';
 const IS_CONTROL_HOST = self.location.hostname.toLowerCase() === 'control.andrikmetal.com';
 
 async function deleteControlCaches(){
@@ -39,9 +39,9 @@ if(IS_CONTROL_HOST){
     '/', '/index.html', '/offline.html', '/open-youtube.html?v=54.66',
     '/manifest.webmanifest?v=55.00-r87', '/assets/v50.js?v=54.42', '/assets/v50-26.css?v=52.03',
     '/assets/pwa-install.css', '/assets/pwa-install.js', '/assets/push-v54-07.js?v=54.07',
-    '/player.html?v=55.00-r122', '/assets/player-v54-27-r122.js?v=55.00-r122',
+    '/player.html?v=55.00-r120', '/assets/player-v54-27-r120.js?v=55.00-r120',
     '/assets/player-v54-27.css?v=54.27', '/assets/player-v54-53.css?v=54.54',
-    '/assets/player-mini-clean-v55-00-r3u.css?v=55.00-r3u', '/assets/player-shell-bridge-r122.js?v=55.00-r122',
+    '/assets/player-mini-clean-v55-00-r3u.css?v=55.00-r3u', '/assets/player-shell-bridge-r120.js?v=55.00-r120',
     '/assets/player-r86-album-carousel.css?v=55.00-r86',
     '/assets/player-r86-album-carousel.js?v=55.00-r86',
     '/assets/andrik-site-illusion-r87-192.png', '/assets/andrik-site-illusion-r87-512.png', '/favicon.ico'

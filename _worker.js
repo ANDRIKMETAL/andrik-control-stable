@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R122', number:122, version:'55.00', full:'55.00 LIVE WEB AI FINAL R122', siteUpdater:'55.00-r122' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R120', number:120, version:'55.00', full:'55.00 LIVE WEB AI FINAL R120', siteUpdater:'55.00-r120' });
 
 const JSON_HEADERS = {
   'content-type': 'application/json; charset=utf-8',
@@ -9033,61 +9033,19 @@ function controlRecoveryPage() {
 }
 
 function allowControlInsidePlayer(response, url, isControlHost) {
+  if (!isControlHost || url.searchParams.get('player-shell') !== '1') return response;
   const contentType = String(response.headers.get('content-type') || '').toLowerCase();
   if (!contentType.includes('text/html')) return response;
-
   const headers = new Headers(response.headers);
-  headers.delete('content-length');
+  headers.delete('x-frame-options');
+  headers.set('content-security-policy', "frame-ancestors 'self' https://andrikmetal.com");
   headers.set('cache-control', 'no-cache, no-store, must-revalidate');
-  headers.set('x-andrik-ui-injection', skipControlUi ? 'R122-skip' : 'R122');
-
-  if (isControlHost && url.searchParams.get('player-shell') === '1') {
-    headers.delete('x-frame-options');
-    headers.set('content-security-policy', "frame-ancestors 'self' https://andrikmetal.com");
-    headers.set('x-andrik-player-shell', 'R121');
-  }
-
-  const skipControlUi =
-    url.pathname.startsWith('/cache-reset') ||
-    url.pathname === '/site-update-admin.html' ||
-    url.pathname === '/site-update-admin';
-  const skipMainShell = url.pathname === '/player.html' || url.pathname.startsWith('/cache-reset');
-
-  let rewriter = new HTMLRewriter();
-
-  // Убираем предыдущие необязательные подключения, чтобы не было дублей.
-  rewriter = rewriter
-    .on('script[src*="control-player-bridge-"]', { element(el){ el.remove(); } })
-    .on('link[href*="control-player-bridge-"]', { element(el){ el.remove(); } })
-    .on('script[src*="player-shell-bridge-"]', { element(el){ el.remove(); } });
-
-  if (isControlHost && !skipControlUi) {
-    rewriter = rewriter.on('head', {
-      element(el) {
-        el.append(
-          '<link rel="stylesheet" href="/assets/control-player-bridge-r122.css?v=55.00-r122">' +
-          '<script defer src="/assets/control-player-bridge-r122.js?v=55.00-r122"></script>',
-          { html:true }
-        );
-      }
-    });
-  } else if (!isControlHost && !skipMainShell) {
-    rewriter = rewriter.on('head', {
-      element(el) {
-        el.append(
-          '<script defer src="/assets/player-shell-bridge-r122.js?v=55.00-r122"></script>',
-          { html:true }
-        );
-      }
-    });
-  }
-
-  const wrapped = new Response(response.body, {
-    status:response.status,
-    statusText:response.statusText,
+  headers.set('x-andrik-player-shell', 'R120');
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
     headers
   });
-  return rewriter.transform(wrapped);
 }
 
 function controlAssetFailurePage(error) {

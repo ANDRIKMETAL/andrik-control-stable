@@ -1,7 +1,0 @@
-R122 SAFE PLAYER BRIDGE
-
-• Экран «Обновить сайт» полностью восстановлен из стабильной R115.
-• Player Bridge никогда не вставляется в site-update-admin.html.
-• Плеер и шторка работают во всех остальных разделах Control.
-• Safe Commit Engine R119 сохранён.
-• Глаз владельца и Player Shell сохранены.
