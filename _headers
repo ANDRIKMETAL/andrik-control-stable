@@ -696,3 +696,28 @@
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
   X-Robots-Tag: noindex, nofollow,noarchive
 
+# R135 — swipe repair + breathing headers + one landscape frame
+/analytics-admin.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/site-update-admin.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/protection-admin.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/attack-map.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/admin-sections.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/assets/unified-glow-r135.css
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/assets/unified-glow-r135.js
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/assets/control-player-bridge-r135.css
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/assets/control-player-bridge-r135.js
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/assets/player-shell-bridge-r135.js
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/cache-reset-v55-00-final-r135.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+  X-Robots-Tag: noindex, nofollow,noarchive
+

@@ -852,10 +852,10 @@ html.live-web-ai-resume-lock .analytics-swipe-viewport{overflow:hidden!important
   document.addEventListener('visibilitychange',function(){if(!document.hidden)lock();},{passive:true});
 })();
 </script>
-<link rel="stylesheet" href="/assets/unified-glow-r134.css?v=55.00-r134">
+<link rel="stylesheet" href="/assets/unified-glow-r135.css?v=55.00-r135">
 
-<style id="andrik-r134-landscape-map-no-black-tail">
-/* R134 — landscape map: no black strip after country focus. */
+<style id="andrik-r135-landscape-map-no-black-tail">
+/* R135 — landscape map: no black strip after country focus. */
 @media screen and (orientation:landscape){
 
   /* Карта занимает весь доступный кадр без вертикального прокручивания. */
@@ -963,9 +963,65 @@ html.live-web-ai-resume-lock .analytics-swipe-viewport{overflow:hidden!important
 }
 </style>
 
+
+<style id="andrik-r135-landscape-swipe-lock">
+@media screen and (orientation:landscape){
+  html,
+  body.analytics-admin-page{
+    overflow:hidden!important;
+    overscroll-behavior:none!important;
+  }
+
+  body.analytics-admin-page .analytics-swipe-main,
+  body.analytics-admin-page .analytics-swipe-viewport{
+    width:100%!important;
+    max-width:100%!important;
+    overflow:hidden!important;
+    overscroll-behavior:none!important;
+  }
+
+  body.analytics-admin-page .analytics-swipe-viewport{
+    touch-action:pan-y!important;
+  }
+
+  body.analytics-admin-page .analytics-swipe-track{
+    display:flex!important;
+    height:100%!important;
+    min-width:300%!important;
+    max-width:none!important;
+    overflow:visible!important;
+    will-change:transform!important;
+    backface-visibility:hidden!important;
+  }
+
+  body.analytics-admin-page .analytics-swipe-pane{
+    flex:0 0 100vw!important;
+    width:100vw!important;
+    min-width:100vw!important;
+    max-width:100vw!important;
+    overflow-x:hidden!important;
+    overscroll-behavior-x:none!important;
+    backface-visibility:hidden!important;
+  }
+
+  body.analytics-admin-page .analytics-site-pane,
+  body.analytics-admin-page .analytics-youtube-pane{
+    touch-action:pan-y!important;
+  }
+
+  html.analytics-horizontal-swipe-lock,
+  html.analytics-horizontal-swipe-lock body,
+  html.analytics-horizontal-swipe-lock .analytics-swipe-pane,
+  html.analytics-horizontal-swipe-lock .analytics-pane-wrap{
+    scroll-behavior:auto!important;
+    overscroll-behavior:none!important;
+  }
+}
+</style>
+
 </head>
 <body class="trika-standalone-page comments-admin-page control-page analytics-admin-page analytics-swipe-page analytics-v54-33-page analytics-v54-46-page">
-<nav class="topbar control-topbar control-detail-topbar"><div class="wrap nav-shell analytics-topbar-minimal"><a class="control-center-logo" id="controlCenterLogo" href="https://andrikmetal.com/" aria-label="Открыть главный сайт ANDRIK"><img class="logo-ok" src="/assets/control-topbar-eye-triangle.jpg?v=55.00-r134" alt=""/><img class="logo-error" src="/assets/andrik-control-red-triangle-192.png" alt=""/></a></div></nav>
+<nav class="topbar control-topbar control-detail-topbar"><div class="wrap nav-shell analytics-topbar-minimal"><a class="control-center-logo" id="controlCenterLogo" href="https://andrikmetal.com/" aria-label="Открыть главный сайт ANDRIK"><img class="logo-ok" src="/assets/control-topbar-eye-triangle.jpg?v=55.00-r135" alt=""/><img class="logo-error" src="/assets/andrik-control-red-triangle-192.png" alt=""/></a></div></nav>
 <main class="analytics-swipe-main" id="analyticsSwipeMain">
   <div class="analytics-pull-indicator" id="analyticsDownIndicator" aria-hidden="true"><i></i><span>Свайп сверху вниз делает обновление</span></div>
   <div class="analytics-swipe-viewport" id="analyticsSwipeViewport">
@@ -1816,9 +1872,19 @@ html.live-web-ai-resume-lock .analytics-swipe-viewport{overflow:hidden!important
       window.dispatchEvent(new CustomEvent('andrik:analytics-page-changed',{detail:{page:document.body.dataset.analyticsPage}}));
       if(pane?.dataset.analyticsPage==='youtube')window.dispatchEvent(new CustomEvent('andrik:youtube-pane-visible'));
     };
-    let stableViewportWidth=Math.max(1,Number(sessionStorage.getItem('live-web-ai-stable-width')||0),viewport.clientWidth||0,window.innerWidth||0);
+    let stableViewportWidth=Math.max(
+      1,
+      Math.round(viewport.getBoundingClientRect().width||viewport.clientWidth||window.visualViewport?.width||window.innerWidth||1)
+    );
     let resizeCommitTimer=0;
-    const effectiveViewportWidth=()=>Math.max(1,stableViewportWidth||viewport.clientWidth||window.innerWidth||1);
+    const effectiveViewportWidth=()=>{
+      const measured=Math.max(
+        1,
+        Math.round(viewport.getBoundingClientRect().width||viewport.clientWidth||window.visualViewport?.width||window.innerWidth||1)
+      );
+      stableViewportWidth=measured;
+      return measured;
+    };
     const apply=(animate=true,dragOffset=0,dragY=0)=>{
       track.style.transition=animate?'transform .20s cubic-bezier(.22,.75,.2,1)':'none';
       track.style.transform=`translate3d(${-page*effectiveViewportWidth()+dragOffset}px,${dragY}px,0)`;
@@ -1920,7 +1986,14 @@ html.live-web-ai-resume-lock .analytics-swipe-viewport{overflow:hidden!important
       const elapsed=Date.now()-gesture.t;
       const mode=gesture.mode;
       const openThreshold=Number(gesture.openThreshold||68);
+      const finishedGesture=gesture;
       gesture=null;
+      document.documentElement.classList.remove('analytics-horizontal-swipe-lock');
+      if(mode==='horizontal'){
+        if(finishedGesture.pane)finishedGesture.pane.scrollTop=finishedGesture.paneScrollStart;
+        if(finishedGesture.inner)finishedGesture.inner.scrollTop=finishedGesture.innerScrollStart;
+        if(finishedGesture.scrollElement)finishedGesture.scrollElement.scrollTop=finishedGesture.scrollStart;
+      }
       if(!cancelled&&mode==='vertical-down'&&dy>56){
         refreshAnalyticsDashboard();
         return;
@@ -1964,14 +2037,14 @@ html.live-web-ai-resume-lock .analytics-swipe-viewport{overflow:hidden!important
          This prevents a swipe from opening the admin panel before the landscape page reaches its real end. */
       const atBottom=pageName==='map'?paneAtBottom:(paneAtBottom&&innerAtBottom);
       const scrollElement=pageName==='map'?pane:(innerScrollable?inner:pane);
-      const mapGesturesEnabled=pageName==='map'&&!countriesExpanded&&(
-        isLandscape ? dedicatedZone : (paneScrollable&&atBottom)
-      );
       const viewportWidth=window.visualViewport?.width||window.innerWidth||document.documentElement.clientWidth||0;
       const viewportHeight=window.visualViewport?.height||window.innerHeight||document.documentElement.clientHeight||0;
       const rightScrollZone=event.clientX>=Math.max(0,viewportWidth-76);
       const bottomMenuZone=event.clientY>=Math.max(0,viewportHeight-132);
       const dedicatedZone=Boolean(target?.closest?.('#mapEndPullZone'));
+      const mapGesturesEnabled=pageName==='map'&&!countriesExpanded&&(
+        isLandscape ? dedicatedZone : (paneScrollable&&atBottom)
+      );
       const portraitMapCenter=Boolean(
         !isLandscape&&
         pageName==='map'&&
@@ -1985,7 +2058,26 @@ html.live-web-ai-resume-lock .analytics-swipe-viewport{overflow:hidden!important
          Portrait opens Admin with a quick upward swipe through the central map area. */
       const canOpenSections=isLandscape?mapGesturesEnabled:portraitMapCenter;
       const openThreshold=isLandscape?68:48;
-      gesture={id:event.pointerId,x:event.clientX,y:event.clientY,lastX:event.clientX,lastY:event.clientY,t:Date.now(),mode:null,canPullRefresh,canOpenSections,openThreshold,pageName,scrollElement,scrollStart:Number(scrollElement?.scrollTop||0)};
+      gesture={
+        id:event.pointerId,
+        x:event.clientX,
+        y:event.clientY,
+        lastX:event.clientX,
+        lastY:event.clientY,
+        t:Date.now(),
+        mode:null,
+        canPullRefresh,
+        canOpenSections,
+        openThreshold,
+        pageName,
+        pane,
+        inner,
+        scrollElement,
+        scrollStart:Number(scrollElement?.scrollTop||0),
+        paneScrollStart:Number(pane?.scrollTop||0),
+        innerScrollStart:Number(inner?.scrollTop||0),
+        windowScrollStart:Number(window.scrollY||0)
+      };
       try{viewport.setPointerCapture(event.pointerId)}catch(_){}
     });
     viewport.addEventListener('pointermove',event=>{
@@ -2031,6 +2123,14 @@ html.live-web-ai-resume-lock .analytics-swipe-viewport{overflow:hidden!important
       }
       if(gesture.mode!=='horizontal')return;
       event.preventDefault();
+      document.documentElement.classList.add('analytics-horizontal-swipe-lock');
+      if(gesture.pane)gesture.pane.scrollTop=gesture.paneScrollStart;
+      if(gesture.inner)gesture.inner.scrollTop=gesture.innerScrollStart;
+      if(gesture.scrollElement)gesture.scrollElement.scrollTop=gesture.scrollStart;
+      if(Math.abs(Number(window.scrollY||0)-gesture.windowScrollStart)>1){
+        try{window.scrollTo({top:gesture.windowScrollStart,left:0,behavior:'instant'})}
+        catch(_){window.scrollTo(0,gesture.windowScrollStart)}
+      }
       const circularEdge=(page===0&&dx>0)||(page===count-1&&dx<0);
       apply(false,circularEdge?0:dx);
     },{passive:false});
@@ -2042,8 +2142,10 @@ html.live-web-ai-resume-lock .analytics-swipe-viewport{overflow:hidden!important
       clearTimeout(resizeCommitTimer);
       resizeCommitTimer=setTimeout(()=>{
         if(document.hidden)return;
-        stableViewportWidth=Math.max(1,viewport.clientWidth||window.innerWidth||stableViewportWidth);
-        try{sessionStorage.setItem('live-web-ai-stable-width',String(stableViewportWidth))}catch(_){ }
+        stableViewportWidth=Math.max(
+          1,
+          Math.round(viewport.getBoundingClientRect().width||viewport.clientWidth||window.visualViewport?.width||window.innerWidth||1)
+        );
         updateHeight();
         const orientation=isLandscapeMode()?'landscape':'portrait';
         if(lastWorldMapCountries.length&&orientation!==lastWorldMapOrientation){
@@ -3364,9 +3466,9 @@ body:not(.is-country-focus-active) #mapFocusActions,
 })();
 </script>
 
-<script defer src="/assets/control-version-v55-00-r115.js?v=55.00-r115"></script><script defer src="/assets/unified-glow-r134.js?v=55.00-r134"></script>
+<script defer src="/assets/control-version-v55-00-r115.js?v=55.00-r115"></script><script defer src="/assets/unified-glow-r135.js?v=55.00-r135"></script>
 
-<script id="andrik-r134-map-focus-scroll-lock">
+<script id="andrik-r135-map-focus-scroll-lock">
 (()=>{
   'use strict';
   const isLandscape=()=>window.matchMedia?.('(orientation:landscape)')?.matches===true;

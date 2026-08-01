@@ -26,7 +26,7 @@ body{position:fixed;inset:0}
 .admin-carousel-loading{position:absolute;inset:0;display:grid;place-items:center;color:#92aab7;font-size:.9rem;pointer-events:none}
 @media(prefers-reduced-motion:reduce){.admin-carousel-track.is-animating{transition-duration:.01ms}.admin-carousel-dots button,.admin-carousel-label{transition:none}}
 </style>
-<link rel="stylesheet" href="/assets/control-player-bridge-r134.css?v=55.00-r134">
+<link rel="stylesheet" href="/assets/control-player-bridge-r135.css?v=55.00-r135">
 
 <style id="andrik-r133-shell-frame">
 @media(orientation:landscape){
@@ -39,6 +39,33 @@ body{position:fixed;inset:0}
   }
 }
 </style>
+
+<style id="andrik-r135-one-landscape-frame">
+@media screen and (orientation:landscape){
+  body.admin-sections-shell::after{
+    content:""!important;
+    position:fixed!important;
+    display:block!important;
+    left:max(6px,env(safe-area-inset-left))!important;
+    right:max(6px,env(safe-area-inset-right))!important;
+    top:86px!important;
+    bottom:max(8px,env(safe-area-inset-bottom))!important;
+    box-sizing:border-box!important;
+    border:2px solid rgba(104,255,170,.94)!important;
+    border-radius:28px!important;
+    background:transparent!important;
+    box-shadow:
+      inset 0 0 18px rgba(82,255,157,.16),
+      0 0 8px rgba(100,255,172,.92),
+      0 0 25px rgba(47,232,132,.56)!important;
+    opacity:1!important;
+    visibility:visible!important;
+    pointer-events:none!important;
+    z-index:2147482000!important;
+  }
+}
+</style>
+
 </head>
 <body class="admin-sections-shell">
 <main class="admin-carousel" aria-label="Разделы админ-панели">
@@ -177,5 +204,5 @@ body{position:fixed;inset:0}
   };
 })();
 </script>
-<script defer src="/assets/control-player-bridge-r134.js?v=55.00-r134"></script><script defer src="/assets/guard-ready-r115.js?v=55.00-r115"></script></body>
+<script defer src="/assets/control-player-bridge-r135.js?v=55.00-r135"></script><script defer src="/assets/guard-ready-r115.js?v=55.00-r115"></script></body>
 </html>
