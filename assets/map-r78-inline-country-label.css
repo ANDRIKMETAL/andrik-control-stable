@@ -1,0 +1,74 @@
+/* Control ANDRIK v55.00 FINAL STABLE R78
+   Landscape country caption is rendered inside the map itself.
+   This avoids suppression by later fixed/body layers. */
+
+@media screen and (orientation:landscape){
+  #worldMap{
+    position:relative!important;
+  }
+
+  #landscapeCountryLabelR78{
+    position:absolute!important;
+    z-index:2147483640!important;
+    display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    gap:7px!important;
+    max-width:min(calc(100% - 24px),360px)!important;
+    min-width:0!important;
+    margin:0!important;
+    padding:2px 8px 3px!important;
+    border:0!important;
+    border-radius:999px!important;
+    background:rgba(2,9,14,.30)!important;
+    box-shadow:0 0 12px rgba(255,174,31,.12)!important;
+    pointer-events:none!important;
+    transform:translateX(-50%)!important;
+    white-space:nowrap!important;
+    opacity:1!important;
+  }
+
+  #landscapeCountryLabelR78[hidden]{
+    display:none!important;
+  }
+
+  #landscapeCountryLabelR78 .r78-country-flag{
+    flex:none!important;
+    font-size:1.08rem!important;
+    line-height:1!important;
+    filter:drop-shadow(0 0 5px rgba(255,190,64,.46))!important;
+  }
+
+  #landscapeCountryLabelR78 .r78-country-name{
+    min-width:0!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+    color:#ffd05c!important;
+    font-size:clamp(.84rem,1.55vw,1rem)!important;
+    font-weight:950!important;
+    letter-spacing:.02em!important;
+    line-height:1.08!important;
+    text-align:center!important;
+    text-shadow:0 0 7px rgba(255,192,60,.70),0 0 15px rgba(255,156,35,.40)!important;
+  }
+
+  /* Old competing landscape labels are never shown in R78. */
+  #landscapeCountryLabelR72,
+  #landscapeCountryLabelR73,
+  #landscapeCountryLabelR74,
+  #landscapeCountryLabelR76,
+  #landscapeCountryLabelR77{
+    display:none!important;
+    visibility:hidden!important;
+    opacity:0!important;
+    pointer-events:none!important;
+  }
+}
+
+@media screen and (orientation:portrait){
+  #landscapeCountryLabelR78{
+    display:none!important;
+    visibility:hidden!important;
+    opacity:0!important;
+  }
+}

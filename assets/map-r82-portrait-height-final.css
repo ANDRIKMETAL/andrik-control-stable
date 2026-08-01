@@ -1,0 +1,427 @@
+/* Control ANDRIK v55.00 FINAL STABLE R82
+   PORTRAIT-ONLY full geometry rebuild.
+   Landscape is intentionally untouched.
+   In portrait the header, auth strip, map card header and map frame keep one
+   geometry in overview and country focus; only the map stage is transformed. */
+
+@media screen and (orientation:portrait){
+  html,body{
+    overflow-anchor:none!important;
+  }
+
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane > .analytics-pane-wrap.analytics-map-pane-wrap{
+    overflow-anchor:none!important;
+  }
+
+  /* One stable portrait flow. */
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane > .analytics-pane-wrap.analytics-map-pane-wrap,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane > .analytics-map-pane-wrap.analytics-pane-wrap,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-pane-wrap{
+    display:flex!important;
+    flex-direction:column!important;
+    align-items:stretch!important;
+    box-sizing:border-box!important;
+    width:100%!important;
+    max-width:none!important;
+    height:auto!important;
+    min-height:100%!important;
+    margin:0!important;
+    padding:0!important;
+    gap:0!important;
+    transform:none!important;
+    transition:none!important;
+    overflow:visible!important;
+  }
+
+  /* Static page header: its geometry cannot change when a country is selected. */
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-compact-header{
+    position:relative!important;
+    inset:auto!important;
+    display:grid!important;
+    grid-template-rows:18px 52px 30px 44px!important;
+    align-content:start!important;
+    box-sizing:border-box!important;
+    width:100%!important;
+    height:154px!important;
+    min-height:154px!important;
+    max-height:154px!important;
+    margin:0!important;
+    padding:0 0 10px!important;
+    transform:none!important;
+    translate:none!important;
+    transition:none!important;
+    animation:none!important;
+    overflow:visible!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-compact-header > .eyeline{
+    grid-row:1!important;
+    align-self:end!important;
+    display:block!important;
+    height:18px!important;
+    margin:0!important;
+    padding:0!important;
+    transform:none!important;
+    transition:none!important;
+    text-align:center!important;
+    line-height:18px!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-compact-header > h1{
+    grid-row:2!important;
+    align-self:center!important;
+    height:52px!important;
+    margin:0!important;
+    padding:0!important;
+    transform:none!important;
+    transition:none!important;
+    text-align:center!important;
+    line-height:52px!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-compact-header > p{
+    grid-row:3!important;
+    align-self:start!important;
+    height:30px!important;
+    margin:0!important;
+    padding:0 6px!important;
+    transform:none!important;
+    transition:none!important;
+    text-align:center!important;
+    line-height:24px!important;
+    white-space:nowrap!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #analyticsAuthStrip{
+    grid-row:4!important;
+    position:relative!important;
+    inset:auto!important;
+    align-self:end!important;
+    box-sizing:border-box!important;
+    width:100%!important;
+    height:44px!important;
+    min-height:44px!important;
+    max-height:44px!important;
+    margin:0!important;
+    padding:5px 12px!important;
+    border-radius:22px!important;
+    transform:none!important;
+    translate:none!important;
+    transition:none!important;
+    animation:none!important;
+    overflow:hidden!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #analyticsAuthStrip strong,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #analyticsAuthStrip a{
+    line-height:1.05!important;
+  }
+
+  /* Completely rebuilt portrait card geometry. Same in overview and focus. */
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top.has-country-focus,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top:not(.has-country-focus){
+    position:relative!important;
+    inset:auto!important;
+    left:auto!important;
+    top:auto!important;
+    display:block!important;
+    align-self:center!important;
+    box-sizing:border-box!important;
+    width:calc(100vw - 8px)!important;
+    max-width:calc(100vw - 8px)!important;
+    height:auto!important;
+    min-height:0!important;
+    max-height:none!important;
+    margin:0 auto!important;
+    padding:12px 10px 12px!important;
+    border-radius:24px!important;
+    transform:none!important;
+    translate:none!important;
+    transition:none!important;
+    animation:none!important;
+    overflow:visible!important;
+    overflow-anchor:none!important;
+  }
+
+  /* Fixed card header, recreated as a deterministic three-row grid. */
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top > .map-landscape-title-row,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top.has-country-focus > .map-landscape-title-row,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top:not(.has-country-focus) > .map-landscape-title-row{
+    position:relative!important;
+    inset:auto!important;
+    display:grid!important;
+    grid-template-columns:112px minmax(0,1fr) 52px!important;
+    grid-template-rows:46px 47px 24px!important;
+    grid-template-areas:
+      "total geography calendar"
+      "title title title"
+      "period period period"!important;
+    align-items:center!important;
+    justify-items:stretch!important;
+    box-sizing:border-box!important;
+    width:100%!important;
+    height:117px!important;
+    min-height:117px!important;
+    max-height:117px!important;
+    margin:0 0 8px!important;
+    padding:0 4px!important;
+    column-gap:8px!important;
+    row-gap:0!important;
+    transform:none!important;
+    translate:none!important;
+    transition:none!important;
+    animation:none!important;
+    overflow:visible!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .map-title-pyramid{
+    display:contents!important;
+    margin:0!important;
+    padding:0!important;
+    transform:none!important;
+    transition:none!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .map-title-pyramid > .eyeline{
+    grid-area:geography!important;
+    position:static!important;
+    inset:auto!important;
+    align-self:center!important;
+    justify-self:center!important;
+    width:auto!important;
+    height:auto!important;
+    margin:0!important;
+    padding:0!important;
+    transform:none!important;
+    translate:none!important;
+    transition:none!important;
+    text-align:center!important;
+    white-space:nowrap!important;
+    line-height:1!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .map-title-pyramid > h2{
+    grid-area:title!important;
+    position:static!important;
+    inset:auto!important;
+    align-self:center!important;
+    justify-self:center!important;
+    width:100%!important;
+    height:47px!important;
+    margin:0!important;
+    padding:0!important;
+    transform:none!important;
+    translate:none!important;
+    transition:none!important;
+    text-align:center!important;
+    font-size:clamp(2.02rem,8.8vw,2.48rem)!important;
+    line-height:47px!important;
+    white-space:nowrap!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .map-title-pyramid > p,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMapPeriod{
+    grid-area:period!important;
+    position:static!important;
+    inset:auto!important;
+    align-self:center!important;
+    justify-self:center!important;
+    box-sizing:border-box!important;
+    width:100%!important;
+    height:24px!important;
+    min-height:24px!important;
+    max-height:24px!important;
+    margin:0!important;
+    padding:0 2px!important;
+    transform:none!important;
+    translate:none!important;
+    transition:none!important;
+    text-align:center!important;
+    font-size:clamp(.70rem,3.05vw,.84rem)!important;
+    line-height:24px!important;
+    white-space:nowrap!important;
+    overflow:hidden!important;
+    text-overflow:clip!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMapPeriod .period-nowrap{
+    white-space:nowrap!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .world-map-total{
+    grid-area:total!important;
+    position:static!important;
+    inset:auto!important;
+    align-self:center!important;
+    justify-self:start!important;
+    box-sizing:border-box!important;
+    width:112px!important;
+    min-width:112px!important;
+    max-width:112px!important;
+    height:40px!important;
+    min-height:40px!important;
+    max-height:40px!important;
+    margin:0!important;
+    padding:0 10px!important;
+    transform:none!important;
+    translate:none!important;
+    transition:none!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .map-monthly-open{
+    grid-area:calendar!important;
+    position:static!important;
+    inset:auto!important;
+    align-self:center!important;
+    justify-self:end!important;
+    box-sizing:border-box!important;
+    width:48px!important;
+    min-width:48px!important;
+    max-width:48px!important;
+    height:48px!important;
+    min-height:48px!important;
+    max-height:48px!important;
+    margin:0!important;
+    transform:none!important;
+    translate:none!important;
+    transition:none!important;
+  }
+
+  /* Large portrait map, identical size before and after country selection. */
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top.has-country-focus #worldMap,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top:not(.has-country-focus) #worldMap{
+    position:relative!important;
+    inset:auto!important;
+    display:block!important;
+    box-sizing:border-box!important;
+    width:100%!important;
+    max-width:100%!important;
+    height:clamp(270px,22dvh,286px)!important;
+    min-height:clamp(270px,22dvh,286px)!important;
+    max-height:286px!important;
+    margin:0 auto!important;
+    padding:0!important;
+    border:1.5px solid rgba(93,221,158,.90)!important;
+    border-radius:22px!important;
+    background:#03101b!important;
+    box-shadow:
+      0 0 0 1px rgba(93,221,158,.10),
+      0 0 14px rgba(57,211,143,.08),
+      inset 0 0 18px rgba(57,211,143,.045)!important;
+    transform:none!important;
+    translate:none!important;
+    transition:none!important;
+    animation:none!important;
+    overflow:hidden!important;
+    overflow-anchor:none!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap .world-map-canvas,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap .world-map-stage{
+    position:relative!important;
+    inset:auto!important;
+    box-sizing:border-box!important;
+    width:100%!important;
+    max-width:100%!important;
+    height:100%!important;
+    min-height:100%!important;
+    max-height:100%!important;
+    margin:0!important;
+    padding:0!important;
+    border:0!important;
+    border-radius:20px!important;
+    overflow:hidden!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap .world-map-stage{
+    transform-origin:0 0!important;
+    transition:transform .34s cubic-bezier(.22,.78,.18,1),filter .20s ease!important;
+    will-change:transform!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap .world-map-stage > img{
+    position:absolute!important;
+    inset:0!important;
+    display:block!important;
+    box-sizing:border-box!important;
+    width:100%!important;
+    height:100%!important;
+    min-height:100%!important;
+    max-height:100%!important;
+    margin:0!important;
+    object-fit:fill!important;
+    object-position:center!important;
+    transform:none!important;
+    transition:none!important;
+    user-select:none!important;
+    pointer-events:none!important;
+  }
+
+  /* Keep all content below the frame in normal document flow. */
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldCountries,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top.has-country-focus #worldCountries,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top:not(.has-country-focus) #worldCountries{
+    position:relative!important;
+    inset:auto!important;
+    display:grid!important;
+    width:100%!important;
+    max-width:100%!important;
+    height:auto!important;
+    min-height:0!important;
+    margin:10px 0 0!important;
+    padding:0!important;
+    transform:none!important;
+    translate:none!important;
+    transition:none!important;
+    overflow:visible!important;
+    overflow-anchor:none!important;
+  }
+
+  /* Focus buttons remain compact; they do not resize the header or map. */
+  body.analytics-admin-page.analytics-v54-46-page[data-analytics-page="map"].is-country-focus-active
+  .analytics-map-top.has-country-focus > #mapFocusActions,
+  body.analytics-admin-page.analytics-v54-46-page[data-analytics-page="map"].is-country-focus-active
+  .analytics-map-top.has-country-focus > #mapFocusActions[hidden],
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #mapFocusActions.is-visible{
+    position:relative!important;
+    inset:auto!important;
+    display:grid!important;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:10px!important;
+    box-sizing:border-box!important;
+    width:100%!important;
+    height:auto!important;
+    min-height:0!important;
+    margin:10px 0 0!important;
+    padding:0!important;
+    transform:none!important;
+    transition:none!important;
+    overflow:visible!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #mapFocusActions .map-focus-action{
+    box-sizing:border-box!important;
+    width:100%!important;
+    min-width:0!important;
+    min-height:92px!important;
+    height:92px!important;
+    max-height:92px!important;
+    padding:10px 8px!important;
+    border-radius:20px!important;
+    font-size:clamp(.78rem,3.55vw,.94rem)!important;
+    line-height:1.12!important;
+    transform:none!important;
+    transition:none!important;
+  }
+
+  /* Do not let old portrait patches move any static element. */
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-compact-header,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-compact-header *,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .map-landscape-title-row,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .map-landscape-title-row > *,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .map-title-pyramid > *,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .world-map-total,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .map-monthly-open{
+    will-change:auto!important;
+  }
+
+  /* Keep the floating 7 control untouched. Hide landscape-only caption layers. */
+  #landscapeCountryLabelR73,
+  #landscapeCountryLabelR76,
+  #landscapeCountryLabelR77,
+  #landscapeCountryLabelR78,
+  #landscapeCountryCardR69{
+    display:none!important;
+    visibility:hidden!important;
+    opacity:0!important;
+    pointer-events:none!important;
+  }
+}

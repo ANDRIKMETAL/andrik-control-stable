@@ -1,0 +1,36 @@
+/* Control ANDRIK v55.00 FINAL R51 — portrait selected-country duplicate line fix only. */
+@media screen and (orientation:portrait){
+  body.analytics-admin-page.analytics-v54-46-page
+  .analytics-map-pane #worldCountries .world-country-button.is-selected
+  .country-weekly-marquee-track{
+    display:block!important;
+    width:100%!important;
+    min-width:0!important;
+    animation:none!important;
+    transform:none!important;
+  }
+
+  body.analytics-admin-page.analytics-v54-46-page
+  .analytics-map-pane #worldCountries .world-country-button.is-selected
+  .country-weekly-marquee-track > span:first-child{
+    display:block!important;
+    width:100%!important;
+    min-width:0!important;
+    white-space:normal!important;
+    animation:none!important;
+    transform:none!important;
+  }
+
+  body.analytics-admin-page.analytics-v54-46-page
+  .analytics-map-pane #worldCountries .world-country-button.is-selected
+  .country-weekly-marquee-track > span:nth-child(n+2){
+    display:none!important;
+  }
+
+  body.analytics-admin-page.analytics-v54-46-page
+  .analytics-map-pane #worldCountries .world-country-button.is-selected
+  .country-weekly-compare.is-overflowing .country-weekly-marquee-track{
+    animation:none!important;
+    transform:none!important;
+  }
+}

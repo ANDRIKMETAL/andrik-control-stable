@@ -1,0 +1,24 @@
+/* ANDRIK Player v55.00 R3U — clean mini-player without album navigation buttons. */
+.album-swipe-switcher{display:none!important}
+body.site-mode .player-shell{overflow:hidden!important}
+body.site-mode .control-side{overflow:hidden!important;min-height:0!important}
+body.site-mode .album-swipe-switcher,
+body.site-mode .collection-actions,
+body.site-mode .track-community-actions,
+body.site-mode .scroll-cue,
+body.site-mode .error{display:none!important}
+body.site-mode .track-title,
+body.site-mode .video-mode .track-title{min-width:0!important;max-width:100%!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+body.site-mode .progress-area{flex:0 0 auto!important}
+body.site-mode .transport{flex:0 0 auto!important}
+@media(max-width:760px){
+  body.site-mode .player-shell{height:104px!important;min-height:104px!important;max-height:104px!important}
+  body.site-mode .visual-side,
+  body.site-mode .control-side{height:104px!important;min-height:104px!important;max-height:104px!important}
+  body.site-mode .control-side{padding:9px 78px 8px 10px!important;justify-content:center!important}
+  body.site-mode .track-title,
+  body.site-mode .video-mode .track-title{font-size:.94rem!important;line-height:1.05!important;margin:1px 0 0!important}
+  body.site-mode .progress-area{margin-top:7px!important}
+  body.site-mode .transport,
+  body.site-mode .video-mode .transport{margin-top:5px!important;gap:6px!important}
+}

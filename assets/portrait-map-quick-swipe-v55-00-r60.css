@@ -1,0 +1,20 @@
+/* Control ANDRIK v55.00 FINAL R60 — portrait quick central swipe only. */
+@media screen and (orientation:portrait){
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #mapEndPullZone,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane > .analytics-pane-wrap > #mapEndPullZone,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane > .analytics-map-pane-wrap > #mapEndPullZone{
+    display:none!important;
+    width:0!important;
+    height:0!important;
+    min-height:0!important;
+    margin:0!important;
+    padding:0!important;
+    overflow:hidden!important;
+    visibility:hidden!important;
+    pointer-events:none!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane > .analytics-pane-wrap,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane > .analytics-map-pane-wrap{
+    padding-bottom:max(8px,env(safe-area-inset-bottom))!important;
+  }
+}

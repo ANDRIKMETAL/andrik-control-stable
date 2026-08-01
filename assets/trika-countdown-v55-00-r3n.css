@@ -1,0 +1,19 @@
+/* ANDRIK v55.00 R3N — compact top countdown to TRIKA. */
+.top-countdown-wrap{padding:14px 0 8px}
+.top-countdown-card{position:relative;overflow:hidden;border:1px solid rgba(123,209,166,.20);border-radius:26px;padding:16px 18px 15px;background:linear-gradient(160deg,rgba(8,17,27,.97),rgba(4,8,14,.99));box-shadow:0 18px 62px rgba(0,0,0,.34),inset 0 1px 0 rgba(255,255,255,.04)}
+.top-countdown-card::before{content:"";position:absolute;inset:-45% -20%;pointer-events:none;background:radial-gradient(circle at 50% 45%,rgba(110,255,180,.15),transparent 38%),linear-gradient(110deg,transparent 0 42%,rgba(255,255,255,.045) 50%,transparent 58%);animation:trikaCountdownGlowR3N 5.6s ease-in-out infinite}
+.top-countdown-head,.top-countdown-grid{position:relative;z-index:1}
+.top-countdown-head{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:12px}
+.top-countdown-copy{min-width:0}
+.top-countdown-title{margin:2px 0 0;font-size:clamp(1.34rem,4vw,2rem);line-height:1;letter-spacing:.08em;color:#efffff;text-shadow:0 0 20px rgba(121,242,189,.12)}
+.top-countdown-sub{margin:6px 0 0;color:var(--text-soft);font-size:.94rem}
+.top-countdown-badge{display:inline-flex;align-items:center;gap:8px;padding:9px 13px;border-radius:999px;border:1px solid rgba(124,221,167,.25);background:rgba(12,24,20,.78);box-shadow:0 0 20px rgba(97,212,145,.12);color:var(--text);font-weight:750;white-space:nowrap}
+.top-countdown-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}
+.top-countdown-box{padding:12px 8px 10px;border-radius:18px;background:linear-gradient(180deg,rgba(12,26,39,.92),rgba(7,12,20,.99));border:1px solid rgba(125,190,235,.14);text-align:center;box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
+.top-countdown-number{display:block;font-size:clamp(1.35rem,4.1vw,2.25rem);line-height:1;font-weight:850;letter-spacing:.04em;color:#f8fcff;text-shadow:0 0 15px rgba(136,212,255,.18);font-variant-numeric:tabular-nums}
+.top-countdown-label{display:block;margin-top:6px;font-size:.67rem;letter-spacing:.16em;text-transform:uppercase;color:var(--text-dim)}
+.top-countdown-done{display:none;position:relative;z-index:1;margin-top:11px;padding:11px 13px;border-radius:15px;border:1px solid rgba(124,221,167,.22);background:rgba(11,29,19,.78);color:#f4fff9;font-weight:750;text-align:center}
+.top-countdown-done.show{display:block}
+@keyframes trikaCountdownGlowR3N{0%,100%{opacity:.68;transform:scale(.98)}50%{opacity:1;transform:scale(1.035)}}
+@media(max-width:640px){.top-countdown-wrap{padding:10px 0 6px}.top-countdown-card{padding:14px 12px 13px;border-radius:23px}.top-countdown-head{margin-bottom:10px}.top-countdown-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}.top-countdown-box{padding:10px 4px 9px;border-radius:15px}.top-countdown-title{font-size:1.38rem}.top-countdown-sub{font-size:.84rem}.top-countdown-badge{padding:7px 10px;font-size:.82rem}.top-countdown-number{font-size:clamp(1.24rem,6vw,1.75rem)}.top-countdown-label{font-size:.54rem;letter-spacing:.09em}}
+@media(max-width:360px){.top-countdown-badge{display:none}.top-countdown-head{justify-content:center;text-align:center}.top-countdown-grid{gap:5px}.top-countdown-box{padding-inline:2px}}

@@ -1,0 +1,278 @@
+/* Control ANDRIK v55.00 FINAL R60
+   One clean landscape implementation:
+   - undistorted 2560x1031 artwork
+   - dots and artwork share the same stage
+   - real vertical finger scroll from upper to lower green frame
+   - compact selected-country caption over the map
+   - no portrait action buttons leaking below the map. */
+@media screen and (orientation:landscape){
+  body.analytics-admin-page.analytics-v54-46-page .analytics-swipe-main,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-swipe-viewport,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-swipe-track{
+    min-height:0!important;
+  }
+
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane{
+    height:100%!important;
+    min-height:0!important;
+    max-height:100%!important;
+    overflow-x:hidden!important;
+    overflow-y:auto!important;
+    -webkit-overflow-scrolling:touch!important;
+    overscroll-behavior-y:contain!important;
+    touch-action:pan-y!important;
+    scroll-behavior:auto!important;
+    background:#000!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane *{
+    touch-action:pan-y!important;
+  }
+
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane > .analytics-pane-wrap,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane > .analytics-map-pane-wrap,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-pane-wrap.analytics-pane-wrap{
+    display:block!important;
+    box-sizing:border-box!important;
+    width:100%!important;
+    max-width:none!important;
+    height:auto!important;
+    min-height:0!important;
+    max-height:none!important;
+    margin:0!important;
+    padding:0!important;
+    overflow:visible!important;
+    background:#000!important;
+  }
+
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-compact-header,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .map-landscape-title-row,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-swipe-hint,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #mapFocusActions,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .map-focus-actions,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #countryGrowthToggle,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #countryGrowthPanel,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .country-growth-toggle,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .country-growth-panel,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .world-country-landscape-controls,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .world-country-landscape-list,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .landscape-bottom-toggle{
+    display:none!important;
+    visibility:hidden!important;
+    width:0!important;
+    height:0!important;
+    min-height:0!important;
+    margin:0!important;
+    padding:0!important;
+    overflow:hidden!important;
+  }
+
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .world-map-card,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top{
+    position:relative!important;
+    display:block!important;
+    box-sizing:border-box!important;
+    width:100%!important;
+    height:auto!important;
+    min-height:0!important;
+    max-height:none!important;
+    margin:0!important;
+    padding:0!important;
+    overflow:visible!important;
+    border:0!important;
+    border-radius:0!important;
+    background:#000!important;
+    box-shadow:none!important;
+  }
+
+  /* Exact artwork ratio. Width determines height; no vertical stretching. */
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top.has-country-focus #worldMap,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top:not(.has-country-focus) #worldMap{
+    position:relative!important;
+    display:block!important;
+    box-sizing:border-box!important;
+    width:calc(100vw - 20px)!important;
+    max-width:calc(100vw - 20px)!important;
+    height:auto!important;
+    min-height:0!important;
+    max-height:none!important;
+    aspect-ratio:2560/1031!important;
+    margin:0 auto!important;
+    padding:0!important;
+    overflow:hidden!important;
+    border:1px solid rgba(86,188,139,.74)!important;
+    border-radius:16px!important;
+    background:#03101b!important;
+    box-shadow:none!important;
+  }
+
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap .world-map-canvas,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap .world-map-stage{
+    position:relative!important;
+    display:block!important;
+    box-sizing:border-box!important;
+    inset:auto!important;
+    width:100%!important;
+    max-width:none!important;
+    height:100%!important;
+    min-height:100%!important;
+    max-height:100%!important;
+    margin:0!important;
+    padding:0!important;
+    overflow:hidden!important;
+    background:#03101b!important;
+    transform-origin:0 0!important;
+  }
+
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap .world-map-stage > img{
+    position:absolute!important;
+    inset:0!important;
+    display:block!important;
+    width:100%!important;
+    max-width:none!important;
+    height:100%!important;
+    max-height:none!important;
+    object-fit:fill!important;
+    object-position:center center!important;
+    transform:none!important;
+  }
+
+  /* Marker geometry stays fixed to the same stage as the image. */
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap .world-map-dot{
+    transform:translate(-50%,-50%)!important;
+    transform-origin:center center!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap:not(.is-country-focused) .world-map-dot{
+    animation:none!important;
+    filter:none!important;
+  }
+
+  /* Zero-height overlay root; selected card does not create a black strip. */
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldCountries,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldCountries.is-landscape-layout{
+    position:absolute!important;
+    z-index:90!important;
+    inset:0 auto auto 0!important;
+    display:block!important;
+    box-sizing:border-box!important;
+    width:100%!important;
+    height:0!important;
+    min-height:0!important;
+    margin:0!important;
+    padding:0!important;
+    overflow:visible!important;
+    background:transparent!important;
+    box-shadow:none!important;
+    pointer-events:none!important;
+  }
+
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldCountries .world-country-selected-card{
+    position:absolute!important;
+    left:0;
+    top:0;
+    transform:none!important;
+    display:grid!important;
+    grid-template-columns:18px minmax(0,1fr) auto!important;
+    grid-template-areas:"flag name value" "meta meta meta"!important;
+    align-items:center!important;
+    column-gap:7px!important;
+    row-gap:3px!important;
+    box-sizing:border-box!important;
+    width:min(286px,calc(100vw - 48px))!important;
+    max-width:286px!important;
+    min-width:0!important;
+    min-height:0!important;
+    height:auto!important;
+    margin:0!important;
+    padding:7px 10px 8px!important;
+    overflow:hidden!important;
+    border:1px solid rgba(255,211,72,.96)!important;
+    border-radius:15px!important;
+    background:linear-gradient(180deg,rgba(112,79,10,.97),rgba(65,44,5,.99))!important;
+    box-shadow:0 7px 18px rgba(0,0,0,.34)!important;
+    pointer-events:auto!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldCountries .world-country-selected-card .world-country-flag{
+    grid-area:flag!important;
+    width:18px!important;
+    min-width:18px!important;
+    font-size:.88rem!important;
+    line-height:1!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldCountries .world-country-selected-card .world-country-name{
+    grid-area:name!important;
+    min-width:0!important;
+    text-align:left!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldCountries .world-country-selected-card .world-country-marquee{
+    display:block!important;
+    width:100%!important;
+    min-width:0!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+    white-space:nowrap!important;
+    animation:none!important;
+    transform:none!important;
+    font-size:.76rem!important;
+    line-height:1.02!important;
+    text-align:left!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldCountries .world-country-selected-card > em{
+    grid-area:value!important;
+    min-width:max-content!important;
+    font-size:.80rem!important;
+    line-height:1!important;
+    white-space:nowrap!important;
+    justify-self:end!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldCountries .world-country-selected-card .country-weekly-gain{
+    grid-area:meta!important;
+    display:grid!important;
+    grid-template-columns:minmax(0,.82fr) minmax(0,1.38fr)!important;
+    gap:5px!important;
+    width:100%!important;
+    min-width:0!important;
+    margin:0!important;
+    padding-top:4px!important;
+    border-top:1px solid rgba(255,221,126,.18)!important;
+    font-size:.53rem!important;
+    line-height:1.05!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldCountries .world-country-selected-card .country-weekly-current,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldCountries .world-country-selected-card .country-weekly-compare,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldCountries .world-country-selected-card .country-weekly-marquee-track,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldCountries .world-country-selected-card .country-weekly-marquee-track > span{
+    min-width:0!important;
+    width:auto!important;
+    overflow:visible!important;
+    white-space:normal!important;
+    animation:none!important;
+    transform:none!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldCountries .world-country-selected-card .country-weekly-marquee-track > span:nth-child(2){
+    display:none!important;
+  }
+
+  /* Real content after the map gives the pane a reachable lower scroll end. */
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #mapEndPullZone{
+    position:relative!important;
+    display:flex!important;
+    flex:none!important;
+    width:calc(100% - 20px)!important;
+    min-height:86px!important;
+    height:86px!important;
+    margin:0 auto!important;
+    padding:8px 0 10px!important;
+    overflow:visible!important;
+    background:#000!important;
+    box-shadow:none!important;
+    touch-action:none!important;
+    pointer-events:auto!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #mapEndPullZone .map-end-pull-spring,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #mapEndPullZone strong{
+    opacity:0!important;
+    visibility:hidden!important;
+    pointer-events:none!important;
+  }
+}

@@ -1,0 +1,65 @@
+/* Control ANDRIK v55.00 FINAL STABLE R68
+   Compact landscape tail + complete country comparison + portrait action restoration. */
+
+@media screen and (orientation:landscape){
+  /* R67 needed a real lower scroll end, but 178–190 px produced a large empty black field.
+     Keep only a compact 82 px reserve: enough for the yellow caption and lower green frame. */
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane > .analytics-pane-wrap.analytics-map-pane-wrap,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane > .analytics-map-pane-wrap.analytics-pane-wrap{
+    min-height:calc((100vw - 20px) * .402734375 + 82px)!important;
+    padding-bottom:0!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane > .analytics-pane-wrap.analytics-map-pane-wrap > #mapEndPullZone,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane > .analytics-map-pane-wrap.analytics-pane-wrap > #mapEndPullZone,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #mapEndPullZone{
+    width:100%!important;
+    height:82px!important;
+    min-height:82px!important;
+    max-height:82px!important;
+    margin:0!important;
+    padding:0!important;
+    background:#000!important;
+    touch-action:pan-y!important;
+  }
+}
+
+/* A known zero for the current week is still real data and stays green like the reference card. */
+body.analytics-admin-page .country-weekly-current.is-positive{color:#65efa0!important}
+
+@media screen and (orientation:portrait){
+  /* Restore both country actions after rotation or a landscape-originated DOM detach. */
+  body.analytics-admin-page.analytics-v54-46-page[data-analytics-page="map"].is-country-focus-active
+  .analytics-map-top.has-country-focus > #mapFocusActions,
+  body.analytics-admin-page.analytics-v54-46-page[data-analytics-page="map"].is-country-focus-active
+  .analytics-map-top.has-country-focus > #mapFocusActions[hidden]{
+    position:static!important;
+    inset:auto!important;
+    display:grid!important;
+    visibility:visible!important;
+    opacity:1!important;
+    pointer-events:auto!important;
+    width:100%!important;
+    max-width:none!important;
+    height:auto!important;
+    min-height:0!important;
+    margin:10px 0 0!important;
+    padding:0!important;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:10px!important;
+    overflow:visible!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page[data-analytics-page="map"].is-country-focus-active
+  .analytics-map-top.has-country-focus > #mapFocusActions .map-focus-action{
+    display:flex!important;
+    width:100%!important;
+    min-width:0!important;
+    min-height:112px!important;
+    padding:14px 10px!important;
+    flex-direction:column!important;
+    align-items:center!important;
+    justify-content:center!important;
+    text-align:center!important;
+    white-space:normal!important;
+    border-radius:22px!important;
+  }
+}

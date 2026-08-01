@@ -1,0 +1,167 @@
+/* Control ANDRIK v55.00 FINAL STABLE R76
+   Portrait geometry lock + reliable landscape country caption. */
+
+#landscapeCountryLabelR72,
+#landscapeCountryLabelR73,
+#landscapeCountryLabelR74{
+  display:none!important;
+  visibility:hidden!important;
+  opacity:0!important;
+  pointer-events:none!important;
+}
+
+@media screen and (orientation:portrait){
+  html,
+  body.analytics-admin-page,
+  body.analytics-admin-page .analytics-swipe-main,
+  body.analytics-admin-page .analytics-swipe-viewport,
+  body.analytics-admin-page .analytics-swipe-track,
+  body.analytics-admin-page .analytics-map-pane,
+  body.analytics-admin-page .analytics-map-pane .analytics-map-pane-wrap,
+  body.analytics-admin-page .analytics-map-pane .analytics-compact-header,
+  body.analytics-admin-page .analytics-map-pane .analytics-map-top,
+  body.analytics-admin-page .analytics-map-pane .map-landscape-title-row,
+  body.analytics-admin-page .analytics-map-pane .map-title-pyramid,
+  body.analytics-admin-page .analytics-map-pane .map-title-pyramid > *,
+  body.analytics-admin-page .analytics-map-pane #worldMap{
+    overflow-anchor:none!important;
+    scroll-behavior:auto!important;
+    animation:none!important;
+    transition:none!important;
+    will-change:auto!important;
+  }
+
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane > .analytics-map-pane-wrap.r76-portrait-locked,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane > .analytics-pane-wrap.analytics-map-pane-wrap.r76-portrait-locked{
+    position:relative!important;
+    display:block!important;
+    box-sizing:border-box!important;
+    width:100%!important;
+    min-height:var(--r76-wrap-height,100%)!important;
+    height:auto!important;
+    max-height:none!important;
+    margin:0!important;
+    padding-top:var(--r76-wrap-pad-top,3px)!important;
+    padding-bottom:0!important;
+    transform:none!important;
+    translate:none!important;
+    gap:0!important;
+    justify-content:flex-start!important;
+    align-content:flex-start!important;
+  }
+
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane > .analytics-map-pane-wrap.r76-portrait-locked > .analytics-compact-header,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane > .analytics-pane-wrap.analytics-map-pane-wrap.r76-portrait-locked > .analytics-compact-header{
+    position:relative!important;
+    inset:auto!important;
+    box-sizing:border-box!important;
+    width:100%!important;
+    height:var(--r76-header-height,auto)!important;
+    min-height:var(--r76-header-height,0px)!important;
+    max-height:var(--r76-header-height,none)!important;
+    margin:0!important;
+    transform:none!important;
+    translate:none!important;
+  }
+
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane > .analytics-map-pane-wrap.r76-portrait-locked > .analytics-map-top,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane > .analytics-pane-wrap.analytics-map-pane-wrap.r76-portrait-locked > .analytics-map-top{
+    position:absolute!important;
+    top:var(--r76-map-card-top,0px)!important;
+    left:50%!important;
+    right:auto!important;
+    bottom:auto!important;
+    box-sizing:border-box!important;
+    width:var(--r76-map-card-width,calc(100vw - 8px))!important;
+    max-width:none!important;
+    min-height:0!important;
+    margin:0!important;
+    transform:translate3d(-50%,0,0)!important;
+    translate:none!important;
+    align-self:auto!important;
+  }
+
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .map-landscape-title-row{
+    box-sizing:border-box!important;
+    height:var(--r76-title-height,108px)!important;
+    min-height:var(--r76-title-height,108px)!important;
+    max-height:var(--r76-title-height,108px)!important;
+    margin-top:0!important;
+    margin-bottom:6px!important;
+    transform:none!important;
+    translate:none!important;
+  }
+
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .map-title-pyramid,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .map-title-pyramid > .eyeline,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .map-title-pyramid > h2,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .map-title-pyramid > p,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMapPeriod,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .world-map-total,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .map-monthly-open{
+    transform:none!important;
+    translate:none!important;
+  }
+
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top.has-country-focus #worldMap,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top:not(.has-country-focus) #worldMap{
+    box-sizing:border-box!important;
+    height:var(--r76-map-height,auto)!important;
+    min-height:var(--r76-map-height,0px)!important;
+    max-height:var(--r76-map-height,none)!important;
+    margin-top:0!important;
+    margin-bottom:0!important;
+    transform:none!important;
+    translate:none!important;
+  }
+
+  #landscapeCountryLabelR76{
+    display:none!important;
+    visibility:hidden!important;
+    opacity:0!important;
+  }
+}
+
+@media screen and (orientation:landscape){
+  #landscapeCountryLabelR76{
+    position:fixed!important;
+    z-index:2147483675!important;
+    display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    gap:7px!important;
+    box-sizing:border-box!important;
+    min-width:0!important;
+    max-width:min(calc(100vw - 28px),360px)!important;
+    margin:0!important;
+    padding:2px 7px 3px!important;
+    border:0!important;
+    border-radius:999px!important;
+    background:rgba(3,10,15,.30)!important;
+    box-shadow:none!important;
+    pointer-events:none!important;
+    transform:translateX(-50%)!important;
+    white-space:nowrap!important;
+    opacity:1!important;
+  }
+  #landscapeCountryLabelR76[hidden]{display:none!important}
+  #landscapeCountryLabelR76 .r76-country-flag{
+    flex:none!important;
+    font-size:1.04rem!important;
+    line-height:1!important;
+    filter:drop-shadow(0 0 5px rgba(255,190,64,.48))!important;
+  }
+  #landscapeCountryLabelR76 .r76-country-name{
+    min-width:0!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+    color:#ffd05c!important;
+    font-size:clamp(.84rem,1.55vw,1rem)!important;
+    font-weight:950!important;
+    letter-spacing:.02em!important;
+    line-height:1.08!important;
+    text-align:center!important;
+    text-shadow:0 0 7px rgba(255,192,60,.65),0 0 15px rgba(255,156,35,.38)!important;
+  }
+}

@@ -1,0 +1,20 @@
+/* Control ANDRIK player v54.53 — album swipe navigation */
+.library,.scroll-cue{display:none!important}
+.album-swipe-switcher{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:9px;margin-top:12px;padding-top:10px;border-top:1px solid rgba(151,207,234,.12)}
+.album-swipe-side{min-width:0;min-height:54px;padding:9px 11px;border:1px solid rgba(145,205,234,.18);border-radius:16px;background:rgba(7,23,34,.72);color:#dff5ff;text-align:left;overflow:hidden}
+.album-swipe-next{text-align:right}.album-swipe-side small{display:block;color:#7697a9;font-size:.58rem;font-weight:850;letter-spacing:.07em;text-transform:uppercase}.album-swipe-side strong{display:block;margin-top:4px;overflow:hidden;color:#c9eafb;font-size:.72rem;line-height:1.15;text-overflow:ellipsis;white-space:nowrap}.album-swipe-side:active{transform:scale(.97);border-color:rgba(255,214,102,.5)}
+.player-shell.is-album-switching .visual-side,.player-shell.is-album-switching .control-side{animation:albumSwitchPulse .38s ease}
+@keyframes albumSwitchPulse{0%{opacity:1;transform:translateX(0)}45%{opacity:.72;transform:translateX(7px)}100%{opacity:1;transform:translateX(0)}}
+@media(max-width:760px){
+ body:not(.site-mode) .player-shell{height:auto!important;min-height:calc(100svh - 70px - env(safe-area-inset-top) - env(safe-area-inset-bottom))!important;grid-template-rows:minmax(225px,39svh) auto!important;overflow:visible!important}
+ body:not(.site-mode) .visual-side{min-height:225px!important}
+ body:not(.site-mode) .control-side{min-height:0!important;padding:11px 13px 13px!important}
+ body:not(.site-mode) .status-row{margin-bottom:7px!important}
+ body:not(.site-mode) .track-title{margin-top:4px!important;font-size:clamp(1.48rem,7.4vw,2.15rem)!important;line-height:.96!important}
+ body:not(.site-mode) .progress-area{margin-top:10px!important}
+ body:not(.site-mode) .transport{margin-top:9px!important}
+ body:not(.site-mode) .collection-actions{margin-top:9px!important;padding-top:8px!important}
+ body:not(.site-mode) .track-community-actions{margin-top:8px!important}
+ .album-swipe-switcher{margin-top:8px;padding-top:8px;gap:7px}.album-swipe-side{min-height:49px;padding:8px 9px}.album-swipe-side strong{font-size:.67rem}
+}
+@media(max-width:390px){body:not(.site-mode) .player-shell{grid-template-rows:minmax(205px,36svh) auto!important}.album-swipe-side small{font-size:.52rem}.album-swipe-side strong{font-size:.62rem}}

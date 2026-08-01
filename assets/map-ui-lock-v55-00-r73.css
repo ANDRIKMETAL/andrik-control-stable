@@ -1,0 +1,216 @@
+/* Control ANDRIK v55.00 FINAL STABLE R73
+   Portrait static map header/frame lock + landscape country label. */
+
+@media screen and (orientation:portrait){
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane > .analytics-pane-wrap.analytics-map-pane-wrap,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane > .analytics-map-pane-wrap.analytics-pane-wrap,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-pane-wrap{
+    display:flex!important;
+    flex-direction:column!important;
+    align-items:stretch!important;
+    gap:0!important;
+  }
+
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-compact-header{
+    flex:0 0 auto!important;
+    margin:0!important;
+    padding:0 0 6px!important;
+    min-height:0!important;
+    max-height:none!important;
+    transform:none!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-compact-header>.eyeline{
+    display:block!important;
+    margin:0 0 2px!important;
+    text-align:center!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-compact-header>h1{
+    margin:0!important;
+    text-align:center!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-compact-header>p{
+    margin:6px 0 10px!important;
+    text-align:center!important;
+  }
+
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #analyticsAuthStrip{
+    box-sizing:border-box!important;
+    width:100%!important;
+    min-height:40px!important;
+    height:40px!important;
+    margin:0 auto 10px!important;
+    padding:5px 10px!important;
+    transform:none!important;
+  }
+
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top.has-country-focus,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top:not(.has-country-focus){
+    position:relative!important;
+    left:50%!important;
+    width:calc(100vw - 8px)!important;
+    max-width:none!important;
+    margin:0!important;
+    transform:translateX(-50%)!important;
+    padding:10px 10px 10px!important;
+    border-radius:22px!important;
+  }
+
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top>.map-landscape-title-row,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top.has-country-focus>.map-landscape-title-row,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top:not(.has-country-focus)>.map-landscape-title-row{
+    display:grid!important;
+    grid-template-columns:minmax(92px,auto) minmax(0,1fr) 52px!important;
+    grid-template-areas:
+      "total geography calendar"
+      "title title title"
+      "period period period"!important;
+    align-items:center!important;
+    justify-items:stretch!important;
+    column-gap:8px!important;
+    row-gap:3px!important;
+    min-height:108px!important;
+    height:108px!important;
+    max-height:108px!important;
+    margin:0 0 6px!important;
+    padding:0 4px!important;
+  }
+
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .map-title-pyramid{
+    display:contents!important;
+    padding:0!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .map-title-pyramid>.eyeline{
+    grid-area:geography!important;
+    position:relative!important;
+    inset:auto!important;
+    top:auto!important;
+    left:auto!important;
+    justify-self:center!important;
+    align-self:center!important;
+    margin:0!important;
+    transform:none!important;
+    text-align:center!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .map-title-pyramid>h2{
+    grid-area:title!important;
+    align-self:center!important;
+    justify-self:center!important;
+    width:100%!important;
+    margin:2px 0 0!important;
+    text-align:center!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .map-title-pyramid>p,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMapPeriod{
+    grid-area:period!important;
+    align-self:start!important;
+    justify-self:center!important;
+    width:100%!important;
+    margin:0!important;
+    padding:0 2px!important;
+    text-align:center!important;
+  }
+
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .world-map-total{
+    grid-area:total!important;
+    position:relative!important;
+    inset:auto!important;
+    left:auto!important;
+    top:auto!important;
+    right:auto!important;
+    bottom:auto!important;
+    justify-self:start!important;
+    align-self:center!important;
+    transform:none!important;
+    margin:0!important;
+  }
+
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .map-monthly-open{
+    grid-area:calendar!important;
+    position:relative!important;
+    inset:auto!important;
+    left:auto!important;
+    top:auto!important;
+    right:auto!important;
+    bottom:auto!important;
+    justify-self:end!important;
+    align-self:center!important;
+    transform:none!important;
+    margin:0!important;
+  }
+
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top.has-country-focus #worldMap,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top:not(.has-country-focus) #worldMap{
+    margin:0 auto!important;
+  }
+
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldCountries{
+    margin-top:8px!important;
+  }
+
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #mapFocusActions{
+    margin-top:10px!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #mapFocusActions .map-focus-action{
+    min-height:96px!important;
+    font-size:clamp(.88rem,4vw,1rem)!important;
+    line-height:1.12!important;
+  }
+}
+
+@media screen and (orientation:landscape){
+  #landscapeCountryLabelR73{
+    position:fixed!important;
+    z-index:2147483660!important;
+    display:flex!important;
+    align-items:center!important;
+    gap:6px!important;
+    max-width:min(calc(100vw - 26px),340px)!important;
+    min-width:0!important;
+    padding:0!important;
+    margin:0!important;
+    border:0!important;
+    background:transparent!important;
+    box-shadow:none!important;
+    pointer-events:none!important;
+    transform:translateX(-50%)!important;
+    white-space:nowrap!important;
+  }
+  #landscapeCountryLabelR73[hidden]{display:none!important}
+  #landscapeCountryLabelR73 .r73-country-dot{
+    width:9px!important;
+    height:9px!important;
+    min-width:9px!important;
+    min-height:9px!important;
+    border-radius:50%!important;
+    background:radial-gradient(circle at 35% 35%,#fff5a6 0%,#ffd54f 42%,#ffae00 100%)!important;
+    box-shadow:0 0 8px rgba(255,209,77,.95),0 0 16px rgba(255,170,0,.55)!important;
+    flex:none!important;
+  }
+  #landscapeCountryLabelR73 .r73-country-flag{
+    font-size:1rem!important;
+    line-height:1!important;
+    filter:drop-shadow(0 0 5px rgba(255,190,64,.45))!important;
+    flex:none!important;
+  }
+  #landscapeCountryLabelR73 .r73-country-name{
+    min-width:0!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+    color:#ffcf57!important;
+    font-size:clamp(.8rem,1.45vw,.96rem)!important;
+    font-weight:900!important;
+    letter-spacing:.02em!important;
+    line-height:1.08!important;
+    text-shadow:0 0 7px rgba(255,191,60,.55),0 0 13px rgba(255,159,39,.30)!important;
+  }
+}
+
+@media screen and (orientation:portrait){
+  #landscapeCountryLabelR73{
+    display:none!important;
+    visibility:hidden!important;
+    opacity:0!important;
+  }
+}

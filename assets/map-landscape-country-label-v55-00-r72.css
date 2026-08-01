@@ -1,0 +1,79 @@
+/* Control ANDRIK v55.00 FINAL STABLE R72
+   Landscape focused-country label + light portrait stabilizer. */
+
+@media screen and (orientation:landscape){
+  /* Old hidden data card stays fully suppressed; R72 uses a compact glowing label. */
+  #landscapeCountryCardR69{
+    display:none!important;
+    visibility:hidden!important;
+    opacity:0!important;
+    pointer-events:none!important;
+  }
+
+  #landscapeCountryLabelR72{
+    position:fixed!important;
+    z-index:2147483650!important;
+    display:flex!important;
+    align-items:center!important;
+    gap:7px!important;
+    min-width:0!important;
+    max-width:min(calc(100vw - 28px),420px)!important;
+    padding:0!important;
+    margin:0!important;
+    border:0!important;
+    background:transparent!important;
+    box-shadow:none!important;
+    pointer-events:none!important;
+    transform:translateX(-50%)!important;
+    white-space:nowrap!important;
+  }
+  #landscapeCountryLabelR72[hidden]{display:none!important}
+  #landscapeCountryLabelR72 .r72-country-dot{
+    width:9px!important;
+    height:9px!important;
+    min-width:9px!important;
+    min-height:9px!important;
+    border-radius:50%!important;
+    background:radial-gradient(circle at 35% 35%,#fff5a6 0%,#ffd54f 40%,#ffae00 100%)!important;
+    box-shadow:0 0 8px rgba(255,209,77,.95),0 0 16px rgba(255,170,0,.55)!important;
+    flex:none!important;
+  }
+  #landscapeCountryLabelR72 .r72-country-flag{
+    font-size:1rem!important;
+    line-height:1!important;
+    filter:drop-shadow(0 0 5px rgba(255,190,64,.45))!important;
+    flex:none!important;
+  }
+  #landscapeCountryLabelR72 .r72-country-name{
+    min-width:0!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+    color:#ffcf57!important;
+    font-size:clamp(.80rem,1.55vw,.96rem)!important;
+    font-weight:900!important;
+    letter-spacing:.02em!important;
+    line-height:1.08!important;
+    text-shadow:0 0 7px rgba(255,191,60,.55),0 0 13px rgba(255,159,39,.30)!important;
+  }
+}
+
+@media screen and (orientation:portrait){
+  /* Reduce visible jitter: keep the title stack and frame from animating independently. */
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .world-map-card,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .map-landscape-title-row,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .admin-card-title-row,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldCountries,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #countryGrowthToggle,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #mapFocusActions{
+    animation:none!important;
+    transition:none!important;
+    will-change:auto!important;
+  }
+
+  #landscapeCountryLabelR72{
+    display:none!important;
+    visibility:hidden!important;
+    opacity:0!important;
+  }
+}

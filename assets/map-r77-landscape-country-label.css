@@ -1,0 +1,69 @@
+/* Control ANDRIK v55.00 FINAL STABLE R77
+   Reliable landscape label restored from the R73 approach.
+   No leading yellow dot: flag + current country name only. */
+
+#landscapeCountryLabelR72,
+#landscapeCountryLabelR73,
+#landscapeCountryLabelR74,
+#landscapeCountryLabelR76{
+  display:none!important;
+  visibility:hidden!important;
+  opacity:0!important;
+  pointer-events:none!important;
+}
+
+@media screen and (orientation:landscape){
+  #landscapeCountryLabelR77{
+    position:fixed!important;
+    z-index:2147483690!important;
+    display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    gap:7px!important;
+    box-sizing:border-box!important;
+    max-width:min(calc(100vw - 24px),360px)!important;
+    min-width:0!important;
+    margin:0!important;
+    padding:2px 7px 3px!important;
+    border:0!important;
+    border-radius:999px!important;
+    background:rgba(2,9,14,.18)!important;
+    box-shadow:none!important;
+    pointer-events:none!important;
+    transform:translateX(-50%)!important;
+    white-space:nowrap!important;
+    opacity:1!important;
+  }
+
+  #landscapeCountryLabelR77[hidden]{
+    display:none!important;
+  }
+
+  #landscapeCountryLabelR77 .r77-country-flag{
+    flex:none!important;
+    font-size:1.04rem!important;
+    line-height:1!important;
+    filter:drop-shadow(0 0 5px rgba(255,190,64,.48))!important;
+  }
+
+  #landscapeCountryLabelR77 .r77-country-name{
+    min-width:0!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+    color:#ffd05c!important;
+    font-size:clamp(.84rem,1.55vw,1rem)!important;
+    font-weight:950!important;
+    letter-spacing:.02em!important;
+    line-height:1.08!important;
+    text-align:center!important;
+    text-shadow:0 0 7px rgba(255,192,60,.68),0 0 15px rgba(255,156,35,.38)!important;
+  }
+}
+
+@media screen and (orientation:portrait){
+  #landscapeCountryLabelR77{
+    display:none!important;
+    visibility:hidden!important;
+    opacity:0!important;
+  }
+}

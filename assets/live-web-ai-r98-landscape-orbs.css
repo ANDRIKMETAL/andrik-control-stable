@@ -1,0 +1,44 @@
+/* Live Web AI FINAL R98 — landscape overview only.
+   Quiet breathing motion for blue audience dots. The selected-country view,
+   frame, map geometry and Control header are intentionally untouched. */
+@media screen and (orientation:landscape){
+  @keyframes liveWebAiR98LandscapeOrb{
+    0%,100%{
+      transform:translate3d(0,0,0) scale(.98);
+      opacity:.86;
+      box-shadow:0 0 0 3px rgba(115,219,255,.045),0 0 13px rgba(91,215,255,.56),0 0 23px rgba(91,215,255,.16);
+    }
+    50%{
+      transform:translate3d(0,-1.25px,0) scale(1.075);
+      opacity:1;
+      box-shadow:0 0 0 5px rgba(115,219,255,.026),0 0 19px rgba(91,215,255,.72),0 0 31px rgba(91,215,255,.23);
+    }
+  }
+
+  body.analytics-admin-page.analytics-v54-46-page
+  #worldMap:not(.is-country-focused)
+  .world-map-dot:not(.is-selected) i{
+    animation:liveWebAiR98LandscapeOrb 3.55s ease-in-out infinite!important;
+    animation-play-state:running!important;
+    transform-origin:50% 50%!important;
+    filter:none!important;
+    will-change:transform,opacity!important;
+  }
+
+  body.analytics-admin-page.analytics-v54-46-page
+  #worldMap:not(.is-country-focused)
+  .world-map-dot:nth-of-type(2n) i{animation-delay:-.88s!important}
+  body.analytics-admin-page.analytics-v54-46-page
+  #worldMap:not(.is-country-focused)
+  .world-map-dot:nth-of-type(3n) i{animation-delay:-1.76s!important}
+  body.analytics-admin-page.analytics-v54-46-page
+  #worldMap:not(.is-country-focused)
+  .world-map-dot:nth-of-type(5n) i{animation-delay:-2.62s!important}
+
+  body.analytics-admin-page.analytics-v54-46-page
+  .world-map-shell.is-map-interacting
+  #worldMap:not(.is-country-focused)
+  .world-map-dot i{
+    animation-play-state:paused!important;
+  }
+}

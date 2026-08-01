@@ -1,0 +1,119 @@
+/* Control ANDRIK v55.00 FINAL STABLE R85
+   Standalone mobile player: one real viewport, no page scrollbar and no empty tail. */
+
+@media screen and (max-width:860px){
+  html.r85-player-fit,
+  html.r85-player-fit body.standalone-player{
+    width:100%!important;
+    height:var(--r85-player-vh,100dvh)!important;
+    min-height:var(--r85-player-vh,100dvh)!important;
+    max-height:var(--r85-player-vh,100dvh)!important;
+    margin:0!important;
+    padding:0!important;
+    overflow:hidden!important;
+    overscroll-behavior:none!important;
+    scroll-behavior:auto!important;
+    scrollbar-width:none!important;
+  }
+
+  html.r85-player-fit::-webkit-scrollbar,
+  html.r85-player-fit body.standalone-player::-webkit-scrollbar,
+  html.r85-player-fit body.standalone-player .app::-webkit-scrollbar,
+  html.r85-player-fit body.standalone-player .player-shell::-webkit-scrollbar{
+    display:none!important;
+    width:0!important;
+    height:0!important;
+  }
+
+  html.r85-player-fit body.standalone-player .app{
+    box-sizing:border-box!important;
+    display:flex!important;
+    flex-direction:column!important;
+    width:min(100% - 14px,1180px)!important;
+    height:var(--r85-player-vh,100dvh)!important;
+    min-height:0!important;
+    max-height:var(--r85-player-vh,100dvh)!important;
+    margin:0 auto!important;
+    padding:6px 0 0!important;
+    overflow:hidden!important;
+  }
+
+  html.r85-player-fit body.standalone-player .topbar{
+    flex:0 0 58px!important;
+    width:100%!important;
+    height:58px!important;
+    min-height:58px!important;
+    max-height:58px!important;
+    margin:0 0 6px!important;
+    overflow:visible!important;
+  }
+
+  html.r85-player-fit body.standalone-player .player-shell{
+    position:relative!important;
+    inset:auto!important;
+    flex:1 1 auto!important;
+    box-sizing:border-box!important;
+    width:100%!important;
+    height:auto!important;
+    min-height:0!important;
+    max-height:none!important;
+    margin:0!important;
+    grid-template-columns:1fr!important;
+    grid-template-rows:minmax(0,42%) minmax(0,58%)!important;
+    border-radius:24px 24px 0 0!important;
+    overflow:hidden!important;
+    overscroll-behavior:none!important;
+  }
+
+  html.r85-player-fit body.standalone-player .visual-side,
+  html.r85-player-fit body.standalone-player .control-side{
+    min-height:0!important;
+    max-height:none!important;
+    overflow:hidden!important;
+  }
+
+  html.r85-player-fit body.standalone-player .control-side{
+    box-sizing:border-box!important;
+    padding-bottom:max(8px,env(safe-area-inset-bottom))!important;
+  }
+
+  html.r85-player-fit body.standalone-player .library,
+  html.r85-player-fit body.standalone-player .keyboard-hint,
+  html.r85-player-fit body.standalone-player .scroll-cue{
+    display:none!important;
+  }
+}
+
+@media screen and (max-width:390px){
+  html.r85-player-fit body.standalone-player .app{
+    width:calc(100% - 10px)!important;
+  }
+  html.r85-player-fit body.standalone-player .player-shell{
+    grid-template-rows:minmax(0,40%) minmax(0,60%)!important;
+  }
+}
+
+@media screen and (max-width:860px) and (max-height:720px){
+  html.r85-player-fit body.standalone-player .player-shell{
+    grid-template-rows:minmax(0,36%) minmax(0,64%)!important;
+  }
+  html.r85-player-fit body.standalone-player .control-side{
+    padding-top:8px!important;
+  }
+  html.r85-player-fit body.standalone-player .status-row{
+    margin-bottom:5px!important;
+  }
+  html.r85-player-fit body.standalone-player .progress-area{
+    margin-top:7px!important;
+  }
+  html.r85-player-fit body.standalone-player .transport{
+    margin-top:6px!important;
+  }
+  html.r85-player-fit body.standalone-player .collection-actions{
+    margin-top:6px!important;
+    padding-top:6px!important;
+  }
+  html.r85-player-fit body.standalone-player .track-community-actions{
+    margin-top:6px!important;
+  }
+}

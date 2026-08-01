@@ -1,0 +1,18 @@
+/* Control ANDRIK v55.00 R38 — monthly maximum chart reserves twelve chronological slots. */
+.map-monthly-bars.map-monthly-bars-r38{
+  display:grid!important;
+  grid-template-columns:repeat(12,minmax(0,1fr))!important;
+  align-items:stretch!important;
+  justify-content:stretch!important;
+  gap:10px!important;
+}
+.map-monthly-bars-r38 .map-month-column{
+  width:auto!important;
+  max-width:none!important;
+  min-width:0!important;
+  height:100%!important;
+  flex:none!important;
+}
+@media (orientation:portrait){
+  .map-monthly-bars.map-monthly-bars-r38{gap:3px!important}
+}

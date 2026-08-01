@@ -1,0 +1,100 @@
+/* Control ANDRIK v55.00 FINAL R46 — static green map frame and lighter animation layer.
+   Removes animated frame glow and expensive multi-layer repainting while preserving
+   the eye and country pulse in a cheaper transform/opacity form. */
+
+/* 1) Static calm green frame in portrait and landscape — no glow, no breathing. */
+body.analytics-admin-page .analytics-map-pane #worldMap .world-map-canvas{
+  border:1px solid rgba(73,190,119,.34)!important;
+  box-shadow:
+    inset 0 0 0 1px rgba(92,215,139,.035),
+    inset 0 0 28px rgba(0,0,0,.25)!important;
+  animation:none!important;
+  will-change:auto!important;
+  contain:paint!important;
+}
+
+/* The separator below the green header uses the same static green tone. */
+body.analytics-admin-page .control-topbar{
+  border-bottom:1px solid rgba(73,190,119,.30)!important;
+  box-shadow:none!important;
+  animation:none!important;
+  will-change:auto!important;
+}
+
+/* 2) Stop the old drifting layer: fixed positions eliminate trails and artifacts.
+      The inner light still pulses below. */
+body.analytics-admin-page .world-map-stage .world-map-dot{
+  animation:none!important;
+  filter:none!important;
+  will-change:auto!important;
+}
+
+/* 3) Cheaper pulse: animate only transform and opacity; glow itself stays static. */
+@keyframes andrikR46MapOrbLite{
+  0%,100%{transform:scale(.94);opacity:.78}
+  50%{transform:scale(1.16);opacity:1}
+}
+@keyframes andrikR46SelectedOrbLite{
+  0%,100%{transform:scale(1.24);opacity:.90}
+  50%{transform:scale(1.52);opacity:1}
+}
+@keyframes andrikR46FlagLite{
+  0%,100%{transform:scale(1);opacity:.92}
+  50%{transform:scale(1.045);opacity:1}
+}
+
+body.analytics-admin-page .world-map-stage .world-map-dot:not(.is-selected) i{
+  animation:andrikR46MapOrbLite 3.15s ease-in-out infinite!important;
+  filter:none!important;
+  box-shadow:
+    0 0 0 4px rgba(115,219,255,.055),
+    0 0 15px rgba(91,215,255,.62),
+    0 0 27px rgba(91,215,255,.20)!important;
+  will-change:auto!important;
+}
+body.analytics-admin-page .world-map-stage .world-map-dot:nth-of-type(2n):not(.is-selected) i{animation-delay:-1.05s!important}
+body.analytics-admin-page .world-map-stage .world-map-dot:nth-of-type(3n):not(.is-selected) i{animation-delay:-2.10s!important}
+
+body.analytics-admin-page .world-map-stage .world-map-dot.is-selected i{
+  animation:andrikR46SelectedOrbLite 1.55s ease-in-out infinite!important;
+  filter:none!important;
+  background:#ffd84d!important;
+  box-shadow:
+    0 0 0 6px rgba(255,216,77,.13),
+    0 0 18px 7px rgba(255,203,35,.72),
+    0 0 38px 12px rgba(255,188,18,.34)!important;
+  will-change:auto!important;
+}
+
+body.analytics-admin-page .world-country-list .world-country-flag{
+  animation:andrikR46FlagLite 3.6s ease-in-out infinite!important;
+  filter:drop-shadow(0 0 3px rgba(114,220,255,.26))!important;
+  will-change:auto!important;
+}
+body.analytics-admin-page .world-country-list .world-country-button:nth-of-type(2n) .world-country-flag{animation-delay:-1.2s!important}
+body.analytics-admin-page .world-country-list .world-country-button:nth-of-type(3n) .world-country-flag{animation-delay:-2.4s!important}
+body.analytics-admin-page .world-country-list .world-country-button.is-selected .world-country-flag{
+  filter:drop-shadow(0 0 5px rgba(255,215,70,.56)) brightness(1.08)!important;
+}
+
+/* 4) While the user touches, zooms or opens the lower panel, pause decorative motion.
+      This protects navigation responsiveness and prevents ghost trails. */
+body.analytics-admin-page .world-map-shell.is-map-interacting .world-map-dot i,
+body.analytics-admin-page .world-map-shell.is-focus-arriving .world-map-dot i,
+body.analytics-admin-page.is-map-end-pulling .world-map-dot i,
+body.analytics-admin-page.is-map-end-ready .world-map-dot i,
+body.analytics-admin-page .world-map-shell.is-map-interacting + .world-country-list .world-country-flag{
+  animation-play-state:paused!important;
+}
+
+/* Keep the eye alive, but avoid permanent compositor hints added by R44. */
+body.analytics-admin-page .control-topbar .control-center-logo::after,
+body.analytics-admin-page .control-topbar .control-center-logo .logo-ok{
+  will-change:auto!important;
+}
+
+/* Avoid animated filters on the large map bitmap during navigation. */
+body.analytics-admin-page .world-map-stage img{
+  transition:opacity .22s ease!important;
+  will-change:auto!important;
+}

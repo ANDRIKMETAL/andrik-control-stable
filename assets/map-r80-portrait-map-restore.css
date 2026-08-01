@@ -1,0 +1,19 @@
+/* Control ANDRIK v55.00 FINAL STABLE R80
+   Restore the larger portrait map composition from pre-R79,
+   keep the floating page bubble, preserve landscape inline country labels. */
+
+@media screen and (orientation:portrait){
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top{
+    width:calc(100vw - 8px)!important;
+    max-width:calc(100vw - 8px)!important;
+  }
+
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top.has-country-focus #worldMap,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top:not(.has-country-focus) #worldMap{
+    width:calc(100vw - 16px)!important;
+    max-width:calc(100vw - 16px)!important;
+    border:1px solid rgba(96,205,153,.88)!important;
+    box-shadow:0 0 0 1px rgba(96,205,153,.10), inset 0 0 18px rgba(96,205,153,.05)!important;
+  }
+}

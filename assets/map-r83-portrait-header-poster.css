@@ -1,0 +1,213 @@
+/* Control ANDRIK v55.00 FINAL STABLE R83
+   PORTRAIT ONLY: replace the conflict-prone live heading with one immutable
+   poster. Landscape remains exactly as in R82/R78. */
+
+@media screen and (orientation:portrait){
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane{
+    overflow-anchor:none!important;
+    scroll-behavior:auto!important;
+  }
+
+  /* The legacy heading stays in DOM for existing scripts, but is not rendered. */
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-compact-header{
+    display:none!important;
+  }
+
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .r83-portrait-header-poster{
+    position:sticky!important;
+    top:0!important;
+    z-index:40!important;
+    flex:0 0 154px!important;
+    display:grid!important;
+    grid-template-rows:18px 52px 30px 44px!important;
+    align-content:start!important;
+    box-sizing:border-box!important;
+    width:100%!important;
+    height:154px!important;
+    min-height:154px!important;
+    max-height:154px!important;
+    margin:0!important;
+    padding:0 0 10px!important;
+    background:linear-gradient(180deg,#000 0%,#000 82%,rgba(0,0,0,.985) 100%)!important;
+    contain:layout paint style!important;
+    isolation:isolate!important;
+    overflow:hidden!important;
+    overflow-anchor:none!important;
+    transform:translateZ(0)!important;
+    translate:none!important;
+    transition:none!important;
+    animation:none!important;
+    will-change:auto!important;
+  }
+
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .r83-poster-eyeline{
+    grid-row:1!important;
+    align-self:end!important;
+    height:18px!important;
+    margin:0!important;
+    padding:0!important;
+    color:#dff7ff!important;
+    font-family:Arial,Helvetica,sans-serif!important;
+    font-size:11px!important;
+    font-style:normal!important;
+    font-weight:800!important;
+    letter-spacing:3.2px!important;
+    line-height:18px!important;
+    text-align:center!important;
+    text-transform:uppercase!important;
+    white-space:nowrap!important;
+    text-rendering:geometricPrecision!important;
+    -webkit-font-smoothing:antialiased!important;
+    transform:none!important;
+    transition:none!important;
+    animation:none!important;
+  }
+
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .r83-poster-title{
+    grid-row:2!important;
+    align-self:center!important;
+    height:52px!important;
+    margin:0!important;
+    padding:0!important;
+    color:#fff!important;
+    font-family:Arial,Helvetica,sans-serif!important;
+    font-size:44px!important;
+    font-style:normal!important;
+    font-weight:700!important;
+    letter-spacing:-1.25px!important;
+    line-height:52px!important;
+    text-align:center!important;
+    white-space:nowrap!important;
+    text-rendering:geometricPrecision!important;
+    -webkit-font-smoothing:antialiased!important;
+    transform:none!important;
+    transition:none!important;
+    animation:none!important;
+  }
+
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .r83-poster-subtitle{
+    grid-row:3!important;
+    align-self:start!important;
+    box-sizing:border-box!important;
+    height:30px!important;
+    margin:0!important;
+    padding:0 6px!important;
+    color:#f1f5f7!important;
+    font-family:Arial,Helvetica,sans-serif!important;
+    font-size:15px!important;
+    font-style:normal!important;
+    font-weight:400!important;
+    letter-spacing:0!important;
+    line-height:24px!important;
+    text-align:center!important;
+    white-space:nowrap!important;
+    overflow:hidden!important;
+    text-overflow:clip!important;
+    text-rendering:geometricPrecision!important;
+    -webkit-font-smoothing:antialiased!important;
+    transform:none!important;
+    transition:none!important;
+    animation:none!important;
+  }
+
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .r83-poster-auth{
+    grid-row:4!important;
+    align-self:end!important;
+    display:grid!important;
+    grid-template-columns:minmax(92px,.72fr) minmax(0,1.28fr)!important;
+    align-items:center!important;
+    box-sizing:border-box!important;
+    width:100%!important;
+    height:44px!important;
+    min-height:44px!important;
+    max-height:44px!important;
+    margin:0!important;
+    padding:5px 12px!important;
+    border:1px solid rgba(146,166,181,.23)!important;
+    border-radius:22px!important;
+    background:rgba(18,22,28,.94)!important;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.025)!important;
+    overflow:hidden!important;
+    transform:none!important;
+    transition:none!important;
+    animation:none!important;
+  }
+
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .r83-poster-service{
+    min-width:0!important;
+    color:#e8eef2!important;
+    font-family:Arial,Helvetica,sans-serif!important;
+    font-size:14px!important;
+    font-weight:700!important;
+    line-height:34px!important;
+    text-align:center!important;
+    text-decoration:none!important;
+    white-space:nowrap!important;
+    overflow:hidden!important;
+    transform:none!important;
+  }
+
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .r83-poster-access{
+    min-width:0!important;
+    display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    gap:7px!important;
+    color:#dceae4!important;
+    font-family:Arial,Helvetica,sans-serif!important;
+    font-size:13px!important;
+    font-weight:700!important;
+    line-height:34px!important;
+    white-space:nowrap!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+    transform:none!important;
+  }
+
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .r83-poster-dot{
+    flex:0 0 14px!important;
+    width:14px!important;
+    height:14px!important;
+    border-radius:50%!important;
+    background:#78848c!important;
+    box-shadow:0 0 0 5px rgba(120,132,140,.09)!important;
+    transform:none!important;
+    transition:none!important;
+    animation:none!important;
+  }
+
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .r83-poster-auth.is-ok .r83-poster-dot{
+    background:#69dfa4!important;
+    box-shadow:0 0 0 5px rgba(105,223,164,.10),0 0 10px rgba(105,223,164,.22)!important;
+  }
+
+  /* R82 card geometry stays intact and starts at one deterministic position. */
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .r83-portrait-header-poster + .analytics-compact-header + .analytics-map-top,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .r83-portrait-header-poster ~ .analytics-map-top{
+    margin-top:0!important;
+    scroll-margin-top:154px!important;
+    overflow-anchor:none!important;
+  }
+}
+
+@media screen and (orientation:portrait) and (max-width:360px){
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .r83-poster-title{
+    font-size:42px!important;
+    letter-spacing:-1.1px!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .r83-poster-subtitle{
+    font-size:14px!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .r83-poster-service{
+    font-size:13px!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .r83-poster-access{
+    font-size:12px!important;
+  }
+}
+
+@media screen and (orientation:landscape){
+  body.analytics-admin-page .r83-portrait-header-poster{
+    display:none!important;
+  }
+}

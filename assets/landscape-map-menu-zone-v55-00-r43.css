@@ -1,0 +1,72 @@
+/* Control ANDRIK v55.00 FINAL R43 — landscape bottom pull zone + compact focused country card. */
+@media screen and (orientation:landscape){
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane > .analytics-pane-wrap > #mapEndPullZone,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane > .analytics-map-pane-wrap > #mapEndPullZone{
+    position:relative!important;
+    left:auto!important;
+    bottom:auto!important;
+    z-index:60!important;
+    box-sizing:border-box!important;
+    display:flex!important;
+    flex-direction:column!important;
+    justify-content:flex-end!important;
+    align-items:center!important;
+    width:calc(100% - 10px)!important;
+    max-width:none!important;
+    min-height:84px!important;
+    height:84px!important;
+    margin:14px auto 0!important;
+    padding:8px 12px 12px!important;
+    transform:none!important;
+    overflow:visible!important;
+    touch-action:none!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane > .analytics-pane-wrap > #mapEndPullZone strong,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane > .analytics-map-pane-wrap > #mapEndPullZone strong{
+    display:block!important;
+    margin-top:6px!important;
+    font-size:.64rem!important;
+    line-height:1.15!important;
+    letter-spacing:.08em!important;
+    text-align:center!important;
+    opacity:.92!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane > .analytics-pane-wrap > #mapEndPullZone .map-end-pull-spring,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane > .analytics-map-pane-wrap > #mapEndPullZone .map-end-pull-spring{
+    height:30px!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane > .analytics-pane-wrap > #mapEndPullZone .map-end-chevron,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane > .analytics-map-pane-wrap > #mapEndPullZone .map-end-chevron{
+    top:0!important;
+    font-size:1.08rem!important;
+  }
+
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top.has-country-focus > #worldCountries{
+    margin-top:3px!important;
+    gap:4px!important;
+    padding-top:0!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top.has-country-focus .world-country-button.is-selected{
+    width:min(58vw, calc(100% - 20px))!important;
+    max-width:560px!important;
+    min-height:80px!important;
+    margin:2px auto 0!important;
+    padding:9px 14px 8px!important;
+    border-radius:19px!important;
+    gap:7px!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top.has-country-focus .world-country-button.is-selected .world-country-marquee{
+    font-size:.90rem!important;
+    line-height:1.05!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top.has-country-focus .world-country-button.is-selected em{
+    font-size:.92rem!important;
+    line-height:1!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top.has-country-focus .country-weekly-gain{
+    margin-top:4px!important;
+    gap:8px!important;
+    font-size:.70rem!important;
+    line-height:1.08!important;
+  }
+}
