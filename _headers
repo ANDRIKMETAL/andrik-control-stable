@@ -660,3 +660,24 @@
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
   X-Robots-Tag: noindex, nofollow,noarchive
 
+# R133 — updater player + exact headers + restored wide landscape frame
+/site-update-admin.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/protection-admin.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/attack-map.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/admin-sections.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/assets/unified-glow-r133.css
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/assets/unified-glow-r133.js
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/assets/control-player-bridge-r133.css
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/assets/control-player-bridge-r133.js
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/cache-reset-v55-00-final-r133.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+  X-Robots-Tag: noindex, nofollow,noarchive
+
