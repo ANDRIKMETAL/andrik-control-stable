@@ -1,0 +1,80 @@
+/* Control ANDRIK v54.83 — accurate daily subscriber metric UI, compact update note,
+   centered detail headers, and menu swipe available from the screen center. */
+
+/* Daily-summary footnote no longer runs under the fixed Send button. */
+.control-home-page .control-summary-page .control-home-updated{
+  box-sizing:border-box!important;
+  width:calc(100% - 230px)!important;
+  max-width:240px!important;
+  min-height:18px!important;
+  margin:9px auto 0 18px!important;
+  padding:0!important;
+  color:#6d8492!important;
+  font-size:.66rem!important;
+  line-height:1.2!important;
+  letter-spacing:.01em!important;
+  text-align:left!important;
+  white-space:nowrap!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+}
+
+/* The three detail-page headers use one centered geometry. */
+.admin-service-page .control-header,
+.lyrics-admin-page .control-header,
+body.comments-admin-page:not(.analytics-admin-page):not(.control-home-page):not(.admin-service-page):not(.lyrics-admin-page) .control-header{
+  width:100%!important;
+  max-width:760px!important;
+  margin:0 auto 20px!important;
+  padding-top:7px!important;
+  text-align:center!important;
+}
+.admin-service-page .control-header .eyeline,
+.lyrics-admin-page .control-header .eyeline,
+body.comments-admin-page:not(.analytics-admin-page):not(.control-home-page):not(.admin-service-page):not(.lyrics-admin-page) .control-header .eyeline{
+  display:block!important;
+  margin:0 auto 8px!important;
+  text-align:center!important;
+}
+.admin-service-page .control-header h1,
+.lyrics-admin-page .control-header h1,
+body.comments-admin-page:not(.analytics-admin-page):not(.control-home-page):not(.admin-service-page):not(.lyrics-admin-page) .control-header h1{
+  margin:0 auto 12px!important;
+  text-align:center!important;
+  text-wrap:balance!important;
+}
+.admin-service-page .control-header p,
+.lyrics-admin-page .control-header p,
+body.comments-admin-page:not(.analytics-admin-page):not(.control-home-page):not(.admin-service-page):not(.lyrics-admin-page) .control-header p{
+  max-width:34ch!important;
+  margin:0 auto!important;
+  text-align:center!important;
+  text-wrap:balance!important;
+}
+.lyrics-admin-page .control-header h1{
+  font-size:clamp(2rem,9.2vw,3.3rem)!important;
+  line-height:.98!important;
+}
+
+/* Menu page accepts the return-to-map pull from cards in the screen centre.
+   Actual link taps remain active because JS suppresses them only after a real drag. */
+.control-home-page.control-menu-mode .control-menu-page,
+.control-home-page.control-menu-mode .control-menu-page .control-swipe-page-inner,
+.control-home-page.control-menu-mode .control-home-menu{
+  touch-action:pan-y!important;
+}
+
+@media(max-width:430px){
+  .control-home-page .control-summary-page .control-home-updated{
+    width:calc(100% - 205px)!important;
+    max-width:190px!important;
+    margin-left:12px!important;
+    font-size:.62rem!important;
+  }
+  .admin-service-page .control-header,
+  .lyrics-admin-page .control-header,
+  body.comments-admin-page:not(.analytics-admin-page):not(.control-home-page):not(.admin-service-page):not(.lyrics-admin-page) .control-header{
+    padding-left:6px!important;
+    padding-right:6px!important;
+  }
+}

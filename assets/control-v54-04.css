@@ -1,0 +1,189 @@
+/* Control ANDRIK v54.03 — reliable map + swipe fix */
+
+/* Statistics: three horizontal pages, the map is the default centre page. */
+.analytics-swipe-page{overflow:hidden!important;height:100dvh!important}
+.analytics-swipe-page .analytics-swipe-main{position:relative;height:var(--analytics-swipe-height,calc(100dvh - 86px));overflow:hidden;padding:0!important}
+.analytics-swipe-page .analytics-swipe-viewport{width:100%;height:100%;overflow:hidden;touch-action:pan-y}
+.analytics-swipe-page .analytics-swipe-track{display:flex;height:100%;will-change:transform;transform:translate3d(-100vw,0,0)}
+.analytics-swipe-page .analytics-swipe-pane{flex:0 0 100vw;width:100vw;height:100%;overflow:hidden;overscroll-behavior:contain}
+.analytics-swipe-page .analytics-swipe-pane.is-scrollable{overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain}
+.analytics-swipe-page .analytics-pane-wrap{max-width:760px!important;height:100%;padding:12px 14px 44px!important}
+.analytics-swipe-page .analytics-site-pane .analytics-pane-wrap{height:auto;min-height:100%;padding-top:14px!important}
+.analytics-swipe-page .analytics-map-pane-wrap,.analytics-swipe-page .analytics-hub-pane-wrap{display:flex;flex-direction:column;min-height:0;padding-bottom:38px!important}
+.analytics-swipe-page .analytics-compact-header{flex:0 0 auto;text-align:center;margin:0 0 9px;padding:0 2px}
+.analytics-swipe-page .analytics-compact-header .eyeline{display:block;margin-bottom:2px;font-size:.67rem;letter-spacing:.24em}
+.analytics-swipe-page .analytics-compact-header h1{margin:0!important;font-size:clamp(2rem,9vw,2.8rem)!important;line-height:1!important}
+.analytics-swipe-page .analytics-compact-header p{margin:5px 0 8px!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:.72rem!important;line-height:1.2!important}
+.analytics-swipe-page .analytics-auth-inline{display:flex!important;align-items:center!important;justify-content:center!important;width:min(100%,390px)!important;margin:0 auto!important;padding:8px 11px!important;border-radius:15px!important;gap:8px!important;white-space:nowrap!important;overflow:visible!important}
+.analytics-swipe-page .analytics-auth-inline strong{max-width:none!important;overflow:visible!important;text-overflow:clip!important;font-size:.72rem!important}
+.analytics-swipe-page .analytics-auth-inline a{font-size:.68rem!important;white-space:nowrap!important}
+.analytics-swipe-page .analytics-map-top{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;margin:0!important;padding:13px 12px 11px!important;border-radius:25px!important;overflow:hidden!important}
+.analytics-swipe-page .analytics-map-top .admin-card-title-row{flex:0 0 auto;margin:0 0 5px!important}
+.analytics-swipe-page .analytics-map-top .eyeline{font-size:.66rem!important}
+.analytics-swipe-page .analytics-map-top h2{margin:3px 0 2px!important;font-size:clamp(1.65rem,7vw,2.1rem)!important;line-height:1.05!important}
+.analytics-swipe-page .analytics-map-top p{margin:0!important;font-size:.7rem!important;line-height:1.25!important}
+.analytics-swipe-page .world-map-shell{flex:1 1 auto;min-height:150px;margin:7px 0 0!important;display:flex;align-items:center}
+.analytics-swipe-page .world-map-canvas{width:100%;height:100%!important;min-height:150px!important;max-height:34vh!important;aspect-ratio:auto!important;border-radius:18px!important}
+.analytics-swipe-page .world-map-canvas img{width:100%;height:100%;object-fit:contain!important}
+.analytics-swipe-page .world-country-list{flex:0 0 auto;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:5px!important;margin:8px 0 0!important}
+.analytics-swipe-page .world-country-list span{min-height:34px;padding:6px 9px!important;border-radius:14px!important}
+.analytics-swipe-page .world-country-list b,.analytics-swipe-page .world-country-list em{font-size:.71rem!important}
+.analytics-swipe-page .analytics-swipe-hint{display:flex;justify-content:space-between;gap:12px;margin-top:7px;padding:0 5px;color:#7890a0;font-size:.58rem;letter-spacing:.04em}
+.analytics-swipe-page .analytics-hub-header{flex:0 0 auto;text-align:center;margin:0 0 9px}
+.analytics-swipe-page .analytics-hub-header h1{font-size:clamp(1.9rem,8vw,2.55rem)!important;line-height:1;margin:2px 0 4px!important}
+.analytics-swipe-page .analytics-hub-header p{font-size:.72rem!important;line-height:1.2!important;margin:0!important}
+.analytics-swipe-page .analytics-hub-pane .analytics-focus-stack{flex:1 1 auto;min-height:0;display:grid;grid-template-rows:repeat(2,minmax(0,1fr));gap:9px!important;margin:0!important}
+.analytics-swipe-page .analytics-hub-pane .analytics-focus-card{display:flex;flex-direction:column;min-height:0;margin:0!important;padding:12px!important;border-radius:23px!important;overflow:hidden}
+.analytics-swipe-page .analytics-hub-pane .analytics-focus-card .admin-card-title-row{flex:0 0 auto;margin:0!important}
+.analytics-swipe-page .analytics-hub-pane .analytics-focus-card .eyeline{font-size:.62rem!important}
+.analytics-swipe-page .analytics-hub-pane .analytics-focus-card h2{font-size:clamp(1.4rem,6.2vw,1.9rem)!important;line-height:1.05;margin:3px 0 2px!important}
+.analytics-swipe-page .analytics-hub-pane .analytics-focus-card p{font-size:.67rem!important;line-height:1.25!important;margin:0!important}
+.analytics-swipe-page .analytics-hub-pane .analytics-focus-grid{flex:1 1 auto;min-height:0;margin-top:7px!important;display:flex!important}
+.analytics-swipe-page .analytics-hub-pane .control-platform-card{width:100%;min-height:0!important;padding:11px 12px!important;border-radius:19px!important;grid-template-columns:42px minmax(0,1fr)!important;align-content:center!important}
+.analytics-swipe-page .analytics-hub-pane .control-platform-icon{width:42px!important;height:42px!important;border-radius:13px!important;font-size:19px!important}
+.analytics-swipe-page .analytics-hub-pane .control-platform-copy strong{font-size:.95rem!important}
+.analytics-swipe-page .analytics-hub-pane .control-platform-copy small,.analytics-swipe-page .analytics-hub-pane .control-platform-copy em{font-size:.66rem!important;line-height:1.25!important}
+.analytics-swipe-page .analytics-hub-pane .control-platform-state{font-size:.54rem!important}
+.analytics-swipe-page .analytics-hub-hint{margin-top:6px}
+.analytics-swipe-page .analytics-swipe-dots{position:absolute;z-index:20;left:50%;bottom:9px;transform:translateX(-50%);display:flex;align-items:center;gap:8px;padding:6px 10px;border:1px solid rgba(120,190,225,.12);border-radius:999px;background:rgba(3,7,10,.72);backdrop-filter:blur(12px)}
+.analytics-swipe-page .analytics-swipe-dots button{width:7px;height:7px;min-width:0;padding:0;border:0;border-radius:50%;background:#4a5c67;box-shadow:none}
+.analytics-swipe-page .analytics-swipe-dots button.is-active{width:20px;border-radius:8px;background:#78d9f5}
+.analytics-swipe-page .analytics-site-hero{margin-bottom:14px!important}
+.analytics-swipe-page .analytics-site-pane .analytics-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+.analytics-swipe-page .analytics-site-pane .analytics-columns{padding-bottom:14px}
+
+/* YouTube: clean header, full status pill and one unified channel/Studio card. */
+.youtube-v54-02-page .admin-main{padding-top:12px!important}
+.youtube-v54-02-page .youtube-compact-header{margin:0 0 12px;padding:0 2px}
+.youtube-v54-02-page .youtube-compact-header>.eyeline{display:block;margin:0 0 4px;font-size:.68rem;letter-spacing:.2em}
+.youtube-v54-02-page .youtube-title-status-row{display:flex;align-items:center;justify-content:space-between;gap:10px;min-width:0}
+.youtube-v54-02-page .youtube-title-status-row h1{min-width:0;margin:0!important;font-size:clamp(2.25rem,10vw,3.25rem)!important;line-height:1!important;text-align:left!important}
+.youtube-v54-02-page .youtube-title-status-row .youtube-studio-gate{flex:0 0 auto;max-width:none!important;width:auto!important;margin:0!important}
+.youtube-v54-02-page .youtube-compact-header>p{margin:7px 0 9px!important;font-size:.76rem!important;line-height:1.25!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.youtube-v54-02-page .youtube-auth-inline{display:flex!important;align-items:center!important;justify-content:space-between!important;margin:0!important;padding:8px 11px!important;border-radius:15px!important;gap:8px!important}
+.youtube-v54-02-page .youtube-auth-inline strong{max-width:none!important;white-space:nowrap!important;overflow:visible!important;text-overflow:clip!important;font-size:.7rem!important}
+.youtube-v54-02-page .youtube-auth-inline a{font-size:.66rem!important;white-space:nowrap!important}
+.youtube-v54-02-page .youtube-studio-status-connected{display:flex;align-items:center;gap:6px;max-width:none;padding:9px 11px;border:1px solid rgba(77,223,145,.34);border-radius:999px;background:rgba(22,105,67,.24);color:#bcf4d3;font:800 .66rem/1 inherit;white-space:nowrap;box-shadow:inset 0 0 20px rgba(55,221,133,.05)}
+.youtube-v54-02-page .youtube-studio-status-connected i{width:9px;height:9px;border-radius:50%;background:#66e59d;box-shadow:0 0 12px rgba(102,229,157,.8)}
+.youtube-v54-02-page .youtube-studio-inline-disconnected{display:flex!important;align-items:center!important;gap:6px!important;padding:6px 7px!important;border-radius:14px!important;white-space:nowrap}
+.youtube-v54-02-page .youtube-studio-inline-disconnected span{font-size:.62rem!important;white-space:nowrap!important}
+.youtube-v54-02-page .youtube-studio-inline-disconnected .btn{font-size:.58rem!important;padding:7px 8px!important}
+.youtube-v54-02-page .youtube-unified-card{padding:15px 13px 13px!important;margin-bottom:12px!important;border-radius:25px!important}
+.youtube-v54-02-page .youtube-unified-card .analytics-youtube-grid{grid-template-columns:1fr!important;gap:9px!important}
+.youtube-v54-02-page .youtube-unified-card .analytics-kpi{min-height:88px!important;margin:0!important}
+.youtube-v54-02-page .youtube-studio-integrated{margin-top:10px!important;padding:0!important;border:0!important;background:transparent!important}
+.youtube-v54-02-page .youtube-studio-integrated[hidden]{display:none!important}
+.youtube-v54-02-page .youtube-studio-integrated .analytics-youtube-studio-kpis{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:9px!important;margin:0!important}
+.youtube-v54-02-page .youtube-studio-integrated .analytics-kpi{min-height:88px!important}
+.youtube-v54-02-page .youtube-integrated-trend{margin-top:10px!important;padding:10px 8px 6px!important;border:1px solid rgba(107,187,224,.13);border-radius:18px;background:rgba(5,12,18,.42)}
+.youtube-v54-02-page .youtube-monitor-only-layout{display:block!important;margin-bottom:12px!important}
+.youtube-v54-02-page .youtube-monitor-card{margin:0!important}
+.youtube-v54-02-page .youtube-monitor-card .admin-card-title-row{gap:8px!important}
+.youtube-v54-02-page .youtube-monitor-card .analytics-mini-btn{flex:0 0 auto;padding:8px 10px!important;font-size:.62rem!important}
+.youtube-v54-02-page .youtube-audience-grid{margin-top:12px!important}
+.youtube-v54-02-page .youtube-album-catalog{margin-top:12px!important}
+
+@media(max-width:420px){
+  .analytics-swipe-page .analytics-pane-wrap{padding-left:11px!important;padding-right:11px!important}
+  .analytics-swipe-page .analytics-compact-header h1{font-size:2.15rem!important}
+  .analytics-swipe-page .analytics-auth-inline{padding:7px 8px!important}
+  .analytics-swipe-page .analytics-auth-inline strong{font-size:.66rem!important}
+  .analytics-swipe-page .analytics-auth-inline a{font-size:.62rem!important}
+  .analytics-swipe-page .world-country-list span{padding:5px 7px!important}
+  .youtube-v54-02-page .youtube-title-status-row{gap:7px}
+  .youtube-v54-02-page .youtube-title-status-row h1{font-size:2.25rem!important}
+  .youtube-v54-02-page .youtube-studio-status-connected{padding:8px 9px;font-size:.59rem}
+  .youtube-v54-02-page .youtube-auth-inline strong{font-size:.64rem!important}
+  .youtube-v54-02-page .youtube-auth-inline a{font-size:.6rem!important}
+}
+
+/* v54.03 — map never stays blank; robust horizontal gesture and tap navigation. */
+.analytics-swipe-page .analytics-swipe-viewport{
+  touch-action:pan-y pinch-zoom!important;
+  overscroll-behavior-x:none!important;
+  -webkit-user-select:none;
+  user-select:none;
+}
+.analytics-swipe-page .analytics-swipe-track,
+.analytics-swipe-page .analytics-swipe-pane{touch-action:pan-y pinch-zoom!important}
+.analytics-swipe-page .analytics-swipe-hint button{
+  appearance:none;
+  border:0;
+  padding:7px 5px;
+  margin:-7px -5px;
+  background:transparent;
+  color:#7890a0;
+  font:inherit;
+  letter-spacing:inherit;
+  white-space:nowrap;
+  cursor:pointer;
+}
+.analytics-swipe-page .analytics-swipe-hint button:active{color:#9de5fb;transform:scale(.98)}
+.analytics-swipe-page .world-map-canvas{position:relative;overflow:hidden}
+.analytics-swipe-page .world-map-state{
+  position:absolute;
+  left:50%;
+  bottom:10px;
+  transform:translateX(-50%);
+  z-index:4;
+  display:block;
+  max-width:90%;
+  padding:7px 11px;
+  border:1px solid rgba(121,196,229,.2);
+  border-radius:999px;
+  background:rgba(4,10,14,.78);
+  color:#a8bac5;
+  font:700 .62rem/1.2 system-ui,sans-serif;
+  text-align:center;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  backdrop-filter:blur(10px);
+}
+.analytics-swipe-page .world-map-state.is-error{border-color:rgba(242,142,122,.28);color:#ffc4b8}
+.analytics-swipe-page .world-country-loading{grid-column:1/-1!important}
+.analytics-swipe-page .analytics-swipe-dots button{touch-action:manipulation!important}
+
+/* Control ANDRIK v54.04 — menu order, precise map, full activity and country spoiler. */
+
+/* The map image and markers now share one exact 2560×1031 coordinate stage. */
+.analytics-swipe-page .world-map-shell{flex:0 0 auto!important;min-height:0!important;display:block!important;align-items:initial!important}
+.analytics-swipe-page .world-map-canvas{position:relative!important;width:100%!important;height:auto!important;min-height:0!important;max-height:none!important;aspect-ratio:auto!important;padding:9px 7px!important;overflow:hidden!important}
+.analytics-swipe-page .world-map-stage{position:relative;width:100%;aspect-ratio:2560/1031;overflow:visible}
+.analytics-swipe-page .world-map-stage img{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;object-fit:fill!important;opacity:.46!important;filter:saturate(.78) brightness(.95) drop-shadow(0 0 10px rgba(94,204,244,.1))!important;pointer-events:none!important}
+.analytics-swipe-page .world-map-stage .world-map-dot{position:absolute!important;z-index:2}
+.analytics-swipe-page .world-map-state{z-index:4}
+
+/* Six countries are visible by default; the complete sorted list opens as a spoiler. */
+.analytics-swipe-page .world-country-list .world-country-extra{display:none!important}
+.analytics-swipe-page .world-country-list.is-expanded .world-country-extra{display:flex!important}
+.analytics-swipe-page .world-country-toggle{grid-column:1/-1;width:100%;min-height:38px;margin-top:2px;padding:8px 12px;border:1px solid rgba(115,202,239,.18);border-radius:14px;background:rgba(12,32,44,.72);color:#a9dff3;font:850 .67rem/1.2 inherit;letter-spacing:.03em;box-shadow:none}
+.analytics-swipe-page .world-country-toggle:active{transform:scale(.985);background:rgba(21,56,74,.82)}
+.analytics-swipe-page .analytics-map-pane.is-country-expanded{overflow-y:auto!important;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain}
+.analytics-swipe-page .analytics-map-pane.is-country-expanded .analytics-map-pane-wrap{height:auto!important;min-height:100%!important;padding-bottom:54px!important}
+.analytics-swipe-page .analytics-map-pane.is-country-expanded .analytics-map-top{flex:0 0 auto!important;overflow:visible!important}
+
+/* The 24-hour badge is a real active button that opens the complete activity sheet. */
+.control-home-page .control-activity-open{appearance:none;-webkit-appearance:none;cursor:pointer;background:rgba(8,18,25,.72);box-shadow:none}
+.control-home-page .control-activity-open.is-active{border-color:rgba(103,218,250,.46)!important;background:rgba(27,105,136,.28)!important;color:#d8f6ff!important;box-shadow:0 0 0 3px rgba(74,191,231,.08)}
+.activity-modal-open{overflow:hidden!important}
+.control-activity-modal[hidden]{display:none!important}
+.control-activity-modal{position:fixed;inset:0;z-index:1000;display:grid;align-items:end;padding:max(12px,env(safe-area-inset-top)) 10px max(12px,env(safe-area-inset-bottom));isolation:isolate}
+.control-activity-backdrop{position:absolute;inset:0;border:0;background:rgba(0,3,6,.76);backdrop-filter:blur(8px);z-index:-1}
+.control-activity-modal-panel{width:min(100%,680px);max-height:min(86dvh,820px);margin:0 auto;display:flex;flex-direction:column;overflow:hidden;border:1px solid rgba(131,205,237,.2);border-radius:27px;background:linear-gradient(180deg,rgba(7,18,26,.99),rgba(2,8,13,.995));box-shadow:0 -18px 70px rgba(0,0,0,.55)}
+.control-activity-modal-panel>header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 18px 13px;border-bottom:1px solid rgba(137,202,231,.1)}
+.control-activity-modal-panel>header h2{margin:3px 0 0!important;font-size:1.65rem!important;line-height:1.05}
+.control-activity-close{flex:0 0 42px;width:42px;height:42px;padding:0;border:1px solid rgba(151,211,238,.18);border-radius:50%;background:rgba(255,255,255,.035);color:#eaf7fc;font:300 1.75rem/1 inherit;box-shadow:none}
+.control-activity-modal-list{display:grid;gap:8px;min-height:130px;padding:12px 12px 18px;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+.control-activity-modal-list .control-home-activity-row{min-height:82px!important;padding:11px 12px!important}
+.control-activity-modal-list .control-home-activity-row p{white-space:normal!important;display:block!important;overflow:visible!important;text-overflow:clip!important}
+
+/* Notifications are deliberately the final YouTube block, below the album catalogue. */
+.youtube-v54-02-page .youtube-monitor-bottom{margin-top:12px!important;margin-bottom:0!important}
+
+@media(max-width:420px){
+  .analytics-swipe-page .world-map-canvas{padding:7px 5px!important}
+  .analytics-swipe-page .world-country-toggle{font-size:.62rem}
+  .control-activity-modal{padding-left:7px;padding-right:7px}
+  .control-activity-modal-panel{border-radius:24px}
+}

@@ -1,0 +1,225 @@
+
+/* Control ANDRIK v54.99c — observability link, alignment fixes, marquee return, stronger chart glow. */
+
+/* Home menu: add a dedicated observability entry and keep cards readable. */
+.control-menu-page .control-home-menu-card.is-observability{
+  border-color:rgba(108,214,255,.24)!important;
+  background:linear-gradient(145deg,rgba(10,27,39,.92),rgba(4,10,16,.98))!important;
+}
+.control-menu-page .control-home-menu-card.is-observability>span{
+  background:rgba(108,214,255,.12)!important;
+}
+.control-menu-page .control-home-menu-card{
+  grid-template-columns:46px minmax(0,1fr) 18px!important;
+  gap:10px!important;
+  align-items:center!important;
+}
+.control-menu-page .control-home-menu-card>div{
+  min-width:0!important;
+  display:flex!important;
+  flex-direction:column!important;
+  justify-content:center!important;
+}
+.control-menu-page .control-home-menu-card>span,
+.control-menu-page .control-home-menu-card>b{
+  align-self:center!important;
+  justify-self:center!important;
+}
+.control-menu-page .control-home-menu-card strong{
+  white-space:normal!important;
+}
+.control-menu-page .control-home-menu-card p{
+  white-space:normal!important;
+  overflow:visible!important;
+  text-overflow:clip!important;
+}
+@media (orientation:landscape) and (max-height:700px){
+  .control-menu-page .control-home-menu{gap:6px!important;grid-template-rows:repeat(4,minmax(0,1fr))!important}
+  .control-menu-page .control-home-menu-card{padding:8px 10px!important;border-radius:19px!important;min-height:0!important}
+  .control-menu-page .control-home-menu-card strong{font-size:clamp(1rem,3vw,1.16rem)!important;line-height:1.02!important}
+  .control-menu-page .control-home-menu-card p{font-size:clamp(.58rem,1.9vw,.69rem)!important;line-height:1.18!important}
+}
+
+/* Service page: dedicated observability card should breathe. */
+.admin-service-page .service-observability-card{
+  border-color:rgba(108,214,255,.22)!important;
+}
+.admin-service-page .service-observability-card .admin-card-title-row{
+  align-items:center!important;
+}
+@media(max-width:700px){
+  .admin-service-page .service-observability-card .admin-card-title-row{
+    flex-direction:column!important;
+    align-items:flex-start!important;
+    gap:12px!important;
+  }
+  .admin-service-page .service-observability-card .admin-card-title-row .btn{
+    width:100%!important;
+  }
+}
+
+/* YouTube KPI cards: move icons closer to copy and center the whole group. */
+.analytics-v54-46-page #analyticsYoutube > .analytics-kpi:nth-child(-n+3),
+.youtube-admin-page #analyticsYoutube > .analytics-kpi:nth-child(-n+3){
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:14px!important;
+}
+.analytics-v54-46-page #analyticsYoutube > .analytics-kpi:nth-child(-n+3)::after,
+.youtube-admin-page #analyticsYoutube > .analytics-kpi:nth-child(-n+3)::after{
+  content:none!important;
+  display:none!important;
+}
+.analytics-v54-46-page #analyticsYoutube > .analytics-kpi:nth-child(-n+3) > .analytics-kpi-icon,
+.youtube-admin-page #analyticsYoutube > .analytics-kpi:nth-child(-n+3) > .analytics-kpi-icon{
+  flex:0 0 auto!important;
+  margin:0!important;
+}
+.analytics-v54-46-page #analyticsYoutube > .analytics-kpi:nth-child(-n+3) > .analytics-kpi-copy,
+.youtube-admin-page #analyticsYoutube > .analytics-kpi:nth-child(-n+3) > .analytics-kpi-copy{
+  flex:0 1 auto!important;
+  width:auto!important;
+  min-width:0!important;
+  text-align:left!important;
+  justify-items:start!important;
+  align-items:flex-start!important;
+}
+.analytics-v54-46-page #analyticsYoutube > .analytics-kpi:nth-child(-n+3) small,
+.analytics-v54-46-page #analyticsYoutube > .analytics-kpi:nth-child(-n+3) strong,
+.analytics-v54-46-page #analyticsYoutube > .analytics-kpi:nth-child(-n+3) em,
+.youtube-admin-page #analyticsYoutube > .analytics-kpi:nth-child(-n+3) small,
+.youtube-admin-page #analyticsYoutube > .analytics-kpi:nth-child(-n+3) strong,
+.youtube-admin-page #analyticsYoutube > .analytics-kpi:nth-child(-n+3) em{
+  width:auto!important;
+  margin:0!important;
+  text-align:left!important;
+}
+@media(max-width:430px){
+  .analytics-v54-46-page #analyticsYoutube > .analytics-kpi:nth-child(-n+3),
+  .youtube-admin-page #analyticsYoutube > .analytics-kpi:nth-child(-n+3){gap:10px!important}
+}
+
+/* YouTube subtitle: single line in landscape. */
+@media (orientation:landscape) and (max-height:700px){
+  .analytics-v54-46-page .analytics-youtube-header > p,
+  .youtube-admin-page .youtube-compact-header > p{
+    width:auto!important;
+    max-width:none!important;
+    white-space:nowrap!important;
+    text-wrap:nowrap!important;
+    line-height:1.1!important;
+  }
+}
+
+/* Analytics map header: center the auth strip and map title block in landscape. */
+@media (orientation:landscape) and (max-height:700px){
+  .analytics-swipe-page .analytics-map-pane .analytics-auth-inline{
+    margin-left:auto!important;
+    margin-right:auto!important;
+    max-width:min(760px,100%)!important;
+    justify-content:center!important;
+  }
+  .analytics-swipe-page .analytics-map-pane .analytics-map-top>.admin-card-title-row{
+    justify-content:center!important;
+  }
+  .analytics-swipe-page .analytics-map-pane .analytics-map-top>.admin-card-title-row>div{
+    margin-left:auto!important;
+    margin-right:auto!important;
+    text-align:center!important;
+  }
+  .analytics-swipe-page .analytics-map-pane .analytics-map-top>.admin-card-title-row h2,
+  .analytics-swipe-page .analytics-map-pane .analytics-map-top>.admin-card-title-row p{
+    text-align:center!important;
+  }
+}
+
+/* Selected country: bring back marquee for the previous-week line. */
+@keyframes andrikCountryWeeklyMarquee99c{
+  0%{transform:translateX(0)}
+  100%{transform:translateX(calc(-100% - 28px))}
+}
+.analytics-v54-46-page .analytics-map-top:has(.world-country-button.is-selected) .country-weekly-compare{
+  display:block!important;
+  overflow:hidden!important;
+}
+.analytics-v54-46-page .analytics-map-top:has(.world-country-button.is-selected) .country-weekly-marquee-track{
+  display:inline-flex!important;
+  align-items:center!important;
+  gap:28px!important;
+  width:max-content!important;
+  min-width:100%!important;
+  animation:none!important;
+  transform:translateX(0)!important;
+}
+.analytics-v54-46-page .analytics-map-top:has(.world-country-button.is-selected) .country-weekly-marquee-track>span{
+  display:block!important;
+  width:auto!important;
+  flex:0 0 auto!important;
+  overflow:visible!important;
+  text-overflow:clip!important;
+  white-space:nowrap!important;
+}
+.analytics-v54-46-page .analytics-map-top:has(.world-country-button.is-selected) .country-weekly-marquee-track>span:nth-child(2){display:none!important}
+.analytics-v54-46-page .analytics-map-top:has(.world-country-button.is-selected) .country-weekly-compare.is-overflowing .country-weekly-marquee-track{
+  animation:andrikCountryWeeklyMarquee99c 10s linear infinite!important;
+}
+.analytics-v54-46-page .analytics-map-top:has(.world-country-button.is-selected) .country-weekly-compare.is-overflowing .country-weekly-marquee-track>span:nth-child(2){display:block!important}
+
+/* Stronger highlight for Search Console and Google Analytics charts. */
+.analytics-admin-page .analytics-trend-panel{
+  padding:14px 10px 10px!important;
+  border:1px solid rgba(140,205,238,.12)!important;
+  border-radius:22px!important;
+  background:rgba(3,12,19,.56)!important;
+  cursor:pointer!important;
+  transform-origin:center center!important;
+  transition:transform .24s ease,border-color .24s ease,box-shadow .24s ease,background .24s ease!important;
+  -webkit-tap-highlight-color:transparent!important;
+}
+.analytics-admin-page .analytics-trend-panel.is-chart-highlighted,
+.analytics-admin-page .search-console-trend.is-chart-highlighted{
+  transform:scale(1.03)!important;
+  border-color:rgba(116,214,255,.48)!important;
+  background:rgba(6,18,27,.74)!important;
+  box-shadow:0 0 0 1px rgba(116,214,255,.15),0 0 28px rgba(85,196,244,.24)!important;
+}
+.analytics-admin-page .analytics-trend-panel.is-chart-highlighted .analytics-day-bars i{
+  animation:andrikGaUsersPulse99c 1.55s ease-in-out infinite;
+}
+.analytics-admin-page .analytics-trend-panel.is-chart-highlighted .analytics-day-bars b{
+  animation:andrikGaViewsPulse99c 1.55s ease-in-out infinite;
+}
+@keyframes andrikGaUsersPulse99c{
+  0%,100%{filter:saturate(1) brightness(1);box-shadow:0 0 0 rgba(116,201,238,0)}
+  50%{filter:saturate(1.2) brightness(1.14);box-shadow:0 0 11px rgba(116,201,238,.75)}
+}
+@keyframes andrikGaViewsPulse99c{
+  0%,100%{filter:saturate(1) brightness(1);box-shadow:0 0 0 rgba(216,233,255,0)}
+  50%{filter:saturate(1.16) brightness(1.12);box-shadow:0 0 11px rgba(216,233,255,.75)}
+}
+@media(prefers-reduced-motion:reduce){
+  .analytics-admin-page .analytics-trend-panel,
+  .analytics-admin-page .search-console-trend{transition:none!important}
+  .analytics-admin-page .analytics-trend-panel.is-chart-highlighted .analytics-day-bars i,
+  .analytics-admin-page .analytics-trend-panel.is-chart-highlighted .analytics-day-bars b,
+  .analytics-admin-page .search-console-trend.is-chart-highlighted .search-console-day i,
+  .analytics-admin-page .search-console-trend.is-chart-highlighted .search-console-day b{animation:none!important;filter:brightness(1.12)!important}
+}
+
+/* v54.99c7 — native monitor menu polish and a hard center lock for every eye state. */
+.control-page .control-topbar .control-center-logo,
+.control-topbar .control-center-logo,
+.control-center-logo{
+  left:50%!important;
+  top:50%!important;
+  transform:translate(-50%,-50%)!important;
+}
+.control-page .control-topbar .control-center-logo.is-warning,
+.control-topbar .control-center-logo.is-warning,
+.control-center-logo.is-warning{
+  transform:translate(-50%,-50%)!important;
+}
+.control-menu-page .control-home-menu-card.is-observability>span{
+  box-shadow:0 0 22px rgba(91,222,255,.16)!important;
+}

@@ -1,0 +1,659 @@
+
+/* Control ANDRIK 1.0 · v54.66 AUTOMATIC STUDIO
+   Push dedupe, instant control navigation and exact phone layout. */
+
+/* === Admin panel: center against the real viewport, not the inner card column. === */
+.control-home-page .control-admin-menu-page .control-menu-heading{
+  box-sizing:border-box!important;
+  width:100vw!important;
+  max-width:100vw!important;
+  margin:0 0 12px calc(50% - 50vw)!important;
+  padding:2px 20px 10px!important;
+  left:auto!important;
+  transform:none!important;
+  text-align:center!important;
+}
+.control-home-page .control-admin-menu-page .control-admin-heading-copy{
+  box-sizing:border-box!important;
+  width:100%!important;
+  max-width:100%!important;
+  margin:0 auto!important;
+  padding:0!important;
+  left:auto!important;
+  transform:none!important;
+  text-align:center!important;
+}
+.control-home-page .control-admin-menu-page .control-menu-heading .eyeline,
+.control-home-page .control-admin-menu-page .control-menu-heading h1{
+  display:block!important;
+  width:fit-content!important;
+  max-width:calc(100vw - 40px)!important;
+  margin-left:auto!important;
+  margin-right:auto!important;
+  text-align:center!important;
+}
+.control-home-page .control-admin-menu-page .control-menu-heading h1{
+  margin-top:8px!important;
+  font-size:clamp(2.05rem,9.6vw,3rem)!important;
+  line-height:1!important;
+  white-space:nowrap!important;
+}
+
+/* === Map launch view: always opens at the same compact, fully visible position. === */
+.analytics-v54-46-page .analytics-map-pane{
+  scroll-behavior:auto!important;
+}
+.analytics-v54-46-page .analytics-map-pane .analytics-map-pane-wrap{
+  box-sizing:border-box!important;
+  min-height:100%!important;
+  padding-top:0!important;
+  padding-bottom:calc(104px + env(safe-area-inset-bottom))!important;
+}
+.analytics-v54-46-page .analytics-map-pane .analytics-map-top{
+  margin-bottom:0!important;
+}
+@media(max-width:540px){
+  /* Match the desired app opening screen: logo, subtitle, access strip, map. */
+  .analytics-v54-46-page .analytics-map-pane .analytics-compact-header{
+    margin:0 0 5px!important;
+  }
+  .analytics-v54-46-page .analytics-map-pane .analytics-compact-header>.eyeline,
+  .analytics-v54-46-page .analytics-map-pane .analytics-compact-header>h1{
+    display:none!important;
+  }
+  .analytics-v54-46-page .analytics-map-pane .analytics-compact-header>p{
+    margin:1px 0 7px!important;
+    font-size:.72rem!important;
+    line-height:1.2!important;
+    text-align:center!important;
+  }
+
+  /* Country focus is a detail screen, so restore its full title. */
+  body.is-country-focus-active .analytics-map-pane .analytics-compact-header>.eyeline{
+    display:block!important;
+    margin-bottom:2px!important;
+    font-size:.62rem!important;
+  }
+  body.is-country-focus-active .analytics-map-pane .analytics-compact-header>h1{
+    display:block!important;
+    margin:2px 0!important;
+    font-size:2rem!important;
+    line-height:.96!important;
+  }
+  .analytics-v54-46-page .analytics-map-pane .analytics-auth-inline{
+    min-height:34px!important;
+    margin:0!important;
+    padding:6px 9px!important;
+    font-size:.66rem!important;
+  }
+  .analytics-v54-46-page .analytics-map-pane .analytics-map-top:not(.has-country-focus){
+    padding:10px!important;
+    border-radius:23px!important;
+  }
+  .analytics-v54-46-page .analytics-map-pane .analytics-map-top:not(.has-country-focus) .admin-card-title-row{
+    margin-bottom:4px!important;
+  }
+  .analytics-v54-46-page .analytics-map-pane .analytics-map-top:not(.has-country-focus) .eyeline{
+    font-size:.63rem!important;
+  }
+  .analytics-v54-46-page .analytics-map-pane .analytics-map-top:not(.has-country-focus) h2{
+    margin:4px 0 2px!important;
+    font-size:1.86rem!important;
+    line-height:.98!important;
+  }
+  .analytics-v54-46-page .analytics-map-pane .analytics-map-top:not(.has-country-focus) p{
+    margin:0 0 7px!important;
+    font-size:.68rem!important;
+    line-height:1.25!important;
+  }
+  .analytics-v54-46-page .analytics-map-pane .analytics-map-top:not(.has-country-focus) .world-map-stage,
+  .analytics-v54-46-page .analytics-map-pane .analytics-map-top:not(.has-country-focus) .world-map-canvas{
+    aspect-ratio:2.42/1!important;
+    min-height:0!important;
+  }
+  .analytics-v54-46-page .analytics-map-pane .analytics-map-top:not(.has-country-focus) .world-map-canvas{
+    padding:5px 4px!important;
+  }
+  .analytics-v54-46-page .analytics-map-pane .analytics-map-top:not(.has-country-focus) .world-country-list{
+    gap:5px!important;
+    margin-top:7px!important;
+  }
+  .analytics-v54-46-page .analytics-map-pane .analytics-map-top:not(.has-country-focus) .world-country-button{
+    min-height:34px!important;
+    padding:5px 8px!important;
+    border-radius:14px!important;
+    font-size:.67rem!important;
+  }
+  .analytics-v54-46-page .analytics-map-pane .analytics-map-top:not(.has-country-focus) .world-country-toggle{
+    min-height:37px!important;
+    margin-top:1px!important;
+    padding:7px 10px!important;
+    font-size:.68rem!important;
+  }
+  .analytics-v54-46-page .analytics-map-pane .analytics-map-top:not(.has-country-focus) .country-growth-toggle{
+    min-height:47px!important;
+    margin-top:8px!important;
+    margin-bottom:0!important;
+    padding:8px 12px!important;
+    font-size:.84rem!important;
+    line-height:1!important;
+    border-radius:18px!important;
+  }
+  .analytics-v54-46-page .analytics-map-pane .analytics-swipe-hint{
+    margin-top:9px!important;
+  }
+}
+
+/* Keep the pager out of the weekly-growth button. */
+.analytics-v54-46-page .analytics-swipe-dots{
+  bottom:calc(13px + env(safe-area-inset-bottom))!important;
+}
+.analytics-v54-46-page .analytics-map-pane .analytics-swipe-hint{
+  padding-bottom:50px!important;
+}
+
+/* === Selected country: one clean row, semantic colors, no extra growth button. === */
+.analytics-v54-46-page .analytics-map-top.has-country-focus .country-growth-toggle{
+  display:none!important;
+}
+.analytics-v54-46-page .analytics-map-top.has-country-focus .world-country-button.is-selected{
+  padding:12px 16px!important;
+}
+.analytics-v54-46-page .analytics-map-top.has-country-focus .country-weekly-gain{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) auto!important;
+  align-items:center!important;
+  column-gap:14px!important;
+  width:100%!important;
+  margin-top:7px!important;
+  white-space:nowrap!important;
+  font-size:clamp(.66rem,3vw,.82rem)!important;
+}
+.analytics-v54-46-page .analytics-map-top.has-country-focus .country-weekly-current{
+  color:#62ef9f!important;
+  text-align:left!important;
+}
+.analytics-v54-46-page .analytics-map-top.has-country-focus .country-weekly-compare{
+  color:#62ef9f!important;
+  text-align:right!important;
+}
+.analytics-v54-46-page .analytics-map-top.has-country-focus .country-weekly-compare.is-negative{
+  color:#ff727f!important;
+}
+.analytics-v54-46-page .analytics-map-top.has-country-focus .country-weekly-compare.is-flat{
+  color:#a9c2cf!important;
+}
+
+/* Floating outlined actions for country focus. */
+.map-focus-actions{
+  position:fixed!important;
+  right:max(10px,env(safe-area-inset-right))!important;
+  bottom:calc(100px + env(safe-area-inset-bottom))!important;
+  z-index:2147482500!important;
+  display:none;
+  flex-direction:column!important;
+  align-items:flex-end!important;
+  gap:8px!important;
+  pointer-events:none!important;
+}
+body[data-analytics-page="map"].is-country-focus-active .map-focus-actions{
+  display:flex!important;
+}
+.map-focus-action{
+  pointer-events:auto!important;
+  min-width:118px!important;
+  min-height:43px!important;
+  padding:0 14px!important;
+  border:1px solid rgba(125,211,247,.52)!important;
+  border-radius:999px!important;
+  background:rgba(4,17,25,.92)!important;
+  color:#dff5ff!important;
+  box-shadow:0 12px 30px rgba(0,0,0,.45)!important;
+  font-size:.76rem!important;
+}
+.map-focus-action.is-activity{
+  border-color:rgba(115,228,164,.42)!important;
+  background:rgba(7,35,24,.94)!important;
+  color:#caffdc!important;
+}
+
+/* === Summary: manual push control is a floating bottom-right action. === */
+.control-summary-eyebrow-row{
+  display:block!important;
+}
+.control-summary-refresh{
+  display:none!important;
+}
+body.control-summary-visible .control-summary-refresh{
+  position:fixed!important;
+  right:max(10px,env(safe-area-inset-right))!important;
+  bottom:calc(96px + env(safe-area-inset-bottom))!important;
+  z-index:2147482500!important;
+  display:inline-flex!important;
+  min-height:46px!important;
+  padding:0 16px!important;
+  border:1px solid rgba(93,223,152,.46)!important;
+  border-radius:999px!important;
+  background:rgba(9,54,34,.96)!important;
+  color:#d3ffe3!important;
+  box-shadow:0 14px 34px rgba(0,0,0,.46)!important;
+  font-size:.76rem!important;
+}
+body.control-summary-visible .control-summary-refresh.is-success{
+  background:rgba(10,69,41,.98)!important;
+}
+body.control-summary-visible .control-summary-next-row{
+  padding-bottom:70px!important;
+}
+
+/* === Faster in-app page movement, no dark transition pause. === */
+.control-swipe-track,
+.analytics-swipe-track{
+  will-change:transform!important;
+  backface-visibility:hidden!important;
+  transform-style:preserve-3d!important;
+}
+.control-swipe-page,
+.analytics-swipe-pane{
+  backface-visibility:hidden!important;
+}
+@media(prefers-reduced-motion:no-preference){
+  .control-swipe-track,
+  .analytics-swipe-track{
+    transition-duration:.20s!important;
+  }
+}
+
+@media(max-width:390px){
+  .control-home-page .control-admin-menu-page .control-menu-heading h1{
+    font-size:2.25rem!important;
+  }
+  .map-focus-actions{
+    right:7px!important;
+    bottom:calc(94px + env(safe-area-inset-bottom))!important;
+  }
+  .map-focus-action{
+    min-width:108px!important;
+    min-height:41px!important;
+    padding:0 12px!important;
+    font-size:.71rem!important;
+  }
+  body.control-summary-visible .control-summary-refresh{
+    right:7px!important;
+    bottom:calc(91px + env(safe-area-inset-bottom))!important;
+    min-height:43px!important;
+    padding:0 13px!important;
+    font-size:.71rem!important;
+  }
+}
+
+/* Short Android viewports: preserve the full launch card and weekly-growth action. */
+@media(max-width:540px) and (max-height:780px){
+  .analytics-v54-46-page .analytics-map-pane .analytics-map-pane-wrap{
+    padding-bottom:calc(88px + env(safe-area-inset-bottom))!important;
+  }
+  .analytics-v54-46-page .analytics-map-pane .analytics-map-top:not(.has-country-focus){
+    padding:8px 10px!important;
+  }
+  .analytics-v54-46-page .analytics-map-pane .analytics-map-top:not(.has-country-focus) h2{
+    font-size:1.72rem!important;
+  }
+  .analytics-v54-46-page .analytics-map-pane .analytics-map-top:not(.has-country-focus) .world-map-stage,
+  .analytics-v54-46-page .analytics-map-pane .analytics-map-top:not(.has-country-focus) .world-map-canvas{
+    aspect-ratio:2.58/1!important;
+  }
+  .analytics-v54-46-page .analytics-map-pane .analytics-map-top:not(.has-country-focus) .world-country-button{
+    min-height:31px!important;
+    padding:4px 7px!important;
+  }
+  .analytics-v54-46-page .analytics-map-pane .analytics-map-top:not(.has-country-focus) .world-country-toggle{
+    min-height:34px!important;
+  }
+  .analytics-v54-46-page .analytics-map-pane .analytics-map-top:not(.has-country-focus) .country-growth-toggle{
+    min-height:43px!important;
+    margin-top:6px!important;
+  }
+  .analytics-v54-46-page .analytics-map-pane .analytics-swipe-hint{
+    margin-top:6px!important;
+    padding-bottom:42px!important;
+  }
+}
+
+/* Exact selected-country footer requested for the phone layout. */
+@media(max-width:540px){
+  body.is-country-focus-active .analytics-map-pane .analytics-map-pane-wrap{
+    padding-bottom:calc(150px + env(safe-area-inset-bottom))!important;
+  }
+  .analytics-v54-46-page .analytics-map-top.has-country-focus .country-weekly-gain{
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;
+  }
+  .analytics-v54-46-page .analytics-map-top.has-country-focus .country-weekly-current,
+  .analytics-v54-46-page .analytics-map-top.has-country-focus .country-weekly-compare{
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+  }
+}
+
+
+/* === Control ANDRIK v54.66: exact final phone fixes === */
+
+/* Main map heading is always visible, centered and protected from the fixed logo bar. */
+.analytics-v54-46-page .analytics-map-pane .analytics-map-pane-wrap{
+  padding-top:8px!important;
+}
+.analytics-v54-46-page .analytics-map-pane .analytics-compact-header{
+  display:block!important;
+  margin:0 0 8px!important;
+  padding:0 4px!important;
+  text-align:center!important;
+  overflow:visible!important;
+}
+.analytics-v54-46-page .analytics-map-pane .analytics-compact-header>.eyeline{
+  display:block!important;
+  margin:0 0 5px!important;
+  font-size:clamp(.68rem,3.4vw,.88rem)!important;
+  line-height:1.15!important;
+  letter-spacing:.22em!important;
+  text-align:center!important;
+}
+.analytics-v54-46-page .analytics-map-pane .analytics-compact-header>h1{
+  display:block!important;
+  margin:0 0 4px!important;
+  font-size:clamp(2.15rem,10vw,3.15rem)!important;
+  line-height:.98!important;
+  text-align:center!important;
+  white-space:nowrap!important;
+}
+.analytics-v54-46-page .analytics-map-pane .analytics-compact-header>p{
+  margin:0 0 9px!important;
+  font-size:clamp(.69rem,3.25vw,.9rem)!important;
+  line-height:1.2!important;
+  text-align:center!important;
+}
+.analytics-v54-46-page .analytics-map-pane .analytics-auth-inline{
+  margin:0!important;
+}
+
+/* Compact launch screen so the weekly-growth button remains fully visible. */
+@media(max-width:540px){
+  .analytics-v54-46-page .analytics-map-pane .analytics-map-pane-wrap{
+    padding-top:6px!important;
+    padding-bottom:calc(82px + env(safe-area-inset-bottom))!important;
+  }
+  .analytics-v54-46-page .analytics-map-pane .analytics-compact-header{
+    margin-bottom:6px!important;
+  }
+  .analytics-v54-46-page .analytics-map-pane .analytics-compact-header>.eyeline{
+    display:block!important;
+    margin-bottom:3px!important;
+    font-size:.68rem!important;
+  }
+  .analytics-v54-46-page .analytics-map-pane .analytics-compact-header>h1{
+    display:block!important;
+    margin:0 0 3px!important;
+    font-size:2.26rem!important;
+    line-height:.96!important;
+  }
+  .analytics-v54-46-page .analytics-map-pane .analytics-compact-header>p{
+    margin:0 0 7px!important;
+    font-size:.71rem!important;
+  }
+  .analytics-v54-46-page .analytics-map-pane .analytics-auth-inline{
+    min-height:36px!important;
+    padding:6px 10px!important;
+  }
+  .analytics-v54-46-page .analytics-map-pane .analytics-map-top:not(.has-country-focus){
+    padding:10px 10px 9px!important;
+  }
+  .analytics-v54-46-page .analytics-map-pane .analytics-map-top:not(.has-country-focus) h2{
+    font-size:1.92rem!important;
+  }
+  .analytics-v54-46-page .analytics-map-pane .analytics-map-top:not(.has-country-focus) .world-map-stage,
+  .analytics-v54-46-page .analytics-map-pane .analytics-map-top:not(.has-country-focus) .world-map-canvas{
+    aspect-ratio:2.56/1!important;
+  }
+  .analytics-v54-46-page .analytics-map-pane .analytics-map-top:not(.has-country-focus) .world-country-list{
+    gap:5px!important;
+    margin-top:7px!important;
+  }
+  .analytics-v54-46-page .analytics-map-pane .analytics-map-top:not(.has-country-focus) .world-country-button{
+    min-height:33px!important;
+    padding:5px 8px!important;
+  }
+  .analytics-v54-46-page .analytics-map-pane .analytics-map-top:not(.has-country-focus) .world-country-toggle{
+    min-height:35px!important;
+  }
+  .analytics-v54-46-page .analytics-map-pane .analytics-map-top:not(.has-country-focus) .country-growth-toggle{
+    min-height:43px!important;
+    margin-top:7px!important;
+  }
+}
+
+/* Country focus quick actions: explicit state class beats the hidden attribute and UA rules. */
+.map-focus-actions{
+  display:none!important;
+  visibility:hidden!important;
+  opacity:0!important;
+  transform:translateY(10px)!important;
+  transition:opacity .16s ease,transform .16s ease,visibility .16s ease!important;
+}
+.map-focus-actions.is-visible,
+body.is-country-focus-active .map-focus-actions.is-visible{
+  display:flex!important;
+  visibility:visible!important;
+  opacity:1!important;
+  transform:none!important;
+}
+.map-focus-actions.is-visible[hidden]{display:flex!important}
+@media(max-width:540px){
+  .map-focus-actions{
+    right:max(9px,env(safe-area-inset-right))!important;
+    bottom:calc(91px + env(safe-area-inset-bottom))!important;
+    gap:7px!important;
+  }
+  .map-focus-action{
+    min-width:112px!important;
+    min-height:42px!important;
+    padding:0 13px!important;
+    font-size:.72rem!important;
+  }
+}
+
+/* Selected country: full comparison is a true marquee instead of a clipped ellipsis. */
+.analytics-v54-46-page .analytics-map-top.has-country-focus .country-weekly-gain{
+  grid-template-columns:minmax(0,.82fr) minmax(0,1.18fr)!important;
+  column-gap:10px!important;
+  overflow:hidden!important;
+}
+.analytics-v54-46-page .analytics-map-top.has-country-focus .country-weekly-current{
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+  white-space:nowrap!important;
+}
+.analytics-v54-46-page .analytics-map-top.has-country-focus .country-weekly-compare{
+  display:block!important;
+  min-width:0!important;
+  overflow:hidden!important;
+  white-space:nowrap!important;
+  text-overflow:clip!important;
+}
+.country-weekly-marquee-track{
+  display:inline-flex!important;
+  width:max-content!important;
+  min-width:100%!important;
+  align-items:center!important;
+  gap:26px!important;
+  will-change:transform!important;
+  animation:andrikCountryCompareMarquee 8.5s linear infinite!important;
+}
+.country-weekly-marquee-track>span{flex:0 0 auto!important}
+@keyframes andrikCountryCompareMarquee{
+  0%,12%{transform:translateX(0)}
+  88%,100%{transform:translateX(calc(-50% - 13px))}
+}
+@media(prefers-reduced-motion:reduce){
+  .country-weekly-marquee-track{animation:none!important}
+}
+
+/* Summary: remove the obsolete eyebrow, center the title and pack content upward. */
+.control-home-page .control-summary-page .control-swipe-page-inner{
+  padding-top:0!important;
+}
+.control-home-page .control-summary-page .control-home-hero{
+  flex:0 0 auto!important;
+  padding:0 4px 2px!important;
+}
+.control-home-page .control-summary-page .control-home-hero-copy{
+  text-align:center!important;
+}
+.control-home-page .control-summary-page .control-summary-eyebrow-row{
+  height:0!important;
+  min-height:0!important;
+  margin:0!important;
+  padding:0!important;
+}
+.control-home-page .control-summary-page .control-summary-eyebrow-row>.eyeline{
+  display:none!important;
+}
+.control-home-page .control-summary-page .control-home-hero h1{
+  width:100%!important;
+  max-width:none!important;
+  margin:0 0 9px!important;
+  font-size:clamp(2.15rem,10.6vw,3.2rem)!important;
+  line-height:.98!important;
+  text-align:center!important;
+  white-space:nowrap!important;
+}
+.control-home-page .control-summary-page .control-home-summary{
+  flex:0 0 auto!important;
+  grid-template-rows:none!important;
+  grid-auto-rows:minmax(136px,auto)!important;
+  align-content:start!important;
+  gap:8px!important;
+}
+.control-home-page .control-summary-page .control-home-summary-item{
+  height:auto!important;
+  min-height:136px!important;
+  padding:12px 11px!important;
+}
+.control-home-page .control-summary-page .control-home-summary-item.is-release{
+  justify-self:start!important;
+}
+.control-home-page .control-summary-page .control-home-updated{
+  margin-top:8px!important;
+  padding-bottom:4px!important;
+}
+.control-home-page .control-summary-page .control-home-geo-delta{
+  margin-top:8px!important;
+}
+body.control-summary-visible .control-summary-refresh{
+  right:max(10px,env(safe-area-inset-right))!important;
+  bottom:calc(92px + env(safe-area-inset-bottom))!important;
+}
+body.control-summary-visible .control-summary-next-row{
+  position:fixed!important;
+  right:max(10px,env(safe-area-inset-right))!important;
+  bottom:calc(146px + env(safe-area-inset-bottom))!important;
+  z-index:2147482490!important;
+  display:flex!important;
+  width:auto!important;
+  margin:0!important;
+  padding:0!important;
+}
+body.control-summary-visible .control-summary-next{
+  min-width:118px!important;
+  min-height:43px!important;
+  padding:0 14px!important;
+  border:1px solid rgba(125,211,247,.45)!important;
+  border-radius:999px!important;
+  background:rgba(4,17,25,.94)!important;
+  color:#dff5ff!important;
+  box-shadow:0 12px 30px rgba(0,0,0,.45)!important;
+  font-size:.74rem!important;
+}
+@media(max-width:540px){
+  .control-home-page .control-summary-page .control-swipe-page-inner{
+    padding:0 8px calc(190px + env(safe-area-inset-bottom))!important;
+  }
+  .control-home-page .control-summary-page .control-home-summary{
+    grid-auto-rows:minmax(128px,auto)!important;
+    gap:7px!important;
+  }
+  .control-home-page .control-summary-page .control-home-summary-item{
+    min-height:128px!important;
+    padding:10px 9px!important;
+  }
+  body.control-summary-visible .control-summary-next-row{
+    right:8px!important;
+    bottom:calc(143px + env(safe-area-inset-bottom))!important;
+  }
+  body.control-summary-visible .control-summary-refresh{
+    right:8px!important;
+    bottom:calc(91px + env(safe-area-inset-bottom))!important;
+  }
+}
+@media(max-width:540px) and (max-height:790px){
+  .analytics-v54-46-page .analytics-map-pane .analytics-compact-header>h1{font-size:2rem!important}
+  .analytics-v54-46-page .analytics-map-pane .analytics-compact-header>.eyeline{font-size:.62rem!important}
+  .analytics-v54-46-page .analytics-map-pane .analytics-compact-header>p{font-size:.66rem!important;margin-bottom:5px!important}
+  .analytics-v54-46-page .analytics-map-pane .analytics-auth-inline{min-height:32px!important;padding:5px 9px!important}
+  .control-home-page .control-summary-page .control-home-summary{grid-auto-rows:minmax(112px,auto)!important}
+  .control-home-page .control-summary-page .control-home-summary-item{min-height:112px!important}
+}
+
+/* === v54.66 AUTOMATIC STUDIO: deterministic page geometry and safe gestures. === */
+.control-home-page.control-menu-mode .control-swipe-track{
+  width:100%!important;
+  transform:translate3d(0,0,0)!important;
+}
+.control-home-page.control-menu-mode .control-swipe-page{
+  flex:0 0 100%!important;
+  width:100%!important;
+}
+.control-home-page.control-daily-carousel-mode .control-swipe-track{
+  width:200%!important;
+}
+.control-home-page.control-daily-carousel-mode .control-swipe-page{
+  flex:0 0 50%!important;
+  width:50%!important;
+}
+.control-home-page.control-menu-mode .control-swipe-track.is-dragging{
+  transform:translate3d(0,0,0)!important;
+}
+.control-activity-modal-panel>header{
+  display:flex!important;
+  align-items:flex-start!important;
+  justify-content:space-between!important;
+  gap:14px!important;
+}
+.control-activity-modal-close{
+  flex:0 0 46px;
+  width:46px;
+  height:46px;
+  display:grid;
+  place-items:center;
+  border:1px solid rgba(147,211,239,.24);
+  border-radius:50%;
+  background:rgba(8,25,36,.94);
+  color:#e9f8ff;
+  font:400 1.8rem/1 system-ui,sans-serif;
+}
+@media(max-width:540px){
+  .analytics-v54-46-page .analytics-map-pane .analytics-compact-header>.eyeline{
+    display:block!important;
+    margin:0 0 2px!important;
+    font-size:.62rem!important;
+    line-height:1.1!important;
+    text-align:center!important;
+  }
+  .analytics-v54-46-page .analytics-map-pane .analytics-compact-header>h1{
+    display:block!important;
+    margin:1px 0 3px!important;
+    font-size:2rem!important;
+    line-height:.95!important;
+    text-align:center!important;
+  }
+  .analytics-v54-46-page .analytics-map-pane .analytics-compact-header>p{
+    margin:1px 0 6px!important;
+  }
+}

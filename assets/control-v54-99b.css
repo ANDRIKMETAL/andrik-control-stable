@@ -1,0 +1,153 @@
+/* Control ANDRIK v54.99b — exact daily counters, lower summary action, compact interactive Search Console axis. */
+
+/* Manual summary action: visibly lower than the "Updated" line while remaining above Android navigation. */
+body.control-summary-visible .control-summary-refresh{
+  bottom:calc(0px + env(safe-area-inset-bottom))!important;
+}
+@media(max-width:390px){
+  body.control-summary-visible .control-summary-refresh{
+    bottom:calc(0px + env(safe-area-inset-bottom))!important;
+  }
+}
+
+/* Search Console: exactly three compact, evenly distributed labels. */
+.analytics-admin-page .search-console-trend{
+  padding:14px 10px 34px!important;
+  cursor:pointer;
+  transform-origin:center center;
+  transition:transform .24s ease,border-color .24s ease,box-shadow .24s ease,background .24s ease;
+  -webkit-tap-highlight-color:transparent;
+  touch-action:manipulation;
+  outline:none;
+}
+.analytics-admin-page .search-console-day span{display:none!important}
+.analytics-admin-page .search-console-axis{
+  position:absolute;
+  left:10px;
+  right:10px;
+  bottom:8px;
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr;
+  align-items:center;
+  color:#8399aa;
+  font:700 .62rem/1 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  letter-spacing:.01em;
+  pointer-events:none;
+}
+.analytics-admin-page .search-console-axis span:first-child{text-align:left}
+.analytics-admin-page .search-console-axis span:nth-child(2){text-align:center}
+.analytics-admin-page .search-console-axis span:last-child{text-align:right}
+
+/* Same tap-highlight language as the YouTube graph. */
+.analytics-admin-page .search-console-trend.is-chart-highlighted{
+  transform:scale(1.022);
+  border-color:rgba(116,214,255,.46)!important;
+  background:rgba(6,18,27,.72)!important;
+  box-shadow:0 0 0 1px rgba(116,214,255,.12),0 0 25px rgba(85,196,244,.20)!important;
+}
+.analytics-admin-page .search-console-trend.is-chart-highlighted .search-console-day i{
+  animation:andrikSearchClicksPulse 1.45s ease-in-out infinite;
+}
+.analytics-admin-page .search-console-trend.is-chart-highlighted .search-console-day b{
+  animation:andrikSearchImpressionsPulse 1.45s ease-in-out infinite;
+}
+@keyframes andrikSearchClicksPulse{
+  0%,100%{filter:saturate(1) brightness(1);box-shadow:0 0 0 rgba(116,201,238,0)}
+  50%{filter:saturate(1.2) brightness(1.14);box-shadow:0 0 10px rgba(116,201,238,.72)}
+}
+@keyframes andrikSearchImpressionsPulse{
+  0%,100%{filter:saturate(1) brightness(1);box-shadow:0 0 0 rgba(105,117,216,0)}
+  50%{filter:saturate(1.22) brightness(1.12);box-shadow:0 0 10px rgba(105,117,216,.72)}
+}
+@media(prefers-reduced-motion:reduce){
+  .analytics-admin-page .search-console-trend{transition:none}
+  .analytics-admin-page .search-console-trend.is-chart-highlighted .search-console-day i,
+  .analytics-admin-page .search-console-trend.is-chart-highlighted .search-console-day b{animation:none;filter:brightness(1.12)}
+}
+
+
+/* v54.99b — landscape map, bottom-only admin swipe, collision-proof Search Console labels. */
+.analytics-admin-page .search-console-axis{
+  display:block!important;
+  left:12px!important;
+  right:12px!important;
+  height:14px!important;
+  white-space:nowrap!important;
+}
+.analytics-admin-page .search-console-axis span{
+  position:absolute!important;
+  top:0!important;
+  max-width:31%!important;
+  overflow:hidden!important;
+  text-overflow:clip!important;
+  white-space:nowrap!important;
+}
+.analytics-admin-page .search-console-axis span:first-child{left:0!important;right:auto!important;transform:none!important;text-align:left!important}
+.analytics-admin-page .search-console-axis span:nth-child(2){left:50%!important;right:auto!important;transform:translateX(-50%)!important;text-align:center!important}
+.analytics-admin-page .search-console-axis span:last-child{left:auto!important;right:0!important;transform:none!important;text-align:right!important}
+.analytics-admin-page .search-console-trend.is-chart-highlighted{
+  transform:translateZ(0)!important;
+}
+.analytics-admin-page .search-console-key span:last-child{
+  flex:1 0 100%!important;
+  line-height:1.35!important;
+}
+
+@media (orientation:landscape) and (max-height:700px){
+  .analytics-swipe-page .analytics-map-pane .analytics-pane-wrap{
+    padding-top:8px!important;
+    padding-left:14px!important;
+    padding-right:14px!important;
+    padding-bottom:120px!important;
+  }
+  .analytics-swipe-page .analytics-map-pane .analytics-compact-header{
+    margin:0 0 8px!important;
+    padding:0!important;
+  }
+  .analytics-swipe-page .analytics-map-pane .analytics-compact-header>.eyeline,
+  .analytics-swipe-page .analytics-map-pane .analytics-compact-header>h1,
+  .analytics-swipe-page .analytics-map-pane .analytics-compact-header>p{
+    display:none!important;
+  }
+  .analytics-swipe-page .analytics-map-pane .analytics-auth-inline{
+    min-height:42px!important;
+    margin:0!important;
+    padding:8px 14px!important;
+    border-radius:17px!important;
+  }
+  .analytics-swipe-page .analytics-map-pane .analytics-map-top{
+    margin-top:0!important;
+    padding:13px!important;
+    border-radius:24px!important;
+  }
+  .analytics-swipe-page .analytics-map-pane .analytics-map-top>.admin-card-title-row{
+    margin-bottom:6px!important;
+  }
+  .analytics-swipe-page .analytics-map-pane .analytics-map-top>.admin-card-title-row h2{
+    font-size:clamp(1.7rem,4.2vw,2.55rem)!important;
+    line-height:.98!important;
+  }
+  .analytics-swipe-page .analytics-map-pane .analytics-map-top>.admin-card-title-row p{
+    font-size:.82rem!important;
+    line-height:1.25!important;
+  }
+  .analytics-swipe-page .analytics-map-pane .world-map-shell{
+    margin-top:8px!important;
+  }
+  .analytics-swipe-page .analytics-map-pane .world-map-canvas{
+    height:clamp(320px,62dvh,500px)!important;
+    min-height:clamp(320px,62dvh,500px)!important;
+    border-radius:20px!important;
+  }
+  .analytics-admin-page .search-console-trend{
+    height:clamp(230px,54dvh,360px)!important;
+    padding-left:14px!important;
+    padding-right:14px!important;
+  }
+  .analytics-admin-page .search-console-bars{gap:4px!important}
+  .analytics-admin-page .search-console-axis{
+    left:14px!important;
+    right:14px!important;
+    font-size:.66rem!important;
+  }
+}

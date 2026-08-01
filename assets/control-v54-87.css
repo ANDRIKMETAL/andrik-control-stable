@@ -1,0 +1,467 @@
+/* Control ANDRIK v54.82 — full-screen weekly growth panel + deterministic country actions. */
+
+/* Weekly growth opens as a real modal window, independent of the transformed swipe track. */
+html.is-country-growth-open,
+body.is-country-growth-open{overflow:hidden!important;overscroll-behavior:none!important}
+body.is-country-growth-open::before{
+  content:"";
+  position:fixed;
+  inset:0;
+  z-index:2147483000;
+  background:rgba(0,4,8,.84);
+  backdrop-filter:blur(5px);
+  -webkit-backdrop-filter:blur(5px);
+}
+body > #countryGrowthPanel.country-growth-panel:not([hidden]){
+  display:flex!important;
+  position:fixed!important;
+  inset:12px 12px calc(78px + env(safe-area-inset-bottom)) 12px!important;
+  z-index:2147483200!important;
+  box-sizing:border-box!important;
+  width:auto!important;
+  max-width:620px!important;
+  height:auto!important;
+  min-height:0!important;
+  max-height:none!important;
+  margin:0 auto!important;
+  padding:0 16px 18px!important;
+  flex-direction:column!important;
+  overflow-y:auto!important;
+  overflow-x:hidden!important;
+  border:1px solid rgba(112,196,235,.28)!important;
+  border-radius:28px!important;
+  background:linear-gradient(180deg,rgba(5,21,31,.995),rgba(3,13,21,.995))!important;
+  box-shadow:0 24px 80px rgba(0,0,0,.72),inset 0 0 0 1px rgba(255,255,255,.025)!important;
+  overscroll-behavior:contain!important;
+  touch-action:pan-y!important;
+  -webkit-overflow-scrolling:touch!important;
+  scrollbar-gutter:stable!important;
+}
+body > #countryGrowthPanel .country-growth-head{
+  position:sticky!important;
+  top:0!important;
+  z-index:30!important;
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) 48px!important;
+  align-items:start!important;
+  gap:12px!important;
+  margin:0 -16px 14px!important;
+  padding:18px 16px 14px!important;
+  background:linear-gradient(180deg,rgba(5,21,31,1) 82%,rgba(5,21,31,.92))!important;
+}
+body > #countryGrowthPanel .country-growth-head > div{min-width:0!important}
+body > #countryGrowthPanel .country-growth-head span{
+  display:block!important;
+  margin:0 0 7px!important;
+  font-size:.72rem!important;
+  line-height:1.1!important;
+}
+body > #countryGrowthPanel .country-growth-head strong{
+  display:block!important;
+  max-width:none!important;
+  margin:0!important;
+  font-size:clamp(1.18rem,5.2vw,1.65rem)!important;
+  line-height:1.16!important;
+}
+body > #countryGrowthPanel #countryGrowthClose{
+  flex:0 0 48px!important;
+  width:48px!important;
+  min-width:48px!important;
+  max-width:48px!important;
+  height:48px!important;
+  min-height:48px!important;
+  max-height:48px!important;
+}
+body > #countryGrowthPanel .country-growth-list{
+  display:grid!important;
+  gap:12px!important;
+  padding:0 0 8px!important;
+}
+body > #countryGrowthPanel .country-growth-row{
+  grid-template-columns:38px minmax(0,1fr) minmax(120px,auto)!important;
+  gap:10px!important;
+  padding:13px 12px!important;
+  border-radius:18px!important;
+}
+body > #countryGrowthPanel .country-growth-rank{
+  width:38px!important;
+  height:38px!important;
+  font-size:.86rem!important;
+}
+body > #countryGrowthPanel .country-growth-name{font-size:clamp(.92rem,4.2vw,1.12rem)!important}
+body > #countryGrowthPanel .country-growth-value{font-size:clamp(1rem,4.5vw,1.25rem)!important}
+body > #countryGrowthPanel .country-growth-value small{
+  max-width:180px!important;
+  margin-top:5px!important;
+  font-size:clamp(.66rem,2.9vw,.8rem)!important;
+  line-height:1.2!important;
+  white-space:normal!important;
+}
+body > #countryGrowthPanel .country-growth-summary-shortcut{
+  position:static!important;
+  align-self:flex-end!important;
+  margin:10px 0 0 auto!important;
+  z-index:auto!important;
+}
+
+/* Selected country always gets the two square actions, even if a delayed map redraw
+   temporarily misses the helper body/card classes. */
+.analytics-v54-46-page .analytics-map-top:has(.world-country-button.is-selected) > .country-growth-toggle,
+.analytics-v54-46-page .analytics-map-top:has(.world-country-button.is-selected) > .country-growth-panel{
+  display:none!important;
+}
+.analytics-v54-46-page .analytics-map-top:has(.world-country-button.is-selected) > .map-focus-actions,
+.analytics-v54-46-page .analytics-map-top:has(.world-country-button.is-selected) > .map-focus-actions[hidden]{
+  display:grid!important;
+  visibility:visible!important;
+  opacity:1!important;
+  pointer-events:auto!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:10px!important;
+  width:100%!important;
+  margin:10px 0 0!important;
+}
+.analytics-v54-46-page .analytics-map-top:has(.world-country-button.is-selected) > .map-focus-actions .map-focus-action{
+  display:flex!important;
+  width:100%!important;
+  min-width:0!important;
+  min-height:112px!important;
+  aspect-ratio:1.18/1!important;
+  padding:14px 10px!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  justify-content:center!important;
+  text-align:center!important;
+  white-space:normal!important;
+  border-radius:22px!important;
+  font-size:clamp(.82rem,3.7vw,1rem)!important;
+  line-height:1.15!important;
+}
+
+/* Selected country weekly comparison: one compact line on each side, never duplicated. */
+.analytics-v54-46-page .analytics-map-top:has(.world-country-button.is-selected) .country-weekly-gain{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;
+  align-items:center!important;
+  gap:8px!important;
+  width:100%!important;
+  margin-top:8px!important;
+  overflow:hidden!important;
+  font-size:clamp(.64rem,2.7vw,.8rem)!important;
+  line-height:1.15!important;
+}
+.analytics-v54-46-page .analytics-map-top:has(.world-country-button.is-selected) .country-weekly-current,
+.analytics-v54-46-page .analytics-map-top:has(.world-country-button.is-selected) .country-weekly-compare{
+  min-width:0!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+  white-space:nowrap!important;
+}
+.analytics-v54-46-page .analytics-map-top:has(.world-country-button.is-selected) .country-weekly-current{text-align:left!important}
+.analytics-v54-46-page .analytics-map-top:has(.world-country-button.is-selected) .country-weekly-compare{text-align:right!important}
+.analytics-v54-46-page .analytics-map-top:has(.world-country-button.is-selected) .country-weekly-marquee-track{
+  display:block!important;
+  width:100%!important;
+  min-width:100%!important;
+  transform:none!important;
+  animation:none!important;
+}
+.analytics-v54-46-page .analytics-map-top:has(.world-country-button.is-selected) .country-weekly-marquee-track > span{
+  display:block!important;
+  width:100%!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+  white-space:nowrap!important;
+}
+.analytics-v54-46-page .analytics-map-top:has(.world-country-button.is-selected) .country-weekly-marquee-track > span:nth-child(2){display:none!important}
+
+@media(max-width:430px){
+  body > #countryGrowthPanel.country-growth-panel:not([hidden]){
+    inset:8px 8px calc(72px + env(safe-area-inset-bottom)) 8px!important;
+    padding:0 12px 14px!important;
+    border-radius:24px!important;
+  }
+  body > #countryGrowthPanel .country-growth-head{
+    margin:0 -12px 12px!important;
+    padding:15px 12px 12px!important;
+  }
+  body > #countryGrowthPanel .country-growth-row{
+    grid-template-columns:34px minmax(0,1fr) minmax(108px,auto)!important;
+    gap:8px!important;
+    padding:11px 9px!important;
+  }
+  body > #countryGrowthPanel .country-growth-rank{width:34px!important;height:34px!important}
+  .analytics-v54-46-page .analytics-map-top:has(.world-country-button.is-selected) > .map-focus-actions{gap:8px!important}
+  .analytics-v54-46-page .analytics-map-top:has(.world-country-button.is-selected) > .map-focus-actions .map-focus-action{
+    min-height:104px!important;
+    padding:12px 8px!important;
+    font-size:.8rem!important;
+  }
+}
+
+
+/* v54.84 — analytics hardening and YouTube pane order */
+.analytics-v54-46-page .analytics-map-top:has(#worldMap[data-focus-country]) > .country-growth-toggle,
+.analytics-v54-46-page .analytics-map-top:has(#worldMap[data-focus-country]) > .country-growth-panel,
+.analytics-v54-46-page .analytics-map-top:has(.world-country-button.is-selected) > .country-growth-toggle,
+.analytics-v54-46-page .analytics-map-top:has(.world-country-button.is-selected) > .country-growth-panel{
+  display:none!important;
+}
+.analytics-v54-46-page .analytics-map-top:has(#worldMap[data-focus-country]) > .map-focus-actions,
+.analytics-v54-46-page .analytics-map-top:has(#worldMap[data-focus-country]) > .map-focus-actions[hidden],
+.analytics-v54-46-page .analytics-map-top:has(.world-country-button.is-selected) > .map-focus-actions,
+.analytics-v54-46-page .analytics-map-top:has(.world-country-button.is-selected) > .map-focus-actions[hidden]{
+  display:grid!important;
+  visibility:visible!important;
+  opacity:1!important;
+  pointer-events:auto!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:10px!important;
+  width:100%!important;
+  margin:10px 0 0!important;
+}
+.analytics-v54-46-page .analytics-youtube-trend-card{margin-top:0!important}
+.analytics-v54-46-page .analytics-youtube-trend-card[hidden]{display:none!important}
+.analytics-v54-46-page .analytics-youtube-trend-card .youtube-integrated-trend{margin-top:14px!important;padding:12px 8px 6px!important;border:1px solid rgba(107,187,224,.13)!important;border-radius:18px!important;background:rgba(5,12,18,.42)!important}
+.analytics-v54-46-page .analytics-youtube-unified{margin-top:14px!important}
+.analytics-v54-46-page .analytics-youtube-unified .analytics-youtube-grid{margin-top:0!important}
+.analytics-v54-46-page .analytics-youtube-unified .youtube-studio-integrated{margin-top:12px!important;padding:0!important;border:0!important;background:transparent!important}
+.analytics-v54-46-page .analytics-youtube-unified .analytics-youtube-studio-kpis{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:9px!important;margin:0!important}
+@media(max-width:760px){
+  .analytics-v54-46-page .analytics-youtube-trend-card .youtube-integrated-trend{margin-top:10px!important}
+}
+
+
+/* v54.85 — centered activity header, fixed weekly growth modal, compact dashboard */
+.control-activity-page .control-page-heading,
+.control-activity-page .control-page-heading > div,
+.control-activity-page .control-page-heading .eyeline,
+.control-activity-page .control-page-heading h1,
+.control-activity-page .control-page-heading p{
+  text-align:center!important;
+}
+.control-activity-page .control-page-heading{
+  display:block!important;
+  width:100%!important;
+  margin-left:auto!important;
+  margin-right:auto!important;
+  padding-left:0!important;
+  padding-right:0!important;
+}
+.control-activity-page .control-page-heading > div{
+  width:100%!important;
+  margin-left:auto!important;
+  margin-right:auto!important;
+}
+.control-activity-page .control-page-heading .eyeline,
+.control-activity-page .control-page-heading h1,
+.control-activity-page .control-page-heading p{
+  margin-left:auto!important;
+  margin-right:auto!important;
+}
+
+body > #countryGrowthPanel.country-growth-panel:not([hidden]){
+  left:50%!important;
+  right:auto!important;
+  width:min(calc(100vw - 24px),620px)!important;
+  transform:translateX(-50%)!important;
+  margin:0!important;
+}
+@media(max-width:430px){
+  body > #countryGrowthPanel.country-growth-panel:not([hidden]){
+    width:min(calc(100vw - 16px),620px)!important;
+  }
+}
+
+.youtube-admin-page .youtube-monitor-card #youtubeMonitor{
+  margin-top:14px!important;
+}
+.youtube-admin-page .youtube-monitor-card .youtube-monitor-head{
+  margin-bottom:12px!important;
+}
+.youtube-admin-page .youtube-monitor-card .youtube-monitor-grid{
+  margin-bottom:12px!important;
+}
+
+
+/* v54.86 — daily-summary layout, release width, modal footer and compact YouTube graph */
+
+/* Daily summary: the release tile occupies the complete two-column row. */
+.control-home-page .control-home-summary-item.is-release{
+  grid-column:1/-1!important;
+  width:100%!important;
+  max-width:none!important;
+  justify-self:stretch!important;
+}
+
+/* Weekly growth: only the list scrolls; the «За день» action stays at the bottom. */
+body > #countryGrowthPanel.country-growth-panel:not([hidden]){
+  overflow:hidden!important;
+  padding-bottom:12px!important;
+}
+body > #countryGrowthPanel .country-growth-head{
+  flex:0 0 auto!important;
+}
+body > #countryGrowthPanel .country-growth-list{
+  flex:1 1 auto!important;
+  min-height:0!important;
+  overflow-y:auto!important;
+  overflow-x:hidden!important;
+  padding:0 2px 10px 0!important;
+  overscroll-behavior:contain!important;
+  -webkit-overflow-scrolling:touch!important;
+}
+body > #countryGrowthPanel .country-growth-summary-shortcut{
+  position:static!important;
+  inset:auto!important;
+  flex:0 0 auto!important;
+  align-self:stretch!important;
+  width:100%!important;
+  max-width:none!important;
+  min-height:52px!important;
+  margin:10px 0 0!important;
+  border-radius:18px!important;
+  z-index:auto!important;
+}
+
+/* YouTube: reduce the header footprint and place a larger complete graph higher. */
+.analytics-v54-46-page .analytics-youtube-pane-wrap{
+  padding-top:5px!important;
+  padding-bottom:82px!important;
+}
+.analytics-v54-46-page .analytics-youtube-header{
+  margin:0 0 8px!important;
+}
+.analytics-v54-46-page .analytics-youtube-header > .eyeline{
+  margin-bottom:3px!important;
+  font-size:clamp(.7rem,2.7vw,.86rem)!important;
+}
+.analytics-v54-46-page .youtube-title-status-row{
+  gap:7px!important;
+}
+.analytics-v54-46-page .youtube-title-status-row h1{
+  font-size:clamp(2.25rem,9.8vw,3.45rem)!important;
+}
+.analytics-v54-46-page .youtube-title-status-row .youtube-studio-gate-inline,
+.analytics-v54-46-page .youtube-title-status-row #youtubeStudioGate{
+  width:min(100%,290px)!important;
+}
+.analytics-v54-46-page .analytics-youtube-header > p{
+  margin:6px auto 0!important;
+  font-size:clamp(.9rem,3.7vw,1.05rem)!important;
+  line-height:1.18!important;
+}
+.analytics-v54-46-page .analytics-youtube-header .youtube-auth-inline{
+  margin-top:8px!important;
+  min-height:48px!important;
+}
+.analytics-v54-46-page .analytics-youtube-trend-card{
+  margin:0 0 10px!important;
+  padding:14px 12px 12px!important;
+}
+.analytics-v54-46-page .analytics-youtube-trend-card .admin-card-title-row{
+  margin-bottom:0!important;
+}
+.analytics-v54-46-page .analytics-youtube-trend-card .eyeline{
+  font-size:.72rem!important;
+}
+.analytics-v54-46-page .analytics-youtube-trend-card h2{
+  margin:4px 0 0!important;
+  font-size:clamp(1.75rem,7vw,2.3rem)!important;
+}
+.analytics-v54-46-page .analytics-youtube-trend-card p{
+  margin:6px 0 0!important;
+  font-size:clamp(.88rem,3.6vw,1.05rem)!important;
+}
+.analytics-v54-46-page .analytics-youtube-trend-card .youtube-integrated-trend{
+  margin-top:9px!important;
+  padding:8px 7px 16px!important;
+}
+.analytics-v54-46-page .analytics-youtube-trend-card .analytics-bars{
+  height:clamp(280px,39dvh,370px)!important;
+  margin-top:4px!important;
+  padding-top:8px!important;
+}
+.analytics-v54-46-page .analytics-youtube-trend-card .analytics-chart-key{
+  margin-top:8px!important;
+  padding-bottom:4px!important;
+}
+
+@media(max-width:430px){
+  body > #countryGrowthPanel.country-growth-panel:not([hidden]){
+    padding-bottom:9px!important;
+  }
+  body > #countryGrowthPanel .country-growth-summary-shortcut{
+    min-height:48px!important;
+    margin-top:8px!important;
+  }
+  .analytics-v54-46-page .analytics-youtube-pane-wrap{
+    padding-top:3px!important;
+  }
+  .analytics-v54-46-page .analytics-youtube-header{
+    margin-bottom:6px!important;
+  }
+  .analytics-v54-46-page .analytics-youtube-trend-card{
+    padding:12px 10px 10px!important;
+  }
+  .analytics-v54-46-page .analytics-youtube-trend-card .analytics-bars{
+    height:clamp(270px,37dvh,335px)!important;
+  }
+}
+
+
+/* v54.87 — pure country list modal, centered wide release tile, 24h columns, graph viewport fit */
+body > #countryGrowthPanel .country-growth-summary-shortcut{display:none!important}
+body > #countryGrowthPanel.country-growth-panel:not([hidden]){padding-bottom:10px!important}
+body > #countryGrowthPanel .country-growth-list{padding-bottom:18px!important}
+
+.control-home-page .control-home-summary-item.is-release{
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  justify-content:center!important;
+  text-align:center!important;
+  min-height:122px!important;
+}
+.control-home-page .control-home-summary-item.is-release>span,
+.control-home-page .control-home-summary-item.is-release>strong,
+.control-home-page .control-home-summary-item.is-release>small,
+.control-home-page .control-home-summary-item.is-release>em{
+  grid-column:auto!important;
+  grid-row:auto!important;
+  margin-left:auto!important;
+  margin-right:auto!important;
+  text-align:center!important;
+}
+.control-home-page .control-home-summary-item.is-release>span{width:38px!important;height:38px!important}
+.control-home-page .control-home-summary-item.is-release small{margin-top:5px!important}
+.control-home-page .control-home-summary-item.is-release em{white-space:normal!important}
+
+/* Keep site metrics visually in the left column and YouTube metrics in the right column. */
+.control-home-page .control-home-summary-item.is-site{grid-column:1!important}
+.control-home-page .control-home-summary-item.is-youtube{grid-column:2!important}
+.control-home-page .control-home-summary-item.is-release{grid-column:1/-1!important}
+
+/* Fit the whole YouTube graph card above the bottom navigation on the first view. */
+.analytics-v54-46-page .analytics-youtube-pane-wrap{padding-top:0!important;padding-bottom:70px!important}
+.analytics-v54-46-page .analytics-youtube-header{margin-bottom:5px!important}
+.analytics-v54-46-page .analytics-youtube-header > .eyeline{margin-bottom:1px!important;font-size:clamp(.62rem,2.35vw,.76rem)!important}
+.analytics-v54-46-page .youtube-title-status-row{gap:4px!important}
+.analytics-v54-46-page .youtube-title-status-row h1{font-size:clamp(1.95rem,8.4vw,2.85rem)!important;line-height:.92!important}
+.analytics-v54-46-page .youtube-title-status-row .youtube-studio-gate-inline,
+.analytics-v54-46-page .youtube-title-status-row #youtubeStudioGate{width:min(100%,245px)!important}
+.analytics-v54-46-page .youtube-studio-status-connected{padding:7px 10px!important;border-radius:14px!important;font-size:clamp(.62rem,2.65vw,.74rem)!important}
+.analytics-v54-46-page .analytics-youtube-header > p{margin:4px auto 0!important;font-size:clamp(.68rem,2.9vw,.84rem)!important;line-height:1.05!important;white-space:nowrap!important;max-width:none!important}
+.analytics-v54-46-page .analytics-youtube-header .youtube-auth-inline{margin-top:6px!important;min-height:40px!important;padding:7px 12px!important;border-radius:17px!important;font-size:.78rem!important}
+.analytics-v54-46-page .analytics-youtube-trend-card{padding:10px 10px 8px!important;margin-bottom:8px!important}
+.analytics-v54-46-page .analytics-youtube-trend-card .eyeline{font-size:.64rem!important}
+.analytics-v54-46-page .analytics-youtube-trend-card h2{margin:2px 0 0!important;font-size:clamp(1.45rem,6.1vw,1.95rem)!important;line-height:1!important}
+.analytics-v54-46-page .analytics-youtube-trend-card p{margin:4px 0 0!important;font-size:clamp(.72rem,3vw,.88rem)!important;line-height:1.1!important}
+.analytics-v54-46-page .analytics-youtube-trend-card .youtube-integrated-trend{margin-top:6px!important;padding:6px 6px 24px!important}
+.analytics-v54-46-page .analytics-youtube-trend-card .analytics-bars{height:clamp(245px,31dvh,325px)!important;margin-top:0!important;padding-top:4px!important}
+.analytics-v54-46-page .analytics-youtube-trend-card .analytics-chart-key{margin-top:6px!important;padding:0 0 18px!important;font-size:.75rem!important}
+@media(max-width:430px){
+  .analytics-v54-46-page .analytics-youtube-header > p{font-size:.66rem!important}
+  .analytics-v54-46-page .analytics-youtube-header .youtube-auth-inline{min-height:38px!important;padding:6px 10px!important}
+  .analytics-v54-46-page .analytics-youtube-trend-card .analytics-bars{height:clamp(235px,29dvh,295px)!important}
+}

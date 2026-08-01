@@ -1,0 +1,232 @@
+/* Control ANDRIK v55.00 R3E — map total pill placement + analytics swipe compatibility. */
+
+/* Keep the map header content inside the common frame on phones. */
+@media (orientation:portrait){
+  .analytics-v54-46-page .world-map-card>.map-landscape-title-row{
+    position:relative!important;
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr) auto!important;
+    grid-template-rows:auto auto!important;
+    align-items:start!important;
+    column-gap:10px!important;
+    row-gap:10px!important;
+    width:100%!important;
+    min-height:unset!important;
+    margin:0 0 8px!important;
+    padding:0 4px!important;
+    overflow:visible!important;
+  }
+  .analytics-v54-46-page .map-title-pyramid{
+    grid-column:1 / 2!important;
+    grid-row:2 / 3!important;
+    width:100%!important;
+    min-width:0!important;
+    margin:0!important;
+    text-align:left!important;
+    align-items:flex-start!important;
+    justify-content:flex-start!important;
+  }
+  .analytics-v54-46-page .map-title-pyramid>.eyeline,
+  .analytics-v54-46-page .map-title-pyramid>h2,
+  .analytics-v54-46-page .map-title-pyramid>p{
+    width:100%!important;
+    max-width:none!important;
+    min-width:0!important;
+    margin-left:0!important;
+    margin-right:0!important;
+    text-align:left!important;
+  }
+  .analytics-v54-46-page .map-title-pyramid>.eyeline{margin-bottom:4px!important}
+  .analytics-v54-46-page .map-title-pyramid>h2{margin-bottom:6px!important;line-height:.98!important}
+
+  .analytics-v54-46-page .world-map-total{
+    grid-column:1 / 2!important;
+    grid-row:1 / 2!important;
+    position:relative!important;
+    left:auto!important;
+    right:auto!important;
+    top:auto!important;
+    bottom:auto!important;
+    transform:none!important;
+    justify-self:start!important;
+    align-self:start!important;
+    width:auto!important;
+    min-width:102px!important;
+    max-width:118px!important;
+    min-height:38px!important;
+    padding:0 10px!important;
+    gap:6px!important;
+    border-radius:999px!important;
+    white-space:nowrap!important;
+    overflow:hidden!important;
+  }
+  .analytics-v54-46-page .world-map-total span{font-size:.52rem!important}
+  .analytics-v54-46-page .world-map-total strong{font-size:.92rem!important}
+
+  .analytics-v54-46-page .map-monthly-open{
+    position:relative!important;
+    grid-column:2 / 3!important;
+    grid-row:1 / 3!important;
+    top:auto!important;
+    right:auto!important;
+    left:auto!important;
+    bottom:auto!important;
+    transform:none!important;
+    justify-self:end!important;
+    align-self:start!important;
+    width:50px!important;
+    height:50px!important;
+    min-width:50px!important;
+    min-height:50px!important;
+    margin:0!important;
+  }
+}
+
+/* On small landscape phones reduce the cloud so it always stays inside the frame. */
+@media (orientation:landscape) and (max-width:960px){
+  .analytics-v54-46-page .world-map-card>.map-landscape-title-row{
+    padding-left:128px!important;
+    padding-right:84px!important;
+  }
+  .analytics-v54-46-page .world-map-total{
+    left:10px!important;
+    max-width:120px!important;
+    min-width:108px!important;
+    min-height:40px!important;
+    padding:0 10px!important;
+    gap:5px!important;
+  }
+  .analytics-v54-46-page .world-map-total span{font-size:.54rem!important}
+  .analytics-v54-46-page .world-map-total strong{font-size:.9rem!important}
+}
+
+/* Make sure the pane can receive touch gestures reliably. */
+.analytics-v54-46-page .analytics-swipe-viewport,
+.analytics-v54-46-page .analytics-swipe-track,
+.analytics-v54-46-page .analytics-swipe-pane{
+  -webkit-user-select:none!important;
+  user-select:none!important;
+}
+
+/* R3F final — restore and center the "География" label on portrait map card. */
+@media (orientation:portrait){
+  .analytics-v54-46-page .map-title-pyramid{
+    align-items:stretch!important;
+  }
+  .analytics-v54-46-page .map-title-pyramid>.eyeline{
+    width:auto!important;
+    max-width:calc(100% - 6px)!important;
+    justify-self:center!important;
+    align-self:center!important;
+    margin:0 auto 4px!important;
+    text-align:center!important;
+    font-size:.64rem!important;
+    letter-spacing:.16em!important;
+    white-space:nowrap!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+  }
+}
+
+/* R3G final — keep "География" fully visible between total pill and calendar. */
+@media (orientation:portrait){
+  .analytics-v54-46-page .world-map-card>.map-landscape-title-row{
+    position:relative!important;
+    display:block!important;
+    width:100%!important;
+    min-height:132px!important;
+    padding:0 8px!important;
+    margin:0 0 8px!important;
+    overflow:visible!important;
+  }
+
+  .analytics-v54-46-page .map-title-pyramid{
+    position:relative!important;
+    display:block!important;
+    width:100%!important;
+    min-width:0!important;
+    margin:0!important;
+    padding-top:56px!important;
+    text-align:center!important;
+  }
+
+  .analytics-v54-46-page .map-title-pyramid>.eyeline{
+    position:absolute!important;
+    top:10px!important;
+    left:50%!important;
+    width:auto!important;
+    max-width:150px!important;
+    margin:0!important;
+    padding:0!important;
+    transform:translateX(-50%)!important;
+    text-align:center!important;
+    font-size:.56rem!important;
+    letter-spacing:.13em!important;
+    white-space:nowrap!important;
+    overflow:visible!important;
+    text-overflow:clip!important;
+    z-index:3!important;
+  }
+
+  .analytics-v54-46-page .map-title-pyramid>h2,
+  .analytics-v54-46-page .map-title-pyramid>p{
+    width:100%!important;
+    max-width:none!important;
+    margin-left:auto!important;
+    margin-right:auto!important;
+    text-align:center!important;
+  }
+
+  .analytics-v54-46-page .world-map-total{
+    position:absolute!important;
+    top:0!important;
+    left:8px!important;
+    right:auto!important;
+    bottom:auto!important;
+    z-index:4!important;
+    min-width:102px!important;
+    max-width:112px!important;
+    min-height:38px!important;
+    padding:0 9px!important;
+    gap:5px!important;
+    transform:none!important;
+  }
+  .analytics-v54-46-page .world-map-total span{font-size:.5rem!important}
+  .analytics-v54-46-page .world-map-total strong{font-size:.86rem!important}
+
+  .analytics-v54-46-page .map-monthly-open{
+    position:absolute!important;
+    top:0!important;
+    right:8px!important;
+    left:auto!important;
+    bottom:auto!important;
+    z-index:4!important;
+    width:48px!important;
+    height:48px!important;
+    min-width:48px!important;
+    min-height:48px!important;
+    margin:0!important;
+    transform:none!important;
+  }
+}
+
+@media (orientation:portrait) and (max-width:390px){
+  .analytics-v54-46-page .map-title-pyramid>.eyeline{
+    max-width:132px!important;
+    font-size:.51rem!important;
+    letter-spacing:.1em!important;
+  }
+  .analytics-v54-46-page .world-map-total{
+    left:4px!important;
+    min-width:96px!important;
+    max-width:102px!important;
+    padding:0 7px!important;
+  }
+  .analytics-v54-46-page .map-monthly-open{
+    right:4px!important;
+    width:46px!important;
+    height:46px!important;
+    min-width:46px!important;
+    min-height:46px!important;
+  }
+}

@@ -1,0 +1,54 @@
+/* Control ANDRIK v54.68 — MAP POSITION LOCK
+   Keep the map card, headings and viewport anchor identical before/after country selection. */
+
+/* Do not let browser scroll anchoring move the analytics pane while country rows are replaced. */
+.analytics-v54-46-page .analytics-map-pane,
+.analytics-v54-46-page .analytics-map-pane-wrap,
+.analytics-v54-46-page .analytics-map-top,
+.analytics-v54-46-page .world-country-list{
+  overflow-anchor:none!important;
+}
+
+/* Selected-country mode must use the same card heading geometry as the main country list. */
+@media(max-width:540px){
+  .analytics-v54-46-page .analytics-map-pane .analytics-map-top.has-country-focus{
+    padding:10px 10px 9px!important;
+    border-radius:23px!important;
+  }
+  .analytics-v54-46-page .analytics-map-pane .analytics-map-top.has-country-focus .admin-card-title-row{
+    margin-bottom:4px!important;
+  }
+  .analytics-v54-46-page .analytics-map-pane .analytics-map-top.has-country-focus .eyeline{
+    font-size:.63rem!important;
+    line-height:1.1!important;
+  }
+  .analytics-v54-46-page .analytics-map-pane .analytics-map-top.has-country-focus h2{
+    margin:4px 0 2px!important;
+    font-size:1.92rem!important;
+    line-height:.98!important;
+    letter-spacing:-.025em!important;
+  }
+  .analytics-v54-46-page .analytics-map-pane .analytics-map-top.has-country-focus p,
+  .analytics-v54-46-page .analytics-map-pane #worldMapPeriod{
+    margin:0 0 7px!important;
+    font-size:.68rem!important;
+    line-height:1.25!important;
+    letter-spacing:0!important;
+    max-width:100%!important;
+  }
+}
+
+/* Keep “28 дней” together even when Android applies a temporary text autosize pass. */
+#worldMapPeriod .period-nowrap{white-space:nowrap!important}
+
+/* Disable Android/WebView automatic text inflation on this card only. */
+.analytics-v54-46-page .analytics-map-top{
+  -webkit-text-size-adjust:100%!important;
+  text-size-adjust:100%!important;
+}
+
+/* The country focus transition may zoom the map image, but never the card itself. */
+.analytics-v54-46-page .analytics-map-top.has-country-focus{
+  transform:none!important;
+  translate:none!important;
+}
