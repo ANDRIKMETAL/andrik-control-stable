@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R118', number:118, version:'55.00', full:'55.00 LIVE WEB AI FINAL R118', siteUpdater:'55.00-r116' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R119', number:119, version:'55.00', full:'55.00 LIVE WEB AI FINAL R119', siteUpdater:'55.00-r119' });
 
 const JSON_HEADERS = {
   'content-type': 'application/json; charset=utf-8',
@@ -2006,88 +2006,6 @@ function adminAuthorized(request, env) {
   const supplied = (auth.startsWith('Bearer ') ? auth.slice(7).trim() : request.headers.get('x-admin-key') || '').trim();
   if (!supplied) return false;
   return expectedKeys.some(expected => supplied.length === expected.length && supplied === expected);
-}
-
-
-function readCookieValue(request, name) {
-  const source = String(request.headers.get('cookie') || '');
-  for (const part of source.split(';')) {
-    const item = part.trim();
-    if (!item.startsWith(`${name}=`)) continue;
-    try { return decodeURIComponent(item.slice(name.length + 1)); }
-    catch (_) { return item.slice(name.length + 1); }
-  }
-  return '';
-}
-
-function timingSafeTextEqual(left, right) {
-  const a = String(left || '');
-  const b = String(right || '');
-  if (a.length !== b.length) return false;
-  let difference = 0;
-  for (let index = 0; index < a.length; index += 1) difference |= a.charCodeAt(index) ^ b.charCodeAt(index);
-  return difference === 0;
-}
-
-async function hmacSha256Hex(secret, value) {
-  const encoder = new TextEncoder();
-  const key = await crypto.subtle.importKey(
-    'raw', encoder.encode(String(secret || '')), { name:'HMAC', hash:'SHA-256' }, false, ['sign']
-  );
-  const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(String(value || '')));
-  return [...new Uint8Array(signature)].map(byte => byte.toString(16).padStart(2, '0')).join('');
-}
-
-function ownerSessionSecret(env) {
-  return `${configuredAdminKeys(env).join('|')}|${String(env.CRON_SECRET || '')}|ANDRIK-OWNER-SESSION-R118`;
-}
-
-async function createOwnerSessionToken(env) {
-  const expiresAt = Date.now() + 30 * 24 * 60 * 60 * 1000;
-  const nonce = crypto.randomUUID().replace(/-/g, '');
-  const payload = `${expiresAt}.${nonce}`;
-  const signature = await hmacSha256Hex(ownerSessionSecret(env), payload);
-  return { token:`${payload}.${signature}`, expiresAt };
-}
-
-async function verifyOwnerSessionToken(token, env) {
-  const parts = String(token || '').split('.');
-  if (parts.length !== 3 || !configuredAdminKeys(env).length) return false;
-  const [expiresRaw, nonce, suppliedSignature] = parts;
-  const expiresAt = Number(expiresRaw || 0);
-  if (!Number.isFinite(expiresAt) || expiresAt <= Date.now() || expiresAt > Date.now() + 31 * 24 * 60 * 60 * 1000) return false;
-  if (!/^[a-f0-9]{20,80}$/i.test(nonce)) return false;
-  const expectedSignature = await hmacSha256Hex(ownerSessionSecret(env), `${expiresRaw}.${nonce}`);
-  return timingSafeTextEqual(suppliedSignature, expectedSignature);
-}
-
-function ownerSessionCookie(request, token, maxAge = 2592000) {
-  let domain = '';
-  try {
-    const hostname = new URL(request.url).hostname.toLowerCase();
-    if (hostname === 'andrikmetal.com' || hostname.endsWith('.andrikmetal.com')) domain = '; Domain=.andrikmetal.com';
-  } catch (_) {}
-  return `andrik_owner_session=${encodeURIComponent(token)}; Path=/; Max-Age=${maxAge}; HttpOnly; Secure; SameSite=Lax${domain}`;
-}
-
-async function handleOwnerSessionCreate(request, env) {
-  if (!adminAuthorized(request, env)) return json({ ok:false, error:'unauthorized' }, 401);
-  if (!isSameOrigin(request)) return json({ ok:false, error:'origin' }, 403);
-  const session = await createOwnerSessionToken(env);
-  return json({ ok:true, owner:true, expiresAt:new Date(session.expiresAt).toISOString() }, 200, {
-    ...JSON_HEADERS,
-    'set-cookie': ownerSessionCookie(request, session.token),
-    'vary':'Cookie'
-  });
-}
-
-async function handleOwnerStatus(request, env) {
-  const token = readCookieValue(request, 'andrik_owner_session');
-  const owner = await verifyOwnerSessionToken(token, env).catch(() => false);
-  return json({ ok:true, owner, version:ANDRIK_CONTROL_RELEASE.short }, 200, {
-    ...JSON_HEADERS,
-    'vary':'Cookie'
-  });
 }
 
 async function handleControlAccess(request, env) {
@@ -7667,7 +7585,7 @@ async function handleControlCommentCollection(request, env) {
 
 
 
-// === ANDRIK Control R116: live security hub + event history + backups + attack map ===
+// === ANDRIK Control R115: live security hub + event history + backups + attack map ===
 const SITE_UPDATE_VERSION = ANDRIK_CONTROL_RELEASE.siteUpdater;
 const SITE_UPDATE_MAX_ZIP_BYTES = 25 * 1024 * 1024;
 const SITE_UPDATE_MAX_FILES = 1200;
@@ -7993,6 +7911,64 @@ async function siteUpdateMapLimit(items, limit, worker) {
 }
 
 
+function siteUpdateTextLikePath(path) {
+  const value = String(path || '').toLowerCase();
+  const name = value.split('/').pop();
+  if (['_headers', '_redirects', '.gitignore', '.gitattributes', 'cname'].includes(name)) return true;
+  return /\.(?:html?|css|js|mjs|cjs|json|jsonc|txt|md|xml|webmanifest|manifest|svg|csv|tsv|map|yml|yaml|toml|ini|conf|properties)$/i.test(value);
+}
+
+function siteUpdateInlineText(entry) {
+  if (!entry || !siteUpdateTextLikePath(entry.path)) return null;
+  if (!entry.bytes || entry.bytes.byteLength > 2 * 1024 * 1024) return null;
+  if (entry.bytes.includes(0)) return null;
+  try {
+    const text = new TextDecoder('utf-8', { fatal:true }).decode(entry.bytes);
+    return text;
+  } catch (_) {
+    return null;
+  }
+}
+
+function siteUpdateTreeEntrySize(entry) {
+  const content = typeof entry?.content === 'string' ? entry.content.length : 0;
+  return 240 + String(entry?.path || '').length * 2 + Math.ceil(content * 1.35);
+}
+
+function siteUpdateTreeBatches(entries, maxEntries = 70, maxEstimatedBytes = 2200000) {
+  const batches = [];
+  let current = [];
+  let size = 0;
+  for (const entry of entries) {
+    const entrySize = siteUpdateTreeEntrySize(entry);
+    if (current.length && (current.length >= maxEntries || size + entrySize > maxEstimatedBytes)) {
+      batches.push(current);
+      current = [];
+      size = 0;
+    }
+    current.push(entry);
+    size += entrySize;
+  }
+  if (current.length) batches.push(current);
+  return batches;
+}
+
+async function siteUpdateCreateTreeBatched(config, owner, repo, baseTreeSha, entries) {
+  let treeSha = baseTreeSha;
+  const batches = siteUpdateTreeBatches(entries);
+  for (const batch of batches) {
+    const tree = await siteUpdateGithubRequest(config, `/repos/${owner}/${repo}/git/trees`, {
+      method:'POST',
+      timeoutMs:60000,
+      body:{ base_tree:treeSha, tree:batch }
+    });
+    if (!tree?.sha) throw new Error('github-tree-missing');
+    treeSha = tree.sha;
+  }
+  return { sha:treeSha, batches:batches.length };
+}
+
+
 let siteUpdateHistoryCache = null;
 
 function siteUpdateNewOperationId(prefix = 'update') {
@@ -8313,19 +8289,36 @@ async function handleSiteUpdatePublish(request, env) {
     if (!touched.length && !diff.deleted.length) return json({ ok:true, noChanges:true, headSha:snapshot.headSha, message:'Изменений нет.' });
     const operationId = siteUpdateNewOperationId('publish');
     const owner = encodeURIComponent(config.owner), repo = encodeURIComponent(config.repo);
-    const blobItems = touched.map(path => diff.archive.get(path));
-    const created = await siteUpdateMapLimit(blobItems, 7, async entry => {
+
+    // R119: текстовые файлы передаются прямо в Git Tree API.
+    // Это заменяет десятки отдельных blob-запросов одним или несколькими пакетами
+    // и не упирается в лимит внешних запросов Cloudflare Worker.
+    const inlineEntries = [];
+    const binaryEntries = [];
+    for (const path of touched) {
+      const entry = diff.archive.get(path);
+      const content = siteUpdateInlineText(entry);
+      const base = {
+        path,
+        mode:snapshot.files.get(path)?.mode || '100644',
+        type:'blob'
+      };
+      if (content !== null) inlineEntries.push({ ...base, content });
+      else binaryEntries.push({ entry, base });
+    }
+
+    const createdBinary = await siteUpdateMapLimit(binaryEntries, 4, async item => {
       const data = await siteUpdateGithubRequest(config, `/repos/${owner}/${repo}/git/blobs`, {
-        method:'POST', body:{ content:siteUpdateBase64(entry.bytes), encoding:'base64' }
+        method:'POST',
+        timeoutMs:60000,
+        body:{ content:siteUpdateBase64(item.entry.bytes), encoding:'base64' }
       });
-      return [entry.path, data.sha];
+      return { ...item.base, sha:data.sha };
     });
-    const blobMap = new Map(created);
-    const treeEntries = touched.map(path => ({
-      path, mode:snapshot.files.get(path)?.mode || '100644', type:'blob', sha:blobMap.get(path)
-    }));
-    for (const path of diff.deleted) treeEntries.push({ path, mode:snapshot.files.get(path)?.mode || '100644', type:'blob', sha:null });
-    const marker = await siteUpdateCreateStateBlob(config, {
+
+    const state = {
+      schema:1,
+      updaterVersion:SITE_UPDATE_VERSION,
       operation:'publish',
       operationId,
       release,
@@ -8333,12 +8326,29 @@ async function handleSiteUpdatePublish(request, env) {
       sourceHead:snapshot.headSha,
       backupSha,
       backupTag,
-      autoRecovery
+      autoRecovery,
+      generatedAt:new Date().toISOString()
+    };
+
+    const treeEntries = [...inlineEntries, ...createdBinary];
+    for (const path of diff.deleted) {
+      treeEntries.push({
+        path,
+        mode:snapshot.files.get(path)?.mode || '100644',
+        type:'blob',
+        sha:null
+      });
+    }
+    treeEntries.push({
+      path:'site-update-state.json',
+      mode:'100644',
+      type:'blob',
+      content:`${JSON.stringify(state, null, 2)}\n`
     });
-    treeEntries.push({ path:'site-update-state.json', mode:'100644', type:'blob', sha:marker.sha });
-    const tree = await siteUpdateGithubRequest(config, `/repos/${owner}/${repo}/git/trees`, {
-      method:'POST', body:{ base_tree:snapshot.treeSha, tree:treeEntries }
-    });
+
+    const tree = await siteUpdateCreateTreeBatched(
+      config, owner, repo, snapshot.treeSha, treeEntries
+    );
     const commitMessage = release ? `${message}\n\nRelease: ${release}` : message;
     const commit = await siteUpdateGithubRequest(config, `/repos/${owner}/${repo}/git/commits`, {
       method:'POST', body:{ message:commitMessage, tree:tree.sha, parents:[snapshot.headSha],
@@ -8352,7 +8362,7 @@ async function handleSiteUpdatePublish(request, env) {
       message:`Сайт отправлен в GitHub: ${commit.sha.slice(0,7)}`,
       details:{ repository:`${config.owner}/${config.repo}`, branch:config.branch, release, commitSha:commit.sha,
         added:diff.added.length, changed:diff.changed.length, deleted:diff.deleted.length,
-        archive:archive.name, archiveBytes:Number(archive.size || 0), operationId, backupSha, backupTag, autoRecovery, durationMs:Date.now()-startedAt }
+        archive:archive.name, archiveBytes:Number(archive.size || 0), operationId, backupSha, backupTag, autoRecovery, inlineFiles:inlineEntries.length, binaryFiles:binaryEntries.length, treeBatches:tree.batches, durationMs:Date.now()-startedAt }
     }).catch(() => {});
     await sendOwnerPush(env, { title:'ANDRIK Control', message:`Обновление сайта отправлено в GitHub: ${commit.sha.slice(0,7)}`, url:'https://control.andrikmetal.com/site-update-admin.html' }).catch(() => {});
     siteUpdateHistoryCache = null;
@@ -8814,8 +8824,6 @@ async function routeApi(request, env, ctx) {
     if (path === '/api/control/site-update/log' && request.method === 'GET') return await handleSiteUpdateLog(request, env);
     if (path === '/api/control/site-update/history' && request.method === 'GET') return await handleSiteUpdateHistory(request, env);
     if (path === '/api/control/site-update/rollback' && request.method === 'POST') return await handleSiteUpdateRollback(request, env);
-    if (path === '/api/control/owner-session' && request.method === 'POST') return await handleOwnerSessionCreate(request, env);
-    if (path === '/api/control/owner-status' && request.method === 'GET') return await handleOwnerStatus(request, env);
     if (path === '/api/control/access' && request.method === 'GET') return await handleControlAccess(request, env);
     if (path === '/api/control/home' && request.method === 'GET') return await handleControlHome(request, env);
     if (path === '/api/control/dashboard' && request.method === 'GET') return await handleControlDashboard(request, env);
@@ -8868,150 +8876,6 @@ function controlRecoveryPage() {
   return `<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#02060a"><meta name="robots" content="noindex,nofollow"><title>Восстановление Control ANDRIK</title><style>*{box-sizing:border-box}html,body{min-height:100%;margin:0;background:#02060a;color:#eff8ff;font-family:system-ui,-apple-system,Segoe UI,sans-serif}body{display:grid;place-items:center;padding:22px}.c{width:min(100%,520px);padding:30px 22px;border:1px solid #244455;border-radius:28px;background:linear-gradient(#081923,#030c13);text-align:center}.e{font-size:58px}h1{font-size:clamp(30px,8vw,44px);margin:12px 0}.s{color:#abc0cc;line-height:1.55}.b{display:inline-flex;min-height:54px;align-items:center;justify-content:center;margin-top:20px;padding:0 22px;border:1px solid #315b70;border-radius:999px;color:#eff8ff;text-decoration:none;font-weight:800;background:#0a2432}</style></head><body><main class="c"><div class="e">🟢</div><h1>Восстанавливаем Control</h1><p class="s" id="s">Заменяем старый перехват страниц безопасной версией…</p><a class="b" id="b" href="/analytics-admin.html?source=recovery&page=map&v=54.96" hidden>Открыть Control</a></main><script>(async()=>{const s=document.getElementById('s'),b=document.getElementById('b'),go='/analytics-admin.html?source=recovery&page=map&v=54.96&t='+Date.now();b.href=go;try{if('caches'in window){const k=await caches.keys();await Promise.all(k.filter(n=>n.startsWith('andrik-control-')||n.startsWith('andrik-site-')).map(n=>caches.delete(n)))}if('serviceWorker'in navigator){const r=await navigator.serviceWorker.register('/service-worker.js?v=54.96-control-recovery',{scope:'/',updateViaCache:'none'});if(r.installing)r.installing.postMessage({type:'SKIP_WAITING'});if(r.waiting)r.waiting.postMessage({type:'SKIP_WAITING'});await r.update().catch(()=>{});await new Promise(x=>setTimeout(x,1200))}s.textContent='Готово. Открываем карту напрямую…';s.style.color='#bfffd9';b.hidden=false;setTimeout(()=>location.replace(go),650)}catch(e){s.textContent='Нажмите кнопку ниже. '+String(e&&e.message||e);s.style.color='#ffb9b9';b.hidden=false}})();</script></body></html>`;
 }
 
-
-function allowControlInsidePlayer(response, url, isControlHost) {
-  if (!isControlHost || url.searchParams.get('player-shell') !== '1') return response;
-  const contentType = String(response.headers.get('content-type') || '').toLowerCase();
-  if (!contentType.includes('text/html')) return response;
-  const headers = new Headers(response.headers);
-  headers.delete('x-frame-options');
-  headers.set('content-security-policy', "frame-ancestors 'self' https://andrikmetal.com");
-  headers.set('cache-control', 'no-cache, no-store, must-revalidate');
-  headers.set('x-andrik-player-shell', 'R118');
-  return new Response(response.body, {
-    status: response.status,
-    statusText: response.statusText,
-    headers
-  });
-}
-
-
-function r118ControlRuntimeCss() {
-  return `
-    html,body{max-width:100%!important;overflow-x:clip!important}
-    body.site-update-page .admin-main,body.site-update-page .update-wrap,body.site-update-page .update-grid,
-    body.site-update-page .admin-control-card,body.site-update-page .update-file-picker,
-    body.site-update-page .update-stagebar,body.site-update-page .update-main-button{
-      width:100%!important;max-width:100%!important;min-width:0!important;box-sizing:border-box!important
-    }
-    body.site-update-page .update-stagebar{grid-template-columns:repeat(6,minmax(0,1fr))!important;overflow:hidden!important}
-    body.site-update-page .update-stagebar>div{min-width:0!important;overflow:hidden!important}
-    body.site-update-page .update-stagebar span{overflow:hidden!important;text-overflow:ellipsis!important}
-    body.site-update-page button,body.site-update-page .btn{max-width:100%!important;white-space:normal!important}
-    body.control-menu-visible .control-protection-fab,
-    body.control-menu-visible .control-attack-fab,
-    body.control-menu-visible .control-update-fab{bottom:calc(3px + env(safe-area-inset-bottom))!important}
-    @media(orientation:landscape){
-      body.control-menu-visible .control-protection-fab,
-      body.control-menu-visible .control-attack-fab,
-      body.control-menu-visible .control-update-fab{bottom:calc(1px + env(safe-area-inset-bottom))!important}
-    }
-    @keyframes andrikControlEyeBreathR118{
-      0%,100%{transform:translate(-50%,-50%) scale(.94);filter:brightness(1.04) saturate(1.24) drop-shadow(0 0 8px rgba(83,255,146,.54)) drop-shadow(0 0 22px rgba(27,224,94,.40))}
-      50%{transform:translate(-50%,-50%) scale(1.085);filter:brightness(1.48) saturate(1.56) drop-shadow(0 0 17px rgba(151,255,190,.98)) drop-shadow(0 0 42px rgba(35,242,111,.90)) drop-shadow(0 0 68px rgba(10,176,70,.52))}
-    }
-    @keyframes andrikControlEyeHaloR118{
-      0%,100%{transform:translate(-50%,-50%) scale(.72);opacity:.18}
-      50%{transform:translate(-50%,-50%) scale(1.34);opacity:.82}
-    }
-    .control-page .control-topbar .control-center-logo .logo-ok,
-    .youtube-admin-page .youtube-topbar-clean .control-center-logo .logo-ok,
-    .comment-collection-page .control-detail-topbar .control-center-logo .logo-ok{
-      animation:andrikControlEyeBreathR118 3.15s ease-in-out infinite!important;
-      animation-play-state:running!important;will-change:transform,filter!important
-    }
-    .control-page .control-topbar .control-center-logo::after,
-    .youtube-admin-page .youtube-topbar-clean .control-center-logo::after,
-    .comment-collection-page .control-detail-topbar .control-center-logo::after{
-      animation:andrikControlEyeHaloR118 3.15s ease-in-out infinite!important;
-      will-change:transform,opacity!important
-    }
-  `;
-}
-
-function r118ControlRuntimeJs() {
-  return `(()=>{
-    'use strict';
-    const SESSION='andrik-comments-admin-key';
-    const LOCAL='andrik-comments-admin-key-persistent';
-    const STAMP='andrik-owner-session-sync-r118';
-    async function syncOwner(){
-      let key='';
-      try{key=localStorage.getItem(LOCAL)||sessionStorage.getItem(SESSION)||''}catch(_){}
-      if(!key)return;
-      try{const last=Number(localStorage.getItem(STAMP)||0);if(Date.now()-last<6*60*60*1000)return}catch(_){}
-      try{
-        const response=await fetch('/api/control/owner-session',{method:'POST',credentials:'include',cache:'no-store',headers:{authorization:'Bearer '+key,accept:'application/json','content-type':'application/json'},body:'{}'});
-        if(response.ok){try{localStorage.setItem(STAMP,String(Date.now()))}catch(_){}}
-      }catch(_){}
-    }
-    function applyVersion(){
-      document.documentElement.dataset.andrikCurrentRelease='R118';
-      if(document.body)document.body.dataset.andrikCurrentRelease='R118';
-      document.querySelectorAll('.control-version-footer strong').forEach(el=>{
-        if(el===document.documentElement||el===document.body)return;
-        const profile=/профиль\\s+ANDRIK/i.test(el.textContent||'');
-        el.textContent=profile?'Live Web AI · профиль ANDRIK · v55.00 LIVE WEB AI FINAL R118':'Live Web AI · ANDRIK · v55.00 LIVE WEB AI FINAL R118';
-      });
-    }
-    if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{applyVersion();syncOwner()},{once:true});
-    else{applyVersion();syncOwner()}
-  })();`;
-}
-
-function r118OwnerEyeJs() {
-  return `(()=>{
-    'use strict';
-    let cleanPath=location.pathname;
-    if(cleanPath.endsWith('/index.html'))cleanPath=cleanPath.slice(0,-10)||'/';
-    const homes=new Set(['/','/en/','/sk/','/uk/']);
-    if(!homes.has(cleanPath)||document.getElementById('andrik-owner-control-eye'))return;
-    const start=async()=>{
-      try{
-        const response=await fetch('/api/control/owner-status',{credentials:'include',cache:'no-store',headers:{accept:'application/json'}});
-        const data=await response.json().catch(()=>({}));
-        if(!response.ok||!data.owner)return;
-        const nav=document.querySelector('.topbar .nav-shell');
-        if(!nav||document.getElementById('andrik-owner-control-eye'))return;
-        nav.style.position='relative';
-        const inside=window.self!==window.top;
-        const link=document.createElement('a');
-        link.id='andrik-owner-control-eye';
-        link.href='https://control.andrikmetal.com/control-home.html?'+(inside?'player-shell=1&':'')+'v=55.00-r118';
-        link.setAttribute('aria-label','Открыть ANDRIK Control');
-        link.title='ANDRIK Control';
-        link.innerHTML='<span aria-hidden="true"></span><img src="/assets/control-topbar-eye-triangle.jpg" alt="">';
-        nav.appendChild(link);
-        const style=document.createElement('style');
-        style.id='andrik-owner-control-eye-style';
-        style.textContent='#andrik-owner-control-eye{position:absolute;left:50%;top:50%;z-index:32;width:44px;height:44px;transform:translate(-50%,-50%);display:grid;place-items:center;border-radius:50%;text-decoration:none;-webkit-tap-highlight-color:transparent;isolation:isolate}#andrik-owner-control-eye span{position:absolute;inset:-8px;border-radius:50%;background:radial-gradient(circle,rgba(96,255,157,.42),rgba(28,218,92,.13) 52%,transparent 73%);animation:andrikOwnerHaloR118 3.05s ease-in-out infinite;z-index:0}#andrik-owner-control-eye img{position:relative;z-index:1;width:40px;height:40px;display:block;object-fit:cover;border-radius:50%;clip-path:circle(49% at 50% 50%);animation:andrikOwnerEyeR118 3.05s ease-in-out infinite;will-change:transform,filter;box-shadow:0 0 0 1px rgba(119,255,177,.22)}#andrik-owner-control-eye:active img{transform:scale(.92)!important}@keyframes andrikOwnerEyeR118{0%,100%{transform:scale(.93);filter:brightness(1.02) saturate(1.28) drop-shadow(0 0 7px rgba(80,255,143,.55)) drop-shadow(0 0 18px rgba(22,218,87,.38))}50%{transform:scale(1.08);filter:brightness(1.48) saturate(1.6) drop-shadow(0 0 14px rgba(146,255,187,.96)) drop-shadow(0 0 34px rgba(32,239,105,.82))}}@keyframes andrikOwnerHaloR118{0%,100%{transform:scale(.70);opacity:.18}50%{transform:scale(1.32);opacity:.86}}@media(max-width:430px){#andrik-owner-control-eye{width:39px;height:39px}#andrik-owner-control-eye img{width:35px;height:35px}#andrik-owner-control-eye span{inset:-7px}}';
-        document.head.appendChild(style);
-      }catch(_){}
-    };
-    if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
-  })();`;
-}
-
-function decorateR118Html(response, url, isControlHost) {
-  const type=String(response.headers.get('content-type')||'').toLowerCase();
-  if(!type.includes('text/html'))return response;
-  let path=url.pathname;
-  if(path.endsWith('/index.html'))path=path.slice(0,-10)||'/';
-  const isMainHome=!isControlHost&&new Set(['/','/en/','/sk/','/uk/']).has(path);
-  if(!isControlHost&&!isMainHome)return response;
-  const headers=new Headers(response.headers);
-  headers.set('cache-control','no-cache, no-store, must-revalidate');
-  const prepared=new Response(response.body,{status:response.status,statusText:response.statusText,headers});
-  let rewriter=new HTMLRewriter();
-  if(isControlHost){
-    rewriter=rewriter.on('head',{element(element){element.append(`<style id="andrik-r118-runtime-css">${r118ControlRuntimeCss()}</style>`,{html:true})}})
-      .on('body',{element(element){element.append(`<script id="andrik-r118-runtime-js">${r118ControlRuntimeJs()}</script>`,{html:true})}});
-  }else if(isMainHome){
-    rewriter=rewriter.on('body',{element(element){element.append(`<script id="andrik-owner-eye-r118">${r118OwnerEyeJs()}</script>`,{html:true})}});
-  }
-  return rewriter.transform(prepared);
-}
-
 function controlAssetFailurePage(error) {
   const safe = String(error?.message || error || 'unknown').replace(/[<>&"']/g, '');
   return `<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Control ANDRIK — восстановление</title><style>body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;background:#02060a;color:#eef8ff;font:18px/1.5 system-ui}.c{max-width:560px;padding:26px;border:1px solid #294654;border-radius:24px;background:#07131b}a{color:#bcecff}</style></head><body><main class="c"><h1>Control временно не получил файл</h1><p>Откройте встроенное восстановление:</p><p><a href="/cache-reset.html?v=5469">Восстановить Control ANDRIK</a></p><small>${safe}</small></main></body></html>`;
@@ -9060,12 +8924,10 @@ export default {
         // Dedicated owner subdomain: serve the Control map HTML directly.
         if (isControlHost && (path === '/' || path === '/index.html' || path === '/admin' || path === '/admin/index.html')) {
           const assetUrl = new URL('/analytics-admin.html', url);
-          const response = await env.ASSETS.fetch(new Request(assetUrl.toString(), request));
-          return decorateR118Html(allowControlInsidePlayer(response, url, isControlHost), url, isControlHost);
+          return await env.ASSETS.fetch(new Request(assetUrl.toString(), request));
         }
       }
-      const response = await env.ASSETS.fetch(request);
-      return decorateR118Html(allowControlInsidePlayer(response, url, isControlHost), url, isControlHost);
+      return await env.ASSETS.fetch(request);
     } catch (error) {
       console.error('ANDRIK static asset error', error);
       ctx?.waitUntil?.(recordSystemLog(env, { scope:'assets', level:'error', event:'asset-fetch-failed', message:`${request.method} ${normalizedPath}: ${cleanPlainText(error?.message || error,420)}`, details:{ host:hostname, path:normalizedPath } }).catch(() => {}));
