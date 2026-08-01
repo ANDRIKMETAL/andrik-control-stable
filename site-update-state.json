@@ -1,12 +1,13 @@
 {
   "schema": 1,
-  "updaterVersion": "55.00-r120",
-  "operation": "rollback",
-  "operationId": "rollback-1785610545627-940ee081d2",
-  "release": "R119",
-  "targetSha": "fc27845014e3e2afbcd748b2df9f14441d341c6f",
-  "targetLabel": "R119",
-  "sourceHead": "f33b55df5582fbd756594b6393f58d1e0aaa761b",
-  "safetyBackup": "control-backup-20260801185545-f33b55d-before-r119-ac8ab",
-  "generatedAt": "2026-08-01T18:55:46.411Z"
+  "updaterVersion": "55.00-r119",
+  "operation": "publish",
+  "operationId": "publish-1785611492492-c7e656b943",
+  "release": "R123",
+  "archiveName": "R123.zip",
+  "sourceHead": "ce18eee6fdb32b20c784d339c2627fd0d474255a",
+  "backupSha": "ce18eee6fdb32b20c784d339c2627fd0d474255a",
+  "backupTag": "control-backup-20260801191129-ce18eee-r123-b05bd",
+  "autoRecovery": true,
+  "generatedAt": "2026-08-01T19:11:32.492Z"
 }

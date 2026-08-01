@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R119', number:119, version:'55.00', full:'55.00 LIVE WEB AI FINAL R119', siteUpdater:'55.00-r119' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R123', number:123, version:'55.00', full:'55.00 LIVE WEB AI FINAL R123', siteUpdater:'55.00-r123' });
 
 const JSON_HEADERS = {
   'content-type': 'application/json; charset=utf-8',
@@ -188,6 +188,15 @@ async function ensureSecuritySchema(db) {
       );
       CREATE INDEX IF NOT EXISTS idx_security_rate_updated
         ON security_rate_buckets(updated_at DESC);
+
+      CREATE TABLE IF NOT EXISTS security_alert_state (
+        alert_key TEXT PRIMARY KEY,
+        pending_count INTEGER NOT NULL DEFAULT 0,
+        last_sent_at TEXT NOT NULL DEFAULT '',
+        last_kind TEXT NOT NULL DEFAULT '',
+        last_country TEXT NOT NULL DEFAULT '',
+        updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+      );
     `);
     await db.prepare(`ALTER TABLE security_events ADD COLUMN country TEXT NOT NULL DEFAULT ''`).run().catch(() => {});
     await db.prepare(`ALTER TABLE security_events ADD COLUMN region TEXT NOT NULL DEFAULT ''`).run().catch(() => {});
@@ -208,20 +217,116 @@ async function recordSecurityEvent(db, request, env, kind, detail = '') {
     await ensureSecuritySchema(db);
     const ipHash = await securityIpHash(request, env);
     const cf = request.cf || {};
+    const event = {
+      kind:cleanPlainText(kind, 80),
+      path:cleanPlainText(new URL(request.url).pathname, 180),
+      ipHash,
+      detail:cleanPlainText(detail, 500),
+      country:cleanPlainText(cf.country || '', 8).toUpperCase(),
+      region:cleanPlainText(cf.region || cf.regionCode || '', 100),
+      city:cleanPlainText(cf.city || '', 100),
+      colo:cleanPlainText(cf.colo || '', 16)
+    };
     await db.prepare(`
       INSERT INTO security_events(kind, path, ip_hash, detail, country, region, city, colo, created_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
     `).bind(
-      cleanPlainText(kind, 80),
-      cleanPlainText(new URL(request.url).pathname, 180),
-      ipHash,
-      cleanPlainText(detail, 500),
-      cleanPlainText(cf.country || '', 8).toUpperCase(),
-      cleanPlainText(cf.region || cf.regionCode || '', 100),
-      cleanPlainText(cf.city || '', 100),
-      cleanPlainText(cf.colo || '', 16)
+      event.kind, event.path, event.ipHash, event.detail,
+      event.country, event.region, event.city, event.colo
     ).run();
+    await maybeSendSecurityAttackPush(db, env, event).catch(() => {});
   } catch (_) {}
+}
+
+function securityAttackPushEnabled(env) {
+  return !/^(0|false|off|no)$/i.test(String(env.ATTACK_PUSH_ENABLED || 'true').trim());
+}
+
+async function maybeSendSecurityAttackPush(db, env, event) {
+  if (!securityAttackPushEnabled(env)) return;
+  const kind = String(event?.kind || '');
+  if (!kind || !/(?:turnstile|spam|honeypot|rate-limit|blocked|abuse|attack|bot)/i.test(kind)) return;
+
+  const cooldownSeconds = Math.max(60, Math.min(3600, Number(env.ATTACK_PUSH_COOLDOWN_SECONDS || 300)));
+  const alertKey = 'owner-attacks';
+  await db.prepare(`
+    INSERT INTO security_alert_state(
+      alert_key, pending_count, last_sent_at, last_kind, last_country, updated_at
+    )
+    VALUES (?, 1, '', ?, ?, datetime('now'))
+    ON CONFLICT(alert_key) DO UPDATE SET
+      pending_count = pending_count + 1,
+      last_kind = excluded.last_kind,
+      last_country = excluded.last_country,
+      updated_at = datetime('now')
+  `).bind(alertKey, cleanPlainText(kind, 80), cleanPlainText(event.country || '', 8)).run();
+
+  const state = await db.prepare(`
+    SELECT pending_count AS pendingCount, last_sent_at AS lastSentAt
+    FROM security_alert_state WHERE alert_key=? LIMIT 1
+  `).bind(alertKey).first();
+
+  const lastSentMs = Date.parse(String(state?.lastSentAt || '')) || 0;
+  if (lastSentMs && Date.now() - lastSentMs < cooldownSeconds * 1000) return;
+
+  const [totals, kinds, countries] = await Promise.all([
+    db.prepare(`
+      SELECT COUNT(*) AS total
+      FROM security_events
+      WHERE datetime(created_at) >= datetime('now', '-5 minutes')
+        AND (
+          kind LIKE '%turnstile%' OR kind LIKE '%spam%' OR kind LIKE '%honeypot%'
+          OR kind LIKE '%rate-limit%' OR kind LIKE '%blocked%'
+          OR kind LIKE '%abuse%' OR kind LIKE '%attack%' OR kind LIKE '%bot%'
+        )
+    `).first(),
+    db.prepare(`
+      SELECT kind, COUNT(*) AS count
+      FROM security_events
+      WHERE datetime(created_at) >= datetime('now', '-5 minutes')
+      GROUP BY kind ORDER BY count DESC LIMIT 3
+    `).all(),
+    db.prepare(`
+      SELECT country, COUNT(*) AS count
+      FROM security_events
+      WHERE datetime(created_at) >= datetime('now', '-5 minutes') AND country<>''
+      GROUP BY country ORDER BY count DESC LIMIT 3
+    `).all()
+  ]);
+
+  const total = Math.max(1, Number(totals?.total || state?.pendingCount || 1));
+  const kindText = (kinds.results || []).map(row => `${row.kind} ×${row.count}`).join(', ');
+  const countryText = (countries.results || []).map(row => `${row.country} ×${row.count}`).join(', ');
+  const message = [
+    `${total} заблокирован${total === 1 ? 'ная попытка' : 'ных попыток'} за 5 минут.`,
+    kindText || cleanPlainText(kind, 80),
+    countryText ? `Страны: ${countryText}.` : ''
+  ].filter(Boolean).join(' ');
+
+  const result = await sendOwnerPush(env, {
+    title:'🛡️ ANDRIK: атака заблокирована',
+    message,
+    url:'https://control.andrikmetal.com/attack-map.html'
+  }).catch(error => ({ ok:false, message:String(error?.message || error) }));
+
+  await db.prepare(`
+    UPDATE security_alert_state
+    SET pending_count=0, last_sent_at=datetime('now'), updated_at=datetime('now')
+    WHERE alert_key=?
+  `).bind(alertKey).run();
+
+  await recordSystemLog(env, {
+    scope:'security',
+    level:result?.ok === false ? 'warning' : 'info',
+    event:'attack-push-sent',
+    message,
+    details:{
+      total,
+      kinds:kinds.results || [],
+      countries:countries.results || [],
+      oneSignalOk:result?.ok !== false
+    }
+  }).catch(() => {});
 }
 
 async function securityRateLimit(db, request, env, event, limit, windowSeconds, blockedKind) {
@@ -8053,6 +8158,208 @@ async function siteUpdateConfirmedHealth(env) {
   return { health:attempts[attempts.length - 1], attempts };
 }
 
+
+let siteUpdateRecoverySchemaPromise = null;
+
+async function ensureSiteUpdateRecoverySchema(env) {
+  if (!env.COMMENTS_DB) return;
+  if (siteUpdateRecoverySchemaPromise) return siteUpdateRecoverySchemaPromise;
+  siteUpdateRecoverySchemaPromise = (async () => {
+    await env.COMMENTS_DB.prepare(`
+      CREATE TABLE IF NOT EXISTS site_update_known_good (
+        slot TEXT PRIMARY KEY,
+        commit_sha TEXT NOT NULL,
+        operation_id TEXT NOT NULL DEFAULT '',
+        release TEXT NOT NULL DEFAULT '',
+        health_json TEXT NOT NULL DEFAULT '{}',
+        verified_at TEXT NOT NULL DEFAULT (datetime('now'))
+      )
+    `).run();
+  })().finally(() => { siteUpdateRecoverySchemaPromise = null; });
+  return siteUpdateRecoverySchemaPromise;
+}
+
+async function siteUpdateGetKnownGood(env) {
+  if (!env.COMMENTS_DB) return null;
+  await ensureSiteUpdateRecoverySchema(env);
+  const row = await env.COMMENTS_DB.prepare(`
+    SELECT commit_sha AS commitSha, operation_id AS operationId, release,
+           health_json AS healthJson, verified_at AS verifiedAt
+    FROM site_update_known_good WHERE slot='production' LIMIT 1
+  `).first();
+  if (!row || !/^[0-9a-f]{40}$/i.test(String(row.commitSha || ''))) return null;
+  let health = {};
+  try { health = JSON.parse(row.healthJson || '{}'); } catch (_) {}
+  return { ...row, health };
+}
+
+async function siteUpdateSaveKnownGood(env, payload = {}) {
+  if (!env.COMMENTS_DB) return null;
+  const commitSha = cleanPlainText(payload.commitSha || '', 64);
+  if (!/^[0-9a-f]{40}$/i.test(commitSha)) return null;
+  await ensureSiteUpdateRecoverySchema(env);
+  let healthJson = '{}';
+  try { healthJson = JSON.stringify(payload.health || {}); } catch (_) {}
+  await env.COMMENTS_DB.prepare(`
+    INSERT INTO site_update_known_good(
+      slot, commit_sha, operation_id, release, health_json, verified_at
+    )
+    VALUES ('production', ?, ?, ?, ?, datetime('now'))
+    ON CONFLICT(slot) DO UPDATE SET
+      commit_sha=excluded.commit_sha,
+      operation_id=excluded.operation_id,
+      release=excluded.release,
+      health_json=excluded.health_json,
+      verified_at=datetime('now')
+  `).bind(
+    commitSha,
+    cleanPlainText(payload.operationId || '', 120),
+    cleanPlainText(payload.release || '', 80),
+    healthJson
+  ).run();
+  return siteUpdateGetKnownGood(env);
+}
+
+async function siteUpdateGuardRequest(env, path, payload = {}, timeoutMs = 30000) {
+  const base = String(env.GUARD_URL || '').trim().replace(/\/+$/, '');
+  const key = String(env.GUARD_KEY || '').trim();
+  if (!base || !key) return { configured:false, ok:false, error:'guard-not-configured' };
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(`${base}${path}`, {
+      method:'POST',
+      signal:controller.signal,
+      headers:{
+        authorization:`Bearer ${key}`,
+        'content-type':'application/json',
+        accept:'application/json'
+      },
+      body:JSON.stringify(payload || {})
+    });
+    const data = await response.json().catch(() => ({}));
+    return { configured:true, ok:response.ok && data?.ok !== false, status:response.status, ...data };
+  } catch (error) {
+    return {
+      configured:true, ok:false,
+      error:error?.name === 'AbortError' ? 'guard-timeout' : cleanPlainText(error?.message || error, 300)
+    };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function siteUpdateRestoreRepositoryToCommit(env, targetSha, details = {}) {
+  const cleanSha = cleanPlainText(targetSha || '', 64);
+  if (!/^[0-9a-f]{40}$/i.test(cleanSha)) return { ok:false, error:'target-sha-invalid' };
+  const config = siteUpdateConfig(env);
+  if (!config.token || !siteUpdateConfigValid(config)) return { ok:false, error:'github-token-missing' };
+  const snapshot = await siteUpdateGithubSnapshot(config);
+  if (snapshot.headSha === cleanSha) return { ok:true, unchanged:true, commitSha:cleanSha };
+
+  const owner = encodeURIComponent(config.owner), repo = encodeURIComponent(config.repo);
+  const target = await siteUpdateGithubRequest(config, `/repos/${owner}/${repo}/git/commits/${cleanSha}`);
+  const operationId = siteUpdateNewOperationId('guard-source-recovery');
+  const marker = await siteUpdateCreateStateBlob(config, {
+    operation:'guard-source-recovery',
+    operationId,
+    release:cleanPlainText(details.release || '', 80),
+    targetSha:cleanSha,
+    failedHead:snapshot.headSha,
+    guardDeployment:cleanPlainText(details.recoveryDeployment || '', 120),
+    autoRecovery:false
+  });
+  const tree = await siteUpdateGithubRequest(config, `/repos/${owner}/${repo}/git/trees`, {
+    method:'POST',
+    body:{
+      base_tree:target.tree.sha,
+      tree:[{ path:'site-update-state.json', mode:'100644', type:'blob', sha:marker.sha }]
+    }
+  });
+  const commit = await siteUpdateGithubRequest(config, `/repos/${owner}/${repo}/git/commits`, {
+    method:'POST',
+    body:{
+      message:`Guard recovery: restore verified source ${cleanSha.slice(0,7)}`,
+      tree:tree.sha,
+      parents:[snapshot.headSha],
+      author:{ name:'ANDRIK Guard', email:'andrik-guard@users.noreply.github.com' }
+    }
+  });
+  const branchRef = config.branch.split('/').map(encodeURIComponent).join('/');
+  await siteUpdateGithubRequest(config, `/repos/${owner}/${repo}/git/refs/heads/${branchRef}`, {
+    method:'PATCH', body:{ sha:commit.sha, force:false }
+  });
+  siteUpdateHistoryCache = null;
+  await recordSystemLog(env, {
+    scope:'guard', level:'warning', event:'source-restored',
+    message:`GitHub восстановлен из проверенного commit ${cleanSha.slice(0,7)}`,
+    details:{ targetSha:cleanSha, recoveryCommit:commit.sha, previousHead:snapshot.headSha, operationId }
+  }).catch(() => {});
+  return { ok:true, targetSha:cleanSha, commitSha:commit.sha, operationId };
+}
+
+function guardEventAuthorized(request, env) {
+  const expected = String(env.GUARD_KEY || '');
+  const supplied = String(request.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
+  if (!expected || supplied.length !== expected.length) return false;
+  let diff = 0;
+  for (let i = 0; i < expected.length; i++) diff |= expected.charCodeAt(i) ^ supplied.charCodeAt(i);
+  return diff === 0;
+}
+
+async function handleGuardEvent(request, env) {
+  if (!guardEventAuthorized(request, env)) return json({ ok:false, error:'unauthorized' }, 401);
+  const body = await readJsonBody(request, 20000).catch(() => ({}));
+  const event = cleanPlainText(body.event || '', 80);
+  const message = cleanPlainText(body.message || '', 700);
+  const targetCommitSha = cleanPlainText(body.targetCommitSha || '', 64);
+  const details = {
+    badDeployment:cleanPlainText(body.badDeployment || '', 160),
+    recoveryDeployment:cleanPlainText(body.recoveryDeployment || '', 160),
+    targetCommitSha,
+    startedAt:cleanPlainText(body.startedAt || '', 80),
+    finishedAt:cleanPlainText(body.finishedAt || '', 80),
+    reason:cleanPlainText(body.reason || '', 120)
+  };
+
+  await recordSystemLog(env, {
+    scope:'guard',
+    level:event === 'recovery-failed' ? 'error' : event === 'recovery-restored' ? 'info' : 'warning',
+    event:event || 'guard-event',
+    message:message || event || 'Guard event',
+    details
+  }).catch(() => {});
+
+  let sourceRecovery = null;
+  if (event === 'recovery-restored' && /^[0-9a-f]{40}$/i.test(targetCommitSha)) {
+    sourceRecovery = await siteUpdateRestoreRepositoryToCommit(env, targetCommitSha, details).catch(error => ({
+      ok:false, error:cleanPlainText(error?.message || error, 400)
+    }));
+  }
+
+  if (event === 'recovery-restored') {
+    await sendOwnerPush(env, {
+      title:'✅ ANDRIK Control восстановлена',
+      message:message || `Страница восстановлена после сбоя. Deploy ${details.recoveryDeployment.slice(0,8)}.`,
+      url:'https://control.andrikmetal.com/'
+    }).catch(() => {});
+  } else if (event === 'recovery-failed') {
+    await sendOwnerPush(env, {
+      title:'🚨 ANDRIK Guard: восстановление не подтверждено',
+      message:message || 'Проверь Control и Cloudflare.',
+      url:'https://control.andrikmetal.com/protection-admin.html'
+    }).catch(() => {});
+  } else if (event === 'outage-detected') {
+    await sendOwnerPush(env, {
+      title:'⚠️ ANDRIK Control: обнаружен сбой',
+      message:message || 'Guard проверяет последнюю исправную версию.',
+      url:'https://control.andrikmetal.com/protection-admin.html'
+    }).catch(() => {});
+  }
+
+  return json({ ok:true, event, sourceRecovery });
+}
+
 async function siteUpdateStartAutomaticRecovery(config, env, failedState) {
   const targetSha = cleanPlainText(failedState?.backupSha || '', 64);
   if (!/^[0-9a-f]{40}$/i.test(targetSha)) throw new Error('recovery-backup-missing');
@@ -8112,7 +8419,7 @@ async function siteUpdateStartAutomaticRecovery(config, env, failedState) {
   }).catch(() => {});
   await sendOwnerPush(env, {
     title:'ANDRIK Control — автозащита',
-    message:`Критическая ошибка после Deploy. Возвращаем backup ${targetSha.slice(0,7)}.`,
+    message:`Критическая ошибка после Deploy. Возвращаем последнюю подтверждённую версию ${targetSha.slice(0,7)}.`,
     url:'https://control.andrikmetal.com/site-update-admin.html'
   }).catch(() => {});
   return {
@@ -8524,13 +8831,38 @@ async function handleSiteUpdateFinalize(request, env) {
     }).catch(() => {});
 
     if (health.status !== 'down') {
+      let knownGood = null;
+      let guard = { configured:Boolean(String(env.GUARD_URL || '').trim()), ok:false };
+      if (health.status === 'ok') {
+        const config = siteUpdateConfig(env);
+        if (config.token && siteUpdateConfigValid(config)) {
+          const snapshot = await siteUpdateGithubSnapshot(config);
+          knownGood = await siteUpdateSaveKnownGood(env, {
+            commitSha:snapshot.headSha,
+            operationId:operationId || deployed.state?.operationId || '',
+            release:cleanPlainText(deployed.state?.release || body.release || '', 80),
+            health
+          }).catch(() => null);
+          await recordSystemLog(env, {
+            scope:'site-update', level:'info', event:'last-known-good-confirmed',
+            message:`Подтверждена исправная версия ${snapshot.headSha.slice(0,7)}`,
+            details:{ commitSha:snapshot.headSha, operationId, release:deployed.state?.release || '' }
+          }).catch(() => {});
+          guard = await siteUpdateGuardRequest(env, '/mark-good', {
+            operationId:operationId || deployed.state?.operationId || '',
+            release:deployed.state?.release || body.release || '',
+            commitSha:snapshot.headSha,
+            reason:'control-post-deploy-health-ok'
+          }, 45000).catch(() => guard);
+        }
+      }
       return json({
         ok:true, healthy:health.status === 'ok', degraded:health.status === 'degraded',
-        recoveryStarted:false, health,
+        recoveryStarted:false, health, knownGood, guard,
         operationId:operationId || deployed.state?.operationId || '',
         message:health.status === 'ok'
-          ? 'Worker, D1 и сайт работают нормально.'
-          : 'Сайт работает, но есть некритические предупреждения.'
+          ? 'Система исправна. Версия сохранена как последняя подтверждённая.'
+          : 'Сайт работает, но есть некритические предупреждения; маркер исправной версии не изменён.'
       });
     }
 
@@ -8540,22 +8872,55 @@ async function handleSiteUpdateFinalize(request, env) {
         ok:true, healthy:false, recoveryStarted:false, health,
         operationId,
         message:autoRecovery
-          ? 'Критическая ошибка подтверждена, но для операции нет безопасного backup.'
-          : 'Критическая ошибка подтверждена. Автооткат выключен.'
+          ? 'Критическая ошибка подтверждена, но операция не разрешила автоматическое восстановление.'
+          : 'Критическая ошибка подтверждена. Автовосстановление выключено.'
+      });
+    }
+
+    // Сначала независимый Guard: он работает даже тогда, когда Control уже не отвечает.
+    const guardRecovery = await siteUpdateGuardRequest(env, '/run', {
+      reason:'post-deploy-health-down',
+      operationId,
+      release:failedState.release || ''
+    }, 125000).catch(() => ({ configured:false, ok:false }));
+
+    if (guardRecovery.configured && (
+      guardRecovery.action === 'rollback-ok' ||
+      guardRecovery.action === 'rollback-unconfirmed' ||
+      guardRecovery.action === 'cooldown'
+    )) {
+      return json({
+        ok:true, healthy:false, recoveryStarted:true, health,
+        operationId, guardRecovery,
+        message:guardRecovery.message || 'Независимый Guard запустил восстановление.'
+      });
+    }
+
+    // Резервный путь: только подтверждённый LAST KNOWN GOOD из D1.
+    const knownGood = await siteUpdateGetKnownGood(env);
+    if (!knownGood?.commitSha) {
+      return json({
+        ok:true, healthy:false, recoveryStarted:false, health,
+        operationId, guardRecovery,
+        message:'Сбой подтверждён, но подтверждённая исправная версия ещё не сохранена.'
       });
     }
 
     const config = siteUpdateConfig(env);
     if (!config.token || !siteUpdateConfigValid(config)) throw new Error('github-token-missing');
-    const recovery = await siteUpdateStartAutomaticRecovery(config, env, failedState);
+    const recovery = await siteUpdateStartAutomaticRecovery(config, env, {
+      ...failedState,
+      backupSha:knownGood.commitSha,
+      backupTag:`last-known-good:${knownGood.verifiedAt || ''}`
+    });
     return json({
       ok:true, healthy:false, recoveryStarted:!recovery.alreadyRecovered,
       health, release:cleanPlainText(failedState.release || '', 80),
-      backupTag:cleanPlainText(failedState.backupTag || '', 180),
-      ...recovery,
+      backupTag:`LAST KNOWN GOOD ${knownGood.commitSha.slice(0,7)}`,
+      knownGood, guardRecovery, ...recovery,
       message:recovery.alreadyRecovered
-        ? 'Backup уже восстановлен.'
-        : 'Критическая ошибка подтверждена трижды. Запущен автоматический откат.'
+        ? 'Последняя подтверждённая версия уже восстановлена.'
+        : 'Guard недоступен. Запущен резервный откат к последней подтверждённой версии.'
     });
   } catch (error) {
     return json({ ok:false, error:'finalize-failed', message:siteUpdateFriendlyError(error) }, 400);
@@ -8776,6 +9141,7 @@ async function routeApi(request, env, ctx) {
   try {
     if (path === '/api/health' && request.method === 'GET') return await handlePublicHealth(request, env);
     if (path === '/api/control/protection/status' && request.method === 'GET') return await handleControlProtectionStatus(request, env);
+    if (path === '/api/control/guard/event' && request.method === 'POST') return await handleGuardEvent(request, env);
     if (path === '/api/control/protection/dashboard' && request.method === 'GET') return await handleControlProtectionDashboard(request, env);
     if (path === '/api/control/protection/attacks' && request.method === 'GET') return await handleControlProtectionAttacks(request, env);
     if (path === '/api/control/protection/guard-run' && request.method === 'POST') return await handleControlProtectionGuardRun(request, env);

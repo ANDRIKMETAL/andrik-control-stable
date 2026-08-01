@@ -1,0 +1,24 @@
+R123 — LAST KNOWN GOOD + GUARD CALLBACK + ATTACK PUSH
+
+Основа: подтверждённая рабочая R119.
+
+Что изменено:
+• Предустановочный backup больше не считается автоматически исправным.
+• После успешной полной проверки commit сохраняется как LAST KNOWN GOOD.
+• При критическом сбое сначала вызывается независимый Worker Guard.
+• Если Guard недоступен, Control откатывается только к LAST KNOWN GOOD из D1.
+• Guard после восстановления отправляет событие обратно в Control.
+• Control записывает событие в системный журнал и присылает push:
+  «ANDRIK Control восстановлена после сбоя».
+• После Cloudflare rollback Control восстанавливает GitHub-ветку из commit
+  выбранного исправного deployment, чтобы источник и production снова совпадали.
+• Заблокированные Turnstile/spam/honeypot/rate-limit события присылаются владельцу
+  push-пакетом не чаще одного раза в 5 минут.
+• Все уведомления об атаках записываются в system_logs.
+• Экран «Обновить сайт» и весь внешний интерфейс оставлены без изменений от R119.
+
+Переменные:
+GUARD_URL
+GUARD_KEY
+ATTACK_PUSH_ENABLED=true
+ATTACK_PUSH_COOLDOWN_SECONDS=300
