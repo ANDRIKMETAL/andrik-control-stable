@@ -586,3 +586,18 @@
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
   X-Robots-Tag: noindex, nofollow, noarchive
 
+# R128 — high player + universal landscape frame + unified live header
+/admin-sections.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/assets/unified-glow-r128.css
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/assets/unified-glow-r128.js
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/assets/control-player-bridge-r128.css
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/assets/control-player-bridge-r128.js
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/cache-reset-v55-00-final-r128.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+  X-Robots-Tag: noindex, nofollow,noarchive
+
