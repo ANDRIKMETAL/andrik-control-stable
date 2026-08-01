@@ -1,0 +1,119 @@
+/* Control ANDRIK v54.74 — focused-country actions + 14-day country comparison.
+   Loaded after v54.73. No Search Console, YouTube Studio, Push, D1, R2, Cron or PWA architecture changes. */
+
+/* Keep the two selected-country actions inside the map card, exactly where the weekly button was. */
+.analytics-v54-46-page .analytics-map-top .map-focus-actions{
+  position:static!important;
+  inset:auto!important;
+  z-index:auto!important;
+  display:none!important;
+  width:100%!important;
+  max-width:none!important;
+  margin:8px 0 0!important;
+  padding:0!important;
+  grid-template-columns:1fr!important;
+  gap:8px!important;
+  visibility:hidden!important;
+  opacity:0!important;
+  transform:none!important;
+  pointer-events:none!important;
+}
+.analytics-v54-46-page .analytics-map-top.has-country-focus .map-focus-actions.is-visible,
+body[data-analytics-page="map"].is-country-focus-active .analytics-map-top .map-focus-actions.is-visible{
+  display:grid!important;
+  visibility:visible!important;
+  opacity:1!important;
+  pointer-events:auto!important;
+}
+.analytics-v54-46-page .analytics-map-top .map-focus-actions[hidden],
+body:not(.is-country-focus-active) .analytics-map-top .map-focus-actions,
+body:not([data-analytics-page="map"]) .analytics-map-top .map-focus-actions{
+  display:none!important;
+}
+.analytics-v54-46-page .analytics-map-top .map-focus-action{
+  display:flex!important;
+  width:100%!important;
+  max-width:none!important;
+  min-width:0!important;
+  min-height:48px!important;
+  margin:0!important;
+  padding:0 16px!important;
+  align-items:center!important;
+  justify-content:center!important;
+  border:1px solid rgba(117,202,239,.36)!important;
+  border-radius:19px!important;
+  background:rgba(9,35,49,.88)!important;
+  color:#d9f5ff!important;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.025)!important;
+  font:900 clamp(.78rem,3.5vw,.94rem)/1.15 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important;
+  text-decoration:none!important;
+  white-space:nowrap!important;
+}
+.analytics-v54-46-page .analytics-map-top .map-focus-action.is-activity{
+  border-color:rgba(96,231,156,.38)!important;
+  background:rgba(6,43,27,.88)!important;
+  color:#d1ffe2!important;
+}
+
+/* The collapsed map keeps its original weekly-growth control and spoiler. */
+.analytics-v54-46-page .analytics-map-top:not(.has-country-focus) .country-growth-toggle{
+  display:flex!important;
+}
+.analytics-v54-46-page .analytics-map-top.has-country-focus .country-growth-toggle,
+.analytics-v54-46-page .analytics-map-top.has-country-focus .country-growth-panel{
+  display:none!important;
+}
+.analytics-v54-46-page .country-growth-panel:not([hidden]){
+  display:block!important;
+}
+
+/* Selected country: current 7 days + previous 7 days = a clear 14-day comparison. */
+.analytics-v54-46-page .analytics-map-top.has-country-focus .world-country-button.is-selected{
+  min-height:94px!important;
+  padding-bottom:13px!important;
+}
+.analytics-v54-46-page .analytics-map-top.has-country-focus .country-weekly-gain{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;
+  align-items:center!important;
+  gap:8px!important;
+  width:100%!important;
+  margin-top:7px!important;
+  overflow:hidden!important;
+  font-size:clamp(.62rem,2.8vw,.79rem)!important;
+  line-height:1.16!important;
+}
+.analytics-v54-46-page .analytics-map-top.has-country-focus .country-weekly-current,
+.analytics-v54-46-page .analytics-map-top.has-country-focus .country-weekly-compare{
+  min-width:0!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+  white-space:nowrap!important;
+}
+.analytics-v54-46-page .analytics-map-top.has-country-focus .country-weekly-current{text-align:left!important}
+.analytics-v54-46-page .analytics-map-top.has-country-focus .country-weekly-compare{text-align:right!important}
+.analytics-v54-46-page .analytics-map-top.has-country-focus .country-weekly-current.is-positive,
+.analytics-v54-46-page .analytics-map-top.has-country-focus .country-weekly-compare.is-positive{color:#65efa0!important}
+.analytics-v54-46-page .analytics-map-top.has-country-focus .country-weekly-current.is-negative,
+.analytics-v54-46-page .analytics-map-top.has-country-focus .country-weekly-compare.is-negative{color:#ff7f8d!important}
+.analytics-v54-46-page .analytics-map-top.has-country-focus .country-weekly-current.is-flat,
+.analytics-v54-46-page .analytics-map-top.has-country-focus .country-weekly-compare.is-flat{color:#b2c6d1!important}
+
+/* Keep manual daily-summary push visible at the lower right of the daily screen. */
+body.control-summary-visible .control-summary-refresh{
+  display:inline-flex!important;
+  position:fixed!important;
+  right:max(9px,env(safe-area-inset-right))!important;
+  bottom:calc(88px + env(safe-area-inset-bottom))!important;
+  z-index:2147483500!important;
+  min-width:174px!important;
+  min-height:46px!important;
+  align-items:center!important;
+  justify-content:center!important;
+}
+
+@media(max-width:390px){
+  .analytics-v54-46-page .analytics-map-top .map-focus-action{min-height:45px!important;font-size:.74rem!important}
+  .analytics-v54-46-page .analytics-map-top.has-country-focus .country-weekly-gain{gap:6px!important;font-size:.60rem!important}
+  body.control-summary-visible .control-summary-refresh{right:7px!important;bottom:calc(84px + env(safe-area-inset-bottom))!important;min-width:166px!important;font-size:.70rem!important}
+}

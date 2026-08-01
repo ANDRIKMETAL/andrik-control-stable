@@ -1,0 +1,63 @@
+/* Control ANDRIK v54.18 — interactive listener map country selection */
+.analytics-swipe-page .world-country-list .world-country-button{
+  appearance:none;
+  -webkit-appearance:none;
+  width:100%;
+  min-width:0;
+  min-height:34px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:6px 9px;
+  border:1px solid rgba(138,204,233,.09);
+  border-radius:14px;
+  background:rgba(12,25,34,.66);
+  color:inherit;
+  font:inherit;
+  text-align:left;
+  cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+  transition:border-color .18s ease,background .18s ease,box-shadow .18s ease,transform .14s ease;
+}
+.analytics-swipe-page .world-country-list .world-country-button b{
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  color:#dceff8;
+  font-size:.71rem;
+  font-weight:800;
+}
+.analytics-swipe-page .world-country-list .world-country-button em{
+  flex:0 0 auto;
+  color:#8ddfff;
+  font-size:.71rem;
+  font-style:normal;
+  font-weight:900;
+}
+.analytics-swipe-page .world-country-list .world-country-button:active{transform:scale(.975)}
+.analytics-swipe-page .world-country-list .world-country-button.is-selected{
+  border-color:rgba(255,213,74,.9);
+  background:linear-gradient(135deg,rgba(108,78,4,.56),rgba(43,34,8,.78));
+  box-shadow:0 0 0 1px rgba(255,213,74,.2),0 0 22px rgba(255,199,35,.22),inset 0 0 18px rgba(255,211,68,.08);
+}
+.analytics-swipe-page .world-country-list .world-country-button.is-selected b,
+.analytics-swipe-page .world-country-list .world-country-button.is-selected em{color:#ffe477}
+.analytics-swipe-page .world-map-stage .world-map-dot.is-selected{
+  z-index:8!important;
+  opacity:1!important;
+}
+.analytics-swipe-page .world-map-stage .world-map-dot.is-selected i{
+  background:#ffd84d!important;
+  box-shadow:0 0 0 6px rgba(255,216,77,.18),0 0 18px 7px rgba(255,203,35,.78),0 0 42px 14px rgba(255,188,18,.48)!important;
+  transform:scale(1.42);
+  animation:worldSelectedPulse 1.25s ease-in-out infinite!important;
+}
+@keyframes worldSelectedPulse{
+  0%,100%{transform:scale(1.3);box-shadow:0 0 0 5px rgba(255,216,77,.16),0 0 18px 7px rgba(255,203,35,.72),0 0 38px 12px rgba(255,188,18,.38)}
+  50%{transform:scale(1.62);box-shadow:0 0 0 9px rgba(255,216,77,.08),0 0 24px 10px rgba(255,214,56,.94),0 0 52px 18px rgba(255,188,18,.58)}
+}
+@media(prefers-reduced-motion:reduce){
+  .analytics-swipe-page .world-map-stage .world-map-dot.is-selected i{animation:none!important;transform:scale(1.45)}
+}

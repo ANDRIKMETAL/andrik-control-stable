@@ -1,0 +1,145 @@
+/* Control ANDRIK v54.07 — circular home carousel, visible pull-to-refresh and compact activity action. */
+.control-home-page .control-swipe-shell{
+  touch-action:none!important;
+  overscroll-behavior:none!important;
+}
+.control-home-page .control-swipe-shell.is-circular-ready .control-swipe-track{
+  width:500%!important;
+  transition:transform .34s cubic-bezier(.22,.78,.23,1);
+}
+.control-home-page .control-swipe-shell.is-circular-ready .control-swipe-page{
+  flex:0 0 20%!important;
+  width:20%!important;
+}
+.control-home-page .control-swipe-page.is-carousel-clone{
+  pointer-events:none!important;
+  user-select:none!important;
+  -webkit-user-select:none!important;
+}
+.control-home-page .control-swipe-page.is-carousel-clone *{pointer-events:none!important}
+.control-home-page .control-swipe-track.is-pulling,
+.control-home-page .control-swipe-track.is-dragging{transition:none!important}
+
+.control-home-page .control-activity-footer-row{
+  flex:0 0 auto;
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  align-items:end;
+  gap:10px;
+  min-height:44px;
+  padding:5px 2px 0;
+}
+.control-home-page .control-activity-footer-row .control-page-footnote{
+  min-width:0;
+  padding:0!important;
+  text-align:left!important;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.control-home-page .control-activity-footer-row .control-activity-open{
+  align-self:end;
+  min-width:82px;
+  min-height:38px;
+  margin:0!important;
+  padding:8px 12px!important;
+  border-radius:999px!important;
+  font-size:.68rem!important;
+  letter-spacing:.08em;
+}
+
+.control-home-page .control-pull-indicator{
+  --pull-progress:0;
+  top:8px!important;
+  display:flex!important;
+  align-items:center;
+  gap:7px;
+  min-height:34px;
+  padding:7px 12px!important;
+  transform:translate(-50%,calc(-155% + (var(--pull-progress) * 34px))) scale(calc(.88 + var(--pull-progress) * .12))!important;
+  opacity:0!important;
+  box-shadow:0 8px 30px rgba(0,0,0,.34),inset 0 0 18px rgba(94,198,238,.04);
+  transition:transform .16s ease,opacity .16s ease,border-color .16s ease,background .16s ease!important;
+}
+.control-home-page .control-pull-indicator.is-visible{
+  transform:translate(-50%,0) scale(1)!important;
+  opacity:1!important;
+}
+.control-home-page .control-pull-icon{
+  display:grid;
+  place-items:center;
+  width:20px;
+  height:20px;
+  border-radius:50%;
+  background:rgba(100,197,235,.11);
+  color:#aeeaff;
+  font:900 .78rem/1 system-ui,sans-serif;
+  transform:rotate(calc(var(--pull-progress) * 180deg));
+  transition:transform .14s ease,background .14s ease,color .14s ease;
+}
+.control-home-page .control-pull-indicator.is-ready .control-pull-icon{
+  background:rgba(88,221,150,.16);
+  color:#caffdd;
+  transform:rotate(180deg) scale(1.08);
+}
+.control-home-page .control-pull-indicator.is-loading .control-pull-icon{
+  color:transparent;
+  border:2px solid rgba(205,242,255,.25);
+  border-top-color:#d8f7ff;
+  background:transparent;
+  animation:controlPullSpin .72s linear infinite;
+}
+@keyframes controlPullSpin{to{transform:rotate(360deg)}}
+.control-home-page .control-swipe-shell.is-refreshing .control-swipe-page[aria-hidden="false"] .control-swipe-page-inner{
+  animation:controlRefreshPulse .55s ease;
+}
+
+/* Keep the menu as the first visible Control page. */
+.control-home-page .control-menu-page .control-version-footer{margin-top:auto!important}
+.control-home-page .control-menu-page>.control-swipe-page-inner>.control-page-footnote{flex:0 0 auto}
+
+/* Thirty-day country list spoiler. */
+.analytics-swipe-page .analytics-country-spoiler{
+  border:1px solid rgba(118,195,229,.15);
+  border-radius:18px;
+  background:rgba(5,15,22,.46);
+  overflow:hidden;
+}
+.analytics-swipe-page .analytics-country-spoiler>summary{
+  list-style:none;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  min-height:50px;
+  padding:12px 14px;
+  color:#bde8f8;
+  font:850 .72rem/1.25 system-ui,sans-serif;
+  letter-spacing:.04em;
+  user-select:none;
+  -webkit-user-select:none;
+}
+.analytics-swipe-page .analytics-country-spoiler>summary::-webkit-details-marker{display:none}
+.analytics-swipe-page .analytics-country-spoiler>summary::after{
+  content:'⌄';
+  font-size:1.05rem;
+  transition:transform .2s ease;
+}
+.analytics-swipe-page .analytics-country-spoiler[open]>summary::after{transform:rotate(180deg)}
+.analytics-swipe-page .analytics-country-spoiler .country-summary-open{display:none}
+.analytics-swipe-page .analytics-country-spoiler[open] .country-summary-closed{display:none}
+.analytics-swipe-page .analytics-country-spoiler[open] .country-summary-open{display:inline}
+.analytics-swipe-page .analytics-country-spoiler-list{
+  display:grid;
+  gap:0;
+  padding:0 10px 10px;
+  border-top:1px solid rgba(115,190,222,.09);
+}
+.analytics-swipe-page .analytics-country-spoiler-list .analytics-list-row{margin:0!important}
+
+@media(max-width:420px){
+  .control-home-page .control-activity-footer-row{gap:6px}
+  .control-home-page .control-activity-footer-row .control-activity-open{min-width:76px;padding:7px 10px!important;font-size:.62rem!important}
+  .control-home-page .control-pull-indicator{font-size:.56rem!important}
+}

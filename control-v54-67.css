@@ -1,0 +1,50 @@
+/* Control ANDRIK v54.67 — restore the bright green central status eye. */
+.control-page .control-topbar .control-center-logo{
+  display:flex!important;
+  opacity:1!important;
+  visibility:visible!important;
+  z-index:6!important;
+}
+.control-page .control-topbar .control-center-logo img{
+  display:block!important;
+}
+.control-page .control-topbar .control-center-logo .logo-ok{
+  display:block!important;
+  opacity:1!important;
+  width:68px!important;
+  height:68px!important;
+  border-radius:50%!important;
+  object-fit:cover!important;
+  filter:drop-shadow(0 0 10px rgba(84,255,139,.78)) drop-shadow(0 0 28px rgba(31,235,98,.72)) drop-shadow(0 0 48px rgba(13,174,69,.42)) saturate(1.42) brightness(1.32)!important;
+  animation:andrikStatusEyeGlow 2.8s ease-in-out infinite!important;
+}
+.control-page .control-topbar .control-center-logo .logo-error{
+  display:block!important;
+}
+.control-page .control-topbar .control-center-logo.is-error .logo-ok{
+  opacity:0!important;
+}
+.control-page .control-topbar .control-center-logo:not(.is-error) .logo-error{
+  opacity:0!important;
+}
+.control-page .control-topbar .control-center-logo.is-error .logo-error{
+  opacity:1!important;
+  width:62px!important;
+  height:62px!important;
+  filter:drop-shadow(0 0 10px rgba(255,83,83,.72)) drop-shadow(0 0 30px rgba(255,34,34,.52))!important;
+}
+.control-page .control-topbar .control-center-logo.is-warning .logo-ok{
+  opacity:1!important;
+  filter:drop-shadow(0 0 10px rgba(84,255,139,.72)) drop-shadow(0 0 28px rgba(31,235,98,.64)) drop-shadow(0 0 0 rgba(255,196,54,0)) saturate(1.38) brightness(1.28)!important;
+}
+.control-page .control-topbar::before{
+  opacity:.34!important;
+  filter:saturate(1.35) brightness(1.18)!important;
+}
+@keyframes andrikStatusEyeGlow{
+  0%,100%{transform:translate(-50%,-50%) scale(1);filter:drop-shadow(0 0 9px rgba(84,255,139,.68)) drop-shadow(0 0 24px rgba(31,235,98,.58)) drop-shadow(0 0 42px rgba(13,174,69,.34)) saturate(1.38) brightness(1.26)}
+  50%{transform:translate(-50%,-50%) scale(1.045);filter:drop-shadow(0 0 13px rgba(113,255,160,.92)) drop-shadow(0 0 34px rgba(31,235,98,.82)) drop-shadow(0 0 58px rgba(13,174,69,.5)) saturate(1.52) brightness(1.4)}
+}
+@media(max-width:420px){
+  .control-page .control-topbar .control-center-logo .logo-ok{width:64px!important;height:64px!important}
+}

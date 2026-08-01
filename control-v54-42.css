@@ -1,0 +1,7 @@
+/* Control ANDRIK v54.42 — menu + daily summary carousel. */
+.control-home-topbar-minimal{grid-template-columns:1fr!important;justify-items:center!important}
+.control-home-menu-card.is-daily-summary{border-color:rgba(233,183,88,.28)!important;background:linear-gradient(145deg,rgba(57,42,13,.5),rgba(5,11,16,.98))!important}
+.control-home-menu-card.is-daily-summary>span{background:rgba(236,184,84,.14)!important}
+.control-daily-carousel-mode .control-swipe-indicator button{display:inline-flex}
+.control-daily-carousel-mode .control-page-footnote{opacity:.8}
+.control-menu-mode .control-pull-indicator{z-index:2147483000!important}

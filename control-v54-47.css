@@ -1,0 +1,7 @@
+/* Control ANDRIK v54.47 — remove the brief dim flash when Sections opens. */
+.control-home-page.control-menu-mode .control-menu-page .control-swipe-page-inner,
+.control-home-page.control-menu-mode .control-swipe-shell.is-refreshing .control-menu-page .control-swipe-page-inner{
+  animation:none!important;
+  opacity:1!important;
+  filter:none!important;
+}

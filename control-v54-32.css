@@ -1,0 +1,118 @@
+/* Control ANDRIK v54.32 STABLE — circular statistics + instant YouTube cache */
+
+/* Four-page circular statistics carousel: Google ← Map → YouTube → Site → Google. */
+.analytics-v54-32-page .analytics-swipe-track{transform:translate3d(-100vw,0,0)}
+.analytics-v54-32-page .analytics-swipe-viewport.is-circular-jump{animation:analyticsCircularFlash .18s ease}
+@keyframes analyticsCircularFlash{0%{opacity:.72}100%{opacity:1}}
+.analytics-v54-32-page .analytics-swipe-hint{display:flex!important;justify-content:space-between!important;gap:12px!important}
+.analytics-v54-32-page .analytics-swipe-hint button{max-width:48%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* GOOGLE PAGE — larger, calmer controls; no YouTube duplicate. */
+.analytics-v54-32-page .analytics-google-pane{overflow:hidden!important;overscroll-behavior:none!important}
+.analytics-v54-32-page .analytics-google-pane .analytics-hub-pane-wrap{
+  height:100%!important;min-height:0!important;display:flex!important;flex-direction:column!important;
+  padding:8px 12px 42px!important;overflow:hidden!important;
+}
+.analytics-v54-32-page .analytics-google-pane .analytics-hub-header{margin:0 0 9px!important;flex:0 0 auto!important}
+.analytics-v54-32-page .analytics-google-pane .analytics-hub-header h1{font-size:clamp(2.35rem,12vw,3.05rem)!important;margin:3px 0 3px!important}
+.analytics-v54-32-page .analytics-google-pane .analytics-hub-header p{font-size:.76rem!important;line-height:1.25!important}
+.analytics-v54-32-page .analytics-google-pane .analytics-google-stack{
+  flex:1 1 auto!important;min-height:0!important;display:grid!important;
+  grid-template-rows:auto minmax(160px,1fr)!important;gap:12px!important;overflow:hidden!important;
+}
+.analytics-v54-32-page .analytics-google-pane .analytics-google-focus-card{padding:15px 15px 16px!important;border-radius:26px!important;overflow:visible!important}
+.analytics-v54-32-page .analytics-google-pane .analytics-google-focus-card .admin-card-title-row{margin-bottom:10px!important}
+.analytics-v54-32-page .analytics-google-pane .analytics-google-focus-card .eyeline{font-size:.66rem!important}
+.analytics-v54-32-page .analytics-google-pane .analytics-google-focus-card h2{font-size:1.65rem!important;margin:4px 0 4px!important}
+.analytics-v54-32-page .analytics-google-pane .analytics-google-focus-card p{display:block!important;font-size:.72rem!important;line-height:1.3!important}
+.analytics-v54-32-page .analytics-google-pane .analytics-google-focus-card .analytics-focus-grid{margin-top:10px!important}
+.analytics-v54-32-page .analytics-google-pane .analytics-google-focus-card .analytics-search-console-clean{gap:10px!important}
+.analytics-v54-32-page .analytics-google-pane .analytics-google-focus-card .control-platform-card{
+  min-height:112px!important;padding:14px 14px!important;border-radius:22px!important;
+  grid-template-columns:52px minmax(0,1fr) auto!important;column-gap:12px!important;row-gap:5px!important;
+}
+.analytics-v54-32-page .analytics-google-pane .analytics-google-focus-card .control-platform-icon{width:52px!important;height:52px!important;border-radius:16px!important;font-size:24px!important}
+.analytics-v54-32-page .analytics-google-pane .analytics-google-focus-card .control-platform-copy strong{display:block!important;font-size:.92rem!important;line-height:1.08!important}
+.analytics-v54-32-page .analytics-google-pane .analytics-google-focus-card .control-platform-copy small{font-size:.72rem!important;line-height:1.28!important}
+.analytics-v54-32-page .analytics-google-pane .analytics-google-focus-card .control-platform-copy em{font-size:.76rem!important;line-height:1.2!important;margin-top:4px!important}
+.analytics-v54-32-page .analytics-google-pane .analytics-google-focus-card .control-platform-state{font-size:.56rem!important;padding:7px 10px!important}
+.analytics-v54-32-page .analytics-google-pane .analytics-google-focus-card .control-platform-arrow{font-size:1.6rem!important}
+.analytics-v54-32-page .analytics-google-pane .analytics-google-focus-card .analytics-google-ads-button{
+  min-height:86px!important;padding:12px 14px!important;border-radius:21px!important;
+  grid-template-columns:50px minmax(0,1fr) auto!important;gap:3px 12px!important;
+}
+.analytics-v54-32-page .analytics-google-pane .analytics-google-focus-card .analytics-google-ads-button>span{width:50px!important;height:50px!important;border-radius:15px!important;font-size:1.35rem!important}
+.analytics-v54-32-page .analytics-google-pane .analytics-google-focus-card .analytics-google-ads-button strong{font-size:.9rem!important}
+.analytics-v54-32-page .analytics-google-pane .analytics-google-focus-card .analytics-google-ads-button small{font-size:.68rem!important;line-height:1.25!important}
+.analytics-platform-hero{
+  position:relative;min-height:0;margin:0;border:1px solid rgba(130,198,229,.16);border-radius:27px;
+  overflow:hidden;background:#05080b;box-shadow:0 20px 50px rgba(0,0,0,.24);
+}
+.analytics-platform-hero::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 35%,rgba(1,5,8,.93) 100%);pointer-events:none}
+.analytics-platform-hero img{width:100%;height:100%;min-height:170px;object-fit:cover;object-position:center 57%;display:block;filter:saturate(.85) contrast(1.07) brightness(.72)}
+.analytics-platform-hero figcaption{position:absolute;z-index:2;left:18px;right:18px;bottom:15px;display:flex;align-items:end;justify-content:space-between;gap:12px}
+.analytics-platform-hero figcaption strong{font-family:Georgia,serif;font-size:1.45rem;letter-spacing:.14em;color:#fff}
+.analytics-platform-hero figcaption span{max-width:52%;text-align:right;color:#a8c1ce;font-size:.66rem;line-height:1.25}
+.analytics-v54-32-page .analytics-google-pane .analytics-hub-hint{margin-top:7px!important;flex:0 0 auto!important}
+
+/* YOUTUBE PAGE INSIDE THE CAROUSEL. Cached data is visible immediately. */
+.analytics-v54-32-page .analytics-youtube-pane{overflow-y:auto!important;-webkit-overflow-scrolling:touch!important;overscroll-behavior-y:contain!important}
+.analytics-v54-32-page .analytics-youtube-pane-wrap{height:auto!important;min-height:100%!important;padding:13px 12px 78px!important}
+.analytics-v54-32-page .analytics-youtube-header{margin:0 0 12px;padding:0 2px}
+.analytics-v54-32-page .analytics-youtube-header>.eyeline{display:block;margin:0 0 5px;font-size:.69rem;letter-spacing:.2em}
+.analytics-v54-32-page .analytics-youtube-header .youtube-title-status-row{display:flex;align-items:center;justify-content:space-between;gap:10px;min-width:0}
+.analytics-v54-32-page .analytics-youtube-header .youtube-title-status-row h1{min-width:0;margin:0!important;font-size:clamp(2.45rem,11vw,3.25rem)!important;line-height:1!important;text-align:left!important}
+.analytics-v54-32-page .analytics-youtube-header .youtube-studio-gate{flex:0 0 auto;max-width:54%;width:auto;margin:0!important}
+.analytics-v54-32-page .analytics-youtube-header>p{margin:8px 0 10px!important;font-size:.78rem!important;line-height:1.25!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.analytics-v54-32-page .analytics-youtube-header .youtube-auth-inline{margin:0!important}
+.analytics-v54-32-page .analytics-youtube-unified{padding:16px 14px!important;margin-bottom:12px!important;border-radius:26px!important}
+.analytics-v54-32-page .analytics-youtube-unified .analytics-youtube-grid{grid-template-columns:1fr!important;gap:10px!important}
+.analytics-v54-32-page .analytics-youtube-unified .analytics-youtube-grid>.analytics-kpi{min-height:100px!important;margin:0!important}
+.analytics-v54-32-page .analytics-youtube-unified .youtube-studio-section{margin-top:14px!important}
+.analytics-v54-32-page .analytics-youtube-unified .analytics-youtube-studio-kpis{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important;margin-bottom:13px!important}
+.analytics-v54-32-page .analytics-youtube-unified .analytics-youtube-studio-kpis>.analytics-kpi{min-height:105px!important}
+.analytics-v54-32-page .analytics-youtube-unified .youtube-integrated-trend{padding:12px 8px 4px!important}
+.analytics-v54-32-page .analytics-youtube-audience{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important;margin:0 0 12px!important}
+.analytics-v54-32-page .analytics-youtube-audience>.analytics-list-card{margin:0!important;padding:13px 11px!important;border-radius:21px!important;min-width:0}
+.analytics-v54-32-page .analytics-youtube-audience>.analytics-list-card:last-child{grid-column:1/-1}
+.analytics-v54-32-page .analytics-youtube-audience h2{font-size:1.15rem!important}
+.analytics-v54-32-page .analytics-youtube-audience .analytics-list-row{grid-template-columns:24px minmax(0,1fr) auto!important;gap:6px!important;padding:7px 0!important}
+.analytics-v54-32-page .analytics-youtube-audience .analytics-list-row strong{font-size:.72rem!important}
+.analytics-v54-32-page .analytics-youtube-albums{margin:0 0 12px!important;padding:15px 13px!important;border-radius:24px!important}
+.analytics-v54-32-page .analytics-youtube-monitor{margin:0 0 12px!important}
+.analytics-v54-32-page .analytics-youtube-monitor .youtube-monitor-card{padding:15px 13px!important;border-radius:24px!important}
+.analytics-v54-32-page .analytics-youtube-pane .control-version-footer{margin-bottom:8px}
+.analytics-v54-32-page .analytics-youtube-hint{margin-top:8px}
+.analytics-v54-32-page .analytics-site-hint{margin:12px 0 4px}
+
+@media(max-height:740px){
+  .analytics-v54-32-page .analytics-google-pane .analytics-hub-pane-wrap{padding-top:4px!important;padding-bottom:35px!important}
+  .analytics-v54-32-page .analytics-google-pane .analytics-hub-header h1{font-size:2.2rem!important}
+  .analytics-v54-32-page .analytics-google-pane .analytics-hub-header p{display:none!important}
+  .analytics-v54-32-page .analytics-google-pane .analytics-google-stack{grid-template-rows:auto minmax(120px,1fr)!important;gap:8px!important}
+  .analytics-v54-32-page .analytics-google-pane .analytics-google-focus-card{padding:10px 11px!important}
+  .analytics-v54-32-page .analytics-google-pane .analytics-google-focus-card .admin-card-title-row p{display:none!important}
+  .analytics-v54-32-page .analytics-google-pane .analytics-google-focus-card .control-platform-card{min-height:92px!important;padding:10px 11px!important}
+  .analytics-v54-32-page .analytics-google-pane .analytics-google-focus-card .analytics-google-ads-button{min-height:68px!important;padding:9px 11px!important}
+  .analytics-platform-hero img{min-height:120px}
+}
+@media(max-width:390px){
+  .analytics-v54-32-page .analytics-google-pane .analytics-google-focus-card .control-platform-card{grid-template-columns:46px minmax(0,1fr) auto!important}
+  .analytics-v54-32-page .analytics-google-pane .analytics-google-focus-card .control-platform-icon{width:46px!important;height:46px!important}
+  .analytics-v54-32-page .analytics-google-pane .analytics-google-focus-card .control-platform-copy strong{font-size:.82rem!important}
+  .analytics-v54-32-page .analytics-youtube-header .youtube-studio-gate{max-width:50%}
+  .analytics-v54-32-page .analytics-youtube-header .youtube-title-status-row h1{font-size:2.35rem!important}
+}
+@media(prefers-reduced-motion:reduce){.analytics-v54-32-page .analytics-swipe-viewport.is-circular-jump{animation:none}}
+
+/* v54.32 — controlled ×4 listener-map focus. Keep markers crisp and the carousel responsive. */
+.analytics-v54-32-page .world-map-shell.is-country-focused .world-map-stage{
+  transform:translate3d(0,0,0) scale(var(--focus-zoom,4))!important;
+}
+.analytics-v54-32-page .world-map-shell.is-country-focused .world-map-dot{
+  transform:translate(-50%,-50%) scale(.25)!important;
+}
+.analytics-v54-32-page .world-map-shell.is-country-focused .world-map-dot.is-selected{
+  opacity:1!important;
+  filter:saturate(1.18) contrast(1.08)!important;
+}
