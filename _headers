@@ -681,3 +681,18 @@
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
   X-Robots-Tag: noindex, nofollow,noarchive
 
+# R134 — listener map no black tail + slightly wider landscape frame
+/analytics-admin.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/assets/unified-glow-r134.css
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/assets/unified-glow-r134.js
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/assets/control-player-bridge-r134.css
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/assets/control-player-bridge-r134.js
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/cache-reset-v55-00-final-r134.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+  X-Robots-Tag: noindex, nofollow,noarchive
+
