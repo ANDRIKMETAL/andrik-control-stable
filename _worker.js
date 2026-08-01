@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R109', number:109, version:'55.00', full:'55.00 LIVE WEB AI FINAL R109', siteUpdater:'55.00-r109' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R110', number:110, version:'55.00', full:'55.00 LIVE WEB AI FINAL R110', siteUpdater:'55.00-r110' });
 
 const JSON_HEADERS = {
   'content-type': 'application/json; charset=utf-8',
@@ -7227,7 +7227,7 @@ async function handleControlCommentCollection(request, env) {
 
 
 
-// === ANDRIK Control R109: floating updater + automatic cache refresh + reliable YouTube event pushes ===
+// === ANDRIK Control R110: emergency version-script repair + R109 feature set ===
 const SITE_UPDATE_VERSION = ANDRIK_CONTROL_RELEASE.siteUpdater;
 const SITE_UPDATE_MAX_ZIP_BYTES = 25 * 1024 * 1024;
 const SITE_UPDATE_MAX_FILES = 1200;
@@ -7441,7 +7441,7 @@ async function siteUpdateGithubRequest(config, route, options = {}) {
         accept:'application/vnd.github+json',
         authorization:`Bearer ${config.token}`,
         'content-type':'application/json',
-        'user-agent':'ANDRIK-Control-Site-Updater-R109',
+        'user-agent':'ANDRIK-Control-Site-Updater-R110',
         'x-github-api-version':'2022-11-28'
       },
       body: options.body === undefined ? undefined : JSON.stringify(options.body)
@@ -7479,7 +7479,7 @@ async function siteUpdateGithubUploadAsset(config, releaseId, fileName, bytes) {
         accept:'application/vnd.github+json',
         authorization:`Bearer ${config.token}`,
         'content-type':'application/zip',
-        'user-agent':'ANDRIK-Control-Site-Updater-R109',
+        'user-agent':'ANDRIK-Control-Site-Updater-R110',
         'x-github-api-version':'2022-11-28'
       },
       body:bytes
@@ -7999,7 +7999,7 @@ async function handleSiteUpdateDeployment(request, env) {
     stateUrl.searchParams.set('deploy_probe', String(Date.now()));
     const response = await fetch(stateUrl.toString(), {
       method:'GET', cache:'no-store',
-      headers:{ accept:'application/json', 'cache-control':'no-cache', 'user-agent':'ANDRIK-Control-R109-Deploy-Check' }
+      headers:{ accept:'application/json', 'cache-control':'no-cache', 'user-agent':'ANDRIK-Control-R110-Deploy-Check' }
     });
     stateStatus = response.status;
     if (response.ok) state = await response.json().catch(() => null);
@@ -8029,7 +8029,7 @@ async function handleSiteUpdateDeployment(request, env) {
   try {
     const response = await fetch(probeUrl.toString(), {
       method:'GET', cache:'no-store',
-      headers:{ accept:'text/html', 'cache-control':'no-cache', 'user-agent':'ANDRIK-Control-R109-Deploy-Check' }
+      headers:{ accept:'text/html', 'cache-control':'no-cache', 'user-agent':'ANDRIK-Control-R110-Deploy-Check' }
     });
     controlStatus = response.status; controlOk = response.ok;
     try { await response.body?.cancel(); } catch (_) {}
@@ -8317,7 +8317,7 @@ async function handleSiteUpdateRollback(request, env) {
     return json({ ok:false, error:'rollback-failed', message:siteUpdateFriendlyError(error) }, 400);
   }
 }
-// === End R109 website updater ===
+// === End R110 website updater ===
 
 
 async function routeApi(request, env, ctx) {

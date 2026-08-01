@@ -415,3 +415,21 @@
   Cache-Control: public, max-age=31536000, immutable
 /cache-reset-v55-00-final-r109.html
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+
+# R110 emergency repair — unique asset URLs bypass broken R109 cache
+/assets/control-version-v55-00-r110.js
+  Cache-Control: public, max-age=31536000, immutable
+/assets/site-update-admin-r110.js
+  Cache-Control: public, max-age=31536000, immutable
+/assets/site-update-admin-r110.css
+  Cache-Control: public, max-age=31536000, immutable
+/assets/service-youtube-events-r110.js
+  Cache-Control: public, max-age=31536000, immutable
+/assets/service-youtube-events-r110.css
+  Cache-Control: public, max-age=31536000, immutable
+/assets/release-center-r110.js
+  Cache-Control: public, max-age=31536000, immutable
+/assets/release-center-r110.css
+  Cache-Control: public, max-age=31536000, immutable
+/cache-reset-v55-00-final-r110.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0

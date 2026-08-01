@@ -1,13 +1,13 @@
 {
   "schema": 1,
-  "updaterVersion": "55.00-r108",
+  "updaterVersion": "55.00-r107",
   "operation": "publish",
-  "operationId": "publish-1785601078321-af1c3e61a4",
-  "release": "R108",
-  "archiveName": "ANDRIK-Control.zip",
-  "sourceHead": "3dd2dbd07c1ddb5056db6c5034e962cafa22c8f4",
-  "backupSha": "3dd2dbd07c1ddb5056db6c5034e962cafa22c8f4",
-  "backupTag": "control-backup-20260801161755-3dd2dbd-r108-52470",
+  "operationId": "publish-1785601837169-fa47f27d4b",
+  "release": "R110",
+  "archiveName": "ANDRIK-Control-v55.00-FINAL-STABLE-R110-EMERGENCY-VERSION-FIX.zip",
+  "sourceHead": "005c110f699410875ecb65bcf7b080abda3bb92a",
+  "backupSha": "005c110f699410875ecb65bcf7b080abda3bb92a",
+  "backupTag": "control-backup-20260801163028-005c110-r110-d18ad",
   "autoRecovery": true,
-  "generatedAt": "2026-08-01T16:18:00.112Z"
+  "generatedAt": "2026-08-01T16:30:38.847Z"
 }
