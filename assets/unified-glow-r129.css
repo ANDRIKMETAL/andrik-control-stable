@@ -261,7 +261,7 @@ body.control-menu-visible .control-menu-page .control-menu-map-link{display:none
 
 
 /* ================================================================
-   R128 — единая живая шапка во всех разделах Control
+   R129 — единая живая шапка во всех разделах Control
    Не меняет разметку и функциональность установщика.
    ================================================================ */
 body.control-page .control-topbar,
@@ -303,7 +303,7 @@ body.comment-collection-page .control-center-logo::after{
   pointer-events:none!important;
   z-index:-1!important;
   background:radial-gradient(circle,rgba(118,255,176,.47),rgba(35,230,105,.15) 48%,transparent 74%)!important;
-  animation:andrikHeaderHaloR128 3.15s ease-in-out infinite!important;
+  animation:andrikHeaderHaloR129 3.15s ease-in-out infinite!important;
 }
 
 body.control-page .control-center-logo .logo-ok,
@@ -314,7 +314,7 @@ body.comment-collection-page .control-center-logo .logo-ok{
   object-fit:cover!important;
   border-radius:50%!important;
   clip-path:circle(49% at 50% 50%)!important;
-  animation:andrikHeaderEyeR128 3.15s ease-in-out infinite!important;
+  animation:andrikHeaderEyeR129 3.15s ease-in-out infinite!important;
   animation-play-state:running!important;
   will-change:transform,filter!important;
   box-shadow:0 0 0 1px rgba(130,255,184,.22)!important;
@@ -337,7 +337,7 @@ body.comment-collection-page .control-center-logo.is-error .logo-error{
   visibility:visible!important;
 }
 
-@keyframes andrikHeaderEyeR128{
+@keyframes andrikHeaderEyeR129{
   0%,100%{
     transform:scale(.93);
     filter:brightness(1.03) saturate(1.28)
@@ -351,7 +351,7 @@ body.comment-collection-page .control-center-logo.is-error .logo-error{
       drop-shadow(0 0 34px rgba(34,239,107,.82));
   }
 }
-@keyframes andrikHeaderHaloR128{
+@keyframes andrikHeaderHaloR129{
   0%,100%{transform:scale(.70);opacity:.18}
   50%{transform:scale(1.34);opacity:.88}
 }
@@ -391,62 +391,53 @@ body.control-menu-visible .control-menu-page .control-swipe-page-inner{
 
 
 /* ==================================================================
-   R128 — FINAL UNIFIED HEADER + LANDSCAPE FRAME
-   Этот блок загружается последним и перекрывает старые page-specific CSS.
+   R129 — SAFE HEADER RESTORE
+   ВАЖНО: здесь намеренно нет inset:auto после left/top.
    ================================================================== */
 :root{
-  --r128-topbar-h:92px;
-  --r128-frame-left:max(10px,env(safe-area-inset-left));
-  --r128-frame-right:max(10px,env(safe-area-inset-right));
-  --r128-frame-bottom:max(8px,env(safe-area-inset-bottom));
+  --r129-topbar-h:92px;
+  --r129-frame-left:max(10px,env(safe-area-inset-left));
+  --r129-frame-right:max(10px,env(safe-area-inset-right));
+  --r129-frame-bottom:max(8px,env(safe-area-inset-bottom));
 }
 
-/* Одна и та же шапка: Обновить / Защита / Карта атак / Мониторинг / остальные. */
+/* Общая шапка всех Control-страниц. */
 body.control-page .control-topbar,
 body.control-page .control-home-topbar,
 body.control-page .control-detail-topbar,
-body.site-update-page .control-detail-topbar,
-body.protection-page .control-detail-topbar,
-body.attack-page .control-detail-topbar,
 body.comment-collection-page .control-topbar{
   position:relative!important;
   width:100%!important;
-  height:var(--r128-topbar-h)!important;
-  min-height:var(--r128-topbar-h)!important;
-  max-height:var(--r128-topbar-h)!important;
+  height:var(--r129-topbar-h)!important;
+  min-height:var(--r129-topbar-h)!important;
+  max-height:var(--r129-topbar-h)!important;
   overflow:hidden!important;
   isolation:isolate!important;
   border:0!important;
-  border-bottom:1px solid rgba(105,255,170,.54)!important;
+  border-bottom:1px solid rgba(103,255,166,.52)!important;
   background:
-    radial-gradient(ellipse at 50% 48%,rgba(38,255,128,.33) 0%,rgba(8,178,80,.14) 28%,transparent 61%),
-    linear-gradient(90deg,#01070a 0%,#03170f 35%,#06281a 50%,#03170f 65%,#01070a 100%)!important;
+    radial-gradient(ellipse at 50% 48%,rgba(38,255,128,.31),rgba(10,177,82,.13) 31%,transparent 63%),
+    linear-gradient(90deg,#01070a 0%,#03170f 35%,#06271a 50%,#03170f 65%,#01070a 100%)!important;
   box-shadow:
-    inset 0 -1px 0 rgba(115,255,177,.28),
+    inset 0 -1px 0 rgba(98,255,162,.31),
     0 3px 0 rgba(79,244,151,.10),
-    0 14px 40px rgba(15,225,107,.21)!important;
+    0 13px 36px rgba(15,225,107,.19)!important;
 }
 
 body.control-page .control-topbar .nav-shell,
 body.control-page .control-home-topbar .nav-shell,
 body.control-page .control-detail-topbar .nav-shell,
-body.site-update-page .control-detail-topbar .nav-shell,
-body.protection-page .control-detail-topbar .nav-shell,
-body.attack-page .control-detail-topbar .nav-shell,
 body.comment-collection-page .control-topbar .nav-shell{
   position:relative!important;
+  height:var(--r129-topbar-h)!important;
+  min-height:var(--r129-topbar-h)!important;
+  max-height:var(--r129-topbar-h)!important;
   z-index:4!important;
-  height:var(--r128-topbar-h)!important;
-  min-height:var(--r128-topbar-h)!important;
-  max-height:var(--r128-topbar-h)!important;
 }
 
-/* Светящийся нижний луч шапки. */
+/* Нижний световой луч шапки. */
 body.control-page .control-topbar::after,
 body.control-page .control-detail-topbar::after,
-body.site-update-page .control-detail-topbar::after,
-body.protection-page .control-detail-topbar::after,
-body.attack-page .control-detail-topbar::after,
 body.comment-collection-page .control-topbar::after{
   content:""!important;
   display:block!important;
@@ -464,26 +455,24 @@ body.comment-collection-page .control-topbar::after{
   box-shadow:0 0 9px rgba(85,255,158,.92),0 0 25px rgba(40,225,125,.56)!important;
 }
 
-/* Живой глаз строго по центру: одинаковая геометрия на всех страницах. */
-body.control-page .control-topbar .control-center-logo,
-body.control-page .control-detail-topbar .control-center-logo,
-body.site-update-page .control-detail-topbar .control-center-logo,
-body.protection-page .control-detail-topbar .control-center-logo,
-body.attack-page .control-detail-topbar .control-center-logo,
-body.comment-collection-page .control-topbar .control-center-logo{
+/* Геометрия самого глаза. */
+body.control-page .control-center-logo,
+body.comment-collection-page .control-center-logo{
   position:absolute!important;
   left:50%!important;
   top:50%!important;
   right:auto!important;
   bottom:auto!important;
-  inset:auto!important;
-  transform:translate(-50%,-50%)!important;
   width:78px!important;
   height:78px!important;
   min-width:78px!important;
   min-height:78px!important;
   max-width:78px!important;
   max-height:78px!important;
+  margin:0!important;
+  padding:0!important;
+  transform:translate(-50%,-50%)!important;
+  transform-origin:center!important;
   display:grid!important;
   place-items:center!important;
   overflow:visible!important;
@@ -497,12 +486,9 @@ body.comment-collection-page .control-topbar .control-center-logo{
   box-shadow:none!important;
 }
 
-body.control-page .control-topbar .control-center-logo::after,
-body.control-page .control-detail-topbar .control-center-logo::after,
-body.site-update-page .control-detail-topbar .control-center-logo::after,
-body.protection-page .control-detail-topbar .control-center-logo::after,
-body.attack-page .control-detail-topbar .control-center-logo::after,
-body.comment-collection-page .control-topbar .control-center-logo::after{
+/* Аура — всегда перед фоном шапки, но позади картинки. */
+body.control-page .control-center-logo::after,
+body.comment-collection-page .control-center-logo::after{
   content:""!important;
   display:block!important;
   position:absolute!important;
@@ -510,32 +496,27 @@ body.comment-collection-page .control-topbar .control-center-logo::after{
   top:50%!important;
   right:auto!important;
   bottom:auto!important;
-  inset:auto!important;
   width:92px!important;
   height:92px!important;
   margin:0!important;
   border:0!important;
   border-radius:50%!important;
-  background:radial-gradient(circle,rgba(130,255,184,.48),rgba(35,230,105,.16) 49%,transparent 73%)!important;
+  background:radial-gradient(circle,rgba(130,255,184,.49),rgba(35,230,105,.17) 49%,transparent 73%)!important;
   pointer-events:none!important;
-  z-index:0!important;
-  animation:andrikHeaderHaloR128 3.05s ease-in-out infinite!important;
+  z-index:1!important;
+  animation:andrikHeaderHaloR129 3.05s ease-in-out infinite!important;
   animation-play-state:running!important;
   will-change:transform,opacity!important;
 }
 
-body.control-page .control-topbar .control-center-logo .logo-ok,
-body.control-page .control-detail-topbar .control-center-logo .logo-ok,
-body.site-update-page .control-detail-topbar .control-center-logo .logo-ok,
-body.protection-page .control-detail-topbar .control-center-logo .logo-ok,
-body.attack-page .control-detail-topbar .control-center-logo .logo-ok,
-body.comment-collection-page .control-topbar .control-center-logo .logo-ok{
+/* Зелёный глаз. */
+body.control-page .control-center-logo .logo-ok,
+body.comment-collection-page .control-center-logo .logo-ok{
   position:absolute!important;
   left:50%!important;
   top:50%!important;
   right:auto!important;
   bottom:auto!important;
-  inset:auto!important;
   width:64px!important;
   height:64px!important;
   min-width:64px!important;
@@ -543,46 +524,52 @@ body.comment-collection-page .control-topbar .control-center-logo .logo-ok{
   max-width:64px!important;
   max-height:64px!important;
   margin:0!important;
+  padding:0!important;
   display:block!important;
   object-fit:cover!important;
+  object-position:center!important;
   border-radius:50%!important;
   clip-path:circle(49% at 50% 50%)!important;
   opacity:1!important;
   visibility:visible!important;
-  z-index:2!important;
-  animation:andrikHeaderEyeR128 3.05s ease-in-out infinite!important;
+  z-index:3!important;
+  animation:andrikHeaderEyeR129 3.05s ease-in-out infinite!important;
   animation-play-state:running!important;
   will-change:transform,filter!important;
   box-shadow:0 0 0 1px rgba(130,255,184,.25)!important;
 }
 
-body.control-page .control-topbar .control-center-logo .logo-error,
-body.control-page .control-detail-topbar .control-center-logo .logo-error,
-body.site-update-page .control-detail-topbar .control-center-logo .logo-error,
-body.protection-page .control-detail-topbar .control-center-logo .logo-error,
-body.attack-page .control-detail-topbar .control-center-logo .logo-error,
-body.comment-collection-page .control-topbar .control-center-logo .logo-error{
+/* Красный глаз сохраняет штатную логику ошибки. */
+body.control-page .control-center-logo .logo-error,
+body.comment-collection-page .control-center-logo .logo-error{
   position:absolute!important;
   left:50%!important;
   top:50%!important;
+  right:auto!important;
+  bottom:auto!important;
+  width:62px!important;
+  height:62px!important;
+  margin:0!important;
   transform:translate(-50%,-50%)!important;
+  border-radius:50%!important;
   opacity:0!important;
   visibility:hidden!important;
+  z-index:4!important;
 }
-
-body.control-page .control-center-logo.is-error .logo-ok{
-  opacity:.20!important;
-  filter:saturate(.3)!important;
+body.control-page .control-center-logo.is-error .logo-ok,
+body.comment-collection-page .control-center-logo.is-error .logo-ok{
+  opacity:0!important;
 }
-body.control-page .control-center-logo.is-error .logo-error{
+body.control-page .control-center-logo.is-error .logo-error,
+body.comment-collection-page .control-center-logo.is-error .logo-error{
   opacity:1!important;
   visibility:visible!important;
 }
 
-@keyframes andrikHeaderEyeR128{
+@keyframes andrikHeaderEyeR129{
   0%,100%{
     transform:translate(-50%,-50%) scale(.93);
-    filter:brightness(1.02) saturate(1.28)
+    filter:brightness(1.03) saturate(1.29)
       drop-shadow(0 0 8px rgba(78,255,142,.58))
       drop-shadow(0 0 20px rgba(28,220,91,.42));
   }
@@ -591,84 +578,71 @@ body.control-page .control-center-logo.is-error .logo-error{
     filter:brightness(1.52) saturate(1.66)
       drop-shadow(0 0 16px rgba(153,255,193,.98))
       drop-shadow(0 0 38px rgba(34,239,107,.86))
-      drop-shadow(0 0 62px rgba(10,176,70,.42));
+      drop-shadow(0 0 60px rgba(10,176,70,.38));
   }
 }
-@keyframes andrikHeaderHaloR128{
+@keyframes andrikHeaderHaloR129{
   0%,100%{transform:translate(-50%,-50%) scale(.70);opacity:.17}
   50%{transform:translate(-50%,-50%) scale(1.36);opacity:.90}
 }
 
-/* У старых страниц были локальные высоты 76/82px — R128 их отменяет. */
-body.attack-page .control-detail-topbar,
-body.attack-page .control-detail-topbar .nav-shell,
+/* Старые локальные высоты Защиты и Карты атак больше не отличаются. */
+body.site-update-page .control-detail-topbar,
+body.site-update-page .control-detail-topbar .nav-shell,
 body.protection-page .control-detail-topbar,
 body.protection-page .control-detail-topbar .nav-shell,
-body.site-update-page .control-detail-topbar,
-body.site-update-page .control-detail-topbar .nav-shell{
-  height:var(--r128-topbar-h)!important;
-  min-height:var(--r128-topbar-h)!important;
-  max-height:var(--r128-topbar-h)!important;
+body.attack-page .control-detail-topbar,
+body.attack-page .control-detail-topbar .nav-shell{
+  height:var(--r129-topbar-h)!important;
+  min-height:var(--r129-topbar-h)!important;
+  max-height:var(--r129-topbar-h)!important;
 }
 
-/* Общая рамка всегда видима в горизонтальном режиме. */
+/* Рамка прямых страниц Control. */
+body.control-page.unified-glow-ready::after,
+body.comment-collection-page.unified-glow-ready::after{
+  top:calc(var(--r129-topbar-h) + 8px)!important;
+  left:var(--r129-frame-left)!important;
+  right:var(--r129-frame-right)!important;
+  bottom:var(--r129-frame-bottom)!important;
+}
+
+/* В iframe-карусели рисуется одна внешняя рамка, поэтому внутренние не дублируем. */
 @media(orientation:landscape){
   :root{
-    --r128-topbar-h:78px;
+    --r129-topbar-h:78px;
     --r115-topbar-h:78px;
+  }
+
+  body.control-page .control-topbar,
+  body.control-page .control-home-topbar,
+  body.control-page .control-detail-topbar,
+  body.comment-collection-page .control-topbar,
+  body.control-page .control-topbar .nav-shell,
+  body.control-page .control-home-topbar .nav-shell,
+  body.control-page .control-detail-topbar .nav-shell,
+  body.comment-collection-page .control-topbar .nav-shell{
+    height:var(--r129-topbar-h)!important;
+    min-height:var(--r129-topbar-h)!important;
+    max-height:var(--r129-topbar-h)!important;
   }
 
   body.control-page.unified-glow-ready::after,
   body.comment-collection-page.unified-glow-ready::after{
-    content:""!important;
-    display:block!important;
-    position:fixed!important;
-    top:calc(var(--r128-topbar-h) + 8px)!important;
-    left:var(--r128-frame-left)!important;
-    right:var(--r128-frame-right)!important;
-    bottom:var(--r128-frame-bottom)!important;
-    z-index:88!important;
-    pointer-events:none!important;
-    border:2px solid rgba(100,255,170,.84)!important;
-    border-radius:28px!important;
-    opacity:1!important;
-    background:transparent!important;
-    box-shadow:
-      0 0 0 1px rgba(92,255,168,.14),
-      0 0 22px rgba(55,239,136,.38),
-      0 0 46px rgba(20,191,91,.16),
-      inset 0 0 18px rgba(55,239,136,.08)!important;
-    animation:r115FrameBreath 4.2s ease-in-out infinite!important;
+    top:calc(var(--r129-topbar-h) + 8px)!important;
+    left:clamp(10px,4.5vw,48px)!important;
+    right:clamp(10px,4.5vw,48px)!important;
+    bottom:max(8px,env(safe-area-inset-bottom))!important;
+    border-width:2px!important;
+    border-radius:30px!important;
   }
 
-  /* Даже embed-страницы получают рамку после шапки, а не вокруг неё. */
   body.control-page.unified-glow-embed::after{
-    top:calc(var(--r128-topbar-h) + 8px)!important;
-    left:var(--r128-frame-left)!important;
-    right:var(--r128-frame-right)!important;
-    bottom:var(--r128-frame-bottom)!important;
-    border-radius:28px!important;
-  }
-
-  body.control-page .control-topbar,
-  body.control-page .control-detail-topbar,
-  body.site-update-page .control-detail-topbar,
-  body.protection-page .control-detail-topbar,
-  body.attack-page .control-detail-topbar,
-  body.control-page .control-topbar .nav-shell,
-  body.control-page .control-detail-topbar .nav-shell,
-  body.site-update-page .control-detail-topbar .nav-shell,
-  body.protection-page .control-detail-topbar .nav-shell,
-  body.attack-page .control-detail-topbar .nav-shell{
-    height:var(--r128-topbar-h)!important;
-    min-height:var(--r128-topbar-h)!important;
-    max-height:var(--r128-topbar-h)!important;
+    display:none!important;
   }
 
   body.control-page .control-center-logo,
-  body.site-update-page .control-center-logo,
-  body.protection-page .control-center-logo,
-  body.attack-page .control-center-logo{
+  body.comment-collection-page .control-center-logo{
     width:68px!important;
     height:68px!important;
     min-width:68px!important;
@@ -678,9 +652,7 @@ body.site-update-page .control-detail-topbar .nav-shell{
   }
 
   body.control-page .control-center-logo .logo-ok,
-  body.site-update-page .control-center-logo .logo-ok,
-  body.protection-page .control-center-logo .logo-ok,
-  body.attack-page .control-center-logo .logo-ok{
+  body.comment-collection-page .control-center-logo .logo-ok{
     width:56px!important;
     height:56px!important;
     min-width:56px!important;

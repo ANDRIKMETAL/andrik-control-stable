@@ -1,7 +1,7 @@
 (() => {
   'use strict';
-  if (window.__ANDRIK_CONTROL_PLAYER_R128__) return;
-  window.__ANDRIK_CONTROL_PLAYER_R128__ = true;
+  if (window.__ANDRIK_CONTROL_PLAYER_R129__) return;
+  window.__ANDRIK_CONTROL_PLAYER_R129__ = true;
 
   const MAIN_ORIGIN='https://andrikmetal.com';
   const CONTROL_ORIGIN='https://control.andrikmetal.com';
@@ -15,7 +15,7 @@
 
   const OWNER_KEY_SESSION='andrik-comments-admin-key';
   const OWNER_KEY_LOCAL='andrik-comments-admin-key-persistent';
-  const OWNER_SYNC_STAMP='andrik-owner-session-sync-r128';
+  const OWNER_SYNC_STAMP='andrik-owner-session-sync-r129';
 
   const syncOwnerSession=async()=>{
     let key='';
@@ -99,7 +99,7 @@
   const toggle=dock.querySelector('[data-action="toggle"]');
   let state=readCookie()||{};
 
-  // R128: всегда начинаем только с круглой кнопки.
+  // R129: всегда начинаем только с круглой кнопки.
   dock.classList.remove('is-open');
   mainButton.setAttribute('aria-expanded','false');
   if(insideMainPlayer)document.documentElement.classList.add('andrik-control-inside-player');
@@ -169,7 +169,7 @@
       }
 
       url.searchParams.set('player-shell','1');
-      url.searchParams.set('v','55.00-r128');
+      url.searchParams.set('v','55.00-r129');
       location.href=url.href;
     }
   },true);

@@ -1,12 +1,12 @@
 (() => {
   'use strict';
-  if (window.__ANDRIK_UNIFIED_GLOW_R128__) return;
-  window.__ANDRIK_UNIFIED_GLOW_R128__ = true;
+  if (window.__ANDRIK_UNIFIED_GLOW_R129__) return;
+  window.__ANDRIK_UNIFIED_GLOW_R129__ = true;
 
-  const RELEASE = 'R128';
+  const RELEASE = 'R129';
   const KEY_SESSION = 'andrik-comments-admin-key';
   const KEY_LOCAL = 'andrik-comments-admin-key-persistent';
-  const OWNER_SYNC_STAMP = 'andrik-owner-session-sync-r128';
+  const OWNER_SYNC_STAMP = 'andrik-owner-session-sync-r129';
 
   const storedAdminKey = () => {
     try {
@@ -49,19 +49,19 @@
     const isEmbeddedControlSection = params.get('embed') === '1';
     if (isUpdater || isReset || isEmbeddedControlSection) return;
 
-    if (!document.querySelector('link[data-andrik-player-r128]')) {
+    if (!document.querySelector('link[data-andrik-player-r129]')) {
       const link = document.createElement('link');
       link.rel = 'stylesheet';
-      link.href = '/assets/control-player-bridge-r128.css?v=55.00-r128';
-      link.dataset.andrikPlayerR128 = 'css';
+      link.href = '/assets/control-player-bridge-r129.css?v=55.00-r129';
+      link.dataset.andrikPlayerR129 = 'css';
       document.head.appendChild(link);
     }
 
-    if (!document.querySelector('script[data-andrik-player-r128]')) {
+    if (!document.querySelector('script[data-andrik-player-r129]')) {
       const script = document.createElement('script');
-      script.src = '/assets/control-player-bridge-r128.js?v=55.00-r128';
+      script.src = '/assets/control-player-bridge-r129.js?v=55.00-r129';
       script.defer = true;
-      script.dataset.andrikPlayerR128 = 'js';
+      script.dataset.andrikPlayerR129 = 'js';
       document.head.appendChild(script);
     }
   };
@@ -70,7 +70,7 @@
     const body = document.body;
     if (!body) return;
 
-    body.classList.add('unified-glow-ready', 'andrik-ui-r128');
+    body.classList.add('unified-glow-ready', 'andrik-ui-r129');
     const params = new URLSearchParams(location.search);
     if (params.get('embed') === '1') body.classList.add('unified-glow-embed');
 
@@ -82,12 +82,12 @@
 
     document.querySelectorAll('.control-center-logo .logo-ok').forEach(image => {
       const url = new URL(image.getAttribute('src') || '/assets/control-topbar-eye-triangle.jpg', location.href);
-      url.searchParams.set('v', '55.00-r128');
+      url.searchParams.set('v', '55.00-r129');
       image.src = `${url.pathname}${url.search}`;
     });
 
     document.querySelectorAll('.control-version-footer strong').forEach(node => {
-      node.textContent = 'Live Web AI · ANDRIK · v55.00 LIVE WEB AI FINAL R128';
+      node.textContent = 'Live Web AI · ANDRIK · v55.00 LIVE WEB AI FINAL R129';
     });
 
     syncOwnerSession();
