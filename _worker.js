@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R119', number:119, version:'55.00', full:'55.00 LIVE WEB AI FINAL R119', siteUpdater:'55.00-r119' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R120', number:120, version:'55.00', full:'55.00 LIVE WEB AI FINAL R120', siteUpdater:'55.00-r120' });
 
 const JSON_HEADERS = {
   'content-type': 'application/json; charset=utf-8',
@@ -463,14 +463,86 @@ async function handleControlProtectionDashboard(request, env) {
 
 async function handleControlProtectionAttacks(request, env) {
   if (!adminAuthorized(request, env)) return json({ ok:false, error:'unauthorized' }, 401);
-  const db = requireDb(env); await ensureSecuritySchema(db);
-  const range = String(new URL(request.url).searchParams.get('range') || '') === '7d' ? { key:'7d', sql:'-7 days' } : { key:'24h', sql:'-24 hours' };
-  const [countriesRaw, totalRaw, recentRaw] = await Promise.all([
-    db.prepare(`SELECT country, MAX(region) AS region, MAX(colo) AS colo, COUNT(*) AS count, MAX(created_at) AS lastAt FROM security_events WHERE datetime(created_at) >= datetime('now', ?) AND country <> '' GROUP BY country ORDER BY count DESC, lastAt DESC LIMIT 60`).bind(range.sql).all(),
-    db.prepare(`SELECT COUNT(*) AS total, SUM(CASE WHEN country='' THEN 1 ELSE 0 END) AS unknown FROM security_events WHERE datetime(created_at) >= datetime('now', ?)`).bind(range.sql).first(),
-    db.prepare(`SELECT kind, path, detail, country, region, colo, created_at AS createdAt FROM security_events WHERE datetime(created_at) >= datetime('now', ?) ORDER BY datetime(created_at) DESC LIMIT 30`).bind(range.sql).all()
-  ]);
-  return json({ ok:true, range:range.key, updatedAt:new Date().toISOString(), total:Number(totalRaw?.total || 0), unknown:Number(totalRaw?.unknown || 0), countries:(countriesRaw.results || []).map(row=>({ country:cleanPlainText(row.country || '',8).toUpperCase(), region:row.region || '', colo:row.colo || '', count:Number(row.count || 0), lastAt:row.lastAt || '' })), recent:recentRaw.results || [], note:'Карта показывает события, дошедшие до Worker. DDoS, остановленный Cloudflare edge раньше Worker, сюда не попадает.' });
+  const range = String(new URL(request.url).searchParams.get('range') || '') === '7d'
+    ? { key:'7d', sql:'-7 days' }
+    : { key:'24h', sql:'-24 hours' };
+
+  let db;
+  try {
+    db = requireDb(env);
+    await ensureSecuritySchema(db);
+  } catch (error) {
+    return json({
+      ok:true,
+      range:range.key,
+      updatedAt:new Date().toISOString(),
+      total:0,
+      unknown:0,
+      countries:[],
+      recent:[],
+      warning:'Журнал защиты пока недоступен. Подключение D1 будет проверено в разделе «Щит».',
+      note:'Карта работает; данные появятся после подключения журнала безопасности.'
+    });
+  }
+
+  try {
+    const [countriesRaw, totalRaw, recentRaw] = await Promise.all([
+      db.prepare(`
+        SELECT country, MAX(region) AS region, MAX(colo) AS colo,
+               COUNT(*) AS count, MAX(created_at) AS lastAt
+        FROM security_events
+        WHERE datetime(created_at) >= datetime('now', ?)
+          AND country <> ''
+        GROUP BY country
+        ORDER BY count DESC, lastAt DESC
+        LIMIT 60
+      `).bind(range.sql).all(),
+      db.prepare(`
+        SELECT COUNT(*) AS total,
+               SUM(CASE WHEN country='' THEN 1 ELSE 0 END) AS unknown
+        FROM security_events
+        WHERE datetime(created_at) >= datetime('now', ?)
+      `).bind(range.sql).first(),
+      db.prepare(`
+        SELECT kind, path, detail, country, region, colo,
+               created_at AS createdAt
+        FROM security_events
+        WHERE datetime(created_at) >= datetime('now', ?)
+        ORDER BY datetime(created_at) DESC
+        LIMIT 30
+      `).bind(range.sql).all()
+    ]);
+
+    return json({
+      ok:true,
+      range:range.key,
+      updatedAt:new Date().toISOString(),
+      total:Number(totalRaw?.total || 0),
+      unknown:Number(totalRaw?.unknown || 0),
+      countries:(countriesRaw.results || []).map(row => ({
+        country:cleanPlainText(row.country || '', 8).toUpperCase(),
+        region:row.region || '',
+        colo:row.colo || '',
+        count:Number(row.count || 0),
+        lastAt:row.lastAt || ''
+      })),
+      recent:recentRaw.results || [],
+      note:'Карта показывает события, дошедшие до Worker. DDoS, остановленный Cloudflare edge раньше Worker, сюда не попадает.'
+    });
+  } catch (error) {
+    console.error('ANDRIK attack map storage error', error);
+    return json({
+      ok:true,
+      range:range.key,
+      updatedAt:new Date().toISOString(),
+      total:0,
+      unknown:0,
+      countries:[],
+      recent:[],
+      warning:'Журнал атак инициализируется. Обнови карту через несколько секунд.',
+      note:'Пустая карта безопаснее общего server-error; новые события появятся автоматически.'
+    });
+  }
 }
 
 
@@ -2007,6 +2079,88 @@ function adminAuthorized(request, env) {
   if (!supplied) return false;
   return expectedKeys.some(expected => supplied.length === expected.length && supplied === expected);
 }
+
+function readCookieValue(request, name) {
+  const source = String(request.headers.get('cookie') || '');
+  for (const part of source.split(';')) {
+    const item = part.trim();
+    if (!item.startsWith(`${name}=`)) continue;
+    try { return decodeURIComponent(item.slice(name.length + 1)); }
+    catch (_) { return item.slice(name.length + 1); }
+  }
+  return '';
+}
+
+function timingSafeTextEqual(left, right) {
+  const a = String(left || '');
+  const b = String(right || '');
+  if (a.length !== b.length) return false;
+  let difference = 0;
+  for (let index = 0; index < a.length; index += 1) difference |= a.charCodeAt(index) ^ b.charCodeAt(index);
+  return difference === 0;
+}
+
+async function hmacSha256Hex(secret, value) {
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    'raw', encoder.encode(String(secret || '')), { name:'HMAC', hash:'SHA-256' }, false, ['sign']
+  );
+  const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(String(value || '')));
+  return [...new Uint8Array(signature)].map(byte => byte.toString(16).padStart(2, '0')).join('');
+}
+
+function ownerSessionSecret(env) {
+  return `${configuredAdminKeys(env).join('|')}|${String(env.CRON_SECRET || '')}|ANDRIK-OWNER-SESSION-R120`;
+}
+
+async function createOwnerSessionToken(env) {
+  const expiresAt = Date.now() + 30 * 24 * 60 * 60 * 1000;
+  const nonce = crypto.randomUUID().replace(/-/g, '');
+  const payload = `${expiresAt}.${nonce}`;
+  const signature = await hmacSha256Hex(ownerSessionSecret(env), payload);
+  return { token:`${payload}.${signature}`, expiresAt };
+}
+
+async function verifyOwnerSessionToken(token, env) {
+  const parts = String(token || '').split('.');
+  if (parts.length !== 3 || !configuredAdminKeys(env).length) return false;
+  const [expiresRaw, nonce, suppliedSignature] = parts;
+  const expiresAt = Number(expiresRaw || 0);
+  if (!Number.isFinite(expiresAt) || expiresAt <= Date.now() || expiresAt > Date.now() + 31 * 24 * 60 * 60 * 1000) return false;
+  if (!/^[a-f0-9]{20,80}$/i.test(nonce)) return false;
+  const expectedSignature = await hmacSha256Hex(ownerSessionSecret(env), `${expiresRaw}.${nonce}`);
+  return timingSafeTextEqual(suppliedSignature, expectedSignature);
+}
+
+function ownerSessionCookie(request, token, maxAge = 2592000) {
+  let domain = '';
+  try {
+    const hostname = new URL(request.url).hostname.toLowerCase();
+    if (hostname === 'andrikmetal.com' || hostname.endsWith('.andrikmetal.com')) domain = '; Domain=.andrikmetal.com';
+  } catch (_) {}
+  return `andrik_owner_session=${encodeURIComponent(token)}; Path=/; Max-Age=${maxAge}; HttpOnly; Secure; SameSite=Lax${domain}`;
+}
+
+async function handleOwnerSessionCreate(request, env) {
+  if (!adminAuthorized(request, env)) return json({ ok:false, error:'unauthorized' }, 401);
+  if (!isSameOrigin(request)) return json({ ok:false, error:'origin' }, 403);
+  const session = await createOwnerSessionToken(env);
+  return json({ ok:true, owner:true, expiresAt:new Date(session.expiresAt).toISOString() }, 200, {
+    ...JSON_HEADERS,
+    'set-cookie': ownerSessionCookie(request, session.token),
+    'vary':'Cookie'
+  });
+}
+
+async function handleOwnerStatus(request, env) {
+  const token = readCookieValue(request, 'andrik_owner_session');
+  const owner = await verifyOwnerSessionToken(token, env).catch(() => false);
+  return json({ ok:true, owner, version:ANDRIK_CONTROL_RELEASE.short }, 200, {
+    ...JSON_HEADERS,
+    'vary':'Cookie'
+  });
+}
+
 
 async function handleControlAccess(request, env) {
   if (!adminAuthorized(request, env)) return json({ ok:false, error:'unauthorized' }, 401);
@@ -8824,6 +8978,8 @@ async function routeApi(request, env, ctx) {
     if (path === '/api/control/site-update/log' && request.method === 'GET') return await handleSiteUpdateLog(request, env);
     if (path === '/api/control/site-update/history' && request.method === 'GET') return await handleSiteUpdateHistory(request, env);
     if (path === '/api/control/site-update/rollback' && request.method === 'POST') return await handleSiteUpdateRollback(request, env);
+    if (path === '/api/control/owner-session' && request.method === 'POST') return await handleOwnerSessionCreate(request, env);
+    if (path === '/api/control/owner-status' && request.method === 'GET') return await handleOwnerStatus(request, env);
     if (path === '/api/control/access' && request.method === 'GET') return await handleControlAccess(request, env);
     if (path === '/api/control/home' && request.method === 'GET') return await handleControlHome(request, env);
     if (path === '/api/control/dashboard' && request.method === 'GET') return await handleControlDashboard(request, env);
@@ -8876,6 +9032,22 @@ function controlRecoveryPage() {
   return `<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#02060a"><meta name="robots" content="noindex,nofollow"><title>Восстановление Control ANDRIK</title><style>*{box-sizing:border-box}html,body{min-height:100%;margin:0;background:#02060a;color:#eff8ff;font-family:system-ui,-apple-system,Segoe UI,sans-serif}body{display:grid;place-items:center;padding:22px}.c{width:min(100%,520px);padding:30px 22px;border:1px solid #244455;border-radius:28px;background:linear-gradient(#081923,#030c13);text-align:center}.e{font-size:58px}h1{font-size:clamp(30px,8vw,44px);margin:12px 0}.s{color:#abc0cc;line-height:1.55}.b{display:inline-flex;min-height:54px;align-items:center;justify-content:center;margin-top:20px;padding:0 22px;border:1px solid #315b70;border-radius:999px;color:#eff8ff;text-decoration:none;font-weight:800;background:#0a2432}</style></head><body><main class="c"><div class="e">🟢</div><h1>Восстанавливаем Control</h1><p class="s" id="s">Заменяем старый перехват страниц безопасной версией…</p><a class="b" id="b" href="/analytics-admin.html?source=recovery&page=map&v=54.96" hidden>Открыть Control</a></main><script>(async()=>{const s=document.getElementById('s'),b=document.getElementById('b'),go='/analytics-admin.html?source=recovery&page=map&v=54.96&t='+Date.now();b.href=go;try{if('caches'in window){const k=await caches.keys();await Promise.all(k.filter(n=>n.startsWith('andrik-control-')||n.startsWith('andrik-site-')).map(n=>caches.delete(n)))}if('serviceWorker'in navigator){const r=await navigator.serviceWorker.register('/service-worker.js?v=54.96-control-recovery',{scope:'/',updateViaCache:'none'});if(r.installing)r.installing.postMessage({type:'SKIP_WAITING'});if(r.waiting)r.waiting.postMessage({type:'SKIP_WAITING'});await r.update().catch(()=>{});await new Promise(x=>setTimeout(x,1200))}s.textContent='Готово. Открываем карту напрямую…';s.style.color='#bfffd9';b.hidden=false;setTimeout(()=>location.replace(go),650)}catch(e){s.textContent='Нажмите кнопку ниже. '+String(e&&e.message||e);s.style.color='#ffb9b9';b.hidden=false}})();</script></body></html>`;
 }
 
+function allowControlInsidePlayer(response, url, isControlHost) {
+  if (!isControlHost || url.searchParams.get('player-shell') !== '1') return response;
+  const contentType = String(response.headers.get('content-type') || '').toLowerCase();
+  if (!contentType.includes('text/html')) return response;
+  const headers = new Headers(response.headers);
+  headers.delete('x-frame-options');
+  headers.set('content-security-policy', "frame-ancestors 'self' https://andrikmetal.com");
+  headers.set('cache-control', 'no-cache, no-store, must-revalidate');
+  headers.set('x-andrik-player-shell', 'R120');
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers
+  });
+}
+
 function controlAssetFailurePage(error) {
   const safe = String(error?.message || error || 'unknown').replace(/[<>&"']/g, '');
   return `<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Control ANDRIK — восстановление</title><style>body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;background:#02060a;color:#eef8ff;font:18px/1.5 system-ui}.c{max-width:560px;padding:26px;border:1px solid #294654;border-radius:24px;background:#07131b}a{color:#bcecff}</style></head><body><main class="c"><h1>Control временно не получил файл</h1><p>Откройте встроенное восстановление:</p><p><a href="/cache-reset.html?v=5469">Восстановить Control ANDRIK</a></p><small>${safe}</small></main></body></html>`;
@@ -8924,10 +9096,12 @@ export default {
         // Dedicated owner subdomain: serve the Control map HTML directly.
         if (isControlHost && (path === '/' || path === '/index.html' || path === '/admin' || path === '/admin/index.html')) {
           const assetUrl = new URL('/analytics-admin.html', url);
-          return await env.ASSETS.fetch(new Request(assetUrl.toString(), request));
+          const response = await env.ASSETS.fetch(new Request(assetUrl.toString(), request));
+          return allowControlInsidePlayer(response, url, isControlHost);
         }
       }
-      return await env.ASSETS.fetch(request);
+      const response = await env.ASSETS.fetch(request);
+      return allowControlInsidePlayer(response, url, isControlHost);
     } catch (error) {
       console.error('ANDRIK static asset error', error);
       ctx?.waitUntil?.(recordSystemLog(env, { scope:'assets', level:'error', event:'asset-fetch-failed', message:`${request.method} ${normalizedPath}: ${cleanPlainText(error?.message || error,420)}`, details:{ host:hostname, path:normalizedPath } }).catch(() => {}));

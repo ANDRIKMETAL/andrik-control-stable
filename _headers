@@ -533,3 +533,24 @@
   Cache-Control: public, max-age=31536000, immutable
 /cache-reset-v55-00-final-r115.html
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+
+# R120 FINAL — Player Bridge, Owner Eye and attack header
+/assets/player-v54-27-r120.js
+  Cache-Control: public, max-age=31536000, immutable
+/assets/player-shell-bridge-r120.js
+  Cache-Control: public, max-age=31536000, immutable
+/assets/control-player-bridge-r120.js
+  Cache-Control: public, max-age=31536000, immutable
+/assets/control-player-bridge-r120.css
+  Cache-Control: public, max-age=31536000, immutable
+/assets/control-version-v55-00-r120.js
+  Cache-Control: public, max-age=31536000, immutable
+/assets/site-update-admin-r120.js
+  Cache-Control: public, max-age=31536000, immutable
+/assets/site-update-admin-r120.css
+  Cache-Control: public, max-age=31536000, immutable
+/assets/attack-map-r120-fix.css
+  Cache-Control: public, max-age=31536000, immutable
+/cache-reset-v55-00-final-r120.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+
