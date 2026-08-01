@@ -622,3 +622,20 @@
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
   X-Robots-Tag: noindex, nofollow,noarchive
 
+# R131 — GA4 top reset + fixed player anchor + exact map headers
+/analytics-admin.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/admin-sections.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/assets/unified-glow-r131.css
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/assets/unified-glow-r131.js
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/assets/control-player-bridge-r131.css
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/assets/control-player-bridge-r131.js
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/cache-reset-v55-00-final-r131.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+  X-Robots-Tag: noindex, nofollow,noarchive
+

@@ -852,10 +852,10 @@ html.live-web-ai-resume-lock .analytics-swipe-viewport{overflow:hidden!important
   document.addEventListener('visibilitychange',function(){if(!document.hidden)lock();},{passive:true});
 })();
 </script>
-<link rel="stylesheet" href="/assets/unified-glow-r130.css?v=55.00-r130">
+<link rel="stylesheet" href="/assets/unified-glow-r131.css?v=55.00-r131">
 </head>
 <body class="trika-standalone-page comments-admin-page control-page analytics-admin-page analytics-swipe-page analytics-v54-33-page analytics-v54-46-page">
-<nav class="topbar control-topbar control-detail-topbar"><div class="wrap nav-shell analytics-topbar-minimal"><a class="control-center-logo" id="controlCenterLogo" href="https://andrikmetal.com/" aria-label="Открыть главный сайт ANDRIK"><img class="logo-ok" src="/assets/control-topbar-eye-triangle.jpg?v=55.00-r129" alt=""/><img class="logo-error" src="/assets/andrik-control-red-triangle-192.png" alt=""/></a></div></nav>
+<nav class="topbar control-topbar control-detail-topbar"><div class="wrap nav-shell analytics-topbar-minimal"><a class="control-center-logo" id="controlCenterLogo" href="https://andrikmetal.com/" aria-label="Открыть главный сайт ANDRIK"><img class="logo-ok" src="/assets/control-topbar-eye-triangle.jpg?v=55.00-r131" alt=""/><img class="logo-error" src="/assets/andrik-control-red-triangle-192.png" alt=""/></a></div></nav>
 <main class="analytics-swipe-main" id="analyticsSwipeMain">
   <div class="analytics-pull-indicator" id="analyticsDownIndicator" aria-hidden="true"><i></i><span>Свайп сверху вниз делает обновление</span></div>
   <div class="analytics-swipe-viewport" id="analyticsSwipeViewport">
@@ -1024,6 +1024,7 @@ html.live-web-ai-resume-lock .analytics-swipe-viewport{overflow:hidden!important
   const $=id=>document.getElementById(id);
   const escapeHtml=value=>String(value??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
   const getKey=()=>{try{return localStorage.getItem(KEY_LOCAL)||sessionStorage.getItem(KEY_SESSION)||''}catch(_){return''}};
+  try{history.scrollRestoration='manual'}catch(_){}
   const number=value=>new Intl.NumberFormat('ru-RU').format(Number(value||0));
   const dateTime=value=>{try{return new Intl.DateTimeFormat('ru-RU',{dateStyle:'medium',timeStyle:'short'}).format(new Date(value))}catch(_){return value||'—'}};
   const shortDate=value=>{const s=String(value||'');return /^\d{8}$/.test(s)?`${s.slice(6,8)}.${s.slice(4,6)}`:s};
@@ -1716,21 +1717,35 @@ html.live-web-ai-resume-lock .analytics-swipe-viewport{overflow:hidden!important
       announcePage();
       requestAnimationFrame(()=>{if(!animate)track.style.transition=''});
     };
-    const resetMapViewport=()=>{
-      const pane=panes.find(item=>item?.dataset?.analyticsPage==='map');
+    const resetPaneViewport=pane=>{
       if(!pane)return;
       pane.scrollTop=0;
       const inner=pane.querySelector('.analytics-pane-wrap');
       if(inner)inner.scrollTop=0;
+      pane.querySelectorAll('.analytics-pane-wrap,.analytics-site-hero').forEach(node=>{
+        try{node.scrollTop=0}catch(_){}
+      });
       try{window.scrollTo({top:0,left:0,behavior:'instant'})}catch(_){window.scrollTo(0,0)}
     };
+    const resetMapViewport=()=>resetPaneViewport(
+      panes.find(item=>item?.dataset?.analyticsPage==='map')
+    );
+    const resetGoogleViewport=()=>resetPaneViewport(
+      panes.find(item=>item?.dataset?.analyticsPage==='site')
+    );
     const setPage=(next,animate=true)=>{
       setEndPullProgress(0,false);
       const raw=Number(next);
       const wrapped=wrap(raw);
       const circularJump=raw<0||raw>=count;
       page=wrapped;
-      if(panes[page]?.dataset?.analyticsPage==='map') resetMapViewport();
+      const activeName=panes[page]?.dataset?.analyticsPage||'';
+      if(activeName==='map') resetMapViewport();
+      if(activeName==='site'){
+        resetGoogleViewport();
+        window.setTimeout(resetGoogleViewport,60);
+        window.setTimeout(()=>{ if(typeof load==='function') load(true); },120);
+      }
       if(circularJump){
         viewport.classList.add('is-circular-jump');
         apply(false);
@@ -1739,7 +1754,7 @@ html.live-web-ai-resume-lock .analytics-swipe-viewport{overflow:hidden!important
     };
     const refreshPageLabel=()=>{
       const name=panes[page]?.dataset?.analyticsPage||'map';
-      return name==='google'?'Google Analytics':name==='youtube'?'YouTube':'карту';
+      return name==='site'?'Google Analytics':name==='youtube'?'YouTube':'карту';
     };
     const setDownProgress=(distance=0,ready=false)=>{
       if(!downIndicator)return;
@@ -2082,6 +2097,25 @@ html.live-web-ai-resume-lock .analytics-swipe-viewport{overflow:hidden!important
   const cachedAudience=readAudienceCache();
   if(cachedAudience?.data){renderSearchConsole(cachedAudience.data.searchEngines||[],cachedAudience.data.searchConsole||{});emitAudienceData(cachedAudience.data)}
   setupAnalyticsSwipe();
+  const restoreGoogleTop=()=>{
+    const requested=String(new URLSearchParams(location.search).get('page')||'').toLowerCase();
+    const bodyPage=document.body.dataset.analyticsPage||'';
+    if(['google','ga','ga4','analytics','site','website'].includes(requested)||bodyPage==='site'){
+      const pane=document.querySelector('[data-analytics-page="site"]');
+      if(pane){
+        pane.scrollTop=0;
+        pane.querySelector('.analytics-pane-wrap')?.scrollTo?.({top:0,left:0,behavior:'instant'});
+      }
+      try{window.scrollTo(0,0)}catch(_){}
+    }
+  };
+  restoreGoogleTop();
+  window.setTimeout(restoreGoogleTop,80);
+  window.setTimeout(restoreGoogleTop,320);
+  window.addEventListener('pageshow',()=>{
+    restoreGoogleTop();
+    window.setTimeout(()=>load(true),100);
+  },{passive:true});
   setTimeout(load,20);
   refreshTimer=setInterval(()=>{if(!document.hidden)load()},120000);
   window.addEventListener('beforeunload',()=>{clearTimeout(startupWatchdog);if(refreshTimer)clearInterval(refreshTimer)});
@@ -3218,5 +3252,5 @@ body:not(.is-country-focus-active) #mapFocusActions,
 })();
 </script>
 
-<script defer src="/assets/control-version-v55-00-r115.js?v=55.00-r115"></script><script defer src="/assets/unified-glow-r130.js?v=55.00-r130"></script>
+<script defer src="/assets/control-version-v55-00-r115.js?v=55.00-r115"></script><script defer src="/assets/unified-glow-r131.js?v=55.00-r131"></script>
 </body></html>
