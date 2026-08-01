@@ -1,5 +1,0 @@
-{
-  "version": 1,
-  "instructions": "Entries can contain plain lines with startMs:null or synced lines with millisecond timestamps. The player checks the public D1 lyrics API first and this file second.",
-  "entries": []
-}

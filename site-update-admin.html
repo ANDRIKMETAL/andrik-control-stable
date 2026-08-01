@@ -7,8 +7,8 @@
 <meta name="robots" content="noindex,nofollow,noarchive">
 <meta name="google" content="notranslate">
 <title>Live Web AI — быстрое обновление</title>
-<link rel="icon" href="/assets/live-web-ai-green-eye-r97-192.png?v=55.00-r105" type="image/png">
-<link rel="apple-touch-icon" href="/assets/live-web-ai-green-eye-r97-192.png?v=55.00-r105">
+<link rel="icon" href="/assets/live-web-ai-green-eye-r97-192.png?v=55.00-r106" type="image/png">
+<link rel="apple-touch-icon" href="/assets/live-web-ai-green-eye-r97-192.png?v=55.00-r106">
 <link rel="stylesheet" href="/assets/v50-26.css?v=53.0">
 <link rel="stylesheet" href="/assets/control-v54-08.css?v=54.08">
 <link rel="stylesheet" href="/assets/control-v54-09.css?v=54.09">
@@ -16,17 +16,17 @@
 <link rel="stylesheet" href="/assets/control-v54-67.css?v=54.67">
 <link rel="stylesheet" href="/assets/control-v54-99c7.css?v=54.99c7">
 <link rel="stylesheet" href="/assets/control-v55-00-final-r21.css?v=55.00-final-r21">
-<link rel="stylesheet" href="/assets/site-update-admin-r105.css?v=55.00-r105">
+<link rel="stylesheet" href="/assets/site-update-admin-r106.css?v=55.00-r106">
 <script defer src="/assets/control-cache-reset-v55-00-final-stable-github.js?v=55.00-final-stable-github"></script>
-<script defer src="/assets/site-update-admin-r105.js?v=55.00-r105"></script>
+<script defer src="/assets/site-update-admin-r106.js?v=55.00-r106"></script>
 </head>
 <body class="control-page site-update-page">
 <nav class="topbar control-topbar control-detail-topbar"><div class="wrap nav-shell">
 <a class="control-center-logo" href="https://andrikmetal.com/" aria-label="Открыть главный сайт ANDRIK"><img class="logo-ok" src="/assets/control-topbar-eye-triangle.jpg" alt=""></a>
-<div class="nav-links control-nav-links control-detail-nav"><a href="/admin-sections.html?section=service&v=55.00-r105">← Служебное</a></div>
+<div class="nav-links control-nav-links control-detail-nav"><a href="/admin-sections.html?section=service&v=55.00-r106">← Служебное</a></div>
 </div></nav>
 <main class="admin-main"><div class="wrap update-wrap">
-<header class="admin-header control-header update-header"><span class="eyeline">LIVE WEB AI · быстрая публикация</span><h1>Обновить сайт</h1><p>Выбери ZIP и нажми одну кнопку. Backup, commit, Release и Cloudflare выполняются автоматически.</p></header>
+<header class="admin-header control-header update-header"><span class="eyeline">LIVE WEB AI · быстрая публикация</span><h1>Обновить сайт</h1><p>Выбери ZIP и нажми одну кнопку. ZIP публикуется одной кнопкой. Backup, commit, Release, Cloudflare, история и безопасный откат выполняются автоматически.</p></header>
 
 <section class="update-grid">
 <article class="admin-control-card admin-control-card-wide update-status-card">
@@ -47,7 +47,7 @@
 </div>
 <button class="btn btn-primary update-main-button" id="siteUpdatePublish" type="button" disabled>ОБНОВИТЬ САЙТ</button>
 <button class="btn" id="siteUpdatePreview" type="button" hidden disabled>Проверить ZIP</button>
-<div class="update-form-row update-hidden-fields" hidden><label>Версия<input id="siteUpdateRelease" type="text" maxlength="80" value="R105"></label><label>Коммит<input id="siteUpdateMessage" type="text" maxlength="240" value="ANDRIK Control — update website R105"></label></div>
+<div class="update-form-row update-hidden-fields" hidden><label>Версия<input id="siteUpdateRelease" type="text" maxlength="80" value="R106"></label><label>Коммит<input id="siteUpdateMessage" type="text" maxlength="240" value="ANDRIK Control — update website R106"></label></div>
 <input id="siteUpdateMakeBackup" type="checkbox" checked hidden>
 <input id="siteUpdateMakeRelease" type="checkbox" checked hidden>
 <input id="siteUpdateConfirm" type="checkbox" hidden>
@@ -66,9 +66,12 @@
 </article>
 
 <article class="admin-control-card admin-control-card-wide update-history-card">
-<details class="update-history-shell"><summary><span><b>История и откат</b><small id="siteUpdateHistoryMessage"></small></span><button class="btn" id="siteUpdateHistoryRefresh" type="button">↻</button></summary>
-<div class="update-two-cols"><details open><summary>Коммиты</summary><div class="update-history" id="siteUpdateHistory"><div class="admin-empty">Загрузка…</div></div></details><details><summary>Журнал</summary><div class="update-log" id="siteUpdateLog"><div class="admin-empty">Загрузка…</div></div></details></div>
-</details>
+<details class="update-history-shell" open><summary><span><b>История и откат</b><small id="siteUpdateHistoryMessage"></small></span><button class="btn" id="siteUpdateHistoryRefresh" type="button">↻</button></summary>
+<div class="update-history-layout">
+<details open><summary>Точки восстановления</summary><div class="update-history" id="siteUpdateHistory"><div class="admin-empty">Загрузка…</div></div></details>
+<details><summary>Технические коммиты</summary><div class="update-history" id="siteUpdateTechnicalHistory"><div class="admin-empty">Загрузка…</div></div></details>
+<details><summary>Журнал операций</summary><div class="update-log" id="siteUpdateLog"><div class="admin-empty">Загрузка…</div></div></details>
+</div></details>
 </article>
 
 <article class="admin-control-card admin-control-card-wide update-setup-card" id="siteUpdateSetupCard" hidden>
@@ -77,6 +80,6 @@ GITHUB_SITE_REPO=andrik-control-stable
 GITHUB_RELEASE_REPO=andrik-control-stable</pre><p>Отдельный GITHUB_RELEASE_TOKEN необязателен.</p>
 </article>
 </section>
-<footer class="control-version-footer"><strong>Live Web AI · ANDRIK · v55.00 FINAL R105</strong><span>выбор ZIP → одна кнопка · auto backup · commit · Release + ZIP · Cloudflare · 01.08.2026</span></footer>
+<footer class="control-version-footer"><strong>Live Web AI · ANDRIK · v55.00 FINAL R106</strong><span>выбор ZIP → одна кнопка · auto backup · commit · Release + ZIP · Cloudflare · 01.08.2026</span></footer>
 </div></main>
 </body></html>

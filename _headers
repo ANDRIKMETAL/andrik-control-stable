@@ -371,3 +371,12 @@
   Cache-Control: public, max-age=31536000, immutable
 /cache-reset-v55-00-final-r105.html
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+
+/assets/site-update-admin-r106.js
+  Cache-Control: public, max-age=31536000, immutable
+/assets/site-update-admin-r106.css
+  Cache-Control: public, max-age=31536000, immutable
+/cache-reset-v55-00-final-r106.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/site-update-state.json
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0

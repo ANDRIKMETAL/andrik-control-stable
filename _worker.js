@@ -7073,8 +7073,8 @@ async function handleControlCommentCollection(request, env) {
 
 
 
-// === ANDRIK Control R105 HOTFIX: timeouts + readable controls + one-button update ===
-const SITE_UPDATE_VERSION = '55.00-r105';
+// === ANDRIK Control R106: release history + safe one-click rollback + exact deploy marker ===
+const SITE_UPDATE_VERSION = '55.00-r106';
 const SITE_UPDATE_MAX_ZIP_BYTES = 25 * 1024 * 1024;
 const SITE_UPDATE_MAX_FILES = 1200;
 const SITE_UPDATE_MAX_TOTAL_BYTES = 40 * 1024 * 1024;
@@ -7083,7 +7083,7 @@ const SITE_UPDATE_REQUIRED_FILES = ['index.html', '_worker.js', 'service-worker.
 const SITE_UPDATE_DEFAULT_PROTECTED = [
   '.github/', '.gitignore', '.gitattributes', 'README.md', 'LICENSE', 'LICENSE.md',
   'CNAME', 'wrangler.toml', 'wrangler.json', 'wrangler.jsonc', 'package.json',
-  'package-lock.json', 'pnpm-lock.yaml', 'yarn.lock'
+  'package-lock.json', 'pnpm-lock.yaml', 'yarn.lock', 'site-update-state.json'
 ];
 
 function siteUpdateConfig(env) {
@@ -7287,7 +7287,7 @@ async function siteUpdateGithubRequest(config, route, options = {}) {
         accept:'application/vnd.github+json',
         authorization:`Bearer ${config.token}`,
         'content-type':'application/json',
-        'user-agent':'ANDRIK-Control-Site-Updater-R105',
+        'user-agent':'ANDRIK-Control-Site-Updater-R106',
         'x-github-api-version':'2022-11-28'
       },
       body: options.body === undefined ? undefined : JSON.stringify(options.body)
@@ -7325,7 +7325,7 @@ async function siteUpdateGithubUploadAsset(config, releaseId, fileName, bytes) {
         accept:'application/vnd.github+json',
         authorization:`Bearer ${config.token}`,
         'content-type':'application/zip',
-        'user-agent':'ANDRIK-Control-Site-Updater-R105',
+        'user-agent':'ANDRIK-Control-Site-Updater-R106',
         'x-github-api-version':'2022-11-28'
       },
       body:bytes
@@ -7396,6 +7396,47 @@ async function siteUpdateMapLimit(items, limit, worker) {
   }
   await Promise.all(Array.from({ length:Math.min(limit, items.length) }, run));
   return results;
+}
+
+
+let siteUpdateHistoryCache = null;
+
+function siteUpdateNewOperationId(prefix = 'update') {
+  return `${prefix}-${Date.now()}-${crypto.randomUUID().replace(/-/g, '').slice(0, 10)}`;
+}
+
+function siteUpdateReleaseFromText(value) {
+  const match = String(value || '').toUpperCase().match(/\bR\d{1,6}\b/);
+  return match ? match[0] : '';
+}
+
+function siteUpdateBackupDate(tag) {
+  const match = String(tag || '').match(/^control-backup-(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})-/);
+  if (!match) return '';
+  const [, year, month, day, hour, minute, second] = match;
+  return `${year}-${month}-${day}T${hour}:${minute}:${second}Z`;
+}
+
+async function siteUpdateCreateStateBlob(config, payload) {
+  const owner = encodeURIComponent(config.owner), repo = encodeURIComponent(config.repo);
+  const state = {
+    schema:1,
+    updaterVersion:SITE_UPDATE_VERSION,
+    ...payload,
+    generatedAt:new Date().toISOString()
+  };
+  const bytes = new TextEncoder().encode(`${JSON.stringify(state, null, 2)}\n`);
+  const blob = await siteUpdateGithubRequest(config, `/repos/${owner}/${repo}/git/blobs`, {
+    method:'POST',
+    body:{ content:siteUpdateBase64(bytes), encoding:'base64' }
+  });
+  return { sha:blob.sha, state };
+}
+
+function siteUpdateHistoryPointLabel(item) {
+  if (item.release) return item.release;
+  if (item.kind === 'backup') return `Backup ${item.short || ''}`.trim();
+  return cleanPlainText(item.message || item.short || 'Версия', 120);
 }
 
 function siteUpdateReleaseMeta(raw) {
@@ -7548,6 +7589,7 @@ async function handleSiteUpdatePublish(request, env) {
     const diff = siteUpdateCompare(parsed, snapshot, config);
     const touched = [...diff.added, ...diff.changed];
     if (!touched.length && !diff.deleted.length) return json({ ok:true, noChanges:true, headSha:snapshot.headSha, message:'Изменений нет.' });
+    const operationId = siteUpdateNewOperationId('publish');
     const owner = encodeURIComponent(config.owner), repo = encodeURIComponent(config.repo);
     const blobItems = touched.map(path => diff.archive.get(path));
     const created = await siteUpdateMapLimit(blobItems, 7, async entry => {
@@ -7561,6 +7603,14 @@ async function handleSiteUpdatePublish(request, env) {
       path, mode:snapshot.files.get(path)?.mode || '100644', type:'blob', sha:blobMap.get(path)
     }));
     for (const path of diff.deleted) treeEntries.push({ path, mode:snapshot.files.get(path)?.mode || '100644', type:'blob', sha:null });
+    const marker = await siteUpdateCreateStateBlob(config, {
+      operation:'publish',
+      operationId,
+      release,
+      archiveName:cleanPlainText(archive.name || 'site.zip', 180),
+      sourceHead:snapshot.headSha
+    });
+    treeEntries.push({ path:'site-update-state.json', mode:'100644', type:'blob', sha:marker.sha });
     const tree = await siteUpdateGithubRequest(config, `/repos/${owner}/${repo}/git/trees`, {
       method:'POST', body:{ base_tree:snapshot.treeSha, tree:treeEntries }
     });
@@ -7577,10 +7627,11 @@ async function handleSiteUpdatePublish(request, env) {
       message:`Сайт отправлен в GitHub: ${commit.sha.slice(0,7)}`,
       details:{ repository:`${config.owner}/${config.repo}`, branch:config.branch, release, commitSha:commit.sha,
         added:diff.added.length, changed:diff.changed.length, deleted:diff.deleted.length,
-        archive:archive.name, archiveBytes:Number(archive.size || 0), durationMs:Date.now()-startedAt }
+        archive:archive.name, archiveBytes:Number(archive.size || 0), operationId, durationMs:Date.now()-startedAt }
     }).catch(() => {});
     await sendOwnerPush(env, { title:'ANDRIK Control', message:`Обновление сайта отправлено в GitHub: ${commit.sha.slice(0,7)}`, url:'https://control.andrikmetal.com/site-update-admin.html' }).catch(() => {});
-    return json({ ok:true, commitSha:commit.sha, commitShort:commit.sha.slice(0,7),
+    siteUpdateHistoryCache = null;
+    return json({ ok:true, operationId, commitSha:commit.sha, commitShort:commit.sha.slice(0,7),
       commitUrl:`https://github.com/${config.owner}/${config.repo}/commit/${commit.sha}`,
       repository:`${config.owner}/${config.repo}`, branch:config.branch,
       added:diff.added.length, changed:diff.changed.length, deleted:diff.deleted.length,
@@ -7618,7 +7669,7 @@ async function handleSiteUpdateRelease(request, env) {
       `Changes: +${added} added · ~${changed} changed · −${deleted} deleted`,
       `Files: ${parsed.entries.length} · ZIP: ${Math.round(parsed.zipBytes/1024)} KB`,
       commitSha ? `Site commit: ${commitSha.slice(0,7)}` : '', '',
-      `Choose a full ZIP and publish with one button. Includes automatic validation, backup, commit, GitHub Release with ZIP, Cloudflare deployment check, update log and rollback.`
+      `Choose a full ZIP and publish with one button. Includes automatic validation, backup, commit, GitHub Release with ZIP, exact Cloudflare deployment marker, release history, operation log and safe one-click rollback.`
     ].filter(Boolean).join('\n');
     let release = await siteUpdateGetRelease(config, meta.tag);
     if (release) {
@@ -7655,27 +7706,54 @@ async function handleSiteUpdateRelease(request, env) {
 async function handleSiteUpdateDeployment(request, env) {
   if (!adminAuthorized(request, env)) return json({ ok:false, error:'unauthorized' }, 401);
   const url = new URL(request.url);
+  const operationId = cleanPlainText(url.searchParams.get('operationId') || '', 120);
+  const releaseRaw = cleanPlainText(url.searchParams.get('release') || '', 80);
+  let stateStatus = 0, state = null, markerMatched = false;
+  try {
+    const stateUrl = new URL('/site-update-state.json', request.url);
+    stateUrl.searchParams.set('deploy_probe', String(Date.now()));
+    const response = await fetch(stateUrl.toString(), {
+      method:'GET', cache:'no-store',
+      headers:{ accept:'application/json', 'cache-control':'no-cache', 'user-agent':'ANDRIK-Control-R106-Deploy-Check' }
+    });
+    stateStatus = response.status;
+    if (response.ok) state = await response.json().catch(() => null);
+    else { try { await response.body?.cancel(); } catch (_) {} }
+    markerMatched = Boolean(operationId && state && state.operationId === operationId);
+  } catch (_) {}
+
+  if (operationId) {
+    return json({
+      ok:true, deployed:markerMatched, operationId, stateStatus,
+      deployedOperationId:cleanPlainText(state?.operationId || '', 120),
+      deployedRelease:cleanPlainText(state?.release || '', 80),
+      checkedAt:new Date().toISOString(),
+      message:markerMatched
+        ? `Cloudflare опубликовал точную операцию ${operationId.split('-').slice(0,2).join('-')}.`
+        : `GitHub готов. Cloudflare ещё не опубликовал точный маркер операции.`
+    });
+  }
+
   let meta;
-  try { meta = siteUpdateReleaseMeta(url.searchParams.get('release') || ''); }
+  try { meta = siteUpdateReleaseMeta(releaseRaw); }
   catch (error) { return json({ ok:false, error:'release-invalid', message:siteUpdateFriendlyError(error) }, 400); }
   const probePath = `/cache-reset-v55-00-final-${meta.release.toLowerCase()}.html`;
   const probeUrl = new URL(probePath, request.url);
   probeUrl.searchParams.set('deploy_probe', String(Date.now()));
-  let controlStatus = 0, controlOk = false, siteStatus = 0, siteOk = false;
+  let controlStatus = 0, controlOk = false;
   try {
-    const response = await fetch(probeUrl.toString(), { method:'GET', cache:'no-store', headers:{ accept:'text/html', 'cache-control':'no-cache', 'user-agent':'ANDRIK-Control-Deploy-Check' } });
+    const response = await fetch(probeUrl.toString(), {
+      method:'GET', cache:'no-store',
+      headers:{ accept:'text/html', 'cache-control':'no-cache', 'user-agent':'ANDRIK-Control-R106-Deploy-Check' }
+    });
     controlStatus = response.status; controlOk = response.ok;
     try { await response.body?.cancel(); } catch (_) {}
   } catch (_) {}
-  try {
-    const siteUrl = cleanPlainText(env.PUBLIC_SITE_ORIGIN || 'https://andrikmetal.com/', 300) || 'https://andrikmetal.com/';
-    const response = await fetch(`${siteUrl}${siteUrl.includes('?') ? '&' : '?'}deploy_probe=${Date.now()}`, { method:'GET', cache:'no-store', headers:{ 'cache-control':'no-cache', 'user-agent':'ANDRIK-Control-Deploy-Check' } });
-    siteStatus = response.status; siteOk = response.ok;
-    try { await response.body?.cancel(); } catch (_) {}
-  } catch (_) {}
-  return json({ ok:true, release:meta.release, deployed:controlOk, controlOk, controlStatus, siteOk, siteStatus,
+  return json({
+    ok:true, release:meta.release, deployed:controlOk, controlOk, controlStatus,
     probePath, checkedAt:new Date().toISOString(),
-    message:controlOk ? `${meta.release} найдена на Control.` : `${meta.release} ещё не найдена на Control. Cloudflare Pages продолжает автоматический Deploy.` });
+    message:controlOk ? `${meta.release} найдена на Control.` : `${meta.release} ещё не найдена на Control.`
+  });
 }
 
 async function handleSiteUpdateLog(request, env) {
@@ -7703,16 +7781,108 @@ async function handleSiteUpdateHistory(request, env) {
   if (!adminAuthorized(request, env)) return json({ ok:false, error:'unauthorized' }, 401);
   try {
     const config = siteUpdateConfig(env);
+    const releaseConfig = siteUpdateReleaseConfig(env, config);
     if (!config.token || !siteUpdateConfigValid(config)) throw new Error('github-token-missing');
+    const cacheKey = `${config.owner}/${config.repo}/${config.branch}`;
+    if (siteUpdateHistoryCache && siteUpdateHistoryCache.key === cacheKey && siteUpdateHistoryCache.expiresAt > Date.now()) {
+      return json(siteUpdateHistoryCache.value);
+    }
+
     const owner = encodeURIComponent(config.owner), repo = encodeURIComponent(config.repo);
-    const commits = await siteUpdateGithubRequest(config, `/repos/${owner}/${repo}/commits?sha=${encodeURIComponent(config.branch)}&per_page=10`);
-    return json({ ok:true, repository:`${config.owner}/${config.repo}`, branch:config.branch,
-      commits:(commits || []).map(item => ({ sha:item.sha, short:item.sha.slice(0,7),
-        message:cleanPlainText(item.commit?.message?.split('\n')[0] || '', 240),
-        date:item.commit?.author?.date || item.commit?.committer?.date || '',
-        author:cleanPlainText(item.commit?.author?.name || item.author?.login || '', 120),
-        url:item.html_url || `https://github.com/${config.owner}/${config.repo}/commit/${item.sha}` }))
+    const sameReleaseRepo = releaseConfig.owner === config.owner && releaseConfig.repo === config.repo;
+    const [commitsRaw, tagsRaw, releasesRaw] = await Promise.all([
+      siteUpdateGithubRequest(config, `/repos/${owner}/${repo}/commits?sha=${encodeURIComponent(config.branch)}&per_page=30`),
+      siteUpdateGithubRequest(config, `/repos/${owner}/${repo}/tags?per_page=100`),
+      sameReleaseRepo
+        ? siteUpdateGithubRequest(config, `/repos/${owner}/${repo}/releases?per_page=12`)
+        : Promise.resolve([])
+    ]);
+
+    const commits = (commitsRaw || []).map(item => ({
+      sha:item.sha, short:item.sha.slice(0,7),
+      message:cleanPlainText(item.commit?.message?.split('\n')[0] || '', 240),
+      fullMessage:cleanPlainText(item.commit?.message || '', 500),
+      date:item.commit?.author?.date || item.commit?.committer?.date || '',
+      author:cleanPlainText(item.commit?.author?.name || item.author?.login || '', 120),
+      url:item.html_url || `https://github.com/${config.owner}/${config.repo}/commit/${item.sha}`
+    }));
+    const current = commits[0] || null;
+
+    const releaseCandidates = (releasesRaw || []).filter(item => !item.draft).slice(0, 8);
+    const releasePoints = await siteUpdateMapLimit(releaseCandidates, 4, async item => {
+      try {
+        const commit = await siteUpdateGithubRequest(config, `/repos/${owner}/${repo}/commits/${encodeURIComponent(item.tag_name)}`);
+        const release = siteUpdateReleaseFromText(item.name || item.tag_name);
+        return {
+          kind:'release', sha:commit.sha, short:commit.sha.slice(0,7),
+          label:release || cleanPlainText(item.name || item.tag_name, 120),
+          release, message:cleanPlainText(item.name || item.tag_name, 180),
+          date:item.published_at || item.created_at || commit.commit?.author?.date || '',
+          url:commit.html_url || `https://github.com/${config.owner}/${config.repo}/commit/${commit.sha}`,
+          releaseUrl:item.html_url || ''
+        };
+      } catch (_) { return null; }
     });
+
+    const backupTags = (tagsRaw || []).filter(item => String(item.name || '').startsWith('control-backup-')).slice(0, 7);
+    const backupPoints = await siteUpdateMapLimit(backupTags, 4, async item => {
+      try {
+        const commit = await siteUpdateGithubRequest(config, `/repos/${owner}/${repo}/commits/${encodeURIComponent(item.commit?.sha || item.name)}`);
+        return {
+          kind:'backup', sha:commit.sha, short:commit.sha.slice(0,7),
+          label:`Backup ${commit.sha.slice(0,7)}`, release:'',
+          message:cleanPlainText(item.name, 180),
+          date:commit.commit?.author?.date || commit.commit?.committer?.date || siteUpdateBackupDate(item.name),
+          url:`https://github.com/${config.owner}/${config.repo}/tree/${encodeURIComponent(item.name)}`,
+          releaseUrl:''
+        };
+      } catch (_) { return null; }
+    });
+
+    const stableCommitPoints = commits.filter(item => {
+      const text = `${item.message}\n${item.fullMessage}`;
+      return /\bR\d{1,6}\b/i.test(text) &&
+        /(full release|final stable|update website|release:\s*R\d+)/i.test(text) &&
+        !/(assets part|full sync\s*[—-]\s*(admin|en|sk|uk|push))/i.test(text);
+    }).slice(0, 10).map(item => {
+      const release = siteUpdateReleaseFromText(`${item.message} ${item.fullMessage}`);
+      return {
+        kind:'stable', ...item,
+        label:release || item.message,
+        release, releaseUrl:''
+      };
+    });
+
+    const points = [];
+    const seen = new Set();
+    const pushPoint = point => {
+      if (!point || !point.sha || seen.has(point.sha)) return;
+      seen.add(point.sha);
+      points.push(point);
+    };
+    if (current) pushPoint({
+      kind:'stable', ...current, current:true,
+      label:siteUpdateReleaseFromText(`${current.message} ${current.fullMessage}`) || 'Текущая версия',
+      release:siteUpdateReleaseFromText(`${current.message} ${current.fullMessage}`),
+      releaseUrl:''
+    });
+    [...releasePoints.filter(Boolean), ...backupPoints.filter(Boolean), ...stableCommitPoints]
+      .sort((a,b) => new Date(b.date || 0) - new Date(a.date || 0))
+      .forEach(pushPoint);
+
+    const technicalCommits = commits.slice(0, 15).map(item => ({
+      sha:item.sha, short:item.short, message:item.message, date:item.date, author:item.author, url:item.url
+    }));
+
+    const value = {
+      ok:true, version:SITE_UPDATE_VERSION,
+      repository:`${config.owner}/${config.repo}`, branch:config.branch,
+      currentSha:current?.sha || '', currentShort:current?.short || '',
+      restorePoints:points.slice(0, 18),
+      technicalCommits
+    };
+    siteUpdateHistoryCache = { key:cacheKey, expiresAt:Date.now()+25000, value };
+    return json(value);
   } catch (error) {
     return json({ ok:false, error:'history-failed', message:siteUpdateFriendlyError(error) }, 400);
   }
@@ -7724,34 +7894,74 @@ async function handleSiteUpdateRollback(request, env) {
   try {
     const config = siteUpdateConfig(env);
     if (!config.token || !siteUpdateConfigValid(config)) throw new Error('github-token-missing');
-    const body = await readJsonBody(request, 5000);
+    const body = await readJsonBody(request, 8000);
     const targetSha = cleanPlainText(body.targetSha || '', 64);
+    const label = cleanPlainText(body.label || targetSha.slice(0,7), 120);
+    const release = siteUpdateReleaseFromText(body.release || label);
     if (!/^[0-9a-f]{40}$/i.test(targetSha)) return json({ ok:false, error:'invalid-target' }, 400);
+
     const owner = encodeURIComponent(config.owner), repo = encodeURIComponent(config.repo);
     const snapshot = await siteUpdateGithubSnapshot(config);
     if (snapshot.headSha === targetSha) return json({ ok:true, noChanges:true, message:'Эта версия уже активна.' });
-    const safetyBackup = await siteUpdateCreateBackup(config, snapshot, 'before-rollback');
+
+    const operationId = siteUpdateNewOperationId('rollback');
+    const safetyBackup = await siteUpdateCreateBackup(config, snapshot, `before-${release || targetSha.slice(0,7)}`);
     const target = await siteUpdateGithubRequest(config, `/repos/${owner}/${repo}/git/commits/${targetSha}`);
+    const marker = await siteUpdateCreateStateBlob(config, {
+      operation:'rollback',
+      operationId,
+      release,
+      targetSha,
+      targetLabel:label,
+      sourceHead:snapshot.headSha,
+      safetyBackup:safetyBackup.tag
+    });
+    const rollbackTree = await siteUpdateGithubRequest(config, `/repos/${owner}/${repo}/git/trees`, {
+      method:'POST',
+      body:{
+        base_tree:target.tree.sha,
+        tree:[{ path:'site-update-state.json', mode:'100644', type:'blob', sha:marker.sha }]
+      }
+    });
     const rollback = await siteUpdateGithubRequest(config, `/repos/${owner}/${repo}/git/commits`, {
-      method:'POST', body:{ message:`Rollback via ANDRIK Control to ${targetSha.slice(0,7)}`,
-        tree:target.tree.sha, parents:[snapshot.headSha], author:{ name:'ANDRIK Control', email:'andrik-control@users.noreply.github.com' } }
+      method:'POST',
+      body:{
+        message:`Rollback via ANDRIK Control to ${label} (${targetSha.slice(0,7)})`,
+        tree:rollbackTree.sha,
+        parents:[snapshot.headSha],
+        author:{ name:'ANDRIK Control', email:'andrik-control@users.noreply.github.com' }
+      }
     });
     const branchRef = config.branch.split('/').map(encodeURIComponent).join('/');
     await siteUpdateGithubRequest(config, `/repos/${owner}/${repo}/git/refs/heads/${branchRef}`, {
       method:'PATCH', body:{ sha:rollback.sha, force:false }
     });
-    await recordSystemLog(env, { scope:'site-update', level:'warning', event:'github-rollback',
-      message:`Откат к ${targetSha.slice(0,7)}`, details:{ rollbackCommit:rollback.sha, targetSha, backupTag:safetyBackup.tag }
+    siteUpdateHistoryCache = null;
+    await recordSystemLog(env, {
+      scope:'site-update', level:'warning', event:'github-rollback',
+      message:`Откат к ${label}`,
+      details:{
+        operationId, rollbackCommit:rollback.sha, targetSha, targetLabel:label,
+        release, backupTag:safetyBackup.tag
+      }
     }).catch(() => {});
-    await sendOwnerPush(env, { title:'ANDRIK Control', message:`Сайт откатывается к версии ${targetSha.slice(0,7)}`, url:'https://control.andrikmetal.com/site-update-admin.html' }).catch(() => {});
-    return json({ ok:true, targetSha, commitSha:rollback.sha, commitShort:rollback.sha.slice(0,7), backupTag:safetyBackup.tag,
+    await sendOwnerPush(env, {
+      title:'ANDRIK Control',
+      message:`Сайт откатывается к ${label}`,
+      url:'https://control.andrikmetal.com/site-update-admin.html'
+    }).catch(() => {});
+    return json({
+      ok:true, operationId, release, targetSha, targetLabel:label,
+      commitSha:rollback.sha, commitShort:rollback.sha.slice(0,7),
+      backupTag:safetyBackup.tag,
       commitUrl:`https://github.com/${config.owner}/${config.repo}/commit/${rollback.sha}`,
-      message:`Откат записан новым коммитом. Перед откатом создан backup ${safetyBackup.tag}.` });
+      message:`Откат записан новым commit. Перед ним создан backup ${safetyBackup.tag}.`
+    });
   } catch (error) {
     return json({ ok:false, error:'rollback-failed', message:siteUpdateFriendlyError(error) }, 400);
   }
 }
-// === End R104 website updater ===
+// === End R106 website updater ===
 
 
 async function routeApi(request, env, ctx) {
