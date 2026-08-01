@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<script>
+(()=>{try{
+  const supported=new Set(['ru','uk','sk','en']);
+  const root=document.documentElement;
+  let page=(root.lang||'ru').toLowerCase().split('-')[0];
+  if(location.pathname.endsWith('/player.html')){
+    const query=(new URLSearchParams(location.search).get('lang')||'').toLowerCase();
+    let saved='';
+    try{saved=(localStorage.getItem('andrikPreferredLanguage')||'').toLowerCase()}catch(_){}
+    if(supported.has(query)) page=query;
+    else if(supported.has(saved)) page=saved;
+    root.lang=page;
+  }
+  let manual='';
+  try{manual=(sessionStorage.getItem('andrikManualLanguage')||'').toLowerCase()}catch(_){}
+  if(supported.has(page)&&manual===page){
+    root.setAttribute('translate','no');
+    root.classList.add('notranslate');
+    const meta=document.createElement('meta');
+    meta.name='google';
+    meta.content='notranslate';
+    document.head.appendChild(meta);
+  }
+}catch(_){}})();
+</script>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#050914">
+<meta name="description" content="Офлайн-страница приложения ANDRIK. Подключитесь к интернету и повторите загрузку.">
+<title>ANDRIK — Нет подключения</title>
+<style>
+html,body{height:100%;margin:0}
+body{display:grid;place-items:center;background:radial-gradient(circle at 50% 25%,#12304d,#050914 58%,#02040a);color:#fff;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;text-align:center;padding:24px}
+main{max-width:560px}
+img{width:150px;height:150px;border-radius:50%;box-shadow:0 0 45px rgba(93,184,255,.35)}
+h1{font-family:Georgia,serif;letter-spacing:.12em}
+p{color:#bdc8d8}
+button{border:1px solid rgba(160,215,255,.45);background:#0d1828;color:#fff;padding:12px 20px;border-radius:999px;font-weight:700}
+</style>
+</head>
+<body>
+<main>
+<img src="/assets/pwa-icon-192.png" alt="Логотип ANDRIK">
+<h1>ANDRIK</h1>
+<p>Музыка • Миры • Смыслы</p>
+<p>Сейчас нет подключения к интернету. Главная страница и основные элементы приложения сохраняются на устройстве.</p>
+<button onclick="location.reload()">Повторить</button>
+</main>
+</body>
+</html>

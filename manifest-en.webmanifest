@@ -1,0 +1,98 @@
+{
+  "name": "ANDRIK — Epic Heavy Metal",
+  "short_name": "ANDRIK",
+  "id": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "dir": "ltr",
+  "categories": [
+    "music",
+    "entertainment"
+  ],
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "/assets/andrik-site-illusion-r87-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/andrik-site-illusion-r87-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/andrik-site-illusion-r87-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "description": "The official ANDRIK music-project app: albums, videos and a built-in player.",
+  "lang": "en",
+  "start_url": "/en/",
+  "shortcuts": [
+    {
+      "name": "Comments",
+      "short_name": "Comments",
+      "description": "ANDRIK listener comments",
+      "url": "/en/comments.html",
+      "icons": [
+        {
+          "src": "/assets/andrik-site-illusion-r87-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Music platforms",
+      "short_name": "Platforms",
+      "description": "Music platforms",
+      "url": "/en/#links",
+      "icons": [
+        {
+          "src": "/assets/andrik-site-illusion-r87-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "ANDRIK Player",
+      "short_name": "Player",
+      "description": "ANDRIK Player",
+      "url": "/player?lang=en",
+      "icons": [
+        {
+          "src": "/assets/andrik-site-illusion-r87-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "OCEAN album",
+      "short_name": "OCEAN",
+      "description": "OCEAN album",
+      "url": "/player?lang=en&collection=ocean",
+      "icons": [
+        {
+          "src": "/assets/andrik-site-illusion-r87-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
+  ],
+  "version": "55.00-r87"
+}

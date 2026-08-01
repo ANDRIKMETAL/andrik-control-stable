@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<meta name="robots" content="noindex,nofollow,noarchive"/>
+<meta name="theme-color" content="#02060a"/>
+<title>ANDRIK — открыть YouTube</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:#02060a;color:#f3f8fc;font-family:system-ui,-apple-system,Segoe UI,sans-serif}body{display:grid;place-items:center;padding:24px}.card{width:min(520px,100%);padding:30px 22px;border:1px solid rgba(137,211,246,.22);border-radius:30px;background:linear-gradient(180deg,rgba(8,24,36,.98),rgba(2,8,14,.99));text-align:center;box-shadow:0 24px 80px rgba(0,0,0,.48)}.logo{width:96px;height:96px;border-radius:50%;object-fit:cover;box-shadow:0 0 34px rgba(41,255,111,.3)}h1{margin:20px 0 8px;font-size:clamp(1.75rem,8vw,2.55rem)}p{margin:0;color:#a9bdcc;line-height:1.55}.btn{display:flex;align-items:center;justify-content:center;width:100%;min-height:62px;margin-top:24px;padding:14px 18px;border:1px solid rgba(255,128,128,.55);border-radius:999px;background:linear-gradient(180deg,#f15a5a,#c92f35);color:#fff;font-size:1.12rem;font-weight:900;text-decoration:none;box-shadow:0 12px 34px rgba(160,30,35,.34)}.fallback{display:inline-block;margin-top:20px;color:#a9dfff;font-weight:750;text-decoration:none}.hint{margin-top:14px;font-size:.9rem;color:#72899a}
+</style>
+</head>
+<body>
+<main class="card">
+<img class="logo" src="/assets/andrik-eye-v22-192.png" alt=""/>
+<h1>Открываем YouTube…</h1>
+<p id="status">Выберите YouTube, ReVanced/Vanced или другое приложение для ссылок YouTube.</p>
+<a class="btn" id="openApp" href="#">▶ Открыть в приложении</a>
+<a class="fallback" id="openWeb" href="https://www.youtube.com/@andrikmetal" rel="noopener">Открыть в браузере ↗</a>
+<p class="hint">Если приложение не запустилось автоматически, нажмите красную кнопку.</p>
+</main>
+<script>
+(()=>{
+  const DEFAULT_URL='https://www.youtube.com/@andrikmetal';
+  const allowedHosts=new Set(['youtube.com','www.youtube.com','m.youtube.com','music.youtube.com','youtu.be']);
+  const params=new URLSearchParams(location.search);
+  let target=DEFAULT_URL;
+  try{
+    const candidate=new URL(params.get('target')||DEFAULT_URL);
+    if(candidate.protocol==='https:'&&allowedHosts.has(candidate.hostname.toLowerCase()))target=candidate.href;
+  }catch(_){target=DEFAULT_URL}
+  const parsed=new URL(target);
+  const videoId=(()=>{
+    if(parsed.hostname.toLowerCase()==='youtu.be')return parsed.pathname.split('/').filter(Boolean)[0]||'';
+    const queryId=parsed.searchParams.get('v')||'';
+    if(queryId)return queryId;
+    const match=parsed.pathname.match(/^\/(?:shorts|embed|live)\/([^/?#]+)/i);
+    return match?.[1]||'';
+  })();
+
+  const openApp=document.getElementById('openApp');
+  const openWeb=document.getElementById('openWeb');
+  const status=document.getElementById('status');
+  openWeb.href=target;
+
+  // For a video use the native YouTube URI first. YouTube, Vanced and ReVanced
+  // clients normally register this scheme. Crucially there is no browser fallback
+  // to m.youtube.com, so a failed app launch stays on this chooser page.
+  const nativeUri=videoId ? `vnd.youtube:${videoId}` : '';
+  const universalIntent=videoId
+    ? `intent://watch?v=${encodeURIComponent(videoId)}#Intent;scheme=vnd.youtube;action=android.intent.action.VIEW;category=android.intent.category.BROWSABLE;end`
+    : `intent://${parsed.host}${parsed.pathname}${parsed.search}${parsed.hash}#Intent;scheme=https;action=android.intent.action.VIEW;category=android.intent.category.BROWSABLE;end`;
+  openApp.href=nativeUri||universalIntent;
+
+  let launchStarted=false;
+  const launch=event=>{
+    event?.preventDefault();
+    if(launchStarted)return;
+    launchStarted=true;
+    status.textContent=videoId?'Передаём видео приложению YouTube / Vanced…':'Передаём канал установленному приложению YouTube…';
+    const first=nativeUri||universalIntent;
+    try{location.href=first}catch(_){launchStarted=false}
+    // If the native URI has no registered handler, try the universal Android intent.
+    if(nativeUri){
+      setTimeout(()=>{
+        if(document.visibilityState==='visible'){
+          try{location.href=universalIntent}catch(_){ }
+        }
+      },650);
+    }
+    setTimeout(()=>{
+      if(document.visibilityState==='visible'){
+        launchStarted=false;
+        status.textContent='Приложение не перехватило ссылку. Нажмите красную кнопку или выберите «Открыть в браузере».';
+      }
+    },1700);
+  };
+  openApp.addEventListener('click',launch);
+
+  // Notification click is a user-initiated navigation. A short delay lets the
+  // standalone/PWA window become active before handing the URI to Android.
+  setTimeout(()=>launch(),90);
+})();
+</script>
+</body>
+</html>

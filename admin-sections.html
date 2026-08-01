@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="ru" translate="no" class="notranslate">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#05080b">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<meta name="google" content="notranslate">
+<title>Live Web AI — разделы</title>
+<link rel="icon" href="/assets/andrik-control-green-r87-192.png?v=55.00-r87" type="image/png">
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#02070b;color:#eaf7ff;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;overscroll-behavior:none}
+body{position:fixed;inset:0}
+.admin-carousel{position:absolute;inset:0;overflow:hidden;background:#02070b}
+.admin-carousel-track{display:flex;width:100%;height:100%;transform:translate3d(-100vw,0,0);will-change:transform;touch-action:none}
+.admin-carousel-track.is-dragging{transition:none!important}
+.admin-carousel-track.is-animating{transition:transform .30s cubic-bezier(.22,.78,.23,1)}
+.admin-carousel-pane{position:relative;flex:0 0 100%;width:100%;min-width:100%;max-width:100%;height:100%;overflow:hidden;background:#02070b}.admin-carousel-pane::before{content:none!important;display:none!important}.admin-carousel-pane iframe{position:relative;left:0;z-index:1}
+.admin-carousel-pane iframe{display:block;width:100%;height:100%;border:0;background:#02070b}
+.admin-carousel-dots{position:fixed;left:50%;bottom:max(8px,env(safe-area-inset-bottom));z-index:20;transform:translateX(-50%);display:flex;align-items:center;gap:9px;padding:7px 12px;border:1px solid rgba(126,198,230,.18);border-radius:999px;background:rgba(4,13,20,.82);backdrop-filter:blur(14px)}
+.admin-carousel-dots button{appearance:none;width:10px;height:10px;padding:0;border:0;border-radius:50%;background:#526576;opacity:.72;transition:width .2s ease,background .2s ease,opacity .2s ease}
+.admin-carousel-dots button.is-active{width:35px;border-radius:999px;background:#79def9;opacity:1;box-shadow:0 0 15px rgba(121,222,249,.55)}
+.admin-carousel-label{position:fixed;left:50%;top:max(12px,env(safe-area-inset-top));z-index:21;transform:translate(-50%,-16px);opacity:0;pointer-events:none;padding:9px 14px;border:1px solid rgba(126,198,230,.2);border-radius:999px;background:rgba(4,13,20,.9);color:#eaf8ff;font-weight:850;font-size:.82rem;transition:opacity .18s ease,transform .18s ease;backdrop-filter:blur(14px)}
+.admin-carousel-label.is-visible{opacity:1;transform:translate(-50%,0)}
+.admin-carousel-loading{position:absolute;inset:0;display:grid;place-items:center;color:#92aab7;font-size:.9rem;pointer-events:none}
+@media(prefers-reduced-motion:reduce){.admin-carousel-track.is-animating{transition-duration:.01ms}.admin-carousel-dots button,.admin-carousel-label{transition:none}}
+</style>
+</head>
+<body>
+<main class="admin-carousel" aria-label="Разделы админ-панели">
+  <div class="admin-carousel-track" id="adminCarouselTrack">
+    <section class="admin-carousel-pane" data-physical="0" data-section="discussion"><div class="admin-carousel-loading">Загружаем обсуждение…</div><iframe title="Обсуждение — копия для кругового перехода" data-section="discussion" data-src="/comments-admin.html?embed=1&v=55.00-final-r31"></iframe></section>
+    <section class="admin-carousel-pane" data-physical="1" data-section="service"><div class="admin-carousel-loading">Загружаем служебное…</div><iframe title="Служебное" data-section="service" data-src="/service-admin.html?embed=1&v=55.00-final-r31"></iframe></section>
+    <section class="admin-carousel-pane" data-physical="2" data-section="monitor"><div class="admin-carousel-loading">Загружаем мониторинг…</div><iframe title="Мониторинг" data-section="monitor" data-src="/observability-admin.html?embed=1&v=55.00-final-r31"></iframe></section>
+    <section class="admin-carousel-pane" data-physical="3" data-section="releases"><div class="admin-carousel-loading">Загружаем релизы…</div><iframe title="Релизы" data-section="releases" data-src="/lyrics-admin.html?embed=1&v=55.00-final-r31"></iframe></section>
+    <section class="admin-carousel-pane" data-physical="4" data-section="discussion"><div class="admin-carousel-loading">Загружаем обсуждение…</div><iframe title="Обсуждение" data-section="discussion" data-src="/comments-admin.html?embed=1&v=55.00-final-r31"></iframe></section>
+    <section class="admin-carousel-pane" data-physical="5" data-section="service"><div class="admin-carousel-loading">Загружаем служебное…</div><iframe title="Служебное — копия для кругового перехода" data-section="service" data-src="/service-admin.html?embed=1&v=55.00-final-r31"></iframe></section>
+  </div>
+</main>
+<nav class="admin-carousel-dots" aria-label="Разделы">
+  <button type="button" data-logical="0" aria-label="Служебное"></button>
+  <button type="button" data-logical="1" aria-label="Мониторинг"></button>
+  <button type="button" data-logical="2" aria-label="Релизы"></button>
+  <button type="button" data-logical="3" aria-label="Обсуждение"></button>
+</nav>
+<div class="admin-carousel-label" id="adminCarouselLabel" aria-live="polite"></div>
+<script>
+(() => {
+  'use strict';
+  const VERSION='55.00-final-r31';
+  const sections=[
+    {key:'service',name:'Служебное'},
+    {key:'monitor',name:'Мониторинг'},
+    {key:'releases',name:'Релизы'},
+    {key:'discussion',name:'Обсуждение'}
+  ];
+  const track=document.getElementById('adminCarouselTrack');
+  const panes=[...track.children];
+  const frames=panes.map(pane=>pane.querySelector('iframe'));
+  const dots=[...document.querySelectorAll('[data-logical]')];
+  const label=document.getElementById('adminCarouselLabel');
+  const initialKey=(new URLSearchParams(location.search).get('section')||'service').toLowerCase();
+  let logical=Math.max(0,sections.findIndex(item=>item.key===initialKey));
+  if(logical<0)logical=0;
+  let physical=logical+1;
+  let dragging=false;
+  let animating=false;
+  let dragX=0;
+  let labelTimer=0;
+
+  const width=()=>Math.max(1,track.parentElement?.clientWidth||window.innerWidth||document.documentElement.clientWidth||1);
+  const setTransform=(animate=false,x=0)=>{
+    track.classList.toggle('is-animating',animate);
+    track.classList.toggle('is-dragging',!animate&&dragging);
+    track.style.transform=`translate3d(${-(physical*width())+x}px,0,0)`;
+  };
+  const updateUi=()=>{
+    dots.forEach((dot,index)=>dot.classList.toggle('is-active',index===logical));
+    document.title=`Live Web AI — ${sections[logical].name}`;
+    const url=new URL(location.href);
+    url.searchParams.set('section',sections[logical].key);
+    url.searchParams.set('v',VERSION);
+    history.replaceState({section:sections[logical].key},'',url);
+  };
+  const showLabel=name=>{
+    label.textContent=name;
+    label.classList.add('is-visible');
+    clearTimeout(labelTimer);
+    labelTimer=setTimeout(()=>label.classList.remove('is-visible'),650);
+  };
+  const snapAfterEdge=()=>{
+    if(physical===0){physical=4;logical=3;setTransform(false,0)}
+    else if(physical===5){physical=1;logical=0;setTransform(false,0)}
+    else logical=physical-1;
+    dragging=false;animating=false;dragX=0;
+    track.classList.remove('is-animating','is-dragging');
+    updateUi();
+  };
+  const moveRelative=direction=>{
+    if(animating||!direction)return;
+    animating=true;dragging=false;dragX=0;
+    physical+=direction;
+    const previewLogical=(logical+direction+sections.length)%sections.length;
+    showLabel(sections[previewLogical].name);
+    setTransform(true,0);
+    window.setTimeout(snapAfterEdge,330);
+  };
+  const moveToLogical=index=>{
+    if(animating||index===logical)return;
+    const forward=(index-logical+4)%4;
+    const backward=(logical-index+4)%4;
+    moveRelative(forward<=backward?1:-1);
+  };
+  const cancelDrag=()=>{
+    if(animating)return;
+    dragging=false;dragX=0;
+    setTransform(true,0);
+    window.setTimeout(()=>track.classList.remove('is-animating','is-dragging'),320);
+  };
+
+  window.addEventListener('message',event=>{
+    if(event.origin!==location.origin)return;
+    const data=event.data||{};
+    if(data.channel!=='andrik-admin-carousel')return;
+    const activeFrame=frames[physical];
+    if(event.source!==activeFrame?.contentWindow)return;
+    if(data.type==='gesture-start'&&!animating){dragging=true;dragX=0;track.classList.add('is-dragging')}
+    if(data.type==='gesture-move'&&dragging&&!animating){
+      dragX=Math.max(-width()*.92,Math.min(width()*.92,Number(data.dx)||0));
+      const preview=(logical+(dragX<0?1:-1)+4)%4;
+      showLabel(sections[preview].name);
+      setTransform(false,dragX);
+    }
+    if(data.type==='gesture-commit'&&dragging&&!animating){dragging=false;moveRelative(Number(data.direction)||0)}
+    if(data.type==='gesture-cancel'&&dragging&&!animating)cancelDrag();
+    if(data.type==='navigate-section'){
+      const index=sections.findIndex(item=>item.key===data.section);
+      if(index>=0)moveToLogical(index);
+    }
+  });
+
+  dots.forEach(dot=>dot.addEventListener('click',()=>moveToLogical(Number(dot.dataset.logical))));
+  window.addEventListener('resize',()=>setTransform(false,0));
+  window.addEventListener('popstate',()=>{
+    const key=(new URLSearchParams(location.search).get('section')||'service').toLowerCase();
+    const index=sections.findIndex(item=>item.key===key);
+    if(index>=0&&index!==logical){logical=index;physical=index+1;setTransform(false,0);updateUi()}
+  });
+
+  frames.forEach((frame,index)=>{
+    frame.addEventListener('load',()=>panes[index].querySelector('.admin-carousel-loading')?.remove(),{once:true});
+    frame.src=frame.dataset.src;
+  });
+
+  setTransform(false,0);
+  updateUi();
+
+  window.__ANDRIK_ADMIN_CAROUSEL_TEST__={
+    getState:()=>({logical,physical,key:sections[logical].key,animating,dragging,transform:track.style.transform}),
+    next:()=>moveRelative(1),
+    prev:()=>moveRelative(-1),
+    go:index=>moveToLogical(Number(index))
+  };
+})();
+</script>
+</body>
+</html>

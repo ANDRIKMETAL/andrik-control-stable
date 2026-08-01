@@ -1,0 +1,98 @@
+{
+  "name": "ANDRIK — Epic Heavy Metal",
+  "short_name": "ANDRIK",
+  "id": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "dir": "ltr",
+  "categories": [
+    "music",
+    "entertainment"
+  ],
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "/assets/andrik-site-illusion-r87-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/andrik-site-illusion-r87-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/andrik-site-illusion-r87-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "description": "Офіційний застосунок музичного проєкту ANDRIK: альбоми, кліпи та вбудований плеєр.",
+  "lang": "uk",
+  "start_url": "/uk/",
+  "shortcuts": [
+    {
+      "name": "Коментарі",
+      "short_name": "Коментарі",
+      "description": "Відгуки слухачів ANDRIK",
+      "url": "/uk/comments.html",
+      "icons": [
+        {
+          "src": "/assets/andrik-site-illusion-r87-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Музичні платформи",
+      "short_name": "Платформи",
+      "description": "Музичні платформи",
+      "url": "/uk/#links",
+      "icons": [
+        {
+          "src": "/assets/andrik-site-illusion-r87-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Плеєр ANDRIK",
+      "short_name": "Плеєр",
+      "description": "Плеєр ANDRIK",
+      "url": "/player?lang=uk",
+      "icons": [
+        {
+          "src": "/assets/andrik-site-illusion-r87-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Альбом OCEAN",
+      "short_name": "OCEAN",
+      "description": "Альбом OCEAN",
+      "url": "/player?lang=uk&collection=ocean",
+      "icons": [
+        {
+          "src": "/assets/andrik-site-illusion-r87-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
+  ],
+  "version": "55.00-r87"
+}

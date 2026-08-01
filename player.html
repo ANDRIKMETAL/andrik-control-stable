@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+
+<html class="i18n-pending" lang="ru">
+<head>
+<meta charset="utf-8"/>
+<script>
+(()=>{try{
+  const supported=new Set(['ru','uk','sk','en']);
+  const routeLanguage=raw=>{
+    if(!raw)return'';
+    try{
+      const url=new URL(raw,location.origin);
+      if(url.origin!==location.origin)return'';
+      const match=url.pathname.match(/^\/(uk|sk|en)(?:\/|$)/);
+      return match?match[1]:'ru';
+    }catch(_){return''}
+  };
+  window.ANDRIK_RESOLVE_PLAYER_LANG=()=>{
+    const params=new URLSearchParams(location.search);
+    const explicit=(params.get('lang')||'').toLowerCase();
+    if(supported.has(explicit))return explicit;
+    const returnLang=routeLanguage(params.get('returnPath')||'');
+    if(returnLang)return returnLang;
+    const refLang=routeLanguage(document.referrer||'');
+    if(refLang)return refLang;
+    let manual='';try{manual=(sessionStorage.getItem('andrikManualLanguage')||'').toLowerCase()}catch(_){}
+    if(supported.has(manual))return manual;
+    return 'ru';
+  };
+  const root=document.documentElement;
+  const page=window.ANDRIK_RESOLVE_PLAYER_LANG();
+  root.lang=page;
+  let manual='';try{manual=(sessionStorage.getItem('andrikManualLanguage')||'').toLowerCase()}catch(_){}
+  if(supported.has(page)&&manual===page){
+    root.setAttribute('translate','no');root.classList.add('notranslate');
+    const meta=document.createElement('meta');meta.name='google';meta.content='notranslate';document.head.appendChild(meta);
+  }
+}catch(_){}})();
+</script>
+<meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/>
+<meta content="#02060a" name="theme-color"/>
+<script>
+  (() => {
+    const supported = new Set(['ru','uk','sk','en']);
+    let lang = typeof window.ANDRIK_RESOLVE_PLAYER_LANG === 'function'
+      ? window.ANDRIK_RESOLVE_PLAYER_LANG()
+      : 'ru';
+    if (!supported.has(lang)) lang = 'ru';
+    window.ANDRIK_INITIAL_LANG = lang;
+    document.documentElement.lang = lang;
+    try { localStorage.setItem('andrikPreferredLanguage', lang); } catch (_) {}
+  })();
+  </script>
+<meta content="dark" name="color-scheme"/>
+<title>ANDRIK Player — альбомы, клипы и официальные хиты</title>
+<meta content="Официальный музыкальный плеер ANDRIK: OCEAN, Я ЕСТЬ, Проснись, Illusion of Life и плейлист последних хитов." name="description"/>
+<link href="https://andrikmetal.com/player" rel="canonical"/>
+<link href="/manifest.webmanifest?v=55.00-r87" id="appManifest" rel="manifest"/>
+<script>
+    (() => {
+      const link = document.getElementById('appManifest');
+      const lang = window.ANDRIK_INITIAL_LANG || 'ru';
+      if (link && lang !== 'ru') link.href = `/manifest-${lang}.webmanifest`;
+    })();
+  </script>
+<link href="/favicon.ico" rel="icon"/>
+<link href="/assets/andrik-site-illusion-r87-180.png" rel="apple-touch-icon"/>
+<link href="https://www.youtube.com" rel="preconnect"/>
+<link href="https://www.google.com" rel="preconnect"/>
+<link href="https://i.ytimg.com" rel="preconnect"/>
+<link href="/assets/player-v54-27.css?v=54.27" rel="stylesheet"/>
+<link href="/assets/player-v54-53.css?v=54.54" rel="stylesheet"/>
+<link href="/assets/player-mini-clean-v55-00-r3u.css?v=55.00-r3u" rel="stylesheet"/>
+<link href="/assets/pwa-install.css" rel="stylesheet"/>
+<noscript><style>html.i18n-pending body{opacity:1!important}</style></noscript>
+</head>
+<body>
+<div aria-hidden="true" class="site-view" id="siteView">
+<iframe id="siteFrame" loading="eager" src="about:blank" title="Главная страница ANDRIK"></iframe>
+</div>
+<main class="app" id="app">
+<header class="topbar">
+<a aria-label="Вернуться на главную ANDRIK" class="brand" href="/" id="homeBrand">
+<img alt="ANDRIK" height="48" src="/assets/andrik-eye-v22-192.png" width="48"/>
+<span class="brand-copy"><strong>ANDRIK</strong><span>Official player</span></span>
+</a>
+<div class="page-label"><span>Ваша музыкальная вселенная</span><h1>ANDRIK PLAYER</h1></div>
+<div class="top-actions">
+<button aria-label="Свернуть плеер в мини-плеер" class="icon-button player-minimize-btn" id="minimizePlayerBtn" title="Свернуть плеер" type="button">
+<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 10h14v2H5v-2Zm3 5h8v2H8v-2Z"></path></svg>
+</button>
+<div class="player-language-picker">
+<button aria-controls="playerLanguageMenu" aria-expanded="false" aria-label="Выбрать язык" class="icon-button" id="playerLanguageBtn" title="Язык" type="button">
+<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm6.92 9h-3.05a15.8 15.8 0 0 0-1.26-5.08A8.03 8.03 0 0 1 18.92 11ZM12 4c.93 1.13 1.68 3.05 1.86 5h-3.72C10.32 7.05 11.07 5.13 12 4ZM9.39 5.92A15.8 15.8 0 0 0 8.13 11H5.08a8.03 8.03 0 0 1 4.31-5.08ZM5.08 13h3.05c.16 1.91.6 3.69 1.26 5.08A8.03 8.03 0 0 1 5.08 13ZM12 20c-.93-1.13-1.68-3.05-1.86-5h3.72c-.18 1.95-.93 3.87-1.86 5Zm2.61-1.92c.66-1.39 1.1-3.17 1.26-5h3.05a8.03 8.03 0 0 1-4.31 5.08Z"></path></svg>
+</button>
+<div class="player-language-menu" hidden="" id="playerLanguageMenu">
+<button data-player-lang="ru" type="button"><span>🇷🇺</span> Русский</button>
+<button data-player-lang="uk" type="button"><span>🇺🇦</span> Українська</button>
+<button data-player-lang="sk" type="button"><span>🇸🇰</span> Slovenčina</button>
+<button data-player-lang="en" type="button"><span>🌐</span> English</button>
+</div>
+</div>
+<button aria-label="Установить приложение ANDRIK" class="icon-button pwa-install-btn" id="pwaInstallButton" title="Установить приложение ANDRIK" type="button"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M11 3h2v9.2l3.2-3.2 1.4 1.4-5.6 5.6-5.6-5.6L7.8 9l3.2 3.2V3Zm-6 14h14v3H5v-3Z"></path></svg></button>
+<button aria-label="Поделиться текущей коллекцией" class="icon-button" id="shareBtn" title="Поделиться" type="button"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M18 16.1c-.8 0-1.5.3-2 .8L8.9 12.7c.1-.2.1-.5.1-.7s0-.5-.1-.7L16 7.1a3 3 0 1 0-1-1.7L7.9 9.6a3 3 0 1 0 0 4.8l7.1 4.2a3 3 0 1 0 3-2.5Z"></path></svg></button>
+</div>
+</header>
+<section aria-label="Официальный плеер ANDRIK" class="player-shell" id="playerShell">
+<div class="visual-side">
+<img alt="" class="visual-bg" id="artBg" src="/assets/ocean-cover-v50.webp"/>
+<div class="visual-shade"></div>
+<div class="media-frame">
+<div class="cover-wrap"><img alt="Обложка OCEAN" class="cover-art" height="900" id="artMain" src="/assets/ocean-cover-v50.webp" width="900"/></div>
+<div class="lyrics-panel" id="lyricsPanel" hidden>
+<div class="lyrics-panel-head">
+<div class="lyrics-title-block"><span class="lyrics-badge" id="lyricsBadge">ТЕКСТ ПЕСНИ</span><strong id="lyricsTrackTitle">ANDRIK</strong></div>
+<button aria-label="Закрыть текст" class="lyrics-close" id="lyricsCloseBtn" type="button"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m6.4 5 5.6 5.6L17.6 5 19 6.4 13.4 12 19 17.6 17.6 19 12 13.4 6.4 19 5 17.6 10.6 12 5 6.4 6.4 5Z"></path></svg></button>
+</div>
+<div class="lyrics-source-tabs" role="tablist" aria-label="Источник текста">
+<button class="lyrics-source-tab active" id="lyricsOfficialTab" type="button" role="tab" aria-selected="true">Текст ANDRIK</button>
+<button class="lyrics-source-tab" id="lyricsYoutubeTab" type="button" role="tab" aria-selected="false">Автосубтитры YouTube</button>
+</div>
+<div class="lyrics-meta" id="lyricsMeta">Синхронизированный текст из базы ANDRIK</div>
+<div class="lyrics-copyright" id="lyricsCopyright" hidden></div>
+<div class="lyrics-scroll" id="lyricsScroll">
+<div class="lyrics-empty" id="lyricsEmpty">Ищем текст на YouTube…</div>
+<div class="lyrics-lines" id="lyricsLines"></div>
+</div>
+</div>
+<div aria-label="Видеоплеер YouTube" class="youtube-stage" id="youtubeStage"><div id="yt-player"></div></div>
+</div>
+<div class="nowplaying-mini">
+<span class="nowplaying-badge">Сейчас выбрано</span>
+<span id="miniCollection">OCEAN · OFFICIAL ALBUM</span>
+<strong id="miniTitle">OCEAN</strong>
+<small id="miniAuthor">ANDRIK</small>
+</div>
+<div aria-hidden="true" class="visualizer viz-theme-1" id="visualizer"></div>
+</div>
+<div class="control-side">
+<button aria-label="Развернуть полный плеер" class="mini-expand" id="expandPlayerBtn" title="Развернуть плеер" type="button">
+<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M8 3H3v5h2V6.4l4.3 4.3 1.4-1.4L6.4 5H8V3Zm8 0v2h1.6l-4.3 4.3 1.4 1.4L19 6.4V8h2V3h-5ZM9.3 13.3 5 17.6V16H3v5h5v-2H6.4l4.3-4.3-1.4-1.4Zm5.4 0-1.4 1.4 4.3 4.3H16v2h5v-5h-2v1.6l-4.3-4.3Z"></path></svg>
+</button>
+<button aria-label="Закрыть мини-плеер" class="mini-close" id="closeMiniPlayerBtn" title="Закрыть мини-плеер" type="button">
+<svg aria-hidden="true" viewBox="0 0 24 24"><path d="m6.4 5 5.6 5.6L17.6 5 19 6.4 13.4 12 19 17.6 17.6 19 12 13.4 6.4 19 5 17.6 10.6 12 5 6.4 6.4 5Z"></path></svg>
+</button>
+<div class="status-row">
+<span class="status-chip"><span class="status-dot"></span><span id="stateText">Подключение к YouTube</span></span>
+<span class="status-tools">
+<button aria-label="Не выключать экран" aria-pressed="false" class="wake-lock-btn" id="wakeLockBtn" title="Не выключать экран" type="button">
+<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3a1 1 0 0 1 1 1v1.1a7 7 0 0 1 5.9 5.9H20a1 1 0 1 1 0 2h-1.1a7 7 0 0 1-5.9 5.9V20a1 1 0 1 1-2 0v-1.1A7 7 0 0 1 5.1 13H4a1 1 0 1 1 0-2h1.1A7 7 0 0 1 11 5.1V4a1 1 0 0 1 1-1Zm0 4a5 5 0 1 0 0 10 5 5 0 0 0 0-10Z"></path></svg>
+</button>
+<span class="playlist-position" id="playlistPos">— / —</span>
+</span>
+</div>
+<span class="player-eyeline" id="collectionLabel">OCEAN · OFFICIAL ALBUM</span>
+<h2 class="track-title" id="trackTitle">Загрузка альбома…</h2>
+<p class="track-author" id="trackAuthor">ANDRIK</p>
+<div class="progress-area">
+<input aria-label="Позиция воспроизведения" class="progress" id="progress" max="1000" min="0" type="range" value="0"/>
+<div class="time-row"><span id="currentTime">0:00</span><span id="duration">0:00</span></div>
+</div>
+<div class="transport">
+<button aria-label="Добавить трек в избранное" aria-pressed="false" class="ctrl secondary" id="favoriteBtn" title="Избранное" type="button"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78Z"></path></svg></button>
+<button aria-label="Предыдущий трек" class="ctrl" id="prevBtn" type="button"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 5h2v14H6V5Zm3.5 7L19 5v14l-9.5-7Z"></path></svg></button>
+<button aria-label="Воспроизвести" class="ctrl primary" id="playBtn" type="button"><svg aria-hidden="true" id="playIcon" viewBox="0 0 24 24"><path d="M8 5v14l11-7Z"></path></svg></button>
+<button aria-label="Следующий трек" class="ctrl" id="nextBtn" type="button"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M16 5h2v14h-2V5ZM5 5l9.5 7L5 19V5Z"></path></svg></button>
+<button aria-label="Перемешать плейлист" aria-pressed="false" class="ctrl secondary" id="shuffleBtn" title="Перемешать" type="button"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M16 3h5v5h-2V6.4l-3.8 3.8-1.4-1.4L17.6 5H16V3ZM3 6h4.6c1.5 0 2.9.7 3.8 1.9l5.7 7.6c.5.7 1.3 1.1 2.2 1.1H21v2h-1.7c-1.5 0-2.9-.7-3.8-1.9L9.8 9.1C9.3 8.4 8.5 8 7.6 8H3V6Zm0 10h4.6c.9 0 1.7-.4 2.2-1.1l1.3-1.7 1.3 1.7-1 1.3c-.9 1.2-2.3 1.8-3.8 1.8H3v-2Zm13-1h1.6l-2.1-2.1 1.3-1.7 2.2 2.2V12h2v5h-5v-2Z"></path></svg></button>
+</div>
+<div class="collection-actions">
+<div class="collection-meta"><strong id="collectionName">OCEAN</strong><span id="collectionNote">10 треков · 2026</span></div>
+<a class="open-youtube" data-app-package="com.google.android.youtube" data-force-app="youtube" data-web-url="https://youtube.com/playlist?list=PLOWKqAipKxhk" href="https://youtube.com/playlist?list=PLOWKqAipKxhk" id="collectionLink" rel="noopener"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M21.6 7.1a2.8 2.8 0 0 0-2-2C17.9 4.6 12 4.6 12 4.6s-5.9 0-7.6.5a2.8 2.8 0 0 0-2 2A29 29 0 0 0 2 12a29 29 0 0 0 .4 4.9 2.8 2.8 0 0 0 2 2c1.7.5 7.6.5 7.6.5s5.9 0 7.6-.5a2.8 2.8 0 0 0 2-2A29 29 0 0 0 22 12a29 29 0 0 0-.4-4.9ZM10 15.2V8.8l5.5 3.2-5.5 3.2Z"></path></svg><span>Открыть на YouTube</span></a>
+</div>
+<div class="track-community-actions">
+<button aria-controls="lyricsPanel" aria-expanded="false" class="lyrics-toggle" id="lyricsToggleBtn" type="button"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 5h14v2H5V5Zm0 4h14v2H5V9Zm0 4h10v2H5v-2Zm0 4h10v2H5v-2Z"></path></svg><span id="lyricsToggleText">Текст</span></button>
+<a class="track-comments-btn" href="/comments.html?song=project#page-top" id="commentsTrackBtn"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 4h16v12H8l-4 4V4Zm2 2v9.2L7.2 14H18V6H6Z"></path></svg><span id="commentsTrackText">Обсуждение</span></a>
+</div>
+
+<div aria-live="polite" class="error" id="errorBox" role="status"></div>
+</div>
+</section>
+
+</main>
+<script defer="" src="/assets/pwa-install.js"></script>
+<script defer="" src="/assets/app-links-v50.js?v=51.46"></script>
+<script defer="" src="/assets/player-i18n-v51.js?v=53.0"></script>
+<script defer="" src="/assets/player-v54-27.js?v=54.54"></script>
+
+<script defer src="/assets/push-v54-07.js?v=54.07"></script>
+<script defer src="/assets/site-live-v54-07.js?v=54.07"></script>
+<link href="/assets/player-r85-fullscreen-fit.css?v=55.00-r85" rel="stylesheet"/>
+<link href="/assets/player-r86-album-carousel.css?v=55.00-r86" rel="stylesheet"/>
+<script defer src="/assets/player-r86-album-carousel.js?v=55.00-r86"></script>
+
+<script defer src="/assets/player-r85-viewport-fit.js?v=55.00-r85"></script>
+</body>
+</html>

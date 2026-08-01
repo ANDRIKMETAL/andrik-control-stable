@@ -1,0 +1,64 @@
+{
+  "name": "Live Web AI",
+  "short_name": "Live Web AI",
+  "id": "/admin/?app=live-web-ai-final-r101",
+  "start_url": "/?source=pwa&page=map&app=live-web-ai&v=55.00-final-r101",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "background_color": "#050607",
+  "theme_color": "#0f1114",
+  "description": "Live Web AI — универсальная панель подключения сайта, Google Analytics 4, Search Console, YouTube Studio, мониторинга и автоматизации. ANDRIK — первый подключённый проект.",
+  "categories": [
+    "business",
+    "utilities",
+    "music"
+  ],
+  "icons": [
+    {
+      "src": "/assets/live-web-ai-green-eye-r97-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/live-web-ai-green-eye-r97-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "YouTube — статистика",
+      "short_name": "YouTube",
+      "description": "Открыть статистику канала ANDRIK",
+      "url": "/?source=app-shortcut-youtube&page=youtube&v=55.00g",
+      "icons": [
+        {
+          "src": "/assets/control-shortcut-youtube-96.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Карта слушателей",
+      "short_name": "Карта",
+      "description": "Открыть карту аудитории ANDRIK",
+      "url": "/?source=app-shortcut-map&page=map&v=55.00g",
+      "icons": [
+        {
+          "src": "/assets/control-shortcut-map-96.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    }
+  ],
+  "version": "55.00-final-r101"
+}

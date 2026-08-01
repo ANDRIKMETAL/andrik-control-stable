@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#050607">
+<meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>Очистка Control — FINAL R81 INLINE COUNTRY LABEL</title>
+<style>
+*{box-sizing:border-box}body{margin:0;min-height:100dvh;display:grid;place-items:center;padding:20px;background:#050607;color:#eef8ff;font-family:system-ui,-apple-system,"Segoe UI",sans-serif}.box{width:min(92vw,580px);padding:28px;border:1px solid #244354;border-radius:26px;background:#07131c;text-align:center;box-shadow:0 24px 70px #000}h1{margin:0 0 12px;font-size:clamp(25px,7vw,40px)}p{color:#a9c0cd;line-height:1.5}.bar{height:10px;margin:18px 0;border-radius:99px;background:#0b2634;overflow:hidden}.bar span{display:block;width:3%;height:100%;background:linear-gradient(90deg,#4adf93,#8eeeff);transition:width .2s ease}.ok{color:#bfffd9}.error{color:#ffb8b8}.actions{display:flex;justify-content:center;gap:10px;flex-wrap:wrap}.btn{display:inline-flex;margin-top:18px;padding:14px 22px;border:0;border-radius:999px;background:#0e3448;color:#d9f5ff;text-decoration:none;font:inherit;font-weight:800}.btn[hidden]{display:none}
+</style>
+</head>
+<body>
+<div class="box">
+<h1>FINAL R81 INLINE COUNTRY LABEL</h1>
+<p id="status">Очищаем Control, возвращаем подписи стран и фиксируем портретную геометрию…</p>
+<div class="bar"><span id="bar"></span></div>
+<div class="actions"><a class="btn" id="open" hidden>Открыть свежую карту</a><button class="btn" id="retry" type="button" hidden>Проверить снова</button></div>
+</div>
+<script>
+(async()=>{
+ const status=document.getElementById('status');
+ const bar=document.getElementById('bar');
+ const open=document.getElementById('open');
+ const retry=document.getElementById('retry');
+ retry.addEventListener('click',()=>location.reload());
+ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+ const step=(n,total,text)=>{status.textContent=n+'/'+total+' · '+text;bar.style.width=(n/total*100)+'%'};
+ const stamp=Date.now();
+ const build='55.00-final-r81-inline-country-label';
+ const go='/analytics-admin.html?v=55.00-r81-portrait-rebuild?page=map&v='+build+'&fresh='+stamp;
+ const htmlMarkers=[
+  'map-r81-inline-country-label.css',
+  'map-r81-inline-country-label.js',
+  'map-focus-layout-v55-00-r71.css',
+  'map-focus-layout-v55-00-r71.js',
+  'map-landscape-country-label-v55-00-r72.css',
+  'map-landscape-country-label-v55-00-r72.js',
+  'map-ui-lock-v55-00-r73.css',
+  'map-ui-lock-v55-00-r73.js',
+  'Control ANDRIK 1.0 · v55.00 FINAL STABLE R76',
+  'map-r76-stability-country-label.css',
+  'map-r76-stability-country-label.js',
+  'map-r77-landscape-country-label.css',
+  'map-r77-landscape-country-label.js'
+ ];
+ try{
+  step(1,6,'Удаляем Cache Storage…');
+  if('caches' in window){for(const name of await caches.keys())await caches.delete(name).catch(()=>false)}
+  step(2,6,'Отключаем старые Service Worker Control…');
+  if('serviceWorker' in navigator){for(const reg of await navigator.serviceWorker.getRegistrations().catch(()=>[])){const script=String(reg.active?.scriptURL||reg.waiting?.scriptURL||reg.installing?.scriptURL||'');if(/OneSignalSDK|\/push\/onesignal\//i.test(script))continue;reg.active?.postMessage?.({type:'CLEAR_ALL_CACHES'});reg.waiting?.postMessage?.({type:'CLEAR_ALL_CACHES'});await reg.unregister().catch(()=>false)}}
+  step(3,6,'Удаляем старые состояния карты…');
+  for(const key of Object.keys(sessionStorage)){if(/andrik-(?:control-)?section|carousel|runtime-reload|swipe|map/i.test(key))sessionStorage.removeItem(key)}
+  localStorage.setItem('andrik-control-runtime-version',build+'-'+stamp);
+  step(4,6,'Обновляем файлы карты…');
+  const controller=new AbortController();
+  const timeout=setTimeout(()=>controller.abort(),5000);
+  let verified=false;
+  try{
+    const response=await fetch('/analytics-admin.html?v=55.00-r81-portrait-rebuild?page=map&v='+build+'&probe='+stamp,{cache:'no-store',signal:controller.signal,headers:{'Cache-Control':'no-cache, no-store'}});
+    if(response.ok){const html=await response.text();verified=htmlMarkers.every(marker=>html.includes(marker))}
+  }catch(_){ }
+  clearTimeout(timeout);
+  step(5,6,'Подготавливаем прямой запуск…');
+  open.href=go;open.hidden=false;retry.hidden=true;
+  await sleep(250);
+  step(6,6,'Очистка завершена.');
+  status.className=verified?'ok':'';
+  status.textContent=verified
+    ?'R81 опубликована: в горизонтальном режиме возвращены флаг и название выбранной страны; в портретном режиме зафиксированы положение карточки, заголовков и рамки карты.'
+    :'Кэш очищен. Проверка сервера задержалась, но карту можно открыть кнопкой ниже.';
+ }catch(error){
+  /* Fail-open: очистка никогда не блокирует доступ к карте. */
+  status.className='error';
+  status.textContent='Основной кэш очищен. Некоторые операции завершились с задержкой — откройте карту кнопкой ниже.';
+  open.href=go;open.hidden=false;retry.hidden=false;bar.style.width='100%';
+ }
+})();
+</script>
+</body>
+</html>

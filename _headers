@@ -1,0 +1,333 @@
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+  Cross-Origin-Opener-Policy: same-origin-allow-popups
+
+/assets/*
+  Cache-Control: public, max-age=604800, stale-while-revalidate=2592000
+
+/assets/*.webp
+  Cache-Control: public, max-age=31536000, immutable
+
+/assets/*.png
+  Cache-Control: public, max-age=31536000, immutable
+
+/assets/*.jpg
+  Cache-Control: public, max-age=31536000, immutable
+
+/assets/*.jpeg
+  Cache-Control: public, max-age=31536000, immutable
+
+/assets/*.mp3
+  Cache-Control: public, max-age=31536000, immutable
+
+/
+  Cache-Control: no-cache, no-store, must-revalidate
+  Content-Language: ru
+
+/index.html
+  Cache-Control: no-cache, no-store, must-revalidate
+  Content-Language: ru
+
+/en/*
+  Cache-Control: no-cache, no-store, must-revalidate
+  Content-Language: en
+
+/uk/*
+  Cache-Control: no-cache, no-store, must-revalidate
+  Content-Language: uk
+
+/sk/*
+  Cache-Control: no-cache, no-store, must-revalidate
+  Content-Language: sk
+
+/player
+  Cache-Control: no-cache, no-store, must-revalidate
+
+/player.html
+  Cache-Control: no-cache, no-store, must-revalidate
+
+/control-home.html
+  Cache-Control: no-cache, no-store, must-revalidate
+  X-Robots-Tag: noindex, nofollow, noarchive
+
+/comments-admin.html
+  Cache-Control: no-cache, no-store, must-revalidate
+  X-Robots-Tag: noindex, nofollow, noarchive
+
+/lyrics-admin.html
+  Cache-Control: no-cache, no-store, must-revalidate
+  X-Robots-Tag: noindex, nofollow, noarchive
+
+/service-admin.html
+  Cache-Control: no-cache, no-store, must-revalidate
+  X-Robots-Tag: noindex, nofollow, noarchive
+
+/analytics-admin.html
+  Cache-Control: no-cache, no-store, must-revalidate
+  X-Robots-Tag: noindex, nofollow, noarchive
+
+/youtube-admin.html
+  Cache-Control: no-cache, no-store, must-revalidate
+  X-Robots-Tag: noindex, nofollow, noarchive
+
+/youtube-comment-reply.html
+  Cache-Control: no-cache, no-store, must-revalidate
+  X-Robots-Tag: noindex, nofollow, noarchive
+
+/admin
+  Cache-Control: no-cache, no-store, must-revalidate
+  X-Robots-Tag: noindex, nofollow, noarchive
+
+/admin/*
+  Cache-Control: no-cache, no-store, must-revalidate
+  X-Robots-Tag: noindex, nofollow, noarchive
+
+/service-worker.js
+  Cache-Control: no-cache, no-store, must-revalidate
+  Service-Worker-Allowed: /
+
+/control-service-worker.js
+  Cache-Control: no-cache, no-store, must-revalidate
+  Service-Worker-Allowed: /
+
+/manifest.webmanifest
+  Cache-Control: no-cache
+
+/manifest-en.webmanifest
+  Cache-Control: no-cache
+
+/manifest-sk.webmanifest
+  Cache-Control: no-cache
+
+/manifest-uk.webmanifest
+  Cache-Control: no-cache
+
+/admin-manifest.webmanifest
+  Cache-Control: no-cache, no-store, must-revalidate
+  X-Robots-Tag: noindex, nofollow, noarchive
+
+/push/onesignal/OneSignalSDKWorker.js
+  Cache-Control: no-cache, no-store, must-revalidate
+  Content-Type: application/javascript; charset=utf-8
+  Service-Worker-Allowed: /push/onesignal/
+
+/trika.html
+  Content-Language: ru
+
+/comments.html
+  Content-Language: ru
+
+# Control ANDRIK — YouTube app launcher
+/open-youtube.html
+  Cache-Control: no-cache, no-store, must-revalidate
+  X-Robots-Tag: noindex, nofollow, noarchive
+
+/assets/control-v54-66.css
+  Cache-Control: no-cache, no-store, must-revalidate
+
+/cache-reset.html
+  Cache-Control: no-cache, no-store, must-revalidate
+  X-Robots-Tag: noindex, nofollow, noarchive
+
+/assets/control-v54-71.css
+  Cache-Control: no-cache, no-store, must-revalidate
+
+/assets/control-v54-76.css
+  Cache-Control: no-cache, no-store, must-revalidate
+
+/assets/control-version-v54-92.js
+  Cache-Control: no-cache, no-store, must-revalidate
+
+/assets/control-v54-92.css
+  Cache-Control: no-cache, no-store, must-revalidate
+
+/observability-admin.html
+  Cache-Control: no-cache, no-store, must-revalidate
+
+/api/health
+  Cache-Control: no-cache, no-store, must-revalidate
+
+/assets/control-version-v54-99b.js
+  Cache-Control: no-cache, no-store, must-revalidate
+
+/assets/analytics-admin-v54-99b.js
+  Cache-Control: no-cache, no-store, must-revalidate
+
+/assets/control-v54-99b.css
+  Cache-Control: no-cache, no-store, must-revalidate
+
+/assets/map-menu-swipe-v54-99b.js
+  Cache-Control: no-cache, no-store, must-revalidate
+
+/service-admin.html
+  Cache-Control: no-cache, no-store, must-revalidate
+
+/assets/youtube-admin-v55-00d.js
+  Cache-Control: no-cache, no-store, must-revalidate
+
+/assets/control-v55-00d.css
+  Cache-Control: no-cache, no-store, must-revalidate
+
+/assets/control-map-total-v55-00e.css
+  Cache-Control: public, max-age=31536000, immutable
+
+/assets/control-landscape-map-v55-00f.css
+  Cache-Control: public, max-age=31536000, immutable
+
+/assets/map-total-v55-00f.js
+  Cache-Control: public, max-age=31536000, immutable
+
+# Control ANDRIK v55.00g — portrait map alignment
+/assets/control-portrait-map-v55-00g.css
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+
+# Control ANDRIK v55.00j — working v55.00g map + unified comment collection
+/comment-collection.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+  X-Robots-Tag: noindex, nofollow, noarchive
+
+/assets/trika-countdown-v55-00-r3n.js
+  Cache-Control: no-cache, no-store, must-revalidate
+
+/assets/trika-countdown-v55-00-r3n.css
+  Cache-Control: no-cache, no-store, must-revalidate
+
+# Control ANDRIK v55.00 R3P — compact portrait map
+/analytics-admin.html
+  Cache-Control: no-cache, no-store, must-revalidate
+  X-Robots-Tag: noindex, nofollow, noarchive
+
+/service-admin.html
+  Cache-Control: no-cache, no-store, must-revalidate
+
+/observability-admin.html
+  Cache-Control: no-cache, no-store, must-revalidate
+
+/lyrics-admin.html
+  Cache-Control: no-cache, no-store, must-revalidate
+
+/comments-admin.html
+  Cache-Control: no-cache, no-store, must-revalidate
+
+/analytics-admin.html
+  Cache-Control: no-cache, no-store, must-revalidate
+
+/service-admin.html
+  Cache-Control: no-cache, no-store, must-revalidate
+
+/observability-admin.html
+  Cache-Control: no-cache, no-store, must-revalidate
+
+/lyrics-admin.html
+  Cache-Control: no-cache, no-store, must-revalidate
+
+/comments-admin.html
+  Cache-Control: no-cache, no-store, must-revalidate
+
+
+# Control ANDRIK v55.00 R3U — verified section swipe + clean mini-player + full cache reset
+/cache-reset-v55-00-r3u.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+  Pragma: no-cache
+  Expires: 0
+  X-Robots-Tag: noindex, nofollow, noarchive
+
+/site-cache-reset-v55-00-r3u.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+  Pragma: no-cache
+  Expires: 0
+  X-Robots-Tag: noindex, nofollow, noarchive
+
+/assets/control-cache-reset-v55-00-r3u.js
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+
+/assets/control-section-swipe-v55-00-r3u.js
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+
+/assets/player-mini-clean-v55-00-r3u.css
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+
+/assets/player-album-swipe-v55-00-r3u.js
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+
+/player.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+
+/service-admin.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+
+/observability-admin.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+
+/lyrics-admin.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+
+/comments-admin.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+
+/assets/admin-service-v55-00-r3u.js
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+
+
+# Control ANDRIK v55.00 FINAL STABLE GITHUB
+/cache-reset-v55-00-final-stable-github.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+  Pragma: no-cache
+  Expires: 0
+  X-Robots-Tag: noindex, nofollow, noarchive
+
+/control-home.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+
+/assets/control-home-v55-00-final-stable-github.js
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+
+/assets/control-cache-reset-v55-00-final-stable-github.js
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+
+/assets/control-version-v55-00-final-stable-github.js
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+
+/control-service-worker.js
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+
+# Control ANDRIK v55.00 FINAL STABLE GITHUB CAROUSEL
+/admin-sections.html
+  Cache-Control: no-cache, no-store, must-revalidate
+  X-Robots-Tag: noindex, nofollow, noarchive
+
+/assets/admin-carousel-embed-v55-00-final.js
+  Cache-Control: no-cache, no-store, must-revalidate
+
+/assets/admin-carousel-embed-v55-00-final.css
+  Cache-Control: no-cache, no-store, must-revalidate
+
+/analytics-admin.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+
+/cache-reset.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+  Pragma: no-cache
+  Expires: 0
+
+/analytics-admin.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+  Pragma: no-cache
+  Expires: 0
+
+/analytics-admin.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+  Pragma: no-cache
+  Expires: 0
+
+/cache-reset.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+  Pragma: no-cache
+  Expires: 0
+
+/analytics-admin.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+  Pragma: no-cache
+  Expires: 0

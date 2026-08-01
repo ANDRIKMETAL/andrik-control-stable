@@ -1,0 +1,3220 @@
+<!DOCTYPE html>
+<html lang="ru" translate="no" class="notranslate"><head>
+<meta name="google" content="notranslate"><meta charset="utf-8"/>
+<meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/>
+<meta content="#252a2e" name="theme-color"/>
+<meta content="Live Web AI" name="apple-mobile-web-app-title"/>
+<meta content="dark" name="color-scheme"/>
+<meta content="noindex,nofollow,noarchive" name="robots"/>
+<meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0"/>
+<meta http-equiv="Pragma" content="no-cache"/>
+<meta http-equiv="Expires" content="0"/>
+<link href="/assets/live-web-ai-green-eye-r97-192.png?v=55.00-final-r98" rel="icon" type="image/png"/>
+<link href="/assets/live-web-ai-green-eye-r97-192.png?v=55.00-final-r98" rel="apple-touch-icon"/>
+<script>if(location.hostname.toLowerCase()==='control.andrikmetal.com'){const m=document.createElement('link');m.rel='manifest';m.href='/admin-manifest.webmanifest?v=55.00-final-r98';document.head.appendChild(m)}</script>
+<script defer src="/assets/control-cache-reset-v55-00-final-stable-github.js?v=55.00-final-stable-github"></script>
+
+<link rel="preload" as="image" href="/assets/world-map-control-v52.webp?v=52.14" fetchpriority="high"/>
+<script id="live-web-ai-final-r98-snapshot-head">
+(function(){
+  try{
+    var raw=localStorage.getItem('live-web-ai-map-first-frame-v1');
+    if(!raw)return;
+    var data=JSON.parse(raw);
+    if(!data||!data.mapHtml||!data.listHtml)return;
+    window.__liveWebAiStartupMapSnapshot=data;
+    document.documentElement.classList.add('live-web-ai-has-map-snapshot');
+  }catch(_){ }
+})();
+</script>
+<link href="/assets/v50-26.css?v=53.0" rel="stylesheet"/>
+<link href="/assets/control-v54-stable.css?v=54.02" rel="stylesheet"/>
+<link href="/assets/control-v54-04.css?v=54.05" rel="stylesheet"/>
+<link href="/assets/control-v54-07.css?v=54.07" rel="stylesheet"/>
+<link href="/assets/control-v54-08.css?v=54.08" rel="stylesheet"/>
+<title>Live Web AI — статистика ANDRIK</title><link rel="prefetch" href="/control-home.html?page=menu&amp;v=54.66"/>
+<link href="/assets/control-v54-09.css?v=54.09" rel="stylesheet"/>
+<link href="/assets/control-v54-18.css?v=54.18" rel="stylesheet"/>
+<link href="/assets/control-v54-21.css?v=54.22" rel="stylesheet"/>
+<link href="/assets/control-v54-24.css?v=54.24" rel="stylesheet"/>
+<link href="/assets/control-v54-25.css?v=54.25" rel="stylesheet"/>
+<link href="/assets/control-v54-28.css?v=54.30" rel="stylesheet"/>
+<link href="/assets/control-v54-32.css?v=54.32" rel="stylesheet"/>
+<link href="/assets/control-v54-58.css?v=54.58" rel="stylesheet"/><link href="/assets/control-v54-59.css?v=54.59" rel="stylesheet"/><link href="/assets/control-v54-60.css?v=54.60" rel="stylesheet"/><link href="/assets/control-v54-66.css?v=54.66" rel="stylesheet"/>
+<link href="/assets/control-v54-84.css?v=54.84" rel="stylesheet"/>
+<link href="/assets/control-v54-85.css?v=54.85" rel="stylesheet"/>
+<link href="/assets/control-v54-86.css?v=54.86" rel="stylesheet"/>
+<link href="/assets/control-v54-87.css?v=54.87" rel="stylesheet"/>
+<link href="/assets/control-v54-91.css?v=54.91" rel="stylesheet"/>
+<link href="/assets/control-v54-99c7.css?v=54.99c7" rel="stylesheet"/>
+<style>
+.andrik-spoiler{margin-top:14px;border:1px solid rgba(170,210,255,.16);border-radius:24px;background:rgba(6,14,26,.55);overflow:hidden}
+.andrik-spoiler>summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 20px;font-weight:800;font-size:1rem;color:#eef6ff;letter-spacing:.02em}
+.andrik-spoiler>summary::-webkit-details-marker{display:none}
+.andrik-spoiler>summary::after{content:'Показать';font-size:.84rem;font-weight:700;color:#9ecbff;opacity:.95}
+.andrik-spoiler[open]>summary::after{content:'Скрыть'}
+.andrik-spoiler-body{padding:0 18px 18px}
+.youtube-monitor-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.youtube-monitor-grid span{min-width:0;text-align:center;justify-content:center;padding:12px 8px;line-height:1.15}
+.analytics-pull-indicator{position:fixed;left:50%;top:max(env(safe-area-inset-top),10px);transform:translate(-50%,-18px);background:rgba(10,22,38,.92);color:#eff8ff;border:1px solid rgba(158,203,255,.2);border-radius:999px;padding:10px 16px;display:flex;align-items:center;gap:10px;z-index:60;opacity:0;pointer-events:none;transition:opacity .25s ease,transform .25s ease,box-shadow .25s ease}
+.analytics-pull-indicator i{width:10px;height:10px;border-radius:50%;background:#7bd3ff;box-shadow:0 0 16px rgba(123,211,255,.8)}
+.analytics-pull-indicator.is-visible{opacity:1;transform:translate(-50%,0)}
+.analytics-pull-indicator.is-ready{box-shadow:0 0 0 1px rgba(255,100,100,.18),0 8px 28px rgba(0,0,0,.35)}
+.world-map-help b{color:#9ed6ff}
+.youtube-title-status-row{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:10px!important;flex-wrap:nowrap!important;min-width:0!important}
+.youtube-title-status-row h1{margin:0!important;min-width:0!important;flex:1 1 auto!important}
+.youtube-studio-gate-inline{margin-left:auto!important;flex:0 1 auto!important;min-width:0!important;width:auto!important;max-width:49%!important}
+.analytics-sharing-card{grid-column:1/-1}
+.analytics-site-title-inline{font-size:clamp(2.25rem,7vw,3.35rem);line-height:1.02;white-space:nowrap;letter-spacing:-.02em}
+.analytics-site-hero .analytics-kpi-grid{margin-top:18px}
+.youtube-studio-status-connected{appearance:none!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:7px!important;box-sizing:border-box!important;width:auto!important;min-width:0!important;max-width:100%!important;padding:9px 12px!important;border:1px solid rgba(255,145,145,.62)!important;border-radius:16px!important;background:linear-gradient(180deg,#e45252 0%,#b9252d 100%)!important;color:#fff!important;box-shadow:0 0 18px rgba(210,39,49,.3),inset 0 0 12px rgba(255,255,255,.08)!important;font-family:inherit!important;font-weight:900!important;font-size:clamp(.68rem,3.05vw,.82rem)!important;line-height:1.08!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+.youtube-studio-status-connected i{flex:0 0 auto!important;width:9px!important;height:9px!important;border-radius:50%!important;background:#fff!important;box-shadow:0 0 9px rgba(255,255,255,.9)!important}
+.youtube-studio-status-connected span{display:block!important;min-width:0!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;color:#fff!important}
+.youtube-studio-status-connected:hover{filter:brightness(1.04)}
+
+
+.search-console-dynamics-card{margin-top:18px}
+.search-console-dynamics-card .admin-card-title-row{align-items:flex-start}
+.search-console-open{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:0 16px;border:1px solid rgba(126,213,255,.28);border-radius:999px;background:rgba(9,28,42,.74);color:#ccefff;font-weight:800;text-decoration:none;white-space:nowrap}
+.search-console-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:16px}
+.search-console-kpi{min-width:0;padding:14px 12px;border:1px solid rgba(140,205,238,.16);border-radius:20px;background:linear-gradient(180deg,rgba(12,28,40,.88),rgba(5,15,23,.9))}
+.search-console-kpi small{display:block;color:#91a8b9;font-size:.76rem;line-height:1.15}
+.search-console-kpi strong{display:block;margin-top:6px;color:#f0f9ff;font-size:1.45rem;line-height:1.05;letter-spacing:-.02em}
+.search-console-trend{position:relative;height:210px;margin-top:16px;padding:14px 10px 30px;border:1px solid rgba(140,205,238,.12);border-radius:22px;background:rgba(3,12,19,.56);overflow:hidden}
+.search-console-bars{height:100%;display:flex;align-items:flex-end;gap:3px}
+.search-console-day{position:relative;flex:1 1 0;min-width:3px;height:100%;display:flex;align-items:flex-end;justify-content:center;gap:1px}
+.search-console-day i,.search-console-day b{display:block;width:42%;min-width:2px;border-radius:4px 4px 1px 1px;transition:height .35s ease}
+.search-console-day i{background:linear-gradient(180deg,#d9f5ff,#74c9ee)}
+.search-console-day b{background:linear-gradient(180deg,#9fa8ff,#5866c9);opacity:.84}
+.search-console-day span{position:absolute;left:50%;bottom:-22px;transform:translateX(-50%);color:#7890a1;font-size:.58rem;white-space:nowrap}
+.search-console-key{display:flex;flex-wrap:wrap;gap:14px;margin-top:12px;color:#91a8b9;font-size:.75rem;font-weight:700}
+.search-console-key span{display:inline-flex;align-items:center;gap:6px}
+.search-console-key i{width:12px;height:6px;border-radius:99px;background:#74c9ee}
+.search-console-key i.is-impressions{background:#6975d8}
+.search-console-message{margin-top:14px;padding:14px 16px;border:1px solid rgba(140,205,238,.14);border-radius:18px;color:#a9bdca;background:rgba(4,14,21,.5)}
+@media (max-width:540px){.search-console-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.search-console-open{min-height:38px;padding:0 13px;font-size:.78rem}.search-console-trend{height:190px}.search-console-day:nth-child(even) span{display:none}}
+
+@media (max-width:540px){.youtube-title-status-row{align-items:center!important;flex-wrap:nowrap!important}.youtube-studio-gate-inline{min-width:0!important;max-width:49%!important;width:auto!important}.analytics-site-title-inline{font-size:clamp(1.9rem,7.8vw,2.55rem)}}
+@media (max-width:420px){.youtube-monitor-grid span{font-size:.85rem;padding:10px 6px}}
+
+.analytics-v54-46-page .analytics-swipe-viewport,
+.analytics-v54-46-page .analytics-map-pane{touch-action:none!important;overscroll-behavior:none!important}
+.analytics-v54-46-page .analytics-map-pane *{touch-action:none}
+.analytics-topbar-minimal{grid-template-columns:1fr!important;justify-items:center!important}
+.analytics-topbar-minimal .control-center-logo{left:50%!important}
+.analytics-v54-46-page .world-map-help{display:none!important}
+.analytics-v54-46-page .analytics-map-pane .admin-card-title-row p{margin-bottom:0!important}
+.analytics-v54-46-page .analytics-pull-indicator{top:calc(env(safe-area-inset-top) + 86px)!important;z-index:2147483000!important;max-width:calc(100vw - 28px)!important;box-sizing:border-box!important;white-space:nowrap!important}
+.analytics-v54-46-page .analytics-swipe-viewport.is-country-list-open,
+.analytics-v54-46-page .analytics-swipe-viewport.is-country-list-open .analytics-swipe-track,
+.analytics-v54-46-page .analytics-map-pane.is-country-expanded,
+.analytics-v54-46-page .analytics-map-pane.is-country-expanded *{touch-action:pan-y!important}
+.analytics-v54-46-page .analytics-map-pane.is-country-expanded{overflow-y:auto!important;-webkit-overflow-scrolling:touch!important;overscroll-behavior-y:contain!important}
+.analytics-v54-46-page .world-country-toggle.is-top-toggle{position:sticky;top:8px;z-index:30;margin-bottom:4px;background:rgba(18,50,67,.97)!important;box-shadow:0 8px 22px rgba(0,0,0,.3)}
+.analytics-v54-46-page .world-map-canvas{overflow:hidden!important}
+.analytics-v54-46-page .world-map-stage{transform-origin:0 0!important;transition:transform .46s cubic-bezier(.2,.78,.22,1),filter .3s ease!important;will-change:transform!important}
+.analytics-v54-46-page .world-map-shell.is-country-focused .world-map-stage{transform-origin:0 0!important;transform:translate3d(var(--focus-tx,0px),var(--focus-ty,0px),0) scale(var(--focus-zoom,1))!important;filter:saturate(1.08) brightness(1.03)!important}
+.analytics-v54-46-page .world-map-shell.is-country-focused .world-map-state{opacity:.88}
+.analytics-v54-46-page .world-map-stage .world-map-dot{transition:transform .18s ease,opacity .18s ease!important}
+.analytics-v54-46-page .analytics-swipe-hint{margin-top:10px!important}
+@media(max-width:420px){.analytics-v54-46-page .analytics-pull-indicator{top:calc(env(safe-area-inset-top) + 76px)!important;font-size:.78rem!important;padding:9px 13px!important}}
+
+
+/* v54.54 — isolated focus UI. The stable map renderer remains untouched. */
+.analytics-v54-46-page .world-country-list.is-country-focus-mode,
+.analytics-v54-46-page .world-country-list:has(.world-country-button.is-selected){
+  display:flex!important;
+  justify-content:center!important;
+  align-items:center!important;
+  padding:12px 0 2px!important;
+}
+.analytics-v54-46-page .world-country-list.is-country-focus-mode .world-country-button:not(.is-selected),
+.analytics-v54-46-page .world-country-list.is-country-focus-mode .world-country-toggle,
+.analytics-v54-46-page .world-country-list:has(.world-country-button.is-selected) .world-country-button:not(.is-selected),
+.analytics-v54-46-page .world-country-list:has(.world-country-button.is-selected) .world-country-toggle{
+  display:none!important;
+}
+.analytics-v54-46-page .world-country-list.is-country-focus-mode .world-country-button.is-selected,
+.analytics-v54-46-page .world-country-list:has(.world-country-button.is-selected) .world-country-button.is-selected{
+  display:grid!important;
+  grid-template-columns:auto minmax(0,1fr) auto!important;
+  align-items:center!important;
+  gap:11px!important;
+  width:min(100%,430px)!important;
+  min-height:62px!important;
+  margin:0 auto!important;
+  padding:11px 20px!important;
+  border-color:rgba(255,211,72,.92)!important;
+  background:linear-gradient(180deg,rgba(96,66,7,.82),rgba(56,38,5,.9))!important;
+  box-shadow:0 0 0 1px rgba(255,203,57,.22),0 0 24px rgba(255,183,0,.20)!important;
+}
+.analytics-v54-46-page .world-country-list.is-country-focus-mode .world-country-button.is-selected::after,
+.analytics-v54-46-page .world-country-list:has(.world-country-button.is-selected) .world-country-button.is-selected::after{
+  content:none!important;
+  display:none!important;
+}
+.analytics-v54-46-page .world-country-list.is-country-focus-mode .world-country-button.is-selected .world-country-name,
+.analytics-v54-46-page .world-country-list:has(.world-country-button.is-selected) .world-country-button.is-selected .world-country-name{
+  width:auto!important;
+  min-width:0!important;
+  text-align:center!important;
+}
+.analytics-v54-46-page .world-country-list.is-country-focus-mode .world-country-button.is-selected .world-country-marquee,
+.analytics-v54-46-page .world-country-list:has(.world-country-button.is-selected) .world-country-button.is-selected .world-country-marquee{
+  transform:none!important;
+  animation:none!important;
+  text-align:center!important;
+}
+
+/* v54.58 — weekly growth is available on the main map; focused mode stays clean. */
+.country-growth-toggle{display:flex;width:100%;min-height:54px;margin:8px 0 0;align-items:center;justify-content:center;border:1px solid rgba(103,190,230,.28);border-radius:20px;background:rgba(11,40,55,.78);color:#bfeaff;font:800 .92rem/1.2 system-ui;letter-spacing:.02em}
+.world-map-card.has-country-focus .country-growth-toggle{display:none!important}
+.country-growth-toggle[aria-expanded="true"]{border-color:rgba(255,205,70,.55);color:#ffe39b;background:rgba(72,48,5,.72)}
+.country-growth-panel{margin-top:8px;padding:18px;border:1px solid rgba(112,196,235,.22);border-radius:24px;background:linear-gradient(180deg,rgba(5,21,31,.96),rgba(3,13,21,.97));box-shadow:0 18px 48px rgba(0,0,0,.35);max-height:min(72dvh,720px);overflow-y:auto!important;overscroll-behavior:contain!important;touch-action:pan-y!important;-webkit-overflow-scrolling:touch;scrollbar-gutter:stable}
+.country-growth-head{position:sticky;top:-18px;z-index:4;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin:-18px -18px 16px;padding:18px 18px 12px;background:linear-gradient(180deg,rgba(5,21,31,.995) 75%,rgba(5,21,31,.86))}.country-growth-head span{display:block;color:#9fdcff;font-size:.68rem;font-weight:900;letter-spacing:.18em}.country-growth-head strong{display:block;margin-top:5px;color:#f4f8fb;font-size:1.08rem}.country-growth-head button{flex:0 0 38px;width:38px!important;height:38px!important;min-width:38px!important;min-height:38px!important;padding:0!important;display:grid!important;place-items:center!important;aspect-ratio:1/1;border:1px solid rgba(156,211,238,.22);border-radius:50%!important;background:rgba(15,35,47,.84);color:#dff4ff;font-size:1.35rem;line-height:1}
+.country-growth-list{display:grid;gap:10px}.country-growth-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;padding:11px 12px;border:1px solid rgba(122,190,221,.16);border-radius:16px;background:rgba(10,30,42,.72)}.country-growth-rank{width:30px;height:30px;display:grid;place-items:center;border-radius:50%;background:rgba(115,193,229,.12);color:#bde9ff;font-size:.75rem;font-weight:900}.country-growth-copy{min-width:0}.country-growth-name{display:flex;align-items:center;gap:8px;color:#eef8fc;font-weight:850}.country-growth-bar{height:5px;margin-top:8px;border-radius:999px;background:rgba(98,154,180,.12);overflow:hidden}.country-growth-bar i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#78d5ff,#e7c45c)}.country-growth-value{text-align:right;color:#79e6a5;font-weight:900}.country-growth-value small{display:block;margin-top:3px;color:#8fa8b6;font-size:.62rem;font-weight:700}.country-growth-loading{color:#91a9b8}
+.country-weekly-gain{display:none}.world-country-button.is-selected .country-weekly-gain{display:block;grid-column:1/-1;margin-top:1px;font-size:.82rem;font-weight:900;text-align:center}.country-weekly-current{color:#65efa0!important}.country-weekly-compare{color:#65efa0!important}.country-weekly-compare.is-negative{color:#ff9f9f}.country-weekly-compare.is-flat{color:#a9c2cf}
+
+.analytics-v54-46-page .country-growth-panel,
+.analytics-v54-46-page .country-growth-panel *{touch-action:pan-y!important}
+.analytics-v54-46-page .analytics-swipe-viewport.is-growth-open,
+.analytics-v54-46-page .analytics-map-pane.is-growth-open{touch-action:pan-y!important;overscroll-behavior-y:contain!important}
+@media(max-width:430px){.country-growth-panel{max-height:calc(100dvh - 190px);padding:15px}.country-growth-head{top:-15px;margin:-15px -15px 14px;padding:15px 15px 10px}.country-growth-row{padding:10px 9px;gap:8px}.country-growth-value{font-size:.94rem}}
+
+</style>
+<link href="/assets/control-v54-67.css?v=54.67" rel="stylesheet"/><link href="/assets/control-v54-68.css?v=54.68" rel="stylesheet"/>
+<link href="/assets/control-v54-72.css?v=54.72" rel="stylesheet"/><link href="/assets/control-v54-73.css?v=54.73" rel="stylesheet"/><link href="/assets/control-v54-76.css?v=54.76" rel="stylesheet"/><link href="/assets/control-v54-77.css?v=54.77" rel="stylesheet"/><link href="/assets/control-v54-78.css?v=54.78" rel="stylesheet"/>
+<link href="/assets/control-v54-79.css?v=54.79" rel="stylesheet"/>
+<link href="/assets/control-v54-81-emergency.css?v=54.81" rel="stylesheet"/>
+<link href="/assets/control-v54-89.css?v=54.89" rel="stylesheet"/>
+<link href="/assets/control-v54-99b.css?v=54.99b" rel="stylesheet"/>
+
+<style id="andrik-analytics-polish-fix">
+/* v54.99c3 — centered auth strip, centered focus buttons, enhanced search chart */
+#analyticsAuthStrip.analytics-auth-inline,
+#youtubeAuthStrip.youtube-auth-inline{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+}
+#analyticsAuthStrip.analytics-auth-inline a,
+#youtubeAuthStrip.youtube-auth-inline a{
+  margin-left:auto;
+}
+#mapFocusActions.map-focus-actions{
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:center;
+  align-items:center;
+  gap:16px;
+  margin:12px auto 0;
+}
+#mapFocusActions.map-focus-actions .map-focus-action{
+  flex:0 1 320px;
+  justify-content:center;
+  text-align:center;
+}
+.search-console-day{cursor:pointer;transition:transform .22s ease,filter .22s ease,opacity .22s ease}
+.search-console-day i,.search-console-day b{transform-origin:bottom center;transition:height .35s ease,transform .22s ease,filter .22s ease,box-shadow .22s ease,opacity .22s ease}
+.search-console-day:hover,
+.search-console-day:focus-visible,
+.search-console-day.is-active{transform:translateY(-2px)}
+.search-console-day:hover i,.search-console-day:focus-visible i,.search-console-day.is-active i{
+  transform:scaleY(1.08);
+  filter:brightness(1.18) saturate(1.1);
+  box-shadow:0 0 18px rgba(122,218,255,.45);
+}
+.search-console-day:hover b,.search-console-day:focus-visible b,.search-console-day.is-active b{
+  transform:scaleY(1.08);
+  filter:brightness(1.16) saturate(1.08);
+  box-shadow:0 0 18px rgba(128,137,255,.4);
+  opacity:1;
+}
+.search-console-day:hover span,.search-console-day:focus-visible span,.search-console-day.is-active span{
+  color:#dfefff;
+}
+@media (orientation:landscape){
+  #analyticsAuthStrip.analytics-auth-inline,
+  #youtubeAuthStrip.youtube-auth-inline{
+    max-width:720px;
+    margin-left:auto;
+    margin-right:auto;
+    justify-content:center;
+  }
+  #analyticsAuthStrip.analytics-auth-inline a,
+  #youtubeAuthStrip.youtube-auth-inline a{
+    margin-left:0;
+  }
+  #analyticsAuthStrip.analytics-auth-inline strong,
+  #youtubeAuthStrip.youtube-auth-inline strong{
+    text-align:center;
+  }
+  #mapFocusActions.map-focus-actions{
+    max-width:760px;
+    margin-left:auto;
+    margin-right:auto;
+  }
+  #mapFocusActions.map-focus-actions .map-focus-action{
+    flex:0 1 280px;
+    min-height:110px;
+    padding:16px 18px;
+  }
+}
+</style>
+
+
+<style id="andrik-c4-analytics-layout-fix">
+/* v54.99c4 — centered authorization window and compact reversed focus actions */
+@media (orientation:landscape){
+  #analyticsAuthStrip.analytics-auth-inline{
+    width:min(720px,68vw)!important;
+    max-width:720px!important;
+    min-width:420px!important;
+    margin:16px auto 18px!important;
+    align-self:center!important;
+    justify-self:center!important;
+    display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    gap:18px!important;
+  }
+  #analyticsAuthStrip.analytics-auth-inline a{
+    margin-left:0!important;
+  }
+  #mapFocusActions.map-focus-actions{
+    width:min(720px,72vw)!important;
+    max-width:720px!important;
+    margin:12px auto 0!important;
+    display:grid!important;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:14px!important;
+    justify-content:center!important;
+  }
+  #mapFocusActions.map-focus-actions .map-focus-action{
+    width:100%!important;
+    min-width:0!important;
+    height:82px!important;
+    min-height:82px!important;
+    max-height:82px!important;
+    aspect-ratio:auto!important;
+    padding:10px 14px!important;
+    border-radius:20px!important;
+    display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    text-align:center!important;
+    font-size:clamp(.9rem,1.8vw,1.12rem)!important;
+    line-height:1.12!important;
+  }
+}
+@media (orientation:landscape) and (max-height:480px){
+  #mapFocusActions.map-focus-actions .map-focus-action{
+    height:70px!important;
+    min-height:70px!important;
+    max-height:70px!important;
+    font-size:.88rem!important;
+  }
+}
+</style>
+
+
+<style id="andrik-v54-99c6b-country-modal-fix">
+/* v54.99c6b — restore centered weekly-growth heading and lower close button. */
+body > #countryGrowthPanel.country-growth-panel:not([hidden]) .country-growth-head{
+  display:block!important;
+  position:sticky!important;
+  top:0!important;
+  text-align:center!important;
+  padding:18px 16px 15px!important;
+}
+body > #countryGrowthPanel.country-growth-panel:not([hidden]) .country-growth-head > div{
+  width:100%!important;
+  max-width:470px!important;
+  margin:0 auto!important;
+  text-align:center!important;
+}
+body > #countryGrowthPanel.country-growth-panel:not([hidden]) .country-growth-head span,
+body > #countryGrowthPanel.country-growth-panel:not([hidden]) .country-growth-head strong{
+  display:block!important;
+  width:100%!important;
+  margin-left:auto!important;
+  margin-right:auto!important;
+  text-align:center!important;
+}
+body > #countryGrowthPanel.country-growth-panel:not([hidden]) #countryGrowthClose{
+  position:fixed!important;
+  top:auto!important;
+  right:max(18px,calc((100vw - 620px)/2 + 18px))!important;
+  bottom:calc(96px + env(safe-area-inset-bottom))!important;
+  width:48px!important;
+  min-width:48px!important;
+  max-width:48px!important;
+  height:48px!important;
+  min-height:48px!important;
+  max-height:48px!important;
+  margin:0!important;
+  transform:none!important;
+  z-index:2147483500!important;
+  border-radius:50%!important;
+  box-shadow:0 14px 34px rgba(0,0,0,.62),0 0 18px rgba(117,211,248,.14)!important;
+}
+</style>
+
+<link href="/assets/control-map-total-v55-00e.css?v=55.00f" rel="stylesheet"/>
+<link href="/assets/control-landscape-map-v55-00f.css?v=55.00f" rel="stylesheet"/>
+<link href="/assets/control-portrait-map-v55-00g.css?v=55.00g" rel="stylesheet"/>
+<link href="/assets/control-v55-00k.css?v=55.00k" rel="stylesheet"/>
+<link href="/assets/map-monthly-v55-00-r38.css?v=55.00-r38" rel="stylesheet"/>
+<link href="/assets/control-v55-00-final-r1.css?v=55.00-final-r1" rel="stylesheet"/>
+<link href="/assets/control-v55-00-final-r2.css?v=55.00-final-r2" rel="stylesheet"/><link href="/assets/control-v55-00-final-r21.css?v=55.00-final-r21" rel="stylesheet"/><link href="/assets/control-v55-00-r3a-live-eye.css?v=55.00-r3a" rel="stylesheet"/>
+<link href="/assets/analytics-r3e-fixes.css?v=55.00-r3e" rel="stylesheet"/>
+
+<style id="andrik-r3i-portrait-geo-fix">
+@media screen and (orientation:portrait) and (max-width: 767px){
+  .analytics-v54-46-page .world-map-card>.map-landscape-title-row{
+    position:relative!important;
+    display:block!important;
+    width:100%!important;
+    min-height:136px!important;
+    padding:0 8px!important;
+    margin:0 0 8px!important;
+    overflow:visible!important;
+  }
+  .analytics-v54-46-page .world-map-total{
+    position:absolute!important;
+    top:0!important;
+    left:8px!important;
+    right:auto!important;
+    bottom:auto!important;
+    z-index:4!important;
+    min-width:100px!important;
+    max-width:112px!important;
+    min-height:38px!important;
+    padding:0 9px!important;
+    gap:5px!important;
+    margin:0!important;
+    transform:none!important;
+    white-space:nowrap!important;
+  }
+  .analytics-v54-46-page .world-map-total span{font-size:.5rem!important}
+  .analytics-v54-46-page .world-map-total strong{font-size:.86rem!important}
+
+  .analytics-v54-46-page .map-monthly-open{
+    position:absolute!important;
+    top:0!important;
+    right:8px!important;
+    left:auto!important;
+    bottom:auto!important;
+    z-index:4!important;
+    width:48px!important;
+    height:48px!important;
+    min-width:48px!important;
+    min-height:48px!important;
+    margin:0!important;
+    transform:none!important;
+  }
+
+  .analytics-v54-46-page .map-title-pyramid{
+    position:relative!important;
+    display:block!important;
+    width:100%!important;
+    min-width:0!important;
+    margin:0!important;
+    padding:56px 0 0!important;
+    text-align:center!important;
+    align-items:stretch!important;
+  }
+
+  .analytics-v54-46-page .map-title-pyramid>.eyeline{
+    position:absolute!important;
+    top:12px!important;
+    left:136px!important;
+    right:72px!important;
+    width:auto!important;
+    min-width:0!important;
+    max-width:none!important;
+    margin:0!important;
+    padding:0 4px!important;
+    transform:none!important;
+    display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    text-align:center!important;
+    font-size:.56rem!important;
+    line-height:1.1!important;
+    letter-spacing:.13em!important;
+    white-space:nowrap!important;
+    overflow:hidden!important;
+    text-overflow:clip!important;
+    z-index:3!important;
+  }
+
+  .analytics-v54-46-page .map-title-pyramid>h2,
+  .analytics-v54-46-page .map-title-pyramid>p{
+    width:100%!important;
+    max-width:none!important;
+    margin-left:auto!important;
+    margin-right:auto!important;
+    text-align:center!important;
+  }
+}
+
+@keyframes andrikMapDotPulseR3i{
+  0%,100%{transform:scale(.94);opacity:.88;box-shadow:0 0 0 4px rgba(115,219,255,.08),0 0 16px rgba(91,215,255,.72)}
+  50%{transform:scale(1.16);opacity:1;box-shadow:0 0 0 7px rgba(115,219,255,.03),0 0 24px rgba(91,215,255,.92)}
+}
+@keyframes andrikMapDotSelectedPulseR3i{
+  0%,100%{transform:scale(1.05);opacity:1;box-shadow:0 0 0 6px rgba(132,224,255,.15),0 0 20px rgba(123,231,255,.92)}
+  50%{transform:scale(1.28);opacity:1;box-shadow:0 0 0 10px rgba(132,224,255,.04),0 0 32px rgba(123,231,255,1)}
+}
+.analytics-v54-46-page .world-map-dot{
+  animation:none!important;
+  filter:none!important;
+  will-change:auto!important;
+}
+.analytics-v54-46-page .world-map-dot i{
+  animation:andrikMapDotPulseR3i 2.8s ease-in-out infinite!important;
+  transform-origin:center center!important;
+  will-change:transform,opacity,box-shadow!important;
+  filter:blur(.15px)!important;
+}
+.analytics-v54-46-page .world-map-dot:nth-of-type(2n) i{animation-delay:.55s!important}
+.analytics-v54-46-page .world-map-dot:nth-of-type(3n) i{animation-delay:1.1s!important}
+.analytics-v54-46-page .world-map-dot:nth-of-type(4n) i{animation-delay:1.65s!important}
+.analytics-v54-46-page .world-map-shell.is-map-interacting .world-map-dot i{
+  animation-play-state:paused!important;
+}
+.analytics-v54-46-page .world-map-shell.is-country-focused .world-map-dot:not(.is-selected) i{
+  animation-play-state:paused!important;
+  filter:none!important;
+}
+.analytics-v54-46-page .world-map-shell.is-country-focused .world-map-dot.is-selected i{
+  animation:andrikMapDotSelectedPulseR3i 1.65s ease-in-out infinite!important;
+  filter:none!important;
+}
+.analytics-v54-46-page .world-map-total,
+.analytics-v54-46-page .world-map-total *{
+  animation:none!important;
+}
+</style>
+
+<style id="andrik-r3m-map-pulse">
+.analytics-v54-46-page .world-map-stage .world-map-dot{animation:andrikMapPulseR3M 2.25s ease-in-out infinite;transform-origin:center center;will-change:transform,opacity,filter}
+.analytics-v54-46-page .world-map-stage .world-map-dot:nth-child(2n){animation-delay:.22s}
+.analytics-v54-46-page .world-map-stage .world-map-dot:nth-child(3n){animation-delay:.44s}
+.analytics-v54-46-page .world-map-stage .world-map-dot:nth-child(5n){animation-delay:.66s}
+@keyframes andrikMapPulseR3M{0%,100%{transform:scale(1);opacity:.84;filter:drop-shadow(0 0 6px rgba(167,226,255,.32))}50%{transform:scale(1.12);opacity:1;filter:drop-shadow(0 0 12px rgba(167,226,255,.65)) drop-shadow(0 0 22px rgba(110,202,255,.36))}}
+.analytics-v54-46-page .map-end-chevron.is-second{display:none!important}
+</style>
+
+<style id="andrik-analytics-r3o-compact">
+@media (orientation:portrait){
+  .analytics-v54-46-page .analytics-map-top .admin-card-title-row{margin-bottom:6px!important;row-gap:6px!important}
+  .analytics-v54-46-page .analytics-map-top .map-title-pyramid{padding-top:48px!important}
+  .analytics-v54-46-page .analytics-map-top .map-title-pyramid>h2{margin:2px auto 4px!important;line-height:.98!important}
+  .analytics-v54-46-page .analytics-map-top .map-title-pyramid>p{margin:4px auto 0!important;max-width:100%!important;font-size:.88rem!important;line-height:1.23!important}
+  .analytics-v54-46-page .analytics-map-pane .world-map-shell{margin-top:4px!important}
+  .analytics-v54-46-page .analytics-map-pane .world-country-list{margin-top:8px!important}
+  .analytics-v54-46-page .analytics-map-pane .country-growth-toggle{margin-top:6px!important}
+  #worldMapPeriod .period-nowrap{white-space:normal!important}
+}
+@media (max-width:390px){
+  .analytics-v54-46-page .analytics-map-top .map-title-pyramid>p{font-size:.82rem!important}
+  .analytics-v54-46-page .map-title-pyramid>.eyeline{left:118px!important;right:70px!important;font-size:.54rem!important}
+}
+</style>
+
+<style id="andrik-analytics-r3s-portrait-final">
+/* R3S — safe one-screen portrait composition. The map keeps a real fixed height, so rendering cannot disappear. */
+@media screen and (orientation:portrait) and (max-width:767px){
+  .analytics-v54-46-page .analytics-map-pane:not(.is-country-expanded):not(.is-growth-open){overflow-y:hidden!important;overscroll-behavior-y:none!important}
+  .analytics-v54-46-page .analytics-map-pane .analytics-map-pane-wrap{
+    padding-top:3px!important;padding-bottom:3px!important;gap:3px!important;
+  }
+  .analytics-v54-46-page .analytics-map-pane .analytics-compact-header{
+    margin:0 0 3px!important;padding:0!important;min-height:0!important;
+  }
+  .analytics-v54-46-page .analytics-map-pane .analytics-compact-header>.eyeline{
+    margin:0 0 1px!important;font-size:.59rem!important;line-height:1!important;
+  }
+  .analytics-v54-46-page .analytics-map-pane .analytics-compact-header>h1{
+    margin:0!important;font-size:2.22rem!important;line-height:.94!important;
+  }
+  .analytics-v54-46-page .analytics-map-pane .analytics-compact-header>p{
+    margin:4px 0 7px!important;font-size:.76rem!important;line-height:1.05!important;
+  }
+  .analytics-v54-46-page .analytics-map-pane #analyticsAuthStrip{
+    min-height:38px!important;height:38px!important;margin:0!important;padding:5px 8px!important;border-radius:18px!important;
+  }
+  .analytics-v54-46-page .analytics-map-pane #analyticsAuthStrip>a,
+  .analytics-v54-46-page .analytics-map-pane #analyticsAuthStrip strong{font-size:.68rem!important;line-height:1!important}
+  .analytics-v54-46-page .analytics-map-pane .analytics-map-top{
+    margin:3px 0 0!important;padding:10px 10px 8px!important;border-radius:22px!important;
+  }
+  .analytics-v54-46-page .world-map-card>.map-landscape-title-row{
+    min-height:104px!important;height:104px!important;margin:0!important;padding:0 5px!important;
+  }
+  .analytics-v54-46-page .map-title-pyramid{padding:43px 0 0!important}
+  .analytics-v54-46-page .map-title-pyramid>.eyeline{top:10px!important}
+  .analytics-v54-46-page .map-title-pyramid>h2{
+    margin:0 auto 3px!important;font-size:clamp(1.92rem,8.4vw,2.38rem)!important;line-height:.95!important;
+  }
+  .analytics-v54-46-page .map-title-pyramid>p,
+  .analytics-v54-46-page #worldMapPeriod{
+    margin:2px auto 0!important;padding:0 1px!important;max-width:100%!important;
+    overflow:visible!important;text-overflow:clip!important;white-space:nowrap!important;
+    font-size:clamp(.63rem,2.85vw,.77rem)!important;line-height:1.05!important;
+  }
+  .analytics-v54-46-page #worldMapPeriod .period-nowrap{white-space:nowrap!important}
+  .analytics-v54-46-page .world-map-total{
+    left:4px!important;min-width:101px!important;max-width:112px!important;min-height:36px!important;height:36px!important;padding:0 8px!important;
+  }
+  .analytics-v54-46-page .map-monthly-open{
+    right:3px!important;width:44px!important;height:44px!important;min-width:44px!important;min-height:44px!important;margin-right:0!important;
+  }
+  .analytics-v54-46-page .analytics-map-pane .world-map-shell{margin:0!important;min-height:0!important}
+  .analytics-v54-46-page .analytics-map-pane .world-map-canvas,
+  .analytics-v54-46-page .analytics-map-pane .world-map-stage{
+    box-sizing:border-box!important;height:clamp(180px,14.5dvh,204px)!important;min-height:clamp(180px,14.5dvh,204px)!important;max-height:204px!important;
+  }
+  .analytics-v54-46-page .analytics-map-pane .world-map-canvas{padding:3px!important;border-radius:17px!important}
+  .analytics-v54-46-page .analytics-map-pane .world-country-list{gap:5px!important;margin-top:6px!important}
+  .analytics-v54-46-page .analytics-map-pane .world-country-list .world-country-button{
+    min-height:39px!important;height:39px!important;padding:5px 8px!important;border-radius:14px!important;
+  }
+  .analytics-v54-46-page .analytics-map-pane .world-country-list .world-country-flag{font-size:1rem!important}
+  .analytics-v54-46-page .analytics-map-pane .world-country-list .world-country-marquee,
+  .analytics-v54-46-page .analytics-map-pane .world-country-list .world-country-button em{font-size:.70rem!important;line-height:1!important}
+  .analytics-v54-46-page .analytics-map-pane .world-country-toggle{
+    min-height:39px!important;height:39px!important;margin-top:2px!important;padding:5px 9px!important;border-radius:14px!important;font-size:.70rem!important;
+  }
+  .analytics-v54-46-page .analytics-map-pane .country-growth-toggle{
+    min-height:47px!important;height:47px!important;margin-top:6px!important;border-radius:18px!important;font-size:.84rem!important;
+  }
+  .analytics-v54-46-page .analytics-map-pane>.analytics-pane-wrap>.analytics-swipe-hint{display:none!important}
+  .analytics-v54-46-page .map-end-pull-zone{
+    position:absolute!important;left:50%!important;bottom:2px!important;z-index:60!important;
+    width:90px!important;min-height:21px!important;height:21px!important;margin:0!important;
+    transform:translateX(-50%)!important;overflow:visible!important;
+  }
+  .analytics-v54-46-page .map-end-pull-zone strong{display:none!important}
+  .analytics-v54-46-page .map-end-pull-spring{height:21px!important}
+  .analytics-v54-46-page .map-end-chevron{top:0!important;font-size:1.02rem!important}
+  .analytics-v54-46-page .analytics-swipe-dots{bottom:2px!important}
+}
+@media screen and (orientation:portrait) and (max-width:390px){
+  .analytics-v54-46-page .analytics-map-pane .analytics-compact-header>h1{font-size:2.05rem!important}
+  .analytics-v54-46-page .world-map-card>.map-landscape-title-row{min-height:100px!important;height:100px!important}
+  .analytics-v54-46-page .map-title-pyramid{padding-top:41px!important}
+  .analytics-v54-46-page .map-title-pyramid>h2{font-size:1.86rem!important}
+  .analytics-v54-46-page .map-title-pyramid>p,.analytics-v54-46-page #worldMapPeriod{font-size:.62rem!important}
+  .analytics-v54-46-page .analytics-map-pane .world-map-canvas,
+  .analytics-v54-46-page .analytics-map-pane .world-map-stage{height:180px!important;min-height:180px!important}
+  .analytics-v54-46-page .analytics-map-pane .world-country-list .world-country-button{height:37px!important;min-height:37px!important}
+  .analytics-v54-46-page .analytics-map-pane .world-country-toggle{height:37px!important;min-height:37px!important}
+  .analytics-v54-46-page .analytics-map-pane .country-growth-toggle{height:44px!important;min-height:44px!important}
+}
+</style>
+
+<style id="r31-map-max-width">
+/* R31 — maximum portrait width only. Existing map height is intentionally preserved. */
+@media screen and (orientation:portrait){
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-pane-wrap{
+    box-sizing:border-box!important;
+    width:100%!important;
+    max-width:none!important;
+    padding-left:0!important;
+    padding-right:0!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top{
+    position:relative!important;
+    left:50%!important;
+    box-sizing:border-box!important;
+    width:calc(100vw - 8px)!important;
+    max-width:none!important;
+    margin-left:0!important;
+    margin-right:0!important;
+    transform:translateX(-50%)!important;
+    padding-left:7px!important;
+    padding-right:7px!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .world-map-shell,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .world-map-canvas,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .world-map-stage{
+    box-sizing:border-box!important;
+    width:100%!important;
+    max-width:none!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .world-map-canvas{
+    padding-left:1px!important;
+    padding-right:1px!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .world-map-stage img{
+    left:0!important;
+    right:0!important;
+    width:100%!important;
+    object-fit:fill!important;
+  }
+}
+</style>
+
+<style id="andrik-r32-landscape-map-start">
+/* R32 — three precise changes only: hide growth close circle; balance two left header items; keep map ready on landscape turn. */
+#countryGrowthClose{display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important;}
+@media screen and (orientation:landscape){
+  .analytics-v54-46-page .world-map-card>.map-landscape-title-row{
+    --r32-map-head-shift:clamp(-52px,-3.7vw,-28px);
+    display:grid!important;
+    grid-template-columns:repeat(3,minmax(0,1fr))!important;
+    grid-template-rows:auto auto auto!important;
+    grid-template-areas:
+      "total geography calendar"
+      "title title title"
+      "period period period"!important;
+    align-items:center!important;
+    column-gap:0!important;
+    padding-left:8px!important;
+    padding-right:8px!important;
+  }
+  .analytics-v54-46-page .map-title-pyramid{display:contents!important;}
+  .analytics-v54-46-page .map-title-pyramid>.eyeline{
+    grid-area:geography!important;
+    justify-self:center!important;
+    transform:translateX(var(--r32-map-head-shift))!important;
+  }
+  .analytics-v54-46-page .world-map-total{
+    grid-area:total!important;
+    position:relative!important;
+    inset:auto!important;
+    justify-self:center!important;
+    transform:translateX(var(--r32-map-head-shift))!important;
+  }
+  .analytics-v54-46-page .map-monthly-open{
+    grid-area:calendar!important;
+    position:relative!important;
+    inset:auto!important;
+    justify-self:center!important;
+    transform:none!important;
+  }
+}
+</style>
+
+
+<style id="andrik-r33-landscape-max-width">
+/* R33 — landscape only: make the map frame nearly edge-to-edge without changing its height. */
+@media screen and (orientation:landscape){
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane > .analytics-map-pane-wrap{
+    box-sizing:border-box!important;
+    width:100%!important;
+    max-width:none!important;
+    margin-left:0!important;
+    margin-right:0!important;
+    padding-left:2px!important;
+    padding-right:2px!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top{
+    position:relative!important;
+    left:50%!important;
+    box-sizing:border-box!important;
+    width:calc(100% - 8px)!important;
+    max-width:none!important;
+    margin-left:0!important;
+    margin-right:0!important;
+    transform:translateX(-50%)!important;
+    padding-left:10px!important;
+    padding-right:10px!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .world-map-shell,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .world-map-canvas,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .world-map-stage{
+    box-sizing:border-box!important;
+    width:100%!important;
+    max-width:none!important;
+  }
+}
+</style>
+
+
+<style id="r34-map-zoom-out-smooth">
+/* R34 — faster, smoother return from country zoom; zoom-in timing stays unchanged. */
+.analytics-v54-46-page .world-map-shell:not(.is-country-focused) .world-map-stage{
+  transition:transform .28s cubic-bezier(.22,.72,.18,1),filter .20s ease-out!important;
+}
+</style>
+
+<style id="andrik-r36-landscape-growth-spacing-real-page">
+/* R36 — actual map page fix. In landscape, remove the flexible spacer and keep growth directly below the country list. */
+@media screen and (orientation:landscape){
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top:not(.has-country-focus){
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr)!important;
+    grid-template-rows:max-content max-content max-content max-content!important;
+    grid-auto-rows:max-content!important;
+    align-content:start!important;
+    justify-content:stretch!important;
+    row-gap:0!important;
+    column-gap:0!important;
+    flex:0 0 auto!important;
+    align-self:flex-start!important;
+    block-size:max-content!important;
+    height:max-content!important;
+    min-height:0!important;
+    max-height:none!important;
+    padding-bottom:9px!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top:not(.has-country-focus) > .map-landscape-title-row{
+    grid-row:1!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top:not(.has-country-focus) > #worldMap{
+    grid-row:2!important;
+    align-self:start!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top:not(.has-country-focus) > #worldCountries{
+    grid-row:3!important;
+    align-self:start!important;
+    flex:none!important;
+    min-height:0!important;
+    margin-bottom:0!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top:not(.has-country-focus) > #mapFocusActions,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top:not(.has-country-focus) > #countryGrowthPanel[hidden]{
+    display:none!important;
+    position:static!important;
+    width:0!important;
+    height:0!important;
+    min-width:0!important;
+    min-height:0!important;
+    margin:0!important;
+    padding:0!important;
+    overflow:hidden!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top:not(.has-country-focus) > #countryGrowthToggle{
+    grid-row:4!important;
+    position:static!important;
+    inset:auto!important;
+    align-self:start!important;
+    justify-self:stretch!important;
+    flex:none!important;
+    width:100%!important;
+    margin:8px 0 0!important;
+    transform:none!important;
+  }
+}
+</style>
+<link href="/assets/landscape-no-growth-v55-00-r37.css?v=55.00-r37" rel="stylesheet"/>
+<link href="/assets/landscape-map-fit-v55-00-r39.css?v=55.00-r39" rel="stylesheet"/>
+
+<link href="/assets/landscape-map-fit-v55-00-r41.css?v=55.00-r41" rel="stylesheet"/>
+<link href="/assets/landscape-map-menu-zone-v55-00-r43.css?v=55.00-r43" rel="stylesheet"/>
+<link href="/assets/landscape-map-live-glow-v55-00-r44.css?v=55.00-r44" rel="stylesheet"/>
+<link href="/assets/map-frame-static-performance-v55-00-r46.css?v=55.00-r46" rel="stylesheet"/>
+<link href="/assets/country-focus-card-v55-00-r47.css?v=55.00-r47" rel="stylesheet"/>
+<link href="/assets/country-focus-pull-zone-v55-00-r48.css?v=55.00-r48" rel="stylesheet"/>
+<link href="/assets/landscape-selected-card-v55-00-r49.css?v=55.00-r49" rel="stylesheet"/>
+<meta name="andrik-control-build" content="55.00-live-web-ai-final-r101-github">
+<meta name="andrik-r67-landscape" content="FINAL R67 LANDSCAPE SCROLL + COUNTRY CARD VERIFIED">
+<meta name="andrik-r68-map-fixes" content="FINAL R68 COMPACT TAIL + COMPLETE COUNTRY DATA + PORTRAIT ACTIONS">
+<meta name="andrik-r69-map-fixes" content="FINAL R71F PORTRAIT STATIC FINAL + R71D LANDSCAPE">
+
+<style id="live-web-ai-r96-portrait-critical">
+@media screen and (orientation:portrait){body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-compact-header{display:none!important}body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .r83-portrait-header-poster{position:sticky!important;top:0!important;z-index:40!important;flex:0 0 154px!important;display:grid!important;grid-template-rows:18px 52px 30px 44px!important;align-content:start!important;box-sizing:border-box!important;width:100%!important;height:154px!important;min-height:154px!important;max-height:154px!important;margin:0!important;padding:0 0 10px!important;background:linear-gradient(180deg,#000 0%,#000 82%,rgba(0,0,0,.985) 100%)!important;overflow:hidden!important}body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .r83-poster-eyeline{grid-row:1!important;align-self:end!important;height:18px!important;margin:0!important;padding:0!important;color:#dff7ff!important;font:800 11px/18px Arial,Helvetica,sans-serif!important;letter-spacing:3.2px!important;text-align:center!important;text-transform:uppercase!important;white-space:nowrap!important}body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .r83-poster-title{grid-row:2!important;align-self:center!important;height:52px!important;margin:0!important;padding:0!important;color:#fff!important;font:700 44px/52px Arial,Helvetica,sans-serif!important;letter-spacing:-1.25px!important;text-align:center!important;white-space:nowrap!important}body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .r83-poster-subtitle{grid-row:3!important;align-self:start!important;box-sizing:border-box!important;height:30px!important;margin:0!important;padding:0 6px!important;color:#f1f5f7!important;font:400 15px/24px Arial,Helvetica,sans-serif!important;text-align:center!important;white-space:nowrap!important;overflow:hidden!important}body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .r83-poster-auth{grid-row:4!important;align-self:end!important;display:grid!important;grid-template-columns:minmax(92px,.72fr) minmax(0,1.28fr)!important;align-items:center!important;box-sizing:border-box!important;width:100%!important;height:44px!important;min-height:44px!important;max-height:44px!important;margin:0!important;padding:5px 12px!important;border:1px solid rgba(146,166,181,.23)!important;border-radius:22px!important;background:rgba(18,22,28,.94)!important;overflow:hidden!important}body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .r83-poster-service{min-width:0!important;color:#e8eef2!important;font:700 14px/34px Arial,Helvetica,sans-serif!important;text-align:center!important;text-decoration:none!important;white-space:nowrap!important;overflow:hidden!important}body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .r83-poster-access{min-width:0!important;display:flex!important;align-items:center!important;justify-content:center!important;gap:7px!important;color:#dceae4!important;font:700 13px/34px Arial,Helvetica,sans-serif!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .r83-poster-dot{flex:0 0 14px!important;width:14px!important;height:14px!important;border-radius:50%!important;background:#78848c!important;box-shadow:0 0 0 5px rgba(120,132,140,.09)!important}body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .r83-poster-auth.is-ok .r83-poster-dot{background:#69dfa4!important;box-shadow:0 0 0 5px rgba(105,223,164,.10),0 0 10px rgba(105,223,164,.22)!important}body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap,body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top.has-country-focus #worldMap,body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top:not(.has-country-focus) #worldMap{position:relative!important;display:block!important;box-sizing:border-box!important;width:100%!important;max-width:100%!important;height:clamp(270px,22dvh,286px)!important;min-height:clamp(270px,22dvh,286px)!important;max-height:286px!important;margin:0 auto!important;padding:0!important;border:1.5px solid rgba(93,221,158,.90)!important;border-radius:22px!important;background:#03101b!important;overflow:hidden!important}body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap .world-map-canvas,body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap .world-map-stage{width:100%!important;height:100%!important;min-height:100%!important;max-height:100%!important;margin:0!important;padding:0!important;border:0!important;border-radius:20px!important;overflow:hidden!important}}
+
+</style>
+
+<style id="live-web-ai-final-r98-no-jump-css">
+html.live-web-ai-has-map-snapshot #worldMap .world-map-state{display:none!important}
+html.live-web-ai-resume-lock .analytics-swipe-track,
+html.live-web-ai-resume-lock #worldMap,
+html.live-web-ai-resume-lock #worldMap .world-map-canvas,
+html.live-web-ai-resume-lock #worldMap .world-map-stage,
+html.live-web-ai-resume-lock #worldMap .world-map-dot,
+html.live-web-ai-resume-lock .analytics-map-top,
+html.live-web-ai-resume-lock .r83-portrait-header-poster{
+  transition:none!important;animation:none!important;scroll-behavior:auto!important
+}
+html.live-web-ai-resume-lock .analytics-swipe-viewport{overflow:hidden!important}
+</style>
+<script id="live-web-ai-final-r98-resume-head">
+(function(){
+  var root=document.documentElement;
+  var timer=0;
+  function lock(){
+    clearTimeout(timer);
+    root.classList.add('live-web-ai-resume-lock');
+    timer=setTimeout(function(){
+      requestAnimationFrame(function(){requestAnimationFrame(function(){root.classList.remove('live-web-ai-resume-lock');});});
+    },720);
+  }
+  window.__liveWebAiResumeLock=lock;
+  lock();
+  window.addEventListener('pageshow',lock,{passive:true});
+  document.addEventListener('visibilitychange',function(){if(!document.hidden)lock();},{passive:true});
+})();
+</script>
+</head>
+<body class="trika-standalone-page comments-admin-page control-page analytics-admin-page analytics-swipe-page analytics-v54-33-page analytics-v54-46-page">
+<nav class="topbar control-topbar control-detail-topbar"><div class="wrap nav-shell analytics-topbar-minimal"><a class="control-center-logo" id="controlCenterLogo" href="https://andrikmetal.com/" aria-label="Открыть главный сайт ANDRIK"><img class="logo-ok" src="/assets/control-topbar-eye-triangle.jpg" alt=""/><img class="logo-error" src="/assets/andrik-control-red-triangle-192.png" alt=""/></a></div></nav>
+<main class="analytics-swipe-main" id="analyticsSwipeMain">
+  <div class="analytics-pull-indicator" id="analyticsDownIndicator" aria-hidden="true"><i></i><span>Свайп сверху вниз делает обновление</span></div>
+  <div class="analytics-swipe-viewport" id="analyticsSwipeViewport">
+    <div class="analytics-swipe-track" id="analyticsSwipeTrack">
+
+      <!-- Слева от карты: Google Analytics -->
+<!-- После YouTube: аудитория сайта -->
+      <section class="analytics-swipe-pane analytics-site-pane is-scrollable" data-analytics-page="site" aria-label="Аудитория сайта">
+        <div class="wrap analytics-pane-wrap">
+          <section class="admin-control-card analytics-hero-card analytics-site-hero">
+            <div class="admin-card-title-row analytics-heading"><div><span class="eyeline">Сайт прямо сейчас</span><h2 class="analytics-site-title-inline">Google Analytics 4</h2><p id="analyticsPropertyLabel">Подключаем Google Analytics Data API…</p></div></div>
+            <div class="analytics-kpi-grid" id="analyticsKpis"><div class="admin-empty">Загружаем показатели…</div></div>
+            <div class="control-analytics-status" id="analyticsMessage">Проверяем соединение…</div>
+          </section>
+          <section class="analytics-main-chart search-console-section">
+  <article class="admin-control-card search-console-dynamics-card">
+    <div class="admin-card-title-row analytics-inline-actions">
+      <div><span class="eyeline">Google · последние 30 дней</span><h2>Google Search Console</h2><p>Клики, показы, CTR и средняя позиция сайта в поиске.</p></div>
+      <a class="search-console-open" id="searchConsoleOpen" href="https://search.google.com/search-console?resource_id=sc-domain%3Aandrikmetal.com&amp;authuser=andrikmetal%40gmail.com" target="_blank" rel="noopener">Открыть ↗</a>
+    </div>
+    <div id="searchConsoleHub"><div class="admin-empty">Загружаем Search Console…</div></div>
+    <div id="searchConsoleTrend"><div class="admin-empty">Получаем динамику поиска…</div></div>
+  </article>
+</section>
+<section class="analytics-main-chart"><article class="admin-control-card analytics-chart-card"><div class="admin-card-title-row analytics-inline-actions"><div><span class="eyeline">Последние 30 дней</span><h2>Динамика посещений</h2></div><div class="analytics-title-actions"><span class="analytics-legend">Пользователи / просмотры</span></div></div><div class="analytics-chart" id="analyticsTrend"><div class="admin-empty">Загружаем график…</div></div></article></section>
+          <section class="analytics-site-geography"><article class="admin-control-card analytics-list-card analytics-site-country-card"><div class="admin-card-title-row"><div><span class="eyeline">Google Analytics · за 30 дней</span><h2>География сайта</h2><p>Страны, из которых заходили посетители сайта.</p></div></div><div id="analyticsCountries"><div class="admin-empty">Загружаем географию сайта…</div></div></article></section>
+          <section class="analytics-columns"><article class="admin-control-card analytics-list-card"><div class="admin-card-title-row"><div><span class="eyeline">За 30 дней</span><h2>Популярные страницы</h2></div></div><div class="analytics-list" id="analyticsPages"><div class="admin-empty">Загружаем страницы…</div></div></article><article class="admin-control-card analytics-list-card"><div class="admin-card-title-row"><div><span class="eyeline">За 30 дней</span><h2>Устройства</h2></div></div><div class="analytics-list" id="analyticsDevices"><div class="admin-empty">Загружаем устройства…</div></div></article></section>
+          <footer class="control-version-footer"><strong>Live Web AI · профиль ANDRIK · v55.00 LIVE WEB AI FINAL R101</strong><span>магнитная рамка зафиксирована во всех трёх разделах · горизонтальная навигация · GitHub в Служебном · 01.08.2026</span></footer>
+          <div class="analytics-swipe-hint analytics-site-hint"><button type="button" data-swipe-go="2">← YouTube</button><button type="button" data-swipe-go="1">Карта слушателей →</button></div>
+        </div>
+      </section>
+
+      <!-- Центр: карта -->
+<!-- Центр: карта -->
+      <section class="analytics-swipe-pane analytics-map-pane" data-analytics-page="map" aria-label="Карта слушателей">
+        <div class="wrap analytics-pane-wrap analytics-map-pane-wrap">
+          <section class="r83-portrait-header-poster" aria-label="Данные проекта. Статистика"><span class="r83-poster-eyeline">ДАННЫЕ ПРОЕКТА</span><h1 class="r83-poster-title">Статистика</h1><p class="r83-poster-subtitle">Google Analytics · карта аудитории · YouTube</p><div class="r83-poster-auth"><a class="r83-poster-service" href="/service-admin.html">Служебное</a><span class="r83-poster-access"><i class="r83-poster-dot" aria-hidden="true"></i><strong class="r83-poster-auth-text">Проверяем доступ…</strong></span></div></section>
+          <header class="analytics-compact-header">
+            <span class="eyeline">Данные проекта</span>
+            <h1>Статистика</h1>
+            <p>Google Analytics · карта аудитории · YouTube</p>
+            <section class="admin-auth-strip analytics-auth-inline" id="analyticsAuthStrip"><span class="analytics-auth-access"><span class="admin-auth-dot"></span><strong id="analyticsAuthText">Проверяем доступ…</strong></span><a href="/service-admin.html">Служебное</a></section>
+          </header>
+          
+          <article class="admin-control-card world-map-card analytics-map-top">
+            <div class="admin-card-title-row map-landscape-title-row">
+              <div class="map-title-pyramid">
+                <span class="eyeline">🌍 География</span>
+                <h2>Карта слушателей</h2>
+                <p id="worldMapPeriod">Просмотры YouTube по странам за последние <span class="period-nowrap">28&nbsp;дней.</span></p>
+              </div>
+              <div class="world-map-total" id="worldMapTotal" role="status" aria-live="polite" title="Сумма просмотров по всем странам"><span>Всего:</span><strong id="worldMapTotalValue">—</strong></div>
+              <button class="map-monthly-open" id="mapMonthlyOpen" type="button" aria-haspopup="dialog" aria-controls="mapMonthlyModal" aria-label="Открыть статистику по месяцам" title="Статистика по месяцам">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 2v3M17 2v3M3.5 9h17M5.5 4h13a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z"/><path d="M8 13h2M14 13h2M8 17h2M14 17h2"/></svg>
+              </button>
+            </div>
+            <div id="worldMap" class="world-map-shell"><div class="world-map-canvas" role="img" aria-label="Карта мира"><img src="/assets/world-map-control-v52.webp?v=52.14" alt="Карта мира"/><span class="world-map-state">Обновляем данные…</span></div></div>
+            <div id="worldCountries" class="world-country-list"></div>
+<script id="live-web-ai-final-r98-map-hydrate">
+(function(){
+  try{
+    if(!window.matchMedia||!window.matchMedia('(orientation:portrait)').matches)return;
+    var snap=window.__liveWebAiStartupMapSnapshot;
+    if(!snap)return;
+    var map=document.getElementById('worldMap');
+    var list=document.getElementById('worldCountries');
+    if(!map||!list)return;
+    map.innerHTML=snap.mapHtml;
+    list.innerHTML=snap.listHtml;
+    if(snap.mapClass)map.className=snap.mapClass;
+    if(snap.listClass)list.className=snap.listClass;
+    if(snap.mapSource)map.dataset.mapSource=snap.mapSource;
+    var total=document.getElementById('worldMapTotalValue');
+    if(total&&snap.total)total.textContent=snap.total;
+    var period=document.getElementById('worldMapPeriod');
+    if(period&&snap.periodHtml)period.innerHTML=snap.periodHtml;
+    document.documentElement.classList.add('live-web-ai-map-hydrated');
+  }catch(_){ }
+})();
+</script>
+
+            <nav class="map-focus-actions" id="mapFocusActions" hidden aria-hidden="true" aria-label="Быстрые действия выбранной страны"><a class="map-focus-action is-activity" href="/control-home.html?page=activity&amp;v=54.85">⚡ Последняя активность</a><a class="map-focus-action is-daily" href="/control-home.html?page=summary&amp;v=54.85">📊 Аналитика за день</a></nav>
+            <button class="country-growth-toggle" id="countryGrowthToggle" type="button" aria-expanded="false" onclick="return window.__andrikToggleCountryGrowth ? window.__andrikToggleCountryGrowth(event) : false">📈 Рост стран за 7 дней</button>
+            <section class="country-growth-panel" id="countryGrowthPanel" hidden><div class="country-growth-head"><div><span>ПОСЛЕДНИЕ 7 ДНЕЙ</span><strong>Какие страны растут быстрее</strong></div><button type="button" id="countryGrowthClose" aria-label="Закрыть">×</button></div><div class="country-growth-list" id="countryGrowthList"><span class="country-growth-loading">Получаем недельную динамику…</span></div></section>
+          </article>
+          <div class="analytics-swipe-hint"><button type="button" data-swipe-go="0">← Google Analytics</button><button type="button" data-swipe-go="2">YouTube →</button></div>
+          <div class="map-end-pull-zone" id="mapEndPullZone" aria-hidden="false">
+            <div class="map-end-pull-spring"><span class="map-end-chevron">⌃</span></div>
+            <strong id="mapEndPullText">Потяните вверх — открыть админ-панель</strong>
+          </div>
+        </div>
+      </section>
+
+      
+      <!-- Справа от карты: полный YouTube -->
+<!-- Справа от карты: полный YouTube -->
+      <section class="analytics-swipe-pane analytics-youtube-pane is-scrollable" data-analytics-page="youtube" aria-label="YouTube">
+        <div class="wrap analytics-pane-wrap analytics-youtube-pane-wrap">
+          <header class="youtube-compact-header analytics-youtube-header">
+            <span class="eyeline">Официальный канал ANDRIK</span>
+            <div class="youtube-title-status-row"><h1>YouTube</h1><div class="youtube-studio-gate youtube-studio-gate-inline" id="youtubeStudioGate"><div class="admin-empty">Проверяем данные Worker…</div></div></div>
+            <p>Канал · Studio · реакции · аудитория · альбомы</p>
+            <section class="admin-auth-strip youtube-auth-inline" id="youtubeAuthStrip"><span class="admin-auth-dot"></span><strong id="youtubeAuthText">Проверяем доступ…</strong><a href="/service-admin.html">Служебное</a></section>
+          </header>
+          <section class="admin-control-card analytics-chart-card analytics-youtube-trend-card" id="youtubeStudioTrendCard" hidden>
+            <div class="admin-card-title-row"><div><span class="eyeline">📈 Динамика канала</span><h2>График YouTube</h2><p>Просмотры и реакции по дням.</p></div></div>
+            <div class="analytics-chart youtube-integrated-trend" id="youtubeStudioTrend"></div>
+          </section>
+          <section class="admin-control-card analytics-youtube-card youtube-channel-card youtube-unified-card analytics-youtube-unified">
+            <div class="analytics-youtube-grid" id="analyticsYoutube"><div class="admin-empty">Загружаем канал…</div></div>
+            <div class="youtube-studio-section youtube-studio-integrated" id="youtubeStudioSection" hidden>
+              <div class="analytics-youtube-studio-kpis" id="youtubeStudioKpis"></div>
+            </div>
+          </section>
+          <section class="analytics-columns youtube-studio-columns youtube-audience-grid analytics-youtube-audience" id="youtubeAudienceSection" hidden>
+            <article class="admin-control-card analytics-list-card"><div class="admin-card-title-row"><div><span class="eyeline">👥 Аудитория</span><h2>Возраст</h2></div></div><div class="analytics-list" id="youtubeStudioAge"></div></article>
+            <article class="admin-control-card analytics-list-card"><div class="admin-card-title-row"><div><span class="eyeline">⚥ Аудитория</span><h2>Пол</h2></div></div><div class="analytics-list" id="youtubeStudioGender"></div></article>
+            <article class="admin-control-card analytics-list-card analytics-sharing-card"><div class="admin-card-title-row"><div><span class="eyeline">↗️ Поделились</span><h2>Площадки</h2></div></div><div class="analytics-list" id="youtubeStudioSharing"></div></article>
+          </section>
+          <section class="admin-control-card album-control-card youtube-album-catalog analytics-youtube-albums">
+            <div class="admin-card-title-row"><div><span class="eyeline">Каталог</span><h2>Альбомы</h2><p>Релизы ANDRIK на YouTube.</p></div></div>
+            <div class="control-album-grid" id="albumStats"><div class="admin-empty">Загружаем альбомы…</div></div>
+          </section>
+          <section class="analytics-layout youtube-control-layout youtube-control-layout-page youtube-monitor-only-layout youtube-monitor-bottom analytics-youtube-monitor">
+            <article class="admin-control-card youtube-monitor-card"><div class="admin-card-title-row analytics-inline-actions"><div><span class="eyeline">🔔 Реакции канала</span><h2>Уведомления YouTube</h2><p>Комментарии, подписчики и лайки.</p></div><button class="btn btn-primary analytics-mini-btn" id="youtubeEventsRun" type="button">Проверить сейчас</button></div><div id="youtubeMonitor" class="youtube-monitor-status"><div class="admin-empty">Загружаем сохранённый статус…</div></div></article>
+          </section>
+          <footer class="control-version-footer"><strong>Live Web AI · профиль ANDRIK · v55.00 LIVE WEB AI FINAL R101</strong><span>магнитная рамка зафиксирована во всех трёх разделах · горизонтальная навигация · GitHub в Служебном · 01.08.2026</span></footer>
+          <div class="analytics-swipe-hint analytics-youtube-hint"><button type="button" data-swipe-go="1">← Карта слушателей</button><button type="button" data-swipe-go="0">Google Analytics →</button></div>
+        </div>
+      </section>
+
+          </div>
+  </div>
+  <div class="analytics-swipe-dots" id="analyticsSwipeDots" aria-label="Страницы статистики">
+    <button type="button" data-page="0" aria-label="Google Analytics"></button>
+    <button type="button" data-page="1" aria-label="Карта слушателей" class="is-active"></button>
+    <button type="button" data-page="2" aria-label="YouTube"></button>
+  </div>
+</main>
+<div class="map-monthly-modal" id="mapMonthlyModal" hidden aria-hidden="true">
+  <button class="map-monthly-backdrop" id="mapMonthlyBackdrop" type="button" aria-label="Закрыть статистику по месяцам"></button>
+  <section class="map-monthly-panel" role="dialog" aria-modal="true" aria-labelledby="mapMonthlyTitle">
+    <header class="map-monthly-header">
+      <div class="map-monthly-heading-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M7 2v3M17 2v3M3.5 9h17M5.5 4h13a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z"/></svg>
+      </div>
+      <div><span>АРХИВ КАРТЫ</span><h2 id="mapMonthlyTitle">Статистика по месяцам</h2><p>Сохраняется максимальное значение, достигнутое в каждом месяце.</p></div>
+      <button class="map-monthly-close" id="mapMonthlyClose" type="button" aria-label="Закрыть">×</button>
+    </header>
+    <div class="map-monthly-content">
+      <div class="map-monthly-list" id="mapMonthlyList"></div>
+      <div class="map-monthly-chart-card">
+        <div class="map-monthly-chart-head"><span>ДИНАМИКА</span><strong id="mapMonthlyChartCaption">По месяцам</strong></div>
+        <div class="map-monthly-chart" id="mapMonthlyChart" role="img" aria-label="График статистики по месяцам"></div>
+      </div>
+    </div>
+  </section>
+</div>
+<script id="andrik-r64-atomic-main">
+/* FINAL R64 ATOMIC SINGLE FILE — MAIN RUNTIME */
+/* FINAL R63 SELF-CONTAINED VERIFIED MAP */
+/* Control ANDRIK v55.00 FINAL R62 — main analytics runtime. */
+(() => {
+  const KEY_SESSION='andrik-comments-admin-key';
+  const KEY_LOCAL='andrik-comments-admin-key-persistent';
+  const $=id=>document.getElementById(id);
+  const escapeHtml=value=>String(value??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  const getKey=()=>{try{return localStorage.getItem(KEY_LOCAL)||sessionStorage.getItem(KEY_SESSION)||''}catch(_){return''}};
+  const number=value=>new Intl.NumberFormat('ru-RU').format(Number(value||0));
+  const dateTime=value=>{try{return new Intl.DateTimeFormat('ru-RU',{dateStyle:'medium',timeStyle:'short'}).format(new Date(value))}catch(_){return value||'—'}};
+  const shortDate=value=>{const s=String(value||'');return /^\d{8}$/.test(s)?`${s.slice(6,8)}.${s.slice(4,6)}`:s};
+  const compactAxisDate=value=>{const s=String(value||'');const m=s.match(/^(?:\d{2})?(\d{2})[-.]?(\d{2})[-.]?(\d{2})$/);if(m)return`${m[2]}/${m[3]}`;const iso=s.match(/^\d{4}-(\d{2})-(\d{2})$/);return iso?`${iso[1]}/${iso[2]}`:shortDate(s).replace('.', '/');};
+  const shiftAxisDate=(value,days)=>{const s=String(value||'');const iso=s.match(/^(\d{4})-(\d{2})-(\d{2})$/);const compact=s.match(/^(\d{4})(\d{2})(\d{2})$/);const parts=iso||compact;if(!parts)return s;const date=new Date(Date.UTC(Number(parts[1]),Number(parts[2])-1,Number(parts[3])+Number(days||0)));return date.toISOString().slice(0,10);};
+  try{
+    const prefetch=document.createElement('link');
+    prefetch.rel='prefetch';
+    prefetch.href='/control-home.html?page=menu&v=55.00-r54';
+    document.head.appendChild(prefetch);
+  }catch(_){}
+  const COUNTRY_MAP={
+    US:'США','UNITED STATES':'США','UNITED STATES OF AMERICA':'США',
+    SK:'Словакия',SLOVAKIA:'Словакия',
+    CN:'Китай',CHINA:'Китай',
+    CA:'Канада',CANADA:'Канада',
+    FR:'Франция',FRANCE:'Франция',
+    NL:'Нидерланды',NETHERLANDS:'Нидерланды',
+    GB:'Великобритания',UK:'Великобритания','UNITED KINGDOM':'Великобритания',
+    DE:'Германия',GERMANY:'Германия',
+    UA:'Украина',UKRAINE:'Украина',
+    RU:'Россия',RUSSIA:'Россия','RUSSIAN FEDERATION':'Россия',
+    CZ:'Чехия',CZECHIA:'Чехия','CZECH REPUBLIC':'Чехия',
+    PL:'Польша',POLAND:'Польша',
+    AT:'Австрия',AUSTRIA:'Австрия',
+    ES:'Испания',SPAIN:'Испания',
+    IT:'Италия',ITALY:'Италия',
+    BR:'Бразилия',BRAZIL:'Бразилия',
+    AU:'Австралия',AUSTRALIA:'Австралия',
+    JP:'Япония',JAPAN:'Япония',
+    IN:'Индия',INDIA:'Индия',
+    SE:'Швеция',SWEDEN:'Швеция',
+    NO:'Норвегия',NORWAY:'Норвегия',
+    FI:'Финляндия',FINLAND:'Финляндия',
+    RO:'Румыния',ROMANIA:'Румыния',
+    HU:'Венгрия',HUNGARY:'Венгрия',
+    BY:'Беларусь',BELARUS:'Беларусь',
+    KR:'Южная Корея','SOUTH KOREA':'Южная Корея','REPUBLIC OF KOREA':'Южная Корея',KOREA:'Южная Корея',
+    TW:'Тайвань',TAIWAN:'Тайвань',
+    BG:'Болгария',BULGARIA:'Болгария',
+    IE:'Ирландия',IRELAND:'Ирландия',
+    CH:'Швейцария',SWITZERLAND:'Швейцария',
+    BE:'Бельгия',BELGIUM:'Бельгия',
+    DK:'Дания',DENMARK:'Дания',
+    PT:'Португалия',PORTUGAL:'Португалия',
+    GR:'Греция',GREECE:'Греция',
+    HR:'Хорватия',CROATIA:'Хорватия',
+    SI:'Словения',SLOVENIA:'Словения',
+    RS:'Сербия',SERBIA:'Сербия',
+    LT:'Литва',LITHUANIA:'Литва',
+    LV:'Латвия',LATVIA:'Латвия',
+    EE:'Эстония',ESTONIA:'Эстония',
+    MD:'Молдова',MOLDOVA:'Молдова',
+    TR:'Турция',TURKEY:'Турция',TÜRKIYE:'Турция',
+    IL:'Израиль',ISRAEL:'Израиль',
+    AE:'ОАЭ','UNITED ARAB EMIRATES':'ОАЭ',
+    KZ:'Казахстан',KAZAKHSTAN:'Казахстан',
+    GE:'Грузия',GEORGIA:'Грузия',
+    AM:'Армения',ARMENIA:'Армения',
+    AZ:'Азербайджан',AZERBAIJAN:'Азербайджан',
+    MX:'Мексика',MEXICO:'Мексика',
+    AR:'Аргентина',ARGENTINA:'Аргентина',
+    CL:'Чили',CHILE:'Чили',
+    CO:'Колумбия',COLOMBIA:'Колумбия',
+    PE:'Перу',PERU:'Перу',
+    ZA:'ЮАР','SOUTH AFRICA':'ЮАР',
+    NZ:'Новая Зеландия','NEW ZEALAND':'Новая Зеландия',
+    ID:'Индонезия',INDONESIA:'Индонезия',
+    TH:'Таиланд',THAILAND:'Таиланд',
+    VN:'Вьетнам',VIETNAM:'Вьетнам',
+    PH:'Филиппины',PHILIPPINES:'Филиппины',
+    MY:'Малайзия',MALAYSIA:'Малайзия',
+    SG:'Сингапур',SINGAPORE:'Сингапур',
+    HK:'Гонконг','HONG KONG':'Гонконг',
+    UZ:'Узбекистан',UZBEKISTAN:'Узбекистан',
+    ZZ:'(не задано)','(NOT SET)':'(не задано)','NOT SET':'(не задано)','(НЕ ЗАДАНО)':'(не задано)'
+  };
+  const SEARCH_CONSOLE_URL='https://search.google.com/search-console?resource_id=sc-domain%3Aandrikmetal.com&authuser=andrikmetal%40gmail.com';
+  const AUDIENCE_CACHE_KEY='andrik-control-audience-v54-39';
+  let audienceRequest=null;
+  const COUNTRY_FLAGS={
+    'США':'🇺🇸','Словакия':'🇸🇰','Китай':'🇨🇳','Канада':'🇨🇦','Франция':'🇫🇷','Нидерланды':'🇳🇱','Великобритания':'🇬🇧',
+    'Германия':'🇩🇪','Украина':'🇺🇦','Россия':'🇷🇺','Чехия':'🇨🇿','Польша':'🇵🇱','Австрия':'🇦🇹','Испания':'🇪🇸','Италия':'🇮🇹',
+    'Бразилия':'🇧🇷','Австралия':'🇦🇺','Япония':'🇯🇵','Индия':'🇮🇳','Швеция':'🇸🇪','Норвегия':'🇳🇴','Финляндия':'🇫🇮',
+    'Румыния':'🇷🇴','Венгрия':'🇭🇺','Беларусь':'🇧🇾','Южная Корея':'🇰🇷','Тайвань':'🇹🇼','Болгария':'🇧🇬','Ирландия':'🇮🇪',
+    'Швейцария':'🇨🇭','Бельгия':'🇧🇪','Дания':'🇩🇰','Португалия':'🇵🇹','Греция':'🇬🇷','Хорватия':'🇭🇷','Словения':'🇸🇮',
+    'Сербия':'🇷🇸','Литва':'🇱🇹','Латвия':'🇱🇻','Эстония':'🇪🇪','Молдова':'🇲🇩','Турция':'🇹🇷','Израиль':'🇮🇱','ОАЭ':'🇦🇪',
+    'Казахстан':'🇰🇿','Грузия':'🇬🇪','Армения':'🇦🇲','Азербайджан':'🇦🇿','Мексика':'🇲🇽','Аргентина':'🇦🇷','Чили':'🇨🇱',
+    'Колумбия':'🇨🇴','Перу':'🇵🇪','ЮАР':'🇿🇦','Новая Зеландия':'🇳🇿','Индонезия':'🇮🇩','Таиланд':'🇹🇭','Вьетнам':'🇻🇳',
+    'Филиппины':'🇵🇭','Малайзия':'🇲🇾','Сингапур':'🇸🇬','Гонконг':'🇭🇰','Узбекистан':'🇺🇿'
+  };
+  const DEVICE_MAP={desktop:'компьютер',mobile:'мобильный',tablet:'планшет',smarttv:'смарт-ТВ',tv:'ТВ',console:'консоль',wearable:'носимое устройство',unknown:'неизвестно','(not set)':'(не задано)'};
+  const GEO={
+    'США':[-98,39],'Канада':[-106,57],'Великобритания':[-3,55],'Франция':[2,46],'Германия':[10,51],'Нидерланды':[5.3,52.1],
+    'Словакия':[19.5,48.7],'Украина':[31,49],'Россия':[90,61],'Китай':[104,35],'Чехия':[15.5,49.8],'Польша':[19,52],
+    'Австрия':[14.5,47.5],'Испания':[-4,40],'Италия':[12.5,42.8],'Бразилия':[-51,-10],'Австралия':[134,-25],'Япония':[138,37],
+    'Индия':[79,22],'Швеция':[16,62],'Норвегия':[9,62],'Финляндия':[26,64],'Румыния':[25,46],'Венгрия':[19,47],
+    'Беларусь':[28,53],'Южная Корея':[127.8,36.4],'Тайвань':[121,23.7],'Болгария':[25.5,42.7],'Ирландия':[-8,53.2],
+    'Швейцария':[8.2,46.8],'Бельгия':[4.7,50.7],'Дания':[10,56],'Португалия':[-8,39.5],'Греция':[22,39],
+    'Хорватия':[16.4,45.1],'Словения':[14.8,46.1],'Сербия':[20.8,44],'Литва':[24,55.2],'Латвия':[24.6,57],
+    'Эстония':[25.5,58.6],'Молдова':[28.5,47.2],'Турция':[35,39],'Израиль':[35,31.5],'ОАЭ':[54.3,24.4],
+    'Казахстан':[68,48],'Грузия':[43.5,42],'Армения':[45,40.1],'Азербайджан':[47.5,40.4],'Мексика':[-102,23],
+    'Аргентина':[-64,-34],'Чили':[-71,-33],'Колумбия':[-74,4],'Перу':[-76,-10],'ЮАР':[24,-29],
+    'Новая Зеландия':[172,-41],'Индонезия':[118,-2],'Таиланд':[101,15],'Вьетнам':[108,16],'Филиппины':[122,13],
+    'Малайзия':[102,4],'Сингапур':[103.8,1.35],'Гонконг':[114.2,22.3],'Узбекистан':[64.6,41.4]
+  };
+  const regionNames=(()=>{try{return new Intl.DisplayNames(['ru'],{type:'region'})}catch(_){return null}})();
+  const translateCountry=value=>{const raw=String(value||'').trim();if(!raw)return'—';const upper=raw.toUpperCase();if(COUNTRY_MAP[upper]||COUNTRY_MAP[raw])return COUNTRY_MAP[upper]||COUNTRY_MAP[raw];if(/^[A-Z]{2}$/.test(upper)&&regionNames){try{return regionNames.of(upper)||raw}catch(_){}}return raw};
+  const isoFlag=code=>{const upper=String(code||'').trim().toUpperCase();return /^[A-Z]{2}$/.test(upper)?String.fromCodePoint(...[...upper].map(char=>127397+char.charCodeAt(0))):''};
+  const countryFlag=(name,code='')=>COUNTRY_FLAGS[String(name||'').trim()]||isoFlag(code)||'🏳️';
+  const translateDevice=value=>{const raw=String(value||'').trim();return DEVICE_MAP[raw.toLowerCase()]||raw||'—'};
+  const normalizePath=value=>{
+    const raw=String(value||'').trim()||'/';
+    if(raw==='/'||raw==='')return '/';
+    return raw.replace(/\/+$/,'')||'/';
+  };
+  const pageSectionLabel=(path,title)=>{
+    const clean=normalizePath(path);
+    const map={
+      '/':'Главная',
+      '/en':'Главная',
+      '/sk':'Главная',
+      '/uk':'Главная',
+      '/player.html':'Плеер',
+      '/comments.html':'Сообщество',
+      '/trika.html':'Трика',
+      '/en/comments.html':'Сообщество',
+      '/sk/comments.html':'Сообщество',
+      '/uk/comments.html':'Сообщество',
+      '/en/trika.html':'Трика',
+      '/sk/trika.html':'Трика',
+      '/uk/trika.html':'Трика',
+      '/offline.html':'Офлайн-страница',
+      '/cmd_sco':'Страница Search Console'
+    };
+    if(map[clean])return map[clean];
+    const originalTitle=String(title||'').trim();
+    const simplified=originalTitle.replace(/\s*[|｜].*$/,'').trim();
+    const t=simplified.toLowerCase();
+    if(t.includes('comment')||t.includes('community'))return'Сообщество';
+    if(t.includes('player')||t.includes('плеер'))return'Плеер';
+    if(t.includes('trika')||t.includes('трика'))return'Трика';
+    return simplified||clean||'Страница';
+  };
+  const pageVersionLabel=path=>{
+    const clean=normalizePath(path);
+    const map={
+      '/':'Русская версия · /',
+      '/en':'Английская версия · /en/',
+      '/sk':'Словацкая версия · /sk/',
+      '/uk':'Украинская версия · /uk/',
+      '/comments.html':'Сообщество · /comments.html',
+      '/player.html':'Плеер · /player.html',
+      '/trika.html':'Раздел Трика · /trika.html',
+      '/cmd_sco':'Служебный маршрут · /cmd_sco'
+    };
+    return map[clean]||clean;
+  };
+  async function api(path,timeoutMs=9500){
+    const controller=new AbortController();
+    let timer=0;
+    const network=fetch(path,{headers:{accept:'application/json',authorization:`Bearer ${getKey()}`},cache:'no-store',signal:controller.signal})
+      .then(async response=>{
+        const data=await response.json().catch(()=>({}));
+        if(!response.ok)throw new Error(data.details||data.error||`HTTP ${response.status}`);
+        return data;
+      });
+    const hardTimeout=new Promise((_,reject)=>{
+      timer=setTimeout(()=>{
+        try{controller.abort()}catch(_){}
+        reject(new Error('Сервер аналитики не ответил вовремя'));
+      },Math.max(2500,Number(timeoutMs)||9500));
+    });
+    try{
+      return await Promise.race([network,hardTimeout]);
+    }catch(error){
+      if(error?.name==='AbortError')throw new Error('Сервер аналитики не ответил вовремя');
+      throw error;
+    }finally{
+      clearTimeout(timer);
+    }
+  }
+  function authState(ok,text){$('analyticsAuthStrip')?.classList.toggle('is-ready',ok);if($('analyticsAuthText'))$('analyticsAuthText').textContent=text}
+  function kpi(icon,value,label,detail,tone=''){return `<article class="analytics-kpi ${tone?`is-${tone}`:''}"><span class="analytics-kpi-icon">${icon}</span><div class="analytics-kpi-copy"><small>${escapeHtml(label)}</small><strong>${escapeHtml(value)}</strong><em>${escapeHtml(detail)}</em></div></article>`}
+  function focusCard({id='',icon='•',name='Пункт',label='',metric='',state='pending',url=''}){
+    const live=state==='live';
+    const stateText=live?'подключено':state==='error'?'ошибка':state==='configured'?'проверка':'не подключено';
+    const stateClass=live?'is-live':state==='error'?'is-error':'is-pending';
+    const body=`<span class="control-platform-icon">${icon}</span><div class="control-platform-copy"><strong>${escapeHtml(name)}</strong><small>${escapeHtml(label)}</small>${metric?`<em>${escapeHtml(metric)}</em>`:''}</div><span class="control-platform-state ${stateClass}">${stateText}</span>${url?'<span class="control-platform-arrow">›</span>':''}`;
+    if(url){const external=/^https?:/i.test(url);return `<a class="control-platform-card is-${escapeHtml(id)}" href="${escapeHtml(url)}"${external?' target="_blank" rel="noopener"':''}>${body}</a>`}
+    return `<article class="control-platform-card is-${escapeHtml(id)}">${body}</article>`;
+  }
+  function renderSearchConsole(items=[],details={}){
+    const box=$('searchConsoleHub');
+    const trendBox=$('searchConsoleTrend');
+    const openLink=$('searchConsoleOpen');
+    if(!box&&!trendBox)return;
+    const item=(items||[]).find(entry=>/google|search/i.test(String(entry.id||''))||/google|search/i.test(String(entry.name||'')));
+    const connected=Boolean(details?.connected)||Boolean(item&&['live','connected'].includes(String(item.status||'')));
+    const clicks=Number(details?.clicks??item?.metric??0);
+    const impressions=Number(details?.impressions||0);
+    const ctr=Number(details?.ctr||0);
+    const position=Number(details?.position||0);
+    if(openLink){openLink.hidden=false;openLink.href=SEARCH_CONSOLE_URL}
+    if(!connected){
+      const raw=String(details?.friendlyError||details?.error||item?.label||'Search Console пока не отдаёт данные.');
+      const serviceEmail=String(details?.serviceAccountEmail||'').trim();
+      const setup=/credentials|not-configured/i.test(raw)
+        ?'В Cloudflare не найден ключ service account для Search Console.'
+        :/snapshot-not-ready/i.test(raw)
+          ?'Ключ найден. Выполняется первая серверная проверка Search Console.'
+          :/no-access|permission|forbidden|does not have access/i.test(raw)
+            ?`Выдайте service account доступ к ресурсу sc-domain:andrikmetal.com${serviceEmail?` — ${serviceEmail}`:''}.`
+            :raw;
+      const emailHint=serviceEmail?`<small>Service account: ${escapeHtml(serviceEmail)}</small>`:'';
+      if(box)box.innerHTML=`<div class="search-console-message"><strong>Search Console ещё не передал данные</strong>${escapeHtml(setup)}${emailHint}<small>После выдачи доступа нажмите «Обновить» в Служебном — клики, показы, CTR, позиция и дневной график сохранятся автоматически.</small></div>`;
+      if(trendBox)trendBox.innerHTML='<div class="admin-empty">Ждём первый снимок Search Console.</div>';
+      return;
+    }
+    if(box)box.innerHTML=`<div class="search-console-kpis">
+      <article class="search-console-kpi"><small>Клики</small><strong>${number(clicks)}</strong></article>
+      <article class="search-console-kpi"><small>Показы</small><strong>${number(impressions)}</strong></article>
+      <article class="search-console-kpi"><small>CTR</small><strong>${(ctr*100).toLocaleString('ru-RU',{maximumFractionDigits:1})}%</strong></article>
+      <article class="search-console-kpi"><small>Средняя позиция</small><strong>${position?position.toLocaleString('ru-RU',{maximumFractionDigits:1}):'—'}</strong></article>
+    </div>`;
+    const rows=Array.isArray(details?.trend)?details.trend:[];
+    if(!trendBox)return;
+    if(!rows.length){trendBox.innerHTML='<div class="search-console-message">Сводные данные получены. Дневная динамика появится после следующего обновления API.</div>';return}
+    const maxClicks=Math.max(1,...rows.map(row=>Number(row.clicks||0)));
+    const maxImpressions=Math.max(1,...rows.map(row=>Number(row.impressions||0)));
+    const axisIndices=[0,Math.floor((rows.length-1)/2),Math.max(0,rows.length-1)];
+    const axisDates=axisIndices.map(index=>compactAxisDate(rows[index]?.date||''));
+    trendBox.innerHTML=`<div class="search-console-trend" role="button" tabindex="0" aria-pressed="false" aria-label="Подсветить график Search Console"><div class="search-console-bars">${rows.map(row=>{
+      const clicksHeight=Math.max(Number(row.clicks||0)>0?4:0,Math.round(Number(row.clicks||0)/maxClicks*100));
+      const impressionsHeight=Math.max(Number(row.impressions||0)>0?4:0,Math.round(Number(row.impressions||0)/maxImpressions*100));
+      const label=compactAxisDate(row.date||'');
+      return `<div class="search-console-day" title="${escapeHtml(label)}: ${number(row.clicks)} кликов, ${number(row.impressions)} показов"><i style="height:${clicksHeight}%"></i><b style="height:${impressionsHeight}%"></b></div>`
+    }).join('')}</div><div class="search-console-axis"><span>${escapeHtml(axisDates[0]||'')}</span><span>${escapeHtml(axisDates[1]||'')}</span><span>${escapeHtml(axisDates[2]||'')}</span></div></div><div class="search-console-key"><span><i></i>Клики</span><span><i class="is-impressions"></i>Показы</span><span>Данные Search Console поступают с задержкой около 2 дней</span></div>`;
+    const chart=trendBox.querySelector('.search-console-trend');
+    const toggleChart=()=>{const active=chart?.classList.toggle('is-chart-highlighted');chart?.setAttribute('aria-pressed',active?'true':'false')};
+    chart?.addEventListener('click',toggleChart);
+    chart?.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleChart()}});
+  }
+  function renderYoutubeFocus(platforms=[]){
+    const box=$('youtubeHub');
+    if(!box)return;
+    const item=(platforms||[]).find(entry=>/youtube/i.test(String(entry.id||''))||/youtube/i.test(String(entry.name||'')));
+    if(!item){
+      box.innerHTML=focusCard({id:'youtube',icon:'▶️',name:'YouTube',label:'Канал и Studio',metric:'Данные пока недоступны',state:'pending',url:'/youtube-admin.html'});
+      return;
+    }
+    const live=['live','connected','metadata'].includes(String(item.status||''));
+    const metricValue=item.metric===null||item.metric===undefined?'':`${number(item.metric)} ${String(item.metricLabel||'').trim()}`.trim();
+    box.innerHTML=focusCard({
+      id:'youtube',
+      icon:item.icon||'▶️',
+      name:'YouTube',
+      label:item.label||'Канал и Studio',
+      metric:metricValue||'Открыть аналитику канала',
+      state:live?'live':(String(item.status||'')==='error'?'error':String(item.status||'')==='configured'?'configured':'pending'),
+      url:item.url||'/youtube-admin.html'
+    });
+  }
+  function renderKpis(ga){
+    $('analyticsKpis').innerHTML=[
+      kpi('🟢',number(ga.realtime?.activeUsers),'Сейчас на сайте','последние 30 минут','live'),
+      kpi('👥',number(ga.today?.activeUsers),'Пользователей сегодня',`${number(ga.today?.sessions)} сессий`,'site'),
+      kpi('📄',number(ga.today?.screenPageViews),'Просмотров сегодня',`${number(ga.today?.eventCount)} событий`,'site'),
+      kpi('📅',number(ga.week?.activeUsers),'За 7 дней',`${number(ga.week?.screenPageViews)} просмотров`,'week'),
+      kpi('📈',number(ga.month?.activeUsers),'За 30 дней',`${number(ga.month?.sessions)} сессий`,'month'),
+      kpi('🌐',number(ga.month?.screenPageViews),'Просмотров за 30 дней',`${number(ga.month?.eventCount)} событий`,'month')
+    ].join('');
+  }
+  function renderTrend(rows=[]){const box=$('analyticsTrend');if(!box)return;if(!rows.length){box.innerHTML='<div class="admin-empty">За этот период данных пока нет.</div>';return}const max=Math.max(1,...rows.map(r=>Math.max(Number(r.activeUsers||0),Number(r.screenPageViews||0))));box.innerHTML=`<div class="analytics-trend-panel" role="button" tabindex="0" aria-pressed="false" aria-label="Подсветить график Google Analytics"><div class="analytics-bars">${rows.map((r,i)=>{const users=Math.max(3,Math.round(Number(r.activeUsers||0)/max*100)),views=Math.max(3,Math.round(Number(r.screenPageViews||0)/max*100)),show=i===0||i===rows.length-1||i%5===0;return `<div class="analytics-day" title="${escapeHtml(shortDate(r.date))}: ${number(r.activeUsers)} пользователей, ${number(r.screenPageViews)} просмотров"><div class="analytics-day-bars"><i style="height:${users}%"></i><b style="height:${views}%"></b></div><small>${show?escapeHtml(shortDate(r.date)):''}</small></div>`}).join('')}</div><div class="analytics-chart-key"><span><i class="is-users"></i>Пользователи</span><span><i class="is-views"></i>Просмотры</span></div></div>`;const chart=box.querySelector('.analytics-trend-panel');const toggle=()=>{const active=chart?.classList.toggle('is-chart-highlighted');chart?.setAttribute('aria-pressed',active?'true':'false')};chart?.addEventListener('click',toggle);chart?.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();toggle()}})}
+  function listRows(items,valueKey,labelKey,subKey){
+    const max=Math.max(1,...items.map(x=>Number(x[valueKey]||0)));
+    return items.map((item,index)=>`<article class="analytics-list-row"><span class="analytics-list-index">${index+1}</span><div><strong>${escapeHtml(item[labelKey]||'Без названия')}</strong>${subKey&&item[subKey]?`<small>${escapeHtml(item[subKey])}</small>`:''}<i><b style="width:${Math.max(3,Number(item[valueKey]||0)/max*100)}%"></b></i></div><em>${number(item[valueKey])}</em></article>`).join('');
+  }
+  function renderList(id,items,valueKey,labelKey,subKey){
+    const box=$(id);if(!box)return;
+    if(!items?.length){box.innerHTML='<div class="admin-empty">Данных пока нет.</div>';return}
+    box.innerHTML=listRows(items,valueKey,labelKey,subKey);
+  }
+  let countries30Expanded=false;
+  function siteCountryItem(item,index){
+    return `<article class="analytics-site-country-item"><span class="analytics-site-country-flag" aria-hidden="true">${escapeHtml(item.flag)}</span><div><strong>${escapeHtml(item.country)}</strong><small>пользователей</small></div><em>${number(item.activeUsers)}</em></article>`;
+  }
+  function renderCountrySpoiler(items=[]){
+    const box=$('analyticsCountries');if(!box)return;
+    const clean=(items||[])
+      .map(item=>{
+        const raw=String(item.country||'').trim();
+        const country=translateCountry(raw);
+        return {...item,country,flag:countryFlag(country,raw),activeUsers:Number(item.activeUsers||0)};
+      })
+      .filter(item=>item.country&&item.country!=='(не задано)')
+      .sort((a,b)=>b.activeUsers-a.activeUsers||a.country.localeCompare(b.country,'ru'));
+    if(!clean.length){box.innerHTML='<div class="admin-empty">Данных пока нет.</div>';return}
+    const visible=clean.slice(0,6);
+    const extra=clean.slice(6);
+    box.innerHTML=`<div class="analytics-site-country-grid">${visible.map(siteCountryItem).join('')}</div>${extra.length?`<details class="analytics-country-spoiler analytics-site-country-spoiler" ${countries30Expanded?'open':''}><summary><span class="country-summary-closed">Показать все страны (${clean.length})</span><span class="country-summary-open">Скрыть список</span></summary><div class="analytics-site-country-grid analytics-site-country-extra">${extra.map(siteCountryItem).join('')}</div></details>`:''}`;
+    const details=box.querySelector('details');
+    details?.addEventListener('toggle',()=>{countries30Expanded=details.open});
+  }
+  const GA_CACHE_KEY='andrik-control-ga-cache-v54-06';
+  const YT_MAP_CACHE_KEY='andrik-control-youtube-map-v54-24';
+  let countriesExpanded=false;
+  let selectedWorldCountry='';
+  let selectedWorldCountryDetailsExpanded=false;
+  let selectedWorldCountryZoomStep=0;
+  let selectedWorldCountryZoomDirection=1;
+  let lastWorldMapCountries=[];
+  let lastWorldMapOptions={};
+  let lastWorldMapOrientation='';
+  const WORLD_ZOOM_LEVELS=[2.38];
+  const isLandscapeMode=()=>window.matchMedia?.('(orientation: landscape)')?.matches===true;
+  function cycleWorldCountrySelection(map,list,country){
+    const next=String(country||'');
+    if(!next){
+      selectedWorldCountry='';
+      selectedWorldCountryDetailsExpanded=false;
+      countriesExpanded=false;
+      selectedWorldCountryZoomStep=0;
+      selectedWorldCountryZoomDirection=1;
+      if(isLandscapeMode()&&lastWorldMapCountries.length){renderWorldMap(lastWorldMapCountries,lastWorldMapOptions);return;}
+      applyWorldCountrySelection(map,list,'');
+      return;
+    }
+    if(next!==selectedWorldCountry){
+      selectedWorldCountry=next;
+      selectedWorldCountryDetailsExpanded=false;
+      selectedWorldCountryZoomStep=1;
+      selectedWorldCountryZoomDirection=1;
+      /* R71D: keep the current map DOM when a country is selected in landscape.
+         Re-rendering the whole map caused a one-frame upward jump/blank flash. */
+      applyWorldCountrySelection(map,list,next);
+      if(isLandscapeMode())window.dispatchEvent(new CustomEvent('andrik:country-focus-changed',{detail:{focused:true,country:next}}));
+      return;
+    }
+    selectedWorldCountry='';
+    selectedWorldCountryDetailsExpanded=false;
+    countriesExpanded=false;
+    selectedWorldCountryZoomStep=0;
+    selectedWorldCountryZoomDirection=1;
+
+    /* R69 FINAL: in landscape keep the existing map/image DOM while zooming out.
+       Rebuilding the entire map at the end of the transition caused two visible flashes. */
+    document.body.classList.add('is-map-returning-overview');
+    applyWorldCountrySelection(map,list,'');
+    list?.querySelectorAll('.world-country-button,.world-country-selected-card').forEach(button=>{
+      button.classList.remove('is-selected','is-details-open');
+      button.setAttribute('aria-pressed','false');
+    });
+    list?.classList.remove('has-selected-country','has-expanded-country-details','is-country-focus-mode');
+    if(list) delete list.dataset.selectedCountry;
+    map?.closest('.world-map-card')?.classList.remove('has-country-focus');
+    document.body.classList.remove('is-country-focus-active');
+    const focusActions=document.getElementById('mapFocusActions');
+    if(focusActions){
+      focusActions.hidden=true;
+      focusActions.classList.remove('is-visible');
+      focusActions.setAttribute('aria-hidden','true');
+    }
+    window.dispatchEvent(new CustomEvent('andrik:country-focus-changed',{detail:{focused:false,country:''}}));
+    window.dispatchEvent(new CustomEvent('andrik:r62-overview-return-start'));
+
+    if(isLandscapeMode()){
+      /* All country markers already exist in the stage. Only the hidden data card is cleared. */
+      if(list)list.innerHTML='';
+      const mapPane=document.querySelector('.analytics-map-pane');
+      if(mapPane){
+        try{mapPane.scrollTo({top:0,left:0,behavior:'smooth'})}catch(_){mapPane.scrollTop=0}
+      }
+      setTimeout(()=>{
+        document.body.classList.remove('is-map-returning-overview');
+        window.dispatchEvent(new CustomEvent('andrik:r62-overview-return-finished'));
+      },300);
+      return;
+    }
+
+    setTimeout(()=>{
+      if(!selectedWorldCountry&&lastWorldMapCountries.length){
+        renderWorldMap(lastWorldMapCountries,lastWorldMapOptions);
+        const mapPane=document.querySelector('.analytics-map-pane');
+        if(mapPane){
+          try{mapPane.scrollTo({top:0,left:0,behavior:'instant'})}catch(_){mapPane.scrollTop=0}
+        }
+      }
+      document.body.classList.remove('is-map-returning-overview');
+      window.dispatchEvent(new CustomEvent('andrik:r62-overview-return-finished'));
+    },180);
+    return;
+  }
+  function applyWorldCountrySelection(map,list,country){
+    const next=String(country||'');
+    if(next!==selectedWorldCountry){
+      selectedWorldCountry=next;
+      selectedWorldCountryZoomDirection=1;
+      selectedWorldCountryZoomStep=next?1:0;
+      if(!next)selectedWorldCountryDetailsExpanded=false;
+    }else if(next&&!selectedWorldCountryZoomStep)selectedWorldCountryZoomStep=1;
+    const isZoomed=Boolean(selectedWorldCountry&&selectedWorldCountryZoomStep);
+    const zoomLabel=isZoomed?2:1;
+    const stage=map?.querySelector('.world-map-stage');
+    map?.querySelectorAll('.world-map-dot[data-country]').forEach(marker=>{
+      const active=decodeURIComponent(marker.dataset.country||'')===selectedWorldCountry;
+      marker.classList.toggle('is-selected',active);
+      marker.setAttribute('aria-current',active?'true':'false');
+      marker.setAttribute('aria-label',active?`${decodeURIComponent(marker.dataset.country||'')} · увеличено`:(decodeURIComponent(marker.dataset.country||'')));
+    });
+    list?.querySelectorAll('.world-country-button[data-country]').forEach(button=>{
+      const active=decodeURIComponent(button.dataset.country||'')===selectedWorldCountry;
+      button.classList.toggle('is-selected',active);
+      button.classList.toggle('is-details-open',active&&selectedWorldCountryDetailsExpanded);
+      button.setAttribute('aria-pressed',String(active));
+      button.title=active?'Нажмите ещё раз, чтобы уменьшить карту':'';
+      const expander=button.querySelector('.world-country-card-toggle');
+      if(expander){
+        expander.setAttribute('aria-hidden',active?'false':'true');
+        expander.setAttribute('data-expanded',String(active&&selectedWorldCountryDetailsExpanded));
+        expander.textContent=active&&selectedWorldCountryDetailsExpanded?'▴':'▾';
+      }
+    });
+    if(list){
+      list.classList.toggle('has-selected-country',Boolean(selectedWorldCountry));
+      list.classList.toggle('has-expanded-country-details',Boolean(selectedWorldCountry&&selectedWorldCountryDetailsExpanded));
+      list.classList.toggle('is-country-focus-mode',Boolean(selectedWorldCountry));
+      if(selectedWorldCountry)list.dataset.selectedCountry=selectedWorldCountry; else delete list.dataset.selectedCountry;
+    }
+    const focusCardRoot=map?.closest('.world-map-card,.analytics-map-top');
+    focusCardRoot?.classList.toggle('has-country-focus',Boolean(selectedWorldCountry));
+    document.body.classList.toggle('is-country-focus-active',Boolean(selectedWorldCountry));
+    window.dispatchEvent(new CustomEvent('andrik:country-focus-changed',{detail:{focused:Boolean(selectedWorldCountry),country:selectedWorldCountry||''}}));
+    if(isZoomed&&stage&&GEO[selectedWorldCountry]){
+      const marker=[...map.querySelectorAll('.world-map-dot[data-country]')].find(item=>decodeURIComponent(item.dataset.country||'')===selectedWorldCountry);
+      const canvas=map.querySelector('.world-map-canvas');
+      const zoom=WORLD_ZOOM_LEVELS[0];
+      if(!marker||!canvas)return;
+      const leftPercent=parseFloat(marker.style.left||'0');
+      const topPercent=parseFloat(marker.style.top||'0');
+      const stageWidth=stage.clientWidth||canvas.clientWidth||1;
+      const stageHeight=stage.clientHeight||canvas.clientHeight||1;
+      const markerX=stageWidth*(leftPercent/100);
+      const markerY=stageHeight*(topPercent/100);
+      const focusTargetX=stageWidth*.50;
+      const focusTargetY=isLandscapeMode()?stageHeight*.43:stageHeight*.50;
+      const desiredTx=focusTargetX-(markerX*zoom);
+      const desiredTy=focusTargetY-(markerY*zoom);
+      /* R69 final polish: keep the scaled artwork covering the complete frame.
+         Unclamped translations exposed the black shell below the focused map. */
+      const minTx=stageWidth-(stageWidth*zoom);
+      const minTy=stageHeight-(stageHeight*zoom);
+      const tx=Math.min(0,Math.max(minTx,desiredTx));
+      const ty=Math.min(0,Math.max(minTy,desiredTy));
+      map.classList.add('is-country-focused');
+      map.dataset.zoomLevel=`X${zoomLabel}`;
+      map.dataset.focusCountry=selectedWorldCountry;
+      stage.style.setProperty('--focus-zoom',String(zoom));
+      stage.style.setProperty('--focus-tx',`${tx.toFixed(2)}px`);
+      stage.style.setProperty('--focus-ty',`${ty.toFixed(2)}px`);
+    }else{
+      map?.classList.remove('is-country-focused');
+      map.dataset.zoomLevel='X1';
+      delete map.dataset.focusCountry;
+      stage?.style.removeProperty('--focus-x');
+      stage?.style.removeProperty('--focus-y');
+      stage?.style.removeProperty('--focus-tx');
+      stage?.style.removeProperty('--focus-ty');
+      stage?.style.removeProperty('--focus-zoom');
+    }
+  }
+  function readGaCache(){try{return JSON.parse(localStorage.getItem(GA_CACHE_KEY)||'null')}catch(_){return null}}
+  function saveGaCache(ga){try{localStorage.setItem(GA_CACHE_KEY,JSON.stringify({google:ga,savedAt:Date.now()}))}catch(_){}}
+  function readYoutubeMapCache(){try{return JSON.parse(localStorage.getItem(YT_MAP_CACHE_KEY)||'null')}catch(_){return null}}
+  function saveYoutubeMapCache(studio){try{localStorage.setItem(YT_MAP_CACHE_KEY,JSON.stringify({countries:studio?.countries||[],startDate:studio?.startDate||'',endDate:studio?.endDate||'',savedAt:Date.now()}))}catch(_){}}
+
+  function saveWorldMapFirstFrameSnapshot(map,list){
+    try{
+      if(!map||!list||isLandscapeMode()||selectedWorldCountry)return;
+      if(!map.querySelector('.world-map-dot[data-country]')||!list.querySelector('.world-country-button[data-country]'))return;
+      const payload={
+        mapHtml:map.innerHTML,
+        listHtml:list.innerHTML,
+        mapClass:map.className,
+        listClass:list.className,
+        mapSource:String(map.dataset.mapSource||'cache'),
+        total:String(document.getElementById('worldMapTotalValue')?.textContent||''),
+        periodHtml:String(document.getElementById('worldMapPeriod')?.innerHTML||''),
+        savedAt:Date.now()
+      };
+      localStorage.setItem('live-web-ai-map-first-frame-v1',JSON.stringify(payload));
+    }catch(_){ }
+  }
+  function renderWorldMap(countries=[],options={}){
+    const map=$('worldMap'),list=$('worldCountries');
+    if(!map||!list)return;
+    lastWorldMapCountries=Array.isArray(countries)?countries:[];
+    lastWorldMapOptions={...(options||{})};
+    const landscape=isLandscapeMode();
+    lastWorldMapOrientation=landscape?'landscape':'portrait';
+    if(options.source)map.dataset.mapSource=String(options.source);
+    const clean=(countries||[])
+      .map(item=>({...item,code:String(item.country||'').trim().toUpperCase(),name:translateCountry(item.country),value:Number(item.views??item.activeUsers??item.value??0)}))
+      .filter(item=>item.name!=='(не задано)')
+      .sort((a,b)=>b.value-a.value||a.name.localeCompare(b.name,'ru'));
+    const max=Math.max(1,...clean.map(x=>x.value));
+    const markers=clean.filter(item=>GEO[item.name]).map(item=>{
+      const [lon,lat]=GEO[item.name];
+      const x=(lon+180)/360*100;
+      const y=(85-lat)/145*100;
+      const power=.5+item.value/max*.5;
+      const size=8+Math.round(item.value/max*13);
+      const encoded=encodeURIComponent(item.name);
+      const selected=item.name===selectedWorldCountry?' is-selected':'';
+      return `<span class="world-map-dot${selected}" data-country="${encoded}" data-code="${escapeHtml(item.code)}" aria-current="${selected?'true':'false'}" style="left:${x.toFixed(2)}%;top:${y.toFixed(2)}%;--power:${power};--dot:${size}px" title="${escapeHtml(item.name)}: ${number(item.value)}"><i></i></span>`;
+    }).join('');
+    const note=options.error?escapeHtml(options.error):(!clean.length?(options.loading?'Получаем географию YouTube…':'Страны появятся после получения данных'):'');
+    map.innerHTML=`<div class="world-map-canvas" role="img" aria-label="Карта стран аудитории"><div class="world-map-stage"><img src="/assets/world-map-control-v52.webp?v=52.14" alt="Карта мира"/>${markers}</div>${note?`<span class="world-map-state ${options.error?'is-error':''}">${note}</span>`:''}</div>`;
+
+    const rowButton=(item,index,kind='portrait')=>{
+      const encoded=encodeURIComponent(item.name);
+      const selected=item.name===selectedWorldCountry;
+      const flag=countryFlag(item.name,item.code);
+      const classes=['world-country-button'];
+      if(kind==='selected')classes.push('world-country-selected-card');
+      if(kind==='landscape-row')classes.push('world-country-landscape-row');
+      if(kind==='portrait'&&index>=6)classes.push('world-country-extra');
+      if(selected)classes.push('is-selected');
+      const landscapeSelected=landscape&&kind==='selected'&&selected;
+      const detailsOpen=selected&&kind==='selected'&&(landscapeSelected||selectedWorldCountryDetailsExpanded);
+      if(detailsOpen)classes.push('is-details-open');
+      const arrow=kind==='selected'&&!landscape?`<span class="world-country-card-toggle" aria-label="${selectedWorldCountryDetailsExpanded?'Скрыть статистику':'Показать статистику'}" role="button" data-expanded="${String(selectedWorldCountryDetailsExpanded)}">${selectedWorldCountryDetailsExpanded?'▴':'▾'}</span>`:'';
+      return `<button type="button" class="${classes.join(' ')}" data-country="${encoded}" data-code="${escapeHtml(item.code)}" aria-pressed="${selected?'true':'false'}"><span class="world-country-flag" aria-hidden="true">${flag}</span><span class="world-country-name"><span class="world-country-marquee">${escapeHtml(item.name)}</span></span><em>${number(item.value)}</em>${arrow}</button>`;
+    };
+
+    if(clean.length){
+      if(landscape){
+        const selectedItem=clean.find(item=>item.name===selectedWorldCountry);
+        list.classList.add('is-landscape-layout');
+        list.classList.remove('is-expanded');
+        list.innerHTML=selectedItem ? `${rowButton(selectedItem,0,'selected')}` : '';
+      }else{
+        const rows=clean.map((item,index)=>rowButton(item,index,'portrait')).join('');
+        const toggleTop=clean.length>6&&countriesExpanded?`<button class="world-country-toggle is-top-toggle" data-country-toggle type="button" aria-expanded="true">Скрыть список</button>`:'';
+        const toggleBottom=clean.length>6?`<button class="world-country-toggle" data-country-toggle type="button" aria-expanded="${countriesExpanded?'true':'false'}">${countriesExpanded?'Скрыть список':`Показать все страны (${clean.length})`}</button>`:'';
+        list.classList.remove('is-landscape-layout');
+        list.classList.toggle('is-expanded',countriesExpanded);
+        list.innerHTML=toggleTop+rows+toggleBottom;
+      }
+
+      list.querySelectorAll('.world-country-button[data-country]').forEach(button=>{
+        const marquee=button.querySelector('.world-country-marquee');
+        if(marquee){
+          requestAnimationFrame(()=>{
+            const shift=Math.max(0,marquee.scrollWidth-marquee.clientWidth);
+            button.classList.toggle('is-overflowing',shift>8);
+            marquee.style.setProperty('--marquee-shift',shift+'px');
+          });
+        }
+        button.addEventListener('click',event=>{
+          const country=decodeURIComponent(button.dataset.country||'');
+          const arrow=event.target.closest?.('.world-country-card-toggle');
+          if(arrow&&button.classList.contains('world-country-selected-card')&&country===selectedWorldCountry){
+            event.preventDefault();
+            event.stopPropagation();
+            selectedWorldCountryDetailsExpanded=!selectedWorldCountryDetailsExpanded;
+            renderWorldMap(lastWorldMapCountries,lastWorldMapOptions);
+            return;
+          }
+          if(landscape&&button.classList.contains('world-country-landscape-row'))countriesExpanded=false;
+          cycleWorldCountrySelection(map,list,country);
+        });
+      });
+
+      map.querySelectorAll('.world-map-dot[data-country]').forEach(marker=>marker.addEventListener('click',()=>{
+        countriesExpanded=false;
+        const country=decodeURIComponent(marker.dataset.country||'');
+        cycleWorldCountrySelection(map,list,country);
+      }));
+
+      applyWorldCountrySelection(map,list,selectedWorldCountry);
+      const pane=document.querySelector('.analytics-map-pane');
+      const viewport=$('analyticsSwipeViewport');
+      pane?.classList.toggle('is-country-expanded',countriesExpanded);
+      viewport?.classList.toggle('is-country-list-open',countriesExpanded);
+
+      list.querySelectorAll('[data-country-toggle]').forEach(toggleButton=>toggleButton.addEventListener('click',event=>{
+        event.preventDefault();
+        event.stopPropagation();
+        countriesExpanded=!countriesExpanded;
+        renderWorldMap(clean,options);
+      }));
+
+      if(landscape&&selectedWorldCountry){
+        requestAnimationFrame(()=>requestAnimationFrame(()=>{
+          const card=list.querySelector('.world-country-selected-card');
+          if(!card||!pane)return;
+          const paneRect=pane.getBoundingClientRect();
+          const cardRect=card.getBoundingClientRect();
+          const safeBottom=paneRect.bottom-12;
+          if(cardRect.bottom>safeBottom){
+            pane.scrollTop=Math.max(0,pane.scrollTop+(cardRect.bottom-safeBottom)+12);
+          }
+        }));
+      }
+    }else{
+      selectedWorldCountry='';
+      selectedWorldCountryDetailsExpanded=false;
+      countriesExpanded=false;
+      selectedWorldCountryZoomStep=0;
+      selectedWorldCountryZoomDirection=1;
+      list.classList.remove('is-expanded','is-landscape-layout');
+      list.innerHTML=options.loading?'<span class="world-country-loading"><b>Получаем страны…</b><em>•••</em></span>':'';
+      document.querySelector('.analytics-map-pane')?.classList.remove('is-country-expanded');
+      $('analyticsSwipeViewport')?.classList.remove('is-country-list-open');
+    }
+    saveWorldMapFirstFrameSnapshot(map,list);
+  }
+  function renderCachedMap(){
+    const gaCached=readGaCache();
+    const ytCached=readYoutubeMapCache();
+    renderWorldMap(ytCached?.countries||[],ytCached?.countries?.length?{source:'cache'}:{loading:true,source:'loading'});
+    if(gaCached?.google){
+      try{renderKpis(gaCached.google);renderTrend(gaCached.google.trend||[])}catch(_){}
+    }
+  }
+  function growthRowsFromPayload(data){
+    const source=data?.weeklyCountries?data
+      :data?.data?.weeklyCountries?data.data
+      :data?.youtube?.studio?.weeklyCountries?data.youtube.studio
+      :data?.youtube?.weeklyCountries?data.youtube
+      :{};
+    return (Array.isArray(source.weeklyCountries)?source.weeklyCountries:[])
+      .map(item=>({country:String(item?.country||item?.code||'').trim().toUpperCase(),views:Number(item?.views??item?.value??0)}))
+      .filter(item=>item.country&&item.views>0);
+  }
+  function renderGrowthMapFallback(data){
+    const map=$('worldMap'),list=$('worldCountries');
+    if(!map||!list)return false;
+    const rows=growthRowsFromPayload(data);
+    if(!rows.length)return false;
+    const alreadyFull=(map.dataset.mapSource==='audience'||map.dataset.mapSource==='cache')&&Boolean(list.querySelector('.world-country-button'));
+    if(alreadyFull)return false;
+    renderWorldMap(rows,{source:'growth'});
+    const period=$('worldMapPeriod');
+    if(period)period.innerHTML='Карта по последним <span class="period-nowrap">7&nbsp;дням</span> · данные за 28 дней догружаются.';
+    authState(true,'Доступ подтверждён');
+    return true;
+  }
+
+  function setupAnalyticsSwipe(){
+    if(window.__andrikAnalyticsSwipeReady)return;
+    const viewport=$('analyticsSwipeViewport');
+    const track=$('analyticsSwipeTrack');
+    const dots=[...document.querySelectorAll('#analyticsSwipeDots [data-page]')];
+    const panes=[...document.querySelectorAll('[data-analytics-page]')];
+    const downIndicator=$('analyticsDownIndicator');
+    const mapEndPullZone=$('mapEndPullZone');
+    const mapEndPullText=$('mapEndPullText');
+    if(!viewport||!track||panes.length<3)return;
+    window.__andrikAnalyticsSwipeReady=true;
+    const count=panes.length;
+    const requested=String(new URLSearchParams(location.search).get('page')||'').toLowerCase();
+    const requestedPage={google:0,ga:0,ga4:0,analytics:0,site:0,website:0,map:1,youtube:2}[requested];
+    let page=Number.isInteger(requestedPage)?requestedPage:1;
+    let gesture=null;
+    let routeChanging=false;
+    const wrap=value=>((Number(value)%count)+count)%count;
+    const updateHeight=()=>{
+      const topbar=document.querySelector('.control-topbar');
+      const viewportHeight=window.visualViewport?.height||window.innerHeight;
+      const topbarHeight=Math.ceil(topbar?.getBoundingClientRect().height||0);
+      document.documentElement.style.setProperty('--analytics-swipe-height',`${Math.max(420,viewportHeight-topbarHeight)}px`);
+      apply(false);
+    };
+    const announcePage=()=>{
+      const pane=panes[page];
+      document.body.dataset.analyticsPage=pane?.dataset.analyticsPage||'';
+      window.dispatchEvent(new CustomEvent('andrik:analytics-page-changed',{detail:{page:document.body.dataset.analyticsPage}}));
+      if(pane?.dataset.analyticsPage==='youtube')window.dispatchEvent(new CustomEvent('andrik:youtube-pane-visible'));
+    };
+    let stableViewportWidth=Math.max(1,Number(sessionStorage.getItem('live-web-ai-stable-width')||0),viewport.clientWidth||0,window.innerWidth||0);
+    let resizeCommitTimer=0;
+    const effectiveViewportWidth=()=>Math.max(1,stableViewportWidth||viewport.clientWidth||window.innerWidth||1);
+    const apply=(animate=true,dragOffset=0,dragY=0)=>{
+      track.style.transition=animate?'transform .20s cubic-bezier(.22,.75,.2,1)':'none';
+      track.style.transform=`translate3d(${-page*effectiveViewportWidth()+dragOffset}px,${dragY}px,0)`;
+      dots.forEach((dot,index)=>dot.classList.toggle('is-active',index===page));
+      panes.forEach((pane,index)=>pane.setAttribute('aria-hidden',index===page?'false':'true'));
+      announcePage();
+      requestAnimationFrame(()=>{if(!animate)track.style.transition=''});
+    };
+    const resetMapViewport=()=>{
+      const pane=panes.find(item=>item?.dataset?.analyticsPage==='map');
+      if(!pane)return;
+      pane.scrollTop=0;
+      const inner=pane.querySelector('.analytics-pane-wrap');
+      if(inner)inner.scrollTop=0;
+      try{window.scrollTo({top:0,left:0,behavior:'instant'})}catch(_){window.scrollTo(0,0)}
+    };
+    const setPage=(next,animate=true)=>{
+      setEndPullProgress(0,false);
+      const raw=Number(next);
+      const wrapped=wrap(raw);
+      const circularJump=raw<0||raw>=count;
+      page=wrapped;
+      if(panes[page]?.dataset?.analyticsPage==='map') resetMapViewport();
+      if(circularJump){
+        viewport.classList.add('is-circular-jump');
+        apply(false);
+        requestAnimationFrame(()=>requestAnimationFrame(()=>viewport.classList.remove('is-circular-jump')));
+      }else apply(animate);
+    };
+    const refreshPageLabel=()=>{
+      const name=panes[page]?.dataset?.analyticsPage||'map';
+      return name==='google'?'Google Analytics':name==='youtube'?'YouTube':'карту';
+    };
+    const setDownProgress=(distance=0,ready=false)=>{
+      if(!downIndicator)return;
+      downIndicator.classList.toggle('is-visible',distance>5);
+      downIndicator.classList.toggle('is-ready',ready);
+      downIndicator.style.setProperty('--down-progress',String(Math.min(1,distance/68)));
+      const text=downIndicator.querySelector('span');
+      const label=refreshPageLabel();
+      if(text)text.textContent=ready?`Отпустите — обновить ${label}`:`Свайп сверху вниз — обновить ${label}`;
+    };
+    const setEndPullProgress=(distance=0,ready=false)=>{
+      const value=Math.max(0,Math.min(92,Number(distance)||0));
+      const progress=Math.min(1,value/68);
+      document.body.classList.toggle('is-map-end-pulling',value>2);
+      document.body.classList.toggle('is-map-end-ready',ready);
+      if(mapEndPullZone){
+        mapEndPullZone.style.setProperty('--map-end-pull',`${value}px`);
+        mapEndPullZone.style.setProperty('--map-end-progress',String(progress));
+      }
+      if(mapEndPullText)mapEndPullText.textContent=ready?'Отпустите — открыть админ-панель':'Потяните вверх — открыть админ-панель';
+    };
+    const bounceMapEnd=()=>{
+      document.body.classList.remove('is-map-end-pulling','is-map-end-ready');
+      document.body.classList.remove('is-map-end-bouncing');
+      if(mapEndPullZone){
+        mapEndPullZone.style.setProperty('--map-end-pull','0px');
+        mapEndPullZone.style.setProperty('--map-end-progress','0');
+      }
+      if(mapEndPullText)mapEndPullText.textContent='Потяните вверх — открыть админ-панель';
+      requestAnimationFrame(()=>{
+        document.body.classList.add('is-map-end-bouncing');
+        window.setTimeout(()=>document.body.classList.remove('is-map-end-bouncing'),520);
+      });
+    };
+    const refreshAnalyticsDashboard=async()=>{
+      if(window.__andrikAnalyticsRefreshing)return;
+      window.__andrikAnalyticsRefreshing=true;
+      const text=downIndicator?.querySelector('span');
+      if(text)text.textContent='Обновляем…';
+      setDownProgress(96,true);
+      apply(true,0,42);
+      try{
+        const name=panes[page]?.dataset?.analyticsPage||'map';
+        if(name==='google')await load(true);
+        else await loadPlatforms(true);
+        if(text)text.textContent='Обновлено ✓';
+      }finally{window.setTimeout(()=>{setDownProgress(0,false);apply(true);window.__andrikAnalyticsRefreshing=false;},720)}
+    };
+    const finishGesture=(event,cancelled=false)=>{
+      if(!gesture)return;
+      const dx=(event?.clientX??gesture.lastX??gesture.x)-gesture.x;
+      const dy=(event?.clientY??gesture.lastY??gesture.y)-gesture.y;
+      const elapsed=Date.now()-gesture.t;
+      const mode=gesture.mode;
+      const openThreshold=Number(gesture.openThreshold||68);
+      gesture=null;
+      if(!cancelled&&mode==='vertical-down'&&dy>56){
+        refreshAnalyticsDashboard();
+        return;
+      }
+      if(!cancelled&&mode==='vertical-up'&&dy<-openThreshold){
+        if(routeChanging)return;
+        routeChanging=true;
+        setDownProgress(0,false);
+        setEndPullProgress(Math.min(92,Math.abs(dy)),true);
+        if(mapEndPullText)mapEndPullText.textContent='Открываем админ-панель…';
+        apply(true,0,0);
+        window.setTimeout(()=>location.assign('/control-home.html?source=map-end-pull&page=menu&v=55.00f'),210);
+        return;
+      }
+      if(mode==='vertical-up')bounceMapEnd();
+      else setEndPullProgress(0,false);
+      setDownProgress(0,false);
+      if(!cancelled&&mode==='horizontal'&&(Math.abs(dx)>46||(elapsed<420&&Math.abs(dx)>30))){
+        setPage(page+(dx<0?1:-1));
+        return;
+      }
+      apply(true);
+    };
+    viewport.addEventListener('pointerdown',event=>{
+      if(event.isPrimary===false)return;
+      const target=event.target;
+      if(target?.closest?.('#countryGrowthPanel'))return;
+      if(target?.closest?.('a,button,input,textarea,select,summary'))return;
+      const pane=panes[page];
+      const pageName=pane?.dataset.analyticsPage||'';
+      const inner=pane?.querySelector?.('.analytics-pane-wrap');
+      const paneTop=Number(pane?.scrollTop||0);
+      const innerTop=Number(inner?.scrollTop||0);
+      const atTop=paneTop<=2&&innerTop<=2&&Number(window.scrollY||0)<=2;
+      const isLandscape=window.matchMedia?.('(orientation: landscape)')?.matches===true;
+      const paneScrollable=Boolean(pane&&(isLandscape||pane.scrollHeight>pane.clientHeight+8));
+      const innerScrollable=Boolean(inner&&inner.scrollHeight>inner.clientHeight+8);
+      const paneAtBottom=!paneScrollable||paneTop+Number(pane?.clientHeight||0)>=Number(pane?.scrollHeight||0)-4;
+      const innerAtBottom=!innerScrollable||innerTop+Number(inner?.clientHeight||0)>=Number(inner?.scrollHeight||0)-4;
+      /* On the listener map the pane itself is the single source of truth.
+         This prevents a swipe from opening the admin panel before the landscape page reaches its real end. */
+      const atBottom=pageName==='map'?paneAtBottom:(paneAtBottom&&innerAtBottom);
+      const scrollElement=pageName==='map'?pane:(innerScrollable?inner:pane);
+      const mapGesturesEnabled=pageName==='map'&&!countriesExpanded&&paneScrollable&&atBottom;
+      const viewportWidth=window.visualViewport?.width||window.innerWidth||document.documentElement.clientWidth||0;
+      const viewportHeight=window.visualViewport?.height||window.innerHeight||document.documentElement.clientHeight||0;
+      const rightScrollZone=event.clientX>=Math.max(0,viewportWidth-76);
+      const bottomMenuZone=event.clientY>=Math.max(0,viewportHeight-132);
+      const dedicatedZone=Boolean(target?.closest?.('#mapEndPullZone'));
+      const portraitMapCenter=Boolean(
+        !isLandscape&&
+        pageName==='map'&&
+        !countriesExpanded&&
+        event.clientX>=viewportWidth*.20&&event.clientX<=viewportWidth*.80&&
+        event.clientY>=viewportHeight*.24&&event.clientY<=viewportHeight*.84&&
+        target?.closest?.('#worldMap,.analytics-map-top')
+      );
+      const canPullRefresh=['google','map','youtube'].includes(pageName)&&atTop&&(pageName!=='map'||!countriesExpanded);
+      /* Landscape keeps the dedicated bottom pull zone.
+         Portrait opens Admin with a quick upward swipe through the central map area. */
+      const canOpenSections=isLandscape?(mapGesturesEnabled&&dedicatedZone):portraitMapCenter;
+      const openThreshold=isLandscape?68:48;
+      gesture={id:event.pointerId,x:event.clientX,y:event.clientY,lastX:event.clientX,lastY:event.clientY,t:Date.now(),mode:null,canPullRefresh,canOpenSections,openThreshold,pageName,scrollElement,scrollStart:Number(scrollElement?.scrollTop||0)};
+      try{viewport.setPointerCapture(event.pointerId)}catch(_){}
+    });
+    viewport.addEventListener('pointermove',event=>{
+      if(!gesture||gesture.id!==event.pointerId)return;
+      gesture.lastX=event.clientX;
+      gesture.lastY=event.clientY;
+      const dx=event.clientX-gesture.x,dy=event.clientY-gesture.y;
+      if(!gesture.mode&&Math.max(Math.abs(dx),Math.abs(dy))>8){
+        if(gesture.canPullRefresh&&dy>0&&Math.abs(dy)>Math.abs(dx)*1.05)gesture.mode='vertical-down';
+        else if(gesture.canOpenSections&&dy<0&&Math.abs(dy)>Math.abs(dx)*1.05)gesture.mode='vertical-up';
+        else if(gesture.pageName==='map'&&window.matchMedia?.('(orientation: landscape)')?.matches===true&&Math.abs(dx)>Math.abs(dy)*1.05)gesture.mode='horizontal';
+        else if(Math.abs(dx)>Math.abs(dy)*1.05)gesture.mode='horizontal';
+        else gesture.mode='vertical-scroll';
+      }
+      if(gesture.mode==='vertical-down'){
+        event.preventDefault();
+        const distance=Math.min(112,Math.max(0,dy));
+        apply(false,0,distance*.42);
+        setDownProgress(distance,distance>=56);
+        return;
+      }
+      if(gesture.mode==='vertical-up'){
+        event.preventDefault();
+        const distance=Math.min(92,Math.max(0,-dy));
+        const resistance=Math.pow(distance/92,.82)*35;
+        apply(false,0,-resistance);
+        setEndPullProgress(distance,distance>=Number(gesture.openThreshold||68));
+        return;
+      }
+      if(gesture.mode==='map-locked'){
+        event.preventDefault();
+        return;
+      }
+      if(gesture.mode==='vertical-scroll'){
+        const scrollElement=gesture.scrollElement;
+        if(scrollElement){
+          event.preventDefault();
+          const maxScroll=Math.max(0,Number(scrollElement.scrollHeight||0)-Number(scrollElement.clientHeight||0));
+          const multiplier=gesture.pageName==='map'&&window.matchMedia?.('(orientation: landscape)')?.matches===true?1.12:1;
+          scrollElement.scrollTop=Math.max(0,Math.min(maxScroll,gesture.scrollStart-(dy*multiplier)));
+        }
+        return;
+      }
+      if(gesture.mode!=='horizontal')return;
+      event.preventDefault();
+      const circularEdge=(page===0&&dx>0)||(page===count-1&&dx<0);
+      apply(false,circularEdge?0:dx);
+    },{passive:false});
+    viewport.addEventListener('pointerup',event=>finishGesture(event,false));
+    viewport.addEventListener('pointercancel',event=>finishGesture(event,true));
+    dots.forEach(dot=>dot.addEventListener('click',()=>setPage(Number(dot.dataset.page||1))));
+    document.querySelectorAll('[data-swipe-go]').forEach(button=>button.addEventListener('click',()=>setPage(Number(button.dataset.swipeGo))));
+    const commitSettledViewport=()=>{
+      clearTimeout(resizeCommitTimer);
+      resizeCommitTimer=setTimeout(()=>{
+        if(document.hidden)return;
+        stableViewportWidth=Math.max(1,viewport.clientWidth||window.innerWidth||stableViewportWidth);
+        try{sessionStorage.setItem('live-web-ai-stable-width',String(stableViewportWidth))}catch(_){ }
+        updateHeight();
+        const orientation=isLandscapeMode()?'landscape':'portrait';
+        if(lastWorldMapCountries.length&&orientation!==lastWorldMapOrientation){
+          if(orientation==='landscape')countriesExpanded=false;
+          renderWorldMap(lastWorldMapCountries,lastWorldMapOptions);
+          return;
+        }
+        if(lastWorldMapCountries.length&&isLandscapeMode()){renderWorldMap(lastWorldMapCountries,lastWorldMapOptions);return;}
+        if(selectedWorldCountry)applyWorldCountrySelection($('worldMap'),$('worldCountries'),selectedWorldCountry);
+        apply(false);
+      },260);
+    };
+    window.addEventListener('resize',commitSettledViewport,{passive:true});
+    window.visualViewport?.addEventListener('resize',commitSettledViewport,{passive:true});
+    updateHeight();
+    try{sessionStorage.setItem('live-web-ai-stable-width',String(stableViewportWidth))}catch(_){ }
+    setPage(page,false);
+    try{history.scrollRestoration='manual'}catch(_){}
+    window.addEventListener('pageshow',event=>{
+      window.__liveWebAiResumeLock?.();
+      apply(false);
+      commitSettledViewport();
+    },{passive:true});
+    document.addEventListener('visibilitychange',()=>{
+      if(document.hidden)return;
+      window.__liveWebAiResumeLock?.();
+      apply(false);
+      commitSettledViewport();
+    },{passive:true});
+    window.analyticsSetPage=setPage;
+  }
+  let refreshTimer=null;
+  function renderGoogleData(ga,data={}){
+    if((!ga?.configured||ga?.error)&&!ga?.liveCounter?.configured){
+      if($('analyticsKpis'))$('analyticsKpis').innerHTML='<div class="admin-empty">Google Analytics пока не отдаёт данные.</div>';
+      if($('analyticsTrend'))$('analyticsTrend').innerHTML=`<div class="admin-empty">${escapeHtml(ga?.error||'Не настроено')}</div>`;
+      ['analyticsPages','analyticsCountries','analyticsDevices'].forEach(id=>{if($(id))$(id).innerHTML='<div class="admin-empty">Ожидаем подключение.</div>'});
+      if($('analyticsMessage')){$('analyticsMessage').textContent=ga?.error||'GOOGLE_ANALYTICS_CREDENTIALS не настроен';$('analyticsMessage').className='control-analytics-status is-warning'}
+      return;
+    }
+    renderKpis(ga);renderTrend(ga.trend||[]);
+    renderList('analyticsPages',(ga.pages||[]).map(item=>({...item,pageLabel:pageSectionLabel(item.pagePath,item.pageTitle),pagePathLabel:pageVersionLabel(item.pagePath)})),'screenPageViews','pageLabel','pagePathLabel');
+    renderCountrySpoiler(ga.countries||[]);
+    renderList('analyticsDevices',(ga.devices||[]).map(item=>({...item,deviceCategory:translateDevice(item.deviceCategory)})),'activeUsers','deviceCategory');
+    if($('analyticsPropertyLabel'))$('analyticsPropertyLabel').textContent=ga.propertyId?`${ga.propertyName||'andrikmetal.com'} · GA4 property ${ga.propertyId}`:`${ga.propertyName||'andrikmetal.com'} · живой счётчик`;
+    if($('analyticsMessage')){const source=ga.liveCounter?.configured?'GA4 + мгновенный счётчик сайта':'Google Analytics';$('analyticsMessage').textContent=`${source} · автообновление каждые 2 минуты · ${dateTime(ga.updatedAt||data.updatedAt)}`;$('analyticsMessage').className='control-analytics-status is-good'}
+    saveGaCache(ga);
+  }
+  function readAudienceCache(){try{return JSON.parse(localStorage.getItem(AUDIENCE_CACHE_KEY)||'null')}catch(_){return null}}
+  function saveAudienceCache(data){try{localStorage.setItem(AUDIENCE_CACHE_KEY,JSON.stringify({data,savedAt:Date.now()}))}catch(_){}}
+  function emitAudienceData(data){
+    window.__andrikLatestAudienceData=data;
+    window.dispatchEvent(new CustomEvent('andrik:audience-data',{detail:data}));
+  }
+  let searchConsoleRequest=null;
+  async function loadSearchConsole(force=false){
+    if(searchConsoleRequest&&!force)return searchConsoleRequest;
+    if(!getKey())return null;
+    const request=api(`/api/control/search-console${force?'?refresh=1':''}`,12500);
+    searchConsoleRequest=request;
+    try{
+      const data=await request;
+      renderSearchConsole([],(data&&data.searchConsole)||data||{});
+      return data;
+    }catch(error){
+      renderSearchConsole([],{connected:false,error:error.message||'Search Console недоступен'});
+      return null;
+    }finally{
+      if(searchConsoleRequest===request)searchConsoleRequest=null;
+    }
+  }
+
+  async function loadPlatforms(force=false){
+    if(audienceRequest&&!force)return audienceRequest;
+    const request=api('/api/control/audience',18000);
+    audienceRequest=request;
+    window.__andrikAudiencePromise=request;
+    try{
+      const data=await request;
+      authState(true,'Доступ подтверждён');
+      saveAudienceCache(data);
+      emitAudienceData(data);
+      renderSearchConsole(data.searchEngines||[],data.searchConsole||{});
+      void loadSearchConsole(force);
+      const studio=data.youtube?.studio||{};
+      const countries=Array.isArray(studio.countries)?studio.countries:[];
+      if(countries.length){
+        saveYoutubeMapCache(studio);
+        renderWorldMap(countries,{source:'audience'});
+        const period=$('worldMapPeriod');
+        if(period)period.innerHTML='Просмотры YouTube по странам за последние <span class="period-nowrap">28&nbsp;дней.</span>';
+      }else{
+        const cached=readYoutubeMapCache();
+        const growthFallbackActive=$('worldMap')?.dataset.mapSource==='growth'&&Boolean($('worldCountries')?.querySelector('.world-country-button'));
+        if(cached?.countries?.length)renderWorldMap(cached.countries,{source:'cache'});
+        else if(!growthFallbackActive)renderWorldMap([],{error:studio.connected?'География YouTube пока не получена':'Данные Studio ещё не собраны Worker',source:'error'});
+      }
+      return data;
+    }catch(error){
+      if(error?.message==='unauthorized')authState(false,'Ключ не принят');
+      renderSearchConsole([],{});
+      const cached=readYoutubeMapCache();
+      const growthFallbackActive=$('worldMap')?.dataset.mapSource==='growth'&&Boolean($('worldCountries')?.querySelector('.world-country-button'));
+      if(cached?.countries?.length)renderWorldMap(cached.countries,{source:'cache'});
+      else if(!growthFallbackActive)renderWorldMap([],{error:error.message,source:'error'});
+      else if(error?.message!=='unauthorized')authState(true,'Доступ подтверждён');
+      window.dispatchEvent(new CustomEvent('andrik:audience-error',{detail:{message:error.message}}));
+      return null;
+    }finally{
+      if(audienceRequest===request)audienceRequest=null;
+    }
+  }
+  window.andrikRefreshAudience=()=>loadPlatforms(true);
+  window.andrikRefreshAnalytics=()=>load(true);
+  async function load(force=false){
+    if(!getKey()){
+      authState(false,'Сначала сохраните ключ в разделе «Служебное».');
+      if($('analyticsMessage'))$('analyticsMessage').textContent='Доступ владельца не подтверждён.';
+      renderSearchConsole([],{});
+      renderWorldMap(readYoutubeMapCache()?.countries||[],{error:'Нужен ключ владельца',source:'error'});
+      return;
+    }
+    const hasMapFallback=Boolean($('worldCountries')?.querySelector('.world-country-button'))&&['growth','cache','audience'].includes($('worldMap')?.dataset.mapSource||'');
+    authState(hasMapFallback,hasMapFallback?'Доступ подтверждён · обновляем данные…':'Проверяем доступ…');
+    if($('analyticsMessage'))$('analyticsMessage').textContent='Обновляем статистику…';
+    const platformsPromise=loadPlatforms(force);
+    try{
+      const data=await api('/api/control/google-analytics',9000);
+      const ga=data.google||data.website||{};
+      authState(true,'Доступ подтверждён');
+      renderGoogleData(ga,data);
+    }catch(error){
+      const unauthorized=error.message==='unauthorized';
+      authState(!unauthorized,unauthorized?'Ключ не принят':'Доступ подтверждён');
+      if($('analyticsMessage')){$('analyticsMessage').textContent=`Аналитика: ${error.message}`;$('analyticsMessage').className='control-analytics-status is-warning'}
+    }
+    // YouTube geography and Search Console update independently. A slow Worker
+    // must never hold the whole map page or the pull-to-refresh gesture open.
+    void platformsPromise;
+  }
+  if('caches' in window){
+    caches.keys().then(keys=>Promise.all(keys.map(key=>caches.open(key).then(cache=>cache.delete('/assets/illusion-of-life-top-v50.webp'))))).catch(()=>{});
+  }
+
+  const startupWatchdog=setTimeout(()=>{
+    const auth=$('analyticsAuthText');
+    const state=$('worldMap')?.querySelector('.world-map-state');
+    if(auth&&/Проверяем доступ/i.test(auth.textContent||''))authState(false,'Сервер отвечает медленно — повторите свайп вниз');
+    if(state&&/Получаем|Обновляем/i.test(state.textContent||'')){
+      const cached=readYoutubeMapCache();
+      const growthFallbackActive=$('worldMap')?.dataset.mapSource==='growth'&&Boolean($('worldCountries')?.querySelector('.world-country-button'));
+      if(cached?.countries?.length)renderWorldMap(cached.countries,{error:'Показаны последние сохранённые данные',source:'cache'});
+      else if(!growthFallbackActive)renderWorldMap([],{error:'Не удалось получить карту. Потяните вниз для повторной проверки',source:'error'});
+    }
+  },10500);
+
+  window.addEventListener('andrik:country-growth-data',event=>{
+    renderGrowthMapFallback(event.detail||{});
+  });
+  if(window.__andrikLatestCountryGrowth)renderGrowthMapFallback(window.__andrikLatestCountryGrowth);
+
+  renderCachedMap();
+  const cachedAudience=readAudienceCache();
+  if(cachedAudience?.data){renderSearchConsole(cachedAudience.data.searchEngines||[],cachedAudience.data.searchConsole||{});emitAudienceData(cachedAudience.data)}
+  setupAnalyticsSwipe();
+  setTimeout(load,20);
+  refreshTimer=setInterval(()=>{if(!document.hidden)load()},120000);
+  window.addEventListener('beforeunload',()=>{clearTimeout(startupWatchdog);if(refreshTimer)clearInterval(refreshTimer)});
+})();
+
+</script>
+<script defer src="/assets/map-end-pull-v55-00-r48.js?v=55.00-r48"></script>
+<script defer src="/assets/map-total-v55-00f.js?v=55.00f"></script>
+<script defer src="/assets/country-focus-v54-84.js?v=54.84"></script>
+<script defer src="/assets/landscape-no-growth-v55-00-r37.js?v=55.00-r37"></script>
+<script defer src="/assets/country-growth-v54-87.js?v=54.87"></script>
+<script defer src="/assets/youtube-admin-v54-89.js?v=54.89"></script><script defer src="/assets/youtube-chart-interaction-v54-91.js?v=54.91"></script>
+
+<script defer src="/assets/control-status-eye-v55-00-r88.js?v=55.00-r88"></script><script defer src="/assets/control-version-v55-00-final.js?v=55.00-final"></script><script defer src="/assets/map-monthly-v55-00-r38.js?v=55.00-r38"></script>
+<script id="andrik-search-console-interaction-fix">
+(function(){
+  function bindChartInteractions(root){
+    var scope = root || document;
+    var days = scope.querySelectorAll('.search-console-day');
+    if(!days.length) return;
+    days.forEach(function(day, index){
+      if(day.dataset.andrikBound==='1') return;
+      day.dataset.andrikBound='1';
+      day.setAttribute('tabindex','0');
+      day.setAttribute('role','button');
+      day.setAttribute('aria-label','День ' + (index + 1));
+      function activate(){
+        days.forEach(function(item){ item.classList.remove('is-active'); });
+        day.classList.add('is-active');
+      }
+      day.addEventListener('pointerdown', activate, {passive:true});
+      day.addEventListener('click', activate);
+      day.addEventListener('mouseenter', activate);
+      day.addEventListener('focus', activate);
+      day.addEventListener('keydown', function(e){
+        if(e.key==='Enter' || e.key===' '){ e.preventDefault(); activate(); }
+      });
+    });
+  }
+  function init(){
+    bindChartInteractions(document);
+    var hub = document.getElementById('searchConsoleTrend') || document.body;
+    if('MutationObserver' in window && hub){
+      new MutationObserver(function(){ bindChartInteractions(document); }).observe(hub, {childList:true, subtree:true});
+    }
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', init, {once:true});
+  else init();
+})();
+</script>
+
+
+<script id="live-web-ai-r96-access-finalizer">
+(function(){
+  function hasOwnerKey(){
+    try{return !!(localStorage.getItem('andrik-comments-admin-key-persistent')||sessionStorage.getItem('andrik-comments-admin-key'));}
+    catch(_){return false;}
+  }
+  function mapHasData(){
+    return !!document.querySelector('#worldMap .world-map-dot, #worldCountries .world-country-button, #worldCountries [data-country], .world-country-button');
+  }
+  function writeConfirmed(){
+    var auth=document.getElementById('analyticsAuthText');
+    var current=String(auth&&auth.textContent||'').trim();
+    if(!auth||!/Проверяем доступ|обновляем данные/i.test(current))return false;
+    if(!hasOwnerKey()||!mapHasData())return false;
+    auth.textContent='Доступ подтверждён';
+    var strip=document.getElementById('analyticsAuthStrip');
+    if(strip)strip.classList.add('is-ready');
+    var mirror=document.querySelector('.r83-poster-auth-text');
+    if(mirror)mirror.textContent='Доступ подтверждён';
+    var poster=document.querySelector('.r83-poster-auth');
+    if(poster)poster.classList.add('is-ok');
+    return true;
+  }
+  function begin(){
+    var attempts=0;
+    var timer=setInterval(function(){
+      attempts+=1;
+      if(writeConfirmed()||attempts>=20)clearInterval(timer);
+    },400);
+    writeConfirmed();
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',begin,{once:true});
+  else begin();
+  window.addEventListener('pageshow',function(){setTimeout(writeConfirmed,250);},{passive:true});
+})();
+</script>
+<script id="andrik-v55-00a-startup-watchdog">
+(function(){
+  function unlock(){
+    var auth=document.getElementById('analyticsAuthText');
+    if(auth && /Проверяем доступ|обновляем данные/i.test(auth.textContent||'')){
+      auth.textContent='Сервер отвечает медленно · потяните вниз для повтора';
+      var row=auth.closest('.control-auth-state,.analytics-auth-state,.control-access-state');
+      if(row){row.classList.remove('is-ok');row.classList.add('is-warning');}
+    }
+    var map=document.getElementById('worldMap');
+    var state=map && map.querySelector('.world-map-state');
+    if(state && /Обновляем|Получаем|Загружаем/i.test(state.textContent||'')){
+      state.textContent='Повторите обновление свайпом вниз';
+      state.classList.add('is-warning');
+    }
+  }
+  setTimeout(unlock,12000);
+  document.addEventListener('visibilitychange',function(){if(!document.hidden)setTimeout(unlock,1500);});
+})();
+</script>
+
+<script defer src="/assets/control-version-v55-00-final.js?v=55.00-final"></script><script defer src="/assets/control-live-eye-v55-00-r3l.js?v=55.00-r3l"></script><script defer src="/assets/analytics-touch-swipe-v55-00-r3e.js?v=55.00-r3e"></script><script id="andrik-r3i-map-stability">
+(function(){
+  function markReady(){
+    document.documentElement.setAttribute('data-andrik-map-build','r46');
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', markReady, {once:true});
+  else markReady();
+})();
+</script><script defer src="/assets/control-version-v55-00-final-stable-github.js?v=55.00-final-stable-github"></script>
+<script defer src="/assets/map-landscape-fit-v55-00-r41.js?v=55.00-r41"></script>
+<style id="andrik-r47-country-focus-polish">
+/* R47 — аккуратная компактная карточка выбранной страны + без дыхания флагов. */
+.analytics-v54-46-page .analytics-map-pane .world-country-list .world-country-flag,
+.analytics-v54-46-page .analytics-site-country-flag{animation:none!important;transition:none!important;transform:none!important;filter:none!important;will-change:auto!important}
+.analytics-v54-46-page .world-country-list.is-country-focus-mode .world-country-button.is-selected,
+.analytics-v54-46-page .world-country-list:has(.world-country-button.is-selected) .world-country-button.is-selected{
+  grid-template-columns:auto minmax(0,1fr) auto!important;
+  grid-template-areas:"flag name value" "meta meta meta"!important;
+  align-items:center!important;
+  gap:6px 12px!important;
+  width:min(100%,440px)!important;
+  min-height:auto!important;
+  padding:10px 16px 11px!important;
+  border-radius:18px!important;
+}
+.analytics-v54-46-page .world-country-list.is-country-focus-mode .world-country-button.is-selected .world-country-flag,
+.analytics-v54-46-page .world-country-list:has(.world-country-button.is-selected) .world-country-button.is-selected .world-country-flag{
+  grid-area:flag!important;
+  align-self:center!important;
+  justify-self:start!important;
+  font-size:1.2rem!important;
+  line-height:1!important;
+}
+.analytics-v54-46-page .world-country-list.is-country-focus-mode .world-country-button.is-selected .world-country-name,
+.analytics-v54-46-page .world-country-list:has(.world-country-button.is-selected) .world-country-button.is-selected .world-country-name{
+  grid-area:name!important;
+  display:block!important;
+  min-width:0!important;
+  text-align:left!important;
+  align-self:center!important;
+}
+.analytics-v54-46-page .world-country-list.is-country-focus-mode .world-country-button.is-selected .world-country-marquee,
+.analytics-v54-46-page .world-country-list:has(.world-country-button.is-selected) .world-country-button.is-selected .world-country-marquee{
+  display:block!important;
+  white-space:normal!important;
+  overflow:visible!important;
+  text-overflow:clip!important;
+  text-align:left!important;
+  font-size:1rem!important;
+  font-weight:900!important;
+  line-height:1.12!important;
+}
+.analytics-v54-46-page .world-country-list.is-country-focus-mode .world-country-button.is-selected em,
+.analytics-v54-46-page .world-country-list:has(.world-country-button.is-selected) .world-country-button.is-selected em{
+  grid-area:value!important;
+  align-self:center!important;
+  justify-self:end!important;
+  font-size:1.12rem!important;
+  font-weight:900!important;
+  line-height:1!important;
+  color:#fff0b3!important;
+  white-space:nowrap!important;
+}
+.analytics-v54-46-page .world-country-list.is-country-focus-mode .world-country-button.is-selected .country-weekly-gain,
+.analytics-v54-46-page .world-country-list:has(.world-country-button.is-selected) .world-country-button.is-selected .country-weekly-gain{
+  grid-area:meta!important;
+  display:grid!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:10px!important;
+  align-items:start!important;
+  width:100%!important;
+  margin-top:2px!important;
+  padding-top:6px!important;
+  border-top:1px solid rgba(255,221,126,.22)!important;
+  font-size:.78rem!important;
+  line-height:1.25!important;
+  text-align:initial!important;
+}
+.analytics-v54-46-page .world-country-list.is-country-focus-mode .world-country-button.is-selected .country-weekly-current,
+.analytics-v54-46-page .world-country-list:has(.world-country-button.is-selected) .world-country-button.is-selected .country-weekly-current{
+  display:block!important;
+  text-align:left!important;
+  white-space:normal!important;
+}
+.analytics-v54-46-page .world-country-list.is-country-focus-mode .world-country-button.is-selected .country-weekly-compare,
+.analytics-v54-46-page .world-country-list:has(.world-country-button.is-selected) .world-country-button.is-selected .country-weekly-compare{
+  display:block!important;
+  text-align:right!important;
+  justify-self:end!important;
+  white-space:normal!important;
+  overflow:visible!important;
+}
+.analytics-v54-46-page .world-country-list.is-country-focus-mode .world-country-button.is-selected .country-weekly-marquee-track,
+.analytics-v54-46-page .world-country-list:has(.world-country-button.is-selected) .world-country-button.is-selected .country-weekly-marquee-track{
+  display:block!important;
+  width:100%!important;
+  min-width:0!important;
+  animation:none!important;
+  transform:none!important;
+}
+.analytics-v54-46-page .world-country-list.is-country-focus-mode .world-country-button.is-selected .country-weekly-marquee-track>span,
+.analytics-v54-46-page .world-country-list:has(.world-country-button.is-selected) .world-country-button.is-selected .country-weekly-marquee-track>span{
+  display:block!important;
+  white-space:normal!important;
+}
+.analytics-v54-46-page .world-country-list.is-country-focus-mode .world-country-button.is-selected .country-weekly-marquee-track>span:nth-child(2),
+.analytics-v54-46-page .world-country-list:has(.world-country-button.is-selected) .world-country-button.is-selected .country-weekly-marquee-track>span:nth-child(2){display:none!important}
+@media (max-width:640px){
+  .analytics-v54-46-page .world-country-list.is-country-focus-mode .world-country-button.is-selected,
+  .analytics-v54-46-page .world-country-list:has(.world-country-button.is-selected) .world-country-button.is-selected{width:min(100%,370px)!important;padding:9px 13px 10px!important;gap:5px 10px!important}
+  .analytics-v54-46-page .world-country-list.is-country-focus-mode .world-country-button.is-selected .world-country-marquee,
+  .analytics-v54-46-page .world-country-list:has(.world-country-button.is-selected) .world-country-button.is-selected .world-country-marquee{font-size:.95rem!important}
+  .analytics-v54-46-page .world-country-list.is-country-focus-mode .world-country-button.is-selected em,
+  .analytics-v54-46-page .world-country-list:has(.world-country-button.is-selected) .world-country-button.is-selected em{font-size:1rem!important}
+  .analytics-v54-46-page .world-country-list.is-country-focus-mode .world-country-button.is-selected .country-weekly-gain,
+  .analytics-v54-46-page .world-country-list:has(.world-country-button.is-selected) .world-country-button.is-selected .country-weekly-gain{gap:8px!important;font-size:.72rem!important}
+}
+</style>
+<link href="/assets/portrait-country-duplicate-fix-v55-00-r51.css?v=55.00-r51" rel="stylesheet"/>
+<link href="/assets/portrait-map-quick-swipe-v55-00-r60.css?v=55.00-r60" rel="stylesheet"/>
+<link href="/assets/landscape-map-rebuild-v55-00-r60.css?v=55.00-r60" rel="stylesheet"/>
+<style id="andrik-r64-atomic-landscape">
+/* FINAL R64 ATOMIC SINGLE FILE — LANDSCAPE CSS */
+/* FINAL R63 SELF-CONTAINED VERIFIED MAP */
+/* Control ANDRIK v55.00 FINAL R61
+   Landscape listener map: real vertical scrolling, complete country caption,
+   no daily/action cards, and smooth zoom-out without replacing the stage. */
+@media screen and (orientation:landscape){
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane{
+    overflow-y:auto!important;
+    overflow-x:hidden!important;
+    -webkit-overflow-scrolling:touch!important;
+    overscroll-behavior-y:contain!important;
+    touch-action:pan-y!important;
+    scroll-behavior:auto!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane *,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap *{
+    touch-action:pan-y!important;
+  }
+
+  /* The stage itself keeps the exact artwork ratio. */
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top.has-country-focus #worldMap,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top:not(.has-country-focus) #worldMap{
+    width:calc(100vw - 20px)!important;
+    max-width:calc(100vw - 20px)!important;
+    height:auto!important;
+    min-height:0!important;
+    max-height:none!important;
+    aspect-ratio:2560/1031!important;
+    flex:none!important;
+    margin:0 auto!important;
+    overflow:hidden!important;
+    border:1px solid rgba(86,188,139,.74)!important;
+    border-radius:16px!important;
+    background:#03101b!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap .world-map-canvas,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap .world-map-stage{
+    width:100%!important;
+    height:100%!important;
+    min-height:100%!important;
+    max-height:100%!important;
+    overflow:hidden!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap .world-map-stage{
+    transition:transform .31s cubic-bezier(.18,.78,.20,1),filter .22s ease-out!important;
+    will-change:transform!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap .world-map-stage>img{
+    width:100%!important;
+    height:100%!important;
+    object-fit:fill!important;
+    object-position:center!important;
+  }
+
+  /* Absolutely remove both huge country action buttons in landscape. */
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #mapFocusActions,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .map-focus-actions,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .map-focus-action,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane a[href*="page=activity"],
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane a[href*="page=summary"]{
+    display:none!important;
+    visibility:hidden!important;
+    position:absolute!important;
+    left:-10000px!important;
+    top:-10000px!important;
+    width:0!important;
+    height:0!important;
+    min-width:0!important;
+    min-height:0!important;
+    margin:0!important;
+    padding:0!important;
+    border:0!important;
+    overflow:hidden!important;
+    opacity:0!important;
+    pointer-events:none!important;
+    clip-path:inset(50%)!important;
+  }
+
+  /* Caption overlay: all weekly data remain visible and compact. */
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldCountries .world-country-selected-card{
+    width:min(310px,calc(100vw - 42px))!important;
+    max-width:310px!important;
+    padding:7px 10px 8px!important;
+    overflow:visible!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldCountries .world-country-selected-card .country-weekly-gain{
+    display:grid!important;
+    visibility:visible!important;
+    grid-template-columns:minmax(0,.88fr) minmax(0,1.32fr)!important;
+    gap:7px!important;
+    width:100%!important;
+    min-height:15px!important;
+    margin:0!important;
+    padding-top:4px!important;
+    border-top:1px solid rgba(255,221,126,.20)!important;
+    font-size:.55rem!important;
+    line-height:1.08!important;
+    opacity:1!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldCountries .world-country-selected-card .country-weekly-current{
+    color:#65efa0!important;
+    text-align:left!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldCountries .world-country-selected-card .country-weekly-compare{
+    text-align:right!important;
+    justify-self:end!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldCountries .world-country-selected-card .country-weekly-marquee-track>span:nth-child(2){display:none!important}
+
+  /* A real black tail after the map makes its lower green frame reachable.
+     It is separate content and therefore never stretches the artwork. */
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #mapEndPullZone{
+    position:relative!important;
+    display:block!important;
+    flex:none!important;
+    box-sizing:border-box!important;
+    width:100%!important;
+    height:190px!important;
+    min-height:190px!important;
+    margin:0!important;
+    padding:0!important;
+    background:#000!important;
+    overflow:hidden!important;
+    touch-action:none!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #mapEndPullZone .map-end-pull-spring,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #mapEndPullZone strong{
+    opacity:0!important;
+    visibility:hidden!important;
+    pointer-events:none!important;
+  }
+}
+
+</style>
+<script id="andrik-r64-atomic-map">
+/* FINAL R64 ATOMIC SINGLE FILE — MAP RUNTIME */
+/* FINAL R63 SELF-CONTAINED VERIFIED MAP */
+/* Control ANDRIK v55.00 FINAL R61
+   Complete landscape country caption + guaranteed map scrolling + action-card removal. */
+(()=>{
+  'use strict';
+  const isLandscape=()=>window.matchMedia?.('(orientation: landscape)')?.matches===true;
+  const map=document.getElementById('worldMap');
+  const list=document.getElementById('worldCountries');
+  const pane=document.querySelector('.analytics-map-pane');
+  const actions=document.getElementById('mapFocusActions');
+  if(!map||!list||!pane)return;
+
+  const format=value=>new Intl.NumberFormat('ru-RU').format(Number(value)||0);
+  let weekly=new Map();
+  let previous=new Map();
+  let raf=0;
+  let actionAnchor=null;
+  let drag=null;
+
+  function normalize(rows){
+    return (Array.isArray(rows)?rows:[]).map(item=>({
+      code:String(item?.country||item?.code||'').trim().toUpperCase(),
+      views:Number(item?.views??item?.value??0)
+    })).filter(item=>item.code);
+  }
+  function ingest(detail){
+    const source=detail?.weeklyCountries?detail
+      :detail?.data?.weeklyCountries?detail.data
+      :detail?.youtube?.studio?.weeklyCountries?detail.youtube.studio
+      :detail?.youtube?.weeklyCountries?detail.youtube
+      :{};
+    const current=normalize(source.weeklyCountries);
+    const before=normalize(source.previousWeekCountries);
+    if(current.length)weekly=new Map(current.map(item=>[item.code,item.views]));
+    if(before.length)previous=new Map(before.map(item=>[item.code,item.views]));
+    decorateCard();
+  }
+  function readCache(){
+    const keys=['andrik-country-growth-v54-75','andrik-country-growth-v54-82','andrik-country-growth-v54-74','andrik-country-growth-v54-73'];
+    for(const key of keys){
+      try{
+        const parsed=JSON.parse(localStorage.getItem(key)||'null');
+        const data=parsed?.data||parsed;
+        if(data?.weeklyCountries||data?.data?.weeklyCountries){ingest(data);return;}
+      }catch(_){ }
+    }
+  }
+
+  function decorateCard(){
+    const card=list.querySelector('.world-country-selected-card');
+    if(!card)return;
+    const code=String(card.dataset.code||'').toUpperCase();
+    let badge=card.querySelector('.country-weekly-gain');
+    if(!badge){
+      badge=document.createElement('small');
+      badge.className='country-weekly-gain';
+      card.appendChild(badge);
+    }
+    const hasNow=weekly.has(code);
+    const hasBefore=previous.has(code);
+    const hasKnownNow=hasNow||hasBefore;
+    const now=hasNow?Number(weekly.get(code)||0):0;
+    const before=hasBefore?Number(previous.get(code)||0):0;
+    const arrow=!hasBefore?'•':(now>before?'▲':(now<before?'▼':'•'));
+    const state=!hasBefore||now===before?'is-flat':(now>before?'is-positive':'is-negative');
+    const currentText=hasKnownNow?`+${format(now)} за 7 дней`:'данные за 7 дней обновляются';
+    const compareText=hasBefore?`${arrow} ${format(before)} за предыдущие 7 дней`:'нет данных за предыдущие 7 дней';
+    badge.hidden=false;
+    badge.innerHTML=`<span class="country-weekly-current ${hasKnownNow?'is-positive':'is-flat'}">${currentText}</span><span class="country-weekly-compare ${state}"><span class="country-weekly-marquee-track"><span>${compareText}</span></span></span>`;
+    schedule();
+  }
+
+  function selectedMarker(){
+    return map.querySelector('.world-map-dot.is-selected,[aria-current="true"].world-map-dot');
+  }
+  function placeCard(){
+    if(!isLandscape())return;
+    const card=list.querySelector('.world-country-selected-card');
+    const marker=selectedMarker();
+    if(!card||!marker)return;
+    const root=list.getBoundingClientRect();
+    const mapRect=map.getBoundingClientRect();
+    const markerRect=marker.getBoundingClientRect();
+    if(!root.width||!mapRect.width)return;
+    const cw=card.offsetWidth||310;
+    const ch=card.offsetHeight||57;
+    const mx=markerRect.left+markerRect.width/2-root.left;
+    const my=markerRect.top+markerRect.height/2-root.top;
+    const mapLeft=mapRect.left-root.left;
+    const mapTop=mapRect.top-root.top;
+    const mapRight=mapLeft+mapRect.width;
+    const mapBottom=mapTop+mapRect.height;
+    let left=mx-cw/2;
+    left=Math.max(mapLeft+8,Math.min(mapRight-cw-8,left));
+    let top=my+Math.max(13,markerRect.height/2)+6;
+    if(top+ch>mapBottom-6)top=my-Math.max(13,markerRect.height/2)-ch-6;
+    top=Math.max(mapTop+6,Math.min(mapBottom-ch-6,top));
+    card.style.left=`${left.toFixed(1)}px`;
+    card.style.top=`${top.toFixed(1)}px`;
+  }
+
+  function hideActions(){
+    if(!actions)return;
+    if(isLandscape()){
+      actions.hidden=true;
+      actions.setAttribute('aria-hidden','true');
+      actions.style.setProperty('display','none','important');
+      if(actions.isConnected){
+        actionAnchor=document.createComment('r61-map-actions');
+        actions.parentNode?.insertBefore(actionAnchor,actions);
+        actions.remove();
+      }
+    }else if(actionAnchor?.isConnected&&!actions.isConnected){
+      actionAnchor.parentNode?.insertBefore(actions,actionAnchor.nextSibling);
+      actionAnchor.remove();
+      actionAnchor=null;
+      actions.style.removeProperty('display');
+    }
+  }
+
+  function schedule(){
+    cancelAnimationFrame(raf);
+    raf=requestAnimationFrame(()=>{
+      hideActions();
+      decorateCardNoLoop();
+      requestAnimationFrame(placeCard);
+    });
+  }
+  function decorateCardNoLoop(){
+    const card=list.querySelector('.world-country-selected-card');
+    if(!card)return;
+    const code=String(card.dataset.code||'').toUpperCase();
+    const badge=card.querySelector('.country-weekly-gain');
+    if(!badge){
+      // Avoid recursion through schedule(); create once and fill synchronously.
+      const node=document.createElement('small');
+      node.className='country-weekly-gain';
+      card.appendChild(node);
+      const hasNow=weekly.has(code),hasBefore=previous.has(code),hasKnownNow=hasNow||hasBefore;
+      const now=hasNow?Number(weekly.get(code)||0):0,before=hasBefore?Number(previous.get(code)||0):0;
+      const arrow=!hasBefore?'•':(now>before?'▲':(now<before?'▼':'•'));
+      const state=!hasBefore||now===before?'is-flat':(now>before?'is-positive':'is-negative');
+      node.innerHTML=`<span class="country-weekly-current ${hasKnownNow?'is-positive':'is-flat'}">${hasKnownNow?`+${format(now)} за 7 дней`:'данные за 7 дней обновляются'}</span><span class="country-weekly-compare ${state}"><span class="country-weekly-marquee-track"><span>${hasBefore?`${arrow} ${format(before)} за предыдущие 7 дней`:'нет данных за предыдущие 7 дней'}</span></span></span>`;
+    }
+  }
+
+  /* R67: duplicate pane-level drag owner removed. The final document-level owner below handles landscape vertical map scrolling. */
+
+  const observer=new MutationObserver(()=>{
+    decorateCardNoLoop();
+    schedule();
+  });
+  observer.observe(map,{childList:true,subtree:true,attributes:true,attributeFilter:['class','style','aria-current']});
+  observer.observe(list,{childList:true,subtree:true,attributes:true,attributeFilter:['class','style','data-code']});
+
+  window.addEventListener('andrik:country-growth-data',event=>ingest(event.detail));
+  window.addEventListener('resize',schedule,{passive:true});
+  window.addEventListener('orientationchange',()=>setTimeout(schedule,120),{passive:true});
+  window.addEventListener('pageshow',schedule,{passive:true});
+  pane.addEventListener('scroll',schedule,{passive:true});
+  map.addEventListener('transitionend',schedule);
+  document.addEventListener('click',event=>{
+    if(event.target.closest?.('.world-map-dot,.world-country-selected-card,.world-country-button')){
+      setTimeout(schedule,0);setTimeout(schedule,120);setTimeout(schedule,360);
+    }
+  });
+
+  readCache();
+  if(window.__andrikLatestCountryGrowth)ingest(window.__andrikLatestCountryGrowth);
+  hideActions();
+  schedule();
+  setTimeout(schedule,300);
+  setTimeout(schedule,900);
+})();
+
+</script>
+<style id="andrik-r64-atomic-floating">
+/* FINAL R64 ATOMIC SINGLE FILE — FLOATING 7 CSS */
+/* FINAL R63 SELF-CONTAINED VERIFIED MAP */
+/* Control ANDRIK v55.00 FINAL R62
+   Portrait map: weekly growth is a floating round “7” control.
+   Repeated country tap returns straight to the clean overview. */
+
+/* The old wide control stays in the DOM for the existing logic, but never occupies layout. */
+body.analytics-admin-page #countryGrowthToggle{
+  display:none!important;
+  width:0!important;
+  height:0!important;
+  min-width:0!important;
+  min-height:0!important;
+  margin:0!important;
+  padding:0!important;
+  border:0!important;
+  overflow:hidden!important;
+  opacity:0!important;
+  pointer-events:none!important;
+}
+
+#countryGrowthFloatingR62{
+  display:none;
+  position:fixed;
+  z-index:2147483600;
+  right:max(17px,env(safe-area-inset-right));
+  bottom:calc(82px + env(safe-area-inset-bottom));
+  width:54px;
+  height:54px;
+  min-width:54px;
+  min-height:54px;
+  padding:0;
+  place-items:center;
+  border:1px solid rgba(112,207,244,.38);
+  border-radius:50%;
+  background:linear-gradient(160deg,rgba(12,39,53,.98),rgba(4,17,25,.98));
+  color:#dff6ff;
+  box-shadow:0 13px 34px rgba(0,0,0,.48),0 0 0 4px rgba(91,202,243,.055),inset 0 0 20px rgba(100,211,255,.06);
+  font:950 1.12rem/1 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  letter-spacing:.02em;
+  text-align:center;
+  cursor:pointer;
+  touch-action:manipulation;
+  -webkit-tap-highlight-color:transparent;
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+}
+#countryGrowthFloatingR62::before{
+  content:"";
+  position:absolute;
+  inset:6px;
+  border:1px solid rgba(142,224,255,.14);
+  border-radius:inherit;
+  pointer-events:none;
+}
+#countryGrowthFloatingR62:active{transform:scale(.95)}
+#countryGrowthFloatingR62.is-open{
+  border-color:rgba(255,211,85,.72);
+  color:#ffe58d;
+  background:linear-gradient(160deg,rgba(83,56,5,.98),rgba(32,22,4,.98));
+  box-shadow:0 13px 34px rgba(0,0,0,.5),0 0 0 4px rgba(255,211,85,.07),0 0 24px rgba(255,196,45,.16);
+}
+
+@media screen and (orientation:portrait){
+  body[data-analytics-page="map"]:not(.is-country-focus-active) #countryGrowthFloatingR62.is-ui-visible{
+    display:grid!important;
+  }
+}
+@media screen and (orientation:landscape){
+  #countryGrowthFloatingR62{display:none!important}
+}
+
+/* During the short zoom-out transition no old selected card/actions may flash. */
+body.is-map-returning-overview #worldCountries{
+  opacity:0!important;
+  pointer-events:none!important;
+}
+body.is-map-returning-overview #mapFocusActions,
+body.is-map-returning-overview #mapEndPullZone,
+body:not(.is-country-focus-active) #mapFocusActions,
+.analytics-map-top:not(.has-country-focus) > #mapFocusActions{
+  display:none!important;
+  visibility:hidden!important;
+  opacity:0!important;
+  pointer-events:none!important;
+}
+
+</style>
+<script id="andrik-r64-atomic-floating-runtime">
+/* FINAL R64 ATOMIC SINGLE FILE — FLOATING 7 RUNTIME */
+/* FINAL R63 SELF-CONTAINED VERIFIED MAP */
+/* Control ANDRIK v55.00 FINAL R62
+   Floating weekly-growth trigger + deterministic overview return cleanup. */
+(()=>{
+  'use strict';
+  const source=document.getElementById('countryGrowthToggle');
+  const panel=document.getElementById('countryGrowthPanel');
+  if(!source||!panel||window.__andrikMapGrowthFloatingR62Ready)return;
+  window.__andrikMapGrowthFloatingR62Ready=true;
+
+  let button=document.getElementById('countryGrowthFloatingR62');
+  if(!button){
+    button=document.createElement('button');
+    button.id='countryGrowthFloatingR62';
+    button.type='button';
+    button.textContent='7';
+    button.setAttribute('aria-label','Рост стран за 7 дней');
+    button.setAttribute('title','Рост стран за 7 дней');
+    button.setAttribute('aria-expanded','false');
+    document.body.appendChild(button);
+  }
+
+  const isLandscape=()=>window.matchMedia?.('(orientation: landscape)')?.matches===true;
+  const isOpen=()=>!panel.hidden&&panel.getAttribute('aria-hidden')!=='true';
+  const sync=()=>{
+    const onMap=document.body.dataset.analyticsPage==='map';
+    const focused=document.body.classList.contains('is-country-focus-active')||Boolean(document.querySelector('#worldCountries .world-country-button.is-selected'));
+    const visible=onMap&&!focused&&!isLandscape();
+    button.classList.toggle('is-ui-visible',visible);
+    button.classList.toggle('is-open',isOpen());
+    button.setAttribute('aria-expanded',String(isOpen()));
+  };
+
+  let lastTap=-Infinity;
+  button.addEventListener('click',event=>{
+    const now=performance.now();
+    if(now-lastTap<500){event.preventDefault();return;}
+    lastTap=now;
+    event.preventDefault();
+    event.stopPropagation();
+    if(typeof window.__andrikToggleCountryGrowth==='function'){
+      window.__andrikToggleCountryGrowth(event);
+    }else{
+      source.click();
+    }
+    setTimeout(sync,0);
+    setTimeout(sync,120);
+  });
+
+  const observer=new MutationObserver(sync);
+  observer.observe(source,{attributes:true,attributeFilter:['aria-expanded','hidden','class']});
+  observer.observe(panel,{attributes:true,attributeFilter:['aria-hidden','hidden','class']});
+  observer.observe(document.body,{attributes:true,attributeFilter:['data-analytics-page','class']});
+
+  window.addEventListener('andrik:analytics-page-changed',sync);
+  window.addEventListener('andrik:country-focus-changed',sync);
+  window.addEventListener('andrik:r62-overview-return-start',sync);
+  window.addEventListener('andrik:r62-overview-return-finished',sync);
+  window.addEventListener('orientationchange',()=>setTimeout(sync,120),{passive:true});
+  window.addEventListener('resize',sync,{passive:true});
+  window.addEventListener('pageshow',sync,{passive:true});
+  document.addEventListener('click',event=>{
+    if(event.target.closest?.('.world-map-dot,.world-country-button,.world-country-selected-card')){
+      setTimeout(sync,0);setTimeout(sync,360);
+    }
+  },true);
+
+  sync();
+  setTimeout(sync,300);
+  setTimeout(sync,1000);
+})();
+
+</script>
+
+
+<style id="andrik-r66-single-native-scroll">
+/* FINAL R66 — one native landscape scrollbar only.
+   Portrait, map geometry, selected-country layout and zoom-out animation are untouched. */
+@media screen and (orientation:landscape){
+  /* The top header has no separate green divider; only the map frame remains green. */
+  body.analytics-admin-page.analytics-v54-46-page .control-topbar,
+  body.analytics-admin-page.analytics-v54-46-page .control-detail-topbar{
+    border-bottom:0!important;
+    border-bottom-color:transparent!important;
+    outline:0!important;
+    box-shadow:none!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .control-topbar::after,
+  body.analytics-admin-page.analytics-v54-46-page .control-detail-topbar::after{
+    content:none!important;
+    display:none!important;
+    border:0!important;
+    box-shadow:none!important;
+  }
+
+  /* One scroll owner: the map pane itself. No synthetic rail and no outer nested scroll. */
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane{
+    position:relative!important;
+    box-sizing:border-box!important;
+    height:100%!important;
+    min-height:0!important;
+    max-height:100%!important;
+    overflow-x:hidden!important;
+    overflow-y:auto!important;
+    -webkit-overflow-scrolling:touch!important;
+    overscroll-behavior-x:none!important;
+    overscroll-behavior-y:contain!important;
+    touch-action:pan-y!important;
+    scroll-behavior:auto!important;
+    scrollbar-width:thin!important;
+    scrollbar-color:rgba(139,150,160,.90) transparent!important;
+    scrollbar-gutter:auto!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane::-webkit-scrollbar{
+    width:6px!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane::-webkit-scrollbar-track{
+    background:transparent!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane::-webkit-scrollbar-thumb{
+    min-height:54px!important;
+    border-radius:999px!important;
+    background:rgba(139,150,160,.90)!important;
+  }
+
+  /* Keep all map content in the natural vertical flow so the lower green frame is reachable. */
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane > .analytics-pane-wrap,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane > .analytics-map-pane-wrap,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-pane-wrap.analytics-pane-wrap{
+    box-sizing:border-box!important;
+    height:auto!important;
+    min-height:calc(100% + 1px)!important;
+    max-height:none!important;
+    overflow:visible!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #mapEndPullZone{
+    display:block!important;
+    position:relative!important;
+    flex:none!important;
+    box-sizing:border-box!important;
+    width:100%!important;
+    height:142px!important;
+    min-height:142px!important;
+    margin:0!important;
+    padding:0!important;
+    background:#000!important;
+    overflow:hidden!important;
+    pointer-events:auto!important;
+    touch-action:pan-y!important;
+  }
+
+  /* R65's synthetic second scrollbar can never appear, even from stale DOM. */
+  #landscapeMapScrollbarR65,
+  #landscapeMapScrollbarR66{
+    display:none!important;
+    visibility:hidden!important;
+    opacity:0!important;
+    pointer-events:none!important;
+  }
+
+  /* Audience intensity remains proportional to the audience size. */
+  @keyframes andrikR66AudiencePulse{
+    0%,100%{
+      transform:scale(var(--r66-scale-min,.90));
+      opacity:var(--r66-opacity,.70);
+      box-shadow:
+        0 0 0 var(--r66-halo-min,3px) rgb(115 219 255 / var(--r66-halo-alpha,.05)),
+        0 0 var(--r66-glow-min,14px) rgb(91 215 255 / var(--r66-glow-alpha,.56));
+    }
+    50%{
+      transform:scale(var(--r66-scale-max,1.08));
+      opacity:1;
+      box-shadow:
+        0 0 0 var(--r66-halo-max,5px) rgb(115 219 255 / var(--r66-halo-alpha-max,.03)),
+        0 0 var(--r66-glow-max,21px) rgb(91 215 255 / var(--r66-glow-alpha-max,.60));
+    }
+  }
+  body.analytics-admin-page.analytics-v54-46-page #worldMap:not(.is-country-focused) .world-map-dot{
+    opacity:var(--r66-dot-opacity,.56)!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page #worldMap:not(.is-country-focused) .world-map-dot i{
+    animation:andrikR66AudiencePulse 2.65s ease-in-out infinite!important;
+    filter:brightness(var(--r66-brightness,.92)) saturate(var(--r66-saturation,1))!important;
+  }
+}
+</style>
+<script id="andrik-r66-single-native-scroll-runtime">
+/* FINAL R66 SINGLE NATIVE MAP SCROLL RUNTIME — no preventDefault, no synthetic rail. */
+(()=>{
+  'use strict';
+  if(window.__andrikR66SingleNativeScrollReady)return;
+  window.__andrikR66SingleNativeScrollReady=true;
+
+  const pane=document.querySelector('.analytics-map-pane');
+  const map=document.getElementById('worldMap');
+  if(!pane||!map)return;
+  const isLandscape=()=>window.matchMedia?.('(orientation: landscape)')?.matches===true;
+  let raf=0;
+
+  function removeSyntheticRails(){
+    document.querySelectorAll('#landscapeMapScrollbarR65,#landscapeMapScrollbarR66').forEach(node=>node.remove());
+  }
+
+  function decorateAudienceDots(){
+    if(!isLandscape())return;
+    map.querySelectorAll('.world-map-dot').forEach(dot=>{
+      const power=parseFloat(dot.style.getPropertyValue('--power'))||.5;
+      const audience=Math.max(0,Math.min(1,(power-.5)*2));
+      dot.style.setProperty('--r66-scale-min',(.90+audience*.10).toFixed(3));
+      dot.style.setProperty('--r66-scale-max',(1.08+audience*.18).toFixed(3));
+      dot.style.setProperty('--r66-opacity',(.70+audience*.30).toFixed(3));
+      dot.style.setProperty('--r66-dot-opacity',(.56+audience*.44).toFixed(3));
+      dot.style.setProperty('--r66-halo-min',`${(3+audience*5).toFixed(1)}px`);
+      dot.style.setProperty('--r66-halo-max',`${(5+audience*7).toFixed(1)}px`);
+      dot.style.setProperty('--r66-glow-min',`${(14+audience*24).toFixed(1)}px`);
+      dot.style.setProperty('--r66-glow-max',`${(21+audience*34).toFixed(1)}px`);
+      dot.style.setProperty('--r66-halo-alpha',(.05+audience*.09).toFixed(3));
+      dot.style.setProperty('--r66-halo-alpha-max',(.03+audience*.06).toFixed(3));
+      dot.style.setProperty('--r66-glow-alpha',(.56+audience*.36).toFixed(3));
+      dot.style.setProperty('--r66-glow-alpha-max',(.60+audience*.38).toFixed(3));
+      dot.style.setProperty('--r66-brightness',(.92+audience*.28).toFixed(3));
+      dot.style.setProperty('--r66-saturation',(1+audience*.16).toFixed(3));
+    });
+  }
+
+  function normalize(){
+    cancelAnimationFrame(raf);
+    raf=requestAnimationFrame(()=>{
+      removeSyntheticRails();
+      decorateAudienceDots();
+      if(isLandscape()){
+        pane.style.removeProperty('scroll-behavior');
+        const max=Math.max(0,pane.scrollHeight-pane.clientHeight);
+        if(pane.scrollTop>max)pane.scrollTop=max;
+      }
+    });
+  }
+
+  const observer=new MutationObserver(normalize);
+  observer.observe(map,{childList:true,subtree:true,attributes:true,attributeFilter:['class','style']});
+  observer.observe(document.body,{childList:true,subtree:false});
+  window.addEventListener('resize',normalize,{passive:true});
+  window.addEventListener('orientationchange',()=>setTimeout(normalize,140),{passive:true});
+  window.addEventListener('pageshow',normalize,{passive:true});
+  window.addEventListener('andrik:analytics-page-changed',normalize);
+
+  normalize();
+  setTimeout(normalize,300);
+  setTimeout(normalize,1000);
+})();
+</script>
+
+
+<style id="andrik-r67-landscape-scroll-card-fix">
+/* FINAL R67 — landscape only.
+   One reliable vertical map scroll owner, reachable lower frame and selected-country caption.
+   Portrait mode and the existing zoom/zoom-out animation are intentionally untouched. */
+@media screen and (orientation:landscape){
+  body.analytics-admin-page.analytics-v54-46-page .analytics-swipe-viewport,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-swipe-track,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane *{
+    touch-action:pan-y!important;
+  }
+
+  /* Exactly one real vertical scroll surface. */
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane{
+    position:relative!important;
+    box-sizing:border-box!important;
+    height:100%!important;
+    min-height:0!important;
+    max-height:100%!important;
+    overflow-x:hidden!important;
+    overflow-y:scroll!important;
+    -webkit-overflow-scrolling:touch!important;
+    overscroll-behavior-x:none!important;
+    overscroll-behavior-y:contain!important;
+    scroll-behavior:auto!important;
+    scrollbar-width:thin!important;
+    scrollbar-color:rgba(145,154,163,.92) transparent!important;
+    scrollbar-gutter:auto!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane::-webkit-scrollbar{width:6px!important}
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane::-webkit-scrollbar-track{background:transparent!important}
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane::-webkit-scrollbar-thumb{
+    min-height:54px!important;
+    border-radius:999px!important;
+    background:rgba(145,154,163,.92)!important;
+  }
+
+  /* Keep the artwork ratio fixed and give the pane a genuine lower scroll end. */
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane > .analytics-pane-wrap.analytics-map-pane-wrap,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane > .analytics-map-pane-wrap.analytics-pane-wrap{
+    box-sizing:border-box!important;
+    height:auto!important;
+    min-height:max(calc(100% + 190px),calc((100vw - 20px) * .402734375 + 178px))!important;
+    max-height:none!important;
+    overflow:visible!important;
+    padding-bottom:0!important;
+  }
+
+  /* Stronger than all old legacy selectors: this black tail is real content,
+     so the green lower edge of the map can always be reached without stretching the artwork. */
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane > .analytics-pane-wrap.analytics-map-pane-wrap > #mapEndPullZone,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane > .analytics-map-pane-wrap.analytics-pane-wrap > #mapEndPullZone{
+    position:relative!important;
+    display:block!important;
+    flex:none!important;
+    box-sizing:border-box!important;
+    width:100%!important;
+    height:178px!important;
+    min-height:178px!important;
+    max-height:178px!important;
+    margin:0!important;
+    padding:0!important;
+    border:0!important;
+    background:#000!important;
+    overflow:hidden!important;
+    pointer-events:auto!important;
+    touch-action:pan-y!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #mapEndPullZone .map-end-pull-spring,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #mapEndPullZone strong{
+    opacity:0!important;
+    visibility:hidden!important;
+    pointer-events:none!important;
+  }
+
+  /* Compact caption remains inside the map frame and over all map layers. */
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldCountries,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldCountries.is-landscape-layout{
+    z-index:214!important;
+    overflow:visible!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldCountries.is-landscape-layout .world-country-selected-card{
+    z-index:215!important;
+    width:min(302px,calc(100vw - 46px))!important;
+    max-width:302px!important;
+    min-width:0!important;
+    height:auto!important;
+    min-height:0!important;
+    padding:7px 10px 8px!important;
+    overflow:visible!important;
+    pointer-events:auto!important;
+  }
+
+  /* No old synthetic scrollbar may survive stale DOM. */
+  #landscapeMapScrollbarR65,
+  #landscapeMapScrollbarR66,
+  #landscapeMapScrollbarR67{
+    display:none!important;
+    visibility:hidden!important;
+    opacity:0!important;
+    pointer-events:none!important;
+  }
+}
+</style>
+
+<link href="/assets/map-card-actions-v55-00-r68.css?v=55.00-r68" rel="stylesheet"/>
+<script defer src="/assets/map-card-actions-v55-00-r68.js?v=55.00-r68"></script>
+<link href="/assets/map-focus-layout-v55-00-r71.css?v=55.00-r71f-portrait-static-final" rel="stylesheet"/>
+<script defer src="/assets/map-focus-layout-v55-00-r71.js?v=55.00-r71f-portrait-static-final"></script>
+<link href="/assets/map-landscape-country-label-v55-00-r72.css?v=55.00-r72-landscape-country-label" rel="stylesheet"/>
+<script defer src="/assets/map-landscape-country-label-v55-00-r72.js?v=55.00-r72-landscape-country-label"></script>
+<link href="/assets/map-ui-lock-v55-00-r73.css?v=55.00-r73-map-ui-lock" rel="stylesheet"/>
+<script defer src="/assets/map-ui-lock-v55-00-r73.js?v=55.00-r73-map-ui-lock"></script>
+
+<link href="/assets/map-r76-stability-country-label.css?v=55.00-r76" rel="stylesheet"/>
+<script defer src="/assets/map-r76-stability-country-label.js?v=55.00-r76"></script>
+<link href="/assets/map-r77-landscape-country-label.css?v=55.00-r77" rel="stylesheet"/>
+<script defer src="/assets/map-r77-landscape-country-label.js?v=55.00-r77"></script>
+<link href="/assets/map-r78-inline-country-label.css?v=55.00-r78" rel="stylesheet"/>
+<script defer src="/assets/map-r78-inline-country-label.js?v=55.00-r78"></script>
+
+<link href="/assets/map-r80-portrait-map-restore.css?v=55.00-r80" rel="stylesheet"/>
+<script defer src="/assets/map-r80-portrait-map-restore.js?v=55.00-r80"></script>
+
+<link href="/assets/map-r82-portrait-height-final.css?v=55.00-r82" rel="stylesheet"/>
+<link href="/assets/map-r83-portrait-header-poster.css?v=55.00-r83" rel="stylesheet"/>
+<script defer src="/assets/map-r83-portrait-header-poster.js?v=55.00-r83"></script>
+
+<script defer src="/assets/map-r84-portrait-swipe-restore.js?v=55.00-r84"></script>
+<link href="/assets/map-r86-landscape-stable-frame.css?v=55.00-r86" rel="stylesheet"/>
+<script defer src="/assets/map-r86-landscape-stable-frame.js?v=55.00-r86"></script>
+
+<link href="/assets/live-web-ai-r98-landscape-orbs.css?v=55.00-final-r98" rel="stylesheet"/>
+
+<style id="live-web-ai-r101-fixed-magnetic-frame">
+/* LIVE WEB AI FINAL R101 — landscape only.
+   One fixed magnetic frame for Google, Map and YouTube. Portrait is untouched. */
+@media screen and (orientation:landscape){
+  /* Disable every older synthetic frame. The R101 overlay is the only frame. */
+  #landscapeMapFrameR69Final,
+  #liveWebAiUniversalLandscapeFrameR100{
+    display:none!important;
+    opacity:0!important;
+    visibility:hidden!important;
+    width:0!important;
+    height:0!important;
+    border:0!important;
+    box-shadow:none!important;
+    pointer-events:none!important;
+  }
+  #liveWebAiMagneticLandscapeFrameR101{
+    position:fixed!important;
+    z-index:2147483642!important;
+    display:block!important;
+    box-sizing:border-box!important;
+    margin:0!important;
+    padding:0!important;
+    pointer-events:none!important;
+    opacity:1!important;
+    visibility:visible!important;
+    border:3px solid rgba(104,255,179,.99)!important;
+    border-radius:27px!important;
+    background:transparent!important;
+    filter:none!important;
+    animation:none!important;
+    transition:none!important;
+    transform:translateZ(0)!important;
+    backface-visibility:hidden!important;
+    box-shadow:
+      0 0 0 1px rgba(141,255,204,.34),
+      0 0 10px rgba(91,255,183,.84),
+      0 0 24px rgba(57,247,157,.54),
+      0 0 46px rgba(35,218,132,.30),
+      inset 0 0 10px rgba(137,255,205,.42),
+      inset 0 0 24px rgba(61,236,151,.18)!important;
+  }
+}
+@media screen and (orientation:portrait){
+  #liveWebAiMagneticLandscapeFrameR101{display:none!important}
+}
+</style>
+<script id="live-web-ai-r101-fixed-magnetic-frame-js">
+(()=>{
+  'use strict';
+  if(window.__liveWebAiR101MagneticFrameReady)return;
+  window.__liveWebAiR101MagneticFrameReady=true;
+  const ID='liveWebAiMagneticLandscapeFrameR101';
+  const landscape=()=>window.matchMedia&&window.matchMedia('(orientation: landscape)').matches;
+  let raf=0;
+  function frame(){
+    let el=document.getElementById(ID);
+    if(!el){
+      el=document.createElement('div');
+      el.id=ID;
+      el.setAttribute('aria-hidden','true');
+      document.body.appendChild(el);
+    }
+    return el;
+  }
+  function update(){
+    raf=0;
+    const el=frame();
+    if(!landscape()){
+      el.style.display='none';
+      return;
+    }
+    const viewport=document.getElementById('analyticsSwipeViewport');
+    const rect=viewport&&viewport.getBoundingClientRect();
+    if(!rect||rect.width<120||rect.height<120){
+      el.style.display='none';
+      return;
+    }
+    const vw=Math.max(1,document.documentElement.clientWidth||window.innerWidth||0);
+    const vh=Math.max(1,document.documentElement.clientHeight||window.innerHeight||0);
+    const side=Math.max(18,Math.min(30,Math.round(vw*.013)));
+    const left=Math.max(8,Math.round(rect.left+side));
+    const right=Math.min(vw-8,Math.round(rect.right-side));
+    const top=Math.max(1,Math.round(rect.top+1));
+    const bottom=Math.min(vh-1,Math.round(rect.bottom-1));
+    el.style.display='block';
+    el.style.left=left+'px';
+    el.style.top=top+'px';
+    el.style.width=Math.max(80,right-left)+'px';
+    el.style.height=Math.max(80,bottom-top)+'px';
+  }
+  function schedule(){
+    if(raf)cancelAnimationFrame(raf);
+    raf=requestAnimationFrame(()=>requestAnimationFrame(update));
+  }
+  function start(){
+    frame();
+    schedule();
+    [80,180,420,900,1600].forEach(ms=>setTimeout(schedule,ms));
+    const viewport=document.getElementById('analyticsSwipeViewport');
+    if(window.ResizeObserver&&viewport)new ResizeObserver(schedule).observe(viewport);
+  }
+  window.addEventListener('resize',schedule,{passive:true});
+  window.addEventListener('orientationchange',()=>setTimeout(schedule,120),{passive:true});
+  window.visualViewport&&window.visualViewport.addEventListener('resize',schedule,{passive:true});
+  window.addEventListener('pageshow',schedule,{passive:true});
+  window.addEventListener('andrik:analytics-page-changed',schedule,{passive:true});
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)schedule()},{passive:true});
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});
+  else start();
+})();
+</script>
+
+</body></html>
