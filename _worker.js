@@ -7073,8 +7073,8 @@ async function handleControlCommentCollection(request, env) {
 
 
 
-// === ANDRIK Control R104 HOTFIX: public repository bootstrap + one-button update ===
-const SITE_UPDATE_VERSION = '55.00-r104';
+// === ANDRIK Control R105 HOTFIX: timeouts + readable controls + one-button update ===
+const SITE_UPDATE_VERSION = '55.00-r105';
 const SITE_UPDATE_MAX_ZIP_BYTES = 25 * 1024 * 1024;
 const SITE_UPDATE_MAX_FILES = 1200;
 const SITE_UPDATE_MAX_TOTAL_BYTES = 40 * 1024 * 1024;
@@ -7275,26 +7275,38 @@ function siteUpdateBase64(bytes) {
 
 async function siteUpdateGithubRequest(config, route, options = {}) {
   if (!config.token) throw new Error('github-token-missing');
-  const response = await fetch(`https://api.github.com${route}`, {
-    method: options.method || 'GET',
-    headers: {
-      accept:'application/vnd.github+json',
-      authorization:`Bearer ${config.token}`,
-      'content-type':'application/json',
-      'user-agent':'ANDRIK-Control-Site-Updater',
-      'x-github-api-version':'2022-11-28'
-    },
-    body: options.body === undefined ? undefined : JSON.stringify(options.body)
-  });
-  const text = await response.text();
-  let data = {};
-  try { data = text ? JSON.parse(text) : {}; } catch (_) { data = { message:text }; }
-  if (!response.ok) {
-    const error = new Error(`github-${response.status}:${cleanPlainText(data.message || text || 'request-failed', 300)}`);
-    error.status = response.status; error.details = data;
+  const method = options.method || 'GET';
+  const controller = new AbortController();
+  const timeoutMs = Math.max(5000, Math.min(60000, Number(options.timeoutMs || (method === 'GET' ? 20000 : 35000))));
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(`https://api.github.com${route}`, {
+      method,
+      signal:controller.signal,
+      headers: {
+        accept:'application/vnd.github+json',
+        authorization:`Bearer ${config.token}`,
+        'content-type':'application/json',
+        'user-agent':'ANDRIK-Control-Site-Updater-R105',
+        'x-github-api-version':'2022-11-28'
+      },
+      body: options.body === undefined ? undefined : JSON.stringify(options.body)
+    });
+    const text = await response.text();
+    let data = {};
+    try { data = text ? JSON.parse(text) : {}; } catch (_) { data = { message:text }; }
+    if (!response.ok) {
+      const error = new Error(`github-${response.status}:${cleanPlainText(data.message || text || 'request-failed', 300)}`);
+      error.status = response.status; error.details = data;
+      throw error;
+    }
+    return data;
+  } catch (error) {
+    if (error?.name === 'AbortError') throw new Error('github-timeout');
     throw error;
+  } finally {
+    clearTimeout(timer);
   }
-  return data;
 }
 
 async function siteUpdateGithubUploadAsset(config, releaseId, fileName, bytes) {
@@ -7302,17 +7314,28 @@ async function siteUpdateGithubUploadAsset(config, releaseId, fileName, bytes) {
   const owner = encodeURIComponent(config.owner), repo = encodeURIComponent(config.repo);
   const safeName = String(fileName || 'ANDRIK-Control.zip').split('/').pop().replace(/[^A-Za-z0-9._-]+/g, '-').slice(0, 180) || 'ANDRIK-Control.zip';
   const url = `https://uploads.github.com/repos/${owner}/${repo}/releases/${encodeURIComponent(releaseId)}/assets?name=${encodeURIComponent(safeName)}`;
-  const response = await fetch(url, {
-    method:'POST',
-    headers:{
-      accept:'application/vnd.github+json',
-      authorization:`Bearer ${config.token}`,
-      'content-type':'application/zip',
-      'user-agent':'ANDRIK-Control-Site-Updater',
-      'x-github-api-version':'2022-11-28'
-    },
-    body:bytes
-  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 120000);
+  let response;
+  try {
+    response = await fetch(url, {
+      method:'POST',
+      signal:controller.signal,
+      headers:{
+        accept:'application/vnd.github+json',
+        authorization:`Bearer ${config.token}`,
+        'content-type':'application/zip',
+        'user-agent':'ANDRIK-Control-Site-Updater-R105',
+        'x-github-api-version':'2022-11-28'
+      },
+      body:bytes
+    });
+  } catch (error) {
+    if (error?.name === 'AbortError') throw new Error('github-timeout');
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
   const text = await response.text();
   let data = {};
   try { data = text ? JSON.parse(text) : {}; } catch (_) { data = { message:text }; }
@@ -7411,6 +7434,7 @@ function siteUpdateFriendlyError(error) {
   const value = String(error?.message || error || 'unknown');
   const map = {
     'github-token-missing':'В Cloudflare не добавлен секрет GITHUB_SITE_TOKEN.',
+    'github-timeout':'GitHub не ответил за отведённое время. Повторите проверку через кнопку «Состояние».',
     'zip-size':'ZIP слишком большой или повреждён.',
     'zip-eocd':'Файл не распознан как ZIP.',
     'zip-multidisk':'Многотомные ZIP не поддерживаются.',

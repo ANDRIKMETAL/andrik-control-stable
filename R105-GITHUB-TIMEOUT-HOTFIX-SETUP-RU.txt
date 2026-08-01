@@ -1,0 +1,15 @@
+R105 HOTFIX — УСТАНОВКА
+
+Поскольку R104 зависает на проверке GitHub, R105 нужно один раз загрузить вручную.
+
+1. Распаковать архив R105-HOTFIX-FILES.
+2. GitHub → ANDRIKMETAL/andrik-control-stable.
+3. Add file → Upload files.
+4. Выбрать всё содержимое распакованной папки, включая папку assets.
+5. Commit message:
+   Deploy ANDRIK Control R105 GitHub timeout hotfix
+6. Commit directly to main.
+7. Дождаться зелёного Deploy Cloudflare.
+8. Открыть Control → Служебное → Быстро обновить сайт.
+
+После этого дальнейшие полные ZIP можно публиковать одной кнопкой через Control.
