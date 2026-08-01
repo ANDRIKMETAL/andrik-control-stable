@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<script>
+(()=>{try{
+  const supported=new Set(['ru','uk','sk','en']);
+  const root=document.documentElement;
+  let page=(root.lang||'ru').toLowerCase().split('-')[0];
+  if(location.pathname.endsWith('/player.html')){
+    const query=(new URLSearchParams(location.search).get('lang')||'').toLowerCase();
+    let saved='';
+    try{saved=(localStorage.getItem('andrikPreferredLanguage')||'').toLowerCase()}catch(_){}
+    if(supported.has(query)) page=query;
+    else if(supported.has(saved)) page=saved;
+    root.lang=page;
+  }
+  let manual='';
+  try{manual=(sessionStorage.getItem('andrikManualLanguage')||'').toLowerCase()}catch(_){}
+  if(supported.has(page)&&manual===page){
+    root.setAttribute('translate','no');
+    root.classList.add('notranslate');
+    const meta=document.createElement('meta');
+    meta.name='google';
+    meta.content='notranslate';
+    document.head.appendChild(meta);
+  }
+}catch(_){}})();
+</script>
+<meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/>
+<meta content="#02060a" name="theme-color"/>
+<meta content="dark" name="color-scheme"/>
+<title>Trika — the spiritual source of ANDRIK</title>
+<meta content="Trika, Kashmir Shaivism and non-dual philosophy as the spiritual source of ANDRIK music." name="description"/>
+<link href="https://andrikmetal.com/en/trika.html" rel="canonical"/><link href="https://andrikmetal.com/trika.html" hreflang="ru" rel="alternate"/><link href="https://andrikmetal.com/uk/trika.html" hreflang="uk" rel="alternate"/><link href="https://andrikmetal.com/sk/trika.html" hreflang="sk" rel="alternate"/><link href="https://andrikmetal.com/en/trika.html" hreflang="en" rel="alternate"/><link href="https://andrikmetal.com/trika.html" hreflang="x-default" rel="alternate"/>
+<link href="/manifest-en.webmanifest" rel="manifest"/>
+<link href="/favicon.ico" rel="icon"/>
+<link href="/assets/v50-26.css?v=51.79" rel="stylesheet"/>
+<link href="/assets/pwa-install.css" rel="stylesheet"/>
+<script>
+try { if ('scrollRestoration' in history) history.scrollRestoration = 'manual'; } catch (_) {}
+const andrikTrikaHasPlayerReturn = new URLSearchParams(location.search).has('returnScroll');
+const andrikOpenTrikaAtTop = () => {
+  if (andrikTrikaHasPlayerReturn) return;
+  try {
+    document.documentElement.style.overflowAnchor = 'none';
+    if (document.body) document.body.style.overflowAnchor = 'none';
+    window.scrollTo(0, 0);
+  } catch (_) {}
+};
+andrikOpenTrikaAtTop();
+requestAnimationFrame(andrikOpenTrikaAtTop);
+window.addEventListener('pageshow', () => {
+  andrikOpenTrikaAtTop();
+  [40,120,300,700,1200].forEach(delay => setTimeout(andrikOpenTrikaAtTop, delay));
+});
+window.addEventListener('load', () => {
+  andrikOpenTrikaAtTop();
+  [60,240,700].forEach(delay => setTimeout(andrikOpenTrikaAtTop, delay));
+}, { once:true });
+document.addEventListener('DOMContentLoaded', andrikOpenTrikaAtTop, { once:true });
+</script>
+</head>
+<body class="trika-standalone-page" id="page-top">
+<a class="skip-link" href="#content">Skip to content</a>
+<audio id="andrikAudio" loop="" preload="metadata" src="/assets/andrik-motif.mp3"></audio>
+<nav aria-label="Menu" class="topbar">
+<div class="wrap nav-shell">
+<div class="brand-cluster"><a aria-label="ANDRIK — Home" class="brand" href="/en/"><span aria-hidden="true" class="brand-eye"></span><span>ANDRIK</span></a><a aria-label="Open player" class="icon-btn brand-player-btn" href="/player.html?lang=en" title="Player"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M8 5.6v12.8L18.5 12 8 5.6Z"></path></svg></a></div>
+<div class="nav-links" id="siteMenu"><a href="/en/#video">Video</a><a href="/en/#prosnis">Проснись</a><a href="/en/#links">Platforms</a><a href="/en/#discography">Discography</a><a href="/en/trika.html#page-top">Inspiration</a><a href="/en/#about">About</a><a href="/en/comments.html#page-top">Community</a></div>
+<div class="nav-tools"><button aria-controls="siteMenu" aria-expanded="false" aria-label="Open menu" class="icon-btn nav-toggle" data-close-label="Close menu" data-open-label="Open menu" id="navToggle" title="Menu" type="button"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 6h16v2H4V6Zm0 5h16v2H4v-2Zm0 5h16v2H4v-2Z"></path></svg></button><div class="language-picker"><button aria-controls="languageMenu" aria-expanded="false" aria-label="Choose language" class="icon-btn language-toggle" title="Choose language" type="button"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm6.92 9h-3.05a15.8 15.8 0 0 0-1.26-5.08A8.03 8.03 0 0 1 18.92 11ZM12 4c.93 1.13 1.68 3.05 1.86 5H10.14C10.32 7.05 11.07 5.13 12 4ZM9.39 5.92A15.8 15.8 0 0 0 8.13 11H5.08a8.03 8.03 0 0 1 4.31-5.08ZM5.08 13h3.05c.16 1.91.6 3.69 1.26 5.08A8.03 8.03 0 0 1 5.08 13ZM12 20c-.93-1.13-1.68-3.05-1.86-5h3.72c-.18 1.95-.93 3.87-1.86 5Zm2.61-1.92c.66-1.39 1.1-3.17 1.26-5h3.05a8.03 8.03 0 0 1-4.31 5.08Z"></path></svg></button><div aria-label="Choose language" class="language-dropdown" id="languageMenu" role="menu"><a class="language-option" href="/trika.html" lang="ru" role="menuitem"><span class="language-label"><span aria-hidden="true" class="language-flag">🇷🇺</span>Русский</span></a><a class="language-option" href="/uk/trika.html" lang="uk" role="menuitem"><span class="language-label"><span aria-hidden="true" class="language-flag">🇺🇦</span>Українська</span></a><a class="language-option" href="/sk/trika.html" lang="sk" role="menuitem"><span class="language-label"><span aria-hidden="true" class="language-flag">🇸🇰</span>Slovenčina</span></a><a aria-current="page" class="language-option active" href="/en/trika.html" lang="en" role="menuitem"><span class="language-label"><span aria-hidden="true" class="language-flag">🌐</span>English</span><span aria-hidden="true" class="language-check">✓</span></a></div></div><button aria-label="Play music motif" class="icon-btn" data-play-label="Play music motif" data-stop-label="Stop music motif" id="audioToggle" title="Music motif" type="button"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M9 18V5l11-2v13.2A3.8 3.8 0 1 1 18 13V7.2L11 8.5V18a3.8 3.8 0 1 1-2-3.35V18Z"></path></svg></button></div>
+</div>
+</nav>
+<main class="trika-page-main" id="content">
+<div class="wrap trika-page-back"><a class="btn" href="/en/">← Return home</a></div>
+<section aria-labelledby="trika-title" class="section trika-section trika-page-section" id="trika">
+<div class="wrap">
+<header class="trika-heritage-hero reveal">
+<div class="trika-heritage-art">
+<img alt="Ancient palm-leaf manuscripts — a symbol of knowledge carried through millennia" decoding="async" fetchpriority="high" height="941" src="/assets/trika-ancient-manuscripts-v61.webp" width="1672"/>
+</div>
+<div aria-hidden="true" class="trika-heritage-shade"></div>
+<div class="trika-heritage-content">
+<span class="eyeline">The spiritual source of the project</span>
+<p class="trika-kicker">Music. Consciousness. Awakening.</p>
+<h1 class="trika-title" id="trika-title">TRIKA</h1>
+<p class="trika-heritage-tagline">Knowledge carried through millennia</p>
+</div>
+</header>
+<article class="trika-heritage-copy reveal">
+<h2>An ancient living tradition</h2>
+<p>Trika is not a modern idea or a new philosophy. Its worldview draws on older Indian spiritual traditions in which knowledge was passed from teacher to student for centuries — first orally and later preserved in manuscripts, including those written on palm leaves. Across generations, this carried an understanding of the one Consciousness, freedom and the true nature of the human being.</p>
+</article>
+<div class="trika-grid">
+<article class="trika-card reveal">
+<span aria-hidden="true" class="trika-number">01</span>
+<h3>What is Trika?</h3>
+<p>Trika is an ancient non-dual spiritual and philosophical tradition of Kashmir Shaivism. It points to all existence as a manifestation of one boundless Consciousness.</p>
+<p>The world is not separate from us. We are not separate from Life.</p>
+<strong>At the heart of everything, one truth remains: I AM.</strong>
+</article>
+<article class="trika-card reveal">
+<span aria-hidden="true" class="trika-number">02</span>
+<h3>Why ANDRIK?</h3>
+<p>This is not an attempt to teach or persuade. It is an artistic invitation to look within.</p>
+<p>Through music, film and symbols, the project explores consciousness, freedom, love and awakening.</p>
+<strong>Every song is a chapter in one greater journey.</strong>
+</article>
+</div>
+<div aria-label="The journey through ANDRIK albums" class="trika-path reveal">
+<article class="trika-path-step">
+<span>First album</span>
+<h3>ILLUSION OF LIFE</h3>
+<p>See the illusion.</p>
+</article>
+<span aria-hidden="true" class="trika-path-arrow">→</span>
+<article class="trika-path-step">
+<span>Second album</span>
+<h3>OCEAN</h3>
+<p>Return to the Source.</p>
+</article>
+<span aria-hidden="true" class="trika-path-arrow">→</span>
+<article class="trika-path-step trika-path-step-accent">
+<span>Third album</span>
+<h3>TRIKA</h3>
+<p>Remember what you have always been.</p>
+</article>
+</div>
+<div class="trika-sources reveal">
+<span class="trika-sources-label">Sources of inspiration</span>
+<div aria-label="ANDRIK sources of inspiration" class="trika-tags">
+<span>Trika</span>
+<span>Kashmir Shaivism</span>
+<span>Yoga Vasistha</span>
+<span>Advaita Vedanta</span>
+</div>
+<p>All ANDRIK works are original artistic interpretations of these ideas.</p>
+</div>
+<blockquote class="trika-final reveal">
+<span>There is only one Consciousness.</span>
+<em>Everything else is its infinite play.</em>
+<strong>I AM.</strong>
+<strong class="trika-final-answer">YOU ARE THAT.</strong>
+</blockquote>
+<aside class="trika-creator-note reveal">
+<img alt="ANDRIK and Lira — the creator and voice of the music project" decoding="async" height="640" loading="lazy" src="/assets/andrik-lira-trika-v58.webp" width="640"/>
+<div>
+<span>ANDRIK · project creator</span>
+<h3>Music as a bridge</h3>
+<p>On this path, ANDRIK and Lira transform ancient ideas into music, imagery and stories — not as preaching, but as a personal artistic exploration of Consciousness.</p>
+</div>
+</aside>
+</div>
+</section>
+</main>
+<footer class="footer"><div class="wrap footer-grid"><div><div class="footer-brand">ANDRIK</div><p class="footer-copy">© <span data-year="">2026</span> ANDRIK Records. All rights reserved.</p></div></div></footer>
+<script defer="" src="/assets/v50.js?v=54.42"></script>
+<script defer="" src="/assets/player-shell-bridge.js?v=51.79"></script>
+<script defer src="/assets/push-v54-07.js?v=54.07"></script>
+<script defer src="/assets/site-live-v54-07.js?v=54.07"></script></body>
+</html>
