@@ -1,0 +1,19 @@
+R104 HOTFIX — PUBLIC REPOSITORY + BUTTON TEXT
+
+Причина ошибки not-found:
+Cloudflare был переключён на публичный репозиторий andrik-control-stable, но в нём находилась старая серверная часть _worker.js без актуального API обновления.
+
+БЫСТРЫЙ ЗАПУСК — ТОЛЬКО ОДИН ФАЙЛ ВРУЧНУЮ:
+1. Открой GitHub → ANDRIKMETAL/andrik-control-stable → Code.
+2. Нажми Add file → Upload files.
+3. Загрузи файл _worker.js из отдельной ссылки, которую дал ChatGPT.
+4. Commit message: R104 bootstrap restore site updater API
+5. Commit directly to main.
+6. Дождись зелёного успешного Deploy в Cloudflare.
+7. Открой Control → Служебное → Обновление сайта.
+8. Выбери полный ZIP ANDRIK-Control-v55.00-FINAL-STABLE-R104-PUBLIC-REPO-HOTFIX.zip.
+9. После автопроверки нажми ОБНОВИТЬ САЙТ.
+
+После этого автоматически обновятся остальные файлы, исправится цвет текста кнопок, создастся backup, commit, Release и запустится Cloudflare Deploy.
+
+Секреты и токены в архив не добавлены.

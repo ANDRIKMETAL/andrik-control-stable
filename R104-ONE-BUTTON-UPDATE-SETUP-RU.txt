@@ -1,0 +1,21 @@
+R104 — ONE BUTTON UPDATE
+
+Рабочая схема:
+1. Control → Служебное → Быстро обновить сайт.
+2. Нажать «Выбрать ZIP» и выбрать полный архив новой версии.
+3. Дождаться надписи «ZIP готов».
+4. Нажать «ОБНОВИТЬ САЙТ» и подтвердить системное окно.
+
+Дальше автоматически:
+- backup текущего сайта;
+- commit в ANDRIKMETAL/ANDRIK-Website, ветка main;
+- Release и ZIP в ANDRIKMETAL/andrik-control-stable;
+- Cloudflare Pages deploy;
+- проверка результата и запись в журнал.
+
+Обязательные настройки Cloudflare Production:
+- Secret GITHUB_SITE_TOKEN;
+- GITHUB_SITE_REPO=ANDRIK-Website (необязательно, это значение по умолчанию);
+- GITHUB_RELEASE_REPO=andrik-control-stable (необязательно, это значение по умолчанию).
+
+Cloudflare Pages должен быть подключён к ANDRIKMETAL/ANDRIK-Website, production branch main, Automatic deployments Enabled.
