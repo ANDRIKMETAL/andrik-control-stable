@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="ru" translate="no" class="notranslate"><head>
+<meta name="google" content="notranslate"><meta charset="utf-8"/>
+<meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/>
+<meta content="#252a2e" name="theme-color"/>
+<meta content="Control" name="apple-mobile-web-app-title"/>
+<meta content="dark" name="color-scheme"/>
+<meta content="noindex,nofollow,noarchive" name="robots"/>
+<link href="/assets/live-web-ai-green-eye-r94-192.png?v=55.00-r94" rel="icon" type="image/png"/>
+<link href="/assets/live-web-ai-green-eye-r94-192.png?v=55.00-r94" rel="apple-touch-icon"/>
+<script>if(location.hostname.toLowerCase()==='control.andrikmetal.com'){const m=document.createElement('link');m.rel='manifest';m.href='/admin-manifest.webmanifest?v=55.00-r94';document.head.appendChild(m)}</script>
+<script defer src="/assets/control-cache-reset-v55-00-r3u.js?v=55.00-r3u"></script>
+<link href="/assets/v50-26.css?v=53.0" rel="stylesheet"/>
+<link href="/assets/control-v54-stable.css?v=54.02" rel="stylesheet"/>
+<link href="/assets/control-v54-04.css?v=54.05" rel="stylesheet"/>
+<link href="/assets/control-v54-07.css?v=54.07" rel="stylesheet"/>
+<link href="/assets/control-v54-08.css?v=54.08" rel="stylesheet"/>
+<title>Live Web AI — статистика ANDRIK</title><link rel="prefetch" href="/control-home.html?page=menu&amp;v=54.66"/>
+<link href="/assets/control-v54-09.css?v=54.09" rel="stylesheet"/>
+<link href="/assets/control-v54-18.css?v=54.18" rel="stylesheet"/>
+<link href="/assets/control-v54-21.css?v=54.22" rel="stylesheet"/>
+<link href="/assets/control-v54-24.css?v=54.24" rel="stylesheet"/>
+<link href="/assets/control-v54-25.css?v=54.25" rel="stylesheet"/>
+<link href="/assets/control-v54-28.css?v=54.30" rel="stylesheet"/>
+<link href="/assets/control-v54-32.css?v=54.32" rel="stylesheet"/>
+<link href="/assets/control-v54-58.css?v=54.58" rel="stylesheet"/><link href="/assets/control-v54-59.css?v=54.59" rel="stylesheet"/><link href="/assets/control-v54-60.css?v=54.60" rel="stylesheet"/><link href="/assets/control-v54-66.css?v=54.66" rel="stylesheet"/>
+<style>
+.andrik-spoiler{margin-top:14px;border:1px solid rgba(170,210,255,.16);border-radius:24px;background:rgba(6,14,26,.55);overflow:hidden}
+.andrik-spoiler>summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 20px;font-weight:800;font-size:1rem;color:#eef6ff;letter-spacing:.02em}
+.andrik-spoiler>summary::-webkit-details-marker{display:none}
+.andrik-spoiler>summary::after{content:'Показать';font-size:.84rem;font-weight:700;color:#9ecbff;opacity:.95}
+.andrik-spoiler[open]>summary::after{content:'Скрыть'}
+.andrik-spoiler-body{padding:0 18px 18px}
+.youtube-monitor-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.youtube-monitor-grid span{min-width:0;text-align:center;justify-content:center;padding:12px 8px;line-height:1.15}
+.analytics-pull-indicator{position:fixed;left:50%;top:max(env(safe-area-inset-top),10px);transform:translate(-50%,-18px);background:rgba(10,22,38,.92);color:#eff8ff;border:1px solid rgba(158,203,255,.2);border-radius:999px;padding:10px 16px;display:flex;align-items:center;gap:10px;z-index:60;opacity:0;pointer-events:none;transition:opacity .25s ease,transform .25s ease,box-shadow .25s ease}
+.analytics-pull-indicator i{width:10px;height:10px;border-radius:50%;background:#7bd3ff;box-shadow:0 0 16px rgba(123,211,255,.8)}
+.analytics-pull-indicator.is-visible{opacity:1;transform:translate(-50%,0)}
+.analytics-pull-indicator.is-ready{box-shadow:0 0 0 1px rgba(255,100,100,.18),0 8px 28px rgba(0,0,0,.35)}
+.world-map-help b{color:#9ed6ff}
+.youtube-title-status-row{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:10px!important;flex-wrap:nowrap!important;min-width:0!important}
+.youtube-title-status-row h1{margin:0!important;min-width:0!important;flex:1 1 auto!important}
+.youtube-studio-gate-inline{margin-left:auto!important;flex:0 1 auto!important;min-width:0!important;width:auto!important;max-width:49%!important}
+.analytics-sharing-card{grid-column:1/-1}
+.analytics-site-title-inline{font-size:clamp(2.25rem,7vw,3.35rem);line-height:1.02;white-space:nowrap;letter-spacing:-.02em}
+.analytics-site-hero .analytics-kpi-grid{margin-top:18px}
+.youtube-studio-status-connected{appearance:none!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:7px!important;box-sizing:border-box!important;width:auto!important;min-width:0!important;max-width:100%!important;padding:9px 12px!important;border:1px solid rgba(255,145,145,.62)!important;border-radius:16px!important;background:linear-gradient(180deg,#e45252 0%,#b9252d 100%)!important;color:#fff!important;box-shadow:0 0 18px rgba(210,39,49,.3),inset 0 0 12px rgba(255,255,255,.08)!important;font-family:inherit!important;font-weight:900!important;font-size:clamp(.68rem,3.05vw,.82rem)!important;line-height:1.08!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+.youtube-studio-status-connected i{flex:0 0 auto!important;width:9px!important;height:9px!important;border-radius:50%!important;background:#fff!important;box-shadow:0 0 9px rgba(255,255,255,.9)!important}
+.youtube-studio-status-connected span{display:block!important;min-width:0!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;color:#fff!important}
+.youtube-studio-status-connected:hover{filter:brightness(1.04)}
+
+
+.search-console-dynamics-card{margin-top:18px}
+.search-console-dynamics-card .admin-card-title-row{align-items:flex-start}
+.search-console-open{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:0 16px;border:1px solid rgba(126,213,255,.28);border-radius:999px;background:rgba(9,28,42,.74);color:#ccefff;font-weight:800;text-decoration:none;white-space:nowrap}
+.search-console-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:16px}
+.search-console-kpi{min-width:0;padding:14px 12px;border:1px solid rgba(140,205,238,.16);border-radius:20px;background:linear-gradient(180deg,rgba(12,28,40,.88),rgba(5,15,23,.9))}
+.search-console-kpi small{display:block;color:#91a8b9;font-size:.76rem;line-height:1.15}
+.search-console-kpi strong{display:block;margin-top:6px;color:#f0f9ff;font-size:1.45rem;line-height:1.05;letter-spacing:-.02em}
+.search-console-trend{position:relative;height:210px;margin-top:16px;padding:14px 10px 30px;border:1px solid rgba(140,205,238,.12);border-radius:22px;background:rgba(3,12,19,.56);overflow:hidden}
+.search-console-bars{height:100%;display:flex;align-items:flex-end;gap:3px}
+.search-console-day{position:relative;flex:1 1 0;min-width:3px;height:100%;display:flex;align-items:flex-end;justify-content:center;gap:1px}
+.search-console-day i,.search-console-day b{display:block;width:42%;min-width:2px;border-radius:4px 4px 1px 1px;transition:height .35s ease}
+.search-console-day i{background:linear-gradient(180deg,#d9f5ff,#74c9ee)}
+.search-console-day b{background:linear-gradient(180deg,#9fa8ff,#5866c9);opacity:.84}
+.search-console-day span{position:absolute;left:50%;bottom:-22px;transform:translateX(-50%);color:#7890a1;font-size:.58rem;white-space:nowrap}
+.search-console-key{display:flex;flex-wrap:wrap;gap:14px;margin-top:12px;color:#91a8b9;font-size:.75rem;font-weight:700}
+.search-console-key span{display:inline-flex;align-items:center;gap:6px}
+.search-console-key i{width:12px;height:6px;border-radius:99px;background:#74c9ee}
+.search-console-key i.is-impressions{background:#6975d8}
+.search-console-message{margin-top:14px;padding:14px 16px;border:1px solid rgba(140,205,238,.14);border-radius:18px;color:#a9bdca;background:rgba(4,14,21,.5)}
+@media (max-width:540px){.search-console-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.search-console-open{min-height:38px;padding:0 13px;font-size:.78rem}.search-console-trend{height:190px}.search-console-day:nth-child(even) span{display:none}}
+
+@media (max-width:540px){.youtube-title-status-row{align-items:center!important;flex-wrap:nowrap!important}.youtube-studio-gate-inline{min-width:0!important;max-width:49%!important;width:auto!important}.analytics-site-title-inline{font-size:clamp(1.9rem,7.8vw,2.55rem)}}
+@media (max-width:420px){.youtube-monitor-grid span{font-size:.85rem;padding:10px 6px}}
+
+.analytics-v54-46-page .analytics-swipe-viewport,
+.analytics-v54-46-page .analytics-map-pane{touch-action:none!important;overscroll-behavior:none!important}
+.analytics-v54-46-page .analytics-map-pane *{touch-action:none}
+.analytics-topbar-minimal{grid-template-columns:1fr!important;justify-items:center!important}
+.analytics-topbar-minimal .control-center-logo{left:50%!important}
+.analytics-v54-46-page .world-map-help{display:none!important}
+.analytics-v54-46-page .analytics-map-pane .admin-card-title-row p{margin-bottom:0!important}
+.analytics-v54-46-page .analytics-pull-indicator{top:calc(env(safe-area-inset-top) + 86px)!important;z-index:2147483000!important;max-width:calc(100vw - 28px)!important;box-sizing:border-box!important;white-space:nowrap!important}
+.analytics-v54-46-page .analytics-swipe-viewport.is-country-list-open,
+.analytics-v54-46-page .analytics-swipe-viewport.is-country-list-open .analytics-swipe-track,
+.analytics-v54-46-page .analytics-map-pane.is-country-expanded,
+.analytics-v54-46-page .analytics-map-pane.is-country-expanded *{touch-action:pan-y!important}
+.analytics-v54-46-page .analytics-map-pane.is-country-expanded{overflow-y:auto!important;-webkit-overflow-scrolling:touch!important;overscroll-behavior-y:contain!important}
+.analytics-v54-46-page .world-country-toggle.is-top-toggle{position:sticky;top:8px;z-index:30;margin-bottom:4px;background:rgba(18,50,67,.97)!important;box-shadow:0 8px 22px rgba(0,0,0,.3)}
+.analytics-v54-46-page .world-map-canvas{overflow:hidden!important}
+.analytics-v54-46-page .world-map-stage{transform-origin:0 0!important;transition:transform .46s cubic-bezier(.2,.78,.22,1),filter .3s ease!important;will-change:transform!important}
+.analytics-v54-46-page .world-map-shell.is-country-focused .world-map-stage{transform-origin:0 0!important;transform:translate3d(var(--focus-tx,0px),var(--focus-ty,0px),0) scale(var(--focus-zoom,1))!important;filter:saturate(1.08) brightness(1.03)!important}
+.analytics-v54-46-page .world-map-shell.is-country-focused .world-map-state{opacity:.88}
+.analytics-v54-46-page .world-map-stage .world-map-dot{transition:transform .18s ease,opacity .18s ease!important}
+.analytics-v54-46-page .analytics-swipe-hint{margin-top:10px!important}
+@media(max-width:420px){.analytics-v54-46-page .analytics-pull-indicator{top:calc(env(safe-area-inset-top) + 76px)!important;font-size:.78rem!important;padding:9px 13px!important}}
+
+
+/* v54.54 — isolated focus UI. The stable map renderer remains untouched. */
+.analytics-v54-46-page .world-country-list.is-country-focus-mode,
+.analytics-v54-46-page .world-country-list:has(.world-country-button.is-selected){
+  display:flex!important;
+  justify-content:center!important;
+  align-items:center!important;
+  padding:12px 0 2px!important;
+}
+.analytics-v54-46-page .world-country-list.is-country-focus-mode .world-country-button:not(.is-selected),
+.analytics-v54-46-page .world-country-list.is-country-focus-mode .world-country-toggle,
+.analytics-v54-46-page .world-country-list:has(.world-country-button.is-selected) .world-country-button:not(.is-selected),
+.analytics-v54-46-page .world-country-list:has(.world-country-button.is-selected) .world-country-toggle{
+  display:none!important;
+}
+.analytics-v54-46-page .world-country-list.is-country-focus-mode .world-country-button.is-selected,
+.analytics-v54-46-page .world-country-list:has(.world-country-button.is-selected) .world-country-button.is-selected{
+  display:grid!important;
+  grid-template-columns:auto minmax(0,1fr) auto!important;
+  align-items:center!important;
+  gap:11px!important;
+  width:min(100%,430px)!important;
+  min-height:62px!important;
+  margin:0 auto!important;
+  padding:11px 20px!important;
+  border-color:rgba(255,211,72,.92)!important;
+  background:linear-gradient(180deg,rgba(96,66,7,.82),rgba(56,38,5,.9))!important;
+  box-shadow:0 0 0 1px rgba(255,203,57,.22),0 0 24px rgba(255,183,0,.20)!important;
+}
+.analytics-v54-46-page .world-country-list.is-country-focus-mode .world-country-button.is-selected::after,
+.analytics-v54-46-page .world-country-list:has(.world-country-button.is-selected) .world-country-button.is-selected::after{
+  content:none!important;
+  display:none!important;
+}
+.analytics-v54-46-page .world-country-list.is-country-focus-mode .world-country-button.is-selected .world-country-name,
+.analytics-v54-46-page .world-country-list:has(.world-country-button.is-selected) .world-country-button.is-selected .world-country-name{
+  width:auto!important;
+  min-width:0!important;
+  text-align:center!important;
+}
+.analytics-v54-46-page .world-country-list.is-country-focus-mode .world-country-button.is-selected .world-country-marquee,
+.analytics-v54-46-page .world-country-list:has(.world-country-button.is-selected) .world-country-button.is-selected .world-country-marquee{
+  transform:none!important;
+  animation:none!important;
+  text-align:center!important;
+}
+
+/* v54.58 — weekly growth is available on the main map; focused mode stays clean. */
+.country-growth-toggle{display:flex;width:100%;min-height:54px;margin:8px 0 0;align-items:center;justify-content:center;border:1px solid rgba(103,190,230,.28);border-radius:20px;background:rgba(11,40,55,.78);color:#bfeaff;font:800 .92rem/1.2 system-ui;letter-spacing:.02em}
+.world-map-card.has-country-focus .country-growth-toggle{display:none!important}
+.country-growth-toggle[aria-expanded="true"]{border-color:rgba(255,205,70,.55);color:#ffe39b;background:rgba(72,48,5,.72)}
+.country-growth-panel{margin-top:8px;padding:18px;border:1px solid rgba(112,196,235,.22);border-radius:24px;background:linear-gradient(180deg,rgba(5,21,31,.96),rgba(3,13,21,.97));box-shadow:0 18px 48px rgba(0,0,0,.35);max-height:min(72dvh,720px);overflow-y:auto!important;overscroll-behavior:contain!important;touch-action:pan-y!important;-webkit-overflow-scrolling:touch;scrollbar-gutter:stable}
+.country-growth-head{position:sticky;top:-18px;z-index:4;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin:-18px -18px 16px;padding:18px 18px 12px;background:linear-gradient(180deg,rgba(5,21,31,.995) 75%,rgba(5,21,31,.86))}.country-growth-head span{display:block;color:#9fdcff;font-size:.68rem;font-weight:900;letter-spacing:.18em}.country-growth-head strong{display:block;margin-top:5px;color:#f4f8fb;font-size:1.08rem}.country-growth-head button{flex:0 0 38px;width:38px!important;height:38px!important;min-width:38px!important;min-height:38px!important;padding:0!important;display:grid!important;place-items:center!important;aspect-ratio:1/1;border:1px solid rgba(156,211,238,.22);border-radius:50%!important;background:rgba(15,35,47,.84);color:#dff4ff;font-size:1.35rem;line-height:1}
+.country-growth-list{display:grid;gap:10px}.country-growth-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;padding:11px 12px;border:1px solid rgba(122,190,221,.16);border-radius:16px;background:rgba(10,30,42,.72)}.country-growth-rank{width:30px;height:30px;display:grid;place-items:center;border-radius:50%;background:rgba(115,193,229,.12);color:#bde9ff;font-size:.75rem;font-weight:900}.country-growth-copy{min-width:0}.country-growth-name{display:flex;align-items:center;gap:8px;color:#eef8fc;font-weight:850}.country-growth-bar{height:5px;margin-top:8px;border-radius:999px;background:rgba(98,154,180,.12);overflow:hidden}.country-growth-bar i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#78d5ff,#e7c45c)}.country-growth-value{text-align:right;color:#79e6a5;font-weight:900}.country-growth-value small{display:block;margin-top:3px;color:#8fa8b6;font-size:.62rem;font-weight:700}.country-growth-loading{color:#91a9b8}
+.country-weekly-gain{display:none}.world-country-button.is-selected .country-weekly-gain{display:block;grid-column:1/-1;margin-top:1px;font-size:.82rem;font-weight:900;text-align:center}.country-weekly-current{color:#65efa0!important}.country-weekly-compare{color:#65efa0!important}.country-weekly-compare.is-negative{color:#ff9f9f}.country-weekly-compare.is-flat{color:#a9c2cf}
+
+.analytics-v54-46-page .country-growth-panel,
+.analytics-v54-46-page .country-growth-panel *{touch-action:pan-y!important}
+.analytics-v54-46-page .analytics-swipe-viewport.is-growth-open,
+.analytics-v54-46-page .analytics-map-pane.is-growth-open{touch-action:pan-y!important;overscroll-behavior-y:contain!important}
+@media(max-width:430px){.country-growth-panel{max-height:calc(100dvh - 190px);padding:15px}.country-growth-head{top:-15px;margin:-15px -15px 14px;padding:15px 15px 10px}.country-growth-row{padding:10px 9px;gap:8px}.country-growth-value{font-size:.94rem}}
+
+
+/* R25 — wider map card: almost edge-to-edge on phone, with a slightly wider map itself. */
+.analytics-v54-46-page .analytics-map-pane .analytics-map-pane-wrap{
+  padding-left:4px!important;
+  padding-right:4px!important;
+}
+.analytics-v54-46-page .analytics-map-pane .analytics-map-top{
+  padding:10px 8px 10px!important;
+  border-radius:26px!important;
+}
+.analytics-v54-46-page .analytics-map-pane .world-map-canvas{
+  padding:4px 2px!important;
+  border-radius:18px!important;
+}
+.analytics-v54-46-page .analytics-map-pane .analytics-map-top:not(.has-country-focus) .world-map-stage{
+  aspect-ratio:3.28/1!important;
+}
+.analytics-v54-46-page .analytics-map-pane .analytics-map-top > .admin-card-title-row{
+  margin-bottom:5px!important;
+}
+@media(max-width:430px){
+  .analytics-v54-46-page .analytics-map-pane .analytics-map-pane-wrap{
+    padding-left:3px!important;
+    padding-right:3px!important;
+  }
+  .analytics-v54-46-page .analytics-map-pane .analytics-map-top{
+    padding:9px 7px 9px!important;
+  }
+}
+
+</style>
+<link href="/assets/control-v54-67.css?v=54.67" rel="stylesheet"/><link href="/assets/control-v54-68.css?v=54.68" rel="stylesheet"/>
+<link href="/assets/control-v54-72.css?v=54.72" rel="stylesheet"/><link href="/assets/control-v54-73.css?v=54.73" rel="stylesheet"/><link href="/assets/control-v54-76.css?v=54.76" rel="stylesheet"/><link href="/assets/control-v54-77.css?v=54.77" rel="stylesheet"/><link href="/assets/control-v54-78.css?v=54.78" rel="stylesheet"/>
+<link href="/assets/control-v54-81-emergency.css?v=54.81" rel="stylesheet"/>
+<link href="/assets/control-v54-82.css?v=54.82" rel="stylesheet"/>
+<link href="/assets/control-v54-89.css?v=54.89" rel="stylesheet"/>
+<link href="/assets/control-v54-99b.css?v=54.99b" rel="stylesheet"/>
+<link href="/assets/control-v55-00-r3a-live-eye.css?v=55.00-r3a" rel="stylesheet"/>
+
+<link href="/assets/control-v55-00-final-r22.css?v=55.00-final-r22" rel="stylesheet"/>
+<style id="r30-portrait-map-width-only">
+/* R30 — portrait only: widen the map card and map horizontally, preserve map height. */
+@media (orientation:portrait){
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane > .analytics-map-pane-wrap{
+    width:100%!important;
+    max-width:none!important;
+    padding-left:2px!important;
+    padding-right:2px!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top{
+    box-sizing:border-box!important;
+    width:calc(100vw - 8px)!important;
+    max-width:none!important;
+    margin-left:auto!important;
+    margin-right:auto!important;
+    padding-left:8px!important;
+    padding-right:8px!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .world-map-shell{
+    width:100%!important;
+    max-width:none!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .world-map-canvas{
+    box-sizing:border-box!important;
+    width:100%!important;
+    max-width:none!important;
+    height:clamp(300px,48.7vw,360px)!important;
+    min-height:0!important;
+    max-height:none!important;
+    aspect-ratio:auto!important;
+    padding-left:2px!important;
+    padding-right:2px!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .world-map-stage{
+    width:100%!important;
+    height:100%!important;
+    min-height:0!important;
+    aspect-ratio:auto!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .world-map-stage img{
+    inset:2% 0!important;
+    width:100%!important;
+    height:96%!important;
+    object-fit:fill!important;
+  }
+}
+</style>
+
+<style id="r31-map-max-width">
+/* R31 — maximum portrait width only. Existing map height is intentionally preserved. */
+@media screen and (orientation:portrait){
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-pane-wrap{
+    box-sizing:border-box!important;
+    width:100%!important;
+    max-width:none!important;
+    padding-left:0!important;
+    padding-right:0!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top{
+    position:relative!important;
+    left:50%!important;
+    box-sizing:border-box!important;
+    width:calc(100vw - 8px)!important;
+    max-width:none!important;
+    margin-left:0!important;
+    margin-right:0!important;
+    transform:translateX(-50%)!important;
+    padding-left:7px!important;
+    padding-right:7px!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .world-map-shell,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .world-map-canvas,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .world-map-stage{
+    box-sizing:border-box!important;
+    width:100%!important;
+    max-width:none!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .world-map-canvas{
+    padding-left:1px!important;
+    padding-right:1px!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .world-map-stage img{
+    left:0!important;
+    right:0!important;
+    width:100%!important;
+    object-fit:fill!important;
+  }
+}
+</style>
+
+<style id="andrik-r32-landscape-map-start">
+/* R32 — three precise changes only: hide growth close circle; balance two left header items; keep map ready on landscape turn. */
+#countryGrowthClose{display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important;}
+@media screen and (orientation:landscape){
+  .analytics-v54-46-page .world-map-card>.map-landscape-title-row{
+    --r32-map-head-shift:clamp(-52px,-3.7vw,-28px);
+    display:grid!important;
+    grid-template-columns:repeat(3,minmax(0,1fr))!important;
+    grid-template-rows:auto auto auto!important;
+    grid-template-areas:
+      "total geography calendar"
+      "title title title"
+      "period period period"!important;
+    align-items:center!important;
+    column-gap:0!important;
+    padding-left:8px!important;
+    padding-right:8px!important;
+  }
+  .analytics-v54-46-page .map-title-pyramid{display:contents!important;}
+  .analytics-v54-46-page .map-title-pyramid>.eyeline{
+    grid-area:geography!important;
+    justify-self:center!important;
+    transform:translateX(var(--r32-map-head-shift))!important;
+  }
+  .analytics-v54-46-page .world-map-total{
+    grid-area:total!important;
+    position:relative!important;
+    inset:auto!important;
+    justify-self:center!important;
+    transform:translateX(var(--r32-map-head-shift))!important;
+  }
+  .analytics-v54-46-page .map-monthly-open{
+    grid-area:calendar!important;
+    position:relative!important;
+    inset:auto!important;
+    justify-self:center!important;
+    transform:none!important;
+  }
+}
+</style>
+
+
+<style id="andrik-r33-landscape-max-width">
+/* R33 — landscape only: make the map frame nearly edge-to-edge without changing its height. */
+@media screen and (orientation:landscape){
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane > .analytics-map-pane-wrap{
+    box-sizing:border-box!important;
+    width:100%!important;
+    max-width:none!important;
+    margin-left:0!important;
+    margin-right:0!important;
+    padding-left:2px!important;
+    padding-right:2px!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top{
+    position:relative!important;
+    left:50%!important;
+    box-sizing:border-box!important;
+    width:calc(100% - 8px)!important;
+    max-width:none!important;
+    margin-left:0!important;
+    margin-right:0!important;
+    transform:translateX(-50%)!important;
+    padding-left:10px!important;
+    padding-right:10px!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .world-map-shell,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .world-map-canvas,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .world-map-stage{
+    box-sizing:border-box!important;
+    width:100%!important;
+    max-width:none!important;
+  }
+}
+</style>
+
+
+<style id="r34-map-zoom-out-smooth">
+/* R34 — faster, smoother return from country zoom; zoom-in timing stays unchanged. */
+.analytics-v54-46-page .world-map-shell:not(.is-country-focused) .world-map-stage{
+  transition:transform .28s cubic-bezier(.22,.72,.18,1),filter .20s ease-out!important;
+}
+</style>
+
+<style id="andrik-r35-landscape-growth-spacing">
+/* R35 — landscape only: keep the growth button directly under the country list and collapse the empty reserve below it. */
+@media screen and (orientation:landscape){
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top:not(.has-country-focus){
+    display:flex!important;
+    flex-direction:column!important;
+    justify-content:flex-start!important;
+    height:auto!important;
+    min-height:0!important;
+    max-height:none!important;
+    padding-bottom:9px!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top:not(.has-country-focus) > .map-focus-actions[hidden],
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top:not(.has-country-focus) > .map-focus-actions[aria-hidden="true"]{
+    display:none!important;
+    position:static!important;
+    width:0!important;
+    height:0!important;
+    min-width:0!important;
+    min-height:0!important;
+    margin:0!important;
+    padding:0!important;
+    gap:0!important;
+    overflow:hidden!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top:not(.has-country-focus) > .world-country-list{
+    flex:0 0 auto!important;
+    margin-bottom:0!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top:not(.has-country-focus) > #countryGrowthToggle{
+    position:relative!important;
+    inset:auto!important;
+    flex:0 0 auto!important;
+    width:100%!important;
+    margin:8px 0 0!important;
+    transform:none!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top:not(.has-country-focus) > #countryGrowthPanel[hidden]{
+    display:none!important;
+    width:0!important;
+    height:0!important;
+    min-height:0!important;
+    margin:0!important;
+    padding:0!important;
+  }
+}
+</style>
+
+<style id="andrik-r36-landscape-growth-spacing-real-page">
+/* R36 — actual map page fix. In landscape, remove the flexible spacer and keep growth directly below the country list. */
+@media screen and (orientation:landscape){
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top:not(.has-country-focus){
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr)!important;
+    grid-template-rows:max-content max-content max-content max-content!important;
+    grid-auto-rows:max-content!important;
+    align-content:start!important;
+    justify-content:stretch!important;
+    row-gap:0!important;
+    column-gap:0!important;
+    flex:0 0 auto!important;
+    align-self:flex-start!important;
+    block-size:max-content!important;
+    height:max-content!important;
+    min-height:0!important;
+    max-height:none!important;
+    padding-bottom:9px!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top:not(.has-country-focus) > .map-landscape-title-row{
+    grid-row:1!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top:not(.has-country-focus) > #worldMap{
+    grid-row:2!important;
+    align-self:start!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top:not(.has-country-focus) > #worldCountries{
+    grid-row:3!important;
+    align-self:start!important;
+    flex:none!important;
+    min-height:0!important;
+    margin-bottom:0!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top:not(.has-country-focus) > #mapFocusActions,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top:not(.has-country-focus) > #countryGrowthPanel[hidden]{
+    display:none!important;
+    position:static!important;
+    width:0!important;
+    height:0!important;
+    min-width:0!important;
+    min-height:0!important;
+    margin:0!important;
+    padding:0!important;
+    overflow:hidden!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top:not(.has-country-focus) > #countryGrowthToggle{
+    grid-row:4!important;
+    position:static!important;
+    inset:auto!important;
+    align-self:start!important;
+    justify-self:stretch!important;
+    flex:none!important;
+    width:100%!important;
+    margin:8px 0 0!important;
+    transform:none!important;
+  }
+}
+</style>
+<link href="/assets/landscape-no-growth-v55-00-r37.css?v=55.00-r37" rel="stylesheet"/>
+<link href="/assets/landscape-map-fit-v55-00-r39.css?v=55.00-r39" rel="stylesheet"/>
+
+<link href="/assets/landscape-map-fit-v55-00-r41.css?v=55.00-r41" rel="stylesheet"/>
+<link href="/assets/landscape-map-menu-zone-v55-00-r42.css?v=55.00-r42" rel="stylesheet"/>
+</head>
+<body class="trika-standalone-page comments-admin-page control-page analytics-admin-page analytics-swipe-page analytics-v54-33-page analytics-v54-46-page">
+<nav class="topbar control-topbar control-detail-topbar"><div class="wrap nav-shell analytics-topbar-minimal"><a class="control-center-logo" id="controlCenterLogo" href="https://andrikmetal.com/" aria-label="Открыть главный сайт ANDRIK"><img class="logo-ok" src="/assets/control-topbar-eye-triangle.jpg" alt=""/><img class="logo-error" src="/assets/andrik-control-red-triangle-192.png" alt=""/></a></div></nav>
+<main class="analytics-swipe-main" id="analyticsSwipeMain">
+  <div class="analytics-pull-indicator" id="analyticsDownIndicator" aria-hidden="true"><i></i><span>Свайп сверху вниз делает обновление</span></div>
+  <div class="analytics-swipe-viewport" id="analyticsSwipeViewport">
+    <div class="analytics-swipe-track" id="analyticsSwipeTrack">
+
+      <!-- Слева от карты: Google Analytics -->
+<!-- После YouTube: аудитория сайта -->
+      <section class="analytics-swipe-pane analytics-site-pane is-scrollable" data-analytics-page="site" aria-label="Аудитория сайта">
+        <div class="wrap analytics-pane-wrap">
+          <section class="admin-control-card analytics-hero-card analytics-site-hero">
+            <div class="admin-card-title-row analytics-heading"><div><span class="eyeline">Сайт прямо сейчас</span><h2 class="analytics-site-title-inline">Google Analytics 4</h2><p id="analyticsPropertyLabel">Подключаем Google Analytics Data API…</p></div></div>
+            <div class="analytics-kpi-grid" id="analyticsKpis"><div class="admin-empty">Загружаем показатели…</div></div>
+            <div class="control-analytics-status" id="analyticsMessage">Проверяем соединение…</div>
+          </section>
+          <section class="analytics-main-chart search-console-section">
+  <article class="admin-control-card search-console-dynamics-card">
+    <div class="admin-card-title-row analytics-inline-actions">
+      <div><span class="eyeline">Google · последние 30 дней</span><h2>Google Search Console</h2><p>Клики, показы, CTR и средняя позиция сайта в поиске.</p></div>
+      <a class="search-console-open" id="searchConsoleOpen" href="https://search.google.com/search-console?resource_id=sc-domain%3Aandrikmetal.com&amp;authuser=andrikmetal%40gmail.com" target="_blank" rel="noopener">Открыть ↗</a>
+    </div>
+    <div id="searchConsoleHub"><div class="admin-empty">Загружаем Search Console…</div></div>
+    <div id="searchConsoleTrend"><div class="admin-empty">Получаем динамику поиска…</div></div>
+  </article>
+</section>
+<section class="analytics-main-chart"><article class="admin-control-card analytics-chart-card"><div class="admin-card-title-row analytics-inline-actions"><div><span class="eyeline">Последние 30 дней</span><h2>Динамика посещений</h2></div><div class="analytics-title-actions"><span class="analytics-legend">Пользователи / просмотры</span></div></div><div class="analytics-chart" id="analyticsTrend"><div class="admin-empty">Загружаем график…</div></div></article></section>
+          <section class="analytics-site-geography"><article class="admin-control-card analytics-list-card analytics-site-country-card"><div class="admin-card-title-row"><div><span class="eyeline">Google Analytics · за 30 дней</span><h2>География сайта</h2><p>Страны, из которых заходили посетители сайта.</p></div></div><div id="analyticsCountries"><div class="admin-empty">Загружаем географию сайта…</div></div></article></section>
+          <section class="analytics-columns"><article class="admin-control-card analytics-list-card"><div class="admin-card-title-row"><div><span class="eyeline">За 30 дней</span><h2>Популярные страницы</h2></div></div><div class="analytics-list" id="analyticsPages"><div class="admin-empty">Загружаем страницы…</div></div></article><article class="admin-control-card analytics-list-card"><div class="admin-card-title-row"><div><span class="eyeline">За 30 дней</span><h2>Устройства</h2></div></div><div class="analytics-list" id="analyticsDevices"><div class="admin-empty">Загружаем устройства…</div></div></article></section>
+          <footer class="control-version-footer"><strong>Live Web AI · профиль ANDRIK · v54.82 GROWTH WINDOW + COUNTRY ACTIONS</strong><span>ADMIN_KEY access + legacy key compatibility · 29.07.2026</span></footer>
+          <div class="analytics-swipe-hint analytics-site-hint"><button type="button" data-swipe-go="2">← YouTube</button><button type="button" data-swipe-go="1">Карта слушателей →</button></div>
+        </div>
+      </section>
+
+      <!-- Центр: карта -->
+<!-- Центр: карта -->
+      <section class="analytics-swipe-pane analytics-map-pane" data-analytics-page="map" aria-label="Карта слушателей">
+        <div class="wrap analytics-pane-wrap analytics-map-pane-wrap">
+          <header class="analytics-compact-header">
+            <span class="eyeline">Данные проекта</span>
+            <h1>Статистика</h1>
+            <p>Google Analytics · карта аудитории · YouTube</p>
+            <section class="admin-auth-strip analytics-auth-inline" id="analyticsAuthStrip"><span class="admin-auth-dot"></span><strong id="analyticsAuthText">Проверяем доступ…</strong><a href="/service-admin.html">Служебное</a></section>
+          </header>
+          
+          <article class="admin-control-card world-map-card analytics-map-top"><div class="admin-card-title-row"><div><span class="eyeline">🌍 География</span><h2>Карта слушателей</h2><p id="worldMapPeriod">Просмотры YouTube по странам за последние <span class="period-nowrap">28&nbsp;дней.</span></p></div></div><div id="worldMap" class="world-map-shell"><div class="world-map-canvas" role="img" aria-label="Карта мира"><img src="/assets/world-map-control-v52.webp?v=52.14" alt="Карта мира"/><span class="world-map-state">Обновляем данные…</span></div></div><div id="worldCountries" class="world-country-list"></div><div class="map-end-pull-zone" id="mapEndPullZone" aria-hidden="false"><div class="map-end-pull-spring"><span class="map-end-chevron">⌃</span></div><strong id="mapEndPullText">Потяните вверх — открыть админ-панель</strong></div><nav class="map-focus-actions" id="mapFocusActions" hidden aria-hidden="true" aria-label="Быстрые действия выбранной страны"><a class="map-focus-action is-daily" href="/control-home.html?page=summary&amp;v=54.82">📊 Аналитика за день</a><a class="map-focus-action is-activity" href="/control-home.html?page=activity&amp;v=54.82">⚡ Последняя активность</a></nav><button class="country-growth-toggle" id="countryGrowthToggle" type="button" aria-expanded="false" onclick="return window.__andrikToggleCountryGrowth ? window.__andrikToggleCountryGrowth(event) : false">📈 Рост стран за 7 дней</button><section class="country-growth-panel" id="countryGrowthPanel" hidden><div class="country-growth-head"><div><span>ПОСЛЕДНИЕ 7 ДНЕЙ</span><strong>Какие страны растут быстрее</strong></div><button type="button" id="countryGrowthClose" aria-label="Закрыть">×</button></div><div class="country-growth-list" id="countryGrowthList"><span class="country-growth-loading">Получаем недельную динамику…</span></div></section></article>
+          <div class="analytics-swipe-hint"><button type="button" data-swipe-go="0">← Google Analytics</button><button type="button" data-swipe-go="2">YouTube →</button></div>
+        </div>
+      </section>
+
+      
+      <!-- Справа от карты: полный YouTube -->
+<!-- Справа от карты: полный YouTube -->
+      <section class="analytics-swipe-pane analytics-youtube-pane is-scrollable" data-analytics-page="youtube" aria-label="YouTube">
+        <div class="wrap analytics-pane-wrap analytics-youtube-pane-wrap">
+          <header class="youtube-compact-header analytics-youtube-header">
+            <span class="eyeline">Официальный канал ANDRIK</span>
+            <div class="youtube-title-status-row"><h1>YouTube</h1><div class="youtube-studio-gate youtube-studio-gate-inline" id="youtubeStudioGate"><div class="admin-empty">Проверяем данные Worker…</div></div></div>
+            <p>Канал · Studio · реакции · аудитория · альбомы</p>
+            <section class="admin-auth-strip youtube-auth-inline" id="youtubeAuthStrip"><span class="admin-auth-dot"></span><strong id="youtubeAuthText">Проверяем доступ…</strong><a href="/service-admin.html">Служебное</a></section>
+          </header>
+          <section class="admin-control-card analytics-youtube-card youtube-channel-card youtube-unified-card analytics-youtube-unified">
+            <div class="analytics-youtube-grid" id="analyticsYoutube"><div class="admin-empty">Загружаем канал…</div></div>
+            <div class="youtube-studio-section youtube-studio-integrated" id="youtubeStudioSection" hidden>
+              <div class="analytics-youtube-studio-kpis" id="youtubeStudioKpis"></div>
+              <div class="analytics-chart youtube-integrated-trend" id="youtubeStudioTrend"></div>
+            </div>
+          </section>
+          <section class="analytics-columns youtube-studio-columns youtube-audience-grid analytics-youtube-audience" id="youtubeAudienceSection" hidden>
+            <article class="admin-control-card analytics-list-card"><div class="admin-card-title-row"><div><span class="eyeline">👥 Аудитория</span><h2>Возраст</h2></div></div><div class="analytics-list" id="youtubeStudioAge"></div></article>
+            <article class="admin-control-card analytics-list-card"><div class="admin-card-title-row"><div><span class="eyeline">⚥ Аудитория</span><h2>Пол</h2></div></div><div class="analytics-list" id="youtubeStudioGender"></div></article>
+            <article class="admin-control-card analytics-list-card analytics-sharing-card"><div class="admin-card-title-row"><div><span class="eyeline">↗️ Поделились</span><h2>Площадки</h2></div></div><div class="analytics-list" id="youtubeStudioSharing"></div></article>
+          </section>
+          <section class="admin-control-card album-control-card youtube-album-catalog analytics-youtube-albums">
+            <div class="admin-card-title-row"><div><span class="eyeline">Каталог</span><h2>Альбомы</h2><p>Релизы ANDRIK на YouTube.</p></div></div>
+            <div class="control-album-grid" id="albumStats"><div class="admin-empty">Загружаем альбомы…</div></div>
+          </section>
+          <section class="analytics-layout youtube-control-layout youtube-control-layout-page youtube-monitor-only-layout youtube-monitor-bottom analytics-youtube-monitor">
+            <article class="admin-control-card youtube-monitor-card"><div class="admin-card-title-row analytics-inline-actions"><div><span class="eyeline">🔔 Реакции канала</span><h2>Уведомления YouTube</h2><p>Комментарии, подписчики и лайки.</p></div><button class="btn btn-primary analytics-mini-btn" id="youtubeEventsRun" type="button">Проверить сейчас</button></div><div id="youtubeMonitor" class="youtube-monitor-status"><div class="admin-empty">Загружаем сохранённый статус…</div></div></article>
+          </section>
+          <footer class="control-version-footer"><strong>Live Web AI · профиль ANDRIK · v54.82 GROWTH WINDOW + COUNTRY ACTIONS</strong><span>ADMIN_KEY access + legacy key compatibility · 29.07.2026</span></footer>
+          <div class="analytics-swipe-hint analytics-youtube-hint"><button type="button" data-swipe-go="1">← Карта слушателей</button><button type="button" data-swipe-go="0">Google Analytics →</button></div>
+        </div>
+      </section>
+
+          </div>
+  </div>
+  <div class="analytics-swipe-dots" id="analyticsSwipeDots" aria-label="Страницы статистики">
+    <button type="button" data-page="0" aria-label="Google Analytics"></button>
+    <button type="button" data-page="1" aria-label="Карта слушателей" class="is-active"></button>
+    <button type="button" data-page="2" aria-label="YouTube"></button>
+  </div>
+</main>
+<script defer src="/assets/analytics-admin-v54-99b.js?v=55.00-r42"></script>
+<script defer src="/assets/country-focus-v54-82.js?v=54.82"></script>
+<script defer src="/assets/landscape-no-growth-v55-00-r37.js?v=55.00-r37"></script>
+<script defer src="/assets/country-growth-v54-82.js?v=54.82"></script>
+<script defer src="/assets/youtube-admin-v54-89.js?v=54.89"></script>
+
+<script defer src="/assets/control-status-eye-v55-00-r3l.js?v=55.00-r3l"></script><script defer src="/assets/control-version-v54-99b.js?v=54.99b"></script><script defer src="/assets/map-menu-swipe-v54-99b.js?v=55.00-r42"></script><script defer src="/assets/control-live-eye-v55-00-r3l.js?v=55.00-r3l"></script>
+<script defer src="/assets/map-landscape-fit-v55-00-r41.js?v=55.00-r41"></script>
+</body></html>
