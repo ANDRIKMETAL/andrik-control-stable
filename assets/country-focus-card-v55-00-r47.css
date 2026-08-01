@@ -1,0 +1,133 @@
+/* Control ANDRIK v55.00 FINAL R47 — compact readable focused-country card + no flag breathing. */
+
+/* Stop flag breathing everywhere. Keep flags clean and stable. */
+body.analytics-admin-page .world-country-list .world-country-flag,
+body.analytics-admin-page .world-country-list .world-country-button.is-selected .world-country-flag{
+  animation:none!important;
+  transform:none!important;
+  filter:none!important;
+  opacity:1!important;
+}
+
+/* Bring the selected-country card closer to the map in focus mode. */
+body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top.has-country-focus > #worldCountries,
+body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top:has(.world-country-button.is-selected) > #worldCountries{
+  margin-top:2px!important;
+  padding-top:0!important;
+  gap:4px!important;
+}
+body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top.has-country-focus .world-map-shell{
+  margin-bottom:2px!important;
+}
+
+/* Recompose the yellow focus card: compact, readable, and centered. */
+body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .world-country-list.is-country-focus-mode .world-country-button.is-selected,
+body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .world-country-list:has(.world-country-button.is-selected) .world-country-button.is-selected,
+body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top.has-country-focus .world-country-button.is-selected{
+  width:min(100%, 560px)!important;
+  max-width:560px!important;
+  min-height:auto!important;
+  margin:0 auto!important;
+  padding:8px 12px 9px!important;
+  border-radius:18px!important;
+  display:grid!important;
+  grid-template-columns:22px minmax(0,1fr) auto!important;
+  align-items:center!important;
+  align-content:start!important;
+  column-gap:8px!important;
+  row-gap:5px!important;
+  background:linear-gradient(135deg,rgba(91,67,6,.78),rgba(46,34,8,.92))!important;
+  border:1px solid rgba(255,214,89,.86)!important;
+  box-shadow:0 0 0 1px rgba(255,214,89,.12),0 6px 20px rgba(0,0,0,.22)!important;
+}
+body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .world-country-button.is-selected .world-country-flag{
+  width:22px!important;
+  min-width:22px!important;
+  font-size:1rem!important;
+  line-height:1!important;
+}
+body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .world-country-button.is-selected .world-country-name{
+  min-width:0!important;
+  width:100%!important;
+}
+body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .world-country-button.is-selected .world-country-marquee{
+  display:block!important;
+  white-space:nowrap!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+  font-size:.86rem!important;
+  line-height:1.08!important;
+  font-weight:900!important;
+  color:#fff1a5!important;
+}
+body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .world-country-button.is-selected em{
+  min-width:fit-content!important;
+  font-size:.88rem!important;
+  line-height:1!important;
+  font-weight:900!important;
+  color:#ffe477!important;
+  text-align:right!important;
+}
+
+/* Weekly data row: two readable halves below title row. */
+body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .world-country-button.is-selected .country-weekly-gain,
+body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top:has(.world-country-button.is-selected) .country-weekly-gain{
+  grid-column:1/-1!important;
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;
+  align-items:start!important;
+  gap:8px!important;
+  width:100%!important;
+  margin-top:2px!important;
+  font-size:.68rem!important;
+  line-height:1.12!important;
+  white-space:normal!important;
+}
+body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .world-country-button.is-selected .country-weekly-current,
+body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .world-country-button.is-selected .country-weekly-compare{
+  min-width:0!important;
+  white-space:normal!important;
+  overflow:visible!important;
+  text-overflow:clip!important;
+}
+body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .world-country-button.is-selected .country-weekly-current{
+  text-align:left!important;
+}
+body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .world-country-button.is-selected .country-weekly-compare{
+  text-align:right!important;
+}
+body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .world-country-button.is-selected .country-weekly-marquee-track,
+body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .world-country-button.is-selected .country-weekly-marquee-track > span{
+  display:block!important;
+  width:100%!important;
+  min-width:0!important;
+  white-space:normal!important;
+  overflow:visible!important;
+  text-overflow:clip!important;
+  animation:none!important;
+  transform:none!important;
+}
+
+@media screen and (orientation:landscape){
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top.has-country-focus > #worldCountries,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top:has(.world-country-button.is-selected) > #worldCountries{
+    margin-top:0!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top.has-country-focus .world-country-button.is-selected{
+    width:min(54vw, calc(100% - 12px))!important;
+    max-width:520px!important;
+    padding:7px 11px 8px!important;
+    border-radius:17px!important;
+    row-gap:4px!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .world-country-button.is-selected .world-country-marquee{
+    font-size:.82rem!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .world-country-button.is-selected em{
+    font-size:.84rem!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .world-country-button.is-selected .country-weekly-gain{
+    font-size:.64rem!important;
+    gap:6px!important;
+  }
+}
