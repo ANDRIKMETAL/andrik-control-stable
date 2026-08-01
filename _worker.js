@@ -7073,8 +7073,8 @@ async function handleControlCommentCollection(request, env) {
 
 
 
-// === ANDRIK Control R106: release history + safe one-click rollback + exact deploy marker ===
-const SITE_UPDATE_VERSION = '55.00-r106';
+// === ANDRIK Control R107: post-deploy health verification + automatic self-recovery ===
+const SITE_UPDATE_VERSION = '55.00-r107';
 const SITE_UPDATE_MAX_ZIP_BYTES = 25 * 1024 * 1024;
 const SITE_UPDATE_MAX_FILES = 1200;
 const SITE_UPDATE_MAX_TOTAL_BYTES = 40 * 1024 * 1024;
@@ -7287,7 +7287,7 @@ async function siteUpdateGithubRequest(config, route, options = {}) {
         accept:'application/vnd.github+json',
         authorization:`Bearer ${config.token}`,
         'content-type':'application/json',
-        'user-agent':'ANDRIK-Control-Site-Updater-R106',
+        'user-agent':'ANDRIK-Control-Site-Updater-R107',
         'x-github-api-version':'2022-11-28'
       },
       body: options.body === undefined ? undefined : JSON.stringify(options.body)
@@ -7325,7 +7325,7 @@ async function siteUpdateGithubUploadAsset(config, releaseId, fileName, bytes) {
         accept:'application/vnd.github+json',
         authorization:`Bearer ${config.token}`,
         'content-type':'application/zip',
-        'user-agent':'ANDRIK-Control-Site-Updater-R106',
+        'user-agent':'ANDRIK-Control-Site-Updater-R107',
         'x-github-api-version':'2022-11-28'
       },
       body:bytes
@@ -7433,6 +7433,128 @@ async function siteUpdateCreateStateBlob(config, payload) {
   return { sha:blob.sha, state };
 }
 
+
+function siteUpdateDecodeGithubBase64(value) {
+  const clean = String(value || '').replace(/\s+/g, '');
+  if (!clean) return '';
+  try {
+    const binary = atob(clean);
+    const bytes = Uint8Array.from(binary, char => char.charCodeAt(0));
+    return new TextDecoder('utf-8').decode(bytes);
+  } catch (_) { return ''; }
+}
+
+async function siteUpdateReadBranchState(config, snapshot = null) {
+  const current = snapshot || await siteUpdateGithubSnapshot(config);
+  const entry = current.files.get('site-update-state.json');
+  if (!entry?.sha) return { snapshot:current, state:null };
+  const owner = encodeURIComponent(config.owner), repo = encodeURIComponent(config.repo);
+  const blob = await siteUpdateGithubRequest(config, `/repos/${owner}/${repo}/git/blobs/${entry.sha}`);
+  const text = siteUpdateDecodeGithubBase64(blob.content || '');
+  let state = null;
+  try { state = JSON.parse(text); } catch (_) {}
+  return { snapshot:current, state };
+}
+
+async function siteUpdateReadDeployedState(request) {
+  let status = 0, state = null;
+  try {
+    const stateUrl = new URL('/site-update-state.json', request.url);
+    stateUrl.searchParams.set('health_probe', String(Date.now()));
+    const response = await fetch(stateUrl.toString(), {
+      method:'GET', cache:'no-store',
+      headers:{ accept:'application/json', 'cache-control':'no-cache', 'user-agent':'ANDRIK-Control-R107-Health' }
+    });
+    status = response.status;
+    if (response.ok) state = await response.json().catch(() => null);
+    else { try { await response.body?.cancel(); } catch (_) {} }
+  } catch (_) {}
+  return { status, state };
+}
+
+async function siteUpdateConfirmedHealth(env) {
+  const attempts = [];
+  for (let index = 0; index < 3; index++) {
+    const health = await buildAndrikHealthSnapshot(env, { checkSite:true, includeMonitor:true });
+    attempts.push(health);
+    if (health.status !== 'down') return { health, attempts };
+    if (index < 2) await new Promise(resolve => setTimeout(resolve, 1100));
+  }
+  return { health:attempts[attempts.length - 1], attempts };
+}
+
+async function siteUpdateStartAutomaticRecovery(config, env, failedState) {
+  const targetSha = cleanPlainText(failedState?.backupSha || '', 64);
+  if (!/^[0-9a-f]{40}$/i.test(targetSha)) throw new Error('recovery-backup-missing');
+
+  const { snapshot, state:branchState } = await siteUpdateReadBranchState(config);
+  if (!branchState || branchState.operationId !== failedState.operationId) throw new Error('deploy-marker-mismatch');
+  if (snapshot.headSha === targetSha) {
+    return { alreadyRecovered:true, recoveryOperationId:'', targetSha, targetShort:targetSha.slice(0,7) };
+  }
+
+  const failedBackup = await siteUpdateCreateBackup(config, snapshot, `failed-${failedState.release || 'deploy'}`);
+  const owner = encodeURIComponent(config.owner), repo = encodeURIComponent(config.repo);
+  const target = await siteUpdateGithubRequest(config, `/repos/${owner}/${repo}/git/commits/${targetSha}`);
+  const recoveryOperationId = siteUpdateNewOperationId('recovery');
+  const marker = await siteUpdateCreateStateBlob(config, {
+    operation:'auto-recovery',
+    operationId:recoveryOperationId,
+    release:cleanPlainText(failedState.release || '', 80),
+    recoveredFrom:cleanPlainText(failedState.operationId || '', 120),
+    targetSha,
+    failedHead:snapshot.headSha,
+    failedBackup:failedBackup.tag,
+    autoRecovery:false
+  });
+  const recoveryTree = await siteUpdateGithubRequest(config, `/repos/${owner}/${repo}/git/trees`, {
+    method:'POST',
+    body:{
+      base_tree:target.tree.sha,
+      tree:[{ path:'site-update-state.json', mode:'100644', type:'blob', sha:marker.sha }]
+    }
+  });
+  const recoveryCommit = await siteUpdateGithubRequest(config, `/repos/${owner}/${repo}/git/commits`, {
+    method:'POST',
+    body:{
+      message:`Automatic recovery via ANDRIK Control to ${targetSha.slice(0,7)}`,
+      tree:recoveryTree.sha,
+      parents:[snapshot.headSha],
+      author:{ name:'ANDRIK Control', email:'andrik-control@users.noreply.github.com' }
+    }
+  });
+  const branchRef = config.branch.split('/').map(encodeURIComponent).join('/');
+  await siteUpdateGithubRequest(config, `/repos/${owner}/${repo}/git/refs/heads/${branchRef}`, {
+    method:'PATCH', body:{ sha:recoveryCommit.sha, force:false }
+  });
+  siteUpdateHistoryCache = null;
+  await recordSystemLog(env, {
+    scope:'site-update', level:'error', event:'auto-recovery-started',
+    message:`Автовосстановление к ${targetSha.slice(0,7)}`,
+    details:{
+      failedOperationId:failedState.operationId,
+      recoveryOperationId,
+      recoveryCommit:recoveryCommit.sha,
+      targetSha,
+      backupTag:failedState.backupTag || '',
+      failedBackup:failedBackup.tag
+    }
+  }).catch(() => {});
+  await sendOwnerPush(env, {
+    title:'ANDRIK Control — автозащита',
+    message:`Критическая ошибка после Deploy. Возвращаем backup ${targetSha.slice(0,7)}.`,
+    url:'https://control.andrikmetal.com/site-update-admin.html'
+  }).catch(() => {});
+  return {
+    recoveryOperationId,
+    recoveryCommit:recoveryCommit.sha,
+    recoveryCommitShort:recoveryCommit.sha.slice(0,7),
+    targetSha,
+    targetShort:targetSha.slice(0,7),
+    failedBackup:failedBackup.tag
+  };
+}
+
 function siteUpdateHistoryPointLabel(item) {
   if (item.release) return item.release;
   if (item.kind === 'backup') return `Backup ${item.short || ''}`.trim();
@@ -7487,7 +7609,9 @@ function siteUpdateFriendlyError(error) {
     'zip-uncompressed-size':'После распаковки архив слишком большой.',
     'zip-empty':'В архиве нет файлов.',
     'release-invalid':'Название версии должно содержать R и номер, например R104.',
-    'branch-changed':'Ветка изменилась после проверки. Обновите состояние и проверьте ZIP повторно.'
+    'branch-changed':'Ветка изменилась после проверки. Обновите состояние и проверьте ZIP повторно.',
+    'deploy-marker-mismatch':'На сайте уже опубликована другая операция. Автооткат остановлен безопасно.',
+    'recovery-backup-missing':'Для этой операции не найден предшествующий backup. Используйте историю версий.'
   };
   if (map[value]) return map[value];
   if (value.startsWith('required-files:')) return `В архиве отсутствуют обязательные файлы: ${value.split(':').slice(1).join(':')}`;
@@ -7519,7 +7643,7 @@ async function handleSiteUpdateStatus(request, env) {
     releaseEnabled:releaseConfig.enabled,
     releaseRepository:`${releaseConfig.owner}/${releaseConfig.repo}`,
     releaseRepoUrl:`https://github.com/${releaseConfig.owner}/${releaseConfig.repo}`,
-    secretName:'GITHUB_SITE_TOKEN'
+    secretName:'GITHUB_SITE_TOKEN', autoRecoverySupported:true
   };
   if (!base.configured) return json({ ...base, connected:false, message:'Добавьте GITHUB_SITE_TOKEN в Cloudflare.' });
   try {
@@ -7584,6 +7708,10 @@ async function handleSiteUpdatePublish(request, env) {
     const message = cleanPlainText(form.get('message') || `ANDRIK Control site update ${new Date().toISOString()}`, 240);
     const release = cleanPlainText(form.get('release') || '', 80);
     const expectedHead = cleanPlainText(form.get('expectedHead') || '', 64);
+    const backupShaRaw = cleanPlainText(form.get('backupSha') || '', 64);
+    const backupSha = /^[0-9a-f]{40}$/i.test(backupShaRaw) ? backupShaRaw : '';
+    const backupTag = cleanPlainText(form.get('backupTag') || '', 180);
+    const autoRecovery = String(form.get('autoRecovery') || '') === 'yes';
     const [parsed, snapshot] = await Promise.all([siteUpdatePrepareArchive(archive), siteUpdateGithubSnapshot(config)]);
     if (expectedHead && /^[0-9a-f]{40}$/i.test(expectedHead) && snapshot.headSha !== expectedHead) throw new Error('branch-changed');
     const diff = siteUpdateCompare(parsed, snapshot, config);
@@ -7608,7 +7736,10 @@ async function handleSiteUpdatePublish(request, env) {
       operationId,
       release,
       archiveName:cleanPlainText(archive.name || 'site.zip', 180),
-      sourceHead:snapshot.headSha
+      sourceHead:snapshot.headSha,
+      backupSha,
+      backupTag,
+      autoRecovery
     });
     treeEntries.push({ path:'site-update-state.json', mode:'100644', type:'blob', sha:marker.sha });
     const tree = await siteUpdateGithubRequest(config, `/repos/${owner}/${repo}/git/trees`, {
@@ -7627,11 +7758,11 @@ async function handleSiteUpdatePublish(request, env) {
       message:`Сайт отправлен в GitHub: ${commit.sha.slice(0,7)}`,
       details:{ repository:`${config.owner}/${config.repo}`, branch:config.branch, release, commitSha:commit.sha,
         added:diff.added.length, changed:diff.changed.length, deleted:diff.deleted.length,
-        archive:archive.name, archiveBytes:Number(archive.size || 0), operationId, durationMs:Date.now()-startedAt }
+        archive:archive.name, archiveBytes:Number(archive.size || 0), operationId, backupSha, backupTag, autoRecovery, durationMs:Date.now()-startedAt }
     }).catch(() => {});
     await sendOwnerPush(env, { title:'ANDRIK Control', message:`Обновление сайта отправлено в GitHub: ${commit.sha.slice(0,7)}`, url:'https://control.andrikmetal.com/site-update-admin.html' }).catch(() => {});
     siteUpdateHistoryCache = null;
-    return json({ ok:true, operationId, commitSha:commit.sha, commitShort:commit.sha.slice(0,7),
+    return json({ ok:true, operationId, backupSha, backupTag, autoRecovery, commitSha:commit.sha, commitShort:commit.sha.slice(0,7),
       commitUrl:`https://github.com/${config.owner}/${config.repo}/commit/${commit.sha}`,
       repository:`${config.owner}/${config.repo}`, branch:config.branch,
       added:diff.added.length, changed:diff.changed.length, deleted:diff.deleted.length,
@@ -7665,11 +7796,11 @@ async function handleSiteUpdateRelease(request, env) {
     const owner = encodeURIComponent(config.owner), repo = encodeURIComponent(config.repo);
     const notes = [
       `Official stable release of ANDRIK Control.`, '',
-      `Version: ${meta.release} — ONE BUTTON UPDATE`, '',
+      `Version: ${meta.release} — AUTO RECOVERY`, '',
       `Changes: +${added} added · ~${changed} changed · −${deleted} deleted`,
       `Files: ${parsed.entries.length} · ZIP: ${Math.round(parsed.zipBytes/1024)} KB`,
       commitSha ? `Site commit: ${commitSha.slice(0,7)}` : '', '',
-      `Choose a full ZIP and publish with one button. Includes automatic validation, backup, commit, GitHub Release with ZIP, exact Cloudflare deployment marker, release history, operation log and safe one-click rollback.`
+      `Choose a full ZIP and publish with one button. Includes automatic validation, backup, commit, GitHub Release with ZIP, exact Cloudflare deployment marker, release history, safe rollback, post-deploy health verification and automatic self-recovery.`
     ].filter(Boolean).join('\n');
     let release = await siteUpdateGetRelease(config, meta.tag);
     if (release) {
@@ -7714,7 +7845,7 @@ async function handleSiteUpdateDeployment(request, env) {
     stateUrl.searchParams.set('deploy_probe', String(Date.now()));
     const response = await fetch(stateUrl.toString(), {
       method:'GET', cache:'no-store',
-      headers:{ accept:'application/json', 'cache-control':'no-cache', 'user-agent':'ANDRIK-Control-R106-Deploy-Check' }
+      headers:{ accept:'application/json', 'cache-control':'no-cache', 'user-agent':'ANDRIK-Control-R107-Deploy-Check' }
     });
     stateStatus = response.status;
     if (response.ok) state = await response.json().catch(() => null);
@@ -7744,7 +7875,7 @@ async function handleSiteUpdateDeployment(request, env) {
   try {
     const response = await fetch(probeUrl.toString(), {
       method:'GET', cache:'no-store',
-      headers:{ accept:'text/html', 'cache-control':'no-cache', 'user-agent':'ANDRIK-Control-R106-Deploy-Check' }
+      headers:{ accept:'text/html', 'cache-control':'no-cache', 'user-agent':'ANDRIK-Control-R107-Deploy-Check' }
     });
     controlStatus = response.status; controlOk = response.ok;
     try { await response.body?.cancel(); } catch (_) {}
@@ -7754,6 +7885,77 @@ async function handleSiteUpdateDeployment(request, env) {
     probePath, checkedAt:new Date().toISOString(),
     message:controlOk ? `${meta.release} найдена на Control.` : `${meta.release} ещё не найдена на Control.`
   });
+}
+
+async function handleSiteUpdateFinalize(request, env) {
+  if (!adminAuthorized(request, env)) return json({ ok:false, error:'unauthorized' }, 401);
+  if (!isSameOrigin(request)) return json({ ok:false, error:'origin' }, 403);
+  try {
+    const body = await readJsonBody(request, 12000).catch(() => ({}));
+    const operationId = cleanPlainText(body.operationId || '', 120);
+    const autoRecovery = Boolean(body.autoRecovery);
+    const manual = Boolean(body.manual);
+    const deployed = await siteUpdateReadDeployedState(request);
+
+    if (operationId && deployed.state?.operationId !== operationId) {
+      return json({
+        ok:false, error:'deploy-marker-mismatch',
+        message:'Точная операция ещё не опубликована или уже заменена другой версией.',
+        deployedOperationId:cleanPlainText(deployed.state?.operationId || '', 120)
+      }, 409);
+    }
+
+    const verified = await siteUpdateConfirmedHealth(env);
+    const health = verified.health;
+    const level = health.status === 'ok' ? 'info' : health.status === 'degraded' ? 'warning' : 'error';
+    const event = health.status === 'ok' ? 'health-ok' : health.status === 'degraded' ? 'health-degraded' : 'health-down';
+    await recordSystemLog(env, {
+      scope:'site-update', level, event,
+      message:`Post-deploy health: ${health.status}`,
+      details:{
+        operationId:operationId || deployed.state?.operationId || '',
+        manual, attempts:verified.attempts.length,
+        checks:health.checks
+      }
+    }).catch(() => {});
+
+    if (health.status !== 'down') {
+      return json({
+        ok:true, healthy:health.status === 'ok', degraded:health.status === 'degraded',
+        recoveryStarted:false, health,
+        operationId:operationId || deployed.state?.operationId || '',
+        message:health.status === 'ok'
+          ? 'Worker, D1 и сайт работают нормально.'
+          : 'Сайт работает, но есть некритические предупреждения.'
+      });
+    }
+
+    const failedState = deployed.state || null;
+    if (!autoRecovery || !operationId || !failedState?.autoRecovery) {
+      return json({
+        ok:true, healthy:false, recoveryStarted:false, health,
+        operationId,
+        message:autoRecovery
+          ? 'Критическая ошибка подтверждена, но для операции нет безопасного backup.'
+          : 'Критическая ошибка подтверждена. Автооткат выключен.'
+      });
+    }
+
+    const config = siteUpdateConfig(env);
+    if (!config.token || !siteUpdateConfigValid(config)) throw new Error('github-token-missing');
+    const recovery = await siteUpdateStartAutomaticRecovery(config, env, failedState);
+    return json({
+      ok:true, healthy:false, recoveryStarted:!recovery.alreadyRecovered,
+      health, release:cleanPlainText(failedState.release || '', 80),
+      backupTag:cleanPlainText(failedState.backupTag || '', 180),
+      ...recovery,
+      message:recovery.alreadyRecovered
+        ? 'Backup уже восстановлен.'
+        : 'Критическая ошибка подтверждена трижды. Запущен автоматический откат.'
+    });
+  } catch (error) {
+    return json({ ok:false, error:'finalize-failed', message:siteUpdateFriendlyError(error) }, 400);
+  }
 }
 
 async function handleSiteUpdateLog(request, env) {
@@ -7961,7 +8163,7 @@ async function handleSiteUpdateRollback(request, env) {
     return json({ ok:false, error:'rollback-failed', message:siteUpdateFriendlyError(error) }, 400);
   }
 }
-// === End R106 website updater ===
+// === End R107 website updater ===
 
 
 async function routeApi(request, env, ctx) {
@@ -8010,6 +8212,7 @@ async function routeApi(request, env, ctx) {
     if (path === '/api/control/site-update/publish' && request.method === 'POST') return await handleSiteUpdatePublish(request, env);
     if (path === '/api/control/site-update/release' && request.method === 'POST') return await handleSiteUpdateRelease(request, env);
     if (path === '/api/control/site-update/deployment' && request.method === 'GET') return await handleSiteUpdateDeployment(request, env);
+    if (path === '/api/control/site-update/finalize' && request.method === 'POST') return await handleSiteUpdateFinalize(request, env);
     if (path === '/api/control/site-update/log' && request.method === 'GET') return await handleSiteUpdateLog(request, env);
     if (path === '/api/control/site-update/history' && request.method === 'GET') return await handleSiteUpdateHistory(request, env);
     if (path === '/api/control/site-update/rollback' && request.method === 'POST') return await handleSiteUpdateRollback(request, env);

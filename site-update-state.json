@@ -1,0 +1,10 @@
+{
+  "schema": 1,
+  "updaterVersion": "55.00-r106",
+  "operation": "publish",
+  "operationId": "publish-1785599261479-d4160a6a6f",
+  "release": "R107",
+  "archiveName": "STABLE-R107-AUTO-RECOVERY.zip",
+  "sourceHead": "a0a223a998638216beadfbd62a6f2c92a7aa2d08",
+  "generatedAt": "2026-08-01T15:47:42.902Z"
+}
