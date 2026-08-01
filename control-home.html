@@ -286,12 +286,12 @@ body.control-home-page.control-report-standalone .control-summary-page{transform
 </style>
 
 
-<style id="andrik-update-fab-r108">
+<style id="andrik-update-fab-r109">
 .control-update-fab{
   display:none;
   position:fixed;
   right:max(14px,env(safe-area-inset-right));
-  bottom:calc(92px + env(safe-area-inset-bottom));
+  bottom:calc(36px + env(safe-area-inset-bottom));
   z-index:145;
   width:68px;
   height:68px;
@@ -316,15 +316,39 @@ body.control-menu-visible .control-update-fab{display:flex}
 body.control-menu-visible .control-menu-page .control-version-footer{padding-right:78px!important}
 body.control-menu-visible .control-menu-page .control-menu-map-link{padding-right:76px!important}
 @media(max-width:390px){
-  .control-update-fab{right:9px;width:62px;height:62px;bottom:calc(88px + env(safe-area-inset-bottom))}
+  .control-update-fab{right:9px;width:62px;height:62px;bottom:calc(34px + env(safe-area-inset-bottom))}
   .control-update-fab .update-fab-icon{font-size:1.32rem}
   .control-update-fab .update-fab-label{font-size:.48rem}
 }
 @media(orientation:landscape){
-  .control-update-fab{right:18px;bottom:calc(18px + env(safe-area-inset-bottom));width:62px;height:62px}
+  .control-update-fab{right:18px;bottom:calc(10px + env(safe-area-inset-bottom));width:58px;height:58px}
   body.control-menu-visible .control-menu-page .control-version-footer,
   body.control-menu-visible .control-menu-page .control-menu-map-link{padding-right:84px!important}
 }
+
+
+<style id="andrik-admin-polish-r109">
+body.control-menu-visible .control-menu-page .control-home-menu-card p{
+  white-space:normal!important;
+  overflow:hidden!important;
+  text-overflow:clip!important;
+  display:-webkit-box!important;
+  -webkit-box-orient:vertical!important;
+  -webkit-line-clamp:2!important;
+  line-clamp:2!important;
+}
+body.control-menu-visible .control-menu-page .control-version-footer{padding-right:0!important;margin-right:82px!important}
+body.control-menu-visible .control-menu-page .control-menu-map-link{padding-right:82px!important;text-align:center!important}
+@media(max-width:390px){
+  body.control-menu-visible .control-menu-page .control-version-footer{margin-right:72px!important}
+  body.control-menu-visible .control-menu-page .control-menu-map-link{padding-right:72px!important}
+}
+@media(orientation:landscape){
+  body.control-menu-visible .control-menu-page .control-version-footer{margin-right:76px!important}
+  body.control-menu-visible .control-menu-page .control-menu-map-link{padding-right:76px!important}
+}
+</style>
+
 </style>
 
 </head>
@@ -350,12 +374,12 @@ body.control-menu-visible .control-menu-page .control-menu-map-link{padding-righ
         <div class="control-swipe-page-inner">
           <header class="control-page-heading control-menu-heading"><div class="control-admin-heading-copy"><span class="eyeline">УПРАВЛЕНИЕ ПРОЕКТОМ</span><h1>Админ панель</h1></div></header>
           <section class="control-home-menu" aria-label="Главное меню Live Web AI">
-            <a class="control-home-menu-card is-service" href="/admin-sections.html?section=service&v=55.00-final-carousel"><span>⚙️</span><div><small>Система</small><strong>Служебное</strong><p>Cron, диагностика и push проекта.</p></div><b>›</b></a>
-            <a class="control-home-menu-card is-observability" href="/admin-sections.html?section=monitor&v=55.00-final-carousel"><span>📡</span><div><small>Надёжность</small><strong>Мониторинг</strong><p>Встроенная проверка сайта, Control, Worker и график времени ответа.</p></div><b>›</b></a>
-            <a class="control-home-menu-card is-releases" href="/admin-sections.html?section=releases&v=55.00-final-carousel"><span>🚀</span><div><small>Музыка и тексты</small><strong>Релизы</strong><p>Тексты песен, публикации и история релизов.</p></div><b>›</b></a>
-            <a class="control-home-menu-card is-discussion" href="/admin-sections.html?section=discussion&v=55.00-final-carousel"><span>💬</span><div><small>Сообщество</small><strong>Обсуждение</strong><p>Комментарии, модерация и ответы слушателям.</p></div><b>›</b></a>
+            <a class="control-home-menu-card is-service" href="/admin-sections.html?section=service&v=55.00-final-r109"><span>⚙️</span><div><small>Система</small><strong>Служебное</strong><p>Cron, диагностика и push проекта.</p></div><b>›</b></a>
+            <a class="control-home-menu-card is-observability" href="/admin-sections.html?section=monitor&v=55.00-final-r109"><span>📡</span><div><small>Надёжность</small><strong>Мониторинг</strong><p>Встроенная проверка сайта, Control, Worker и график времени ответа.</p></div><b>›</b></a>
+            <a class="control-home-menu-card is-releases" href="/admin-sections.html?section=releases&v=55.00-final-r109"><span>🚀</span><div><small>Музыка и тексты</small><strong>Релизы</strong><p>Тексты песен, публикации и история релизов.</p></div><b>›</b></a>
+            <a class="control-home-menu-card is-discussion" href="/admin-sections.html?section=discussion&v=55.00-final-r109"><span>💬</span><div><small>Сообщество</small><strong>Обсуждение</strong><p>Комментарии, модерация и ответы слушателям.</p></div><b>›</b></a>
           </section>
-          <footer class="control-version-footer"><strong>Live Web AI · профиль ANDRIK · v55.00 LIVE WEB AI FINAL R108</strong><span>Live Web AI · прямой запуск без заставки · 01.08.2026</span></footer>
+          <footer class="control-version-footer"><strong>Live Web AI · профиль ANDRIK · v55.00 LIVE WEB AI FINAL R109</strong><span>Live Web AI · прямой запуск без заставки · 01.08.2026</span></footer>
           <a class="control-page-footnote control-menu-map-link" href="/analytics-admin.html?page=map&amp;v=55.00-final-r1">Свайп вниз — вернуться на карту</a>
         </div>
       </section>
@@ -386,7 +410,7 @@ body.control-menu-visible .control-menu-page .control-menu-map-link{padding-righ
     </div>
   </div>
 </main>
-<a class="control-update-fab" href="/site-update-admin.html?v=55.00-r108" aria-label="Обновить сайт"><span class="update-fab-icon" aria-hidden="true">↻</span><span class="update-fab-label">Обновить</span></a>
+<a class="control-update-fab" href="/site-update-admin.html?v=55.00-r109" aria-label="Обновить сайт"><span class="update-fab-icon" aria-hidden="true">↻</span><span class="update-fab-label">Обновить</span></a>
 <a class="control-comment-collection-button" href="/comment-collection.html?v=55.00n" aria-label="Открыть коллекцию комментариев"><span aria-hidden="true">💬</span><span>Комментарии</span></a>
 <button class="control-summary-refresh" id="controlSummaryRefresh" type="button" aria-label="Отправить вручную ту же ежедневную сводку, которая приходит утром"><span aria-hidden="true">📨</span><span data-summary-refresh-label>Отправить сводку</span></button>
 <div class="control-activity-modal" id="controlActivityModal" hidden aria-hidden="true">
@@ -400,4 +424,4 @@ body.control-menu-visible .control-menu-page .control-menu-map-link{padding-righ
 
 
 <script defer src="/assets/control-live-eye-v55-00-r3l.js?v=55.00-r3l"></script><script defer src="/assets/control-version-v55-00-r3n.js?v=55.00-r3n"></script><script defer src="/assets/control-version-v55-00-final-stable-github.js?v=55.00-final-stable-github"></script><script defer src="/assets/control-menu-return-map-v55-00-r33.js?v=55.00-final-r33"></script>
-</body></html>
+<script defer src="/assets/control-version-v55-00-r109.js?v=55.00-r109"></script></body></html>

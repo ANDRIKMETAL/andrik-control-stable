@@ -1,3 +1,5 @@
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R109', number:109, version:'55.00', full:'55.00 LIVE WEB AI FINAL R109', siteUpdater:'55.00-r109' });
+
 const JSON_HEADERS = {
   'content-type': 'application/json; charset=utf-8',
   'cache-control': 'no-store',
@@ -1078,7 +1080,7 @@ async function resolveYoutubeLikeBurst(db, item, startedAt) {
     lastChangeAt: startedAt
   };
   await setPushState(db, stateKey, JSON.stringify(nextState));
-  return nextState;
+  return { ...nextState, previousState:state };
 }
 
 
@@ -1686,7 +1688,7 @@ async function handleControlAccess(request, env) {
   return json({
     ok: true,
     access: 'owner',
-    version: '55.00-r87',
+    version: ANDRIK_CONTROL_RELEASE.full,
     adminKeyConfigured: Boolean(String(env.ADMIN_KEY || '').trim()),
     legacyCommentsKeyConfigured: Boolean(String(env.COMMENTS_ADMIN_KEY || '').trim()),
     acceptedKeyCount: configuredAdminKeys(env).length
@@ -2534,7 +2536,7 @@ async function handleControlSystem(request, env) {
           : 'Каждый день в 06:00 · ожидает первого утра';
   return json({
     ok: true,
-    version: '55.00-r92',
+    version: ANDRIK_CONTROL_RELEASE.full,
     services: {
       site: { configured: true, status: 'good', label: 'Основной сайт и Control открываются' },
       worker: { configured: true, status: 'good', label: 'Cloudflare Worker отвечает · API v54.76' },
@@ -4770,6 +4772,9 @@ async function handleCheckYoutubeEvents(request, env) {
 
     const notifications = [];
     const commentDelivery = new Map();
+    const subscriberDelivery = new Map();
+    const likeDeferredVideoIds = new Set();
+    let subscriberCountDeferred = false;
     const commentBatch = newComments.slice().reverse().slice(0, 20);
     for (const item of commentBatch) {
       const onceKey = `push-once:youtube-comment:${item.id}`;
@@ -4811,8 +4816,10 @@ async function handleCheckYoutubeEvents(request, env) {
     // Count-only comment notifications are intentionally disabled. YouTube counts
     // include replies written by the channel owner, which caused false admin alerts.
     // Detailed external comments above remain the single source of comment push alerts.
-    for (const item of newVisibleSubscribers.slice().reverse().slice(0, 6)) {
-      if (!await claimPushOnce(db, `push-once:youtube-subscriber:${item.id}`, startedAt)) continue;
+    const visibleSubscriberBatch = newVisibleSubscribers.slice().reverse().slice(0, 6);
+    for (const item of visibleSubscriberBatch) {
+      const onceKey = `push-once:youtube-subscriber:${item.id}`;
+      if (!await claimPushOnce(db, onceKey, startedAt)) continue;
       const subscriberTarget = item.url || identity.channelUrl;
       const subscriberAppUrl = youtubeAppLauncherUrl(subscriberTarget);
       const result = await sendOwnerPush(env, {
@@ -4821,9 +4828,11 @@ async function handleCheckYoutubeEvents(request, env) {
         url: subscriberAppUrl,
         name: `youtube-subscriber-${item.id}`,
         webButtons: [{ id:'open-youtube', text:'▶️ Открыть в YouTube', url:subscriberAppUrl }],
-        history: { type:'youtube-subscriber', source:'YouTube', videoTitle:item.title, details:{ targetUrl:subscriberTarget } }
+        history: { type:'youtube-subscriber', source:'YouTube', videoTitle:item.title, details:{ targetUrl:subscriberTarget, subscriberId:item.id } }
       });
-      notifications.push({ type:'subscriber', id:item.id, ok:Boolean(result.ok), url:item.url });
+      if (!result.ok) await releasePushOnceClaim(db, onceKey);
+      subscriberDelivery.set(item.id, result);
+      notifications.push({ type:'subscriber', id:item.id, ok:Boolean(result.ok), url:item.url, error:result.error || '' });
     }
     const unnamedSubscriberDelta = Math.max(0, subscriberDelta - newVisibleSubscribers.length);
     if (unnamedSubscriberDelta > 0) {
@@ -4863,6 +4872,7 @@ async function handleCheckYoutubeEvents(request, env) {
             history: { type:'youtube-subscriber-count', source:'YouTube', videoTitle:identity.title, details:{ targetUrl:identity.channelUrl, totalSubscribers:identity.subscribers, delta:unnamedSubscriberDelta, subscriberDelta:unnamedSubscriberDelta } }
           });
           if (!result.ok) {
+            subscriberCountDeferred = true;
             await releasePushOnceClaim(db, onceKey);
             // Let the next cron retry only when OneSignal did not accept this push.
             // Roll back the high-water mark conditionally so a newer real total is never overwritten.
@@ -4876,7 +4886,17 @@ async function handleCheckYoutubeEvents(request, env) {
         }
       }
     }
-    for (const item of likeChanges.slice(0, 12)) {
+    const likeBatch = likeChanges.slice(0, 12);
+    for (const item of likeChanges.slice(12)) {
+      const onceKey = `push-once:youtube-like:${item.videoId}:${item.likes}`;
+      await releasePushOnceClaim(db, onceKey);
+      await db.prepare(`
+        UPDATE youtube_event_seen SET count_value=?, last_seen_at=datetime('now')
+        WHERE event_key=? AND count_value=?
+      `).bind(item.before, `like-count:${item.videoId}`, item.likes).run().catch(()=>{});
+      likeDeferredVideoIds.add(item.videoId);
+    }
+    for (const item of likeBatch) {
       const videoAppUrl = youtubeAppLauncherUrl(item.url);
       const burst = await resolveYoutubeLikeBurst(db, item, startedAt);
       const cumulativeDelta = burst.cumulativeDelta;
@@ -4923,19 +4943,33 @@ async function handleCheckYoutubeEvents(request, env) {
           }
         }
       });
-      notifications.push({ type:'like', videoId:item.videoId, delta:item.delta, cumulativeDelta, glowLevel:glowTheme.level, ok:Boolean(result.ok), url:videoAppUrl });
+      if (!result.ok) {
+        const onceKey = `push-once:youtube-like:${item.videoId}:${item.likes}`;
+        await releasePushOnceClaim(db, onceKey);
+        await db.prepare(`
+          UPDATE youtube_event_seen SET count_value=?, last_seen_at=datetime('now')
+          WHERE event_key=? AND count_value=?
+        `).bind(item.before, `like-count:${item.videoId}`, item.likes).run().catch(()=>{});
+        const burstKey = `youtube-like-burst-v54-97:${item.videoId}`;
+        if (burst.previousState) await setPushState(db, burstKey, JSON.stringify(burst.previousState));
+        else await db.prepare(`DELETE FROM push_state WHERE key=?`).bind(burstKey).run().catch(()=>{});
+        likeDeferredVideoIds.add(item.videoId);
+      }
+      notifications.push({ type:'like', videoId:item.videoId, delta:item.delta, cumulativeDelta, glowLevel:glowTheme.level, ok:Boolean(result.ok), url:videoAppUrl, error:result.error || '' });
     }
 
     for (const item of newComments) {
       const delivery = commentDelivery.get(item.id);
       if (delivery?.ok) await saveYoutubeEventRow(db, { key:`comment:${item.id}`, type:'comment', resourceId:item.id, videoId:item.videoId, author:item.author, title:item.text, url:item.url, payload:item });
     }
-    for (const item of newVisibleSubscribers) await saveYoutubeEventRow(db, { key:`subscriber:${item.id}`, type:'subscriber', resourceId:item.id, author:item.title, title:item.title, url:item.url, payload:item });
+    for (const item of newVisibleSubscribers) {
+      if (subscriberDelivery.get(item.id)?.ok) await saveYoutubeEventRow(db, { key:`subscriber:${item.id}`, type:'subscriber', resourceId:item.id, author:item.title, title:item.title, url:item.url, payload:item });
+    }
     for (const item of videos) {
-      await saveYoutubeEventRow(db, { key:`like-count:${item.videoId}`, type:'like-count', resourceId:item.videoId, videoId:item.videoId, title:item.title, countValue:item.likes, url:item.url, payload:item });
+      if (!likeDeferredVideoIds.has(item.videoId)) await saveYoutubeEventRow(db, { key:`like-count:${item.videoId}`, type:'like-count', resourceId:item.videoId, videoId:item.videoId, title:item.title, countValue:item.likes, url:item.url, payload:item });
       await saveYoutubeEventRow(db, { key:`comment-count:${item.videoId}`, type:'comment-count', resourceId:item.videoId, videoId:item.videoId, title:item.title, countValue:item.comments, url:item.url, payload:item });
     }
-    await saveYoutubeEventRow(db, { key:'channel-subscriber-count', type:'subscriber-count', resourceId:identity.channelId, title:identity.title, countValue:identity.subscribers, url:identity.channelUrl, payload:identity });
+    if (!subscriberCountDeferred) await saveYoutubeEventRow(db, { key:'channel-subscriber-count', type:'subscriber-count', resourceId:identity.channelId, title:identity.title, countValue:identity.subscribers, url:identity.channelUrl, payload:identity });
 
     const summary = {
       seeded:false,
@@ -4943,21 +4977,29 @@ async function handleCheckYoutubeEvents(request, env) {
       commentsAttempted:commentBatch.length,
       commentsSent:notifications.filter(item=>item.type==='comment'&&item.ok).length,
       commentsFailed:notifications.filter(item=>item.type==='comment'&&!item.ok).length,
-      commentsQueued:Math.max(0,newComments.length-commentDelivery.size),
+      commentsQueued:Math.max(0,newComments.length-[...commentDelivery.values()].filter(result=>result?.ok).length),
       newVisibleSubscribers:newVisibleSubscribers.length,
+      subscribersAttempted:visibleSubscriberBatch.length + (unnamedSubscriberDelta > 0 ? 1 : 0),
+      subscribersSent:notifications.filter(item=>['subscriber','subscriber-count'].includes(item.type)&&item.ok).length,
+      subscribersFailed:notifications.filter(item=>['subscriber','subscriber-count'].includes(item.type)&&!item.ok).length,
+      subscribersQueued:Math.max(0,newVisibleSubscribers.length-[...subscriberDelivery.values()].filter(result=>result?.ok).length) + (subscriberCountDeferred?1:0),
       subscriberDelta,
       likeChanges:likeChanges.reduce((sum,item)=>sum+item.delta,0),
+      likesAttempted:likeBatch.length,
+      likesSent:notifications.filter(item=>item.type==='like'&&item.ok).length,
+      likesFailed:notifications.filter(item=>item.type==='like'&&!item.ok).length,
+      likesQueued:likeDeferredVideoIds.size,
       likeLoopGuardApplied:suppressLikePushThisRun,
       commentChanges:newComments.length,
       videosChecked:videos.length,
       notifications:notifications.length,
       warnings
     };
-    const failedCommentDelivery = notifications.some(item => item.type === 'comment' && !item.ok);
-    await setPushState(db, 'youtube-events-last-check-status', (warnings.length || failedCommentDelivery) ? 'warning' : 'success');
-    if (!failedCommentDelivery) await setPushState(db, 'youtube-events-last-success-at', startedAt);
-    await setPushState(db, 'youtube-events-last-check-summary', JSON.stringify({ ...summary, failedCommentDelivery }));
-    await recordSystemLog(env, { scope:'youtube-events', level:(warnings.length||failedCommentDelivery)?'warning':'info', event:'check-completed', message:`YouTube: комментарии ${newComments.length || summary.commentChanges}, подписки ${subscriberDelta}, лайки +${summary.likeChanges}.`, details:summary }).catch(() => {});
+    const failedEventDelivery = notifications.some(item => !item.ok);
+    await setPushState(db, 'youtube-events-last-check-status', (warnings.length || failedEventDelivery || summary.commentsQueued || summary.subscribersQueued || summary.likesQueued) ? 'warning' : 'success');
+    if (!failedEventDelivery) await setPushState(db, 'youtube-events-last-success-at', startedAt);
+    await setPushState(db, 'youtube-events-last-check-summary', JSON.stringify({ ...summary, failedEventDelivery }));
+    await recordSystemLog(env, { scope:'youtube-events', level:(warnings.length||failedEventDelivery)?'warning':'info', event:'check-completed', message:`YouTube: комментарии ${summary.commentsSent}/${summary.commentsAttempted}, подписчики ${summary.subscribersSent}/${summary.subscribersAttempted}, лайки ${summary.likesSent}/${summary.likesAttempted}, очередь ${summary.commentsQueued+summary.subscribersQueued+summary.likesQueued}.`, details:summary }).catch(() => {});
     return json({ ok:true, ...summary, checkedAt:startedAt });
   } catch (error) {
     const message = cleanPlainText(error?.message || error, 700);
@@ -4966,6 +5008,60 @@ async function handleCheckYoutubeEvents(request, env) {
     await recordSystemLog(env, { scope:'youtube-events', level:'error', event:'check-failed', message:'Проверка реакций YouTube завершилась ошибкой.', details:{ error:message } }).catch(() => {});
     return json({ ok:false, error:'youtube-events-check-failed', details:message, checkedAt:startedAt }, 502);
   }
+}
+
+
+async function handleYoutubeEventsStatus(request, env) {
+  if (!adminAuthorized(request, env)) return json({ ok:false, error:'unauthorized' }, 401);
+  const db = requireDb(env);
+  await Promise.all([ensurePushAutomationSchema(db), ensureControlV1Schema(db), ensurePlatformAnalyticsSchema(db)]);
+  const [lastCheck,lastSuccess,lastStatus,lastSummary,todayRows,lastFailure,lastLog] = await Promise.all([
+    getPushState(db,'youtube-events-last-check-at'),
+    getPushState(db,'youtube-events-last-success-at'),
+    getPushState(db,'youtube-events-last-check-status'),
+    getPushState(db,'youtube-events-last-check-summary'),
+    db.prepare(`
+      SELECT type,status,COUNT(*) AS total
+      FROM push_history
+      WHERE type IN ('youtube-comment','youtube-like','youtube-subscriber','youtube-subscriber-count')
+        AND datetime(created_at)>=datetime('now','-24 hours')
+      GROUP BY type,status
+    `).all(),
+    db.prepare(`
+      SELECT type,title,message,error,created_at AS createdAt
+      FROM push_history
+      WHERE type IN ('youtube-comment','youtube-like','youtube-subscriber','youtube-subscriber-count')
+        AND status='failed'
+      ORDER BY datetime(created_at) DESC LIMIT 1
+    `).first(),
+    db.prepare(`
+      SELECT level,event,message,details_json AS detailsJson,created_at AS createdAt
+      FROM system_logs WHERE scope='youtube-events'
+      ORDER BY datetime(created_at) DESC LIMIT 1
+    `).first()
+  ]);
+  let summary={};try{summary=JSON.parse(lastSummary?.value||'{}')}catch(_){}
+  const today={commentsSent:0,repliesSent:0,likesSent:0,subscribersSent:0,failed:0};
+  for(const row of (todayRows.results||[])){
+    const n=Number(row.total||0),sent=row.status==='sent';
+    if(!sent){today.failed+=n;continue}
+    if(row.type==='youtube-comment')today.commentsSent+=n;
+    if(row.type==='youtube-like')today.likesSent+=n;
+    if(row.type==='youtube-subscriber'||row.type==='youtube-subscriber-count')today.subscribersSent+=n;
+  }
+  const replyRow=await db.prepare(`
+    SELECT COUNT(*) AS total FROM push_history
+    WHERE type='youtube-comment' AND status='sent' AND datetime(created_at)>=datetime('now','-24 hours')
+      AND json_valid(details_json)
+      AND COALESCE(json_extract(details_json,'$.parentId'),'')<>''
+      AND COALESCE(json_extract(details_json,'$.parentId'),'')<>COALESCE(json_extract(details_json,'$.commentId'),'')
+  `).first().catch(()=>null);
+  today.repliesSent=Number(replyRow?.total||0);
+  return json({
+    ok:true,version:ANDRIK_CONTROL_RELEASE.full,
+    status:lastStatus?.value||'never',lastCheckAt:lastCheck?.value||lastCheck?.updatedAt||'',lastSuccessAt:lastSuccess?.value||lastSuccess?.updatedAt||'',
+    summary,today,lastError:cleanPlainText(lastFailure?.error||lastFailure?.message||'',300),lastFailure:lastFailure||null,lastLog:lastLog||null,updatedAt:new Date().toISOString()
+  });
 }
 
 let googleSearchConsoleTokenCache = null;
@@ -6889,7 +6985,7 @@ async function buildAndrikHealthSnapshot(env, options = {}) {
     status:criticalError ? 'down' : hasWarning ? 'degraded' : 'ok',
     checkedAt,
     checks,
-    version:'55.00g'
+    version:ANDRIK_CONTROL_RELEASE.full
   };
 }
 
@@ -7131,8 +7227,8 @@ async function handleControlCommentCollection(request, env) {
 
 
 
-// === ANDRIK Control R108: floating updater + automatic cache refresh + reliable YouTube event pushes ===
-const SITE_UPDATE_VERSION = '55.00-r108';
+// === ANDRIK Control R109: floating updater + automatic cache refresh + reliable YouTube event pushes ===
+const SITE_UPDATE_VERSION = ANDRIK_CONTROL_RELEASE.siteUpdater;
 const SITE_UPDATE_MAX_ZIP_BYTES = 25 * 1024 * 1024;
 const SITE_UPDATE_MAX_FILES = 1200;
 const SITE_UPDATE_MAX_TOTAL_BYTES = 40 * 1024 * 1024;
@@ -7345,7 +7441,7 @@ async function siteUpdateGithubRequest(config, route, options = {}) {
         accept:'application/vnd.github+json',
         authorization:`Bearer ${config.token}`,
         'content-type':'application/json',
-        'user-agent':'ANDRIK-Control-Site-Updater-R108',
+        'user-agent':'ANDRIK-Control-Site-Updater-R109',
         'x-github-api-version':'2022-11-28'
       },
       body: options.body === undefined ? undefined : JSON.stringify(options.body)
@@ -7383,7 +7479,7 @@ async function siteUpdateGithubUploadAsset(config, releaseId, fileName, bytes) {
         accept:'application/vnd.github+json',
         authorization:`Bearer ${config.token}`,
         'content-type':'application/zip',
-        'user-agent':'ANDRIK-Control-Site-Updater-R108',
+        'user-agent':'ANDRIK-Control-Site-Updater-R109',
         'x-github-api-version':'2022-11-28'
       },
       body:bytes
@@ -7903,7 +7999,7 @@ async function handleSiteUpdateDeployment(request, env) {
     stateUrl.searchParams.set('deploy_probe', String(Date.now()));
     const response = await fetch(stateUrl.toString(), {
       method:'GET', cache:'no-store',
-      headers:{ accept:'application/json', 'cache-control':'no-cache', 'user-agent':'ANDRIK-Control-R108-Deploy-Check' }
+      headers:{ accept:'application/json', 'cache-control':'no-cache', 'user-agent':'ANDRIK-Control-R109-Deploy-Check' }
     });
     stateStatus = response.status;
     if (response.ok) state = await response.json().catch(() => null);
@@ -7933,7 +8029,7 @@ async function handleSiteUpdateDeployment(request, env) {
   try {
     const response = await fetch(probeUrl.toString(), {
       method:'GET', cache:'no-store',
-      headers:{ accept:'text/html', 'cache-control':'no-cache', 'user-agent':'ANDRIK-Control-R108-Deploy-Check' }
+      headers:{ accept:'text/html', 'cache-control':'no-cache', 'user-agent':'ANDRIK-Control-R109-Deploy-Check' }
     });
     controlStatus = response.status; controlOk = response.ok;
     try { await response.body?.cancel(); } catch (_) {}
@@ -8221,7 +8317,7 @@ async function handleSiteUpdateRollback(request, env) {
     return json({ ok:false, error:'rollback-failed', message:siteUpdateFriendlyError(error) }, 400);
   }
 }
-// === End R108 website updater ===
+// === End R109 website updater ===
 
 
 async function routeApi(request, env, ctx) {
@@ -8283,6 +8379,7 @@ async function routeApi(request, env, ctx) {
     if (path === '/api/control/search-console' && request.method === 'GET') return await handleControlSearchConsole(request, env);
     if (path === '/api/control/snapshots/refresh' && request.method === 'POST') return await handleControlSnapshotsRefresh(request, env);
     if (path === '/api/control/country-growth' && request.method === 'GET') return await handleControlCountryGrowth(request, env);
+    if (path === '/api/control/youtube-events/status' && request.method === 'GET') return await handleYoutubeEventsStatus(request, env);
     if (path === '/api/control/youtube-oauth/status' && request.method === 'GET') return await handleYoutubeOAuthStatus(request, env);
     if (path === '/api/control/youtube-oauth/start' && request.method === 'GET') return await handleYoutubeOAuthStart(request, env);
     if ((path === '/api/control/youtube-oauth/callback' || path === '/oauth/youtube/callback') && request.method === 'GET') return await handleYoutubeOAuthCallback(request, env, ctx);

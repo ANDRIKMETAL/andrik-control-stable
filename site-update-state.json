@@ -1,13 +1,13 @@
 {
   "schema": 1,
-  "updaterVersion": "55.00-r107",
+  "updaterVersion": "55.00-r108",
   "operation": "publish",
-  "operationId": "publish-1785599670630-318460fb12",
+  "operationId": "publish-1785601078321-af1c3e61a4",
   "release": "R108",
-  "archiveName": "R108-FLOATING-UPDATE-PUSH-FIX.zip",
-  "sourceHead": "9514e1121e67311bc7ee7f9232e8efc530d3bdc2",
-  "backupSha": "",
-  "backupTag": "",
-  "autoRecovery": false,
-  "generatedAt": "2026-08-01T15:54:31.939Z"
+  "archiveName": "ANDRIK-Control.zip",
+  "sourceHead": "3dd2dbd07c1ddb5056db6c5034e962cafa22c8f4",
+  "backupSha": "3dd2dbd07c1ddb5056db6c5034e962cafa22c8f4",
+  "backupTag": "control-backup-20260801161755-3dd2dbd-r108-52470",
+  "autoRecovery": true,
+  "generatedAt": "2026-08-01T16:18:00.112Z"
 }

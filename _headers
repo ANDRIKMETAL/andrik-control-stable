@@ -398,3 +398,20 @@
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
 /service-admin.html
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+
+/assets/control-version-v55-00-r109.js
+  Cache-Control: public, max-age=31536000, immutable
+/assets/site-update-admin-r109.js
+  Cache-Control: public, max-age=31536000, immutable
+/assets/site-update-admin-r109.css
+  Cache-Control: public, max-age=31536000, immutable
+/assets/service-youtube-events-r109.js
+  Cache-Control: public, max-age=31536000, immutable
+/assets/service-youtube-events-r109.css
+  Cache-Control: public, max-age=31536000, immutable
+/assets/release-center-r109.js
+  Cache-Control: public, max-age=31536000, immutable
+/assets/release-center-r109.css
+  Cache-Control: public, max-age=31536000, immutable
+/cache-reset-v55-00-final-r109.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
