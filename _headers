@@ -518,3 +518,18 @@
   Cache-Control: public, max-age=31536000, immutable
 /cache-reset-v55-00-final-r113.html
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+# R115 unified glow assets
+/assets/unified-glow-r115.css
+  Cache-Control: public, max-age=31536000, immutable
+/assets/unified-glow-r115.js
+  Cache-Control: public, max-age=31536000, immutable
+/assets/control-version-v55-00-r115.js
+  Cache-Control: public, max-age=31536000, immutable
+/assets/guard-ready-r115.js
+  Cache-Control: public, max-age=31536000, immutable
+/assets/site-update-admin-r115.css
+  Cache-Control: public, max-age=31536000, immutable
+/assets/site-update-admin-r115.js
+  Cache-Control: public, max-age=31536000, immutable
+/cache-reset-v55-00-final-r115.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0

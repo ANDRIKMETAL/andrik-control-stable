@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R113', number:113, version:'55.00', full:'55.00 LIVE WEB AI FINAL R113', siteUpdater:'55.00-r113' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R115', number:115, version:'55.00', full:'55.00 LIVE WEB AI FINAL R115', siteUpdater:'55.00-r115' });
 
 const JSON_HEADERS = {
   'content-type': 'application/json; charset=utf-8',
@@ -7585,7 +7585,7 @@ async function handleControlCommentCollection(request, env) {
 
 
 
-// === ANDRIK Control R113: live security hub + event history + backups + attack map ===
+// === ANDRIK Control R115: live security hub + event history + backups + attack map ===
 const SITE_UPDATE_VERSION = ANDRIK_CONTROL_RELEASE.siteUpdater;
 const SITE_UPDATE_MAX_ZIP_BYTES = 25 * 1024 * 1024;
 const SITE_UPDATE_MAX_FILES = 1200;
@@ -8357,7 +8357,7 @@ async function handleSiteUpdateDeployment(request, env) {
     stateUrl.searchParams.set('deploy_probe', String(Date.now()));
     const response = await fetch(stateUrl.toString(), {
       method:'GET', cache:'no-store',
-      headers:{ accept:'application/json', 'cache-control':'no-cache', 'user-agent':'ANDRIK-Control-R113-Deploy-Check' }
+      headers:{ accept:'application/json', 'cache-control':'no-cache', 'user-agent':'ANDRIK-Control-R115-Deploy-Check' }
     });
     stateStatus = response.status;
     if (response.ok) state = await response.json().catch(() => null);
@@ -8387,7 +8387,7 @@ async function handleSiteUpdateDeployment(request, env) {
   try {
     const response = await fetch(probeUrl.toString(), {
       method:'GET', cache:'no-store',
-      headers:{ accept:'text/html', 'cache-control':'no-cache', 'user-agent':'ANDRIK-Control-R113-Deploy-Check' }
+      headers:{ accept:'text/html', 'cache-control':'no-cache', 'user-agent':'ANDRIK-Control-R115-Deploy-Check' }
     });
     controlStatus = response.status; controlOk = response.ok;
     try { await response.body?.cancel(); } catch (_) {}
