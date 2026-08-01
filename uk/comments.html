@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+
+<html lang="uk">
+<head>
+<meta charset="utf-8"/>
+<script>
+(()=>{try{
+  const supported=new Set(['ru','uk','sk','en']);
+  const root=document.documentElement;
+  let page=(root.lang||'ru').toLowerCase().split('-')[0];
+  if(location.pathname.endsWith('/player.html')){
+    const query=(new URLSearchParams(location.search).get('lang')||'').toLowerCase();
+    let saved='';
+    try{saved=(localStorage.getItem('andrikPreferredLanguage')||'').toLowerCase()}catch(_){}
+    if(supported.has(query)) page=query;
+    else if(supported.has(saved)) page=saved;
+    root.lang=page;
+  }
+  let manual='';
+  try{manual=(sessionStorage.getItem('andrikManualLanguage')||'').toLowerCase()}catch(_){}
+  if(supported.has(page)&&manual===page){
+    root.setAttribute('translate','no');
+    root.classList.add('notranslate');
+    const meta=document.createElement('meta');
+    meta.name='google';
+    meta.content='notranslate';
+    document.head.appendChild(meta);
+  }
+}catch(_){}})();
+</script>
+<meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/>
+<meta content="#02060a" name="theme-color"/>
+<meta content="dark" name="color-scheme"/>
+<title>Відгуки слухачів ANDRIK</title>
+<meta content="Спільнота ANDRIK: обговорення музики, кліпів і філософії проєкту." name="description"/>
+<link href="https://andrikmetal.com/uk/comments.html" rel="canonical"/><link href="https://andrikmetal.com/comments.html" hreflang="ru" rel="alternate"/><link href="https://andrikmetal.com/uk/comments.html" hreflang="uk" rel="alternate"/><link href="https://andrikmetal.com/sk/comments.html" hreflang="sk" rel="alternate"/><link href="https://andrikmetal.com/en/comments.html" hreflang="en" rel="alternate"/><link href="https://andrikmetal.com/comments.html" hreflang="x-default" rel="alternate"/>
+<link href="/manifest-uk.webmanifest" rel="manifest"/>
+<link href="/favicon.ico" rel="icon"/>
+<link href="/assets/v50-26.css?v=52.13" rel="stylesheet"/>
+<link href="/assets/pwa-install.css" rel="stylesheet"/>
+</head>
+<body class="trika-standalone-page comments-page" id="page-top">
+<a class="skip-link" href="#content">Skip</a>
+<audio id="andrikAudio" loop="" preload="metadata" src="/assets/andrik-motif.mp3"></audio>
+<nav aria-label="Menu" class="topbar">
+<div class="wrap nav-shell">
+<div class="brand-cluster"><a aria-label="ANDRIK" class="brand" href="/uk/"><span aria-hidden="true" class="brand-eye"></span><span>ANDRIK</span></a><a aria-label="Відкрити плеєр" class="icon-btn brand-player-btn" href="/player.html?lang=uk" title="Player"><svg aria-hidden="true" viewbox="0 0 24 24"><path d="M8 5.6v12.8L18.5 12 8 5.6Z"></path></svg></a></div>
+<div class="nav-links" id="siteMenu"><a href="/uk/#video">Кліп</a><a href="/uk/#prosnis">Проснись</a><a href="/uk/#links">Платформи</a><a href="/uk/#discography">Дискографія</a><a href="/uk/trika.html#page-top">Натхнення</a><a href="/uk/#about">Про проєкт</a><a href="/uk/comments.html#page-top">Спільнота</a></div>
+<div class="nav-tools"><button aria-controls="siteMenu" aria-expanded="false" aria-label="Menu" class="icon-btn nav-toggle" data-close-label="Close" data-open-label="Open" id="navToggle" title="Menu" type="button"><svg aria-hidden="true" viewbox="0 0 24 24"><path d="M4 6h16v2H4V6Zm0 5h16v2H4v-2Zm0 5h16v2H4v-2Z"></path></svg></button><div class="language-picker"><button aria-controls="languageMenu" aria-expanded="false" aria-label="Language" class="icon-btn language-toggle" title="Language" type="button"><svg aria-hidden="true" viewbox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm6.92 9h-3.05a15.8 15.8 0 0 0-1.26-5.08A8.03 8.03 0 0 1 18.92 11ZM12 4c.93 1.13 1.68 3.05 1.86 5H10.14C10.32 7.05 11.07 5.13 12 4ZM9.39 5.92A15.8 15.8 0 0 0 8.13 11H5.08a8.03 8.03 0 0 1 4.31-5.08ZM5.08 13h3.05c.16 1.91.6 3.69 1.26 5.08A8.03 8.03 0 0 1 5.08 13ZM12 20c-.93-1.13-1.68-3.05-1.86-5h3.72c-.18 1.95-.93 3.87-1.86 5Zm2.61-1.92c.66-1.39 1.1-3.17 1.26-5h3.05a8.03 8.03 0 0 1-4.31 5.08Z"></path></svg></button><div aria-label="Language" class="language-dropdown" id="languageMenu" role="menu"><a class="language-option" href="/comments.html" lang="ru" role="menuitem"><span class="language-label"><span aria-hidden="true" class="language-flag">🇷🇺</span>Русский</span></a><a aria-current="page" class="language-option active" href="/uk/comments.html" lang="uk" role="menuitem"><span class="language-label"><span aria-hidden="true" class="language-flag">🇺🇦</span>Українська</span><span aria-hidden="true" class="language-check">✓</span></a><a class="language-option" href="/sk/comments.html" lang="sk" role="menuitem"><span class="language-label"><span aria-hidden="true" class="language-flag">🇸🇰</span>Slovenčina</span></a><a class="language-option" href="/en/comments.html" lang="en" role="menuitem"><span class="language-label"><span aria-hidden="true" class="language-flag">🌐</span>English</span></a></div></div><button aria-label="Audio" class="icon-btn" data-play-label="Play motif" data-stop-label="Stop motif" id="audioToggle" title="Audio" type="button"><svg aria-hidden="true" viewbox="0 0 24 24"><path d="M9 18V5l11-2v13.2A3.8 3.8 0 1 1 18 13V7.2L11 8.5V18a3.8 3.8 0 1 1-2-3.35V18Z"></path></svg></button></div>
+</div>
+</nav>
+<main class="comments-page-main" id="content">
+
+<section class="section">
+<div class="wrap">
+<header class="comments-hero reveal">
+<div class="comments-hero-art"><img alt="ANDRIK comments hero" decoding="async" fetchpriority="high" src="/assets/comments-ocean-cosmos-v51.jpg"/></div>
+<div aria-hidden="true" class="comments-hero-shade"></div>
+<div class="comments-hero-content"><p class="comments-kicker">ANDRIK COMMUNITY</p><h1 class="comments-title">Спільнота</h1><p class="comments-tagline">Обговорення музики, кліпів, образів і філософії ANDRIK.</p></div>
+</header>
+<div class="comments-shell">
+<section class="comments-panel reveal">
+<h2>Обговорення</h2>
+<p>Оберіть спосіб спілкування та напишіть, що ви відчули або яка пісня відгукнулася.</p>
+<form class="comments-form" data-comments-form="" data-empty-message="Поки відгуків немає. Будьте першим." data-saved-message="Дякуємо! Відгук збережено." data-validation-message="Введіть ім’я та відгук.">
+<label aria-hidden="true" class="comments-honeypot">Website<input autocomplete="off" name="website" tabindex="-1" type="text"/></label>
+<label>Ваше ім’я<input maxlength="48" name="name" placeholder="Наприклад: Андрій" required="" type="text"/></label>
+<label>Пісня або розділ<select data-comments-song="" name="song"><option value="project">Проєкт ANDRIK</option></select></label>
+<label>Ваш відгук<textarea maxlength="1200" name="message" placeholder="Напишіть повідомлення…" required=""></textarea></label>
+<div class="comments-turnstile" data-turnstile-wrap="" hidden=""><div id="commentsTurnstileWidget"></div></div>
+<div class="comments-form-row"><button class="btn btn-primary comments-submit" type="submit">Оберіть спосіб спілкування</button><div aria-live="polite" class="comments-status" data-comments-status=""></div></div>
+<p class="comments-note">Усі повідомлення модеруються. Захист від повторних надсилань і спаму працює на сервері.</p>
+</form>
+</section>
+<section class="comments-list-panel reveal">
+<h2>Обговорення спільноти</h2>
+<p>Нові повідомлення з’являються зверху вниз.</p>
+<div class="comments-filter-bar">
+<label><span>Пошук в обговоренні</span><input data-comments-search="" placeholder="Ім’я, текст або пісня" type="search"/></label>
+<label><span>Пісня</span><select data-comments-filter-song=""><option value="">Усі пісні та розділи</option></select></label>
+</div>
+<div aria-live="polite" class="comments-result-status" data-comments-result-status=""></div>
+<div class="comments-list" data-comments-list="" data-empty-message="Поки відгуків немає. Будьте першим."></div>
+</section>
+</div>
+</div>
+</section>
+</main>
+<footer class="footer"><div class="wrap footer-grid"><div><div class="footer-brand">ANDRIK</div><p class="footer-copy">© <span data-year="">2026</span> ANDRIK Records. Усі права захищені.</p></div></div></footer>
+<script defer="" src="/assets/v50.js?v=54.42"></script>
+<script defer="" src="/assets/comments-auth-v52.js?v=52.13"></script>
+<script defer="" src="/assets/player-shell-bridge.js?v=52.13"></script>
+<script defer="" src="/assets/push-v54-07.js?v=54.07"></script>
+<script defer src="/assets/site-live-v54-07.js?v=54.07"></script></body>
+</html>

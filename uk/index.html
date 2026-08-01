@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+
+<html lang="uk">
+<head>
+<meta charset="utf-8"/>
+<script>
+(()=>{try{
+  const supported=new Set(['ru','uk','sk','en']);
+  const root=document.documentElement;
+  let page=(root.lang||'ru').toLowerCase().split('-')[0];
+  if(location.pathname.endsWith('/player.html')){
+    const query=(new URLSearchParams(location.search).get('lang')||'').toLowerCase();
+    let saved='';
+    try{saved=(localStorage.getItem('andrikPreferredLanguage')||'').toLowerCase()}catch(_){}
+    if(supported.has(query)) page=query;
+    else if(supported.has(saved)) page=saved;
+    root.lang=page;
+  }
+  let manual='';
+  try{manual=(sessionStorage.getItem('andrikManualLanguage')||'').toLowerCase()}catch(_){}
+  if(supported.has(page)&&manual===page){
+    root.setAttribute('translate','no');
+    root.classList.add('notranslate');
+    const meta=document.createElement('meta');
+    meta.name='google';
+    meta.content='notranslate';
+    document.head.appendChild(meta);
+  }
+}catch(_){}})();
+</script>
+<meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/>
+<title>ANDRIK — OCEAN | Офіційний сайт</title>
+<meta content="Офіційний сайт ANDRIK — кінематографічний Modern Epic Heavy Metal, натхнений Трікою та недвоїстістю. Альбом OCEAN, кліп «Я ЕСТЬ», дискографія та музичні платформи." name="description"/>
+<meta content="#030507" name="theme-color"/>
+<meta content="dark" name="color-scheme"/>
+<link href="https://andrikmetal.com/uk/" rel="canonical"/><link href="https://andrikmetal.com/" hreflang="ru" rel="alternate"/><link href="https://andrikmetal.com/uk/" hreflang="uk" rel="alternate"/><link href="https://andrikmetal.com/sk/" hreflang="sk" rel="alternate"/><link href="https://andrikmetal.com/en/" hreflang="en" rel="alternate"/><link href="https://andrikmetal.com/" hreflang="x-default" rel="alternate"/>
+<meta content="website" property="og:type"/>
+<meta content="ANDRIK — OCEAN" property="og:title"/>
+<meta content="Кінематографічний Modern Epic Heavy Metal, натхнений Трікою та недвоїстістю. Альбом OCEAN і офіційний кліп «Я ЕСТЬ»." property="og:description"/>
+<meta content="https://andrikmetal.com/" property="og:url"/>
+<meta content="https://andrikmetal.com/assets/andrik-ocean-poster-v50.webp" property="og:image"/>
+<meta content="1536" property="og:image:width"/>
+<meta content="1024" property="og:image:height"/>
+<meta content="summary_large_image" name="twitter:card"/>
+<meta content="ANDRIK — OCEAN" name="twitter:title"/>
+<meta content="ANDRIK — музика пробудження, натхнена Трікою. Альбом OCEAN і кліп «Я ЕСТЬ»." name="twitter:description"/>
+<meta content="https://andrikmetal.com/assets/andrik-ocean-poster-v50.webp" name="twitter:image"/>
+<link href="/favicon.ico" rel="icon"/>
+<link href="/assets/andrik-eye-v22-180.png" rel="apple-touch-icon"/>
+<link href="/manifest-uk.webmanifest" rel="manifest"/>
+<link href="/assets/v50-26.css?v=51.79" rel="stylesheet"/>
+<link href="/assets/pwa-install.css" rel="stylesheet"/>
+<link href="/assets/trika-countdown-v55-00-r3n.css?v=55.00-r3n" rel="stylesheet"/>
+<script type="application/ld+json">
+  {
+    "@context":"https://schema.org",
+    "@type":"MusicGroup",
+    "name":"ANDRIK",
+    "url":"https://andrikmetal.com/uk/",
+    "image":"https://andrikmetal.com/assets/andrik-ocean-poster-v50.webp",
+    "email":"andrikmetal@gmail.com",
+    "description":"Кінематографічний Modern Epic Heavy Metal, натхнений філософією Тріки, недвоїстістю та дослідженням свідомості.",
+    "genre":["Epic Heavy Metal","Cinematic Metal","Symphonic Metal"],
+    "album":[
+      {"@type":"MusicAlbum","name":"OCEAN","datePublished":"2026-07-20","numTracks":10,"url":"https://youtube.com/playlist?list=PLOWKqAipKxhk"},
+      {"@type":"MusicAlbum","name":"Illusion of Life","datePublished":"2026"}
+    ],
+    "sameAs":[
+      "https://youtube.com/@andrikmetal",
+      "https://open.spotify.com/album/75Xp5YlFl91z5c1yT1n1KU",
+      "https://music.apple.com/sk/artist/andrik/6783139479",
+      "https://soundcloud.com/andrikmetal",
+      "https://www.instagram.com/andrikmetal/",
+      "https://www.tiktok.com/@andrikmetal",
+      "https://x.com/andrikmetal",
+      "https://www.pinterest.com/andrikmetal/",
+      "https://www.facebook.com/andrikmetal/"
+    ]
+  }
+  </script>
+<style id="r27-site-center-fix">
+/* R27 — public site centering + kill stray control pagers/left sliver */
+html,body{max-width:100%;overflow-x:hidden!important;overscroll-behavior-x:none!important;}
+body{position:relative;left:0!important;right:0!important;}
+body::before{content:none!important;}
+main,.topbar,.site-footer,section,header,footer,.wrap{max-width:100%;}
+.topbar,.hero,.section,.site-footer,main{overflow-x:clip;}
+[class*="control-section-pager"],[class*="control-section-swipe-indicator"],[class*="control-section-preview"],[class*="control-section-swipe-toast"],.control-swipe-indicator,.control-pull-indicator,.analytics-swipe-dots{display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important;}
+</style>
+</head>
+<body>
+<a class="skip-link" href="#content">Перейти до вмісту</a>
+<audio id="andrikAudio" loop="" preload="metadata" src="/assets/andrik-motif.mp3"></audio>
+<nav aria-label="Основна навігація" class="topbar">
+<div class="wrap nav-shell">
+<div class="brand-cluster">
+<a aria-label="ANDRIK — головна" class="brand" href="#top">
+<span aria-hidden="true" class="brand-eye"></span>
+<span>ANDRIK</span>
+</a>
+<a aria-label="Відкрити плеєр" class="icon-btn brand-player-btn" href="/player.html?lang=uk" title="Плеєр">
+<svg aria-hidden="true" viewbox="0 0 24 24"><path d="M8 5.6v12.8L18.5 12 8 5.6Z"></path></svg>
+</a>
+</div>
+<div class="nav-links" id="siteMenu"><a href="#video">Кліп</a><a href="#prosnis">Проснись</a><a href="#links">Платформи</a><a href="#discography">Дискографія</a><a href="/uk/trika.html#page-top">Натхнення</a><a href="#about">Про проєкт</a><a href="/uk/comments.html#page-top">Спільнота</a></div>
+<div class="nav-tools">
+<button aria-controls="siteMenu" aria-expanded="false" aria-label="Відкрити меню" class="icon-btn nav-toggle" data-close-label="Закрити меню" data-open-label="Відкрити меню" id="navToggle" title="Меню" type="button">
+<svg aria-hidden="true" viewbox="0 0 24 24"><path d="M4 6h16v2H4V6Zm0 5h16v2H4v-2Zm0 5h16v2H4v-2Z"></path></svg>
+</button>
+<div class="language-picker"><button aria-controls="languageMenu" aria-expanded="false" aria-label="Обрати мову" class="icon-btn language-toggle" title="Обрати мову" type="button"><svg aria-hidden="true" viewbox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm6.92 9h-3.05a15.8 15.8 0 0 0-1.26-5.08A8.03 8.03 0 0 1 18.92 11ZM12 4c.93 1.13 1.68 3.05 1.86 5H10.14C10.32 7.05 11.07 5.13 12 4ZM9.39 5.92A15.8 15.8 0 0 0 8.13 11H5.08a8.03 8.03 0 0 1 4.31-5.08ZM5.08 13h3.05c.16 1.91.6 3.69 1.26 5.08A8.03 8.03 0 0 1 5.08 13ZM12 20c-.93-1.13-1.68-3.05-1.86-5h3.72c-.18 1.95-.93 3.87-1.86 5Zm2.61-1.92c.66-1.39 1.1-3.17 1.26-5h3.05a8.03 8.03 0 0 1-4.31 5.08Z"></path></svg></button><div aria-label="Обрати мову" class="language-dropdown" id="languageMenu" role="menu"><a class="language-option" href="/" lang="ru" role="menuitem"><span class="language-label"><span aria-hidden="true" class="language-flag">🇷🇺</span>Русский</span></a><a aria-current="page" class="language-option active" href="/uk/" lang="uk" role="menuitem"><span class="language-label"><span aria-hidden="true" class="language-flag">🇺🇦</span>Українська</span><span aria-hidden="true" class="language-check">✓</span></a><a class="language-option" href="/sk/" lang="sk" role="menuitem"><span class="language-label"><span aria-hidden="true" class="language-flag">🇸🇰</span>Slovenčina</span></a><a class="language-option" href="/en/" lang="en" role="menuitem"><span class="language-label"><span aria-hidden="true" class="language-flag">🌐</span>English</span></a></div></div>
+<button aria-label="Встановити застосунок" class="icon-btn pwa-install-btn" id="pwaInstallButton" title="Встановити застосунок" type="button">
+<svg aria-hidden="true" viewbox="0 0 24 24"><path d="M11 3h2v9.2l3.2-3.2 1.4 1.4-5.6 5.6-5.6-5.6L7.8 9l3.2 3.2V3Zm-6 14h14v3H5v-3Z"></path></svg>
+</button>
+<button aria-label="Увімкнути музичний мотив" class="icon-btn" data-play-label="Увімкнути музичний мотив" data-stop-label="Вимкнути музичний мотив" id="audioToggle" title="Музичний мотив" type="button">
+<svg aria-hidden="true" viewbox="0 0 24 24"><path d="M9 18V5l11-2v13.2A3.8 3.8 0 1 1 18 13V7.2L11 8.5V18a3.8 3.8 0 1 1-2-3.35V18Z"></path></svg>
+</button>
+</div>
+</div>
+</nav>
+<main id="content">
+<section class="top-countdown-wrap" aria-label="Зворотний відлік до альбому Трика">
+  <div class="wrap">
+    <div class="top-countdown-card reveal">
+      <div class="top-countdown-head">
+        <div class="top-countdown-copy">
+          <span class="eyeline">Зворотний відлік до третього альбому</span>
+          <h2 class="top-countdown-title">ТРИКА</h2>
+          <p class="top-countdown-sub">Реліз — 20 серпня 2026</p>
+        </div>
+        <div class="top-countdown-badge">20 серпня 2026</div>
+      </div>
+      <div class="top-countdown-grid" id="topTrikaCountdown" data-release="2026-08-20T00:00:00+02:00">
+        <div class="top-countdown-box"><span class="top-countdown-number" data-unit="days">00</span><span class="top-countdown-label">днів</span></div>
+        <div class="top-countdown-box"><span class="top-countdown-number" data-unit="hours">00</span><span class="top-countdown-label">годин</span></div>
+        <div class="top-countdown-box"><span class="top-countdown-number" data-unit="minutes">00</span><span class="top-countdown-label">хвилин</span></div>
+        <div class="top-countdown-box"><span class="top-countdown-number" data-unit="seconds">00</span><span class="top-countdown-label">секунд</span></div>
+      </div>
+      <div class="top-countdown-done" id="topTrikaCountdownDone">Альбом «Трика» вже вийшов.</div>
+    </div>
+  </div>
+</section>
+
+<section class="youtube-news-shell" id="youtubeLatestNews" hidden aria-live="polite"><div class="wrap"><a class="youtube-news-card direct-app-link" data-force-app="youtube" data-web-url="https://youtube.com/@andrikmetal" href="https://youtube.com/@andrikmetal" rel="noopener external"><span class="youtube-news-icon" aria-hidden="true">▶</span><span class="youtube-news-copy"><span class="youtube-news-eyeline youtube-news-badge">YouTube</span><strong class="youtube-news-title">ANDRIK</strong><time class="youtube-news-meta"></time></span><span class="youtube-news-action">Смотреть ↗</span></a></div></section>
+
+<header class="hero" id="top">
+<div aria-hidden="true" class="stars"></div>
+<div class="wrap">
+<div class="hero-intro reveal">
+<p class="kicker">Другий альбом вже доступний</p>
+<h1>Пориньте в <span>OCEAN</span></h1>
+<p class="hero-lead">Новий розділ проєкту ANDRIK — десять композицій про пробудження, свободу та безмежний океан свідомості.</p>
+<div class="hero-actions">
+<a class="btn btn-primary direct-app-link" data-app-package="com.google.android.youtube" data-force-app="ytmusic" data-web-url="https://music.youtube.com/playlist?list=PLOWKqAipKxhk" href="https://music.youtube.com/playlist?list=PLOWKqAipKxhk" rel="noopener noreferrer external">
+<svg aria-hidden="true" class="ytmusic-button-icon" viewbox="0 0 24 24"><circle cx="12" cy="12" fill="none" r="8.2" stroke="currentColor" stroke-width="1.8"></circle><circle cx="12" cy="12" fill="none" opacity=".72" r="5.1" stroke="currentColor" stroke-width="1.4"></circle><path d="M10.4 8.8v6.4l5-3.2-5-3.2Z" fill="currentColor"></path></svg>
+              Слухати альбом
+            </a>
+<a class="btn direct-app-link" data-app-package="com.google.android.youtube" data-force-app="youtube" data-web-url="https://www.youtube.com/watch?v=wcfmPOWZZEg" href="https://www.youtube.com/watch?v=wcfmPOWZZEg" rel="noopener noreferrer external">
+<svg aria-hidden="true" viewbox="0 0 24 24"><path d="M21.6 7.1a2.8 2.8 0 0 0-2-2C17.9 4.6 12 4.6 12 4.6s-5.9 0-7.6.5a2.8 2.8 0 0 0-2 2A29 29 0 0 0 2 12a29 29 0 0 0 .4 4.9 2.8 2.8 0 0 0 2 2c1.7.5 7.6.5 7.6.5s5.9 0 7.6-.5a2.8 2.8 0 0 0 2-2A29 29 0 0 0 22 12a29 29 0 0 0-.4-4.9ZM10 15.2V8.8l5.5 3.2-5.5 3.2Z"></path></svg>
+              Дивитися кліп
+            </a>
+</div>
+</div>
+<div class="hero-stage">
+<figure class="hero-poster reveal" id="ocean">
+<img alt="Офіційний постер ANDRIK: альбом OCEAN і кліп «Я ЕСТЬ»" class="always-breathe breath-2" decoding="async" fetchpriority="high" height="1024" src="/assets/andrik-ocean-poster-v50.webp" width="1536"/>
+</figure>
+<article class="release-card reveal" id="video">
+<img alt="Кадр з офіційного кліпу ANDRIK — Я ЕСТЬ" class="always-breathe breath-3" decoding="async" height="1500" loading="eager" src="/assets/ya-est-video-v51.webp" width="1200"/>
+<div class="release-content">
+<span class="release-label">Офіційний музичний кліп</span>
+<h2 class="release-title">Я ЕСТЬ</h2>
+<p class="release-meta">Перший офіційний музичний кліп</p>
+<a class="release-link direct-app-link" data-app-package="com.google.android.youtube" data-force-app="youtube" data-web-url="https://www.youtube.com/watch?v=wcfmPOWZZEg" href="https://www.youtube.com/watch?v=wcfmPOWZZEg" rel="noopener noreferrer external"><span><svg aria-hidden="true" viewbox="0 0 24 24"><path d="M8 5.6v12.8L18.5 12 8 5.6Z"></path></svg></span>Дивитися на YouTube</a>
+<a class="release-player-link" href="/player.html?lang=uk&amp;collection=videos&amp;return=video">Відкрити у вбудованому плеєрі →</a>
+</div>
+</article>
+</div>
+</div>
+</header>
+<div aria-hidden="true" class="section-divider"><span></span></div>
+<section aria-labelledby="prosnis-title" class="section feature-section feature-section-compact" id="prosnis">
+<div class="wrap">
+<div class="prosnis-compact reveal">
+<div class="prosnis-compact-copy">
+<span class="eyebrow">Новий візуальний фрагмент</span>
+<h2 id="prosnis-title">Перший погляд на «Проснись»:</h2>
+<p>Кінематографічний уривок із візуального світу ANDRIK: місто, що розколюється, тривожне небо та героїня посеред пробудження.</p>
+<div class="album-tags prosnis-compact-tags">
+<span class="tag">Кінематографічний візуал</span>
+<span class="tag">З третього альбому</span>
+</div>
+</div>
+<div aria-label="Фрагмент «Проснись»" class="prosnis-compact-media">
+<div class="prosnis-media-frame">
+<img alt="Кадр з уривка «Проснись»: героїня серед високих будівель і розломів світла" class="always-breathe breath-4" decoding="async" height="675" loading="lazy" src="/assets/prosnis-scene-1-v51.webp" width="1200"/>
+</div>
+<div class="prosnis-media-actions">
+<a class="btn btn-primary prosnis-media-btn direct-app-link" data-app-package="com.google.android.youtube" data-force-app="youtube" data-web-url="https://www.youtube.com/shorts/414QuYnbP8s" href="https://www.youtube.com/shorts/414QuYnbP8s" rel="noopener noreferrer external">
+<svg aria-hidden="true" viewbox="0 0 24 24"><path d="M21.6 7.1a2.8 2.8 0 0 0-2-2C17.9 4.6 12 4.6 12 4.6s-5.9 0-7.6.5a2.8 2.8 0 0 0-2 2A29 29 0 0 0 2 12a29 29 0 0 0 .4 4.9 2.8 2.8 0 0 0 2 2c1.7.5 7.6.5 7.6.5s5.9 0 7.6-.5a2.8 2.8 0 0 0 2-2A29 29 0 0 0 22 12a29 29 0 0 0-.4-4.9ZM10 15.2V8.8l5.5 3.2-5.5 3.2Z"></path></svg>
+                Дивитися уривок
+              </a>
+<a class="inline-player-link prosnis-media-link" href="/player.html?lang=uk&amp;collection=prosnis&amp;return=prosnis">Відкрити у вбудованому плеєрі →</a>
+</div>
+</div>
+</div>
+</div>
+</section>
+<div aria-hidden="true" class="section-divider section-divider-warm"><span></span></div>
+<section aria-labelledby="links-title" class="section" id="links">
+<div class="wrap">
+<div class="section-head reveal">
+<div><span class="eyeline">Слухайте там, де вам зручно</span><h2 class="section-title" id="links-title">Музичні платформи</h2></div>
+<p class="section-sub">Швидкі посилання на YouTube, SoundCloud і соцмережі ANDRIK.</p>
+</div>
+<div class="platform-grid">
+<a class="platform-card reveal" data-app-package="com.google.android.youtube" data-force-app="youtube" data-web-url="https://www.youtube.com/@andrikmetal" href="https://www.youtube.com/@andrikmetal" rel="noopener noreferrer external">
+<span class="platform-icon"><svg aria-hidden="true" viewbox="0 0 24 24"><path d="M21.6 7.1a2.8 2.8 0 0 0-2-2C17.9 4.6 12 4.6 12 4.6s-5.9 0-7.6.5a2.8 2.8 0 0 0-2 2A29 29 0 0 0 2 12a29 29 0 0 0 .4 4.9 2.8 2.8 0 0 0 2 2c1.7.5 7.6.5 7.6.5s5.9 0 7.6-.5a2.8 2.8 0 0 0 2-2A29 29 0 0 0 22 12a29 29 0 0 0-.4-4.9ZM10 15.2V8.8l5.5 3.2-5.5 3.2Z"></path></svg></span>
+<span><span class="platform-name">YouTube</span><br/><span class="platform-note">Профіль ANDRIK</span></span><span class="platform-arrow">↗</span>
+</a>
+<a class="platform-card reveal" data-app-package="com.soundcloud.android" data-force-app="soundcloud" data-web-url="https://soundcloud.com/andrikmetal" href="https://soundcloud.com/andrikmetal" rel="noopener noreferrer external" target="_blank">
+<span class="platform-icon"><svg aria-hidden="true" viewbox="0 0 24 24"><path d="M1.5 14.4c-.3 0-.5.2-.5.5v2.2c0 .3.2.5.5.5s.5-.2.5-.5v-2.2c0-.3-.2-.5-.5-.5Zm2-.9c-.4 0-.6.3-.6.7v3.6c0 .4.2.7.6.7s.6-.3.6-.7v-3.6c0-.4-.2-.7-.6-.7Zm2.1-1.1c-.4 0-.7.3-.7.8v5.1c0 .5.3.8.7.8.4 0 .7-.3.7-.8v-5.1c0-.5-.3-.8-.7-.8Zm2.2-4.2c-.5 0-.8.4-.8.9v9.2c0 .5.3.9.8.9s.8-.4.8-.9V9.1c0-.5-.3-.9-.8-.9Zm8.2 3.1a4.4 4.4 0 0 0-1.4.2 5.7 5.7 0 0 0-5.4-3.8v10.9H16a3.7 3.7 0 1 0 0-7.3Z"></path></svg></span>
+<span><span class="platform-name">SoundCloud</span><br/><span class="platform-note">Профіль ANDRIK</span></span><span class="platform-arrow">↗</span>
+</a>
+</div>
+<div aria-label="Соціальні платформи ANDRIK" class="platform-mini-grid">
+<a aria-label="Instagram ANDRIK" class="platform-mini-card platform-instagram reveal" data-app-package="com.instagram.android" data-force-app="instagram" data-web-url="https://www.instagram.com/andrikmetal/" href="https://www.instagram.com/andrikmetal/" rel="noopener noreferrer external" target="_blank" title="Instagram">
+<svg aria-hidden="true" viewbox="0 0 24 24"><path d="M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5Zm0 2a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3H7Zm5 3.2A4.8 4.8 0 1 1 12 16.8 4.8 4.8 0 0 1 12 7.2Zm0 2A2.8 2.8 0 1 0 12 14.8 2.8 2.8 0 0 0 12 9.2Zm5.05-3.35a1.15 1.15 0 1 1 0 2.3 1.15 1.15 0 0 1 0-2.3Z" fill-rule="evenodd"></path></svg>
+</a>
+<a aria-label="TikTok ANDRIK" class="platform-mini-card platform-tiktok reveal" data-app-package="com.zhiliaoapp.musically" data-force-app="tiktok" data-web-url="https://www.tiktok.com/@andrikmetal" href="https://www.tiktok.com/@andrikmetal" rel="noopener noreferrer external" target="_blank" title="TikTok">
+<svg aria-hidden="true" viewbox="0 0 24 24"><path d="M15.4 2h3.05c.2 1.66 1.13 3.1 2.55 3.93V9a8.27 8.27 0 0 1-3.55-1.05v7.12a6.07 6.07 0 1 1-5.23-6.01v3.1a3.03 3.03 0 1 0 2.18 2.91V2Z"></path></svg>
+</a>
+<a aria-label="Telegram ANDRIK" class="platform-mini-card platform-telegram reveal" data-web-url="https://t.me/andrik_heavymetal" href="https://t.me/andrik_heavymetal" rel="noopener noreferrer external" target="_blank" title="Telegram">
+<svg aria-hidden="true" viewbox="0 0 24 24"><path d="M21.8 4.2 18.5 19a1.2 1.2 0 0 1-1.8.73l-4.1-3.04-2.1 2.04a1 1 0 0 1-1.7-.56l-.3-4.25L16.2 7c.36-.32-.08-.48-.56-.18L6 12.92l-4-.98a1.02 1.02 0 0 1-.05-1.95L20.2 3a1.25 1.25 0 0 1 1.6 1.2Z"></path></svg>
+</a>
+<a aria-label="X ANDRIK" class="platform-mini-card platform-x reveal" data-app-package="com.twitter.android" data-force-app="x" data-web-fallback="https://x.com/andrikmetal" data-web-url="https://x.com/andrikmetal" href="https://x.com/andrikmetal" rel="noopener noreferrer external" title="X">
+<svg aria-hidden="true" viewbox="0 0 24 24"><path d="M18.9 2H22l-6.77 7.74L23.2 22h-6.25l-4.9-6.7L6.2 22H3.1l7.24-8.28L.8 2h6.36l4.42 6.05L18.9 2Zm-1.1 18h1.73L6.18 3.9H4.32L17.8 20Z"></path></svg>
+</a>
+<a aria-label="Pinterest ANDRIK" class="platform-mini-card platform-pinterest reveal" data-app-package="com.pinterest" data-force-app="pinterest" data-web-fallback="https://www.pinterest.com/andrikmetal/" data-web-url="https://www.pinterest.com/andrikmetal/" href="https://www.pinterest.com/andrikmetal/" rel="noopener noreferrer external" title="Pinterest">
+<svg aria-hidden="true" viewbox="0 0 24 24"><path d="M12.2 2C6.7 2 4 5.9 4 9.2c0 2.5.95 4.7 3 5.5.34.14.64 0 .74-.37.07-.25.23-.9.3-1.17.1-.37.06-.5-.2-.8-.58-.68-.95-1.56-.95-2.8 0-3.6 2.7-6.84 7.04-6.84 3.84 0 5.95 2.35 5.95 5.48 0 4.12-1.82 7.6-4.53 7.6-1.5 0-2.62-1.24-2.26-2.75.43-1.8 1.26-3.74 1.26-5.04 0-1.16-.62-2.13-1.91-2.13-1.52 0-2.74 1.57-2.74 3.67 0 1.34.45 2.25.45 2.25l-1.82 7.7c-.54 2.29-.08 5.1-.04 5.38.02.17.24.21.34.08.14-.18 1.98-2.45 2.6-4.71.17-.64 1-3.9 1-3.9.5.95 1.94 1.78 3.47 1.78 4.57 0 7.67-4.16 7.67-9.73C23.37 5.3 19.8 2 12.2 2Z"></path></svg>
+</a>
+<a aria-label="Facebook ANDRIK" class="platform-mini-card platform-facebook reveal" data-web-url="https://www.facebook.com/andrikmetal/" href="https://www.facebook.com/andrikmetal/" rel="noopener noreferrer external" target="_blank" title="Facebook">
+<svg aria-hidden="true" viewbox="0 0 24 24"><path d="M13.6 22v-9h3l.45-3.5H13.6V7.27c0-1.01.28-1.7 1.73-1.7h1.84V2.45c-.32-.04-1.41-.14-2.68-.14-2.65 0-4.47 1.62-4.47 4.59v2.6H7v3.5h3.02v9h3.58Z"></path></svg>
+</a>
+</div>
+</div>
+</section>
+<section aria-labelledby="discography-title" class="section" id="discography">
+<div class="wrap">
+<div class="section-head reveal">
+<div><span class="eyeline">Два світи — одна історія</span><h2 class="section-title" id="discography-title">Дискографія</h2></div>
+<p class="section-sub">Альбоми ANDRIK поєднують важку музику, кінематографічний масштаб і філософію внутрішнього пробудження.</p>
+</div>
+<div class="discography-grid">
+<article class="album-card reveal" id="album-ocean">
+<div class="album-art"><img alt="Обкладинка альбому OCEAN" class="discography-breathe album-breathe-v5148" decoding="async" height="900" loading="lazy" src="/assets/ocean-cover-v5148-clean.webp" width="900"/></div>
+<div class="album-info"><span class="album-year">2026 · Другий альбом</span><h3 class="album-name">OCEAN</h3><p class="album-desc">Десять композицій — від «Витоку» й пробудження до руйнування останніх стін та «Живого світла».</p><div class="album-tags"><span class="tag">10 треків</span><span class="tag">Epic Metal</span><span class="tag">Cinematic</span></div><div aria-label="Де слухати OCEAN" class="album-actions">
+<a aria-label="OCEAN у Spotify" class="album-platform-link spotify-btn" data-app-package="com.spotify.music" data-force-app="spotify" data-web-url="https://open.spotify.com/album/3ioFAprVi3B2GOXWgK15BQ" href="https://open.spotify.com/album/3ioFAprVi3B2GOXWgK15BQ" rel="noopener noreferrer external"><span aria-hidden="true" class="album-platform-icon"><svg aria-hidden="true" viewbox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm4.58 14.42a.62.62 0 0 1-.85.2c-2.34-1.43-5.29-1.75-8.76-.96a.62.62 0 1 1-.28-1.2c3.8-.87 7.06-.5 9.68 1.1.29.18.39.56.21.86Zm1.22-2.72a.78.78 0 0 1-1.07.26c-2.68-1.65-6.76-2.12-9.93-1.16a.78.78 0 1 1-.45-1.49c3.62-1.1 8.13-.57 11.19 1.31.36.22.48.7.26 1.08Zm.1-2.83C14.7 8.96 9.4 8.78 6.34 9.7a.94.94 0 1 1-.54-1.8c3.51-1.06 9.38-.85 13.08 1.35a.94.94 0 0 1-.97 1.62Z"></path></svg></span><span class="album-platform-label">Spotify</span></a>
+<a aria-label="Слухати OCEAN в Apple Music" class="album-platform-link apple-btn" data-app-package="com.apple.android.music" data-web-url="https://music.apple.com/sk/album/ocean/6792855113" href="https://music.apple.com/sk/album/ocean/6792855113" rel="noopener noreferrer external" target="_blank"><span aria-hidden="true" class="album-platform-icon"><svg aria-hidden="true" viewbox="0 0 24 24"><path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.79 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.53 4.09ZM12.03 7.25C11.88 5.02 13.69 3.18 15.77 3c.29 2.58-2.34 4.5-3.74 4.25Z"></path></svg></span><span class="album-platform-label">Apple Music</span></a>
+<a aria-label="OCEAN в Amazon Music" class="album-platform-link amazon-btn" data-app-package="com.amazon.mp3" data-web-url="https://music.amazon.com/albums/B0H9NYQ18C" href="https://music.amazon.com/albums/B0H9NYQ18C" rel="noopener noreferrer external" target="_blank"><span aria-hidden="true" class="album-platform-icon"><svg aria-hidden="true" viewbox="0 0 24 24"><path d="M12 3a1 1 0 0 1 1 1v8.38a3.5 3.5 0 1 1-2-3.16V4a1 1 0 0 1 1-1Zm4.62 12.76c-1.62 1.52-3.74 2.29-6.34 2.29-2.52 0-4.8-.72-6.84-2.17a.75.75 0 1 1 .86-1.23c1.78 1.27 3.78 1.9 5.98 1.9 2.2 0 3.95-.62 5.31-1.88a.75.75 0 1 1 1.03 1.09Zm2.1-.33c.1.42-.02.83-.35 1.22-.21.25-.51.5-.89.74a.75.75 0 1 1-.78-1.28c.2-.12.36-.25.47-.38-.33-.11-.78-.16-1.36-.14a.75.75 0 1 1-.05-1.5c1.12-.03 1.94.12 2.46.45.26.16.43.45.5.89Z"></path></svg></span><span class="album-platform-label">Amazon Music</span></a>
+<a class="album-player-link" href="/player.html?lang=uk&amp;collection=ocean&amp;return=album-ocean"><span aria-hidden="true" class="album-platform-icon"><svg aria-hidden="true" viewbox="0 0 24 24"><path d="M8 5.6v12.8L18.5 12 8 5.6Z"></path></svg></span><span class="album-platform-label">Вбудований плеєр →</span></a>
+</div></div>
+</article>
+<article class="album-card reveal" id="album-illusion">
+<div class="album-art"><img alt="Фірмовий арт ANDRIK для альбому Illusion of Life" class="discography-breathe album-breathe-v5148" decoding="async" height="1536" loading="eager" src="/assets/illusion-of-life-static-v52.jpg" width="1536"/></div>
+<div class="album-info"><span class="album-year">2026 · Дебютний альбом</span><h3 class="album-name">Illusion of Life</h3><p class="album-desc">Дебютний альбом із потужним візуальним образом: космічне око, внутрішній шлях, виразний жіночий вокал, гітарна енергія та філософія виходу з ілюзії.</p><div class="album-tags"><span class="tag">10 треків</span><span class="tag">Heavy Metal</span><span class="tag">Philosophical</span></div><div aria-label="Де слухати Illusion of Life" class="album-actions">
+<a aria-label="Illusion of Life у Spotify" class="album-platform-link spotify-btn" data-app-package="com.spotify.music" data-force-app="spotify" data-web-url="https://open.spotify.com/album/75Xp5YlFl91z5c1yT1n1KU" href="https://open.spotify.com/album/75Xp5YlFl91z5c1yT1n1KU" rel="noopener noreferrer external"><span aria-hidden="true" class="album-platform-icon"><svg aria-hidden="true" viewbox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm4.58 14.42a.62.62 0 0 1-.85.2c-2.34-1.43-5.29-1.75-8.76-.96a.62.62 0 1 1-.28-1.2c3.8-.87 7.06-.5 9.68 1.1.29.18.39.56.21.86Zm1.22-2.72a.78.78 0 0 1-1.07.26c-2.68-1.65-6.76-2.12-9.93-1.16a.78.78 0 1 1-.45-1.49c3.62-1.1 8.13-.57 11.19 1.31.36.22.48.7.26 1.08Zm.1-2.83C14.7 8.96 9.4 8.78 6.34 9.7a.94.94 0 1 1-.54-1.8c3.51-1.06 9.38-.85 13.08 1.35a.94.94 0 0 1-.97 1.62Z"></path></svg></span><span class="album-platform-label">Spotify</span></a>
+<a aria-label="Слухати Illusion of Life в Apple Music" class="album-platform-link apple-btn" data-app-package="com.apple.android.music" data-web-url="https://music.apple.com/sk/album/illusion-of-life/6783139947" href="https://music.apple.com/sk/album/illusion-of-life/6783139947" rel="noopener noreferrer external" target="_blank"><span aria-hidden="true" class="album-platform-icon"><svg aria-hidden="true" viewbox="0 0 24 24"><path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.79 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.53 4.09ZM12.03 7.25C11.88 5.02 13.69 3.18 15.77 3c.29 2.58-2.34 4.5-3.74 4.25Z"></path></svg></span><span class="album-platform-label">Apple Music</span></a>
+<a aria-label="Illusion of Life в Amazon Music" class="album-platform-link amazon-btn" data-app-package="com.amazon.mp3" data-web-url="https://music.amazon.com/albums/B0H6F41L25" href="https://music.amazon.com/albums/B0H6F41L25" rel="noopener noreferrer external" target="_blank"><span aria-hidden="true" class="album-platform-icon"><svg aria-hidden="true" viewbox="0 0 24 24"><path d="M12 3a1 1 0 0 1 1 1v8.38a3.5 3.5 0 1 1-2-3.16V4a1 1 0 0 1 1-1Zm4.62 12.76c-1.62 1.52-3.74 2.29-6.34 2.29-2.52 0-4.8-.72-6.84-2.17a.75.75 0 1 1 .86-1.23c1.78 1.27 3.78 1.9 5.98 1.9 2.2 0 3.95-.62 5.31-1.88a.75.75 0 1 1 1.03 1.09Zm2.1-.33c.1.42-.02.83-.35 1.22-.21.25-.51.5-.89.74a.75.75 0 1 1-.78-1.28c.2-.12.36-.25.47-.38-.33-.11-.78-.16-1.36-.14a.75.75 0 1 1-.05-1.5c1.12-.03 1.94.12 2.46.45.26.16.43.45.5.89Z"></path></svg></span><span class="album-platform-label">Amazon Music</span></a>
+<a class="album-player-link" href="/player.html?lang=uk&amp;collection=illusion&amp;return=album-illusion"><span aria-hidden="true" class="album-platform-icon"><svg aria-hidden="true" viewbox="0 0 24 24"><path d="M8 5.6v12.8L18.5 12 8 5.6Z"></path></svg></span><span class="album-platform-label">Вбудований плеєр →</span></a>
+</div></div>
+</article>
+</div>
+</div>
+</section>
+<div aria-hidden="true" class="section-divider section-divider-trika"><span></span></div>
+<section aria-labelledby="inspiration-title" class="section inspiration-section" id="inspiration">
+<div class="wrap">
+<a aria-label="Духовне джерело проєкту Натхнення: Тріка Відкрийте філософське джерело музики ANDRIK. +" class="inspiration-spoiler reveal direct-chapter-link" href="/uk/trika.html#page-top">
+<span class="inspiration-summary-copy"><span class="eyeline">Духовне джерело проєкту</span><strong id="inspiration-title">Натхнення: Тріка</strong><small>Відкрийте філософське джерело музики ANDRIK.</small></span>
+<span aria-hidden="true" class="inspiration-plus">+</span>
+</a>
+</div>
+</section><section aria-labelledby="comments-spoiler-title" class="section comments-spoiler-section" id="comments">
+<div class="wrap">
+<a aria-label="Голоси слухачів Коментарі Відгуки про музику, кліпи та філософію ANDRIK. +" class="comments-home-spoiler reveal direct-chapter-link" href="/uk/comments.html#page-top">
+<span class="comments-spoiler-copy"><span class="eyeline">Голоси слухачів</span><strong id="comments-spoiler-title">Коментарі</strong><small>Відгуки про музику, кліпи та філософію ANDRIK.</small></span>
+<span aria-hidden="true" class="comments-spoiler-plus">+</span>
+</a>
+</div>
+</section>
+<div aria-hidden="true" class="section-divider section-divider-gold"><span></span></div>
+<section aria-labelledby="about-title" class="philosophy" id="about">
+<div class="wrap philosophy-panel reveal">
+<div class="philosophy-copy">
+<span class="eyeline">Філософія ANDRIK</span>
+<blockquote id="about-title">Музика Пробудження.</blockquote>
+<p>ANDRIK — незалежний кінематографічний Modern Epic Heavy Metal-проєкт. Потужний жіночий вокал, мелодичні гітарні соло та пісні про свободу, пробудження і природу Свідомості.</p>
+</div>
+</div>
+</section>
+</main>
+<footer class="footer">
+<div class="wrap footer-grid">
+<div><div class="footer-brand">ANDRIK</div><p class="footer-copy">© <span data-year="">2026</span> ANDRIK Records. Усі права захищено.</p></div>
+<div class="footer-links"><a data-app-package="com.google.android.youtube" data-force-app="youtube" data-web-url="https://youtube.com/@andrikmetal" href="https://youtube.com/@andrikmetal" rel="noopener noreferrer external">YouTube</a><a data-app-package="com.instagram.android" data-force-app="instagram" data-web-url="https://www.instagram.com/andrikmetal/" href="https://www.instagram.com/andrikmetal/" rel="noopener noreferrer external" target="_blank">Instagram</a><a data-app-package="com.zhiliaoapp.musically" data-force-app="tiktok" data-web-url="https://www.tiktok.com/@andrikmetal" href="https://www.tiktok.com/@andrikmetal" rel="noopener noreferrer external" target="_blank">TikTok</a><a data-web-url="https://t.me/andrik_heavymetal" href="https://t.me/andrik_heavymetal" rel="noopener noreferrer external" target="_blank">Telegram</a><a data-app-package="com.twitter.android" data-force-app="x" data-web-fallback="https://x.com/andrikmetal" data-web-url="https://x.com/andrikmetal" href="https://x.com/andrikmetal" rel="noopener noreferrer external">X</a></div>
+</div>
+<div class="wrap footer-contact">
+<a aria-label="Написати ANDRIK електронною поштою" class="footer-email" href="mailto:andrikmetal@gmail.com">
+<svg aria-hidden="true" viewbox="0 0 24 24"><path d="M4 5h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z"></path><path d="m22 7-10 7L2 7"></path></svg>
+<span>andrikmetal@gmail.com</span>
+</a>
+</div>
+</footer>
+<script defer="" src="/assets/pwa-install.js"></script>
+<script defer="" src="/assets/v50.js?v=54.42"></script>
+<script defer="" src="/assets/app-links-v50.js?v=51.48"></script>
+<script defer="" src="/assets/player-shell-bridge.js?v=51.79"></script>
+<script defer="" src="/assets/push-v54-07.js?v=54.07"></script>
+<script defer src="/assets/youtube-news-v51.js?v=51.79"></script>
+<script defer src="/assets/site-live-v54-07.js?v=54.07"></script><script defer src="/assets/trika-countdown-v55-00-r3n.js?v=55.00-r3n"></script>
+<script id="r27-site-cleanup">
+(()=>{
+  const bad='[class*="control-section-pager"],[class*="control-section-swipe-indicator"],[class*="control-section-preview"],[class*="control-section-swipe-toast"],.control-swipe-indicator,.control-pull-indicator,.analytics-swipe-dots';
+  const badBodyClasses=['control-section-swipe-r3q','control-section-swipe-r3u','control-section-carousel','control-section-carousel-r3k','control-section-carousel-r3n','admin-carousel-embedded'];
+  const clean=()=>{
+    try{document.querySelectorAll(bad).forEach(el=>el.remove());}catch(_){}
+    try{badBodyClasses.forEach(c=>document.body.classList.remove(c));}catch(_){}
+    try{document.documentElement.classList.remove('admin-carousel-embedded');}catch(_){}
+    try{document.documentElement.style.removeProperty('--control-section-swipe-x');document.documentElement.style.removeProperty('--control-section-swipe-progress');}catch(_){}
+    try{document.body.style.removeProperty('transform');document.documentElement.style.removeProperty('transform');}catch(_){}
+    try{window.scrollTo({left:0,behavior:'instant'});}catch(_){ try{window.scrollTo(0,window.scrollY||0);}catch(__){} }
+  };
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',clean,{once:true}); else clean();
+  const start=()=>{ if(!document.body)return setTimeout(start,50); clean(); try{new MutationObserver(clean).observe(document.body,{childList:true,subtree:true});}catch(_){} };
+  start();
+})();
+</script>
+</body>
+</html>
