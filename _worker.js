@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R112', number:112, version:'55.00', full:'55.00 LIVE WEB AI FINAL R112', siteUpdater:'55.00-r112' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R113', number:113, version:'55.00', full:'55.00 LIVE WEB AI FINAL R113', siteUpdater:'55.00-r113' });
 
 const JSON_HEADERS = {
   'content-type': 'application/json; charset=utf-8',
@@ -189,6 +189,11 @@ async function ensureSecuritySchema(db) {
       CREATE INDEX IF NOT EXISTS idx_security_rate_updated
         ON security_rate_buckets(updated_at DESC);
     `);
+    await db.prepare(`ALTER TABLE security_events ADD COLUMN country TEXT NOT NULL DEFAULT ''`).run().catch(() => {});
+    await db.prepare(`ALTER TABLE security_events ADD COLUMN region TEXT NOT NULL DEFAULT ''`).run().catch(() => {});
+    await db.prepare(`ALTER TABLE security_events ADD COLUMN city TEXT NOT NULL DEFAULT ''`).run().catch(() => {});
+    await db.prepare(`ALTER TABLE security_events ADD COLUMN colo TEXT NOT NULL DEFAULT ''`).run().catch(() => {});
+    await db.prepare(`CREATE INDEX IF NOT EXISTS idx_security_events_country_created ON security_events(country, created_at DESC)`).run().catch(() => {});
   })().finally(() => { securitySchemaPromise = null; });
   return securitySchemaPromise;
 }
@@ -202,14 +207,19 @@ async function recordSecurityEvent(db, request, env, kind, detail = '') {
   try {
     await ensureSecuritySchema(db);
     const ipHash = await securityIpHash(request, env);
+    const cf = request.cf || {};
     await db.prepare(`
-      INSERT INTO security_events(kind, path, ip_hash, detail, created_at)
-      VALUES (?, ?, ?, ?, datetime('now'))
+      INSERT INTO security_events(kind, path, ip_hash, detail, country, region, city, colo, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
     `).bind(
       cleanPlainText(kind, 80),
       cleanPlainText(new URL(request.url).pathname, 180),
       ipHash,
-      cleanPlainText(detail, 500)
+      cleanPlainText(detail, 500),
+      cleanPlainText(cf.country || '', 8).toUpperCase(),
+      cleanPlainText(cf.region || cf.regionCode || '', 100),
+      cleanPlainText(cf.city || '', 100),
+      cleanPlainText(cf.colo || '', 16)
     ).run();
   } catch (_) {}
 }
@@ -321,7 +331,7 @@ async function handleControlProtectionStatus(request, env) {
       GROUP BY kind
     `).all(),
     db.prepare(`
-      SELECT kind, path, detail, created_at AS createdAt
+      SELECT kind, path, detail, country, region, colo, created_at AS createdAt
       FROM security_events
       WHERE created_at >= datetime('now', '-1 day')
       ORDER BY created_at DESC
@@ -335,7 +345,7 @@ async function handleControlProtectionStatus(request, env) {
     probe.searchParams.set('security_probe', String(Date.now()));
     const response = await fetch(probe.toString(), {
       method:'GET', cache:'no-store',
-      headers:{ 'cache-control':'no-cache', 'user-agent':'ANDRIK-Control-R112-Security' }
+      headers:{ 'cache-control':'no-cache', 'user-agent':'ANDRIK-Control-R113-Security' }
     });
     const csp = response.headers.get('content-security-policy') || '';
     headerStatus = {
@@ -412,6 +422,55 @@ async function handleControlProtectionGuardRun(request, env) {
     return json({ ok:false, error:'guard-unavailable', message:result.message }, 503);
   }
   return json({ ok:true, ...result.status, message:result.message });
+}
+
+
+function protectionDashboardRange(value) {
+  const key = ['2h','24h','7d'].includes(String(value || '')) ? String(value) : '24h';
+  return { key, sql:key === '7d' ? '-7 days' : key === '2h' ? '-2 hours' : '-24 hours', ms:key === '7d' ? 7*86400000 : key === '2h' ? 2*3600000 : 86400000 };
+}
+
+function parseSystemLogDetails(value) { try { return JSON.parse(value || '{}') || {}; } catch (_) { return {}; } }
+
+async function handleControlProtectionDashboard(request, env) {
+  if (!adminAuthorized(request, env)) return json({ ok:false, error:'unauthorized' }, 401);
+  const db = requireDb(env);
+  await Promise.all([ensureSecuritySchema(db), ensurePushAutomationSchema(db), ensureNativeMonitorSchema(db), ensureControlV1Schema(db), ensureSiteMetricsSchema(db)]);
+  const range = protectionDashboardRange(new URL(request.url).searchParams.get('range'));
+  const [monitorRaw, securityBuckets, securityKinds, securityRows, systemRows, backupRows, pushRows, incidentRows, traffic] = await Promise.all([
+    getNativeMonitorDashboardData(env, range.key === '7d' ? '7d' : '24h'),
+    db.prepare(`SELECT (CAST(strftime('%s', created_at) AS INTEGER)/300)*300 AS bucket, COUNT(*) AS count FROM security_events WHERE datetime(created_at) >= datetime('now', ?) GROUP BY bucket ORDER BY bucket ASC`).bind(range.sql).all(),
+    db.prepare(`SELECT kind, COUNT(*) AS count FROM security_events WHERE datetime(created_at) >= datetime('now', ?) GROUP BY kind`).bind(range.sql).all(),
+    db.prepare(`SELECT kind, path, detail, country, region, colo, created_at AS createdAt FROM security_events WHERE datetime(created_at) >= datetime('now', ?) ORDER BY datetime(created_at) DESC LIMIT 50`).bind(range.sql).all(),
+    db.prepare(`SELECT scope, level, event, message, details_json AS detailsJson, created_at AS createdAt FROM system_logs WHERE datetime(created_at) >= datetime('now', ?) ORDER BY datetime(created_at) DESC LIMIT 60`).bind(range.sql).all(),
+    db.prepare(`SELECT id, storage, status, row_count AS rowCount, size_bytes AS sizeBytes, reason, error, created_at AS createdAt FROM backup_history ORDER BY datetime(created_at) DESC LIMIT 20`).all(),
+    db.prepare(`SELECT type, status, title, message, error, created_at AS createdAt FROM push_history WHERE datetime(created_at) >= datetime('now', ?) ORDER BY datetime(created_at) DESC LIMIT 30`).bind(range.sql).all(),
+    db.prepare(`SELECT target_id AS targetId, target_name AS targetName, event_type AS eventType, status, reason, started_at AS startedAt, ended_at AS endedAt FROM control_monitor_incidents WHERE datetime(started_at) >= datetime('now', ?) ORDER BY datetime(started_at) DESC LIMIT 30`).bind(range.sql).all(),
+    getSiteLiveMetrics(db)
+  ]);
+  const cutoff = Date.now() - range.ms;
+  const monitor = { ...monitorRaw, samples:(monitorRaw.samples || []).filter(item => Date.parse(item.checkedAt || 0) >= cutoff) };
+  const counts = {}; for (const row of securityKinds.results || []) counts[row.kind] = Number(row.count || 0);
+  const events = [];
+  for (const row of securityRows.results || []) events.push({ type:'security', category:'security', level:'warning', title:row.kind || 'Защита', message:[row.country,row.detail || row.path].filter(Boolean).join(' · '), createdAt:row.createdAt || '', details:{ country:row.country || '', region:row.region || '', colo:row.colo || '' } });
+  for (const row of systemRows.results || []) events.push({ type:'system', category:row.scope || 'system', level:row.level || 'info', title:row.event || row.scope || 'Система', message:row.message || '', createdAt:row.createdAt || '', details:parseSystemLogDetails(row.detailsJson) });
+  for (const row of backupRows.results || []) events.push({ type:'backup', category:'backup', level:row.status === 'failed' ? 'error' : 'info', title:row.status === 'failed' ? 'Ошибка резервной копии' : 'Резервная копия D1', message:row.status === 'failed' ? row.error : `${row.storage || 'D1'} · ${Number(row.rowCount || 0)} строк · ${row.reason || ''}`, createdAt:row.createdAt || '', details:{ id:row.id, sizeBytes:Number(row.sizeBytes || 0) } });
+  for (const row of pushRows.results || []) events.push({ type:'push', category:'push', level:row.status === 'failed' ? 'error' : 'info', title:row.title || row.type || 'Push', message:row.error || row.message || '', createdAt:row.createdAt || '' });
+  for (const row of incidentRows.results || []) events.push({ type:'monitor', category:'monitor', level:row.status === 'error' ? 'error' : 'warning', title:`${row.targetName || row.targetId}: ${row.eventType || 'событие'}`, message:row.reason || '', createdAt:row.startedAt || '' });
+  events.sort((a,b) => Date.parse(b.createdAt || 0) - Date.parse(a.createdAt || 0));
+  return json({ ok:true, range:range.key, updatedAt:new Date().toISOString(), monitor, traffic, security:{ total:Object.values(counts).reduce((a,b)=>a+Number(b || 0),0), counts, buckets:(securityBuckets.results || []).map(row => ({ at:new Date(Number(row.bucket || 0)*1000).toISOString(), count:Number(row.count || 0) })), recent:securityRows.results || [] }, backup:{ latest:(backupRows.results || [])[0] || null, count:(backupRows.results || []).filter(row=>row.status==='completed').length }, events:events.slice(0,100) });
+}
+
+async function handleControlProtectionAttacks(request, env) {
+  if (!adminAuthorized(request, env)) return json({ ok:false, error:'unauthorized' }, 401);
+  const db = requireDb(env); await ensureSecuritySchema(db);
+  const range = String(new URL(request.url).searchParams.get('range') || '') === '7d' ? { key:'7d', sql:'-7 days' } : { key:'24h', sql:'-24 hours' };
+  const [countriesRaw, totalRaw, recentRaw] = await Promise.all([
+    db.prepare(`SELECT country, MAX(region) AS region, MAX(colo) AS colo, COUNT(*) AS count, MAX(created_at) AS lastAt FROM security_events WHERE datetime(created_at) >= datetime('now', ?) AND country <> '' GROUP BY country ORDER BY count DESC, lastAt DESC LIMIT 60`).bind(range.sql).all(),
+    db.prepare(`SELECT COUNT(*) AS total, SUM(CASE WHEN country='' THEN 1 ELSE 0 END) AS unknown FROM security_events WHERE datetime(created_at) >= datetime('now', ?)`).bind(range.sql).first(),
+    db.prepare(`SELECT kind, path, detail, country, region, colo, created_at AS createdAt FROM security_events WHERE datetime(created_at) >= datetime('now', ?) ORDER BY datetime(created_at) DESC LIMIT 30`).bind(range.sql).all()
+  ]);
+  return json({ ok:true, range:range.key, updatedAt:new Date().toISOString(), total:Number(totalRaw?.total || 0), unknown:Number(totalRaw?.unknown || 0), countries:(countriesRaw.results || []).map(row=>({ country:cleanPlainText(row.country || '',8).toUpperCase(), region:row.region || '', colo:row.colo || '', count:Number(row.count || 0), lastAt:row.lastAt || '' })), recent:recentRaw.results || [], note:'Карта показывает события, дошедшие до Worker. DDoS, остановленный Cloudflare edge раньше Worker, сюда не попадает.' });
 }
 
 
@@ -2674,7 +2733,9 @@ async function handleControlSystem(request, env) {
     ensureLyricsV2Schema(db),
     ensurePushAutomationSchema(db),
     ensureControlV1Schema(db),
-    ensurePlatformAnalyticsSchema(db)
+    ensurePlatformAnalyticsSchema(db),
+    ensureSecuritySchema(db),
+    ensureSiteMetricsSchema(db)
   ]);
   const [lastCheck, lastStatus, lastSummary, seeded, uploadsPlaylist, ownerDevices, latestBackup, lastSeen, recentEvents, latestPush, dailySummaryAt, latestSubscriberSeen, searchConsoleRow] = await Promise.all([
     getPushState(db, 'playlist-last-check-at'),
@@ -6855,7 +6916,8 @@ async function handleControlDashboard(request, env) {
 const BACKUP_TABLES = [
   'comments', 'comment_likes', 'comment_reports', 'lyrics',
   'push_admin_devices', 'push_subscribers', 'push_playlist_seen', 'push_state', 'push_history', 'system_logs', 'observability_usage', 'control_monitor_samples', 'control_monitor_incidents',
-  'release_history', 'youtube_event_seen', 'platform_accounts', 'platform_snapshots'
+  'release_history', 'youtube_event_seen', 'platform_accounts', 'platform_snapshots',
+  'security_events', 'security_rate_buckets', 'site_visit_events'
 ];
 
 async function buildDatabaseBackup(db) {
@@ -6866,7 +6928,9 @@ async function buildDatabaseBackup(db) {
     ensureObservabilitySchema(db),
     ensureNativeMonitorSchema(db),
     ensureControlV1Schema(db),
-    ensurePlatformAnalyticsSchema(db)
+    ensurePlatformAnalyticsSchema(db),
+    ensureSecuritySchema(db),
+    ensureSiteMetricsSchema(db)
   ]);
   await backfillReleaseHistory(db);
   const tables = {};
@@ -7033,7 +7097,9 @@ async function loadBackupForRestore(request, env) {
     ensureObservabilitySchema(db),
     ensureNativeMonitorSchema(db),
     ensureControlV1Schema(db),
-    ensurePlatformAnalyticsSchema(db)
+    ensurePlatformAnalyticsSchema(db),
+    ensureSecuritySchema(db),
+    ensureSiteMetricsSchema(db)
   ]);
   const id = cleanPlainText(new URL(request.url).searchParams.get('id'), 80);
   if (!id) throw new Error('validation');
@@ -7073,7 +7139,7 @@ async function inspectBackupCompatibility(db, payload) {
   const missingTables = [];
   const unknownColumns = {};
   const counts = {};
-  const optionalTables = new Set(['system_logs', 'push_subscribers', 'youtube_event_seen', 'platform_accounts', 'platform_snapshots', 'observability_usage', 'control_monitor_samples', 'control_monitor_incidents']);
+  const optionalTables = new Set(['system_logs', 'push_subscribers', 'youtube_event_seen', 'platform_accounts', 'platform_snapshots', 'observability_usage', 'control_monitor_samples', 'control_monitor_incidents', 'security_events', 'security_rate_buckets', 'site_visit_events']);
   let rowCount = 0;
   for (const table of BACKUP_TABLES) {
     const rows = payload.tables?.[table];
@@ -7109,8 +7175,8 @@ function chunkRows(rows, columnCount) {
 }
 
 async function restoreBackupTables(db, payload) {
-  const deleteOrder = ['comment_likes', 'comment_reports', 'comments', 'lyrics', 'push_admin_devices', 'push_subscribers', 'push_playlist_seen', 'push_state', 'push_history', 'system_logs', 'observability_usage', 'control_monitor_incidents', 'control_monitor_samples', 'release_history', 'youtube_event_seen', 'platform_snapshots', 'platform_accounts'];
-  const insertOrder = ['comments', 'comment_likes', 'comment_reports', 'lyrics', 'push_admin_devices', 'push_subscribers', 'push_playlist_seen', 'push_state', 'push_history', 'system_logs', 'observability_usage', 'control_monitor_incidents', 'control_monitor_samples', 'release_history', 'youtube_event_seen', 'platform_accounts', 'platform_snapshots'];
+  const deleteOrder = ['comment_likes', 'comment_reports', 'comments', 'lyrics', 'push_admin_devices', 'push_subscribers', 'push_playlist_seen', 'push_state', 'push_history', 'system_logs', 'observability_usage', 'control_monitor_incidents', 'control_monitor_samples', 'release_history', 'youtube_event_seen', 'platform_snapshots', 'platform_accounts', 'security_events', 'security_rate_buckets', 'site_visit_events'];
+  const insertOrder = ['comments', 'comment_likes', 'comment_reports', 'lyrics', 'push_admin_devices', 'push_subscribers', 'push_playlist_seen', 'push_state', 'push_history', 'system_logs', 'observability_usage', 'control_monitor_incidents', 'control_monitor_samples', 'release_history', 'youtube_event_seen', 'platform_accounts', 'platform_snapshots', 'security_events', 'security_rate_buckets', 'site_visit_events'];
   const statements = deleteOrder
     .filter(table => Array.isArray(payload.tables?.[table]))
     .map(table => db.prepare(`DELETE FROM "${table}"`));
@@ -7519,7 +7585,7 @@ async function handleControlCommentCollection(request, env) {
 
 
 
-// === ANDRIK Control R112: protection center + application anti-abuse + Guard bridge ===
+// === ANDRIK Control R113: live security hub + event history + backups + attack map ===
 const SITE_UPDATE_VERSION = ANDRIK_CONTROL_RELEASE.siteUpdater;
 const SITE_UPDATE_MAX_ZIP_BYTES = 25 * 1024 * 1024;
 const SITE_UPDATE_MAX_FILES = 1200;
@@ -7733,7 +7799,7 @@ async function siteUpdateGithubRequest(config, route, options = {}) {
         accept:'application/vnd.github+json',
         authorization:`Bearer ${config.token}`,
         'content-type':'application/json',
-        'user-agent':'ANDRIK-Control-Site-Updater-R112',
+        'user-agent':'ANDRIK-Control-Site-Updater-R113',
         'x-github-api-version':'2022-11-28'
       },
       body: options.body === undefined ? undefined : JSON.stringify(options.body)
@@ -7771,7 +7837,7 @@ async function siteUpdateGithubUploadAsset(config, releaseId, fileName, bytes) {
         accept:'application/vnd.github+json',
         authorization:`Bearer ${config.token}`,
         'content-type':'application/zip',
-        'user-agent':'ANDRIK-Control-Site-Updater-R112',
+        'user-agent':'ANDRIK-Control-Site-Updater-R113',
         'x-github-api-version':'2022-11-28'
       },
       body:bytes
@@ -8291,7 +8357,7 @@ async function handleSiteUpdateDeployment(request, env) {
     stateUrl.searchParams.set('deploy_probe', String(Date.now()));
     const response = await fetch(stateUrl.toString(), {
       method:'GET', cache:'no-store',
-      headers:{ accept:'application/json', 'cache-control':'no-cache', 'user-agent':'ANDRIK-Control-R112-Deploy-Check' }
+      headers:{ accept:'application/json', 'cache-control':'no-cache', 'user-agent':'ANDRIK-Control-R113-Deploy-Check' }
     });
     stateStatus = response.status;
     if (response.ok) state = await response.json().catch(() => null);
@@ -8321,7 +8387,7 @@ async function handleSiteUpdateDeployment(request, env) {
   try {
     const response = await fetch(probeUrl.toString(), {
       method:'GET', cache:'no-store',
-      headers:{ accept:'text/html', 'cache-control':'no-cache', 'user-agent':'ANDRIK-Control-R112-Deploy-Check' }
+      headers:{ accept:'text/html', 'cache-control':'no-cache', 'user-agent':'ANDRIK-Control-R113-Deploy-Check' }
     });
     controlStatus = response.status; controlOk = response.ok;
     try { await response.body?.cancel(); } catch (_) {}
@@ -8609,7 +8675,7 @@ async function handleSiteUpdateRollback(request, env) {
     return json({ ok:false, error:'rollback-failed', message:siteUpdateFriendlyError(error) }, 400);
   }
 }
-// === End R112 website updater ===
+// === End R113 website updater ===
 
 
 async function routeApi(request, env, ctx) {
@@ -8618,6 +8684,8 @@ async function routeApi(request, env, ctx) {
   try {
     if (path === '/api/health' && request.method === 'GET') return await handlePublicHealth(request, env);
     if (path === '/api/control/protection/status' && request.method === 'GET') return await handleControlProtectionStatus(request, env);
+    if (path === '/api/control/protection/dashboard' && request.method === 'GET') return await handleControlProtectionDashboard(request, env);
+    if (path === '/api/control/protection/attacks' && request.method === 'GET') return await handleControlProtectionAttacks(request, env);
     if (path === '/api/control/protection/guard-run' && request.method === 'POST') return await handleControlProtectionGuardRun(request, env);
     if (path === '/api/control/observability' && request.method === 'GET') return await handleControlObservability(request, env);
     if (path === '/api/control/monitor' && request.method === 'GET') return await handleControlNativeMonitor(request, env);

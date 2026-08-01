@@ -484,3 +484,37 @@
   Cache-Control: public, max-age=31536000, immutable
 /cache-reset-v55-00-final-r112.html
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+
+# R113 live security hub
+/protection-admin.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+  X-Robots-Tag: noindex, nofollow, noarchive
+/attack-map.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+  X-Robots-Tag: noindex, nofollow, noarchive
+/assets/control-version-v55-00-r113.js
+  Cache-Control: public, max-age=31536000, immutable
+/assets/guard-ready-r113.js
+  Cache-Control: public, max-age=31536000, immutable
+/assets/protection-admin-r113.js
+  Cache-Control: public, max-age=31536000, immutable
+/assets/protection-admin-r113.css
+  Cache-Control: public, max-age=31536000, immutable
+/assets/attack-map-r113.js
+  Cache-Control: public, max-age=31536000, immutable
+/assets/attack-map-r113.css
+  Cache-Control: public, max-age=31536000, immutable
+/assets/site-update-admin-r113.js
+  Cache-Control: public, max-age=31536000, immutable
+/assets/site-update-admin-r113.css
+  Cache-Control: public, max-age=31536000, immutable
+/assets/service-youtube-events-r113.js
+  Cache-Control: public, max-age=31536000, immutable
+/assets/service-youtube-events-r113.css
+  Cache-Control: public, max-age=31536000, immutable
+/assets/release-center-r113.js
+  Cache-Control: public, max-age=31536000, immutable
+/assets/release-center-r113.css
+  Cache-Control: public, max-age=31536000, immutable
+/cache-reset-v55-00-final-r113.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
