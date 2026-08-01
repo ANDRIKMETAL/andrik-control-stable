@@ -7,8 +7,8 @@
 <meta name="robots" content="noindex,nofollow,noarchive">
 <meta name="google" content="notranslate">
 <title>Live Web AI — быстрое обновление</title>
-<link rel="icon" href="/assets/live-web-ai-green-eye-r97-192.png?v=55.00-r107" type="image/png">
-<link rel="apple-touch-icon" href="/assets/live-web-ai-green-eye-r97-192.png?v=55.00-r107">
+<link rel="icon" href="/assets/live-web-ai-green-eye-r97-192.png?v=55.00-r108" type="image/png">
+<link rel="apple-touch-icon" href="/assets/live-web-ai-green-eye-r97-192.png?v=55.00-r108">
 <link rel="stylesheet" href="/assets/v50-26.css?v=53.0">
 <link rel="stylesheet" href="/assets/control-v54-08.css?v=54.08">
 <link rel="stylesheet" href="/assets/control-v54-09.css?v=54.09">
@@ -16,17 +16,17 @@
 <link rel="stylesheet" href="/assets/control-v54-67.css?v=54.67">
 <link rel="stylesheet" href="/assets/control-v54-99c7.css?v=54.99c7">
 <link rel="stylesheet" href="/assets/control-v55-00-final-r21.css?v=55.00-final-r21">
-<link rel="stylesheet" href="/assets/site-update-admin-r107.css?v=55.00-r107">
+<link rel="stylesheet" href="/assets/site-update-admin-r108.css?v=55.00-r108">
 <script defer src="/assets/control-cache-reset-v55-00-final-stable-github.js?v=55.00-final-stable-github"></script>
-<script defer src="/assets/site-update-admin-r107.js?v=55.00-r107"></script>
+<script defer src="/assets/site-update-admin-r108.js?v=55.00-r108"></script>
 </head>
 <body class="control-page site-update-page">
 <nav class="topbar control-topbar control-detail-topbar"><div class="wrap nav-shell">
 <a class="control-center-logo" href="https://andrikmetal.com/" aria-label="Открыть главный сайт ANDRIK"><img class="logo-ok" src="/assets/control-topbar-eye-triangle.jpg" alt=""></a>
-<div class="nav-links control-nav-links control-detail-nav"><a href="/admin-sections.html?section=service&v=55.00-r107">← Служебное</a></div>
+<div class="nav-links control-nav-links control-detail-nav"><a href="/admin-sections.html?section=service&v=55.00-r108">← Служебное</a></div>
 </div></nav>
 <main class="admin-main"><div class="wrap update-wrap">
-<header class="admin-header control-header update-header"><span class="eyeline">LIVE WEB AI · быстрая публикация</span><h1>Обновить сайт</h1><p>Выбери ZIP и нажми одну кнопку. ZIP публикуется одной кнопкой. После Deploy система проверяет Worker, D1 и сайт; при критической ошибке автоматически возвращает предыдущий backup.</p></header>
+<header class="admin-header control-header update-header"><span class="eyeline">LIVE WEB AI · быстрая публикация</span><h1>Обновить сайт</h1><p>Выбери полный ZIP и нажми одну кнопку. Backup, commit, Release, Cloudflare, проверка системы, автооткат и обновление кэша выполняются автоматически.</p></header>
 
 <section class="update-grid">
 <article class="admin-control-card admin-control-card-wide update-status-card">
@@ -40,7 +40,7 @@
 
 <article class="admin-control-card admin-control-card-wide update-protection-card">
 <div class="protection-row">
-  <div class="protection-title"><span class="eyeline">Автозащита R107</span><strong>Проверка после каждого Deploy</strong><small id="siteUpdateHealthMessage">Worker, D1 и главный сайт будут проверены автоматически.</small></div>
+  <div class="protection-title"><span class="eyeline">Автозащита R108</span><strong>Проверка после каждого Deploy</strong><small id="siteUpdateHealthMessage">Worker, D1 и главный сайт будут проверены автоматически.</small></div>
   <span class="service-access-state is-ready" id="siteUpdateProtectionState">Включена</span>
 </div>
 <div class="protection-controls">
@@ -48,6 +48,7 @@
   <button class="btn" id="siteUpdateHealthCheck" type="button">Проверить сейчас</button>
 </div>
 <div class="health-checks" id="siteUpdateHealthChecks"></div>
+<div class="update-cache-row"><small id="siteUpdateCacheMessage">После успешного обновления кэш Control очищается автоматически. Ручная кнопка оставлена как запасной вариант.</small><button class="btn" id="siteUpdateCacheClear" type="button">Очистить кэш</button></div>
 </article>
 
 <article class="admin-control-card admin-control-card-wide update-upload-card">
@@ -59,7 +60,7 @@
 </div>
 <button class="btn btn-primary update-main-button" id="siteUpdatePublish" type="button" disabled>ОБНОВИТЬ САЙТ</button>
 <button class="btn" id="siteUpdatePreview" type="button" hidden disabled>Проверить ZIP</button>
-<div class="update-form-row update-hidden-fields" hidden><label>Версия<input id="siteUpdateRelease" type="text" maxlength="80" value="R107"></label><label>Коммит<input id="siteUpdateMessage" type="text" maxlength="240" value="ANDRIK Control — update website R107"></label></div>
+<div class="update-form-row update-hidden-fields" hidden><label>Версия<input id="siteUpdateRelease" type="text" maxlength="80" value="R108"></label><label>Коммит<input id="siteUpdateMessage" type="text" maxlength="240" value="ANDRIK Control — update website R108"></label></div>
 <input id="siteUpdateMakeBackup" type="checkbox" checked hidden>
 <input id="siteUpdateMakeRelease" type="checkbox" checked hidden>
 <input id="siteUpdateConfirm" type="checkbox" hidden>
@@ -92,6 +93,6 @@ GITHUB_SITE_REPO=andrik-control-stable
 GITHUB_RELEASE_REPO=andrik-control-stable</pre><p>Отдельный GITHUB_RELEASE_TOKEN необязателен.</p>
 </article>
 </section>
-<footer class="control-version-footer"><strong>Live Web AI · ANDRIK · v55.00 FINAL R107</strong><span>ZIP → backup → commit → Release → Cloudflare → health check → auto recovery · 01.08.2026</span></footer>
+<footer class="control-version-footer"><strong>Live Web AI · ANDRIK · v55.00 FINAL R108</strong><span>ZIP → backup → commit → Release → Cloudflare → health check → auto recovery · 01.08.2026</span></footer>
 </div></main>
 </body></html>

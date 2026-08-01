@@ -1390,13 +1390,10 @@ function pushTopicToken(value, fallback = 'andrik-event') {
   return token || fallback;
 }
 
-const OWNER_PUSH_STACK_TYPES = new Set([
-  'daily-summary',
-  'youtube-comment', 'youtube-comment-count', 'youtube-subscriber', 'youtube-subscriber-count', 'youtube-like',
-  'site-subscriber', 'comment-live', 'comment-pending', 'report-owner', 'country-new',
-  'monitor-down', 'monitor-recovery', 'automation-error', 'owner-subscription', 'owner-test',
-  'auto-release', 'auto-release-retry', 'release-publish', 'comment-approved'
-]);
+// R108: real-time owner events must never replace each other. Only the scheduled
+// morning summary uses a collapse topic. Comments, likes and subscribers stay
+// as separate notifications so Android shows the actual event that happened.
+const OWNER_PUSH_STACK_TYPES = new Set(['daily-summary']);
 
 function ownerPushPresentation(history = null, name = '') {
   const type = cleanPlainText(history?.type || '', 80).toLowerCase();
@@ -4393,58 +4390,85 @@ function isYoutubeOwnerComment(item = {}, identity = {}) {
   return false;
 }
 
+async function fetchYoutubeThreadReplies(env, parentIds = [], fallbackVideos = new Map()) {
+  const targets = [...new Set((Array.isArray(parentIds) ? parentIds : []).filter(Boolean))].slice(0, 14);
+  if (!targets.length) return { items:[], warnings:[] };
+  const settled = await Promise.allSettled(targets.map(async parentId => {
+    const { data } = await youtubeApiJson(env, 'comments', {
+      part:'snippet', parentId, maxResults:100, textFormat:'plainText'
+    });
+    return (data.items || []).map(reply => {
+      const videoId = cleanPlainText(reply?.snippet?.videoId || '', 40);
+      return parseYoutubeCommentItem(reply, fallbackVideos.get(videoId) || { videoId });
+    });
+  }));
+  const items=[]; const warnings=[];
+  settled.forEach(result => {
+    if (result.status === 'fulfilled') items.push(...result.value);
+    else warnings.push(cleanPlainText(result.reason?.message || result.reason, 240));
+  });
+  return { items:uniqueYoutubeComments(items), warnings };
+}
+
 async function fetchYoutubeRecentComments(env, channelId) {
   const { data } = await youtubeApiJson(env, 'commentThreads', {
-    part: 'snippet,replies',
-    allThreadsRelatedToChannelId: channelId,
-    maxResults: 50,
-    order: 'time',
-    textFormat: 'plainText'
+    part:'snippet,replies',
+    allThreadsRelatedToChannelId:channelId,
+    maxResults:100,
+    order:'time',
+    textFormat:'plainText'
   });
-  const comments = [];
+  const comments=[];
+  const incompleteParents=[];
   for (const thread of data.items || []) {
-    const top = parseYoutubeCommentItem(thread?.snippet?.topLevelComment || {});
+    const top=parseYoutubeCommentItem(thread?.snippet?.topLevelComment || {});
     if (top.id && top.authorChannelId !== channelId) comments.push(top);
-    for (const reply of thread?.replies?.comments || []) {
-      const item = parseYoutubeCommentItem(reply, { videoId: top.videoId });
+    const embedded=thread?.replies?.comments || [];
+    for (const reply of embedded) {
+      const item=parseYoutubeCommentItem(reply,{videoId:top.videoId});
       if (item.id && item.authorChannelId !== channelId) comments.push(item);
     }
+    const totalReplies=Math.max(0,Number(thread?.snippet?.totalReplyCount || 0));
+    if (top.id && totalReplies > embedded.length) incompleteParents.push(top.id);
   }
+  const fullReplies=await fetchYoutubeThreadReplies(env,incompleteParents).catch(()=>({items:[],warnings:[]}));
+  comments.push(...(fullReplies.items || []).filter(item=>item.authorChannelId !== channelId));
   return uniqueYoutubeComments(comments);
 }
 
 async function fetchYoutubeCommentsForVideos(env, videos = [], ownerChannelId = '') {
-  const targets = (Array.isArray(videos) ? videos : []).slice(0, 8);
-  if (!targets.length) return { items: [], warnings: [] };
-  const settled = await Promise.allSettled(targets.map(async video => {
-    const { data } = await youtubeApiJson(env, 'commentThreads', {
-      part: 'snippet,replies',
-      videoId: video.videoId,
-      maxResults: 20,
-      order: 'time',
-      textFormat: 'plainText'
+  const targets=(Array.isArray(videos)?videos:[]).slice(0,12);
+  if(!targets.length)return {items:[],warnings:[]};
+  const settled=await Promise.allSettled(targets.map(async video=>{
+    const {data}=await youtubeApiJson(env,'commentThreads',{
+      part:'snippet,replies', videoId:video.videoId, maxResults:100, order:'time', textFormat:'plainText'
     });
-    const rows = [];
-    for (const thread of data.items || []) {
-      const top = parseYoutubeCommentItem(thread?.snippet?.topLevelComment || {}, video);
-      if (top.id && top.authorChannelId !== ownerChannelId) rows.push(top);
-      for (const reply of thread?.replies?.comments || []) {
-        const item = parseYoutubeCommentItem(reply, video);
-        if (item.id && item.authorChannelId !== ownerChannelId) rows.push(item);
+    const rows=[]; const incompleteParents=[];
+    for(const thread of data.items||[]){
+      const top=parseYoutubeCommentItem(thread?.snippet?.topLevelComment||{},video);
+      if(top.id&&top.authorChannelId!==ownerChannelId)rows.push(top);
+      const embedded=thread?.replies?.comments||[];
+      for(const reply of embedded){
+        const item=parseYoutubeCommentItem(reply,video);
+        if(item.id&&item.authorChannelId!==ownerChannelId)rows.push(item);
       }
+      const totalReplies=Math.max(0,Number(thread?.snippet?.totalReplyCount||0));
+      if(top.id&&totalReplies>embedded.length)incompleteParents.push(top.id);
     }
+    const fallback=new Map([[video.videoId,video]]);
+    const fullReplies=await fetchYoutubeThreadReplies(env,incompleteParents,fallback).catch(()=>({items:[],warnings:[]}));
+    rows.push(...(fullReplies.items||[]).filter(item=>item.authorChannelId!==ownerChannelId));
     return rows;
   }));
-  const items = [];
-  const warnings = [];
-  settled.forEach((result, index) => {
-    if (result.status === 'fulfilled') items.push(...result.value);
-    else {
-      const message = cleanPlainText(result.reason?.message || result.reason, 220);
-      if (message && !/commentsDisabled|disabled comments/i.test(message)) warnings.push(`${targets[index]?.title || 'Видео'}: ${message}`);
+  const items=[]; const warnings=[];
+  settled.forEach((result,index)=>{
+    if(result.status==='fulfilled')items.push(...result.value);
+    else{
+      const message=cleanPlainText(result.reason?.message||result.reason,220);
+      if(message&&!/commentsDisabled|disabled comments/i.test(message))warnings.push(`${targets[index]?.title||'Видео'}: ${message}`);
     }
   });
-  return { items: uniqueYoutubeComments(items), warnings };
+  return {items:uniqueYoutubeComments(items),warnings};
 }
 
 async function fetchYoutubeRecentSubscribers(env) {
@@ -4578,10 +4602,19 @@ async function handleCheckYoutubeEvents(request, env) {
       const previous = await getYoutubeEventRow(db, `comment-count:${video.videoId}`);
       const before = Number(previous?.countValue || 0);
       if ((!previous && video.comments > 0) || (previous && video.comments > before)) commentProbeVideos.push(video);
-      if (commentProbeVideos.length >= 8) break;
+      if (commentProbeVideos.length >= 12) break;
     }
     const videoCommentResult = await fetchYoutubeCommentsForVideos(env, commentProbeVideos, identity.channelId).catch(error => ({ items:[], warnings:[cleanPlainText(error?.message || error, 260)] }));
+    const videoMeta = new Map(videos.map(video => [video.videoId, video]));
     const comments = uniqueYoutubeComments([...channelComments, ...(videoCommentResult.items || [])])
+      .map(item => {
+        const video = videoMeta.get(item.videoId) || {};
+        return {
+          ...item,
+          videoTitle:item.videoTitle || video.title || 'Новое событие YouTube',
+          thumbnail:item.thumbnail || video.thumbnail || ''
+        };
+      })
       .filter(item => !isYoutubeOwnerComment(item, identity));
     const warnings = settled.map(result => result.status === 'rejected' ? cleanPlainText(result.reason?.message || result.reason, 260) : '').filter(Boolean);
     if (subscribersResult.error) warnings.push(`Подписчики: ${subscribersResult.error}`);
@@ -4647,11 +4680,11 @@ async function handleCheckYoutubeEvents(request, env) {
     const startedMs = Date.parse(startedAt);
     const previousCheckpointRaw = previousSuccessState?.value || previousCheckState?.value || previousSuccessState?.updatedAt || previousCheckState?.updatedAt || '';
     const previousCheckpointMs = Date.parse(previousCheckpointRaw);
+    // R108 queue window: every unseen external comment from the last 24 hours
+    // remains eligible until its push is accepted. A temporary OneSignal/API error
+    // can no longer turn a real comment into a silent seed on the next cron run.
     const recentFloorMs = startedMs - 24 * 60 * 60 * 1000;
-    const fallbackFloorMs = startedMs - 45 * 60 * 1000;
-    const notificationCutoffMs = Number.isFinite(previousCheckpointMs)
-      ? Math.max(recentFloorMs, previousCheckpointMs - 2 * 60 * 1000)
-      : fallbackFloorMs;
+    const notificationCutoffMs = recentFloorMs;
 
     for (const item of comments) {
       const key = `comment:${item.id}`;
@@ -4737,22 +4770,43 @@ async function handleCheckYoutubeEvents(request, env) {
 
     const notifications = [];
     const commentDelivery = new Map();
-    for (const item of newComments.slice().reverse().slice(0, 8)) {
-      if (!await claimPushOnce(db, `push-once:youtube-comment:${item.id}`, startedAt)) continue;
+    const commentBatch = newComments.slice().reverse().slice(0, 20);
+    for (const item of commentBatch) {
+      const onceKey = `push-once:youtube-comment:${item.id}`;
+      let claimed = await claimPushOnce(db, onceKey, startedAt);
+      if (!claimed) {
+        // Recover an old interrupted claim. A successful historical delivery is
+        // considered final; a stale claim without a sent push becomes retryable.
+        const delivered = await db.prepare(`
+          SELECT 1 AS found FROM push_history
+          WHERE type='youtube-comment' AND status='sent' AND details_json LIKE ?
+          ORDER BY created_at DESC LIMIT 1
+        `).bind(`%${item.id}%`).first();
+        if (delivered?.found) {
+          commentDelivery.set(item.id, { ok:true, recoveredFromHistory:true });
+          continue;
+        }
+        await db.prepare(`DELETE FROM push_state WHERE key=? AND updated_at < datetime('now','-30 minutes')`).bind(onceKey).run().catch(()=>{});
+        claimed = await claimPushOnce(db, onceKey, startedAt);
+      }
+      if (!claimed) continue;
       const result = await sendOwnerPush(env, {
         title: `💬 ${compactYoutubePushTitle(item.videoTitle || 'Новый комментарий', 'YouTube')}`,
-        message: `${item.author}: ${item.text.slice(0, 125)}`,
+        message: `${item.author}: ${item.text.slice(0, 160)}`,
         url: item.url,
         image: item.thumbnail || '',
         name: `youtube-comment-${item.id}`,
+        ttl:86400,
+        data:{ commentId:item.id, parentId:item.parentId || item.id, videoId:item.videoId || '' },
         webButtons: [
           { id:'reply-comment', text:'↩️ Ответить', url:`https://control.andrikmetal.com/youtube-comment-reply.html?commentId=${encodeURIComponent(item.id)}&videoId=${encodeURIComponent(item.videoId || '')}` },
           { id:'open-youtube', text:'▶️ YouTube', url:item.url }
         ],
-        history: { type:'youtube-comment', source:'YouTube', videoId:item.videoId, videoTitle:item.videoTitle || item.text, details:{ commentId:item.id, parentId:item.parentId || item.id, author:item.author } }
+        history: { type:'youtube-comment', source:'YouTube', videoId:item.videoId, videoTitle:item.videoTitle || item.text, details:{ commentId:item.id, parentId:item.parentId || item.id, author:item.author, publishedAt:item.publishedAt } }
       });
+      if (!result.ok) await releasePushOnceClaim(db, onceKey);
       commentDelivery.set(item.id, result);
-      notifications.push({ type:'comment', id:item.id, ok:Boolean(result.ok), url:item.url });
+      notifications.push({ type:'comment', id:item.id, ok:Boolean(result.ok), url:item.url, error:result.error || '' });
     }
     // Count-only comment notifications are intentionally disabled. YouTube counts
     // include replies written by the channel owner, which caused false admin alerts.
@@ -4874,7 +4928,7 @@ async function handleCheckYoutubeEvents(request, env) {
 
     for (const item of newComments) {
       const delivery = commentDelivery.get(item.id);
-      if (!delivery || delivery.ok) await saveYoutubeEventRow(db, { key:`comment:${item.id}`, type:'comment', resourceId:item.id, videoId:item.videoId, author:item.author, title:item.text, url:item.url, payload:item });
+      if (delivery?.ok) await saveYoutubeEventRow(db, { key:`comment:${item.id}`, type:'comment', resourceId:item.id, videoId:item.videoId, author:item.author, title:item.text, url:item.url, payload:item });
     }
     for (const item of newVisibleSubscribers) await saveYoutubeEventRow(db, { key:`subscriber:${item.id}`, type:'subscriber', resourceId:item.id, author:item.title, title:item.title, url:item.url, payload:item });
     for (const item of videos) {
@@ -4886,6 +4940,10 @@ async function handleCheckYoutubeEvents(request, env) {
     const summary = {
       seeded:false,
       newComments:newComments.length,
+      commentsAttempted:commentBatch.length,
+      commentsSent:notifications.filter(item=>item.type==='comment'&&item.ok).length,
+      commentsFailed:notifications.filter(item=>item.type==='comment'&&!item.ok).length,
+      commentsQueued:Math.max(0,newComments.length-commentDelivery.size),
       newVisibleSubscribers:newVisibleSubscribers.length,
       subscriberDelta,
       likeChanges:likeChanges.reduce((sum,item)=>sum+item.delta,0),
@@ -4899,7 +4957,7 @@ async function handleCheckYoutubeEvents(request, env) {
     await setPushState(db, 'youtube-events-last-check-status', (warnings.length || failedCommentDelivery) ? 'warning' : 'success');
     if (!failedCommentDelivery) await setPushState(db, 'youtube-events-last-success-at', startedAt);
     await setPushState(db, 'youtube-events-last-check-summary', JSON.stringify({ ...summary, failedCommentDelivery }));
-    await recordSystemLog(env, { scope:'youtube-events', level:warnings.length?'warning':'info', event:'check-completed', message:`YouTube: комментарии ${newComments.length || summary.commentChanges}, подписки ${subscriberDelta}, лайки +${summary.likeChanges}.`, details:summary }).catch(() => {});
+    await recordSystemLog(env, { scope:'youtube-events', level:(warnings.length||failedCommentDelivery)?'warning':'info', event:'check-completed', message:`YouTube: комментарии ${newComments.length || summary.commentChanges}, подписки ${subscriberDelta}, лайки +${summary.likeChanges}.`, details:summary }).catch(() => {});
     return json({ ok:true, ...summary, checkedAt:startedAt });
   } catch (error) {
     const message = cleanPlainText(error?.message || error, 700);
@@ -7073,8 +7131,8 @@ async function handleControlCommentCollection(request, env) {
 
 
 
-// === ANDRIK Control R107: post-deploy health verification + automatic self-recovery ===
-const SITE_UPDATE_VERSION = '55.00-r107';
+// === ANDRIK Control R108: floating updater + automatic cache refresh + reliable YouTube event pushes ===
+const SITE_UPDATE_VERSION = '55.00-r108';
 const SITE_UPDATE_MAX_ZIP_BYTES = 25 * 1024 * 1024;
 const SITE_UPDATE_MAX_FILES = 1200;
 const SITE_UPDATE_MAX_TOTAL_BYTES = 40 * 1024 * 1024;
@@ -7287,7 +7345,7 @@ async function siteUpdateGithubRequest(config, route, options = {}) {
         accept:'application/vnd.github+json',
         authorization:`Bearer ${config.token}`,
         'content-type':'application/json',
-        'user-agent':'ANDRIK-Control-Site-Updater-R107',
+        'user-agent':'ANDRIK-Control-Site-Updater-R108',
         'x-github-api-version':'2022-11-28'
       },
       body: options.body === undefined ? undefined : JSON.stringify(options.body)
@@ -7325,7 +7383,7 @@ async function siteUpdateGithubUploadAsset(config, releaseId, fileName, bytes) {
         accept:'application/vnd.github+json',
         authorization:`Bearer ${config.token}`,
         'content-type':'application/zip',
-        'user-agent':'ANDRIK-Control-Site-Updater-R107',
+        'user-agent':'ANDRIK-Control-Site-Updater-R108',
         'x-github-api-version':'2022-11-28'
       },
       body:bytes
@@ -7463,7 +7521,7 @@ async function siteUpdateReadDeployedState(request) {
     stateUrl.searchParams.set('health_probe', String(Date.now()));
     const response = await fetch(stateUrl.toString(), {
       method:'GET', cache:'no-store',
-      headers:{ accept:'application/json', 'cache-control':'no-cache', 'user-agent':'ANDRIK-Control-R107-Health' }
+      headers:{ accept:'application/json', 'cache-control':'no-cache', 'user-agent':'ANDRIK-Control-R108-Health' }
     });
     status = response.status;
     if (response.ok) state = await response.json().catch(() => null);
@@ -7845,7 +7903,7 @@ async function handleSiteUpdateDeployment(request, env) {
     stateUrl.searchParams.set('deploy_probe', String(Date.now()));
     const response = await fetch(stateUrl.toString(), {
       method:'GET', cache:'no-store',
-      headers:{ accept:'application/json', 'cache-control':'no-cache', 'user-agent':'ANDRIK-Control-R107-Deploy-Check' }
+      headers:{ accept:'application/json', 'cache-control':'no-cache', 'user-agent':'ANDRIK-Control-R108-Deploy-Check' }
     });
     stateStatus = response.status;
     if (response.ok) state = await response.json().catch(() => null);
@@ -7875,7 +7933,7 @@ async function handleSiteUpdateDeployment(request, env) {
   try {
     const response = await fetch(probeUrl.toString(), {
       method:'GET', cache:'no-store',
-      headers:{ accept:'text/html', 'cache-control':'no-cache', 'user-agent':'ANDRIK-Control-R107-Deploy-Check' }
+      headers:{ accept:'text/html', 'cache-control':'no-cache', 'user-agent':'ANDRIK-Control-R108-Deploy-Check' }
     });
     controlStatus = response.status; controlOk = response.ok;
     try { await response.body?.cancel(); } catch (_) {}
@@ -8163,7 +8221,7 @@ async function handleSiteUpdateRollback(request, env) {
     return json({ ok:false, error:'rollback-failed', message:siteUpdateFriendlyError(error) }, 400);
   }
 }
-// === End R107 website updater ===
+// === End R108 website updater ===
 
 
 async function routeApi(request, env, ctx) {

@@ -285,6 +285,48 @@ body.control-home-page.control-report-standalone .control-summary-page{transform
 }
 </style>
 
+
+<style id="andrik-update-fab-r108">
+.control-update-fab{
+  display:none;
+  position:fixed;
+  right:max(14px,env(safe-area-inset-right));
+  bottom:calc(92px + env(safe-area-inset-bottom));
+  z-index:145;
+  width:68px;
+  height:68px;
+  padding:0;
+  border:1px solid rgba(100,235,174,.54);
+  border-radius:50%;
+  background:radial-gradient(circle at 35% 25%,rgba(50,188,119,.98),rgba(5,67,43,.98) 65%,rgba(2,35,26,.99));
+  color:#effff6;
+  text-decoration:none;
+  box-shadow:0 18px 42px rgba(0,0,0,.48),0 0 0 6px rgba(53,225,143,.07),0 0 24px rgba(53,225,143,.28);
+  align-items:center;
+  justify-content:center;
+  flex-direction:column;
+  gap:0;
+  touch-action:manipulation;
+  -webkit-tap-highlight-color:transparent;
+}
+body.control-menu-visible .control-update-fab{display:flex}
+.control-update-fab .update-fab-icon{font:900 1.48rem/1 system-ui;transform:translateY(1px)}
+.control-update-fab .update-fab-label{font:900 .52rem/1.05 system-ui;letter-spacing:.01em;margin-top:3px}
+.control-update-fab:active{transform:scale(.95)}
+body.control-menu-visible .control-menu-page .control-version-footer{padding-right:78px!important}
+body.control-menu-visible .control-menu-page .control-menu-map-link{padding-right:76px!important}
+@media(max-width:390px){
+  .control-update-fab{right:9px;width:62px;height:62px;bottom:calc(88px + env(safe-area-inset-bottom))}
+  .control-update-fab .update-fab-icon{font-size:1.32rem}
+  .control-update-fab .update-fab-label{font-size:.48rem}
+}
+@media(orientation:landscape){
+  .control-update-fab{right:18px;bottom:calc(18px + env(safe-area-inset-bottom));width:62px;height:62px}
+  body.control-menu-visible .control-menu-page .control-version-footer,
+  body.control-menu-visible .control-menu-page .control-menu-map-link{padding-right:84px!important}
+}
+</style>
+
 </head>
 <body class="trika-standalone-page comments-admin-page control-page control-home-page">
 <nav class="topbar control-topbar control-home-topbar"><div class="wrap nav-shell control-home-topbar-minimal"><a class="control-center-logo" id="controlCenterLogo" href="https://andrikmetal.com/" aria-label="Открыть главный сайт ANDRIK"><img class="logo-ok" src="/assets/control-topbar-eye-triangle.jpg" alt=""/><img class="logo-error" src="/assets/andrik-control-red-triangle-192.png" alt=""/></a></div></nav>
@@ -308,12 +350,12 @@ body.control-home-page.control-report-standalone .control-summary-page{transform
         <div class="control-swipe-page-inner">
           <header class="control-page-heading control-menu-heading"><div class="control-admin-heading-copy"><span class="eyeline">УПРАВЛЕНИЕ ПРОЕКТОМ</span><h1>Админ панель</h1></div></header>
           <section class="control-home-menu" aria-label="Главное меню Live Web AI">
-            <a class="control-home-menu-card is-service" href="/admin-sections.html?section=service&v=55.00-final-carousel"><span>⚙️</span><div><small>Система</small><strong>Служебное</strong><p>Cron, диагностика, push и резервные копии.</p></div><b>›</b></a>
+            <a class="control-home-menu-card is-service" href="/admin-sections.html?section=service&v=55.00-final-carousel"><span>⚙️</span><div><small>Система</small><strong>Служебное</strong><p>Cron, диагностика и push проекта.</p></div><b>›</b></a>
             <a class="control-home-menu-card is-observability" href="/admin-sections.html?section=monitor&v=55.00-final-carousel"><span>📡</span><div><small>Надёжность</small><strong>Мониторинг</strong><p>Встроенная проверка сайта, Control, Worker и график времени ответа.</p></div><b>›</b></a>
             <a class="control-home-menu-card is-releases" href="/admin-sections.html?section=releases&v=55.00-final-carousel"><span>🚀</span><div><small>Музыка и тексты</small><strong>Релизы</strong><p>Тексты песен, публикации и история релизов.</p></div><b>›</b></a>
             <a class="control-home-menu-card is-discussion" href="/admin-sections.html?section=discussion&v=55.00-final-carousel"><span>💬</span><div><small>Сообщество</small><strong>Обсуждение</strong><p>Комментарии, модерация и ответы слушателям.</p></div><b>›</b></a>
           </section>
-          <footer class="control-version-footer"><strong>Live Web AI · профиль ANDRIK · v55.00 LIVE WEB AI FINAL R98</strong><span>Live Web AI · прямой запуск без заставки · 01.08.2026</span></footer>
+          <footer class="control-version-footer"><strong>Live Web AI · профиль ANDRIK · v55.00 LIVE WEB AI FINAL R108</strong><span>Live Web AI · прямой запуск без заставки · 01.08.2026</span></footer>
           <a class="control-page-footnote control-menu-map-link" href="/analytics-admin.html?page=map&amp;v=55.00-final-r1">Свайп вниз — вернуться на карту</a>
         </div>
       </section>
@@ -344,6 +386,7 @@ body.control-home-page.control-report-standalone .control-summary-page{transform
     </div>
   </div>
 </main>
+<a class="control-update-fab" href="/site-update-admin.html?v=55.00-r108" aria-label="Обновить сайт"><span class="update-fab-icon" aria-hidden="true">↻</span><span class="update-fab-label">Обновить</span></a>
 <a class="control-comment-collection-button" href="/comment-collection.html?v=55.00n" aria-label="Открыть коллекцию комментариев"><span aria-hidden="true">💬</span><span>Комментарии</span></a>
 <button class="control-summary-refresh" id="controlSummaryRefresh" type="button" aria-label="Отправить вручную ту же ежедневную сводку, которая приходит утром"><span aria-hidden="true">📨</span><span data-summary-refresh-label>Отправить сводку</span></button>
 <div class="control-activity-modal" id="controlActivityModal" hidden aria-hidden="true">
