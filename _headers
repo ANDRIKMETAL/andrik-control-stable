@@ -533,3 +533,21 @@
   Cache-Control: public, max-age=31536000, immutable
 /cache-reset-v55-00-final-r115.html
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+
+# R124 — UI runtime без кэша
+/assets/unified-glow-r124.css
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/assets/unified-glow-r124.js
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/assets/control-player-bridge-r124.css
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/assets/control-player-bridge-r124.js
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/assets/player-shell-bridge-r124.js
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/assets/player-v54-27-r124.js
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/cache-reset-v55-00-final-r124.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+  X-Robots-Tag: noindex, nofollow, noarchive
+
