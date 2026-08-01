@@ -3,6 +3,8 @@
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=()
   Cross-Origin-Opener-Policy: same-origin-allow-popups
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  X-Frame-Options: SAMEORIGIN
 
 /assets/*
   Cache-Control: public, max-age=604800, stale-while-revalidate=2592000
@@ -432,4 +434,53 @@
 /assets/release-center-r110.css
   Cache-Control: public, max-age=31536000, immutable
 /cache-reset-v55-00-final-r110.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+
+# R111 unique URLs
+/assets/control-version-v55-00-r111.js
+  Cache-Control: public, max-age=31536000, immutable
+/assets/guard-ready-r111.js
+  Cache-Control: public, max-age=31536000, immutable
+/assets/site-update-admin-r111.js
+  Cache-Control: public, max-age=31536000, immutable
+/assets/site-update-admin-r111.css
+  Cache-Control: public, max-age=31536000, immutable
+/assets/service-youtube-events-r111.js
+  Cache-Control: public, max-age=31536000, immutable
+/assets/service-youtube-events-r111.css
+  Cache-Control: public, max-age=31536000, immutable
+/assets/release-center-r111.js
+  Cache-Control: public, max-age=31536000, immutable
+/assets/release-center-r111.css
+  Cache-Control: public, max-age=31536000, immutable
+/cache-reset-v55-00-final-r111.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+
+# R112 protection center
+/protection-admin.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+  X-Robots-Tag: noindex, nofollow, noarchive
+  X-Frame-Options: SAMEORIGIN
+
+/assets/control-version-v55-00-r112.js
+  Cache-Control: public, max-age=31536000, immutable
+/assets/guard-ready-r112.js
+  Cache-Control: public, max-age=31536000, immutable
+/assets/protection-admin-r112.js
+  Cache-Control: public, max-age=31536000, immutable
+/assets/protection-admin-r112.css
+  Cache-Control: public, max-age=31536000, immutable
+/assets/site-update-admin-r112.js
+  Cache-Control: public, max-age=31536000, immutable
+/assets/site-update-admin-r112.css
+  Cache-Control: public, max-age=31536000, immutable
+/assets/service-youtube-events-r112.js
+  Cache-Control: public, max-age=31536000, immutable
+/assets/service-youtube-events-r112.css
+  Cache-Control: public, max-age=31536000, immutable
+/assets/release-center-r112.js
+  Cache-Control: public, max-age=31536000, immutable
+/assets/release-center-r112.css
+  Cache-Control: public, max-age=31536000, immutable
+/cache-reset-v55-00-final-r112.html
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0

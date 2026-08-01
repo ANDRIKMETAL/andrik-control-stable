@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="ru" translate="no" class="notranslate">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#03111a">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<meta name="google" content="notranslate">
+<title>Live Web AI — Защита</title>
+<link rel="icon" href="/assets/live-web-ai-green-eye-r97-192.png?v=55.00-r112" type="image/png">
+<link rel="stylesheet" href="/assets/v50-26.css?v=53.0">
+<link rel="stylesheet" href="/assets/control-v54-08.css?v=54.08">
+<link rel="stylesheet" href="/assets/control-v54-09.css?v=54.09">
+<link rel="stylesheet" href="/assets/control-v54-21.css?v=54.22">
+<link rel="stylesheet" href="/assets/control-v54-99c7.css?v=54.99c7">
+<link rel="stylesheet" href="/assets/control-v55-00-final-r21.css?v=55.00-final-r21">
+<link rel="stylesheet" href="/assets/protection-admin-r112.css?v=55.00-r112">
+<script defer src="/assets/protection-admin-r112.js?v=55.00-r112"></script>
+</head>
+<body class="control-page protection-page">
+<nav class="topbar control-topbar control-detail-topbar"><div class="wrap nav-shell">
+<a class="control-center-logo" href="https://andrikmetal.com/" aria-label="Открыть главный сайт ANDRIK"><img class="logo-ok" src="/assets/control-topbar-eye-triangle.jpg" alt=""></a>
+<div class="nav-links control-nav-links control-detail-nav"><a href="/control-home.html?v=55.00-r112">← Админ панель</a></div>
+</div></nav>
+
+<main class="admin-main">
+<div class="protection-wrap">
+<header class="protection-header">
+<div class="shield-mark" aria-hidden="true">🛡️</div>
+<span class="eyeline">LIVE WEB AI · ЦЕНТР БЕЗОПАСНОСТИ</span>
+<h1>Защита</h1>
+<p>Независимый Guard, автоматическое восстановление, защита комментариев от спама, контроль домена, HTTPS и Cloudflare Edge.</p>
+</header>
+
+<section class="protection-grid">
+<article class="protection-card is-green">
+<div class="protection-title-row">
+<div><span class="eyeline">Общее состояние</span><h2>Щит ANDRIK</h2><p id="protectionMessage">Введите ADMIN_KEY для проверки.</p></div>
+<span class="protection-state" id="protectionOverallState">Не проверено</span>
+</div>
+<div class="protection-score">
+<div class="score-ring" id="protectionScoreRing" style="--score:0"><strong id="protectionScore">0%</strong></div>
+<div class="score-copy"><strong id="protectionScoreTitle">Ожидает проверки</strong><span id="protectionScoreText">Проверим Guard, Turnstile, D1, заголовки HTTPS, SPF и DMARC.</span></div>
+</div>
+<div class="protection-admin-key">
+<input id="protectionAdminKey" type="password" autocomplete="current-password" placeholder="ADMIN_KEY">
+<button class="btn btn-primary" id="protectionVerify" type="button">Проверить</button>
+</div>
+<label class="admin-remember"><input id="protectionRemember" type="checkbox"> Запомнить ключ на этом телефоне</label>
+<div class="protection-actions"><button class="btn" id="protectionRefresh" type="button">↻ Обновить защиту</button></div>
+</article>
+
+<article class="protection-card">
+<div class="protection-title-row">
+<div><span class="eyeline">Независимый сторож</span><h2>Guard</h2><p id="protectionGuardMessage">Проверяем подключение внешнего Worker.</p></div>
+<span class="protection-state" id="protectionGuardState">Проверяем</span>
+</div>
+<p class="protection-note" id="protectionGuardMeta">Guard работает отдельно от Control и способен восстановить предыдущий Cloudflare Deploy.</p>
+<label class="protection-toggle"><input id="protectionAutoRecovery" type="checkbox" checked><span>Автоматический откат после критической ошибки</span></label>
+<div class="protection-actions">
+<button class="btn btn-primary" id="protectionGuardRun" type="button">Запустить Guard</button>
+<a class="btn" id="protectionGuardOpen" href="#" target="_blank" rel="noopener" hidden>Открыть Guard ↗</a>
+</div>
+</article>
+
+<article class="protection-card">
+<div class="protection-title-row">
+<div><span class="eyeline">Приложение</span><h2>Control и комментарии</h2><p>Серверные секреты, Turnstile, D1, лимиты и безопасные заголовки.</p></div>
+<span class="protection-state is-good">Активно</span>
+</div>
+<div class="security-list" id="protectionApplicationList"><div class="admin-empty">Загрузка…</div></div>
+</article>
+
+<article class="protection-card">
+<div class="protection-title-row">
+<div><span class="eyeline">Cloudflare Edge</span><h2>DDoS, WAF и боты</h2><p>DDoS работает автоматически. WAF и Bot Fight Mode проверяются и настраиваются в Cloudflare Security.</p></div>
+<span class="protection-state is-good">Edge</span>
+</div>
+<div class="security-list" id="protectionEdgeList"><div class="admin-empty">Загрузка…</div></div>
+<div class="protection-actions">
+<a class="btn" href="https://dash.cloudflare.com/" target="_blank" rel="noopener">Cloudflare Security ↗</a>
+</div>
+</article>
+
+<article class="protection-card">
+<div class="protection-title-row">
+<div><span class="eyeline">Антифишинг</span><h2>Домен и почта</h2><p>Проверка SPF, DMARC, HTTPS и защиты панели от незаметного встраивания.</p></div>
+<span class="protection-state">DNS</span>
+</div>
+<div class="security-list" id="protectionPhishingList"><div class="admin-empty">Загрузка…</div></div>
+<p class="protection-note">DKIM зависит от почтового сервиса и проверяется после выбора его selector. Пароли и секреты никогда не размещаются в клиентском коде.</p>
+</article>
+
+<article class="protection-card">
+<div class="protection-title-row">
+<div><span class="eyeline">Последние 24 часа</span><h2>Заблокировано</h2><p>События сохраняются без открытых IP-адресов — только с необратимым хэшем.</p></div>
+<span class="protection-state is-good">Журнал</span>
+</div>
+<div class="security-kpis">
+<div class="security-kpi"><strong id="protectionKpiBots">0</strong><span>Ловушка</span></div>
+<div class="security-kpi"><strong id="protectionKpiTurnstile">0</strong><span>Turnstile</span></div>
+<div class="security-kpi"><strong id="protectionKpiSpam">0</strong><span>Спам</span></div>
+<div class="security-kpi"><strong id="protectionKpiLimits">0</strong><span>Лимиты</span></div>
+</div>
+<div class="security-events" id="protectionEvents"><div class="admin-empty">Загрузка…</div></div>
+</article>
+</section>
+
+<footer class="control-version-footer">
+<strong>Live Web AI · ANDRIK · v55.00 LIVE WEB AI FINAL R112</strong>
+<span>Guard · антиспам · антифишинг · DDoS · WAF · 01.08.2026</span>
+</footer>
+</div>
+</main>
+<script defer src="/assets/control-version-v55-00-r112.js?v=55.00-r112"></script>
+</body>
+</html>

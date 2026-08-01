@@ -1,10 +1,12 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R110', number:110, version:'55.00', full:'55.00 LIVE WEB AI FINAL R110', siteUpdater:'55.00-r110' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R112', number:112, version:'55.00', full:'55.00 LIVE WEB AI FINAL R112', siteUpdater:'55.00-r112' });
 
 const JSON_HEADERS = {
   'content-type': 'application/json; charset=utf-8',
   'cache-control': 'no-store',
   'x-content-type-options': 'nosniff',
-  'referrer-policy': 'strict-origin-when-cross-origin'
+  'referrer-policy': 'strict-origin-when-cross-origin',
+  'permissions-policy': 'camera=(), microphone=(), geolocation=()',
+  'x-frame-options': 'SAMEORIGIN'
 };
 
 const PUBLIC_CACHE_HEADERS = {
@@ -122,7 +124,16 @@ async function verifyTurnstile(token, request, env) {
       body: form
     });
     const data = await response.json();
-    return data?.success ? { success: true } : { success: false, error: 'turnstile-failed' };
+    if (!data?.success) return { success:false, error:'turnstile-failed' };
+    const allowed = new Set(
+      String(env.TURNSTILE_HOSTNAMES || 'andrikmetal.com,www.andrikmetal.com')
+        .split(',').map(item=>item.trim().toLowerCase()).filter(Boolean)
+    );
+    const hostname = String(data.hostname || '').toLowerCase();
+    if (hostname && allowed.size && !allowed.has(hostname)) {
+      return { success:false, error:'turnstile-hostname' };
+    }
+    return { success:true, hostname };
   } catch (_) {
     return { success: false, error: 'turnstile-unavailable' };
   }
@@ -148,6 +159,261 @@ function calculateSpamScore(name, message, blocklist = '') {
 
 
 let commentsSchemaV4Promise = null;
+
+let securitySchemaPromise = null;
+
+async function ensureSecuritySchema(db) {
+  if (securitySchemaPromise) return securitySchemaPromise;
+  securitySchemaPromise = (async () => {
+    await db.exec(`
+      CREATE TABLE IF NOT EXISTS security_events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        kind TEXT NOT NULL,
+        path TEXT NOT NULL DEFAULT '',
+        ip_hash TEXT NOT NULL DEFAULT '',
+        detail TEXT NOT NULL DEFAULT '',
+        created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      );
+      CREATE INDEX IF NOT EXISTS idx_security_events_created
+        ON security_events(created_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_security_events_kind_created
+        ON security_events(kind, created_at DESC);
+
+      CREATE TABLE IF NOT EXISTS security_rate_buckets (
+        bucket TEXT PRIMARY KEY,
+        event TEXT NOT NULL,
+        count INTEGER NOT NULL DEFAULT 0,
+        window_id INTEGER NOT NULL,
+        updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+      );
+      CREATE INDEX IF NOT EXISTS idx_security_rate_updated
+        ON security_rate_buckets(updated_at DESC);
+    `);
+  })().finally(() => { securitySchemaPromise = null; });
+  return securitySchemaPromise;
+}
+
+async function securityIpHash(request, env) {
+  const salt = String(env.COMMENTS_HASH_SALT || 'andrik-security');
+  return sha256Hex(`${salt}:security:${getClientIp(request)}`);
+}
+
+async function recordSecurityEvent(db, request, env, kind, detail = '') {
+  try {
+    await ensureSecuritySchema(db);
+    const ipHash = await securityIpHash(request, env);
+    await db.prepare(`
+      INSERT INTO security_events(kind, path, ip_hash, detail, created_at)
+      VALUES (?, ?, ?, ?, datetime('now'))
+    `).bind(
+      cleanPlainText(kind, 80),
+      cleanPlainText(new URL(request.url).pathname, 180),
+      ipHash,
+      cleanPlainText(detail, 500)
+    ).run();
+  } catch (_) {}
+}
+
+async function securityRateLimit(db, request, env, event, limit, windowSeconds, blockedKind) {
+  await ensureSecuritySchema(db);
+  const ipHash = await securityIpHash(request, env);
+  const windowId = Math.floor(Date.now() / (Math.max(1, windowSeconds) * 1000));
+  const rawBucket = `${event}:${ipHash}:${windowId}`;
+  const bucket = await sha256Hex(rawBucket);
+
+  await db.prepare(`
+    INSERT INTO security_rate_buckets(bucket, event, count, window_id, updated_at)
+    VALUES (?, ?, 1, ?, datetime('now'))
+    ON CONFLICT(bucket) DO UPDATE SET
+      count = count + 1,
+      updated_at = datetime('now')
+  `).bind(bucket, cleanPlainText(event, 80), windowId).run();
+
+  const row = await db.prepare(`
+    SELECT count FROM security_rate_buckets WHERE bucket = ? LIMIT 1
+  `).bind(bucket).first();
+
+  const count = Number(row?.count || 0);
+  if (count > limit) {
+    await recordSecurityEvent(
+      db, request, env, blockedKind || `${event}-rate-limit`,
+      `${count}/${limit} за ${windowSeconds} сек.`
+    );
+    return { allowed:false, count, limit, windowSeconds };
+  }
+  return { allowed:true, count, limit, windowSeconds };
+}
+
+async function fetchTxtRecords(name) {
+  try {
+    const url = new URL('https://cloudflare-dns.com/dns-query');
+    url.searchParams.set('name', name);
+    url.searchParams.set('type', 'TXT');
+    const response = await fetch(url.toString(), {
+      headers:{ accept:'application/dns-json' },
+      cf:{ cacheTtl:300, cacheEverything:true }
+    });
+    if (!response.ok) return [];
+    const data = await response.json();
+    return (data.Answer || []).map(item => String(item.data || '').replace(/^"|"$/g, '').replace(/"\s+"/g, ''));
+  } catch (_) {
+    return [];
+  }
+}
+
+async function fetchGuardStatus(env, run = false) {
+  const base = String(env.GUARD_URL || '').trim().replace(/\/+$/, '');
+  const key = String(env.GUARD_KEY || '').trim();
+  if (!base || !key) {
+    return { configured:false, connected:false, url:base, message:'Добавь GUARD_URL и GUARD_KEY в Cloudflare Pages.' };
+  }
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), run ? 105000 : 16000);
+  try {
+    const response = await fetch(`${base}${run ? '/run' : '/status'}`, {
+      method: run ? 'POST' : 'GET',
+      signal: controller.signal,
+      headers:{
+        authorization:`Bearer ${key}`,
+        accept:'application/json',
+        ...(run ? {'content-type':'application/json'} : {})
+      },
+      body: run ? '{}' : undefined
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      return {
+        configured:true, connected:false, url:base,
+        message:data.message || data.error || `Guard HTTP ${response.status}`
+      };
+    }
+    return {
+      configured:true, connected:true, url:base, status:data,
+      message:run ? (data.message || 'Guard завершил проверку.') : (data.status?.message || 'Guard подключён.')
+    };
+  } catch (error) {
+    return {
+      configured:true, connected:false, url:base,
+      message:error.name === 'AbortError' ? 'Guard не ответил вовремя.' : error.message
+    };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function handleControlProtectionStatus(request, env) {
+  if (!adminAuthorized(request, env)) return json({ ok:false, error:'unauthorized' }, 401);
+  const db = requireDb(env);
+  await ensureSecuritySchema(db);
+
+  await db.prepare(`DELETE FROM security_events WHERE created_at < datetime('now', '-7 days')`).run().catch(() => {});
+  await db.prepare(`DELETE FROM security_rate_buckets WHERE updated_at < datetime('now', '-2 days')`).run().catch(() => {});
+
+  const [guard, spfRecords, dmarcRecords, countsResult, recentResult] = await Promise.all([
+    fetchGuardStatus(env, false),
+    fetchTxtRecords('andrikmetal.com'),
+    fetchTxtRecords('_dmarc.andrikmetal.com'),
+    db.prepare(`
+      SELECT kind, COUNT(*) AS count
+      FROM security_events
+      WHERE created_at >= datetime('now', '-1 day')
+      GROUP BY kind
+    `).all(),
+    db.prepare(`
+      SELECT kind, path, detail, created_at AS createdAt
+      FROM security_events
+      WHERE created_at >= datetime('now', '-1 day')
+      ORDER BY created_at DESC
+      LIMIT 20
+    `).all()
+  ]);
+
+  let headerStatus = { hsts:false, frame:false, nosniff:false };
+  try {
+    const probe = new URL('/control-home.html', request.url);
+    probe.searchParams.set('security_probe', String(Date.now()));
+    const response = await fetch(probe.toString(), {
+      method:'GET', cache:'no-store',
+      headers:{ 'cache-control':'no-cache', 'user-agent':'ANDRIK-Control-R112-Security' }
+    });
+    const csp = response.headers.get('content-security-policy') || '';
+    headerStatus = {
+      hsts:Boolean(response.headers.get('strict-transport-security')),
+      frame:Boolean(response.headers.get('x-frame-options')) || /frame-ancestors/i.test(csp),
+      nosniff:(response.headers.get('x-content-type-options') || '').toLowerCase() === 'nosniff'
+    };
+    try { await response.body?.cancel(); } catch (_) {}
+  } catch (_) {}
+
+  const spf = spfRecords.some(value => /^v=spf1\b/i.test(value));
+  const dmarcRecord = dmarcRecords.find(value => /^v=dmarc1\b/i.test(value)) || '';
+  const policyMatch = dmarcRecord.match(/(?:^|;)\s*p\s*=\s*([a-z]+)/i);
+  const dmarcPolicy = policyMatch ? policyMatch[1].toLowerCase() : '';
+
+  const counts = {};
+  for (const row of countsResult.results || []) counts[row.kind] = Number(row.count || 0);
+
+  const application = {
+    adminKey:Boolean(String(env.ADMIN_KEY || '').trim()),
+    turnstile:Boolean(String(env.TURNSTILE_SECRET_KEY || '').trim()),
+    d1:Boolean(env.COMMENTS_DB)
+  };
+
+  let score = 10; // Cloudflare Pages / HTTPS edge.
+  if (application.adminKey) score += 10;
+  if (application.turnstile) score += 15;
+  if (application.d1) score += 15;
+  if (guard.connected && guard.status?.status?.ok) score += 20;
+  else if (guard.configured) score += 8;
+  if (headerStatus.hsts) score += 10;
+  if (headerStatus.frame) score += 5;
+  if (spf) score += 7;
+  if (dmarcRecord) score += dmarcPolicy === 'reject' || dmarcPolicy === 'quarantine' ? 8 : 4;
+  score = Math.max(0, Math.min(100, score));
+
+  return json({
+    ok:true,
+    version:ANDRIK_CONTROL_RELEASE.full,
+    checkedAt:new Date().toISOString(),
+    score,
+    summary:score >= 85
+      ? 'Guard и основные уровни защиты работают.'
+      : score >= 65
+        ? 'Базовая защита сильная, но есть пункты для настройки.'
+        : 'Нужно подключить Guard, Turnstile или почтовую защиту.',
+    guard,
+    application,
+    edge:{
+      ddos:true,
+      waf:cleanPlainText(env.CLOUDFLARE_WAF_STATE || 'manual', 20),
+      bot:cleanPlainText(env.CLOUDFLARE_BOT_STATE || 'manual', 20)
+    },
+    headers:headerStatus,
+    phishing:{
+      spf,
+      spfRecords,
+      dmarc:Boolean(dmarcRecord),
+      dmarcPolicy,
+      dmarcRecord
+    },
+    events:{
+      counts,
+      recent:recentResult.results || []
+    }
+  });
+}
+
+async function handleControlProtectionGuardRun(request, env) {
+  if (!adminAuthorized(request, env)) return json({ ok:false, error:'unauthorized' }, 401);
+  if (!isSameOrigin(request)) return json({ ok:false, error:'origin' }, 403);
+  const result = await fetchGuardStatus(env, true);
+  if (!result.configured || !result.connected) {
+    return json({ ok:false, error:'guard-unavailable', message:result.message }, 503);
+  }
+  return json({ ok:true, ...result.status, message:result.message });
+}
+
 
 const COMMENT_GENERAL_SUBJECTS = [
   { slug: 'project', title: 'Проект ANDRIK', group: 'general' },
@@ -2723,12 +2989,19 @@ async function handleSubmitComment(request, env, ctx) {
   if (!isSameOrigin(request)) return json({ ok: false, error: 'origin-not-allowed' }, 403);
   const db = requireDb(env);
   await ensureCommentsV4Schema(db);
+  await ensureSecuritySchema(db);
+  const burstLimit = await securityRateLimit(db, request, env, 'comment-submit-10m', 6, 600, 'comment-rate-limit');
+  const dayLimit = await securityRateLimit(db, request, env, 'comment-submit-day', 20, 86400, 'comment-rate-limit');
+  if (!burstLimit.allowed || !dayLimit.allowed) return json({ ok:false, error:'rate-limit' }, 429);
   let body;
   try { body = await readJsonBody(request); }
   catch (error) { return json({ ok: false, error: error.message === 'payload-too-large' ? 'payload-too-large' : 'invalid-json' }, 400); }
 
   const honeypot = cleanPlainText(body.website, 160);
-  if (honeypot) return json({ ok: true, status: 'pending' }, 202);
+  if (honeypot) {
+    await recordSecurityEvent(db, request, env, 'honeypot', 'Поле website заполнено.');
+    return json({ ok:true, status:'pending' }, 202);
+  }
 
   const locale = cleanPlainText(body.locale, 8) || 'ru';
   const message = cleanPlainText(body.message, 1200);
@@ -2744,7 +3017,10 @@ async function handleSubmitComment(request, env, ctx) {
 
   if (!googleAuth?.ok) {
     const turnstile = await verifyTurnstile(cleanPlainText(body.turnstileToken, 2200), request, env);
-    if (!turnstile.success) return json({ ok: false, error: turnstile.error }, 400);
+    if (!turnstile.success) {
+      await recordSecurityEvent(db, request, env, 'turnstile-failed', turnstile.error);
+      return json({ ok:false, error:turnstile.error }, 400);
+    }
   }
 
   const ip = getClientIp(request);
@@ -2755,12 +3031,20 @@ async function handleSubmitComment(request, env, ctx) {
 
   const recent10m = await db.prepare(`SELECT COUNT(*) AS count FROM comments WHERE ip_hash = ? AND created_at >= datetime('now', '-10 minutes')`).bind(ipHash).first('count');
   const recentDay = await db.prepare(`SELECT COUNT(*) AS count FROM comments WHERE ip_hash = ? AND created_at >= datetime('now', '-1 day')`).bind(ipHash).first('count');
-  if (Number(recent10m || 0) >= 3 || Number(recentDay || 0) >= 12) return json({ ok: false, error: 'rate-limit' }, 429);
+  if (Number(recent10m || 0) >= 3 || Number(recentDay || 0) >= 12) {
+    await recordSecurityEvent(db, request, env, 'comment-rate-limit', `${recent10m || 0}/10m · ${recentDay || 0}/day`);
+    return json({ ok:false, error:'rate-limit' }, 429);
+  }
 
   const duplicate = await db.prepare(`SELECT id FROM comments WHERE ip_hash = ? AND message_hash = ? AND created_at >= datetime('now', '-1 day') LIMIT 1`).bind(ipHash, messageHash).first();
   if (duplicate) return json({ ok: true, status: 'pending', duplicate: true }, 202);
 
   const spamScore = calculateSpamScore(resolvedName, message, env.COMMENTS_BLOCKLIST);
+  const rejectScore = Math.max(8, Number(env.COMMENTS_SPAM_REJECT_SCORE || 12));
+  if (!googleAuth?.ok && spamScore >= rejectScore) {
+    await recordSecurityEvent(db, request, env, 'spam-block', `score=${spamScore}`);
+    return json({ ok:true, status:'pending' }, 202);
+  }
   const id = crypto.randomUUID();
   const initialStatus = googleAuth?.ok ? 'approved' : 'pending';
   await db.prepare(`
@@ -2936,6 +3220,10 @@ async function handleCommentLike(request, env) {
   if (!isSameOrigin(request)) return json({ ok: false, error: 'origin-not-allowed' }, 403);
   const db = requireDb(env);
   await ensureCommentsV4Schema(db);
+  await ensureSecuritySchema(db);
+  const minuteLimit = await securityRateLimit(db, request, env, 'comment-like-minute', 30, 60, 'comment-like-rate-limit');
+  const dayLimit = await securityRateLimit(db, request, env, 'comment-like-day', 300, 86400, 'comment-like-rate-limit');
+  if (!minuteLimit.allowed || !dayLimit.allowed) return json({ ok:false, error:'rate-limit' }, 429);
   let body;
   try { body = await readJsonBody(request); }
   catch (_) { return json({ ok: false, error: 'invalid-json' }, 400); }
@@ -2963,6 +3251,10 @@ async function handleCommentReport(request, env, ctx) {
   if (!isSameOrigin(request)) return json({ ok: false, error: 'origin-not-allowed' }, 403);
   const db = requireDb(env);
   await ensureCommentsV4Schema(db);
+  await ensureSecuritySchema(db);
+  const hourLimit = await securityRateLimit(db, request, env, 'comment-report-hour', 6, 3600, 'comment-report-rate-limit');
+  const dayLimit = await securityRateLimit(db, request, env, 'comment-report-day', 20, 86400, 'comment-report-rate-limit');
+  if (!hourLimit.allowed || !dayLimit.allowed) return json({ ok:false, error:'rate-limit' }, 429);
   let body;
   try { body = await readJsonBody(request); }
   catch (_) { return json({ ok: false, error: 'invalid-json' }, 400); }
@@ -7227,7 +7519,7 @@ async function handleControlCommentCollection(request, env) {
 
 
 
-// === ANDRIK Control R110: emergency version-script repair + R109 feature set ===
+// === ANDRIK Control R112: protection center + application anti-abuse + Guard bridge ===
 const SITE_UPDATE_VERSION = ANDRIK_CONTROL_RELEASE.siteUpdater;
 const SITE_UPDATE_MAX_ZIP_BYTES = 25 * 1024 * 1024;
 const SITE_UPDATE_MAX_FILES = 1200;
@@ -7441,7 +7733,7 @@ async function siteUpdateGithubRequest(config, route, options = {}) {
         accept:'application/vnd.github+json',
         authorization:`Bearer ${config.token}`,
         'content-type':'application/json',
-        'user-agent':'ANDRIK-Control-Site-Updater-R110',
+        'user-agent':'ANDRIK-Control-Site-Updater-R112',
         'x-github-api-version':'2022-11-28'
       },
       body: options.body === undefined ? undefined : JSON.stringify(options.body)
@@ -7479,7 +7771,7 @@ async function siteUpdateGithubUploadAsset(config, releaseId, fileName, bytes) {
         accept:'application/vnd.github+json',
         authorization:`Bearer ${config.token}`,
         'content-type':'application/zip',
-        'user-agent':'ANDRIK-Control-Site-Updater-R110',
+        'user-agent':'ANDRIK-Control-Site-Updater-R112',
         'x-github-api-version':'2022-11-28'
       },
       body:bytes
@@ -7999,7 +8291,7 @@ async function handleSiteUpdateDeployment(request, env) {
     stateUrl.searchParams.set('deploy_probe', String(Date.now()));
     const response = await fetch(stateUrl.toString(), {
       method:'GET', cache:'no-store',
-      headers:{ accept:'application/json', 'cache-control':'no-cache', 'user-agent':'ANDRIK-Control-R110-Deploy-Check' }
+      headers:{ accept:'application/json', 'cache-control':'no-cache', 'user-agent':'ANDRIK-Control-R112-Deploy-Check' }
     });
     stateStatus = response.status;
     if (response.ok) state = await response.json().catch(() => null);
@@ -8029,7 +8321,7 @@ async function handleSiteUpdateDeployment(request, env) {
   try {
     const response = await fetch(probeUrl.toString(), {
       method:'GET', cache:'no-store',
-      headers:{ accept:'text/html', 'cache-control':'no-cache', 'user-agent':'ANDRIK-Control-R110-Deploy-Check' }
+      headers:{ accept:'text/html', 'cache-control':'no-cache', 'user-agent':'ANDRIK-Control-R112-Deploy-Check' }
     });
     controlStatus = response.status; controlOk = response.ok;
     try { await response.body?.cancel(); } catch (_) {}
@@ -8317,7 +8609,7 @@ async function handleSiteUpdateRollback(request, env) {
     return json({ ok:false, error:'rollback-failed', message:siteUpdateFriendlyError(error) }, 400);
   }
 }
-// === End R110 website updater ===
+// === End R112 website updater ===
 
 
 async function routeApi(request, env, ctx) {
@@ -8325,6 +8617,8 @@ async function routeApi(request, env, ctx) {
   const path = url.pathname.replace(/\/+$/, '') || '/';
   try {
     if (path === '/api/health' && request.method === 'GET') return await handlePublicHealth(request, env);
+    if (path === '/api/control/protection/status' && request.method === 'GET') return await handleControlProtectionStatus(request, env);
+    if (path === '/api/control/protection/guard-run' && request.method === 'POST') return await handleControlProtectionGuardRun(request, env);
     if (path === '/api/control/observability' && request.method === 'GET') return await handleControlObservability(request, env);
     if (path === '/api/control/monitor' && request.method === 'GET') return await handleControlNativeMonitor(request, env);
     if (path === '/api/control/monitor/check' && request.method === 'POST') return await handleControlNativeMonitorCheck(request, env);

@@ -1,0 +1,25 @@
+R112 — PROTECTION CENTER
+
+Готово:
+• Отдельная плавающая кнопка 🛡 Защита слева внизу.
+• Кнопки Защита и Обновить симметричны и не перекрывают карточки.
+• Отдельная страница protection-admin.html.
+• Guard status и ручной запуск через серверный proxy.
+• Автооткат управляется из раздела Защита.
+• Turnstile hostname validation.
+• Серверные rate limits:
+  - комментарии;
+  - лайки;
+  - жалобы.
+• Honeypot и silent spam block.
+• Журнал заблокированных попыток без хранения открытых IP.
+• Проверка SPF и DMARC.
+• HSTS и X-Frame-Options.
+• DDoS/WAF/Bot Fight Mode отображаются отдельно.
+
+Для подключения Guard к панели добавить в Cloudflare Pages:
+GUARD_URL=https://АДРЕС-GUARD-WORKER
+GUARD_KEY=ТОТ-ЖЕ-СЕКРЕТ-ЧТО-В-GUARD
+
+После установки открыть:
+https://control.andrikmetal.com/cache-reset-v55-00-final-r112.html

@@ -1,0 +1,13 @@
+
+.youtube-events-control-card{background:radial-gradient(circle at 92% 0,rgba(255,69,69,.08),transparent 34%),rgba(4,16,24,.86)!important}
+.youtube-events-kpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:7px;margin-top:14px}
+.youtube-events-kpi{min-width:0;padding:10px 7px;border:1px solid rgba(132,204,233,.15);border-radius:15px;background:rgba(2,10,16,.58);text-align:center}
+.youtube-events-kpi strong{display:block;color:#f3fbff;font-size:1.22rem;line-height:1}
+.youtube-events-kpi span{display:block;margin-top:5px;color:#8fa9b8;font-size:.62rem;line-height:1.12}
+.youtube-events-kpi.is-warning{border-color:rgba(255,190,72,.35)}
+.youtube-events-kpi.is-error{border-color:rgba(255,96,108,.42)}
+.youtube-events-meta{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px;color:#91a9b7;font-size:.68rem}
+.youtube-events-meta span{padding:5px 8px;border:1px solid rgba(132,204,233,.12);border-radius:999px;background:rgba(2,10,16,.45)}
+.youtube-events-control-card .admin-actions{margin-top:12px}
+@media(max-width:720px){.youtube-events-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:420px){.youtube-events-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.youtube-events-control-card .admin-actions{grid-template-columns:1fr!important}}

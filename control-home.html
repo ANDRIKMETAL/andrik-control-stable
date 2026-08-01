@@ -351,6 +351,104 @@ body.control-menu-visible .control-menu-page .control-menu-map-link{padding-righ
 
 </style>
 
+
+<style id="andrik-protection-fab-r112">
+.control-protection-fab{
+  display:none;
+  position:fixed;
+  left:max(14px,env(safe-area-inset-left));
+  bottom:calc(28px + env(safe-area-inset-bottom));
+  z-index:146;
+  width:68px;
+  height:68px;
+  padding:0;
+  border:1px solid rgba(111,205,255,.58);
+  border-radius:50%;
+  background:
+    radial-gradient(circle at 35% 24%,rgba(72,186,242,.98),rgba(11,73,111,.98) 62%,rgba(3,31,48,.99));
+  color:#f2fbff;
+  text-decoration:none;
+  box-shadow:
+    0 18px 42px rgba(0,0,0,.48),
+    0 0 0 6px rgba(76,190,245,.07),
+    0 0 25px rgba(64,184,242,.30);
+  align-items:center;
+  justify-content:center;
+  flex-direction:column;
+  gap:0;
+  touch-action:manipulation;
+  -webkit-tap-highlight-color:transparent;
+}
+body.control-menu-visible .control-protection-fab{display:flex}
+.control-protection-fab .protection-fab-icon{
+  font:900 1.32rem/1 system-ui;
+  filter:drop-shadow(0 2px 6px rgba(0,0,0,.35));
+}
+.control-protection-fab .protection-fab-label{
+  font:900 .50rem/1.05 system-ui;
+  margin-top:4px;
+}
+.control-protection-fab:active{transform:scale(.95)}
+
+body.control-menu-visible .control-update-fab{
+  bottom:calc(28px + env(safe-area-inset-bottom))!important;
+}
+body.control-menu-visible .control-menu-page .control-version-footer{
+  margin-left:82px!important;
+  margin-right:82px!important;
+  padding-left:0!important;
+  padding-right:0!important;
+}
+body.control-menu-visible .control-menu-page .control-menu-map-link{
+  padding-left:82px!important;
+  padding-right:82px!important;
+  text-align:center!important;
+}
+body.control-menu-visible .control-menu-page .control-swipe-page-inner{
+  padding-bottom:max(82px,calc(66px + env(safe-area-inset-bottom)))!important;
+}
+@media(max-width:390px){
+  .control-protection-fab{
+    left:9px;
+    width:62px;
+    height:62px;
+    bottom:calc(27px + env(safe-area-inset-bottom));
+  }
+  .control-protection-fab .protection-fab-icon{font-size:1.20rem}
+  .control-protection-fab .protection-fab-label{font-size:.47rem}
+  body.control-menu-visible .control-update-fab{
+    bottom:calc(27px + env(safe-area-inset-bottom))!important;
+  }
+  body.control-menu-visible .control-menu-page .control-version-footer{
+    margin-left:72px!important;
+    margin-right:72px!important;
+  }
+  body.control-menu-visible .control-menu-page .control-menu-map-link{
+    padding-left:72px!important;
+    padding-right:72px!important;
+  }
+}
+@media(orientation:landscape){
+  .control-protection-fab{
+    left:18px;
+    bottom:calc(10px + env(safe-area-inset-bottom));
+    width:58px;
+    height:58px;
+  }
+  body.control-menu-visible .control-update-fab{
+    bottom:calc(10px + env(safe-area-inset-bottom))!important;
+  }
+  body.control-menu-visible .control-menu-page .control-version-footer{
+    margin-left:76px!important;
+    margin-right:76px!important;
+  }
+  body.control-menu-visible .control-menu-page .control-menu-map-link{
+    padding-left:76px!important;
+    padding-right:76px!important;
+  }
+}
+</style>
+
 </head>
 <body class="trika-standalone-page comments-admin-page control-page control-home-page">
 <nav class="topbar control-topbar control-home-topbar"><div class="wrap nav-shell control-home-topbar-minimal"><a class="control-center-logo" id="controlCenterLogo" href="https://andrikmetal.com/" aria-label="Открыть главный сайт ANDRIK"><img class="logo-ok" src="/assets/control-topbar-eye-triangle.jpg" alt=""/><img class="logo-error" src="/assets/andrik-control-red-triangle-192.png" alt=""/></a></div></nav>
@@ -374,12 +472,12 @@ body.control-menu-visible .control-menu-page .control-menu-map-link{padding-righ
         <div class="control-swipe-page-inner">
           <header class="control-page-heading control-menu-heading"><div class="control-admin-heading-copy"><span class="eyeline">УПРАВЛЕНИЕ ПРОЕКТОМ</span><h1>Админ панель</h1></div></header>
           <section class="control-home-menu" aria-label="Главное меню Live Web AI">
-            <a class="control-home-menu-card is-service" href="/admin-sections.html?section=service&v=55.00-final-r109"><span>⚙️</span><div><small>Система</small><strong>Служебное</strong><p>Cron, диагностика и push проекта.</p></div><b>›</b></a>
-            <a class="control-home-menu-card is-observability" href="/admin-sections.html?section=monitor&v=55.00-final-r109"><span>📡</span><div><small>Надёжность</small><strong>Мониторинг</strong><p>Встроенная проверка сайта, Control, Worker и график времени ответа.</p></div><b>›</b></a>
-            <a class="control-home-menu-card is-releases" href="/admin-sections.html?section=releases&v=55.00-final-r109"><span>🚀</span><div><small>Музыка и тексты</small><strong>Релизы</strong><p>Тексты песен, публикации и история релизов.</p></div><b>›</b></a>
-            <a class="control-home-menu-card is-discussion" href="/admin-sections.html?section=discussion&v=55.00-final-r109"><span>💬</span><div><small>Сообщество</small><strong>Обсуждение</strong><p>Комментарии, модерация и ответы слушателям.</p></div><b>›</b></a>
+            <a class="control-home-menu-card is-service" href="/admin-sections.html?section=service&v=55.00-final-r112"><span>⚙️</span><div><small>Система</small><strong>Служебное</strong><p>Cron, диагностика и push проекта.</p></div><b>›</b></a>
+            <a class="control-home-menu-card is-observability" href="/admin-sections.html?section=monitor&v=55.00-final-r112"><span>📡</span><div><small>Надёжность</small><strong>Мониторинг</strong><p>Встроенная проверка сайта, Control, Worker и график времени ответа.</p></div><b>›</b></a>
+            <a class="control-home-menu-card is-releases" href="/admin-sections.html?section=releases&v=55.00-final-r112"><span>🚀</span><div><small>Музыка и тексты</small><strong>Релизы</strong><p>Тексты песен, публикации и история релизов.</p></div><b>›</b></a>
+            <a class="control-home-menu-card is-discussion" href="/admin-sections.html?section=discussion&v=55.00-final-r112"><span>💬</span><div><small>Сообщество</small><strong>Обсуждение</strong><p>Комментарии, модерация и ответы слушателям.</p></div><b>›</b></a>
           </section>
-          <footer class="control-version-footer"><strong>Live Web AI · профиль ANDRIK · v55.00 LIVE WEB AI FINAL R110</strong><span>Live Web AI · прямой запуск без заставки · 01.08.2026</span></footer>
+          <footer class="control-version-footer"><strong>Live Web AI · профиль ANDRIK · v55.00 LIVE WEB AI FINAL R112</strong><span>Live Web AI · прямой запуск без заставки · 01.08.2026</span></footer>
           <a class="control-page-footnote control-menu-map-link" href="/analytics-admin.html?page=map&amp;v=55.00-final-r1">Свайп вниз — вернуться на карту</a>
         </div>
       </section>
@@ -410,7 +508,8 @@ body.control-menu-visible .control-menu-page .control-menu-map-link{padding-righ
     </div>
   </div>
 </main>
-<a class="control-update-fab" href="/site-update-admin.html?v=55.00-r110" aria-label="Обновить сайт"><span class="update-fab-icon" aria-hidden="true">↻</span><span class="update-fab-label">Обновить</span></a>
+<a class="control-protection-fab" href="/protection-admin.html?v=55.00-r112" aria-label="Открыть защиту"><span class="protection-fab-icon" aria-hidden="true">🛡️</span><span class="protection-fab-label">Защита</span></a>
+<a class="control-update-fab" href="/site-update-admin.html?v=55.00-r112" aria-label="Обновить сайт"><span class="update-fab-icon" aria-hidden="true">↻</span><span class="update-fab-label">Обновить</span></a>
 <a class="control-comment-collection-button" href="/comment-collection.html?v=55.00n" aria-label="Открыть коллекцию комментариев"><span aria-hidden="true">💬</span><span>Комментарии</span></a>
 <button class="control-summary-refresh" id="controlSummaryRefresh" type="button" aria-label="Отправить вручную ту же ежедневную сводку, которая приходит утром"><span aria-hidden="true">📨</span><span data-summary-refresh-label>Отправить сводку</span></button>
 <div class="control-activity-modal" id="controlActivityModal" hidden aria-hidden="true">
@@ -424,4 +523,4 @@ body.control-menu-visible .control-menu-page .control-menu-map-link{padding-righ
 
 
 <script defer src="/assets/control-live-eye-v55-00-r3l.js?v=55.00-r3l"></script><script defer src="/assets/control-version-v55-00-r3n.js?v=55.00-r3n"></script><script defer src="/assets/control-version-v55-00-final-stable-github.js?v=55.00-final-stable-github"></script><script defer src="/assets/control-menu-return-map-v55-00-r33.js?v=55.00-final-r33"></script>
-<script defer src="/assets/control-version-v55-00-r110.js?v=55.00-r110"></script></body></html>
+<script defer src="/assets/control-version-v55-00-r112.js?v=55.00-r112"></script><script defer src="/assets/guard-ready-r112.js?v=55.00-r112"></script></body></html>
