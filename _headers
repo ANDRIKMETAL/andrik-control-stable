@@ -554,3 +554,29 @@
 /cache-reset-v55-00-final-r120.html
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
 
+# R121 forced runtime UI
+/assets/control-player-bridge-r121.js
+  Cache-Control: no-store, no-cache, must-revalidate
+/assets/control-player-bridge-r121.css
+  Cache-Control: no-store, no-cache, must-revalidate
+/assets/player-shell-bridge-r121.js
+  Cache-Control: no-store, no-cache, must-revalidate
+/assets/player-v54-27-r121.js
+  Cache-Control: no-store, no-cache, must-revalidate
+/cache-reset-v55-00-final-r121.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+
+# R122 — player runtime, updater excluded
+/assets/control-player-bridge-r122.js
+  Cache-Control: no-store, no-cache, must-revalidate
+/assets/control-player-bridge-r122.css
+  Cache-Control: no-store, no-cache, must-revalidate
+/assets/player-shell-bridge-r122.js
+  Cache-Control: no-store, no-cache, must-revalidate
+/assets/player-v54-27-r122.js
+  Cache-Control: no-store, no-cache, must-revalidate
+/site-update-admin.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/cache-reset-v55-00-final-r122.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+
