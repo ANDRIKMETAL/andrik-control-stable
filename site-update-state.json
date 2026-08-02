@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r157",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1785682517090-2a9beec2e8",
-  "release": "R168",
-  "archiveName": "R168-CACHE-RESET-REPAIR-FULL.zip",
-  "sourceHead": "70d7eda34753a77765a4b7e69537c51f130ded9f",
-  "backupSha": "70d7eda34753a77765a4b7e69537c51f130ded9f",
-  "backupTag": "control-backup-20260802145513-70d7eda-r168-f753c",
+  "operationId": "publish-1785683423608-67372990d5",
+  "release": "R169",
+  "archiveName": "R169-MAP-BLACK-STRIP-ONLY-FULL.zip",
+  "sourceHead": "0bfe33599e607f2f73938ae5dc8c935b1cae16f6",
+  "backupSha": "0bfe33599e607f2f73938ae5dc8c935b1cae16f6",
+  "backupTag": "control-backup-20260802151020-0bfe335-r169-65b90",
   "autoRecovery": true,
-  "generatedAt": "2026-08-02T14:55:17.090Z"
+  "generatedAt": "2026-08-02T15:10:23.608Z"
 }
