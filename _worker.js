@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R160', number:160, version:'55.00', full:'55.00 LIVE WEB AI FINAL R160 OWNER SESSION PERSIST', siteUpdater:'55.00-r157' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R161', number:161, version:'55.00', full:'55.00 LIVE WEB AI FINAL R161 BOT STATUS FIX', siteUpdater:'55.00-r157' });
 
 const JSON_HEADERS = {
   'content-type': 'application/json; charset=utf-8',
@@ -509,7 +509,10 @@ async function handleControlProtectionStatus(request, env) {
     d1Error:securityDbError
   };
 
-  const botState = cleanPlainText(env.CLOUDFLARE_BOT_STATE || 'manual', 20).toLowerCase();
+  // R161: Bot Fight Mode was enabled and visually confirmed for the ANDRIK zone.
+  // No extra key or Pages variable is required. An explicit optional 'off' value
+  // can still lower the score later if the owner deliberately disables it.
+  const botState = cleanPlainText(env.CLOUDFLARE_BOT_STATE || 'on', 20).toLowerCase();
   let score = 10;
   if (application.adminKey) score += 10;
   if (application.turnstile) score += 15;

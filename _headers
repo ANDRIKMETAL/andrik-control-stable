@@ -476,3 +476,6 @@
 
 /assets/protection-admin-r160.js
   Cache-Control: public, max-age=31536000, immutable
+
+/assets/protection-admin-r161.js
+  Cache-Control: public, max-age=31536000, immutable
