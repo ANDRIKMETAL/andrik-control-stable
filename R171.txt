@@ -1,5 +1,0 @@
-R171 SECURITY HEADERS RESTORE
-- Restores HSTS (+10%) and Anti-frame (+5%) at Worker level.
-- Protection score should return from 85% to 100%.
-- Adds global _headers backup rules.
-- Does not change map, frames, scrolling, UI, Guard, D1, keys or Google integration.

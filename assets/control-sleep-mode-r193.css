@@ -1,0 +1,16 @@
+/* R193 — Control energy-saving sleep mode. */
+html.andrik-sleeping *,
+html.andrik-sleeping *::before,
+html.andrik-sleeping *::after{
+  animation-play-state:paused!important;
+}
+html.andrik-sleeping .control-live-eye,
+html.andrik-sleeping .andrik-live-eye,
+html.andrik-sleeping [class*="wave"],
+html.andrik-sleeping [class*="pulse"],
+html.andrik-sleeping [class*="glow"]{
+  animation-play-state:paused!important;
+}
+html.andrik-idle body{
+  --andrik-sleep-mode:1;
+}

@@ -1,19 +1,40 @@
 (() => {
   'use strict';
-  const SITE_UPDATE_UI_VERSION='55.00-r157';
+  const SITE_UPDATE_UI_VERSION='55.00-r195';
   const KEY_SESSION='andrik-comments-admin-key',KEY_LOCAL='andrik-comments-admin-key-persistent',AUTO_RECOVERY_KEY='andrik-site-update-auto-recovery',CACHE_REFRESH_PREFIX='andrik-site-update-cache-refresh:';
   const byId=id=>document.getElementById(id),keyInput=byId('siteUpdateAdminKey'),archiveInput=byId('siteUpdateArchive'),previewButton=byId('siteUpdatePreview'),publishButton=byId('siteUpdatePublish'),confirmInput=byId('siteUpdateConfirm'),autoRecoveryInput=byId('siteUpdateAutoRecovery');
   let previewData=null,lastRelease='',lastPublish=null,lastOperationId='',operation=false;
+  let runtimeAdminKey='';
+  const OWNER_SENTINEL=window.AndrikOwnerSession?.sentinel||'__ANDRIK_OWNER_SESSION__';
   try{
-    keyInput.value=localStorage.getItem(KEY_LOCAL)||sessionStorage.getItem(KEY_SESSION)||'';
+    const stored=localStorage.getItem(KEY_LOCAL)||sessionStorage.getItem(KEY_SESSION)||'';
+    if(stored&&stored!==OWNER_SENTINEL){runtimeAdminKey=stored;window.AndrikOwnerSession?.capture?.(stored);}
+    if(stored)keyInput.value=stored;
     autoRecoveryInput.checked=localStorage.getItem(AUTO_RECOVERY_KEY)!=='0';
   }catch(_){autoRecoveryInput.checked=true}
-  const getKey=()=>keyInput.value.trim(),sleep=ms=>new Promise(r=>setTimeout(r,ms));
+  const visibleKey=()=>String(keyInput.value||'').trim();
+  const captureKey=()=>{
+    const value=visibleKey();
+    if(value&&value!==OWNER_SENTINEL){runtimeAdminKey=value;window.AndrikOwnerSession?.capture?.(value);}
+    return runtimeAdminKey;
+  };
+  const getKey=()=>captureKey()||(visibleKey()===OWNER_SENTINEL?OWNER_SENTINEL:'');
+  const hasOwnerAccess=()=>Boolean(runtimeAdminKey||visibleKey()===OWNER_SENTINEL||window.AndrikOwnerSession?.isActive?.());
+  const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   const setText=(id,text)=>{const el=byId(id);if(el)el.textContent=text};
   const escapeHtml=value=>String(value??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
   const formatBytes=value=>{const n=Number(value||0);if(n<1024)return `${n} Б`;if(n<1024**2)return `${(n/1024).toFixed(1)} КБ`;return `${(n/1024**2).toFixed(2)} МБ`};
   const formatDate=value=>{try{return new Intl.DateTimeFormat('ru-RU',{dateStyle:'short',timeStyle:'short'}).format(new Date(value))}catch(_){return value||'—'}};
-  function saveKey(){const key=getKey();try{sessionStorage.setItem(KEY_SESSION,key);if(localStorage.getItem(KEY_LOCAL))localStorage.setItem(KEY_LOCAL,key)}catch(_){}}
+  function saveKey(){captureKey();}
+  async function ensureOwnerAccess(){
+    const raw=captureKey();
+    if(window.AndrikOwnerSession?.ensure){
+      const data=await window.AndrikOwnerSession.ensure(raw||'');
+      if(data?.owner){keyInput.value=OWNER_SENTINEL;return true;}
+      if(data?.rawFallback&&raw)return true;
+    }
+    return Boolean(raw);
+  }
   function apiTimeout(path,method='GET'){
     if(path.includes('/preview'))return 90000;
     if(path.includes('/publish'))return 150000;
@@ -27,9 +48,19 @@
     const {timeoutMs,...fetchOptions}=options;
     const controller=new AbortController();
     const timer=setTimeout(()=>controller.abort(),Number(timeoutMs||apiTimeout(path,fetchOptions.method||'GET')));
-    const headers={accept:'application/json',authorization:`Bearer ${getKey()}`,...(fetchOptions.headers||{})};
     try{
-      const response=await fetch(path,{...fetchOptions,headers,cache:'no-store',signal:controller.signal});
+      await ensureOwnerAccess();
+      const raw=runtimeAdminKey;
+      const headers={accept:'application/json',...(raw?{authorization:`Bearer ${raw}`}:{ }),...(fetchOptions.headers||{})};
+      let response=await fetch(path,{...fetchOptions,headers,credentials:'include',cache:'no-store',signal:controller.signal});
+      // If Android did not attach the cookie, re-establish once and retry with
+      // the RAM-only ADMIN_KEY. Mutating requests are retried only after a 401,
+      // before the Worker has executed the protected operation.
+      if(response.status===401&&runtimeAdminKey){
+        await window.AndrikOwnerSession?.establish?.(runtimeAdminKey).catch(()=>null);
+        const retryHeaders={accept:'application/json',authorization:`Bearer ${runtimeAdminKey}`,...(fetchOptions.headers||{})};
+        response=await fetch(path,{...fetchOptions,headers:retryHeaders,credentials:'include',cache:'no-store',signal:controller.signal});
+      }
       const data=await response.json().catch(()=>({}));
       if(!response.ok){
         const fallback=(response.status===404&&data.error==='not-found')
@@ -53,7 +84,7 @@
   function resetStages(){byId('siteUpdateStages').hidden=false;['check','backup','commit','release','deploy','protect'].forEach(name=>stage(name,''))}
   function setBusy(on){
     operation=on;
-    previewButton.disabled=on||!archiveInput.files?.[0]||!getKey();
+    previewButton.disabled=on||!archiveInput.files?.[0]||!hasOwnerAccess();
     publishButton.disabled=on||!canPublishPreview();
     byId('siteUpdateBackupNow').disabled=on;
     byId('siteUpdateHealthCheck').disabled=on;
@@ -68,22 +99,38 @@
     publishButton.dataset.mode=reinstall?'reinstall':'update';
   }
   let statusRequestId=0;
+  async function readStatusWithRetry(){
+    let lastError=null;
+    for(let attempt=1;attempt<=3;attempt++){
+      try{
+        return await api(`/api/control/site-update/status?fresh=${Date.now()}-${attempt}`,{timeoutMs:18000,headers:{'cache-control':'no-cache','x-andrik-status-attempt':String(attempt)}})
+      }catch(error){
+        lastError=error;
+        if(error.status===401||error.status===403||attempt===3)throw error;
+        await sleep(500*attempt)
+      }
+    }
+    throw lastError||new Error('Не удалось проверить подключение.')
+  }
   async function loadStatus(){
     const requestId=++statusRequestId;
-    if(!getKey()){
+    try{
+      await ensureOwnerAccess();
+    }catch(error){
       setState(false,'Нужен ADMIN_KEY');
-      setText('siteUpdateRepoText','GitHub не проверен');
-      setText('siteUpdateReleaseRepoText','');
-      setText('siteUpdateConnectionMessage','Введите ключ владельца.');
+      setText('siteUpdateRepoText','Доступ владельца не подтверждён');
+      setText('siteUpdateReleaseRepoText','GitHub ещё не проверялся');
+      setText('siteUpdateConnectionMessage','Введите ADMIN_KEY один раз. После подтверждения сессия сохранится на этом устройстве.');
+      byId('siteUpdateSetupCard').hidden=false;
       return
     }
     saveKey();
     setState(false,'Проверяем…');
-    setText('siteUpdateRepoText','Проверяем GitHub…');
-    setText('siteUpdateReleaseRepoText','Ожидание ответа — не более 18 секунд');
-    setText('siteUpdateConnectionMessage','Проверяем токен, ветку main и последний commit…');
+    setText('siteUpdateRepoText','Проверяем ADMIN_KEY и GitHub…');
+    setText('siteUpdateReleaseRepoText','До трёх безопасных попыток');
+    setText('siteUpdateConnectionMessage','2FA GitHub не участвует в API: проверяем ADMIN_KEY, GITHUB_SITE_TOKEN и ветку main.');
     try{
-      const data=await api('/api/control/site-update/status',{timeoutMs:18000});
+      const data=await readStatusWithRetry();
       if(requestId!==statusRequestId)return;
       byId('siteUpdateRepoLink').href=data.repoUrl;
       setText('siteUpdateRepoText',`${data.owner}/${data.repo} · ${data.branch}`);
@@ -96,17 +143,44 @@
         if(selectedFile()&&!previewData&&!operation)preview()
       }else{
         setState(false,'Не настроено');
-        setText('siteUpdateConnectionMessage',data.message||'Нужен GitHub token.');
+        const message=data.message||'Нужен GitHub token.';
+        setText('siteUpdateRepoText',/GITHUB_SITE_TOKEN|токен/i.test(message)?'GitHub token не настроен':'GitHub не готов');
+        setText('siteUpdateReleaseRepoText','Проверь секрет в Cloudflare Production');
+        setText('siteUpdateConnectionMessage',message);
         byId('siteUpdateSetupCard').hidden=false
       }
     }catch(error){
       if(requestId!==statusRequestId)return;
+      const message=String(error.message||'Неизвестная ошибка');
+      if(error.status===401){
+        setState(false,'ADMIN_KEY');
+        setText('siteUpdateRepoText','ADMIN_KEY не подтверждён');
+        setText('siteUpdateReleaseRepoText','GitHub-токен ещё не проверялся');
+        setText('siteUpdateConnectionMessage','Повтори ADMIN_KEY. Включение 2FA GitHub этот ключ не меняет.');
+        byId('siteUpdateSetupCard').hidden=false;
+        return
+      }
+      if(error.status===403||/GitHub отклонил токен|github-403|Contents: Read and write/i.test(message)){
+        setState(false,'GitHub token');
+        setText('siteUpdateRepoText','GitHub отклонил GITHUB_SITE_TOKEN');
+        setText('siteUpdateReleaseRepoText','Нужен новый Fine-grained token');
+        setText('siteUpdateConnectionMessage',message);
+        byId('siteUpdateSetupCard').hidden=false;
+        return
+      }
+      if(/GITHUB_SITE_TOKEN|токен/i.test(message)){
+        setState(false,'GitHub token');
+        setText('siteUpdateRepoText','GITHUB_SITE_TOKEN отсутствует или недействителен');
+        setText('siteUpdateReleaseRepoText','Cloudflare Pages → Production secrets');
+        setText('siteUpdateConnectionMessage',message);
+        byId('siteUpdateSetupCard').hidden=false;
+        return
+      }
       setState(false,error.status===408?'Нет ответа':'Ошибка');
-      setText('siteUpdateRepoText',error.status===408?'GitHub: превышено время ожидания':'GitHub не подключён');
-      setText('siteUpdateReleaseRepoText','Нажмите «Состояние» для повторной проверки');
-      setText('siteUpdateConnectionMessage',error.message);
-      const needsSetup=error.status===401||/GITHUB_SITE_TOKEN|токен|репозиторий не найден/i.test(error.message);
-      byId('siteUpdateSetupCard').hidden=!needsSetup
+      setText('siteUpdateRepoText',error.status===408?'GitHub временно не ответил':'Проверка подключения не завершена');
+      setText('siteUpdateReleaseRepoText','Нажми «Состояние» ещё раз');
+      setText('siteUpdateConnectionMessage',message);
+      byId('siteUpdateSetupCard').hidden=true
     }
   }
   archiveInput.addEventListener('change',()=>{
@@ -124,20 +198,20 @@
     }
     setText('siteUpdateFileName',`${file.name} · ${formatBytes(file.size)}`);
     setText('siteUpdateFileState','Проверяем…');
-    previewButton.disabled=!getKey();publishButton.disabled=true;
+    previewButton.disabled=!hasOwnerAccess();publishButton.disabled=true;
     const match=file.name.match(/R\d+/i);
     if(match){
       lastRelease=match[0].toUpperCase();
       byId('siteUpdateRelease').value=lastRelease;
       byId('siteUpdateMessage').value=`ANDRIK Control — update website ${lastRelease}`
     }
-    setText('siteUpdateUploadMessage',getKey()?'Автоматически проверяем ZIP…':'Сначала введи ADMIN_KEY в разделе подключения.');
-    if(getKey())setTimeout(preview,120)
+    setText('siteUpdateUploadMessage',hasOwnerAccess()?'Автоматически проверяем ZIP…':'Сначала введи ADMIN_KEY в разделе подключения.');
+    if(hasOwnerAccess())setTimeout(preview,120)
   });
   function pathsHtml(data){return [['Добавлены',data.paths?.added||[]],['Изменены',data.paths?.changed||[]],['Удалены',data.paths?.deleted||[]]].map(([title,items])=>`<section class="update-path-group"><h3>${escapeHtml(title)} · ${items.length}</h3>${items.length?items.map(path=>`<code>${escapeHtml(path)}</code>`).join(''):'<code>Нет</code>'}</section>`).join('')}
   async function preview(){
     const file=selectedFile();
-    if(!file||!getKey()||operation)return;
+    if(!file||!hasOwnerAccess()||operation)return;
     resetStages();stage('check','running');setBusy(true);
     setText('siteUpdateFileState','Проверяем…');
     setText('siteUpdateUploadMessage','CRC, структура и сравнение с GitHub…');
@@ -165,7 +239,7 @@
   }
   confirmInput.addEventListener('change',()=>{publishButton.disabled=operation||!canPublishPreview()});
   async function createBackup(label,manual=false){const data=await api('/api/control/site-update/backup',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({label,manual})});return data}
-  async function backupNow(){if(!getKey()||operation)return;setBusy(true);setText('siteUpdateConnectionMessage','Создаём резервную метку…');try{const data=await createBackup(byId('siteUpdateRelease').value||'manual',true);setText('siteUpdateConnectionMessage',data.message);await loadLog()}catch(error){setText('siteUpdateConnectionMessage',`Backup: ${error.message}`)}finally{setBusy(false)}}
+  async function backupNow(){if(!hasOwnerAccess()||operation)return;setBusy(true);setText('siteUpdateConnectionMessage','Создаём резервную метку…');try{const data=await createBackup(byId('siteUpdateRelease').value||'manual',true);setText('siteUpdateConnectionMessage',data.message);await loadLog()}catch(error){setText('siteUpdateConnectionMessage',`Backup: ${error.message}`)}finally{setBusy(false)}}
   async function createRelease(file,publishData){const form=new FormData();form.append('archive',file,file.name);form.append('release',byId('siteUpdateRelease').value.trim());form.append('commitSha',publishData.commitSha||'');form.append('added',String(publishData.added||0));form.append('changed',String(publishData.changed||0));form.append('deleted',String(publishData.deleted||0));return api('/api/control/site-update/release',{method:'POST',body:form})}
   async function readDirectDeployMarker(operationId=''){
     if(!operationId)return null;
@@ -383,18 +457,37 @@
   }
   async function publish(){
     const file=selectedFile();
-    if(!file||!canPublishPreview()||operation)return;
+    if(operation){
+      setText('siteUpdateUploadMessage','Установка уже запущена. Дождись завершения текущего этапа.');
+      return;
+    }
+    if(!file){
+      setText('siteUpdateFileState','Не выбран');
+      setText('siteUpdateUploadMessage','Сначала выбери полный ZIP сайта.');
+      return;
+    }
+    if(!previewData){
+      setText('siteUpdateFileState','Проверяем…');
+      setText('siteUpdateUploadMessage','ZIP ещё не проверен. Запускаю проверку повторно…');
+      await preview();
+      if(!previewData)return;
+    }
+    if(!canPublishPreview()){
+      setText('siteUpdateFileState','Нет изменений');
+      setText('siteUpdateUploadMessage','ZIP не содержит изменений и не разрешён для повторной установки.');
+      return;
+    }
     const release=byId('siteUpdateRelease').value.trim().toUpperCase();
     const reinstall=!previewData.hasChanges&&previewData.canReinstall;
-    const confirmation=reinstall
-      ?`Перепрошить ${release} повторно?\n\nZIP совпадает с main. Будут созданы новый backup, commit, Release и Cloudflare Deploy.`
-      :`Опубликовать ${release}?\n\n＋${previewData.added}  ～${previewData.changed}  −${previewData.deleted}`;
-    if(!confirm(confirmation))return;
-    resetStages();stage('check','done');byId('siteUpdateResultCard').hidden=false;
-    setResultState('','В процессе');setBusy(true);
+    // R195: one-button installation. Android PWA/WebView sometimes suppresses
+    // confirm() dialogs, making an active button appear dead. Preview has already
+    // validated the archive, so start immediately and show progress inline.
+    setText('siteUpdateUploadMessage',reinstall?'Запускаю безопасную повторную установку…':'Запускаю безопасное обновление…');
+    resetStages();stage('check','done');stage('backup','running');byId('siteUpdateResultCard').hidden=false;
+    setResultState('','В процессе');setText('siteUpdateResultTitle',reinstall?'Повторная установка запущена':'Обновление запущено');setText('siteUpdateResultText','Создаём защитный backup…');setBusy(true);
     let backupData=null,publishData=null,releaseData=null;
     try{
-      stage('backup','running');backupData=await createBackup(release);stage('backup','done');
+      backupData=await createBackup(release);stage('backup','done');setText('siteUpdateResultText','Backup готов. Отправляем commit в GitHub…');
       stage('commit','running');
       const form=new FormData();
       form.append('archive',file,file.name);
@@ -422,7 +515,7 @@
       lastRelease=release;lastOperationId=publishData.operationId||'';lastPublish={backupData,publishData,releaseData};
       setText('siteUpdateResultTitle',publishData.reinstall?`${release} отправлена на повторную установку`:`${release} отправлена`);
       setText('siteUpdateResultText',`${publishData.reinstall?'Повторная установка · ':''}Commit ${publishData.commitShort} · ＋${publishData.added} ～${publishData.changed} −${publishData.deleted}${backupData?` · backup ${backupData.short}`:''}${releaseData?.warning?` · Release: ${releaseData.warning}`:''}`);
-      setResultState('','Проверяем');byId('siteUpdateConsoleR184')?.classList.add('is-active');
+      setResultState('','Проверяем');byId('siteUpdateConsoleR195')?.classList.add('is-active');
       previewData=null;confirmInput.checked=false;setPublishMode(false);
       await Promise.allSettled([loadStatus(),loadHistory(),loadLog()]);
       await watchDeployment(lastOperationId,release,'publish')
@@ -467,7 +560,7 @@
     </article>`;
   }
   async function loadHistory(){
-    if(!getKey())return;
+    if(!hasOwnerAccess())return;
     const historyBox=byId('siteUpdateHistory'),technicalBox=byId('siteUpdateTechnicalHistory');
     try{
       setText('siteUpdateHistoryMessage','Загрузка…');
@@ -488,7 +581,7 @@
     }
   }
   async function loadLog(){
-    if(!getKey())return;
+    if(!hasOwnerAccess())return;
     try{
       const data=await api('/api/control/site-update/log',{timeoutMs:18000}),box=byId('siteUpdateLog');
       const labels={
@@ -525,7 +618,7 @@
     setText('siteUpdateResultTitle',`Откат к ${label}`);
     setText('siteUpdateResultText','Создаём защитный backup и новый rollback commit…');
     setText('siteUpdateDeployMessage','Ожидание GitHub…');
-    byId('siteUpdateConsoleR184')?.classList.add('is-active');
+    byId('siteUpdateConsoleR195')?.classList.add('is-active');
     setBusy(true);
     setText('siteUpdateHistoryMessage',`Откат к ${label}…`);
     try{
@@ -559,5 +652,39 @@
       setBusy(false);
     }
   }
-  byId('siteUpdateVerify').addEventListener('click',loadStatus);byId('siteUpdateRefresh').addEventListener('click',loadStatus);byId('siteUpdateBackupNow').addEventListener('click',backupNow);byId('siteUpdateHealthCheck').addEventListener('click',manualHealthCheck);byId('siteUpdateCacheClear').addEventListener('click',()=>clearControlRuntimeCaches({reload:true,release:'R184',manual:true}));autoRecoveryInput.addEventListener('change',()=>{try{localStorage.setItem(AUTO_RECOVERY_KEY,autoRecoveryInput.checked?'1':'0')}catch(_){};setText('siteUpdateHealthMessage',autoRecoveryInput.checked?'Автооткат включён: критический сбой вернёт предыдущий backup.':'Автооткат выключен: проверка останется активной.');});previewButton.addEventListener('click',preview);publishButton.addEventListener('click',publish);byId('siteUpdateHistoryRefresh').addEventListener('click',()=>Promise.allSettled([loadStatus(),loadHistory(),loadLog()]));byId('siteUpdateCheckDeploy').addEventListener('click',()=>checkDeployment(lastOperationId,lastRelease||byId('siteUpdateRelease').value.trim().toUpperCase()));keyInput.addEventListener('input',()=>{previewButton.disabled=operation||!selectedFile()||!getKey()});keyInput.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();loadStatus()}});resetStages();if(getKey())loadStatus();else setState(false,'Нужен ADMIN_KEY');
+  byId('siteUpdateVerify').addEventListener('click',loadStatus);byId('siteUpdateRefresh').addEventListener('click',loadStatus);byId('siteUpdateBackupNow').addEventListener('click',backupNow);byId('siteUpdateHealthCheck').addEventListener('click',manualHealthCheck);byId('siteUpdateCacheClear').addEventListener('click',()=>clearControlRuntimeCaches({reload:true,release:'R195',manual:true}));autoRecoveryInput.addEventListener('change',()=>{try{localStorage.setItem(AUTO_RECOVERY_KEY,autoRecoveryInput.checked?'1':'0')}catch(_){};setText('siteUpdateHealthMessage',autoRecoveryInput.checked?'Автооткат включён: критический сбой вернёт предыдущий backup.':'Автооткат выключен: проверка останется активной.');});previewButton.addEventListener('click',preview);
+  let lastPublishGesture=0;
+  const startPublishFromGesture=event=>{
+    if(event){event.preventDefault();event.stopPropagation();}
+    const now=Date.now();
+    if(now-lastPublishGesture<700)return;
+    lastPublishGesture=now;
+    publish().catch(error=>{
+      setText('siteUpdateFileState','Ошибка');
+      setText('siteUpdateUploadMessage',`Ошибка запуска: ${error?.message||error}`);
+    });
+  };
+  publishButton.addEventListener('click',startPublishFromGesture,{capture:true});
+  publishButton.addEventListener('pointerup',event=>{
+    if(event.pointerType==='touch'||event.pointerType==='pen')startPublishFromGesture(event);
+  },{capture:true,passive:false});
+  publishButton.addEventListener('touchend',startPublishFromGesture,{capture:true,passive:false});
+  window.AndrikSiteUpdateR195={preview,publish,start:startPublishFromGesture,version:SITE_UPDATE_UI_VERSION};byId('siteUpdateHistoryRefresh').addEventListener('click',()=>Promise.allSettled([loadStatus(),loadHistory(),loadLog()]));byId('siteUpdateCheckDeploy').addEventListener('click',()=>checkDeployment(lastOperationId,lastRelease||byId('siteUpdateRelease').value.trim().toUpperCase()));keyInput.addEventListener('input',()=>{captureKey();previewButton.disabled=operation||!selectedFile()||!hasOwnerAccess()});keyInput.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();loadStatus()}});resetStages();
+  window.addEventListener('andrik-owner-session',event=>{
+    if(event.detail?.active){
+      keyInput.value=OWNER_SENTINEL;
+      if(!operation)loadStatus();
+    }
+  });
+  (async()=>{
+    try{await window.AndrikOwnerSession?.ready?.();}catch(_){}
+    if(window.AndrikOwnerSession?.isActive?.()){
+      keyInput.value=OWNER_SENTINEL;
+      loadStatus();
+    }else if(hasOwnerAccess()){
+      loadStatus();
+    }else{
+      setState(false,'Нужен ADMIN_KEY');
+    }
+  })();
 })();

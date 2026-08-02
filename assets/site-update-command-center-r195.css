@@ -1,0 +1,927 @@
+/*
+  R184 — Update Command Center
+  Всё критическое управление установкой находится на первом экране.
+  История, откат и кэш остаются ниже как вторичный раздел.
+*/
+
+.site-update-page .update-command-center-r184{
+  display:grid;
+  align-content:start;
+  gap:8px;
+  min-width:0!important;
+  width:100%!important;
+  max-width:100%!important;
+}
+
+.site-update-page .update-command-center-r184>*,
+.site-update-page .update-primary-grid-r184,
+.site-update-page .update-primary-grid-r184>*{
+  box-sizing:border-box!important;
+  min-width:0!important;
+  width:100%!important;
+  max-width:100%!important;
+}
+
+.site-update-page .update-primary-grid-r184,
+.site-update-page .update-secondary-grid-r184{
+  display:grid;
+  gap:9px;
+}
+
+.site-update-page .update-primary-grid-r184 .update-status-card,
+.site-update-page .update-primary-grid-r184 .update-upload-card{
+  grid-column:1/-1!important;
+}
+
+.site-update-page .update-live-console-r184{
+  margin-top:8px;
+  padding:9px 10px;
+  border:1px solid rgba(105,222,255,.22);
+  border-radius:14px;
+  background:
+    radial-gradient(circle at 92% 0,rgba(82,235,166,.07),transparent 38%),
+    rgba(2,13,20,.82);
+  box-shadow:inset 0 0 16px rgba(67,211,255,.035);
+}
+
+.site-update-page .update-live-console-r184.is-active{
+  border-color:rgba(100,255,174,.46);
+  box-shadow:
+    inset 0 0 18px rgba(67,211,255,.055),
+    0 0 18px rgba(74,238,155,.10);
+}
+
+.site-update-page .update-console-head-r184{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:9px;
+}
+
+.site-update-page .update-console-head-r184 .eyeline{
+  margin:0!important;
+  font-size:.62rem!important;
+}
+
+.site-update-page .update-console-head-r184 strong{
+  min-width:0;
+  color:#caffdd;
+  font-size:.78rem;
+  line-height:1.15;
+  text-align:right;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.site-update-page .update-console-metrics-r184{
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:5px;
+  min-height:27px;
+  margin-top:7px;
+}
+
+.site-update-page .update-console-metrics-r184>span,
+.site-update-page .update-console-metrics-r184 .update-metric{
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  min-height:26px;
+  padding:4px 7px;
+  border:1px solid rgba(132,204,233,.16);
+  border-radius:999px;
+  background:rgba(4,17,25,.78);
+  color:#9fb6c1;
+  font-size:.66rem;
+}
+
+.site-update-page .update-console-metrics-r184 .update-metric strong{
+  color:#eef8ff;
+  font-size:.78rem;
+}
+
+.site-update-page .update-console-message-r184{
+  min-height:1.2em;
+  margin:6px 0 0!important;
+  color:#98adb8;
+  font-size:.71rem!important;
+  line-height:1.3!important;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.site-update-page .update-console-actions-r184{
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:5px;
+  margin-top:7px;
+}
+
+.site-update-page .update-console-actions-r184 .btn{
+  min-height:31px!important;
+  padding:6px 9px!important;
+  font-size:.66rem!important;
+}
+
+.site-update-page .update-stagebar{
+  grid-template-columns:repeat(6,minmax(0,1fr))!important;
+}
+
+.site-update-page .update-main-button{
+  order:0;
+}
+
+
+.site-update-page #siteUpdatePreview,
+.site-update-page #siteUpdatePreview[hidden],
+.site-update-page .update-console-actions-r184 [hidden]{
+  display:none!important;
+}
+
+/* Первый экран в портрете. */
+@media screen and (orientation:portrait){
+  body.site-update-page .admin-main{
+    scroll-padding-top:0!important;
+  }
+
+  body.site-update-page .update-wrap{
+    max-width:760px!important;
+    padding-top:6px!important;
+    padding-bottom:24px!important;
+  }
+
+  body.site-update-page .update-command-center-r184{
+    min-height:calc(100dvh - 92px);
+    align-content:start;
+    padding-bottom:8px;
+  }
+
+  body.site-update-page .update-header{
+    padding:0 4px 4px!important;
+  }
+
+  body.site-update-page .update-header .eyeline{
+    font-size:.66rem!important;
+    letter-spacing:.14em!important;
+  }
+
+  body.site-update-page .update-header h1{
+    margin:1px 0 2px!important;
+    font-size:clamp(2.55rem,12vw,4rem)!important;
+    line-height:.88!important;
+  }
+
+  body.site-update-page .update-header p{
+    max-width:34rem!important;
+    margin:0 auto!important;
+    font-size:.72rem!important;
+    line-height:1.22!important;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+
+  body.site-update-page .update-primary-grid-r184{
+    gap:7px!important;
+  }
+
+  body.site-update-page .update-primary-grid-r184 .admin-control-card{
+    padding:9px 10px!important;
+    border-radius:18px!important;
+  }
+
+  body.site-update-page .update-status-card{
+    padding-top:8px!important;
+    padding-bottom:8px!important;
+  }
+
+  body.site-update-page .update-status-line{
+    min-height:34px;
+    gap:7px!important;
+  }
+
+  body.site-update-page .update-status-line>div{
+    min-width:0;
+  }
+
+  body.site-update-page .update-status-line strong{
+    display:block;
+    max-width:100%;
+    font-size:.76rem!important;
+    line-height:1.15;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+
+  body.site-update-page .update-status-line small{
+    max-width:100%;
+    margin-top:2px!important;
+    font-size:.58rem!important;
+    line-height:1.15;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+
+  body.site-update-page .update-status-card>.update-advanced{
+    margin-top:5px!important;
+  }
+
+  body.site-update-page .update-advanced>summary{
+    padding:6px 8px!important;
+    font-size:.67rem!important;
+  }
+
+  body.site-update-page .update-upload-card .compact-title{
+    min-height:31px;
+  }
+
+  body.site-update-page .update-upload-card h2{
+    margin:0!important;
+    font-size:1.26rem!important;
+    line-height:1.05!important;
+  }
+
+  body.site-update-page .update-upload-card .eyeline{
+    font-size:.58rem!important;
+  }
+
+  body.site-update-page .update-file-picker{
+    min-height:46px!important;
+    margin-top:6px!important;
+    padding:7px 10px!important;
+    flex-direction:row!important;
+    align-items:center!important;
+  }
+
+  body.site-update-page .update-file-picker strong{
+    flex:0 0 auto;
+    gap:7px!important;
+    font-size:.86rem!important;
+  }
+
+  body.site-update-page .update-file-picker-icon{
+    width:25px!important;
+    height:25px!important;
+    border-radius:8px!important;
+    font-size:.86rem!important;
+  }
+
+  body.site-update-page .update-file-picker>span{
+    min-width:0;
+    max-width:58%;
+    text-align:right!important;
+    font-size:.67rem!important;
+    line-height:1.15;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+
+  body.site-update-page .update-main-button{
+    min-height:45px!important;
+    margin-top:7px!important;
+    border-radius:999px!important;
+    font-size:.92rem!important;
+    letter-spacing:.045em!important;
+  }
+
+  body.site-update-page .update-stagebar{
+    gap:3px!important;
+    margin-top:7px!important;
+  }
+
+  body.site-update-page .update-stagebar>div{
+    min-height:41px;
+    padding:4px 1px!important;
+    border-radius:9px!important;
+  }
+
+  body.site-update-page .update-stagebar b{
+    width:17px!important;
+    height:17px!important;
+    margin:0!important;
+    font-size:.58rem!important;
+  }
+
+  body.site-update-page .update-stagebar span{
+    display:block!important;
+    margin-top:2px!important;
+    font-size:.51rem!important;
+    line-height:1!important;
+  }
+
+  body.site-update-page .update-live-console-r184{
+    margin-top:7px;
+    padding:7px 8px;
+    border-radius:12px;
+  }
+
+  body.site-update-page .update-console-metrics-r184{
+    min-height:25px;
+    margin-top:5px;
+  }
+
+  body.site-update-page .update-console-message-r184{
+    margin-top:4px!important;
+  }
+
+  body.site-update-page .update-console-actions-r184{
+    margin-top:5px;
+  }
+
+  body.site-update-page .update-auto-note{
+    margin-top:5px!important;
+    font-size:.63rem!important;
+    line-height:1.15!important;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+
+  /* Второстепенные подробности начинаются только после первого экрана. */
+  body.site-update-page .update-secondary-grid-r184{
+    margin-top:10px;
+  }
+}
+
+/* Очень низкие портретные экраны: ещё плотнее, но все элементы сохраняются. */
+@media screen and (orientation:portrait) and (max-height:720px){
+  body.site-update-page .update-wrap{padding-top:3px!important}
+  body.site-update-page .update-header{padding-bottom:2px!important}
+  body.site-update-page .update-header h1{
+    font-size:clamp(2.25rem,10.8vw,3.25rem)!important;
+  }
+  body.site-update-page .update-header p{font-size:.65rem!important}
+  body.site-update-page .update-primary-grid-r184{gap:5px!important}
+  body.site-update-page .update-primary-grid-r184 .admin-control-card{padding:7px 8px!important}
+  body.site-update-page .update-file-picker{min-height:42px!important;margin-top:4px!important}
+  body.site-update-page .update-main-button{min-height:41px!important;margin-top:5px!important}
+  body.site-update-page .update-stagebar{margin-top:5px!important}
+  body.site-update-page .update-stagebar>div{min-height:37px!important}
+  body.site-update-page .update-live-console-r184{margin-top:5px;padding:6px 7px}
+  body.site-update-page .update-console-actions-r184 .btn{min-height:28px!important;padding:5px 7px!important}
+  body.site-update-page .update-auto-note{display:none!important}
+}
+
+/* Горизонт: статус слева, установка целиком справа, без прокрутки для управления. */
+@media screen and (orientation:landscape){
+  body.site-update-page .update-command-center-r184{
+    min-height:calc(100dvh - 78px);
+    padding:16px 18px 8px;
+  }
+
+  body.site-update-page .update-header{
+    grid-column:1/-1;
+    padding:0 4px 3px!important;
+  }
+
+  body.site-update-page .update-header h1{
+    font-size:clamp(2.4rem,4.5vw,3.65rem)!important;
+    margin:0!important;
+  }
+
+  body.site-update-page .update-header p{
+    font-size:.67rem!important;
+  }
+
+  body.site-update-page .update-primary-grid-r184{
+    grid-template-columns:.72fr 1.28fr!important;
+    align-items:start!important;
+    gap:8px!important;
+  }
+
+  body.site-update-page .update-primary-grid-r184 .update-status-card{
+    grid-column:1!important;
+  }
+
+  body.site-update-page .update-primary-grid-r184 .update-upload-card{
+    grid-column:2!important;
+  }
+
+  body.site-update-page .update-primary-grid-r184 .admin-control-card{
+    padding:9px 11px!important;
+  }
+
+  body.site-update-page .update-file-picker{
+    min-height:43px!important;
+    padding:7px 10px!important;
+  }
+
+  body.site-update-page .update-main-button{
+    min-height:42px!important;
+    margin-top:6px!important;
+  }
+
+  body.site-update-page .update-stagebar{
+    margin-top:6px!important;
+  }
+
+  body.site-update-page .update-stagebar>div{
+    padding:4px 1px!important;
+  }
+
+  body.site-update-page .update-live-console-r184{
+    margin-top:6px;
+    padding:7px 8px;
+  }
+
+  body.site-update-page .update-auto-note{
+    margin-top:4px!important;
+    font-size:.62rem!important;
+  }
+
+  body.site-update-page .update-secondary-grid-r184{
+    margin-top:10px;
+  }
+}
+
+
+/* R184 final phone compaction: весь процесс целиком в первом окне. */
+@media screen and (orientation:portrait) and (max-width:520px){
+  body.site-update-page .update-header h1{
+    font-size:clamp(2.1rem,10vw,2.8rem)!important;
+    line-height:.9!important;
+    white-space:nowrap!important;
+  }
+  body.site-update-page .update-header p{
+    display:none!important;
+  }
+  body.site-update-page .update-status-card{
+    padding-top:7px!important;
+    padding-bottom:7px!important;
+  }
+  body.site-update-page .update-status-line{
+    min-height:30px!important;
+  }
+  body.site-update-page .update-advanced>summary{
+    padding:5px 7px!important;
+  }
+  body.site-update-page .update-upload-card .compact-title{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr) auto!important;
+    align-items:center!important;
+    gap:6px!important;
+  }
+  body.site-update-page .update-upload-card .compact-title>div{
+    min-width:0!important;
+  }
+  body.site-update-page .update-upload-card .compact-title .eyeline{
+    display:none!important;
+  }
+  body.site-update-page .update-upload-card h2{
+    font-size:1.08rem!important;
+    white-space:nowrap!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+  }
+  body.site-update-page .update-upload-card .service-access-state{
+    font-size:.66rem!important;
+    padding:4px 7px!important;
+  }
+  body.site-update-page .update-file-picker{
+    min-height:42px!important;
+    margin-top:5px!important;
+    padding:6px 9px!important;
+  }
+  body.site-update-page .update-main-button{
+    min-height:40px!important;
+    margin-top:5px!important;
+  }
+  body.site-update-page .update-stagebar{
+    margin-top:5px!important;
+  }
+  body.site-update-page .update-stagebar>div{
+    min-height:35px!important;
+    padding:3px 1px!important;
+  }
+  body.site-update-page .update-stagebar b{
+    width:15px!important;
+    height:15px!important;
+  }
+  body.site-update-page .update-live-console-r184{
+    margin-top:5px!important;
+    padding:6px 7px!important;
+  }
+  body.site-update-page .update-console-metrics-r184{
+    min-height:22px!important;
+    margin-top:4px!important;
+  }
+  body.site-update-page .update-console-metrics-r184>span,
+  body.site-update-page .update-console-metrics-r184 .update-metric{
+    min-height:22px!important;
+    padding:3px 6px!important;
+  }
+  body.site-update-page .update-console-message-r184{
+    margin-top:3px!important;
+    font-size:.65rem!important;
+  }
+  body.site-update-page .update-console-actions-r184{
+    display:grid!important;
+    grid-template-columns:1fr 1fr!important;
+    gap:4px!important;
+    margin-top:4px!important;
+  }
+  body.site-update-page .update-console-actions-r184 .btn{
+    width:100%!important;
+    min-height:27px!important;
+    padding:4px 6px!important;
+  }
+  body.site-update-page .update-auto-note{
+    display:none!important;
+  }
+}
+
+
+/* R184 landscape compact command center: управление без прокрутки. */
+@media screen and (orientation:landscape) and (max-height:520px){
+  body.site-update-page .admin-main{
+    overflow-y:hidden!important;
+  }
+  body.site-update-page .update-wrap{
+    height:calc(100dvh - 78px)!important;
+    max-height:calc(100dvh - 78px)!important;
+    padding:0!important;
+    overflow:hidden!important;
+  }
+  body.site-update-page .update-command-center-r184{
+    min-height:0!important;
+    height:100%!important;
+    padding:5px 22px 6px!important;
+    gap:3px!important;
+    overflow:hidden!important;
+  }
+  body.site-update-page .update-header{
+    padding:0!important;
+  }
+  body.site-update-page .update-header .eyeline{
+    font-size:.53rem!important;
+    letter-spacing:.14em!important;
+  }
+  body.site-update-page .update-header h1{
+    font-size:1.95rem!important;
+    line-height:.85!important;
+    margin:0!important;
+  }
+  body.site-update-page .update-header p{
+    display:none!important;
+  }
+  body.site-update-page .update-primary-grid-r184{
+    min-height:0!important;
+    grid-template-columns:.72fr 1.28fr!important;
+    gap:6px!important;
+  }
+  body.site-update-page .update-primary-grid-r184 .admin-control-card{
+    min-height:0!important;
+    height:100%!important;
+    padding:6px 7px!important;
+    border-radius:16px!important;
+    overflow:hidden!important;
+  }
+  body.site-update-page .update-status-line{
+    min-height:28px!important;
+  }
+  body.site-update-page .update-status-line strong{
+    font-size:.68rem!important;
+    line-height:1.1!important;
+  }
+  body.site-update-page .update-status-line small{
+    font-size:.5rem!important;
+  }
+  body.site-update-page .update-status-card .service-access-state{
+    font-size:.56rem!important;
+    padding:3px 6px!important;
+  }
+  body.site-update-page .update-status-card>.update-advanced{
+    margin-top:4px!important;
+  }
+  body.site-update-page .update-advanced>summary{
+    padding:5px 7px!important;
+    font-size:.59rem!important;
+  }
+  body.site-update-page .update-upload-card .compact-title{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr) auto!important;
+    gap:5px!important;
+  }
+  body.site-update-page .update-upload-card .compact-title .eyeline{
+    display:none!important;
+  }
+  body.site-update-page .update-upload-card h2{
+    font-size:.93rem!important;
+    white-space:nowrap!important;
+    margin:0!important;
+  }
+  body.site-update-page .update-upload-card .service-access-state{
+    font-size:.54rem!important;
+    padding:3px 6px!important;
+  }
+  body.site-update-page .update-file-picker{
+    min-height:32px!important;
+    margin-top:3px!important;
+    padding:4px 7px!important;
+    flex-direction:row!important;
+  }
+  body.site-update-page .update-file-picker strong{
+    font-size:.68rem!important;
+  }
+  body.site-update-page .update-file-picker-icon{
+    width:20px!important;
+    height:20px!important;
+    font-size:.66rem!important;
+  }
+  body.site-update-page .update-file-picker>span{
+    font-size:.52rem!important;
+    white-space:nowrap!important;
+  }
+  body.site-update-page .update-main-button{
+    min-height:31px!important;
+    margin-top:3px!important;
+    font-size:.72rem!important;
+  }
+  body.site-update-page .update-stagebar{
+    margin-top:3px!important;
+    gap:2px!important;
+  }
+  body.site-update-page .update-stagebar>div{
+    min-height:28px!important;
+    padding:2px 0!important;
+    border-radius:7px!important;
+  }
+  body.site-update-page .update-stagebar b{
+    width:13px!important;
+    height:13px!important;
+    font-size:.46rem!important;
+  }
+  body.site-update-page .update-stagebar span{
+    display:block!important;
+    margin-top:1px!important;
+    font-size:.42rem!important;
+    line-height:1!important;
+  }
+  body.site-update-page .update-live-console-r184{
+    margin-top:3px!important;
+    padding:4px 6px!important;
+    border-radius:9px!important;
+  }
+  body.site-update-page .update-console-head-r184 .eyeline{
+    font-size:.46rem!important;
+  }
+  body.site-update-page .update-console-head-r184 strong{
+    font-size:.58rem!important;
+  }
+  body.site-update-page .update-console-metrics-r184{
+    min-height:17px!important;
+    margin-top:2px!important;
+  }
+  body.site-update-page .update-console-metrics-r184>span,
+  body.site-update-page .update-console-metrics-r184 .update-metric{
+    min-height:17px!important;
+    padding:2px 5px!important;
+    font-size:.48rem!important;
+  }
+  body.site-update-page .update-console-message-r184{
+    margin-top:2px!important;
+    font-size:.49rem!important;
+  }
+  body.site-update-page .update-console-actions-r184{
+    display:grid!important;
+    grid-template-columns:1fr 1fr!important;
+    gap:3px!important;
+    margin-top:2px!important;
+  }
+  body.site-update-page .update-console-actions-r184 .btn{
+    min-height:22px!important;
+    padding:3px 5px!important;
+    font-size:.48rem!important;
+  }
+  body.site-update-page .update-auto-note{
+    display:none!important;
+  }
+  body.site-update-page .update-secondary-grid-r184,
+  body.site-update-page .control-version-footer{
+    display:none!important;
+  }
+}
+
+
+/* R184 landscape matrix: ZIP, кнопка, этапы и консоль одновременно. */
+@media screen and (orientation:landscape) and (max-height:520px){
+  body.site-update-page .update-command-center-r184{
+    grid-template-rows:43px minmax(0,1fr)!important;
+  }
+  body.site-update-page .update-header{
+    height:43px!important;
+    min-height:43px!important;
+    max-height:43px!important;
+    margin:0!important;
+    overflow:hidden!important;
+  }
+  body.site-update-page .update-header .eyeline{
+    display:none!important;
+  }
+  body.site-update-page .update-header h1{
+    font-size:1.78rem!important;
+    line-height:.9!important;
+    white-space:nowrap!important;
+  }
+  body.site-update-page .update-primary-grid-r184{
+    align-self:stretch!important;
+    margin:0!important;
+  }
+  body.site-update-page .update-upload-card{
+    display:grid!important;
+    grid-template-columns:.78fr 1.22fr!important;
+    grid-template-rows:34px 32px minmax(0,1fr)!important;
+    column-gap:5px!important;
+    row-gap:4px!important;
+    align-content:stretch!important;
+  }
+  body.site-update-page .update-upload-card .compact-title{
+    grid-column:1!important;
+    grid-row:1!important;
+    align-self:stretch!important;
+  }
+  body.site-update-page .update-file-picker{
+    grid-column:2!important;
+    grid-row:1!important;
+    align-self:stretch!important;
+    width:100%!important;
+    height:34px!important;
+    min-height:34px!important;
+    margin:0!important;
+  }
+  body.site-update-page .update-main-button{
+    grid-column:1!important;
+    grid-row:2!important;
+    align-self:stretch!important;
+    width:100%!important;
+    height:32px!important;
+    min-height:32px!important;
+    margin:0!important;
+  }
+  body.site-update-page .update-stagebar{
+    grid-column:2!important;
+    grid-row:2!important;
+    align-self:stretch!important;
+    width:100%!important;
+    height:32px!important;
+    min-height:32px!important;
+    margin:0!important;
+  }
+  body.site-update-page .update-stagebar>div{
+    min-height:32px!important;
+    height:32px!important;
+  }
+  body.site-update-page .update-live-console-r184{
+    grid-column:1/-1!important;
+    grid-row:3!important;
+    align-self:stretch!important;
+    min-height:0!important;
+    height:auto!important;
+    margin:0!important;
+    overflow:hidden!important;
+  }
+  body.site-update-page .update-console-metrics-r184{
+    display:none!important;
+  }
+  body.site-update-page .update-console-message-r184{
+    white-space:nowrap!important;
+  }
+  body.site-update-page .update-console-actions-r184{
+    grid-template-columns:1fr 1fr 1fr 1fr!important;
+  }
+}
+
+
+/* R184 landscape cloud clearance: title hidden, controls start below the upper arc. */
+@media screen and (orientation:landscape) and (max-height:520px){
+  body.site-update-page .update-command-center-r184{
+    grid-template-rows:minmax(0,1fr)!important;
+    padding:18px 22px 6px!important;
+  }
+  body.site-update-page .update-header{
+    display:none!important;
+  }
+}
+
+
+/* R188 — restore centered portrait layout, contain the blue inner frames. */
+@media screen and (orientation:portrait){
+  body.site-update-page .update-wrap{
+    box-sizing:border-box!important;
+    width:100%!important;
+    max-width:760px!important;
+    margin-inline:auto!important;
+    padding-inline:clamp(16px,4.8vw,24px)!important;
+  }
+  body.site-update-page .update-command-center-r184,
+  body.site-update-page .update-primary-grid-r184,
+  body.site-update-page .update-secondary-grid-r184{
+    box-sizing:border-box!important;
+    width:100%!important;
+    max-width:100%!important;
+    margin-inline:auto!important;
+  }
+  body.site-update-page .update-primary-grid-r184 .admin-control-card,
+  body.site-update-page .update-secondary-grid-r184 .admin-control-card{
+    box-sizing:border-box!important;
+    width:100%!important;
+    max-width:100%!important;
+    margin-inline:auto!important;
+  }
+  body.site-update-page .update-status-line{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr) auto!important;
+    align-items:center!important;
+    width:100%!important;
+    max-width:100%!important;
+    gap:8px!important;
+  }
+  body.site-update-page .update-status-line>div{
+    min-width:0!important;
+    max-width:100%!important;
+  }
+  body.site-update-page .update-status-line strong,
+  body.site-update-page .update-status-line small{
+    max-width:100%!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+  }
+  body.site-update-page .update-status-card .service-access-state{
+    box-sizing:border-box!important;
+    width:auto!important;
+    min-width:92px!important;
+    max-width:142px!important;
+    white-space:normal!important;
+    text-align:center!important;
+    line-height:1.12!important;
+  }
+  body.site-update-page .update-status-card>.update-advanced,
+  body.site-update-page .update-status-card>.update-advanced>summary,
+  body.site-update-page .update-upload-card .update-live-console-r184{
+    box-sizing:border-box!important;
+    width:100%!important;
+    max-width:100%!important;
+    margin-left:0!important;
+    margin-right:0!important;
+  }
+  body.site-update-page .update-upload-card .compact-title{
+    width:100%!important;
+    max-width:100%!important;
+  }
+  body.site-update-page .update-upload-card .compact-title>div{
+    min-width:0!important;
+  }
+  body.site-update-page .update-upload-card .service-access-state{
+    box-sizing:border-box!important;
+    width:auto!important;
+    max-width:132px!important;
+    white-space:normal!important;
+    text-align:center!important;
+  }
+  body.site-update-page .update-live-console-r184{
+    border-color:rgba(105,222,255,.30)!important;
+  }
+}
+
+@media screen and (orientation:portrait) and (max-width:430px){
+  body.site-update-page .update-wrap{
+    padding-inline:14px!important;
+  }
+  body.site-update-page .update-status-card .service-access-state{
+    min-width:82px!important;
+    max-width:124px!important;
+    font-size:.66rem!important;
+    padding:4px 7px!important;
+  }
+  body.site-update-page .update-upload-card .service-access-state{
+    max-width:112px!important;
+  }
+}
+
+
+/* R195 — Android/PWA one-button emergency hardening. */
+.site-update-page #siteUpdatePublish{
+  position:relative!important;
+  z-index:40!important;
+  pointer-events:auto!important;
+  touch-action:manipulation!important;
+  -webkit-tap-highlight-color:rgba(120,220,255,.18)!important;
+  user-select:none!important;
+  -webkit-user-select:none!important;
+}
+.site-update-page #siteUpdatePublish:not(:disabled){
+  cursor:pointer!important;
+}
+.site-update-page .update-file-picker,
+.site-update-page .update-stagebar,
+.site-update-page .update-live-console-r184{
+  position:relative!important;
+  z-index:1!important;
+}

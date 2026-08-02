@@ -1,4 +1,0 @@
-Emergency legacy ADMIN_KEY mode.
-Server authorization remains enabled.
-The ADMIN_KEY is stored on this owner's device temporarily because the Android PWA did not retain the HttpOnly owner-session cookie.
-GitHub two-factor authentication remains enabled.

@@ -1,4 +1,7 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R190', number:190, version:'55.00', full:'55.00 LIVE WEB AI FINAL R190 LYRICS TITLE FIT', siteUpdater:'55.00-r157' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R197', number:197, version:'55.00', full:'55.00 LIVE WEB AI FINAL R197 SIGNED OWNER SESSION', siteUpdater:'55.00-r197' });
+
+const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
+const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
 
 const JSON_HEADERS = {
   'content-type': 'application/json; charset=utf-8',
@@ -2171,15 +2174,28 @@ function adminAuthorized(request, env) {
   return expectedKeys.some(expected => supplied.length === expected.length && supplied === expected);
 }
 
-function readCookieValue(request, name) {
+function readCookieValues(request, name) {
   const source = String(request.headers.get('cookie') || '');
+  const values = [];
   for (const part of source.split(';')) {
     const item = part.trim();
     if (!item.startsWith(`${name}=`)) continue;
-    try { return decodeURIComponent(item.slice(name.length + 1)); }
-    catch (_) { return item.slice(name.length + 1); }
+    try { values.push(decodeURIComponent(item.slice(name.length + 1))); }
+    catch (_) { values.push(item.slice(name.length + 1)); }
   }
-  return '';
+  return values.filter(Boolean);
+}
+
+function readCookieValue(request, name) {
+  return readCookieValues(request, name)[0] || '';
+}
+
+function readOwnerSessionTokens(request) {
+  const headerToken = String(request.headers.get(OWNER_SESSION_TOKEN_HEADER) || '').trim();
+  return [
+    ...readCookieValues(request, OWNER_SESSION_COOKIE),
+    headerToken
+  ].filter(Boolean);
 }
 
 function timingSafeTextEqual(left, right) {
@@ -2223,22 +2239,33 @@ async function verifyOwnerSessionToken(token, env) {
   return timingSafeTextEqual(suppliedSignature, expectedSignature);
 }
 
-function ownerSessionCookie(request, token, maxAge = 7776000) {
-  let domain = '';
-  try {
-    const hostname = new URL(request.url).hostname.toLowerCase();
-    if (hostname === 'andrikmetal.com' || hostname.endsWith('.andrikmetal.com')) domain = '; Domain=.andrikmetal.com';
-  } catch (_) {}
-  return `andrik_owner_session=${encodeURIComponent(token)}; Path=/; Max-Age=${maxAge}; HttpOnly; Secure; SameSite=Lax; Priority=High${domain}`;
+function ownerSessionCookie(name, token, maxAge = 7776000, domain = '') {
+  const domainPart = domain ? `; Domain=${domain}` : '';
+  const expiresPart = Number(maxAge) > 0 ? '' : '; Expires=Thu, 01 Jan 1970 00:00:00 GMT';
+  return `${name}=${encodeURIComponent(token)}; Path=/; Max-Age=${maxAge}${expiresPart}; HttpOnly; Secure; SameSite=Lax; Priority=High${domainPart}`;
+}
+
+function ownerSessionJson(_request, data, status, token, maxAge) {
+  const headers = new Headers(JSON_HEADERS);
+  headers.set('vary', 'Cookie');
+  // R197 compatibility fix: emit exactly one host-only Set-Cookie header.
+  // Some Android PWA/WebView builds drop cookie responses containing several
+  // deletion and creation headers at once.
+  headers.set('set-cookie', ownerSessionCookie(OWNER_SESSION_COOKIE, token, maxAge, ''));
+  return new Response(JSON.stringify(data), { status, headers });
 }
 
 async function handleOwnerSessionCreate(request, env) {
   if (!isSameOrigin(request)) return json({ ok:false, error:'origin' }, 403);
 
-  // R173: a valid HttpOnly owner cookie may renew itself without spending the
-  // brute-force bucket. Raw ADMIN_KEY attempts are rate-limited in D1.
-  const fromOwnerCookie = request.headers.get('x-andrik-owner-session') === '1';
-  if (!fromOwnerCookie && env.COMMENTS_DB) {
+  // A verified owner session may renew itself without spending the brute-force
+  // bucket. Verify the signed credential here instead of trusting a client-set
+  // marker header.
+  let fromOwnerSession = false;
+  for (const token of readOwnerSessionTokens(request)) {
+    if (await verifyOwnerSessionToken(token, env).catch(() => false)) { fromOwnerSession = true; break; }
+  }
+  if (!fromOwnerSession && env.COMMENTS_DB) {
     try {
       const limit = await securityRateLimit(
         env.COMMENTS_DB, request, env,
@@ -2268,23 +2295,23 @@ async function handleOwnerSessionCreate(request, env) {
   }
 
   const session = await createOwnerSessionToken(env);
-  return json({
+  return ownerSessionJson(request, {
     ok:true,
     owner:true,
-    storage:'HttpOnly cookie',
+    storage:'HttpOnly cookie + signed Android PWA fallback',
     sessionDays:90,
-    expiresAt:new Date(session.expiresAt).toISOString()
-  }, 200, {
-    ...JSON_HEADERS,
-    'set-cookie': ownerSessionCookie(request, session.token),
-    'vary':'Cookie'
-  });
+    expiresAt:new Date(session.expiresAt).toISOString(),
+    compatToken:session.token
+  }, 200, session.token, 7776000);
 }
 
 async function handleOwnerStatus(request, env) {
-  const token = readCookieValue(request, 'andrik_owner_session');
-  const owner = await verifyOwnerSessionToken(token, env).catch(() => false);
-  return json({ ok:true, owner, version:ANDRIK_CONTROL_RELEASE.short, storage:'HttpOnly cookie', sessionDays:90 }, 200, {
+  const tokens = readOwnerSessionTokens(request);
+  let owner = false;
+  for (const token of tokens) {
+    if (await verifyOwnerSessionToken(token, env).catch(() => false)) { owner = true; break; }
+  }
+  return json({ ok:true, owner, version:ANDRIK_CONTROL_RELEASE.short, storage:'HttpOnly cookie + signed Android PWA fallback', sessionDays:90 }, 200, {
     ...JSON_HEADERS,
     'vary':'Cookie'
   });
@@ -2292,11 +2319,7 @@ async function handleOwnerStatus(request, env) {
 
 async function handleOwnerSessionDelete(request) {
   if (!isSameOrigin(request)) return json({ ok:false, error:'origin' }, 403);
-  return json({ ok:true, owner:false }, 200, {
-    ...JSON_HEADERS,
-    'set-cookie': ownerSessionCookie(request, '', 0),
-    'vary':'Cookie'
-  });
+  return ownerSessionJson(request, { ok:true, owner:false }, 200, '', 0);
 }
 
 
@@ -9690,12 +9713,15 @@ async function routeApi(request, env, ctx) {
   const url = new URL(request.url);
   const path = url.pathname.replace(/\/+$/, '') || '/';
   try {
-    // R160: a previously verified owner session transparently authorizes all
-    // Control API calls. The signed HttpOnly cookie survives deploys, cache
-    // resets and PWA/service-worker updates without exposing ADMIN_KEY to JS.
+    // R197: a verified signed owner session transparently authorizes all
+    // Control API calls. HttpOnly cookie is primary; Android PWA may send the
+    // same expiring signed token in x-andrik-owner-token. ADMIN_KEY is not stored.
     if (!adminAuthorized(request, env)) {
-      const ownerToken = readCookieValue(request, 'andrik_owner_session');
-      const ownerSessionOk = ownerToken && await verifyOwnerSessionToken(ownerToken, env).catch(() => false);
+      const ownerTokens = readOwnerSessionTokens(request);
+      let ownerSessionOk = false;
+      for (const ownerToken of ownerTokens) {
+        if (await verifyOwnerSessionToken(ownerToken, env).catch(() => false)) { ownerSessionOk = true; break; }
+      }
       if (ownerSessionOk) {
         const ownerKey = configuredAdminKeys(env)[0] || '';
         if (ownerKey) {

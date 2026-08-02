@@ -1,4 +1,0 @@
-R169 MAP BLACK STRIP ONLY
-- Only analytics-admin.html landscape map tail changed.
-- The pull gesture zone is now transparent and absolutely overlaid, so it no longer creates a black row.
-- No admin panel, protection, attack map, update page, Guard, Worker or API logic changed.

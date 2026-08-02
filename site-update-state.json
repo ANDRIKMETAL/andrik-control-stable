@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r157",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1785699806579-0515a99a89",
-  "release": "R190",
-  "archiveName": "R190-LYRICS-TITLE-FIT-FULL.zip",
-  "sourceHead": "fb1825e18327b2ca1f5c78b4169060049c9231d8",
-  "backupSha": "fb1825e18327b2ca1f5c78b4169060049c9231d8",
-  "backupTag": "control-backup-20260802194323-fb1825e-r190-06822",
+  "operationId": "publish-1785712156215-fb4461bfa4",
+  "release": "R197",
+  "archiveName": "ANDRIK-Control-v55.00-FINAL-R197-SIGNED-OWNER-SESSION-1.zip",
+  "sourceHead": "4c65363e3e6ca0847c5d6e66d159fb87685b0a4e",
+  "backupSha": "4c65363e3e6ca0847c5d6e66d159fb87685b0a4e",
+  "backupTag": "control-backup-20260802230912-4c65363-r197-19934",
   "autoRecovery": true,
-  "generatedAt": "2026-08-02T19:43:26.579Z"
+  "generatedAt": "2026-08-02T23:09:16.215Z"
 }

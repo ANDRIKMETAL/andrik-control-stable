@@ -1,1 +1,0 @@
-Android PWA updater button, confirmation dialog, console IDs and cache fixed.

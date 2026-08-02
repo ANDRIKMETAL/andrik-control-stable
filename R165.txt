@@ -1,5 +1,0 @@
-R165 MAP CENTER + LANDSCAPE FRAMES + ADMIN COMPACT
-- Focused landscape map lowered and black tail reduced again.
-- Added one shared neon frame around the scroll area on Protection, Attack Map and Site Update pages.
-- Admin panel landscape menu compacted: less empty scroll area, footer/map note hidden in landscape.
-- Site Update header text shortened and top block moved higher / more compact.

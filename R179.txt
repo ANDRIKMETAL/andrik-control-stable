@@ -1,9 +1,0 @@
-R179 STABLE OWNER + UI FIXES
-- Built fresh from confirmed-working R173.
-- R174-R178 CSRF request blocking is not included.
-- Update, rollback and backup use owner-session-r173.js.
-- Old false CSRF events are deleted/hidden.
-- Focused landscape map gets isolated bottom-center swipe to Admin.
-- Admin footer shows Live Web AI · R179.
-- Cache reset is fast and auto-returns to Control.
-- Cron: good <=60 min, warning 61-180, error >180.

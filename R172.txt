@@ -1,5 +1,0 @@
-R172 ADMIN PANEL LANDSCAPE ONLY
-- Raised only the main Admin panel frame to the header line.
-- Restored one native vertical scroll owner in the Admin menu.
-- Removed the middle black clipping band and landscape footer letters.
-- Map, Protection, Attack Map, Site Update and backend were not changed.

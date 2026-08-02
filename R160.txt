@@ -1,4 +1,0 @@
-R160 OWNER SESSION PERSIST
-- ADMIN_KEY is entered once per device/browser profile.
-- Signed HttpOnly owner session survives deploys and cache resets.
-- Forget explicitly removes both local key and server session cookie.

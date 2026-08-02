@@ -1,5 +1,0 @@
-R168 CACHE RESET ROUTE REPAIR
-- Replaced root cache-reset.html with a non-redirecting manual reset page.
-- Added strict no-store headers.
-- Added exact R168 reset alias.
-- Verification checks page markers, not only HTTP 200, so fallback index can no longer pass as a successful deploy.
