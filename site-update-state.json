@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r157",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1785693188948-24c66bcdd9",
-  "release": "R180",
-  "archiveName": "R180-ADMIN-HEADING-VERSION-PORTRAIT-FIX-FULL.zip",
-  "sourceHead": "4a7167881f1fb2f353a556287307a7ab43347498",
-  "backupSha": "4a7167881f1fb2f353a556287307a7ab43347498",
-  "backupTag": "control-backup-20260802175305-4a71678-r180-fef78",
+  "operationId": "publish-1785693813455-2c7c6d970b",
+  "release": "R181",
+  "archiveName": "R181-ADMIN-FRAME-PORTRAIT-NO-SCROLL-FULL.zip",
+  "sourceHead": "6764a5ba3b1f0e554fc5cc3470191d18cebedd4a",
+  "backupSha": "6764a5ba3b1f0e554fc5cc3470191d18cebedd4a",
+  "backupTag": "control-backup-20260802180331-6764a5b-r181-c17f0",
   "autoRecovery": true,
-  "generatedAt": "2026-08-02T17:53:08.948Z"
+  "generatedAt": "2026-08-02T18:03:33.455Z"
 }

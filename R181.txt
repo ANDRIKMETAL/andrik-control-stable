@@ -1,0 +1,7 @@
+R181 ADMIN FRAME + PORTRAIT LOCK
+- Built directly from working R180/R179 authorization base.
+- Four embedded sections use one parent landscape frame only.
+- Frame top is aligned to the 92px header seam.
+- Portrait Admin menu is locked to one viewport with no vertical scroll.
+- Live Web AI is placed left of the Attack button; R181 is placed right.
+- Update, rollback, owner session, security, maps and gestures are unchanged.

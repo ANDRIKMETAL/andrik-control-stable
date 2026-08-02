@@ -1,0 +1,61 @@
+/* LIVE WEB AI R181 — only frame alignment in the four admin sections. */
+@media screen and (orientation:landscape){
+  :root{--r181-section-head:92px}
+
+  /* The parent carousel owns the only visible frame. */
+  body.admin-sections-shell .control-admin-landscape-frame-r141{
+    display:block!important;
+    position:fixed!important;
+    top:calc(var(--r181-section-head) - 1px)!important;
+    left:max(8px,calc(env(safe-area-inset-left) + 3px))!important;
+    right:max(8px,calc(env(safe-area-inset-right) + 3px))!important;
+    bottom:max(5px,env(safe-area-inset-bottom))!important;
+    width:auto!important;
+    height:auto!important;
+    margin:0!important;
+    transform:none!important;
+    border:2px solid rgba(104,255,174,.98)!important;
+    border-radius:28px!important;
+    background:transparent!important;
+    box-shadow:
+      0 0 0 1px rgba(132,255,197,.24),
+      0 0 9px rgba(91,255,180,.88),
+      0 0 27px rgba(46,232,132,.55),
+      inset 0 0 18px rgba(70,246,151,.15)!important;
+    opacity:1!important;
+    visibility:visible!important;
+    pointer-events:none!important;
+    z-index:2147483000!important;
+  }
+
+  /* No second frame inside an iframe: it caused the line across headings. */
+  html.admin-carousel-embedded body.control-page::after,
+  html.admin-carousel-embedded body.comment-collection-page::after,
+  html.admin-carousel-embedded body.control-page.unified-glow-ready::after,
+  html.admin-carousel-embedded body.comment-collection-page.unified-glow-ready::after{
+    content:none!important;
+    display:none!important;
+    visibility:hidden!important;
+    opacity:0!important;
+    border:0!important;
+    box-shadow:none!important;
+  }
+
+  /* Keep the embedded header and scroll viewport on the same 92px seam. */
+  html.admin-carousel-embedded body.control-page .control-detail-topbar,
+  html.admin-carousel-embedded body.control-page .control-detail-topbar .nav-shell{
+    height:var(--r181-section-head)!important;
+    min-height:var(--r181-section-head)!important;
+    max-height:var(--r181-section-head)!important;
+    flex:0 0 var(--r181-section-head)!important;
+  }
+  html.admin-carousel-embedded body.control-page .admin-main{
+    max-height:calc(100dvh - var(--r181-section-head))!important;
+  }
+
+  /* Directly opened section: frame also starts on its own header line. */
+  html:not(.admin-carousel-embedded) body.control-page:not(.control-home-page):not(.analytics-admin-page).unified-glow-ready::after,
+  html:not(.admin-carousel-embedded) body.comment-collection-page.unified-glow-ready::after{
+    top:calc(var(--r181-section-head) - 1px)!important;
+  }
+}
