@@ -1,0 +1,10 @@
+R184 UPDATE COMMAND CENTER
+- Built directly from working R183.
+- The Update Website button is moved directly under the ZIP picker.
+- The six installation stages are permanently visible on the first screen.
+- A live command console mirrors ZIP validation, file metrics, deployment state,
+  current message, Commit/Release links and the manual Deploy check.
+- The first portrait screen contains connection, ZIP, update button, stages and live status.
+- History, rollback, setup and cache controls remain below as secondary tools.
+- Forced scrolling to the old result card is removed.
+- R173 owner authorization, security, rollback and R183 cloud frames are unchanged.

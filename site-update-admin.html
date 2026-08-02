@@ -19,6 +19,8 @@
 <link rel="stylesheet" href="/assets/site-update-admin-r115.css?v=55.00-r115">
 <script defer src="/assets/owner-session-r173.js?v=55.00-r173"></script><script defer src="/assets/control-cache-reset-v55-00-final-stable-github.js?v=55.00-final-stable-github"></script>
 <script defer src="/assets/site-update-admin-r157.js?v=55.00-r157"></script>
+<script defer src="/assets/site-update-command-center-r184.js?v=55.00-r185"></script>
+
 <link rel="stylesheet" href="/assets/unified-glow-r139.css?v=55.00-r142">
 <link rel="stylesheet" href="/assets/r137-eye-motion.css?v=55.00-r144">
 <link rel="stylesheet" href="/assets/control-mini-player-r141.css?v=55.00-r144">
@@ -122,15 +124,17 @@ body.r137-eye-motion-page .control-topbar .control-center-logo[data-r3d-live-eye
   body.protection-page .protection-nav{position:static!important;top:auto!important;margin-top:10px!important}
   body.protection-page .protection-swipe{margin-top:10px!important}
 }
-</style><link rel="stylesheet" href="/assets/landscape-cloud-r183.css?v=55.00-r183">
+</style><link rel="stylesheet" href="/assets/landscape-cloud-r183.css?v=55.00-r185">
+<link rel="stylesheet" href="/assets/site-update-command-center-r184.css?v=55.00-r185">
 </head>
 <body class="control-page site-update-page r136-standard-header-page r137-eye-motion-page">
 <nav class="topbar control-topbar control-detail-topbar"><div class="wrap nav-shell"><a class="control-center-logo" id="controlCenterLogo" href="https://andrikmetal.com/" aria-label="Открыть главный сайт ANDRIK"><img class="logo-ok" src="/assets/control-topbar-eye-triangle.jpg?v=55.00-r136" alt=""><img class="logo-error" src="/assets/andrik-control-red-triangle-192.png?v=55.00-r136" alt=""></a><div class="nav-links control-nav-links control-detail-nav"><a href="/admin-sections.html?section=service&v=55.00-r136">← Служебное</a></div></div></nav>
 <div class="control-section-landscape-frame-r165" aria-hidden="true"></div>
 <main class="admin-main"><div class="wrap update-wrap">
-<header class="admin-header control-header update-header"><span class="eyeline">LIVE WEB AI · быстрая публикация</span><h1>Обновить сайт</h1><p>Выбери ZIP и запусти обновление. Control сам проверит архив и опубликует сайт.</p></header>
+<section class="update-command-center-r184" aria-label="Центр установки сайта">
+<header class="admin-header control-header update-header"><span class="eyeline">LIVE WEB AI · быстрая публикация</span><h1>Обновить сайт</h1><p>ZIP, проверка и весь процесс установки — сразу на первом экране.</p></header>
 
-<section class="update-grid">
+<section class="update-grid update-primary-grid-r184">
 <article class="admin-control-card admin-control-card-wide update-status-card">
 <div class="update-status-line"><div><strong id="siteUpdateRepoText">Проверяем GitHub…</strong><small id="siteUpdateReleaseRepoText"></small></div><span class="service-access-state" id="siteUpdateState">Проверяем…</span></div>
 <details class="update-advanced"><summary>Подключение и ручной backup</summary>
@@ -150,18 +154,37 @@ body.r137-eye-motion-page .control-topbar .control-center-logo[data-r3d-live-eye
 <article class="admin-control-card admin-control-card-wide update-upload-card">
 <div class="admin-card-title-row compact-title"><div><span class="eyeline">Новая версия</span><h2>Полный ZIP сайта</h2></div><span class="service-access-state" id="siteUpdateFileState">Не выбран</span></div>
 <label class="update-file-picker" for="siteUpdateArchive"><strong><span class="update-file-picker-icon" aria-hidden="true">🗜️</span><span>Выбрать ZIP</span></strong><span id="siteUpdateFileName">до 25 МБ</span></label><input id="siteUpdateArchive" type="file" accept=".zip,application/zip" hidden>
-<div class="update-auto-note" id="siteUpdateUploadMessage">После выбора ZIP проверка запустится автоматически.</div>
-<div class="update-stagebar" id="siteUpdateStages" hidden>
+<button class="btn btn-primary update-main-button" id="siteUpdatePublish" type="button" disabled>ОБНОВИТЬ САЙТ</button>
+<div class="update-stagebar" id="siteUpdateStages" aria-label="Этапы установки">
 <div data-stage="check"><b>1</b><span>ZIP</span></div><div data-stage="backup"><b>2</b><span>Backup</span></div><div data-stage="commit"><b>3</b><span>Commit</span></div><div data-stage="release"><b>4</b><span>Release</span></div><div data-stage="deploy"><b>5</b><span>Сайт</span></div><div data-stage="protect"><b>6</b><span>Защита</span></div>
 </div>
-<button class="btn btn-primary update-main-button" id="siteUpdatePublish" type="button" disabled>ОБНОВИТЬ САЙТ</button>
+<div class="update-live-console-r184" id="siteUpdateConsoleR185" aria-live="polite">
+  <div class="update-console-head-r184">
+    <span class="eyeline">Процесс установки</span>
+    <strong id="siteUpdateConsoleStateR185">Ожидание ZIP</strong>
+  </div>
+  <div class="update-console-metrics-r184" id="siteUpdateConsoleMetricsR185">
+    <span>Выбери полный ZIP сайта</span>
+  </div>
+  <p class="update-console-message-r184" id="siteUpdateConsoleMessageR185">Проверка архива запустится автоматически.</p>
+  <div class="update-console-actions-r184">
+    <button class="btn" id="siteUpdateConsoleCheckR185" type="button" disabled>↻ Проверить Deploy</button>
+    <a class="btn" id="siteUpdateConsoleCommitR185" target="_blank" rel="noopener noreferrer" hidden>Commit ↗</a>
+    <a class="btn" id="siteUpdateConsoleReleaseR185" target="_blank" rel="noopener noreferrer" hidden>Release ↗</a>
+    <a class="btn" href="https://andrikmetal.com/" target="_blank" rel="noopener">Сайт ↗</a>
+  </div>
+</div>
+<div class="update-auto-note" id="siteUpdateUploadMessage">После выбора ZIP проверка запустится автоматически.</div>
 <button class="btn" id="siteUpdatePreview" type="button" hidden disabled>Проверить ZIP</button>
-<div class="update-form-row update-hidden-fields" hidden><label>Версия<input id="siteUpdateRelease" type="text" maxlength="80" value="R115"></label><label>Коммит<input id="siteUpdateMessage" type="text" maxlength="240" value="ANDRIK Control — update website R115"></label></div>
+<div class="update-form-row update-hidden-fields" hidden><label>Версия<input id="siteUpdateRelease" type="text" maxlength="80" value="R185"></label><label>Коммит<input id="siteUpdateMessage" type="text" maxlength="240" value="ANDRIK Control — update website R185"></label></div>
 <input id="siteUpdateMakeBackup" type="checkbox" checked hidden>
 <input id="siteUpdateMakeRelease" type="checkbox" checked hidden>
 <input id="siteUpdateConfirm" type="checkbox" hidden>
 </article>
+</section>
+</section>
 
+<section class="update-grid update-secondary-grid-r184">
 <article class="admin-control-card admin-control-card-wide update-preview-card" id="siteUpdatePreviewCard" hidden>
 <div class="update-preview-top"><div><span class="eyeline">Автопроверка</span><strong id="siteUpdatePreviewState">Готово</strong></div><div class="update-metrics" id="siteUpdateMetrics"></div></div>
 <details class="update-details"><summary>Показать изменяемые файлы</summary><div id="siteUpdatePaths"></div></details>
@@ -195,7 +218,7 @@ GITHUB_RELEASE_REPO=andrik-control-stable</pre><p>Отдельный GITHUB_RELE
 
 
 </section>
-<footer class="control-version-footer"><strong>Live Web AI · ANDRIK · v55.00 LIVE WEB AI FINAL R167</strong><span>ZIP → backup → commit → Release → Cloudflare → повторная установка той же версии · 02.08.2026</span></footer>
+<footer class="control-version-footer"><strong>Live Web AI · ANDRIK · v55.00 LIVE WEB AI FINAL R185</strong><span>ZIP → backup → commit → Release → Cloudflare → повторная установка той же версии · 02.08.2026</span></footer>
 </div></main>
 <script defer src="/assets/control-version-v55-00-r115.js?v=55.00-r115"></script><script defer src="/assets/control-status-eye-v55-00-r88.js?v=55.00-r88"></script><script defer src="/assets/control-live-eye-v55-00-r3l.js?v=55.00-r3l"></script><script defer src="/assets/unified-glow-r139.js?v=55.00-r142"></script>
 <script defer src="/assets/control-mini-player-r141.js?v=55.00-r144"></script>
@@ -204,9 +227,9 @@ GITHUB_RELEASE_REPO=andrik-control-stable</pre><p>Отдельный GITHUB_RELE
   const body=document.body;
   if(!body) return;
   const routes=[
-    '/protection-admin.html?v=55.00-r167',
-    '/attack-map.html?v=55.00-r167',
-    '/site-update-admin.html?v=55.00-r167'
+    '/protection-admin.html?v=55.00-r185',
+    '/attack-map.html?v=55.00-r185',
+    '/site-update-admin.html?v=55.00-r185'
   ];
   const current=body.classList.contains('protection-page')?0:(body.classList.contains('attack-page')?1:(body.classList.contains('site-update-page')?2:-1));
   if(current<0) return;

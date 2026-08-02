@@ -422,7 +422,7 @@
       lastRelease=release;lastOperationId=publishData.operationId||'';lastPublish={backupData,publishData,releaseData};
       setText('siteUpdateResultTitle',publishData.reinstall?`${release} отправлена на повторную установку`:`${release} отправлена`);
       setText('siteUpdateResultText',`${publishData.reinstall?'Повторная установка · ':''}Commit ${publishData.commitShort} · ＋${publishData.added} ～${publishData.changed} −${publishData.deleted}${backupData?` · backup ${backupData.short}`:''}${releaseData?.warning?` · Release: ${releaseData.warning}`:''}`);
-      setResultState('','Проверяем');byId('siteUpdateResultCard').scrollIntoView({behavior:'smooth',block:'start'});
+      setResultState('','Проверяем');byId('siteUpdateConsoleR184')?.classList.add('is-active');
       previewData=null;confirmInput.checked=false;setPublishMode(false);
       await Promise.allSettled([loadStatus(),loadHistory(),loadLog()]);
       await watchDeployment(lastOperationId,release,'publish')
@@ -525,7 +525,7 @@
     setText('siteUpdateResultTitle',`Откат к ${label}`);
     setText('siteUpdateResultText','Создаём защитный backup и новый rollback commit…');
     setText('siteUpdateDeployMessage','Ожидание GitHub…');
-    byId('siteUpdateResultCard').scrollIntoView({behavior:'smooth',block:'start'});
+    byId('siteUpdateConsoleR184')?.classList.add('is-active');
     setBusy(true);
     setText('siteUpdateHistoryMessage',`Откат к ${label}…`);
     try{
@@ -559,5 +559,5 @@
       setBusy(false);
     }
   }
-  byId('siteUpdateVerify').addEventListener('click',loadStatus);byId('siteUpdateRefresh').addEventListener('click',loadStatus);byId('siteUpdateBackupNow').addEventListener('click',backupNow);byId('siteUpdateHealthCheck').addEventListener('click',manualHealthCheck);byId('siteUpdateCacheClear').addEventListener('click',()=>clearControlRuntimeCaches({reload:true,release:'R115',manual:true}));autoRecoveryInput.addEventListener('change',()=>{try{localStorage.setItem(AUTO_RECOVERY_KEY,autoRecoveryInput.checked?'1':'0')}catch(_){};setText('siteUpdateHealthMessage',autoRecoveryInput.checked?'Автооткат включён: критический сбой вернёт предыдущий backup.':'Автооткат выключен: проверка останется активной.');});previewButton.addEventListener('click',preview);publishButton.addEventListener('click',publish);byId('siteUpdateHistoryRefresh').addEventListener('click',()=>Promise.allSettled([loadStatus(),loadHistory(),loadLog()]));byId('siteUpdateCheckDeploy').addEventListener('click',()=>checkDeployment(lastOperationId,lastRelease||byId('siteUpdateRelease').value.trim().toUpperCase()));keyInput.addEventListener('input',()=>{previewButton.disabled=operation||!selectedFile()||!getKey()});keyInput.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();loadStatus()}});resetStages();if(getKey())loadStatus();else setState(false,'Нужен ADMIN_KEY');
+  byId('siteUpdateVerify').addEventListener('click',loadStatus);byId('siteUpdateRefresh').addEventListener('click',loadStatus);byId('siteUpdateBackupNow').addEventListener('click',backupNow);byId('siteUpdateHealthCheck').addEventListener('click',manualHealthCheck);byId('siteUpdateCacheClear').addEventListener('click',()=>clearControlRuntimeCaches({reload:true,release:'R184',manual:true}));autoRecoveryInput.addEventListener('change',()=>{try{localStorage.setItem(AUTO_RECOVERY_KEY,autoRecoveryInput.checked?'1':'0')}catch(_){};setText('siteUpdateHealthMessage',autoRecoveryInput.checked?'Автооткат включён: критический сбой вернёт предыдущий backup.':'Автооткат выключен: проверка останется активной.');});previewButton.addEventListener('click',preview);publishButton.addEventListener('click',publish);byId('siteUpdateHistoryRefresh').addEventListener('click',()=>Promise.allSettled([loadStatus(),loadHistory(),loadLog()]));byId('siteUpdateCheckDeploy').addEventListener('click',()=>checkDeployment(lastOperationId,lastRelease||byId('siteUpdateRelease').value.trim().toUpperCase()));keyInput.addEventListener('input',()=>{previewButton.disabled=operation||!selectedFile()||!getKey()});keyInput.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();loadStatus()}});resetStages();if(getKey())loadStatus();else setState(false,'Нужен ADMIN_KEY');
 })();

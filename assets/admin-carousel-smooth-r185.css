@@ -1,0 +1,12 @@
+/* Live Web AI R185 — no vertical bounce during horizontal carousel gestures. */
+html.admin-carousel-embedded,
+html.admin-carousel-embedded body.control-page{
+  overscroll-behavior:none!important;
+}
+
+html.admin-carousel-embedded body.control-page .admin-main{
+  touch-action:pan-y!important;
+  overscroll-behavior-y:contain!important;
+  scroll-behavior:auto!important;
+  overflow-anchor:none!important;
+}

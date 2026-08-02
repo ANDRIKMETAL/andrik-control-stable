@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r157",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1785696039472-55b4dfd4b6",
-  "release": "R183",
-  "archiveName": "R183-UNIFIED-LANDSCAPE-CLOUD-FULL.zip",
-  "sourceHead": "537272432c72309cd6200fc4c90993a2f8674255",
-  "backupSha": "537272432c72309cd6200fc4c90993a2f8674255",
-  "backupTag": "control-backup-20260802184036-5372724-r183-a86e0",
+  "operationId": "publish-1785697298610-70588f53d4",
+  "release": "R185",
+  "archiveName": "R185-SMOOTH-ADMIN-CAROUSEL-UPDATE-CENTER-FULL.zip",
+  "sourceHead": "9bed9661c80a27228f4ceea5c5ed4c74ba05624a",
+  "backupSha": "9bed9661c80a27228f4ceea5c5ed4c74ba05624a",
+  "backupTag": "control-backup-20260802190136-9bed966-r185-f1e62",
   "autoRecovery": true,
-  "generatedAt": "2026-08-02T18:40:39.472Z"
+  "generatedAt": "2026-08-02T19:01:38.610Z"
 }

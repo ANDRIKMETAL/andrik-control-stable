@@ -1,0 +1,9 @@
+R185 SMOOTH ADMIN CAROUSEL
+- Built directly from R184; compact Update Command Center preserved.
+- Vertical scrolling no longer starts or cancels the horizontal carousel.
+- Horizontal axis locks only after a clear deliberate movement.
+- Vertical scroll position is frozen during horizontal swipe.
+- Duplicate Service and Discussion frames keep the same scroll position.
+- Only active and neighbouring iframes are painted during movement.
+- Heavy cloud-frame animation pauses while swiping.
+- R173 owner authorization, update, rollback, security and maps unchanged.
