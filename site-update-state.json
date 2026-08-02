@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r157",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1785687832599-e28bf8d649",
-  "release": "R173",
-  "archiveName": "R173-OWNER-SESSION-WORKER-HARDENING-FULL.zip",
-  "sourceHead": "64eade2ba85020275d0101dc153782e02a4b2996",
-  "backupSha": "64eade2ba85020275d0101dc153782e02a4b2996",
-  "backupTag": "control-backup-20260802162350-64eade2-r173-f9ba8",
+  "operationId": "publish-1785689105859-c932c6a860",
+  "release": "R175",
+  "archiveName": "R175-LANDSCAPE-MAP-UP-SWIPE-FULL.zip",
+  "sourceHead": "ae200ca0be480e9d05d81ee0955cec947ea10177",
+  "backupSha": "ae200ca0be480e9d05d81ee0955cec947ea10177",
+  "backupTag": "control-backup-20260802164503-ae200ca-r175-a27a4",
   "autoRecovery": true,
-  "generatedAt": "2026-08-02T16:23:52.599Z"
+  "generatedAt": "2026-08-02T16:45:05.859Z"
 }

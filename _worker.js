@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R173', number:173, version:'55.00', full:'55.00 LIVE WEB AI FINAL R173 OWNER SESSION HARDENING', siteUpdater:'55.00-r157' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R174', number:174, version:'55.00', full:'55.00 LIVE WEB AI FINAL R174 CSRF + SECURITY PUSH', siteUpdater:'55.00-r157' });
 
 const JSON_HEADERS = {
   'content-type': 'application/json; charset=utf-8',
@@ -299,10 +299,19 @@ async function maybeSendSecurityAttackPush(db, env, event) {
     countryText ? `Страны: ${countryText}.` : ''
   ].filter(Boolean).join(' ');
 
+  const ownerLoginAttack = /owner-session-rate-limit/i.test(kind);
   const result = await sendOwnerPush(env, {
-    title:'🛡️ ANDRIK: атака заблокирована',
-    message,
-    url:'https://control.andrikmetal.com/attack-map.html'
+    title:ownerLoginAttack ? '🔐 Перебор ADMIN_KEY заблокирован' : '🛡️ ANDRIK: атака заблокирована',
+    message:ownerLoginAttack ? `${message} Вход владельца временно ограничен.` : message,
+    url:ownerLoginAttack
+      ? 'https://control.andrikmetal.com/protection-admin.html'
+      : 'https://control.andrikmetal.com/attack-map.html',
+    name:ownerLoginAttack ? `owner-bruteforce-${Math.floor(Date.now()/300000)}` : `security-attack-${Math.floor(Date.now()/300000)}`,
+    history:{
+      type:ownerLoginAttack ? 'owner-bruteforce-blocked' : 'security-attack',
+      source:'ANDRIK Guard',
+      audience:'owner'
+    }
   }).catch(error => ({ ok:false, message:String(error?.message || error) }));
 
   await db.prepare(`
@@ -2232,11 +2241,110 @@ function ownerSessionCookie(request, token, maxAge = 7776000) {
   return `andrik_owner_session=${encodeURIComponent(token)}; Path=/; Max-Age=${maxAge}; HttpOnly; Secure; SameSite=Lax; Priority=High${domain}`;
 }
 
-async function handleOwnerSessionCreate(request, env) {
+function createOwnerCsrfToken() {
+  return `${crypto.randomUUID().replace(/-/g, '')}${crypto.randomUUID().replace(/-/g, '')}`;
+}
+
+function validOwnerCsrfToken(value) {
+  return /^[a-f0-9]{64}$/i.test(String(value || ''));
+}
+
+function ownerCsrfCookie(token, maxAge = 7776000) {
+  return `andrik_csrf=${encodeURIComponent(token)}; Path=/; Max-Age=${maxAge}; Secure; SameSite=Strict; Priority=High`;
+}
+
+function ownerSessionResponseHeaders(request, sessionToken, csrfToken, maxAge = 7776000) {
+  const headers = new Headers(JSON_HEADERS);
+  headers.append('set-cookie', ownerSessionCookie(request, sessionToken, maxAge));
+  headers.append('set-cookie', ownerCsrfCookie(csrfToken, maxAge));
+  headers.set('vary', 'Cookie');
+  return headers;
+}
+
+function maskedClientIp(request) {
+  const value = cleanPlainText(getClientIp(request), 120);
+  if (/^\d{1,3}(?:\.\d{1,3}){3}$/.test(value)) {
+    const parts = value.split('.');
+    return `${parts[0]}.${parts[1]}.${parts[2]}.***`;
+  }
+  if (value.includes(':')) return `${value.split(':').slice(0, 4).join(':')}::***`;
+  return value === 'unknown' ? 'не определён' : 'скрыт';
+}
+
+function ownerLoginLocation(request) {
+  const cf = request.cf || {};
+  return [
+    cleanPlainText(cf.country || '', 8).toUpperCase(),
+    cleanPlainText(cf.city || '', 80),
+    cleanPlainText(cf.colo || '', 16)
+  ].filter(Boolean).join(' · ') || 'локация не определена';
+}
+
+function queueOwnerSecurityPush(ctx, env, payload) {
+  const task = sendOwnerPush(env, payload).catch(error => ({ ok:false, error:String(error?.message || error) }));
+  if (ctx?.waitUntil) ctx.waitUntil(task);
+  else task.catch(() => {});
+}
+
+const OWNER_CSRF_MUTATIONS = new Set([
+  'POST /api/control/protection/guard-run',
+  'POST /api/control/monitor/check',
+  'POST /api/push/admin-device',
+  'POST /api/push/send',
+  'POST /api/push/inspect-playlist',
+  'POST /api/push/check-playlist',
+  'POST /api/push/check-youtube-events',
+  'POST /api/automation/run',
+  'POST /api/control/daily-summary/send',
+  'POST /api/push/retry-latest',
+  'POST /api/comments/moderate',
+  'POST /api/lyrics/admin',
+  'DELETE /api/lyrics/admin',
+  'POST /api/lyrics/musixmatch',
+  'POST /api/releases/publish',
+  'POST /api/control/site-update/preview',
+  'POST /api/control/site-update/backup',
+  'POST /api/control/site-update/publish',
+  'POST /api/control/site-update/release',
+  'POST /api/control/site-update/finalize',
+  'POST /api/control/site-update/rollback',
+  'POST /api/control/snapshots/refresh',
+  'POST /api/control/youtube-oauth/disconnect',
+  'POST /api/control/youtube-comment/reply',
+  'POST /api/backup/run',
+  'POST /api/backup/restore'
+]);
+
+function requiresOwnerCsrf(path, method) {
+  return OWNER_CSRF_MUTATIONS.has(`${String(method || '').toUpperCase()} ${path}`);
+}
+
+function verifyOwnerCsrfRequest(request) {
+  if (request.headers.get('x-andrik-control-request') !== '1') return { ok:false, reason:'control-header' };
+  const supplied = cleanPlainText(request.headers.get('x-andrik-csrf') || '', 100);
+  const cookie = readCookieValue(request, 'andrik_csrf');
+  if (!validOwnerCsrfToken(supplied) || !validOwnerCsrfToken(cookie) || !timingSafeTextEqual(supplied, cookie)) {
+    return { ok:false, reason:'token' };
+  }
+  let expectedOrigin = '';
+  try { expectedOrigin = new URL(request.url).origin; } catch (_) {}
+  const origin = request.headers.get('origin');
+  if (origin && origin !== expectedOrigin) return { ok:false, reason:'origin' };
+  const referer = request.headers.get('referer');
+  if (!origin && referer) {
+    try { if (new URL(referer).origin !== expectedOrigin) return { ok:false, reason:'referer' }; }
+    catch (_) { return { ok:false, reason:'referer' }; }
+  }
+  const fetchSite = String(request.headers.get('sec-fetch-site') || '').toLowerCase();
+  if (fetchSite && !['same-origin', 'same-site', 'none'].includes(fetchSite)) return { ok:false, reason:'fetch-site' };
+  return { ok:true };
+}
+
+async function handleOwnerSessionCreate(request, env, ctx) {
   if (!isSameOrigin(request)) return json({ ok:false, error:'origin' }, 403);
 
-  // R173: a valid HttpOnly owner cookie may renew itself without spending the
-  // brute-force bucket. Raw ADMIN_KEY attempts are rate-limited in D1.
+  // R174: a valid HttpOnly owner cookie may renew itself without spending the
+  // brute-force bucket. Raw ADMIN_KEY attempts remain rate-limited in D1.
   const fromOwnerCookie = request.headers.get('x-andrik-owner-session') === '1';
   if (!fromOwnerCookie && env.COMMENTS_DB) {
     try {
@@ -2268,35 +2376,68 @@ async function handleOwnerSessionCreate(request, env) {
   }
 
   const session = await createOwnerSessionToken(env);
+  const csrfToken = createOwnerCsrfToken();
+
+  if (!fromOwnerCookie) {
+    if (env.COMMENTS_DB) {
+      const eventTask = recordSecurityEvent(
+        env.COMMENTS_DB, request, env,
+        'owner-login-success',
+        `Вход владельца подтверждён · ${ownerLoginLocation(request)}.`
+      );
+      if (ctx?.waitUntil) ctx.waitUntil(eventTask); else eventTask.catch(() => {});
+    }
+    queueOwnerSecurityPush(ctx, env, {
+      title:'🔐 Новый вход владельца',
+      message:`ADMIN_KEY подтверждён · ${ownerLoginLocation(request)} · IP ${maskedClientIp(request)}`,
+      url:'https://control.andrikmetal.com/protection-admin.html',
+      name:`owner-login-${Date.now()}`,
+      history:{ type:'owner-login-success', source:'ANDRIK Control', audience:'owner' }
+    });
+  }
+
   return json({
     ok:true,
     owner:true,
     storage:'HttpOnly cookie',
+    csrf:'double-submit',
+    csrfToken,
     sessionDays:90,
     expiresAt:new Date(session.expiresAt).toISOString()
-  }, 200, {
-    ...JSON_HEADERS,
-    'set-cookie': ownerSessionCookie(request, session.token),
-    'vary':'Cookie'
-  });
+  }, 200, ownerSessionResponseHeaders(request, session.token, csrfToken));
 }
 
 async function handleOwnerStatus(request, env) {
   const token = readCookieValue(request, 'andrik_owner_session');
   const owner = await verifyOwnerSessionToken(token, env).catch(() => false);
-  return json({ ok:true, owner, version:ANDRIK_CONTROL_RELEASE.short, storage:'HttpOnly cookie', sessionDays:90 }, 200, {
-    ...JSON_HEADERS,
-    'vary':'Cookie'
-  });
+  let csrfToken = owner ? readCookieValue(request, 'andrik_csrf') : '';
+  const headers = new Headers(JSON_HEADERS);
+  headers.set('vary', 'Cookie');
+  if (owner && !validOwnerCsrfToken(csrfToken)) {
+    csrfToken = createOwnerCsrfToken();
+    headers.append('set-cookie', ownerCsrfCookie(csrfToken));
+  } else if (!owner && csrfToken) {
+    csrfToken = '';
+    headers.append('set-cookie', ownerCsrfCookie('', 0));
+  }
+  return json({
+    ok:true,
+    owner,
+    version:ANDRIK_CONTROL_RELEASE.short,
+    storage:'HttpOnly cookie',
+    csrf:'double-submit',
+    csrfToken:owner ? csrfToken : '',
+    sessionDays:90
+  }, 200, headers);
 }
 
 async function handleOwnerSessionDelete(request) {
   if (!isSameOrigin(request)) return json({ ok:false, error:'origin' }, 403);
-  return json({ ok:true, owner:false }, 200, {
-    ...JSON_HEADERS,
-    'set-cookie': ownerSessionCookie(request, '', 0),
-    'vary':'Cookie'
-  });
+  const headers = new Headers(JSON_HEADERS);
+  headers.append('set-cookie', ownerSessionCookie(request, '', 0));
+  headers.append('set-cookie', ownerCsrfCookie('', 0));
+  headers.set('vary', 'Cookie');
+  return json({ ok:true, owner:false }, 200, headers);
 }
 
 
@@ -9700,10 +9841,29 @@ async function routeApi(request, env, ctx) {
         const ownerKey = configuredAdminKeys(env)[0] || '';
         if (ownerKey) {
           const headers = new Headers(request.headers);
+          // R174: a stale __ANDRIK_OWNER_SESSION__ Bearer marker must never
+          // override the real key restored from the signed HttpOnly cookie.
+          headers.delete('authorization');
           headers.set('x-admin-key', ownerKey);
           headers.set('x-andrik-owner-session', '1');
           request = new Request(request, { headers });
         }
+      }
+    }
+
+    if (requiresOwnerCsrf(path, request.method)) {
+      if (!adminAuthorized(request, env)) return json({ ok:false, error:'unauthorized' }, 401);
+      const csrf = verifyOwnerCsrfRequest(request);
+      if (!csrf.ok) {
+        const task = env.COMMENTS_DB
+          ? recordSecurityEvent(
+              env.COMMENTS_DB, request, env,
+              'csrf-blocked',
+              `Опасная команда отклонена: ${request.method} ${path} · ${csrf.reason}.`
+            )
+          : Promise.resolve();
+        if (ctx?.waitUntil) ctx.waitUntil(task); else task.catch(() => {});
+        return json({ ok:false, error:'csrf', reason:csrf.reason }, 403);
       }
     }
     if (path === '/api/health' && request.method === 'GET') return await handlePublicHealth(request, env);
@@ -9758,7 +9918,7 @@ async function routeApi(request, env, ctx) {
     if (path === '/api/control/site-update/log' && request.method === 'GET') return await handleSiteUpdateLog(request, env);
     if (path === '/api/control/site-update/history' && request.method === 'GET') return await handleSiteUpdateHistory(request, env);
     if (path === '/api/control/site-update/rollback' && request.method === 'POST') return await handleSiteUpdateRollback(request, env);
-    if (path === '/api/control/owner-session' && request.method === 'POST') return await handleOwnerSessionCreate(request, env);
+    if (path === '/api/control/owner-session' && request.method === 'POST') return await handleOwnerSessionCreate(request, env, ctx);
     if (path === '/api/control/owner-session' && request.method === 'DELETE') return await handleOwnerSessionDelete(request);
     if (path === '/api/control/owner-status' && request.method === 'GET') return await handleOwnerStatus(request, env);
     if (path === '/api/control/access' && request.method === 'GET') return await handleControlAccess(request, env);
@@ -9838,7 +9998,7 @@ function allowControlPlayerFrame(response, url, isControlHost) {
   headers.set('x-content-type-options', 'nosniff');
   headers.set('referrer-policy', 'strict-origin-when-cross-origin');
   headers.set('permissions-policy', 'camera=(), microphone=(), geolocation=()');
-  headers.set('x-andrik-security-headers', 'R173');
+  headers.set('x-andrik-security-headers', 'R174');
 
   if (isHtml) {
     if (isPlayerShell) {

@@ -1,0 +1,6 @@
+R175 LANDSCAPE MAP BOTTOM SWIPE ONLY
+- Added upward swipe from the bottom 92 px of the landscape listener map.
+- Opens Control Admin panel only when the map has reached its real vertical end.
+- Normal vertical map scrolling remains active before the end.
+- Horizontal analytics swipes and country/map interactions are unchanged.
+- R174 CSRF and security push protection preserved.
