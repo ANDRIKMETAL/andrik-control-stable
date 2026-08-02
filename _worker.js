@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R138', number:138, version:'55.00', full:'55.00 LIVE WEB AI FINAL R138', siteUpdater:'55.00-r138' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R139', number:139, version:'55.00', full:'55.00 LIVE WEB AI FINAL R139', siteUpdater:'55.00-r139' });
 
 const JSON_HEADERS = {
   'content-type': 'application/json; charset=utf-8',
@@ -2915,7 +2915,15 @@ function formatSystemDateLabel(value) {
 async function handleControlSystem(request, env) {
   if (!adminAuthorized(request, env)) return json({ ok: false, error: 'unauthorized' }, 401);
   const db = requireDb(env);
-  await Promise.all([
+  const systemReadErrors=[];
+  const safeRead=async(label,operation,fallback=null)=>{
+    try{return await operation}
+    catch(error){
+      systemReadErrors.push(`${label}: ${cleanPlainText(error?.message || error,180)}`);
+      return fallback;
+    }
+  };
+  await Promise.allSettled([
     ensureCommentsV4Schema(db),
     ensureLyricsV2Schema(db),
     ensurePushAutomationSchema(db),
@@ -2925,50 +2933,50 @@ async function handleControlSystem(request, env) {
     ensureSiteMetricsSchema(db)
   ]);
   const [lastCheck, lastStatus, lastSummary, seeded, uploadsPlaylist, ownerDevices, latestBackup, lastSeen, recentEvents, latestPush, dailySummaryAt, latestSubscriberSeen, searchConsoleRow] = await Promise.all([
-    getPushState(db, 'playlist-last-check-at'),
-    getPushState(db, 'playlist-last-check-status'),
-    getPushState(db, 'playlist-last-check-summary'),
-    getPushState(db, 'playlist-seeded'),
-    getPushState(db, 'youtube-uploads-playlist-id'),
-    db.prepare('SELECT COUNT(*) AS total FROM push_admin_devices').first(),
-    db.prepare(`
+    safeRead('playlist-last-check-at',getPushState(db, 'playlist-last-check-at')),
+    safeRead('playlist-last-check-status',getPushState(db, 'playlist-last-check-status')),
+    safeRead('playlist-last-check-summary',getPushState(db, 'playlist-last-check-summary')),
+    safeRead('playlist-seeded',getPushState(db, 'playlist-seeded')),
+    safeRead('youtube-uploads-playlist-id',getPushState(db, 'youtube-uploads-playlist-id')),
+    safeRead('push-admin-devices',db.prepare('SELECT COUNT(*) AS total FROM push_admin_devices').first(),{total:0}),
+    safeRead('backup-history',db.prepare(`
       SELECT id, storage, status, row_count AS rowCount, size_bytes AS sizeBytes, created_at AS createdAt
       FROM backup_history ORDER BY created_at DESC LIMIT 1
-    `).first(),
-    db.prepare(`
+    `).first()),
+    safeRead('push-playlist-seen',db.prepare(`
       SELECT video_id AS videoId, title, published_at AS publishedAt, first_seen_at AS firstSeenAt
       FROM push_playlist_seen
       ORDER BY COALESCE(published_at, first_seen_at) DESC, first_seen_at DESC
       LIMIT 1
-    `).first(),
-    db.prepare(`
+    `).first()),
+    safeRead('recent-push-events',db.prepare(`
       SELECT type, source, audience, status, title, message, url, video_id AS videoId,
              recipients, error, created_at AS createdAt
       FROM push_history ORDER BY created_at DESC LIMIT 5
-    `).all(),
-    db.prepare(`
+    `).all(),{results:[]}),
+    safeRead('latest-push',db.prepare(`
       SELECT type, source, audience, status, title, message, url, video_id AS videoId,
              onesignal_id AS oneSignalId, recipients, error, created_at AS createdAt
       FROM push_history
       WHERE type <> 'owner-subscription'
       ORDER BY created_at DESC
       LIMIT 1
-    `).first(),
-    getPushState(db, 'daily-owner-summary-last-at'),
-    db.prepare(`SELECT MAX(last_seen_at) AS lastSeenAt FROM push_subscribers WHERE status='active'`).first(),
-    db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform='google-search-console' ORDER BY created_at DESC LIMIT 1`).first()
+    `).first()),
+    safeRead('daily-owner-summary-last-at',getPushState(db, 'daily-owner-summary-last-at')),
+    safeRead('latest-subscriber',db.prepare(`SELECT MAX(last_seen_at) AS lastSeenAt FROM push_subscribers WHERE status='active'`).first()),
+    safeRead('search-console-snapshot',db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform='google-search-console' ORDER BY created_at DESC LIMIT 1`).first())
   ]);
   const [centralCheck, centralStatus, centralSummary] = await Promise.all([
-    getPushState(db, 'automation-last-check-at'),
-    getPushState(db, 'automation-last-check-status'),
-    getPushState(db, 'automation-last-check-summary')
+    safeRead('automation-last-check-at',getPushState(db, 'automation-last-check-at')),
+    safeRead('automation-last-check-status',getPushState(db, 'automation-last-check-status')),
+    safeRead('automation-last-check-summary',getPushState(db, 'automation-last-check-summary'))
   ]);
   const [nativeMonitorLastAt, nativeMonitorLastStatus, nativeMonitorTargetCount, nativeMonitorErrorCount, nativeMonitorWarningCount] = await Promise.all([
-    getPushState(db, 'native-monitor-last-sync-at'),
-    getPushState(db, 'native-monitor-last-status'),
-    getPushState(db, 'native-monitor-target-count'),
-    getPushState(db, 'native-monitor-error-count'),
-    getPushState(db, 'native-monitor-warning-count')
+    safeRead('native-monitor-last-sync-at',getPushState(db, 'native-monitor-last-sync-at')),
+    safeRead('native-monitor-last-status',getPushState(db, 'native-monitor-last-status')),
+    safeRead('native-monitor-target-count',getPushState(db, 'native-monitor-target-count')),
+    safeRead('native-monitor-error-count',getPushState(db, 'native-monitor-error-count')),
+    safeRead('native-monitor-warning-count',getPushState(db, 'native-monitor-warning-count'))
   ]);
   const effectiveLastCheck = centralCheck?.value || '';
   const effectiveLastStatus = centralStatus?.value || 'never';
@@ -2988,8 +2996,16 @@ async function handleControlSystem(request, env) {
     : searchConsoleConfigured
       ? `Ключ найден · выдайте доступ ${cleanPlainText(searchConsoleCredentials?.client_email || '',120)} к ${getGoogleSearchConsoleSiteUrl(env)}`
       : 'Search Console не настроен';
-  const youtubeAuth = await youtubeAutomaticAuthStatus(env);
-  const audienceCounts = await getPushAudienceCounts(env);
+  const youtubeAuth = await safeRead(
+    'youtube-auth-status',
+    youtubeAutomaticAuthStatus(env),
+    {configured:false,clientConfigured:false,refreshTokenConfigured:false,source:'unavailable'}
+  );
+  const audienceCounts = await safeRead(
+    'push-audience',
+    getPushAudienceCounts(env),
+    {public:0,owners:0,total:0}
+  );
   const ownerDeviceCount = Number(ownerDevices?.total || 0);
   const latestPushSent = Boolean(latestPush && latestPush.status === 'sent');
   const latestPushHasError = Boolean(cleanPlainText(latestPush?.error || '', 240));
@@ -3054,7 +3070,13 @@ async function handleControlSystem(request, env) {
     services: {
       site: { configured: true, status: 'good', label: 'Основной сайт и Control открываются' },
       worker: { configured: true, status: 'good', label: 'Cloudflare Worker отвечает · API v54.76' },
-      database: { configured: true, status: 'good', label: 'D1 подключена и отвечает' },
+      database: {
+        configured:true,
+        status:systemReadErrors.length?'warning':'good',
+        label:systemReadErrors.length
+          ? `D1 отвечает частично · недоступно проверок: ${systemReadErrors.length}`
+          : 'D1 подключена и отвечает'
+      },
       oneSignal: { configured: oneSignalConfigured, status: oneSignalStatus, ownerDevices: ownerDeviceCount, audience: audienceCounts, label: oneSignalLabel, note: 'Массовая рассылка использует явные subscription ID из D1' },
       pushAudience: { configured: audienceCounts.total > 0, status: audienceCounts.total > 0 ? 'good' : 'warning', counts: audienceCounts, label: `Общая аудитория: ${audienceCounts.total} · слушателей: ${audienceCounts.public} · владельцев: ${audienceCounts.owners}` },
       lastPush: { configured: Boolean(latestPush), status: latestPushStatus, latest: latestPush || null, label: latestPushLabel },
@@ -3088,7 +3110,9 @@ async function handleControlSystem(request, env) {
       summary: parsePushSummary(effectiveLastSummary)
     },
     lastSeenVideo: lastSeen || null,
-    recentEvents: recentEvents.results || [],
+    recentEvents: recentEvents?.results || [],
+    partial:Boolean(systemReadErrors.length),
+    readErrors:systemReadErrors,
     updatedAt: new Date().toISOString()
   });
 }

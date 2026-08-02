@@ -770,3 +770,26 @@
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
   X-Robots-Tag: noindex, nofollow,noarchive
 
+# R139 — direct mini-player + resilient system status + hidden Player Shell
+/assets/control-player-bridge-r139.js
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/assets/control-player-bridge-r139.css
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/assets/unified-glow-r139.js
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/assets/unified-glow-r139.css
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/assets/service-mini-player-settings-r139.js
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/assets/service-mini-player-settings-r139.css
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/assets/admin-service-r139.js
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/assets/player-v54-27-r139.js
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/assets/player-r139-control-shell.css
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/cache-reset-v55-00-final-r139.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+  X-Robots-Tag: noindex, nofollow,noarchive
+
