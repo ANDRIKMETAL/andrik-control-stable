@@ -28,7 +28,7 @@ body{position:fixed;inset:0}
 </style>
 <link rel="stylesheet" href="/assets/control-admin-shell-r141.css?v=55.00-r142">
 <link rel="stylesheet" href="/assets/control-mini-player-r141.css?v=55.00-r144">
-<link rel="stylesheet" href="/assets/control-hotfix-r146.css?v=55.00-r147">
+<link rel="stylesheet" href="/assets/control-hotfix-r148.css?v=55.00-r148">
 </head>
 <body class="admin-sections-shell">
 <div class="control-admin-landscape-frame-r141" aria-hidden="true"></div>
@@ -80,6 +80,8 @@ body{position:fixed;inset:0}
     track.style.transform=`translate3d(${-(physical*width())+x}px,0,0)`;
   };
   const updateUi=()=>{
+    const activeSection=sections[logical]?.key||'service';
+    document.body.dataset.activeSection=activeSection;
     dots.forEach((dot,index)=>dot.classList.toggle('is-active',index===logical));
     document.title=`Live Web AI — ${sections[logical].name}`;
     const url=new URL(location.href);
