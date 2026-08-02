@@ -386,10 +386,7 @@
     if(!file||!canPublishPreview()||operation)return;
     const release=byId('siteUpdateRelease').value.trim().toUpperCase();
     const reinstall=!previewData.hasChanges&&previewData.canReinstall;
-    const confirmation=reinstall
-      ?`Перепрошить ${release} повторно?\n\nZIP совпадает с main. Будут созданы новый backup, commit, Release и Cloudflare Deploy.`
-      :`Опубликовать ${release}?\n\n＋${previewData.added}  ～${previewData.changed}  −${previewData.deleted}`;
-    if(!confirm(confirmation))return;
+    setText('siteUpdateUploadMessage',reinstall?'Запускаю повторную установку…':'Запускаю обновление…');
     resetStages();stage('check','done');byId('siteUpdateResultCard').hidden=false;
     setResultState('','В процессе');setBusy(true);
     let backupData=null,publishData=null,releaseData=null;
@@ -559,5 +556,23 @@
       setBusy(false);
     }
   }
-  byId('siteUpdateVerify').addEventListener('click',loadStatus);byId('siteUpdateRefresh').addEventListener('click',loadStatus);byId('siteUpdateBackupNow').addEventListener('click',backupNow);byId('siteUpdateHealthCheck').addEventListener('click',manualHealthCheck);byId('siteUpdateCacheClear').addEventListener('click',()=>clearControlRuntimeCaches({reload:true,release:'R184',manual:true}));autoRecoveryInput.addEventListener('change',()=>{try{localStorage.setItem(AUTO_RECOVERY_KEY,autoRecoveryInput.checked?'1':'0')}catch(_){};setText('siteUpdateHealthMessage',autoRecoveryInput.checked?'Автооткат включён: критический сбой вернёт предыдущий backup.':'Автооткат выключен: проверка останется активной.');});previewButton.addEventListener('click',preview);publishButton.addEventListener('click',publish);byId('siteUpdateHistoryRefresh').addEventListener('click',()=>Promise.allSettled([loadStatus(),loadHistory(),loadLog()]));byId('siteUpdateCheckDeploy').addEventListener('click',()=>checkDeployment(lastOperationId,lastRelease||byId('siteUpdateRelease').value.trim().toUpperCase()));keyInput.addEventListener('input',()=>{previewButton.disabled=operation||!selectedFile()||!getKey()});keyInput.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();loadStatus()}});resetStages();if(getKey())loadStatus();else setState(false,'Нужен ADMIN_KEY');
+  byId('siteUpdateVerify').addEventListener('click',loadStatus);byId('siteUpdateRefresh').addEventListener('click',loadStatus);byId('siteUpdateBackupNow').addEventListener('click',backupNow);byId('siteUpdateHealthCheck').addEventListener('click',manualHealthCheck);byId('siteUpdateCacheClear').addEventListener('click',()=>clearControlRuntimeCaches({reload:true,release:'R184',manual:true}));autoRecoveryInput.addEventListener('change',()=>{try{localStorage.setItem(AUTO_RECOVERY_KEY,autoRecoveryInput.checked?'1':'0')}catch(_){};setText('siteUpdateHealthMessage',autoRecoveryInput.checked?'Автооткат включён: критический сбой вернёт предыдущий backup.':'Автооткат выключен: проверка останется активной.');});previewButton.addEventListener('click',preview);
+  let EMERGENCY_R195_TOUCH_START=0;
+  const emergencyR195Start=event=>{
+    if(event){event.preventDefault();event.stopPropagation();}
+    const now=Date.now();
+    if(now-EMERGENCY_R195_TOUCH_START<700)return;
+    EMERGENCY_R195_TOUCH_START=now;
+    publish().catch(error=>{
+      setText('siteUpdateFileState','Ошибка');
+      setText('siteUpdateUploadMessage',`Ошибка запуска: ${error?.message||error}`);
+    });
+  };
+  publishButton.addEventListener('click',emergencyR195Start,{capture:true});
+  publishButton.addEventListener('pointerup',event=>{
+    if(event.pointerType==='touch'||event.pointerType==='pen'){
+      emergencyR195Start(event);
+    }
+  },{capture:true,passive:false});
+  publishButton.addEventListener('touchend',emergencyR195Start,{capture:true,passive:false});byId('siteUpdateHistoryRefresh').addEventListener('click',()=>Promise.allSettled([loadStatus(),loadHistory(),loadLog()]));byId('siteUpdateCheckDeploy').addEventListener('click',()=>checkDeployment(lastOperationId,lastRelease||byId('siteUpdateRelease').value.trim().toUpperCase()));keyInput.addEventListener('input',()=>{previewButton.disabled=operation||!selectedFile()||!getKey()});keyInput.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();loadStatus()}});resetStages();if(getKey())loadStatus();else setState(false,'Нужен ADMIN_KEY');
 })();
