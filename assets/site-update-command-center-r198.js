@@ -5,13 +5,14 @@
   const text=id=>String(byId(id)?.textContent||'').trim();
   const visible=el=>Boolean(el && !el.hidden && getComputedStyle(el).display!=='none');
 
-  const consoleBox=byId('siteUpdateConsoleR184');
-  const consoleState=byId('siteUpdateConsoleStateR184');
-  const consoleMetrics=byId('siteUpdateConsoleMetricsR184');
-  const consoleMessage=byId('siteUpdateConsoleMessageR184');
-  const consoleCheck=byId('siteUpdateConsoleCheckR184');
-  const consoleCommit=byId('siteUpdateConsoleCommitR184');
-  const consoleRelease=byId('siteUpdateConsoleReleaseR184');
+  const versioned=base=>byId(`${base}R198`)||byId(`${base}R185`)||byId(`${base}R184`);
+  const consoleBox=versioned('siteUpdateConsole');
+  const consoleState=versioned('siteUpdateConsoleState');
+  const consoleMetrics=versioned('siteUpdateConsoleMetrics');
+  const consoleMessage=versioned('siteUpdateConsoleMessage');
+  const consoleCheck=versioned('siteUpdateConsoleCheck');
+  const consoleCommit=versioned('siteUpdateConsoleCommit');
+  const consoleRelease=versioned('siteUpdateConsoleRelease');
 
   if(!consoleBox||!consoleState||!consoleMetrics||!consoleMessage)return;
 

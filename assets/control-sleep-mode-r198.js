@@ -1,8 +1,8 @@
 (() => {
   'use strict';
 
-  if (window.__ANDRIK_SLEEP_MODE_R194__) return;
-  window.__ANDRIK_SLEEP_MODE_R194__ = true;
+  if (window.__ANDRIK_SLEEP_MODE_R198__) return;
+  window.__ANDRIK_SLEEP_MODE_R198__ = true;
 
   const root = document.documentElement;
   const nativeClearInterval = window.clearInterval.bind(window);
@@ -15,7 +15,7 @@
   // Keep the public API available, but do not patch timers/fetch on this critical page.
   if (criticalUpdatePage) {
     window.ANDRIK_SLEEP_MODE = Object.freeze({
-      build: 'R194',
+      build: 'R198',
       isHidden: () => document.hidden,
       isIdle: () => false,
       isSleeping: () => false,
@@ -29,6 +29,7 @@
   let idleTimer = 0;
   let idle = false;
   let hidden = document.hidden;
+  let externallyInactive = false;
   let syntheticId = 910000;
   const managedIntervals = new Map();
   const inFlight = new Map();
@@ -43,7 +44,7 @@
     }
   };
 
-  const sleeping = () => hidden || idle;
+  const sleeping = () => hidden || idle || externallyInactive;
   const idleDelay = delay => {
     const ms = Math.max(16, Number(delay) || 0);
     if (!idle) return ms;
@@ -58,7 +59,7 @@
     root.classList.toggle('andrik-tab-hidden', hidden);
     root.classList.toggle('andrik-idle', idle);
     root.classList.toggle('andrik-sleeping', sleeping());
-    const detail = { hidden, idle, sleeping: sleeping(), previous };
+    const detail = { hidden, idle, externallyInactive, sleeping: sleeping(), previous };
     document.dispatchEvent(new CustomEvent('andrik:sleepstate', { detail }));
     document.dispatchEvent(new CustomEvent(detail.sleeping ? 'andrik:sleep' : 'andrik:wake', { detail }));
   };
@@ -71,10 +72,10 @@
   };
 
   const scheduleRecord = record => {
-    if (!record.active || record.timer || hidden) return;
+    if (!record.active || record.timer || hidden || externallyInactive) return;
     record.timer = nativeSetTimeout(() => {
       record.timer = 0;
-      if (!record.active || hidden) return;
+      if (!record.active || hidden || externallyInactive) return;
       try {
         if (typeof record.callback === 'function') record.callback(...record.args);
       } catch (error) {
@@ -85,7 +86,7 @@
   };
 
   const resumeManagedTimers = () => {
-    if (hidden) return;
+    if (hidden || externallyInactive) return;
     for (const record of managedIntervals.values()) scheduleRecord(record);
   };
 
@@ -117,7 +118,7 @@
 
   const armIdle = () => {
     if (idleTimer) nativeClearTimeout(idleTimer);
-    if (hidden || mediaIsActive()) {
+    if (hidden || externallyInactive || mediaIsActive()) {
       setIdle(false);
       return;
     }
@@ -125,7 +126,7 @@
   };
 
   const markActive = () => {
-    if (hidden) return;
+    if (hidden || externallyInactive) return;
     setIdle(false);
     armIdle();
   };
@@ -148,6 +149,26 @@
     }
     dispatchState(previous);
   }, { passive: true });
+
+  window.addEventListener('message', event => {
+    if (event.origin !== location.origin) return;
+    const data = event.data || {};
+    if (data.channel !== 'andrik-admin-carousel-control' || data.type !== 'visibility-state') return;
+    const nextInactive = data.active === false;
+    if (externallyInactive === nextInactive) return;
+    const previous = { hidden, idle, externallyInactive, sleeping: sleeping() };
+    externallyInactive = nextInactive;
+    if (externallyInactive) {
+      if (idleTimer) nativeClearTimeout(idleTimer);
+      idleTimer = 0;
+      stopManagedTimers();
+    } else {
+      idle = false;
+      resumeManagedTimers();
+      armIdle();
+    }
+    dispatchState(previous);
+  }, { passive:true });
 
   // Same-page GET hub: concurrent identical API reads become one network request.
   // A very short memory cache also prevents several widgets from asking for the same data at once.
@@ -190,10 +211,11 @@
   };
 
   window.ANDRIK_SLEEP_MODE = Object.freeze({
-    build: 'R194',
+    build: 'R198',
     isHidden: () => hidden,
     isIdle: () => idle,
     isSleeping: sleeping,
+    isExternallyInactive: () => externallyInactive,
     wake: markActive,
     markMediaActive(value) {
       window.__ANDRIK_MEDIA_ACTIVE__ = Boolean(value);

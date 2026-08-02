@@ -1,6 +1,6 @@
 (() => {
   'use strict';
-  const SITE_UPDATE_UI_VERSION='55.00-r195';
+  const SITE_UPDATE_UI_VERSION='55.00-r198';
   const KEY_SESSION='andrik-comments-admin-key',KEY_LOCAL='andrik-comments-admin-key-persistent',AUTO_RECOVERY_KEY='andrik-site-update-auto-recovery',CACHE_REFRESH_PREFIX='andrik-site-update-cache-refresh:';
   const byId=id=>document.getElementById(id),keyInput=byId('siteUpdateAdminKey'),archiveInput=byId('siteUpdateArchive'),previewButton=byId('siteUpdatePreview'),publishButton=byId('siteUpdatePublish'),confirmInput=byId('siteUpdateConfirm'),autoRecoveryInput=byId('siteUpdateAutoRecovery');
   let previewData=null,lastRelease='',lastPublish=null,lastOperationId='',operation=false;
@@ -479,7 +479,7 @@
     }
     const release=byId('siteUpdateRelease').value.trim().toUpperCase();
     const reinstall=!previewData.hasChanges&&previewData.canReinstall;
-    // R195: one-button installation. Android PWA/WebView sometimes suppresses
+    // R198: one-button installation. Android PWA/WebView sometimes suppresses
     // confirm() dialogs, making an active button appear dead. Preview has already
     // validated the archive, so start immediately and show progress inline.
     setText('siteUpdateUploadMessage',reinstall?'Запускаю безопасную повторную установку…':'Запускаю безопасное обновление…');
@@ -515,7 +515,7 @@
       lastRelease=release;lastOperationId=publishData.operationId||'';lastPublish={backupData,publishData,releaseData};
       setText('siteUpdateResultTitle',publishData.reinstall?`${release} отправлена на повторную установку`:`${release} отправлена`);
       setText('siteUpdateResultText',`${publishData.reinstall?'Повторная установка · ':''}Commit ${publishData.commitShort} · ＋${publishData.added} ～${publishData.changed} −${publishData.deleted}${backupData?` · backup ${backupData.short}`:''}${releaseData?.warning?` · Release: ${releaseData.warning}`:''}`);
-      setResultState('','Проверяем');byId('siteUpdateConsoleR195')?.classList.add('is-active');
+      setResultState('','Проверяем');byId('siteUpdateConsoleR198')?.classList.add('is-active');
       previewData=null;confirmInput.checked=false;setPublishMode(false);
       await Promise.allSettled([loadStatus(),loadHistory(),loadLog()]);
       await watchDeployment(lastOperationId,release,'publish')
@@ -618,7 +618,7 @@
     setText('siteUpdateResultTitle',`Откат к ${label}`);
     setText('siteUpdateResultText','Создаём защитный backup и новый rollback commit…');
     setText('siteUpdateDeployMessage','Ожидание GitHub…');
-    byId('siteUpdateConsoleR195')?.classList.add('is-active');
+    byId('siteUpdateConsoleR198')?.classList.add('is-active');
     setBusy(true);
     setText('siteUpdateHistoryMessage',`Откат к ${label}…`);
     try{
@@ -652,7 +652,7 @@
       setBusy(false);
     }
   }
-  byId('siteUpdateVerify').addEventListener('click',loadStatus);byId('siteUpdateRefresh').addEventListener('click',loadStatus);byId('siteUpdateBackupNow').addEventListener('click',backupNow);byId('siteUpdateHealthCheck').addEventListener('click',manualHealthCheck);byId('siteUpdateCacheClear').addEventListener('click',()=>clearControlRuntimeCaches({reload:true,release:'R195',manual:true}));autoRecoveryInput.addEventListener('change',()=>{try{localStorage.setItem(AUTO_RECOVERY_KEY,autoRecoveryInput.checked?'1':'0')}catch(_){};setText('siteUpdateHealthMessage',autoRecoveryInput.checked?'Автооткат включён: критический сбой вернёт предыдущий backup.':'Автооткат выключен: проверка останется активной.');});previewButton.addEventListener('click',preview);
+  byId('siteUpdateVerify').addEventListener('click',loadStatus);byId('siteUpdateRefresh').addEventListener('click',loadStatus);byId('siteUpdateBackupNow').addEventListener('click',backupNow);byId('siteUpdateHealthCheck').addEventListener('click',manualHealthCheck);byId('siteUpdateCacheClear').addEventListener('click',()=>clearControlRuntimeCaches({reload:true,release:'R198',manual:true}));autoRecoveryInput.addEventListener('change',()=>{try{localStorage.setItem(AUTO_RECOVERY_KEY,autoRecoveryInput.checked?'1':'0')}catch(_){};setText('siteUpdateHealthMessage',autoRecoveryInput.checked?'Автооткат включён: критический сбой вернёт предыдущий backup.':'Автооткат выключен: проверка останется активной.');});previewButton.addEventListener('click',preview);
   let lastPublishGesture=0;
   const startPublishFromGesture=event=>{
     if(event){event.preventDefault();event.stopPropagation();}
@@ -669,7 +669,7 @@
     if(event.pointerType==='touch'||event.pointerType==='pen')startPublishFromGesture(event);
   },{capture:true,passive:false});
   publishButton.addEventListener('touchend',startPublishFromGesture,{capture:true,passive:false});
-  window.AndrikSiteUpdateR195={preview,publish,start:startPublishFromGesture,version:SITE_UPDATE_UI_VERSION};byId('siteUpdateHistoryRefresh').addEventListener('click',()=>Promise.allSettled([loadStatus(),loadHistory(),loadLog()]));byId('siteUpdateCheckDeploy').addEventListener('click',()=>checkDeployment(lastOperationId,lastRelease||byId('siteUpdateRelease').value.trim().toUpperCase()));keyInput.addEventListener('input',()=>{captureKey();previewButton.disabled=operation||!selectedFile()||!hasOwnerAccess()});keyInput.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();loadStatus()}});resetStages();
+  window.AndrikSiteUpdateR198={preview,publish,start:startPublishFromGesture,version:SITE_UPDATE_UI_VERSION};byId('siteUpdateHistoryRefresh').addEventListener('click',()=>Promise.allSettled([loadStatus(),loadHistory(),loadLog()]));byId('siteUpdateCheckDeploy').addEventListener('click',()=>checkDeployment(lastOperationId,lastRelease||byId('siteUpdateRelease').value.trim().toUpperCase()));keyInput.addEventListener('input',()=>{captureKey();previewButton.disabled=operation||!selectedFile()||!hasOwnerAccess()});keyInput.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();loadStatus()}});resetStages();
   window.addEventListener('andrik-owner-session',event=>{
     if(event.detail?.active){
       keyInput.value=OWNER_SENTINEL;
