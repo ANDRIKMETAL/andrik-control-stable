@@ -1,13 +1,13 @@
 {
   "schema": 1,
-  "updaterVersion": "55.00-r138",
+  "updaterVersion": "55.00-r139",
   "operation": "publish",
-  "operationId": "publish-1785644285488-8a7f67bb9e",
-  "release": "R139",
-  "archiveName": "R139.zip",
-  "sourceHead": "244e842a4dd6ef02c5d311e8216a83915e75c0d6",
-  "backupSha": "244e842a4dd6ef02c5d311e8216a83915e75c0d6",
-  "backupTag": "control-backup-20260802041802-244e842-r139-6a3f3",
+  "operationId": "publish-1785644801406-7804ad5dac",
+  "release": "R140",
+  "archiveName": "R140.zip",
+  "sourceHead": "d516bcce1aa6a0fd30365b144da2deaec20546d3",
+  "backupSha": "d516bcce1aa6a0fd30365b144da2deaec20546d3",
+  "backupTag": "control-backup-20260802042638-d516bcc-r140-1d400",
   "autoRecovery": true,
-  "generatedAt": "2026-08-02T04:18:05.488Z"
+  "generatedAt": "2026-08-02T04:26:41.406Z"
 }

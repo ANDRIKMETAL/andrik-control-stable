@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R139', number:139, version:'55.00', full:'55.00 LIVE WEB AI FINAL R139', siteUpdater:'55.00-r139' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R140', number:140, version:'55.00', full:'55.00 LIVE WEB AI FINAL R140', siteUpdater:'55.00-r140' });
 
 const JSON_HEADERS = {
   'content-type': 'application/json; charset=utf-8',
@@ -1285,17 +1285,27 @@ async function getSiteLiveMetrics(db) {
   };
 }
 
-async function getSiteWindowMetrics(db, startAt) {
+async function getSiteWindowMetrics(db, startAt, endAt = '') {
   await ensureSiteMetricsSchema(db);
-  const row = await db.prepare(`
-    SELECT COUNT(*) AS views, COUNT(DISTINCT visitor_hash) AS users
-    FROM site_visit_events
-    WHERE datetime(created_at) >= datetime(?1)
-  `).bind(startAt).first();
+  const safeStart = cleanPlainText(startAt || '', 80);
+  const safeEnd = cleanPlainText(endAt || '', 80);
+  const row = safeEnd
+    ? await db.prepare(`
+        SELECT COUNT(*) AS views, COUNT(DISTINCT visitor_hash) AS users
+        FROM site_visit_events
+        WHERE datetime(created_at) >= datetime(?1)
+          AND datetime(created_at) < datetime(?2)
+      `).bind(safeStart, safeEnd).first()
+    : await db.prepare(`
+        SELECT COUNT(*) AS views, COUNT(DISTINCT visitor_hash) AS users
+        FROM site_visit_events
+        WHERE datetime(created_at) >= datetime(?1)
+      `).bind(safeStart).first();
   return {
     views:Number(row?.views || 0),
     users:Number(row?.users || 0),
-    startAt:cleanPlainText(startAt || '', 80),
+    startAt:safeStart,
+    endAt:safeEnd,
     updatedAt:new Date().toISOString()
   };
 }
@@ -2932,7 +2942,7 @@ async function handleControlSystem(request, env) {
     ensureSecuritySchema(db),
     ensureSiteMetricsSchema(db)
   ]);
-  const [lastCheck, lastStatus, lastSummary, seeded, uploadsPlaylist, ownerDevices, latestBackup, lastSeen, recentEvents, latestPush, dailySummaryAt, latestSubscriberSeen, searchConsoleRow] = await Promise.all([
+  const [lastCheck, lastStatus, lastSummary, seeded, uploadsPlaylist, ownerDevices, latestBackup, lastSeen, recentEvents, latestPush, dailySummaryAt, dailySummaryAttemptAt, dailySummaryAttemptStatus, dailySummaryAttemptError, latestSubscriberSeen, searchConsoleRow] = await Promise.all([
     safeRead('playlist-last-check-at',getPushState(db, 'playlist-last-check-at')),
     safeRead('playlist-last-check-status',getPushState(db, 'playlist-last-check-status')),
     safeRead('playlist-last-check-summary',getPushState(db, 'playlist-last-check-summary')),
@@ -2963,6 +2973,9 @@ async function handleControlSystem(request, env) {
       LIMIT 1
     `).first()),
     safeRead('daily-owner-summary-last-at',getPushState(db, 'daily-owner-summary-last-at')),
+    safeRead('daily-owner-summary-last-attempt-at',getPushState(db, 'daily-owner-summary-last-attempt-at')),
+    safeRead('daily-owner-summary-last-attempt-status',getPushState(db, 'daily-owner-summary-last-attempt-status')),
+    safeRead('daily-owner-summary-last-attempt-error',getPushState(db, 'daily-owner-summary-last-attempt-error')),
     safeRead('latest-subscriber',db.prepare(`SELECT MAX(last_seen_at) AS lastSeenAt FROM push_subscribers WHERE status='active'`).first()),
     safeRead('search-console-snapshot',db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform='google-search-console' ORDER BY created_at DESC LIMIT 1`).first())
   ]);
@@ -3082,7 +3095,20 @@ async function handleControlSystem(request, env) {
       lastPush: { configured: Boolean(latestPush), status: latestPushStatus, latest: latestPush || null, label: latestPushLabel },
       youtube: { configured: Boolean(env.YOUTUBE_API_KEY), studioConfigured:youtubeAuth.configured, status: env.YOUTUBE_API_KEY && youtubeAuth.configured ? 'good' : 'warning', mode: youtubeAuth.configured ? 'YouTube Data API + Studio Worker' : (env.YOUTUBE_API_KEY ? 'YouTube Data API' : 'XML feed'), handle: cleanPlainText(env.YOUTUBE_CHANNEL_HANDLE || '@andrikmetal', 100), uploadsPlaylistId: uploadsPlaylist?.value || cleanPlainText(env.YOUTUBE_UPLOADS_PLAYLIST_ID, 100), label: youtubeAuth.configured ? `YouTube Data API + Studio автоматически · ${youtubeAuth.source}` : (env.YOUTUBE_API_KEY ? 'Data API работает · Studio ждёт серверный refresh token' : 'YouTube работает через резервный feed') },
       cron: { configured: Boolean(env.CRON_SECRET), status: automationHealth === 'active' ? 'good' : automationHealth === 'never' ? 'warning' : 'error', health: automationHealth, lastCheckAt: effectiveLastCheck, ageMinutes, lastStatus: effectiveLastStatus, summary: parsePushSummary(effectiveLastSummary), label: automationHealth === 'active' ? `Центральный Cron активен · ${ageMinutes} мин. назад` : automationHealth === 'never' ? 'Центральный Cron ещё не запускался' : `Центральный Cron требует проверки · ${ageMinutes ?? '—'} мин. без запуска` },
-      dailySummary: { configured: dailySummaryReady, status: dailySummaryReady ? 'good' : 'warning', lastSentAt: dailySummaryAt?.value || '', schedule: '06:00 Europe/Bratislava', label: dailySummaryLabel },
+      dailySummary: {
+        configured:dailySummaryReady,
+        status:dailySummaryAttemptStatus?.value === 'failed'
+          ? 'error'
+          : (dailySummaryReady ? 'good' : 'warning'),
+        lastSentAt:dailySummaryAt?.value || '',
+        lastAttemptAt:dailySummaryAttemptAt?.value || '',
+        lastAttemptStatus:dailySummaryAttemptStatus?.value || '',
+        lastAttemptError:dailySummaryAttemptError?.value || '',
+        schedule:'06:00 Europe/Bratislava · с автоматическим догоном',
+        label:dailySummaryAttemptStatus?.value === 'failed'
+          ? `Последняя попытка не удалась: ${dailySummaryAttemptError?.value || 'ошибка отправки'}`
+          : dailySummaryLabel
+      },
       backups: { configured: Boolean(getBackupBucket(env)), status: backupStatus, latest: latestBackup || null, label: backupLabel },
       analytics: { configured: analyticsConfigured, status: analyticsConfigured ? 'good' : 'optional', label: analyticsConfigured ? 'Google Analytics Data API подключён' : 'Аналитика сайта отложена' },
       searchConsole: { configured:searchConsoleConfigured, connected:searchConsoleConnected, status:searchConsoleStatus, serviceAccountEmail:cleanPlainText(searchConsoleCredentials?.client_email || '',180), siteUrl:getGoogleSearchConsoleSiteUrl(env), label:searchConsoleLabel },
@@ -6324,6 +6350,22 @@ function getBratislavaSummaryWindow(date = new Date()) {
   };
 }
 
+
+function getBratislavaCompletedSummaryWindow(date = new Date()) {
+  const clock = getBratislavaClock(date);
+  const windowDate = shiftIsoCalendarDate(clock.date, -1);
+  return {
+    key: windowDate,
+    startAt: bratislavaLocalDateTimeToIso(windowDate, 6, 5),
+    endAt: bratislavaLocalDateTimeToIso(clock.date, 6, 5),
+    currentLocalDate: clock.date,
+    crossesMidnight: true,
+    midnightAt: bratislavaLocalDateTimeToIso(clock.date, 0, 0),
+    cutoffLabel: '06:05 Europe/Bratislava',
+    completed: true
+  };
+}
+
 function googleSummaryWindowMetric(current, baseline, rollover, window, field) {
   if (!baseline?.__snapshotFound) return 0;
   const nowValue = Number(current?.today?.[field] || 0);
@@ -6542,39 +6584,63 @@ function buildDailyOwnerSummaryLines(metrics = {}) {
     lines.push(`🚀 ${n} ${word(n,'релиз','релиза','релизов')}`);
   }
   if (!lines.length) lines.push('За сутки новых событий нет');
+  if (metrics.partial) lines.push('⚠️ Часть источников временно недоступна');
   return lines;
 }
 
-async function collectDailyOwnerSummary(env, { liveExternal = true } = {}) {
+async function collectDailyOwnerSummary(env, { liveExternal = true, windowOverride = null } = {}) {
   const db = requireDb(env);
-  const window = getBratislavaSummaryWindow();
+  const window = windowOverride || getBratislavaSummaryWindow();
   await Promise.all([ensurePushAutomationSchema(db), ensureCommentsV4Schema(db), ensurePlatformAnalyticsSchema(db), ensureControlV1Schema(db), ensureSiteMetricsSchema(db)]);
   const [siteSubscribers, siteComments, pendingComments, youtubeEvents, youtubeLikeRows, youtubeSubscriberRows, releases, ytLatest, ytBaseline, gaLatest, gaBaseline, gaRollover, siteLive, siteWindow] = await Promise.all([
-    db.prepare(`SELECT COUNT(*) AS total FROM push_history WHERE type='site-subscriber' AND datetime(created_at) >= datetime(?1)`).bind(window.startAt).first(),
-    db.prepare(`SELECT COUNT(*) AS total FROM comments WHERE datetime(created_at) >= datetime(?1)`).bind(window.startAt).first(),
+    db.prepare(`SELECT COUNT(*) AS total FROM push_history
+      WHERE type='site-subscriber'
+        AND datetime(created_at) >= datetime(?1)
+        AND datetime(created_at) < datetime(?2)`).bind(window.startAt, window.endAt).first(),
+    db.prepare(`SELECT COUNT(*) AS total FROM comments
+      WHERE datetime(created_at) >= datetime(?1)
+        AND datetime(created_at) < datetime(?2)`).bind(window.startAt, window.endAt).first(),
     db.prepare(`SELECT COUNT(*) AS total FROM comments WHERE status='pending'`).first(),
     db.prepare(`SELECT
       SUM(CASE WHEN type IN ('youtube-comment','youtube-comment-count') THEN 1 ELSE 0 END) AS comments,
       SUM(CASE WHEN type IN ('youtube-subscriber','youtube-subscriber-count') THEN 1 ELSE 0 END) AS subscribers,
       SUM(CASE WHEN type='youtube-like' THEN 1 ELSE 0 END) AS likes
-      FROM push_history WHERE datetime(created_at) >= datetime(?1)`).bind(window.startAt).first(),
-    db.prepare(`SELECT message, details_json AS detailsJson FROM push_history WHERE type='youtube-like' AND status='sent' AND datetime(created_at) >= datetime(?1) ORDER BY created_at ASC`).bind(window.startAt).all(),
-    db.prepare(`SELECT type, title, message, details_json AS detailsJson FROM push_history WHERE type IN ('youtube-subscriber','youtube-subscriber-count') AND status='sent' AND datetime(created_at) >= datetime(?1) ORDER BY created_at ASC`).bind(window.startAt).all(),
+      FROM push_history
+      WHERE datetime(created_at) >= datetime(?1)
+        AND datetime(created_at) < datetime(?2)`).bind(window.startAt, window.endAt).first(),
+    db.prepare(`SELECT message, details_json AS detailsJson FROM push_history
+      WHERE type='youtube-like' AND status='sent'
+        AND datetime(created_at) >= datetime(?1)
+        AND datetime(created_at) < datetime(?2)
+      ORDER BY created_at ASC`).bind(window.startAt, window.endAt).all(),
+    db.prepare(`SELECT type, title, message, details_json AS detailsJson FROM push_history
+      WHERE type IN ('youtube-subscriber','youtube-subscriber-count') AND status='sent'
+        AND datetime(created_at) >= datetime(?1)
+        AND datetime(created_at) < datetime(?2)
+      ORDER BY created_at ASC`).bind(window.startAt, window.endAt).all(),
     db.prepare(`SELECT COUNT(*) AS total FROM (
       SELECT COALESCE(NULLIF(video_id,''), id) AS release_key FROM push_history
-      WHERE type IN ('auto-release','release-publish') AND datetime(created_at) >= datetime(?1)
+      WHERE type IN ('auto-release','release-publish')
+        AND datetime(created_at) >= datetime(?1)
+        AND datetime(created_at) < datetime(?2)
       UNION
-      SELECT video_id AS release_key FROM release_history WHERE datetime(published_at) >= datetime(?1)
-    )`).bind(window.startAt).first(),
-    db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform='youtube' ORDER BY datetime(created_at) DESC LIMIT 1`).first(),
+      SELECT video_id AS release_key FROM release_history
+      WHERE datetime(published_at) >= datetime(?1)
+        AND datetime(published_at) < datetime(?2)
+    )`).bind(window.startAt, window.endAt).first(),
+    db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots
+      WHERE platform='youtube' AND datetime(created_at) <= datetime(?1)
+      ORDER BY datetime(created_at) DESC LIMIT 1`).bind(window.endAt).first(),
     db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform='youtube' AND datetime(created_at) >= datetime(?1) ORDER BY datetime(created_at) ASC LIMIT 1`).bind(window.startAt).first(),
-    db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform='google-analytics' ORDER BY datetime(created_at) DESC LIMIT 1`).first(),
+    db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots
+      WHERE platform='google-analytics' AND datetime(created_at) <= datetime(?1)
+      ORDER BY datetime(created_at) DESC LIMIT 1`).bind(window.endAt).first(),
     db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform='google-analytics' AND datetime(created_at) >= datetime(?1) ORDER BY datetime(created_at) ASC LIMIT 1`).bind(window.startAt).first(),
     window.crossesMidnight
       ? db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform='google-analytics' AND datetime(created_at) <= datetime(?1) AND datetime(created_at) >= datetime(?2) ORDER BY datetime(created_at) DESC LIMIT 1`).bind(window.midnightAt, window.startAt).first()
       : Promise.resolve(null),
     getSiteLiveMetrics(db),
-    getSiteWindowMetrics(db, window.startAt)
+    getSiteWindowMetrics(db, window.startAt, window.endAt)
   ]);
   const ytNow = parseSnapshotMetrics(ytLatest);
   const ytStart = parseSnapshotMetrics(ytBaseline);
@@ -6586,7 +6652,9 @@ async function collectDailyOwnerSummary(env, { liveExternal = true } = {}) {
   const youtubeDailyCountries = normalizeDailyCountryRows(ytNow?.studio?.dailyCountries || [])
     .map(item => ({ ...item, delta:item.value }));
   let searchConsole = { connected:false, clicks:0, impressions:0 };
-  let googleCurrent = mergeGoogleWithSiteLive(gaSnapshot, siteLive);
+  let googleCurrent = window.completed
+    ? gaSnapshot
+    : mergeGoogleWithSiteLive(gaSnapshot, siteLive);
   if (liveExternal) {
     const [searchResult, googleResult] = await Promise.allSettled([
       fetchGoogleSearchConsoleAnalytics(env),
@@ -6620,65 +6688,215 @@ async function collectDailyOwnerSummary(env, { liveExternal = true } = {}) {
   };
 }
 
+
+async function collectDailyOwnerSummaryFallback(env, window, reason = '') {
+  const db = requireDb(env);
+  await Promise.allSettled([
+    ensurePushAutomationSchema(db),
+    ensureCommentsV4Schema(db),
+    ensureControlV1Schema(db)
+  ]);
+
+  const safe = async (operation, fallback) => {
+    try { return await operation; } catch (_) { return fallback; }
+  };
+
+  const [siteSubscribers, siteComments, pendingComments, youtubeEvents, youtubeLikeRows, youtubeSubscriberRows, releases, siteWindow] = await Promise.all([
+    safe(db.prepare(`SELECT COUNT(*) AS total FROM push_history
+      WHERE type='site-subscriber'
+        AND datetime(created_at) >= datetime(?1)
+        AND datetime(created_at) < datetime(?2)`).bind(window.startAt, window.endAt).first(), {total:0}),
+    safe(db.prepare(`SELECT COUNT(*) AS total FROM comments
+      WHERE datetime(created_at) >= datetime(?1)
+        AND datetime(created_at) < datetime(?2)`).bind(window.startAt, window.endAt).first(), {total:0}),
+    safe(db.prepare(`SELECT COUNT(*) AS total FROM comments WHERE status='pending'`).first(), {total:0}),
+    safe(db.prepare(`SELECT
+      SUM(CASE WHEN type IN ('youtube-comment','youtube-comment-count') THEN 1 ELSE 0 END) AS comments
+      FROM push_history
+      WHERE datetime(created_at) >= datetime(?1)
+        AND datetime(created_at) < datetime(?2)`).bind(window.startAt, window.endAt).first(), {comments:0}),
+    safe(db.prepare(`SELECT message, details_json AS detailsJson FROM push_history
+      WHERE type='youtube-like' AND status='sent'
+        AND datetime(created_at) >= datetime(?1)
+        AND datetime(created_at) < datetime(?2)
+      ORDER BY created_at ASC`).bind(window.startAt, window.endAt).all(), {results:[]}),
+    safe(db.prepare(`SELECT type, title, message, details_json AS detailsJson FROM push_history
+      WHERE type IN ('youtube-subscriber','youtube-subscriber-count') AND status='sent'
+        AND datetime(created_at) >= datetime(?1)
+        AND datetime(created_at) < datetime(?2)
+      ORDER BY created_at ASC`).bind(window.startAt, window.endAt).all(), {results:[]}),
+    safe(db.prepare(`SELECT COUNT(*) AS total FROM (
+      SELECT COALESCE(NULLIF(video_id,''), id) AS release_key FROM push_history
+      WHERE type IN ('auto-release','release-publish')
+        AND datetime(created_at) >= datetime(?1)
+        AND datetime(created_at) < datetime(?2)
+      UNION
+      SELECT video_id AS release_key FROM release_history
+      WHERE datetime(published_at) >= datetime(?1)
+        AND datetime(published_at) < datetime(?2)
+    )`).bind(window.startAt, window.endAt).first(), {total:0}),
+    safe(getSiteWindowMetrics(db, window.startAt, window.endAt), {views:0,users:0})
+  ]);
+
+  return {
+    windowKey:window.key,
+    windowStartAt:window.startAt,
+    windowEndAt:window.endAt,
+    youtubeSubscribers:sumYoutubeSubscriberHistoryDeltas(youtubeSubscriberRows?.results || []),
+    youtubeLikes:sumYoutubeLikeHistoryDeltas(youtubeLikeRows?.results || []),
+    youtubeComments:Number(youtubeEvents?.comments || 0),
+    youtubeViewDelta:0,
+    siteUsers:Number(siteWindow?.users || 0),
+    siteViews:Number(siteWindow?.views || 0),
+    siteSubscribers:Number(siteSubscribers?.total || 0),
+    siteComments:Number(siteComments?.total || 0),
+    pendingComments:Number(pendingComments?.total || 0),
+    releases:Number(releases?.total || 0),
+    searchClicks:0,
+    searchImpressions:0,
+    searchConnected:false,
+    countryDeltas:[],
+    totalCountries:0,
+    countryDate:'',
+    partial:true,
+    partialReason:cleanPlainText(reason || 'summary-fallback', 300)
+  };
+}
+
 async function maybeSendDailyOwnerSummary(env) {
   const clock = getBratislavaClock();
-  if (clock.hour !== 6) return { ok:true, skipped:true, reason:'outside-06-hour', localDate:clock.date };
+  const afterSix = clock.hour > 6 || (clock.hour === 6 && clock.minute >= 0);
+  if (!afterSix) {
+    return { ok:true, skipped:true, reason:'before-06-local', localDate:clock.date };
+  }
+
   const db = requireDb(env);
   await ensurePushAutomationSchema(db);
+
   const last = await getPushState(db, 'daily-owner-summary-auto-last-date');
-  if (last?.value === clock.date) return { ok:true, skipped:true, reason:'already-sent', localDate:clock.date };
-  const dailyClaimKey = `push-once:daily-summary-auto:${clock.date}`;
+  if (last?.value === clock.date) {
+    return { ok:true, skipped:true, reason:'already-sent', localDate:clock.date };
+  }
+
   const alreadyInHistory = await hasSentPushExact(db, {
     type:'daily-summary',
     source:'central-cron',
-    title:'📊 Ежедневная сводка ANDRIK',
-    sinceHours:3
+    sinceHours:30
   });
   if (alreadyInHistory) {
     await setPushState(db, 'daily-owner-summary-auto-last-date', clock.date);
     return { ok:true, skipped:true, reason:'history-already-sent', localDate:clock.date };
   }
+
+  const dailyClaimKey = `push-once:daily-summary-auto:${clock.date}`;
+  const previousClaim = await db.prepare(`
+    SELECT value, updated_at AS updatedAt
+    FROM push_state
+    WHERE key = ?
+    LIMIT 1
+  `).bind(dailyClaimKey).first().catch(() => null);
+
+  if (previousClaim) {
+    const claimAgeMinutes = (Date.now() - Date.parse(previousClaim.updatedAt || '')) / 60000;
+    if (Number.isFinite(claimAgeMinutes) && claimAgeMinutes < 20) {
+      return {
+        ok:true,
+        skipped:true,
+        reason:'send-claimed',
+        localDate:clock.date,
+        claimAgeMinutes:Math.max(0, Math.round(claimAgeMinutes))
+      };
+    }
+    await releasePushOnceClaim(db, dailyClaimKey);
+  }
+
   if (!await claimPushOnce(db, dailyClaimKey, new Date().toISOString())) {
     return { ok:true, skipped:true, reason:'send-claimed', localDate:clock.date };
   }
+
+  const summaryWindow = getBratislavaCompletedSummaryWindow();
+  await setPushState(db, 'daily-owner-summary-last-attempt-at', new Date().toISOString());
+  await setPushState(db, 'daily-owner-summary-last-attempt-status', 'collecting');
+
   let metrics;
+  let collectionError = '';
   try {
-    metrics = await collectDailyOwnerSummary(env);
+    metrics = await collectDailyOwnerSummary(env, {
+      liveExternal:false,
+      windowOverride:summaryWindow
+    });
   } catch (error) {
-    await releasePushOnceClaim(db, dailyClaimKey);
-    throw error;
+    collectionError = cleanPlainText(error?.message || error, 500);
+    metrics = await collectDailyOwnerSummaryFallback(env, summaryWindow, collectionError);
   }
+
   const lines = buildDailyOwnerSummaryLines(metrics);
   let result;
   try {
     result = await sendOwnerPush(env, {
-    title: '📊 Ежедневная сводка ANDRIK',
-    message: lines.join('\n'),
-    url: 'https://control.andrikmetal.com/control-home.html?page=summary',
-    name: `ANDRIK daily summary ${clock.date}`,
-    history: {
-      type: 'daily-summary',
-      source: 'central-cron',
-      title: 'Ежедневная сводка ANDRIK',
-      message: lines.join('\n'),
-      url: 'https://control.andrikmetal.com/control-home.html?page=summary',
-      details: { localDate:clock.date, localHour:clock.hour, metrics }
-    }
+      title:'📊 Ежедневная сводка ANDRIK',
+      message:lines.join('\n'),
+      url:'https://control.andrikmetal.com/control-home.html?page=summary',
+      name:`ANDRIK daily summary ${clock.date}`,
+      history:{
+        type:'daily-summary',
+        source:'central-cron',
+        title:'Ежедневная сводка ANDRIK',
+        message:lines.join('\n'),
+        url:'https://control.andrikmetal.com/control-home.html?page=summary',
+        details:{
+          localDate:clock.date,
+          localHour:clock.hour,
+          localMinute:clock.minute,
+          catchUp:clock.hour !== 6 || clock.minute > 10,
+          collectionError,
+          metrics
+        }
+      }
     });
   } catch (error) {
+    const message = cleanPlainText(error?.message || error, 500);
+    await setPushState(db, 'daily-owner-summary-last-attempt-status', 'failed');
+    await setPushState(db, 'daily-owner-summary-last-attempt-error', message);
     await releasePushOnceClaim(db, dailyClaimKey);
+    await recordSystemLog(env, {
+      scope:'daily-summary',
+      level:'error',
+      event:'send-failed',
+      message:`Не удалось отправить ежедневную сводку: ${message}`,
+      details:{ localDate:clock.date, summaryWindow, collectionError }
+    }).catch(() => {});
     throw error;
   }
+
   if (result.ok) {
+    const sentAt = new Date().toISOString();
     await setPushState(db, 'daily-owner-summary-auto-last-date', clock.date);
-    await setPushState(db, 'daily-owner-summary-last-at', new Date().toISOString());
-    await recordSystemLog(env, { scope:'daily-summary', level:'info', event:'sent', message:`Ежедневная сводка отправлена за ${clock.date}.`, details:{ metrics, oneSignalId:result.oneSignalId || '' } }).catch(() => {});
+    await setPushState(db, 'daily-owner-summary-last-at', sentAt);
+    await setPushState(db, 'daily-owner-summary-last-attempt-status', metrics.partial ? 'sent-partial' : 'sent');
+    await setPushState(db, 'daily-owner-summary-last-attempt-error', collectionError);
+    await recordSystemLog(env, {
+      scope:'daily-summary',
+      level:metrics.partial ? 'warning' : 'info',
+      event:metrics.partial ? 'sent-partial' : 'sent',
+      message:`Ежедневная сводка отправлена за ${clock.date}.`,
+      details:{ metrics, collectionError, summaryWindow, oneSignalId:result.oneSignalId || '' }
+    }).catch(() => {});
   } else {
+    const message = cleanPlainText(result.error || 'onesignal-send-failed', 500);
+    await setPushState(db, 'daily-owner-summary-last-attempt-status', 'failed');
+    await setPushState(db, 'daily-owner-summary-last-attempt-error', message);
     await releasePushOnceClaim(db, dailyClaimKey);
   }
-  return { ...result, localDate:clock.date, metrics };
-}
 
+  return {
+    ...result,
+    localDate:clock.date,
+    summaryWindow,
+    collectionError,
+    metrics
+  };
+}
 
 async function handleManualDailyOwnerSummary(request, env) {
   if (!adminAuthorized(request, env)) return json({ ok:false, error:'unauthorized' }, 401);
