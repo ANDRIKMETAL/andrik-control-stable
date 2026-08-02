@@ -1,0 +1,480 @@
+/* LIVE WEB AI R162 — landscape graphics final.
+   Only layout/frames/map. Protection and backend logic are untouched. */
+
+@media screen and (orientation:landscape){
+  :root{
+    --r162-head:78px;
+    --r162-edge:max(8px,env(safe-area-inset-left));
+    --r162-edge-r:max(8px,env(safe-area-inset-right));
+    --r162-bottom:max(4px,env(safe-area-inset-bottom));
+  }
+
+  /* ---------------------------------------------------------------
+     1) One identical frame around the real scrolling viewport.
+     --------------------------------------------------------------- */
+  body.control-home-page .control-admin-landscape-frame-r141,
+  body.admin-sections-shell .control-admin-landscape-frame-r141{
+    display:block!important;
+    position:fixed!important;
+    top:var(--r162-head)!important;
+    left:var(--r162-edge)!important;
+    right:var(--r162-edge-r)!important;
+    bottom:var(--r162-bottom)!important;
+    width:auto!important;
+    height:auto!important;
+    margin:0!important;
+    border:2px solid rgba(104,255,174,.98)!important;
+    border-radius:28px!important;
+    background:transparent!important;
+    box-shadow:
+      0 0 0 1px rgba(132,255,197,.24),
+      0 0 9px rgba(91,255,180,.88),
+      0 0 27px rgba(46,232,132,.55),
+      inset 0 0 18px rgba(70,246,151,.15)!important;
+    pointer-events:none!important;
+    z-index:2147481800!important;
+  }
+
+  body.control-page.unified-glow-ready:not(.unified-glow-embed)::after,
+  body.comment-collection-page.unified-glow-ready:not(.unified-glow-embed)::after{
+    content:""!important;
+    display:block!important;
+    position:fixed!important;
+    top:var(--r162-head)!important;
+    left:var(--r162-edge)!important;
+    right:var(--r162-edge-r)!important;
+    bottom:var(--r162-bottom)!important;
+    width:auto!important;
+    height:auto!important;
+    margin:0!important;
+    border:2px solid rgba(104,255,174,.98)!important;
+    border-radius:28px!important;
+    background:transparent!important;
+    box-shadow:
+      0 0 0 1px rgba(132,255,197,.24),
+      0 0 9px rgba(91,255,180,.88),
+      0 0 27px rgba(46,232,132,.55),
+      inset 0 0 18px rgba(70,246,151,.15)!important;
+    opacity:1!important;
+    visibility:visible!important;
+    animation:none!important;
+    pointer-events:none!important;
+    z-index:2147481800!important;
+  }
+  body.control-page.unified-glow-embed::after,
+  body.comment-collection-page.unified-glow-embed::after{
+    content:none!important;
+    display:none!important;
+  }
+
+  /* ---------------------------------------------------------------
+     2) Main Admin panel: the content itself is the scroll area.
+        Removes the middle black clipping band.
+     --------------------------------------------------------------- */
+  body.control-home-page{
+    height:100dvh!important;
+    min-height:100dvh!important;
+    max-height:100dvh!important;
+    overflow:hidden!important;
+  }
+  body.control-home-page .control-topbar,
+  body.control-home-page .control-topbar .nav-shell{
+    height:var(--r162-head)!important;
+    min-height:var(--r162-head)!important;
+    max-height:var(--r162-head)!important;
+  }
+  body.control-home-page .control-swipe-main{
+    position:relative!important;
+    inset:auto!important;
+    box-sizing:border-box!important;
+    width:100%!important;
+    height:calc(100dvh - var(--r162-head))!important;
+    min-height:0!important;
+    max-height:calc(100dvh - var(--r162-head))!important;
+    margin:0!important;
+    padding:0!important;
+    overflow:hidden!important;
+    background:#02060a!important;
+  }
+  body.control-home-page .control-swipe-shell,
+  body.control-home-page .control-swipe-track,
+  body.control-home-page .control-swipe-page{
+    height:100%!important;
+    min-height:0!important;
+    max-height:100%!important;
+  }
+  body.control-home-page .control-menu-page{
+    position:relative!important;
+    box-sizing:border-box!important;
+    overflow-x:hidden!important;
+    overflow-y:auto!important;
+    -webkit-overflow-scrolling:touch!important;
+    overscroll-behavior-y:contain!important;
+    touch-action:pan-y!important;
+    background:#02060a!important;
+    isolation:isolate!important;
+  }
+  body.control-home-page .control-menu-page::before,
+  body.control-home-page .control-menu-page::after,
+  body.control-home-page .control-swipe-main::before,
+  body.control-home-page .control-swipe-main::after{
+    content:none!important;
+    display:none!important;
+  }
+  body.control-home-page .control-menu-page .control-swipe-page-inner{
+    box-sizing:border-box!important;
+    width:100%!important;
+    height:auto!important;
+    min-height:100%!important;
+    max-height:none!important;
+    margin:0!important;
+    padding:8px clamp(18px,4vw,34px) max(92px,calc(78px + env(safe-area-inset-bottom)))!important;
+    overflow:visible!important;
+    background:transparent!important;
+  }
+  body.control-home-page .control-menu-heading{
+    margin:0 0 8px!important;
+    padding:0!important;
+  }
+  body.control-home-page .control-menu-heading .eyeline{
+    font-size:clamp(.62rem,1.4vw,.78rem)!important;
+    line-height:1.1!important;
+  }
+  body.control-home-page .control-menu-heading h1{
+    margin:3px 0 0!important;
+    font-size:clamp(2.4rem,7.2vw,3.55rem)!important;
+    line-height:.92!important;
+  }
+  body.control-home-page .control-menu-page .control-home-menu{
+    display:grid!important;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    grid-template-rows:none!important;
+    grid-auto-rows:minmax(82px,auto)!important;
+    gap:10px 12px!important;
+    width:min(100%,1120px)!important;
+    height:auto!important;
+    min-height:0!important;
+    max-height:none!important;
+    margin:8px auto 0!important;
+    overflow:visible!important;
+    align-content:start!important;
+  }
+  body.control-home-page .control-menu-page .control-home-menu-card{
+    position:relative!important;
+    inset:auto!important;
+    box-sizing:border-box!important;
+    min-height:82px!important;
+    height:auto!important;
+    max-height:none!important;
+    padding:10px 12px!important;
+    grid-template-columns:44px minmax(0,1fr) auto!important;
+    gap:10px!important;
+    overflow:hidden!important;
+    transform:none!important;
+    z-index:2!important;
+  }
+  body.control-home-page .control-menu-page .control-home-menu-card > span{
+    width:40px!important;
+    height:40px!important;
+    min-width:40px!important;
+    font-size:1.25rem!important;
+  }
+  body.control-home-page .control-menu-page .control-home-menu-card small{
+    font-size:.62rem!important;
+  }
+  body.control-home-page .control-menu-page .control-home-menu-card strong{
+    font-size:clamp(1.22rem,3vw,1.55rem)!important;
+    line-height:1!important;
+  }
+  body.control-home-page .control-menu-page .control-home-menu-card p{
+    margin-top:4px!important;
+    font-size:.72rem!important;
+    line-height:1.12!important;
+    -webkit-line-clamp:1!important;
+    line-clamp:1!important;
+  }
+
+  /* ---------------------------------------------------------------
+     3) Four carousel sections: fixed header + one clean scroll owner.
+     --------------------------------------------------------------- */
+  body.admin-sections-shell .admin-carousel{
+    position:fixed!important;
+    inset:0!important;
+    width:100%!important;
+    height:100dvh!important;
+    background:#02070b!important;
+  }
+  body.admin-sections-shell .admin-carousel-pane,
+  body.admin-sections-shell .admin-carousel-pane iframe{
+    width:100%!important;
+    height:100%!important;
+    min-height:100%!important;
+    max-height:100%!important;
+    background:#02070b!important;
+  }
+
+  html.admin-carousel-embedded,
+  html.admin-carousel-embedded body.control-page{
+    height:100dvh!important;
+    min-height:100dvh!important;
+    max-height:100dvh!important;
+    overflow:hidden!important;
+  }
+  html.admin-carousel-embedded body.control-page{
+    position:fixed!important;
+    inset:0!important;
+    display:flex!important;
+    flex-direction:column!important;
+    background:#02070b!important;
+  }
+  html.admin-carousel-embedded body.control-page .control-detail-topbar,
+  html.admin-carousel-embedded body.control-page .control-detail-topbar .nav-shell{
+    flex:0 0 var(--r162-head)!important;
+    height:var(--r162-head)!important;
+    min-height:var(--r162-head)!important;
+    max-height:var(--r162-head)!important;
+  }
+  html.admin-carousel-embedded body.control-page .admin-main{
+    position:relative!important;
+    inset:auto!important;
+    flex:1 1 auto!important;
+    box-sizing:border-box!important;
+    width:100%!important;
+    height:auto!important;
+    min-height:0!important;
+    max-height:none!important;
+    margin:0!important;
+    padding:10px 18px max(84px,calc(70px + env(safe-area-inset-bottom)))!important;
+    overflow-x:hidden!important;
+    overflow-y:auto!important;
+    -webkit-overflow-scrolling:touch!important;
+    overscroll-behavior-y:contain!important;
+    background:#02060a!important;
+  }
+  html.admin-carousel-embedded body.control-page .admin-main::before,
+  html.admin-carousel-embedded body.control-page .admin-main::after{
+    content:none!important;
+    display:none!important;
+  }
+  html.admin-carousel-embedded body.control-page .admin-main > .wrap{
+    box-sizing:border-box!important;
+    width:min(100%,1180px)!important;
+    max-width:1180px!important;
+    margin:0 auto!important;
+    padding:0!important;
+    background:transparent!important;
+  }
+
+  /* Directly opened section: same geometry as inside the carousel. */
+  body.control-page:not(.control-home-page):not(.analytics-admin-page):not(.unified-glow-embed){
+    height:100dvh!important;
+    min-height:100dvh!important;
+    max-height:100dvh!important;
+    overflow:hidden!important;
+    background:#02070b!important;
+  }
+  body.control-page:not(.control-home-page):not(.analytics-admin-page):not(.unified-glow-embed) .control-detail-topbar,
+  body.control-page:not(.control-home-page):not(.analytics-admin-page):not(.unified-glow-embed) .control-detail-topbar .nav-shell{
+    height:var(--r162-head)!important;
+    min-height:var(--r162-head)!important;
+    max-height:var(--r162-head)!important;
+  }
+  body.control-page:not(.control-home-page):not(.analytics-admin-page):not(.unified-glow-embed) .admin-main{
+    position:fixed!important;
+    top:var(--r162-head)!important;
+    left:0!important;
+    right:0!important;
+    bottom:0!important;
+    box-sizing:border-box!important;
+    width:100%!important;
+    height:auto!important;
+    min-height:0!important;
+    max-height:none!important;
+    margin:0!important;
+    padding:10px 18px max(84px,calc(70px + env(safe-area-inset-bottom)))!important;
+    overflow-x:hidden!important;
+    overflow-y:auto!important;
+    -webkit-overflow-scrolling:touch!important;
+    overscroll-behavior-y:contain!important;
+    background:#02060a!important;
+  }
+  body.control-page:not(.control-home-page):not(.analytics-admin-page):not(.unified-glow-embed) .admin-main::before,
+  body.control-page:not(.control-home-page):not(.analytics-admin-page):not(.unified-glow-embed) .admin-main::after{
+    content:none!important;
+    display:none!important;
+  }
+  body.control-page:not(.control-home-page):not(.analytics-admin-page):not(.unified-glow-embed) .admin-main > .wrap{
+    width:min(100%,1180px)!important;
+    max-width:1180px!important;
+    margin:0 auto!important;
+    padding:0!important;
+  }
+
+  /* ---------------------------------------------------------------
+     4) Listener map: larger, slightly lower, no 178px black tail.
+     --------------------------------------------------------------- */
+  body.analytics-admin-page{
+    height:100dvh!important;
+    min-height:100dvh!important;
+    max-height:100dvh!important;
+    overflow:hidden!important;
+    background:#000!important;
+  }
+  body.analytics-admin-page .control-topbar,
+  body.analytics-admin-page .control-topbar .nav-shell{
+    height:var(--r162-head)!important;
+    min-height:var(--r162-head)!important;
+    max-height:var(--r162-head)!important;
+  }
+  body.analytics-admin-page .analytics-swipe-main{
+    height:calc(100dvh - var(--r162-head))!important;
+    min-height:0!important;
+    max-height:calc(100dvh - var(--r162-head))!important;
+    margin:0!important;
+    overflow:hidden!important;
+  }
+  body.analytics-admin-page .analytics-swipe-viewport,
+  body.analytics-admin-page .analytics-swipe-track,
+  body.analytics-admin-page .analytics-swipe-pane{
+    height:100%!important;
+    min-height:0!important;
+    max-height:100%!important;
+  }
+  body.analytics-admin-page .analytics-map-pane{
+    overflow-x:hidden!important;
+    overflow-y:auto!important;
+    -webkit-overflow-scrolling:touch!important;
+    overscroll-behavior-y:contain!important;
+    background:#000!important;
+  }
+  body.analytics-admin-page .analytics-map-pane > .analytics-pane-wrap.analytics-map-pane-wrap,
+  body.analytics-admin-page .analytics-map-pane > .analytics-map-pane-wrap.analytics-pane-wrap{
+    box-sizing:border-box!important;
+    width:100%!important;
+    height:auto!important;
+    min-height:100%!important;
+    max-height:none!important;
+    margin:0!important;
+    padding:10px 0 36px!important;
+    overflow:visible!important;
+    background:#000!important;
+  }
+  body.analytics-admin-page .analytics-map-pane #worldMap,
+  body.analytics-admin-page .analytics-map-pane .analytics-map-top.has-country-focus #worldMap,
+  body.analytics-admin-page .analytics-map-pane .analytics-map-top:not(.has-country-focus) #worldMap{
+    box-sizing:border-box!important;
+    width:calc(100vw - 24px)!important;
+    max-width:calc(100vw - 24px)!important;
+    height:auto!important;
+    min-height:0!important;
+    max-height:none!important;
+    aspect-ratio:2560/1031!important;
+    margin:10px auto 0!important;
+    padding:0!important;
+    border:0!important;
+    border-radius:22px!important;
+    overflow:hidden!important;
+    background:#03101b!important;
+    box-shadow:none!important;
+  }
+  body.analytics-admin-page .analytics-map-pane #worldMap .world-map-canvas,
+  body.analytics-admin-page .analytics-map-pane #worldMap .world-map-stage{
+    box-sizing:border-box!important;
+    width:100%!important;
+    height:100%!important;
+    min-height:100%!important;
+    max-height:100%!important;
+    margin:0!important;
+    padding:0!important;
+    border:0!important;
+    border-radius:22px!important;
+    overflow:hidden!important;
+    background:#03101b!important;
+  }
+  body.analytics-admin-page .analytics-map-pane #worldMap .world-map-stage > img,
+  body.analytics-admin-page .analytics-map-pane #worldMap .world-map-canvas > img{
+    width:100%!important;
+    height:100%!important;
+    object-fit:fill!important;
+    object-position:center!important;
+  }
+  body.analytics-admin-page .analytics-map-pane #mapEndPullZone{
+    position:relative!important;
+    display:block!important;
+    box-sizing:border-box!important;
+    width:100%!important;
+    height:44px!important;
+    min-height:44px!important;
+    max-height:44px!important;
+    margin:0!important;
+    padding:0!important;
+    border:0!important;
+    background:transparent!important;
+    overflow:hidden!important;
+    touch-action:pan-y!important;
+  }
+  body.analytics-admin-page .analytics-map-pane #mapEndPullZone .map-end-pull-spring,
+  body.analytics-admin-page .analytics-map-pane #mapEndPullZone strong{
+    opacity:0!important;
+    visibility:hidden!important;
+  }
+
+  /* R101 overlay is forced to the same clean viewport rectangle. */
+  #liveWebAiMagneticLandscapeFrameR101{
+    position:fixed!important;
+    top:var(--r162-head)!important;
+    left:max(18px,calc(env(safe-area-inset-left) + 4px))!important;
+    right:max(18px,calc(env(safe-area-inset-right) + 4px))!important;
+    bottom:var(--r162-bottom)!important;
+    width:auto!important;
+    height:auto!important;
+    margin:0!important;
+    border-radius:27px!important;
+  }
+}
+
+/* R162 hard guarantee: real frame element for directly opened admin pages. */
+.control-admin-landscape-frame-r162{display:none;pointer-events:none}
+@media screen and (orientation:landscape){
+  body.control-home-page{
+    display:flex!important;
+    flex-direction:column!important;
+  }
+  body.control-home-page .control-topbar{flex:0 0 var(--r162-head)!important}
+  body.control-home-page .control-swipe-main{flex:1 1 auto!important}
+
+  body.control-page:not(.control-home-page):not(.analytics-admin-page) > .control-admin-landscape-frame-r162,
+  body.comment-collection-page > .control-admin-landscape-frame-r162{
+    display:block!important;
+    position:fixed!important;
+    top:var(--r162-head)!important;
+    left:var(--r162-edge)!important;
+    right:var(--r162-edge-r)!important;
+    bottom:var(--r162-bottom)!important;
+    z-index:2147481900!important;
+    margin:0!important;
+    border:2px solid rgba(104,255,174,.98)!important;
+    border-radius:28px!important;
+    background:transparent!important;
+    box-shadow:
+      0 0 0 1px rgba(132,255,197,.24),
+      0 0 9px rgba(91,255,180,.88),
+      0 0 27px rgba(46,232,132,.55),
+      inset 0 0 18px rgba(70,246,151,.15)!important;
+    pointer-events:none!important;
+  }
+  html.admin-carousel-embedded .control-admin-landscape-frame-r162{
+    display:none!important;
+  }
+}
+
+/* R162: exactly one visible landscape frame per screen. */
+@media screen and (orientation:landscape){
+  body.control-home-page.unified-glow-ready::after,
+  body.analytics-admin-page.unified-glow-ready::after,
+  body.control-page:not(.control-home-page):not(.analytics-admin-page).unified-glow-ready::after,
+  body.comment-collection-page.unified-glow-ready::after{
+    content:none!important;
+    display:none!important;
+  }
+}
