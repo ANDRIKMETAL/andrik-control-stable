@@ -7,7 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <title>Очистка кэша — LIVE WEB AI R177</title>
+  <title>Очистка кэша — LIVE WEB AI R176</title>
   <style>
     *{box-sizing:border-box}
     html,body{margin:0;min-height:100%;background:#050607;color:#eef8ff;font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
@@ -27,11 +27,11 @@
 </head>
 <body>
   <main class="box">
-    <span class="badge">СТРАНИЦА ОЧИСТКИ R177</span>
+    <span class="badge">СТРАНИЦА ОЧИСТКИ R176</span>
     <h1>Чистим кэш Control</h1>
     <p id="status">Запускаю полную очистку старой версии…</p>
     <div class="bar"><span id="bar"></span></div>
-    <a class="btn" id="open" hidden>Открыть Control R177</a>
+    <a class="btn" id="open" hidden>Открыть Control R176</a>
     <code id="debug"></code>
   </main>
   <script>
@@ -96,8 +96,8 @@
         step(3, 'Очищаем сетевой кэш браузера…');
         await fetch('/control-home.html?cache-bust=' + stamp, {cache:'reload'}).catch(() => null);
 
-        step(4, 'Проверяем защиту, версию и свайп увеличенной карты R177…');
-        await verifyText('/assets/owner-session-r174.js', "CLIENT_RELEASE = 'R177'");
+        step(4, 'Проверяем защиту, версию и свайп увеличенной карты R176…');
+        await verifyText('/assets/owner-session-r174.js', '__ANDRIK_OWNER_SESSION__');
         await verifyText('/analytics-admin.html', 'r176-focused-map-admin-swipe');
         await verifyText('/control-home.html', 'r176-admin-version-footer-style');
         const ownerStatus = await fetch('/api/control/owner-status?probe=' + stamp, {cache:'no-store', credentials:'include'});
@@ -109,7 +109,7 @@
 
         step(6, 'Готово');
         status.className = 'ok';
-        status.textContent = 'Кэш очищен. R177 опубликована: владелец больше не считается атакой при обновлении CSRF; свайп увеличенной карты и защита сохранены.';
+        status.textContent = 'Кэш очищен. R176 опубликована: свайп увеличенной карты активен, версия показана внизу админ-панели, защита R174 сохранена.';
         open.href = target;
         open.hidden = false;
         debug.textContent = 'Проверка: ' + new Date().toLocaleString();

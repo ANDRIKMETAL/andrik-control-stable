@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R174', number:174, version:'55.00', full:'55.00 LIVE WEB AI FINAL R174 CSRF + SECURITY PUSH', siteUpdater:'55.00-r157' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R177', number:177, version:'55.00', full:'55.00 LIVE WEB AI FINAL R177 OWNER CSRF SELF-HEAL', siteUpdater:'55.00-r157' });
 
 const JSON_HEADERS = {
   'content-type': 'application/json; charset=utf-8',
@@ -270,6 +270,7 @@ async function maybeSendSecurityAttackPush(db, env, event) {
       SELECT COUNT(*) AS total
       FROM security_events
       WHERE datetime(created_at) >= datetime('now', '-5 minutes')
+        AND kind <> 'csrf-blocked'
         AND (
           kind LIKE '%turnstile%' OR kind LIKE '%spam%' OR kind LIKE '%honeypot%'
           OR kind LIKE '%rate-limit%' OR kind LIKE '%blocked%'
@@ -280,12 +281,13 @@ async function maybeSendSecurityAttackPush(db, env, event) {
       SELECT kind, COUNT(*) AS count
       FROM security_events
       WHERE datetime(created_at) >= datetime('now', '-5 minutes')
+        AND kind <> 'csrf-blocked'
       GROUP BY kind ORDER BY count DESC LIMIT 3
     `).all(),
     db.prepare(`
       SELECT country, COUNT(*) AS count
       FROM security_events
-      WHERE datetime(created_at) >= datetime('now', '-5 minutes') AND country<>''
+      WHERE datetime(created_at) >= datetime('now', '-5 minutes') AND country<>'' AND kind <> 'csrf-blocked'
       GROUP BY country ORDER BY count DESC LIMIT 3
     `).all()
   ]);
@@ -601,9 +603,9 @@ async function handleControlProtectionDashboard(request, env) {
   const range = protectionDashboardRange(new URL(request.url).searchParams.get('range'));
   const [monitorRaw, securityBuckets, securityKinds, securityRows, systemRows, backupRows, pushRows, incidentRows, traffic] = await Promise.all([
     getNativeMonitorDashboardData(env, range.key === '7d' ? '7d' : '24h'),
-    db.prepare(`SELECT (CAST(strftime('%s', created_at) AS INTEGER)/300)*300 AS bucket, COUNT(*) AS count FROM security_events WHERE datetime(created_at) >= datetime('now', ?) GROUP BY bucket ORDER BY bucket ASC`).bind(range.sql).all(),
-    db.prepare(`SELECT kind, COUNT(*) AS count FROM security_events WHERE datetime(created_at) >= datetime('now', ?) GROUP BY kind`).bind(range.sql).all(),
-    db.prepare(`SELECT kind, path, detail, country, region, colo, created_at AS createdAt FROM security_events WHERE datetime(created_at) >= datetime('now', ?) ORDER BY datetime(created_at) DESC LIMIT 50`).bind(range.sql).all(),
+    db.prepare(`SELECT (CAST(strftime('%s', created_at) AS INTEGER)/300)*300 AS bucket, COUNT(*) AS count FROM security_events WHERE datetime(created_at) >= datetime('now', ?) AND kind <> 'csrf-blocked' GROUP BY bucket ORDER BY bucket ASC`).bind(range.sql).all(),
+    db.prepare(`SELECT kind, COUNT(*) AS count FROM security_events WHERE datetime(created_at) >= datetime('now', ?) AND kind <> 'csrf-blocked' GROUP BY kind`).bind(range.sql).all(),
+    db.prepare(`SELECT kind, path, detail, country, region, colo, created_at AS createdAt FROM security_events WHERE datetime(created_at) >= datetime('now', ?) AND kind <> 'csrf-blocked' ORDER BY datetime(created_at) DESC LIMIT 50`).bind(range.sql).all(),
     db.prepare(`SELECT scope, level, event, message, details_json AS detailsJson, created_at AS createdAt FROM system_logs WHERE datetime(created_at) >= datetime('now', ?) ORDER BY datetime(created_at) DESC LIMIT 60`).bind(range.sql).all(),
     db.prepare(`SELECT id, storage, status, row_count AS rowCount, size_bytes AS sizeBytes, reason, error, created_at AS createdAt FROM backup_history ORDER BY datetime(created_at) DESC LIMIT 20`).all(),
     db.prepare(`SELECT type, status, title, message, error, created_at AS createdAt FROM push_history WHERE datetime(created_at) >= datetime('now', ?) ORDER BY datetime(created_at) DESC LIMIT 30`).bind(range.sql).all(),
@@ -628,9 +630,9 @@ async function handleControlProtectionAttacks(request, env) {
   const db = requireDb(env); await ensureSecuritySchema(db);
   const range = String(new URL(request.url).searchParams.get('range') || '') === '7d' ? { key:'7d', sql:'-7 days' } : { key:'24h', sql:'-24 hours' };
   const [countriesRaw, totalRaw, recentRaw] = await Promise.all([
-    db.prepare(`SELECT country, MAX(region) AS region, MAX(colo) AS colo, COUNT(*) AS count, MAX(created_at) AS lastAt FROM security_events WHERE datetime(created_at) >= datetime('now', ?) AND country <> '' GROUP BY country ORDER BY count DESC, lastAt DESC LIMIT 60`).bind(range.sql).all(),
-    db.prepare(`SELECT COUNT(*) AS total, SUM(CASE WHEN country='' THEN 1 ELSE 0 END) AS unknown FROM security_events WHERE datetime(created_at) >= datetime('now', ?)`).bind(range.sql).first(),
-    db.prepare(`SELECT kind, path, detail, country, region, colo, created_at AS createdAt FROM security_events WHERE datetime(created_at) >= datetime('now', ?) ORDER BY datetime(created_at) DESC LIMIT 30`).bind(range.sql).all()
+    db.prepare(`SELECT country, MAX(region) AS region, MAX(colo) AS colo, COUNT(*) AS count, MAX(created_at) AS lastAt FROM security_events WHERE datetime(created_at) >= datetime('now', ?) AND country <> '' AND kind <> 'csrf-blocked' GROUP BY country ORDER BY count DESC, lastAt DESC LIMIT 60`).bind(range.sql).all(),
+    db.prepare(`SELECT COUNT(*) AS total, SUM(CASE WHEN country='' THEN 1 ELSE 0 END) AS unknown FROM security_events WHERE datetime(created_at) >= datetime('now', ?) AND kind <> 'csrf-blocked'`).bind(range.sql).first(),
+    db.prepare(`SELECT kind, path, detail, country, region, colo, created_at AS createdAt FROM security_events WHERE datetime(created_at) >= datetime('now', ?) AND kind <> 'csrf-blocked' ORDER BY datetime(created_at) DESC LIMIT 30`).bind(range.sql).all()
   ]);
   return json({ ok:true, range:range.key, updatedAt:new Date().toISOString(), total:Number(totalRaw?.total || 0), unknown:Number(totalRaw?.unknown || 0), countries:(countriesRaw.results || []).map(row=>({ country:cleanPlainText(row.country || '',8).toUpperCase(), region:row.region || '', colo:row.colo || '', count:Number(row.count || 0), lastAt:row.lastAt || '' })), recent:recentRaw.results || [], note:'Карта показывает события, дошедшие до Worker. DDoS, остановленный Cloudflare edge раньше Worker, сюда не попадает.' });
 }
@@ -9855,11 +9857,27 @@ async function routeApi(request, env, ctx) {
       if (!adminAuthorized(request, env)) return json({ ok:false, error:'unauthorized' }, 401);
       const csrf = verifyOwnerCsrfRequest(request);
       if (!csrf.ok) {
+        const ownerSessionRequest = request.headers.get('x-andrik-owner-session') === '1';
+
+        // R177: a valid owner session with an outdated browser CSRF token is
+        // a synchronization issue, not an attack. Do not put it on the attack
+        // map and do not send an alarm push. The client refreshes the token
+        // from /api/control/owner-status and repeats the command once.
+        if (ownerSessionRequest && csrf.reason === 'token') {
+          return json({
+            ok:false,
+            error:'csrf-stale',
+            reason:'token',
+            refreshOwnerSession:true,
+            message:'Сессия владельца подтверждена. Обновляем защитный токен и повторяем действие.'
+          }, 409);
+        }
+
         const task = env.COMMENTS_DB
           ? recordSecurityEvent(
               env.COMMENTS_DB, request, env,
-              'csrf-blocked',
-              `Опасная команда отклонена: ${request.method} ${path} · ${csrf.reason}.`
+              'csrf-attack-blocked',
+              `Поддельная команда отклонена: ${request.method} ${path} · ${csrf.reason}.`
             )
           : Promise.resolve();
         if (ctx?.waitUntil) ctx.waitUntil(task); else task.catch(() => {});

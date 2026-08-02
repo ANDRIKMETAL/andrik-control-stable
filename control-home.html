@@ -461,6 +461,34 @@ body.control-menu-visible .control-menu-page .control-swipe-page-inner{padding-b
 <link rel="stylesheet" href="/assets/control-mini-player-r141.css?v=55.00-r144">
 <link rel="stylesheet" href="/assets/control-hotfix-r155.css?v=55.00-r155">
 <link rel="stylesheet" href="/assets/control-home-landscape-r172.css?v=55.00-r172">
+<style id="r176-admin-version-footer-style">
+.control-home-page .control-menu-page .control-version-footer{
+  font-size:.64rem!important;
+  line-height:1.1!important;
+  letter-spacing:.08em!important;
+  opacity:.62!important;
+  text-align:center!important;
+  margin-top:7px!important;
+  padding-top:0!important;
+  padding-bottom:0!important;
+  color:#9ab1bd!important;
+}
+.control-home-page .control-menu-page .control-version-footer strong,
+.control-home-page .control-menu-page .control-version-footer span{
+  font:800 inherit!important;
+  color:inherit!important;
+}
+.control-home-page .control-menu-page .control-version-footer strong::after{content:" · ";}
+@media(orientation:landscape){
+  .control-home-page .control-menu-page .control-version-footer{
+    position:relative!important;
+    inset:auto!important;
+    transform:none!important;
+    margin-top:5px!important;
+    font-size:.58rem!important;
+  }
+}
+</style>
 </head>
 <body class="trika-standalone-page comments-admin-page control-page control-home-page r137-eye-motion-page">
 <nav class="topbar control-topbar control-home-topbar"><div class="wrap nav-shell control-home-topbar-minimal"><a class="control-center-logo" id="controlCenterLogo" href="https://andrikmetal.com/" aria-label="Открыть главный сайт ANDRIK"><img class="logo-ok" src="/assets/control-topbar-eye-triangle.jpg?v=55.00-r129" alt=""/><img class="logo-error" src="/assets/andrik-control-red-triangle-192.png" alt=""/></a></div></nav>
@@ -490,7 +518,7 @@ body.control-menu-visible .control-menu-page .control-swipe-page-inner{padding-b
             <a class="control-home-menu-card is-releases" href="/admin-sections.html?section=releases&v=55.00-final-r115"><span>🚀</span><div><small>Музыка и тексты</small><strong>Релизы</strong><p>Тексты песен, публикации и история релизов.</p></div><b>›</b></a>
             <a class="control-home-menu-card is-discussion" href="/admin-sections.html?section=discussion&v=55.00-final-r115"><span>💬</span><div><small>Сообщество</small><strong>Обсуждение</strong><p>Комментарии, модерация и ответы слушателям.</p></div><b>›</b></a>
           </section>
-          <footer class="control-version-footer"><strong>Live Web AI</strong><span>R115</span></footer>
+          <footer class="control-version-footer" aria-label="Текущая версия"><strong>Live Web AI</strong><span>R176</span></footer>
           <a class="control-page-footnote control-menu-map-link" href="/analytics-admin.html?page=map&amp;v=55.00-final-r1">Свайп вниз — вернуться на карту</a>
         </div>
       </section>
@@ -539,4 +567,19 @@ body.control-menu-visible .control-menu-page .control-swipe-page-inner{padding-b
 <script defer src="/assets/control-live-eye-v55-00-r3l.js?v=55.00-r3l"></script><script defer src="/assets/control-version-v55-00-r3n.js?v=55.00-r3n"></script><script defer src="/assets/control-version-v55-00-final-stable-github.js?v=55.00-final-stable-github"></script><script defer src="/assets/control-menu-return-map-v55-00-r33.js?v=55.00-final-r33"></script>
 <script defer src="/assets/control-version-v55-00-r115.js?v=55.00-r115"></script><script defer src="/assets/guard-ready-r115.js?v=55.00-r115"></script><script defer src="/assets/unified-glow-r139.js?v=55.00-r143"></script>
 <script defer src="/assets/control-mini-player-r141.js?v=55.00-r144"></script>
+<script id="r176-admin-version-footer-script">
+(()=>{
+  const apply=()=>{
+    const footer=document.querySelector('.control-menu-page .control-version-footer');
+    if(!footer)return;
+    const strong=footer.querySelector('strong');
+    const span=footer.querySelector('span');
+    if(strong)strong.textContent='Live Web AI';
+    if(span)span.textContent='R176';
+  };
+  window.addEventListener('load',apply,{once:true});
+  window.addEventListener('andrik-control-version-ready',apply);
+  setTimeout(apply,0);setTimeout(apply,400);
+})();
+</script>
 </body></html>

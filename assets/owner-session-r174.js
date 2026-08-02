@@ -4,6 +4,7 @@
   const KEY_SESSION = 'andrik-comments-admin-key';
   const KEY_LOCAL = 'andrik-comments-admin-key-persistent';
   const SENTINEL = '__ANDRIK_OWNER_SESSION__';
+  const CLIENT_RELEASE = 'R177';
   const KEY_NAMES = new Set([KEY_SESSION, KEY_LOCAL]);
   const nativeFetch = window.fetch.bind(window);
   const nativeSetItem = Storage.prototype.setItem;
@@ -191,7 +192,29 @@
       next.headers = headers;
     }
 
-    const response = await nativeFetch(input, next);
+    let response = await nativeFetch(input, next);
+
+    // R177: if a valid owner cookie survives a deploy but the in-memory CSRF
+    // token is stale, refresh it silently and repeat the protected command once.
+    if (protectedMutation && (response.status === 409 || response.status === 403)) {
+      let failure = {};
+      try { failure = await response.clone().json(); } catch (_) {}
+      if (failure?.error === 'csrf-stale' || failure?.refreshOwnerSession === true) {
+        const refreshed = await status();
+        if (refreshed?.owner && csrfToken) {
+          headers = requestHeaders(input, init);
+          const auth = String(headers.get('authorization') || '');
+          const bearer = auth.startsWith('Bearer ') ? auth.slice(7).trim() : '';
+          if (bearer === SENTINEL) headers.delete('authorization');
+          if (String(headers.get('x-admin-key') || '').trim() === SENTINEL) headers.delete('x-admin-key');
+          headers.set('x-andrik-control-request', '1');
+          headers.set('x-andrik-csrf', csrfToken);
+          const retryInit = { ...init, credentials:'include', headers };
+          response = await nativeFetch(input, retryInit);
+        }
+      }
+    }
+
     if (sameApi && requestUrl.pathname !== '/api/control/owner-session') {
       try {
         const auth = String(headers.get('authorization') || '');

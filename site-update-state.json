@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r157",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1785689105859-c932c6a860",
-  "release": "R175",
-  "archiveName": "R175-LANDSCAPE-MAP-UP-SWIPE-FULL.zip",
-  "sourceHead": "ae200ca0be480e9d05d81ee0955cec947ea10177",
-  "backupSha": "ae200ca0be480e9d05d81ee0955cec947ea10177",
-  "backupTag": "control-backup-20260802164503-ae200ca-r175-a27a4",
+  "operationId": "publish-1785691160434-279cc9e141",
+  "release": "R177",
+  "archiveName": "R177-OWNER-NOT-ATTACK-CSRF-SELF-HEAL-FULL.zip",
+  "sourceHead": "6a3427731a964953673926ff5be2397e54d46994",
+  "backupSha": "6a3427731a964953673926ff5be2397e54d46994",
+  "backupTag": "control-backup-20260802171917-6a34277-r177-33ae9",
   "autoRecovery": true,
-  "generatedAt": "2026-08-02T16:45:05.859Z"
+  "generatedAt": "2026-08-02T17:19:20.434Z"
 }
