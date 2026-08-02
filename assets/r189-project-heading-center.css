@@ -1,0 +1,34 @@
+/* R189 — only the landscape eyeline "УПРАВЛЕНИЕ ПРОЕКТОМ" is centered to the real viewport. */
+@media screen and (orientation:landscape){
+  body.control-home-page .control-admin-menu-page .control-menu-heading{
+    box-sizing:border-box!important;
+    position:relative!important;
+    left:auto!important;
+    transform:none!important;
+    width:100vw!important;
+    max-width:none!important;
+    margin-left:calc(50% - 50vw)!important;
+    margin-right:calc(50% - 50vw)!important;
+    text-align:center!important;
+  }
+  body.control-home-page .control-admin-menu-page .control-menu-heading .control-admin-heading-copy{
+    box-sizing:border-box!important;
+    width:100vw!important;
+    max-width:none!important;
+    margin:0!important;
+    padding:0!important;
+    text-align:center!important;
+  }
+  body.control-home-page .control-admin-menu-page .control-menu-heading .eyeline{
+    display:block!important;
+    box-sizing:border-box!important;
+    width:100vw!important;
+    max-width:none!important;
+    margin-left:0!important;
+    margin-right:0!important;
+    text-align:center!important;
+    position:static!important;
+    left:auto!important;
+    transform:none!important;
+  }
+}

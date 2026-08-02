@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R188', number:188, version:'55.00', full:'55.00 LIVE WEB AI FINAL R188 UI ALIGNMENT', siteUpdater:'55.00-r157' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R189', number:189, version:'55.00', full:'55.00 LIVE WEB AI FINAL R189 PROJECT HEADING CENTER', siteUpdater:'55.00-r157' });
 
 const JSON_HEADERS = {
   'content-type': 'application/json; charset=utf-8',
@@ -9838,7 +9838,7 @@ function allowControlPlayerFrame(response, url, isControlHost) {
   headers.set('x-content-type-options', 'nosniff');
   headers.set('referrer-policy', 'strict-origin-when-cross-origin');
   headers.set('permissions-policy', 'camera=(), microphone=(), geolocation=()');
-  headers.set('x-andrik-security-headers', 'R188');
+  headers.set('x-andrik-security-headers', 'R189');
 
   if (isHtml) {
     if (isPlayerShell) {

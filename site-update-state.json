@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r157",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1785698829027-5887c9db8f",
-  "release": "R188",
-  "archiveName": "R188-COLLAPSED-HISTORY-CENTERED-ADMIN-FULL.zip",
-  "sourceHead": "5cd1864aadc430c006a7af6da58bc57050d1f96a",
-  "backupSha": "5cd1864aadc430c006a7af6da58bc57050d1f96a",
-  "backupTag": "control-backup-20260802192705-5cd1864-r188-a9f9d",
+  "operationId": "publish-1785699117170-7e87f01662",
+  "release": "R189",
+  "archiveName": "R189-PROJECT-HEADING-CENTER-FULL.zip",
+  "sourceHead": "76bf1a3acee389785a7e87295886f00c529221ff",
+  "backupSha": "76bf1a3acee389785a7e87295886f00c529221ff",
+  "backupTag": "control-backup-20260802193154-76bf1a3-r189-7eccd",
   "autoRecovery": true,
-  "generatedAt": "2026-08-02T19:27:09.027Z"
+  "generatedAt": "2026-08-02T19:31:57.170Z"
 }
