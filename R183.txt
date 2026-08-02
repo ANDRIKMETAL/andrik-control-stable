@@ -1,0 +1,9 @@
+R183 UNIFIED LANDSCAPE CLOUD
+- Built directly from working R182.
+- Removed the old straight glowing header line on internal landscape pages.
+- All internal landscape sections now use one rounded glowing cloud frame.
+- The frame top is the only visual seam under the header.
+- Listener map and Control Home geometry are unchanged.
+- Fixed portrait Lyrics title overflow.
+- Reduced the empty bottom tail on the portrait attack map.
+- R173 owner authorization, update, rollback, security and cache reset are unchanged.

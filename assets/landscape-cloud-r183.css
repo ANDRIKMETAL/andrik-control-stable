@@ -1,0 +1,258 @@
+/*
+  LIVE WEB AI R183
+  Единый горизонтальный стиль внутренних экранов:
+  зелёная шапка + одно округлое светящееся облако.
+  Карта слушателей и control-home намеренно исключены.
+*/
+
+@media screen and (orientation:landscape){
+
+  /* Базовая высота внутренних шапок. */
+  body.control-page:not(.control-home-page):not(.analytics-admin-page),
+  body.comment-collection-page{
+    --r183-cloud-head:92px;
+    --r183-cloud-left:max(10px,calc(env(safe-area-inset-left) + 4px));
+    --r183-cloud-right:max(10px,calc(env(safe-area-inset-right) + 4px));
+    --r183-cloud-bottom:max(6px,env(safe-area-inset-bottom));
+  }
+
+  /* Три самостоятельных экрана используют компактную 78px-шапку. */
+  html:not(.admin-carousel-embedded) body.attack-page,
+  html:not(.admin-carousel-embedded) body.protection-page,
+  html:not(.admin-carousel-embedded) body.site-update-page{
+    --r183-cloud-head:78px;
+  }
+
+  /* Отдельно открытый Lyrics использует собственную 82px-шапку.
+     В карусели высота остаётся 92px. */
+  html:not(.admin-carousel-embedded) body.lyrics-admin-page{
+    --r183-cloud-head:82px;
+  }
+
+  /*
+    Убираем старую прямую полоску:
+    нет border-bottom и нет светящейся ::after-линии.
+    Само мягкое зелёное свечение шапки сохраняется.
+  */
+  body.control-page:not(.control-home-page):not(.analytics-admin-page) .control-topbar,
+  body.comment-collection-page .control-topbar{
+    border-bottom:0!important;
+    box-shadow:0 15px 38px rgba(15,225,107,.15)!important;
+  }
+
+  body.control-page:not(.control-home-page):not(.analytics-admin-page) .control-topbar::after,
+  body.comment-collection-page .control-topbar::after{
+    content:none!important;
+    display:none!important;
+    visibility:hidden!important;
+    opacity:0!important;
+    height:0!important;
+    box-shadow:none!important;
+  }
+
+  /*
+    Встроенные четыре раздела:
+    видна только родительская рамка admin-sections.
+    Внутренние pseudo-рамки полностью отключены.
+  */
+  html.admin-carousel-embedded body.control-page::after,
+  html.admin-carousel-embedded body.comment-collection-page::after,
+  html.admin-carousel-embedded body.control-page.unified-glow-ready::after,
+  html.admin-carousel-embedded body.comment-collection-page.unified-glow-ready::after{
+    content:none!important;
+    display:none!important;
+    visibility:hidden!important;
+    opacity:0!important;
+    border:0!important;
+    box-shadow:none!important;
+  }
+
+  body.admin-sections-shell .control-admin-landscape-frame-r141{
+    display:block!important;
+    position:fixed!important;
+    top:92px!important;
+    left:max(10px,calc(env(safe-area-inset-left) + 4px))!important;
+    right:max(10px,calc(env(safe-area-inset-right) + 4px))!important;
+    bottom:max(6px,env(safe-area-inset-bottom))!important;
+    width:auto!important;
+    height:auto!important;
+    margin:0!important;
+    transform:none!important;
+    border:2px solid rgba(104,255,174,.98)!important;
+    border-radius:36px!important;
+    background:transparent!important;
+    box-shadow:
+      0 0 0 1px rgba(132,255,197,.20),
+      0 0 10px rgba(91,255,180,.88),
+      0 0 30px rgba(46,232,132,.50),
+      inset 0 0 22px rgba(70,246,151,.14)!important;
+    opacity:1!important;
+    visibility:visible!important;
+    pointer-events:none!important;
+    z-index:2147483000!important;
+  }
+
+  /*
+    Контент в iframe начинается ниже единственной верхней дуги,
+    поэтому линия рамки больше не проходит через заголовки.
+  */
+  html.admin-carousel-embedded body.control-page .admin-main{
+    padding-top:18px!important;
+  }
+
+  html.admin-carousel-embedded body.control-page .admin-main > .wrap{
+    padding-top:0!important;
+  }
+
+  /*
+    Защита / Атаки / Обновить:
+    используем единственный реальный frame-div.
+  */
+  body.attack-page::after,
+  body.protection-page::after,
+  body.site-update-page::after{
+    content:none!important;
+    display:none!important;
+  }
+
+  body.attack-page .control-section-landscape-frame-r165,
+  body.protection-page .control-section-landscape-frame-r165,
+  body.site-update-page .control-section-landscape-frame-r165{
+    display:block!important;
+    position:fixed!important;
+    top:var(--r183-cloud-head)!important;
+    left:var(--r183-cloud-left)!important;
+    right:var(--r183-cloud-right)!important;
+    bottom:var(--r183-cloud-bottom)!important;
+    width:auto!important;
+    height:auto!important;
+    margin:0!important;
+    border:2px solid rgba(104,255,174,.98)!important;
+    border-radius:36px!important;
+    background:transparent!important;
+    box-shadow:
+      0 0 0 1px rgba(132,255,197,.20),
+      0 0 10px rgba(91,255,180,.90),
+      0 0 30px rgba(46,232,132,.52),
+      inset 0 0 22px rgba(70,246,151,.14)!important;
+    pointer-events:none!important;
+    z-index:2147483000!important;
+  }
+
+  /*
+    Остальные самостоятельные внутренние страницы:
+    одна body-рамка с тем же облачным контуром.
+  */
+  html:not(.admin-carousel-embedded)
+  body.control-page:not(.control-home-page):not(.analytics-admin-page):not(.attack-page):not(.protection-page):not(.site-update-page).unified-glow-ready::after,
+  html:not(.admin-carousel-embedded)
+  body.comment-collection-page.unified-glow-ready::after{
+    content:""!important;
+    display:block!important;
+    position:fixed!important;
+    top:var(--r183-cloud-head)!important;
+    left:var(--r183-cloud-left)!important;
+    right:var(--r183-cloud-right)!important;
+    bottom:var(--r183-cloud-bottom)!important;
+    border:2px solid rgba(104,255,174,.98)!important;
+    border-radius:36px!important;
+    background:transparent!important;
+    box-shadow:
+      0 0 0 1px rgba(132,255,197,.20),
+      0 0 10px rgba(91,255,180,.88),
+      0 0 30px rgba(46,232,132,.50),
+      inset 0 0 22px rgba(70,246,151,.14)!important;
+    animation:r115FrameBreath 4.4s ease-in-out infinite!important;
+    pointer-events:none!important;
+    z-index:2147483000!important;
+  }
+
+  /*
+    Самостоятельные внутренние страницы получают воздух
+    под верхней дугой облака.
+  */
+  html:not(.admin-carousel-embedded)
+  body.control-page:not(.control-home-page):not(.analytics-admin-page):not(.attack-page):not(.protection-page):not(.site-update-page) .admin-main{
+    padding-top:18px!important;
+  }
+
+  /*
+    Три самостоятельных экрана:
+    wrapper уже является скроллируемым контентом,
+    поэтому оставляем аккуратный внутренний отступ.
+  */
+  body.attack-page .attack-wrap,
+  body.protection-page .protection-wrap,
+  body.site-update-page .update-wrap{
+    padding-top:24px!important;
+  }
+}
+
+/* ---------------------------------------------------------------
+   Lyrics — исправление обрезанного портретного заголовка.
+---------------------------------------------------------------- */
+@media screen and (orientation:portrait){
+  body.lyrics-admin-page .control-header{
+    width:100%!important;
+    max-width:100%!important;
+    overflow:hidden!important;
+    padding-left:4px!important;
+    padding-right:4px!important;
+  }
+
+  body.lyrics-admin-page .control-header h1{
+    display:block!important;
+    width:100%!important;
+    max-width:calc(100vw - 28px)!important;
+    margin-left:auto!important;
+    margin-right:auto!important;
+    font-size:clamp(2.45rem,11.7vw,4.15rem)!important;
+    line-height:.92!important;
+    letter-spacing:-.035em!important;
+    white-space:normal!important;
+    overflow:visible!important;
+    overflow-wrap:normal!important;
+    word-break:normal!important;
+    text-wrap:balance!important;
+    hyphens:none!important;
+  }
+
+  body.lyrics-admin-page .control-header p{
+    max-width:31rem!important;
+    margin-left:auto!important;
+    margin-right:auto!important;
+  }
+}
+
+/* ---------------------------------------------------------------
+   Карта атак — компактный конец страницы без лишнего чёрного хвоста.
+---------------------------------------------------------------- */
+@media screen and (orientation:portrait){
+  body.attack-page{
+    min-height:0!important;
+    padding-bottom:0!important;
+  }
+
+  body.attack-page .admin-main{
+    min-height:0!important;
+    padding-bottom:0!important;
+  }
+
+  body.attack-page .attack-wrap{
+    min-height:0!important;
+    padding-bottom:max(8px,env(safe-area-inset-bottom))!important;
+  }
+
+  body.attack-page .attack-note{
+    margin-bottom:0!important;
+  }
+
+  body.attack-page .control-version-footer{
+    margin:20px 0 0!important;
+    padding:14px 4px 0!important;
+  }
+
+  body.attack-page .control-version-footer:last-child{
+    margin-bottom:0!important;
+  }
+}

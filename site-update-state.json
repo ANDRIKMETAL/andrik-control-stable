@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r157",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1785693998357-a0eecb30cf",
-  "release": "R182",
-  "archiveName": "R182-REAL-CACHE-RESET-NO-AUTO-REDIRECT-FULL.zip",
-  "sourceHead": "40eb4cead995a30fec6ae9bd5ee7bde0245315ba",
-  "backupSha": "40eb4cead995a30fec6ae9bd5ee7bde0245315ba",
-  "backupTag": "control-backup-20260802180634-40eb4ce-r182-f2f16",
+  "operationId": "publish-1785696039472-55b4dfd4b6",
+  "release": "R183",
+  "archiveName": "R183-UNIFIED-LANDSCAPE-CLOUD-FULL.zip",
+  "sourceHead": "537272432c72309cd6200fc4c90993a2f8674255",
+  "backupSha": "537272432c72309cd6200fc4c90993a2f8674255",
+  "backupTag": "control-backup-20260802184036-5372724-r183-a86e0",
   "autoRecovery": true,
-  "generatedAt": "2026-08-02T18:06:38.357Z"
+  "generatedAt": "2026-08-02T18:40:39.472Z"
 }
