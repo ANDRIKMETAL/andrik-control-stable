@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R156', number:156, version:'55.00', full:'55.00 LIVE WEB AI FINAL R156 PROTECTION UI RESTORE', siteUpdater:'55.00-r156' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R158', number:158, version:'55.00', full:'55.00 LIVE WEB AI FINAL R158 TURNSTILE PAGES + SPOILER FIX', siteUpdater:'55.00-r157' });
 
 const JSON_HEADERS = {
   'content-type': 'application/json; charset=utf-8',
@@ -496,9 +496,14 @@ async function handleControlProtectionStatus(request, env) {
   const counts = {};
   for (const row of countsResult.results || []) counts[row.kind] = Number(row.count || 0);
 
+  const turnstileSecret = Boolean(String(env.TURNSTILE_SECRET_KEY || '').trim());
+  const turnstileSite = Boolean(String(env.TURNSTILE_SITE_KEY || '').trim());
   const application = {
     adminKey:Boolean(String(env.ADMIN_KEY || '').trim()),
-    turnstile:Boolean(String(env.TURNSTILE_SECRET_KEY || '').trim()),
+    turnstile:turnstileSecret && turnstileSite,
+    turnstileSecret,
+    turnstileSite,
+    turnstileScope:'pages-production',
     d1:Boolean(env.COMMENTS_DB),
     d1Healthy:!securityDbError,
     d1Error:securityDbError
@@ -9031,6 +9036,8 @@ async function handleSiteUpdatePreview(request, env) {
       zipBytes:parsed.zipBytes, totalBytes:parsed.totalBytes, fileCount:parsed.entries.length,
       added:diff.added.length, changed:diff.changed.length, deleted:diff.deleted.length, unchanged:diff.unchanged.length,
       hasChanges:Boolean(diff.added.length || diff.changed.length || diff.deleted.length),
+      sameAsMain:!Boolean(diff.added.length || diff.changed.length || diff.deleted.length),
+      canReinstall:true,
       paths:{ added:diff.added.slice(0,100), changed:diff.changed.slice(0,100), deleted:diff.deleted.slice(0,100) },
       headSha:snapshot.headSha, headShort:snapshot.headSha.slice(0,7),
       repository:`${config.owner}/${config.repo}`, branch:config.branch
@@ -9074,12 +9081,15 @@ async function handleSiteUpdatePublish(request, env) {
     const backupSha = /^[0-9a-f]{40}$/i.test(backupShaRaw) ? backupShaRaw : '';
     const backupTag = cleanPlainText(form.get('backupTag') || '', 180);
     const autoRecovery = String(form.get('autoRecovery') || '') === 'yes';
+    const forceReinstall = String(form.get('forceReinstall') || '') === 'yes';
     const [parsed, snapshot] = await Promise.all([siteUpdatePrepareArchive(archive), siteUpdateGithubSnapshot(config)]);
     if (expectedHead && /^[0-9a-f]{40}$/i.test(expectedHead) && snapshot.headSha !== expectedHead) throw new Error('branch-changed');
     const diff = siteUpdateCompare(parsed, snapshot, config);
     const touched = [...diff.added, ...diff.changed];
-    if (!touched.length && !diff.deleted.length) return json({ ok:true, noChanges:true, headSha:snapshot.headSha, message:'Изменений нет.' });
-    const operationId = siteUpdateNewOperationId('publish');
+    const noFileChanges = !touched.length && !diff.deleted.length;
+    if (noFileChanges && !forceReinstall) return json({ ok:true, noChanges:true, headSha:snapshot.headSha, message:'Изменений нет.' });
+    const reinstall = noFileChanges && forceReinstall;
+    const operationId = siteUpdateNewOperationId(reinstall ? 'reinstall' : 'publish');
     const owner = encodeURIComponent(config.owner), repo = encodeURIComponent(config.repo);
 
     // R119: текстовые файлы передаются прямо в Git Tree API.
@@ -9111,7 +9121,8 @@ async function handleSiteUpdatePublish(request, env) {
     const state = {
       schema:1,
       updaterVersion:SITE_UPDATE_VERSION,
-      operation:'publish',
+      operation:reinstall ? 'reinstall' : 'publish',
+      reinstall,
       operationId,
       release,
       archiveName:cleanPlainText(archive.name || 'site.zip', 180),
@@ -9141,7 +9152,8 @@ async function handleSiteUpdatePublish(request, env) {
     const tree = await siteUpdateCreateTreeBatched(
       config, owner, repo, snapshot.treeSha, treeEntries
     );
-    const commitMessage = release ? `${message}\n\nRelease: ${release}` : message;
+    const effectiveMessage = reinstall ? `${message} · повторная установка той же версии` : message;
+    const commitMessage = release ? `${effectiveMessage}\n\nRelease: ${release}` : effectiveMessage;
     const commit = await siteUpdateGithubRequest(config, `/repos/${owner}/${repo}/git/commits`, {
       method:'POST', body:{ message:commitMessage, tree:tree.sha, parents:[snapshot.headSha],
         author:{ name:'ANDRIK Control', email:'andrik-control@users.noreply.github.com' } }
@@ -9150,19 +9162,19 @@ async function handleSiteUpdatePublish(request, env) {
     await siteUpdateGithubRequest(config, `/repos/${owner}/${repo}/git/refs/heads/${branchRef}`, {
       method:'PATCH', body:{ sha:commit.sha, force:false }
     });
-    await recordSystemLog(env, { scope:'site-update', level:'info', event:'github-publish',
-      message:`Сайт отправлен в GitHub: ${commit.sha.slice(0,7)}`,
-      details:{ repository:`${config.owner}/${config.repo}`, branch:config.branch, release, commitSha:commit.sha,
+    await recordSystemLog(env, { scope:'site-update', level:'info', event:reinstall ? 'github-reinstall' : 'github-publish',
+      message:reinstall ? `Повторная установка ${release || 'версии'}: ${commit.sha.slice(0,7)}` : `Сайт отправлен в GitHub: ${commit.sha.slice(0,7)}`,
+      details:{ repository:`${config.owner}/${config.repo}`, branch:config.branch, release, reinstall, commitSha:commit.sha,
         added:diff.added.length, changed:diff.changed.length, deleted:diff.deleted.length,
         archive:archive.name, archiveBytes:Number(archive.size || 0), operationId, backupSha, backupTag, autoRecovery, inlineFiles:inlineEntries.length, binaryFiles:binaryEntries.length, treeBatches:tree.batches, durationMs:Date.now()-startedAt }
     }).catch(() => {});
-    await sendOwnerPush(env, { title:'ANDRIK Control', message:`Обновление сайта отправлено в GitHub: ${commit.sha.slice(0,7)}`, url:'https://control.andrikmetal.com/site-update-admin.html' }).catch(() => {});
+    await sendOwnerPush(env, { title:'ANDRIK Control', message:reinstall ? `Повторная установка ${release || 'версии'} отправлена: ${commit.sha.slice(0,7)}` : `Обновление сайта отправлено в GitHub: ${commit.sha.slice(0,7)}`, url:'https://control.andrikmetal.com/site-update-admin.html' }).catch(() => {});
     siteUpdateHistoryCache = null;
-    return json({ ok:true, operationId, backupSha, backupTag, autoRecovery, commitSha:commit.sha, commitShort:commit.sha.slice(0,7),
+    return json({ ok:true, operationId, backupSha, backupTag, autoRecovery, reinstall, commitSha:commit.sha, commitShort:commit.sha.slice(0,7),
       commitUrl:`https://github.com/${config.owner}/${config.repo}/commit/${commit.sha}`,
       repository:`${config.owner}/${config.repo}`, branch:config.branch,
       added:diff.added.length, changed:diff.changed.length, deleted:diff.deleted.length,
-      durationMs:Date.now()-startedAt, message:'GitHub принял обновление. Проверяем Release и Cloudflare.'
+      durationMs:Date.now()-startedAt, message:reinstall ? 'GitHub принял повторную установку. Проверяем Release и Cloudflare.' : 'GitHub принял обновление. Проверяем Release и Cloudflare.'
     });
   } catch (error) {
     await recordSystemLog(env, { scope:'site-update', level:'error', event:'github-publish-failed',
