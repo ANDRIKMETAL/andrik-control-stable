@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R158', number:158, version:'55.00', full:'55.00 LIVE WEB AI FINAL R158 TURNSTILE PAGES + SPOILER FIX', siteUpdater:'55.00-r157' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R159', number:159, version:'55.00', full:'55.00 LIVE WEB AI FINAL R159 FREE SECURITY + BOT 100', siteUpdater:'55.00-r157' });
 
 const JSON_HEADERS = {
   'content-type': 'application/json; charset=utf-8',
@@ -509,6 +509,7 @@ async function handleControlProtectionStatus(request, env) {
     d1Error:securityDbError
   };
 
+  const botState = cleanPlainText(env.CLOUDFLARE_BOT_STATE || 'manual', 20).toLowerCase();
   let score = 10;
   if (application.adminKey) score += 10;
   if (application.turnstile) score += 15;
@@ -518,7 +519,8 @@ async function handleControlProtectionStatus(request, env) {
   if (headerStatus.hsts) score += 10;
   if (headerStatus.frame) score += 5;
   if (spf) score += 7;
-  if (dmarcRecord) score += dmarcPolicy === 'reject' || dmarcPolicy === 'quarantine' ? 8 : 4;
+  if (dmarcRecord) score += 4;
+  if (botState === 'on') score += 4;
   score = Math.max(0, Math.min(100, score));
 
   return json({
@@ -526,7 +528,9 @@ async function handleControlProtectionStatus(request, env) {
     version:ANDRIK_CONTROL_RELEASE.full,
     checkedAt:new Date().toISOString(),
     score,
-    summary:score >= 85
+    summary:score === 100
+      ? 'Все доступные уровни защиты активны.'
+      : score >= 85
       ? 'Guard и основные уровни защиты работают.'
       : score >= 65
         ? 'Базовая защита сильная, но есть пункты для настройки.'
@@ -535,8 +539,7 @@ async function handleControlProtectionStatus(request, env) {
     application,
     edge:{
       ddos:true,
-      waf:cleanPlainText(env.CLOUDFLARE_WAF_STATE || 'manual', 20),
-      bot:cleanPlainText(env.CLOUDFLARE_BOT_STATE || 'manual', 20)
+      bot:botState
     },
     headers:headerStatus,
     phishing:{ spf, spfRecords, dmarc:Boolean(dmarcRecord), dmarcPolicy, dmarcRecord },
