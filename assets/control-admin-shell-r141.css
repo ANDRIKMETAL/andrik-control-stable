@@ -1,0 +1,86 @@
+/* R141 — исправление экрана Админ-панели */
+html,body.control-home-page{
+  min-height:100%!important;
+  min-height:100dvh!important;
+  background:#02070b!important;
+}
+body.control-home-page{
+  overflow-x:hidden!important;
+}
+.control-admin-landscape-frame-r141{
+  display:none;
+  pointer-events:none;
+}
+@media(orientation:portrait){
+  body.control-home-page .control-swipe-main{
+    min-height:calc(100dvh - 172px)!important;
+  }
+  body.control-home-page .control-menu-page .control-swipe-page-inner{
+    padding-bottom:max(154px,calc(138px + env(safe-area-inset-bottom)))!important;
+  }
+}
+@media(orientation:landscape){
+  .control-admin-landscape-frame-r141{
+    display:block!important;
+    position:fixed!important;
+    left:max(14px,calc(env(safe-area-inset-left) + 5px))!important;
+    right:max(14px,calc(env(safe-area-inset-right) + 5px))!important;
+    top:148px!important;
+    bottom:max(8px,env(safe-area-inset-bottom))!important;
+    z-index:2147481800!important;
+    border:2px solid rgba(105,255,174,.94)!important;
+    border-radius:30px!important;
+    background:transparent!important;
+    box-shadow:
+      0 0 0 1px rgba(92,255,168,.16),
+      0 0 10px rgba(100,255,172,.9),
+      0 0 30px rgba(48,234,134,.55),
+      inset 0 0 20px rgba(55,239,136,.13)!important;
+  }
+  body.control-home-page .control-swipe-main{
+    position:relative!important;
+    z-index:1!important;
+    height:calc(100dvh - 148px)!important;
+    min-height:0!important;
+    overflow:hidden!important;
+  }
+  body.control-home-page .control-swipe-shell,
+  body.control-home-page .control-swipe-track,
+  body.control-home-page .control-swipe-page{
+    height:100%!important;
+    min-height:0!important;
+  }
+  body.control-home-page .control-menu-page .control-swipe-page-inner{
+    height:100%!important;
+    overflow-y:auto!important;
+    overscroll-behavior-y:contain!important;
+    padding:12px clamp(34px,5vw,76px) 86px!important;
+    scrollbar-width:thin!important;
+  }
+  body.control-home-page .control-menu-heading{
+    margin-top:0!important;
+    margin-bottom:12px!important;
+  }
+  body.control-home-page .control-home-menu{
+    max-width:min(1180px,100%)!important;
+    margin:0 auto!important;
+  }
+}
+@media(max-height:470px) and (orientation:landscape){
+  .control-admin-landscape-frame-r141{top:142px!important}
+  body.control-home-page .control-swipe-main{height:calc(100dvh - 142px)!important}
+}
+
+@media(orientation:landscape){
+  body.admin-sections-shell .control-admin-landscape-frame-r141{
+    display:block!important;
+    top:148px!important;
+  }
+  body.admin-sections-shell .admin-carousel{
+    position:absolute!important;
+    inset:0!important;
+  }
+  body.admin-sections-shell .admin-carousel-dots{
+    z-index:2147482600!important;
+  }
+}

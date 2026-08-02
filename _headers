@@ -798,3 +798,26 @@
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
   X-Robots-Tag: noindex, nofollow,noarchive
 
+# R141 — fixed Control shell + universal mini-player
+/assets/control-mini-player-r141.js
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/assets/control-mini-player-r141.css
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/assets/control-admin-shell-r141.css
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/assets/service-mini-player-settings-r141.js
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/assets/service-mini-player-settings-r141.css
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/assets/player-v54-27-r141.js
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/assets/player-r141-control-shell.css
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/control-home.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/admin-sections.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/cache-reset-v55-00-final-r141.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+  X-Robots-Tag: noindex, nofollow,noarchive
+
