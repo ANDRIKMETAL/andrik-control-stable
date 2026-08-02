@@ -1,0 +1,17 @@
+R147 — ANDRIK GUARD 2.1 FULL COMPATIBILITY
+
+Основа: R146.
+
+Добавлена полная обработка сценария Guard 2.1:
+- подключение через GUARD_URL и GUARD_KEY;
+- чтение /status и ручной запуск /run;
+- автоматический /mark-good после подтверждённого исправного Deploy;
+- приём callback /api/control/guard/event;
+- обработка recovery-restored, public-recovery-restored, project-recovery-restored;
+- обработка recovery-failed, public-recovery-failed, project-recovery-failed;
+- outage-detected журналируется без двойного push;
+- восстановленный commit сохраняется как LAST KNOWN GOOD в D1;
+- при наличии GitHub-конфигурации исходники синхронизируются с восстановленным commit;
+- раздел «Защита» показывает build Guard, последнюю операцию и последний исправный Deploy.
+
+Критический установщик site-update-admin-r115.js и механика R140 не изменены.

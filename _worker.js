@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R146', number:146, version:'55.00', full:'55.00 LIVE WEB AI FINAL R146', siteUpdater:'55.00-r146' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R147', number:147, version:'55.00', full:'55.00 LIVE WEB AI FINAL R147', siteUpdater:'55.00-r147' });
 
 const JSON_HEADERS = {
   'content-type': 'application/json; charset=utf-8',
@@ -403,9 +403,15 @@ async function fetchGuardStatus(env, run = false) {
         message:data.message || data.error || `Guard HTTP ${response.status}`
       };
     }
+    const guardBuild = cleanPlainText(data.build || '', 100);
+    const lastAction = cleanPlainText(data.status?.action || '', 60);
+    const lastMessage = cleanPlainText(data.status?.message || '', 400);
     return {
-      configured:true, connected:true, url:base, status:data,
-      message:run ? (data.message || 'Guard завершил проверку.') : (data.status?.message || 'Guard подключён.')
+      configured:true, connected:true, compatible:/ANDRIK Guard 2\.1 FULL/i.test(guardBuild),
+      url:base, status:data, build:guardBuild,
+      message:run
+        ? (data.message || lastMessage || 'Guard завершил проверку.')
+        : (lastMessage || (guardBuild ? `${guardBuild} подключён${lastAction ? ` · ${lastAction}` : ''}.` : 'Guard подключён.'))
     };
   } catch (error) {
     return {
@@ -8713,13 +8719,35 @@ function guardEventAuthorized(request, env) {
   return diff === 0;
 }
 
+function classifyGuardEvent(eventValue) {
+  const event = cleanPlainText(eventValue || '', 80).toLowerCase();
+  const restored = /^(?:public-|project-)?recovery-restored$/.test(event);
+  const failed = /^(?:public-|project-)?recovery-failed$/.test(event);
+  const area = event.startsWith('public-') ? 'public'
+    : event.startsWith('project-') ? 'project'
+      : 'control';
+  return {
+    event,
+    restored,
+    failed,
+    outage:event === 'outage-detected',
+    started:event === 'recovery-started',
+    area
+  };
+}
+
 async function handleGuardEvent(request, env) {
   if (!guardEventAuthorized(request, env)) return json({ ok:false, error:'unauthorized' }, 401);
   const body = await readJsonBody(request, 20000).catch(() => ({}));
-  const event = cleanPlainText(body.event || '', 80);
+  const info = classifyGuardEvent(body.event);
+  const event = info.event;
   const message = cleanPlainText(body.message || '', 700);
   const targetCommitSha = cleanPlainText(body.targetCommitSha || '', 64);
+  const suppliedArea = cleanPlainText(body.area || '', 40).toLowerCase();
+  const area = ['control','public','project'].includes(suppliedArea) ? suppliedArea : info.area;
   const details = {
+    build:cleanPlainText(body.build || 'ANDRIK Guard 2.1 FULL', 100),
+    area,
     badDeployment:cleanPlainText(body.badDeployment || '', 160),
     recoveryDeployment:cleanPlainText(body.recoveryDeployment || '', 160),
     targetCommitSha,
@@ -8728,42 +8756,63 @@ async function handleGuardEvent(request, env) {
     reason:cleanPlainText(body.reason || '', 120)
   };
 
+  const level = info.failed ? 'error' : info.restored ? 'info' : 'warning';
   await recordSystemLog(env, {
     scope:'guard',
-    level:event === 'recovery-failed' ? 'error' : event === 'recovery-restored' ? 'info' : 'warning',
+    level,
     event:event || 'guard-event',
     message:message || event || 'Guard event',
     details
   }).catch(() => {});
 
   let sourceRecovery = null;
-  if (event === 'recovery-restored' && /^[0-9a-f]{40}$/i.test(targetCommitSha)) {
+  let knownGood = null;
+  if (info.restored && /^[0-9a-f]{40}$/i.test(targetCommitSha)) {
     sourceRecovery = await siteUpdateRestoreRepositoryToCommit(env, targetCommitSha, details).catch(error => ({
       ok:false, error:cleanPlainText(error?.message || error, 400)
     }));
+    knownGood = await siteUpdateSaveKnownGood(env, {
+      commitSha:targetCommitSha,
+      operationId:`guard:${details.recoveryDeployment || Date.now()}`,
+      release:'GUARD 2.1 RECOVERY',
+      health:{
+        status:'ok',
+        source:'ANDRIK Guard 2.1 FULL',
+        area,
+        restoredAt:details.finishedAt || new Date().toISOString(),
+        deployment:details.recoveryDeployment
+      }
+    }).catch(() => null);
   }
 
-  if (event === 'recovery-restored') {
+  /* Guard 2.1 сам всегда шлёт outage push. Поэтому callback только журналирует outage,
+     иначе владелец получил бы два одинаковых уведомления. Финальный push через Control
+     нужен только для control recovery: для public/project Guard 2.1 шлёт его напрямую. */
+  if (info.restored && area === 'control') {
     await sendOwnerPush(env, {
       title:'✅ ANDRIK Control восстановлена',
-      message:message || `Страница восстановлена после сбоя. Deploy ${details.recoveryDeployment.slice(0,8)}.`,
+      message:message || `Control восстановлена. Deploy ${details.recoveryDeployment.slice(0,8)}.`,
       url:'https://control.andrikmetal.com/'
     }).catch(() => {});
-  } else if (event === 'recovery-failed') {
+  } else if (info.failed && area === 'control') {
     await sendOwnerPush(env, {
       title:'🚨 ANDRIK Guard: восстановление не подтверждено',
       message:message || 'Проверь Control и Cloudflare.',
       url:'https://control.andrikmetal.com/protection-admin.html'
     }).catch(() => {});
-  } else if (event === 'outage-detected') {
-    await sendOwnerPush(env, {
-      title:'⚠️ ANDRIK Control: обнаружен сбой',
-      message:message || 'Guard проверяет последнюю исправную версию.',
-      url:'https://control.andrikmetal.com/protection-admin.html'
-    }).catch(() => {});
   }
 
-  return json({ ok:true, event, sourceRecovery });
+  return json({
+    ok:true,
+    accepted:true,
+    build:'ANDRIK Guard 2.1 FULL compatible',
+    event,
+    area,
+    restored:info.restored,
+    failed:info.failed,
+    sourceRecovery,
+    knownGood
+  });
 }
 
 async function siteUpdateStartAutomaticRecovery(config, env, failedState) {
