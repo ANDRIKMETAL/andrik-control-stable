@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R149', number:149, version:'55.00', full:'55.00 LIVE WEB AI FINAL R149', siteUpdater:'55.00-r149' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R151', number:151, version:'55.00', full:'55.00 LIVE WEB AI FINAL R151', siteUpdater:'55.00-r151' });
 
 const JSON_HEADERS = {
   'content-type': 'application/json; charset=utf-8',
@@ -379,14 +379,22 @@ async function fetchTxtRecords(name) {
 async function fetchGuardStatus(env, run = false) {
   const base = String(env.GUARD_URL || '').trim().replace(/\/+$/, '');
   const key = String(env.GUARD_KEY || '').trim();
-  if (!base || !key) {
-    return { configured:false, connected:false, url:base, message:'Добавь GUARD_URL и GUARD_KEY в Cloudflare Pages.' };
+  const missing = [];
+  if (!base) missing.push('GUARD_URL');
+  if (!key) missing.push('GUARD_KEY');
+  const endpoint = base ? `${base}${run ? '/run' : '/status'}` : '';
+  if (missing.length) {
+    return {
+      configured:false, connected:false, url:base,
+      diagnostic:{ code:'guard-config-missing', missing, endpoint },
+      message:`В Cloudflare Pages Production отсутствуют: ${missing.join(', ')}.`
+    };
   }
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), run ? 105000 : 16000);
   try {
-    const response = await fetch(`${base}${run ? '/run' : '/status'}`, {
+    const response = await fetch(endpoint, {
       method: run ? 'POST' : 'GET',
       signal: controller.signal,
       headers:{
@@ -396,11 +404,17 @@ async function fetchGuardStatus(env, run = false) {
       },
       body: run ? '{}' : undefined
     });
-    const data = await response.json().catch(() => ({}));
+    const raw = await response.text();
+    let data = {};
+    try { data = raw ? JSON.parse(raw) : {}; } catch (_) {}
     if (!response.ok) {
+      const code = response.status === 401 ? 'guard-key-mismatch' : `guard-http-${response.status}`;
       return {
         configured:true, connected:false, url:base,
-        message:data.message || data.error || `Guard HTTP ${response.status}`
+        diagnostic:{ code, httpStatus:response.status, endpoint, response:cleanPlainText(raw, 220) },
+        message:response.status === 401
+          ? 'GUARD_KEY в Pages не совпадает с GUARD_KEY внешнего Worker.'
+          : (data.message || data.error || `Guard ответил HTTP ${response.status}.`)
       };
     }
     const guardBuild = cleanPlainText(data.build || '', 100);
@@ -409,14 +423,17 @@ async function fetchGuardStatus(env, run = false) {
     return {
       configured:true, connected:true, compatible:/ANDRIK Guard 2\.1 FULL/i.test(guardBuild),
       url:base, status:data, build:guardBuild,
+      diagnostic:{ code:'guard-connected', httpStatus:response.status, endpoint },
       message:run
         ? (data.message || lastMessage || 'Guard завершил проверку.')
         : (lastMessage || (guardBuild ? `${guardBuild} подключён${lastAction ? ` · ${lastAction}` : ''}.` : 'Guard подключён.'))
     };
   } catch (error) {
+    const timeout = error?.name === 'AbortError';
     return {
       configured:true, connected:false, url:base,
-      message:error.name === 'AbortError' ? 'Guard не ответил вовремя.' : error.message
+      diagnostic:{ code:timeout ? 'guard-timeout' : 'guard-network-error', endpoint, error:cleanPlainText(error?.message || error, 220) },
+      message:timeout ? 'Guard не ответил вовремя.' : `Guard недоступен: ${cleanPlainText(error?.message || error, 180)}`
     };
   } finally {
     clearTimeout(timer);
