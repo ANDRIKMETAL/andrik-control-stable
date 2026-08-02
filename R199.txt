@@ -1,0 +1,7 @@
+R199 — ANALYTICS COMPATIBILITY RESTORE
+
+1. Keeps R198 owner-session, updater gap fix, and energy saving on non-analytics pages.
+2. Restores all compatibility assets removed by R198 so cached R197 pages do not lose authorization.
+3. Google Analytics and Search Console pages use the known-working R193 sleep mode.
+4. No Google credentials, secrets, API bindings, or stored analytics data are changed.
+5. Old compatibility files are intentionally retained until all PWA/service-worker caches have aged out safely.

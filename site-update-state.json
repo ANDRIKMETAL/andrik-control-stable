@@ -1,14 +1,14 @@
 {
   "schema": 1,
-  "updaterVersion": "55.00-r197",
+  "updaterVersion": "55.00-r198",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1785713225881-6f8d0bd4ba",
-  "release": "R198",
-  "archiveName": "ANDRIK-Control-v55.00-FINAL-R198-PERSISTENT-OWNER-GAP-ECO-CLEAN.zip",
-  "sourceHead": "7a9810518674396e6d1b76bafc32a58ce23906f0",
-  "backupSha": "7a9810518674396e6d1b76bafc32a58ce23906f0",
-  "backupTag": "control-backup-20260802232702-7a98105-r198-20d44",
+  "operationId": "publish-1785713647081-7e6fb78a2b",
+  "release": "R199",
+  "archiveName": "ANDRIK-Control-v55.00-FINAL-R199-ANALYTICS-COMPATIBILITY-RESTORE.zip",
+  "sourceHead": "cada9876dce5142dc307e4b760d42258f74bb066",
+  "backupSha": "cada9876dce5142dc307e4b760d42258f74bb066",
+  "backupTag": "control-backup-20260802233403-cada987-r199-a4ba5",
   "autoRecovery": true,
-  "generatedAt": "2026-08-02T23:27:05.881Z"
+  "generatedAt": "2026-08-02T23:34:07.081Z"
 }
