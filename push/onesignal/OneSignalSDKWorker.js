@@ -1,7 +1,7 @@
-/* Control ANDRIK v55.00d — smart owner notification stack.
-   Generic OneSignal welcome messages stay disabled. Owner activity is shown as
-   one eye notification; the latest push replaces the previous item and carries
-   the current +N counter in its title. */
+/* Live Web AI R187 — one-eye notification stack.
+   Every new ANDRIK push replaces the previous visible notification. Android
+   therefore keeps one eye in the status bar; the notification title can show
+   the accumulated +N counter. */
 const ANDRIK_GENERIC_WELCOME = /thanks\s+for\s+subscribing|спасибо\s+за\s+подписку|дякуємо\s+за\s+підписку|ďakujeme\s+za\s+odber/i;
 const ANDRIK_STACK_TITLE = /^👁\s*ANDRIK\s*·\s*\+(\d+)/iu;
 
@@ -35,6 +35,15 @@ self.addEventListener('push', event => {
   } catch (_) {}
 });
 
+self.addEventListener('activate', event => {
+  event.waitUntil((async () => {
+    try {
+      const visible = await self.registration.getNotifications();
+      visible.forEach(notification => notification.close());
+    } catch (_) {}
+  })());
+});
+
 try {
   const originalShowNotification = self.registration.showNotification.bind(self.registration);
   self.registration.showNotification = async (title, options = {}) => {
@@ -46,21 +55,33 @@ try {
     const count = Math.max(embeddedCount, titleCount);
     const groupKey = String(deepAndrikValue(options, 'andrikGroupKey') || (count > 0 ? 'andrik-owner-stack' : '')).trim();
 
-    if (groupKey) {
-      const originalTitle = String(deepAndrikValue(options, 'andrikOriginalTitle') || title || 'Событие ANDRIK');
-      const originalMessage = String(deepAndrikValue(options, 'andrikOriginalMessage') || options?.body || '');
-      options = {
-        ...options,
-        tag: groupKey,
-        renotify: true,
-        badge: '/assets/andrik-eye-notification-badge-192.png',
-        icon: options?.icon || '/assets/andrik-eye-v22-192.png',
-        data: { ...(options?.data || {}), andrikGroupKey:groupKey, andrikGroupCount:Math.max(1, count || 1) }
-      };
-      if (count > 1) {
-        title = `👁 ANDRIK · +${count} ${stackWord(count)}`;
-        options.body = `Последнее: ${originalTitle}${originalMessage ? `\n${originalMessage}` : ''}`.slice(0, 360);
+    const originalTitle = String(deepAndrikValue(options, 'andrikOriginalTitle') || title || 'Событие ANDRIK');
+    const originalMessage = String(deepAndrikValue(options, 'andrikOriginalMessage') || options?.body || '');
+    const singleTag = 'andrik-single-eye';
+
+    /* Close every older notification created by this worker before showing the
+       latest event. A constant tag alone is not reliable on every Android skin. */
+    try {
+      const visible = await self.registration.getNotifications();
+      visible.forEach(notification => notification.close());
+    } catch (_) {}
+
+    options = {
+      ...options,
+      tag: singleTag,
+      renotify: true,
+      badge: '/assets/andrik-eye-notification-badge-192.png',
+      icon: options?.icon || '/assets/andrik-eye-v22-192.png',
+      data: {
+        ...(options?.data || {}),
+        andrikGroupKey: groupKey || singleTag,
+        andrikGroupCount: Math.max(1, count || 1),
+        andrikSingleEye: true
       }
+    };
+    if (count > 1) {
+      title = `👁 ANDRIK · +${count} ${stackWord(count)}`;
+      options.body = `Последнее: ${originalTitle}${originalMessage ? `\n${originalMessage}` : ''}`.slice(0, 360);
     }
 
     return originalShowNotification(title, options);

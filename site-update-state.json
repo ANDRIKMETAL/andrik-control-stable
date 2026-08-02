@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r157",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1785697298610-70588f53d4",
-  "release": "R185",
-  "archiveName": "R185-SMOOTH-ADMIN-CAROUSEL-UPDATE-CENTER-FULL.zip",
-  "sourceHead": "9bed9661c80a27228f4ceea5c5ed4c74ba05624a",
-  "backupSha": "9bed9661c80a27228f4ceea5c5ed4c74ba05624a",
-  "backupTag": "control-backup-20260802190136-9bed966-r185-f1e62",
+  "operationId": "publish-1785698218211-a674a9c5f3",
+  "release": "R187",
+  "archiveName": "R187-SINGLE-EYE-NOTIFICATIONS-FULL.zip",
+  "sourceHead": "7e9ad9408057c79de419b3b60a3044ff166ed63a",
+  "backupSha": "7e9ad9408057c79de419b3b60a3044ff166ed63a",
+  "backupTag": "control-backup-20260802191655-7e9ad94-r187-500ed",
   "autoRecovery": true,
-  "generatedAt": "2026-08-02T19:01:38.610Z"
+  "generatedAt": "2026-08-02T19:16:58.211Z"
 }

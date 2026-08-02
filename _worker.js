@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R185', number:185, version:'55.00', full:'55.00 LIVE WEB AI FINAL R185 SMOOTH ADMIN CAROUSEL', siteUpdater:'55.00-r157' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R187', number:187, version:'55.00', full:'55.00 LIVE WEB AI FINAL R187 SINGLE EYE NOTIFICATIONS', siteUpdater:'55.00-r157' });
 
 const JSON_HEADERS = {
   'content-type': 'application/json; charset=utf-8',
@@ -1885,23 +1885,18 @@ function pushTopicToken(value, fallback = 'andrik-event') {
   return token || fallback;
 }
 
-// R108: real-time owner events must never replace each other. Only the scheduled
-// morning summary uses a collapse topic. Comments, likes and subscribers stay
-// as separate notifications so Android shows the actual event that happened.
-const OWNER_PUSH_STACK_TYPES = new Set(['daily-summary']);
-
+// R187: every owner event uses one universal replacement stack. This keeps
+// exactly one ANDRIK eye in Android's status bar while preserving the latest
+// event and an accumulated +N counter inside the notification itself.
 function ownerPushPresentation(history = null, name = '') {
   const type = cleanPlainText(history?.type || '', 80).toLowerCase();
-  if (OWNER_PUSH_STACK_TYPES.has(type)) {
-    return {
-      androidGroup: 'andrik-owner-stack',
-      threadId: 'andrik-owner-stack',
-      collapseId: 'andrik-owner-stack',
-      webPushTopic: 'andrik-owner-stack',
-      ttl: type === 'daily-summary' ? 86400 : 43200
-    };
-  }
-  return {};
+  return {
+    androidGroup: 'andrik-single-eye',
+    threadId: 'andrik-single-eye',
+    collapseId: 'andrik-single-eye',
+    webPushTopic: 'andrik-single-eye',
+    ttl: type === 'daily-summary' ? 86400 : 43200
+  };
 }
 
 function ownerPushStackLabel(count) {
@@ -1913,10 +1908,10 @@ function ownerPushStackLabel(count) {
 
 async function nextOwnerPushStack(env, history = null) {
   const type = cleanPlainText(history?.type || '', 80).toLowerCase();
-  if (!OWNER_PUSH_STACK_TYPES.has(type) || !env.COMMENTS_DB) return { enabled:false, count:1, windowMinutes:30 };
+  if (!env.COMMENTS_DB) return { enabled:true, count:1, windowMinutes:30, key:'andrik-single-eye' };
   const db = env.COMMENTS_DB;
   await ensurePushAutomationSchema(db);
-  const stateKey = 'owner-push-stack-v55-00d';
+  const stateKey = 'owner-push-stack-r187';
   const now = Date.now();
   const windowMs = 30 * 60 * 1000;
   let previous = {};
@@ -1929,7 +1924,7 @@ async function nextOwnerPushStack(env, history = null) {
   const count = withinWindow ? Math.min(99, Math.max(1, Number(previous?.count || 0)) + 1) : 1;
   const value = { count, lastAt:new Date(now).toISOString(), firstAt:withinWindow ? (previous?.firstAt || previous?.lastAt || new Date(now).toISOString()) : new Date(now).toISOString(), lastType:type };
   await setPushState(db, stateKey, JSON.stringify(value));
-  return { enabled:true, count, windowMinutes:30, key:'andrik-owner-stack' };
+  return { enabled:true, count, windowMinutes:30, key:'andrik-single-eye' };
 }
 
 async function sendOneSignalPush(env, {
@@ -2008,7 +2003,7 @@ async function sendOneSignalPush(env, {
       ...(historyType ? { andrikType: historyType } : {}),
       ...(historySource ? { andrikSource: historySource } : {}),
       ...(ownerStack.enabled ? {
-        andrikGroupKey: ownerStack.key || 'andrik-owner-stack',
+        andrikGroupKey: ownerStack.key || 'andrik-single-eye',
         andrikGroupCount: stackCount,
         andrikGroupWindowMinutes: Number(ownerStack.windowMinutes || 30),
         andrikOriginalTitle: cleanPlainText(title, 180),
@@ -9843,7 +9838,7 @@ function allowControlPlayerFrame(response, url, isControlHost) {
   headers.set('x-content-type-options', 'nosniff');
   headers.set('referrer-policy', 'strict-origin-when-cross-origin');
   headers.set('permissions-policy', 'camera=(), microphone=(), geolocation=()');
-  headers.set('x-andrik-security-headers', 'R185');
+  headers.set('x-andrik-security-headers', 'R187');
 
   if (isHtml) {
     if (isPlayerShell) {

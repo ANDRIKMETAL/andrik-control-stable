@@ -1,0 +1,26 @@
+/* Live Web AI R186 — clean return from YouTube to listener map. */
+@media screen and (orientation:landscape){
+  /* Keep landscape map scrolling functional but visually remove every old rail / bar. */
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane{
+    scrollbar-width:none!important;
+    -ms-overflow-style:none!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane::-webkit-scrollbar,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane::-webkit-scrollbar-track,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane::-webkit-scrollbar-thumb{
+    width:0!important;
+    height:0!important;
+    display:none!important;
+    background:transparent!important;
+  }
+  #landscapeMapScrollbarR65,
+  #landscapeMapScrollbarR66,
+  #landscapeMapScrollbarR67,
+  #landscapeMapScrollbarR69Final,
+  #landscapeMapScrollbarR69FinalThumb{
+    display:none!important;
+    visibility:hidden!important;
+    opacity:0!important;
+    pointer-events:none!important;
+  }
+}
