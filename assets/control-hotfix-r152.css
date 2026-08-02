@@ -1,0 +1,665 @@
+/* R144 — точечный hotfix: горизонтальный скролл, единый мини-плеер, рамки и дыхание глаза. */
+
+/* 1) Главная Control: исключаем нативный горизонтальный скролл/полосу при боковом жесте. */
+html.control-home-root-r144,
+html.control-home-root-r144 body.control-home-page{
+  width:100%!important;
+  max-width:100vw!important;
+  overflow-x:hidden!important;
+  overscroll-behavior-x:none!important;
+}
+html.control-home-root-r144 body.control-home-page .control-swipe-main,
+html.control-home-root-r144 body.control-home-page .control-swipe-shell,
+html.control-home-root-r144 body.control-home-page .control-swipe-page{
+  max-width:100vw!important;
+  overflow-x:hidden!important;
+  overscroll-behavior-x:none!important;
+}
+html.control-home-root-r144 body.control-home-page .control-swipe-track{
+  overflow:visible!important;
+  overscroll-behavior-x:none!important;
+}
+html.control-home-root-r144::-webkit-scrollbar,
+html.control-home-root-r144 body.control-home-page::-webkit-scrollbar{
+  width:0!important;
+  height:0!important;
+  display:none!important;
+}
+
+/* 2) Кнопка мини-плеера: размер R142 сохранён, пульсация заметно сильнее. */
+.andrik-mini-r141-button{
+  transform-origin:50% 50%!important;
+  animation:andrikMiniR144Pulse 1.06s cubic-bezier(.42,0,.20,1) infinite!important;
+}
+.andrik-mini-r141-button::before,
+.andrik-mini-r141-button::after{
+  animation:andrikMiniR144Ring 1.06s ease-out infinite!important;
+}
+.andrik-mini-r141-button::after{animation-delay:.23s!important}
+@keyframes andrikMiniR144Pulse{
+  0%,100%{
+    transform:scale(.86);
+    filter:brightness(.92) saturate(1.04);
+    box-shadow:0 0 0 3px rgba(63,248,149,.08),0 0 15px rgba(57,255,151,.32),0 10px 26px rgba(0,0,0,.44)
+  }
+  50%{
+    transform:scale(1.18);
+    filter:brightness(1.48) saturate(1.20);
+    box-shadow:0 0 0 7px rgba(63,248,149,.18),0 0 42px rgba(57,255,151,.98),0 14px 36px rgba(0,0,0,.52)
+  }
+}
+@keyframes andrikMiniR144Ring{
+  0%{transform:scale(.70);opacity:.96}
+  100%{transform:scale(1.42);opacity:0}
+}
+
+/* 3) Во всех горизонтальных экранах мини-плеер стоит на одной высоте. */
+@media(orientation:landscape){
+  #andrik-control-mini-r141,
+  body.analytics-admin-page[data-analytics-page="map"] #andrik-control-mini-r141{
+    top:190px!important;
+  }
+  body.analytics-admin-page[data-analytics-page="map"] .andrik-mini-r141-panel,
+  .andrik-mini-r141-panel{
+    max-height:calc(100dvh - 206px)!important;
+    overflow:auto!important;
+  }
+
+  /* Главная Админ-панель: верх рамки точно к нижней линии шапки; низ не меняется. */
+  body.control-home-page .control-admin-landscape-frame-r141{
+    top:78px!important;
+  }
+
+  /* Карусель разделов, включая Мониторинг: поднимаем только верх рамки. */
+  body.admin-sections-shell .control-admin-landscape-frame-r141{
+    top:82px!important;
+  }
+
+  /* В Мониторинге кнопка остаётся внутри нижнего края рамки. */
+  html.admin-carousel-embedded body.observability-page #observabilityRefresh{
+    position:relative!important;
+    top:-18px!important;
+    margin-right:8px!important;
+  }
+}
+@media(max-height:470px) and (orientation:landscape){
+  #andrik-control-mini-r141,
+  body.analytics-admin-page[data-analytics-page="map"] #andrik-control-mini-r141{
+    top:176px!important;
+  }
+  body.analytics-admin-page[data-analytics-page="map"] .andrik-mini-r141-panel,
+  .andrik-mini-r141-panel{
+    max-height:calc(100dvh - 186px)!important;
+  }
+  body.control-home-page .control-admin-landscape-frame-r141{top:78px!important}
+  body.admin-sections-shell .control-admin-landscape-frame-r141{top:82px!important}
+}
+
+/* 4) Реальное дыхание самого глаза: анимируем изображение, а не зафиксированный контейнер. */
+body.r137-eye-motion-page .control-topbar .control-center-logo{
+  animation:none!important;
+  transform:translate(-50%,-50%)!important;
+  transform-origin:50% 50%!important;
+}
+body.r137-eye-motion-page .control-topbar .control-center-logo .logo-ok{
+  transform-origin:50% 50%!important;
+  animation:andrikR144EyeBreath 2.72s ease-in-out infinite!important;
+  animation-play-state:running!important;
+  will-change:transform,filter!important;
+}
+body.r137-eye-motion-page .control-topbar .control-center-logo::after{
+  animation:andrikR144EyeHalo 2.72s ease-in-out infinite!important;
+  animation-play-state:running!important;
+}
+@keyframes andrikR144EyeBreath{
+  0%,100%{
+    transform:translate(-50%,-50%) scale(.88);
+    filter:brightness(1.08) saturate(1.34)
+      drop-shadow(0 0 9px rgba(83,255,147,.62))
+      drop-shadow(0 0 24px rgba(29,226,98,.46))
+  }
+  50%{
+    transform:translate(-50%,-50%) scale(1.15);
+    filter:brightness(1.58) saturate(1.72)
+      drop-shadow(0 0 18px rgba(156,255,195,.99))
+      drop-shadow(0 0 44px rgba(34,241,111,.92))
+  }
+}
+@keyframes andrikR144EyeHalo{
+  0%,100%{transform:translate(-50%,-50%) scale(.70);opacity:.18}
+  50%{transform:translate(-50%,-50%) scale(1.42);opacity:.94}
+}
+@media(prefers-reduced-motion:reduce){
+  .andrik-mini-r141-button{animation-duration:1.8s!important}
+  body.r137-eye-motion-page .control-topbar .control-center-logo .logo-ok,
+  body.r137-eye-motion-page .control-topbar .control-center-logo::after{
+    animation-duration:5.2s!important;
+  }
+}
+
+/* R145 — map rail removal, frame alignment and stronger eye breathing. */
+
+/* 5) Карта слушателей в горизонте: полностью убираем синтетическую зелёную вертикальную рейку/док и любые видимые scrollbar. */
+@media(orientation:landscape){
+  body.analytics-admin-page.analytics-v54-46-page[data-analytics-page="map"] .analytics-map-pane,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane{
+    scrollbar-width:none!important;
+    -ms-overflow-style:none!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page[data-analytics-page="map"] .analytics-map-pane::-webkit-scrollbar,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane::-webkit-scrollbar{
+    width:0!important;
+    height:0!important;
+    display:none!important;
+    background:transparent!important;
+  }
+  #landscapeMapScrollbarR69Final,
+  #landscapeMapScrollbarR69FinalThumb,
+  #landscapeMapDockR70{
+    display:none!important;
+    visibility:hidden!important;
+    opacity:0!important;
+    pointer-events:none!important;
+    width:0!important;
+    min-width:0!important;
+    max-width:0!important;
+    height:0!important;
+    min-height:0!important;
+    max-height:0!important;
+    margin:0!important;
+    padding:0!important;
+    border:0!important;
+    box-shadow:none!important;
+    overflow:hidden!important;
+  }
+
+  /* 6) Главная админ-панель: верх рамки ещё чуть выше, точно в уровень линии шапки. */
+  body.control-home-page .control-admin-landscape-frame-r141{
+    top:74px!important;
+  }
+
+  /* 7) Карусель админ-разделов / Мониторинг: рамка выше к линии шапки. */
+  body.admin-sections-shell .control-admin-landscape-frame-r141{
+    top:76px!important;
+  }
+
+  /* 8) В Мониторинге кнопка обновления гарантированно остаётся внутри правого нижнего угла рамки. */
+  html.admin-carousel-embedded body.observability-page .observability-toolbar,
+  body.observability-page .observability-toolbar{
+    padding-bottom:20px!important;
+  }
+  html.admin-carousel-embedded body.observability-page #observabilityRefresh,
+  body.observability-page #observabilityRefresh{
+    position:relative!important;
+    top:-28px!important;
+    right:auto!important;
+    margin-right:14px!important;
+    align-self:flex-end!important;
+    z-index:3!important;
+  }
+}
+@media(max-height:470px) and (orientation:landscape){
+  body.control-home-page .control-admin-landscape-frame-r141{top:74px!important}
+  body.admin-sections-shell .control-admin-landscape-frame-r141{top:76px!important}
+  html.admin-carousel-embedded body.observability-page #observabilityRefresh,
+  body.observability-page #observabilityRefresh{top:-24px!important}
+}
+
+/* 9) Верхний глаз: усиленное дыхание для Защиты / Атаки / Обновить и остальных страниц с r137-eye-motion-page. */
+body.r137-eye-motion-page .control-topbar .control-center-logo{
+  animation:andrikR145EyeDock 2.42s ease-in-out infinite!important;
+  animation-play-state:running!important;
+  transform-origin:50% 50%!important;
+  will-change:transform,filter!important;
+}
+body.r137-eye-motion-page .control-topbar .control-center-logo .logo-ok{
+  animation:andrikR145EyeCore 2.42s ease-in-out infinite!important;
+  animation-play-state:running!important;
+  transform-origin:50% 50%!important;
+  will-change:transform,filter!important;
+}
+body.r137-eye-motion-page .control-topbar .control-center-logo::after{
+  animation:andrikR145EyeHalo 2.42s ease-in-out infinite!important;
+  animation-play-state:running!important;
+}
+@keyframes andrikR145EyeDock{
+  0%,100%{transform:translate(-50%,-50%) scale(.88)}
+  50%{transform:translate(-50%,-50%) scale(1.10)}
+}
+@keyframes andrikR145EyeCore{
+  0%,100%{
+    transform:translate(-50%,-50%) scale(.92);
+    filter:brightness(1.10) saturate(1.34)
+      drop-shadow(0 0 10px rgba(85,255,145,.74))
+      drop-shadow(0 0 28px rgba(31,235,98,.56));
+  }
+  50%{
+    transform:translate(-50%,-50%) scale(1.20);
+    filter:brightness(1.62) saturate(1.78)
+      drop-shadow(0 0 18px rgba(167,255,205,.98))
+      drop-shadow(0 0 42px rgba(34,241,111,.92));
+  }
+}
+@keyframes andrikR145EyeHalo{
+  0%,100%{transform:translate(-50%,-50%) scale(.70);opacity:.20}
+  50%{transform:translate(-50%,-50%) scale(1.46);opacity:.96}
+}
+@media(prefers-reduced-motion:reduce){
+  body.r137-eye-motion-page .control-topbar .control-center-logo,
+  body.r137-eye-motion-page .control-topbar .control-center-logo .logo-ok,
+  body.r137-eye-motion-page .control-topbar .control-center-logo::after{
+    animation-duration:5.4s!important;
+  }
+}
+
+/* R146 — убрать чёрную полосу карты и растянуть рамку на всю рабочую область. */
+@media(orientation:landscape){
+  /* 10) Увеличенная карта: подложка повторяет карту, поэтому при focus/zoom не появляется чёрная полоса снизу. */
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top.has-country-focus #worldMap,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top:not(.has-country-focus) #worldMap{
+    background:
+      url('/assets/world-map-control-v52.webp?v=52.14') center center/100% 100% no-repeat,
+      linear-gradient(180deg,#163b4f 0%,#123447 100%)!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap > .world-map-canvas,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top.has-country-focus #worldMap > .world-map-canvas,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top:not(.has-country-focus) #worldMap > .world-map-canvas{
+    position:absolute!important;
+    inset:0!important;
+    background:
+      url('/assets/world-map-control-v52.webp?v=52.14') center center/100% 100% no-repeat,
+      linear-gradient(180deg,#163b4f 0%,#123447 100%)!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap .world-map-stage,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap .world-map-canvas{
+    position:absolute!important;
+    inset:0!important;
+  }
+
+  /* 11) Главная админ-панель и карусель разделов: рамка ровно по всей рабочей скролл-области, почти от края до края. */
+  body.control-home-page .control-admin-landscape-frame-r141,
+  body.admin-sections-shell .control-admin-landscape-frame-r141{
+    left:max(6px,calc(env(safe-area-inset-left) + 2px))!important;
+    right:max(6px,calc(env(safe-area-inset-right) + 2px))!important;
+    top:74px!important;
+    bottom:max(4px,env(safe-area-inset-bottom))!important;
+    border-radius:28px!important;
+  }
+  body.control-home-page .control-swipe-main{
+    height:calc(100dvh - 92px)!important;
+  }
+  body.control-home-page .control-menu-page .control-swipe-page-inner{
+    padding-top:16px!important;
+    scrollbar-width:none!important;
+    -ms-overflow-style:none!important;
+  }
+  body.control-home-page .control-menu-page .control-swipe-page-inner::-webkit-scrollbar{
+    width:0!important;
+    height:0!important;
+    display:none!important;
+  }
+
+  /* 12) Встроенные разделы (Служебное и другие): скрываем серую правую полосу, чтобы ничего не торчало за рамку. */
+  html.admin-carousel-embedded body.control-page .admin-main{
+    scrollbar-width:none!important;
+    -ms-overflow-style:none!important;
+    padding-bottom:calc(18px + env(safe-area-inset-bottom))!important;
+  }
+  html.admin-carousel-embedded body.control-page .admin-main::-webkit-scrollbar{
+    width:0!important;
+    height:0!important;
+    display:none!important;
+  }
+  html.admin-carousel-embedded body.control-page .admin-main > .wrap{
+    width:calc(100% - 14px)!important;
+    max-width:min(1180px,calc(100% - 14px))!important;
+  }
+  html.admin-carousel-embedded body.control-page .admin-header{
+    margin-top:2px!important;
+  }
+}
+@media(max-height:470px) and (orientation:landscape){
+  body.control-home-page .control-admin-landscape-frame-r141,
+  body.admin-sections-shell .control-admin-landscape-frame-r141{
+    top:72px!important;
+    bottom:max(3px,env(safe-area-inset-bottom))!important;
+  }
+  body.control-home-page .control-swipe-main{height:calc(100dvh - 88px)!important}
+}
+
+/* R149 — центрирование карты при выборе страны и точное выравнивание верхней рамки в админ-разделах. */
+@media(orientation:landscape){
+  /* 13) Неподвижная подложка под zoom-слоем карты. При выборе любой страны
+     transform основного stage больше не открывает чёрный canvas снизу. */
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap > .world-map-canvas{
+    isolation:isolate!important;
+    background:#123447!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap > .world-map-canvas::before{
+    content:""!important;
+    position:absolute!important;
+    inset:-2px!important;
+    z-index:0!important;
+    display:block!important;
+    width:auto!important;
+    height:auto!important;
+    background-image:url('/assets/world-map-control-v52.webp?v=52.14')!important;
+    background-position:center center!important;
+    background-repeat:no-repeat!important;
+    background-size:100% 100%!important;
+    pointer-events:none!important;
+    transform:translateZ(0)!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap > .world-map-canvas > .world-map-stage{
+    z-index:1!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap > .world-map-canvas > .world-map-state{
+    z-index:2!important;
+  }
+
+  /* 14) Только «Служебное»: верх общей рамки начинается на уровне зелёной
+     нижней линии 92px-шапки встроенного раздела. */
+  body.admin-sections-shell[data-active-section="service"] .control-admin-landscape-frame-r141{
+    top:92px!important;
+  }
+}
+@media(max-height:470px) and (orientation:landscape){
+  body.admin-sections-shell[data-active-section="service"] .control-admin-landscape-frame-r141{
+    top:92px!important;
+  }
+}
+
+
+/* R149 — центрирование карты при выборе страны и точное выравнивание верхней рамки. */
+@media(orientation:landscape){
+  /* Все внутренние страницы админ-разделов: верх зелёной рамки ровно по линии шапки. */
+  body.control-page.unified-glow-ready::after,
+  body.comment-collection-page.unified-glow-ready::after{
+    top:var(--r139-topbar-h)!important;
+  }
+
+  /* Главная админ-панель и карусель разделов: внешняя рамка также строго по линии шапки. */
+  body.control-home-page .control-admin-landscape-frame-r141,
+  body.admin-sections-shell .control-admin-landscape-frame-r141{
+    top:78px!important;
+  }
+
+  /* Карта: при фокусе стран избегаем визуального тёмного хвоста, фон и shell одинаковые. */
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap .world-map-canvas,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap .world-map-stage{
+    background:#082331!important;
+  }
+}
+@media(max-height:470px) and (orientation:landscape){
+  body.control-home-page .control-admin-landscape-frame-r141,
+  body.admin-sections-shell .control-admin-landscape-frame-r141{
+    top:78px!important;
+  }
+}
+
+
+/* R151 — карта, рамки и защита по фактическим скриншотам телефона. */
+@media screen and (orientation:landscape){
+  /* Карта: двигаем и увеличиваем реальный zoom-слой, а не подкрашиваем пустой хвост. */
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap > .world-map-canvas{
+    position:absolute!important;
+    inset:0!important;
+    padding:0!important;
+    overflow:hidden!important;
+    background:#153b4f!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap > .world-map-canvas::before{
+    display:none!important;
+    content:none!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap > .world-map-canvas > .world-map-stage{
+    position:absolute!important;
+    left:0!important;
+    right:0!important;
+    top:9px!important;
+    bottom:-15px!important;
+    width:100%!important;
+    height:auto!important;
+    min-height:0!important;
+    max-height:none!important;
+    margin:0!important;
+    padding:0!important;
+    overflow:hidden!important;
+    background:#153b4f!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap .world-map-stage > img{
+    position:absolute!important;
+    inset:0!important;
+    display:block!important;
+    width:100%!important;
+    height:100%!important;
+    max-width:none!important;
+    max-height:none!important;
+    object-fit:fill!important;
+    object-position:center center!important;
+  }
+
+  /* Одна геометрия для главной админки и всех четырёх разделов. */
+  body.control-home-page .control-admin-landscape-frame-r141,
+  body.admin-sections-shell .control-admin-landscape-frame-r141,
+  body.admin-sections-shell[data-active-section="service"] .control-admin-landscape-frame-r141{
+    top:92px!important;
+    left:max(6px,calc(env(safe-area-inset-left) + 2px))!important;
+    right:max(6px,calc(env(safe-area-inset-right) + 2px))!important;
+    bottom:max(4px,env(safe-area-inset-bottom))!important;
+  }
+  body.control-page.unified-glow-ready::after,
+  body.comment-collection-page.unified-glow-ready::after{
+    top:92px!important;
+  }
+  body.control-home-page .control-swipe-main{
+    height:calc(100dvh - 104px)!important;
+  }
+}
+@media screen and (orientation:landscape) and (max-height:470px){
+  body.control-home-page .control-admin-landscape-frame-r141,
+  body.admin-sections-shell .control-admin-landscape-frame-r141,
+  body.admin-sections-shell[data-active-section="service"] .control-admin-landscape-frame-r141{
+    top:92px!important;
+  }
+  body.control-home-page .control-swipe-main{height:calc(100dvh - 102px)!important}
+}
+
+/* Защита в портрете: панель вкладок больше не прилипает поверх карточек. */
+@media screen and (orientation:portrait){
+  body.protection-page .protection-nav{
+    position:relative!important;
+    top:auto!important;
+    z-index:4!important;
+  }
+}
+
+
+/* =====================================================================
+   R152 — окончательная геометрия короткого горизонтального экрана.
+   1) Карта: возвращена цельная сцена 2560/1031 без смещённого слоя.
+   2) Админ-панель: реальная область начинается после 78px-шапки.
+   3) На низком landscape все четыре карточки полностью видны и нажимаются.
+   ===================================================================== */
+@media screen and (orientation:landscape){
+  /* Карта: shell, canvas и transform-stage имеют одну геометрию и один фон.
+     Это исключает открытие тёмного нижнего слоя при фокусе любой страны. */
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top.has-country-focus #worldMap,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top:not(.has-country-focus) #worldMap{
+    position:relative!important;
+    width:calc(100vw - 20px)!important;
+    max-width:calc(100vw - 20px)!important;
+    height:auto!important;
+    min-height:0!important;
+    max-height:none!important;
+    aspect-ratio:2560/1031!important;
+    flex:none!important;
+    margin:0 auto!important;
+    padding:0!important;
+    overflow:hidden!important;
+    background:#153b4f!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap>.world-map-canvas{
+    position:absolute!important;
+    inset:0!important;
+    width:100%!important;
+    height:100%!important;
+    min-height:0!important;
+    max-height:none!important;
+    margin:0!important;
+    padding:0!important;
+    overflow:hidden!important;
+    background:#153b4f!important;
+    isolation:isolate!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap>.world-map-canvas::before{
+    display:none!important;
+    content:none!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap>.world-map-canvas>.world-map-stage{
+    position:absolute!important;
+    inset:0!important;
+    width:100%!important;
+    height:100%!important;
+    min-height:100%!important;
+    max-height:100%!important;
+    aspect-ratio:auto!important;
+    margin:0!important;
+    padding:0!important;
+    overflow:visible!important;
+    background:#153b4f!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap .world-map-stage>img{
+    position:absolute!important;
+    inset:-1px!important;
+    display:block!important;
+    width:calc(100% + 2px)!important;
+    height:calc(100% + 2px)!important;
+    max-width:none!important;
+    max-height:none!important;
+    object-fit:fill!important;
+    object-position:center!important;
+  }
+
+  /* Main Admin: body grid and header now agree on the same 78px height.
+     The earlier 68px/78px conflict was clipping the real working area. */
+  body.control-home-page{
+    display:grid!important;
+    grid-template-rows:78px minmax(0,1fr)!important;
+  }
+  body.control-home-page .control-admin-landscape-frame-r141{
+    top:80px!important;
+    bottom:max(4px,env(safe-area-inset-bottom))!important;
+  }
+  body.control-home-page .admin-main.control-swipe-main{
+    grid-row:2!important;
+    height:100%!important;
+    min-height:0!important;
+    max-height:100%!important;
+    overflow:hidden!important;
+  }
+  body.control-home-page .control-swipe-shell,
+  body.control-home-page .control-swipe-track,
+  body.control-home-page .control-swipe-page{
+    height:100%!important;
+    min-height:0!important;
+    max-height:100%!important;
+  }
+  body.control-home-page .control-menu-page{
+    overflow-y:auto!important;
+    overflow-x:hidden!important;
+    -webkit-overflow-scrolling:touch!important;
+  }
+  body.control-home-page .control-menu-page .control-swipe-page-inner{
+    height:auto!important;
+    min-height:100%!important;
+    max-height:none!important;
+    overflow:visible!important;
+  }
+}
+
+/* Real phone landscape is about 329 CSS px high. Use a dedicated compact layout
+   rather than clipping ordinary 112px cards behind the bottom action buttons. */
+@media screen and (orientation:landscape) and (max-height:470px){
+  body.control-home-page .control-admin-landscape-frame-r141{
+    top:80px!important;
+    bottom:max(4px,env(safe-area-inset-bottom))!important;
+  }
+  body.control-home-page .control-menu-page{
+    padding:2px 10px 58px!important;
+  }
+  body.control-home-page .control-menu-page .control-swipe-page-inner{
+    box-sizing:border-box!important;
+    width:100%!important;
+    max-width:none!important;
+    min-height:100%!important;
+    padding:2px clamp(18px,4vw,34px) 58px!important;
+  }
+  body.control-home-page .control-menu-heading{
+    min-height:52px!important;
+    height:52px!important;
+    max-height:52px!important;
+    margin:0 0 4px!important;
+    padding:0 8px 4px!important;
+    overflow:hidden!important;
+  }
+  body.control-home-page .control-menu-heading .eyeline,
+  body.control-home-page .control-menu-heading small{
+    font-size:.48rem!important;
+    line-height:1!important;
+    margin:0!important;
+  }
+  body.control-home-page .control-menu-heading h1{
+    margin:2px 0 0!important;
+    font-size:2.05rem!important;
+    line-height:.92!important;
+  }
+  body.control-home-page .control-menu-heading p{display:none!important}
+  body.control-home-page .control-menu-page .control-home-menu{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    grid-template-rows:repeat(2,58px)!important;
+    grid-auto-rows:58px!important;
+    gap:8px 12px!important;
+    height:124px!important;
+    min-height:124px!important;
+    max-height:124px!important;
+    margin:0!important;
+    overflow:visible!important;
+  }
+  body.control-home-page .control-menu-page .control-home-menu-card{
+    box-sizing:border-box!important;
+    min-height:58px!important;
+    height:58px!important;
+    max-height:58px!important;
+    padding:6px 10px!important;
+    grid-template-columns:34px minmax(0,1fr) 18px!important;
+    gap:8px!important;
+    border-radius:16px!important;
+    overflow:hidden!important;
+  }
+  body.control-home-page .control-menu-page .control-home-menu-card>span{
+    width:34px!important;
+    height:34px!important;
+    min-width:34px!important;
+    min-height:34px!important;
+    border-radius:11px!important;
+    font-size:1rem!important;
+  }
+  body.control-home-page .control-menu-page .control-home-menu-card small{
+    margin:0!important;
+    font-size:.42rem!important;
+    line-height:1!important;
+  }
+  body.control-home-page .control-menu-page .control-home-menu-card strong{
+    margin:2px 0 0!important;
+    font-size:1.08rem!important;
+    line-height:1!important;
+  }
+  body.control-home-page .control-menu-page .control-home-menu-card p{display:none!important}
+  body.control-home-page .control-menu-page .control-home-menu-card b{font-size:1.25rem!important}
+  body.control-home-page .control-menu-page .control-version-footer,
+  body.control-home-page .control-menu-page .control-menu-map-link{display:none!important}
+}
