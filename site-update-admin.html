@@ -68,9 +68,61 @@ body.r137-eye-motion-page .control-topbar .control-center-logo[data-r3d-live-eye
     padding-bottom:max(18px,calc(12px + env(safe-area-inset-bottom)))!important;
   }
 }
+</style><style id="r167-frame-swipe-fix">
+@media (orientation:landscape){
+  /* Use one visible frame element and disable competing body pseudo frames. */
+  body.control-page.attack-page::after,
+  body.control-page.protection-page::after,
+  body.control-page.site-update-page::after{display:none!important;content:none!important}
+
+  body.control-page.attack-page,
+  body.control-page.protection-page,
+  body.control-page.site-update-page{background:#02070b!important;overflow-x:hidden!important}
+
+  body.control-page.attack-page .admin-main,
+  body.control-page.protection-page .admin-main,
+  body.control-page.site-update-page .admin-main{
+    position:relative!important;
+    width:100%!important;
+    height:auto!important;
+    min-height:calc(100dvh - 78px)!important;
+    max-height:none!important;
+    margin:0!important;
+    padding:0 0 max(14px,calc(10px + env(safe-area-inset-bottom)))!important;
+    overflow-x:hidden!important;
+    overflow-y:auto!important;
+    -webkit-overflow-scrolling:touch!important;
+    overscroll-behavior-y:contain!important;
+    background:#02070b!important;
+  }
+
+  .control-section-landscape-frame-r165{
+    display:block!important;
+    position:fixed!important;
+    top:86px!important;
+    left:max(8px,calc(env(safe-area-inset-left) + 3px))!important;
+    right:max(8px,calc(env(safe-area-inset-right) + 3px))!important;
+    bottom:max(5px,env(safe-area-inset-bottom))!important;
+    border:2px solid rgba(104,255,174,.98)!important;
+    border-radius:28px!important;
+    background:transparent!important;
+    box-shadow:0 0 0 1px rgba(132,255,197,.22),0 0 9px rgba(91,255,180,.88),0 0 27px rgba(46,232,132,.55),inset 0 0 18px rgba(70,246,151,.15)!important;
+    pointer-events:none!important;
+    z-index:2147481800!important;
+  }
+
+  body.attack-page .attack-wrap{padding-top:12px!important}
+  body.protection-page .protection-wrap{padding-top:18px!important}
+  body.site-update-page .update-wrap{padding-top:16px!important}
+
+  /* Protection: stop sticky tab bar from dragging / magnetizing during scroll. */
+  body.protection-page .protection-nav{position:static!important;top:auto!important;margin-top:10px!important}
+  body.protection-page .protection-swipe{margin-top:10px!important}
+}
 </style></head>
 <body class="control-page site-update-page r136-standard-header-page r137-eye-motion-page">
 <nav class="topbar control-topbar control-detail-topbar"><div class="wrap nav-shell"><a class="control-center-logo" id="controlCenterLogo" href="https://andrikmetal.com/" aria-label="Открыть главный сайт ANDRIK"><img class="logo-ok" src="/assets/control-topbar-eye-triangle.jpg?v=55.00-r136" alt=""><img class="logo-error" src="/assets/andrik-control-red-triangle-192.png?v=55.00-r136" alt=""></a><div class="nav-links control-nav-links control-detail-nav"><a href="/admin-sections.html?section=service&v=55.00-r136">← Служебное</a></div></div></nav>
+<div class="control-section-landscape-frame-r165" aria-hidden="true"></div>
 <main class="admin-main"><div class="wrap update-wrap">
 <header class="admin-header control-header update-header"><span class="eyeline">LIVE WEB AI · быстрая публикация</span><h1>Обновить сайт</h1><p>Выбери ZIP и запусти обновление. Control сам проверит архив и опубликует сайт.</p></header>
 
@@ -139,8 +191,37 @@ GITHUB_RELEASE_REPO=andrik-control-stable</pre><p>Отдельный GITHUB_RELE
 
 
 </section>
-<footer class="control-version-footer"><strong>Live Web AI · ANDRIK · v55.00 LIVE WEB AI FINAL R166</strong><span>ZIP → backup → commit → Release → Cloudflare → повторная установка той же версии · 02.08.2026</span></footer>
+<footer class="control-version-footer"><strong>Live Web AI · ANDRIK · v55.00 LIVE WEB AI FINAL R167</strong><span>ZIP → backup → commit → Release → Cloudflare → повторная установка той же версии · 02.08.2026</span></footer>
 </div></main>
 <script defer src="/assets/control-version-v55-00-r115.js?v=55.00-r115"></script><script defer src="/assets/control-status-eye-v55-00-r88.js?v=55.00-r88"></script><script defer src="/assets/control-live-eye-v55-00-r3l.js?v=55.00-r3l"></script><script defer src="/assets/unified-glow-r139.js?v=55.00-r142"></script>
 <script defer src="/assets/control-mini-player-r141.js?v=55.00-r144"></script>
+<script id="r167-triad-swipe">
+(()=>{
+  const body=document.body;
+  if(!body) return;
+  const routes=[
+    '/protection-admin.html?v=55.00-r167',
+    '/attack-map.html?v=55.00-r167',
+    '/site-update-admin.html?v=55.00-r167'
+  ];
+  const current=body.classList.contains('protection-page')?0:(body.classList.contains('attack-page')?1:(body.classList.contains('site-update-page')?2:-1));
+  if(current<0) return;
+  let sx=0,sy=0,tracking=false;
+  const blocked='input,textarea,select,button,a,label,summary,[data-no-page-swipe],.protection-swipe,.attack-map,.attack-stage,.world-map-shell,.world-map-canvas';
+  const go=(dir)=>{ const next=(current + (dir==='left'?1:2))%routes.length; window.location.href=routes[next]; };
+  window.addEventListener('touchstart',e=>{
+    if(e.touches.length!==1) return;
+    if(e.target && e.target.closest && e.target.closest(blocked)) return;
+    const t=e.touches[0]; sx=t.clientX; sy=t.clientY; tracking=true;
+  },{passive:true});
+  window.addEventListener('touchend',e=>{
+    if(!tracking) return; tracking=false;
+    const t=e.changedTouches && e.changedTouches[0]; if(!t) return;
+    const dx=t.clientX-sx, dy=t.clientY-sy;
+    if(Math.abs(dx)<72) return;
+    if(Math.abs(dx)<Math.abs(dy)*1.25) return;
+    go(dx<0?'left':'right');
+  },{passive:true});
+})();
+</script>
 </body></html>

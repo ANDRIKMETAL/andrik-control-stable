@@ -1,0 +1,6 @@
+R167 MAP TAIL + FRAME + SWIPE
+- Removed control-home compact regression, back to previous admin panel layout.
+- Added visible frame to Site Update and normalized frame on Protection / Attack pages.
+- Protection tabs no longer sticky in landscape.
+- Added left/right swipe rotation: Protection -> Attack -> Update.
+- Map bottom black tail removed and focused map nudged lower.

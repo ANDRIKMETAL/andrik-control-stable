@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r157",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1785677042848-458d723138",
-  "release": "R166",
-  "archiveName": "R166-MAP-DIRECTION-FRAME.zip",
-  "sourceHead": "b24301c5350da9e4bc31c08a9cf40e4d0c5f7788",
-  "backupSha": "b24301c5350da9e4bc31c08a9cf40e4d0c5f7788",
-  "backupTag": "control-backup-20260802132358-b24301c-r166-b62e6",
+  "operationId": "publish-1785682517090-2a9beec2e8",
+  "release": "R168",
+  "archiveName": "R168-CACHE-RESET-REPAIR-FULL.zip",
+  "sourceHead": "70d7eda34753a77765a4b7e69537c51f130ded9f",
+  "backupSha": "70d7eda34753a77765a4b7e69537c51f130ded9f",
+  "backupTag": "control-backup-20260802145513-70d7eda-r168-f753c",
   "autoRecovery": true,
-  "generatedAt": "2026-08-02T13:24:02.848Z"
+  "generatedAt": "2026-08-02T14:55:17.090Z"
 }
