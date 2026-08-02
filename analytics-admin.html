@@ -863,6 +863,33 @@ html.live-web-ai-resume-lock .analytics-swipe-viewport{overflow:hidden!important
   body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane>.analytics-pane-wrap.analytics-map-pane-wrap,
   body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane>.analytics-map-pane-wrap.analytics-pane-wrap{padding-bottom:0!important}
 }
+</style><style id="r166-map-fix">
+@media (orientation:landscape){
+  /* Move focused map content upward, not downward. */
+  body.analytics-admin-page.analytics-v54-46-page .world-map-shell.is-country-focused .world-map-stage{
+    transform:translate3d(var(--focus-tx,0px),calc(var(--focus-ty,0px) - 22px),0) scale(var(--focus-zoom,1))!important;
+  }
+  /* Remove most of the black tail under the enlarged map. */
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #mapEndPullZone,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane > .analytics-pane-wrap.analytics-map-pane-wrap > #mapEndPullZone,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane > .analytics-map-pane-wrap.analytics-pane-wrap > #mapEndPullZone{
+    height:6px!important;
+    min-height:6px!important;
+    max-height:6px!important;
+    margin:0!important;
+    padding:0!important;
+    background:#000!important;
+    border:0!important;
+    overflow:hidden!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane > .analytics-pane-wrap.analytics-map-pane-wrap,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane > .analytics-map-pane-wrap.analytics-pane-wrap,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane > .analytics-map-pane-wrap,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane > .analytics-pane-wrap{
+    min-height:max(calc(100% + 6px),calc((100vw - 20px) * .402734375 + 6px))!important;
+    padding-bottom:0!important;
+  }
+}
 </style></head>
 <body class="trika-standalone-page comments-admin-page control-page analytics-admin-page analytics-swipe-page analytics-v54-33-page analytics-v54-46-page">
 <nav class="topbar control-topbar control-detail-topbar"><div class="wrap nav-shell analytics-topbar-minimal"><a class="control-center-logo" id="controlCenterLogo" href="https://andrikmetal.com/" aria-label="Открыть главный сайт ANDRIK"><img class="logo-ok" src="/assets/control-topbar-eye-triangle.jpg" alt=""/><img class="logo-error" src="/assets/andrik-control-red-triangle-192.png" alt=""/></a></div></nav>

@@ -289,3 +289,7 @@ body.site-update-page .update-header p{font-size:clamp(.82rem,2.6vw,1rem)!import
   .site-update-page .update-upload-card,.site-update-page .update-preview-card{grid-column:auto!important}
   .site-update-page .update-cache-card{order:99!important}
 }
+
+@media(orientation:landscape){
+  .site-update-page .update-header h1{font-size:clamp(2.7rem,5.3vw,4.4rem)!important;line-height:.92!important}
+}

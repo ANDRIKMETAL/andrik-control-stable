@@ -1,0 +1,4 @@
+R166 MAP DIRECTION + STRONG FRAME
+- Map moved in the opposite direction during country zoom.
+- Landscape black tail under map reduced to 6px.
+- Strong unified frame forced with body::after on Site Update / Protection / Attack Map.
