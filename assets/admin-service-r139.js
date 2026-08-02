@@ -25,7 +25,7 @@
     return data;
   }
   function access(ok,text){state.className=`service-access-state ${ok?'is-ready':'is-error'}`;state.textContent=ok?'Доступ подтверждён':'Доступ не подтверждён';msg.textContent=text||''}
-  async function verify(){if(!getKey()){access(false,'Введите ключ администратора.');return}saveKey();msg.textContent='Проверяем…';try{await api('/api/control/access');access(true,'ADMIN_KEY подтверждён сервером. Все разделы ANDRIK Control будут входить автоматически. ✅')}catch(error){access(false,error.message==='unauthorized'?'Ключ неверный.':`Ошибка: ${error.message}`)}}
+  async function verify(){if(!getKey()){access(false,'Введите ключ администратора.');return}const rawKey=getKey();msg.textContent='Создаём защищённую сессию…';try{await window.AndrikOwnerSession?.establish(rawKey);keyInput.value=window.AndrikOwnerSession?.sentinel||'__ANDRIK_OWNER_SESSION__';saveKey();await api('/api/control/access');access(true,'Доступ подтверждён. ADMIN_KEY удалён из памяти страницы и заменён защищённой HttpOnly-сессией на 90 дней. ✅')}catch(error){access(false,error.message==='unauthorized'?'Ключ неверный.':error.status===429?'Слишком много попыток. Подожди 10 минут.':`Ошибка: ${error.message}`)}}
   async function loadYoutubeOauthStatus(){
     const stateEl=document.getElementById('serviceYoutubeOauthState');
     const messageEl=document.getElementById('serviceYoutubeOauthMessage');
@@ -151,7 +151,7 @@
   document.getElementById('serviceVerify')?.addEventListener('click',verify);
   keyInput?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();verify()}});
   remember?.addEventListener('change',saveKey);
-  document.getElementById('serviceForget')?.addEventListener('click',()=>{keyInput.value='';remember.checked=false;try{sessionStorage.removeItem(KEY_SESSION);localStorage.removeItem(KEY_LOCAL)}catch(_){}access(false,'Ключ удалён с этого устройства.');});
+  document.getElementById('serviceForget')?.addEventListener('click',async()=>{await window.AndrikOwnerSession?.clear?.();keyInput.value='';remember.checked=false;try{sessionStorage.removeItem(KEY_SESSION);localStorage.removeItem(KEY_LOCAL)}catch(_){}access(false,'Защищённая сессия удалена с этого устройства.');});
   const ownerButton=document.getElementById('adminPushRegister');if(ownerButton&&!IS_CONTROL_HOST)ownerButton.textContent='Подключить мой телефон';
   document.getElementById('adminPushRegister')?.addEventListener('click',registerOwnerPush);
   document.getElementById('serviceYoutubeOauthConnect')?.addEventListener('click',connectYoutubeOauth);

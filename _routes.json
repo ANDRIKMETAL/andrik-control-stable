@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "include": [
+    "/*"
+  ],
+  "exclude": [
+    "/assets/*",
+    "/push/onesignal/*",
+    "/favicon.ico",
+    "/manifest*.webmanifest",
+    "/admin-manifest.webmanifest",
+    "/sitemap*.xml",
+    "/image-sitemap.xml"
+  ]
+}

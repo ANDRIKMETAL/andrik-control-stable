@@ -1,0 +1,7 @@
+R173 OWNER SESSION HARDENING + WORKER QUOTA SAVE
+- Raw ADMIN_KEY no longer persists in browser storage.
+- Signed HttpOnly owner cookie lasts 90 days.
+- Existing raw keys migrate automatically to a harmless session marker.
+- Owner login has D1 brute-force rate limiting.
+- _routes.json bypasses Worker for heavy static assets.
+- Cloudflare manual WAF/Bot steps included.

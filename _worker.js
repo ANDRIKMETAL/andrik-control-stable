@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R161', number:161, version:'55.00', full:'55.00 LIVE WEB AI FINAL R161 BOT STATUS FIX', siteUpdater:'55.00-r157' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R173', number:173, version:'55.00', full:'55.00 LIVE WEB AI FINAL R173 OWNER SESSION HARDENING', siteUpdater:'55.00-r157' });
 
 const JSON_HEADERS = {
   'content-type': 'application/json; charset=utf-8',
@@ -6,6 +6,7 @@ const JSON_HEADERS = {
   'x-content-type-options': 'nosniff',
   'referrer-policy': 'strict-origin-when-cross-origin',
   'permissions-policy': 'camera=(), microphone=(), geolocation=()',
+  'strict-transport-security': 'max-age=31536000; includeSubDomains',
   'x-frame-options': 'SAMEORIGIN'
 };
 
@@ -2204,7 +2205,7 @@ function ownerSessionSecret(env) {
 }
 
 async function createOwnerSessionToken(env) {
-  const expiresAt = Date.now() + 5 * 365 * 24 * 60 * 60 * 1000;
+  const expiresAt = Date.now() + 90 * 24 * 60 * 60 * 1000;
   const nonce = crypto.randomUUID().replace(/-/g, '');
   const payload = `${expiresAt}.${nonce}`;
   const signature = await hmacSha256Hex(ownerSessionSecret(env), payload);
@@ -2216,26 +2217,64 @@ async function verifyOwnerSessionToken(token, env) {
   if (parts.length !== 3 || !configuredAdminKeys(env).length) return false;
   const [expiresRaw, nonce, suppliedSignature] = parts;
   const expiresAt = Number(expiresRaw || 0);
-  if (!Number.isFinite(expiresAt) || expiresAt <= Date.now() || expiresAt > Date.now() + (5 * 365 + 2) * 24 * 60 * 60 * 1000) return false;
+  if (!Number.isFinite(expiresAt) || expiresAt <= Date.now() || expiresAt > Date.now() + 92 * 24 * 60 * 60 * 1000) return false;
   if (!/^[a-f0-9]{20,80}$/i.test(nonce)) return false;
   const expectedSignature = await hmacSha256Hex(ownerSessionSecret(env), `${expiresRaw}.${nonce}`);
   return timingSafeTextEqual(suppliedSignature, expectedSignature);
 }
 
-function ownerSessionCookie(request, token, maxAge = 157680000) {
+function ownerSessionCookie(request, token, maxAge = 7776000) {
   let domain = '';
   try {
     const hostname = new URL(request.url).hostname.toLowerCase();
     if (hostname === 'andrikmetal.com' || hostname.endsWith('.andrikmetal.com')) domain = '; Domain=.andrikmetal.com';
   } catch (_) {}
-  return `andrik_owner_session=${encodeURIComponent(token)}; Path=/; Max-Age=${maxAge}; HttpOnly; Secure; SameSite=Lax${domain}`;
+  return `andrik_owner_session=${encodeURIComponent(token)}; Path=/; Max-Age=${maxAge}; HttpOnly; Secure; SameSite=Lax; Priority=High${domain}`;
 }
 
 async function handleOwnerSessionCreate(request, env) {
-  if (!adminAuthorized(request, env)) return json({ ok:false, error:'unauthorized' }, 401);
   if (!isSameOrigin(request)) return json({ ok:false, error:'origin' }, 403);
+
+  // R173: a valid HttpOnly owner cookie may renew itself without spending the
+  // brute-force bucket. Raw ADMIN_KEY attempts are rate-limited in D1.
+  const fromOwnerCookie = request.headers.get('x-andrik-owner-session') === '1';
+  if (!fromOwnerCookie && env.COMMENTS_DB) {
+    try {
+      const limit = await securityRateLimit(
+        env.COMMENTS_DB, request, env,
+        'owner-session-login-10m', 12, 600,
+        'owner-session-rate-limit'
+      );
+      if (!limit.allowed) {
+        return json({ ok:false, error:'rate-limit', retryAfter:600 }, 429, {
+          ...JSON_HEADERS,
+          'retry-after':'600'
+        });
+      }
+    } catch (_) {
+      // Login remains available if the protection database is temporarily down.
+    }
+  }
+
+  if (!adminAuthorized(request, env)) {
+    if (env.COMMENTS_DB) {
+      recordSecurityEvent(
+        env.COMMENTS_DB, request, env,
+        'owner-login-failed',
+        'Неверный ADMIN_KEY без сохранения значения ключа.'
+      ).catch(() => {});
+    }
+    return json({ ok:false, error:'unauthorized' }, 401);
+  }
+
   const session = await createOwnerSessionToken(env);
-  return json({ ok:true, owner:true, expiresAt:new Date(session.expiresAt).toISOString() }, 200, {
+  return json({
+    ok:true,
+    owner:true,
+    storage:'HttpOnly cookie',
+    sessionDays:90,
+    expiresAt:new Date(session.expiresAt).toISOString()
+  }, 200, {
     ...JSON_HEADERS,
     'set-cookie': ownerSessionCookie(request, session.token),
     'vary':'Cookie'
@@ -2245,7 +2284,7 @@ async function handleOwnerSessionCreate(request, env) {
 async function handleOwnerStatus(request, env) {
   const token = readCookieValue(request, 'andrik_owner_session');
   const owner = await verifyOwnerSessionToken(token, env).catch(() => false);
-  return json({ ok:true, owner, version:ANDRIK_CONTROL_RELEASE.short }, 200, {
+  return json({ ok:true, owner, version:ANDRIK_CONTROL_RELEASE.short, storage:'HttpOnly cookie', sessionDays:90 }, 200, {
     ...JSON_HEADERS,
     'vary':'Cookie'
   });
@@ -9662,6 +9701,7 @@ async function routeApi(request, env, ctx) {
         if (ownerKey) {
           const headers = new Headers(request.headers);
           headers.set('x-admin-key', ownerKey);
+          headers.set('x-andrik-owner-session', '1');
           request = new Request(request, { headers });
         }
       }
@@ -9798,7 +9838,7 @@ function allowControlPlayerFrame(response, url, isControlHost) {
   headers.set('x-content-type-options', 'nosniff');
   headers.set('referrer-policy', 'strict-origin-when-cross-origin');
   headers.set('permissions-policy', 'camera=(), microphone=(), geolocation=()');
-  headers.set('x-andrik-security-headers', 'R171');
+  headers.set('x-andrik-security-headers', 'R173');
 
   if (isHtml) {
     if (isPlayerShell) {

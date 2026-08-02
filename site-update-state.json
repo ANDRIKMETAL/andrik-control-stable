@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r157",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1785686834325-071725f806",
-  "release": "R172",
-  "archiveName": "R172-ADMIN-PANEL-LANDSCAPE-ONLY-FULL.zip",
-  "sourceHead": "f08c67670288b01deb359b1873afbd09387ffe65",
-  "backupSha": "f08c67670288b01deb359b1873afbd09387ffe65",
-  "backupTag": "control-backup-20260802160710-f08c676-r172-fb9b2",
+  "operationId": "publish-1785687832599-e28bf8d649",
+  "release": "R173",
+  "archiveName": "R173-OWNER-SESSION-WORKER-HARDENING-FULL.zip",
+  "sourceHead": "64eade2ba85020275d0101dc153782e02a4b2996",
+  "backupSha": "64eade2ba85020275d0101dc153782e02a4b2996",
+  "backupTag": "control-backup-20260802162350-64eade2-r173-f9ba8",
   "autoRecovery": true,
-  "generatedAt": "2026-08-02T16:07:14.325Z"
+  "generatedAt": "2026-08-02T16:23:52.599Z"
 }
