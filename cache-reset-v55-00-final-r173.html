@@ -97,7 +97,7 @@
         await fetch('/control-home.html?cache-bust=' + stamp, {cache:'reload'}).catch(() => null);
 
         step(4, 'Проверяем защищённую сессию R173…');
-        await verifyText('/assets/owner-session-r174.js', '__ANDRIK_OWNER_SESSION__');
+        await verifyText('/assets/owner-session-r173.js', '__ANDRIK_OWNER_SESSION__');
         const ownerStatus = await fetch('/api/control/owner-status?probe=' + stamp, {cache:'no-store', credentials:'include'});
         const ownerData = await ownerStatus.json().catch(() => ({}));
         if (!ownerStatus.ok || ownerData.version !== 'R173') throw new Error('Worker пока отдаёт старую версию owner-session');

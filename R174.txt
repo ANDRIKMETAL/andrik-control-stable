@@ -1,8 +1,0 @@
-R174 CSRF + SECURITY PUSH
-
-- Double-submit CSRF token for dangerous owner mutations.
-- Same-origin/custom-header validation before site update, rollback, backup restore, moderation, release publishing and other owner commands.
-- New owner login push notification with masked IP and Cloudflare location.
-- Brute-force block push receives a dedicated ADMIN_KEY warning.
-- Stale __ANDRIK_OWNER_SESSION__ bearer markers are removed so the HttpOnly cookie remains authoritative.
-- No UI, map, frame or layout changes.

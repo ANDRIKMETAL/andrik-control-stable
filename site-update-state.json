@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r157",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1785691160434-279cc9e141",
-  "release": "R177",
-  "archiveName": "R177-OWNER-NOT-ATTACK-CSRF-SELF-HEAL-FULL.zip",
-  "sourceHead": "6a3427731a964953673926ff5be2397e54d46994",
-  "backupSha": "6a3427731a964953673926ff5be2397e54d46994",
-  "backupTag": "control-backup-20260802171917-6a34277-r177-33ae9",
+  "operationId": "publish-1785692311923-d85050c0a5",
+  "release": "R179",
+  "archiveName": "R179-STABLE-R173-BASE-NO-CSRF-BLOCK-FULL.zip",
+  "sourceHead": "87d55db7d3172f5297600dcc8491068adb7880d3",
+  "backupSha": "87d55db7d3172f5297600dcc8491068adb7880d3",
+  "backupTag": "control-backup-20260802173828-87d55db-r179-4dfb4",
   "autoRecovery": true,
-  "generatedAt": "2026-08-02T17:19:20.434Z"
+  "generatedAt": "2026-08-02T17:38:31.923Z"
 }

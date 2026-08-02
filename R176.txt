@@ -1,7 +1,0 @@
-R176 FOCUSED MAP ADMIN SWIPE + VERSION FOOTER
-
-- Added an independent bottom-center swipe zone active only while the landscape listener map is zoomed/focused.
-- The gesture no longer depends on the map's vertical scrollbar or scroll-end state.
-- Normal map zoom, country centering, horizontal carousel and vertical map scrolling are unchanged.
-- Added a small current build label "Live Web AI · R176" at the bottom of the Admin panel.
-- Security Worker remains R174; no security/server behavior was modified.

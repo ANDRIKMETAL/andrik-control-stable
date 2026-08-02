@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R177', number:177, version:'55.00', full:'55.00 LIVE WEB AI FINAL R177 OWNER CSRF SELF-HEAL', siteUpdater:'55.00-r157' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R179', number:179, version:'55.00', full:'55.00 LIVE WEB AI FINAL R179 STABLE OWNER + UI FIXES', siteUpdater:'55.00-r157' });
 
 const JSON_HEADERS = {
   'content-type': 'application/json; charset=utf-8',
@@ -270,7 +270,7 @@ async function maybeSendSecurityAttackPush(db, env, event) {
       SELECT COUNT(*) AS total
       FROM security_events
       WHERE datetime(created_at) >= datetime('now', '-5 minutes')
-        AND kind <> 'csrf-blocked'
+        AND kind NOT IN ('csrf-blocked','csrf-attack-blocked','csrf-stale')
         AND (
           kind LIKE '%turnstile%' OR kind LIKE '%spam%' OR kind LIKE '%honeypot%'
           OR kind LIKE '%rate-limit%' OR kind LIKE '%blocked%'
@@ -281,13 +281,13 @@ async function maybeSendSecurityAttackPush(db, env, event) {
       SELECT kind, COUNT(*) AS count
       FROM security_events
       WHERE datetime(created_at) >= datetime('now', '-5 minutes')
-        AND kind <> 'csrf-blocked'
+        AND kind NOT IN ('csrf-blocked','csrf-attack-blocked','csrf-stale')
       GROUP BY kind ORDER BY count DESC LIMIT 3
     `).all(),
     db.prepare(`
       SELECT country, COUNT(*) AS count
       FROM security_events
-      WHERE datetime(created_at) >= datetime('now', '-5 minutes') AND country<>'' AND kind <> 'csrf-blocked'
+      WHERE datetime(created_at) >= datetime('now', '-5 minutes') AND country<>'' AND kind NOT IN ('csrf-blocked','csrf-attack-blocked','csrf-stale')
       GROUP BY country ORDER BY count DESC LIMIT 3
     `).all()
   ]);
@@ -301,19 +301,10 @@ async function maybeSendSecurityAttackPush(db, env, event) {
     countryText ? `Страны: ${countryText}.` : ''
   ].filter(Boolean).join(' ');
 
-  const ownerLoginAttack = /owner-session-rate-limit/i.test(kind);
   const result = await sendOwnerPush(env, {
-    title:ownerLoginAttack ? '🔐 Перебор ADMIN_KEY заблокирован' : '🛡️ ANDRIK: атака заблокирована',
-    message:ownerLoginAttack ? `${message} Вход владельца временно ограничен.` : message,
-    url:ownerLoginAttack
-      ? 'https://control.andrikmetal.com/protection-admin.html'
-      : 'https://control.andrikmetal.com/attack-map.html',
-    name:ownerLoginAttack ? `owner-bruteforce-${Math.floor(Date.now()/300000)}` : `security-attack-${Math.floor(Date.now()/300000)}`,
-    history:{
-      type:ownerLoginAttack ? 'owner-bruteforce-blocked' : 'security-attack',
-      source:'ANDRIK Guard',
-      audience:'owner'
-    }
+    title:'🛡️ ANDRIK: атака заблокирована',
+    message,
+    url:'https://control.andrikmetal.com/attack-map.html'
   }).catch(error => ({ ok:false, message:String(error?.message || error) }));
 
   await db.prepare(`
@@ -464,18 +455,21 @@ async function handleControlProtectionStatus(request, env) {
     const db = requireDb(env);
     await ensureSecuritySchema(db);
     await db.prepare(`DELETE FROM security_events WHERE created_at < datetime('now', '-7 days')`).run().catch(() => {});
+    await db.prepare(`DELETE FROM security_events WHERE kind IN ('csrf-blocked','csrf-attack-blocked','csrf-stale')`).run().catch(() => {});
     await db.prepare(`DELETE FROM security_rate_buckets WHERE updated_at < datetime('now', '-2 days')`).run().catch(() => {});
     [countsResult, recentResult] = await Promise.all([
       db.prepare(`
         SELECT kind, COUNT(*) AS count
         FROM security_events
         WHERE created_at >= datetime('now', '-1 day')
+          AND kind NOT IN ('csrf-blocked','csrf-attack-blocked','csrf-stale')
         GROUP BY kind
       `).all(),
       db.prepare(`
         SELECT kind, path, detail, country, region, colo, created_at AS createdAt
         FROM security_events
         WHERE created_at >= datetime('now', '-1 day')
+          AND kind NOT IN ('csrf-blocked','csrf-attack-blocked','csrf-stale')
         ORDER BY created_at DESC
         LIMIT 20
       `).all()
@@ -603,9 +597,9 @@ async function handleControlProtectionDashboard(request, env) {
   const range = protectionDashboardRange(new URL(request.url).searchParams.get('range'));
   const [monitorRaw, securityBuckets, securityKinds, securityRows, systemRows, backupRows, pushRows, incidentRows, traffic] = await Promise.all([
     getNativeMonitorDashboardData(env, range.key === '7d' ? '7d' : '24h'),
-    db.prepare(`SELECT (CAST(strftime('%s', created_at) AS INTEGER)/300)*300 AS bucket, COUNT(*) AS count FROM security_events WHERE datetime(created_at) >= datetime('now', ?) AND kind <> 'csrf-blocked' GROUP BY bucket ORDER BY bucket ASC`).bind(range.sql).all(),
-    db.prepare(`SELECT kind, COUNT(*) AS count FROM security_events WHERE datetime(created_at) >= datetime('now', ?) AND kind <> 'csrf-blocked' GROUP BY kind`).bind(range.sql).all(),
-    db.prepare(`SELECT kind, path, detail, country, region, colo, created_at AS createdAt FROM security_events WHERE datetime(created_at) >= datetime('now', ?) AND kind <> 'csrf-blocked' ORDER BY datetime(created_at) DESC LIMIT 50`).bind(range.sql).all(),
+    db.prepare(`SELECT (CAST(strftime('%s', created_at) AS INTEGER)/300)*300 AS bucket, COUNT(*) AS count FROM security_events WHERE datetime(created_at) >= datetime('now', ?) AND kind NOT IN ('csrf-blocked','csrf-attack-blocked','csrf-stale') GROUP BY bucket ORDER BY bucket ASC`).bind(range.sql).all(),
+    db.prepare(`SELECT kind, COUNT(*) AS count FROM security_events WHERE datetime(created_at) >= datetime('now', ?) AND kind NOT IN ('csrf-blocked','csrf-attack-blocked','csrf-stale') GROUP BY kind`).bind(range.sql).all(),
+    db.prepare(`SELECT kind, path, detail, country, region, colo, created_at AS createdAt FROM security_events WHERE datetime(created_at) >= datetime('now', ?) AND kind NOT IN ('csrf-blocked','csrf-attack-blocked','csrf-stale') ORDER BY datetime(created_at) DESC LIMIT 50`).bind(range.sql).all(),
     db.prepare(`SELECT scope, level, event, message, details_json AS detailsJson, created_at AS createdAt FROM system_logs WHERE datetime(created_at) >= datetime('now', ?) ORDER BY datetime(created_at) DESC LIMIT 60`).bind(range.sql).all(),
     db.prepare(`SELECT id, storage, status, row_count AS rowCount, size_bytes AS sizeBytes, reason, error, created_at AS createdAt FROM backup_history ORDER BY datetime(created_at) DESC LIMIT 20`).all(),
     db.prepare(`SELECT type, status, title, message, error, created_at AS createdAt FROM push_history WHERE datetime(created_at) >= datetime('now', ?) ORDER BY datetime(created_at) DESC LIMIT 30`).bind(range.sql).all(),
@@ -630,9 +624,9 @@ async function handleControlProtectionAttacks(request, env) {
   const db = requireDb(env); await ensureSecuritySchema(db);
   const range = String(new URL(request.url).searchParams.get('range') || '') === '7d' ? { key:'7d', sql:'-7 days' } : { key:'24h', sql:'-24 hours' };
   const [countriesRaw, totalRaw, recentRaw] = await Promise.all([
-    db.prepare(`SELECT country, MAX(region) AS region, MAX(colo) AS colo, COUNT(*) AS count, MAX(created_at) AS lastAt FROM security_events WHERE datetime(created_at) >= datetime('now', ?) AND country <> '' AND kind <> 'csrf-blocked' GROUP BY country ORDER BY count DESC, lastAt DESC LIMIT 60`).bind(range.sql).all(),
-    db.prepare(`SELECT COUNT(*) AS total, SUM(CASE WHEN country='' THEN 1 ELSE 0 END) AS unknown FROM security_events WHERE datetime(created_at) >= datetime('now', ?) AND kind <> 'csrf-blocked'`).bind(range.sql).first(),
-    db.prepare(`SELECT kind, path, detail, country, region, colo, created_at AS createdAt FROM security_events WHERE datetime(created_at) >= datetime('now', ?) AND kind <> 'csrf-blocked' ORDER BY datetime(created_at) DESC LIMIT 30`).bind(range.sql).all()
+    db.prepare(`SELECT country, MAX(region) AS region, MAX(colo) AS colo, COUNT(*) AS count, MAX(created_at) AS lastAt FROM security_events WHERE datetime(created_at) >= datetime('now', ?) AND country <> '' AND kind NOT IN ('csrf-blocked','csrf-attack-blocked','csrf-stale') GROUP BY country ORDER BY count DESC, lastAt DESC LIMIT 60`).bind(range.sql).all(),
+    db.prepare(`SELECT COUNT(*) AS total, SUM(CASE WHEN country='' THEN 1 ELSE 0 END) AS unknown FROM security_events WHERE datetime(created_at) >= datetime('now', ?) AND kind NOT IN ('csrf-blocked','csrf-attack-blocked','csrf-stale')`).bind(range.sql).first(),
+    db.prepare(`SELECT kind, path, detail, country, region, colo, created_at AS createdAt FROM security_events WHERE datetime(created_at) >= datetime('now', ?) AND kind NOT IN ('csrf-blocked','csrf-attack-blocked','csrf-stale') ORDER BY datetime(created_at) DESC LIMIT 30`).bind(range.sql).all()
   ]);
   return json({ ok:true, range:range.key, updatedAt:new Date().toISOString(), total:Number(totalRaw?.total || 0), unknown:Number(totalRaw?.unknown || 0), countries:(countriesRaw.results || []).map(row=>({ country:cleanPlainText(row.country || '',8).toUpperCase(), region:row.region || '', colo:row.colo || '', count:Number(row.count || 0), lastAt:row.lastAt || '' })), recent:recentRaw.results || [], note:'Карта показывает события, дошедшие до Worker. DDoS, остановленный Cloudflare edge раньше Worker, сюда не попадает.' });
 }
@@ -2243,110 +2237,11 @@ function ownerSessionCookie(request, token, maxAge = 7776000) {
   return `andrik_owner_session=${encodeURIComponent(token)}; Path=/; Max-Age=${maxAge}; HttpOnly; Secure; SameSite=Lax; Priority=High${domain}`;
 }
 
-function createOwnerCsrfToken() {
-  return `${crypto.randomUUID().replace(/-/g, '')}${crypto.randomUUID().replace(/-/g, '')}`;
-}
-
-function validOwnerCsrfToken(value) {
-  return /^[a-f0-9]{64}$/i.test(String(value || ''));
-}
-
-function ownerCsrfCookie(token, maxAge = 7776000) {
-  return `andrik_csrf=${encodeURIComponent(token)}; Path=/; Max-Age=${maxAge}; Secure; SameSite=Strict; Priority=High`;
-}
-
-function ownerSessionResponseHeaders(request, sessionToken, csrfToken, maxAge = 7776000) {
-  const headers = new Headers(JSON_HEADERS);
-  headers.append('set-cookie', ownerSessionCookie(request, sessionToken, maxAge));
-  headers.append('set-cookie', ownerCsrfCookie(csrfToken, maxAge));
-  headers.set('vary', 'Cookie');
-  return headers;
-}
-
-function maskedClientIp(request) {
-  const value = cleanPlainText(getClientIp(request), 120);
-  if (/^\d{1,3}(?:\.\d{1,3}){3}$/.test(value)) {
-    const parts = value.split('.');
-    return `${parts[0]}.${parts[1]}.${parts[2]}.***`;
-  }
-  if (value.includes(':')) return `${value.split(':').slice(0, 4).join(':')}::***`;
-  return value === 'unknown' ? 'не определён' : 'скрыт';
-}
-
-function ownerLoginLocation(request) {
-  const cf = request.cf || {};
-  return [
-    cleanPlainText(cf.country || '', 8).toUpperCase(),
-    cleanPlainText(cf.city || '', 80),
-    cleanPlainText(cf.colo || '', 16)
-  ].filter(Boolean).join(' · ') || 'локация не определена';
-}
-
-function queueOwnerSecurityPush(ctx, env, payload) {
-  const task = sendOwnerPush(env, payload).catch(error => ({ ok:false, error:String(error?.message || error) }));
-  if (ctx?.waitUntil) ctx.waitUntil(task);
-  else task.catch(() => {});
-}
-
-const OWNER_CSRF_MUTATIONS = new Set([
-  'POST /api/control/protection/guard-run',
-  'POST /api/control/monitor/check',
-  'POST /api/push/admin-device',
-  'POST /api/push/send',
-  'POST /api/push/inspect-playlist',
-  'POST /api/push/check-playlist',
-  'POST /api/push/check-youtube-events',
-  'POST /api/automation/run',
-  'POST /api/control/daily-summary/send',
-  'POST /api/push/retry-latest',
-  'POST /api/comments/moderate',
-  'POST /api/lyrics/admin',
-  'DELETE /api/lyrics/admin',
-  'POST /api/lyrics/musixmatch',
-  'POST /api/releases/publish',
-  'POST /api/control/site-update/preview',
-  'POST /api/control/site-update/backup',
-  'POST /api/control/site-update/publish',
-  'POST /api/control/site-update/release',
-  'POST /api/control/site-update/finalize',
-  'POST /api/control/site-update/rollback',
-  'POST /api/control/snapshots/refresh',
-  'POST /api/control/youtube-oauth/disconnect',
-  'POST /api/control/youtube-comment/reply',
-  'POST /api/backup/run',
-  'POST /api/backup/restore'
-]);
-
-function requiresOwnerCsrf(path, method) {
-  return OWNER_CSRF_MUTATIONS.has(`${String(method || '').toUpperCase()} ${path}`);
-}
-
-function verifyOwnerCsrfRequest(request) {
-  if (request.headers.get('x-andrik-control-request') !== '1') return { ok:false, reason:'control-header' };
-  const supplied = cleanPlainText(request.headers.get('x-andrik-csrf') || '', 100);
-  const cookie = readCookieValue(request, 'andrik_csrf');
-  if (!validOwnerCsrfToken(supplied) || !validOwnerCsrfToken(cookie) || !timingSafeTextEqual(supplied, cookie)) {
-    return { ok:false, reason:'token' };
-  }
-  let expectedOrigin = '';
-  try { expectedOrigin = new URL(request.url).origin; } catch (_) {}
-  const origin = request.headers.get('origin');
-  if (origin && origin !== expectedOrigin) return { ok:false, reason:'origin' };
-  const referer = request.headers.get('referer');
-  if (!origin && referer) {
-    try { if (new URL(referer).origin !== expectedOrigin) return { ok:false, reason:'referer' }; }
-    catch (_) { return { ok:false, reason:'referer' }; }
-  }
-  const fetchSite = String(request.headers.get('sec-fetch-site') || '').toLowerCase();
-  if (fetchSite && !['same-origin', 'same-site', 'none'].includes(fetchSite)) return { ok:false, reason:'fetch-site' };
-  return { ok:true };
-}
-
-async function handleOwnerSessionCreate(request, env, ctx) {
+async function handleOwnerSessionCreate(request, env) {
   if (!isSameOrigin(request)) return json({ ok:false, error:'origin' }, 403);
 
-  // R174: a valid HttpOnly owner cookie may renew itself without spending the
-  // brute-force bucket. Raw ADMIN_KEY attempts remain rate-limited in D1.
+  // R173: a valid HttpOnly owner cookie may renew itself without spending the
+  // brute-force bucket. Raw ADMIN_KEY attempts are rate-limited in D1.
   const fromOwnerCookie = request.headers.get('x-andrik-owner-session') === '1';
   if (!fromOwnerCookie && env.COMMENTS_DB) {
     try {
@@ -2378,68 +2273,35 @@ async function handleOwnerSessionCreate(request, env, ctx) {
   }
 
   const session = await createOwnerSessionToken(env);
-  const csrfToken = createOwnerCsrfToken();
-
-  if (!fromOwnerCookie) {
-    if (env.COMMENTS_DB) {
-      const eventTask = recordSecurityEvent(
-        env.COMMENTS_DB, request, env,
-        'owner-login-success',
-        `Вход владельца подтверждён · ${ownerLoginLocation(request)}.`
-      );
-      if (ctx?.waitUntil) ctx.waitUntil(eventTask); else eventTask.catch(() => {});
-    }
-    queueOwnerSecurityPush(ctx, env, {
-      title:'🔐 Новый вход владельца',
-      message:`ADMIN_KEY подтверждён · ${ownerLoginLocation(request)} · IP ${maskedClientIp(request)}`,
-      url:'https://control.andrikmetal.com/protection-admin.html',
-      name:`owner-login-${Date.now()}`,
-      history:{ type:'owner-login-success', source:'ANDRIK Control', audience:'owner' }
-    });
-  }
-
   return json({
     ok:true,
     owner:true,
     storage:'HttpOnly cookie',
-    csrf:'double-submit',
-    csrfToken,
     sessionDays:90,
     expiresAt:new Date(session.expiresAt).toISOString()
-  }, 200, ownerSessionResponseHeaders(request, session.token, csrfToken));
+  }, 200, {
+    ...JSON_HEADERS,
+    'set-cookie': ownerSessionCookie(request, session.token),
+    'vary':'Cookie'
+  });
 }
 
 async function handleOwnerStatus(request, env) {
   const token = readCookieValue(request, 'andrik_owner_session');
   const owner = await verifyOwnerSessionToken(token, env).catch(() => false);
-  let csrfToken = owner ? readCookieValue(request, 'andrik_csrf') : '';
-  const headers = new Headers(JSON_HEADERS);
-  headers.set('vary', 'Cookie');
-  if (owner && !validOwnerCsrfToken(csrfToken)) {
-    csrfToken = createOwnerCsrfToken();
-    headers.append('set-cookie', ownerCsrfCookie(csrfToken));
-  } else if (!owner && csrfToken) {
-    csrfToken = '';
-    headers.append('set-cookie', ownerCsrfCookie('', 0));
-  }
-  return json({
-    ok:true,
-    owner,
-    version:ANDRIK_CONTROL_RELEASE.short,
-    storage:'HttpOnly cookie',
-    csrf:'double-submit',
-    csrfToken:owner ? csrfToken : '',
-    sessionDays:90
-  }, 200, headers);
+  return json({ ok:true, owner, version:ANDRIK_CONTROL_RELEASE.short, storage:'HttpOnly cookie', sessionDays:90 }, 200, {
+    ...JSON_HEADERS,
+    'vary':'Cookie'
+  });
 }
 
 async function handleOwnerSessionDelete(request) {
   if (!isSameOrigin(request)) return json({ ok:false, error:'origin' }, 403);
-  const headers = new Headers(JSON_HEADERS);
-  headers.append('set-cookie', ownerSessionCookie(request, '', 0));
-  headers.append('set-cookie', ownerCsrfCookie('', 0));
-  headers.set('vary', 'Cookie');
-  return json({ ok:true, owner:false }, 200, headers);
+  return json({ ok:true, owner:false }, 200, {
+    ...JSON_HEADERS,
+    'set-cookie': ownerSessionCookie(request, '', 0),
+    'vary':'Cookie'
+  });
 }
 
 
@@ -2912,7 +2774,7 @@ async function handlePushHistory(request, env) {
   const effectiveLastSummary = centralSummary?.value || '';
   const lastCheckMs = effectiveLastCheck ? Date.parse(effectiveLastCheck) : NaN;
   const ageMinutes = Number.isFinite(lastCheckMs) ? Math.max(0, Math.round((Date.now() - lastCheckMs) / 60000)) : null;
-  const health = ageMinutes === null ? 'never' : ageMinutes <= 35 ? 'active' : ageMinutes <= 180 ? 'late' : 'stale';
+  const health = ageMinutes === null ? 'never' : ageMinutes <= 60 ? 'active' : ageMinutes <= 180 ? 'late' : 'stale';
   const nextExpectedAt = Number.isFinite(lastCheckMs) ? new Date(lastCheckMs + 15 * 60 * 1000).toISOString() : '';
 
   const history = (result.results || []).map(item => ({
@@ -3234,7 +3096,7 @@ async function handleControlSystem(request, env) {
   const effectiveLastSummary = centralSummary?.value || '';
   const lastCheckMs = effectiveLastCheck ? Date.parse(effectiveLastCheck) : NaN;
   const ageMinutes = Number.isFinite(lastCheckMs) ? Math.max(0, Math.round((Date.now() - lastCheckMs) / 60000)) : null;
-  const automationHealth = ageMinutes === null ? 'never' : ageMinutes <= 35 ? 'active' : ageMinutes <= 180 ? 'late' : 'stale';
+  const automationHealth = ageMinutes === null ? 'never' : ageMinutes <= 60 ? 'active' : ageMinutes <= 180 ? 'late' : 'stale';
   const oneSignalConfigured = Boolean(env.ONESIGNAL_APP_ID && (env.ONESIGNAL_REST_API_KEY || env.ONESIGNAL_APP_API_KEY));
   const analyticsConfigured = Boolean(String(env.GOOGLE_ANALYTICS_CREDENTIALS || '').trim());
   const searchConsoleCredentials = parseGoogleSearchConsoleCredentials(env);
@@ -3332,7 +3194,7 @@ async function handleControlSystem(request, env) {
       pushAudience: { configured: audienceCounts.total > 0, status: audienceCounts.total > 0 ? 'good' : 'warning', counts: audienceCounts, label: `Общая аудитория: ${audienceCounts.total} · слушателей: ${audienceCounts.public} · владельцев: ${audienceCounts.owners}` },
       lastPush: { configured: Boolean(latestPush), status: latestPushStatus, latest: latestPush || null, label: latestPushLabel },
       youtube: { configured: Boolean(env.YOUTUBE_API_KEY), studioConfigured:youtubeAuth.configured, status: env.YOUTUBE_API_KEY && youtubeAuth.configured ? 'good' : 'warning', mode: youtubeAuth.configured ? 'YouTube Data API + Studio Worker' : (env.YOUTUBE_API_KEY ? 'YouTube Data API' : 'XML feed'), handle: cleanPlainText(env.YOUTUBE_CHANNEL_HANDLE || '@andrikmetal', 100), uploadsPlaylistId: uploadsPlaylist?.value || cleanPlainText(env.YOUTUBE_UPLOADS_PLAYLIST_ID, 100), label: youtubeAuth.configured ? `YouTube Data API + Studio автоматически · ${youtubeAuth.source}` : (env.YOUTUBE_API_KEY ? 'Data API работает · Studio ждёт серверный refresh token' : 'YouTube работает через резервный feed') },
-      cron: { configured: Boolean(env.CRON_SECRET), status: automationHealth === 'active' ? 'good' : automationHealth === 'never' ? 'warning' : 'error', health: automationHealth, lastCheckAt: effectiveLastCheck, ageMinutes, lastStatus: effectiveLastStatus, summary: parsePushSummary(effectiveLastSummary), label: automationHealth === 'active' ? `Центральный Cron активен · ${ageMinutes} мин. назад` : automationHealth === 'never' ? 'Центральный Cron ещё не запускался' : `Центральный Cron требует проверки · ${ageMinutes ?? '—'} мин. без запуска` },
+      cron: { configured: Boolean(env.CRON_SECRET), status: automationHealth === 'active' ? 'good' : automationHealth === 'stale' ? 'error' : 'warning', health: automationHealth, lastCheckAt: effectiveLastCheck, ageMinutes, lastStatus: effectiveLastStatus, summary: parsePushSummary(effectiveLastSummary), label: automationHealth === 'active' ? `Центральный Cron активен · ${ageMinutes} мин. назад` : automationHealth === 'never' ? 'Центральный Cron ещё не запускался' : `Центральный Cron требует проверки · ${ageMinutes ?? '—'} мин. без запуска` },
       dailySummary: {
         configured:dailySummaryReady,
         status:dailySummaryAttemptStatus?.value === 'failed'
@@ -8029,7 +7891,7 @@ async function buildAndrikHealthSnapshot(env, options = {}) {
       const lastAt = row?.value || '';
       const parsed = Date.parse(lastAt);
       const ageMinutes = Number.isFinite(parsed) ? Math.max(0, Math.round((Date.now()-parsed)/60000)) : null;
-      const status = ageMinutes === null ? 'warning' : ageMinutes <= 35 ? 'good' : ageMinutes <= 180 ? 'warning' : 'error';
+      const status = ageMinutes === null ? 'warning' : ageMinutes <= 60 ? 'good' : ageMinutes <= 180 ? 'warning' : 'error';
       checks.push({ id:'cron', label:'Центральный Cron', status, detail:ageMinutes === null ? 'Ещё не запускался' : `Последний запуск ${ageMinutes} мин назад`, lastCheckAt:lastAt, ageMinutes });
     } catch (error) {
       checks.push({ id:'cron', label:'Центральный Cron', status:'warning', detail:'Состояние недоступно' });
@@ -8062,7 +7924,7 @@ async function buildAndrikHealthSnapshot(env, options = {}) {
       const lastAt = lastAtRow?.value || '';
       const ageMinutes = Number.isFinite(Date.parse(lastAt)) ? Math.max(0, Math.round((Date.now()-Date.parse(lastAt))/60000)) : null;
       const lastStatus = lastStatusRow?.value || 'waiting';
-      const status = lastStatus === 'error' ? 'error' : lastStatus === 'good' && ageMinutes !== null && ageMinutes <= 35 ? 'good' : 'warning';
+      const status = lastStatus === 'error' ? 'error' : lastStatus === 'good' && ageMinutes !== null && ageMinutes <= 60 ? 'good' : 'warning';
       const detail = lastStatus === 'error'
         ? `Недоступных точек: ${Number(errorRow?.value || 0)}`
         : ageMinutes === null
@@ -9843,45 +9705,10 @@ async function routeApi(request, env, ctx) {
         const ownerKey = configuredAdminKeys(env)[0] || '';
         if (ownerKey) {
           const headers = new Headers(request.headers);
-          // R174: a stale __ANDRIK_OWNER_SESSION__ Bearer marker must never
-          // override the real key restored from the signed HttpOnly cookie.
-          headers.delete('authorization');
           headers.set('x-admin-key', ownerKey);
           headers.set('x-andrik-owner-session', '1');
           request = new Request(request, { headers });
         }
-      }
-    }
-
-    if (requiresOwnerCsrf(path, request.method)) {
-      if (!adminAuthorized(request, env)) return json({ ok:false, error:'unauthorized' }, 401);
-      const csrf = verifyOwnerCsrfRequest(request);
-      if (!csrf.ok) {
-        const ownerSessionRequest = request.headers.get('x-andrik-owner-session') === '1';
-
-        // R177: a valid owner session with an outdated browser CSRF token is
-        // a synchronization issue, not an attack. Do not put it on the attack
-        // map and do not send an alarm push. The client refreshes the token
-        // from /api/control/owner-status and repeats the command once.
-        if (ownerSessionRequest && csrf.reason === 'token') {
-          return json({
-            ok:false,
-            error:'csrf-stale',
-            reason:'token',
-            refreshOwnerSession:true,
-            message:'Сессия владельца подтверждена. Обновляем защитный токен и повторяем действие.'
-          }, 409);
-        }
-
-        const task = env.COMMENTS_DB
-          ? recordSecurityEvent(
-              env.COMMENTS_DB, request, env,
-              'csrf-attack-blocked',
-              `Поддельная команда отклонена: ${request.method} ${path} · ${csrf.reason}.`
-            )
-          : Promise.resolve();
-        if (ctx?.waitUntil) ctx.waitUntil(task); else task.catch(() => {});
-        return json({ ok:false, error:'csrf', reason:csrf.reason }, 403);
       }
     }
     if (path === '/api/health' && request.method === 'GET') return await handlePublicHealth(request, env);
@@ -9936,7 +9763,7 @@ async function routeApi(request, env, ctx) {
     if (path === '/api/control/site-update/log' && request.method === 'GET') return await handleSiteUpdateLog(request, env);
     if (path === '/api/control/site-update/history' && request.method === 'GET') return await handleSiteUpdateHistory(request, env);
     if (path === '/api/control/site-update/rollback' && request.method === 'POST') return await handleSiteUpdateRollback(request, env);
-    if (path === '/api/control/owner-session' && request.method === 'POST') return await handleOwnerSessionCreate(request, env, ctx);
+    if (path === '/api/control/owner-session' && request.method === 'POST') return await handleOwnerSessionCreate(request, env);
     if (path === '/api/control/owner-session' && request.method === 'DELETE') return await handleOwnerSessionDelete(request);
     if (path === '/api/control/owner-status' && request.method === 'GET') return await handleOwnerStatus(request, env);
     if (path === '/api/control/access' && request.method === 'GET') return await handleControlAccess(request, env);
@@ -10016,7 +9843,7 @@ function allowControlPlayerFrame(response, url, isControlHost) {
   headers.set('x-content-type-options', 'nosniff');
   headers.set('referrer-policy', 'strict-origin-when-cross-origin');
   headers.set('permissions-policy', 'camera=(), microphone=(), geolocation=()');
-  headers.set('x-andrik-security-headers', 'R174');
+  headers.set('x-andrik-security-headers', 'R179');
 
   if (isHtml) {
     if (isPlayerShell) {

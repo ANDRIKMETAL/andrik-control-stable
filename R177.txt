@@ -1,7 +1,0 @@
-R177 OWNER CSRF FALSE-POSITIVE FIX
-- Valid owner session + stale CSRF token is treated as session synchronization, not an attack.
-- No attack-map event and no alarm push for owner token refresh.
-- Client silently refreshes owner-status and retries the protected request once.
-- Real cross-origin / forged CSRF attempts remain blocked and logged as csrf-attack-blocked.
-- Legacy csrf-blocked false positives are hidden from dashboard and attack map.
-- R176 focused-map swipe and version label are preserved.
