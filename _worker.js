@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R154', number:154, version:'55.00', full:'55.00 LIVE WEB AI FINAL R154 GUARD CONTROL FIX', siteUpdater:'55.00-r154' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R155', number:155, version:'55.00', full:'55.00 LIVE WEB AI FINAL R155 PROTECTION COMPLETE', siteUpdater:'55.00-r155' });
 
 const JSON_HEADERS = {
   'content-type': 'application/json; charset=utf-8',
@@ -161,45 +161,45 @@ function calculateSpamScore(name, message, blocklist = '') {
 let commentsSchemaV4Promise = null;
 
 async function ensureSecuritySchema(db) {
-  // R154: do not share D1 I/O promises across Cloudflare request contexts.
-    await db.exec(`
-      CREATE TABLE IF NOT EXISTS security_events (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        kind TEXT NOT NULL,
-        path TEXT NOT NULL DEFAULT '',
-        ip_hash TEXT NOT NULL DEFAULT '',
-        detail TEXT NOT NULL DEFAULT '',
-        created_at TEXT NOT NULL DEFAULT (datetime('now'))
-      );
-      CREATE INDEX IF NOT EXISTS idx_security_events_created
-        ON security_events(created_at DESC);
-      CREATE INDEX IF NOT EXISTS idx_security_events_kind_created
-        ON security_events(kind, created_at DESC);
-
-      CREATE TABLE IF NOT EXISTS security_rate_buckets (
-        bucket TEXT PRIMARY KEY,
-        event TEXT NOT NULL,
-        count INTEGER NOT NULL DEFAULT 0,
-        window_id INTEGER NOT NULL,
-        updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-      );
-      CREATE INDEX IF NOT EXISTS idx_security_rate_updated
-        ON security_rate_buckets(updated_at DESC);
-
-      CREATE TABLE IF NOT EXISTS security_alert_state (
-        alert_key TEXT PRIMARY KEY,
-        pending_count INTEGER NOT NULL DEFAULT 0,
-        last_sent_at TEXT NOT NULL DEFAULT '',
-        last_kind TEXT NOT NULL DEFAULT '',
-        last_country TEXT NOT NULL DEFAULT '',
-        updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-      );
-    `);
-    await db.prepare(`ALTER TABLE security_events ADD COLUMN country TEXT NOT NULL DEFAULT ''`).run().catch(() => {});
-    await db.prepare(`ALTER TABLE security_events ADD COLUMN region TEXT NOT NULL DEFAULT ''`).run().catch(() => {});
-    await db.prepare(`ALTER TABLE security_events ADD COLUMN city TEXT NOT NULL DEFAULT ''`).run().catch(() => {});
-    await db.prepare(`ALTER TABLE security_events ADD COLUMN colo TEXT NOT NULL DEFAULT ''`).run().catch(() => {});
-    await db.prepare(`CREATE INDEX IF NOT EXISTS idx_security_events_country_created ON security_events(country, created_at DESC)`).run().catch(() => {});
+  // R155: D1 executes each schema statement separately. This avoids
+  // SQLITE "incomplete input" errors from multi-statement db.exec().
+  const statements = [
+    `CREATE TABLE IF NOT EXISTS security_events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      kind TEXT NOT NULL,
+      path TEXT NOT NULL DEFAULT '',
+      ip_hash TEXT NOT NULL DEFAULT '',
+      detail TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_security_events_created
+      ON security_events(created_at DESC)`,
+    `CREATE INDEX IF NOT EXISTS idx_security_events_kind_created
+      ON security_events(kind, created_at DESC)`,
+    `CREATE TABLE IF NOT EXISTS security_rate_buckets (
+      bucket TEXT PRIMARY KEY,
+      event TEXT NOT NULL,
+      count INTEGER NOT NULL DEFAULT 0,
+      window_id INTEGER NOT NULL,
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_security_rate_updated
+      ON security_rate_buckets(updated_at DESC)`,
+    `CREATE TABLE IF NOT EXISTS security_alert_state (
+      alert_key TEXT PRIMARY KEY,
+      pending_count INTEGER NOT NULL DEFAULT 0,
+      last_sent_at TEXT NOT NULL DEFAULT '',
+      last_kind TEXT NOT NULL DEFAULT '',
+      last_country TEXT NOT NULL DEFAULT '',
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )`
+  ];
+  for (const statement of statements) await db.prepare(statement).run();
+  await db.prepare(`ALTER TABLE security_events ADD COLUMN country TEXT NOT NULL DEFAULT ''`).run().catch(() => {});
+  await db.prepare(`ALTER TABLE security_events ADD COLUMN region TEXT NOT NULL DEFAULT ''`).run().catch(() => {});
+  await db.prepare(`ALTER TABLE security_events ADD COLUMN city TEXT NOT NULL DEFAULT ''`).run().catch(() => {});
+  await db.prepare(`ALTER TABLE security_events ADD COLUMN colo TEXT NOT NULL DEFAULT ''`).run().catch(() => {});
+  await db.prepare(`CREATE INDEX IF NOT EXISTS idx_security_events_country_created ON security_events(country, created_at DESC)`).run();
 }
 
 async function securityIpHash(request, env) {
@@ -478,7 +478,7 @@ async function handleControlProtectionStatus(request, env) {
     probe.searchParams.set('security_probe', String(Date.now()));
     const response = await fetch(probe.toString(), {
       method:'GET', cache:'no-store',
-      headers:{ 'cache-control':'no-cache', 'user-agent':'ANDRIK-Control-R154-Security' }
+      headers:{ 'cache-control':'no-cache', 'user-agent':'ANDRIK-Control-R155-Security' }
     });
     const csp = response.headers.get('content-security-policy') || '';
     headerStatus = {

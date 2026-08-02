@@ -46,3 +46,18 @@ body.protection-page .admin-main{padding-top:4px !important;}
   }
   .protection-nav{top:52px !important;}
 }
+
+
+/* R155 — saved owner access, working setup button, stable scan feedback. */
+.protection-access-details{margin:12px 0 10px;border:1px solid rgba(111,185,216,.18);border-radius:16px;background:rgba(2,10,15,.74);overflow:hidden}
+.protection-access-details>summary{list-style:none;display:flex;align-items:center;justify-content:space-between;min-height:48px;padding:11px 14px;cursor:pointer;color:#dff6ff;font-size:.72rem;font-weight:900}
+.protection-access-details>summary::-webkit-details-marker{display:none}
+.protection-access-details>summary::after{content:'⌄';color:#8fcce7}
+.protection-access-details[open]>summary::after{content:'⌃'}
+.protection-access-details.is-authenticated{border-color:rgba(79,226,153,.30);background:rgba(4,31,25,.45)}
+.protection-access-details.is-authenticated>summary{color:#baffd7}
+.protection-access-details .protection-access{margin:0;padding:0 10px 10px;grid-template-columns:minmax(0,1fr) auto auto}
+.state-pill[type="button"]{font-family:inherit;cursor:pointer}
+.state-pill[type="button"]:active{transform:scale(.96)}
+.state-pill.is-scanning{border-color:rgba(103,220,255,.42);color:#dff8ff;background:rgba(10,65,88,.48)}
+@media(max-width:430px){.protection-access-details .protection-access{grid-template-columns:1fr 1fr}.protection-access-details .protection-access input{grid-column:1/-1}.protection-access-details .protection-access .btn{min-width:0}}

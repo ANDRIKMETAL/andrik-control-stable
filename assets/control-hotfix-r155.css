@@ -111,3 +111,5 @@ body.r137-eye-motion-page .control-topbar .control-center-logo::after{
   body.r137-eye-motion-page .control-topbar .control-center-logo .logo-ok,
   body.r137-eye-motion-page .control-topbar .control-center-logo::after{animation-duration:5.4s!important}
 }
+
+/* R155: protection UI and D1 attack-map fixes are isolated in their page styles. */

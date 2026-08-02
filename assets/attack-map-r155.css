@@ -41,3 +41,12 @@ body.attack-page .admin-main{padding-top:4px !important;}
     max-height:76px !important;
   }
 }
+
+
+/* R155 — owner access collapses after successful login. */
+.attack-access-details{margin:14px 0;border:1px solid rgba(255,165,70,.20);border-radius:18px;background:rgba(29,12,4,.45);overflow:hidden}
+.attack-access-details>summary{list-style:none;display:flex;justify-content:space-between;align-items:center;min-height:48px;padding:11px 14px;cursor:pointer;color:#ffe4c7;font-weight:900}
+.attack-access-details>summary::-webkit-details-marker{display:none}.attack-access-details>summary::after{content:'⌄'}.attack-access-details[open]>summary::after{content:'⌃'}
+.attack-access-details.is-authenticated{border-color:rgba(79,226,153,.28);background:rgba(4,31,25,.42)}.attack-access-details.is-authenticated>summary{color:#baffd7}
+.attack-access-details .attack-access{margin:0;padding:0 10px 10px;grid-template-columns:minmax(0,1fr) auto auto}
+@media(max-width:430px){.attack-access-details .attack-access{grid-template-columns:1fr 1fr}.attack-access-details .attack-access input{grid-column:1/-1}}
