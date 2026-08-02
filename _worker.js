@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R145', number:145, version:'55.00', full:'55.00 LIVE WEB AI FINAL R145', siteUpdater:'55.00-r145' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R146', number:146, version:'55.00', full:'55.00 LIVE WEB AI FINAL R146', siteUpdater:'55.00-r146' });
 
 const JSON_HEADERS = {
   'content-type': 'application/json; charset=utf-8',

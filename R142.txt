@@ -1,7 +1,10 @@
-R142 — THREE VISUAL BUG FIXES ONLY
+R142 — MINI PLAYER + ADMIN LANDSCAPE HOTFIX
 
-1. On the main listener map only, in landscape, the mini-player is positioned lower and clamped inside the existing green map frame.
-2. The main Admin panel gets the same magnetic landscape frame as the map; excessive empty scroll reserve is removed in portrait and landscape.
-3. The mini-player button is smaller and visibly pulses everywhere, including Android reduced-motion mode.
+Основа: R141.
 
-Unchanged: mini-player JavaScript/state, analytics, Worker APIs, daily Cron, Guard, updater, swipes, map rendering, headers/eye animation and all other sections.
+Исправлено только 3 бага:
+1) На главной странице с картой в горизонтальном режиме мини-плеер опущен ниже, чтобы открытая панель не выходила за зелёную рамку.
+2) В Админ панели в горизонтальном режиме исправлена общая зелёная рамка и убран лишний пустой запас/прокрутка снизу.
+3) Везде уменьшена круглая кнопка мини-плеера и усилена её пульсация.
+
+Без изменения механики R140 и критического установщика R115.
