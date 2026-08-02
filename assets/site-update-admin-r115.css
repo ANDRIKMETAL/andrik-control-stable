@@ -277,3 +277,15 @@ body.site-update-page .update-header p{font-size:clamp(.82rem,2.6vw,1rem)!import
 /* R163 — upload card order polish + archive icon in ZIP picker */
 .update-file-picker strong{display:inline-flex;align-items:center;gap:10px}
 .update-file-picker-icon{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:10px;background:rgba(72,217,141,.16);border:1px solid rgba(105,239,170,.42);box-shadow:0 0 0 1px rgba(105,239,170,.08),0 0 14px rgba(80,228,149,.12) inset;font-size:1rem;line-height:1}
+
+@media(orientation:landscape){
+  .site-update-page .update-wrap{max-width:980px!important;padding-bottom:24px!important}
+  .site-update-page .update-header{padding:2px 6px 6px!important;text-align:center!important}
+  .site-update-page .update-header .eyeline{font-size:clamp(.68rem,1.2vw,.84rem)!important}
+  .site-update-page .update-header h1{font-size:clamp(3.2rem,6.2vw,5.2rem)!important;line-height:.88!important;margin:0 0 4px!important}
+  .site-update-page .update-header p{max-width:640px!important;margin:0 auto 2px!important;font-size:.76rem!important;line-height:1.28!important}
+  .site-update-page .update-grid{grid-template-columns:1fr 1fr!important;gap:8px!important;align-items:start!important}
+  .site-update-page .update-status-card,.site-update-page .update-result-card,.site-update-page .update-history-card,.site-update-page .update-setup-card,.site-update-page .update-cache-card{grid-column:1/-1!important}
+  .site-update-page .update-upload-card,.site-update-page .update-preview-card{grid-column:auto!important}
+  .site-update-page .update-cache-card{order:99!important}
+}

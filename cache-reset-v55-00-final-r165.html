@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#050607">
+  <meta http-equiv="Cache-Control" content="no-store,no-cache,must-revalidate,max-age=0">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>Очистка — LIVE WEB AI R165</title>
+  <style>
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100dvh;display:grid;place-items:center;padding:20px;background:#050607;color:#eef8ff;font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+    .box{width:min(92vw,620px);padding:26px;border:1px solid #245044;border-radius:24px;background:#07131c;text-align:center;box-shadow:0 24px 70px #000}
+    h1{margin:0 0 10px;font-size:clamp(24px,7vw,38px)}
+    p{color:#a9c0cd;line-height:1.5}
+    .bar{height:9px;margin:16px 0;border-radius:99px;background:#0b2634;overflow:hidden}
+    .bar span{display:block;width:2%;height:100%;background:linear-gradient(90deg,#4adf93,#8eeeff);transition:width .2s}
+    .ok{color:#bfffd9!important}
+    .btn{display:inline-flex;margin-top:16px;padding:13px 20px;border-radius:999px;background:#0e4430;color:#e7fff1;text-decoration:none;font-weight:800}
+    .btn[hidden]{display:none}
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h1>LIVE WEB AI R165</h1>
+    <p id="status">Доводим карту, ZIP-блок и пульсацию глаза…</p>
+    <div class="bar"><span id="bar"></span></div>
+    <a class="btn" id="open" hidden>Открыть Control</a>
+  </div>
+  <script>
+    (async()=>{
+      const status=document.getElementById('status');
+      const bar=document.getElementById('bar');
+      const open=document.getElementById('open');
+      const stamp=Date.now();
+      const target='/control-home.html?page=menu&v=55.00-r165&fresh='+stamp;
+      const step=(number,text)=>{status.textContent=number+'/6 · '+text;bar.style.width=(number/6*100)+'%';};
+      try{
+        step(1,'Удаляем старый кэш интерфейса…');
+        if('caches' in window){for(const name of await caches.keys()) await caches.delete(name).catch(()=>false);}
+        step(2,'Обновляем Service Worker сайта…');
+        if('serviceWorker' in navigator){const registrations=await navigator.serviceWorker.getRegistrations().catch(()=>[]);for(const registration of registrations){const scriptUrl=String(registration.active?.scriptURL||'');if(/OneSignalSDK|\/push\/onesignal\//i.test(scriptUrl)) continue;await registration.unregister().catch(()=>false);}}
+        step(3,'Проверяем защиту и Worker…');
+        const health=await fetch('/api/health?probe='+stamp,{cache:'no-store'}); if(!health.ok) throw new Error('Worker временно не ответил');
+        step(4,'Проверяем новую карту…');
+        const mapCheck=await fetch('/analytics-admin.html?probe='+stamp,{cache:'no-store'}); if(!mapCheck.ok) throw new Error('Экран карты ещё не опубликован');
+        step(5,'Проверяем страницу обновления сайта и глаз…');
+        const pages=await Promise.all(['/site-update-admin.html','/attack-map.html','/protection-admin.html'].map(path=>fetch(path+'?probe='+stamp,{cache:'no-store'})));
+        if(pages.some(response=>!response.ok)) throw new Error('Не все страницы R165 опубликованы');
+        step(6,'Готово');
+        status.className='ok';
+        status.textContent='R165 опубликована: чёрная полоса карты уменьшена, ZIP-блок стоит выше, Cache Control внизу, глаз снова пульсирует.';
+        open.href=target; open.hidden=false;
+      }catch(error){
+        console.error(error);
+        status.textContent='Кэш очищен. Развёртывание ещё завершается — открой Control через минуту.';
+        bar.style.width='100%';
+        open.href=target; open.hidden=false;
+      }
+    })();
+  </script>
+</body>
+</html>

@@ -855,7 +855,15 @@ html.live-web-ai-resume-lock .analytics-swipe-viewport{overflow:hidden!important
 <link rel="stylesheet" href="/assets/unified-glow-r139.css?v=55.00-r153">
 <link rel="stylesheet" href="/assets/control-mini-player-r141.css?v=55.00-r153">
 <link rel="stylesheet" href="/assets/control-hotfix-r155.css?v=55.00-r155">
-</head>
+<style id="r165-map-landscape-fix">
+@media(orientation:landscape){
+  body.analytics-admin-page.analytics-v54-46-page .world-map-shell.is-country-focused .world-map-stage{transform:translate3d(var(--focus-tx,0px),calc(var(--focus-ty,0px) + 18px),0) scale(var(--focus-zoom,1))!important}
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .world-map-shell{margin-top:8px!important;margin-bottom:0!important}
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap{margin:6px auto 0!important}
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane>.analytics-pane-wrap.analytics-map-pane-wrap,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane>.analytics-map-pane-wrap.analytics-pane-wrap{padding-bottom:0!important}
+}
+</style></head>
 <body class="trika-standalone-page comments-admin-page control-page analytics-admin-page analytics-swipe-page analytics-v54-33-page analytics-v54-46-page">
 <nav class="topbar control-topbar control-detail-topbar"><div class="wrap nav-shell analytics-topbar-minimal"><a class="control-center-logo" id="controlCenterLogo" href="https://andrikmetal.com/" aria-label="Открыть главный сайт ANDRIK"><img class="logo-ok" src="/assets/control-topbar-eye-triangle.jpg" alt=""/><img class="logo-error" src="/assets/andrik-control-red-triangle-192.png" alt=""/></a></div></nav>
 <main class="analytics-swipe-main" id="analyticsSwipeMain">
@@ -3015,7 +3023,7 @@ body:not(.is-country-focus-active) #mapFocusActions,
   body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane > .analytics-map-pane-wrap.analytics-pane-wrap{
     box-sizing:border-box!important;
     height:auto!important;
-    min-height:max(calc(100% + 44px),calc((100vw - 20px) * .402734375 + 44px))!important;
+    min-height:max(calc(100% + 16px),calc((100vw - 20px) * .402734375 + 16px))!important;
     max-height:none!important;
     overflow:visible!important;
     padding-bottom:0!important;

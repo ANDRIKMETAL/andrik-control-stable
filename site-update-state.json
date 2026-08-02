@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r157",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1785675503109-803221ad3b",
-  "release": "R164",
-  "archiveName": "R164-MAP-ZIP-EYE-FIX.zip",
-  "sourceHead": "61b7485e6b4459d6714cbfcdf9e9c0ac9e31f952",
-  "backupSha": "61b7485e6b4459d6714cbfcdf9e9c0ac9e31f952",
-  "backupTag": "control-backup-20260802125820-61b7485-r164-7e5ce",
+  "operationId": "publish-1785676260967-67e9be769c",
+  "release": "R165",
+  "archiveName": "R165-FRAME-MAP-COMPACT.zip",
+  "sourceHead": "480649678293469d0feba648a2803706db9097fc",
+  "backupSha": "480649678293469d0feba648a2803706db9097fc",
+  "backupTag": "control-backup-20260802131057-4806496-r165-8cfc4",
   "autoRecovery": true,
-  "generatedAt": "2026-08-02T12:58:23.109Z"
+  "generatedAt": "2026-08-02T13:11:00.967Z"
 }
