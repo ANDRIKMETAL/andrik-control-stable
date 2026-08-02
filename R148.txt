@@ -7,3 +7,4 @@ R148 — MAP FOCUS BACKPLATE + SERVICE FRAME ALIGNMENT
 2. Только в разделе «Служебное» верх зелёной рамки опущен до нижней зелёной линии 92px-шапки.
 
 Guard 2.1, R140 и установщик R115 не изменялись.
+ADMIN KEY REDEPLOY
