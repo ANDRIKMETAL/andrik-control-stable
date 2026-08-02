@@ -9780,17 +9780,43 @@ function controlRecoveryPage() {
 
 
 function allowControlPlayerFrame(response, url, isControlHost) {
-  if (!isControlHost || url.searchParams.get('player-shell') !== '1') return response;
+  if (!isControlHost) return response;
+
   const path = url.pathname.replace(/\/+$/, '') || '/';
-  if (path === '/site-update-admin.html' || path === '/site-update-admin' || path.startsWith('/cache-reset')) return response;
   const contentType = String(response.headers.get('content-type') || '').toLowerCase();
-  if (!contentType.includes('text/html')) return response;
+  const isHtml = contentType.includes('text/html');
+  const isPlayerShell = url.searchParams.get('player-shell') === '1'
+    && path !== '/site-update-admin.html'
+    && path !== '/site-update-admin'
+    && !path.startsWith('/cache-reset');
 
   const headers = new Headers(response.headers);
-  headers.delete('x-frame-options');
-  headers.set('content-security-policy', "frame-ancestors 'self' https://andrikmetal.com");
-  headers.set('cache-control', 'no-store, no-cache, must-revalidate');
-  headers.set('x-andrik-player-shell', 'R124');
+
+  // R171: security headers are enforced by the Worker itself, so a future
+  // replacement of the static _headers file cannot lower the protection score.
+  headers.set('strict-transport-security', 'max-age=31536000; includeSubDomains');
+  headers.set('x-content-type-options', 'nosniff');
+  headers.set('referrer-policy', 'strict-origin-when-cross-origin');
+  headers.set('permissions-policy', 'camera=(), microphone=(), geolocation=()');
+  headers.set('x-andrik-security-headers', 'R171');
+
+  if (isHtml) {
+    if (isPlayerShell) {
+      // The player shell is intentionally allowed only inside our own origins.
+      headers.delete('x-frame-options');
+      headers.set('content-security-policy', "frame-ancestors 'self' https://andrikmetal.com https://control.andrikmetal.com");
+      headers.set('cache-control', 'no-store, no-cache, must-revalidate');
+      headers.set('x-andrik-player-shell', 'R171');
+    } else {
+      headers.set('x-frame-options', 'SAMEORIGIN');
+      const existingCsp = String(headers.get('content-security-policy') || '').trim();
+      if (!/frame-ancestors/i.test(existingCsp)) {
+        headers.set('content-security-policy', existingCsp
+          ? `${existingCsp}; frame-ancestors 'self'`
+          : "frame-ancestors 'self'");
+      }
+    }
+  }
 
   return new Response(response.body, {
     status:response.status,

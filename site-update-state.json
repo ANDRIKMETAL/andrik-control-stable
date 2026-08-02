@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r157",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1785684888667-147b8d63f2",
-  "release": "R170",
-  "archiveName": "R170-FRAME-TOP-SCROLL-FIX-FULL.zip",
-  "sourceHead": "6891cb3c5dc25e271eaa149ac18344632011d8fe",
-  "backupSha": "6891cb3c5dc25e271eaa149ac18344632011d8fe",
-  "backupTag": "control-backup-20260802153445-6891cb3-r170-191b3",
+  "operationId": "publish-1785686332484-02c11763d1",
+  "release": "R171",
+  "archiveName": "R171-SECURITY-100-RESTORE-FULL.zip",
+  "sourceHead": "ef3d2945af33e230b91c978db64ea47ee60a6378",
+  "backupSha": "ef3d2945af33e230b91c978db64ea47ee60a6378",
+  "backupTag": "control-backup-20260802155848-ef3d294-r171-c404f",
   "autoRecovery": true,
-  "generatedAt": "2026-08-02T15:34:48.667Z"
+  "generatedAt": "2026-08-02T15:58:52.484Z"
 }
