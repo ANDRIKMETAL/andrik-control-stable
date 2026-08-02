@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r157",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1785670310991-cffacf0d6c",
-  "release": "R159",
-  "archiveName": "R159.zip",
-  "sourceHead": "4f1baff934ee1880671d93791e3b46360c80f86f",
-  "backupSha": "4f1baff934ee1880671d93791e3b46360c80f86f",
-  "backupTag": "control-backup-20260802113147-4f1baff-r159-d3e5a",
+  "operationId": "publish-1785670953620-fa2da8dea0",
+  "release": "R160",
+  "archiveName": "R160.zip",
+  "sourceHead": "bfcc468bbcda324873759e72db3e6d3623e372f0",
+  "backupSha": "bfcc468bbcda324873759e72db3e6d3623e372f0",
+  "backupTag": "control-backup-20260802114230-bfcc468-r160-e6f0f",
   "autoRecovery": true,
-  "generatedAt": "2026-08-02T11:31:50.991Z"
+  "generatedAt": "2026-08-02T11:42:33.620Z"
 }

@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R159', number:159, version:'55.00', full:'55.00 LIVE WEB AI FINAL R159 FREE SECURITY + BOT 100', siteUpdater:'55.00-r157' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R160', number:160, version:'55.00', full:'55.00 LIVE WEB AI FINAL R160 OWNER SESSION PERSIST', siteUpdater:'55.00-r157' });
 
 const JSON_HEADERS = {
   'content-type': 'application/json; charset=utf-8',
@@ -2201,7 +2201,7 @@ function ownerSessionSecret(env) {
 }
 
 async function createOwnerSessionToken(env) {
-  const expiresAt = Date.now() + 30 * 24 * 60 * 60 * 1000;
+  const expiresAt = Date.now() + 5 * 365 * 24 * 60 * 60 * 1000;
   const nonce = crypto.randomUUID().replace(/-/g, '');
   const payload = `${expiresAt}.${nonce}`;
   const signature = await hmacSha256Hex(ownerSessionSecret(env), payload);
@@ -2213,13 +2213,13 @@ async function verifyOwnerSessionToken(token, env) {
   if (parts.length !== 3 || !configuredAdminKeys(env).length) return false;
   const [expiresRaw, nonce, suppliedSignature] = parts;
   const expiresAt = Number(expiresRaw || 0);
-  if (!Number.isFinite(expiresAt) || expiresAt <= Date.now() || expiresAt > Date.now() + 31 * 24 * 60 * 60 * 1000) return false;
+  if (!Number.isFinite(expiresAt) || expiresAt <= Date.now() || expiresAt > Date.now() + (5 * 365 + 2) * 24 * 60 * 60 * 1000) return false;
   if (!/^[a-f0-9]{20,80}$/i.test(nonce)) return false;
   const expectedSignature = await hmacSha256Hex(ownerSessionSecret(env), `${expiresRaw}.${nonce}`);
   return timingSafeTextEqual(suppliedSignature, expectedSignature);
 }
 
-function ownerSessionCookie(request, token, maxAge = 2592000) {
+function ownerSessionCookie(request, token, maxAge = 157680000) {
   let domain = '';
   try {
     const hostname = new URL(request.url).hostname.toLowerCase();
@@ -2244,6 +2244,15 @@ async function handleOwnerStatus(request, env) {
   const owner = await verifyOwnerSessionToken(token, env).catch(() => false);
   return json({ ok:true, owner, version:ANDRIK_CONTROL_RELEASE.short }, 200, {
     ...JSON_HEADERS,
+    'vary':'Cookie'
+  });
+}
+
+async function handleOwnerSessionDelete(request) {
+  if (!isSameOrigin(request)) return json({ ok:false, error:'origin' }, 403);
+  return json({ ok:true, owner:false }, 200, {
+    ...JSON_HEADERS,
+    'set-cookie': ownerSessionCookie(request, '', 0),
     'vary':'Cookie'
   });
 }
@@ -9639,6 +9648,21 @@ async function routeApi(request, env, ctx) {
   const url = new URL(request.url);
   const path = url.pathname.replace(/\/+$/, '') || '/';
   try {
+    // R160: a previously verified owner session transparently authorizes all
+    // Control API calls. The signed HttpOnly cookie survives deploys, cache
+    // resets and PWA/service-worker updates without exposing ADMIN_KEY to JS.
+    if (!adminAuthorized(request, env)) {
+      const ownerToken = readCookieValue(request, 'andrik_owner_session');
+      const ownerSessionOk = ownerToken && await verifyOwnerSessionToken(ownerToken, env).catch(() => false);
+      if (ownerSessionOk) {
+        const ownerKey = configuredAdminKeys(env)[0] || '';
+        if (ownerKey) {
+          const headers = new Headers(request.headers);
+          headers.set('x-admin-key', ownerKey);
+          request = new Request(request, { headers });
+        }
+      }
+    }
     if (path === '/api/health' && request.method === 'GET') return await handlePublicHealth(request, env);
     if (path === '/api/control/protection/status' && request.method === 'GET') return await handleControlProtectionStatus(request, env);
     if (path === '/api/control/protection/guard-status' && request.method === 'GET') return await handleControlProtectionGuardStatus(request, env);
@@ -9692,6 +9716,7 @@ async function routeApi(request, env, ctx) {
     if (path === '/api/control/site-update/history' && request.method === 'GET') return await handleSiteUpdateHistory(request, env);
     if (path === '/api/control/site-update/rollback' && request.method === 'POST') return await handleSiteUpdateRollback(request, env);
     if (path === '/api/control/owner-session' && request.method === 'POST') return await handleOwnerSessionCreate(request, env);
+    if (path === '/api/control/owner-session' && request.method === 'DELETE') return await handleOwnerSessionDelete(request);
     if (path === '/api/control/owner-status' && request.method === 'GET') return await handleOwnerStatus(request, env);
     if (path === '/api/control/access' && request.method === 'GET') return await handleControlAccess(request, env);
     if (path === '/api/control/home' && request.method === 'GET') return await handleControlHome(request, env);
