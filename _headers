@@ -821,16 +821,3 @@
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
   X-Robots-Tag: noindex, nofollow,noarchive
 
-# R142 — three visual bug fixes only
-/assets/control-mini-player-r142.css
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/assets/control-mini-map-position-r142.js
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/assets/control-admin-shell-r142.css
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/assets/control-admin-frame-r142.js
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/cache-reset-v55-00-final-r142.html
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-  X-Robots-Tag: noindex, nofollow,noarchive
-
