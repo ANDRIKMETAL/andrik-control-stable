@@ -1,0 +1,229 @@
+/* R172 — ONLY the main Admin panel in landscape.
+   Map, Protection, Attack Map, Site Update and backend are untouched. */
+@media screen and (orientation:landscape){
+  :root{
+    --r172-admin-head:78px;
+    --r172-admin-edge-left:max(8px,env(safe-area-inset-left));
+    --r172-admin-edge-right:max(8px,env(safe-area-inset-right));
+    --r172-admin-bottom:max(5px,env(safe-area-inset-bottom));
+  }
+
+  html.control-home-root-r144,
+  html.control-home-root-r144 body.control-home-page{
+    width:100%!important;
+    height:100dvh!important;
+    min-height:100dvh!important;
+    max-height:100dvh!important;
+    overflow:hidden!important;
+    overflow-x:hidden!important;
+    background:#02060a!important;
+  }
+
+  body.control-home-page .control-topbar,
+  body.control-home-page .control-topbar .nav-shell{
+    height:var(--r172-admin-head)!important;
+    min-height:var(--r172-admin-head)!important;
+    max-height:var(--r172-admin-head)!important;
+  }
+
+  /* The top of the frame is exactly on the lower header line. */
+  body.control-home-page .control-admin-landscape-frame-r141{
+    display:block!important;
+    position:fixed!important;
+    top:var(--r172-admin-head)!important;
+    left:var(--r172-admin-edge-left)!important;
+    right:var(--r172-admin-edge-right)!important;
+    bottom:var(--r172-admin-bottom)!important;
+    width:auto!important;
+    height:auto!important;
+    margin:0!important;
+    border:2px solid rgba(104,255,174,.98)!important;
+    border-radius:28px!important;
+    background:transparent!important;
+    box-shadow:
+      0 0 0 1px rgba(132,255,197,.24),
+      0 0 9px rgba(91,255,180,.88),
+      0 0 27px rgba(46,232,132,.55),
+      inset 0 0 18px rgba(70,246,151,.15)!important;
+    pointer-events:none!important;
+    z-index:2147481800!important;
+  }
+
+  /* One viewport, one real vertical scroll owner. */
+  body.control-home-page .admin-main.control-swipe-main{
+    position:relative!important;
+    inset:auto!important;
+    flex:1 1 auto!important;
+    box-sizing:border-box!important;
+    width:100%!important;
+    height:calc(100dvh - var(--r172-admin-head))!important;
+    min-height:0!important;
+    max-height:calc(100dvh - var(--r172-admin-head))!important;
+    margin:0!important;
+    padding:0!important;
+    overflow:hidden!important;
+    background:#02060a!important;
+  }
+  body.control-home-page .control-swipe-shell,
+  body.control-home-page .control-swipe-track,
+  body.control-home-page .control-swipe-page{
+    height:100%!important;
+    min-height:0!important;
+    max-height:100%!important;
+  }
+  body.control-home-page .control-swipe-shell,
+  body.control-home-page .control-swipe-track{
+    overflow:hidden!important;
+  }
+
+  body.control-home-page .control-menu-page,
+  body.control-home-page .control-menu-page[aria-hidden="false"]{
+    position:relative!important;
+    box-sizing:border-box!important;
+    height:100%!important;
+    min-height:0!important;
+    max-height:100%!important;
+    padding:0!important;
+    overflow-x:hidden!important;
+    overflow-y:auto!important;
+    -webkit-overflow-scrolling:touch!important;
+    overscroll-behavior-y:contain!important;
+    touch-action:pan-y!important;
+    background:#02060a!important;
+    isolation:isolate!important;
+    scrollbar-width:none!important;
+  }
+  body.control-home-page .control-menu-page::-webkit-scrollbar{
+    width:0!important;
+    height:0!important;
+    display:none!important;
+  }
+
+  /* Remove every old clipping/masking layer that produced the middle black band. */
+  body.control-home-page .control-menu-page::before,
+  body.control-home-page .control-menu-page::after,
+  body.control-home-page .control-swipe-main::before,
+  body.control-home-page .control-swipe-main::after,
+  body.control-home-page .control-swipe-shell::before,
+  body.control-home-page .control-swipe-shell::after{
+    content:none!important;
+    display:none!important;
+  }
+
+  body.control-home-page .control-menu-page .control-swipe-page-inner{
+    display:block!important;
+    box-sizing:border-box!important;
+    width:100%!important;
+    height:auto!important;
+    min-height:calc(100% + 1px)!important;
+    max-height:none!important;
+    margin:0!important;
+    padding:12px clamp(22px,4.8vw,64px) max(86px,calc(72px + env(safe-area-inset-bottom)))!important;
+    overflow:visible!important;
+    background:transparent!important;
+    touch-action:pan-y!important;
+  }
+
+  body.control-home-page .control-menu-heading{
+    margin:0 0 10px!important;
+    padding:0!important;
+  }
+  body.control-home-page .control-menu-heading .eyeline{
+    font-size:clamp(.64rem,1.35vw,.80rem)!important;
+    line-height:1.08!important;
+  }
+  body.control-home-page .control-menu-heading h1{
+    margin:4px 0 0!important;
+    font-size:clamp(2.55rem,6vw,3.75rem)!important;
+    line-height:.91!important;
+  }
+
+  body.control-home-page .control-menu-page .control-home-menu{
+    display:grid!important;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    grid-template-rows:none!important;
+    grid-auto-rows:minmax(104px,auto)!important;
+    gap:12px 14px!important;
+    width:min(100%,1160px)!important;
+    height:auto!important;
+    min-height:0!important;
+    max-height:none!important;
+    margin:8px auto 0!important;
+    overflow:visible!important;
+    align-content:start!important;
+  }
+  body.control-home-page .control-menu-page .control-home-menu-card{
+    position:relative!important;
+    inset:auto!important;
+    box-sizing:border-box!important;
+    min-height:104px!important;
+    height:auto!important;
+    max-height:none!important;
+    padding:12px 14px!important;
+    grid-template-columns:46px minmax(0,1fr) auto!important;
+    gap:11px!important;
+    overflow:hidden!important;
+    transform:none!important;
+    z-index:2!important;
+    touch-action:pan-y!important;
+  }
+  body.control-home-page .control-menu-page .control-home-menu-card > span{
+    width:42px!important;
+    height:42px!important;
+    min-width:42px!important;
+    font-size:1.30rem!important;
+  }
+  body.control-home-page .control-menu-page .control-home-menu-card small{
+    font-size:.64rem!important;
+  }
+  body.control-home-page .control-menu-page .control-home-menu-card strong{
+    font-size:clamp(1.28rem,2.8vw,1.62rem)!important;
+    line-height:1!important;
+  }
+  body.control-home-page .control-menu-page .control-home-menu-card p{
+    margin-top:4px!important;
+    font-size:.74rem!important;
+    line-height:1.14!important;
+    -webkit-line-clamp:1!important;
+    line-clamp:1!important;
+  }
+
+  /* Remove the old version/footer letters from the bottom of this one screen. */
+  body.control-home-page .control-menu-page .control-version-footer,
+  body.control-home-page .control-menu-page .control-menu-map-link{
+    display:none!important;
+    visibility:hidden!important;
+    position:static!important;
+    width:0!important;
+    height:0!important;
+    min-height:0!important;
+    margin:0!important;
+    padding:0!important;
+    overflow:hidden!important;
+  }
+
+  /* Keep the three round controls over the live scroll area. */
+  body.control-home-page.control-menu-visible .control-protection-fab,
+  body.control-home-page.control-menu-visible .control-attack-fab,
+  body.control-home-page.control-menu-visible .control-update-fab{
+    z-index:2147482500!important;
+    bottom:calc(10px + env(safe-area-inset-bottom))!important;
+  }
+}
+
+@media screen and (orientation:landscape) and (max-height:500px){
+  body.control-home-page .control-menu-page .control-swipe-page-inner{
+    padding-top:8px!important;
+    padding-bottom:max(78px,calc(66px + env(safe-area-inset-bottom)))!important;
+  }
+  body.control-home-page .control-menu-heading{margin-bottom:7px!important}
+  body.control-home-page .control-menu-heading h1{font-size:clamp(2.25rem,5.4vw,3.2rem)!important}
+  body.control-home-page .control-menu-page .control-home-menu{
+    grid-auto-rows:minmax(94px,auto)!important;
+    gap:10px 12px!important;
+  }
+  body.control-home-page .control-menu-page .control-home-menu-card{
+    min-height:94px!important;
+    padding:10px 12px!important;
+  }
+}

@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r157",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1785686332484-02c11763d1",
-  "release": "R171",
-  "archiveName": "R171-SECURITY-100-RESTORE-FULL.zip",
-  "sourceHead": "ef3d2945af33e230b91c978db64ea47ee60a6378",
-  "backupSha": "ef3d2945af33e230b91c978db64ea47ee60a6378",
-  "backupTag": "control-backup-20260802155848-ef3d294-r171-c404f",
+  "operationId": "publish-1785686834325-071725f806",
+  "release": "R172",
+  "archiveName": "R172-ADMIN-PANEL-LANDSCAPE-ONLY-FULL.zip",
+  "sourceHead": "f08c67670288b01deb359b1873afbd09387ffe65",
+  "backupSha": "f08c67670288b01deb359b1873afbd09387ffe65",
+  "backupTag": "control-backup-20260802160710-f08c676-r172-fb9b2",
   "autoRecovery": true,
-  "generatedAt": "2026-08-02T15:58:52.484Z"
+  "generatedAt": "2026-08-02T16:07:14.325Z"
 }
