@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R153', number:153, version:'55.00', full:'55.00 LIVE WEB AI FINAL R153 CLEANUP SAFE', siteUpdater:'55.00-r153' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R154', number:154, version:'55.00', full:'55.00 LIVE WEB AI FINAL R154 GUARD CONTROL FIX', siteUpdater:'55.00-r154' });
 
 const JSON_HEADERS = {
   'content-type': 'application/json; charset=utf-8',
@@ -160,11 +160,8 @@ function calculateSpamScore(name, message, blocklist = '') {
 
 let commentsSchemaV4Promise = null;
 
-let securitySchemaPromise = null;
-
 async function ensureSecuritySchema(db) {
-  if (securitySchemaPromise) return securitySchemaPromise;
-  securitySchemaPromise = (async () => {
+  // R154: do not share D1 I/O promises across Cloudflare request contexts.
     await db.exec(`
       CREATE TABLE IF NOT EXISTS security_events (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -203,8 +200,6 @@ async function ensureSecuritySchema(db) {
     await db.prepare(`ALTER TABLE security_events ADD COLUMN city TEXT NOT NULL DEFAULT ''`).run().catch(() => {});
     await db.prepare(`ALTER TABLE security_events ADD COLUMN colo TEXT NOT NULL DEFAULT ''`).run().catch(() => {});
     await db.prepare(`CREATE INDEX IF NOT EXISTS idx_security_events_country_created ON security_events(country, created_at DESC)`).run().catch(() => {});
-  })().finally(() => { securitySchemaPromise = null; });
-  return securitySchemaPromise;
 }
 
 async function securityIpHash(request, env) {
@@ -442,30 +437,40 @@ async function fetchGuardStatus(env, run = false) {
 
 async function handleControlProtectionStatus(request, env) {
   if (!adminAuthorized(request, env)) return json({ ok:false, error:'unauthorized' }, 401);
-  const db = requireDb(env);
-  await ensureSecuritySchema(db);
 
-  await db.prepare(`DELETE FROM security_events WHERE created_at < datetime('now', '-7 days')`).run().catch(() => {});
-  await db.prepare(`DELETE FROM security_rate_buckets WHERE updated_at < datetime('now', '-2 days')`).run().catch(() => {});
-
-  const [guard, spfRecords, dmarcRecords, countsResult, recentResult] = await Promise.all([
+  // Guard is intentionally checked independently from D1 and the remaining cards.
+  const [guard, spfRecords, dmarcRecords] = await Promise.all([
     fetchGuardStatus(env, false),
     fetchTxtRecords('andrikmetal.com'),
-    fetchTxtRecords('_dmarc.andrikmetal.com'),
-    db.prepare(`
-      SELECT kind, COUNT(*) AS count
-      FROM security_events
-      WHERE created_at >= datetime('now', '-1 day')
-      GROUP BY kind
-    `).all(),
-    db.prepare(`
-      SELECT kind, path, detail, country, region, colo, created_at AS createdAt
-      FROM security_events
-      WHERE created_at >= datetime('now', '-1 day')
-      ORDER BY created_at DESC
-      LIMIT 20
-    `).all()
+    fetchTxtRecords('_dmarc.andrikmetal.com')
   ]);
+
+  let countsResult = { results:[] };
+  let recentResult = { results:[] };
+  let securityDbError = '';
+  try {
+    const db = requireDb(env);
+    await ensureSecuritySchema(db);
+    await db.prepare(`DELETE FROM security_events WHERE created_at < datetime('now', '-7 days')`).run().catch(() => {});
+    await db.prepare(`DELETE FROM security_rate_buckets WHERE updated_at < datetime('now', '-2 days')`).run().catch(() => {});
+    [countsResult, recentResult] = await Promise.all([
+      db.prepare(`
+        SELECT kind, COUNT(*) AS count
+        FROM security_events
+        WHERE created_at >= datetime('now', '-1 day')
+        GROUP BY kind
+      `).all(),
+      db.prepare(`
+        SELECT kind, path, detail, country, region, colo, created_at AS createdAt
+        FROM security_events
+        WHERE created_at >= datetime('now', '-1 day')
+        ORDER BY created_at DESC
+        LIMIT 20
+      `).all()
+    ]);
+  } catch (error) {
+    securityDbError = cleanPlainText(error?.message || error, 300);
+  }
 
   let headerStatus = { hsts:false, frame:false, nosniff:false };
   try {
@@ -473,7 +478,7 @@ async function handleControlProtectionStatus(request, env) {
     probe.searchParams.set('security_probe', String(Date.now()));
     const response = await fetch(probe.toString(), {
       method:'GET', cache:'no-store',
-      headers:{ 'cache-control':'no-cache', 'user-agent':'ANDRIK-Control-R113-Security' }
+      headers:{ 'cache-control':'no-cache', 'user-agent':'ANDRIK-Control-R154-Security' }
     });
     const csp = response.headers.get('content-security-policy') || '';
     headerStatus = {
@@ -488,20 +493,21 @@ async function handleControlProtectionStatus(request, env) {
   const dmarcRecord = dmarcRecords.find(value => /^v=dmarc1\b/i.test(value)) || '';
   const policyMatch = dmarcRecord.match(/(?:^|;)\s*p\s*=\s*([a-z]+)/i);
   const dmarcPolicy = policyMatch ? policyMatch[1].toLowerCase() : '';
-
   const counts = {};
   for (const row of countsResult.results || []) counts[row.kind] = Number(row.count || 0);
 
   const application = {
     adminKey:Boolean(String(env.ADMIN_KEY || '').trim()),
     turnstile:Boolean(String(env.TURNSTILE_SECRET_KEY || '').trim()),
-    d1:Boolean(env.COMMENTS_DB)
+    d1:Boolean(env.COMMENTS_DB),
+    d1Healthy:!securityDbError,
+    d1Error:securityDbError
   };
 
-  let score = 10; // Cloudflare Pages / HTTPS edge.
+  let score = 10;
   if (application.adminKey) score += 10;
   if (application.turnstile) score += 15;
-  if (application.d1) score += 15;
+  if (application.d1 && application.d1Healthy) score += 15;
   if (guard.connected && guard.status?.status?.ok) score += 20;
   else if (guard.configured) score += 8;
   if (headerStatus.hsts) score += 10;
@@ -519,7 +525,7 @@ async function handleControlProtectionStatus(request, env) {
       ? 'Guard и основные уровни защиты работают.'
       : score >= 65
         ? 'Базовая защита сильная, но есть пункты для настройки.'
-        : 'Нужно подключить Guard, Turnstile или почтовую защиту.',
+        : 'Нужно проверить отдельные уровни защиты.',
     guard,
     application,
     edge:{
@@ -528,30 +534,37 @@ async function handleControlProtectionStatus(request, env) {
       bot:cleanPlainText(env.CLOUDFLARE_BOT_STATE || 'manual', 20)
     },
     headers:headerStatus,
-    phishing:{
-      spf,
-      spfRecords,
-      dmarc:Boolean(dmarcRecord),
-      dmarcPolicy,
-      dmarcRecord
-    },
-    events:{
-      counts,
-      recent:recentResult.results || []
-    }
+    phishing:{ spf, spfRecords, dmarc:Boolean(dmarcRecord), dmarcPolicy, dmarcRecord },
+    events:{ counts, recent:recentResult.results || [] }
   });
+}
+
+async function handleControlProtectionGuardStatus(request, env) {
+  if (!adminAuthorized(request, env)) return json({ ok:false, error:'unauthorized' }, 401);
+  const guard = await fetchGuardStatus(env, false);
+  return json({
+    ok:Boolean(guard.connected),
+    checkedAt:new Date().toISOString(),
+    guard,
+    message:guard.message || (guard.connected ? 'Guard подключён.' : 'Guard недоступен.')
+  }, guard.connected ? 200 : 503);
 }
 
 async function handleControlProtectionGuardRun(request, env) {
   if (!adminAuthorized(request, env)) return json({ ok:false, error:'unauthorized' }, 401);
-  if (!isSameOrigin(request)) return json({ ok:false, error:'origin' }, 403);
+  // ADMIN_KEY already protects this Control endpoint. Some Android PWA/WebView
+  // requests omit Origin, so Origin must not prevent a valid owner command.
   const result = await fetchGuardStatus(env, true);
   if (!result.configured || !result.connected) {
-    return json({ ok:false, error:'guard-unavailable', message:result.message }, 503);
+    return json({
+      ok:false,
+      error:'guard-unavailable',
+      message:result.message,
+      diagnostic:result.diagnostic || null
+    }, 503);
   }
-  return json({ ok:true, ...result.status, message:result.message });
+  return json({ ok:true, ...result.status, message:result.message, diagnostic:result.diagnostic || null });
 }
-
 
 function protectionDashboardRange(value) {
   const key = ['2h','24h','7d'].includes(String(value || '')) ? String(value) : '24h';
@@ -9613,6 +9626,7 @@ async function routeApi(request, env, ctx) {
   try {
     if (path === '/api/health' && request.method === 'GET') return await handlePublicHealth(request, env);
     if (path === '/api/control/protection/status' && request.method === 'GET') return await handleControlProtectionStatus(request, env);
+    if (path === '/api/control/protection/guard-status' && request.method === 'GET') return await handleControlProtectionGuardStatus(request, env);
     if (path === '/api/control/guard/event' && request.method === 'POST') return await handleGuardEvent(request, env);
     if (path === '/api/control/protection/dashboard' && request.method === 'GET') return await handleControlProtectionDashboard(request, env);
     if (path === '/api/control/protection/attacks' && request.method === 'GET') return await handleControlProtectionAttacks(request, env);
@@ -9695,7 +9709,12 @@ async function routeApi(request, env, ctx) {
       message:`${request.method} ${path}: ${cleanPlainText(error?.message || error, 420)}`,
       details:{ path, method:request.method, stack:cleanPlainText(error?.stack || '', 1200) }
     }).catch(() => {});
-    return json({ ok: false, error: missingDb ? 'backend-not-configured' : 'server-error' }, missingDb ? 503 : 500);
+    const isProtection = path.startsWith('/api/control/protection/');
+    return json({
+      ok:false,
+      error:missingDb ? 'backend-not-configured' : 'server-error',
+      ...(isProtection ? { message:cleanPlainText(error?.message || error, 300) } : {})
+    }, missingDb ? 503 : 500);
   }
 }
 

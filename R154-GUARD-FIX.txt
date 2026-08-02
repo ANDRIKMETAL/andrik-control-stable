@@ -1,0 +1,9 @@
+R154 GUARD CONTROL FIX
+
+- Устранён глобальный D1 Promise, пересекавший параллельные Cloudflare request contexts.
+- Добавлен независимый /api/control/protection/guard-status.
+- Guard больше не зависит от D1, DNS и остальных карточек защиты.
+- Запуск Guard не блокируется отсутствующим Origin в Android PWA/WebView.
+- Общая карточка Щита не падает целиком при временной ошибке журнала D1.
+- Protection API показывает безопасную реальную причину вместо безликого server-error.
+- Карта и остальные функции R153 не изменялись.
