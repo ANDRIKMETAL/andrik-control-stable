@@ -220,3 +220,66 @@ html.andrik-mini-player-hidden #andrik-control-mini-r141{
   .andrik-mini-r141-button::after,
   .andrik-mini-r141-wave i{animation:none!important}
 }
+
+
+/* R142 — only button size and breathing animation. Player panel is unchanged. */
+.andrik-mini-r141-button{
+  width:42px!important;
+  height:42px!important;
+  flex:0 0 42px!important;
+  animation:andrikMiniR142Pulse 1.55s ease-in-out infinite!important;
+  animation-play-state:running!important;
+  will-change:transform,filter,box-shadow!important;
+}
+.andrik-mini-r141-button::before{
+  inset:-5px!important;
+  animation:andrikMiniR142Ring 1.55s ease-out infinite!important;
+  animation-play-state:running!important;
+}
+.andrik-mini-r141-button::after{
+  inset:-9px!important;
+  animation:andrikMiniR142Ring 1.55s ease-out infinite .34s!important;
+  animation-play-state:running!important;
+}
+.andrik-mini-r141-button svg{width:19px!important;height:19px!important}
+.andrik-mini-r141-wave{bottom:4px!important;height:6px!important}
+
+@keyframes andrikMiniR142Pulse{
+  0%,100%{
+    transform:scale(.91);
+    filter:brightness(.92) saturate(1.02);
+    box-shadow:0 0 0 3px rgba(63,248,149,.07),0 0 13px rgba(57,255,151,.34),0 10px 24px rgba(0,0,0,.42);
+  }
+  50%{
+    transform:scale(1.09);
+    filter:brightness(1.38) saturate(1.18);
+    box-shadow:0 0 0 6px rgba(63,248,149,.13),0 0 30px rgba(57,255,151,.92),0 12px 28px rgba(0,0,0,.48);
+  }
+}
+@keyframes andrikMiniR142Ring{
+  0%{transform:scale(.76);opacity:.88}
+  100%{transform:scale(1.35);opacity:0}
+}
+
+@media(max-width:430px) and (orientation:portrait){
+  .andrik-mini-r141-button{width:40px!important;height:40px!important;flex-basis:40px!important}
+}
+@media(orientation:landscape){
+  .andrik-mini-r141-button{width:40px!important;height:40px!important;flex-basis:40px!important}
+}
+/* User explicitly wants the button to breathe even when Android reduced motion is enabled. */
+@media(prefers-reduced-motion:reduce){
+  .andrik-mini-r141-button{
+    animation:andrikMiniR142Pulse 1.9s ease-in-out infinite!important;
+    animation-play-state:running!important;
+  }
+  .andrik-mini-r141-button::before,
+  .andrik-mini-r141-button::after{
+    animation-name:andrikMiniR142Ring!important;
+    animation-duration:1.9s!important;
+    animation-timing-function:ease-out!important;
+    animation-iteration-count:infinite!important;
+    animation-play-state:running!important;
+  }
+  .andrik-mini-r141-button::after{animation-delay:.38s!important}
+}
