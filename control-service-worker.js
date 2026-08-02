@@ -1,5 +1,5 @@
 'use strict';
-const VERSION = '55.00-emergency-r195-button-fix';
+const VERSION = '55.00-emergency-admin-key-196';
 async function clearControlCaches(){
   if(!self.caches) return;
   const keys = await caches.keys();
