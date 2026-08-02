@@ -1,0 +1,184 @@
+/* R143 — только горизонтальные рамки разделов и админ-панели.
+   Портретный режим не затрагивается. */
+@media screen and (orientation:landscape){
+
+  /* Одна и та же магнитная рамка, как у большой карты. */
+  body.r143-section-frame-page > .admin-main,
+  body.r143-admin-frame-page > .control-swipe-main{
+    box-sizing:border-box!important;
+    border:3px solid rgba(104,255,179,.99)!important;
+    border-radius:27px!important;
+    background:#02070b!important;
+    box-shadow:
+      0 0 0 1px rgba(141,255,204,.34),
+      0 0 10px rgba(91,255,183,.84),
+      0 0 24px rgba(57,247,157,.54),
+      0 0 46px rgba(35,218,132,.30),
+      inset 0 0 10px rgba(137,255,205,.42),
+      inset 0 0 24px rgba(61,236,151,.18)!important;
+  }
+
+  /* Служебное / Мониторинг / Релизы / Обсуждение:
+     шапка остаётся сверху, один скролл работает внутри рамки. */
+  html:has(body.r143-section-frame-page),
+  body.r143-section-frame-page{
+    height:100dvh!important;
+    min-height:100dvh!important;
+    max-height:100dvh!important;
+    overflow:hidden!important;
+    background:#02070b!important;
+  }
+  body.r143-section-frame-page{
+    display:flex!important;
+    flex-direction:column!important;
+  }
+  body.r143-section-frame-page > .topbar{
+    flex:0 0 auto!important;
+    width:100%!important;
+  }
+  body.r143-section-frame-page > .admin-main{
+    flex:1 1 auto!important;
+    min-height:0!important;
+    max-height:none!important;
+    width:auto!important;
+    margin:
+      0
+      max(14px,calc(env(safe-area-inset-right) + 6px))
+      max(8px,env(safe-area-inset-bottom))
+      max(14px,calc(env(safe-area-inset-left) + 6px))!important;
+    padding:0!important;
+    overflow-y:auto!important;
+    overflow-x:hidden!important;
+    overscroll-behavior-y:contain!important;
+    -webkit-overflow-scrolling:touch!important;
+    scrollbar-width:thin!important;
+  }
+  body.r143-section-frame-page > .admin-main > .wrap{
+    box-sizing:border-box!important;
+    width:100%!important;
+    max-width:1180px!important;
+    margin:0 auto!important;
+    padding:
+      10px
+      clamp(24px,4vw,54px)
+      max(58px,calc(44px + env(safe-area-inset-bottom)))!important;
+  }
+
+  /* В iframe-карусели не создаём второй внешний контур:
+     рамка принадлежит самому открытому разделу. */
+  html.admin-carousel-embedded body.control-page.r143-section-frame-page > .admin-main{
+    flex:1 1 auto!important;
+    min-height:0!important;
+    max-height:none!important;
+    margin:
+      0
+      max(14px,calc(env(safe-area-inset-right) + 6px))
+      max(8px,env(safe-area-inset-bottom))
+      max(14px,calc(env(safe-area-inset-left) + 6px))!important;
+    padding:0!important;
+    border-left:3px solid rgba(104,255,179,.99)!important;
+    scrollbar-gutter:auto!important;
+  }
+  html.admin-carousel-embedded body.control-page.r143-section-frame-page > .admin-main > .wrap{
+    width:100%!important;
+    max-width:1180px!important;
+    padding:
+      10px
+      clamp(24px,4vw,54px)
+      max(58px,calc(44px + env(safe-area-inset-bottom)))!important;
+  }
+
+  /* Админ-панель:
+     рамка ставится прямо на рабочее окно, без отдельного fixed-слоя.
+     Это устраняет чёрный графический блок и обрезание карточек R142. */
+  html:has(body.r143-admin-frame-page),
+  body.r143-admin-frame-page{
+    height:100dvh!important;
+    min-height:100dvh!important;
+    max-height:100dvh!important;
+    overflow:hidden!important;
+    background:#02070b!important;
+  }
+  body.r143-admin-frame-page{
+    display:flex!important;
+    flex-direction:column!important;
+  }
+  body.r143-admin-frame-page > .topbar{
+    flex:0 0 auto!important;
+    width:100%!important;
+  }
+  body.r143-admin-frame-page > .control-swipe-main{
+    position:relative!important;
+    flex:1 1 auto!important;
+    min-height:0!important;
+    height:auto!important;
+    width:auto!important;
+    margin:
+      0
+      max(14px,calc(env(safe-area-inset-right) + 6px))
+      max(8px,env(safe-area-inset-bottom))
+      max(14px,calc(env(safe-area-inset-left) + 6px))!important;
+    padding:0!important;
+    overflow:hidden!important;
+    z-index:1!important;
+  }
+  body.r143-admin-frame-page .control-swipe-shell,
+  body.r143-admin-frame-page .control-swipe-track,
+  body.r143-admin-frame-page .control-swipe-page{
+    height:100%!important;
+    min-height:0!important;
+  }
+
+  /* Скролл только у активной страницы. Никакого чёрного перекрытия. */
+  body.r143-admin-frame-page .control-menu-page{
+    overflow-y:auto!important;
+    overflow-x:hidden!important;
+    overscroll-behavior-y:contain!important;
+    -webkit-overflow-scrolling:touch!important;
+  }
+  body.r143-admin-frame-page .control-menu-page .control-swipe-page-inner{
+    display:block!important;
+    box-sizing:border-box!important;
+    height:auto!important;
+    min-height:100%!important;
+    max-height:none!important;
+    overflow:visible!important;
+    padding:
+      10px
+      clamp(28px,5vw,68px)
+      max(88px,calc(72px + env(safe-area-inset-bottom)))!important;
+  }
+  body.r143-admin-frame-page .control-menu-heading{
+    margin-top:0!important;
+    margin-bottom:12px!important;
+  }
+  body.r143-admin-frame-page .control-home-menu{
+    max-width:min(1180px,100%)!important;
+    margin:0 auto!important;
+  }
+
+  /* Старый отдельный overlay R141/R142 полностью выключен:
+     именно он давал графический баг и конфликтовал со скроллом. */
+  body.r143-admin-frame-page .control-admin-landscape-frame-r141,
+  body.admin-sections-shell .control-admin-landscape-frame-r141{
+    display:none!important;
+    opacity:0!important;
+    visibility:hidden!important;
+    width:0!important;
+    height:0!important;
+    border:0!important;
+    box-shadow:none!important;
+  }
+}
+
+@media screen and (orientation:landscape) and (max-height:470px){
+  body.r143-section-frame-page > .admin-main > .wrap,
+  html.admin-carousel-embedded body.control-page.r143-section-frame-page > .admin-main > .wrap{
+    padding-top:7px!important;
+    padding-bottom:max(48px,calc(36px + env(safe-area-inset-bottom)))!important;
+  }
+  body.r143-admin-frame-page .control-menu-page .control-swipe-page-inner{
+    padding-top:7px!important;
+    padding-bottom:max(76px,calc(62px + env(safe-area-inset-bottom)))!important;
+  }
+}

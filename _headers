@@ -821,3 +821,65 @@
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
   X-Robots-Tag: noindex, nofollow,noarchive
 
+# R142 — three visual bug fixes only
+/assets/control-mini-player-r142.css
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/assets/control-mini-map-position-r142.js
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/assets/control-admin-shell-r142.css
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/assets/control-admin-frame-r142.js
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/cache-reset-v55-00-final-r142.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+  X-Robots-Tag: noindex, nofollow,noarchive
+
+# R143 — landscape frames only
+/assets/control-landscape-frame-r143.css
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/control-home.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/admin-sections.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/service-admin.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/observability-admin.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/lyrics-admin.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/comments-admin.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/cache-reset-v55-00-final-r143.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+  X-Robots-Tag: noindex, nofollow,noarchive
+
+# R144 — targeted UI hotfix
+/assets/control-ui-hotfix-r144.css
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/assets/control-mini-player-r142.css
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/assets/control-mini-map-position-r142.js
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/analytics-admin.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/observability-admin.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/control-home.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/protection-admin.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/attack-map.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/site-update-admin.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/cache-reset-v55-00-final-r144.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+  X-Robots-Tag: noindex, nofollow,noarchive
+
+
+# R145 — frame cleanup
+/assets/control-ui-hotfix-r145.css
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/cache-reset-v55-00-final-r145.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+  X-Robots-Tag: noindex, nofollow,noarchive

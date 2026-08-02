@@ -1,0 +1,93 @@
+/* R145 — frame cleanup only: neat landscape frames without clipping. */
+@media screen and (orientation:landscape){
+  /* Universal frame polish: slightly more room and no clipped glow. */
+  body.r143-section-frame-page > .admin-main,
+  body.r143-admin-frame-page > .control-swipe-main{
+    box-sizing:border-box!important;
+    background:#02070b!important;
+    overflow:hidden!important;
+  }
+
+  /* Monitoring and other framed sections. */
+  body.r143-section-frame-page > .admin-main{
+    top:calc(var(--r139-topbar-h,78px) - 6px)!important;
+    left:max(16px,calc(env(safe-area-inset-left) + 8px))!important;
+    right:max(16px,calc(env(safe-area-inset-right) + 8px))!important;
+    bottom:max(12px,calc(env(safe-area-inset-bottom) + 4px))!important;
+    padding:0!important;
+  }
+  body.r143-section-frame-page > .admin-main > .wrap{
+    box-sizing:border-box!important;
+    height:100%!important;
+    min-height:0!important;
+    overflow-y:auto!important;
+    overflow-x:hidden!important;
+    padding:16px clamp(22px,4vw,50px) max(96px,calc(78px + env(safe-area-inset-bottom)))!important;
+    scrollbar-width:none!important;
+    -ms-overflow-style:none!important;
+  }
+  body.r143-section-frame-page > .admin-main > .wrap::-webkit-scrollbar{width:0!important;height:0!important;display:none!important}
+
+  /* Monitoring: header and toolbar stay clean inside the frame. */
+  body.observability-page .admin-header{
+    margin-bottom:10px!important;
+    padding-top:0!important;
+  }
+  body.observability-page .admin-header h1{
+    margin-bottom:10px!important;
+  }
+  body.observability-page .observability-toolbar{
+    margin:0 0 16px!important;
+    padding:0 0 6px!important;
+    gap:14px!important;
+    align-items:flex-end!important;
+  }
+  body.observability-page .observability-toolbar .btn{
+    align-self:flex-end!important;
+    margin-right:0!important;
+  }
+
+  /* Admin panel frame: raise a little and keep full bottom curve visible. */
+  body.r143-admin-frame-page > .control-swipe-main{
+    top:calc(var(--r139-topbar-h,78px) - 6px)!important;
+    left:max(16px,calc(env(safe-area-inset-left) + 8px))!important;
+    right:max(16px,calc(env(safe-area-inset-right) + 8px))!important;
+    bottom:max(12px,calc(env(safe-area-inset-bottom) + 4px))!important;
+  }
+  body.r143-admin-frame-page .control-menu-page .control-swipe-page-inner{
+    padding:14px clamp(26px,5vw,64px) max(100px,calc(82px + env(safe-area-inset-bottom)))!important;
+  }
+
+  /* Map frame: no extra vertical line, clean inset on all sides. */
+  [id^="landscapeMapScrollbarR"],
+  [id^="landscapeMapScrollbarR"] *{
+    display:none!important;
+    visibility:hidden!important;
+    opacity:0!important;
+    width:0!important;
+    height:0!important;
+    pointer-events:none!important;
+  }
+  #landscapeMapFrameR69Final{
+    top:calc(var(--r139-topbar-h,78px) + 4px)!important;
+    left:max(18px,calc(env(safe-area-inset-left) + 10px))!important;
+    right:max(18px,calc(env(safe-area-inset-right) + 10px))!important;
+    bottom:max(12px,calc(env(safe-area-inset-bottom) + 4px))!important;
+    box-sizing:border-box!important;
+  }
+}
+
+@media screen and (orientation:landscape) and (max-height:720px){
+  body.r143-section-frame-page > .admin-main > .wrap{
+    padding-top:12px!important;
+    padding-bottom:max(88px,calc(72px + env(safe-area-inset-bottom)))!important;
+  }
+  body.r143-admin-frame-page .control-menu-page .control-swipe-page-inner{
+    padding-top:10px!important;
+    padding-bottom:max(90px,calc(74px + env(safe-area-inset-bottom)))!important;
+  }
+  body.observability-page .admin-header h1{
+    margin-top:0!important;
+    margin-bottom:8px!important;
+  }
+}
