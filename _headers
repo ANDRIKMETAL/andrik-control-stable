@@ -733,3 +733,40 @@
 
 /assets/service-mini-player-settings-r136.css
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+
+# R137 — snapshot analytics + real eye movement
+/analytics-admin.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/attack-map.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/protection-admin.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/site-update-admin.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/assets/r137-eye-motion.css
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/assets/youtube-admin-r137.js
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/cache-reset-v55-00-final-r137.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+  X-Robots-Tag: noindex, nofollow,noarchive
+
+# R138 — universal mini-player loader
+/assets/control-player-loader-r138.js
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/assets/control-player-bridge-r138.js
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/assets/control-player-bridge-r138.css
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/assets/unified-glow-r138.js
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/assets/unified-glow-r138.css
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/assets/service-mini-player-settings-r138.js
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/assets/service-mini-player-settings-r138.css
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/cache-reset-v55-00-final-r138.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+  X-Robots-Tag: noindex, nofollow,noarchive
+

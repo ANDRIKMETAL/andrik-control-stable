@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R136', number:136, version:'55.00', full:'55.00 LIVE WEB AI FINAL R136', siteUpdater:'55.00-r136' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R138', number:138, version:'55.00', full:'55.00 LIVE WEB AI FINAL R138', siteUpdater:'55.00-r138' });
 
 const JSON_HEADERS = {
   'content-type': 'application/json; charset=utf-8',
@@ -6862,30 +6862,77 @@ async function handleControlHome(request, env) {
 }
 
 async function handleControlGoogleAnalytics(request, env) {
-  if (!adminAuthorized(request, env)) return json({ ok: false, error: 'unauthorized' }, 401);
+  if (!adminAuthorized(request, env)) return json({ ok:false, error:'unauthorized' }, 401);
+
   const db = requireDb(env);
-  await ensureSiteMetricsSchema(db);
-  const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('google-analytics-timeout')), 15000));
-  const [googleResult, liveResult] = await Promise.allSettled([
-    Promise.race([fetchGoogleSiteAnalytics(env), timeout]),
+  await Promise.all([
+    ensurePlatformAnalyticsSchema(db),
+    ensureSiteMetricsSchema(db)
+  ]);
+
+  const [snapshotResult, liveResult] = await Promise.allSettled([
+    db.prepare(`
+      SELECT metrics_json, created_at
+      FROM platform_snapshots
+      WHERE platform='google-analytics'
+      ORDER BY datetime(created_at) DESC
+      LIMIT 1
+    `).first(),
     getSiteLiveMetrics(db)
   ]);
-  const live = liveResult.status === 'fulfilled' ? liveResult.value : { configured:false, today:{}, realtime:{} };
-  if (googleResult.status === 'fulfilled') {
-    const google = mergeGoogleWithSiteLive(googleResult.value, live);
-    return json({ ok: true, google, website: google, updatedAt: new Date().toISOString() });
-  }
-  const details = analyticsErrorMessage(googleResult.reason, 'google-analytics-error');
+
+  const row = snapshotResult.status === 'fulfilled' ? snapshotResult.value : null;
+  const snapshot = parseSnapshotMetrics(row);
+  const live = liveResult.status === 'fulfilled'
+    ? liveResult.value
+    : { configured:false, today:{}, realtime:{} };
+
+  const hasSnapshot = Boolean(row);
   const google = mergeGoogleWithSiteLive({
-    configured:false,
-    error:details === 'google-analytics-timeout' ? 'google-analytics-timeout' : 'google-analytics-error',
-    details,
-    trend:[], countries:[], pages:[], devices:[], week:{}, month:{}
+    ...snapshot,
+    configured:hasSnapshot ? snapshot.configured !== false : false,
+    updatedAt:row?.created_at || snapshot.updatedAt || ''
   }, live);
-  // The local counter still provides accurate immediate values for today even
-  // while GA4 is delayed or temporarily unavailable.
-  if (live.configured) return json({ ok:true, partial:true, google, website:google, updatedAt:new Date().toISOString() });
-  return json({ ok:false, error:google.error, details }, 502);
+
+  if (hasSnapshot || live.configured) {
+    return json({
+      ok:true,
+      partial:!hasSnapshot,
+      source:hasSnapshot ? 'snapshot+live-counter' : 'live-counter',
+      google,
+      website:google,
+      snapshotAt:row?.created_at || '',
+      updatedAt:new Date().toISOString()
+    });
+  }
+
+  return json({
+    ok:true,
+    partial:true,
+    source:'not-ready',
+    google:{
+      configured:false,
+      error:'snapshot-not-ready',
+      details:'Последний снимок GA4 ещё не создан центральным Cron.',
+      trend:[],
+      countries:[],
+      pages:[],
+      devices:[],
+      week:{},
+      month:{},
+      liveCounter:live
+    },
+    website:{
+      configured:false,
+      error:'snapshot-not-ready',
+      trend:[],
+      countries:[],
+      pages:[],
+      devices:[],
+      liveCounter:live
+    },
+    updatedAt:new Date().toISOString()
+  });
 }
 
 async function handleControlSnapshotsRefresh(request, env) {
@@ -6953,7 +7000,7 @@ async function handleControlAudience(request, env) {
   const refreshYoutube = new URL(request.url).searchParams.get('refresh') === '1';
   const youtubeSnapshotMs = Date.parse(youtubeSnapshotAt || '');
   const youtubeSnapshotAgeMinutes = Number.isFinite(youtubeSnapshotMs) ? Math.max(0, (Date.now() - youtubeSnapshotMs) / 60000) : Infinity;
-  if (refreshYoutube || youtubeSnapshotAgeMinutes > 8) {
+  if (refreshYoutube) {
     try {
       const liveIdentity = await Promise.race([
         fetchYoutubeMonitorIdentity(env),

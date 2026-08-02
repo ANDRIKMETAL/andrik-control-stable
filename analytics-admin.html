@@ -852,7 +852,7 @@ html.live-web-ai-resume-lock .analytics-swipe-viewport{overflow:hidden!important
   document.addEventListener('visibilitychange',function(){if(!document.hidden)lock();},{passive:true});
 })();
 </script>
-<link rel="stylesheet" href="/assets/unified-glow-r136.css?v=55.00-r136">
+<link rel="stylesheet" href="/assets/unified-glow-r138.css?v=55.00-r138">
 
 <style id="andrik-r134-landscape-map-no-black-tail">
 /* R134 — landscape map: no black strip after country focus. */
@@ -2138,7 +2138,7 @@ html.live-web-ai-resume-lock .analytics-swipe-viewport{overflow:hidden!important
 
   async function loadPlatforms(force=false){
     if(audienceRequest&&!force)return audienceRequest;
-    const request=api('/api/control/audience',18000);
+    const request=api('/api/control/audience',24000);
     audienceRequest=request;
     window.__andrikAudiencePromise=request;
     try{
@@ -2191,7 +2191,7 @@ html.live-web-ai-resume-lock .analytics-swipe-viewport{overflow:hidden!important
     if($('analyticsMessage'))$('analyticsMessage').textContent='Обновляем статистику…';
     const platformsPromise=loadPlatforms(force);
     try{
-      const data=await api('/api/control/google-analytics',9000);
+      const data=await api('/api/control/google-analytics',16000);
       const ga=data.google||data.website||{};
       authState(true,'Доступ подтверждён');
       renderGoogleData(ga,data);
@@ -2259,7 +2259,7 @@ html.live-web-ai-resume-lock .analytics-swipe-viewport{overflow:hidden!important
 <script defer src="/assets/country-focus-v54-84.js?v=54.84"></script>
 <script defer src="/assets/landscape-no-growth-v55-00-r37.js?v=55.00-r37"></script>
 <script defer src="/assets/country-growth-v54-87.js?v=54.87"></script>
-<script defer src="/assets/youtube-admin-v54-89.js?v=54.89"></script><script defer src="/assets/youtube-chart-interaction-v54-91.js?v=54.91"></script>
+<script defer src="/assets/youtube-admin-r137.js?v=55.00-r137"></script><script defer src="/assets/youtube-chart-interaction-v54-91.js?v=54.91"></script>
 
 <script defer src="/assets/control-status-eye-v55-00-r88.js?v=55.00-r88"></script><script defer src="/assets/control-version-v55-00-final.js?v=55.00-final"></script><script defer src="/assets/map-monthly-v55-00-r38.js?v=55.00-r38"></script>
 <script id="andrik-search-console-interaction-fix">
@@ -3384,7 +3384,7 @@ body:not(.is-country-focus-active) #mapFocusActions,
 })();
 </script>
 
-<script defer src="/assets/control-version-v55-00-r115.js?v=55.00-r115"></script><script defer src="/assets/unified-glow-r136.js?v=55.00-r136"></script>
+<script defer src="/assets/control-version-v55-00-r115.js?v=55.00-r115"></script><script defer src="/assets/unified-glow-r138.js?v=55.00-r138"></script>
 
 <script id="andrik-r134-map-focus-scroll-lock">
 (()=>{
@@ -3421,4 +3421,5 @@ body:not(.is-country-focus-active) #mapFocusActions,
 })();
 </script>
 
+<script defer src="/assets/control-player-loader-r138.js?v=55.00-r138"></script>
 </body></html>
