@@ -1,0 +1,5 @@
+R164 MAP TAIL + ZIP LAYOUT + EYE PULSE
+- Landscape map black tail reduced and pushed lower (44px reserve only).
+- Site update page keeps ZIP upload above and Cache Control at the bottom; cache card spans full width.
+- Green archive icon before "Выбрать ZIP" kept and reinforced.
+- Eye pulse fallback strengthened on Site Update, Attack Map and Protection pages.
