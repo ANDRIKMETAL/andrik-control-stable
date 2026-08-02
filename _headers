@@ -230,28 +230,10 @@
 
 
 # Control ANDRIK v55.00 R3U — verified section swipe + clean mini-player + full cache reset
-/cache-reset-v55-00-r3u.html
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-  Pragma: no-cache
-  Expires: 0
-  X-Robots-Tag: noindex, nofollow, noarchive
-
-/site-cache-reset-v55-00-r3u.html
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-  Pragma: no-cache
-  Expires: 0
-  X-Robots-Tag: noindex, nofollow, noarchive
-
 /assets/control-cache-reset-v55-00-r3u.js
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
 
-/assets/control-section-swipe-v55-00-r3u.js
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-
 /assets/player-mini-clean-v55-00-r3u.css
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-
-/assets/player-album-swipe-v55-00-r3u.js
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
 
 /player.html
@@ -269,21 +251,7 @@
 /comments-admin.html
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
 
-/assets/admin-service-v55-00-r3u.js
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-
-
-# Control ANDRIK v55.00 FINAL STABLE GITHUB
-/cache-reset-v55-00-final-stable-github.html
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-  Pragma: no-cache
-  Expires: 0
-  X-Robots-Tag: noindex, nofollow, noarchive
-
 /control-home.html
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-
-/assets/control-home-v55-00-final-stable-github.js
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
 
 /assets/control-cache-reset-v55-00-final-stable-github.js
@@ -339,174 +307,18 @@
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
   X-Robots-Tag: noindex, nofollow, noarchive
 
-/assets/site-update-admin-r103.js
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-
-/assets/site-update-admin-r103.css
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-
-/cache-reset-v55-00-final-r102.html
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-  Pragma: no-cache
-  Expires: 0
-  X-Robots-Tag: noindex, nofollow, noarchive
-
-/cache-reset-v55-00-final-r103.html
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-
-# LIVE WEB AI FINAL R104 — one-button website updater
-/assets/site-update-admin-r104.js
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-
-/assets/site-update-admin-r104.css
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-
-/cache-reset-v55-00-final-r104.html
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-  Pragma: no-cache
-  Expires: 0
-  X-Robots-Tag: noindex, nofollow, noarchive
-
-/assets/site-update-admin-r105.js
-  Cache-Control: public, max-age=31536000, immutable
-/assets/site-update-admin-r105.css
-  Cache-Control: public, max-age=31536000, immutable
-/cache-reset-v55-00-final-r105.html
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-
-/assets/site-update-admin-r106.js
-  Cache-Control: public, max-age=31536000, immutable
-/assets/site-update-admin-r106.css
-  Cache-Control: public, max-age=31536000, immutable
-/cache-reset-v55-00-final-r106.html
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/site-update-state.json
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-
-/assets/site-update-admin-r107.js
-  Cache-Control: public, max-age=31536000, immutable
-/assets/site-update-admin-r107.css
-  Cache-Control: public, max-age=31536000, immutable
-/cache-reset-v55-00-final-r107.html
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-
-/assets/site-update-admin-r108.js
-  Cache-Control: public, max-age=31536000, immutable
-/assets/site-update-admin-r108.css
-  Cache-Control: public, max-age=31536000, immutable
-/cache-reset-v55-00-final-r108.html
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
 /control-home.html
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
 /service-admin.html
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
 
-/assets/control-version-v55-00-r109.js
+/assets/service-youtube-events-r113.js
   Cache-Control: public, max-age=31536000, immutable
-/assets/site-update-admin-r109.js
+/assets/service-youtube-events-r113.css
   Cache-Control: public, max-age=31536000, immutable
-/assets/site-update-admin-r109.css
+/assets/release-center-r113.js
   Cache-Control: public, max-age=31536000, immutable
-/assets/service-youtube-events-r109.js
-  Cache-Control: public, max-age=31536000, immutable
-/assets/service-youtube-events-r109.css
-  Cache-Control: public, max-age=31536000, immutable
-/assets/release-center-r109.js
-  Cache-Control: public, max-age=31536000, immutable
-/assets/release-center-r109.css
-  Cache-Control: public, max-age=31536000, immutable
-/cache-reset-v55-00-final-r109.html
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-
-# R110 emergency repair — unique asset URLs bypass broken R109 cache
-/assets/control-version-v55-00-r110.js
-  Cache-Control: public, max-age=31536000, immutable
-/assets/site-update-admin-r110.js
-  Cache-Control: public, max-age=31536000, immutable
-/assets/site-update-admin-r110.css
-  Cache-Control: public, max-age=31536000, immutable
-/assets/service-youtube-events-r110.js
-  Cache-Control: public, max-age=31536000, immutable
-/assets/service-youtube-events-r110.css
-  Cache-Control: public, max-age=31536000, immutable
-/assets/release-center-r110.js
-  Cache-Control: public, max-age=31536000, immutable
-/assets/release-center-r110.css
-  Cache-Control: public, max-age=31536000, immutable
-/cache-reset-v55-00-final-r110.html
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-
-# R111 unique URLs
-/assets/control-version-v55-00-r111.js
-  Cache-Control: public, max-age=31536000, immutable
-/assets/guard-ready-r111.js
-  Cache-Control: public, max-age=31536000, immutable
-/assets/site-update-admin-r111.js
-  Cache-Control: public, max-age=31536000, immutable
-/assets/site-update-admin-r111.css
-  Cache-Control: public, max-age=31536000, immutable
-/assets/service-youtube-events-r111.js
-  Cache-Control: public, max-age=31536000, immutable
-/assets/service-youtube-events-r111.css
-  Cache-Control: public, max-age=31536000, immutable
-/assets/release-center-r111.js
-  Cache-Control: public, max-age=31536000, immutable
-/assets/release-center-r111.css
-  Cache-Control: public, max-age=31536000, immutable
-/cache-reset-v55-00-final-r111.html
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-
-# R112 protection center
-/protection-admin.html
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-  X-Robots-Tag: noindex, nofollow, noarchive
-  X-Frame-Options: SAMEORIGIN
-
-/assets/control-version-v55-00-r112.js
-  Cache-Control: public, max-age=31536000, immutable
-/assets/guard-ready-r112.js
-  Cache-Control: public, max-age=31536000, immutable
-/assets/protection-admin-r112.js
-  Cache-Control: public, max-age=31536000, immutable
-/assets/protection-admin-r112.css
-  Cache-Control: public, max-age=31536000, immutable
-/assets/site-update-admin-r112.js
-  Cache-Control: public, max-age=31536000, immutable
-/assets/site-update-admin-r112.css
-  Cache-Control: public, max-age=31536000, immutable
-/assets/service-youtube-events-r112.js
-  Cache-Control: public, max-age=31536000, immutable
-/assets/service-youtube-events-r112.css
-  Cache-Control: public, max-age=31536000, immutable
-/assets/release-center-r112.js
-  Cache-Control: public, max-age=31536000, immutable
-/assets/release-center-r112.css
-  Cache-Control: public, max-age=31536000, immutable
-/cache-reset-v55-00-final-r112.html
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-
-# R113 live security hub
-/protection-admin.html
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-  X-Robots-Tag: noindex, nofollow, noarchive
-/attack-map.html
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-  X-Robots-Tag: noindex, nofollow, noarchive
-/assets/control-version-v55-00-r113.js
-  Cache-Control: public, max-age=31536000, immutable
-/assets/guard-ready-r113.js
-  Cache-Control: public, max-age=31536000, immutable
-/assets/protection-admin-r113.js
-  Cache-Control: public, max-age=31536000, immutable
-/assets/protection-admin-r113.css
-  Cache-Control: public, max-age=31536000, immutable
-/assets/attack-map-r113.js
-  Cache-Control: public, max-age=31536000, immutable
-/assets/attack-map-r113.css
-  Cache-Control: public, max-age=31536000, immutable
-/assets/site-update-admin-r113.js
-  Cache-Control: public, max-age=31536000, immutable
-/assets/site-update-admin-r113.css
+/assets/release-center-r113.css
   Cache-Control: public, max-age=31536000, immutable
 /assets/service-youtube-events-r113.js
   Cache-Control: public, max-age=31536000, immutable
@@ -516,12 +328,42 @@
   Cache-Control: public, max-age=31536000, immutable
 /assets/release-center-r113.css
   Cache-Control: public, max-age=31536000, immutable
-/cache-reset-v55-00-final-r113.html
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-# R115 unified glow assets
-/assets/unified-glow-r115.css
+/assets/service-youtube-events-r113.js
   Cache-Control: public, max-age=31536000, immutable
-/assets/unified-glow-r115.js
+/assets/service-youtube-events-r113.css
+  Cache-Control: public, max-age=31536000, immutable
+/assets/release-center-r113.js
+  Cache-Control: public, max-age=31536000, immutable
+/assets/release-center-r113.css
+  Cache-Control: public, max-age=31536000, immutable
+/protection-admin.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+  X-Robots-Tag: noindex, nofollow, noarchive
+  X-Frame-Options: SAMEORIGIN
+
+/assets/service-youtube-events-r113.js
+  Cache-Control: public, max-age=31536000, immutable
+/assets/service-youtube-events-r113.css
+  Cache-Control: public, max-age=31536000, immutable
+/assets/release-center-r113.js
+  Cache-Control: public, max-age=31536000, immutable
+/assets/release-center-r113.css
+  Cache-Control: public, max-age=31536000, immutable
+/protection-admin.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+  X-Robots-Tag: noindex, nofollow, noarchive
+/attack-map.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+  X-Robots-Tag: noindex, nofollow, noarchive
+/assets/attack-map-r113.js
+  Cache-Control: public, max-age=31536000, immutable
+/assets/service-youtube-events-r113.js
+  Cache-Control: public, max-age=31536000, immutable
+/assets/service-youtube-events-r113.css
+  Cache-Control: public, max-age=31536000, immutable
+/assets/release-center-r113.js
+  Cache-Control: public, max-age=31536000, immutable
+/assets/release-center-r113.css
   Cache-Control: public, max-age=31536000, immutable
 /assets/control-version-v55-00-r115.js
   Cache-Control: public, max-age=31536000, immutable
@@ -531,136 +373,24 @@
   Cache-Control: public, max-age=31536000, immutable
 /assets/site-update-admin-r115.js
   Cache-Control: public, max-age=31536000, immutable
-/cache-reset-v55-00-final-r115.html
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-
-# R124 — UI runtime без кэша
-/assets/unified-glow-r124.css
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/assets/unified-glow-r124.js
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/assets/control-player-bridge-r124.css
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/assets/control-player-bridge-r124.js
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/assets/player-shell-bridge-r124.js
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/assets/player-v54-27-r124.js
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/cache-reset-v55-00-final-r124.html
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-  X-Robots-Tag: noindex, nofollow, noarchive
-
-# R125 — collapsed mini-player + collection selector
-/assets/control-player-bridge-r125.js
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/assets/control-player-bridge-r125.css
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/assets/player-v54-27-r125.js
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
 /assets/player-r125-collection-switch.css
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/cache-reset-v55-00-final-r125.html
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-  X-Robots-Tag: noindex, nofollow, noarchive
-
-# R126 — public header owner quick switch
-/assets/player-shell-bridge-r126.js
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/cache-reset-v55-00-final-r126.html
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-  X-Robots-Tag: noindex, nofollow, noarchive
-
-# R127 — persistent player on admin carousel
 /admin-sections.html
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/assets/unified-glow-r127.css
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/assets/unified-glow-r127.js
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/assets/control-player-bridge-r127.css
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/assets/control-player-bridge-r127.js
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/cache-reset-v55-00-final-r127.html
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-  X-Robots-Tag: noindex, nofollow, noarchive
-
-# R129 — restored eyes, high player and universal landscape frame
 /admin-sections.html
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/assets/unified-glow-r129.css
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/assets/unified-glow-r129.js
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/assets/control-player-bridge-r129.css
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/assets/control-player-bridge-r129.js
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/cache-reset-v55-00-final-r129.html
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-  X-Robots-Tag: noindex, nofollow, noarchive
-
-# R130 — map player position + persistent button + hidden Control shell player
 /admin-sections.html
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
 /player.html
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/assets/unified-glow-r130.css
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/assets/unified-glow-r130.js
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/assets/control-player-bridge-r130.css
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/assets/control-player-bridge-r130.js
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/assets/player-v54-27-r130.js
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/assets/player-r130-control-shell.css
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/cache-reset-v55-00-final-r130.html
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-  X-Robots-Tag: noindex, nofollow,noarchive
-
-# R131 — GA4 top reset + fixed player anchor + exact map headers
 /analytics-admin.html
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
 /admin-sections.html
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/assets/unified-glow-r131.css
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/assets/unified-glow-r131.js
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/assets/control-player-bridge-r131.css
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/assets/control-player-bridge-r131.js
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/cache-reset-v55-00-final-r131.html
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-  X-Robots-Tag: noindex, nofollow,noarchive
-
-# R132 — mini-player visibility setting + landscape lower-left anchor
 /service-admin.html
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
 /admin-sections.html
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/assets/service-mini-player-settings-r132.css
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/assets/service-mini-player-settings-r132.js
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/assets/unified-glow-r132.css
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/assets/unified-glow-r132.js
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/assets/control-player-bridge-r132.css
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/assets/control-player-bridge-r132.js
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/cache-reset-v55-00-final-r132.html
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-  X-Robots-Tag: noindex, nofollow,noarchive
-
-# R133 — updater player + exact headers + restored wide landscape frame
 /site-update-admin.html
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
 /protection-admin.html
@@ -669,33 +399,8 @@
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
 /admin-sections.html
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/assets/unified-glow-r133.css
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/assets/unified-glow-r133.js
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/assets/control-player-bridge-r133.css
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/assets/control-player-bridge-r133.js
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/cache-reset-v55-00-final-r133.html
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-  X-Robots-Tag: noindex, nofollow,noarchive
-
-# R134 — listener map no black tail + slightly wider landscape frame
 /analytics-admin.html
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/assets/unified-glow-r134.css
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/assets/unified-glow-r134.js
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/assets/control-player-bridge-r134.css
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/assets/control-player-bridge-r134.js
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/cache-reset-v55-00-final-r134.html
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-  X-Robots-Tag: noindex, nofollow,noarchive
-# R136
 /analytics-admin.html
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
 /service-admin.html
@@ -718,23 +423,14 @@
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
 /assets/control-player-bridge-r136.js
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/assets/service-mini-player-settings-r136.js
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
 /assets/control-home-r136.js
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
 /assets/comment-collection-r136.js
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/cache-reset-v55-00-final-r136.html
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-  X-Robots-Tag: noindex, nofollow,noarchive
 /assets/player-shell-bridge-r136.js
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
 
 
-/assets/service-mini-player-settings-r136.css
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-
-# R137 — snapshot analytics + real eye movement
 /analytics-admin.html
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
 /attack-map.html
@@ -745,60 +441,12 @@
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
 /assets/r137-eye-motion.css
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/assets/youtube-admin-r137.js
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/cache-reset-v55-00-final-r137.html
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-  X-Robots-Tag: noindex, nofollow,noarchive
-
-# R138 — universal mini-player loader
-/assets/control-player-loader-r138.js
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/assets/control-player-bridge-r138.js
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/assets/control-player-bridge-r138.css
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/assets/unified-glow-r138.js
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/assets/unified-glow-r138.css
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/assets/service-mini-player-settings-r138.js
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/assets/service-mini-player-settings-r138.css
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/cache-reset-v55-00-final-r138.html
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-  X-Robots-Tag: noindex, nofollow,noarchive
-
-# R139 — direct mini-player + resilient system status + hidden Player Shell
-/assets/control-player-bridge-r139.js
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/assets/control-player-bridge-r139.css
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
 /assets/unified-glow-r139.js
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
 /assets/unified-glow-r139.css
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/assets/service-mini-player-settings-r139.js
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/assets/service-mini-player-settings-r139.css
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
 /assets/admin-service-r139.js
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/assets/player-v54-27-r139.js
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/assets/player-r139-control-shell.css
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/cache-reset-v55-00-final-r139.html
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-  X-Robots-Tag: noindex, nofollow,noarchive
-
-# R140 — reliable 06:00 daily summary
-/cache-reset-v55-00-final-r140.html
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-  X-Robots-Tag: noindex, nofollow,noarchive
-
-# R141 — fixed Control shell + universal mini-player
 /assets/control-mini-player-r141.js
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
 /assets/control-mini-player-r141.css
@@ -817,7 +465,3 @@
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
 /admin-sections.html
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/cache-reset-v55-00-final-r141.html
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-  X-Robots-Tag: noindex, nofollow,noarchive
-

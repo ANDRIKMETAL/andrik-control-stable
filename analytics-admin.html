@@ -852,122 +852,12 @@ html.live-web-ai-resume-lock .analytics-swipe-viewport{overflow:hidden!important
   document.addEventListener('visibilitychange',function(){if(!document.hidden)lock();},{passive:true});
 })();
 </script>
-<link rel="stylesheet" href="/assets/unified-glow-r139.css?v=55.00-r143">
-
-<style id="andrik-r134-landscape-map-no-black-tail">
-/* R134 — landscape map: no black strip after country focus. */
-@media screen and (orientation:landscape){
-
-  /* Карта занимает весь доступный кадр без вертикального прокручивания. */
-  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane{
-    overflow-x:hidden!important;
-    overflow-y:hidden!important;
-    scrollbar-width:none!important;
-    overscroll-behavior:none!important;
-  }
-  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane::-webkit-scrollbar{
-    display:none!important;
-    width:0!important;
-    height:0!important;
-  }
-
-  body.analytics-admin-page.analytics-v54-46-page
-  .analytics-map-pane > .analytics-pane-wrap.analytics-map-pane-wrap,
-  body.analytics-admin-page.analytics-v54-46-page
-  .analytics-map-pane > .analytics-map-pane-wrap.analytics-pane-wrap{
-    position:relative!important;
-    box-sizing:border-box!important;
-    width:100%!important;
-    height:100%!important;
-    min-height:100%!important;
-    max-height:100%!important;
-    margin:0!important;
-    padding:0!important;
-    overflow:hidden!important;
-  }
-
-  /* Старый 178px чёрный хвост больше не участвует в потоке.
-     Он остаётся только прозрачной сенсорной зоной у нижнего края. */
-  body.analytics-admin-page.analytics-v54-46-page
-  .analytics-map-pane #mapEndPullZone,
-  body.analytics-admin-page.analytics-v54-46-page
-  .analytics-map-pane > .analytics-pane-wrap.analytics-map-pane-wrap > #mapEndPullZone,
-  body.analytics-admin-page.analytics-v54-46-page
-  .analytics-map-pane > .analytics-map-pane-wrap.analytics-pane-wrap > #mapEndPullZone{
-    position:absolute!important;
-    display:block!important;
-    left:0!important;
-    right:0!important;
-    top:auto!important;
-    bottom:0!important;
-    z-index:260!important;
-    box-sizing:border-box!important;
-    width:100%!important;
-    height:42px!important;
-    min-height:42px!important;
-    max-height:42px!important;
-    margin:0!important;
-    padding:0!important;
-    border:0!important;
-    background:transparent!important;
-    overflow:hidden!important;
-    opacity:1!important;
-    visibility:visible!important;
-    pointer-events:auto!important;
-    touch-action:none!important;
-  }
-
-  body.analytics-admin-page.analytics-v54-46-page
-  .analytics-map-pane #mapEndPullZone .map-end-pull-spring,
-  body.analytics-admin-page.analytics-v54-46-page
-  .analytics-map-pane #mapEndPullZone strong{
-    display:none!important;
-    opacity:0!important;
-    visibility:hidden!important;
-    pointer-events:none!important;
-  }
-
-  /* Рамка и сама карта немного шире. */
-  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap,
-  body.analytics-admin-page.analytics-v54-46-page
-  .analytics-map-pane .analytics-map-top.has-country-focus #worldMap,
-  body.analytics-admin-page.analytics-v54-46-page
-  .analytics-map-pane .analytics-map-top:not(.has-country-focus) #worldMap{
-    width:calc(100vw - 8px)!important;
-    max-width:calc(100vw - 8px)!important;
-    margin-left:auto!important;
-    margin-right:auto!important;
-  }
-
-  body.analytics-admin-page.unified-glow-ready::after{
-    left:max(4px,env(safe-area-inset-left))!important;
-    right:max(4px,env(safe-area-inset-right))!important;
-  }
-
-  /* Даже при субпиксельном округлении подложка не становится чёрной. */
-  body.analytics-admin-page.analytics-v54-46-page
-  .analytics-map-pane #worldMap,
-  body.analytics-admin-page.analytics-v54-46-page
-  .analytics-map-pane #worldMap .world-map-canvas,
-  body.analytics-admin-page.analytics-v54-46-page
-  .analytics-map-pane #worldMap .world-map-stage{
-    background:#082331!important;
-  }
-
-  /* Фокус страны никогда не смещает вертикальный scroll-контейнер. */
-  body.analytics-admin-page.is-country-focus-active .analytics-map-pane,
-  body.analytics-admin-page.is-country-focus-active
-  .analytics-map-pane > .analytics-pane-wrap{
-    scroll-behavior:auto!important;
-  }
-}
-</style>
-
-<link rel="stylesheet" href="/assets/control-mini-player-r141.css?v=55.00-r144">
-<link rel="stylesheet" href="/assets/control-hotfix-r152.css?v=55.00-r152">
+<link rel="stylesheet" href="/assets/unified-glow-r139.css?v=55.00-r153">
+<link rel="stylesheet" href="/assets/control-mini-player-r141.css?v=55.00-r153">
+<link rel="stylesheet" href="/assets/control-hotfix-r153.css?v=55.00-r153">
 </head>
 <body class="trika-standalone-page comments-admin-page control-page analytics-admin-page analytics-swipe-page analytics-v54-33-page analytics-v54-46-page">
-<nav class="topbar control-topbar control-detail-topbar"><div class="wrap nav-shell analytics-topbar-minimal"><a class="control-center-logo" id="controlCenterLogo" href="https://andrikmetal.com/" aria-label="Открыть главный сайт ANDRIK"><img class="logo-ok" src="/assets/control-topbar-eye-triangle.jpg?v=55.00-r134" alt=""/><img class="logo-error" src="/assets/andrik-control-red-triangle-192.png" alt=""/></a></div></nav>
+<nav class="topbar control-topbar control-detail-topbar"><div class="wrap nav-shell analytics-topbar-minimal"><a class="control-center-logo" id="controlCenterLogo" href="https://andrikmetal.com/" aria-label="Открыть главный сайт ANDRIK"><img class="logo-ok" src="/assets/control-topbar-eye-triangle.jpg" alt=""/><img class="logo-error" src="/assets/andrik-control-red-triangle-192.png" alt=""/></a></div></nav>
 <main class="analytics-swipe-main" id="analyticsSwipeMain">
   <div class="analytics-pull-indicator" id="analyticsDownIndicator" aria-hidden="true"><i></i><span>Свайп сверху вниз делает обновление</span></div>
   <div class="analytics-swipe-viewport" id="analyticsSwipeViewport">
@@ -995,7 +885,7 @@ html.live-web-ai-resume-lock .analytics-swipe-viewport{overflow:hidden!important
 <section class="analytics-main-chart"><article class="admin-control-card analytics-chart-card"><div class="admin-card-title-row analytics-inline-actions"><div><span class="eyeline">Последние 30 дней</span><h2>Динамика посещений</h2></div><div class="analytics-title-actions"><span class="analytics-legend">Пользователи / просмотры</span></div></div><div class="analytics-chart" id="analyticsTrend"><div class="admin-empty">Загружаем график…</div></div></article></section>
           <section class="analytics-site-geography"><article class="admin-control-card analytics-list-card analytics-site-country-card"><div class="admin-card-title-row"><div><span class="eyeline">Google Analytics · за 30 дней</span><h2>География сайта</h2><p>Страны, из которых заходили посетители сайта.</p></div></div><div id="analyticsCountries"><div class="admin-empty">Загружаем географию сайта…</div></div></article></section>
           <section class="analytics-columns"><article class="admin-control-card analytics-list-card"><div class="admin-card-title-row"><div><span class="eyeline">За 30 дней</span><h2>Популярные страницы</h2></div></div><div class="analytics-list" id="analyticsPages"><div class="admin-empty">Загружаем страницы…</div></div></article><article class="admin-control-card analytics-list-card"><div class="admin-card-title-row"><div><span class="eyeline">За 30 дней</span><h2>Устройства</h2></div></div><div class="analytics-list" id="analyticsDevices"><div class="admin-empty">Загружаем устройства…</div></div></article></section>
-          <footer class="control-version-footer"><strong>Live Web AI · профиль ANDRIK · v55.00 LIVE WEB AI FINAL R115</strong><span>магнитная рамка зафиксирована во всех трёх разделах · горизонтальная навигация · GitHub в Служебном · 01.08.2026</span></footer>
+          <footer class="control-version-footer"><strong>Live Web AI · профиль ANDRIK · v55.00 LIVE WEB AI FINAL R153</strong><span>магнитная рамка зафиксирована во всех трёх разделах · горизонтальная навигация · GitHub в Служебном · 01.08.2026</span></footer>
           <div class="analytics-swipe-hint analytics-site-hint"><button type="button" data-swipe-go="2">← YouTube</button><button type="button" data-swipe-go="1">Карта слушателей →</button></div>
         </div>
       </section>
@@ -1136,7 +1026,6 @@ html.live-web-ai-resume-lock .analytics-swipe-viewport{overflow:hidden!important
   const $=id=>document.getElementById(id);
   const escapeHtml=value=>String(value??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
   const getKey=()=>{try{return localStorage.getItem(KEY_LOCAL)||sessionStorage.getItem(KEY_SESSION)||''}catch(_){return''}};
-  try{history.scrollRestoration='manual'}catch(_){}
   const number=value=>new Intl.NumberFormat('ru-RU').format(Number(value||0));
   const dateTime=value=>{try{return new Intl.DateTimeFormat('ru-RU',{dateStyle:'medium',timeStyle:'short'}).format(new Date(value))}catch(_){return value||'—'}};
   const shortDate=value=>{const s=String(value||'');return /^\d{8}$/.test(s)?`${s.slice(6,8)}.${s.slice(4,6)}`:s};
@@ -1829,35 +1718,21 @@ html.live-web-ai-resume-lock .analytics-swipe-viewport{overflow:hidden!important
       announcePage();
       requestAnimationFrame(()=>{if(!animate)track.style.transition=''});
     };
-    const resetPaneViewport=pane=>{
+    const resetMapViewport=()=>{
+      const pane=panes.find(item=>item?.dataset?.analyticsPage==='map');
       if(!pane)return;
       pane.scrollTop=0;
       const inner=pane.querySelector('.analytics-pane-wrap');
       if(inner)inner.scrollTop=0;
-      pane.querySelectorAll('.analytics-pane-wrap,.analytics-site-hero').forEach(node=>{
-        try{node.scrollTop=0}catch(_){}
-      });
       try{window.scrollTo({top:0,left:0,behavior:'instant'})}catch(_){window.scrollTo(0,0)}
     };
-    const resetMapViewport=()=>resetPaneViewport(
-      panes.find(item=>item?.dataset?.analyticsPage==='map')
-    );
-    const resetGoogleViewport=()=>resetPaneViewport(
-      panes.find(item=>item?.dataset?.analyticsPage==='site')
-    );
     const setPage=(next,animate=true)=>{
       setEndPullProgress(0,false);
       const raw=Number(next);
       const wrapped=wrap(raw);
       const circularJump=raw<0||raw>=count;
       page=wrapped;
-      const activeName=panes[page]?.dataset?.analyticsPage||'';
-      if(activeName==='map') resetMapViewport();
-      if(activeName==='site'){
-        resetGoogleViewport();
-        window.setTimeout(resetGoogleViewport,60);
-        window.setTimeout(()=>{ if(typeof load==='function') load(true); },120);
-      }
+      if(panes[page]?.dataset?.analyticsPage==='map') resetMapViewport();
       if(circularJump){
         viewport.classList.add('is-circular-jump');
         apply(false);
@@ -1866,7 +1741,7 @@ html.live-web-ai-resume-lock .analytics-swipe-viewport{overflow:hidden!important
     };
     const refreshPageLabel=()=>{
       const name=panes[page]?.dataset?.analyticsPage||'map';
-      return name==='site'?'Google Analytics':name==='youtube'?'YouTube':'карту';
+      return name==='google'?'Google Analytics':name==='youtube'?'YouTube':'карту';
     };
     const setDownProgress=(distance=0,ready=false)=>{
       if(!downIndicator)return;
@@ -1922,13 +1797,7 @@ html.live-web-ai-resume-lock .analytics-swipe-viewport{overflow:hidden!important
       const elapsed=Date.now()-gesture.t;
       const mode=gesture.mode;
       const openThreshold=Number(gesture.openThreshold||68);
-      const finishedGesture=gesture;
       gesture=null;
-      if(mode==='horizontal'){
-        if(finishedGesture.pane)finishedGesture.pane.scrollTop=finishedGesture.paneScrollStart;
-        if(finishedGesture.inner)finishedGesture.inner.scrollTop=finishedGesture.innerScrollStart;
-        if(finishedGesture.scrollElement)finishedGesture.scrollElement.scrollTop=finishedGesture.scrollStart;
-      }
       if(!cancelled&&mode==='vertical-down'&&dy>56){
         refreshAnalyticsDashboard();
         return;
@@ -1972,14 +1841,12 @@ html.live-web-ai-resume-lock .analytics-swipe-viewport{overflow:hidden!important
          This prevents a swipe from opening the admin panel before the landscape page reaches its real end. */
       const atBottom=pageName==='map'?paneAtBottom:(paneAtBottom&&innerAtBottom);
       const scrollElement=pageName==='map'?pane:(innerScrollable?inner:pane);
+      const mapGesturesEnabled=pageName==='map'&&!countriesExpanded&&paneScrollable&&atBottom;
       const viewportWidth=window.visualViewport?.width||window.innerWidth||document.documentElement.clientWidth||0;
       const viewportHeight=window.visualViewport?.height||window.innerHeight||document.documentElement.clientHeight||0;
       const rightScrollZone=event.clientX>=Math.max(0,viewportWidth-76);
       const bottomMenuZone=event.clientY>=Math.max(0,viewportHeight-132);
       const dedicatedZone=Boolean(target?.closest?.('#mapEndPullZone'));
-      const mapGesturesEnabled=pageName==='map'&&!countriesExpanded&&(
-        isLandscape ? dedicatedZone : (paneScrollable&&atBottom)
-      );
       const portraitMapCenter=Boolean(
         !isLandscape&&
         pageName==='map'&&
@@ -1991,16 +1858,9 @@ html.live-web-ai-resume-lock .analytics-swipe-viewport{overflow:hidden!important
       const canPullRefresh=['google','map','youtube'].includes(pageName)&&atTop&&(pageName!=='map'||!countriesExpanded);
       /* Landscape keeps the dedicated bottom pull zone.
          Portrait opens Admin with a quick upward swipe through the central map area. */
-      const canOpenSections=isLandscape?mapGesturesEnabled:portraitMapCenter;
+      const canOpenSections=isLandscape?(mapGesturesEnabled&&dedicatedZone):portraitMapCenter;
       const openThreshold=isLandscape?68:48;
-      gesture={
-        id:event.pointerId,x:event.clientX,y:event.clientY,lastX:event.clientX,lastY:event.clientY,t:Date.now(),
-        mode:null,canPullRefresh,canOpenSections,openThreshold,pageName,pane,inner,scrollElement,
-        scrollStart:Number(scrollElement?.scrollTop||0),
-        paneScrollStart:Number(pane?.scrollTop||0),
-        innerScrollStart:Number(inner?.scrollTop||0),
-        windowScrollStart:Number(window.scrollY||0)
-      };
+      gesture={id:event.pointerId,x:event.clientX,y:event.clientY,lastX:event.clientX,lastY:event.clientY,t:Date.now(),mode:null,canPullRefresh,canOpenSections,openThreshold,pageName,scrollElement,scrollStart:Number(scrollElement?.scrollTop||0)};
       try{viewport.setPointerCapture(event.pointerId)}catch(_){}
     });
     viewport.addEventListener('pointermove',event=>{
@@ -2046,13 +1906,6 @@ html.live-web-ai-resume-lock .analytics-swipe-viewport{overflow:hidden!important
       }
       if(gesture.mode!=='horizontal')return;
       event.preventDefault();
-      if(gesture.pane)gesture.pane.scrollTop=gesture.paneScrollStart;
-      if(gesture.inner)gesture.inner.scrollTop=gesture.innerScrollStart;
-      if(gesture.scrollElement)gesture.scrollElement.scrollTop=gesture.scrollStart;
-      if(Math.abs(Number(window.scrollY||0)-gesture.windowScrollStart)>1){
-        try{window.scrollTo({top:gesture.windowScrollStart,left:0,behavior:'instant'})}
-        catch(_){window.scrollTo(0,gesture.windowScrollStart)}
-      }
       const circularEdge=(page===0&&dx>0)||(page===count-1&&dx<0);
       apply(false,circularEdge?0:dx);
     },{passive:false});
@@ -2140,7 +1993,7 @@ html.live-web-ai-resume-lock .analytics-swipe-viewport{overflow:hidden!important
 
   async function loadPlatforms(force=false){
     if(audienceRequest&&!force)return audienceRequest;
-    const request=api('/api/control/audience',24000);
+    const request=api('/api/control/audience',18000);
     audienceRequest=request;
     window.__andrikAudiencePromise=request;
     try{
@@ -2193,7 +2046,7 @@ html.live-web-ai-resume-lock .analytics-swipe-viewport{overflow:hidden!important
     if($('analyticsMessage'))$('analyticsMessage').textContent='Обновляем статистику…';
     const platformsPromise=loadPlatforms(force);
     try{
-      const data=await api('/api/control/google-analytics',16000);
+      const data=await api('/api/control/google-analytics',9000);
       const ga=data.google||data.website||{};
       authState(true,'Доступ подтверждён');
       renderGoogleData(ga,data);
@@ -2231,25 +2084,6 @@ html.live-web-ai-resume-lock .analytics-swipe-viewport{overflow:hidden!important
   const cachedAudience=readAudienceCache();
   if(cachedAudience?.data){renderSearchConsole(cachedAudience.data.searchEngines||[],cachedAudience.data.searchConsole||{});emitAudienceData(cachedAudience.data)}
   setupAnalyticsSwipe();
-  const restoreGoogleTop=()=>{
-    const requested=String(new URLSearchParams(location.search).get('page')||'').toLowerCase();
-    const bodyPage=document.body.dataset.analyticsPage||'';
-    if(['google','ga','ga4','analytics','site','website'].includes(requested)||bodyPage==='site'){
-      const pane=document.querySelector('[data-analytics-page="site"]');
-      if(pane){
-        pane.scrollTop=0;
-        pane.querySelector('.analytics-pane-wrap')?.scrollTo?.({top:0,left:0,behavior:'instant'});
-      }
-      try{window.scrollTo(0,0)}catch(_){}
-    }
-  };
-  restoreGoogleTop();
-  window.setTimeout(restoreGoogleTop,80);
-  window.setTimeout(restoreGoogleTop,320);
-  window.addEventListener('pageshow',()=>{
-    restoreGoogleTop();
-    window.setTimeout(()=>load(true),100);
-  },{passive:true});
   setTimeout(load,20);
   refreshTimer=setInterval(()=>{if(!document.hidden)load()},120000);
   window.addEventListener('beforeunload',()=>{clearTimeout(startupWatchdog);if(refreshTimer)clearInterval(refreshTimer)});
@@ -2261,7 +2095,7 @@ html.live-web-ai-resume-lock .analytics-swipe-viewport{overflow:hidden!important
 <script defer src="/assets/country-focus-v54-84.js?v=54.84"></script>
 <script defer src="/assets/landscape-no-growth-v55-00-r37.js?v=55.00-r37"></script>
 <script defer src="/assets/country-growth-v54-87.js?v=54.87"></script>
-<script defer src="/assets/youtube-admin-r137.js?v=55.00-r137"></script><script defer src="/assets/youtube-chart-interaction-v54-91.js?v=54.91"></script>
+<script defer src="/assets/youtube-admin-v54-89.js?v=54.89"></script><script defer src="/assets/youtube-chart-interaction-v54-91.js?v=54.91"></script>
 
 <script defer src="/assets/control-status-eye-v55-00-r88.js?v=55.00-r88"></script><script defer src="/assets/control-version-v55-00-final.js?v=55.00-final"></script><script defer src="/assets/map-monthly-v55-00-r38.js?v=55.00-r38"></script>
 <script id="andrik-search-console-interaction-fix">
@@ -3308,12 +3142,12 @@ body:not(.is-country-focus-active) #mapFocusActions,
     transform:translateZ(0)!important;
     backface-visibility:hidden!important;
     box-shadow:
-      0 0 0 1px rgba(151,255,211,.42),
-      0 0 12px rgba(96,255,187,.94),
-      0 0 28px rgba(57,247,157,.64),
-      0 0 52px rgba(35,218,132,.36),
-      inset 0 0 12px rgba(145,255,211,.48),
-      inset 0 0 26px rgba(61,236,151,.22)!important;
+      0 0 0 1px rgba(141,255,204,.34),
+      0 0 10px rgba(91,255,183,.84),
+      0 0 24px rgba(57,247,157,.54),
+      0 0 46px rgba(35,218,132,.30),
+      inset 0 0 10px rgba(137,255,205,.42),
+      inset 0 0 24px rgba(61,236,151,.18)!important;
   }
 }
 @media screen and (orientation:portrait){
@@ -3353,9 +3187,9 @@ body:not(.is-country-focus-active) #mapFocusActions,
     }
     const vw=Math.max(1,document.documentElement.clientWidth||window.innerWidth||0);
     const vh=Math.max(1,document.documentElement.clientHeight||window.innerHeight||0);
-    const side=Math.max(8,Math.min(14,Math.round(vw*.008)));
-    const left=Math.max(4,Math.round(rect.left+side));
-    const right=Math.min(vw-4,Math.round(rect.right-side));
+    const side=Math.max(18,Math.min(30,Math.round(vw*.013)));
+    const left=Math.max(8,Math.round(rect.left+side));
+    const right=Math.min(vw-8,Math.round(rect.right-side));
     const top=Math.max(1,Math.round(rect.top+1));
     const bottom=Math.min(vh-1,Math.round(rect.bottom-1));
     el.style.display='block';
@@ -3386,42 +3220,6 @@ body:not(.is-country-focus-active) #mapFocusActions,
 })();
 </script>
 
-<script defer src="/assets/control-version-v55-00-r115.js?v=55.00-r115"></script><script defer src="/assets/unified-glow-r139.js?v=55.00-r143"></script>
-
-<script id="andrik-r134-map-focus-scroll-lock">
-(()=>{
-  'use strict';
-  const isLandscape=()=>window.matchMedia?.('(orientation:landscape)')?.matches===true;
-  const reset=()=>{
-    if(!isLandscape())return;
-    const pane=document.querySelector('.analytics-map-pane');
-    const wrap=pane?.querySelector('.analytics-map-pane-wrap,.analytics-pane-wrap');
-    if(pane) pane.scrollTop=0;
-    if(wrap) wrap.scrollTop=0;
-    try{window.scrollTo({top:0,left:0,behavior:'instant'})}catch(_){window.scrollTo(0,0)}
-  };
-
-  window.addEventListener('andrik:country-focus-changed',()=>{
-    reset();
-    requestAnimationFrame(reset);
-    setTimeout(reset,80);
-    setTimeout(reset,360);
-  });
-
-  window.addEventListener('orientationchange',()=>setTimeout(reset,140),{passive:true});
-  window.addEventListener('pageshow',reset,{passive:true});
-
-  const map=document.getElementById('worldMap');
-  if(map){
-    const observer=new MutationObserver(()=>{
-      if(map.classList.contains('is-country-focused')) reset();
-    });
-    observer.observe(map,{attributes:true,attributeFilter:['class','data-focus-country']});
-  }
-
-  reset();
-})();
-</script>
-
-<script defer src="/assets/control-mini-player-r141.js?v=55.00-r144"></script>
+<script defer src="/assets/control-version-v55-00-r115.js?v=55.00-r153"></script><script defer src="/assets/unified-glow-r139.js?v=55.00-r153"></script>
+<script defer src="/assets/control-mini-player-r141.js?v=55.00-r153"></script>
 </body></html>
