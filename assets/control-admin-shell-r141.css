@@ -37,6 +37,13 @@ body.control-home-page{
       0 0 30px rgba(48,234,134,.55),
       inset 0 0 20px rgba(55,239,136,.13)!important;
   }
+
+  /* R143: only the main Admin panel frame rises directly under the 78px header.
+     The lower edge remains exactly where R142 left it. */
+  body.control-home-page .control-admin-landscape-frame-r141{
+    top:86px!important;
+  }
+
   body.control-home-page .control-swipe-main{
     position:relative!important;
     z-index:1!important;
@@ -50,24 +57,36 @@ body.control-home-page{
     height:100%!important;
     min-height:0!important;
   }
+  body.control-home-page .control-menu-page{
+    overflow:hidden!important;
+  }
   body.control-home-page .control-menu-page .control-swipe-page-inner{
+    min-height:100%!important;
     height:100%!important;
+    max-height:100%!important;
     overflow-y:auto!important;
     overscroll-behavior-y:contain!important;
-    padding:12px clamp(34px,5vw,76px) 86px!important;
+    padding:24px clamp(34px,5vw,76px) max(72px,calc(60px + env(safe-area-inset-bottom)))!important;
     scrollbar-width:thin!important;
   }
   body.control-home-page .control-menu-heading{
     margin-top:0!important;
-    margin-bottom:12px!important;
+    margin-bottom:16px!important;
   }
   body.control-home-page .control-home-menu{
     max-width:min(1180px,100%)!important;
     margin:0 auto!important;
+    align-content:start!important;
+  }
+  body.control-home-page .control-version-footer{
+    margin-top:14px!important;
+  }
+  body.control-home-page .control-page-footnote.control-menu-map-link{
+    margin-top:12px!important;
   }
 }
 @media(max-height:470px) and (orientation:landscape){
-  .control-admin-landscape-frame-r141{top:142px!important}
+  body.control-home-page .control-admin-landscape-frame-r141{top:86px!important}
   body.control-home-page .control-swipe-main{height:calc(100dvh - 142px)!important}
 }
 
