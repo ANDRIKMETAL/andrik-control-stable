@@ -1,0 +1,7 @@
+R182 REAL CACHE RESET
+- Built directly from R181.
+- Cache reset no longer redirects automatically.
+- It visibly deletes Cache Storage, unregisters old Control service workers,
+  fetches fresh Control files with cache:no-store, then shows a manual Open Control button.
+- OneSignal service worker is preserved.
+- R181 frames, portrait lock, owner authorization, update and rollback are unchanged.

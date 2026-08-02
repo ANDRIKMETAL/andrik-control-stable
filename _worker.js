@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R181', number:181, version:'55.00', full:'55.00 LIVE WEB AI FINAL R181 ADMIN FRAME + PORTRAIT LOCK', siteUpdater:'55.00-r157' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R182', number:182, version:'55.00', full:'55.00 LIVE WEB AI FINAL R182 REAL CACHE RESET', siteUpdater:'55.00-r157' });
 
 const JSON_HEADERS = {
   'content-type': 'application/json; charset=utf-8',
@@ -9843,7 +9843,7 @@ function allowControlPlayerFrame(response, url, isControlHost) {
   headers.set('x-content-type-options', 'nosniff');
   headers.set('referrer-policy', 'strict-origin-when-cross-origin');
   headers.set('permissions-policy', 'camera=(), microphone=(), geolocation=()');
-  headers.set('x-andrik-security-headers', 'R181');
+  headers.set('x-andrik-security-headers', 'R182');
 
   if (isHtml) {
     if (isPlayerShell) {
