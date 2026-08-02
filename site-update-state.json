@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r157",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1785699117170-7e87f01662",
-  "release": "R189",
-  "archiveName": "R189-PROJECT-HEADING-CENTER-FULL.zip",
-  "sourceHead": "76bf1a3acee389785a7e87295886f00c529221ff",
-  "backupSha": "76bf1a3acee389785a7e87295886f00c529221ff",
-  "backupTag": "control-backup-20260802193154-76bf1a3-r189-7eccd",
+  "operationId": "publish-1785699806579-0515a99a89",
+  "release": "R190",
+  "archiveName": "R190-LYRICS-TITLE-FIT-FULL.zip",
+  "sourceHead": "fb1825e18327b2ca1f5c78b4169060049c9231d8",
+  "backupSha": "fb1825e18327b2ca1f5c78b4169060049c9231d8",
+  "backupTag": "control-backup-20260802194323-fb1825e-r190-06822",
   "autoRecovery": true,
-  "generatedAt": "2026-08-02T19:31:57.170Z"
+  "generatedAt": "2026-08-02T19:43:26.579Z"
 }
