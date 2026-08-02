@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r157",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1785692311923-d85050c0a5",
-  "release": "R179",
-  "archiveName": "R179-STABLE-R173-BASE-NO-CSRF-BLOCK-FULL.zip",
-  "sourceHead": "87d55db7d3172f5297600dcc8491068adb7880d3",
-  "backupSha": "87d55db7d3172f5297600dcc8491068adb7880d3",
-  "backupTag": "control-backup-20260802173828-87d55db-r179-4dfb4",
+  "operationId": "publish-1785693188948-24c66bcdd9",
+  "release": "R180",
+  "archiveName": "R180-ADMIN-HEADING-VERSION-PORTRAIT-FIX-FULL.zip",
+  "sourceHead": "4a7167881f1fb2f353a556287307a7ab43347498",
+  "backupSha": "4a7167881f1fb2f353a556287307a7ab43347498",
+  "backupTag": "control-backup-20260802175305-4a71678-r180-fef78",
   "autoRecovery": true,
-  "generatedAt": "2026-08-02T17:38:31.923Z"
+  "generatedAt": "2026-08-02T17:53:08.948Z"
 }

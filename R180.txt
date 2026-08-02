@@ -1,0 +1,7 @@
+R180 ADMIN LABEL LAYOUT
+- Built directly from working R179.
+- Only control-home graphical layout was changed.
+- Landscape: 'УПРАВЛЕНИЕ ПРОЕКТОМ' is moved fully below the header line.
+- Portrait: Live Web AI · R180 is fixed above the middle Attack button.
+- Portrait bottom scroll reserve is reduced.
+- R179 owner authorization, update, rollback, security and map swipe are unchanged.
