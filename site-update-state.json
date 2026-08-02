@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r157",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1785683423608-67372990d5",
-  "release": "R169",
-  "archiveName": "R169-MAP-BLACK-STRIP-ONLY-FULL.zip",
-  "sourceHead": "0bfe33599e607f2f73938ae5dc8c935b1cae16f6",
-  "backupSha": "0bfe33599e607f2f73938ae5dc8c935b1cae16f6",
-  "backupTag": "control-backup-20260802151020-0bfe335-r169-65b90",
+  "operationId": "publish-1785684888667-147b8d63f2",
+  "release": "R170",
+  "archiveName": "R170-FRAME-TOP-SCROLL-FIX-FULL.zip",
+  "sourceHead": "6891cb3c5dc25e271eaa149ac18344632011d8fe",
+  "backupSha": "6891cb3c5dc25e271eaa149ac18344632011d8fe",
+  "backupTag": "control-backup-20260802153445-6891cb3-r170-191b3",
   "autoRecovery": true,
-  "generatedAt": "2026-08-02T15:10:23.608Z"
+  "generatedAt": "2026-08-02T15:34:48.667Z"
 }

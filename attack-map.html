@@ -47,7 +47,9 @@ body.r137-eye-motion-page .control-topbar .control-center-logo[data-r3d-live-eye
     padding-bottom:max(18px,calc(12px + env(safe-area-inset-bottom)))!important;
   }
 }
-</style><style id="r167-frame-swipe-fix">
+</style><style id="r170-frame-top-scroll-fix">
+/* r170-frame-top-scroll-fix */
+
 @media (orientation:landscape){
   /* Use one visible frame element and disable competing body pseudo frames. */
   body.control-page.attack-page::after,
@@ -56,29 +58,30 @@ body.r137-eye-motion-page .control-topbar .control-center-logo[data-r3d-live-eye
 
   body.control-page.attack-page,
   body.control-page.protection-page,
-  body.control-page.site-update-page{background:#02070b!important;overflow-x:hidden!important}
+  body.control-page.site-update-page{background:#02070b!important;overflow-x:hidden!important;overflow-y:hidden!important}
 
   body.control-page.attack-page .admin-main,
   body.control-page.protection-page .admin-main,
   body.control-page.site-update-page .admin-main{
     position:relative!important;
     width:100%!important;
-    height:auto!important;
-    min-height:calc(100dvh - 78px)!important;
-    max-height:none!important;
+    height:calc(100dvh - 78px)!important;
+    min-height:0!important;
+    max-height:calc(100dvh - 78px)!important;
     margin:0!important;
     padding:0 0 max(14px,calc(10px + env(safe-area-inset-bottom)))!important;
     overflow-x:hidden!important;
     overflow-y:auto!important;
     -webkit-overflow-scrolling:touch!important;
     overscroll-behavior-y:contain!important;
+    touch-action:pan-y!important;
     background:#02070b!important;
   }
 
   .control-section-landscape-frame-r165{
     display:block!important;
     position:fixed!important;
-    top:86px!important;
+    top:78px!important;
     left:max(8px,calc(env(safe-area-inset-left) + 3px))!important;
     right:max(8px,calc(env(safe-area-inset-right) + 3px))!important;
     bottom:max(5px,env(safe-area-inset-bottom))!important;
@@ -90,9 +93,9 @@ body.r137-eye-motion-page .control-topbar .control-center-logo[data-r3d-live-eye
     z-index:2147481800!important;
   }
 
-  body.attack-page .attack-wrap{padding-top:12px!important}
-  body.protection-page .protection-wrap{padding-top:18px!important}
-  body.site-update-page .update-wrap{padding-top:16px!important}
+  body.attack-page .attack-wrap{padding-top:22px!important}
+  body.protection-page .protection-wrap{padding-top:22px!important}
+  body.site-update-page .update-wrap{padding-top:22px!important}
 
   /* Protection: stop sticky tab bar from dragging / magnetizing during scroll. */
   body.protection-page .protection-nav{position:static!important;top:auto!important;margin-top:10px!important}

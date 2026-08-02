@@ -93,7 +93,7 @@ body.control-home-page{
 @media(orientation:landscape){
   body.admin-sections-shell .control-admin-landscape-frame-r141{
     display:block!important;
-    top:148px!important;
+    top:86px!important;
   }
   body.admin-sections-shell .admin-carousel{
     position:absolute!important;
