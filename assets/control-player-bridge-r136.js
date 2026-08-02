@@ -1,7 +1,7 @@
 (() => {
   'use strict';
-  if (window.__ANDRIK_CONTROL_PLAYER_R135__) return;
-  window.__ANDRIK_CONTROL_PLAYER_R135__ = true;
+  if (window.__ANDRIK_CONTROL_PLAYER_R136__) return;
+  window.__ANDRIK_CONTROL_PLAYER_R136__ = true;
 
   const MAIN_ORIGIN='https://andrikmetal.com';
   const CONTROL_ORIGIN='https://control.andrikmetal.com';
@@ -16,7 +16,7 @@
 
   const OWNER_KEY_SESSION='andrik-comments-admin-key';
   const OWNER_KEY_LOCAL='andrik-comments-admin-key-persistent';
-  const OWNER_SYNC_STAMP='andrik-owner-session-sync-r135';
+  const OWNER_SYNC_STAMP='andrik-owner-session-sync-r136';
 
   const syncOwnerSession=async()=>{
     let key='';
@@ -93,8 +93,10 @@
   const readPlayerVisible=()=>{
     try{return localStorage.getItem(VISIBILITY_KEY)!=='0'}catch(_){return true}
   };
+  let appliedVisibility=null;
   const applyPlayerVisibility=visible=>{
     const show=visible!==false;
+    appliedVisibility=show;
     dock.classList.toggle('is-user-hidden',!show);
     document.documentElement.classList.toggle('andrik-mini-player-hidden',!show);
     if(!show){
@@ -102,7 +104,9 @@
       const button=dock.querySelector('#andrik-control-player-button');
       button?.setAttribute('aria-expanded','false');
     }
+    return show;
   };
+  window.__ANDRIK_APPLY_MINI_PLAYER_VISIBILITY__=applyPlayerVisibility;
   applyPlayerVisibility(readPlayerVisible());
 
 
@@ -116,7 +120,7 @@
   const toggle=dock.querySelector('[data-action="toggle"]');
   let state=readCookie()||{};
 
-  // R135: всегда начинаем только с круглой кнопки.
+  // R136: всегда начинаем только с круглой кнопки.
   dock.classList.remove('is-open');
   mainButton.setAttribute('aria-expanded','false');
   if(insideMainPlayer)document.documentElement.classList.add('andrik-control-inside-player');
@@ -197,7 +201,7 @@
       }
 
       url.searchParams.set('player-shell','1');
-      url.searchParams.set('v','55.00-r135');
+      url.searchParams.set('v','55.00-r136');
       location.href=url.href;
     }
   },true);
@@ -234,4 +238,9 @@ syncOwnerSession();
   }else{
     window.setInterval(()=>render(readCookie()||{}),1800);
   }
+  window.setInterval(()=>{
+    const visible=readPlayerVisible();
+    if(visible!==appliedVisibility)applyPlayerVisibility(visible);
+  },500);
+  window.addEventListener('pageshow',()=>applyPlayerVisibility(readPlayerVisible()),{passive:true});
 })();

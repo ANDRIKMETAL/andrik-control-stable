@@ -1,12 +1,12 @@
 (() => {
   'use strict';
-  if (window.__ANDRIK_UNIFIED_GLOW_R135__) return;
-  window.__ANDRIK_UNIFIED_GLOW_R135__ = true;
+  if (window.__ANDRIK_UNIFIED_GLOW_R136__) return;
+  window.__ANDRIK_UNIFIED_GLOW_R136__ = true;
 
-  const RELEASE = 'R135';
+  const RELEASE = 'R136';
   const KEY_SESSION = 'andrik-comments-admin-key';
   const KEY_LOCAL = 'andrik-comments-admin-key-persistent';
-  const OWNER_SYNC_STAMP = 'andrik-owner-session-sync-r135';
+  const OWNER_SYNC_STAMP = 'andrik-owner-session-sync-r136';
 
   const storedAdminKey = () => {
     try {
@@ -47,23 +47,23 @@
     const isUpdater = path === '/site-update-admin.html' || path === '/site-update-admin';
     const isReset = path.startsWith('/cache-reset');
     const isEmbeddedControlSection = params.get('embed') === '1';
-    // R135: плеер работает и на странице обновления сайта.
+    // R136: плеер работает и на странице обновления сайта.
     // Исключаются только технические cache-reset страницы.
     if (isReset) return;
 
-    if (!document.querySelector('link[data-andrik-player-r135]')) {
+    if (!document.querySelector('link[data-andrik-player-r136]')) {
       const link = document.createElement('link');
       link.rel = 'stylesheet';
-      link.href = '/assets/control-player-bridge-r135.css?v=55.00-r135';
-      link.dataset.andrikPlayerR135 = 'css';
+      link.href = '/assets/control-player-bridge-r136.css?v=55.00-r136';
+      link.dataset.andrikPlayerR136 = 'css';
       document.head.appendChild(link);
     }
 
-    if (!document.querySelector('script[data-andrik-player-r135]')) {
+    if (!document.querySelector('script[data-andrik-player-r136]')) {
       const script = document.createElement('script');
-      script.src = '/assets/control-player-bridge-r135.js?v=55.00-r135';
+      script.src = '/assets/control-player-bridge-r136.js?v=55.00-r136';
       script.defer = true;
-      script.dataset.andrikPlayerR135 = 'js';
+      script.dataset.andrikPlayerR136 = 'js';
       document.head.appendChild(script);
     }
   };
@@ -72,9 +72,9 @@
     const body = document.body;
     if (!body) return;
 
-    body.classList.add('unified-glow-ready', 'andrik-ui-r135');
+    body.classList.add('unified-glow-ready', 'andrik-ui-r136');
     const params = new URLSearchParams(location.search);
-    // R135: embed-класс нужен только настоящему вложенному iframe.
+    // R136: embed-класс нужен только настоящему вложенному iframe.
     const trulyEmbedded = window.self !== window.top;
     if (params.get('embed') === '1' && trulyEmbedded) {
       body.classList.add('unified-glow-embed');
@@ -90,12 +90,12 @@
 
     document.querySelectorAll('.control-center-logo .logo-ok').forEach(image => {
       const url = new URL(image.getAttribute('src') || '/assets/control-topbar-eye-triangle.jpg', location.href);
-      url.searchParams.set('v', '55.00-r135');
+      url.searchParams.set('v', '55.00-r136');
       image.src = `${url.pathname}${url.search}`;
     });
 
     document.querySelectorAll('.control-version-footer strong').forEach(node => {
-      node.textContent = 'Live Web AI · ANDRIK · v55.00 LIVE WEB AI FINAL R135';
+      node.textContent = 'Live Web AI · ANDRIK · v55.00 LIVE WEB AI FINAL R136';
     });
 
     syncOwnerSession();

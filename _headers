@@ -695,9 +695,14 @@
 /cache-reset-v55-00-final-r134.html
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
   X-Robots-Tag: noindex, nofollow,noarchive
-
-# R135 — swipe repair + breathing headers + one landscape frame
+# R136
 /analytics-admin.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/service-admin.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/control-home.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/comment-collection.html
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
 /site-update-admin.html
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
@@ -705,19 +710,26 @@
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
 /attack-map.html
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/admin-sections.html
+/assets/unified-glow-r136.css
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/assets/unified-glow-r135.css
+/assets/unified-glow-r136.js
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/assets/unified-glow-r135.js
+/assets/control-player-bridge-r136.css
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/assets/control-player-bridge-r135.css
+/assets/control-player-bridge-r136.js
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/assets/control-player-bridge-r135.js
+/assets/service-mini-player-settings-r136.js
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/assets/player-shell-bridge-r135.js
+/assets/control-home-r136.js
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-/cache-reset-v55-00-final-r135.html
+/assets/comment-collection-r136.js
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/cache-reset-v55-00-final-r136.html
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
   X-Robots-Tag: noindex, nofollow,noarchive
+/assets/player-shell-bridge-r136.js
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
 
+
+/assets/service-mini-player-settings-r136.css
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0

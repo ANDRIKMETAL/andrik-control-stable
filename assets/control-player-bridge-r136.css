@@ -92,13 +92,13 @@ html.andrik-control-inside-player body{padding-left:0!important}
 @media(prefers-reduced-motion:reduce){#andrik-control-player-button,#andrik-control-player-button::before,#andrik-control-player-button .andrik-player-wave i{animation:none!important}}
 
 
-/* R135 — lower dock + unmistakable living status eye */
+/* R136 — lower dock + unmistakable living status eye */
 body.control-menu-visible .control-protection-fab,
 body.control-menu-visible .control-attack-fab,
 body.control-menu-visible .control-update-fab{
   bottom:calc(11px + env(safe-area-inset-bottom))!important;
 }
-@keyframes andrikControlEyeBreathR135{
+@keyframes andrikControlEyeBreathR136{
   0%,100%{
     transform:translate(-50%,-50%) scale(.94);
     filter:brightness(1.05) saturate(1.25) drop-shadow(0 0 8px rgba(83,255,146,.54)) drop-shadow(0 0 22px rgba(27,224,94,.40));
@@ -108,21 +108,21 @@ body.control-menu-visible .control-update-fab{
     filter:brightness(1.48) saturate(1.55) drop-shadow(0 0 17px rgba(151,255,190,.98)) drop-shadow(0 0 42px rgba(35,242,111,.90)) drop-shadow(0 0 68px rgba(10,176,70,.52));
   }
 }
-@keyframes andrikControlEyeHaloR135{
+@keyframes andrikControlEyeHaloR136{
   0%,100%{transform:translate(-50%,-50%) scale(.72);opacity:.18}
   50%{transform:translate(-50%,-50%) scale(1.34);opacity:.82}
 }
 .control-page .control-topbar .control-center-logo .logo-ok,
 .youtube-admin-page .youtube-topbar-clean .control-center-logo .logo-ok,
 .comment-collection-page .control-detail-topbar .control-center-logo .logo-ok{
-  animation:andrikControlEyeBreathR135 3.15s ease-in-out infinite!important;
+  animation:andrikControlEyeBreathR136 3.15s ease-in-out infinite!important;
   animation-play-state:running!important;
   will-change:transform,filter!important;
 }
 .control-page .control-topbar .control-center-logo::after,
 .youtube-admin-page .youtube-topbar-clean .control-center-logo::after,
 .comment-collection-page .control-detail-topbar .control-center-logo::after{
-  animation:andrikControlEyeHaloR135 3.15s ease-in-out infinite!important;
+  animation:andrikControlEyeHaloR136 3.15s ease-in-out infinite!important;
   will-change:transform,opacity!important;
 }
 @media(orientation:landscape){
@@ -134,7 +134,7 @@ body.control-menu-visible .control-update-fab{
 }
 
 
-/* R135 — гарантированная видимость кнопки и подпись */
+/* R136 — гарантированная видимость кнопки и подпись */
 #andrik-control-player-dock{
   display:flex!important;
   opacity:1!important;
@@ -169,7 +169,7 @@ body.control-menu-visible .control-update-fab{
 
 
 /* ================================================================
-   R135 — мини-плеер всегда свёрнут, меньше перекрывает интерфейс.
+   R136 — мини-плеер всегда свёрнут, меньше перекрывает интерфейс.
    ================================================================ */
 #andrik-control-player-dock{
   left:max(10px,env(safe-area-inset-left))!important;
@@ -182,7 +182,7 @@ body.control-menu-visible .control-update-fab{
   height:48px!important;
   flex-basis:48px!important;
   border-width:1px!important;
-  animation:andrikPlayerPulseR135 1.55s ease-in-out infinite!important;
+  animation:andrikPlayerPulseR136 1.55s ease-in-out infinite!important;
   box-shadow:
     0 0 0 4px rgba(63,248,149,.10),
     0 0 24px rgba(57,255,151,.56),
@@ -198,7 +198,7 @@ body.control-menu-visible .control-update-fab{
 }
 #andrik-control-player-button::before{
   inset:-7px!important;
-  animation:andrikPlayerRingR135 1.55s ease-out infinite!important;
+  animation:andrikPlayerRingR136 1.55s ease-out infinite!important;
 }
 #andrik-control-player-button::after{
   content:""!important;
@@ -212,7 +212,7 @@ body.control-menu-visible .control-update-fab{
   border-radius:50%!important;
   background:transparent!important;
   box-shadow:none!important;
-  animation:andrikPlayerRingR135 1.55s .34s ease-out infinite!important;
+  animation:andrikPlayerRingR136 1.55s .34s ease-out infinite!important;
   pointer-events:none!important;
 }
 #andrik-control-player-panel{
@@ -222,7 +222,7 @@ body.control-menu-visible .control-update-fab{
 #andrik-control-player-dock.is-open #andrik-control-player-panel{
   transform:translateX(0) scale(1)!important;
 }
-@keyframes andrikPlayerPulseR135{
+@keyframes andrikPlayerPulseR136{
   0%,100%{
     transform:scale(.94);
     filter:brightness(.94) saturate(1.15);
@@ -241,7 +241,7 @@ body.control-menu-visible .control-update-fab{
       0 15px 34px rgba(0,0,0,.52);
   }
 }
-@keyframes andrikPlayerRingR135{
+@keyframes andrikPlayerRingR136{
   0%{transform:scale(.72);opacity:.82}
   100%{transform:scale(1.34);opacity:0}
 }
@@ -270,7 +270,7 @@ body.control-menu-visible .control-update-fab{
 }
 
 
-/* R135 — внешний плеер поверх iframe-карусели админ-панели */
+/* R136 — внешний плеер поверх iframe-карусели админ-панели */
 body.admin-sections-shell #andrik-control-player-dock{
   z-index:2147483000!important;
 }
@@ -281,7 +281,7 @@ body.admin-sections-shell #andrik-control-player-panel{
 
 
 /* ==================================================================
-   R135 — окончательная позиция мини-плеера.
+   R136 — окончательная позиция мини-плеера.
    ================================================================== */
 #andrik-control-player-dock,
 body.admin-sections-shell #andrik-control-player-dock{
@@ -312,7 +312,7 @@ body.admin-sections-shell #andrik-control-player-dock{
       0 0 23px rgba(55,239,136,.42),
       0 0 48px rgba(20,191,91,.17),
       inset 0 0 18px rgba(55,239,136,.08)!important;
-    animation:andrikAdminFrameR135 4.2s ease-in-out infinite!important;
+    animation:andrikAdminFrameR136 4.2s ease-in-out infinite!important;
   }
 
   #andrik-control-player-dock,
@@ -336,7 +336,7 @@ body.admin-sections-shell #andrik-control-player-dock{
   }
 }
 
-@keyframes andrikAdminFrameR135{
+@keyframes andrikAdminFrameR136{
   0%,100%{
     opacity:.78;
     box-shadow:
@@ -364,7 +364,7 @@ body.admin-sections-shell #andrik-control-player-dock{
 
 
 /* ==================================================================
-   R135 — гарантированная закрытая кнопка и точная позиция.
+   R136 — гарантированная закрытая кнопка и точная позиция.
    ================================================================== */
 #andrik-control-player-dock,
 body.admin-sections-shell #andrik-control-player-dock{
@@ -441,7 +441,7 @@ body.unified-glow-embed #andrik-control-player-dock{
 
 
 /* ==================================================================
-   R135 — одно положение мини-плеера во всех разделах.
+   R136 — одно положение мини-плеера во всех разделах.
    Панель всегда зарезервирована слева, кнопка всегда на её верхнем
    правом углу — и в открытом, и в закрытом состоянии.
    ================================================================== */
@@ -547,7 +547,7 @@ body.analytics-admin-page.unified-glow-map-view #andrik-control-player-dock{
 
 
 /* ==================================================================
-   R135 — пользовательская видимость и точная landscape-позиция.
+   R136 — пользовательская видимость и точная landscape-позиция.
    ================================================================== */
 #andrik-control-player-dock.is-user-hidden,
 html.andrik-mini-player-hidden #andrik-control-player-dock{
@@ -637,7 +637,7 @@ html.andrik-mini-player-hidden #andrik-control-player-dock{
 
 
 /* ==================================================================
-   R135 — единая безопасная позиция мини-плеера.
+   R136 — единая безопасная позиция мини-плеера.
    ================================================================== */
 
 #andrik-control-player-dock,
@@ -774,60 +774,4 @@ html.andrik-mini-player-hidden #andrik-control-player-dock{
     max-height:calc(100dvh - 98px)!important;
   }
 }
-
-
-/* R135 — компактная landscape-шторка. */
-@media screen and (orientation:landscape){
-  #andrik-control-player-panel{
-    width:min(310px,calc(100vw - 104px))!important;
-    max-width:310px!important;
-    padding:8px!important;
-  }
-
-  #andrik-control-player-panel .andrik-control-player-head{
-    grid-template-columns:36px minmax(0,1fr) 30px!important;
-    gap:7px!important;
-  }
-
-  #andrik-control-player-panel .andrik-control-player-art{
-    width:36px!important;
-    height:36px!important;
-    border-radius:10px!important;
-  }
-
-  #andrik-control-player-panel .andrik-control-player-copy small{
-    font-size:.52rem!important;
-  }
-
-  #andrik-control-player-panel .andrik-control-player-copy strong{
-    font-size:.74rem!important;
-  }
-
-  #andrik-control-player-panel .andrik-control-player-controls{
-    grid-template-columns:33px 41px 33px minmax(112px,1fr)!important;
-    gap:5px!important;
-    margin-top:7px!important;
-  }
-
-  #andrik-control-player-panel .andrik-control-player-controls button{
-    height:33px!important;
-    border-radius:10px!important;
-  }
-
-  #andrik-control-player-panel .andrik-control-player-controls .main{
-    height:38px!important;
-  }
-
-  #andrik-control-player-panel .andrik-control-player-controls .open-label{
-    min-width:0!important;
-    padding:0 7px!important;
-    font-size:.60rem!important;
-  }
-}
-
-@media screen and (orientation:landscape) and (max-height:480px){
-  #andrik-control-player-panel{
-    width:min(292px,calc(100vw - 96px))!important;
-    max-width:292px!important;
-  }
-}
+@media screen and (orientation:landscape){#andrik-control-player-panel{width:min(310px,calc(100vw - 104px))!important;max-width:310px!important;padding:8px!important}}

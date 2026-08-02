@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R135', number:135, version:'55.00', full:'55.00 LIVE WEB AI FINAL R135', siteUpdater:'55.00-r135' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R136', number:136, version:'55.00', full:'55.00 LIVE WEB AI FINAL R136', siteUpdater:'55.00-r136' });
 
 const JSON_HEADERS = {
   'content-type': 'application/json; charset=utf-8',
@@ -6744,6 +6744,16 @@ function parseSnapshotMetrics(row) {
   try { return JSON.parse(row?.metrics_json || '{}'); } catch (_) { return {}; }
 }
 
+function parseDailySummaryMetrics(row) {
+  let details = {};
+  try { details = JSON.parse(row?.detailsJson || row?.details_json || '{}') || {}; }
+  catch (_) { details = {}; }
+  return details?.metrics && typeof details.metrics === 'object' ? details.metrics : {};
+}
+function dailyMetric(metrics, key) {
+  return Math.max(0, Number(metrics?.[key] || 0));
+}
+
 async function handleControlHome(request, env) {
   if (!adminAuthorized(request, env)) return json({ ok:false, error:'unauthorized' },401);
   const db = requireDb(env);
@@ -6752,7 +6762,7 @@ async function handleControlHome(request, env) {
   await Promise.all([ensurePushAutomationSchema(db), ensureCommentsV4Schema(db), ensurePlatformAnalyticsSchema(db), ensureControlV1Schema(db), ensureSiteMetricsSchema(db)]);
   // The daily screen uses a fixed Bratislava window: 06:05 → next 06:05.
   // At the cutoff all counters become zero, then grow only inside the new window.
-  const [siteSubscribers, siteComments, siteLikes, youtubeEvents, youtubeLikeRows, youtubeSubscriberRows, releases, activityResult, ytLatest, ytBaseline, gaLatest, gaBaseline, gaRollover, automationAt, automationStatus, automationSummary, siteLive, siteWindow] = await Promise.all([
+  const [siteSubscribers, siteComments, siteLikes, youtubeEvents, youtubeLikeRows, youtubeSubscriberRows, releases, activityResult, ytLatest, ytBaseline, gaLatest, gaBaseline, gaRollover, automationAt, automationStatus, automationSummary, siteLive, siteWindow, latestDailySummaryLog] = await Promise.all([
     db.prepare(`SELECT COUNT(*) AS total FROM push_history WHERE type='site-subscriber' AND datetime(created_at) >= datetime(?1)`).bind(window.startAt).first(),
     db.prepare(`SELECT COUNT(*) AS total FROM comments WHERE datetime(created_at) >= datetime(?1)`).bind(window.startAt).first(),
     db.prepare(`SELECT COUNT(*) AS total FROM comment_likes WHERE datetime(created_at) >= datetime(?1)`).bind(window.startAt).first(),
@@ -6785,7 +6795,16 @@ async function handleControlHome(request, env) {
     getPushState(db, 'automation-last-check-status'),
     getPushState(db, 'automation-last-check-summary'),
     getSiteLiveMetrics(db),
-    getSiteWindowMetrics(db, window.startAt)
+    getSiteWindowMetrics(db, window.startAt),
+    db.prepare(`
+      SELECT details_json AS detailsJson, created_at AS createdAt
+      FROM system_logs
+      WHERE scope='daily-summary'
+        AND event IN ('sent','manual-sent')
+        AND datetime(created_at) >= datetime('now','-30 hours')
+      ORDER BY datetime(created_at) DESC
+      LIMIT 1
+    `).first()
   ]);
   const ytNow = parseSnapshotMetrics(ytLatest);
   const ytStart = parseSnapshotMetrics(ytBaseline);
@@ -6803,6 +6822,10 @@ async function handleControlHome(request, env) {
     .map(item => ({ ...item, delta:item.value }));
   const youtubeViewDelta = ytBaseline ? Math.max(0, Number(ytNow.views || 0) - Number(ytStart.views || 0)) : 0;
   const youtubeSubscriberDelta = ytBaseline ? Math.max(0, Number(ytNow.subscribers || 0) - Number(ytStart.subscribers || 0)) : 0;
+  const pushMetrics = parseDailySummaryMetrics(latestDailySummaryLog);
+  const liveCountryDeltas = youtubeDailyCountries.slice(0,4);
+  const pushCountryDeltas = Array.isArray(pushMetrics?.countryDeltas) ? pushMetrics.countryDeltas.slice(0,4) : [];
+  const summarySource = Object.keys(pushMetrics).length ? 'push-merged' : 'live';
   return json({
     ok:true,
     period:'06:05-cycle',
@@ -6810,20 +6833,20 @@ async function handleControlHome(request, env) {
     windowStartAt:window.startAt,
     windowEndAt:window.endAt,
     summary:{
-      websiteUsers:Math.max(Number(siteWindow?.users || 0), googleSummaryWindowMetric(gaNow, gaStart, gaBeforeMidnight, window, 'activeUsers')),
-      websiteViews:Math.max(Number(siteWindow?.views || 0), googleSummaryWindowMetric(gaNow, gaStart, gaBeforeMidnight, window, 'screenPageViews')),
-      siteSubscribers:Number(siteSubscribers?.total || 0),
-      siteComments:Number(siteComments?.total || 0),
-      siteLikes:Number(siteLikes?.total || 0),
-      youtubeComments:Number(youtubeEvents?.comments || 0),
-      youtubeSubscribers:Math.max(youtubeSubscriberDelta, sumYoutubeSubscriberHistoryDeltas(youtubeSubscriberRows?.results || [])),
-      youtubeLikes:sumYoutubeLikeHistoryDeltas(youtubeLikeRows?.results || []),
-      youtubeViews:youtubeViewDelta,
-      youtubeViewDelta,
-      releases:Number(releases?.total || 0),
-      countryDeltas:youtubeDailyCountries.slice(0,4),
-      totalCountries:youtubeCountries.length,
-      countryDate:ytNow?.studio?.dailyDate || ''
+      websiteUsers:Math.max(Number(siteWindow?.users || 0),googleSummaryWindowMetric(gaNow, gaStart, gaBeforeMidnight, window, 'activeUsers'),dailyMetric(pushMetrics,'siteUsers')),
+      websiteViews:Math.max(Number(siteWindow?.views || 0),googleSummaryWindowMetric(gaNow, gaStart, gaBeforeMidnight, window, 'screenPageViews'),dailyMetric(pushMetrics,'siteViews')),
+      siteSubscribers:Math.max(Number(siteSubscribers?.total || 0),dailyMetric(pushMetrics,'siteSubscribers')),
+      siteComments:Math.max(Number(siteComments?.total || 0),dailyMetric(pushMetrics,'siteComments')),
+      siteLikes:Math.max(Number(siteLikes?.total || 0),dailyMetric(pushMetrics,'siteLikes')),
+      youtubeComments:Math.max(Number(youtubeEvents?.comments || 0),dailyMetric(pushMetrics,'youtubeComments')),
+      youtubeSubscribers:Math.max(youtubeSubscriberDelta,sumYoutubeSubscriberHistoryDeltas(youtubeSubscriberRows?.results || []),dailyMetric(pushMetrics,'youtubeSubscribers')),
+      youtubeLikes:Math.max(sumYoutubeLikeHistoryDeltas(youtubeLikeRows?.results || []),dailyMetric(pushMetrics,'youtubeLikes')),
+      youtubeViews:Math.max(youtubeViewDelta,dailyMetric(pushMetrics,'youtubeViewDelta')),
+      youtubeViewDelta:Math.max(youtubeViewDelta,dailyMetric(pushMetrics,'youtubeViewDelta')),
+      releases:Math.max(Number(releases?.total || 0),dailyMetric(pushMetrics,'releases')),
+      countryDeltas:liveCountryDeltas.length?liveCountryDeltas:pushCountryDeltas,
+      totalCountries:Math.max(youtubeCountries.length,dailyMetric(pushMetrics,'totalCountries')),
+      countryDate:ytNow?.studio?.dailyDate || pushMetrics?.countryDate || ''
     },
     activity:activityResult.results || [],
     automation:{
@@ -6832,6 +6855,8 @@ async function handleControlHome(request, env) {
       summary:parsePushSummary(automationSummary?.value || '')
     },
     snapshots:{ youtubeAt:ytLatest?.created_at || '', googleAt:gaLatest?.created_at || '' },
+    summarySource,
+    dailySummaryPushAt:latestDailySummaryLog?.createdAt || '',
     updatedAt:new Date().toISOString()
   });
 }
@@ -7640,7 +7665,8 @@ async function loadUnifiedCommentCollection(db) {
     db.prepare(`
       SELECT id, name, message, locale, status,
              song_slug AS songSlug, song_title AS songTitle,
-             created_at AS createdAt, updated_at AS updatedAt
+             created_at AS createdAt, updated_at AS updatedAt,
+             (SELECT COUNT(*) FROM comment_likes l WHERE l.comment_id = comments.id) AS likeCount
       FROM comments
       ORDER BY datetime(created_at) DESC
       LIMIT 5000
@@ -7676,6 +7702,7 @@ async function loadUnifiedCommentCollection(db) {
       targetTitle,
       url:songSlug ? `https://andrikmetal.com/comments.html?song=${encodeURIComponent(songSlug)}` : 'https://andrikmetal.com/comments.html',
       status:cleanPlainText(row.status || 'approved', 24),
+      likeCount:Math.max(0, Number(row.likeCount || 0)),
       ...date
     });
   }
@@ -7700,6 +7727,7 @@ async function loadUnifiedCommentCollection(db) {
       targetTitle:cleanPlainText(payload.videoTitle || 'Видео YouTube', 240),
       url:commentUrl,
       status:'published',
+      likeCount:Math.max(0, Number(payload.likeCount || payload.likes || 0)),
       ...date
     });
   }
@@ -7718,13 +7746,17 @@ async function handleControlCommentCollection(request, env) {
   const requestedMonth = Number(url.searchParams.get('month') || 0);
   const month = requestedMonth >= 1 && requestedMonth <= 12 ? Math.trunc(requestedMonth) : 0;
   const source = ['site','youtube'].includes(url.searchParams.get('source')) ? url.searchParams.get('source') : 'all';
-  const items = await loadUnifiedCommentCollection(db);
+  const items = (await loadUnifiedCommentCollection(db)).filter(item => {
+    const author = String(item?.author || '').trim().toLowerCase().replace(/^@+/, '').replace(/\s+/g, ' ');
+    return author !== 'andrikmetal';
+  });
   const availableYears = [...new Set([currentParts.year, ...items.map(item => item.year).filter(Boolean)])].sort((a,b)=>b-a);
   const months = Array.from({ length:12 }, (_, index) => ({
     month:index + 1,
     total:0,
     site:0,
     youtube:0,
+    likes:0,
     days:[]
   }));
   const dayMaps = Array.from({ length:12 }, () => new Map());
@@ -7734,10 +7766,12 @@ async function handleControlCommentCollection(request, env) {
     if (!month) continue;
     month.total += 1;
     month[item.source] += 1;
+    month.likes += Math.max(0, Number(item.likeCount || 0));
     const map = dayMaps[item.month - 1];
-    const entry = map.get(item.date) || { date:item.date, day:item.day, total:0, site:0, youtube:0 };
+    const entry = map.get(item.date) || { date:item.date, day:item.day, total:0, site:0, youtube:0, likes:0 };
     entry.total += 1;
     entry[item.source] += 1;
+    entry.likes += Math.max(0, Number(item.likeCount || 0));
     map.set(item.date, entry);
   }
   months.forEach((month, index) => {
@@ -7752,8 +7786,9 @@ async function handleControlCommentCollection(request, env) {
   const totals = months.reduce((acc, month) => ({
     total:acc.total + month.total,
     site:acc.site + month.site,
-    youtube:acc.youtube + month.youtube
-  }), { total:0, site:0, youtube:0 });
+    youtube:acc.youtube + month.youtube,
+    likes:acc.likes + Number(month.likes || 0)
+  }), { total:0, site:0, youtube:0, likes:0 });
   return json({
     ok:true,
     timeZone:COMMENT_COLLECTION_TIME_ZONE,

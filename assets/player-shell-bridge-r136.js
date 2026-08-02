@@ -1,6 +1,6 @@
 (() => {
-  if (window.__ANDRIK_PLAYER_SHELL_R135__) return;
-  window.__ANDRIK_PLAYER_SHELL_R135__ = true;
+  if (window.__ANDRIK_PLAYER_SHELL_R136__) return;
+  window.__ANDRIK_PLAYER_SHELL_R136__ = true;
   const isPlayerUrl = url => url.origin === location.origin && url.pathname === '/player.html';
   const RESUME_STATE_KEY = 'andrik-player-resume-v1';
   const CONTROL_RETURN_KEY = 'andrik-control-return-v1';
@@ -85,10 +85,10 @@
 
       const link = document.createElement('a');
       link.id = 'andrik-owner-control-eye';
-      link.href = 'https://control.andrikmetal.com/control-home.html?v=55.00-r135';
+      link.href = 'https://control.andrikmetal.com/control-home.html?v=55.00-r136';
       link.setAttribute('aria-label','Быстро открыть ANDRIK Control');
       link.title = 'Быстрое переключение в Control';
-      link.innerHTML = '<span aria-hidden="true"></span><img src="/assets/control-topbar-eye-triangle.jpg?v=55.00-r135" alt="">';
+      link.innerHTML = '<span aria-hidden="true"></span><img src="/assets/control-topbar-eye-triangle.jpg?v=55.00-r136" alt="">';
       cluster.appendChild(link);
 
       if (!document.getElementById('andrik-owner-control-eye-style')) {
@@ -130,7 +130,7 @@
             inset:-7px;
             border-radius:50%;
             background:radial-gradient(circle,rgba(96,255,157,.42),rgba(28,218,92,.13) 52%,transparent 73%);
-            animation:andrikOwnerHaloR135 3.05s ease-in-out infinite;
+            animation:andrikOwnerHaloR136 3.05s ease-in-out infinite;
             z-index:0;
             pointer-events:none;
           }
@@ -143,12 +143,12 @@
             object-fit:cover;
             border-radius:50%;
             clip-path:circle(49% at 50% 50%);
-            animation:andrikOwnerEyeR135 3.05s ease-in-out infinite;
+            animation:andrikOwnerEyeR136 3.05s ease-in-out infinite;
             will-change:transform,filter;
             box-shadow:0 0 0 1px rgba(119,255,177,.22);
           }
           #andrik-owner-control-eye:active img{transform:scale(.90)!important}
-          @keyframes andrikOwnerEyeR135{
+          @keyframes andrikOwnerEyeR136{
             0%,100%{
               transform:scale(.93);
               filter:brightness(1.02) saturate(1.28)
@@ -162,7 +162,7 @@
                 drop-shadow(0 0 30px rgba(32,239,105,.78));
             }
           }
-          @keyframes andrikOwnerHaloR135{
+          @keyframes andrikOwnerHaloR136{
             0%,100%{transform:scale(.70);opacity:.18}
             50%{transform:scale(1.28);opacity:.82}
           }
@@ -421,14 +421,14 @@
 })();
 
 
-/* R135 — голубая пульсирующая плавающая кнопка главного сайта. */
+/* R136 — голубая пульсирующая плавающая кнопка главного сайта. */
 (()=>{
   'use strict';
-  if(document.getElementById('andrik-r135-main-player-button-style'))return;
+  if(document.getElementById('andrik-r136-main-player-button-style'))return;
   const style=document.createElement('style');
-  style.id='andrik-r135-main-player-button-style';
+  style.id='andrik-r136-main-player-button-style';
   style.textContent=`
-    @keyframes andrikR135BluePlayerPulse{
+    @keyframes andrikR136BluePlayerPulse{
       0%,100%{
         transform:scale(.94);
         box-shadow:
@@ -458,7 +458,7 @@
       box-shadow:
         0 14px 38px rgba(0,0,0,.54),
         0 0 22px rgba(70,194,255,.62)!important;
-      animation:andrikR135BluePlayerPulse 2.35s ease-in-out infinite!important;
+      animation:andrikR136BluePlayerPulse 2.35s ease-in-out infinite!important;
     }
 
     #andrik-standalone-resume-player:active,
