@@ -19,7 +19,7 @@
 <link rel="stylesheet" href="/assets/site-update-admin-r115.css?v=55.00-r115">
 <script defer src="/assets/owner-session-r173.js?v=55.00-r173"></script><script defer src="/assets/control-cache-reset-v55-00-final-stable-github.js?v=55.00-final-stable-github"></script>
 <script defer src="/assets/site-update-admin-r157.js?v=55.00-r157"></script>
-<script defer src="/assets/site-update-command-center-r184.js?v=55.00-r187"></script>
+<script defer src="/assets/site-update-command-center-r184.js?v=55.00-r188"></script>
 
 <link rel="stylesheet" href="/assets/unified-glow-r139.css?v=55.00-r142">
 <link rel="stylesheet" href="/assets/r137-eye-motion.css?v=55.00-r144">
@@ -124,8 +124,8 @@ body.r137-eye-motion-page .control-topbar .control-center-logo[data-r3d-live-eye
   body.protection-page .protection-nav{position:static!important;top:auto!important;margin-top:10px!important}
   body.protection-page .protection-swipe{margin-top:10px!important}
 }
-</style><link rel="stylesheet" href="/assets/landscape-cloud-r183.css?v=55.00-r187">
-<link rel="stylesheet" href="/assets/site-update-command-center-r186.css?v=55.00-r187">
+</style><link rel="stylesheet" href="/assets/landscape-cloud-r183.css?v=55.00-r188">
+<link rel="stylesheet" href="/assets/site-update-command-center-r188.css?v=55.00-r188">
 </head>
 <body class="control-page site-update-page r136-standard-header-page r137-eye-motion-page">
 <nav class="topbar control-topbar control-detail-topbar"><div class="wrap nav-shell"><a class="control-center-logo" id="controlCenterLogo" href="https://andrikmetal.com/" aria-label="Открыть главный сайт ANDRIK"><img class="logo-ok" src="/assets/control-topbar-eye-triangle.jpg?v=55.00-r136" alt=""><img class="logo-error" src="/assets/andrik-control-red-triangle-192.png?v=55.00-r136" alt=""></a><div class="nav-links control-nav-links control-detail-nav"><a href="/admin-sections.html?section=service&v=55.00-r136">← Служебное</a></div></div></nav>
@@ -176,7 +176,7 @@ body.r137-eye-motion-page .control-topbar .control-center-logo[data-r3d-live-eye
 </div>
 <div class="update-auto-note" id="siteUpdateUploadMessage">После выбора ZIP проверка запустится автоматически.</div>
 <button class="btn" id="siteUpdatePreview" type="button" hidden disabled>Проверить ZIP</button>
-<div class="update-form-row update-hidden-fields" hidden><label>Версия<input id="siteUpdateRelease" type="text" maxlength="80" value="R187"></label><label>Коммит<input id="siteUpdateMessage" type="text" maxlength="240" value="ANDRIK Control — update website R187"></label></div>
+<div class="update-form-row update-hidden-fields" hidden><label>Версия<input id="siteUpdateRelease" type="text" maxlength="80" value="R188"></label><label>Коммит<input id="siteUpdateMessage" type="text" maxlength="240" value="ANDRIK Control — update website R188"></label></div>
 <input id="siteUpdateMakeBackup" type="checkbox" checked hidden>
 <input id="siteUpdateMakeRelease" type="checkbox" checked hidden>
 <input id="siteUpdateConfirm" type="checkbox" hidden>
@@ -200,7 +200,7 @@ body.r137-eye-motion-page .control-topbar .control-center-logo[data-r3d-live-eye
 <article class="admin-control-card admin-control-card-wide update-history-card">
 <details class="update-history-shell" open><summary><span><b>История и откат</b><small id="siteUpdateHistoryMessage"></small></span><button class="btn" id="siteUpdateHistoryRefresh" type="button">↻</button></summary>
 <div class="update-history-layout">
-<details open><summary>Точки восстановления</summary><div class="update-history" id="siteUpdateHistory"><div class="admin-empty">Загрузка…</div></div></details>
+<details id="siteUpdateRestorePoints"><summary>Точки восстановления</summary><div class="update-history" id="siteUpdateHistory"><div class="admin-empty">Загрузка…</div></div></details>
 <details><summary>Технические коммиты</summary><div class="update-history" id="siteUpdateTechnicalHistory"><div class="admin-empty">Загрузка…</div></div></details>
 <details><summary>Журнал операций</summary><div class="update-log" id="siteUpdateLog"><div class="admin-empty">Загрузка…</div></div></details>
 </div></details>
@@ -218,7 +218,7 @@ GITHUB_RELEASE_REPO=andrik-control-stable</pre><p>Отдельный GITHUB_RELE
 
 
 </section>
-<footer class="control-version-footer"><strong>Live Web AI · ANDRIK · v55.00 LIVE WEB AI FINAL R187</strong><span>ZIP → backup → commit → Release → Cloudflare → повторная установка той же версии · 02.08.2026</span></footer>
+<footer class="control-version-footer"><strong>Live Web AI · ANDRIK · v55.00 LIVE WEB AI FINAL R188</strong><span>ZIP → backup → commit → Release → Cloudflare → повторная установка той же версии · 02.08.2026</span></footer>
 </div></main>
 <script defer src="/assets/control-version-v55-00-r115.js?v=55.00-r115"></script><script defer src="/assets/control-status-eye-v55-00-r88.js?v=55.00-r88"></script><script defer src="/assets/control-live-eye-v55-00-r3l.js?v=55.00-r3l"></script><script defer src="/assets/unified-glow-r139.js?v=55.00-r142"></script>
 <script defer src="/assets/control-mini-player-r141.js?v=55.00-r144"></script>
@@ -227,9 +227,9 @@ GITHUB_RELEASE_REPO=andrik-control-stable</pre><p>Отдельный GITHUB_RELE
   const body=document.body;
   if(!body) return;
   const routes=[
-    '/protection-admin.html?v=55.00-r187',
-    '/attack-map.html?v=55.00-r187',
-    '/site-update-admin.html?v=55.00-r187'
+    '/protection-admin.html?v=55.00-r188',
+    '/attack-map.html?v=55.00-r188',
+    '/site-update-admin.html?v=55.00-r188'
   ];
   const current=body.classList.contains('protection-page')?0:(body.classList.contains('attack-page')?1:(body.classList.contains('site-update-page')?2:-1));
   if(current<0) return;
@@ -249,6 +249,14 @@ GITHUB_RELEASE_REPO=andrik-control-stable</pre><p>Отдельный GITHUB_RELE
     if(Math.abs(dx)<Math.abs(dy)*1.25) return;
     go(dx<0?'left':'right');
   },{passive:true});
+})();
+</script>
+<script id="r188-restore-points-collapsed">
+(()=>{
+  const closeRestorePoints=()=>document.getElementById('siteUpdateRestorePoints')?.removeAttribute('open');
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',closeRestorePoints,{once:true});
+  else closeRestorePoints();
+  window.addEventListener('pageshow',closeRestorePoints,{passive:true});
 })();
 </script>
 </body></html>

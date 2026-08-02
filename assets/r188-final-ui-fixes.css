@@ -1,0 +1,23 @@
+
+/* R188 — final small visual corrections only. */
+@media screen and (orientation:landscape){
+  body.control-home-page .control-menu-heading,
+  body.control-home-page .control-menu-heading .control-admin-heading-copy{
+    box-sizing:border-box!important;
+    display:block!important;
+    width:100%!important;
+    max-width:100%!important;
+    margin-left:auto!important;
+    margin-right:auto!important;
+    text-align:center!important;
+  }
+  body.control-home-page .control-menu-heading .eyeline,
+  body.control-home-page .control-menu-heading h1{
+    display:block!important;
+    width:100%!important;
+    max-width:100%!important;
+    margin-left:auto!important;
+    margin-right:auto!important;
+    text-align:center!important;
+  }
+}
