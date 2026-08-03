@@ -82,11 +82,11 @@
 
     const frame = (time) => {
       if (visible) {
-        const phase = (Math.sin(time / 520) + 1) / 2;
+        const phase = (Math.sin(time / 760) + 1) / 2;
         const smooth = phase * phase * (3 - 2 * phase);
-        const scale = 0.985 + smooth * 0.075;
-        const haloScale = 0.86 + smooth * 0.38;
-        const haloOpacity = 0.28 + smooth * 0.52;
+        const scale = 0.992 + smooth * 0.043;
+        const haloScale = 0.90 + smooth * 0.26;
+        const haloOpacity = 0.26 + smooth * 0.42;
 
         const warning = logo.classList.contains('is-warning');
         const error = logo.classList.contains('is-error');
