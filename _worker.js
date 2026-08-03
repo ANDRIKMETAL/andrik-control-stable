@@ -7162,7 +7162,7 @@ async function handleControlHome(request, env) {
       SELECT details_json AS detailsJson, created_at AS createdAt
       FROM system_logs
       WHERE scope='daily-summary'
-        AND event IN ('sent','manual-sent')
+        AND event IN ('sent','sent-partial','manual-sent')
         AND datetime(created_at) >= datetime('now','-30 hours')
       ORDER BY datetime(created_at) DESC
       LIMIT 1
