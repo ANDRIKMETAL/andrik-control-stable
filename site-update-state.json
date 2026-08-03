@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r203",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1785739910739-548770f456",
-  "release": "R205",
-  "archiveName": "ANDRIK-Control-v55.00-FINAL-R205-SUMMARY-PUSH-MERGE.zip",
-  "sourceHead": "9d445c223d0343eacbe89c9f76acb947be2eb677",
-  "backupSha": "9d445c223d0343eacbe89c9f76acb947be2eb677",
-  "backupTag": "control-backup-20260803065141-9d445c2-r205-d2e5f",
+  "operationId": "publish-1785743648478-ef7d6efa2a",
+  "release": "R206",
+  "archiveName": "ANDRIK-Control-v55.00-FINAL-R206-DEPLOY-STEP5-CONTAINMENT.zip",
+  "sourceHead": "8238d22b97be3d0e61050602356d51ab6888f0c5",
+  "backupSha": "8238d22b97be3d0e61050602356d51ab6888f0c5",
+  "backupTag": "control-backup-20260803075401-8238d22-r206-e4370",
   "autoRecovery": true,
-  "generatedAt": "2026-08-03T06:51:50.739Z"
+  "generatedAt": "2026-08-03T07:54:08.478Z"
 }

@@ -1104,3 +1104,104 @@
   }
   body.site-update-page .update-live-console-r184{margin-top:4px!important}
 }
+
+/* R206 — hard portrait containment during Deploy step 5.
+   R204 deliberately made cards overflow-visible to prevent text clipping; that
+   reopened horizontal page growth when the Cloudflare status/actions appeared.
+   Keep the wider layout, but contain every live deploy child inside the card. */
+@media screen and (orientation:portrait){
+  body.site-update-page,
+  body.site-update-page .admin-main,
+  body.site-update-page .update-wrap,
+  body.site-update-page .update-command-center-r184,
+  body.site-update-page .update-primary-grid-r184,
+  body.site-update-page .update-upload-card{
+    box-sizing:border-box!important;
+    min-width:0!important;
+    width:100%!important;
+    max-width:100%!important;
+    overflow-x:clip!important;
+  }
+
+  body.site-update-page .update-upload-card,
+  body.site-update-page .update-upload-card *,
+  body.site-update-page .update-live-console-r184,
+  body.site-update-page .update-live-console-r184 *{
+    box-sizing:border-box!important;
+    min-width:0!important;
+    max-width:100%!important;
+  }
+
+  body.site-update-page .update-upload-card{
+    overflow:hidden!important;
+    contain:layout paint!important;
+  }
+
+  body.site-update-page .update-upload-card .compact-title,
+  body.site-update-page .update-console-head-r184{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr) auto!important;
+    width:100%!important;
+    gap:7px!important;
+    align-items:center!important;
+  }
+
+  body.site-update-page .update-upload-card .compact-title>div,
+  body.site-update-page .update-console-head-r184>*{
+    min-width:0!important;
+  }
+
+  body.site-update-page .update-upload-card .service-access-state,
+  body.site-update-page .update-console-head-r184 strong{
+    width:auto!important;
+    max-width:42vw!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+    white-space:nowrap!important;
+  }
+
+  body.site-update-page .update-file-picker,
+  body.site-update-page .update-main-button,
+  body.site-update-page .update-stagebar,
+  body.site-update-page .update-live-console-r184,
+  body.site-update-page .update-console-metrics-r184,
+  body.site-update-page .update-console-message-r184,
+  body.site-update-page .update-console-actions-r184{
+    min-width:0!important;
+    width:100%!important;
+    max-width:100%!important;
+    overflow:hidden!important;
+  }
+
+  body.site-update-page .update-file-picker>span,
+  body.site-update-page .update-console-message-r184{
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+    white-space:nowrap!important;
+  }
+
+  body.site-update-page .update-stagebar{
+    grid-template-columns:repeat(6,minmax(0,1fr))!important;
+  }
+
+  body.site-update-page .update-stagebar>div{
+    width:auto!important;
+    min-width:0!important;
+    overflow:hidden!important;
+  }
+
+  body.site-update-page .update-console-actions-r184{
+    display:grid!important;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:6px!important;
+  }
+
+  body.site-update-page .update-console-actions-r184 .btn{
+    width:100%!important;
+    min-width:0!important;
+    max-width:100%!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+    white-space:nowrap!important;
+  }
+}

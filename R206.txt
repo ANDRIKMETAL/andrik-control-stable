@@ -1,0 +1,2 @@
+R206 — DEPLOY STEP 5 CONTAINMENT
+Based on R205. Portrait-only hard width containment for the live deploy card.
