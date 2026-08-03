@@ -50,14 +50,14 @@
         z-index:2!important;
       }
       .andrik-live-eye-halo-r3d{
-        width:108px!important;
-        height:108px!important;
+        width:118px!important;
+        height:118px!important;
         border-radius:50%!important;
         z-index:1!important;
         background:radial-gradient(circle,
-          rgba(118,255,174,.58) 0%,
-          rgba(49,224,108,.30) 30%,
-          rgba(16,142,62,.12) 51%,
+          rgba(118,255,174,.64) 0%,
+          rgba(49,224,108,.34) 28%,
+          rgba(16,142,62,.14) 49%,
           rgba(0,0,0,0) 74%)!important;
         filter:blur(8px)!important;
       }
@@ -69,10 +69,10 @@
         transform-origin:50% 50%!important;
       }
       @media(max-width:760px){
-        .andrik-live-eye-halo-r3d{width:102px!important;height:102px!important}
+        .andrik-live-eye-halo-r3d{width:112px!important;height:112px!important}
       }
       @media(max-width:420px){
-        .andrik-live-eye-halo-r3d{width:96px!important;height:96px!important}
+        .andrik-live-eye-halo-r3d{width:106px!important;height:106px!important}
       }
     `;
     document.head.appendChild(style);
@@ -82,11 +82,11 @@
 
     const frame = (time) => {
       if (visible) {
-        const phase = (Math.sin(time / 760) + 1) / 2;
+        const phase = (Math.sin(time / 420) + 1) / 2;
         const smooth = phase * phase * (3 - 2 * phase);
-        const scale = 0.992 + smooth * 0.043;
-        const haloScale = 0.90 + smooth * 0.26;
-        const haloOpacity = 0.26 + smooth * 0.42;
+        const scale = 0.915 + smooth * 0.245;
+        const haloScale = 0.78 + smooth * 0.72;
+        const haloOpacity = 0.18 + smooth * 0.70;
 
         const warning = logo.classList.contains('is-warning');
         const error = logo.classList.contains('is-error');
@@ -94,14 +94,14 @@
         let shadow;
         let haloColor;
         if (error) {
-          shadow = `brightness(${1.02 + smooth * .10}) saturate(1.08) drop-shadow(0 0 ${8 + smooth * 7}px rgba(255,112,128,.78)) drop-shadow(0 0 ${22 + smooth * 18}px rgba(255,45,72,.58))`;
-          haloColor = `radial-gradient(circle,rgba(255,122,140,.50) 0%,rgba(255,47,73,.25) 38%,rgba(80,0,12,0) 74%)`;
+          shadow = `brightness(${1.02 + smooth * .14}) saturate(1.12) drop-shadow(0 0 ${9 + smooth * 8}px rgba(255,112,128,.82)) drop-shadow(0 0 ${24 + smooth * 20}px rgba(255,45,72,.62))`;
+          haloColor = `radial-gradient(circle,rgba(255,122,140,.54) 0%,rgba(255,47,73,.30) 38%,rgba(80,0,12,0) 74%)`;
         } else if (warning) {
-          shadow = `brightness(${1.13 + smooth * .20}) saturate(${1.27 + smooth * .18}) drop-shadow(0 0 ${10 + smooth * 8}px rgba(150,255,194,.92)) drop-shadow(0 0 ${28 + smooth * 21}px rgba(43,226,105,.82)) drop-shadow(0 0 ${48 + smooth * 30}px rgba(13,176,68,.52))`;
-          haloColor = `radial-gradient(circle,rgba(118,255,174,.56) 0%,rgba(49,224,108,.30) 39%,rgba(16,142,62,0) 74%)`;
+          shadow = `brightness(${1.15 + smooth * .24}) saturate(${1.30 + smooth * .22}) drop-shadow(0 0 ${11 + smooth * 10}px rgba(150,255,194,.94)) drop-shadow(0 0 ${30 + smooth * 24}px rgba(43,226,105,.84)) drop-shadow(0 0 ${56 + smooth * 34}px rgba(13,176,68,.56))`;
+          haloColor = `radial-gradient(circle,rgba(118,255,174,.62) 0%,rgba(49,224,108,.34) 39%,rgba(16,142,62,0) 74%)`;
         } else {
-          shadow = `brightness(${1.18 + smooth * .24}) saturate(${1.34 + smooth * .18}) drop-shadow(0 0 ${11 + smooth * 8}px rgba(150,255,194,.98)) drop-shadow(0 0 ${30 + smooth * 24}px rgba(43,226,105,.90)) drop-shadow(0 0 ${56 + smooth * 34}px rgba(13,176,68,.60))`;
-          haloColor = `radial-gradient(circle,rgba(118,255,174,.62) 0%,rgba(49,224,108,.32) 31%,rgba(16,142,62,.13) 52%,rgba(0,0,0,0) 74%)`;
+          shadow = `brightness(${1.20 + smooth * .28}) saturate(${1.36 + smooth * .24}) drop-shadow(0 0 ${12 + smooth * 10}px rgba(150,255,194,.99)) drop-shadow(0 0 ${34 + smooth * 28}px rgba(43,226,105,.92)) drop-shadow(0 0 ${62 + smooth * 40}px rgba(13,176,68,.64))`;
+          haloColor = `radial-gradient(circle,rgba(118,255,174,.68) 0%,rgba(49,224,108,.36) 31%,rgba(16,142,62,.15) 52%,rgba(0,0,0,0) 74%)`;
         }
 
         motion.style.setProperty('transform', `translate(-50%,-50%) scale(${scale.toFixed(4)})`, 'important');
