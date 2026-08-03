@@ -262,4 +262,19 @@ GITHUB_RELEASE_REPO=andrik-control-stable</pre><p>Отдельный GITHUB_RELE
 })();
 </script>
 <script id="r195-one-button-fallback">(()=>{const b=document.getElementById('siteUpdatePublish');if(!b)return;const run=e=>{if(b.disabled)return;e.preventDefault();window.AndrikSiteUpdateR195?.start?.(e)};b.addEventListener('pointerup',run,{capture:true,passive:false});})();</script>
+<script id="r208-horizontal-lock">
+(()=>{
+  const reset=()=>{
+    try{window.scrollTo(0,window.scrollY)}catch(_){}
+    for(const el of [document.documentElement,document.body,document.querySelector('.admin-main'),document.querySelector('.update-wrap'),document.querySelector('.update-upload-card'),document.getElementById('siteUpdateStages')]){
+      if(el && el.scrollLeft) el.scrollLeft=0;
+    }
+  };
+  const stages=document.getElementById('siteUpdateStages');
+  if(stages) new MutationObserver(()=>requestAnimationFrame(reset)).observe(stages,{subtree:true,attributes:true,childList:true,characterData:true});
+  window.addEventListener('resize',reset,{passive:true});
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)reset()});
+  reset();
+})();
+</script>
 </body></html>

@@ -1205,3 +1205,217 @@
     white-space:nowrap!important;
   }
 }
+
+/* R208 — absolute portrait width lock for Deploy steps 5–6.
+   Six stages use zero-basis flex tracks, so active labels and Cloudflare status
+   can never enlarge the updater or push the last stages beyond the phone. */
+@media screen and (orientation:portrait){
+  html,
+  body.site-update-page{
+    inline-size:100%!important;
+    max-inline-size:100%!important;
+    overflow-x:hidden!important;
+    overscroll-behavior-x:none!important;
+  }
+
+  body.site-update-page .admin-main{
+    inline-size:100vw!important;
+    max-inline-size:100vw!important;
+    overflow-x:hidden!important;
+  }
+
+  body.site-update-page .update-wrap{
+    box-sizing:border-box!important;
+    position:relative!important;
+    left:50%!important;
+    transform:translateX(-50%)!important;
+    inline-size:calc(100vw - 14px)!important;
+    width:calc(100vw - 14px)!important;
+    min-inline-size:0!important;
+    max-inline-size:calc(100vw - 14px)!important;
+    max-width:calc(100vw - 14px)!important;
+    margin:0!important;
+    padding-inline:0!important;
+    overflow-x:hidden!important;
+  }
+
+  body.site-update-page .update-command-center-r184,
+  body.site-update-page .update-primary-grid-r184,
+  body.site-update-page .update-upload-card,
+  body.site-update-page .update-upload-card>*{
+    box-sizing:border-box!important;
+    min-inline-size:0!important;
+    max-inline-size:100%!important;
+  }
+
+  body.site-update-page .update-upload-card{
+    inline-size:100%!important;
+    width:100%!important;
+    overflow:hidden!important;
+    contain:inline-size layout paint!important;
+    isolation:isolate!important;
+  }
+
+  body.site-update-page .update-upload-card .compact-title{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr) minmax(0,96px)!important;
+    align-items:center!important;
+    gap:6px!important;
+    inline-size:100%!important;
+    width:100%!important;
+    overflow:hidden!important;
+  }
+
+  body.site-update-page .update-upload-card .compact-title>div,
+  body.site-update-page .update-upload-card h2{
+    min-inline-size:0!important;
+    max-inline-size:100%!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+    white-space:nowrap!important;
+  }
+
+  body.site-update-page .update-upload-card .service-access-state{
+    box-sizing:border-box!important;
+    inline-size:96px!important;
+    width:96px!important;
+    max-inline-size:96px!important;
+    max-width:96px!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+    white-space:nowrap!important;
+    text-align:center!important;
+  }
+
+  body.site-update-page .update-file-picker,
+  body.site-update-page .update-main-button,
+  body.site-update-page .update-live-console-r184{
+    box-sizing:border-box!important;
+    inline-size:100%!important;
+    width:100%!important;
+    min-inline-size:0!important;
+    max-inline-size:100%!important;
+    max-width:100%!important;
+    margin-inline:0!important;
+    overflow:hidden!important;
+  }
+
+  body.site-update-page .update-file-picker>span,
+  body.site-update-page #siteUpdateFileName{
+    min-inline-size:0!important;
+    max-inline-size:100%!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+    white-space:nowrap!important;
+  }
+
+  body.site-update-page .update-stagebar{
+    display:flex!important;
+    flex-wrap:nowrap!important;
+    align-items:stretch!important;
+    gap:4px!important;
+    box-sizing:border-box!important;
+    inline-size:100%!important;
+    width:100%!important;
+    min-inline-size:0!important;
+    max-inline-size:100%!important;
+    max-width:100%!important;
+    overflow:hidden!important;
+  }
+
+  body.site-update-page .update-stagebar>div{
+    box-sizing:border-box!important;
+    flex:1 1 0!important;
+    inline-size:0!important;
+    width:0!important;
+    min-inline-size:0!important;
+    min-width:0!important;
+    max-inline-size:none!important;
+    max-width:none!important;
+    padding-inline:0!important;
+    overflow:hidden!important;
+  }
+
+  body.site-update-page .update-stagebar b{
+    margin-inline:0!important;
+  }
+
+  body.site-update-page .update-stagebar span{
+    display:block!important;
+    inline-size:100%!important;
+    max-inline-size:100%!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+    white-space:nowrap!important;
+    font-size:.5rem!important;
+  }
+
+  body.site-update-page .update-console-head-r184{
+    display:flex!important;
+    align-items:center!important;
+    justify-content:space-between!important;
+    gap:6px!important;
+    inline-size:100%!important;
+    width:100%!important;
+    min-inline-size:0!important;
+    overflow:hidden!important;
+  }
+
+  body.site-update-page .update-console-head-r184 .eyeline{
+    flex:1 1 auto!important;
+    min-inline-size:0!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+    white-space:nowrap!important;
+  }
+
+  body.site-update-page .update-console-head-r184 strong{
+    flex:0 1 43%!important;
+    inline-size:auto!important;
+    width:auto!important;
+    min-inline-size:0!important;
+    max-inline-size:43%!important;
+    max-width:43%!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+    white-space:nowrap!important;
+  }
+
+  body.site-update-page .update-console-metrics-r184,
+  body.site-update-page .update-console-message-r184,
+  body.site-update-page .update-console-actions-r184{
+    box-sizing:border-box!important;
+    inline-size:100%!important;
+    width:100%!important;
+    min-inline-size:0!important;
+    max-inline-size:100%!important;
+    max-width:100%!important;
+    overflow:hidden!important;
+  }
+
+  body.site-update-page .update-console-metrics-r184>*{
+    box-sizing:border-box!important;
+    min-inline-size:0!important;
+    max-inline-size:100%!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+    white-space:nowrap!important;
+  }
+
+  body.site-update-page .update-console-actions-r184{
+    display:grid!important;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:6px!important;
+  }
+
+  body.site-update-page .update-console-actions-r184 .btn{
+    box-sizing:border-box!important;
+    inline-size:100%!important;
+    width:100%!important;
+    min-inline-size:0!important;
+    max-inline-size:100%!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+    white-space:nowrap!important;
+  }
+}
