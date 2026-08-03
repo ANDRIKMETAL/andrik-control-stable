@@ -1,0 +1,10 @@
+ANDRIK Control R211 — KV ULTRA ECONOMY
+
+1. External Guard status is cached in Pages Worker memory for 10 minutes.
+2. Protection screen no longer requests Guard twice during one scan.
+3. Background protection polling reduced to 15 minutes.
+4. Live panel refresh reduced to 5 minutes.
+5. All timers stop while Control is hidden.
+6. Manual Guard run and manual refresh remain immediate.
+
+Important: the largest KV reduction comes from installing ANDRIK Guard 2.2 ULTRA ECO and changing its Cron to */10 * * * *.

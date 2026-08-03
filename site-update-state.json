@@ -1,14 +1,14 @@
 {
   "schema": 1,
-  "updaterVersion": "55.00-r209",
+  "updaterVersion": "55.00-r210",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1785760119667-7262753cd7",
-  "release": "R210",
-  "archiveName": "ANDRIK-Control-v55.00-FINAL-R210-RELEASE-EVENT-SYNC.zip",
-  "sourceHead": "f4568b5be3ef6acc1404701fb052cbda301fc256",
-  "backupSha": "f4568b5be3ef6acc1404701fb052cbda301fc256",
-  "backupTag": "control-backup-20260803122836-f4568b5-r210-d8f5a",
+  "operationId": "publish-1785768864449-b0584a3269",
+  "release": "R211",
+  "archiveName": "ANDRIK-Control-v55.00-FINAL-R211-KV-ULTRA-ECONOMY-2.zip",
+  "sourceHead": "7a9f2c2ca210ee7164e541b9978f1ac390f21db7",
+  "backupSha": "7a9f2c2ca210ee7164e541b9978f1ac390f21db7",
+  "backupTag": "control-backup-20260803145421-7a9f2c2-r211-8320e",
   "autoRecovery": true,
-  "generatedAt": "2026-08-03T12:28:39.667Z"
+  "generatedAt": "2026-08-03T14:54:24.449Z"
 }

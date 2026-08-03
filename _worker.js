@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R210', number:210, version:'55.00', full:'55.00 LIVE WEB AI FINAL R210 RELEASE EVENT SYNC', siteUpdater:'55.00-r210' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R211', number:211, version:'55.00', full:'55.00 LIVE WEB AI FINAL R211 KV ULTRA ECONOMY', siteUpdater:'55.00-r211' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -377,7 +377,19 @@ async function fetchTxtRecords(name) {
   }
 }
 
+// R211: Guard status is cached in Worker memory. Repeated Control refreshes no longer
+// hit the external Guard/KV every time. Manual /run always bypasses this cache.
+const guardStatusMemoryR211 = { value:null, expiresAt:0, inflight:null };
+const GUARD_STATUS_OK_TTL_R211 = 10 * 60 * 1000;
+const GUARD_STATUS_ERROR_TTL_R211 = 60 * 1000;
+
 async function fetchGuardStatus(env, run = false) {
+  if (!run && guardStatusMemoryR211.value && Date.now() < guardStatusMemoryR211.expiresAt) {
+    return guardStatusMemoryR211.value;
+  }
+  if (!run && guardStatusMemoryR211.inflight) return guardStatusMemoryR211.inflight;
+
+  const execute = async () => {
   const base = String(env.GUARD_URL || '').trim().replace(/\/+$/, '');
   const key = String(env.GUARD_KEY || '').trim();
   const missing = [];
@@ -422,7 +434,7 @@ async function fetchGuardStatus(env, run = false) {
     const lastAction = cleanPlainText(data.status?.action || '', 60);
     const lastMessage = cleanPlainText(data.status?.message || '', 400);
     return {
-      configured:true, connected:true, compatible:/ANDRIK Guard 2\.1 FULL/i.test(guardBuild),
+      configured:true, connected:true, compatible:/ANDRIK Guard 2\.(?:1|2)/i.test(guardBuild),
       url:base, status:data, build:guardBuild,
       diagnostic:{ code:'guard-connected', httpStatus:response.status, endpoint },
       message:run
@@ -439,8 +451,22 @@ async function fetchGuardStatus(env, run = false) {
   } finally {
     clearTimeout(timer);
   }
-}
+  };
 
+  if (run) {
+    const value = await execute();
+    guardStatusMemoryR211.value = value;
+    guardStatusMemoryR211.expiresAt = Date.now() + (value?.connected ? GUARD_STATUS_OK_TTL_R211 : GUARD_STATUS_ERROR_TTL_R211);
+    return value;
+  }
+
+  guardStatusMemoryR211.inflight = execute().then(value => {
+    guardStatusMemoryR211.value = value;
+    guardStatusMemoryR211.expiresAt = Date.now() + (value?.connected ? GUARD_STATUS_OK_TTL_R211 : GUARD_STATUS_ERROR_TTL_R211);
+    return value;
+  }).finally(() => { guardStatusMemoryR211.inflight = null; });
+  return guardStatusMemoryR211.inflight;
+}
 async function handleControlProtectionStatus(request, env) {
   if (!adminAuthorized(request, env)) return json({ ok:false, error:'unauthorized' }, 401);
 
