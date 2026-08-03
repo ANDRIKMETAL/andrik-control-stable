@@ -1,9 +1,0 @@
-R198 — PERSISTENT OWNER + UPDATE GAP FIX + ECO CLEAN
-
-1. ADMIN_KEY is exchanged once for a signed 90-day owner session.
-2. While Control is used, the signed session silently renews once per week, so it remains active continuously.
-3. Raw ADMIN_KEY is not kept in localStorage/sessionStorage.
-4. Removed the artificial full-screen black spacer between the update card and history/rollback.
-5. Unified sleep mode on Control pages; inactive carousel iframes stop their timers and animations.
-6. Removed superseded owner-session, sleep-mode, old cache reset, and unused updater asset tails.
-7. GitHub 2FA remains enabled and independent from Control authorization.

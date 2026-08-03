@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="ru" translate="no" class="notranslate">
 <head>
-<link rel="stylesheet" href="/assets/control-sleep-mode-r198.css?v=55.00-r198"><script defer src="/assets/control-sleep-mode-r198.js?v=55.00-r198"></script>
+<link rel="stylesheet" href="/assets/control-sleep-mode-r193.css?v=55.00-r193"><script defer src="/assets/control-sleep-mode-r193.js?v=55.00-r193"></script>
 
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
@@ -136,11 +136,9 @@ body.is-carousel-moving .admin-carousel-label{backdrop-filter:none!important}
     ]);
 
     panes.forEach((pane,index)=>{
-      const active=index===physical;
       pane.classList.toggle('is-near',near.has(index));
-      pane.classList.toggle('is-active',active);
-      pane.setAttribute('aria-hidden',active?'false':'true');
-      sendToFrame(frames[index],{type:'visibility-state',active,near:near.has(index)});
+      pane.classList.toggle('is-active',index===physical);
+      pane.setAttribute('aria-hidden',index===physical?'false':'true');
     });
   };
 
@@ -363,7 +361,6 @@ body.is-carousel-moving .admin-carousel-label{backdrop-filter:none!important}
     frame.addEventListener('load',()=>{
       panes[index].querySelector('.admin-carousel-loading')?.remove();
       applyScrollStateToFrame(frame,frame.dataset.section||'');
-      sendToFrame(frame,{type:'visibility-state',active:index===physical,near:panes[index].classList.contains('is-near')});
     },{once:true});
 
     frame.src=frame.dataset.src;
@@ -390,6 +387,6 @@ body.is-carousel-moving .admin-carousel-label{backdrop-filter:none!important}
   };
 })();
 </script>
-<script defer src="/assets/owner-session-r198.js?v=55.00-r198"></script><script defer src="/assets/guard-ready-r115.js?v=55.00-r115"></script><script defer src="/assets/control-mini-player-r141.js?v=55.00-r144"></script>
+<script defer src="/assets/owner-session-r197.js?v=55.00-r197"></script><script defer src="/assets/guard-ready-r115.js?v=55.00-r115"></script><script defer src="/assets/control-mini-player-r141.js?v=55.00-r144"></script>
 </body>
 </html>

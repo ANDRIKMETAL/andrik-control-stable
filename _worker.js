@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R199', number:199, version:'55.00', full:'55.00 LIVE WEB AI FINAL R199 ANALYTICS COMPATIBILITY RESTORE', siteUpdater:'55.00-r199' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R197', number:197, version:'55.00', full:'55.00 LIVE WEB AI FINAL R197 SIGNED OWNER SESSION', siteUpdater:'55.00-r197' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -2248,7 +2248,7 @@ function ownerSessionCookie(name, token, maxAge = 7776000, domain = '') {
 function ownerSessionJson(_request, data, status, token, maxAge) {
   const headers = new Headers(JSON_HEADERS);
   headers.set('vary', 'Cookie');
-  // R198 compatibility: emit exactly one host-only Set-Cookie header.
+  // R197 compatibility fix: emit exactly one host-only Set-Cookie header.
   // Some Android PWA/WebView builds drop cookie responses containing several
   // deletion and creation headers at once.
   headers.set('set-cookie', ownerSessionCookie(OWNER_SESSION_COOKIE, token, maxAge, ''));
@@ -2283,7 +2283,7 @@ async function handleOwnerSessionCreate(request, env) {
     }
   }
 
-  if (!fromOwnerSession && !adminAuthorized(request, env)) {
+  if (!adminAuthorized(request, env)) {
     if (env.COMMENTS_DB) {
       recordSecurityEvent(
         env.COMMENTS_DB, request, env,
@@ -2308,16 +2308,10 @@ async function handleOwnerSessionCreate(request, env) {
 async function handleOwnerStatus(request, env) {
   const tokens = readOwnerSessionTokens(request);
   let owner = false;
-  let expiresAt = null;
   for (const token of tokens) {
-    if (await verifyOwnerSessionToken(token, env).catch(() => false)) {
-      owner = true;
-      const rawExpiry = Number(String(token || '').split('.')[0] || 0);
-      if (Number.isFinite(rawExpiry) && rawExpiry > Date.now()) expiresAt = new Date(rawExpiry).toISOString();
-      break;
-    }
+    if (await verifyOwnerSessionToken(token, env).catch(() => false)) { owner = true; break; }
   }
-  return json({ ok:true, owner, version:ANDRIK_CONTROL_RELEASE.short, storage:'HttpOnly cookie + signed Android PWA fallback', sessionDays:90, expiresAt }, 200, {
+  return json({ ok:true, owner, version:ANDRIK_CONTROL_RELEASE.short, storage:'HttpOnly cookie + signed Android PWA fallback', sessionDays:90 }, 200, {
     ...JSON_HEADERS,
     'vary':'Cookie'
   });
@@ -9719,7 +9713,7 @@ async function routeApi(request, env, ctx) {
   const url = new URL(request.url);
   const path = url.pathname.replace(/\/+$/, '') || '/';
   try {
-    // R198: a verified signed owner session transparently authorizes all
+    // R197: a verified signed owner session transparently authorizes all
     // Control API calls. HttpOnly cookie is primary; Android PWA may send the
     // same expiring signed token in x-andrik-owner-token. ADMIN_KEY is not stored.
     if (!adminAuthorized(request, env)) {

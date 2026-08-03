@@ -1,14 +1,14 @@
 {
   "schema": 1,
-  "updaterVersion": "55.00-r198",
+  "updaterVersion": "55.00-r199",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1785713647081-7e6fb78a2b",
-  "release": "R199",
-  "archiveName": "ANDRIK-Control-v55.00-FINAL-R199-ANALYTICS-COMPATIBILITY-RESTORE.zip",
-  "sourceHead": "cada9876dce5142dc307e4b760d42258f74bb066",
-  "backupSha": "cada9876dce5142dc307e4b760d42258f74bb066",
-  "backupTag": "control-backup-20260802233403-cada987-r199-a4ba5",
+  "operationId": "publish-1785726274141-7ddd9f100a",
+  "release": "R197",
+  "archiveName": "ANDRIK-Control-v55.00-FINAL-R197-SIGNED-OWNER-SESSION.zip",
+  "sourceHead": "ebfe019d4bd4b3f2bdd71cf988987f3db3dcb25e",
+  "backupSha": "ebfe019d4bd4b3f2bdd71cf988987f3db3dcb25e",
+  "backupTag": "control-backup-20260803030431-ebfe019-r197-91299",
   "autoRecovery": true,
-  "generatedAt": "2026-08-02T23:34:07.081Z"
+  "generatedAt": "2026-08-03T03:04:34.141Z"
 }
