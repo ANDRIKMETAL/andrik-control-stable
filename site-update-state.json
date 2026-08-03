@@ -1,14 +1,14 @@
 {
   "schema": 1,
   "updaterVersion": "55.00-r203",
-  "operation": "publish",
-  "reinstall": false,
-  "operationId": "publish-1785746718125-d3f2806e2e",
+  "operation": "reinstall",
+  "reinstall": true,
+  "operationId": "reinstall-1785746785377-e2c0879731",
   "release": "R207",
   "archiveName": "ANDRIK-Control-v55.00-FINAL-R207-DAILY-SUMMARY-SOURCE-OF-TRUTH.zip",
-  "sourceHead": "2fb732213f9b15a130d30b24cf15ad4fbf45373d",
-  "backupSha": "2fb732213f9b15a130d30b24cf15ad4fbf45373d",
-  "backupTag": "control-backup-20260803084515-2fb7322-r207-d9052",
+  "sourceHead": "d6172639aa6864a1513358ae098e0f0c28050753",
+  "backupSha": "d6172639aa6864a1513358ae098e0f0c28050753",
+  "backupTag": "control-backup-20260803084622-d617263-r207-6cf07",
   "autoRecovery": true,
-  "generatedAt": "2026-08-03T08:45:18.125Z"
+  "generatedAt": "2026-08-03T08:46:25.377Z"
 }
