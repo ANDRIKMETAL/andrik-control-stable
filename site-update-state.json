@@ -1,14 +1,14 @@
 {
   "schema": 1,
-  "updaterVersion": "55.00-r207",
+  "updaterVersion": "55.00-r209",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1785749196451-651aff0b6a",
-  "release": "R209",
-  "archiveName": "ANDRIK-Control-v55.00-FINAL-R209-CURRENT-VERSION-AUTO.zip",
-  "sourceHead": "9bf77eecfa2be8d7f9c9b494de0570fcc63de6c4",
-  "backupSha": "9bf77eecfa2be8d7f9c9b494de0570fcc63de6c4",
-  "backupTag": "control-backup-20260803092628-9bf77ee-r209-2457c",
+  "operationId": "publish-1785760119667-7262753cd7",
+  "release": "R210",
+  "archiveName": "ANDRIK-Control-v55.00-FINAL-R210-RELEASE-EVENT-SYNC.zip",
+  "sourceHead": "f4568b5be3ef6acc1404701fb052cbda301fc256",
+  "backupSha": "f4568b5be3ef6acc1404701fb052cbda301fc256",
+  "backupTag": "control-backup-20260803122836-f4568b5-r210-d8f5a",
   "autoRecovery": true,
-  "generatedAt": "2026-08-03T09:26:36.451Z"
+  "generatedAt": "2026-08-03T12:28:39.667Z"
 }

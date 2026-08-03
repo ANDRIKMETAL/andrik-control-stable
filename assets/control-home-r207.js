@@ -18,6 +18,7 @@
     'comment-live':['💬','Новый комментарий'],
     'comment-pending':['💬','Комментарий на модерации'],
     'auto-release':['🎵','Новый релиз YouTube'],
+    'auto-release-retry':['🎵','Новый релиз YouTube'],
     'release-publish':['🚀','Релиз опубликован']
   }[type]||['•','Событие ANDRIK']);
   const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));

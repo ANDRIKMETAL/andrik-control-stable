@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R209', number:209, version:'55.00', full:'55.00 LIVE WEB AI FINAL R209 CURRENT VERSION AUTO', siteUpdater:'55.00-r209' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R210', number:210, version:'55.00', full:'55.00 LIVE WEB AI FINAL R210 RELEASE EVENT SYNC', siteUpdater:'55.00-r210' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -1492,7 +1492,7 @@ async function backfillReleaseHistory(db) {
   const result = await db.prepare(`
     SELECT video_id AS videoId, video_title AS videoTitle, title, url, source, status, created_at AS createdAt
     FROM push_history
-    WHERE type IN ('auto-release', 'release-publish') AND video_id IS NOT NULL AND video_id != ''
+    WHERE type IN ('auto-release', 'auto-release-retry', 'release-publish') AND video_id IS NOT NULL AND video_id != ''
     ORDER BY created_at ASC
     LIMIT 1000
   `).all();
@@ -5965,12 +5965,12 @@ async function buildPlatformControlData(env, google = {}, youtube = {}, searchCo
         SUM(CASE WHEN type='youtube-like' THEN 1 ELSE 0 END) AS likes
       FROM push_history WHERE created_at >= datetime('now', '-24 hours')
     `).first(),
-    db.prepare(`SELECT COUNT(*) AS total FROM push_history WHERE type IN ('auto-release','release-publish') AND created_at >= datetime('now', '-24 hours')`).first(),
+    db.prepare(`SELECT COUNT(*) AS total FROM push_history WHERE type IN ('auto-release','auto-release-retry','release-publish') AND created_at >= datetime('now', '-24 hours')`).first(),
     db.prepare(`
       SELECT id, type, source, audience, title, message, url, video_id AS videoId, video_title AS videoTitle,
              status, created_at AS createdAt
       FROM push_history
-      WHERE type IN ('youtube-comment','youtube-comment-count','youtube-subscriber','youtube-subscriber-count','youtube-like','site-subscriber','comment-live','comment-pending','auto-release','release-publish')
+      WHERE type IN ('youtube-comment','youtube-comment-count','youtube-subscriber','youtube-subscriber-count','youtube-like','site-subscriber','comment-live','comment-pending','auto-release','auto-release-retry','release-publish')
       ORDER BY created_at DESC LIMIT 24
     `).all(),
     getPushState(db, 'youtube-events-last-check-at'),
@@ -6469,6 +6469,17 @@ function getBratislavaSummaryWindow(date = new Date()) {
 }
 
 
+
+function latestYoutubeReleaseCountForWindow(stateRow, window) {
+  const latest = parsePushSummary(stateRow?.value || '');
+  if (!latest?.videoId || !window?.startAt || !window?.endAt) return 0;
+  const publishedAt = Date.parse(latest.publishedAt || '');
+  const startAt = Date.parse(window.startAt || '');
+  const endAt = Date.parse(window.endAt || '');
+  if (![publishedAt, startAt, endAt].every(Number.isFinite)) return 0;
+  return publishedAt >= startAt && publishedAt < endAt ? 1 : 0;
+}
+
 function getBratislavaCompletedSummaryWindow(date = new Date()) {
   const clock = getBratislavaClock(date);
   const windowDate = shiftIsoCalendarDate(clock.date, -1);
@@ -6710,7 +6721,7 @@ async function collectDailyOwnerSummary(env, { liveExternal = true, windowOverri
   const db = requireDb(env);
   const window = windowOverride || getBratislavaSummaryWindow();
   await Promise.all([ensurePushAutomationSchema(db), ensureCommentsV4Schema(db), ensurePlatformAnalyticsSchema(db), ensureControlV1Schema(db), ensureSiteMetricsSchema(db)]);
-  const [siteSubscribers, siteComments, pendingComments, youtubeEvents, youtubeLikeRows, youtubeSubscriberRows, releases, ytLatest, ytBaseline, gaLatest, gaBaseline, gaRollover, siteLive, siteWindow] = await Promise.all([
+  const [siteSubscribers, siteComments, pendingComments, youtubeEvents, youtubeLikeRows, youtubeSubscriberRows, releases, latestYoutubeState, ytLatest, ytBaseline, gaLatest, gaBaseline, gaRollover, siteLive, siteWindow] = await Promise.all([
     db.prepare(`SELECT COUNT(*) AS total FROM push_history
       WHERE type='site-subscriber'
         AND datetime(created_at) >= datetime(?1)
@@ -6738,7 +6749,7 @@ async function collectDailyOwnerSummary(env, { liveExternal = true, windowOverri
       ORDER BY created_at ASC`).bind(window.startAt, window.endAt).all(),
     db.prepare(`SELECT COUNT(*) AS total FROM (
       SELECT COALESCE(NULLIF(video_id,''), id) AS release_key FROM push_history
-      WHERE type IN ('auto-release','release-publish')
+      WHERE type IN ('auto-release','auto-release-retry','release-publish')
         AND datetime(created_at) >= datetime(?1)
         AND datetime(created_at) < datetime(?2)
       UNION
@@ -6746,6 +6757,7 @@ async function collectDailyOwnerSummary(env, { liveExternal = true, windowOverri
       WHERE datetime(published_at) >= datetime(?1)
         AND datetime(published_at) < datetime(?2)
     )`).bind(window.startAt, window.endAt).first(),
+    getPushState(db, 'youtube-latest-public'),
     db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots
       WHERE platform='youtube' AND datetime(created_at) <= datetime(?1)
       ORDER BY datetime(created_at) DESC LIMIT 1`).bind(window.endAt).first(),
@@ -6796,7 +6808,7 @@ async function collectDailyOwnerSummary(env, { liveExternal = true, windowOverri
     siteSubscribers: Number(siteSubscribers?.total || 0),
     siteComments: Number(siteComments?.total || 0),
     pendingComments: Number(pendingComments?.total || 0),
-    releases: Number(releases?.total || 0),
+    releases: Math.max(Number(releases?.total || 0), latestYoutubeReleaseCountForWindow(latestYoutubeState, window)),
     searchClicks: Number(searchConsole?.clicks || 0),
     searchImpressions: Number(searchConsole?.impressions || 0),
     searchConnected: Boolean(searchConsole?.connected),
@@ -6819,7 +6831,7 @@ async function collectDailyOwnerSummaryFallback(env, window, reason = '') {
     try { return await operation; } catch (_) { return fallback; }
   };
 
-  const [siteSubscribers, siteComments, pendingComments, youtubeEvents, youtubeLikeRows, youtubeSubscriberRows, releases, siteWindow] = await Promise.all([
+  const [siteSubscribers, siteComments, pendingComments, youtubeEvents, youtubeLikeRows, youtubeSubscriberRows, releases, latestYoutubeState, siteWindow] = await Promise.all([
     safe(db.prepare(`SELECT COUNT(*) AS total FROM push_history
       WHERE type='site-subscriber'
         AND datetime(created_at) >= datetime(?1)
@@ -6845,7 +6857,7 @@ async function collectDailyOwnerSummaryFallback(env, window, reason = '') {
       ORDER BY created_at ASC`).bind(window.startAt, window.endAt).all(), {results:[]}),
     safe(db.prepare(`SELECT COUNT(*) AS total FROM (
       SELECT COALESCE(NULLIF(video_id,''), id) AS release_key FROM push_history
-      WHERE type IN ('auto-release','release-publish')
+      WHERE type IN ('auto-release','auto-release-retry','release-publish')
         AND datetime(created_at) >= datetime(?1)
         AND datetime(created_at) < datetime(?2)
       UNION
@@ -6853,6 +6865,7 @@ async function collectDailyOwnerSummaryFallback(env, window, reason = '') {
       WHERE datetime(published_at) >= datetime(?1)
         AND datetime(published_at) < datetime(?2)
     )`).bind(window.startAt, window.endAt).first(), {total:0}),
+    safe(getPushState(db, 'youtube-latest-public'), null),
     safe(getSiteWindowMetrics(db, window.startAt, window.endAt), {views:0,users:0})
   ]);
 
@@ -6869,7 +6882,7 @@ async function collectDailyOwnerSummaryFallback(env, window, reason = '') {
     siteSubscribers:Number(siteSubscribers?.total || 0),
     siteComments:Number(siteComments?.total || 0),
     pendingComments:Number(pendingComments?.total || 0),
-    releases:Number(releases?.total || 0),
+    releases:Math.max(Number(releases?.total || 0), latestYoutubeReleaseCountForWindow(latestYoutubeState, window)),
     searchClicks:0,
     searchImpressions:0,
     searchConnected:false,
@@ -7195,7 +7208,7 @@ async function handleControlHome(request, env) {
   await Promise.all([ensurePushAutomationSchema(db), ensureCommentsV4Schema(db), ensurePlatformAnalyticsSchema(db), ensureControlV1Schema(db), ensureSiteMetricsSchema(db)]);
   // The daily screen uses a fixed Bratislava window: 06:05 → next 06:05.
   // At the cutoff all counters become zero, then grow only inside the new window.
-  const [siteSubscribers, siteComments, siteLikes, youtubeEvents, youtubeLikeRows, youtubeSubscriberRows, releases, activityResult, ytLatest, ytBaseline, gaLatest, gaBaseline, gaRollover, automationAt, automationStatus, automationSummary, siteLive, siteWindow, latestDailySummaryState, latestDailySummaryPush, latestDailySummaryLog] = await Promise.all([
+  const [siteSubscribers, siteComments, siteLikes, youtubeEvents, youtubeLikeRows, youtubeSubscriberRows, releases, latestYoutubeState, activityResult, ytLatest, ytBaseline, gaLatest, gaBaseline, gaRollover, automationAt, automationStatus, automationSummary, siteLive, siteWindow, latestDailySummaryState, latestDailySummaryPush, latestDailySummaryLog] = await Promise.all([
     db.prepare(`SELECT COUNT(*) AS total FROM push_history WHERE type='site-subscriber' AND datetime(created_at) >= datetime(?1)`).bind(window.startAt).first(),
     db.prepare(`SELECT COUNT(*) AS total FROM comments WHERE datetime(created_at) >= datetime(?1)`).bind(window.startAt).first(),
     db.prepare(`SELECT COUNT(*) AS total FROM comment_likes WHERE datetime(created_at) >= datetime(?1)`).bind(window.startAt).first(),
@@ -7208,13 +7221,14 @@ async function handleControlHome(request, env) {
     db.prepare(`SELECT type, title, message, details_json AS detailsJson FROM push_history WHERE type IN ('youtube-subscriber','youtube-subscriber-count') AND status='sent' AND datetime(created_at) >= datetime(?1) ORDER BY created_at ASC`).bind(window.startAt).all(),
     db.prepare(`SELECT COUNT(*) AS total FROM (
       SELECT COALESCE(NULLIF(video_id,''), id) AS release_key FROM push_history
-      WHERE type IN ('auto-release','release-publish') AND datetime(created_at) >= datetime(?1)
+      WHERE type IN ('auto-release','auto-release-retry','release-publish') AND datetime(created_at) >= datetime(?1)
       UNION
       SELECT video_id AS release_key FROM release_history WHERE datetime(published_at) >= datetime(?1)
     )`).bind(window.startAt).first(),
+    getPushState(db, 'youtube-latest-public'),
     db.prepare(`SELECT id, type, source, audience, title, message, url, video_id AS videoId, video_title AS videoTitle, status, created_at AS createdAt
       FROM push_history
-      WHERE type IN ('youtube-comment','youtube-comment-count','youtube-subscriber','youtube-subscriber-count','youtube-like','site-subscriber','comment-live','comment-pending','auto-release','release-publish')
+      WHERE type IN ('youtube-comment','youtube-comment-count','youtube-subscriber','youtube-subscriber-count','youtube-like','site-subscriber','comment-live','comment-pending','auto-release','auto-release-retry','release-publish')
         AND datetime(created_at) >= datetime(?1)
       ORDER BY datetime(created_at) DESC LIMIT 200`).bind(window.startAt).all(),
     db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform='youtube' ORDER BY datetime(created_at) DESC LIMIT 1`).first(),
@@ -7290,7 +7304,7 @@ async function handleControlHome(request, env) {
       youtubeLikes:Math.max(sumYoutubeLikeHistoryDeltas(youtubeLikeRows?.results || []),dailyMetric(pushMetrics,'youtubeLikes')),
       youtubeViews:Math.max(youtubeViewDelta,dailyMetric(pushMetrics,'youtubeViewDelta')),
       youtubeViewDelta:Math.max(youtubeViewDelta,dailyMetric(pushMetrics,'youtubeViewDelta')),
-      releases:Math.max(Number(releases?.total || 0),dailyMetric(pushMetrics,'releases')),
+      releases:Math.max(Number(releases?.total || 0),dailyMetric(pushMetrics,'releases'),latestYoutubeReleaseCountForWindow(latestYoutubeState, window)),
       countryDeltas:liveCountryDeltas.length?liveCountryDeltas:pushCountryDeltas,
       totalCountries:Math.max(youtubeCountries.length,dailyMetric(pushMetrics,'totalCountries')),
       countryDate:ytNow?.studio?.dailyDate || pushMetrics?.countryDate || ''
@@ -7562,7 +7576,7 @@ async function handleControlDashboard(request, env) {
       SELECT
         SUM(CASE WHEN status = 'sent' THEN 1 ELSE 0 END) AS sent,
         SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) AS failed,
-        SUM(CASE WHEN type IN ('auto-release','release-publish') AND status = 'sent' THEN 1 ELSE 0 END) AS releasePushes
+        SUM(CASE WHEN type IN ('auto-release','auto-release-retry','release-publish') AND status = 'sent' THEN 1 ELSE 0 END) AS releasePushes
       FROM push_history
     `).first(),
     db.prepare(`SELECT COUNT(*) AS total FROM push_admin_devices`).first(),
