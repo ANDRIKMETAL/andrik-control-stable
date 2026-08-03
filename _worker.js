@@ -7063,6 +7063,12 @@ async function handleAutomationRun(request, env) {
   await setPushState(db, 'automation-last-check-status', 'running');
   const tasks = {};
   const errors = [];
+  // R204: the 06:00 owner summary runs first. Heavy Google/YouTube snapshot
+  // work must never delay the morning push until the request budget is exhausted.
+  try {
+    tasks.dailySummary = await maybeSendDailyOwnerSummary(env);
+    if (!tasks.dailySummary.ok && !tasks.dailySummary.skipped) errors.push(`dailySummary: ${tasks.dailySummary.error || 'failed'}`);
+  } catch (error) { tasks.dailySummary={ok:false,error:cleanPlainText(error?.message || error,500)}; errors.push(`dailySummary: ${tasks.dailySummary.error}`); }
   try {
     tasks.releases = await responseData(await handleCheckPlaylist(request, env));
     if (!tasks.releases.httpOk) errors.push(`releases: ${tasks.releases.details || tasks.releases.error || tasks.releases.status}`);
@@ -7079,10 +7085,6 @@ async function handleAutomationRun(request, env) {
     tasks.newCountries = await maybeSendNewCountryAlerts(env, tasks.snapshots?.youtube?.studio?.countries || []);
     if (!tasks.newCountries.ok && !tasks.newCountries.skipped) errors.push(`newCountries: ${tasks.newCountries.error || 'failed'}`);
   } catch (error) { tasks.newCountries={ok:false,error:cleanPlainText(error?.message || error,500)}; errors.push(`newCountries: ${tasks.newCountries.error}`); }
-  try {
-    tasks.dailySummary = await maybeSendDailyOwnerSummary(env);
-    if (!tasks.dailySummary.ok && !tasks.dailySummary.skipped) errors.push(`dailySummary: ${tasks.dailySummary.error || 'failed'}`);
-  } catch (error) { tasks.dailySummary={ok:false,error:cleanPlainText(error?.message || error,500)}; errors.push(`dailySummary: ${tasks.dailySummary.error}`); }
   try {
     tasks.nativeMonitor = await runNativeMonitor(env, { sendNotifications:true, source:'central-cron' });
     if (!tasks.nativeMonitor.ok && tasks.nativeMonitor.errorCount > 0) errors.push(`nativeMonitor: недоступных точек ${tasks.nativeMonitor.errorCount}`);

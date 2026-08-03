@@ -1,14 +1,14 @@
 {
   "schema": 1,
-  "updaterVersion": "55.00-r201",
+  "updaterVersion": "55.00-r203",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1785728349784-49181d64e7",
-  "release": "R203",
-  "archiveName": "ANDRIK-Control-v55.00-FINAL-R203-DEPLOY-WIDTH-LOCK.zip",
-  "sourceHead": "ad5b9967eb119db999fa296d30efaaf0aae9d137",
-  "backupSha": "ad5b9967eb119db999fa296d30efaaf0aae9d137",
-  "backupTag": "control-backup-20260803033906-ad5b996-r203-4612f",
+  "operationId": "publish-1785734839735-f813766fc2",
+  "release": "R204",
+  "archiveName": "ANDRIK-Control-v55.00-FINAL-R204-FULL-WIDTH-MORNING-PUSH-FIRST.zip",
+  "sourceHead": "f019283d17518609d3deccf510d704b942948658",
+  "backupSha": "f019283d17518609d3deccf510d704b942948658",
+  "backupTag": "control-backup-20260803052712-f019283-r204-0ca3b",
   "autoRecovery": true,
-  "generatedAt": "2026-08-03T03:39:09.784Z"
+  "generatedAt": "2026-08-03T05:27:19.735Z"
 }

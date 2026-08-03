@@ -1030,3 +1030,77 @@
     max-width:54%!important;
   }
 }
+
+
+/* R204 — portrait full width + natural section flow */
+@media screen and (orientation:portrait){
+  body.site-update-page .admin-main{
+    padding-left:0!important;
+    padding-right:0!important;
+    overflow-x:hidden!important;
+  }
+  body.site-update-page .update-wrap{
+    width:100%!important;
+    max-width:none!important;
+    margin:0!important;
+    padding:4px 7px 14px!important;
+  }
+  body.site-update-page .update-command-center-r184{
+    min-height:0!important;
+    height:auto!important;
+    align-content:start!important;
+    gap:5px!important;
+    padding-bottom:0!important;
+  }
+  body.site-update-page .update-primary-grid-r184{
+    gap:6px!important;
+  }
+  body.site-update-page .update-secondary-grid-r184{
+    gap:6px!important;
+    margin-top:6px!important;
+  }
+  body.site-update-page .update-primary-grid-r184 .admin-control-card,
+  body.site-update-page .update-secondary-grid-r184 .admin-control-card{
+    width:100%!important;
+    max-width:none!important;
+    margin-left:0!important;
+    margin-right:0!important;
+  }
+  body.site-update-page .update-upload-card,
+  body.site-update-page .update-live-console-r184,
+  body.site-update-page .update-preview-card,
+  body.site-update-page .update-result-card,
+  body.site-update-page .update-history-card,
+  body.site-update-page .update-cache-card{
+    overflow:visible!important;
+  }
+}
+@media screen and (orientation:portrait) and (max-width:520px){
+  body.site-update-page .update-header{padding:0 2px 2px!important}
+  body.site-update-page .update-header h1{
+    font-size:clamp(2.2rem,10.8vw,3rem)!important;
+    line-height:.92!important;
+    white-space:normal!important;
+    overflow:visible!important;
+    text-overflow:clip!important;
+  }
+  body.site-update-page .update-header p{
+    display:block!important;
+    margin-top:2px!important;
+    white-space:normal!important;
+    overflow:visible!important;
+    text-overflow:clip!important;
+  }
+  body.site-update-page .update-primary-grid-r184 .admin-control-card{
+    padding-left:9px!important;
+    padding-right:9px!important;
+  }
+  body.site-update-page .update-file-picker,
+  body.site-update-page .update-main-button,
+  body.site-update-page .update-stagebar,
+  body.site-update-page .update-live-console-r184{
+    width:100%!important;
+    max-width:100%!important;
+  }
+  body.site-update-page .update-live-console-r184{margin-top:4px!important}
+}
