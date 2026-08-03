@@ -1,7 +1,0 @@
-ANDRIK Control v55.00 FINAL R201
-
-Base: verified R197.
-Change: one shared owner-session gate for Google Analytics, Google Search Console and the protected audience/map API.
-All protected analytics requests wait for the signed R197 session and retry once after a 401.
-The raw ADMIN_KEY is not stored.
-No Google credentials, map layout, updater, rollback, sleep mode or site content were changed.

@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R201', number:201, version:'55.00', full:'55.00 LIVE WEB AI FINAL R201 GOOGLE OWNER SESSION GATE', siteUpdater:'55.00-r201' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R203', number:203, version:'55.00', full:'55.00 LIVE WEB AI FINAL R203 DEPLOY WIDTH LOCK', siteUpdater:'55.00-r203' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
