@@ -64,6 +64,28 @@
   }
   function cachedForCurrentWindow(cached){return Boolean(cached?.data&&cached.data.windowKey===currentSummaryWindowKey())}
 
+  const SUMMARY_NUMBER_KEYS_R213=['websiteUsers','websiteViews','siteSubscribers','siteComments','siteLikes','youtubeComments','youtubeSubscribers','youtubeLikes','youtubeViews','youtubeViewDelta','releases','totalCountries'];
+  function mergeSummaryPayloadR213(previous,incoming){
+    if(!previous||!incoming||previous.windowKey!==incoming.windowKey)return incoming;
+    const merged={...incoming,summary:{...(incoming.summary||{})}};
+    const old=previous.summary||{};
+    for(const key of SUMMARY_NUMBER_KEYS_R213){
+      merged.summary[key]=Math.max(0,Number(old[key]||0),Number(merged.summary[key]||0));
+    }
+    const oldCountries=Array.isArray(old.countryDeltas)?old.countryDeltas:[];
+    const newCountries=Array.isArray(merged.summary.countryDeltas)?merged.summary.countryDeltas:[];
+    if(oldCountries.length>newCountries.length)merged.summary.countryDeltas=oldCountries;
+    if(!merged.summary.countryDate&&old.countryDate)merged.summary.countryDate=old.countryDate;
+    const events=[...(Array.isArray(incoming.activity)?incoming.activity:[]),...(Array.isArray(previous.activity)?previous.activity:[])];
+    const seen=new Set();
+    merged.activity=events.filter(item=>{
+      const id=String(item?.id||`${item?.type||''}|${item?.videoId||''}|${item?.createdAt||''}|${item?.title||''}`);
+      if(seen.has(id))return false; seen.add(id); return true;
+    }).slice(0,200);
+    merged.summarySource=String(incoming.summarySource||'').includes('push')?incoming.summarySource:(previous.summarySource||incoming.summarySource||'high-water');
+    return merged;
+  }
+
   function activityRow(event,{modal=false}={}){
     const [icon,label]=eventMeta(event.type);
     const href=event.url||'/admin/';
@@ -207,9 +229,11 @@
     try{
       const data=await api(forceLive?'/api/control/home?refresh=1&v=55.00-r136':'/api/control/home?v=55.00-r136',{timeoutMs:forceLive?13000:8000});
       if(data?.windowKey)activeSummaryWindowKey=data.windowKey;
-      saveHomeCache(data);
-      renderSummary(data);
-      renderActivity(data.activity||[]);
+      const previous=readHomeCache();
+      const stable=cachedForCurrentWindow(previous)?mergeSummaryPayloadR213(previous.data,data):data;
+      saveHomeCache(stable);
+      renderSummary(stable);
+      renderActivity(stable.activity||[]);
     }catch(error){
       const cached=readHomeCache();
       if(cachedForCurrentWindow(cached)){
@@ -404,8 +428,10 @@
           },
           activity:allActivityEvents
         };
-        saveHomeCache(payload);
-        renderSummary(payload);
+        const previous=readHomeCache();
+        const stable=cachedForCurrentWindow(previous)?mergeSummaryPayloadR213(previous.data,payload):payload;
+        saveHomeCache(stable);
+        renderSummary(stable);
       }
       if($('controlHomeUpdated'))$('controlHomeUpdated').textContent='Сводка отправлена ✓';
       // Refresh the numbers in the background; never hold or move the action button.

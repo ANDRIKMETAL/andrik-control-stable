@@ -1,14 +1,14 @@
 {
   "schema": 1,
-  "updaterVersion": "55.00-r211",
+  "updaterVersion": "55.00-r212",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1785776935184-98e9d21db3",
-  "release": "R212",
-  "archiveName": "R212.zip",
-  "sourceHead": "d82e23323a86053b2d4a70140c3d6c9fd49cc8f6",
-  "backupSha": "d82e23323a86053b2d4a70140c3d6c9fd49cc8f6",
-  "backupTag": "control-backup-20260803170852-d82e233-r212-b7724",
+  "operationId": "publish-1785783437183-a14351d57e",
+  "release": "R213",
+  "archiveName": "R213.zip",
+  "sourceHead": "bd5b0cda6f4b637469b1218cc3c87c24a9241559",
+  "backupSha": "bd5b0cda6f4b637469b1218cc3c87c24a9241559",
+  "backupTag": "control-backup-20260803185714-bd5b0cd-r213-494b1",
   "autoRecovery": true,
-  "generatedAt": "2026-08-03T17:08:55.184Z"
+  "generatedAt": "2026-08-03T18:57:17.183Z"
 }

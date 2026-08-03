@@ -4,7 +4,8 @@
   onScroll();
   addEventListener('scroll', onScroll, { passive: true });
 
-  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const fastHome = document.body.classList.contains('home-fast-r213');
+  const reduced = fastHome || matchMedia('(prefers-reduced-motion: reduce)').matches;
   const revealItems = document.querySelectorAll('.reveal');
   if (reduced || !('IntersectionObserver' in window)) {
     revealItems.forEach(el => el.classList.add('visible'));

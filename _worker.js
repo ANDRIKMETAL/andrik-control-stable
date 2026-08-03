@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R212', number:212, version:'55.00', full:'55.00 LIVE WEB AI FINAL R212 DIRECT YOUTUBE APP', siteUpdater:'55.00-r212' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R213', number:213, version:'55.00', full:'55.00 LIVE WEB AI FINAL R213 FAST HOME SUMMARY HOLD', siteUpdater:'55.00-r213' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -7199,6 +7199,31 @@ function mergeDailyMetrics(...sources) {
   return merged;
 }
 
+const CONTROL_HOME_SUMMARY_KEYS_R213 = ['websiteUsers','websiteViews','siteSubscribers','siteComments','siteLikes','youtubeComments','youtubeSubscribers','youtubeLikes','youtubeViews','youtubeViewDelta','releases','totalCountries'];
+function normalizeControlHomeSummaryR213(summary = {}) {
+  const normalized = { ...summary };
+  for (const key of CONTROL_HOME_SUMMARY_KEYS_R213) normalized[key] = Math.max(0, Number(summary?.[key] || 0));
+  normalized.countryDeltas = Array.isArray(summary?.countryDeltas) ? summary.countryDeltas : [];
+  normalized.countryDate = cleanPlainText(summary?.countryDate || '', 30);
+  return normalized;
+}
+function mergeControlHomeSummaryR213(...sources) {
+  const merged = normalizeControlHomeSummaryR213({});
+  for (const source of sources) {
+    const item = normalizeControlHomeSummaryR213(source || {});
+    for (const key of CONTROL_HOME_SUMMARY_KEYS_R213) merged[key] = Math.max(merged[key], item[key]);
+    if (item.countryDeltas.length > merged.countryDeltas.length) merged.countryDeltas = item.countryDeltas;
+    if (!merged.countryDate && item.countryDate) merged.countryDate = item.countryDate;
+  }
+  return merged;
+}
+function parseControlHomeHighWaterR213(row) {
+  try {
+    const parsed = JSON.parse(row?.value || '{}');
+    return parsed?.summary && typeof parsed.summary === 'object' ? parsed.summary : {};
+  } catch (_) { return {}; }
+}
+
 function parseDailySummaryMessageMetrics(row) {
   const message = String(row?.message || '');
   if (!message) return {};
@@ -7316,28 +7341,38 @@ async function handleControlHome(request, env) {
   const liveCountryDeltas = youtubeDailyCountries.slice(0,4);
   const pushCountryDeltas = Array.isArray(pushMetrics?.countryDeltas) ? pushMetrics.countryDeltas.slice(0,4) : [];
   const summarySource = Object.keys(pushMetrics).length ? 'push-merged' : 'live';
+  const liveSummaryR213 = normalizeControlHomeSummaryR213({
+    websiteUsers:Math.max(Number(siteWindow?.users || 0),googleSummaryWindowMetric(gaNow, gaStart, gaBeforeMidnight, window, 'activeUsers'),dailyMetric(pushMetrics,'siteUsers')),
+    websiteViews:Math.max(Number(siteWindow?.views || 0),googleSummaryWindowMetric(gaNow, gaStart, gaBeforeMidnight, window, 'screenPageViews'),dailyMetric(pushMetrics,'siteViews')),
+    siteSubscribers:Math.max(Number(siteSubscribers?.total || 0),dailyMetric(pushMetrics,'siteSubscribers')),
+    siteComments:Math.max(Number(siteComments?.total || 0),dailyMetric(pushMetrics,'siteComments')),
+    siteLikes:Math.max(Number(siteLikes?.total || 0),dailyMetric(pushMetrics,'siteLikes')),
+    youtubeComments:Math.max(Number(youtubeEvents?.comments || 0),dailyMetric(pushMetrics,'youtubeComments')),
+    youtubeSubscribers:Math.max(youtubeSubscriberDelta,sumYoutubeSubscriberHistoryDeltas(youtubeSubscriberRows?.results || []),dailyMetric(pushMetrics,'youtubeSubscribers')),
+    youtubeLikes:Math.max(sumYoutubeLikeHistoryDeltas(youtubeLikeRows?.results || []),dailyMetric(pushMetrics,'youtubeLikes')),
+    youtubeViews:Math.max(youtubeViewDelta,dailyMetric(pushMetrics,'youtubeViewDelta')),
+    youtubeViewDelta:Math.max(youtubeViewDelta,dailyMetric(pushMetrics,'youtubeViewDelta')),
+    releases:Math.max(Number(releases?.total || 0),dailyMetric(pushMetrics,'releases'),latestYoutubeReleaseCountForWindow(latestYoutubeState, window)),
+    countryDeltas:liveCountryDeltas.length?liveCountryDeltas:pushCountryDeltas,
+    totalCountries:Math.max(youtubeCountries.length,dailyMetric(pushMetrics,'totalCountries')),
+    countryDate:ytNow?.studio?.dailyDate || pushMetrics?.countryDate || ''
+  });
+  const highWaterKeyR213 = `control-home-high-water-r213:${window.key}`;
+  const previousHighWaterRowR213 = await getPushState(db, highWaterKeyR213).catch(() => null);
+  const previousHighWaterR213 = parseControlHomeHighWaterR213(previousHighWaterRowR213);
+  const summaryR213 = mergeControlHomeSummaryR213(previousHighWaterR213, liveSummaryR213);
+  const previousSerializedR213 = JSON.stringify(normalizeControlHomeSummaryR213(previousHighWaterR213));
+  const nextSerializedR213 = JSON.stringify(summaryR213);
+  if (nextSerializedR213 !== previousSerializedR213) {
+    await setPushState(db, highWaterKeyR213, JSON.stringify({ windowKey:window.key, summary:summaryR213, updatedAt:new Date().toISOString() })).catch(() => {});
+  }
   return json({
     ok:true,
     period:'06:05-cycle',
     windowKey:window.key,
     windowStartAt:window.startAt,
     windowEndAt:window.endAt,
-    summary:{
-      websiteUsers:Math.max(Number(siteWindow?.users || 0),googleSummaryWindowMetric(gaNow, gaStart, gaBeforeMidnight, window, 'activeUsers'),dailyMetric(pushMetrics,'siteUsers')),
-      websiteViews:Math.max(Number(siteWindow?.views || 0),googleSummaryWindowMetric(gaNow, gaStart, gaBeforeMidnight, window, 'screenPageViews'),dailyMetric(pushMetrics,'siteViews')),
-      siteSubscribers:Math.max(Number(siteSubscribers?.total || 0),dailyMetric(pushMetrics,'siteSubscribers')),
-      siteComments:Math.max(Number(siteComments?.total || 0),dailyMetric(pushMetrics,'siteComments')),
-      siteLikes:Math.max(Number(siteLikes?.total || 0),dailyMetric(pushMetrics,'siteLikes')),
-      youtubeComments:Math.max(Number(youtubeEvents?.comments || 0),dailyMetric(pushMetrics,'youtubeComments')),
-      youtubeSubscribers:Math.max(youtubeSubscriberDelta,sumYoutubeSubscriberHistoryDeltas(youtubeSubscriberRows?.results || []),dailyMetric(pushMetrics,'youtubeSubscribers')),
-      youtubeLikes:Math.max(sumYoutubeLikeHistoryDeltas(youtubeLikeRows?.results || []),dailyMetric(pushMetrics,'youtubeLikes')),
-      youtubeViews:Math.max(youtubeViewDelta,dailyMetric(pushMetrics,'youtubeViewDelta')),
-      youtubeViewDelta:Math.max(youtubeViewDelta,dailyMetric(pushMetrics,'youtubeViewDelta')),
-      releases:Math.max(Number(releases?.total || 0),dailyMetric(pushMetrics,'releases'),latestYoutubeReleaseCountForWindow(latestYoutubeState, window)),
-      countryDeltas:liveCountryDeltas.length?liveCountryDeltas:pushCountryDeltas,
-      totalCountries:Math.max(youtubeCountries.length,dailyMetric(pushMetrics,'totalCountries')),
-      countryDate:ytNow?.studio?.dailyDate || pushMetrics?.countryDate || ''
-    },
+    summary:summaryR213,
     activity:activityResult.results || [],
     automation:{
       lastCheckAt:automationAt?.value || '',
