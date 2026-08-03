@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VIDEO_URL = '/assets/live-eye-r217.mp4?v=55.00-r217';
+  const VIDEO_URL = '/assets/live-eye-r219.mp4?v=55.00-r219';
 
   const init = () => {
     const logo = document.getElementById('controlCenterLogo');
@@ -19,7 +19,6 @@
     motion.className = 'andrik-live-eye-motion-r3d';
     const halo = document.createElement('span');
     halo.className = 'andrik-live-eye-halo-r3d';
-
     images.forEach((image) => motion.appendChild(image));
     logo.appendChild(halo);
     logo.appendChild(motion);
@@ -40,91 +39,108 @@
       @media(max-width:420px){.andrik-live-eye-halo-r3d{width:106px!important;height:106px!important}}
 
       html.andrik-live-eye-open,html.andrik-live-eye-open body{overflow:hidden!important;overscroll-behavior:none!important}
-      .andrik-live-eye-overlay-r217{position:fixed!important;inset:0!important;z-index:2147483647!important;display:grid!important;place-items:center!important;padding:max(18px,env(safe-area-inset-top)) max(14px,env(safe-area-inset-right)) max(18px,env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left))!important;background:radial-gradient(circle at 50% 42%,rgba(18,102,55,.28),rgba(0,0,0,.96) 58%,#000 100%)!important;backdrop-filter:blur(12px)!important;-webkit-backdrop-filter:blur(12px)!important;opacity:0!important;transition:opacity .18s ease!important}
-      .andrik-live-eye-overlay-r217.is-open{opacity:1!important}
-      .andrik-live-eye-stage-r217{position:relative!important;width:min(94vw,480px)!important;height:min(88dvh,840px)!important;overflow:hidden!important;border:1px solid rgba(124,255,178,.52)!important;border-radius:30px!important;background:#000!important;box-shadow:0 0 0 1px rgba(161,255,201,.12),0 0 34px rgba(43,226,105,.30),0 28px 80px rgba(0,0,0,.72)!important}
-      .andrik-live-eye-video-r217{display:block!important;width:100%!important;height:100%!important;object-fit:contain!important;background:#000!important}
-      .andrik-live-eye-close-r217{position:absolute!important;top:12px!important;right:12px!important;z-index:4!important;display:grid!important;place-items:center!important;width:48px!important;height:48px!important;border:1px solid rgba(255,255,255,.24)!important;border-radius:50%!important;background:rgba(2,8,11,.78)!important;color:#effff5!important;font:800 28px/1 system-ui,sans-serif!important;box-shadow:0 8px 26px rgba(0,0,0,.42)!important}
-      .andrik-live-eye-play-r217{position:absolute!important;left:50%!important;top:50%!important;z-index:3!important;transform:translate(-50%,-50%)!important;display:none!important;align-items:center!important;justify-content:center!important;min-width:160px!important;min-height:52px!important;padding:0 20px!important;border:1px solid rgba(124,255,178,.54)!important;border-radius:999px!important;background:rgba(1,12,16,.86)!important;color:#d8ffe6!important;font:800 14px/1 system-ui,sans-serif!important;box-shadow:0 0 28px rgba(43,226,105,.24)!important}
-      .andrik-live-eye-play-r217.is-visible{display:flex!important}
-      @media(max-width:430px){.andrik-live-eye-stage-r217{width:96vw!important;height:86dvh!important;border-radius:24px!important}.andrik-live-eye-close-r217{width:44px!important;height:44px!important}}
+      .andrik-live-eye-overlay-r219{position:fixed!important;inset:0!important;z-index:2147483647!important;display:grid!important;place-items:center!important;padding:max(10px,env(safe-area-inset-top)) max(8px,env(safe-area-inset-right)) max(10px,env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left))!important;background:radial-gradient(circle at 50% 42%,rgba(18,102,55,.30),rgba(0,0,0,.97) 60%,#000 100%)!important;backdrop-filter:blur(12px)!important;-webkit-backdrop-filter:blur(12px)!important;opacity:0!important;visibility:hidden!important;pointer-events:none!important;transition:opacity .10s ease,visibility 0s linear .10s!important}
+      .andrik-live-eye-overlay-r219.is-open{opacity:1!important;visibility:visible!important;pointer-events:auto!important;transition:opacity .10s ease!important}
+      .andrik-live-eye-stage-r219{position:relative!important;width:min(calc(100vw - 16px),520px)!important;height:min(88dvh,900px)!important;overflow:hidden!important;border:3px solid rgba(104,255,174,.92)!important;border-radius:30px!important;background:#000!important;box-shadow:0 0 0 1px rgba(187,255,216,.24),0 0 12px rgba(104,255,174,.86),0 0 34px rgba(43,226,105,.60),0 0 70px rgba(18,155,72,.34),inset 0 0 20px rgba(80,255,161,.15)!important}
+      .andrik-live-eye-video-r219{display:block!important;width:100%!important;height:100%!important;object-fit:cover!important;object-position:50% 50%!important;background:#000!important}
+      .andrik-live-eye-close-r219{position:absolute!important;top:14px!important;right:14px!important;z-index:4!important;display:grid!important;place-items:center!important;width:54px!important;height:54px!important;border:2px solid rgba(255,255,255,.28)!important;border-radius:50%!important;background:rgba(2,8,11,.80)!important;color:#effff5!important;font:900 31px/1 system-ui,sans-serif!important;box-shadow:0 8px 26px rgba(0,0,0,.48),0 0 18px rgba(43,226,105,.18)!important}
+      .andrik-live-eye-play-r219{position:absolute!important;left:50%!important;top:50%!important;z-index:3!important;transform:translate(-50%,-50%)!important;display:none!important;align-items:center!important;justify-content:center!important;min-width:170px!important;min-height:54px!important;padding:0 22px!important;border:2px solid rgba(124,255,178,.70)!important;border-radius:999px!important;background:rgba(1,12,16,.90)!important;color:#d8ffe6!important;font:850 14px/1 system-ui,sans-serif!important;box-shadow:0 0 30px rgba(43,226,105,.32)!important}
+      .andrik-live-eye-play-r219.is-visible{display:flex!important}
+      @media(max-width:430px){.andrik-live-eye-stage-r219{width:calc(100vw - 12px)!important;height:88dvh!important;border-width:3px!important;border-radius:25px!important}.andrik-live-eye-close-r219{width:48px!important;height:48px!important;top:12px!important;right:12px!important}}
     `;
     document.head.appendChild(style);
 
+    const overlay = document.createElement('div');
+    overlay.className = 'andrik-live-eye-overlay-r219';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-label', 'Живая анимация ANDRIK');
+    overlay.setAttribute('aria-hidden', 'true');
+    overlay.innerHTML = `
+      <div class="andrik-live-eye-stage-r219">
+        <video class="andrik-live-eye-video-r219" muted loop playsinline webkit-playsinline preload="auto" src="${VIDEO_URL}"></video>
+        <button class="andrik-live-eye-close-r219" type="button" aria-label="Закрыть">×</button>
+        <button class="andrik-live-eye-play-r219" type="button">▶ Запустить видео</button>
+      </div>`;
+    document.body.appendChild(overlay);
+
+    const video = overlay.querySelector('video');
+    const closeButton = overlay.querySelector('.andrik-live-eye-close-r219');
+    const playButton = overlay.querySelector('.andrik-live-eye-play-r219');
+    let isOpen = false;
     let raf = 0;
     let visible = !document.hidden;
-    let overlay = null;
 
-    const closeVideo = () => {
-      if (!overlay) return;
-      const current = overlay;
-      overlay = null;
-      current.classList.remove('is-open');
-      const video = current.querySelector('video');
-      if (video) {
-        try { video.pause(); video.removeAttribute('src'); video.load(); } catch (_) {}
+    // Preload once. The source stays attached, so every next launch is immediate.
+    try {
+      video.muted = true;
+      video.playsInline = true;
+      video.load();
+    } catch (_) {}
+
+    const startPlayback = async () => {
+      try {
+        video.pause();
+        video.currentTime = 0;
+        video.muted = true;
+        video.playsInline = true;
+        await video.play();
+        playButton?.classList.remove('is-visible');
+      } catch (_) {
+        playButton?.classList.add('is-visible');
       }
-      document.documentElement.classList.remove('andrik-live-eye-open');
-      window.setTimeout(() => current.remove(), 190);
     };
 
-    const openVideo = () => {
-      if (overlay) return;
-      const shell = document.createElement('div');
-      shell.className = 'andrik-live-eye-overlay-r217';
-      shell.setAttribute('role', 'dialog');
-      shell.setAttribute('aria-modal', 'true');
-      shell.setAttribute('aria-label', 'Живая анимация ANDRIK');
-      shell.innerHTML = `
-        <div class="andrik-live-eye-stage-r217">
-          <video class="andrik-live-eye-video-r217" muted loop playsinline webkit-playsinline preload="auto"></video>
-          <button class="andrik-live-eye-close-r217" type="button" aria-label="Закрыть">×</button>
-          <button class="andrik-live-eye-play-r217" type="button">▶ Запустить видео</button>
-        </div>`;
-
-      const video = shell.querySelector('video');
-      const closeButton = shell.querySelector('.andrik-live-eye-close-r217');
-      const playButton = shell.querySelector('.andrik-live-eye-play-r217');
-      overlay = shell;
+    const openVideo = (event) => {
+      event?.preventDefault?.();
+      event?.stopPropagation?.();
+      if (isOpen) {
+        startPlayback();
+        return;
+      }
+      isOpen = true;
+      overlay.setAttribute('aria-hidden', 'false');
       document.documentElement.classList.add('andrik-live-eye-open');
-      document.body.appendChild(shell);
-      requestAnimationFrame(() => shell.classList.add('is-open'));
-
-      closeButton?.addEventListener('click', (event) => { event.preventDefault(); event.stopPropagation(); closeVideo(); });
-      shell.addEventListener('click', (event) => { if (event.target === shell) closeVideo(); });
-      document.addEventListener('keydown', function onKey(event) {
-        if (event.key !== 'Escape') return;
-        document.removeEventListener('keydown', onKey);
-        closeVideo();
-      });
-
-      const play = async () => {
-        if (!video) return;
-        try {
-          video.muted = true;
-          video.playsInline = true;
-          video.src = VIDEO_URL;
-          await video.play();
-          playButton?.classList.remove('is-visible');
-        } catch (_) {
-          playButton?.classList.add('is-visible');
-        }
-      };
-      playButton?.addEventListener('click', (event) => { event.preventDefault(); event.stopPropagation(); play(); });
-      play();
+      overlay.classList.add('is-open');
+      startPlayback();
     };
 
-    const activate = (event) => {
+    const closeVideo = (event) => {
+      event?.preventDefault?.();
+      event?.stopPropagation?.();
+      if (!isOpen) return;
+      isOpen = false;
+      try {
+        video.pause();
+        video.currentTime = 0;
+      } catch (_) {}
+      playButton?.classList.remove('is-visible');
+      overlay.classList.remove('is-open');
+      overlay.setAttribute('aria-hidden', 'true');
+      document.documentElement.classList.remove('andrik-live-eye-open');
+    };
+
+    // A single click handler avoids the old pointerup+click double firing.
+    logo.addEventListener('click', openVideo, true);
+    logo.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') openVideo(event);
+    }, true);
+    logo.addEventListener('pointerdown', () => {
+      try { if (video.readyState < 3) video.load(); } catch (_) {}
+    }, { passive: true });
+
+    closeButton?.addEventListener('click', closeVideo);
+    playButton?.addEventListener('click', (event) => {
       event.preventDefault();
       event.stopPropagation();
-      openVideo();
-    };
-
-    logo.addEventListener('pointerup', activate, true);
-    logo.addEventListener('click', activate, true);
-    logo.addEventListener('keydown', (event) => {
-      if (event.key === 'Enter' || event.key === ' ') activate(event);
-    }, true);
+      startPlayback();
+    });
+    overlay.addEventListener('click', (event) => {
+      if (event.target === overlay) closeVideo(event);
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && isOpen) closeVideo(event);
+    });
 
     const frame = (time) => {
       if (visible) {
@@ -162,7 +178,10 @@
     }, { passive: true });
 
     raf = requestAnimationFrame(frame);
-    window.addEventListener('pagehide', () => { closeVideo(); cancelAnimationFrame(raf); }, { once: true });
+    window.addEventListener('pagehide', () => {
+      closeVideo();
+      cancelAnimationFrame(raf);
+    }, { once: true });
   };
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once: true });
