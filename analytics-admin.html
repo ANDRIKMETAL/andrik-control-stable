@@ -1293,15 +1293,59 @@ html.live-web-ai-resume-lock .analytics-swipe-viewport{overflow:hidden!important
     };
     return map[clean]||clean;
   };
+  let ownerTransportPromise=null;
+  async function waitOwnerSessionTransport(maxWaitMs=8000,force=false){
+    if(ownerTransportPromise&&!force)return ownerTransportPromise;
+    const task=(async()=>{
+      const started=Date.now();
+      while(!window.AndrikOwnerSession&&Date.now()-started<maxWaitMs){
+        await new Promise(resolve=>setTimeout(resolve,50));
+      }
+      const owner=window.AndrikOwnerSession;
+      if(!owner)return false;
+      if(owner.isActive?.())return true;
+      try{
+        const initial=await owner.ready?.();
+        if(initial?.owner||owner.isActive?.())return true;
+      }catch(_){}
+      try{
+        const checked=await owner.status?.();
+        if(checked?.owner||owner.isActive?.())return true;
+      }catch(_){}
+      try{
+        const ensured=await owner.ensure?.();
+        return Boolean(ensured?.owner||owner.isActive?.());
+      }catch(_){return Boolean(owner.isActive?.())}
+    })();
+    ownerTransportPromise=task;
+    try{return await task}finally{if(ownerTransportPromise===task)ownerTransportPromise=null}
+  }
   async function api(path,timeoutMs=9500){
     const controller=new AbortController();
     let timer=0;
-    const network=fetch(path,{headers:{accept:'application/json',authorization:`Bearer ${getKey()}`},cache:'no-store',signal:controller.signal})
-      .then(async response=>{
-        const data=await response.json().catch(()=>({}));
-        if(!response.ok)throw new Error(data.details||data.error||`HTTP ${response.status}`);
-        return data;
-      });
+    const requestOnce=async()=>{
+      const key=String(getKey()||'').trim();
+      const headers={accept:'application/json'};
+      if(key&&!/^__ANDRIK_OWNER_SESSION_/i.test(key))headers.authorization=`Bearer ${key}`;
+      const response=await fetch(path,{headers,credentials:'include',cache:'no-store',signal:controller.signal});
+      const data=await response.json().catch(()=>({}));
+      if(!response.ok){
+        const error=new Error(data.details||data.error||`HTTP ${response.status}`);
+        error.status=response.status;
+        throw error;
+      }
+      return data;
+    };
+    const network=(async()=>{
+      await waitOwnerSessionTransport();
+      try{return await requestOnce()}
+      catch(error){
+        if(error?.status!==401&&error?.message!=='unauthorized')throw error;
+        const restored=await waitOwnerSessionTransport(8000,true);
+        if(!restored)throw error;
+        return requestOnce();
+      }
+    })();
     const hardTimeout=new Promise((_,reject)=>{
       timer=setTimeout(()=>{
         try{controller.abort()}catch(_){}
@@ -2085,7 +2129,6 @@ html.live-web-ai-resume-lock .analytics-swipe-viewport{overflow:hidden!important
   let searchConsoleRequest=null;
   async function loadSearchConsole(force=false){
     if(searchConsoleRequest&&!force)return searchConsoleRequest;
-    if(!getKey())return null;
     const request=api(`/api/control/search-console${force?'?refresh=1':''}`,12500);
     searchConsoleRequest=request;
     try{
@@ -2143,11 +2186,14 @@ html.live-web-ai-resume-lock .analytics-swipe-viewport{overflow:hidden!important
   window.andrikRefreshAudience=()=>loadPlatforms(true);
   window.andrikRefreshAnalytics=()=>load(true);
   async function load(force=false){
-    if(!getKey()){
-      authState(false,'Сначала сохраните ключ в разделе «Служебное».');
+    const ownerReady=await waitOwnerSessionTransport();
+    const storedKey=String(getKey()||'').trim();
+    const hasRawKey=Boolean(storedKey&&!/^__ANDRIK_OWNER_SESSION_/i.test(storedKey));
+    if(!ownerReady&&!hasRawKey){
+      authState(false,'Сначала подтвердите доступ в разделе «Служебное».');
       if($('analyticsMessage'))$('analyticsMessage').textContent='Доступ владельца не подтверждён.';
-      renderSearchConsole([],{});
-      renderWorldMap(readYoutubeMapCache()?.countries||[],{error:'Нужен ключ владельца',source:'error'});
+      renderSearchConsole([],{connected:false,error:'Доступ владельца не подтверждён'});
+      renderWorldMap(readYoutubeMapCache()?.countries||[],{error:'Нужен доступ владельца',source:'error'});
       return;
     }
     const hasMapFallback=Boolean($('worldCountries')?.querySelector('.world-country-button'))&&['growth','cache','audience'].includes($('worldMap')?.dataset.mapSource||'');

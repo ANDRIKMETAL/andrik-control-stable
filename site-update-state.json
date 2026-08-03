@@ -1,14 +1,14 @@
 {
   "schema": 1,
-  "updaterVersion": "55.00-r199",
+  "updaterVersion": "55.00-r197",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1785726274141-7ddd9f100a",
-  "release": "R197",
-  "archiveName": "ANDRIK-Control-v55.00-FINAL-R197-SIGNED-OWNER-SESSION.zip",
-  "sourceHead": "ebfe019d4bd4b3f2bdd71cf988987f3db3dcb25e",
-  "backupSha": "ebfe019d4bd4b3f2bdd71cf988987f3db3dcb25e",
-  "backupTag": "control-backup-20260803030431-ebfe019-r197-91299",
+  "operationId": "publish-1785727791975-dd2e3f7622",
+  "release": "R201",
+  "archiveName": "ANDRIK-Control-v55.00-FINAL-R201-GOOGLE-OWNER-SESSION-GATE.zip",
+  "sourceHead": "a963a6301d318882f839376d5637ac9f690d37c2",
+  "backupSha": "a963a6301d318882f839376d5637ac9f690d37c2",
+  "backupTag": "control-backup-20260803032948-a963a63-r201-03b4c",
   "autoRecovery": true,
-  "generatedAt": "2026-08-03T03:04:34.141Z"
+  "generatedAt": "2026-08-03T03:29:51.975Z"
 }
