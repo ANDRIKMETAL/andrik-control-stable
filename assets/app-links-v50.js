@@ -23,12 +23,13 @@
   function youtubeResolverIntent(webUrl, music = false) {
     try {
       const parsed = new URL(webUrl, window.location.href);
-      if (music) {
-        return `intent://${parsed.host}${parsed.pathname}${parsed.search}${parsed.hash}#Intent;scheme=https;action=android.intent.action.VIEW;category=android.intent.category.BROWSABLE;end`;
-      }
-      // vnd.youtube excludes ordinary browsers and is handled by official YouTube,
-      // ReVanced/RVX and compatible clients.
-      return `intent://${parsed.host}${parsed.pathname}${parsed.search}${parsed.hash}#Intent;scheme=vnd.youtube;action=android.intent.action.VIEW;category=android.intent.category.BROWSABLE;S.browser_fallback_url=${encodeFallback(parsed.href)};end`;
+      const packageName = music
+        ? 'com.google.android.apps.youtube.music'
+        : 'com.google.android.youtube';
+      // R212: address the official app package directly, so Android does not
+      // show the extra resolver window. If the package is absent, Chrome uses
+      // the original HTTPS address from browser_fallback_url.
+      return `intent://${parsed.host}${parsed.pathname}${parsed.search}${parsed.hash}#Intent;scheme=https;package=${packageName};action=android.intent.action.VIEW;category=android.intent.category.BROWSABLE;S.browser_fallback_url=${encodeFallback(parsed.href)};end`;
     } catch (_) {
       return webUrl;
     }

@@ -1,14 +1,14 @@
 {
   "schema": 1,
-  "updaterVersion": "55.00-r210",
+  "updaterVersion": "55.00-r211",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1785768864449-b0584a3269",
-  "release": "R211",
-  "archiveName": "ANDRIK-Control-v55.00-FINAL-R211-KV-ULTRA-ECONOMY-2.zip",
-  "sourceHead": "7a9f2c2ca210ee7164e541b9978f1ac390f21db7",
-  "backupSha": "7a9f2c2ca210ee7164e541b9978f1ac390f21db7",
-  "backupTag": "control-backup-20260803145421-7a9f2c2-r211-8320e",
+  "operationId": "publish-1785776935184-98e9d21db3",
+  "release": "R212",
+  "archiveName": "R212.zip",
+  "sourceHead": "d82e23323a86053b2d4a70140c3d6c9fd49cc8f6",
+  "backupSha": "d82e23323a86053b2d4a70140c3d6c9fd49cc8f6",
+  "backupTag": "control-backup-20260803170852-d82e233-r212-b7724",
   "autoRecovery": true,
-  "generatedAt": "2026-08-03T14:54:24.449Z"
+  "generatedAt": "2026-08-03T17:08:55.184Z"
 }

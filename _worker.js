@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R211', number:211, version:'55.00', full:'55.00 LIVE WEB AI FINAL R211 KV ULTRA ECONOMY', siteUpdater:'55.00-r211' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R212', number:212, version:'55.00', full:'55.00 LIVE WEB AI FINAL R212 DIRECT YOUTUBE APP', siteUpdater:'55.00-r212' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -42,7 +42,10 @@ function youtubeAppLauncherUrl(targetUrl) {
     const allowed = new Set(['youtube.com', 'www.youtube.com', 'm.youtube.com', 'music.youtube.com', 'youtu.be']);
     if (parsed.protocol === 'https:' && allowed.has(parsed.hostname.toLowerCase())) target = parsed.href;
   } catch (_) {}
-  return `https://control.andrikmetal.com/open-youtube.html?target=${encodeURIComponent(target)}&v=54.76`;
+  // R212: push notifications open the real YouTube HTTPS link directly.
+  // Android hands it to the installed YouTube app; if no handler exists,
+  // the same URL opens normally in the browser. No intermediate Control page.
+  return target;
 }
 
 function normalizeTitle(value) {

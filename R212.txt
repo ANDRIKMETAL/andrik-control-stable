@@ -1,0 +1,7 @@
+ANDRIK Control R212 — DIRECT YOUTUBE APP
+
+- YouTube notifications open the real YouTube link directly.
+- Public YouTube buttons target the official Android package.
+- If YouTube is not installed, the original HTTPS link opens in the browser.
+- The intermediate “Открываем YouTube” page is removed.
+- R211 KV economy changes are preserved.
