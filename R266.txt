@@ -1,0 +1,7 @@
+R266
+- Update steps 1-4 green eye/glow
+- Step 5 yellow eye/glow
+- Step 6 blue eye/glow
+- After completion immediate green, no gold transition
+- Service, Monitoring, Releases, Discussion forced blue
+- R265 attack-map local glow fix preserved
