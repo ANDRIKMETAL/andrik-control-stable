@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r264",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1785869873346-9974016f18",
-  "release": "R266",
-  "archiveName": "R266-UPDATE-1-4-GREEN-5-YELLOW-6-BLUE-ADMIN-SECTIONS-BLUE-SAFE-FULL.zip",
-  "sourceHead": "29185a63951de7a101c9bfa3a494aa8fe4150299",
-  "backupSha": "29185a63951de7a101c9bfa3a494aa8fe4150299",
-  "backupTag": "control-backup-20260804185747-29185a6-r266-eda1e",
+  "operationId": "publish-1785870439139-47325a180e",
+  "release": "R267",
+  "archiveName": "R267-R256-EYE-BREATH-GLOW-RESTORE-R266-COLORS-SAFE-FULL.zip",
+  "sourceHead": "a7e71d430f3c786759648d2c48af96efd94f9ec8",
+  "backupSha": "a7e71d430f3c786759648d2c48af96efd94f9ec8",
+  "backupTag": "control-backup-20260804190714-a7e71d4-r267-faa2b",
   "autoRecovery": false,
-  "generatedAt": "2026-08-04T18:57:53.346Z"
+  "generatedAt": "2026-08-04T19:07:19.139Z"
 }
