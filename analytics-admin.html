@@ -2302,7 +2302,7 @@ html.live-web-ai-resume-lock .analytics-swipe-viewport{overflow:hidden!important
 })();
 </script>
 
-<script defer src="/assets/control-live-eye-v55-00-r247.js?v=55.00-r247"></script><script defer src="/assets/control-map-exit-guard-r221.js?v=55.00-r221"></script><script defer src="/assets/analytics-touch-swipe-v55-00-r3e.js?v=55.00-r3e"></script><script id="andrik-r3i-map-stability">
+<script defer src="/assets/control-live-eye-v55-00-r254.js?v=55.00-r254"></script><script defer src="/assets/control-map-exit-guard-r221.js?v=55.00-r221"></script><script defer src="/assets/analytics-touch-swipe-v55-00-r3e.js?v=55.00-r3e"></script><script id="andrik-r3i-map-stability">
 (function(){
   function markReady(){
     document.documentElement.setAttribute('data-andrik-map-build','r46');
@@ -3613,5 +3613,98 @@ body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #mapFocusAct
 body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #mapFocusActions.map-focus-actions .map-focus-action{min-height:74px!important;max-height:74px!important;height:74px!important;padding:10px 12px!important;display:flex!important;align-items:center!important;justify-content:center!important;text-align:center!important;line-height:1.12!important;font-size:clamp(.92rem,3.7vw,1.02rem)!important}
 @media (orientation:portrait){body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #mapFocusActions.map-focus-actions{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;width:100%!important}body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #mapFocusActions.map-focus-actions .map-focus-action{border-radius:22px!important}}
 </style>
+
+
+<style id="andrik-r254-country-scroll-visible-final">
+body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top{position:relative!important}
+body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldCountries.is-expanded{
+  display:grid!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  height:min(32dvh,228px)!important;
+  min-height:205px!important;
+  max-height:228px!important;
+  overflow-y:auto!important;
+  overflow-x:hidden!important;
+  overscroll-behavior-y:contain!important;
+  -webkit-overflow-scrolling:touch!important;
+  touch-action:pan-y!important;
+  scrollbar-width:none!important;
+  padding:0 14px 10px 2px!important;
+  border-radius:16px!important;
+}
+body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldCountries.is-expanded::-webkit-scrollbar{width:0!important;height:0!important}
+.country-scroll-rail-r254{
+  position:absolute!important;
+  z-index:80!important;
+  width:7px!important;
+  border-radius:999px!important;
+  background:rgba(4,18,26,.72)!important;
+  border:1px solid rgba(129,221,255,.28)!important;
+  box-shadow:inset 0 0 7px rgba(0,0,0,.7),0 0 10px rgba(95,210,255,.18)!important;
+  pointer-events:none!important;
+  opacity:0!important;
+  transition:opacity .16s ease!important;
+}
+.country-scroll-rail-r254.is-visible{opacity:1!important}
+.country-scroll-thumb-r254{
+  position:absolute!important;
+  left:1px!important;
+  right:1px!important;
+  top:1px!important;
+  min-height:36px!important;
+  border-radius:999px!important;
+  background:linear-gradient(180deg,#9defff 0%,#69ed9e 100%)!important;
+  box-shadow:0 0 9px rgba(118,231,255,.75),0 0 17px rgba(102,239,164,.45)!important;
+  will-change:transform,height!important;
+}
+</style>
+<script id="andrik-r254-country-scroll-visible-final-js">
+(()=>{
+  const init=()=>{
+    const list=document.getElementById('worldCountries');
+    const card=list?.closest('.analytics-map-top');
+    if(!list||!card||card.dataset.r254CountryScroll==='1')return;
+    card.dataset.r254CountryScroll='1';
+    const rail=document.createElement('span');
+    rail.className='country-scroll-rail-r254';
+    rail.setAttribute('aria-hidden','true');
+    rail.innerHTML='<i class="country-scroll-thumb-r254"></i>';
+    card.appendChild(rail);
+    const thumb=rail.firstElementChild;
+    const update=()=>{
+      const expanded=list.classList.contains('is-expanded');
+      const canScroll=list.scrollHeight>list.clientHeight+2;
+      if(!expanded||!canScroll){rail.classList.remove('is-visible');return;}
+      const cardRect=card.getBoundingClientRect();
+      const listRect=list.getBoundingClientRect();
+      const top=listRect.top-cardRect.top;
+      rail.style.top=Math.max(0,top)+'px';
+      rail.style.right='5px';
+      rail.style.height=Math.max(70,list.clientHeight)+'px';
+      const railH=Math.max(70,list.clientHeight);
+      const thumbH=Math.max(36,Math.round(railH*(list.clientHeight/list.scrollHeight)));
+      const maxThumb=Math.max(0,railH-thumbH-2);
+      const maxScroll=Math.max(1,list.scrollHeight-list.clientHeight);
+      const y=Math.round(maxThumb*(list.scrollTop/maxScroll));
+      thumb.style.height=thumbH+'px';
+      thumb.style.transform='translateY('+y+'px)';
+      rail.classList.add('is-visible');
+    };
+    const stop=e=>{if(list.classList.contains('is-expanded'))e.stopPropagation();};
+    list.addEventListener('scroll',update,{passive:true});
+    list.addEventListener('touchstart',stop,{passive:true});
+    list.addEventListener('touchmove',stop,{passive:true});
+    list.addEventListener('pointerdown',stop,{passive:true});
+    list.addEventListener('pointermove',stop,{passive:true});
+    new MutationObserver(()=>requestAnimationFrame(update)).observe(list,{attributes:true,attributeFilter:['class'],childList:true,subtree:true});
+    new ResizeObserver(update).observe(list);
+    addEventListener('resize',update,{passive:true});
+    addEventListener('orientationchange',()=>setTimeout(update,120),{passive:true});
+    setTimeout(update,0);setTimeout(update,250);setTimeout(update,900);
+  };
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
+  addEventListener('pageshow',init,{passive:true});
+})();
+</script>
 
 </body></html>

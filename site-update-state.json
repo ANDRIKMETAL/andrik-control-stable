@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r243",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1785860194664-6731184231",
-  "release": "R253",
-  "archiveName": "R253-PUSH-ONLY-0600-BRATISLAVA-DATE-FIX-SAFE-FULL.zip",
-  "sourceHead": "a4fe252702221c6040dcb3a383e8790db4e33eaa",
-  "backupSha": "a4fe252702221c6040dcb3a383e8790db4e33eaa",
-  "backupTag": "control-backup-20260804161619-a4fe252-r253-5ca8f",
+  "operationId": "publish-1785860785742-8e3caa491b",
+  "release": "R254",
+  "archiveName": "R254-CACHE-COUNTRY-SCROLL-LIVE-EYE-PUSH253-SAFE-FULL.zip",
+  "sourceHead": "02a9b9b9e6648a9d029a29e97c88c91fd7067bee",
+  "backupSha": "02a9b9b9e6648a9d029a29e97c88c91fd7067bee",
+  "backupTag": "control-backup-20260804162618-02a9b9b-r254-693d9",
   "autoRecovery": true,
-  "generatedAt": "2026-08-04T16:16:36.126Z"
+  "generatedAt": "2026-08-04T16:26:25.742Z"
 }

@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R243', number:243, version:'55.00', full:'55.00 LIVE WEB AI FINAL R243 MAP TWO MODE ZIP BACKUP', siteUpdater:'55.00-r243' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R253', number:253, version:'55.00', full:'55.00 LIVE WEB AI FINAL R253 DAILY PUSH ONLY', siteUpdater:'55.00-r253' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -6923,6 +6923,24 @@ async function collectDailyOwnerSummaryFallback(env, window, reason = '') {
   };
 }
 
+async function hasDailyOwnerSummaryForBratislavaDate(db, localDate) {
+  const nextLocalDate = shiftIsoCalendarDate(localDate, 1);
+  const startAt = bratislavaLocalDateTimeToIso(localDate, 0, 0);
+  const endAt = bratislavaLocalDateTimeToIso(nextLocalDate, 0, 0);
+  const row = await db.prepare(`
+    SELECT id, created_at AS createdAt
+    FROM push_history
+    WHERE type = 'daily-summary'
+      AND source = 'central-cron'
+      AND status = 'sent'
+      AND datetime(created_at) >= datetime(?1)
+      AND datetime(created_at) < datetime(?2)
+    ORDER BY datetime(created_at) DESC
+    LIMIT 1
+  `).bind(startAt, endAt).first();
+  return row || null;
+}
+
 async function maybeSendDailyOwnerSummary(env) {
   const clock = getBratislavaClock();
   const afterSix = clock.hour > 6 || (clock.hour === 6 && clock.minute >= 0);
@@ -6933,29 +6951,37 @@ async function maybeSendDailyOwnerSummary(env) {
   const db = requireDb(env);
   await ensurePushAutomationSchema(db);
 
+  // R253 PUSH ONLY: the old 30-hour history check always found yesterday's
+  // 06:00 summary and incorrectly marked today as already sent. Check the
+  // exact Bratislava calendar date instead and repair a poisoned state key.
+  const sentToday = await hasDailyOwnerSummaryForBratislavaDate(db, clock.date);
   const last = await getPushState(db, 'daily-owner-summary-auto-last-date');
-  if (last?.value === clock.date) {
-    return { ok:true, skipped:true, reason:'already-sent', localDate:clock.date };
+
+  if (sentToday) {
+    if (last?.value !== clock.date) {
+      await setPushState(db, 'daily-owner-summary-auto-last-date', clock.date);
+    }
+    return {
+      ok:true,
+      skipped:true,
+      reason:'already-sent-today',
+      localDate:clock.date,
+      sentAt:sentToday.createdAt || ''
+    };
   }
 
-  // R253 PUSH ONLY: check the current Bratislava calendar day exactly.
-  // The former 30-hour lookback also matched yesterday's 06:00 summary and
-  // could suppress today's notification as an apparent duplicate.
-  const localDayStart = bratislavaLocalDateTimeToIso(clock.date, 0, 0);
-  const localDayEnd = bratislavaLocalDateTimeToIso(shiftIsoCalendarDate(clock.date, 1), 0, 0);
-  const alreadyInHistory = await db.prepare(`
-    SELECT 1 AS found
-    FROM push_history
-    WHERE type = 'daily-summary'
-      AND source = 'central-cron'
-      AND status = 'sent'
-      AND datetime(created_at) >= datetime(?)
-      AND datetime(created_at) < datetime(?)
-    LIMIT 1
-  `).bind(localDayStart, localDayEnd).first();
-  if (alreadyInHistory?.found) {
-    await setPushState(db, 'daily-owner-summary-auto-last-date', clock.date);
-    return { ok:true, skipped:true, reason:'history-already-sent-today', localDate:clock.date };
+  if (last?.value === clock.date) {
+    // R252 and earlier could write today's date merely because yesterday's
+    // push existed inside a 30-hour window. Remove that false marker so the
+    // next Cron pass sends the missed summary immediately as a catch-up.
+    await releasePushOnceClaim(db, 'daily-owner-summary-auto-last-date');
+    await recordSystemLog(env, {
+      scope:'daily-summary',
+      level:'warning',
+      event:'false-sent-marker-repaired',
+      message:`Исправлена ложная отметка отправки сводки за ${clock.date}.`,
+      details:{ previousValue:last.value, repairedAt:new Date().toISOString() }
+    }).catch(() => {});
   }
 
   const dailyClaimKey = `push-once:daily-summary-auto:${clock.date}`;
