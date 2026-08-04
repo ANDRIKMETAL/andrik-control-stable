@@ -1,6 +1,6 @@
 (() => {
   'use strict';
-  const VERSION='55.00-r247';
+  const VERSION='55.00-r251';
   const logo=document.getElementById('controlCenterLogo')||document.querySelector('.control-center-logo');
   if(!logo)return;
 
@@ -48,12 +48,12 @@
     html[data-andrik-header-state="red"]{--r244-eye-filter:brightness(1.12) saturate(1.86) hue-rotate(238deg);--r244-eye-a:rgba(255,142,153,.96);--r244-eye-b:rgba(255,39,68,.72);--r244-halo:rgba(255,70,91,.66);--r244-bg1:rgba(255,54,77,.35);--r244-bg2:rgba(170,8,34,.17);--r244-line:#ff98a7;--r244-line-soft:rgba(255,81,101,.92)}
     body.control-page .control-topbar,body.comment-collection-page .control-topbar,.control-topbar{
       position:relative!important;overflow:hidden!important;border-bottom-color:var(--r244-line-soft)!important;
-      background:radial-gradient(ellipse at 50% 50%,var(--r244-bg1) 0%,var(--r244-bg2) 25%,rgba(3,18,14,.94) 48%,#01070a 78%,#010507 100%)!important;
-      box-shadow:0 3px 0 color-mix(in srgb,var(--r244-line) 12%,transparent),0 12px 30px color-mix(in srgb,var(--r244-line) 18%,transparent)!important;
+      background:radial-gradient(ellipse 38% 92% at 50% 50%,var(--r244-bg1) 0%,var(--r244-bg2) 34%,rgba(3,18,14,.90) 58%,transparent 76%),linear-gradient(90deg,#010507 0%,#01090a 34%,#041810 50%,#01090a 66%,#010507 100%)!important;
+      box-shadow:0 3px 0 color-mix(in srgb,var(--r244-line) 12%,transparent),0 10px 25px color-mix(in srgb,var(--r244-line) 13%,transparent)!important;
       animation:andrikR244HeaderPulse 2.45s ease-in-out infinite!important
     }
     body.control-page .control-topbar::before,body.comment-collection-page .control-topbar::before,.control-topbar::before{
-      content:""!important;position:absolute!important;left:24%!important;right:24%!important;top:0!important;bottom:0!important;pointer-events:none!important;
+      content:""!important;position:absolute!important;left:34%!important;right:34%!important;top:0!important;bottom:0!important;pointer-events:none!important;
       background:radial-gradient(ellipse at center,var(--r244-bg1),var(--r244-bg2) 38%,transparent 74%)!important;opacity:.94!important
     }
     body.control-page .control-topbar::after,body.comment-collection-page .control-topbar::after,.control-topbar::after{

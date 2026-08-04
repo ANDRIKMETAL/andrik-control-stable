@@ -427,10 +427,10 @@
         const encoded=encodeURIComponent(item.name);
         const selected=item.name===selectedWorldCountry;
         const flag=countryFlag(item.name,item.code);
-        return `<button type="button" class="world-country-button ${index>=6?'world-country-extra ':''}${selected?'is-selected':''}" data-country="${encoded}" data-code="${escapeHtml(item.code)}" aria-pressed="${selected?'true':'false'}"><span class="world-country-flag" aria-hidden="true">${flag}</span><span class="world-country-name"><span class="world-country-marquee">${escapeHtml(item.name)}</span></span><em>${number(item.value)}</em></button>`;
+        return `<button type="button" class="world-country-button ${index>=4?'world-country-extra ':''}${selected?'is-selected':''}" data-country="${encoded}" data-code="${escapeHtml(item.code)}" aria-pressed="${selected?'true':'false'}"><span class="world-country-flag" aria-hidden="true">${flag}</span><span class="world-country-name"><span class="world-country-marquee">${escapeHtml(item.name)}</span></span><em>${number(item.value)}</em></button>`;
       }).join('');
-      const toggleTop=clean.length>6&&countriesExpanded?`<button class="world-country-toggle is-top-toggle" data-country-toggle type="button" aria-expanded="true">Скрыть список</button>`:'';
-      const toggleBottom=clean.length>6?`<button class="world-country-toggle" data-country-toggle type="button" aria-expanded="${countriesExpanded?'true':'false'}">${countriesExpanded?'Скрыть список':`Показать все страны (${clean.length})`}</button>`:'';
+      const toggleTop=clean.length>4&&countriesExpanded?`<button class="world-country-toggle is-top-toggle" data-country-toggle type="button" aria-expanded="true">Скрыть список</button>`:'';
+      const toggleBottom=clean.length>4?`<button class="world-country-toggle" data-country-toggle type="button" aria-expanded="${countriesExpanded?'true':'false'}">${countriesExpanded?'Скрыть список':`Показать все страны (${clean.length})`}</button>`:'';
       list.classList.toggle('is-expanded',countriesExpanded);
       list.innerHTML=toggleTop+rows+toggleBottom;
       list.querySelectorAll('.world-country-button[data-country]').forEach(button=>{
