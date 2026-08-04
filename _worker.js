@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R225', number:225, version:'55.00', full:'55.00 LIVE WEB AI FINAL R225 HEADER STATE COLORS', siteUpdater:'55.00-r225' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R236', number:236, version:'55.00', full:'55.00 LIVE WEB AI FINAL R236 SECTION HEADER COLORS', siteUpdater:'55.00-r236' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';

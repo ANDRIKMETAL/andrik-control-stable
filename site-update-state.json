@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r225",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1785834702156-1eba56c641",
-  "release": "R234",
-  "archiveName": "R234-MAP-BLOCK-UP-PERSISTENT-CONTROLS-SAFE-ZIP-FULL.zip",
-  "sourceHead": "3c5983f604443ea5a104bfa34dc56dc2e6621098",
-  "backupSha": "3c5983f604443ea5a104bfa34dc56dc2e6621098",
-  "backupTag": "control-backup-20260804091131-3c5983f-r234-6cc3e",
+  "operationId": "publish-1785836105119-9f4e8be369",
+  "release": "R236",
+  "archiveName": "R236-SECTION-HEADER-COLORS-VERSION-SYNC-SAFE-ZIP-FULL.zip",
+  "sourceHead": "0cc2b8987eca9bd2395d8ba8765a7782c9c2c73f",
+  "backupSha": "0cc2b8987eca9bd2395d8ba8765a7782c9c2c73f",
+  "backupTag": "control-backup-20260804093450-0cc2b89-r236-cf201",
   "autoRecovery": true,
-  "generatedAt": "2026-08-04T09:11:42.156Z"
+  "generatedAt": "2026-08-04T09:35:05.119Z"
 }
