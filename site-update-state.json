@@ -1,14 +1,14 @@
 {
   "schema": 1,
-  "updaterVersion": "55.00-r255",
+  "updaterVersion": "55.00-r253",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1785862241208-5f55d14d6d",
-  "release": "R256",
-  "archiveName": "R256-CENTERED-HEADER-ADMIN-BLUE-REAL-COUNTRY-SCROLL-SAFE-FULL.zip",
-  "sourceHead": "5879adb6cc807cce2c4e3b63b45770f85b464941",
-  "backupSha": "5879adb6cc807cce2c4e3b63b45770f85b464941",
-  "backupTag": "control-backup-20260804165033-5879adb-r256-8178a",
+  "operationId": "publish-1785862997256-a76fb2fd63",
+  "release": "R258",
+  "archiveName": "R258-COUNTRY-OVERLAY-SCROLL-ADMIN-BLUE-EYE-SAFE-FULL.zip",
+  "sourceHead": "7fcf51edea88125d468bf6a0a7378c38c1e0917d",
+  "backupSha": "7fcf51edea88125d468bf6a0a7378c38c1e0917d",
+  "backupTag": "control-backup-20260804170303-7fcf51e-r258-92ad1",
   "autoRecovery": true,
-  "generatedAt": "2026-08-04T16:50:41.208Z"
+  "generatedAt": "2026-08-04T17:03:17.256Z"
 }

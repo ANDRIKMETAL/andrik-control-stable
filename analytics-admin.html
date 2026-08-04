@@ -2302,7 +2302,7 @@ html.live-web-ai-resume-lock .analytics-swipe-viewport{overflow:hidden!important
 })();
 </script>
 
-<script defer src="/assets/control-live-eye-v55-00-r256.js?v=55.00-r256"></script><script defer src="/assets/control-map-exit-guard-r221.js?v=55.00-r221"></script><script defer src="/assets/analytics-touch-swipe-v55-00-r3e.js?v=55.00-r3e"></script><script id="andrik-r3i-map-stability">
+<script defer src="/assets/control-live-eye-v55-00-r258.js?v=55.00-r258"></script><script defer src="/assets/control-map-exit-guard-r221.js?v=55.00-r221"></script><script defer src="/assets/analytics-touch-swipe-v55-00-r3e.js?v=55.00-r3e"></script><script id="andrik-r3i-map-stability">
 (function(){
   function markReady(){
     document.documentElement.setAttribute('data-andrik-map-build','r46');
@@ -3682,6 +3682,209 @@ body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #mapFocusAct
   };
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
   addEventListener('pageshow',init,{passive:true});
+})();
+</script>
+
+
+<style id="andrik-r257-landscape-bottom-admin-swipe">
+@media screen and (orientation:landscape){
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .map-end-pull-zone{
+    display:flex!important;
+    position:fixed!important;
+    left:50%!important;
+    right:auto!important;
+    bottom:max(4px,env(safe-area-inset-bottom))!important;
+    z-index:2140!important;
+    width:min(280px,46vw)!important;
+    height:54px!important;
+    min-height:54px!important;
+    margin:0!important;
+    padding:4px 18px 7px!important;
+    transform:translateX(-50%)!important;
+    flex-direction:column!important;
+    align-items:center!important;
+    justify-content:flex-end!important;
+    gap:0!important;
+    overflow:visible!important;
+    pointer-events:auto!important;
+    touch-action:none!important;
+    user-select:none!important;
+    -webkit-user-select:none!important;
+    border:0!important;
+    border-radius:22px 22px 0 0!important;
+    background:linear-gradient(180deg,transparent 0%,rgba(2,13,18,.52) 42%,rgba(2,13,18,.94) 100%)!important;
+    box-shadow:0 -8px 24px rgba(0,0,0,.32)!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .map-end-pull-zone .map-end-pull-spring{
+    display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    width:76px!important;
+    height:22px!important;
+    min-height:22px!important;
+    transform:translateY(calc(-1 * min(var(--r257-admin-pull,0px),22px)))!important;
+    transition:transform .12s ease!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .map-end-pull-zone .map-end-chevron{
+    display:block!important;
+    position:static!important;
+    font-size:1.34rem!important;
+    line-height:1!important;
+    color:#9df3ff!important;
+    text-shadow:0 0 9px rgba(91,220,255,.94),0 0 20px rgba(91,220,255,.62)!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .map-end-pull-zone strong{
+    display:block!important;
+    margin:0!important;
+    font-size:.72rem!important;
+    line-height:1.05!important;
+    letter-spacing:.03em!important;
+    color:#eaffff!important;
+    text-align:center!important;
+    white-space:nowrap!important;
+    text-shadow:0 0 10px rgba(91,220,255,.42)!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .map-end-pull-zone.is-r257-ready .map-end-chevron,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .map-end-pull-zone.is-r257-ready strong{
+    color:#fff4b5!important;
+    text-shadow:0 0 10px rgba(255,215,80,.92),0 0 22px rgba(255,191,42,.58)!important;
+  }
+}
+@media screen and (orientation:portrait){
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .map-end-pull-zone{display:none!important}
+}
+</style>
+<script id="andrik-r257-landscape-bottom-admin-swipe-script">
+(()=>{
+  const bind=()=>{
+    const zone=document.getElementById('mapEndPullZone');
+    const label=document.getElementById('mapEndPullText');
+    if(!zone||zone.dataset.r257Bound==='1')return;
+    zone.dataset.r257Bound='1';
+    let active=false,pointerId=null,startY=0,lastY=0,navigating=false;
+    const isLandscape=()=>matchMedia?.('(orientation:landscape)')?.matches===true;
+    const reset=()=>{
+      active=false;pointerId=null;startY=0;lastY=0;
+      zone.classList.remove('is-r257-ready');
+      zone.style.setProperty('--r257-admin-pull','0px');
+      if(label)label.textContent='Свайп вверх — Админ-панель';
+    };
+    const go=()=>{
+      if(navigating)return;
+      navigating=true;
+      zone.classList.add('is-r257-ready');
+      if(label)label.textContent='Открываем Админ-панель…';
+      setTimeout(()=>location.assign('/control-home.html?page=menu&source=landscape-bottom-swipe&v=55.00-r257'),110);
+    };
+    zone.addEventListener('pointerdown',event=>{
+      if(!isLandscape()||event.isPrimary===false)return;
+      active=true;pointerId=event.pointerId;startY=lastY=event.clientY;
+      try{zone.setPointerCapture(pointerId)}catch(_){}
+      event.preventDefault();event.stopPropagation();
+    },{passive:false});
+    zone.addEventListener('pointermove',event=>{
+      if(!active||event.pointerId!==pointerId)return;
+      lastY=event.clientY;
+      const distance=Math.max(0,startY-lastY);
+      zone.style.setProperty('--r257-admin-pull',`${Math.min(54,distance)}px`);
+      const ready=distance>=44;
+      zone.classList.toggle('is-r257-ready',ready);
+      if(label)label.textContent=ready?'Отпустите — открыть Админ-панель':'Свайп вверх — Админ-панель';
+      event.preventDefault();event.stopPropagation();
+    },{passive:false});
+    const finish=event=>{
+      if(!active||event.pointerId!==pointerId)return;
+      const distance=Math.max(0,startY-(event.clientY||lastY));
+      event.preventDefault();event.stopPropagation();
+      try{zone.releasePointerCapture(pointerId)}catch(_){}
+      if(distance>=44)go();else reset();
+    };
+    zone.addEventListener('pointerup',finish,{passive:false});
+    zone.addEventListener('pointercancel',event=>{event.stopPropagation();reset();},{passive:true});
+    zone.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();},{capture:true});
+    reset();
+  };
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind,{once:true});else bind();
+  addEventListener('pageshow',bind,{passive:true});
+})();
+</script>
+
+
+<style id="andrik-r258-country-overlay-scroll">
+body.andrik-country-overlay-r258-open{overflow:hidden!important;touch-action:none!important}
+.country-scroll-overlay-r258{
+  position:fixed!important;inset:0!important;z-index:2147483000!important;display:none!important;
+  padding:max(86px,calc(env(safe-area-inset-top) + 70px)) 12px max(18px,env(safe-area-inset-bottom))!important;
+  background:rgba(0,5,9,.96)!important;backdrop-filter:blur(16px)!important;-webkit-backdrop-filter:blur(16px)!important;
+  pointer-events:auto!important;touch-action:pan-y!important;overflow:hidden!important;
+}
+.country-scroll-overlay-r258.is-open{display:flex!important;flex-direction:column!important}
+.country-scroll-overlay-r258::before{content:"Все страны";display:block!important;flex:0 0 auto!important;margin:0 0 10px!important;text-align:center!important;color:#dff7ff!important;font-weight:900!important;font-size:1.08rem!important;letter-spacing:.12em!important;text-transform:uppercase!important}
+body .country-scroll-overlay-r258>#worldCountries.is-expanded{
+  position:relative!important;display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  flex:1 1 auto!important;width:100%!important;height:auto!important;min-height:0!important;max-height:none!important;
+  margin:0!important;padding:0 12px 24px 0!important;overflow-y:scroll!important;overflow-x:hidden!important;
+  overscroll-behavior:contain!important;-webkit-overflow-scrolling:touch!important;touch-action:pan-y!important;
+  align-content:start!important;scrollbar-width:auto!important;scrollbar-color:#70efb1 rgba(15,39,50,.85)!important;
+}
+body .country-scroll-overlay-r258>#worldCountries.is-expanded,
+body .country-scroll-overlay-r258>#worldCountries.is-expanded *{touch-action:pan-y!important}
+body .country-scroll-overlay-r258>#worldCountries.is-expanded::-webkit-scrollbar{width:9px!important}
+body .country-scroll-overlay-r258>#worldCountries.is-expanded::-webkit-scrollbar-track{background:rgba(15,39,50,.85)!important;border-radius:999px!important}
+body .country-scroll-overlay-r258>#worldCountries.is-expanded::-webkit-scrollbar-thumb{background:linear-gradient(180deg,#9ceeff,#70efb1)!important;border-radius:999px!important;box-shadow:0 0 12px rgba(112,239,177,.72)!important}
+body .country-scroll-overlay-r258>#worldCountries.is-expanded .world-country-toggle.is-top-toggle{position:sticky!important;top:0!important;z-index:30!important;grid-column:1/-1!important;margin-bottom:6px!important}
+body .country-scroll-overlay-r258>#worldCountries.is-expanded .world-country-toggle:not(.is-top-toggle){grid-column:1/-1!important}
+body .analytics-map-top>.country-scroll-rail-r256{display:none!important}
+@media(max-width:430px){.country-scroll-overlay-r258{padding-left:8px!important;padding-right:8px!important}.country-scroll-overlay-r258::before{font-size:.96rem!important}}
+</style>
+<script id="andrik-r258-country-overlay-scroll-js">
+(()=>{
+  'use strict';
+  if(window.__ANDRIK_COUNTRY_OVERLAY_R258__)return;
+  window.__ANDRIK_COUNTRY_OVERLAY_R258__=true;
+  const boot=()=>{
+    const list=document.getElementById('worldCountries');
+    if(!list||list.dataset.r258OverlayBound==='1')return;
+    list.dataset.r258OverlayBound='1';
+    const home=document.createComment('worldCountries-r258-home');
+    list.parentNode.insertBefore(home,list);
+    const overlay=document.createElement('section');
+    overlay.className='country-scroll-overlay-r258';
+    overlay.setAttribute('aria-label','Полный список стран');
+    document.body.appendChild(overlay);
+    const open=()=>{
+      if(list.parentNode!==overlay)overlay.appendChild(list);
+      overlay.classList.add('is-open');
+      document.body.classList.add('andrik-country-overlay-r258-open');
+      requestAnimationFrame(()=>{list.scrollTop=0;});
+    };
+    const close=()=>{
+      overlay.classList.remove('is-open');
+      document.body.classList.remove('andrik-country-overlay-r258-open');
+      if(home.parentNode)home.parentNode.insertBefore(list,home.nextSibling);
+      list.scrollTop=0;
+    };
+    const sync=()=>{
+      const expanded=list.classList.contains('is-expanded');
+      if(expanded)open();else close();
+    };
+    // The list already owns its own touch scrolling. Stop every outer map/swipe gesture at the overlay boundary.
+    ['touchstart','touchmove','touchend','pointerdown','pointermove','pointerup','wheel'].forEach(type=>{
+      overlay.addEventListener(type,e=>{
+        if(!overlay.classList.contains('is-open'))return;
+        e.stopPropagation();
+      },{capture:false,passive:true});
+    });
+    new MutationObserver(sync).observe(list,{attributes:true,attributeFilter:['class']});
+    document.addEventListener('keydown',e=>{
+      if(e.key==='Escape'&&overlay.classList.contains('is-open')){
+        list.querySelector('[data-country-toggle]')?.click();
+      }
+    });
+    sync();
+  };
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
+  addEventListener('pageshow',boot,{passive:true});
 })();
 </script>
 
