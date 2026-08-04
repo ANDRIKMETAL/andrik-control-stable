@@ -1,7 +1,7 @@
 (() => {
   'use strict';
-  if (window.__ANDRIK_SITE_UPDATE_HEADER_R262__) return;
-  window.__ANDRIK_SITE_UPDATE_HEADER_R262__ = true;
+  if (window.__ANDRIK_SITE_UPDATE_HEADER_R263__) return;
+  window.__ANDRIK_SITE_UPDATE_HEADER_R263__ = true;
 
   const GOLD_MS = 5200;
   let goldUntil = 0;

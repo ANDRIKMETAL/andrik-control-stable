@@ -1,14 +1,14 @@
 {
   "schema": 1,
-  "updaterVersion": "55.00-r261",
+  "updaterVersion": "55.00-r262",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1785865936368-58026cf57e",
-  "release": "R262",
-  "archiveName": "R262-UPDATE-STAGE-EYE-COLORS-GREEN-ZIP-WINRAR-ICON-SAFE-FULL.zip",
-  "sourceHead": "a1fcbdbeb46ae1fe9ee6217c4cb93ba4dc8035db",
-  "backupSha": "a1fcbdbeb46ae1fe9ee6217c4cb93ba4dc8035db",
-  "backupTag": "control-backup-20260804175208-a1fcbdb-r262-49e4d",
+  "operationId": "publish-1785868470396-dfaa5ea389",
+  "release": "R264",
+  "archiveName": "R264-RED-ERROR-EYE-INSTALLER-503-ATTACK-LOCAL-GLOW-SAFE-FULL.zip",
+  "sourceHead": "125c6f1ef715312e0a107220f0a0aaddfe259568",
+  "backupSha": "125c6f1ef715312e0a107220f0a0aaddfe259568",
+  "backupTag": "control-backup-20260804183425-125c6f1-r264-fb786",
   "autoRecovery": true,
-  "generatedAt": "2026-08-04T17:52:16.368Z"
+  "generatedAt": "2026-08-04T18:34:30.396Z"
 }

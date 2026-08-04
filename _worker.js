@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R262', number:262, version:'55.00', full:'55.00 LIVE WEB AI FINAL R262', siteUpdater:'55.00-r262' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R264', number:264, version:'55.00', full:'55.00 LIVE WEB AI FINAL R264', siteUpdater:'55.00-r264' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -8673,38 +8673,55 @@ function siteUpdateBase64(bytes) {
 async function siteUpdateGithubRequest(config, route, options = {}) {
   if (!config.token) throw new Error('github-token-missing');
   const method = options.method || 'GET';
-  const controller = new AbortController();
   const defaultTimeout = method === 'GET' ? 25000 : 150000;
   const timeoutMs = Math.max(5000, Math.min(180000, Number(options.timeoutMs || defaultTimeout)));
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const response = await fetch(`https://api.github.com${route}`, {
-      method,
-      signal:controller.signal,
-      headers: {
-        accept:'application/vnd.github+json',
-        authorization:`Bearer ${config.token}`,
-        'content-type':'application/json',
-        'user-agent':'ANDRIK-Control-Site-Updater-R113',
-        'x-github-api-version':'2022-11-28'
-      },
-      body: options.body === undefined ? undefined : JSON.stringify(options.body)
-    });
-    const text = await response.text();
-    let data = {};
-    try { data = text ? JSON.parse(text) : {}; } catch (_) { data = { message:text }; }
-    if (!response.ok) {
-      const error = new Error(`github-${response.status}:${cleanPlainText(data.message || text || 'request-failed', 300)}`);
-      error.status = response.status; error.details = data;
-      throw error;
+  const retryableRoute = method === 'GET' || method === 'PATCH' ||
+    /\/git\/(?:blobs|trees|commits)(?:\/|$)/.test(route);
+  const attempts = retryableRoute ? 3 : 1;
+  let lastError = null;
+
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const response = await fetch(`https://api.github.com${route}`, {
+        method,
+        signal:controller.signal,
+        headers: {
+          accept:'application/vnd.github+json',
+          authorization:`Bearer ${config.token}`,
+          'content-type':'application/json',
+          'user-agent':'ANDRIK-Control-Site-Updater-R264',
+          'x-github-api-version':'2022-11-28'
+        },
+        body: options.body === undefined ? undefined : JSON.stringify(options.body)
+      });
+      const raw = await response.text();
+      let data = {};
+      try { data = raw ? JSON.parse(raw) : {}; } catch (_) { data = { message:raw }; }
+      if (response.ok) return data;
+
+      const error = new Error(`github-${response.status}:${cleanPlainText(data.message || raw || 'request-failed', 300)}`);
+      error.status = response.status;
+      error.details = data;
+      lastError = error;
+      const transient = [429,500,502,503,504].includes(response.status);
+      if (!transient || attempt >= attempts) throw error;
+      const retryAfter = Math.max(0, Number(response.headers.get('retry-after') || 0) * 1000);
+      await new Promise(resolve => setTimeout(resolve, Math.max(retryAfter, 450 * attempt * attempt)));
+    } catch (error) {
+      const normalized = error?.name === 'AbortError' ? Object.assign(new Error('github-timeout'), { status:504 }) : error;
+      lastError = normalized;
+      const networkTransient = normalized?.name === 'TypeError' ||
+        String(normalized?.message || '') === 'github-timeout' ||
+        [429,500,502,503,504].includes(Number(normalized?.status || 0));
+      if (!retryableRoute || !networkTransient || attempt >= attempts) throw normalized;
+      await new Promise(resolve => setTimeout(resolve, 450 * attempt * attempt));
+    } finally {
+      clearTimeout(timer);
     }
-    return data;
-  } catch (error) {
-    if (error?.name === 'AbortError') throw new Error('github-timeout');
-    throw error;
-  } finally {
-    clearTimeout(timer);
   }
+  throw lastError || new Error('github-timeout');
 }
 
 async function siteUpdateGithubUploadAsset(config, releaseId, fileName, bytes) {
@@ -8764,7 +8781,10 @@ async function siteUpdateGithubSnapshot(config) {
 
 async function siteUpdatePrepareArchive(file) {
   const parsed = await siteUpdateReadZip(await file.arrayBuffer());
-  await Promise.all(parsed.entries.map(async entry => { entry.gitSha = await siteUpdateGitBlobSha(entry.bytes); }));
+  await siteUpdateMapLimit(parsed.entries, 12, async entry => {
+    entry.gitSha = await siteUpdateGitBlobSha(entry.bytes);
+    return entry.gitSha;
+  });
   return parsed;
 }
 
@@ -9320,6 +9340,7 @@ function siteUpdateFriendlyError(error) {
   if (value.startsWith('github-401') || value.startsWith('github-403')) return 'GitHub отклонил токен. Проверьте доступ к обоим репозиториям и право Contents: Read and write.';
   if (value.startsWith('github-404')) return 'GitHub не нашёл репозиторий. Проверьте owner/repo и доступ токена.';
   if (value.startsWith('github-422')) return 'GitHub отклонил операцию: тег уже существует или ветка изменилась. Обновите состояние и повторите.';
+  if (value.startsWith('github-429') || value.startsWith('github-500') || value.startsWith('github-502') || value.startsWith('github-503') || value.startsWith('github-504')) return 'GitHub временно недоступен. Установщик выполнил безопасные повторные попытки; повторите установку тем же ZIP.';
   return cleanPlainText(value, 500);
 }
 
@@ -9363,7 +9384,8 @@ async function handleSiteUpdatePreview(request, env) {
     const config = siteUpdateConfig(env);
     if (!config.token || !siteUpdateConfigValid(config)) throw new Error('github-token-missing');
     const { archive } = await siteUpdateReadArchiveForm(request);
-    const [parsed, snapshot] = await Promise.all([siteUpdatePrepareArchive(archive), siteUpdateGithubSnapshot(config)]);
+    const parsed = await siteUpdatePrepareArchive(archive);
+    const snapshot = await siteUpdateGithubSnapshot(config);
     const diff = siteUpdateCompare(parsed, snapshot, config);
     return json({
       ok:true, version:SITE_UPDATE_VERSION, archiveName:cleanPlainText(archive.name || 'site.zip', 180),
@@ -9463,7 +9485,8 @@ async function handleSiteUpdatePublish(request, env) {
     const backupTag = cleanPlainText(form.get('backupTag') || '', 180);
     const autoRecovery = String(form.get('autoRecovery') || '') === 'yes';
     const forceReinstall = String(form.get('forceReinstall') || '') === 'yes';
-    const [parsed, snapshot] = await Promise.all([siteUpdatePrepareArchive(archive), siteUpdateGithubSnapshot(config)]);
+    const parsed = await siteUpdatePrepareArchive(archive);
+    const snapshot = await siteUpdateGithubSnapshot(config);
     if (expectedHead && /^[0-9a-f]{40}$/i.test(expectedHead) && snapshot.headSha !== expectedHead) throw new Error('branch-changed');
     const diff = siteUpdateCompare(parsed, snapshot, config);
     const touched = [...diff.added, ...diff.changed];
@@ -9490,7 +9513,7 @@ async function handleSiteUpdatePublish(request, env) {
       else binaryEntries.push({ entry, base });
     }
 
-    const createdBinary = await siteUpdateMapLimit(binaryEntries, 4, async item => {
+    const createdBinary = await siteUpdateMapLimit(binaryEntries, 2, async item => {
       const data = await siteUpdateGithubRequest(config, `/repos/${owner}/${repo}/git/blobs`, {
         method:'POST',
         timeoutMs:60000,
@@ -9561,8 +9584,9 @@ async function handleSiteUpdatePublish(request, env) {
     await recordSystemLog(env, { scope:'site-update', level:'error', event:'github-publish-failed',
       message:siteUpdateFriendlyError(error), details:{ raw:cleanPlainText(error?.message || error, 500) }
     }).catch(() => {});
-    const status = error?.status === 422 || String(error?.message || '') === 'branch-changed' ? 409 : 400;
-    return json({ ok:false, error:'publish-failed', message:siteUpdateFriendlyError(error) }, status);
+    const transient = [429,500,502,503,504].includes(Number(error?.status || 0)) || String(error?.message || '') === 'github-timeout';
+    const status = transient ? 503 : (error?.status === 422 || String(error?.message || '') === 'branch-changed' ? 409 : 400);
+    return json({ ok:false, error:'publish-failed', retryable:transient, message:siteUpdateFriendlyError(error) }, status);
   }
 }
 

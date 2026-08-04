@@ -1,8 +1,8 @@
 (() => {
   'use strict';
-  if(window.__ANDRIK_LIVE_EYE_R262__)return;
-  window.__ANDRIK_LIVE_EYE_R262__=true;
-  const VERSION='55.00-r262';
+  if(window.__ANDRIK_LIVE_EYE_R264__)return;
+  window.__ANDRIK_LIVE_EYE_R264__=true;
+  const VERSION='55.00-r264';
   const logo=document.getElementById('controlCenterLogo')||document.querySelector('.control-center-logo');
   if(!logo)return;
 
@@ -15,7 +15,8 @@
   let goldUntil=0;
   let goldLatched=false;
 
-  logo.dataset.r262LiveEye='1';
+  logo.dataset.r264LiveEye='1';
+  logo.dataset.r263LiveEye='1';
   logo.dataset.r260LiveEye='1';
   logo.dataset.r256LiveEye='1';
   logo.dataset.r255LiveEye='1';
@@ -43,7 +44,7 @@
   }
 
   const style=document.createElement('style');
-  style.id='andrik-live-eye-style-r262';
+  style.id='andrik-live-eye-style-r264';
   style.textContent=`
     @keyframes andrikR244EyePulse{0%,100%{transform:translate(-50%,-50%) scale(.9)}50%{transform:translate(-50%,-50%) scale(1.16)}}
     @keyframes andrikR244HaloPulse{0%,100%{transform:translate(-50%,-50%) scale(.7);opacity:.42}50%{transform:translate(-50%,-50%) scale(1.62);opacity:1}}
@@ -52,7 +53,7 @@
     html[data-andrik-header-state="blue"]{--r244-eye-filter:brightness(1.32) saturate(2.05) hue-rotate(74deg);--r244-eye-a:rgba(191,241,255,.99);--r244-eye-b:rgba(82,172,255,.9);--r244-halo:rgba(86,196,255,.82);--r244-bg1:rgba(72,193,255,.24);--r244-bg2:rgba(22,96,216,.11);--r244-line:#b6f2ff;--r244-line-soft:rgba(126,220,255,.98)}
     html[data-andrik-header-state="yellow"]{--r244-eye-filter:brightness(1.34) saturate(2.1) hue-rotate(-72deg);--r244-eye-a:rgba(255,244,181,.99);--r244-eye-b:rgba(255,188,44,.92);--r244-halo:rgba(255,221,98,.84);--r244-bg1:rgba(255,211,78,.24);--r244-bg2:rgba(207,128,10,.10);--r244-line:#fff2b8;--r244-line-soft:rgba(255,220,100,.98)}
     html[data-andrik-header-state="gold"]{--r244-eye-filter:brightness(1.24) saturate(1.84) hue-rotate(-82deg);--r244-eye-a:rgba(255,229,147,.99);--r244-eye-b:rgba(255,154,24,.78);--r244-halo:rgba(255,194,67,.74);--r244-bg1:rgba(255,203,77,.42);--r244-bg2:rgba(199,118,12,.20);--r244-line:#ffe6a0;--r244-line-soft:rgba(255,199,70,.96)}
-    html[data-andrik-header-state="red"]{--r244-eye-filter:brightness(1.12) saturate(1.86) hue-rotate(238deg);--r244-eye-a:rgba(255,142,153,.96);--r244-eye-b:rgba(255,39,68,.72);--r244-halo:rgba(255,70,91,.66);--r244-bg1:rgba(255,54,77,.35);--r244-bg2:rgba(170,8,34,.17);--r244-line:#ff98a7;--r244-line-soft:rgba(255,81,101,.92)}
+    html[data-andrik-header-state="red"]{--r244-eye-filter:grayscale(1) brightness(.82) sepia(1) saturate(8) hue-rotate(314deg) contrast(1.22);--r244-eye-a:rgba(255,174,182,.99);--r244-eye-b:rgba(255,32,58,.94);--r244-halo:rgba(255,48,72,.88);--r244-bg1:rgba(255,42,64,.24);--r244-bg2:rgba(170,8,34,.10);--r244-line:#ff98a7;--r244-line-soft:rgba(255,81,101,.98)}
     html[data-andrik-section-lock="blue"]{--r244-eye-filter:brightness(1.36) saturate(2.15) hue-rotate(74deg);--r244-eye-a:rgba(198,244,255,.99);--r244-eye-b:rgba(74,176,255,.94);--r244-halo:rgba(84,199,255,.88);--r244-bg1:rgba(64,192,255,.28);--r244-bg2:rgba(18,103,220,.12);--r244-line:#baf4ff;--r244-line-soft:rgba(132,224,255,.99)}
     html[data-andrik-section-lock="yellow"]{--r244-eye-filter:brightness(1.36) saturate(2.12) hue-rotate(-72deg);--r244-eye-a:rgba(255,247,190,.99);--r244-eye-b:rgba(255,190,42,.94);--r244-halo:rgba(255,221,91,.88);--r244-bg1:rgba(255,208,58,.26);--r244-bg2:rgba(205,124,8,.11);--r244-line:#fff3b9;--r244-line-soft:rgba(255,222,104,.99)}
     body.control-page .control-topbar,body.comment-collection-page .control-topbar,.control-topbar{
@@ -76,6 +77,10 @@
     .andrik-live-eye-halo-r244{width:146px!important;height:146px!important;border-radius:50%!important;z-index:1!important;background:radial-gradient(circle,var(--r244-halo) 0%,color-mix(in srgb,var(--r244-halo) 62%,transparent) 34%,transparent 74%)!important;filter:blur(12px)!important;animation:andrikR244HaloPulse 1.12s ease-in-out infinite!important}
     .andrik-live-eye-motion-r244 img{position:absolute!important;left:50%!important;top:50%!important;transform:translate(-50%,-50%)!important;transform-origin:50% 50%!important}
     .andrik-live-eye-motion-r244 .logo-ok{display:block!important;opacity:1!important;visibility:visible!important;filter:var(--r244-eye-filter) drop-shadow(0 0 14px var(--r244-eye-a)) drop-shadow(0 0 36px var(--r244-eye-b)) drop-shadow(0 0 56px var(--r244-halo))!important}
+    html[data-andrik-header-state="red"] .andrik-live-eye-motion-r244 .logo-ok{filter:grayscale(1) brightness(.82) sepia(1) saturate(8) hue-rotate(314deg) contrast(1.22) drop-shadow(0 0 15px rgba(255,174,182,.99)) drop-shadow(0 0 38px rgba(255,32,58,.96)) drop-shadow(0 0 60px rgba(255,48,72,.92))!important}
+    /* R264: Attack Map keeps only the local glow emitted by the eye itself. */
+    body.attack-page .control-topbar{background:#01070a!important;box-shadow:none!important;border-bottom-color:rgba(115,145,160,.18)!important;animation:none!important}
+    body.attack-page .control-topbar::before,body.attack-page .control-topbar::after{display:none!important;content:none!important}
     html[data-andrik-section-lock="blue"] body.control-page.control-home-page.r137-eye-motion-page .control-topbar .control-center-logo[data-r3d-live-eye="1"] .andrik-live-eye-motion-r244.andrik-live-eye-motion-r3d .logo-ok{filter:brightness(1.38) saturate(2.22) hue-rotate(74deg) drop-shadow(0 0 15px rgba(198,244,255,.99)) drop-shadow(0 0 38px rgba(74,176,255,.96)) drop-shadow(0 0 58px rgba(84,199,255,.90))!important}
     .andrik-live-eye-motion-r244 .logo-error{display:none!important}
     .andrik-live-eye-overlay-r244{position:fixed!important;inset:0!important;z-index:2147483647!important;display:none!important;place-items:center!important;background:rgba(0,0,0,.96)!important;padding:0!important;overflow:hidden!important}
@@ -122,7 +127,7 @@
 
     // Stage 5 (Site/Deploy) is always yellow while active or waiting for stage 6.
     const deployActive=deploy?.classList.contains('is-running')||deploy?.classList.contains('is-warn');
-    const protectUntouched=protect&&!/is-(?:running|done|warn|error|skipped)/.test(protect.className);
+    const protectUntouched=protect&&!/\bis-(?:running|done|warn|error|skipped)\b/.test(protect.className);
     if(deployActive||(deploy?.classList.contains('is-done')&&protectUntouched))return 'yellow';
 
     if(items.some(x=>x.classList.contains('is-running')))return 'blue';
@@ -131,7 +136,7 @@
     const complete=deploy?.classList.contains('is-done')&&protect?.classList.contains('is-done')&&result?.classList.contains('is-ready');
     if(complete&&!goldLatched){goldLatched=true;goldUntil=Date.now()+5200;}
     if(complete&&Date.now()<goldUntil)return 'gold';
-    if(!items.some(x=>/is-(?:running|done|warn|error|skipped)/.test(x.className))){goldLatched=false;goldUntil=0;}
+    if(!items.some(x=>/\bis-(?:running|done|warn|error|skipped)\b/.test(x.className))){goldLatched=false;goldUntil=0;}
     return 'auto';
   };
 
