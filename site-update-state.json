@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r225",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1785832676549-ea0b85c086",
-  "release": "R232",
-  "archiveName": "R232-UPDATE-HEADER-STATES-DIRECT-SAFE-ZIP-FULL.zip",
-  "sourceHead": "95023e739ebafeb32012e160fd338bb8c7ec41b2",
-  "backupSha": "95023e739ebafeb32012e160fd338bb8c7ec41b2",
-  "backupTag": "control-backup-20260804083745-95023e7-r232-7b4d3",
+  "operationId": "publish-1785833714449-b751fc78ef",
+  "release": "R233",
+  "archiveName": "R233-PORTRAIT-MAP-DIRECT-CONTROLS-FIX-SAFE-ZIP-FULL.zip",
+  "sourceHead": "6b80f24904650fc501dc6c8c075ad96dbd5db216",
+  "backupSha": "6b80f24904650fc501dc6c8c075ad96dbd5db216",
+  "backupTag": "control-backup-20260804085420-6b80f24-r233-ddaac",
   "autoRecovery": true,
-  "generatedAt": "2026-08-04T08:37:56.549Z"
+  "generatedAt": "2026-08-04T08:55:14.449Z"
 }

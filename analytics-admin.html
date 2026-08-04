@@ -4088,4 +4088,169 @@ body:not(.is-country-focus-active) #mapFocusActions,
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot,{once:true}); else boot();
 })();
 </script>
+
+<style id="andrik-r233-portrait-map-direct-controls-fix">
+@media screen and (orientation:portrait){
+  html,body{overflow-x:hidden!important;}
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane>.analytics-pane-wrap.analytics-map-pane-wrap,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane>.analytics-map-pane-wrap.analytics-pane-wrap{
+    overflow-y:hidden!important;
+    overscroll-behavior:none!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top{
+    margin-top:0!important;
+    padding-top:6px!important;
+    padding-bottom:8px!important;
+    min-height:0!important;
+    height:auto!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .world-map-card>.map-landscape-title-row{
+    display:block!important;
+    min-height:0!important;
+    height:auto!important;
+    margin:0 0 6px!important;
+    padding:0!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .world-map-card>.map-landscape-title-row .map-title-pyramid{
+    padding:0!important;
+    margin:0!important;
+    min-height:0!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .world-map-card>.map-landscape-title-row .map-title-pyramid .eyeline,
+  body.analytics-admin-page.analytics-v54-46-page .world-map-card>.map-landscape-title-row .map-title-pyramid h2{display:none!important}
+  body.analytics-admin-page.analytics-v54-46-page #worldMapPeriod{
+    display:block!important;
+    margin:0 0 6px!important;
+    padding:0 2px!important;
+    color:#dbeaf3!important;
+    font-size:.81rem!important;
+    line-height:1.06!important;
+    text-align:left!important;
+    white-space:nowrap!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+    max-width:100%!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap{
+    position:relative!important;
+    margin:0 auto!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap>#worldMapTotal{
+    position:absolute!important;
+    left:10px!important;
+    top:10px!important;
+    right:auto!important;
+    bottom:auto!important;
+    z-index:28!important;
+    opacity:1!important;
+    clip-path:none!important;
+    pointer-events:auto!important;
+    overflow:visible!important;
+    width:auto!important;
+    height:auto!important;
+    min-width:101px!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap>#mapMonthlyOpen{
+    position:absolute!important;
+    right:10px!important;
+    top:10px!important;
+    left:auto!important;
+    bottom:auto!important;
+    z-index:28!important;
+    opacity:1!important;
+    clip-path:none!important;
+    pointer-events:auto!important;
+    overflow:visible!important;
+    width:44px!important;
+    height:44px!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap>#countryGrowthFloatingR62{
+    position:absolute!important;
+    right:10px!important;
+    bottom:10px!important;
+    left:auto!important;
+    top:auto!important;
+    z-index:28!important;
+    display:grid!important;
+    opacity:1!important;
+    clip-path:none!important;
+    pointer-events:auto!important;
+    overflow:visible!important;
+    margin:0!important;
+    transform:none!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap>.map-orientation-fab{
+    position:absolute!important;
+    left:10px!important;
+    bottom:10px!important;
+    top:auto!important;
+    right:auto!important;
+    z-index:28!important;
+    transform:none!important;
+  }
+}
+@media screen and (orientation:landscape){
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .map-orientation-fab{left:14px!important;bottom:52px!important;top:auto!important}
+}
+</style>
+<script id="andrik-r233-portrait-map-direct-controls-fix-script">
+(function(){
+  const q=s=>document.querySelector(s);
+  const isPortrait=()=>window.matchMedia?window.matchMedia('(orientation: portrait)').matches:(window.innerHeight>=window.innerWidth);
+  function ensureGrowthButton(){
+    let btn=document.getElementById('countryGrowthFloatingR62');
+    if(btn)return btn;
+    const source=document.getElementById('countryGrowthToggle');
+    if(!source)return null;
+    btn=document.createElement('button');
+    btn.id='countryGrowthFloatingR62';
+    btn.type='button';
+    btn.textContent='7';
+    btn.setAttribute('aria-label','Рост стран за 7 дней');
+    btn.setAttribute('title','Рост стран за 7 дней');
+    btn.addEventListener('click',e=>{e.preventDefault(); source.click(); setTimeout(sync,60);});
+    document.body.appendChild(btn);
+    return btn;
+  }
+  function sync(){
+    const map=document.getElementById('worldMap');
+    const titleRow=q('.world-map-card > .map-landscape-title-row');
+    const total=document.getElementById('worldMapTotal');
+    const monthly=document.getElementById('mapMonthlyOpen');
+    const growth=ensureGrowthButton();
+    if(!map||!titleRow||!total||!monthly)return;
+    if(isPortrait()){
+      if(total.parentNode!==map) map.appendChild(total);
+      if(monthly.parentNode!==map) map.appendChild(monthly);
+      if(growth&&growth.parentNode!==map) map.appendChild(growth);
+      if(growth){
+        growth.classList.add('is-ui-visible');
+        growth.style.display=document.body.classList.contains('is-country-focus-active')?'none':'grid';
+      }
+    }else{
+      const pyramid=titleRow.querySelector('.map-title-pyramid');
+      if(total.parentNode!==titleRow) titleRow.appendChild(total);
+      if(monthly.parentNode!==titleRow) titleRow.appendChild(monthly);
+      if(growth&&growth.parentNode!==document.body) document.body.appendChild(growth);
+      if(pyramid){ titleRow.insertBefore(pyramid,titleRow.firstChild); }
+      if(growth) growth.style.display='';
+    }
+  }
+  const schedule=()=>requestAnimationFrame(()=>requestAnimationFrame(sync));
+  window.addEventListener('load',schedule,{passive:true});
+  window.addEventListener('resize',schedule,{passive:true});
+  window.addEventListener('orientationchange',()=>setTimeout(schedule,140),{passive:true});
+  document.addEventListener('click',e=>{ if(e.target.closest?.('#mapOrientationFab,#countryGrowthFloatingR62,#mapMonthlyOpen,.world-country-button,.world-country-toggle,[data-country-toggle],.world-map-dot')) setTimeout(schedule,60); },true);
+  document.addEventListener('visibilitychange',()=>{ if(!document.hidden) setTimeout(schedule,80); },{passive:true});
+  const boot=()=>{
+    const bodyObs=new MutationObserver(()=>schedule());
+    bodyObs.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['class','style','hidden','data-analytics-page']});
+    const map=q('#worldMap');
+    if(map){ new MutationObserver(()=>schedule()).observe(map,{childList:true,subtree:false}); }
+    schedule(); setTimeout(schedule,250); setTimeout(schedule,900);
+  };
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot,{once:true}); else boot();
+})();
+</script>
 </body></html>
