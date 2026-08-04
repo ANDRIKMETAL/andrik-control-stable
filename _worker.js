@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R237', number:237, version:'55.00', full:'55.00 LIVE WEB AI FINAL R237 AUTO DEPLOY MAP STABILITY', siteUpdater:'55.00-r237' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R242', number:242, version:'55.00', full:'55.00 LIVE WEB AI FINAL R242 ZIP BACKUP COMMIT RECOVERY', siteUpdater:'55.00-r242' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -8583,7 +8583,8 @@ async function siteUpdateGithubRequest(config, route, options = {}) {
   if (!config.token) throw new Error('github-token-missing');
   const method = options.method || 'GET';
   const controller = new AbortController();
-  const timeoutMs = Math.max(5000, Math.min(60000, Number(options.timeoutMs || (method === 'GET' ? 20000 : 35000))));
+  const defaultTimeout = method === 'GET' ? 25000 : 150000;
+  const timeoutMs = Math.max(5000, Math.min(180000, Number(options.timeoutMs || defaultTimeout)));
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const response = await fetch(`https://api.github.com${route}`, {
@@ -9307,6 +9308,33 @@ async function handleSiteUpdateBackup(request, env) {
   }
 }
 
+
+async function handleSiteUpdateBackupZip(request, env) {
+  if (!adminAuthorized(request, env)) return json({ ok:false, error:'unauthorized' }, 401);
+  if (!isSameOrigin(request)) return json({ ok:false, error:'origin' }, 403);
+  const config = siteUpdateConfig(env);
+  if (!config.token || !siteUpdateConfigValid(config)) return json({ ok:false, error:'github-token-missing', message:'GitHub не настроен.' }, 400);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 180000);
+  try {
+    const head = await siteUpdateGithubHead(config);
+    const owner = encodeURIComponent(config.owner), repo = encodeURIComponent(config.repo), sha = encodeURIComponent(head.headSha);
+    const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/zipball/${sha}`, {
+      signal:controller.signal, redirect:'follow',
+      headers:{accept:'application/vnd.github+json',authorization:`Bearer ${config.token}`,'user-agent':'ANDRIK-Control-ZIP-Backup-R242','x-github-api-version':'2022-11-28'}
+    });
+    if (!response.ok || !response.body) throw new Error(`github-${response.status}:backup-download-failed`);
+    const msg = cleanPlainText(head.commit?.message || '', 240);
+    const release = (msg.toUpperCase().match(/R\d{1,6}/) || ['R242'])[0];
+    const filename = `ANDRIK-BACKUP-${release}-${new Date().toISOString().slice(0,10)}-${head.headSha.slice(0,7)}.zip`;
+    await recordSystemLog(env,{scope:'site-update',level:'info',event:'backup-zip-created',message:`ZIP backup ${filename}`,details:{commitSha:head.headSha,filename}}).catch(()=>{});
+    return new Response(response.body,{status:200,headers:{'content-type':'application/zip','content-disposition':`attachment; filename="${filename}"`,'cache-control':'private, no-store, max-age=0','x-content-type-options':'nosniff'}});
+  } catch(error) {
+    if(error?.name==='AbortError') return json({ok:false,error:'backup-zip-timeout',message:'ZIP-бэкап не успел создаться. Повторите попытку.'},504);
+    return json({ok:false,error:'backup-zip-failed',message:siteUpdateFriendlyError(error)},502);
+  } finally { clearTimeout(timer); }
+}
+
 async function handleSiteUpdatePublish(request, env) {
   if (!adminAuthorized(request, env)) return json({ ok:false, error:'unauthorized' }, 401);
   if (!isSameOrigin(request)) return json({ ok:false, error:'origin' }, 403);
@@ -9942,6 +9970,7 @@ async function routeApi(request, env, ctx) {
     if (path === '/api/control/site-update/status' && request.method === 'GET') return await handleSiteUpdateStatus(request, env);
     if (path === '/api/control/site-update/preview' && request.method === 'POST') return await handleSiteUpdatePreview(request, env);
     if (path === '/api/control/site-update/backup' && request.method === 'POST') return await handleSiteUpdateBackup(request, env);
+    if (path === '/api/control/site-update/backup-zip' && request.method === 'GET') return await handleSiteUpdateBackupZip(request, env);
     if (path === '/api/control/site-update/publish' && request.method === 'POST') return await handleSiteUpdatePublish(request, env);
     if (path === '/api/control/site-update/release' && request.method === 'POST') return await handleSiteUpdateRelease(request, env);
     if (path === '/api/control/site-update/deployment' && request.method === 'GET') return await handleSiteUpdateDeployment(request, env);

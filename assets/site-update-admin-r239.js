@@ -1,10 +1,11 @@
 (() => {
   'use strict';
-  const SITE_UPDATE_UI_VERSION='55.00-r239';
-  const KEY_SESSION='andrik-comments-admin-key',KEY_LOCAL='andrik-comments-admin-key-persistent',AUTO_RECOVERY_KEY='andrik-site-update-auto-recovery',CACHE_REFRESH_PREFIX='andrik-site-update-cache-refresh:',PENDING_DEPLOY_KEY='andrik-site-update-pending-deploy-r239';
+  const SITE_UPDATE_UI_VERSION='55.00-r242';
+  const KEY_SESSION='andrik-comments-admin-key',KEY_LOCAL='andrik-comments-admin-key-persistent',AUTO_RECOVERY_KEY='andrik-site-update-auto-recovery',CACHE_REFRESH_PREFIX='andrik-site-update-cache-refresh:',PENDING_DEPLOY_KEY='andrik-site-update-pending-deploy-r242';
   const byId=id=>document.getElementById(id),keyInput=byId('siteUpdateAdminKey'),archiveInput=byId('siteUpdateArchive'),previewButton=byId('siteUpdatePreview'),publishButton=byId('siteUpdatePublish'),confirmInput=byId('siteUpdateConfirm'),autoRecoveryInput=byId('siteUpdateAutoRecovery');
   let previewData=null,lastRelease='',lastPublish=null,lastOperationId='',operation=false;
   let runtimeAdminKey='',pendingResumeBusy=false,pendingResumeTimer=0;
+  let siteBackupZipFile=null,siteBackupZipUrl='';
   function savePendingDeploy(operationId='',release='',mode='publish'){
     if(!operationId)return;
     try{localStorage.setItem(PENDING_DEPLOY_KEY,JSON.stringify({operationId,release,mode,createdAt:Date.now()}));}catch(_){}
@@ -29,8 +30,15 @@
     return runtimeAdminKey;
   };
   const getKey=()=>captureKey()||(visibleKey()===OWNER_SENTINEL?OWNER_SENTINEL:'');
-  const hasOwnerAccess=()=>Boolean(runtimeAdminKey||visibleKey()===OWNER_SENTINEL||window.AndrikOwnerSession?.isActive?.());
+  const hasOwnerAccess=()=>Boolean(runtimeAdminKey||visibleKey()===OWNER_SENTINEL||window.AndrikOwnerSession?.isActive?.()||window.AndrikOwnerSession?.hasMarker?.()||window.AndrikOwnerSession?.signedToken?.());
   const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+  const withDeadline=(promise,ms,message='Операция не ответила вовремя.')=>{
+    let timer=0;
+    return Promise.race([
+      Promise.resolve(promise),
+      new Promise((_,reject)=>{timer=setTimeout(()=>{const error=new Error(message);error.status=408;reject(error)},Math.max(1000,Number(ms||7000)))})
+    ]).finally(()=>clearTimeout(timer));
+  };
   const setText=(id,text)=>{const el=byId(id);if(el)el.textContent=text};
   const escapeHtml=value=>String(value??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
   const formatBytes=value=>{const n=Number(value||0);if(n<1024)return `${n} Б`;if(n<1024**2)return `${(n/1024).toFixed(1)} КБ`;return `${(n/1024**2).toFixed(2)} МБ`};
@@ -38,16 +46,21 @@
   function saveKey(){captureKey();}
   async function ensureOwnerAccess(){
     const raw=captureKey();
-    if(window.AndrikOwnerSession?.ensure){
-      const data=await window.AndrikOwnerSession.ensure(raw||'');
+    if(!window.AndrikOwnerSession?.ensure)return Boolean(raw||hasOwnerAccess());
+    try{
+      const data=await withDeadline(window.AndrikOwnerSession.ensure(raw||''),6500,'Вход владельца не ответил за 6,5 секунды.');
       if(data?.owner){keyInput.value=OWNER_SENTINEL;return true;}
       if(data?.rawFallback&&raw)return true;
+    }catch(error){
+      // Signed marker/token may remain valid even when the status probe is slow.
+      if(hasOwnerAccess())return true;
+      throw error;
     }
-    return Boolean(raw);
+    return Boolean(raw||hasOwnerAccess());
   }
   function apiTimeout(path,method='GET'){
     if(path.includes('/preview'))return 90000;
-    if(path.includes('/publish'))return 150000;
+    if(path.includes('/publish'))return 300000;
     if(path.includes('/release'))return 150000;
     if(path.includes('/rollback'))return 75000;
     if(path.includes('/finalize'))return 110000;
@@ -115,6 +128,7 @@
     previewButton.disabled=on||!archiveInput.files?.[0]||!hasOwnerAccess();
     publishButton.disabled=on||!canPublishPreview();
     byId('siteUpdateBackupNow').disabled=on;
+    const zipBackupButton=byId('siteUpdateBackupZipCreate');if(zipBackupButton)zipBackupButton.disabled=on;
     byId('siteUpdateHealthCheck').disabled=on;
     byId('siteUpdateCacheClear').disabled=on;
     autoRecoveryInput.disabled=on;
@@ -128,17 +142,10 @@
   }
   let statusRequestId=0;
   async function readStatusWithRetry(){
-    let lastError=null;
-    for(let attempt=1;attempt<=3;attempt++){
-      try{
-        return await api(`/api/control/site-update/status?fresh=${Date.now()}-${attempt}`,{timeoutMs:18000,headers:{'cache-control':'no-cache','x-andrik-status-attempt':String(attempt)}})
-      }catch(error){
-        lastError=error;
-        if(error.status===401||error.status===403||attempt===3)throw error;
-        await sleep(500*attempt)
-      }
-    }
-    throw lastError||new Error('Не удалось проверить подключение.')
+    return api(`/api/control/site-update/status?fresh=${Date.now()}-rescue`,{
+      timeoutMs:12000,
+      headers:{'cache-control':'no-cache','x-andrik-status-attempt':'rescue'}
+    });
   }
   async function loadStatus(){
     const requestId=++statusRequestId;
@@ -155,8 +162,8 @@
     saveKey();
     setState(false,'Проверяем…');
     setText('siteUpdateRepoText','Проверяем ADMIN_KEY и GitHub…');
-    setText('siteUpdateReleaseRepoText','До трёх безопасных попыток');
-    setText('siteUpdateConnectionMessage','2FA GitHub не участвует в API: проверяем ADMIN_KEY, GITHUB_SITE_TOKEN и ветку main.');
+    setText('siteUpdateReleaseRepoText','Быстрая проверка · максимум 12 секунд');
+    setText('siteUpdateConnectionMessage','Проверяем ADMIN_KEY и GitHub. Если сеть медленная, ZIP и ручной backup останутся доступными.');
     try{
       const data=await readStatusWithRetry();
       if(requestId!==statusRequestId)return;
@@ -204,11 +211,13 @@
         byId('siteUpdateSetupCard').hidden=false;
         return
       }
-      setState(false,error.status===408?'Нет ответа':'Ошибка');
-      setText('siteUpdateRepoText',error.status===408?'GitHub временно не ответил':'Проверка подключения не завершена');
-      setText('siteUpdateReleaseRepoText','Нажми «Состояние» ещё раз');
-      setText('siteUpdateConnectionMessage',message);
-      byId('siteUpdateSetupCard').hidden=true
+      setState(true,'Резервный режим');
+      setText('siteUpdateRepoText','GitHub отвечает медленно — интерфейс разблокирован');
+      setText('siteUpdateReleaseRepoText','ZIP и ручной backup доступны');
+      setText('siteUpdateConnectionMessage',`${message} Можно выбрать ZIP или запустить backup; повторная проверка состояния не блокирует страницу.`);
+      byId('siteUpdateSetupCard').hidden=true;
+      previewButton.disabled=operation||!selectedFile()||!hasOwnerAccess();
+      byId('siteUpdateBackupNow').disabled=operation||!hasOwnerAccess()
     }
   }
   archiveInput.addEventListener('change',()=>{
@@ -268,6 +277,82 @@
   confirmInput.addEventListener('change',()=>{publishButton.disabled=operation||!canPublishPreview()});
   async function createBackup(label,manual=false){const data=await api('/api/control/site-update/backup',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({label,manual})});return data}
   async function backupNow(){if(!hasOwnerAccess()||operation)return;setBusy(true);setText('siteUpdateConnectionMessage','Создаём резервную метку…');try{const data=await createBackup(byId('siteUpdateRelease').value||'manual',true);setText('siteUpdateConnectionMessage',data.message);await loadLog()}catch(error){setText('siteUpdateConnectionMessage',`Backup: ${error.message}`)}finally{setBusy(false)}}
+  function backupFilenameFromResponse(response){
+    const disposition=String(response.headers.get('content-disposition')||'');
+    const utf=disposition.match(/filename\*=UTF-8''([^;]+)/i);
+    const plain=disposition.match(/filename="?([^";]+)"?/i);
+    try{return decodeURIComponent((utf?.[1]||plain?.[1]||'').trim())||`ANDRIK-BACKUP-${new Date().toISOString().slice(0,10)}.zip`}catch(_){return plain?.[1]||`ANDRIK-BACKUP-${new Date().toISOString().slice(0,10)}.zip`}
+  }
+  function releaseBackupZipUrl(){
+    if(siteBackupZipUrl){try{URL.revokeObjectURL(siteBackupZipUrl)}catch(_){}}
+    siteBackupZipUrl='';siteBackupZipFile=null;
+  }
+  function setBackupZipReady(file){
+    siteBackupZipFile=file;
+    siteBackupZipUrl=URL.createObjectURL(file);
+    const download=byId('siteUpdateBackupZipDownload'),share=byId('siteUpdateBackupZipShare');
+    if(download){download.disabled=false;download.hidden=false;download.textContent=`Скачать · ${formatBytes(file.size)}`;}
+    if(share){share.disabled=false;share.hidden=false;}
+    setText('siteUpdateBackupZipState',`${file.name} · ${formatBytes(file.size)} · готов к восстановлению`);
+  }
+  async function fetchBackupZip(){
+    await ensureOwnerAccess();
+    const controller=new AbortController();
+    const timer=setTimeout(()=>controller.abort(),180000);
+    try{
+      const raw=runtimeAdminKey;
+      const headers={accept:'application/zip',...(raw?{authorization:`Bearer ${raw}`}:{})};
+      let response=await fetch(`/api/control/site-update/backup-zip?fresh=${Date.now()}`,{credentials:'include',cache:'no-store',headers,signal:controller.signal});
+      if(response.status===401&&runtimeAdminKey){
+        await window.AndrikOwnerSession?.establish?.(runtimeAdminKey).catch(()=>null);
+        response=await fetch(`/api/control/site-update/backup-zip?fresh=${Date.now()}`,{credentials:'include',cache:'no-store',headers:{accept:'application/zip',authorization:`Bearer ${runtimeAdminKey}`},signal:controller.signal});
+      }
+      if(!response.ok){
+        const data=await response.json().catch(()=>({}));
+        throw new Error(data.message||data.error||`HTTP ${response.status}`);
+      }
+      const blob=await response.blob();
+      if(!blob.size)throw new Error('Получен пустой ZIP-бэкап.');
+      const filename=backupFilenameFromResponse(response);
+      return new File([blob],filename,{type:'application/zip',lastModified:Date.now()});
+    }catch(error){
+      if(error?.name==='AbortError')throw new Error('ZIP-бэкап не успел создаться за 3 минуты. Повторите попытку.');
+      throw error;
+    }finally{clearTimeout(timer)}
+  }
+  async function createDownloadableZipBackup(){
+    if(operation)return;
+    const button=byId('siteUpdateBackupZipCreate');
+    if(button)button.disabled=true;
+    setText('siteUpdateBackupZipState','Собираем точную ZIP-копию текущего Commit…');
+    try{
+      releaseBackupZipUrl();
+      const file=await fetchBackupZip();
+      setBackupZipReady(file);
+    }catch(error){
+      setText('siteUpdateBackupZipState',`Ошибка ZIP-бэкапа: ${error.message}`);
+    }finally{if(button)button.disabled=false}
+  }
+  function downloadZipBackup(){
+    if(!siteBackupZipFile||!siteBackupZipUrl)return;
+    const link=document.createElement('a');link.href=siteBackupZipUrl;link.download=siteBackupZipFile.name;link.rel='noopener';document.body.appendChild(link);link.click();link.remove();
+    setText('siteUpdateBackupZipState',`${siteBackupZipFile.name} сохранён в загрузки.`);
+  }
+  async function shareZipBackup(){
+    if(!siteBackupZipFile)return;
+    try{
+      if(navigator.share&&(!navigator.canShare||navigator.canShare({files:[siteBackupZipFile]}))){
+        await navigator.share({title:'ANDRIK — ZIP-бэкап сайта',text:'Полная резервная копия сайта для восстановления через Control.',files:[siteBackupZipFile]});
+        setText('siteUpdateBackupZipState','ZIP-бэкап передан в системное меню «Поделиться».');
+        return;
+      }
+      downloadZipBackup();
+      setText('siteUpdateBackupZipState','Телефон не поддерживает передачу ZIP напрямую. Архив скачан — поделитесь им из папки «Загрузки».');
+    }catch(error){
+      if(error?.name!=='AbortError')setText('siteUpdateBackupZipState',`Не удалось поделиться: ${error.message}`);
+    }
+  }
+
   async function createRelease(file,publishData){const form=new FormData();form.append('archive',file,file.name);form.append('release',byId('siteUpdateRelease').value.trim());form.append('commitSha',publishData.commitSha||'');form.append('added',String(publishData.added||0));form.append('changed',String(publishData.changed||0));form.append('deleted',String(publishData.deleted||0));return api('/api/control/site-update/release',{method:'POST',body:form})}
   async function readDirectDeployMarker(operationId=''){
     if(!operationId)return null;
@@ -575,7 +660,7 @@
       form.append('autoRecovery',autoRecoveryInput.checked?'yes':'no');
       form.append('forceReinstall',reinstall?'yes':'no');
       form.append('confirm','yes');
-      publishData=await api('/api/control/site-update/publish',{method:'POST',body:form});
+      publishData=await api('/api/control/site-update/publish',{method:'POST',body:form,timeoutMs:300000});
       if(publishData.noChanges){
         stage('commit','done');stage('release','skipped');stage('deploy','skipped');
         setResultState('done','Без изменений');setText('siteUpdateResultTitle','Изменений нет');setText('siteUpdateResultText',publishData.message);return
@@ -729,7 +814,7 @@
       setBusy(false);
     }
   }
-  byId('siteUpdateVerify').addEventListener('click',loadStatus);byId('siteUpdateRefresh').addEventListener('click',loadStatus);byId('siteUpdateBackupNow').addEventListener('click',backupNow);byId('siteUpdateHealthCheck').addEventListener('click',manualHealthCheck);byId('siteUpdateCacheClear').addEventListener('click',()=>clearControlRuntimeCaches({reload:true,release:'R239',manual:true}));autoRecoveryInput.addEventListener('change',()=>{try{localStorage.setItem(AUTO_RECOVERY_KEY,autoRecoveryInput.checked?'1':'0')}catch(_){};setText('siteUpdateHealthMessage',autoRecoveryInput.checked?'Автооткат включён: критический сбой вернёт предыдущий backup.':'Автооткат выключен: проверка останется активной.');});previewButton.addEventListener('click',preview);
+  byId('siteUpdateVerify').addEventListener('click',loadStatus);byId('siteUpdateRefresh').addEventListener('click',loadStatus);byId('siteUpdateBackupNow').addEventListener('click',backupNow);byId('siteUpdateBackupZipCreate')?.addEventListener('click',createDownloadableZipBackup);byId('siteUpdateBackupZipDownload')?.addEventListener('click',downloadZipBackup);byId('siteUpdateBackupZipShare')?.addEventListener('click',shareZipBackup);byId('siteUpdateHealthCheck').addEventListener('click',manualHealthCheck);byId('siteUpdateCacheClear').addEventListener('click',()=>clearControlRuntimeCaches({reload:true,release:'R242',manual:true}));autoRecoveryInput.addEventListener('change',()=>{try{localStorage.setItem(AUTO_RECOVERY_KEY,autoRecoveryInput.checked?'1':'0')}catch(_){};setText('siteUpdateHealthMessage',autoRecoveryInput.checked?'Автооткат включён: критический сбой вернёт предыдущий backup.':'Автооткат выключен: проверка останется активной.');});previewButton.addEventListener('click',preview);
   let lastPublishGesture=0;
   const startPublishFromGesture=event=>{
     if(event){event.preventDefault();event.stopPropagation();}
@@ -746,7 +831,7 @@
     if(event.pointerType==='touch'||event.pointerType==='pen')startPublishFromGesture(event);
   },{capture:true,passive:false});
   publishButton.addEventListener('touchend',startPublishFromGesture,{capture:true,passive:false});
-  window.AndrikSiteUpdateR239={preview,publish,start:startPublishFromGesture,resume:resumePendingDeploy,checkDeploy:checkDeployNow,version:SITE_UPDATE_UI_VERSION};window.AndrikSiteUpdateR238=window.AndrikSiteUpdateR239;window.AndrikSiteUpdateR237=window.AndrikSiteUpdateR239;window.AndrikSiteUpdateR232=window.AndrikSiteUpdateR239;window.AndrikSiteUpdateR195=window.AndrikSiteUpdateR239;byId('siteUpdateHistoryRefresh').addEventListener('click',()=>Promise.allSettled([loadStatus(),loadHistory(),loadLog()]));byId('siteUpdateCheckDeploy').addEventListener('click',()=>checkDeployNow());keyInput.addEventListener('input',()=>{captureKey();previewButton.disabled=operation||!selectedFile()||!hasOwnerAccess()});keyInput.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();loadStatus()}});resetStages();
+  window.AndrikSiteUpdateR242={preview,publish,start:startPublishFromGesture,resume:resumePendingDeploy,checkDeploy:checkDeployNow,createZipBackup:createDownloadableZipBackup,version:SITE_UPDATE_UI_VERSION};window.AndrikSiteUpdateR241=window.AndrikSiteUpdateR242;window.AndrikSiteUpdateR240=window.AndrikSiteUpdateR242;window.AndrikSiteUpdateR239=window.AndrikSiteUpdateR242;window.AndrikSiteUpdateR238=window.AndrikSiteUpdateR242;window.AndrikSiteUpdateR237=window.AndrikSiteUpdateR242;window.AndrikSiteUpdateR232=window.AndrikSiteUpdateR242;window.AndrikSiteUpdateR195=window.AndrikSiteUpdateR242;byId('siteUpdateHistoryRefresh').addEventListener('click',()=>Promise.allSettled([loadStatus(),loadHistory(),loadLog()]));byId('siteUpdateCheckDeploy').addEventListener('click',()=>checkDeployNow());keyInput.addEventListener('input',()=>{captureKey();previewButton.disabled=operation||!selectedFile()||!hasOwnerAccess()});keyInput.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();loadStatus()}});resetStages();
   window.addEventListener('andrik-owner-session',event=>{
     if(event.detail?.active){
       keyInput.value=OWNER_SENTINEL;
@@ -754,7 +839,7 @@
     }
   });
   (async()=>{
-    try{await window.AndrikOwnerSession?.ready?.();}catch(_){}
+    try{await withDeadline(window.AndrikOwnerSession?.ready?.(),7000,'Сессия владельца отвечает медленно.');}catch(_){}
     if(window.AndrikOwnerSession?.isActive?.()){
       keyInput.value=OWNER_SENTINEL;
       loadStatus();
