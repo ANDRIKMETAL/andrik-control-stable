@@ -1,14 +1,14 @@
 {
   "schema": 1,
-  "updaterVersion": "55.00-r220",
+  "updaterVersion": "55.00-r223",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1785819074381-59615a45ea",
-  "release": "R223",
-  "archiveName": "R223.zip",
-  "sourceHead": "0e54856c45de28a50a4f91fdc67e10b991351d6b",
-  "backupSha": "0e54856c45de28a50a4f91fdc67e10b991351d6b",
-  "backupTag": "control-backup-20260804045100-0e54856-r223-93207",
+  "operationId": "publish-1785822313503-56026b702b",
+  "release": "R225",
+  "archiveName": "R225-HEADER-STATE-COLORS-FULL.zip",
+  "sourceHead": "209aa3e5ddbacfeee34a40199b4b45c5500f6f57",
+  "backupSha": "209aa3e5ddbacfeee34a40199b4b45c5500f6f57",
+  "backupTag": "control-backup-20260804054502-209aa3e-r225-dfa60",
   "autoRecovery": true,
-  "generatedAt": "2026-08-04T04:51:15.916Z"
+  "generatedAt": "2026-08-04T05:45:13.503Z"
 }
