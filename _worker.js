@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R220', number:220, version:'55.00', full:'55.00 LIVE WEB AI FINAL R220 MAP EXIT GUARD + VIDEO CROP', siteUpdater:'55.00-r220' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R223', number:223, version:'55.00', full:'55.00 LIVE WEB AI FINAL R223 FULL 4S AUTO RETURN', siteUpdater:'55.00-r223' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
