@@ -1,14 +1,14 @@
 {
   "schema": 1,
   "updaterVersion": "55.00-r243",
-  "operation": "reinstall",
-  "reinstall": true,
-  "operationId": "reinstall-1785852539956-a0df1d20dc",
-  "release": "R245",
-  "archiveName": "R245-R244-BASE-R237-UPDATER-VISIBLE-ZIP-BACKUP-SAFE-FULL.zip",
-  "sourceHead": "2d038efcb401ee310bde3671af86ecf1f80e113d",
-  "backupSha": "2d038efcb401ee310bde3671af86ecf1f80e113d",
-  "backupTag": "control-backup-20260804140854-2d038ef-r245-0c4c4",
+  "operation": "publish",
+  "reinstall": false,
+  "operationId": "publish-1785853074473-637c92d47c",
+  "release": "R246",
+  "archiveName": "R246-PORTRAIT-MAP-COMPACT-LIFT-CENTERED-CALENDAR-SAFE-FULL.zip",
+  "sourceHead": "a0e65bbc8e598893b72c04aa198361420c027cef",
+  "backupSha": "a0e65bbc8e598893b72c04aa198361420c027cef",
+  "backupTag": "control-backup-20260804141747-a0e65bb-r246-5138f",
   "autoRecovery": true,
-  "generatedAt": "2026-08-04T14:08:59.956Z"
+  "generatedAt": "2026-08-04T14:17:54.473Z"
 }
