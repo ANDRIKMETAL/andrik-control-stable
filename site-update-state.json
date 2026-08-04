@@ -1,14 +1,14 @@
 {
   "schema": 1,
-  "updaterVersion": "55.00-r243",
+  "updaterVersion": "55.00-r253",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1785860785742-8e3caa491b",
-  "release": "R254",
-  "archiveName": "R254-CACHE-COUNTRY-SCROLL-LIVE-EYE-PUSH253-SAFE-FULL.zip",
-  "sourceHead": "02a9b9b9e6648a9d029a29e97c88c91fd7067bee",
-  "backupSha": "02a9b9b9e6648a9d029a29e97c88c91fd7067bee",
-  "backupTag": "control-backup-20260804162618-02a9b9b-r254-693d9",
+  "operationId": "publish-1785861673529-d4537ee619",
+  "release": "R255",
+  "archiveName": "R255-EYE-VIDEO-ADMIN-BLUE-ATTACK-CENTER-COUNTRY-HARD-SCROLL-SAFE-FULL.zip",
+  "sourceHead": "133af0e85f1f71a211c1ca2609f9deade9b68e9a",
+  "backupSha": "133af0e85f1f71a211c1ca2609f9deade9b68e9a",
+  "backupTag": "control-backup-20260804164105-133af0e-r255-33415",
   "autoRecovery": true,
-  "generatedAt": "2026-08-04T16:26:25.742Z"
+  "generatedAt": "2026-08-04T16:41:13.529Z"
 }
