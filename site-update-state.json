@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r225",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1785833714449-b751fc78ef",
-  "release": "R233",
-  "archiveName": "R233-PORTRAIT-MAP-DIRECT-CONTROLS-FIX-SAFE-ZIP-FULL.zip",
-  "sourceHead": "6b80f24904650fc501dc6c8c075ad96dbd5db216",
-  "backupSha": "6b80f24904650fc501dc6c8c075ad96dbd5db216",
-  "backupTag": "control-backup-20260804085420-6b80f24-r233-ddaac",
+  "operationId": "publish-1785834702156-1eba56c641",
+  "release": "R234",
+  "archiveName": "R234-MAP-BLOCK-UP-PERSISTENT-CONTROLS-SAFE-ZIP-FULL.zip",
+  "sourceHead": "3c5983f604443ea5a104bfa34dc56dc2e6621098",
+  "backupSha": "3c5983f604443ea5a104bfa34dc56dc2e6621098",
+  "backupTag": "control-backup-20260804091131-3c5983f-r234-6cc3e",
   "autoRecovery": true,
-  "generatedAt": "2026-08-04T08:55:14.449Z"
+  "generatedAt": "2026-08-04T09:11:42.156Z"
 }
