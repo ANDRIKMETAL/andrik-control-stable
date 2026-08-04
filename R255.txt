@@ -1,7 +1,11 @@
-R255 — EYE TAP + ADMIN BLUE + ATTACK CENTER GLOW + HARD COUNTRY SCROLL
+ANDRIK Control v55.00 FINAL R255
 
-- Fixes eye video opening: removes pointerup/click double-trigger that immediately closed the overlay.
-- Locks Control/Admin pages to blue eye/header state.
-- Keeps Attack Map yellow but centers the glow and removes the left-side flare.
-- Adds manual pointer-based scrolling for the expanded country list and draggable visible rail.
-- Preserves R253 push fix, R254 cache pages, updater and Worker logic.
+FIXES:
+- Eye video opens reliably from a single click/tap; removed pointerup+click double firing.
+- Admin panel and Protection eye + full header glow are locked blue.
+- Attack Map eye + full header glow are locked yellow; legacy off-center pseudo halo disabled.
+- Website update stage 5 (Site/Deploy) is yellow for both eye and glow.
+- Website update stage 6 (Protection) is blue for both eye and glow.
+- All-country list has one native portrait scroll owner; page swipe no longer steals the gesture.
+- Visible scrollbar is synchronized and can also be dragged.
+- Displayed release/meta/aria/fallback/Worker version updated to R255.

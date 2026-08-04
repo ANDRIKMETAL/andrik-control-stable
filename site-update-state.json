@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r253",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1785861673529-d4537ee619",
+  "operationId": "publish-1785862078014-0afd4393ab",
   "release": "R255",
-  "archiveName": "R255-EYE-VIDEO-ADMIN-BLUE-ATTACK-CENTER-COUNTRY-HARD-SCROLL-SAFE-FULL.zip",
-  "sourceHead": "133af0e85f1f71a211c1ca2609f9deade9b68e9a",
-  "backupSha": "133af0e85f1f71a211c1ca2609f9deade9b68e9a",
-  "backupTag": "control-backup-20260804164105-133af0e-r255-33415",
+  "archiveName": "R255-EYE-VIDEO-STAGE-COUNTRY-SCROLL-SAFE-FULL.zip",
+  "sourceHead": "015bdac1b80bb7e161680680e2cbcf04683f2dcf",
+  "backupSha": "015bdac1b80bb7e161680680e2cbcf04683f2dcf",
+  "backupTag": "control-backup-20260804164749-015bdac-r255-99cea",
   "autoRecovery": true,
-  "generatedAt": "2026-08-04T16:41:13.529Z"
+  "generatedAt": "2026-08-04T16:47:59.935Z"
 }
