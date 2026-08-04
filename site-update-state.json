@@ -1,14 +1,14 @@
 {
   "schema": 1,
-  "updaterVersion": "55.00-r262",
-  "operation": "publish",
-  "reinstall": false,
-  "operationId": "publish-1785868470396-dfaa5ea389",
+  "updaterVersion": "55.00-r264",
+  "operation": "reinstall",
+  "reinstall": true,
+  "operationId": "reinstall-1785868633355-9df7b99323",
   "release": "R264",
   "archiveName": "R264-RED-ERROR-EYE-INSTALLER-503-ATTACK-LOCAL-GLOW-SAFE-FULL.zip",
-  "sourceHead": "125c6f1ef715312e0a107220f0a0aaddfe259568",
-  "backupSha": "125c6f1ef715312e0a107220f0a0aaddfe259568",
-  "backupTag": "control-backup-20260804183425-125c6f1-r264-fb786",
-  "autoRecovery": true,
-  "generatedAt": "2026-08-04T18:34:30.396Z"
+  "sourceHead": "508828bed673d40b0c768030191311b228fdac6c",
+  "backupSha": "508828bed673d40b0c768030191311b228fdac6c",
+  "backupTag": "control-backup-20260804183708-508828b-r264-5f54f",
+  "autoRecovery": false,
+  "generatedAt": "2026-08-04T18:37:13.355Z"
 }
