@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r225",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1785824657837-009e267dcf",
-  "release": "R226",
-  "archiveName": "R226-PORTRAIT-MAP-HEIGHT-ORIENTATION-FAB-FULL.zip",
-  "sourceHead": "fa32371217148d129e1cf8122d69af84b89cbd9b",
-  "backupSha": "fa32371217148d129e1cf8122d69af84b89cbd9b",
-  "backupTag": "control-backup-20260804062406-fa32371-r226-d6268",
+  "operationId": "publish-1785829550204-c0bd3aae79",
+  "release": "R229",
+  "archiveName": "R229-LANDSCAPE-ROTATE-BUTTON-UP-SAFE-ZIP-FULL.zip",
+  "sourceHead": "9f362b7441de6a4f1ce754e27509bcbe8ffeeebf",
+  "backupSha": "9f362b7441de6a4f1ce754e27509bcbe8ffeeebf",
+  "backupTag": "control-backup-20260804074542-9f362b7-r229-cfd16",
   "autoRecovery": true,
-  "generatedAt": "2026-08-04T06:24:17.837Z"
+  "generatedAt": "2026-08-04T07:45:50.204Z"
 }

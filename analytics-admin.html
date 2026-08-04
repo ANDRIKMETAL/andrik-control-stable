@@ -851,8 +851,90 @@ body > #countryGrowthPanel.country-growth-panel:not([hidden]) #countryGrowthClos
   }
 }
 @media screen and (orientation:landscape){
-  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .map-orientation-fab{top:auto!important;bottom:10px!important;transform:none!important}
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .map-orientation-fab{top:auto!important;bottom:24px!important;left:14px!important;transform:none!important}
   body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .map-orientation-fab:active{transform:scale(.97)!important}
+}
+</style>
+
+<style id="andrik-r227-portrait-map-fit-corners">
+@media screen and (orientation:portrait){
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane>.analytics-pane-wrap.analytics-map-pane-wrap,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane>.analytics-map-pane-wrap.analytics-pane-wrap{
+    overflow-y:hidden!important;
+    padding-bottom:0!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top{
+    position:relative!important;
+    margin-top:4px!important;
+    padding-top:10px!important;
+    padding-bottom:12px!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .world-map-card>.map-landscape-title-row{
+    position:relative!important;
+    min-height:0!important;
+    height:auto!important;
+    margin:0 0 4px!important;
+    padding:0!important;
+    display:block!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .world-map-card>.map-landscape-title-row .map-title-pyramid{
+    min-height:0!important;
+    padding:0!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .world-map-card>.map-landscape-title-row .map-title-pyramid .eyeline,
+  body.analytics-admin-page.analytics-v54-46-page .world-map-card>.map-landscape-title-row .map-title-pyramid h2{
+    display:none!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .world-map-card>.map-landscape-title-row .map-title-pyramid p{
+    display:block!important;
+    margin:0 0 4px!important;
+    padding:0 2px!important;
+    color:#dbeaf3!important;
+    font-size:.81rem!important;
+    line-height:1.08!important;
+    text-align:left!important;
+    white-space:nowrap!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .world-map-card>.map-landscape-title-row > .world-map-total,
+  body.analytics-admin-page.analytics-v54-46-page .world-map-card>.map-landscape-title-row > .map-monthly-open{
+    position:absolute!important;
+    z-index:24!important;
+    margin:0!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap{
+    margin:2px auto 0!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .map-orientation-fab{
+    left:10px!important;
+    bottom:10px!important;
+    top:auto!important;
+    transform:none!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .map-orientation-fab:active{
+    transform:scale(.97)!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .world-country-list{
+    margin-top:6px!important;
+    gap:5px!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .world-country-list .world-country-button{
+    height:36px!important;
+    min-height:36px!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .world-country-toggle{
+    margin-top:5px!important;
+    min-height:36px!important;
+    height:36px!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #countryGrowthFloatingR62{
+    right:auto!important;
+    bottom:auto!important;
+    left:0!important;
+    top:0!important;
+  }
 }
 </style>
 
@@ -3586,6 +3668,61 @@ body:not(.is-country-focus-active) #mapFocusActions,
     }catch(_){}
   },{passive:true});
   setButtonState();
+})();
+</script>
+
+<script id="andrik-r227-portrait-map-corners-script">
+(function(){
+  const portraitQuery=window.matchMedia?window.matchMedia('(orientation: portrait)'):null;
+  const isPortrait=()=>portraitQuery?portraitQuery.matches:(window.innerHeight>=window.innerWidth);
+  function place(){
+    const card=document.querySelector('.analytics-map-top');
+    const map=document.getElementById('worldMap');
+    const total=document.getElementById('worldMapTotal');
+    const monthly=document.getElementById('mapMonthlyOpen');
+    const growth=document.getElementById('countryGrowthFloatingR62');
+    if(!card||!map||!total||!monthly)return;
+    if(!isPortrait()){
+      total.style.left=''; total.style.top=''; total.style.right='';
+      monthly.style.left=''; monthly.style.top=''; monthly.style.right='';
+      if(growth){growth.style.left=''; growth.style.top='';}
+      return;
+    }
+    const mapLeft=map.offsetLeft||0;
+    const mapTop=map.offsetTop||0;
+    const mapWidth=map.offsetWidth||0;
+    const cardWidth=card.clientWidth||0;
+    total.style.left=(mapLeft+10)+'px';
+    total.style.top=(mapTop+10)+'px';
+    total.style.right='auto';
+    monthly.style.top=(mapTop+8)+'px';
+    monthly.style.right=(Math.max(0,cardWidth-(mapLeft+mapWidth))+8)+'px';
+    monthly.style.left='auto';
+    if(growth){
+      const rect=map.getBoundingClientRect();
+      growth.style.left=Math.round(rect.right-54-10)+'px';
+      growth.style.top=Math.round(rect.bottom-54-10)+'px';
+    }
+  }
+  const schedule=()=>requestAnimationFrame(()=>requestAnimationFrame(place));
+  window.addEventListener('load',schedule,{passive:true});
+  window.addEventListener('resize',schedule,{passive:true});
+  window.addEventListener('orientationchange',()=>setTimeout(schedule,120),{passive:true});
+  document.addEventListener('fullscreenchange',schedule,{passive:true});
+  document.addEventListener('click',event=>{
+    if(event.target.closest?.('#countryGrowthFloatingR62,#mapOrientationFab,#mapMonthlyOpen,.world-country-toggle,[data-country-toggle]'))setTimeout(schedule,60);
+  },{passive:true});
+  if(portraitQuery){
+    if(typeof portraitQuery.addEventListener==='function')portraitQuery.addEventListener('change',schedule);
+    else if(typeof portraitQuery.addListener==='function')portraitQuery.addListener(schedule);
+  }
+  const map=document.getElementById('worldMap');
+  if(map&&window.MutationObserver){
+    new MutationObserver(()=>schedule()).observe(map,{childList:true,subtree:false});
+  }
+  setTimeout(schedule,50);
+  setTimeout(schedule,260);
+  setTimeout(schedule,900);
 })();
 </script>
 </body></html>
