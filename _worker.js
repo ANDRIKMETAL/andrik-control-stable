@@ -7078,6 +7078,7 @@ async function maybeSendDailyOwnerSummary(env) {
       source:'central-cron',
       windowKey:summaryWindow?.key || metrics?.windowKey || ''
     }));
+    await persistControlHomeHighWaterFromMetricsR260(db, summaryWindow?.key || metrics?.windowKey || '', metrics);
     await recordSystemLog(env, {
       scope:'daily-summary',
       level:metrics.partial ? 'warning' : 'info',
@@ -7137,6 +7138,7 @@ async function handleManualDailyOwnerSummary(request, env) {
       source:'manual-control',
       windowKey:metrics?.windowKey || ''
     }));
+    await persistControlHomeHighWaterFromMetricsR260(db, metrics?.windowKey || getBratislavaSummaryWindow().key, metrics);
     await recordSystemLog(env, {
       scope:'daily-summary', level:'info', event:'manual-sent',
       message:`Ежедневная сводка отправлена вручную за ${clock.date}.`,
@@ -7218,6 +7220,56 @@ function parseStoredDailySummaryMetrics(row) {
   } catch (_) { return {}; }
 }
 
+function parseStoredDailySummaryMetricsForWindow(row, windowKey) {
+  if (!row?.value || !windowKey) return {};
+  try {
+    const parsed = JSON.parse(row.value || '{}') || {};
+    const storedKey = cleanPlainText(parsed?.windowKey || parsed?.metrics?.windowKey || '', 40);
+    if (storedKey !== windowKey) return {};
+    return parsed?.metrics && typeof parsed.metrics === 'object' ? parsed.metrics : {};
+  } catch (_) { return {}; }
+}
+
+function parseDailySummaryMetricsForWindow(row, windowKey) {
+  if (!row || !windowKey) return {};
+  let details = {};
+  try { details = JSON.parse(row?.detailsJson || row?.details_json || '{}') || {}; }
+  catch (_) { details = {}; }
+  const metrics = details?.metrics && typeof details.metrics === 'object' ? details.metrics : {};
+  const storedKey = cleanPlainText(details?.windowKey || metrics?.windowKey || '', 40);
+  return storedKey === windowKey ? metrics : {};
+}
+
+async function persistControlHomeHighWaterFromMetricsR260(db, windowKey, metrics = {}) {
+  if (!windowKey) return;
+  const key = `control-home-high-water-r213:${windowKey}`;
+  const previousRow = await getPushState(db, key).catch(() => null);
+  const previous = parseControlHomeHighWaterR213(previousRow);
+  const incoming = normalizeControlHomeSummaryR213({
+    websiteUsers:Number(metrics?.siteUsers || 0),
+    websiteViews:Number(metrics?.siteViews || 0),
+    siteSubscribers:Number(metrics?.siteSubscribers || 0),
+    siteComments:Number(metrics?.siteComments || 0),
+    siteLikes:Number(metrics?.siteLikes || 0),
+    youtubeComments:Number(metrics?.youtubeComments || 0),
+    youtubeSubscribers:Number(metrics?.youtubeSubscribers || 0),
+    youtubeLikes:Number(metrics?.youtubeLikes || 0),
+    youtubeViews:Number(metrics?.youtubeViewDelta || 0),
+    youtubeViewDelta:Number(metrics?.youtubeViewDelta || 0),
+    releases:Number(metrics?.releases || 0),
+    countryDeltas:Array.isArray(metrics?.countryDeltas) ? metrics.countryDeltas : [],
+    totalCountries:Number(metrics?.totalCountries || 0),
+    countryDate:metrics?.countryDate || ''
+  });
+  const merged = mergeControlHomeSummaryR213(previous, incoming);
+  await setPushState(db, key, JSON.stringify({
+    windowKey,
+    summary:merged,
+    updatedAt:new Date().toISOString(),
+    source:'daily-accumulator-r260'
+  })).catch(() => {});
+}
+
 function mergeDailyMetrics(...sources) {
   const merged = {};
   for (const source of sources) {
@@ -7296,8 +7348,8 @@ async function handleControlHome(request, env) {
   const forceRefresh = new URL(request.url).searchParams.get('refresh') === '1';
   const window = getBratislavaSummaryWindow();
   await Promise.all([ensurePushAutomationSchema(db), ensureCommentsV4Schema(db), ensurePlatformAnalyticsSchema(db), ensureControlV1Schema(db), ensureSiteMetricsSchema(db)]);
-  // The daily screen uses a fixed Bratislava window: 06:05 → next 06:05.
-  // At the cutoff all counters become zero, then grow only inside the new window.
+  // R260 DAILY ACCUMULATOR: the screen uses one Bratislava window, 06:05 → next 06:05.
+  // Sending a push only records a checkpoint. It never resets counters; only the window key changes at 06:05.
   const [siteSubscribers, siteComments, siteLikes, youtubeEvents, youtubeLikeRows, youtubeSubscriberRows, releases, latestYoutubeState, activityResult, ytLatest, ytBaseline, gaLatest, gaBaseline, gaRollover, automationAt, automationStatus, automationSummary, siteLive, siteWindow, latestDailySummaryState, latestDailySummaryPush, latestDailySummaryLog] = await Promise.all([
     db.prepare(`SELECT COUNT(*) AS total FROM push_history WHERE type='site-subscriber' AND datetime(created_at) >= datetime(?1)`).bind(window.startAt).first(),
     db.prepare(`SELECT COUNT(*) AS total FROM comments WHERE datetime(created_at) >= datetime(?1)`).bind(window.startAt).first(),
@@ -7368,11 +7420,14 @@ async function handleControlHome(request, env) {
     .map(item => ({ ...item, delta:item.value }));
   const youtubeViewDelta = ytBaseline ? Math.max(0, Number(ytNow.views || 0) - Number(ytStart.views || 0)) : 0;
   const youtubeSubscriberDelta = ytBaseline ? Math.max(0, Number(ytNow.subscribers || 0) - Number(ytStart.subscribers || 0)) : 0;
+  const storedPushMetrics = parseStoredDailySummaryMetricsForWindow(latestDailySummaryState, window.key);
+  const historyPushMetrics = parseDailySummaryMetricsForWindow(latestDailySummaryPush, window.key);
+  const logPushMetrics = parseDailySummaryMetricsForWindow(latestDailySummaryLog, window.key);
   const pushMetrics = mergeDailyMetrics(
-    parseStoredDailySummaryMetrics(latestDailySummaryState),
-    parseDailySummaryMetrics(latestDailySummaryPush),
-    parseDailySummaryMetrics(latestDailySummaryLog),
-    parseDailySummaryMessageMetrics(latestDailySummaryPush)
+    storedPushMetrics,
+    historyPushMetrics,
+    logPushMetrics,
+    Object.keys(historyPushMetrics).length ? parseDailySummaryMessageMetrics(latestDailySummaryPush) : {}
   );
   const liveCountryDeltas = youtubeDailyCountries.slice(0,4);
   const pushCountryDeltas = Array.isArray(pushMetrics?.countryDeltas) ? pushMetrics.countryDeltas.slice(0,4) : [];

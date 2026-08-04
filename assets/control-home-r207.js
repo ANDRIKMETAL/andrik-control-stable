@@ -434,8 +434,8 @@
         renderSummary(stable);
       }
       if($('controlHomeUpdated'))$('controlHomeUpdated').textContent='Сводка отправлена ✓';
-      // Refresh the numbers in the background; never hold or move the action button.
-      setTimeout(()=>load({silent:true,forceLive:true}).catch(()=>{}),700);
+      // R260: the push is only a checkpoint. Keep the accumulated high-water values on screen;
+      // the normal 2-minute refresh will merge new events without repainting temporary zeros.
       setTimeout(()=>{
         if(label)label.textContent='Отправить сводку';
         button?.classList.remove('is-success');

@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r253",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1785863503756-57be26453c",
-  "release": "R259",
-  "archiveName": "R259-LIVE-EYE-BREATH-RESTORE-APP-VERSION-259-SAFE-FULL.zip",
-  "sourceHead": "a63047263d182b07b41b7c7535bcacd741969b5a",
-  "backupSha": "a63047263d182b07b41b7c7535bcacd741969b5a",
-  "backupTag": "control-backup-20260804171138-a630472-r259-14269",
+  "operationId": "publish-1785864135410-2fed73f83d",
+  "release": "R260",
+  "archiveName": "R260-DAILY-0605-ACCUMULATOR-R256-EYE-RESTORE-SAFE-FULL.zip",
+  "sourceHead": "662eaaa53a1fe6283aebd738909e781e227acd3d",
+  "backupSha": "662eaaa53a1fe6283aebd738909e781e227acd3d",
+  "backupTag": "control-backup-20260804172211-662eaaa-r260-a872e",
   "autoRecovery": true,
-  "generatedAt": "2026-08-04T17:11:43.756Z"
+  "generatedAt": "2026-08-04T17:22:15.410Z"
 }
