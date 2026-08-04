@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r243",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1785853554604-f023bff231",
-  "release": "R247",
-  "archiveName": "R247-EYE-WIDE-R237-LANDSCAPE-ZIP-ORDER-BACKUP-FIX-SAFE-FULL.zip",
-  "sourceHead": "20ea77cbdd98c9802cb4bd9b8da38b0b304e9f06",
-  "backupSha": "20ea77cbdd98c9802cb4bd9b8da38b0b304e9f06",
-  "backupTag": "control-backup-20260804142549-20ea77c-r247-344be",
+  "operationId": "publish-1785855437072-60d3768446",
+  "release": "R248",
+  "archiveName": "R248-GLOBAL-EYE-ZIP-SHARE-MAP-CONTROLS-ROTATION-SAFE-FULL.zip",
+  "sourceHead": "2526e562e0546be916a3894dc3f3b198efc5319a",
+  "backupSha": "2526e562e0546be916a3894dc3f3b198efc5319a",
+  "backupTag": "control-backup-20260804145710-2526e56-r248-b3e54",
   "autoRecovery": true,
-  "generatedAt": "2026-08-04T14:25:54.604Z"
+  "generatedAt": "2026-08-04T14:57:17.072Z"
 }

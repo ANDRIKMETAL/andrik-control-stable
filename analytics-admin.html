@@ -952,7 +952,7 @@ html.live-web-ai-resume-lock .analytics-swipe-viewport{overflow:hidden!important
 
 </head>
 <body class="trika-standalone-page comments-admin-page control-page analytics-admin-page analytics-swipe-page analytics-v54-33-page analytics-v54-46-page">
-<nav class="topbar control-topbar control-detail-topbar"><div class="wrap nav-shell analytics-topbar-minimal"><a class="control-center-logo" id="controlCenterLogo" href="https://andrikmetal.com/" aria-label="Открыть главный сайт ANDRIK"><img class="logo-ok" src="/assets/control-topbar-eye-triangle.jpg" alt=""/><img class="logo-error" src="/assets/andrik-control-red-triangle-192.png" alt=""/></a></div></nav>
+<nav class="topbar control-topbar control-detail-topbar"><div class="wrap nav-shell analytics-topbar-minimal"><a class="control-center-logo" id="controlCenterLogo" aria-label="Открыть живую анимацию ANDRIK"><img class="logo-ok" src="/assets/control-topbar-eye-triangle.jpg" alt=""/><img class="logo-error" src="/assets/andrik-control-red-triangle-192.png" alt=""/></a></div></nav>
 <div id="r179FocusedMapAdminSwipe" aria-hidden="true"><span class="r179-focused-map-handle">⌃ Свайп вверх · Админ</span></div>
 <main class="analytics-swipe-main" id="analyticsSwipeMain">
   <div class="analytics-pull-indicator" id="analyticsDownIndicator" aria-hidden="true"><i></i><span>Свайп сверху вниз делает обновление</span></div>
@@ -2302,7 +2302,7 @@ html.live-web-ai-resume-lock .analytics-swipe-viewport{overflow:hidden!important
 })();
 </script>
 
-<script defer src="/assets/control-live-eye-v55-00-r247.js?v=55.00-r247"></script><script defer src="/assets/control-map-exit-guard-r221.js?v=55.00-r221"></script><script defer src="/assets/analytics-touch-swipe-v55-00-r3e.js?v=55.00-r3e"></script><script id="andrik-r3i-map-stability">
+<script defer src="/assets/control-live-eye-v55-00-r248.js?v=55.00-r248"></script><script defer src="/assets/control-map-exit-guard-r221.js?v=55.00-r221"></script><script defer src="/assets/analytics-touch-swipe-v55-00-r3e.js?v=55.00-r3e"></script><script id="andrik-r3i-map-stability">
 (function(){
   function markReady(){
     document.documentElement.setAttribute('data-andrik-map-build','r46');
@@ -3268,41 +3268,9 @@ html.live-web-ai-resume-lock .analytics-swipe-viewport{overflow:hidden!important
 })();
 </script>
 
-<script id="andrik-r237-map-orientation-runtime">
-(function(){
-  const isLandscape=()=>window.matchMedia?window.matchMedia('(orientation: landscape)').matches:(innerWidth>innerHeight);
-  function syncGrowth(){
-    const source=document.getElementById('countryGrowthToggle');
-    const panel=document.getElementById('countryGrowthPanel');
-    const button=document.getElementById('mapGrowthFabR237');
-    if(!button)return;
-    const open=Boolean(panel&&!panel.hidden&&panel.getAttribute('aria-hidden')!=='true');
-    button.classList.toggle('is-open',open);
-    button.setAttribute('aria-expanded',String(open));
-    button.style.display=document.body.classList.contains('is-country-focus-active')?'none':'';
-  }
-  async function enterLandscape(){
-    try{if(!document.fullscreenElement&&document.documentElement.requestFullscreen)await document.documentElement.requestFullscreen({navigationUI:'hide'});}catch(_){}
-    try{if(screen.orientation&&screen.orientation.lock)await screen.orientation.lock('landscape');}catch(_){}
-  }
-  async function returnPortrait(){
-    try{if(screen.orientation&&screen.orientation.lock)await screen.orientation.lock('portrait');}catch(_){}
-    try{if(document.fullscreenElement&&document.exitFullscreen)await document.exitFullscreen();}catch(_){}
-  }
-  document.addEventListener('click',event=>{
-    const rotate=event.target.closest?.('#mapOrientationFab');
-    if(rotate){event.preventDefault();isLandscape()?returnPortrait():enterLandscape();return;}
-    if(event.target.closest?.('#mapGrowthFabR237,#countryGrowthToggle,#countryGrowthClose'))setTimeout(syncGrowth,30);
-  },true);
-  window.addEventListener('orientationchange',()=>setTimeout(syncGrowth,120),{passive:true});
-  window.addEventListener('pageshow',syncGrowth,{passive:true});
-  window.addEventListener('andrik:country-focus-changed',syncGrowth);
-  setTimeout(syncGrowth,0);
-})();
-</script>
 
 
-<script defer src="/assets/control-version-sync-r247.js?v=55.00-r247"></script>
+<script defer src="/assets/control-version-sync-r248.js?v=55.00-r248"></script>
 
 
 <style id="andrik-r243-map-two-mode-final">
@@ -3543,6 +3511,190 @@ body>#countryGrowthPanel.country-growth-panel:not([hidden]) #countryGrowthClose,
   const schedule=()=>[0,70,220,650,1500].forEach(ms=>setTimeout(force,ms));
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',schedule,{once:true});else schedule();
   addEventListener('pageshow',schedule,{passive:true});addEventListener('orientationchange',schedule,{passive:true});addEventListener('resize',()=>setTimeout(force,80),{passive:true});
+})();
+</script>
+
+
+<style id="andrik-r248-map-controls-final">
+/* R248 — stable close control, country-list scroll and compact focus actions. */
+#mapMonthlyModal:not([hidden]) .map-monthly-panel{
+  position:relative!important;
+  padding-bottom:66px!important;
+}
+#mapMonthlyModal:not([hidden]) .map-monthly-content{
+  padding-bottom:12px!important;
+  max-height:calc(100dvh - 160px - max(18px,env(safe-area-inset-top)) - max(18px,env(safe-area-inset-bottom)))!important;
+}
+#mapMonthlyModal:not([hidden]) #mapMonthlyClose{
+  position:absolute!important;
+  top:auto!important;
+  left:auto!important;
+  right:12px!important;
+  bottom:10px!important;
+  width:50px!important;
+  min-width:50px!important;
+  max-width:50px!important;
+  height:50px!important;
+  min-height:50px!important;
+  max-height:50px!important;
+  margin:0!important;
+  padding:0 0 3px!important;
+  z-index:120!important;
+  display:grid!important;
+  place-items:center!important;
+  border:1.5px solid rgba(91,237,180,.94)!important;
+  border-radius:50%!important;
+  background:radial-gradient(circle at 35% 28%,rgba(24,67,84,.99),rgba(4,17,25,.99) 72%)!important;
+  color:#f4fbff!important;
+  font:800 2rem/1 Arial,Helvetica,sans-serif!important;
+  box-shadow:0 8px 22px rgba(0,0,0,.55),0 0 20px rgba(70,232,174,.30)!important;
+  transform:none!important;
+}
+@media screen and (orientation:portrait){
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldCountries.is-expanded{
+    display:grid!important;
+    max-height:min(48dvh,430px)!important;
+    overflow-y:auto!important;
+    overflow-x:hidden!important;
+    overscroll-behavior:contain!important;
+    touch-action:pan-y!important;
+    -webkit-overflow-scrolling:touch!important;
+    padding-right:3px!important;
+    scrollbar-gutter:stable!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldCountries.is-expanded .world-country-toggle.is-top-toggle{
+    position:sticky!important;
+    top:0!important;
+    z-index:12!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #mapFocusActions.map-focus-actions:not([hidden]){
+    display:grid!important;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:8px!important;
+    width:100%!important;
+    margin:7px 0 0!important;
+    padding:0!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #mapFocusActions .map-focus-action{
+    display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    box-sizing:border-box!important;
+    width:100%!important;
+    min-width:0!important;
+    height:66px!important;
+    min-height:66px!important;
+    max-height:66px!important;
+    margin:0!important;
+    padding:8px 10px!important;
+    border-radius:18px!important;
+    font-size:clamp(.78rem,3.4vw,.92rem)!important;
+    font-weight:850!important;
+    line-height:1.12!important;
+    text-align:center!important;
+    white-space:normal!important;
+  }
+}
+@media screen and (orientation:landscape){
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #mapEndPullZone{
+    height:38px!important;
+    min-height:38px!important;
+    bottom:0!important;
+    pointer-events:auto!important;
+    touch-action:none!important;
+  }
+}
+</style>
+<script id="andrik-r248-map-runtime">
+(() => {
+  'use strict';
+  if (window.__andrikMapR248) return;
+  window.__andrikMapR248 = true;
+
+  const isLandscape = () => window.matchMedia?.('(orientation: landscape)')?.matches === true;
+  const list = document.getElementById('worldCountries');
+  if (list) {
+    const stopMapGesture = event => {
+      if (!list.classList.contains('is-expanded')) return;
+      event.stopPropagation();
+    };
+    list.addEventListener('pointerdown', stopMapGesture);
+    list.addEventListener('touchstart', stopMapGesture, {passive:true});
+    list.addEventListener('wheel', stopMapGesture, {passive:true});
+  }
+
+  const lock = async mode => {
+    const landscape = mode === 'landscape';
+    try {
+      if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
+        await document.documentElement.requestFullscreen({navigationUI:'hide'});
+      }
+    } catch (_) {}
+    try {
+      if (screen.orientation?.lock) {
+        try { await screen.orientation.lock(landscape ? 'landscape-primary' : 'portrait-primary'); }
+        catch (_) { await screen.orientation.lock(landscape ? 'landscape' : 'portrait'); }
+      }
+    } catch (_) {}
+    if (!landscape) {
+      setTimeout(async () => {
+        try { if (document.fullscreenElement && document.exitFullscreen) await document.exitFullscreen(); } catch (_) {}
+      }, 180);
+    }
+  };
+
+  let rotationBusy = false;
+  document.addEventListener('pointerup', async event => {
+    const button = event.target.closest?.('#mapOrientationFab');
+    if (!button || rotationBusy) return;
+    event.preventDefault();
+    event.stopPropagation();
+    rotationBusy = true;
+    await lock(isLandscape() ? 'portrait' : 'landscape');
+    setTimeout(() => { rotationBusy = false; }, 650);
+  }, true);
+  document.addEventListener('click', event => {
+    if (event.target.closest?.('#mapOrientationFab')) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+  }, true);
+
+  const zone = document.getElementById('mapEndPullZone');
+  if (zone) {
+    let drag = null;
+    const reset = () => { drag = null; zone.classList.remove('is-ready'); };
+    zone.addEventListener('pointerdown', event => {
+      if (!isLandscape() || event.isPrimary === false) return;
+      drag = {id:event.pointerId,x:event.clientX,y:event.clientY,lastY:event.clientY};
+      try { zone.setPointerCapture(event.pointerId); } catch (_) {}
+      event.preventDefault();
+      event.stopPropagation();
+    }, {passive:false});
+    zone.addEventListener('pointermove', event => {
+      if (!drag || drag.id !== event.pointerId) return;
+      drag.lastY = event.clientY;
+      const dx = event.clientX - drag.x;
+      const dy = event.clientY - drag.y;
+      const ready = Math.abs(dy) >= 54 && Math.abs(dy) > Math.abs(dx) * 1.08;
+      zone.classList.toggle('is-ready', ready);
+      event.preventDefault();
+      event.stopPropagation();
+    }, {passive:false});
+    const finish = event => {
+      if (!drag || (event && drag.id !== event.pointerId)) return;
+      const dx = (event?.clientX ?? drag.x) - drag.x;
+      const dy = (event?.clientY ?? drag.lastY) - drag.y;
+      const valid = Math.abs(dy) >= 54 && Math.abs(dy) > Math.abs(dx) * 1.08;
+      try { if (event) zone.releasePointerCapture(event.pointerId); } catch (_) {}
+      event?.preventDefault?.();
+      event?.stopPropagation?.();
+      reset();
+      if (valid) location.assign('/control-home.html?page=menu&source=map-bottom-swipe&v=55.00-r248');
+    };
+    zone.addEventListener('pointerup', finish, {passive:false});
+    zone.addEventListener('pointercancel', reset, {passive:true});
+  }
 })();
 </script>
 

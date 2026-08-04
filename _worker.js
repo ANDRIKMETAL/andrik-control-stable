@@ -9321,11 +9321,11 @@ async function handleSiteUpdateBackupZip(request, env) {
     try { head = await siteUpdateGithubHead(config); } catch (_) {}
     const ref = head?.headSha || config.branch || 'main';
     const owner = encodeURIComponent(config.owner), repo = encodeURIComponent(config.repo), encodedRef = encodeURIComponent(ref);
-    const headers = {accept:'application/vnd.github+json',authorization:`Bearer ${config.token}`,'user-agent':'ANDRIK-Control-ZIP-Backup-R247','x-github-api-version':'2022-11-28'};
+    const headers = {accept:'application/vnd.github+json',authorization:`Bearer ${config.token}`,'user-agent':'ANDRIK-Control-ZIP-Backup-R248','x-github-api-version':'2022-11-28'};
     const attempts = [
       [`https://api.github.com/repos/${owner}/${repo}/zipball/${encodedRef}`, headers],
-      [`https://codeload.github.com/${owner}/${repo}/zip/${encodedRef}`, {authorization:`Bearer ${config.token}`,'user-agent':'ANDRIK-Control-ZIP-Backup-R247'}],
-      [`https://codeload.github.com/${owner}/${repo}/zip/refs/heads/${encodeURIComponent(config.branch || 'main')}`, {authorization:`Bearer ${config.token}`,'user-agent':'ANDRIK-Control-ZIP-Backup-R247'}]
+      [`https://codeload.github.com/${owner}/${repo}/zip/${encodedRef}`, {authorization:`Bearer ${config.token}`,'user-agent':'ANDRIK-Control-ZIP-Backup-R248'}],
+      [`https://codeload.github.com/${owner}/${repo}/zip/refs/heads/${encodeURIComponent(config.branch || 'main')}`, {authorization:`Bearer ${config.token}`,'user-agent':'ANDRIK-Control-ZIP-Backup-R248'}]
     ];
     let archiveResponse = null;
     let lastStatus = 0;
@@ -9344,7 +9344,7 @@ async function handleSiteUpdateBackupZip(request, env) {
     if (archiveBytes.byteLength > SITE_UPDATE_MAX_ZIP_BYTES) throw new Error('zip-size');
     const sha = head?.headSha || ref;
     const msg = cleanPlainText(head?.commit?.message || '', 240);
-    const release = (msg.toUpperCase().match(/R\d{1,6}/) || ['R247'])[0];
+    const release = (msg.toUpperCase().match(/R\d{1,6}/) || ['R248'])[0];
     const short = /^[0-9a-f]{7,40}$/i.test(sha) ? sha.slice(0,7) : 'current';
     const filename = `ANDRIK-BACKUP-${release}-${new Date().toISOString().slice(0,10)}-${short}.zip`;
     await recordSystemLog(env,{scope:'site-update',level:'info',event:'backup-zip-created',message:`ZIP backup ${filename}`,details:{commitSha:sha,filename,bytes:archiveBytes.byteLength}}).catch(()=>{});
