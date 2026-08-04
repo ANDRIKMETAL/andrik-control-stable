@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r264",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1785870439139-47325a180e",
-  "release": "R267",
-  "archiveName": "R267-R256-EYE-BREATH-GLOW-RESTORE-R266-COLORS-SAFE-FULL.zip",
-  "sourceHead": "a7e71d430f3c786759648d2c48af96efd94f9ec8",
-  "backupSha": "a7e71d430f3c786759648d2c48af96efd94f9ec8",
-  "backupTag": "control-backup-20260804190714-a7e71d4-r267-faa2b",
+  "operationId": "publish-1785870568425-7aa8c72048",
+  "release": "R265",
+  "archiveName": "R265-STAGE-COLORS-GREEN-1-4-YELLOW-5-BLUE-6-ATTACK-GLOW-FIX-SAFE-FULL.zip",
+  "sourceHead": "473cdbd7789b9694813edd01b9e76bdae8b8fa58",
+  "backupSha": "473cdbd7789b9694813edd01b9e76bdae8b8fa58",
+  "backupTag": "control-backup-20260804190923-473cdbd-r265-b3c92",
   "autoRecovery": false,
-  "generatedAt": "2026-08-04T19:07:19.139Z"
+  "generatedAt": "2026-08-04T19:09:28.425Z"
 }
