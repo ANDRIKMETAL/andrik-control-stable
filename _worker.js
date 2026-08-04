@@ -9315,36 +9315,42 @@ async function handleSiteUpdateBackupZip(request, env) {
   const config = siteUpdateConfig(env);
   if (!config.token || !siteUpdateConfigValid(config)) return json({ ok:false, error:'github-token-missing', message:'GitHub не настроен.' }, 400);
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 90000);
+  const timer = setTimeout(() => controller.abort(), 120000);
   try {
-    const head = await siteUpdateGithubHead(config);
-    const owner = encodeURIComponent(config.owner), repo = encodeURIComponent(config.repo), sha = encodeURIComponent(head.headSha);
-    const apiUrl = `https://api.github.com/repos/${owner}/${repo}/zipball/${sha}`;
-    let archiveResponse = await fetch(apiUrl, {
-      signal:controller.signal,
-      redirect:'manual',
-      headers:{accept:'application/vnd.github+json',authorization:`Bearer ${config.token}`,'user-agent':'ANDRIK-Control-ZIP-Backup-R246','x-github-api-version':'2022-11-28'}
-    });
-    if (archiveResponse.status >= 300 && archiveResponse.status < 400) {
-      const location = archiveResponse.headers.get('location');
-      if (!location) throw new Error('github-archive-location-missing');
-      archiveResponse = await fetch(location,{signal:controller.signal,redirect:'follow',headers:{'user-agent':'ANDRIK-Control-ZIP-Backup-R246'}});
+    let head = null;
+    try { head = await siteUpdateGithubHead(config); } catch (_) {}
+    const ref = head?.headSha || config.branch || 'main';
+    const owner = encodeURIComponent(config.owner), repo = encodeURIComponent(config.repo), encodedRef = encodeURIComponent(ref);
+    const headers = {accept:'application/vnd.github+json',authorization:`Bearer ${config.token}`,'user-agent':'ANDRIK-Control-ZIP-Backup-R247','x-github-api-version':'2022-11-28'};
+    const attempts = [
+      [`https://api.github.com/repos/${owner}/${repo}/zipball/${encodedRef}`, headers],
+      [`https://codeload.github.com/${owner}/${repo}/zip/${encodedRef}`, {authorization:`Bearer ${config.token}`,'user-agent':'ANDRIK-Control-ZIP-Backup-R247'}],
+      [`https://codeload.github.com/${owner}/${repo}/zip/refs/heads/${encodeURIComponent(config.branch || 'main')}`, {authorization:`Bearer ${config.token}`,'user-agent':'ANDRIK-Control-ZIP-Backup-R247'}]
+    ];
+    let archiveResponse = null;
+    let lastStatus = 0;
+    for (const [url, attemptHeaders] of attempts) {
+      try {
+        const response = await fetch(url,{signal:controller.signal,redirect:'follow',headers:attemptHeaders});
+        lastStatus = response.status;
+        if (response.ok) { archiveResponse = response; break; }
+      } catch (error) {
+        if (error?.name === 'AbortError') throw error;
+      }
     }
-    if (!archiveResponse.ok) {
-      const direct = `https://codeload.github.com/${owner}/${repo}/zip/${sha}`;
-      archiveResponse = await fetch(direct,{signal:controller.signal,redirect:'follow',headers:{'user-agent':'ANDRIK-Control-ZIP-Backup-R246'}});
-    }
-    if (!archiveResponse.ok) throw new Error(`github-${archiveResponse.status}:backup-download-failed`);
+    if (!archiveResponse) throw new Error(`github-${lastStatus || 502}:backup-download-failed`);
     const archiveBytes = await archiveResponse.arrayBuffer();
     if (archiveBytes.byteLength < 1000) throw new Error('backup-archive-empty');
     if (archiveBytes.byteLength > SITE_UPDATE_MAX_ZIP_BYTES) throw new Error('zip-size');
-    const msg = cleanPlainText(head.commit?.message || '', 240);
-    const release = (msg.toUpperCase().match(/R\d{1,6}/) || ['R246'])[0];
-    const filename = `ANDRIK-BACKUP-${release}-${new Date().toISOString().slice(0,10)}-${head.headSha.slice(0,7)}.zip`;
-    await recordSystemLog(env,{scope:'site-update',level:'info',event:'backup-zip-created',message:`ZIP backup ${filename}`,details:{commitSha:head.headSha,filename,bytes:archiveBytes.byteLength}}).catch(()=>{});
-    return new Response(archiveBytes,{status:200,headers:{'content-type':'application/zip','content-length':String(archiveBytes.byteLength),'content-disposition':`attachment; filename="${filename}"`,'cache-control':'private, no-store, max-age=0','x-content-type-options':'nosniff','x-andrik-backup-commit':head.headSha}});
+    const sha = head?.headSha || ref;
+    const msg = cleanPlainText(head?.commit?.message || '', 240);
+    const release = (msg.toUpperCase().match(/R\d{1,6}/) || ['R247'])[0];
+    const short = /^[0-9a-f]{7,40}$/i.test(sha) ? sha.slice(0,7) : 'current';
+    const filename = `ANDRIK-BACKUP-${release}-${new Date().toISOString().slice(0,10)}-${short}.zip`;
+    await recordSystemLog(env,{scope:'site-update',level:'info',event:'backup-zip-created',message:`ZIP backup ${filename}`,details:{commitSha:sha,filename,bytes:archiveBytes.byteLength}}).catch(()=>{});
+    return new Response(archiveBytes,{status:200,headers:{'content-type':'application/zip','content-length':String(archiveBytes.byteLength),'content-disposition':`attachment; filename="${filename}"`,'cache-control':'private, no-store, max-age=0','x-content-type-options':'nosniff','x-andrik-backup-commit':sha}});
   } catch(error) {
-    if(error?.name==='AbortError'||String(error?.message||'').includes('github-timeout')) return json({ok:false,error:'backup-zip-timeout',message:'GitHub не отдал архив за 90 секунд. Нажмите «Повторить ZIP-бэкап».'},504);
+    if(error?.name==='AbortError'||String(error?.message||'').includes('github-timeout')) return json({ok:false,error:'backup-zip-timeout',message:'GitHub не отдал архив за 120 секунд. Нажмите «Повторить ZIP-бэкап».'},504);
     return json({ok:false,error:'backup-zip-failed',message:siteUpdateFriendlyError(error)},502);
   } finally { clearTimeout(timer); }
 }
