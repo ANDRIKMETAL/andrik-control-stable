@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r253",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1785862997256-a76fb2fd63",
-  "release": "R258",
-  "archiveName": "R258-COUNTRY-OVERLAY-SCROLL-ADMIN-BLUE-EYE-SAFE-FULL.zip",
-  "sourceHead": "7fcf51edea88125d468bf6a0a7378c38c1e0917d",
-  "backupSha": "7fcf51edea88125d468bf6a0a7378c38c1e0917d",
-  "backupTag": "control-backup-20260804170303-7fcf51e-r258-92ad1",
+  "operationId": "publish-1785863503756-57be26453c",
+  "release": "R259",
+  "archiveName": "R259-LIVE-EYE-BREATH-RESTORE-APP-VERSION-259-SAFE-FULL.zip",
+  "sourceHead": "a63047263d182b07b41b7c7535bcacd741969b5a",
+  "backupSha": "a63047263d182b07b41b7c7535bcacd741969b5a",
+  "backupTag": "control-backup-20260804171138-a630472-r259-14269",
   "autoRecovery": true,
-  "generatedAt": "2026-08-04T17:03:17.256Z"
+  "generatedAt": "2026-08-04T17:11:43.756Z"
 }
