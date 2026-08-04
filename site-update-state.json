@@ -1,14 +1,14 @@
 {
   "schema": 1,
-  "updaterVersion": "55.00-r237",
-  "operation": "publish",
-  "reinstall": false,
-  "operationId": "publish-1785852383414-3d15b526cf",
+  "updaterVersion": "55.00-r243",
+  "operation": "reinstall",
+  "reinstall": true,
+  "operationId": "reinstall-1785852539956-a0df1d20dc",
   "release": "R245",
   "archiveName": "R245-R244-BASE-R237-UPDATER-VISIBLE-ZIP-BACKUP-SAFE-FULL.zip",
-  "sourceHead": "4cb2692b6cb94f7b28ba5fb88ecaf7e9b3aadf7c",
-  "backupSha": "4cb2692b6cb94f7b28ba5fb88ecaf7e9b3aadf7c",
-  "backupTag": "control-backup-20260804140618-4cb2692-r245-48a11",
+  "sourceHead": "2d038efcb401ee310bde3671af86ecf1f80e113d",
+  "backupSha": "2d038efcb401ee310bde3671af86ecf1f80e113d",
+  "backupTag": "control-backup-20260804140854-2d038ef-r245-0c4c4",
   "autoRecovery": true,
-  "generatedAt": "2026-08-04T14:06:23.414Z"
+  "generatedAt": "2026-08-04T14:08:59.956Z"
 }
