@@ -1,6 +1,6 @@
 'use strict';
 
-const VERSION = '55.00-r261';
+const VERSION = '55.00-r262';
 const IS_CONTROL_HOST = self.location.hostname.toLowerCase() === 'control.andrikmetal.com';
 
 async function deleteControlCaches(){

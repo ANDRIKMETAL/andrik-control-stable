@@ -1,14 +1,14 @@
 {
   "schema": 1,
-  "updaterVersion": "55.00-r253",
+  "updaterVersion": "55.00-r261",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1785865074098-da8adb67fc",
-  "release": "R261",
-  "archiveName": "R261-PROTECTION-HEADER-ADMIN-BLUE-MONTHLY-CLOSE-SAFE-FULL.zip",
-  "sourceHead": "e5fc7949fbeee7427af1081e920574d798778318",
-  "backupSha": "e5fc7949fbeee7427af1081e920574d798778318",
-  "backupTag": "control-backup-20260804173749-e5fc794-r261-141ab",
+  "operationId": "publish-1785865936368-58026cf57e",
+  "release": "R262",
+  "archiveName": "R262-UPDATE-STAGE-EYE-COLORS-GREEN-ZIP-WINRAR-ICON-SAFE-FULL.zip",
+  "sourceHead": "a1fcbdbeb46ae1fe9ee6217c4cb93ba4dc8035db",
+  "backupSha": "a1fcbdbeb46ae1fe9ee6217c4cb93ba4dc8035db",
+  "backupTag": "control-backup-20260804175208-a1fcbdb-r262-49e4d",
   "autoRecovery": true,
-  "generatedAt": "2026-08-04T17:37:54.098Z"
+  "generatedAt": "2026-08-04T17:52:16.368Z"
 }
