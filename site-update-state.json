@@ -1,14 +1,14 @@
 {
   "schema": 1,
-  "updaterVersion": "55.00-r243",
+  "updaterVersion": "55.00-r237",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1785855437072-60d3768446",
-  "release": "R248",
-  "archiveName": "R248-GLOBAL-EYE-ZIP-SHARE-MAP-CONTROLS-ROTATION-SAFE-FULL.zip",
-  "sourceHead": "2526e562e0546be916a3894dc3f3b198efc5319a",
-  "backupSha": "2526e562e0546be916a3894dc3f3b198efc5319a",
-  "backupTag": "control-backup-20260804145710-2526e56-r248-b3e54",
+  "operationId": "publish-1785857727723-f51a57ed43",
+  "release": "R250",
+  "archiveName": "R250-R249-BASE-R237-INSTALLER-RESTORE-SAFE-FULL.zip",
+  "sourceHead": "084bdaec5045da2493f7950bf4e583b09a985f87",
+  "backupSha": "084bdaec5045da2493f7950bf4e583b09a985f87",
+  "backupTag": "control-backup-20260804153522-084bdae-r250-594d5",
   "autoRecovery": true,
-  "generatedAt": "2026-08-04T14:57:17.072Z"
+  "generatedAt": "2026-08-04T15:35:27.723Z"
 }
