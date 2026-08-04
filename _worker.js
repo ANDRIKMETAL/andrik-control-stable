@@ -6938,14 +6938,24 @@ async function maybeSendDailyOwnerSummary(env) {
     return { ok:true, skipped:true, reason:'already-sent', localDate:clock.date };
   }
 
-  const alreadyInHistory = await hasSentPushExact(db, {
-    type:'daily-summary',
-    source:'central-cron',
-    sinceHours:30
-  });
-  if (alreadyInHistory) {
+  // R253 PUSH ONLY: check the current Bratislava calendar day exactly.
+  // The former 30-hour lookback also matched yesterday's 06:00 summary and
+  // could suppress today's notification as an apparent duplicate.
+  const localDayStart = bratislavaLocalDateTimeToIso(clock.date, 0, 0);
+  const localDayEnd = bratislavaLocalDateTimeToIso(shiftIsoCalendarDate(clock.date, 1), 0, 0);
+  const alreadyInHistory = await db.prepare(`
+    SELECT 1 AS found
+    FROM push_history
+    WHERE type = 'daily-summary'
+      AND source = 'central-cron'
+      AND status = 'sent'
+      AND datetime(created_at) >= datetime(?)
+      AND datetime(created_at) < datetime(?)
+    LIMIT 1
+  `).bind(localDayStart, localDayEnd).first();
+  if (alreadyInHistory?.found) {
     await setPushState(db, 'daily-owner-summary-auto-last-date', clock.date);
-    return { ok:true, skipped:true, reason:'history-already-sent', localDate:clock.date };
+    return { ok:true, skipped:true, reason:'history-already-sent-today', localDate:clock.date };
   }
 
   const dailyClaimKey = `push-once:daily-summary-auto:${clock.date}`;

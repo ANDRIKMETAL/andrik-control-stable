@@ -1,14 +1,14 @@
 {
   "schema": 1,
-  "updaterVersion": "55.00-r237",
+  "updaterVersion": "55.00-r243",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1785858770261-aa7ca34426",
-  "release": "R251",
-  "archiveName": "R251-R247-STABLE-INSTALLER-MAP-4-COUNTRIES-CENTERED-HEADER-SAFE-FULL.zip",
-  "sourceHead": "afe140703f11d8b239bd277215b53af5274bcffa",
-  "backupSha": "afe140703f11d8b239bd277215b53af5274bcffa",
-  "backupTag": "control-backup-20260804155245-afe1407-r251-3da44",
+  "operationId": "publish-1785860194664-6731184231",
+  "release": "R253",
+  "archiveName": "R253-PUSH-ONLY-0600-BRATISLAVA-DATE-FIX-SAFE-FULL.zip",
+  "sourceHead": "a4fe252702221c6040dcb3a383e8790db4e33eaa",
+  "backupSha": "a4fe252702221c6040dcb3a383e8790db4e33eaa",
+  "backupTag": "control-backup-20260804161619-a4fe252-r253-5ca8f",
   "autoRecovery": true,
-  "generatedAt": "2026-08-04T15:52:50.261Z"
+  "generatedAt": "2026-08-04T16:16:36.126Z"
 }
