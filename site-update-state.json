@@ -1,14 +1,14 @@
 {
   "schema": 1,
-  "updaterVersion": "55.00-r225",
+  "updaterVersion": "55.00-r236",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1785836105119-9f4e8be369",
-  "release": "R236",
-  "archiveName": "R236-SECTION-HEADER-COLORS-VERSION-SYNC-SAFE-ZIP-FULL.zip",
-  "sourceHead": "0cc2b8987eca9bd2395d8ba8765a7782c9c2c73f",
-  "backupSha": "0cc2b8987eca9bd2395d8ba8765a7782c9c2c73f",
-  "backupTag": "control-backup-20260804093450-0cc2b89-r236-cf201",
+  "operationId": "publish-1785838067211-cd9f1bed48",
+  "release": "R237",
+  "archiveName": "R237-AUTO-DEPLOY-MAP-STABILITY-SECTION-COLORS-SAFE-ZIP-FULL.zip",
+  "sourceHead": "0ce16dd10403f9c79292e59550aeb082ed9681c6",
+  "backupSha": "0ce16dd10403f9c79292e59550aeb082ed9681c6",
+  "backupTag": "control-backup-20260804100743-0ce16dd-r237-df93c",
   "autoRecovery": true,
-  "generatedAt": "2026-08-04T09:35:05.119Z"
+  "generatedAt": "2026-08-04T10:07:47.211Z"
 }

@@ -9,7 +9,6 @@
   const listNode = document.getElementById('mapMonthlyList');
   const chartNode = document.getElementById('mapMonthlyChart');
   const captionNode = document.getElementById('mapMonthlyChartCaption');
-  const totalNode = document.getElementById('worldMapTotalValue');
   if (!openButton || !modal || !listNode || !chartNode) return;
 
   const STORAGE_KEY = 'andrik-control-map-monthly-archive-v1';
@@ -186,7 +185,7 @@
   }
 
   function openModal() {
-    const liveValue = readNumber(totalNode?.textContent);
+    const liveValue = readNumber(document.getElementById('worldMapTotalValue')?.textContent);
     if (liveValue) rememberCurrentTotal(liveValue);
     returnFocus = document.activeElement;
     render();
@@ -204,6 +203,7 @@
     if (returnFocus && typeof returnFocus.focus === 'function') returnFocus.focus({ preventScroll: true });
   }
 
+  window.__andrikOpenMapMonthly = openModal;
   openButton.addEventListener('click', openModal);
   backdrop?.addEventListener('click', closeModal);
   closeButton?.addEventListener('click', closeModal);
@@ -211,6 +211,6 @@
     if (event.key === 'Escape' && !modal.hidden) closeModal();
   });
   window.addEventListener('andrik:map-total-updated', event => rememberCurrentTotal(event.detail?.total));
-  const initial = readNumber(totalNode?.textContent);
+  const initial = readNumber(document.getElementById('worldMapTotalValue')?.textContent);
   if (initial) rememberCurrentTotal(initial);
 })();
