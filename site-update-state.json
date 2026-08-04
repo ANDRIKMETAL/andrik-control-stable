@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r225",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1785831156266-db7c74f197",
-  "release": "R230",
-  "archiveName": "R230-HARD-LOCK-MAP-CONTROLS-SAFE-ZIP-FULL.zip",
-  "sourceHead": "dca51d99b572fcc78f0943059978953a83bc742a",
-  "backupSha": "dca51d99b572fcc78f0943059978953a83bc742a",
-  "backupTag": "control-backup-20260804081231-dca51d9-r230-cc376",
+  "operationId": "publish-1785832063055-364f4bf0b6",
+  "release": "R231",
+  "archiveName": "R231-STABLE-PORTRAIT-MAP-OVERLAY-SAFE-ZIP-FULL.zip",
+  "sourceHead": "40b006a3cea0d64b777ca26c74b0caff1afac003",
+  "backupSha": "40b006a3cea0d64b777ca26c74b0caff1afac003",
+  "backupTag": "control-backup-20260804082734-40b006a-r231-de25a",
   "autoRecovery": true,
-  "generatedAt": "2026-08-04T08:12:36.266Z"
+  "generatedAt": "2026-08-04T08:27:43.055Z"
 }
