@@ -3725,4 +3725,156 @@ body:not(.is-country-focus-active) #mapFocusActions,
   setTimeout(schedule,900);
 })();
 </script>
+
+<style id="andrik-r230-map-hard-lock-fix">
+@media screen and (orientation:portrait){
+  html,body{overflow-x:hidden!important;}
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane>.analytics-pane-wrap.analytics-map-pane-wrap,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane>.analytics-map-pane-wrap.analytics-pane-wrap{
+    overflow-y:hidden!important;
+    overscroll-behavior:none!important;
+    padding-bottom:0!important;
+    max-height:100dvh!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top{
+    margin-top:0!important;
+    padding-top:6px!important;
+    padding-bottom:8px!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .world-map-card>.map-landscape-title-row{
+    min-height:0!important;
+    height:auto!important;
+    margin:0 0 2px!important;
+    padding:0!important;
+    display:block!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .world-map-card>.map-landscape-title-row .map-title-pyramid{
+    padding:0!important;
+    min-height:0!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .world-map-card>.map-landscape-title-row .map-title-pyramid .eyeline,
+  body.analytics-admin-page.analytics-v54-46-page .world-map-card>.map-landscape-title-row .map-title-pyramid h2{
+    display:none!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .world-map-card>.map-landscape-title-row .map-title-pyramid p{
+    margin:0 0 2px!important;
+    padding:0 2px!important;
+    font-size:.81rem!important;
+    line-height:1.04!important;
+    text-align:left!important;
+    white-space:nowrap!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top.has-country-focus #worldMap,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top:not(.has-country-focus) #worldMap{
+    position:relative!important;
+    margin:0 auto!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap>#worldMapTotal{
+    position:absolute!important;
+    left:10px!important;
+    top:10px!important;
+    right:auto!important;
+    bottom:auto!important;
+    z-index:26!important;
+    margin:0!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap>#mapMonthlyOpen{
+    position:absolute!important;
+    right:10px!important;
+    top:10px!important;
+    left:auto!important;
+    bottom:auto!important;
+    z-index:26!important;
+    margin:0!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap>#countryGrowthFloatingR62{
+    position:absolute!important;
+    left:auto!important;
+    right:10px!important;
+    top:auto!important;
+    bottom:10px!important;
+    z-index:26!important;
+    margin:0!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap>.map-orientation-fab{
+    left:10px!important;
+    right:auto!important;
+    top:auto!important;
+    bottom:10px!important;
+    z-index:26!important;
+    transform:none!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .world-country-list{
+    margin-top:6px!important;
+    gap:4px!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .world-country-list .world-country-button{
+    height:34px!important;
+    min-height:34px!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .world-country-toggle{
+    height:34px!important;
+    min-height:34px!important;
+    margin-top:4px!important;
+  }
+}
+@media screen and (orientation:landscape){
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .map-orientation-fab{
+    left:14px!important;
+    bottom:38px!important;
+    top:auto!important;
+  }
+}
+</style>
+<script id="andrik-r230-map-hard-lock-script">
+(function(){
+  const mq=window.matchMedia?window.matchMedia('(orientation: portrait)'):null;
+  function isPortrait(){return mq?mq.matches:(window.innerHeight>=window.innerWidth);}
+  function placeControls(){
+    const map=document.getElementById('worldMap');
+    const titleRow=document.querySelector('.map-landscape-title-row');
+    const total=document.getElementById('worldMapTotal');
+    const monthly=document.getElementById('mapMonthlyOpen');
+    const growth=document.getElementById('countryGrowthFloatingR62');
+    if(!map||!titleRow||!total||!monthly)return;
+    if(isPortrait()){
+      if(total.parentNode!==map) map.appendChild(total);
+      if(monthly.parentNode!==map) map.appendChild(monthly);
+      if(growth&&growth.parentNode!==map) map.appendChild(growth);
+    }else{
+      if(total.parentNode!==titleRow) titleRow.appendChild(total);
+      if(monthly.parentNode!==titleRow) titleRow.appendChild(monthly);
+      if(growth&&growth.parentNode!==document.body) document.body.appendChild(growth);
+    }
+  }
+  const run=()=>requestAnimationFrame(()=>requestAnimationFrame(placeControls));
+  window.addEventListener('load',run,{passive:true});
+  window.addEventListener('resize',run,{passive:true});
+  window.addEventListener('orientationchange',()=>setTimeout(run,120),{passive:true});
+  document.addEventListener('fullscreenchange',run,{passive:true});
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(run,100);},{passive:true});
+  const clickTargets='#mapOrientationFab,#countryGrowthFloatingR62,#mapMonthlyOpen,.world-country-toggle,[data-country-toggle]';
+  document.addEventListener('click',e=>{if(e.target.closest?.(clickTargets))setTimeout(run,50);},{passive:true});
+  if(mq){
+    if(typeof mq.addEventListener==='function')mq.addEventListener('change',run);
+    else if(typeof mq.addListener==='function')mq.addListener(run);
+  }
+  const boot=()=>{
+    const map=document.getElementById('worldMap');
+    if(map&&window.MutationObserver){
+      new MutationObserver(()=>run()).observe(map,{childList:true,subtree:false});
+    }
+    new MutationObserver(()=>run()).observe(document.body,{childList:true,subtree:true});
+    run();
+    setTimeout(run,300);
+    setTimeout(run,900);
+  };
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});
+  else boot();
+})();
+</script>
 </body></html>
