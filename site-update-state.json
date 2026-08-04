@@ -1,14 +1,14 @@
 {
   "schema": 1,
   "updaterVersion": "55.00-r225",
-  "operation": "publish",
-  "reinstall": false,
-  "operationId": "publish-1785829550204-c0bd3aae79",
+  "operation": "reinstall",
+  "reinstall": true,
+  "operationId": "reinstall-1785830686753-976eabbdab",
   "release": "R229",
   "archiveName": "R229-LANDSCAPE-ROTATE-BUTTON-UP-SAFE-ZIP-FULL.zip",
-  "sourceHead": "9f362b7441de6a4f1ce754e27509bcbe8ffeeebf",
-  "backupSha": "9f362b7441de6a4f1ce754e27509bcbe8ffeeebf",
-  "backupTag": "control-backup-20260804074542-9f362b7-r229-cfd16",
+  "sourceHead": "0544b05dfe63e62775b926b76f2274129d072d2f",
+  "backupSha": "0544b05dfe63e62775b926b76f2274129d072d2f",
+  "backupTag": "control-backup-20260804080440-0544b05-r229-4fa68",
   "autoRecovery": true,
-  "generatedAt": "2026-08-04T07:45:50.204Z"
+  "generatedAt": "2026-08-04T08:04:46.753Z"
 }
