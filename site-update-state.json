@@ -1,14 +1,14 @@
 {
   "schema": 1,
   "updaterVersion": "55.00-r264",
-  "operation": "reinstall",
-  "reinstall": true,
-  "operationId": "reinstall-1785868633355-9df7b99323",
-  "release": "R264",
-  "archiveName": "R264-RED-ERROR-EYE-INSTALLER-503-ATTACK-LOCAL-GLOW-SAFE-FULL.zip",
-  "sourceHead": "508828bed673d40b0c768030191311b228fdac6c",
-  "backupSha": "508828bed673d40b0c768030191311b228fdac6c",
-  "backupTag": "control-backup-20260804183708-508828b-r264-5f54f",
+  "operation": "publish",
+  "reinstall": false,
+  "operationId": "publish-1785869433467-9c296318cb",
+  "release": "R265",
+  "archiveName": "R265-STAGE-COLORS-GREEN-1-4-YELLOW-5-BLUE-6-ATTACK-GLOW-FIX-SAFE-FULL.zip",
+  "sourceHead": "26d92589c32a900c53569fc7857a3d78ab156bc5",
+  "backupSha": "26d92589c32a900c53569fc7857a3d78ab156bc5",
+  "backupTag": "control-backup-20260804185028-26d9258-r265-0376e",
   "autoRecovery": false,
-  "generatedAt": "2026-08-04T18:37:13.355Z"
+  "generatedAt": "2026-08-04T18:50:33.467Z"
 }
