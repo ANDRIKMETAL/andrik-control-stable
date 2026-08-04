@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r237",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1785839445156-5920f0fe3c",
-  "release": "R238",
-  "archiveName": "R238-MAP-LAYOUT-GROWTH-CLOSE-SECTION-COLOR-LOCK-SAFE-ZIP-FULL.zip",
-  "sourceHead": "3930990a634fe74ba506920b0b9366c28dbfab6c",
-  "backupSha": "3930990a634fe74ba506920b0b9366c28dbfab6c",
-  "backupTag": "control-backup-20260804103040-3930990-r238-e6d03",
+  "operationId": "publish-1785841413354-ce8eabe3fc",
+  "release": "R239",
+  "archiveName": "R239-IRON-MAP-STEP5-YELLOW-LOWER-CLOSE-SAFE-ZIP-FULL.zip",
+  "sourceHead": "c691307d7d00be458ba612074379686c285a27ae",
+  "backupSha": "c691307d7d00be458ba612074379686c285a27ae",
+  "backupTag": "control-backup-20260804110323-c691307-r239-0fc2b",
   "autoRecovery": true,
-  "generatedAt": "2026-08-04T10:30:45.156Z"
+  "generatedAt": "2026-08-04T11:03:33.354Z"
 }

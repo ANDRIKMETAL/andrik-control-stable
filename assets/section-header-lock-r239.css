@@ -1,0 +1,19 @@
+/* R239 — hard section color locks. Direct page-class selectors prevent ordinary green checks from overriding them. */
+html:not([data-andrik-header-state="red"]) body.protection-page .control-topbar{
+  border-bottom-color:rgba(91,204,255,.76)!important;
+  background:radial-gradient(ellipse at 50% 52%,rgba(55,184,255,.39) 0%,rgba(24,104,208,.18) 25%,transparent 59%),linear-gradient(90deg,#01070b 0%,#031226 36%,#071f3a 50%,#031226 64%,#01070b 100%)!important;
+  box-shadow:0 3px 0 rgba(102,210,255,.13),0 12px 40px rgba(37,145,255,.30)!important
+}
+html:not([data-andrik-header-state="red"]) body.attack-page .control-topbar{
+  border-bottom-color:rgba(255,222,89,.82)!important;
+  background:radial-gradient(ellipse at 50% 52%,rgba(255,214,64,.41) 0%,rgba(205,130,12,.19) 25%,transparent 59%),linear-gradient(90deg,#090701 0%,#1d1503 36%,#332406 50%,#1d1503 64%,#090701 100%)!important;
+  box-shadow:0 3px 0 rgba(255,224,104,.14),0 12px 40px rgba(255,177,30,.31)!important
+}
+html:not([data-andrik-header-state="red"]) body.protection-page .control-topbar::before{background:radial-gradient(ellipse at center,rgba(99,211,255,.44),rgba(31,126,232,.19) 36%,transparent 70%)!important}
+html:not([data-andrik-header-state="red"]) body.attack-page .control-topbar::before{background:radial-gradient(ellipse at center,rgba(255,229,105,.45),rgba(226,154,28,.20) 36%,transparent 70%)!important}
+html:not([data-andrik-header-state="red"]) body.protection-page .control-topbar::after{background:linear-gradient(90deg,transparent,rgba(91,204,255,.98) 18%,#a8efff 50%,rgba(91,204,255,.98) 82%,transparent)!important;box-shadow:0 0 10px rgba(91,204,255,1),0 0 30px rgba(40,139,255,.72)!important}
+html:not([data-andrik-header-state="red"]) body.attack-page .control-topbar::after{background:linear-gradient(90deg,transparent,rgba(255,218,80,.99) 18%,#fff5b5 50%,rgba(255,218,80,.99) 82%,transparent)!important;box-shadow:0 0 10px rgba(255,224,101,1),0 0 30px rgba(255,174,34,.74)!important}
+html:not([data-andrik-header-state="red"]) body.protection-page .andrik-live-eye-halo-r3d{background:radial-gradient(circle,rgba(132,225,255,.78) 0%,rgba(48,157,255,.44) 30%,rgba(18,78,190,.20) 52%,rgba(0,0,0,0) 75%)!important}
+html:not([data-andrik-header-state="red"]) body.attack-page .andrik-live-eye-halo-r3d{background:radial-gradient(circle,rgba(255,239,139,.82) 0%,rgba(255,190,48,.48) 30%,rgba(174,91,4,.22) 52%,rgba(0,0,0,0) 75%)!important}
+html:not([data-andrik-header-state="red"]) body.protection-page .andrik-live-eye-motion-r3d{filter:brightness(1.18) saturate(1.58) hue-rotate(74deg) drop-shadow(0 0 18px rgba(88,206,255,.92)) drop-shadow(0 0 42px rgba(34,116,255,.68))!important}
+html:not([data-andrik-header-state="red"]) body.attack-page .andrik-live-eye-motion-r3d{filter:brightness(1.22) saturate(1.68) hue-rotate(-70deg) drop-shadow(0 0 18px rgba(255,228,111,.94)) drop-shadow(0 0 42px rgba(255,158,30,.70))!important}
