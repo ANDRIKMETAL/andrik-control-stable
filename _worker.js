@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R242', number:242, version:'55.00', full:'55.00 LIVE WEB AI FINAL R242 ZIP BACKUP COMMIT RECOVERY', siteUpdater:'55.00-r242' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R243', number:243, version:'55.00', full:'55.00 LIVE WEB AI FINAL R243 MAP TWO MODE ZIP BACKUP', siteUpdater:'55.00-r243' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -9315,22 +9315,36 @@ async function handleSiteUpdateBackupZip(request, env) {
   const config = siteUpdateConfig(env);
   if (!config.token || !siteUpdateConfigValid(config)) return json({ ok:false, error:'github-token-missing', message:'GitHub не настроен.' }, 400);
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 180000);
+  const timer = setTimeout(() => controller.abort(), 90000);
   try {
     const head = await siteUpdateGithubHead(config);
     const owner = encodeURIComponent(config.owner), repo = encodeURIComponent(config.repo), sha = encodeURIComponent(head.headSha);
-    const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/zipball/${sha}`, {
-      signal:controller.signal, redirect:'follow',
-      headers:{accept:'application/vnd.github+json',authorization:`Bearer ${config.token}`,'user-agent':'ANDRIK-Control-ZIP-Backup-R242','x-github-api-version':'2022-11-28'}
+    const apiUrl = `https://api.github.com/repos/${owner}/${repo}/zipball/${sha}`;
+    let archiveResponse = await fetch(apiUrl, {
+      signal:controller.signal,
+      redirect:'manual',
+      headers:{accept:'application/vnd.github+json',authorization:`Bearer ${config.token}`,'user-agent':'ANDRIK-Control-ZIP-Backup-R243','x-github-api-version':'2022-11-28'}
     });
-    if (!response.ok || !response.body) throw new Error(`github-${response.status}:backup-download-failed`);
+    if (archiveResponse.status >= 300 && archiveResponse.status < 400) {
+      const location = archiveResponse.headers.get('location');
+      if (!location) throw new Error('github-archive-location-missing');
+      archiveResponse = await fetch(location,{signal:controller.signal,redirect:'follow',headers:{'user-agent':'ANDRIK-Control-ZIP-Backup-R243'}});
+    }
+    if (!archiveResponse.ok) {
+      const direct = `https://codeload.github.com/${owner}/${repo}/zip/${sha}`;
+      archiveResponse = await fetch(direct,{signal:controller.signal,redirect:'follow',headers:{'user-agent':'ANDRIK-Control-ZIP-Backup-R243'}});
+    }
+    if (!archiveResponse.ok) throw new Error(`github-${archiveResponse.status}:backup-download-failed`);
+    const archiveBytes = await archiveResponse.arrayBuffer();
+    if (archiveBytes.byteLength < 1000) throw new Error('backup-archive-empty');
+    if (archiveBytes.byteLength > SITE_UPDATE_MAX_ZIP_BYTES) throw new Error('zip-size');
     const msg = cleanPlainText(head.commit?.message || '', 240);
-    const release = (msg.toUpperCase().match(/R\d{1,6}/) || ['R242'])[0];
+    const release = (msg.toUpperCase().match(/R\d{1,6}/) || ['R243'])[0];
     const filename = `ANDRIK-BACKUP-${release}-${new Date().toISOString().slice(0,10)}-${head.headSha.slice(0,7)}.zip`;
-    await recordSystemLog(env,{scope:'site-update',level:'info',event:'backup-zip-created',message:`ZIP backup ${filename}`,details:{commitSha:head.headSha,filename}}).catch(()=>{});
-    return new Response(response.body,{status:200,headers:{'content-type':'application/zip','content-disposition':`attachment; filename="${filename}"`,'cache-control':'private, no-store, max-age=0','x-content-type-options':'nosniff'}});
+    await recordSystemLog(env,{scope:'site-update',level:'info',event:'backup-zip-created',message:`ZIP backup ${filename}`,details:{commitSha:head.headSha,filename,bytes:archiveBytes.byteLength}}).catch(()=>{});
+    return new Response(archiveBytes,{status:200,headers:{'content-type':'application/zip','content-length':String(archiveBytes.byteLength),'content-disposition':`attachment; filename="${filename}"`,'cache-control':'private, no-store, max-age=0','x-content-type-options':'nosniff','x-andrik-backup-commit':head.headSha}});
   } catch(error) {
-    if(error?.name==='AbortError') return json({ok:false,error:'backup-zip-timeout',message:'ZIP-бэкап не успел создаться. Повторите попытку.'},504);
+    if(error?.name==='AbortError'||String(error?.message||'').includes('github-timeout')) return json({ok:false,error:'backup-zip-timeout',message:'GitHub не отдал архив за 90 секунд. Нажмите «Повторить ZIP-бэкап».'},504);
     return json({ok:false,error:'backup-zip-failed',message:siteUpdateFriendlyError(error)},502);
   } finally { clearTimeout(timer); }
 }

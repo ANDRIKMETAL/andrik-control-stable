@@ -1,14 +1,14 @@
 {
   "schema": 1,
-  "updaterVersion": "55.00-r225",
+  "updaterVersion": "55.00-r237",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1785845182248-c94fadee88",
-  "release": "R242",
-  "archiveName": "R242-MINIMAL-UPDATER-HOTFIX-ZIP-BACKUP-FULL.zip",
-  "sourceHead": "5c66476bf01880b0c3f99f7ec4c4990d9ec57a66",
-  "backupSha": "5c66476bf01880b0c3f99f7ec4c4990d9ec57a66",
-  "backupTag": "control-backup-20260804120616-5c66476-r242-faf0b",
+  "operationId": "publish-1785851406757-a0610b538b",
+  "release": "R244",
+  "archiveName": "R244-UPDATER-NO-RESET-GLOBAL-EYE-RESTORE-SAFE-ZIP-FULL.zip",
+  "sourceHead": "5fe87d1ae976f4d5fbd1da225bd4483a24fa5e32",
+  "backupSha": "5fe87d1ae976f4d5fbd1da225bd4483a24fa5e32",
+  "backupTag": "control-backup-20260804135000-5fe87d1-r244-ce5ff",
   "autoRecovery": true,
-  "generatedAt": "2026-08-04T12:06:22.248Z"
+  "generatedAt": "2026-08-04T13:50:06.757Z"
 }
