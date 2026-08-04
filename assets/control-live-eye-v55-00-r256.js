@@ -1,8 +1,8 @@
 (() => {
   'use strict';
-  if(window.__ANDRIK_LIVE_EYE_R255__)return;
-  window.__ANDRIK_LIVE_EYE_R255__=true;
-  const VERSION='55.00-r255';
+  if(window.__ANDRIK_LIVE_EYE_R256__)return;
+  window.__ANDRIK_LIVE_EYE_R256__=true;
+  const VERSION='55.00-r256';
   const logo=document.getElementById('controlCenterLogo')||document.querySelector('.control-center-logo');
   if(!logo)return;
 
@@ -15,6 +15,7 @@
   let goldUntil=0;
   let goldLatched=false;
 
+  logo.dataset.r256LiveEye='1';
   logo.dataset.r255LiveEye='1';
   logo.dataset.r254LiveEye='1';
   logo.dataset.r247LiveEye='1';
@@ -50,19 +51,21 @@
     html[data-andrik-header-state="yellow"]{--r244-eye-filter:brightness(1.34) saturate(2.1) hue-rotate(-72deg);--r244-eye-a:rgba(255,244,181,.99);--r244-eye-b:rgba(255,188,44,.92);--r244-halo:rgba(255,221,98,.84);--r244-bg1:rgba(255,211,78,.24);--r244-bg2:rgba(207,128,10,.10);--r244-line:#fff2b8;--r244-line-soft:rgba(255,220,100,.98)}
     html[data-andrik-header-state="gold"]{--r244-eye-filter:brightness(1.24) saturate(1.84) hue-rotate(-82deg);--r244-eye-a:rgba(255,229,147,.99);--r244-eye-b:rgba(255,154,24,.78);--r244-halo:rgba(255,194,67,.74);--r244-bg1:rgba(255,203,77,.42);--r244-bg2:rgba(199,118,12,.20);--r244-line:#ffe6a0;--r244-line-soft:rgba(255,199,70,.96)}
     html[data-andrik-header-state="red"]{--r244-eye-filter:brightness(1.12) saturate(1.86) hue-rotate(238deg);--r244-eye-a:rgba(255,142,153,.96);--r244-eye-b:rgba(255,39,68,.72);--r244-halo:rgba(255,70,91,.66);--r244-bg1:rgba(255,54,77,.35);--r244-bg2:rgba(170,8,34,.17);--r244-line:#ff98a7;--r244-line-soft:rgba(255,81,101,.92)}
+    html[data-andrik-section-lock="blue"]{--r244-eye-filter:brightness(1.36) saturate(2.15) hue-rotate(74deg);--r244-eye-a:rgba(198,244,255,.99);--r244-eye-b:rgba(74,176,255,.94);--r244-halo:rgba(84,199,255,.88);--r244-bg1:rgba(64,192,255,.28);--r244-bg2:rgba(18,103,220,.12);--r244-line:#baf4ff;--r244-line-soft:rgba(132,224,255,.99)}
+    html[data-andrik-section-lock="yellow"]{--r244-eye-filter:brightness(1.36) saturate(2.12) hue-rotate(-72deg);--r244-eye-a:rgba(255,247,190,.99);--r244-eye-b:rgba(255,190,42,.94);--r244-halo:rgba(255,221,91,.88);--r244-bg1:rgba(255,208,58,.26);--r244-bg2:rgba(205,124,8,.11);--r244-line:#fff3b9;--r244-line-soft:rgba(255,222,104,.99)}
     body.control-page .control-topbar,body.comment-collection-page .control-topbar,.control-topbar{
       position:relative!important;overflow:hidden!important;border-bottom-color:var(--r244-line-soft)!important;
-      background:radial-gradient(ellipse 28% 86% at 50% 48%,var(--r244-bg1) 0%,var(--r244-bg2) 38%,transparent 68%),linear-gradient(90deg,#010507 0%,#01090a 34%,#031017 50%,#01090a 66%,#010507 100%)!important;
+      background:linear-gradient(90deg,#010507 0%,#01090a 38%,#031017 50%,#01090a 62%,#010507 100%)!important;
       box-shadow:0 3px 0 color-mix(in srgb,var(--r244-line) 12%,transparent),0 10px 25px color-mix(in srgb,var(--r244-line) 13%,transparent)!important;
       animation:andrikR244HeaderPulse 1.45s ease-in-out infinite!important
     }
     body.control-page .control-topbar::before,body.comment-collection-page .control-topbar::before,.control-topbar::before{
-      content:""!important;position:absolute!important;left:27%!important;right:27%!important;top:0!important;bottom:0!important;pointer-events:none!important;
-      background:radial-gradient(ellipse at center,var(--r244-bg1) 0%,var(--r244-bg2) 46%,transparent 76%)!important;opacity:.96!important
+      content:""!important;position:absolute!important;left:50%!important;right:auto!important;top:50%!important;bottom:auto!important;width:190px!important;height:118px!important;transform:translate(-50%,-50%)!important;pointer-events:none!important;
+      background:radial-gradient(ellipse at center,var(--r244-bg1) 0%,var(--r244-bg2) 48%,transparent 76%)!important;opacity:.98!important
     }
     body.control-page .control-topbar::after,body.comment-collection-page .control-topbar::after,.control-topbar::after{
       content:""!important;position:absolute!important;left:0!important;right:0!important;bottom:-1px!important;height:2px!important;pointer-events:none!important;
-      background:linear-gradient(90deg,transparent,var(--r244-line-soft) 18%,var(--r244-line) 50%,var(--r244-line-soft) 82%,transparent)!important;
+      background:linear-gradient(90deg,transparent 0%,transparent 30%,var(--r244-line-soft) 43%,var(--r244-line) 50%,var(--r244-line-soft) 57%,transparent 70%,transparent 100%)!important;
       box-shadow:0 0 9px var(--r244-line-soft),0 0 25px color-mix(in srgb,var(--r244-line) 64%,transparent)!important
     }
     .control-center-logo{position:relative!important;isolation:isolate!important;overflow:visible!important;cursor:pointer!important;touch-action:manipulation!important;-webkit-tap-highlight-color:transparent!important}
@@ -76,19 +79,6 @@
     .andrik-live-eye-overlay-r244.is-open{display:grid!important}
     .andrik-live-eye-stage-r247{position:relative!important;width:100vw!important;height:100dvh!important;overflow:hidden!important;border-radius:0!important;background:#000!important;box-shadow:none!important}
     .andrik-live-eye-stage-r247 video{display:block!important;width:100%!important;height:100%!important;max-width:none!important;max-height:none!important;object-fit:cover!important;object-position:50% 50%!important;transform:none!important;transform-origin:50% 50%!important;background:#000!important}
-    html[data-andrik-header-state="yellow"] body.control-page.attack-page .control-topbar.control-topbar{
-      background:radial-gradient(ellipse 25% 86% at 50% 50%,rgba(255,219,86,.24) 0%,rgba(205,130,12,.10) 40%,transparent 70%),linear-gradient(90deg,#050501 0%,#090801 34%,#171202 50%,#090801 66%,#050501 100%)!important;
-      box-shadow:0 3px 0 rgba(255,224,104,.13),0 10px 26px rgba(255,177,30,.16)!important
-    }
-    html[data-andrik-header-state="yellow"] body.control-page.attack-page .control-topbar.control-topbar::before{
-      left:35%!important;right:35%!important;top:0!important;bottom:0!important;
-      background:radial-gradient(ellipse at center,rgba(255,229,105,.34) 0%,rgba(226,154,28,.12) 42%,transparent 74%)!important;
-      opacity:.95!important
-    }
-    html[data-andrik-header-state="yellow"] body.control-page.attack-page .control-topbar.control-topbar::after{
-      background:linear-gradient(90deg,transparent 0%,rgba(255,218,80,.18) 30%,#fff2a9 50%,rgba(255,218,80,.18) 70%,transparent 100%)!important;
-      box-shadow:0 0 8px rgba(255,224,101,.82),0 0 20px rgba(255,174,34,.38)!important
-    }
     @media(max-width:430px){.andrik-live-eye-stage-r247{width:100vw!important;height:100dvh!important;border-radius:0!important}}
     @media (prefers-reduced-motion:reduce){.andrik-live-eye-motion-r244,.andrik-live-eye-halo-r244{animation-duration:1.7s!important}.control-topbar{animation-duration:2.1s!important}}
   `;
