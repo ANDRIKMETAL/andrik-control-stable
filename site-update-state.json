@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r237",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1785851406757-a0610b538b",
-  "release": "R244",
-  "archiveName": "R244-UPDATER-NO-RESET-GLOBAL-EYE-RESTORE-SAFE-ZIP-FULL.zip",
-  "sourceHead": "5fe87d1ae976f4d5fbd1da225bd4483a24fa5e32",
-  "backupSha": "5fe87d1ae976f4d5fbd1da225bd4483a24fa5e32",
-  "backupTag": "control-backup-20260804135000-5fe87d1-r244-ce5ff",
+  "operationId": "publish-1785852383414-3d15b526cf",
+  "release": "R245",
+  "archiveName": "R245-R244-BASE-R237-UPDATER-VISIBLE-ZIP-BACKUP-SAFE-FULL.zip",
+  "sourceHead": "4cb2692b6cb94f7b28ba5fb88ecaf7e9b3aadf7c",
+  "backupSha": "4cb2692b6cb94f7b28ba5fb88ecaf7e9b3aadf7c",
+  "backupTag": "control-backup-20260804140618-4cb2692-r245-48a11",
   "autoRecovery": true,
-  "generatedAt": "2026-08-04T13:50:06.757Z"
+  "generatedAt": "2026-08-04T14:06:23.414Z"
 }

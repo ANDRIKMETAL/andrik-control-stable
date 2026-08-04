@@ -9323,23 +9323,23 @@ async function handleSiteUpdateBackupZip(request, env) {
     let archiveResponse = await fetch(apiUrl, {
       signal:controller.signal,
       redirect:'manual',
-      headers:{accept:'application/vnd.github+json',authorization:`Bearer ${config.token}`,'user-agent':'ANDRIK-Control-ZIP-Backup-R243','x-github-api-version':'2022-11-28'}
+      headers:{accept:'application/vnd.github+json',authorization:`Bearer ${config.token}`,'user-agent':'ANDRIK-Control-ZIP-Backup-R245','x-github-api-version':'2022-11-28'}
     });
     if (archiveResponse.status >= 300 && archiveResponse.status < 400) {
       const location = archiveResponse.headers.get('location');
       if (!location) throw new Error('github-archive-location-missing');
-      archiveResponse = await fetch(location,{signal:controller.signal,redirect:'follow',headers:{'user-agent':'ANDRIK-Control-ZIP-Backup-R243'}});
+      archiveResponse = await fetch(location,{signal:controller.signal,redirect:'follow',headers:{'user-agent':'ANDRIK-Control-ZIP-Backup-R245'}});
     }
     if (!archiveResponse.ok) {
       const direct = `https://codeload.github.com/${owner}/${repo}/zip/${sha}`;
-      archiveResponse = await fetch(direct,{signal:controller.signal,redirect:'follow',headers:{'user-agent':'ANDRIK-Control-ZIP-Backup-R243'}});
+      archiveResponse = await fetch(direct,{signal:controller.signal,redirect:'follow',headers:{'user-agent':'ANDRIK-Control-ZIP-Backup-R245'}});
     }
     if (!archiveResponse.ok) throw new Error(`github-${archiveResponse.status}:backup-download-failed`);
     const archiveBytes = await archiveResponse.arrayBuffer();
     if (archiveBytes.byteLength < 1000) throw new Error('backup-archive-empty');
     if (archiveBytes.byteLength > SITE_UPDATE_MAX_ZIP_BYTES) throw new Error('zip-size');
     const msg = cleanPlainText(head.commit?.message || '', 240);
-    const release = (msg.toUpperCase().match(/R\d{1,6}/) || ['R243'])[0];
+    const release = (msg.toUpperCase().match(/R\d{1,6}/) || ['R245'])[0];
     const filename = `ANDRIK-BACKUP-${release}-${new Date().toISOString().slice(0,10)}-${head.headSha.slice(0,7)}.zip`;
     await recordSystemLog(env,{scope:'site-update',level:'info',event:'backup-zip-created',message:`ZIP backup ${filename}`,details:{commitSha:head.headSha,filename,bytes:archiveBytes.byteLength}}).catch(()=>{});
     return new Response(archiveBytes,{status:200,headers:{'content-type':'application/zip','content-length':String(archiveBytes.byteLength),'content-disposition':`attachment; filename="${filename}"`,'cache-control':'private, no-store, max-age=0','x-content-type-options':'nosniff','x-andrik-backup-commit':head.headSha}});
