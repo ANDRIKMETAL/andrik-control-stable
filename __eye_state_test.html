@@ -1,0 +1,31 @@
+<!doctype html><html><head><meta charset="utf-8"><title>eye test</title></head>
+<body class="control-page">
+<nav class="control-topbar"><a class="control-center-logo" id="controlCenterLogo"><img class="logo-ok" src="/assets/control-topbar-eye-triangle.jpg"><img class="logo-error" src="/assets/andrik-control-red-triangle-192.png"></a></nav>
+<div id="siteUpdateStages">
+  <div data-stage="check"></div><div data-stage="backup"></div><div data-stage="commit"></div><div data-stage="release"></div><div data-stage="deploy"></div><div data-stage="protect"></div>
+</div>
+<span id="siteUpdateResultState">В процессе</span><div id="siteUpdateDeployMessage"></div><div id="siteUpdateResultText"></div>
+<pre id="log"></pre>
+<script>
+HTMLMediaElement.prototype.load=function(){}; HTMLMediaElement.prototype.play=function(){return Promise.reject(new Error('test'))}; HTMLMediaElement.prototype.pause=function(){};
+const log=(name)=>{document.getElementById('log').textContent+=name+':'+document.documentElement.dataset.andrikHeaderState+'\n'};
+const stage=(name,state)=>{document.querySelector('[data-stage="'+name+'"]').className=state?'is-'+state:''};
+</script>
+<script src="/assets/control-live-eye-v55-00-r3l.js?v=test"></script>
+<script>
+setTimeout(()=>log('initial'),150);
+setTimeout(()=>{document.getElementById('controlCenterLogo').classList.add('is-checking')},250);
+setTimeout(()=>log('checking'),420);
+setTimeout(()=>{document.getElementById('controlCenterLogo').classList.remove('is-checking');stage('check','running')},550);
+setTimeout(()=>log('stage1'),720);
+setTimeout(()=>{stage('check','done');stage('release','running')},850);
+setTimeout(()=>log('release'),1020);
+setTimeout(()=>{stage('release','done');stage('deploy','running')},1150);
+setTimeout(()=>log('deploy'),1320);
+setTimeout(()=>{stage('deploy','error');document.getElementById('siteUpdateResultState').className='service-access-state is-error';document.getElementById('siteUpdateResultState').textContent='Ошибка'},1450);
+setTimeout(()=>log('failure'),1620);
+setTimeout(()=>{document.querySelectorAll('[data-stage]').forEach(x=>x.className='');document.getElementById('siteUpdateResultState').className='service-access-state';document.getElementById('siteUpdateResultState').textContent='В процессе'},1750);
+setTimeout(()=>{stage('release','done');stage('deploy','done');stage('protect','done');document.getElementById('siteUpdateResultState').className='service-access-state is-ready';document.getElementById('siteUpdateResultState').textContent='Опубликовано'},1900);
+setTimeout(()=>log('success'),2100);
+setTimeout(()=>log('returned'),7500);
+</script></body></html>

@@ -824,6 +824,38 @@ body > #countryGrowthPanel.country-growth-panel:not([hidden]) #countryGrowthClos
 
 </style>
 
+<style id="andrik-r226-map-height-and-orientation-fab">
+.map-orientation-fab{position:absolute!important;left:10px!important;z-index:16!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;width:52px!important;height:52px!important;padding:0!important;border:1.4px solid rgba(95,225,160,.78)!important;border-radius:50%!important;background:radial-gradient(circle at 32% 28%,rgba(30,74,98,.98),rgba(7,18,28,.96) 72%)!important;color:#e8fbff!important;box-shadow:0 10px 24px rgba(0,0,0,.42),0 0 0 1px rgba(255,255,255,.04) inset,0 0 16px rgba(115,227,255,.18)!important;backdrop-filter:blur(10px)!important;-webkit-backdrop-filter:blur(10px)!important;cursor:pointer!important;touch-action:manipulation!important}
+.map-orientation-fab:hover{box-shadow:0 12px 28px rgba(0,0,0,.46),0 0 0 1px rgba(255,255,255,.06) inset,0 0 18px rgba(115,227,255,.24)!important}
+.map-orientation-fab .map-orientation-fab-icon{display:block!important;font:900 1.36rem/1 Arial,Helvetica,sans-serif!important;letter-spacing:.02em!important;pointer-events:none!important;transform:translateX(.5px)!important}
+.map-orientation-fab[data-mode="enter-landscape"] .map-orientation-fab-icon{transform:rotate(90deg)!important}
+.map-orientation-fab[data-mode="return-portrait"] .map-orientation-fab-icon{transform:none!important}
+@media screen and (orientation:portrait){
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top.has-country-focus #worldMap,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top:not(.has-country-focus) #worldMap{
+    height:clamp(208px,18.4dvh,224px)!important;
+    min-height:clamp(208px,18.4dvh,224px)!important;
+    max-height:224px!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .map-orientation-fab{top:50%!important;bottom:auto!important;transform:translateY(-50%)!important}
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .map-orientation-fab:active{transform:translateY(-50%) scale(.97)!important}
+}
+@media screen and (orientation:portrait) and (max-width:390px){
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top.has-country-focus #worldMap,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top:not(.has-country-focus) #worldMap{
+    height:188px!important;
+    min-height:188px!important;
+    max-height:188px!important;
+  }
+}
+@media screen and (orientation:landscape){
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .map-orientation-fab{top:auto!important;bottom:10px!important;transform:none!important}
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .map-orientation-fab:active{transform:scale(.97)!important}
+}
+</style>
+
 <style id="live-web-ai-final-r98-no-jump-css">
 html.live-web-ai-has-map-snapshot #worldMap .world-map-state{display:none!important}
 html.live-web-ai-resume-lock .analytics-swipe-track,
@@ -1023,7 +1055,7 @@ html.live-web-ai-resume-lock .analytics-swipe-viewport{overflow:hidden!important
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 2v3M17 2v3M3.5 9h17M5.5 4h13a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z"/><path d="M8 13h2M14 13h2M8 17h2M14 17h2"/></svg>
               </button>
             </div>
-            <div id="worldMap" class="world-map-shell"><div class="world-map-canvas" role="img" aria-label="Карта мира"><img src="/assets/world-map-control-v52.webp?v=52.14" alt="Карта мира"/><span class="world-map-state">Обновляем данные…</span></div></div>
+            <div id="worldMap" class="world-map-shell"><div class="world-map-canvas" role="img" aria-label="Карта мира"><img src="/assets/world-map-control-v52.webp?v=52.14" alt="Карта мира"/><span class="world-map-state">Обновляем данные…</span></div><button class="map-orientation-fab" id="mapOrientationFab" type="button" data-mode="enter-landscape" aria-label="Открыть карту в горизонтальном режиме" title="Открыть карту в горизонтальном режиме"><span class="map-orientation-fab-icon" aria-hidden="true">↻</span></button></div>
             <div id="worldCountries" class="world-country-list"></div>
 <script id="live-web-ai-final-r98-map-hydrate">
 (function(){
@@ -1696,7 +1728,7 @@ html.live-web-ai-resume-lock .analytics-swipe-viewport{overflow:hidden!important
       return `<span class="world-map-dot${selected}" data-country="${encoded}" data-code="${escapeHtml(item.code)}" aria-current="${selected?'true':'false'}" style="left:${x.toFixed(2)}%;top:${y.toFixed(2)}%;--power:${power};--dot:${size}px" title="${escapeHtml(item.name)}: ${number(item.value)}"><i></i></span>`;
     }).join('');
     const note=options.error?escapeHtml(options.error):(!clean.length?(options.loading?'Получаем географию YouTube…':'Страны появятся после получения данных'):'');
-    map.innerHTML=`<div class="world-map-canvas" role="img" aria-label="Карта стран аудитории"><div class="world-map-stage"><img src="/assets/world-map-control-v52.webp?v=52.14" alt="Карта мира"/>${markers}</div>${note?`<span class="world-map-state ${options.error?'is-error':''}">${note}</span>`:''}</div>`;
+    map.innerHTML=`<div class="world-map-canvas" role="img" aria-label="Карта стран аудитории"><div class="world-map-stage"><img src="/assets/world-map-control-v52.webp?v=52.14" alt="Карта мира"/>${markers}</div>${note?`<span class="world-map-state ${options.error?'is-error':''}">${note}</span>`:''}</div><button class="map-orientation-fab" id="mapOrientationFab" type="button" data-mode="${landscape?'return-portrait':'enter-landscape'}" aria-label="${landscape?'Вернуть карту в портретный режим':'Открыть карту в горизонтальном режиме'}" title="${landscape?'Вернуть карту в портретный режим':'Открыть карту в горизонтальном режиме'}"><span class="map-orientation-fab-icon" aria-hidden="true">↻</span></button>`;
 
     const rowButton=(item,index,kind='portrait')=>{
       const encoded=encodeURIComponent(item.name);
@@ -3480,4 +3512,80 @@ body:not(.is-country-focus-active) #mapFocusActions,
 })();
 </script>
 
+
+<script id="andrik-r226-map-orientation-fab-script">
+(function(){
+  const BUTTON_SELECTOR='#mapOrientationFab';
+  const SESSION_KEY='andrik-map-orientation-request';
+  const landscapeQuery=window.matchMedia?window.matchMedia('(orientation: landscape)'):null;
+  const isLandscape=()=>landscapeQuery?landscapeQuery.matches:(window.innerWidth>window.innerHeight);
+  function getButtons(){return Array.from(document.querySelectorAll(BUTTON_SELECTOR));}
+  function setButtonState(){
+    const landscape=isLandscape();
+    getButtons().forEach(button=>{
+      button.dataset.mode=landscape?'return-portrait':'enter-landscape';
+      const label=landscape?'Вернуть карту в портретный режим':'Открыть карту в горизонтальном режиме';
+      button.setAttribute('aria-label',label);
+      button.setAttribute('title',label);
+      const icon=button.querySelector('.map-orientation-fab-icon');
+      if(icon)icon.textContent=landscape?'↺':'↻';
+    });
+  }
+  async function tryEnterLandscape(){
+    try{sessionStorage.setItem(SESSION_KEY,'landscape');}catch(_){}
+    try{
+      const root=document.documentElement;
+      if(!document.fullscreenElement&&root.requestFullscreen){
+        await root.requestFullscreen({navigationUI:'hide'});
+      }
+    }catch(_){}
+    try{
+      if(screen.orientation&&typeof screen.orientation.lock==='function'){
+        await screen.orientation.lock('landscape');
+      }
+    }catch(_){}
+    setButtonState();
+    setTimeout(()=>window.dispatchEvent(new Event('resize')),90);
+    setTimeout(()=>window.dispatchEvent(new Event('orientationchange')),180);
+  }
+  async function tryReturnPortrait(){
+    try{sessionStorage.removeItem(SESSION_KEY);}catch(_){}
+    try{
+      if(screen.orientation&&typeof screen.orientation.lock==='function'){
+        await screen.orientation.lock('portrait');
+      }
+    }catch(_){}
+    try{if(screen.orientation&&typeof screen.orientation.unlock==='function')screen.orientation.unlock();}catch(_){}
+    try{if(document.fullscreenElement&&document.exitFullscreen)await document.exitFullscreen();}catch(_){}
+    setButtonState();
+    setTimeout(()=>window.dispatchEvent(new Event('resize')),90);
+    setTimeout(()=>window.dispatchEvent(new Event('orientationchange')),180);
+  }
+  document.addEventListener('click',event=>{
+    const button=event.target.closest?.(BUTTON_SELECTOR);
+    if(!button)return;
+    event.preventDefault();
+    if(isLandscape())tryReturnPortrait();
+    else tryEnterLandscape();
+  });
+  const sync=()=>setButtonState();
+  if(landscapeQuery){
+    if(typeof landscapeQuery.addEventListener==='function')landscapeQuery.addEventListener('change',sync);
+    else if(typeof landscapeQuery.addListener==='function')landscapeQuery.addListener(sync);
+  }
+  window.addEventListener('resize',sync,{passive:true});
+  window.addEventListener('orientationchange',()=>setTimeout(sync,120),{passive:true});
+  document.addEventListener('fullscreenchange',sync,{passive:true});
+  document.addEventListener('visibilitychange',()=>{
+    if(document.hidden)return;
+    setTimeout(sync,140);
+    try{
+      if(sessionStorage.getItem(SESSION_KEY)==='landscape'&&!isLandscape()&&screen.orientation&&typeof screen.orientation.lock==='function'){
+        screen.orientation.lock('landscape').catch(()=>{});
+      }
+    }catch(_){}
+  },{passive:true});
+  setButtonState();
+})();
+</script>
 </body></html>
