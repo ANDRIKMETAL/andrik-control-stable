@@ -3282,12 +3282,10 @@ html.live-web-ai-resume-lock .analytics-swipe-viewport{overflow:hidden!important
     button.style.display=document.body.classList.contains('is-country-focus-active')?'none':'';
   }
   async function enterLandscape(){
-    /* R270: no fullscreen request — avoids the browser system toast in landscape. */
     try{if(screen.orientation&&screen.orientation.lock)await screen.orientation.lock('landscape');}catch(_){}
   }
   async function returnPortrait(){
     try{if(screen.orientation&&screen.orientation.lock)await screen.orientation.lock('portrait');}catch(_){}
-    /* R270: no fullscreen exit needed. */
   }
   document.addEventListener('click',event=>{
     const rotate=event.target.closest?.('#mapOrientationFab');
@@ -3300,9 +3298,6 @@ html.live-web-ai-resume-lock .analytics-swipe-viewport{overflow:hidden!important
   setTimeout(syncGrowth,0);
 })();
 </script>
-
-
-<script defer src="/assets/control-version-sync-r247.js?v=55.00-r271"></script>
 
 
 <style id="andrik-r243-map-two-mode-final">
@@ -3888,8 +3883,6 @@ body .analytics-map-top>.country-scroll-rail-r256{display:none!important}
 })();
 </script>
 
-<script defer src="/assets/control-version-sync-r263.js?v=55.00-r271"></script>
-
 <style id="andrik-r263-monthly-close-inside">
 #mapMonthlyModal:not([hidden]) .map-monthly-panel{position:relative!important;overflow:hidden!important}
 #mapMonthlyModal:not([hidden]) #mapMonthlyClose{display:grid!important;place-items:center!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important;position:absolute!important;top:auto!important;left:auto!important;right:12px!important;bottom:12px!important;width:50px!important;height:50px!important;min-width:50px!important;min-height:50px!important;max-width:50px!important;max-height:50px!important;margin:0!important;padding:0 0 3px!important;border:1.5px solid rgba(91,237,180,.94)!important;border-radius:50%!important;background:radial-gradient(circle at 35% 28%,rgba(24,67,84,.99),rgba(4,17,25,.99) 72%)!important;color:#f4fbff!important;font:800 1.9rem/1 Arial,Helvetica,sans-serif!important;box-shadow:0 10px 28px rgba(0,0,0,.56),0 0 0 4px rgba(70,232,174,.07),0 0 22px rgba(70,232,174,.34)!important;transform:none!important;z-index:2147483602!important;touch-action:manipulation!important}
@@ -3944,70 +3937,7 @@ body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #mapFocusAct
 </style>
 
 
-<style id="andrik-r270-portrait-map-clean-cut">
-@media screen and (orientation:portrait){
-  /* R270 — no hidden lower scroll after selecting a country. */
-  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane:not(.is-country-expanded){
-    overflow-y:hidden!important;
-    overscroll-behavior:none!important;
-  }
-  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane>.analytics-pane-wrap.analytics-map-pane-wrap,
-  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane>.analytics-map-pane-wrap.analytics-pane-wrap,
-  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane>.analytics-map-pane-wrap{
-    padding-bottom:0!important;
-    margin-bottom:0!important;
-  }
-  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-swipe-hint,
-  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #mapFocusActions,
-  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #mapEndPullZone,
-  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .map-end-pull-zone{
-    display:none!important;
-    visibility:hidden!important;
-    opacity:0!important;
-    pointer-events:none!important;
-    height:0!important;
-    min-height:0!important;
-    max-height:0!important;
-    margin:0!important;
-    padding:0!important;
-    border:0!important;
-    overflow:hidden!important;
-  }
-  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top,
-  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top:not(.has-country-focus),
-  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top.has-country-focus{
-    row-gap:4px!important;
-    padding-bottom:0!important;
-  }
-  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldCountries,
-  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .world-country-list,
-  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .world-country-list.is-country-focus-mode,
-  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .world-country-list:has(.world-country-button.is-selected){
-    margin-bottom:0!important;
-    padding-bottom:0!important;
-  }
-}
-</style>
-
-<script id="andrik-r270-portrait-focus-cut">
-(function(){
-  const portrait=()=>window.matchMedia?window.matchMedia('(orientation:portrait)').matches:(innerHeight>=innerWidth);
-  const sync=()=>{
-    const actions=document.getElementById('mapFocusActions');
-    const endZone=document.getElementById('mapEndPullZone');
-    if(portrait()){
-      if(actions){actions.hidden=true;actions.setAttribute('aria-hidden','true');}
-      if(endZone){endZone.hidden=true;endZone.setAttribute('aria-hidden','true');}
-    }else if(endZone){
-      endZone.hidden=false;endZone.removeAttribute('aria-hidden');
-    }
-  };
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',sync,{once:true});else sync();
-  window.addEventListener('pageshow',sync,{passive:true});
-  window.addEventListener('resize',()=>setTimeout(sync,60),{passive:true});
-  window.addEventListener('orientationchange',()=>setTimeout(sync,120),{passive:true});
-  window.addEventListener('andrik:country-focus-changed',()=>setTimeout(sync,0));
-})();
-</script>
-
+<link rel="stylesheet" href="/assets/analytics-r272-portrait-clean-cut.css?v=55.00-r272">
+<script defer src="/assets/analytics-r272-portrait-clean-cut.js?v=55.00-r272"></script>
+<script defer src="/assets/control-version-sync-r272.js?v=55.00-r272"></script>
 </body></html>

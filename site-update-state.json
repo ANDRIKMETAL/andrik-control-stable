@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r264",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1785905290287-d22ad91e4b",
-  "release": "R271",
-  "archiveName": "R271-PUSH-SUMMARY-WINDOW-LINK-FIX-SAFE-FULL.zip",
-  "sourceHead": "8016a974b4d707b64383d303bc65aa81fe308c53",
-  "backupSha": "8016a974b4d707b64383d303bc65aa81fe308c53",
-  "backupTag": "control-backup-20260805044754-8016a97-r271-9af63",
+  "operationId": "publish-1785906519809-8bdeb5f4ef",
+  "release": "R272",
+  "archiveName": "R272-R268-PUSH-SNAPSHOT-PORTRAIT-MAP-CLEAN-CUT-SAFE-FULL.zip",
+  "sourceHead": "4569d26176def9198b70d41546e57aa316d81b8e",
+  "backupSha": "4569d26176def9198b70d41546e57aa316d81b8e",
+  "backupTag": "control-backup-20260805050825-4569d26-r272-a3e7b",
   "autoRecovery": false,
-  "generatedAt": "2026-08-05T04:48:10.287Z"
+  "generatedAt": "2026-08-05T05:08:39.809Z"
 }

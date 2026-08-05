@@ -1,0 +1,105 @@
+/* R272 — only the requested portrait map clean-cut fixes. */
+@media screen and (orientation:portrait){
+  html,
+  body.analytics-admin-page.analytics-v54-46-page{
+    overflow-x:hidden!important;
+    max-width:100%!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-swipe-shell,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-swipe-viewport,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-swipe-track,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane>.analytics-pane-wrap.analytics-map-pane-wrap{
+    overflow-x:hidden!important;
+    max-width:100%!important;
+  }
+
+  /* The lower hint/gesture tail caused the hidden scroll and empty black area. */
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane>.analytics-pane-wrap>.analytics-swipe-hint,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #mapEndPullZone{
+    display:none!important;
+    width:0!important;
+    height:0!important;
+    min-height:0!important;
+    max-height:0!important;
+    margin:0!important;
+    padding:0!important;
+    border:0!important;
+    overflow:hidden!important;
+    visibility:hidden!important;
+    pointer-events:none!important;
+  }
+
+  /* The old text growth control is not part of the compact selected-country screen. */
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #countryGrowthToggle,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #countryGrowthPanel[hidden]{
+    display:none!important;
+    width:0!important;
+    height:0!important;
+    min-height:0!important;
+    margin:0!important;
+    padding:0!important;
+    overflow:hidden!important;
+  }
+
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top.has-country-focus{
+    grid-auto-rows:max-content!important;
+    align-content:start!important;
+    min-height:0!important;
+    height:auto!important;
+    max-height:none!important;
+    padding-bottom:8px!important;
+    margin-bottom:0!important;
+    overflow:hidden!important;
+  }
+
+  /* Exactly two compact actions in one row. Any stale duplicated buttons are cut off. */
+  body.analytics-admin-page.analytics-v54-46-page[data-analytics-page="map"].is-country-focus-active
+  .analytics-map-top.has-country-focus>#mapFocusActions,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #mapFocusActions.is-visible,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #mapFocusActions[aria-hidden="false"]{
+    position:relative!important;
+    inset:auto!important;
+    display:grid!important;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    grid-template-rows:58px!important;
+    grid-auto-rows:0!important;
+    gap:10px!important;
+    width:100%!important;
+    height:58px!important;
+    min-height:58px!important;
+    max-height:58px!important;
+    margin:9px 0 0!important;
+    padding:0!important;
+    overflow:hidden!important;
+    transform:none!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #mapFocusActions>.map-focus-action{
+    box-sizing:border-box!important;
+    display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    width:100%!important;
+    min-width:0!important;
+    height:58px!important;
+    min-height:58px!important;
+    max-height:58px!important;
+    margin:0!important;
+    padding:7px 9px!important;
+    border-radius:19px!important;
+    text-align:center!important;
+    font-size:clamp(.82rem,3.35vw,.96rem)!important;
+    line-height:1.08!important;
+    overflow:hidden!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #mapFocusActions>.map-focus-action:nth-child(n+3){
+    display:none!important;
+  }
+
+  body.analytics-admin-page.analytics-v54-46-page.r272-portrait-country-focused,
+  body.analytics-admin-page.analytics-v54-46-page.r272-portrait-country-focused .analytics-map-pane,
+  body.analytics-admin-page.analytics-v54-46-page.r272-portrait-country-focused .analytics-map-pane>.analytics-pane-wrap.analytics-map-pane-wrap{
+    overscroll-behavior:none!important;
+  }
+}

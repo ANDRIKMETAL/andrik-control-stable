@@ -1,6 +1,6 @@
 (() => {
   'use strict';
-  const RELEASE='R271';
+  const RELEASE='R251';
   const apply=()=>{
     const meta=document.querySelector('meta[name="andrik-control-release"]');
     if(meta)meta.content=RELEASE;

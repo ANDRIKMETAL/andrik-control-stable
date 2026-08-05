@@ -34,6 +34,9 @@
   let allActivityEvents=[];
   let sourcePages=[];
   const HOME_CACHE_KEY='andrik-control-home-last-good-r136';
+  const PAGE_PARAMS=new URLSearchParams(location.search);
+  const PUSH_SNAPSHOT_ID=String(PAGE_PARAMS.get('push_snapshot')||'').trim();
+  const PUSH_SNAPSHOT_MODE=Boolean(PUSH_SNAPSHOT_ID);
   function saveHomeCache(data){try{localStorage.setItem(HOME_CACHE_KEY,JSON.stringify({savedAt:new Date().toISOString(),data}))}catch(_){}}
   function readHomeCache(){try{const raw=localStorage.getItem(HOME_CACHE_KEY);if(!raw)return null;const parsed=JSON.parse(raw);return parsed?.data?parsed:null}catch(_){return null}}
 
@@ -159,7 +162,28 @@
     box.innerHTML=`<strong>🌍 За сутки YouTube:</strong><span>${line}${escapeHtml(extra)}</span>${summary.totalCountries?`<small>Стран в аудитории YouTube за 28 дней: ${number(summary.totalCountries)}</small>`:''}`;
   }
 
+  function formatSnapshotPeriod(startAt,endAt){
+    const format=value=>{
+      const time=Date.parse(value||'');
+      if(!Number.isFinite(time))return'';
+      return new Intl.DateTimeFormat('ru-RU',{timeZone:'Europe/Bratislava',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}).format(new Date(time));
+    };
+    const start=format(startAt),end=format(endAt);
+    return start&&end?`${start} → ${end}`:'';
+  }
+
+  function renderSnapshotHeading(data={}){
+    const row=document.querySelector('.control-summary-eyebrow-row');
+    if(!row)return;
+    if(!data.snapshotMode){row.classList.remove('is-push-snapshot');row.innerHTML='';return;}
+    row.classList.add('is-push-snapshot');
+    const label=data.snapshotLabel||'Сводка из push';
+    const period=formatSnapshotPeriod(data.windowStartAt,data.windowEndAt);
+    row.innerHTML=`<span class="control-push-snapshot-label">${escapeHtml(label)}</span>${period?`<small class="control-push-snapshot-period">${escapeHtml(period)}</small>`:''}`;
+  }
+
   function renderSummary(data){
+    renderSnapshotHeading(data);
     const s=data.summary||{};
     const yDelta=Number(s.youtubeViewDelta||0);
     const items=[
@@ -180,8 +204,12 @@
       : 'сейчас';
     const updatedBox=$('controlHomeUpdated');
     if(updatedBox){
-      const source=['push-merged','push-direct'].includes(data.summarySource)?' · сверено с push':'';
-      updatedBox.textContent=`Обновлено ${compactTime}${source}`;
+      if(data.snapshotMode){
+        updatedBox.textContent=`Зафиксировано в push · ${compactTime}`;
+      }else{
+        const source=['push-merged','push-direct'].includes(data.summarySource)?' · сверено с push':'';
+        updatedBox.textContent=`Обновлено ${compactTime}${source}`;
+      }
     }
     syncCarouselClones();
   }
@@ -208,7 +236,7 @@
   async function load({silent=false,forceLive=false}={}){
     if(loading)return;
     loading=true;
-  if(summaryMode){
+  if(summaryMode&&!PUSH_SNAPSHOT_MODE){
     const cached=readHomeCache();
     if(cachedForCurrentWindow(cached)){
       renderSummary(cached.data);
@@ -227,16 +255,22 @@
     if(showRefreshEffect)shell?.classList.add('is-refreshing');
     else shell?.classList.remove('is-refreshing');
     try{
-      const data=await api(forceLive?'/api/control/home?refresh=1&v=55.00-r136':'/api/control/home?v=55.00-r136',{timeoutMs:forceLive?13000:8000});
+      const snapshotQuery=PUSH_SNAPSHOT_MODE?`&push_snapshot=${encodeURIComponent(PUSH_SNAPSHOT_ID)}`:'';
+      const data=await api(`${forceLive?'/api/control/home?refresh=1&v=55.00-r272':'/api/control/home?v=55.00-r272'}${snapshotQuery}`,{timeoutMs:forceLive?13000:8000});
       if(data?.windowKey)activeSummaryWindowKey=data.windowKey;
-      const previous=readHomeCache();
-      const stable=cachedForCurrentWindow(previous)?mergeSummaryPayloadR213(previous.data,data):data;
-      saveHomeCache(stable);
-      renderSummary(stable);
-      renderActivity(stable.activity||[]);
+      if(PUSH_SNAPSHOT_MODE){
+        renderSummary(data);
+        renderActivity(data.activity||[]);
+      }else{
+        const previous=readHomeCache();
+        const stable=cachedForCurrentWindow(previous)?mergeSummaryPayloadR213(previous.data,data):data;
+        saveHomeCache(stable);
+        renderSummary(stable);
+        renderActivity(stable.activity||[]);
+      }
     }catch(error){
       const cached=readHomeCache();
-      if(cachedForCurrentWindow(cached)){
+      if(!PUSH_SNAPSHOT_MODE&&cachedForCurrentWindow(cached)){
         renderSummary(cached.data);
         renderActivity(cached.data.activity||[]);
         if($('controlHomeUpdated'))$('controlHomeUpdated').textContent=`Последние сохранённые данные · ${dateTime(cached.savedAt)} · ${escapeHtml(error.message)}`;
@@ -361,7 +395,8 @@
   }));
 
   $('controlSummaryNext')?.addEventListener('click',()=>{
-    location.assign(`/control-home.html?page=activity&v=55.00-final-stable-github&t=${Date.now()}`);
+    const snapshot=PUSH_SNAPSHOT_MODE?`&push_snapshot=${encodeURIComponent(PUSH_SNAPSHOT_ID)}`:'';
+    location.assign(`/control-home.html?page=activity&v=55.00-r272&t=${Date.now()}${snapshot}`);
   });
 
 
@@ -402,7 +437,7 @@
       if(!response.ok||data.ok===false)throw new Error(data.details||data.error||`HTTP ${response.status}`);
       if(label)label.textContent='Push отправлен ✓';
       button?.classList.add('is-success');
-      if(data?.metrics && typeof data.metrics==='object'){
+      if(!PUSH_SNAPSHOT_MODE&&data?.metrics && typeof data.metrics==='object'){
         const m=data.metrics;
         const payload={
           ok:true,
@@ -647,7 +682,7 @@
   window.addEventListener('resize',()=>applyPosition({animate:false}));
   document.addEventListener('visibilitychange',()=>{if(!document.hidden){updatePageState();if(summaryMode)load({silent:true})}});
   if(summaryMode)window.setInterval(()=>{if(!document.hidden)load({silent:true})},120000);
-  if(summaryMode)window.setInterval(()=>{
+  if(summaryMode&&!PUSH_SNAPSHOT_MODE)window.setInterval(()=>{
     const nextKey=currentSummaryWindowKey();
     if(nextKey===activeSummaryWindowKey)return;
     activeSummaryWindowKey=nextKey;
