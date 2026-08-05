@@ -1,0 +1,1 @@
+R277 — final portrait selected-country full-height layout. The bottom action cards are fully visible; the black clipped strip is removed. Based only on stable R276/R275 chain.

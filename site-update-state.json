@@ -1,14 +1,14 @@
 {
   "schema": 1,
-  "updaterVersion": "55.00-r275",
+  "updaterVersion": "55.00-r276",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1785916870778-9f4d6a8046",
-  "release": "R275",
-  "archiveName": "R276-BOTTOM-BUTTONS-BLACK-STRIPE-FIX-SAFE-FULL.zip",
-  "sourceHead": "3b66d2cd137fdcd3e7cbeb041e53774f70ce102d",
-  "backupSha": "3b66d2cd137fdcd3e7cbeb041e53774f70ce102d",
-  "backupTag": "control-backup-20260805080057-3b66d2c-r275-1dd55",
+  "operationId": "publish-1785917920674-80ad73d489",
+  "release": "R276",
+  "archiveName": "R277.zip",
+  "sourceHead": "9baf6cff554f344fe91486500e9946c0f571407f",
+  "backupSha": "9baf6cff554f344fe91486500e9946c0f571407f",
+  "backupTag": "control-backup-20260805081825-9baf6cf-r276-5a94c",
   "autoRecovery": false,
-  "generatedAt": "2026-08-05T08:01:10.778Z"
+  "generatedAt": "2026-08-05T08:18:40.674Z"
 }
