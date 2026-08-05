@@ -1,0 +1,7 @@
+R223 — FULL 4S AUTO RETURN
+- Uses the exact original 4.066-second eye animation file.
+- One tap on the header eye opens the video from frame 0.
+- Video plays once, never loops, and closes automatically only after the ended event.
+- Returns to the same page and restores the exact scroll position and focus.
+- Manual center-eye close hotspot removed so the animation cannot be cut short accidentally.
+- Based on R222; map exit guard and prior layout fixes preserved.

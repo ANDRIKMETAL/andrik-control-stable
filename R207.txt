@@ -1,0 +1,8 @@
+R207 — DAILY SUMMARY SOURCE OF TRUTH
+
+- Stores the exact metrics used for automatic and manual daily-summary pushes.
+- The summary screen reads durable push_state first, then push history/system logs.
+- Legacy push messages are parsed as a fallback.
+- Manual Send Summary renders returned metrics immediately.
+- Preserves original push history details instead of overwriting metrics.
+- Based on R206; deploy containment and Google owner-session fixes remain unchanged.

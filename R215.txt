@@ -1,0 +1,5 @@
+R215 — FAST EYE + STEP 5/6 WIDTH LOCK
+- Control eye now breathes faster, larger and more noticeably.
+- Site Update stage bar is hard-locked to 6 visible steps with no right stretch at steps 5–6.
+- Console width is clamped so step 6 stays inside the phone screen.
+- Based on R214.

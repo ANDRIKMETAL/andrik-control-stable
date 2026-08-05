@@ -1,0 +1,2 @@
+R256 — CENTERED HEADER GLOW + ADMIN BLUE EYE + REAL COUNTRY SCROLL
+Based on R255. No cleanup performed. Installer, Worker and push logic preserved.

@@ -1,0 +1,1 @@
+R299 — R299 stable base + YouTube OAuth safe recovery. Keeps existing YouTube data visible, avoids reconnect loops on transient Google verification failures, and uses read-only OAuth scopes.

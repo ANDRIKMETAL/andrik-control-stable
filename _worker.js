@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R297', number:296, version:'55.00', full:'55.00 LIVE WEB AI FINAL R297', siteUpdater:'55.00-r297' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R299', number:299, version:'55.00', full:'55.00 LIVE WEB AI FINAL R299', siteUpdater:'55.00-r299' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -4689,6 +4689,8 @@ async function getYoutubeOAuthRuntimeStatus(env, { verify = false } = {}) {
     refreshTokenConfigured:Boolean(base.refreshTokenConfigured),
     source:base.source || 'missing',
     connected:Boolean(base.clientConfigured && base.refreshTokenConfigured),
+    verified:false,
+    degraded:false,
     error:''
   };
   if (!verify || !status.connected) return status;
@@ -4698,8 +4700,13 @@ async function getYoutubeOAuthRuntimeStatus(env, { verify = false } = {}) {
       new Promise((_, reject) => setTimeout(() => reject(new Error('youtube-oauth-status-timeout')), 7500))
     ]);
     status.connected = true;
+    status.verified = true;
   } catch (error) {
-    status.connected = false;
+    // R299: a temporary Google/token verification failure must not erase a valid
+    // stored refresh-token connection or force the owner into an OAuth loop.
+    // Existing snapshots/Data API remain available while the next Cron retries.
+    status.connected = Boolean(status.clientConfigured && status.refreshTokenConfigured);
+    status.degraded = status.connected;
     status.error = cleanPlainText(error?.message || error, 300);
   }
   return status;
@@ -4742,12 +4749,12 @@ async function handleYoutubeOAuthStart(request, env) {
   url.searchParams.set('redirect_uri', config.redirectUri);
   url.searchParams.set('response_type','code');
   url.searchParams.set('access_type','offline');
-  url.searchParams.set('prompt','consent');
+  url.searchParams.set('prompt','select_account consent');
+  url.searchParams.set('login_hint','andrikmetal@gmail.com');
   url.searchParams.set('include_granted_scopes','true');
   url.searchParams.set('scope',[
     'https://www.googleapis.com/auth/yt-analytics.readonly',
-    'https://www.googleapis.com/auth/youtube.readonly',
-    'https://www.googleapis.com/auth/youtube.force-ssl'
+    'https://www.googleapis.com/auth/youtube.readonly'
   ].join(' '));
   url.searchParams.set('state',state);
   return json({ ok:true, url:url.toString(), redirectUri:config.redirectUri });

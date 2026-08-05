@@ -1,0 +1,7 @@
+R219 — INSTANT REPLAY + FULL FRAME VIDEO
+- Eye video is preloaded once and starts immediately on every tap.
+- Removed the old duplicate pointerup/click trigger and any perceived launch delay.
+- Closing resets the video to the beginning without removing its source, so repeat launch works reliably.
+- Video now uses cover mode and reaches the glowing side frame with no letterbox bars.
+- Frame is thicker and brighter.
+- Based on R218; R215 step 5/6 width lock is preserved.
