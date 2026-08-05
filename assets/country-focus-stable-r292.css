@@ -1,17 +1,17 @@
-/* Control ANDRIK R292 — compact buttons only. The map dimensions are untouched. */
+/* Control ANDRIK R293 — compact buttons only. The map dimensions are untouched. */
 @media screen and (orientation:portrait){
-  body.analytics-admin-page.analytics-v54-46-page.r292-country-actions-visible .analytics-map-pane .analytics-swipe-hint,
-  body.analytics-admin-page.analytics-v54-46-page.r292-country-actions-visible #mapEndPullZone,
-  body.analytics-admin-page.analytics-v54-46-page.r292-country-actions-visible #analyticsSwipeDots,
-  body.analytics-admin-page.analytics-v54-46-page.r292-country-actions-visible .analytics-swipe-dots{
+  body.analytics-admin-page.analytics-v54-46-page.r293-country-actions-visible .analytics-map-pane .analytics-swipe-hint,
+  body.analytics-admin-page.analytics-v54-46-page.r293-country-actions-visible #mapEndPullZone,
+  body.analytics-admin-page.analytics-v54-46-page.r293-country-actions-visible #analyticsSwipeDots,
+  body.analytics-admin-page.analytics-v54-46-page.r293-country-actions-visible .analytics-swipe-dots{
     display:none!important;
     visibility:hidden!important;
     opacity:0!important;
     pointer-events:none!important;
   }
 
-  body.analytics-admin-page.analytics-v54-46-page>#mapFocusActions.r292-country-actions-portal,
-  body.analytics-admin-page.analytics-v54-46-page>#mapFocusActions.r292-country-actions-portal[hidden]{
+  body.analytics-admin-page.analytics-v54-46-page>#mapFocusActions.r293-country-actions-portal,
+  body.analytics-admin-page.analytics-v54-46-page>#mapFocusActions.r293-country-actions-portal[hidden]{
     position:fixed!important;
     left:14px!important;
     right:14px!important;
@@ -36,7 +36,7 @@
     background:transparent!important;
   }
 
-  body.analytics-admin-page.analytics-v54-46-page>#mapFocusActions.r292-country-actions-portal .map-focus-action{
+  body.analytics-admin-page.analytics-v54-46-page>#mapFocusActions.r293-country-actions-portal .map-focus-action{
     box-sizing:border-box!important;
     display:flex!important;
     align-items:center!important;
@@ -61,8 +61,8 @@
 }
 
 @media screen and (orientation:portrait) and (max-height:720px){
-  body.analytics-admin-page.analytics-v54-46-page>#mapFocusActions.r292-country-actions-portal,
-  body.analytics-admin-page.analytics-v54-46-page>#mapFocusActions.r292-country-actions-portal .map-focus-action{
+  body.analytics-admin-page.analytics-v54-46-page>#mapFocusActions.r293-country-actions-portal,
+  body.analytics-admin-page.analytics-v54-46-page>#mapFocusActions.r293-country-actions-portal .map-focus-action{
     height:36px!important;
     min-height:36px!important;
     max-height:36px!important;
@@ -70,7 +70,7 @@
 }
 
 @media screen and (orientation:landscape){
-  body.analytics-admin-page.analytics-v54-46-page>#mapFocusActions.r292-country-actions-portal{
+  body.analytics-admin-page.analytics-v54-46-page>#mapFocusActions.r293-country-actions-portal{
     display:none!important;
   }
 }

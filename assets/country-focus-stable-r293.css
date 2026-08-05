@@ -74,3 +74,40 @@
     display:none!important;
   }
 }
+
+
+/* R293 — one permanent portrait map size.
+   The selected-country map and its green frame use exactly the same geometry
+   as the normal overview map. This late rule overrides the old R275 compact
+   selected-country height without touching map zoom, markers or image scale. */
+@media screen and (orientation:portrait){
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top.has-country-focus > #worldMap,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top:not(.has-country-focus) > #worldMap{
+    box-sizing:border-box!important;
+    width:100%!important;
+    max-width:100%!important;
+    height:clamp(270px,22dvh,286px)!important;
+    min-height:clamp(270px,22dvh,286px)!important;
+    max-height:286px!important;
+    margin:0 auto!important;
+    padding:0!important;
+    aspect-ratio:auto!important;
+    border:1.5px solid rgba(93,221,158,.90)!important;
+    border-radius:22px!important;
+    overflow:hidden!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap .world-map-canvas,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap .world-map-stage,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top.has-country-focus > #worldMap .world-map-canvas,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top.has-country-focus > #worldMap .world-map-stage{
+    width:100%!important;
+    height:100%!important;
+    min-height:100%!important;
+    max-height:100%!important;
+    margin:0!important;
+    padding:0!important;
+    border-radius:20px!important;
+    overflow:hidden!important;
+  }
+}

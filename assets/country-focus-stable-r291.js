@@ -1,11 +1,11 @@
-/* Control ANDRIK R292 — stable selected-country actions on the proven R275 map.
+/* Control ANDRIK R293 — stable selected-country actions on the proven R275 map.
    The map geometry is never changed. The action bar is moved outside the old
    swipe/scroll container and a short debounce prevents it disappearing during
    a normal country-card redraw. */
 (() => {
   'use strict';
-  if (window.__ANDRIK_COUNTRY_FOCUS_STABLE_R292__) return;
-  window.__ANDRIK_COUNTRY_FOCUS_STABLE_R292__ = true;
+  if (window.__ANDRIK_COUNTRY_FOCUS_STABLE_R293__) return;
+  window.__ANDRIK_COUNTRY_FOCUS_STABLE_R293__ = true;
 
   const portrait = () => window.matchMedia
     ? window.matchMedia('(orientation: portrait)').matches
@@ -33,7 +33,7 @@
     if (!actions) return false;
     if (!homeMarker) {
       homeParent = actions.parentNode;
-      homeMarker = document.createComment('andrik-r292-map-actions-home');
+      homeMarker = document.createComment('andrik-r293-map-actions-home');
       homeParent?.insertBefore(homeMarker, actions);
     }
     return true;
@@ -61,14 +61,14 @@
     if (actions.parentNode !== document.body) document.body.appendChild(actions);
     if (actions.hidden) actions.hidden = false;
     if (actions.getAttribute('aria-hidden') !== 'false') actions.setAttribute('aria-hidden', 'false');
-    if (!actions.classList.contains('r292-country-actions-portal')) actions.classList.add('r292-country-actions-portal');
-    if (!document.body.classList.contains('r292-country-actions-visible')) document.body.classList.add('r292-country-actions-visible');
+    if (!actions.classList.contains('r293-country-actions-portal')) actions.classList.add('r293-country-actions-portal');
+    if (!document.body.classList.contains('r293-country-actions-visible')) document.body.classList.add('r293-country-actions-visible');
   }
 
   function hide() {
     if (!actions) return;
-    actions.classList.remove('r292-country-actions-portal');
-    document.body.classList.remove('r292-country-actions-visible');
+    actions.classList.remove('r293-country-actions-portal');
+    document.body.classList.remove('r293-country-actions-visible');
     actions.hidden = true;
     actions.setAttribute('aria-hidden', 'true');
     if (homeParent && actions.parentNode !== homeParent) {

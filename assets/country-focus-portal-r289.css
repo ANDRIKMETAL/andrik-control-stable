@@ -1,4 +1,4 @@
-/* Control ANDRIK R292 — selected-country portal without black overlay.
+/* Control ANDRIK R293 — selected-country portal without black overlay.
    The full map remains visible. No fixed filler is allowed to cover it. */
 
 /* Kill the obsolete R283/R284 black filler even if it survived in the DOM/cache. */
@@ -139,7 +139,7 @@ body.r289-country-actions-active::after{
 }
 
 
-/* R292 — remove every obsolete overlay/state from failed R283–R288 attempts. */
+/* R293 — remove every obsolete overlay/state from failed R283–R288 attempts. */
 #r285CountryBottomFill,#r286CountryBottomFill,#r287CountryBottomFill,#r288CountryBottomFill{
   display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important;
   width:0!important;height:0!important;min-width:0!important;min-height:0!important;max-width:0!important;max-height:0!important;
