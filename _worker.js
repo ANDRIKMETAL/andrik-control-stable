@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R288', number:288, version:'55.00', full:'55.00 LIVE WEB AI FINAL R288', siteUpdater:'55.00-r288' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R289', number:288, version:'55.00', full:'55.00 LIVE WEB AI FINAL R289', siteUpdater:'55.00-r289' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -8813,7 +8813,7 @@ function siteUpdateBase64(bytes) {
 async function siteUpdateGithubRequest(config, route, options = {}) {
   if (!config.token) throw new Error('github-token-missing');
   const method = options.method || 'GET';
-  // R288: stop a stalled GitHub request early and retry safely. This keeps
+  // R289: stop a stalled GitHub request early and retry safely. This keeps
   // the whole Commit stage below the Android connection timeout.
   const defaultTimeout = method === 'GET' ? 22000 : 32000;
   const timeoutMs = Math.max(5000, Math.min(60000, Number(options.timeoutMs || defaultTimeout)));

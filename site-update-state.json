@@ -1,14 +1,14 @@
 {
   "schema": 1,
-  "updaterVersion": "55.00-r286",
+  "updaterVersion": "55.00-r288",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1785929917665-0e131f2083",
+  "operationId": "publish-1785931671972-d8935d2a22",
   "release": "R286",
-  "archiveName": "R288.zip",
-  "sourceHead": "6c8a0f1bfa86cf25c42488c6791dd7460de62621",
-  "backupSha": "6c8a0f1bfa86cf25c42488c6791dd7460de62621",
-  "backupTag": "control-backup-20260805113833-6c8a0f1-r286-67e6e",
+  "archiveName": "R289.zip",
+  "sourceHead": "f4300c5e6c185fbc6d72026e655552eacb15907c",
+  "backupSha": "f4300c5e6c185fbc6d72026e655552eacb15907c",
+  "backupTag": "control-backup-20260805120747-f4300c5-r286-e1908",
   "autoRecovery": false,
-  "generatedAt": "2026-08-05T11:38:37.665Z"
+  "generatedAt": "2026-08-05T12:07:51.972Z"
 }
