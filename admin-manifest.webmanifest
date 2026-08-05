@@ -2,7 +2,7 @@
   "name": "Live Web AI",
   "short_name": "Live Web AI",
   "id": "/admin/?app=live-web-ai-final-r101",
-  "start_url": "/?source=pwa&page=map&app=live-web-ai&v=55.00-final-r101",
+  "start_url": "/?source=pwa&page=map&app=live-web-ai&v=55.00-r273",
   "scope": "/",
   "display": "standalone",
   "display_override": [
@@ -37,7 +37,7 @@
       "name": "YouTube — статистика",
       "short_name": "YouTube",
       "description": "Открыть статистику канала ANDRIK",
-      "url": "/?source=app-shortcut-youtube&page=youtube&v=55.00g",
+      "url": "/?source=app-shortcut-youtube&page=youtube&v=55.00-r273",
       "icons": [
         {
           "src": "/assets/control-shortcut-youtube-96.png",
@@ -50,7 +50,7 @@
       "name": "Карта слушателей",
       "short_name": "Карта",
       "description": "Открыть карту аудитории ANDRIK",
-      "url": "/?source=app-shortcut-map&page=map&v=55.00g",
+      "url": "/?source=app-shortcut-map&page=map&v=55.00-r273",
       "icons": [
         {
           "src": "/assets/control-shortcut-map-96.png",
@@ -60,5 +60,5 @@
       ]
     }
   ],
-  "version": "55.00-final-r264"
+  "version": "55.00-r273"
 }

@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r264",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1785908107801-672b200e5b",
-  "release": "R271",
-  "archiveName": "R271-PUSH-SUMMARY-WINDOW-FIX-SAFE-FULL.zip",
-  "sourceHead": "904b354e270e8a009b730294247c48d0a9729b15",
-  "backupSha": "904b354e270e8a009b730294247c48d0a9729b15",
-  "backupTag": "control-backup-20260805053452-904b354-r271-c3a09",
+  "operationId": "publish-1785910977033-3d5be97595",
+  "release": "R273",
+  "archiveName": "R273-PORTRAIT-COUNTRY-FOCUS-ONE-SCREEN-SAFE-FULL.zip",
+  "sourceHead": "7a6176900b2e396649b1f31d92a4d587223bc03e",
+  "backupSha": "7a6176900b2e396649b1f31d92a4d587223bc03e",
+  "backupTag": "control-backup-20260805062221-7a61769-r273-de15a",
   "autoRecovery": false,
-  "generatedAt": "2026-08-05T05:35:07.801Z"
+  "generatedAt": "2026-08-05T06:22:57.033Z"
 }
