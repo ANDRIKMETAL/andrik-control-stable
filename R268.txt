@@ -1,0 +1,6 @@
+R268 — R265 stable base
+
+Исправлено только ложное отображение карточки «Нужен GitHub Secret».
+Причина: общий стиль .admin-control-card { display:grid } перебивал HTML-атрибут hidden.
+Теперь карточка скрыта при connected=true и появляется только когда siteUpdateSetupCard.hidden=false.
+Глаз, карта, установщик, push, аналитика и прочие функции R265 не изменялись.
