@@ -1,0 +1,83 @@
+/* Control ANDRIK R295 — no action-button flash outside a real selected-country map state.
+   Map dimensions and frame are intentionally untouched. */
+body.analytics-admin-page.analytics-v54-46-page:not([data-analytics-page="map"]) #mapFocusActions,
+body.analytics-admin-page.analytics-v54-46-page[data-analytics-page="map"]:not(.is-country-focus-active) #mapFocusActions,
+body.analytics-admin-page.analytics-v54-46-page:not(.r295-country-actions-visible) #mapFocusActions.r295-country-actions-in-card{
+  display:none!important;
+  visibility:hidden!important;
+  opacity:0!important;
+  pointer-events:none!important;
+}
+
+@media screen and (orientation:portrait){
+  body.analytics-admin-page.analytics-v54-46-page.r295-country-actions-visible .analytics-map-pane .analytics-swipe-hint,
+  body.analytics-admin-page.analytics-v54-46-page.r295-country-actions-visible #mapEndPullZone,
+  body.analytics-admin-page.analytics-v54-46-page.r295-country-actions-visible #analyticsSwipeDots,
+  body.analytics-admin-page.analytics-v54-46-page.r295-country-actions-visible .analytics-swipe-dots{
+    display:none!important;
+    visibility:hidden!important;
+    opacity:0!important;
+    pointer-events:none!important;
+    width:0!important;
+    height:0!important;
+    min-width:0!important;
+    min-height:0!important;
+    max-height:0!important;
+    margin:0!important;
+    padding:0!important;
+    overflow:hidden!important;
+  }
+
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top.has-country-focus > #mapFocusActions.r295-country-actions-in-card,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top.has-country-focus > #mapFocusActions.r295-country-actions-in-card[hidden]{
+    position:static!important;
+    inset:auto!important;
+    z-index:12!important;
+    box-sizing:border-box!important;
+    display:grid!important;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    align-items:stretch!important;
+    width:calc(100% - 14px)!important;
+    height:42px!important;
+    min-height:42px!important;
+    max-height:42px!important;
+    margin:6px auto 0!important;
+    padding:0!important;
+    gap:8px!important;
+    overflow:visible!important;
+    visibility:visible!important;
+    opacity:1!important;
+    pointer-events:auto!important;
+    transform:none!important;
+    background:transparent!important;
+  }
+
+  body.analytics-admin-page.analytics-v54-46-page #mapFocusActions.r295-country-actions-in-card .map-focus-action{
+    box-sizing:border-box!important;
+    display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    width:100%!important;
+    min-width:0!important;
+    height:42px!important;
+    min-height:42px!important;
+    max-height:42px!important;
+    margin:0!important;
+    padding:3px 5px!important;
+    border-radius:15px!important;
+    flex-direction:row!important;
+    gap:3px!important;
+    font-size:clamp(.60rem,2.45vw,.72rem)!important;
+    line-height:1!important;
+    letter-spacing:-.012em!important;
+    white-space:nowrap!important;
+    overflow:hidden!important;
+    text-overflow:clip!important;
+  }
+}
+
+@media screen and (orientation:landscape){
+  body.analytics-admin-page.analytics-v54-46-page #mapFocusActions.r295-country-actions-in-card{
+    display:none!important;
+  }
+}
