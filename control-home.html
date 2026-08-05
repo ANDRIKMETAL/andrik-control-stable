@@ -654,6 +654,27 @@ body.control-home-page .control-menu-page .control-version-footer{
 
 
 
+
+<style id="r271-push-summary-style">
+.control-summary-source{
+  display:none;
+  width:max-content;
+  max-width:calc(100vw - 40px);
+  margin:0 auto 8px;
+  padding:6px 12px;
+  border:1px solid rgba(92,211,255,.34);
+  border-radius:999px;
+  background:rgba(8,42,58,.72);
+  color:#bcefff;
+  font-size:.72rem;
+  font-weight:900;
+  letter-spacing:.035em;
+  text-align:center;
+  box-shadow:0 0 20px rgba(54,190,255,.12);
+}
+body.control-push-summary-view .control-summary-source{display:block}
+</style>
+
 <link rel="stylesheet" href="/assets/r188-final-ui-fixes.css?v=55.00-r188">
 <link rel="stylesheet" href="/assets/r189-project-heading-center.css?v=55.00-r189">
 </head>
@@ -667,7 +688,7 @@ body.control-home-page .control-menu-page .control-version-footer{
       <section class="control-swipe-page control-summary-page" data-page="summary" data-logical-page="0" aria-label="Сводка за сегодня">
         <div class="control-swipe-page-inner">
           <header class="control-home-hero">
-            <div class="control-home-hero-copy"><div class="control-summary-eyebrow-row"></div><h1 id="controlHomeTitle">Сводка за сегодня</h1></div>
+            <div class="control-home-hero-copy"><div class="control-summary-source" id="controlSummarySource" hidden></div><div class="control-summary-eyebrow-row"></div><h1 id="controlHomeTitle">Сводка за сегодня</h1></div>
             <div class="control-home-summary" id="controlHomeSummary"><div class="admin-empty">Собираем сводку…</div></div>
             <div class="control-home-geo-delta" id="controlHomeGeoDelta" hidden></div>
             <div class="control-home-updated" id="controlHomeUpdated">Проверяем доступ…</div>
@@ -732,7 +753,7 @@ body.control-home-page .control-menu-page .control-version-footer{
     <div class="control-activity-modal-list" id="controlActivityModalList"><div class="admin-empty">Загружаем события…</div></div>
   </section>
 </div>
-<script defer src="/assets/control-home-r207.js?v=55.00-r214"></script><script defer src="/assets/control-home-exit-guard-r214.js?v=55.00-r214"></script><script defer src="/assets/control-status-eye-v55-00-r88.js?v=55.00-r88"></script><script defer src="/assets/control-version-v55-00-final-r1.js?v=55.00-final-r1"></script>
+<script defer src="/assets/control-home-r271.js?v=55.00-r271"></script><script defer src="/assets/control-home-exit-guard-r214.js?v=55.00-r214"></script><script defer src="/assets/control-status-eye-v55-00-r88.js?v=55.00-r88"></script><script defer src="/assets/control-version-v55-00-final-r1.js?v=55.00-final-r1"></script>
 
 
 <script defer src="/assets/control-live-eye-v55-00-r265.js?v=55.00-r265"></script><script defer src="/assets/control-version-v55-00-r3n.js?v=55.00-r3n"></script><script defer src="/assets/control-version-v55-00-final-stable-github.js?v=55.00-final-stable-github"></script><script defer src="/assets/control-menu-return-map-v55-00-r33.js?v=55.00-final-r33"></script>
@@ -820,6 +841,6 @@ body.control-home-page .control-menu-page .control-version-footer{
 
 
 
-<script defer src="/assets/control-version-sync-r247.js?v=55.00-r270"></script>
-<script defer src="/assets/control-version-sync-r263.js?v=55.00-r270"></script>
+<script defer src="/assets/control-version-sync-r247.js?v=55.00-r247"></script>
+<script defer src="/assets/control-version-sync-r263.js?v=55.00-r263"></script>
 </body></html>

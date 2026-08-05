@@ -7027,19 +7027,20 @@ async function maybeSendDailyOwnerSummary(env) {
   }
 
   const lines = buildDailyOwnerSummaryLines(metrics);
+  const summaryUrl = `https://control.andrikmetal.com/control-home.html?page=summary&source=push&summaryWindow=${encodeURIComponent(summaryWindow.key)}`;
   let result;
   try {
     result = await sendOwnerPush(env, {
       title:'📊 Ежедневная сводка ANDRIK',
       message:lines.join('\n'),
-      url:'https://control.andrikmetal.com/control-home.html?page=summary',
+      url:summaryUrl,
       name:`ANDRIK daily summary ${clock.date}`,
       history:{
         type:'daily-summary',
         source:'central-cron',
         title:'Ежедневная сводка ANDRIK',
         message:lines.join('\n'),
-        url:'https://control.andrikmetal.com/control-home.html?page=summary',
+        url:summaryUrl,
         details:{
           localDate:clock.date,
           localHour:clock.hour,
@@ -7071,14 +7072,19 @@ async function maybeSendDailyOwnerSummary(env) {
     await setPushState(db, 'daily-owner-summary-last-at', sentAt);
     await setPushState(db, 'daily-owner-summary-last-attempt-status', metrics.partial ? 'sent-partial' : 'sent');
     await setPushState(db, 'daily-owner-summary-last-attempt-error', collectionError);
-    await setPushState(db, 'daily-owner-summary-last-metrics', JSON.stringify({
+    const completedWindowKey = summaryWindow?.key || metrics?.windowKey || '';
+    const storedSnapshot = JSON.stringify({
       metrics,
       sentAt,
       localDate:clock.date,
       source:'central-cron',
-      windowKey:summaryWindow?.key || metrics?.windowKey || ''
-    }));
-    await persistControlHomeHighWaterFromMetricsR260(db, summaryWindow?.key || metrics?.windowKey || '', metrics);
+      windowKey:completedWindowKey
+    });
+    await setPushState(db, 'daily-owner-summary-last-metrics', storedSnapshot);
+    if (completedWindowKey) {
+      await setPushState(db, `daily-owner-summary-window:${completedWindowKey}`, storedSnapshot);
+    }
+    await persistControlHomeHighWaterFromMetricsR260(db, completedWindowKey, metrics);
     await recordSystemLog(env, {
       scope:'daily-summary',
       level:metrics.partial ? 'warning' : 'info',
@@ -7342,12 +7348,146 @@ function parseDailySummaryMessageMetrics(row) {
   return metrics;
 }
 
+
+
+function getBratislavaSummaryWindowByKeyR271(windowKey, date = new Date()) {
+  const key = cleanPlainText(windowKey || '', 20);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(key)) return null;
+  const startDay = Date.parse(`${key}T00:00:00.000Z`);
+  if (!Number.isFinite(startDay)) return null;
+  const current = getBratislavaSummaryWindow(date);
+  const currentDay = Date.parse(`${current.key}T00:00:00.000Z`);
+  const ageDays = Math.round((currentDay - startDay) / 86400000);
+  if (!Number.isFinite(ageDays) || ageDays < 0 || ageDays > 45) return null;
+  const nextDate = shiftIsoCalendarDate(key, 1);
+  const endAt = bratislavaLocalDateTimeToIso(nextDate, 6, 5);
+  return {
+    key,
+    startAt:bratislavaLocalDateTimeToIso(key, 6, 5),
+    endAt,
+    currentLocalDate:getBratislavaClock(date).date,
+    crossesMidnight:true,
+    midnightAt:bratislavaLocalDateTimeToIso(nextDate, 0, 0),
+    cutoffLabel:'06:05 Europe/Bratislava',
+    completed:Date.parse(endAt) <= date.getTime()
+  };
+}
+
+function controlHomeSummaryFromDailyMetricsR271(metrics = {}) {
+  return normalizeControlHomeSummaryR213({
+    websiteUsers:Number(metrics?.siteUsers || 0),
+    websiteViews:Number(metrics?.siteViews || 0),
+    siteSubscribers:Number(metrics?.siteSubscribers || 0),
+    siteComments:Number(metrics?.siteComments || 0),
+    siteLikes:Number(metrics?.siteLikes || 0),
+    youtubeComments:Number(metrics?.youtubeComments || 0),
+    youtubeSubscribers:Number(metrics?.youtubeSubscribers || 0),
+    youtubeLikes:Number(metrics?.youtubeLikes || 0),
+    youtubeViews:Number(metrics?.youtubeViewDelta || 0),
+    youtubeViewDelta:Number(metrics?.youtubeViewDelta || 0),
+    releases:Number(metrics?.releases || 0),
+    countryDeltas:Array.isArray(metrics?.countryDeltas) ? metrics.countryDeltas : [],
+    totalCountries:Number(metrics?.totalCountries || 0),
+    countryDate:metrics?.countryDate || ''
+  });
+}
+
+function parseStoredDailySummarySnapshotR271(row, windowKey) {
+  if (!row?.value) return null;
+  try {
+    const parsed = JSON.parse(row.value || '{}') || {};
+    const metrics = parsed?.metrics && typeof parsed.metrics === 'object' ? parsed.metrics : {};
+    const storedKey = cleanPlainText(parsed?.windowKey || metrics?.windowKey || '', 40);
+    if (storedKey !== windowKey) return null;
+    return {
+      metrics,
+      sentAt:cleanPlainText(parsed?.sentAt || row?.updatedAt || '', 80),
+      source:cleanPlainText(parsed?.source || 'central-cron', 40)
+    };
+  } catch (_) { return null; }
+}
+
+async function findDailySummarySnapshotR271(db, window) {
+  const stored = parseStoredDailySummarySnapshotR271(
+    await getPushState(db, `daily-owner-summary-window:${window.key}`).catch(() => null),
+    window.key
+  );
+  if (stored) return stored;
+
+  const searchEnd = new Date(Date.parse(window.endAt) + 86400000).toISOString();
+  const rows = await db.prepare(`
+    SELECT details_json AS detailsJson, created_at AS createdAt
+    FROM push_history
+    WHERE type='daily-summary'
+      AND source='central-cron'
+      AND status='sent'
+      AND datetime(created_at) >= datetime(?1)
+      AND datetime(created_at) < datetime(?2)
+    ORDER BY datetime(created_at) DESC
+    LIMIT 12
+  `).bind(window.startAt, searchEnd).all();
+
+  for (const row of rows?.results || []) {
+    const metrics = parseDailySummaryMetricsForWindow(row, window.key);
+    if (Object.keys(metrics).length) {
+      return { metrics, sentAt:row.createdAt || '', source:'central-cron-history' };
+    }
+  }
+  return null;
+}
+
+async function handleControlHomePushSnapshotR271(db, window) {
+  const snapshot = await findDailySummarySnapshotR271(db, window);
+  if (!snapshot) {
+    return json({
+      ok:false,
+      error:'push-summary-not-found',
+      details:'Сохранённая сводка из push для этого периода не найдена.'
+    }, 404);
+  }
+
+  const activityResult = await db.prepare(`
+    SELECT id, type, source, audience, title, message, url,
+           video_id AS videoId, video_title AS videoTitle,
+           status, created_at AS createdAt
+    FROM push_history
+    WHERE type IN ('youtube-comment','youtube-comment-count','youtube-subscriber','youtube-subscriber-count','youtube-like','site-subscriber','comment-live','comment-pending','auto-release','auto-release-retry','release-publish')
+      AND datetime(created_at) >= datetime(?1)
+      AND datetime(created_at) < datetime(?2)
+    ORDER BY datetime(created_at) DESC
+    LIMIT 200
+  `).bind(window.startAt, window.endAt).all();
+
+  return json({
+    ok:true,
+    period:'06:05-cycle',
+    windowKey:window.key,
+    windowStartAt:window.startAt,
+    windowEndAt:window.endAt,
+    summary:controlHomeSummaryFromDailyMetricsR271(snapshot.metrics),
+    activity:activityResult?.results || [],
+    summarySource:'push-direct',
+    summaryView:'completed-push',
+    pushSentAt:snapshot.sentAt || '',
+    updatedAt:snapshot.sentAt || new Date().toISOString()
+  });
+}
+
 async function handleControlHome(request, env) {
   if (!adminAuthorized(request, env)) return json({ ok:false, error:'unauthorized' },401);
   const db = requireDb(env);
-  const forceRefresh = new URL(request.url).searchParams.get('refresh') === '1';
+  const requestUrl = new URL(request.url);
+  const forceRefresh = requestUrl.searchParams.get('refresh') === '1';
+  const pushSnapshotRequested = requestUrl.searchParams.get('source') === 'push';
+  const requestedPushWindow = pushSnapshotRequested
+    ? getBratislavaSummaryWindowByKeyR271(requestUrl.searchParams.get('window'))
+    : null;
   const window = getBratislavaSummaryWindow();
   await Promise.all([ensurePushAutomationSchema(db), ensureCommentsV4Schema(db), ensurePlatformAnalyticsSchema(db), ensureControlV1Schema(db), ensureSiteMetricsSchema(db)]);
+  if (pushSnapshotRequested && !requestedPushWindow) {
+    return json({ ok:false, error:'invalid-push-summary-window' }, 400);
+  }
+  if (requestedPushWindow) return await handleControlHomePushSnapshotR271(db, requestedPushWindow);
   // R260 DAILY ACCUMULATOR: the screen uses one Bratislava window, 06:05 → next 06:05.
   // Sending a push only records a checkpoint. It never resets counters; only the window key changes at 06:05.
   const [siteSubscribers, siteComments, siteLikes, youtubeEvents, youtubeLikeRows, youtubeSubscriberRows, releases, latestYoutubeState, activityResult, ytLatest, ytBaseline, gaLatest, gaBaseline, gaRollover, automationAt, automationStatus, automationSummary, siteLive, siteWindow, latestDailySummaryState, latestDailySummaryPush, latestDailySummaryLog] = await Promise.all([

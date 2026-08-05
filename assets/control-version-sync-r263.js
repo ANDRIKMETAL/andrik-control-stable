@@ -1,9 +1,9 @@
 (() => {
   'use strict';
-  if(window.__ANDRIK_VERSION_SYNC_R270__)return;
-  window.__ANDRIK_VERSION_SYNC_R270__=true;
-  const RELEASE='R270';
-  const FULL='Live Web AI · ANDRIK · v55.00 LIVE WEB AI FINAL R270';
+  if(window.__ANDRIK_VERSION_SYNC_R263__)return;
+  window.__ANDRIK_VERSION_SYNC_R263__=true;
+  const RELEASE='R263';
+  const FULL='Live Web AI · ANDRIK · v55.00 LIVE WEB AI FINAL R263';
   const apply=()=>{
     document.documentElement.dataset.andrikRelease=RELEASE;
     let meta=document.querySelector('meta[name="andrik-control-release"]');
@@ -21,7 +21,7 @@
       }
       footer.dataset.release=RELEASE;
     });
-    try{localStorage.setItem('andrik-control-runtime-version','55.00-r270');}catch(_){}
+    try{localStorage.setItem('andrik-control-runtime-version','55.00-r263');}catch(_){}
   };
   apply();
   document.addEventListener('DOMContentLoaded',apply,{once:true});

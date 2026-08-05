@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r264",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1785906783373-364f947af8",
-  "release": "R270",
-  "archiveName": "R270-PORTRAIT-MAP-CLEAN-CUT-SAFE-FULL-1.zip",
-  "sourceHead": "2f939d280b1dde6727b394e135888abf0e097d3c",
-  "backupSha": "2f939d280b1dde6727b394e135888abf0e097d3c",
-  "backupTag": "control-backup-20260805051248-2f939d2-r270-96626",
+  "operationId": "publish-1785908107801-672b200e5b",
+  "release": "R271",
+  "archiveName": "R271-PUSH-SUMMARY-WINDOW-FIX-SAFE-FULL.zip",
+  "sourceHead": "904b354e270e8a009b730294247c48d0a9729b15",
+  "backupSha": "904b354e270e8a009b730294247c48d0a9729b15",
+  "backupTag": "control-backup-20260805053452-904b354-r271-c3a09",
   "autoRecovery": false,
-  "generatedAt": "2026-08-05T05:13:03.373Z"
+  "generatedAt": "2026-08-05T05:35:07.801Z"
 }
