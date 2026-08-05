@@ -1,8 +1,0 @@
-R263 — UPDATE STEP COLORS + ADMIN BLUE + GREEN ZIP PICKER
-
-- Step 5 in Update Site forces yellow eye and yellow halo.
-- Step 6 forces blue eye and blue halo.
-- Discussion, Releases, Monitoring, Service and other admin pages stay blue.
-- Choose ZIP is bright green with animated glow.
-- ZIP icon is a WinRAR-style stack of books.
-- Based on R261; push, analytics accumulation, country scroll and installer logic preserved.

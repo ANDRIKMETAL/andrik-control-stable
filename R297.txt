@@ -1,0 +1,1 @@
+R297 — GENERAL CLEANUP built directly from the confirmed stable base. Removed historical cache-reset pages, old release markers, test/debug page and superseded unreferenced version tails. Map, selected-country buttons, push/summary logic, installer and active assets are unchanged.

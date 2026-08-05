@@ -1,5 +1,0 @@
-R209 CURRENT VERSION AUTO
-- The home menu version badge now shows R209 immediately.
-- It confirms the installed version from /api/control/owner-status.
-- Future releases only need the Worker release constant updated.
-- All R208 deploy width and R207 summary fixes are preserved.

@@ -1,6 +1,0 @@
-R220 — MAP EXIT GUARD + VIDEO CROP
-- One Android/PWA Back press on the analytics/map screen now opens “Выйти / Остаться” in portrait and landscape.
-- Staying keeps the map open; exiting requires explicit confirmation.
-- Live-eye video is zoomed/cropped horizontally to remove the remaining black side space.
-- Video frame is thicker and brighter.
-- Based on R219.

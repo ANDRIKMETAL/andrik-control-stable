@@ -1,5 +1,0 @@
-R260 DAILY ACCUMULATOR + R256 EYE RESTORE
-- Restores the exact working R256 eye pulse/glow implementation.
-- Daily analytics resets only by the 06:05 Europe/Bratislava window boundary.
-- Manual or scheduled push records a checkpoint and never clears live counters.
-- Push metrics are merged only when their windowKey matches the current daily window.

@@ -1,5 +1,0 @@
-R211 RELEASE EVENT SYNC
-- The daily summary counts a newly published YouTube track as a release event.
-- The count is synchronized with the same youtube-latest-public state used by the website card.
-- auto-release-retry events are included in release counts, history and activity.
-- R209 current-version auto display and all earlier fixes are preserved.

@@ -1,5 +1,0 @@
-R222 — CENTER EYE CLOSE
-- Video closes only when the user taps the invisible central eye zone.
-- Taps anywhere else do nothing.
-- No close cross or edge close action.
-- Based on R221; map exit protection and video crop preserved.

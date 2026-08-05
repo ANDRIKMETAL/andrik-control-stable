@@ -1,7 +1,0 @@
-R255 — EYE TAP + ADMIN BLUE + ATTACK CENTER GLOW + HARD COUNTRY SCROLL
-
-- Fixes eye video opening: removes pointerup/click double-trigger that immediately closed the overlay.
-- Locks Control/Admin pages to blue eye/header state.
-- Keeps Attack Map yellow but centers the glow and removes the left-side flare.
-- Adds manual pointer-based scrolling for the expanded country list and draggable visible rail.
-- Preserves R253 push fix, R254 cache pages, updater and Worker logic.

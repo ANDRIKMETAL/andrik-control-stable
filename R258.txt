@@ -1,5 +1,0 @@
-ANDRIK Control R258
-- Full country list is moved into a dedicated viewport-level scrolling overlay.
-- Outer map/swipe gestures cannot intercept country scrolling.
-- Admin panel eye is force-rendered blue over the legacy green status filter.
-- No Worker, push, updater, map data, or deployment logic changes.
