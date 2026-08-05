@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r264",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1785899675144-701f7dbb0b",
-  "release": "R268",
-  "archiveName": "R268-R265-STABLE-GITHUB-SECRET-CARD-VISIBILITY-FIX-SAFE-FULL.zip",
-  "sourceHead": "c0570e296c053500c60521cdd93e3c6ea8c08f03",
-  "backupSha": "c0570e296c053500c60521cdd93e3c6ea8c08f03",
-  "backupTag": "control-backup-20260805031429-c0570e2-r268-3d6c7",
+  "operationId": "publish-1785900615591-5f630047c6",
+  "release": "R269",
+  "archiveName": "R269-BLUE-ADMIN-SECTIONS-YELLOW-STAGE-5-FRESH-APP-VERSION-R268-SAFE-FULL.zip",
+  "sourceHead": "0bc3bc2420d4987ce2d4428297237ee0d9d43037",
+  "backupSha": "0bc3bc2420d4987ce2d4428297237ee0d9d43037",
+  "backupTag": "control-backup-20260805033009-0bc3bc2-r269-a1959",
   "autoRecovery": false,
-  "generatedAt": "2026-08-05T03:14:35.144Z"
+  "generatedAt": "2026-08-05T03:30:15.591Z"
 }
