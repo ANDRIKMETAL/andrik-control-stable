@@ -1,14 +1,14 @@
 {
   "schema": 1,
-  "updaterVersion": "55.00-r285",
+  "updaterVersion": "55.00-r286",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1785928601298-e8e7f0a5ea",
-  "release": "R285",
-  "archiveName": "R286.zip",
-  "sourceHead": "c092d82da9ef00a253f15a9bf2556adcae2f30e3",
-  "backupSha": "c092d82da9ef00a253f15a9bf2556adcae2f30e3",
-  "backupTag": "control-backup-20260805111636-c092d82-r285-87391",
+  "operationId": "publish-1785929917665-0e131f2083",
+  "release": "R286",
+  "archiveName": "R288.zip",
+  "sourceHead": "6c8a0f1bfa86cf25c42488c6791dd7460de62621",
+  "backupSha": "6c8a0f1bfa86cf25c42488c6791dd7460de62621",
+  "backupTag": "control-backup-20260805113833-6c8a0f1-r286-67e6e",
   "autoRecovery": false,
-  "generatedAt": "2026-08-05T11:16:41.298Z"
+  "generatedAt": "2026-08-05T11:38:37.665Z"
 }
