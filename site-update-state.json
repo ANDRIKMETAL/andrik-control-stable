@@ -1,14 +1,14 @@
 {
   "schema": 1,
-  "updaterVersion": "55.00-r282",
+  "updaterVersion": "55.00-r283",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1785925172209-b0e1b1b756",
-  "release": "R282",
-  "archiveName": "R283-LIGHT-UPLOAD.zip",
-  "sourceHead": "b78db2a3f0ae64d158a908d1081f6ea6a0ec9df7",
-  "backupSha": "b78db2a3f0ae64d158a908d1081f6ea6a0ec9df7",
-  "backupTag": "control-backup-20260805101928-b78db2a-r282-9ca43",
+  "operationId": "publish-1785926308783-3ab4be5190",
+  "release": "R283",
+  "archiveName": "R284.zip",
+  "sourceHead": "dc3b788a63bbd2ff36bf0bcd0be9735abf879da2",
+  "backupSha": "dc3b788a63bbd2ff36bf0bcd0be9735abf879da2",
+  "backupTag": "control-backup-20260805103824-dc3b788-r283-0463f",
   "autoRecovery": false,
-  "generatedAt": "2026-08-05T10:19:32.209Z"
+  "generatedAt": "2026-08-05T10:38:28.783Z"
 }
