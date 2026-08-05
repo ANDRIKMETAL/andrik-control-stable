@@ -1,4 +1,4 @@
-/* Control ANDRIK R281 — exact completed-period daily summary opened from push. */
+/* Control ANDRIK R283 — exact completed-period daily summary opened from push. */
 (() => {
   const KEY_SESSION='andrik-comments-admin-key';
   const KEY_LOCAL='andrik-comments-admin-key-persistent';
@@ -244,7 +244,7 @@
     if(showRefreshEffect)shell?.classList.add('is-refreshing');
     else shell?.classList.remove('is-refreshing');
     try{
-      const query=new URLSearchParams({v:'55.00-r281'});
+      const query=new URLSearchParams({v:'55.00-r283'});
       if(forceLive&&!IS_PUSH_SUMMARY_VIEW)query.set('refresh','1');
       if(IS_PUSH_SUMMARY_VIEW){query.set('source','push');query.set('window',PUSH_SUMMARY_WINDOW_KEY)}
       const data=await api(`/api/control/home?${query.toString()}`,{timeoutMs:forceLive&&!IS_PUSH_SUMMARY_VIEW?13000:8000});
@@ -382,7 +382,7 @@
 
   $('controlSummaryNext')?.addEventListener('click',()=>{
     const pushQuery=IS_PUSH_SUMMARY_VIEW?`&source=push&summaryWindow=${encodeURIComponent(PUSH_SUMMARY_WINDOW_KEY)}`:'';
-    location.assign(`/control-home.html?page=activity${pushQuery}&v=55.00-r281&t=${Date.now()}`);
+    location.assign(`/control-home.html?page=activity${pushQuery}&v=55.00-r283&t=${Date.now()}`);
   });
 
 

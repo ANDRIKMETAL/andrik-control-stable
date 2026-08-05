@@ -1,0 +1,1 @@
+R283 — RECOVERY FROM R280: removes self-observing portal freeze, preserves full map, locks legacy selected-country scroll, keeps action buttons clickable.

@@ -1,4 +1,4 @@
-/* Control ANDRIK R282 — selected-country action portal.
+/* Control ANDRIK R283 — selected-country action portal.
    The map keeps its original full geometry. Only the obsolete bottom
    swipe/pull layer is disabled and the two action buttons are moved outside
    the transformed analytics track so it cannot clip them. */
@@ -29,9 +29,9 @@
   }
 
 
-  body.analytics-admin-page.analytics-v54-46-page > #r282CountryBottomFill[hidden]{display:none!important;}
+  body.analytics-admin-page.analytics-v54-46-page > #r283CountryBottomFill[hidden]{display:none!important;}
 
-  body.analytics-admin-page.analytics-v54-46-page > #r282CountryBottomFill{
+  body.analytics-admin-page.analytics-v54-46-page > #r283CountryBottomFill{
     position:fixed!important;
     left:2px!important;
     right:2px!important;
@@ -51,7 +51,7 @@
     pointer-events:none!important;
   }
 
-  body.analytics-admin-page.analytics-v54-46-page.r282-country-actions-active::after{
+  body.analytics-admin-page.analytics-v54-46-page.r283-country-actions-active::after{
     content:"";
     position:fixed;
     left:0;
@@ -63,8 +63,8 @@
     pointer-events:none;
   }
 
-  body.analytics-admin-page.analytics-v54-46-page > #mapFocusActions.r282-country-actions-portal,
-  body.analytics-admin-page.analytics-v54-46-page > #mapFocusActions.r282-country-actions-portal[hidden]{
+  body.analytics-admin-page.analytics-v54-46-page > #mapFocusActions.r283-country-actions-portal,
+  body.analytics-admin-page.analytics-v54-46-page > #mapFocusActions.r283-country-actions-portal[hidden]{
     position:fixed!important;
     left:22px!important;
     right:22px!important;
@@ -89,7 +89,7 @@
     background:transparent!important;
   }
 
-  body.analytics-admin-page.analytics-v54-46-page > #mapFocusActions.r282-country-actions-portal .map-focus-action{
+  body.analytics-admin-page.analytics-v54-46-page > #mapFocusActions.r283-country-actions-portal .map-focus-action{
     box-sizing:border-box!important;
     display:flex!important;
     align-items:center!important;
@@ -113,8 +113,8 @@
 }
 
 @media screen and (orientation:portrait) and (max-height:720px){
-  body.analytics-admin-page.analytics-v54-46-page > #mapFocusActions.r282-country-actions-portal,
-  body.analytics-admin-page.analytics-v54-46-page > #mapFocusActions.r282-country-actions-portal .map-focus-action{
+  body.analytics-admin-page.analytics-v54-46-page > #mapFocusActions.r283-country-actions-portal,
+  body.analytics-admin-page.analytics-v54-46-page > #mapFocusActions.r283-country-actions-portal .map-focus-action{
     height:52px!important;
     min-height:52px!important;
     max-height:52px!important;
@@ -122,7 +122,24 @@
 }
 
 @media screen and (orientation:landscape){
-  body.analytics-admin-page.analytics-v54-46-page > #mapFocusActions.r282-country-actions-portal{
+  body.analytics-admin-page.analytics-v54-46-page > #mapFocusActions.r283-country-actions-portal{
     display:none!important;
+  }
+}
+
+
+/* R283 — selected country is a fixed one-screen state; legacy pane scrolling is disabled. */
+@media screen and (orientation:portrait){
+  body.analytics-admin-page.analytics-v54-46-page.r283-country-scroll-locked,
+  body.analytics-admin-page.analytics-v54-46-page.r283-country-scroll-locked .analytics-swipe-main,
+  body.analytics-admin-page.analytics-v54-46-page.r283-country-scroll-locked .analytics-swipe-viewport,
+  body.analytics-admin-page.analytics-v54-46-page.r283-country-scroll-locked .analytics-swipe-track,
+  body.analytics-admin-page.analytics-v54-46-page.r283-country-scroll-locked .analytics-map-pane,
+  body.analytics-admin-page.analytics-v54-46-page.r283-country-scroll-locked .analytics-map-pane > .analytics-pane-wrap{
+    overflow:hidden!important;
+    overscroll-behavior:none!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page.r283-country-scroll-locked .analytics-map-pane{
+    touch-action:manipulation!important;
   }
 }
