@@ -1,1 +1,0 @@
-R295 — no transient map action-button flash; daily summary baseline recovery; manual and scheduled push timeout/retry; summary metrics persist even if push delivery fails.

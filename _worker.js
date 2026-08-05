@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R295', number:295, version:'55.00', full:'55.00 LIVE WEB AI FINAL R295', siteUpdater:'55.00-r295' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R296', number:296, version:'55.00', full:'55.00 LIVE WEB AI FINAL R296', siteUpdater:'55.00-r296' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -2081,50 +2081,14 @@ async function sendOneSignalPush(env, {
       payload.included_segments = ['Subscribed Users'];
     }
   }
-  let response = null;
-  let oneSignalFetchError = null;
-  for (let attempt = 0; attempt < 2 && !response; attempt += 1) {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort('onesignal-timeout'), 12000);
-    try {
-      response = await fetch('https://api.onesignal.com/notifications?c=push', {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-          authorization: `Key ${getOneSignalApiKey(env)}`
-        },
-        body: JSON.stringify(payload),
-        signal: controller.signal
-      });
-    } catch (error) {
-      oneSignalFetchError = error;
-      if (attempt === 0) await new Promise(resolve => setTimeout(resolve, 650));
-    } finally {
-      clearTimeout(timer);
-    }
-  }
-  if (!response) {
-    const errorCode = oneSignalFetchError?.name === 'AbortError' ? 'onesignal-timeout' : 'onesignal-network-error';
-    const errorMessage = cleanPlainText(oneSignalFetchError?.message || errorCode, 500);
-    if (history) {
-      await recordPushHistory(env, {
-        ...history,
-        audience,
-        status:'failed',
-        title,
-        message,
-        url,
-        error:errorCode,
-        details:{ ...(history?.details && typeof history.details === 'object' ? history.details : {}), errorMessage }
-      }).catch(() => {});
-    }
-    await recordSystemLog(env, {
-      scope:'push', level:'error', event:errorCode,
-      message:`OneSignal не ответил: ${errorMessage}`,
-      details:{ audience, title, url, errorMessage }
-    }).catch(() => {});
-    return { ok:false, error:errorCode, message:errorMessage };
-  }
+  const response = await fetch('https://api.onesignal.com/notifications?c=push', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      authorization: `Key ${getOneSignalApiKey(env)}`
+    },
+    body: JSON.stringify(payload)
+  });
   const responseData = await response.json().catch(() => ({}));
   if (!response.ok) {
     console.error('OneSignal push failed', response.status, responseData);
@@ -6826,11 +6790,11 @@ async function collectDailyOwnerSummary(env, { liveExternal = true, windowOverri
     db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots
       WHERE platform='youtube' AND datetime(created_at) <= datetime(?1)
       ORDER BY datetime(created_at) DESC LIMIT 1`).bind(window.endAt).first(),
-    db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform='youtube' AND datetime(created_at) <= datetime(?1) ORDER BY datetime(created_at) DESC LIMIT 1`).bind(window.startAt).first(),
+    db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform='youtube' AND datetime(created_at) >= datetime(?1) ORDER BY datetime(created_at) ASC LIMIT 1`).bind(window.startAt).first(),
     db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots
       WHERE platform='google-analytics' AND datetime(created_at) <= datetime(?1)
       ORDER BY datetime(created_at) DESC LIMIT 1`).bind(window.endAt).first(),
-    db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform='google-analytics' AND datetime(created_at) <= datetime(?1) ORDER BY datetime(created_at) DESC LIMIT 1`).bind(window.startAt).first(),
+    db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform='google-analytics' AND datetime(created_at) >= datetime(?1) ORDER BY datetime(created_at) ASC LIMIT 1`).bind(window.startAt).first(),
     window.crossesMidnight
       ? db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform='google-analytics' AND datetime(created_at) <= datetime(?1) AND datetime(created_at) >= datetime(?2) ORDER BY datetime(created_at) DESC LIMIT 1`).bind(window.midnightAt, window.startAt).first()
       : Promise.resolve(null),
@@ -7062,21 +7026,6 @@ async function maybeSendDailyOwnerSummary(env) {
     metrics = await collectDailyOwnerSummaryFallback(env, summaryWindow, collectionError);
   }
 
-  const completedWindowKey = summaryWindow?.key || metrics?.windowKey || '';
-  const preparedAt = new Date().toISOString();
-  const preparedSnapshot = JSON.stringify({
-    metrics,
-    sentAt:preparedAt,
-    localDate:clock.date,
-    source:'central-cron-prepared',
-    windowKey:completedWindowKey
-  });
-  await setPushState(db, 'daily-owner-summary-last-metrics', preparedSnapshot).catch(() => {});
-  if (completedWindowKey) {
-    await setPushState(db, `daily-owner-summary-window:${completedWindowKey}`, preparedSnapshot).catch(() => {});
-    await persistControlHomeHighWaterFromMetricsR260(db, completedWindowKey, metrics).catch(() => {});
-  }
-
   const lines = buildDailyOwnerSummaryLines(metrics);
   const summaryUrl = `https://control.andrikmetal.com/control-home.html?page=summary&source=push&summaryWindow=${encodeURIComponent(summaryWindow.key)}`;
   let result;
@@ -7123,6 +7072,7 @@ async function maybeSendDailyOwnerSummary(env) {
     await setPushState(db, 'daily-owner-summary-last-at', sentAt);
     await setPushState(db, 'daily-owner-summary-last-attempt-status', metrics.partial ? 'sent-partial' : 'sent');
     await setPushState(db, 'daily-owner-summary-last-attempt-error', collectionError);
+    const completedWindowKey = summaryWindow?.key || metrics?.windowKey || '';
     const storedSnapshot = JSON.stringify({
       metrics,
       sentAt,
@@ -7161,90 +7111,47 @@ async function maybeSendDailyOwnerSummary(env) {
 async function handleManualDailyOwnerSummary(request, env) {
   if (!adminAuthorized(request, env)) return json({ ok:false, error:'unauthorized' }, 401);
   const db = requireDb(env);
-  await Promise.all([ensurePushAutomationSchema(db), ensureCommentsV4Schema(db), ensurePlatformAnalyticsSchema(db), ensureControlV1Schema(db), ensureSiteMetricsSchema(db)]);
+  await Promise.all([ensurePushAutomationSchema(db), ensureCommentsV4Schema(db), ensurePlatformAnalyticsSchema(db), ensureControlV1Schema(db)]);
   const clock = getBratislavaClock();
-  const window = getBratislavaSummaryWindow();
   const snapshotRefresh = { ok:true, skipped:true, reason:'verified-d1-snapshots' };
-
-  let metrics;
-  let collectionError = '';
-  try {
-    metrics = await collectDailyOwnerSummary(env, { liveExternal:false, windowOverride:window });
-  } catch (error) {
-    collectionError = cleanPlainText(error?.message || error, 500);
-    metrics = await collectDailyOwnerSummaryFallback(env, window, collectionError);
-  }
-
-  const preparedAt = new Date().toISOString();
-  const windowKey = metrics?.windowKey || window.key;
-  const preparedSnapshot = JSON.stringify({
-    metrics,
-    sentAt:preparedAt,
-    localDate:clock.date,
-    source:'manual-control-prepared',
-    windowKey
-  });
-  await setPushState(db, 'daily-owner-summary-last-metrics', preparedSnapshot).catch(() => {});
-  if (windowKey) {
-    await setPushState(db, `daily-owner-summary-window:${windowKey}`, preparedSnapshot).catch(() => {});
-    await persistControlHomeHighWaterFromMetricsR260(db, windowKey, metrics).catch(() => {});
-  }
-
+  // The manual test push uses the latest verified local snapshots and responds immediately.
+  // The scheduled 06:00 summary still performs a live Google refresh.
+  const metrics = await collectDailyOwnerSummary(env, { liveExternal:false });
   const lines = buildDailyOwnerSummaryLines(metrics);
-  const summaryUrl = `https://control.andrikmetal.com/control-home.html?page=summary&source=push&summaryWindow=${encodeURIComponent(windowKey)}`;
-  let result;
-  try {
-    result = await sendOwnerPush(env, {
-      title:'📊 Ежедневная сводка ANDRIK',
-      message:lines.join('\n'),
-      url:summaryUrl,
-      name:`ANDRIK manual daily summary ${clock.date} ${Date.now()}`,
-      history:{
-        type:'daily-summary',
-        source:'manual-control',
-        title:'Ежедневная сводка ANDRIK',
-        message:lines.join('\n'),
-        url:summaryUrl,
-        details:{ localDate:clock.date, localHour:clock.hour, manual:true, metrics, snapshotRefresh, collectionError }
-      }
-    });
-  } catch (error) {
-    result = { ok:false, error:cleanPlainText(error?.message || error, 500) };
-  }
-
   const sentAt = new Date().toISOString();
+  const result = await sendOwnerPush(env, {
+    title: '📊 Ежедневная сводка ANDRIK',
+    message: lines.join('\n'),
+    url: 'https://control.andrikmetal.com/control-home.html?page=summary',
+    name: `ANDRIK manual daily summary ${clock.date} ${Date.now()}`,
+    history: {
+      type: 'daily-summary',
+      source: 'manual-control',
+      title: 'Ежедневная сводка ANDRIK',
+      message: lines.join('\n'),
+      url: 'https://control.andrikmetal.com/control-home.html?page=summary',
+      details: { localDate:clock.date, localHour:clock.hour, manual:true, metrics, snapshotRefresh }
+    }
+  });
   if (result.ok) {
-    const sentSnapshot = JSON.stringify({ metrics, sentAt, localDate:clock.date, source:'manual-control', windowKey });
+    // Manual tests are independent: they must never suppress the scheduled morning summary.
     await setPushState(db, 'daily-owner-summary-manual-last-date', clock.date);
     await setPushState(db, 'daily-owner-summary-manual-last-at', sentAt);
-    await setPushState(db, 'daily-owner-summary-last-metrics', sentSnapshot);
-    if (windowKey) await setPushState(db, `daily-owner-summary-window:${windowKey}`, sentSnapshot).catch(() => {});
+    await setPushState(db, 'daily-owner-summary-last-metrics', JSON.stringify({
+      metrics,
+      sentAt,
+      localDate:clock.date,
+      source:'manual-control',
+      windowKey:metrics?.windowKey || ''
+    }));
+    await persistControlHomeHighWaterFromMetricsR260(db, metrics?.windowKey || getBratislavaSummaryWindow().key, metrics);
     await recordSystemLog(env, {
       scope:'daily-summary', level:'info', event:'manual-sent',
       message:`Ежедневная сводка отправлена вручную за ${clock.date}.`,
-      details:{ metrics, snapshotRefresh, oneSignalId:result.oneSignalId || '', collectionError }
-    }).catch(() => {});
-  } else {
-    await recordSystemLog(env, {
-      scope:'daily-summary', level:'error', event:'manual-send-failed',
-      message:`Сводка собрана, но push не отправлен: ${cleanPlainText(result.error || 'push-failed', 300)}`,
-      details:{ metrics, snapshotRefresh, collectionError, pushError:result.error || '' }
+      details:{ metrics, snapshotRefresh, oneSignalId:result.oneSignalId || '' }
     }).catch(() => {});
   }
-
-  return json({
-    ok:true,
-    sent:Boolean(result.ok),
-    pushOk:Boolean(result.ok),
-    sentAt,
-    localDate:clock.date,
-    windowKey,
-    metrics,
-    snapshotRefresh,
-    oneSignalId:result.oneSignalId || '',
-    error:result.error || '',
-    collectionError
-  });
+  return json({ ok:Boolean(result.ok), sent:Boolean(result.ok), sentAt, localDate:clock.date, metrics, snapshotRefresh, oneSignalId:result.oneSignalId || '', error:result.error || '' }, result.ok ? 200 : 502);
 }
 
 async function handleAutomationRun(request, env) {
@@ -7607,9 +7514,9 @@ async function handleControlHome(request, env) {
         AND datetime(created_at) >= datetime(?1)
       ORDER BY datetime(created_at) DESC LIMIT 200`).bind(window.startAt).all(),
     db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform='youtube' ORDER BY datetime(created_at) DESC LIMIT 1`).first(),
-    db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform='youtube' AND datetime(created_at) <= datetime(?1) ORDER BY datetime(created_at) DESC LIMIT 1`).bind(window.startAt).first(),
+    db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform='youtube' AND datetime(created_at) >= datetime(?1) ORDER BY datetime(created_at) ASC LIMIT 1`).bind(window.startAt).first(),
     db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform='google-analytics' ORDER BY datetime(created_at) DESC LIMIT 1`).first(),
-    db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform='google-analytics' AND datetime(created_at) <= datetime(?1) ORDER BY datetime(created_at) DESC LIMIT 1`).bind(window.startAt).first(),
+    db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform='google-analytics' AND datetime(created_at) >= datetime(?1) ORDER BY datetime(created_at) ASC LIMIT 1`).bind(window.startAt).first(),
     window.crossesMidnight
       ? db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform='google-analytics' AND datetime(created_at) <= datetime(?1) AND datetime(created_at) >= datetime(?2) ORDER BY datetime(created_at) DESC LIMIT 1`).bind(window.midnightAt, window.startAt).first()
       : Promise.resolve(null),
@@ -8906,10 +8813,8 @@ function siteUpdateBase64(bytes) {
 async function siteUpdateGithubRequest(config, route, options = {}) {
   if (!config.token) throw new Error('github-token-missing');
   const method = options.method || 'GET';
-  // R294: stop a stalled GitHub request early and retry safely. This keeps
-  // the whole Commit stage below the Android connection timeout.
-  const defaultTimeout = method === 'GET' ? 22000 : 32000;
-  const timeoutMs = Math.max(5000, Math.min(60000, Number(options.timeoutMs || defaultTimeout)));
+  const defaultTimeout = method === 'GET' ? 25000 : 150000;
+  const timeoutMs = Math.max(5000, Math.min(180000, Number(options.timeoutMs || defaultTimeout)));
   const retryableRoute = method === 'GET' || method === 'PATCH' ||
     /\/git\/(?:blobs|trees|commits)(?:\/|$)/.test(route);
   const attempts = retryableRoute ? 3 : 1;
@@ -9100,7 +9005,7 @@ async function siteUpdateCreateTreeBatched(config, owner, repo, baseTreeSha, ent
   for (const batch of batches) {
     const tree = await siteUpdateGithubRequest(config, `/repos/${owner}/${repo}/git/trees`, {
       method:'POST',
-      timeoutMs:35000,
+      timeoutMs:60000,
       body:{ base_tree:treeSha, tree:batch }
     });
     if (!tree?.sha) throw new Error('github-tree-missing');
@@ -9605,23 +9510,8 @@ async function handleSiteUpdateStatus(request, env) {
   if (!base.configured) return json({ ...base, connected:false, message:'Добавьте GITHUB_SITE_TOKEN в Cloudflare.' });
   try {
     const snapshot = await siteUpdateGithubSnapshot(config);
-    const recover = new URL(request.url).searchParams.get('recover') === '1';
-    let headState = null;
-    if (recover) {
-      const branch = await siteUpdateReadBranchState(config, snapshot).catch(() => ({ state:null }));
-      const raw = branch?.state && typeof branch.state === 'object' ? branch.state : null;
-      if (raw) {
-        headState = {
-          schema:Number(raw.schema || 0), operationId:cleanPlainText(raw.operationId || '', 140),
-          release:cleanPlainText(raw.release || '', 80), operation:cleanPlainText(raw.operation || '', 40),
-          archiveName:cleanPlainText(raw.archiveName || '', 180), backupSha:cleanPlainText(raw.backupSha || '', 64),
-          backupTag:cleanPlainText(raw.backupTag || '', 180), sourceHead:cleanPlainText(raw.sourceHead || '', 64),
-          generatedAt:cleanPlainText(raw.generatedAt || '', 60)
-        };
-      }
-    }
     return json({ ...base, connected:true, headSha:snapshot.headSha, headShort:snapshot.headSha.slice(0,7),
-      headMessage:cleanPlainText(snapshot.commit?.message || '', 240), headState });
+      headMessage:cleanPlainText(snapshot.commit?.message || '', 240) });
   } catch (error) {
     return json({ ...base, connected:false, error:'github', message:siteUpdateFriendlyError(error) }, 502);
   }
@@ -9766,7 +9656,7 @@ async function handleSiteUpdatePublish(request, env) {
     const createdBinary = await siteUpdateMapLimit(binaryEntries, 2, async item => {
       const data = await siteUpdateGithubRequest(config, `/repos/${owner}/${repo}/git/blobs`, {
         method:'POST',
-        timeoutMs:35000,
+        timeoutMs:60000,
         body:{ content:siteUpdateBase64(item.entry.bytes), encoding:'base64' }
       });
       return { ...item.base, sha:data.sha };

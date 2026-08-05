@@ -1,1 +1,0 @@
-R294 — R290 installer retained; R275 map geometry retained; compact selected-country buttons moved outside the old swipe container; transient redraw no longer hides them; no global overflow lock; one required MP4 only.

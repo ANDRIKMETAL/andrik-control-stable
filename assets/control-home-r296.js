@@ -1,4 +1,4 @@
-/* Control ANDRIK R295 — reliable daily summary, push status and exact completed-period view. */
+/* Control ANDRIK R296 — exact completed-period daily summary opened from push. */
 (() => {
   const KEY_SESSION='andrik-comments-admin-key';
   const KEY_LOCAL='andrik-comments-admin-key-persistent';
@@ -38,7 +38,7 @@
   let allActivityEvents=[];
   let sourcePages=[];
   const HOME_CACHE_KEY_LIVE='andrik-control-home-last-good-r136';
-  const HOME_CACHE_KEY_PUSH_BASE='andrik-control-home-push-r275';
+  const HOME_CACHE_KEY_PUSH_BASE='andrik-control-home-push-r296';
   function activeViewWindowKey(){return IS_PUSH_SUMMARY_VIEW?PUSH_SUMMARY_WINDOW_KEY:currentSummaryWindowKey()}
   function homeCacheKey(){return IS_PUSH_SUMMARY_VIEW?`${HOME_CACHE_KEY_PUSH_BASE}:${activeViewWindowKey()}`:HOME_CACHE_KEY_LIVE}
   function saveHomeCache(data){try{localStorage.setItem(homeCacheKey(),JSON.stringify({savedAt:new Date().toISOString(),data}))}catch(_){}}
@@ -244,20 +244,10 @@
     if(showRefreshEffect)shell?.classList.add('is-refreshing');
     else shell?.classList.remove('is-refreshing');
     try{
-      const query=new URLSearchParams({v:'55.00-r295'});
+      const query=new URLSearchParams({v:'55.00-r296'});
       if(forceLive&&!IS_PUSH_SUMMARY_VIEW)query.set('refresh','1');
       if(IS_PUSH_SUMMARY_VIEW){query.set('source','push');query.set('window',PUSH_SUMMARY_WINDOW_KEY)}
-      let data=await api(`/api/control/home?${query.toString()}`,{timeoutMs:forceLive&&!IS_PUSH_SUMMARY_VIEW?16000:10000});
-      if(!forceLive&&!IS_PUSH_SUMMARY_VIEW){
-        const summary=data?.summary||{};
-        const numericKeys=['websiteUsers','websiteViews','siteSubscribers','siteComments','siteLikes','youtubeComments','youtubeSubscribers','youtubeLikes','youtubeViews','youtubeViewDelta','releases'];
-        const allZero=numericKeys.every(key=>Number(summary[key]||0)===0);
-        const noActivity=!Array.isArray(data?.activity)||data.activity.length===0;
-        if(allZero&&noActivity){
-          query.set('refresh','1');
-          data=await api(`/api/control/home?${query.toString()}`,{timeoutMs:16000});
-        }
-      }
+      const data=await api(`/api/control/home?${query.toString()}`,{timeoutMs:forceLive&&!IS_PUSH_SUMMARY_VIEW?13000:8000});
       if(data?.windowKey)activeSummaryWindowKey=data.windowKey;
       const previous=readHomeCache();
       const stable=IS_PUSH_SUMMARY_VIEW?data:(cachedForCurrentWindow(previous)?mergeSummaryPayloadR213(previous.data,data):data);
@@ -392,7 +382,7 @@
 
   $('controlSummaryNext')?.addEventListener('click',()=>{
     const pushQuery=IS_PUSH_SUMMARY_VIEW?`&source=push&summaryWindow=${encodeURIComponent(PUSH_SUMMARY_WINDOW_KEY)}`:'';
-    location.assign(`/control-home.html?page=activity${pushQuery}&v=55.00-r295&t=${Date.now()}`);
+    location.assign(`/control-home.html?page=activity${pushQuery}&v=55.00-r296&t=${Date.now()}`);
   });
 
 
@@ -417,10 +407,10 @@
       button.classList.remove('is-error','is-success','is-pressed');
       button.classList.add('is-loading');
     }
-    if(label)label.textContent='Собираем данные…';
-    if($('controlHomeUpdated'))$('controlHomeUpdated').textContent='Собираем актуальную сводку…';
+    if(label)label.textContent='Отправляем…';
+    if($('controlHomeUpdated'))$('controlHomeUpdated').textContent='Отправляем сводку…';
     const controller=new AbortController();
-    const timer=setTimeout(()=>controller.abort(),32000);
+    const timer=setTimeout(()=>controller.abort(),45000);
     try{
       const response=await fetch('/api/control/daily-summary/send',{
         method:'POST',
@@ -431,15 +421,16 @@
       });
       const data=await response.json().catch(()=>({}));
       if(!response.ok||data.ok===false)throw new Error(data.details||data.error||`HTTP ${response.status}`);
-
-      if(data?.metrics&&typeof data.metrics==='object'){
+      if(label)label.textContent='Push отправлен ✓';
+      button?.classList.add('is-success');
+      if(!IS_PUSH_SUMMARY_VIEW&&data?.metrics && typeof data.metrics==='object'){
         const m=data.metrics;
         const payload={
           ok:true,
           period:'06:05-cycle',
-          windowKey:m.windowKey||data.windowKey||activeSummaryWindowKey,
+          windowKey:m.windowKey||activeSummaryWindowKey,
           updatedAt:data.sentAt||new Date().toISOString(),
-          summarySource:data.sent?'push-direct':'prepared-live',
+          summarySource:'push-direct',
           summary:{
             websiteUsers:Number(m.siteUsers||0),
             websiteViews:Number(m.siteViews||0),
@@ -458,33 +449,23 @@
           },
           activity:allActivityEvents
         };
-        activeSummaryWindowKey=payload.windowKey||activeSummaryWindowKey;
         const previous=readHomeCache();
         const stable=cachedForCurrentWindow(previous)?mergeSummaryPayloadR213(previous.data,payload):payload;
         saveHomeCache(stable);
         renderSummary(stable);
       }
-
-      if(data.sent){
-        if(label)label.textContent='Push отправлен ✓';
-        button?.classList.add('is-success');
-        if($('controlHomeUpdated'))$('controlHomeUpdated').textContent='Сводка обновлена и push отправлен ✓';
-      }else{
-        const reason=String(data.error||'push не принят');
-        if(label)label.textContent='Данные обновлены';
-        button?.classList.add('is-error');
-        if($('controlHomeUpdated'))$('controlHomeUpdated').textContent=`Сводка обновлена · push не отправлен: ${reason}`;
-      }
+      if($('controlHomeUpdated'))$('controlHomeUpdated').textContent='Сводка отправлена ✓';
+      // R260: the push is only a checkpoint. Keep the accumulated high-water values on screen;
+      // the normal 2-minute refresh will merge new events without repainting temporary zeros.
       setTimeout(()=>{
         if(label)label.textContent='Отправить сводку';
-        button?.classList.remove('is-success','is-error');
-      },3200);
+        button?.classList.remove('is-success');
+      },2600);
     }catch(error){
       if(label)label.textContent='Повторить';
       button?.classList.add('is-error');
-      const message=error?.name==='AbortError'?'Сервер не ответил за 32 секунды':(error?.message||'Ошибка отправки');
-      if($('controlHomeUpdated'))$('controlHomeUpdated').textContent=message;
-      setTimeout(()=>button?.classList.remove('is-error'),2400);
+      if($('controlHomeUpdated'))$('controlHomeUpdated').textContent=error?.name==='AbortError'?'Сервер отвечает долго':'Ошибка отправки';
+      setTimeout(()=>button?.classList.remove('is-error'),2200);
     }finally{
       clearTimeout(timer);
       dailySummarySending=false;

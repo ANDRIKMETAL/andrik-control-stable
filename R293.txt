@@ -1,1 +1,0 @@
-R294 — portrait map and green map frame keep the same full height in overview and selected-country modes; compact action buttons from R292 preserved.
