@@ -1,4 +1,4 @@
-/* Control ANDRIK R273 — portrait focused-country one-screen fit.
+/* Control ANDRIK R275 — portrait focused-country one-screen fit.
    Only the selected-country portrait layout is changed. */
 @media screen and (orientation:portrait){
   body.analytics-admin-page.analytics-v54-46-page.is-country-focus-active .analytics-map-pane{

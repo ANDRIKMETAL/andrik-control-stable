@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R273', number:272, version:'55.00', full:'55.00 LIVE WEB AI FINAL R273', siteUpdater:'55.00-r273' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R275', number:275, version:'55.00', full:'55.00 LIVE WEB AI FINAL R275', siteUpdater:'55.00-r275' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -7027,19 +7027,20 @@ async function maybeSendDailyOwnerSummary(env) {
   }
 
   const lines = buildDailyOwnerSummaryLines(metrics);
+  const summaryUrl = `https://control.andrikmetal.com/control-home.html?page=summary&source=push&summaryWindow=${encodeURIComponent(summaryWindow.key)}`;
   let result;
   try {
     result = await sendOwnerPush(env, {
       title:'📊 Ежедневная сводка ANDRIK',
       message:lines.join('\n'),
-      url:'https://control.andrikmetal.com/control-home.html?page=summary',
+      url:summaryUrl,
       name:`ANDRIK daily summary ${clock.date}`,
       history:{
         type:'daily-summary',
         source:'central-cron',
         title:'Ежедневная сводка ANDRIK',
         message:lines.join('\n'),
-        url:'https://control.andrikmetal.com/control-home.html?page=summary',
+        url:summaryUrl,
         details:{
           localDate:clock.date,
           localHour:clock.hour,
@@ -7071,14 +7072,19 @@ async function maybeSendDailyOwnerSummary(env) {
     await setPushState(db, 'daily-owner-summary-last-at', sentAt);
     await setPushState(db, 'daily-owner-summary-last-attempt-status', metrics.partial ? 'sent-partial' : 'sent');
     await setPushState(db, 'daily-owner-summary-last-attempt-error', collectionError);
-    await setPushState(db, 'daily-owner-summary-last-metrics', JSON.stringify({
+    const completedWindowKey = summaryWindow?.key || metrics?.windowKey || '';
+    const storedSnapshot = JSON.stringify({
       metrics,
       sentAt,
       localDate:clock.date,
       source:'central-cron',
-      windowKey:summaryWindow?.key || metrics?.windowKey || ''
-    }));
-    await persistControlHomeHighWaterFromMetricsR260(db, summaryWindow?.key || metrics?.windowKey || '', metrics);
+      windowKey:completedWindowKey
+    });
+    await setPushState(db, 'daily-owner-summary-last-metrics', storedSnapshot);
+    if (completedWindowKey) {
+      await setPushState(db, `daily-owner-summary-window:${completedWindowKey}`, storedSnapshot);
+    }
+    await persistControlHomeHighWaterFromMetricsR260(db, completedWindowKey, metrics);
     await recordSystemLog(env, {
       scope:'daily-summary',
       level:metrics.partial ? 'warning' : 'info',
@@ -7342,12 +7348,146 @@ function parseDailySummaryMessageMetrics(row) {
   return metrics;
 }
 
+
+
+function getBratislavaSummaryWindowByKeyR271(windowKey, date = new Date()) {
+  const key = cleanPlainText(windowKey || '', 20);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(key)) return null;
+  const startDay = Date.parse(`${key}T00:00:00.000Z`);
+  if (!Number.isFinite(startDay)) return null;
+  const current = getBratislavaSummaryWindow(date);
+  const currentDay = Date.parse(`${current.key}T00:00:00.000Z`);
+  const ageDays = Math.round((currentDay - startDay) / 86400000);
+  if (!Number.isFinite(ageDays) || ageDays < 0 || ageDays > 45) return null;
+  const nextDate = shiftIsoCalendarDate(key, 1);
+  const endAt = bratislavaLocalDateTimeToIso(nextDate, 6, 5);
+  return {
+    key,
+    startAt:bratislavaLocalDateTimeToIso(key, 6, 5),
+    endAt,
+    currentLocalDate:getBratislavaClock(date).date,
+    crossesMidnight:true,
+    midnightAt:bratislavaLocalDateTimeToIso(nextDate, 0, 0),
+    cutoffLabel:'06:05 Europe/Bratislava',
+    completed:Date.parse(endAt) <= date.getTime()
+  };
+}
+
+function controlHomeSummaryFromDailyMetricsR271(metrics = {}) {
+  return normalizeControlHomeSummaryR213({
+    websiteUsers:Number(metrics?.siteUsers || 0),
+    websiteViews:Number(metrics?.siteViews || 0),
+    siteSubscribers:Number(metrics?.siteSubscribers || 0),
+    siteComments:Number(metrics?.siteComments || 0),
+    siteLikes:Number(metrics?.siteLikes || 0),
+    youtubeComments:Number(metrics?.youtubeComments || 0),
+    youtubeSubscribers:Number(metrics?.youtubeSubscribers || 0),
+    youtubeLikes:Number(metrics?.youtubeLikes || 0),
+    youtubeViews:Number(metrics?.youtubeViewDelta || 0),
+    youtubeViewDelta:Number(metrics?.youtubeViewDelta || 0),
+    releases:Number(metrics?.releases || 0),
+    countryDeltas:Array.isArray(metrics?.countryDeltas) ? metrics.countryDeltas : [],
+    totalCountries:Number(metrics?.totalCountries || 0),
+    countryDate:metrics?.countryDate || ''
+  });
+}
+
+function parseStoredDailySummarySnapshotR271(row, windowKey) {
+  if (!row?.value) return null;
+  try {
+    const parsed = JSON.parse(row.value || '{}') || {};
+    const metrics = parsed?.metrics && typeof parsed.metrics === 'object' ? parsed.metrics : {};
+    const storedKey = cleanPlainText(parsed?.windowKey || metrics?.windowKey || '', 40);
+    if (storedKey !== windowKey) return null;
+    return {
+      metrics,
+      sentAt:cleanPlainText(parsed?.sentAt || row?.updatedAt || '', 80),
+      source:cleanPlainText(parsed?.source || 'central-cron', 40)
+    };
+  } catch (_) { return null; }
+}
+
+async function findDailySummarySnapshotR271(db, window) {
+  const stored = parseStoredDailySummarySnapshotR271(
+    await getPushState(db, `daily-owner-summary-window:${window.key}`).catch(() => null),
+    window.key
+  );
+  if (stored) return stored;
+
+  const searchEnd = new Date(Date.parse(window.endAt) + 86400000).toISOString();
+  const rows = await db.prepare(`
+    SELECT details_json AS detailsJson, created_at AS createdAt
+    FROM push_history
+    WHERE type='daily-summary'
+      AND source='central-cron'
+      AND status='sent'
+      AND datetime(created_at) >= datetime(?1)
+      AND datetime(created_at) < datetime(?2)
+    ORDER BY datetime(created_at) DESC
+    LIMIT 12
+  `).bind(window.startAt, searchEnd).all();
+
+  for (const row of rows?.results || []) {
+    const metrics = parseDailySummaryMetricsForWindow(row, window.key);
+    if (Object.keys(metrics).length) {
+      return { metrics, sentAt:row.createdAt || '', source:'central-cron-history' };
+    }
+  }
+  return null;
+}
+
+async function handleControlHomePushSnapshotR271(db, window) {
+  const snapshot = await findDailySummarySnapshotR271(db, window);
+  if (!snapshot) {
+    return json({
+      ok:false,
+      error:'push-summary-not-found',
+      details:'Сохранённая сводка из push для этого периода не найдена.'
+    }, 404);
+  }
+
+  const activityResult = await db.prepare(`
+    SELECT id, type, source, audience, title, message, url,
+           video_id AS videoId, video_title AS videoTitle,
+           status, created_at AS createdAt
+    FROM push_history
+    WHERE type IN ('youtube-comment','youtube-comment-count','youtube-subscriber','youtube-subscriber-count','youtube-like','site-subscriber','comment-live','comment-pending','auto-release','auto-release-retry','release-publish')
+      AND datetime(created_at) >= datetime(?1)
+      AND datetime(created_at) < datetime(?2)
+    ORDER BY datetime(created_at) DESC
+    LIMIT 200
+  `).bind(window.startAt, window.endAt).all();
+
+  return json({
+    ok:true,
+    period:'06:05-cycle',
+    windowKey:window.key,
+    windowStartAt:window.startAt,
+    windowEndAt:window.endAt,
+    summary:controlHomeSummaryFromDailyMetricsR271(snapshot.metrics),
+    activity:activityResult?.results || [],
+    summarySource:'push-direct',
+    summaryView:'completed-push',
+    pushSentAt:snapshot.sentAt || '',
+    updatedAt:snapshot.sentAt || new Date().toISOString()
+  });
+}
+
 async function handleControlHome(request, env) {
   if (!adminAuthorized(request, env)) return json({ ok:false, error:'unauthorized' },401);
   const db = requireDb(env);
-  const forceRefresh = new URL(request.url).searchParams.get('refresh') === '1';
+  const requestUrl = new URL(request.url);
+  const forceRefresh = requestUrl.searchParams.get('refresh') === '1';
+  const pushSnapshotRequested = requestUrl.searchParams.get('source') === 'push';
+  const requestedPushWindow = pushSnapshotRequested
+    ? getBratislavaSummaryWindowByKeyR271(requestUrl.searchParams.get('window'))
+    : null;
   const window = getBratislavaSummaryWindow();
   await Promise.all([ensurePushAutomationSchema(db), ensureCommentsV4Schema(db), ensurePlatformAnalyticsSchema(db), ensureControlV1Schema(db), ensureSiteMetricsSchema(db)]);
+  if (pushSnapshotRequested && !requestedPushWindow) {
+    return json({ ok:false, error:'invalid-push-summary-window' }, 400);
+  }
+  if (requestedPushWindow) return await handleControlHomePushSnapshotR271(db, requestedPushWindow);
   // R260 DAILY ACCUMULATOR: the screen uses one Bratislava window, 06:05 → next 06:05.
   // Sending a push only records a checkpoint. It never resets counters; only the window key changes at 06:05.
   const [siteSubscribers, siteComments, siteLikes, youtubeEvents, youtubeLikeRows, youtubeSubscriberRows, releases, latestYoutubeState, activityResult, ytLatest, ytBaseline, gaLatest, gaBaseline, gaRollover, automationAt, automationStatus, automationSummary, siteLive, siteWindow, latestDailySummaryState, latestDailySummaryPush, latestDailySummaryLog] = await Promise.all([
@@ -8691,7 +8831,7 @@ async function siteUpdateGithubRequest(config, route, options = {}) {
           accept:'application/vnd.github+json',
           authorization:`Bearer ${config.token}`,
           'content-type':'application/json',
-          'user-agent':'ANDRIK-Control-Site-Updater-R273',
+          'user-agent':'ANDRIK-Control-Site-Updater-R264',
           'x-github-api-version':'2022-11-28'
         },
         body: options.body === undefined ? undefined : JSON.stringify(options.body)
@@ -9434,11 +9574,11 @@ async function handleSiteUpdateBackupZip(request, env) {
     try { head = await siteUpdateGithubHead(config); } catch (_) {}
     const ref = head?.headSha || config.branch || 'main';
     const owner = encodeURIComponent(config.owner), repo = encodeURIComponent(config.repo), encodedRef = encodeURIComponent(ref);
-    const headers = {accept:'application/vnd.github+json',authorization:`Bearer ${config.token}`,'user-agent':'ANDRIK-Control-ZIP-Backup-R273','x-github-api-version':'2022-11-28'};
+    const headers = {accept:'application/vnd.github+json',authorization:`Bearer ${config.token}`,'user-agent':'ANDRIK-Control-ZIP-Backup-R247','x-github-api-version':'2022-11-28'};
     const attempts = [
       [`https://api.github.com/repos/${owner}/${repo}/zipball/${encodedRef}`, headers],
-      [`https://codeload.github.com/${owner}/${repo}/zip/${encodedRef}`, {authorization:`Bearer ${config.token}`,'user-agent':'ANDRIK-Control-ZIP-Backup-R273'}],
-      [`https://codeload.github.com/${owner}/${repo}/zip/refs/heads/${encodeURIComponent(config.branch || 'main')}`, {authorization:`Bearer ${config.token}`,'user-agent':'ANDRIK-Control-ZIP-Backup-R273'}]
+      [`https://codeload.github.com/${owner}/${repo}/zip/${encodedRef}`, {authorization:`Bearer ${config.token}`,'user-agent':'ANDRIK-Control-ZIP-Backup-R247'}],
+      [`https://codeload.github.com/${owner}/${repo}/zip/refs/heads/${encodeURIComponent(config.branch || 'main')}`, {authorization:`Bearer ${config.token}`,'user-agent':'ANDRIK-Control-ZIP-Backup-R247'}]
     ];
     let archiveResponse = null;
     let lastStatus = 0;
@@ -9457,7 +9597,7 @@ async function handleSiteUpdateBackupZip(request, env) {
     if (archiveBytes.byteLength > SITE_UPDATE_MAX_ZIP_BYTES) throw new Error('zip-size');
     const sha = head?.headSha || ref;
     const msg = cleanPlainText(head?.commit?.message || '', 240);
-    const release = (msg.toUpperCase().match(/R\d{1,6}/) || ['R273'])[0];
+    const release = (msg.toUpperCase().match(/R\d{1,6}/) || ['R247'])[0];
     const short = /^[0-9a-f]{7,40}$/i.test(sha) ? sha.slice(0,7) : 'current';
     const filename = `ANDRIK-BACKUP-${release}-${new Date().toISOString().slice(0,10)}-${short}.zip`;
     await recordSystemLog(env,{scope:'site-update',level:'info',event:'backup-zip-created',message:`ZIP backup ${filename}`,details:{commitSha:sha,filename,bytes:archiveBytes.byteLength}}).catch(()=>{});

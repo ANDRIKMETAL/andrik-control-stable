@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r264",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1785910977033-3d5be97595",
-  "release": "R273",
-  "archiveName": "R273-PORTRAIT-COUNTRY-FOCUS-ONE-SCREEN-SAFE-FULL.zip",
-  "sourceHead": "7a6176900b2e396649b1f31d92a4d587223bc03e",
-  "backupSha": "7a6176900b2e396649b1f31d92a4d587223bc03e",
-  "backupTag": "control-backup-20260805062221-7a61769-r273-de15a",
+  "operationId": "publish-1785916058714-0e956c4247",
+  "release": "R275",
+  "archiveName": "R275-R268-SAFE-RECOVERY-PUSH-SUMMARY-COUNTRY-FIT-SAFE-FULL.zip",
+  "sourceHead": "6d41214d79985feb469ef2aa87390ba90fd34ec2",
+  "backupSha": "6d41214d79985feb469ef2aa87390ba90fd34ec2",
+  "backupTag": "control-backup-20260805074721-6d41214-r275-b3249",
   "autoRecovery": false,
-  "generatedAt": "2026-08-05T06:22:57.033Z"
+  "generatedAt": "2026-08-05T07:47:38.714Z"
 }
