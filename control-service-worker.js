@@ -1,5 +1,5 @@
 'use strict';
-const VERSION = '55.00-r280';
+const VERSION = '55.00-r282';
 async function clearControlCaches(){
   if(!self.caches) return;
   const keys = await caches.keys();

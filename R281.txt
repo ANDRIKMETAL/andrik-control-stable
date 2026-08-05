@@ -1,0 +1,1 @@
+R281 — selected-country portrait scroll lock. Full R280 map preserved; selected country stays fixed at the top with complete action buttons.
