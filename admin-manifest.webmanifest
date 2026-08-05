@@ -1,8 +1,8 @@
 {
   "name": "Live Web AI",
   "short_name": "Live Web AI",
-  "id": "/admin/?app=live-web-ai-final-r269",
-  "start_url": "/?source=pwa&page=map&app=live-web-ai&v=55.00-final-r269",
+  "id": "/admin/?app=live-web-ai-final-r101",
+  "start_url": "/?source=pwa&page=map&app=live-web-ai&v=55.00-final-r101",
   "scope": "/",
   "display": "standalone",
   "display_override": [
@@ -60,5 +60,5 @@
       ]
     }
   ],
-  "version": "55.00-final-r269"
+  "version": "R270"
 }

@@ -1,2 +1,0 @@
-R242 — MINIMAL UPDATER HOTFIX + PORTABLE ZIP BACKUP
-Минимальный набор изменений для установки через R239: долгий тайм-аут GitHub Commit, ZIP-бэкап скачать/поделиться/восстановить.

@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r264",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1785900615591-5f630047c6",
-  "release": "R269",
-  "archiveName": "R269-BLUE-ADMIN-SECTIONS-YELLOW-STAGE-5-FRESH-APP-VERSION-R268-SAFE-FULL.zip",
-  "sourceHead": "0bc3bc2420d4987ce2d4428297237ee0d9d43037",
-  "backupSha": "0bc3bc2420d4987ce2d4428297237ee0d9d43037",
-  "backupTag": "control-backup-20260805033009-0bc3bc2-r269-a1959",
+  "operationId": "publish-1785901369823-20b3cbfaec",
+  "release": "R270",
+  "archiveName": "R270-EMERGENCY-MAIN-RESTORE-CACHE-RESET-VERSION-CONFLICT-FIX-SAFE-FULL.zip",
+  "sourceHead": "70885065c7df35dbc648ec9578c5e50eead3bbd8",
+  "backupSha": "70885065c7df35dbc648ec9578c5e50eead3bbd8",
+  "backupTag": "control-backup-20260805034244-7088506-r270-912f4",
   "autoRecovery": false,
-  "generatedAt": "2026-08-05T03:30:15.591Z"
+  "generatedAt": "2026-08-05T03:42:49.823Z"
 }

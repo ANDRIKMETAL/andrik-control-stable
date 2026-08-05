@@ -1,1 +1,0 @@
-R204: portrait update window full width, removed forced viewport gap, daily owner summary runs first in central Cron.

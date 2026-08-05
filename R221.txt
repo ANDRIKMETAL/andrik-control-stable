@@ -1,5 +1,0 @@
-R221 — TAP ANYWHERE TO CLOSE EYE VIDEO
-- Removed the close X button from the live-eye video.
-- One tap anywhere on the video/overlay closes it.
-- Fallback Play button remains usable if Android blocks autoplay.
-- R220 map exit protection and video crop are preserved.

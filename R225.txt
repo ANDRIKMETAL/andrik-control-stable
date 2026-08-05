@@ -1,9 +1,0 @@
-R225 — HEADER STATE COLORS
-- Changed only the color behavior of the Control header eye, halo and header glow.
-- Green: system normal / ready.
-- Blue: checking, update processing and stages 1–3, 5–6.
-- Yellow: only active stage 4 — Release.
-- Gold: release + deploy + protection successfully completed; returns to green automatically after 5.2 seconds.
-- Red: error, Release failure, protection failure or failed operation/Deploy.
-- Eye dimensions, motion, video, map, frames, buttons and all other UI are unchanged.
-- Based on R224.
