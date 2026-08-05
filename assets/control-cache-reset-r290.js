@@ -1,8 +1,8 @@
-/* Control ANDRIK R290 — one-time cache generation switch.
+/* Control ANDRIK R291 — one-time cache generation switch.
    Uses a dedicated cache key and never fights the visible release number. */
 (() => {
   'use strict';
-  const VERSION = '55.00-r290';
+  const VERSION = '55.00-r291';
   const KEY = 'andrik-control-cache-generation';
   const ONCE = 'andrik-control-cache-reload-r290';
   if (location.hostname.toLowerCase() !== 'control.andrikmetal.com') return;
@@ -41,7 +41,7 @@
       url.searchParams.set('fresh', String(Date.now()));
       location.replace(url.toString());
     } catch (error) {
-      console.warn('Control cache generation R290:', error);
+      console.warn('Control cache generation R291:', error);
     }
   })();
 })();

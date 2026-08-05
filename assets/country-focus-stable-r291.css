@@ -1,0 +1,76 @@
+/* Control ANDRIK R291 — compact buttons only. The map dimensions are untouched. */
+@media screen and (orientation:portrait){
+  body.analytics-admin-page.analytics-v54-46-page.r291-country-actions-visible .analytics-map-pane .analytics-swipe-hint,
+  body.analytics-admin-page.analytics-v54-46-page.r291-country-actions-visible #mapEndPullZone,
+  body.analytics-admin-page.analytics-v54-46-page.r291-country-actions-visible #analyticsSwipeDots,
+  body.analytics-admin-page.analytics-v54-46-page.r291-country-actions-visible .analytics-swipe-dots{
+    display:none!important;
+    visibility:hidden!important;
+    opacity:0!important;
+    pointer-events:none!important;
+  }
+
+  body.analytics-admin-page.analytics-v54-46-page>#mapFocusActions.r291-country-actions-portal,
+  body.analytics-admin-page.analytics-v54-46-page>#mapFocusActions.r291-country-actions-portal[hidden]{
+    position:fixed!important;
+    left:14px!important;
+    right:14px!important;
+    bottom:calc(8px + env(safe-area-inset-bottom))!important;
+    top:auto!important;
+    z-index:2147483300!important;
+    box-sizing:border-box!important;
+    display:grid!important;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    width:auto!important;
+    height:40px!important;
+    min-height:40px!important;
+    max-height:40px!important;
+    margin:0!important;
+    padding:0!important;
+    gap:8px!important;
+    overflow:visible!important;
+    visibility:visible!important;
+    opacity:1!important;
+    pointer-events:auto!important;
+    transform:none!important;
+    background:transparent!important;
+  }
+
+  body.analytics-admin-page.analytics-v54-46-page>#mapFocusActions.r291-country-actions-portal .map-focus-action{
+    box-sizing:border-box!important;
+    display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    width:100%!important;
+    min-width:0!important;
+    height:40px!important;
+    min-height:40px!important;
+    max-height:40px!important;
+    margin:0!important;
+    padding:2px 5px!important;
+    border-radius:14px!important;
+    flex-direction:row!important;
+    gap:3px!important;
+    font-size:clamp(.58rem,2.38vw,.70rem)!important;
+    line-height:1!important;
+    letter-spacing:-.012em!important;
+    white-space:nowrap!important;
+    overflow:hidden!important;
+    text-overflow:clip!important;
+  }
+}
+
+@media screen and (orientation:portrait) and (max-height:720px){
+  body.analytics-admin-page.analytics-v54-46-page>#mapFocusActions.r291-country-actions-portal,
+  body.analytics-admin-page.analytics-v54-46-page>#mapFocusActions.r291-country-actions-portal .map-focus-action{
+    height:36px!important;
+    min-height:36px!important;
+    max-height:36px!important;
+  }
+}
+
+@media screen and (orientation:landscape){
+  body.analytics-admin-page.analytics-v54-46-page>#mapFocusActions.r291-country-actions-portal{
+    display:none!important;
+  }
+}
