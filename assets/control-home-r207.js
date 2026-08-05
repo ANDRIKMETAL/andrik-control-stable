@@ -59,10 +59,15 @@
       return now.getHours()>6||(now.getHours()===6&&now.getMinutes()>=5)?date:shiftSummaryDate(date,-1);
     }
   }
+  const requestedSummaryWindowKey=(()=>{
+    const value=(new URLSearchParams(location.search).get('window')||'').trim();
+    return /^\d{4}-\d{2}-\d{2}$/.test(value)?value:'';
+  })();
+  const targetSummaryWindowKey=()=>requestedSummaryWindowKey||currentSummaryWindowKey();
   function emptySummaryPayload(){
-    return {ok:true,period:'06:05-cycle',windowKey:currentSummaryWindowKey(),updatedAt:new Date().toISOString(),summary:{websiteUsers:0,websiteViews:0,siteSubscribers:0,siteComments:0,siteLikes:0,youtubeComments:0,youtubeSubscribers:0,youtubeLikes:0,youtubeViews:0,youtubeViewDelta:0,releases:0,countryDeltas:[],totalCountries:0,countryDate:''},activity:[]};
+    return {ok:true,period:requestedSummaryWindowKey?'06:05-cycle-completed':'06:05-cycle',archived:Boolean(requestedSummaryWindowKey),windowKey:targetSummaryWindowKey(),updatedAt:new Date().toISOString(),summary:{websiteUsers:0,websiteViews:0,siteSubscribers:0,siteComments:0,siteLikes:0,youtubeComments:0,youtubeSubscribers:0,youtubeLikes:0,youtubeViews:0,youtubeViewDelta:0,releases:0,countryDeltas:[],totalCountries:0,countryDate:''},activity:[]};
   }
-  function cachedForCurrentWindow(cached){return Boolean(cached?.data&&cached.data.windowKey===currentSummaryWindowKey())}
+  function cachedForCurrentWindow(cached){return Boolean(cached?.data&&cached.data.windowKey===targetSummaryWindowKey())}
 
   const SUMMARY_NUMBER_KEYS_R213=['websiteUsers','websiteViews','siteSubscribers','siteComments','siteLikes','youtubeComments','youtubeSubscribers','youtubeLikes','youtubeViews','youtubeViewDelta','releases','totalCountries'];
   function mergeSummaryPayloadR213(previous,incoming){
@@ -180,8 +185,10 @@
       : 'сейчас';
     const updatedBox=$('controlHomeUpdated');
     if(updatedBox){
-      const source=['push-merged','push-direct'].includes(data.summarySource)?' · сверено с push':'';
-      updatedBox.textContent=`Обновлено ${compactTime}${source}`;
+      const source=data.archived||data.summarySource==='push-archive'
+        ? `Сводка из push · завершённый период ${escapeHtml(data.windowKey||'')}`
+        : `Обновлено ${compactTime}${['push-merged','push-direct'].includes(data.summarySource)?' · сверено с push':''}`;
+      updatedBox.textContent=source;
     }
     syncCarouselClones();
   }
@@ -204,7 +211,7 @@
   }
 
   let loading=false;
-  let activeSummaryWindowKey=currentSummaryWindowKey();
+  let activeSummaryWindowKey=targetSummaryWindowKey();
   async function load({silent=false,forceLive=false}={}){
     if(loading)return;
     loading=true;
@@ -227,7 +234,10 @@
     if(showRefreshEffect)shell?.classList.add('is-refreshing');
     else shell?.classList.remove('is-refreshing');
     try{
-      const data=await api(forceLive?'/api/control/home?refresh=1&v=55.00-r136':'/api/control/home?v=55.00-r136',{timeoutMs:forceLive?13000:8000});
+      const params=new URLSearchParams({v:'55.00-r271'});
+      if(forceLive)params.set('refresh','1');
+      if(requestedSummaryWindowKey)params.set('window',requestedSummaryWindowKey);
+      const data=await api(`/api/control/home?${params.toString()}`,{timeoutMs:forceLive?13000:8000});
       if(data?.windowKey)activeSummaryWindowKey=data.windowKey;
       const previous=readHomeCache();
       const stable=cachedForCurrentWindow(previous)?mergeSummaryPayloadR213(previous.data,data):data;

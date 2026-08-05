@@ -1,0 +1,8 @@
+R263 — COMPACT DAILY ACTION BUTTONS
+
+Base: confirmed stable R262.
+Changes only in portrait country-focus action buttons:
+- shorter height;
+- centered labels;
+- safe bottom margin to prevent clipping.
+All other R262 functions preserved.

@@ -1,0 +1,5 @@
+R257 — LANDSCAPE BOTTOM SWIPE RESTORE
+
+- Restores the dedicated bottom-up swipe zone in the landscape listener map.
+- Swipe upward from the bottom-center hint to open the Admin panel.
+- Keeps R256 header, eye colors, country scrolling, installer and R253 push logic unchanged.

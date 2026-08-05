@@ -6497,6 +6497,23 @@ function getBratislavaSummaryWindow(date = new Date()) {
   };
 }
 
+function getBratislavaSummaryWindowByKey(windowKey) {
+  const key = cleanPlainText(windowKey || '', 40);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(key)) return null;
+  const nextDate = shiftIsoCalendarDate(key, 1);
+  if (!nextDate) return null;
+  return {
+    key,
+    startAt: bratislavaLocalDateTimeToIso(key, 6, 5),
+    endAt: bratislavaLocalDateTimeToIso(nextDate, 6, 5),
+    currentLocalDate: getBratislavaClock().date,
+    crossesMidnight: true,
+    midnightAt: bratislavaLocalDateTimeToIso(nextDate, 0, 0),
+    cutoffLabel: '06:05 Europe/Bratislava',
+    requested: true
+  };
+}
+
 
 
 function latestYoutubeReleaseCountForWindow(stateRow, window) {
@@ -7032,14 +7049,14 @@ async function maybeSendDailyOwnerSummary(env) {
     result = await sendOwnerPush(env, {
       title:'📊 Ежедневная сводка ANDRIK',
       message:lines.join('\n'),
-      url:'https://control.andrikmetal.com/control-home.html?page=summary',
+      url:`https://control.andrikmetal.com/control-home.html?page=summary&window=${encodeURIComponent(summaryWindow.key)}&source=daily-push`,
       name:`ANDRIK daily summary ${clock.date}`,
       history:{
         type:'daily-summary',
         source:'central-cron',
         title:'Ежедневная сводка ANDRIK',
         message:lines.join('\n'),
-        url:'https://control.andrikmetal.com/control-home.html?page=summary',
+        url:`https://control.andrikmetal.com/control-home.html?page=summary&window=${encodeURIComponent(summaryWindow.key)}&source=daily-push`,
         details:{
           localDate:clock.date,
           localHour:clock.hour,
@@ -7116,14 +7133,14 @@ async function handleManualDailyOwnerSummary(request, env) {
   const result = await sendOwnerPush(env, {
     title: '📊 Ежедневная сводка ANDRIK',
     message: lines.join('\n'),
-    url: 'https://control.andrikmetal.com/control-home.html?page=summary',
+    url: `https://control.andrikmetal.com/control-home.html?page=summary&window=${encodeURIComponent(metrics?.windowKey || getBratislavaSummaryWindow().key)}&source=daily-push`,
     name: `ANDRIK manual daily summary ${clock.date} ${Date.now()}`,
     history: {
       type: 'daily-summary',
       source: 'manual-control',
       title: 'Ежедневная сводка ANDRIK',
       message: lines.join('\n'),
-      url: 'https://control.andrikmetal.com/control-home.html?page=summary',
+      url: `https://control.andrikmetal.com/control-home.html?page=summary&window=${encodeURIComponent(metrics?.windowKey || getBratislavaSummaryWindow().key)}&source=daily-push`,
       details: { localDate:clock.date, localHour:clock.hour, manual:true, metrics, snapshotRefresh }
     }
   });
@@ -7240,12 +7257,8 @@ function parseDailySummaryMetricsForWindow(row, windowKey) {
   return storedKey === windowKey ? metrics : {};
 }
 
-async function persistControlHomeHighWaterFromMetricsR260(db, windowKey, metrics = {}) {
-  if (!windowKey) return;
-  const key = `control-home-high-water-r213:${windowKey}`;
-  const previousRow = await getPushState(db, key).catch(() => null);
-  const previous = parseControlHomeHighWaterR213(previousRow);
-  const incoming = normalizeControlHomeSummaryR213({
+function controlHomeSummaryFromDailyMetricsR271(metrics = {}) {
+  return normalizeControlHomeSummaryR213({
     websiteUsers:Number(metrics?.siteUsers || 0),
     websiteViews:Number(metrics?.siteViews || 0),
     siteSubscribers:Number(metrics?.siteSubscribers || 0),
@@ -7261,6 +7274,14 @@ async function persistControlHomeHighWaterFromMetricsR260(db, windowKey, metrics
     totalCountries:Number(metrics?.totalCountries || 0),
     countryDate:metrics?.countryDate || ''
   });
+}
+
+async function persistControlHomeHighWaterFromMetricsR260(db, windowKey, metrics = {}) {
+  if (!windowKey) return;
+  const key = `control-home-high-water-r213:${windowKey}`;
+  const previousRow = await getPushState(db, key).catch(() => null);
+  const previous = parseControlHomeHighWaterR213(previousRow);
+  const incoming = controlHomeSummaryFromDailyMetricsR271(metrics);
   const merged = mergeControlHomeSummaryR213(previous, incoming);
   await setPushState(db, key, JSON.stringify({
     windowKey,
@@ -7345,9 +7366,76 @@ function parseDailySummaryMessageMetrics(row) {
 async function handleControlHome(request, env) {
   if (!adminAuthorized(request, env)) return json({ ok:false, error:'unauthorized' },401);
   const db = requireDb(env);
-  const forceRefresh = new URL(request.url).searchParams.get('refresh') === '1';
-  const window = getBratislavaSummaryWindow();
+  const requestUrl = new URL(request.url);
+  const forceRefresh = requestUrl.searchParams.get('refresh') === '1';
+  const currentWindow = getBratislavaSummaryWindow();
+  const requestedWindowKey = cleanPlainText(requestUrl.searchParams.get('window') || '', 40);
+  const requestedWindow = requestedWindowKey ? getBratislavaSummaryWindowByKey(requestedWindowKey) : null;
+  const window = requestedWindow || currentWindow;
+  const archivedWindow = Boolean(requestedWindow && requestedWindow.key !== currentWindow.key);
   await Promise.all([ensurePushAutomationSchema(db), ensureCommentsV4Schema(db), ensurePlatformAnalyticsSchema(db), ensureControlV1Schema(db), ensureSiteMetricsSchema(db)]);
+
+  // R271: a morning push opens the exact completed 06:05-cycle stored in its URL.
+  // Without this branch, a tap after 06:05 silently switched to the new empty cycle.
+  if (archivedWindow) {
+    const highWaterKey = `control-home-high-water-r213:${window.key}`;
+    const [highWaterRow, latestStoredRow, pushRows, logRows, activityResult] = await Promise.all([
+      getPushState(db, highWaterKey).catch(() => null),
+      getPushState(db, 'daily-owner-summary-last-metrics').catch(() => null),
+      db.prepare(`SELECT details_json AS detailsJson, message, created_at AS createdAt
+        FROM push_history
+        WHERE type='daily-summary' AND status='sent'
+        ORDER BY datetime(created_at) DESC LIMIT 40`).all().catch(() => ({ results:[] })),
+      db.prepare(`SELECT details_json AS detailsJson, created_at AS createdAt
+        FROM system_logs
+        WHERE scope='daily-summary' AND event IN ('sent','sent-partial','manual-sent')
+        ORDER BY datetime(created_at) DESC LIMIT 40`).all().catch(() => ({ results:[] })),
+      db.prepare(`SELECT id, type, source, audience, title, message, url, video_id AS videoId, video_title AS videoTitle, status, created_at AS createdAt
+        FROM push_history
+        WHERE type IN ('youtube-comment','youtube-comment-count','youtube-subscriber','youtube-subscriber-count','youtube-like','site-subscriber','comment-live','comment-pending','auto-release','auto-release-retry','release-publish')
+          AND datetime(created_at) >= datetime(?1)
+          AND datetime(created_at) < datetime(?2)
+        ORDER BY datetime(created_at) DESC LIMIT 200`).bind(window.startAt, window.endAt).all().catch(() => ({ results:[] }))
+    ]);
+
+    const storedMetrics = parseStoredDailySummaryMetricsForWindow(latestStoredRow, window.key);
+    let pushMetrics = {};
+    let pushAt = '';
+    for (const row of pushRows?.results || []) {
+      const metrics = parseDailySummaryMetricsForWindow(row, window.key);
+      if (Object.keys(metrics).length) {
+        pushMetrics = mergeDailyMetrics(pushMetrics, metrics, parseDailySummaryMessageMetrics(row));
+        if (!pushAt) pushAt = row.createdAt || '';
+      }
+    }
+    let logMetrics = {};
+    for (const row of logRows?.results || []) {
+      const metrics = parseDailySummaryMetricsForWindow(row, window.key);
+      if (Object.keys(metrics).length) {
+        logMetrics = mergeDailyMetrics(logMetrics, metrics);
+        if (!pushAt) pushAt = row.createdAt || '';
+      }
+    }
+    const metrics = mergeDailyMetrics(storedMetrics, pushMetrics, logMetrics);
+    const highWater = parseControlHomeHighWaterR213(highWaterRow);
+    const summary = mergeControlHomeSummaryR213(highWater, controlHomeSummaryFromDailyMetricsR271(metrics));
+    return json({
+      ok:true,
+      period:'06:05-cycle-completed',
+      archived:true,
+      windowKey:window.key,
+      windowStartAt:window.startAt,
+      windowEndAt:window.endAt,
+      summary,
+      activity:activityResult?.results || [],
+      automation:{ status:'archived', summary:{} },
+      snapshots:{ youtubeAt:'', googleAt:'' },
+      summarySource:'push-archive',
+      dailySummaryPushAt:pushAt,
+      updatedAt:pushAt || new Date().toISOString()
+    });
+  }
+
   // R260 DAILY ACCUMULATOR: the screen uses one Bratislava window, 06:05 → next 06:05.
   // Sending a push only records a checkpoint. It never resets counters; only the window key changes at 06:05.
   const [siteSubscribers, siteComments, siteLikes, youtubeEvents, youtubeLikeRows, youtubeSubscriberRows, releases, latestYoutubeState, activityResult, ytLatest, ytBaseline, gaLatest, gaBaseline, gaRollover, automationAt, automationStatus, automationSummary, siteLive, siteWindow, latestDailySummaryState, latestDailySummaryPush, latestDailySummaryLog] = await Promise.all([
@@ -10160,7 +10248,7 @@ async function routeApi(request, env, ctx) {
 function controlRecoveryServiceWorkerSource() {
   return [
     "'use strict';",
-    "const VERSION='55.00-r271';",
+    "const VERSION='54.95';",
     "async function clearCaches(){if(!self.caches)return;const keys=await caches.keys();await Promise.all(keys.filter(name=>name.startsWith('andrik-control-')||name.startsWith('andrik-site-')).map(name=>caches.delete(name)));}",
     "self.addEventListener('install',event=>event.waitUntil(self.skipWaiting()));",
     "self.addEventListener('activate',event=>event.waitUntil((async()=>{await clearCaches();await self.clients.claim();})()));",
@@ -10170,7 +10258,7 @@ function controlRecoveryServiceWorkerSource() {
 }
 
 function controlRecoveryPage() {
-  return `<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#02060a"><meta name="robots" content="noindex,nofollow"><meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0"><meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0"><title>Очистка Control — R271</title><style>*{box-sizing:border-box}html,body{min-height:100%;margin:0;background:#02060a;color:#eff8ff;font-family:system-ui,-apple-system,Segoe UI,sans-serif}body{display:grid;place-items:center;padding:22px}.c{width:min(100%,540px);padding:30px 22px;border:1px solid #2a6550;border-radius:28px;background:linear-gradient(180deg,#081923,#030c13);text-align:center;box-shadow:0 24px 80px #000,0 0 36px rgba(61,255,154,.14)}.badge{display:inline-flex;padding:7px 12px;border:1px solid rgba(111,255,179,.42);border-radius:999px;background:rgba(16,71,48,.48);color:#caffdd;font-weight:900;font-size:.78rem;letter-spacing:.09em}.e{font-size:58px;margin-top:12px}h1{font-size:clamp(30px,8vw,44px);margin:8px 0}.s{color:#abc0cc;line-height:1.55}.bar{height:11px;margin:22px 0 15px;border-radius:99px;background:#0b2634;overflow:hidden}.bar span{display:block;width:4%;height:100%;background:linear-gradient(90deg,#4adf93,#8eeeff);transition:width .28s ease}.b{display:none;min-height:54px;align-items:center;justify-content:center;width:100%;margin-top:20px;padding:0 22px;border:1px solid #315b70;border-radius:999px;color:#eff8ff;text-decoration:none;font-weight:900;background:#0a2432}.b.show{display:flex}.ok{color:#bfffd9;font-weight:850}</style></head><body><main class="c"><span class="badge">ВОССТАНОВЛЕНИЕ R271</span><div class="e">🟢</div><h1 id="t">Чистим старый кэш</h1><p class="s" id="s">Удаляем старые версии Control и перезапускаем безопасный Worker.</p><div class="bar"><span id="bar"></span></div><a class="b" id="b" href="/analytics-admin.html?page=map&v=55.00-r271">Открыть Control</a></main><script>(async()=>{const t=document.getElementById('t'),s=document.getElementById('s'),b=document.getElementById('b'),bar=document.getElementById('bar'),stamp=Date.now(),go='/analytics-admin.html?page=map&v=55.00-r271&fresh='+stamp;b.href=go;let dc=0,dw=0;try{bar.style.width='24%';if('caches'in window){const keys=await caches.keys();const done=await Promise.all(keys.map(k=>caches.delete(k).catch(()=>false)));dc=done.filter(Boolean).length}bar.style.width='56%';if('serviceWorker'in navigator){const regs=await navigator.serviceWorker.getRegistrations().catch(()=>[]);for(const reg of regs){const u=String(reg.active?.scriptURL||reg.waiting?.scriptURL||reg.installing?.scriptURL||'');if(/OneSignalSDK|\/push\/onesignal\//i.test(u))continue;if(await reg.unregister().catch(()=>false))dw++}const reg=await navigator.serviceWorker.register('/service-worker.js?v=55.00-r271&fresh='+stamp,{scope:'/',updateViaCache:'none'}).catch(()=>null);if(reg?.installing)reg.installing.postMessage({type:'SKIP_WAITING'});if(reg?.waiting)reg.waiting.postMessage({type:'SKIP_WAITING'});await reg?.update?.().catch(()=>{})}bar.style.width='82%';await fetch('/analytics-admin.html?fresh='+stamp,{cache:'no-store',credentials:'include',headers:{'Cache-Control':'no-cache, no-store, max-age=0','Pragma':'no-cache'}}).catch(()=>null);bar.style.width='100%';t.textContent='Control восстановлена';s.classList.add('ok');s.textContent='Удалено кэшей: '+dc+'. Остановлено старых Worker: '+dw+'.';b.classList.add('show');setTimeout(()=>location.replace(go),900)}catch(e){console.error(e);bar.style.width='100%';t.textContent='Очистка завершена';s.textContent='Нажми кнопку ниже, чтобы открыть Control.';b.classList.add('show')}})();</script></body></html>`;
+  return `<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#02060a"><meta name="robots" content="noindex,nofollow"><title>Восстановление Control ANDRIK</title><style>*{box-sizing:border-box}html,body{min-height:100%;margin:0;background:#02060a;color:#eff8ff;font-family:system-ui,-apple-system,Segoe UI,sans-serif}body{display:grid;place-items:center;padding:22px}.c{width:min(100%,520px);padding:30px 22px;border:1px solid #244455;border-radius:28px;background:linear-gradient(#081923,#030c13);text-align:center}.e{font-size:58px}h1{font-size:clamp(30px,8vw,44px);margin:12px 0}.s{color:#abc0cc;line-height:1.55}.b{display:inline-flex;min-height:54px;align-items:center;justify-content:center;margin-top:20px;padding:0 22px;border:1px solid #315b70;border-radius:999px;color:#eff8ff;text-decoration:none;font-weight:800;background:#0a2432}</style></head><body><main class="c"><div class="e">🟢</div><h1>Восстанавливаем Control</h1><p class="s" id="s">Заменяем старый перехват страниц безопасной версией…</p><a class="b" id="b" href="/analytics-admin.html?source=recovery&page=map&v=54.96" hidden>Открыть Control</a></main><script>(async()=>{const s=document.getElementById('s'),b=document.getElementById('b'),go='/analytics-admin.html?source=recovery&page=map&v=54.96&t='+Date.now();b.href=go;try{if('caches'in window){const k=await caches.keys();await Promise.all(k.filter(n=>n.startsWith('andrik-control-')||n.startsWith('andrik-site-')).map(n=>caches.delete(n)))}if('serviceWorker'in navigator){const r=await navigator.serviceWorker.register('/service-worker.js?v=54.96-control-recovery',{scope:'/',updateViaCache:'none'});if(r.installing)r.installing.postMessage({type:'SKIP_WAITING'});if(r.waiting)r.waiting.postMessage({type:'SKIP_WAITING'});await r.update().catch(()=>{});await new Promise(x=>setTimeout(x,1200))}s.textContent='Готово. Открываем карту напрямую…';s.style.color='#bfffd9';b.hidden=false;setTimeout(()=>location.replace(go),650)}catch(e){s.textContent='Нажмите кнопку ниже. '+String(e&&e.message||e);s.style.color='#ffb9b9';b.hidden=false}})();</script></body></html>`;
 }
 
 
@@ -10252,10 +10340,7 @@ export default {
 
     // Recovery page also comes directly from the Worker so it cannot disappear
     // because of an incomplete static upload.
-    const isCacheResetRoute = normalizedPath === '/cache-reset.html'
-      || normalizedPath.startsWith('/cache-reset-')
-      || /^\/r\d{1,6}(?:\.txt)?$/i.test(normalizedPath);
-    if (isControlHost && isCacheResetRoute) {
+    if (isControlHost && (normalizedPath === '/cache-reset.html' || normalizedPath.startsWith('/cache-reset-v54-'))) {
       return new Response(controlRecoveryPage(), {
         headers: {
           'content-type': 'text/html; charset=utf-8',

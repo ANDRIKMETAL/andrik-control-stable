@@ -1,0 +1,8 @@
+R208 — DEPLOY STEPS 5–6 HARD WIDTH LOCK
+
+- Based on R207; daily summary source-of-truth fix is preserved.
+- Replaces the six-stage portrait grid with six zero-basis flex tracks.
+- Keeps stages 5 and 6 fully inside the updater during Cloudflare deployment.
+- Locks title badge, live status, metrics and action buttons to the card width.
+- Resets accidental horizontal scroll when deploy state changes.
+- Does not change authentication, Google Analytics, Search Console, push logic or deployment logic.

@@ -1,0 +1,5 @@
+R218 — VERSION SOURCE FIX
+- Fixed the authoritative release value in _worker.js: R216 -> R218.
+- The Control version display now matches the installed build.
+- Eye tap launches video only; no website launch.
+- All R215 width fixes and R217 video behavior are preserved.

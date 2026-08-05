@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r264",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1785902062034-c8496a408d",
+  "operationId": "publish-1785905290287-d22ad91e4b",
   "release": "R271",
-  "archiveName": "R271-ROBUST-CACHE-RESET-MARKER-ROUTE-FIX-SAFE-CLEAN-FULL.zip",
-  "sourceHead": "15092ed6e247f70d962f99682a8739a4ec03ca3d",
-  "backupSha": "15092ed6e247f70d962f99682a8739a4ec03ca3d",
-  "backupTag": "control-backup-20260805035416-15092ed-r271-f7081",
+  "archiveName": "R271-PUSH-SUMMARY-WINDOW-LINK-FIX-SAFE-FULL.zip",
+  "sourceHead": "8016a974b4d707b64383d303bc65aa81fe308c53",
+  "backupSha": "8016a974b4d707b64383d303bc65aa81fe308c53",
+  "backupTag": "control-backup-20260805044754-8016a97-r271-9af63",
   "autoRecovery": false,
-  "generatedAt": "2026-08-05T03:54:22.034Z"
+  "generatedAt": "2026-08-05T04:48:10.287Z"
 }
