@@ -1,0 +1,1 @@
+R276 — remove black stripe over focused-country bottom buttons; keep R276 recovery, push summary and compact selected-country layout.

@@ -149,3 +149,81 @@
     max-height:43px!important;
   }
 }
+
+
+/* R276 — remove black middle stripe on focused-country bottom buttons. */
+@media screen and (orientation:portrait){
+  body.analytics-admin-page.analytics-v54-46-page.is-country-focus-active .analytics-swipe-dots,
+  body.analytics-admin-page.analytics-v54-46-page.is-country-focus-active #analyticsSwipeDots{
+    display:none!important;
+    opacity:0!important;
+    visibility:hidden!important;
+    pointer-events:none!important;
+    width:0!important;
+    height:0!important;
+    min-height:0!important;
+    margin:0!important;
+    padding:0!important;
+    overflow:hidden!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page.is-country-focus-active .analytics-map-pane,
+  body.analytics-admin-page.analytics-v54-46-page.is-country-focus-active .analytics-map-pane > .analytics-pane-wrap.analytics-map-pane-wrap,
+  body.analytics-admin-page.analytics-v54-46-page.is-country-focus-active .analytics-map-pane > .analytics-map-pane-wrap.analytics-pane-wrap{
+    background:transparent!important;
+    padding-bottom:0!important;
+    margin-bottom:0!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page.is-country-focus-active .analytics-map-pane .analytics-map-top.has-country-focus{
+    padding:4px 7px 0!important;
+    row-gap:4px!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page.is-country-focus-active .analytics-map-pane .analytics-map-top.has-country-focus>#worldMap{
+    height:clamp(198px,24dvh,228px)!important;
+    min-height:198px!important;
+    max-height:228px!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page.is-country-focus-active .analytics-map-pane #worldCountries .world-country-button.is-selected{
+    min-height:52px!important;
+    padding:4px 9px 5px!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page.is-country-focus-active .analytics-map-pane #worldCountries .world-country-button.is-selected .world-country-marquee{
+    font-size:.79rem!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page.is-country-focus-active .analytics-map-pane #worldCountries .world-country-button.is-selected>em{
+    font-size:.82rem!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page.is-country-focus-active .analytics-map-pane #worldCountries .world-country-button.is-selected .country-weekly-gain{
+    font-size:.54rem!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page.is-country-focus-active .analytics-map-pane #mapFocusActions.map-focus-actions,
+  body.analytics-admin-page.analytics-v54-46-page[data-analytics-page="map"].is-country-focus-active .analytics-map-top.has-country-focus>#mapFocusActions{
+    height:42px!important;
+    min-height:42px!important;
+    max-height:42px!important;
+    margin:4px auto 0!important;
+    gap:6px!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page.is-country-focus-active .analytics-map-pane #mapFocusActions.map-focus-actions .map-focus-action,
+  body.analytics-admin-page.analytics-v54-46-page[data-analytics-page="map"].is-country-focus-active .analytics-map-top.has-country-focus>#mapFocusActions .map-focus-action{
+    height:42px!important;
+    min-height:42px!important;
+    max-height:42px!important;
+    padding:3px 4px!important;
+    border-radius:15px!important;
+    font-size:clamp(.62rem,2.6vw,.74rem)!important;
+  }
+}
+
+@media screen and (orientation:portrait) and (max-height:720px){
+  body.analytics-admin-page.analytics-v54-46-page.is-country-focus-active .analytics-map-pane .analytics-map-top.has-country-focus>#worldMap{
+    height:190px!important;
+    min-height:190px!important;
+    max-height:190px!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page.is-country-focus-active .analytics-map-pane #mapFocusActions.map-focus-actions,
+  body.analytics-admin-page.analytics-v54-46-page.is-country-focus-active .analytics-map-pane #mapFocusActions.map-focus-actions .map-focus-action{
+    height:40px!important;
+    min-height:40px!important;
+    max-height:40px!important;
+  }
+}

@@ -4,7 +4,7 @@
   'use strict';
   const VERSION = '55.00-r276';
   const KEY = 'andrik-control-cache-generation';
-  const ONCE = 'andrik-control-cache-reload-r275';
+  const ONCE = 'andrik-control-cache-reload-r276';
   if (location.hostname.toLowerCase() !== 'control.andrikmetal.com') return;
 
   async function clearControlCaches() {
