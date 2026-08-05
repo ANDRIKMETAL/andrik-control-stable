@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r264",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1785901369823-20b3cbfaec",
-  "release": "R270",
-  "archiveName": "R270-EMERGENCY-MAIN-RESTORE-CACHE-RESET-VERSION-CONFLICT-FIX-SAFE-FULL.zip",
-  "sourceHead": "70885065c7df35dbc648ec9578c5e50eead3bbd8",
-  "backupSha": "70885065c7df35dbc648ec9578c5e50eead3bbd8",
-  "backupTag": "control-backup-20260805034244-7088506-r270-912f4",
+  "operationId": "publish-1785902062034-c8496a408d",
+  "release": "R271",
+  "archiveName": "R271-ROBUST-CACHE-RESET-MARKER-ROUTE-FIX-SAFE-CLEAN-FULL.zip",
+  "sourceHead": "15092ed6e247f70d962f99682a8739a4ec03ca3d",
+  "backupSha": "15092ed6e247f70d962f99682a8739a4ec03ca3d",
+  "backupTag": "control-backup-20260805035416-15092ed-r271-f7081",
   "autoRecovery": false,
-  "generatedAt": "2026-08-05T03:42:49.823Z"
+  "generatedAt": "2026-08-05T03:54:22.034Z"
 }
