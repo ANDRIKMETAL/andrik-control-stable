@@ -25,7 +25,7 @@
     document.querySelector('.analytics-map-top.has-country-focus,.world-map-card.has-country-focus') ||
     String(document.getElementById('worldMap')?.dataset?.focusCountry || '').trim()
   );
-  const active = () => portrait() && onMapPage() && focused;
+  const active = () => portrait() && onMapPage() && (focused || hasFocusDom());
 
   function remember() {
     actions ||= document.getElementById('mapFocusActions');
@@ -79,6 +79,7 @@
 
   function sync() {
     frame = 0;
+    if (hasFocusDom()) focused = true;
     if (active()) show();
     else hide();
   }
@@ -91,7 +92,7 @@
   function confirmBlur() {
     clearTimeout(falseTimer);
     falseTimer = window.setTimeout(() => {
-      focused = Boolean(hasFocusDom() && document.body.classList.contains('is-country-focus-active'));
+      focused = Boolean(hasFocusDom());
       schedule();
     }, 700);
   }
@@ -120,7 +121,7 @@
 
   function start() {
     if (!remember()) return;
-    focused = Boolean(document.body.classList.contains('is-country-focus-active') && hasFocusDom());
+    focused = Boolean(hasFocusDom());
 
     pane?.addEventListener('touchmove', stopLegacyScroll, { passive: false, capture: true });
     pane?.addEventListener('wheel', stopLegacyScroll, { passive: false, capture: true });
@@ -130,7 +131,7 @@
     window.addEventListener('resize', schedule, { passive: true });
     window.addEventListener('orientationchange', () => setTimeout(schedule, 120), { passive: true });
     window.addEventListener('pageshow', () => {
-      focused = Boolean(document.body.classList.contains('is-country-focus-active') && hasFocusDom());
+      focused = Boolean(hasFocusDom());
       if (focused) resetMapScroll();
       schedule();
     }, { passive: true });
@@ -138,7 +139,7 @@
     // Observe only country selection state. The action bar is not observed,
     // which avoids the self-triggering loop that broke later test builds.
     const observer = new MutationObserver(() => {
-      if (!focused && hasFocusDom() && document.body.classList.contains('is-country-focus-active')) focused = true;
+      if (hasFocusDom()) focused = true;
       schedule();
     });
     observer.observe(document.body, { attributes: true, attributeFilter: ['class', 'data-analytics-page'] });
@@ -151,6 +152,11 @@
     const positionObserver = new MutationObserver(schedule);
     positionObserver.observe(document.body, { childList: true });
     if (homeParent && homeParent !== document.body) positionObserver.observe(homeParent, { childList: true });
+
+    window.setInterval(() => {
+      if (hasFocusDom()) focused = true;
+      schedule();
+    }, 900);
 
     schedule();
   }

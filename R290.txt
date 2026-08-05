@@ -1,1 +1,1 @@
-R291 — selected-country buttons remain permanently visible; selected map keeps the same full size as the ordinary main map. Based on R289 light build.
+R292 — selected-country buttons remain permanently visible; selected map keeps the same full size as the ordinary main map. Based on R289 light build.

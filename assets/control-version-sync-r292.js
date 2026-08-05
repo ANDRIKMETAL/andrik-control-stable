@@ -67,7 +67,7 @@
       }
 
       window.ANDRIK_CONTROL_RELEASE = Object.freeze({
-        short: RELEASE, number: 286, version: '55.00',
+        short: RELEASE, number: 292, version: '55.00',
         full: 'v55.00 LIVE WEB AI FINAL R292',
         build: 'R268 SAFE BASE + PUSH SUMMARY + COUNTRY ONE SCREEN',
         date: '05.08.2026'
