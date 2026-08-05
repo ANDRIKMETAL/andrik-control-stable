@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r277",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1785919683883-fa01f70770",
-  "release": "R277",
-  "archiveName": "R278.zip",
-  "sourceHead": "a918f4766d1a7be38c9156e4b860d9c8bb9d9423",
-  "backupSha": "a918f4766d1a7be38c9156e4b860d9c8bb9d9423",
-  "backupTag": "control-backup-20260805084714-a918f47-r277-24cb0",
+  "operationId": "publish-1785920804212-6315c06c36",
+  "release": "R278",
+  "archiveName": "R279.zip",
+  "sourceHead": "17534e38027e611b2fd35d7be9e799540eca7386",
+  "backupSha": "17534e38027e611b2fd35d7be9e799540eca7386",
+  "backupTag": "control-backup-20260805090609-17534e3-r278-5d415",
   "autoRecovery": false,
-  "generatedAt": "2026-08-05T08:48:03.883Z"
+  "generatedAt": "2026-08-05T09:06:44.212Z"
 }

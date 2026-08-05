@@ -1,4 +1,4 @@
-/* Control ANDRIK R278 — portrait focused-country one-screen fit.
+/* Control ANDRIK R279 — portrait focused-country one-screen fit.
    Only the selected-country portrait layout is changed. */
 @media screen and (orientation:portrait){
   body.analytics-admin-page.analytics-v54-46-page.is-country-focus-active .analytics-map-pane{
@@ -151,7 +151,7 @@
 }
 
 
-/* R278 — remove black middle stripe on focused-country bottom buttons. */
+/* R279 — remove black middle stripe on focused-country bottom buttons. */
 @media screen and (orientation:portrait){
   body.analytics-admin-page.analytics-v54-46-page.is-country-focus-active .analytics-swipe-dots,
   body.analytics-admin-page.analytics-v54-46-page.is-country-focus-active #analyticsSwipeDots{
