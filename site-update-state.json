@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r264",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1785906519809-8bdeb5f4ef",
-  "release": "R272",
-  "archiveName": "R272-R268-PUSH-SNAPSHOT-PORTRAIT-MAP-CLEAN-CUT-SAFE-FULL.zip",
-  "sourceHead": "4569d26176def9198b70d41546e57aa316d81b8e",
-  "backupSha": "4569d26176def9198b70d41546e57aa316d81b8e",
-  "backupTag": "control-backup-20260805050825-4569d26-r272-a3e7b",
+  "operationId": "publish-1785906783373-364f947af8",
+  "release": "R270",
+  "archiveName": "R270-PORTRAIT-MAP-CLEAN-CUT-SAFE-FULL-1.zip",
+  "sourceHead": "2f939d280b1dde6727b394e135888abf0e097d3c",
+  "backupSha": "2f939d280b1dde6727b394e135888abf0e097d3c",
+  "backupTag": "control-backup-20260805051248-2f939d2-r270-96626",
   "autoRecovery": false,
-  "generatedAt": "2026-08-05T05:08:39.809Z"
+  "generatedAt": "2026-08-05T05:13:03.373Z"
 }
