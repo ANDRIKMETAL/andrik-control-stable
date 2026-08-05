@@ -1,14 +1,14 @@
 {
   "schema": 1,
-  "updaterVersion": "55.00-r288",
+  "updaterVersion": "55.00-r289",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1785931671972-d8935d2a22",
-  "release": "R286",
-  "archiveName": "R289.zip",
-  "sourceHead": "f4300c5e6c185fbc6d72026e655552eacb15907c",
-  "backupSha": "f4300c5e6c185fbc6d72026e655552eacb15907c",
-  "backupTag": "control-backup-20260805120747-f4300c5-r286-e1908",
+  "operationId": "publish-1785931861041-e674945180",
+  "release": "R289",
+  "archiveName": "R275-R268-SAFE-RECOVERY-PUSH-SUMMARY-COUNTRY-FIT-SAFE-FULL.zip",
+  "sourceHead": "bf325a99f4589ee1e5ab452bb97e5fb60aeb0a7d",
+  "backupSha": "bf325a99f4589ee1e5ab452bb97e5fb60aeb0a7d",
+  "backupTag": "control-backup-20260805121054-bf325a9-r289-f2b79",
   "autoRecovery": false,
-  "generatedAt": "2026-08-05T12:07:51.972Z"
+  "generatedAt": "2026-08-05T12:11:03.831Z"
 }

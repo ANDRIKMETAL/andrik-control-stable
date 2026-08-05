@@ -1,1 +1,0 @@
-R288 — installer bridge: fast GitHub retry and automatic recovery when the Commit response is lost. Built directly on working R286 to keep the first repair deployment small.
