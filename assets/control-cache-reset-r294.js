@@ -2,9 +2,9 @@
    Uses a dedicated cache key and never fights the visible release number. */
 (() => {
   'use strict';
-  const VERSION = '55.00-r293';
+  const VERSION = '55.00-r294';
   const KEY = 'andrik-control-cache-generation';
-  const ONCE = 'andrik-control-cache-reload-r290';
+  const ONCE = 'andrik-control-cache-reload-r294';
   if (location.hostname.toLowerCase() !== 'control.andrikmetal.com') return;
 
   async function clearControlCaches() {

@@ -6,7 +6,7 @@
   window.__ANDRIK_VERSION_SYNC_R294__ = true;
 
   const RELEASE = 'R294';
-  const RUNTIME = '55.00-r293';
+  const RUNTIME = '55.00-r294';
   const FULL = 'Live Web AI · ANDRIK · v55.00 LIVE WEB AI FINAL R294';
   let applying = false;
 

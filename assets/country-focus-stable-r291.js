@@ -1,11 +1,11 @@
-/* Control ANDRIK R293 — stable selected-country actions on the proven R275 map.
+/* Control ANDRIK R294 — stable selected-country actions on the proven R275 map.
    The map geometry is never changed. The action bar is moved outside the old
    swipe/scroll container and a short debounce prevents it disappearing during
    a normal country-card redraw. */
 (() => {
   'use strict';
-  if (window.__ANDRIK_COUNTRY_FOCUS_STABLE_R293__) return;
-  window.__ANDRIK_COUNTRY_FOCUS_STABLE_R293__ = true;
+  if (window.__ANDRIK_COUNTRY_FOCUS_STABLE_R294__) return;
+  window.__ANDRIK_COUNTRY_FOCUS_STABLE_R294__ = true;
 
   const portrait = () => window.matchMedia
     ? window.matchMedia('(orientation: portrait)').matches

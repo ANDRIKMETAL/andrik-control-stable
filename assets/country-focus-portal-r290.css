@@ -1,4 +1,4 @@
-/* Control ANDRIK R293 — permanent selected-country buttons, full main-map size. */
+/* Control ANDRIK R294 — permanent selected-country buttons, full main-map size. */
 #r283CountryBottomFill,#r284CountryBottomFill,#r285CountryBottomFill,#r286CountryBottomFill,
 #r287CountryBottomFill,#r288CountryBottomFill,#r289CountryBottomFill,#r290CountryBottomFill{
   display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important;

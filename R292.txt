@@ -1,1 +1,1 @@
-R293 — selected-country compact action buttons remain visible during redraws; map geometry unchanged from R291/R275.
+R294 — selected-country compact action buttons remain visible during redraws; map geometry unchanged from R291/R275.

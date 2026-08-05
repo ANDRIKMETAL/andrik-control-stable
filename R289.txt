@@ -1,1 +1,1 @@
-R293 — restore proven R285 full-map country view, retain compact buttons, remove all R283–R288 stale portal/scroll states, keep R288 installer commit recovery.
+R294 — restore proven R285 full-map country view, retain compact buttons, remove all R283–R288 stale portal/scroll states, keep R288 installer commit recovery.

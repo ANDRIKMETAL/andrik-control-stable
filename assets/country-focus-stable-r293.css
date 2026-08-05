@@ -1,4 +1,4 @@
-/* Control ANDRIK R293 — compact buttons only. The map dimensions are untouched. */
+/* Control ANDRIK R294 — compact buttons only. The map dimensions are untouched. */
 @media screen and (orientation:portrait){
   body.analytics-admin-page.analytics-v54-46-page.r293-country-actions-visible .analytics-map-pane .analytics-swipe-hint,
   body.analytics-admin-page.analytics-v54-46-page.r293-country-actions-visible #mapEndPullZone,
@@ -76,7 +76,7 @@
 }
 
 
-/* R293 — one permanent portrait map size.
+/* R294 — one permanent portrait map size.
    The selected-country map and its green frame use exactly the same geometry
    as the normal overview map. This late rule overrides the old R275 compact
    selected-country height without touching map zoom, markers or image scale. */

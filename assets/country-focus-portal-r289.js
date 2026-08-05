@@ -1,8 +1,8 @@
-/* Control ANDRIK R293 — selected-country portal without black filler. */
+/* Control ANDRIK R294 — selected-country portal without black filler. */
 (() => {
   'use strict';
-  if (window.__ANDRIK_COUNTRY_PORTAL_R293__) return;
-  window.__ANDRIK_COUNTRY_PORTAL_R293__ = true;
+  if (window.__ANDRIK_COUNTRY_PORTAL_R294__) return;
+  window.__ANDRIK_COUNTRY_PORTAL_R294__ = true;
 
   const portrait = () => window.matchMedia
     ? window.matchMedia('(orientation: portrait)').matches

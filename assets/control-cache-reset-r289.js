@@ -1,4 +1,4 @@
-/* Control ANDRIK R293 — one-time cache generation switch.
+/* Control ANDRIK R294 — one-time cache generation switch.
    Uses a dedicated cache key and never fights the visible release number. */
 (() => {
   'use strict';
@@ -41,7 +41,7 @@
       url.searchParams.set('fresh', String(Date.now()));
       location.replace(url.toString());
     } catch (error) {
-      console.warn('Control cache generation R293:', error);
+      console.warn('Control cache generation R294:', error);
     }
   })();
 })();

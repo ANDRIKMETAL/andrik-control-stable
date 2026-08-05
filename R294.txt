@@ -1,0 +1,1 @@
+R294 — R293 layout preserved exactly; only the selected-country action buttons are compact, always visible inside the map card, and no longer cut by the old black viewport strip. One used eye MP4 retained; unused copies remain removed.
