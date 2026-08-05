@@ -1,10 +1,10 @@
-/* Control ANDRIK R278 — one-time cache generation switch.
+/* Control ANDRIK R280 — one-time cache generation switch.
    Uses a dedicated cache key and never fights the visible release number. */
 (() => {
   'use strict';
-  const VERSION = '55.00-r278';
+  const VERSION = '55.00-r280';
   const KEY = 'andrik-control-cache-generation';
-  const ONCE = 'andrik-control-cache-reload-r278';
+  const ONCE = 'andrik-control-cache-reload-r280';
   if (location.hostname.toLowerCase() !== 'control.andrikmetal.com') return;
 
   async function clearControlCaches() {
@@ -41,7 +41,7 @@
       url.searchParams.set('fresh', String(Date.now()));
       location.replace(url.toString());
     } catch (error) {
-      console.warn('Control cache generation R278:', error);
+      console.warn('Control cache generation R280:', error);
     }
   })();
 })();

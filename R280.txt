@@ -1,0 +1,1 @@
+R280 — stable R275 base; full map restored; obsolete bottom swipe/pull overlay removed; selected-country buttons portaled outside clipped analytics track.
