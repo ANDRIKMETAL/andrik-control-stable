@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R275', number:275, version:'55.00', full:'55.00 LIVE WEB AI FINAL R275', siteUpdater:'55.00-r275' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R290', number:288, version:'55.00', full:'55.00 LIVE WEB AI FINAL R290', siteUpdater:'55.00-r290' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -8813,8 +8813,10 @@ function siteUpdateBase64(bytes) {
 async function siteUpdateGithubRequest(config, route, options = {}) {
   if (!config.token) throw new Error('github-token-missing');
   const method = options.method || 'GET';
-  const defaultTimeout = method === 'GET' ? 25000 : 150000;
-  const timeoutMs = Math.max(5000, Math.min(180000, Number(options.timeoutMs || defaultTimeout)));
+  // R290: stop a stalled GitHub request early and retry safely. This keeps
+  // the whole Commit stage below the Android connection timeout.
+  const defaultTimeout = method === 'GET' ? 22000 : 32000;
+  const timeoutMs = Math.max(5000, Math.min(60000, Number(options.timeoutMs || defaultTimeout)));
   const retryableRoute = method === 'GET' || method === 'PATCH' ||
     /\/git\/(?:blobs|trees|commits)(?:\/|$)/.test(route);
   const attempts = retryableRoute ? 3 : 1;
@@ -9005,7 +9007,7 @@ async function siteUpdateCreateTreeBatched(config, owner, repo, baseTreeSha, ent
   for (const batch of batches) {
     const tree = await siteUpdateGithubRequest(config, `/repos/${owner}/${repo}/git/trees`, {
       method:'POST',
-      timeoutMs:60000,
+      timeoutMs:35000,
       body:{ base_tree:treeSha, tree:batch }
     });
     if (!tree?.sha) throw new Error('github-tree-missing');
@@ -9510,8 +9512,23 @@ async function handleSiteUpdateStatus(request, env) {
   if (!base.configured) return json({ ...base, connected:false, message:'Добавьте GITHUB_SITE_TOKEN в Cloudflare.' });
   try {
     const snapshot = await siteUpdateGithubSnapshot(config);
+    const recover = new URL(request.url).searchParams.get('recover') === '1';
+    let headState = null;
+    if (recover) {
+      const branch = await siteUpdateReadBranchState(config, snapshot).catch(() => ({ state:null }));
+      const raw = branch?.state && typeof branch.state === 'object' ? branch.state : null;
+      if (raw) {
+        headState = {
+          schema:Number(raw.schema || 0), operationId:cleanPlainText(raw.operationId || '', 140),
+          release:cleanPlainText(raw.release || '', 80), operation:cleanPlainText(raw.operation || '', 40),
+          archiveName:cleanPlainText(raw.archiveName || '', 180), backupSha:cleanPlainText(raw.backupSha || '', 64),
+          backupTag:cleanPlainText(raw.backupTag || '', 180), sourceHead:cleanPlainText(raw.sourceHead || '', 64),
+          generatedAt:cleanPlainText(raw.generatedAt || '', 60)
+        };
+      }
+    }
     return json({ ...base, connected:true, headSha:snapshot.headSha, headShort:snapshot.headSha.slice(0,7),
-      headMessage:cleanPlainText(snapshot.commit?.message || '', 240) });
+      headMessage:cleanPlainText(snapshot.commit?.message || '', 240), headState });
   } catch (error) {
     return json({ ...base, connected:false, error:'github', message:siteUpdateFriendlyError(error) }, 502);
   }
@@ -9656,7 +9673,7 @@ async function handleSiteUpdatePublish(request, env) {
     const createdBinary = await siteUpdateMapLimit(binaryEntries, 2, async item => {
       const data = await siteUpdateGithubRequest(config, `/repos/${owner}/${repo}/git/blobs`, {
         method:'POST',
-        timeoutMs:60000,
+        timeoutMs:35000,
         body:{ content:siteUpdateBase64(item.entry.bytes), encoding:'base64' }
       });
       return { ...item.base, sha:data.sha };

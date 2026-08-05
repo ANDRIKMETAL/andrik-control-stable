@@ -1,6 +1,6 @@
 (() => {
   'use strict';
-  const SITE_UPDATE_UI_VERSION='55.00-r247';
+  const SITE_UPDATE_UI_VERSION='55.00-r290';
   const KEY_SESSION='andrik-comments-admin-key',KEY_LOCAL='andrik-comments-admin-key-persistent',AUTO_RECOVERY_KEY='andrik-site-update-auto-recovery',CACHE_REFRESH_PREFIX='andrik-site-update-cache-refresh:',PENDING_DEPLOY_KEY='andrik-site-update-pending-deploy-r247';
   const byId=id=>document.getElementById(id),keyInput=byId('siteUpdateAdminKey'),archiveInput=byId('siteUpdateArchive'),previewButton=byId('siteUpdatePreview'),publishButton=byId('siteUpdatePublish'),confirmInput=byId('siteUpdateConfirm'),autoRecoveryInput=byId('siteUpdateAutoRecovery');
   let previewData=null,lastRelease='',lastPublish=null,lastOperationId='',operation=false;
@@ -48,7 +48,7 @@
   }
   function apiTimeout(path,method='GET'){
     if(path.includes('/preview'))return 90000;
-    if(path.includes('/publish'))return 150000;
+    if(path.includes('/publish'))return 240000;
     if(path.includes('/release'))return 150000;
     if(path.includes('/rollback'))return 75000;
     if(path.includes('/finalize'))return 110000;
@@ -88,6 +88,35 @@
       }
       throw error
     }finally{clearTimeout(timer)}
+  }
+  function isPublishTransportError(error){
+    const message=String(error?.message||'');
+    return Number(error?.status||0)===408 || error?.name==='TypeError'
+      || /failed to fetch|networkerror|network request failed|github не ответил вовремя|load failed/i.test(message);
+  }
+  async function recoverPublishedCommit(expectedHead='',release='',backupData=null){
+    const wanted=String(release||'').trim().toUpperCase();
+    setResultState('warn','Проверяем Commit');
+    setText('siteUpdateResultText','Ответ потерян. Проверяем GitHub: возможно Commit уже создан…');
+    for(let attempt=1;attempt<=10;attempt++){
+      try{
+        const status=await api(`/api/control/site-update/status?recover=1&fresh=${Date.now()}-${attempt}`,{timeoutMs:28000,headers:{'cache-control':'no-cache','x-andrik-publish-recovery':String(attempt)}});
+        const state=status?.headState||null,head=String(status?.headSha||'');
+        const stateRelease=String(state?.release||'').trim().toUpperCase();
+        const sourceHead=String(state?.sourceHead||''),backupSha=String(state?.backupSha||'');
+        const headChanged=Boolean(head&&head!==String(expectedHead||''));
+        const releaseMatches=Boolean(wanted&&stateRelease===wanted);
+        const sourceMatches=!expectedHead||!sourceHead||sourceHead===String(expectedHead);
+        const backupMatches=!backupData?.sha||!backupSha||backupSha===String(backupData.sha);
+        if(headChanged&&releaseMatches&&sourceMatches&&backupMatches){
+          setText('siteUpdateResultText',`Commit ${head.slice(0,7)} найден. Продолжаем установку без повторной отправки ZIP.`);
+          return {ok:true,recovered:true,operationId:String(state?.operationId||''),backupSha:String(state?.backupSha||backupData?.sha||''),backupTag:String(state?.backupTag||backupData?.tag||''),autoRecovery:autoRecoveryInput.checked,reinstall:String(state?.operation||'')==='reinstall',commitSha:head,commitShort:head.slice(0,7),commitUrl:`https://github.com/${status.owner}/${status.repo}/commit/${head}`,repository:`${status.owner}/${status.repo}`,branch:status.branch||'',added:Number(previewData?.added||0),changed:Number(previewData?.changed||0),deleted:Number(previewData?.deleted||0),message:'GitHub принял Commit; ответ восстановлен по состоянию ветки.'};
+        }
+      }catch(_){}
+      setText('siteUpdateResultText',`Проверяем GitHub после потерянного ответа… ${attempt}/10`);
+      await sleep(attempt<4?2500:4000);
+    }
+    return null;
   }
   function setState(ok,text){const el=byId('siteUpdateState');el.className=`service-access-state ${ok?'is-ready':'is-error'}`;el.textContent=text}
   function emitHeaderStage(source='stage'){
@@ -658,7 +687,13 @@
       form.append('autoRecovery',autoRecoveryInput.checked?'yes':'no');
       form.append('forceReinstall',reinstall?'yes':'no');
       form.append('confirm','yes');
-      publishData=await api('/api/control/site-update/publish',{method:'POST',body:form});
+      try{
+        publishData=await api('/api/control/site-update/publish',{method:'POST',body:form,timeoutMs:240000});
+      }catch(error){
+        if(!isPublishTransportError(error))throw error;
+        publishData=await recoverPublishedCommit(previewData.headSha||'',release,backupData);
+        if(!publishData){const recoveredError=new Error('Связь оборвалась на Commit, и GitHub не подтвердил новую версию. Backup сохранён; повторите тем же ZIP один раз.');recoveredError.status=408;throw recoveredError;}
+      }
       if(publishData.noChanges){
         stage('commit','done');stage('release','skipped');stage('deploy','skipped');
         setResultState('done','Без изменений');setText('siteUpdateResultTitle','Изменений нет');setText('siteUpdateResultText',publishData.message);return

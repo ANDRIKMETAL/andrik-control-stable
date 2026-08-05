@@ -1,0 +1,1 @@
+R286 — compact selected-country bottom actions. Full map, country card, scroll lock, push summary and all R285 fixes preserved.
