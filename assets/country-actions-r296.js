@@ -1,10 +1,10 @@
-/* Control ANDRIK R296 — stable portrait action portal.
+/* Control ANDRIK R300 — stable portrait action portal.
    Moves only the two selected-country action buttons out of the legacy
    swipe container. It never changes map dimensions, transforms or scrolling. */
 (() => {
   'use strict';
-  if (window.__ANDRIK_COUNTRY_ACTIONS_R296__) return;
-  window.__ANDRIK_COUNTRY_ACTIONS_R296__ = true;
+  if (window.__ANDRIK_COUNTRY_ACTIONS_R300__) return;
+  window.__ANDRIK_COUNTRY_ACTIONS_R300__ = true;
 
   let actions = null;
   let list = null;

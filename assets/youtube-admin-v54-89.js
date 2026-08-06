@@ -54,13 +54,10 @@
     oauthStatusRequest=request;
     try{
       const status=await request;
-      if(status.connected||status.refreshTokenConfigured)showStudioConnected(status);else showStudioDisconnected(status);
+      if(status.connected)showStudioConnected();else showStudioDisconnected(status);
       return status;
     }catch(error){
-      // Keep the current page and cached/server data visible on a transient status error.
-      // Reconnect is offered only when the server explicitly reports that no token exists.
-      const cached=readCache()?.data?.youtube?.studio;
-      if(cached?.connected)showStudioConnected({degraded:true,error:error.message});
+      showStudioDisconnected({error:error.message});
       return null;
     }finally{if(oauthStatusRequest===request)oauthStatusRequest=null}
   }
@@ -72,7 +69,7 @@
       showStudioDisconnected(studio);
       return
     }
-    showStudioConnected(studio);
+    showStudioConnected();
     if(trendCard)trendCard.hidden=false;
     section.hidden=false;audience.hidden=false;
     const x=studio.summary||{};
@@ -191,14 +188,7 @@
   }
   $('youtubeEventsRun')?.addEventListener('click',runYoutubeEvents);
   document.addEventListener('click',event=>{if(event.target.closest?.('#youtubeStudioConnect'))connectYoutubeStudio()});
-  const oauthParams=new URLSearchParams(location.search);
-  const oauthState=oauthParams.get('youtube');
-  if(oauthState==='denied'){
-    authState(true,'YouTube продолжает работать по сохранённым данным · повторный вход не выполнен');
-    const button=$('youtubeStudioConnect');
-    if(button){button.disabled=false;button.textContent='Подключить Studio'}
-    try{history.replaceState(null,'',location.pathname+(INTEGRATED?'?page=youtube&v=55.00d':'?v=55.00d'))}catch(_){}
-  }
+  const oauthState=new URLSearchParams(location.search).get('youtube');
   if(oauthState==='connected'){
     void finishYoutubeOAuth();
     try{history.replaceState(null,'',location.pathname+(INTEGRATED?'?page=youtube&v=54.89':'?v=54.89'))}catch(_){}

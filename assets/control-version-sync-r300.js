@@ -1,13 +1,13 @@
-/* Control ANDRIK R299 — safe display-version synchronization.
+/* Control ANDRIK R300 — safe display-version synchronization.
    Never writes text into <html> or <body>. */
 (() => {
   'use strict';
-  if (window.__ANDRIK_VERSION_SYNC_R299__) return;
-  window.__ANDRIK_VERSION_SYNC_R299__ = true;
+  if (window.__ANDRIK_VERSION_SYNC_R300__) return;
+  window.__ANDRIK_VERSION_SYNC_R300__ = true;
 
-  const RELEASE = 'R299';
-  const RUNTIME = '55.00-r299';
-  const FULL = 'Live Web AI · ANDRIK · v55.00 LIVE WEB AI FINAL R299';
+  const RELEASE = 'R300';
+  const RUNTIME = '55.00-r300';
+  const FULL = 'Live Web AI · ANDRIK · v55.00 LIVE WEB AI FINAL R300';
   let applying = false;
 
   const isRoot = node => node === document.documentElement || node === document.body;
@@ -67,13 +67,13 @@
       }
 
       window.ANDRIK_CONTROL_RELEASE = Object.freeze({
-        short: RELEASE, number: 299, version: '55.00',
-        full: 'v55.00 LIVE WEB AI FINAL R299',
-        build: 'R299 YOUTUBE OAUTH SAFE RECOVERY',
+        short: RELEASE, number: 296, version: '55.00',
+        full: 'v55.00 LIVE WEB AI FINAL R300',
+        build: 'R300 CLEAN BASE + FIXED COUNTRY ACTION BUTTONS',
         date: '05.08.2026'
       });
-      window.ANDRIK_CONTROL_VERSION = '55.00 LIVE WEB AI FINAL R299';
-      window.ANDRIK_CONTROL_BUILD = 'R299 YOUTUBE OAUTH SAFE RECOVERY';
+      window.ANDRIK_CONTROL_VERSION = '55.00 LIVE WEB AI FINAL R300';
+      window.ANDRIK_CONTROL_BUILD = 'R300 CLEAN BASE + FIXED COUNTRY ACTION BUTTONS';
       try { localStorage.setItem('andrik-control-display-version', RUNTIME); } catch (_) {}
       window.dispatchEvent(new CustomEvent('andrik-control-version-ready', {detail: window.ANDRIK_CONTROL_RELEASE}));
     } finally {
