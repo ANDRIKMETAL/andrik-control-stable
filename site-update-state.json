@@ -1,14 +1,14 @@
 {
   "schema": 1,
-  "updaterVersion": "55.00-r300",
+  "updaterVersion": "55.00-r301",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786012235791-76a749bb28",
-  "release": "R300",
-  "archiveName": "R301.zip",
-  "sourceHead": "8087ef20f34129fe56e6c43d2ae715f63a340115",
-  "backupSha": "8087ef20f34129fe56e6c43d2ae715f63a340115",
-  "backupTag": "control-backup-20260806102939-8087ef2-r300-85d9b",
+  "operationId": "publish-1786031367564-35ffb960dd",
+  "release": "R301",
+  "archiveName": "R302.zip",
+  "sourceHead": "90d47836d8c0c6b46329a6da3f32d678dbfc02b0",
+  "backupSha": "90d47836d8c0c6b46329a6da3f32d678dbfc02b0",
+  "backupTag": "control-backup-20260806154924-90d4783-r301-f3496",
   "autoRecovery": true,
-  "generatedAt": "2026-08-06T10:30:35.791Z"
+  "generatedAt": "2026-08-06T15:49:27.564Z"
 }

@@ -1,0 +1,15 @@
+R302 — GUARD HEALTH YOUTUBE PUSH BRIDGE
+
+Base: R301 (stable R296 interface).
+
+Changed:
+- _worker.js: Guard /api/health probe launches YouTube events check in ctx.waitUntil.
+- Check throttled to no more than once per 7 minutes.
+- D1 lock prevents overlapping runs and expires after 15 minutes.
+- Comment, like and subscriber pushes no longer require opening Control.
+- Existing central Cron remains active as primary path; Guard bridge is a fail-safe.
+- No map, country buttons, admin panel, CSS or layout logic changed.
+
+Required existing configuration:
+- External ANDRIK Guard Cron active.
+- Pages has CRON_SECRET and COMMENTS_DB.

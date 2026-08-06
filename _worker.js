@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R301', number:301, version:'55.00', full:'55.00 LIVE WEB AI FINAL R301', siteUpdater:'55.00-r301' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R302', number:302, version:'55.00', full:'55.00 LIVE WEB AI FINAL R302', siteUpdater:'55.00-r302' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -5382,7 +5382,7 @@ async function handleCheckYoutubeEvents(request, env) {
     const subscribersResult = settled[1].status === 'fulfilled' ? settled[1].value : { available:false, items:[], error:cleanPlainText(settled[1].reason?.message || settled[1].reason, 260) };
     const videos = settled[2].status === 'fulfilled' ? settled[2].value : [];
 
-    // R301: detected counters are persisted independently from push delivery.
+    // R301/R302: detected counters are persisted independently from push delivery.
     // OneSignal may be delayed, the phone may sleep, or a push may fail; the daily
     // counter must still advance automatically on the server. A partial video API
     // response is never saved as zero, so an external timeout cannot erase totals.
@@ -5394,7 +5394,7 @@ async function handleCheckYoutubeEvents(request, env) {
         likesTotal:aggregateLikes,
         commentsTotal:aggregateComments,
         trackedVideos:videos.length
-      }, 'youtube-events-counted-r301').catch(() => {});
+      }, 'youtube-events-counted-r302').catch(() => {});
       await setPushState(db, 'youtube-counts-last-at', new Date().toISOString()).catch(() => {});
       await setPushState(db, 'youtube-counts-last-summary', JSON.stringify({
         likesTotal:aggregateLikes,
@@ -7299,14 +7299,14 @@ async function handleAutomationRun(request, env) {
   await setPushState(db, 'automation-last-check-status', 'running');
   const tasks = {};
   const errors = [];
-  // R301: one cheap YouTube channel request runs before the summary. This keeps
+  // R301/R302: one cheap YouTube channel request runs before the summary. This keeps
   // views/subscribers current without waiting for the heavy Studio/GA refresh.
   try {
     const identity = await Promise.race([
       fetchYoutubeMonitorIdentity(env),
       new Promise((_, reject) => setTimeout(() => reject(new Error('youtube-identity-timeout')), 10000))
     ]);
-    tasks.youtubeIdentity = { ok:true, snapshot:await mergeYoutubeIdentityIntoLatestSnapshot(db, identity, 'central-cron-pre-summary-r301') };
+    tasks.youtubeIdentity = { ok:true, snapshot:await mergeYoutubeIdentityIntoLatestSnapshot(db, identity, 'central-cron-pre-summary-r302') };
     await setPushState(db, 'youtube-counts-last-at', new Date().toISOString()).catch(() => {});
   } catch (error) {
     tasks.youtubeIdentity = { ok:false, error:cleanPlainText(error?.message || error, 500) };
@@ -8514,7 +8514,66 @@ async function buildAndrikHealthSnapshot(env, options = {}) {
   };
 }
 
-async function handlePublicHealth(request, env) {
+function isAndrikGuardHealthProbe(request) {
+  const userAgent = String(request.headers.get('user-agent') || '');
+  const explicit = String(request.headers.get('x-andrik-guard') || '');
+  return explicit === '1' || /ANDRIK[\s_-]*Guard/i.test(userAgent);
+}
+
+async function runYoutubeEventsFromGuardHealth(env) {
+  if (!env.COMMENTS_DB || !String(env.CRON_SECRET || '').trim()) return { ok:false, skipped:true, reason:'bridge-not-configured' };
+  const db = requireDb(env);
+  await Promise.all([ensurePushAutomationSchema(db), ensureControlV1Schema(db), ensurePlatformAnalyticsSchema(db)]);
+  const lockKey = 'youtube-guard-health-bridge-lock-r302';
+  const lastCheck = await getPushState(db, 'youtube-events-last-check-at').catch(() => null);
+  const lastMs = Date.parse(lastCheck?.value || lastCheck?.updatedAt || '');
+  if (Number.isFinite(lastMs) && Date.now() - lastMs < 7 * 60 * 1000) {
+    return { ok:true, skipped:true, reason:'recent-youtube-check', lastCheckAt:lastCheck?.value || lastCheck?.updatedAt || '' };
+  }
+  await db.prepare(`DELETE FROM push_state WHERE key=? AND updated_at < datetime('now','-15 minutes')`).bind(lockKey).run().catch(() => {});
+  if (!await claimPushOnce(db, lockKey, new Date().toISOString())) return { ok:true, skipped:true, reason:'bridge-already-running' };
+  try {
+    await setPushState(db, 'youtube-guard-health-bridge-last-at-r302', new Date().toISOString()).catch(() => {});
+    const synthetic = new Request('https://control.andrikmetal.com/api/push/check-youtube-events', {
+      method:'POST',
+      headers:{
+        'x-cron-key':String(env.CRON_SECRET || ''),
+        'user-agent':'ANDRIK-Guard-Health-Bridge/R302',
+        accept:'application/json'
+      }
+    });
+    const response = await handleCheckYoutubeEvents(synthetic, env);
+    const payload = await response.clone().json().catch(() => ({}));
+    if (!response.ok || payload?.ok === false) {
+      throw new Error(cleanPlainText(payload?.details || payload?.error || `youtube-events-http-${response.status}`, 500));
+    }
+    await setPushState(db, 'youtube-guard-health-bridge-last-ok-r302', new Date().toISOString()).catch(() => {});
+    await recordSystemLog(env, {
+      scope:'youtube-events', level:'info', event:'guard-health-bridge-ok',
+      message:'Guard health-check запустил фоновую проверку комментариев, лайков и подписчиков YouTube.',
+      details:{ checkedAt:payload?.checkedAt || new Date().toISOString(), commentsSent:payload?.commentsSent || 0, likesSent:payload?.likesSent || 0, subscribersSent:payload?.subscribersSent || 0 }
+    }).catch(() => {});
+    return { ok:true, payload };
+  } catch (error) {
+    const message = cleanPlainText(error?.message || error, 500);
+    await setPushState(db, 'youtube-guard-health-bridge-last-error-r302', message).catch(() => {});
+    await recordSystemLog(env, {
+      scope:'youtube-events', level:'error', event:'guard-health-bridge-failed',
+      message:'Фоновая проверка YouTube от Guard завершилась ошибкой.', details:{ error:message }
+    }).catch(() => {});
+    return { ok:false, error:message };
+  } finally {
+    await releasePushOnceClaim(db, lockKey).catch(() => {});
+  }
+}
+
+async function handlePublicHealth(request, env, ctx) {
+  // R302 fail-safe: the external ANDRIK Guard already wakes on its own Cron.
+  // Its normal /api/health probe now also starts the YouTube event checker in
+  // the background, so comment/like pushes no longer depend on opening Control.
+  if (isAndrikGuardHealthProbe(request) && ctx?.waitUntil) {
+    ctx.waitUntil(runYoutubeEventsFromGuardHealth(env));
+  }
   const health = await buildAndrikHealthSnapshot(env, { checkSite:true });
   const statusCode = health.status === 'down' ? 503 : 200;
   return json({ ok:health.status !== 'down', ...health }, statusCode, {
@@ -10352,7 +10411,7 @@ async function routeApi(request, env, ctx) {
         }
       }
     }
-    if (path === '/api/health' && request.method === 'GET') return await handlePublicHealth(request, env);
+    if (path === '/api/health' && request.method === 'GET') return await handlePublicHealth(request, env, ctx);
     if (path === '/api/control/protection/status' && request.method === 'GET') return await handleControlProtectionStatus(request, env);
     if (path === '/api/control/protection/guard-status' && request.method === 'GET') return await handleControlProtectionGuardStatus(request, env);
     if (path === '/api/control/guard/event' && request.method === 'POST') return await handleGuardEvent(request, env);
