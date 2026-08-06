@@ -1,4 +1,4 @@
-/* Control ANDRIK R300 — reliable daily summary, push status and exact completed-period view. */
+/* Control ANDRIK R301 — reliable daily summary, push status and exact completed-period view. */
 (() => {
   const KEY_SESSION='andrik-comments-admin-key';
   const KEY_LOCAL='andrik-comments-admin-key-persistent';
@@ -38,7 +38,7 @@
   let allActivityEvents=[];
   let sourcePages=[];
   const HOME_CACHE_KEY_LIVE='andrik-control-home-last-good-r136';
-  const HOME_CACHE_KEY_PUSH_BASE='andrik-control-home-push-r300';
+  const HOME_CACHE_KEY_PUSH_BASE='andrik-control-home-push-r301';
   function activeViewWindowKey(){return IS_PUSH_SUMMARY_VIEW?PUSH_SUMMARY_WINDOW_KEY:currentSummaryWindowKey()}
   function homeCacheKey(){return IS_PUSH_SUMMARY_VIEW?`${HOME_CACHE_KEY_PUSH_BASE}:${activeViewWindowKey()}`:HOME_CACHE_KEY_LIVE}
   function saveHomeCache(data){try{localStorage.setItem(homeCacheKey(),JSON.stringify({savedAt:new Date().toISOString(),data}))}catch(_){}}
@@ -244,7 +244,7 @@
     if(showRefreshEffect)shell?.classList.add('is-refreshing');
     else shell?.classList.remove('is-refreshing');
     try{
-      const query=new URLSearchParams({v:'55.00-r300'});
+      const query=new URLSearchParams({v:'55.00-r301'});
       if(forceLive&&!IS_PUSH_SUMMARY_VIEW)query.set('refresh','1');
       if(IS_PUSH_SUMMARY_VIEW){query.set('source','push');query.set('window',PUSH_SUMMARY_WINDOW_KEY)}
       let data=await api(`/api/control/home?${query.toString()}`,{timeoutMs:forceLive&&!IS_PUSH_SUMMARY_VIEW?16000:10000});
@@ -392,7 +392,7 @@
 
   $('controlSummaryNext')?.addEventListener('click',()=>{
     const pushQuery=IS_PUSH_SUMMARY_VIEW?`&source=push&summaryWindow=${encodeURIComponent(PUSH_SUMMARY_WINDOW_KEY)}`:'';
-    location.assign(`/control-home.html?page=activity${pushQuery}&v=55.00-r300&t=${Date.now()}`);
+    location.assign(`/control-home.html?page=activity${pushQuery}&v=55.00-r301&t=${Date.now()}`);
   });
 
 

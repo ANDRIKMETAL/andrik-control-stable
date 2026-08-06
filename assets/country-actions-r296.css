@@ -1,4 +1,4 @@
-/* Control ANDRIK R300 — selected-country actions outside the clipped swipe pane.
+/* Control ANDRIK R301 — selected-country actions outside the clipped swipe pane.
    This file does not alter the map, its frame, selected-country card, or zoom. */
 @media screen and (orientation:portrait){
   body > #mapFocusActions.r296-country-actions[hidden]{

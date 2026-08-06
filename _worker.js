@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R300', number:300, version:'55.00', full:'55.00 LIVE WEB AI FINAL R300', siteUpdater:'55.00-r300' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R301', number:301, version:'55.00', full:'55.00 LIVE WEB AI FINAL R301', siteUpdater:'55.00-r301' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -5295,16 +5295,21 @@ async function fetchYoutubeVideoStats(env, db, uploadsPlaylistId = '') {
   }
   const recent = [...unique.values()]
     .sort((a, b) => String(b.publishedAt || '').localeCompare(String(a.publishedAt || '')))
-    .slice(0, 50);
+    .slice(0, 200);
   const ids = recent.map(item => item.videoId).filter(Boolean);
   if (!ids.length) return [];
-  const { data } = await youtubeApiJson(env, 'videos', {
+  const chunks = [];
+  for (let index = 0; index < ids.length; index += 50) chunks.push(ids.slice(index, index + 50));
+  const settled = await Promise.allSettled(chunks.map(chunk => youtubeApiJson(env, 'videos', {
     part: 'snippet,statistics',
-    id: ids.join(','),
+    id: chunk.join(','),
     maxResults: 50
-  });
+  })));
+  const failedChunk = settled.find(result => result.status === 'rejected');
+  if (failedChunk) throw failedChunk.reason;
+  const apiItems = settled.flatMap(result => result.value?.data?.items || []);
   const itemMap = new Map(recent.map(item => [item.videoId, item]));
-  return (data.items || []).map(video => ({
+  return apiItems.map(video => ({
     videoId: cleanPlainText(video.id, 40),
     title: cleanPlainText(video?.snippet?.title || itemMap.get(video.id)?.title || 'Видео ANDRIK', 180),
     publishedAt: cleanPlainText(video?.snippet?.publishedAt || itemMap.get(video.id)?.publishedAt || '', 50),
@@ -5376,6 +5381,30 @@ async function handleCheckYoutubeEvents(request, env) {
     const channelComments = settled[0].status === 'fulfilled' ? settled[0].value : [];
     const subscribersResult = settled[1].status === 'fulfilled' ? settled[1].value : { available:false, items:[], error:cleanPlainText(settled[1].reason?.message || settled[1].reason, 260) };
     const videos = settled[2].status === 'fulfilled' ? settled[2].value : [];
+
+    // R301: detected counters are persisted independently from push delivery.
+    // OneSignal may be delayed, the phone may sleep, or a push may fail; the daily
+    // counter must still advance automatically on the server. A partial video API
+    // response is never saved as zero, so an external timeout cannot erase totals.
+    if (settled[2].status === 'fulfilled') {
+      const aggregateLikes = videos.reduce((sum, video) => sum + Math.max(0, Number(video?.likes || 0)), 0);
+      const aggregateComments = videos.reduce((sum, video) => sum + Math.max(0, Number(video?.comments || 0)), 0);
+      await mergeYoutubeIdentityIntoLatestSnapshot(db, {
+        ...identity,
+        likesTotal:aggregateLikes,
+        commentsTotal:aggregateComments,
+        trackedVideos:videos.length
+      }, 'youtube-events-counted-r301').catch(() => {});
+      await setPushState(db, 'youtube-counts-last-at', new Date().toISOString()).catch(() => {});
+      await setPushState(db, 'youtube-counts-last-summary', JSON.stringify({
+        likesTotal:aggregateLikes,
+        commentsTotal:aggregateComments,
+        subscribers:identity.subscribers,
+        views:identity.views,
+        trackedVideos:videos.length
+      })).catch(() => {});
+    }
+
     const commentProbeVideos = [];
     for (const video of videos.slice(0, 24)) {
       const previous = await getYoutubeEventRow(db, `comment-count:${video.videoId}`);
@@ -6311,6 +6340,9 @@ async function mergeYoutubeIdentityIntoLatestSnapshot(db, identity = {}, source 
     subscribers:Math.max(0, Number(identity.subscribers ?? previous.subscribers ?? 0)),
     hiddenSubscribers:Boolean(identity.hiddenSubscribers ?? previous.hiddenSubscribers),
     videos:Math.max(0, Number(identity.videos ?? previous.videos ?? 0)),
+    likesTotal:Math.max(0, Number(identity.likesTotal ?? previous.likesTotal ?? 0)),
+    commentsTotal:Math.max(0, Number(identity.commentsTotal ?? previous.commentsTotal ?? 0)),
+    trackedVideos:Math.max(0, Number(identity.trackedVideos ?? previous.trackedVideos ?? 0)),
     channelUrl:cleanPlainText(identity.channelUrl || previous.channelUrl || '', 700),
     studio:previous.studio || {},
     updatedAt:new Date().toISOString()
@@ -6379,6 +6411,9 @@ async function refreshControlSnapshots(env, { force = false } = {}) {
       subscribers:Number(yt.subscribers || 0),
       hiddenSubscribers:Boolean(yt.hiddenSubscribers),
       videos:Number(yt.videos || 0),
+      likesTotal:Math.max(0, Number(latestYoutubeMetrics?.likesTotal || 0)),
+      commentsTotal:Math.max(0, Number(latestYoutubeMetrics?.commentsTotal || 0)),
+      trackedVideos:Math.max(0, Number(latestYoutubeMetrics?.trackedVideos || 0)),
       studio:yt.studio?.connected ? {
         configured:true,
         connected:true,
@@ -6847,6 +6882,10 @@ async function collectDailyOwnerSummary(env, { liveExternal = true, windowOverri
   const gaStart = { ...parseSnapshotMetrics(gaBaseline), __snapshotFound:Boolean(gaBaseline) };
   const gaBeforeMidnight = parseSnapshotMetrics(gaRollover);
   const youtubeSubscriberDelta = ytBaseline ? Math.max(0, Number(ytNow.subscribers || 0) - Number(ytStart.subscribers || 0)) : 0;
+  const youtubeLikeSnapshotDelta = ytBaseline && Number.isFinite(Number(ytNow.likesTotal)) && Number.isFinite(Number(ytStart.likesTotal))
+    ? Math.max(0, Number(ytNow.likesTotal || 0) - Number(ytStart.likesTotal || 0)) : 0;
+  const youtubeCommentSnapshotDelta = ytBaseline && Number.isFinite(Number(ytNow.commentsTotal)) && Number.isFinite(Number(ytStart.commentsTotal))
+    ? Math.max(0, Number(ytNow.commentsTotal || 0) - Number(ytStart.commentsTotal || 0)) : 0;
   const youtubeCountries = normalizeDailyCountryRows(ytNow?.studio?.countries || []);
   const youtubeDailyCountries = normalizeDailyCountryRows(ytNow?.studio?.dailyCountries || [])
     .map(item => ({ ...item, delta:item.value }));
@@ -6869,8 +6908,8 @@ async function collectDailyOwnerSummary(env, { liveExternal = true, windowOverri
     windowStartAt: window.startAt,
     windowEndAt: window.endAt,
     youtubeSubscribers: Math.max(youtubeSubscriberDelta, sumYoutubeSubscriberHistoryDeltas(youtubeSubscriberRows?.results || [])),
-    youtubeLikes: sumYoutubeLikeHistoryDeltas(youtubeLikeRows?.results || []),
-    youtubeComments: Number(youtubeEvents?.comments || 0),
+    youtubeLikes: Math.max(youtubeLikeSnapshotDelta, sumYoutubeLikeHistoryDeltas(youtubeLikeRows?.results || [])),
+    youtubeComments: Math.max(youtubeCommentSnapshotDelta, Number(youtubeEvents?.comments || 0)),
     youtubeViewDelta: ytBaseline ? Math.max(0, Number(ytNow.views || 0) - Number(ytStart.views || 0)) : 0,
     siteUsers: Math.max(Number(siteWindow?.users || 0), googleSummaryWindowMetric(googleCurrent, gaStart, gaBeforeMidnight, window, 'activeUsers')),
     siteViews: Math.max(Number(siteWindow?.views || 0), googleSummaryWindowMetric(googleCurrent, gaStart, gaBeforeMidnight, window, 'screenPageViews')),
@@ -7260,8 +7299,20 @@ async function handleAutomationRun(request, env) {
   await setPushState(db, 'automation-last-check-status', 'running');
   const tasks = {};
   const errors = [];
-  // R204: the 06:00 owner summary runs first. Heavy Google/YouTube snapshot
-  // work must never delay the morning push until the request budget is exhausted.
+  // R301: one cheap YouTube channel request runs before the summary. This keeps
+  // views/subscribers current without waiting for the heavy Studio/GA refresh.
+  try {
+    const identity = await Promise.race([
+      fetchYoutubeMonitorIdentity(env),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('youtube-identity-timeout')), 10000))
+    ]);
+    tasks.youtubeIdentity = { ok:true, snapshot:await mergeYoutubeIdentityIntoLatestSnapshot(db, identity, 'central-cron-pre-summary-r301') };
+    await setPushState(db, 'youtube-counts-last-at', new Date().toISOString()).catch(() => {});
+  } catch (error) {
+    tasks.youtubeIdentity = { ok:false, error:cleanPlainText(error?.message || error, 500) };
+    errors.push(`youtubeIdentity: ${tasks.youtubeIdentity.error}`);
+  }
+  // The 06:00 owner summary still runs before heavy Studio/Google work.
   try {
     tasks.dailySummary = await maybeSendDailyOwnerSummary(env);
     if (!tasks.dailySummary.ok && !tasks.dailySummary.skipped) errors.push(`dailySummary: ${tasks.dailySummary.error || 'failed'}`);
@@ -7657,6 +7708,10 @@ async function handleControlHome(request, env) {
     .map(item => ({ ...item, delta:item.value }));
   const youtubeViewDelta = ytBaseline ? Math.max(0, Number(ytNow.views || 0) - Number(ytStart.views || 0)) : 0;
   const youtubeSubscriberDelta = ytBaseline ? Math.max(0, Number(ytNow.subscribers || 0) - Number(ytStart.subscribers || 0)) : 0;
+  const youtubeLikeSnapshotDelta = ytBaseline && Number.isFinite(Number(ytNow.likesTotal)) && Number.isFinite(Number(ytStart.likesTotal))
+    ? Math.max(0, Number(ytNow.likesTotal || 0) - Number(ytStart.likesTotal || 0)) : 0;
+  const youtubeCommentSnapshotDelta = ytBaseline && Number.isFinite(Number(ytNow.commentsTotal)) && Number.isFinite(Number(ytStart.commentsTotal))
+    ? Math.max(0, Number(ytNow.commentsTotal || 0) - Number(ytStart.commentsTotal || 0)) : 0;
   const storedPushMetrics = parseStoredDailySummaryMetricsForWindow(latestDailySummaryState, window.key);
   const historyPushMetrics = parseDailySummaryMetricsForWindow(latestDailySummaryPush, window.key);
   const logPushMetrics = parseDailySummaryMetricsForWindow(latestDailySummaryLog, window.key);
@@ -7675,9 +7730,9 @@ async function handleControlHome(request, env) {
     siteSubscribers:Math.max(Number(siteSubscribers?.total || 0),dailyMetric(pushMetrics,'siteSubscribers')),
     siteComments:Math.max(Number(siteComments?.total || 0),dailyMetric(pushMetrics,'siteComments')),
     siteLikes:Math.max(Number(siteLikes?.total || 0),dailyMetric(pushMetrics,'siteLikes')),
-    youtubeComments:Math.max(Number(youtubeEvents?.comments || 0),dailyMetric(pushMetrics,'youtubeComments')),
+    youtubeComments:Math.max(youtubeCommentSnapshotDelta,Number(youtubeEvents?.comments || 0),dailyMetric(pushMetrics,'youtubeComments')),
     youtubeSubscribers:Math.max(youtubeSubscriberDelta,sumYoutubeSubscriberHistoryDeltas(youtubeSubscriberRows?.results || []),dailyMetric(pushMetrics,'youtubeSubscribers')),
-    youtubeLikes:Math.max(sumYoutubeLikeHistoryDeltas(youtubeLikeRows?.results || []),dailyMetric(pushMetrics,'youtubeLikes')),
+    youtubeLikes:Math.max(youtubeLikeSnapshotDelta,sumYoutubeLikeHistoryDeltas(youtubeLikeRows?.results || []),dailyMetric(pushMetrics,'youtubeLikes')),
     youtubeViews:Math.max(youtubeViewDelta,dailyMetric(pushMetrics,'youtubeViewDelta')),
     youtubeViewDelta:Math.max(youtubeViewDelta,dailyMetric(pushMetrics,'youtubeViewDelta')),
     releases:Math.max(Number(releases?.total || 0),dailyMetric(pushMetrics,'releases'),latestYoutubeReleaseCountForWindow(latestYoutubeState, window)),
@@ -10463,6 +10518,30 @@ function controlAssetFailurePage(error) {
 }
 
 export default {
+  async scheduled(controller, env, ctx) {
+    const cronKey = String(env.CRON_SECRET || '');
+    const request = new Request('https://control.andrikmetal.com/api/automation/run', {
+      method:'POST',
+      headers:cronKey ? { 'x-cron-key':cronKey } : {}
+    });
+    ctx.waitUntil((async () => {
+      if (!cronKey) {
+        await recordSystemLog(env, {
+          scope:'automation', level:'error', event:'scheduled-secret-missing',
+          message:'Cron Trigger запущен, но CRON_SECRET не настроен.'
+        }).catch(() => {});
+        return;
+      }
+      const response = await handleAutomationRun(request, env);
+      if (!response.ok) {
+        const body = await response.text().catch(() => '');
+        throw new Error(`scheduled-automation-${response.status}: ${body.slice(0, 300)}`);
+      }
+    })().catch(error => recordSystemLog(env, {
+      scope:'automation', level:'error', event:'scheduled-run-failed',
+      message:cleanPlainText(error?.message || error, 500)
+    }).catch(() => {})));
+  },
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const normalizedPath = url.pathname.replace(/\/+$/, '') || '/';

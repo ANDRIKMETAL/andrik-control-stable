@@ -1,1 +1,1 @@
-R300 — R296 stable base; completed daily summary saved before push; OneSignal timeout/retry; manual summary saves even if push fails; YouTube OAuth connection preserved during temporary verification errors.
+R301 — R296 stable base; completed daily summary saved before push; OneSignal timeout/retry; manual summary saves even if push fails; YouTube OAuth connection preserved during temporary verification errors.
