@@ -1,14 +1,14 @@
 {
   "schema": 1,
-  "updaterVersion": "55.00-r301",
-  "operation": "publish",
-  "reinstall": false,
-  "operationId": "publish-1786031367564-35ffb960dd",
+  "updaterVersion": "55.00-r302",
+  "operation": "reinstall",
+  "reinstall": true,
+  "operationId": "reinstall-1786031494977-ac9c7176ee",
   "release": "R301",
-  "archiveName": "R302.zip",
-  "sourceHead": "90d47836d8c0c6b46329a6da3f32d678dbfc02b0",
-  "backupSha": "90d47836d8c0c6b46329a6da3f32d678dbfc02b0",
-  "backupTag": "control-backup-20260806154924-90d4783-r301-f3496",
+  "archiveName": "R302-GUARD-HEALTH-YOUTUBE-PUSH-BRIDGE-R301-BASE-SAFE-FULL.zip",
+  "sourceHead": "4b22bcb88e9475e6c7c829b4be4dddd5f7a67552",
+  "backupSha": "4b22bcb88e9475e6c7c829b4be4dddd5f7a67552",
+  "backupTag": "control-backup-20260806155130-4b22bcb-r301-21e25",
   "autoRecovery": true,
-  "generatedAt": "2026-08-06T15:49:27.564Z"
+  "generatedAt": "2026-08-06T15:51:34.977Z"
 }
