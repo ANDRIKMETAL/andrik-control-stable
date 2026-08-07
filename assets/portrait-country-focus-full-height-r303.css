@@ -1,0 +1,9 @@
+/* ANDRIK Control R303 — portrait country focus: full main-map height.
+   Surgical override only. No JS, no button positioning, no map transform changes. */
+@media screen and (orientation:portrait){
+  body.analytics-admin-page.analytics-v54-46-page.is-country-focus-active .analytics-map-pane .analytics-map-top.has-country-focus > #worldMap{
+    height:clamp(270px,22dvh,286px)!important;
+    min-height:clamp(270px,22dvh,286px)!important;
+    max-height:clamp(270px,22dvh,286px)!important;
+  }
+}
