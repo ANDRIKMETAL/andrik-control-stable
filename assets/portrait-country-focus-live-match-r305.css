@@ -1,0 +1,16 @@
+/* ANDRIK Control R305 — selected-country portrait map uses the measured overview-map height.
+   The overview frame is measured on this exact device before focus; selected mode reuses that pixel height. */
+@media screen and (orientation:portrait){
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top.has-country-focus > #worldMap{
+    height:var(--andrik-overview-map-height-r305,286px)!important;
+    min-height:var(--andrik-overview-map-height-r305,286px)!important;
+    max-height:var(--andrik-overview-map-height-r305,286px)!important;
+    box-sizing:border-box!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top.has-country-focus > #worldMap > .world-map-canvas,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top.has-country-focus > #worldMap .world-map-stage{
+    height:100%!important;
+    min-height:100%!important;
+    max-height:100%!important;
+  }
+}

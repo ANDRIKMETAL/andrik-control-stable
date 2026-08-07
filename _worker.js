@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R302', number:302, version:'55.00', full:'55.00 LIVE WEB AI FINAL R302', siteUpdater:'55.00-r302' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R305', number:305, version:'55.00', full:'55.00 LIVE WEB AI FINAL R305', siteUpdater:'55.00-r305' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -6821,6 +6821,90 @@ function buildDailyOwnerSummaryLines(metrics = {}) {
   return lines;
 }
 
+// R305: keep the current 06:05→06:05 summary warm even when Control is closed.
+// Both the central Cron and the external Guard health probe may call this helper;
+// a D1 lock prevents duplicate Google API work.
+async function refreshDailySummaryAccumulatorR305(env, source = 'background') {
+  if (!env.COMMENTS_DB) return { ok:false, skipped:true, reason:'database-not-configured' };
+  const db = requireDb(env);
+  await Promise.all([
+    ensurePushAutomationSchema(db),
+    ensurePlatformAnalyticsSchema(db),
+    ensureControlV1Schema(db),
+    ensureSiteMetricsSchema(db),
+    ensureCommentsV4Schema(db)
+  ]);
+
+  const lockKey = 'control-summary-auto-refresh-lock-r305';
+  const lastKey = 'control-summary-auto-refresh-last-at-r305';
+  const last = await getPushState(db, lastKey).catch(() => null);
+  const lastMs = Date.parse(last?.value || last?.updatedAt || '');
+  if (Number.isFinite(lastMs) && Date.now() - lastMs < 8 * 60 * 1000) {
+    return { ok:true, skipped:true, reason:'recent-summary-refresh', lastAt:last?.value || last?.updatedAt || '' };
+  }
+
+  await db.prepare(`DELETE FROM push_state WHERE key=? AND updated_at < datetime('now','-12 minutes')`).bind(lockKey).run().catch(() => {});
+  if (!await claimPushOnce(db, lockKey, new Date().toISOString())) {
+    return { ok:true, skipped:true, reason:'summary-refresh-already-running' };
+  }
+
+  const startedAt = new Date().toISOString();
+  let google = { ok:true, skipped:true, reason:'not-configured' };
+  let collectionError = '';
+  try {
+    if (String(env.GOOGLE_ANALYTICS_CREDENTIALS || '').trim()) {
+      try {
+        const liveGoogle = await Promise.race([
+          fetchGoogleSiteAnalytics(env),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('google-summary-refresh-timeout')), 12000))
+        ]);
+        if (liveGoogle?.configured) {
+          await savePlatformSnapshot(db, 'google-analytics', {
+            configured:true,
+            propertyId:liveGoogle.propertyId || '',
+            propertyName:liveGoogle.propertyName || 'andrikmetal.com',
+            propertySource:liveGoogle.propertySource || '',
+            realtime:liveGoogle.realtime || {},
+            today:liveGoogle.today || {},
+            week:liveGoogle.week || {},
+            month:liveGoogle.month || {},
+            trend:liveGoogle.trend || [],
+            countries:liveGoogle.countries || [],
+            pages:liveGoogle.pages || [],
+            devices:liveGoogle.devices || [],
+            updatedAt:liveGoogle.updatedAt || startedAt
+          }, `Google Analytics auto summary R305 · ${source}`);
+          google = { ok:true, updatedAt:liveGoogle.updatedAt || startedAt, views:Number(liveGoogle?.today?.screenPageViews || 0), users:Number(liveGoogle?.today?.activeUsers || 0) };
+        }
+      } catch (error) {
+        google = { ok:false, error:cleanPlainText(error?.message || error, 420) };
+      }
+    }
+
+    const window = getBratislavaSummaryWindow();
+    let metrics;
+    try {
+      metrics = await collectDailyOwnerSummary(env, { liveExternal:false, windowOverride:window });
+    } catch (error) {
+      collectionError = cleanPlainText(error?.message || error, 500);
+      metrics = await collectDailyOwnerSummaryFallback(env, window, collectionError);
+    }
+
+    await persistControlHomeHighWaterFromMetricsR260(db, window.key, metrics).catch(() => {});
+    const finishedAt = new Date().toISOString();
+    await setPushState(db, lastKey, finishedAt).catch(() => {});
+    await setPushState(db, 'control-summary-auto-refresh-last-status-r305', google.ok === false ? 'partial' : 'ok').catch(() => {});
+    await recordSystemLog(env, {
+      scope:'daily-summary', level:google.ok === false ? 'warning' : 'info', event:'auto-refresh-r305',
+      message:`Сводка автоматически обновлена · ${source}.`,
+      details:{ source, startedAt, finishedAt, windowKey:window.key, google, metrics, collectionError }
+    }).catch(() => {});
+    return { ok:true, source, windowKey:window.key, google, metrics, collectionError, updatedAt:finishedAt };
+  } finally {
+    await releasePushOnceClaim(db, lockKey).catch(() => {});
+  }
+}
+
 async function collectDailyOwnerSummary(env, { liveExternal = true, windowOverride = null } = {}) {
   const db = requireDb(env);
   const window = windowOverride || getBratislavaSummaryWindow();
@@ -7312,7 +7396,13 @@ async function handleAutomationRun(request, env) {
     tasks.youtubeIdentity = { ok:false, error:cleanPlainText(error?.message || error, 500) };
     errors.push(`youtubeIdentity: ${tasks.youtubeIdentity.error}`);
   }
-  // The 06:00 owner summary still runs before heavy Studio/Google work.
+  // R305: refresh Google + current summary accumulator before the 06:00 push.
+  // This also keeps the live summary current on every normal Cron cycle.
+  try {
+    tasks.summaryRefresh = await refreshDailySummaryAccumulatorR305(env, 'central-cron');
+    if (!tasks.summaryRefresh.ok && !tasks.summaryRefresh.skipped) errors.push(`summaryRefresh: ${tasks.summaryRefresh.error || 'failed'}`);
+  } catch (error) { tasks.summaryRefresh={ok:false,error:cleanPlainText(error?.message || error,500)}; errors.push(`summaryRefresh: ${tasks.summaryRefresh.error}`); }
+  // The 06:00 owner summary uses the freshly persisted accumulator above.
   try {
     tasks.dailySummary = await maybeSendDailyOwnerSummary(env);
     if (!tasks.dailySummary.ok && !tasks.dailySummary.skipped) errors.push(`dailySummary: ${tasks.dailySummary.error || 'failed'}`);
@@ -7699,8 +7789,19 @@ async function handleControlHome(request, env) {
   let gaNow = mergeGoogleWithSiteLive(parseSnapshotMetrics(gaLatest), siteLive);
   if (forceRefresh) {
     try {
-      const liveGoogle = await Promise.race([fetchGoogleSiteAnalytics(env), new Promise((_, reject) => setTimeout(() => reject(new Error('ga4-refresh-timeout')), 9000))]);
-      if (liveGoogle?.configured) gaNow = mergeGoogleWithSiteLive(liveGoogle, siteLive);
+      const liveGoogle = await Promise.race([fetchGoogleSiteAnalytics(env), new Promise((_, reject) => setTimeout(() => reject(new Error('ga4-refresh-timeout')), 12000))]);
+      if (liveGoogle?.configured) {
+        gaNow = mergeGoogleWithSiteLive(liveGoogle, siteLive);
+        await savePlatformSnapshot(db, 'google-analytics', {
+          configured:true,
+          propertyId:liveGoogle.propertyId || '',
+          propertyName:liveGoogle.propertyName || 'andrikmetal.com',
+          propertySource:liveGoogle.propertySource || '',
+          realtime:liveGoogle.realtime || {}, today:liveGoogle.today || {}, week:liveGoogle.week || {}, month:liveGoogle.month || {},
+          trend:liveGoogle.trend || [], countries:liveGoogle.countries || [], pages:liveGoogle.pages || [], devices:liveGoogle.devices || [],
+          updatedAt:liveGoogle.updatedAt || new Date().toISOString()
+        }, 'Google Analytics Control Home live R305').catch(() => {});
+      }
     } catch (_) {}
   }
   const youtubeCountries = normalizeDailyCountryRows(ytNow?.studio?.countries || []);
@@ -8572,7 +8673,10 @@ async function handlePublicHealth(request, env, ctx) {
   // Its normal /api/health probe now also starts the YouTube event checker in
   // the background, so comment/like pushes no longer depend on opening Control.
   if (isAndrikGuardHealthProbe(request) && ctx?.waitUntil) {
-    ctx.waitUntil(runYoutubeEventsFromGuardHealth(env));
+    ctx.waitUntil(Promise.allSettled([
+      runYoutubeEventsFromGuardHealth(env),
+      refreshDailySummaryAccumulatorR305(env, 'guard-health')
+    ]));
   }
   const health = await buildAndrikHealthSnapshot(env, { checkSite:true });
   const statusCode = health.status === 'down' ? 503 : 200;

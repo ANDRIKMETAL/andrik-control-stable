@@ -1,0 +1,23 @@
+R305 — AUTO SUMMARY + EXACT MAP FRAME
+Base: R304.
+
+MAP
+- Portrait selected-country #worldMap now uses the exact same height rule as the overview map from R243:
+  height: clamp(282px, 33dvh, 326px)
+  min-height: 282px
+  max-height: 326px
+- No changes to map transforms, dots, selected-country positioning logic, gestures, country actions or landscape geometry.
+
+DAILY SUMMARY
+- The live Summary page requests a live refresh immediately when opened/resumed and every 5 minutes while visible.
+- Live refresh uses a lightweight GA4 query (today + realtime only), merged into the last complete Google Analytics snapshot so charts/countries are preserved.
+- Central automation refreshes the lightweight GA/site summary every Cron cycle and persists the current 06:05 window high-water.
+- The R302 Guard /api/health bridge also refreshes the current daily summary in the background (8-minute lock / normal Guard cadence), so Control does not need to be opened.
+- Completed push snapshots stay immutable and are not converted into live views.
+- Manual Send push remains available but is no longer required just to update counters.
+
+UNCHANGED FUNCTIONAL AREAS
+- country-actions-r296.js unchanged
+- YouTube event push checker logic unchanged
+- installer/update stages unchanged
+- map landscape logic unchanged

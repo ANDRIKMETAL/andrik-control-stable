@@ -1,0 +1,15 @@
+/* ANDRIK Control R305 — portrait selected-country map uses the exact overview-map height.
+   Geometry-only override. No transforms, actions, gestures, data, push or Worker behavior changed here. */
+@media screen and (orientation:portrait){
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top.has-country-focus > #worldMap{
+    height:clamp(282px,33dvh,326px)!important;
+    min-height:282px!important;
+    max-height:326px!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top.has-country-focus > #worldMap > .world-map-canvas,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top.has-country-focus > #worldMap .world-map-stage{
+    height:100%!important;
+    min-height:100%!important;
+    max-height:100%!important;
+  }
+}

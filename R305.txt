@@ -1,0 +1,10 @@
+R305 — AUTO SUMMARY + EXACT MAP FRAME + FAST EXIT
+
+Base: R304 / R302 functional base.
+- Selected-country portrait map reuses the exact measured overview-map height on the current device.
+- Guard health fail-safe refreshes Google Analytics + YouTube identity and persists the current daily summary when Central Cron is stale.
+- Morning daily summary can be sent by the Guard fail-safe if Central Cron missed it.
+- Summary page performs a live refresh on open/return and a live Google refresh every 10 minutes while visible.
+- Live Google refresh is persisted into platform snapshots.
+- Exit confirmation “Выйти” now leaves Control immediately via deterministic navigation to andrikmetal.com instead of unwinding fragile Android history.
+- No country buttons, map zoom/points, installer, OAuth or release logic changed.

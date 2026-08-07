@@ -1,0 +1,15 @@
+/* ANDRIK Control R305 — final small portrait country-frame drop.
+   Only selected-country map height changes; overview map and all JS stay untouched. */
+@media screen and (orientation:portrait){
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top.has-country-focus > #worldMap{
+    height:clamp(284px,23dvh,300px)!important;
+    min-height:clamp(284px,23dvh,300px)!important;
+    max-height:300px!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top.has-country-focus > #worldMap > .world-map-canvas,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top.has-country-focus > #worldMap .world-map-stage{
+    height:100%!important;
+    min-height:100%!important;
+    max-height:100%!important;
+  }
+}
