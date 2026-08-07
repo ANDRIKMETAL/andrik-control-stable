@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r302",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786078937192-085964e03f",
-  "release": "R302",
-  "archiveName": "R303.zip",
-  "sourceHead": "c5f5276e839e0d6cc357602f6954c4e323f0f377",
-  "backupSha": "c5f5276e839e0d6cc357602f6954c4e323f0f377",
-  "backupTag": "control-backup-20260807050207-c5f5276-r302-b4acd",
+  "operationId": "publish-1786079581507-90a394cd60",
+  "release": "R303",
+  "archiveName": "R304.zip",
+  "sourceHead": "cf696c096cbab1ee4601bbab2e30226e58f4691b",
+  "backupSha": "cf696c096cbab1ee4601bbab2e30226e58f4691b",
+  "backupTag": "control-backup-20260807051254-cf696c0-r303-3ab37",
   "autoRecovery": true,
-  "generatedAt": "2026-08-07T05:02:17.192Z"
+  "generatedAt": "2026-08-07T05:13:01.507Z"
 }

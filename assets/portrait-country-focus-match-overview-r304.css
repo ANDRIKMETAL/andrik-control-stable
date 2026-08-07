@@ -1,0 +1,22 @@
+/* ANDRIK Control R304 — portrait selected-country frame matches overview map exactly.
+   Surgical CSS-only geometry override. No map transform, buttons, gestures, data, push or Worker logic. */
+@media screen and (orientation:portrait){
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top.has-country-focus > #worldMap{
+    box-sizing:border-box!important;
+    width:100%!important;
+    max-width:100%!important;
+    height:clamp(270px,22dvh,286px)!important;
+    min-height:clamp(270px,22dvh,286px)!important;
+    max-height:286px!important;
+    aspect-ratio:auto!important;
+    margin:0 auto!important;
+    padding:0!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top.has-country-focus > #worldMap > .world-map-canvas,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top.has-country-focus > #worldMap .world-map-stage{
+    box-sizing:border-box!important;
+    height:100%!important;
+    min-height:100%!important;
+    max-height:100%!important;
+  }
+}
