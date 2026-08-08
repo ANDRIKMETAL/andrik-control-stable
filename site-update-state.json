@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r305",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786192506246-5c02ce3552",
-  "release": "R309",
-  "archiveName": "R313-R312-EXTERNAL-R2-SINGLE-DOWNLOAD-SAFE-FULL.zip",
-  "sourceHead": "6df4cc91b4450a01952c3f8a9c0dfe83e2fd472f",
-  "backupSha": "6df4cc91b4450a01952c3f8a9c0dfe83e2fd472f",
-  "backupTag": "control-backup-20260808123502-6df4cc9-r309-148af",
+  "operationId": "publish-1786193158053-76c393cd32",
+  "release": "R313",
+  "archiveName": "R314-R313-LYRICS-MP3-R2-UPLOAD-SAFE-FULL.zip",
+  "sourceHead": "f94f9b7932b777a511c2b4903779d0fbf5b7b444",
+  "backupSha": "f94f9b7932b777a511c2b4903779d0fbf5b7b444",
+  "backupTag": "control-backup-20260808124553-f94f9b7-r313-ac8d8",
   "autoRecovery": true,
-  "generatedAt": "2026-08-08T12:35:06.246Z"
+  "generatedAt": "2026-08-08T12:45:58.053Z"
 }

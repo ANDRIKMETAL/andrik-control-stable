@@ -10499,6 +10499,33 @@ async function handleSiteUpdateRollback(request, env) {
 // === End R113 website updater ===
 
 
+
+function getMusicBucketR314(env) { return env.MUSIC_BUCKET || env.ANDRIK_MUSIC || null; }
+function musicFileNameR314(value) {
+  const raw = String(value || '').trim().toLowerCase();
+  const safe = raw.replace(/[^a-z0-9._-]+/g, '_').replace(/^_+|_+$/g, '').replace(/_+/g, '_');
+  if (!safe || !safe.endsWith('.mp3') || safe.length > 160) return '';
+  return safe;
+}
+async function handleMusicMp3PutR314(request, env) {
+  if (!adminAuthorized(request, env)) return json({ok:false,error:'unauthorized'},401);
+  const bucket=getMusicBucketR314(env); if(!bucket) return json({ok:false,error:'music-bucket-not-configured',message:'Добавьте R2 binding MUSIC_BUCKET → andrik-music'},503);
+  const url=new URL(request.url), name=musicFileNameR314(url.searchParams.get('name'));
+  if(!name) return json({ok:false,error:'invalid-mp3-name'},400);
+  const len=Number(request.headers.get('content-length')||0); if(len>40*1024*1024) return json({ok:false,error:'file-too-large'},413);
+  const body=await request.arrayBuffer(); if(!body.byteLength||body.byteLength>40*1024*1024) return json({ok:false,error:'file-too-large'},413);
+  const key='singles/'+name;
+  await bucket.put(key,body,{httpMetadata:{contentType:'audio/mpeg',contentDisposition:`attachment; filename="${name}"`},customMetadata:{source:'ANDRIK Control R314'}});
+  return json({ok:true,key,url:`https://music.andrikmetal.com/${key}`,size:body.byteLength});
+}
+async function handleMusicMp3DeleteR314(request, env) {
+  if (!adminAuthorized(request, env)) return json({ok:false,error:'unauthorized'},401);
+  const bucket=getMusicBucketR314(env); if(!bucket) return json({ok:false,error:'music-bucket-not-configured',message:'Добавьте R2 binding MUSIC_BUCKET → andrik-music'},503);
+  const url=new URL(request.url), key=String(url.searchParams.get('key')||'');
+  if(!/^singles\/[a-z0-9._-]+\.mp3$/.test(key)) return json({ok:false,error:'invalid-key'},400);
+  await bucket.delete(key); return json({ok:true,key});
+}
+
 async function routeApi(request, env, ctx) {
   const url = new URL(request.url);
   const path = url.pathname.replace(/\/+$/, '') || '/';
@@ -10556,6 +10583,8 @@ async function routeApi(request, env, ctx) {
     if (path === '/api/comments/moderate' && request.method === 'GET') return await handleAdminCommentsGet(request, env);
     if (path === '/api/comments/moderate' && request.method === 'POST') return await handleAdminCommentsPost(request, env, ctx);
     if (path === '/api/youtube-captions' && request.method === 'GET') return await handleYoutubeCaptions(request, env);
+    if (path === '/api/control/music/mp3' && request.method === 'PUT') return await handleMusicMp3PutR314(request, env);
+    if (path === '/api/control/music/mp3' && request.method === 'DELETE') return await handleMusicMp3DeleteR314(request, env);
     if (path === '/api/lyrics' && request.method === 'GET') return await handlePublicLyrics(request, env);
     if (path === '/api/lyrics/admin' && request.method === 'GET') return await handleAdminLyricsGet(request, env);
     if (path === '/api/lyrics/catalog' && request.method === 'GET') return await handleAdminLyricsCatalog(request, env);

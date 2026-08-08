@@ -1,0 +1,18 @@
+ANDRIK Control R314
+Base: R313
+
+Added to Lyrics admin:
+- Upload MP3 button
+- direct server-side upload to R2 binding MUSIC_BUCKET, key singles/<file>.mp3
+- copy public music.andrikmetal.com URL
+- delete uploaded MP3
+- upload status
+
+Security:
+- R2 credentials are never exposed to browser JavaScript
+- API requires existing ANDRIK owner/admin authorization
+- MP3 only, sanitized filenames, 40 MB limit
+
+ONE-TIME CLOUDFLARE BINDING REQUIRED:
+Variable name: MUSIC_BUCKET
+R2 bucket: andrik-music

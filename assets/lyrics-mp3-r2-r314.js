@@ -1,0 +1,11 @@
+(()=>{'use strict';
+const $=id=>document.getElementById(id), file=$('mp3R2File'), choose=$('mp3R2Choose'), copy=$('mp3R2Copy'), del=$('mp3R2Delete'), status=$('mp3R2Status'), badge=$('mp3R2Badge');
+let currentUrl='', currentKey='';
+function headers(extra={}){const h={...extra};const k=$('lyricsAdminKey')?.value?.trim();if(k)h['x-admin-key']=k;return h}
+function safeName(name){let n=String(name||'track.mp3').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase();n=n.replace(/\.mp3$/i,'').replace(/[^a-z0-9_-]+/g,'_').replace(/^_+|_+$/g,'').replace(/_+/g,'_');return (n||('track_'+Date.now()))+'.mp3'}
+function setState(msg,ok=false){status.textContent=msg;badge.textContent=ok?'MP3 загружен ✓':'Нет файла';badge.classList.toggle('ok',ok);copy.disabled=!ok;del.disabled=!ok}
+choose?.addEventListener('click',()=>file.click());
+file?.addEventListener('change',async()=>{const f=file.files?.[0];if(!f)return;if(!/\.mp3$/i.test(f.name)){setState('Нужен файл MP3.');return}const name=safeName(f.name);choose.disabled=true;setState('Загружаем '+name+'…');try{const r=await fetch('/api/control/music/mp3?name='+encodeURIComponent(name),{method:'PUT',headers:headers({'content-type':'audio/mpeg'}),body:f});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.message||d.error||('HTTP '+r.status));currentUrl=d.url;currentKey=d.key;setState('Готово: '+d.url,true)}catch(e){setState('Ошибка: '+e.message)}finally{choose.disabled=false;file.value=''}});
+copy?.addEventListener('click',async()=>{if(!currentUrl)return;try{await navigator.clipboard.writeText(currentUrl);status.textContent='Ссылка скопирована: '+currentUrl}catch(_){prompt('Скопируйте ссылку',currentUrl)}});
+del?.addEventListener('click',async()=>{if(!currentKey||!confirm('Удалить этот MP3 из R2?'))return;del.disabled=true;try{const r=await fetch('/api/control/music/mp3?key='+encodeURIComponent(currentKey),{method:'DELETE',headers:headers()});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.message||d.error||('HTTP '+r.status));currentUrl='';currentKey='';setState('MP3 удалён из R2.')}catch(e){status.textContent='Ошибка удаления: '+e.message}finally{del.disabled=!currentKey}});
+})();
