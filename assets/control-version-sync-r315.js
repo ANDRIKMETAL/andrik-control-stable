@@ -5,9 +5,9 @@
   if (window.__ANDRIK_VERSION_SYNC_R315__) return;
   window.__ANDRIK_VERSION_SYNC_R315__ = true;
 
-  const RELEASE = 'R328';
-  const RUNTIME = '55.00-r328';
-  const FULL = 'Live Web AI · ANDRIK · v55.00 LIVE WEB AI FINAL R328';
+  const RELEASE = 'R330';
+  const RUNTIME = '55.00-r330';
+  const FULL = 'Live Web AI · ANDRIK · v55.00 LIVE WEB AI FINAL R330';
   let applying = false;
 
   const isRoot = node => node === document.documentElement || node === document.body;
@@ -67,12 +67,12 @@
       }
 
       window.ANDRIK_CONTROL_RELEASE = Object.freeze({
-        short: RELEASE, number: 328, version: '55.00',
-        full: 'v55.00 LIVE WEB AI FINAL R328',
+        short: RELEASE, number: 330, version: '55.00',
+        full: 'v55.00 LIVE WEB AI FINAL R330',
         build: 'R328 R325 STABLE BASE · PLAYER MP3 ENDPOINT FIX',
         date: '08.08.2026'
       });
-      window.ANDRIK_CONTROL_VERSION = '55.00 LIVE WEB AI FINAL R328';
+      window.ANDRIK_CONTROL_VERSION = '55.00 LIVE WEB AI FINAL R330';
       window.ANDRIK_CONTROL_BUILD = 'R328 R325 STABLE BASE · PLAYER MP3 ENDPOINT FIX';
       try { localStorage.setItem('andrik-control-display-version', RUNTIME); } catch (_) {}
       window.dispatchEvent(new CustomEvent('andrik-control-version-ready', {detail: window.ANDRIK_CONTROL_RELEASE}));

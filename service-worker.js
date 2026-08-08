@@ -1,6 +1,6 @@
 'use strict';
 
-const VERSION = '55.00-r304';
+const VERSION = '55.00-r330';
 const IS_CONTROL_HOST = self.location.hostname.toLowerCase() === 'control.andrikmetal.com';
 
 async function deleteControlCaches(){
@@ -42,6 +42,8 @@ if(IS_CONTROL_HOST){
     '/assets/app-links-v50.js?v=55.00-r213',
     '/assets/home-fast-r213.css?v=55.00-r213',
     '/assets/home-fast-r213.js?v=55.00-r213',
+    '/singles.html?v=55.00-r330', '/assets/singles-r316.css?v=330', '/assets/singles-r316.js?v=330',
+    '/assets/home-singles-nav-r330.css?v=55.00-r330', '/assets/home-singles-nav-r330.js?v=55.00-r330',
     '/player.html?v=55.00-r141', '/assets/player-v54-27-r141.js?v=55.00-r141',
     '/assets/player-v54-27.css?v=54.27', '/assets/player-v54-53.css?v=54.54',
     '/assets/player-mini-clean-v55-00-r3u.css?v=55.00-r3u',

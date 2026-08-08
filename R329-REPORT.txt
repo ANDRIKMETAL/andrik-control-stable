@@ -1,0 +1,13 @@
+ANDRIK R329
+Base: R328.
+
+Player visualizer:
+- Restored reliable equalizer motion with CSS animation driven by the player's playing state.
+- Added a lightweight JS state watchdog as fallback.
+- Added smooth left/right fading to the equalizer with CSS mask.
+- Existing random visualizer themes remain intact.
+- Existing R327 MP3 download and R328 discussion routing remain intact.
+
+Safety:
+- No changes to the R315-based admin carousel shell.
+- admin-sections.html, comments-admin.html, service-admin.html and observability-admin.html are byte-for-byte unchanged.

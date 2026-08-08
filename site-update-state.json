@@ -1,14 +1,14 @@
 {
   "schema": 1,
-  "updaterVersion": "55.00-r327",
+  "updaterVersion": "55.00-r328",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786212021224-6508f7b9f6",
+  "operationId": "publish-1786218966359-522e39163d",
   "release": "R313",
-  "archiveName": "R328-R327-DISCUSSION-DIRECT-TRACK-FIX-SAFE-FULL.zip",
-  "sourceHead": "b157d37064698592daed7f2f109c6a0557cd7922",
-  "backupSha": "b157d37064698592daed7f2f109c6a0557cd7922",
-  "backupTag": "control-backup-20260808180017-b157d37-r313-1e62d",
+  "archiveName": "R330-R329-EQUALIZER-FADE-ALL-SINGLES-FIX-SAFE-FULL.zip",
+  "sourceHead": "d38757c2d217b0f472e95953e254c5c2943223b6",
+  "backupSha": "d38757c2d217b0f472e95953e254c5c2943223b6",
+  "backupTag": "control-backup-20260808195602-d38757c-r313-da603",
   "autoRecovery": true,
-  "generatedAt": "2026-08-08T18:00:21.224Z"
+  "generatedAt": "2026-08-08T19:56:06.359Z"
 }

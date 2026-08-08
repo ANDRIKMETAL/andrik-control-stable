@@ -1,0 +1,73 @@
+/* ANDRIK R329 — reliable equalizer motion + soft side fade. */
+
+/* Fade the visualizer naturally at both edges. */
+#visualizer{
+  -webkit-mask-image:linear-gradient(90deg,
+    transparent 0%,
+    rgba(0,0,0,.22) 3%,
+    #000 10%,
+    #000 90%,
+    rgba(0,0,0,.22) 97%,
+    transparent 100%);
+  mask-image:linear-gradient(90deg,
+    transparent 0%,
+    rgba(0,0,0,.22) 3%,
+    #000 10%,
+    #000 90%,
+    rgba(0,0,0,.22) 97%,
+    transparent 100%);
+  overflow:hidden;
+}
+
+/* CSS motion is independent from the older JS interval.
+   The individual `scale` property composes with the existing theme transforms. */
+#visualizer .bar{
+  scale:1 1;
+  animation-name:andrikEqPulseR329;
+  animation-duration:calc(540ms + (var(--i) * 13ms));
+  animation-timing-function:ease-in-out;
+  animation-iteration-count:infinite;
+  animation-direction:alternate;
+  animation-play-state:paused;
+  animation-delay:calc(var(--i) * -31ms);
+  will-change:scale,opacity;
+}
+
+/* Start whenever the player's own verified playing state is active. */
+.app.playing #visualizer .bar,
+#visualizer.eq-playing-r329 .bar{
+  animation-play-state:running!important;
+}
+
+/* Small phase differences make neighbouring bars move independently. */
+#visualizer .bar:nth-child(3n+1){animation-duration:690ms}
+#visualizer .bar:nth-child(3n+2){animation-duration:830ms}
+#visualizer .bar:nth-child(5n){animation-duration:610ms}
+
+@keyframes andrikEqPulseR329{
+  0%   {scale:1 .38;opacity:.46}
+  28%  {scale:1 .82;opacity:.82}
+  52%  {scale:1 .56;opacity:.64}
+  78%  {scale:1 1.18;opacity:1}
+  100% {scale:1 .70;opacity:.76}
+}
+
+/* Keep the visualizer fully hidden where the old player intentionally hides it. */
+#visualizer[hidden],
+.player-shell.has-open-lyrics #visualizer,
+body.site-mode #visualizer{
+  visibility:hidden!important;
+}
+
+/* On very narrow phones keep a softer, slightly wider fade. */
+@media(max-width:430px){
+  #visualizer{
+    -webkit-mask-image:linear-gradient(90deg,transparent 0%,#000 12%,#000 88%,transparent 100%);
+    mask-image:linear-gradient(90deg,transparent 0%,#000 12%,#000 88%,transparent 100%);
+  }
+}
+
+/* Respect reduced motion only outside actual playback. */
+@media(prefers-reduced-motion:reduce){
+  .app:not(.playing) #visualizer .bar{animation-play-state:paused!important}
+}
