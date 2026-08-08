@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r305",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786194030198-240531c913",
+  "operationId": "publish-1786194766724-afcc782b69",
   "release": "R313",
-  "archiveName": "R315-R314-MP3-SINGLES-CATALOG-SAFE-FULL.zip",
-  "sourceHead": "c379ea8722b5077538fe6310125ab2adda1e9ba4",
-  "backupSha": "c379ea8722b5077538fe6310125ab2adda1e9ba4",
-  "backupTag": "control-backup-20260808130025-c379ea8-r313-08e9b",
+  "archiveName": "R316-SINGLES-BELOW-COUNTDOWN-SAFE-FULL.zip",
+  "sourceHead": "3948ba246dbefc4ee619d6ac283e287450bdc741",
+  "backupSha": "3948ba246dbefc4ee619d6ac283e287450bdc741",
+  "backupTag": "control-backup-20260808131242-3948ba2-r313-afce1",
   "autoRecovery": true,
-  "generatedAt": "2026-08-08T13:00:30.198Z"
+  "generatedAt": "2026-08-08T13:12:46.724Z"
 }
