@@ -1,13 +1,13 @@
-/* Control ANDRIK R316 — safe display-version synchronization.
+/* Control ANDRIK R313 — safe display-version synchronization.
    Never writes text into <html> or <body>. */
 (() => {
   'use strict';
-  if (window.__ANDRIK_VERSION_SYNC_R316__) return;
-  window.__ANDRIK_VERSION_SYNC_R316__ = true;
+  if (window.__ANDRIK_VERSION_SYNC_R313__) return;
+  window.__ANDRIK_VERSION_SYNC_R313__ = true;
 
-  const RELEASE = 'R316';
-  const RUNTIME = '55.00-r316';
-  const FULL = 'Live Web AI · ANDRIK · v55.00 LIVE WEB AI FINAL R316';
+  const RELEASE = 'R313';
+  const RUNTIME = '55.00-r313';
+  const FULL = 'Live Web AI · ANDRIK · v55.00 LIVE WEB AI FINAL R313';
   let applying = false;
 
   const isRoot = node => node === document.documentElement || node === document.body;
@@ -67,13 +67,13 @@
       }
 
       window.ANDRIK_CONTROL_RELEASE = Object.freeze({
-        short: RELEASE, number: 316, version: '55.00',
-        full: 'v55.00 LIVE WEB AI FINAL R316',
-        build: 'R316 SINGLES CATALOG · R2 TITLES · SHARE',
+        short: RELEASE, number: 311, version: '55.00',
+        full: 'v55.00 LIVE WEB AI FINAL R313',
+        build: 'R313 FAST EXIT · INSTALLER STAGE LABEL LOCK',
         date: '08.08.2026'
       });
-      window.ANDRIK_CONTROL_VERSION = '55.00 LIVE WEB AI FINAL R316';
-      window.ANDRIK_CONTROL_BUILD = 'R316 FAST EXIT · INSTALLER STAGE LABEL LOCK';
+      window.ANDRIK_CONTROL_VERSION = '55.00 LIVE WEB AI FINAL R313';
+      window.ANDRIK_CONTROL_BUILD = 'R313 FAST EXIT · INSTALLER STAGE LABEL LOCK';
       try { localStorage.setItem('andrik-control-display-version', RUNTIME); } catch (_) {}
       window.dispatchEvent(new CustomEvent('andrik-control-version-ready', {detail: window.ANDRIK_CONTROL_RELEASE}));
     } finally {

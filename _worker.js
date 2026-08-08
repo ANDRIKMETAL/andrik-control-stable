@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R320', number:320, version:'55.00', full:'55.00 LIVE WEB AI FINAL R320', siteUpdater:'55.00-r320' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R305', number:305, version:'55.00', full:'55.00 LIVE WEB AI FINAL R305', siteUpdater:'55.00-r305' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -10507,77 +10507,36 @@ function musicFileNameR314(value) {
   if (!safe || !safe.endsWith('.mp3') || safe.length > 160) return '';
   return safe;
 }
-function musicFolderR317(value){
-  const folder=String(value||'singles').trim().toLowerCase().replace(/^\/+|\/+$/g,'');
-  if(folder==='singles')return 'singles';
-  if(/^albums\/[a-z0-9][a-z0-9_-]{0,63}$/.test(folder))return folder;
-  return '';
-}
-function musicObjectKeyR317(value){
-  const key=String(value||'').trim().replace(/^\/+/, '');
-  if(!/^(?:singles|albums\/[a-z0-9][a-z0-9_-]{0,63})\/[a-z0-9._-]+\.mp3$/i.test(key))return '';
-  return key;
-}
-function musicHeaderR317(request,name,max=220){
-  let value=String(request.headers.get(name)||'');
-  try{value=decodeURIComponent(value)}catch(_){}
-  return cleanPlainText(value,max);
-}
 async function handleMusicMp3PutR314(request, env) {
   if (!adminAuthorized(request, env)) return json({ok:false,error:'unauthorized'},401);
   const bucket=getMusicBucketR314(env); if(!bucket) return json({ok:false,error:'music-bucket-not-configured',message:'Добавьте R2 binding MUSIC_BUCKET → andrik-music'},503);
-  const url=new URL(request.url), name=musicFileNameR314(url.searchParams.get('name')), folder=musicFolderR317(url.searchParams.get('folder')||'singles');
+  const url=new URL(request.url), name=musicFileNameR314(url.searchParams.get('name'));
   if(!name) return json({ok:false,error:'invalid-mp3-name'},400);
-  if(!folder) return json({ok:false,error:'invalid-music-folder'},400);
   const len=Number(request.headers.get('content-length')||0); if(len>40*1024*1024) return json({ok:false,error:'file-too-large'},413);
   const body=await request.arrayBuffer(); if(!body.byteLength||body.byteLength>40*1024*1024) return json({ok:false,error:'file-too-large'},413);
-  const key=folder+'/'+name;
-  const metadata={
-    source:'ANDRIK Control R320',
-    title:musicHeaderR317(request,'x-andrik-track-title'),
-    artist:musicHeaderR317(request,'x-andrik-track-artist'),
-    album:musicHeaderR317(request,'x-andrik-track-album'),
-    track:musicHeaderR317(request,'x-andrik-track-number',24),
-    year:musicHeaderR317(request,'x-andrik-track-year',12),
-    genre:musicHeaderR317(request,'x-andrik-track-genre',80)
-  };
-  await bucket.put(key,body,{httpMetadata:{contentType:'audio/mpeg',contentDisposition:`attachment; filename="${name}"`},customMetadata:metadata});
-  return json({ok:true,key,url:`https://music.andrikmetal.com/${key}`,size:body.byteLength,metadata});
+  const key='singles/'+name;
+  await bucket.put(key,body,{httpMetadata:{contentType:'audio/mpeg',contentDisposition:`attachment; filename="${name}"`},customMetadata:{source:'ANDRIK Control R316',title:decodeURIComponent(request.headers.get('x-andrik-track-title')||'')}});
+  return json({ok:true,key,url:`https://music.andrikmetal.com/${key}`,size:body.byteLength});
 }
 async function handleMusicSinglesListR316(request, env) {
   const bucket=getMusicBucketR314(env); if(!bucket) return json({ok:false,error:'music-bucket-not-configured'},503);
-  const listed=await bucket.list({prefix:'singles/',limit:1000,include:['customMetadata']});
-  const legacyTitles={'singles/ty_uze_dostoin.mp3':'Ты уже достоин','singles/tisina.mp3':'Тишина'};
+  const listed=await bucket.list({prefix:'singles/',limit:1000});
   const tracks=(listed.objects||[]).filter(o=>/\.mp3$/i.test(o.key)).map(o=>({
-    key:o.key,name:o.key.replace(/^singles\//,'').replace(/\.mp3$/i,'').replace(/[_-]+/g,' '),
-    title:(o.customMetadata&&o.customMetadata.title)||legacyTitles[o.key]||'',url:'https://music.andrikmetal.com/'+o.key,
-    uploaded:o.uploaded||null,size:o.size||0
+    key:o.key,
+    name:o.key.replace(/^singles\//,'').replace(/\.mp3$/i,'').replace(/[_-]+/g,' '),
+    title:(o.customMetadata&&o.customMetadata.title)||'',
+    url:'https://music.andrikmetal.com/'+o.key,
+    uploaded:o.uploaded||null,
+    size:o.size||0
   })).sort((a,b)=>String(b.uploaded||'').localeCompare(String(a.uploaded||'')));
   return json({ok:true,tracks});
 }
-async function handleMusicLibraryR317(request, env){
-  if (!adminAuthorized(request, env)) return json({ok:false,error:'unauthorized'},401);
-  const bucket=getMusicBucketR314(env); if(!bucket) return json({ok:false,error:'music-bucket-not-configured'},503);
-  const listed=await bucket.list({limit:1000,include:['customMetadata']});
-  const legacyTitles={'singles/ty_uze_dostoin.mp3':'Ты уже достоин','singles/tisina.mp3':'Тишина'};
-  const tracks=(listed.objects||[]).filter(o=>musicObjectKeyR317(o.key)).map(o=>{
-    const m=o.customMetadata||{},base=o.key.split('/').pop().replace(/\.mp3$/i,'').replace(/[_-]+/g,' ');
-    return {key:o.key,name:base,title:m.title||legacyTitles[o.key]||base,artist:m.artist||'',album:m.album||'',track:m.track||'',year:m.year||'',genre:m.genre||'',size:o.size||0,uploaded:o.uploaded||null,url:'https://music.andrikmetal.com/'+o.key};
-  }).sort((a,b)=>String(b.uploaded||'').localeCompare(String(a.uploaded||'')));
-  return json({ok:true,tracks});
-}
-async function handleMusicFileR317(request, env){
-  if (!adminAuthorized(request, env)) return json({ok:false,error:'unauthorized'},401);
-  const bucket=getMusicBucketR314(env); if(!bucket) return json({ok:false,error:'music-bucket-not-configured'},503);
-  const key=musicObjectKeyR317(new URL(request.url).searchParams.get('key')); if(!key)return json({ok:false,error:'invalid-key'},400);
-  const object=await bucket.get(key); if(!object)return json({ok:false,error:'not-found'},404);
-  const h=new Headers(); h.set('content-type','audio/mpeg'); h.set('cache-control','no-store'); h.set('content-disposition',`attachment; filename="${key.split('/').pop()}"`); if(object.size)h.set('content-length',String(object.size));
-  return new Response(object.body,{status:200,headers:h});
-}
+
 async function handleMusicMp3DeleteR314(request, env) {
   if (!adminAuthorized(request, env)) return json({ok:false,error:'unauthorized'},401);
   const bucket=getMusicBucketR314(env); if(!bucket) return json({ok:false,error:'music-bucket-not-configured',message:'Добавьте R2 binding MUSIC_BUCKET → andrik-music'},503);
-  const key=musicObjectKeyR317(new URL(request.url).searchParams.get('key')); if(!key) return json({ok:false,error:'invalid-key'},400);
+  const url=new URL(request.url), key=String(url.searchParams.get('key')||'');
+  if(!/^singles\/[a-z0-9._-]+\.mp3$/.test(key)) return json({ok:false,error:'invalid-key'},400);
   await bucket.delete(key); return json({ok:true,key});
 }
 
@@ -10639,8 +10598,6 @@ async function routeApi(request, env, ctx) {
     if (path === '/api/comments/moderate' && request.method === 'POST') return await handleAdminCommentsPost(request, env, ctx);
     if (path === '/api/youtube-captions' && request.method === 'GET') return await handleYoutubeCaptions(request, env);
     if (path === '/api/music/singles' && request.method === 'GET') return await handleMusicSinglesListR316(request, env);
-    if (path === '/api/control/music/library' && request.method === 'GET') return await handleMusicLibraryR317(request, env);
-    if (path === '/api/control/music/file' && request.method === 'GET') return await handleMusicFileR317(request, env);
     if (path === '/api/control/music/mp3' && request.method === 'PUT') return await handleMusicMp3PutR314(request, env);
     if (path === '/api/control/music/mp3' && request.method === 'DELETE') return await handleMusicMp3DeleteR314(request, env);
     if (path === '/api/lyrics' && request.method === 'GET') return await handlePublicLyrics(request, env);

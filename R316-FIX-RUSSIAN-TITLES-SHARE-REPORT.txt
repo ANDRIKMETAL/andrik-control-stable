@@ -1,7 +1,0 @@
-R316 FIX
-- R2 list now requests customMetadata, so original Russian MP3 titles are displayed.
-- Technical R2 filenames remain safe Latin filenames.
-- Added compact “🔗 Поделиться ссылкой” button to each single; copies direct browser MP3 URL.
-- Prevented singles controls/cards from overflowing mobile width.
-- Worker release synchronized to R316.
-- Legacy R313 version synchronizer synchronized to R316 to prevent version rollback in UI.

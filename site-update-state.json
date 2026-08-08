@@ -1,14 +1,14 @@
 {
   "schema": 1,
-  "updaterVersion": "55.00-r317",
+  "updaterVersion": "55.00-r320",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786202088699-afd88c382d",
-  "release": "R320",
-  "archiveName": "R320-R316-CAROUSEL-RESTORE-TAG-EDITOR-SAFE-FULL.zip",
-  "sourceHead": "ce09e3b9387ec0d691739cbd60b2ad72f31b27cc",
-  "backupSha": "ce09e3b9387ec0d691739cbd60b2ad72f31b27cc",
-  "backupTag": "control-backup-20260808151443-ce09e3b-r320-76de0",
+  "operationId": "publish-1786202216152-6326edbe3e",
+  "release": "R313",
+  "archiveName": "R316-SINGLES-BELOW-COUNTDOWN-SAFE-FULL.zip",
+  "sourceHead": "e9e347150ba54a131cca857433957ccb6d6386a7",
+  "backupSha": "e9e347150ba54a131cca857433957ccb6d6386a7",
+  "backupTag": "control-backup-20260808151651-e9e3471-r313-0d410",
   "autoRecovery": true,
-  "generatedAt": "2026-08-08T15:14:48.699Z"
+  "generatedAt": "2026-08-08T15:16:56.152Z"
 }
