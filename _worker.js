@@ -10526,6 +10526,28 @@ async function handleMusicMp3DeleteR314(request, env) {
   await bucket.delete(key); return json({ok:true,key});
 }
 
+async function ensureMusicSinglesR315(env){
+  const db=env.COMMENTS_DB; if(!db) throw new Error('COMMENTS_DB not configured');
+  await db.prepare(`CREATE TABLE IF NOT EXISTS music_singles (key TEXT PRIMARY KEY, title TEXT NOT NULL, url TEXT NOT NULL, published INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`).run();
+  return db;
+}
+async function handleMusicSinglesGetR315(env){
+  const db=await ensureMusicSinglesR315(env); const q=await db.prepare(`SELECT key,title,url,created_at AS createdAt FROM music_singles WHERE published=1 ORDER BY datetime(updated_at) DESC`).all();
+  return json({ok:true,singles:q.results||[]});
+}
+async function handleMusicSinglesPostR315(request,env){
+  if(!adminAuthorized(request,env)) return json({ok:false,error:'unauthorized'},401);
+  const body=await request.json().catch(()=>({})), key=String(body.key||''), title=String(body.title||'').trim().slice(0,120), url=String(body.url||'');
+  if(!/^singles\/[a-z0-9._-]+\.mp3$/.test(key)||!title||!url.startsWith('https://music.andrikmetal.com/singles/')) return json({ok:false,error:'invalid-single'},400);
+  const db=await ensureMusicSinglesR315(env); await db.prepare(`INSERT INTO music_singles(key,title,url,published,updated_at) VALUES(?,?,?,1,CURRENT_TIMESTAMP) ON CONFLICT(key) DO UPDATE SET title=excluded.title,url=excluded.url,published=1,updated_at=CURRENT_TIMESTAMP`).bind(key,title,url).run();
+  return json({ok:true,key,title,url});
+}
+async function handleMusicSinglesDeleteR315(request,env){
+  if(!adminAuthorized(request,env)) return json({ok:false,error:'unauthorized'},401);
+  const key=String(new URL(request.url).searchParams.get('key')||''); if(!/^singles\/[a-z0-9._-]+\.mp3$/.test(key)) return json({ok:false,error:'invalid-key'},400);
+  const db=await ensureMusicSinglesR315(env); await db.prepare(`UPDATE music_singles SET published=0,updated_at=CURRENT_TIMESTAMP WHERE key=?`).bind(key).run(); return json({ok:true,key});
+}
+
 async function routeApi(request, env, ctx) {
   const url = new URL(request.url);
   const path = url.pathname.replace(/\/+$/, '') || '/';
@@ -10583,6 +10605,9 @@ async function routeApi(request, env, ctx) {
     if (path === '/api/comments/moderate' && request.method === 'GET') return await handleAdminCommentsGet(request, env);
     if (path === '/api/comments/moderate' && request.method === 'POST') return await handleAdminCommentsPost(request, env, ctx);
     if (path === '/api/youtube-captions' && request.method === 'GET') return await handleYoutubeCaptions(request, env);
+    if (path === '/api/music/singles' && request.method === 'GET') return await handleMusicSinglesGetR315(env);
+    if (path === '/api/control/music/singles' && request.method === 'POST') return await handleMusicSinglesPostR315(request, env);
+    if (path === '/api/control/music/singles' && request.method === 'DELETE') return await handleMusicSinglesDeleteR315(request, env);
     if (path === '/api/control/music/mp3' && request.method === 'PUT') return await handleMusicMp3PutR314(request, env);
     if (path === '/api/control/music/mp3' && request.method === 'DELETE') return await handleMusicMp3DeleteR314(request, env);
     if (path === '/api/lyrics' && request.method === 'GET') return await handlePublicLyrics(request, env);

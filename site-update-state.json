@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r305",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786193158053-76c393cd32",
+  "operationId": "publish-1786194030198-240531c913",
   "release": "R313",
-  "archiveName": "R314-R313-LYRICS-MP3-R2-UPLOAD-SAFE-FULL.zip",
-  "sourceHead": "f94f9b7932b777a511c2b4903779d0fbf5b7b444",
-  "backupSha": "f94f9b7932b777a511c2b4903779d0fbf5b7b444",
-  "backupTag": "control-backup-20260808124553-f94f9b7-r313-ac8d8",
+  "archiveName": "R315-R314-MP3-SINGLES-CATALOG-SAFE-FULL.zip",
+  "sourceHead": "c379ea8722b5077538fe6310125ab2adda1e9ba4",
+  "backupSha": "c379ea8722b5077538fe6310125ab2adda1e9ba4",
+  "backupTag": "control-backup-20260808130025-c379ea8-r313-08e9b",
   "autoRecovery": true,
-  "generatedAt": "2026-08-08T12:45:58.053Z"
+  "generatedAt": "2026-08-08T13:00:30.198Z"
 }
