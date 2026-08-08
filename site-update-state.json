@@ -1,14 +1,14 @@
 {
   "schema": 1,
-  "updaterVersion": "55.00-r321",
+  "updaterVersion": "55.00-r322",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786203341232-de8541fe16",
+  "operationId": "publish-1786204587249-d74f508396",
   "release": "R313",
-  "archiveName": "R322-R321-R2-DELETE-PLAYER-MP3-DOWNLOAD-SAFE-FULL.zip",
-  "sourceHead": "9a4fa091e42a18205c4645030125f4fe014552f3",
-  "backupSha": "9a4fa091e42a18205c4645030125f4fe014552f3",
-  "backupTag": "control-backup-20260808153534-9a4fa09-r313-4f2f0",
+  "archiveName": "R323-R322-WAV-TO-MP3-FIRST-EDITOR-SAFE-FULL.zip",
+  "sourceHead": "d221c9c29f34be4a367139b7f6a82795ba75997d",
+  "backupSha": "d221c9c29f34be4a367139b7f6a82795ba75997d",
+  "backupTag": "control-backup-20260808155620-d221c9c-r313-22eec",
   "autoRecovery": true,
-  "generatedAt": "2026-08-08T15:35:41.232Z"
+  "generatedAt": "2026-08-08T15:56:27.249Z"
 }
