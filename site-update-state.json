@@ -1,14 +1,14 @@
 {
   "schema": 1,
-  "updaterVersion": "55.00-r326",
+  "updaterVersion": "55.00-r327",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786210395268-91dccd05bd",
+  "operationId": "publish-1786212021224-6508f7b9f6",
   "release": "R313",
-  "archiveName": "R327-R326-CENTER-MP3-REAL-DOWNLOAD-SAFE-FULL.zip",
-  "sourceHead": "178e8f136df40e2d536790be3c45d60088cc9fed",
-  "backupSha": "178e8f136df40e2d536790be3c45d60088cc9fed",
-  "backupTag": "control-backup-20260808173310-178e8f1-r313-8bed4",
+  "archiveName": "R328-R327-DISCUSSION-DIRECT-TRACK-FIX-SAFE-FULL.zip",
+  "sourceHead": "b157d37064698592daed7f2f109c6a0557cd7922",
+  "backupSha": "b157d37064698592daed7f2f109c6a0557cd7922",
+  "backupTag": "control-backup-20260808180017-b157d37-r313-1e62d",
   "autoRecovery": true,
-  "generatedAt": "2026-08-08T17:33:15.268Z"
+  "generatedAt": "2026-08-08T18:00:21.224Z"
 }

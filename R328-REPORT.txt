@@ -1,0 +1,17 @@
+ANDRIK R328
+Base: R327.
+
+Fixed:
+- Player Discussion button in standalone/PWA mode now opens the exact comments page directly.
+- Current track slug is preserved, e.g. Holy Void -> /comments.html?song=holy-void&auth=1#page-top.
+- Removed the erroneous standalone detour through buildStandaloneReturnUrl(), which could restore the main page instead of Comments.
+- Embedded/site-shell discussion navigation is unchanged.
+- Comments page/form/API are unchanged and continue to preselect/filter by ?song=.
+- R327 MP3 download remains unchanged.
+- R325 WAV staging and Cancel remain unchanged.
+
+Safety:
+- admin-sections.html unchanged byte-for-byte.
+- comments-admin.html unchanged byte-for-byte.
+- service-admin.html unchanged byte-for-byte.
+- observability-admin.html unchanged byte-for-byte.

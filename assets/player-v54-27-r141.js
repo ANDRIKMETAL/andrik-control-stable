@@ -1704,10 +1704,10 @@ function openTrackDiscussion(event){
   const slug = commentsTrackBtn?.dataset?.song || commentSubjectForTitle(trackTitle?.textContent || '');
   const path = localizedCommentsPath(slug);
   if(standaloneMode){
-    activeReturnPath = sanitizeReturnPath(path);
-    activeReturnHash = '#page-top';
-    activeReturnScroll = 0;
-    location.href = buildStandaloneReturnUrl();
+    // R328: in the standalone/PWA player go straight to the requested
+    // comments page. buildStandaloneReturnUrl() was designed for Home return
+    // state and could replace /comments.html with the stored main-page URL.
+    location.assign(`${path}#page-top`);
     return;
   }
   // Do not call history.back() here. The previous history entry still contains
