@@ -1,0 +1,18 @@
+ANDRIK Control R325
+Base: R324 / stable R315 admin carousel.
+
+Fixes:
+- Android WAV file access: every selected WAV is copied immediately into Origin Private File System (OPFS)
+  before batch conversion starts. Later tracks no longer depend on Android's temporary file-picker reference.
+- Persistent storage is requested when supported.
+- Global "⛔ Отменить всё" button appears during staging or batch conversion.
+- Cancel immediately aborts the current encoder Worker / active upload and stops the remaining queue.
+- Already uploaded R2 tracks are preserved.
+- Temporary staged WAV is deleted after successful upload; Clear also removes staging files.
+- Existing fast Web Worker MP3 320 kbps encoder retained.
+
+Safety:
+- admin-sections.html unchanged byte-for-byte.
+- comments-admin.html unchanged byte-for-byte.
+- service-admin.html unchanged byte-for-byte.
+- observability-admin.html unchanged byte-for-byte.

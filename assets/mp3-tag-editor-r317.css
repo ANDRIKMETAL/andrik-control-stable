@@ -21,3 +21,12 @@
  .mp3-tag-library-bulk{align-items:stretch;flex-direction:column}
  .mp3-tag-library-bulk .btn{width:100%}
 }
+
+/* R325 — batch cancel. */
+.mp3-tag-upload-actions{grid-template-columns:minmax(0,1fr) auto}
+#tagCancelAll{min-width:150px}
+#tagCancelAll[hidden]{display:none!important}
+@media(max-width:520px){
+  .mp3-tag-upload-actions{grid-template-columns:1fr}
+  #tagCancelAll{width:100%;min-width:0}
+}
