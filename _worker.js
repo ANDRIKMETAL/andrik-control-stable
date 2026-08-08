@@ -10515,29 +10515,37 @@ async function handleMusicMp3PutR314(request, env) {
   const len=Number(request.headers.get('content-length')||0); if(len>40*1024*1024) return json({ok:false,error:'file-too-large'},413);
   const body=await request.arrayBuffer(); if(!body.byteLength||body.byteLength>40*1024*1024) return json({ok:false,error:'file-too-large'},413);
   const key='singles/'+name;
-  await bucket.put(key,body,{httpMetadata:{contentType:'audio/mpeg',contentDisposition:`attachment; filename="${name}"`},customMetadata:{source:'ANDRIK Control R316',title:decodeURIComponent(request.headers.get('x-andrik-track-title')||'')}});
+  await bucket.put(key,body,{httpMetadata:{contentType:'audio/mpeg',contentDisposition:`attachment; filename="${name}"`},customMetadata:{source:'ANDRIK Control R314'}});
   return json({ok:true,key,url:`https://music.andrikmetal.com/${key}`,size:body.byteLength});
 }
-async function handleMusicSinglesListR316(request, env) {
-  const bucket=getMusicBucketR314(env); if(!bucket) return json({ok:false,error:'music-bucket-not-configured'},503);
-  const listed=await bucket.list({prefix:'singles/',limit:1000});
-  const tracks=(listed.objects||[]).filter(o=>/\.mp3$/i.test(o.key)).map(o=>({
-    key:o.key,
-    name:o.key.replace(/^singles\//,'').replace(/\.mp3$/i,'').replace(/[_-]+/g,' '),
-    title:(o.customMetadata&&o.customMetadata.title)||'',
-    url:'https://music.andrikmetal.com/'+o.key,
-    uploaded:o.uploaded||null,
-    size:o.size||0
-  })).sort((a,b)=>String(b.uploaded||'').localeCompare(String(a.uploaded||'')));
-  return json({ok:true,tracks});
-}
-
 async function handleMusicMp3DeleteR314(request, env) {
   if (!adminAuthorized(request, env)) return json({ok:false,error:'unauthorized'},401);
   const bucket=getMusicBucketR314(env); if(!bucket) return json({ok:false,error:'music-bucket-not-configured',message:'Добавьте R2 binding MUSIC_BUCKET → andrik-music'},503);
   const url=new URL(request.url), key=String(url.searchParams.get('key')||'');
   if(!/^singles\/[a-z0-9._-]+\.mp3$/.test(key)) return json({ok:false,error:'invalid-key'},400);
   await bucket.delete(key); return json({ok:true,key});
+}
+
+async function ensureMusicSinglesR315(env){
+  const db=env.COMMENTS_DB; if(!db) throw new Error('COMMENTS_DB not configured');
+  await db.prepare(`CREATE TABLE IF NOT EXISTS music_singles (key TEXT PRIMARY KEY, title TEXT NOT NULL, url TEXT NOT NULL, published INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`).run();
+  return db;
+}
+async function handleMusicSinglesGetR315(env){
+  const db=await ensureMusicSinglesR315(env); const q=await db.prepare(`SELECT key,title,url,created_at AS createdAt FROM music_singles WHERE published=1 ORDER BY datetime(updated_at) DESC`).all();
+  return json({ok:true,singles:q.results||[]});
+}
+async function handleMusicSinglesPostR315(request,env){
+  if(!adminAuthorized(request,env)) return json({ok:false,error:'unauthorized'},401);
+  const body=await request.json().catch(()=>({})), key=String(body.key||''), title=String(body.title||'').trim().slice(0,120), url=String(body.url||'');
+  if(!/^singles\/[a-z0-9._-]+\.mp3$/.test(key)||!title||!url.startsWith('https://music.andrikmetal.com/singles/')) return json({ok:false,error:'invalid-single'},400);
+  const db=await ensureMusicSinglesR315(env); await db.prepare(`INSERT INTO music_singles(key,title,url,published,updated_at) VALUES(?,?,?,1,CURRENT_TIMESTAMP) ON CONFLICT(key) DO UPDATE SET title=excluded.title,url=excluded.url,published=1,updated_at=CURRENT_TIMESTAMP`).bind(key,title,url).run();
+  return json({ok:true,key,title,url});
+}
+async function handleMusicSinglesDeleteR315(request,env){
+  if(!adminAuthorized(request,env)) return json({ok:false,error:'unauthorized'},401);
+  const key=String(new URL(request.url).searchParams.get('key')||''); if(!/^singles\/[a-z0-9._-]+\.mp3$/.test(key)) return json({ok:false,error:'invalid-key'},400);
+  const db=await ensureMusicSinglesR315(env); await db.prepare(`UPDATE music_singles SET published=0,updated_at=CURRENT_TIMESTAMP WHERE key=?`).bind(key).run(); return json({ok:true,key});
 }
 
 async function routeApi(request, env, ctx) {
@@ -10597,7 +10605,9 @@ async function routeApi(request, env, ctx) {
     if (path === '/api/comments/moderate' && request.method === 'GET') return await handleAdminCommentsGet(request, env);
     if (path === '/api/comments/moderate' && request.method === 'POST') return await handleAdminCommentsPost(request, env, ctx);
     if (path === '/api/youtube-captions' && request.method === 'GET') return await handleYoutubeCaptions(request, env);
-    if (path === '/api/music/singles' && request.method === 'GET') return await handleMusicSinglesListR316(request, env);
+    if (path === '/api/music/singles' && request.method === 'GET') return await handleMusicSinglesGetR315(env);
+    if (path === '/api/control/music/singles' && request.method === 'POST') return await handleMusicSinglesPostR315(request, env);
+    if (path === '/api/control/music/singles' && request.method === 'DELETE') return await handleMusicSinglesDeleteR315(request, env);
     if (path === '/api/control/music/mp3' && request.method === 'PUT') return await handleMusicMp3PutR314(request, env);
     if (path === '/api/control/music/mp3' && request.method === 'DELETE') return await handleMusicMp3DeleteR314(request, env);
     if (path === '/api/lyrics' && request.method === 'GET') return await handlePublicLyrics(request, env);

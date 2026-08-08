@@ -1,0 +1,9 @@
+
+/* R315: mobile-safe R2 controls + published singles catalog */
+.mp3-r2-card,.mp3-r2-card *{box-sizing:border-box;min-width:0}
+.mp3-r2-actions{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:10px!important;width:100%!important;max-width:100%!important;overflow:hidden}
+.mp3-r2-actions .btn{display:flex!important;width:100%!important;max-width:100%!important;min-width:0!important;margin:0!important;justify-content:center!important;white-space:normal!important;overflow-wrap:anywhere!important}
+.mp3-r2-card .admin-status{max-width:100%;overflow:hidden;overflow-wrap:anywhere;word-break:break-word}
+.mp3-publish-row{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;margin-top:10px}
+.mp3-publish-row .btn{width:100%;max-width:100%}
+.mp3-r2-title{width:100%;min-height:48px;border:1px solid rgba(255,255,255,.16);border-radius:14px;background:rgba(0,0,0,.18);color:inherit;padding:0 14px;font:inherit}

@@ -1,14 +1,14 @@
 {
   "schema": 1,
-  "updaterVersion": "55.00-r320",
+  "updaterVersion": "55.00-r305",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786202216152-6326edbe3e",
+  "operationId": "publish-1786202339439-48591c5c15",
   "release": "R313",
-  "archiveName": "R316-SINGLES-BELOW-COUNTDOWN-SAFE-FULL.zip",
-  "sourceHead": "e9e347150ba54a131cca857433957ccb6d6386a7",
-  "backupSha": "e9e347150ba54a131cca857433957ccb6d6386a7",
-  "backupTag": "control-backup-20260808151651-e9e3471-r313-0d410",
+  "archiveName": "R315-R314-MP3-SINGLES-CATALOG-SAFE-FULL.zip",
+  "sourceHead": "006dbb4c4cec2ac2edeae8445d89f68e4dcaa5ba",
+  "backupSha": "006dbb4c4cec2ac2edeae8445d89f68e4dcaa5ba",
+  "backupTag": "control-backup-20260808151855-006dbb4-r313-ec0e7",
   "autoRecovery": true,
-  "generatedAt": "2026-08-08T15:16:56.152Z"
+  "generatedAt": "2026-08-08T15:18:59.439Z"
 }
