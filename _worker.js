@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R305', number:305, version:'55.00', full:'55.00 LIVE WEB AI FINAL R305', siteUpdater:'55.00-r305' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R316', number:316, version:'55.00', full:'55.00 LIVE WEB AI FINAL R316', siteUpdater:'55.00-r316' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -10520,7 +10520,7 @@ async function handleMusicMp3PutR314(request, env) {
 }
 async function handleMusicSinglesListR316(request, env) {
   const bucket=getMusicBucketR314(env); if(!bucket) return json({ok:false,error:'music-bucket-not-configured'},503);
-  const listed=await bucket.list({prefix:'singles/',limit:1000});
+  const listed=await bucket.list({prefix:'singles/',limit:1000,include:['customMetadata']});
   const tracks=(listed.objects||[]).filter(o=>/\.mp3$/i.test(o.key)).map(o=>({
     key:o.key,
     name:o.key.replace(/^singles\//,'').replace(/\.mp3$/i,'').replace(/[_-]+/g,' '),

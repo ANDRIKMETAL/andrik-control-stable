@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r305",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786194766724-afcc782b69",
+  "operationId": "publish-1786195374287-f1cd9cfe13",
   "release": "R313",
-  "archiveName": "R316-SINGLES-BELOW-COUNTDOWN-SAFE-FULL.zip",
-  "sourceHead": "3948ba246dbefc4ee619d6ac283e287450bdc741",
-  "backupSha": "3948ba246dbefc4ee619d6ac283e287450bdc741",
-  "backupTag": "control-backup-20260808131242-3948ba2-r313-afce1",
+  "archiveName": "R316-RUSSIAN-TITLES-SHARE-FIX-SAFE-FULL-1.zip",
+  "sourceHead": "748057f28faff04d31e765ddb3cc218409e0620f",
+  "backupSha": "748057f28faff04d31e765ddb3cc218409e0620f",
+  "backupTag": "control-backup-20260808132249-748057f-r313-71106",
   "autoRecovery": true,
-  "generatedAt": "2026-08-08T13:12:46.724Z"
+  "generatedAt": "2026-08-08T13:22:54.287Z"
 }
