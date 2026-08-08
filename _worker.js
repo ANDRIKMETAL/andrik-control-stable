@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R325', number:325, version:'55.00', full:'55.00 LIVE WEB AI FINAL R325', siteUpdater:'55.00-r325' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R326', number:326, version:'55.00', full:'55.00 LIVE WEB AI FINAL R326', siteUpdater:'55.00-r326' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -10524,7 +10524,7 @@ async function handleMusicMp3PutR314(request, env) {
   const body=await request.arrayBuffer(); if(!body.byteLength||body.byteLength>40*1024*1024) return json({ok:false,error:'file-too-large'},413);
   const key=folder+'/'+name;
   const metadata={
-    source:'ANDRIK Control R325',
+    source:'ANDRIK Control R326',
     title:musicHeaderR317(request,'x-andrik-track-title'),
     artist:musicHeaderR317(request,'x-andrik-track-artist'),
     album:musicHeaderR317(request,'x-andrik-track-album'),
@@ -10554,7 +10554,7 @@ async function handleMusicDownloadsR322(request, env){
     const m=o.customMetadata||{},folder=o.key.split('/').slice(0,-1).join('/'),base=o.key.split('/').pop().replace(/\.mp3$/i,'').replace(/[_-]+/g,' ');
     return {key:o.key,title:m.title||legacyTitles[o.key]||base,album:m.album||'',track:m.track||'',folder,url:'https://music.andrikmetal.com/'+o.key,uploaded:o.uploaded||null};
   });
-  return json({ok:true,tracks},{headers:{'cache-control':'public, max-age=60'}});
+  return json({ok:true,tracks});
 }
 async function handleMusicLibraryR317(request, env){
   if (!adminAuthorized(request, env)) return json({ok:false,error:'unauthorized'},401);
