@@ -3,7 +3,7 @@
 <head>
 <link rel="stylesheet" href="/assets/control-sleep-mode-r193.css?v=55.00-r193"><script defer src="/assets/control-sleep-mode-r193.js?v=55.00-r193"></script>
 
-<meta charset="utf-8"><meta name="andrik-control-release" content="R317">
+<meta charset="utf-8"><meta name="andrik-control-release" content="R318">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <meta name="theme-color" content="#05080b">
 <meta name="robots" content="noindex,nofollow,noarchive">
@@ -15,13 +15,12 @@
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#02070b;color:#eaf7ff;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;overscroll-behavior:none}
 body{position:fixed;inset:0}
 .admin-carousel{position:absolute;inset:0;overflow:hidden;background:#02070b}
-.admin-carousel-track{display:flex;width:100%;height:100%;transform:translateX(-100vw);will-change:auto;touch-action:none;backface-visibility:visible;transform-style:flat}
+.admin-carousel-track{display:flex;width:100%;height:100%;transform:translate3d(-100vw,0,0);will-change:transform;touch-action:none;backface-visibility:hidden;transform-style:flat}
 .admin-carousel-track.is-dragging{transition:none!important;will-change:transform}
 .admin-carousel-track.is-animating{transition:transform .26s cubic-bezier(.22,.78,.23,1);will-change:transform}
 .admin-carousel-pane{position:relative;flex:0 0 100%;width:100%;min-width:100%;max-width:100%;height:100%;overflow:hidden;background:#02070b;contain:none;backface-visibility:visible;transform:none}.admin-carousel-pane::before{content:none!important;display:none!important}.admin-carousel-pane iframe{position:relative;left:0;z-index:1}
 .admin-carousel-pane iframe{display:block;width:100%;height:100%;border:0;background:#02070b;backface-visibility:visible;transform:none}
 .admin-carousel-pane iframe{visibility:visible!important}
-.admin-carousel-pane:not(.is-active) iframe{pointer-events:none!important}
 .admin-carousel-pane:not(.is-active) iframe{pointer-events:none!important}
 .admin-carousel-pane.is-active iframe{pointer-events:auto!important}
 body.is-carousel-moving .control-admin-landscape-frame-r141{animation-play-state:paused!important;filter:none!important}
@@ -34,29 +33,29 @@ body.is-carousel-moving .admin-carousel-label{backdrop-filter:none!important}
 .admin-carousel-loading{position:absolute;inset:0;display:grid;place-items:center;color:#92aab7;font-size:.9rem;pointer-events:none}
 @media(prefers-reduced-motion:reduce){.admin-carousel-track.is-animating{transition-duration:.01ms}.admin-carousel-dots button,.admin-carousel-label{transition:none}}
 
-/* R317 Android/WebView iframe recovery: avoid hidden accelerated iframe layers. */
-.admin-carousel-track{transform-style:flat!important;backface-visibility:visible!important}
+/* R318 Android/WebView: GPU-fast track + non-accelerated iframe surfaces. */
+.admin-carousel-track{transform-style:flat!important;backface-visibility:hidden!important;will-change:transform!important}
 .admin-carousel-pane{contain:none!important;backface-visibility:visible!important}
 .admin-carousel-pane iframe{visibility:visible!important;backface-visibility:visible!important;transform:none!important;opacity:1!important}
 .admin-carousel-pane:not(.is-active) iframe{pointer-events:none!important}
 </style>
-<link rel="stylesheet" href="/assets/control-admin-shell-r141.css?v=55.00-r317">
+<link rel="stylesheet" href="/assets/control-admin-shell-r141.css?v=55.00-r318">
 <link rel="stylesheet" href="/assets/control-mini-player-r141.css?v=55.00-r144">
 <link rel="stylesheet" href="/assets/control-hotfix-r155.css?v=55.00-r155">
-<link rel="stylesheet" href="/assets/admin-graphics-r181.css?v=55.00-r317">
-<link rel="stylesheet" href="/assets/landscape-cloud-r183.css?v=55.00-r317">
+<link rel="stylesheet" href="/assets/admin-graphics-r181.css?v=55.00-r318">
+<link rel="stylesheet" href="/assets/landscape-cloud-r183.css?v=55.00-r318">
 <script defer src="/assets/control-cache-reset-r305.js?v=55.00-r305"></script>
 </head>
 <body class="admin-sections-shell">
 <div class="control-admin-landscape-frame-r141" aria-hidden="true"></div>
 <main class="admin-carousel" aria-label="Разделы админ-панели">
   <div class="admin-carousel-track" id="adminCarouselTrack">
-    <section class="admin-carousel-pane" data-physical="0" data-section="discussion"><div class="admin-carousel-loading">Загружаем обсуждение…</div><iframe title="Обсуждение — копия для кругового перехода" data-section="discussion" data-src="/comments-admin.html?embed=1&v=55.00-r317"></iframe></section>
-    <section class="admin-carousel-pane" data-physical="1" data-section="service"><div class="admin-carousel-loading">Загружаем служебное…</div><iframe title="Служебное" data-section="service" data-src="/service-admin.html?embed=1&v=55.00-r317"></iframe></section>
-    <section class="admin-carousel-pane" data-physical="2" data-section="monitor"><div class="admin-carousel-loading">Загружаем мониторинг…</div><iframe title="Мониторинг" data-section="monitor" data-src="/observability-admin.html?embed=1&v=55.00-r317"></iframe></section>
-    <section class="admin-carousel-pane" data-physical="3" data-section="releases"><div class="admin-carousel-loading">Загружаем релизы…</div><iframe title="Релизы" data-section="releases" data-src="/lyrics-admin.html?embed=1&v=55.00-r317"></iframe></section>
-    <section class="admin-carousel-pane" data-physical="4" data-section="discussion"><div class="admin-carousel-loading">Загружаем обсуждение…</div><iframe title="Обсуждение" data-section="discussion" data-src="/comments-admin.html?embed=1&v=55.00-r317"></iframe></section>
-    <section class="admin-carousel-pane" data-physical="5" data-section="service"><div class="admin-carousel-loading">Загружаем служебное…</div><iframe title="Служебное — копия для кругового перехода" data-section="service" data-src="/service-admin.html?embed=1&v=55.00-r317"></iframe></section>
+    <section class="admin-carousel-pane" data-physical="0" data-section="discussion"><div class="admin-carousel-loading">Загружаем обсуждение…</div><iframe title="Обсуждение — копия для кругового перехода" data-section="discussion" data-src="/comments-admin.html?embed=1&v=55.00-r318"></iframe></section>
+    <section class="admin-carousel-pane" data-physical="1" data-section="service"><div class="admin-carousel-loading">Загружаем служебное…</div><iframe title="Служебное" data-section="service" data-src="/service-admin.html?embed=1&v=55.00-r318"></iframe></section>
+    <section class="admin-carousel-pane" data-physical="2" data-section="monitor"><div class="admin-carousel-loading">Загружаем мониторинг…</div><iframe title="Мониторинг" data-section="monitor" data-src="/observability-admin.html?embed=1&v=55.00-r318"></iframe></section>
+    <section class="admin-carousel-pane" data-physical="3" data-section="releases"><div class="admin-carousel-loading">Загружаем релизы…</div><iframe title="Релизы" data-section="releases" data-src="/lyrics-admin.html?embed=1&v=55.00-r318"></iframe></section>
+    <section class="admin-carousel-pane" data-physical="4" data-section="discussion"><div class="admin-carousel-loading">Загружаем обсуждение…</div><iframe title="Обсуждение" data-section="discussion" data-src="/comments-admin.html?embed=1&v=55.00-r318"></iframe></section>
+    <section class="admin-carousel-pane" data-physical="5" data-section="service"><div class="admin-carousel-loading">Загружаем служебное…</div><iframe title="Служебное — копия для кругового перехода" data-section="service" data-src="/service-admin.html?embed=1&v=55.00-r318"></iframe></section>
   </div>
 </main>
 <nav class="admin-carousel-dots" aria-label="Разделы">
@@ -70,7 +69,7 @@ body.is-carousel-moving .admin-carousel-label{backdrop-filter:none!important}
 (() => {
   'use strict';
 
-  const VERSION='55.00-r317';
+  const VERSION='55.00-r318';
   const CHILD_CHANNEL='andrik-admin-carousel-control';
 
   const sections=[
@@ -166,7 +165,7 @@ body.is-carousel-moving .admin-carousel-label{backdrop-filter:none!important}
   const setTransform=(animate=false,x=0)=>{
     track.classList.toggle('is-animating',animate);
     track.classList.toggle('is-dragging',!animate&&dragging);
-    track.style.transform=`translateX(${-(physical*width())+x}px)`;
+    track.style.transform=`translate3d(${-(physical*width())+x}px,0,0)`;
   };
 
   const updateUi=()=>{
@@ -378,7 +377,7 @@ body.is-carousel-moving .admin-carousel-label{backdrop-filter:none!important}
     frame.addEventListener('load',()=>{
       panes[index].querySelector('.admin-carousel-loading')?.remove();
       applyScrollStateToFrame(frame,frame.dataset.section||'');
-      try{frame.contentDocument?.documentElement?.classList.add('andrik-frame-ready-r317')}catch(_){}
+      try{frame.contentDocument?.documentElement?.classList.add('andrik-frame-ready-r318')}catch(_){}
     });
     frame.addEventListener('error',()=>{
       frame.dataset.loaded='0';
@@ -388,6 +387,15 @@ body.is-carousel-moving .admin-carousel-label{backdrop-filter:none!important}
 
   setTransform(false,0);
   updateUi();
+
+  // R318: warm the remaining admin frames after first paint. This keeps the first screen light
+  // but prevents a network/iframe load from starting during a swipe.
+  const warmAllFrames=()=>frames.forEach((_,index)=>ensureFrame(index));
+  if('requestIdleCallback' in window){
+    requestIdleCallback(warmAllFrames,{timeout:900});
+  }else{
+    setTimeout(warmAllFrames,420);
+  }
 
   window.__ANDRIK_ADMIN_CAROUSEL_TEST__={
     getState:()=>({
@@ -410,6 +418,7 @@ body.is-carousel-moving .admin-carousel-label{backdrop-filter:none!important}
 <script defer src="/assets/owner-session-r197.js?v=55.00-r197"></script><script defer src="/assets/guard-ready-r115.js?v=55.00-r115"></script><script defer src="/assets/control-mini-player-r141.js?v=55.00-r144"></script>
 <script defer src="/assets/control-version-sync-r313.js?v=55.00-r311"></script>
 <script defer src="/assets/control-version-sync-r316.js?v=55.00-r316"></script>
-<script defer src="/assets/control-version-sync-r317.js?v=55.00-r317"></script>
+<script defer src="/assets/control-version-sync-r318.js?v=55.00-r318"></script>
+
 </body>
 </html>

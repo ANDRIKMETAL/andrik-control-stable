@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r316",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786200765206-d59dcfe031",
+  "operationId": "publish-1786201174121-c08bf0ac19",
   "release": "R313",
-  "archiveName": "R317-R316-TAG-EDITOR-BLACK-SCREEN-RECOVERY-SAFE-FULL.zip",
-  "sourceHead": "310251236ca595ad7c0438451c3ac980132572ac",
-  "backupSha": "310251236ca595ad7c0438451c3ac980132572ac",
-  "backupTag": "control-backup-20260808145241-3102512-r313-a52a0",
+  "archiveName": "R318-R317-FAST-GESTURES-TAG-EDITOR-SAFE-FULL.zip",
+  "sourceHead": "816838b3afa8156d24d5566222b5f4c9ed2b5edc",
+  "backupSha": "816838b3afa8156d24d5566222b5f4c9ed2b5edc",
+  "backupTag": "control-backup-20260808145930-816838b-r313-12aa3",
   "autoRecovery": true,
-  "generatedAt": "2026-08-08T14:52:45.206Z"
+  "generatedAt": "2026-08-08T14:59:34.121Z"
 }
