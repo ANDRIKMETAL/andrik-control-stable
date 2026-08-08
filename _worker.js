@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R321', number:321, version:'55.00', full:'55.00 LIVE WEB AI FINAL R321', siteUpdater:'55.00-r321' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R322', number:322, version:'55.00', full:'55.00 LIVE WEB AI FINAL R322', siteUpdater:'55.00-r322' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -10524,7 +10524,7 @@ async function handleMusicMp3PutR314(request, env) {
   const body=await request.arrayBuffer(); if(!body.byteLength||body.byteLength>40*1024*1024) return json({ok:false,error:'file-too-large'},413);
   const key=folder+'/'+name;
   const metadata={
-    source:'ANDRIK Control R321',
+    source:'ANDRIK Control R322',
     title:musicHeaderR317(request,'x-andrik-track-title'),
     artist:musicHeaderR317(request,'x-andrik-track-artist'),
     album:musicHeaderR317(request,'x-andrik-track-album'),
@@ -10545,6 +10545,16 @@ async function handleMusicSinglesListR316(request, env) {
     uploaded:o.uploaded||null,size:o.size||0
   })).sort((a,b)=>String(b.uploaded||'').localeCompare(String(a.uploaded||'')));
   return json({ok:true,tracks});
+}
+async function handleMusicDownloadsR322(request, env){
+  const bucket=getMusicBucketR314(env); if(!bucket) return json({ok:false,error:'music-bucket-not-configured'},503);
+  const listed=await bucket.list({limit:1000,include:['customMetadata']});
+  const legacyTitles={'singles/ty_uze_dostoin.mp3':'Ты уже достоин','singles/tisina.mp3':'Тишина'};
+  const tracks=(listed.objects||[]).filter(o=>musicObjectKeyR317(o.key)).map(o=>{
+    const m=o.customMetadata||{},folder=o.key.split('/').slice(0,-1).join('/'),base=o.key.split('/').pop().replace(/\.mp3$/i,'').replace(/[_-]+/g,' ');
+    return {key:o.key,title:m.title||legacyTitles[o.key]||base,album:m.album||'',track:m.track||'',folder,url:'https://music.andrikmetal.com/'+o.key,uploaded:o.uploaded||null};
+  });
+  return json({ok:true,tracks},{headers:{'cache-control':'public, max-age=60'}});
 }
 async function handleMusicLibraryR317(request, env){
   if (!adminAuthorized(request, env)) return json({ok:false,error:'unauthorized'},401);
@@ -10630,6 +10640,7 @@ async function routeApi(request, env, ctx) {
     if (path === '/api/comments/moderate' && request.method === 'POST') return await handleAdminCommentsPost(request, env, ctx);
     if (path === '/api/youtube-captions' && request.method === 'GET') return await handleYoutubeCaptions(request, env);
     if (path === '/api/music/singles' && request.method === 'GET') return await handleMusicSinglesListR316(request, env);
+    if (path === '/api/music/downloads' && request.method === 'GET') return await handleMusicDownloadsR322(request, env);
     if (path === '/api/control/music/library' && request.method === 'GET') return await handleMusicLibraryR317(request, env);
     if (path === '/api/control/music/file' && request.method === 'GET') return await handleMusicFileR317(request, env);
     if (path === '/api/control/music/mp3' && request.method === 'PUT') return await handleMusicMp3PutR314(request, env);

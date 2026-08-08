@@ -1,14 +1,14 @@
 {
   "schema": 1,
-  "updaterVersion": "55.00-r305",
+  "updaterVersion": "55.00-r321",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786202976104-c0a08d2cda",
+  "operationId": "publish-1786203341232-de8541fe16",
   "release": "R313",
-  "archiveName": "R321-R315-STABLE-BASE-R316-SINGLES-R317-TAGS-R318-PUSH-SAFE-FULL.zip",
-  "sourceHead": "75757affb400672cd62625ae107b7558e6a4a78d",
-  "backupSha": "75757affb400672cd62625ae107b7558e6a4a78d",
-  "backupTag": "control-backup-20260808152930-75757af-r313-74b02",
+  "archiveName": "R322-R321-R2-DELETE-PLAYER-MP3-DOWNLOAD-SAFE-FULL.zip",
+  "sourceHead": "9a4fa091e42a18205c4645030125f4fe014552f3",
+  "backupSha": "9a4fa091e42a18205c4645030125f4fe014552f3",
+  "backupTag": "control-backup-20260808153534-9a4fa09-r313-4f2f0",
   "autoRecovery": true,
-  "generatedAt": "2026-08-08T15:29:36.104Z"
+  "generatedAt": "2026-08-08T15:35:41.232Z"
 }

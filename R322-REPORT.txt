@@ -1,0 +1,17 @@
+ANDRIK Control R322
+Base: R321, itself based on user-confirmed working R315 carousel.
+
+Added:
+- R2 tag-editor library: Delete button for every MP3.
+- Checkbox selection + Select all + Delete selected.
+- Confirmation before single/bulk deletion.
+- Player bottom action row: compact ↓ MP3 button.
+- Button appears only when the currently playing track has a matching MP3 in R2.
+- Public lightweight /api/music/downloads map for title/album -> R2 file.
+- No change to YouTube playback source or transport controls.
+
+Safety:
+- admin-sections.html unchanged byte-for-byte.
+- comments-admin.html unchanged byte-for-byte.
+- service-admin.html unchanged byte-for-byte.
+- observability-admin.html unchanged byte-for-byte.
