@@ -5339,8 +5339,14 @@ async function saveYoutubeEventRow(db, event = {}) {
       title = excluded.title,
       author = excluded.author,
       count_value = CASE
-        WHEN youtube_event_seen.event_type IN ('like-count','comment-count','subscriber-count')
-          OR excluded.event_type IN ('like-count','comment-count','subscriber-count')
+        /* R309: subscriber totals are a CURRENT baseline, not a historical high-water mark.
+           If YouTube drops from 150 to 148, we must remember 148 so the next 149 can
+           generate a real +1 subscriber notification. Likes/comments remain high-water. */
+        WHEN youtube_event_seen.event_type = 'subscriber-count'
+          OR excluded.event_type = 'subscriber-count'
+        THEN excluded.count_value
+        WHEN youtube_event_seen.event_type IN ('like-count','comment-count')
+          OR excluded.event_type IN ('like-count','comment-count')
         THEN MAX(youtube_event_seen.count_value, excluded.count_value)
         ELSE excluded.count_value
       END,
@@ -5640,56 +5646,54 @@ async function handleCheckYoutubeEvents(request, env) {
       subscriberDelivery.set(item.id, result);
       notifications.push({ type:'subscriber', id:item.id, ok:Boolean(result.ok), url:item.url, error:result.error || '' });
     }
-    const unnamedSubscriberDelta = Math.max(0, subscriberDelta - newVisibleSubscribers.length);
+    /* R309 subscriber baseline logic.
+       - Store the latest REAL YouTube total, including decreases.
+       - Never suppress a new rise just because the same absolute total was seen days ago.
+       - Use compare-and-swap on the baseline so overlapping Cron/Guard runs cannot both send.
+       - If OneSignal fails, roll the baseline back so the next background check retries. */
+    const visibleSubscriberCredit = Math.min(subscriberDelta, newVisibleSubscribers.length);
+    const unnamedSubscriberDelta = Math.max(0, subscriberDelta - visibleSubscriberCredit);
     if (unnamedSubscriberDelta > 0) {
       const subscriberMessage = `На канале теперь ${identity.subscribers} подписчиков`;
-      const duplicateSubscriberPush = await hasSentPushExact(db, {
-        type:'youtube-subscriber-count',
-        message:subscriberMessage,
-        sinceHours:24 * 14
-      });
-      if (duplicateSubscriberPush) {
-        await saveYoutubeEventRow(db, {
-          key:'channel-subscriber-count',
-          type:'subscriber-count',
-          resourceId:identity.channelId,
-          title:identity.title,
-          countValue:identity.subscribers,
-          url:identity.channelUrl,
-          payload:{ ...identity, duplicateSuppressedAt:startedAt, reason:'exact-push-history-match-v54.76' }
-        });
-      } else {
-        const highWaterClaim = await db.prepare(`
-          UPDATE youtube_event_seen
-          SET count_value = MAX(count_value, ?), last_seen_at = datetime('now')
-          WHERE event_key = 'channel-subscriber-count' AND count_value < ?
-        `).bind(identity.subscribers, identity.subscribers).run();
-        const onceKey = `push-once:youtube-subscriber-count:${identity.subscribers}`;
-        const once = Number(highWaterClaim?.meta?.changes || 0) > 0
-          && await claimPushOnce(db, onceKey, startedAt);
-        if (once) {
-          const channelAppUrl = youtubeAppLauncherUrl(identity.channelUrl);
-          const result = await sendOwnerPush(env, {
-            title: unnamedSubscriberDelta === 1 ? '👤 Новый подписчик YouTube' : `👤 +${unnamedSubscriberDelta} подписчика YouTube`,
-            message: subscriberMessage,
-            url: channelAppUrl,
-            name: `youtube-subscriber-count-${identity.subscribers}`,
-            webButtons: [{ id:'open-youtube', text:'▶️ Открыть в YouTube', url:channelAppUrl }],
-            history: { type:'youtube-subscriber-count', source:'YouTube', videoTitle:identity.title, details:{ targetUrl:identity.channelUrl, totalSubscribers:identity.subscribers, delta:unnamedSubscriberDelta, subscriberDelta:unnamedSubscriberDelta } }
-          });
-          if (!result.ok) {
-            subscriberCountDeferred = true;
-            await releasePushOnceClaim(db, onceKey);
-            // Let the next cron retry only when OneSignal did not accept this push.
-            // Roll back the high-water mark conditionally so a newer real total is never overwritten.
-            await db.prepare(`
-              UPDATE youtube_event_seen
-              SET count_value = ?, last_seen_at = datetime('now')
-              WHERE event_key = 'channel-subscriber-count' AND count_value = ?
-            `).bind(previousSubscriberCount, identity.subscribers).run().catch(() => {});
+      const baselineClaim = await db.prepare(`
+        UPDATE youtube_event_seen
+        SET count_value = ?, last_seen_at = datetime('now')
+        WHERE event_key = 'channel-subscriber-count' AND count_value = ?
+      `).bind(identity.subscribers, previousSubscriberCount).run();
+      const ownsSubscriberRise = Number(baselineClaim?.meta?.changes || 0) > 0;
+      if (ownsSubscriberRise) {
+        const channelAppUrl = youtubeAppLauncherUrl(identity.channelUrl);
+        const result = await sendOwnerPush(env, {
+          title: unnamedSubscriberDelta === 1 ? '👤 Новый подписчик YouTube' : `👤 +${unnamedSubscriberDelta} подписчика YouTube`,
+          message: subscriberMessage,
+          url: channelAppUrl,
+          name: `youtube-subscriber-count-${previousSubscriberCount}-to-${identity.subscribers}`,
+          webButtons: [{ id:'open-youtube', text:'▶️ Открыть в YouTube', url:channelAppUrl }],
+          history: {
+            type:'youtube-subscriber-count',
+            source:'YouTube',
+            videoTitle:identity.title,
+            details:{
+              targetUrl:identity.channelUrl,
+              previousSubscribers:previousSubscriberCount,
+              totalSubscribers:identity.subscribers,
+              delta:unnamedSubscriberDelta,
+              subscriberDelta,
+              visibleSubscriberCredit,
+              baselineMode:'current-count-r309'
+            }
           }
-          notifications.push({ type:'subscriber-count', delta:unnamedSubscriberDelta, ok:Boolean(result.ok), url:identity.channelUrl });
+        });
+        if (!result.ok) {
+          subscriberCountDeferred = true;
+          // Retry on the next Cron/Guard cycle only if this run still owns the same total.
+          await db.prepare(`
+            UPDATE youtube_event_seen
+            SET count_value = ?, last_seen_at = datetime('now')
+            WHERE event_key = 'channel-subscriber-count' AND count_value = ?
+          `).bind(previousSubscriberCount, identity.subscribers).run().catch(() => {});
         }
+        notifications.push({ type:'subscriber-count', delta:unnamedSubscriberDelta, ok:Boolean(result.ok), url:identity.channelUrl, previous:previousSubscriberCount, total:identity.subscribers });
       }
     }
     const likeBatch = likeChanges.slice(0, 12);
@@ -5790,6 +5794,9 @@ async function handleCheckYoutubeEvents(request, env) {
       subscribersFailed:notifications.filter(item=>['subscriber','subscriber-count'].includes(item.type)&&!item.ok).length,
       subscribersQueued:Math.max(0,newVisibleSubscribers.length-[...subscriberDelivery.values()].filter(result=>result?.ok).length) + (subscriberCountDeferred?1:0),
       subscriberDelta,
+      subscriberPreviousCount:previousSubscriberCount,
+      subscriberCurrentCount:identity.subscribers,
+      subscriberBaselineMode:'current-count-r309',
       likeChanges:likeChanges.reduce((sum,item)=>sum+item.delta,0),
       likesAttempted:likeBatch.length,
       likesSent:notifications.filter(item=>item.type==='like'&&item.ok).length,
