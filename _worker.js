@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R305', number:305, version:'55.00', full:'55.00 LIVE WEB AI FINAL R305', siteUpdater:'55.00-r305' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R321', number:321, version:'55.00', full:'55.00 LIVE WEB AI FINAL R321', siteUpdater:'55.00-r321' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -7390,19 +7390,18 @@ async function handleAutomationRun(request, env) {
   await setPushState(db, 'automation-last-check-status', 'running');
   const tasks = {};
   const errors = [];
-  // R301/R302: one cheap YouTube channel request runs before the summary. This keeps
-  // views/subscribers current without waiting for the heavy Studio/GA refresh.
+  // R318: push reactions are first priority. The old separate identity probe was
+  // redundant because handleCheckYoutubeEvents already refreshes channel identity.
+  // Running reactions first prevents comments/likes from waiting behind heavy summary tasks
+  // and also removes one duplicate YouTube API request from every Cron cycle.
   try {
-    const identity = await Promise.race([
-      fetchYoutubeMonitorIdentity(env),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('youtube-identity-timeout')), 10000))
-    ]);
-    tasks.youtubeIdentity = { ok:true, snapshot:await mergeYoutubeIdentityIntoLatestSnapshot(db, identity, 'central-cron-pre-summary-r302') };
-    await setPushState(db, 'youtube-counts-last-at', new Date().toISOString()).catch(() => {});
-  } catch (error) {
-    tasks.youtubeIdentity = { ok:false, error:cleanPlainText(error?.message || error, 500) };
-    errors.push(`youtubeIdentity: ${tasks.youtubeIdentity.error}`);
-  }
+    tasks.youtubeEvents = await responseData(await handleCheckYoutubeEvents(request, env));
+    if (!tasks.youtubeEvents.httpOk) errors.push(`youtubeEvents: ${tasks.youtubeEvents.details || tasks.youtubeEvents.error || tasks.youtubeEvents.status}`);
+  } catch (error) { tasks.youtubeEvents={ok:false,error:cleanPlainText(error?.message || error,500)}; errors.push(`youtubeEvents: ${tasks.youtubeEvents.error}`); }
+  try {
+    tasks.releases = await responseData(await handleCheckPlaylist(request, env));
+    if (!tasks.releases.httpOk) errors.push(`releases: ${tasks.releases.details || tasks.releases.error || tasks.releases.status}`);
+  } catch (error) { tasks.releases={ok:false,error:cleanPlainText(error?.message || error,500)}; errors.push(`releases: ${tasks.releases.error}`); }
   // R305: refresh Google + current summary accumulator before the 06:00 push.
   // This also keeps the live summary current on every normal Cron cycle.
   try {
@@ -7414,14 +7413,6 @@ async function handleAutomationRun(request, env) {
     tasks.dailySummary = await maybeSendDailyOwnerSummary(env);
     if (!tasks.dailySummary.ok && !tasks.dailySummary.skipped) errors.push(`dailySummary: ${tasks.dailySummary.error || 'failed'}`);
   } catch (error) { tasks.dailySummary={ok:false,error:cleanPlainText(error?.message || error,500)}; errors.push(`dailySummary: ${tasks.dailySummary.error}`); }
-  try {
-    tasks.releases = await responseData(await handleCheckPlaylist(request, env));
-    if (!tasks.releases.httpOk) errors.push(`releases: ${tasks.releases.details || tasks.releases.error || tasks.releases.status}`);
-  } catch (error) { tasks.releases={ok:false,error:cleanPlainText(error?.message || error,500)}; errors.push(`releases: ${tasks.releases.error}`); }
-  try {
-    tasks.youtubeEvents = await responseData(await handleCheckYoutubeEvents(request, env));
-    if (!tasks.youtubeEvents.httpOk) errors.push(`youtubeEvents: ${tasks.youtubeEvents.details || tasks.youtubeEvents.error || tasks.youtubeEvents.status}`);
-  } catch (error) { tasks.youtubeEvents={ok:false,error:cleanPlainText(error?.message || error,500)}; errors.push(`youtubeEvents: ${tasks.youtubeEvents.error}`); }
   try {
     tasks.snapshots = await refreshControlSnapshots(env, { force:false });
     if (!tasks.snapshots.ok && !tasks.snapshots.skipped) errors.push(`snapshots: ${(tasks.snapshots.errors || []).join(' · ') || 'failed'}`);
@@ -10507,45 +10498,78 @@ function musicFileNameR314(value) {
   if (!safe || !safe.endsWith('.mp3') || safe.length > 160) return '';
   return safe;
 }
+function musicFolderR317(value){
+  const folder=String(value||'singles').trim().toLowerCase().replace(/^\/+|\/+$/g,'');
+  if(folder==='singles')return 'singles';
+  if(/^albums\/[a-z0-9][a-z0-9_-]{0,63}$/.test(folder))return folder;
+  return '';
+}
+function musicObjectKeyR317(value){
+  const key=String(value||'').trim().replace(/^\/+/, '');
+  if(!/^(?:singles|albums\/[a-z0-9][a-z0-9_-]{0,63})\/[a-z0-9._-]+\.mp3$/i.test(key))return '';
+  return key;
+}
+function musicHeaderR317(request,name,max=220){
+  let value=String(request.headers.get(name)||'');
+  try{value=decodeURIComponent(value)}catch(_){}
+  return cleanPlainText(value,max);
+}
 async function handleMusicMp3PutR314(request, env) {
   if (!adminAuthorized(request, env)) return json({ok:false,error:'unauthorized'},401);
   const bucket=getMusicBucketR314(env); if(!bucket) return json({ok:false,error:'music-bucket-not-configured',message:'Добавьте R2 binding MUSIC_BUCKET → andrik-music'},503);
-  const url=new URL(request.url), name=musicFileNameR314(url.searchParams.get('name'));
+  const url=new URL(request.url), name=musicFileNameR314(url.searchParams.get('name')), folder=musicFolderR317(url.searchParams.get('folder')||'singles');
   if(!name) return json({ok:false,error:'invalid-mp3-name'},400);
+  if(!folder) return json({ok:false,error:'invalid-music-folder'},400);
   const len=Number(request.headers.get('content-length')||0); if(len>40*1024*1024) return json({ok:false,error:'file-too-large'},413);
   const body=await request.arrayBuffer(); if(!body.byteLength||body.byteLength>40*1024*1024) return json({ok:false,error:'file-too-large'},413);
-  const key='singles/'+name;
-  await bucket.put(key,body,{httpMetadata:{contentType:'audio/mpeg',contentDisposition:`attachment; filename="${name}"`},customMetadata:{source:'ANDRIK Control R314'}});
-  return json({ok:true,key,url:`https://music.andrikmetal.com/${key}`,size:body.byteLength});
+  const key=folder+'/'+name;
+  const metadata={
+    source:'ANDRIK Control R321',
+    title:musicHeaderR317(request,'x-andrik-track-title'),
+    artist:musicHeaderR317(request,'x-andrik-track-artist'),
+    album:musicHeaderR317(request,'x-andrik-track-album'),
+    track:musicHeaderR317(request,'x-andrik-track-number',24),
+    year:musicHeaderR317(request,'x-andrik-track-year',12),
+    genre:musicHeaderR317(request,'x-andrik-track-genre',80)
+  };
+  await bucket.put(key,body,{httpMetadata:{contentType:'audio/mpeg',contentDisposition:`attachment; filename="${name}"`},customMetadata:metadata});
+  return json({ok:true,key,url:`https://music.andrikmetal.com/${key}`,size:body.byteLength,metadata});
+}
+async function handleMusicSinglesListR316(request, env) {
+  const bucket=getMusicBucketR314(env); if(!bucket) return json({ok:false,error:'music-bucket-not-configured'},503);
+  const listed=await bucket.list({prefix:'singles/',limit:1000,include:['customMetadata']});
+  const legacyTitles={'singles/ty_uze_dostoin.mp3':'Ты уже достоин','singles/tisina.mp3':'Тишина'};
+  const tracks=(listed.objects||[]).filter(o=>/\.mp3$/i.test(o.key)).map(o=>({
+    key:o.key,name:o.key.replace(/^singles\//,'').replace(/\.mp3$/i,'').replace(/[_-]+/g,' '),
+    title:(o.customMetadata&&o.customMetadata.title)||legacyTitles[o.key]||'',url:'https://music.andrikmetal.com/'+o.key,
+    uploaded:o.uploaded||null,size:o.size||0
+  })).sort((a,b)=>String(b.uploaded||'').localeCompare(String(a.uploaded||'')));
+  return json({ok:true,tracks});
+}
+async function handleMusicLibraryR317(request, env){
+  if (!adminAuthorized(request, env)) return json({ok:false,error:'unauthorized'},401);
+  const bucket=getMusicBucketR314(env); if(!bucket) return json({ok:false,error:'music-bucket-not-configured'},503);
+  const listed=await bucket.list({limit:1000,include:['customMetadata']});
+  const legacyTitles={'singles/ty_uze_dostoin.mp3':'Ты уже достоин','singles/tisina.mp3':'Тишина'};
+  const tracks=(listed.objects||[]).filter(o=>musicObjectKeyR317(o.key)).map(o=>{
+    const m=o.customMetadata||{},base=o.key.split('/').pop().replace(/\.mp3$/i,'').replace(/[_-]+/g,' ');
+    return {key:o.key,name:base,title:m.title||legacyTitles[o.key]||base,artist:m.artist||'',album:m.album||'',track:m.track||'',year:m.year||'',genre:m.genre||'',size:o.size||0,uploaded:o.uploaded||null,url:'https://music.andrikmetal.com/'+o.key};
+  }).sort((a,b)=>String(b.uploaded||'').localeCompare(String(a.uploaded||'')));
+  return json({ok:true,tracks});
+}
+async function handleMusicFileR317(request, env){
+  if (!adminAuthorized(request, env)) return json({ok:false,error:'unauthorized'},401);
+  const bucket=getMusicBucketR314(env); if(!bucket) return json({ok:false,error:'music-bucket-not-configured'},503);
+  const key=musicObjectKeyR317(new URL(request.url).searchParams.get('key')); if(!key)return json({ok:false,error:'invalid-key'},400);
+  const object=await bucket.get(key); if(!object)return json({ok:false,error:'not-found'},404);
+  const h=new Headers(); h.set('content-type','audio/mpeg'); h.set('cache-control','no-store'); h.set('content-disposition',`attachment; filename="${key.split('/').pop()}"`); if(object.size)h.set('content-length',String(object.size));
+  return new Response(object.body,{status:200,headers:h});
 }
 async function handleMusicMp3DeleteR314(request, env) {
   if (!adminAuthorized(request, env)) return json({ok:false,error:'unauthorized'},401);
   const bucket=getMusicBucketR314(env); if(!bucket) return json({ok:false,error:'music-bucket-not-configured',message:'Добавьте R2 binding MUSIC_BUCKET → andrik-music'},503);
-  const url=new URL(request.url), key=String(url.searchParams.get('key')||'');
-  if(!/^singles\/[a-z0-9._-]+\.mp3$/.test(key)) return json({ok:false,error:'invalid-key'},400);
+  const key=musicObjectKeyR317(new URL(request.url).searchParams.get('key')); if(!key) return json({ok:false,error:'invalid-key'},400);
   await bucket.delete(key); return json({ok:true,key});
-}
-
-async function ensureMusicSinglesR315(env){
-  const db=env.COMMENTS_DB; if(!db) throw new Error('COMMENTS_DB not configured');
-  await db.prepare(`CREATE TABLE IF NOT EXISTS music_singles (key TEXT PRIMARY KEY, title TEXT NOT NULL, url TEXT NOT NULL, published INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`).run();
-  return db;
-}
-async function handleMusicSinglesGetR315(env){
-  const db=await ensureMusicSinglesR315(env); const q=await db.prepare(`SELECT key,title,url,created_at AS createdAt FROM music_singles WHERE published=1 ORDER BY datetime(updated_at) DESC`).all();
-  return json({ok:true,singles:q.results||[]});
-}
-async function handleMusicSinglesPostR315(request,env){
-  if(!adminAuthorized(request,env)) return json({ok:false,error:'unauthorized'},401);
-  const body=await request.json().catch(()=>({})), key=String(body.key||''), title=String(body.title||'').trim().slice(0,120), url=String(body.url||'');
-  if(!/^singles\/[a-z0-9._-]+\.mp3$/.test(key)||!title||!url.startsWith('https://music.andrikmetal.com/singles/')) return json({ok:false,error:'invalid-single'},400);
-  const db=await ensureMusicSinglesR315(env); await db.prepare(`INSERT INTO music_singles(key,title,url,published,updated_at) VALUES(?,?,?,1,CURRENT_TIMESTAMP) ON CONFLICT(key) DO UPDATE SET title=excluded.title,url=excluded.url,published=1,updated_at=CURRENT_TIMESTAMP`).bind(key,title,url).run();
-  return json({ok:true,key,title,url});
-}
-async function handleMusicSinglesDeleteR315(request,env){
-  if(!adminAuthorized(request,env)) return json({ok:false,error:'unauthorized'},401);
-  const key=String(new URL(request.url).searchParams.get('key')||''); if(!/^singles\/[a-z0-9._-]+\.mp3$/.test(key)) return json({ok:false,error:'invalid-key'},400);
-  const db=await ensureMusicSinglesR315(env); await db.prepare(`UPDATE music_singles SET published=0,updated_at=CURRENT_TIMESTAMP WHERE key=?`).bind(key).run(); return json({ok:true,key});
 }
 
 async function routeApi(request, env, ctx) {
@@ -10605,9 +10629,9 @@ async function routeApi(request, env, ctx) {
     if (path === '/api/comments/moderate' && request.method === 'GET') return await handleAdminCommentsGet(request, env);
     if (path === '/api/comments/moderate' && request.method === 'POST') return await handleAdminCommentsPost(request, env, ctx);
     if (path === '/api/youtube-captions' && request.method === 'GET') return await handleYoutubeCaptions(request, env);
-    if (path === '/api/music/singles' && request.method === 'GET') return await handleMusicSinglesGetR315(env);
-    if (path === '/api/control/music/singles' && request.method === 'POST') return await handleMusicSinglesPostR315(request, env);
-    if (path === '/api/control/music/singles' && request.method === 'DELETE') return await handleMusicSinglesDeleteR315(request, env);
+    if (path === '/api/music/singles' && request.method === 'GET') return await handleMusicSinglesListR316(request, env);
+    if (path === '/api/control/music/library' && request.method === 'GET') return await handleMusicLibraryR317(request, env);
+    if (path === '/api/control/music/file' && request.method === 'GET') return await handleMusicFileR317(request, env);
     if (path === '/api/control/music/mp3' && request.method === 'PUT') return await handleMusicMp3PutR314(request, env);
     if (path === '/api/control/music/mp3' && request.method === 'DELETE') return await handleMusicMp3DeleteR314(request, env);
     if (path === '/api/lyrics' && request.method === 'GET') return await handlePublicLyrics(request, env);

@@ -1,0 +1,30 @@
+ANDRIK Control R321
+Base: user-confirmed working R315.
+
+Critical safety:
+- admin-sections.html is byte-for-byte identical to R315.
+- comments-admin.html is byte-for-byte identical to R315.
+- service-admin.html is byte-for-byte identical to R315.
+- observability-admin.html is byte-for-byte identical to R315.
+- NO R316/R317/R318 carousel/iframe black-screen experiments imported.
+
+R316 features kept:
+- one latest single on homepage
+- all singles page
+- Russian titles from R2 metadata + legacy fallback
+- Download MP3
+- Share direct MP3 link
+- mobile-safe controls
+- YouTube latest-release block remains
+
+R317 features kept:
+- separate MP3 tag editor in Lyrics
+- one file or batch album processing
+- ID3v2.3 title / artist / album / track / year / genre / cover
+- edit existing R2 MP3 and overwrite same key
+- singles + album folders in MUSIC_BUCKET
+
+R318 backend improvement kept:
+- YouTube comments/likes/subscriber events checked first in central Cron
+- redundant pre-summary YouTube identity request removed
+- fast gestures come from the proven R315 carousel engine
