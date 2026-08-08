@@ -1,0 +1,19 @@
+/* ANDRIK Control R319 — authoritative display version sync. */
+(()=>{'use strict';
+if(window.__ANDRIK_VERSION_SYNC_R319__)return;window.__ANDRIK_VERSION_SYNC_R319__=true;
+const RELEASE='R319',FULL='Live Web AI · ANDRIK · v55.00 LIVE WEB AI FINAL R319';
+function sync(){try{
+ document.documentElement.dataset.andrikRelease=RELEASE;if(document.body)document.body.dataset.andrikRelease=RELEASE;
+ const meta=document.querySelector('meta[name=\"andrik-control-release\"]');if(meta)meta.content=RELEASE;
+ document.querySelectorAll('.control-version-footer strong,[data-control-version],.build-version,.version-label,.control-split-number-r181').forEach(el=>{
+   if(el.matches('.control-version-footer strong')){const profile=/профиль\s+ANDRIK/i.test(el.textContent||'');el.textContent=profile?`Live Web AI · профиль ANDRIK · v55.00 LIVE WEB AI FINAL ${RELEASE}`:FULL;}else el.textContent=RELEASE;
+ });
+ document.querySelectorAll('.control-split-version-r181').forEach(el=>el.setAttribute('aria-label',`Live Web AI, версия ${RELEASE}`));
+ const input=document.getElementById('siteUpdateRelease');if(input&&document.activeElement!==input)input.value=RELEASE;
+ window.ANDRIK_CONTROL_RELEASE=Object.freeze({short:RELEASE,number:319,version:'55.00',full:'v55.00 LIVE WEB AI FINAL R319',build:'R319 BLACK FRAME FIX + TAG EDITOR',date:'08.08.2026'});
+ window.ANDRIK_CONTROL_VERSION='55.00 LIVE WEB AI FINAL R319';window.ANDRIK_CONTROL_BUILD='R319 BLACK FRAME FIX + TAG EDITOR';
+ try{localStorage.setItem('andrik-control-display-version','55.00-r319')}catch(_){}
+}catch(_){}}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',sync,{once:true});else sync();
+window.addEventListener('pageshow',sync,{passive:true});setTimeout(sync,350);setTimeout(sync,1900);
+})();
