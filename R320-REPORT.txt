@@ -1,0 +1,10 @@
+ANDRIK Control R320
+Base: R316 ONE LATEST SINGLE HOME
+Goal: restore the exact R316 admin carousel behavior and keep the MP3 tag editor.
+
+Key point:
+- admin-sections.html is byte-for-byte identical to the user-provided working R316: True
+- No R317/R318/R319 carousel recovery code remains.
+- No MutationObserver-based version sync was added.
+- MP3 tag editor UI + R2 library/file endpoints are retained.
+- Main page keeps data-limit="1" for one latest single.

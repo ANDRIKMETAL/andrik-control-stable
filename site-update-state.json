@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r317",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786201634224-627dc31bff",
-  "release": "R313",
-  "archiveName": "R319-R318-NO-BLACK-FRAME-FAST-SWIPE-TAG-EDITOR-SAFE-FULL.zip",
-  "sourceHead": "9d0e4284322e95904d16ccc230fcc374ba4ac853",
-  "backupSha": "9d0e4284322e95904d16ccc230fcc374ba4ac853",
-  "backupTag": "control-backup-20260808150705-9d0e428-r313-fea29",
+  "operationId": "publish-1786202088699-afd88c382d",
+  "release": "R320",
+  "archiveName": "R320-R316-CAROUSEL-RESTORE-TAG-EDITOR-SAFE-FULL.zip",
+  "sourceHead": "ce09e3b9387ec0d691739cbd60b2ad72f31b27cc",
+  "backupSha": "ce09e3b9387ec0d691739cbd60b2ad72f31b27cc",
+  "backupTag": "control-backup-20260808151443-ce09e3b-r320-76de0",
   "autoRecovery": true,
-  "generatedAt": "2026-08-08T15:07:14.224Z"
+  "generatedAt": "2026-08-08T15:14:48.699Z"
 }

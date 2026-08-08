@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R317', number:317, version:'55.00', full:'55.00 LIVE WEB AI FINAL R317', siteUpdater:'55.00-r317' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R320', number:320, version:'55.00', full:'55.00 LIVE WEB AI FINAL R320', siteUpdater:'55.00-r320' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -10533,7 +10533,7 @@ async function handleMusicMp3PutR314(request, env) {
   const body=await request.arrayBuffer(); if(!body.byteLength||body.byteLength>40*1024*1024) return json({ok:false,error:'file-too-large'},413);
   const key=folder+'/'+name;
   const metadata={
-    source:'ANDRIK Control R317',
+    source:'ANDRIK Control R320',
     title:musicHeaderR317(request,'x-andrik-track-title'),
     artist:musicHeaderR317(request,'x-andrik-track-artist'),
     album:musicHeaderR317(request,'x-andrik-track-album'),

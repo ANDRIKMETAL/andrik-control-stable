@@ -1,4 +1,0 @@
-ANDRIK Control R317
-Base: R316 ONE LATEST SINGLE HOME
-Date: 2026-08-08
-Features: MP3 ID3 tag editor (single + batch + edit existing R2) and admin carousel black-screen recovery.
