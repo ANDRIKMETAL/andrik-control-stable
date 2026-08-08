@@ -1,14 +1,14 @@
 {
   "schema": 1,
-  "updaterVersion": "55.00-r322",
+  "updaterVersion": "55.00-r323",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786204587249-d74f508396",
+  "operationId": "publish-1786205768539-7a768012e5",
   "release": "R313",
-  "archiveName": "R323-R322-WAV-TO-MP3-FIRST-EDITOR-SAFE-FULL.zip",
-  "sourceHead": "d221c9c29f34be4a367139b7f6a82795ba75997d",
-  "backupSha": "d221c9c29f34be4a367139b7f6a82795ba75997d",
-  "backupTag": "control-backup-20260808155620-d221c9c-r313-22eec",
+  "archiveName": "R324-R323-FAST-WAV-WORKER-320-SAFE-FULL.zip",
+  "sourceHead": "071f4870a46885bc136b3cb1b1c4ccb299a9c583",
+  "backupSha": "071f4870a46885bc136b3cb1b1c4ccb299a9c583",
+  "backupTag": "control-backup-20260808161603-071f487-r313-1f4da",
   "autoRecovery": true,
-  "generatedAt": "2026-08-08T15:56:27.249Z"
+  "generatedAt": "2026-08-08T16:16:08.539Z"
 }
