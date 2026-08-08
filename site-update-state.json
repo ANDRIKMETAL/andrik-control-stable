@@ -1,14 +1,14 @@
 {
   "schema": 1,
-  "updaterVersion": "55.00-r305",
+  "updaterVersion": "55.00-r316",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786195374287-f1cd9cfe13",
+  "operationId": "publish-1786195608914-068b4a7449",
   "release": "R313",
-  "archiveName": "R316-RUSSIAN-TITLES-SHARE-FIX-SAFE-FULL-1.zip",
-  "sourceHead": "748057f28faff04d31e765ddb3cc218409e0620f",
-  "backupSha": "748057f28faff04d31e765ddb3cc218409e0620f",
-  "backupTag": "control-backup-20260808132249-748057f-r313-71106",
+  "archiveName": "R316-RUSSIAN-TITLES-FINAL-FIX-SAFE-FULL.zip",
+  "sourceHead": "3622a48295878195f33a9b5bbb2834014f52fa83",
+  "backupSha": "3622a48295878195f33a9b5bbb2834014f52fa83",
+  "backupTag": "control-backup-20260808132644-3622a48-r313-e6d5e",
   "autoRecovery": true,
-  "generatedAt": "2026-08-08T13:22:54.287Z"
+  "generatedAt": "2026-08-08T13:26:48.914Z"
 }

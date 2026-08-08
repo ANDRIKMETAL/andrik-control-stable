@@ -10521,10 +10521,14 @@ async function handleMusicMp3PutR314(request, env) {
 async function handleMusicSinglesListR316(request, env) {
   const bucket=getMusicBucketR314(env); if(!bucket) return json({ok:false,error:'music-bucket-not-configured'},503);
   const listed=await bucket.list({prefix:'singles/',limit:1000,include:['customMetadata']});
+  const legacyTitles={
+    'singles/ty_uze_dostoin.mp3':'Ты уже достоин',
+    'singles/tisina.mp3':'Тишина'
+  };
   const tracks=(listed.objects||[]).filter(o=>/\.mp3$/i.test(o.key)).map(o=>({
     key:o.key,
     name:o.key.replace(/^singles\//,'').replace(/\.mp3$/i,'').replace(/[_-]+/g,' '),
-    title:(o.customMetadata&&o.customMetadata.title)||'',
+    title:(o.customMetadata&&o.customMetadata.title)||legacyTitles[o.key]||'',
     url:'https://music.andrikmetal.com/'+o.key,
     uploaded:o.uploaded||null,
     size:o.size||0
