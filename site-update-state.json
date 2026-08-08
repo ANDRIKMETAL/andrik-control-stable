@@ -1,14 +1,14 @@
 {
   "schema": 1,
-  "updaterVersion": "55.00-r325",
+  "updaterVersion": "55.00-r326",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786209988345-415010ddfd",
+  "operationId": "publish-1786210395268-91dccd05bd",
   "release": "R313",
-  "archiveName": "R326-R325-PLAYER-MP3-DOWNLOAD-ENDPOINT-FIX-SAFE-FULL.zip",
-  "sourceHead": "05dedaf108f8ea63c3ed02bd7e64e3c2b0adbcce",
-  "backupSha": "05dedaf108f8ea63c3ed02bd7e64e3c2b0adbcce",
-  "backupTag": "control-backup-20260808172624-05dedaf-r313-3113e",
+  "archiveName": "R327-R326-CENTER-MP3-REAL-DOWNLOAD-SAFE-FULL.zip",
+  "sourceHead": "178e8f136df40e2d536790be3c45d60088cc9fed",
+  "backupSha": "178e8f136df40e2d536790be3c45d60088cc9fed",
+  "backupTag": "control-backup-20260808173310-178e8f1-r313-8bed4",
   "autoRecovery": true,
-  "generatedAt": "2026-08-08T17:26:28.345Z"
+  "generatedAt": "2026-08-08T17:33:15.268Z"
 }

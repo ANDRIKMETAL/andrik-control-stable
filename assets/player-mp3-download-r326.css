@@ -1,18 +1,63 @@
-/* ANDRIK R322 — compact MP3 download in the existing player bottom action row. */
-body:not(.site-mode) .track-community-actions{grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto!important;gap:7px!important}
-.track-mp3-download-r322{display:inline-flex;align-items:center;justify-content:center;gap:4px;min-width:58px;min-height:40px;padding:7px 9px;border-radius:14px;border:1px solid rgba(112,220,255,.28);background:linear-gradient(145deg,rgba(9,28,39,.96),rgba(4,14,21,.98));color:#dff7ff;font-size:.76rem;font-weight:850;line-height:1;text-decoration:none;white-space:nowrap;box-sizing:border-box}
-.track-mp3-download-r322[hidden]{display:none!important}
-.track-mp3-download-r322:active{transform:scale(.97)}
+/* ANDRIK R327 — centered compact MP3 download row. */
+body:not(.site-mode) .track-community-actions{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;
+  gap:7px!important;
+}
+body:not(.site-mode) .track-community-actions .lyrics-toggle,
+body:not(.site-mode) .track-community-actions .track-comments-btn{
+  grid-row:1!important;
+  min-width:0!important;
+}
+body:not(.site-mode) .track-mp3-download-r322{
+  grid-column:1 / -1!important;
+  grid-row:2!important;
+  justify-self:center!important;
+  align-self:center!important;
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:5px!important;
+  width:auto!important;
+  min-width:96px!important;
+  max-width:140px!important;
+  min-height:36px!important;
+  margin:1px auto 0!important;
+  padding:7px 14px!important;
+  border-radius:999px!important;
+  border:1px solid rgba(112,220,255,.28)!important;
+  background:linear-gradient(145deg,rgba(9,28,39,.96),rgba(4,14,21,.98))!important;
+  color:#dff7ff!important;
+  -webkit-text-fill-color:#dff7ff!important;
+  font-size:.78rem!important;
+  font-weight:850!important;
+  line-height:1!important;
+  text-decoration:none!important;
+  white-space:nowrap!important;
+  box-sizing:border-box!important;
+}
+body:not(.site-mode) .track-mp3-download-r322[hidden]{display:none!important}
+body:not(.site-mode) .track-mp3-download-r322:active{transform:scale(.97)}
 body.site-mode .track-mp3-download-r322{display:none!important}
 @media(max-width:420px){
- body:not(.site-mode) .track-community-actions{gap:5px!important}
- body:not(.site-mode) .track-community-actions .lyrics-toggle,
- body:not(.site-mode) .track-comments-btn{min-height:40px!important;padding:7px 7px!important;font-size:.72rem!important;gap:5px!important}
- body:not(.site-mode) .track-community-actions .lyrics-toggle svg,
- body:not(.site-mode) .track-comments-btn svg{width:15px!important;height:15px!important}
- .track-mp3-download-r322{min-width:52px;min-height:40px;padding:7px 7px;font-size:.72rem}
+  body:not(.site-mode) .track-community-actions{gap:5px!important}
+  body:not(.site-mode) .track-community-actions .lyrics-toggle,
+  body:not(.site-mode) .track-comments-btn{
+    min-height:40px!important;
+    padding:7px!important;
+    font-size:.72rem!important;
+    gap:5px!important
+  }
+  body:not(.site-mode) .track-community-actions .lyrics-toggle svg,
+  body:not(.site-mode) .track-comments-btn svg{width:15px!important;height:15px!important}
+  body:not(.site-mode) .track-mp3-download-r322{
+    min-width:88px!important;
+    min-height:34px!important;
+    padding:6px 12px!important;
+    font-size:.74rem!important
+  }
 }
 @media(max-height:720px) and (max-width:860px){
- body:not(.site-mode) .track-community-actions{margin-top:5px!important}
- .track-mp3-download-r322{min-height:36px}
+  body:not(.site-mode) .track-community-actions{margin-top:5px!important}
+  body:not(.site-mode) .track-mp3-download-r322{min-height:32px!important;padding-block:5px!important}
 }

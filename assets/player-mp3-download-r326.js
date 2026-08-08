@@ -46,7 +46,7 @@ async function sync(force=false){
  const currentNo=currentTrackNumber();
  const best=chooseMatch(rawTitle,currentAlbum,currentNo);
  if(!best){btn.hidden=true;btn.removeAttribute('href');lastKey='';return}
- if(lastKey!==best.key){btn.href=best.url;btn.download=(best.key.split('/').pop()||'ANDRIK.mp3');btn.title='Скачать MP3: '+(best.title||rawTitle);btn.setAttribute('aria-label','Скачать MP3: '+(best.title||rawTitle));lastKey=best.key}
+ if(lastKey!==best.key){btn.href='/api/music/download?key='+encodeURIComponent(best.key);btn.removeAttribute('download');btn.title='Скачать MP3: '+(best.title||rawTitle);btn.setAttribute('aria-label','Скачать MP3: '+(best.title||rawTitle));lastKey=best.key}
  btn.hidden=false;
 }
 const obs=new MutationObserver(()=>sync());
@@ -55,5 +55,11 @@ if(albumEl)obs.observe(albumEl,{childList:true,characterData:true,subtree:true})
 if(posEl)obs.observe(posEl,{childList:true,characterData:true,subtree:true});
 window.addEventListener('pageshow',()=>sync(true),{passive:true});
 window.addEventListener('focus',()=>sync(true),{passive:true});
+btn.addEventListener('click',()=>{
+  if(btn.hidden||!btn.getAttribute('href'))return;
+  const label=btn.querySelector('span:last-child');
+  if(label){label.textContent='СКАЧАТЬ';setTimeout(()=>{if(label)label.textContent='MP3'},1800)}
+});
+
 sync(true);
 })();
