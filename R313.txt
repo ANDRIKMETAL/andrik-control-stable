@@ -1,0 +1,6 @@
+ANDRIK R313
+Base: R312
+Date: 2026-08-08
+Change: homepage single download button now points to external Cloudflare R2 MP3:
+https://music.andrikmetal.com/singles/ty_uze_dostoin.mp3
+MP3 is NOT included in site ZIP.

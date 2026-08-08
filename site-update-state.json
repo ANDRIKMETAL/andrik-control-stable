@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r305",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786162900266-884d7558d3",
-  "release": "R308",
-  "archiveName": "R309.zip",
-  "sourceHead": "e7bfa97a45a4729e2f2ddad42aeb7d1ce861737d",
-  "backupSha": "e7bfa97a45a4729e2f2ddad42aeb7d1ce861737d",
-  "backupTag": "control-backup-20260808042136-e7bfa97-r308-3c3a9",
+  "operationId": "publish-1786192506246-5c02ce3552",
+  "release": "R309",
+  "archiveName": "R313-R312-EXTERNAL-R2-SINGLE-DOWNLOAD-SAFE-FULL.zip",
+  "sourceHead": "6df4cc91b4450a01952c3f8a9c0dfe83e2fd472f",
+  "backupSha": "6df4cc91b4450a01952c3f8a9c0dfe83e2fd472f",
+  "backupTag": "control-backup-20260808123502-6df4cc9-r309-148af",
   "autoRecovery": true,
-  "generatedAt": "2026-08-08T04:21:40.266Z"
+  "generatedAt": "2026-08-08T12:35:06.246Z"
 }
