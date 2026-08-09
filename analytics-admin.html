@@ -958,6 +958,7 @@ html.live-web-ai-resume-lock .analytics-swipe-viewport{overflow:hidden!important
 <link rel="stylesheet" href="/assets/country-ui-r368.css?v=55.00-r369">
 <link rel="stylesheet" href="/assets/country-city-points-r360.css?v=55.00-r360">
 
+<link rel="stylesheet" href="/assets/country-city-r372.css?v=55.00-r372">
 </head>
 <body class="trika-standalone-page comments-admin-page control-page analytics-admin-page analytics-swipe-page analytics-v54-33-page analytics-v54-46-page">
 <nav class="topbar control-topbar control-detail-topbar"><div class="wrap nav-shell analytics-topbar-minimal"><a class="control-center-logo" id="controlCenterLogo" href="https://andrikmetal.com/" aria-label="Открыть главный сайт ANDRIK"><img class="logo-ok" src="/assets/control-topbar-eye-triangle.jpg" alt=""/><img class="logo-error" src="/assets/andrik-control-red-triangle-192.png" alt=""/></a></div></nav>
@@ -1843,6 +1844,47 @@ html.live-web-ai-resume-lock .analytics-swipe-viewport{overflow:hidden!important
     getSelection:()=>selectedWorldCountry,
     clearSelection:()=>returnToWorldMap(document.getElementById('worldMap'),document.getElementById('worldCountries')),
     goWorld:()=>returnToWorldMap(document.getElementById('worldMap'),document.getElementById('worldCountries')),
+    forceWorld:()=>{
+      clearTimeout(countryTransitionTimer);
+      countryTransitionTimer=0;
+      selectedWorldCountry='';
+      selectedWorldCountryDetailsExpanded=false;
+      countriesExpanded=false;
+      selectedWorldCountryZoomStep=0;
+      selectedWorldCountryZoomDirection=1;
+      selectedWorldCountryDeep=false;
+
+      const map=document.getElementById('worldMap');
+      const list=document.getElementById('worldCountries');
+      document.body.classList.remove(
+        'is-country-deep-active','is-country-focus-active',
+        'is-country-zooming-in','is-country-zooming-out',
+        'is-country-returning','is-country-entering'
+      );
+
+      if(map){
+        delete map.dataset.countryDeep;
+        delete map.dataset.focusCountry;
+        map.dataset.zoomLevel='X1';
+        map.classList.remove('is-country-focused');
+        const stage=map.querySelector('.world-map-stage');
+        stage?.style.removeProperty('--focus-x');
+        stage?.style.removeProperty('--focus-y');
+        stage?.style.removeProperty('--focus-tx');
+        stage?.style.removeProperty('--focus-ty');
+        stage?.style.removeProperty('--focus-zoom');
+      }
+
+      if(list){
+        delete list.dataset.selectedCountry;
+        list.classList.remove('has-selected-country','has-expanded-country-details','is-country-focus-mode');
+      }
+
+      renderWorldMap(lastWorldMapCountries,lastWorldMapOptions);
+      window.dispatchEvent(new CustomEvent('andrik:country-deep-changed',{detail:{active:false,country:'',forced:true}}));
+      window.dispatchEvent(new CustomEvent('andrik:country-focus-changed',{detail:{focused:false,country:'',forced:true}}));
+      return true;
+    },
     isDeep:()=>selectedWorldCountryDeep,
     translateCountry,
     countryFlag,
@@ -3147,8 +3189,8 @@ html.live-web-ai-resume-lock .analytics-swipe-viewport{overflow:hidden!important
 <script defer src="/assets/map-r76-stability-country-label.js?v=55.00-r76"></script>
 <link href="/assets/map-r77-landscape-country-label.css?v=55.00-r77" rel="stylesheet"/>
 <script defer src="/assets/map-r77-landscape-country-label.js?v=55.00-r77"></script>
-<link href="/assets/map-r78-inline-country-label.css?v=55.00-r371" rel="stylesheet"/>
-<script defer src="/assets/map-r78-inline-country-label.js?v=55.00-r371"></script>
+<link href="/assets/map-r78-inline-country-label.css?v=55.00-r372" rel="stylesheet"/>
+<script defer src="/assets/map-r78-inline-country-label.js?v=55.00-r372"></script>
 
 <link href="/assets/map-r80-portrait-map-restore.css?v=55.00-r80" rel="stylesheet"/>
 <script defer src="/assets/map-r80-portrait-map-restore.js?v=55.00-r80"></script>
@@ -4068,4 +4110,5 @@ body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #mapFocusAct
 <script defer src="/assets/youtube-red-r357.js?v=55.00-r357"></script>
 <script defer src="/assets/country-anchor-r358.js?v=55.00-r358"></script>
 <script defer src="/assets/country-pulse-r368.js?v=55.00-r369"></script>
+<script defer src="/assets/country-city-r372.js?v=55.00-r372"></script>
 </body></html>

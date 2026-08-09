@@ -36,19 +36,30 @@
 
   function ensureLabel(){
     let node=document.getElementById('landscapeCountryLabelR78');
+
+    // R372: if an older build left a DIV in DOM, replace it with a real button.
+    if(node && node.tagName!=='BUTTON'){
+      const fresh=document.createElement('button');
+      fresh.id='landscapeCountryLabelR78';
+      fresh.innerHTML=node.innerHTML||'<span class="r78-country-flag" aria-hidden="true"></span><span class="r78-country-name"></span>';
+      node.replaceWith(fresh);
+      node=fresh;
+    }
+
     if(!node){
       node=document.createElement('button');
-      node.type='button';
       node.id='landscapeCountryLabelR78';
-      node.hidden=true;
-      node.setAttribute('aria-hidden','true');
-      node.setAttribute('aria-label','Вернуться к общей карте мира');
-      node.setAttribute('title','Вернуться к общей карте мира');
       node.innerHTML='<span class="r78-country-flag" aria-hidden="true"></span><span class="r78-country-name"></span>';
       map.appendChild(node);
     }else if(node.parentElement!==map){
       map.appendChild(node);
     }
+
+    node.type='button';
+    node.hidden=true;
+    node.setAttribute('aria-hidden','true');
+    node.setAttribute('aria-label','Вернуться к общей карте мира');
+    node.setAttribute('title','Вернуться к общей карте мира');
     return node;
   }
 
@@ -158,14 +169,19 @@
     event?.stopPropagation?.();
 
     const runtime=window.__andrikWorldMapRuntime;
-    if(runtime?.goWorld){
+    if(runtime?.forceWorld){
+      runtime.forceWorld();
+    }else if(runtime?.goWorld){
       runtime.goWorld();
     }else if(runtime?.clearSelection){
       runtime.clearSelection();
     }else{
-      window.dispatchEvent(new CustomEvent('andrik:country-focus-changed',{
-        detail:{focused:false,country:''}
-      }));
+      document.body.classList.remove('is-country-deep-active','is-country-focus-active','is-country-zooming-in','is-country-zooming-out');
+      delete map.dataset.countryDeep;
+      delete map.dataset.focusCountry;
+      map.classList.remove('is-country-focused');
+      window.dispatchEvent(new CustomEvent('andrik:country-deep-changed',{detail:{active:false,country:'',forced:true}}));
+      window.dispatchEvent(new CustomEvent('andrik:country-focus-changed',{detail:{focused:false,country:'',forced:true}}));
     }
 
     activeCountry='';
@@ -184,7 +200,16 @@
     if(!isLandscape())return;
     event.stopPropagation();
   },true);
+  labelButton.addEventListener('pointerup',goWorldR371,true);
+  labelButton.addEventListener('touchend',goWorldR371,{capture:true,passive:false});
   labelButton.addEventListener('click',goWorldR371,true);
+
+  // R372: delegated fallback in case another map layer sits above the label.
+  document.addEventListener('pointerup',event=>{
+    const target=event.target?.closest?.('#landscapeCountryLabelR78');
+    if(target)goWorldR371(event);
+  },true);
+
   labelButton.addEventListener('keydown',event=>{
     if(event.key==='Enter'||event.key===' '){
       goWorldR371(event);

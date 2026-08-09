@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786294561529-0a25251bea",
-  "release": "R371",
-  "archiveName": "R371-R370-LANDSCAPE-COUNTRY-LABEL-GO-WORLD-SAFE-FULL.zip",
-  "sourceHead": "acca594d2a5a643206089300dfc72a61979cb83c",
-  "backupSha": "acca594d2a5a643206089300dfc72a61979cb83c",
-  "backupTag": "control-backup-20260809165557-acca594-r371-88ca1",
+  "operationId": "publish-1786295794004-897c34036b",
+  "release": "R372",
+  "archiveName": "R372-R371-LANDSCAPE-CITY-LABEL-NATIVE-PULSE-FORCE-WORLD-SAFE-FULL.zip",
+  "sourceHead": "87894f3351e42d23b121f731665983007c0fe28b",
+  "backupSha": "87894f3351e42d23b121f731665983007c0fe28b",
+  "backupTag": "control-backup-20260809171629-87894f3-r372-d8530",
   "autoRecovery": true,
-  "generatedAt": "2026-08-09T16:56:01.529Z"
+  "generatedAt": "2026-08-09T17:16:34.004Z"
 }

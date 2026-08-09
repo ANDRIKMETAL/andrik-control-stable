@@ -1,4 +1,4 @@
-R371 — PUSH SUMMARY EXACT DATA FIX
+R372 — PUSH SUMMARY EXACT DATA FIX
 
 Проблема:
 - Push показывал реальные цифры, но экран «Сводка за сегодня» мог открыть
@@ -17,5 +17,5 @@ R371 — PUSH SUMMARY EXACT DATA FIX
 - Карта целиком сохранена из R365: Россия zoom, city tap counter, стабильная жёлтая точка.
 - R362 smooth-halos не возвращались.
 
-Версия Control: R371.
+Версия Control: R372.
 База: R365.

@@ -32,7 +32,7 @@
     anchor.setAttribute('r','20');
     anchor.setAttribute('opacity','1');
 
-    // Hide all older central halos from R352/R358/R359/R361/R371.
+    // Hide all older central halos from R352/R358/R359/R361/R372.
     svg.querySelectorAll(
       '.country-center-anchor-halo-r358,.country-point-halo-r352,'+
       '.country-native-halo-r359,.country-native-halo-r361,'+

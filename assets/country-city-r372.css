@@ -1,0 +1,87 @@
+/* ANDRIK R372 — city label in both orientations + native SVG city pulse. */
+
+#worldMap{
+  position:relative!important;
+}
+
+#countryCityTapLabelR372{
+  position:absolute!important;
+  left:50%!important;
+  z-index:2147483638!important;
+  max-width:min(82%,420px)!important;
+  padding:4px 10px!important;
+  border:0!important;
+  border-radius:999px!important;
+  background:rgba(2,10,16,.56)!important;
+  color:#eefbff!important;
+  text-align:center!important;
+  white-space:nowrap!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+  text-shadow:0 2px 7px rgba(0,0,0,.98),0 0 12px rgba(82,205,255,.48)!important;
+  box-shadow:0 0 14px rgba(70,197,255,.12)!important;
+  font:800 12px/1.15 Arial,Helvetica,sans-serif!important;
+  pointer-events:none!important;
+  opacity:0!important;
+  transform:translate(-50%,6px)!important;
+  transition:opacity .26s ease,transform .26s ease!important;
+}
+#countryCityTapLabelR372[hidden]{display:none!important}
+#countryCityTapLabelR372.is-visible-r372{
+  opacity:1!important;
+  transform:translate(-50%,0)!important;
+}
+#countryCityTapLabelR372.is-hiding-r372{
+  opacity:0!important;
+  transform:translate(-50%,5px)!important;
+}
+
+@media screen and (orientation:portrait){
+  #countryCityTapLabelR372{
+    bottom:56px!important;
+  }
+}
+@media screen and (orientation:landscape){
+  #countryCityTapLabelR372{
+    bottom:12px!important;
+    font-size:13px!important;
+    padding:5px 12px!important;
+    background:rgba(1,8,13,.68)!important;
+  }
+}
+
+/* Android/WebView: CSS transform animation is disabled; native SVG <animate> owns the pulse. */
+#worldMap .country-map-r352 .country-city-halo-r360,
+#worldMap .country-map-r352 .country-city-native-halo-r372{
+  animation:none!important;
+  transform:none!important;
+  fill:rgba(83,218,255,.10)!important;
+  stroke:rgba(111,230,255,.92)!important;
+  stroke-width:3!important;
+  filter:drop-shadow(0 0 8px rgba(71,209,255,.48))!important;
+  pointer-events:none!important;
+}
+#worldMap .country-map-r352 .country-city-point-r360{
+  animation:none!important;
+  opacity:1!important;
+  fill:#7edfff!important;
+  stroke:#f1fdff!important;
+  stroke-width:3!important;
+  filter:drop-shadow(0 0 8px rgba(75,217,255,.98))
+         drop-shadow(0 0 18px rgba(43,178,255,.72))!important;
+}
+#worldMap .country-map-r352 .country-city-marker-r360.is-city-selected-r372 .country-city-point-r360{
+  stroke:#ffffff!important;
+  stroke-width:4.3!important;
+  filter:drop-shadow(0 0 11px rgba(116,231,255,1))
+         drop-shadow(0 0 25px rgba(44,181,255,.92))!important;
+}
+
+/* Return-to-world label must always be above the country SVG overlay. */
+@media screen and (orientation:landscape){
+  #landscapeCountryLabelR78{
+    pointer-events:auto!important;
+    touch-action:manipulation!important;
+    z-index:2147483646!important;
+  }
+}
