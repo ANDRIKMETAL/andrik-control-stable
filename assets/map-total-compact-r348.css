@@ -1,0 +1,41 @@
+/* ANDRIK R348 — compact TOTAL badge on main ecosystem world map only. */
+body.analytics-admin-page.analytics-v54-46-page:not(.is-country-focus-active):not(.is-country-deep-active) .analytics-map-pane #worldMap .world-map-total{
+  left:8px!important;
+  top:8px!important;
+  right:auto!important;
+  bottom:auto!important;
+  min-width:0!important;
+  width:auto!important;
+  max-width:92px!important;
+  height:34px!important;
+  min-height:34px!important;
+  max-height:34px!important;
+  padding:0 8px!important;
+  gap:5px!important;
+  border-radius:15px!important;
+  box-sizing:border-box!important;
+}
+body.analytics-admin-page.analytics-v54-46-page:not(.is-country-focus-active):not(.is-country-deep-active) .analytics-map-pane #worldMap .world-map-total span{
+  font-size:.43rem!important;
+  line-height:1!important;
+  letter-spacing:0!important;
+  white-space:nowrap!important;
+}
+body.analytics-admin-page.analytics-v54-46-page:not(.is-country-focus-active):not(.is-country-deep-active) .analytics-map-pane #worldMap .world-map-total strong{
+  font-size:.72rem!important;
+  line-height:1!important;
+  letter-spacing:.01em!important;
+  white-space:nowrap!important;
+}
+@media (max-width:390px) and (orientation:portrait){
+  body.analytics-admin-page.analytics-v54-46-page:not(.is-country-focus-active):not(.is-country-deep-active) .analytics-map-pane #worldMap .world-map-total{
+    max-width:86px!important;
+    height:32px!important;
+    min-height:32px!important;
+    max-height:32px!important;
+    padding:0 7px!important;
+    gap:4px!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page:not(.is-country-focus-active):not(.is-country-deep-active) .analytics-map-pane #worldMap .world-map-total span{font-size:.40rem!important}
+  body.analytics-admin-page.analytics-v54-46-page:not(.is-country-focus-active):not(.is-country-deep-active) .analytics-map-pane #worldMap .world-map-total strong{font-size:.68rem!important}
+}

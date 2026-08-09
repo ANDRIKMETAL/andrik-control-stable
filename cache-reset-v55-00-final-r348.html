@@ -7,7 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <title>Очистка Control — R347</title>
+  <title>Очистка Control — R348</title>
   <style>
     *{box-sizing:border-box}
     html,body{
@@ -143,7 +143,7 @@
 </head>
 <body>
   <main class="box">
-    <span class="badge">СТРАНИЦА ОЧИСТКИ R347</span>
+    <span class="badge">СТРАНИЦА ОЧИСТКИ R348</span>
     <h1 id="title">Чистим кэш Control</h1>
     <p id="status">Не закрывай страницу. После завершения появится кнопка открытия Control.</p>
 
@@ -242,7 +242,7 @@
       '/service-admin.html?cache-bust='+stamp,
       '/site-update-admin.html?cache-bust='+stamp,
       '/assets/ecosystem-map-r337.css?cache-bust='+stamp,
-      '/assets/ecosystem-map-r347.js?cache-bust='+stamp,
+      '/assets/ecosystem-map-r348.js?cache-bust='+stamp,
       '/assets/country-activity-r337.js?cache-bust='+stamp,
       '/assets/map-monthly-r337.js?cache-bust='+stamp,
       '/assets/country-focus-compact-r339.css?cache-bust='+stamp,
@@ -250,7 +250,7 @@
       '/assets/country-shapes-r341.js?cache-bust='+stamp,
       '/assets/country-map-r346.css?cache-bust='+stamp,
       '/assets/country-map-r346.js?cache-bust='+stamp,
-      '/assets/control-version-sync-r347.js?cache-bust='+stamp,
+      '/assets/control-version-sync-r348.js?cache-bust='+stamp,
       '/player.html?cache-bust='+stamp,
       '/singles.html?cache-bust='+stamp
     ];
@@ -276,7 +276,7 @@
       headers:{'Cache-Control':'no-cache, no-store, max-age=0','Pragma':'no-cache'}
     }).catch(()=>null);
     // Also run one lightweight release check now, so a release published before
-    // R347 installation can be caught immediately without waiting for the next Cron.
+    // R348 installation can be caught immediately without waiting for the next Cron.
     await fetch('/api/automation/youtube-fast',{
       method:'POST',
       cache:'no-store',
@@ -304,5 +304,6 @@
 })();
 </script>
 <script defer src="/assets/control-version-sync-r348.js?v=55.00-r348"></script>
+<link rel="preload" as="style" href="/assets/map-total-compact-r348.css?cache-bust=1">
 </body>
 </html>

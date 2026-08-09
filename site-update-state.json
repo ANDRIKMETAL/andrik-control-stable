@@ -1,14 +1,14 @@
 {
   "schema": 1,
-  "updaterVersion": "55.00-r345",
+  "updaterVersion": "55.00-r347",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786282163944-b0c7d046eb",
-  "release": "R347",
-  "archiveName": "R347-R346-DEFAULT-ECOSYSTEM-MAP-SAFE-FULL.zip",
-  "sourceHead": "80b313aeb55baf8e909d6c28aae6f21288f3f336",
-  "backupSha": "80b313aeb55baf8e909d6c28aae6f21288f3f336",
-  "backupTag": "control-backup-20260809132919-80b313a-r347-70c63",
+  "operationId": "publish-1786282243220-ae45522e15",
+  "release": "R348",
+  "archiveName": "R348-R347-COMPACT-TOTAL-BADGE-SAFE-FULL.zip",
+  "sourceHead": "b2a02a99f770c24d244d74b0a530fe3c098687a7",
+  "backupSha": "b2a02a99f770c24d244d74b0a530fe3c098687a7",
+  "backupTag": "control-backup-20260809133039-b2a02a9-r348-6f4ab",
   "autoRecovery": true,
-  "generatedAt": "2026-08-09T13:29:23.944Z"
+  "generatedAt": "2026-08-09T13:30:43.220Z"
 }
