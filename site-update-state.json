@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r342",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786279979493-bf8d3182be",
+  "operationId": "publish-1786280590813-bb12c8634a",
   "release": "R342",
-  "archiveName": "R343-R342-COUNTRY-CLEAN-WEEK-STATS-SMOOTH-SAFE-FULL.zip",
-  "sourceHead": "3d0e3b164fc29ef73738fc6bca4f5e7212429224",
-  "backupSha": "3d0e3b164fc29ef73738fc6bca4f5e7212429224",
-  "backupTag": "control-backup-20260809125255-3d0e3b1-r342-5b6dd",
+  "archiveName": "R344-R343-DIRECT-COUNTRY-FAST-MAP-BUTTON-FIT-SAFE-FULL.zip",
+  "sourceHead": "6fb6c32de316789d910737fefa1b0449c8c8114e",
+  "backupSha": "6fb6c32de316789d910737fefa1b0449c8c8114e",
+  "backupTag": "control-backup-20260809130306-6fb6c32-r342-dd1b2",
   "autoRecovery": true,
-  "generatedAt": "2026-08-09T12:52:59.493Z"
+  "generatedAt": "2026-08-09T13:03:10.813Z"
 }

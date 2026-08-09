@@ -237,6 +237,7 @@
   });
 
   const labelObserver=new MutationObserver(()=>{
+    if(!isLandscape())return;
     clearTimeout(updateTimer);
     updateTimer=setTimeout(()=>{updateLabel();if(activeCountry)followLabel(420)},20);
   });

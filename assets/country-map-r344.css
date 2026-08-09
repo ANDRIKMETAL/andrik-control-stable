@@ -1,0 +1,282 @@
+/* ANDRIK R344 — two-step WORLD -> FOCUS -> COUNTRY map transition. */
+body.analytics-admin-page.analytics-v54-46-page.is-country-focus-active .analytics-map-pane{
+  overflow-y:auto!important;
+  overflow-x:hidden!important;
+  -webkit-overflow-scrolling:touch!important;
+  overscroll-behavior-y:contain!important;
+  touch-action:pan-y!important;
+  padding-bottom:calc(82px + env(safe-area-inset-bottom))!important;
+}
+body.analytics-admin-page.analytics-v54-46-page.is-country-focus-active .analytics-map-top{
+  overflow:visible!important;
+  padding-bottom:12px!important;
+}
+body.analytics-admin-page.analytics-v54-46-page.is-country-focus-active #mapEndPullZone{
+  display:none!important;
+  pointer-events:none!important;
+  height:0!important;
+  min-height:0!important;
+  max-height:0!important;
+  overflow:hidden!important;
+}
+
+/* First tap keeps the normal WORLD map zoom. Only the second tap enters the real country map. */
+body.analytics-admin-page.analytics-v54-46-page.is-country-deep-active #worldMap .world-map-canvas,
+body.analytics-admin-page.analytics-v54-46-page.is-country-deep-active #worldMap .world-map-stage{
+  height:250px!important;
+  min-height:250px!important;
+  max-height:250px!important;
+}
+body.analytics-admin-page.analytics-v54-46-page.is-country-deep-active #worldMap .world-map-stage{
+  transform:none!important;
+  left:0!important;
+  top:0!important;
+}
+body.analytics-admin-page.analytics-v54-46-page.is-country-deep-active #worldMap .world-map-stage>img,
+body.analytics-admin-page.analytics-v54-46-page.is-country-deep-active #worldMap .world-map-stage>.world-map-dot,
+body.analytics-admin-page.analytics-v54-46-page.is-country-deep-active #worldMap .world-map-stage>.world-map-city-dot,
+body.analytics-admin-page.analytics-v54-46-page.is-country-deep-active #worldMap .country-focus-center-pulse-r339{
+  opacity:0!important;
+  visibility:hidden!important;
+  transition:opacity .18s ease!important;
+}
+
+.country-map-r344{
+  display:none;
+  position:absolute;
+  inset:0;
+  z-index:9;
+  overflow:hidden;
+  border-radius:18px;
+  background:
+    radial-gradient(circle at 50% 48%,rgba(20,74,105,.36),rgba(4,12,20,.94) 64%),
+    linear-gradient(180deg,#071723,#031019);
+  transform-origin:center center;
+}
+body.analytics-admin-page.is-country-deep-active #worldMap .country-map-r344{
+  display:block!important;
+  animation:r344CountryEnter .12s ease-out both;
+}
+.country-map-r344.is-leaving{display:block!important;animation:r344CountryLeave .14s ease both!important}
+.country-map-r344::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  opacity:.30;
+  background:
+    repeating-linear-gradient(90deg,transparent 0,transparent calc(20% - 1px),rgba(119,206,255,.10) calc(20% - 1px),rgba(119,206,255,.10) 20%),
+    repeating-linear-gradient(180deg,transparent 0,transparent calc(20% - 1px),rgba(119,206,255,.10) calc(20% - 1px),rgba(119,206,255,.10) 20%);
+}
+.country-map-r344 svg{position:absolute;inset:8px;width:calc(100% - 16px);height:calc(100% - 16px);overflow:visible}
+.country-map-r344 .country-shape-r344{
+  fill:rgba(21,62,82,.76);
+  stroke:#92dbff;
+  stroke-width:4;
+  vector-effect:non-scaling-stroke;
+  filter:drop-shadow(0 0 7px rgba(83,197,255,.42));
+}
+.country-map-r344[data-layer="site"] .country-shape-r344{stroke:#74efb1;filter:drop-shadow(0 0 7px rgba(86,236,167,.42))}
+.country-map-r344[data-layer="music"] .country-shape-r344{stroke:#ffd86b;filter:drop-shadow(0 0 7px rgba(255,201,77,.42))}
+.country-map-r344[data-layer="push"] .country-shape-r344{stroke:#d5a8ff;filter:drop-shadow(0 0 7px rgba(190,132,255,.44))}
+.country-map-r344[data-layer="all"] .country-shape-r344{stroke:#e7fbff;filter:drop-shadow(0 0 8px rgba(132,229,255,.48))}
+.country-map-r344 .country-point-r344{fill:#a9edff;stroke:rgba(255,255,255,.72);stroke-width:2;transform-box:fill-box;transform-origin:center;animation:r344PointPulse 1.8s ease-in-out infinite}
+.country-map-r344[data-layer="site"] .country-point-r344{fill:#7af0b2}
+.country-map-r344[data-layer="music"] .country-point-r344{fill:#ffd35e}
+.country-map-r344[data-layer="push"] .country-point-r344{fill:#d6a7ff}
+.country-map-r344 .country-point-r344.is-empty{fill:#ffd84f;stroke:#fff0a0;animation:r344EmptyPulse 1.25s ease-in-out infinite;filter:drop-shadow(0 0 12px rgba(255,206,65,.98))}
+.country-map-r344 .country-map-label-r344{
+  position:absolute;
+  left:50%;
+  top:10px;
+  transform:translateX(-50%);
+  max-width:min(64%,250px);
+  padding:6px 12px;
+  border-radius:999px;
+  background:rgba(4,11,17,.84);
+  border:1px solid rgba(142,218,255,.30);
+  color:#f4fbff;
+  font:900 11px/1 Arial,Helvetica,sans-serif;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+  z-index:12;
+}
+.country-map-r344 .country-map-empty-label-r344{
+  position:absolute;
+  left:50%;
+  bottom:14px;
+  transform:translateX(-50%);
+  padding:5px 9px;
+  border-radius:999px;
+  background:rgba(4,10,16,.78);
+  color:#eaf8ff;
+  font:800 10px/1 Arial,Helvetica,sans-serif;
+  white-space:nowrap;
+}
+@keyframes r344CountryEnter{0%{opacity:.35;transform:scale(.965)}100%{opacity:1;transform:scale(1)}}
+@keyframes r344CountryLeave{0%{opacity:1}100%{opacity:0}}
+@keyframes r344PointPulse{0%,100%{opacity:.65;transform:scale(.84)}50%{opacity:1;transform:scale(1.22)}}
+@keyframes r344EmptyPulse{0%,100%{opacity:.72;transform:scale(.72)}50%{opacity:1;transform:scale(1.42)}}
+
+/* Yellow selected-country card stays compact at both focus stages. */
+body.analytics-admin-page.analytics-v54-46-page.is-country-focus-active #worldCountries{margin:5px 0 0!important}
+body.analytics-admin-page.analytics-v54-46-page.is-country-focus-active #worldCountries .world-country-button.is-selected,
+body.analytics-admin-page.analytics-v54-46-page.is-country-focus-active #worldCountries .world-country-selected-card{
+  min-height:60px!important;
+  max-height:76px!important;
+  overflow:hidden!important;
+  padding:7px 11px!important;
+  border-radius:17px!important;
+}
+body.analytics-admin-page.analytics-v54-46-page.is-country-focus-active #worldCountries .ecosystem-country-detail,
+body.analytics-admin-page.analytics-v54-46-page.is-country-focus-active #worldCountries .world-country-selected-card .ecosystem-country-detail{display:none!important}
+body.analytics-admin-page.analytics-v54-46-page.is-country-focus-active #worldCountries .country-weekly-gain{
+  margin-top:2px!important;
+  padding-top:3px!important;
+  border-top:1px solid rgba(255,221,91,.18)!important;
+}
+
+/* Action buttons remain responsive and fully visible. */
+body.analytics-admin-page.analytics-v54-46-page.is-country-focus-active .analytics-map-pane #mapFocusActions.map-focus-actions,
+body.analytics-admin-page.analytics-v54-46-page[data-analytics-page="map"].is-country-focus-active .analytics-map-top.has-country-focus>#mapFocusActions,
+body.analytics-admin-page.analytics-v54-46-page[data-analytics-page="map"].is-country-focus-active .analytics-map-top.has-country-focus>#mapFocusActions[hidden]{
+  position:static!important;
+  display:grid!important;
+  visibility:visible!important;
+  opacity:1!important;
+  pointer-events:auto!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:7px!important;
+  width:100%!important;
+  max-width:none!important;
+  height:auto!important;
+  min-height:0!important;
+  margin:6px 0 12px!important;
+  padding:0!important;
+  overflow:visible!important;
+}
+body.analytics-admin-page.analytics-v54-46-page.is-country-focus-active .analytics-map-pane #mapFocusActions.map-focus-actions .map-focus-action,
+body.analytics-admin-page.analytics-v54-46-page[data-analytics-page="map"].is-country-focus-active .analytics-map-top.has-country-focus>#mapFocusActions .map-focus-action{
+  box-sizing:border-box!important;
+  height:40px!important;
+  min-height:40px!important;
+  max-height:40px!important;
+  padding:5px 7px!important;
+  border-radius:15px!important;
+  font-size:.72rem!important;
+  line-height:1.04!important;
+  white-space:normal!important;
+  overflow:hidden!important;
+  touch-action:manipulation!important;
+}
+
+@media (max-width:480px) and (orientation:portrait){
+  body.analytics-admin-page.analytics-v54-46-page.is-country-deep-active #worldMap .world-map-canvas,
+  body.analytics-admin-page.analytics-v54-46-page.is-country-deep-active #worldMap .world-map-stage{height:225px!important;min-height:225px!important;max-height:225px!important}
+  .country-map-r344 .country-map-label-r344{font-size:10px;max-width:61%}
+  .country-map-r344 .country-map-week-r344{font-size:9px}
+  body.analytics-admin-page.analytics-v54-46-page.is-country-focus-active .analytics-map-pane #mapFocusActions.map-focus-actions .map-focus-action{font-size:.68rem!important;height:38px!important;min-height:38px!important;max-height:38px!important}
+}
+@media screen and (orientation:landscape){
+  body.analytics-admin-page.analytics-v54-46-page.is-country-deep-active #worldMap .world-map-canvas,
+  body.analytics-admin-page.analytics-v54-46-page.is-country-deep-active #worldMap .world-map-stage{height:min(58vh,330px)!important;min-height:220px!important;max-height:330px!important}
+  body.analytics-admin-page.analytics-v54-46-page.is-country-focus-active #worldCountries,
+  body.analytics-admin-page.analytics-v54-46-page.is-country-focus-active #mapFocusActions{max-width:660px!important;margin-left:auto!important;margin-right:auto!important}
+}
+@media(prefers-reduced-motion:reduce){.country-map-r344,.country-map-r344 .country-point-r344{animation:none!important}}
+
+
+/* R344 — keep the map clean while a country is selected. */
+body.analytics-admin-page.analytics-v54-46-page.is-country-focus-active #countryGrowthPanel,
+body.analytics-admin-page.analytics-v54-46-page.is-country-deep-active #countryGrowthPanel{display:none!important;}
+body.analytics-admin-page.analytics-v54-46-page.is-country-focus-active .world-country-button.is-selected .country-weekly-gain,
+body.analytics-admin-page.analytics-v54-46-page.is-country-deep-active .world-country-button.is-selected .country-weekly-gain,
+body.analytics-admin-page.analytics-v54-46-page.is-country-focus-active .world-country-selected-card .country-weekly-gain,
+body.analytics-admin-page.analytics-v54-46-page.is-country-deep-active .world-country-selected-card .country-weekly-gain{display:grid!important;visibility:visible!important;opacity:1!important;}
+body.analytics-admin-page.analytics-v54-46-page.is-country-focus-active .world-country-button.is-selected,
+body.analytics-admin-page.analytics-v54-46-page.is-country-deep-active .world-country-button.is-selected{overflow:visible!important;}
+
+
+/* R344 — direct WORLD -> COUNTRY and guaranteed room for both bottom actions. */
+@media screen and (orientation:portrait){
+  body.analytics-admin-page.analytics-v54-46-page.is-country-focus-active .analytics-map-pane{
+    overflow-y:auto!important;
+    overflow-x:hidden!important;
+    -webkit-overflow-scrolling:touch!important;
+    overscroll-behavior-y:contain!important;
+    touch-action:pan-y!important;
+    padding-bottom:calc(110px + env(safe-area-inset-bottom))!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page.is-country-focus-active .analytics-map-pane>.analytics-map-pane-wrap.r76-portrait-locked,
+  body.analytics-admin-page.analytics-v54-46-page.is-country-focus-active .analytics-map-pane>.analytics-pane-wrap.analytics-map-pane-wrap.r76-portrait-locked{
+    position:relative!important;
+    min-height:0!important;
+    height:auto!important;
+    max-height:none!important;
+    padding-bottom:calc(96px + env(safe-area-inset-bottom))!important;
+    overflow:visible!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page.is-country-focus-active .analytics-map-pane>.analytics-map-pane-wrap.r76-portrait-locked>.analytics-map-top,
+  body.analytics-admin-page.analytics-v54-46-page.is-country-focus-active .analytics-map-pane>.analytics-pane-wrap.analytics-map-pane-wrap.r76-portrait-locked>.analytics-map-top{
+    position:relative!important;
+    top:auto!important;
+    left:auto!important;
+    right:auto!important;
+    bottom:auto!important;
+    width:100%!important;
+    max-width:100%!important;
+    height:auto!important;
+    max-height:none!important;
+    min-height:0!important;
+    transform:none!important;
+    overflow:visible!important;
+    padding-bottom:18px!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page.is-country-focus-active #mapFocusActions.map-focus-actions,
+  body.analytics-admin-page.analytics-v54-46-page.is-country-focus-active #mapFocusActions.map-focus-actions[hidden]{
+    display:grid!important;
+    position:relative!important;
+    z-index:20!important;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    width:100%!important;
+    margin:8px 0 28px!important;
+    padding:0 0 8px!important;
+    overflow:visible!important;
+    visibility:visible!important;
+    opacity:1!important;
+    pointer-events:auto!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page.is-country-focus-active #mapFocusActions .map-focus-action{
+    box-sizing:border-box!important;
+    min-width:0!important;
+    width:100%!important;
+    height:42px!important;
+    min-height:42px!important;
+    max-height:42px!important;
+    padding:6px 7px!important;
+    overflow:visible!important;
+    white-space:normal!important;
+    font-size:.72rem!important;
+    line-height:1.06!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page.is-country-deep-active #worldMap .country-map-r344 .country-shape-r344{
+    filter:none!important;
+  }
+}
+
+/* R344 final portrait fit: weekly yellow card and both actions are natural-height rows. */
+@media screen and (orientation:portrait){
+  body.analytics-admin-page.analytics-v54-46-page.is-country-focus-active .analytics-map-top{
+    grid-template-rows:max-content max-content max-content max-content!important;
+    align-content:start!important;
+    overflow:visible!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page.is-country-focus-active #worldCountries .world-country-button.is-selected,
+  body.analytics-admin-page.analytics-v54-46-page.is-country-deep-active #worldCountries .world-country-button.is-selected{
+    max-height:none!important;
+    overflow:visible!important;
+  }
+}

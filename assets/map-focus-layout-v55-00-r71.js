@@ -532,7 +532,7 @@
   rail.addEventListener('pointerup',finishRail);
   rail.addEventListener('pointercancel',finishRail);
 
-  const observer=new MutationObserver(schedule);
+  const observer=new MutationObserver(()=>{if(isLandscape())schedule()});
   observer.observe(map,{childList:true,subtree:true,attributes:true,attributeFilter:['class','style','data-focus-country','aria-current']});
   observer.observe(list,{childList:true,subtree:true,attributes:true,attributeFilter:['class','data-selected-country','data-country','data-code','aria-pressed']});
   observer.observe(document.body,{attributes:true,attributeFilter:['class','data-analytics-page']});
@@ -545,9 +545,10 @@
     overviewScrollTop=safe;
     updateFrame();updateRail();
   },{passive:true});
-  map.addEventListener('transitionend',()=>{updateFrame();updateRail();if(isFocused()&&!focusTrackerRaf&&lockedFocusScrollTop===null)startFocusTracking({force:true})});
+  map.addEventListener('transitionend',()=>{if(!isLandscape())return;updateFrame();updateRail();if(isFocused()&&!focusTrackerRaf&&lockedFocusScrollTop===null)startFocusTracking({force:true})});
   window.addEventListener('andrik:country-growth-data',event=>ingest(event.detail));
   window.addEventListener('andrik:country-focus-changed',event=>{
+    if(!isLandscape())return;
     const detail=event?.detail||{};
     const next=detail.focused?String(detail.country||'').trim():'';
     if(next!==forcedCountry){
@@ -580,6 +581,7 @@
   if(typeof landscapeQuery.addEventListener==='function')landscapeQuery.addEventListener('change',()=>{if(isPortrait())recoverPortraitAfterRotation();schedule()});
   window.addEventListener('pageshow',schedule,{passive:true});
   document.addEventListener('click',event=>{
+    if(!isLandscape())return;
     if(event.target.closest?.('.world-map-dot,.world-country-button,.world-country-selected-card,#landscapeCountryCardR69')){
       setTimeout(schedule,0);setTimeout(schedule,70);setTimeout(()=>{fillCard();updateFrame();if(isFocused()&&lockedFocusScrollTop===null&&!focusTrackerRaf)startFocusTracking({force:true})},220);
     }
@@ -590,119 +592,4 @@
   schedule();
   setTimeout(schedule,250);
   setTimeout(schedule,900);
-})();
-
-
-
-/* R71F — robust portrait viewport stabilizer.
-   It compensates the real layout shift regardless of which element owns scrolling. */
-(()=>{
-  'use strict';
-  if(window.__andrikR71FPortraitStaticReady)return;
-  window.__andrikR71FPortraitStaticReady=true;
-
-  const pane=document.querySelector('.analytics-map-pane');
-  const viewport=document.getElementById('analyticsSwipeViewport');
-  const wrap=pane?.querySelector('.analytics-map-pane-wrap');
-  const card=pane?.querySelector('.analytics-map-top');
-  if(!pane||!card)return;
-
-  const isPortrait=()=>window.matchMedia?.('(orientation:portrait)')?.matches===true;
-  const onMap=()=>document.body.dataset.analyticsPage==='map';
-  let targetTop=0;
-  let shift=0;
-  let lockUntil=0;
-  let raf=0;
-  let scrollSnapshot=null;
-
-  const readScroll=()=>({
-    winX:window.scrollX||0,
-    winY:window.scrollY||0,
-    doc:document.scrollingElement?.scrollTop||0,
-    pane:pane.scrollTop||0,
-    viewport:viewport?.scrollTop||0,
-    wrap:wrap?.scrollTop||0
-  });
-
-  const restoreScroll=s=>{
-    if(!s)return;
-    if(document.scrollingElement)document.scrollingElement.scrollTop=s.doc;
-    pane.scrollTop=s.pane;
-    if(viewport)viewport.scrollTop=s.viewport;
-    if(wrap)wrap.scrollTop=s.wrap;
-    if(Math.abs((window.scrollY||0)-s.winY)>.5){
-      try{window.scrollTo({left:s.winX,top:s.winY,behavior:'instant'})}
-      catch(_){window.scrollTo(s.winX,s.winY)}
-    }
-  };
-
-  function capture(){
-    if(!isPortrait()||!onMap())return;
-    card.style.setProperty('--r71f-card-shift',`${shift.toFixed(2)}px`);
-    targetTop=card.getBoundingClientRect().top;
-    scrollSnapshot=readScroll();
-  }
-
-  function stop(){
-    if(raf)cancelAnimationFrame(raf);
-    raf=0;
-  }
-
-  function tick(now){
-    if(!isPortrait()||!onMap()||now>=lockUntil){
-      stop();
-      return;
-    }
-    restoreScroll(scrollSnapshot);
-    const current=card.getBoundingClientRect().top;
-    const delta=targetTop-current;
-    if(Math.abs(delta)>.08){
-      shift+=delta;
-      card.style.setProperty('--r71f-card-shift',`${shift.toFixed(2)}px`);
-    }
-    raf=requestAnimationFrame(tick);
-  }
-
-  function hold(ms=1250){
-    if(!isPortrait()||!onMap())return;
-    stop();
-    lockUntil=performance.now()+ms;
-    raf=requestAnimationFrame(tick);
-  }
-
-  document.addEventListener('pointerdown',event=>{
-    if(!isPortrait()||!onMap())return;
-    if(event.target.closest?.('.world-map-dot,.world-country-button,.world-country-selected-card')){
-      capture();
-      hold(1450);
-    }
-  },true);
-
-  window.addEventListener('andrik:country-focus-changed',()=>{
-    if(!isPortrait()||!onMap())return;
-    if(!targetTop)capture();
-    hold(1500);
-  });
-
-  const observer=new MutationObserver(mutations=>{
-    if(!isPortrait()||!onMap()||!lockUntil)return;
-    const relevant=mutations.some(m=>m.target===card||card.contains(m.target)||m.target===document.body);
-    if(relevant)hold(Math.max(700,lockUntil-performance.now()));
-  });
-  observer.observe(card,{subtree:true,childList:true,attributes:true,attributeFilter:['class','hidden']});
-  observer.observe(document.body,{attributes:true,attributeFilter:['class','data-analytics-page']});
-
-  window.addEventListener('orientationchange',()=>{
-    stop();
-    targetTop=0;
-    shift=0;
-    scrollSnapshot=null;
-    card.style.removeProperty('--r71f-card-shift');
-  },{passive:true});
-  window.addEventListener('pageshow',()=>{
-    targetTop=0;
-    shift=0;
-    scrollSnapshot=null;
-    card.style.removeProperty('--r71f-card-shift');
-  },{passive:true});
 })();

@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="ru" translate="no" class="notranslate"><head>
-<meta name="andrik-control-release" content="R342">
+<meta name="andrik-control-release" content="R344">
 <link rel="stylesheet" href="/assets/control-sleep-mode-r193.css?v=55.00-r193"><script defer src="/assets/control-sleep-mode-r193.js?v=55.00-r193"></script>
 
 <meta name="google" content="notranslate"><meta charset="utf-8"/>
@@ -1453,50 +1453,63 @@ html.live-web-ai-resume-lock .analytics-swipe-viewport{overflow:hidden!important
   let lastWorldMapOrientation='';
   const WORLD_ZOOM_LEVELS=[2.38];
   const isLandscapeMode=()=>window.matchMedia?.('(orientation: landscape)')?.matches===true;
+  function returnToWorldMap(map,list){
+    selectedWorldCountry='';
+    selectedWorldCountryDetailsExpanded=false;
+    countriesExpanded=false;
+    selectedWorldCountryZoomStep=0;
+    selectedWorldCountryZoomDirection=1;
+    selectedWorldCountryDeep=false;
+    document.body.classList.remove('is-country-deep-active','is-country-focus-active');
+    const root=map?.closest('.world-map-card,.analytics-map-top');
+    root?.classList.remove('has-country-focus');
+    if(map){
+      delete map.dataset.countryDeep;
+      delete map.dataset.focusCountry;
+      map.dataset.zoomLevel='X1';
+      map.classList.remove('is-country-focused');
+      const stage=map.querySelector('.world-map-stage');
+      stage?.style.removeProperty('--focus-x');
+      stage?.style.removeProperty('--focus-y');
+      stage?.style.removeProperty('--focus-tx');
+      stage?.style.removeProperty('--focus-ty');
+      stage?.style.removeProperty('--focus-zoom');
+    }
+    if(list){
+      delete list.dataset.selectedCountry;
+      list.classList.remove('has-selected-country','has-expanded-country-details','is-country-focus-mode');
+    }
+    window.dispatchEvent(new CustomEvent('andrik:country-deep-changed',{detail:{active:false,country:''}}));
+    window.dispatchEvent(new CustomEvent('andrik:country-focus-changed',{detail:{focused:false,country:''}}));
+    if(lastWorldMapCountries.length){
+      renderWorldMap(lastWorldMapCountries,lastWorldMapOptions);
+      return;
+    }
+    applyWorldCountrySelection(map,list,'');
+  }
   function cycleWorldCountrySelection(map,list,country){
     const next=String(country||'');
     if(!next){
-      selectedWorldCountry='';
+      returnToWorldMap(map,list);
+      return;
+    }
+    /* R344: one tap on the world map opens the standalone country map immediately.
+       No intermediate zoom stage: this removes the double transition and the main source of UI lag. */
+    if(next!==selectedWorldCountry || !selectedWorldCountryDeep){
+      selectedWorldCountry=next;
       selectedWorldCountryDetailsExpanded=false;
       countriesExpanded=false;
       selectedWorldCountryZoomStep=0;
       selectedWorldCountryZoomDirection=1;
-      selectedWorldCountryDeep=false;
-      document.body.classList.remove('is-country-deep-active');
-      if(map)delete map.dataset.countryDeep;
-      window.dispatchEvent(new CustomEvent('andrik:country-deep-changed',{detail:{active:false,country:''}}));
-      if(isLandscapeMode()&&lastWorldMapCountries.length){renderWorldMap(lastWorldMapCountries,lastWorldMapOptions);return;}
-      applyWorldCountrySelection(map,list,'');
-      return;
-    }
-    if(next!==selectedWorldCountry){
-      selectedWorldCountry=next;
-      selectedWorldCountryDetailsExpanded=false;
-      selectedWorldCountryZoomStep=1;
-      selectedWorldCountryZoomDirection=1;
-      selectedWorldCountryDeep=false;
-      document.body.classList.remove('is-country-deep-active');
-      if(map)delete map.dataset.countryDeep;
-      window.dispatchEvent(new CustomEvent('andrik:country-deep-changed',{detail:{active:false,country:next}}));
-      /* R71D: keep the current map DOM when a country is selected in landscape.
-         Re-rendering the whole map caused a one-frame upward jump/blank flash. */
+      selectedWorldCountryDeep=true;
+      document.body.classList.add('is-country-deep-active');
+      if(map)map.dataset.countryDeep='true';
       applyWorldCountrySelection(map,list,next);
-      if(isLandscapeMode())window.dispatchEvent(new CustomEvent('andrik:country-focus-changed',{detail:{focused:true,country:next}}));
+      window.dispatchEvent(new CustomEvent('andrik:country-deep-changed',{detail:{active:true,country:next}}));
       return;
     }
-    /* R342: two-step country navigation.
-       1st tap = focus/zoom the selected country on the WORLD map.
-       2nd tap on the same country = open the standalone country silhouette.
-       Another tap returns to the focused world-map step; the dedicated "Мир" button clears selection. */
-    selectedWorldCountryDeep=!selectedWorldCountryDeep;
-    document.body.classList.toggle('is-country-deep-active',selectedWorldCountryDeep);
-    if(map){
-      if(selectedWorldCountryDeep)map.dataset.countryDeep='true';
-      else delete map.dataset.countryDeep;
-    }
-    window.dispatchEvent(new CustomEvent('andrik:country-deep-changed',{detail:{active:selectedWorldCountryDeep,country:selectedWorldCountry}}));
-    applyWorldCountrySelection(map,list,selectedWorldCountry);
-    return;
+    /* Tapping the already-open country again is a second, simple route back to the world. */
+    returnToWorldMap(map,list);
   }
   function applyWorldCountrySelection(map,list,country){
     const next=String(country||'');
@@ -1505,8 +1518,8 @@ html.live-web-ai-resume-lock .analytics-swipe-viewport{overflow:hidden!important
       selectedWorldCountryZoomDirection=1;
       selectedWorldCountryZoomStep=next?1:0;
       if(!next)selectedWorldCountryDetailsExpanded=false;
-    }else if(next&&!selectedWorldCountryZoomStep)selectedWorldCountryZoomStep=1;
-    const isZoomed=Boolean(selectedWorldCountry&&selectedWorldCountryZoomStep);
+    }else if(next&&!selectedWorldCountryZoomStep&&!selectedWorldCountryDeep)selectedWorldCountryZoomStep=1;
+    const isZoomed=Boolean(selectedWorldCountry&&!selectedWorldCountryDeep&&selectedWorldCountryZoomStep);
     const zoomLabel=isZoomed?2:1;
     const stage=map?.querySelector('.world-map-stage');
     map?.querySelectorAll('.world-map-dot[data-country]').forEach(marker=>{
@@ -1768,7 +1781,8 @@ html.live-web-ai-resume-lock .analytics-swipe-viewport{overflow:hidden!important
   window.__andrikWorldMapRuntime={
     render:renderWorldMap,
     getSelection:()=>selectedWorldCountry,
-    clearSelection:()=>{selectedWorldCountry='';selectedWorldCountryDetailsExpanded=false;countriesExpanded=false;selectedWorldCountryZoomStep=0;selectedWorldCountryZoomDirection=1;selectedWorldCountryDeep=false;document.body.classList.remove('is-country-deep-active');const m=document.getElementById('worldMap');if(m)delete m.dataset.countryDeep;window.dispatchEvent(new CustomEvent('andrik:country-deep-changed',{detail:{active:false,country:''}}));},
+    clearSelection:()=>returnToWorldMap(document.getElementById('worldMap'),document.getElementById('worldCountries')),
+    goWorld:()=>returnToWorldMap(document.getElementById('worldMap'),document.getElementById('worldCountries')),
     isDeep:()=>selectedWorldCountryDeep,
     translateCountry,
     countryFlag,
@@ -2233,7 +2247,7 @@ html.live-web-ai-resume-lock .analytics-swipe-viewport{overflow:hidden!important
 <script defer src="/assets/country-focus-v54-84.js?v=54.84"></script>
 <script defer src="/assets/landscape-no-growth-v55-00-r37.js?v=55.00-r37"></script>
 <script defer src="/assets/country-activity-r337.js?v=55.00-r337"></script>
-<script defer src="/assets/country-focus-compact-r339.js?v=55.00-r340"></script>
+
 <script defer src="/assets/youtube-admin-v54-89.js?v=54.89"></script><script defer src="/assets/youtube-chart-interaction-v54-91.js?v=54.91"></script>
 
 <script defer src="/assets/control-status-eye-v55-00-r88.js?v=55.00-r88"></script><script defer src="/assets/control-version-v55-00-final.js?v=55.00-final"></script><script defer src="/assets/map-monthly-r337.js?v=55.00-r337"></script>
@@ -3981,7 +3995,7 @@ body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #mapFocusAct
 <link rel="stylesheet" href="/assets/country-focus-compact-r339.css?v=55.00-r340">
 <script defer src="/assets/ecosystem-map-r337.js?v=55.00-r337"></script>
 <script defer src="/assets/country-shapes-r341.js?v=55.00-r341"></script>
-<link rel="stylesheet" href="/assets/country-map-r343.css?v=55.00-r343">
-<script defer src="/assets/country-map-r343.js?v=55.00-r343"></script>
-<script defer src="/assets/control-version-sync-r342.js?v=55.00-r342"></script>
+<link rel="stylesheet" href="/assets/country-map-r344.css?v=55.00-r344">
+<script defer src="/assets/country-map-r344.js?v=55.00-r344"></script>
+<script defer src="/assets/control-version-sync-r344.js?v=55.00-r344"></script>
 </body></html>

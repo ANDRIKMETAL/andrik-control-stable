@@ -7,7 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <title>Очистка Control — R342</title>
+  <title>Очистка Control — R344</title>
   <style>
     *{box-sizing:border-box}
     html,body{
@@ -143,7 +143,7 @@
 </head>
 <body>
   <main class="box">
-    <span class="badge">СТРАНИЦА ОЧИСТКИ R342</span>
+    <span class="badge">СТРАНИЦА ОЧИСТКИ R344</span>
     <h1 id="title">Чистим кэш Control</h1>
     <p id="status">Не закрывай страницу. После завершения появится кнопка открытия Control.</p>
 
@@ -247,10 +247,10 @@
       '/assets/map-monthly-r337.js?cache-bust='+stamp,
       '/assets/country-focus-compact-r339.css?cache-bust='+stamp,
       '/assets/country-focus-compact-r339.js?cache-bust='+stamp,
-      '/assets/country-shapes-r342.js?cache-bust='+stamp,
-      '/assets/country-map-r342.css?cache-bust='+stamp,
-      '/assets/country-map-r342.js?cache-bust='+stamp,
-      '/assets/control-version-sync-r342.js?cache-bust='+stamp,
+      '/assets/country-shapes-r341.js?cache-bust='+stamp,
+      '/assets/country-map-r344.css?cache-bust='+stamp,
+      '/assets/country-map-r344.js?cache-bust='+stamp,
+      '/assets/control-version-sync-r344.js?cache-bust='+stamp,
       '/player.html?cache-bust='+stamp,
       '/singles.html?cache-bust='+stamp
     ];
@@ -267,7 +267,7 @@
       }))
     );
 
-    // R342: activate YouTube WebSub immediately when the owner session is present.
+    // R344: activate YouTube WebSub immediately when the owner session is present.
     // If the session is unavailable, the normal central Cron will subscribe automatically.
     await fetch('/api/youtube/websub/subscribe',{
       method:'POST',
@@ -276,7 +276,7 @@
       headers:{'Cache-Control':'no-cache, no-store, max-age=0','Pragma':'no-cache'}
     }).catch(()=>null);
     // Also run one lightweight release check now, so a release published before
-    // R342 installation can be caught immediately without waiting for the next Cron.
+    // R344 installation can be caught immediately without waiting for the next Cron.
     await fetch('/api/automation/youtube-fast',{
       method:'POST',
       cache:'no-store',
