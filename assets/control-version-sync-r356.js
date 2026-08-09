@@ -1,12 +1,12 @@
-/* Control ANDRIK R357 — safe display-version synchronization. */
+/* Control ANDRIK R358 — safe display-version synchronization. */
 (() => {
   'use strict';
   if (window.__ANDRIK_VERSION_SYNC_R356__) return;
   window.__ANDRIK_VERSION_SYNC_R356__ = true;
 
-  const RELEASE = 'R357';
+  const RELEASE = 'R358';
   const RUNTIME = '55.00-r356';
-  const FULL = 'Live Web AI · ANDRIK · v55.00 LIVE WEB AI FINAL R357';
+  const FULL = 'Live Web AI · ANDRIK · v55.00 LIVE WEB AI FINAL R358';
   let applying = false;
 
   const isRoot = node => node === document.documentElement || node === document.body;
@@ -61,14 +61,14 @@
 
       window.ANDRIK_CONTROL_RELEASE = Object.freeze({
         short: RELEASE,
-        number: 357,
+        number: 358,
         version: '55.00',
-        full: 'v55.00 LIVE WEB AI FINAL R357',
-        build: 'R357 SCROLL RESTORE + YOUTUBE RED RENDER + VERSION SYNC',
+        full: 'v55.00 LIVE WEB AI FINAL R358',
+        build: 'R358 SCROLL RESTORE + YOUTUBE RED RENDER + VERSION SYNC',
         date: '09.08.2026'
       });
-      window.ANDRIK_CONTROL_VERSION = '55.00 LIVE WEB AI FINAL R357';
-      window.ANDRIK_CONTROL_BUILD = 'R357 SCROLL RESTORE + YOUTUBE RED RENDER + VERSION SYNC';
+      window.ANDRIK_CONTROL_VERSION = '55.00 LIVE WEB AI FINAL R358';
+      window.ANDRIK_CONTROL_BUILD = 'R358 SCROLL RESTORE + YOUTUBE RED RENDER + VERSION SYNC';
       try { localStorage.setItem('andrik-control-display-version', RUNTIME); } catch (_) {}
       window.dispatchEvent(new CustomEvent('andrik-control-version-ready', {detail: window.ANDRIK_CONTROL_RELEASE}));
     } finally {

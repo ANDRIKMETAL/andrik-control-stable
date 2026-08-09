@@ -1,11 +1,11 @@
-R357 — SCROLL RESTORE + YOUTUBE RED RENDER + VERSION SYNC
+R358 — SCROLL RESTORE + YOUTUBE RED RENDER + VERSION SYNC
 
 Исправлено:
 1) Возвращён именно рабочий механизм скролла списка стран из R354. R355 ссылался на отсутствующие country-list-scroll-r355.css/js, поэтому скролл пропал.
 2) Верхняя дублирующая кнопка «Скрыть список» убрана из генерации списка; нижняя кнопка сохранена.
 3) Красно-розовая идентификация YouTube перенесена прямо в renderWorldMap: YouTube-маркеры получают класс r356-youtube-dot в момент создания, а не перекрашиваются после рендера.
 4) Красно-розовый pulse закреплён финальным CSS с высокой специфичностью.
-5) Версия приложения обновлена до R357: _worker owner-status, meta, статические footer/split fallback и новый control-version-sync-r356.js.
+5) Версия приложения обновлена до R358: _worker owner-status, meta, статические footer/split fallback и новый control-version-sync-r356.js.
 6) Исправлен number в объекте версии: 356.
 
 База: рабочая R354, чтобы не наследовать регрессию скролла R355.

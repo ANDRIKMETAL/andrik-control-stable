@@ -1,0 +1,36 @@
+/* ANDRIK R358 — permanent bright yellow center anchor on every selected country. */
+@keyframes andrikCountryAnchorR358{
+  0%,100%{
+    opacity:.88;
+    transform:scale(.82);
+    filter:drop-shadow(0 0 9px #ffe600) drop-shadow(0 0 19px rgba(255,205,0,.98));
+  }
+  50%{
+    opacity:1;
+    transform:scale(1.38);
+    filter:drop-shadow(0 0 13px #fff05a) drop-shadow(0 0 30px rgba(255,207,0,1)) drop-shadow(0 0 44px rgba(255,148,0,.72));
+  }
+}
+@keyframes andrikCountryAnchorHaloR358{
+  0%{opacity:.12;transform:scale(.48)}
+  65%{opacity:.72;transform:scale(1.23)}
+  100%{opacity:0;transform:scale(1.72)}
+}
+#worldMap .country-map-r352 .country-center-anchor-r358{
+  fill:#ffe600!important;
+  stroke:#fffbd0!important;
+  stroke-width:4!important;
+  transform-box:fill-box!important;
+  transform-origin:center!important;
+  animation:andrikCountryAnchorR358 .92s ease-in-out infinite!important;
+  pointer-events:none!important;
+}
+#worldMap .country-map-r352 .country-center-anchor-halo-r358{
+  fill:rgba(255,225,0,.18)!important;
+  stroke:rgba(255,238,88,.94)!important;
+  stroke-width:3!important;
+  transform-box:fill-box!important;
+  transform-origin:center!important;
+  animation:andrikCountryAnchorHaloR358 .92s ease-out infinite!important;
+  pointer-events:none!important;
+}

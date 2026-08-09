@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786287359880-cb743af443",
-  "release": "R357",
-  "archiveName": "R357-R356-YOUTUBE-RED-HARD-OVERRIDE-SAFE-FULL.zip",
-  "sourceHead": "b465dd52d60a9ea48dd593430650b253f4287b6a",
-  "backupSha": "b465dd52d60a9ea48dd593430650b253f4287b6a",
-  "backupTag": "control-backup-20260809145555-b465dd5-r357-cda73",
+  "operationId": "publish-1786288743227-a880a9b5a2",
+  "release": "R358",
+  "archiveName": "R358-R357-YELLOW-COUNTRY-PULSE-ALL-MAPS-SAFE-FULL.zip",
+  "sourceHead": "6fd52e675b8e0ca6ef2c0d54e33967062b72a59c",
+  "backupSha": "6fd52e675b8e0ca6ef2c0d54e33967062b72a59c",
+  "backupTag": "control-backup-20260809151859-6fd52e6-r358-ba40b",
   "autoRecovery": true,
-  "generatedAt": "2026-08-09T14:55:59.880Z"
+  "generatedAt": "2026-08-09T15:19:03.227Z"
 }
