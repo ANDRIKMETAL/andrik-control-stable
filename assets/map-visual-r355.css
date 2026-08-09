@@ -1,0 +1,91 @@
+/* ANDRIK R352 — visual map identifiers. */
+/* YouTube is immediately recognizable by warm red/pink points, distinct from error-red UI. */
+#worldMap[data-ecosystem-layer="youtube"] .world-map-dot i{
+  background:#ff7b86!important;
+  box-shadow:0 0 0 5px rgba(255,107,122,.11),0 0 21px rgba(255,92,112,.93),0 0 34px rgba(255,62,89,.34)!important;
+}
+#worldMap[data-ecosystem-layer="youtube"] .world-map-city-dot i{
+  background:#ff8791!important;
+  box-shadow:0 0 0 2px rgba(255,255,255,.13),0 0 13px rgba(255,92,112,.94)!important;
+}
+/* Total badge: compact on both world and selected-country maps. */
+body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap .world-map-total{
+  left:7px!important;top:7px!important;right:auto!important;bottom:auto!important;
+  min-width:0!important;width:auto!important;max-width:78px!important;
+  height:29px!important;min-height:29px!important;max-height:29px!important;
+  padding:0 6px!important;gap:4px!important;border-radius:13px!important;box-sizing:border-box!important;
+}
+body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap .world-map-total span{
+  font-size:.37rem!important;line-height:1!important;letter-spacing:0!important;white-space:nowrap!important;
+}
+body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap .world-map-total strong{
+  font-size:.64rem!important;line-height:1!important;letter-spacing:0!important;white-space:nowrap!important;
+}
+@media(max-width:390px) and (orientation:portrait){
+ body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap .world-map-total{max-width:72px!important;height:28px!important;min-height:28px!important;max-height:28px!important;padding:0 5px!important;gap:3px!important}
+ body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap .world-map-total span{font-size:.35rem!important}
+ body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap .world-map-total strong{font-size:.60rem!important}
+}
+
+
+/* R355 — unmistakable YouTube red, including the pulse itself (old keyframes were cyan). */
+@keyframes andrikYoutubePulseR355{
+  0%,100%{transform:scale(.94);opacity:.90;box-shadow:0 0 0 4px rgba(255,92,109,.10),0 0 17px rgba(255,76,98,.78),0 0 28px rgba(255,52,80,.30)}
+  50%{transform:scale(1.18);opacity:1;box-shadow:0 0 0 8px rgba(255,92,109,.035),0 0 26px rgba(255,73,96,.98),0 0 40px rgba(255,45,75,.42)}
+}
+#worldMap[data-ecosystem-layer="youtube"] .world-map-dot i,
+#worldMap.is-youtube-layer-r355 .world-map-dot i{
+  background:#ff6675!important;
+  border:1px solid rgba(255,215,219,.72)!important;
+  animation:andrikYoutubePulseR355 2.65s ease-in-out infinite!important;
+  filter:none!important;
+}
+#worldMap[data-ecosystem-layer="youtube"] .world-map-city-dot i,
+#worldMap.is-youtube-layer-r355 .world-map-city-dot i{
+  background:#ff7481!important;
+  border-color:rgba(255,214,219,.65)!important;
+  box-shadow:0 0 0 3px rgba(255,95,112,.10),0 0 16px rgba(255,68,91,.90)!important;
+}
+/* A very small slow drift. Keep translate(-50%,-50%) so geographic anchors never shift. */
+@keyframes andrikWorldDotDriftR355A{
+  0%,100%{transform:translate(-50%,-50%)}
+  24%{transform:translate(calc(-50% + 1.6px),calc(-50% - .8px))}
+  51%{transform:translate(calc(-50% - .8px),calc(-50% + 1.4px))}
+  76%{transform:translate(calc(-50% + .7px),calc(-50% + .5px))}
+}
+@keyframes andrikWorldDotDriftR355B{
+  0%,100%{transform:translate(-50%,-50%)}
+  32%{transform:translate(calc(-50% - 1.4px),calc(-50% + .7px))}
+  67%{transform:translate(calc(-50% + .8px),calc(-50% - 1.3px))}
+}
+#worldMap .world-map-dot{animation:andrikWorldDotDriftR355A 9.6s ease-in-out infinite!important;will-change:transform!important}
+#worldMap .world-map-dot:nth-of-type(2n){animation-name:andrikWorldDotDriftR355B!important;animation-duration:11.4s!important;animation-delay:-3.1s!important}
+@media(prefers-reduced-motion:reduce){#worldMap .world-map-dot{animation:none!important}}
+
+
+/* R355 — final YouTube identity. Loaded last and bound to both map and body state. */
+@keyframes andrikYoutubePulseR355Final{
+  0%,100%{transform:scale(.95);opacity:.94;background:#ff5f72;box-shadow:0 0 0 4px rgba(255,83,107,.12),0 0 18px rgba(255,64,91,.92),0 0 30px rgba(255,40,74,.35)}
+  50%{transform:scale(1.20);opacity:1;background:#ff7b89;box-shadow:0 0 0 8px rgba(255,83,107,.04),0 0 28px rgba(255,58,87,1),0 0 44px rgba(255,32,67,.46)}
+}
+body.r355-youtube-layer #worldMap .world-map-dot i,
+#worldMap.is-youtube-layer-r355 .world-map-dot i,
+#worldMap[data-ecosystem-layer="youtube"] .world-map-dot i{
+  background:#ff5f72!important;
+  border:1px solid rgba(255,221,226,.82)!important;
+  box-shadow:0 0 0 5px rgba(255,83,107,.12),0 0 20px rgba(255,64,91,.96),0 0 34px rgba(255,39,73,.38)!important;
+  filter:none!important;
+  animation:andrikYoutubePulseR355Final 2.55s ease-in-out infinite!important;
+}
+body.r355-youtube-layer #worldMap .world-map-dot,
+#worldMap.is-youtube-layer-r355 .world-map-dot,
+#worldMap[data-ecosystem-layer="youtube"] .world-map-dot{
+  filter:none!important;
+}
+body.r355-youtube-layer #worldMap .world-map-city-dot i,
+#worldMap.is-youtube-layer-r355 .world-map-city-dot i,
+#worldMap[data-ecosystem-layer="youtube"] .world-map-city-dot i{
+  background:#ff6879!important;
+  border-color:rgba(255,218,224,.78)!important;
+  box-shadow:0 0 0 3px rgba(255,88,106,.11),0 0 17px rgba(255,57,84,.96)!important;
+}

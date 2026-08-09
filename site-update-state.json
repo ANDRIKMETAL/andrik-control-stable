@@ -1,14 +1,14 @@
 {
   "schema": 1,
-  "updaterVersion": "55.00-r353",
+  "updaterVersion": "55.00-r352",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786286081041-0771005c94",
-  "release": "R354",
-  "archiveName": "R354-R352-SCROLL-STABLE-YOUTUBE-RED-POINT-DRIFT-SAFE-FULL.zip",
-  "sourceHead": "e17d8ef423e9fc0ca7db32283d5ff0bf4a377dec",
-  "backupSha": "e17d8ef423e9fc0ca7db32283d5ff0bf4a377dec",
-  "backupTag": "control-backup-20260809143437-e17d8ef-r354-b98aa",
+  "operationId": "publish-1786286619949-9f53c84a6d",
+  "release": "R355",
+  "archiveName": "R355-R354-YOUTUBE-RED-FINAL-LIST-TOP-CLEAN-SAFE-FULL.zip",
+  "sourceHead": "2cd597bdaf1a0b027e921435efe429822d5b43cd",
+  "backupSha": "2cd597bdaf1a0b027e921435efe429822d5b43cd",
+  "backupTag": "control-backup-20260809144335-2cd597b-r355-eadd6",
   "autoRecovery": true,
-  "generatedAt": "2026-08-09T14:34:41.041Z"
+  "generatedAt": "2026-08-09T14:43:39.949Z"
 }

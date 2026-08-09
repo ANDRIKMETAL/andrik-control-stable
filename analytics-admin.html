@@ -1645,7 +1645,7 @@ html.live-web-ai-resume-lock .analytics-swipe-viewport{overflow:hidden!important
   function renderWorldMap(countries=[],options={}){
     const map=$('worldMap'),list=$('worldCountries');
     if(!map||!list)return;
-    /* R354: while the full-country overlay is open, keep its DOM untouched.
+    /* R355: while the full-country overlay is open, keep its DOM untouched.
        Background GA/YouTube/ecosystem refreshes may update the pending data,
        but they must not rebuild the list and throw Android scroll back to top. */
     const fullCountryOverlay=document.querySelector('.country-scroll-overlay-r258.is-open');
@@ -1749,7 +1749,7 @@ html.live-web-ai-resume-lock .analytics-swipe-viewport{overflow:hidden!important
         list.innerHTML=selectedItem ? `${rowButton(selectedItem,0,'selected')}` : '';
       }else{
         const rows=clean.map((item,index)=>rowButton(item,index,'portrait')).join('');
-        const toggleTop=clean.length>4&&countriesExpanded?`<button class="world-country-toggle is-top-toggle" data-country-toggle type="button" aria-expanded="true">Скрыть список</button>`:'';
+        const toggleTop='';
         const toggleBottom=clean.length>4?`<button class="world-country-toggle" data-country-toggle type="button" aria-expanded="${countriesExpanded?'true':'false'}">${countriesExpanded?'Скрыть список':`Показать все страны (${clean.length})`}</button>`:'';
         list.classList.remove('is-landscape-layout');
         list.classList.toggle('is-expanded',countriesExpanded);
@@ -4046,13 +4046,13 @@ body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #mapFocusAct
 <link rel="stylesheet" href="/assets/country-focus-compact-r339.css?v=55.00-r340">
 <link rel="stylesheet" href="/assets/map-total-compact-r348.css?v=55.00-r350">
 <script defer src="/assets/ecosystem-map-r347.js?v=55.00-r347"></script>
-<script defer src="/assets/map-layer-color-r354.js?v=55.00-r354"></script>
+<script defer src="/assets/map-layer-color-r355.js?v=55.00-r355"></script>
 <script defer src="/assets/country-shapes-r341.js?v=55.00-r341"></script>
 <link rel="stylesheet" href="/assets/country-map-r352.css?v=55.00-r352">
 <script defer src="/assets/country-map-r352.js?v=55.00-r352"></script>
 <link rel="stylesheet" href="/assets/map-frame-scroll-r351.css?v=55.00-r351">
-<link rel="stylesheet" href="/assets/map-visual-r354.css?v=55.00-r354">
-<link rel="stylesheet" href="/assets/country-list-scroll-r354.css?v=55.00-r354">
-<script defer src="/assets/country-list-scroll-r354.js?v=55.00-r354"></script>
-<script defer src="/assets/control-version-sync-r354.js?v=55.00-r354"></script>
+<link rel="stylesheet" href="/assets/map-visual-r355.css?v=55.00-r355">
+<link rel="stylesheet" href="/assets/country-list-scroll-r355.css?v=55.00-r355">
+<script defer src="/assets/country-list-scroll-r355.js?v=55.00-r355"></script>
+<script defer src="/assets/control-version-sync-r355.js?v=55.00-r355"></script>
 </body></html>
