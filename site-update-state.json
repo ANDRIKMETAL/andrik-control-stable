@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786296724049-29a383b3af",
-  "release": "R373",
-  "archiveName": "R373-R372-DAILY-CITY-LIST-SCROLL-FIX-SAFE-FULL.zip",
-  "sourceHead": "fb0b8d4e786d00d0ef2b7aa037b1656b807c1b5d",
-  "backupSha": "fb0b8d4e786d00d0ef2b7aa037b1656b807c1b5d",
-  "backupTag": "control-backup-20260809173159-fb0b8d4-r373-49f2f",
+  "operationId": "publish-1786297156467-0838091451",
+  "release": "R374",
+  "archiveName": "R374-R372-CITY-LIST-RESTORE-CLEAN-SCROLL-NO-ACTIVITY-SAFE-FULL.zip",
+  "sourceHead": "5b96811305e5653d0cbd38d86c3ee25870437fd0",
+  "backupSha": "5b96811305e5653d0cbd38d86c3ee25870437fd0",
+  "backupTag": "control-backup-20260809173912-5b96811-r374-f2c50",
   "autoRecovery": true,
-  "generatedAt": "2026-08-09T17:32:04.049Z"
+  "generatedAt": "2026-08-09T17:39:16.467Z"
 }

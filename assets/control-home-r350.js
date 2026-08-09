@@ -175,12 +175,57 @@
     return String.fromCodePoint(...[...iso].map(ch=>127397+ch.charCodeAt(0)));
   }
 
+  function cityCacheKeyR374(data={}){
+    const key=String(data?.windowKey||activeViewWindowKey()||'').trim();
+    return key?`andrik-control-city-highwater-r374:${key}`:'';
+  }
+
+  function mergeCityRowsR374(previous=[],incoming=[]){
+    const merged=new Map();
+    for(const item of [...previous,...incoming]){
+      const city=String(item?.city||'').trim();
+      const region=String(item?.region||'').trim();
+      const country=String(item?.country||'').trim().toUpperCase();
+      const label=String(item?.label||city||region||'Город / регион').trim();
+      const key=`${country}|${city.toLocaleLowerCase('ru')}|${region.toLocaleLowerCase('ru')}`;
+      const current=merged.get(key)||{city,region,country,label,opens:0,visitors:0,lastAt:''};
+      current.opens=Math.max(Number(current.opens||0),Number(item?.opens||0));
+      current.visitors=Math.max(Number(current.visitors||0),Number(item?.visitors||0));
+      if(String(item?.lastAt||'')>String(current.lastAt||''))current.lastAt=String(item.lastAt||'');
+      if(city)current.city=city;
+      if(region)current.region=region;
+      if(country)current.country=country;
+      if(label)current.label=label;
+      merged.set(key,current);
+    }
+    return [...merged.values()].filter(item=>Number(item.opens||0)>0)
+      .sort((a,b)=>Number(b.opens||0)-Number(a.opens||0)||String(b.lastAt||'').localeCompare(String(a.lastAt||'')));
+  }
+
+  function readCityCacheR374(data={}){
+    const key=cityCacheKeyR374(data);
+    if(!key)return [];
+    try{
+      const parsed=JSON.parse(localStorage.getItem(key)||'[]');
+      return Array.isArray(parsed)?parsed:[];
+    }catch(_){return []}
+  }
+
+  function writeCityCacheR374(data={},rows=[]){
+    const key=cityCacheKeyR374(data);
+    if(!key||!rows.length)return;
+    try{localStorage.setItem(key,JSON.stringify(rows.slice(0,50)))}catch(_){}
+  }
+
   function renderDailyCitiesR370(data={}){
     const box=$('controlHomeCityList');
     if(!box)return;
-    const rows=Array.isArray(data.cityActivity)
+    const incoming=Array.isArray(data.cityActivity)
       ? data.cityActivity.filter(item=>Number(item?.opens||0)>0)
       : [];
+    const cached=readCityCacheR374(data);
+    const rows=mergeCityRowsR374(cached,incoming);
+    if(incoming.length)writeCityCacheR374(data,rows);
     if(!rows.length){
       box.hidden=true;
       box.innerHTML='';
@@ -423,10 +468,6 @@
     moveRelative(index>logicalPage?1:-1);
   }));
 
-  $('controlSummaryNext')?.addEventListener('click',()=>{
-    const pushQuery=IS_PUSH_SUMMARY_VIEW?`&source=push&summaryWindow=${encodeURIComponent(PUSH_SUMMARY_WINDOW_KEY)}`:'';
-    location.assign(`/control-home.html?page=activity${pushQuery}&v=55.00-r305&t=${Date.now()}`);
-  });
 
 
   let dailySummarySending=false;

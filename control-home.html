@@ -5,7 +5,7 @@
 <meta name="google" content="notranslate"><meta charset="utf-8"/>
 <meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/>
 <meta content="#02060a" name="theme-color"/>
-<meta content="R373" name="andrik-control-release"/>
+<meta content="R374" name="andrik-control-release"/>
 <meta content="Live Web AI" name="apple-mobile-web-app-title"/>
 <meta content="dark" name="color-scheme"/>
 <meta content="noindex,nofollow,noarchive" name="robots"/><script>document.documentElement.dataset.controlInitialPage=(new URLSearchParams(location.search).get('page')||'menu').toLowerCase();</script>
@@ -221,74 +221,54 @@ body.control-summary-visible .control-summary-refresh:active{
 
 
 
-<style id="andrik-r373-summary-city-scroll-fix">
-/* R373 — allow the daily city list to be fully readable above the two fixed buttons. */
+<style id="andrik-r374-summary-scroll-clean">
 body.control-home-page.control-summary-visible .control-summary-page,
 body.control-home-page.control-report-standalone.control-summary-visible .control-summary-page{
+  box-sizing:border-box!important;
+  height:100%!important;
+  min-height:0!important;
+  max-height:100%!important;
   overflow-y:auto!important;
   overflow-x:hidden!important;
   -webkit-overflow-scrolling:touch!important;
   overscroll-behavior-y:contain!important;
   touch-action:pan-y!important;
-  padding-bottom:max(196px,calc(196px + env(safe-area-inset-bottom)))!important;
+  padding-bottom:0!important;
 }
-body.control-home-page.control-summary-visible .control-summary-page .control-swipe-page-inner,
-body.control-home-page.control-report-standalone.control-summary-visible .control-summary-page .control-swipe-page-inner{
-  min-height:auto!important;
+body.control-home-page.control-summary-visible .control-summary-page>.control-swipe-page-inner,
+body.control-home-page.control-report-standalone.control-summary-visible .control-summary-page>.control-swipe-page-inner{
+  box-sizing:border-box!important;
+  width:100%!important;
   height:auto!important;
+  min-height:100%!important;
   max-height:none!important;
   overflow:visible!important;
-  padding-bottom:max(212px,calc(212px + env(safe-area-inset-bottom)))!important;
-}
-body.control-home-page.control-summary-visible .control-summary-page .control-home-hero,
-body.control-home-page.control-report-standalone.control-summary-visible .control-summary-page .control-home-hero{
-  padding-bottom:12px!important;
+  padding-bottom:max(138px,calc(122px + env(safe-area-inset-bottom)))!important;
+  touch-action:pan-y!important;
 }
 body.control-home-page.control-summary-visible #controlHomeCityList,
 body.control-home-page.control-report-standalone.control-summary-visible #controlHomeCityList{
-  margin-bottom:max(124px,calc(124px + env(safe-area-inset-bottom)))!important;
+  margin-bottom:10px!important;
 }
 body.control-home-page.control-summary-visible #controlHomeUpdated,
 body.control-home-page.control-report-standalone.control-summary-visible #controlHomeUpdated{
-  margin-bottom:max(118px,calc(118px + env(safe-area-inset-bottom)))!important;
+  margin-bottom:0!important;
 }
-body.control-home-page.control-summary-visible .control-summary-next-row,
-body.control-home-page.control-report-standalone.control-summary-visible .control-summary-next-row{
-  margin-bottom:max(112px,calc(112px + env(safe-area-inset-bottom)))!important;
-}
+body.control-home-page.control-summary-visible .control-summary-next-row{display:none!important}
 @media (max-width:430px){
-  body.control-home-page.control-summary-visible .control-summary-page,
-  body.control-home-page.control-report-standalone.control-summary-visible .control-summary-page{
-    padding-bottom:max(208px,calc(208px + env(safe-area-inset-bottom)))!important;
-  }
-  body.control-home-page.control-summary-visible .control-summary-page .control-swipe-page-inner,
-  body.control-home-page.control-report-standalone.control-summary-visible .control-summary-page .control-swipe-page-inner{
-    padding-bottom:max(224px,calc(224px + env(safe-area-inset-bottom)))!important;
-  }
-  body.control-home-page.control-summary-visible #controlHomeCityList,
-  body.control-home-page.control-report-standalone.control-summary-visible #controlHomeCityList{
-    margin-bottom:max(136px,calc(136px + env(safe-area-inset-bottom)))!important;
+  body.control-home-page.control-summary-visible .control-summary-page>.control-swipe-page-inner,
+  body.control-home-page.control-report-standalone.control-summary-visible .control-summary-page>.control-swipe-page-inner{
+    padding-bottom:max(150px,calc(134px + env(safe-area-inset-bottom)))!important;
   }
 }
 @media (orientation:landscape){
-  body.control-home-page.control-summary-visible .control-summary-page,
-  body.control-home-page.control-report-standalone.control-summary-visible .control-summary-page{
-    padding-bottom:max(118px,calc(118px + env(safe-area-inset-bottom)))!important;
-  }
-  body.control-home-page.control-summary-visible .control-summary-page .control-swipe-page-inner,
-  body.control-home-page.control-report-standalone.control-summary-visible .control-summary-page .control-swipe-page-inner{
-    padding-bottom:max(132px,calc(132px + env(safe-area-inset-bottom)))!important;
-  }
-  body.control-home-page.control-summary-visible #controlHomeCityList,
-  body.control-home-page.control-report-standalone.control-summary-visible #controlHomeCityList,
-  body.control-home-page.control-summary-visible #controlHomeUpdated,
-  body.control-home-page.control-report-standalone.control-summary-visible #controlHomeUpdated,
-  body.control-home-page.control-summary-visible .control-summary-next-row,
-  body.control-home-page.control-report-standalone.control-summary-visible .control-summary-next-row{
-    margin-bottom:max(56px,calc(56px + env(safe-area-inset-bottom)))!important;
+  body.control-home-page.control-summary-visible .control-summary-page>.control-swipe-page-inner,
+  body.control-home-page.control-report-standalone.control-summary-visible .control-summary-page>.control-swipe-page-inner{
+    padding-bottom:max(88px,calc(74px + env(safe-area-inset-bottom)))!important;
   }
 }
 </style>
+
 <style id="andrik-summary-first-tap-v55-00c">
 /* v55.00c — fixed push action stays under the finger and fires on the first tap. */
 body.control-summary-visible .control-summary-refresh{
@@ -765,7 +745,6 @@ body.control-push-summary-view .control-summary-source{display:block}
             <div class="control-home-city-list-r370" id="controlHomeCityList" hidden></div>
             <div class="control-home-updated" id="controlHomeUpdated">Проверяем доступ…</div>
           </header>
-          <div class="control-summary-next-row"><button class="control-summary-next" id="controlSummaryNext" type="button" aria-label="Открыть активность">Активность <span aria-hidden="true">→</span></button></div>
         </div>
       </section>
 
@@ -778,10 +757,10 @@ body.control-push-summary-view .control-summary-source{display:block}
             <a class="control-home-menu-card is-releases" href="/admin-sections.html?section=releases&v=55.00-r214"><span>🚀</span><div><small>Музыка и тексты</small><strong>Релизы</strong><p>Тексты песен, публикации и история релизов.</p></div><b>›</b></a>
             <a class="control-home-menu-card is-discussion" href="/admin-sections.html?section=discussion&v=55.00-r214"><span>💬</span><div><small>Сообщество</small><strong>Обсуждение</strong><p>Комментарии, модерация и ответы слушателям.</p></div><b>›</b></a>
           </section>
-          <footer class="control-version-footer" aria-label="Текущая версия"><strong>Live Web AI</strong><span>R373</span></footer>
-          <div class="control-split-version-r181" aria-label="Live Web AI, версия R342">
+          <footer class="control-version-footer" aria-label="Текущая версия"><strong>Live Web AI</strong><span>R374</span></footer>
+          <div class="control-split-version-r181" aria-label="Live Web AI, версия R374">
             <span class="control-split-brand-r181">Live Web AI</span>
-            <span class="control-split-number-r181">R373</span>
+            <span class="control-split-number-r181">R374</span>
           </div>
           <a class="control-page-footnote control-menu-map-link" href="/analytics-admin.html?page=map&amp;v=55.00-final-r1">Свайп вниз — вернуться на карту</a>
         </div>
@@ -825,7 +804,7 @@ body.control-push-summary-view .control-summary-source{display:block}
     <div class="control-activity-modal-list" id="controlActivityModalList"><div class="admin-empty">Загружаем события…</div></div>
   </section>
 </div>
-<script defer src="/assets/control-home-r350.js?v=55.00-r370"></script><script defer src="/assets/control-fast-exit-r311.js?v=55.00-r311"></script><script defer src="/assets/control-status-eye-v55-00-r88.js?v=55.00-r88"></script><script defer src="/assets/control-version-v55-00-final-r1.js?v=55.00-final-r1"></script>
+<script defer src="/assets/control-home-r350.js?v=55.00-r374"></script><script defer src="/assets/control-fast-exit-r311.js?v=55.00-r311"></script><script defer src="/assets/control-status-eye-v55-00-r88.js?v=55.00-r88"></script><script defer src="/assets/control-version-v55-00-final-r1.js?v=55.00-final-r1"></script>
 
 
 <script defer src="/assets/control-live-eye-v55-00-r265.js?v=55.00-r265"></script><script defer src="/assets/control-version-v55-00-r3n.js?v=55.00-r3n"></script><script defer src="/assets/control-version-v55-00-final-stable-github.js?v=55.00-final-stable-github"></script><script defer src="/assets/control-menu-return-map-v55-00-r33.js?v=55.00-final-r33"></script>
