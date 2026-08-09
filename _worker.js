@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R336', number:336, version:'55.00', full:'55.00 LIVE WEB AI FINAL R336', siteUpdater:'55.00-r336' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R337', number:337, version:'55.00', full:'55.00 LIVE WEB AI FINAL R337', siteUpdater:'55.00-r337' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -1433,7 +1433,7 @@ async function handleSiteVisit(request, env) {
   const city = cleanPlainText(cf.city || '', 120);
   const latRaw = Number(cf.latitude);
   const lonRaw = Number(cf.longitude);
-  // R336 stores only coarse (~11 km) edge coordinates and never stores a raw IP.
+  // R337 keeps R336 privacy: only coarse (~11 km) edge coordinates are stored; raw IP is never stored.
   const latitude = Number.isFinite(latRaw) ? Math.round(latRaw * 10) / 10 : null;
   const longitude = Number.isFinite(lonRaw) ? Math.round(lonRaw * 10) / 10 : null;
   await db.prepare(`
@@ -2581,6 +2581,53 @@ async function handleControlEcosystemMap(request, env) {
       ORDER BY datetime(created_at) DESC LIMIT 40
     `).all()
   ]);
+  const [siteWeeklyRaw, sitePreviousWeeklyRaw, musicWeeklyRaw, musicPreviousWeeklyRaw, pushWeeklyRaw, pushPreviousWeeklyRaw] = await Promise.all([
+    db.prepare(`
+      SELECT country, COUNT(DISTINCT visitor_hash) AS value
+      FROM site_visit_events
+      WHERE event_type='visit' AND country<>'' AND datetime(created_at)>=datetime('now','-7 days')
+      GROUP BY country ORDER BY value DESC LIMIT 120
+    `).all(),
+    db.prepare(`
+      SELECT country, COUNT(DISTINCT visitor_hash) AS value
+      FROM site_visit_events
+      WHERE event_type='visit' AND country<>''
+        AND datetime(created_at)>=datetime('now','-14 days') AND datetime(created_at)<datetime('now','-7 days')
+      GROUP BY country ORDER BY value DESC LIMIT 120
+    `).all(),
+    db.prepare(`
+      SELECT country, COUNT(*) AS value
+      FROM site_visit_events
+      WHERE event_type IN ('music-download','music-listen') AND country<>''
+        AND datetime(created_at)>=datetime('now','-7 days')
+      GROUP BY country ORDER BY value DESC LIMIT 120
+    `).all(),
+    db.prepare(`
+      SELECT country, COUNT(*) AS value
+      FROM site_visit_events
+      WHERE event_type IN ('music-download','music-listen') AND country<>''
+        AND datetime(created_at)>=datetime('now','-14 days') AND datetime(created_at)<datetime('now','-7 days')
+      GROUP BY country ORDER BY value DESC LIMIT 120
+    `).all(),
+    db.prepare(`
+      SELECT country, COUNT(*) AS value
+      FROM push_subscribers
+      WHERE status='active' AND source<>'owner' AND country<>'' AND datetime(created_at)>=datetime('now','-7 days')
+      GROUP BY country ORDER BY value DESC LIMIT 120
+    `).all(),
+    db.prepare(`
+      SELECT country, COUNT(*) AS value
+      FROM push_subscribers
+      WHERE status='active' AND source<>'owner' AND country<>''
+        AND datetime(created_at)>=datetime('now','-14 days') AND datetime(created_at)<datetime('now','-7 days')
+      GROUP BY country ORDER BY value DESC LIMIT 120
+    `).all()
+  ]);
+  const normalizeWeekly = rows => (rows?.results || []).map(row => ({
+    country: cleanPlainText(row.country || '', 8).toUpperCase(),
+    value: Number(row.value || 0)
+  })).filter(row => row.country && row.value >= 0);
+
   const normalizeCountries = rows => (rows?.results || []).map(row => ({
     country: cleanPlainText(row.country || '', 8).toUpperCase(),
     value: Number(row.value || 0),
@@ -2608,9 +2655,18 @@ async function handleControlEcosystemMap(request, env) {
     updatedAt:new Date().toISOString(),
     periodDays:30,
     privacy:{ rawIpStored:false, coordinatePrecision:'0.1-degree', adminOnly:true },
-    site:{ countries:normalizeCountries(siteCountriesRaw), points:normalizePoints(sitePointsRaw) },
-    music:{ countries:normalizeCountries(musicCountriesRaw), points:normalizePoints(musicPointsRaw) },
-    push:{ countries:normalizeCountries(pushCountriesRaw), points:normalizePoints(pushPointsRaw), counts:pushCounts },
+    site:{
+      countries:normalizeCountries(siteCountriesRaw), points:normalizePoints(sitePointsRaw),
+      weeklyCountries:normalizeWeekly(siteWeeklyRaw), previousWeekCountries:normalizeWeekly(sitePreviousWeeklyRaw)
+    },
+    music:{
+      countries:normalizeCountries(musicCountriesRaw), points:normalizePoints(musicPointsRaw),
+      weeklyCountries:normalizeWeekly(musicWeeklyRaw), previousWeekCountries:normalizeWeekly(musicPreviousWeeklyRaw)
+    },
+    push:{
+      countries:normalizeCountries(pushCountriesRaw), points:normalizePoints(pushPointsRaw), counts:pushCounts,
+      weeklyCountries:normalizeWeekly(pushWeeklyRaw), previousWeekCountries:normalizeWeekly(pushPreviousWeeklyRaw)
+    },
     links,
     recent:(recentRaw?.results || []).map(row => ({
       type:cleanPlainText(row.type || '',40), country:cleanPlainText(row.country || '',8).toUpperCase(),

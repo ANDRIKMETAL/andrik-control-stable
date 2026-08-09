@@ -1,14 +1,14 @@
 {
   "schema": 1,
-  "updaterVersion": "55.00-r335",
+  "updaterVersion": "55.00-r336",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786270237385-e00893a9fe",
-  "release": "R313",
-  "archiveName": "R336-R335-LIVE-ECOSYSTEM-MAP-SAFE-FULL.zip",
-  "sourceHead": "0cba0b14edf691641947952de77cfab1fa290eef",
-  "backupSha": "0cba0b14edf691641947952de77cfab1fa290eef",
-  "backupTag": "control-backup-20260809101033-0cba0b1-r313-107fb",
+  "operationId": "publish-1786271403168-2355ac25b7",
+  "release": "R336",
+  "archiveName": "R337-R336-PER-LAYER-MAP-ANALYTICS-SAFE-FULL.zip",
+  "sourceHead": "4cfa513896bee85b05d7b2d0ea38730b168fc351",
+  "backupSha": "4cfa513896bee85b05d7b2d0ea38730b168fc351",
+  "backupTag": "control-backup-20260809102956-4cfa513-r336-15818",
   "autoRecovery": true,
-  "generatedAt": "2026-08-09T10:10:37.385Z"
+  "generatedAt": "2026-08-09T10:30:03.168Z"
 }
