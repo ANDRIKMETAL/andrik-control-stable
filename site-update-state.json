@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786298938481-7dad846cbf",
-  "release": "R376",
-  "archiveName": "R376-R375-RELIABLE-YOUTUBE-LIKE-COMMENT-PUSH-FAST-CRON-DIAGNOSTICS-SAFE-FULL.zip",
-  "sourceHead": "21a5111a6139a82aa4d8a5df86a0999f89329739",
-  "backupSha": "21a5111a6139a82aa4d8a5df86a0999f89329739",
-  "backupTag": "control-backup-20260809180855-21a5111-r376-71802",
+  "operationId": "publish-1786301840507-b5c00e4300",
+  "release": "R377",
+  "archiveName": "R377-R376-FAST-SMOOTH-OLD-STEP2-MAP-TRANSITION-SAFE-FULL.zip",
+  "sourceHead": "beba81e6e4167a391eb56589fe5ed14c3625dc3b",
+  "backupSha": "beba81e6e4167a391eb56589fe5ed14c3625dc3b",
+  "backupTag": "control-backup-20260809185716-beba81e-r377-ef0c1",
   "autoRecovery": true,
-  "generatedAt": "2026-08-09T18:08:58.481Z"
+  "generatedAt": "2026-08-09T18:57:20.507Z"
 }

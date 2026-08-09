@@ -53,8 +53,8 @@ body.analytics-admin-page.analytics-v54-46-page.is-country-deep-active #worldMap
     linear-gradient(180deg,#071723,#031019);
   transform-origin:center center;
 }
-body.analytics-admin-page.is-country-deep-active #worldMap .country-map-r352{display:block!important;animation:r352CountryEnter .16s ease-out both;will-change:transform,opacity}
-body.analytics-admin-page.is-country-returning #worldMap .country-map-r352,.country-map-r352.is-leaving{display:block!important;animation:r352CountryLeave .13s ease-in both!important;will-change:transform,opacity}
+body.analytics-admin-page.is-country-deep-active #worldMap .country-map-r352{display:block!important;animation:r352CountryEnter .12s ease-out both;will-change:transform,opacity}
+body.analytics-admin-page.is-country-returning #worldMap .country-map-r352,.country-map-r352.is-leaving{display:block!important;animation:r352CountryLeave .09s ease-in both!important;will-change:transform,opacity}
 .country-map-r352::before{
   content:"";
   position:absolute;
@@ -284,10 +284,10 @@ body.analytics-admin-page.analytics-v54-46-page.is-country-deep-active .world-co
 
 /* R352 — visual WORLD ⇄ COUNTRY transition without reflow/blur. */
 body.analytics-admin-page.is-country-deep-active.is-country-entering #worldMap .world-map-stage>img{
-  visibility:visible!important;opacity:1!important;animation:r352WorldOut .22s ease-out both!important;will-change:transform,opacity;
+  visibility:visible!important;opacity:1!important;animation:r352WorldOut .16s ease-out both!important;will-change:transform,opacity;
 }
 body.analytics-admin-page.is-country-deep-active.is-country-returning #worldMap .world-map-stage>img{
-  visibility:visible!important;opacity:1!important;animation:r352WorldIn .20s ease-in both!important;will-change:transform,opacity;
+  visibility:visible!important;opacity:1!important;animation:r352WorldIn .16s ease-in both!important;will-change:transform,opacity;
 }
 /* Keep bottom actions safely above the black viewport edge. */
 body.analytics-admin-page.analytics-v54-46-page.is-country-focus-active .analytics-map-pane{padding-bottom:calc(104px + env(safe-area-inset-bottom))!important;}
@@ -300,7 +300,7 @@ body.analytics-admin-page.analytics-v54-46-page.is-country-focus-active #mapFocu
 
 /* R352 — old step-2 world zoom restored as a single-tap transition. */
 body.analytics-admin-page.analytics-v54-46-page #worldMap .world-map-stage{
-  transition:transform .28s cubic-bezier(.20,.78,.22,1),filter .20s ease!important;
+  transition:transform .19s cubic-bezier(.20,.78,.22,1),filter .14s ease!important;
   backface-visibility:hidden!important;
   transform-style:preserve-3d!important;
 }

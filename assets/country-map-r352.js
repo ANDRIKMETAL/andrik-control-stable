@@ -144,7 +144,7 @@
     document.body.classList.add('is-country-returning');
     overlay?.classList.add('is-leaving');
     clearTimeout(transitionTimer);
-    transitionTimer = setTimeout(finishWorldReturn, 135);
+    transitionTimer = setTimeout(finishWorldReturn, 90);
   }
   function startCountryEnter(){
     returningToWorld = false;
@@ -154,7 +154,7 @@
     transitionTimer = setTimeout(()=>{
       document.body.classList.remove('is-country-entering');
       transitionTimer = 0;
-    }, 170);
+    }, 120);
   }
   function renderCountryMap() {
     if (!isDeep()) {

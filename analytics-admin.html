@@ -1455,6 +1455,8 @@ html.live-web-ai-resume-lock .analytics-swipe-viewport{overflow:hidden!important
   let selectedWorldCountryZoomDirection=1;
   let selectedWorldCountryDeep=false;
   let countryTransitionTimer=0;
+  const COUNTRY_ZOOM_IN_MS_R377=205;
+  const COUNTRY_ZOOM_OUT_MS_R377=210;
   let lastWorldMapCountries=[];
   let lastWorldMapOptions={};
   let lastWorldMapOrientation='';
@@ -1525,7 +1527,7 @@ html.live-web-ai-resume-lock .analytics-swipe-viewport{overflow:hidden!important
         }
         window.dispatchEvent(new CustomEvent('andrik:country-focus-changed',{detail:{focused:false,country:'',animated:true}}));
         countryTransitionTimer=0;
-      },430);
+      },COUNTRY_ZOOM_OUT_MS_R377);
     }));
   }
   function cycleWorldCountrySelection(map,list,country){
@@ -1554,7 +1556,7 @@ html.live-web-ai-resume-lock .analytics-swipe-viewport{overflow:hidden!important
         if(map)map.dataset.countryDeep='true';
         window.dispatchEvent(new CustomEvent('andrik:country-deep-changed',{detail:{active:true,country:next,animated:true}}));
         countryTransitionTimer=0;
-      },420);
+      },COUNTRY_ZOOM_IN_MS_R377);
       return;
     }
     returnToWorldMap(map,list);
@@ -4099,8 +4101,8 @@ body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #mapFocusAct
 <script defer src="/assets/ecosystem-map-r347.js?v=55.00-r347"></script>
 <script defer src="/assets/map-layer-color-r354.js?v=55.00-r354"></script>
 <script defer src="/assets/country-shapes-r341.js?v=55.00-r341"></script>
-<link rel="stylesheet" href="/assets/country-map-r352.css?v=55.00-r352">
-<script defer src="/assets/country-map-r352.js?v=55.00-r369"></script>
+<link rel="stylesheet" href="/assets/country-map-r352.css?v=55.00-r377">
+<script defer src="/assets/country-map-r352.js?v=55.00-r377"></script>
 <link rel="stylesheet" href="/assets/map-frame-scroll-r351.css?v=55.00-r351">
 <link rel="stylesheet" href="/assets/map-visual-r354.css?v=55.00-r354">
 <link rel="stylesheet" href="/assets/country-list-scroll-r354.css?v=55.00-r356">
