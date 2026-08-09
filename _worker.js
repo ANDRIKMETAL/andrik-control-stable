@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R334', number:334, version:'55.00', full:'55.00 LIVE WEB AI FINAL R334', siteUpdater:'55.00-r334' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R335', number:335, version:'55.00', full:'55.00 LIVE WEB AI FINAL R335', siteUpdater:'55.00-r335' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -11293,6 +11293,56 @@ function musicHeaderR317(request,name,max=220){
   try{value=decodeURIComponent(value)}catch(_){}
   return cleanPlainText(value,max);
 }
+
+function musicTranslitR335(value){
+  const map={'а':'a','б':'b','в':'v','г':'g','д':'d','е':'e','ё':'yo','ж':'zh','з':'z','и':'i','й':'y','к':'k','л':'l','м':'m','н':'n','о':'o','п':'p','р':'r','с':'s','т':'t','у':'u','ф':'f','х':'h','ц':'ts','ч':'ch','ш':'sh','щ':'sch','ъ':'','ы':'y','ь':'','э':'e','ю':'yu','я':'ya'};
+  return [...String(value||'').toLowerCase()].map(ch=>map[ch]??ch).join('');
+}
+function musicTitleFileNameR335(title){
+  const base=musicTranslitR335(title).normalize('NFKD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[^a-z0-9._-]+/g,'_').replace(/^_+|_+$/g,'').replace(/_+/g,'_').slice(0,150);
+  return base ? `${base}.mp3` : '';
+}
+async function handleMusicMp3PatchR335(request, env){
+  if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
+  const bucket=getMusicBucketR314(env);
+  if(!bucket)return json({ok:false,error:'music-bucket-not-configured'},503);
+  const url=new URL(request.url);
+  const oldKey=musicObjectKeyR317(url.searchParams.get('key'));
+  if(!oldKey)return json({ok:false,error:'invalid-key'},400);
+  const title=musicHeaderR317(request,'x-andrik-track-title');
+  if(!title)return json({ok:false,error:'title-required'},400);
+
+  const object=await bucket.get(oldKey);
+  if(!object)return json({ok:false,error:'not-found'},404);
+
+  const folder=oldKey.split('/').slice(0,-1).join('/');
+  const generated=/\/track_\d+\.mp3$/i.test(oldKey);
+  const desiredName=musicTitleFileNameR335(title);
+  let newKey=oldKey;
+  if(generated && desiredName){
+    const candidate=`${folder}/${desiredName}`;
+    if(candidate!==oldKey){
+      const exists=await bucket.head(candidate).catch(()=>null);
+      if(exists)return json({ok:false,error:'target-exists',message:'Файл с таким названием уже есть в R2.'},409);
+      newKey=candidate;
+    }
+  }
+
+  const oldMeta=object.customMetadata || {};
+  const customMetadata={...oldMeta,source:'ANDRIK Control R335',title};
+  const httpMetadata={...(object.httpMetadata || {}),contentType:'audio/mpeg',contentDisposition:`attachment; filename="${newKey.split('/').pop()}"`};
+
+  if(newKey===oldKey){
+    const bytes=await object.arrayBuffer();
+    await bucket.put(oldKey,bytes,{httpMetadata,customMetadata});
+  }else{
+    await bucket.put(newKey,object.body,{httpMetadata,customMetadata});
+    await bucket.delete(oldKey);
+  }
+
+  return json({ok:true,oldKey,key:newKey,title,url:`https://music.andrikmetal.com/${newKey}`,renamed:newKey!==oldKey});
+}
 async function handleMusicMp3PutR314(request, env) {
   if (!adminAuthorized(request, env)) return json({ok:false,error:'unauthorized'},401);
   const bucket=getMusicBucketR314(env); if(!bucket) return json({ok:false,error:'music-bucket-not-configured',message:'Добавьте R2 binding MUSIC_BUCKET → andrik-music'},503);
@@ -11303,7 +11353,7 @@ async function handleMusicMp3PutR314(request, env) {
   const body=await request.arrayBuffer(); if(!body.byteLength||body.byteLength>40*1024*1024) return json({ok:false,error:'file-too-large'},413);
   const key=folder+'/'+name;
   const metadata={
-    source:'ANDRIK Control R334',
+    source:'ANDRIK Control R335',
     title:musicHeaderR317(request,'x-andrik-track-title'),
     artist:musicHeaderR317(request,'x-andrik-track-artist'),
     album:musicHeaderR317(request,'x-andrik-track-album'),
@@ -11317,7 +11367,7 @@ async function handleMusicMp3PutR314(request, env) {
 async function handleMusicSinglesListR316(request, env) {
   const bucket=getMusicBucketR314(env); if(!bucket) return json({ok:false,error:'music-bucket-not-configured'},503);
   const listed=await bucket.list({prefix:'singles/',limit:1000,include:['customMetadata']});
-  const legacyTitles={'singles/ty_uze_dostoin.mp3':'Ты уже достоин','singles/tisina.mp3':'Тишина'};
+  const legacyTitles={'singles/ty_uze_dostoin.mp3':'Ты уже достоин','singles/tisina.mp3':'Тишина','singles/track_1786265187225.mp3':'Свобода'};
   const tracks=(listed.objects||[]).filter(o=>/\.mp3$/i.test(o.key)).map(o=>({
     key:o.key,name:o.key.replace(/^singles\//,'').replace(/\.mp3$/i,'').replace(/[_-]+/g,' '),
     title:(o.customMetadata&&o.customMetadata.title)||legacyTitles[o.key]||'',url:'https://music.andrikmetal.com/'+o.key,
@@ -11328,7 +11378,7 @@ async function handleMusicSinglesListR316(request, env) {
 async function handleMusicDownloadsR322(request, env){
   const bucket=getMusicBucketR314(env); if(!bucket) return json({ok:false,error:'music-bucket-not-configured'},503);
   const listed=await bucket.list({limit:1000,include:['customMetadata']});
-  const legacyTitles={'singles/ty_uze_dostoin.mp3':'Ты уже достоин','singles/tisina.mp3':'Тишина'};
+  const legacyTitles={'singles/ty_uze_dostoin.mp3':'Ты уже достоин','singles/tisina.mp3':'Тишина','singles/track_1786265187225.mp3':'Свобода'};
   const tracks=(listed.objects||[]).filter(o=>musicObjectKeyR317(o.key)).map(o=>{
     const m=o.customMetadata||{},folder=o.key.split('/').slice(0,-1).join('/'),base=o.key.split('/').pop().replace(/\.mp3$/i,'').replace(/[_-]+/g,' ');
     return {key:o.key,title:m.title||legacyTitles[o.key]||base,album:m.album||'',track:m.track||'',folder,url:'https://music.andrikmetal.com/'+o.key,uploaded:o.uploaded||null};
@@ -11357,7 +11407,7 @@ async function handleMusicLibraryR317(request, env){
   if (!adminAuthorized(request, env)) return json({ok:false,error:'unauthorized'},401);
   const bucket=getMusicBucketR314(env); if(!bucket) return json({ok:false,error:'music-bucket-not-configured'},503);
   const listed=await bucket.list({limit:1000,include:['customMetadata']});
-  const legacyTitles={'singles/ty_uze_dostoin.mp3':'Ты уже достоин','singles/tisina.mp3':'Тишина'};
+  const legacyTitles={'singles/ty_uze_dostoin.mp3':'Ты уже достоин','singles/tisina.mp3':'Тишина','singles/track_1786265187225.mp3':'Свобода'};
   const tracks=(listed.objects||[]).filter(o=>musicObjectKeyR317(o.key)).map(o=>{
     const m=o.customMetadata||{},base=o.key.split('/').pop().replace(/\.mp3$/i,'').replace(/[_-]+/g,' ');
     return {key:o.key,name:base,title:m.title||legacyTitles[o.key]||base,artist:m.artist||'',album:m.album||'',track:m.track||'',year:m.year||'',genre:m.genre||'',size:o.size||0,uploaded:o.uploaded||null,url:'https://music.andrikmetal.com/'+o.key};
@@ -11449,6 +11499,7 @@ async function routeApi(request, env, ctx) {
     if (path === '/api/control/music/library' && request.method === 'GET') return await handleMusicLibraryR317(request, env);
     if (path === '/api/control/music/file' && request.method === 'GET') return await handleMusicFileR317(request, env);
     if (path === '/api/control/music/mp3' && request.method === 'PUT') return await handleMusicMp3PutR314(request, env);
+    if (path === '/api/control/music/mp3' && request.method === 'PATCH') return await handleMusicMp3PatchR335(request, env);
     if (path === '/api/control/music/mp3' && request.method === 'DELETE') return await handleMusicMp3DeleteR314(request, env);
     if (path === '/api/lyrics' && request.method === 'GET') return await handlePublicLyrics(request, env);
     if (path === '/api/lyrics/admin' && request.method === 'GET') return await handleAdminLyricsGet(request, env);

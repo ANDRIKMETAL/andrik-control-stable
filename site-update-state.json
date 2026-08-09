@@ -1,14 +1,14 @@
 {
   "schema": 1,
-  "updaterVersion": "55.00-r333",
+  "updaterVersion": "55.00-r334",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786264409033-eeeefbe773",
+  "operationId": "publish-1786265634760-f435e79823",
   "release": "R313",
-  "archiveName": "R334-R333-EXTERNAL-CRON-GATEWAY-SAFE-FULL.zip",
-  "sourceHead": "e0f9b3e84ad5c047acd3501e03fb9df987204b24",
-  "backupSha": "e0f9b3e84ad5c047acd3501e03fb9df987204b24",
-  "backupTag": "control-backup-20260809083324-e0f9b3e-r313-36464",
+  "archiveName": "R335-R334-SINGLE-TITLE-MOBILE-FIT-SAFE-FULL.zip",
+  "sourceHead": "33895a60ff33013bfdf0ec2972629a93f6d9a19e",
+  "backupSha": "33895a60ff33013bfdf0ec2972629a93f6d9a19e",
+  "backupTag": "control-backup-20260809085350-33895a6-r313-68f8a",
   "autoRecovery": true,
-  "generatedAt": "2026-08-09T08:33:29.033Z"
+  "generatedAt": "2026-08-09T08:53:54.760Z"
 }

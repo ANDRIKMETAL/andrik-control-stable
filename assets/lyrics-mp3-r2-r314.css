@@ -2,3 +2,21 @@
 .mp3-r2-card{margin:18px 0;border-color:rgba(245,190,72,.38);box-shadow:0 0 28px rgba(245,190,72,.08)}
 .mp3-r2-badge{padding:7px 11px;border-radius:999px;border:1px solid rgba(255,255,255,.16);font-size:12px;color:#b9c6ce}.mp3-r2-badge.ok{color:#bfffd4;border-color:rgba(72,255,151,.4)}
 .mp3-r2-actions{gap:10px;flex-wrap:wrap}.mp3-r2-actions .btn{min-height:44px}
+
+
+/* ANDRIK R335 — quick single uploader: strict mobile fit + Russian title editor */
+.mp3-r2-card,.mp3-r2-card *{box-sizing:border-box;min-width:0}
+.mp3-r2-card{width:100%;max-width:100%;overflow:hidden}
+.mp3-r2-actions{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:10px!important;width:100%!important;max-width:100%!important;overflow:hidden}
+.mp3-r2-actions .btn{display:flex!important;width:100%!important;max-width:100%!important;min-width:0!important;margin:0!important;justify-content:center!important;text-align:center!important;white-space:normal!important;overflow-wrap:anywhere!important;word-break:break-word!important}
+.mp3-r2-card .admin-status{display:block;width:100%;max-width:100%;overflow:hidden;overflow-wrap:anywhere;word-break:break-word}
+.mp3-r2-title-editor-r335{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:end;width:100%;max-width:100%;margin:14px 0}
+.mp3-r2-title-editor-r335 label{display:grid;gap:7px;min-width:0;color:#d9edf8;font-weight:800}
+.mp3-r2-title-editor-r335 input{box-sizing:border-box;width:100%;max-width:100%;min-width:0;border:1px solid rgba(139,201,235,.18);border-radius:15px;background:#071018;color:#f4fbff;padding:12px 13px;font:inherit}
+.mp3-r2-title-editor-r335 .btn{min-height:46px;white-space:normal}
+.mp3-r2-title-editor-r335 small{grid-column:1/-1;color:#8fa6b5;line-height:1.45;overflow-wrap:anywhere}
+@media(max-width:760px){
+  .mp3-r2-card{padding-left:14px!important;padding-right:14px!important}
+  .mp3-r2-title-editor-r335{grid-template-columns:minmax(0,1fr)}
+  .mp3-r2-title-editor-r335 .btn{width:100%;max-width:100%}
+}
