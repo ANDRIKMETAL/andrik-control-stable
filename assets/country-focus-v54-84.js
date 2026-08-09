@@ -28,11 +28,11 @@
       focusActions.hidden = true;
       focusActions.setAttribute('aria-hidden', 'true');
       focusActions.setAttribute('aria-label', 'Быстрые действия выбранной страны');
-      focusActions.innerHTML = '<a class="map-focus-action is-daily" href="/control-home.html?page=summary&v=54.84">📊 Аналитика за день</a><a class="map-focus-action is-activity" href="/control-home.html?page=activity&v=54.84">⚡ Последняя активность</a>';
+      focusActions.innerHTML = '<a class="map-focus-action is-daily" href="/control-home.html?page=summary&v=54.84">📊 Статистика за день</a><a class="map-focus-action is-activity" href="/control-home.html?page=activity&v=54.84">⚡ Последняя активность</a>';
     } else {
       const daily = focusActions.querySelector('.is-daily');
       const activity = focusActions.querySelector('.is-activity');
-      if (daily) { daily.href = '/control-home.html?page=summary&v=54.84'; daily.textContent = '📊 Аналитика за день'; }
+      if (daily) { daily.href = '/control-home.html?page=summary&v=54.84'; daily.textContent = '📊 Статистика за день'; }
       if (activity) { activity.href = '/control-home.html?page=activity&v=54.84'; activity.textContent = '⚡ Последняя активность'; }
     }
     if (growthToggle && (focusActions.parentElement !== card || focusActions.nextElementSibling !== growthToggle)) {

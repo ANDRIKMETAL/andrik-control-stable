@@ -25,6 +25,7 @@
 
     const isMapVisible = () => {
       const hidden = pane.getAttribute('aria-hidden');
+      if (document.body.classList.contains('is-country-focus-active')) return false;
       return hidden !== 'true' && (document.body.dataset.analyticsPage || 'map') === 'map';
     };
     const isAtBottom = () => {

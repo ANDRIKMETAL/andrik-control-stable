@@ -1,0 +1,124 @@
+/* ANDRIK R339 — compact country focus: one country map, yellow weekly card, compact actions. */
+body.analytics-admin-page.is-country-focus-active #countryDrilldownPanelR338{display:none!important}
+body.analytics-admin-page.is-country-focus-active .analytics-map-top{overflow:visible!important}
+
+/* The selected country view stays inside the original world-map frame. */
+body.analytics-admin-page.is-country-focus-active #worldMap{
+  margin-bottom:4px!important;
+}
+body.analytics-admin-page.is-country-focus-active #worldMap .world-map-canvas{
+  min-height:330px!important;
+  height:330px!important;
+  border-radius:22px!important;
+  overflow:hidden!important;
+}
+body.analytics-admin-page.is-country-focus-active #worldMap .world-map-stage{
+  min-height:330px!important;
+  height:330px!important;
+}
+body.analytics-admin-page.is-country-focus-active #worldMap .ecosystem-layer-switcher{
+  bottom:12px!important;
+}
+
+/* Hide non-selected country markers while focused: visually this becomes one-country map. */
+body.analytics-admin-page.is-country-focus-active #worldMap .world-map-dot:not(.is-selected){opacity:.035!important;pointer-events:none!important}
+body.analytics-admin-page.is-country-focus-active #worldMap .world-map-dot.is-selected{opacity:1!important;z-index:10!important}
+body.analytics-admin-page.is-country-focus-active #worldMap .world-map-dot.is-selected i{
+  background:#ffd84f!important;
+  box-shadow:0 0 0 5px rgba(255,216,79,.14),0 0 18px rgba(255,208,67,.98),0 0 34px rgba(255,177,27,.54)!important;
+}
+
+/* If a layer has no city point for the selected country, keep one central pulse. */
+#worldMap .country-focus-center-pulse-r339{display:none;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:12;pointer-events:none}
+body.analytics-admin-page.is-country-focus-active #worldMap .country-focus-center-pulse-r339.is-visible{display:block!important}
+#worldMap .country-focus-center-pulse-r339 i{display:block;width:14px;height:14px;border-radius:50%;background:#ffd84f;box-shadow:0 0 0 7px rgba(255,216,79,.10),0 0 24px rgba(255,205,71,1);animation:r339CountryPulse 1.45s ease-in-out infinite}
+#worldMap .country-focus-center-pulse-r339 span{position:absolute;left:50%;top:22px;transform:translateX(-50%);padding:5px 9px;border-radius:999px;background:rgba(8,10,12,.84);border:1px solid rgba(255,216,79,.38);color:#fff0a6;font:900 11px/1 Arial,Helvetica,sans-serif;white-space:nowrap}
+@keyframes r339CountryPulse{0%,100%{transform:scale(.72);opacity:.72}50%{transform:scale(1.35);opacity:1}}
+
+/* Yellow selected-country card: country + total + weekly activity, no long text. */
+body.analytics-admin-page.is-country-focus-active #worldCountries{
+  display:block!important;
+  width:100%!important;
+  margin:4px 0 0!important;
+  padding:0!important;
+  max-height:none!important;
+  overflow:visible!important;
+}
+body.analytics-admin-page.is-country-focus-active #worldCountries .world-country-button:not(.is-selected),
+body.analytics-admin-page.is-country-focus-active #worldCountries .world-country-extra:not(.is-selected){display:none!important}
+body.analytics-admin-page.is-country-focus-active #worldCountries .world-country-button.is-selected{
+  display:grid!important;
+  width:100%!important;
+  max-width:none!important;
+  min-height:58px!important;
+  margin:0!important;
+  padding:8px 12px!important;
+  grid-template-columns:26px minmax(0,1fr) auto!important;
+  row-gap:4px!important;
+  border-radius:18px!important;
+  background:linear-gradient(135deg,rgba(112,77,4,.92),rgba(50,35,5,.97))!important;
+  border:1px solid rgba(255,218,80,.94)!important;
+  box-shadow:0 0 0 1px rgba(255,216,79,.11),0 0 19px rgba(255,185,31,.13)!important;
+}
+body.analytics-admin-page.is-country-focus-active #worldCountries .world-country-button.is-selected .world-country-marquee{font-size:1rem!important;color:#fff2a0!important}
+body.analytics-admin-page.is-country-focus-active #worldCountries .world-country-button.is-selected em{font-size:1rem!important;color:#ffe15e!important}
+body.analytics-admin-page.is-country-focus-active #worldCountries .world-country-button.is-selected .ecosystem-country-detail{display:none!important}
+body.analytics-admin-page.is-country-focus-active #worldCountries .world-country-button.is-selected .country-weekly-gain{
+  grid-column:1/-1!important;
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;
+  gap:6px!important;
+  margin:0!important;
+  font-size:.69rem!important;
+  line-height:1.08!important;
+}
+body.analytics-admin-page.is-country-focus-active #worldCountries .country-weekly-current{text-align:left!important;color:#83f3af!important}
+body.analytics-admin-page.is-country-focus-active #worldCountries .country-weekly-compare{text-align:right!important}
+
+/* Return the two country actions immediately under the yellow card, compact. */
+body.analytics-admin-page.is-country-focus-active #mapFocusActions,
+body.analytics-admin-page.is-country-focus-active #mapFocusActions[hidden]{
+  position:static!important;
+  display:grid!important;
+  visibility:visible!important;
+  opacity:1!important;
+  pointer-events:auto!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:8px!important;
+  width:100%!important;
+  height:auto!important;
+  min-height:0!important;
+  margin:7px 0 0!important;
+  padding:0!important;
+}
+body.analytics-admin-page.is-country-focus-active #mapFocusActions .map-focus-action{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  min-height:46px!important;
+  height:46px!important;
+  padding:7px 9px!important;
+  border-radius:16px!important;
+  font-size:.78rem!important;
+  line-height:1.05!important;
+  text-align:center!important;
+  white-space:normal!important;
+}
+
+/* Country mode is not a gateway to Admin: disable the bottom pull zone completely. */
+body.analytics-admin-page.is-country-focus-active #mapEndPullZone{pointer-events:none!important;visibility:hidden!important;height:0!important;min-height:0!important;max-height:0!important;margin:0!important;padding:0!important;overflow:hidden!important}
+body.analytics-admin-page.is-country-focus-active .analytics-map-pane{overscroll-behavior-y:contain!important}
+
+@media screen and (orientation:landscape){
+  body.analytics-admin-page.is-country-focus-active #worldMap .world-map-canvas,
+  body.analytics-admin-page.is-country-focus-active #worldMap .world-map-stage{height:calc(100vw * .402734375)!important;min-height:250px!important;max-height:72vh!important}
+  body.analytics-admin-page.is-country-focus-active #worldCountries{max-width:620px!important;margin:4px auto 0!important}
+  body.analytics-admin-page.is-country-focus-active #mapFocusActions{max-width:620px!important;margin:6px auto 0!important}
+}
+@media (max-width:480px){
+  body.analytics-admin-page.is-country-focus-active #worldMap .world-map-canvas,
+  body.analytics-admin-page.is-country-focus-active #worldMap .world-map-stage{height:300px!important;min-height:300px!important}
+  body.analytics-admin-page.is-country-focus-active #worldCountries .world-country-button.is-selected{min-height:54px!important;padding:7px 10px!important}
+  body.analytics-admin-page.is-country-focus-active #mapFocusActions .map-focus-action{height:42px!important;min-height:42px!important;font-size:.73rem!important}
+}
+@media(prefers-reduced-motion:reduce){#worldMap .country-focus-center-pulse-r339 i{animation:none!important}}

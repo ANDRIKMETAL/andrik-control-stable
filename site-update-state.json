@@ -1,14 +1,14 @@
 {
   "schema": 1,
-  "updaterVersion": "55.00-r337",
+  "updaterVersion": "55.00-r338",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786277228910-2338301db3",
-  "release": "R337",
-  "archiveName": "R338-R337-COUNTRY-DRILLDOWN-MAP-SAFE-FULL.zip",
-  "sourceHead": "7d08d452ec6488c58c6988990f80c947e3a781ea",
-  "backupSha": "7d08d452ec6488c58c6988990f80c947e3a781ea",
-  "backupTag": "control-backup-20260809120704-7d08d45-r337-c2f7a",
+  "operationId": "publish-1786277930365-721f03f2e3",
+  "release": "R338",
+  "archiveName": "R339-R338-COMPACT-COUNTRY-MAP-WEEKLY-YELLOW-CARD-SAFE-FULL.zip",
+  "sourceHead": "2019b4cb7e32c1d9651f49f192e4870504bcd5ab",
+  "backupSha": "2019b4cb7e32c1d9651f49f192e4870504bcd5ab",
+  "backupTag": "control-backup-20260809121845-2019b4c-r338-3dfa8",
   "autoRecovery": true,
-  "generatedAt": "2026-08-09T12:07:08.910Z"
+  "generatedAt": "2026-08-09T12:18:50.365Z"
 }

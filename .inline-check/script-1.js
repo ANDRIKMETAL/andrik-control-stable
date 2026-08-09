@@ -1,0 +1,1 @@
+if(location.hostname.toLowerCase()==='control.andrikmetal.com'){const m=document.createElement('link');m.rel='manifest';m.href='/admin-manifest.webmanifest?v=55.00-final-r98';document.head.appendChild(m)}
