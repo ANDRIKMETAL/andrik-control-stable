@@ -1,14 +1,14 @@
 {
   "schema": 1,
   "updaterVersion": "55.00-r347",
-  "operation": "publish",
-  "reinstall": false,
-  "operationId": "publish-1786282243220-ae45522e15",
+  "operation": "reinstall",
+  "reinstall": true,
+  "operationId": "reinstall-1786282313347-a651176976",
   "release": "R348",
   "archiveName": "R348-R347-COMPACT-TOTAL-BADGE-SAFE-FULL.zip",
-  "sourceHead": "b2a02a99f770c24d244d74b0a530fe3c098687a7",
-  "backupSha": "b2a02a99f770c24d244d74b0a530fe3c098687a7",
-  "backupTag": "control-backup-20260809133039-b2a02a9-r348-6f4ab",
+  "sourceHead": "a1db0d1e8d271544f7545b0008d8a57476df4f2d",
+  "backupSha": "a1db0d1e8d271544f7545b0008d8a57476df4f2d",
+  "backupTag": "control-backup-20260809133149-a1db0d1-r348-fcfbd",
   "autoRecovery": true,
-  "generatedAt": "2026-08-09T13:30:43.220Z"
+  "generatedAt": "2026-08-09T13:31:53.347Z"
 }
