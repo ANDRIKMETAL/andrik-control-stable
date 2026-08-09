@@ -1,4 +1,4 @@
-R379 — ALL LIST COUNTRIES GET ONE WORLD MARKER
+R380 — ALL LIST COUNTRIES GET ONE WORLD MARKER
 
 Причина:
 R378 правильно убрал city/LIVE точки с общей карты, но world country marker рендерился только если страна была вручную записана в старом GEO. Поэтому страна могла быть в списке статистики, но не иметь точки на карте.
@@ -22,5 +22,5 @@ R378 правильно убрал city/LIVE точки с общей карты
 - R377 быстрый smooth step-2 transition.
 - R376 надёжные YouTube like/comment push.
 
-Версия: R379.
+Версия: R380.
 База: R378.

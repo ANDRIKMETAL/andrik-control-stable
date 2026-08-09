@@ -21,9 +21,13 @@
   const selectedButton = () => list.querySelector('.world-country-button.is-selected,.world-country-selected-card.is-selected,[aria-pressed="true"]');
   const selectedCountry = () => String(runtime.getSelection?.() || map.dataset.focusCountry || '').trim();
   const selectedCode = () => {
-    const direct = String(selectedButton()?.dataset?.code || '').trim().toUpperCase();
+    const buttonRaw = String(selectedButton()?.dataset?.code || '').trim();
+    const direct = String(runtime.resolveCountryCode?.(buttonRaw) || buttonRaw).trim().toUpperCase();
     if (/^[A-Z]{2}$/.test(direct)) return direct;
-    const country = String(selectedCountry() || '').trim().toLowerCase();
+    const selectedRaw=String(selectedCountry() || '').trim();
+    const runtimeCode=String(runtime.resolveCountryCode?.(selectedRaw)||'').trim().toUpperCase();
+    if(/^[A-Z]{2}$/.test(runtimeCode))return runtimeCode;
+    const country = selectedRaw.toLowerCase();
     const shapes = window.__ANDRIK_COUNTRY_SHAPES_R341__ || {};
     const extra = {
       'россия':'RU','russia':'RU','russian federation':'RU',

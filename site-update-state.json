@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786304158943-00e27dfa01",
-  "release": "R379",
-  "archiveName": "R379-R378-ALL-COUNTRIES-WORLD-MARKERS-ISO-FALLBACK-SAFE-FULL.zip",
-  "sourceHead": "a453c9f579382dcaeb5c9b0923525e3fe366ab16",
-  "backupSha": "a453c9f579382dcaeb5c9b0923525e3fe366ab16",
-  "backupTag": "control-backup-20260809193554-a453c9f-r379-ad010",
+  "operationId": "publish-1786305033531-02adbcec71",
+  "release": "R380",
+  "archiveName": "R380-R379-CENTRAL-COUNTRY-ISO-FLAGS-WORLD-DOTS-DEEP-MAP-FIX-SAFE-FULL.zip",
+  "sourceHead": "d52867310edd494b8bf9801036c5da0a5f99d2d4",
+  "backupSha": "d52867310edd494b8bf9801036c5da0a5f99d2d4",
+  "backupTag": "control-backup-20260809195030-d528673-r380-23888",
   "autoRecovery": true,
-  "generatedAt": "2026-08-09T19:35:58.943Z"
+  "generatedAt": "2026-08-09T19:50:33.531Z"
 }

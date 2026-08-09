@@ -1,4 +1,4 @@
-R379 — WORLD MAP COUNTRY-ONLY MARKERS FIX
+R380 — WORLD MAP COUNTRY-ONLY MARKERS FIX
 
 Проблема по скриншоту/видео:
 - на общей карте одновременно рисовались country markers и city/LIVE markers;
@@ -27,5 +27,5 @@ R379 — WORLD MAP COUNTRY-ONLY MARKERS FIX
 - R375 summary modal/live-data logic.
 - R372/R369 country city interaction stack.
 
-Версия: R379.
+Версия: R380.
 База: R377.
