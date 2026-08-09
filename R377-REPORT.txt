@@ -1,4 +1,4 @@
-R378 — FAST SMOOTH OLD STEP-2 MAP TRANSITION
+R379 — FAST SMOOTH OLD STEP-2 MAP TRANSITION
 
 Исправлено по видео 1000376279.mp4.
 
@@ -28,5 +28,5 @@ R378 — FAST SMOOTH OLD STEP-2 MAP TRANSITION
 - R375 новая ежедневная сводка.
 - R372/R369/R368 городские точки, tap и pulse.
 
-Версия: R378.
+Версия: R379.
 База: R376.

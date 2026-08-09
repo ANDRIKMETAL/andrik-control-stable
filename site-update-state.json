@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786303393144-734f73dcdb",
-  "release": "R378",
-  "archiveName": "R378-R377-WORLD-COUNTRY-ONLY-MARKERS-NO-DUPLICATE-CITY-LIVE-GLITCH-SAFE-FULL.zip",
-  "sourceHead": "95c7b5d10cabd22bc59924aae980598ffdacd89f",
-  "backupSha": "95c7b5d10cabd22bc59924aae980598ffdacd89f",
-  "backupTag": "control-backup-20260809192309-95c7b5d-r378-eb55e",
+  "operationId": "publish-1786304158943-00e27dfa01",
+  "release": "R379",
+  "archiveName": "R379-R378-ALL-COUNTRIES-WORLD-MARKERS-ISO-FALLBACK-SAFE-FULL.zip",
+  "sourceHead": "a453c9f579382dcaeb5c9b0923525e3fe366ab16",
+  "backupSha": "a453c9f579382dcaeb5c9b0923525e3fe366ab16",
+  "backupTag": "control-backup-20260809193554-a453c9f-r379-ad010",
   "autoRecovery": true,
-  "generatedAt": "2026-08-09T19:23:13.144Z"
+  "generatedAt": "2026-08-09T19:35:58.943Z"
 }
