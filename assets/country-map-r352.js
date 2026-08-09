@@ -199,7 +199,9 @@
           const label = esc(rawLabel || 'Город / регион');
           const valueNumber = Math.max(0, Number(point.value || 0));
           const value = fmt(valueNumber);
+          const hitR = Math.max(34, r + 24);
           return `<g class="country-city-marker-r360" data-city="${label}" data-value="${valueNumber}" data-index="${index}" tabindex="-1" focusable="false" role="button" aria-label="${label}: ${value} включений">
+            <circle class="country-city-hit-r369" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${hitR.toFixed(1)}"/>
             <circle class="country-city-halo-r360" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(r+11).toFixed(1)}"/>
             <circle class="country-point-r352 country-city-point-r360" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r}"/>
           </g>`;

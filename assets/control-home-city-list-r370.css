@@ -1,0 +1,40 @@
+/* ANDRIK R370 — compact daily city activity list. */
+.control-home-page .control-home-city-list-r370{
+  margin-top:9px;
+  padding:10px 11px 9px;
+  border:1px solid rgba(96,211,255,.18);
+  border-radius:16px;
+  background:linear-gradient(180deg,rgba(5,23,33,.88),rgba(3,14,21,.94));
+  box-shadow:0 10px 28px rgba(0,0,0,.16),inset 0 0 0 1px rgba(255,255,255,.012);
+  color:#eaf8ff;
+}
+.control-home-page .control-home-city-list-r370[hidden]{display:none!important}
+.control-home-page .control-city-head-r370{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px
+}
+.control-home-page .control-city-head-r370 strong{font-size:.80rem;font-weight:950;letter-spacing:.01em}
+.control-home-page .control-city-head-r370 span{
+  min-width:25px;padding:2px 7px;border-radius:999px;background:rgba(74,199,246,.10);
+  color:#9ee7ff;font-size:.68rem;font-weight:950;text-align:center
+}
+.control-home-page .control-city-grid-r370{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px 7px
+}
+.control-home-page .control-city-row-r370{
+  display:flex;align-items:center;justify-content:space-between;gap:6px;min-width:0;
+  padding:6px 8px;border:1px solid rgba(111,204,237,.10);border-radius:10px;background:rgba(7,28,39,.64)
+}
+.control-home-page .control-city-row-r370 span{
+  min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#dceff8;font-size:.70rem;font-weight:800
+}
+.control-home-page .control-city-row-r370 strong{
+  flex:0 0 auto;color:#8fe2ff;font-size:.72rem;font-weight:1000
+}
+.control-home-page .control-home-city-list-r370>small{
+  display:block;margin-top:7px;color:#789caf;font-size:.64rem;text-align:center
+}
+@media(max-width:430px){
+  .control-home-page .control-city-grid-r370{gap:4px 6px}
+  .control-home-page .control-city-row-r370{padding:5px 7px}
+  .control-home-page .control-city-row-r370 span{font-size:.67rem}
+}

@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R368', number:368, version:'55.00', full:'55.00 LIVE WEB AI FINAL R368', siteUpdater:'55.00-r356' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R370', number:370, version:'55.00', full:'55.00 LIVE WEB AI FINAL R370', siteUpdater:'55.00-r356' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -8089,8 +8089,9 @@ async function maybeSendDailyOwnerSummary(env) {
 
   const windowKey = summaryWindow?.key || metrics?.windowKey || '';
   const preparedAt = new Date().toISOString();
+  const cities = await collectDailyCityActivityR370(db, summaryWindow, preparedAt).catch(() => []);
   const snapshotId = `auto-${clock.date}-${slot}-${Date.now().toString(36)}`;
-  const preparedSnapshot = JSON.stringify({ metrics, sentAt:preparedAt, localDate:clock.date, slot, source:'central-cron-prepared', windowKey, snapshotId });
+  const preparedSnapshot = JSON.stringify({ metrics, cities, sentAt:preparedAt, localDate:clock.date, slot, source:'central-cron-prepared', windowKey, snapshotId });
   await setPushState(db, 'daily-owner-summary-last-metrics', preparedSnapshot).catch(() => {});
   if (windowKey) {
     await setPushState(db, `daily-owner-summary-window:${windowKey}`, preparedSnapshot).catch(() => {});
@@ -8112,7 +8113,7 @@ async function maybeSendDailyOwnerSummary(env) {
         type:'daily-summary', source:'central-cron',
         title:`Общая сводка ANDRIK · ${slotLabel}`,
         message:lines.join('\n'), url:summaryUrl,
-        details:{ localDate:clock.date, localHour:clock.hour, localMinute:clock.minute, summarySlot:slot, collectionError, metrics, windowKey, snapshotId }
+        details:{ localDate:clock.date, localHour:clock.hour, localMinute:clock.minute, summarySlot:slot, collectionError, metrics, cities, windowKey, snapshotId }
       }
     });
   } catch (error) {
@@ -8131,7 +8132,7 @@ async function maybeSendDailyOwnerSummary(env) {
     await setPushState(db, 'daily-owner-summary-last-at', sentAt);
     await setPushState(db, 'daily-owner-summary-last-attempt-status', metrics.partial ? 'sent-partial' : 'sent');
     await setPushState(db, 'daily-owner-summary-last-attempt-error', collectionError);
-    const storedSnapshot = JSON.stringify({ metrics, sentAt, localDate:clock.date, slot, source:'central-cron', windowKey, snapshotId });
+    const storedSnapshot = JSON.stringify({ metrics, cities, sentAt, localDate:clock.date, slot, source:'central-cron', windowKey, snapshotId });
     await setPushState(db, 'daily-owner-summary-last-metrics', storedSnapshot);
     if (windowKey) await setPushState(db, `daily-owner-summary-window:${windowKey}`, storedSnapshot);
     await setPushState(db, `daily-owner-summary-push-snapshot:${snapshotId}`, storedSnapshot).catch(() => {});
@@ -8165,9 +8166,11 @@ async function handleManualDailyOwnerSummary(request, env) {
 
   const preparedAt = new Date().toISOString();
   const windowKey = metrics?.windowKey || window.key;
+  const cities = await collectDailyCityActivityR370(db, window, preparedAt).catch(() => []);
   const snapshotId = `manual-${clock.date}-${Date.now().toString(36)}`;
   const preparedSnapshot = JSON.stringify({
     metrics,
+    cities,
     sentAt:preparedAt,
     localDate:clock.date,
     source:'manual-control-prepared',
@@ -8196,7 +8199,7 @@ async function handleManualDailyOwnerSummary(request, env) {
         title:'Ежедневная сводка ANDRIK',
         message:lines.join('\n'),
         url:summaryUrl,
-        details:{ localDate:clock.date, localHour:clock.hour, manual:true, metrics, snapshotRefresh, collectionError, windowKey, snapshotId }
+        details:{ localDate:clock.date, localHour:clock.hour, manual:true, metrics, cities, snapshotRefresh, collectionError, windowKey, snapshotId }
       }
     });
   } catch (error) {
@@ -8205,7 +8208,7 @@ async function handleManualDailyOwnerSummary(request, env) {
 
   const sentAt = new Date().toISOString();
   if (result.ok) {
-    const sentSnapshot = JSON.stringify({ metrics, sentAt, localDate:clock.date, source:'manual-control', windowKey, snapshotId });
+    const sentSnapshot = JSON.stringify({ metrics, cities, sentAt, localDate:clock.date, source:'manual-control', windowKey, snapshotId });
     await setPushState(db, 'daily-owner-summary-manual-last-date', clock.date);
     await setPushState(db, 'daily-owner-summary-manual-last-at', sentAt);
     await setPushState(db, 'daily-owner-summary-last-metrics', sentSnapshot);
@@ -8600,6 +8603,51 @@ function controlHomeSummaryFromDailyMetricsR271(metrics = {}) {
   });
 }
 
+
+async function collectDailyCityActivityR370(db, window, cutoffAt = '') {
+  const windowStart = cleanPlainText(window?.startAt || '', 80);
+  const windowEnd = cleanPlainText(window?.endAt || '', 80);
+  if (!windowStart || !windowEnd) return [];
+
+  let effectiveEnd = windowEnd;
+  const cutoffMs = Date.parse(cutoffAt || '');
+  const endMs = Date.parse(windowEnd);
+  const startMs = Date.parse(windowStart);
+  if (Number.isFinite(cutoffMs) && Number.isFinite(startMs) && Number.isFinite(endMs)) {
+    effectiveEnd = new Date(Math.max(startMs, Math.min(endMs, cutoffMs))).toISOString();
+  }
+
+  const rows = await db.prepare(`
+    SELECT country, region, city,
+           COUNT(*) AS opens,
+           COUNT(DISTINCT visitor_hash) AS visitors,
+           MAX(created_at) AS lastAt
+    FROM site_visit_events
+    WHERE event_type='visit'
+      AND datetime(created_at) >= datetime(?1)
+      AND datetime(created_at) < datetime(?2)
+      AND (city<>'' OR region<>'')
+    GROUP BY country, region, city
+    ORDER BY opens DESC, visitors DESC, datetime(lastAt) DESC
+    LIMIT 50
+  `).bind(windowStart, effectiveEnd).all();
+
+  return (rows?.results || []).map(row => {
+    const city = cleanPlainText(row.city || '', 120);
+    const region = cleanPlainText(row.region || '', 120);
+    const country = cleanPlainText(row.country || '', 8).toUpperCase();
+    return {
+      city,
+      region,
+      country,
+      label:city || region || 'Город / регион',
+      opens:Math.max(0, Number(row.opens || 0)),
+      visitors:Math.max(0, Number(row.visitors || 0)),
+      lastAt:cleanPlainText(row.lastAt || '', 80)
+    };
+  }).filter(item => item.label && item.opens > 0);
+}
+
 function parseStoredDailySummarySnapshotR271(row, windowKey) {
   if (!row?.value) return null;
   try {
@@ -8609,6 +8657,7 @@ function parseStoredDailySummarySnapshotR271(row, windowKey) {
     if (storedKey !== windowKey) return null;
     return {
       metrics,
+      cities:Array.isArray(parsed?.cities) ? parsed.cities.slice(0,50) : [],
       sentAt:cleanPlainText(parsed?.sentAt || row?.updatedAt || '', 80),
       source:cleanPlainText(parsed?.source || 'central-cron', 40)
     };
@@ -8691,6 +8740,9 @@ async function handleControlHomePushSnapshotR271(db, window) {
     windowStartAt:window.startAt,
     windowEndAt:window.endAt,
     summary:controlHomeSummaryFromDailyMetricsR271(snapshot.metrics),
+    cityActivity:(Array.isArray(snapshot.cities) && snapshot.cities.length)
+      ? snapshot.cities
+      : await collectDailyCityActivityR370(db, window, snapshot.sentAt || window.endAt).catch(() => []),
     activity:activityResult?.results || [],
     summarySource:'push-direct',
     summaryView:'completed-push',
@@ -8738,6 +8790,9 @@ async function handleControlHome(request, env) {
           windowStartAt:requestedPushWindow.startAt,
           windowEndAt:requestedPushWindow.endAt,
           summary:controlHomeSummaryFromDailyMetricsR271(exact.metrics),
+          cityActivity:(Array.isArray(exact.cities) && exact.cities.length)
+            ? exact.cities
+            : await collectDailyCityActivityR370(db, requestedPushWindow, exact.sentAt || requestedPushWindow.endAt).catch(() => []),
           activity:activityResult?.results || [],
           summarySource:'push-exact-r366',
           summaryView:'completed-push',
@@ -8751,7 +8806,7 @@ async function handleControlHome(request, env) {
   }
   // R260 DAILY ACCUMULATOR: the screen uses one Bratislava window, 06:05 → next 06:05.
   // Sending a push only records a checkpoint. It never resets counters; only the window key changes at 06:05.
-  const [siteSubscribers, siteComments, siteLikes, youtubeEvents, youtubeLikeRows, youtubeSubscriberRows, releases, latestYoutubeState, activityResult, ytLatest, ytBaselineBefore, ytBaselineAfter, gaLatest, gaBaselineBefore, gaBaselineAfter, gaRollover, automationAt, automationStatus, automationSummary, siteLive, siteWindow, latestDailySummaryState, latestDailySummaryPush, latestDailySummaryLog] = await Promise.all([
+  const [siteSubscribers, siteComments, siteLikes, youtubeEvents, youtubeLikeRows, youtubeSubscriberRows, releases, latestYoutubeState, activityResult, ytLatest, ytBaselineBefore, ytBaselineAfter, gaLatest, gaBaselineBefore, gaBaselineAfter, gaRollover, automationAt, automationStatus, automationSummary, siteLive, siteWindow, latestDailySummaryState, latestDailySummaryPush, latestDailySummaryLog, cityActivity] = await Promise.all([
     db.prepare(`SELECT COUNT(*) AS total FROM push_history WHERE type='site-subscriber' AND datetime(created_at) >= datetime(?1)`).bind(window.startAt).first(),
     db.prepare(`SELECT COUNT(*) AS total FROM comments WHERE datetime(created_at) >= datetime(?1)`).bind(window.startAt).first(),
     db.prepare(`SELECT COUNT(*) AS total FROM comment_likes WHERE datetime(created_at) >= datetime(?1)`).bind(window.startAt).first(),
@@ -8805,7 +8860,8 @@ async function handleControlHome(request, env) {
         AND datetime(created_at) >= datetime('now','-30 hours')
       ORDER BY datetime(created_at) DESC
       LIMIT 1
-    `).first()
+    `).first(),
+    collectDailyCityActivityR370(db, window, new Date().toISOString())
   ]);
   const ytBaseline = ytBaselineBefore || ytBaselineAfter;
   const gaBaseline = gaBaselineBefore || gaBaselineAfter;
@@ -8884,6 +8940,7 @@ async function handleControlHome(request, env) {
     windowStartAt:window.startAt,
     windowEndAt:window.endAt,
     summary:summaryR213,
+    cityActivity:Array.isArray(cityActivity)?cityActivity:[],
     activity:activityResult.results || [],
     automation:{
       lastCheckAt:automationAt?.value || '',

@@ -168,6 +168,36 @@
     box.innerHTML=`<strong>🌍 За сутки YouTube:</strong><span>${line}${escapeHtml(extra)}</span>${summary.totalCountries?`<small>Стран в аудитории YouTube за 28 дней: ${number(summary.totalCountries)}</small>`:''}`;
   }
 
+
+  function countryFlagR370(code=''){
+    const iso=String(code||'').trim().toUpperCase();
+    if(!/^[A-Z]{2}$/.test(iso))return '🌍';
+    return String.fromCodePoint(...[...iso].map(ch=>127397+ch.charCodeAt(0)));
+  }
+
+  function renderDailyCitiesR370(data={}){
+    const box=$('controlHomeCityList');
+    if(!box)return;
+    const rows=Array.isArray(data.cityActivity)
+      ? data.cityActivity.filter(item=>Number(item?.opens||0)>0)
+      : [];
+    if(!rows.length){
+      box.hidden=true;
+      box.innerHTML='';
+      return;
+    }
+    const visible=rows.slice(0,24);
+    const items=visible.map(item=>{
+      const place=String(item?.city||item?.label||item?.region||'Город / регион');
+      return `<div class="control-city-row-r370"><span>${countryFlagR370(item?.country||'')} ${escapeHtml(place)}</span><strong>${number(item.opens)}</strong></div>`;
+    }).join('');
+    const extra=rows.length>visible.length
+      ? `<small>Ещё ${number(rows.length-visible.length)} городов/регионов</small>`
+      : '';
+    box.hidden=false;
+    box.innerHTML=`<div class="control-city-head-r370"><strong>📍 Города за день</strong><span>${number(rows.length)}</span></div><div class="control-city-grid-r370">${items}</div>${extra}`;
+  }
+
   function renderSummary(data){
     const pushSnapshot=IS_PUSH_SUMMARY_VIEW||data?.summaryView==='completed-push';
     document.body.classList.toggle('control-push-summary-view',pushSnapshot);
@@ -190,6 +220,7 @@
     const summaryBox=$('controlHomeSummary');
     if(summaryBox)summaryBox.innerHTML=items.map(item=>summaryCard(...item)).join('');
     renderGeoDelta(s);
+    renderDailyCitiesR370(data);
     const updatedAt=Date.parse(data.updatedAt||'');
     const compactTime=Number.isFinite(updatedAt)
       ? new Intl.DateTimeFormat('ru-RU',{hour:'2-digit',minute:'2-digit'}).format(new Date(updatedAt))

@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786293504387-e0e0694cb8",
-  "release": "R368",
-  "archiveName": "R368-R367-BOTTOM-CITY-LABEL-BRIGHT-SMOOTH-PULSE-SAFE-FULL.zip",
-  "sourceHead": "8f1d771837c1620035393ebcc95ba8b3a4512e55",
-  "backupSha": "8f1d771837c1620035393ebcc95ba8b3a4512e55",
-  "backupTag": "control-backup-20260809163820-8f1d771-r368-99fd6",
+  "operationId": "publish-1786294147321-903ae5fe27",
+  "release": "R370",
+  "archiveName": "R370-R369-DAILY-CITY-LIST-SUMMARY-SAFE-FULL.zip",
+  "sourceHead": "d2f090c6e61141a3a04691a533ef7b38325ea8b7",
+  "backupSha": "d2f090c6e61141a3a04691a533ef7b38325ea8b7",
+  "backupTag": "control-backup-20260809164903-d2f090c-r370-7d7e7",
   "autoRecovery": true,
-  "generatedAt": "2026-08-09T16:38:24.387Z"
+  "generatedAt": "2026-08-09T16:49:07.321Z"
 }

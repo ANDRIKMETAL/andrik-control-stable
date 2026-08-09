@@ -1,4 +1,4 @@
-R368 — RUSSIA DETAIL + CITY TAP COUNTER + STABLE YELLOW HALO
+R370 — RUSSIA DETAIL + CITY TAP COUNTER + STABLE YELLOW HALO
 
 Основа:
 - Frontend карты: R361/R364 (R362 smooth-halos не возвращались).
@@ -24,4 +24,4 @@ R368 — RUSSIA DETAIL + CITY TAP COUNTER + STABLE YELLOW HALO
 - Анимируется только один мягкий жёлтый ореол: радиус 34 → 74 → 34 за 2.6 сек.
 - Opacity ореола постоянная, поэтому нет мигания и затемнения карты.
 
-Версия: R368.
+Версия: R370.
