@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R362', number:362, version:'55.00', full:'55.00 LIVE WEB AI FINAL R362', siteUpdater:'55.00-r356' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R364', number:364, version:'55.00', full:'55.00 LIVE WEB AI FINAL R364', siteUpdater:'55.00-r356' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -3955,7 +3955,7 @@ async function handleControlSystem(request, env) {
         lastAttemptAt:dailySummaryAttemptAt?.value || '',
         lastAttemptStatus:dailySummaryAttemptStatus?.value || '',
         lastAttemptError:dailySummaryAttemptError?.value || '',
-        schedule:'06:00 Europe/Bratislava · с автоматическим догоном',
+        schedule:'05:00 / 17:00 Europe/Bratislava · быстрая проверка каждые 5 минут + догон',
         label:dailySummaryAttemptStatus?.value === 'failed'
           ? `Последняя попытка не удалась: ${dailySummaryAttemptError?.value || 'ошибка отправки'}`
           : dailySummaryLabel
@@ -8287,8 +8287,15 @@ async function handleExternalCronGatewayR334(request, env) {
     tasks.engagement={ok:true,skipped:true,reason:clock.due2?'slot-already-claimed':'not-due'};
   }
 
-  // Every 5 minutes: subscriber/event monitor + release fallback.
+  // R364 (from R363): every 5 minutes, check owner-summary slot FIRST.
   if(clock.due5 && await claimCronGatewaySlotR334(db,'youtube-5m',clock.slot5)){
+    try{
+      tasks.dailySummaryFast=await maybeSendDailyOwnerSummary(env);
+      if(!tasks.dailySummaryFast.ok && !tasks.dailySummaryFast.skipped)errors.push(`dailySummaryFast:${tasks.dailySummaryFast.error || 'failed'}`);
+    }catch(error){
+      tasks.dailySummaryFast={ok:false,error:cleanPlainText(error?.message || error,400)};
+      errors.push(`dailySummaryFast:${tasks.dailySummaryFast.error}`);
+    }
     try{
       tasks.releaseFallback=await responseData(await handleFastYoutubeReleaseCheckR332(request,env));
       if(!tasks.releaseFallback.httpOk)errors.push(`releaseFallback:${tasks.releaseFallback.error || tasks.releaseFallback.status}`);
@@ -8304,6 +8311,7 @@ async function handleExternalCronGatewayR334(request, env) {
       errors.push(`youtubeEvents:${tasks.youtubeEvents.error}`);
     }
   }else{
+    tasks.dailySummaryFast={ok:true,skipped:true,reason:clock.due5?'slot-already-claimed':'not-due'};
     tasks.releaseFallback={ok:true,skipped:true,reason:clock.due5?'slot-already-claimed':'not-due'};
     tasks.youtubeEvents={ok:true,skipped:true,reason:clock.due5?'slot-already-claimed':'not-due'};
   }
@@ -8365,7 +8373,7 @@ async function handleAutomationRun(request, env) {
     tasks.summaryRefresh = await refreshDailySummaryAccumulatorR305(env, 'central-cron');
     if (!tasks.summaryRefresh.ok && !tasks.summaryRefresh.skipped) errors.push(`summaryRefresh: ${tasks.summaryRefresh.error || 'failed'}`);
   } catch (error) { tasks.summaryRefresh={ok:false,error:cleanPlainText(error?.message || error,500)}; errors.push(`summaryRefresh: ${tasks.summaryRefresh.error}`); }
-  // R350: scheduled 05:00 / 17:00 owner summaries read the same persisted accumulator.
+  // R364/R363: central run is catch-up fallback; primary delivery runs in the fast 5-minute cycle.
   try {
     tasks.dailySummary = await maybeSendDailyOwnerSummary(env);
     if (!tasks.dailySummary.ok && !tasks.dailySummary.skipped) errors.push(`dailySummary: ${tasks.dailySummary.error || 'failed'}`);
@@ -11836,10 +11844,17 @@ export default {
       if(isEngagementR333){
         response=await handleFastYoutubeEngagementR333(request,env);
       }else if(isFiveMinuteR333){
+        let dailySummary;
+        try{
+          dailySummary=await maybeSendDailyOwnerSummary(env);
+        }catch(error){
+          dailySummary={ok:false,error:cleanPlainText(error?.message || error,500)};
+        }
         const release=await responseData(await handleFastYoutubeReleaseCheckR332(request,env));
         const events=await responseData(await handleCheckYoutubeEvents(request,env));
-        const ok=Boolean(release.httpOk)&&Boolean(events.httpOk);
-        response=json({ok,release,events,mode:'five-minute-r333'},ok?200:502);
+        const summaryOk=Boolean(dailySummary?.ok || dailySummary?.skipped);
+        const ok=summaryOk&&Boolean(release.httpOk)&&Boolean(events.httpOk);
+        response=json({ok,dailySummary,release,events,mode:'five-minute-r364'},ok?200:502);
       }else{
         response=await handleAutomationRun(request,env);
       }

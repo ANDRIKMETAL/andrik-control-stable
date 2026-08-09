@@ -23,11 +23,11 @@
         node.style.setProperty('border-color','rgba(255,220,226,.88)','important');
         node.style.setProperty(
           'box-shadow',
-          '0 0 7px rgba(255,61,92,.56)',
+          '0 0 0 5px rgba(255,86,111,.14),0 0 22px rgba(255,66,94,.98),0 0 40px rgba(255,40,78,.48)',
           'important'
         );
         node.style.setProperty('filter','none','important');
-        node.style.setProperty('animation','none','important');
+        node.style.setProperty('animation','andrikYoutubeRedPulseR357 2.55s ease-in-out infinite','important');
         node.dataset.youtubeRedR357='1';
       }else if(node.dataset.youtubeRedR357==='1'){
         node.style.removeProperty('background');

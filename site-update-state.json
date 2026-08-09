@@ -1,14 +1,14 @@
 {
   "schema": 1,
   "updaterVersion": "55.00-r356",
-  "operation": "reinstall",
-  "reinstall": true,
-  "operationId": "reinstall-1786290221572-285c49a42b",
-  "release": "R362",
-  "archiveName": "R362-R361-SMOOTH-WIDE-HALOS-ALL-POINTS-CITIES-SAFE-FULL.zip",
-  "sourceHead": "f18f4760d843d78dcaf68585a2a33a64f11e88d0",
-  "backupSha": "f18f4760d843d78dcaf68585a2a33a64f11e88d0",
-  "backupTag": "control-backup-20260809154337-f18f476-r362-6f1b2",
+  "operation": "publish",
+  "reinstall": false,
+  "operationId": "publish-1786290850053-c45338de89",
+  "release": "R364",
+  "archiveName": "R364-R361-MAP-R363-SUMMARY-R277-YELLOW-PULSE-SAFE-FULL.zip",
+  "sourceHead": "be19e1635f490884325e3c4b9c29645e44641c3d",
+  "backupSha": "be19e1635f490884325e3c4b9c29645e44641c3d",
+  "backupTag": "control-backup-20260809155406-be19e16-r364-129d8",
   "autoRecovery": true,
-  "generatedAt": "2026-08-09T15:43:41.572Z"
+  "generatedAt": "2026-08-09T15:54:10.053Z"
 }
