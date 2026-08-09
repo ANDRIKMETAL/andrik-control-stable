@@ -1,4 +1,4 @@
-R370 — R361 MAP RESTORE + R363 FAST SUMMARY + R277 YELLOW PULSE
+R371 — R361 MAP RESTORE + R363 FAST SUMMARY + R277 YELLOW PULSE
 
 Сборка намеренно создана от стабильной R361, а НЕ от R362/R363 frontend.
 
@@ -25,7 +25,7 @@ R370 — R361 MAP RESTORE + R363 FAST SUMMARY + R277 YELLOW PULSE
 - Ядро + два мягких жёлто-золотых слоя свечения.
 - Старый R361 native pulse для центральной точки отключён, чтобы не было двойной анимации.
 
-Версия Control: R370.
+Версия Control: R371.
 База frontend: R361.
 Server fix: R363.
 Pulse source: R277 / R44 selected orb.

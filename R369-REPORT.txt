@@ -1,4 +1,4 @@
-R370 — CITY TOUCH TARGET FIX
+R371 — CITY TOUCH TARGET FIX
 
 Исправлено:
 - Реальная синяя городская точка оставлена прежнего визуального размера.
@@ -14,5 +14,5 @@ R370 — CITY TOUCH TARGET FIX
 - R366 exact push summary snapshot.
 - R363 fast 5-minute summary cycle.
 
-Версия: R370.
+Версия: R371.
 База: R368.

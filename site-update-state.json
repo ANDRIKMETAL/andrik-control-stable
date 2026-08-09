@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786294147321-903ae5fe27",
-  "release": "R370",
-  "archiveName": "R370-R369-DAILY-CITY-LIST-SUMMARY-SAFE-FULL.zip",
-  "sourceHead": "d2f090c6e61141a3a04691a533ef7b38325ea8b7",
-  "backupSha": "d2f090c6e61141a3a04691a533ef7b38325ea8b7",
-  "backupTag": "control-backup-20260809164903-d2f090c-r370-7d7e7",
+  "operationId": "publish-1786294561529-0a25251bea",
+  "release": "R371",
+  "archiveName": "R371-R370-LANDSCAPE-COUNTRY-LABEL-GO-WORLD-SAFE-FULL.zip",
+  "sourceHead": "acca594d2a5a643206089300dfc72a61979cb83c",
+  "backupSha": "acca594d2a5a643206089300dfc72a61979cb83c",
+  "backupTag": "control-backup-20260809165557-acca594-r371-88ca1",
   "autoRecovery": true,
-  "generatedAt": "2026-08-09T16:49:07.321Z"
+  "generatedAt": "2026-08-09T16:56:01.529Z"
 }

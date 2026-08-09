@@ -22,7 +22,13 @@
     border-radius:999px!important;
     background:rgba(2,9,14,.30)!important;
     box-shadow:0 0 12px rgba(255,174,31,.12)!important;
-    pointer-events:none!important;
+    pointer-events:auto!important;
+    cursor:pointer!important;
+    touch-action:manipulation!important;
+    -webkit-tap-highlight-color:transparent!important;
+    appearance:none!important;
+    -webkit-appearance:none!important;
+    font:inherit!important;
     transform:translateX(-50%)!important;
     white-space:nowrap!important;
     opacity:1!important;
@@ -31,6 +37,16 @@
   #landscapeCountryLabelR78[hidden]{
     display:none!important;
   }
+
+  #landscapeCountryLabelR78:active{
+    background:rgba(90,61,7,.52)!important;
+    box-shadow:0 0 16px rgba(255,174,31,.25)!important;
+  }
+  #landscapeCountryLabelR78:focus,
+  #landscapeCountryLabelR78:focus-visible{
+    outline:none!important;
+  }
+
 
   #landscapeCountryLabelR78 .r78-country-flag{
     flex:none!important;

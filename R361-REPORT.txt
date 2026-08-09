@@ -1,4 +1,4 @@
-R370 — SOFT WIDE COUNTRY PULSE
+R371 — SOFT WIDE COUNTRY PULSE
 
 Изменена только центральная жёлтая пульсация страны:
 - Цикл замедлен с 0.92 сек до 2.45 сек.
@@ -9,6 +9,6 @@ R370 — SOFT WIDE COUNTRY PULSE
 - Старые native-анимации R359 удаляются из SVG перед запуском новой R361-анимации.
 - Старый R359 pulse-loader больше не подключается к analytics-admin.
 - Городские точки R360, YouTube red/pink, скролл и геометрия карт не изменялись.
-- Версия Control: R370.
+- Версия Control: R371.
 
 База: R360.

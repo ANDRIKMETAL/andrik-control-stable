@@ -37,10 +37,13 @@
   function ensureLabel(){
     let node=document.getElementById('landscapeCountryLabelR78');
     if(!node){
-      node=document.createElement('div');
+      node=document.createElement('button');
+      node.type='button';
       node.id='landscapeCountryLabelR78';
       node.hidden=true;
       node.setAttribute('aria-hidden','true');
+      node.setAttribute('aria-label','Вернуться к общей карте мира');
+      node.setAttribute('title','Вернуться к общей карте мира');
       node.innerHTML='<span class="r78-country-flag" aria-hidden="true"></span><span class="r78-country-name"></span>';
       map.appendChild(node);
     }else if(node.parentElement!==map){
@@ -147,6 +150,46 @@
       activate('','');
     }
   });
+
+
+  function goWorldR371(event){
+    if(!isLandscape())return;
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+
+    const runtime=window.__andrikWorldMapRuntime;
+    if(runtime?.goWorld){
+      runtime.goWorld();
+    }else if(runtime?.clearSelection){
+      runtime.clearSelection();
+    }else{
+      window.dispatchEvent(new CustomEvent('andrik:country-focus-changed',{
+        detail:{focused:false,country:''}
+      }));
+    }
+
+    activeCountry='';
+    activeCode='';
+    hide();
+
+    setTimeout(()=>{
+      const node=ensureLabel();
+      node.hidden=true;
+      node.setAttribute('aria-hidden','true');
+    },20);
+  }
+
+  const labelButton=ensureLabel();
+  labelButton.addEventListener('pointerdown',event=>{
+    if(!isLandscape())return;
+    event.stopPropagation();
+  },true);
+  labelButton.addEventListener('click',goWorldR371,true);
+  labelButton.addEventListener('keydown',event=>{
+    if(event.key==='Enter'||event.key===' '){
+      goWorldR371(event);
+    }
+  },true);
 
   const observer=new MutationObserver(()=>{
     if(activeCountry)follow(500);

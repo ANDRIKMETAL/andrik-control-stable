@@ -1,4 +1,4 @@
-R370 — BOTTOM CITY LABEL + BRIGHT SMOOTH PULSE
+R371 — BOTTOM CITY LABEL + BRIGHT SMOOTH PULSE
 
 - Убран Android/SVG tooltip сверху карты и квадратный focus-эффект.
 - «Город · N включений» теперь показывается снизу по центру в свободном месте, 3 секунды, затем плавно исчезает.
