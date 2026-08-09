@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="ru" translate="no" class="notranslate"><head>
-<meta name="andrik-control-release" content="R384">
+<meta name="andrik-control-release" content="R385">
 <link rel="stylesheet" href="/assets/control-sleep-mode-r193.css?v=55.00-r193"><script defer src="/assets/control-sleep-mode-r193.js?v=55.00-r193"></script>
 
 <meta name="google" content="notranslate"><meta charset="utf-8"/>
@@ -34,6 +34,13 @@ if (location.hostname.toLowerCase() === 'control.andrikmetal.com') {
 .control-overview-card strong{font-size:1.68rem;line-height:1.02;margin-top:2px}
 .control-overview-card small{font-size:.68rem;line-height:1.08}
 .control-backup-center-actions,.admin-push-history{margin-top:4px}
+/* R385: notification history stays inside the spoiler and scrolls internally. */
+#adminPushHistorySpoiler .andrik-spoiler-body{padding:0 12px 14px 18px}
+#adminPushHistory{max-height:min(58vh,620px);overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;scrollbar-gutter:stable;padding-right:6px;padding-bottom:4px}
+#adminPushHistory::-webkit-scrollbar{width:7px}
+#adminPushHistory::-webkit-scrollbar-thumb{background:rgba(125,220,255,.48);border-radius:999px}
+#adminPushHistory::-webkit-scrollbar-track{background:rgba(255,255,255,.035);border-radius:999px}
+@media (max-width:620px){#adminPushHistory{max-height:56vh;padding-right:4px}}
 @media (max-width:620px){.control-overview-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.control-overview-card{padding:10px 8px;min-height:98px;border-radius:16px}.control-overview-card strong{font-size:1.45rem}.control-overview-card small{font-size:.62rem}.control-overview-heading .btn{width:100%;margin-top:12px}}
 @media (max-width:380px){.control-overview-card{padding:9px 7px;min-height:92px}.control-overview-card strong{font-size:1.32rem}.control-overview-card small{font-size:.58rem}}
 </style>
@@ -112,8 +119,8 @@ if (location.hostname.toLowerCase() === 'control.andrikmetal.com') {
 <article class="admin-control-card admin-release-monitor-card"><div class="admin-card-title-row"><div><h2>Автоматические релизы YouTube</h2><p>Проверка канала каждые 15 минут. Ручная проверка перенесена в «Служебное».</p></div><span class="automation-health is-never" id="adminAutomationHealth">Не проверялось</span></div><div class="automation-summary"><div><small>Последняя проверка</small><strong id="adminAutomationLast">—</strong></div><div><small>Следующая ожидается</small><strong id="adminAutomationNext">—</strong></div><div><small>Источник</small><strong id="adminAutomationMode">—</strong></div></div><div class="admin-actions"><button class="btn" id="adminPushHistoryRefresh" type="button">Обновить историю</button></div><div class="admin-push-status" id="adminPlaylistStatus"></div></article>
 <article class="admin-control-card admin-control-card-wide admin-push-history-card"><div class="admin-card-title-row"><div><h2>История уведомлений</h2><p>Автоматические релизы, ручные рассылки, тесты и системные события.</p></div><span class="admin-history-count" id="adminPushHistoryCount">0 записей</span></div><details class="andrik-spoiler admin-block-spoiler" id="adminPushHistorySpoiler"><summary>Уведомления и системные события</summary><div class="andrik-spoiler-body"><div class="admin-push-history" id="adminPushHistory"><div class="admin-empty">Загружаем историю…</div></div></div></details></article>
 
-</section><footer class="control-version-footer"><strong>Live Web AI · профиль ANDRIK · v55.00 LIVE WEB AI FINAL R342</strong><span>три плитки в ряд и уменьшенная панель ANDRIK · 29.07.2026</span></footer></div></main>
+</section><footer class="control-version-footer"><strong>Live Web AI · профиль ANDRIK · v55.00 LIVE WEB AI FINAL R385</strong><span>История уведомлений — спойлер + внутренняя прокрутка · 09.08.2026</span></footer></div></main>
 <script defer src="/assets/push-v54-07.js?v=54.07"></script><script defer src="/assets/comments-admin-v51.js?v=53.0"></script><script defer src="/assets/control-dashboard-v51.js?v=53.0"></script><script defer src="/assets/control-version-v54-92.js?v=54.92"></script><script defer src="/assets/control-status-eye-v55-00-r88.js?v=55.00-r88"></script><script defer src="/assets/control-version-v54-99b.js?v=54.99b"></script><script defer src="/assets/control-version-v55-00-final-r2.js?v=55.00-final-r2"></script><script defer src="/assets/control-version-v55-00-final-r21.js?v=55.00-final-r21"></script><script defer src="/assets/control-live-eye-v55-00-r265.js?v=55.00-r265"></script><script defer src="/assets/control-version-v55-00-r3n.js?v=55.00-r3n"></script><script defer src="/assets/control-version-v55-00-final-stable-github.js?v=55.00-final-stable-github"></script><script defer src="/assets/admin-carousel-embed-v55-00-final.js?v=55.00-r185"></script><script defer src="/assets/control-version-v55-00-r115.js?v=55.00-r115"></script><script defer src="/assets/unified-glow-r139.js?v=55.00-r142"></script>
 <script defer src="/assets/control-mini-player-r141.js?v=55.00-r144"></script>
-<script defer src="/assets/control-version-sync-r356.js?v=55.00-r356"></script>
+<script defer src="/assets/control-version-sync-r385.js?v=55.00-r385"></script>
 </body></html>

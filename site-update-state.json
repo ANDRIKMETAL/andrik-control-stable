@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786308298056-3bfe1c6d75",
-  "release": "R384",
-  "archiveName": "R384-R383-NO-YELLOW-HALO-RETURN-STALL-SAFE-FULL.zip",
-  "sourceHead": "ef22b5841ff277492becba086db3795152e609ea",
-  "backupSha": "ef22b5841ff277492becba086db3795152e609ea",
-  "backupTag": "control-backup-20260809204453-ef22b58-r384-10f64",
+  "operationId": "publish-1786309508929-41e6835460",
+  "release": "R385",
+  "archiveName": "R385-R384-NOTIFICATION-HISTORY-SPOILER-SCROLL-VERSION-FIX-SAFE-FULL.zip",
+  "sourceHead": "7b1c476b8502e9e50de121ce600f1f5f0cbf81d9",
+  "backupSha": "7b1c476b8502e9e50de121ce600f1f5f0cbf81d9",
+  "backupTag": "control-backup-20260809210503-7b1c476-r385-00419",
   "autoRecovery": true,
-  "generatedAt": "2026-08-09T20:44:58.056Z"
+  "generatedAt": "2026-08-09T21:05:08.929Z"
 }
