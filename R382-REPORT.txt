@@ -1,4 +1,4 @@
-R382 — REMEMBER LAST ECOSYSTEM MAP LAYER
+R383 — REMEMBER LAST ECOSYSTEM MAP LAYER
 
 Изменено:
 - Последний выбранный слой главной карты сохраняется в localStorage.
@@ -16,5 +16,5 @@ R382 — REMEMBER LAST ECOSYSTEM MAP LAYER
 - R377 быстрый плавный step-2 переход.
 - R376 надёжные YouTube лайк/комментарий push.
 
-Версия: R382.
+Версия: R383.
 База: R381.

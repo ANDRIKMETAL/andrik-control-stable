@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786306369180-38df40baeb",
-  "release": "R382",
-  "archiveName": "R382-R381-REMEMBER-LAST-MAP-LAYER-SAFE-FULL.zip",
-  "sourceHead": "f8e2eb2219b521ad1de7560599ae3c4f64c522f7",
-  "backupSha": "f8e2eb2219b521ad1de7560599ae3c4f64c522f7",
-  "backupTag": "control-backup-20260809201244-f8e2eb2-r382-42c7b",
+  "operationId": "publish-1786307495029-2ac431b09b",
+  "release": "R383",
+  "archiveName": "R383-R382-YELLOW-COUNTRY-CARD-BACK-TO-WORLD-SAFE-FULL.zip",
+  "sourceHead": "eedaa37cd8454360c49d13c3fffea75d3b4b3314",
+  "backupSha": "eedaa37cd8454360c49d13c3fffea75d3b4b3314",
+  "backupTag": "control-backup-20260809203131-eedaa37-r383-97207",
   "autoRecovery": true,
-  "generatedAt": "2026-08-09T20:12:49.180Z"
+  "generatedAt": "2026-08-09T20:31:35.029Z"
 }
