@@ -1,14 +1,14 @@
 {
   "schema": 1,
-  "updaterVersion": "55.00-r336",
+  "updaterVersion": "55.00-r337",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786271403168-2355ac25b7",
-  "release": "R336",
-  "archiveName": "R337-R336-PER-LAYER-MAP-ANALYTICS-SAFE-FULL.zip",
-  "sourceHead": "4cfa513896bee85b05d7b2d0ea38730b168fc351",
-  "backupSha": "4cfa513896bee85b05d7b2d0ea38730b168fc351",
-  "backupTag": "control-backup-20260809102956-4cfa513-r336-15818",
+  "operationId": "publish-1786277228910-2338301db3",
+  "release": "R337",
+  "archiveName": "R338-R337-COUNTRY-DRILLDOWN-MAP-SAFE-FULL.zip",
+  "sourceHead": "7d08d452ec6488c58c6988990f80c947e3a781ea",
+  "backupSha": "7d08d452ec6488c58c6988990f80c947e3a781ea",
+  "backupTag": "control-backup-20260809120704-7d08d45-r337-c2f7a",
   "autoRecovery": true,
-  "generatedAt": "2026-08-09T10:30:03.168Z"
+  "generatedAt": "2026-08-09T12:07:08.910Z"
 }

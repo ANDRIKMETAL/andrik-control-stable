@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R337', number:337, version:'55.00', full:'55.00 LIVE WEB AI FINAL R337', siteUpdater:'55.00-r337' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R338', number:338, version:'55.00', full:'55.00 LIVE WEB AI FINAL R338', siteUpdater:'55.00-r338' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -1433,7 +1433,7 @@ async function handleSiteVisit(request, env) {
   const city = cleanPlainText(cf.city || '', 120);
   const latRaw = Number(cf.latitude);
   const lonRaw = Number(cf.longitude);
-  // R337 keeps R336 privacy: only coarse (~11 km) edge coordinates are stored; raw IP is never stored.
+  // R338 keeps R336 privacy and adds country drilldown UI: only coarse (~11 km) edge coordinates are stored; raw IP is never stored.
   const latitude = Number.isFinite(latRaw) ? Math.round(latRaw * 10) / 10 : null;
   const longitude = Number.isFinite(lonRaw) ? Math.round(lonRaw * 10) / 10 : null;
   await db.prepare(`
