@@ -1,14 +1,14 @@
 {
   "schema": 1,
-  "updaterVersion": "55.00-r347",
-  "operation": "publish",
-  "reinstall": false,
-  "operationId": "publish-1786283938895-a31fce5823",
+  "updaterVersion": "55.00-r351",
+  "operation": "reinstall",
+  "reinstall": true,
+  "operationId": "reinstall-1786284019675-abf08fe239",
   "release": "R351",
   "archiveName": "R351-R350-MAP-SMOOTH-COUNTRY-LIST-SCROLL-SAFE-FULL.zip",
-  "sourceHead": "f41349ad60018f1360c8d92b5cfc711239f04e73",
-  "backupSha": "f41349ad60018f1360c8d92b5cfc711239f04e73",
-  "backupTag": "control-backup-20260809135854-f41349a-r351-ef7ec",
+  "sourceHead": "e1a1745ab7dd6693d4ba0c676993b02e7b94d981",
+  "backupSha": "e1a1745ab7dd6693d4ba0c676993b02e7b94d981",
+  "backupTag": "control-backup-20260809140015-e1a1745-r351-6af95",
   "autoRecovery": true,
-  "generatedAt": "2026-08-09T13:58:58.895Z"
+  "generatedAt": "2026-08-09T14:00:19.675Z"
 }
