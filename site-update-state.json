@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r347",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786282905490-0a3a14e4fb",
-  "release": "R350",
-  "archiveName": "R350-R349-AUTO-DAILY-STATS-0500-1700-SUMMARY-SAFE-FULL.zip",
-  "sourceHead": "d5723602a3188ac2110bf083d708a8f13a3f048b",
-  "backupSha": "d5723602a3188ac2110bf083d708a8f13a3f048b",
-  "backupTag": "control-backup-20260809134141-d572360-r350-89ef0",
+  "operationId": "publish-1786283938895-a31fce5823",
+  "release": "R351",
+  "archiveName": "R351-R350-MAP-SMOOTH-COUNTRY-LIST-SCROLL-SAFE-FULL.zip",
+  "sourceHead": "f41349ad60018f1360c8d92b5cfc711239f04e73",
+  "backupSha": "f41349ad60018f1360c8d92b5cfc711239f04e73",
+  "backupTag": "control-backup-20260809135854-f41349a-r351-ef7ec",
   "autoRecovery": true,
-  "generatedAt": "2026-08-09T13:41:45.490Z"
+  "generatedAt": "2026-08-09T13:58:58.895Z"
 }

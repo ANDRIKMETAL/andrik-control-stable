@@ -1,0 +1,108 @@
+/* ANDRIK R351 — fixed map viewport + smoother country transition + reliable country list scroll. */
+@media screen and (orientation:portrait){
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top.has-country-focus #worldMap,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top:not(.has-country-focus) #worldMap{
+    position:relative!important;
+    box-sizing:border-box!important;
+    width:100%!important;
+    max-width:100%!important;
+    height:clamp(270px,22dvh,286px)!important;
+    min-height:clamp(270px,22dvh,286px)!important;
+    max-height:286px!important;
+    margin:0 auto!important;
+    padding:0!important;
+    overflow:hidden!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap .world-map-canvas,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap .world-map-stage,
+  body.analytics-admin-page.analytics-v54-46-page.is-country-focus-active #worldMap .world-map-canvas,
+  body.analytics-admin-page.analytics-v54-46-page.is-country-focus-active #worldMap .world-map-stage,
+  body.analytics-admin-page.analytics-v54-46-page.is-country-deep-active #worldMap .world-map-canvas,
+  body.analytics-admin-page.analytics-v54-46-page.is-country-deep-active #worldMap .world-map-stage{
+    position:absolute!important;
+    inset:0!important;
+    width:100%!important;
+    height:100%!important;
+    min-height:100%!important;
+    max-height:100%!important;
+    margin:0!important;
+    padding:0!important;
+    box-sizing:border-box!important;
+    overflow:hidden!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page #worldMap .world-map-stage{
+    transition:transform .42s cubic-bezier(.18,.78,.20,1),filter .28s ease!important;
+    transform-origin:0 0!important;
+    backface-visibility:hidden!important;
+    transform-style:preserve-3d!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page #worldMap .country-map-r346{
+    inset:0!important;
+    width:100%!important;
+    height:100%!important;
+    min-height:100%!important;
+    max-height:100%!important;
+    border-radius:20px!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page #worldMap .country-map-r346 svg{
+    inset:8px!important;
+    width:calc(100% - 16px)!important;
+    height:calc(100% - 16px)!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page #worldMap .country-map-label-r346{
+    right:68px!important;
+    left:auto!important;
+    max-width:39%!important;
+    font-size:10px!important;
+    padding:6px 10px!important;
+  }
+}
+@media (max-width:390px) and (orientation:portrait){
+  body.analytics-admin-page.analytics-v54-46-page #worldMap .country-map-label-r346{
+    right:64px!important;
+    max-width:37%!important;
+    padding-left:8px!important;
+    padding-right:8px!important;
+  }
+}
+
+/* The overlay owns vertical touch scrolling. The page underneath remains frozen. */
+body.andrik-country-overlay-r258-open{
+  overflow:hidden!important;
+  overscroll-behavior:none!important;
+  touch-action:pan-y!important;
+}
+body .country-scroll-overlay-r258{
+  box-sizing:border-box!important;
+  width:100vw!important;
+  height:100dvh!important;
+  min-height:100dvh!important;
+  max-height:100dvh!important;
+  overflow:hidden!important;
+  overscroll-behavior:contain!important;
+  touch-action:pan-y!important;
+}
+body .country-scroll-overlay-r258.is-open{
+  display:flex!important;
+  flex-direction:column!important;
+}
+body .country-scroll-overlay-r258.is-open>#worldCountries.is-expanded{
+  flex:1 1 0!important;
+  box-sizing:border-box!important;
+  width:100%!important;
+  height:auto!important;
+  min-height:0!important;
+  max-height:100%!important;
+  overflow-y:auto!important;
+  overflow-x:hidden!important;
+  overscroll-behavior-y:contain!important;
+  -webkit-overflow-scrolling:touch!important;
+  touch-action:pan-y!important;
+  scrollbar-width:auto!important;
+  scroll-behavior:auto!important;
+  pointer-events:auto!important;
+}
+body .country-scroll-overlay-r258.is-open>#worldCountries.is-expanded *{
+  touch-action:pan-y!important;
+}

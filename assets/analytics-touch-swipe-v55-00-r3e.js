@@ -16,7 +16,7 @@
 
   const canHandleTarget = target => {
     if (!target) return false;
-    if (target.closest('#countryGrowthPanel')) return false;
+    if (target.closest('#countryGrowthPanel,.country-scroll-overlay-r258,#worldCountries.is-expanded')) return false;
     if (target.closest('input,textarea,select,option,[contenteditable="true"],iframe,video,audio')) return false;
     return true;
   };

@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="ru" translate="no" class="notranslate"><head>
-<meta name="andrik-control-release" content="R350">
+<meta name="andrik-control-release" content="R351">
 <link rel="stylesheet" href="/assets/control-sleep-mode-r193.css?v=55.00-r193"><script defer src="/assets/control-sleep-mode-r193.js?v=55.00-r193"></script>
 
 <meta name="google" content="notranslate"><meta charset="utf-8"/>
@@ -1519,7 +1519,7 @@ html.live-web-ai-resume-lock .analytics-swipe-viewport{overflow:hidden!important
         }
         window.dispatchEvent(new CustomEvent('andrik:country-focus-changed',{detail:{focused:false,country:'',animated:true}}));
         countryTransitionTimer=0;
-      },300);
+      },430);
     }));
   }
   function cycleWorldCountrySelection(map,list,country){
@@ -1548,7 +1548,7 @@ html.live-web-ai-resume-lock .analytics-swipe-viewport{overflow:hidden!important
         if(map)map.dataset.countryDeep='true';
         window.dispatchEvent(new CustomEvent('andrik:country-deep-changed',{detail:{active:true,country:next,animated:true}}));
         countryTransitionTimer=0;
-      },300);
+      },420);
       return;
     }
     returnToWorldMap(map,list);
@@ -4040,5 +4040,7 @@ body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #mapFocusAct
 <script defer src="/assets/country-shapes-r341.js?v=55.00-r341"></script>
 <link rel="stylesheet" href="/assets/country-map-r346.css?v=55.00-r346">
 <script defer src="/assets/country-map-r346.js?v=55.00-r346"></script>
-<script defer src="/assets/control-version-sync-r350.js?v=55.00-r350"></script>
+<link rel="stylesheet" href="/assets/map-frame-scroll-r351.css?v=55.00-r351">
+<script defer src="/assets/country-list-scroll-r351.js?v=55.00-r351"></script>
+<script defer src="/assets/control-version-sync-r351.js?v=55.00-r351"></script>
 </body></html>

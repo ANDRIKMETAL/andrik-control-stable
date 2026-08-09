@@ -7,7 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <title>Очистка Control — R350</title>
+  <title>Очистка Control — R351</title>
   <style>
     *{box-sizing:border-box}
     html,body{
@@ -143,7 +143,7 @@
 </head>
 <body>
   <main class="box">
-    <span class="badge">СТРАНИЦА ОЧИСТКИ R350</span>
+    <span class="badge">СТРАНИЦА ОЧИСТКИ R351</span>
     <h1 id="title">Чистим кэш Control</h1>
     <p id="status">Не закрывай страницу. После завершения появится кнопка открытия Control.</p>
 
@@ -241,9 +241,9 @@
       '/analytics-admin.html?cache-bust='+stamp,
       '/service-admin.html?cache-bust='+stamp,
       '/site-update-admin.html?cache-bust='+stamp,
-      '/assets/singles-r350.js?cache-bust='+stamp,
+      '/assets/singles-r349.js?cache-bust='+stamp,
       '/assets/ecosystem-map-r337.css?cache-bust='+stamp,
-      '/assets/ecosystem-map-r350.js?cache-bust='+stamp,
+      '/assets/ecosystem-map-r347.js?cache-bust='+stamp,
       '/assets/country-activity-r337.js?cache-bust='+stamp,
       '/assets/map-monthly-r337.js?cache-bust='+stamp,
       '/assets/country-focus-compact-r339.css?cache-bust='+stamp,
@@ -251,7 +251,9 @@
       '/assets/country-shapes-r341.js?cache-bust='+stamp,
       '/assets/country-map-r346.css?cache-bust='+stamp,
       '/assets/country-map-r346.js?cache-bust='+stamp,
-      '/assets/control-version-sync-r350.js?cache-bust='+stamp,
+      '/assets/map-frame-scroll-r351.css?cache-bust='+stamp,
+      '/assets/country-list-scroll-r351.js?cache-bust='+stamp,
+      '/assets/control-version-sync-r351.js?cache-bust='+stamp,
       '/player.html?cache-bust='+stamp,
       '/singles.html?cache-bust='+stamp
     ];
@@ -277,7 +279,7 @@
       headers:{'Cache-Control':'no-cache, no-store, max-age=0','Pragma':'no-cache'}
     }).catch(()=>null);
     // Also run one lightweight release check now, so a release published before
-    // R350 installation can be caught immediately without waiting for the next Cron.
+    // R351 installation can be caught immediately without waiting for the next Cron.
     await fetch('/api/automation/youtube-fast',{
       method:'POST',
       cache:'no-store',
@@ -305,6 +307,6 @@
 })();
 </script>
 <script defer src="/assets/control-version-sync-r351.js?v=55.00-r351"></script>
-<link rel="preload" as="style" href="/assets/map-total-compact-r350.css?cache-bust=1">
+<link rel="preload" as="style" href="/assets/map-total-compact-r348.css?cache-bust=1">
 </body>
 </html>
