@@ -1,12 +1,12 @@
-/* Control ANDRIK R352 — safe display-version synchronization. */
+/* Control ANDRIK R354 — safe display-version synchronization. */
 (() => {
   'use strict';
-  if (window.__ANDRIK_VERSION_SYNC_R352__) return;
-  window.__ANDRIK_VERSION_SYNC_R352__ = true;
+  if (window.__ANDRIK_VERSION_SYNC_R354__) return;
+  window.__ANDRIK_VERSION_SYNC_R354__ = true;
 
-  const RELEASE = 'R352';
-  const RUNTIME = '55.00-r352';
-  const FULL = 'Live Web AI · ANDRIK · v55.00 LIVE WEB AI FINAL R352';
+  const RELEASE = 'R354';
+  const RUNTIME = '55.00-r354';
+  const FULL = 'Live Web AI · ANDRIK · v55.00 LIVE WEB AI FINAL R354';
   let applying = false;
 
   const isRoot = node => node === document.documentElement || node === document.body;
@@ -61,14 +61,14 @@
 
       window.ANDRIK_CONTROL_RELEASE = Object.freeze({
         short: RELEASE,
-        number: 352,
+        number: 354,
         version: '55.00',
-        full: 'v55.00 LIVE WEB AI FINAL R352',
-        build: 'R352 MAP VISUAL + COUNTRY SCROLL FIX',
+        full: 'v55.00 LIVE WEB AI FINAL R354',
+        build: 'R354 SCROLL STABLE + YOUTUBE RED + POINT DRIFT',
         date: '09.08.2026'
       });
-      window.ANDRIK_CONTROL_VERSION = '55.00 LIVE WEB AI FINAL R352';
-      window.ANDRIK_CONTROL_BUILD = 'R352 MAP VISUAL + COUNTRY SCROLL FIX';
+      window.ANDRIK_CONTROL_VERSION = '55.00 LIVE WEB AI FINAL R354';
+      window.ANDRIK_CONTROL_BUILD = 'R354 SCROLL STABLE + YOUTUBE RED + POINT DRIFT';
       try { localStorage.setItem('andrik-control-display-version', RUNTIME); } catch (_) {}
       window.dispatchEvent(new CustomEvent('andrik-control-version-ready', {detail: window.ANDRIK_CONTROL_RELEASE}));
     } finally {

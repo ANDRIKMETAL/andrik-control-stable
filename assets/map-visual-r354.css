@@ -26,3 +26,38 @@ body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap .w
  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap .world-map-total span{font-size:.35rem!important}
  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap .world-map-total strong{font-size:.60rem!important}
 }
+
+
+/* R354 — unmistakable YouTube red, including the pulse itself (old keyframes were cyan). */
+@keyframes andrikYoutubePulseR354{
+  0%,100%{transform:scale(.94);opacity:.90;box-shadow:0 0 0 4px rgba(255,92,109,.10),0 0 17px rgba(255,76,98,.78),0 0 28px rgba(255,52,80,.30)}
+  50%{transform:scale(1.18);opacity:1;box-shadow:0 0 0 8px rgba(255,92,109,.035),0 0 26px rgba(255,73,96,.98),0 0 40px rgba(255,45,75,.42)}
+}
+#worldMap[data-ecosystem-layer="youtube"] .world-map-dot i,
+#worldMap.is-youtube-layer-r354 .world-map-dot i{
+  background:#ff6675!important;
+  border:1px solid rgba(255,215,219,.72)!important;
+  animation:andrikYoutubePulseR354 2.65s ease-in-out infinite!important;
+  filter:none!important;
+}
+#worldMap[data-ecosystem-layer="youtube"] .world-map-city-dot i,
+#worldMap.is-youtube-layer-r354 .world-map-city-dot i{
+  background:#ff7481!important;
+  border-color:rgba(255,214,219,.65)!important;
+  box-shadow:0 0 0 3px rgba(255,95,112,.10),0 0 16px rgba(255,68,91,.90)!important;
+}
+/* A very small slow drift. Keep translate(-50%,-50%) so geographic anchors never shift. */
+@keyframes andrikWorldDotDriftR354A{
+  0%,100%{transform:translate(-50%,-50%)}
+  24%{transform:translate(calc(-50% + 1.6px),calc(-50% - .8px))}
+  51%{transform:translate(calc(-50% - .8px),calc(-50% + 1.4px))}
+  76%{transform:translate(calc(-50% + .7px),calc(-50% + .5px))}
+}
+@keyframes andrikWorldDotDriftR354B{
+  0%,100%{transform:translate(-50%,-50%)}
+  32%{transform:translate(calc(-50% - 1.4px),calc(-50% + .7px))}
+  67%{transform:translate(calc(-50% + .8px),calc(-50% - 1.3px))}
+}
+#worldMap .world-map-dot{animation:andrikWorldDotDriftR354A 9.6s ease-in-out infinite!important;will-change:transform!important}
+#worldMap .world-map-dot:nth-of-type(2n){animation-name:andrikWorldDotDriftR354B!important;animation-duration:11.4s!important;animation-delay:-3.1s!important}
+@media(prefers-reduced-motion:reduce){#worldMap .world-map-dot{animation:none!important}}

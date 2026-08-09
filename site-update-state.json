@@ -1,14 +1,14 @@
 {
   "schema": 1,
-  "updaterVersion": "55.00-r352",
+  "updaterVersion": "55.00-r353",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786285341142-2eab5ff22b",
-  "release": "R353",
-  "archiveName": "R353-R352-MAP-POINT-DRIFT-COUNTRY-SCROLL-ANDROID-FIX-SAFE-FULL.zip",
-  "sourceHead": "2b7f3ce0a416e4a920c0c9e3c4d5df2417668777",
-  "backupSha": "2b7f3ce0a416e4a920c0c9e3c4d5df2417668777",
-  "backupTag": "control-backup-20260809142217-2b7f3ce-r353-89291",
+  "operationId": "publish-1786286081041-0771005c94",
+  "release": "R354",
+  "archiveName": "R354-R352-SCROLL-STABLE-YOUTUBE-RED-POINT-DRIFT-SAFE-FULL.zip",
+  "sourceHead": "e17d8ef423e9fc0ca7db32283d5ff0bf4a377dec",
+  "backupSha": "e17d8ef423e9fc0ca7db32283d5ff0bf4a377dec",
+  "backupTag": "control-backup-20260809143437-e17d8ef-r354-b98aa",
   "autoRecovery": true,
-  "generatedAt": "2026-08-09T14:22:21.142Z"
+  "generatedAt": "2026-08-09T14:34:41.041Z"
 }

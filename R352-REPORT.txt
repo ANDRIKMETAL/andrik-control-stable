@@ -1,4 +1,4 @@
-R353 — MAP VISUAL + COUNTRY SCROLL FIX
+R352 — MAP VISUAL + COUNTRY SCROLL FIX
 
 Исправлено:
 1. В режиме YouTube точки мировой карты стали красновато-розовыми с соответствующим свечением.

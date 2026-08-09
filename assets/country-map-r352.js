@@ -1,8 +1,8 @@
-/* ANDRIK R353 — second tap opens the standalone country silhouette. */
+/* ANDRIK R352 — second tap opens the standalone country silhouette. */
 (() => {
   'use strict';
-  if (window.__ANDRIK_COUNTRY_MAP_R353__) return;
-  window.__ANDRIK_COUNTRY_MAP_R353__ = true;
+  if (window.__ANDRIK_COUNTRY_MAP_R352__) return;
+  window.__ANDRIK_COUNTRY_MAP_R352__ = true;
 
   const map = document.getElementById('worldMap');
   const list = document.getElementById('worldCountries');
@@ -97,10 +97,10 @@
   function ensureOverlay() {
     const stage = map.querySelector('.world-map-stage');
     if (!stage) return null;
-    let overlay = stage.querySelector('.country-map-r353');
+    let overlay = stage.querySelector('.country-map-r352');
     if (!overlay) {
       overlay = document.createElement('div');
-      overlay.className = 'country-map-r353';
+      overlay.className = 'country-map-r352';
       stage.appendChild(overlay);
     }
     return overlay;
@@ -115,7 +115,7 @@
   function finishWorldReturn(){
     clearTimeout(transitionTimer);
     transitionTimer = 0;
-    const overlay = map.querySelector('.country-map-r353');
+    const overlay = map.querySelector('.country-map-r352');
     overlay?.classList.remove('is-leaving');
     document.body.classList.remove('is-country-returning','is-country-entering');
     returningToWorld = false;
@@ -133,7 +133,7 @@
   function clearToWorld(){
     if (returningToWorld) return;
     returningToWorld = true;
-    const overlay = map.querySelector('.country-map-r353');
+    const overlay = map.querySelector('.country-map-r352');
     document.body.classList.remove('is-country-entering');
     document.body.classList.add('is-country-returning');
     overlay?.classList.add('is-leaving');
@@ -152,7 +152,7 @@
   }
   function renderCountryMap() {
     if (!isDeep()) {
-      const overlay = map.querySelector('.country-map-r353');
+      const overlay = map.querySelector('.country-map-r352');
       if (!overlay) { restoreOverviewLabels(); return; }
       overlay.innerHTML = '';
       overlay.removeAttribute('data-layer');
@@ -187,12 +187,12 @@
           const [x,y] = projectPoint(shape, point.lon, point.lat);
           if (!(x >= 0 && x <= 1000 && y >= 0 && y <= 600)) return '';
           const r = 6 + Math.round((Math.max(0,point.value)/max)*8);
-          return `<circle class="country-point-r353" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r}"/>`;
+          return `<circle class="country-point-r352" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r}"/>`;
         }).join('');
-        if (!dots) dots = '<circle class="country-point-halo-r353" cx="500" cy="300" r="48"/><circle class="country-point-r353 is-empty" cx="500" cy="300" r="20"/>';
-        svg = `<svg viewBox="0 0 1000 600" role="img" aria-label="Карта страны ${esc(country)}"><path class="country-shape-r353" fill-rule="evenodd" d="${shape.path}"/>${dots}</svg>`;
+        if (!dots) dots = '<circle class="country-point-halo-r352" cx="500" cy="300" r="48"/><circle class="country-point-r352 is-empty" cx="500" cy="300" r="20"/>';
+        svg = `<svg viewBox="0 0 1000 600" role="img" aria-label="Карта страны ${esc(country)}"><path class="country-shape-r352" fill-rule="evenodd" d="${shape.path}"/>${dots}</svg>`;
       } else {
-        svg = `<svg viewBox="0 0 1000 600" role="img" aria-label="Карта страны ${esc(country)}"><rect x="90" y="80" width="820" height="440" rx="80" fill="rgba(20,58,78,.55)" stroke="#92dbff" stroke-width="4" stroke-dasharray="12 12"/><circle class="country-point-halo-r353" cx="500" cy="300" r="48"/><circle class="country-point-r353 is-empty" cx="500" cy="300" r="20"/></svg>`;
+        svg = `<svg viewBox="0 0 1000 600" role="img" aria-label="Карта страны ${esc(country)}"><rect x="90" y="80" width="820" height="440" rx="80" fill="rgba(20,58,78,.55)" stroke="#92dbff" stroke-width="4" stroke-dasharray="12 12"/><circle class="country-point-halo-r352" cx="500" cy="300" r="48"/><circle class="country-point-r352 is-empty" cx="500" cy="300" r="20"/></svg>`;
       }
       overlay.innerHTML = svg;
       overlay.dataset.signature = signature;

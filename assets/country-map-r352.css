@@ -1,4 +1,4 @@
-/* ANDRIK R353 — two-step WORLD -> FOCUS -> COUNTRY map transition. */
+/* ANDRIK R352 — two-step WORLD -> FOCUS -> COUNTRY map transition. */
 body.analytics-admin-page.analytics-v54-46-page.is-country-focus-active .analytics-map-pane{
   overflow-y:auto!important;
   overflow-x:hidden!important;
@@ -41,7 +41,7 @@ body.analytics-admin-page.analytics-v54-46-page.is-country-deep-active #worldMap
   transition:opacity .18s ease!important;
 }
 
-.country-map-r353{
+.country-map-r352{
   display:none;
   position:absolute;
   inset:0;
@@ -53,9 +53,9 @@ body.analytics-admin-page.analytics-v54-46-page.is-country-deep-active #worldMap
     linear-gradient(180deg,#071723,#031019);
   transform-origin:center center;
 }
-body.analytics-admin-page.is-country-deep-active #worldMap .country-map-r353{display:block!important;animation:r353CountryEnter .16s ease-out both;will-change:transform,opacity}
-body.analytics-admin-page.is-country-returning #worldMap .country-map-r353,.country-map-r353.is-leaving{display:block!important;animation:r353CountryLeave .13s ease-in both!important;will-change:transform,opacity}
-.country-map-r353::before{
+body.analytics-admin-page.is-country-deep-active #worldMap .country-map-r352{display:block!important;animation:r352CountryEnter .16s ease-out both;will-change:transform,opacity}
+body.analytics-admin-page.is-country-returning #worldMap .country-map-r352,.country-map-r352.is-leaving{display:block!important;animation:r352CountryLeave .13s ease-in both!important;will-change:transform,opacity}
+.country-map-r352::before{
   content:"";
   position:absolute;
   inset:0;
@@ -65,24 +65,24 @@ body.analytics-admin-page.is-country-returning #worldMap .country-map-r353,.coun
     repeating-linear-gradient(90deg,transparent 0,transparent calc(20% - 1px),rgba(119,206,255,.10) calc(20% - 1px),rgba(119,206,255,.10) 20%),
     repeating-linear-gradient(180deg,transparent 0,transparent calc(20% - 1px),rgba(119,206,255,.10) calc(20% - 1px),rgba(119,206,255,.10) 20%);
 }
-.country-map-r353 svg{position:absolute;inset:8px;width:calc(100% - 16px);height:calc(100% - 16px);overflow:visible}
-.country-map-r353 .country-shape-r353{
+.country-map-r352 svg{position:absolute;inset:8px;width:calc(100% - 16px);height:calc(100% - 16px);overflow:visible}
+.country-map-r352 .country-shape-r352{
   fill:rgba(21,62,82,.76);
   stroke:#92dbff;
   stroke-width:4;
   vector-effect:non-scaling-stroke;
   filter:drop-shadow(0 0 7px rgba(83,197,255,.42));
 }
-.country-map-r353[data-layer="site"] .country-shape-r353{stroke:#74efb1;filter:drop-shadow(0 0 7px rgba(86,236,167,.42))}
-.country-map-r353[data-layer="music"] .country-shape-r353{stroke:#ffd86b;filter:drop-shadow(0 0 7px rgba(255,201,77,.42))}
-.country-map-r353[data-layer="push"] .country-shape-r353{stroke:#d5a8ff;filter:drop-shadow(0 0 7px rgba(190,132,255,.44))}
-.country-map-r353[data-layer="all"] .country-shape-r353{stroke:#e7fbff;filter:drop-shadow(0 0 8px rgba(132,229,255,.48))}
-.country-map-r353 .country-point-r353{fill:#a9edff;stroke:rgba(255,255,255,.72);stroke-width:2;transform-box:fill-box;transform-origin:center;animation:r353PointPulse 1.8s ease-in-out infinite}
-.country-map-r353[data-layer="site"] .country-point-r353{fill:#7af0b2}
-.country-map-r353[data-layer="music"] .country-point-r353{fill:#ffd35e}
-.country-map-r353[data-layer="push"] .country-point-r353{fill:#d6a7ff}
-.country-map-r353 .country-point-r353.is-empty{fill:#ffd400;stroke:#fff5a6;stroke-width:3;animation:r353EmptyPulse 1.05s ease-in-out infinite;filter:drop-shadow(0 0 8px #ffd400) drop-shadow(0 0 18px rgba(255,205,0,.96))}.country-map-r353 .country-point-halo-r353{fill:rgba(255,212,0,.10);stroke:rgba(255,220,66,.72);stroke-width:2;transform-box:fill-box;transform-origin:center;animation:r353HaloPulse 1.05s ease-out infinite}
-.country-map-r353 .country-map-label-r353{
+.country-map-r352[data-layer="site"] .country-shape-r352{stroke:#74efb1;filter:drop-shadow(0 0 7px rgba(86,236,167,.42))}
+.country-map-r352[data-layer="music"] .country-shape-r352{stroke:#ffd86b;filter:drop-shadow(0 0 7px rgba(255,201,77,.42))}
+.country-map-r352[data-layer="push"] .country-shape-r352{stroke:#d5a8ff;filter:drop-shadow(0 0 7px rgba(190,132,255,.44))}
+.country-map-r352[data-layer="all"] .country-shape-r352{stroke:#e7fbff;filter:drop-shadow(0 0 8px rgba(132,229,255,.48))}
+.country-map-r352 .country-point-r352{fill:#a9edff;stroke:rgba(255,255,255,.72);stroke-width:2;transform-box:fill-box;transform-origin:center;animation:r352PointPulse 1.8s ease-in-out infinite}
+.country-map-r352[data-layer="site"] .country-point-r352{fill:#7af0b2}
+.country-map-r352[data-layer="music"] .country-point-r352{fill:#ffd35e}
+.country-map-r352[data-layer="push"] .country-point-r352{fill:#d6a7ff}
+.country-map-r352 .country-point-r352.is-empty{fill:#ffd400;stroke:#fff5a6;stroke-width:3;animation:r352EmptyPulse 1.05s ease-in-out infinite;filter:drop-shadow(0 0 8px #ffd400) drop-shadow(0 0 18px rgba(255,205,0,.96))}.country-map-r352 .country-point-halo-r352{fill:rgba(255,212,0,.10);stroke:rgba(255,220,66,.72);stroke-width:2;transform-box:fill-box;transform-origin:center;animation:r352HaloPulse 1.05s ease-out infinite}
+.country-map-r352 .country-map-label-r352{
   position:absolute;
   left:auto;
   right:92px;
@@ -102,7 +102,7 @@ body.analytics-admin-page.is-country-returning #worldMap .country-map-r353,.coun
   -webkit-tap-highlight-color:transparent;
   z-index:12;
 }
-.country-map-r353 .country-map-empty-label-r353{
+.country-map-r352 .country-map-empty-label-r352{
   position:absolute;
   left:50%;
   bottom:14px;
@@ -114,13 +114,13 @@ body.analytics-admin-page.is-country-returning #worldMap .country-map-r353,.coun
   font:800 10px/1 Arial,Helvetica,sans-serif;
   white-space:nowrap;
 }
-@keyframes r353CountryEnter{0%{opacity:0;transform:scale(.94)}100%{opacity:1;transform:scale(1)}}
-@keyframes r353CountryLeave{0%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(.96)}}
-@keyframes r353PointPulse{0%,100%{opacity:.65;transform:scale(.84)}50%{opacity:1;transform:scale(1.22)}}
-@keyframes r353EmptyPulse{0%,100%{opacity:.78;transform:scale(.82)}50%{opacity:1;transform:scale(1.22)}}
-@keyframes r353HaloPulse{0%{opacity:.25;transform:scale(.55)}70%{opacity:.72;transform:scale(1.15)}100%{opacity:0;transform:scale(1.45)}}
-@keyframes r353WorldOut{0%{opacity:1;transform:scale(1)}100%{opacity:.12;transform:scale(1.05)}}
-@keyframes r353WorldIn{0%{opacity:.15;transform:scale(1.05)}100%{opacity:1;transform:scale(1)}}
+@keyframes r352CountryEnter{0%{opacity:0;transform:scale(.94)}100%{opacity:1;transform:scale(1)}}
+@keyframes r352CountryLeave{0%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(.96)}}
+@keyframes r352PointPulse{0%,100%{opacity:.65;transform:scale(.84)}50%{opacity:1;transform:scale(1.22)}}
+@keyframes r352EmptyPulse{0%,100%{opacity:.78;transform:scale(.82)}50%{opacity:1;transform:scale(1.22)}}
+@keyframes r352HaloPulse{0%{opacity:.25;transform:scale(.55)}70%{opacity:.72;transform:scale(1.15)}100%{opacity:0;transform:scale(1.45)}}
+@keyframes r352WorldOut{0%{opacity:1;transform:scale(1)}100%{opacity:.12;transform:scale(1.05)}}
+@keyframes r352WorldIn{0%{opacity:.15;transform:scale(1.05)}100%{opacity:1;transform:scale(1)}}
 
 /* Yellow selected-country card stays compact at both focus stages. */
 body.analytics-admin-page.analytics-v54-46-page.is-country-focus-active #worldCountries{margin:5px 0 0!important}
@@ -177,8 +177,8 @@ body.analytics-admin-page.analytics-v54-46-page[data-analytics-page="map"].is-co
 @media (max-width:480px) and (orientation:portrait){
   body.analytics-admin-page.analytics-v54-46-page.is-country-deep-active #worldMap .world-map-canvas,
   body.analytics-admin-page.analytics-v54-46-page.is-country-deep-active #worldMap .world-map-stage{height:225px!important;min-height:225px!important;max-height:225px!important}
-  .country-map-r353 .country-map-label-r353{font-size:10px;max-width:61%}
-  .country-map-r353 .country-map-week-r344{font-size:9px}
+  .country-map-r352 .country-map-label-r352{font-size:10px;max-width:61%}
+  .country-map-r352 .country-map-week-r344{font-size:9px}
   body.analytics-admin-page.analytics-v54-46-page.is-country-focus-active .analytics-map-pane #mapFocusActions.map-focus-actions .map-focus-action{font-size:.68rem!important;height:38px!important;min-height:38px!important;max-height:38px!important}
 }
 @media screen and (orientation:landscape){
@@ -187,10 +187,10 @@ body.analytics-admin-page.analytics-v54-46-page[data-analytics-page="map"].is-co
   body.analytics-admin-page.analytics-v54-46-page.is-country-focus-active #worldCountries,
   body.analytics-admin-page.analytics-v54-46-page.is-country-focus-active #mapFocusActions{max-width:660px!important;margin-left:auto!important;margin-right:auto!important}
 }
-@media(prefers-reduced-motion:reduce){.country-map-r353,.country-map-r353 .country-point-r353{animation:none!important}}
+@media(prefers-reduced-motion:reduce){.country-map-r352,.country-map-r352 .country-point-r352{animation:none!important}}
 
 
-/* R353 — keep the map clean while a country is selected. */
+/* R352 — keep the map clean while a country is selected. */
 body.analytics-admin-page.analytics-v54-46-page.is-country-focus-active #countryGrowthPanel,
 body.analytics-admin-page.analytics-v54-46-page.is-country-deep-active #countryGrowthPanel{display:none!important;}
 body.analytics-admin-page.analytics-v54-46-page.is-country-focus-active .world-country-button.is-selected .country-weekly-gain,
@@ -201,7 +201,7 @@ body.analytics-admin-page.analytics-v54-46-page.is-country-focus-active .world-c
 body.analytics-admin-page.analytics-v54-46-page.is-country-deep-active .world-country-button.is-selected{overflow:visible!important;}
 
 
-/* R353 — direct WORLD -> COUNTRY and guaranteed room for both bottom actions. */
+/* R352 — direct WORLD -> COUNTRY and guaranteed room for both bottom actions. */
 @media screen and (orientation:portrait){
   body.analytics-admin-page.analytics-v54-46-page.is-country-focus-active .analytics-map-pane{
     overflow-y:auto!important;
@@ -263,12 +263,12 @@ body.analytics-admin-page.analytics-v54-46-page.is-country-deep-active .world-co
     font-size:.72rem!important;
     line-height:1.06!important;
   }
-  body.analytics-admin-page.analytics-v54-46-page.is-country-deep-active #worldMap .country-map-r353 .country-shape-r353{
+  body.analytics-admin-page.analytics-v54-46-page.is-country-deep-active #worldMap .country-map-r352 .country-shape-r352{
     filter:none!important;
   }
 }
 
-/* R353 final portrait fit: weekly yellow card and both actions are natural-height rows. */
+/* R352 final portrait fit: weekly yellow card and both actions are natural-height rows. */
 @media screen and (orientation:portrait){
   body.analytics-admin-page.analytics-v54-46-page.is-country-focus-active .analytics-map-top{
     grid-template-rows:max-content max-content max-content max-content!important;
@@ -282,23 +282,23 @@ body.analytics-admin-page.analytics-v54-46-page.is-country-deep-active .world-co
   }
 }
 
-/* R353 — visual WORLD ⇄ COUNTRY transition without reflow/blur. */
+/* R352 — visual WORLD ⇄ COUNTRY transition without reflow/blur. */
 body.analytics-admin-page.is-country-deep-active.is-country-entering #worldMap .world-map-stage>img{
-  visibility:visible!important;opacity:1!important;animation:r353WorldOut .22s ease-out both!important;will-change:transform,opacity;
+  visibility:visible!important;opacity:1!important;animation:r352WorldOut .22s ease-out both!important;will-change:transform,opacity;
 }
 body.analytics-admin-page.is-country-deep-active.is-country-returning #worldMap .world-map-stage>img{
-  visibility:visible!important;opacity:1!important;animation:r353WorldIn .20s ease-in both!important;will-change:transform,opacity;
+  visibility:visible!important;opacity:1!important;animation:r352WorldIn .20s ease-in both!important;will-change:transform,opacity;
 }
 /* Keep bottom actions safely above the black viewport edge. */
 body.analytics-admin-page.analytics-v54-46-page.is-country-focus-active .analytics-map-pane{padding-bottom:calc(104px + env(safe-area-inset-bottom))!important;}
 body.analytics-admin-page.analytics-v54-46-page.is-country-focus-active .analytics-map-top{padding-bottom:20px!important;overflow:visible!important;}
 body.analytics-admin-page.analytics-v54-46-page.is-country-focus-active #mapFocusActions.map-focus-actions{margin-bottom:18px!important;overflow:visible!important;}
 @media (max-width:480px) and (orientation:portrait){
-  .country-map-r353 .country-map-label-r353{right:82px!important;max-width:45%!important;font-size:10px!important;}
+  .country-map-r352 .country-map-label-r352{right:82px!important;max-width:45%!important;font-size:10px!important;}
 }
 
 
-/* R353 — old step-2 world zoom restored as a single-tap transition. */
+/* R352 — old step-2 world zoom restored as a single-tap transition. */
 body.analytics-admin-page.analytics-v54-46-page #worldMap .world-map-stage{
   transition:transform .28s cubic-bezier(.20,.78,.22,1),filter .20s ease!important;
   backface-visibility:hidden!important;
@@ -319,7 +319,7 @@ body.analytics-admin-page.analytics-v54-46-page.is-country-deep-active:not(.is-c
   opacity:0!important;
   visibility:hidden!important;
 }
-/* Compact centered header subtitle requested in R353. */
+/* Compact centered header subtitle requested in R352. */
 body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .r83-poster-subtitle,
 body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-compact-header>p{
   text-align:center!important;
@@ -329,22 +329,22 @@ body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-c
 }
 
 
-/* R353 — selected country center marker: brighter and larger. */
-.country-map-r353 .country-point-r353.is-empty{
+/* R352 — selected country center marker: brighter and larger. */
+.country-map-r352 .country-point-r352.is-empty{
   fill:#ffe100!important;
   stroke:#fff8a8!important;
   stroke-width:4!important;
   filter:drop-shadow(0 0 9px #ffe100) drop-shadow(0 0 22px rgba(255,220,0,1)) drop-shadow(0 0 34px rgba(255,176,0,.72))!important;
-  animation:r353EmptyPulseStrong .92s ease-in-out infinite!important;
+  animation:r352EmptyPulseStrong .92s ease-in-out infinite!important;
 }
-.country-map-r353 .country-point-halo-r353{
+.country-map-r352 .country-point-halo-r352{
   fill:rgba(255,225,0,.18)!important;
   stroke:rgba(255,235,85,.92)!important;
   stroke-width:3!important;
   filter:drop-shadow(0 0 12px rgba(255,220,0,.72))!important;
-  animation:r353HaloPulseStrong .92s ease-out infinite!important;
+  animation:r352HaloPulseStrong .92s ease-out infinite!important;
 }
-@keyframes r353EmptyPulseStrong{0%,100%{opacity:.86;transform:scale(.90)}50%{opacity:1;transform:scale(1.34)}}
-@keyframes r353HaloPulseStrong{0%{opacity:.32;transform:scale(.62)}68%{opacity:.86;transform:scale(1.26)}100%{opacity:0;transform:scale(1.62)}}
-/* The World/Country pill is intentionally removed in R353. */
-.country-map-r353 .country-map-label-r353{display:none!important}
+@keyframes r352EmptyPulseStrong{0%,100%{opacity:.86;transform:scale(.90)}50%{opacity:1;transform:scale(1.34)}}
+@keyframes r352HaloPulseStrong{0%{opacity:.32;transform:scale(.62)}68%{opacity:.86;transform:scale(1.26)}100%{opacity:0;transform:scale(1.62)}}
+/* The World/Country pill is intentionally removed in R352. */
+.country-map-r352 .country-map-label-r352{display:none!important}
