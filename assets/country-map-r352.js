@@ -199,11 +199,9 @@
           const label = esc(rawLabel || 'Город / регион');
           const valueNumber = Math.max(0, Number(point.value || 0));
           const value = fmt(valueNumber);
-          return `<g class="country-city-marker-r360" data-city="${label}" data-value="${valueNumber}" data-index="${index}" tabindex="0" role="button" aria-label="${label}: ${value} включений">
+          return `<g class="country-city-marker-r360" data-city="${label}" data-value="${valueNumber}" data-index="${index}" tabindex="-1" focusable="false" role="button" aria-label="${label}: ${value} включений">
             <circle class="country-city-halo-r360" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(r+11).toFixed(1)}"/>
-            <circle class="country-point-r352 country-city-point-r360" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r}">
-              <title>${label} · ${value} включений</title>
-            </circle>
+            <circle class="country-point-r352 country-city-point-r360" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r}"/>
           </g>`;
         }).join('');
         if (!dots) dots = '<circle class="country-point-halo-r352" cx="500" cy="300" r="48"/><circle class="country-point-r352 is-empty" cx="500" cy="300" r="20"/>';
@@ -318,7 +316,21 @@
       panel.hidden=false;
     }
     overlay.dataset.selectedCity=city;
-    flashCityNameR367(marker);
+    overlay.querySelectorAll('.country-city-name-flash-r367').forEach(node=>node.remove());
+    clearTimeout(overlay.__cityStatHideR368);
+    clearTimeout(overlay.__cityStatRemoveR368);
+    if(panel){
+      panel.classList.remove('is-hiding-r368');
+      panel.classList.add('is-visible-r368');
+      overlay.__cityStatHideR368=setTimeout(()=>{
+        panel.classList.remove('is-visible-r368');
+        panel.classList.add('is-hiding-r368');
+        overlay.__cityStatRemoveR368=setTimeout(()=>{
+          panel.hidden=true;
+          panel.classList.remove('is-hiding-r368');
+        },360);
+      },3000);
+    }
   }
   map.addEventListener('click',event=>{
     const marker=event.target?.closest?.('.country-city-marker-r360');

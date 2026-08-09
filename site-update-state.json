@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786292684418-1486a2d79c",
-  "release": "R367",
-  "archiveName": "R367-R366-TEMP-CITY-NAME-LABELS-SAFE-FULL.zip",
-  "sourceHead": "55c78e49a8bb3931e2f8116166221fbfed5547d7",
-  "backupSha": "55c78e49a8bb3931e2f8116166221fbfed5547d7",
-  "backupTag": "control-backup-20260809162441-55c78e4-r367-667a7",
+  "operationId": "publish-1786293504387-e0e0694cb8",
+  "release": "R368",
+  "archiveName": "R368-R367-BOTTOM-CITY-LABEL-BRIGHT-SMOOTH-PULSE-SAFE-FULL.zip",
+  "sourceHead": "8f1d771837c1620035393ebcc95ba8b3a4512e55",
+  "backupSha": "8f1d771837c1620035393ebcc95ba8b3a4512e55",
+  "backupTag": "control-backup-20260809163820-8f1d771-r368-99fd6",
   "autoRecovery": true,
-  "generatedAt": "2026-08-09T16:24:44.418Z"
+  "generatedAt": "2026-08-09T16:38:24.387Z"
 }

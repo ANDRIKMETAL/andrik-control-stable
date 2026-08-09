@@ -37,7 +37,7 @@
     const anchor=svg.querySelector('.country-center-anchor-r358,.country-point-r352.is-empty');
     if(!anchor) return;
 
-    // Remove R359/R367 pulse from this center before applying the R277 behavior.
+    // Remove R359/R368 pulse from this center before applying the R277 behavior.
     removeOld(anchor);
     anchor.classList.remove('country-native-pulse-r359','country-native-pulse-r361');
     anchor.classList.add('country-r277-selected-orb-r364');
@@ -45,7 +45,7 @@
     anchor.setAttribute('r','18');
     anchor.setAttribute('opacity','1');
 
-    // Retire the R367 halo only for this central point.
+    // Retire the R368 halo only for this central point.
     svg.querySelectorAll('.country-center-anchor-halo-r358,.country-point-halo-r352,.country-native-halo-r359,.country-native-halo-r361')
       .forEach(h=>{
         removeOld(h);
