@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786289589581-b09348f798",
-  "release": "R361",
-  "archiveName": "R361-R360-SOFT-WIDE-SLOW-COUNTRY-PULSE-SAFE-FULL.zip",
-  "sourceHead": "cc1730376135a897a3212ee286647085cdd7c941",
-  "backupSha": "cc1730376135a897a3212ee286647085cdd7c941",
-  "backupTag": "control-backup-20260809153306-cc17303-r361-ae43f",
+  "operationId": "publish-1786290049525-7904b50f5e",
+  "release": "R362",
+  "archiveName": "R362-R361-SMOOTH-WIDE-HALOS-ALL-POINTS-CITIES-SAFE-FULL.zip",
+  "sourceHead": "52aa206a3a951ef6e7df9447824d4c0d651fbfab",
+  "backupSha": "52aa206a3a951ef6e7df9447824d4c0d651fbfab",
+  "backupTag": "control-backup-20260809154045-52aa206-r362-a3857",
   "autoRecovery": true,
-  "generatedAt": "2026-08-09T15:33:09.581Z"
+  "generatedAt": "2026-08-09T15:40:49.525Z"
 }
