@@ -1,14 +1,14 @@
 {
   "schema": 1,
   "updaterVersion": "55.00-r356",
-  "operation": "publish",
-  "reinstall": false,
-  "operationId": "publish-1786297156467-0838091451",
+  "operation": "reinstall",
+  "reinstall": true,
+  "operationId": "reinstall-1786297230483-e477842f8f",
   "release": "R374",
   "archiveName": "R374-R372-CITY-LIST-RESTORE-CLEAN-SCROLL-NO-ACTIVITY-SAFE-FULL.zip",
-  "sourceHead": "5b96811305e5653d0cbd38d86c3ee25870437fd0",
-  "backupSha": "5b96811305e5653d0cbd38d86c3ee25870437fd0",
-  "backupTag": "control-backup-20260809173912-5b96811-r374-f2c50",
+  "sourceHead": "bb30ed9f82921e65f4752f23cb263ab628a219b3",
+  "backupSha": "bb30ed9f82921e65f4752f23cb263ab628a219b3",
+  "backupTag": "control-backup-20260809174026-bb30ed9-r374-b0323",
   "autoRecovery": true,
-  "generatedAt": "2026-08-09T17:39:16.467Z"
+  "generatedAt": "2026-08-09T17:40:30.483Z"
 }
