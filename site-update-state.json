@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786288743227-a880a9b5a2",
-  "release": "R358",
-  "archiveName": "R358-R357-YELLOW-COUNTRY-PULSE-ALL-MAPS-SAFE-FULL.zip",
-  "sourceHead": "6fd52e675b8e0ca6ef2c0d54e33967062b72a59c",
-  "backupSha": "6fd52e675b8e0ca6ef2c0d54e33967062b72a59c",
-  "backupTag": "control-backup-20260809151859-6fd52e6-r358-ba40b",
+  "operationId": "publish-1786289254864-a55cd9f940",
+  "release": "R359",
+  "archiveName": "R359-R358-NATIVE-SVG-YELLOW-PULSE-ALL-COUNTRIES-SAFE-FULL.zip",
+  "sourceHead": "9ca86a713af9bb873288321c18e0fced39b336aa",
+  "backupSha": "9ca86a713af9bb873288321c18e0fced39b336aa",
+  "backupTag": "control-backup-20260809152730-9ca86a7-r359-481fa",
   "autoRecovery": true,
-  "generatedAt": "2026-08-09T15:19:03.227Z"
+  "generatedAt": "2026-08-09T15:27:34.864Z"
 }

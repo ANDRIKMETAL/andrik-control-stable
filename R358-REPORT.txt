@@ -1,4 +1,4 @@
-R358 — COUNTRY CENTER YELLOW PULSE ALL MAPS
+R359 — COUNTRY CENTER YELLOW PULSE ALL MAPS
 
 Исправлено:
 - Причина Словакии найдена: при наличии реальных городских точек старый код не создавал жёлтый fallback-маркер.

@@ -1,0 +1,15 @@
+/* R359 — native SVG pulse wins over all older CSS animations. */
+#worldMap .country-map-r352 .country-native-pulse-r359{
+  fill:#ffe600!important;
+  stroke:#fffbd0!important;
+  stroke-width:4!important;
+  filter:drop-shadow(0 0 10px #ffe600) drop-shadow(0 0 24px rgba(255,207,0,.98))!important;
+  animation:none!important;
+}
+#worldMap .country-map-r352 .country-native-halo-r359{
+  fill:rgba(255,225,0,.16)!important;
+  stroke:rgba(255,239,92,.95)!important;
+  stroke-width:3!important;
+  filter:drop-shadow(0 0 13px rgba(255,214,0,.82))!important;
+  animation:none!important;
+}
