@@ -1,0 +1,34 @@
+ANDRIK R332
+Base: R331.
+
+Goal: near-real-time YouTube release pushes without phone-side polling.
+
+Implemented:
+- Public YouTube WebSub/PubSubHubbub callback: /api/youtube/websub.
+- Automatic subscription/renewal to the official YouTube channel Atom topic.
+- Cache-reset R332 attempts an immediate owner-authorized WebSub subscription.
+- Normal central Cron also renews WebSub automatically before expiry.
+- Incoming WebSub video IDs are verified against YouTube Data API and the ANDRIK channel before push delivery.
+- Only public videos are eligible for release push.
+- Existing push_playlist_seen + sent history are retained as deduplication sources.
+- Added a shared per-video release claim so WebSub and Cron cannot race into duplicate pushes.
+- Stale release claims older than 10 minutes can recover.
+- Added lightweight fast endpoint /api/automation/youtube-fast.
+- scheduled() recognizes the exact Cloudflare Cron expression */5 * * * * and runs only the lightweight release checker.
+- Existing central Cron remains full automation on every other schedule.
+- WebSub status endpoint for owner diagnostics: GET /api/youtube/websub/status.
+- Manual owner subscribe endpoint: POST /api/youtube/websub/subscribe.
+
+Battery:
+- No browser/PWA timer, polling loop, wake lock, or foreground activity was added.
+- YouTube -> Cloudflare WebSub and Cloudflare Cron are server-side.
+
+Safety:
+- player.html unchanged byte-for-byte from R331.
+- index.html unchanged byte-for-byte from R331.
+- singles.html unchanged byte-for-byte from R331.
+- lyrics-admin.html unchanged byte-for-byte from R331.
+- admin-sections.html unchanged byte-for-byte from R331.
+- comments-admin.html unchanged byte-for-byte from R331.
+- service-admin.html unchanged byte-for-byte from R331.
+- observability-admin.html unchanged byte-for-byte from R331.

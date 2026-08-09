@@ -1,0 +1,7 @@
+R333 from R332:
+- comments + likes fast check every 2 minutes
+- subscriber/events + release fallback every 5 minutes
+- WebSub near-real-time releases retained
+- 50% approximate YouTube quota push restored
+- R332 scheduled fast-dispatch bug fixed
+- fragile admin/public/player/editor surfaces unchanged

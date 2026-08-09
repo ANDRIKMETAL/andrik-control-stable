@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R331', number:331, version:'55.00', full:'55.00 LIVE WEB AI FINAL R331', siteUpdater:'55.00-r331' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R333', number:333, version:'55.00', full:'55.00 LIVE WEB AI FINAL R333', siteUpdater:'55.00-r333' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -966,6 +966,9 @@ async function trackObservabilityUsage(env, service, units = 0, requests = 1, de
     Math.max(0, Number(requests || 0)),
     detailsJson
   ).run();
+  if (cleanPlainText(service || '', 80) === 'youtube-data-api') {
+    await maybeSendYoutubeQuota50AlertR333(env, db, dateKey).catch(()=>{});
+  }
 }
 
 function observabilityQuotaCost(endpoint, method = 'GET') {
@@ -978,6 +981,44 @@ function observabilityQuotaCost(endpoint, method = 'GET') {
   if (key === 'captions-download') return 200;
   if (key === 'search') return 100;
   return 1;
+}
+
+async function maybeSendYoutubeQuota50AlertR333(env, db, dateKey='') {
+  try {
+    const keyDate=cleanPlainText(dateKey || getBratislavaClock().date,20);
+    const row=await db.prepare(`
+      SELECT units,requests FROM observability_usage
+      WHERE date_key=? AND service='youtube-data-api' LIMIT 1
+    `).bind(keyDate).first();
+    const units=Math.max(0,Number(row?.units || 0));
+    const requests=Math.max(0,Number(row?.requests || 0));
+    const limit=Math.max(100,Number(env.YOUTUBE_DAILY_QUOTA_LIMIT || 10000));
+    if(units < Math.ceil(limit*0.50)) return {ok:true,sent:false,units,limit};
+
+    await ensurePushAutomationSchema(db);
+    const onceKey=`push-once:youtube-quota-50:${keyDate}`;
+    const claimed=await claimPushOnce(db,onceKey,new Date().toISOString());
+    if(!claimed)return {ok:true,sent:false,duplicate:true,units,limit};
+
+    const percent=Math.min(100,Math.round((units/limit)*1000)/10);
+    const remaining=Math.max(0,limit-units);
+    const result=await sendOwnerPush(env,{
+      title:'⚠️ YouTube API — 50% квоты',
+      message:`Использовано ${units.toLocaleString('ru-RU')} из ${limit.toLocaleString('ru-RU')} units · ${percent}% · осталось ${remaining.toLocaleString('ru-RU')}`,
+      url:'https://control.andrikmetal.com/youtube-admin.html',
+      name:`youtube-quota-50-${keyDate}`,
+      ttl:43200,
+      history:{type:'youtube-quota-50',source:'YouTube Data API',details:{dateKey:keyDate,units,requests,limit,percent,remaining,threshold:50,mode:'approximate-observability-r333'}}
+    });
+    if(!result.ok){
+      await releasePushOnceClaim(db,onceKey);
+      return {ok:false,sent:false,error:result.error || 'push-failed',units,limit};
+    }
+    await setPushState(db,`youtube-quota-50-sent:${keyDate}`,JSON.stringify({units,requests,limit,percent,remaining,sentAt:new Date().toISOString()})).catch(()=>{});
+    return {ok:true,sent:true,units,limit,percent,remaining};
+  }catch(error){
+    return {ok:false,sent:false,error:cleanPlainText(error?.message || error,300)};
+  }
 }
 
 
@@ -2645,6 +2686,373 @@ async function fetchOfficialPlaylist(env, db) {
   };
 }
 
+
+const YOUTUBE_WEBSUB_HUB_R332 = 'https://pubsubhubbub.appspot.com/subscribe';
+const YOUTUBE_WEBSUB_CALLBACK_R332 = 'https://control.andrikmetal.com/api/youtube/websub';
+const YOUTUBE_FAST_CRON_R332 = '*/5 * * * *';
+const YOUTUBE_ENGAGEMENT_CRON_R333 = '*/2 * * * *';
+
+async function claimYoutubeReleaseOnceR332(db, videoId, value = new Date().toISOString()) {
+  const safeVideoId = cleanPlainText(videoId || '', 80);
+  if (!safeVideoId) return { ok:false, reason:'video-id-required', key:'' };
+  const key = `push-once:youtube-release:${safeVideoId}`;
+  const delivered = await db.prepare(`
+    SELECT 1 AS found FROM push_history
+    WHERE type='auto-release' AND status='sent' AND video_id=?
+      AND onesignal_id IS NOT NULL AND onesignal_id != ''
+    ORDER BY created_at DESC LIMIT 1
+  `).bind(safeVideoId).first().catch(() => null);
+  if (delivered?.found) return { ok:false, reason:'already-sent', key };
+  let claimed = await claimPushOnce(db, key, value);
+  if (!claimed) {
+    await db.prepare(`
+      DELETE FROM push_state
+      WHERE key=? AND updated_at < datetime('now','-10 minutes')
+    `).bind(key).run().catch(() => {});
+    claimed = await claimPushOnce(db, key, value);
+  }
+  return { ok:Boolean(claimed), reason:claimed ? 'claimed' : 'busy', key };
+}
+
+async function resolveYoutubeWebSubChannelIdR332(env, db) {
+  const explicit = cleanPlainText(env.YOUTUBE_CHANNEL_ID || '', 120);
+  if (explicit) return explicit;
+  const saved = await getPushState(db, 'youtube-websub-channel-id-r332').catch(() => null);
+  if (saved?.value) return cleanPlainText(saved.value, 120);
+  const row = await db.prepare(`
+    SELECT resource_id AS channelId
+    FROM youtube_event_seen
+    WHERE event_key='channel-subscriber-count' AND resource_id IS NOT NULL AND resource_id != ''
+    LIMIT 1
+  `).first().catch(() => null);
+  if (row?.channelId) {
+    const id = cleanPlainText(row.channelId, 120);
+    await setPushState(db, 'youtube-websub-channel-id-r332', id).catch(() => {});
+    return id;
+  }
+  const identity = await fetchYoutubeMonitorIdentity(env);
+  const id = cleanPlainText(identity?.channelId || '', 120);
+  if (id) await setPushState(db, 'youtube-websub-channel-id-r332', id).catch(() => {});
+  return id;
+}
+
+function youtubeWebSubTopicR332(channelId) {
+  return `https://www.youtube.com/feeds/videos.xml?channel_id=${encodeURIComponent(channelId)}`;
+}
+
+async function ensureYoutubeWebSubSubscriptionR332(env, db, { force=false } = {}) {
+  const now = Date.now();
+  const [statusState, expiryState, requestedState] = await Promise.all([
+    getPushState(db, 'youtube-websub-status-r332').catch(() => null),
+    getPushState(db, 'youtube-websub-lease-expires-at-r332').catch(() => null),
+    getPushState(db, 'youtube-websub-requested-at-r332').catch(() => null)
+  ]);
+  const expiresMs = Date.parse(expiryState?.value || '');
+  if (!force && statusState?.value === 'verified' && Number.isFinite(expiresMs) && expiresMs - now > 24 * 60 * 60 * 1000) {
+    return { ok:true, skipped:true, status:'verified', leaseExpiresAt:expiryState.value };
+  }
+  const requestedMs = Date.parse(requestedState?.value || '');
+  if (!force && statusState?.value === 'pending' && Number.isFinite(requestedMs) && now - requestedMs < 10 * 60 * 1000) {
+    return { ok:true, skipped:true, status:'pending', requestedAt:requestedState.value };
+  }
+
+  const channelId = await resolveYoutubeWebSubChannelIdR332(env, db);
+  if (!channelId) return { ok:false, error:'youtube-websub-channel-id-unavailable' };
+  const topic = youtubeWebSubTopicR332(channelId);
+  const callback = cleanPlainText(env.YOUTUBE_WEBSUB_CALLBACK || YOUTUBE_WEBSUB_CALLBACK_R332, 500);
+  const requestedAt = new Date().toISOString();
+  await Promise.all([
+    setPushState(db, 'youtube-websub-channel-id-r332', channelId),
+    setPushState(db, 'youtube-websub-topic-r332', topic),
+    setPushState(db, 'youtube-websub-callback-r332', callback),
+    setPushState(db, 'youtube-websub-status-r332', 'pending'),
+    setPushState(db, 'youtube-websub-requested-at-r332', requestedAt)
+  ]);
+
+  const body = new URLSearchParams();
+  body.set('hub.mode', 'subscribe');
+  body.set('hub.topic', topic);
+  body.set('hub.callback', callback);
+  body.set('hub.verify', 'async');
+  body.set('hub.lease_seconds', '432000');
+  const response = await fetch(YOUTUBE_WEBSUB_HUB_R332, {
+    method:'POST',
+    headers:{ 'content-type':'application/x-www-form-urlencoded;charset=UTF-8', accept:'text/plain' },
+    body:body.toString()
+  });
+  const responseText = await response.text().catch(() => '');
+  await setPushState(db, 'youtube-websub-subscribe-http-r332', JSON.stringify({
+    ok:response.ok,
+    status:response.status,
+    requestedAt,
+    body:cleanPlainText(responseText, 300)
+  })).catch(() => {});
+  if (!response.ok) {
+    await setPushState(db, 'youtube-websub-status-r332', 'request-failed').catch(() => {});
+    throw new Error(`youtube-websub-subscribe-${response.status}`);
+  }
+  await recordSystemLog(env, {
+    scope:'youtube', level:'info', event:'websub-subscribe-requested',
+    message:'YouTube WebSub: запрос мгновенных уведомлений отправлен.',
+    details:{ channelId, topic, callback, requestedAt, httpStatus:response.status }
+  }).catch(() => {});
+  return { ok:true, requested:true, status:'pending', channelId, topic, callback, requestedAt, httpStatus:response.status };
+}
+
+async function handleYoutubeWebSubSubscribeR332(request, env) {
+  if (!adminAuthorized(request, env) && !cronAuthorized(request, env)) return json({ok:false,error:'unauthorized'},401);
+  const db = requireDb(env);
+  await Promise.all([ensurePushAutomationSchema(db), ensureControlV1Schema(db)]);
+  try {
+    const result = await ensureYoutubeWebSubSubscriptionR332(env, db, { force:true });
+    return json(result, result.ok ? 200 : 503);
+  } catch (error) {
+    return json({ok:false,error:cleanPlainText(error?.message || error,400)},503);
+  }
+}
+
+async function handleYoutubeWebSubStatusR332(request, env) {
+  if (!adminAuthorized(request, env)) return json({ok:false,error:'unauthorized'},401);
+  const db = requireDb(env);
+  await ensurePushAutomationSchema(db);
+  const keys = [
+    'youtube-websub-status-r332','youtube-websub-channel-id-r332','youtube-websub-topic-r332',
+    'youtube-websub-callback-r332','youtube-websub-requested-at-r332','youtube-websub-verified-at-r332',
+    'youtube-websub-lease-expires-at-r332','youtube-websub-last-callback-at-r332',
+    'youtube-websub-last-video-id-r332','youtube-websub-last-result-r332','youtube-fast-last-check-at-r332'
+  ];
+  const states = {};
+  for (const key of keys) states[key] = (await getPushState(db,key).catch(() => null))?.value || '';
+  return json({ok:true,websub:states,fastCronExpression:YOUTUBE_FAST_CRON_R332,engagementCronExpression:YOUTUBE_ENGAGEMENT_CRON_R333,releaseMode:'WebSub + 5m fallback',engagementMode:'comments+likes 2m',subscriberMode:'R331 events <=5m'});
+}
+
+async function handleYoutubeWebSubVerifyR332(request, env, ctx) {
+  const db = requireDb(env);
+  await ensurePushAutomationSchema(db);
+  const url = new URL(request.url);
+  const mode = cleanPlainText(url.searchParams.get('hub.mode') || '', 30);
+  const topic = String(url.searchParams.get('hub.topic') || '');
+  const challenge = String(url.searchParams.get('hub.challenge') || '');
+  const leaseSeconds = Math.max(0, Math.min(31_536_000, Number(url.searchParams.get('hub.lease_seconds') || 0)));
+  if (!challenge || !['subscribe','unsubscribe'].includes(mode)) return new Response('invalid-websub-verification',{status:400});
+
+  const configuredTopic = (await getPushState(db, 'youtube-websub-topic-r332').catch(() => null))?.value || '';
+  let expectedTopic = configuredTopic;
+  if (!expectedTopic) {
+    const channelId = await resolveYoutubeWebSubChannelIdR332(env, db).catch(() => '');
+    if (channelId) expectedTopic = youtubeWebSubTopicR332(channelId);
+  }
+  if (!expectedTopic || topic !== expectedTopic) return new Response('topic-mismatch',{status:403});
+
+  const verifiedAt = new Date().toISOString();
+  const leaseExpiresAt = leaseSeconds ? new Date(Date.now() + leaseSeconds * 1000).toISOString() : '';
+  const persist = (async () => {
+    await setPushState(db, 'youtube-websub-status-r332', mode === 'subscribe' ? 'verified' : 'unsubscribed');
+    await setPushState(db, 'youtube-websub-verified-at-r332', verifiedAt);
+    if (leaseExpiresAt) await setPushState(db, 'youtube-websub-lease-expires-at-r332', leaseExpiresAt);
+    await recordSystemLog(env, {
+      scope:'youtube', level:'info', event:'websub-verified',
+      message:mode === 'subscribe' ? 'YouTube WebSub подключён.' : 'YouTube WebSub отключён.',
+      details:{ mode, topic, verifiedAt, leaseSeconds, leaseExpiresAt }
+    }).catch(() => {});
+  })();
+  if (ctx?.waitUntil) ctx.waitUntil(persist); else await persist;
+  return new Response(challenge,{status:200,headers:{'content-type':'text/plain; charset=utf-8','cache-control':'no-store'}});
+}
+
+function parseYoutubeWebSubPayloadR332(xml='') {
+  const text = String(xml || '').slice(0, 200000);
+  const videoId = cleanPlainText(text.match(/<yt:videoId>([^<]+)<\/yt:videoId>/i)?.[1] || '', 80);
+  const channelId = cleanPlainText(text.match(/<yt:channelId>([^<]+)<\/yt:channelId>/i)?.[1] || '', 120);
+  return { videoId, channelId };
+}
+
+async function fetchYoutubeVideoForWebSubR332(env, videoId) {
+  const { data, mode } = await youtubeApiJson(env, 'videos', { part:'snippet,status', id:videoId }, { oauth:false });
+  const item = Array.isArray(data?.items) ? data.items[0] : null;
+  if (!item) return { ok:false, error:'video-not-found', mode };
+  const snippet = item.snippet || {};
+  const status = item.status || {};
+  return {
+    ok:true,
+    mode,
+    item:{
+      videoId:cleanPlainText(item.id || videoId,80),
+      title:cleanPlainText(snippet.title || '',180),
+      publishedAt:cleanPlainText(snippet.publishedAt || '',50),
+      thumbnail:snippet?.thumbnails?.maxres?.url || snippet?.thumbnails?.high?.url || snippet?.thumbnails?.medium?.url || '',
+      channelId:cleanPlainText(snippet.channelId || '',120),
+      privacyStatus:cleanPlainText(status.privacyStatus || '',30),
+      source:'YouTube WebSub'
+    }
+  };
+}
+
+async function pushYoutubeReleaseItemR332(env, db, item, origin='websub') {
+  const videoId = cleanPlainText(item?.videoId || '',80);
+  if (!videoId) return {ok:false,error:'video-id-required'};
+  const claim = await claimYoutubeReleaseOnceR332(db, videoId, `${origin}:${new Date().toISOString()}`);
+  if (!claim.ok) return {ok:true,skipped:true,reason:claim.reason,videoId};
+
+  const releaseTitle = normalizeReleaseTitle(item.title);
+  const releaseUrl = `https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`;
+  const result = await sendOneSignalPush(env, {
+    title:`🎵 ${compactYoutubePushTitle(releaseTitle, 'Новый релиз')}`,
+    message:'Новый релиз ANDRIK уже доступен на YouTube',
+    url:releaseUrl,
+    image:item.thumbnail || '',
+    webButtons:[{id:'listen-now',text:'▶️ Слушать на YouTube',url:releaseUrl}],
+    audience:'all',
+    name:`release-${videoId}`,
+    history:{type:'auto-release',source:item.source || 'YouTube',videoId,videoTitle:releaseTitle,details:{origin}}
+  });
+  await upsertReleaseHistory(db, {
+    videoId,
+    title:releaseTitle,
+    url:releaseUrl,
+    source:item.source || 'YouTube WebSub',
+    pushStatus:result.ok ? 'sent' : (result.skipped ? 'skipped' : 'failed'),
+    lyricsStatus:'missing',
+    publishedAt:item.publishedAt || '',
+    details:{automatic:true,origin,error:result.error || '',oneSignalId:result.oneSignalId || ''}
+  }).catch(() => {});
+  if (!result.ok) {
+    await releasePushOnceClaim(db, claim.key).catch(() => {});
+    return {ok:false,error:result.error || 'push-failed',videoId,title:releaseTitle};
+  }
+  await db.prepare(`
+    INSERT OR IGNORE INTO push_playlist_seen (video_id,title,published_at,first_seen_at)
+    VALUES (?,?,?,datetime('now'))
+  `).bind(videoId,item.title || releaseTitle,item.publishedAt || '').run();
+  await cacheLatestYoutubeItem(db, item, {mode:origin}).catch(() => {});
+  await recordSystemLog(env, {
+    scope:'push',level:'info',event:'auto-release-websub-sent',
+    message:`WebSub: уведомление о «${releaseTitle}» отправлено.`,
+    details:{videoId,origin,oneSignalId:result.oneSignalId || ''}
+  }).catch(() => {});
+  return {ok:true,sent:true,videoId,title:releaseTitle,oneSignalId:result.oneSignalId || ''};
+}
+
+async function processYoutubeWebSubNotificationR332(env, payload) {
+  const db = requireDb(env);
+  await Promise.all([ensurePushAutomationSchema(db), ensureLyricsV2Schema(db), ensureControlV1Schema(db)]);
+  const startedAt = new Date().toISOString();
+  await setPushState(db, 'youtube-websub-last-callback-at-r332', startedAt).catch(() => {});
+  await setPushState(db, 'youtube-websub-last-video-id-r332', payload.videoId || '').catch(() => {});
+  try {
+    const expectedChannelId = await resolveYoutubeWebSubChannelIdR332(env, db);
+    if (!payload.videoId || !payload.channelId || payload.channelId !== expectedChannelId) {
+      const result={ok:false,skipped:true,error:'channel-or-video-mismatch',payload,expectedChannelId};
+      await setPushState(db,'youtube-websub-last-result-r332',JSON.stringify(result)).catch(() => {});
+      return result;
+    }
+    const fetched = await fetchYoutubeVideoForWebSubR332(env, payload.videoId);
+    if (!fetched.ok) throw new Error(fetched.error || 'video-fetch-failed');
+    const item = fetched.item;
+    if (item.channelId !== expectedChannelId) throw new Error('video-channel-mismatch');
+    if (item.privacyStatus && item.privacyStatus !== 'public') {
+      const result={ok:true,skipped:true,reason:`privacy-${item.privacyStatus}`,videoId:item.videoId};
+      await setPushState(db,'youtube-websub-last-result-r332',JSON.stringify(result)).catch(() => {});
+      return result;
+    }
+    const result = await pushYoutubeReleaseItemR332(env, db, item, 'websub-r332');
+    try{
+      const {data}=await youtubeApiJson(env,'videos',{part:'snippet,statistics',id:item.videoId,maxResults:1});
+      const video=data?.items?.[0];
+      if(video && !await getYoutubeEventRow(db,`like-count:${item.videoId}`)){
+        const baseline={
+          videoId:cleanPlainText(video.id || item.videoId,40),
+          title:cleanPlainText(video?.snippet?.title || item.title || 'Видео ANDRIK',180),
+          publishedAt:cleanPlainText(video?.snippet?.publishedAt || item.publishedAt || '',50),
+          thumbnail:video?.snippet?.thumbnails?.high?.url || video?.snippet?.thumbnails?.medium?.url || item.thumbnail || '',
+          likes:Number(video?.statistics?.likeCount || 0),comments:Number(video?.statistics?.commentCount || 0),
+          url:`https://www.youtube.com/watch?v=${encodeURIComponent(video.id || item.videoId)}`
+        };
+        await saveYoutubeEventRow(db,{key:`like-count:${baseline.videoId}`,type:'like-count',resourceId:baseline.videoId,videoId:baseline.videoId,title:baseline.title,countValue:baseline.likes,url:baseline.url,payload:baseline});
+        await saveYoutubeEventRow(db,{key:`comment-count:${baseline.videoId}`,type:'comment-count',resourceId:baseline.videoId,videoId:baseline.videoId,title:baseline.title,countValue:baseline.comments,url:baseline.url,payload:baseline});
+      }
+    }catch(_){}
+    await setPushState(db,'youtube-websub-last-result-r332',JSON.stringify(result)).catch(() => {});
+    return result;
+  } catch (error) {
+    const result={ok:false,error:cleanPlainText(error?.message || error,400),videoId:payload.videoId || ''};
+    await setPushState(db,'youtube-websub-last-result-r332',JSON.stringify(result)).catch(() => {});
+    await recordSystemLog(env,{scope:'youtube',level:'error',event:'websub-process-failed',message:`WebSub ошибка: ${result.error}`,details:result}).catch(() => {});
+    return result;
+  }
+}
+
+async function handleYoutubeWebSubNotifyR332(request, env, ctx) {
+  const text = await request.text();
+  const payload = parseYoutubeWebSubPayloadR332(text);
+  if (!payload.videoId || !payload.channelId) return new Response('',{status:204,headers:{'cache-control':'no-store'}});
+  const task = processYoutubeWebSubNotificationR332(env, payload);
+  if (ctx?.waitUntil) ctx.waitUntil(task); else await task;
+  return new Response('',{status:204,headers:{'cache-control':'no-store'}});
+}
+
+async function fetchLatestUploadsR332(env, db) {
+  const playlistId = await resolveUploadsPlaylistId(env, db);
+  if (!playlistId) throw new Error('youtube-uploads-playlist-unavailable');
+  const apiKey = String(env.YOUTUBE_API_KEY || '').trim();
+  const source = `Канал ${cleanPlainText(env.YOUTUBE_CHANNEL_HANDLE || '@andrikmetal',100)}`;
+  if (!apiKey) {
+    const items = await fetchYoutubePlaylistFeed(playlistId, source);
+    return {items:items.slice(0,3),mode:'youtube-feed-fast',playlistId};
+  }
+  const url = new URL('https://www.googleapis.com/youtube/v3/playlistItems');
+  url.searchParams.set('part','snippet,contentDetails');
+  url.searchParams.set('playlistId',playlistId);
+  url.searchParams.set('maxResults','3');
+  url.searchParams.set('key',apiKey);
+  await trackObservabilityUsage(env,'youtube-data-api',observabilityQuotaCost('playlistItems'),1,{endpoint:'playlistItems',playlistId:cleanPlainText(playlistId,80),source:'fast-release-r332'}).catch(() => {});
+  const response = await fetch(url.toString(),{headers:{accept:'application/json'}});
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data?.error?.message || 'youtube-fast-playlist-error');
+  const items=(data.items || []).map(raw=>{
+    const videoId=raw?.contentDetails?.videoId || raw?.snippet?.resourceId?.videoId || '';
+    const title=cleanPlainText(raw?.snippet?.title || '',180);
+    if(!videoId || !title || /private video|deleted video/i.test(title)) return null;
+    return {
+      videoId,title,
+      publishedAt:cleanPlainText(raw?.contentDetails?.videoPublishedAt || raw?.snippet?.publishedAt || '',50),
+      thumbnail:raw?.snippet?.thumbnails?.maxres?.url || raw?.snippet?.thumbnails?.high?.url || raw?.snippet?.thumbnails?.medium?.url || '',
+      source,playlistId
+    };
+  }).filter(Boolean);
+  return {items,mode:'youtube-data-api-fast',playlistId};
+}
+
+async function handleFastYoutubeReleaseCheckR332(request, env) {
+  if (!adminAuthorized(request, env) && !cronAuthorized(request, env)) return json({ok:false,error:'unauthorized'},401);
+  const db = requireDb(env);
+  await Promise.all([ensurePushAutomationSchema(db),ensureLyricsV2Schema(db),ensureControlV1Schema(db)]);
+  const startedAt=new Date().toISOString();
+  await setPushState(db,'youtube-fast-last-check-at-r332',startedAt).catch(() => {});
+  let websub={ok:true,skipped:true};
+  try{websub=await ensureYoutubeWebSubSubscriptionR332(env,db,{force:false});}catch(error){websub={ok:false,error:cleanPlainText(error?.message || error,300)}}
+  const seeded=await getPushState(db,'playlist-seeded').catch(() => null);
+  if(!seeded?.value){
+    const full=await responseData(await handleCheckPlaylist(request,env));
+    return json({ok:Boolean(full.httpOk),mode:'seed-via-full',websub,full},full.httpOk?200:502);
+  }
+  try{
+    const fetched=await fetchLatestUploadsR332(env,db);
+    const results=[];
+    for(const item of fetched.items.slice().reverse()) results.push(await pushYoutubeReleaseItemR332(env,db,item,'fast-cron-r332'));
+    const sent=results.filter(x=>x?.sent).length;
+    const failed=results.filter(x=>x && x.ok===false).length;
+    const finishedAt=new Date().toISOString();
+    await setPushState(db,'youtube-fast-last-check-at-r332',finishedAt).catch(() => {});
+    await setPushState(db,'youtube-fast-last-result-r332',JSON.stringify({sent,failed,results,mode:fetched.mode})).catch(() => {});
+    return json({ok:failed===0,checked:fetched.items.length,sent,failed,results,mode:fetched.mode,websub,checkedAt:finishedAt},failed===0?200:502);
+  }catch(error){
+    const msg=cleanPlainText(error?.message || error,400);
+    await setPushState(db,'youtube-fast-last-result-r332',JSON.stringify({ok:false,error:msg})).catch(() => {});
+    return json({ok:false,error:msg,websub},502);
+  }
+}
+
 async function handleCheckPlaylist(request, env) {
   if (!adminAuthorized(request, env) && !cronAuthorized(request, env)) return json({ ok: false, error: 'unauthorized' }, 401);
   const db = requireDb(env);
@@ -2722,6 +3130,8 @@ async function handleCheckPlaylist(request, env) {
     const sentItems = [];
     const failedItems = [];
     for (const item of newItems.slice().reverse().slice(0, 8)) {
+      const releaseClaimR332 = await claimYoutubeReleaseOnceR332(db, item.videoId, `playlist:${startedAt}`);
+      if (!releaseClaimR332.ok) continue;
       const releaseTitle = normalizeReleaseTitle(item.title);
       const releaseUrl = `https://www.youtube.com/watch?v=${encodeURIComponent(item.videoId)}`;
       await recordSystemLog(env, {
@@ -2762,6 +3172,7 @@ async function handleCheckPlaylist(request, env) {
           details: { videoId: item.videoId, oneSignalId: result.oneSignalId || '', response: result.data || {} }
         }).catch(() => {});
       } else {
+        await releasePushOnceClaim(db, releaseClaimR332.key).catch(() => {});
         failedItems.push({ videoId: item.videoId, title: releaseTitle, error: result.error || 'send-failed' });
         await recordSystemLog(env, {
           scope: 'push', level: 'error', event: 'auto-release-failed',
@@ -5390,6 +5801,169 @@ async function setYoutubeSubscriberVisibleCreditR331(db, count) {
   return safe;
 }
 
+
+async function loadFastYoutubeVideoIdsR333(db,limit=50){
+  const rows=await db.prepare(`
+    SELECT video_id AS videoId,payload_json AS payloadJson,last_seen_at AS lastSeenAt
+    FROM youtube_event_seen
+    WHERE event_type='like-count' AND video_id IS NOT NULL AND video_id!=''
+    ORDER BY datetime(last_seen_at) DESC LIMIT 120
+  `).all();
+  const items=[];
+  for(const row of rows.results || []){
+    let payload={};try{payload=JSON.parse(row.payloadJson || '{}') || {}}catch(_){}
+    items.push({videoId:cleanPlainText(row.videoId || '',40),publishedAt:cleanPlainText(payload.publishedAt || '',50)});
+  }
+  return items.filter(x=>x.videoId)
+    .sort((a,b)=>String(b.publishedAt || '').localeCompare(String(a.publishedAt || '')))
+    .slice(0,Math.max(1,Math.min(50,Number(limit || 50)))).map(x=>x.videoId);
+}
+
+async function fetchFastYoutubeCommentsR333(env,channelId){
+  const {data}=await youtubeApiJson(env,'commentThreads',{
+    part:'snippet,replies',allThreadsRelatedToChannelId:channelId,maxResults:100,order:'time',textFormat:'plainText'
+  });
+  const items=[];
+  for(const thread of data.items || []){
+    const top=parseYoutubeCommentItem(thread?.snippet?.topLevelComment || {});
+    if(top.id)items.push(top);
+    for(const reply of thread?.replies?.comments || []){
+      const item=parseYoutubeCommentItem(reply,{videoId:top.videoId});
+      if(item.id)items.push(item);
+    }
+  }
+  return uniqueYoutubeComments(items);
+}
+
+async function fetchFastYoutubeLikesR333(env,db){
+  const ids=await loadFastYoutubeVideoIdsR333(db,50);
+  if(!ids.length)return [];
+  const {data}=await youtubeApiJson(env,'videos',{part:'snippet,statistics',id:ids.join(','),maxResults:50});
+  return (data.items || []).map(video=>({
+    videoId:cleanPlainText(video.id || '',40),
+    title:cleanPlainText(video?.snippet?.title || 'Видео ANDRIK',180),
+    publishedAt:cleanPlainText(video?.snippet?.publishedAt || '',50),
+    thumbnail:video?.snippet?.thumbnails?.high?.url || video?.snippet?.thumbnails?.medium?.url || '',
+    likes:Number(video?.statistics?.likeCount || 0),
+    comments:Number(video?.statistics?.commentCount || 0),
+    url:`https://www.youtube.com/watch?v=${encodeURIComponent(video.id || '')}`
+  })).filter(x=>x.videoId);
+}
+
+async function handleFastYoutubeEngagementR333(request,env){
+  if(!adminAuthorized(request,env) && !cronAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
+  const db=requireDb(env);
+  await Promise.all([ensurePushAutomationSchema(db),ensureControlV1Schema(db)]);
+  const startedAt=new Date().toISOString();
+  await setPushState(db,'youtube-fast-engagement-last-at-r333',startedAt).catch(()=>{});
+  try{
+    let channelId=(await getPushState(db,'youtube-websub-channel-id-r332').catch(()=>null))?.value || '';
+    if(!channelId)channelId=await resolveYoutubeWebSubChannelIdR332(env,db);
+    if(!channelId)throw new Error('youtube-channel-id-unavailable');
+
+    const settled=await Promise.allSettled([fetchFastYoutubeCommentsR333(env,channelId),fetchFastYoutubeLikesR333(env,db)]);
+    const comments=settled[0].status==='fulfilled'?settled[0].value:[];
+    const videos=settled[1].status==='fulfilled'?settled[1].value:[];
+    const videoMap=new Map(videos.map(v=>[v.videoId,v]));
+    const identity={channelId,handle:cleanPlainText(env.YOUTUBE_CHANNEL_HANDLE || '@andrikmetal',100)};
+    const notifications=[];
+    const external=comments.map(item=>{
+      const v=videoMap.get(item.videoId)||{};
+      return {...item,videoTitle:item.videoTitle||v.title||'Новое событие YouTube',thumbnail:item.thumbnail||v.thumbnail||''};
+    }).filter(item=>!isYoutubeOwnerComment(item,identity));
+
+    const cutoff=Date.now()-24*60*60*1000;
+    for(const item of external.slice().reverse().slice(-30)){
+      const key=`comment:${item.id}`;
+      if(await getYoutubeEventRow(db,key))continue;
+      const published=Date.parse(item.publishedAt || '');
+      if(Number.isFinite(published) && published<cutoff){
+        await saveYoutubeEventRow(db,{key,type:'comment',resourceId:item.id,videoId:item.videoId,author:item.author,title:item.text,url:item.url,payload:{...item,seededSilently:true,mode:'fast-r333'}});
+        continue;
+      }
+      const onceKey=`push-once:youtube-comment:${item.id}`;
+      let claimed=await claimPushOnce(db,onceKey,startedAt);
+      if(!claimed){
+        const delivered=await db.prepare(`SELECT 1 AS found FROM push_history WHERE type='youtube-comment' AND status='sent' AND details_json LIKE ? ORDER BY created_at DESC LIMIT 1`).bind(`%${item.id}%`).first().catch(()=>null);
+        if(delivered?.found){
+          await saveYoutubeEventRow(db,{key,type:'comment',resourceId:item.id,videoId:item.videoId,author:item.author,title:item.text,url:item.url,payload:item});
+          continue;
+        }
+        await db.prepare(`DELETE FROM push_state WHERE key=? AND updated_at < datetime('now','-30 minutes')`).bind(onceKey).run().catch(()=>{});
+        claimed=await claimPushOnce(db,onceKey,startedAt);
+      }
+      if(!claimed)continue;
+      const result=await sendOwnerPush(env,{
+        title:`💬 ${compactYoutubePushTitle(item.videoTitle || 'Новый комментарий','YouTube')}`,
+        message:`${item.author}: ${String(item.text || '').slice(0,160)}`,
+        url:item.url,image:item.thumbnail || '',name:`youtube-comment-${item.id}`,ttl:86400,
+        data:{commentId:item.id,parentId:item.parentId || item.id,videoId:item.videoId || ''},
+        webButtons:[
+          {id:'reply-comment',text:'↩️ Ответить',url:`https://control.andrikmetal.com/youtube-comment-reply.html?commentId=${encodeURIComponent(item.id)}&videoId=${encodeURIComponent(item.videoId || '')}`},
+          {id:'open-youtube',text:'▶️ YouTube',url:item.url}
+        ],
+        history:{type:'youtube-comment',source:'YouTube',videoId:item.videoId,videoTitle:item.videoTitle || item.text,details:{commentId:item.id,parentId:item.parentId || item.id,author:item.author,publishedAt:item.publishedAt,deliveryMode:'fast-r333'}}
+      });
+      if(result.ok)await saveYoutubeEventRow(db,{key,type:'comment',resourceId:item.id,videoId:item.videoId,author:item.author,title:item.text,url:item.url,payload:item});
+      else await releasePushOnceClaim(db,onceKey);
+      notifications.push({type:'comment',id:item.id,ok:Boolean(result.ok),error:result.error || ''});
+    }
+
+    for(const item of videos){
+      const key=`like-count:${item.videoId}`;
+      const previous=await getYoutubeEventRow(db,key);
+      if(!previous){
+        await saveYoutubeEventRow(db,{key,type:'like-count',resourceId:item.videoId,videoId:item.videoId,title:item.title,countValue:item.likes,url:item.url,payload:item});
+        continue;
+      }
+      const before=Number(previous.countValue || 0);
+      if(item.likes<=before)continue;
+
+      const duplicate=await db.prepare(`SELECT 1 AS found FROM push_history WHERE type='youtube-like' AND video_id=? AND status='sent' AND message LIKE ? ORDER BY created_at DESC LIMIT 1`).bind(item.videoId,`%всего ${item.likes}%`).first().catch(()=>null);
+      if(duplicate?.found){
+        await db.prepare(`UPDATE youtube_event_seen SET count_value=MAX(count_value,?),last_seen_at=datetime('now') WHERE event_key=?`).bind(item.likes,key).run().catch(()=>{});
+        continue;
+      }
+
+      const claim=await db.prepare(`UPDATE youtube_event_seen SET count_value=MAX(count_value,?),last_seen_at=datetime('now') WHERE event_key=? AND count_value<?`).bind(item.likes,key,item.likes).run();
+      if(Number(claim?.meta?.changes || 0)<=0)continue;
+      const onceKey=`push-once:youtube-like:${item.videoId}:${item.likes}`;
+      const once=await claimPushOnce(db,onceKey,startedAt);
+      if(!once)continue;
+
+      const delta=item.likes-before;
+      const burst=await resolveYoutubeLikeBurst(db,{...item,before,delta},startedAt);
+      const cumulativeDelta=burst.cumulativeDelta;
+      const glowTheme=youtubeLikeGlowTheme(cumulativeDelta);
+      const likeTopic=pushTopicToken(`youtube-like-${item.videoId}`);
+      const videoAppUrl=youtubeAppLauncherUrl(item.url);
+      const result=await sendOwnerPush(env,{
+        title:`👍 ${compactYoutubePushTitle(item.title,'YouTube')}`,
+        message:`+${cumulativeDelta} ${russianLikeWord(cumulativeDelta)} на YouTube · всего ${item.likes}`,
+        url:videoAppUrl,image:youtubeLikeGlowImageUrl(item.videoId,cumulativeDelta),icon:glowTheme.icon,
+        name:`youtube-like-${item.videoId}-${item.likes}`,androidGroup:likeTopic,threadId:likeTopic,collapseId:likeTopic,webPushTopic:likeTopic,ttl:7200,
+        data:{videoId:item.videoId,totalLikes:item.likes,cumulativeDelta,burstStartedAt:burst.startedAt,notificationTag:likeTopic,glowLevel:glowTheme.level},
+        webButtons:[{id:'open-youtube',text:'▶️ Смотреть видео',url:videoAppUrl}],
+        history:{type:'youtube-like',source:'YouTube',videoId:item.videoId,videoTitle:item.title,details:{targetUrl:item.url,launcherUrl:videoAppUrl,delta,cumulativeDelta,before,totalLikes:item.likes,deliveryMode:'fast-r333'}}
+      });
+      if(!result.ok){
+        await releasePushOnceClaim(db,onceKey);
+        await db.prepare(`UPDATE youtube_event_seen SET count_value=?,last_seen_at=datetime('now') WHERE event_key=? AND count_value=?`).bind(before,key,item.likes).run().catch(()=>{});
+      }
+      notifications.push({type:'like',videoId:item.videoId,ok:Boolean(result.ok),delta,total:item.likes,error:result.error || ''});
+    }
+
+    const warnings=settled.map(r=>r.status==='rejected'?cleanPlainText(r.reason?.message || r.reason,240):'').filter(Boolean);
+    const summary={ok:warnings.length===0,commentsSeen:comments.length,videosChecked:videos.length,sent:notifications.filter(x=>x.ok).length,failed:notifications.filter(x=>!x.ok).length,warnings,checkedAt:new Date().toISOString()};
+    await setPushState(db,'youtube-fast-engagement-last-result-r333',JSON.stringify(summary)).catch(()=>{});
+    return json(summary,warnings.length?206:200);
+  }catch(error){
+    const msg=cleanPlainText(error?.message || error,400);
+    await setPushState(db,'youtube-fast-engagement-last-result-r333',JSON.stringify({ok:false,error:msg})).catch(()=>{});
+    return json({ok:false,error:msg},502);
+  }
+}
+
 async function handleCheckYoutubeEvents(request, env) {
   if (!adminAuthorized(request, env) && !cronAuthorized(request, env)) return json({ ok: false, error: 'unauthorized' }, 401);
   const db = requireDb(env);
@@ -7497,6 +8071,10 @@ async function handleAutomationRun(request, env) {
     tasks.youtubeEvents = await responseData(await handleCheckYoutubeEvents(request, env));
     if (!tasks.youtubeEvents.httpOk) errors.push(`youtubeEvents: ${tasks.youtubeEvents.details || tasks.youtubeEvents.error || tasks.youtubeEvents.status}`);
   } catch (error) { tasks.youtubeEvents={ok:false,error:cleanPlainText(error?.message || error,500)}; errors.push(`youtubeEvents: ${tasks.youtubeEvents.error}`); }
+  try {
+    tasks.websub = await ensureYoutubeWebSubSubscriptionR332(env, db, { force:false });
+    if (!tasks.websub.ok && !tasks.websub.skipped) errors.push(`websub: ${tasks.websub.error || 'failed'}`);
+  } catch (error) { tasks.websub={ok:false,error:cleanPlainText(error?.message || error,500)}; errors.push(`websub: ${tasks.websub.error}`); }
   try {
     tasks.releases = await responseData(await handleCheckPlaylist(request, env));
     if (!tasks.releases.httpOk) errors.push(`releases: ${tasks.releases.details || tasks.releases.error || tasks.releases.status}`);
@@ -10623,7 +11201,7 @@ async function handleMusicMp3PutR314(request, env) {
   const body=await request.arrayBuffer(); if(!body.byteLength||body.byteLength>40*1024*1024) return json({ok:false,error:'file-too-large'},413);
   const key=folder+'/'+name;
   const metadata={
-    source:'ANDRIK Control R331',
+    source:'ANDRIK Control R333',
     title:musicHeaderR317(request,'x-andrik-track-title'),
     artist:musicHeaderR317(request,'x-andrik-track-artist'),
     album:musicHeaderR317(request,'x-andrik-track-album'),
@@ -10723,6 +11301,8 @@ async function routeApi(request, env, ctx) {
       }
     }
     if (path === '/api/health' && request.method === 'GET') return await handlePublicHealth(request, env, ctx);
+    if (path === '/api/youtube/websub' && request.method === 'GET') return await handleYoutubeWebSubVerifyR332(request, env, ctx);
+    if (path === '/api/youtube/websub' && request.method === 'POST') return await handleYoutubeWebSubNotifyR332(request, env, ctx);
     if (path === '/api/control/protection/status' && request.method === 'GET') return await handleControlProtectionStatus(request, env);
     if (path === '/api/control/protection/guard-status' && request.method === 'GET') return await handleControlProtectionGuardStatus(request, env);
     if (path === '/api/control/guard/event' && request.method === 'POST') return await handleGuardEvent(request, env);
@@ -10740,6 +11320,10 @@ async function routeApi(request, env, ctx) {
     if (path === '/api/push/inspect-playlist' && request.method === 'POST') return await handleInspectPlaylist(request, env);
     if (path === '/api/push/check-playlist' && request.method === 'POST') return await handleCheckPlaylist(request, env);
     if (path === '/api/push/check-youtube-events' && request.method === 'POST') return await handleCheckYoutubeEvents(request, env);
+    if (path === '/api/youtube/websub/subscribe' && request.method === 'POST') return await handleYoutubeWebSubSubscribeR332(request, env);
+    if (path === '/api/youtube/websub/status' && request.method === 'GET') return await handleYoutubeWebSubStatusR332(request, env);
+    if (path === '/api/automation/youtube-fast' && request.method === 'POST') return await handleFastYoutubeReleaseCheckR332(request, env);
+    if (path === '/api/automation/youtube-engagement-fast' && request.method === 'POST') return await handleFastYoutubeEngagementR333(request, env);
     if (path === '/api/automation/run' && request.method === 'POST') return await handleAutomationRun(request, env);
     if (path === '/api/control/daily-summary/send' && request.method === 'POST') return await handleManualDailyOwnerSummary(request, env);
     if (path === '/api/push/retry-latest' && request.method === 'POST') return await handleRetryLatestPush(request, env);
@@ -10896,28 +11480,38 @@ function controlAssetFailurePage(error) {
 
 export default {
   async scheduled(controller, env, ctx) {
-    const cronKey = String(env.CRON_SECRET || '');
-    const request = new Request('https://control.andrikmetal.com/api/automation/run', {
-      method:'POST',
-      headers:cronKey ? { 'x-cron-key':cronKey } : {}
-    });
-    ctx.waitUntil((async () => {
-      if (!cronKey) {
-        await recordSystemLog(env, {
-          scope:'automation', level:'error', event:'scheduled-secret-missing',
-          message:'Cron Trigger запущен, но CRON_SECRET не настроен.'
-        }).catch(() => {});
+    const cronKey=String(env.CRON_SECRET || '');
+    const cron=String(controller?.cron || '');
+    const isEngagementR333=cron===YOUTUBE_ENGAGEMENT_CRON_R333;
+    const isFiveMinuteR333=cron===YOUTUBE_FAST_CRON_R332;
+    const target=isEngagementR333
+      ? 'https://control.andrikmetal.com/api/automation/youtube-engagement-fast'
+      : isFiveMinuteR333
+        ? 'https://control.andrikmetal.com/api/automation/youtube-fast'
+        : 'https://control.andrikmetal.com/api/automation/run';
+    const request=new Request(target,{method:'POST',headers:cronKey?{'x-cron-key':cronKey}:{}});
+    ctx.waitUntil((async()=>{
+      if(!cronKey){
+        await recordSystemLog(env,{scope:'automation',level:'error',event:'scheduled-secret-missing',message:'Cron Trigger запущен, но CRON_SECRET не настроен.'}).catch(()=>{});
         return;
       }
-      const response = await handleAutomationRun(request, env);
-      if (!response.ok) {
-        const body = await response.text().catch(() => '');
-        throw new Error(`scheduled-automation-${response.status}: ${body.slice(0, 300)}`);
+      let response;
+      if(isEngagementR333){
+        response=await handleFastYoutubeEngagementR333(request,env);
+      }else if(isFiveMinuteR333){
+        const release=await responseData(await handleFastYoutubeReleaseCheckR332(request,env));
+        const events=await responseData(await handleCheckYoutubeEvents(request,env));
+        const ok=Boolean(release.httpOk)&&Boolean(events.httpOk);
+        response=json({ok,release,events,mode:'five-minute-r333'},ok?200:502);
+      }else{
+        response=await handleAutomationRun(request,env);
       }
-    })().catch(error => recordSystemLog(env, {
-      scope:'automation', level:'error', event:'scheduled-run-failed',
-      message:cleanPlainText(error?.message || error, 500)
-    }).catch(() => {})));
+      if(!response.ok){
+        const body=await response.text().catch(()=>'');
+        const mode=isEngagementR333?'youtube-engagement-fast':isFiveMinuteR333?'youtube-fast-5m':'automation';
+        throw new Error(`scheduled-${mode}-${response.status}: ${body.slice(0,300)}`);
+      }
+    })().catch(error=>recordSystemLog(env,{scope:'automation',level:'error',event:'scheduled-run-failed',message:cleanPlainText(error?.message || error,500)}).catch(()=>{})));
   },
   async fetch(request, env, ctx) {
     const url = new URL(request.url);

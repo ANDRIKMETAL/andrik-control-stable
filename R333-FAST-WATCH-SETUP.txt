@@ -1,0 +1,14 @@
+ANDRIK R333 FAST WATCH
+
+Keep the existing main Cron unchanged.
+Add to the SAME Worker:
+*/2 * * * *  -> fast comments + likes
+*/5 * * * *  -> release fallback + R331 subscriber/events check
+
+WebSub remains primary for new releases.
+
+R333 also sends one push per Bratislava day when Control's locally tracked
+YouTube Data API usage first reaches 50% of YOUTUBE_DAILY_QUOTA_LIMIT.
+Default: 10,000 units. This is Control's approximate local counter.
+
+No phone-side polling was added.
