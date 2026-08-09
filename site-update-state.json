@@ -1,14 +1,14 @@
 {
   "schema": 1,
   "updaterVersion": "55.00-r347",
-  "operation": "reinstall",
-  "reinstall": true,
-  "operationId": "reinstall-1786282313347-a651176976",
-  "release": "R348",
-  "archiveName": "R348-R347-COMPACT-TOTAL-BADGE-SAFE-FULL.zip",
-  "sourceHead": "a1db0d1e8d271544f7545b0008d8a57476df4f2d",
-  "backupSha": "a1db0d1e8d271544f7545b0008d8a57476df4f2d",
-  "backupTag": "control-backup-20260809133149-a1db0d1-r348-fcfbd",
+  "operation": "publish",
+  "reinstall": false,
+  "operationId": "publish-1786282905490-0a3a14e4fb",
+  "release": "R350",
+  "archiveName": "R350-R349-AUTO-DAILY-STATS-0500-1700-SUMMARY-SAFE-FULL.zip",
+  "sourceHead": "d5723602a3188ac2110bf083d708a8f13a3f048b",
+  "backupSha": "d5723602a3188ac2110bf083d708a8f13a3f048b",
+  "backupTag": "control-backup-20260809134141-d572360-r350-89ef0",
   "autoRecovery": true,
-  "generatedAt": "2026-08-09T13:31:53.347Z"
+  "generatedAt": "2026-08-09T13:41:45.490Z"
 }

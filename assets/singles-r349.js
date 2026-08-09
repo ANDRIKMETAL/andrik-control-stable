@@ -1,0 +1,30 @@
+(()=>{'use strict';
+const root=document.getElementById('andrikSinglesList');if(!root)return;
+const lang=String(document.documentElement.lang||'ru').toLowerCase().split('-')[0];
+const I={
+ ru:{loading:'Загружаем синглы…',empty:'Синглы скоро появятся.',play:'▶ Слушать',pause:'❚❚ Пауза',download:'↓ Скачать MP3',share:'🔗 Поделиться ссылкой',copied:'✓ Ссылка скопирована',copyPrompt:'Скопируйте ссылку для браузера',error:'Не удалось загрузить список синглов.'},
+ uk:{loading:'Завантажуємо сингли…',empty:'Сингли скоро з’являться.',play:'▶ Слухати',pause:'❚❚ Пауза',download:'↓ Завантажити MP3',share:'🔗 Поділитися посиланням',copied:'✓ Посилання скопійовано',copyPrompt:'Скопіюйте посилання для браузера',error:'Не вдалося завантажити список синглів.'},
+ sk:{loading:'Načítavame single…',empty:'Single sa čoskoro objavia.',play:'▶ Počúvať',pause:'❚❚ Pauza',download:'↓ Stiahnuť MP3',share:'🔗 Zdieľať odkaz',copied:'✓ Odkaz skopírovaný',copyPrompt:'Skopírujte odkaz pre prehliadač',error:'Zoznam singlov sa nepodarilo načítať.'},
+ en:{loading:'Loading singles…',empty:'Singles are coming soon.',play:'▶ Listen',pause:'❚❚ Pause',download:'↓ Download MP3',share:'🔗 Share link',copied:'✓ Link copied',copyPrompt:'Copy this link for your browser',error:'Could not load the singles list.'}
+};
+const t=I[lang]||I.ru;
+const limit=Number(root.dataset.limit||0);
+const pretty=s=>{try{return decodeURIComponent(String(s||''))}catch(_){return String(s||'')}};
+const esc=s=>String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fallback=s=>String(s||'').replace(/\b\w/g,c=>c.toUpperCase());
+const copyLink=async(url,btn)=>{try{await navigator.clipboard.writeText(url);const old=btn.textContent;btn.textContent=t.copied;setTimeout(()=>btn.textContent=old,1600)}catch(_){window.prompt(t.copyPrompt,url)}};
+root.innerHTML=`<div class="andrik-singles-empty">${t.loading}</div>`;
+fetch('/api/music/singles',{cache:'no-store'}).then(r=>r.json()).then(d=>{
+ let a=Array.isArray(d.tracks)?d.tracks:[];if(limit)a=a.slice(0,limit);
+ if(!a.length){root.innerHTML=`<div class="andrik-singles-empty">${t.empty}</div>`;return}
+ root.innerHTML=a.map((x,i)=>{const title=pretty(x.title).trim()||fallback(x.name);return `<article class="andrik-track"><div class="andrik-track-title">${esc(title)}</div><div class="andrik-track-actions"><button type="button" data-play="${i}">${t.play}</button><a href="${esc(x.url)}" download>${t.download}</a></div><button class="andrik-track-share" type="button" data-share="${esc(x.url)}">${t.share}</button><audio class="andrik-audio" data-audio="${i}" controls preload="none" hidden src="${esc(x.url)}"></audio></article>`}).join('');
+ root.addEventListener('click',e=>{
+   const share=e.target.closest('[data-share]');if(share){copyLink(share.dataset.share,share);return}
+   const b=e.target.closest('[data-play]');if(!b)return;
+   const a=root.querySelector(`[data-audio="${b.dataset.play}"]`);if(!a)return;
+   a.hidden=false;
+   if(a.paused){root.querySelectorAll('audio').forEach(o=>{if(o!==a)o.pause()});a.play().catch(()=>{});b.textContent=t.pause}
+   else{a.pause();b.textContent=t.play}
+ });
+}).catch(()=>root.innerHTML=`<div class="andrik-singles-empty">${t.error}</div>`);
+})();

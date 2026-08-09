@@ -3920,14 +3920,14 @@ async function handleControlSystem(request, env) {
         : 'R2 подключено · копий пока нет';
   const dailySummaryReady = oneSignalConfigured && ownerDeviceCount > 0 && automationHealth === 'active';
   const dailySummaryLabel = !oneSignalConfigured
-    ? 'Сводка 06:00 ожидает настройки OneSignal'
+    ? 'Сводки 05:00 / 17:00 ожидают настройки OneSignal'
     : ownerDeviceCount < 1
-      ? 'Сводка 06:00 ожидает регистрацию устройства владельца'
+      ? 'Сводки 05:00 / 17:00 ожидают регистрацию устройства владельца'
       : automationHealth !== 'active'
-        ? 'Сводка 06:00 ожидает стабильный Центральный Cron'
+        ? 'Сводки 05:00 / 17:00 ожидают стабильный Центральный Cron'
         : dailySummaryAt?.value
-          ? `Каждый день в 06:00 · последняя ${formatSystemDateLabel(dailySummaryAt.value)}`
-          : 'Каждый день в 06:00 · ожидает первого утра';
+          ? `Каждый день в 05:00 и 17:00 · последняя ${formatSystemDateLabel(dailySummaryAt.value)}`
+          : 'Каждый день в 05:00 и 17:00 · ожидает первой сводки';
   return json({
     ok: true,
     version: ANDRIK_CONTROL_RELEASE.full,
@@ -7846,7 +7846,7 @@ async function collectDailyOwnerSummary(env, { liveExternal = true, windowOverri
   const db = requireDb(env);
   const window = windowOverride || getBratislavaSummaryWindow();
   await Promise.all([ensurePushAutomationSchema(db), ensureCommentsV4Schema(db), ensurePlatformAnalyticsSchema(db), ensureControlV1Schema(db), ensureSiteMetricsSchema(db)]);
-  const [siteSubscribers, siteComments, pendingComments, youtubeEvents, youtubeLikeRows, youtubeSubscriberRows, releases, latestYoutubeState, ytLatest, ytBaseline, gaLatest, gaBaseline, gaRollover, siteLive, siteWindow] = await Promise.all([
+  const [siteSubscribers, siteComments, pendingComments, youtubeEvents, youtubeLikeRows, youtubeSubscriberRows, releases, latestYoutubeState, ytLatest, ytBaselineBefore, ytBaselineAfter, gaLatest, gaBaselineBefore, gaBaselineAfter, gaRollover, siteLive, siteWindow] = await Promise.all([
     db.prepare(`SELECT COUNT(*) AS total FROM push_history
       WHERE type='site-subscriber'
         AND datetime(created_at) >= datetime(?1)
@@ -7887,16 +7887,20 @@ async function collectDailyOwnerSummary(env, { liveExternal = true, windowOverri
       WHERE platform='youtube' AND datetime(created_at) <= datetime(?1)
       ORDER BY datetime(created_at) DESC LIMIT 1`).bind(window.endAt).first(),
     db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform='youtube' AND datetime(created_at) <= datetime(?1) ORDER BY datetime(created_at) DESC LIMIT 1`).bind(window.startAt).first(),
+    db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform='youtube' AND datetime(created_at) >= datetime(?1) AND datetime(created_at) < datetime(?2) ORDER BY datetime(created_at) ASC LIMIT 1`).bind(window.startAt, window.endAt).first(),
     db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots
       WHERE platform='google-analytics' AND datetime(created_at) <= datetime(?1)
       ORDER BY datetime(created_at) DESC LIMIT 1`).bind(window.endAt).first(),
     db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform='google-analytics' AND datetime(created_at) <= datetime(?1) ORDER BY datetime(created_at) DESC LIMIT 1`).bind(window.startAt).first(),
+    db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform='google-analytics' AND datetime(created_at) >= datetime(?1) AND datetime(created_at) < datetime(?2) ORDER BY datetime(created_at) ASC LIMIT 1`).bind(window.startAt, window.endAt).first(),
     window.crossesMidnight
       ? db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform='google-analytics' AND datetime(created_at) <= datetime(?1) AND datetime(created_at) >= datetime(?2) ORDER BY datetime(created_at) DESC LIMIT 1`).bind(window.midnightAt, window.startAt).first()
       : Promise.resolve(null),
     getSiteLiveMetrics(db),
     getSiteWindowMetrics(db, window.startAt, window.endAt)
   ]);
+  const ytBaseline = ytBaselineBefore || ytBaselineAfter;
+  const gaBaseline = gaBaselineBefore || gaBaselineAfter;
   const ytNow = parseSnapshotMetrics(ytLatest);
   const ytStart = parseSnapshotMetrics(ytBaseline);
   const gaSnapshot = parseSnapshotMetrics(gaLatest);
@@ -8043,183 +8047,100 @@ async function hasDailyOwnerSummaryForBratislavaDate(db, localDate) {
 
 async function maybeSendDailyOwnerSummary(env) {
   const clock = getBratislavaClock();
-  const afterSix = clock.hour > 6 || (clock.hour === 6 && clock.minute >= 0);
-  if (!afterSix) {
-    return { ok:true, skipped:true, reason:'before-06-local', localDate:clock.date };
-  }
+  // R350: two automatic owner summaries in Bratislava local time.
+  // Morning slot stays eligible from 05:00 until 16:59; evening from 17:00 onward.
+  const slot = clock.hour >= 17 ? '17' : (clock.hour >= 5 ? '05' : '');
+  if (!slot) return { ok:true, skipped:true, reason:'before-05-local', localDate:clock.date };
 
   const db = requireDb(env);
   await ensurePushAutomationSchema(db);
-
-  // R253 PUSH ONLY: the old 30-hour history check always found yesterday's
-  // 06:00 summary and incorrectly marked today as already sent. Check the
-  // exact Bratislava calendar date instead and repair a poisoned state key.
-  const sentToday = await hasDailyOwnerSummaryForBratislavaDate(db, clock.date);
-  const last = await getPushState(db, 'daily-owner-summary-auto-last-date');
-
-  if (sentToday) {
-    if (last?.value !== clock.date) {
-      await setPushState(db, 'daily-owner-summary-auto-last-date', clock.date);
-    }
-    return {
-      ok:true,
-      skipped:true,
-      reason:'already-sent-today',
-      localDate:clock.date,
-      sentAt:sentToday.createdAt || ''
-    };
+  const slotKey = `${clock.date}:${slot}`;
+  const sentStateKey = `daily-owner-summary-auto-slot:${slotKey}`;
+  const already = await getPushState(db, sentStateKey).catch(() => null);
+  if (already?.value) {
+    return { ok:true, skipped:true, reason:'slot-already-sent', localDate:clock.date, slot, sentAt:already.value };
   }
 
-  if (last?.value === clock.date) {
-    // R252 and earlier could write today's date merely because yesterday's
-    // push existed inside a 30-hour window. Remove that false marker so the
-    // next Cron pass sends the missed summary immediately as a catch-up.
-    await releasePushOnceClaim(db, 'daily-owner-summary-auto-last-date');
-    await recordSystemLog(env, {
-      scope:'daily-summary',
-      level:'warning',
-      event:'false-sent-marker-repaired',
-      message:`Исправлена ложная отметка отправки сводки за ${clock.date}.`,
-      details:{ previousValue:last.value, repairedAt:new Date().toISOString() }
-    }).catch(() => {});
-  }
-
-  const dailyClaimKey = `push-once:daily-summary-auto:${clock.date}`;
-  const previousClaim = await db.prepare(`
-    SELECT value, updated_at AS updatedAt
-    FROM push_state
-    WHERE key = ?
-    LIMIT 1
-  `).bind(dailyClaimKey).first().catch(() => null);
-
+  const claimKey = `push-once:daily-summary-auto:${slotKey}`;
+  const previousClaim = await db.prepare(`SELECT value, updated_at AS updatedAt FROM push_state WHERE key=? LIMIT 1`).bind(claimKey).first().catch(() => null);
   if (previousClaim) {
-    const claimAgeMinutes = (Date.now() - Date.parse(previousClaim.updatedAt || '')) / 60000;
-    if (Number.isFinite(claimAgeMinutes) && claimAgeMinutes < 20) {
-      return {
-        ok:true,
-        skipped:true,
-        reason:'send-claimed',
-        localDate:clock.date,
-        claimAgeMinutes:Math.max(0, Math.round(claimAgeMinutes))
-      };
-    }
-    await releasePushOnceClaim(db, dailyClaimKey);
+    const age = (Date.now() - Date.parse(previousClaim.updatedAt || '')) / 60000;
+    if (Number.isFinite(age) && age < 20) return { ok:true, skipped:true, reason:'send-claimed', localDate:clock.date, slot };
+    await releasePushOnceClaim(db, claimKey);
+  }
+  if (!await claimPushOnce(db, claimKey, new Date().toISOString())) {
+    return { ok:true, skipped:true, reason:'send-claimed', localDate:clock.date, slot };
   }
 
-  if (!await claimPushOnce(db, dailyClaimKey, new Date().toISOString())) {
-    return { ok:true, skipped:true, reason:'send-claimed', localDate:clock.date };
-  }
-
-  const summaryWindow = getBratislavaCompletedSummaryWindow();
+  // 05:00 = almost-completed 06:05-cycle; 17:00 = live current 06:05-cycle.
+  // Both are snapshots of the automatic server accumulator; sending a push never resets it.
+  const summaryWindow = getBratislavaSummaryWindow();
   await setPushState(db, 'daily-owner-summary-last-attempt-at', new Date().toISOString());
   await setPushState(db, 'daily-owner-summary-last-attempt-status', 'collecting');
 
   let metrics;
   let collectionError = '';
   try {
-    metrics = await collectDailyOwnerSummary(env, {
-      liveExternal:false,
-      windowOverride:summaryWindow
-    });
+    metrics = await collectDailyOwnerSummary(env, { liveExternal:false, windowOverride:summaryWindow });
   } catch (error) {
     collectionError = cleanPlainText(error?.message || error, 500);
     metrics = await collectDailyOwnerSummaryFallback(env, summaryWindow, collectionError);
   }
 
-  const completedWindowKey = summaryWindow?.key || metrics?.windowKey || '';
+  const windowKey = summaryWindow?.key || metrics?.windowKey || '';
   const preparedAt = new Date().toISOString();
-  const preparedSnapshot = JSON.stringify({
-    metrics,
-    sentAt:preparedAt,
-    localDate:clock.date,
-    source:'central-cron-prepared',
-    windowKey:completedWindowKey
-  });
+  const preparedSnapshot = JSON.stringify({ metrics, sentAt:preparedAt, localDate:clock.date, slot, source:'central-cron-prepared', windowKey });
   await setPushState(db, 'daily-owner-summary-last-metrics', preparedSnapshot).catch(() => {});
-  if (completedWindowKey) {
-    await setPushState(db, `daily-owner-summary-window:${completedWindowKey}`, preparedSnapshot).catch(() => {});
-    await persistControlHomeHighWaterFromMetricsR260(db, completedWindowKey, metrics).catch(() => {});
+  if (windowKey) {
+    await setPushState(db, `daily-owner-summary-window:${windowKey}`, preparedSnapshot).catch(() => {});
+    await persistControlHomeHighWaterFromMetricsR260(db, windowKey, metrics).catch(() => {});
   }
 
   const lines = buildDailyOwnerSummaryLines(metrics);
+  const slotLabel = slot === '05' ? '05:00 · утро' : '17:00 · вечер';
   const summaryUrl = `https://control.andrikmetal.com/control-home.html?page=summary&source=push&summaryWindow=${encodeURIComponent(summaryWindow.key)}`;
   let result;
   try {
     result = await sendOwnerPush(env, {
-      title:'📊 Ежедневная сводка ANDRIK',
+      title:`📊 Общая сводка ANDRIK · ${slot === '05' ? 'утро' : 'вечер'}`,
       message:lines.join('\n'),
       url:summaryUrl,
-      name:`ANDRIK daily summary ${clock.date}`,
+      name:`ANDRIK daily summary ${clock.date} ${slot}`,
       history:{
-        type:'daily-summary',
-        source:'central-cron',
-        title:'Ежедневная сводка ANDRIK',
-        message:lines.join('\n'),
-        url:summaryUrl,
-        details:{
-          localDate:clock.date,
-          localHour:clock.hour,
-          localMinute:clock.minute,
-          catchUp:clock.hour !== 6 || clock.minute > 10,
-          collectionError,
-          metrics
-        }
+        type:'daily-summary', source:'central-cron',
+        title:`Общая сводка ANDRIK · ${slotLabel}`,
+        message:lines.join('\n'), url:summaryUrl,
+        details:{ localDate:clock.date, localHour:clock.hour, localMinute:clock.minute, summarySlot:slot, collectionError, metrics, windowKey }
       }
     });
   } catch (error) {
     const message = cleanPlainText(error?.message || error, 500);
     await setPushState(db, 'daily-owner-summary-last-attempt-status', 'failed');
     await setPushState(db, 'daily-owner-summary-last-attempt-error', message);
-    await releasePushOnceClaim(db, dailyClaimKey);
-    await recordSystemLog(env, {
-      scope:'daily-summary',
-      level:'error',
-      event:'send-failed',
-      message:`Не удалось отправить ежедневную сводку: ${message}`,
-      details:{ localDate:clock.date, summaryWindow, collectionError }
-    }).catch(() => {});
+    await releasePushOnceClaim(db, claimKey);
+    await recordSystemLog(env, { scope:'daily-summary', level:'error', event:'send-failed', message:`Не удалось отправить сводку ${slotLabel}: ${message}`, details:{localDate:clock.date,slot,summaryWindow,collectionError} }).catch(() => {});
     throw error;
   }
 
   if (result.ok) {
     const sentAt = new Date().toISOString();
+    await setPushState(db, sentStateKey, sentAt);
     await setPushState(db, 'daily-owner-summary-auto-last-date', clock.date);
     await setPushState(db, 'daily-owner-summary-last-at', sentAt);
     await setPushState(db, 'daily-owner-summary-last-attempt-status', metrics.partial ? 'sent-partial' : 'sent');
     await setPushState(db, 'daily-owner-summary-last-attempt-error', collectionError);
-    const storedSnapshot = JSON.stringify({
-      metrics,
-      sentAt,
-      localDate:clock.date,
-      source:'central-cron',
-      windowKey:completedWindowKey
-    });
+    const storedSnapshot = JSON.stringify({ metrics, sentAt, localDate:clock.date, slot, source:'central-cron', windowKey });
     await setPushState(db, 'daily-owner-summary-last-metrics', storedSnapshot);
-    if (completedWindowKey) {
-      await setPushState(db, `daily-owner-summary-window:${completedWindowKey}`, storedSnapshot);
-    }
-    await persistControlHomeHighWaterFromMetricsR260(db, completedWindowKey, metrics);
-    await recordSystemLog(env, {
-      scope:'daily-summary',
-      level:metrics.partial ? 'warning' : 'info',
-      event:metrics.partial ? 'sent-partial' : 'sent',
-      message:`Ежедневная сводка отправлена за ${clock.date}.`,
-      details:{ metrics, collectionError, summaryWindow, oneSignalId:result.oneSignalId || '' }
-    }).catch(() => {});
+    if (windowKey) await setPushState(db, `daily-owner-summary-window:${windowKey}`, storedSnapshot);
+    await persistControlHomeHighWaterFromMetricsR260(db, windowKey, metrics);
+    await recordSystemLog(env, { scope:'daily-summary', level:metrics.partial?'warning':'info', event:metrics.partial?'sent-partial':'sent', message:`Автосводка ${slotLabel} отправлена.`, details:{metrics,slot,collectionError,summaryWindow,oneSignalId:result.oneSignalId||''} }).catch(() => {});
   } else {
-    const message = cleanPlainText(result.error || 'onesignal-send-failed', 500);
-    await setPushState(db, 'daily-owner-summary-last-attempt-status', 'failed');
-    await setPushState(db, 'daily-owner-summary-last-attempt-error', message);
-    await releasePushOnceClaim(db, dailyClaimKey);
+    const message=cleanPlainText(result.error||'onesignal-send-failed',500);
+    await setPushState(db,'daily-owner-summary-last-attempt-status','failed');
+    await setPushState(db,'daily-owner-summary-last-attempt-error',message);
+    await releasePushOnceClaim(db,claimKey);
   }
-
-  return {
-    ...result,
-    localDate:clock.date,
-    summaryWindow,
-    collectionError,
-    metrics
-  };
+  return { ok:Boolean(result.ok), sent:Boolean(result.ok), slot, localDate:clock.date, summaryWindow, metrics, collectionError, oneSignalId:result.oneSignalId||'', error:result.error||'' };
 }
 
 async function handleManualDailyOwnerSummary(request, env) {
@@ -8438,13 +8359,13 @@ async function handleAutomationRun(request, env) {
     tasks.releases = await responseData(await handleCheckPlaylist(request, env));
     if (!tasks.releases.httpOk) errors.push(`releases: ${tasks.releases.details || tasks.releases.error || tasks.releases.status}`);
   } catch (error) { tasks.releases={ok:false,error:cleanPlainText(error?.message || error,500)}; errors.push(`releases: ${tasks.releases.error}`); }
-  // R305: refresh Google + current summary accumulator before the 06:00 push.
+  // R350: refresh Google + current summary accumulator independently of push delivery.
   // This also keeps the live summary current on every normal Cron cycle.
   try {
     tasks.summaryRefresh = await refreshDailySummaryAccumulatorR305(env, 'central-cron');
     if (!tasks.summaryRefresh.ok && !tasks.summaryRefresh.skipped) errors.push(`summaryRefresh: ${tasks.summaryRefresh.error || 'failed'}`);
   } catch (error) { tasks.summaryRefresh={ok:false,error:cleanPlainText(error?.message || error,500)}; errors.push(`summaryRefresh: ${tasks.summaryRefresh.error}`); }
-  // The 06:00 owner summary uses the freshly persisted accumulator above.
+  // R350: scheduled 05:00 / 17:00 owner summaries read the same persisted accumulator.
   try {
     tasks.dailySummary = await maybeSendDailyOwnerSummary(env);
     if (!tasks.dailySummary.ok && !tasks.dailySummary.skipped) errors.push(`dailySummary: ${tasks.dailySummary.error || 'failed'}`);
@@ -8732,7 +8653,7 @@ async function handleControlHomePushSnapshotR271(db, window) {
 
   return json({
     ok:true,
-    period:'06:05-cycle',
+    period:'06:05-auto-cycle',
     windowKey:window.key,
     windowStartAt:window.startAt,
     windowEndAt:window.endAt,
@@ -8762,7 +8683,7 @@ async function handleControlHome(request, env) {
   if (requestedPushWindow) return await handleControlHomePushSnapshotR271(db, requestedPushWindow);
   // R260 DAILY ACCUMULATOR: the screen uses one Bratislava window, 06:05 → next 06:05.
   // Sending a push only records a checkpoint. It never resets counters; only the window key changes at 06:05.
-  const [siteSubscribers, siteComments, siteLikes, youtubeEvents, youtubeLikeRows, youtubeSubscriberRows, releases, latestYoutubeState, activityResult, ytLatest, ytBaseline, gaLatest, gaBaseline, gaRollover, automationAt, automationStatus, automationSummary, siteLive, siteWindow, latestDailySummaryState, latestDailySummaryPush, latestDailySummaryLog] = await Promise.all([
+  const [siteSubscribers, siteComments, siteLikes, youtubeEvents, youtubeLikeRows, youtubeSubscriberRows, releases, latestYoutubeState, activityResult, ytLatest, ytBaselineBefore, ytBaselineAfter, gaLatest, gaBaselineBefore, gaBaselineAfter, gaRollover, automationAt, automationStatus, automationSummary, siteLive, siteWindow, latestDailySummaryState, latestDailySummaryPush, latestDailySummaryLog] = await Promise.all([
     db.prepare(`SELECT COUNT(*) AS total FROM push_history WHERE type='site-subscriber' AND datetime(created_at) >= datetime(?1)`).bind(window.startAt).first(),
     db.prepare(`SELECT COUNT(*) AS total FROM comments WHERE datetime(created_at) >= datetime(?1)`).bind(window.startAt).first(),
     db.prepare(`SELECT COUNT(*) AS total FROM comment_likes WHERE datetime(created_at) >= datetime(?1)`).bind(window.startAt).first(),
@@ -8787,8 +8708,10 @@ async function handleControlHome(request, env) {
       ORDER BY datetime(created_at) DESC LIMIT 200`).bind(window.startAt).all(),
     db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform='youtube' ORDER BY datetime(created_at) DESC LIMIT 1`).first(),
     db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform='youtube' AND datetime(created_at) <= datetime(?1) ORDER BY datetime(created_at) DESC LIMIT 1`).bind(window.startAt).first(),
+    db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform='youtube' AND datetime(created_at) >= datetime(?1) AND datetime(created_at) < datetime(?2) ORDER BY datetime(created_at) ASC LIMIT 1`).bind(window.startAt, window.endAt).first(),
     db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform='google-analytics' ORDER BY datetime(created_at) DESC LIMIT 1`).first(),
     db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform='google-analytics' AND datetime(created_at) <= datetime(?1) ORDER BY datetime(created_at) DESC LIMIT 1`).bind(window.startAt).first(),
+    db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform='google-analytics' AND datetime(created_at) >= datetime(?1) AND datetime(created_at) < datetime(?2) ORDER BY datetime(created_at) ASC LIMIT 1`).bind(window.startAt, window.endAt).first(),
     window.crossesMidnight
       ? db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform='google-analytics' AND datetime(created_at) <= datetime(?1) AND datetime(created_at) >= datetime(?2) ORDER BY datetime(created_at) DESC LIMIT 1`).bind(window.midnightAt, window.startAt).first()
       : Promise.resolve(null),
@@ -8816,6 +8739,8 @@ async function handleControlHome(request, env) {
       LIMIT 1
     `).first()
   ]);
+  const ytBaseline = ytBaselineBefore || ytBaselineAfter;
+  const gaBaseline = gaBaselineBefore || gaBaselineAfter;
   const ytNow = parseSnapshotMetrics(ytLatest);
   const ytStart = parseSnapshotMetrics(ytBaseline);
   const gaStart = { ...parseSnapshotMetrics(gaBaseline), __snapshotFound:Boolean(gaBaseline) };
@@ -8886,7 +8811,7 @@ async function handleControlHome(request, env) {
   }
   return json({
     ok:true,
-    period:'06:05-cycle',
+    period:'06:05-auto-cycle',
     windowKey:window.key,
     windowStartAt:window.startAt,
     windowEndAt:window.endAt,
