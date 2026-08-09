@@ -1,0 +1,29 @@
+R373 — DAILY CITY LIST SCROLL FIX
+
+Исправление по экрану «Сводка за сегодня».
+
+Что было:
+- блок «Города за день» открывался,
+- но нижние фиксированные кнопки «Комментарии» и «Отправить сводку»
+  перекрывали список,
+- из-за нехватки нижнего отступа пользователь не мог нормально дочитать
+  города ниже, особенно в push/standalone summary режиме.
+
+Что исправлено:
+1. Для control-summary-page включён гарантированный вертикальный скролл.
+2. Для .control-swipe-page-inner добавлен большой безопасный нижний padding.
+3. Для #controlHomeCityList добавлен дополнительный нижний отступ,
+   чтобы последний город не уходил под две плавающие кнопки.
+4. Для #controlHomeUpdated и нижнего ряда summary также добавлен запас.
+5. Отдельно учтены portrait, small-width mobile и landscape режимы.
+6. Исправление действует и в обычной сводке, и в push summary standalone view.
+
+Сохранено:
+- R372 city label + native city pulse + force world return.
+- R370 cities in daily summary.
+- R369 city touch target.
+- R366 exact push snapshot.
+- R363 fast daily summary cron.
+
+Версия: R373.
+База: R372.

@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786295794004-897c34036b",
-  "release": "R372",
-  "archiveName": "R372-R371-LANDSCAPE-CITY-LABEL-NATIVE-PULSE-FORCE-WORLD-SAFE-FULL.zip",
-  "sourceHead": "87894f3351e42d23b121f731665983007c0fe28b",
-  "backupSha": "87894f3351e42d23b121f731665983007c0fe28b",
-  "backupTag": "control-backup-20260809171629-87894f3-r372-d8530",
+  "operationId": "publish-1786296724049-29a383b3af",
+  "release": "R373",
+  "archiveName": "R373-R372-DAILY-CITY-LIST-SCROLL-FIX-SAFE-FULL.zip",
+  "sourceHead": "fb0b8d4e786d00d0ef2b7aa037b1656b807c1b5d",
+  "backupSha": "fb0b8d4e786d00d0ef2b7aa037b1656b807c1b5d",
+  "backupTag": "control-backup-20260809173159-fb0b8d4-r373-49f2f",
   "autoRecovery": true,
-  "generatedAt": "2026-08-09T17:16:34.004Z"
+  "generatedAt": "2026-08-09T17:32:04.049Z"
 }
