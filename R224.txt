@@ -1,8 +1,0 @@
-R224 — STATUS GLOW
-- Only the header-eye glow changes; layout, image and controls are untouched.
-- Green: normal / ready.
-- Blue: active processing and update stages 1–3, 5–6.
-- Yellow: warning and update stage 4 (Release).
-- Red: error / problem.
-- The behavior is shared across Control pages that use the common header eye.
-- Based on R223.

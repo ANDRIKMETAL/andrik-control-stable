@@ -1,5 +1,0 @@
-R217 — EYE VIDEO ONLY
-- One tap on the Control header eye opens the ANDRIK video immediately.
-- Site launch from the header eye is completely removed.
-- Added a visible Play fallback button if Android blocks autoplay.
-- R216 video, R215 eye motion and deploy width fixes are preserved.

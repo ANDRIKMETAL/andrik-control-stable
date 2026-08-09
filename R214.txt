@@ -1,4 +1,0 @@
-R214 — CONTROL EYE + EXIT GUARD
-- Gentler, slower breathing animation for the Control header eye.
-- Android/PWA Back button confirmation on Control home: Stay or Exit.
-- Based on R213; fast site and summary protections preserved.

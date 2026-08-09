@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R339', number:339, version:'55.00', full:'55.00 LIVE WEB AI FINAL R339', siteUpdater:'55.00-r339' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R341', number:341, version:'55.00', full:'55.00 LIVE WEB AI FINAL R341', siteUpdater:'55.00-r341' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';

@@ -1,14 +1,14 @@
 {
   "schema": 1,
-  "updaterVersion": "55.00-r338",
+  "updaterVersion": "55.00-r339",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786277930365-721f03f2e3",
+  "operationId": "publish-1786278593319-7578af2503",
   "release": "R338",
-  "archiveName": "R339-R338-COMPACT-COUNTRY-MAP-WEEKLY-YELLOW-CARD-SAFE-FULL.zip",
-  "sourceHead": "2019b4cb7e32c1d9651f49f192e4870504bcd5ab",
-  "backupSha": "2019b4cb7e32c1d9651f49f192e4870504bcd5ab",
-  "backupTag": "control-backup-20260809121845-2019b4c-r338-3dfa8",
+  "archiveName": "R341-R340-REAL-COUNTRY-MAP-BUTTON-FIT-SAFE-FULL.zip",
+  "sourceHead": "c6753486a07f29b9ae05a6cf3698e1ae7b94bf00",
+  "backupSha": "c6753486a07f29b9ae05a6cf3698e1ae7b94bf00",
+  "backupTag": "control-backup-20260809122949-c675348-r338-795a1",
   "autoRecovery": true,
-  "generatedAt": "2026-08-09T12:18:50.365Z"
+  "generatedAt": "2026-08-09T12:29:53.319Z"
 }

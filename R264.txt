@@ -1,7 +1,0 @@
-ANDRIK Control R264
-
-- Red error state recolors the eye itself red.
-- Attack Map removes the duplicate horizontal yellow header glow; only the eye halo remains.
-- Site updater retries transient GitHub 429/5xx failures and reduces peak Worker load.
-- GitHub Secret card stays hidden unless configuration/authentication is truly missing.
-- All R263 map, push, analytics, ZIP UI and admin-section behavior is preserved.

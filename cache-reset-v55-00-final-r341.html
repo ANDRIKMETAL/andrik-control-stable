@@ -7,7 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <title>Очистка Control — R340</title>
+  <title>Очистка Control — R341</title>
   <style>
     *{box-sizing:border-box}
     html,body{
@@ -143,7 +143,7 @@
 </head>
 <body>
   <main class="box">
-    <span class="badge">СТРАНИЦА ОЧИСТКИ R340</span>
+    <span class="badge">СТРАНИЦА ОЧИСТКИ R341</span>
     <h1 id="title">Чистим кэш Control</h1>
     <p id="status">Не закрывай страницу. После завершения появится кнопка открытия Control.</p>
 
@@ -247,7 +247,10 @@
       '/assets/map-monthly-r337.js?cache-bust='+stamp,
       '/assets/country-focus-compact-r339.css?cache-bust='+stamp,
       '/assets/country-focus-compact-r339.js?cache-bust='+stamp,
-      '/assets/control-version-sync-r340.js?cache-bust='+stamp,
+      '/assets/country-shapes-r341.js?cache-bust='+stamp,
+      '/assets/country-map-r341.css?cache-bust='+stamp,
+      '/assets/country-map-r341.js?cache-bust='+stamp,
+      '/assets/control-version-sync-r341.js?cache-bust='+stamp,
       '/player.html?cache-bust='+stamp,
       '/singles.html?cache-bust='+stamp
     ];
@@ -264,7 +267,7 @@
       }))
     );
 
-    // R340: activate YouTube WebSub immediately when the owner session is present.
+    // R341: activate YouTube WebSub immediately when the owner session is present.
     // If the session is unavailable, the normal central Cron will subscribe automatically.
     await fetch('/api/youtube/websub/subscribe',{
       method:'POST',
@@ -273,7 +276,7 @@
       headers:{'Cache-Control':'no-cache, no-store, max-age=0','Pragma':'no-cache'}
     }).catch(()=>null);
     // Also run one lightweight release check now, so a release published before
-    // R340 installation can be caught immediately without waiting for the next Cron.
+    // R341 installation can be caught immediately without waiting for the next Cron.
     await fetch('/api/automation/youtube-fast',{
       method:'POST',
       cache:'no-store',
@@ -300,6 +303,6 @@
   }
 })();
 </script>
-<script defer src="/assets/control-version-sync-r340.js?v=55.00-r340"></script>
+<script defer src="/assets/control-version-sync-r341.js?v=55.00-r341"></script>
 </body>
 </html>

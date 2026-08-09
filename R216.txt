@@ -1,5 +1,0 @@
-R216 — LIVE EYE TAP
-- One tap on the Control header eye opens the user's live-eye video in a fullscreen overlay.
-- Two taps on the header eye open andrikmetal.com.
-- Video is loaded only after the tap, so normal Control startup stays light.
-- R215 fast eye breathing and the hard width lock for deploy steps 5–6 are preserved.

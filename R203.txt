@@ -1,6 +1,0 @@
-ANDRIK Control v55.00 FINAL R203
-
-Base: working R201 Google Owner Session Gate.
-Change: portrait-only containment fix for updater deploy step 5.
-The Cloudflare waiting/result card can no longer enlarge the page or pull the interface to the right.
-No authorization, Google Analytics, Search Console, map, updater logic, rollback, sleep mode or site content was changed.
