@@ -1,14 +1,14 @@
 {
   "schema": 1,
-  "updaterVersion": "55.00-r328",
+  "updaterVersion": "55.00-r330",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786218966359-522e39163d",
+  "operationId": "publish-1786256212872-36fe9c76c8",
   "release": "R313",
-  "archiveName": "R330-R329-EQUALIZER-FADE-ALL-SINGLES-FIX-SAFE-FULL.zip",
-  "sourceHead": "d38757c2d217b0f472e95953e254c5c2943223b6",
-  "backupSha": "d38757c2d217b0f472e95953e254c5c2943223b6",
-  "backupTag": "control-backup-20260808195602-d38757c-r313-da603",
+  "archiveName": "R331-R330-YOUTUBE-SUBSCRIBER-PUSH-RELIABLE-SAFE-FULL.zip",
+  "sourceHead": "b3c1f04f4fcf99cf0d51001c3fb0a35f4da41e5a",
+  "backupSha": "b3c1f04f4fcf99cf0d51001c3fb0a35f4da41e5a",
+  "backupTag": "control-backup-20260809061648-b3c1f04-r313-0944d",
   "autoRecovery": true,
-  "generatedAt": "2026-08-08T19:56:06.359Z"
+  "generatedAt": "2026-08-09T06:16:52.872Z"
 }

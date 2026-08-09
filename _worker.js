@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R330', number:330, version:'55.00', full:'55.00 LIVE WEB AI FINAL R330', siteUpdater:'55.00-r330' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R331', number:331, version:'55.00', full:'55.00 LIVE WEB AI FINAL R331', siteUpdater:'55.00-r331' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -5366,6 +5366,30 @@ async function saveYoutubeEventRow(db, event = {}) {
   ).run();
 }
 
+
+async function getYoutubeSubscriberVisibleCreditR331(db) {
+  const row = await getPushState(db, 'youtube-subscriber-visible-credit-r331').catch(() => null);
+  if (!row?.value) return { count:0, updatedAt:'' };
+  try {
+    const parsed = JSON.parse(row.value || '{}') || {};
+    const updatedAt = cleanPlainText(parsed.updatedAt || row.updatedAt || '', 60);
+    const age = Date.now() - Date.parse(updatedAt || '');
+    if (!Number.isFinite(age) || age < 0 || age > 12 * 60 * 60 * 1000) return { count:0, updatedAt };
+    return { count:Math.max(0, Math.min(50, Number(parsed.count || 0))), updatedAt };
+  } catch (_) {
+    return { count:0, updatedAt:'' };
+  }
+}
+
+async function setYoutubeSubscriberVisibleCreditR331(db, count) {
+  const safe = Math.max(0, Math.min(50, Number(count || 0)));
+  await setPushState(db, 'youtube-subscriber-visible-credit-r331', JSON.stringify({
+    count:safe,
+    updatedAt:new Date().toISOString()
+  })).catch(() => {});
+  return safe;
+}
+
 async function handleCheckYoutubeEvents(request, env) {
   if (!adminAuthorized(request, env) && !cronAuthorized(request, env)) return json({ ok: false, error: 'unauthorized' }, 401);
   const db = requireDb(env);
@@ -5581,6 +5605,11 @@ async function handleCheckYoutubeEvents(request, env) {
     const previousSubscriberCount = Number(subscriberState?.countValue || 0);
     const subscriberDelta = !identity.hiddenSubscribers && previousSubscriberCount > 0 && identity.subscribers > previousSubscriberCount
       ? identity.subscribers - previousSubscriberCount : 0;
+    const subscriberDropped = !identity.hiddenSubscribers && previousSubscriberCount > 0 && identity.subscribers < previousSubscriberCount;
+    const visibleCreditStateR331 = subscriberDropped
+      ? { count:0, updatedAt:'' }
+      : await getYoutubeSubscriberVisibleCreditR331(db);
+    let pendingVisibleCreditR331 = Math.max(0, Number(visibleCreditStateR331.count || 0));
 
     const notifications = [];
     const commentDelivery = new Map();
@@ -5631,7 +5660,30 @@ async function handleCheckYoutubeEvents(request, env) {
     const visibleSubscriberBatch = newVisibleSubscribers.slice().reverse().slice(0, 6);
     for (const item of visibleSubscriberBatch) {
       const onceKey = `push-once:youtube-subscriber:${item.id}`;
-      if (!await claimPushOnce(db, onceKey, startedAt)) continue;
+      let claimed = await claimPushOnce(db, onceKey, startedAt);
+      if (!claimed) {
+        // R331: recover a subscriber claim exactly like comments.
+        // A run that died after claiming but before persisting youtube_event_seen
+        // must not silence this subscriber forever.
+        const delivered = await db.prepare(`
+          SELECT 1 AS found FROM push_history
+          WHERE type='youtube-subscriber'
+            AND status='sent'
+            AND details_json LIKE ?
+          ORDER BY created_at DESC LIMIT 1
+        `).bind(`%${item.id}%`).first().catch(() => null);
+        if (delivered?.found) {
+          subscriberDelivery.set(item.id, { ok:true, recoveredFromHistory:true });
+          continue;
+        }
+        await db.prepare(`
+          DELETE FROM push_state
+          WHERE key=? AND updated_at < datetime('now','-10 minutes')
+        `).bind(onceKey).run().catch(() => {});
+        claimed = await claimPushOnce(db, onceKey, startedAt);
+      }
+      if (!claimed) continue;
+
       const subscriberTarget = item.url || identity.channelUrl;
       const subscriberAppUrl = youtubeAppLauncherUrl(subscriberTarget);
       const result = await sendOwnerPush(env, {
@@ -5640,7 +5692,12 @@ async function handleCheckYoutubeEvents(request, env) {
         url: subscriberAppUrl,
         name: `youtube-subscriber-${item.id}`,
         webButtons: [{ id:'open-youtube', text:'▶️ Открыть в YouTube', url:subscriberAppUrl }],
-        history: { type:'youtube-subscriber', source:'YouTube', videoTitle:item.title, details:{ targetUrl:subscriberTarget, subscriberId:item.id } }
+        history: {
+          type:'youtube-subscriber',
+          source:'YouTube',
+          videoTitle:item.title,
+          details:{ targetUrl:subscriberTarget, subscriberId:item.id, deliveryMode:'visible-r331' }
+        }
       });
       if (!result.ok) await releasePushOnceClaim(db, onceKey);
       subscriberDelivery.set(item.id, result);
@@ -5651,8 +5708,17 @@ async function handleCheckYoutubeEvents(request, env) {
        - Never suppress a new rise just because the same absolute total was seen days ago.
        - Use compare-and-swap on the baseline so overlapping Cron/Guard runs cannot both send.
        - If OneSignal fails, roll the baseline back so the next background check retries. */
-    const visibleSubscriberCredit = Math.min(subscriberDelta, newVisibleSubscribers.length);
+    /* R331 subscriber delivery accounting.
+       IMPORTANT: a visible subscriber only counts as "covered" after a push was
+       actually delivered (or recovered from sent push_history). R330 subtracted
+       every detected visible subscriber before checking delivery, so one failed/
+       stale individual claim could suppress the generic +1 fallback. */
+    const visibleDeliveredNowR331 = newVisibleSubscribers.filter(item => subscriberDelivery.get(item.id)?.ok).length;
+    const availableVisibleCreditR331 = Math.max(0, pendingVisibleCreditR331 + visibleDeliveredNowR331);
+    const visibleSubscriberCredit = Math.min(subscriberDelta, availableVisibleCreditR331);
     const unnamedSubscriberDelta = Math.max(0, subscriberDelta - visibleSubscriberCredit);
+    let subscriberCountPushOkR331 = false;
+
     if (unnamedSubscriberDelta > 0) {
       const subscriberMessage = `На канале теперь ${identity.subscribers} подписчиков`;
       const baselineClaim = await db.prepare(`
@@ -5680,21 +5746,52 @@ async function handleCheckYoutubeEvents(request, env) {
               delta:unnamedSubscriberDelta,
               subscriberDelta,
               visibleSubscriberCredit,
-              baselineMode:'current-count-r309'
+              visibleDeliveredNow:visibleDeliveredNowR331,
+              pendingVisibleCreditBefore:pendingVisibleCreditR331,
+              baselineMode:'current-count-r331'
             }
           }
         });
+        subscriberCountPushOkR331 = Boolean(result.ok);
         if (!result.ok) {
           subscriberCountDeferred = true;
-          // Retry on the next Cron/Guard cycle only if this run still owns the same total.
+          // Keep both baseline and pending visible credit retryable.
           await db.prepare(`
             UPDATE youtube_event_seen
             SET count_value = ?, last_seen_at = datetime('now')
             WHERE event_key = 'channel-subscriber-count' AND count_value = ?
           `).bind(previousSubscriberCount, identity.subscribers).run().catch(() => {});
+        } else {
+          // If individual subscriber delivery failed but the generic count push
+          // covered the same increase, mark those rows as covered so they do not
+          // produce a duplicate named push on the next Cron.
+          let cover = unnamedSubscriberDelta;
+          for (const item of newVisibleSubscribers) {
+            if (cover <= 0) break;
+            if (subscriberDelivery.get(item.id)?.ok) continue;
+            subscriberDelivery.set(item.id, { ok:true, coveredByCountPush:true });
+            cover--;
+          }
         }
-        notifications.push({ type:'subscriber-count', delta:unnamedSubscriberDelta, ok:Boolean(result.ok), url:identity.channelUrl, previous:previousSubscriberCount, total:identity.subscribers });
+        notifications.push({
+          type:'subscriber-count',
+          delta:unnamedSubscriberDelta,
+          ok:Boolean(result.ok),
+          url:identity.channelUrl,
+          previous:previousSubscriberCount,
+          total:identity.subscribers
+        });
       }
+    }
+
+    // If the named subscriber appears before the channel total catches up, retain
+    // a short-lived credit. When the total rises later, it consumes that credit
+    // instead of sending the same subscriber twice.
+    if (!subscriberCountDeferred) {
+      const remainingVisibleCreditR331 = subscriberDropped
+        ? 0
+        : Math.max(0, availableVisibleCreditR331 - visibleSubscriberCredit);
+      pendingVisibleCreditR331 = await setYoutubeSubscriberVisibleCreditR331(db, remainingVisibleCreditR331);
     }
     const likeBatch = likeChanges.slice(0, 12);
     for (const item of likeChanges.slice(12)) {
@@ -5796,7 +5893,9 @@ async function handleCheckYoutubeEvents(request, env) {
       subscriberDelta,
       subscriberPreviousCount:previousSubscriberCount,
       subscriberCurrentCount:identity.subscribers,
-      subscriberBaselineMode:'current-count-r309',
+      subscriberBaselineMode:'current-count-r331',
+      subscriberVisibleCreditPending:pendingVisibleCreditR331,
+      subscriberVisibleDeliveredNow:visibleDeliveredNowR331,
       likeChanges:likeChanges.reduce((sum,item)=>sum+item.delta,0),
       likesAttempted:likeBatch.length,
       likesSent:notifications.filter(item=>item.type==='like'&&item.ok).length,
@@ -10524,7 +10623,7 @@ async function handleMusicMp3PutR314(request, env) {
   const body=await request.arrayBuffer(); if(!body.byteLength||body.byteLength>40*1024*1024) return json({ok:false,error:'file-too-large'},413);
   const key=folder+'/'+name;
   const metadata={
-    source:'ANDRIK Control R330',
+    source:'ANDRIK Control R331',
     title:musicHeaderR317(request,'x-andrik-track-title'),
     artist:musicHeaderR317(request,'x-andrik-track-artist'),
     album:musicHeaderR317(request,'x-andrik-track-album'),
