@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R375', number:375, version:'55.00', full:'55.00 LIVE WEB AI FINAL R375', siteUpdater:'55.00-r356' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R376', number:376, version:'55.00', full:'55.00 LIVE WEB AI FINAL R376', siteUpdater:'55.00-r356' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -111,6 +111,62 @@ async function hasSentPushExact(db, { type = '', source = '', message = '', titl
 async function releasePushOnceClaim(db, key) {
   const safeKey = cleanPlainText(key, 220);
   await db.prepare(`DELETE FROM push_state WHERE key = ?`).bind(safeKey).run().catch(() => {});
+}
+
+
+async function hasSentYoutubeLikeTotalR376(db, videoId, totalLikes) {
+  const safeVideoId = cleanPlainText(videoId || '', 80);
+  const safeTotal = Math.max(0, Math.trunc(Number(totalLikes || 0)));
+  if (!safeVideoId || safeTotal <= 0) return false;
+  const row = await db.prepare(`
+    SELECT 1 AS found
+    FROM push_history
+    WHERE type='youtube-like'
+      AND video_id=?
+      AND status='sent'
+      AND message LIKE ?
+    ORDER BY datetime(created_at) DESC
+    LIMIT 1
+  `).bind(safeVideoId, `%всего ${safeTotal}%`).first().catch(() => null);
+  return Boolean(row?.found);
+}
+
+async function claimYoutubeLikePushR376(db, videoId, totalLikes, startedAt) {
+  const safeVideoId = cleanPlainText(videoId || '', 80);
+  const safeTotal = Math.max(0, Math.trunc(Number(totalLikes || 0)));
+  const onceKey = `push-once:youtube-like:${safeVideoId}:${safeTotal}`;
+
+  if (await hasSentYoutubeLikeTotalR376(db, safeVideoId, safeTotal)) {
+    return { onceKey, claimed:false, delivered:true, busy:false, recoveredStale:false };
+  }
+
+  let claimed = await claimPushOnce(db, onceKey, startedAt);
+  if (claimed) return { onceKey, claimed:true, delivered:false, busy:false, recoveredStale:false };
+
+  // R376: a Worker can die after claiming an event. Unlike the old fast-like
+  // path, an orphaned claim must not suppress that like forever. 8 minutes is
+  // deliberately longer than a normal OneSignal attempt but short enough to
+  // recover automatically within a few cron cycles.
+  const staleDelete = await db.prepare(`
+    DELETE FROM push_state
+    WHERE key=? AND updated_at < datetime('now','-8 minutes')
+  `).bind(onceKey).run().catch(() => null);
+
+  if (Number(staleDelete?.meta?.changes || 0) > 0) {
+    // The previous attempt might actually have reached OneSignal before dying.
+    // sendOneSignalPush also uses a stable idempotency_key, and this history
+    // check lets us finalize the local high-water mark without another push.
+    if (await hasSentYoutubeLikeTotalR376(db, safeVideoId, safeTotal)) {
+      return { onceKey, claimed:false, delivered:true, busy:false, recoveredStale:true };
+    }
+    claimed = await claimPushOnce(db, onceKey, startedAt);
+    if (claimed) return { onceKey, claimed:true, delivered:false, busy:false, recoveredStale:true };
+  }
+
+  if (await hasSentYoutubeLikeTotalR376(db, safeVideoId, safeTotal)) {
+    return { onceKey, claimed:false, delivered:true, busy:false, recoveredStale:false };
+  }
+  return { onceKey, claimed:false, delivered:false, busy:true, recoveredStale:false };
 }
 
 function getClientIp(request) {
@@ -6113,6 +6169,7 @@ async function handleFastYoutubeEngagementR333(request,env){
   await Promise.all([ensurePushAutomationSchema(db),ensureControlV1Schema(db)]);
   const startedAt=new Date().toISOString();
   await setPushState(db,'youtube-fast-engagement-last-at-r333',startedAt).catch(()=>{});
+  await setPushState(db,'youtube-fast-engagement-last-status-r376','running').catch(()=>{});
   try{
     let channelId=(await getPushState(db,'youtube-websub-channel-id-r332').catch(()=>null))?.value || '';
     if(!channelId)channelId=await resolveYoutubeWebSubChannelIdR332(env,db);
@@ -6124,6 +6181,8 @@ async function handleFastYoutubeEngagementR333(request,env){
     const videoMap=new Map(videos.map(v=>[v.videoId,v]));
     const identity={channelId,handle:cleanPlainText(env.YOUTUBE_CHANNEL_HANDLE || '@andrikmetal',100)};
     const notifications=[];
+    let staleLikeClaimsRecovered=0;
+    let busyLikeClaims=0;
     const external=comments.map(item=>{
       const v=videoMap.get(item.videoId)||{};
       return {...item,videoTitle:item.videoTitle||v.title||'Новое событие YouTube',thumbnail:item.thumbnail||v.thumbnail||''};
@@ -6146,7 +6205,7 @@ async function handleFastYoutubeEngagementR333(request,env){
           await saveYoutubeEventRow(db,{key,type:'comment',resourceId:item.id,videoId:item.videoId,author:item.author,title:item.text,url:item.url,payload:item});
           continue;
         }
-        await db.prepare(`DELETE FROM push_state WHERE key=? AND updated_at < datetime('now','-30 minutes')`).bind(onceKey).run().catch(()=>{});
+        await db.prepare(`DELETE FROM push_state WHERE key=? AND updated_at < datetime('now','-8 minutes')`).bind(onceKey).run().catch(()=>{});
         claimed=await claimPushOnce(db,onceKey,startedAt);
       }
       if(!claimed)continue;
@@ -6176,17 +6235,25 @@ async function handleFastYoutubeEngagementR333(request,env){
       const before=Number(previous.countValue || 0);
       if(item.likes<=before)continue;
 
-      const duplicate=await db.prepare(`SELECT 1 AS found FROM push_history WHERE type='youtube-like' AND video_id=? AND status='sent' AND message LIKE ? ORDER BY created_at DESC LIMIT 1`).bind(item.videoId,`%всего ${item.likes}%`).first().catch(()=>null);
-      if(duplicate?.found){
+      const duplicate=await hasSentYoutubeLikeTotalR376(db,item.videoId,item.likes);
+      if(duplicate){
         await db.prepare(`UPDATE youtube_event_seen SET count_value=MAX(count_value,?),last_seen_at=datetime('now') WHERE event_key=?`).bind(item.likes,key).run().catch(()=>{});
         continue;
       }
 
-      const claim=await db.prepare(`UPDATE youtube_event_seen SET count_value=MAX(count_value,?),last_seen_at=datetime('now') WHERE event_key=? AND count_value<?`).bind(item.likes,key,item.likes).run();
-      if(Number(claim?.meta?.changes || 0)<=0)continue;
-      const onceKey=`push-once:youtube-like:${item.videoId}:${item.likes}`;
-      const once=await claimPushOnce(db,onceKey,startedAt);
-      if(!once)continue;
+      // R376: never advance the local like baseline before OneSignal confirms
+      // delivery. The exact total is protected by a recoverable push-once claim.
+      const likeClaim=await claimYoutubeLikePushR376(db,item.videoId,item.likes,startedAt);
+      if(likeClaim.recoveredStale)staleLikeClaimsRecovered++;
+      if(likeClaim.delivered){
+        await db.prepare(`UPDATE youtube_event_seen SET count_value=MAX(count_value,?),last_seen_at=datetime('now') WHERE event_key=?`).bind(item.likes,key).run().catch(()=>{});
+        continue;
+      }
+      if(!likeClaim.claimed){
+        if(likeClaim.busy)busyLikeClaims++;
+        continue;
+      }
+      const onceKey=likeClaim.onceKey;
 
       const delta=item.likes-before;
       const burst=await resolveYoutubeLikeBurst(db,{...item,before,delta},startedAt);
@@ -6203,21 +6270,50 @@ async function handleFastYoutubeEngagementR333(request,env){
         webButtons:[{id:'open-youtube',text:'▶️ Смотреть видео',url:videoAppUrl}],
         history:{type:'youtube-like',source:'YouTube',videoId:item.videoId,videoTitle:item.title,details:{targetUrl:item.url,launcherUrl:videoAppUrl,delta,cumulativeDelta,before,totalLikes:item.likes,deliveryMode:'fast-r333'}}
       });
-      if(!result.ok){
+      if(result.ok){
+        // The like becomes processed only after OneSignal accepted the push.
+        await db.prepare(`UPDATE youtube_event_seen SET count_value=MAX(count_value,?),last_seen_at=datetime('now') WHERE event_key=?`).bind(item.likes,key).run().catch(()=>{});
+      }else{
         await releasePushOnceClaim(db,onceKey);
-        await db.prepare(`UPDATE youtube_event_seen SET count_value=?,last_seen_at=datetime('now') WHERE event_key=? AND count_value=?`).bind(before,key,item.likes).run().catch(()=>{});
+        const burstKey=`youtube-like-burst-v54-97:${item.videoId}`;
+        if(burst.previousState)await setPushState(db,burstKey,JSON.stringify(burst.previousState)).catch(()=>{});
+        else await db.prepare(`DELETE FROM push_state WHERE key=?`).bind(burstKey).run().catch(()=>{});
       }
       notifications.push({type:'like',videoId:item.videoId,ok:Boolean(result.ok),delta,total:item.likes,error:result.error || ''});
     }
 
     const warnings=settled.map(r=>r.status==='rejected'?cleanPlainText(r.reason?.message || r.reason,240):'').filter(Boolean);
-    const summary={ok:warnings.length===0,commentsSeen:comments.length,videosChecked:videos.length,sent:notifications.filter(x=>x.ok).length,failed:notifications.filter(x=>!x.ok).length,warnings,checkedAt:new Date().toISOString()};
+    const failed=notifications.filter(x=>!x.ok).length;
+    const summary={
+      ok:warnings.length===0 && failed===0,
+      commentsSeen:comments.length,
+      videosChecked:videos.length,
+      sent:notifications.filter(x=>x.ok).length,
+      failed,
+      busyLikeClaims,
+      staleLikeClaimsRecovered,
+      warnings,
+      checkedAt:new Date().toISOString()
+    };
+    const fastStatus=failed>0?'failed':warnings.length?'warning':'success';
     await setPushState(db,'youtube-fast-engagement-last-result-r333',JSON.stringify(summary)).catch(()=>{});
-    return json(summary,warnings.length?206:200);
+    await setPushState(db,'youtube-fast-engagement-last-status-r376',fastStatus).catch(()=>{});
+    if(summary.ok)await setPushState(db,'youtube-fast-engagement-last-success-at-r376',startedAt).catch(()=>{});
+    await recordSystemLog(env,{
+      scope:'youtube-fast-engagement',
+      level:summary.ok?'info':failed>0?'error':'warning',
+      event:summary.ok?'fast-check-success':'fast-check-warning',
+      message:`YouTube fast 2m: отправлено ${summary.sent}, ошибок ${summary.failed}, занятых like-claim ${busyLikeClaims}, восстановлено stale ${staleLikeClaimsRecovered}.`,
+      details:summary
+    }).catch(()=>{});
+    return json(summary,failed>0?502:warnings.length?206:200);
   }catch(error){
     const msg=cleanPlainText(error?.message || error,400);
-    await setPushState(db,'youtube-fast-engagement-last-result-r333',JSON.stringify({ok:false,error:msg})).catch(()=>{});
-    return json({ok:false,error:msg},502);
+    const failedSummary={ok:false,error:msg,checkedAt:new Date().toISOString()};
+    await setPushState(db,'youtube-fast-engagement-last-result-r333',JSON.stringify(failedSummary)).catch(()=>{});
+    await setPushState(db,'youtube-fast-engagement-last-status-r376','failed').catch(()=>{});
+    await recordSystemLog(env,{scope:'youtube-fast-engagement',level:'error',event:'fast-check-failed',message:'Быстрая 2-минутная проверка YouTube завершилась ошибкой.',details:{error:msg}}).catch(()=>{});
+    return json(failedSummary,502);
   }
 }
 
@@ -6385,6 +6481,8 @@ async function handleCheckYoutubeEvents(request, env) {
       const key = `subscriber:${item.id}`;
       if (!await getYoutubeEventRow(db, key)) newVisibleSubscribers.push(item);
     }
+    const likeClaimBusyVideoIds = new Set();
+    let staleFullLikeClaimsRecovered = 0;
     const likeChanges = [];
     if (!suppressLikePushThisRun) {
       for (const item of videos) {
@@ -6392,36 +6490,24 @@ async function handleCheckYoutubeEvents(request, env) {
         const previous = await getYoutubeEventRow(db, key);
         const before = Number(previous?.countValue || 0);
         if (!previous || item.likes <= before) continue;
-        // Do not resend the same public like total. YouTube can briefly return a
-        // lower number and then restore it, which previously recreated the same push.
-        const duplicate = await db.prepare(`
-          SELECT 1 AS found
-          FROM push_history
-          WHERE type = 'youtube-like'
-            AND video_id = ?
-            AND status = 'sent'
-            AND message LIKE ?
-          ORDER BY created_at DESC
-          LIMIT 1
-        `).bind(item.videoId, `%всего ${item.likes}%`).first();
-        if (duplicate?.found) {
+        // R376: the exact total is protected by a recoverable claim, but the
+        // high-water mark stays untouched until delivery is confirmed.
+        const likeClaim = await claimYoutubeLikePushR376(db,item.videoId,item.likes,startedAt);
+        if(likeClaim.recoveredStale)staleFullLikeClaimsRecovered++;
+        if(likeClaim.delivered){
           await db.prepare(`
             UPDATE youtube_event_seen
-            SET count_value = MAX(count_value, ?), last_seen_at = datetime('now')
-            WHERE event_key = ?
-          `).bind(item.likes, key).run();
+            SET count_value=MAX(count_value,?),last_seen_at=datetime('now')
+            WHERE event_key=?
+          `).bind(item.likes,key).run().catch(()=>{});
           continue;
         }
-        // Claim this exact increase before sending. Only one overlapping cron run
-        // can move the stored high-water mark, so concurrent checks cannot duplicate it.
-        const claim = await db.prepare(`
-          UPDATE youtube_event_seen
-          SET count_value = MAX(count_value, ?), last_seen_at = datetime('now')
-          WHERE event_key = ? AND count_value < ?
-        `).bind(item.likes, key, item.likes).run();
-        if (Number(claim?.meta?.changes || 0) > 0) {
-          const once = await claimPushOnce(db, `push-once:youtube-like:${item.videoId}:${item.likes}`, startedAt);
-          if (once) likeChanges.push({ ...item, delta:item.likes-before, before });
+        if(likeClaim.claimed){
+          likeChanges.push({ ...item, delta:item.likes-before, before, onceKey:likeClaim.onceKey });
+        }else{
+          // Another overlapping 2m/5m run owns this exact total. Do not advance
+          // the baseline in the final save loop until that owner confirms it.
+          likeClaimBusyVideoIds.add(item.videoId);
         }
       }
     }
@@ -6445,7 +6531,7 @@ async function handleCheckYoutubeEvents(request, env) {
     const notifications = [];
     const commentDelivery = new Map();
     const subscriberDelivery = new Map();
-    const likeDeferredVideoIds = new Set();
+    const likeDeferredVideoIds = new Set(likeClaimBusyVideoIds);
     let subscriberCountDeferred = false;
     const commentBatch = newComments.slice().reverse().slice(0, 20);
     for (const item of commentBatch) {
@@ -6463,7 +6549,7 @@ async function handleCheckYoutubeEvents(request, env) {
           commentDelivery.set(item.id, { ok:true, recoveredFromHistory:true });
           continue;
         }
-        await db.prepare(`DELETE FROM push_state WHERE key=? AND updated_at < datetime('now','-30 minutes')`).bind(onceKey).run().catch(()=>{});
+        await db.prepare(`DELETE FROM push_state WHERE key=? AND updated_at < datetime('now','-8 minutes')`).bind(onceKey).run().catch(()=>{});
         claimed = await claimPushOnce(db, onceKey, startedAt);
       }
       if (!claimed) continue;
@@ -6626,12 +6712,7 @@ async function handleCheckYoutubeEvents(request, env) {
     }
     const likeBatch = likeChanges.slice(0, 12);
     for (const item of likeChanges.slice(12)) {
-      const onceKey = `push-once:youtube-like:${item.videoId}:${item.likes}`;
-      await releasePushOnceClaim(db, onceKey);
-      await db.prepare(`
-        UPDATE youtube_event_seen SET count_value=?, last_seen_at=datetime('now')
-        WHERE event_key=? AND count_value=?
-      `).bind(item.before, `like-count:${item.videoId}`, item.likes).run().catch(()=>{});
+      await releasePushOnceClaim(db, item.onceKey || `push-once:youtube-like:${item.videoId}:${item.likes}`);
       likeDeferredVideoIds.add(item.videoId);
     }
     for (const item of likeBatch) {
@@ -6682,12 +6763,7 @@ async function handleCheckYoutubeEvents(request, env) {
         }
       });
       if (!result.ok) {
-        const onceKey = `push-once:youtube-like:${item.videoId}:${item.likes}`;
-        await releasePushOnceClaim(db, onceKey);
-        await db.prepare(`
-          UPDATE youtube_event_seen SET count_value=?, last_seen_at=datetime('now')
-          WHERE event_key=? AND count_value=?
-        `).bind(item.before, `like-count:${item.videoId}`, item.likes).run().catch(()=>{});
+        await releasePushOnceClaim(db, item.onceKey || `push-once:youtube-like:${item.videoId}:${item.likes}`);
         const burstKey = `youtube-like-burst-v54-97:${item.videoId}`;
         if (burst.previousState) await setPushState(db, burstKey, JSON.stringify(burst.previousState));
         else await db.prepare(`DELETE FROM push_state WHERE key=?`).bind(burstKey).run().catch(()=>{});
@@ -6732,6 +6808,9 @@ async function handleCheckYoutubeEvents(request, env) {
       likesSent:notifications.filter(item=>item.type==='like'&&item.ok).length,
       likesFailed:notifications.filter(item=>item.type==='like'&&!item.ok).length,
       likesQueued:likeDeferredVideoIds.size,
+      likeClaimsBusy:likeClaimBusyVideoIds.size,
+      staleLikeClaimsRecovered:staleFullLikeClaimsRecovered,
+      likeBaselineMode:'after-confirmed-push-r376',
       likeLoopGuardApplied:suppressLikePushThisRun,
       commentChanges:newComments.length,
       videosChecked:videos.length,
@@ -6758,11 +6837,15 @@ async function handleYoutubeEventsStatus(request, env) {
   if (!adminAuthorized(request, env)) return json({ ok:false, error:'unauthorized' }, 401);
   const db = requireDb(env);
   await Promise.all([ensurePushAutomationSchema(db), ensureControlV1Schema(db), ensurePlatformAnalyticsSchema(db)]);
-  const [lastCheck,lastSuccess,lastStatus,lastSummary,todayRows,lastFailure,lastLog] = await Promise.all([
+  const [lastCheck,lastSuccess,lastStatus,lastSummary,fastLastAt,fastLastSuccess,fastLastStatus,fastLastResult,todayRows,lastFailure,lastLog] = await Promise.all([
     getPushState(db,'youtube-events-last-check-at'),
     getPushState(db,'youtube-events-last-success-at'),
     getPushState(db,'youtube-events-last-check-status'),
     getPushState(db,'youtube-events-last-check-summary'),
+    getPushState(db,'youtube-fast-engagement-last-at-r333'),
+    getPushState(db,'youtube-fast-engagement-last-success-at-r376'),
+    getPushState(db,'youtube-fast-engagement-last-status-r376'),
+    getPushState(db,'youtube-fast-engagement-last-result-r333'),
     db.prepare(`
       SELECT type,status,COUNT(*) AS total
       FROM push_history
@@ -6784,6 +6867,11 @@ async function handleYoutubeEventsStatus(request, env) {
     `).first()
   ]);
   let summary={};try{summary=JSON.parse(lastSummary?.value||'{}')}catch(_){}
+  let fastSummary={};try{fastSummary=JSON.parse(fastLastResult?.value||'{}')}catch(_){}
+  const fastLastAtValue=fastLastAt?.value||fastLastAt?.updatedAt||'';
+  const fastAgeMinutes=fastLastAtValue?Math.max(0,Math.round((Date.now()-Date.parse(fastLastAtValue))/60000)):null;
+  const fastStatusValue=fastLastStatus?.value||(fastSummary?.ok===false?'failed':fastSummary?.ok===true?'success':'never');
+  const fastHealthy=fastAgeMinutes===null?null:(fastAgeMinutes<=6 && !['failed'].includes(fastStatusValue));
   const today={commentsSent:0,repliesSent:0,likesSent:0,subscribersSent:0,failed:0};
   for(const row of (todayRows.results||[])){
     const n=Number(row.total||0),sent=row.status==='sent';
@@ -6803,6 +6891,16 @@ async function handleYoutubeEventsStatus(request, env) {
   return json({
     ok:true,version:ANDRIK_CONTROL_RELEASE.full,
     status:lastStatus?.value||'never',lastCheckAt:lastCheck?.value||lastCheck?.updatedAt||'',lastSuccessAt:lastSuccess?.value||lastSuccess?.updatedAt||'',
+    fast:{
+      status:fastStatusValue,
+      healthy:fastHealthy,
+      lastCheckAt:fastLastAtValue,
+      lastSuccessAt:fastLastSuccess?.value||fastLastSuccess?.updatedAt||'',
+      ageMinutes:fastAgeMinutes,
+      staleLikeClaims:Number(fastSummary?.staleLikeClaimsRecovered||0),
+      summary:fastSummary,
+      error:cleanPlainText(fastSummary?.error||'',300)
+    },
     summary,today,lastError:cleanPlainText(lastFailure?.error||lastFailure?.message||'',300),lastFailure:lastFailure||null,lastLog:lastLog||null,updatedAt:new Date().toISOString()
   });
 }
@@ -8288,7 +8386,7 @@ async function handleExternalCronGatewayR334(request, env) {
   if(clock.due2 && await claimCronGatewaySlotR334(db,'engagement-2m',clock.slot2)){
     try{
       tasks.engagement=await responseData(await handleFastYoutubeEngagementR333(request,env));
-      if(!tasks.engagement.httpOk)errors.push(`engagement:${tasks.engagement.error || tasks.engagement.status}`);
+      if(!tasks.engagement.httpOk || tasks.engagement.ok===false)errors.push(`engagement:${tasks.engagement.error || tasks.engagement.status || 'delivery-failed'}`);
     }catch(error){
       tasks.engagement={ok:false,error:cleanPlainText(error?.message || error,400)};
       errors.push(`engagement:${tasks.engagement.error}`);

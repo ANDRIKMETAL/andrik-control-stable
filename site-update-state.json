@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786297790045-30d2152a1f",
-  "release": "R375",
-  "archiveName": "R375-R374-TWO-SUMMARY-BUTTONS-CITY-MODAL-LIVE-DATA-FIX-SAFE-FULL.zip",
-  "sourceHead": "e415b2286cff97fe3733d9c7498d1cf1af565ab6",
-  "backupSha": "e415b2286cff97fe3733d9c7498d1cf1af565ab6",
-  "backupTag": "control-backup-20260809174945-e415b22-r375-658b7",
+  "operationId": "publish-1786298938481-7dad846cbf",
+  "release": "R376",
+  "archiveName": "R376-R375-RELIABLE-YOUTUBE-LIKE-COMMENT-PUSH-FAST-CRON-DIAGNOSTICS-SAFE-FULL.zip",
+  "sourceHead": "21a5111a6139a82aa4d8a5df86a0999f89329739",
+  "backupSha": "21a5111a6139a82aa4d8a5df86a0999f89329739",
+  "backupTag": "control-backup-20260809180855-21a5111-r376-71802",
   "autoRecovery": true,
-  "generatedAt": "2026-08-09T17:49:50.045Z"
+  "generatedAt": "2026-08-09T18:08:58.481Z"
 }

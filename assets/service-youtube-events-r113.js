@@ -16,10 +16,13 @@
     const strong=box.querySelector('strong');if(strong)strong.textContent=String(value??0);
   }
   function render(data={}){
-    const summary=data.summary||{},today=data.today||{};
+    const summary=data.summary||{},today=data.today||{},fast=data.fast||{};
     const status=String(data.status||'never');
+    const fastStatus=String(fast.status||'never');
+    const fastHardError=fastStatus==='failed'||fast.healthy===false;
+    const effectiveStatus=fastHardError?'failed':status;
     const badge=byId('youtubeEventsState');
-    if(badge){badge.className=`service-access-state ${status==='success'?'is-ready':status==='failed'?'is-error':status==='warning'?'is-warn':''}`;badge.textContent=status==='success'?'Работает':status==='failed'?'Ошибка':status==='warning'?'Очередь':'Ожидает'}
+    if(badge){badge.className=`service-access-state ${effectiveStatus==='success'?'is-ready':effectiveStatus==='failed'?'is-error':effectiveStatus==='warning'?'is-warn':''}`;badge.textContent=effectiveStatus==='success'?'Работает':effectiveStatus==='failed'?'Ошибка':effectiveStatus==='warning'?'Очередь':'Ожидает'}
     paintKpi('youtubeEventsComments',today.commentsSent||summary.commentsSent||0);
     paintKpi('youtubeEventsReplies',today.repliesSent||0);
     paintKpi('youtubeEventsLikes',today.likesSent||summary.likesSent||0);
@@ -28,9 +31,16 @@
     const errors=Number(summary.commentsFailed||0)+Number(summary.subscribersFailed||0)+Number(summary.likesFailed||0);
     paintKpi('youtubeEventsQueue',queue,queue?'warning':'');
     paintKpi('youtubeEventsErrors',errors,errors?'error':'');
-    set('youtubeEventsLastCheck',`Последняя проверка: ${fmt(data.lastCheckAt)}`);
-    set('youtubeEventsLastSuccess',`Последний успех: ${fmt(data.lastSuccessAt)}`);
-    const message=data.lastError?`Последняя ошибка: ${data.lastError}`:queue?`В очереди ${queue}. Нажмите «Повторить очередь».`:'Комментарии, ответы, лайки и подписчики обработаны без потерь.';
+    const fastAge=Number.isFinite(Number(fast.ageMinutes))?` · ${Number(fast.ageMinutes)} мин. назад`:'';
+    set('youtubeEventsFastCheck',`Быстрый cron 2 мин: ${fmt(fast.lastCheckAt)}${fastAge}`);
+    set('youtubeEventsFastResult',`Быстрый результат: ${fastStatus==='success'?'успех':fastStatus==='warning'?'предупреждение':fastStatus==='failed'?'ОШИБКА':'ожидает'} · отправлено ${Number(fast.summary?.sent||0)} · ошибок ${Number(fast.summary?.failed||0)} · восстановлено stale ${Number(fast.staleLikeClaims||0)}`);
+    set('youtubeEventsLastCheck',`Полная проверка 5 мин: ${fmt(data.lastCheckAt)}`);
+    set('youtubeEventsLastSuccess',`Последний полный успех: ${fmt(data.lastSuccessAt)}`);
+    const message=fastHardError
+      ?`Быстрый 2-минутный cron требует внимания${fast.error?`: ${fast.error}`:''}.`
+      :data.lastError?`Последняя ошибка: ${data.lastError}`
+      :queue?`В очереди ${queue}. Нажмите «Повторить очередь».`
+      :'2-минутный и полный YouTube-контроль работают без выявленных потерь.';
     set('youtubeEventsMessage',message);
   }
   async function load(){
