@@ -1,0 +1,75 @@
+/* ANDRIK R375 — releases/cities quick row + independent city modal. */
+.control-home-page .control-summary-dual-r375{
+  display:grid!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:10px!important;
+  margin:10px 0 8px!important;
+}
+.control-home-page .control-summary-mini-r375{
+  appearance:none!important;
+  min-width:0!important;
+  min-height:82px!important;
+  padding:11px 12px!important;
+  border-radius:20px!important;
+  border:1px solid rgba(126,213,246,.18)!important;
+  background:linear-gradient(145deg,rgba(9,31,43,.88),rgba(4,14,20,.96))!important;
+  color:#effaff!important;
+  text-decoration:none!important;
+  display:grid!important;
+  grid-template-columns:42px minmax(0,1fr)!important;
+  align-items:center!important;
+  gap:9px!important;
+  box-shadow:inset 0 0 24px rgba(70,190,238,.035),0 10px 24px rgba(0,0,0,.16)!important;
+  text-align:left!important;
+  touch-action:manipulation!important;
+}
+.control-home-page .control-summary-mini-r375>span{
+  width:42px!important;height:42px!important;border-radius:13px!important;
+  display:grid!important;place-items:center!important;font-size:20px!important;
+  background:rgba(255,255,255,.055)!important;
+}
+.control-home-page .control-summary-mini-r375 strong{display:block!important;font-size:1.45rem!important;line-height:1!important;color:#fff!important}
+.control-home-page .control-summary-mini-r375 small{display:block!important;margin-top:5px!important;font-size:.69rem!important;font-weight:900!important;color:#d6edf7!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+.control-home-page .control-summary-mini-r375.is-release{border-color:rgba(239,184,78,.28)!important;background:linear-gradient(145deg,rgba(58,43,12,.30),rgba(12,12,12,.95))!important}
+.control-home-page .control-summary-mini-r375.is-release>span{background:rgba(239,184,78,.12)!important}
+.control-home-page .control-summary-mini-r375.is-city{border-color:rgba(70,196,241,.28)!important}
+.control-home-page .control-summary-mini-r375.is-city>span{background:rgba(70,196,241,.12)!important}
+.control-home-page .control-summary-mini-r375:active{transform:scale(.98)!important}
+
+/* The old inline city block is intentionally gone in R375. */
+.control-home-page #controlHomeCityList{display:none!important}
+
+.control-city-modal-r375{position:fixed!important;inset:0!important;z-index:2147483600!important;display:grid!important;place-items:end center!important;padding:18px 12px max(18px,env(safe-area-inset-bottom))!important}
+.control-city-modal-r375[hidden]{display:none!important}
+.control-city-backdrop-r375{position:absolute!important;inset:0!important;border:0!important;background:rgba(0,4,7,.76)!important;backdrop-filter:blur(5px)!important}
+.control-city-panel-r375{position:relative!important;z-index:2!important;width:min(94vw,620px)!important;max-height:min(78dvh,760px)!important;display:flex!important;flex-direction:column!important;overflow:hidden!important;border:1px solid rgba(92,211,250,.28)!important;border-radius:24px!important;background:linear-gradient(180deg,rgba(5,23,32,.99),rgba(1,8,13,.995))!important;box-shadow:0 24px 80px rgba(0,0,0,.65),0 0 36px rgba(60,190,239,.10)!important;color:#f2fbff!important}
+.control-city-panel-r375>header{flex:0 0 auto!important;display:flex!important;align-items:center!important;justify-content:space-between!important;gap:12px!important;padding:16px 16px 12px!important;border-bottom:1px solid rgba(100,210,247,.14)!important}
+.control-city-panel-r375>header .eyeline{font-size:.58rem!important;color:#78a8bc!important;letter-spacing:.12em!important}
+.control-city-panel-r375>header h2{margin:3px 0 0!important;font:900 1.25rem/1.05 system-ui,-apple-system,"Segoe UI",sans-serif!important}
+.control-city-close-r375{width:42px!important;height:42px!important;flex:0 0 42px!important;border-radius:50%!important;border:1px solid rgba(112,211,244,.22)!important;background:rgba(8,31,42,.92)!important;color:#eafaff!important;font:400 1.8rem/1 system-ui!important}
+.control-city-modal-list-r375{flex:1 1 auto!important;min-height:0!important;overflow-y:auto!important;overflow-x:hidden!important;-webkit-overflow-scrolling:touch!important;touch-action:pan-y!important;overscroll-behavior-y:contain!important;padding:10px 12px 18px!important}
+.control-city-modal-row-r375{display:grid!important;grid-template-columns:24px 28px minmax(0,1fr) auto!important;align-items:center!important;gap:8px!important;min-height:54px!important;padding:8px 9px!important;border-bottom:1px solid rgba(117,207,238,.09)!important}
+.control-city-modal-row-r375>b{color:#5e8698!important;font-size:.68rem!important;text-align:center!important}
+.control-city-modal-row-r375>span{font-size:1.2rem!important}
+.control-city-modal-row-r375>div{min-width:0!important}
+.control-city-modal-row-r375>div strong{display:block!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;font-size:.82rem!important;color:#edfaff!important}
+.control-city-modal-row-r375>div small{display:block!important;margin-top:2px!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;color:#7194a5!important;font-size:.62rem!important}
+.control-city-modal-row-r375>em{font-style:normal!important;font-weight:1000!important;color:#8be3ff!important;font-size:.86rem!important}
+body.city-modal-r375-open{overflow:hidden!important}
+
+/* No giant summary-scroll spacer is needed anymore. */
+body.control-home-page.control-summary-visible .control-summary-page,
+body.control-home-page.control-report-standalone.control-summary-visible .control-summary-page{padding-bottom:calc(108px + env(safe-area-inset-bottom))!important}
+body.control-home-page.control-summary-visible .control-summary-page .control-swipe-page-inner,
+body.control-home-page.control-report-standalone.control-summary-visible .control-summary-page .control-swipe-page-inner{padding-bottom:36px!important}
+@media(max-width:390px){
+  .control-home-page .control-summary-mini-r375{min-height:76px!important;padding:9px!important;grid-template-columns:38px minmax(0,1fr)!important;gap:7px!important}
+  .control-home-page .control-summary-mini-r375>span{width:38px!important;height:38px!important;font-size:18px!important}
+  .control-home-page .control-summary-mini-r375 strong{font-size:1.28rem!important}
+  .control-home-page .control-summary-mini-r375 small{font-size:.63rem!important}
+}
+@media(orientation:landscape){
+  .control-city-modal-r375{place-items:center!important}
+  .control-city-panel-r375{max-height:84dvh!important;width:min(78vw,760px)!important}
+  .control-home-page .control-summary-dual-r375{max-width:760px!important;margin-inline:auto!important}
+}

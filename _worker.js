@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R374', number:374, version:'55.00', full:'55.00 LIVE WEB AI FINAL R374', siteUpdater:'55.00-r356' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R375', number:375, version:'55.00', full:'55.00 LIVE WEB AI FINAL R375', siteUpdater:'55.00-r356' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -8870,23 +8870,11 @@ async function handleControlHome(request, env) {
   const gaStart = { ...parseSnapshotMetrics(gaBaseline), __snapshotFound:Boolean(gaBaseline) };
   const gaBeforeMidnight = parseSnapshotMetrics(gaRollover);
   let gaNow = mergeGoogleWithSiteLive(parseSnapshotMetrics(gaLatest), siteLive);
-  if (forceRefresh) {
-    try {
-      const liveGoogle = await Promise.race([fetchGoogleSiteAnalytics(env), new Promise((_, reject) => setTimeout(() => reject(new Error('ga4-refresh-timeout')), 12000))]);
-      if (liveGoogle?.configured) {
-        gaNow = mergeGoogleWithSiteLive(liveGoogle, siteLive);
-        await savePlatformSnapshot(db, 'google-analytics', {
-          configured:true,
-          propertyId:liveGoogle.propertyId || '',
-          propertyName:liveGoogle.propertyName || 'andrikmetal.com',
-          propertySource:liveGoogle.propertySource || '',
-          realtime:liveGoogle.realtime || {}, today:liveGoogle.today || {}, week:liveGoogle.week || {}, month:liveGoogle.month || {},
-          trend:liveGoogle.trend || [], countries:liveGoogle.countries || [], pages:liveGoogle.pages || [], devices:liveGoogle.devices || [],
-          updatedAt:liveGoogle.updatedAt || new Date().toISOString()
-        }, 'Google Analytics Control Home live R305').catch(() => {});
-      }
-    } catch (_) {}
-  }
+  // R375: opening the daily summary must never wait on an external Google API.
+  // The page is built immediately from D1 visit events, persisted platform snapshots
+  // and push/event history. External analytics are refreshed by the server cron.
+  // This removes the timeout path that previously left the UI on zero cards until
+  // the manual push button was pressed.
   const youtubeCountries = normalizeDailyCountryRows(ytNow?.studio?.countries || []);
   const youtubeDailyCountries = normalizeDailyCountryRows(ytNow?.studio?.dailyCountries || [])
     .map(item => ({ ...item, delta:item.value }));

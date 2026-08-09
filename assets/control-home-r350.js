@@ -39,6 +39,7 @@
 
   let allActivityEvents=[];
   let sourcePages=[];
+  let dailyCityRowsR375=[];
   const HOME_CACHE_KEY_LIVE='andrik-control-home-last-good-r136';
   const HOME_CACHE_KEY_PUSH_BASE='andrik-control-home-push-r305';
   function activeViewWindowKey(){return IS_PUSH_SUMMARY_VIEW?PUSH_SUMMARY_WINDOW_KEY:currentSummaryWindowKey()}
@@ -72,6 +73,13 @@
     return {ok:true,period:'06:05-auto-cycle',windowKey:activeViewWindowKey(),updatedAt:new Date().toISOString(),summary:{websiteUsers:0,websiteViews:0,siteSubscribers:0,siteComments:0,siteLikes:0,youtubeComments:0,youtubeSubscribers:0,youtubeLikes:0,youtubeViews:0,youtubeViewDelta:0,releases:0,countryDeltas:[],totalCountries:0,countryDate:''},activity:[]};
   }
   function cachedForCurrentWindow(cached){return Boolean(cached?.data&&cached.data.windowKey===activeViewWindowKey())}
+  function summaryHasSignalR375(data={}){
+    const s=data?.summary||{};
+    const keys=['websiteUsers','websiteViews','siteSubscribers','siteComments','siteLikes','youtubeComments','youtubeSubscribers','youtubeLikes','youtubeViews','youtubeViewDelta','releases'];
+    return keys.some(key=>Number(s[key]||0)>0)
+      || (Array.isArray(data?.activity)&&data.activity.length>0)
+      || (Array.isArray(data?.cityActivity)&&data.cityActivity.some(item=>Number(item?.opens||0)>0));
+  }
 
   const SUMMARY_NUMBER_KEYS_R213=['websiteUsers','websiteViews','siteSubscribers','siteComments','siteLikes','youtubeComments','youtubeSubscribers','youtubeLikes','youtubeViews','youtubeViewDelta','releases','totalCountries'];
   function mergeSummaryPayloadR213(previous,incoming){
@@ -217,30 +225,51 @@
     try{localStorage.setItem(key,JSON.stringify(rows.slice(0,50)))}catch(_){}
   }
 
-  function renderDailyCitiesR370(data={}){
-    const box=$('controlHomeCityList');
+  function renderCityModalR375(){
+    const box=$('controlCityModalListR375');
     if(!box)return;
+    if(!dailyCityRowsR375.length){
+      box.innerHTML='<div class="admin-empty">За этот период города пока не зафиксированы.</div>';
+      return;
+    }
+    box.innerHTML=dailyCityRowsR375.map((item,index)=>{
+      const place=String(item?.city||item?.label||item?.region||'Город / регион');
+      const region=String(item?.region||'').trim();
+      const sub=region&&region.toLocaleLowerCase('ru')!==place.toLocaleLowerCase('ru')?`<small>${escapeHtml(region)}</small>`:'';
+      return `<div class="control-city-modal-row-r375"><b>${number(index+1)}</b><span>${countryFlagR370(item?.country||'')}</span><div><strong>${escapeHtml(place)}</strong>${sub}</div><em>${number(item.opens)}</em></div>`;
+    }).join('');
+  }
+
+  function setCityModalR375(open){
+    const modal=$('controlCityModalR375');
+    if(!modal)return;
+    if(open){
+      renderCityModalR375();
+      modal.hidden=false;
+      modal.setAttribute('aria-hidden','false');
+      document.body.classList.add('city-modal-r375-open');
+      requestAnimationFrame(()=>$('controlCityCloseR375')?.focus());
+    }else{
+      modal.setAttribute('aria-hidden','true');
+      modal.hidden=true;
+      document.body.classList.remove('city-modal-r375-open');
+      $('controlCitiesDayR375')?.focus();
+    }
+  }
+
+  function renderDailyCitiesR370(data={}){
     const incoming=Array.isArray(data.cityActivity)
       ? data.cityActivity.filter(item=>Number(item?.opens||0)>0)
       : [];
     const cached=readCityCacheR374(data);
     const rows=mergeCityRowsR374(cached,incoming);
     if(incoming.length)writeCityCacheR374(data,rows);
-    if(!rows.length){
-      box.hidden=true;
-      box.innerHTML='';
-      return;
-    }
-    const visible=rows.slice(0,24);
-    const items=visible.map(item=>{
-      const place=String(item?.city||item?.label||item?.region||'Город / регион');
-      return `<div class="control-city-row-r370"><span>${countryFlagR370(item?.country||'')} ${escapeHtml(place)}</span><strong>${number(item.opens)}</strong></div>`;
-    }).join('');
-    const extra=rows.length>visible.length
-      ? `<small>Ещё ${number(rows.length-visible.length)} городов/регионов</small>`
-      : '';
-    box.hidden=false;
-    box.innerHTML=`<div class="control-city-head-r370"><strong>📍 Города за день</strong><span>${number(rows.length)}</span></div><div class="control-city-grid-r370">${items}</div>${extra}`;
+    dailyCityRowsR375=rows.slice(0,50);
+    const count=$('controlCityCountR375');
+    if(count)count.textContent=number(dailyCityRowsR375.length);
+    const button=$('controlCitiesDayR375');
+    if(button)button.classList.toggle('is-empty',dailyCityRowsR375.length===0);
+    if(!$('controlCityModalR375')?.hidden)renderCityModalR375();
   }
 
   function renderSummary(data){
@@ -259,11 +288,12 @@
       ['💬',number(s.siteComments),'Сообщений сообщества',`${number(s.siteLikes)} лайков`,'site','/comments-admin.html'],
       ['👍',number(s.youtubeLikes),'Лайков YouTube',`${number(s.youtubeComments)} комментариев`,'youtube','/youtube-admin.html?refresh=1&v=55.00n'],
       ['👀',number(s.websiteViews),'Просмотров сайта','за последние 24 часа','site','/analytics-admin.html?page=site'],
-      ['▶️',number(yDelta),'Просмотров канала','за последние 24 часа','youtube','/youtube-admin.html?refresh=1&v=55.00n'],
-      ['🚀',number(s.releases),'Релизных событий','за последние 24 часа','release','/lyrics-admin.html']
+      ['▶️',number(yDelta),'Просмотров канала','за последние 24 часа','youtube','/youtube-admin.html?refresh=1&v=55.00n']
     ];
     const summaryBox=$('controlHomeSummary');
     if(summaryBox)summaryBox.innerHTML=items.map(item=>summaryCard(...item)).join('');
+    const releaseCount=$('controlReleaseCountR375');
+    if(releaseCount)releaseCount.textContent=number(s.releases);
     renderGeoDelta(s);
     renderDailyCitiesR370(data);
     const updatedAt=Date.parse(data.updatedAt||'');
@@ -305,13 +335,14 @@
     loading=true;
   if(summaryMode){
     const cached=IS_PUSH_SUMMARY_VIEW?null:readHomeCache();
-    if(cachedForCurrentWindow(cached)){
+    if(cachedForCurrentWindow(cached)&&summaryHasSignalR375(cached.data)){
       renderSummary(cached.data);
       renderActivity(cached.data.activity||[]);
     }else{
       if(!IS_PUSH_SUMMARY_VIEW){try{localStorage.removeItem(homeCacheKey())}catch(_){}}
-      const empty=emptySummaryPayload();
-      renderSummary(empty);
+      if($('controlHomeSummary'))$('controlHomeSummary').innerHTML='<div class="admin-empty">Собираем актуальные цифры…</div>';
+      if($('controlReleaseCountR375'))$('controlReleaseCountR375').textContent='—';
+      if($('controlCityCountR375'))$('controlCityCountR375').textContent='—';
       renderActivity([]);
     }
   }
@@ -325,7 +356,7 @@
       const query=new URLSearchParams({v:'55.00-r305'});
       if(forceLive||IS_PUSH_SUMMARY_VIEW)query.set('refresh','1');
       if(IS_PUSH_SUMMARY_VIEW){query.set('source','push');query.set('window',PUSH_SUMMARY_WINDOW_KEY);if(PUSH_SUMMARY_SNAPSHOT_ID)query.set('snapshot',PUSH_SUMMARY_SNAPSHOT_ID)}
-      let data=await api(`/api/control/home?${query.toString()}`,{timeoutMs:forceLive&&!IS_PUSH_SUMMARY_VIEW?16000:10000});
+      let data=await api(`/api/control/home?${query.toString()}`,{timeoutMs:forceLive&&!IS_PUSH_SUMMARY_VIEW?20000:12000});
       if(!forceLive&&!IS_PUSH_SUMMARY_VIEW){
         const summary=data?.summary||{};
         const numericKeys=['websiteUsers','websiteViews','siteSubscribers','siteComments','siteLikes','youtubeComments','youtubeSubscribers','youtubeLikes','youtubeViews','youtubeViewDelta','releases'];
@@ -339,7 +370,7 @@
       if(data?.windowKey)activeSummaryWindowKey=data.windowKey;
       const previous=readHomeCache();
       const stable=IS_PUSH_SUMMARY_VIEW?data:(cachedForCurrentWindow(previous)?mergeSummaryPayloadR213(previous.data,data):data);
-      saveHomeCache(stable);
+      if(IS_PUSH_SUMMARY_VIEW||summaryHasSignalR375(stable))saveHomeCache(stable);
       renderSummary(stable);
       renderActivity(stable.activity||[]);
     }catch(error){
@@ -778,6 +809,9 @@
   });
   $('controlActivityClose')?.addEventListener('click',()=>setActivityModal(false));
   $('controlActivityBackdrop')?.addEventListener('click',()=>setActivityModal(false));
+  $('controlCitiesDayR375')?.addEventListener('click',()=>setCityModalR375(true));
+  $('controlCityCloseR375')?.addEventListener('click',()=>setCityModalR375(false));
+  $('controlCityBackdropR375')?.addEventListener('click',()=>setCityModalR375(false));
   $('controlActivityModal')?.addEventListener('click',event=>{if(event.target.closest('[data-activity-modal-link]'))setActivityModal(false)});
   document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!$('controlActivityModal')?.hidden)setActivityModal(false)});
 
@@ -785,7 +819,11 @@
     try{window.scrollTo(0,0)}catch(_){}
     const active=currentPageElement();
     if(active)active.scrollTop=0;
-    updatePageState();
+  
+  document.addEventListener('keydown',event=>{
+    if(event.key==='Escape'&&!$('controlCityModalR375')?.hidden)setCityModalR375(false);
+  });
+  updatePageState();
   },{passive:true});
   syncCarouselClones();
   setLogicalPage(logicalPage,{animate:false});

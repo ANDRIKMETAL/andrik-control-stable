@@ -5,7 +5,7 @@
 <meta name="google" content="notranslate"><meta charset="utf-8"/>
 <meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/>
 <meta content="#02060a" name="theme-color"/>
-<meta content="R374" name="andrik-control-release"/>
+<meta content="R375" name="andrik-control-release"/>
 <meta content="Live Web AI" name="apple-mobile-web-app-title"/>
 <meta content="dark" name="color-scheme"/>
 <meta content="noindex,nofollow,noarchive" name="robots"/><script>document.documentElement.dataset.controlInitialPage=(new URLSearchParams(location.search).get('page')||'menu').toLowerCase();</script>
@@ -728,6 +728,7 @@ body.control-push-summary-view .control-summary-source{display:block}
 <link rel="stylesheet" href="/assets/r189-project-heading-center.css?v=55.00-r189">
 <script defer src="/assets/control-cache-reset-r305.js?v=55.00-r305"></script>
 <link rel="stylesheet" href="/assets/control-home-city-list-r370.css?v=55.00-r370">
+<link rel="stylesheet" href="/assets/control-home-summary-r375.css?v=55.00-r375">
 </head>
 <body class="trika-standalone-page comments-admin-page control-page control-home-page r137-eye-motion-page">
 <nav class="topbar control-topbar control-home-topbar"><div class="wrap nav-shell control-home-topbar-minimal"><a class="control-center-logo" id="controlCenterLogo" href="https://andrikmetal.com/" aria-label="Открыть главный сайт ANDRIK"><img class="logo-ok" src="/assets/control-topbar-eye-triangle.jpg?v=55.00-r129" alt=""/><img class="logo-error" src="/assets/andrik-control-red-triangle-192.png" alt=""/></a></div></nav>
@@ -741,8 +742,15 @@ body.control-push-summary-view .control-summary-source{display:block}
           <header class="control-home-hero">
             <div class="control-home-hero-copy"><div class="control-summary-source" id="controlSummarySource" hidden></div><div class="control-summary-eyebrow-row"></div><h1 id="controlHomeTitle">Сводка за сегодня</h1></div>
             <div class="control-home-summary" id="controlHomeSummary"><div class="admin-empty">Собираем сводку…</div></div>
+            <div class="control-summary-dual-r375" id="controlSummaryDualR375">
+              <a class="control-summary-mini-r375 is-release" id="controlReleasesDayR375" href="/lyrics-admin.html" aria-label="Открыть релизы за день">
+                <span aria-hidden="true">🚀</span><div><strong id="controlReleaseCountR375">—</strong><small>Релизы за день</small></div>
+              </a>
+              <button class="control-summary-mini-r375 is-city" id="controlCitiesDayR375" type="button" aria-haspopup="dialog" aria-controls="controlCityModalR375">
+                <span aria-hidden="true">📍</span><div><strong id="controlCityCountR375">—</strong><small>Города за день</small></div>
+              </button>
+            </div>
             <div class="control-home-geo-delta" id="controlHomeGeoDelta" hidden></div>
-            <div class="control-home-city-list-r370" id="controlHomeCityList" hidden></div>
             <div class="control-home-updated" id="controlHomeUpdated">Проверяем доступ…</div>
           </header>
         </div>
@@ -757,10 +765,10 @@ body.control-push-summary-view .control-summary-source{display:block}
             <a class="control-home-menu-card is-releases" href="/admin-sections.html?section=releases&v=55.00-r214"><span>🚀</span><div><small>Музыка и тексты</small><strong>Релизы</strong><p>Тексты песен, публикации и история релизов.</p></div><b>›</b></a>
             <a class="control-home-menu-card is-discussion" href="/admin-sections.html?section=discussion&v=55.00-r214"><span>💬</span><div><small>Сообщество</small><strong>Обсуждение</strong><p>Комментарии, модерация и ответы слушателям.</p></div><b>›</b></a>
           </section>
-          <footer class="control-version-footer" aria-label="Текущая версия"><strong>Live Web AI</strong><span>R374</span></footer>
-          <div class="control-split-version-r181" aria-label="Live Web AI, версия R374">
+          <footer class="control-version-footer" aria-label="Текущая версия"><strong>Live Web AI</strong><span>R375</span></footer>
+          <div class="control-split-version-r181" aria-label="Live Web AI, версия R375">
             <span class="control-split-brand-r181">Live Web AI</span>
-            <span class="control-split-number-r181">R374</span>
+            <span class="control-split-number-r181">R375</span>
           </div>
           <a class="control-page-footnote control-menu-map-link" href="/analytics-admin.html?page=map&amp;v=55.00-final-r1">Свайп вниз — вернуться на карту</a>
         </div>
@@ -797,6 +805,13 @@ body.control-push-summary-view .control-summary-source{display:block}
 <a class="control-update-fab" href="/site-update-admin.html?v=55.00-r214" aria-label="Обновить сайт"><span class="update-fab-icon" aria-hidden="true">↻</span><span class="update-fab-label">Обновить</span></a>
 <a class="control-comment-collection-button" href="/comment-collection.html?v=55.00n" aria-label="Открыть коллекцию комментариев"><span aria-hidden="true">💬</span><span>Комментарии</span></a>
 <button class="control-summary-refresh" id="controlSummaryRefresh" type="button" aria-label="Отправить вручную ту же ежедневную сводку, которая приходит утром"><span aria-hidden="true">📨</span><span data-summary-refresh-label>Отправить сводку</span></button>
+<div class="control-city-modal-r375" id="controlCityModalR375" hidden aria-hidden="true">
+  <button class="control-city-backdrop-r375" id="controlCityBackdropR375" type="button" aria-label="Закрыть список городов"></button>
+  <section class="control-city-panel-r375" role="dialog" aria-modal="true" aria-labelledby="controlCityModalTitleR375">
+    <header><div><span class="eyeline">АКТИВНОСТЬ САЙТА</span><h2 id="controlCityModalTitleR375">📍 Города за день</h2></div><button class="control-city-close-r375" id="controlCityCloseR375" type="button" aria-label="Закрыть">×</button></header>
+    <div class="control-city-modal-list-r375" id="controlCityModalListR375"><div class="admin-empty">Загружаем города…</div></div>
+  </section>
+</div>
 <div class="control-activity-modal" id="controlActivityModal" hidden aria-hidden="true">
   <button class="control-activity-backdrop" id="controlActivityBackdrop" type="button" aria-label="Закрыть"></button>
   <section class="control-activity-modal-panel" role="dialog" aria-modal="true" aria-labelledby="controlActivityModalTitle">
@@ -804,7 +819,7 @@ body.control-push-summary-view .control-summary-source{display:block}
     <div class="control-activity-modal-list" id="controlActivityModalList"><div class="admin-empty">Загружаем события…</div></div>
   </section>
 </div>
-<script defer src="/assets/control-home-r350.js?v=55.00-r374"></script><script defer src="/assets/control-fast-exit-r311.js?v=55.00-r311"></script><script defer src="/assets/control-status-eye-v55-00-r88.js?v=55.00-r88"></script><script defer src="/assets/control-version-v55-00-final-r1.js?v=55.00-final-r1"></script>
+<script defer src="/assets/control-home-r350.js?v=55.00-r375"></script><script defer src="/assets/control-fast-exit-r311.js?v=55.00-r311"></script><script defer src="/assets/control-status-eye-v55-00-r88.js?v=55.00-r88"></script><script defer src="/assets/control-version-v55-00-final-r1.js?v=55.00-final-r1"></script>
 
 
 <script defer src="/assets/control-live-eye-v55-00-r265.js?v=55.00-r265"></script><script defer src="/assets/control-version-v55-00-r3n.js?v=55.00-r3n"></script><script defer src="/assets/control-version-v55-00-final-stable-github.js?v=55.00-final-stable-github"></script><script defer src="/assets/control-menu-return-map-v55-00-r33.js?v=55.00-final-r33"></script>

@@ -1,14 +1,14 @@
 {
   "schema": 1,
   "updaterVersion": "55.00-r356",
-  "operation": "reinstall",
-  "reinstall": true,
-  "operationId": "reinstall-1786297230483-e477842f8f",
-  "release": "R374",
-  "archiveName": "R374-R372-CITY-LIST-RESTORE-CLEAN-SCROLL-NO-ACTIVITY-SAFE-FULL.zip",
-  "sourceHead": "bb30ed9f82921e65f4752f23cb263ab628a219b3",
-  "backupSha": "bb30ed9f82921e65f4752f23cb263ab628a219b3",
-  "backupTag": "control-backup-20260809174026-bb30ed9-r374-b0323",
+  "operation": "publish",
+  "reinstall": false,
+  "operationId": "publish-1786297790045-30d2152a1f",
+  "release": "R375",
+  "archiveName": "R375-R374-TWO-SUMMARY-BUTTONS-CITY-MODAL-LIVE-DATA-FIX-SAFE-FULL.zip",
+  "sourceHead": "e415b2286cff97fe3733d9c7498d1cf1af565ab6",
+  "backupSha": "e415b2286cff97fe3733d9c7498d1cf1af565ab6",
+  "backupTag": "control-backup-20260809174945-e415b22-r375-658b7",
   "autoRecovery": true,
-  "generatedAt": "2026-08-09T17:40:30.483Z"
+  "generatedAt": "2026-08-09T17:49:50.045Z"
 }
