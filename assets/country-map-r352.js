@@ -79,9 +79,15 @@
       if (translate(point?.country || point?.code || '') !== country) continue;
       const lat = Number(point?.latitude), lon = Number(point?.longitude);
       if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
-      const key = `${String(point?.city || point?.region || '').trim()}|${lat.toFixed(2)}|${lon.toFixed(2)}`;
-      const prev = merged.get(key) || {lat, lon, value:0};
+      const city = String(point?.city || '').trim();
+      const region = String(point?.region || '').trim();
+      const label = city || region || 'Город / регион';
+      const key = `${label}|${lat.toFixed(2)}|${lon.toFixed(2)}`;
+      const prev = merged.get(key) || {lat, lon, value:0, city, region, label};
       prev.value += Math.max(0, Number(point?.value || 0));
+      if (!prev.city && city) prev.city = city;
+      if (!prev.region && region) prev.region = region;
+      if (!prev.label || prev.label === 'Город / регион') prev.label = label;
       merged.set(key, prev);
     }
     return [...merged.values()].sort((a,b) => b.value - a.value).slice(0, 30);
@@ -178,16 +184,23 @@
     const total = countryTotal(country, layer);
     const points = pointsFor(country, layer);
     overlay.dataset.layer = layer;
-    const signature = JSON.stringify([code,layer,weekly,total,points.map(p=>[p.lat,p.lon,p.value])]);
+    const signature = JSON.stringify([code,layer,weekly,total,points.map(p=>[p.lat,p.lon,p.value,p.label||p.city||p.region||''])]);
     if (overlay.dataset.signature !== signature) {
       let svg='';
       if (shape?.path) {
         const max = Math.max(1, ...points.map(p => p.value || 0));
-        let dots = points.map(point => {
+        let dots = points.map((point,index) => {
           const [x,y] = projectPoint(shape, point.lon, point.lat);
           if (!(x >= 0 && x <= 1000 && y >= 0 && y <= 600)) return '';
-          const r = 6 + Math.round((Math.max(0,point.value)/max)*8);
-          return `<circle class="country-point-r352" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r}"/>`;
+          const r = 7 + Math.round((Math.max(0,point.value)/max)*8);
+          const label = esc(point.label || point.city || point.region || 'Город / регион');
+          const value = fmt(point.value || 0);
+          return `<g class="country-city-marker-r360" data-city="${label}" data-index="${index}">
+            <circle class="country-city-halo-r360" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(r+11).toFixed(1)}"/>
+            <circle class="country-point-r352 country-city-point-r360" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r}">
+              <title>${label} · ${value}</title>
+            </circle>
+          </g>`;
         }).join('');
         if (!dots) dots = '<circle class="country-point-halo-r352" cx="500" cy="300" r="48"/><circle class="country-point-r352 is-empty" cx="500" cy="300" r="20"/>';
         svg = `<svg viewBox="0 0 1000 600" role="img" aria-label="Карта страны ${esc(country)}"><path class="country-shape-r352" fill-rule="evenodd" d="${shape.path}"/>${dots}</svg>`;

@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786289254864-a55cd9f940",
-  "release": "R359",
-  "archiveName": "R359-R358-NATIVE-SVG-YELLOW-PULSE-ALL-COUNTRIES-SAFE-FULL.zip",
-  "sourceHead": "9ca86a713af9bb873288321c18e0fced39b336aa",
-  "backupSha": "9ca86a713af9bb873288321c18e0fced39b336aa",
-  "backupTag": "control-backup-20260809152730-9ca86a7-r359-481fa",
+  "operationId": "publish-1786289589581-b09348f798",
+  "release": "R361",
+  "archiveName": "R361-R360-SOFT-WIDE-SLOW-COUNTRY-PULSE-SAFE-FULL.zip",
+  "sourceHead": "cc1730376135a897a3212ee286647085cdd7c941",
+  "backupSha": "cc1730376135a897a3212ee286647085cdd7c941",
+  "backupTag": "control-backup-20260809153306-cc17303-r361-ae43f",
   "autoRecovery": true,
-  "generatedAt": "2026-08-09T15:27:34.864Z"
+  "generatedAt": "2026-08-09T15:33:09.581Z"
 }
