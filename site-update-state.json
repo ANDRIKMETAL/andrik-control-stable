@@ -1,14 +1,14 @@
 {
   "schema": 1,
-  "updaterVersion": "55.00-r331",
+  "updaterVersion": "55.00-r333",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786263059286-a0fa28b409",
+  "operationId": "publish-1786264409033-eeeefbe773",
   "release": "R313",
-  "archiveName": "R333-R332-FAST-ENGAGEMENT-QUOTA50-PUSH-SAFE-FULL.zip",
-  "sourceHead": "188121733b9ee74e756617c629504a55ac5cb3e3",
-  "backupSha": "188121733b9ee74e756617c629504a55ac5cb3e3",
-  "backupTag": "control-backup-20260809081055-1881217-r313-74d54",
+  "archiveName": "R334-R333-EXTERNAL-CRON-GATEWAY-SAFE-FULL.zip",
+  "sourceHead": "e0f9b3e84ad5c047acd3501e03fb9df987204b24",
+  "backupSha": "e0f9b3e84ad5c047acd3501e03fb9df987204b24",
+  "backupTag": "control-backup-20260809083324-e0f9b3e-r313-36464",
   "autoRecovery": true,
-  "generatedAt": "2026-08-09T08:10:59.286Z"
+  "generatedAt": "2026-08-09T08:33:29.033Z"
 }

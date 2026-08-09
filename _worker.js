@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R333', number:333, version:'55.00', full:'55.00 LIVE WEB AI FINAL R333', siteUpdater:'55.00-r333' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R334', number:334, version:'55.00', full:'55.00 LIVE WEB AI FINAL R334', siteUpdater:'55.00-r334' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -8054,6 +8054,108 @@ async function handleManualDailyOwnerSummary(request, env) {
   });
 }
 
+
+async function claimCronGatewaySlotR334(db, task, slot) {
+  const key=`cron-gateway-r334:${cleanPlainText(task || 'task',80)}`;
+  const value=cleanPlainText(slot || '',80);
+  const inserted=await db.prepare(`
+    INSERT OR IGNORE INTO push_state (key,value,updated_at)
+    VALUES (?,?,datetime('now'))
+  `).bind(key,value).run();
+  if(Number(inserted?.meta?.changes || 0)>0)return true;
+
+  const updated=await db.prepare(`
+    UPDATE push_state
+    SET value=?,updated_at=datetime('now')
+    WHERE key=? AND value<>?
+  `).bind(value,key,value).run();
+  return Number(updated?.meta?.changes || 0)>0;
+}
+
+function cronGatewayClockR334(date=new Date()) {
+  const minute=date.getUTCMinutes();
+  const hour=date.getUTCHours();
+  const day=date.toISOString().slice(0,10);
+  const hourKey=`${day}T${String(hour).padStart(2,'0')}`;
+  return {
+    minute,
+    due2:minute % 2 === 0,
+    due5:minute % 5 === 0,
+    due15:minute % 15 === 0,
+    slot2:`${hourKey}:${String(minute - (minute % 2)).padStart(2,'0')}`,
+    slot5:`${hourKey}:${String(minute - (minute % 5)).padStart(2,'0')}`,
+    slot15:`${hourKey}:${String(minute - (minute % 15)).padStart(2,'0')}`
+  };
+}
+
+async function handleExternalCronGatewayR334(request, env) {
+  if(!adminAuthorized(request,env) && !cronAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
+  const db=requireDb(env);
+  await Promise.all([ensurePushAutomationSchema(db),ensureControlV1Schema(db)]);
+  const clock=cronGatewayClockR334(new Date());
+  const tasks={};
+  const errors=[];
+
+  // Every 2 minutes: lightweight comments + likes.
+  if(clock.due2 && await claimCronGatewaySlotR334(db,'engagement-2m',clock.slot2)){
+    try{
+      tasks.engagement=await responseData(await handleFastYoutubeEngagementR333(request,env));
+      if(!tasks.engagement.httpOk)errors.push(`engagement:${tasks.engagement.error || tasks.engagement.status}`);
+    }catch(error){
+      tasks.engagement={ok:false,error:cleanPlainText(error?.message || error,400)};
+      errors.push(`engagement:${tasks.engagement.error}`);
+    }
+  }else{
+    tasks.engagement={ok:true,skipped:true,reason:clock.due2?'slot-already-claimed':'not-due'};
+  }
+
+  // Every 5 minutes: subscriber/event monitor + release fallback.
+  if(clock.due5 && await claimCronGatewaySlotR334(db,'youtube-5m',clock.slot5)){
+    try{
+      tasks.releaseFallback=await responseData(await handleFastYoutubeReleaseCheckR332(request,env));
+      if(!tasks.releaseFallback.httpOk)errors.push(`releaseFallback:${tasks.releaseFallback.error || tasks.releaseFallback.status}`);
+    }catch(error){
+      tasks.releaseFallback={ok:false,error:cleanPlainText(error?.message || error,400)};
+      errors.push(`releaseFallback:${tasks.releaseFallback.error}`);
+    }
+    try{
+      tasks.youtubeEvents=await responseData(await handleCheckYoutubeEvents(request,env));
+      if(!tasks.youtubeEvents.httpOk)errors.push(`youtubeEvents:${tasks.youtubeEvents.error || tasks.youtubeEvents.status}`);
+    }catch(error){
+      tasks.youtubeEvents={ok:false,error:cleanPlainText(error?.message || error,400)};
+      errors.push(`youtubeEvents:${tasks.youtubeEvents.error}`);
+    }
+  }else{
+    tasks.releaseFallback={ok:true,skipped:true,reason:clock.due5?'slot-already-claimed':'not-due'};
+    tasks.youtubeEvents={ok:true,skipped:true,reason:clock.due5?'slot-already-claimed':'not-due'};
+  }
+
+  // Every 15 minutes: keep the original full central automation exactly as before.
+  if(clock.due15 && await claimCronGatewaySlotR334(db,'main-15m',clock.slot15)){
+    try{
+      tasks.main=await responseData(await handleAutomationRun(request,env));
+      if(!tasks.main.httpOk)errors.push(`main:${tasks.main.error || tasks.main.status}`);
+    }catch(error){
+      tasks.main={ok:false,error:cleanPlainText(error?.message || error,400)};
+      errors.push(`main:${tasks.main.error}`);
+    }
+  }else{
+    tasks.main={ok:true,skipped:true,reason:clock.due15?'slot-already-claimed':'not-due'};
+  }
+
+  const result={
+    ok:errors.length===0,
+    mode:'external-cron-gateway-r334',
+    utcMinute:clock.minute,
+    due:{every2:clock.due2,every5:clock.due5,every15:clock.due15},
+    tasks,
+    errors,
+    checkedAt:new Date().toISOString()
+  };
+  await setPushState(db,'cron-gateway-r334-last-result',JSON.stringify(result)).catch(()=>{});
+  return json(result,errors.length?502:200);
+}
+
 async function handleAutomationRun(request, env) {
   if (!adminAuthorized(request, env) && !cronAuthorized(request, env)) return json({ ok:false, error:'unauthorized' },401);
   const db = requireDb(env);
@@ -11201,7 +11303,7 @@ async function handleMusicMp3PutR314(request, env) {
   const body=await request.arrayBuffer(); if(!body.byteLength||body.byteLength>40*1024*1024) return json({ok:false,error:'file-too-large'},413);
   const key=folder+'/'+name;
   const metadata={
-    source:'ANDRIK Control R333',
+    source:'ANDRIK Control R334',
     title:musicHeaderR317(request,'x-andrik-track-title'),
     artist:musicHeaderR317(request,'x-andrik-track-artist'),
     album:musicHeaderR317(request,'x-andrik-track-album'),
@@ -11324,6 +11426,7 @@ async function routeApi(request, env, ctx) {
     if (path === '/api/youtube/websub/status' && request.method === 'GET') return await handleYoutubeWebSubStatusR332(request, env);
     if (path === '/api/automation/youtube-fast' && request.method === 'POST') return await handleFastYoutubeReleaseCheckR332(request, env);
     if (path === '/api/automation/youtube-engagement-fast' && request.method === 'POST') return await handleFastYoutubeEngagementR333(request, env);
+    if (path === '/api/automation/cron-gateway' && (request.method === 'GET' || request.method === 'POST')) return await handleExternalCronGatewayR334(request, env);
     if (path === '/api/automation/run' && request.method === 'POST') return await handleAutomationRun(request, env);
     if (path === '/api/control/daily-summary/send' && request.method === 'POST') return await handleManualDailyOwnerSummary(request, env);
     if (path === '/api/push/retry-latest' && request.method === 'POST') return await handleRetryLatestPush(request, env);

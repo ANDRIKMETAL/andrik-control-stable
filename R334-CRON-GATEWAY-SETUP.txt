@@ -1,0 +1,29 @@
+ANDRIK R334 — EXTERNAL CRON GATEWAY
+
+WHY R334
+The real Cron Triggers are on the separate Cloudflare Worker "andrik-push-cron".
+That Worker has one CHECK_URL, so */2, */5 and */15 all call the same URL.
+R333 had schedule routing inside the Pages _worker.js scheduled() handler, which
+does not receive Cron events created on the separate andrik-push-cron Worker.
+
+R334 FIX
+Use one CHECK_URL in andrik-push-cron:
+https://control.andrikmetal.com/api/automation/cron-gateway
+
+Keep all three Trigger events on andrik-push-cron:
+*/2 * * * *
+*/5 * * * *
+*/15 * * * *
+
+The R334 gateway automatically decides what is due:
+- 2 min: comments + likes
+- 5 min: subscribers/events + release fallback
+- 15 min: original full automation
+
+Overlap protection:
+At 10, 30, etc. more than one Cron Trigger can fire at the same minute.
+R334 uses three fixed atomic D1 slot keys, so each task runs only once per slot.
+
+No manual worker.js editing is required.
+Only edit the existing CHECK_URL secret value in andrik-push-cron.
+CRON_SECRET remains unchanged.
