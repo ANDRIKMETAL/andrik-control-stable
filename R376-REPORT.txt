@@ -1,4 +1,4 @@
-R377 — RELIABLE YOUTUBE LIKE + COMMENT PUSH / FAST CRON DIAGNOSTICS
+R378 — RELIABLE YOUTUBE LIKE + COMMENT PUSH / FAST CRON DIAGNOSTICS
 
 Сравнено со стабильной R225 и исправлено поверх R375.
 
@@ -36,5 +36,5 @@ FAST 2-MIN LOOP:
 - R366: exact push summary snapshot;
 - R363: быстрая 5-минутная доставка ежедневной сводки.
 
-Версия: R377.
+Версия: R378.
 База: R375.

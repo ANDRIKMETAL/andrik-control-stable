@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786301840507-b5c00e4300",
-  "release": "R377",
-  "archiveName": "R377-R376-FAST-SMOOTH-OLD-STEP2-MAP-TRANSITION-SAFE-FULL.zip",
-  "sourceHead": "beba81e6e4167a391eb56589fe5ed14c3625dc3b",
-  "backupSha": "beba81e6e4167a391eb56589fe5ed14c3625dc3b",
-  "backupTag": "control-backup-20260809185716-beba81e-r377-ef0c1",
+  "operationId": "publish-1786303393144-734f73dcdb",
+  "release": "R378",
+  "archiveName": "R378-R377-WORLD-COUNTRY-ONLY-MARKERS-NO-DUPLICATE-CITY-LIVE-GLITCH-SAFE-FULL.zip",
+  "sourceHead": "95c7b5d10cabd22bc59924aae980598ffdacd89f",
+  "backupSha": "95c7b5d10cabd22bc59924aae980598ffdacd89f",
+  "backupTag": "control-backup-20260809192309-95c7b5d-r378-eb55e",
   "autoRecovery": true,
-  "generatedAt": "2026-08-09T18:57:20.507Z"
+  "generatedAt": "2026-08-09T19:23:13.144Z"
 }

@@ -959,6 +959,16 @@ html.live-web-ai-resume-lock .analytics-swipe-viewport{overflow:hidden!important
 <link rel="stylesheet" href="/assets/country-city-points-r360.css?v=55.00-r360">
 
 <link rel="stylesheet" href="/assets/country-city-r372.css?v=55.00-r372">
+
+<style id="andrik-r378-world-country-only-points">
+/* R378: world overview = one marker per country. City/LIVE dots exist only inside country detail. */
+body.analytics-admin-page.analytics-v54-46-page #worldMap:not([data-country-deep="true"]) .world-map-city-dot{
+  display:none!important;
+  visibility:hidden!important;
+  opacity:0!important;
+  pointer-events:none!important;
+}
+</style>
 </head>
 <body class="trika-standalone-page comments-admin-page control-page analytics-admin-page analytics-swipe-page analytics-v54-33-page analytics-v54-46-page">
 <nav class="topbar control-topbar control-detail-topbar"><div class="wrap nav-shell analytics-topbar-minimal"><a class="control-center-logo" id="controlCenterLogo" href="https://andrikmetal.com/" aria-label="Открыть главный сайт ANDRIK"><img class="logo-ok" src="/assets/control-topbar-eye-triangle.jpg" alt=""/><img class="logo-error" src="/assets/andrik-control-red-triangle-192.png" alt=""/></a></div></nav>
@@ -1706,13 +1716,15 @@ html.live-web-ai-resume-lock .analytics-swipe-viewport{overflow:hidden!important
       const youtubeClass=isYoutubeVisual?' r356-youtube-dot':'';
       return `<span class="world-map-city-dot${liveClass}${active}${youtubeClass}" data-country="${encoded}" data-code="${escapeHtml(rawCountry.toUpperCase())}" style="left:${x.toFixed(2)}%;top:${y.toFixed(2)}%;--city-dot:${size}px" title="${escapeHtml(city)} · ${escapeHtml(name)}${escapeHtml(eventLabel)}${live?'':`: ${number(value)}`}"><i></i></span>`;
     };
-    const cityMarkers=points.map(point=>pointMarkup(point,{maxValue:pointMax})).join('');
-    const livePoints=(Array.isArray(options.livePoints)?options.livePoints:[]).filter(point=>Number.isFinite(Number(point?.latitude))&&Number.isFinite(Number(point?.longitude))).slice(0,40);
-    const liveMarkers=livePoints.map(point=>pointMarkup(point,{live:true})).join('');
+    /* R378: the world overview must contain exactly one interactive marker per country.
+       City/event points belong to the deep country map. Rendering them here duplicated USA
+       and allowed a city/live point to trigger an invalid country transition on Android. */
+    const cityMarkers='';
+    const liveMarkers='';
     const note=options.error?escapeHtml(options.error):(!clean.length?(options.loading?'Получаем географию YouTube…':'Страны появятся после получения данных'):'');
     const stableControls=map.querySelector('.map-controls-r237');
     const ecosystemControls=map.querySelector('.ecosystem-layer-switcher');
-    map.innerHTML=`<div class="world-map-canvas" role="img" aria-label="Карта стран аудитории"><div class="world-map-stage"><img src="/assets/world-map-control-v52.webp?v=52.14" alt="Карта мира"/>${markers}${cityMarkers}${liveMarkers}</div>${note?`<span class="world-map-state ${options.error?'is-error':''}">${note}</span>`:''}</div>`;
+    map.innerHTML=`<div class="world-map-canvas" role="img" aria-label="Карта стран аудитории"><div class="world-map-stage"><img src="/assets/world-map-control-v52.webp?v=52.14" alt="Карта мира"/>${markers}</div>${note?`<span class="world-map-state ${options.error?'is-error':''}">${note}</span>`:''}</div>`;
     if(ecosystemControls)map.appendChild(ecosystemControls);
     if(stableControls)map.appendChild(stableControls);
     else map.insertAdjacentHTML('beforeend',"<div class=\"map-controls-r237\" aria-label=\"\u0423\u043f\u0440\u0430\u0432\u043b\u0435\u043d\u0438\u0435 \u043a\u0430\u0440\u0442\u043e\u0439\"><div class=\"world-map-total\" id=\"worldMapTotal\" role=\"status\" aria-live=\"polite\" title=\"\u0421\u0443\u043c\u043c\u0430 \u043f\u0440\u043e\u0441\u043c\u043e\u0442\u0440\u043e\u0432 \u043f\u043e \u0432\u0441\u0435\u043c \u0441\u0442\u0440\u0430\u043d\u0430\u043c\"><span>\u0412\u0441\u0435\u0433\u043e:</span><strong id=\"worldMapTotalValue\">\u2014</strong></div><button class=\"map-monthly-open\" id=\"mapMonthlyOpen\" type=\"button\" aria-haspopup=\"dialog\" aria-controls=\"mapMonthlyModal\" aria-label=\"\u041e\u0442\u043a\u0440\u044b\u0442\u044c \u0441\u0442\u0430\u0442\u0438\u0441\u0442\u0438\u043a\u0443 \u043f\u043e \u043c\u0435\u0441\u044f\u0446\u0430\u043c\" title=\"\u0421\u0442\u0430\u0442\u0438\u0441\u0442\u0438\u043a\u0430 \u043f\u043e \u043c\u0435\u0441\u044f\u0446\u0430\u043c\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M7 2v3M17 2v3M3.5 9h17M5.5 4h13a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z\"/><path d=\"M8 13h2M14 13h2M8 17h2M14 17h2\"/></svg></button><button class=\"map-orientation-fab\" id=\"mapOrientationFab\" type=\"button\" data-mode=\"enter-landscape\" aria-label=\"\u041e\u0442\u043a\u0440\u044b\u0442\u044c \u043a\u0430\u0440\u0442\u0443 \u0432 \u0433\u043e\u0440\u0438\u0437\u043e\u043d\u0442\u0430\u043b\u044c\u043d\u043e\u043c \u0440\u0435\u0436\u0438\u043c\u0435\" title=\"\u041e\u0442\u043a\u0440\u044b\u0442\u044c \u043a\u0430\u0440\u0442\u0443 \u0432 \u0433\u043e\u0440\u0438\u0437\u043e\u043d\u0442\u0430\u043b\u044c\u043d\u043e\u043c \u0440\u0435\u0436\u0438\u043c\u0435\"><span class=\"map-orientation-fab-icon\" aria-hidden=\"true\">\u21bb</span></button><button class=\"map-growth-fab-r237\" id=\"mapGrowthFabR237\" type=\"button\" aria-label=\"\u0420\u043e\u0441\u0442 \u0441\u0442\u0440\u0430\u043d \u0437\u0430 7 \u0434\u043d\u0435\u0439\" title=\"\u0420\u043e\u0441\u0442 \u0441\u0442\u0440\u0430\u043d \u0437\u0430 7 \u0434\u043d\u0435\u0439\" onclick=\"return window.__andrikToggleCountryGrowth ? window.__andrikToggleCountryGrowth(event) : false\">7</button></div>");
@@ -1793,11 +1805,6 @@ html.live-web-ai-resume-lock .analytics-swipe-viewport{overflow:hidden!important
       });
 
       map.querySelectorAll('.world-map-dot[data-country]').forEach(marker=>marker.addEventListener('click',()=>{
-        countriesExpanded=false;
-        const country=decodeURIComponent(marker.dataset.country||'');
-        cycleWorldCountrySelection(map,list,country);
-      }));
-      map.querySelectorAll('.world-map-city-dot[data-country]').forEach(marker=>marker.addEventListener('click',()=>{
         countriesExpanded=false;
         const country=decodeURIComponent(marker.dataset.country||'');
         cycleWorldCountrySelection(map,list,country);
