@@ -1,14 +1,14 @@
 {
   "schema": 1,
   "updaterVersion": "55.00-r356",
-  "operation": "publish",
-  "reinstall": false,
-  "operationId": "publish-1786290049525-7904b50f5e",
+  "operation": "reinstall",
+  "reinstall": true,
+  "operationId": "reinstall-1786290221572-285c49a42b",
   "release": "R362",
   "archiveName": "R362-R361-SMOOTH-WIDE-HALOS-ALL-POINTS-CITIES-SAFE-FULL.zip",
-  "sourceHead": "52aa206a3a951ef6e7df9447824d4c0d651fbfab",
-  "backupSha": "52aa206a3a951ef6e7df9447824d4c0d651fbfab",
-  "backupTag": "control-backup-20260809154045-52aa206-r362-a3857",
+  "sourceHead": "f18f4760d843d78dcaf68585a2a33a64f11e88d0",
+  "backupSha": "f18f4760d843d78dcaf68585a2a33a64f11e88d0",
+  "backupTag": "control-backup-20260809154337-f18f476-r362-6f1b2",
   "autoRecovery": true,
-  "generatedAt": "2026-08-09T15:40:49.525Z"
+  "generatedAt": "2026-08-09T15:43:41.572Z"
 }
