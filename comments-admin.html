@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="ru" translate="no" class="notranslate"><head>
-<meta name="andrik-control-release" content="R387">
+<meta name="andrik-control-release" content="R388">
 <link rel="stylesheet" href="/assets/control-sleep-mode-r193.css?v=55.00-r193"><script defer src="/assets/control-sleep-mode-r193.js?v=55.00-r193"></script>
 
 <meta name="google" content="notranslate"><meta charset="utf-8"/>
@@ -34,7 +34,7 @@ if (location.hostname.toLowerCase() === 'control.andrikmetal.com') {
 .control-overview-card strong{font-size:1.68rem;line-height:1.02;margin-top:2px}
 .control-overview-card small{font-size:.68rem;line-height:1.08}
 .control-backup-center-actions,.admin-push-history{margin-top:4px}
-/* R387: real explicit notification spoiler; independent of native <details>. */
+/* R388: release history and notification history both use explicit spoilers. */
 .andrik-history-spoiler-r387{padding:0!important;overflow:hidden}
 .andrik-history-summary-r387{appearance:none;width:100%;border:0;background:transparent;color:inherit;text-align:left;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:22px 28px;min-height:104px;font:inherit;-webkit-tap-highlight-color:transparent}
 .andrik-history-summary-copy-r387{display:grid;gap:6px;min-width:0}
@@ -112,9 +112,12 @@ if (location.hostname.toLowerCase() === 'control.andrikmetal.com') {
     </div>
   </details>
 </section>
-<section class="admin-control-card control-release-history-card" aria-label="История релизов">
-  <div class="admin-card-title-row"><div><h2>История релизов</h2><p>Заполняется автоматически после публикации текста или релизного push.</p></div><span class="admin-history-count" id="controlReleaseCount">0 релизов</span></div>
-  <div class="control-release-history" id="controlReleaseHistory"><div class="admin-empty">Загружаем релизы…</div></div>
+<section class="admin-control-card control-release-history-card andrik-history-spoiler-r387" aria-label="История релизов" id="controlReleaseHistorySpoiler">
+  <button class="andrik-history-summary-r387" id="controlReleaseHistoryToggle" type="button" aria-expanded="false" aria-controls="controlReleaseHistoryPanel">
+    <span class="andrik-history-summary-copy-r387"><strong>История релизов</strong><small>Заполняется автоматически после публикации текста или релизного push.</small></span>
+    <span class="andrik-history-summary-side-r387"><span class="admin-history-count" id="controlReleaseCount">0 релизов</span><b id="controlReleaseHistoryToggleText">Показать</b></span>
+  </button>
+  <div class="andrik-history-body-r387" id="controlReleaseHistoryPanel" hidden><div class="control-release-history" id="controlReleaseHistory"><div class="admin-empty">Загружаем релизы…</div></div></div>
 </section>
 <div class="admin-section-label" id="controlCommunity"><span>Обсуждение сообщества</span></div><section aria-label="Статистика сообщества" class="admin-stats" id="commentsAdminStats"><article class="admin-stat-card"><span>📝</span><strong>0</strong><small>Всего</small></article><article class="admin-stat-card"><span>⏳</span><strong>0</strong><small>Ожидают решения</small></article><article class="admin-stat-card"><span>✅</span><strong>0</strong><small>Опубликовано</small></article><article class="admin-stat-card"><span>❤️</span><strong>0</strong><small>Лайков</small></article></section>
 <section class="admin-toolbar admin-community-toolbar admin-toolbar-clean">
@@ -135,26 +138,30 @@ if (location.hostname.toLowerCase() === 'control.andrikmetal.com') {
   <div class="andrik-history-body-r387" id="adminPushHistoryPanel" hidden><div class="admin-push-history" id="adminPushHistory"><div class="admin-empty">Загружаем историю…</div></div></div>
 </section>
 
-</section><footer class="control-version-footer"><strong>Live Web AI · профиль ANDRIK · v55.00 LIVE WEB AI FINAL R387</strong><span>История уведомлений — настоящий спойлер + внутренняя прокрутка · iframe cache fix · 09.08.2026</span></footer></div></main>
+</section><footer class="control-version-footer"><strong>Live Web AI · профиль ANDRIK · v55.00 LIVE WEB AI FINAL R388</strong><span>История релизов и уведомлений — оба под спойлером · версия R388 · 09.08.2026</span></footer></div></main>
 <script defer src="/assets/push-v54-07.js?v=54.07"></script><script defer src="/assets/comments-admin-v51.js?v=53.0"></script><script defer src="/assets/control-dashboard-v51.js?v=53.0"></script><script defer src="/assets/control-version-v54-92.js?v=54.92"></script><script defer src="/assets/control-status-eye-v55-00-r88.js?v=55.00-r88"></script><script defer src="/assets/control-version-v54-99b.js?v=54.99b"></script><script defer src="/assets/control-version-v55-00-final-r2.js?v=55.00-final-r2"></script><script defer src="/assets/control-version-v55-00-final-r21.js?v=55.00-final-r21"></script><script defer src="/assets/control-live-eye-v55-00-r265.js?v=55.00-r265"></script><script defer src="/assets/control-version-v55-00-r3n.js?v=55.00-r3n"></script><script defer src="/assets/control-version-v55-00-final-stable-github.js?v=55.00-final-stable-github"></script><script defer src="/assets/admin-carousel-embed-v55-00-final.js?v=55.00-r185"></script><script defer src="/assets/control-version-v55-00-r115.js?v=55.00-r115"></script><script defer src="/assets/unified-glow-r139.js?v=55.00-r142"></script>
 <script defer src="/assets/control-mini-player-r141.js?v=55.00-r144"></script>
-<script defer src="/assets/control-version-sync-r387.js?v=55.00-r387"></script>
+<script defer src="/assets/control-version-sync-r388.js?v=55.00-r388"></script>
 
 <script>
 (()=>{
   'use strict';
-  const btn=document.getElementById('adminPushHistoryToggle');
-  const panel=document.getElementById('adminPushHistoryPanel');
-  const text=document.getElementById('adminPushHistoryToggleText');
-  if(!btn||!panel)return;
-  const setOpen=(open)=>{
-    panel.hidden=!open;
-    btn.setAttribute('aria-expanded',open?'true':'false');
-    if(text)text.textContent=open?'Скрыть':'Показать';
+  const bindSpoiler=(buttonId,panelId,textId)=>{
+    const btn=document.getElementById(buttonId);
+    const panel=document.getElementById(panelId);
+    const text=document.getElementById(textId);
+    if(!btn||!panel)return;
+    const setOpen=(open)=>{
+      panel.hidden=!open;
+      btn.setAttribute('aria-expanded',open?'true':'false');
+      if(text)text.textContent=open?'Скрыть':'Показать';
+    };
+    setOpen(false);
+    btn.addEventListener('click',()=>setOpen(panel.hidden));
+    window.addEventListener('pageshow',()=>setOpen(false),{passive:true});
   };
-  setOpen(false);
-  btn.addEventListener('click',()=>setOpen(panel.hidden));
-  window.addEventListener('pageshow',()=>setOpen(false),{passive:true});
+  bindSpoiler('controlReleaseHistoryToggle','controlReleaseHistoryPanel','controlReleaseHistoryToggleText');
+  bindSpoiler('adminPushHistoryToggle','adminPushHistoryPanel','adminPushHistoryToggleText');
 })();
-</script>
+</script></script>
 </body></html>

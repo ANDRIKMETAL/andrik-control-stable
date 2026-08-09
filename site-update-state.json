@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786310414690-6a3d01753e",
-  "release": "R387",
-  "archiveName": "R387-R386-DISCUSSION-IFRAME-CACHE-SPOILER-VERSION-RESTORE-SAFE-FULL.zip",
-  "sourceHead": "7a88c4b115fd0433980c681ae1b41807b5328897",
-  "backupSha": "7a88c4b115fd0433980c681ae1b41807b5328897",
-  "backupTag": "control-backup-20260809212009-7a88c4b-r387-3c0d5",
+  "operationId": "publish-1786311365249-579901b423",
+  "release": "R388",
+  "archiveName": "R388-R387-RELEASE-HISTORY-SPOILER-ADMIN-VERSION-FIX-SAFE-FULL.zip",
+  "sourceHead": "03d9c6a40fda5b5d97dc353ed871dc239633370c",
+  "backupSha": "03d9c6a40fda5b5d97dc353ed871dc239633370c",
+  "backupTag": "control-backup-20260809213600-03d9c6a-r388-e3a06",
   "autoRecovery": true,
-  "generatedAt": "2026-08-09T21:20:14.690Z"
+  "generatedAt": "2026-08-09T21:36:05.249Z"
 }
