@@ -1,14 +1,14 @@
 {
   "schema": 1,
-  "updaterVersion": "55.00-r334",
+  "updaterVersion": "55.00-r335",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786265634760-f435e79823",
+  "operationId": "publish-1786270237385-e00893a9fe",
   "release": "R313",
-  "archiveName": "R335-R334-SINGLE-TITLE-MOBILE-FIT-SAFE-FULL.zip",
-  "sourceHead": "33895a60ff33013bfdf0ec2972629a93f6d9a19e",
-  "backupSha": "33895a60ff33013bfdf0ec2972629a93f6d9a19e",
-  "backupTag": "control-backup-20260809085350-33895a6-r313-68f8a",
+  "archiveName": "R336-R335-LIVE-ECOSYSTEM-MAP-SAFE-FULL.zip",
+  "sourceHead": "0cba0b14edf691641947952de77cfab1fa290eef",
+  "backupSha": "0cba0b14edf691641947952de77cfab1fa290eef",
+  "backupTag": "control-backup-20260809101033-0cba0b1-r313-107fb",
   "autoRecovery": true,
-  "generatedAt": "2026-08-09T08:53:54.760Z"
+  "generatedAt": "2026-08-09T10:10:37.385Z"
 }

@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R335', number:335, version:'55.00', full:'55.00 LIVE WEB AI FINAL R335', siteUpdater:'55.00-r335' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R336', number:336, version:'55.00', full:'55.00 LIVE WEB AI FINAL R336', siteUpdater:'55.00-r336' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -906,12 +906,30 @@ async function ensurePushAutomationSchema(db) {
         status TEXT NOT NULL DEFAULT 'active',
         source TEXT NOT NULL DEFAULT 'site',
         label TEXT NOT NULL DEFAULT '',
+        country TEXT NOT NULL DEFAULT '',
+        region TEXT NOT NULL DEFAULT '',
+        city TEXT NOT NULL DEFAULT '',
+        latitude REAL,
+        longitude REAL,
         created_at TEXT NOT NULL DEFAULT (datetime('now')),
         updated_at TEXT NOT NULL DEFAULT (datetime('now')),
         last_seen_at TEXT NOT NULL DEFAULT (datetime('now'))
       )
     `).run();
+    const pushGeoAlterations = [
+      `ALTER TABLE push_subscribers ADD COLUMN country TEXT NOT NULL DEFAULT ''`,
+      `ALTER TABLE push_subscribers ADD COLUMN region TEXT NOT NULL DEFAULT ''`,
+      `ALTER TABLE push_subscribers ADD COLUMN city TEXT NOT NULL DEFAULT ''`,
+      `ALTER TABLE push_subscribers ADD COLUMN latitude REAL`,
+      `ALTER TABLE push_subscribers ADD COLUMN longitude REAL`
+    ];
+    for (const sql of pushGeoAlterations) {
+      await db.prepare(sql).run().catch(error => {
+        if (!/duplicate column|already exists/i.test(String(error?.message || error || ''))) throw error;
+      });
+    }
     await db.prepare(`CREATE INDEX IF NOT EXISTS idx_push_subscribers_status_seen ON push_subscribers(status, last_seen_at DESC)`).run();
+    await db.prepare(`CREATE INDEX IF NOT EXISTS idx_push_subscribers_geo ON push_subscribers(status, country, region, city)`).run().catch(() => {});
   })();
   try {
     await pushAutomationSchemaPromise;
@@ -1353,12 +1371,34 @@ async function ensureSiteMetricsSchema(db) {
         id TEXT PRIMARY KEY,
         visitor_hash TEXT NOT NULL,
         path TEXT NOT NULL DEFAULT '/',
+        event_type TEXT NOT NULL DEFAULT 'visit',
+        target TEXT NOT NULL DEFAULT '',
+        country TEXT NOT NULL DEFAULT '',
+        region TEXT NOT NULL DEFAULT '',
+        city TEXT NOT NULL DEFAULT '',
+        latitude REAL,
+        longitude REAL,
         local_date TEXT NOT NULL,
         created_at TEXT NOT NULL DEFAULT (datetime('now'))
       )
     `).run();
+    const siteGeoAlterations = [
+      `ALTER TABLE site_visit_events ADD COLUMN event_type TEXT NOT NULL DEFAULT 'visit'`,
+      `ALTER TABLE site_visit_events ADD COLUMN target TEXT NOT NULL DEFAULT ''`,
+      `ALTER TABLE site_visit_events ADD COLUMN country TEXT NOT NULL DEFAULT ''`,
+      `ALTER TABLE site_visit_events ADD COLUMN region TEXT NOT NULL DEFAULT ''`,
+      `ALTER TABLE site_visit_events ADD COLUMN city TEXT NOT NULL DEFAULT ''`,
+      `ALTER TABLE site_visit_events ADD COLUMN latitude REAL`,
+      `ALTER TABLE site_visit_events ADD COLUMN longitude REAL`
+    ];
+    for (const sql of siteGeoAlterations) {
+      await db.prepare(sql).run().catch(error => {
+        if (!/duplicate column|already exists/i.test(String(error?.message || error || ''))) throw error;
+      });
+    }
     await db.prepare(`CREATE INDEX IF NOT EXISTS idx_site_visit_local_date ON site_visit_events(local_date, created_at DESC)`).run();
     await db.prepare(`CREATE INDEX IF NOT EXISTS idx_site_visit_visitor_date ON site_visit_events(visitor_hash, local_date)`).run();
+    await db.prepare(`CREATE INDEX IF NOT EXISTS idx_site_visit_geo ON site_visit_events(event_type, country, region, city, created_at DESC)`).run().catch(() => {});
   })();
   try { await siteMetricsSchemaPromise; }
   catch (error) { siteMetricsSchemaPromise = null; throw error; }
@@ -1380,13 +1420,33 @@ async function handleSiteVisit(request, env) {
   if (!/^[a-z0-9_-]{16,120}$/i.test(visitorId)) return json({ ok:false, error:'validation' }, 400);
   const visitorHash = await sha256Hex(`andrik-site:${visitorId}`);
   const localDate = getBratislavaClock().date;
+  const allowedEventTypes = new Set([
+    'visit','music-download','music-listen','telegram-open','youtube-open',
+    'spotify-open','apple-music-open','soundcloud-open','amazon-music-open','external-open'
+  ]);
+  const requestedType = cleanPlainText(body.eventType || 'visit', 40).toLowerCase();
+  const eventType = allowedEventTypes.has(requestedType) ? requestedType : 'external-open';
+  const target = cleanPlainText(body.target || '', 500);
+  const cf = request.cf || {};
+  const country = cleanPlainText(cf.country || '', 8).toUpperCase();
+  const region = cleanPlainText(cf.region || cf.regionCode || '', 120);
+  const city = cleanPlainText(cf.city || '', 120);
+  const latRaw = Number(cf.latitude);
+  const lonRaw = Number(cf.longitude);
+  // R336 stores only coarse (~11 km) edge coordinates and never stores a raw IP.
+  const latitude = Number.isFinite(latRaw) ? Math.round(latRaw * 10) / 10 : null;
+  const longitude = Number.isFinite(lonRaw) ? Math.round(lonRaw * 10) / 10 : null;
   await db.prepare(`
-    INSERT INTO site_visit_events(id, visitor_hash, path, local_date, created_at)
-    VALUES (?, ?, ?, ?, datetime('now'))
-  `).bind(crypto.randomUUID(), visitorHash, normalizeSitePath(body.path), localDate).run();
+    INSERT INTO site_visit_events(
+      id, visitor_hash, path, event_type, target, country, region, city, latitude, longitude, local_date, created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+  `).bind(
+    crypto.randomUUID(), visitorHash, normalizeSitePath(body.path), eventType, target,
+    country, region, city, latitude, longitude, localDate
+  ).run();
   // Keep this lightweight first-party counter small; long-term analytics remains in GA4.
   await db.prepare(`DELETE FROM site_visit_events WHERE local_date < date('now','-62 days')`).run().catch(() => {});
-  return json({ ok:true, localDate });
+  return json({ ok:true, localDate, eventType });
 }
 
 async function getSiteLiveMetrics(db) {
@@ -1395,11 +1455,11 @@ async function getSiteLiveMetrics(db) {
   const [today, realtime] = await Promise.all([
     db.prepare(`
       SELECT COUNT(*) AS views, COUNT(DISTINCT visitor_hash) AS users
-      FROM site_visit_events WHERE local_date = ?
+      FROM site_visit_events WHERE local_date = ? AND event_type = 'visit'
     `).bind(localDate).first(),
     db.prepare(`
       SELECT COUNT(*) AS views, COUNT(DISTINCT visitor_hash) AS users
-      FROM site_visit_events WHERE created_at >= datetime('now','-30 minutes')
+      FROM site_visit_events WHERE created_at >= datetime('now','-30 minutes') AND event_type = 'visit'
     `).first()
   ]);
   return {
@@ -1419,13 +1479,15 @@ async function getSiteWindowMetrics(db, startAt, endAt = '') {
     ? await db.prepare(`
         SELECT COUNT(*) AS views, COUNT(DISTINCT visitor_hash) AS users
         FROM site_visit_events
-        WHERE datetime(created_at) >= datetime(?1)
+        WHERE event_type = 'visit'
+          AND datetime(created_at) >= datetime(?1)
           AND datetime(created_at) < datetime(?2)
       `).bind(safeStart, safeEnd).first()
     : await db.prepare(`
         SELECT COUNT(*) AS views, COUNT(DISTINCT visitor_hash) AS users
         FROM site_visit_events
-        WHERE datetime(created_at) >= datetime(?1)
+        WHERE event_type = 'visit'
+          AND datetime(created_at) >= datetime(?1)
       `).bind(safeStart).first();
   return {
     views:Number(row?.views || 0),
@@ -1881,27 +1943,45 @@ async function upsertPushSubscriber(db, {
   subscriptionId,
   active = true,
   source = 'site',
-  label = ''
+  label = '',
+  country = '',
+  region = '',
+  city = '',
+  latitude = null,
+  longitude = null
 }) {
   const id = cleanPlainText(subscriptionId, 80);
   if (!/^[0-9a-f-]{30,80}$/i.test(id)) throw new Error('validation');
   await ensurePushAutomationSchema(db);
   const previous = await db.prepare(`SELECT status, source FROM push_subscribers WHERE subscription_id = ? LIMIT 1`).bind(id).first();
+  const safeCountry = cleanPlainText(country, 8).toUpperCase();
+  const safeRegion = cleanPlainText(region, 120);
+  const safeCity = cleanPlainText(city, 120);
+  const latNumber = latitude === null || latitude === '' || latitude === undefined ? NaN : Number(latitude);
+  const lonNumber = longitude === null || longitude === '' || longitude === undefined ? NaN : Number(longitude);
+  const safeLatitude = Number.isFinite(latNumber) ? Math.round(latNumber * 10) / 10 : null;
+  const safeLongitude = Number.isFinite(lonNumber) ? Math.round(lonNumber * 10) / 10 : null;
   await db.prepare(`
     INSERT INTO push_subscribers (
-      subscription_id, status, source, label, created_at, updated_at, last_seen_at
-    ) VALUES (?, ?, ?, ?, datetime('now'), datetime('now'), datetime('now'))
+      subscription_id, status, source, label, country, region, city, latitude, longitude, created_at, updated_at, last_seen_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'), datetime('now'))
     ON CONFLICT(subscription_id) DO UPDATE SET
       status = excluded.status,
       source = CASE WHEN push_subscribers.source = 'owner' THEN 'owner' ELSE excluded.source END,
       label = CASE WHEN excluded.label <> '' THEN excluded.label ELSE push_subscribers.label END,
+      country = CASE WHEN excluded.country <> '' THEN excluded.country ELSE push_subscribers.country END,
+      region = CASE WHEN excluded.region <> '' THEN excluded.region ELSE push_subscribers.region END,
+      city = CASE WHEN excluded.city <> '' THEN excluded.city ELSE push_subscribers.city END,
+      latitude = COALESCE(excluded.latitude, push_subscribers.latitude),
+      longitude = COALESCE(excluded.longitude, push_subscribers.longitude),
       updated_at = datetime('now'),
       last_seen_at = datetime('now')
   `).bind(
     id,
     active ? 'active' : 'inactive',
     cleanPlainText(source, 40) || 'site',
-    cleanPlainText(label, 120)
+    cleanPlainText(label, 120),
+    safeCountry, safeRegion, safeCity, safeLatitude, safeLongitude
   ).run();
   return {
     id,
@@ -2429,6 +2509,119 @@ async function handleOwnerSessionDelete(request) {
 }
 
 
+async function handleControlEcosystemMap(request, env) {
+  if (!adminAuthorized(request, env)) return json({ ok:false, error:'unauthorized' }, 401);
+  const db = requireDb(env);
+  await Promise.all([ensureSiteMetricsSchema(db), ensurePushAutomationSchema(db)]);
+  const age = "-30 days";
+  const [siteCountriesRaw, sitePointsRaw, musicCountriesRaw, musicPointsRaw, pushCountriesRaw, pushPointsRaw, linkRowsRaw, recentRaw] = await Promise.all([
+    db.prepare(`
+      SELECT country, COUNT(DISTINCT visitor_hash) AS value, COUNT(*) AS events
+      FROM site_visit_events
+      WHERE event_type='visit' AND country<>'' AND datetime(created_at)>=datetime('now', ?)
+      GROUP BY country ORDER BY value DESC, events DESC LIMIT 120
+    `).bind(age).all(),
+    db.prepare(`
+      SELECT country, MAX(region) AS region, MAX(city) AS city,
+             ROUND(AVG(latitude),1) AS latitude, ROUND(AVG(longitude),1) AS longitude,
+             COUNT(DISTINCT visitor_hash) AS value, COUNT(*) AS events, MAX(created_at) AS lastAt
+      FROM site_visit_events
+      WHERE event_type='visit' AND country<>'' AND latitude IS NOT NULL AND longitude IS NOT NULL
+        AND datetime(created_at)>=datetime('now', ?)
+      GROUP BY country, region, city, ROUND(latitude,1), ROUND(longitude,1)
+      ORDER BY value DESC, events DESC LIMIT 180
+    `).bind(age).all(),
+    db.prepare(`
+      SELECT country, COUNT(*) AS value,
+             SUM(CASE WHEN event_type='music-download' THEN 1 ELSE 0 END) AS downloads,
+             SUM(CASE WHEN event_type='music-listen' THEN 1 ELSE 0 END) AS listens
+      FROM site_visit_events
+      WHERE event_type IN ('music-download','music-listen') AND country<>'' AND datetime(created_at)>=datetime('now', ?)
+      GROUP BY country ORDER BY value DESC LIMIT 120
+    `).bind(age).all(),
+    db.prepare(`
+      SELECT country, MAX(region) AS region, MAX(city) AS city,
+             ROUND(AVG(latitude),1) AS latitude, ROUND(AVG(longitude),1) AS longitude,
+             COUNT(*) AS value,
+             SUM(CASE WHEN event_type='music-download' THEN 1 ELSE 0 END) AS downloads,
+             SUM(CASE WHEN event_type='music-listen' THEN 1 ELSE 0 END) AS listens,
+             MAX(created_at) AS lastAt
+      FROM site_visit_events
+      WHERE event_type IN ('music-download','music-listen') AND country<>''
+        AND latitude IS NOT NULL AND longitude IS NOT NULL AND datetime(created_at)>=datetime('now', ?)
+      GROUP BY country, region, city, ROUND(latitude,1), ROUND(longitude,1)
+      ORDER BY value DESC LIMIT 180
+    `).bind(age).all(),
+    db.prepare(`
+      SELECT country, COUNT(*) AS value
+      FROM push_subscribers
+      WHERE status='active' AND source<>'owner' AND country<>''
+      GROUP BY country ORDER BY value DESC LIMIT 120
+    `).all(),
+    db.prepare(`
+      SELECT country, MAX(region) AS region, MAX(city) AS city,
+             ROUND(AVG(latitude),1) AS latitude, ROUND(AVG(longitude),1) AS longitude,
+             COUNT(*) AS value, MAX(last_seen_at) AS lastAt
+      FROM push_subscribers
+      WHERE status='active' AND source<>'owner' AND country<>'' AND latitude IS NOT NULL AND longitude IS NOT NULL
+      GROUP BY country, region, city, ROUND(latitude,1), ROUND(longitude,1)
+      ORDER BY value DESC LIMIT 180
+    `).all(),
+    db.prepare(`
+      SELECT event_type AS type, COUNT(*) AS value
+      FROM site_visit_events
+      WHERE event_type IN ('telegram-open','youtube-open','spotify-open','apple-music-open','soundcloud-open','amazon-music-open')
+        AND datetime(created_at)>=datetime('now', ?)
+      GROUP BY event_type ORDER BY value DESC
+    `).bind(age).all(),
+    db.prepare(`
+      SELECT event_type AS type, country, region, city, latitude, longitude, target, created_at AS createdAt
+      FROM site_visit_events
+      WHERE datetime(created_at)>=datetime('now','-60 minutes')
+      ORDER BY datetime(created_at) DESC LIMIT 40
+    `).all()
+  ]);
+  const normalizeCountries = rows => (rows?.results || []).map(row => ({
+    country: cleanPlainText(row.country || '', 8).toUpperCase(),
+    value: Number(row.value || 0),
+    events: Number(row.events || 0),
+    downloads: Number(row.downloads || 0),
+    listens: Number(row.listens || 0)
+  })).filter(row => row.country && row.value > 0);
+  const normalizePoints = rows => (rows?.results || []).map(row => ({
+    country: cleanPlainText(row.country || '', 8).toUpperCase(),
+    region: cleanPlainText(row.region || '', 120),
+    city: cleanPlainText(row.city || '', 120),
+    latitude: Number(row.latitude),
+    longitude: Number(row.longitude),
+    value: Number(row.value || 0),
+    events: Number(row.events || 0),
+    downloads: Number(row.downloads || 0),
+    listens: Number(row.listens || 0),
+    lastAt: cleanPlainText(row.lastAt || '', 60)
+  })).filter(row => row.country && Number.isFinite(row.latitude) && Number.isFinite(row.longitude));
+  const links = {};
+  for (const row of linkRowsRaw?.results || []) links[cleanPlainText(row.type || '', 40)] = Number(row.value || 0);
+  const pushCounts = await getPushAudienceCounts(env);
+  return json({
+    ok:true,
+    updatedAt:new Date().toISOString(),
+    periodDays:30,
+    privacy:{ rawIpStored:false, coordinatePrecision:'0.1-degree', adminOnly:true },
+    site:{ countries:normalizeCountries(siteCountriesRaw), points:normalizePoints(sitePointsRaw) },
+    music:{ countries:normalizeCountries(musicCountriesRaw), points:normalizePoints(musicPointsRaw) },
+    push:{ countries:normalizeCountries(pushCountriesRaw), points:normalizePoints(pushPointsRaw), counts:pushCounts },
+    links,
+    recent:(recentRaw?.results || []).map(row => ({
+      type:cleanPlainText(row.type || '',40), country:cleanPlainText(row.country || '',8).toUpperCase(),
+      region:cleanPlainText(row.region || '',120), city:cleanPlainText(row.city || '',120),
+      latitude:row.latitude === null || row.latitude === undefined || row.latitude === '' ? null : Number(row.latitude),
+      longitude:row.longitude === null || row.longitude === undefined || row.longitude === '' ? null : Number(row.longitude),
+      target:cleanPlainText(row.target || '',300), createdAt:cleanPlainText(row.createdAt || '',60)
+    }))
+  });
+}
+
 async function handleControlAccess(request, env) {
   if (!adminAuthorized(request, env)) return json({ ok:false, error:'unauthorized' }, 401);
   return json({
@@ -2473,7 +2666,15 @@ async function handlePushSubscriber(request, env, ctx) {
   if (!/^[0-9a-f-]{30,80}$/i.test(subscriptionId)) return json({ ok: false, error: 'validation' }, 400);
   const ownerAuthorized = adminAuthorized(request, env);
   const source = ownerAuthorized ? 'owner' : requestedSource;
-  const transition = await upsertPushSubscriber(db, { subscriptionId, active, source, label });
+  const cf = request.cf || {};
+  const transition = await upsertPushSubscriber(db, {
+    subscriptionId, active, source, label,
+    country: cf.country || '',
+    region: cf.region || cf.regionCode || '',
+    city: cf.city || '',
+    latitude: cf.latitude,
+    longitude: cf.longitude
+  });
 
   // When the owner renews the browser subscription after a Service Worker or
   // OneSignal change, bind the new subscription id automatically. This keeps
@@ -11528,6 +11729,7 @@ async function routeApi(request, env, ctx) {
     if (path === '/api/control/dashboard' && request.method === 'GET') return await handleControlDashboard(request, env);
     if (path === '/api/control/system' && request.method === 'GET') return await handleControlSystem(request, env);
     if (path === '/api/control/google-analytics' && request.method === 'GET') return await handleControlGoogleAnalytics(request, env);
+    if (path === '/api/control/ecosystem-map' && request.method === 'GET') return await handleControlEcosystemMap(request, env);
     if (path === '/api/control/audience' && request.method === 'GET') return await handleControlAudience(request, env);
     if (path === '/api/control/search-console' && request.method === 'GET') return await handleControlSearchConsole(request, env);
     if (path === '/api/control/snapshots/refresh' && request.method === 'POST') return await handleControlSnapshotsRefresh(request, env);
