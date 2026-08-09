@@ -1,14 +1,14 @@
 {
   "schema": 1,
-  "updaterVersion": "55.00-r341",
+  "updaterVersion": "55.00-r342",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786279403631-0128f7a7e8",
+  "operationId": "publish-1786279979493-bf8d3182be",
   "release": "R342",
-  "archiveName": "R342-R341-TWO-STEP-WORLD-COUNTRY-TRANSITION-SAFE-FULL.zip",
-  "sourceHead": "569b5e624cda3890798cc137954b88a9a1df23bd",
-  "backupSha": "569b5e624cda3890798cc137954b88a9a1df23bd",
-  "backupTag": "control-backup-20260809124319-569b5e6-r342-cb11f",
+  "archiveName": "R343-R342-COUNTRY-CLEAN-WEEK-STATS-SMOOTH-SAFE-FULL.zip",
+  "sourceHead": "3d0e3b164fc29ef73738fc6bca4f5e7212429224",
+  "backupSha": "3d0e3b164fc29ef73738fc6bca4f5e7212429224",
+  "backupTag": "control-backup-20260809125255-3d0e3b1-r342-5b6dd",
   "autoRecovery": true,
-  "generatedAt": "2026-08-09T12:43:23.631Z"
+  "generatedAt": "2026-08-09T12:52:59.493Z"
 }

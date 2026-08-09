@@ -1742,7 +1742,7 @@ html.live-web-ai-resume-lock .analytics-swipe-viewport{overflow:hidden!important
 
       if(landscape&&selectedWorldCountry){
         requestAnimationFrame(()=>requestAnimationFrame(()=>{
-          const card=list.querySelector('.world-country-selected-card');
+          const card=list.querySelector('.world-country-selected-card,.world-country-button.is-selected');
           if(!card||!pane)return;
           const paneRect=pane.getBoundingClientRect();
           const cardRect=card.getBoundingClientRect();
@@ -2641,7 +2641,7 @@ html.live-web-ai-resume-lock .analytics-swipe-viewport{overflow:hidden!important
   }
 
   function decorateCard(){
-    const card=list.querySelector('.world-country-selected-card');
+    const card=list.querySelector('.world-country-selected-card,.world-country-button.is-selected');
     if(!card)return;
     if(window.__andrikEcosystemActiveLayer&&window.__andrikEcosystemActiveLayer!=='youtube'){
       card.querySelector('.country-weekly-gain')?.remove();
@@ -2673,7 +2673,7 @@ html.live-web-ai-resume-lock .analytics-swipe-viewport{overflow:hidden!important
   }
   function placeCard(){
     if(!isLandscape())return;
-    const card=list.querySelector('.world-country-selected-card');
+    const card=list.querySelector('.world-country-selected-card,.world-country-button.is-selected');
     const marker=selectedMarker();
     if(!card||!marker)return;
     const root=list.getBoundingClientRect();
@@ -2725,7 +2725,7 @@ html.live-web-ai-resume-lock .analytics-swipe-viewport{overflow:hidden!important
     });
   }
   function decorateCardNoLoop(){
-    const card=list.querySelector('.world-country-selected-card');
+    const card=list.querySelector('.world-country-selected-card,.world-country-button.is-selected');
     if(!card)return;
     const code=String(card.dataset.code||'').toUpperCase();
     const badge=card.querySelector('.country-weekly-gain');
@@ -3981,7 +3981,7 @@ body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #mapFocusAct
 <link rel="stylesheet" href="/assets/country-focus-compact-r339.css?v=55.00-r340">
 <script defer src="/assets/ecosystem-map-r337.js?v=55.00-r337"></script>
 <script defer src="/assets/country-shapes-r341.js?v=55.00-r341"></script>
-<link rel="stylesheet" href="/assets/country-map-r342.css?v=55.00-r342">
-<script defer src="/assets/country-map-r342.js?v=55.00-r342"></script>
+<link rel="stylesheet" href="/assets/country-map-r343.css?v=55.00-r343">
+<script defer src="/assets/country-map-r343.js?v=55.00-r343"></script>
 <script defer src="/assets/control-version-sync-r342.js?v=55.00-r342"></script>
 </body></html>
