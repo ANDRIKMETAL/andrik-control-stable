@@ -1,4 +1,4 @@
-R383 — YELLOW COUNTRY CARD RETURNS TO WORLD
+R384 — YELLOW COUNTRY CARD RETURNS TO WORLD
 
 Исправлено:
 - Тап по стране в «Все страны» по-прежнему сразу открывает её большую карту.
@@ -19,5 +19,5 @@ R383 — YELLOW COUNTRY CARD RETURNS TO WORLD
 - R377 быстрый плавный step-2.
 - R376 надёжные YouTube push.
 
-Версия: R383.
+Версия: R384.
 База: R382.

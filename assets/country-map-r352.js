@@ -148,7 +148,8 @@
     document.body.classList.add('is-country-returning');
     overlay?.classList.add('is-leaving');
     clearTimeout(transitionTimer);
-    transitionTimer = setTimeout(finishWorldReturn, 90);
+    /* R384: no 90 ms pre-hold on the yellow focus frame. */
+    transitionTimer = setTimeout(finishWorldReturn, 18);
   }
   function startCountryEnter(){
     returningToWorld = false;

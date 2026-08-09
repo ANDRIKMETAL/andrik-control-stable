@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786307495029-2ac431b09b",
-  "release": "R383",
-  "archiveName": "R383-R382-YELLOW-COUNTRY-CARD-BACK-TO-WORLD-SAFE-FULL.zip",
-  "sourceHead": "eedaa37cd8454360c49d13c3fffea75d3b4b3314",
-  "backupSha": "eedaa37cd8454360c49d13c3fffea75d3b4b3314",
-  "backupTag": "control-backup-20260809203131-eedaa37-r383-97207",
+  "operationId": "publish-1786308298056-3bfe1c6d75",
+  "release": "R384",
+  "archiveName": "R384-R383-NO-YELLOW-HALO-RETURN-STALL-SAFE-FULL.zip",
+  "sourceHead": "ef22b5841ff277492becba086db3795152e609ea",
+  "backupSha": "ef22b5841ff277492becba086db3795152e609ea",
+  "backupTag": "control-backup-20260809204453-ef22b58-r384-10f64",
   "autoRecovery": true,
-  "generatedAt": "2026-08-09T20:31:35.029Z"
+  "generatedAt": "2026-08-09T20:44:58.056Z"
 }

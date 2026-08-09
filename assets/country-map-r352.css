@@ -54,7 +54,7 @@ body.analytics-admin-page.analytics-v54-46-page.is-country-deep-active #worldMap
   transform-origin:center center;
 }
 body.analytics-admin-page.is-country-deep-active #worldMap .country-map-r352{display:block!important;animation:r352CountryEnter .12s ease-out both;will-change:transform,opacity}
-body.analytics-admin-page.is-country-returning #worldMap .country-map-r352,.country-map-r352.is-leaving{display:block!important;animation:r352CountryLeave .09s ease-in both!important;will-change:transform,opacity}
+body.analytics-admin-page.is-country-returning #worldMap .country-map-r352,.country-map-r352.is-leaving{display:block!important;animation:r352CountryLeave .065s ease-in both!important;will-change:transform,opacity}
 .country-map-r352::before{
   content:"";
   position:absolute;
