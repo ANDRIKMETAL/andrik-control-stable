@@ -162,6 +162,7 @@
       if (!overlay) { restoreOverviewLabels(); return; }
       overlay.innerHTML = '';
       overlay.removeAttribute('data-layer');
+      overlay.removeAttribute('data-code');
       overlay.removeAttribute('data-signature');
       restoreOverviewLabels();
       return;
@@ -184,6 +185,7 @@
     const total = countryTotal(country, layer);
     const points = pointsFor(country, layer);
     overlay.dataset.layer = layer;
+    overlay.dataset.code = code;
     const signature = JSON.stringify([code,layer,weekly,total,points.map(p=>[p.lat,p.lon,p.value,p.label||p.city||p.region||''])]);
     if (overlay.dataset.signature !== signature) {
       let svg='';
@@ -193,26 +195,146 @@
           const [x,y] = projectPoint(shape, point.lon, point.lat);
           if (!(x >= 0 && x <= 1000 && y >= 0 && y <= 600)) return '';
           const r = 7 + Math.round((Math.max(0,point.value)/max)*8);
-          const label = esc(point.label || point.city || point.region || 'Город / регион');
-          const value = fmt(point.value || 0);
-          return `<g class="country-city-marker-r360" data-city="${label}" data-index="${index}">
+          const rawLabel = String(point.label || point.city || point.region || '').trim();
+          const label = esc(rawLabel || 'Город / регион');
+          const valueNumber = Math.max(0, Number(point.value || 0));
+          const value = fmt(valueNumber);
+          return `<g class="country-city-marker-r360" data-city="${label}" data-value="${valueNumber}" data-index="${index}" tabindex="0" role="button" aria-label="${label}: ${value} включений">
             <circle class="country-city-halo-r360" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(r+11).toFixed(1)}"/>
             <circle class="country-point-r352 country-city-point-r360" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r}">
-              <title>${label} · ${value}</title>
+              <title>${label} · ${value} включений</title>
             </circle>
           </g>`;
         }).join('');
         if (!dots) dots = '<circle class="country-point-halo-r352" cx="500" cy="300" r="48"/><circle class="country-point-r352 is-empty" cx="500" cy="300" r="20"/>';
-        svg = `<svg viewBox="0 0 1000 600" role="img" aria-label="Карта страны ${esc(country)}"><path class="country-shape-r352" fill-rule="evenodd" d="${shape.path}"/>${dots}</svg>`;
+        const countryViewBox = code === 'RU' ? '45 135 910 330' : '0 0 1000 600';
+        svg = `<svg viewBox="${countryViewBox}" role="img" aria-label="Карта страны ${esc(country)}"><path class="country-shape-r352" fill-rule="evenodd" d="${shape.path}"/>${dots}</svg>
+          <div class="country-city-stat-r365" hidden aria-live="polite"></div>`;
       } else {
         svg = `<svg viewBox="0 0 1000 600" role="img" aria-label="Карта страны ${esc(country)}"><rect x="90" y="80" width="820" height="440" rx="80" fill="rgba(20,58,78,.55)" stroke="#92dbff" stroke-width="4" stroke-dasharray="12 12"/><circle class="country-point-halo-r352" cx="500" cy="300" r="48"/><circle class="country-point-r352 is-empty" cx="500" cy="300" r="20"/></svg>`;
       }
       overlay.innerHTML = svg;
       overlay.dataset.signature = signature;
+      delete overlay.dataset.selectedCity;
     }
     if (totalNode) totalNode.textContent = fmt(total);
     if (period) period.textContent = `${country} · ${layer === 'youtube' ? 'YouTube' : layer === 'site' ? 'Сайт' : layer === 'music' ? 'Music' : layer === 'push' ? 'Push' : 'Вся экосистема'} · активность за 7 дней.`;
   }
+
+
+  function cityCountWord(value){
+    const n=Math.abs(Math.trunc(Number(value||0)));
+    const n10=n%10, n100=n%100;
+    if(n10===1 && n100!==11) return 'включение';
+    if(n10>=2 && n10<=4 && !(n100>=12 && n100<=14)) return 'включения';
+    return 'включений';
+  }
+
+  const CITY_NAMES_R367 = new Map(Object.entries({
+    // Ukraine
+    'kyiv':'Киев','kiev':'Киев','київ':'Киев','киев':'Киев',
+    'dnipro':'Днепр','dnepr':'Днепр','dnipropetrovsk':'Днепр','дніпро':'Днепр','днепр':'Днепр',
+    'odesa':'Одесса','odessa':'Одесса','одеса':'Одесса','одесса':'Одесса',
+    'mykolaiv':'Николаев','nikolaev':'Николаев','миколаїв':'Николаев','николаев':'Николаев',
+    'donetsk':'Донецк','донецьк':'Донецк','донецк':'Донецк',
+    'kharkiv':'Харьков','kharkov':'Харьков','харків':'Харьков','харьков':'Харьков',
+    'zaporizhzhia':'Запорожье','zaporozhye':'Запорожье','запоріжжя':'Запорожье','запорожье':'Запорожье',
+    'lviv':'Львов','львів':'Львов','львов':'Львов',
+    'kherson':'Херсон','херсон':'Херсон',
+    'mariupol':'Мариуполь','маріуполь':'Мариуполь','мариуполь':'Мариуполь',
+    'kryvyi rih':'Кривой Рог','krivoy rog':'Кривой Рог','кривий ріг':'Кривой Рог','кривой рог':'Кривой Рог',
+    // Russia
+    'voronezh':'Воронеж','воронеж':'Воронеж',
+    'moscow':'Москва','moskva':'Москва','москва':'Москва',
+    'saint petersburg':'Санкт-Петербург','st petersburg':'Санкт-Петербург','санкт-петербург':'Санкт-Петербург',
+    'rostov-on-don':'Ростов-на-Дону','rostov on don':'Ростов-на-Дону','ростов-на-дону':'Ростов-на-Дону',
+    'krasnodar':'Краснодар','краснодар':'Краснодар',
+    'volgograd':'Волгоград','волгоград':'Волгоград',
+    'kazan':'Казань','казань':'Казань',
+    'samara':'Самара','самара':'Самара',
+    'yekaterinburg':'Екатеринбург','ekaterinburg':'Екатеринбург','екатеринбург':'Екатеринбург',
+    'novosibirsk':'Новосибирск','новосибирск':'Новосибирск',
+    // Slovakia
+    'kosice':'Кошице','košice':'Кошице','кошице':'Кошице',
+    'bratislava':'Братислава','братислава':'Братислава'
+  }));
+
+  function displayCityNameR367(raw){
+    const original=String(raw||'').trim();
+    if(!original) return 'Город / регион';
+    const key=original.toLocaleLowerCase('ru').replace(/\s+/g,' ').trim();
+    return CITY_NAMES_R367.get(key)||original;
+  }
+
+  function flashCityNameR367(marker){
+    const overlay=marker?.closest?.('.country-map-r352');
+    const svg=overlay?.querySelector('svg');
+    const point=marker?.querySelector('.country-city-point-r360');
+    if(!overlay||!svg||!point) return;
+
+    svg.querySelectorAll('.country-city-name-flash-r367').forEach(node=>node.remove());
+
+    const city=displayCityNameR367(marker.dataset.city||'');
+    let x=Number(point.getAttribute('cx')||0);
+    let y=Number(point.getAttribute('cy')||0)-26;
+
+    const vb=svg.viewBox?.baseVal;
+    if(vb && vb.width>0 && vb.height>0){
+      const padX=Math.min(70,vb.width*.09);
+      const padY=Math.min(38,vb.height*.12);
+      x=Math.max(vb.x+padX,Math.min(vb.x+vb.width-padX,x));
+      y=Math.max(vb.y+padY,Math.min(vb.y+vb.height-padY,y));
+    }
+
+    const text=document.createElementNS('http://www.w3.org/2000/svg','text');
+    text.classList.add('country-city-name-flash-r367');
+    text.setAttribute('x',x.toFixed(1));
+    text.setAttribute('y',y.toFixed(1));
+    text.setAttribute('text-anchor','middle');
+    text.setAttribute('dominant-baseline','central');
+    text.textContent=city;
+    svg.appendChild(text);
+
+    requestAnimationFrame(()=>text.classList.add('is-visible-r367'));
+    clearTimeout(overlay.__cityNameHideR367);
+    overlay.__cityNameHideR367=setTimeout(()=>{
+      text.classList.remove('is-visible-r367');
+      text.classList.add('is-hiding-r367');
+      setTimeout(()=>text.remove(),420);
+    },2400);
+  }
+  function selectCityMarker(marker){
+    if(!marker) return;
+    const overlay=marker.closest('.country-map-r352');
+    if(!overlay) return;
+    overlay.querySelectorAll('.country-city-marker-r360.is-city-selected-r365')
+      .forEach(node=>node.classList.remove('is-city-selected-r365'));
+    marker.classList.add('is-city-selected-r365');
+    const city=displayCityNameR367(marker.dataset.city||'Город / регион');
+    const value=Math.max(0,Number(marker.dataset.value||0));
+    const panel=overlay.querySelector('.country-city-stat-r365');
+    if(panel){
+      panel.textContent=`${city} · ${fmt(value)} ${cityCountWord(value)}`;
+      panel.hidden=false;
+    }
+    overlay.dataset.selectedCity=city;
+    flashCityNameR367(marker);
+  }
+  map.addEventListener('click',event=>{
+    const marker=event.target?.closest?.('.country-city-marker-r360');
+    if(!marker || !map.contains(marker)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    selectCityMarker(marker);
+  },true);
+  map.addEventListener('keydown',event=>{
+    if(event.key!=='Enter' && event.key!==' ') return;
+    const marker=event.target?.closest?.('.country-city-marker-r360');
+    if(!marker || !map.contains(marker)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    selectCityMarker(marker);
+  },true);
 
   function closeGrowthOverlays(){
     const panel = document.getElementById('countryGrowthPanel');

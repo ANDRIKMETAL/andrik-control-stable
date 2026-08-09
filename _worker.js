@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R364', number:364, version:'55.00', full:'55.00 LIVE WEB AI FINAL R364', siteUpdater:'55.00-r356' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R367', number:367, version:'55.00', full:'55.00 LIVE WEB AI FINAL R367', siteUpdater:'55.00-r356' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -8089,16 +8089,18 @@ async function maybeSendDailyOwnerSummary(env) {
 
   const windowKey = summaryWindow?.key || metrics?.windowKey || '';
   const preparedAt = new Date().toISOString();
-  const preparedSnapshot = JSON.stringify({ metrics, sentAt:preparedAt, localDate:clock.date, slot, source:'central-cron-prepared', windowKey });
+  const snapshotId = `auto-${clock.date}-${slot}-${Date.now().toString(36)}`;
+  const preparedSnapshot = JSON.stringify({ metrics, sentAt:preparedAt, localDate:clock.date, slot, source:'central-cron-prepared', windowKey, snapshotId });
   await setPushState(db, 'daily-owner-summary-last-metrics', preparedSnapshot).catch(() => {});
   if (windowKey) {
     await setPushState(db, `daily-owner-summary-window:${windowKey}`, preparedSnapshot).catch(() => {});
     await persistControlHomeHighWaterFromMetricsR260(db, windowKey, metrics).catch(() => {});
   }
+  await setPushState(db, `daily-owner-summary-push-snapshot:${snapshotId}`, preparedSnapshot).catch(() => {});
 
   const lines = buildDailyOwnerSummaryLines(metrics);
   const slotLabel = slot === '05' ? '05:00 · утро' : '17:00 · вечер';
-  const summaryUrl = `https://control.andrikmetal.com/control-home.html?page=summary&source=push&summaryWindow=${encodeURIComponent(summaryWindow.key)}`;
+  const summaryUrl = `https://control.andrikmetal.com/control-home.html?page=summary&source=push&summaryWindow=${encodeURIComponent(summaryWindow.key)}&summarySnapshot=${encodeURIComponent(snapshotId)}`;
   let result;
   try {
     result = await sendOwnerPush(env, {
@@ -8110,7 +8112,7 @@ async function maybeSendDailyOwnerSummary(env) {
         type:'daily-summary', source:'central-cron',
         title:`Общая сводка ANDRIK · ${slotLabel}`,
         message:lines.join('\n'), url:summaryUrl,
-        details:{ localDate:clock.date, localHour:clock.hour, localMinute:clock.minute, summarySlot:slot, collectionError, metrics, windowKey }
+        details:{ localDate:clock.date, localHour:clock.hour, localMinute:clock.minute, summarySlot:slot, collectionError, metrics, windowKey, snapshotId }
       }
     });
   } catch (error) {
@@ -8129,9 +8131,10 @@ async function maybeSendDailyOwnerSummary(env) {
     await setPushState(db, 'daily-owner-summary-last-at', sentAt);
     await setPushState(db, 'daily-owner-summary-last-attempt-status', metrics.partial ? 'sent-partial' : 'sent');
     await setPushState(db, 'daily-owner-summary-last-attempt-error', collectionError);
-    const storedSnapshot = JSON.stringify({ metrics, sentAt, localDate:clock.date, slot, source:'central-cron', windowKey });
+    const storedSnapshot = JSON.stringify({ metrics, sentAt, localDate:clock.date, slot, source:'central-cron', windowKey, snapshotId });
     await setPushState(db, 'daily-owner-summary-last-metrics', storedSnapshot);
     if (windowKey) await setPushState(db, `daily-owner-summary-window:${windowKey}`, storedSnapshot);
+    await setPushState(db, `daily-owner-summary-push-snapshot:${snapshotId}`, storedSnapshot).catch(() => {});
     await persistControlHomeHighWaterFromMetricsR260(db, windowKey, metrics);
     await recordSystemLog(env, { scope:'daily-summary', level:metrics.partial?'warning':'info', event:metrics.partial?'sent-partial':'sent', message:`Автосводка ${slotLabel} отправлена.`, details:{metrics,slot,collectionError,summaryWindow,oneSignalId:result.oneSignalId||''} }).catch(() => {});
   } else {
@@ -8162,21 +8165,24 @@ async function handleManualDailyOwnerSummary(request, env) {
 
   const preparedAt = new Date().toISOString();
   const windowKey = metrics?.windowKey || window.key;
+  const snapshotId = `manual-${clock.date}-${Date.now().toString(36)}`;
   const preparedSnapshot = JSON.stringify({
     metrics,
     sentAt:preparedAt,
     localDate:clock.date,
     source:'manual-control-prepared',
-    windowKey
+    windowKey,
+    snapshotId
   });
   await setPushState(db, 'daily-owner-summary-last-metrics', preparedSnapshot).catch(() => {});
   if (windowKey) {
     await setPushState(db, `daily-owner-summary-window:${windowKey}`, preparedSnapshot).catch(() => {});
     await persistControlHomeHighWaterFromMetricsR260(db, windowKey, metrics).catch(() => {});
   }
+  await setPushState(db, `daily-owner-summary-push-snapshot:${snapshotId}`, preparedSnapshot).catch(() => {});
 
   const lines = buildDailyOwnerSummaryLines(metrics);
-  const summaryUrl = `https://control.andrikmetal.com/control-home.html?page=summary&source=push&summaryWindow=${encodeURIComponent(windowKey)}`;
+  const summaryUrl = `https://control.andrikmetal.com/control-home.html?page=summary&source=push&summaryWindow=${encodeURIComponent(windowKey)}&summarySnapshot=${encodeURIComponent(snapshotId)}`;
   let result;
   try {
     result = await sendOwnerPush(env, {
@@ -8190,7 +8196,7 @@ async function handleManualDailyOwnerSummary(request, env) {
         title:'Ежедневная сводка ANDRIK',
         message:lines.join('\n'),
         url:summaryUrl,
-        details:{ localDate:clock.date, localHour:clock.hour, manual:true, metrics, snapshotRefresh, collectionError }
+        details:{ localDate:clock.date, localHour:clock.hour, manual:true, metrics, snapshotRefresh, collectionError, windowKey, snapshotId }
       }
     });
   } catch (error) {
@@ -8199,11 +8205,12 @@ async function handleManualDailyOwnerSummary(request, env) {
 
   const sentAt = new Date().toISOString();
   if (result.ok) {
-    const sentSnapshot = JSON.stringify({ metrics, sentAt, localDate:clock.date, source:'manual-control', windowKey });
+    const sentSnapshot = JSON.stringify({ metrics, sentAt, localDate:clock.date, source:'manual-control', windowKey, snapshotId });
     await setPushState(db, 'daily-owner-summary-manual-last-date', clock.date);
     await setPushState(db, 'daily-owner-summary-manual-last-at', sentAt);
     await setPushState(db, 'daily-owner-summary-last-metrics', sentSnapshot);
     if (windowKey) await setPushState(db, `daily-owner-summary-window:${windowKey}`, sentSnapshot).catch(() => {});
+    await setPushState(db, `daily-owner-summary-push-snapshot:${snapshotId}`, sentSnapshot).catch(() => {});
     await recordSystemLog(env, {
       scope:'daily-summary', level:'info', event:'manual-sent',
       message:`Ежедневная сводка отправлена вручную за ${clock.date}.`,
@@ -8608,33 +8615,51 @@ function parseStoredDailySummarySnapshotR271(row, windowKey) {
   } catch (_) { return null; }
 }
 
+function normalizeDailySummarySnapshotIdR366(value) {
+  const id = cleanPlainText(value || '', 120);
+  return /^[a-z0-9][a-z0-9:_-]{5,119}$/i.test(id) ? id : '';
+}
+async function findExactDailySummarySnapshotR366(db, window, snapshotId) {
+  const safeId = normalizeDailySummarySnapshotIdR366(snapshotId);
+  if (!safeId) return null;
+  const row = await getPushState(db, `daily-owner-summary-push-snapshot:${safeId}`).catch(() => null);
+  const parsed = parseStoredDailySummarySnapshotR271(row, window.key);
+  return parsed ? { ...parsed, snapshotId:safeId } : null;
+}
+
 async function findDailySummarySnapshotR271(db, window) {
+  const searchEnd = new Date(Date.parse(window.endAt) + 86400000).toISOString();
+  const rows = await db.prepare(`
+    SELECT details_json AS detailsJson, message, created_at AS createdAt, source
+    FROM push_history
+    WHERE type='daily-summary'
+      AND status='sent'
+      AND datetime(created_at) >= datetime(?1)
+      AND datetime(created_at) < datetime(?2)
+    ORDER BY datetime(created_at) DESC
+    LIMIT 24
+  `).bind(window.startAt, searchEnd).all();
+
+  for (const row of rows?.results || []) {
+    const fromDetails = parseDailySummaryMetricsForWindow(row, window.key);
+    const fromMessage = parseDailySummaryMessageMetrics(row);
+    const metrics = mergeDailyMetrics(fromDetails, fromMessage);
+    if (Object.keys(metrics).length) {
+      return { metrics, sentAt:row.createdAt || '', source:`${cleanPlainText(row.source || 'push-history',40)}-sent-r366` };
+    }
+  }
+
   const stored = parseStoredDailySummarySnapshotR271(
     await getPushState(db, `daily-owner-summary-window:${window.key}`).catch(() => null),
     window.key
   );
   if (stored) return stored;
 
-  const searchEnd = new Date(Date.parse(window.endAt) + 86400000).toISOString();
-  const rows = await db.prepare(`
-    SELECT details_json AS detailsJson, created_at AS createdAt
-    FROM push_history
-    WHERE type='daily-summary'
-      AND source='central-cron'
-      AND status='sent'
-      AND datetime(created_at) >= datetime(?1)
-      AND datetime(created_at) < datetime(?2)
-    ORDER BY datetime(created_at) DESC
-    LIMIT 12
-  `).bind(window.startAt, searchEnd).all();
-
-  for (const row of rows?.results || []) {
-    const metrics = parseDailySummaryMetricsForWindow(row, window.key);
-    if (Object.keys(metrics).length) {
-      return { metrics, sentAt:row.createdAt || '', source:'central-cron-history' };
-    }
-  }
-  return null;
+  const latestStored = parseStoredDailySummarySnapshotR271(
+    await getPushState(db, 'daily-owner-summary-last-metrics').catch(() => null),
+    window.key
+  );
+  return latestStored || null;
 }
 
 async function handleControlHomePushSnapshotR271(db, window) {
@@ -8683,12 +8708,47 @@ async function handleControlHome(request, env) {
   const requestedPushWindow = pushSnapshotRequested
     ? getBratislavaSummaryWindowByKeyR271(requestUrl.searchParams.get('window'))
     : null;
+  const requestedPushSnapshotId = pushSnapshotRequested
+    ? normalizeDailySummarySnapshotIdR366(requestUrl.searchParams.get('snapshot'))
+    : '';
   const window = getBratislavaSummaryWindow();
   await Promise.all([ensurePushAutomationSchema(db), ensureCommentsV4Schema(db), ensurePlatformAnalyticsSchema(db), ensureControlV1Schema(db), ensureSiteMetricsSchema(db)]);
   if (pushSnapshotRequested && !requestedPushWindow) {
     return json({ ok:false, error:'invalid-push-summary-window' }, 400);
   }
-  if (requestedPushWindow) return await handleControlHomePushSnapshotR271(db, requestedPushWindow);
+  if (requestedPushWindow) {
+    if (requestedPushSnapshotId) {
+      const exact = await findExactDailySummarySnapshotR366(db, requestedPushWindow, requestedPushSnapshotId);
+      if (exact) {
+        const activityResult = await db.prepare(`
+          SELECT id, type, source, audience, title, message, url,
+                 video_id AS videoId, video_title AS videoTitle,
+                 status, created_at AS createdAt
+          FROM push_history
+          WHERE type IN ('youtube-comment','youtube-comment-count','youtube-subscriber','youtube-subscriber-count','youtube-like','site-subscriber','comment-live','comment-pending','auto-release','auto-release-retry','release-publish')
+            AND datetime(created_at) >= datetime(?1)
+            AND datetime(created_at) < datetime(?2)
+          ORDER BY datetime(created_at) DESC
+          LIMIT 200
+        `).bind(requestedPushWindow.startAt, requestedPushWindow.endAt).all();
+        return json({
+          ok:true,
+          period:'06:05-auto-cycle',
+          windowKey:requestedPushWindow.key,
+          windowStartAt:requestedPushWindow.startAt,
+          windowEndAt:requestedPushWindow.endAt,
+          summary:controlHomeSummaryFromDailyMetricsR271(exact.metrics),
+          activity:activityResult?.results || [],
+          summarySource:'push-exact-r366',
+          summaryView:'completed-push',
+          pushSnapshotId:requestedPushSnapshotId,
+          pushSentAt:exact.sentAt || '',
+          updatedAt:exact.sentAt || new Date().toISOString()
+        });
+      }
+    }
+    return await handleControlHomePushSnapshotR271(db, requestedPushWindow);
+  }
   // R260 DAILY ACCUMULATOR: the screen uses one Bratislava window, 06:05 → next 06:05.
   // Sending a push only records a checkpoint. It never resets counters; only the window key changes at 06:05.
   const [siteSubscribers, siteComments, siteLikes, youtubeEvents, youtubeLikeRows, youtubeSubscriberRows, releases, latestYoutubeState, activityResult, ytLatest, ytBaselineBefore, ytBaselineAfter, gaLatest, gaBaselineBefore, gaBaselineAfter, gaRollover, automationAt, automationStatus, automationSummary, siteLive, siteWindow, latestDailySummaryState, latestDailySummaryPush, latestDailySummaryLog] = await Promise.all([

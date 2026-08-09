@@ -4,9 +4,9 @@
   if (window.__ANDRIK_VERSION_SYNC_R356__) return;
   window.__ANDRIK_VERSION_SYNC_R356__ = true;
 
-  const RELEASE = 'R364';
+  const RELEASE = 'R367';
   const RUNTIME = '55.00-r356';
-  const FULL = 'Live Web AI · ANDRIK · v55.00 LIVE WEB AI FINAL R364';
+  const FULL = 'Live Web AI · ANDRIK · v55.00 LIVE WEB AI FINAL R367';
   let applying = false;
 
   const isRoot = node => node === document.documentElement || node === document.body;
@@ -61,14 +61,14 @@
 
       window.ANDRIK_CONTROL_RELEASE = Object.freeze({
         short: RELEASE,
-        number: 364,
+        number: 367,
         version: '55.00',
-        full: 'v55.00 LIVE WEB AI FINAL R364',
-        build: 'R364 SOFT WIDE COUNTRY PULSE',
+        full: 'v55.00 LIVE WEB AI FINAL R367',
+        build: 'R367 SOFT WIDE COUNTRY PULSE',
         date: '09.08.2026'
       });
-      window.ANDRIK_CONTROL_VERSION = '55.00 LIVE WEB AI FINAL R364';
-      window.ANDRIK_CONTROL_BUILD = 'R364 SOFT WIDE COUNTRY PULSE';
+      window.ANDRIK_CONTROL_VERSION = '55.00 LIVE WEB AI FINAL R367';
+      window.ANDRIK_CONTROL_BUILD = 'R367 SOFT WIDE COUNTRY PULSE';
       try { localStorage.setItem('andrik-control-display-version', RUNTIME); } catch (_) {}
       window.dispatchEvent(new CustomEvent('andrik-control-version-ready', {detail: window.ANDRIK_CONTROL_RELEASE}));
     } finally {

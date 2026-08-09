@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786290850053-c45338de89",
-  "release": "R364",
-  "archiveName": "R364-R361-MAP-R363-SUMMARY-R277-YELLOW-PULSE-SAFE-FULL.zip",
-  "sourceHead": "be19e1635f490884325e3c4b9c29645e44641c3d",
-  "backupSha": "be19e1635f490884325e3c4b9c29645e44641c3d",
-  "backupTag": "control-backup-20260809155406-be19e16-r364-129d8",
+  "operationId": "publish-1786292684418-1486a2d79c",
+  "release": "R367",
+  "archiveName": "R367-R366-TEMP-CITY-NAME-LABELS-SAFE-FULL.zip",
+  "sourceHead": "55c78e49a8bb3931e2f8116166221fbfed5547d7",
+  "backupSha": "55c78e49a8bb3931e2f8116166221fbfed5547d7",
+  "backupTag": "control-backup-20260809162441-55c78e4-r367-667a7",
   "autoRecovery": true,
-  "generatedAt": "2026-08-09T15:54:10.053Z"
+  "generatedAt": "2026-08-09T16:24:44.418Z"
 }

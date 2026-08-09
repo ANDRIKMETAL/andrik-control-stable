@@ -11,6 +11,8 @@
   const LOCATION_PARAMS=new URLSearchParams(location.search);
   const PUSH_SUMMARY_WINDOW_RAW=String(LOCATION_PARAMS.get('summaryWindow')||'');
   const PUSH_SUMMARY_WINDOW_KEY=/^\d{4}-\d{2}-\d{2}$/.test(PUSH_SUMMARY_WINDOW_RAW)?PUSH_SUMMARY_WINDOW_RAW:'';
+  const PUSH_SUMMARY_SNAPSHOT_RAW=String(LOCATION_PARAMS.get('summarySnapshot')||'');
+  const PUSH_SUMMARY_SNAPSHOT_ID=/^[a-z0-9][a-z0-9:_-]{5,119}$/i.test(PUSH_SUMMARY_SNAPSHOT_RAW)?PUSH_SUMMARY_SNAPSHOT_RAW:'';
   const IS_PUSH_SUMMARY_VIEW=LOCATION_PARAMS.get('source')==='push'&&Boolean(PUSH_SUMMARY_WINDOW_KEY);
   const eventMeta=type=>({
     'youtube-like':['👍','Новый лайк YouTube'],
@@ -40,7 +42,7 @@
   const HOME_CACHE_KEY_LIVE='andrik-control-home-last-good-r136';
   const HOME_CACHE_KEY_PUSH_BASE='andrik-control-home-push-r305';
   function activeViewWindowKey(){return IS_PUSH_SUMMARY_VIEW?PUSH_SUMMARY_WINDOW_KEY:currentSummaryWindowKey()}
-  function homeCacheKey(){return IS_PUSH_SUMMARY_VIEW?`${HOME_CACHE_KEY_PUSH_BASE}:${activeViewWindowKey()}`:HOME_CACHE_KEY_LIVE}
+  function homeCacheKey(){return IS_PUSH_SUMMARY_VIEW?`${HOME_CACHE_KEY_PUSH_BASE}:${activeViewWindowKey()}:${PUSH_SUMMARY_SNAPSHOT_ID||'legacy-r366'}`:HOME_CACHE_KEY_LIVE}
   function saveHomeCache(data){try{localStorage.setItem(homeCacheKey(),JSON.stringify({savedAt:new Date().toISOString(),data}))}catch(_){}}
   function readHomeCache(){try{const raw=localStorage.getItem(homeCacheKey());if(!raw)return null;const parsed=JSON.parse(raw);return parsed?.data?parsed:null}catch(_){return null}}
 
@@ -172,7 +174,7 @@
     const sourceBox=$('controlSummarySource');
     if(sourceBox){
       sourceBox.hidden=!pushSnapshot;
-      sourceBox.textContent=pushSnapshot?'Сводка из push · завершённый период':'';
+      sourceBox.textContent=pushSnapshot?'Сводка из push · данные этого уведомления':'';
     }
     const s=data.summary||{};
     const yDelta=Number(s.youtubeViewDelta||0);
@@ -226,12 +228,12 @@
     if(loading)return;
     loading=true;
   if(summaryMode){
-    const cached=readHomeCache();
+    const cached=IS_PUSH_SUMMARY_VIEW?null:readHomeCache();
     if(cachedForCurrentWindow(cached)){
       renderSummary(cached.data);
       renderActivity(cached.data.activity||[]);
     }else{
-      try{localStorage.removeItem(homeCacheKey())}catch(_){}
+      if(!IS_PUSH_SUMMARY_VIEW){try{localStorage.removeItem(homeCacheKey())}catch(_){}}
       const empty=emptySummaryPayload();
       renderSummary(empty);
       renderActivity([]);
@@ -245,8 +247,8 @@
     else shell?.classList.remove('is-refreshing');
     try{
       const query=new URLSearchParams({v:'55.00-r305'});
-      if(forceLive&&!IS_PUSH_SUMMARY_VIEW)query.set('refresh','1');
-      if(IS_PUSH_SUMMARY_VIEW){query.set('source','push');query.set('window',PUSH_SUMMARY_WINDOW_KEY)}
+      if(forceLive||IS_PUSH_SUMMARY_VIEW)query.set('refresh','1');
+      if(IS_PUSH_SUMMARY_VIEW){query.set('source','push');query.set('window',PUSH_SUMMARY_WINDOW_KEY);if(PUSH_SUMMARY_SNAPSHOT_ID)query.set('snapshot',PUSH_SUMMARY_SNAPSHOT_ID)}
       let data=await api(`/api/control/home?${query.toString()}`,{timeoutMs:forceLive&&!IS_PUSH_SUMMARY_VIEW?16000:10000});
       if(!forceLive&&!IS_PUSH_SUMMARY_VIEW){
         const summary=data?.summary||{};
