@@ -1,0 +1,30 @@
+ANDRIK Control — R386
+Date: 09.08.2026
+Base: R385
+
+Fix:
+1. «История уведомлений» is now a REAL whole-card spoiler/details control.
+   - collapsed by default
+   - compact row shows title + dynamic record count + «Показать»
+   - tap opens the history
+   - open state shows «Скрыть»
+2. The full loaded notification list scrolls INSIDE the opened spoiler.
+   - max-height 58vh / 620px desktop
+   - 56vh mobile
+   - touch momentum scrolling + contained overscroll
+3. Discussion footer updated to R386 with note:
+   «История уведомлений — настоящий спойлер + внутренняя прокрутка · 09.08.2026».
+4. Added cache-busted control-version-sync-r386.js and updated active page references/meta fallbacks.
+
+Preserved:
+- R384 no yellow-halo return stall
+- R383 yellow country card back-to-world
+- R382 remembered map layer
+- R381 direct country-list map opening
+- R380 ISO/flags/deep maps
+
+Validation:
+- notification history details is NOT open by default
+- only one adminPushHistorySpoiler / adminPushHistory / adminPushHistoryCount id
+- JS syntax checks planned
+- ZIP integrity planned
