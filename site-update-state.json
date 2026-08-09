@@ -1,14 +1,14 @@
 {
   "schema": 1,
   "updaterVersion": "55.00-r351",
-  "operation": "reinstall",
-  "reinstall": true,
-  "operationId": "reinstall-1786284019675-abf08fe239",
-  "release": "R351",
-  "archiveName": "R351-R350-MAP-SMOOTH-COUNTRY-LIST-SCROLL-SAFE-FULL.zip",
-  "sourceHead": "e1a1745ab7dd6693d4ba0c676993b02e7b94d981",
-  "backupSha": "e1a1745ab7dd6693d4ba0c676993b02e7b94d981",
-  "backupTag": "control-backup-20260809140015-e1a1745-r351-6af95",
+  "operation": "publish",
+  "reinstall": false,
+  "operationId": "publish-1786284893274-255f33eef5",
+  "release": "R352",
+  "archiveName": "R352-R351-YOUTUBE-RED-DOTS-BRIGHT-COUNTRY-POINT-SCROLL-FIX-SAFE-FULL.zip",
+  "sourceHead": "51651b7e4c94a39be4450fe295f3e8681a516970",
+  "backupSha": "51651b7e4c94a39be4450fe295f3e8681a516970",
+  "backupTag": "control-backup-20260809141449-51651b7-r352-a7da3",
   "autoRecovery": true,
-  "generatedAt": "2026-08-09T14:00:19.675Z"
+  "generatedAt": "2026-08-09T14:14:53.274Z"
 }

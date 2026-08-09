@@ -1,0 +1,38 @@
+/* ANDRIK R352 — Android-proof full-country-list scroll. */
+body.andrik-country-overlay-r258-open{
+  overflow:hidden!important;
+  overscroll-behavior:none!important;
+  touch-action:pan-y!important;
+}
+body .country-scroll-overlay-r258{
+  position:fixed!important;inset:0!important;
+  width:100vw!important;height:100dvh!important;min-height:100dvh!important;max-height:100dvh!important;
+  overflow:hidden!important;overscroll-behavior:none!important;touch-action:pan-y!important;
+}
+body .country-scroll-overlay-r258.is-open{display:flex!important;flex-direction:column!important;}
+body .country-scroll-overlay-r258.is-open>#worldCountries.is-expanded{
+  position:relative!important;
+  display:grid!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  flex:1 1 0!important;
+  width:100%!important;
+  height:0!important;
+  min-height:0!important;
+  max-height:none!important;
+  margin:0!important;
+  padding:0 12px calc(30px + env(safe-area-inset-bottom)) 0!important;
+  overflow-y:scroll!important;
+  overflow-x:hidden!important;
+  overscroll-behavior-y:contain!important;
+  -webkit-overflow-scrolling:touch!important;
+  touch-action:pan-y!important;
+  scroll-behavior:auto!important;
+  pointer-events:auto!important;
+  align-content:start!important;
+  scrollbar-width:auto!important;
+  scrollbar-color:#70efb1 rgba(15,39,50,.85)!important;
+}
+body .country-scroll-overlay-r258.is-open>#worldCountries.is-expanded *{touch-action:pan-y!important;}
+body .country-scroll-overlay-r258.is-open>#worldCountries.is-expanded::-webkit-scrollbar{width:8px!important}
+body .country-scroll-overlay-r258.is-open>#worldCountries.is-expanded::-webkit-scrollbar-track{background:rgba(15,39,50,.72)!important;border-radius:999px!important}
+body .country-scroll-overlay-r258.is-open>#worldCountries.is-expanded::-webkit-scrollbar-thumb{background:linear-gradient(180deg,#a8f3ff,#70efb1)!important;border-radius:999px!important}
