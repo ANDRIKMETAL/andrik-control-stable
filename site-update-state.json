@@ -1,14 +1,14 @@
 {
   "schema": 1,
-  "updaterVersion": "55.00-r342",
+  "updaterVersion": "55.00-r344",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786280590813-bb12c8634a",
-  "release": "R342",
-  "archiveName": "R344-R343-DIRECT-COUNTRY-FAST-MAP-BUTTON-FIT-SAFE-FULL.zip",
-  "sourceHead": "6fb6c32de316789d910737fefa1b0449c8c8114e",
-  "backupSha": "6fb6c32de316789d910737fefa1b0449c8c8114e",
-  "backupTag": "control-backup-20260809130306-6fb6c32-r342-dd1b2",
+  "operationId": "publish-1786281096966-7527dc97b8",
+  "release": "R345",
+  "archiveName": "R345-R344-COUNTRY-ZOOM-PULSE-SMOOTH-BUTTON-SAFE-FULL.zip",
+  "sourceHead": "1a1737b271b84e175b543e8026c60695c85ca282",
+  "backupSha": "1a1737b271b84e175b543e8026c60695c85ca282",
+  "backupTag": "control-backup-20260809131132-1a1737b-r345-65ace",
   "autoRecovery": true,
-  "generatedAt": "2026-08-09T13:03:10.813Z"
+  "generatedAt": "2026-08-09T13:11:36.966Z"
 }
