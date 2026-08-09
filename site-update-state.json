@@ -1,14 +1,14 @@
 {
   "schema": 1,
-  "updaterVersion": "55.00-r352",
+  "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786286961150-50c84b1d24",
-  "release": "R356",
-  "archiveName": "R356-R354-SCROLL-RESTORE-YOUTUBE-RED-RENDER-VERSION-FIX-SAFE-FULL.zip",
-  "sourceHead": "947c50be05cdc07c9da2bee87f6b8c518120265f",
-  "backupSha": "947c50be05cdc07c9da2bee87f6b8c518120265f",
-  "backupTag": "control-backup-20260809144917-947c50b-r356-2a8a2",
+  "operationId": "publish-1786287359880-cb743af443",
+  "release": "R357",
+  "archiveName": "R357-R356-YOUTUBE-RED-HARD-OVERRIDE-SAFE-FULL.zip",
+  "sourceHead": "b465dd52d60a9ea48dd593430650b253f4287b6a",
+  "backupSha": "b465dd52d60a9ea48dd593430650b253f4287b6a",
+  "backupTag": "control-backup-20260809145555-b465dd5-r357-cda73",
   "autoRecovery": true,
-  "generatedAt": "2026-08-09T14:49:21.150Z"
+  "generatedAt": "2026-08-09T14:55:59.880Z"
 }

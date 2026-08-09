@@ -1,0 +1,21 @@
+/* ANDRIK R357 — final YouTube red/pink pulse. */
+@keyframes andrikYoutubeRedPulseR357{
+  0%,100%{
+    transform:scale(.93);
+    opacity:.92;
+    box-shadow:0 0 0 4px rgba(255,91,113,.13),0 0 18px rgba(255,66,94,.94),0 0 32px rgba(255,42,80,.40)
+  }
+  50%{
+    transform:scale(1.22);
+    opacity:1;
+    box-shadow:0 0 0 9px rgba(255,91,113,.045),0 0 31px rgba(255,58,89,1),0 0 48px rgba(255,34,73,.55)
+  }
+}
+#worldMap.is-youtube-red-r357 .world-map-dot i,
+#worldMap.is-youtube-red-r357 .world-map-city-dot i{
+  background:#ff5f75!important;
+  border-color:rgba(255,220,226,.88)!important;
+  box-shadow:0 0 0 5px rgba(255,86,111,.14),0 0 22px rgba(255,66,94,.98),0 0 40px rgba(255,40,78,.48)!important;
+  filter:none!important;
+  animation:andrikYoutubeRedPulseR357 2.55s ease-in-out infinite!important;
+}
