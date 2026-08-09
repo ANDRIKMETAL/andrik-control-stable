@@ -23,7 +23,20 @@
     loaded:false,
     updatedAt:''
   };
-  let active = 'all';
+  const LAYER_STORAGE_KEY_R382 = 'andrik-ecosystem-last-layer-r382';
+  const VALID_LAYERS_R382 = ['all','site','youtube','music','push'];
+  const readSavedLayerR382 = () => {
+    try {
+      const saved = String(localStorage.getItem(LAYER_STORAGE_KEY_R382) || '').trim().toLowerCase();
+      return VALID_LAYERS_R382.includes(saved) ? saved : 'all';
+    } catch (_) { return 'all'; }
+  };
+  const rememberLayerR382 = layer => {
+    if (!VALID_LAYERS_R382.includes(layer)) return;
+    try { localStorage.setItem(LAYER_STORAGE_KEY_R382, layer); } catch (_) {}
+  };
+
+  let active = readSavedLayerR382();
   let requestPromise = null;
   window.__andrikEcosystemActiveLayer = active;
 
@@ -237,8 +250,9 @@
   };
 
   const setLayer = layer => {
-    if (!['all','site','youtube','music','push'].includes(layer)) return;
+    if (!VALID_LAYERS_R382.includes(layer)) return;
     active = layer;
+    rememberLayerR382(active);
     window.__andrikEcosystemActiveLayer = active;
     applyLayer(true);
     if (!state.loaded && layer !== 'youtube') void loadEcosystem();
@@ -304,6 +318,7 @@
   readCaches();
   rebuildAll();
   bindButtons();
+  rememberLayerR382(active);
   applyLayer();
   updateAccessoryLabels();
   emitLayerChanged();
@@ -321,8 +336,9 @@
   if (window.__andrikLatestCountryGrowth) ingestYoutubeGrowth(window.__andrikLatestCountryGrowth);
   window.addEventListener('andrik:country-growth-data',event=>ingestYoutubeGrowth(event.detail||{}));
   window.addEventListener('andrik:country-focus-changed',()=>requestAnimationFrame(decorateCountry));
-  const openAllOverview = () => {
-    active = 'all';
+  const openRememberedOverviewR382 = () => {
+    // Always return to the WORLD overview, but preserve the user's last map layer.
+    active = readSavedLayerR382();
     window.__andrikEcosystemActiveLayer = active;
     try { runtime.clearSelection?.(); } catch (_) {}
     document.body?.classList.remove('is-country-focus-active','is-country-deep-active','is-country-returning');
@@ -333,9 +349,15 @@
     applyLayer(true);
     window.dispatchEvent(new CustomEvent('andrik:country-focus-changed',{detail:{focused:false,country:''}}));
     window.dispatchEvent(new CustomEvent('andrik:country-deep-changed',{detail:{deep:false,country:''}}));
-    if (!state.loaded) void loadEcosystem();
+    if (!state.loaded && active !== 'youtube') void loadEcosystem();
   };
-  window.addEventListener('pageshow',openAllOverview,{passive:true});
+  window.addEventListener('pageshow',openRememberedOverviewR382,{passive:true});
+
+  // Save once more when the page/app is being hidden. This covers Android PWA/back navigation.
+  document.addEventListener('visibilitychange',()=>{
+    if (document.visibilityState === 'hidden') rememberLayerR382(active);
+  },{passive:true});
+  window.addEventListener('pagehide',()=>rememberLayerR382(active),{passive:true});
   new MutationObserver(()=>{bindButtons();if(runtime.getSelection?.())requestAnimationFrame(decorateCountry)}).observe(map,{childList:true,subtree:false});
   void loadEcosystem();
 

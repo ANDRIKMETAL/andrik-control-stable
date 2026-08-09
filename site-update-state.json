@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786305033531-02adbcec71",
-  "release": "R380",
-  "archiveName": "R380-R379-CENTRAL-COUNTRY-ISO-FLAGS-WORLD-DOTS-DEEP-MAP-FIX-SAFE-FULL.zip",
-  "sourceHead": "d52867310edd494b8bf9801036c5da0a5f99d2d4",
-  "backupSha": "d52867310edd494b8bf9801036c5da0a5f99d2d4",
-  "backupTag": "control-backup-20260809195030-d528673-r380-23888",
+  "operationId": "publish-1786306369180-38df40baeb",
+  "release": "R382",
+  "archiveName": "R382-R381-REMEMBER-LAST-MAP-LAYER-SAFE-FULL.zip",
+  "sourceHead": "f8e2eb2219b521ad1de7560599ae3c4f64c522f7",
+  "backupSha": "f8e2eb2219b521ad1de7560599ae3c4f64c522f7",
+  "backupTag": "control-backup-20260809201244-f8e2eb2-r382-42c7b",
   "autoRecovery": true,
-  "generatedAt": "2026-08-09T19:50:33.531Z"
+  "generatedAt": "2026-08-09T20:12:49.180Z"
 }
