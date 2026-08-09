@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="ru" translate="no" class="notranslate"><head>
-<meta name="andrik-control-release" content="R352">
+<meta name="andrik-control-release" content="R353">
 <link rel="stylesheet" href="/assets/control-sleep-mode-r193.css?v=55.00-r193"><script defer src="/assets/control-sleep-mode-r193.js?v=55.00-r193"></script>
 
 <meta name="google" content="notranslate"><meta charset="utf-8"/>
@@ -4038,11 +4038,91 @@ body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #mapFocusAct
 <link rel="stylesheet" href="/assets/map-total-compact-r348.css?v=55.00-r350">
 <script defer src="/assets/ecosystem-map-r347.js?v=55.00-r347"></script>
 <script defer src="/assets/country-shapes-r341.js?v=55.00-r341"></script>
-<link rel="stylesheet" href="/assets/country-map-r352.css?v=55.00-r352">
-<script defer src="/assets/country-map-r352.js?v=55.00-r352"></script>
+<link rel="stylesheet" href="/assets/country-map-r353.css?v=55.00-r353">
+<script defer src="/assets/country-map-r353.js?v=55.00-r353"></script>
 <link rel="stylesheet" href="/assets/map-frame-scroll-r351.css?v=55.00-r351">
-<link rel="stylesheet" href="/assets/map-visual-r352.css?v=55.00-r352">
-<link rel="stylesheet" href="/assets/country-list-scroll-r352.css?v=55.00-r352">
-<script defer src="/assets/country-list-scroll-r352.js?v=55.00-r352"></script>
-<script defer src="/assets/control-version-sync-r352.js?v=55.00-r352"></script>
+<link rel="stylesheet" href="/assets/map-visual-r353.css?v=55.00-r353">
+<link rel="stylesheet" href="/assets/country-list-scroll-r353.css?v=55.00-r353">
+<script defer src="/assets/country-list-scroll-r353.js?v=55.00-r353"></script>
+<script defer src="/assets/control-version-sync-r353.js?v=55.00-r353"></script>
 </body></html>
+
+<style id="andrik-r353-country-scroll-final">
+body.andrik-country-overlay-r258-open{
+  overflow:hidden!important;
+  overscroll-behavior:none!important;
+  touch-action:auto!important;
+}
+.country-scroll-overlay-r258{
+  overflow-y:auto!important;
+  overflow-x:hidden!important;
+  touch-action:pan-y!important;
+  overscroll-behavior-y:contain!important;
+  -webkit-overflow-scrolling:touch!important;
+}
+.country-scroll-overlay-r258.is-open{
+  display:block!important;
+}
+body .country-scroll-overlay-r258>#worldCountries.is-expanded{
+  display:grid!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  width:100%!important;
+  height:auto!important;
+  min-height:max-content!important;
+  max-height:none!important;
+  overflow:visible!important;
+  touch-action:pan-y!important;
+  padding-bottom:calc(42px + env(safe-area-inset-bottom))!important;
+}
+body .country-scroll-overlay-r258>#worldCountries.is-expanded,
+body .country-scroll-overlay-r258>#worldCountries.is-expanded *{
+  touch-action:pan-y!important;
+}
+</style>
+<script id="andrik-r353-country-scroll-final-js">
+(()=>{
+  'use strict';
+  const bind=()=>{
+    const overlay=document.querySelector('.country-scroll-overlay-r258');
+    const list=document.getElementById('worldCountries');
+    if(!overlay||!list||overlay.dataset.r353==='1')return;
+    overlay.dataset.r353='1';
+    // Stop map/admin swipe handlers, but leave native vertical scrolling untouched.
+    ['pointerdown','pointermove','pointerup','touchstart','touchmove','touchend'].forEach(type=>{
+      overlay.addEventListener(type,e=>{
+        if(!overlay.classList.contains('is-open'))return;
+        e.stopPropagation();
+      },{capture:true,passive:true});
+    });
+    // Ensure every opening starts at the top and overlay is the scroll owner.
+    const mo=new MutationObserver(()=>{
+      if(overlay.classList.contains('is-open')){
+        overlay.scrollTop=0;
+        list.style.overflow='visible';
+      }
+    });
+    mo.observe(overlay,{attributes:true,attributeFilter:['class']});
+  };
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind,{once:true});else bind();
+})();
+</script>
+
+<style id="andrik-r353-map-point-drift">
+@keyframes andrikPointDriftA{0%,100%{transform:translate3d(0,0,0) scale(1)}25%{transform:translate3d(2px,-1px,0) scale(1.035)}50%{transform:translate3d(-1px,2px,0) scale(.985)}75%{transform:translate3d(1px,1px,0) scale(1.02)}}
+@keyframes andrikPointDriftB{0%,100%{transform:translate3d(0,0,0) scale(1)}33%{transform:translate3d(-2px,1px,0) scale(1.025)}66%{transform:translate3d(1px,-2px,0) scale(.99)}}
+.analytics-map-top .map-point,
+.analytics-map-top .world-point,
+.analytics-map-top [class*="map-dot"],
+.analytics-map-top [class*="world-dot"],
+.analytics-map-top [class*="activity-dot"]{
+  transform-origin:center!important;
+  will-change:transform,filter!important;
+  animation:andrikPointDriftA 8.8s ease-in-out infinite!important;
+}
+.analytics-map-top .map-point:nth-of-type(2n),
+.analytics-map-top .world-point:nth-of-type(2n),
+.analytics-map-top [class*="map-dot"]:nth-of-type(2n),
+.analytics-map-top [class*="world-dot"]:nth-of-type(2n),
+.analytics-map-top [class*="activity-dot"]:nth-of-type(2n){animation-name:andrikPointDriftB!important;animation-duration:10.6s!important;animation-delay:-3.2s!important}
+@media (prefers-reduced-motion:reduce){.analytics-map-top .map-point,.analytics-map-top .world-point,.analytics-map-top [class*="map-dot"],.analytics-map-top [class*="world-dot"],.analytics-map-top [class*="activity-dot"]{animation:none!important}}
+</style>

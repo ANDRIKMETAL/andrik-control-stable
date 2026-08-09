@@ -1,13 +1,13 @@
-/* ANDRIK R352 — overlay-level manual touch scrolling, before old map gestures can intercept. */
+/* ANDRIK R353 — overlay-level manual touch scrolling, before old map gestures can intercept. */
 (()=>{
  'use strict';
- if(window.__ANDRIK_COUNTRY_SCROLL_R352__)return;
- window.__ANDRIK_COUNTRY_SCROLL_R352__=true;
+ if(window.__ANDRIK_COUNTRY_SCROLL_R353__)return;
+ window.__ANDRIK_COUNTRY_SCROLL_R353__=true;
  const bind=()=>{
    const list=document.getElementById('worldCountries');
    const overlay=document.querySelector('.country-scroll-overlay-r258');
-   if(!list||!overlay||overlay.dataset.r352ScrollBound==='1')return false;
-   overlay.dataset.r352ScrollBound='1';
+   if(!list||!overlay||overlay.dataset.r353ScrollBound==='1')return false;
+   overlay.dataset.r353ScrollBound='1';
    const active=()=>overlay.classList.contains('is-open')&&list.classList.contains('is-expanded')&&list.parentNode===overlay;
    let tracking=false,startY=0,startScroll=0,moved=false;
    overlay.addEventListener('touchstart',e=>{

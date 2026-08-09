@@ -1,14 +1,14 @@
 {
   "schema": 1,
-  "updaterVersion": "55.00-r351",
+  "updaterVersion": "55.00-r352",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786284893274-255f33eef5",
-  "release": "R352",
-  "archiveName": "R352-R351-YOUTUBE-RED-DOTS-BRIGHT-COUNTRY-POINT-SCROLL-FIX-SAFE-FULL.zip",
-  "sourceHead": "51651b7e4c94a39be4450fe295f3e8681a516970",
-  "backupSha": "51651b7e4c94a39be4450fe295f3e8681a516970",
-  "backupTag": "control-backup-20260809141449-51651b7-r352-a7da3",
+  "operationId": "publish-1786285341142-2eab5ff22b",
+  "release": "R353",
+  "archiveName": "R353-R352-MAP-POINT-DRIFT-COUNTRY-SCROLL-ANDROID-FIX-SAFE-FULL.zip",
+  "sourceHead": "2b7f3ce0a416e4a920c0c9e3c4d5df2417668777",
+  "backupSha": "2b7f3ce0a416e4a920c0c9e3c4d5df2417668777",
+  "backupTag": "control-backup-20260809142217-2b7f3ce-r353-89291",
   "autoRecovery": true,
-  "generatedAt": "2026-08-09T14:14:53.274Z"
+  "generatedAt": "2026-08-09T14:22:21.142Z"
 }
