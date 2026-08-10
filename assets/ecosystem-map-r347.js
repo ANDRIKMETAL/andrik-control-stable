@@ -1,4 +1,4 @@
-/* ANDRIK R347 — default ALL ecosystem map on every analytics opening. */
+/* ANDRIK R391 — ecosystem map + true YouTube lifetime counter on world overview. */
 (() => {
   'use strict';
   if (window.__ANDRIK_ECOSYSTEM_MAP_R347__) return;
@@ -21,7 +21,8 @@
     recent:[],
     breakdown:new Map(),
     loaded:false,
-    updatedAt:''
+    updatedAt:'',
+    youtubeLifetimeViews:0
   };
   const LAYER_STORAGE_KEY_R382 = 'andrik-ecosystem-last-layer-r382';
   const VALID_LAYERS_R382 = ['all','site','youtube','music','push'];
@@ -113,7 +114,7 @@
     const telegram = Number(state.links['telegram-open'] || 0);
     const common = {
       all:{
-        periodText:`Вся экосистема ANDRIK · 30 дней + LIVE 60 мин${telegram?` · Telegram ${fmt(telegram)}`:''}.`,metricLabel:'сигналов',totalTitle:'Суммарные сигналы экосистемы',
+        periodText:`Вся экосистема ANDRIK · карта 30 дней + LIVE 60 мин${telegram?` · Telegram ${fmt(telegram)}`:''} · 🎧 счётчик за всё время.`,metricLabel:'сигналов',totalTitle:'Просмотры ANDRIK на YouTube за всё время',
         growthEyeline:'ВСЯ ЭКОСИСТЕМА · ПОСЛЕДНИЕ 7 ДНЕЙ',growthTitle:'Топ стран по общей активности',growthSubtitle:'Сравнение суммарных сигналов с предыдущими 7 днями',
         monthlyEyeline:'АРХИВ · ВСЯ ЭКОСИСТЕМА',monthlyTitle:'Динамика общей активности',monthlyDescription:'Сохраняется максимальное значение суммарных сигналов, достигнутое в каждом месяце.',monthlyMetric:'сигналов',
         growthButtonTitle:'Активность стран экосистемы за 7 дней',calendarTitle:'График общей активности по месяцам'
@@ -170,7 +171,7 @@
     const layer = state[active] || state.youtube;
     const meta = layerMeta(active);
     const total = cleanRows(layer.rows).reduce((sum,row)=>sum+Math.max(0,Number(row.value||0)),0);
-    const detail = {layer:active,meta,rows:cleanRows(layer.rows),weekly:cleanWeekly(layer.weekly),previous:cleanWeekly(layer.previous),total,updatedAt:state.updatedAt||new Date().toISOString()};
+    const detail = {layer:active,meta,rows:cleanRows(layer.rows),weekly:cleanWeekly(layer.weekly),previous:cleanWeekly(layer.previous),total,youtubeLifetimeViews:state.youtubeLifetimeViews,updatedAt:state.updatedAt||new Date().toISOString()};
     window.__andrikEcosystemLayerDetail = detail;
     window.dispatchEvent(new CustomEvent('andrik:ecosystem-layer-changed',{detail}));
   };
@@ -269,6 +270,13 @@
 
   const ingestAudience = data => {
     const rows = data?.youtube?.studio?.countries || data?.youtube?.countries || [];
+    const lifetime = Math.max(0, Number(data?.youtube?.views || 0));
+    if (lifetime > 0) {
+      state.youtubeLifetimeViews = lifetime;
+      window.__andrikYoutubeLifetimeViews = lifetime;
+      try { localStorage.setItem('andrik-youtube-lifetime-views-r391', String(lifetime)); } catch (_) {}
+      window.dispatchEvent(new CustomEvent('andrik:youtube-lifetime-views',{detail:{views:lifetime,updatedAt:data?.youtube?.updatedAt||data?.updatedAt||new Date().toISOString()}}));
+    }
     if (Array.isArray(rows) && rows.length) state.youtube.rows = cleanRows(rows,'views');
     rebuildAll();
     if (active === 'youtube' || active === 'all') applyLayer();
@@ -315,6 +323,13 @@
     }
   }
 
+  try {
+    const cachedLifetimeR391 = Math.max(0, Number(localStorage.getItem('andrik-youtube-lifetime-views-r391') || 0));
+    if (cachedLifetimeR391 > 0) {
+      state.youtubeLifetimeViews = cachedLifetimeR391;
+      window.__andrikYoutubeLifetimeViews = cachedLifetimeR391;
+    }
+  } catch (_) {}
   readCaches();
   rebuildAll();
   bindButtons();

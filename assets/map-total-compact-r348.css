@@ -39,3 +39,11 @@ body.analytics-admin-page.analytics-v54-46-page:not(.is-country-focus-active):no
   body.analytics-admin-page.analytics-v54-46-page:not(.is-country-focus-active):not(.is-country-deep-active) .analytics-map-pane #worldMap .world-map-total span{font-size:.40rem!important}
   body.analytics-admin-page.analytics-v54-46-page:not(.is-country-focus-active):not(.is-country-deep-active) .analytics-map-pane #worldMap .world-map-total strong{font-size:.68rem!important}
 }
+
+/* R391 — lifetime label needs a few extra pixels only on the ALL overview. */
+body.analytics-admin-page.analytics-v54-46-page:not(.is-country-focus-active):not(.is-country-deep-active) .analytics-map-pane #worldMap[data-ecosystem-layer="all"] .world-map-total{
+  max-width:112px!important;
+}
+@media (max-width:390px) and (orientation:portrait){
+  body.analytics-admin-page.analytics-v54-46-page:not(.is-country-focus-active):not(.is-country-deep-active) .analytics-map-pane #worldMap[data-ecosystem-layer="all"] .world-map-total{max-width:106px!important;}
+}

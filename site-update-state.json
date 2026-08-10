@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786332631554-b4a06e18d6",
-  "release": "R390",
-  "archiveName": "R390-R389-MORNING-PUSH-SNAPSHOT-INSTANT-SUMMARY-VERSION-FIX-SAFE-FULL.zip",
-  "sourceHead": "b2d1f8d6a48916ea28b51e71053bd05840a5f02e",
-  "backupSha": "b2d1f8d6a48916ea28b51e71053bd05840a5f02e",
-  "backupTag": "control-backup-20260810033024-b2d1f8d-r390-1e6cb",
+  "operationId": "publish-1786343945075-51d02a07e7",
+  "release": "R391",
+  "archiveName": "R391-R390-LIFETIME-YOUTUBE-TOTAL-ON-WORLD-MAP-SAFE-FULL.zip",
+  "sourceHead": "e3433c84420cd87c9a076d9aefa402cab5a2c6ec",
+  "backupSha": "e3433c84420cd87c9a076d9aefa402cab5a2c6ec",
+  "backupTag": "control-backup-20260810063634-e3433c8-r391-47647",
   "autoRecovery": true,
-  "generatedAt": "2026-08-10T03:30:31.554Z"
+  "generatedAt": "2026-08-10T06:39:05.075Z"
 }
