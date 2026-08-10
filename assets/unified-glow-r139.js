@@ -70,9 +70,8 @@
       image.src = `${url.pathname}${url.search}`;
     });
 
-    document.querySelectorAll('.control-version-footer strong').forEach(node => {
-      node.textContent = 'Live Web AI · ANDRIK · v55.00 LIVE WEB AI FINAL R139';
-    });
+    // R389: visual glow must never own or downgrade the displayed Control build version.
+    // Version display is handled only by the current control-version-sync script.
 
     syncOwnerSession();
     loadPlayerBridge();
