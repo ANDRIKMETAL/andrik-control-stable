@@ -1,4 +1,4 @@
-/* ANDRIK R391 — display true lifetime YouTube views on ALL world layer without corrupting period archives. */
+/* ANDRIK R392 — display true lifetime YouTube views on ALL world layer without corrupting period archives. */
 (() => {
   'use strict';
 
@@ -13,7 +13,7 @@
   let lastTotal = null;
   let activeLayer = String(document.getElementById('worldMap')?.dataset?.ecosystemLayer || window.__andrikEcosystemActiveLayer || 'all').toLowerCase();
   let lifetimeViews = Math.max(0, Number(window.__andrikYoutubeLifetimeViews || 0));
-  try { lifetimeViews = Math.max(lifetimeViews, Number(localStorage.getItem('andrik-youtube-lifetime-views-r391') || 0)); } catch (_) {}
+  try { lifetimeViews = Math.max(lifetimeViews, Number(localStorage.getItem('andrik-youtube-lifetime-views-r392') || 0)); } catch (_) {}
 
   function readNumber(text) {
     const normalized = String(text || '').replace(/[^\d-]/g, '');
@@ -88,7 +88,7 @@
     if (next > 0) {
       lifetimeViews = next;
       window.__andrikYoutubeLifetimeViews = next;
-      try { localStorage.setItem('andrik-youtube-lifetime-views-r391', String(next)); } catch (_) {}
+      try { localStorage.setItem('andrik-youtube-lifetime-views-r392', String(next)); } catch (_) {}
     }
     scheduleUpdate();
   });

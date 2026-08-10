@@ -354,7 +354,7 @@
     if(showRefreshEffect)shell?.classList.add('is-refreshing');
     else shell?.classList.remove('is-refreshing');
     try{
-      const query=new URLSearchParams({v:'55.00-r390'});
+      const query=new URLSearchParams({v:'55.00-r392'});
       if(forceLive||IS_PUSH_SUMMARY_VIEW)query.set('refresh','1');
       if(IS_PUSH_SUMMARY_VIEW){query.set('source','push');query.set('window',PUSH_SUMMARY_WINDOW_KEY);if(PUSH_SUMMARY_SNAPSHOT_ID)query.set('snapshot',PUSH_SUMMARY_SNAPSHOT_ID)}
       let data=await api(`/api/control/home?${query.toString()}`,{timeoutMs:forceLive&&!IS_PUSH_SUMMARY_VIEW?20000:12000});
@@ -796,8 +796,8 @@
   shell?.addEventListener('pointercancel',()=>{applyPosition({animate:true});updatePullUi(0);resetGesture()});
   shell?.addEventListener('click',event=>{if(moved&&isInteractive(event.target)){event.preventDefault();event.stopPropagation()}moved=false},true);
   window.addEventListener('resize',()=>applyPosition({animate:false}));
-  document.addEventListener('visibilitychange',()=>{if(!document.hidden){updatePageState();if(summaryMode)load({silent:true,forceLive:!IS_PUSH_SUMMARY_VIEW})}});
-  if(summaryMode)window.setInterval(()=>{if(!document.hidden)load({silent:true,forceLive:!IS_PUSH_SUMMARY_VIEW})},300000);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden){updatePageState();if(summaryMode)load({silent:true,forceLive:false})}});
+  if(summaryMode)window.setInterval(()=>{if(!document.hidden)load({silent:true,forceLive:false})},300000);
   if(summaryMode&&!IS_PUSH_SUMMARY_VIEW)window.setInterval(()=>{
     const nextKey=currentSummaryWindowKey();
     if(nextKey===activeSummaryWindowKey)return;
@@ -806,7 +806,7 @@
     const empty=emptySummaryPayload();
     renderSummary(empty);
     renderActivity([]);
-    if(!document.hidden)load({silent:true,forceLive:true});
+    if(!document.hidden)load({silent:true,forceLive:false});
   },15000);
 
   $('controlActivityOpen')?.addEventListener('click',()=>{
@@ -833,5 +833,7 @@
   },{passive:true});
   syncCarouselClones();
   setLogicalPage(logicalPage,{animate:false});
-  if(summaryMode)load({silent:true,forceLive:!IS_PUSH_SUMMARY_VIEW});
+  // R392: first paint never bypasses the server-side fast snapshot.
+  // If a push snapshot/high-water is available it is rendered first; full live refresh is queued afterwards.
+  if(summaryMode)load({silent:true,forceLive:false});
 })();

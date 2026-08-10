@@ -1,10 +1,10 @@
-/* ANDRIK Control R391 — authoritative display-version synchronization. */
+/* ANDRIK Control R392 — authoritative display-version synchronization. */
 (()=>{
   'use strict';
-  if(window.__ANDRIK_VERSION_SYNC_R391__)return;
-  window.__ANDRIK_VERSION_SYNC_R391__=true;
-  const RELEASE='R391';
-  const RUNTIME='55.00-r391';
+  if(window.__ANDRIK_VERSION_SYNC_R392__)return;
+  window.__ANDRIK_VERSION_SYNC_R392__=true;
+  const RELEASE='R392';
+  const RUNTIME='55.00-r392';
   let busy=false;
   const apply=()=>{
     if(busy)return; busy=true;
@@ -31,7 +31,7 @@
       document.querySelectorAll('.control-split-version-r181').forEach(n=>n.setAttribute('aria-label',`Live Web AI, версия ${RELEASE}`));
       document.querySelectorAll('[data-andrik-version]').forEach(n=>n.textContent=RELEASE);
       window.ANDRIK_CONTROL_VERSION=`55.00 LIVE WEB AI FINAL ${RELEASE}`;
-      window.ANDRIK_CONTROL_BUILD='R391 LIFETIME YOUTUBE MAP TOTAL + VERSION LOCK';
+      window.ANDRIK_CONTROL_BUILD='R392 LIFETIME YOUTUBE MAP TOTAL + VERSION LOCK';
       try{localStorage.setItem('andrik-control-display-version',RUNTIME)}catch(_){ }
       window.dispatchEvent(new CustomEvent('andrik-control-version-ready',{detail:{short:RELEASE,number:391,version:'55.00'}}));
     }finally{busy=false;}

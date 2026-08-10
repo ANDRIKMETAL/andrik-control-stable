@@ -1,4 +1,4 @@
-/* ANDRIK R391 — ecosystem map + true YouTube lifetime counter on world overview. */
+/* ANDRIK R392 — ecosystem map + true YouTube lifetime counter on world overview. */
 (() => {
   'use strict';
   if (window.__ANDRIK_ECOSYSTEM_MAP_R347__) return;
@@ -274,7 +274,7 @@
     if (lifetime > 0) {
       state.youtubeLifetimeViews = lifetime;
       window.__andrikYoutubeLifetimeViews = lifetime;
-      try { localStorage.setItem('andrik-youtube-lifetime-views-r391', String(lifetime)); } catch (_) {}
+      try { localStorage.setItem('andrik-youtube-lifetime-views-r392', String(lifetime)); } catch (_) {}
       window.dispatchEvent(new CustomEvent('andrik:youtube-lifetime-views',{detail:{views:lifetime,updatedAt:data?.youtube?.updatedAt||data?.updatedAt||new Date().toISOString()}}));
     }
     if (Array.isArray(rows) && rows.length) state.youtube.rows = cleanRows(rows,'views');
@@ -324,10 +324,10 @@
   }
 
   try {
-    const cachedLifetimeR391 = Math.max(0, Number(localStorage.getItem('andrik-youtube-lifetime-views-r391') || 0));
-    if (cachedLifetimeR391 > 0) {
-      state.youtubeLifetimeViews = cachedLifetimeR391;
-      window.__andrikYoutubeLifetimeViews = cachedLifetimeR391;
+    const cachedLifetimeR392 = Math.max(0, Number(localStorage.getItem('andrik-youtube-lifetime-views-r392') || 0));
+    if (cachedLifetimeR392 > 0) {
+      state.youtubeLifetimeViews = cachedLifetimeR392;
+      window.__andrikYoutubeLifetimeViews = cachedLifetimeR392;
     }
   } catch (_) {}
   readCaches();

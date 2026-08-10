@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786343945075-51d02a07e7",
-  "release": "R391",
-  "archiveName": "R391-R390-LIFETIME-YOUTUBE-TOTAL-ON-WORLD-MAP-SAFE-FULL.zip",
-  "sourceHead": "e3433c84420cd87c9a076d9aefa402cab5a2c6ec",
-  "backupSha": "e3433c84420cd87c9a076d9aefa402cab5a2c6ec",
-  "backupTag": "control-backup-20260810063634-e3433c8-r391-47647",
+  "operationId": "publish-1786366548150-d73d2f21c6",
+  "release": "R392",
+  "archiveName": "R392-R391-FAST-SUMMARY-FIRST-PAINT-NO-FORCE-LIVE-SAFE-FULL.zip",
+  "sourceHead": "4df0296da1bdbea4d94e1434c9043ebc6819e1fd",
+  "backupSha": "4df0296da1bdbea4d94e1434c9043ebc6819e1fd",
+  "backupTag": "control-backup-20260810125538-4df0296-r392-12596",
   "autoRecovery": true,
-  "generatedAt": "2026-08-10T06:39:05.075Z"
+  "generatedAt": "2026-08-10T12:55:48.150Z"
 }
