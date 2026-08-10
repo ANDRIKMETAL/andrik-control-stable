@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786322044279-fbaac25a1c",
-  "release": "R389",
-  "archiveName": "R389-R388-VERSION-LOCK-ERROR-LIST-SPOILER-SAFE-FULL.zip",
-  "sourceHead": "d40c5a7d0728a56d64ca4a68fc74b9728a9a6ffd",
-  "backupSha": "d40c5a7d0728a56d64ca4a68fc74b9728a9a6ffd",
-  "backupTag": "control-backup-20260810003358-d40c5a7-r389-cd92c",
+  "operationId": "publish-1786332631554-b4a06e18d6",
+  "release": "R390",
+  "archiveName": "R390-R389-MORNING-PUSH-SNAPSHOT-INSTANT-SUMMARY-VERSION-FIX-SAFE-FULL.zip",
+  "sourceHead": "b2d1f8d6a48916ea28b51e71053bd05840a5f02e",
+  "backupSha": "b2d1f8d6a48916ea28b51e71053bd05840a5f02e",
+  "backupTag": "control-backup-20260810033024-b2d1f8d-r390-1e6cb",
   "autoRecovery": true,
-  "generatedAt": "2026-08-10T00:34:04.279Z"
+  "generatedAt": "2026-08-10T03:30:31.554Z"
 }

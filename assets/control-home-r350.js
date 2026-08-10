@@ -304,7 +304,7 @@
     if(updatedBox){
       if(pushSnapshot)updatedBox.textContent=`Сохранено в push · ${compactTime}`;
       else{
-        const source=['push-merged','push-direct'].includes(data.summarySource)?' · сверено с push':'';
+        const source=['push-merged','push-direct','push-fast-r390'].includes(data.summarySource)?' · сверено с push':'';
         updatedBox.textContent=`Обновлено ${compactTime}${source}`;
       }
     }
@@ -329,6 +329,7 @@
   }
 
   let loading=false;
+  let queuedLiveRefreshR390=false;
   let activeSummaryWindowKey=activeViewWindowKey();
   async function load({silent=false,forceLive=false}={}){
     if(loading)return;
@@ -353,7 +354,7 @@
     if(showRefreshEffect)shell?.classList.add('is-refreshing');
     else shell?.classList.remove('is-refreshing');
     try{
-      const query=new URLSearchParams({v:'55.00-r305'});
+      const query=new URLSearchParams({v:'55.00-r390'});
       if(forceLive||IS_PUSH_SUMMARY_VIEW)query.set('refresh','1');
       if(IS_PUSH_SUMMARY_VIEW){query.set('source','push');query.set('window',PUSH_SUMMARY_WINDOW_KEY);if(PUSH_SUMMARY_SNAPSHOT_ID)query.set('snapshot',PUSH_SUMMARY_SNAPSHOT_ID)}
       let data=await api(`/api/control/home?${query.toString()}`,{timeoutMs:forceLive&&!IS_PUSH_SUMMARY_VIEW?20000:12000});
@@ -368,6 +369,7 @@
         }
       }
       if(data?.windowKey)activeSummaryWindowKey=data.windowKey;
+      if(!IS_PUSH_SUMMARY_VIEW && data?.summarySource==='push-fast-r390') queuedLiveRefreshR390=true;
       const previous=readHomeCache();
       const stable=IS_PUSH_SUMMARY_VIEW?data:(cachedForCurrentWindow(previous)?mergeSummaryPayloadR213(previous.data,data):data);
       if(IS_PUSH_SUMMARY_VIEW||summaryHasSignalR375(stable))saveHomeCache(stable);
@@ -390,6 +392,10 @@
       loading=false;
       if(showRefreshEffect)setTimeout(()=>shell?.classList.remove('is-refreshing'),260);
       else shell?.classList.remove('is-refreshing');
+      if(queuedLiveRefreshR390 && !IS_PUSH_SUMMARY_VIEW){
+        queuedLiveRefreshR390=false;
+        setTimeout(()=>load({silent:true,forceLive:true}),320);
+      }
     }
   }
 

@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R384', number:384, version:'55.00', full:'55.00 LIVE WEB AI FINAL R384', siteUpdater:'55.00-r356' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R390', number:390, version:'55.00', full:'55.00 LIVE WEB AI FINAL R390', siteUpdater:'55.00-r356' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -8902,6 +8902,48 @@ async function handleControlHome(request, env) {
     }
     return await handleControlHomePushSnapshotR271(db, requestedPushWindow);
   }
+  // R390 FAST MORNING SNAPSHOT: if an automatic/manual daily summary has already
+  // been sent for the active 06:05 window, return that immutable D1 snapshot first.
+  // The mobile UI renders it immediately and then refreshes live data in background.
+  // This prevents a correct 05:00 push from reopening as zero/loading cards.
+  if (!forceRefresh) {
+    const fastSnapshotR390 = parseStoredDailySummarySnapshotR271(
+      await getPushState(db, `daily-owner-summary-window:${window.key}`).catch(() => null),
+      window.key
+    );
+    if (fastSnapshotR390) {
+      const fastSummaryR390 = controlHomeSummaryFromDailyMetricsR271(fastSnapshotR390.metrics);
+      const hasSignalR390 = CONTROL_HOME_SUMMARY_KEYS_R213.some(key => Number(fastSummaryR390?.[key] || 0) > 0)
+        || (Array.isArray(fastSummaryR390?.countryDeltas) && fastSummaryR390.countryDeltas.length > 0);
+      if (hasSignalR390) {
+        const activityResultR390 = await db.prepare(`
+          SELECT id, type, source, audience, title, message, url,
+                 video_id AS videoId, video_title AS videoTitle,
+                 status, created_at AS createdAt
+          FROM push_history
+          WHERE type IN ('youtube-comment','youtube-comment-count','youtube-subscriber','youtube-subscriber-count','youtube-like','site-subscriber','comment-live','comment-pending','auto-release','auto-release-retry','release-publish')
+            AND datetime(created_at) >= datetime(?1)
+          ORDER BY datetime(created_at) DESC
+          LIMIT 200
+        `).bind(window.startAt).all().catch(() => ({ results:[] }));
+        return json({
+          ok:true,
+          period:'06:05-auto-cycle',
+          windowKey:window.key,
+          windowStartAt:window.startAt,
+          windowEndAt:window.endAt,
+          summary:fastSummaryR390,
+          cityActivity:Array.isArray(fastSnapshotR390.cities) ? fastSnapshotR390.cities : [],
+          activity:activityResultR390?.results || [],
+          summarySource:'push-fast-r390',
+          summaryView:'live-snapshot-floor',
+          pushSentAt:fastSnapshotR390.sentAt || '',
+          updatedAt:fastSnapshotR390.sentAt || new Date().toISOString()
+        });
+      }
+    }
+  }
+
   // R260 DAILY ACCUMULATOR: the screen uses one Bratislava window, 06:05 → next 06:05.
   // Sending a push only records a checkpoint. It never resets counters; only the window key changes at 06:05.
   const [siteSubscribers, siteComments, siteLikes, youtubeEvents, youtubeLikeRows, youtubeSubscriberRows, releases, latestYoutubeState, activityResult, ytLatest, ytBaselineBefore, ytBaselineAfter, gaLatest, gaBaselineBefore, gaBaselineAfter, gaRollover, automationAt, automationStatus, automationSummary, siteLive, siteWindow, latestDailySummaryState, latestDailySummaryPush, latestDailySummaryLog, cityActivity] = await Promise.all([
