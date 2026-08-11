@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786366548150-d73d2f21c6",
-  "release": "R392",
-  "archiveName": "R392-R391-FAST-SUMMARY-FIRST-PAINT-NO-FORCE-LIVE-SAFE-FULL.zip",
-  "sourceHead": "4df0296da1bdbea4d94e1434c9043ebc6819e1fd",
-  "backupSha": "4df0296da1bdbea4d94e1434c9043ebc6819e1fd",
-  "backupTag": "control-backup-20260810125538-4df0296-r392-12596",
+  "operationId": "publish-1786418570472-820f07f6d7",
+  "release": "R393",
+  "archiveName": "R393-R392-CRON-SELF-HEAL-AUTO-DAILY-ANALYTICS-SAFE-FULL.zip",
+  "sourceHead": "c84e3e986f96018c899841feee06334a7c615765",
+  "backupSha": "c84e3e986f96018c899841feee06334a7c615765",
+  "backupTag": "control-backup-20260811032246-c84e3e9-r393-dcb9a",
   "autoRecovery": true,
-  "generatedAt": "2026-08-10T12:55:48.150Z"
+  "generatedAt": "2026-08-11T03:22:50.472Z"
 }

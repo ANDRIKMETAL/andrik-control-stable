@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R392', number:392, version:'55.00', full:'55.00 LIVE WEB AI FINAL R392', siteUpdater:'55.00-r356' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R393', number:393, version:'55.00', full:'55.00 LIVE WEB AI FINAL R393', siteUpdater:'55.00-r356' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -3571,18 +3571,21 @@ async function handlePushHistory(request, env) {
   const lastSummary = await getPushState(db, 'playlist-last-check-summary');
   const seeded = await getPushState(db, 'playlist-seeded');
   const uploadsPlaylist = await getPushState(db, 'youtube-uploads-playlist-id');
-  const [centralCheck, centralStatus, centralSummary] = await Promise.all([
+  const [centralCheck, centralStatus, centralSummary, schedulerHeartbeat] = await Promise.all([
     getPushState(db, 'automation-last-check-at'),
     getPushState(db, 'automation-last-check-status'),
-    getPushState(db, 'automation-last-check-summary')
+    getPushState(db, 'automation-last-check-summary'),
+    getPushState(db, 'cron-scheduler-heartbeat-at-r393')
   ]);
-  const effectiveLastCheck = centralCheck?.value || '';
+  const fullLastCheck = centralCheck?.value || '';
+  const effectiveLastCheck = schedulerHeartbeat?.value || fullLastCheck;
   const effectiveLastStatus = centralStatus?.value || 'never';
   const effectiveLastSummary = centralSummary?.value || '';
-  const lastCheckMs = effectiveLastCheck ? Date.parse(effectiveLastCheck) : NaN;
-  const ageMinutes = Number.isFinite(lastCheckMs) ? Math.max(0, Math.round((Date.now() - lastCheckMs) / 60000)) : null;
-  const health = ageMinutes === null ? 'never' : ageMinutes <= 60 ? 'active' : ageMinutes <= 180 ? 'late' : 'stale';
-  const nextExpectedAt = Number.isFinite(lastCheckMs) ? new Date(lastCheckMs + 15 * 60 * 1000).toISOString() : '';
+  const ageMinutes = cronAgeMinutesR393(effectiveLastCheck);
+  const fullAgeMinutes = cronAgeMinutesR393(fullLastCheck);
+  const health = ageMinutes === null ? 'never' : ageMinutes <= 12 ? 'active' : ageMinutes <= 30 ? 'late' : 'stale';
+  const effectiveMs=Date.parse(effectiveLastCheck || '');
+  const nextExpectedAt = Number.isFinite(effectiveMs) ? new Date(effectiveMs + 5 * 60 * 1000).toISOString() : '';
 
   const history = (result.results || []).map(item => ({
     ...item,
@@ -3600,6 +3603,7 @@ async function handlePushHistory(request, env) {
       lastStatus: effectiveLastStatus,
       nextExpectedAt,
       ageMinutes,
+      fullAgeMinutes,
       seeded: Boolean(seeded?.value),
       mode: String(env.YOUTUBE_API_KEY || '') ? 'YouTube Data API' : 'YouTube XML feed',
       channelHandle: cleanPlainText(env.YOUTUBE_CHANNEL_HANDLE || '@andrikmetal', 100),
@@ -3886,10 +3890,13 @@ async function handleControlSystem(request, env) {
     safeRead('latest-subscriber',db.prepare(`SELECT MAX(last_seen_at) AS lastSeenAt FROM push_subscribers WHERE status='active'`).first()),
     safeRead('search-console-snapshot',db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform='google-search-console' ORDER BY created_at DESC LIMIT 1`).first())
   ]);
-  const [centralCheck, centralStatus, centralSummary] = await Promise.all([
+  const [centralCheck, centralStatus, centralSummary, schedulerHeartbeat, schedulerSource, schedulerStatus] = await Promise.all([
     safeRead('automation-last-check-at',getPushState(db, 'automation-last-check-at')),
     safeRead('automation-last-check-status',getPushState(db, 'automation-last-check-status')),
-    safeRead('automation-last-check-summary',getPushState(db, 'automation-last-check-summary'))
+    safeRead('automation-last-check-summary',getPushState(db, 'automation-last-check-summary')),
+    safeRead('cron-scheduler-heartbeat-at-r393',getPushState(db,'cron-scheduler-heartbeat-at-r393')),
+    safeRead('cron-scheduler-heartbeat-source-r393',getPushState(db,'cron-scheduler-heartbeat-source-r393')),
+    safeRead('cron-scheduler-last-status-r393',getPushState(db,'cron-scheduler-last-status-r393'))
   ]);
   const [nativeMonitorLastAt, nativeMonitorLastStatus, nativeMonitorTargetCount, nativeMonitorErrorCount, nativeMonitorWarningCount] = await Promise.all([
     safeRead('native-monitor-last-sync-at',getPushState(db, 'native-monitor-last-sync-at')),
@@ -3901,9 +3908,16 @@ async function handleControlSystem(request, env) {
   const effectiveLastCheck = centralCheck?.value || '';
   const effectiveLastStatus = centralStatus?.value || 'never';
   const effectiveLastSummary = centralSummary?.value || '';
-  const lastCheckMs = effectiveLastCheck ? Date.parse(effectiveLastCheck) : NaN;
-  const ageMinutes = Number.isFinite(lastCheckMs) ? Math.max(0, Math.round((Date.now() - lastCheckMs) / 60000)) : null;
-  const automationHealth = ageMinutes === null ? 'never' : ageMinutes <= 60 ? 'active' : ageMinutes <= 180 ? 'late' : 'stale';
+  const fullAgeMinutes = cronAgeMinutesR393(effectiveLastCheck);
+  const schedulerHeartbeatAt = schedulerHeartbeat?.value || '';
+  const schedulerAgeMinutes = cronAgeMinutesR393(schedulerHeartbeatAt);
+  const schedulerAlive = schedulerAgeMinutes !== null && schedulerAgeMinutes <= 12;
+  const schedulerLate = schedulerAgeMinutes !== null && schedulerAgeMinutes <= 30;
+  const fullRunFresh = fullAgeMinutes !== null && fullAgeMinutes <= 35;
+  // R393: a live scheduler heartbeat is authoritative for trigger health. A stale
+  // full-run marker alone can no longer paint the whole system red.
+  const automationHealth = schedulerAlive ? 'active' : schedulerLate ? 'late' : schedulerAgeMinutes === null ? (fullAgeMinutes === null ? 'never' : fullAgeMinutes <= 60 ? 'active' : fullAgeMinutes <= 180 ? 'late' : 'stale') : 'stale';
+  const ageMinutes = schedulerAgeMinutes ?? fullAgeMinutes;
   const oneSignalConfigured = Boolean(env.ONESIGNAL_APP_ID && (env.ONESIGNAL_REST_API_KEY || env.ONESIGNAL_APP_API_KEY));
   const analyticsConfigured = Boolean(String(env.GOOGLE_ANALYTICS_CREDENTIALS || '').trim());
   const searchConsoleCredentials = parseGoogleSearchConsoleCredentials(env);
@@ -3974,13 +3988,13 @@ async function handleControlSystem(request, env) {
       : latestBackup?.status === 'failed'
         ? 'Последняя резервная копия завершилась ошибкой'
         : 'R2 подключено · копий пока нет';
-  const dailySummaryReady = oneSignalConfigured && ownerDeviceCount > 0 && automationHealth === 'active';
+  const dailySummaryReady = oneSignalConfigured && ownerDeviceCount > 0 && (schedulerAlive || automationHealth === 'active');
   const dailySummaryLabel = !oneSignalConfigured
     ? 'Сводки 05:00 / 17:00 ожидают настройки OneSignal'
     : ownerDeviceCount < 1
       ? 'Сводки 05:00 / 17:00 ожидают регистрацию устройства владельца'
-      : automationHealth !== 'active'
-        ? 'Сводки 05:00 / 17:00 ожидают стабильный Центральный Cron'
+      : !(schedulerAlive || automationHealth === 'active')
+        ? 'Сводки 05:00 / 17:00 ожидают стабильный Cron'
         : dailySummaryAt?.value
           ? `Каждый день в 05:00 и 17:00 · последняя ${formatSystemDateLabel(dailySummaryAt.value)}`
           : 'Каждый день в 05:00 и 17:00 · ожидает первой сводки';
@@ -4001,7 +4015,28 @@ async function handleControlSystem(request, env) {
       pushAudience: { configured: audienceCounts.total > 0, status: audienceCounts.total > 0 ? 'good' : 'warning', counts: audienceCounts, label: `Общая аудитория: ${audienceCounts.total} · слушателей: ${audienceCounts.public} · владельцев: ${audienceCounts.owners}` },
       lastPush: { configured: Boolean(latestPush), status: latestPushStatus, latest: latestPush || null, label: latestPushLabel },
       youtube: { configured: Boolean(env.YOUTUBE_API_KEY), studioConfigured:youtubeAuth.configured, status: env.YOUTUBE_API_KEY && youtubeAuth.configured ? 'good' : 'warning', mode: youtubeAuth.configured ? 'YouTube Data API + Studio Worker' : (env.YOUTUBE_API_KEY ? 'YouTube Data API' : 'XML feed'), handle: cleanPlainText(env.YOUTUBE_CHANNEL_HANDLE || '@andrikmetal', 100), uploadsPlaylistId: uploadsPlaylist?.value || cleanPlainText(env.YOUTUBE_UPLOADS_PLAYLIST_ID, 100), label: youtubeAuth.configured ? `YouTube Data API + Studio автоматически · ${youtubeAuth.source}` : (env.YOUTUBE_API_KEY ? 'Data API работает · Studio ждёт серверный refresh token' : 'YouTube работает через резервный feed') },
-      cron: { configured: Boolean(env.CRON_SECRET), status: automationHealth === 'active' ? 'good' : automationHealth === 'stale' ? 'error' : 'warning', health: automationHealth, lastCheckAt: effectiveLastCheck, ageMinutes, lastStatus: effectiveLastStatus, summary: parsePushSummary(effectiveLastSummary), label: automationHealth === 'active' ? `Центральный Cron активен · ${ageMinutes} мин. назад` : automationHealth === 'never' ? 'Центральный Cron ещё не запускался' : `Центральный Cron требует проверки · ${ageMinutes ?? '—'} мин. без запуска` },
+      cron: {
+        configured:Boolean(env.CRON_SECRET),
+        status:schedulerAlive ? 'good' : automationHealth === 'stale' ? 'error' : 'warning',
+        health:automationHealth,
+        lastCheckAt:schedulerHeartbeatAt || effectiveLastCheck,
+        ageMinutes,
+        schedulerHeartbeatAt,
+        schedulerAgeMinutes,
+        schedulerSource:schedulerSource?.value || '',
+        schedulerStatus:schedulerStatus?.value || '',
+        fullLastCheckAt:effectiveLastCheck,
+        fullAgeMinutes,
+        lastStatus:effectiveLastStatus,
+        summary:parsePushSummary(effectiveLastSummary),
+        label:schedulerAlive
+          ? (fullRunFresh
+              ? `Cron работает · heartbeat ${schedulerAgeMinutes} мин. · полный цикл ${fullAgeMinutes} мин.`
+              : `Cron работает · heartbeat ${schedulerAgeMinutes} мин. · полный цикл самовосстановится на ближайшем 15-мин. слоте`)
+          : automationHealth === 'never'
+            ? 'Cron ещё не запускался'
+            : `Cron требует проверки · heartbeat ${ageMinutes ?? '—'} мин. назад`
+      },
       dailySummary: {
         configured:dailySummaryReady,
         status:dailySummaryAttemptStatus?.value === 'failed'
@@ -8374,13 +8409,31 @@ function cronGatewayClockR334(date=new Date()) {
   };
 }
 
+// R393: one heartbeat for the scheduler itself, independent of a heavy full run.
+// Any working Cron Trigger refreshes it. The 5-minute trigger also self-heals the
+// full 15-minute automation through the shared gateway below.
+async function touchCronSchedulerHeartbeatR393(db, source='cron') {
+  const at=new Date().toISOString();
+  await Promise.all([
+    setPushState(db,'cron-scheduler-heartbeat-at-r393',at).catch(()=>{}),
+    setPushState(db,'cron-scheduler-heartbeat-source-r393',cleanPlainText(source || 'cron',120)).catch(()=>{})
+  ]);
+  return at;
+}
+
+function cronAgeMinutesR393(value) {
+  const ms=Date.parse(String(value || ''));
+  return Number.isFinite(ms) ? Math.max(0,Math.round((Date.now()-ms)/60000)) : null;
+}
+
 async function handleExternalCronGatewayR334(request, env) {
   if(!adminAuthorized(request,env) && !cronAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
   const db=requireDb(env);
-  await Promise.all([ensurePushAutomationSchema(db),ensureControlV1Schema(db)]);
+  await Promise.all([ensurePushAutomationSchema(db),ensureControlV1Schema(db),ensurePlatformAnalyticsSchema(db),ensureSiteMetricsSchema(db)]);
   const clock=cronGatewayClockR334(new Date());
   const tasks={};
   const errors=[];
+  const schedulerHeartbeatAt=await touchCronSchedulerHeartbeatR393(db,`gateway:${new URL(request.url).pathname}`).catch(()=>new Date().toISOString());
 
   // Every 2 minutes: lightweight comments + likes.
   if(clock.due2 && await claimCronGatewaySlotR334(db,'engagement-2m',clock.slot2)){
@@ -8395,8 +8448,16 @@ async function handleExternalCronGatewayR334(request, env) {
     tasks.engagement={ok:true,skipped:true,reason:clock.due2?'slot-already-claimed':'not-due'};
   }
 
-  // R364 (from R363): every 5 minutes, check owner-summary slot FIRST.
+  // R393: every 5 minutes warm the daily analytics FIRST. This is independent
+  // from push delivery, so «Аналитика за день» never needs a manual push to populate.
   if(clock.due5 && await claimCronGatewaySlotR334(db,'youtube-5m',clock.slot5)){
+    try{
+      tasks.summaryRefreshFast=await refreshDailySummaryAccumulatorR305(env,'cron-5m-r393');
+      if(!tasks.summaryRefreshFast.ok && !tasks.summaryRefreshFast.skipped)errors.push(`summaryRefreshFast:${tasks.summaryRefreshFast.error || 'failed'}`);
+    }catch(error){
+      tasks.summaryRefreshFast={ok:false,error:cleanPlainText(error?.message || error,400)};
+      errors.push(`summaryRefreshFast:${tasks.summaryRefreshFast.error}`);
+    }
     try{
       tasks.dailySummaryFast=await maybeSendDailyOwnerSummary(env);
       if(!tasks.dailySummaryFast.ok && !tasks.dailySummaryFast.skipped)errors.push(`dailySummaryFast:${tasks.dailySummaryFast.error || 'failed'}`);
@@ -8419,6 +8480,7 @@ async function handleExternalCronGatewayR334(request, env) {
       errors.push(`youtubeEvents:${tasks.youtubeEvents.error}`);
     }
   }else{
+    tasks.summaryRefreshFast={ok:true,skipped:true,reason:clock.due5?'slot-already-claimed':'not-due'};
     tasks.dailySummaryFast={ok:true,skipped:true,reason:clock.due5?'slot-already-claimed':'not-due'};
     tasks.releaseFallback={ok:true,skipped:true,reason:clock.due5?'slot-already-claimed':'not-due'};
     tasks.youtubeEvents={ok:true,skipped:true,reason:clock.due5?'slot-already-claimed':'not-due'};
@@ -8439,14 +8501,18 @@ async function handleExternalCronGatewayR334(request, env) {
 
   const result={
     ok:errors.length===0,
-    mode:'external-cron-gateway-r334',
+    mode:'external-cron-gateway-r393',
+    schedulerHeartbeatAt,
     utcMinute:clock.minute,
     due:{every2:clock.due2,every5:clock.due5,every15:clock.due15},
     tasks,
     errors,
     checkedAt:new Date().toISOString()
   };
-  await setPushState(db,'cron-gateway-r334-last-result',JSON.stringify(result)).catch(()=>{});
+  await Promise.all([
+    setPushState(db,'cron-gateway-r334-last-result',JSON.stringify(result)).catch(()=>{}),
+    setPushState(db,'cron-scheduler-last-status-r393',errors.length?'partial':'ok').catch(()=>{})
+  ]);
   return json(result,errors.length?502:200);
 }
 
@@ -9766,12 +9832,19 @@ async function buildAndrikHealthSnapshot(env, options = {}) {
 
   if (env.COMMENTS_DB) {
     try {
-      const row = await env.COMMENTS_DB.prepare(`SELECT value, updated_at AS updatedAt FROM push_state WHERE key='automation-last-check-at' LIMIT 1`).first();
-      const lastAt = row?.value || '';
-      const parsed = Date.parse(lastAt);
-      const ageMinutes = Number.isFinite(parsed) ? Math.max(0, Math.round((Date.now()-parsed)/60000)) : null;
-      const status = ageMinutes === null ? 'warning' : ageMinutes <= 60 ? 'good' : ageMinutes <= 180 ? 'warning' : 'error';
-      checks.push({ id:'cron', label:'Центральный Cron', status, detail:ageMinutes === null ? 'Ещё не запускался' : `Последний запуск ${ageMinutes} мин назад`, lastCheckAt:lastAt, ageMinutes });
+      const [fullRow, heartbeatRow] = await Promise.all([
+        env.COMMENTS_DB.prepare(`SELECT value, updated_at AS updatedAt FROM push_state WHERE key='automation-last-check-at' LIMIT 1`).first(),
+        env.COMMENTS_DB.prepare(`SELECT value, updated_at AS updatedAt FROM push_state WHERE key='cron-scheduler-heartbeat-at-r393' LIMIT 1`).first()
+      ]);
+      const fullAt=fullRow?.value || '';
+      const heartbeatAt=heartbeatRow?.value || '';
+      const fullAge=cronAgeMinutesR393(fullAt);
+      const heartbeatAge=cronAgeMinutesR393(heartbeatAt);
+      const status=heartbeatAge !== null && heartbeatAge <= 12 ? 'good' : heartbeatAge !== null && heartbeatAge <= 30 ? 'warning' : fullAge !== null && fullAge <= 60 ? 'warning' : 'error';
+      const detail=heartbeatAge !== null
+        ? `Планировщик ${heartbeatAge} мин назад · полный цикл ${fullAge ?? '—'} мин назад`
+        : fullAge !== null ? `Полный цикл ${fullAge} мин назад · heartbeat ожидается` : 'Ещё не запускался';
+      checks.push({ id:'cron', label:'Центральный Cron', status, detail, lastCheckAt:heartbeatAt || fullAt, ageMinutes:heartbeatAge ?? fullAge, fullAgeMinutes:fullAge });
     } catch (error) {
       checks.push({ id:'cron', label:'Центральный Cron', status:'warning', detail:'Состояние недоступно' });
     }
@@ -12072,41 +12145,19 @@ export default {
   async scheduled(controller, env, ctx) {
     const cronKey=String(env.CRON_SECRET || '');
     const cron=String(controller?.cron || '');
-    const isEngagementR333=cron===YOUTUBE_ENGAGEMENT_CRON_R333;
-    const isFiveMinuteR333=cron===YOUTUBE_FAST_CRON_R332;
-    const target=isEngagementR333
-      ? 'https://control.andrikmetal.com/api/automation/youtube-engagement-fast'
-      : isFiveMinuteR333
-        ? 'https://control.andrikmetal.com/api/automation/youtube-fast'
-        : 'https://control.andrikmetal.com/api/automation/run';
-    const request=new Request(target,{method:'POST',headers:cronKey?{'x-cron-key':cronKey}:{}});
+    const request=new Request(`https://control.andrikmetal.com/api/automation/cron-gateway?cron=${encodeURIComponent(cron)}`,{method:'POST',headers:cronKey?{'x-cron-key':cronKey}:{}});
     ctx.waitUntil((async()=>{
       if(!cronKey){
         await recordSystemLog(env,{scope:'automation',level:'error',event:'scheduled-secret-missing',message:'Cron Trigger запущен, но CRON_SECRET не настроен.'}).catch(()=>{});
         return;
       }
-      let response;
-      if(isEngagementR333){
-        response=await handleFastYoutubeEngagementR333(request,env);
-      }else if(isFiveMinuteR333){
-        let dailySummary;
-        try{
-          dailySummary=await maybeSendDailyOwnerSummary(env);
-        }catch(error){
-          dailySummary={ok:false,error:cleanPlainText(error?.message || error,500)};
-        }
-        const release=await responseData(await handleFastYoutubeReleaseCheckR332(request,env));
-        const events=await responseData(await handleCheckYoutubeEvents(request,env));
-        const summaryOk=Boolean(dailySummary?.ok || dailySummary?.skipped);
-        const ok=summaryOk&&Boolean(release.httpOk)&&Boolean(events.httpOk);
-        response=json({ok,dailySummary,release,events,mode:'five-minute-r364'},ok?200:502);
-      }else{
-        response=await handleAutomationRun(request,env);
-      }
+      // R393: every installed trigger enters the same deduplicated gateway. The 5-minute
+      // trigger therefore self-heals the full 15-minute run even if the dedicated 15m
+      // trigger is skipped by the platform. A heartbeat is written on every invocation.
+      const response=await handleExternalCronGatewayR334(request,env);
       if(!response.ok){
         const body=await response.text().catch(()=>'');
-        const mode=isEngagementR333?'youtube-engagement-fast':isFiveMinuteR333?'youtube-fast-5m':'automation';
-        throw new Error(`scheduled-${mode}-${response.status}: ${body.slice(0,300)}`);
+        throw new Error(`scheduled-gateway-${response.status}: ${body.slice(0,300)}`);
       }
     })().catch(error=>recordSystemLog(env,{scope:'automation',level:'error',event:'scheduled-run-failed',message:cleanPlainText(error?.message || error,500)}).catch(()=>{})));
   },
