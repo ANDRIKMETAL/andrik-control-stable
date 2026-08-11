@@ -354,7 +354,7 @@
     if(showRefreshEffect)shell?.classList.add('is-refreshing');
     else shell?.classList.remove('is-refreshing');
     try{
-      const query=new URLSearchParams({v:'55.00-r393'});
+      const query=new URLSearchParams({v:'55.00-r394'});
       if(forceLive||IS_PUSH_SUMMARY_VIEW)query.set('refresh','1');
       if(IS_PUSH_SUMMARY_VIEW){query.set('source','push');query.set('window',PUSH_SUMMARY_WINDOW_KEY);if(PUSH_SUMMARY_SNAPSHOT_ID)query.set('snapshot',PUSH_SUMMARY_SNAPSHOT_ID)}
       let data=await api(`/api/control/home?${query.toString()}`,{timeoutMs:forceLive&&!IS_PUSH_SUMMARY_VIEW?20000:12000});
@@ -363,7 +363,7 @@
         const numericKeys=['websiteUsers','websiteViews','siteSubscribers','siteComments','siteLikes','youtubeComments','youtubeSubscribers','youtubeLikes','youtubeViews','youtubeViewDelta','releases'];
         const allZero=numericKeys.every(key=>Number(summary[key]||0)===0);
         const noActivity=!Array.isArray(data?.activity)||data.activity.length===0;
-        // R393: never block first paint with a second heavy request. Even an empty
+        // R394: never block first paint with a second heavy request. Even an empty
         // fast snapshot is rendered immediately; a silent live refresh is queued.
         if(allZero&&noActivity)queuedLiveRefreshR390=true;
       }
@@ -832,7 +832,7 @@
   },{passive:true});
   syncCarouselClones();
   setLogicalPage(logicalPage,{animate:false});
-  // R393: first paint never waits for a second heavy request; fast snapshot renders immediately.
+  // R394: first paint never waits for a second heavy request; fast snapshot renders immediately.
   // If a push snapshot/high-water is available it is rendered first; full live refresh is queued afterwards.
   if(summaryMode)load({silent:true,forceLive:false});
 })();

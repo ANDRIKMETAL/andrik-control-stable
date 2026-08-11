@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786418570472-820f07f6d7",
-  "release": "R393",
-  "archiveName": "R393-R392-CRON-SELF-HEAL-AUTO-DAILY-ANALYTICS-SAFE-FULL.zip",
-  "sourceHead": "c84e3e986f96018c899841feee06334a7c615765",
-  "backupSha": "c84e3e986f96018c899841feee06334a7c615765",
-  "backupTag": "control-backup-20260811032246-c84e3e9-r393-dcb9a",
+  "operationId": "publish-1786443300818-e7c2d02a4c",
+  "release": "R394",
+  "archiveName": "R394-R393-FRESH-AUTO-SUMMARY-CRON-DELAY-TOLERANCE-SAFE-FULL.zip",
+  "sourceHead": "7ec02f30e93c04ba90ff54357a47c8556a055ad5",
+  "backupSha": "7ec02f30e93c04ba90ff54357a47c8556a055ad5",
+  "backupTag": "control-backup-20260811101434-7ec02f3-r394-43586",
   "autoRecovery": true,
-  "generatedAt": "2026-08-11T03:22:50.472Z"
+  "generatedAt": "2026-08-11T10:15:00.818Z"
 }

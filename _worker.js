@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R393', number:393, version:'55.00', full:'55.00 LIVE WEB AI FINAL R393', siteUpdater:'55.00-r356' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R394', number:394, version:'55.00', full:'55.00 LIVE WEB AI FINAL R394', siteUpdater:'55.00-r356' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -3575,14 +3575,14 @@ async function handlePushHistory(request, env) {
     getPushState(db, 'automation-last-check-at'),
     getPushState(db, 'automation-last-check-status'),
     getPushState(db, 'automation-last-check-summary'),
-    getPushState(db, 'cron-scheduler-heartbeat-at-r393')
+    getPushState(db, 'cron-scheduler-heartbeat-at-r394')
   ]);
   const fullLastCheck = centralCheck?.value || '';
   const effectiveLastCheck = schedulerHeartbeat?.value || fullLastCheck;
   const effectiveLastStatus = centralStatus?.value || 'never';
   const effectiveLastSummary = centralSummary?.value || '';
-  const ageMinutes = cronAgeMinutesR393(effectiveLastCheck);
-  const fullAgeMinutes = cronAgeMinutesR393(fullLastCheck);
+  const ageMinutes = cronAgeMinutesR394(effectiveLastCheck);
+  const fullAgeMinutes = cronAgeMinutesR394(fullLastCheck);
   const health = ageMinutes === null ? 'never' : ageMinutes <= 12 ? 'active' : ageMinutes <= 30 ? 'late' : 'stale';
   const effectiveMs=Date.parse(effectiveLastCheck || '');
   const nextExpectedAt = Number.isFinite(effectiveMs) ? new Date(effectiveMs + 5 * 60 * 1000).toISOString() : '';
@@ -3894,9 +3894,9 @@ async function handleControlSystem(request, env) {
     safeRead('automation-last-check-at',getPushState(db, 'automation-last-check-at')),
     safeRead('automation-last-check-status',getPushState(db, 'automation-last-check-status')),
     safeRead('automation-last-check-summary',getPushState(db, 'automation-last-check-summary')),
-    safeRead('cron-scheduler-heartbeat-at-r393',getPushState(db,'cron-scheduler-heartbeat-at-r393')),
-    safeRead('cron-scheduler-heartbeat-source-r393',getPushState(db,'cron-scheduler-heartbeat-source-r393')),
-    safeRead('cron-scheduler-last-status-r393',getPushState(db,'cron-scheduler-last-status-r393'))
+    safeRead('cron-scheduler-heartbeat-at-r394',getPushState(db,'cron-scheduler-heartbeat-at-r394')),
+    safeRead('cron-scheduler-heartbeat-source-r394',getPushState(db,'cron-scheduler-heartbeat-source-r394')),
+    safeRead('cron-scheduler-last-status-r394',getPushState(db,'cron-scheduler-last-status-r394'))
   ]);
   const [nativeMonitorLastAt, nativeMonitorLastStatus, nativeMonitorTargetCount, nativeMonitorErrorCount, nativeMonitorWarningCount] = await Promise.all([
     safeRead('native-monitor-last-sync-at',getPushState(db, 'native-monitor-last-sync-at')),
@@ -3908,13 +3908,13 @@ async function handleControlSystem(request, env) {
   const effectiveLastCheck = centralCheck?.value || '';
   const effectiveLastStatus = centralStatus?.value || 'never';
   const effectiveLastSummary = centralSummary?.value || '';
-  const fullAgeMinutes = cronAgeMinutesR393(effectiveLastCheck);
+  const fullAgeMinutes = cronAgeMinutesR394(effectiveLastCheck);
   const schedulerHeartbeatAt = schedulerHeartbeat?.value || '';
-  const schedulerAgeMinutes = cronAgeMinutesR393(schedulerHeartbeatAt);
+  const schedulerAgeMinutes = cronAgeMinutesR394(schedulerHeartbeatAt);
   const schedulerAlive = schedulerAgeMinutes !== null && schedulerAgeMinutes <= 12;
   const schedulerLate = schedulerAgeMinutes !== null && schedulerAgeMinutes <= 30;
   const fullRunFresh = fullAgeMinutes !== null && fullAgeMinutes <= 35;
-  // R393: a live scheduler heartbeat is authoritative for trigger health. A stale
+  // R394: a live scheduler heartbeat is authoritative for trigger health. A stale
   // full-run marker alone can no longer paint the whole system red.
   const automationHealth = schedulerAlive ? 'active' : schedulerLate ? 'late' : schedulerAgeMinutes === null ? (fullAgeMinutes === null ? 'never' : fullAgeMinutes <= 60 ? 'active' : fullAgeMinutes <= 180 ? 'late' : 'stale') : 'stale';
   const ageMinutes = schedulerAgeMinutes ?? fullAgeMinutes;
@@ -8393,35 +8393,43 @@ async function claimCronGatewaySlotR334(db, task, slot) {
   return Number(updated?.meta?.changes || 0)>0;
 }
 
-function cronGatewayClockR334(date=new Date()) {
+function cronGatewayClockR394(date=new Date(), cronExpression='') {
   const minute=date.getUTCMinutes();
   const hour=date.getUTCHours();
   const day=date.toISOString().slice(0,10);
   const hourKey=`${day}T${String(hour).padStart(2,'0')}`;
+  const firstField=String(cronExpression || '').trim().split(/\s+/)[0] || '';
+  // R394: Cloudflare may deliver a scheduled event tens of seconds or even a minute late.
+  // The controller.cron expression is authoritative, so a */5 trigger still runs the
+  // 5-minute job even when Date#getUTCMinutes() has already rolled from :10 to :11.
+  const scheduled2=/\*\/2(?:$|,)/.test(firstField);
+  const scheduled5=/\*\/5(?:$|,)/.test(firstField);
+  const scheduled15=/\*\/15(?:$|,)/.test(firstField);
   return {
     minute,
-    due2:minute % 2 === 0,
-    due5:minute % 5 === 0,
-    due15:minute % 15 === 0,
+    cronExpression:String(cronExpression || ''),
+    due2:minute % 2 === 0 || scheduled2,
+    due5:minute % 5 === 0 || scheduled5,
+    due15:minute % 15 === 0 || scheduled15,
     slot2:`${hourKey}:${String(minute - (minute % 2)).padStart(2,'0')}`,
     slot5:`${hourKey}:${String(minute - (minute % 5)).padStart(2,'0')}`,
     slot15:`${hourKey}:${String(minute - (minute % 15)).padStart(2,'0')}`
   };
 }
 
-// R393: one heartbeat for the scheduler itself, independent of a heavy full run.
+// R394: one heartbeat for the scheduler itself, independent of a heavy full run.
 // Any working Cron Trigger refreshes it. The 5-minute trigger also self-heals the
 // full 15-minute automation through the shared gateway below.
-async function touchCronSchedulerHeartbeatR393(db, source='cron') {
+async function touchCronSchedulerHeartbeatR394(db, source='cron') {
   const at=new Date().toISOString();
   await Promise.all([
-    setPushState(db,'cron-scheduler-heartbeat-at-r393',at).catch(()=>{}),
-    setPushState(db,'cron-scheduler-heartbeat-source-r393',cleanPlainText(source || 'cron',120)).catch(()=>{})
+    setPushState(db,'cron-scheduler-heartbeat-at-r394',at).catch(()=>{}),
+    setPushState(db,'cron-scheduler-heartbeat-source-r394',cleanPlainText(source || 'cron',120)).catch(()=>{})
   ]);
   return at;
 }
 
-function cronAgeMinutesR393(value) {
+function cronAgeMinutesR394(value) {
   const ms=Date.parse(String(value || ''));
   return Number.isFinite(ms) ? Math.max(0,Math.round((Date.now()-ms)/60000)) : null;
 }
@@ -8430,10 +8438,11 @@ async function handleExternalCronGatewayR334(request, env) {
   if(!adminAuthorized(request,env) && !cronAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
   const db=requireDb(env);
   await Promise.all([ensurePushAutomationSchema(db),ensureControlV1Schema(db),ensurePlatformAnalyticsSchema(db),ensureSiteMetricsSchema(db)]);
-  const clock=cronGatewayClockR334(new Date());
+  const gatewayUrlR394=new URL(request.url);
+  const clock=cronGatewayClockR394(new Date(),gatewayUrlR394.searchParams.get('cron')||'');
   const tasks={};
   const errors=[];
-  const schedulerHeartbeatAt=await touchCronSchedulerHeartbeatR393(db,`gateway:${new URL(request.url).pathname}`).catch(()=>new Date().toISOString());
+  const schedulerHeartbeatAt=await touchCronSchedulerHeartbeatR394(db,`gateway:${new URL(request.url).pathname}`).catch(()=>new Date().toISOString());
 
   // Every 2 minutes: lightweight comments + likes.
   if(clock.due2 && await claimCronGatewaySlotR334(db,'engagement-2m',clock.slot2)){
@@ -8448,11 +8457,11 @@ async function handleExternalCronGatewayR334(request, env) {
     tasks.engagement={ok:true,skipped:true,reason:clock.due2?'slot-already-claimed':'not-due'};
   }
 
-  // R393: every 5 minutes warm the daily analytics FIRST. This is independent
+  // R394: every 5 minutes warm the daily analytics FIRST. This is independent
   // from push delivery, so «Аналитика за день» never needs a manual push to populate.
   if(clock.due5 && await claimCronGatewaySlotR334(db,'youtube-5m',clock.slot5)){
     try{
-      tasks.summaryRefreshFast=await refreshDailySummaryAccumulatorR305(env,'cron-5m-r393');
+      tasks.summaryRefreshFast=await refreshDailySummaryAccumulatorR305(env,'cron-5m-r394');
       if(!tasks.summaryRefreshFast.ok && !tasks.summaryRefreshFast.skipped)errors.push(`summaryRefreshFast:${tasks.summaryRefreshFast.error || 'failed'}`);
     }catch(error){
       tasks.summaryRefreshFast={ok:false,error:cleanPlainText(error?.message || error,400)};
@@ -8501,7 +8510,7 @@ async function handleExternalCronGatewayR334(request, env) {
 
   const result={
     ok:errors.length===0,
-    mode:'external-cron-gateway-r393',
+    mode:'external-cron-gateway-r394',
     schedulerHeartbeatAt,
     utcMinute:clock.minute,
     due:{every2:clock.due2,every5:clock.due5,every15:clock.due15},
@@ -8511,7 +8520,7 @@ async function handleExternalCronGatewayR334(request, env) {
   };
   await Promise.all([
     setPushState(db,'cron-gateway-r334-last-result',JSON.stringify(result)).catch(()=>{}),
-    setPushState(db,'cron-scheduler-last-status-r393',errors.length?'partial':'ok').catch(()=>{})
+    setPushState(db,'cron-scheduler-last-status-r394',errors.length?'partial':'ok').catch(()=>{})
   ]);
   return json(result,errors.length?502:200);
 }
@@ -8691,6 +8700,20 @@ function parseControlHomeHighWaterR213(row) {
     const parsed = JSON.parse(row?.value || '{}');
     return parsed?.summary && typeof parsed.summary === 'object' ? parsed.summary : {};
   } catch (_) { return {}; }
+}
+
+function parseControlHomeHighWaterEnvelopeR394(row) {
+  try {
+    const parsed = JSON.parse(row?.value || '{}');
+    return {
+      windowKey: cleanPlainText(parsed?.windowKey || '', 20),
+      summary: parsed?.summary && typeof parsed.summary === 'object' ? normalizeControlHomeSummaryR213(parsed.summary) : normalizeControlHomeSummaryR213({}),
+      updatedAt: cleanPlainText(parsed?.updatedAt || row?.updatedAt || '', 80),
+      source: cleanPlainText(parsed?.source || 'daily-accumulator-r260', 80)
+    };
+  } catch (_) {
+    return { windowKey:'', summary:normalizeControlHomeSummaryR213({}), updatedAt:cleanPlainText(row?.updatedAt || '',80), source:'' };
+  }
 }
 
 function parseDailySummaryMessageMetrics(row) {
@@ -8968,21 +8991,27 @@ async function handleControlHome(request, env) {
     }
     return await handleControlHomePushSnapshotR271(db, requestedPushWindow);
   }
-  // R390 FAST MORNING SNAPSHOT: if an automatic/manual daily summary has already
-  // been sent for the active 06:05 window, return that immutable D1 snapshot first.
-  // The mobile UI renders it immediately and then refreshes live data in background.
-  // This prevents a correct 05:00 push from reopening as zero/loading cards.
+  // R394 FAST CURRENT SUMMARY: the morning push snapshot is only a floor, not the
+  // forever source for the whole day. Prefer the automatically refreshed high-water
+  // accumulator when it is newer, so the screen timestamp and values advance every
+  // 5-minute Cron cycle without needing a manual push or a heavy refresh request.
   if (!forceRefresh) {
-    const fastSnapshotR390 = parseStoredDailySummarySnapshotR271(
-      await getPushState(db, `daily-owner-summary-window:${window.key}`).catch(() => null),
-      window.key
-    );
-    if (fastSnapshotR390) {
-      const fastSummaryR390 = controlHomeSummaryFromDailyMetricsR271(fastSnapshotR390.metrics);
-      const hasSignalR390 = CONTROL_HOME_SUMMARY_KEYS_R213.some(key => Number(fastSummaryR390?.[key] || 0) > 0)
-        || (Array.isArray(fastSummaryR390?.countryDeltas) && fastSummaryR390.countryDeltas.length > 0);
-      if (hasSignalR390) {
-        const activityResultR390 = await db.prepare(`
+    const [highWaterRowR394, pushStateRowR394] = await Promise.all([
+      getPushState(db, `control-home-high-water-r213:${window.key}`).catch(() => null),
+      getPushState(db, `daily-owner-summary-window:${window.key}`).catch(() => null)
+    ]);
+    const highWaterR394 = parseControlHomeHighWaterEnvelopeR394(highWaterRowR394);
+    const fastSnapshotR390 = parseStoredDailySummarySnapshotR271(pushStateRowR394, window.key);
+    const pushSummaryR394 = fastSnapshotR390 ? controlHomeSummaryFromDailyMetricsR271(fastSnapshotR390.metrics) : normalizeControlHomeSummaryR213({});
+    const mergedFastSummaryR394 = mergeControlHomeSummaryR213(pushSummaryR394, highWaterR394.summary);
+    const hasSignalR394 = CONTROL_HOME_SUMMARY_KEYS_R213.some(key => Number(mergedFastSummaryR394?.[key] || 0) > 0)
+      || (Array.isArray(mergedFastSummaryR394?.countryDeltas) && mergedFastSummaryR394.countryDeltas.length > 0);
+    const highWaterMsR394 = Date.parse(highWaterR394.updatedAt || '');
+    const pushMsR394 = Date.parse(fastSnapshotR390?.sentAt || '');
+    const accumulatorIsCurrentR394 = Number.isFinite(highWaterMsR394) && (!Number.isFinite(pushMsR394) || highWaterMsR394 >= pushMsR394);
+    if (hasSignalR394) {
+      const [activityResultR394, cityActivityR394] = await Promise.all([
+        db.prepare(`
           SELECT id, type, source, audience, title, message, url,
                  video_id AS videoId, video_title AS videoTitle,
                  status, created_at AS createdAt
@@ -8991,22 +9020,27 @@ async function handleControlHome(request, env) {
             AND datetime(created_at) >= datetime(?1)
           ORDER BY datetime(created_at) DESC
           LIMIT 200
-        `).bind(window.startAt).all().catch(() => ({ results:[] }));
-        return json({
-          ok:true,
-          period:'06:05-auto-cycle',
-          windowKey:window.key,
-          windowStartAt:window.startAt,
-          windowEndAt:window.endAt,
-          summary:fastSummaryR390,
-          cityActivity:Array.isArray(fastSnapshotR390.cities) ? fastSnapshotR390.cities : [],
-          activity:activityResultR390?.results || [],
-          summarySource:'push-fast-r390',
-          summaryView:'live-snapshot-floor',
-          pushSentAt:fastSnapshotR390.sentAt || '',
-          updatedAt:fastSnapshotR390.sentAt || new Date().toISOString()
-        });
-      }
+        `).bind(window.startAt).all().catch(() => ({ results:[] })),
+        collectDailyCityActivityR370(db, window).catch(() => Array.isArray(fastSnapshotR390?.cities) ? fastSnapshotR390.cities : [])
+      ]);
+      const updatedAtR394 = accumulatorIsCurrentR394
+        ? highWaterR394.updatedAt
+        : (fastSnapshotR390?.sentAt || highWaterR394.updatedAt || new Date().toISOString());
+      return json({
+        ok:true,
+        period:'06:05-auto-cycle',
+        windowKey:window.key,
+        windowStartAt:window.startAt,
+        windowEndAt:window.endAt,
+        summary:mergedFastSummaryR394,
+        cityActivity:Array.isArray(cityActivityR394) ? cityActivityR394 : [],
+        activity:activityResultR394?.results || [],
+        summarySource:accumulatorIsCurrentR394 ? 'auto-accumulator-fast-r394' : 'push-fast-r390',
+        summaryView:'live-snapshot-floor',
+        pushSentAt:fastSnapshotR390?.sentAt || '',
+        accumulatorUpdatedAt:highWaterR394.updatedAt || '',
+        updatedAt:updatedAtR394
+      });
     }
   }
 
@@ -9834,12 +9868,12 @@ async function buildAndrikHealthSnapshot(env, options = {}) {
     try {
       const [fullRow, heartbeatRow] = await Promise.all([
         env.COMMENTS_DB.prepare(`SELECT value, updated_at AS updatedAt FROM push_state WHERE key='automation-last-check-at' LIMIT 1`).first(),
-        env.COMMENTS_DB.prepare(`SELECT value, updated_at AS updatedAt FROM push_state WHERE key='cron-scheduler-heartbeat-at-r393' LIMIT 1`).first()
+        env.COMMENTS_DB.prepare(`SELECT value, updated_at AS updatedAt FROM push_state WHERE key='cron-scheduler-heartbeat-at-r394' LIMIT 1`).first()
       ]);
       const fullAt=fullRow?.value || '';
       const heartbeatAt=heartbeatRow?.value || '';
-      const fullAge=cronAgeMinutesR393(fullAt);
-      const heartbeatAge=cronAgeMinutesR393(heartbeatAt);
+      const fullAge=cronAgeMinutesR394(fullAt);
+      const heartbeatAge=cronAgeMinutesR394(heartbeatAt);
       const status=heartbeatAge !== null && heartbeatAge <= 12 ? 'good' : heartbeatAge !== null && heartbeatAge <= 30 ? 'warning' : fullAge !== null && fullAge <= 60 ? 'warning' : 'error';
       const detail=heartbeatAge !== null
         ? `Планировщик ${heartbeatAge} мин назад · полный цикл ${fullAge ?? '—'} мин назад`
@@ -12151,7 +12185,7 @@ export default {
         await recordSystemLog(env,{scope:'automation',level:'error',event:'scheduled-secret-missing',message:'Cron Trigger запущен, но CRON_SECRET не настроен.'}).catch(()=>{});
         return;
       }
-      // R393: every installed trigger enters the same deduplicated gateway. The 5-minute
+      // R394: every installed trigger enters the same deduplicated gateway. The 5-minute
       // trigger therefore self-heals the full 15-minute run even if the dedicated 15m
       // trigger is skipped by the platform. A heartbeat is written on every invocation.
       const response=await handleExternalCronGatewayR334(request,env);
