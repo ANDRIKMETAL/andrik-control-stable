@@ -178,13 +178,22 @@
     }
   }
 
-  async function api(path,{timeoutMs=12000}={}){
+  async function api(path,{timeoutMs=12000,method='GET',body=null,headers={}}={}){
     const key=getKey();
     if(!key)throw new Error('Ключ владельца не сохранён');
     const controller=new AbortController();
     const timer=setTimeout(()=>controller.abort('timeout'),timeoutMs);
     try{
-      const response=await fetch(path,{headers:{accept:'application/json',authorization:`Bearer ${key}`},cache:'no-store',signal:controller.signal});
+      const requestHeaders={accept:'application/json',authorization:`Bearer ${key}`,...headers};
+      let requestBody;
+      if(body!==null&&body!==undefined){
+        if(typeof body==='string')requestBody=body;
+        else{
+          requestBody=JSON.stringify(body);
+          if(!requestHeaders['content-type']&&!requestHeaders['Content-Type'])requestHeaders['content-type']='application/json';
+        }
+      }
+      const response=await fetch(path,{method,headers:requestHeaders,body:requestBody,cache:'no-store',signal:controller.signal});
       const data=await response.json().catch(()=>({}));
       if(!response.ok)throw new Error(data.details||data.error||`HTTP ${response.status}`);
       return data;
@@ -884,7 +893,7 @@
     summaryAutoRefreshLastTryR403=now;
     summaryAutoRefreshBusyR403=true;
     try{
-      const refreshed=await api('/api/control/daily-summary/auto-refresh?v=55.00-r403',{method:'POST',timeoutMs:22000});
+      const refreshed=await api('/api/control/daily-summary/auto-refresh?v=55.00-r404',{method:'POST',body:{},timeoutMs:22000});
       absorbUpdateTimesR396(refreshed||{});
       renderUpdateTimesR396();
       await load({silent:true,forceLive:false});
