@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R398', number:398, version:'55.00', full:'55.00 LIVE WEB AI FINAL R398', siteUpdater:'55.00-r356' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R400', number:400, version:'55.00', full:'55.00 LIVE WEB AI FINAL R400', siteUpdater:'55.00-r356' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -8528,6 +8528,118 @@ function cronAgeMinutesR394(value) {
   return Number.isFinite(ms) ? Math.max(0,Math.round((Date.now()-ms)/60000)) : null;
 }
 
+
+// R400: zero-touch compatibility bridge for the OLD external andrik-push-cron Worker.
+// The legacy Worker sends every */2, */5 and */15 trigger to the same /api/automation/run
+// and does not forward controller.cron. Do NOT require the owner to edit that Worker.
+// We identify its stable UA, save the daily Auto checkpoint immediately, return 200 fast,
+// and run the schedule-aware gateway in ctx.waitUntil. A synthetic combined cron expression
+// marks 2m/5m/15m as due; existing D1 slot claims ensure each class runs only once per slot.
+async function handleLegacyExternalCronR400(request, env, ctx) {
+  if(!adminAuthorized(request,env) && !cronAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
+  const db=requireDb(env);
+  await Promise.all([
+    ensurePushAutomationSchema(db), ensureControlV1Schema(db), ensurePlatformAnalyticsSchema(db),
+    ensureSiteMetricsSchema(db), ensureCommentsV4Schema(db)
+  ]);
+  const receivedAt=await touchCronSchedulerHeartbeatR394(db,'legacy-external-r400').catch(()=>new Date().toISOString());
+  const checkpoint=await checkpointDailySummaryAutoR398(env,'legacy-external-r400')
+    .catch(error=>({ok:false,error:cleanPlainText(error?.message||error,500)}));
+
+  await Promise.all([
+    setPushState(db,'legacy-external-cron-r400-last-at',receivedAt).catch(()=>{}),
+    setPushState(db,'legacy-external-cron-r400-last-checkpoint',JSON.stringify(checkpoint||{})).catch(()=>{})
+  ]);
+
+  // Force all schedule classes into the shared slot-gateway. This is safe because
+  // claimCronGatewaySlotR334 deduplicates 2m / 5m / 15m work by its own time slots.
+  const u=new URL(request.url);
+  u.pathname='/api/automation/cron-gateway';
+  u.searchParams.set('cron','*/2,*/5,*/15 * * * *');
+  u.searchParams.set('source','legacy-external-r400');
+  const headers=new Headers(request.headers);
+  headers.set('x-andrik-cron-source','legacy-external-r400');
+  headers.set('x-andrik-cron','*/2,*/5,*/15 * * * *');
+  const gatewayRequest=new Request(u.toString(),{method:'POST',headers});
+  const run=async()=>{
+    try{
+      const response=await handleExternalCronGatewayR334(gatewayRequest,env);
+      let result={};
+      try{result=await response.clone().json();}catch(_){result={status:response.status};}
+      await Promise.all([
+        setPushState(db,'legacy-external-cron-r400-gateway-last-at',new Date().toISOString()).catch(()=>{}),
+        setPushState(db,'legacy-external-cron-r400-gateway-last-status',response.ok?'ok':'failed').catch(()=>{}),
+        setPushState(db,'legacy-external-cron-r400-gateway-last-result',JSON.stringify(result).slice(0,12000)).catch(()=>{})
+      ]);
+    }catch(error){
+      await Promise.all([
+        setPushState(db,'legacy-external-cron-r400-gateway-last-at',new Date().toISOString()).catch(()=>{}),
+        setPushState(db,'legacy-external-cron-r400-gateway-last-status','failed').catch(()=>{}),
+        setPushState(db,'legacy-external-cron-r400-gateway-last-result',cleanPlainText(error?.message||error,1000)).catch(()=>{})
+      ]);
+      await recordSystemLog(env,{scope:'cron',level:'error',event:'legacy-external-r400',message:'Фоновый gateway старого Cron завершился ошибкой.',details:{error:cleanPlainText(error?.message||error,800)}}).catch(()=>{});
+    }
+  };
+  if(ctx?.waitUntil)ctx.waitUntil(run()); else run().catch(()=>{});
+
+  // Fast ACK prevents the old Cron Worker from waiting for Google/YouTube and timing out.
+  return json({
+    ok:checkpoint?.ok!==false || checkpoint?.skipped===true,
+    version:ANDRIK_CONTROL_RELEASE.short,
+    mode:'legacy-external-cron-bridge-r400',
+    receivedAt,
+    checkpoint,
+    gateway:'scheduled-in-background'
+  });
+}
+
+// R399: dedicated lightweight endpoint for the external andrik-push-cron Worker.
+// It is intentionally separate from the heavy gateway: every scheduled trigger first
+// proves that the external scheduler reached Control, refreshes scheduler heartbeat,
+// and saves the current daily high-water / `Авто` checkpoint without Google APIs.
+// The heavy 2m/5m/15m gateway runs afterwards and may fail independently.
+async function handleExternalSummaryCheckpointR399(request, env) {
+  if(!adminAuthorized(request,env) && !cronAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
+  const db=requireDb(env);
+  await Promise.all([
+    ensurePushAutomationSchema(db),
+    ensureControlV1Schema(db),
+    ensurePlatformAnalyticsSchema(db),
+    ensureSiteMetricsSchema(db),
+    ensureCommentsV4Schema(db)
+  ]);
+  const url=new URL(request.url);
+  const cron=cleanPlainText(url.searchParams.get('cron') || request.headers.get('x-andrik-cron') || '',80);
+  const source=cleanPlainText(
+    request.headers.get('x-andrik-cron-source') ||
+    url.searchParams.get('source') ||
+    'external-andrik-push-cron',
+    120
+  );
+  const heartbeatAt=await touchCronSchedulerHeartbeatR394(db,`external-r399:${source}:${cron || 'unknown'}`)
+    .catch(()=>new Date().toISOString());
+
+  const checkpoint=await checkpointDailySummaryAutoR398(env,`external-r399:${source}`)
+    .catch(error=>({ok:false,error:cleanPlainText(error?.message || error,500)}));
+
+  await Promise.all([
+    setPushState(db,'external-cron-r399-last-at',heartbeatAt).catch(()=>{}),
+    setPushState(db,'external-cron-r399-last-cron',cron || 'unknown').catch(()=>{}),
+    setPushState(db,'external-cron-r399-last-source',source).catch(()=>{}),
+    setPushState(db,'external-cron-r399-last-status',checkpoint?.ok===false && !checkpoint?.skipped ? 'failed' : 'ok').catch(()=>{})
+  ]);
+
+  const ok=checkpoint?.ok!==false || checkpoint?.skipped===true;
+  return json({
+    ok,
+    version:ANDRIK_CONTROL_RELEASE.short,
+    heartbeatAt,
+    cron,
+    source,
+    checkpoint
+  },ok?200:502);
+}
+
 async function handleExternalCronGatewayR334(request, env) {
   if(!adminAuthorized(request,env) && !cronAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
   const db=requireDb(env);
@@ -12203,8 +12315,13 @@ async function routeApi(request, env, ctx) {
     if (path === '/api/youtube/websub/status' && request.method === 'GET') return await handleYoutubeWebSubStatusR332(request, env);
     if (path === '/api/automation/youtube-fast' && request.method === 'POST') return await handleFastYoutubeReleaseCheckR332(request, env);
     if (path === '/api/automation/youtube-engagement-fast' && request.method === 'POST') return await handleFastYoutubeEngagementR333(request, env);
+    if (path === '/api/automation/summary-checkpoint' && (request.method === 'GET' || request.method === 'POST')) return await handleExternalSummaryCheckpointR399(request, env);
     if (path === '/api/automation/cron-gateway' && (request.method === 'GET' || request.method === 'POST')) return await handleExternalCronGatewayR334(request, env);
-    if (path === '/api/automation/run' && request.method === 'POST') return await handleAutomationRun(request, env);
+    if (path === '/api/automation/run' && request.method === 'POST') {
+      const ua=String(request.headers.get('user-agent')||'');
+      if(/ANDRIK-Central-Cron\/1\.0/i.test(ua)) return await handleLegacyExternalCronR400(request,env,ctx);
+      return await handleAutomationRun(request, env);
+    }
     if (path === '/api/control/daily-summary/send' && request.method === 'POST') return await handleManualDailyOwnerSummary(request, env);
     if (path === '/api/push/retry-latest' && request.method === 'POST') return await handleRetryLatestPush(request, env);
     if (path === '/api/push/diagnostic-log' && request.method === 'GET') return await handlePushDiagnosticLog(request, env);

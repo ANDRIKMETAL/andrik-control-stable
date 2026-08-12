@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786528336023-314491df9f",
-  "release": "R398",
-  "archiveName": "R398-R397-ROUTE-INDEPENDENT-AUTO-SUMMARY-CHECKPOINT-SAFE-FULL.zip",
-  "sourceHead": "891652f0d3cecd1ddb09a6836dddfbe084a94b99",
-  "backupSha": "891652f0d3cecd1ddb09a6836dddfbe084a94b99",
-  "backupTag": "control-backup-20260812095205-891652f-r398-c529d",
+  "operationId": "publish-1786540141584-5095dfb4f0",
+  "release": "R400",
+  "archiveName": "R400-R399-ZERO-TOUCH-LEGACY-CRON-BRIDGE-FAST-ACK-SAFE-FULL.zip",
+  "sourceHead": "2b4ea7058bd06eb2921a10c1332987913a340c1f",
+  "backupSha": "2b4ea7058bd06eb2921a10c1332987913a340c1f",
+  "backupTag": "control-backup-20260812130857-2b4ea70-r400-c9639",
   "autoRecovery": true,
-  "generatedAt": "2026-08-12T09:52:16.023Z"
+  "generatedAt": "2026-08-12T13:09:01.584Z"
 }
