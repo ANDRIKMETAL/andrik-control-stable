@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786516497383-213e551872",
-  "release": "R397",
-  "archiveName": "R397-R396-EARLY-AUTO-SUMMARY-CHECKPOINT-SAFE-FULL.zip",
-  "sourceHead": "d20be344816ed761910657da8c25993d95dabb18",
-  "backupSha": "d20be344816ed761910657da8c25993d95dabb18",
-  "backupTag": "control-backup-20260812063453-d20be34-r397-e21ff",
+  "operationId": "publish-1786528336023-314491df9f",
+  "release": "R398",
+  "archiveName": "R398-R397-ROUTE-INDEPENDENT-AUTO-SUMMARY-CHECKPOINT-SAFE-FULL.zip",
+  "sourceHead": "891652f0d3cecd1ddb09a6836dddfbe084a94b99",
+  "backupSha": "891652f0d3cecd1ddb09a6836dddfbe084a94b99",
+  "backupTag": "control-backup-20260812095205-891652f-r398-c529d",
   "autoRecovery": true,
-  "generatedAt": "2026-08-12T06:34:57.383Z"
+  "generatedAt": "2026-08-12T09:52:16.023Z"
 }

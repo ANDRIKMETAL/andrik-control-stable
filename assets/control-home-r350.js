@@ -1,4 +1,4 @@
-/* Control ANDRIK R397 — reliable early auto-update checkpoint + update clocks. */
+/* Control ANDRIK R398 — route-independent auto checkpoint + stable summary first paint. */
 (() => {
   const KEY_SESSION='andrik-comments-admin-key';
   const KEY_LOCAL='andrik-comments-admin-key-persistent';
@@ -361,6 +361,7 @@
 
   let loading=false;
   let queuedLiveRefreshR390=false;
+  let fastRetryCountR398=0;
   let activeSummaryWindowKey=activeViewWindowKey();
   async function load({silent=false,forceLive=false}={}){
     if(loading)return;
@@ -385,7 +386,7 @@
     if(showRefreshEffect)shell?.classList.add('is-refreshing');
     else shell?.classList.remove('is-refreshing');
     try{
-      const query=new URLSearchParams({v:'55.00-r397'});
+      const query=new URLSearchParams({v:'55.00-r398'});
       if(forceLive||IS_PUSH_SUMMARY_VIEW)query.set('refresh','1');
       if(IS_PUSH_SUMMARY_VIEW){query.set('source','push');query.set('window',PUSH_SUMMARY_WINDOW_KEY);if(PUSH_SUMMARY_SNAPSHOT_ID)query.set('snapshot',PUSH_SUMMARY_SNAPSHOT_ID)}
       let data=await api(`/api/control/home?${query.toString()}`,{timeoutMs:forceLive&&!IS_PUSH_SUMMARY_VIEW?20000:12000});
@@ -405,6 +406,7 @@
       if(IS_PUSH_SUMMARY_VIEW||summaryHasSignalR375(stable))saveHomeCache(stable);
       renderSummary(stable);
       renderActivity(stable.activity||[]);
+      if(summaryHasSignalR375(stable))fastRetryCountR398=0;
     }catch(error){
       const cached=readHomeCache();
       if(cachedForCurrentWindow(cached)){
@@ -422,9 +424,12 @@
       loading=false;
       if(showRefreshEffect)setTimeout(()=>shell?.classList.remove('is-refreshing'),260);
       else shell?.classList.remove('is-refreshing');
-      if(queuedLiveRefreshR390 && !IS_PUSH_SUMMARY_VIEW){
+      if(queuedLiveRefreshR390 && !IS_PUSH_SUMMARY_VIEW && fastRetryCountR398<1){
         queuedLiveRefreshR390=false;
-        setTimeout(()=>load({silent:true,forceLive:true}),320);
+        fastRetryCountR398+=1;
+        // R398: background server checkpoints own freshness. Never turn a normal page open
+        // into the heavy forceLive path; that was the source of the recurring spinner.
+        setTimeout(()=>load({silent:true,forceLive:false}),5000);
       }
     }
   }

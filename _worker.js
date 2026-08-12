@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R397', number:397, version:'55.00', full:'55.00 LIVE WEB AI FINAL R397', siteUpdater:'55.00-r356' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R398', number:398, version:'55.00', full:'55.00 LIVE WEB AI FINAL R398', siteUpdater:'55.00-r356' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -6202,6 +6202,7 @@ async function handleFastYoutubeEngagementR333(request,env){
   if(!adminAuthorized(request,env) && !cronAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
   const db=requireDb(env);
   await Promise.all([ensurePushAutomationSchema(db),ensureControlV1Schema(db)]);
+  const autoCheckpointR398=await checkpointDailySummaryAutoR398(env,'youtube-fast-2m').catch(error=>({ok:false,error:cleanPlainText(error?.message||error,300)}));
   const startedAt=new Date().toISOString();
   await setPushState(db,'youtube-fast-engagement-last-at-r333',startedAt).catch(()=>{});
   await setPushState(db,'youtube-fast-engagement-last-status-r376','running').catch(()=>{});
@@ -6356,6 +6357,7 @@ async function handleCheckYoutubeEvents(request, env) {
   if (!adminAuthorized(request, env) && !cronAuthorized(request, env)) return json({ ok: false, error: 'unauthorized' }, 401);
   const db = requireDb(env);
   await Promise.all([ensurePushAutomationSchema(db), ensureControlV1Schema(db), ensurePlatformAnalyticsSchema(db)]);
+  const autoCheckpointR398=await checkpointDailySummaryAutoR398(env,'youtube-events').catch(error=>({ok:false,error:cleanPlainText(error?.message||error,300)}));
   const previousSuccessState = await getPushState(db, 'youtube-events-last-success-at');
   const previousCheckState = await getPushState(db, 'youtube-events-last-check-at');
   const startedAt = new Date().toISOString();
@@ -7891,6 +7893,65 @@ function buildDailyOwnerSummaryLines(metrics = {}) {
   return lines;
 }
 
+// R398: route-independent automatic summary checkpoint.
+// The external andrik-push-cron Worker historically wakes several different endpoints
+// (fast YouTube, full YouTube, central automation, Guard health). R397 only stamped
+// `Авто` inside the newer cron-gateway path, so real background work could continue
+// while the UI stayed `Авто: —`. This lightweight checkpoint is deliberately attached
+// to every proven server wake-up path and never waits for Google Analytics.
+async function checkpointDailySummaryAutoR398(env, source='server-wakeup') {
+  if (!env.COMMENTS_DB) return { ok:false, skipped:true, reason:'database-not-configured' };
+  const db=requireDb(env);
+  await Promise.all([
+    ensurePushAutomationSchema(db),
+    ensurePlatformAnalyticsSchema(db),
+    ensureControlV1Schema(db),
+    ensureSiteMetricsSchema(db),
+    ensureCommentsV4Schema(db)
+  ]);
+  const window=getBratislavaSummaryWindow();
+  const stampKey=`control-summary-auto-checkpoint-last-at-r398:${window.key}`;
+  const globalKey='control-summary-auto-checkpoint-last-at-r398';
+  const lockKey=`control-summary-auto-checkpoint-lock-r398:${window.key}`;
+  const last=await getPushState(db,stampKey).catch(()=>null);
+  const lastAt=cleanPlainText(last?.value || last?.updatedAt || '',80);
+  const lastMs=Date.parse(lastAt);
+  if(Number.isFinite(lastMs) && Date.now()-lastMs < 4*60*1000){
+    return {ok:true,skipped:true,reason:'recent-auto-checkpoint',windowKey:window.key,updatedAt:lastAt};
+  }
+  await db.prepare(`DELETE FROM push_state WHERE key=? AND updated_at < datetime('now','-6 minutes')`).bind(lockKey).run().catch(()=>{});
+  if(!await claimPushOnce(db,lockKey,new Date().toISOString())){
+    return {ok:true,skipped:true,reason:'auto-checkpoint-running',windowKey:window.key};
+  }
+  try{
+    let metrics=null;
+    let fallbackError='';
+    try{
+      metrics=await collectDailyOwnerSummary(env,{liveExternal:false,windowOverride:window});
+    }catch(error){
+      fallbackError=cleanPlainText(error?.message || error,500);
+      metrics=await collectDailyOwnerSummaryFallback(env,window,fallbackError);
+    }
+    if(!metrics || typeof metrics!=='object') throw new Error('auto-checkpoint-no-metrics');
+    await persistControlHomeHighWaterFromMetricsR260(db,window.key,metrics).catch(()=>{});
+    const at=new Date().toISOString();
+    await Promise.all([
+      setPushState(db,stampKey,at),
+      setPushState(db,globalKey,at),
+      setPushState(db,'control-summary-auto-checkpoint-source-r398',cleanPlainText(source||'server-wakeup',120)),
+      setPushState(db,'control-summary-auto-checkpoint-status-r398',fallbackError?'fallback':'ok')
+    ]).catch(()=>{});
+    await recordSystemLog(env,{
+      scope:'daily-summary', level:fallbackError?'warning':'info', event:'auto-checkpoint-r398',
+      message:`Автосводка checkpoint сохранён · ${source}.`,
+      details:{source,windowKey:window.key,updatedAt:at,fallbackError}
+    }).catch(()=>{});
+    return {ok:true,windowKey:window.key,updatedAt:at,source,fallbackError};
+  }finally{
+    await releasePushOnceClaim(db,lockKey).catch(()=>{});
+  }
+}
+
 // R305: keep the current 06:05→06:05 summary warm even when Control is closed.
 // Both the central Cron and the external Guard health probe may call this helper;
 // a D1 lock prevents duplicate Google API work.
@@ -8476,6 +8537,8 @@ async function handleExternalCronGatewayR334(request, env) {
   const tasks={};
   const errors=[];
   const schedulerHeartbeatAt=await touchCronSchedulerHeartbeatR394(db,`gateway:${new URL(request.url).pathname}`).catch(()=>new Date().toISOString());
+  tasks.summaryCheckpointR398=await checkpointDailySummaryAutoR398(env,'cron-gateway').catch(error=>({ok:false,error:cleanPlainText(error?.message||error,300)}));
+  if(tasks.summaryCheckpointR398?.ok===false && !tasks.summaryCheckpointR398?.skipped)errors.push(`summaryCheckpointR398:${tasks.summaryCheckpointR398.error||'failed'}`);
 
   // Every 2 minutes: lightweight comments + likes.
   if(clock.due2 && await claimCronGatewaySlotR334(db,'engagement-2m',clock.slot2)){
@@ -8562,6 +8625,7 @@ async function handleAutomationRun(request, env) {
   if (!adminAuthorized(request, env) && !cronAuthorized(request, env)) return json({ ok:false, error:'unauthorized' },401);
   const db = requireDb(env);
   await Promise.all([ensurePushAutomationSchema(db), ensurePlatformAnalyticsSchema(db), ensureControlV1Schema(db)]);
+  const autoCheckpointR398=await checkpointDailySummaryAutoR398(env,'central-automation').catch(error=>({ok:false,error:cleanPlainText(error?.message||error,300)}));
   const startedAt = new Date().toISOString();
   await setPushState(db, 'automation-last-check-at', startedAt);
   await setPushState(db, 'automation-last-check-status', 'running');
@@ -8996,14 +9060,18 @@ async function findDailySummarySnapshotR271(db, window) {
 
 async function getControlSummaryUpdateTimesR396(db, windowKey = '') {
   const safeWindow = cleanPlainText(windowKey || '', 40);
-  const [autoWindow, autoGlobal, manual] = await Promise.all([
+  const [checkpointWindowR398, checkpointGlobalR398, autoWindow, autoGlobal, manual, checkpointSourceR398] = await Promise.all([
+    safeWindow ? getPushState(db, `control-summary-auto-checkpoint-last-at-r398:${safeWindow}`).catch(() => null) : Promise.resolve(null),
+    getPushState(db, 'control-summary-auto-checkpoint-last-at-r398').catch(() => null),
     safeWindow ? getPushState(db, `control-summary-auto-refresh-last-at-r395:${safeWindow}`).catch(() => null) : Promise.resolve(null),
     getPushState(db, 'control-summary-auto-refresh-last-at-r305').catch(() => null),
-    getPushState(db, 'control-summary-manual-refresh-last-at-r396').catch(() => null)
+    getPushState(db, 'control-summary-manual-refresh-last-at-r396').catch(() => null),
+    getPushState(db, 'control-summary-auto-checkpoint-source-r398').catch(() => null)
   ]);
   return {
-    autoUpdatedAt:cleanPlainText(autoWindow?.value || autoWindow?.updatedAt || autoGlobal?.value || autoGlobal?.updatedAt || '',80),
-    manualUpdatedAt:cleanPlainText(manual?.value || manual?.updatedAt || '',80)
+    autoUpdatedAt:cleanPlainText(checkpointWindowR398?.value || checkpointWindowR398?.updatedAt || checkpointGlobalR398?.value || checkpointGlobalR398?.updatedAt || autoWindow?.value || autoWindow?.updatedAt || autoGlobal?.value || autoGlobal?.updatedAt || '',80),
+    manualUpdatedAt:cleanPlainText(manual?.value || manual?.updatedAt || '',80),
+    autoUpdateSource:cleanPlainText(checkpointSourceR398?.value || '',120)
   };
 }
 
@@ -9148,6 +9216,7 @@ async function handleControlHome(request, env) {
       accumulatorUpdatedAt:highWaterR395.updatedAt || '',
       autoUpdatedAt:updateTimesR396.autoUpdatedAt || '',
       manualUpdatedAt:updateTimesR396.manualUpdatedAt || '',
+      autoUpdateSource:updateTimesR396.autoUpdateSource || '',
       refreshNeeded:!highWaterFreshR395,
       updatedAt:updatedAtR395
     });
@@ -9292,6 +9361,7 @@ async function handleControlHome(request, env) {
     dailySummaryPushAt:latestDailySummaryLog?.createdAt || '',
     autoUpdatedAt:updateTimesR396.autoUpdatedAt || '',
     manualUpdatedAt:updateTimesR396.manualUpdatedAt || '',
+    autoUpdateSource:updateTimesR396.autoUpdateSource || '',
     updatedAt:new Date().toISOString()
   });
 }
@@ -10108,6 +10178,7 @@ async function handlePublicHealth(request, env, ctx) {
   if (isAndrikGuardHealthProbe(request) && ctx?.waitUntil) {
     ctx.waitUntil(Promise.allSettled([
       runYoutubeEventsFromGuardHealth(env),
+      checkpointDailySummaryAutoR398(env, 'guard-health'),
       refreshDailySummaryAccumulatorR305(env, 'guard-health')
     ]));
   }
