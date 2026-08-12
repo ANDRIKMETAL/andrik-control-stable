@@ -1,4 +1,4 @@
-/* Control ANDRIK R395 — instant current-window summary + ecosystem city activity. */
+/* Control ANDRIK R396 — explicit auto/manual update clocks + map-city fallback parity. */
 (() => {
   const KEY_SESSION='andrik-comments-admin-key';
   const KEY_LOCAL='andrik-comments-admin-key-persistent';
@@ -47,6 +47,36 @@
   function homeCacheKey(){return IS_PUSH_SUMMARY_VIEW?`${HOME_CACHE_KEY_PUSH_BASE}:${activeViewWindowKey()}:${PUSH_SUMMARY_SNAPSHOT_ID||'legacy-r366'}`:HOME_CACHE_KEY_LIVE}
   function saveHomeCache(data){try{localStorage.setItem(homeCacheKey(),JSON.stringify({savedAt:new Date().toISOString(),data}))}catch(_){}}
   function readHomeCache(){try{const raw=localStorage.getItem(homeCacheKey());if(!raw)return null;const parsed=JSON.parse(raw);return parsed?.data?parsed:null}catch(_){return null}}
+
+  const SUMMARY_AUTO_AT_KEY_R396='andrik-control-summary-auto-at-r396';
+  const SUMMARY_MANUAL_AT_KEY_R396='andrik-control-summary-manual-at-r396';
+  let lastAutoUpdatedAtR396='';
+  let lastManualUpdatedAtR396='';
+  function readStoredClockR396(key){try{return String(localStorage.getItem(key)||'')}catch(_){return ''}}
+  function writeStoredClockR396(key,value){if(!value)return;try{localStorage.setItem(key,String(value))}catch(_){}}
+  function compactClockR396(value){
+    const ms=Date.parse(value||'');
+    if(!Number.isFinite(ms))return '—';
+    return new Intl.DateTimeFormat('ru-RU',{hour:'2-digit',minute:'2-digit'}).format(new Date(ms));
+  }
+  function absorbUpdateTimesR396(data={}){
+    const auto=String(data?.autoUpdatedAt||'').trim();
+    const manual=String(data?.manualUpdatedAt||'').trim();
+    if(auto){lastAutoUpdatedAtR396=auto;writeStoredClockR396(SUMMARY_AUTO_AT_KEY_R396,auto)}
+    if(manual){lastManualUpdatedAtR396=manual;writeStoredClockR396(SUMMARY_MANUAL_AT_KEY_R396,manual)}
+    if(!lastAutoUpdatedAtR396)lastAutoUpdatedAtR396=readStoredClockR396(SUMMARY_AUTO_AT_KEY_R396);
+    if(!lastManualUpdatedAtR396)lastManualUpdatedAtR396=readStoredClockR396(SUMMARY_MANUAL_AT_KEY_R396);
+  }
+  function renderUpdateTimesR396({manualBusy=false}={}){
+    const box=$('controlHomeUpdated');
+    if(!box)return;
+    if(!lastAutoUpdatedAtR396)lastAutoUpdatedAtR396=readStoredClockR396(SUMMARY_AUTO_AT_KEY_R396);
+    if(!lastManualUpdatedAtR396)lastManualUpdatedAtR396=readStoredClockR396(SUMMARY_MANUAL_AT_KEY_R396);
+    const auto=compactClockR396(lastAutoUpdatedAtR396);
+    const manual=manualBusy?'…':compactClockR396(lastManualUpdatedAtR396);
+    box.textContent=`Авто: ${auto} · Ручное: ${manual}`;
+    box.title=`Последнее автообновление: ${auto}; последнее ручное обновление: ${manual}`;
+  }
 
 
   function shiftSummaryDate(dateText,days){
@@ -237,7 +267,7 @@
     if(!box)return;
     const title=$('controlCityModalTitleR375');
     const rows=dailyCityRowsR375.length?dailyCityRowsR375:mapCityRowsR395;
-    if(title)title.textContent=dailyCityRowsR375.length?'📍 Города за день':'📍 Города на карте · 30 дней';
+    if(title)title.textContent=dailyCityRowsR375.length?'📍 Города за день':'📍 Города на карте';
     if(!rows.length){
       box.innerHTML='<div class="admin-empty">Города с доступной географией пока не зафиксированы.</div>';
       return;
@@ -307,18 +337,8 @@
     if(releaseCount)releaseCount.textContent=number(s.releases);
     renderGeoDelta(s);
     renderDailyCitiesR370(data);
-    const updatedAt=Date.parse(data.updatedAt||'');
-    const compactTime=Number.isFinite(updatedAt)
-      ? new Intl.DateTimeFormat('ru-RU',{hour:'2-digit',minute:'2-digit'}).format(new Date(updatedAt))
-      : 'сейчас';
-    const updatedBox=$('controlHomeUpdated');
-    if(updatedBox){
-      if(pushSnapshot)updatedBox.textContent=`Сохранено в push · ${compactTime}`;
-      else{
-        const source=['push-merged','push-direct','push-fast-r390'].includes(data.summarySource)?' · сверено с push':'';
-        updatedBox.textContent=`Обновлено ${compactTime}${source}`;
-      }
-    }
+    absorbUpdateTimesR396(data);
+    renderUpdateTimesR396();
     syncCarouselClones();
   }
 
@@ -361,11 +381,11 @@
 
   const shell=$('controlSwipeShell');
     const showRefreshEffect=!silent&&currentPageElement()?.dataset.page!=='menu';
-    if(!silent&&$('controlHomeUpdated'))$('controlHomeUpdated').textContent='Обновляем сводку…';
+    if(!silent)renderUpdateTimesR396();
     if(showRefreshEffect)shell?.classList.add('is-refreshing');
     else shell?.classList.remove('is-refreshing');
     try{
-      const query=new URLSearchParams({v:'55.00-r395'});
+      const query=new URLSearchParams({v:'55.00-r396'});
       if(forceLive||IS_PUSH_SUMMARY_VIEW)query.set('refresh','1');
       if(IS_PUSH_SUMMARY_VIEW){query.set('source','push');query.set('window',PUSH_SUMMARY_WINDOW_KEY);if(PUSH_SUMMARY_SNAPSHOT_ID)query.set('snapshot',PUSH_SUMMARY_SNAPSHOT_ID)}
       let data=await api(`/api/control/home?${query.toString()}`,{timeoutMs:forceLive&&!IS_PUSH_SUMMARY_VIEW?20000:12000});
@@ -390,11 +410,11 @@
       if(cachedForCurrentWindow(cached)){
         renderSummary(cached.data);
         renderActivity(cached.data.activity||[]);
-        if($('controlHomeUpdated'))$('controlHomeUpdated').textContent=`Последние сохранённые данные · ${dateTime(cached.savedAt)} · ${escapeHtml(error.message)}`;
+        renderUpdateTimesR396();
       }else{
         if($('controlHomeSummary'))$('controlHomeSummary').innerHTML=`<div class="admin-empty">${escapeHtml(error.message)}. Откройте «Служебное» и проверьте ключ владельца.</div>`;
         if($('controlHomeActivity'))$('controlHomeActivity').innerHTML='<div class="admin-empty"><a class="btn" href="/service-admin.html">Открыть Служебное</a></div>';
-        if($('controlHomeUpdated'))$('controlHomeUpdated').textContent='Сводка недоступна';
+        renderUpdateTimesR396();
         if($('controlHomeGeoDelta')){$('controlHomeGeoDelta').hidden=true;$('controlHomeGeoDelta').innerHTML='';}
         syncCarouselClones();
       }
@@ -539,7 +559,7 @@
       button.classList.add('is-loading');
     }
     if(label)label.textContent='Собираем данные…';
-    if($('controlHomeUpdated'))$('controlHomeUpdated').textContent='Собираем актуальную сводку…';
+    renderUpdateTimesR396({manualBusy:true});
     const controller=new AbortController();
     const timer=setTimeout(()=>controller.abort(),32000);
     try{
@@ -552,6 +572,10 @@
       });
       const data=await response.json().catch(()=>({}));
       if(!response.ok||data.ok===false)throw new Error(data.details||data.error||`HTTP ${response.status}`);
+      if(data?.manualUpdatedAt||data?.sentAt){
+        lastManualUpdatedAtR396=String(data.manualUpdatedAt||data.sentAt||'');
+        writeStoredClockR396(SUMMARY_MANUAL_AT_KEY_R396,lastManualUpdatedAtR396);
+      }
 
       if(data?.metrics&&typeof data.metrics==='object'){
         const m=data.metrics;
@@ -589,12 +613,12 @@
       if(data.sent){
         if(label)label.textContent='Push отправлен ✓';
         button?.classList.add('is-success');
-        if($('controlHomeUpdated'))$('controlHomeUpdated').textContent='Сводка обновлена и push отправлен ✓';
+        renderUpdateTimesR396();
       }else{
         const reason=String(data.error||'push не принят');
         if(label)label.textContent='Данные обновлены';
         button?.classList.add('is-error');
-        if($('controlHomeUpdated'))$('controlHomeUpdated').textContent=`Сводка обновлена · push не отправлен: ${reason}`;
+        renderUpdateTimesR396();
       }
       setTimeout(()=>{
         if(label)label.textContent='Отправить сводку';
@@ -604,7 +628,7 @@
       if(label)label.textContent='Повторить';
       button?.classList.add('is-error');
       const message=error?.name==='AbortError'?'Сервер не ответил за 32 секунды':(error?.message||'Ошибка отправки');
-      if($('controlHomeUpdated'))$('controlHomeUpdated').textContent=message;
+      renderUpdateTimesR396();
       setTimeout(()=>button?.classList.remove('is-error'),2400);
     }finally{
       clearTimeout(timer);
@@ -843,7 +867,10 @@
   },{passive:true});
   syncCarouselClones();
   setLogicalPage(logicalPage,{animate:false});
-  // R395: first paint always returns from the fast current-window endpoint; full refresh stays background.
+  absorbUpdateTimesR396({});
+  renderUpdateTimesR396();
+
+  // R396: first paint always returns from the fast current-window endpoint; full refresh stays background.
   // If a push snapshot/high-water is available it is rendered first; full live refresh is queued afterwards.
   if(summaryMode)load({silent:true,forceLive:false});
 })();

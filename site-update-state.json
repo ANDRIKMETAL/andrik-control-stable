@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786513325083-6d5d1eac40",
-  "release": "R395",
-  "archiveName": "R395-R394-NEXT-DAY-INSTANT-SUMMARY-ECOSYSTEM-CITIES-SAFE-FULL.zip",
-  "sourceHead": "942f6b68fc0c03a30e5cc8cba182dd2b9f1ede97",
-  "backupSha": "942f6b68fc0c03a30e5cc8cba182dd2b9f1ede97",
-  "backupTag": "control-backup-20260812054155-942f6b6-r395-1086b",
+  "operationId": "publish-1786514061620-3102611c43",
+  "release": "R396",
+  "archiveName": "R396-R395-UPDATE-CLOCKS-CITY-MAP-HISTORY-PARITY-SAFE-FULL.zip",
+  "sourceHead": "f022055aaff470e26115ae52573a982dabc9ad3f",
+  "backupSha": "f022055aaff470e26115ae52573a982dabc9ad3f",
+  "backupTag": "control-backup-20260812055414-f022055-r396-d5e08",
   "autoRecovery": true,
-  "generatedAt": "2026-08-12T05:42:05.083Z"
+  "generatedAt": "2026-08-12T05:54:21.620Z"
 }

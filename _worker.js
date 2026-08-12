@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R395', number:395, version:'55.00', full:'55.00 LIVE WEB AI FINAL R395', siteUpdater:'55.00-r356' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R396', number:396, version:'55.00', full:'55.00 LIVE WEB AI FINAL R396', siteUpdater:'55.00-r356' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -8301,6 +8301,7 @@ async function handleManualDailyOwnerSummary(request, env) {
   }
 
   const preparedAt = new Date().toISOString();
+  await setPushState(db, 'control-summary-manual-refresh-last-at-r396', preparedAt).catch(() => {});
   const windowKey = metrics?.windowKey || window.key;
   const cities = await collectDailyCityActivityR370(db, window, preparedAt).catch(() => []);
   const snapshotId = `manual-${clock.date}-${Date.now().toString(36)}`;
@@ -8368,6 +8369,7 @@ async function handleManualDailyOwnerSummary(request, env) {
     sent:Boolean(result.ok),
     pushOk:Boolean(result.ok),
     sentAt,
+    manualUpdatedAt:preparedAt,
     localDate:clock.date,
     windowKey,
     metrics,
@@ -8794,7 +8796,7 @@ function controlHomeSummaryFromDailyMetricsR271(metrics = {}) {
 }
 
 
-async function collectCityActivityWindowR395(db, windowStart, windowEnd, { limit = 50, includePush = true } = {}) {
+async function collectCityActivityWindowR395(db, windowStart, windowEnd, { limit = 50, includePush = true, pushAllActive = false } = {}) {
   const startAt = cleanPlainText(windowStart || '', 80);
   const endAt = cleanPlainText(windowEnd || '', 80);
   if (!startAt || !endAt) return [];
@@ -8821,7 +8823,18 @@ async function collectCityActivityWindowR395(db, windowStart, windowEnd, { limit
 
   let pushRows = { results:[] };
   if (includePush) {
-    pushRows = await db.prepare(`
+    const pushSql = pushAllActive ? `
+      SELECT country, region, city,
+             COUNT(*) AS opens,
+             COUNT(*) AS visitors,
+             MAX(COALESCE(NULLIF(last_seen_at,''), created_at)) AS lastAt
+      FROM push_subscribers
+      WHERE status='active' AND source<>'owner'
+        AND (city<>'' OR region<>'')
+      GROUP BY country, region, city
+      ORDER BY opens DESC, datetime(lastAt) DESC
+      LIMIT ${Math.max(50, Math.min(240, Number(limit || 50) * 2))}
+    ` : `
       SELECT country, region, city,
              COUNT(*) AS opens,
              COUNT(*) AS visitors,
@@ -8834,7 +8847,10 @@ async function collectCityActivityWindowR395(db, windowStart, windowEnd, { limit
       GROUP BY country, region, city
       ORDER BY opens DESC, datetime(lastAt) DESC
       LIMIT ${Math.max(50, Math.min(240, Number(limit || 50) * 2))}
-    `).bind(startAt, endAt).all().catch(() => ({ results:[] }));
+    `;
+    pushRows = pushAllActive
+      ? await db.prepare(pushSql).all().catch(() => ({ results:[] }))
+      : await db.prepare(pushSql).bind(startAt, endAt).all().catch(() => ({ results:[] }));
   }
 
   const merged = new Map();
@@ -8884,7 +8900,7 @@ async function collectDailyCityActivityR370(db, window, cutoffAt = '') {
 async function collectMapCityActivity30dR395(db) {
   const endAt = new Date().toISOString();
   const startAt = new Date(Date.now() - 30 * 86400000).toISOString();
-  return collectCityActivityWindowR395(db, startAt, endAt, { limit:80, includePush:true });
+  return collectCityActivityWindowR395(db, startAt, endAt, { limit:80, includePush:true, pushAllActive:true });
 }
 
 function parseStoredDailySummarySnapshotR271(row, windowKey) {
@@ -8948,6 +8964,19 @@ async function findDailySummarySnapshotR271(db, window) {
     window.key
   );
   return latestStored || null;
+}
+
+async function getControlSummaryUpdateTimesR396(db, windowKey = '') {
+  const safeWindow = cleanPlainText(windowKey || '', 40);
+  const [autoWindow, autoGlobal, manual] = await Promise.all([
+    safeWindow ? getPushState(db, `control-summary-auto-refresh-last-at-r395:${safeWindow}`).catch(() => null) : Promise.resolve(null),
+    getPushState(db, 'control-summary-auto-refresh-last-at-r305').catch(() => null),
+    getPushState(db, 'control-summary-manual-refresh-last-at-r396').catch(() => null)
+  ]);
+  return {
+    autoUpdatedAt:cleanPlainText(autoWindow?.value || autoWindow?.updatedAt || autoGlobal?.value || autoGlobal?.updatedAt || '',80),
+    manualUpdatedAt:cleanPlainText(manual?.value || manual?.updatedAt || '',80)
+  };
 }
 
 async function handleControlHomePushSnapshotR271(db, window) {
@@ -9074,6 +9103,7 @@ async function handleControlHome(request, env) {
     const updatedAtR395 = accumulatorIsCurrentR395
       ? highWaterR395.updatedAt
       : (fastSnapshotR395?.sentAt || highWaterR395.updatedAt || new Date().toISOString());
+    const updateTimesR396 = await getControlSummaryUpdateTimesR396(db, window.key);
     return json({
       ok:true,
       period:'06:05-auto-cycle',
@@ -9088,6 +9118,8 @@ async function handleControlHome(request, env) {
       summaryView:'live-fast-r395',
       pushSentAt:fastSnapshotR395?.sentAt || '',
       accumulatorUpdatedAt:highWaterR395.updatedAt || '',
+      autoUpdatedAt:updateTimesR396.autoUpdatedAt || '',
+      manualUpdatedAt:updateTimesR396.manualUpdatedAt || '',
       refreshNeeded:!highWaterFreshR395,
       updatedAt:updatedAtR395
     });
@@ -9202,6 +9234,7 @@ async function handleControlHome(request, env) {
     countryDate:ytNow?.studio?.dailyDate || pushMetrics?.countryDate || ''
   });
   const cityMapActivityR395 = await collectMapCityActivity30dR395(db).catch(() => []);
+  const updateTimesR396 = await getControlSummaryUpdateTimesR396(db, window.key);
   const highWaterKeyR213 = `control-home-high-water-r213:${window.key}`;
   const previousHighWaterRowR213 = await getPushState(db, highWaterKeyR213).catch(() => null);
   const previousHighWaterR213 = parseControlHomeHighWaterR213(previousHighWaterRowR213);
@@ -9229,6 +9262,8 @@ async function handleControlHome(request, env) {
     snapshots:{ youtubeAt:ytLatest?.created_at || '', googleAt:gaLatest?.created_at || '' },
     summarySource,
     dailySummaryPushAt:latestDailySummaryLog?.createdAt || '',
+    autoUpdatedAt:updateTimesR396.autoUpdatedAt || '',
+    manualUpdatedAt:updateTimesR396.manualUpdatedAt || '',
     updatedAt:new Date().toISOString()
   });
 }
