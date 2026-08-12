@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R402', number:402, version:'55.00', full:'55.00 LIVE WEB AI FINAL R402', siteUpdater:'55.00-r356' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R403', number:403, version:'55.00', full:'55.00 LIVE WEB AI FINAL R403', siteUpdater:'55.00-r356' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -8372,6 +8372,30 @@ async function maybeSendDailyOwnerSummary(env) {
   return { ok:Boolean(result.ok), sent:Boolean(result.ok), slot, localDate:clock.date, summaryWindow, metrics, collectionError, oneSignalId:result.oneSignalId||'', error:result.error||'' };
 }
 
+// R403: owner-page driven automatic refresh. This is a zero-Cloudflare fallback:
+// opening the daily summary performs a real server-side accumulator refresh without
+// sending a push. It uses the same D1/GA collector as Cron and writes the normal
+// automatic timestamp only after the refresh succeeds.
+async function handleControlSummaryAutoRefreshR403(request, env) {
+  if (!adminAuthorized(request, env)) return json({ok:false,error:'unauthorized'},401);
+  try {
+    const result=await refreshDailySummaryAccumulatorR305(env,'control-summary-page-r403');
+    const db=requireDb(env);
+    const window=getBratislavaSummaryWindow();
+    const times=await getControlSummaryUpdateTimesR396(db,window.key).catch(()=>({autoUpdatedAt:'',manualUpdatedAt:''}));
+    return json({
+      ok:result?.ok!==false,
+      version:ANDRIK_CONTROL_RELEASE.short,
+      result,
+      windowKey:window.key,
+      autoUpdatedAt:times?.autoUpdatedAt || result?.updatedAt || result?.lastAt || '',
+      manualUpdatedAt:times?.manualUpdatedAt || ''
+    },result?.ok===false && !result?.skipped?502:200);
+  } catch (error) {
+    return json({ok:false,error:cleanPlainText(error?.message||error,500)},500);
+  }
+}
+
 async function handleManualDailyOwnerSummary(request, env) {
   if (!adminAuthorized(request, env)) return json({ ok:false, error:'unauthorized' }, 401);
   const db = requireDb(env);
@@ -12360,6 +12384,7 @@ async function routeApi(request, env, ctx) {
       if(/ANDRIK-Central-Cron\/1\.0/i.test(ua)) return await handleLegacyExternalCronR400(request,env,ctx);
       return await handleAutomationRun(request, env);
     }
+    if (path === '/api/control/daily-summary/auto-refresh' && request.method === 'POST') return await handleControlSummaryAutoRefreshR403(request, env);
     if (path === '/api/control/daily-summary/send' && request.method === 'POST') return await handleManualDailyOwnerSummary(request, env);
     if (path === '/api/push/retry-latest' && request.method === 'POST') return await handleRetryLatestPush(request, env);
     if (path === '/api/push/diagnostic-log' && request.method === 'GET') return await handlePushDiagnosticLog(request, env);

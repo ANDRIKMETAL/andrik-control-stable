@@ -386,7 +386,7 @@
     if(showRefreshEffect)shell?.classList.add('is-refreshing');
     else shell?.classList.remove('is-refreshing');
     try{
-      const query=new URLSearchParams({v:'55.00-r401'});
+      const query=new URLSearchParams({v:'55.00-r403'});
       if(forceLive||IS_PUSH_SUMMARY_VIEW)query.set('refresh','1');
       if(IS_PUSH_SUMMARY_VIEW){query.set('source','push');query.set('window',PUSH_SUMMARY_WINDOW_KEY);if(PUSH_SUMMARY_SNAPSHOT_ID)query.set('snapshot',PUSH_SUMMARY_SNAPSHOT_ID)}
       let data=await api(`/api/control/home?${query.toString()}`,{timeoutMs:forceLive&&!IS_PUSH_SUMMARY_VIEW?20000:12000});
@@ -872,18 +872,35 @@
   },{passive:true});
   syncCarouselClones();
   setLogicalPage(logicalPage,{animate:false});
-  // R401: visible summary safety-net. Quiet refresh every five minutes.
-  let summaryLastAutoFetchAtR401=0;
-  function runSummaryAutoRefreshR401(){
-    if(!summaryMode || IS_PUSH_SUMMARY_VIEW || document.hidden)return;
+  // R403: real automatic refresh while the summary page is in use.
+  // Do not depend on the external Cloudflare Cron. The owner page asks the Worker
+  // to refresh the accumulator, then reloads the fast summary. No push is sent.
+  let summaryAutoRefreshBusyR403=false;
+  let summaryAutoRefreshLastTryR403=0;
+  async function runSummaryAutoRefreshR403({force=false}={}){
+    if(!summaryMode || IS_PUSH_SUMMARY_VIEW || document.hidden || summaryAutoRefreshBusyR403)return;
     const now=Date.now();
-    if(now-summaryLastAutoFetchAtR401<4.5*60*1000)return;
-    summaryLastAutoFetchAtR401=now;
-    load({silent:true,forceLive:false}).catch(()=>{});
+    if(!force && now-summaryAutoRefreshLastTryR403<4.5*60*1000)return;
+    summaryAutoRefreshLastTryR403=now;
+    summaryAutoRefreshBusyR403=true;
+    try{
+      const refreshed=await api('/api/control/daily-summary/auto-refresh?v=55.00-r403',{method:'POST',timeoutMs:22000});
+      absorbUpdateTimesR396(refreshed||{});
+      renderUpdateTimesR396();
+      await load({silent:true,forceLive:false});
+    }catch(_){
+      // Keep the last truthful automatic time. A failed request must never fake freshness.
+    }finally{
+      summaryAutoRefreshBusyR403=false;
+    }
   }
-  setInterval(runSummaryAutoRefreshR401,5*60*1000);
-  document.addEventListener('visibilitychange',()=>{if(!document.hidden)runSummaryAutoRefreshR401()},{passive:true});
-  window.addEventListener('pageshow',()=>setTimeout(runSummaryAutoRefreshR401,350),{passive:true});
+  setInterval(()=>runSummaryAutoRefreshR403(),5*60*1000);
+  document.addEventListener('visibilitychange',()=>{
+    if(!document.hidden)setTimeout(()=>runSummaryAutoRefreshR403({force:true}),250);
+  },{passive:true});
+  window.addEventListener('pageshow',()=>setTimeout(()=>runSummaryAutoRefreshR403({force:true}),650),{passive:true});
+  // First real auto refresh shortly after the fast first paint.
+  if(summaryMode && !IS_PUSH_SUMMARY_VIEW)setTimeout(()=>runSummaryAutoRefreshR403({force:true}),900);
 
   absorbUpdateTimesR396({});
   renderUpdateTimesR396();

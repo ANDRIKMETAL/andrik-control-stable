@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786549394141-a73cbc26a1",
-  "release": "R402",
-  "archiveName": "R402-R401-NEWEST-AUTO-TIMESTAMP-WINS-SAFE-FULL.zip",
-  "sourceHead": "9eb6214013c7f23fab9f00a5f75ad3f07224a128",
-  "backupSha": "9eb6214013c7f23fab9f00a5f75ad3f07224a128",
-  "backupTag": "control-backup-20260812154309-9eb6214-r402-088a8",
+  "operationId": "publish-1786552100879-00c7d06541",
+  "release": "R403",
+  "archiveName": "R403-R402-PAGE-DRIVEN-REAL-AUTO-SUMMARY-REFRESH-NO-CLOUDFLARE-SAFE-FULL.zip",
+  "sourceHead": "d2e0c4af9b6e7b88f1f8c212ba64cd52f2bd078e",
+  "backupSha": "d2e0c4af9b6e7b88f1f8c212ba64cd52f2bd078e",
+  "backupTag": "control-backup-20260812162816-d2e0c4a-r403-33681",
   "autoRecovery": true,
-  "generatedAt": "2026-08-12T15:43:14.141Z"
+  "generatedAt": "2026-08-12T16:28:20.879Z"
 }
