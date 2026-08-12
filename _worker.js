@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R401', number:401, version:'55.00', full:'55.00 LIVE WEB AI FINAL R401', siteUpdater:'55.00-r356' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R402', number:402, version:'55.00', full:'55.00 LIVE WEB AI FINAL R402', siteUpdater:'55.00-r356' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -9191,10 +9191,21 @@ async function getControlSummaryUpdateTimesR396(db, windowKey = '') {
     getPushState(db, 'control-summary-manual-refresh-last-at-r396').catch(() => null),
     getPushState(db, 'control-summary-auto-checkpoint-source-r398').catch(() => null)
   ]);
+  // R402: choose the NEWEST automatic timestamp, not the first non-empty one.
+  // R396-R401 preferred checkpointWindowR398 forever once it existed, so an old
+  // 11:20 checkpoint masked fresher auto-refresh timestamps from later server cycles.
+  const autoCandidatesR402 = [
+    {source:'checkpoint-window-r398', value:checkpointWindowR398?.value || checkpointWindowR398?.updatedAt || ''},
+    {source:'checkpoint-global-r398', value:checkpointGlobalR398?.value || checkpointGlobalR398?.updatedAt || ''},
+    {source:'auto-window-r395', value:autoWindow?.value || autoWindow?.updatedAt || ''},
+    {source:'auto-global-r305', value:autoGlobal?.value || autoGlobal?.updatedAt || ''}
+  ].map(item=>({source:item.source,value:cleanPlainText(item.value || '',80)}));
+  const autoUpdatedAtR402 = freshestIsoR401(...autoCandidatesR402.map(item=>item.value));
+  const autoWinnerR402 = autoCandidatesR402.find(item=>item.value===autoUpdatedAtR402);
   return {
-    autoUpdatedAt:cleanPlainText(checkpointWindowR398?.value || checkpointWindowR398?.updatedAt || checkpointGlobalR398?.value || checkpointGlobalR398?.updatedAt || autoWindow?.value || autoWindow?.updatedAt || autoGlobal?.value || autoGlobal?.updatedAt || '',80),
+    autoUpdatedAt:autoUpdatedAtR402 || '',
     manualUpdatedAt:cleanPlainText(manual?.value || manual?.updatedAt || '',80),
-    autoUpdateSource:cleanPlainText(checkpointSourceR398?.value || '',120)
+    autoUpdateSource:autoWinnerR402?.source || cleanPlainText(checkpointSourceR398?.value || '',120)
   };
 }
 

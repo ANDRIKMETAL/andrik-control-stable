@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786543582474-3dbe99fa44",
-  "release": "R401",
-  "archiveName": "R401-R400-FRESH-AUTO-CLOCK-FULL-MANUAL-TIME-5MIN-UI-REFRESH-SAFE-FULL.zip",
-  "sourceHead": "ea0930b53f849e1b402ddf4dfb92306bf135dee1",
-  "backupSha": "ea0930b53f849e1b402ddf4dfb92306bf135dee1",
-  "backupTag": "control-backup-20260812140613-ea0930b-r401-2ea3d",
+  "operationId": "publish-1786549394141-a73cbc26a1",
+  "release": "R402",
+  "archiveName": "R402-R401-NEWEST-AUTO-TIMESTAMP-WINS-SAFE-FULL.zip",
+  "sourceHead": "9eb6214013c7f23fab9f00a5f75ad3f07224a128",
+  "backupSha": "9eb6214013c7f23fab9f00a5f75ad3f07224a128",
+  "backupTag": "control-backup-20260812154309-9eb6214-r402-088a8",
   "autoRecovery": true,
-  "generatedAt": "2026-08-12T14:06:22.474Z"
+  "generatedAt": "2026-08-12T15:43:14.141Z"
 }
