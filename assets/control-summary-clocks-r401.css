@@ -1,0 +1,39 @@
+/* R401 — full Auto/Manual clocks */
+.control-home-page .control-summary-page .control-home-updated,
+body.control-home-page.control-summary-visible #controlHomeUpdated,
+body.control-home-page.control-report-standalone.control-summary-visible #controlHomeUpdated{
+  box-sizing:border-box!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:flex-start!important;
+  gap:14px!important;
+  width:calc(100% - 24px)!important;
+  max-width:none!important;
+  min-width:0!important;
+  margin:10px 12px 0!important;
+  padding:0 2px 4px!important;
+  overflow:visible!important;
+  text-overflow:clip!important;
+  white-space:nowrap!important;
+  color:#728995!important;
+  font-size:clamp(.64rem,2.7vw,.76rem)!important;
+  line-height:1.25!important;
+  letter-spacing:.01em!important;
+  text-align:left!important;
+}
+#controlHomeUpdated .summary-clock-r401{
+  display:inline-flex!important;
+  gap:4px!important;
+  flex:0 0 auto!important;
+}
+#controlHomeUpdated .summary-clock-r401 b{
+  color:#8aa2af!important;
+  font-weight:700!important;
+}
+@media(max-width:370px){
+  .control-home-page .control-summary-page .control-home-updated,
+  body.control-home-page.control-summary-visible #controlHomeUpdated{
+    gap:9px!important;
+    font-size:.61rem!important;
+  }
+}

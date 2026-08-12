@@ -60,7 +60,7 @@
     return new Intl.DateTimeFormat('ru-RU',{hour:'2-digit',minute:'2-digit'}).format(new Date(ms));
   }
   function absorbUpdateTimesR396(data={}){
-    const auto=String(data?.autoUpdatedAt||'').trim();
+    const auto=String(data?.autoUpdatedAt||data?.accumulatorUpdatedAt||'').trim();
     const manual=String(data?.manualUpdatedAt||'').trim();
     if(auto){lastAutoUpdatedAtR396=auto;writeStoredClockR396(SUMMARY_AUTO_AT_KEY_R396,auto)}
     if(manual){lastManualUpdatedAtR396=manual;writeStoredClockR396(SUMMARY_MANUAL_AT_KEY_R396,manual)}
@@ -74,7 +74,7 @@
     if(!lastManualUpdatedAtR396)lastManualUpdatedAtR396=readStoredClockR396(SUMMARY_MANUAL_AT_KEY_R396);
     const auto=compactClockR396(lastAutoUpdatedAtR396);
     const manual=manualBusy?'…':compactClockR396(lastManualUpdatedAtR396);
-    box.textContent=`Авто: ${auto} · Ручное: ${manual}`;
+    box.innerHTML=`<span class="summary-clock-r401"><b>Авто:</b> ${escapeHtml(auto)}</span><span class="summary-clock-r401"><b>Ручное:</b> ${escapeHtml(manual)}</span>`;
     box.title=`Последнее автообновление: ${auto}; последнее ручное обновление: ${manual}`;
   }
 
@@ -386,7 +386,7 @@
     if(showRefreshEffect)shell?.classList.add('is-refreshing');
     else shell?.classList.remove('is-refreshing');
     try{
-      const query=new URLSearchParams({v:'55.00-r398'});
+      const query=new URLSearchParams({v:'55.00-r401'});
       if(forceLive||IS_PUSH_SUMMARY_VIEW)query.set('refresh','1');
       if(IS_PUSH_SUMMARY_VIEW){query.set('source','push');query.set('window',PUSH_SUMMARY_WINDOW_KEY);if(PUSH_SUMMARY_SNAPSHOT_ID)query.set('snapshot',PUSH_SUMMARY_SNAPSHOT_ID)}
       let data=await api(`/api/control/home?${query.toString()}`,{timeoutMs:forceLive&&!IS_PUSH_SUMMARY_VIEW?20000:12000});
@@ -872,6 +872,19 @@
   },{passive:true});
   syncCarouselClones();
   setLogicalPage(logicalPage,{animate:false});
+  // R401: visible summary safety-net. Quiet refresh every five minutes.
+  let summaryLastAutoFetchAtR401=0;
+  function runSummaryAutoRefreshR401(){
+    if(!summaryMode || IS_PUSH_SUMMARY_VIEW || document.hidden)return;
+    const now=Date.now();
+    if(now-summaryLastAutoFetchAtR401<4.5*60*1000)return;
+    summaryLastAutoFetchAtR401=now;
+    load({silent:true,forceLive:false}).catch(()=>{});
+  }
+  setInterval(runSummaryAutoRefreshR401,5*60*1000);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)runSummaryAutoRefreshR401()},{passive:true});
+  window.addEventListener('pageshow',()=>setTimeout(runSummaryAutoRefreshR401,350),{passive:true});
+
   absorbUpdateTimesR396({});
   renderUpdateTimesR396();
 

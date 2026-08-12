@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R400', number:400, version:'55.00', full:'55.00 LIVE WEB AI FINAL R400', siteUpdater:'55.00-r356' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R401', number:401, version:'55.00', full:'55.00 LIVE WEB AI FINAL R401', siteUpdater:'55.00-r356' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -9170,6 +9170,17 @@ async function findDailySummarySnapshotR271(db, window) {
   return latestStored || null;
 }
 
+// R401: newest truthful server-side freshness marker.
+function freshestIsoR401(...values){
+  let best='', bestMs=-1;
+  for(const value of values){
+    const cleaned=cleanPlainText(value || '',80);
+    const ms=Date.parse(cleaned);
+    if(Number.isFinite(ms) && ms>bestMs){best=cleaned;bestMs=ms;}
+  }
+  return best;
+}
+
 async function getControlSummaryUpdateTimesR396(db, windowKey = '') {
   const safeWindow = cleanPlainText(windowKey || '', 40);
   const [checkpointWindowR398, checkpointGlobalR398, autoWindow, autoGlobal, manual, checkpointSourceR398] = await Promise.all([
@@ -9312,6 +9323,10 @@ async function handleControlHome(request, env) {
       ? highWaterR395.updatedAt
       : (fastSnapshotR395?.sentAt || highWaterR395.updatedAt || new Date().toISOString());
     const updateTimesR396 = await getControlSummaryUpdateTimesR396(db, window.key);
+    const effectiveAutoUpdatedAtR401 = freshestIsoR401(
+      updateTimesR396.autoUpdatedAt,
+      highWaterR395.updatedAt
+    );
     return json({
       ok:true,
       period:'06:05-auto-cycle',
@@ -9326,9 +9341,11 @@ async function handleControlHome(request, env) {
       summaryView:'live-fast-r395',
       pushSentAt:fastSnapshotR395?.sentAt || '',
       accumulatorUpdatedAt:highWaterR395.updatedAt || '',
-      autoUpdatedAt:updateTimesR396.autoUpdatedAt || '',
+      autoUpdatedAt:effectiveAutoUpdatedAtR401 || '',
       manualUpdatedAt:updateTimesR396.manualUpdatedAt || '',
-      autoUpdateSource:updateTimesR396.autoUpdateSource || '',
+      autoUpdateSource:effectiveAutoUpdatedAtR401 && effectiveAutoUpdatedAtR401!==updateTimesR396.autoUpdatedAt
+        ? 'accumulator-high-water-r401'
+        : (updateTimesR396.autoUpdateSource || ''),
       refreshNeeded:!highWaterFreshR395,
       updatedAt:updatedAtR395
     });
@@ -9450,9 +9467,17 @@ async function handleControlHome(request, env) {
   const summaryR213 = mergeControlHomeSummaryR213(previousHighWaterR213, liveSummaryR213);
   const previousSerializedR213 = JSON.stringify(normalizeControlHomeSummaryR213(previousHighWaterR213));
   const nextSerializedR213 = JSON.stringify(summaryR213);
+  let highWaterUpdatedAtR401 = cleanPlainText(previousHighWaterRowR213?.updatedAt || '',80);
   if (nextSerializedR213 !== previousSerializedR213) {
-    await setPushState(db, highWaterKeyR213, JSON.stringify({ windowKey:window.key, summary:summaryR213, updatedAt:new Date().toISOString() })).catch(() => {});
+    highWaterUpdatedAtR401 = new Date().toISOString();
+    await setPushState(db, highWaterKeyR213, JSON.stringify({ windowKey:window.key, summary:summaryR213, updatedAt:highWaterUpdatedAtR401 })).catch(() => {});
   }
+  const effectiveAutoUpdatedAtR401 = freshestIsoR401(
+    updateTimesR396.autoUpdatedAt,
+    highWaterUpdatedAtR401,
+    ytLatest?.created_at || '',
+    gaLatest?.created_at || ''
+  );
   return json({
     ok:true,
     period:'06:05-auto-cycle',
@@ -9471,9 +9496,11 @@ async function handleControlHome(request, env) {
     snapshots:{ youtubeAt:ytLatest?.created_at || '', googleAt:gaLatest?.created_at || '' },
     summarySource,
     dailySummaryPushAt:latestDailySummaryLog?.createdAt || '',
-    autoUpdatedAt:updateTimesR396.autoUpdatedAt || '',
+    autoUpdatedAt:effectiveAutoUpdatedAtR401 || '',
     manualUpdatedAt:updateTimesR396.manualUpdatedAt || '',
-    autoUpdateSource:updateTimesR396.autoUpdateSource || '',
+    autoUpdateSource:effectiveAutoUpdatedAtR401 && effectiveAutoUpdatedAtR401!==updateTimesR396.autoUpdatedAt
+      ? 'live-accumulator-r401'
+      : (updateTimesR396.autoUpdateSource || ''),
     updatedAt:new Date().toISOString()
   });
 }

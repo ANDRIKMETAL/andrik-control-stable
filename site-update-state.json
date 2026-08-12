@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786540141584-5095dfb4f0",
-  "release": "R400",
-  "archiveName": "R400-R399-ZERO-TOUCH-LEGACY-CRON-BRIDGE-FAST-ACK-SAFE-FULL.zip",
-  "sourceHead": "2b4ea7058bd06eb2921a10c1332987913a340c1f",
-  "backupSha": "2b4ea7058bd06eb2921a10c1332987913a340c1f",
-  "backupTag": "control-backup-20260812130857-2b4ea70-r400-c9639",
+  "operationId": "publish-1786543582474-3dbe99fa44",
+  "release": "R401",
+  "archiveName": "R401-R400-FRESH-AUTO-CLOCK-FULL-MANUAL-TIME-5MIN-UI-REFRESH-SAFE-FULL.zip",
+  "sourceHead": "ea0930b53f849e1b402ddf4dfb92306bf135dee1",
+  "backupSha": "ea0930b53f849e1b402ddf4dfb92306bf135dee1",
+  "backupTag": "control-backup-20260812140613-ea0930b-r401-2ea3d",
   "autoRecovery": true,
-  "generatedAt": "2026-08-12T13:09:01.584Z"
+  "generatedAt": "2026-08-12T14:06:22.474Z"
 }
