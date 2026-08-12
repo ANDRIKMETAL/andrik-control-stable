@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R396', number:396, version:'55.00', full:'55.00 LIVE WEB AI FINAL R396', siteUpdater:'55.00-r356' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R397', number:397, version:'55.00', full:'55.00 LIVE WEB AI FINAL R397', siteUpdater:'55.00-r356' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -7925,6 +7925,34 @@ async function refreshDailySummaryAccumulatorR305(env, source = 'background') {
   let google = { ok:true, skipped:true, reason:'not-configured' };
   let collectionError = '';
   try {
+    // R397: write a truthful automatic-summary checkpoint BEFORE any slow external API.
+    // The previous implementation waited for Google Analytics (up to 12s) and the full
+    // collector before writing the auto timestamp. If a Cron request ended early, the
+    // summary could still have partial data while `Авто` stayed blank forever.
+    // First collect only D1 + persisted platform snapshots, persist high-water, and mark
+    // the automatic refresh successful. Slow Google enrichment then runs as phase two.
+    let localMetricsR397 = null;
+    let localErrorR397 = '';
+    try {
+      localMetricsR397 = await collectDailyOwnerSummary(env, { liveExternal:false, windowOverride:activeWindowR395 });
+    } catch (error) {
+      localErrorR397 = cleanPlainText(error?.message || error, 500);
+      localMetricsR397 = await collectDailyOwnerSummaryFallback(env, activeWindowR395, localErrorR397);
+    }
+    if (localMetricsR397 && typeof localMetricsR397 === 'object') {
+      await persistControlHomeHighWaterFromMetricsR260(db, activeWindowR395.key, localMetricsR397).catch(() => {});
+      const localFinishedAtR397 = new Date().toISOString();
+      await Promise.all([
+        setPushState(db, lastKey, localFinishedAtR397),
+        setPushState(db, 'control-summary-auto-refresh-last-at-r305', localFinishedAtR397),
+        setPushState(db, 'control-summary-auto-refresh-last-status-r305', localErrorR397 ? 'local-fallback' : 'local-ok')
+      ]).catch(() => {});
+      await recordSystemLog(env, {
+        scope:'daily-summary', level:localErrorR397 ? 'warning' : 'info', event:'auto-refresh-fast-r397',
+        message:`Автосводка быстро сохранена · ${source}.`,
+        details:{ source, windowKey:activeWindowR395.key, updatedAt:localFinishedAtR397, localError:localErrorR397 }
+      }).catch(() => {});
+    }
     if (String(env.GOOGLE_ANALYTICS_CREDENTIALS || '').trim()) {
       try {
         const liveGoogle = await Promise.race([
@@ -8466,7 +8494,7 @@ async function handleExternalCronGatewayR334(request, env) {
   // from push delivery, so «Аналитика за день» never needs a manual push to populate.
   if(clock.due5 && await claimCronGatewaySlotR334(db,'youtube-5m',clock.slot5)){
     try{
-      tasks.summaryRefreshFast=await refreshDailySummaryAccumulatorR305(env,'cron-5m-r394');
+      tasks.summaryRefreshFast=await refreshDailySummaryAccumulatorR305(env,'cron-5m-r397');
       if(!tasks.summaryRefreshFast.ok && !tasks.summaryRefreshFast.skipped)errors.push(`summaryRefreshFast:${tasks.summaryRefreshFast.error || 'failed'}`);
     }catch(error){
       tasks.summaryRefreshFast={ok:false,error:cleanPlainText(error?.message || error,400)};
@@ -8515,7 +8543,7 @@ async function handleExternalCronGatewayR334(request, env) {
 
   const result={
     ok:errors.length===0,
-    mode:'external-cron-gateway-r394',
+    mode:'external-cron-gateway-r397',
     schedulerHeartbeatAt,
     utcMinute:clock.minute,
     due:{every2:clock.due2,every5:clock.due5,every15:clock.due15},
