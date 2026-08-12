@@ -395,7 +395,7 @@
     if(showRefreshEffect)shell?.classList.add('is-refreshing');
     else shell?.classList.remove('is-refreshing');
     try{
-      const query=new URLSearchParams({v:'55.00-r403'});
+      const query=new URLSearchParams({v:'55.00-r405'});
       if(forceLive||IS_PUSH_SUMMARY_VIEW)query.set('refresh','1');
       if(IS_PUSH_SUMMARY_VIEW){query.set('source','push');query.set('window',PUSH_SUMMARY_WINDOW_KEY);if(PUSH_SUMMARY_SNAPSHOT_ID)query.set('snapshot',PUSH_SUMMARY_SNAPSHOT_ID)}
       let data=await api(`/api/control/home?${query.toString()}`,{timeoutMs:forceLive&&!IS_PUSH_SUMMARY_VIEW?20000:12000});
@@ -893,10 +893,26 @@
     summaryAutoRefreshLastTryR403=now;
     summaryAutoRefreshBusyR403=true;
     try{
-      const refreshed=await api('/api/control/daily-summary/auto-refresh?v=55.00-r404',{method:'POST',body:{},timeoutMs:22000});
+      const refreshed=await api('/api/control/daily-summary/auto-refresh?v=55.00-r405',{method:'POST',body:{},timeoutMs:22000});
       absorbUpdateTimesR396(refreshed||{});
       renderUpdateTimesR396();
-      await load({silent:true,forceLive:false});
+
+      // R405: the successful POST already contains the exact persisted summary.
+      // Render it immediately instead of waiting for a second GET that can be stale/slow.
+      if(refreshed?.summary && refreshed?.windowKey){
+        activeSummaryWindowKey=refreshed.windowKey;
+        const previous=readHomeCache();
+        const stable=cachedForCurrentWindow(previous)
+          ? mergeSummaryPayloadR213(previous.data,refreshed)
+          : refreshed;
+        if(summaryHasSignalR375(stable))saveHomeCache(stable);
+        renderSummary(stable);
+        renderActivity(stable.activity||[]);
+        if(summaryHasSignalR375(stable))fastRetryCountR398=0;
+      }
+
+      // Fast GET is now only a synchronization safety-net and cannot block first data paint.
+      setTimeout(()=>load({silent:true,forceLive:false}),450);
     }catch(_){
       // Keep the last truthful automatic time. A failed request must never fake freshness.
     }finally{

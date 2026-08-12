@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R404', number:404, version:'55.00', full:'55.00 LIVE WEB AI FINAL R404', siteUpdater:'55.00-r356' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R405', number:405, version:'55.00', full:'55.00 LIVE WEB AI FINAL R405', siteUpdater:'55.00-r356' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -8376,20 +8376,65 @@ async function maybeSendDailyOwnerSummary(env) {
 // opening the daily summary performs a real server-side accumulator refresh without
 // sending a push. It uses the same D1/GA collector as Cron and writes the normal
 // automatic timestamp only after the refresh succeeds.
+// R405: atomic page auto-refresh response. The previous R404 POST successfully
+// refreshed the accumulator and the Auto clock, but the browser threw away result.metrics
+// and waited for a second /api/control/home GET. If that GET was stale/slow, the page stayed
+// on the spinner even though fresh metrics had already been collected. R405 returns the
+// complete renderable summary in this SAME successful POST response.
 async function handleControlSummaryAutoRefreshR403(request, env) {
   if (!adminAuthorized(request, env)) return json({ok:false,error:'unauthorized'},401);
   try {
-    const result=await refreshDailySummaryAccumulatorR305(env,'control-summary-page-r403');
+    const result=await refreshDailySummaryAccumulatorR305(env,'control-summary-page-r405');
     const db=requireDb(env);
     const window=getBratislavaSummaryWindow();
-    const times=await getControlSummaryUpdateTimesR396(db,window.key).catch(()=>({autoUpdatedAt:'',manualUpdatedAt:''}));
+    const [times, highWaterRow, storedWindowRow, activityResult, cityActivity, cityMapActivity] = await Promise.all([
+      getControlSummaryUpdateTimesR396(db,window.key).catch(()=>({autoUpdatedAt:'',manualUpdatedAt:''})),
+      getPushState(db,`control-home-high-water-r213:${window.key}`).catch(()=>null),
+      getPushState(db,`daily-owner-summary-window:${window.key}`).catch(()=>null),
+      db.prepare(`SELECT id, type, source, audience, title, message, url,
+                         video_id AS videoId, video_title AS videoTitle,
+                         status, created_at AS createdAt
+                  FROM push_history
+                  WHERE type IN ('youtube-comment','youtube-comment-count','youtube-subscriber','youtube-subscriber-count','youtube-like','site-subscriber','comment-live','comment-pending','auto-release','auto-release-retry','release-publish')
+                    AND datetime(created_at) >= datetime(?1)
+                  ORDER BY datetime(created_at) DESC LIMIT 200`).bind(window.startAt).all().catch(()=>({results:[]})),
+      collectDailyCityActivityR370(db,window).catch(()=>[]),
+      collectMapCityActivity30dR395(db).catch(()=>[])
+    ]);
+
+    const highWater=parseControlHomeHighWaterEnvelopeR394(highWaterRow);
+    const stored=parseStoredDailySummarySnapshotR271(storedWindowRow,window.key);
+    const storedSummary=stored ? controlHomeSummaryFromDailyMetricsR271(stored.metrics) : normalizeControlHomeSummaryR213({});
+    const resultSummary=result?.metrics && typeof result.metrics==='object'
+      ? controlHomeSummaryFromDailyMetricsR271(result.metrics)
+      : normalizeControlHomeSummaryR213({});
+    const summary=mergeControlHomeSummaryR213(storedSummary,highWater.summary,resultSummary);
+    const autoUpdatedAt=freshestIsoR401(
+      times?.autoUpdatedAt || '',
+      result?.updatedAt || result?.lastAt || '',
+      highWater.updatedAt || ''
+    );
+
     return json({
       ok:result?.ok!==false,
       version:ANDRIK_CONTROL_RELEASE.short,
       result,
+      period:'06:05-auto-cycle',
       windowKey:window.key,
-      autoUpdatedAt:times?.autoUpdatedAt || result?.updatedAt || result?.lastAt || '',
-      manualUpdatedAt:times?.manualUpdatedAt || ''
+      windowStartAt:window.startAt,
+      windowEndAt:window.endAt,
+      summary,
+      cityActivity:Array.isArray(cityActivity)?cityActivity:[],
+      cityMapActivity:Array.isArray(cityMapActivity)?cityMapActivity:[],
+      activity:activityResult?.results || [],
+      summarySource:'auto-refresh-direct-r405',
+      summaryView:'live-auto-r405',
+      accumulatorUpdatedAt:highWater.updatedAt || result?.updatedAt || '',
+      autoUpdatedAt:autoUpdatedAt || '',
+      manualUpdatedAt:times?.manualUpdatedAt || '',
+      autoUpdateSource:'page-auto-refresh-r405',
+      refreshNeeded:false,
+      updatedAt:autoUpdatedAt || highWater.updatedAt || new Date().toISOString()
     },result?.ok===false && !result?.skipped?502:200);
   } catch (error) {
     return json({ok:false,error:cleanPlainText(error?.message||error,500)},500);

@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786557452499-35351d9500",
-  "release": "R404",
-  "archiveName": "R404-R403-REAL-POST-AUTO-REFRESH-R397-ALGORITHM-SAFE-FULL.zip",
-  "sourceHead": "a003d754edfcb6091b31682ef76b401cc6e45372",
-  "backupSha": "a003d754edfcb6091b31682ef76b401cc6e45372",
-  "backupTag": "control-backup-20260812175722-a003d75-r404-2bc08",
+  "operationId": "publish-1786558576577-cfc2a79500",
+  "release": "R405",
+  "archiveName": "R405-R404-ATOMIC-AUTO-SUMMARY-DATA-AND-CLOCK-SAFE-FULL.zip",
+  "sourceHead": "68beae61ce0f3cf634e0d80e15bb74ff998f20fb",
+  "backupSha": "68beae61ce0f3cf634e0d80e15bb74ff998f20fb",
+  "backupTag": "control-backup-20260812181611-68beae6-r405-1fa33",
   "autoRecovery": true,
-  "generatedAt": "2026-08-12T17:57:32.499Z"
+  "generatedAt": "2026-08-12T18:16:16.577Z"
 }
