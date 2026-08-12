@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R394', number:394, version:'55.00', full:'55.00 LIVE WEB AI FINAL R394', siteUpdater:'55.00-r356' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R395', number:395, version:'55.00', full:'55.00 LIVE WEB AI FINAL R395', siteUpdater:'55.00-r356' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -7905,15 +7905,18 @@ async function refreshDailySummaryAccumulatorR305(env, source = 'background') {
     ensureCommentsV4Schema(db)
   ]);
 
-  const lockKey = 'control-summary-auto-refresh-lock-r305';
-  const lastKey = 'control-summary-auto-refresh-last-at-r305';
+  // R395: freshness and lock are scoped to the active 06:05→06:05 window.
+  // A refresh from the previous day can never suppress creation of the new day's accumulator.
+  const activeWindowR395 = getBratislavaSummaryWindow();
+  const lockKey = `control-summary-auto-refresh-lock-r395:${activeWindowR395.key}`;
+  const lastKey = `control-summary-auto-refresh-last-at-r395:${activeWindowR395.key}`;
   const last = await getPushState(db, lastKey).catch(() => null);
   const lastMs = Date.parse(last?.value || last?.updatedAt || '');
-  if (Number.isFinite(lastMs) && Date.now() - lastMs < 8 * 60 * 1000) {
-    return { ok:true, skipped:true, reason:'recent-summary-refresh', lastAt:last?.value || last?.updatedAt || '' };
+  if (Number.isFinite(lastMs) && Date.now() - lastMs < 4 * 60 * 1000) {
+    return { ok:true, skipped:true, reason:'recent-summary-refresh', windowKey:activeWindowR395.key, lastAt:last?.value || last?.updatedAt || '' };
   }
 
-  await db.prepare(`DELETE FROM push_state WHERE key=? AND updated_at < datetime('now','-12 minutes')`).bind(lockKey).run().catch(() => {});
+  await db.prepare(`DELETE FROM push_state WHERE key=? AND updated_at < datetime('now','-7 minutes')`).bind(lockKey).run().catch(() => {});
   if (!await claimPushOnce(db, lockKey, new Date().toISOString())) {
     return { ok:true, skipped:true, reason:'summary-refresh-already-running' };
   }
@@ -7951,7 +7954,7 @@ async function refreshDailySummaryAccumulatorR305(env, source = 'background') {
       }
     }
 
-    const window = getBratislavaSummaryWindow();
+    const window = activeWindowR395;
     let metrics;
     try {
       metrics = await collectDailyOwnerSummary(env, { liveExternal:false, windowOverride:window });
@@ -7962,7 +7965,7 @@ async function refreshDailySummaryAccumulatorR305(env, source = 'background') {
 
     await persistControlHomeHighWaterFromMetricsR260(db, window.key, metrics).catch(() => {});
     const finishedAt = new Date().toISOString();
-    await setPushState(db, lastKey, finishedAt).catch(() => {});
+    await Promise.all([setPushState(db, lastKey, finishedAt), setPushState(db, 'control-summary-auto-refresh-last-at-r305', finishedAt)]).catch(() => {});
     await setPushState(db, 'control-summary-auto-refresh-last-status-r305', google.ok === false ? 'partial' : 'ok').catch(() => {});
     await recordSystemLog(env, {
       scope:'daily-summary', level:google.ok === false ? 'warning' : 'info', event:'auto-refresh-r305',
@@ -8791,48 +8794,97 @@ function controlHomeSummaryFromDailyMetricsR271(metrics = {}) {
 }
 
 
+async function collectCityActivityWindowR395(db, windowStart, windowEnd, { limit = 50, includePush = true } = {}) {
+  const startAt = cleanPlainText(windowStart || '', 80);
+  const endAt = cleanPlainText(windowEnd || '', 80);
+  if (!startAt || !endAt) return [];
+
+  const ecosystemTypes = [
+    'visit','music-download','music-listen','telegram-open','youtube-open',
+    'spotify-open','apple-music-open','soundcloud-open','amazon-music-open'
+  ];
+  const placeholders = ecosystemTypes.map((_, index) => `?${index + 3}`).join(',');
+  const eventRows = await db.prepare(`
+    SELECT country, region, city,
+           COUNT(*) AS opens,
+           COUNT(DISTINCT visitor_hash) AS visitors,
+           MAX(created_at) AS lastAt
+    FROM site_visit_events
+    WHERE datetime(created_at) >= datetime(?1)
+      AND datetime(created_at) < datetime(?2)
+      AND event_type IN (${placeholders})
+      AND (city<>'' OR region<>'')
+    GROUP BY country, region, city
+    ORDER BY opens DESC, visitors DESC, datetime(lastAt) DESC
+    LIMIT ${Math.max(50, Math.min(240, Number(limit || 50) * 3))}
+  `).bind(startAt, endAt, ...ecosystemTypes).all();
+
+  let pushRows = { results:[] };
+  if (includePush) {
+    pushRows = await db.prepare(`
+      SELECT country, region, city,
+             COUNT(*) AS opens,
+             COUNT(*) AS visitors,
+             MAX(COALESCE(NULLIF(last_seen_at,''), created_at)) AS lastAt
+      FROM push_subscribers
+      WHERE status='active' AND source<>'owner'
+        AND datetime(created_at) >= datetime(?1)
+        AND datetime(created_at) < datetime(?2)
+        AND (city<>'' OR region<>'')
+      GROUP BY country, region, city
+      ORDER BY opens DESC, datetime(lastAt) DESC
+      LIMIT ${Math.max(50, Math.min(240, Number(limit || 50) * 2))}
+    `).bind(startAt, endAt).all().catch(() => ({ results:[] }));
+  }
+
+  const merged = new Map();
+  const addRows = (rows, source) => {
+    for (const row of rows || []) {
+      const city = cleanPlainText(row.city || '', 120);
+      const region = cleanPlainText(row.region || '', 120);
+      const country = cleanPlainText(row.country || '', 8).toUpperCase();
+      if (!city && !region) continue;
+      const key = `${country}|${city.toLowerCase()}|${region.toLowerCase()}`;
+      const item = merged.get(key) || {
+        city, region, country, label:city || region || 'Город / регион',
+        opens:0, visitors:0, lastAt:'', sources:[]
+      };
+      item.opens += Math.max(0, Number(row.opens || 0));
+      item.visitors += Math.max(0, Number(row.visitors || 0));
+      const lastAt = cleanPlainText(row.lastAt || '', 80);
+      if (lastAt > item.lastAt) item.lastAt = lastAt;
+      if (!item.sources.includes(source)) item.sources.push(source);
+      merged.set(key, item);
+    }
+  };
+  addRows(eventRows?.results || [], 'ecosystem');
+  addRows(pushRows?.results || [], 'push');
+  return [...merged.values()]
+    .filter(item => item.label && item.opens > 0)
+    .sort((a,b) => Number(b.opens||0)-Number(a.opens||0) || String(b.lastAt||'').localeCompare(String(a.lastAt||'')))
+    .slice(0, Math.max(1, Math.min(100, Number(limit || 50))));
+}
+
 async function collectDailyCityActivityR370(db, window, cutoffAt = '') {
   const windowStart = cleanPlainText(window?.startAt || '', 80);
   const windowEnd = cleanPlainText(window?.endAt || '', 80);
   if (!windowStart || !windowEnd) return [];
-
   let effectiveEnd = windowEnd;
   const cutoffMs = Date.parse(cutoffAt || '');
   const endMs = Date.parse(windowEnd);
   const startMs = Date.parse(windowStart);
   if (Number.isFinite(cutoffMs) && Number.isFinite(startMs) && Number.isFinite(endMs)) {
     effectiveEnd = new Date(Math.max(startMs, Math.min(endMs, cutoffMs))).toISOString();
+  } else if (Number.isFinite(endMs) && endMs > Date.now()) {
+    effectiveEnd = new Date().toISOString();
   }
+  return collectCityActivityWindowR395(db, windowStart, effectiveEnd, { limit:50, includePush:true });
+}
 
-  const rows = await db.prepare(`
-    SELECT country, region, city,
-           COUNT(*) AS opens,
-           COUNT(DISTINCT visitor_hash) AS visitors,
-           MAX(created_at) AS lastAt
-    FROM site_visit_events
-    WHERE event_type='visit'
-      AND datetime(created_at) >= datetime(?1)
-      AND datetime(created_at) < datetime(?2)
-      AND (city<>'' OR region<>'')
-    GROUP BY country, region, city
-    ORDER BY opens DESC, visitors DESC, datetime(lastAt) DESC
-    LIMIT 50
-  `).bind(windowStart, effectiveEnd).all();
-
-  return (rows?.results || []).map(row => {
-    const city = cleanPlainText(row.city || '', 120);
-    const region = cleanPlainText(row.region || '', 120);
-    const country = cleanPlainText(row.country || '', 8).toUpperCase();
-    return {
-      city,
-      region,
-      country,
-      label:city || region || 'Город / регион',
-      opens:Math.max(0, Number(row.opens || 0)),
-      visitors:Math.max(0, Number(row.visitors || 0)),
-      lastAt:cleanPlainText(row.lastAt || '', 80)
-    };
-  }).filter(item => item.label && item.opens > 0);
+async function collectMapCityActivity30dR395(db) {
+  const endAt = new Date().toISOString();
+  const startAt = new Date(Date.now() - 30 * 86400000).toISOString();
+  return collectCityActivityWindowR395(db, startAt, endAt, { limit:80, includePush:true });
 }
 
 function parseStoredDailySummarySnapshotR271(row, windowKey) {
@@ -8991,57 +9043,54 @@ async function handleControlHome(request, env) {
     }
     return await handleControlHomePushSnapshotR271(db, requestedPushWindow);
   }
-  // R394 FAST CURRENT SUMMARY: the morning push snapshot is only a floor, not the
-  // forever source for the whole day. Prefer the automatically refreshed high-water
-  // accumulator when it is newer, so the screen timestamp and values advance every
-  // 5-minute Cron cycle without needing a manual push or a heavy refresh request.
+  // R395 FAST CURRENT SUMMARY: normal page opening must NEVER fall through into
+  // the expensive full collector. Return current-window high-water immediately,
+  // even when it is zero, then let the client request a silent live refresh.
   if (!forceRefresh) {
-    const [highWaterRowR394, pushStateRowR394] = await Promise.all([
+    const [highWaterRowR395, pushStateRowR395, activityResultR395, cityActivityR395, cityMapActivityR395] = await Promise.all([
       getPushState(db, `control-home-high-water-r213:${window.key}`).catch(() => null),
-      getPushState(db, `daily-owner-summary-window:${window.key}`).catch(() => null)
+      getPushState(db, `daily-owner-summary-window:${window.key}`).catch(() => null),
+      db.prepare(`
+        SELECT id, type, source, audience, title, message, url,
+               video_id AS videoId, video_title AS videoTitle,
+               status, created_at AS createdAt
+        FROM push_history
+        WHERE type IN ('youtube-comment','youtube-comment-count','youtube-subscriber','youtube-subscriber-count','youtube-like','site-subscriber','comment-live','comment-pending','auto-release','auto-release-retry','release-publish')
+          AND datetime(created_at) >= datetime(?1)
+        ORDER BY datetime(created_at) DESC
+        LIMIT 200
+      `).bind(window.startAt).all().catch(() => ({ results:[] })),
+      collectDailyCityActivityR370(db, window).catch(() => []),
+      collectMapCityActivity30dR395(db).catch(() => [])
     ]);
-    const highWaterR394 = parseControlHomeHighWaterEnvelopeR394(highWaterRowR394);
-    const fastSnapshotR390 = parseStoredDailySummarySnapshotR271(pushStateRowR394, window.key);
-    const pushSummaryR394 = fastSnapshotR390 ? controlHomeSummaryFromDailyMetricsR271(fastSnapshotR390.metrics) : normalizeControlHomeSummaryR213({});
-    const mergedFastSummaryR394 = mergeControlHomeSummaryR213(pushSummaryR394, highWaterR394.summary);
-    const hasSignalR394 = CONTROL_HOME_SUMMARY_KEYS_R213.some(key => Number(mergedFastSummaryR394?.[key] || 0) > 0)
-      || (Array.isArray(mergedFastSummaryR394?.countryDeltas) && mergedFastSummaryR394.countryDeltas.length > 0);
-    const highWaterMsR394 = Date.parse(highWaterR394.updatedAt || '');
-    const pushMsR394 = Date.parse(fastSnapshotR390?.sentAt || '');
-    const accumulatorIsCurrentR394 = Number.isFinite(highWaterMsR394) && (!Number.isFinite(pushMsR394) || highWaterMsR394 >= pushMsR394);
-    if (hasSignalR394) {
-      const [activityResultR394, cityActivityR394] = await Promise.all([
-        db.prepare(`
-          SELECT id, type, source, audience, title, message, url,
-                 video_id AS videoId, video_title AS videoTitle,
-                 status, created_at AS createdAt
-          FROM push_history
-          WHERE type IN ('youtube-comment','youtube-comment-count','youtube-subscriber','youtube-subscriber-count','youtube-like','site-subscriber','comment-live','comment-pending','auto-release','auto-release-retry','release-publish')
-            AND datetime(created_at) >= datetime(?1)
-          ORDER BY datetime(created_at) DESC
-          LIMIT 200
-        `).bind(window.startAt).all().catch(() => ({ results:[] })),
-        collectDailyCityActivityR370(db, window).catch(() => Array.isArray(fastSnapshotR390?.cities) ? fastSnapshotR390.cities : [])
-      ]);
-      const updatedAtR394 = accumulatorIsCurrentR394
-        ? highWaterR394.updatedAt
-        : (fastSnapshotR390?.sentAt || highWaterR394.updatedAt || new Date().toISOString());
-      return json({
-        ok:true,
-        period:'06:05-auto-cycle',
-        windowKey:window.key,
-        windowStartAt:window.startAt,
-        windowEndAt:window.endAt,
-        summary:mergedFastSummaryR394,
-        cityActivity:Array.isArray(cityActivityR394) ? cityActivityR394 : [],
-        activity:activityResultR394?.results || [],
-        summarySource:accumulatorIsCurrentR394 ? 'auto-accumulator-fast-r394' : 'push-fast-r390',
-        summaryView:'live-snapshot-floor',
-        pushSentAt:fastSnapshotR390?.sentAt || '',
-        accumulatorUpdatedAt:highWaterR394.updatedAt || '',
-        updatedAt:updatedAtR394
-      });
-    }
+    const highWaterR395 = parseControlHomeHighWaterEnvelopeR394(highWaterRowR395);
+    const fastSnapshotR395 = parseStoredDailySummarySnapshotR271(pushStateRowR395, window.key);
+    const pushSummaryR395 = fastSnapshotR395 ? controlHomeSummaryFromDailyMetricsR271(fastSnapshotR395.metrics) : normalizeControlHomeSummaryR213({});
+    const mergedFastSummaryR395 = mergeControlHomeSummaryR213(pushSummaryR395, highWaterR395.summary);
+    const highWaterMsR395 = Date.parse(highWaterR395.updatedAt || '');
+    const pushMsR395 = Date.parse(fastSnapshotR395?.sentAt || '');
+    const highWaterFreshR395 = Number.isFinite(highWaterMsR395) && Date.now() - highWaterMsR395 <= 7 * 60 * 1000;
+    const accumulatorIsCurrentR395 = Number.isFinite(highWaterMsR395) && (!Number.isFinite(pushMsR395) || highWaterMsR395 >= pushMsR395);
+    const updatedAtR395 = accumulatorIsCurrentR395
+      ? highWaterR395.updatedAt
+      : (fastSnapshotR395?.sentAt || highWaterR395.updatedAt || new Date().toISOString());
+    return json({
+      ok:true,
+      period:'06:05-auto-cycle',
+      windowKey:window.key,
+      windowStartAt:window.startAt,
+      windowEndAt:window.endAt,
+      summary:mergedFastSummaryR395,
+      cityActivity:Array.isArray(cityActivityR395) ? cityActivityR395 : [],
+      cityMapActivity:Array.isArray(cityMapActivityR395) ? cityMapActivityR395 : [],
+      activity:activityResultR395?.results || [],
+      summarySource:accumulatorIsCurrentR395 ? 'auto-accumulator-fast-r395' : (fastSnapshotR395 ? 'push-fast-r395' : 'fast-current-empty-r395'),
+      summaryView:'live-fast-r395',
+      pushSentAt:fastSnapshotR395?.sentAt || '',
+      accumulatorUpdatedAt:highWaterR395.updatedAt || '',
+      refreshNeeded:!highWaterFreshR395,
+      updatedAt:updatedAtR395
+    });
   }
 
   // R260 DAILY ACCUMULATOR: the screen uses one Bratislava window, 06:05 → next 06:05.
@@ -9152,6 +9201,7 @@ async function handleControlHome(request, env) {
     totalCountries:Math.max(youtubeCountries.length,dailyMetric(pushMetrics,'totalCountries')),
     countryDate:ytNow?.studio?.dailyDate || pushMetrics?.countryDate || ''
   });
+  const cityMapActivityR395 = await collectMapCityActivity30dR395(db).catch(() => []);
   const highWaterKeyR213 = `control-home-high-water-r213:${window.key}`;
   const previousHighWaterRowR213 = await getPushState(db, highWaterKeyR213).catch(() => null);
   const previousHighWaterR213 = parseControlHomeHighWaterR213(previousHighWaterRowR213);
@@ -9169,6 +9219,7 @@ async function handleControlHome(request, env) {
     windowEndAt:window.endAt,
     summary:summaryR213,
     cityActivity:Array.isArray(cityActivity)?cityActivity:[],
+    cityMapActivity:Array.isArray(cityMapActivityR395)?cityMapActivityR395:[],
     activity:activityResult.results || [],
     automation:{
       lastCheckAt:automationAt?.value || '',

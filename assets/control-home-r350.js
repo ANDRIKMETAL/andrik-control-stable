@@ -1,4 +1,4 @@
-/* Control ANDRIK R350 — server-side daily accumulator + 05:00/17:00 push snapshots. */
+/* Control ANDRIK R395 — instant current-window summary + ecosystem city activity. */
 (() => {
   const KEY_SESSION='andrik-comments-admin-key';
   const KEY_LOCAL='andrik-comments-admin-key-persistent';
@@ -40,6 +40,7 @@
   let allActivityEvents=[];
   let sourcePages=[];
   let dailyCityRowsR375=[];
+  let mapCityRowsR395=[];
   const HOME_CACHE_KEY_LIVE='andrik-control-home-last-good-r136';
   const HOME_CACHE_KEY_PUSH_BASE='andrik-control-home-push-r305';
   function activeViewWindowKey(){return IS_PUSH_SUMMARY_VIEW?PUSH_SUMMARY_WINDOW_KEY:currentSummaryWindowKey()}
@@ -100,6 +101,12 @@
       if(seen.has(id))return false; seen.add(id); return true;
     }).slice(0,200);
     merged.summarySource=String(incoming.summarySource||'').includes('push')?incoming.summarySource:(previous.summarySource||incoming.summarySource||'high-water');
+    const incomingCities=Array.isArray(incoming.cityActivity)?incoming.cityActivity:[];
+    const oldCities=Array.isArray(previous.cityActivity)?previous.cityActivity:[];
+    merged.cityActivity=mergeCityRowsR374(oldCities,incomingCities).slice(0,50);
+    const incomingMapCities=Array.isArray(incoming.cityMapActivity)?incoming.cityMapActivity:[];
+    const oldMapCities=Array.isArray(previous.cityMapActivity)?previous.cityMapActivity:[];
+    merged.cityMapActivity=mergeCityRowsR374(oldMapCities,incomingMapCities).slice(0,80);
     return merged;
   }
 
@@ -228,11 +235,14 @@
   function renderCityModalR375(){
     const box=$('controlCityModalListR375');
     if(!box)return;
-    if(!dailyCityRowsR375.length){
-      box.innerHTML='<div class="admin-empty">За этот период города пока не зафиксированы.</div>';
+    const title=$('controlCityModalTitleR375');
+    const rows=dailyCityRowsR375.length?dailyCityRowsR375:mapCityRowsR395;
+    if(title)title.textContent=dailyCityRowsR375.length?'📍 Города за день':'📍 Города на карте · 30 дней';
+    if(!rows.length){
+      box.innerHTML='<div class="admin-empty">Города с доступной географией пока не зафиксированы.</div>';
       return;
     }
-    box.innerHTML=dailyCityRowsR375.map((item,index)=>{
+    box.innerHTML=rows.map((item,index)=>{
       const place=String(item?.city||item?.label||item?.region||'Город / регион');
       const region=String(item?.region||'').trim();
       const sub=region&&region.toLocaleLowerCase('ru')!==place.toLocaleLowerCase('ru')?`<small>${escapeHtml(region)}</small>`:'';
@@ -265,6 +275,7 @@
     const rows=mergeCityRowsR374(cached,incoming);
     if(incoming.length)writeCityCacheR374(data,rows);
     dailyCityRowsR375=rows.slice(0,50);
+    mapCityRowsR395=mergeCityRowsR374([],Array.isArray(data.cityMapActivity)?data.cityMapActivity:[]).slice(0,80);
     const count=$('controlCityCountR375');
     if(count)count.textContent=number(dailyCityRowsR375.length);
     const button=$('controlCitiesDayR375');
@@ -354,7 +365,7 @@
     if(showRefreshEffect)shell?.classList.add('is-refreshing');
     else shell?.classList.remove('is-refreshing');
     try{
-      const query=new URLSearchParams({v:'55.00-r394'});
+      const query=new URLSearchParams({v:'55.00-r395'});
       if(forceLive||IS_PUSH_SUMMARY_VIEW)query.set('refresh','1');
       if(IS_PUSH_SUMMARY_VIEW){query.set('source','push');query.set('window',PUSH_SUMMARY_WINDOW_KEY);if(PUSH_SUMMARY_SNAPSHOT_ID)query.set('snapshot',PUSH_SUMMARY_SNAPSHOT_ID)}
       let data=await api(`/api/control/home?${query.toString()}`,{timeoutMs:forceLive&&!IS_PUSH_SUMMARY_VIEW?20000:12000});
@@ -363,12 +374,12 @@
         const numericKeys=['websiteUsers','websiteViews','siteSubscribers','siteComments','siteLikes','youtubeComments','youtubeSubscribers','youtubeLikes','youtubeViews','youtubeViewDelta','releases'];
         const allZero=numericKeys.every(key=>Number(summary[key]||0)===0);
         const noActivity=!Array.isArray(data?.activity)||data.activity.length===0;
-        // R394: never block first paint with a second heavy request. Even an empty
-        // fast snapshot is rendered immediately; a silent live refresh is queued.
-        if(allZero&&noActivity)queuedLiveRefreshR390=true;
+        // R395: server explicitly reports accumulator freshness. First paint is always
+        // immediate; a stale/missing current-window accumulator refreshes silently.
+        if(data?.refreshNeeded===true || (allZero&&noActivity))queuedLiveRefreshR390=true;
       }
       if(data?.windowKey)activeSummaryWindowKey=data.windowKey;
-      if(!IS_PUSH_SUMMARY_VIEW && data?.summarySource==='push-fast-r390') queuedLiveRefreshR390=true;
+      if(!IS_PUSH_SUMMARY_VIEW && ['push-fast-r390','push-fast-r395','fast-current-empty-r395'].includes(data?.summarySource)) queuedLiveRefreshR390=true;
       const previous=readHomeCache();
       const stable=IS_PUSH_SUMMARY_VIEW?data:(cachedForCurrentWindow(previous)?mergeSummaryPayloadR213(previous.data,data):data);
       if(IS_PUSH_SUMMARY_VIEW||summaryHasSignalR375(stable))saveHomeCache(stable);
@@ -832,7 +843,7 @@
   },{passive:true});
   syncCarouselClones();
   setLogicalPage(logicalPage,{animate:false});
-  // R394: first paint never waits for a second heavy request; fast snapshot renders immediately.
+  // R395: first paint always returns from the fast current-window endpoint; full refresh stays background.
   // If a push snapshot/high-water is available it is rendered first; full live refresh is queued afterwards.
   if(summaryMode)load({silent:true,forceLive:false});
 })();

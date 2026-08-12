@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786443300818-e7c2d02a4c",
-  "release": "R394",
-  "archiveName": "R394-R393-FRESH-AUTO-SUMMARY-CRON-DELAY-TOLERANCE-SAFE-FULL.zip",
-  "sourceHead": "7ec02f30e93c04ba90ff54357a47c8556a055ad5",
-  "backupSha": "7ec02f30e93c04ba90ff54357a47c8556a055ad5",
-  "backupTag": "control-backup-20260811101434-7ec02f3-r394-43586",
+  "operationId": "publish-1786513325083-6d5d1eac40",
+  "release": "R395",
+  "archiveName": "R395-R394-NEXT-DAY-INSTANT-SUMMARY-ECOSYSTEM-CITIES-SAFE-FULL.zip",
+  "sourceHead": "942f6b68fc0c03a30e5cc8cba182dd2b9f1ede97",
+  "backupSha": "942f6b68fc0c03a30e5cc8cba182dd2b9f1ede97",
+  "backupTag": "control-backup-20260812054155-942f6b6-r395-1086b",
   "autoRecovery": true,
-  "generatedAt": "2026-08-11T10:15:00.818Z"
+  "generatedAt": "2026-08-12T05:42:05.083Z"
 }
