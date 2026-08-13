@@ -736,7 +736,9 @@
     if(animating||event.isPrimary===false||(event.pointerType==='mouse'&&event.button!==0))return;
     moved=false;
     const menuGesture=currentPageElement()?.dataset.page==='menu';
-    if(isInteractive(event.target)&&!menuGesture)return;
+    // R422: interactive controls must never enter the legacy swipe/pull recognizer.
+    // Two recognizers were competing on the Admin hub and could cancel one of the quick links.
+    if(isInteractive(event.target))return;
     const landscape=window.matchMedia?.('(orientation: landscape)')?.matches===true;
     const viewportWidth=Math.max(1,window.innerWidth||document.documentElement.clientWidth||1);
     const inLandscapeCenter=event.clientX>=viewportWidth*.34&&event.clientX<=viewportWidth*.66;
@@ -870,6 +872,7 @@
   document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!$('controlActivityModal')?.hidden)setActivityModal(false)});
 
   window.addEventListener('pageshow',()=>{
+    moved=false; gesture=null; animating=false; pullDistance=0; pullActive=false;
     try{window.scrollTo(0,0)}catch(_){}
     const active=currentPageElement();
     if(active)active.scrollTop=0;

@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786651709083-6abdcbe7df",
-  "release": "R421",
-  "archiveName": "R421-ADMIN-GLOBE-SPACING-SAFE-FULL.zip",
-  "sourceHead": "b98936858316a99d1fd828769b6060d312c37270",
-  "backupSha": "b98936858316a99d1fd828769b6060d312c37270",
-  "backupTag": "control-backup-20260813200824-b989368-r421-25d70",
+  "operationId": "publish-1786652071016-43c3a99486",
+  "release": "R422",
+  "archiveName": "R422-ADMIN-QUICK-REPORT-NAV-FIX-SAFE-FULL.zip",
+  "sourceHead": "d40c14d92c87c84772a6858d1aed56c88190225c",
+  "backupSha": "d40c14d92c87c84772a6858d1aed56c88190225c",
+  "backupTag": "control-backup-20260813201426-d40c14d-r422-00775",
   "autoRecovery": true,
-  "generatedAt": "2026-08-13T20:08:29.083Z"
+  "generatedAt": "2026-08-13T20:14:31.016Z"
 }

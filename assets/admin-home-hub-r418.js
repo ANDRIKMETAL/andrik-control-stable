@@ -36,7 +36,7 @@
   };
   if('requestIdleCallback'in window)requestIdleCallback(warmSides,{timeout:900});else setTimeout(warmSides,260);
   let gesture=null,navigating=false;
-  const formInteractive=target=>Boolean(target?.closest?.('input,textarea,select,[contenteditable="true"]'));
+  const formInteractive=target=>Boolean(target?.closest?.('a,button,input,textarea,select,label,[contenteditable="true"]')); // R422: links/buttons own their tap
   let suppressClickUntil=0;
   page.addEventListener('pointerdown',e=>{
     if(navigating||e.isPrimary===false||(e.pointerType==='mouse'&&e.button!==0)||formInteractive(e.target))return;
@@ -63,5 +63,6 @@
     location.assign(url);
   },true);
   page.addEventListener('pointercancel',()=>{gesture=null},true);
+  window.addEventListener('pageshow',()=>{gesture=null;navigating=false;suppressClickUntil=0},{passive:true});
   page.addEventListener('click',e=>{if(performance.now()<suppressClickUntil){e.preventDefault();e.stopImmediatePropagation();}},true);
 })();
