@@ -1,8 +1,8 @@
 {
   "name": "Live Web AI",
   "short_name": "Live Web AI",
-  "id": "/admin/?app=live-web-ai-final-r417",
-  "start_url": "/control-home.html?source=pwa&page=menu&app=live-web-ai&v=55.00-r417",
+  "id": "/admin/?app=live-web-ai-final-r418",
+  "start_url": "/control-home.html?source=pwa&page=menu&app=live-web-ai&v=55.00-r418",
   "scope": "/",
   "display": "standalone",
   "display_override": [
@@ -37,7 +37,7 @@
       "name": "YouTube — статистика",
       "short_name": "YouTube",
       "description": "Открыть статистику канала ANDRIK",
-      "url": "/?source=app-shortcut-youtube&page=youtube&v=55.00g",
+      "url": "/analytics-admin.html?page=youtube&source=app-shortcut-youtube&v=55.00-r418",
       "icons": [
         {
           "src": "/assets/control-shortcut-youtube-96.png",
@@ -47,5 +47,5 @@
       ]
     }
   ],
-  "version": "55.00-final-r417"
+  "version": "55.00-final-r418"
 }

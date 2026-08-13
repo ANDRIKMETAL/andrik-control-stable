@@ -1,13 +1,13 @@
-/* ANDRIK R417 — home hub globe + direct side swipes. */
+/* ANDRIK R418 — home hub globe + direct side swipes. */
 (()=>{
   'use strict';
-  if(window.__ANDRIK_ADMIN_HUB_R417__)return;
-  window.__ANDRIK_ADMIN_HUB_R417__=true;
+  if(window.__ANDRIK_ADMIN_HUB_R418__)return;
+  window.__ANDRIK_ADMIN_HUB_R418__=true;
   const page=document.querySelector('.control-menu-page');
-  const globe=document.getElementById('adminHubGlobeR417');
-  const sphere=document.getElementById('adminHubGlobeSphereR417');
-  const texture=document.getElementById('adminHubGlobeTextureR417');
-  const dot=document.getElementById('adminHubGlobeDotR417');
+  const globe=document.getElementById('adminHubGlobeR418');
+  const sphere=document.getElementById('adminHubGlobeSphereR418');
+  const texture=document.getElementById('adminHubGlobeTextureR418');
+  const dot=document.getElementById('adminHubGlobeDotR418');
   if(globe&&sphere&&texture&&dot){
     const SK_LAT=48.67,SK_LON=19.70,REVOLUTION_MS=20000;
     const started=performance.now();let raf=0,last=0;
@@ -29,6 +29,12 @@
     document.addEventListener('visibilitychange',resume,{passive:true});resume();
   }
   if(!page)return;
+  const sideUrls={google:'/analytics-admin.html?page=google&source=admin-hub-swipe&v=55.00-r418',youtube:'/analytics-admin.html?page=youtube&source=admin-hub-swipe&v=55.00-r418'};
+  const warmSides=()=>{
+    if(window.__ANDRIK_HUB_SIDE_WARM_R418__)return;window.__ANDRIK_HUB_SIDE_WARM_R418__=true;
+    Promise.allSettled(Object.values(sideUrls).map(url=>fetch(url,{method:'GET',credentials:'same-origin',cache:'force-cache',priority:'low'}).then(r=>r.ok?r.text():''))).catch(()=>{});
+  };
+  if('requestIdleCallback'in window)requestIdleCallback(warmSides,{timeout:900});else setTimeout(warmSides,260);
   let gesture=null,navigating=false;
   const formInteractive=target=>Boolean(target?.closest?.('input,textarea,select,[contenteditable="true"]'));
   let suppressClickUntil=0;
@@ -53,9 +59,7 @@
     suppressClickUntil=performance.now()+700;
     navigating=true;
     // Finger left -> right = Google Analytics. Finger right -> left = YouTube.
-    const url=dx>0
-      ?'/analytics-admin.html?page=google&source=admin-hub-swipe&v=55.00-r417'
-      :'/analytics-admin.html?page=youtube&source=admin-hub-swipe&v=55.00-r417';
+    const url=dx>0?sideUrls.google:sideUrls.youtube;
     location.assign(url);
   },true);
   page.addEventListener('pointercancel',()=>{gesture=null},true);

@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R417', number:417, version:'55.00', full:'55.00 LIVE WEB AI FINAL R417', siteUpdater:'55.00-r356' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R418', number:418, version:'55.00', full:'55.00 LIVE WEB AI FINAL R418', siteUpdater:'55.00-r356' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -1462,10 +1462,10 @@ async function ensureSiteMetricsSchema(db) {
 
 
 
-let countryCityHistorySchemaPromiseR417 = null;
-async function ensureCountryCityHistorySchemaR417(db) {
-  if (countryCityHistorySchemaPromiseR417) return countryCityHistorySchemaPromiseR417;
-  countryCityHistorySchemaPromiseR417 = (async () => {
+let countryCityHistorySchemaPromiseR418 = null;
+async function ensureCountryCityHistorySchemaR418(db) {
+  if (countryCityHistorySchemaPromiseR418) return countryCityHistorySchemaPromiseR418;
+  countryCityHistorySchemaPromiseR418 = (async () => {
     await db.prepare(`
       CREATE TABLE IF NOT EXISTS country_city_daily_history (
         local_date TEXT NOT NULL,
@@ -1480,23 +1480,23 @@ async function ensureCountryCityHistorySchemaR417(db) {
     `).run();
     await db.prepare(`CREATE INDEX IF NOT EXISTS idx_country_city_history_country_date ON country_city_daily_history(country, local_date DESC, opens DESC)`).run().catch(() => {});
   })();
-  try { await countryCityHistorySchemaPromiseR417; }
-  catch (error) { countryCityHistorySchemaPromiseR417 = null; throw error; }
+  try { await countryCityHistorySchemaPromiseR418; }
+  catch (error) { countryCityHistorySchemaPromiseR418 = null; throw error; }
 }
 
-const CITY_HISTORY_EVENT_TYPES_R417 = new Set([
+const CITY_HISTORY_EVENT_TYPES_R418 = new Set([
   'visit','music-download','music-listen','telegram-open','youtube-open',
   'spotify-open','apple-music-open','soundcloud-open','amazon-music-open'
 ]);
 
-async function recordCountryCityHistoryR417(db, { localDate='', country='', region='', city='', eventType='' } = {}) {
+async function recordCountryCityHistoryR418(db, { localDate='', country='', region='', city='', eventType='' } = {}) {
   const date = cleanPlainText(localDate || '', 20);
   const code = cleanPlainText(country || '', 8).toUpperCase();
   const safeRegion = cleanPlainText(region || '', 120);
   const safeCity = cleanPlainText(city || '', 120);
   const type = cleanPlainText(eventType || '', 40).toLowerCase();
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^[A-Z]{2}$/.test(code) || (!safeCity && !safeRegion) || !CITY_HISTORY_EVENT_TYPES_R417.has(type)) return;
-  await ensureCountryCityHistorySchemaR417(db);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^[A-Z]{2}$/.test(code) || (!safeCity && !safeRegion) || !CITY_HISTORY_EVENT_TYPES_R418.has(type)) return;
+  await ensureCountryCityHistorySchemaR418(db);
   await db.prepare(`
     INSERT INTO country_city_daily_history(local_date,country,region,city,opens,first_at,last_at)
     VALUES(?1,?2,?3,?4,1,datetime('now'),datetime('now'))
@@ -1506,9 +1506,9 @@ async function recordCountryCityHistoryR417(db, { localDate='', country='', regi
   `).bind(date, code, safeRegion, safeCity).run();
 }
 
-async function ensureCountryCityHistoryBackfillR417(db) {
-  await Promise.all([ensureCountryCityHistorySchemaR417(db), ensurePushAutomationSchema(db)]);
-  const markerKey='country-city-history-backfill-r417';
+async function ensureCountryCityHistoryBackfillR418(db) {
+  await Promise.all([ensureCountryCityHistorySchemaR418(db), ensurePushAutomationSchema(db)]);
+  const markerKey='country-city-history-backfill-r418';
   const state=await getPushState(db,markerKey).catch(()=>null);
   if (String(state?.value || '').startsWith('done:')) return;
   // Backfill all raw city activity still retained by the first-party counter (currently 62 days).
@@ -1525,21 +1525,31 @@ async function ensureCountryCityHistoryBackfillR417(db) {
   await setPushState(db,markerKey,`done:${new Date().toISOString()}`).catch(()=>{});
 }
 
-function parseHistoryDateR417(value, fallback='') {
+function parseHistoryDateR418(value, fallback='') {
   const date=cleanPlainText(value || fallback || '',20);
   return /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : '';
 }
 
-async function handleControlCountryCityHistoryR417(request, env) {
+async function handleControlCountryCityHistoryR418(request, env) {
   if (!adminAuthorized(request, env)) return json({ ok:false, error:'unauthorized' }, 401);
   const db=requireDb(env);
-  await Promise.all([ensureSiteMetricsSchema(db), ensureCountryCityHistoryBackfillR417(db)]);
+  await Promise.all([ensureSiteMetricsSchema(db), ensureCountryCityHistorySchemaR418(db)]);
   const url=new URL(request.url);
   const country=cleanPlainText(url.searchParams.get('country') || '',8).toUpperCase();
   if (!/^[A-Z]{2}$/.test(country)) return json({ok:false,error:'country'},400);
   const today=getBratislavaClock().date;
-  let date=parseHistoryDateR417(url.searchParams.get('date'),today) || today;
+  let date=parseHistoryDateR418(url.searchParams.get('date'),today) || today;
   if (date>today) date=today;
+  // R418 CPU-safe lazy history: migrate only the selected country/day from retained raw events.
+  // New events are already written directly into country_city_daily_history, so this is only for pre-R418 history.
+  await db.prepare(`
+    INSERT OR REPLACE INTO country_city_daily_history(local_date,country,region,city,opens,first_at,last_at)
+    SELECT local_date,country,region,city,COUNT(*) AS opens,MIN(created_at),MAX(created_at)
+    FROM site_visit_events
+    WHERE country=?1 AND local_date=?2 AND (city<>'' OR region<>'')
+      AND event_type IN ('visit','music-download','music-listen','telegram-open','youtube-open','spotify-open','apple-music-open','soundcloud-open','amazon-music-open')
+    GROUP BY local_date,country,region,city
+  `).bind(country,date).run().catch(() => {});
   const rowsResult=await db.prepare(`
     SELECT city,region,opens,last_at AS lastAt
     FROM country_city_daily_history
@@ -1610,7 +1620,7 @@ async function handleSiteVisit(request, env) {
     country, region, city, latitude, longitude, localDate
   ).run();
   // Keep this lightweight first-party counter small; long-term analytics remains in GA4.
-  await recordCountryCityHistoryR417(db,{localDate,country,region,city,eventType}).catch(() => {});
+  await recordCountryCityHistoryR418(db,{localDate,country,region,city,eventType}).catch(() => {});
   await db.prepare(`DELETE FROM site_visit_events WHERE local_date < date('now','-62 days')`).run().catch(() => {});
   return json({ ok:true, localDate, eventType });
 }
@@ -12857,7 +12867,7 @@ async function routeApi(request, env, ctx) {
     if (path === '/api/control/search-console' && request.method === 'GET') return await handleControlSearchConsole(request, env);
     if (path === '/api/control/snapshots/refresh' && request.method === 'POST') return await handleControlSnapshotsRefresh(request, env);
     if (path === '/api/control/country-growth' && request.method === 'GET') return await handleControlCountryGrowth(request, env);
-    if (path === '/api/control/country-city-history' && request.method === 'GET') return await handleControlCountryCityHistoryR417(request, env);
+    if (path === '/api/control/country-city-history' && request.method === 'GET') return await handleControlCountryCityHistoryR418(request, env);
     if (path === '/api/control/youtube-events/status' && request.method === 'GET') return await handleYoutubeEventsStatus(request, env);
     if (path === '/api/control/youtube-oauth/status' && request.method === 'GET') return await handleYoutubeOAuthStatus(request, env);
     if (path === '/api/control/youtube-oauth/start' && request.method === 'GET') return await handleYoutubeOAuthStart(request, env);
@@ -12903,7 +12913,7 @@ function controlRecoveryServiceWorkerSource() {
 }
 
 function controlRecoveryPage() {
-  return `<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#02060a"><meta name="robots" content="noindex,nofollow"><title>Восстановление Control ANDRIK</title><style>*{box-sizing:border-box}html,body{min-height:100%;margin:0;background:#02060a;color:#eff8ff;font-family:system-ui,-apple-system,Segoe UI,sans-serif}body{display:grid;place-items:center;padding:22px}.c{width:min(100%,520px);padding:30px 22px;border:1px solid #244455;border-radius:28px;background:linear-gradient(#081923,#030c13);text-align:center}.e{font-size:58px}h1{font-size:clamp(30px,8vw,44px);margin:12px 0}.s{color:#abc0cc;line-height:1.55}.b{display:inline-flex;min-height:54px;align-items:center;justify-content:center;margin-top:20px;padding:0 22px;border:1px solid #315b70;border-radius:999px;color:#eff8ff;text-decoration:none;font-weight:800;background:#0a2432}</style></head><body><main class="c"><div class="e">🟢</div><h1>Восстанавливаем Control</h1><p class="s" id="s">Заменяем старый перехват страниц безопасной версией…</p><a class="b" id="b" href="/analytics-admin.html?source=recovery&page=map&v=54.96" hidden>Открыть Control</a></main><script>(async()=>{const s=document.getElementById('s'),b=document.getElementById('b'),go='/analytics-admin.html?source=recovery&page=map&v=54.96&t='+Date.now();b.href=go;try{if('caches'in window){const k=await caches.keys();await Promise.all(k.filter(n=>n.startsWith('andrik-control-')||n.startsWith('andrik-site-')).map(n=>caches.delete(n)))}if('serviceWorker'in navigator){const r=await navigator.serviceWorker.register('/service-worker.js?v=54.96-control-recovery',{scope:'/',updateViaCache:'none'});if(r.installing)r.installing.postMessage({type:'SKIP_WAITING'});if(r.waiting)r.waiting.postMessage({type:'SKIP_WAITING'});await r.update().catch(()=>{});await new Promise(x=>setTimeout(x,1200))}s.textContent='Готово. Открываем карту напрямую…';s.style.color='#bfffd9';b.hidden=false;setTimeout(()=>location.replace(go),650)}catch(e){s.textContent='Нажмите кнопку ниже. '+String(e&&e.message||e);s.style.color='#ffb9b9';b.hidden=false}})();</script></body></html>`;
+  return `<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#02060a"><meta name="robots" content="noindex,nofollow"><title>Восстановление Control ANDRIK</title><style>*{box-sizing:border-box}html,body{min-height:100%;margin:0;background:#02060a;color:#eff8ff;font-family:system-ui,-apple-system,Segoe UI,sans-serif}body{display:grid;place-items:center;padding:22px}.c{width:min(100%,520px);padding:30px 22px;border:1px solid #244455;border-radius:28px;background:linear-gradient(#081923,#030c13);text-align:center}.e{font-size:58px}h1{font-size:clamp(30px,8vw,44px);margin:12px 0}.s{color:#abc0cc;line-height:1.55}.b{display:inline-flex;min-height:54px;align-items:center;justify-content:center;margin-top:20px;padding:0 22px;border:1px solid #315b70;border-radius:999px;color:#eff8ff;text-decoration:none;font-weight:800;background:#0a2432}</style></head><body><main class="c"><div class="e">🟢</div><h1>Восстанавливаем Control</h1><p class="s" id="s">Заменяем старый перехват страниц безопасной версией…</p><a class="b" id="b" href="/control-home.html?page=menu&source=recovery&v=55.00-r418" hidden>Открыть Control</a></main><script>(async()=>{const s=document.getElementById('s'),b=document.getElementById('b'),go='/control-home.html?page=menu&source=recovery&v=55.00-r418&t='+Date.now();b.href=go;try{if('caches'in window){const k=await caches.keys();await Promise.all(k.filter(n=>n.startsWith('andrik-control-')||n.startsWith('andrik-site-')).map(n=>caches.delete(n)))}if('serviceWorker'in navigator){const r=await navigator.serviceWorker.register('/service-worker.js?v=54.96-control-recovery',{scope:'/',updateViaCache:'none'});if(r.installing)r.installing.postMessage({type:'SKIP_WAITING'});if(r.waiting)r.waiting.postMessage({type:'SKIP_WAITING'});await r.update().catch(()=>{});await new Promise(x=>setTimeout(x,1200))}s.textContent='Готово. Открываем админ-панель…';s.style.color='#bfffd9';b.hidden=false;setTimeout(()=>location.replace(go),650)}catch(e){s.textContent='Нажмите кнопку ниже. '+String(e&&e.message||e);s.style.color='#ffb9b9';b.hidden=false}})();</script></body></html>`;
 }
 
 
@@ -13017,9 +13027,9 @@ export default {
     try {
       if (request.method === 'GET' || request.method === 'HEAD') {
         const path = normalizedPath;
-        // Dedicated owner subdomain: serve the Control map HTML directly.
+        // R418: Admin panel is the permanent Control home. The listener map opens only from the green globe.
         if (isControlHost && (path === '/' || path === '/index.html' || path === '/admin' || path === '/admin/index.html')) {
-          const assetUrl = new URL('/analytics-admin.html', url);
+          const assetUrl = new URL('/control-home.html', url);
           const response = await env.ASSETS.fetch(new Request(assetUrl.toString(), request));
           return allowControlPlayerFrame(response, url, isControlHost);
         }

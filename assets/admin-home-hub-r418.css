@@ -1,0 +1,49 @@
+/* ANDRIK R418 — Admin panel is the home hub: compact cards, fixed green globe, side swipes. */
+body.control-home-page.control-menu-visible .control-menu-page .control-swipe-page-inner{
+  padding-top:8px!important;
+  padding-bottom:max(118px,calc(102px + env(safe-area-inset-bottom)))!important;
+}
+body.control-home-page.control-menu-visible .control-menu-heading{margin-bottom:8px!important}
+body.control-home-page.control-menu-visible .control-menu-heading .eyeline{font-size:.62rem!important;letter-spacing:.14em!important}
+body.control-home-page.control-menu-visible .control-menu-heading h1{font-size:clamp(1.6rem,7vw,2.15rem)!important;line-height:1!important;margin-top:3px!important}
+body.control-home-page.control-menu-visible .control-home-menu{gap:7px!important;margin-top:6px!important}
+body.control-home-page.control-menu-visible .control-home-menu-card{
+  grid-template-columns:34px minmax(0,1fr) 18px!important;
+  gap:9px!important;min-height:58px!important;padding:7px 10px!important;border-radius:17px!important;
+}
+body.control-home-page.control-menu-visible .control-home-menu-card>span{font-size:1.1rem!important;width:34px!important;height:34px!important;display:grid!important;place-items:center!important}
+body.control-home-page.control-menu-visible .control-home-menu-card small{font-size:.58rem!important;line-height:1!important;letter-spacing:.05em!important}
+body.control-home-page.control-menu-visible .control-home-menu-card strong{font-size:.95rem!important;line-height:1.08!important;margin-top:2px!important}
+body.control-home-page.control-menu-visible .control-home-menu-card p{display:none!important}
+body.control-home-page.control-menu-visible .control-home-menu-card>b{font-size:1.05rem!important}
+.admin-hub-quick-r418{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:8px}
+.admin-hub-quick-r418 a{min-height:36px;display:flex;align-items:center;justify-content:center;gap:6px;padding:5px 8px;border:1px solid rgba(116,199,235,.16);border-radius:13px;background:rgba(7,22,32,.78);color:#cceeff;text-decoration:none;font-size:.73rem;font-weight:900;box-sizing:border-box}
+.admin-hub-globe-r418{--hub-green:#68efa0;--hub-green-rgb:104,239,160;position:relative;width:122px;margin:7px auto 0;display:grid;justify-items:center;text-decoration:none;color:#dffff0;-webkit-tap-highlight-color:transparent;isolation:isolate}
+.admin-hub-globe-r418:focus-visible{outline:2px solid var(--hub-green);outline-offset:5px;border-radius:50%}
+.admin-hub-globe-halo-r418{position:absolute;top:0;width:108px;height:108px;border-radius:50%;border:1px solid rgba(var(--hub-green-rgb),.28);box-shadow:0 0 26px rgba(var(--hub-green-rgb),.23),inset 0 0 22px rgba(var(--hub-green-rgb),.08);animation:adminHubHaloR418 3.2s ease-in-out infinite;pointer-events:none}
+.admin-hub-globe-sphere-r418{position:relative;width:94px;height:94px;margin-top:7px;border-radius:50%;overflow:hidden;transform:translateZ(0);background:radial-gradient(circle at 35% 29%,#123d34 0,#08271f 38%,#03150f 68%,#010806 100%);border:1px solid rgba(var(--hub-green-rgb),.36);box-shadow:inset -16px -10px 25px rgba(0,0,0,.78),inset 8px 6px 16px rgba(var(--hub-green-rgb),.09),0 0 26px rgba(var(--hub-green-rgb),.24)}
+.admin-hub-globe-texture-r418{position:absolute;inset:0;opacity:.9;will-change:background-position;background-image:url('/assets/network-globe-map-r415.png?v=55.00-r418');background-repeat:repeat-x;background-position:0 50%;background-size:200% 100%;filter:drop-shadow(0 0 3px rgba(var(--hub-green-rgb),.3));transform:translateZ(0)}
+.admin-hub-globe-grid-r418{position:absolute;inset:0;border-radius:50%;opacity:.28;background:repeating-radial-gradient(ellipse at center,transparent 0 11px,rgba(var(--hub-green-rgb),.17) 12px,transparent 13px 20px),repeating-linear-gradient(90deg,transparent 0 13px,rgba(var(--hub-green-rgb),.11) 14px,transparent 15px 27px);pointer-events:none}
+.admin-hub-globe-shade-r418{position:absolute;inset:-1px;border-radius:50%;background:radial-gradient(circle at 31% 24%,rgba(255,255,255,.12),transparent 15%),linear-gradient(90deg,rgba(0,0,0,.58),transparent 24%,transparent 72%,rgba(0,0,0,.75)),radial-gradient(circle at center,transparent 58%,rgba(0,0,0,.54) 82%,rgba(0,0,0,.9));pointer-events:none}
+.admin-hub-globe-dot-r418{position:absolute;left:62%;top:23%;width:7px;height:7px;border-radius:50%;background:var(--hub-green);box-shadow:0 0 0 3px rgba(var(--hub-green-rgb),.12),0 0 13px rgba(var(--hub-green-rgb),.98);z-index:5;transform:translate(-50%,-50%);will-change:left,top,opacity}
+.admin-hub-globe-dot-r418::before{content:'SK';position:absolute;left:9px;top:-5px;padding:1px 3px;border-radius:99px;border:1px solid rgba(var(--hub-green-rgb),.32);background:rgba(2,11,8,.86);color:#eafff2;font-size:6px;line-height:1.2;font-weight:950}
+.admin-hub-globe-dot-r418::after{content:'';position:absolute;inset:-7px;border:1px solid rgba(var(--hub-green-rgb),.6);border-radius:50%;animation:adminHubPingR418 2.2s ease-out infinite}
+.admin-hub-globe-r418>strong{margin-top:4px;color:#cffff0;font-size:.72rem;line-height:1;font-weight:950;letter-spacing:.04em;text-shadow:0 0 10px rgba(var(--hub-green-rgb),.3)}
+.admin-hub-swipe-hint-r418{display:flex;justify-content:space-between;gap:10px;margin:7px 2px 0;color:#7598a9;font-size:.61rem;font-weight:800;white-space:nowrap}
+body.control-home-page.control-menu-visible .control-page-footnote.control-menu-map-link{display:none!important}
+@keyframes adminHubHaloR418{0%,100%{transform:scale(.98);opacity:.7}50%{transform:scale(1.03);opacity:1}}
+@keyframes adminHubPingR418{0%{transform:scale(.45);opacity:.95}78%,100%{transform:scale(1.85);opacity:0}}
+@media(max-height:740px) and (orientation:portrait){
+  body.control-home-page.control-menu-visible .control-home-menu-card{min-height:52px!important;padding:5px 9px!important}
+  .admin-hub-globe-r418{transform:scale(.9);transform-origin:top center;margin-bottom:-9px}
+  .admin-hub-quick-r418 a{min-height:32px}
+}
+@media(orientation:landscape){
+  body.control-home-page.control-menu-visible .control-home-menu{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important}
+  body.control-home-page.control-menu-visible .control-home-menu-card{min-height:54px!important}
+  .admin-hub-globe-r418{margin-top:5px;transform:scale(.82);transform-origin:top center;margin-bottom:-18px}
+  .admin-hub-swipe-hint-r418{max-width:480px;margin-left:auto;margin-right:auto}
+}
+
+/* R418 navigation polish: keep gesture target on its own compositor layer. */
+body.control-home-page.control-menu-visible .control-menu-page{transform:translateZ(0);backface-visibility:hidden;contain:layout style;}

@@ -33,7 +33,7 @@
     window.scrollTo(0,0);
     const prefetch=document.createElement('link');
     prefetch.rel='prefetch';
-    prefetch.href='/analytics-admin.html?source=prefetch&page=map&v=55.00n';
+    prefetch.href='/analytics-admin.html?page=google&source=admin-hub-swipe&v=55.00-r418';
     document.head.appendChild(prefetch);
   }catch(_){}
 
@@ -721,7 +721,7 @@
     indicator.classList.toggle('is-ready',ready&&!loading);
     indicator.classList.toggle('is-loading',loading);
     text.textContent=menuReturn
-      ?(ready?'Отпустите — вернуться на карту':'Потяните вниз — вернуться на карту')
+      ?(ready?'Отпустите — админ-панель':'Потяните вниз — админ-панель')
       :(loading?'Обновляем…':ready?'Отпустите, чтобы обновить':'Потяните вниз, чтобы обновить');
   }
 
@@ -740,7 +740,7 @@
     const landscape=window.matchMedia?.('(orientation: landscape)')?.matches===true;
     const viewportWidth=Math.max(1,window.innerWidth||document.documentElement.clientWidth||1);
     const inLandscapeCenter=event.clientX>=viewportWidth*.34&&event.clientX<=viewportWidth*.66;
-    const canLandscapeMenuPull=false; // R417: map opens only from the hub globe.
+    const canLandscapeMenuPull=false; // R418: map opens only from the hub globe.
     gesture={
       id:event.pointerId,x:event.clientX,y:event.clientY,lastX:event.clientX,lastY:event.clientY,mode:null,
       canPull:(!menuGesture&&!landscape&&canPullFrom())||canLandscapeMenuPull,
@@ -794,7 +794,7 @@
       track?.classList.remove('is-pulling');
       applyPosition({animate:true,pullY:42});
       await wait(35);
-      location.replace(`/analytics-admin.html?source=menu-pull&page=map&v=55.00n&t=${Date.now()}`);
+      location.replace(`/control-home.html?page=menu&source=menu-pull&v=55.00-r418&t=${Date.now()}`);
       return;
     }
     if(pullDistance>=currentPullThreshold()){
