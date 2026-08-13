@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786558576577-cfc2a79500",
-  "release": "R405",
-  "archiveName": "R405-R404-ATOMIC-AUTO-SUMMARY-DATA-AND-CLOCK-SAFE-FULL.zip",
-  "sourceHead": "68beae61ce0f3cf634e0d80e15bb74ff998f20fb",
-  "backupSha": "68beae61ce0f3cf634e0d80e15bb74ff998f20fb",
-  "backupTag": "control-backup-20260812181611-68beae6-r405-1fa33",
+  "operationId": "publish-1786584587179-0d0f5cea0d",
+  "release": "R406",
+  "archiveName": "R406-R405-LANDSCAPE-NO-FULLSCREEN-TOAST-SAFE-FULL.zip",
+  "sourceHead": "9f206c269a28d4e9b10244905d8f4db54cfe6e70",
+  "backupSha": "9f206c269a28d4e9b10244905d8f4db54cfe6e70",
+  "backupTag": "control-backup-20260813012943-9f206c2-r406-7ac2f",
   "autoRecovery": true,
-  "generatedAt": "2026-08-12T18:16:16.577Z"
+  "generatedAt": "2026-08-13T01:29:47.179Z"
 }
