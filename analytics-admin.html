@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="ru" translate="no" class="notranslate"><head>
-<meta name="andrik-control-release" content="R406">
+<meta name="andrik-control-release" content="R407">
 <link rel="stylesheet" href="/assets/control-sleep-mode-r193.css?v=55.00-r193"><script defer src="/assets/control-sleep-mode-r193.js?v=55.00-r193"></script>
 
 <meta name="google" content="notranslate"><meta charset="utf-8"/>
@@ -1853,7 +1853,7 @@ body.analytics-admin-page.is-country-returning #worldMap .world-map-dot.is-selec
       const classes=['world-country-button'];
       if(kind==='selected')classes.push('world-country-selected-card');
       if(kind==='landscape-row')classes.push('world-country-landscape-row');
-      if(kind==='portrait'&&index>=4)classes.push('world-country-extra');
+      if(kind==='portrait'&&index>=6)classes.push('world-country-extra');
       if(selected)classes.push('is-selected');
       const landscapeSelected=landscape&&kind==='selected'&&selected;
       const detailsOpen=selected&&kind==='selected'&&(landscapeSelected||selectedWorldCountryDetailsExpanded);
@@ -1871,7 +1871,7 @@ body.analytics-admin-page.is-country-returning #worldMap .world-map-dot.is-selec
       }else{
         const rows=clean.map((item,index)=>rowButton(item,index,'portrait')).join('');
         const toggleTop='';
-        const toggleBottom=clean.length>4?`<button class="world-country-toggle" data-country-toggle type="button" aria-expanded="${countriesExpanded?'true':'false'}">${countriesExpanded?'Скрыть список':`Показать все страны (${clean.length})`}</button>`:'';
+        const toggleBottom=clean.length>6?`<button class="world-country-toggle" data-country-toggle type="button" aria-expanded="${countriesExpanded?'true':'false'}">${countriesExpanded?'Скрыть список':`Показать все страны (${clean.length})`}</button>`:'';
         list.classList.remove('is-landscape-layout');
         list.classList.toggle('is-expanded',countriesExpanded);
         list.innerHTML=toggleTop+rows+toggleBottom;
@@ -2483,7 +2483,7 @@ body.analytics-admin-page.is-country-returning #worldMap .world-map-dot.is-selec
 
 </script>
 <script defer src="/assets/map-end-pull-v55-00-r48.js?v=55.00-r48"></script>
-<script defer src="/assets/map-total-v55-00f.js?v=55.00-r406"></script>
+<script defer src="/assets/map-total-v55-00f.js?v=55.00-r405"></script>
 <script defer src="/assets/country-focus-v54-84.js?v=54.84"></script>
 <script defer src="/assets/landscape-no-growth-v55-00-r37.js?v=55.00-r37"></script>
 <script defer src="/assets/country-activity-r337.js?v=55.00-r337"></script>
@@ -3569,15 +3569,30 @@ body.analytics-admin-page.is-country-returning #worldMap .world-map-dot.is-selec
     button.setAttribute('aria-expanded',String(open));
     button.style.display=document.body.classList.contains('is-country-focus-active')?'none':'';
   }
-  // R406: switch orientation without the Fullscreen API. Android/Chrome shows a
-  // browser-owned brown fullscreen hint whenever requestFullscreen() is called;
-  // that hint cannot be hidden by page CSS. Live Web AI runs as a standalone PWA,
-  // where Screen Orientation lock works without forcing browser fullscreen.
+  const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+  async function tryOrientation(mode){
+    try{
+      if(screen.orientation&&typeof screen.orientation.lock==='function'){
+        await screen.orientation.lock(mode);
+        await wait(120);
+        return mode==='landscape'?isLandscape():!isLandscape();
+      }
+    }catch(_){ }
+    return mode==='landscape'?isLandscape():!isLandscape();
+  }
   async function enterLandscape(){
-    try{if(screen.orientation&&screen.orientation.lock)await screen.orientation.lock('landscape');}catch(_){}
+    if(await tryOrientation('landscape'))return;
+    try{
+      if(!document.fullscreenElement&&document.documentElement.requestFullscreen){
+        await document.documentElement.requestFullscreen({navigationUI:'hide'});
+        await wait(80);
+      }
+    }catch(_){ }
+    await tryOrientation('landscape');
   }
   async function returnPortrait(){
-    try{if(screen.orientation&&screen.orientation.lock)await screen.orientation.lock('portrait');}catch(_){}
+    await tryOrientation('portrait');
+    try{if(document.fullscreenElement&&document.exitFullscreen)await document.exitFullscreen();}catch(_){ }
   }
   document.addEventListener('click',event=>{
     const rotate=event.target.closest?.('#mapOrientationFab');
@@ -4235,8 +4250,8 @@ body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #mapFocusAct
 <script defer src="/assets/country-actions-r296.js?v=55.00-r311"></script>
 <link rel="stylesheet" href="/assets/ecosystem-map-r337.css?v=55.00-r337">
 <link rel="stylesheet" href="/assets/country-focus-compact-r339.css?v=55.00-r340">
-<link rel="stylesheet" href="/assets/map-total-compact-r348.css?v=55.00-r406">
-<script defer src="/assets/ecosystem-map-r347.js?v=55.00-r406"></script>
+<link rel="stylesheet" href="/assets/map-total-compact-r348.css?v=55.00-r405">
+<script defer src="/assets/ecosystem-map-r347.js?v=55.00-r405"></script>
 <script defer src="/assets/map-layer-color-r354.js?v=55.00-r354"></script>
 <script defer src="/assets/country-shapes-r341.js?v=55.00-r341"></script>
 <link rel="stylesheet" href="/assets/country-map-r352.css?v=55.00-r384">
@@ -4245,11 +4260,38 @@ body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #mapFocusAct
 <link rel="stylesheet" href="/assets/map-visual-r354.css?v=55.00-r354">
 <link rel="stylesheet" href="/assets/country-list-scroll-r354.css?v=55.00-r356">
 <script defer src="/assets/country-list-scroll-r354.js?v=55.00-r356"></script>
-<script defer src="/assets/control-version-sync-r406.js?v=55.00-r406"></script>
+<script defer src="/assets/control-version-sync-r405.js?v=55.00-r405"></script>
 \n<style id="andrik-r356-youtube-red-rendered-final">\n@keyframes andrikYoutubePulseR356{\n  0%,100%{transform:scale(.94);opacity:.92;box-shadow:0 0 0 4px rgba(255,72,101,.12),0 0 18px rgba(255,62,92,.90),0 0 30px rgba(255,40,77,.34)}\n  50%{transform:scale(1.20);opacity:1;box-shadow:0 0 0 8px rgba(255,72,101,.045),0 0 29px rgba(255,55,87,1),0 0 44px rgba(255,35,71,.48)}\n}\nbody.analytics-admin-page.analytics-v54-46-page #worldMap .world-map-dot.r356-youtube-dot i{\n  background:#ff536b!important;\n  border:1px solid rgba(255,225,229,.88)!important;\n  box-shadow:0 0 0 5px rgba(255,78,104,.12),0 0 22px rgba(255,54,86,.98),0 0 38px rgba(255,35,72,.42)!important;\n  filter:none!important;\n  animation:andrikYoutubePulseR356 2.55s ease-in-out infinite!important;\n}\nbody.analytics-admin-page.analytics-v54-46-page #worldMap .world-map-city-dot.r356-youtube-dot i{\n  background:#ff6076!important;\n  border-color:rgba(255,222,227,.82)!important;\n  box-shadow:0 0 0 3px rgba(255,78,104,.13),0 0 18px rgba(255,48,81,.98)!important;\n}\n</style>\n
 <script defer src="/assets/youtube-red-r357.js?v=55.00-r357"></script>
 <script defer src="/assets/country-anchor-r358.js?v=55.00-r358"></script>
 <script defer src="/assets/country-pulse-r368.js?v=55.00-r369"></script>
 <script defer src="/assets/country-city-r372.js?v=55.00-r372"></script>
 <!-- R384: country cards in the full list open the selected country map directly. -->
+
+<style id="andrik-r407-portrait-fill-adjustments">
+@media (orientation:portrait){
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #mapFocusActions.map-focus-actions{
+    gap:10px!important;
+    margin:10px auto 10px!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #mapFocusActions.map-focus-actions .map-focus-action{
+    height:64px!important;
+    min-height:64px!important;
+    max-height:64px!important;
+    padding:8px 10px!important;
+    border-radius:20px!important;
+    line-height:1.1!important;
+  }
+}
+@media (max-width:390px) and (orientation:portrait){
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #mapFocusActions.map-focus-actions .map-focus-action{
+    height:60px!important;
+    min-height:60px!important;
+    max-height:60px!important;
+    font-size:.84rem!important;
+    padding:7px 9px!important;
+  }
+}
+</style>
+
 </body></html>
