@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786604352107-1d6c6048bf",
-  "release": "R411",
-  "archiveName": "R411-COUNTRY-PREVIEW-6-HARDLOCK-SAFE-FULL.zip",
-  "sourceHead": "59806600d6b99c9792a71dbfdf34ded0d860cbdf",
-  "backupSha": "59806600d6b99c9792a71dbfdf34ded0d860cbdf",
-  "backupTag": "control-backup-20260813065907-5980660-r411-f15c9",
+  "operationId": "publish-1786605289076-60c65f776c",
+  "release": "R412",
+  "archiveName": "R412-LIVE-NETWORK-GLOBE-SAFE-FULL.zip",
+  "sourceHead": "4a36698dbd9205d5b1a5cf82797842b37909e879",
+  "backupSha": "4a36698dbd9205d5b1a5cf82797842b37909e879",
+  "backupTag": "control-backup-20260813071444-4a36698-r412-9c429",
   "autoRecovery": true,
-  "generatedAt": "2026-08-13T06:59:12.107Z"
+  "generatedAt": "2026-08-13T07:14:49.709Z"
 }
