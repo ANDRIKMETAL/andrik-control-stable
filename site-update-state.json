@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786652985371-729fd58178",
-  "release": "R424",
-  "archiveName": "R424-LANDSCAPE-COUNTRY-FILL-ADMIN-SWIPE-SAFE-FULL.zip",
-  "sourceHead": "6c6a4c614e696eac9b903c3c5a7977395f14eb33",
-  "backupSha": "6c6a4c614e696eac9b903c3c5a7977395f14eb33",
-  "backupTag": "control-backup-20260813202940-6c6a4c6-r424-62cb5",
+  "operationId": "publish-1786653373284-340e928974",
+  "release": "R425",
+  "archiveName": "R425-LANDSCAPE-CITIES-SIMPLE-LIST-SAFE-FULL.zip",
+  "sourceHead": "1477e28df193298cbfc6828ff50619084c9654c4",
+  "backupSha": "1477e28df193298cbfc6828ff50619084c9654c4",
+  "backupTag": "control-backup-20260813203608-1477e28-r425-10009",
   "autoRecovery": true,
-  "generatedAt": "2026-08-13T20:29:45.371Z"
+  "generatedAt": "2026-08-13T20:36:13.284Z"
 }
