@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786607508567-8b6a36cbe3",
-  "release": "R415",
-  "archiveName": "R415-YOUTUBE-SMOOTH-MONITOR-POLISH-SAFE-FULL.zip",
-  "sourceHead": "e6cfb3849c8a8eea5f95eb499faf818873f8c6a4",
-  "backupSha": "e6cfb3849c8a8eea5f95eb499faf818873f8c6a4",
-  "backupTag": "control-backup-20260813075144-e6cfb38-r415-d9539",
+  "operationId": "publish-1786622069189-2c9a144ac2",
+  "release": "R416",
+  "archiveName": "R416-COUNTRY-TOP-CLOUDFLARE-1102-CPU-SAFE-FULL.zip",
+  "sourceHead": "5a6cf16aaeb7496f17d8a4cb2f9db2ae3be36b44",
+  "backupSha": "5a6cf16aaeb7496f17d8a4cb2f9db2ae3be36b44",
+  "backupTag": "control-backup-20260813115424-5a6cf16-r416-216cb",
   "autoRecovery": true,
-  "generatedAt": "2026-08-13T07:51:49.348Z"
+  "generatedAt": "2026-08-13T11:54:29.189Z"
 }

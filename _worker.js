@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R415', number:415, version:'55.00', full:'55.00 LIVE WEB AI FINAL R415', siteUpdater:'55.00-r356' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R416', number:416, version:'55.00', full:'55.00 LIVE WEB AI FINAL R416', siteUpdater:'55.00-r356' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -6185,7 +6185,7 @@ async function loadFastYoutubeVideoIdsR333(db,limit=50){
 
 async function fetchFastYoutubeCommentsR333(env,channelId){
   const {data}=await youtubeApiJson(env,'commentThreads',{
-    part:'snippet,replies',allThreadsRelatedToChannelId:channelId,maxResults:100,order:'time',textFormat:'plainText'
+    part:'snippet,replies',allThreadsRelatedToChannelId:channelId,maxResults:50,order:'time',textFormat:'plainText'
   });
   const items=[];
   for(const thread of data.items || []){
@@ -6200,9 +6200,20 @@ async function fetchFastYoutubeCommentsR333(env,channelId){
 }
 
 async function fetchFastYoutubeLikesR333(env,db){
-  const ids=await loadFastYoutubeVideoIdsR333(db,50);
-  if(!ids.length)return [];
-  const {data}=await youtubeApiJson(env,'videos',{part:'snippet,statistics',id:ids.join(','),maxResults:50});
+  const allIds=await loadFastYoutubeVideoIdsR333(db,50);
+  if(!allIds.length)return [];
+  // R416: inspect only 24 videos per 2-minute request, rotating through the full
+  // recent set. This roughly halves JSON/D1 loop CPU while still covering ~50
+  // videos across consecutive cycles.
+  const offsetRow=await getPushState(db,'youtube-fast-like-offset-r416').catch(()=>null);
+  const rawOffset=Math.max(0,Number(offsetRow?.value || 0));
+  const offset=allIds.length ? rawOffset % allIds.length : 0;
+  const take=Math.min(24,allIds.length);
+  const ids=[];
+  for(let i=0;i<take;i++)ids.push(allIds[(offset+i)%allIds.length]);
+  const nextOffset=allIds.length ? (offset+take)%allIds.length : 0;
+  await setPushState(db,'youtube-fast-like-offset-r416',String(nextOffset)).catch(()=>{});
+  const {data}=await youtubeApiJson(env,'videos',{part:'snippet,statistics',id:ids.join(','),maxResults:24});
   return (data.items || []).map(video=>({
     videoId:cleanPlainText(video.id || '',40),
     title:cleanPlainText(video?.snippet?.title || 'Видео ANDRIK',180),
@@ -6214,11 +6225,13 @@ async function fetchFastYoutubeLikesR333(env,db){
   })).filter(x=>x.videoId);
 }
 
-async function handleFastYoutubeEngagementR333(request,env){
+async function handleFastYoutubeEngagementR333(request,env,options={}){
   if(!adminAuthorized(request,env) && !cronAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
   const db=requireDb(env);
   await Promise.all([ensurePushAutomationSchema(db),ensureControlV1Schema(db)]);
-  const autoCheckpointR398=await checkpointDailySummaryAutoR398(env,'youtube-fast-2m').catch(error=>({ok:false,error:cleanPlainText(error?.message||error,300)}));
+  const autoCheckpointR398=options.skipCheckpoint
+    ? {ok:true,skipped:true,reason:'checkpoint-owned-by-caller-r416'}
+    : await checkpointDailySummaryAutoR398(env,'youtube-fast-2m').catch(error=>({ok:false,error:cleanPlainText(error?.message||error,300)}));
   const startedAt=new Date().toISOString();
   await setPushState(db,'youtube-fast-engagement-last-at-r333',startedAt).catch(()=>{});
   await setPushState(db,'youtube-fast-engagement-last-status-r376','running').catch(()=>{});
@@ -6340,6 +6353,8 @@ async function handleFastYoutubeEngagementR333(request,env){
       ok:warnings.length===0 && failed===0,
       commentsSeen:comments.length,
       videosChecked:videos.length,
+      commentsSent:notifications.filter(x=>x.type==='comment'&&x.ok).length,
+      likesSent:notifications.filter(x=>x.type==='like'&&x.ok).length,
       sent:notifications.filter(x=>x.ok).length,
       failed,
       busyLikeClaims,
@@ -6367,6 +6382,105 @@ async function handleFastYoutubeEngagementR333(request,env){
     await recordSystemLog(env,{scope:'youtube-fast-engagement',level:'error',event:'fast-check-failed',message:'Быстрая 2-минутная проверка YouTube завершилась ошибкой.',details:{error:msg}}).catch(()=>{});
     return json(failedSummary,502);
   }
+}
+
+// R416: cron-safe YouTube path. The old 5-minute fallback called the full historical
+// event reconciler, which can exceed the HTTP Worker CPU budget (Cloudflare 1102).
+// Cron now keeps comments/likes on the proven fast R333 path and checks subscriber
+// count with one channels request. The full reconciler stays available for an explicit
+// owner/manual check, where its richer named-subscriber/history reconciliation is useful.
+async function handleFastYoutubeSubscriberCountR416(request, env, options = {}) {
+  if (!adminAuthorized(request, env) && !cronAuthorized(request, env)) return { ok:false, error:'unauthorized' };
+  const db = requireDb(env);
+  await Promise.all([ensurePushAutomationSchema(db), ensureControlV1Schema(db), ensurePlatformAnalyticsSchema(db)]);
+  const startedAt = new Date().toISOString();
+  try {
+    const identity = await fetchYoutubeMonitorIdentity(env);
+    if (identity.uploadsPlaylistId) await setPushState(db, 'youtube-uploads-playlist-id', identity.uploadsPlaylistId).catch(()=>{});
+    await refreshYoutubeRolloverBaselineR410(db, Number(identity.views || 0), startedAt).catch(()=>{});
+
+    const key='channel-subscriber-count';
+    const previous=await getYoutubeEventRow(db,key);
+    const before=Math.max(0,Number(previous?.countValue || 0));
+    const current=Math.max(0,Number(identity.subscribers || 0));
+    let sent=false;
+    let pushError='';
+
+    if(!previous){
+      await saveYoutubeEventRow(db,{key,type:'subscriber-count',resourceId:identity.channelId,title:identity.title,countValue:current,url:identity.channelUrl,payload:{...identity,seededBy:'cron-lite-r416'}});
+    }else if(!identity.hiddenSubscribers && current>before){
+      const delta=current-before;
+      const onceKey=`push-once:youtube-subscriber-lite-r416:${before}:${current}`;
+      const claimed=await claimPushOnce(db,onceKey,startedAt);
+      if(claimed){
+        const channelAppUrl=youtubeAppLauncherUrl(identity.channelUrl);
+        const result=await sendOwnerPush(env,{
+          title:delta===1?'👤 Новый подписчик YouTube':`👤 +${delta} подписчика YouTube`,
+          message:`На канале теперь ${current} подписчиков`,
+          url:channelAppUrl,
+          name:`youtube-subscriber-lite-r416-${before}-to-${current}`,
+          webButtons:[{id:'open-youtube',text:'▶️ Открыть YouTube',url:channelAppUrl}],
+          history:{type:'youtube-subscriber-count',source:'YouTube',videoTitle:identity.title,details:{previousSubscribers:before,totalSubscribers:current,delta,deliveryMode:'cron-lite-r416'}}
+        });
+        sent=Boolean(result.ok);
+        pushError=cleanPlainText(result.error || '',300);
+        if(sent){
+          await saveYoutubeEventRow(db,{key,type:'subscriber-count',resourceId:identity.channelId,title:identity.title,countValue:current,url:identity.channelUrl,payload:{...identity,deliveryMode:'cron-lite-r416'}});
+        }else{
+          await releasePushOnceClaim(db,onceKey).catch(()=>{});
+        }
+      }
+    }else if(current!==before){
+      // A decrease is a new baseline, never a notification.
+      await saveYoutubeEventRow(db,{key,type:'subscriber-count',resourceId:identity.channelId,title:identity.title,countValue:current,url:identity.channelUrl,payload:{...identity,baselineReset:true,deliveryMode:'cron-lite-r416'}});
+    }
+
+    await setPushState(db,'youtube-counts-last-at',startedAt).catch(()=>{});
+    await setPushState(db,'youtube-counts-last-summary',JSON.stringify({subscribers:current,views:Number(identity.views||0),mode:'cron-lite-r416'})).catch(()=>{});
+    return {ok:!pushError,subscribers:current,previousSubscribers:before,delta:Math.max(0,current-before),sent,error:pushError,checkedAt:startedAt};
+  } catch(error) {
+    return {ok:false,error:cleanPlainText(error?.message || error,400),checkedAt:startedAt};
+  }
+}
+
+async function handleCronYoutubeEventsLiteR416(request, env, options = {}) {
+  if (!adminAuthorized(request, env) && !cronAuthorized(request, env)) return json({ok:false,error:'unauthorized'},401);
+  const db=requireDb(env);
+  await Promise.all([ensurePushAutomationSchema(db),ensureControlV1Schema(db),ensurePlatformAnalyticsSchema(db)]);
+  const startedAt=new Date().toISOString();
+  await Promise.all([
+    setPushState(db,'youtube-events-last-check-at',startedAt).catch(()=>{}),
+    setPushState(db,'youtube-events-last-check-status','running').catch(()=>{})
+  ]);
+
+  const engagementResponse=await handleFastYoutubeEngagementR333(request,env,{skipCheckpoint:true});
+  const engagement=await responseData(engagementResponse).catch(error=>({ok:false,httpOk:false,error:cleanPlainText(error?.message||error,300)}));
+  const subscriber=await handleFastYoutubeSubscriberCountR416(request,env,options);
+  const errors=[];
+  if(engagement?.ok===false || engagement?.httpOk===false) errors.push(`engagement:${engagement?.error || engagement?.warnings?.join?.(' · ') || engagement?.status || 'degraded'}`);
+  if(subscriber?.ok===false) errors.push(`subscriber:${subscriber.error || 'degraded'}`);
+  const summary={
+    mode:'cron-lite-r416',
+    commentsSent:Number(engagement?.commentsSent || 0),
+    likesSent:Number(engagement?.likesSent || 0),
+    subscribersSent:subscriber?.sent ? Math.max(1,Number(subscriber?.delta || 1)) : 0,
+    subscribers:Number(subscriber?.subscribers || 0),
+    engagement,
+    subscriber,
+    errors,
+    checkedAt:new Date().toISOString()
+  };
+  await Promise.all([
+    setPushState(db,'youtube-events-last-check-status',errors.length?'warning':'success').catch(()=>{}),
+    setPushState(db,'youtube-events-last-check-summary',JSON.stringify(summary)).catch(()=>{}),
+    errors.length?Promise.resolve():setPushState(db,'youtube-events-last-success-at',summary.checkedAt).catch(()=>{})
+  ]);
+  if(errors.length){
+    await recordSystemLog(env,{scope:'youtube-events',level:'warning',event:'cron-lite-r416-degraded',message:'Cron-safe YouTube check завершён частично, без тяжёлого fallback.',details:{errors}}).catch(()=>{});
+  }
+  // Always acknowledge cron with 200. Upstream/API problems remain visible in the payload
+  // and logs but must not make the external Worker launch its CPU-heavy legacy fallback.
+  return json({ok:true,healthy:errors.length===0,degraded:errors.length>0,...summary},200);
 }
 
 async function handleCheckYoutubeEvents(request, env) {
@@ -8586,12 +8700,18 @@ function cronGatewayClockR394(date=new Date(), cronExpression='') {
   const scheduled2=/\*\/2(?:$|,)/.test(firstField);
   const scheduled5=/\*\/5(?:$|,)/.test(firstField);
   const scheduled15=/\*\/15(?:$|,)/.test(firstField);
+  const single2=firstField==='*/2';
+  const single5=firstField==='*/5';
+  const single15=firstField==='*/15';
+  const hasDedicatedClass=single2||single5||single15;
   return {
     minute,
     cronExpression:String(cronExpression || ''),
-    due2:minute % 2 === 0 || scheduled2,
-    due5:minute % 5 === 0 || scheduled5,
-    due15:minute % 15 === 0 || scheduled15,
+    // R416: the cron expression is authoritative when it names one dedicated trigger.
+    // */15 at minute :15 must not also execute the 5-minute bundle in the same HTTP invocation.
+    due2:hasDedicatedClass ? single2 : (minute % 2 === 0 || scheduled2),
+    due5:hasDedicatedClass ? single5 : (minute % 5 === 0 || scheduled5),
+    due15:hasDedicatedClass ? single15 : (minute % 15 === 0 || scheduled15),
     slot2:`${hourKey}:${String(minute - (minute % 2)).padStart(2,'0')}`,
     slot5:`${hourKey}:${String(minute - (minute % 5)).padStart(2,'0')}`,
     slot15:`${hourKey}:${String(minute - (minute % 15)).padStart(2,'0')}`
@@ -8625,59 +8745,14 @@ function cronAgeMinutesR394(value) {
 async function handleLegacyExternalCronR400(request, env, ctx) {
   if(!adminAuthorized(request,env) && !cronAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
   const db=requireDb(env);
-  await Promise.all([
-    ensurePushAutomationSchema(db), ensureControlV1Schema(db), ensurePlatformAnalyticsSchema(db),
-    ensureSiteMetricsSchema(db), ensureCommentsV4Schema(db)
-  ]);
-  const receivedAt=await touchCronSchedulerHeartbeatR394(db,'legacy-external-r400').catch(()=>new Date().toISOString());
-  const checkpoint=await checkpointDailySummaryAutoR398(env,'legacy-external-r400')
-    .catch(error=>({ok:false,error:cleanPlainText(error?.message||error,500)}));
-
+  const receivedAt=await touchCronSchedulerHeartbeatR394(db,'legacy-external-r416').catch(()=>new Date().toISOString());
   await Promise.all([
     setPushState(db,'legacy-external-cron-r400-last-at',receivedAt).catch(()=>{}),
-    setPushState(db,'legacy-external-cron-r400-last-checkpoint',JSON.stringify(checkpoint||{})).catch(()=>{})
+    setPushState(db,'legacy-external-cron-r400-last-checkpoint',JSON.stringify({ok:true,skipped:true,reason:'dedicated-gateway-owns-work-r416'})).catch(()=>{})
   ]);
-
-  // Force all schedule classes into the shared slot-gateway. This is safe because
-  // claimCronGatewaySlotR334 deduplicates 2m / 5m / 15m work by its own time slots.
-  const u=new URL(request.url);
-  u.pathname='/api/automation/cron-gateway';
-  u.searchParams.set('cron','*/2,*/5,*/15 * * * *');
-  u.searchParams.set('source','legacy-external-r400');
-  const headers=new Headers(request.headers);
-  headers.set('x-andrik-cron-source','legacy-external-r400');
-  headers.set('x-andrik-cron','*/2,*/5,*/15 * * * *');
-  const gatewayRequest=new Request(u.toString(),{method:'POST',headers});
-  const run=async()=>{
-    try{
-      const response=await handleExternalCronGatewayR334(gatewayRequest,env);
-      let result={};
-      try{result=await response.clone().json();}catch(_){result={status:response.status};}
-      await Promise.all([
-        setPushState(db,'legacy-external-cron-r400-gateway-last-at',new Date().toISOString()).catch(()=>{}),
-        setPushState(db,'legacy-external-cron-r400-gateway-last-status',response.ok?'ok':'failed').catch(()=>{}),
-        setPushState(db,'legacy-external-cron-r400-gateway-last-result',JSON.stringify(result).slice(0,12000)).catch(()=>{})
-      ]);
-    }catch(error){
-      await Promise.all([
-        setPushState(db,'legacy-external-cron-r400-gateway-last-at',new Date().toISOString()).catch(()=>{}),
-        setPushState(db,'legacy-external-cron-r400-gateway-last-status','failed').catch(()=>{}),
-        setPushState(db,'legacy-external-cron-r400-gateway-last-result',cleanPlainText(error?.message||error,1000)).catch(()=>{})
-      ]);
-      await recordSystemLog(env,{scope:'cron',level:'error',event:'legacy-external-r400',message:'Фоновый gateway старого Cron завершился ошибкой.',details:{error:cleanPlainText(error?.message||error,800)}}).catch(()=>{});
-    }
-  };
-  if(ctx?.waitUntil)ctx.waitUntil(run()); else run().catch(()=>{});
-
-  // Fast ACK prevents the old Cron Worker from waiting for Google/YouTube and timing out.
-  return json({
-    ok:checkpoint?.ok!==false || checkpoint?.skipped===true,
-    version:ANDRIK_CONTROL_RELEASE.short,
-    mode:'legacy-external-cron-bridge-r400',
-    receivedAt,
-    checkpoint,
-    gateway:'scheduled-in-background'
-  });
+  // Fast compatibility ACK only. The external Worker already has dedicated */2, */5
+  // and */15 calls to /cron-gateway; doing the same work again here doubled CPU load.
+  return json({ok:true,version:ANDRIK_CONTROL_RELEASE.short,mode:'legacy-external-fast-ack-r416',receivedAt,gateway:'owned-by-dedicated-cron-gateway'},200);
 }
 
 // R399: dedicated lightweight endpoint for the external andrik-push-cron Worker.
@@ -8706,8 +8781,7 @@ async function handleExternalSummaryCheckpointR399(request, env) {
   const heartbeatAt=await touchCronSchedulerHeartbeatR394(db,`external-r399:${source}:${cron || 'unknown'}`)
     .catch(()=>new Date().toISOString());
 
-  const checkpoint=await checkpointDailySummaryAutoR398(env,`external-r399:${source}`)
-    .catch(error=>({ok:false,error:cleanPlainText(error?.message || error,500)}));
+  const checkpoint={ok:true,skipped:true,reason:'owned-by-15m-gateway-r416',updatedAt:heartbeatAt};
 
   await Promise.all([
     setPushState(db,'external-cron-r399-last-at',heartbeatAt).catch(()=>{}),
@@ -8716,115 +8790,159 @@ async function handleExternalSummaryCheckpointR399(request, env) {
     setPushState(db,'external-cron-r399-last-status',checkpoint?.ok===false && !checkpoint?.skipped ? 'failed' : 'ok').catch(()=>{})
   ]);
 
-  const ok=checkpoint?.ok!==false || checkpoint?.skipped===true;
+  const healthy=checkpoint?.healthy!==false && checkpoint?.ok!==false;
   return json({
-    ok,
+    ok:true,
+    healthy,
+    degraded:!healthy,
     version:ANDRIK_CONTROL_RELEASE.short,
     heartbeatAt,
     cron,
     source,
     checkpoint
-  },ok?200:502);
+  },200);
 }
 
-async function handleExternalCronGatewayR334(request, env) {
+// R416: Cloudflare Free gives each HTTP Worker request a very small CPU budget.
+// Do NOT self-fetch another route in the same zone: that can itself be rejected by
+// Cloudflare. Instead the already-existing */2, */5 and */15 external triggers are
+// used as three independent CPU slices. Each gateway invocation runs at most ONE
+// meaningful duty; the 5-minute class rotates release/subscriber work.
+async function handleCronYoutubeEventsAckR416(request, env) {
   if(!adminAuthorized(request,env) && !cronAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
+  // This URL is only the legacy emergency fallback of andrik-push-cron. Normal
+  // comments/likes are owned by the */2 gateway. Re-running the historical full
+  // reconciler here was the second source of 1102 after a gateway failure.
+  if(env.COMMENTS_DB){
+    const db=requireDb(env);
+    await Promise.all([
+      setPushState(db,'youtube-cron-fallback-ack-r416',new Date().toISOString()).catch(()=>{}),
+      setPushState(db,'youtube-cron-fallback-mode-r416','suppressed-full-reconciler').catch(()=>{})
+    ]);
+  }
+  return json({ok:true,healthy:true,degraded:false,skipped:true,mode:'youtube-cron-fallback-ack-r416',reason:'fast-engagement-owned-by-2m-gateway',checkedAt:new Date().toISOString()},200);
+}
+
+async function runCronFiveMinuteSliceR416(request, env, clock) {
+  const local=getBratislavaClock();
+  // Exact owner-summary windows get a whole invocation to themselves. Once the
+  // slot has been sent maybeSendDailyOwnerSummary becomes a tiny state check.
+  if((local.hour===5 || local.hour===17) && local.minute<10){
+    const value=await maybeSendDailyOwnerSummary(env);
+    return {task:'daily-summary',value};
+  }
+  // Alternate release and subscriber checks. Each now gets its own 5-minute HTTP
+  // invocation instead of sharing CPU with summary, YouTube reconciliation and cron.
+  const phase=Math.floor(Number(clock?.minute || 0)/5)%2;
+  if(phase===0){
+    const value=await responseData(await handleFastYoutubeReleaseCheckR332(request,env));
+    return {task:'release',value};
+  }
+  const value=await handleFastYoutubeSubscriberCountR416(request,env,{source:'gateway-subscriber-r416'});
+  return {task:'subscriber',value};
+}
+
+async function runCronMaintenanceSliceR416(env, clock) {
   const db=requireDb(env);
-  await Promise.all([ensurePushAutomationSchema(db),ensureControlV1Schema(db),ensurePlatformAnalyticsSchema(db),ensureSiteMetricsSchema(db)]);
-  const gatewayUrlR394=new URL(request.url);
-  const clock=cronGatewayClockR394(new Date(),gatewayUrlR394.searchParams.get('cron')||'');
+  await Promise.all([ensurePushAutomationSchema(db),ensurePlatformAnalyticsSchema(db),ensureControlV1Schema(db)]);
+  const startedAt=new Date().toISOString();
+  const quarter=Math.floor(Number(clock?.minute || 0)/15)%4;
   const tasks={};
   const errors=[];
-  const schedulerHeartbeatAt=await touchCronSchedulerHeartbeatR394(db,`gateway:${new URL(request.url).pathname}`).catch(()=>new Date().toISOString());
-  tasks.summaryCheckpointR398=await checkpointDailySummaryAutoR398(env,'cron-gateway').catch(error=>({ok:false,error:cleanPlainText(error?.message||error,300)}));
-  if(tasks.summaryCheckpointR398?.ok===false && !tasks.summaryCheckpointR398?.skipped)errors.push(`summaryCheckpointR398:${tasks.summaryCheckpointR398.error||'failed'}`);
-
-  // Every 2 minutes: lightweight comments + likes.
-  if(clock.due2 && await claimCronGatewaySlotR334(db,'engagement-2m',clock.slot2)){
-    try{
-      tasks.engagement=await responseData(await handleFastYoutubeEngagementR333(request,env));
-      if(!tasks.engagement.httpOk || tasks.engagement.ok===false)errors.push(`engagement:${tasks.engagement.error || tasks.engagement.status || 'delivery-failed'}`);
-    }catch(error){
-      tasks.engagement={ok:false,error:cleanPlainText(error?.message || error,400)};
-      errors.push(`engagement:${tasks.engagement.error}`);
+  try{
+    if(quarter===0){
+      tasks.snapshots=await refreshControlSnapshots(env,{force:false});
+      if(tasks.snapshots?.youtube?.studio?.countries){
+        tasks.newCountries=await maybeSendNewCountryAlerts(env,tasks.snapshots.youtube.studio.countries).catch(error=>({ok:false,error:cleanPlainText(error?.message||error,300)}));
+      }else tasks.newCountries={ok:true,skipped:true,reason:'no-fresh-youtube-countries'};
+    }else if(quarter===1){
+      tasks.nativeMonitor=await runNativeMonitor(env,{sendNotifications:true,source:'cron-slice-r416'});
+    }else if(quarter===2){
+      tasks.websub=await ensureYoutubeWebSubSubscriptionR332(env,db,{force:false});
+    }else{
+      tasks.backup=await maybeCreateDailyBackup(env);
     }
-  }else{
-    tasks.engagement={ok:true,skipped:true,reason:clock.due2?'slot-already-claimed':'not-due'};
+  }catch(error){
+    errors.push(cleanPlainText(error?.message || error,500));
   }
-
-  // R394: every 5 minutes warm the daily analytics FIRST. This is independent
-  // from push delivery, so «Аналитика за день» never needs a manual push to populate.
-  if(clock.due5 && await claimCronGatewaySlotR334(db,'youtube-5m',clock.slot5)){
-    try{
-      tasks.summaryRefreshFast=await refreshDailySummaryAccumulatorR305(env,'cron-5m-r397');
-      if(!tasks.summaryRefreshFast.ok && !tasks.summaryRefreshFast.skipped)errors.push(`summaryRefreshFast:${tasks.summaryRefreshFast.error || 'failed'}`);
-    }catch(error){
-      tasks.summaryRefreshFast={ok:false,error:cleanPlainText(error?.message || error,400)};
-      errors.push(`summaryRefreshFast:${tasks.summaryRefreshFast.error}`);
-    }
-    try{
-      tasks.dailySummaryFast=await maybeSendDailyOwnerSummary(env);
-      if(!tasks.dailySummaryFast.ok && !tasks.dailySummaryFast.skipped)errors.push(`dailySummaryFast:${tasks.dailySummaryFast.error || 'failed'}`);
-    }catch(error){
-      tasks.dailySummaryFast={ok:false,error:cleanPlainText(error?.message || error,400)};
-      errors.push(`dailySummaryFast:${tasks.dailySummaryFast.error}`);
-    }
-    try{
-      tasks.releaseFallback=await responseData(await handleFastYoutubeReleaseCheckR332(request,env));
-      if(!tasks.releaseFallback.httpOk)errors.push(`releaseFallback:${tasks.releaseFallback.error || tasks.releaseFallback.status}`);
-    }catch(error){
-      tasks.releaseFallback={ok:false,error:cleanPlainText(error?.message || error,400)};
-      errors.push(`releaseFallback:${tasks.releaseFallback.error}`);
-    }
-    try{
-      tasks.youtubeEvents=await responseData(await handleCheckYoutubeEvents(request,env));
-      if(!tasks.youtubeEvents.httpOk)errors.push(`youtubeEvents:${tasks.youtubeEvents.error || tasks.youtubeEvents.status}`);
-    }catch(error){
-      tasks.youtubeEvents={ok:false,error:cleanPlainText(error?.message || error,400)};
-      errors.push(`youtubeEvents:${tasks.youtubeEvents.error}`);
-    }
-  }else{
-    tasks.summaryRefreshFast={ok:true,skipped:true,reason:clock.due5?'slot-already-claimed':'not-due'};
-    tasks.dailySummaryFast={ok:true,skipped:true,reason:clock.due5?'slot-already-claimed':'not-due'};
-    tasks.releaseFallback={ok:true,skipped:true,reason:clock.due5?'slot-already-claimed':'not-due'};
-    tasks.youtubeEvents={ok:true,skipped:true,reason:clock.due5?'slot-already-claimed':'not-due'};
+  for(const [name,item] of Object.entries(tasks)){
+    if(item?.ok===false && !item?.skipped)errors.push(`${name}:${item.error || (item.errors||[]).join(' · ') || 'failed'}`);
   }
+  const finishedAt=new Date().toISOString();
+  const status=errors.length?'partial':'ok';
+  const summary={mode:'split-maintenance-r416',quarter,startedAt,finishedAt,status,tasks,errors};
+  await Promise.all([
+    setPushState(db,'automation-last-check-at',finishedAt).catch(()=>{}),
+    setPushState(db,'automation-last-check-status',status).catch(()=>{}),
+    setPushState(db,'automation-last-check-summary',JSON.stringify(summary)).catch(()=>{})
+  ]);
+  await recordSystemLog(env,{scope:'automation',level:errors.length?'warning':'info',event:'split-maintenance-r416',message:`Cron R416: лёгкий 15-мин. сектор ${quarter+1}/4 завершён.`,details:summary}).catch(()=>{});
+  return {ok:true,healthy:errors.length===0,degraded:errors.length>0,...summary};
+}
 
-  // Every 15 minutes: keep the original full central automation exactly as before.
-  if(clock.due15 && await claimCronGatewaySlotR334(db,'main-15m',clock.slot15)){
-    try{
-      tasks.main=await responseData(await handleAutomationRun(request,env,{skipYoutubeEvents:true,skipReleases:true,skipSummaryRefresh:true,skipDailySummary:true}));
-      if(!tasks.main.httpOk)errors.push(`main:${tasks.main.error || tasks.main.status}`);
-    }catch(error){
-      tasks.main={ok:false,error:cleanPlainText(error?.message || error,400)};
-      errors.push(`main:${tasks.main.error}`);
+async function handleExternalCronGatewayR334(request, env, ctx) {
+  if(!adminAuthorized(request,env) && !cronAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
+  const db=requireDb(env);
+  const gatewayUrl=new URL(request.url);
+  const cron=cleanPlainText(gatewayUrl.searchParams.get('cron') || request.headers.get('x-andrik-cron') || '',80);
+  const clock=cronGatewayClockR394(new Date(),cron);
+  const schedulerHeartbeatAt=await touchCronSchedulerHeartbeatR394(db,`gateway-r416:${cron || 'unknown'}`).catch(()=>new Date().toISOString());
+  let task='heartbeat';
+  let value={ok:true,skipped:true,reason:'no-due-class'};
+  let claimed=false;
+  try{
+    if(clock.due2){
+      claimed=await claimCronGatewaySlotR334(db,'engagement-2m-r416',clock.slot2);
+      if(claimed){
+        task='engagement';
+        value=await responseData(await handleFastYoutubeEngagementR333(request,env,{skipCheckpoint:true}));
+      }else value={ok:true,skipped:true,reason:'slot-already-claimed'};
+    }else if(clock.due5){
+      claimed=await claimCronGatewaySlotR334(db,'five-minute-slice-r416',clock.slot5);
+      if(claimed){
+        const slice=await runCronFiveMinuteSliceR416(request,env,clock);
+        task=slice.task; value=slice.value;
+      }else value={ok:true,skipped:true,reason:'slot-already-claimed'};
+    }else if(clock.due15){
+      claimed=await claimCronGatewaySlotR334(db,'checkpoint-15m-r416',clock.slot15);
+      if(claimed){
+        task='summary-checkpoint';
+        // R405/R410 daily high-water remains alive, but it no longer shares this
+        // request with YouTube/release/full automation work.
+        value=await checkpointDailySummaryAutoR398(env,'gateway-15m-r416');
+        const at=new Date().toISOString();
+        await Promise.all([
+          setPushState(db,'automation-last-check-at',at).catch(()=>{}),
+          setPushState(db,'automation-last-check-status',value?.ok===false?'partial':'ok').catch(()=>{}),
+          setPushState(db,'automation-last-check-summary',JSON.stringify({mode:'cpu-safe-r416',task:'summary-checkpoint',at,value}).slice(0,12000)).catch(()=>{})
+        ]);
+      }else value={ok:true,skipped:true,reason:'slot-already-claimed'};
     }
-  }else{
-    tasks.main={ok:true,skipped:true,reason:clock.due15?'slot-already-claimed':'not-due'};
+  }catch(error){
+    // A normal API/D1 failure must never make the old external Worker launch its
+    // expensive legacy fallback. CPU-limit termination itself cannot be caught,
+    // which is why R416 keeps exactly one duty per incoming request.
+    value={ok:false,error:cleanPlainText(error?.message || error,500)};
   }
-
+  const failed=value?.ok===false || value?.httpOk===false;
   const result={
-    // R409: reaching the gateway and completing its guarded task loop is scheduler success.
-    // Individual upstream failures stay visible as degraded/errors but must not trigger the
-    // external Worker's legacy fallback, which previously doubled load and hit 100 s wall time.
     ok:true,
-    healthy:errors.length===0,
-    degraded:errors.length>0,
-    mode:'external-cron-gateway-r409',
+    healthy:!failed,
+    degraded:failed,
+    mode:'external-cron-gateway-r416-one-duty',
     schedulerHeartbeatAt,
     utcMinute:clock.minute,
+    cron,
     due:{every2:clock.due2,every5:clock.due5,every15:clock.due15},
-    tasks,
-    errors,
+    task,
+    claimed,
+    value,
     checkedAt:new Date().toISOString()
   };
   await Promise.all([
-    setPushState(db,'cron-gateway-r334-last-result',JSON.stringify(result)).catch(()=>{}),
-    setPushState(db,'cron-scheduler-last-status-r394',errors.length?'partial':'ok').catch(()=>{})
+    setPushState(db,'cron-gateway-r334-last-result',JSON.stringify(result).slice(0,12000)).catch(()=>{}),
+    setPushState(db,'cron-scheduler-last-status-r394',failed?'partial':'ok').catch(()=>{})
   ]);
-  if(errors.length){
-    await recordSystemLog(env,{scope:'cron',level:'warning',event:'cron-gateway-partial-r409',message:`Cron gateway завершён без аварии; частичных ошибок: ${errors.length}.`,details:{errors,due:result.due}}).catch(()=>{});
-  }
   return json(result,200);
 }
 
@@ -10507,7 +10625,7 @@ async function runYoutubeEventsFromGuardHealth(env) {
         accept:'application/json'
       }
     });
-    const response = await handleCheckYoutubeEvents(synthetic, env);
+    const response = await handleCronYoutubeEventsAckR416(synthetic, env);
     const payload = await response.clone().json().catch(() => ({}));
     if (!response.ok || payload?.ok === false) {
       throw new Error(cleanPlainText(payload?.details || payload?.error || `youtube-events-http-${response.status}`, 500));
@@ -10536,12 +10654,11 @@ async function handlePublicHealth(request, env, ctx) {
   // R302 fail-safe: the external ANDRIK Guard already wakes on its own Cron.
   // Its normal /api/health probe now also starts the YouTube event checker in
   // the background, so comment/like pushes no longer depend on opening Control.
-  if (isAndrikGuardHealthProbe(request) && ctx?.waitUntil) {
-    ctx.waitUntil(Promise.allSettled([
-      runYoutubeEventsFromGuardHealth(env),
-      checkpointDailySummaryAutoR398(env, 'guard-health'),
-      refreshDailySummaryAccumulatorR305(env, 'guard-health')
-    ]));
+  if (isAndrikGuardHealthProbe(request) && ctx?.waitUntil && env.COMMENTS_DB) {
+    // R416: Guard is a health probe only. The old bridge duplicated YouTube +
+    // summary work inside the same HTTP CPU slice and could create hidden 1102s.
+    const db=requireDb(env);
+    ctx.waitUntil(setPushState(db,'guard-health-last-wakeup-r416',new Date().toISOString()).catch(()=>{}));
   }
   const health = await buildAndrikHealthSnapshot(env, { checkSite:true });
   const statusCode = health.status === 'down' ? 503 : 200;
@@ -12559,13 +12676,16 @@ async function routeApi(request, env, ctx) {
     if (path === '/api/push/send' && request.method === 'POST') return await handleAdminPushSend(request, env);
     if (path === '/api/push/inspect-playlist' && request.method === 'POST') return await handleInspectPlaylist(request, env);
     if (path === '/api/push/check-playlist' && request.method === 'POST') return await handleCheckPlaylist(request, env);
-    if (path === '/api/push/check-youtube-events' && request.method === 'POST') return await handleCheckYoutubeEvents(request, env);
+    if (path === '/api/push/check-youtube-events' && request.method === 'POST') {
+      if (cronAuthorized(request,env) && !adminAuthorized(request,env)) return await handleCronYoutubeEventsAckR416(request,env);
+      return await handleCheckYoutubeEvents(request, env);
+    }
     if (path === '/api/youtube/websub/subscribe' && request.method === 'POST') return await handleYoutubeWebSubSubscribeR332(request, env);
     if (path === '/api/youtube/websub/status' && request.method === 'GET') return await handleYoutubeWebSubStatusR332(request, env);
     if (path === '/api/automation/youtube-fast' && request.method === 'POST') return await handleFastYoutubeReleaseCheckR332(request, env);
     if (path === '/api/automation/youtube-engagement-fast' && request.method === 'POST') return await handleFastYoutubeEngagementR333(request, env);
     if (path === '/api/automation/summary-checkpoint' && (request.method === 'GET' || request.method === 'POST')) return await handleExternalSummaryCheckpointR399(request, env);
-    if (path === '/api/automation/cron-gateway' && (request.method === 'GET' || request.method === 'POST')) return await handleExternalCronGatewayR334(request, env);
+    if (path === '/api/automation/cron-gateway' && (request.method === 'GET' || request.method === 'POST')) return await handleExternalCronGatewayR334(request, env, ctx);
     if (path === '/api/automation/run' && request.method === 'POST') {
       const ua=String(request.headers.get('user-agent')||'');
       if(/ANDRIK-Central-Cron\/1\.0/i.test(ua)) return await handleLegacyExternalCronR400(request,env,ctx);
@@ -12740,7 +12860,7 @@ export default {
       // R394: every installed trigger enters the same deduplicated gateway. The 5-minute
       // trigger therefore self-heals the full 15-minute run even if the dedicated 15m
       // trigger is skipped by the platform. A heartbeat is written on every invocation.
-      const response=await handleExternalCronGatewayR334(request,env);
+      const response=await handleExternalCronGatewayR334(request,env,ctx);
       if(!response.ok){
         const body=await response.text().catch(()=>'');
         throw new Error(`scheduled-gateway-${response.status}: ${body.slice(0,300)}`);
