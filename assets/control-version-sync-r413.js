@@ -1,10 +1,10 @@
-/* ANDRIK Control R412 — authoritative display-version synchronization. */
+/* ANDRIK Control R413 — authoritative display-version synchronization. */
 (()=>{
   'use strict';
-  if(window.__ANDRIK_VERSION_SYNC_R412__)return;
-  window.__ANDRIK_VERSION_SYNC_R412__=true;
-  const RELEASE='R412';
-  const RUNTIME='55.00-r412';
+  if(window.__ANDRIK_VERSION_SYNC_R413__)return;
+  window.__ANDRIK_VERSION_SYNC_R413__=true;
+  const RELEASE='R413';
+  const RUNTIME='55.00-r413';
   let busy=false;
   const apply=()=>{
     if(busy)return; busy=true;
@@ -31,9 +31,9 @@
       document.querySelectorAll('.control-split-version-r181').forEach(n=>n.setAttribute('aria-label',`Live Web AI, версия ${RELEASE}`));
       document.querySelectorAll('[data-andrik-version]').forEach(n=>n.textContent=RELEASE);
       window.ANDRIK_CONTROL_VERSION=`55.00 LIVE WEB AI FINAL ${RELEASE}`;
-      window.ANDRIK_CONTROL_BUILD='R412 R408 BASE + R225 112PX COUNTRY ACTIONS HARD LOCK';
+      window.ANDRIK_CONTROL_BUILD='R413 R408 BASE + R225 COUNTRY ACTIONS 104PX + HARD VERSION SYNC';
       try{localStorage.setItem('andrik-control-display-version',RUNTIME)}catch(_){ }
-      window.dispatchEvent(new CustomEvent('andrik-control-version-ready',{detail:{short:RELEASE,number:412,version:'55.00'}}));
+      window.dispatchEvent(new CustomEvent('andrik-control-version-ready',{detail:{short:RELEASE,number:413,version:'55.00'}}));
     }finally{busy=false;}
   };
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',apply,{once:true}); else apply();

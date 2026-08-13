@@ -1,10 +1,10 @@
-/* ANDRIK R412 — exact R225 country action height, no map geometry changes. */
+/* ANDRIK R413 — exact R225 country action height, no map geometry changes. */
 @media screen and (orientation:portrait){
   html body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane .analytics-map-top #mapFocusActions.map-focus-actions{
     box-sizing:border-box!important;
-    min-height:112px!important;
-    height:112px!important;
-    max-height:112px!important;
+    min-height:104px!important;
+    height:104px!important;
+    max-height:104px!important;
     margin-top:8px!important;
     overflow:visible!important;
   }
@@ -12,9 +12,9 @@
     box-sizing:border-box!important;
     width:100%!important;
     min-width:0!important;
-    min-height:112px!important;
-    height:112px!important;
-    max-height:112px!important;
+    min-height:104px!important;
+    height:104px!important;
+    max-height:104px!important;
     padding:14px 10px!important;
     border-radius:22px!important;
     display:flex!important;
