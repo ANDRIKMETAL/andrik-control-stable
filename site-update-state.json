@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786602732918-2a3479b0c7",
-  "release": "R409",
-  "archiveName": "R409-CRON-GATEWAY-YOUTUBE-TIMEOUT-SAFE-FULL.zip",
-  "sourceHead": "7cfd1c9a6e003b0c8588f0a7d3ca9830952b7409",
-  "backupSha": "7cfd1c9a6e003b0c8588f0a7d3ca9830952b7409",
-  "backupTag": "control-backup-20260813063208-7cfd1c9-r409-c2bd0",
+  "operationId": "publish-1786604081509-da9e2b3225",
+  "release": "R410",
+  "archiveName": "R410-SUMMARY-LAYOUT-YOUTUBE-DAILY-BASELINE-SAFE-FULL.zip",
+  "sourceHead": "af4212f6f595198edfadd71750571b650b94ee8e",
+  "backupSha": "af4212f6f595198edfadd71750571b650b94ee8e",
+  "backupTag": "control-backup-20260813065437-af4212f-r410-608e0",
   "autoRecovery": true,
-  "generatedAt": "2026-08-13T06:32:12.918Z"
+  "generatedAt": "2026-08-13T06:54:41.509Z"
 }

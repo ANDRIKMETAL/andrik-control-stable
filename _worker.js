@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R409', number:409, version:'55.00', full:'55.00 LIVE WEB AI FINAL R409', siteUpdater:'55.00-r356' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R410', number:410, version:'55.00', full:'55.00 LIVE WEB AI FINAL R410', siteUpdater:'55.00-r356' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -6382,6 +6382,7 @@ async function handleCheckYoutubeEvents(request, env) {
   try {
     const identity = await fetchYoutubeMonitorIdentity(env);
     if (identity.uploadsPlaylistId) await setPushState(db, 'youtube-uploads-playlist-id', identity.uploadsPlaylistId);
+    await refreshYoutubeRolloverBaselineR410(db, Number(identity.views || 0), identity.updatedAt || startedAt).catch(() => {});
     await mergeYoutubeIdentityIntoLatestSnapshot(db, identity, 'youtube-events-live-v55-00d').catch(() => {});
     const settled = await Promise.allSettled([
       fetchYoutubeRecentComments(env, identity.channelId),
@@ -8147,6 +8148,7 @@ async function collectDailyOwnerSummary(env, { liveExternal = true, windowOverri
   const gaSnapshot = parseSnapshotMetrics(gaLatest);
   const gaStart = { ...parseSnapshotMetrics(gaBaseline), __snapshotFound:Boolean(gaBaseline) };
   const gaBeforeMidnight = parseSnapshotMetrics(gaRollover);
+  const youtubeViewDeltaR410 = await resolveYoutubeViewDeltaR410(db, window, ytNow, ytBaselineBefore, ytBaselineAfter);
   const youtubeSubscriberDelta = ytBaseline ? Math.max(0, Number(ytNow.subscribers || 0) - Number(ytStart.subscribers || 0)) : 0;
   const youtubeLikeSnapshotDelta = ytBaseline && Number.isFinite(Number(ytNow.likesTotal)) && Number.isFinite(Number(ytStart.likesTotal))
     ? Math.max(0, Number(ytNow.likesTotal || 0) - Number(ytStart.likesTotal || 0)) : 0;
@@ -8176,7 +8178,7 @@ async function collectDailyOwnerSummary(env, { liveExternal = true, windowOverri
     youtubeSubscribers: Math.max(youtubeSubscriberDelta, sumYoutubeSubscriberHistoryDeltas(youtubeSubscriberRows?.results || [])),
     youtubeLikes: Math.max(youtubeLikeSnapshotDelta, sumYoutubeLikeHistoryDeltas(youtubeLikeRows?.results || [])),
     youtubeComments: Math.max(youtubeCommentSnapshotDelta, Number(youtubeEvents?.comments || 0)),
-    youtubeViewDelta: ytBaseline ? Math.max(0, Number(ytNow.views || 0) - Number(ytStart.views || 0)) : 0,
+    youtubeViewDelta: youtubeViewDeltaR410,
     siteUsers: Math.max(Number(siteWindow?.users || 0), googleSummaryWindowMetric(googleCurrent, gaStart, gaBeforeMidnight, window, 'activeUsers')),
     siteViews: Math.max(Number(siteWindow?.views || 0), googleSummaryWindowMetric(googleCurrent, gaStart, gaBeforeMidnight, window, 'screenPageViews')),
     siteSubscribers: Number(siteSubscribers?.total || 0),
@@ -8908,6 +8910,103 @@ function parseSnapshotMetrics(row) {
   try { return JSON.parse(row?.metrics_json || '{}'); } catch (_) { return {}; }
 }
 
+
+// R410: durable YouTube view baseline for the active 06:05 -> 06:05 summary window.
+// The previous implementation derived the baseline only from platform_snapshots. Those
+// snapshots are intentionally trimmed, so the 06:05 baseline could disappear later in
+// the day and the high-water layer would then freeze a stale YouTube view count.
+// Persisting one baseline per window makes the counter reset with the rest of the daily
+// summary and stay stable for the entire window, regardless of snapshot retention.
+function parseYoutubeViewBaselineR410(row, windowKey) {
+  if (!row?.value || !windowKey) return null;
+  try {
+    const parsed=JSON.parse(row.value || '{}') || {};
+    if (cleanPlainText(parsed.windowKey || '',40)!==windowKey) return null;
+    const views=Number(parsed.views);
+    if (!Number.isFinite(views) || views<0) return null;
+    return {views, capturedAt:cleanPlainText(parsed.capturedAt || row.updatedAt || '',80), source:cleanPlainText(parsed.source || '',80)};
+  } catch (_) { return null; }
+}
+
+async function persistYoutubeViewBaselineR410(db, window, views, capturedAt='', source='nearest-snapshot-r410', {replace=false}={}) {
+  if (!window?.key || !Number.isFinite(Number(views)) || Number(views)<0) return null;
+  const key=`youtube-view-baseline-r410:${window.key}`;
+  const current=parseYoutubeViewBaselineR410(await getPushState(db,key).catch(()=>null),window.key);
+  if (current && !replace) return current;
+  const payload={
+    windowKey:window.key,
+    views:Math.max(0,Number(views||0)),
+    capturedAt:cleanPlainText(capturedAt || new Date().toISOString(),80),
+    source:cleanPlainText(source || 'r410',80),
+    savedAt:new Date().toISOString()
+  };
+  await setPushState(db,key,JSON.stringify(payload)).catch(()=>{});
+  // R410 migration/rollover: any YouTube view high-water produced from the old transient
+  // snapshot baseline belongs to a different baseline and must not pin the corrected value.
+  // Reset ONLY the two YouTube view fields; every other summary counter remains untouched.
+  const highWaterKey=`control-home-high-water-r213:${window.key}`;
+  const highWaterRow=await getPushState(db,highWaterKey).catch(()=>null);
+  if(highWaterRow?.value){
+    try{
+      const parsed=JSON.parse(highWaterRow.value || '{}') || {};
+      if(parsed?.summary && typeof parsed.summary==='object'){
+        parsed.summary.youtubeViews=0;
+        parsed.summary.youtubeViewDelta=0;
+        parsed.updatedAt=new Date().toISOString();
+        parsed.youtubeBaselineReset='r410';
+        await setPushState(db,highWaterKey,JSON.stringify(parsed)).catch(()=>{});
+      }
+    }catch(_){ }
+  }
+  // Keep only recent rollover baselines; the active key is never removed here.
+  await db.prepare(`DELETE FROM push_state WHERE key LIKE 'youtube-view-baseline-r410:%' AND key != ? AND updated_at < datetime('now','-4 days')`).bind(key).run().catch(()=>{});
+  return payload;
+}
+
+async function resolveYoutubeViewDeltaR410(db, window, currentMetrics={}, baselineBeforeRow=null, baselineAfterRow=null) {
+  const currentViews=Number(currentMetrics?.views);
+  if (!window?.key || !Number.isFinite(currentViews) || currentViews<0) return 0;
+  const key=`youtube-view-baseline-r410:${window.key}`;
+  let baseline=parseYoutubeViewBaselineR410(await getPushState(db,key).catch(()=>null),window.key);
+  if (!baseline) {
+    const startMs=Date.parse(window.startAt || '');
+    const candidates=[baselineBeforeRow,baselineAfterRow].map(row=>{
+      const metrics=parseSnapshotMetrics(row);
+      const views=Number(metrics?.views);
+      const at=cleanPlainText(row?.created_at || row?.createdAt || metrics?.updatedAt || '',80);
+      const atMs=Date.parse(at || '');
+      return {views,at,atMs,distance:Number.isFinite(startMs)&&Number.isFinite(atMs)?Math.abs(atMs-startMs):Number.POSITIVE_INFINITY};
+    }).filter(item=>Number.isFinite(item.views)&&item.views>=0&&Number.isFinite(item.atMs));
+    candidates.sort((a,b)=>a.distance-b.distance);
+    const nearest=candidates[0];
+    baseline=await persistYoutubeViewBaselineR410(
+      db,window,
+      nearest ? nearest.views : currentViews,
+      nearest ? nearest.at : new Date().toISOString(),
+      nearest ? 'nearest-rollover-snapshot-r410' : 'current-fallback-r410'
+    );
+  }
+  const baseViews=Math.max(0,Number(baseline?.views||0));
+  return Math.max(0,currentViews-baseViews);
+}
+
+// Called after a live YouTube identity fetch. During the first 12 minutes after 06:05,
+// prefer that fresh cumulative count over a nearby pre-rollover snapshot, giving the
+// new day a clean zero baseline without waiting for historical snapshot retention.
+async function refreshYoutubeRolloverBaselineR410(db, views, capturedAt='') {
+  const at=cleanPlainText(capturedAt || new Date().toISOString(),80);
+  const atMs=Date.parse(at);
+  if (!Number.isFinite(atMs) || !Number.isFinite(Number(views)) || Number(views)<0) return null;
+  const window=getBratislavaSummaryWindow(new Date(atMs));
+  const startMs=Date.parse(window.startAt || '');
+  const ageMs=atMs-startMs;
+  if (!Number.isFinite(startMs) || ageMs<0 || ageMs>12*60*1000) return null;
+  const key=`youtube-view-baseline-r410:${window.key}`;
+  const existing=parseYoutubeViewBaselineR410(await getPushState(db,key).catch(()=>null),window.key);
+  if (existing?.source==='live-rollover-r410') return existing;
+  return persistYoutubeViewBaselineR410(db,window,Number(views),at,'live-rollover-r410',{replace:true});
+}
+
 function parseDailySummaryMetrics(row) {
   let details = {};
   try { details = JSON.parse(row?.detailsJson || row?.details_json || '{}') || {}; }
@@ -9545,7 +9644,7 @@ async function handleControlHome(request, env) {
   const youtubeCountries = normalizeDailyCountryRows(ytNow?.studio?.countries || []);
   const youtubeDailyCountries = normalizeDailyCountryRows(ytNow?.studio?.dailyCountries || [])
     .map(item => ({ ...item, delta:item.value }));
-  const youtubeViewDelta = ytBaseline ? Math.max(0, Number(ytNow.views || 0) - Number(ytStart.views || 0)) : 0;
+  const youtubeViewDelta = await resolveYoutubeViewDeltaR410(db, window, ytNow, ytBaselineBefore, ytBaselineAfter);
   const youtubeSubscriberDelta = ytBaseline ? Math.max(0, Number(ytNow.subscribers || 0) - Number(ytStart.subscribers || 0)) : 0;
   const youtubeLikeSnapshotDelta = ytBaseline && Number.isFinite(Number(ytNow.likesTotal)) && Number.isFinite(Number(ytStart.likesTotal))
     ? Math.max(0, Number(ytNow.likesTotal || 0) - Number(ytStart.likesTotal || 0)) : 0;
@@ -9572,8 +9671,11 @@ async function handleControlHome(request, env) {
     youtubeComments:Math.max(youtubeCommentSnapshotDelta,Number(youtubeEvents?.comments || 0),dailyMetric(pushMetrics,'youtubeComments')),
     youtubeSubscribers:Math.max(youtubeSubscriberDelta,sumYoutubeSubscriberHistoryDeltas(youtubeSubscriberRows?.results || []),dailyMetric(pushMetrics,'youtubeSubscribers')),
     youtubeLikes:Math.max(youtubeLikeSnapshotDelta,sumYoutubeLikeHistoryDeltas(youtubeLikeRows?.results || []),dailyMetric(pushMetrics,'youtubeLikes')),
-    youtubeViews:Math.max(youtubeViewDelta,dailyMetric(pushMetrics,'youtubeViewDelta')),
-    youtubeViewDelta:Math.max(youtubeViewDelta,dailyMetric(pushMetrics,'youtubeViewDelta')),
+    // R410: the live daily view counter is authoritative because it uses the persisted
+    // 06:05 baseline. Old push checkpoints may contain values from the retired transient
+    // snapshot baseline and must not resurrect them after migration/rollover.
+    youtubeViews:youtubeViewDelta,
+    youtubeViewDelta:youtubeViewDelta,
     releases:Math.max(Number(releases?.total || 0),dailyMetric(pushMetrics,'releases'),latestYoutubeReleaseCountForWindow(latestYoutubeState, window)),
     countryDeltas:liveCountryDeltas.length?liveCountryDeltas:pushCountryDeltas,
     totalCountries:Math.max(youtubeCountries.length,dailyMetric(pushMetrics,'totalCountries')),
