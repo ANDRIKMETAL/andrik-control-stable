@@ -33,7 +33,7 @@
     window.scrollTo(0,0);
     const prefetch=document.createElement('link');
     prefetch.rel='prefetch';
-    prefetch.href='/analytics-admin.html?page=google&source=admin-hub-swipe&v=55.00-r418';
+    prefetch.href='/analytics-admin.html?page=google&source=admin-hub-swipe&v=55.00-r420';
     document.head.appendChild(prefetch);
   }catch(_){}
 
@@ -794,7 +794,7 @@
       track?.classList.remove('is-pulling');
       applyPosition({animate:true,pullY:42});
       await wait(35);
-      location.replace(`/control-home.html?page=menu&source=menu-pull&v=55.00-r418&t=${Date.now()}`);
+      location.replace(`/control-home.html?page=menu&source=menu-pull&v=55.00-r420&t=${Date.now()}`);
       return;
     }
     if(pullDistance>=currentPullThreshold()){

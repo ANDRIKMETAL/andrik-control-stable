@@ -1,0 +1,61 @@
+/* ANDRIK R418 — compact city history: zero extra map height + Android-safe sheet. */
+.country-city-history-open-r418[hidden]{display:none!important}
+#worldMap{position:relative!important}
+#worldMap>.country-city-history-open-r418{
+  position:absolute!important;z-index:58!important;left:calc(50% + 34px)!important;top:10px!important;transform:translateX(-50%) translateZ(0)!important;
+  display:flex!important;align-items:center!important;justify-content:center!important;box-sizing:border-box!important;
+  width:auto!important;min-width:112px!important;max-width:142px!important;height:31px!important;min-height:31px!important;max-height:31px!important;
+  margin:0!important;padding:0 11px!important;border:1px solid rgba(105,220,255,.34)!important;border-radius:999px!important;
+  background:linear-gradient(180deg,rgba(9,43,58,.96),rgba(4,24,34,.98))!important;color:#d7f5ff!important;
+  font:900 .68rem/1 system-ui,-apple-system,Segoe UI,sans-serif!important;letter-spacing:.01em!important;white-space:nowrap!important;
+  box-shadow:0 5px 16px rgba(0,0,0,.30),0 0 12px rgba(69,200,255,.08)!important;touch-action:manipulation!important;-webkit-tap-highlight-color:transparent!important;
+}
+body:not(.is-country-deep-active) #worldMap>.country-city-history-open-r418{display:none!important}
+@media(max-width:390px){#worldMap>.country-city-history-open-r418{left:calc(50% + 24px)!important;top:8px!important;min-width:104px!important;height:29px!important;min-height:29px!important;max-height:29px!important;font-size:.64rem!important}}
+@media(orientation:landscape){#worldMap>.country-city-history-open-r418{left:calc(50% + 22px)!important;top:8px!important;height:28px!important;min-height:28px!important;max-height:28px!important;font-size:.63rem!important}}
+
+.country-city-history-modal-r418[hidden]{display:none!important}
+.country-city-history-modal-r418{
+  position:fixed!important;inset:0!important;z-index:2147483620!important;display:flex!important;align-items:flex-end!important;justify-content:center!important;
+  box-sizing:border-box!important;padding:10px max(8px,env(safe-area-inset-right)) max(8px,env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left))!important;
+  touch-action:none!important;isolation:isolate!important;
+}
+.country-city-history-backdrop-r418{
+  position:absolute!important;inset:0!important;z-index:0!important;border:0!important;margin:0!important;padding:0!important;
+  background:rgba(0,6,10,.82)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;filter:none!important;box-shadow:none!important;
+}
+.country-city-history-panel-r418{
+  position:relative!important;z-index:2!important;box-sizing:border-box!important;width:min(100%,560px)!important;height:min(68dvh,570px)!important;min-height:320px!important;max-height:min(78dvh,650px)!important;
+  display:flex!important;flex-direction:column!important;gap:8px!important;padding:13px!important;border:1px solid rgba(104,219,255,.26)!important;border-radius:22px!important;
+  background:#061722!important;background:linear-gradient(180deg,#08202d 0%,#04131c 100%)!important;color:#eefaff!important;
+  box-shadow:0 18px 55px rgba(0,0,0,.55)!important;overflow:hidden!important;transform:translateZ(0)!important;contain:layout paint!important;touch-action:pan-y!important;
+}
+.country-city-history-panel-r418 header{display:flex!important;align-items:flex-start!important;justify-content:space-between!important;gap:12px!important;flex:0 0 auto!important}
+.country-city-history-panel-r418 header .eyeline{font-size:.60rem!important;color:#75d7ff!important;letter-spacing:.14em!important}
+.country-city-history-panel-r418 h2{margin:4px 0 0!important;font-size:1.18rem!important;line-height:1.05!important;color:#f0fbff!important}
+.country-city-history-panel-r418 header>button{width:36px!important;height:36px!important;min-width:36px!important;border:1px solid rgba(145,214,240,.2)!important;border-radius:50%!important;background:#0b2b3a!important;color:#e9f9ff!important;font:800 1.4rem/1 Arial!important}
+.country-city-history-toolbar-r419{display:grid!important;grid-template-columns:minmax(0,1fr) 48px!important;gap:8px!important;align-items:center!important;flex:0 0 auto!important}
+.country-city-history-toolbar-r419 button{height:36px!important;border-radius:12px!important;border:1px solid rgba(113,203,239,.18)!important;background:#092431!important;color:#d5f3ff!important;font-weight:900!important}
+.country-city-history-toolbar-r419 button.is-active{border-color:rgba(108,230,156,.48)!important;color:#eafff3!important;box-shadow:0 0 0 1px rgba(108,230,156,.16) inset!important}
+.country-city-history-toolbar-r419 #countryCityHistoryCalendarR419{font-size:1.12rem!important;padding:0!important}
+.country-city-history-meta-r419{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:8px!important}
+.country-city-history-meta-r419 .country-city-history-mode-label-r419{color:#7dcff0!important;font-size:.70rem!important;font-weight:850!important}
+.country-city-history-hidden-r419{display:none!important}
+.country-city-history-date-r418{display:grid!important;grid-template-columns:38px minmax(0,1fr) 38px!important;align-items:center!important;gap:7px!important;flex:0 0 auto!important}
+.country-city-history-date-r418 button,.country-city-history-quick-r418 button{border:1px solid rgba(113,203,239,.18)!important;background:#092431!important;color:#d5f3ff!important;font-weight:900!important}
+.country-city-history-date-r418 button{height:36px!important;border-radius:11px!important;font-size:1.3rem!important}
+.country-city-history-date-r418 strong{text-align:center!important;color:#f2f9fc!important;font-size:.88rem!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+.country-city-history-quick-r418{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:7px!important;flex:0 0 auto!important}
+.country-city-history-quick-r418 button{height:33px!important;border-radius:10px!important;font-size:.70rem!important}
+.country-city-history-summary-r418{min-height:22px!important;display:flex!important;align-items:center!important;justify-content:center!important;padding:5px 8px!important;border-radius:10px!important;background:rgba(70,186,232,.07)!important;color:#9fdcf5!important;font-size:.69rem!important;font-weight:850!important;text-align:center!important;flex:0 0 auto!important}
+.country-city-history-list-r418{min-height:0!important;flex:1 1 auto!important;overflow-y:auto!important;overscroll-behavior:contain!important;touch-action:pan-y!important;-webkit-overflow-scrolling:touch!important;scrollbar-width:none!important;display:grid!important;align-content:start!important;gap:6px!important;padding-right:1px!important}
+.country-city-history-list-r418::-webkit-scrollbar{display:none!important}
+.country-city-history-row-r418{display:grid!important;grid-template-columns:28px minmax(0,1fr) auto!important;align-items:center!important;gap:8px!important;padding:8px 9px!important;border:1px solid rgba(111,190,221,.12)!important;border-radius:12px!important;background:#071c27!important}
+.country-city-history-row-r418>b{width:26px!important;height:26px!important;display:grid!important;place-items:center!important;border-radius:50%!important;background:rgba(92,204,246,.10)!important;color:#9fe0fa!important;font-size:.66rem!important}
+.country-city-history-row-r418 div{min-width:0!important}.country-city-history-row-r418 strong{display:block!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important;color:#eefaff!important;font-size:.81rem!important}
+.country-city-history-row-r418 small{display:block!important;margin-top:1px!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important;color:#7799a8!important;font-size:.61rem!important}
+.country-city-history-row-r418 em{font-style:normal!important;color:#6ff0a3!important;font-size:.82rem!important;font-weight:950!important;white-space:nowrap!important}
+.country-city-history-modal-r418 .admin-empty{padding:16px 8px!important;color:#8fa9b6!important;text-align:center!important}
+body.country-city-history-open-r418{overscroll-behavior:none!important}
+@media(orientation:landscape){.country-city-history-modal-r418{align-items:center!important}.country-city-history-panel-r418{height:min(88dvh,560px)!important;width:min(76vw,620px)!important;min-height:280px!important}}
+/* R418: city history lives inside #worldMap, so it consumes zero vertical space and cannot push the 2 action buttons below the viewport. */

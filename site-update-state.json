@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786650221895-be561332db",
-  "release": "R418",
-  "archiveName": "R418-ADMIN-HOME-CITY-HISTORY-FIX-SAFE-FULL.zip",
-  "sourceHead": "46b92f444337bbe89dead1552393dd3440804a74",
-  "backupSha": "46b92f444337bbe89dead1552393dd3440804a74",
-  "backupTag": "control-backup-20260813194338-46b92f4-r418-d3c46",
+  "operationId": "publish-1786650814244-113b06328e",
+  "release": "R420",
+  "archiveName": "R420-ADMIN-LAUNCH-HARD-GUARD-CITY-LIST-SAFE-FULL.zip",
+  "sourceHead": "695ac87b548a879b79df4b8471e30045a3232a3e",
+  "backupSha": "695ac87b548a879b79df4b8471e30045a3232a3e",
+  "backupTag": "control-backup-20260813195329-695ac87-r420-491b0",
   "autoRecovery": true,
-  "generatedAt": "2026-08-13T19:43:41.895Z"
+  "generatedAt": "2026-08-13T19:53:34.244Z"
 }

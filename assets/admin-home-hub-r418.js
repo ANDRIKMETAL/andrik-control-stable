@@ -29,7 +29,7 @@
     document.addEventListener('visibilitychange',resume,{passive:true});resume();
   }
   if(!page)return;
-  const sideUrls={google:'/analytics-admin.html?page=google&source=admin-hub-swipe&v=55.00-r418',youtube:'/analytics-admin.html?page=youtube&source=admin-hub-swipe&v=55.00-r418'};
+  const sideUrls={google:'/analytics-admin.html?page=google&source=admin-hub-swipe&v=55.00-r420',youtube:'/analytics-admin.html?page=youtube&source=admin-hub-swipe&v=55.00-r420'};
   const warmSides=()=>{
     if(window.__ANDRIK_HUB_SIDE_WARM_R418__)return;window.__ANDRIK_HUB_SIDE_WARM_R418__=true;
     Promise.allSettled(Object.values(sideUrls).map(url=>fetch(url,{method:'GET',credentials:'same-origin',cache:'force-cache',priority:'low'}).then(r=>r.ok?r.text():''))).catch(()=>{});
