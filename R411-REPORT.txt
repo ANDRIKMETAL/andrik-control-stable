@@ -1,0 +1,20 @@
+ANDRIK Control — R411
+Date: 13.08.2026
+Base: R410 — SUMMARY LAYOUT + YOUTUBE DAILY BASELINE SAFE
+
+COUNTRY PREVIEW FIX
+1. Found the concrete race: analytics-admin.html already used a 6-country preview, but assets/analytics-admin-v54-99b.js still marked every row from index 4 as world-country-extra.
+2. Updated the legacy/shared renderer from 4 to 6 and changed its Show-all threshold from >4 to >6.
+3. Added a small R411 DOM hard-lock that normalizes the portrait overview to exactly the first 6 visible countries after cache render, live audience render, growth fallback, pageshow, resize and orientation changes.
+4. Added a CSS hard-lock so stale world-country-extra classes cannot hide rows 5 and 6 in portrait overview.
+5. Full-list/expanded mode, selected-country mode, deep country map and landscape mode are explicitly left alone.
+
+PRESERVED
+- R410 summary layout and durable YouTube 06:05 daily-view baseline
+- R409 Cron gateway / YouTube timeout safety
+- R408 98 px country action buttons and map geometry
+- R405 atomic summary/high-water behavior
+
+EXPECTED RESULT
+- Portrait overview always shows 6 ranked countries, then “Показать все страны (N)”.
+- It no longer flips 4 ↔ 6 when cached/live renderers update the same list.

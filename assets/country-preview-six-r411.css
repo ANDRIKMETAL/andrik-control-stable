@@ -1,0 +1,15 @@
+/* ANDRIK R411 — portrait country preview: always exactly 6 rows before “Показать все страны”. */
+@media screen and (orientation:portrait){
+  body.analytics-admin-page:not(.is-country-focus-active):not(.is-country-deep-active)
+  .analytics-map-pane .analytics-map-top:not(.has-country-focus)
+  #worldCountries.world-country-list:not(.is-expanded):not(.is-landscape-layout)
+  > .world-country-button:nth-of-type(-n+6){
+    display:grid!important;
+  }
+  body.analytics-admin-page:not(.is-country-focus-active):not(.is-country-deep-active)
+  .analytics-map-pane .analytics-map-top:not(.has-country-focus)
+  #worldCountries.world-country-list:not(.is-expanded):not(.is-landscape-layout)
+  > .world-country-button:nth-of-type(n+7){
+    display:none!important;
+  }
+}

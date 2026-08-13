@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786604081509-da9e2b3225",
-  "release": "R410",
-  "archiveName": "R410-SUMMARY-LAYOUT-YOUTUBE-DAILY-BASELINE-SAFE-FULL.zip",
-  "sourceHead": "af4212f6f595198edfadd71750571b650b94ee8e",
-  "backupSha": "af4212f6f595198edfadd71750571b650b94ee8e",
-  "backupTag": "control-backup-20260813065437-af4212f-r410-608e0",
+  "operationId": "publish-1786604352107-1d6c6048bf",
+  "release": "R411",
+  "archiveName": "R411-COUNTRY-PREVIEW-6-HARDLOCK-SAFE-FULL.zip",
+  "sourceHead": "59806600d6b99c9792a71dbfdf34ded0d860cbdf",
+  "backupSha": "59806600d6b99c9792a71dbfdf34ded0d860cbdf",
+  "backupTag": "control-backup-20260813065907-5980660-r411-f15c9",
   "autoRecovery": true,
-  "generatedAt": "2026-08-13T06:54:41.509Z"
+  "generatedAt": "2026-08-13T06:59:12.107Z"
 }
