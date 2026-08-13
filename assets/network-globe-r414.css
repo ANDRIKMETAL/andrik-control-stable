@@ -1,0 +1,32 @@
+/* ANDRIK R414 — live network globe, forced motion + Slovakia marker. */
+.andrik-network-globe-card-r414{
+  --globe-accent:#68cfff;--globe-accent-rgb:104,207,255;
+  position:relative;display:grid;grid-template-columns:minmax(150px,190px) 1fr;align-items:center;gap:18px;
+  margin:0 0 18px;padding:18px 20px;overflow:hidden;text-decoration:none;color:inherit;
+  border:1px solid rgba(126,202,238,.2);border-radius:26px;
+  background:radial-gradient(circle at 18% 50%,rgba(var(--globe-accent-rgb),.10),transparent 38%),linear-gradient(145deg,rgba(7,22,34,.92),rgba(2,9,15,.97));
+  box-shadow:inset 0 1px rgba(255,255,255,.025),0 16px 44px rgba(0,0,0,.18);-webkit-tap-highlight-color:transparent
+}
+.andrik-network-globe-card-r414::after{content:"";position:absolute;inset:auto -12% -55% 25%;height:170px;pointer-events:none;background:radial-gradient(ellipse,rgba(var(--globe-accent-rgb),.16),transparent 64%);filter:blur(10px)}
+.andrik-network-globe-card-r414:focus-visible{outline:2px solid var(--globe-accent);outline-offset:3px}
+.andrik-network-globe-card-r414.is-ok{--globe-accent:#65eea1;--globe-accent-rgb:101,238,161}
+.andrik-network-globe-card-r414.is-warning{--globe-accent:#ffd46f;--globe-accent-rgb:255,212,111}
+.andrik-network-globe-card-r414.is-error{--globe-accent:#ff7082;--globe-accent-rgb:255,112,130}
+.andrik-network-globe-stage-r414{position:relative;width:166px;height:166px;margin:auto;display:grid;place-items:center;isolation:isolate}
+.andrik-network-globe-halo-r414{position:absolute;inset:4px;border-radius:50%;border:1px solid rgba(var(--globe-accent-rgb),.25);box-shadow:0 0 28px rgba(var(--globe-accent-rgb),.20),inset 0 0 26px rgba(var(--globe-accent-rgb),.08);animation:andrikGlobeHaloR414 3.2s ease-in-out infinite}
+.andrik-network-globe-r414{position:relative;width:138px;height:138px;border-radius:50%;overflow:hidden;transform:translateZ(0);background:radial-gradient(circle at 36% 30%,#12374c 0,#071b29 39%,#03101a 67%,#01060b 100%);border:1px solid rgba(var(--globe-accent-rgb),.30);box-shadow:inset -22px -12px 32px rgba(0,0,0,.78),inset 10px 7px 20px rgba(var(--globe-accent-rgb),.08),0 0 24px rgba(var(--globe-accent-rgb),.18)}
+.andrik-network-globe-texture-r414{position:absolute;inset:0;opacity:.88;will-change:background-position;background-image:url('/assets/network-globe-map-r414.png?v=55.00-r414');background-repeat:repeat-x;background-position:0 50%;background-size:200% 100%;filter:drop-shadow(0 0 3px rgba(var(--globe-accent-rgb),.24));transform:translateZ(0)}
+.andrik-network-globe-grid-r414{position:absolute;inset:0;border-radius:50%;pointer-events:none;opacity:.34;background:repeating-radial-gradient(ellipse at center,transparent 0 16px,rgba(var(--globe-accent-rgb),.18) 17px,transparent 18px 29px),repeating-linear-gradient(90deg,transparent 0 19px,rgba(var(--globe-accent-rgb),.12) 20px,transparent 21px 39px)}
+.andrik-network-globe-shade-r414{position:absolute;inset:-1px;border-radius:50%;pointer-events:none;background:radial-gradient(circle at 31% 25%,rgba(255,255,255,.12),transparent 16%),linear-gradient(90deg,rgba(0,0,0,.62) 0,transparent 24%,transparent 72%,rgba(0,0,0,.76) 100%),radial-gradient(circle at center,transparent 57%,rgba(0,0,0,.56) 82%,rgba(0,0,0,.9) 100%)}
+.andrik-network-globe-dot-r414{position:absolute;left:62%;top:23%;width:9px;height:9px;border-radius:50%;background:var(--globe-accent);box-shadow:0 0 0 4px rgba(var(--globe-accent-rgb),.11),0 0 15px rgba(var(--globe-accent-rgb),.95);z-index:5;transform:translate(-50%,-50%);will-change:left,top,opacity;transition:opacity .12s linear}
+.andrik-network-globe-dot-r414::before{content:"SK";position:absolute;left:11px;top:-6px;padding:1px 4px;border-radius:999px;border:1px solid rgba(var(--globe-accent-rgb),.34);background:rgba(2,10,16,.86);color:#eafff3;font-size:7px;line-height:1.25;font-weight:950;letter-spacing:.02em;box-shadow:0 0 9px rgba(var(--globe-accent-rgb),.2)}
+.andrik-network-globe-dot-r414::after{content:"";position:absolute;inset:-8px;border:1px solid rgba(var(--globe-accent-rgb),.62);border-radius:50%;animation:andrikGlobePingR414 2.2s ease-out infinite}
+.andrik-network-globe-copy-r414{position:relative;z-index:2;min-width:0}.andrik-network-globe-copy-r414 .eyeline{display:block;margin-bottom:6px;color:var(--globe-accent)}
+.andrik-network-globe-copy-r414 h2{margin:0;font-size:clamp(1.35rem,4.2vw,2rem);line-height:1.08}.andrik-network-globe-copy-r414 p{margin:8px 0 0;color:#9cb0bd;line-height:1.42}
+.andrik-network-globe-state-r414{display:flex;align-items:center;gap:8px;margin-top:13px;font-weight:900;color:#dff7ff}.andrik-network-globe-state-r414 i{width:9px;height:9px;border-radius:50%;background:var(--globe-accent);box-shadow:0 0 12px rgba(var(--globe-accent-rgb),.88);flex:none}
+.andrik-network-globe-open-r414{display:inline-flex;align-items:center;gap:7px;margin-top:12px;color:var(--globe-accent);font-weight:900;font-size:.88rem;transition:transform .18s ease}.andrik-network-globe-card-r414:hover .andrik-network-globe-open-r414{transform:translateX(2px)}
+.andrik-network-globe-card-r414.is-paused .andrik-network-globe-halo-r414,.andrik-network-globe-card-r414.is-paused .andrik-network-globe-dot-r414::after{animation-play-state:paused!important}
+@keyframes andrikGlobeHaloR414{0%,100%{transform:scale(.98);opacity:.7}50%{transform:scale(1.025);opacity:1}}
+@keyframes andrikGlobePingR414{0%{transform:scale(.45);opacity:.95}78%,100%{transform:scale(1.9);opacity:0}}
+@media(max-width:620px){.andrik-network-globe-card-r414{grid-template-columns:126px minmax(0,1fr);gap:10px;padding:13px 14px;border-radius:23px}.andrik-network-globe-stage-r414{width:126px;height:126px}.andrik-network-globe-r414{width:108px;height:108px}.andrik-network-globe-copy-r414 h2{font-size:1.25rem}.andrik-network-globe-copy-r414 p{margin-top:5px;font-size:.79rem;line-height:1.32}.andrik-network-globe-state-r414{margin-top:8px;font-size:.79rem}.andrik-network-globe-open-r414{margin-top:6px;font-size:.78rem}}
+@media(max-width:355px){.andrik-network-globe-card-r414{grid-template-columns:1fr;text-align:center}.andrik-network-globe-stage-r414{margin-bottom:2px}.andrik-network-globe-state-r414,.andrik-network-globe-open-r414{justify-content:center}}

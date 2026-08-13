@@ -1,5 +1,5 @@
 <!DOCTYPE html><html lang="ru" translate="no" class="notranslate"><head>
-<meta name="andrik-control-release" content="R412">
+<meta name="andrik-control-release" content="R414">
 <link rel="stylesheet" href="/assets/control-sleep-mode-r193.css?v=55.00-r193"><script defer src="/assets/control-sleep-mode-r193.js?v=55.00-r193"></script>
 
 <meta name="google" content="notranslate"><meta charset="utf-8"/>
@@ -46,27 +46,27 @@
 <link rel="stylesheet" href="/assets/landscape-cloud-r183.css?v=55.00-r185">
 <link rel="stylesheet" href="/assets/admin-carousel-smooth-r185.css?v=55.00-r185">
 <script defer src="/assets/control-cache-reset-r306.js?v=55.00-r306"></script>
-<link rel="stylesheet" href="/assets/network-globe-r412.css?v=55.00-r412">
+<link rel="stylesheet" href="/assets/network-globe-r414.css?v=55.00-r414">
 </head>
 <body data-control-section="monitor" class="trika-standalone-page comments-admin-page control-page observability-page r137-eye-motion-page"><nav class="topbar control-topbar control-detail-topbar"><div class="wrap nav-shell"><a class="control-center-logo" id="controlCenterLogo" href="https://andrikmetal.com/" aria-label="Открыть главный сайт ANDRIK"><img class="logo-ok" src="/assets/control-topbar-eye-triangle.jpg?v=55.00-r129" alt=""/><img class="logo-error" src="/assets/andrik-control-red-triangle-192.png" alt=""/></a><div class="nav-links control-nav-links control-detail-nav"><a href="/admin/">⌂ Главная</a></div></div></nav>
 <main class="admin-main"><div class="wrap"><header class="admin-header control-header"><span class="eyeline">Надёжность проекта</span><h1>Мониторинг</h1><p>Встроенная проверка сайта и Control, ошибки Worker, состояние Cron и расход YouTube API.</p></header>
 <div class="observability-toolbar"><div><span class="observability-overall is-degraded" id="observabilityHealthSummary">Проверяем…</span><small>Обновлено: <span id="observabilityUpdated">—</span></small></div><button class="btn btn-primary" id="observabilityRefresh" type="button">Обновить всё</button></div>
-<a class="andrik-network-globe-card-r412" id="andrikNetworkGlobeR412" href="/analytics-admin.html?page=map&amp;v=55.00-r412" target="_top" aria-label="Открыть живую карту экосистемы ANDRIK">
-  <div class="andrik-network-globe-stage-r412" aria-hidden="true">
-    <span class="andrik-network-globe-halo-r412"></span>
-    <span class="andrik-network-globe-r412">
-      <span class="andrik-network-globe-texture-r412"></span>
-      <span class="andrik-network-globe-grid-r412"></span>
-      <span class="andrik-network-globe-shade-r412"></span>
-      <span class="andrik-network-globe-dot-r412"></span>
+<a class="andrik-network-globe-card-r414" id="andrikNetworkGlobeR414" href="/analytics-admin.html?page=map&amp;v=55.00-r414" target="_top" aria-label="Открыть живую карту экосистемы ANDRIK">
+  <div class="andrik-network-globe-stage-r414" aria-hidden="true">
+    <span class="andrik-network-globe-halo-r414"></span>
+    <span class="andrik-network-globe-r414" id="andrikNetworkGlobeSphereR414">
+      <span class="andrik-network-globe-texture-r414" id="andrikNetworkGlobeTextureR414"></span>
+      <span class="andrik-network-globe-grid-r414"></span>
+      <span class="andrik-network-globe-shade-r414"></span>
+      <span class="andrik-network-globe-dot-r414" id="andrikNetworkGlobeDotR414" title="Словакия"></span>
     </span>
   </div>
-  <div class="andrik-network-globe-copy-r412">
+  <div class="andrik-network-globe-copy-r414">
     <span class="eyeline">Глобальная сеть</span>
     <h2>ANDRIK Network</h2>
     <p>Живой индикатор экосистемы. Нажмите на планету, чтобы открыть мировую карту.</p>
-    <div class="andrik-network-globe-state-r412" id="andrikNetworkGlobeStateR412"><i aria-hidden="true"></i><span>Проверяем глобальную сеть</span></div>
-    <span class="andrik-network-globe-open-r412">Открыть живую карту <b aria-hidden="true">→</b></span>
+    <div class="andrik-network-globe-state-r414" id="andrikNetworkGlobeStateR414"><i aria-hidden="true"></i><span>Проверяем глобальную сеть</span></div>
+    <span class="andrik-network-globe-open-r414">Открыть живую карту <b aria-hidden="true">→</b></span>
   </div>
 </a>
 
@@ -75,10 +75,10 @@
 <article class="admin-control-card admin-control-card-wide" id="errors"><div class="admin-card-title-row"><div><span class="eyeline">Error Tracking</span><h2>Ошибки за 24 часа</h2><p>Сюда попадают реальные необработанные ошибки API, Worker и загрузки файлов Control.</p></div></div><div class="observability-metric-grid"><div class="observability-metric is-error"><strong id="observabilityErrors">—</strong><small>ошибок</small></div><div class="observability-metric is-warning"><strong id="observabilityWarnings">—</strong><small>предупреждений</small></div><div class="observability-metric is-info"><strong id="observabilityEvents">—</strong><small>записей</small></div></div><section class="observability-errors-spoiler-r389" id="observabilityErrorsSpoiler"><button class="observability-errors-toggle-r389" id="observabilityErrorsToggle" type="button" aria-expanded="false" aria-controls="observabilityErrorsPanel"><span>Список ошибок и предупреждений</span><b id="observabilityErrorsToggleText">Показать</b></button><div class="observability-errors-panel-r389" id="observabilityErrorsPanel" hidden><div class="observability-issue-list" id="observabilityIssues"><div class="admin-empty">Загружаем журнал…</div></div></div></section></article>
 <article class="admin-control-card admin-control-card-wide" id="quota"><div class="admin-card-title-row"><div><span class="eyeline">YouTube API</span><h2>Приблизительная квота</h2><p>Control считает запросы, которые делает сам. Это защитный ориентир, а не официальный счётчик Google Cloud.</p></div><strong id="observabilityQuotaPercent">0%</strong></div><div class="observability-progress"><span id="observabilityQuotaBar"></span></div><div class="observability-quota-line"><span>Потрачено: <strong id="observabilityQuotaUsed">0</strong></span><span>Осталось: <strong id="observabilityQuotaRemaining">10 000</strong></span></div><div class="observability-metric-grid observability-quota"><div class="observability-metric is-info"><strong id="observabilityQuotaRequests">0</strong><small>Data API запросов</small></div><div class="observability-metric is-info"><strong id="observabilityAnalyticsRequests">0</strong><small>Analytics запросов</small></div><div class="observability-metric is-info"><strong id="observabilityQuotaDate">—</strong><small>дата учёта</small></div></div><p class="observability-note" id="observabilityQuotaNote"></p></article>
 <article class="admin-control-card admin-control-card-wide"><div class="admin-card-title-row"><div><span class="eyeline">Техническая проверка</span><h2>Health endpoint</h2><p>Встроенный монитор использует этот адрес для проверки Worker и D1. Он вернёт HTTP 503 при критическом сбое.</p></div><span class="service-monitor-ready" id="observabilityExternalState">Проверяем…</span></div><div class="observability-url-row"><input id="observabilityHealthUrl" readonly value=""/><button class="btn" id="observabilityCopyHealth" type="button">Копировать</button><button class="btn" id="observabilityOpenHealth" type="button">Открыть</button></div><p class="observability-note" id="observabilityExternalNote"></p><div class="admin-push-status" id="observabilityExternalMessage"></div></article>
-</section><div class="admin-push-status" id="observabilityMessage"></div><footer class="control-version-footer"><strong>Live Web AI · профиль ANDRIK · v55.00 LIVE WEB AI FINAL R412</strong><span>компактный монитор · исправленные шапки · 30.07.2026</span></footer></div></main>
+</section><div class="admin-push-status" id="observabilityMessage"></div><footer class="control-version-footer"><strong>Live Web AI · профиль ANDRIK · v55.00 LIVE WEB AI FINAL R414</strong><span>компактный монитор · исправленные шапки · 30.07.2026</span></footer></div></main>
 <script defer src="/assets/observability-admin-v54-99c7.js?v=54.99c7"></script><script defer src="/assets/control-status-eye-v55-00-r88.js?v=55.00-r88"></script><script defer src="/assets/control-version-v55-00-final-r1.js?v=55.00-final-r1"></script><script defer src="/assets/control-version-v55-00-final-r2.js?v=55.00-final-r2"></script><script defer src="/assets/control-version-v55-00-final-r21.js?v=55.00-final-r21"></script><script defer src="/assets/control-live-eye-v55-00-r265.js?v=55.00-r265"></script><script defer src="/assets/control-version-v55-00-r3n.js?v=55.00-r3n"></script><script defer src="/assets/control-version-v55-00-final-stable-github.js?v=55.00-final-stable-github"></script><script defer src="/assets/admin-carousel-embed-v55-00-final.js?v=55.00-r185"></script><script defer src="/assets/control-version-v55-00-r115.js?v=55.00-r115"></script><script defer src="/assets/unified-glow-r139.js?v=55.00-r143"></script>
 <script defer src="/assets/control-mini-player-r141.js?v=55.00-r144"></script>
-<script defer src="/assets/control-version-sync-r412.js?v=55.00-r412"></script>
+<script defer src="/assets/control-version-sync-r414.js?v=55.00-r414"></script>
 
 <script>
 (()=>{
@@ -93,5 +93,5 @@
   window.addEventListener('pageshow',()=>setOpen(false),{passive:true});
 })();
 </script>
-<script defer src="/assets/network-globe-r412.js?v=55.00-r412"></script>
+<script defer src="/assets/network-globe-r414.js?v=55.00-r414"></script>
 </body></html>

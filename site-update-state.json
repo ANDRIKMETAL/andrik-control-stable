@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786605289076-60c65f776c",
-  "release": "R412",
-  "archiveName": "R412-LIVE-NETWORK-GLOBE-SAFE-FULL.zip",
-  "sourceHead": "4a36698dbd9205d5b1a5cf82797842b37909e879",
-  "backupSha": "4a36698dbd9205d5b1a5cf82797842b37909e879",
-  "backupTag": "control-backup-20260813071444-4a36698-r412-9c429",
+  "operationId": "publish-1786606281133-a6c85e4ecb",
+  "release": "R414",
+  "archiveName": "R414-GLOBE-SLOVAKIA-SERVICE-DEDUP-SAFE-FULL.zip",
+  "sourceHead": "73771a44223de49c9973c398f893e6bec9598eed",
+  "backupSha": "73771a44223de49c9973c398f893e6bec9598eed",
+  "backupTag": "control-backup-20260813073116-73771a4-r414-10bed",
   "autoRecovery": true,
-  "generatedAt": "2026-08-13T07:14:49.709Z"
+  "generatedAt": "2026-08-13T07:31:21.564Z"
 }
