@@ -1,0 +1,142 @@
+/* ANDRIK R427 — city list stays completely inside the landscape map frame. */
+.country-city-history-modal-r418{
+  touch-action:pan-y!important;
+}
+.country-city-history-panel-r418{
+  overflow:hidden!important;
+  display:flex!important;
+  flex-direction:column!important;
+  min-height:0!important;
+  touch-action:pan-y!important;
+}
+.country-city-history-panel-r418 header{
+  position:relative!important;
+  z-index:5!important;
+  flex:0 0 auto!important;
+  min-height:44px!important;
+  align-items:center!important;
+  gap:8px!important;
+  margin:0!important;
+  padding:0 0 8px!important;
+  border-bottom:1px solid rgba(112,211,241,.14)!important;
+  background:#08202d!important;
+}
+.country-city-history-panel-r418 header .eyeline{display:none!important;}
+.country-city-history-panel-r418 h2{
+  margin:0!important;
+  font-size:1.03rem!important;
+  line-height:1.05!important;
+  white-space:nowrap!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+}
+.country-city-history-panel-r418 header>button{
+  width:36px!important;
+  height:36px!important;
+  min-width:36px!important;
+  flex:0 0 36px!important;
+}
+/* R426: both orientations are intentionally list-only. */
+.country-city-history-toolbar-r419,
+.country-city-history-meta-r419,
+.country-city-history-date-r418,
+.country-city-history-quick-r418,
+.country-city-history-summary-r418{
+  display:none!important;
+}
+.country-city-history-list-r418{
+  position:relative!important;
+  z-index:1!important;
+  display:block!important;
+  flex:1 1 auto!important;
+  min-height:0!important;
+  height:auto!important;
+  overflow-y:auto!important;
+  overflow-x:hidden!important;
+  overscroll-behavior:contain!important;
+  touch-action:pan-y!important;
+  -webkit-overflow-scrolling:touch!important;
+  scrollbar-width:none!important;
+  margin:0!important;
+  padding:8px 2px 12px!important;
+  background:#061722!important;
+}
+.country-city-history-list-r418::-webkit-scrollbar{display:none!important;}
+.country-city-history-row-r418{
+  min-height:54px!important;
+  margin:0 0 7px!important;
+  padding:8px 10px!important;
+  grid-template-columns:28px minmax(0,1fr) auto!important;
+  border-radius:12px!important;
+}
+.country-city-history-row-r418 strong{font-size:.82rem!important;}
+.country-city-history-row-r418 small{font-size:.61rem!important;}
+.country-city-history-row-r418 em{font-size:.86rem!important;}
+.country-city-history-modal-r418 .admin-empty{padding:16px 8px!important;}
+
+@media (orientation:portrait){
+  .country-city-history-modal-r418{
+    align-items:flex-end!important;
+    padding:10px max(8px,env(safe-area-inset-right)) max(8px,env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left))!important;
+  }
+  .country-city-history-panel-r418{
+    width:min(100%,560px)!important;
+    height:min(70dvh,610px)!important;
+    max-height:min(76dvh,650px)!important;
+    padding:12px 12px 10px!important;
+    gap:0!important;
+    border-radius:22px!important;
+  }
+}
+
+@media (orientation:landscape){
+  .country-city-history-modal-r418{
+    display:block!important;
+    align-items:initial!important;
+    justify-content:initial!important;
+    padding:0!important;
+    touch-action:none!important;
+  }
+  .country-city-history-panel-r418{
+    position:fixed!important;
+    z-index:2!important;
+    left:50%!important;
+    top:var(--r427-city-panel-top,22dvh)!important;
+    transform:translateX(-50%)!important;
+    width:min(78vw,760px)!important;
+    max-width:calc(100vw - 28px)!important;
+    height:var(--r427-city-panel-height,74dvh)!important;
+    max-height:var(--r427-city-panel-height,74dvh)!important;
+    min-height:0!important;
+    padding:10px 12px 10px!important;
+    gap:0!important;
+    border-radius:20px!important;
+    overflow:hidden!important;
+  }
+  .country-city-history-panel-r418 header{
+    min-height:40px!important;
+    padding:0 0 7px!important;
+    flex:0 0 40px!important;
+  }
+  .country-city-history-panel-r418 h2{font-size:1rem!important;}
+  .country-city-history-panel-r418 header>button{
+    width:34px!important;height:34px!important;min-width:34px!important;flex-basis:34px!important;
+  }
+  .country-city-history-list-r418{
+    min-height:0!important;
+    flex:1 1 auto!important;
+    padding:7px 1px 8px!important;
+    overflow-y:auto!important;
+    overscroll-behavior:contain!important;
+    -webkit-overflow-scrolling:touch!important;
+  }
+  .country-city-history-row-r418{
+    min-height:46px!important;
+    margin-bottom:6px!important;
+    padding:7px 10px!important;
+    border-radius:11px!important;
+  }
+  .country-city-history-row-r418 strong{font-size:.78rem!important;}
+  .country-city-history-row-r418 small{font-size:.58rem!important;}
+  .country-city-history-row-r418 em{font-size:.82rem!important;}
+}
