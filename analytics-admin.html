@@ -993,7 +993,7 @@ body.analytics-admin-page.is-country-returning #worldMap .world-map-dot.is-selec
 </head>
 <body class="trika-standalone-page comments-admin-page control-page analytics-admin-page analytics-swipe-page analytics-v54-33-page analytics-v54-46-page">
 <nav class="topbar control-topbar control-detail-topbar"><div class="wrap nav-shell analytics-topbar-minimal"><a class="control-center-logo" id="controlCenterLogo" href="https://andrikmetal.com/" aria-label="Открыть главный сайт ANDRIK"><img class="logo-ok" src="/assets/control-topbar-eye-triangle.jpg" alt=""/><img class="logo-error" src="/assets/andrik-control-red-triangle-192.png" alt=""/></a></div></nav>
-<div id="r179FocusedMapAdminSwipe" aria-hidden="true"><span class="r179-focused-map-handle">⌃ Свайп вверх · Админ</span></div>
+<div id="r179FocusedMapAdminSwipe" aria-hidden="true"><span class="r179-focused-map-handle">⌃ Свайп вверх · Админ-панель</span></div>
 <main class="analytics-swipe-main" id="analyticsSwipeMain">
   <div class="analytics-pull-indicator" id="analyticsDownIndicator" aria-hidden="true"><i></i><span>Свайп сверху вниз делает обновление</span></div>
   <div class="analytics-swipe-viewport" id="analyticsSwipeViewport">
@@ -4532,4 +4532,44 @@ body .country-scroll-overlay-r258::before{margin:0 0 10px!important;}
 <script defer src="/assets/country-city-history-r419.js?v=55.00-r419"></script>
 <link rel="stylesheet" href="/assets/country-preview-six-r411.css?v=55.00-r412"/>
 <script defer src="/assets/country-preview-six-r411.js?v=55.00-r412"></script>
+
+<style id="andrik-r424-landscape-country-fill-final">
+/* R424: late country-map-r352 capped the focused landscape stage at 330px.
+   Fill the whole green frame and keep only a compact swipe label. */
+@media screen and (orientation:landscape){
+  body.analytics-admin-page.analytics-v54-46-page.is-country-deep-active .analytics-map-pane #worldMap{
+    overflow:hidden!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page.is-country-deep-active .analytics-map-pane #worldMap > .world-map-canvas,
+  body.analytics-admin-page.analytics-v54-46-page.is-country-deep-active .analytics-map-pane #worldMap .world-map-stage{
+    position:absolute!important;
+    inset:0!important;
+    width:100%!important;
+    height:100%!important;
+    min-width:100%!important;
+    min-height:100%!important;
+    max-width:100%!important;
+    max-height:100%!important;
+    margin:0!important;
+    padding:0!important;
+    aspect-ratio:auto!important;
+    overflow:hidden!important;
+  }
+  body.r179-focused-map-swipe-ready .analytics-map-pane #mapEndPullZone{
+    display:none!important;width:0!important;height:0!important;min-height:0!important;
+    margin:0!important;padding:0!important;background:transparent!important;box-shadow:none!important;
+    visibility:hidden!important;opacity:0!important;pointer-events:none!important;
+  }
+  #r179FocusedMapAdminSwipe{
+    left:28%!important;right:28%!important;height:42px!important;
+    bottom:max(5px,env(safe-area-inset-bottom))!important;padding-bottom:3px!important;
+  }
+  #r179FocusedMapAdminSwipe .r179-focused-map-handle{
+    min-width:220px!important;max-width:min(320px,46vw)!important;height:30px!important;
+    padding:0 16px!important;white-space:nowrap!important;overflow:visible!important;
+    backdrop-filter:none!important;-webkit-backdrop-filter:none!important;
+    background:rgba(5,18,27,.70)!important;
+  }
+}
+</style>
 </body></html>

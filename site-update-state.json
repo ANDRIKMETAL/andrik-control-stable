@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786652467232-2c24825fdf",
-  "release": "R423",
-  "archiveName": "R423-ADMIN-QUICK-ONE-TAP-GLOBE-LOWER-SAFE-FULL.zip",
-  "sourceHead": "7e3c88b9d66568b0151d4efa32571353f0aa848f",
-  "backupSha": "7e3c88b9d66568b0151d4efa32571353f0aa848f",
-  "backupTag": "control-backup-20260813202103-7e3c88b-r423-773a4",
+  "operationId": "publish-1786652985371-729fd58178",
+  "release": "R424",
+  "archiveName": "R424-LANDSCAPE-COUNTRY-FILL-ADMIN-SWIPE-SAFE-FULL.zip",
+  "sourceHead": "6c6a4c614e696eac9b903c3c5a7977395f14eb33",
+  "backupSha": "6c6a4c614e696eac9b903c3c5a7977395f14eb33",
+  "backupTag": "control-backup-20260813202940-6c6a4c6-r424-62cb5",
   "autoRecovery": true,
-  "generatedAt": "2026-08-13T20:21:07.232Z"
+  "generatedAt": "2026-08-13T20:29:45.371Z"
 }
