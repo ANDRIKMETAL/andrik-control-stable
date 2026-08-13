@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786587727920-b96194c9b3",
-  "release": "R408",
-  "archiveName": "R408-R407-COUNTRY-DEEP-NO-SCROLL-VERSION-UPDATE-SAFE-FULL-2.zip",
-  "sourceHead": "dbf6aa5dbc7c6e34a415fe056429299f008456b8",
-  "backupSha": "dbf6aa5dbc7c6e34a415fe056429299f008456b8",
-  "backupTag": "control-backup-20260813022203-dbf6aa5-r408-8598a",
+  "operationId": "publish-1786588320148-86c2808896",
+  "release": "R410",
+  "archiveName": "R410-R408-ONLY-BIGGER-COUNTRY-ACTION-BUTTONS-SAFE-FULL.zip",
+  "sourceHead": "2ea2ffa23569209602bc462367bbee02b4ca517a",
+  "backupSha": "2ea2ffa23569209602bc462367bbee02b4ca517a",
+  "backupTag": "control-backup-20260813023156-2ea2ffa-r410-001af",
   "autoRecovery": true,
-  "generatedAt": "2026-08-13T02:22:07.920Z"
+  "generatedAt": "2026-08-13T02:32:00.148Z"
 }
