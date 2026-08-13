@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786586946270-84f69a3efc",
-  "release": "R407",
-  "archiveName": "R407-R405-HYBRID-LANDSCAPE-COUNTRY-LIST-FILL-SAFE-FULL.zip",
-  "sourceHead": "bafd7e1328b4da83468993a86640ce9c3637553b",
-  "backupSha": "bafd7e1328b4da83468993a86640ce9c3637553b",
-  "backupTag": "control-backup-20260813020902-bafd7e1-r407-9eafb",
+  "operationId": "publish-1786587727920-b96194c9b3",
+  "release": "R408",
+  "archiveName": "R408-R407-COUNTRY-DEEP-NO-SCROLL-VERSION-UPDATE-SAFE-FULL-2.zip",
+  "sourceHead": "dbf6aa5dbc7c6e34a415fe056429299f008456b8",
+  "backupSha": "dbf6aa5dbc7c6e34a415fe056429299f008456b8",
+  "backupTag": "control-backup-20260813022203-dbf6aa5-r408-8598a",
   "autoRecovery": true,
-  "generatedAt": "2026-08-13T02:09:06.270Z"
+  "generatedAt": "2026-08-13T02:22:07.920Z"
 }
