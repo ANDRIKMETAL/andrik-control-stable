@@ -766,10 +766,10 @@ body.control-push-summary-view .control-summary-source{display:block}
             <a class="control-home-menu-card is-releases" href="/admin-sections.html?section=releases&v=55.00-r408"><span>🚀</span><div><small>Музыка и тексты</small><strong>Релизы</strong><p>Тексты песен, публикации и история релизов.</p></div><b>›</b></a>
             <a class="control-home-menu-card is-discussion" href="/admin-sections.html?section=discussion&v=55.00-r408"><span>💬</span><div><small>Сообщество</small><strong>Обсуждение</strong><p>Комментарии, модерация и ответы слушателям.</p></div><b>›</b></a>
           </section>
-          <footer class="control-version-footer" aria-label="Текущая версия"><strong>Live Web AI</strong><span>R413</span></footer>
-          <div class="control-split-version-r181" aria-label="Live Web AI, версия R413">
+          <footer class="control-version-footer" aria-label="Текущая версия"><strong>Live Web AI</strong><span>R408</span></footer>
+          <div class="control-split-version-r181" aria-label="Live Web AI, версия R408">
             <span class="control-split-brand-r181">Live Web AI</span>
-            <span class="control-split-number-r181">R413</span>
+            <span class="control-split-number-r181">R408</span>
           </div>
           <a class="control-page-footnote control-menu-map-link" href="/analytics-admin.html?page=map&amp;v=55.00-final-r1">Свайп вниз — вернуться на карту</a>
         </div>
@@ -906,35 +906,15 @@ body.control-push-summary-view .control-summary-source{display:block}
   [500,1800].forEach(ms=>setTimeout(confirmInstalledVersion,ms));
 })();
 </script>
-<script defer src="/assets/control-version-sync-r413.js?v=55.00-r413"></script>
-
-
-<script id="andrik-r413-version-hard-guard">
+<script defer src="/assets/control-version-sync-r408.js?v=55.00-r408"></script>
+<script>
 (()=>{
-  'use strict';
-  const R='R413';
   const apply=()=>{
-    document.querySelectorAll('.control-version-footer span,.control-split-number-r181,[data-andrik-version]')
-      .forEach(el=>{ if(el.textContent!==R) el.textContent=R; });
-    document.querySelectorAll('.control-split-version-r181')
-      .forEach(el=>el.setAttribute('aria-label','Live Web AI, версия '+R));
-    const m=document.querySelector('meta[name="andrik-control-release"]');
-    if(m)m.content=R;
-    document.documentElement.dataset.andrikRelease=R;
-    if(document.body)document.body.dataset.andrikRelease=R;
+    document.querySelectorAll('.control-version-footer span,.control-split-number-r181').forEach(el=>{el.textContent='R394';});
+    document.querySelectorAll('[aria-label*="версия R"]').forEach(el=>el.setAttribute('aria-label','Live Web AI, версия R408'));
   };
-  apply();
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',apply,{once:true});
-  addEventListener('load',apply,{once:true});
-  addEventListener('pageshow',()=>{ apply(); setTimeout(apply,80); setTimeout(apply,350); },{passive:true});
-  [50,150,400,900,1800,3000].forEach(ms=>setTimeout(apply,ms));
-  try{
-    new MutationObserver(apply).observe(document.documentElement,{
-      subtree:true,childList:true,characterData:true,attributes:true,
-      attributeFilter:['class','style','aria-label']
-    });
-  }catch(_){}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',apply,{once:true}); else apply();
+  window.addEventListener('pageshow',apply,{passive:true});
 })();
 </script>
-
 </body></html>

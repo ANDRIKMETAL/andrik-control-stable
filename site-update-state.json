@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786590176377-5dfa29c094",
-  "release": "R413",
-  "archiveName": "R413-R412-104PX-BUTTONS-VERSION-HARD-SYNC-SAFE-FULL.zip",
-  "sourceHead": "fa9c0354110a2d40cda6edcf48296a66cce5baa9",
-  "backupSha": "fa9c0354110a2d40cda6edcf48296a66cce5baa9",
-  "backupTag": "control-backup-20260813030252-fa9c035-r413-54bd3",
+  "operationId": "publish-1786590722382-cc04017998",
+  "release": "R408",
+  "archiveName": "R408-COUNTRY-ACTION-BUTTONS-98PX-SAFE-FULL.zip",
+  "sourceHead": "7ec1e1f0d9887f8d0c76e3f60b838cd419b8953f",
+  "backupSha": "7ec1e1f0d9887f8d0c76e3f60b838cd419b8953f",
+  "backupTag": "control-backup-20260813031158-7ec1e1f-r408-36aec",
   "autoRecovery": true,
-  "generatedAt": "2026-08-13T03:02:56.377Z"
+  "generatedAt": "2026-08-13T03:12:02.382Z"
 }
