@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786652071016-43c3a99486",
-  "release": "R422",
-  "archiveName": "R422-ADMIN-QUICK-REPORT-NAV-FIX-SAFE-FULL.zip",
-  "sourceHead": "d40c14d92c87c84772a6858d1aed56c88190225c",
-  "backupSha": "d40c14d92c87c84772a6858d1aed56c88190225c",
-  "backupTag": "control-backup-20260813201426-d40c14d-r422-00775",
+  "operationId": "publish-1786652467232-2c24825fdf",
+  "release": "R423",
+  "archiveName": "R423-ADMIN-QUICK-ONE-TAP-GLOBE-LOWER-SAFE-FULL.zip",
+  "sourceHead": "7e3c88b9d66568b0151d4efa32571353f0aa848f",
+  "backupSha": "7e3c88b9d66568b0151d4efa32571353f0aa848f",
+  "backupTag": "control-backup-20260813202103-7e3c88b-r423-773a4",
   "autoRecovery": true,
-  "generatedAt": "2026-08-13T20:14:31.016Z"
+  "generatedAt": "2026-08-13T20:21:07.232Z"
 }
