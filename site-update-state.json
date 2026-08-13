@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786588320148-86c2808896",
-  "release": "R410",
-  "archiveName": "R410-R408-ONLY-BIGGER-COUNTRY-ACTION-BUTTONS-SAFE-FULL.zip",
-  "sourceHead": "2ea2ffa23569209602bc462367bbee02b4ca517a",
-  "backupSha": "2ea2ffa23569209602bc462367bbee02b4ca517a",
-  "backupTag": "control-backup-20260813023156-2ea2ffa-r410-001af",
+  "operationId": "publish-1786588865925-da92472eff",
+  "release": "R411",
+  "archiveName": "R411-R408-R225-COUNTRY-ACTION-BUTTONS-ONLY-SAFE-FULL.zip",
+  "sourceHead": "dd2bbebdb2b434b7b3b1229d1b89765d84c64968",
+  "backupSha": "dd2bbebdb2b434b7b3b1229d1b89765d84c64968",
+  "backupTag": "control-backup-20260813024101-dd2bbeb-r411-df348",
   "autoRecovery": true,
-  "generatedAt": "2026-08-13T02:32:00.148Z"
+  "generatedAt": "2026-08-13T02:41:05.925Z"
 }
