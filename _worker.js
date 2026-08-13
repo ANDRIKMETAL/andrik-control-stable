@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R416', number:416, version:'55.00', full:'55.00 LIVE WEB AI FINAL R416', siteUpdater:'55.00-r356' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R417', number:417, version:'55.00', full:'55.00 LIVE WEB AI FINAL R417', siteUpdater:'55.00-r356' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -1460,6 +1460,115 @@ async function ensureSiteMetricsSchema(db) {
   catch (error) { siteMetricsSchemaPromise = null; throw error; }
 }
 
+
+
+let countryCityHistorySchemaPromiseR417 = null;
+async function ensureCountryCityHistorySchemaR417(db) {
+  if (countryCityHistorySchemaPromiseR417) return countryCityHistorySchemaPromiseR417;
+  countryCityHistorySchemaPromiseR417 = (async () => {
+    await db.prepare(`
+      CREATE TABLE IF NOT EXISTS country_city_daily_history (
+        local_date TEXT NOT NULL,
+        country TEXT NOT NULL,
+        region TEXT NOT NULL DEFAULT '',
+        city TEXT NOT NULL DEFAULT '',
+        opens INTEGER NOT NULL DEFAULT 0,
+        first_at TEXT NOT NULL DEFAULT '',
+        last_at TEXT NOT NULL DEFAULT '',
+        PRIMARY KEY(local_date, country, region, city)
+      )
+    `).run();
+    await db.prepare(`CREATE INDEX IF NOT EXISTS idx_country_city_history_country_date ON country_city_daily_history(country, local_date DESC, opens DESC)`).run().catch(() => {});
+  })();
+  try { await countryCityHistorySchemaPromiseR417; }
+  catch (error) { countryCityHistorySchemaPromiseR417 = null; throw error; }
+}
+
+const CITY_HISTORY_EVENT_TYPES_R417 = new Set([
+  'visit','music-download','music-listen','telegram-open','youtube-open',
+  'spotify-open','apple-music-open','soundcloud-open','amazon-music-open'
+]);
+
+async function recordCountryCityHistoryR417(db, { localDate='', country='', region='', city='', eventType='' } = {}) {
+  const date = cleanPlainText(localDate || '', 20);
+  const code = cleanPlainText(country || '', 8).toUpperCase();
+  const safeRegion = cleanPlainText(region || '', 120);
+  const safeCity = cleanPlainText(city || '', 120);
+  const type = cleanPlainText(eventType || '', 40).toLowerCase();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^[A-Z]{2}$/.test(code) || (!safeCity && !safeRegion) || !CITY_HISTORY_EVENT_TYPES_R417.has(type)) return;
+  await ensureCountryCityHistorySchemaR417(db);
+  await db.prepare(`
+    INSERT INTO country_city_daily_history(local_date,country,region,city,opens,first_at,last_at)
+    VALUES(?1,?2,?3,?4,1,datetime('now'),datetime('now'))
+    ON CONFLICT(local_date,country,region,city) DO UPDATE SET
+      opens=country_city_daily_history.opens+1,
+      last_at=datetime('now')
+  `).bind(date, code, safeRegion, safeCity).run();
+}
+
+async function ensureCountryCityHistoryBackfillR417(db) {
+  await Promise.all([ensureCountryCityHistorySchemaR417(db), ensurePushAutomationSchema(db)]);
+  const markerKey='country-city-history-backfill-r417';
+  const state=await getPushState(db,markerKey).catch(()=>null);
+  if (String(state?.value || '').startsWith('done:')) return;
+  // Backfill all raw city activity still retained by the first-party counter (currently 62 days).
+  // INSERT OR REPLACE is safe: it refreshes only dates still represented by raw events and never
+  // deletes older aggregate rows, so city history remains available after raw-event cleanup.
+  await db.prepare(`
+    INSERT OR REPLACE INTO country_city_daily_history(local_date,country,region,city,opens,first_at,last_at)
+    SELECT local_date,country,region,city,COUNT(*) AS opens,MIN(created_at),MAX(created_at)
+    FROM site_visit_events
+    WHERE country<>'' AND (city<>'' OR region<>'')
+      AND event_type IN ('visit','music-download','music-listen','telegram-open','youtube-open','spotify-open','apple-music-open','soundcloud-open','amazon-music-open')
+    GROUP BY local_date,country,region,city
+  `).run();
+  await setPushState(db,markerKey,`done:${new Date().toISOString()}`).catch(()=>{});
+}
+
+function parseHistoryDateR417(value, fallback='') {
+  const date=cleanPlainText(value || fallback || '',20);
+  return /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : '';
+}
+
+async function handleControlCountryCityHistoryR417(request, env) {
+  if (!adminAuthorized(request, env)) return json({ ok:false, error:'unauthorized' }, 401);
+  const db=requireDb(env);
+  await Promise.all([ensureSiteMetricsSchema(db), ensureCountryCityHistoryBackfillR417(db)]);
+  const url=new URL(request.url);
+  const country=cleanPlainText(url.searchParams.get('country') || '',8).toUpperCase();
+  if (!/^[A-Z]{2}$/.test(country)) return json({ok:false,error:'country'},400);
+  const today=getBratislavaClock().date;
+  let date=parseHistoryDateR417(url.searchParams.get('date'),today) || today;
+  if (date>today) date=today;
+  const rowsResult=await db.prepare(`
+    SELECT city,region,opens,last_at AS lastAt
+    FROM country_city_daily_history
+    WHERE country=?1 AND local_date=?2 AND opens>0
+    ORDER BY opens DESC, datetime(last_at) DESC, city ASC, region ASC
+    LIMIT 240
+  `).bind(country,date).all();
+  const datesResult=await db.prepare(`
+    SELECT local_date AS date, SUM(opens) AS opens
+    FROM country_city_daily_history
+    WHERE country=?1 AND opens>0
+    GROUP BY local_date
+    ORDER BY local_date DESC
+    LIMIT 180
+  `).bind(country).all();
+  const rows=(rowsResult?.results||[]).map(row=>({
+    city:cleanPlainText(row.city||'',120),
+    region:cleanPlainText(row.region||'',120),
+    opens:Math.max(0,Number(row.opens||0)),
+    lastAt:cleanPlainText(row.lastAt||'',80)
+  })).filter(row=>row.city||row.region);
+  const total=rows.reduce((sum,row)=>sum+row.opens,0);
+  return json({
+    ok:true,country,date,today,total,cities:rows.length,rows,
+    availableDates:(datesResult?.results||[]).map(row=>({date:cleanPlainText(row.date||'',20),opens:Math.max(0,Number(row.opens||0))})),
+    retention:'persistent-daily-rollup',source:'first-party ecosystem events',timezone:'Europe/Bratislava'
+  });
+}
+
 function normalizeSitePath(value) {
   const path = cleanPlainText(value || '/', 260).split('?')[0].split('#')[0];
   return path.startsWith('/') ? path : `/${path}`;
@@ -1501,6 +1610,7 @@ async function handleSiteVisit(request, env) {
     country, region, city, latitude, longitude, localDate
   ).run();
   // Keep this lightweight first-party counter small; long-term analytics remains in GA4.
+  await recordCountryCityHistoryR417(db,{localDate,country,region,city,eventType}).catch(() => {});
   await db.prepare(`DELETE FROM site_visit_events WHERE local_date < date('now','-62 days')`).run().catch(() => {});
   return json({ ok:true, localDate, eventType });
 }
@@ -12747,6 +12857,7 @@ async function routeApi(request, env, ctx) {
     if (path === '/api/control/search-console' && request.method === 'GET') return await handleControlSearchConsole(request, env);
     if (path === '/api/control/snapshots/refresh' && request.method === 'POST') return await handleControlSnapshotsRefresh(request, env);
     if (path === '/api/control/country-growth' && request.method === 'GET') return await handleControlCountryGrowth(request, env);
+    if (path === '/api/control/country-city-history' && request.method === 'GET') return await handleControlCountryCityHistoryR417(request, env);
     if (path === '/api/control/youtube-events/status' && request.method === 'GET') return await handleYoutubeEventsStatus(request, env);
     if (path === '/api/control/youtube-oauth/status' && request.method === 'GET') return await handleYoutubeOAuthStatus(request, env);
     if (path === '/api/control/youtube-oauth/start' && request.method === 'GET') return await handleYoutubeOAuthStart(request, env);

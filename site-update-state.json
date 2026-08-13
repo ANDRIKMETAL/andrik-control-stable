@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786622069189-2c9a144ac2",
-  "release": "R416",
-  "archiveName": "R416-COUNTRY-TOP-CLOUDFLARE-1102-CPU-SAFE-FULL.zip",
-  "sourceHead": "5a6cf16aaeb7496f17d8a4cb2f9db2ae3be36b44",
-  "backupSha": "5a6cf16aaeb7496f17d8a4cb2f9db2ae3be36b44",
-  "backupTag": "control-backup-20260813115424-5a6cf16-r416-216cb",
+  "operationId": "publish-1786648909049-df9fd19aa7",
+  "release": "R417",
+  "archiveName": "R417-ADMIN-HUB-CITY-HISTORY-SAFE-FULL.zip",
+  "sourceHead": "5501acc22782b92a7418394e4a22a04afeb81cec",
+  "backupSha": "5501acc22782b92a7418394e4a22a04afeb81cec",
+  "backupTag": "control-backup-20260813192145-5501acc-r417-b16a8",
   "autoRecovery": true,
-  "generatedAt": "2026-08-13T11:54:29.189Z"
+  "generatedAt": "2026-08-13T19:21:49.049Z"
 }

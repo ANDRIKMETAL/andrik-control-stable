@@ -740,10 +740,10 @@
     const landscape=window.matchMedia?.('(orientation: landscape)')?.matches===true;
     const viewportWidth=Math.max(1,window.innerWidth||document.documentElement.clientWidth||1);
     const inLandscapeCenter=event.clientX>=viewportWidth*.34&&event.clientX<=viewportWidth*.66;
-    const canLandscapeMenuPull=landscape&&menuGesture&&inLandscapeCenter&&canPullFrom();
+    const canLandscapeMenuPull=false; // R417: map opens only from the hub globe.
     gesture={
       id:event.pointerId,x:event.clientX,y:event.clientY,lastX:event.clientX,lastY:event.clientY,mode:null,
-      canPull:(!landscape&&canPullFrom())||canLandscapeMenuPull,
+      canPull:(!menuGesture&&!landscape&&canPullFrom())||canLandscapeMenuPull,
       allowHorizontal:false,
       captured:false,landscapeCenterPull:canLandscapeMenuPull
     };

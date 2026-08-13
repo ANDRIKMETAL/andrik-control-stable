@@ -1,8 +1,8 @@
 {
   "name": "Live Web AI",
   "short_name": "Live Web AI",
-  "id": "/admin/?app=live-web-ai-final-r101",
-  "start_url": "/control-home.html?source=pwa&page=menu&app=live-web-ai&v=55.00-r302",
+  "id": "/admin/?app=live-web-ai-final-r417",
+  "start_url": "/control-home.html?source=pwa&page=menu&app=live-web-ai&v=55.00-r417",
   "scope": "/",
   "display": "standalone",
   "display_override": [
@@ -45,20 +45,7 @@
           "type": "image/png"
         }
       ]
-    },
-    {
-      "name": "Карта слушателей",
-      "short_name": "Карта",
-      "description": "Открыть карту аудитории ANDRIK",
-      "url": "/?source=app-shortcut-map&page=map&v=55.00g",
-      "icons": [
-        {
-          "src": "/assets/control-shortcut-map-96.png",
-          "sizes": "96x96",
-          "type": "image/png"
-        }
-      ]
     }
   ],
-  "version": "55.00-final-r275"
+  "version": "55.00-final-r417"
 }
