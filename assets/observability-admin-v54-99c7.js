@@ -6,10 +6,11 @@
   const escapeHtml=value=>String(value??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
   const formatDate=value=>{if(!value)return '—';try{return new Intl.DateTimeFormat('ru-RU',{dateStyle:'short',timeStyle:'short'}).format(new Date(value))}catch(_){return value}};
   const formatTime=value=>{if(!value)return '—';try{return new Intl.DateTimeFormat('ru-RU',{hour:'2-digit',minute:'2-digit'}).format(new Date(value))}catch(_){return value}};
+  const formatUpdatedCompact=value=>{if(!value)return '—';try{const d=new Date(value),date=new Intl.DateTimeFormat('ru-RU',{day:'2-digit',month:'2-digit',year:'numeric'}).format(d),time=new Intl.DateTimeFormat('ru-RU',{hour:'2-digit',minute:'2-digit'}).format(d);return `${date} · ${time}`}catch(_){return value}};
   const fmt=value=>Number(value||0).toLocaleString('ru-RU');
   const set=(id,value)=>{const el=document.getElementById(id);if(el)el.textContent=value};
   const statusText={good:'Работает',warning:'Внимание',error:'Ошибка'};
-  const statusIcon={good:'●',warning:'●',error:'●'};
+  const healthIcon={worker:'⚙️',database:'🗄️',cron:'⏱️',site:'🌐','native-monitor':'📡'};
   let monitorRange='24h';
 
   async function api(path,options={}){
@@ -27,7 +28,7 @@
     const overall=health.status||'degraded';
     if(summary){summary.className=`observability-overall is-${overall}`;summary.textContent=overall==='ok'?'🟢 Всё доступно':overall==='down'?'🔴 Есть недоступная служба':'🟡 Есть предупреждение'}
     if(!box)return;
-    box.innerHTML=(health.checks||[]).map(item=>`<article class="observability-check is-${escapeHtml(item.status||'warning')}"><span>${statusIcon[item.status]||'●'}</span><div><strong>${escapeHtml(item.label||item.id)}</strong><small>${escapeHtml(item.detail||'Нет данных')}</small><em>${escapeHtml(statusText[item.status]||'Проверить')}</em></div></article>`).join('')||'<div class="admin-empty">Нет данных проверки.</div>';
+    box.innerHTML=(health.checks||[]).map(item=>`<article class="observability-check is-${escapeHtml(item.status||'warning')}"><span class="observability-check-icon-r415" aria-hidden="true">${healthIcon[item.id]||'🔧'}</span><div><strong>${escapeHtml(item.label||item.id)}</strong><small>${escapeHtml(item.detail||'Нет данных')}</small><em>${escapeHtml(statusText[item.status]||'Проверить')}</em></div></article>`).join('')||'<div class="admin-empty">Нет данных проверки.</div>';
   }
 
   function renderErrors(data={}){
@@ -154,7 +155,7 @@
       renderErrors(data);
       renderQuota(data.youtubeQuota||{});
       renderHealthEndpoint(data.externalMonitor||{});
-      set('observabilityUpdated',formatDate(data.updatedAt));
+      set('observabilityUpdated',formatUpdatedCompact(data.updatedAt));
       set('observabilityMessage','Мониторинг обновлён ✅');
     }catch(error){
       set('observabilityMessage',`Ошибка: ${error.message}`);

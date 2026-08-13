@@ -1,0 +1,35 @@
+/* ANDRIK R415 — smooth YouTube map pulse for Android/WebView.
+   Only compositor-friendly transform/opacity are animated; expensive box-shadow animation
+   and outer marker drift are intentionally removed. */
+@keyframes andrikYoutubeRedPulseR415{
+  0%,100%{transform:translateZ(0) scale(.96);opacity:.88}
+  50%{transform:translateZ(0) scale(1.15);opacity:1}
+}
+/* Geographic anchors stay absolutely fixed. Old R354 drift caused visible micro-jumps. */
+body.analytics-admin-page.analytics-v54-46-page #worldMap.is-youtube-red-r415 .world-map-dot,
+body.analytics-admin-page.analytics-v54-46-page #worldMap[data-ecosystem-layer="youtube"] .world-map-dot{
+  animation:none!important;
+  transform:translate(-50%,-50%) translateZ(0)!important;
+  filter:none!important;
+  will-change:auto!important;
+}
+body.analytics-admin-page.analytics-v54-46-page #worldMap.is-youtube-red-r415 .world-map-dot i,
+body.analytics-admin-page.analytics-v54-46-page #worldMap[data-ecosystem-layer="youtube"] .world-map-dot i,
+body.analytics-admin-page.analytics-v54-46-page #worldMap.is-youtube-red-r415 .world-map-city-dot i{
+  background:#ff5f75!important;
+  border-color:rgba(255,220,226,.88)!important;
+  box-shadow:0 0 0 5px rgba(255,86,111,.13),0 0 21px rgba(255,66,94,.90),0 0 35px rgba(255,40,78,.38)!important;
+  filter:none!important;
+  animation:andrikYoutubeRedPulseR415 2.9s cubic-bezier(.45,0,.55,1) infinite!important;
+  transform-origin:center center!important;
+  will-change:transform,opacity!important;
+  backface-visibility:hidden!important;
+  -webkit-backface-visibility:hidden!important;
+}
+body.analytics-admin-page.analytics-v54-46-page #worldMap.is-youtube-red-r415 .world-map-dot:nth-of-type(2n) i{animation-delay:-.97s!important}
+body.analytics-admin-page.analytics-v54-46-page #worldMap.is-youtube-red-r415 .world-map-dot:nth-of-type(3n) i{animation-delay:-1.93s!important}
+/* Pause only while the user actively manipulates the map. */
+body.analytics-admin-page.analytics-v54-46-page #worldMap.is-map-interacting .world-map-dot i,
+body.analytics-admin-page.analytics-v54-46-page #worldMap.is-focus-arriving .world-map-dot i{
+  animation-play-state:paused!important;
+}

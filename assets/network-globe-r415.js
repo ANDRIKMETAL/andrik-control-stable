@@ -1,14 +1,14 @@
-/* ANDRIK R414 — Monitoring live globe. Rotation is driven directly so mobile reduced-motion/browser optimizations cannot freeze it. */
+/* ANDRIK R415 — Monitoring live globe. Rotation is driven directly so mobile reduced-motion/browser optimizations cannot freeze it. */
 (()=>{
   'use strict';
-  if(window.__ANDRIK_NETWORK_GLOBE_R414__)return;
-  window.__ANDRIK_NETWORK_GLOBE_R414__=true;
-  const card=document.getElementById('andrikNetworkGlobeR414');
-  const sphere=document.getElementById('andrikNetworkGlobeSphereR414');
-  const texture=document.getElementById('andrikNetworkGlobeTextureR414');
-  const dot=document.getElementById('andrikNetworkGlobeDotR414');
+  if(window.__ANDRIK_NETWORK_GLOBE_R415__)return;
+  window.__ANDRIK_NETWORK_GLOBE_R415__=true;
+  const card=document.getElementById('andrikNetworkGlobeR415');
+  const sphere=document.getElementById('andrikNetworkGlobeSphereR415');
+  const texture=document.getElementById('andrikNetworkGlobeTextureR415');
+  const dot=document.getElementById('andrikNetworkGlobeDotR415');
   const summary=document.getElementById('observabilityHealthSummary');
-  const state=document.getElementById('andrikNetworkGlobeStateR414');
+  const state=document.getElementById('andrikNetworkGlobeStateR415');
   if(!card||!sphere||!texture||!dot||!state)return;
 
   const pluralCountries=n=>{const a=Math.abs(Number(n)||0)%100,b=a%10;return a>10&&a<20?'стран':b===1?'страна':b>=2&&b<=4?'страны':'стран'};

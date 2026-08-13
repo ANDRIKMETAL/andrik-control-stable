@@ -1,10 +1,10 @@
-/* ANDRIK Control R414 — authoritative display-version synchronization. */
+/* ANDRIK Control R415 — authoritative display-version synchronization. */
 (()=>{
   'use strict';
-  if(window.__ANDRIK_VERSION_SYNC_R414__)return;
-  window.__ANDRIK_VERSION_SYNC_R414__=true;
-  const RELEASE='R414';
-  const RUNTIME='55.00-r414';
+  if(window.__ANDRIK_VERSION_SYNC_R415__)return;
+  window.__ANDRIK_VERSION_SYNC_R415__=true;
+  const RELEASE='R415';
+  const RUNTIME='55.00-r415';
   let busy=false;
   const apply=()=>{
     if(busy)return; busy=true;
@@ -31,7 +31,7 @@
       document.querySelectorAll('.control-split-version-r181').forEach(n=>n.setAttribute('aria-label',`Live Web AI, версия ${RELEASE}`));
       document.querySelectorAll('[data-andrik-version]').forEach(n=>n.textContent=RELEASE);
       window.ANDRIK_CONTROL_VERSION=`55.00 LIVE WEB AI FINAL ${RELEASE}`;
-      window.ANDRIK_CONTROL_BUILD='R414 GENERAL CLEAN + R412 GLOBE + R411 COUNTRY SIX + R410 SUMMARY + R409 CRON SAFE';
+      window.ANDRIK_CONTROL_BUILD='R415 YOUTUBE SMOOTH + MONITOR POLISH + GLOBE SK + CLEAN BASE + SUMMARY + CRON SAFE';
       try{localStorage.setItem('andrik-control-display-version',RUNTIME)}catch(_){ }
       window.dispatchEvent(new CustomEvent('andrik-control-version-ready',{detail:{short:RELEASE,number:413,version:'55.00'}}));
     }finally{busy=false;}

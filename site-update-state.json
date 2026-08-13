@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786606281133-a6c85e4ecb",
-  "release": "R414",
-  "archiveName": "R414-GLOBE-SLOVAKIA-SERVICE-DEDUP-SAFE-FULL.zip",
-  "sourceHead": "73771a44223de49c9973c398f893e6bec9598eed",
-  "backupSha": "73771a44223de49c9973c398f893e6bec9598eed",
-  "backupTag": "control-backup-20260813073116-73771a4-r414-10bed",
+  "operationId": "publish-1786607508567-8b6a36cbe3",
+  "release": "R415",
+  "archiveName": "R415-YOUTUBE-SMOOTH-MONITOR-POLISH-SAFE-FULL.zip",
+  "sourceHead": "e6cfb3849c8a8eea5f95eb499faf818873f8c6a4",
+  "backupSha": "e6cfb3849c8a8eea5f95eb499faf818873f8c6a4",
+  "backupTag": "control-backup-20260813075144-e6cfb38-r415-d9539",
   "autoRecovery": true,
-  "generatedAt": "2026-08-13T07:31:21.564Z"
+  "generatedAt": "2026-08-13T07:51:49.348Z"
 }
