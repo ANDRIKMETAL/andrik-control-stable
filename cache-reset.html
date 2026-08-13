@@ -7,7 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <title>Очистка Control — R411</title>
+  <title>Очистка Control — R412</title>
   <style>
     *{box-sizing:border-box}
     html,body{
@@ -143,7 +143,7 @@
 </head>
 <body>
   <main class="box">
-    <span class="badge">СТРАНИЦА ОЧИСТКИ R411</span>
+    <span class="badge">СТРАНИЦА ОЧИСТКИ R412</span>
     <h1 id="title">Чистим кэш Control</h1>
     <p id="status">Не закрывай страницу. После завершения появится кнопка открытия Control.</p>
 
@@ -248,7 +248,9 @@
       '/assets/map-layer-color-r359.js?cache-bust='+stamp,
       '/assets/country-list-scroll-r359.css?cache-bust='+stamp,
       '/assets/country-list-scroll-r359.js?cache-bust='+stamp,
-      '/assets/control-version-sync-r408.js?cache-bust='+stamp,
+      '/assets/control-version-sync-r412.js?cache-bust='+stamp,
+      '/assets/country-actions-r412.css?cache-bust='+stamp,
+      '/assets/country-actions-r412.js?cache-bust='+stamp,
       '/assets/singles-r349.js?cache-bust='+stamp,
       '/assets/ecosystem-map-r337.css?cache-bust='+stamp,
       '/assets/ecosystem-map-r347.js?cache-bust='+stamp,
@@ -285,7 +287,7 @@
       headers:{'Cache-Control':'no-cache, no-store, max-age=0','Pragma':'no-cache'}
     }).catch(()=>null);
     // Also run one lightweight release check now, so a release published before
-    // R411 installation can be caught immediately without waiting for the next Cron.
+    // R412 installation can be caught immediately without waiting for the next Cron.
     await fetch('/api/automation/youtube-fast',{
       method:'POST',
       cache:'no-store',
@@ -312,7 +314,7 @@
   }
 })();
 </script>
-<script defer src="/assets/control-version-sync-r408.js?v=55.00-r408"></script>
+<script defer src="/assets/control-version-sync-r412.js?v=55.00-r412"></script>
 <link rel="preload" as="style" href="/assets/map-total-compact-r348.css?cache-bust=1">
 </body>
 </html>
