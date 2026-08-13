@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786653373284-340e928974",
-  "release": "R425",
-  "archiveName": "R425-LANDSCAPE-CITIES-SIMPLE-LIST-SAFE-FULL.zip",
-  "sourceHead": "1477e28df193298cbfc6828ff50619084c9654c4",
-  "backupSha": "1477e28df193298cbfc6828ff50619084c9654c4",
-  "backupTag": "control-backup-20260813203608-1477e28-r425-10009",
+  "operationId": "publish-1786654048335-e586878fa3",
+  "release": "R426",
+  "archiveName": "R426-CITIES-SIMPLE-LIST-BOTH-ORIENTATIONS-SAFE-FULL.zip",
+  "sourceHead": "26f7d7c5eb13c1d709b2734767297e849389aa3f",
+  "backupSha": "26f7d7c5eb13c1d709b2734767297e849389aa3f",
+  "backupTag": "control-backup-20260813204724-26f7d7c-r426-c6584",
   "autoRecovery": true,
-  "generatedAt": "2026-08-13T20:36:13.284Z"
+  "generatedAt": "2026-08-13T20:47:28.335Z"
 }
