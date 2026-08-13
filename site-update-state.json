@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786590722382-cc04017998",
-  "release": "R408",
-  "archiveName": "R408-COUNTRY-ACTION-BUTTONS-98PX-SAFE-FULL.zip",
-  "sourceHead": "7ec1e1f0d9887f8d0c76e3f60b838cd419b8953f",
-  "backupSha": "7ec1e1f0d9887f8d0c76e3f60b838cd419b8953f",
-  "backupTag": "control-backup-20260813031158-7ec1e1f-r408-36aec",
+  "operationId": "publish-1786602732918-2a3479b0c7",
+  "release": "R409",
+  "archiveName": "R409-CRON-GATEWAY-YOUTUBE-TIMEOUT-SAFE-FULL.zip",
+  "sourceHead": "7cfd1c9a6e003b0c8588f0a7d3ca9830952b7409",
+  "backupSha": "7cfd1c9a6e003b0c8588f0a7d3ca9830952b7409",
+  "backupTag": "control-backup-20260813063208-7cfd1c9-r409-c2bd0",
   "autoRecovery": true,
-  "generatedAt": "2026-08-13T03:12:02.382Z"
+  "generatedAt": "2026-08-13T06:32:12.918Z"
 }

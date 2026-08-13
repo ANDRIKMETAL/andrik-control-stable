@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R408', number:408, version:'55.00', full:'55.00 LIVE WEB AI FINAL R408', siteUpdater:'55.00-r356' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R409', number:409, version:'55.00', full:'55.00 LIVE WEB AI FINAL R409', siteUpdater:'55.00-r356' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -2897,7 +2897,7 @@ async function resolveUploadsPlaylistId(env, db) {
   url.searchParams.set('forHandle', channelHandle.replace(/^@/, ''));
   url.searchParams.set('key', apiKey);
   await trackObservabilityUsage(env, 'youtube-data-api', observabilityQuotaCost('channels'), 1, { endpoint:'channels', source:'resolve-uploads-playlist' }).catch(() => {});
-  const response = await fetch(url.toString(), { headers: { accept: 'application/json' } });
+  const response = await fetchWithAbortTimeoutR409(url.toString(), { headers: { accept: 'application/json' } }, 8000, 'youtube-channel-timeout');
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(data?.error?.message || 'youtube-channel-api-error');
   const playlistId = cleanPlainText(data?.items?.[0]?.contentDetails?.relatedPlaylists?.uploads, 100);
@@ -2916,7 +2916,7 @@ async function fetchYoutubePlaylistItems(env, apiKey, playlistId, source) {
     url.searchParams.set('key', apiKey);
     if (pageToken) url.searchParams.set('pageToken', pageToken);
     await trackObservabilityUsage(env, 'youtube-data-api', observabilityQuotaCost('playlistItems'), 1, { endpoint:'playlistItems', playlistId:cleanPlainText(playlistId,80) }).catch(() => {});
-    const response = await fetch(url.toString(), { headers: { accept: 'application/json' } });
+    const response = await fetchWithAbortTimeoutR409(url.toString(), { headers: { accept: 'application/json' } }, 8000, 'youtube-playlist-items-timeout');
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data?.error?.message || 'youtube-api-error');
     for (const item of data.items || []) {
@@ -2948,9 +2948,9 @@ function xmlEntityDecode(value) {
 }
 
 async function fetchYoutubePlaylistFeed(playlistId, source) {
-  const response = await fetch(`https://www.youtube.com/feeds/videos.xml?playlist_id=${encodeURIComponent(playlistId)}`, {
+  const response = await fetchWithAbortTimeoutR409(`https://www.youtube.com/feeds/videos.xml?playlist_id=${encodeURIComponent(playlistId)}`, {
     headers: { accept: 'application/atom+xml, application/xml, text/xml' }
-  });
+  }, 8000, 'youtube-feed-timeout');
   if (!response.ok) throw new Error(`youtube-feed-error-${response.status}`);
   const xml = await response.text();
   const entries = xml.match(/<entry>[\s\S]*?<\/entry>/g) || [];
@@ -3088,11 +3088,11 @@ async function ensureYoutubeWebSubSubscriptionR332(env, db, { force=false } = {}
   body.set('hub.callback', callback);
   body.set('hub.verify', 'async');
   body.set('hub.lease_seconds', '432000');
-  const response = await fetch(YOUTUBE_WEBSUB_HUB_R332, {
+  const response = await fetchWithAbortTimeoutR409(YOUTUBE_WEBSUB_HUB_R332, {
     method:'POST',
     headers:{ 'content-type':'application/x-www-form-urlencoded;charset=UTF-8', accept:'text/plain' },
     body:body.toString()
-  });
+  }, 8000, 'youtube-websub-timeout');
   const responseText = await response.text().catch(() => '');
   await setPushState(db, 'youtube-websub-subscribe-http-r332', JSON.stringify({
     ok:response.ok,
@@ -3319,7 +3319,7 @@ async function fetchLatestUploadsR332(env, db) {
   url.searchParams.set('maxResults','3');
   url.searchParams.set('key',apiKey);
   await trackObservabilityUsage(env,'youtube-data-api',observabilityQuotaCost('playlistItems'),1,{endpoint:'playlistItems',playlistId:cleanPlainText(playlistId,80),source:'fast-release-r332'}).catch(() => {});
-  const response = await fetch(url.toString(),{headers:{accept:'application/json'}});
+  const response = await fetchWithAbortTimeoutR409(url.toString(),{headers:{accept:'application/json'}},8000,'youtube-fast-playlist-timeout');
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(data?.error?.message || 'youtube-fast-playlist-error');
   const items=(data.items || []).map(raw=>{
@@ -5524,7 +5524,7 @@ async function getYoutubeOAuthAccessToken(env) {
     refresh_token: refreshToken,
     grant_type: 'refresh_token'
   });
-  const response = await fetch('https://oauth2.googleapis.com/token', { method:'POST', headers:{'content-type':'application/x-www-form-urlencoded'}, body });
+  const response = await fetchWithAbortTimeoutR409('https://oauth2.googleapis.com/token', { method:'POST', headers:{'content-type':'application/x-www-form-urlencoded'}, body }, 7000, 'youtube-oauth-token-timeout');
   const data = await response.json().catch(()=>({}));
   if (!response.ok || !data.access_token) throw new Error(data.error_description || data.error || `youtube-oauth-token-${response.status}`);
   youtubeOAuthAccessCache = { token:data.access_token, expiresAt:now+Number(data.expires_in||3600) };
@@ -5747,6 +5747,22 @@ async function ensurePlatformAnalyticsSchema(db) {
   catch (error) { platformAnalyticsSchemaPromise = null; throw error; }
 }
 
+// R409: hard network budget for YouTube/Google calls used by Cron.
+// A stalled upstream must never keep the external scheduler alive until its 100 s wall-time limit.
+async function fetchWithAbortTimeoutR409(url, init = {}, timeoutMs = 8000, label = 'upstream-timeout') {
+  const ms = Math.max(2500, Math.min(15000, Number(timeoutMs || 8000)));
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(label), ms);
+  try {
+    return await fetch(url, { ...init, signal:controller.signal });
+  } catch (error) {
+    if (error?.name === 'AbortError' || controller.signal.aborted) throw new Error(label);
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function youtubeApiJson(env, endpoint, params = {}, options = {}) {
   const url = new URL(`https://www.googleapis.com/youtube/v3/${endpoint}`);
   Object.entries(params).forEach(([key, value]) => {
@@ -5767,7 +5783,7 @@ async function youtubeApiJson(env, endpoint, params = {}, options = {}) {
     mode = 'oauth';
   }
   await trackObservabilityUsage(env, 'youtube-data-api', observabilityQuotaCost(endpoint), 1, { endpoint:cleanPlainText(endpoint,80), mode }).catch(() => {});
-  const response = await fetch(url.toString(), { headers });
+  const response = await fetchWithAbortTimeoutR409(url.toString(), { headers }, Number(options.timeoutMs || 8000), `youtube-${endpoint}-timeout`);
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(data?.error?.message || `youtube-${endpoint}-${response.status}`);
   return { data, mode };
@@ -5781,7 +5797,7 @@ async function youtubeApiMutation(env, endpoint, params = {}, body = {}) {
   });
   const accessToken = await getYoutubeOAuthAccessToken(env);
   await trackObservabilityUsage(env, 'youtube-data-api', observabilityQuotaCost(endpoint, 'POST'), 1, { endpoint:cleanPlainText(endpoint,80), mode:'oauth-mutation' }).catch(() => {});
-  const response = await fetch(url.toString(), {
+  const response = await fetchWithAbortTimeoutR409(url.toString(), {
     method: 'POST',
     headers: {
       accept: 'application/json',
@@ -5789,7 +5805,7 @@ async function youtubeApiMutation(env, endpoint, params = {}, body = {}) {
       authorization: `Bearer ${accessToken}`
     },
     body: JSON.stringify(body)
-  });
+  }, 9000, `youtube-${endpoint}-mutation-timeout`);
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(data?.error?.message || `youtube-${endpoint}-${response.status}`);
   return data;
@@ -7202,7 +7218,7 @@ async function youtubeAnalyticsQuery(env, accessToken, params={}) {
   const url=new URL('https://youtubeanalytics.googleapis.com/v2/reports');
   Object.entries(params).forEach(([key,value])=>{if(value!==undefined&&value!==null&&value!=='')url.searchParams.set(key,String(value))});
   await trackObservabilityUsage(env, 'youtube-analytics-api', 0, 1, { dimensions:cleanPlainText(params.dimensions || 'summary',120), metrics:cleanPlainText(params.metrics || '',240) }).catch(() => {});
-  const response=await fetch(url,{headers:{authorization:`Bearer ${accessToken}`,accept:'application/json'}});
+  const response=await fetchWithAbortTimeoutR409(url,{headers:{authorization:`Bearer ${accessToken}`,accept:'application/json'}},8000,'youtube-analytics-timeout');
   const data=await response.json().catch(()=>({}));
   if(!response.ok) throw new Error(data?.error?.message||`youtube-analytics-${response.status}`);
   const headers=(data.columnHeaders||[]).map(x=>x.name);
@@ -7338,7 +7354,7 @@ async function fetchYouTubeChannelAnalytics(env) {
   url.searchParams.set('forHandle', handle);
   url.searchParams.set('key', apiKey);
   await trackObservabilityUsage(env, 'youtube-data-api', observabilityQuotaCost('channels'), 1, { endpoint:'channels', source:'channel-statistics' }).catch(() => {});
-  const response = await fetch(url.toString(), { headers: { accept: 'application/json' } });
+  const response = await fetchWithAbortTimeoutR409(url.toString(), { headers: { accept: 'application/json' } }, 8000, 'youtube-statistics-timeout');
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(data?.error?.message || `youtube-statistics-${response.status}`);
   const channel = data?.items?.[0];
@@ -8775,7 +8791,7 @@ async function handleExternalCronGatewayR334(request, env) {
   // Every 15 minutes: keep the original full central automation exactly as before.
   if(clock.due15 && await claimCronGatewaySlotR334(db,'main-15m',clock.slot15)){
     try{
-      tasks.main=await responseData(await handleAutomationRun(request,env));
+      tasks.main=await responseData(await handleAutomationRun(request,env,{skipYoutubeEvents:true,skipReleases:true,skipSummaryRefresh:true,skipDailySummary:true}));
       if(!tasks.main.httpOk)errors.push(`main:${tasks.main.error || tasks.main.status}`);
     }catch(error){
       tasks.main={ok:false,error:cleanPlainText(error?.message || error,400)};
@@ -8786,8 +8802,13 @@ async function handleExternalCronGatewayR334(request, env) {
   }
 
   const result={
-    ok:errors.length===0,
-    mode:'external-cron-gateway-r397',
+    // R409: reaching the gateway and completing its guarded task loop is scheduler success.
+    // Individual upstream failures stay visible as degraded/errors but must not trigger the
+    // external Worker's legacy fallback, which previously doubled load and hit 100 s wall time.
+    ok:true,
+    healthy:errors.length===0,
+    degraded:errors.length>0,
+    mode:'external-cron-gateway-r409',
     schedulerHeartbeatAt,
     utcMinute:clock.minute,
     due:{every2:clock.due2,every5:clock.due5,every15:clock.due15},
@@ -8799,10 +8820,13 @@ async function handleExternalCronGatewayR334(request, env) {
     setPushState(db,'cron-gateway-r334-last-result',JSON.stringify(result)).catch(()=>{}),
     setPushState(db,'cron-scheduler-last-status-r394',errors.length?'partial':'ok').catch(()=>{})
   ]);
-  return json(result,errors.length?502:200);
+  if(errors.length){
+    await recordSystemLog(env,{scope:'cron',level:'warning',event:'cron-gateway-partial-r409',message:`Cron gateway завершён без аварии; частичных ошибок: ${errors.length}.`,details:{errors,due:result.due}}).catch(()=>{});
+  }
+  return json(result,200);
 }
 
-async function handleAutomationRun(request, env) {
+async function handleAutomationRun(request, env, options = {}) {
   if (!adminAuthorized(request, env) && !cronAuthorized(request, env)) return json({ ok:false, error:'unauthorized' },401);
   const db = requireDb(env);
   await Promise.all([ensurePushAutomationSchema(db), ensurePlatformAnalyticsSchema(db), ensureControlV1Schema(db)]);
@@ -8816,29 +8840,45 @@ async function handleAutomationRun(request, env) {
   // redundant because handleCheckYoutubeEvents already refreshes channel identity.
   // Running reactions first prevents comments/likes from waiting behind heavy summary tasks
   // and also removes one duplicate YouTube API request from every Cron cycle.
-  try {
-    tasks.youtubeEvents = await responseData(await handleCheckYoutubeEvents(request, env));
-    if (!tasks.youtubeEvents.httpOk) errors.push(`youtubeEvents: ${tasks.youtubeEvents.details || tasks.youtubeEvents.error || tasks.youtubeEvents.status}`);
-  } catch (error) { tasks.youtubeEvents={ok:false,error:cleanPlainText(error?.message || error,500)}; errors.push(`youtubeEvents: ${tasks.youtubeEvents.error}`); }
+  if (options.skipYoutubeEvents) {
+    tasks.youtubeEvents={ok:true,skipped:true,reason:'handled-by-5m-gateway-r409'};
+  } else {
+    try {
+      tasks.youtubeEvents = await responseData(await handleCheckYoutubeEvents(request, env));
+      if (!tasks.youtubeEvents.httpOk) errors.push(`youtubeEvents: ${tasks.youtubeEvents.details || tasks.youtubeEvents.error || tasks.youtubeEvents.status}`);
+    } catch (error) { tasks.youtubeEvents={ok:false,error:cleanPlainText(error?.message || error,500)}; errors.push(`youtubeEvents: ${tasks.youtubeEvents.error}`); }
+  }
   try {
     tasks.websub = await ensureYoutubeWebSubSubscriptionR332(env, db, { force:false });
     if (!tasks.websub.ok && !tasks.websub.skipped) errors.push(`websub: ${tasks.websub.error || 'failed'}`);
   } catch (error) { tasks.websub={ok:false,error:cleanPlainText(error?.message || error,500)}; errors.push(`websub: ${tasks.websub.error}`); }
-  try {
-    tasks.releases = await responseData(await handleCheckPlaylist(request, env));
-    if (!tasks.releases.httpOk) errors.push(`releases: ${tasks.releases.details || tasks.releases.error || tasks.releases.status}`);
-  } catch (error) { tasks.releases={ok:false,error:cleanPlainText(error?.message || error,500)}; errors.push(`releases: ${tasks.releases.error}`); }
+  if (options.skipReleases) {
+    tasks.releases={ok:true,skipped:true,reason:'handled-by-5m-gateway-r409'};
+  } else {
+    try {
+      tasks.releases = await responseData(await handleCheckPlaylist(request, env));
+      if (!tasks.releases.httpOk) errors.push(`releases: ${tasks.releases.details || tasks.releases.error || tasks.releases.status}`);
+    } catch (error) { tasks.releases={ok:false,error:cleanPlainText(error?.message || error,500)}; errors.push(`releases: ${tasks.releases.error}`); }
+  }
   // R350: refresh Google + current summary accumulator independently of push delivery.
   // This also keeps the live summary current on every normal Cron cycle.
-  try {
-    tasks.summaryRefresh = await refreshDailySummaryAccumulatorR305(env, 'central-cron');
-    if (!tasks.summaryRefresh.ok && !tasks.summaryRefresh.skipped) errors.push(`summaryRefresh: ${tasks.summaryRefresh.error || 'failed'}`);
-  } catch (error) { tasks.summaryRefresh={ok:false,error:cleanPlainText(error?.message || error,500)}; errors.push(`summaryRefresh: ${tasks.summaryRefresh.error}`); }
+  if (options.skipSummaryRefresh) {
+    tasks.summaryRefresh={ok:true,skipped:true,reason:'handled-by-5m-gateway-r409'};
+  } else {
+    try {
+      tasks.summaryRefresh = await refreshDailySummaryAccumulatorR305(env, 'central-cron');
+      if (!tasks.summaryRefresh.ok && !tasks.summaryRefresh.skipped) errors.push(`summaryRefresh: ${tasks.summaryRefresh.error || 'failed'}`);
+    } catch (error) { tasks.summaryRefresh={ok:false,error:cleanPlainText(error?.message || error,500)}; errors.push(`summaryRefresh: ${tasks.summaryRefresh.error}`); }
+  }
   // R364/R363: central run is catch-up fallback; primary delivery runs in the fast 5-minute cycle.
-  try {
-    tasks.dailySummary = await maybeSendDailyOwnerSummary(env);
-    if (!tasks.dailySummary.ok && !tasks.dailySummary.skipped) errors.push(`dailySummary: ${tasks.dailySummary.error || 'failed'}`);
-  } catch (error) { tasks.dailySummary={ok:false,error:cleanPlainText(error?.message || error,500)}; errors.push(`dailySummary: ${tasks.dailySummary.error}`); }
+  if (options.skipDailySummary) {
+    tasks.dailySummary={ok:true,skipped:true,reason:'handled-by-5m-gateway-r409'};
+  } else {
+    try {
+      tasks.dailySummary = await maybeSendDailyOwnerSummary(env);
+      if (!tasks.dailySummary.ok && !tasks.dailySummary.skipped) errors.push(`dailySummary: ${tasks.dailySummary.error || 'failed'}`);
+    } catch (error) { tasks.dailySummary={ok:false,error:cleanPlainText(error?.message || error,500)}; errors.push(`dailySummary: ${tasks.dailySummary.error}`); }
+  }
   try {
     tasks.snapshots = await refreshControlSnapshots(env, { force:false });
     if (!tasks.snapshots.ok && !tasks.snapshots.skipped) errors.push(`snapshots: ${(tasks.snapshots.errors || []).join(' · ') || 'failed'}`);
