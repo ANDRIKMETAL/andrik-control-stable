@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786709060641-045a0dd6b7",
-  "release": "R436",
-  "archiveName": "R436-R434-YOUTUBE-COMMENT-REPLY-PUSH-RECOVERY-SAFE-FULL.zip",
-  "sourceHead": "fa6b71f6079a2ffbbe31cfefac6eac36fd3cce82",
-  "backupSha": "fa6b71f6079a2ffbbe31cfefac6eac36fd3cce82",
-  "backupTag": "control-backup-20260814120416-fa6b71f-r436-523d7",
+  "operationId": "publish-1786719495924-db4d164f58",
+  "release": "R437",
+  "archiveName": "R437-R436-CITY-TRAFFIC-SOURCE-GA4-FIRST-PARTY-SAFE-FULL.zip",
+  "sourceHead": "c9b6fdfdaf94f12bde5513c7c57c150e317c4406",
+  "backupSha": "c9b6fdfdaf94f12bde5513c7c57c150e317c4406",
+  "backupTag": "control-backup-20260814145812-c9b6fdf-r437-b5a3f",
   "autoRecovery": true,
-  "generatedAt": "2026-08-14T12:04:20.641Z"
+  "generatedAt": "2026-08-14T14:58:15.924Z"
 }

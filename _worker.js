@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R436', number:436, version:'55.00', full:'55.00 LIVE WEB AI FINAL R436', siteUpdater:'55.00-r356' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R437', number:437, version:'55.00', full:'55.00 LIVE WEB AI FINAL R437', siteUpdater:'55.00-r356' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -1434,6 +1434,9 @@ async function ensureSiteMetricsSchema(db) {
         city TEXT NOT NULL DEFAULT '',
         latitude REAL,
         longitude REAL,
+        acquisition_source TEXT NOT NULL DEFAULT '',
+        acquisition_medium TEXT NOT NULL DEFAULT '',
+        referrer_host TEXT NOT NULL DEFAULT '',
         local_date TEXT NOT NULL,
         created_at TEXT NOT NULL DEFAULT (datetime('now'))
       )
@@ -1445,7 +1448,10 @@ async function ensureSiteMetricsSchema(db) {
       `ALTER TABLE site_visit_events ADD COLUMN region TEXT NOT NULL DEFAULT ''`,
       `ALTER TABLE site_visit_events ADD COLUMN city TEXT NOT NULL DEFAULT ''`,
       `ALTER TABLE site_visit_events ADD COLUMN latitude REAL`,
-      `ALTER TABLE site_visit_events ADD COLUMN longitude REAL`
+      `ALTER TABLE site_visit_events ADD COLUMN longitude REAL`,
+      `ALTER TABLE site_visit_events ADD COLUMN acquisition_source TEXT NOT NULL DEFAULT ''`,
+      `ALTER TABLE site_visit_events ADD COLUMN acquisition_medium TEXT NOT NULL DEFAULT ''`,
+      `ALTER TABLE site_visit_events ADD COLUMN referrer_host TEXT NOT NULL DEFAULT ''`
     ];
     for (const sql of siteGeoAlterations) {
       await db.prepare(sql).run().catch(error => {
@@ -1455,6 +1461,7 @@ async function ensureSiteMetricsSchema(db) {
     await db.prepare(`CREATE INDEX IF NOT EXISTS idx_site_visit_local_date ON site_visit_events(local_date, created_at DESC)`).run();
     await db.prepare(`CREATE INDEX IF NOT EXISTS idx_site_visit_visitor_date ON site_visit_events(visitor_hash, local_date)`).run();
     await db.prepare(`CREATE INDEX IF NOT EXISTS idx_site_visit_geo ON site_visit_events(event_type, country, region, city, created_at DESC)`).run().catch(() => {});
+    await db.prepare(`CREATE INDEX IF NOT EXISTS idx_site_visit_source_r437 ON site_visit_events(event_type, country, city, acquisition_source, local_date)`).run().catch(() => {});
   })();
   try { await siteMetricsSchemaPromise; }
   catch (error) { siteMetricsSchemaPromise = null; throw error; }
@@ -1616,6 +1623,10 @@ async function handleSiteVisit(request, env) {
   const requestedType = cleanPlainText(body.eventType || 'visit', 40).toLowerCase();
   const eventType = allowedEventTypes.has(requestedType) ? requestedType : 'external-open';
   const target = cleanPlainText(body.target || '', 500);
+  // R437: retain only coarse acquisition labels, never a full referrer URL.
+  const acquisitionSource = cleanPlainText(body.acquisitionSource || '', 180).toLowerCase();
+  const acquisitionMedium = cleanPlainText(body.acquisitionMedium || '', 80).toLowerCase();
+  const referrerHost = cleanPlainText(body.referrerHost || '', 180).toLowerCase().replace(/[^a-z0-9._:-]/g, '');
   const cf = request.cf || {};
   const country = cleanPlainText(cf.country || '', 8).toUpperCase();
   const region = cleanPlainText(cf.region || cf.regionCode || '', 120);
@@ -1627,11 +1638,11 @@ async function handleSiteVisit(request, env) {
   const longitude = Number.isFinite(lonRaw) ? Math.round(lonRaw * 10) / 10 : null;
   await db.prepare(`
     INSERT INTO site_visit_events(
-      id, visitor_hash, path, event_type, target, country, region, city, latitude, longitude, local_date, created_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+      id, visitor_hash, path, event_type, target, country, region, city, latitude, longitude, acquisition_source, acquisition_medium, referrer_host, local_date, created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
   `).bind(
     crypto.randomUUID(), visitorHash, normalizeSitePath(body.path), eventType, target,
-    country, region, city, latitude, longitude, localDate
+    country, region, city, latitude, longitude, acquisitionSource, acquisitionMedium, referrerHost, localDate
   ).run();
   // Keep this lightweight first-party counter small; long-term analytics remains in GA4.
   await recordCountryCityHistoryR418(db,{localDate,country,region,city,eventType}).catch(() => {});
@@ -5614,6 +5625,139 @@ async function fetchGoogleSiteAnalytics(env) {
   };
 }
 
+
+
+// R437 — on-demand traffic-source drilldown for a selected city/region.
+// GA4 is queried only when the owner taps a city, so this adds no Cron load.
+function trafficSourceLabelR437(source = '', medium = '', channel = '') {
+  const rawSource = cleanPlainText(source || '', 180).toLowerCase();
+  const rawMedium = cleanPlainText(medium || '', 80).toLowerCase();
+  const rawChannel = cleanPlainText(channel || '', 120);
+  const hay = `${rawSource} ${rawMedium} ${rawChannel}`.toLowerCase();
+  if (!rawSource || rawSource === '(direct)' || (rawMedium === '(none)' && /direct/i.test(rawChannel))) return { key:'direct', label:'Прямой вход', icon:'🌐' };
+  if (/youtube|youtu\.be/.test(hay)) return { key:'youtube', label:'YouTube', icon:'▶️' };
+  if (/spotify/.test(hay)) return { key:'spotify', label:'Spotify', icon:'🟢' };
+  if (/soundcloud/.test(hay)) return { key:'soundcloud', label:'SoundCloud', icon:'☁️' };
+  if (/amazon/.test(hay)) return { key:'amazon', label:'Amazon', icon:'📦' };
+  if (/apple/.test(hay)) return { key:'apple', label:'Apple Music', icon:'' };
+  if (/google/.test(hay)) return { key:'google', label:rawMedium === 'organic' ? 'Google · поиск' : 'Google', icon:'🔎' };
+  if (/bing/.test(hay)) return { key:'bing', label:rawMedium === 'organic' ? 'Bing · поиск' : 'Bing', icon:'🔎' };
+  if (/facebook|instagram|threads|tiktok|x\.com|twitter/.test(hay)) return { key:'social', label:'Соцсети', icon:'💬' };
+  if (/organic search/i.test(rawChannel)) return { key:'search', label:'Поиск', icon:'🔎' };
+  if (/referral/i.test(rawMedium) || /referral/i.test(rawChannel)) return { key:'referral', label:rawSource || 'Переход по ссылке', icon:'🔗' };
+  return { key:'other', label:rawSource || rawChannel || 'Другой источник', icon:'↗️' };
+}
+
+function trafficSourceDateRangeR437(mode, requestedDate = '') {
+  const today = getBratislavaClock().date;
+  const date = parseHistoryDateR418(requestedDate, today) || today;
+  if (String(mode || '').toLowerCase() === 'daily') return { startDate:date, endDate:date, label:date, mode:'daily' };
+  return { startDate:shiftIsoCalendarDate(today, -61), endDate:today, label:'последние 62 дня', mode:'all' };
+}
+
+async function firstPartyCitySourcesR437(db, { country='', city='', region='', range } = {}) {
+  await ensureSiteMetricsSchema(db);
+  const code = cleanPlainText(country || '', 8).toUpperCase();
+  const safeCity = cleanPlainText(city || '', 120);
+  const safeRegion = cleanPlainText(region || '', 120);
+  if (!/^[A-Z]{2}$/.test(code) || (!safeCity && !safeRegion)) return { configured:true, rows:[], total:0, users:0 };
+  const placeSql = safeCity ? `LOWER(city)=LOWER(?4)` : `LOWER(region)=LOWER(?4)`;
+  const placeValue = safeCity || safeRegion;
+  const result = await db.prepare(`
+    SELECT
+      CASE WHEN acquisition_source<>'' THEN acquisition_source WHEN referrer_host<>'' THEN referrer_host ELSE '(unknown)' END AS source,
+      CASE WHEN acquisition_medium<>'' THEN acquisition_medium ELSE '' END AS medium,
+      MAX(referrer_host) AS referrerHost,
+      COUNT(*) AS events,
+      COUNT(DISTINCT visitor_hash) AS users
+    FROM site_visit_events
+    WHERE event_type='visit' AND country=?1
+      AND local_date>=?2 AND local_date<=?3
+      AND ${placeSql}
+    GROUP BY source,medium
+    ORDER BY events DESC, users DESC, source ASC
+    LIMIT 16
+  `).bind(code, range.startDate, range.endDate, placeValue).all();
+  const rows = (result?.results || []).map(row => {
+    const source = cleanPlainText(row.source || '', 180);
+    const medium = cleanPlainText(row.medium || '', 80);
+    const meta = trafficSourceLabelR437(source, medium, '');
+    return {
+      source, medium, referrerHost:cleanPlainText(row.referrerHost || '', 180),
+      events:Math.max(0,Number(row.events || 0)), users:Math.max(0,Number(row.users || 0)),
+      ...meta
+    };
+  });
+  return {
+    configured:true,
+    rows,
+    total:rows.reduce((sum,row)=>sum+row.events,0),
+    users:rows.reduce((sum,row)=>sum+row.users,0),
+    note:'Собственные данные источника начинают накапливаться с R437.'
+  };
+}
+
+async function ga4CitySourcesR437(env, { country='', city='', region='', range } = {}) {
+  if (!String(env.GOOGLE_ANALYTICS_CREDENTIALS || '').trim()) return { configured:false, rows:[], totalSessions:0, totalUsers:0 };
+  const accessToken = await getGoogleAnalyticsAccessToken(env);
+  const property = await resolveGoogleAnalyticsProperty(env, accessToken);
+  const placeField = city ? 'city' : 'region';
+  const placeValue = cleanPlainText(city || region || '', 120);
+  const report = await googleAnalyticsPost(accessToken, property.id, 'runReport', {
+    dateRanges:[{ startDate:range.startDate, endDate:range.endDate }],
+    dimensions:[
+      { name:'sessionSource' },
+      { name:'sessionMedium' },
+      { name:'sessionDefaultChannelGroup' }
+    ],
+    metrics:[{ name:'sessions' }, { name:'activeUsers' }],
+    dimensionFilter:{
+      andGroup:{ expressions:[
+        { filter:{ fieldName:'countryId', stringFilter:{ matchType:'EXACT', value:country, caseSensitive:false } } },
+        { filter:{ fieldName:placeField, stringFilter:{ matchType:'EXACT', value:placeValue, caseSensitive:false } } }
+      ] }
+    },
+    orderBys:[{ metric:{ metricName:'sessions' }, desc:true }],
+    keepEmptyRows:false,
+    limit:'24'
+  });
+  const rows = gaRows(report, ['source','medium','channel'], ['sessions','activeUsers']).map(row => ({
+    ...row,
+    ...trafficSourceLabelR437(row.source,row.medium,row.channel)
+  }));
+  return {
+    configured:true,
+    propertyId:property.id,
+    propertyName:property.name,
+    rows,
+    totalSessions:rows.reduce((sum,row)=>sum+Math.max(0,Number(row.sessions||0)),0),
+    totalUsers:rows.reduce((sum,row)=>sum+Math.max(0,Number(row.activeUsers||0)),0)
+  };
+}
+
+async function handleControlCityTrafficSourceR437(request, env) {
+  if (!adminAuthorized(request, env)) return json({ ok:false, error:'unauthorized' }, 401);
+  const url = new URL(request.url);
+  const country = cleanPlainText(url.searchParams.get('country') || '', 8).toUpperCase();
+  const city = cleanPlainText(url.searchParams.get('city') || '', 120);
+  const region = cleanPlainText(url.searchParams.get('region') || '', 120);
+  if (!/^[A-Z]{2}$/.test(country) || (!city && !region)) return json({ ok:false, error:'validation' }, 400);
+  const range = trafficSourceDateRangeR437(url.searchParams.get('mode'), url.searchParams.get('date'));
+  const db = requireDb(env);
+  const firstParty = await firstPartyCitySourcesR437(db,{country,city,region,range}).catch(error => ({ configured:false, rows:[], total:0, error:cleanPlainText(error?.message || error,240) }));
+  let ga4;
+  try { ga4 = await ga4CitySourcesR437(env,{country,city,region,range}); }
+  catch (error) { ga4 = { configured:Boolean(String(env.GOOGLE_ANALYTICS_CREDENTIALS || '').trim()), rows:[], totalSessions:0, totalUsers:0, error:analyticsErrorMessage(error) }; }
+  return json({
+    ok:true,
+    country, city, region,
+    range:{...range, timezone:'Europe/Bratislava'},
+    ga4,
+    firstParty,
+    source:'GA4 session acquisition + ANDRIK first-party acquisition R437',
+    updatedAt:new Date().toISOString()
+  });
+}
 
 
 let youtubeOAuthAccessCache = null;
@@ -13110,6 +13254,7 @@ async function routeApi(request, env, ctx) {
     if (path === '/api/control/snapshots/refresh' && request.method === 'POST') return await handleControlSnapshotsRefresh(request, env);
     if (path === '/api/control/country-growth' && request.method === 'GET') return await handleControlCountryGrowth(request, env);
     if (path === '/api/control/country-city-history' && request.method === 'GET') return await handleControlCountryCityHistoryR418(request, env);
+    if (path === '/api/control/city-traffic-source' && request.method === 'GET') return await handleControlCityTrafficSourceR437(request, env);
     if (path === '/api/control/youtube-events/status' && request.method === 'GET') return await handleYoutubeEventsStatus(request, env);
     if (path === '/api/control/youtube-oauth/status' && request.method === 'GET') return await handleYoutubeOAuthStatus(request, env);
     if (path === '/api/control/youtube-oauth/start' && request.method === 'GET') return await handleYoutubeOAuthStart(request, env);
@@ -13155,7 +13300,7 @@ function controlRecoveryServiceWorkerSource() {
 }
 
 function controlRecoveryPage() {
-  return `<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#02060a"><meta name="robots" content="noindex,nofollow"><title>Восстановление Control ANDRIK</title><style>*{box-sizing:border-box}html,body{min-height:100%;margin:0;background:#02060a;color:#eff8ff;font-family:system-ui,-apple-system,Segoe UI,sans-serif}body{display:grid;place-items:center;padding:22px}.c{width:min(100%,520px);padding:30px 22px;border:1px solid #244455;border-radius:28px;background:linear-gradient(#081923,#030c13);text-align:center}.e{font-size:58px}h1{font-size:clamp(30px,8vw,44px);margin:12px 0}.s{color:#abc0cc;line-height:1.55}.b{display:inline-flex;min-height:54px;align-items:center;justify-content:center;margin-top:20px;padding:0 22px;border:1px solid #315b70;border-radius:999px;color:#eff8ff;text-decoration:none;font-weight:800;background:#0a2432}</style></head><body><main class="c"><div class="e">🟢</div><h1>Восстанавливаем Control</h1><p class="s" id="s">Заменяем старый перехват страниц безопасной версией…</p><a class="b" id="b" href="/control-home.html?page=menu&source=recovery&v=55.00-r436" hidden>Открыть Control</a></main><script>(async()=>{const s=document.getElementById('s'),b=document.getElementById('b'),go='/control-home.html?page=menu&source=recovery&v=55.00-r436&t='+Date.now();b.href=go;try{if('caches'in window){const k=await caches.keys();await Promise.all(k.filter(n=>n.startsWith('andrik-control-')||n.startsWith('andrik-site-')).map(n=>caches.delete(n)))}if('serviceWorker'in navigator){const r=await navigator.serviceWorker.register('/service-worker.js?v=54.96-control-recovery',{scope:'/',updateViaCache:'none'});if(r.installing)r.installing.postMessage({type:'SKIP_WAITING'});if(r.waiting)r.waiting.postMessage({type:'SKIP_WAITING'});await r.update().catch(()=>{});await new Promise(x=>setTimeout(x,1200))}s.textContent='Готово. Открываем админ-панель…';s.style.color='#bfffd9';b.hidden=false;setTimeout(()=>location.replace(go),650)}catch(e){s.textContent='Нажмите кнопку ниже. '+String(e&&e.message||e);s.style.color='#ffb9b9';b.hidden=false}})();</script></body></html>`;
+  return `<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#02060a"><meta name="robots" content="noindex,nofollow"><title>Восстановление Control ANDRIK</title><style>*{box-sizing:border-box}html,body{min-height:100%;margin:0;background:#02060a;color:#eff8ff;font-family:system-ui,-apple-system,Segoe UI,sans-serif}body{display:grid;place-items:center;padding:22px}.c{width:min(100%,520px);padding:30px 22px;border:1px solid #244455;border-radius:28px;background:linear-gradient(#081923,#030c13);text-align:center}.e{font-size:58px}h1{font-size:clamp(30px,8vw,44px);margin:12px 0}.s{color:#abc0cc;line-height:1.55}.b{display:inline-flex;min-height:54px;align-items:center;justify-content:center;margin-top:20px;padding:0 22px;border:1px solid #315b70;border-radius:999px;color:#eff8ff;text-decoration:none;font-weight:800;background:#0a2432}</style></head><body><main class="c"><div class="e">🟢</div><h1>Восстанавливаем Control</h1><p class="s" id="s">Заменяем старый перехват страниц безопасной версией…</p><a class="b" id="b" href="/control-home.html?page=menu&source=recovery&v=55.00-r437" hidden>Открыть Control</a></main><script>(async()=>{const s=document.getElementById('s'),b=document.getElementById('b'),go='/control-home.html?page=menu&source=recovery&v=55.00-r437&t='+Date.now();b.href=go;try{if('caches'in window){const k=await caches.keys();await Promise.all(k.filter(n=>n.startsWith('andrik-control-')||n.startsWith('andrik-site-')).map(n=>caches.delete(n)))}if('serviceWorker'in navigator){const r=await navigator.serviceWorker.register('/service-worker.js?v=54.96-control-recovery',{scope:'/',updateViaCache:'none'});if(r.installing)r.installing.postMessage({type:'SKIP_WAITING'});if(r.waiting)r.waiting.postMessage({type:'SKIP_WAITING'});await r.update().catch(()=>{});await new Promise(x=>setTimeout(x,1200))}s.textContent='Готово. Открываем админ-панель…';s.style.color='#bfffd9';b.hidden=false;setTimeout(()=>location.replace(go),650)}catch(e){s.textContent='Нажмите кнопку ниже. '+String(e&&e.message||e);s.style.color='#ffb9b9';b.hidden=false}})();</script></body></html>`;
 }
 
 
@@ -13277,7 +13422,7 @@ export default {
           const allowedSide = (page === 'google' || page === 'youtube') && source === 'admin-hub-swipe';
           const allowedMap = page === 'map' && source === 'admin-globe';
           if (!allowedSide && !allowedMap) {
-            const adminUrl = new URL('/control-home.html?page=menu&source=launch-guard-r436&v=55.00-r436', url);
+            const adminUrl = new URL('/control-home.html?page=menu&source=launch-guard-r437&v=55.00-r437', url);
             return Response.redirect(adminUrl.toString(), 302);
           }
         }
