@@ -13057,21 +13057,13 @@ export default {
     try {
       if (request.method === 'GET' || request.method === 'HEAD') {
         const path = normalizedPath;
-        // R430: stable dedicated map route. The Admin globe is a normal anchor to /map,
-        // so repeated entry does not depend on pointer handlers, BFCache state or query preservation.
+        // R431: /map is only an alias. Redirect to the exact route that was confirmed working in R427.
         if (isControlHost && path === '/map') {
-          const assetUrl = new URL('/analytics-admin.html', url);
-          const assetResponse = await env.ASSETS.fetch(new Request(assetUrl.toString(), request));
-          const mapHeaders = new Headers(assetResponse.headers);
-          mapHeaders.set('cache-control', 'no-store, no-cache, must-revalidate, max-age=0');
-          mapHeaders.set('pragma', 'no-cache');
-          mapHeaders.set('expires', '0');
-          mapHeaders.set('x-andrik-map-entry', 'R430-dedicated-route');
-          const freshMap = new Response(assetResponse.body, {status:assetResponse.status,statusText:assetResponse.statusText,headers:mapHeaders});
-          return allowControlPlayerFrame(freshMap, url, isControlHost);
+          const mapUrl = new URL('/analytics-admin.html?page=map&source=admin-globe&v=55.00-r431', url);
+          return Response.redirect(mapUrl.toString(), 302);
         }
 
-        // R420/R430: hard launch guard. Even an older installed WebAPK/PWA whose saved
+        // R420/R431: hard launch guard. Even an older installed WebAPK/PWA whose saved
         // start URL still points to analytics-admin/map is forced into the Admin hub.
         // The listener map is intentionally allowed only from an explicit map entry.
         if (isControlHost && (path === '/analytics-admin.html' || path === '/analytics-admin')) {
@@ -13080,7 +13072,7 @@ export default {
           const allowedSide = (page === 'google' || page === 'youtube') && source === 'admin-hub-swipe';
           const allowedMap = page === 'map' && source === 'admin-globe';
           if (!allowedSide && !allowedMap) {
-            const adminUrl = new URL('/control-home.html?page=menu&source=launch-guard-r430&v=55.00-r430', url);
+            const adminUrl = new URL('/control-home.html?page=menu&source=launch-guard-r431&v=55.00-r431', url);
             return Response.redirect(adminUrl.toString(), 302);
           }
           // R428: every globe tap is a fresh map document. This prevents Android/PWA
@@ -13092,7 +13084,7 @@ export default {
             mapHeaders.set('cache-control', 'no-store, no-cache, must-revalidate, max-age=0');
             mapHeaders.set('pragma', 'no-cache');
             mapHeaders.set('expires', '0');
-            mapHeaders.set('x-andrik-map-entry', 'R430-query-fresh');
+            mapHeaders.set('x-andrik-map-entry', 'R431-query-fresh');
             const freshMap = new Response(assetResponse.body, {status:assetResponse.status,statusText:assetResponse.statusText,headers:mapHeaders});
             return allowControlPlayerFrame(freshMap, url, isControlHost);
           }

@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786677447636-8340300262",
-  "release": "R430",
-  "archiveName": "R430-DIRECT-MAP-ANCHOR-SUMMARY-REDUNDANCY-SAFE-FULL.zip",
-  "sourceHead": "778cca7323fa38185242c40951925c6c32c6eb2a",
-  "backupSha": "778cca7323fa38185242c40951925c6c32c6eb2a",
-  "backupTag": "control-backup-20260814031723-778cca7-r430-f8a47",
+  "operationId": "publish-1786678219761-1fcb4ee06a",
+  "release": "R431",
+  "archiveName": "R431-R427-MAP-ENTRY-LANDSCAPE-GLOBE-SCROLL-SAFE-FULL.zip",
+  "sourceHead": "69690ad871268e206fef4e05c42c8dbdaa108707",
+  "backupSha": "69690ad871268e206fef4e05c42c8dbdaa108707",
+  "backupTag": "control-backup-20260814033015-69690ad-r431-dc7ad",
   "autoRecovery": true,
-  "generatedAt": "2026-08-14T03:17:27.636Z"
+  "generatedAt": "2026-08-14T03:30:19.761Z"
 }

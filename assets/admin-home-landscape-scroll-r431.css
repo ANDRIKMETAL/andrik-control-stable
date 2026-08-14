@@ -1,0 +1,27 @@
+/* ANDRIK R431 — landscape Admin hub: allow vertical scroll to the globe below the fixed FAB row. */
+@media screen and (orientation:landscape){
+  body.control-home-page.control-menu-visible .control-menu-page,
+  body.control-home-page.control-menu-visible .control-menu-page[aria-hidden="false"]{
+    overflow-x:hidden!important;
+    overflow-y:auto!important;
+    -webkit-overflow-scrolling:touch!important;
+    overscroll-behavior-y:contain!important;
+    touch-action:pan-y!important;
+    contain:none!important;
+    scroll-padding-bottom:190px!important;
+  }
+  body.control-home-page.control-menu-visible .control-menu-page .control-swipe-page-inner{
+    height:auto!important;
+    max-height:none!important;
+    min-height:calc(100% + 170px)!important;
+    padding-bottom:max(220px,calc(200px + env(safe-area-inset-bottom)))!important;
+    overflow:visible!important;
+  }
+  body.control-home-page.control-menu-visible .admin-hub-globe-r418{
+    margin-top:22px!important;
+    margin-bottom:4px!important;
+  }
+  body.control-home-page.control-menu-visible .admin-hub-swipe-hint-r418{
+    margin-bottom:18px!important;
+  }
+}
