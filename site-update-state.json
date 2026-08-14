@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786678767132-6e461a187a",
-  "release": "R432",
-  "archiveName": "R432-R427-NATIVE-MAP-ENTRY-VERSION-FIX-SAFE-FULL.zip",
-  "sourceHead": "d2d0e15457f1d400bd51b4bce5c2316fa4a2eb27",
-  "backupSha": "d2d0e15457f1d400bd51b4bce5c2316fa4a2eb27",
-  "backupTag": "control-backup-20260814033923-d2d0e15-r432-9f2e9",
+  "operationId": "publish-1786687934569-16b8c4d0a9",
+  "release": "R433",
+  "archiveName": "R433-R432-YOUTUBE-RELEASE-EVERY-5M-SAFE-FULL.zip",
+  "sourceHead": "5b3cea6fed04d6f21632cfddf0438ed88bff5c57",
+  "backupSha": "5b3cea6fed04d6f21632cfddf0438ed88bff5c57",
+  "backupTag": "control-backup-20260814061205-5b3cea6-r433-d4e39",
   "autoRecovery": true,
-  "generatedAt": "2026-08-14T03:39:27.132Z"
+  "generatedAt": "2026-08-14T06:12:14.569Z"
 }

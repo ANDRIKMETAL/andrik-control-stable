@@ -1,10 +1,10 @@
-/* ANDRIK Control R432 — authoritative display-version synchronization. */
+/* ANDRIK Control R433 — authoritative display-version synchronization. */
 (()=>{
   'use strict';
-  if(window.__ANDRIK_VERSION_SYNC_R432__)return;
-  window.__ANDRIK_VERSION_SYNC_R432__=true;
-  const RELEASE='R432';
-  const RUNTIME='55.00-r432';
+  if(window.__ANDRIK_VERSION_SYNC_R433__)return;
+  window.__ANDRIK_VERSION_SYNC_R433__=true;
+  const RELEASE='R433';
+  const RUNTIME='55.00-r433';
   let busy=false;
   const apply=()=>{
     if(busy)return; busy=true;
@@ -31,9 +31,9 @@
       document.querySelectorAll('.control-split-version-r181').forEach(n=>n.setAttribute('aria-label',`Live Web AI, версия ${RELEASE}`));
       document.querySelectorAll('[data-andrik-version]').forEach(n=>n.textContent=RELEASE);
       window.ANDRIK_CONTROL_VERSION=`55.00 LIVE WEB AI FINAL ${RELEASE}`;
-      window.ANDRIK_CONTROL_BUILD='R432 R427 NATIVE MAP ENTRY + VERSION AUTHORITY + R430 SUMMARY DELIVERY + R416 CRON CPU SAFE';
+      window.ANDRIK_CONTROL_BUILD='R433 R427 NATIVE MAP ENTRY + RELEASE EVERY 5M + R430 SUMMARY DELIVERY + R416 CPU SAFE';
       try{localStorage.setItem('andrik-control-display-version',RUNTIME)}catch(_){ }
-      window.dispatchEvent(new CustomEvent('andrik-control-version-ready',{detail:{short:RELEASE,number:432,version:'55.00'}}));
+      window.dispatchEvent(new CustomEvent('andrik-control-version-ready',{detail:{short:RELEASE,number:433,version:'55.00'}}));
     }finally{busy=false;}
   };
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',apply,{once:true}); else apply();

@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R432', number:432, version:'55.00', full:'55.00 LIVE WEB AI FINAL R432', siteUpdater:'55.00-r356' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R433', number:433, version:'55.00', full:'55.00 LIVE WEB AI FINAL R433', siteUpdater:'55.00-r356' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -8957,12 +8957,14 @@ async function handleCronYoutubeEventsAckR416(request, env) {
   return json({ok:true,healthy:true,degraded:false,skipped:true,mode:'youtube-cron-fallback-ack-r416',reason:'fast-engagement-owned-by-2m-gateway',checkedAt:new Date().toISOString()},200);
 }
 
-async function runCronFiveMinuteSliceR416(request, env, clock) {
+async function runCronFiveMinuteSliceR433(request, env, clock) {
   const local=getBratislavaClock();
-  // R430: keep the proven R416 split-CPU architecture, but reserve the entire
-  // 5-minute invocation for the owner summary during the 05:xx and 17:xx hours.
-  // If OneSignal/D1 has a transient failure, the next */5 trigger retries. Outside
-  // those two hours release/subscriber work is never starved by an old summary slot.
+  // R433: release detection is now checked on EVERY */5 invocation.
+  // R416 alternated release/subscriber slices, so a release could effectively wait
+  // 10 minutes (and longer if YouTube indexed it just after a release slice).
+  // We keep the lightweight CPU-safe paths: release is always first priority; when
+  // no release push was sent, the same 5-minute invocation may do the tiny subscriber
+  // count tail check. If a release was sent, subscriber waits for the next */5 slot.
   if(local.hour===5 || local.hour===17){
     try{
       const summaryAttempt=await maybeSendDailyOwnerSummary(env);
@@ -8973,13 +8975,45 @@ async function runCronFiveMinuteSliceR416(request, env, clock) {
       return {task:'daily-summary',value:{ok:false,error:cleanPlainText(error?.message||error,500)}};
     }
   }
-  const phase=Math.floor(Number(clock?.minute || 0)/5)%2;
-  if(phase===0){
-    const value=await responseData(await handleFastYoutubeReleaseCheckR332(request,env));
-    return {task:'release',value};
+
+  const release=await responseData(await handleFastYoutubeReleaseCheckR332(request,env));
+  const releaseFailed=release?.ok===false || release?.httpOk===false;
+  const releaseSent=Math.max(0,Number(release?.sent || 0));
+
+  if(releaseFailed){
+    return {
+      task:'release',
+      value:{
+        ok:false,
+        release,
+        subscriber:{ok:true,skipped:true,reason:'release-check-failed-first-priority-r433'},
+        mode:'release-every-5m-r433'
+      }
+    };
   }
-  const value=await handleFastYoutubeSubscriberCountR416(request,env,{source:'gateway-subscriber-r416'});
-  return {task:'subscriber',value};
+
+  if(releaseSent>0){
+    return {
+      task:'release',
+      value:{
+        ok:true,
+        release,
+        subscriber:{ok:true,skipped:true,reason:'release-sent-first-priority-r433'},
+        mode:'release-every-5m-r433'
+      }
+    };
+  }
+
+  const subscriber=await handleFastYoutubeSubscriberCountR416(request,env,{source:'gateway-subscriber-r433'});
+  return {
+    task:'release+subscriber',
+    value:{
+      ok:subscriber?.ok!==false,
+      release,
+      subscriber,
+      mode:'release-every-5m-r433'
+    }
+  };
 }
 
 async function runCronMaintenanceSliceR416(env, clock) {
@@ -9040,7 +9074,7 @@ async function handleExternalCronGatewayR334(request, env, ctx) {
     }else if(clock.due5){
       claimed=await claimCronGatewaySlotR334(db,'five-minute-slice-r416',clock.slot5);
       if(claimed){
-        const slice=await runCronFiveMinuteSliceR416(request,env,clock);
+        const slice=await runCronFiveMinuteSliceR433(request,env,clock);
         task=slice.task; value=slice.value;
       }else value={ok:true,skipped:true,reason:'slot-already-claimed'};
     }else if(clock.due15){
@@ -12943,7 +12977,7 @@ function controlRecoveryServiceWorkerSource() {
 }
 
 function controlRecoveryPage() {
-  return `<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#02060a"><meta name="robots" content="noindex,nofollow"><title>Восстановление Control ANDRIK</title><style>*{box-sizing:border-box}html,body{min-height:100%;margin:0;background:#02060a;color:#eff8ff;font-family:system-ui,-apple-system,Segoe UI,sans-serif}body{display:grid;place-items:center;padding:22px}.c{width:min(100%,520px);padding:30px 22px;border:1px solid #244455;border-radius:28px;background:linear-gradient(#081923,#030c13);text-align:center}.e{font-size:58px}h1{font-size:clamp(30px,8vw,44px);margin:12px 0}.s{color:#abc0cc;line-height:1.55}.b{display:inline-flex;min-height:54px;align-items:center;justify-content:center;margin-top:20px;padding:0 22px;border:1px solid #315b70;border-radius:999px;color:#eff8ff;text-decoration:none;font-weight:800;background:#0a2432}</style></head><body><main class="c"><div class="e">🟢</div><h1>Восстанавливаем Control</h1><p class="s" id="s">Заменяем старый перехват страниц безопасной версией…</p><a class="b" id="b" href="/control-home.html?page=menu&source=recovery&v=55.00-r432" hidden>Открыть Control</a></main><script>(async()=>{const s=document.getElementById('s'),b=document.getElementById('b'),go='/control-home.html?page=menu&source=recovery&v=55.00-r432&t='+Date.now();b.href=go;try{if('caches'in window){const k=await caches.keys();await Promise.all(k.filter(n=>n.startsWith('andrik-control-')||n.startsWith('andrik-site-')).map(n=>caches.delete(n)))}if('serviceWorker'in navigator){const r=await navigator.serviceWorker.register('/service-worker.js?v=54.96-control-recovery',{scope:'/',updateViaCache:'none'});if(r.installing)r.installing.postMessage({type:'SKIP_WAITING'});if(r.waiting)r.waiting.postMessage({type:'SKIP_WAITING'});await r.update().catch(()=>{});await new Promise(x=>setTimeout(x,1200))}s.textContent='Готово. Открываем админ-панель…';s.style.color='#bfffd9';b.hidden=false;setTimeout(()=>location.replace(go),650)}catch(e){s.textContent='Нажмите кнопку ниже. '+String(e&&e.message||e);s.style.color='#ffb9b9';b.hidden=false}})();</script></body></html>`;
+  return `<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#02060a"><meta name="robots" content="noindex,nofollow"><title>Восстановление Control ANDRIK</title><style>*{box-sizing:border-box}html,body{min-height:100%;margin:0;background:#02060a;color:#eff8ff;font-family:system-ui,-apple-system,Segoe UI,sans-serif}body{display:grid;place-items:center;padding:22px}.c{width:min(100%,520px);padding:30px 22px;border:1px solid #244455;border-radius:28px;background:linear-gradient(#081923,#030c13);text-align:center}.e{font-size:58px}h1{font-size:clamp(30px,8vw,44px);margin:12px 0}.s{color:#abc0cc;line-height:1.55}.b{display:inline-flex;min-height:54px;align-items:center;justify-content:center;margin-top:20px;padding:0 22px;border:1px solid #315b70;border-radius:999px;color:#eff8ff;text-decoration:none;font-weight:800;background:#0a2432}</style></head><body><main class="c"><div class="e">🟢</div><h1>Восстанавливаем Control</h1><p class="s" id="s">Заменяем старый перехват страниц безопасной версией…</p><a class="b" id="b" href="/control-home.html?page=menu&source=recovery&v=55.00-r433" hidden>Открыть Control</a></main><script>(async()=>{const s=document.getElementById('s'),b=document.getElementById('b'),go='/control-home.html?page=menu&source=recovery&v=55.00-r433&t='+Date.now();b.href=go;try{if('caches'in window){const k=await caches.keys();await Promise.all(k.filter(n=>n.startsWith('andrik-control-')||n.startsWith('andrik-site-')).map(n=>caches.delete(n)))}if('serviceWorker'in navigator){const r=await navigator.serviceWorker.register('/service-worker.js?v=54.96-control-recovery',{scope:'/',updateViaCache:'none'});if(r.installing)r.installing.postMessage({type:'SKIP_WAITING'});if(r.waiting)r.waiting.postMessage({type:'SKIP_WAITING'});await r.update().catch(()=>{});await new Promise(x=>setTimeout(x,1200))}s.textContent='Готово. Открываем админ-панель…';s.style.color='#bfffd9';b.hidden=false;setTimeout(()=>location.replace(go),650)}catch(e){s.textContent='Нажмите кнопку ниже. '+String(e&&e.message||e);s.style.color='#ffb9b9';b.hidden=false}})();</script></body></html>`;
 }
 
 
@@ -13057,7 +13091,7 @@ export default {
     try {
       if (request.method === 'GET' || request.method === 'HEAD') {
         const path = normalizedPath;
-        // R432: restore the proven R427 navigation path exactly: a normal static page request
+        // R433: preserve the proven R427 navigation path exactly: a normal static page request
         // with page=map&source=admin-globe. No special map fetch, alias or BFCache shim here.
         if (isControlHost && (path === '/analytics-admin.html' || path === '/analytics-admin')) {
           const page = String(url.searchParams.get('page') || '').toLowerCase();
@@ -13065,7 +13099,7 @@ export default {
           const allowedSide = (page === 'google' || page === 'youtube') && source === 'admin-hub-swipe';
           const allowedMap = page === 'map' && source === 'admin-globe';
           if (!allowedSide && !allowedMap) {
-            const adminUrl = new URL('/control-home.html?page=menu&source=launch-guard-r432&v=55.00-r432', url);
+            const adminUrl = new URL('/control-home.html?page=menu&source=launch-guard-r433&v=55.00-r433', url);
             return Response.redirect(adminUrl.toString(), 302);
           }
         }
