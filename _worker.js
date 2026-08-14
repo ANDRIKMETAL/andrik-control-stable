@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R438', number:438, version:'55.00', full:'55.00 LIVE WEB AI FINAL R438', siteUpdater:'55.00-r356' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R439', number:439, version:'55.00', full:'55.00 LIVE WEB AI FINAL R439', siteUpdater:'55.00-r356' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -2713,16 +2713,30 @@ async function handleOwnerSessionDelete(request) {
 async function handleControlEcosystemMap(request, env) {
   if (!adminAuthorized(request, env)) return json({ ok:false, error:'unauthorized' }, 401);
   const db = requireDb(env);
-  await Promise.all([ensureSiteMetricsSchema(db), ensurePushAutomationSchema(db)]);
+
+  // R439 — ecosystem-map recovery guard.
+  // City/source schema upgrades must never take the whole map endpoint down.
+  // The map only needs the long-standing event/geo columns, so run migrations
+  // best-effort and isolate every dashboard query from unrelated schema failures.
+  const schemaWarnings = [];
+  const schemaResults = await Promise.allSettled([
+    ensureSiteMetricsSchema(db),
+    ensurePushAutomationSchema(db)
+  ]);
+  schemaResults.forEach((result, index) => {
+    if (result.status === 'rejected') schemaWarnings.push(index === 0 ? 'site-metrics-schema' : 'push-schema');
+  });
+  const safeQueryR439 = task => Promise.resolve().then(task).catch(() => ({ results:[] }));
+
   const age = "-30 days";
   const [siteCountriesRaw, sitePointsRaw, musicCountriesRaw, musicPointsRaw, pushCountriesRaw, pushPointsRaw, linkRowsRaw, recentRaw] = await Promise.all([
-    db.prepare(`
+    safeQueryR439(() => db.prepare(`
       SELECT country, COUNT(DISTINCT visitor_hash) AS value, COUNT(*) AS events
       FROM site_visit_events
       WHERE event_type='visit' AND country<>'' AND datetime(created_at)>=datetime('now', ?)
       GROUP BY country ORDER BY value DESC, events DESC LIMIT 120
-    `).bind(age).all(),
-    db.prepare(`
+    `).bind(age).all()),
+    safeQueryR439(() => db.prepare(`
       SELECT country, MAX(region) AS region, MAX(city) AS city,
              ROUND(AVG(latitude),1) AS latitude, ROUND(AVG(longitude),1) AS longitude,
              COUNT(DISTINCT visitor_hash) AS value, COUNT(*) AS events, MAX(created_at) AS lastAt
@@ -2731,16 +2745,16 @@ async function handleControlEcosystemMap(request, env) {
         AND datetime(created_at)>=datetime('now', ?)
       GROUP BY country, region, city, ROUND(latitude,1), ROUND(longitude,1)
       ORDER BY value DESC, events DESC LIMIT 180
-    `).bind(age).all(),
-    db.prepare(`
+    `).bind(age).all()),
+    safeQueryR439(() => db.prepare(`
       SELECT country, COUNT(*) AS value,
              SUM(CASE WHEN event_type='music-download' THEN 1 ELSE 0 END) AS downloads,
              SUM(CASE WHEN event_type='music-listen' THEN 1 ELSE 0 END) AS listens
       FROM site_visit_events
       WHERE event_type IN ('music-download','music-listen') AND country<>'' AND datetime(created_at)>=datetime('now', ?)
       GROUP BY country ORDER BY value DESC LIMIT 120
-    `).bind(age).all(),
-    db.prepare(`
+    `).bind(age).all()),
+    safeQueryR439(() => db.prepare(`
       SELECT country, MAX(region) AS region, MAX(city) AS city,
              ROUND(AVG(latitude),1) AS latitude, ROUND(AVG(longitude),1) AS longitude,
              COUNT(*) AS value,
@@ -2752,14 +2766,14 @@ async function handleControlEcosystemMap(request, env) {
         AND latitude IS NOT NULL AND longitude IS NOT NULL AND datetime(created_at)>=datetime('now', ?)
       GROUP BY country, region, city, ROUND(latitude,1), ROUND(longitude,1)
       ORDER BY value DESC LIMIT 180
-    `).bind(age).all(),
-    db.prepare(`
+    `).bind(age).all()),
+    safeQueryR439(() => db.prepare(`
       SELECT country, COUNT(*) AS value
       FROM push_subscribers
       WHERE status='active' AND source<>'owner' AND country<>''
       GROUP BY country ORDER BY value DESC LIMIT 120
-    `).all(),
-    db.prepare(`
+    `).all()),
+    safeQueryR439(() => db.prepare(`
       SELECT country, MAX(region) AS region, MAX(city) AS city,
              ROUND(AVG(latitude),1) AS latitude, ROUND(AVG(longitude),1) AS longitude,
              COUNT(*) AS value, MAX(last_seen_at) AS lastAt
@@ -2767,62 +2781,62 @@ async function handleControlEcosystemMap(request, env) {
       WHERE status='active' AND source<>'owner' AND country<>'' AND latitude IS NOT NULL AND longitude IS NOT NULL
       GROUP BY country, region, city, ROUND(latitude,1), ROUND(longitude,1)
       ORDER BY value DESC LIMIT 180
-    `).all(),
-    db.prepare(`
+    `).all()),
+    safeQueryR439(() => db.prepare(`
       SELECT event_type AS type, COUNT(*) AS value
       FROM site_visit_events
       WHERE event_type IN ('telegram-open','youtube-open','spotify-open','apple-music-open','soundcloud-open','amazon-music-open')
         AND datetime(created_at)>=datetime('now', ?)
       GROUP BY event_type ORDER BY value DESC
-    `).bind(age).all(),
-    db.prepare(`
+    `).bind(age).all()),
+    safeQueryR439(() => db.prepare(`
       SELECT event_type AS type, country, region, city, latitude, longitude, target, created_at AS createdAt
       FROM site_visit_events
       WHERE datetime(created_at)>=datetime('now','-60 minutes')
       ORDER BY datetime(created_at) DESC LIMIT 40
-    `).all()
+    `).all())
   ]);
   const [siteWeeklyRaw, sitePreviousWeeklyRaw, musicWeeklyRaw, musicPreviousWeeklyRaw, pushWeeklyRaw, pushPreviousWeeklyRaw] = await Promise.all([
-    db.prepare(`
+    safeQueryR439(() => db.prepare(`
       SELECT country, COUNT(DISTINCT visitor_hash) AS value
       FROM site_visit_events
       WHERE event_type='visit' AND country<>'' AND datetime(created_at)>=datetime('now','-7 days')
       GROUP BY country ORDER BY value DESC LIMIT 120
-    `).all(),
-    db.prepare(`
+    `).all()),
+    safeQueryR439(() => db.prepare(`
       SELECT country, COUNT(DISTINCT visitor_hash) AS value
       FROM site_visit_events
       WHERE event_type='visit' AND country<>''
         AND datetime(created_at)>=datetime('now','-14 days') AND datetime(created_at)<datetime('now','-7 days')
       GROUP BY country ORDER BY value DESC LIMIT 120
-    `).all(),
-    db.prepare(`
+    `).all()),
+    safeQueryR439(() => db.prepare(`
       SELECT country, COUNT(*) AS value
       FROM site_visit_events
       WHERE event_type IN ('music-download','music-listen') AND country<>''
         AND datetime(created_at)>=datetime('now','-7 days')
       GROUP BY country ORDER BY value DESC LIMIT 120
-    `).all(),
-    db.prepare(`
+    `).all()),
+    safeQueryR439(() => db.prepare(`
       SELECT country, COUNT(*) AS value
       FROM site_visit_events
       WHERE event_type IN ('music-download','music-listen') AND country<>''
         AND datetime(created_at)>=datetime('now','-14 days') AND datetime(created_at)<datetime('now','-7 days')
       GROUP BY country ORDER BY value DESC LIMIT 120
-    `).all(),
-    db.prepare(`
+    `).all()),
+    safeQueryR439(() => db.prepare(`
       SELECT country, COUNT(*) AS value
       FROM push_subscribers
       WHERE status='active' AND source<>'owner' AND country<>'' AND datetime(created_at)>=datetime('now','-7 days')
       GROUP BY country ORDER BY value DESC LIMIT 120
-    `).all(),
-    db.prepare(`
+    `).all()),
+    safeQueryR439(() => db.prepare(`
       SELECT country, COUNT(*) AS value
       FROM push_subscribers
       WHERE status='active' AND source<>'owner' AND country<>''
         AND datetime(created_at)>=datetime('now','-14 days') AND datetime(created_at)<datetime('now','-7 days')
       GROUP BY country ORDER BY value DESC LIMIT 120
-    `).all()
+    `).all())
   ]);
   const normalizeWeekly = rows => (rows?.results || []).map(row => ({
     country: cleanPlainText(row.country || '', 8).toUpperCase(),
@@ -2850,12 +2864,13 @@ async function handleControlEcosystemMap(request, env) {
   })).filter(row => row.country && Number.isFinite(row.latitude) && Number.isFinite(row.longitude));
   const links = {};
   for (const row of linkRowsRaw?.results || []) links[cleanPlainText(row.type || '', 40)] = Number(row.value || 0);
-  const pushCounts = await getPushAudienceCounts(env);
+  const pushCounts = await getPushAudienceCounts(env).catch(() => ({}));
   return json({
     ok:true,
     updatedAt:new Date().toISOString(),
     periodDays:30,
     privacy:{ rawIpStored:false, coordinatePrecision:'0.1-degree', adminOnly:true },
+    diagnostics:{ recovery:'R439', schemaWarnings },
     site:{
       countries:normalizeCountries(siteCountriesRaw), points:normalizePoints(sitePointsRaw),
       weeklyCountries:normalizeWeekly(siteWeeklyRaw), previousWeekCountries:normalizeWeekly(sitePreviousWeeklyRaw)
@@ -5748,6 +5763,9 @@ async function handleControlCityTrafficSourceR438(request, env) {
   if (!/^[A-Z]{2}$/.test(country) || (!city && !region)) return json({ ok:false, error:'validation' }, 400);
   const range = trafficSourceDateRangeR438(url.searchParams.get('mode'), url.searchParams.get('date'));
   const db = requireDb(env);
+  // R439: source drilldown owns its schema preparation; the ecosystem map no longer
+  // depends on this migration succeeding.
+  await ensureSiteMetricsSchema(db).catch(() => {});
   const firstParty = await firstPartyCitySourcesR438(db,{country,city,region,range}).catch(error => ({ configured:false, rows:[], total:0, users:0, error:cleanPlainText(error?.message || error,240) }));
   // R438: the number shown on the city card is authoritative. Reconcile the source
   // breakdown to that SAME first-party ecosystem-event metric. Raw source fields are
@@ -13324,7 +13342,7 @@ function controlRecoveryServiceWorkerSource() {
 }
 
 function controlRecoveryPage() {
-  return `<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#02060a"><meta name="robots" content="noindex,nofollow"><title>Восстановление Control ANDRIK</title><style>*{box-sizing:border-box}html,body{min-height:100%;margin:0;background:#02060a;color:#eff8ff;font-family:system-ui,-apple-system,Segoe UI,sans-serif}body{display:grid;place-items:center;padding:22px}.c{width:min(100%,520px);padding:30px 22px;border:1px solid #244455;border-radius:28px;background:linear-gradient(#081923,#030c13);text-align:center}.e{font-size:58px}h1{font-size:clamp(30px,8vw,44px);margin:12px 0}.s{color:#abc0cc;line-height:1.55}.b{display:inline-flex;min-height:54px;align-items:center;justify-content:center;margin-top:20px;padding:0 22px;border:1px solid #315b70;border-radius:999px;color:#eff8ff;text-decoration:none;font-weight:800;background:#0a2432}</style></head><body><main class="c"><div class="e">🟢</div><h1>Восстанавливаем Control</h1><p class="s" id="s">Заменяем старый перехват страниц безопасной версией…</p><a class="b" id="b" href="/control-home.html?page=menu&source=recovery&v=55.00-r438" hidden>Открыть Control</a></main><script>(async()=>{const s=document.getElementById('s'),b=document.getElementById('b'),go='/control-home.html?page=menu&source=recovery&v=55.00-r438&t='+Date.now();b.href=go;try{if('caches'in window){const k=await caches.keys();await Promise.all(k.filter(n=>n.startsWith('andrik-control-')||n.startsWith('andrik-site-')).map(n=>caches.delete(n)))}if('serviceWorker'in navigator){const r=await navigator.serviceWorker.register('/service-worker.js?v=54.96-control-recovery',{scope:'/',updateViaCache:'none'});if(r.installing)r.installing.postMessage({type:'SKIP_WAITING'});if(r.waiting)r.waiting.postMessage({type:'SKIP_WAITING'});await r.update().catch(()=>{});await new Promise(x=>setTimeout(x,1200))}s.textContent='Готово. Открываем админ-панель…';s.style.color='#bfffd9';b.hidden=false;setTimeout(()=>location.replace(go),650)}catch(e){s.textContent='Нажмите кнопку ниже. '+String(e&&e.message||e);s.style.color='#ffb9b9';b.hidden=false}})();</script></body></html>`;
+  return `<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#02060a"><meta name="robots" content="noindex,nofollow"><title>Восстановление Control ANDRIK</title><style>*{box-sizing:border-box}html,body{min-height:100%;margin:0;background:#02060a;color:#eff8ff;font-family:system-ui,-apple-system,Segoe UI,sans-serif}body{display:grid;place-items:center;padding:22px}.c{width:min(100%,520px);padding:30px 22px;border:1px solid #244455;border-radius:28px;background:linear-gradient(#081923,#030c13);text-align:center}.e{font-size:58px}h1{font-size:clamp(30px,8vw,44px);margin:12px 0}.s{color:#abc0cc;line-height:1.55}.b{display:inline-flex;min-height:54px;align-items:center;justify-content:center;margin-top:20px;padding:0 22px;border:1px solid #315b70;border-radius:999px;color:#eff8ff;text-decoration:none;font-weight:800;background:#0a2432}</style></head><body><main class="c"><div class="e">🟢</div><h1>Восстанавливаем Control</h1><p class="s" id="s">Заменяем старый перехват страниц безопасной версией…</p><a class="b" id="b" href="/control-home.html?page=menu&source=recovery&v=55.00-r439" hidden>Открыть Control</a></main><script>(async()=>{const s=document.getElementById('s'),b=document.getElementById('b'),go='/control-home.html?page=menu&source=recovery&v=55.00-r439&t='+Date.now();b.href=go;try{if('caches'in window){const k=await caches.keys();await Promise.all(k.filter(n=>n.startsWith('andrik-control-')||n.startsWith('andrik-site-')).map(n=>caches.delete(n)))}if('serviceWorker'in navigator){const r=await navigator.serviceWorker.register('/service-worker.js?v=54.96-control-recovery',{scope:'/',updateViaCache:'none'});if(r.installing)r.installing.postMessage({type:'SKIP_WAITING'});if(r.waiting)r.waiting.postMessage({type:'SKIP_WAITING'});await r.update().catch(()=>{});await new Promise(x=>setTimeout(x,1200))}s.textContent='Готово. Открываем админ-панель…';s.style.color='#bfffd9';b.hidden=false;setTimeout(()=>location.replace(go),650)}catch(e){s.textContent='Нажмите кнопку ниже. '+String(e&&e.message||e);s.style.color='#ffb9b9';b.hidden=false}})();</script></body></html>`;
 }
 
 
@@ -13446,7 +13464,7 @@ export default {
           const allowedSide = (page === 'google' || page === 'youtube') && source === 'admin-hub-swipe';
           const allowedMap = page === 'map' && source === 'admin-globe';
           if (!allowedSide && !allowedMap) {
-            const adminUrl = new URL('/control-home.html?page=menu&source=launch-guard-r438&v=55.00-r438', url);
+            const adminUrl = new URL('/control-home.html?page=menu&source=launch-guard-r439&v=55.00-r439', url);
             return Response.redirect(adminUrl.toString(), 302);
           }
         }

@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786721275170-b73b441794",
-  "release": "R438",
-  "archiveName": "R438-R437-CITY-SOURCE-EXACT-TOTALS-SAFE-FULL.zip",
-  "sourceHead": "94969679ef56e6f5a14c38d12a7c567fc6c35670",
-  "backupSha": "94969679ef56e6f5a14c38d12a7c567fc6c35670",
-  "backupTag": "control-backup-20260814152751-9496967-r438-1851e",
+  "operationId": "publish-1786740232163-968b6e9259",
+  "release": "R439",
+  "archiveName": "R439-R438-ECOSYSTEM-MUSIC-PUSH-MAP-RECOVERY-SAFE-FULL.zip",
+  "sourceHead": "2585cefe56d497c9df97dd90f2a884419a5748e6",
+  "backupSha": "2585cefe56d497c9df97dd90f2a884419a5748e6",
+  "backupTag": "control-backup-20260814204348-2585cef-r439-26a9d",
   "autoRecovery": true,
-  "generatedAt": "2026-08-14T15:27:55.170Z"
+  "generatedAt": "2026-08-14T20:43:52.163Z"
 }
