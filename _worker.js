@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R433', number:433, version:'55.00', full:'55.00 LIVE WEB AI FINAL R433', siteUpdater:'55.00-r356' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R434', number:434, version:'55.00', full:'55.00 LIVE WEB AI FINAL R434', siteUpdater:'55.00-r356' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -3161,6 +3161,99 @@ async function claimYoutubeReleaseOnceR332(db, videoId, value = new Date().toISO
   return { ok:Boolean(claimed), reason:claimed ? 'claimed' : 'busy', key };
 }
 
+
+// R434: a freshly published release must start its like high-water mark at ZERO.
+// R433 could seed the current public likeCount during WebSub discovery; if the first
+// like already existed at that instant, the 2-minute engagement loop treated it as
+// historical and never pushed it. This helper also repairs that R433 baseline once
+// for a recent release that already has a confirmed release notification.
+async function ensureYoutubeReleaseLikeZeroBaselineR434(db, item = {}, origin = 'release-r434', options = {}) {
+  const videoId = cleanPlainText(item?.videoId || item?.id || '', 40);
+  if (!videoId) return {ok:false,skipped:true,reason:'video-id-required'};
+  const markerKey = `youtube-like-zero-baseline-r434:${videoId}`;
+  const marker = await getPushState(db, markerKey).catch(() => null);
+  if (marker?.value) return {ok:true,skipped:true,reason:'already-initialized'};
+
+  const force = Boolean(options.force);
+  const publishedAt = cleanPlainText(item?.publishedAt || '', 60);
+  const publishedMs = Date.parse(publishedAt || '');
+  const freshWindowMs = 6 * 60 * 60 * 1000;
+  if (!force) {
+    if (!Number.isFinite(publishedMs) || publishedMs > Date.now() + 10 * 60 * 1000 || Date.now() - publishedMs > freshWindowMs) {
+      return {ok:true,skipped:true,reason:'not-fresh-release'};
+    }
+    const releaseDelivered = await db.prepare(`
+      SELECT 1 AS found FROM push_history
+      WHERE type='auto-release' AND status='sent' AND video_id=?
+        AND onesignal_id IS NOT NULL AND onesignal_id!=''
+      ORDER BY created_at DESC LIMIT 1
+    `).bind(videoId).first().catch(() => null);
+    if (!releaseDelivered?.found) return {ok:true,skipped:true,reason:'release-push-not-confirmed'};
+  }
+
+  // Never rewind a video that already produced a confirmed like notification.
+  const likeDelivered = await db.prepare(`
+    SELECT 1 AS found FROM push_history
+    WHERE type='youtube-like' AND status='sent' AND video_id=?
+    ORDER BY created_at DESC LIMIT 1
+  `).bind(videoId).first().catch(() => null);
+  if (likeDelivered?.found) {
+    await setPushState(db, markerKey, JSON.stringify({
+      initializedAt:new Date().toISOString(), origin, mode:'kept-after-confirmed-like'
+    })).catch(() => {});
+    return {ok:true,skipped:true,reason:'like-already-delivered'};
+  }
+
+  const key = `like-count:${videoId}`;
+  const existing = await getYoutubeEventRow(db, key).catch(() => null);
+  const baselinePayload = {
+    videoId,
+    title:cleanPlainText(item?.title || existing?.title || 'Видео ANDRIK', 180),
+    publishedAt,
+    thumbnail:item?.thumbnail || '',
+    likes:0,
+    url:cleanPlainText(item?.url || `https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`, 700),
+    zeroBaselineR434:true,
+    baselineOrigin:cleanPlainText(origin, 80),
+    baselineInitializedAt:new Date().toISOString()
+  };
+  const payloadJson = JSON.stringify(baselinePayload);
+
+  if (existing) {
+    // saveYoutubeEventRow intentionally keeps MAX() for like high-water marks, so
+    // this one-time R433 repair must use a guarded direct reset to zero.
+    await db.prepare(`
+      UPDATE youtube_event_seen
+      SET count_value=0,
+          title=CASE WHEN ?!='' THEN ? ELSE title END,
+          url=CASE WHEN ?!='' THEN ? ELSE url END,
+          payload_json=?,
+          last_seen_at=datetime('now')
+      WHERE event_key=?
+    `).bind(
+      baselinePayload.title, baselinePayload.title,
+      baselinePayload.url, baselinePayload.url,
+      payloadJson, key
+    ).run();
+  } else {
+    await saveYoutubeEventRow(db, {
+      key,
+      type:'like-count',
+      resourceId:videoId,
+      videoId,
+      title:baselinePayload.title,
+      countValue:0,
+      url:baselinePayload.url,
+      payload:baselinePayload
+    });
+  }
+
+  await setPushState(db, markerKey, JSON.stringify({
+    initializedAt:new Date().toISOString(), origin, previousBaseline:Number(existing?.countValue || 0), baseline:0
+  })).catch(() => {});
+  return {ok:true,reset:true,previousBaseline:Number(existing?.countValue || 0),baseline:0};
+}
+
 async function resolveYoutubeWebSubChannelIdR332(env, db) {
   const explicit = cleanPlainText(env.YOUTUBE_CHANNEL_ID || '', 120);
   if (explicit) return explicit;
@@ -3339,7 +3432,14 @@ async function pushYoutubeReleaseItemR332(env, db, item, origin='websub') {
   const videoId = cleanPlainText(item?.videoId || '',80);
   if (!videoId) return {ok:false,error:'video-id-required'};
   const claim = await claimYoutubeReleaseOnceR332(db, videoId, `${origin}:${new Date().toISOString()}`);
-  if (!claim.ok) return {ok:true,skipped:true,reason:claim.reason,videoId};
+  if (!claim.ok) {
+    // R434 migration path: when R433 already sent the release but seeded its first
+    // like as the baseline, the next 5-minute release check repairs it once.
+    if (claim.reason === 'already-sent') {
+      await ensureYoutubeReleaseLikeZeroBaselineR434(db, item, `${origin}-already-sent-r434`, {force:false}).catch(() => {});
+    }
+    return {ok:true,skipped:true,reason:claim.reason,videoId};
+  }
 
   const releaseTitle = normalizeReleaseTitle(item.title);
   const releaseUrl = `https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`;
@@ -3367,6 +3467,7 @@ async function pushYoutubeReleaseItemR332(env, db, item, origin='websub') {
     await releasePushOnceClaim(db, claim.key).catch(() => {});
     return {ok:false,error:result.error || 'push-failed',videoId,title:releaseTitle};
   }
+  await ensureYoutubeReleaseLikeZeroBaselineR434(db, item, `${origin}-release-sent-r434`, {force:true}).catch(() => {});
   await db.prepare(`
     INSERT OR IGNORE INTO push_playlist_seen (video_id,title,published_at,first_seen_at)
     VALUES (?,?,?,datetime('now'))
@@ -3406,17 +3507,20 @@ async function processYoutubeWebSubNotificationR332(env, payload) {
     try{
       const {data}=await youtubeApiJson(env,'videos',{part:'snippet,statistics',id:item.videoId,maxResults:1});
       const video=data?.items?.[0];
-      if(video && !await getYoutubeEventRow(db,`like-count:${item.videoId}`)){
+      if(video){
         const baseline={
           videoId:cleanPlainText(video.id || item.videoId,40),
           title:cleanPlainText(video?.snippet?.title || item.title || 'Видео ANDRIK',180),
           publishedAt:cleanPlainText(video?.snippet?.publishedAt || item.publishedAt || '',50),
           thumbnail:video?.snippet?.thumbnails?.high?.url || video?.snippet?.thumbnails?.medium?.url || item.thumbnail || '',
-          likes:Number(video?.statistics?.likeCount || 0),comments:Number(video?.statistics?.commentCount || 0),
+          likes:0,comments:Number(video?.statistics?.commentCount || 0),
           url:`https://www.youtube.com/watch?v=${encodeURIComponent(video.id || item.videoId)}`
         };
-        await saveYoutubeEventRow(db,{key:`like-count:${baseline.videoId}`,type:'like-count',resourceId:baseline.videoId,videoId:baseline.videoId,title:baseline.title,countValue:baseline.likes,url:baseline.url,payload:baseline});
-        await saveYoutubeEventRow(db,{key:`comment-count:${baseline.videoId}`,type:'comment-count',resourceId:baseline.videoId,videoId:baseline.videoId,title:baseline.title,countValue:baseline.comments,url:baseline.url,payload:baseline});
+        // R434: never absorb the first public like into the release baseline.
+        await ensureYoutubeReleaseLikeZeroBaselineR434(db,baseline,'websub-stats-r434',{force:true}).catch(()=>{});
+        if(!await getYoutubeEventRow(db,`comment-count:${baseline.videoId}`)){
+          await saveYoutubeEventRow(db,{key:`comment-count:${baseline.videoId}`,type:'comment-count',resourceId:baseline.videoId,videoId:baseline.videoId,title:baseline.title,countValue:baseline.comments,url:baseline.url,payload:baseline});
+        }
       }
     }catch(_){}
     await setPushState(db,'youtube-websub-last-result-r332',JSON.stringify(result)).catch(() => {});
@@ -3609,6 +3713,7 @@ async function handleCheckPlaylist(request, env) {
       if (result.ok) {
         notified += 1;
         sentItems.push({ videoId: item.videoId, title: releaseTitle, oneSignalId: result.oneSignalId || '' });
+        await ensureYoutubeReleaseLikeZeroBaselineR434(db, item, 'playlist-release-sent-r434', {force:true}).catch(() => {});
         await db.prepare(`
           INSERT OR IGNORE INTO push_playlist_seen (video_id, title, published_at, first_seen_at)
           VALUES (?, ?, ?, datetime('now'))
@@ -6336,16 +6441,19 @@ async function fetchFastYoutubeCommentsR333(env,channelId){
 async function fetchFastYoutubeLikesR333(env,db){
   const allIds=await loadFastYoutubeVideoIdsR333(db,50);
   if(!allIds.length)return [];
-  // R416: inspect only 24 videos per 2-minute request, rotating through the full
-  // recent set. This roughly halves JSON/D1 loop CPU while still covering ~50
-  // videos across consecutive cycles.
+  // R434: keep the newest upload in EVERY 2-minute like request. The remaining
+  // 23 slots still rotate through the historical pool, so CPU/API cost stays the
+  // same while a fresh release can no longer wait for the alternate rotation.
+  const newestId=allIds[0];
+  const rotatingPool=allIds.slice(1);
   const offsetRow=await getPushState(db,'youtube-fast-like-offset-r416').catch(()=>null);
   const rawOffset=Math.max(0,Number(offsetRow?.value || 0));
-  const offset=allIds.length ? rawOffset % allIds.length : 0;
+  const offset=rotatingPool.length ? rawOffset % rotatingPool.length : 0;
   const take=Math.min(24,allIds.length);
-  const ids=[];
-  for(let i=0;i<take;i++)ids.push(allIds[(offset+i)%allIds.length]);
-  const nextOffset=allIds.length ? (offset+take)%allIds.length : 0;
+  const rotatingTake=Math.max(0,take-1);
+  const ids=[newestId];
+  for(let i=0;i<rotatingTake;i++)ids.push(rotatingPool[(offset+i)%rotatingPool.length]);
+  const nextOffset=rotatingPool.length ? (offset+rotatingTake)%rotatingPool.length : 0;
   await setPushState(db,'youtube-fast-like-offset-r416',String(nextOffset)).catch(()=>{});
   const {data}=await youtubeApiJson(env,'videos',{part:'snippet,statistics',id:ids.join(','),maxResults:24});
   return (data.items || []).map(video=>({
@@ -6425,6 +6533,9 @@ async function handleFastYoutubeEngagementR333(request,env,options={}){
     }
 
     for(const item of videos){
+      // R434 repair is safe here because it only acts on a recent video with a
+      // confirmed release push and no previously confirmed like notification.
+      await ensureYoutubeReleaseLikeZeroBaselineR434(db,item,'engagement-2m-r434',{force:false}).catch(()=>{});
       const key=`like-count:${item.videoId}`;
       const previous=await getYoutubeEventRow(db,key);
       if(!previous){
@@ -8957,9 +9068,9 @@ async function handleCronYoutubeEventsAckR416(request, env) {
   return json({ok:true,healthy:true,degraded:false,skipped:true,mode:'youtube-cron-fallback-ack-r416',reason:'fast-engagement-owned-by-2m-gateway',checkedAt:new Date().toISOString()},200);
 }
 
-async function runCronFiveMinuteSliceR433(request, env, clock) {
+async function runCronFiveMinuteSliceR434(request, env, clock) {
   const local=getBratislavaClock();
-  // R433: release detection is now checked on EVERY */5 invocation.
+  // R434: keep R433 release-every-5m behavior and add first-like zero-baseline recovery.
   // R416 alternated release/subscriber slices, so a release could effectively wait
   // 10 minutes (and longer if YouTube indexed it just after a release slice).
   // We keep the lightweight CPU-safe paths: release is always first priority; when
@@ -8986,8 +9097,8 @@ async function runCronFiveMinuteSliceR433(request, env, clock) {
       value:{
         ok:false,
         release,
-        subscriber:{ok:true,skipped:true,reason:'release-check-failed-first-priority-r433'},
-        mode:'release-every-5m-r433'
+        subscriber:{ok:true,skipped:true,reason:'release-check-failed-first-priority-r434'},
+        mode:'release-every-5m-r434'
       }
     };
   }
@@ -8998,20 +9109,20 @@ async function runCronFiveMinuteSliceR433(request, env, clock) {
       value:{
         ok:true,
         release,
-        subscriber:{ok:true,skipped:true,reason:'release-sent-first-priority-r433'},
-        mode:'release-every-5m-r433'
+        subscriber:{ok:true,skipped:true,reason:'release-sent-first-priority-r434'},
+        mode:'release-every-5m-r434'
       }
     };
   }
 
-  const subscriber=await handleFastYoutubeSubscriberCountR416(request,env,{source:'gateway-subscriber-r433'});
+  const subscriber=await handleFastYoutubeSubscriberCountR416(request,env,{source:'gateway-subscriber-r434'});
   return {
     task:'release+subscriber',
     value:{
       ok:subscriber?.ok!==false,
       release,
       subscriber,
-      mode:'release-every-5m-r433'
+      mode:'release-every-5m-r434'
     }
   };
 }
@@ -9074,7 +9185,7 @@ async function handleExternalCronGatewayR334(request, env, ctx) {
     }else if(clock.due5){
       claimed=await claimCronGatewaySlotR334(db,'five-minute-slice-r416',clock.slot5);
       if(claimed){
-        const slice=await runCronFiveMinuteSliceR433(request,env,clock);
+        const slice=await runCronFiveMinuteSliceR434(request,env,clock);
         task=slice.task; value=slice.value;
       }else value={ok:true,skipped:true,reason:'slot-already-claimed'};
     }else if(clock.due15){
@@ -12977,7 +13088,7 @@ function controlRecoveryServiceWorkerSource() {
 }
 
 function controlRecoveryPage() {
-  return `<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#02060a"><meta name="robots" content="noindex,nofollow"><title>Восстановление Control ANDRIK</title><style>*{box-sizing:border-box}html,body{min-height:100%;margin:0;background:#02060a;color:#eff8ff;font-family:system-ui,-apple-system,Segoe UI,sans-serif}body{display:grid;place-items:center;padding:22px}.c{width:min(100%,520px);padding:30px 22px;border:1px solid #244455;border-radius:28px;background:linear-gradient(#081923,#030c13);text-align:center}.e{font-size:58px}h1{font-size:clamp(30px,8vw,44px);margin:12px 0}.s{color:#abc0cc;line-height:1.55}.b{display:inline-flex;min-height:54px;align-items:center;justify-content:center;margin-top:20px;padding:0 22px;border:1px solid #315b70;border-radius:999px;color:#eff8ff;text-decoration:none;font-weight:800;background:#0a2432}</style></head><body><main class="c"><div class="e">🟢</div><h1>Восстанавливаем Control</h1><p class="s" id="s">Заменяем старый перехват страниц безопасной версией…</p><a class="b" id="b" href="/control-home.html?page=menu&source=recovery&v=55.00-r433" hidden>Открыть Control</a></main><script>(async()=>{const s=document.getElementById('s'),b=document.getElementById('b'),go='/control-home.html?page=menu&source=recovery&v=55.00-r433&t='+Date.now();b.href=go;try{if('caches'in window){const k=await caches.keys();await Promise.all(k.filter(n=>n.startsWith('andrik-control-')||n.startsWith('andrik-site-')).map(n=>caches.delete(n)))}if('serviceWorker'in navigator){const r=await navigator.serviceWorker.register('/service-worker.js?v=54.96-control-recovery',{scope:'/',updateViaCache:'none'});if(r.installing)r.installing.postMessage({type:'SKIP_WAITING'});if(r.waiting)r.waiting.postMessage({type:'SKIP_WAITING'});await r.update().catch(()=>{});await new Promise(x=>setTimeout(x,1200))}s.textContent='Готово. Открываем админ-панель…';s.style.color='#bfffd9';b.hidden=false;setTimeout(()=>location.replace(go),650)}catch(e){s.textContent='Нажмите кнопку ниже. '+String(e&&e.message||e);s.style.color='#ffb9b9';b.hidden=false}})();</script></body></html>`;
+  return `<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#02060a"><meta name="robots" content="noindex,nofollow"><title>Восстановление Control ANDRIK</title><style>*{box-sizing:border-box}html,body{min-height:100%;margin:0;background:#02060a;color:#eff8ff;font-family:system-ui,-apple-system,Segoe UI,sans-serif}body{display:grid;place-items:center;padding:22px}.c{width:min(100%,520px);padding:30px 22px;border:1px solid #244455;border-radius:28px;background:linear-gradient(#081923,#030c13);text-align:center}.e{font-size:58px}h1{font-size:clamp(30px,8vw,44px);margin:12px 0}.s{color:#abc0cc;line-height:1.55}.b{display:inline-flex;min-height:54px;align-items:center;justify-content:center;margin-top:20px;padding:0 22px;border:1px solid #315b70;border-radius:999px;color:#eff8ff;text-decoration:none;font-weight:800;background:#0a2432}</style></head><body><main class="c"><div class="e">🟢</div><h1>Восстанавливаем Control</h1><p class="s" id="s">Заменяем старый перехват страниц безопасной версией…</p><a class="b" id="b" href="/control-home.html?page=menu&source=recovery&v=55.00-r434" hidden>Открыть Control</a></main><script>(async()=>{const s=document.getElementById('s'),b=document.getElementById('b'),go='/control-home.html?page=menu&source=recovery&v=55.00-r434&t='+Date.now();b.href=go;try{if('caches'in window){const k=await caches.keys();await Promise.all(k.filter(n=>n.startsWith('andrik-control-')||n.startsWith('andrik-site-')).map(n=>caches.delete(n)))}if('serviceWorker'in navigator){const r=await navigator.serviceWorker.register('/service-worker.js?v=54.96-control-recovery',{scope:'/',updateViaCache:'none'});if(r.installing)r.installing.postMessage({type:'SKIP_WAITING'});if(r.waiting)r.waiting.postMessage({type:'SKIP_WAITING'});await r.update().catch(()=>{});await new Promise(x=>setTimeout(x,1200))}s.textContent='Готово. Открываем админ-панель…';s.style.color='#bfffd9';b.hidden=false;setTimeout(()=>location.replace(go),650)}catch(e){s.textContent='Нажмите кнопку ниже. '+String(e&&e.message||e);s.style.color='#ffb9b9';b.hidden=false}})();</script></body></html>`;
 }
 
 
@@ -13099,7 +13210,7 @@ export default {
           const allowedSide = (page === 'google' || page === 'youtube') && source === 'admin-hub-swipe';
           const allowedMap = page === 'map' && source === 'admin-globe';
           if (!allowedSide && !allowedMap) {
-            const adminUrl = new URL('/control-home.html?page=menu&source=launch-guard-r433&v=55.00-r433', url);
+            const adminUrl = new URL('/control-home.html?page=menu&source=launch-guard-r434&v=55.00-r434', url);
             return Response.redirect(adminUrl.toString(), 302);
           }
         }
