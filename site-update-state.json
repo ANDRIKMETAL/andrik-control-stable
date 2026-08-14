@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786654368810-c3249021db",
-  "release": "R427",
-  "archiveName": "R427-LANDSCAPE-CITY-PANEL-IN-FRAME-SAFE-FULL.zip",
-  "sourceHead": "3714eb2bafc16bdd01186578b2e4681f3e17df66",
-  "backupSha": "3714eb2bafc16bdd01186578b2e4681f3e17df66",
-  "backupTag": "control-backup-20260813205244-3714eb2-r427-59d7e",
+  "operationId": "publish-1786676335719-1ae7799011",
+  "release": "R428",
+  "archiveName": "R428-MAP-REENTRY-LANDSCAPE-WORLD-SCROLL-SAFE-FULL.zip",
+  "sourceHead": "a69fa8c982021a2db593b16b2d88922ebcbe57c9",
+  "backupSha": "a69fa8c982021a2db593b16b2d88922ebcbe57c9",
+  "backupTag": "control-backup-20260814025851-a69fa8c-r428-1403b",
   "autoRecovery": true,
-  "generatedAt": "2026-08-13T20:52:48.810Z"
+  "generatedAt": "2026-08-14T02:58:55.719Z"
 }

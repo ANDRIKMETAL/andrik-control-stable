@@ -13050,8 +13050,21 @@ export default {
           const allowedSide = (page === 'google' || page === 'youtube') && source === 'admin-hub-swipe';
           const allowedMap = page === 'map' && source === 'admin-globe';
           if (!allowedSide && !allowedMap) {
-            const adminUrl = new URL('/control-home.html?page=menu&source=launch-guard-r420&v=55.00-r422', url);
+            const adminUrl = new URL('/control-home.html?page=menu&source=launch-guard-r428&v=55.00-r428', url);
             return Response.redirect(adminUrl.toString(), 302);
+          }
+          // R428: every globe tap is a fresh map document. This prevents Android/PWA
+          // history/BFCache from restoring a stale map entry that immediately ejects back to Admin.
+          if (allowedMap) {
+            const assetUrl = new URL('/analytics-admin.html', url);
+            const assetResponse = await env.ASSETS.fetch(new Request(assetUrl.toString(), request));
+            const mapHeaders = new Headers(assetResponse.headers);
+            mapHeaders.set('cache-control', 'no-store, no-cache, must-revalidate, max-age=0');
+            mapHeaders.set('pragma', 'no-cache');
+            mapHeaders.set('expires', '0');
+            mapHeaders.set('x-andrik-map-entry', 'R428-fresh');
+            const freshMap = new Response(assetResponse.body, {status:assetResponse.status,statusText:assetResponse.statusText,headers:mapHeaders});
+            return allowControlPlayerFrame(freshMap, url, isControlHost);
           }
         }
         // R420: Admin panel is the permanent Control home. The listener map opens only from the green globe.

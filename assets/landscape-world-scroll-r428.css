@@ -1,0 +1,19 @@
+/* ANDRIK R428 — landscape world overview can pan down enough to expose portrait-return control. */
+@media screen and (orientation:landscape){
+  body.analytics-admin-page.analytics-v54-46-page:not(.is-country-focus-active):not(.is-country-deep-active) .analytics-map-pane{
+    height:100dvh!important;max-height:100dvh!important;overflow-y:auto!important;overflow-x:hidden!important;
+    overscroll-behavior-y:contain!important;touch-action:pan-y!important;-webkit-overflow-scrolling:touch!important;scrollbar-width:none!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page:not(.is-country-focus-active):not(.is-country-deep-active) .analytics-map-pane::-webkit-scrollbar{display:none!important}
+  body.analytics-admin-page.analytics-v54-46-page:not(.is-country-focus-active):not(.is-country-deep-active) .analytics-map-pane>.analytics-pane-wrap.analytics-map-pane-wrap,
+  body.analytics-admin-page.analytics-v54-46-page:not(.is-country-focus-active):not(.is-country-deep-active) .analytics-map-pane>.analytics-map-pane-wrap.analytics-pane-wrap{
+    height:calc(100dvh + 92px)!important;min-height:calc(100dvh + 92px)!important;max-height:none!important;overflow:visible!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page:not(.is-country-focus-active):not(.is-country-deep-active) .analytics-map-pane .analytics-map-top:not(.has-country-focus){
+    top:0!important;bottom:auto!important;height:calc(100dvh + 92px)!important;min-height:calc(100dvh + 92px)!important;max-height:none!important;
+    padding:74px 18px 96px!important;overflow:visible!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page:not(.is-country-focus-active):not(.is-country-deep-active) .analytics-map-pane #worldMap{
+    height:calc(100dvh - 78px)!important;min-height:260px!important;max-height:none!important;flex:none!important;
+  }
+}
