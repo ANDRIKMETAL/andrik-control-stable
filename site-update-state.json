@@ -1,14 +1,14 @@
 {
   "schema": 1,
   "updaterVersion": "55.00-r356",
-  "operation": "publish",
-  "reinstall": false,
-  "operationId": "publish-1786678219761-1fcb4ee06a",
+  "operation": "reinstall",
+  "reinstall": true,
+  "operationId": "reinstall-1786678316586-5f7d5b58de",
   "release": "R431",
   "archiveName": "R431-R427-MAP-ENTRY-LANDSCAPE-GLOBE-SCROLL-SAFE-FULL.zip",
-  "sourceHead": "69690ad871268e206fef4e05c42c8dbdaa108707",
-  "backupSha": "69690ad871268e206fef4e05c42c8dbdaa108707",
-  "backupTag": "control-backup-20260814033015-69690ad-r431-dc7ad",
+  "sourceHead": "c81a021d6593f6f19605e6d3be8bb881a4d612e6",
+  "backupSha": "c81a021d6593f6f19605e6d3be8bb881a4d612e6",
+  "backupTag": "control-backup-20260814033152-c81a021-r431-9942f",
   "autoRecovery": true,
-  "generatedAt": "2026-08-14T03:30:19.761Z"
+  "generatedAt": "2026-08-14T03:31:56.586Z"
 }
