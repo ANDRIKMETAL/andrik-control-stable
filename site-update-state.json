@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786689622797-f5a35d5af3",
-  "release": "R434",
-  "archiveName": "R434-R433-FIRST-LIKE-ZERO-BASELINE-NEWEST-2M-SAFE-FULL.zip",
-  "sourceHead": "12ea04a0932308d6fbbaf838972df186349e9c1c",
-  "backupSha": "12ea04a0932308d6fbbaf838972df186349e9c1c",
-  "backupTag": "control-backup-20260814064016-12ea04a-r434-2144f",
+  "operationId": "publish-1786709060641-045a0dd6b7",
+  "release": "R436",
+  "archiveName": "R436-R434-YOUTUBE-COMMENT-REPLY-PUSH-RECOVERY-SAFE-FULL.zip",
+  "sourceHead": "fa6b71f6079a2ffbbe31cfefac6eac36fd3cce82",
+  "backupSha": "fa6b71f6079a2ffbbe31cfefac6eac36fd3cce82",
+  "backupTag": "control-backup-20260814120416-fa6b71f-r436-523d7",
   "autoRecovery": true,
-  "generatedAt": "2026-08-14T06:40:22.797Z"
+  "generatedAt": "2026-08-14T12:04:20.641Z"
 }

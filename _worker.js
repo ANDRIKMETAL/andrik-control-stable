@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R434', number:434, version:'55.00', full:'55.00 LIVE WEB AI FINAL R434', siteUpdater:'55.00-r356' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R436', number:436, version:'55.00', full:'55.00 LIVE WEB AI FINAL R436', siteUpdater:'55.00-r356' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -6438,6 +6438,73 @@ async function fetchFastYoutubeCommentsR333(env,channelId){
   return uniqueYoutubeComments(items);
 }
 
+
+// R436: commentThreads(part=replies) only embeds a subset of replies. A fresh reply can
+// increase totalReplyCount while being absent from thread.replies.comments, so the old
+// 2-minute path could miss it forever. Keep the cheap channel-wide request, but when an
+// incomplete thread's reply total increases, fetch that parent explicitly with comments.list.
+// The per-thread reply-count high-water prevents repeating those extra API calls every 2m.
+async function fetchFastYoutubeCommentsR436(env,db,channelId){
+  const {data}=await youtubeApiJson(env,'commentThreads',{
+    part:'snippet,replies',allThreadsRelatedToChannelId:channelId,maxResults:50,order:'time',textFormat:'plainText'
+  });
+  const items=[];
+  const incomplete=[];
+  for(const thread of data.items || []){
+    const top=parseYoutubeCommentItem(thread?.snippet?.topLevelComment || {});
+    if(top.id)items.push(top);
+    const embedded=thread?.replies?.comments || [];
+    for(const reply of embedded){
+      const item=parseYoutubeCommentItem(reply,{videoId:top.videoId});
+      if(item.id)items.push(item);
+    }
+    const totalReplies=Math.max(0,Number(thread?.snippet?.totalReplyCount || 0));
+    if(top.id && totalReplies>embedded.length){
+      incomplete.push({parentId:top.id,videoId:top.videoId,totalReplies});
+    }
+  }
+
+  if(incomplete.length){
+    const rows=await db.prepare(`
+      SELECT resource_id AS parentId,count_value AS countValue
+      FROM youtube_event_seen
+      WHERE event_type='reply-count'
+      ORDER BY datetime(last_seen_at) DESC
+      LIMIT 200
+    `).all().catch(()=>({results:[]}));
+    const seen=new Map((rows.results || []).map(row=>[
+      cleanPlainText(row.parentId || '',140),Math.max(0,Number(row.countValue || 0))
+    ]));
+    // Four parents per 2-minute cycle is enough to drain a backlog quickly while keeping
+    // YouTube quota/CPU bounded. Successfully checked parents are high-watered, so the next
+    // cycle naturally advances to any remaining incomplete threads.
+    const candidates=incomplete
+      .filter(row=>row.totalReplies>Math.max(0,Number(seen.get(row.parentId) || 0)))
+      .slice(0,4);
+
+    const settled=await Promise.allSettled(candidates.map(async target=>{
+      const {data:replyData}=await youtubeApiJson(env,'comments',{
+        part:'snippet',parentId:target.parentId,maxResults:100,textFormat:'plainText'
+      });
+      const replies=(replyData.items || []).map(reply=>parseYoutubeCommentItem(reply,{videoId:target.videoId}));
+      return {...target,replies};
+    }));
+
+    for(const result of settled){
+      if(result.status!=='fulfilled')continue;
+      const target=result.value;
+      items.push(...target.replies.filter(item=>item?.id));
+      await saveYoutubeEventRow(db,{
+        key:`reply-count:${target.parentId}`,
+        type:'reply-count',resourceId:target.parentId,videoId:target.videoId,
+        countValue:target.totalReplies,
+        payload:{parentId:target.parentId,videoId:target.videoId,totalReplies:target.totalReplies,mode:'fast-r436'}
+      }).catch(()=>{});
+    }
+  }
+  return uniqueYoutubeComments(items);
+}
+
 async function fetchFastYoutubeLikesR333(env,db){
   const allIds=await loadFastYoutubeVideoIdsR333(db,50);
   if(!allIds.length)return [];
@@ -6482,7 +6549,7 @@ async function handleFastYoutubeEngagementR333(request,env,options={}){
     if(!channelId)channelId=await resolveYoutubeWebSubChannelIdR332(env,db);
     if(!channelId)throw new Error('youtube-channel-id-unavailable');
 
-    const settled=await Promise.allSettled([fetchFastYoutubeCommentsR333(env,channelId),fetchFastYoutubeLikesR333(env,db)]);
+    const settled=await Promise.allSettled([fetchFastYoutubeCommentsR436(env,db,channelId),fetchFastYoutubeLikesR333(env,db)]);
     const comments=settled[0].status==='fulfilled'?settled[0].value:[];
     const videos=settled[1].status==='fulfilled'?settled[1].value:[];
     const videoMap=new Map(videos.map(v=>[v.videoId,v]));
@@ -13088,7 +13155,7 @@ function controlRecoveryServiceWorkerSource() {
 }
 
 function controlRecoveryPage() {
-  return `<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#02060a"><meta name="robots" content="noindex,nofollow"><title>Восстановление Control ANDRIK</title><style>*{box-sizing:border-box}html,body{min-height:100%;margin:0;background:#02060a;color:#eff8ff;font-family:system-ui,-apple-system,Segoe UI,sans-serif}body{display:grid;place-items:center;padding:22px}.c{width:min(100%,520px);padding:30px 22px;border:1px solid #244455;border-radius:28px;background:linear-gradient(#081923,#030c13);text-align:center}.e{font-size:58px}h1{font-size:clamp(30px,8vw,44px);margin:12px 0}.s{color:#abc0cc;line-height:1.55}.b{display:inline-flex;min-height:54px;align-items:center;justify-content:center;margin-top:20px;padding:0 22px;border:1px solid #315b70;border-radius:999px;color:#eff8ff;text-decoration:none;font-weight:800;background:#0a2432}</style></head><body><main class="c"><div class="e">🟢</div><h1>Восстанавливаем Control</h1><p class="s" id="s">Заменяем старый перехват страниц безопасной версией…</p><a class="b" id="b" href="/control-home.html?page=menu&source=recovery&v=55.00-r434" hidden>Открыть Control</a></main><script>(async()=>{const s=document.getElementById('s'),b=document.getElementById('b'),go='/control-home.html?page=menu&source=recovery&v=55.00-r434&t='+Date.now();b.href=go;try{if('caches'in window){const k=await caches.keys();await Promise.all(k.filter(n=>n.startsWith('andrik-control-')||n.startsWith('andrik-site-')).map(n=>caches.delete(n)))}if('serviceWorker'in navigator){const r=await navigator.serviceWorker.register('/service-worker.js?v=54.96-control-recovery',{scope:'/',updateViaCache:'none'});if(r.installing)r.installing.postMessage({type:'SKIP_WAITING'});if(r.waiting)r.waiting.postMessage({type:'SKIP_WAITING'});await r.update().catch(()=>{});await new Promise(x=>setTimeout(x,1200))}s.textContent='Готово. Открываем админ-панель…';s.style.color='#bfffd9';b.hidden=false;setTimeout(()=>location.replace(go),650)}catch(e){s.textContent='Нажмите кнопку ниже. '+String(e&&e.message||e);s.style.color='#ffb9b9';b.hidden=false}})();</script></body></html>`;
+  return `<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#02060a"><meta name="robots" content="noindex,nofollow"><title>Восстановление Control ANDRIK</title><style>*{box-sizing:border-box}html,body{min-height:100%;margin:0;background:#02060a;color:#eff8ff;font-family:system-ui,-apple-system,Segoe UI,sans-serif}body{display:grid;place-items:center;padding:22px}.c{width:min(100%,520px);padding:30px 22px;border:1px solid #244455;border-radius:28px;background:linear-gradient(#081923,#030c13);text-align:center}.e{font-size:58px}h1{font-size:clamp(30px,8vw,44px);margin:12px 0}.s{color:#abc0cc;line-height:1.55}.b{display:inline-flex;min-height:54px;align-items:center;justify-content:center;margin-top:20px;padding:0 22px;border:1px solid #315b70;border-radius:999px;color:#eff8ff;text-decoration:none;font-weight:800;background:#0a2432}</style></head><body><main class="c"><div class="e">🟢</div><h1>Восстанавливаем Control</h1><p class="s" id="s">Заменяем старый перехват страниц безопасной версией…</p><a class="b" id="b" href="/control-home.html?page=menu&source=recovery&v=55.00-r436" hidden>Открыть Control</a></main><script>(async()=>{const s=document.getElementById('s'),b=document.getElementById('b'),go='/control-home.html?page=menu&source=recovery&v=55.00-r436&t='+Date.now();b.href=go;try{if('caches'in window){const k=await caches.keys();await Promise.all(k.filter(n=>n.startsWith('andrik-control-')||n.startsWith('andrik-site-')).map(n=>caches.delete(n)))}if('serviceWorker'in navigator){const r=await navigator.serviceWorker.register('/service-worker.js?v=54.96-control-recovery',{scope:'/',updateViaCache:'none'});if(r.installing)r.installing.postMessage({type:'SKIP_WAITING'});if(r.waiting)r.waiting.postMessage({type:'SKIP_WAITING'});await r.update().catch(()=>{});await new Promise(x=>setTimeout(x,1200))}s.textContent='Готово. Открываем админ-панель…';s.style.color='#bfffd9';b.hidden=false;setTimeout(()=>location.replace(go),650)}catch(e){s.textContent='Нажмите кнопку ниже. '+String(e&&e.message||e);s.style.color='#ffb9b9';b.hidden=false}})();</script></body></html>`;
 }
 
 
@@ -13210,7 +13277,7 @@ export default {
           const allowedSide = (page === 'google' || page === 'youtube') && source === 'admin-hub-swipe';
           const allowedMap = page === 'map' && source === 'admin-globe';
           if (!allowedSide && !allowedMap) {
-            const adminUrl = new URL('/control-home.html?page=menu&source=launch-guard-r434&v=55.00-r434', url);
+            const adminUrl = new URL('/control-home.html?page=menu&source=launch-guard-r436&v=55.00-r436', url);
             return Response.redirect(adminUrl.toString(), 302);
           }
         }
