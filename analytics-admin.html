@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru" translate="no" class="notranslate"><head><script>(function(){try{var u=new URL(location.href),p=(u.searchParams.get('page')||'').toLowerCase(),s=(u.searchParams.get('source')||'').toLowerCase();var ok=(p==='map'&&s==='admin-globe')||((p==='google'||p==='youtube')&&s==='admin-hub-swipe');if(!ok){location.replace('/control-home.html?page=menu&source=launch-guard-r428&v=55.00-r428');}}catch(_){}})();</script>
+<html lang="ru" translate="no" class="notranslate"><head><script>(function(){try{var u=new URL(location.href),path=(u.pathname||'').replace(/\/+$/,'')||'/',p=(u.searchParams.get('page')||'').toLowerCase(),s=(u.searchParams.get('source')||'').toLowerCase();var directMap=path==='/map',ok=directMap||(p==='map'&&s==='admin-globe')||((p==='google'||p==='youtube')&&s==='admin-hub-swipe');if(!ok){location.replace('/control-home.html?page=menu&source=launch-guard-r429&v=55.00-r429');}}catch(_){}})();</script>
 <meta name="andrik-control-release" content="R418">
 <link rel="stylesheet" href="/assets/control-sleep-mode-r193.css?v=55.00-r193"><script defer src="/assets/control-sleep-mode-r193.js?v=55.00-r193"></script>
 
@@ -2074,8 +2074,9 @@ body.analytics-admin-page.is-country-returning #worldMap .world-map-dot.is-selec
     window.__andrikAnalyticsSwipeReady=true;
     const count=panes.length;
     const routeParamsR418=new URLSearchParams(location.search);
-    const requested=String(routeParamsR418.get('page')||'').toLowerCase();
-    const routeSourceR418=String(routeParamsR418.get('source')||'').toLowerCase();
+    const directMapRouteR429=(location.pathname.replace(/\/+$/,'')||'/')==='/map';
+    const requested=directMapRouteR429?'map':String(routeParamsR418.get('page')||'').toLowerCase();
+    const routeSourceR418=directMapRouteR429?'admin-globe':String(routeParamsR418.get('source')||'').toLowerCase();
     const hubSideModeR418=routeSourceR418==='admin-hub-swipe';
     const globeMapModeR418=routeSourceR418==='admin-globe';
     const requestedPage={google:0,ga:0,ga4:0,analytics:0,site:0,website:0,map:1,youtube:2}[requested];

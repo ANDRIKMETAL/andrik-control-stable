@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786676335719-1ae7799011",
-  "release": "R428",
-  "archiveName": "R428-MAP-REENTRY-LANDSCAPE-WORLD-SCROLL-SAFE-FULL.zip",
-  "sourceHead": "a69fa8c982021a2db593b16b2d88922ebcbe57c9",
-  "backupSha": "a69fa8c982021a2db593b16b2d88922ebcbe57c9",
-  "backupTag": "control-backup-20260814025851-a69fa8c-r428-1403b",
+  "operationId": "publish-1786676963050-101df73bf8",
+  "release": "R429",
+  "archiveName": "R429-MAP-TAP-DAILY-SUMMARY-CATCHUP-SAFE-FULL.zip",
+  "sourceHead": "84fe45ac5339ec77552fe4bfec1614a6513dfd33",
+  "backupSha": "84fe45ac5339ec77552fe4bfec1614a6513dfd33",
+  "backupTag": "control-backup-20260814030919-84fe45a-r429-0d4b2",
   "autoRecovery": true,
-  "generatedAt": "2026-08-14T02:58:55.719Z"
+  "generatedAt": "2026-08-14T03:09:23.050Z"
 }
