@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R430', number:430, version:'55.00', full:'55.00 LIVE WEB AI FINAL R430', siteUpdater:'55.00-r356' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R432', number:432, version:'55.00', full:'55.00 LIVE WEB AI FINAL R432', siteUpdater:'55.00-r356' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -12943,7 +12943,7 @@ function controlRecoveryServiceWorkerSource() {
 }
 
 function controlRecoveryPage() {
-  return `<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#02060a"><meta name="robots" content="noindex,nofollow"><title>Восстановление Control ANDRIK</title><style>*{box-sizing:border-box}html,body{min-height:100%;margin:0;background:#02060a;color:#eff8ff;font-family:system-ui,-apple-system,Segoe UI,sans-serif}body{display:grid;place-items:center;padding:22px}.c{width:min(100%,520px);padding:30px 22px;border:1px solid #244455;border-radius:28px;background:linear-gradient(#081923,#030c13);text-align:center}.e{font-size:58px}h1{font-size:clamp(30px,8vw,44px);margin:12px 0}.s{color:#abc0cc;line-height:1.55}.b{display:inline-flex;min-height:54px;align-items:center;justify-content:center;margin-top:20px;padding:0 22px;border:1px solid #315b70;border-radius:999px;color:#eff8ff;text-decoration:none;font-weight:800;background:#0a2432}</style></head><body><main class="c"><div class="e">🟢</div><h1>Восстанавливаем Control</h1><p class="s" id="s">Заменяем старый перехват страниц безопасной версией…</p><a class="b" id="b" href="/control-home.html?page=menu&source=recovery&v=55.00-r422" hidden>Открыть Control</a></main><script>(async()=>{const s=document.getElementById('s'),b=document.getElementById('b'),go='/control-home.html?page=menu&source=recovery&v=55.00-r422&t='+Date.now();b.href=go;try{if('caches'in window){const k=await caches.keys();await Promise.all(k.filter(n=>n.startsWith('andrik-control-')||n.startsWith('andrik-site-')).map(n=>caches.delete(n)))}if('serviceWorker'in navigator){const r=await navigator.serviceWorker.register('/service-worker.js?v=54.96-control-recovery',{scope:'/',updateViaCache:'none'});if(r.installing)r.installing.postMessage({type:'SKIP_WAITING'});if(r.waiting)r.waiting.postMessage({type:'SKIP_WAITING'});await r.update().catch(()=>{});await new Promise(x=>setTimeout(x,1200))}s.textContent='Готово. Открываем админ-панель…';s.style.color='#bfffd9';b.hidden=false;setTimeout(()=>location.replace(go),650)}catch(e){s.textContent='Нажмите кнопку ниже. '+String(e&&e.message||e);s.style.color='#ffb9b9';b.hidden=false}})();</script></body></html>`;
+  return `<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#02060a"><meta name="robots" content="noindex,nofollow"><title>Восстановление Control ANDRIK</title><style>*{box-sizing:border-box}html,body{min-height:100%;margin:0;background:#02060a;color:#eff8ff;font-family:system-ui,-apple-system,Segoe UI,sans-serif}body{display:grid;place-items:center;padding:22px}.c{width:min(100%,520px);padding:30px 22px;border:1px solid #244455;border-radius:28px;background:linear-gradient(#081923,#030c13);text-align:center}.e{font-size:58px}h1{font-size:clamp(30px,8vw,44px);margin:12px 0}.s{color:#abc0cc;line-height:1.55}.b{display:inline-flex;min-height:54px;align-items:center;justify-content:center;margin-top:20px;padding:0 22px;border:1px solid #315b70;border-radius:999px;color:#eff8ff;text-decoration:none;font-weight:800;background:#0a2432}</style></head><body><main class="c"><div class="e">🟢</div><h1>Восстанавливаем Control</h1><p class="s" id="s">Заменяем старый перехват страниц безопасной версией…</p><a class="b" id="b" href="/control-home.html?page=menu&source=recovery&v=55.00-r432" hidden>Открыть Control</a></main><script>(async()=>{const s=document.getElementById('s'),b=document.getElementById('b'),go='/control-home.html?page=menu&source=recovery&v=55.00-r432&t='+Date.now();b.href=go;try{if('caches'in window){const k=await caches.keys();await Promise.all(k.filter(n=>n.startsWith('andrik-control-')||n.startsWith('andrik-site-')).map(n=>caches.delete(n)))}if('serviceWorker'in navigator){const r=await navigator.serviceWorker.register('/service-worker.js?v=54.96-control-recovery',{scope:'/',updateViaCache:'none'});if(r.installing)r.installing.postMessage({type:'SKIP_WAITING'});if(r.waiting)r.waiting.postMessage({type:'SKIP_WAITING'});await r.update().catch(()=>{});await new Promise(x=>setTimeout(x,1200))}s.textContent='Готово. Открываем админ-панель…';s.style.color='#bfffd9';b.hidden=false;setTimeout(()=>location.replace(go),650)}catch(e){s.textContent='Нажмите кнопку ниже. '+String(e&&e.message||e);s.style.color='#ffb9b9';b.hidden=false}})();</script></body></html>`;
 }
 
 
@@ -13057,36 +13057,16 @@ export default {
     try {
       if (request.method === 'GET' || request.method === 'HEAD') {
         const path = normalizedPath;
-        // R431: /map is only an alias. Redirect to the exact route that was confirmed working in R427.
-        if (isControlHost && path === '/map') {
-          const mapUrl = new URL('/analytics-admin.html?page=map&source=admin-globe&v=55.00-r431', url);
-          return Response.redirect(mapUrl.toString(), 302);
-        }
-
-        // R420/R431: hard launch guard. Even an older installed WebAPK/PWA whose saved
-        // start URL still points to analytics-admin/map is forced into the Admin hub.
-        // The listener map is intentionally allowed only from an explicit map entry.
+        // R432: restore the proven R427 navigation path exactly: a normal static page request
+        // with page=map&source=admin-globe. No special map fetch, alias or BFCache shim here.
         if (isControlHost && (path === '/analytics-admin.html' || path === '/analytics-admin')) {
           const page = String(url.searchParams.get('page') || '').toLowerCase();
           const source = String(url.searchParams.get('source') || '').toLowerCase();
           const allowedSide = (page === 'google' || page === 'youtube') && source === 'admin-hub-swipe';
           const allowedMap = page === 'map' && source === 'admin-globe';
           if (!allowedSide && !allowedMap) {
-            const adminUrl = new URL('/control-home.html?page=menu&source=launch-guard-r431&v=55.00-r431', url);
+            const adminUrl = new URL('/control-home.html?page=menu&source=launch-guard-r432&v=55.00-r432', url);
             return Response.redirect(adminUrl.toString(), 302);
-          }
-          // R428: every globe tap is a fresh map document. This prevents Android/PWA
-          // history/BFCache from restoring a stale map entry that immediately ejects back to Admin.
-          if (allowedMap) {
-            const assetUrl = new URL('/analytics-admin.html', url);
-            const assetResponse = await env.ASSETS.fetch(new Request(assetUrl.toString(), request));
-            const mapHeaders = new Headers(assetResponse.headers);
-            mapHeaders.set('cache-control', 'no-store, no-cache, must-revalidate, max-age=0');
-            mapHeaders.set('pragma', 'no-cache');
-            mapHeaders.set('expires', '0');
-            mapHeaders.set('x-andrik-map-entry', 'R431-query-fresh');
-            const freshMap = new Response(assetResponse.body, {status:assetResponse.status,statusText:assetResponse.statusText,headers:mapHeaders});
-            return allowControlPlayerFrame(freshMap, url, isControlHost);
           }
         }
         // R420: Admin panel is the permanent Control home. The listener map opens only from the green globe.

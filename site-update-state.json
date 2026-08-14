@@ -1,14 +1,14 @@
 {
   "schema": 1,
   "updaterVersion": "55.00-r356",
-  "operation": "reinstall",
-  "reinstall": true,
-  "operationId": "reinstall-1786678316586-5f7d5b58de",
-  "release": "R431",
-  "archiveName": "R431-R427-MAP-ENTRY-LANDSCAPE-GLOBE-SCROLL-SAFE-FULL.zip",
-  "sourceHead": "c81a021d6593f6f19605e6d3be8bb881a4d612e6",
-  "backupSha": "c81a021d6593f6f19605e6d3be8bb881a4d612e6",
-  "backupTag": "control-backup-20260814033152-c81a021-r431-9942f",
+  "operation": "publish",
+  "reinstall": false,
+  "operationId": "publish-1786678767132-6e461a187a",
+  "release": "R432",
+  "archiveName": "R432-R427-NATIVE-MAP-ENTRY-VERSION-FIX-SAFE-FULL.zip",
+  "sourceHead": "d2d0e15457f1d400bd51b4bce5c2316fa4a2eb27",
+  "backupSha": "d2d0e15457f1d400bd51b4bce5c2316fa4a2eb27",
+  "backupTag": "control-backup-20260814033923-d2d0e15-r432-9f2e9",
   "autoRecovery": true,
-  "generatedAt": "2026-08-14T03:31:56.586Z"
+  "generatedAt": "2026-08-14T03:39:27.132Z"
 }
