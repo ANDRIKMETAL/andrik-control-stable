@@ -1,8 +1,8 @@
-/* ANDRIK R437 — global city list + tap-to-show GA4 traffic source. */
+/* ANDRIK R438 — global city list + exact first-party source totals, with GA4 as reference. */
 (()=>{
   'use strict';
-  if(window.__ANDRIK_COUNTRY_CITY_HISTORY_R437__)return;
-  window.__ANDRIK_COUNTRY_CITY_HISTORY_R437__=true;
+  if(window.__ANDRIK_COUNTRY_CITY_HISTORY_R438__)return;
+  window.__ANDRIK_COUNTRY_CITY_HISTORY_R438__=true;
   const $=id=>document.getElementById(id),map=$('worldMap'),list=$('worldCountries'),openBtn=$('countryCityHistoryOpenR418');
   if(!map||!list||!openBtn)return;
   const runtime=window.__andrikWorldMapRuntime||{};
@@ -28,36 +28,57 @@
     const medium=String(row.medium||'').trim(),channel=String(row.channel||'').trim();
     const bits=[];if(medium&&medium!=='(none)')bits.push(medium);if(channel&&!/direct/i.test(channel))bits.push(channel);return bits.join(' · ');
   };
-  const renderSourceRows=(rows=[],kind='ga4')=>rows.slice(0,7).map(r=>{
+  const compactRows=(rows=[],kind='ga4')=>{
+    const sorted=[...rows].sort((a,b)=>Number((kind==='ga4'?b.sessions:b.events)||0)-Number((kind==='ga4'?a.sessions:a.events)||0));
+    if(kind==='ga4'||sorted.length<=7)return sorted.slice(0,7);
+    const head=sorted.slice(0,6),tail=sorted.slice(6);
+    const events=tail.reduce((n,r)=>n+Math.max(0,Number(r.events||0)),0),users=tail.reduce((n,r)=>n+Math.max(0,Number(r.users||0)),0);
+    if(events>0)head.push({source:'other',label:'Другие источники',icon:'↗️',events,users});
+    return head;
+  };
+  const renderSourceRows=(rows=[],kind='ga4')=>compactRows(rows,kind).map(r=>{
     const count=kind==='ga4'?Number(r.sessions||0):Number(r.events||0);const users=Number(r.activeUsers??r.users??0);const meta=sourceMeta(r);
-    const unit=kind==='ga4'?'сес.':'виз.';return `<div class="country-city-source-line-r437"><span class="country-city-source-icon-r437">${esc(r.icon||'↗️')}</span><div><strong>${esc(sourceLabel(r))}</strong>${meta?`<small>${esc(meta)}</small>`:''}</div><em>${fmt(count)} ${unit}${users>0?`<small>${fmt(users)} чел.</small>`:''}</em></div>`;
+    const unit=kind==='ga4'?'сес.':'вкл.';return `<div class="country-city-source-line-r438"><span class="country-city-source-icon-r438">${esc(r.icon||'↗️')}</span><div><strong>${esc(sourceLabel(r))}</strong>${meta?`<small>${esc(meta)}</small>`:''}</div><em>${fmt(count)} ${unit}${users>0?`<small>${fmt(users)} чел.</small>`:''}</em></div>`;
   }).join('');
+  const gaHint=(gaRows=[])=>{
+    const top=[...gaRows].sort((a,b)=>Number(b.sessions||0)-Number(a.sessions||0)).slice(0,3);
+    if(!top.length)return'';
+    const text=top.map(r=>`${sourceLabel(r)} — ${fmt(r.sessions)} сес.`).join(' · ');
+    return `<p class="country-city-source-note-r438">GA4 справочно: ${esc(text)} Это отдельная метрика сессий и она не складывается с включениями ANDRIK.</p>`;
+  };
   const renderSourceDetail=(payload,place)=>{
     const ga=payload?.ga4||{},fp=payload?.firstParty||{},gaRows=Array.isArray(ga.rows)?ga.rows:[],fpRows=Array.isArray(fp.rows)?fp.rows:[];
-    const usefulFp=fpRows.filter(r=>String(r.source||'').trim()&&!/^\(unknown\)$/i.test(String(r.source||'')));
+    if(fpRows.length){
+      const direct=fpRows.some(r=>String(r.key||'')==='direct');
+      const unknown=fpRows.some(r=>String(r.key||'')==='unknown'&&Number(r.events||0)>0);
+      const expected=Math.max(0,Number(fp.expectedOpens??payload?.expectedOpens??fp.total??0));
+      const scope=String(fp.scopeLabel||'те же данные');
+      let notes='';
+      if(direct)notes+='<p class="country-city-source-note-r438">Прямой вход может означать прямой заход или переход из приложения, которое не передало источник.</p>';
+      if(unknown)notes+='<p class="country-city-source-note-r438">❔ «Источник не сохранён» — это события до R437 либо история, для которой исходные source/referrer уже не хранятся.</p>';
+      if(unknown&&gaRows.length)notes+=gaHint(gaRows);
+      return `<div class="country-city-source-head-r438"><strong>↗ Откуда пришли · ${esc(place)}</strong><small>ANDRIK · ${esc(scope)}</small></div>${renderSourceRows(fpRows,'first')}<p class="country-city-source-note-r438">Сумма источников = ${fmt(expected)} — точно как число справа у города.</p>${notes}`;
+    }
     if(gaRows.length){
       const direct=gaRows.some(r=>String(r.key||'')==='direct');
-      return `<div class="country-city-source-head-r437"><strong>↗ Откуда пришли · ${esc(place)}</strong><small>GA4 · ${esc(payload?.range?.label||'')}</small></div>${renderSourceRows(gaRows,'ga4')}${direct?'<p class="country-city-source-note-r437">Direct может означать прямой вход или переход из приложения, которое не передало источник.</p>':''}`;
-    }
-    if(usefulFp.length){
-      return `<div class="country-city-source-head-r437"><strong>↗ Откуда пришли · ${esc(place)}</strong><small>ANDRIK Live · с R437</small></div>${renderSourceRows(usefulFp,'first')}`;
+      return `<div class="country-city-source-head-r438"><strong>↗ Откуда пришли · ${esc(place)}</strong><small>GA4 · ${esc(payload?.range?.label||'')}</small></div>${renderSourceRows(gaRows,'ga4')}${direct?'<p class="country-city-source-note-r438">GA4 показывает сессии; Direct может включать переходы из приложений без referrer.</p>':''}`;
     }
     const err=ga.error?`<small>${esc(ga.error)}</small>`:'';
-    return `<div class="country-city-source-empty-r437"><strong>Источник пока не определён</strong>${err}<small>Для новых посещений R437 параллельно сохраняет источник в ANDRIK Live.</small></div>`;
+    return `<div class="country-city-source-empty-r438"><strong>Источник пока не определён</strong>${err}<small>Новые источники ANDRIK сохраняет с R437.</small></div>`;
   };
   const loadSource=async row=>{
-    const city=String(row.dataset.city||'').trim(),region=String(row.dataset.region||'').trim(),place=city||region||'Город';
-    const cacheKey=[country,city,region,mode,mode==='daily'?date:'all'].join('|');
-    if(openedSourceKey===cacheKey){row.nextElementSibling?.classList?.contains('country-city-source-r437')&&row.nextElementSibling.remove();openedSourceKey='';return;}
-    document.querySelectorAll('#countryCityHistoryListR418 .country-city-source-r437').forEach(el=>el.remove());openedSourceKey=cacheKey;
-    const box=document.createElement('div');box.className='country-city-source-r437';box.innerHTML='<div class="country-city-source-loading-r437">Определяем источник перехода…</div>';row.insertAdjacentElement('afterend',box);
+    const city=String(row.dataset.city||'').trim(),region=String(row.dataset.region||'').trim(),place=city||region||'Город',expected=Math.max(0,Number(row.dataset.opens||0));
+    const cacheKey=[country,city,region,mode,mode==='daily'?date:'all',expected].join('|');
+    if(openedSourceKey===cacheKey){row.nextElementSibling?.classList?.contains('country-city-source-r438')&&row.nextElementSibling.remove();openedSourceKey='';return;}
+    document.querySelectorAll('#countryCityHistoryListR418 .country-city-source-r438').forEach(el=>el.remove());openedSourceKey=cacheKey;
+    const box=document.createElement('div');box.className='country-city-source-r438';box.innerHTML='<div class="country-city-source-loading-r438">Определяем источник перехода…</div>';row.insertAdjacentElement('afterend',box);
     const cached=sourceCache.get(cacheKey);if(cached){box.innerHTML=renderSourceDetail(cached,place);return;}
     try{
       const headers={accept:'application/json'};const token=key();if(token)headers.authorization=`Bearer ${token}`;
-      const qs=new URLSearchParams({country,city,region,mode,v:'55.00-r437'});if(mode==='daily')qs.set('date',date);
+      const qs=new URLSearchParams({country,city,region,mode,expected:String(expected),v:'55.00-r438'});if(mode==='daily')qs.set('date',date);
       const r=await fetch(`/api/control/city-traffic-source?${qs.toString()}`,{cache:'no-store',credentials:'include',headers});const data=await r.json().catch(()=>({}));
       if(!r.ok||data.ok===false)throw new Error(data.error||`HTTP ${r.status}`);sourceCache.set(cacheKey,data);if(openedSourceKey===cacheKey)box.innerHTML=renderSourceDetail(data,place);
-    }catch(e){if(openedSourceKey===cacheKey)box.innerHTML=`<div class="country-city-source-empty-r437"><strong>Не удалось получить источник</strong><small>${esc(e?.message||'Ошибка')}</small></div>`}
+    }catch(e){if(openedSourceKey===cacheKey)box.innerHTML=`<div class="country-city-source-empty-r438"><strong>Не удалось получить источник</strong><small>${esc(e?.message||'Ошибка')}</small></div>`}
   };
   const isLandscape=()=>matchMedia('(orientation: landscape)').matches;
   const placeOpenButton=()=>{if(openBtn.parentElement!==map)map.appendChild(openBtn)};
@@ -105,14 +126,14 @@
     $('countryCityHistoryDateR418').textContent=pretty(date);
     $('countryCityHistoryNextR418').disabled=date>=localDate();
     $('countryCityHistorySummaryR418').textContent=rows.length?`${fmt(total)} включений · ${fmt(rows.length)} городов / регионов`:(mode==='all'?'Пока нет сохранённых городов для этой страны':'За эту дату городов не зафиксировано');
-    $('countryCityHistoryListR418').innerHTML=rows.length?rows.map((r,i)=>{const place=String(r.city||r.region||'Город / регион'),region=String(r.region||'').trim(),sub=region&&region.toLowerCase()!==place.toLowerCase()?`<small>${esc(region)}</small>`:'';const days=mode==='all'&&Number(r.days||0)>1?`<small>Дней активности: ${fmt(r.days)}</small>`:'';return `<div class="country-city-history-row-r418 country-city-source-trigger-r437" role="button" tabindex="0" aria-label="Показать источник перехода: ${esc(place)}" data-city="${esc(String(r.city||''))}" data-region="${esc(region)}"><b>${i+1}</b><div><strong>${esc(place)}</strong>${sub||days}</div><em>${fmt(r.opens)}<small class="country-city-source-tap-r437">↗</small></em></div>`}).join(''):'<div class="admin-empty">Нет активности с доступной географией.</div>';
+    $('countryCityHistoryListR418').innerHTML=rows.length?rows.map((r,i)=>{const place=String(r.city||r.region||'Город / регион'),region=String(r.region||'').trim(),sub=region&&region.toLowerCase()!==place.toLowerCase()?`<small>${esc(region)}</small>`:'';const days=mode==='all'&&Number(r.days||0)>1?`<small>Дней активности: ${fmt(r.days)}</small>`:'';return `<div class="country-city-history-row-r418 country-city-source-trigger-r438" role="button" tabindex="0" aria-label="Показать источник перехода: ${esc(place)}" data-city="${esc(String(r.city||''))}" data-region="${esc(region)}" data-opens="${Math.max(0,Number(r.opens||0))}"><b>${i+1}</b><div><strong>${esc(place)}</strong>${sub||days}</div><em>${fmt(r.opens)}<small class="country-city-source-tap-r438">↗</small></em></div>`}).join(''):'<div class="admin-empty">Нет активности с доступной географией.</div>';
   };
   const load=async()=>{
     if(loading||!country)return;loading=true;controller?.abort?.();controller=new AbortController();const timer=setTimeout(()=>controller?.abort?.(),12000);
     $('countryCityHistorySummaryR418').textContent='Загружаем историю…';$('countryCityHistoryListR418').innerHTML='<div class="admin-empty">Загрузка…</div>';
     try{
       const headers={accept:'application/json'};const token=key();if(token)headers.authorization=`Bearer ${token}`;
-      const qs=new URLSearchParams({country,mode,v:'55.00-r437'});if(mode==='daily')qs.set('date',date);
+      const qs=new URLSearchParams({country,mode,v:'55.00-r438'});if(mode==='daily')qs.set('date',date);
       const r=await fetch(`/api/control/country-city-history?${qs.toString()}`,{cache:'no-store',credentials:'include',headers,signal:controller.signal});
       const data=await r.json().catch(()=>({}));if(!r.ok||data.ok===false)throw new Error(data.error||`HTTP ${r.status}`);render(data);
     }catch(e){
@@ -127,8 +148,8 @@
   $('countryCityHistoryTodayR418')?.addEventListener('click',()=>{date=localDate();if(mode!=='daily'){mode='daily';syncModeUi()}load()});$('countryCityHistoryYesterdayR418')?.addEventListener('click',()=>{date=shift(localDate(),-1);if(mode!=='daily'){mode='daily';syncModeUi()}load()});
   $('countryCityHistoryAllR419')?.addEventListener('click',()=>{if(mode!=='all'){mode='all';syncModeUi();load()}});
   $('countryCityHistoryCalendarR419')?.addEventListener('click',()=>{mode=mode==='daily'?'all':'daily';if(mode==='daily'&&!date)date=localDate();syncModeUi();load()});
-  $('countryCityHistoryListR418')?.addEventListener('click',e=>{const row=e.target?.closest?.('.country-city-source-trigger-r437');if(row)loadSource(row)});
-  $('countryCityHistoryListR418')?.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target?.classList?.contains('country-city-source-trigger-r437')){e.preventDefault();loadSource(e.target)}});
+  $('countryCityHistoryListR418')?.addEventListener('click',e=>{const row=e.target?.closest?.('.country-city-source-trigger-r438');if(row)loadSource(row)});
+  $('countryCityHistoryListR418')?.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target?.classList?.contains('country-city-source-trigger-r438')){e.preventDefault();loadSource(e.target)}});
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('countryCityHistoryModalR418')?.hidden)setOpen(false)});
   document.addEventListener('click',e=>{
     const link=e.target?.closest?.('#mapFocusActions .map-focus-action');if(!link)return;

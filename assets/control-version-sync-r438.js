@@ -1,10 +1,10 @@
-/* ANDRIK Control R437 — authoritative display-version synchronization. */
+/* ANDRIK Control R438 — authoritative display-version synchronization. */
 (()=>{
   'use strict';
-  if(window.__ANDRIK_VERSION_SYNC_R437__)return;
-  window.__ANDRIK_VERSION_SYNC_R437__=true;
-  const RELEASE='R437';
-  const RUNTIME='55.00-r437';
+  if(window.__ANDRIK_VERSION_SYNC_R438__)return;
+  window.__ANDRIK_VERSION_SYNC_R438__=true;
+  const RELEASE='R438';
+  const RUNTIME='55.00-r438';
   let busy=false;
   const apply=()=>{
     if(busy)return; busy=true;
@@ -31,9 +31,9 @@
       document.querySelectorAll('.control-split-version-r181').forEach(n=>n.setAttribute('aria-label',`Live Web AI, версия ${RELEASE}`));
       document.querySelectorAll('[data-andrik-version]').forEach(n=>n.textContent=RELEASE);
       window.ANDRIK_CONTROL_VERSION=`55.00 LIVE WEB AI FINAL ${RELEASE}`;
-      window.ANDRIK_CONTROL_BUILD='R437 R436 STABLE BASE + CITY TRAFFIC SOURCE DRILLDOWN + GA4 SESSION SOURCE + FIRST-PARTY ACQUISITION + R416 CPU SAFE';
+      window.ANDRIK_CONTROL_BUILD='R438 R437 STABLE BASE + EXACT CITY SOURCE TOTALS + GA4 REFERENCE + FIRST-PARTY ACQUISITION + R416 CPU SAFE';
       try{localStorage.setItem('andrik-control-display-version',RUNTIME)}catch(_){ }
-      window.dispatchEvent(new CustomEvent('andrik-control-version-ready',{detail:{short:RELEASE,number:437,version:'55.00'}}));
+      window.dispatchEvent(new CustomEvent('andrik-control-version-ready',{detail:{short:RELEASE,number:438,version:'55.00'}}));
     }finally{busy=false;}
   };
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',apply,{once:true}); else apply();

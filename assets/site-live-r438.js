@@ -1,4 +1,4 @@
-/* ANDRIK R437 — first-party live ecosystem telemetry + session acquisition source.
+/* ANDRIK R438 — first-party live ecosystem telemetry + session acquisition source.
    Stores no raw IP and no full referrer URL. Server keeps only coarse geo + source labels. */
 (() => {
   'use strict';

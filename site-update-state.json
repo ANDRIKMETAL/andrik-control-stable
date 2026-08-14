@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786719495924-db4d164f58",
-  "release": "R437",
-  "archiveName": "R437-R436-CITY-TRAFFIC-SOURCE-GA4-FIRST-PARTY-SAFE-FULL.zip",
-  "sourceHead": "c9b6fdfdaf94f12bde5513c7c57c150e317c4406",
-  "backupSha": "c9b6fdfdaf94f12bde5513c7c57c150e317c4406",
-  "backupTag": "control-backup-20260814145812-c9b6fdf-r437-b5a3f",
+  "operationId": "publish-1786721275170-b73b441794",
+  "release": "R438",
+  "archiveName": "R438-R437-CITY-SOURCE-EXACT-TOTALS-SAFE-FULL.zip",
+  "sourceHead": "94969679ef56e6f5a14c38d12a7c567fc6c35670",
+  "backupSha": "94969679ef56e6f5a14c38d12a7c567fc6c35670",
+  "backupTag": "control-backup-20260814152751-9496967-r438-1851e",
   "autoRecovery": true,
-  "generatedAt": "2026-08-14T14:58:15.924Z"
+  "generatedAt": "2026-08-14T15:27:55.170Z"
 }
