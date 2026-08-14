@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786676963050-101df73bf8",
-  "release": "R429",
-  "archiveName": "R429-MAP-TAP-DAILY-SUMMARY-CATCHUP-SAFE-FULL.zip",
-  "sourceHead": "84fe45ac5339ec77552fe4bfec1614a6513dfd33",
-  "backupSha": "84fe45ac5339ec77552fe4bfec1614a6513dfd33",
-  "backupTag": "control-backup-20260814030919-84fe45a-r429-0d4b2",
+  "operationId": "publish-1786677447636-8340300262",
+  "release": "R430",
+  "archiveName": "R430-DIRECT-MAP-ANCHOR-SUMMARY-REDUNDANCY-SAFE-FULL.zip",
+  "sourceHead": "778cca7323fa38185242c40951925c6c32c6eb2a",
+  "backupSha": "778cca7323fa38185242c40951925c6c32c6eb2a",
+  "backupTag": "control-backup-20260814031723-778cca7-r430-f8a47",
   "autoRecovery": true,
-  "generatedAt": "2026-08-14T03:09:23.050Z"
+  "generatedAt": "2026-08-14T03:17:27.636Z"
 }

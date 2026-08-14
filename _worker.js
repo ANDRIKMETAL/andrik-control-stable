@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R429', number:429, version:'55.00', full:'55.00 LIVE WEB AI FINAL R429', siteUpdater:'55.00-r356' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R430', number:430, version:'55.00', full:'55.00 LIVE WEB AI FINAL R430', siteUpdater:'55.00-r356' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -8959,12 +8959,11 @@ async function handleCronYoutubeEventsAckR416(request, env) {
 
 async function runCronFiveMinuteSliceR416(request, env, clock) {
   const local=getBratislavaClock();
-  // R429: every 5-minute trigger is also a catch-up opportunity for the currently
-  // due owner-summary slot. If the slot is already sent, maybeSendDailyOwnerSummary
-  // is only a tiny D1 state read and normal release/subscriber work continues.
-  // This removes the fragile 10-minute window that could miss 05:00 after a delayed
-  // Cron invocation or a transient OneSignal/D1 failure.
-  if(local.hour>=5){
+  // R430: keep the proven R416 split-CPU architecture, but reserve the entire
+  // 5-minute invocation for the owner summary during the 05:xx and 17:xx hours.
+  // If OneSignal/D1 has a transient failure, the next */5 trigger retries. Outside
+  // those two hours release/subscriber work is never starved by an old summary slot.
+  if(local.hour===5 || local.hour===17){
     try{
       const summaryAttempt=await maybeSendDailyOwnerSummary(env);
       if(!summaryAttempt?.skipped || summaryAttempt?.reason!=='slot-already-sent'){
@@ -8974,8 +8973,6 @@ async function runCronFiveMinuteSliceR416(request, env, clock) {
       return {task:'daily-summary',value:{ok:false,error:cleanPlainText(error?.message||error,500)}};
     }
   }
-  // Alternate release and subscriber checks. Each gets its own 5-minute HTTP
-  // invocation once the currently due summary slot is confirmed as sent.
   const phase=Math.floor(Number(clock?.minute || 0)/5)%2;
   if(phase===0){
     const value=await responseData(await handleFastYoutubeReleaseCheckR332(request,env));
@@ -9049,16 +9046,26 @@ async function handleExternalCronGatewayR334(request, env, ctx) {
     }else if(clock.due15){
       claimed=await claimCronGatewaySlotR334(db,'checkpoint-15m-r416',clock.slot15);
       if(claimed){
-        task='summary-checkpoint';
-        // R405/R410 daily high-water remains alive, but it no longer shares this
-        // request with YouTube/release/full automation work.
-        value=await checkpointDailySummaryAutoR398(env,'gateway-15m-r416');
-        const at=new Date().toISOString();
-        await Promise.all([
-          setPushState(db,'automation-last-check-at',at).catch(()=>{}),
-          setPushState(db,'automation-last-check-status',value?.ok===false?'partial':'ok').catch(()=>{}),
-          setPushState(db,'automation-last-check-summary',JSON.stringify({mode:'cpu-safe-r416',task:'summary-checkpoint',at,value}).slice(0,12000)).catch(()=>{})
-        ]);
+        const local15=getBratislavaClock();
+        // R430 redundant delivery path: the dedicated */15 invocation can rescue
+        // a missed 05:xx/17:xx summary without combining it with the normal
+        // checkpoint. D1 send claims prevent a duplicate if */5 already succeeded.
+        if(local15.hour===5 || local15.hour===17){
+          task='daily-summary-fallback';
+          try{ value=await maybeSendDailyOwnerSummary(env); }
+          catch(error){ value={ok:false,error:cleanPlainText(error?.message||error,500)}; }
+        }else{
+          task='summary-checkpoint';
+          // R405/R410 daily high-water remains alive, but it no longer shares this
+          // request with YouTube/release/full automation work.
+          value=await checkpointDailySummaryAutoR398(env,'gateway-15m-r416');
+          const at=new Date().toISOString();
+          await Promise.all([
+            setPushState(db,'automation-last-check-at',at).catch(()=>{}),
+            setPushState(db,'automation-last-check-status',value?.ok===false?'partial':'ok').catch(()=>{}),
+            setPushState(db,'automation-last-check-summary',JSON.stringify({mode:'cpu-safe-r430',task:'summary-checkpoint',at,value}).slice(0,12000)).catch(()=>{})
+          ]);
+        }
       }else value={ok:true,skipped:true,reason:'slot-already-claimed'};
     }
   }catch(error){
@@ -13050,7 +13057,7 @@ export default {
     try {
       if (request.method === 'GET' || request.method === 'HEAD') {
         const path = normalizedPath;
-        // R429: stable dedicated map route. The Admin globe is a normal anchor to /map,
+        // R430: stable dedicated map route. The Admin globe is a normal anchor to /map,
         // so repeated entry does not depend on pointer handlers, BFCache state or query preservation.
         if (isControlHost && path === '/map') {
           const assetUrl = new URL('/analytics-admin.html', url);
@@ -13059,12 +13066,12 @@ export default {
           mapHeaders.set('cache-control', 'no-store, no-cache, must-revalidate, max-age=0');
           mapHeaders.set('pragma', 'no-cache');
           mapHeaders.set('expires', '0');
-          mapHeaders.set('x-andrik-map-entry', 'R429-dedicated-route');
+          mapHeaders.set('x-andrik-map-entry', 'R430-dedicated-route');
           const freshMap = new Response(assetResponse.body, {status:assetResponse.status,statusText:assetResponse.statusText,headers:mapHeaders});
           return allowControlPlayerFrame(freshMap, url, isControlHost);
         }
 
-        // R420/R429: hard launch guard. Even an older installed WebAPK/PWA whose saved
+        // R420/R430: hard launch guard. Even an older installed WebAPK/PWA whose saved
         // start URL still points to analytics-admin/map is forced into the Admin hub.
         // The listener map is intentionally allowed only from an explicit map entry.
         if (isControlHost && (path === '/analytics-admin.html' || path === '/analytics-admin')) {
@@ -13073,7 +13080,7 @@ export default {
           const allowedSide = (page === 'google' || page === 'youtube') && source === 'admin-hub-swipe';
           const allowedMap = page === 'map' && source === 'admin-globe';
           if (!allowedSide && !allowedMap) {
-            const adminUrl = new URL('/control-home.html?page=menu&source=launch-guard-r429&v=55.00-r429', url);
+            const adminUrl = new URL('/control-home.html?page=menu&source=launch-guard-r430&v=55.00-r430', url);
             return Response.redirect(adminUrl.toString(), 302);
           }
           // R428: every globe tap is a fresh map document. This prevents Android/PWA
@@ -13085,7 +13092,7 @@ export default {
             mapHeaders.set('cache-control', 'no-store, no-cache, must-revalidate, max-age=0');
             mapHeaders.set('pragma', 'no-cache');
             mapHeaders.set('expires', '0');
-            mapHeaders.set('x-andrik-map-entry', 'R429-query-fresh');
+            mapHeaders.set('x-andrik-map-entry', 'R430-query-fresh');
             const freshMap = new Response(assetResponse.body, {status:assetResponse.status,statusText:assetResponse.statusText,headers:mapHeaders});
             return allowControlPlayerFrame(freshMap, url, isControlHost);
           }
