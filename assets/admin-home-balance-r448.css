@@ -1,0 +1,15 @@
+/* ANDRIK R448 — lower the admin globe slightly while preserving all four menu cards. */
+@media screen and (orientation:portrait){
+  body.control-home-page.control-menu-visible .admin-hub-globe-r418{
+    margin-top:58px!important;
+    transform:scale(1.04)!important;
+    transform-origin:top center!important;
+  }
+  body.control-home-page.control-menu-visible .admin-hub-swipe-hint-r418{margin-top:9px!important}
+}
+@media screen and (orientation:portrait) and (max-height:740px){
+  body.control-home-page.control-menu-visible .admin-hub-globe-r418{margin-top:25px!important;transform:scale(.82)!important;margin-bottom:-16px!important}
+}
+@media screen and (orientation:portrait) and (max-height:650px){
+  body.control-home-page.control-menu-visible .admin-hub-globe-r418{margin-top:16px!important;transform:scale(.76)!important;margin-bottom:-23px!important}
+}

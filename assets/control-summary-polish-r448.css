@@ -1,0 +1,157 @@
+/* ANDRIK R448 — final compact daily summary + centered clocks/calendar + visible city sources. */
+html:has(body.control-home-page.control-summary-visible),
+body.control-home-page.control-summary-visible{
+  overflow:hidden!important;
+  overscroll-behavior:none!important;
+}
+body.control-home-page.control-summary-visible .control-summary-page,
+body.control-home-page.control-report-standalone.control-summary-visible .control-summary-page{
+  box-sizing:border-box!important;
+  height:100%!important;
+  min-height:0!important;
+  max-height:100%!important;
+  overflow:hidden!important;
+  overscroll-behavior:none!important;
+  padding-top:8px!important;
+  padding-bottom:max(88px,calc(76px + env(safe-area-inset-bottom)))!important;
+}
+body.control-home-page.control-summary-visible .control-summary-page>.control-swipe-page-inner,
+body.control-home-page.control-report-standalone.control-summary-visible .control-summary-page>.control-swipe-page-inner{
+  box-sizing:border-box!important;
+  height:100%!important;
+  min-height:0!important;
+  max-height:100%!important;
+  padding-bottom:0!important;
+  overflow:hidden!important;
+}
+body.control-home-page.control-summary-visible .control-summary-page .control-home-hero{
+  box-sizing:border-box!important;
+  height:100%!important;
+  min-height:0!important;
+  max-height:100%!important;
+  padding:4px 4px 0!important;
+  overflow:hidden!important;
+}
+body.control-home-page.control-summary-visible .control-summary-page .control-home-hero h1{
+  margin:1px 0 4px!important;
+  line-height:.96!important;
+}
+.control-home-page .control-summary-page .control-home-hero-copy #controlHomeUpdated,
+body.control-home-page.control-summary-visible #controlHomeUpdated,
+body.control-home-page.control-report-standalone.control-summary-visible #controlHomeUpdated{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) 36px minmax(0,1fr)!important;
+  grid-template-rows:34px!important;
+  align-items:center!important;
+  justify-items:center!important;
+  gap:4px!important;
+  width:min(100%,620px)!important;
+  max-width:620px!important;
+  min-width:0!important;
+  margin:0 auto 5px!important;
+  padding:0 10px!important;
+  box-sizing:border-box!important;
+  overflow:visible!important;
+  white-space:nowrap!important;
+  text-align:center!important;
+  font-size:clamp(.61rem,2.55vw,.74rem)!important;
+  line-height:1.1!important;
+}
+#controlHomeUpdated .summary-clock-r401{
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:4px!important;
+  min-width:0!important;
+  max-width:100%!important;
+  white-space:nowrap!important;
+}
+#controlHomeUpdated .summary-clock-r401:nth-child(1){grid-column:1!important;grid-row:1!important}
+#controlHomeUpdated .summary-clock-r401:nth-child(2){grid-column:3!important;grid-row:1!important}
+#controlHomeUpdated .summary-calendar-slot-r442{
+  grid-column:2!important;
+  grid-row:1!important;
+  width:36px!important;
+  height:34px!important;
+  display:grid!important;
+  place-items:center!important;
+  overflow:visible!important;
+}
+#controlHomeUpdated .summary-calendar-slot-r442 .control-summary-archive-button-r442{
+  width:32px!important;
+  height:32px!important;
+  font-size:.95rem!important;
+  transform:translateY(-7px)!important;
+}
+#controlHomeUpdated .summary-calendar-slot-r442 .control-summary-archive-button-r442:active{
+  transform:translateY(-7px) scale(.94)!important;
+}
+/* Exactly three rows for six metric cards. The old fourth empty grid row caused the vertical tail. */
+body.control-home-page.control-summary-visible .control-summary-page .control-home-summary{
+  grid-template-rows:repeat(3,minmax(0,1fr))!important;
+  gap:7px!important;
+  margin:0!important;
+  flex:1 1 auto!important;
+  min-height:0!important;
+  overflow:hidden!important;
+}
+body.control-home-page.control-summary-visible .control-summary-page .control-home-summary-item{
+  min-height:0!important;
+  padding-top:8px!important;
+  padding-bottom:8px!important;
+}
+body.control-home-page.control-summary-visible .control-summary-dual-r375{
+  margin:6px 0 0!important;
+  gap:9px!important;
+  flex:0 0 auto!important;
+}
+body.control-home-page.control-summary-visible .control-summary-mini-r375{
+  min-height:0!important;
+}
+body.control-home-page.control-summary-visible .control-home-geo-delta{display:none!important}
+
+/* Daily city modal: show the acquisition source directly under each city. */
+.control-city-modal-row-r375{
+  min-height:64px!important;
+  align-items:start!important;
+  padding-top:9px!important;
+  padding-bottom:9px!important;
+}
+.control-city-modal-row-r375>div{align-self:center!important}
+.control-city-source-inline-r448{
+  display:block!important;
+  margin-top:4px!important;
+  color:#7fcde9!important;
+  font-size:.58rem!important;
+  line-height:1.28!important;
+  white-space:normal!important;
+  overflow:visible!important;
+  text-overflow:clip!important;
+}
+.control-city-source-inline-r448.is-unknown{color:#6f8793!important}
+.control-city-modal-row-r375>em{align-self:center!important}
+
+@media(max-width:390px){
+  .control-home-page .control-summary-page .control-home-hero-copy #controlHomeUpdated,
+  body.control-home-page.control-summary-visible #controlHomeUpdated{
+    grid-template-columns:minmax(0,1fr) 32px minmax(0,1fr)!important;
+    grid-template-rows:32px!important;
+    gap:2px!important;
+    padding-inline:5px!important;
+    font-size:.59rem!important;
+  }
+  #controlHomeUpdated .summary-calendar-slot-r442{width:32px!important;height:32px!important}
+  #controlHomeUpdated .summary-calendar-slot-r442 .control-summary-archive-button-r442{
+    width:29px!important;height:29px!important;font-size:.88rem!important;transform:translateY(-6px)!important
+  }
+  #controlHomeUpdated .summary-calendar-slot-r442 .control-summary-archive-button-r442:active{transform:translateY(-6px) scale(.94)!important}
+  body.control-home-page.control-summary-visible .control-summary-page{padding-top:5px!important}
+  body.control-home-page.control-summary-visible .control-summary-page .control-home-summary{gap:5px!important}
+  body.control-home-page.control-summary-visible .control-summary-dual-r375{gap:7px!important;margin-top:5px!important}
+}
+@media(max-height:760px){
+  body.control-home-page.control-summary-visible .control-summary-page{padding-top:3px!important;padding-bottom:max(76px,calc(68px + env(safe-area-inset-bottom)))!important}
+  body.control-home-page.control-summary-visible .control-summary-page .control-home-hero h1{margin-bottom:2px!important}
+  .control-home-page .control-summary-page .control-home-hero-copy #controlHomeUpdated,
+  body.control-home-page.control-summary-visible #controlHomeUpdated{grid-template-rows:29px!important;margin-bottom:3px!important}
+}

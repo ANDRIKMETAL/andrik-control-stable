@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786795567223-5dd473b55f",
-  "release": "R447",
-  "archiveName": "R447-R446-SUMMARY-CITY-SOURCES-ALBUM-ORDER-YOUTUBE-BASELINE-SAFE-FULL.zip",
-  "sourceHead": "a18feb9bcd77403dd6ee288b76f9b302853a1663",
-  "backupSha": "a18feb9bcd77403dd6ee288b76f9b302853a1663",
-  "backupTag": "control-backup-20260815120602-a18feb9-r447-7974b",
+  "operationId": "publish-1786800059237-2c39867650",
+  "release": "R448",
+  "archiveName": "R448-R447-ARCHIVE-NULL-GUARD-PLANET-PORTAL-GLOBE-LOWER-SAFE-FULL.zip",
+  "sourceHead": "9d0b9b594d89715f8d26001be32f53147c5a21c8",
+  "backupSha": "9d0b9b594d89715f8d26001be32f53147c5a21c8",
+  "backupTag": "control-backup-20260815132054-9d0b9b5-r448-e74b5",
   "autoRecovery": true,
-  "generatedAt": "2026-08-15T12:06:07.223Z"
+  "generatedAt": "2026-08-15T13:20:59.237Z"
 }

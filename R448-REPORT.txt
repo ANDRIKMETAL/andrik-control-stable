@@ -1,0 +1,16 @@
+ANDRIK Control — R448
+Date: 15.08.2026
+Base: R447
+
+FIXES
+1. Daily summary archive no longer crashes when the optional Activity pane is absent.
+2. Archived-day application now treats Summary as required and Activity as optional.
+3. Technical null/innerHTML failure is hidden from the UI; archive remains in-place.
+4. Admin rotating globe moved slightly lower in portrait without changing four menu cards.
+5. Planet -> world-map transition rebuilt with pointer-up capture, a guaranteed painted start frame, stronger portal, and reduced-motion fallback that is still visible when explicitly triggered.
+6. Existing map return hooks remain compatible through andrikMapPortalCloseR446 alias.
+
+PRESERVED
+- R447 YouTube baseline and city sources
+- R446 albums / R2 ZIP download
+- R445/R439 map, country and city logic
