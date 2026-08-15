@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786793797196-557e868853",
-  "release": "R446",
-  "archiveName": "R446-R445-SUMMARY-ALBUMS-POLISH-PLAYER-FAB-SAFE-FULL.zip",
-  "sourceHead": "97b4ea99be09d8474563c6dc7cb6da551be353a5",
-  "backupSha": "97b4ea99be09d8474563c6dc7cb6da551be353a5",
-  "backupTag": "control-backup-20260815113633-97b4ea9-r446-07754",
+  "operationId": "publish-1786795567223-5dd473b55f",
+  "release": "R447",
+  "archiveName": "R447-R446-SUMMARY-CITY-SOURCES-ALBUM-ORDER-YOUTUBE-BASELINE-SAFE-FULL.zip",
+  "sourceHead": "a18feb9bcd77403dd6ee288b76f9b302853a1663",
+  "backupSha": "a18feb9bcd77403dd6ee288b76f9b302853a1663",
+  "backupTag": "control-backup-20260815120602-a18feb9-r447-7974b",
   "autoRecovery": true,
-  "generatedAt": "2026-08-15T11:36:37.196Z"
+  "generatedAt": "2026-08-15T12:06:07.223Z"
 }

@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R446', number:446, version:'55.00', full:'55.00 LIVE WEB AI FINAL R446', siteUpdater:'55.00-r356' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R447', number:447, version:'55.00', full:'55.00 LIVE WEB AI FINAL R447', siteUpdater:'55.00-r356' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -6896,6 +6896,10 @@ async function handleFastYoutubeSubscriberCountR416(request, env, options = {}) 
     const identity = await fetchYoutubeMonitorIdentity(env);
     if (identity.uploadsPlaylistId) await setPushState(db, 'youtube-uploads-playlist-id', identity.uploadsPlaylistId).catch(()=>{});
     await refreshYoutubeRolloverBaselineR410(db, Number(identity.views || 0), startedAt).catch(()=>{});
+    // R447: keep a lightweight cumulative channel sample on the normal cron path.
+    // It preserves the previous complete Studio payload and gives the next 06:05
+    // summary a baseline within a few minutes instead of an old hourly snapshot.
+    await mergeYoutubeIdentityIntoLatestSnapshot(db, identity, 'youtube-cron-lite-r447').catch(()=>{});
 
     const key='channel-subscriber-count';
     const previous=await getYoutubeEventRow(db,key);
@@ -9681,22 +9685,36 @@ async function resolveYoutubeViewDeltaR410(db, window, currentMetrics={}, baseli
   if (!window?.key || !Number.isFinite(currentViews) || currentViews<0) return 0;
   const key=`youtube-view-baseline-r410:${window.key}`;
   let baseline=parseYoutubeViewBaselineR410(await getPushState(db,key).catch(()=>null),window.key);
+  const windowStartMs=Date.parse(window.startAt || '');
+
+  // R447: never trust a rollover baseline captured far away from 06:05.
+  // An old hourly snapshot could otherwise make a few hours look like hundreds of views.
+  if (baseline && baseline.source!=='live-rollover-r410') {
+    const capturedMs=Date.parse(baseline.capturedAt || '');
+    const tooFar=Number.isFinite(windowStartMs)&&Number.isFinite(capturedMs)&&Math.abs(capturedMs-windowStartMs)>20*60*1000;
+    if (tooFar) {
+      baseline=await persistYoutubeViewBaselineR410(
+        db,window,currentViews,new Date().toISOString(),'stale-rollover-guard-r447',{replace:true}
+      );
+    }
+  }
+
   if (!baseline) {
-    const startMs=Date.parse(window.startAt || '');
     const candidates=[baselineBeforeRow,baselineAfterRow].map(row=>{
       const metrics=parseSnapshotMetrics(row);
       const views=Number(metrics?.views);
       const at=cleanPlainText(row?.created_at || row?.createdAt || metrics?.updatedAt || '',80);
       const atMs=Date.parse(at || '');
-      return {views,at,atMs,distance:Number.isFinite(startMs)&&Number.isFinite(atMs)?Math.abs(atMs-startMs):Number.POSITIVE_INFINITY};
+      return {views,at,atMs,distance:Number.isFinite(windowStartMs)&&Number.isFinite(atMs)?Math.abs(atMs-windowStartMs):Number.POSITIVE_INFINITY};
     }).filter(item=>Number.isFinite(item.views)&&item.views>=0&&Number.isFinite(item.atMs));
     candidates.sort((a,b)=>a.distance-b.distance);
     const nearest=candidates[0];
+    const trustedNearest=nearest&&nearest.distance<=20*60*1000?nearest:null;
     baseline=await persistYoutubeViewBaselineR410(
       db,window,
-      nearest ? nearest.views : currentViews,
-      nearest ? nearest.at : new Date().toISOString(),
-      nearest ? 'nearest-rollover-snapshot-r410' : 'current-fallback-r410'
+      trustedNearest ? trustedNearest.views : currentViews,
+      trustedNearest ? trustedNearest.at : new Date().toISOString(),
+      trustedNearest ? 'nearest-rollover-snapshot-r410' : 'current-fallback-r447'
     );
   }
   const baseViews=Math.max(0,Number(baseline?.views||0));
@@ -9946,6 +9964,22 @@ async function collectCityActivityWindowR395(db, windowStart, windowEnd, { limit
     LIMIT ${Math.max(50, Math.min(240, Number(limit || 50) * 3))}
   `).bind(startAt, endAt, ...ecosystemTypes).all();
 
+  // R447: source rows use the exact same event window and metric as the city number.
+  const sourceRows = await db.prepare(`
+    SELECT country, region, city,
+           CASE WHEN acquisition_source<>'' THEN acquisition_source WHEN referrer_host<>'' THEN referrer_host ELSE '(unknown)' END AS acquisitionSource,
+           CASE WHEN acquisition_medium<>'' THEN acquisition_medium ELSE '' END AS acquisitionMedium,
+           COUNT(*) AS events
+    FROM site_visit_events
+    WHERE datetime(created_at) >= datetime(?1)
+      AND datetime(created_at) < datetime(?2)
+      AND event_type IN (${placeholders})
+      AND (city<>'' OR region<>'')
+    GROUP BY country, region, city, acquisitionSource, acquisitionMedium
+    ORDER BY events DESC
+    LIMIT ${Math.max(120, Math.min(900, Number(limit || 50) * 12))}
+  `).bind(startAt, endAt, ...ecosystemTypes).all().catch(() => ({ results:[] }));
+
   let pushRows = { results:[] };
   if (includePush) {
     const pushSql = pushAllActive ? `
@@ -9978,6 +10012,30 @@ async function collectCityActivityWindowR395(db, windowStart, windowEnd, { limit
       : await db.prepare(pushSql).bind(startAt, endAt).all().catch(() => ({ results:[] }));
   }
 
+  const placeKey = row => {
+    const country=cleanPlainText(row?.country || '',8).toUpperCase();
+    const city=cleanPlainText(row?.city || '',120).toLowerCase();
+    const region=cleanPlainText(row?.region || '',120).toLowerCase();
+    return `${country}|${city}|${region}`;
+  };
+  const sourceByPlace=new Map();
+  const addSource=(key,source)=>{
+    if(!key||!source||Number(source.events||0)<=0)return;
+    const map=sourceByPlace.get(key)||new Map();
+    const sourceKey=cleanPlainText(source.key || source.label || 'unknown',120);
+    const prev=map.get(sourceKey)||{...source,events:0};
+    prev.events+=Math.max(0,Number(source.events||0));
+    map.set(sourceKey,prev);
+    sourceByPlace.set(key,map);
+  };
+  for(const row of sourceRows?.results || []){
+    const meta=trafficSourceLabelR438(row.acquisitionSource || '',row.acquisitionMedium || '','');
+    addSource(placeKey(row),{
+      key:meta.key,label:meta.label,icon:meta.icon,
+      events:Math.max(0,Number(row.events||0))
+    });
+  }
+
   const merged = new Map();
   const addRows = (rows, source) => {
     for (const row of rows || []) {
@@ -9988,10 +10046,13 @@ async function collectCityActivityWindowR395(db, windowStart, windowEnd, { limit
       const key = `${country}|${city.toLowerCase()}|${region.toLowerCase()}`;
       const item = merged.get(key) || {
         city, region, country, label:city || region || 'Город / регион',
-        opens:0, visitors:0, lastAt:'', sources:[]
+        opens:0, visitors:0, lastAt:'', sources:[], ecosystemOpens:0, pushOpens:0
       };
-      item.opens += Math.max(0, Number(row.opens || 0));
+      const opens=Math.max(0, Number(row.opens || 0));
+      item.opens += opens;
       item.visitors += Math.max(0, Number(row.visitors || 0));
+      if(source==='ecosystem')item.ecosystemOpens+=opens;
+      if(source==='push')item.pushOpens+=opens;
       const lastAt = cleanPlainText(row.lastAt || '', 80);
       if (lastAt > item.lastAt) item.lastAt = lastAt;
       if (!item.sources.includes(source)) item.sources.push(source);
@@ -10000,8 +10061,22 @@ async function collectCityActivityWindowR395(db, windowStart, windowEnd, { limit
   };
   addRows(eventRows?.results || [], 'ecosystem');
   addRows(pushRows?.results || [], 'push');
-  return [...merged.values()]
-    .filter(item => item.label && item.opens > 0)
+
+  const output=[];
+  for(const [key,item] of merged){
+    const srcMap=sourceByPlace.get(key)||new Map();
+    const accounted=[...srcMap.values()].reduce((sum,row)=>sum+Math.max(0,Number(row.events||0)),0);
+    const missing=Math.max(0,Number(item.ecosystemOpens||0)-accounted);
+    if(missing>0)addSource(key,{key:'unknown',label:'Источник не сохранён',icon:'❔',events:missing});
+    if(Number(item.pushOpens||0)>0)addSource(key,{key:'push',label:'Push ANDRIK',icon:'🔔',events:Number(item.pushOpens||0)});
+    item.trafficSources=[...(sourceByPlace.get(key)||new Map()).values()]
+      .filter(row=>Number(row.events||0)>0)
+      .sort((a,b)=>Number(b.events||0)-Number(a.events||0)||String(a.label||'').localeCompare(String(b.label||'')));
+    delete item.ecosystemOpens;
+    delete item.pushOpens;
+    if(item.label&&item.opens>0)output.push(item);
+  }
+  return output
     .sort((a,b) => Number(b.opens||0)-Number(a.opens||0) || String(b.lastAt||'').localeCompare(String(a.lastAt||'')))
     .slice(0, Math.max(1, Math.min(100, Number(limit || 50))));
 }
@@ -13675,7 +13750,7 @@ function controlRecoveryServiceWorkerSource() {
 }
 
 function controlRecoveryPage() {
-  return `<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#02060a"><meta name="robots" content="noindex,nofollow"><title>Восстановление Control ANDRIK</title><style>*{box-sizing:border-box}html,body{min-height:100%;margin:0;background:#02060a;color:#eff8ff;font-family:system-ui,-apple-system,Segoe UI,sans-serif}body{display:grid;place-items:center;padding:22px}.c{width:min(100%,520px);padding:30px 22px;border:1px solid #244455;border-radius:28px;background:linear-gradient(#081923,#030c13);text-align:center}.e{font-size:58px}h1{font-size:clamp(30px,8vw,44px);margin:12px 0}.s{color:#abc0cc;line-height:1.55}.b{display:inline-flex;min-height:54px;align-items:center;justify-content:center;margin-top:20px;padding:0 22px;border:1px solid #315b70;border-radius:999px;color:#eff8ff;text-decoration:none;font-weight:800;background:#0a2432}</style></head><body><main class="c"><div class="e">🟢</div><h1>Восстанавливаем Control</h1><p class="s" id="s">Заменяем старый перехват страниц безопасной версией…</p><a class="b" id="b" href="/control-home.html?page=menu&source=recovery&v=55.00-r446" hidden>Открыть Control</a></main><script>(async()=>{const s=document.getElementById('s'),b=document.getElementById('b'),go='/control-home.html?page=menu&source=recovery&v=55.00-r446&t='+Date.now();b.href=go;try{if('caches'in window){const k=await caches.keys();await Promise.all(k.filter(n=>n.startsWith('andrik-control-')||n.startsWith('andrik-site-')).map(n=>caches.delete(n)))}if('serviceWorker'in navigator){const r=await navigator.serviceWorker.register('/service-worker.js?v=54.96-control-recovery',{scope:'/',updateViaCache:'none'});if(r.installing)r.installing.postMessage({type:'SKIP_WAITING'});if(r.waiting)r.waiting.postMessage({type:'SKIP_WAITING'});await r.update().catch(()=>{});await new Promise(x=>setTimeout(x,1200))}s.textContent='Готово. Открываем админ-панель…';s.style.color='#bfffd9';b.hidden=false;setTimeout(()=>location.replace(go),650)}catch(e){s.textContent='Нажмите кнопку ниже. '+String(e&&e.message||e);s.style.color='#ffb9b9';b.hidden=false}})();</script></body></html>`;
+  return `<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#02060a"><meta name="robots" content="noindex,nofollow"><title>Восстановление Control ANDRIK</title><style>*{box-sizing:border-box}html,body{min-height:100%;margin:0;background:#02060a;color:#eff8ff;font-family:system-ui,-apple-system,Segoe UI,sans-serif}body{display:grid;place-items:center;padding:22px}.c{width:min(100%,520px);padding:30px 22px;border:1px solid #244455;border-radius:28px;background:linear-gradient(#081923,#030c13);text-align:center}.e{font-size:58px}h1{font-size:clamp(30px,8vw,44px);margin:12px 0}.s{color:#abc0cc;line-height:1.55}.b{display:inline-flex;min-height:54px;align-items:center;justify-content:center;margin-top:20px;padding:0 22px;border:1px solid #315b70;border-radius:999px;color:#eff8ff;text-decoration:none;font-weight:800;background:#0a2432}</style></head><body><main class="c"><div class="e">🟢</div><h1>Восстанавливаем Control</h1><p class="s" id="s">Заменяем старый перехват страниц безопасной версией…</p><a class="b" id="b" href="/control-home.html?page=menu&source=recovery&v=55.00-r447" hidden>Открыть Control</a></main><script>(async()=>{const s=document.getElementById('s'),b=document.getElementById('b'),go='/control-home.html?page=menu&source=recovery&v=55.00-r447&t='+Date.now();b.href=go;try{if('caches'in window){const k=await caches.keys();await Promise.all(k.filter(n=>n.startsWith('andrik-control-')||n.startsWith('andrik-site-')).map(n=>caches.delete(n)))}if('serviceWorker'in navigator){const r=await navigator.serviceWorker.register('/service-worker.js?v=54.96-control-recovery',{scope:'/',updateViaCache:'none'});if(r.installing)r.installing.postMessage({type:'SKIP_WAITING'});if(r.waiting)r.waiting.postMessage({type:'SKIP_WAITING'});await r.update().catch(()=>{});await new Promise(x=>setTimeout(x,1200))}s.textContent='Готово. Открываем админ-панель…';s.style.color='#bfffd9';b.hidden=false;setTimeout(()=>location.replace(go),650)}catch(e){s.textContent='Нажмите кнопку ниже. '+String(e&&e.message||e);s.style.color='#ffb9b9';b.hidden=false}})();</script></body></html>`;
 }
 
 
@@ -13797,7 +13872,7 @@ export default {
           const allowedSide = (page === 'google' || page === 'youtube') && source === 'admin-hub-swipe';
           const allowedMap = page === 'map' && source === 'admin-globe';
           if (!allowedSide && !allowedMap) {
-            const adminUrl = new URL('/control-home.html?page=menu&source=launch-guard-r446&v=55.00-r446', url);
+            const adminUrl = new URL('/control-home.html?page=menu&source=launch-guard-r447&v=55.00-r447', url);
             return Response.redirect(adminUrl.toString(), 302);
           }
         }
