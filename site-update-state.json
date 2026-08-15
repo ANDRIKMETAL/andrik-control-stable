@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786787635293-7d26ee548a",
-  "release": "R443",
-  "archiveName": "R443-R442-R2-ALBUM-ZIP-INSPECTOR-BUILDER-SAFE-FULL-1.zip",
-  "sourceHead": "ee23866109e632a8bae36d20cd90ac5d3b8b5d15",
-  "backupSha": "ee23866109e632a8bae36d20cd90ac5d3b8b5d15",
-  "backupTag": "control-backup-20260815095351-ee23866-r443-35b3d",
+  "operationId": "publish-1786791745329-7d184f0f14",
+  "release": "R445",
+  "archiveName": "R445-R444-PLANET-WORLD-MAP-PORTAL-TRANSITION-SAFE-FULL.zip",
+  "sourceHead": "24c8bee40a784294b270f4d0e34a271916a3181f",
+  "backupSha": "24c8bee40a784294b270f4d0e34a271916a3181f",
+  "backupTag": "control-backup-20260815110222-24c8bee-r445-4633a",
   "autoRecovery": true,
-  "generatedAt": "2026-08-15T09:53:55.293Z"
+  "generatedAt": "2026-08-15T11:02:25.329Z"
 }

@@ -1,0 +1,45 @@
+/* ANDRIK R445 — public Albums hub + dedicated discography page */
+.albums-hub-section-r445{padding-top:48px!important;padding-bottom:52px!important}
+.albums-hub-card-r445{display:grid;grid-template-columns:minmax(180px,330px) 1fr;gap:28px;align-items:center;padding:24px;border:1px solid rgba(173,225,255,.18);border-radius:32px;background:radial-gradient(circle at 16% 18%,rgba(54,152,214,.14),transparent 37%),linear-gradient(145deg,rgba(10,22,32,.94),rgba(3,8,13,.98));box-shadow:0 24px 64px rgba(0,0,0,.32);text-decoration:none;color:inherit;overflow:hidden;position:relative}
+.albums-hub-card-r445:after{content:'';position:absolute;inset:auto -80px -100px auto;width:260px;height:260px;border-radius:50%;background:radial-gradient(circle,rgba(76,211,255,.15),transparent 68%);pointer-events:none}
+.albums-hub-covers-r445{display:grid;grid-template-columns:1fr 1fr;gap:10px;perspective:800px}
+.albums-hub-covers-r445 img{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:20px;border:1px solid rgba(255,255,255,.12);box-shadow:0 16px 38px rgba(0,0,0,.38);animation:andrikAlbumsHubBreathR445 4.2s ease-in-out infinite alternate}
+.albums-hub-covers-r445 img:nth-child(2){animation-delay:-2.1s}
+@keyframes andrikAlbumsHubBreathR445{from{transform:scale(.985) translateY(2px);filter:saturate(.92) brightness(.94)}to{transform:scale(1.025) translateY(-2px);filter:saturate(1.08) brightness(1.06)}}
+.albums-hub-copy-r445{display:grid;gap:10px;position:relative;z-index:1}
+.albums-hub-copy-r445 h2{margin:0;font-size:clamp(2.1rem,7vw,4.2rem);line-height:.94;letter-spacing:-.035em;color:#f5fbff}
+.albums-hub-copy-r445 p{margin:0;max-width:680px;color:#aebec8;line-height:1.62}
+.albums-hub-open-r445{display:inline-flex;width:max-content;max-width:100%;align-items:center;justify-content:center;min-height:50px;margin-top:6px;padding:0 20px;border-radius:999px;border:1px solid rgba(117,211,255,.36);background:linear-gradient(135deg,rgba(36,145,207,.25),rgba(31,84,119,.2));color:#eaf8ff;font-weight:900;box-shadow:0 10px 28px rgba(0,0,0,.22)}
+
+.albums-page-r445{min-height:100vh;background:radial-gradient(circle at 50% -10%,rgba(36,124,174,.16),transparent 42%),#03070b;color:#eef8ff}
+.albums-page-top-r445{position:sticky;top:0;z-index:50;border-bottom:1px solid rgba(131,205,239,.18);background:rgba(3,9,14,.86);backdrop-filter:blur(16px)}
+.albums-page-top-inner-r445{width:min(1180px,calc(100% - 28px));margin:auto;min-height:72px;display:flex;align-items:center;justify-content:space-between;gap:14px}
+.albums-page-home-r445,.albums-page-lang-r445{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:0 14px;border:1px solid rgba(160,216,241,.18);border-radius:999px;color:#eaf7ff;text-decoration:none;font-weight:800;background:rgba(255,255,255,.035)}
+.albums-page-brand-r445{font-weight:950;letter-spacing:.18em;color:#f3fbff}
+.albums-page-langs-r445{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.albums-page-lang-r445{min-width:42px;padding:0 11px;font-size:.74rem;color:#a9bdc8}
+.albums-page-lang-r445.is-active{color:#eafff5;border-color:rgba(94,232,167,.34);background:rgba(48,159,111,.12)}
+.albums-page-hero-r445{padding:60px 0 22px;text-align:center}
+.albums-page-hero-r445 .wrap{display:grid;justify-items:center;gap:12px}
+.albums-page-hero-r445 h1{margin:0;font-size:clamp(2.8rem,10vw,6.2rem);line-height:.9;letter-spacing:-.045em}
+.albums-page-hero-r445 p{margin:0;max-width:740px;color:#a8bac5;line-height:1.6}
+.albums-page-r445 #discography.section{padding-top:26px!important}
+.albums-page-r445 #discography .section-head{margin-bottom:24px}
+.albums-page-r445 #discography .album-card{height:100%}
+.album-download-r445{display:inline-flex!important;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:11px 16px;border-radius:999px;border:1px solid rgba(92,232,165,.34);background:linear-gradient(145deg,rgba(23,126,83,.22),rgba(10,52,38,.42));color:#e9fff4!important;text-decoration:none;font-size:.78rem;font-weight:900;box-shadow:0 10px 24px rgba(0,0,0,.22)}
+.album-download-r445:hover{transform:translateY(-2px);border-color:rgba(92,232,165,.62)}
+.album-download-r445.is-disabled{pointer-events:none;opacity:.5;filter:grayscale(.3)}
+.album-archive-note-r445{margin-top:10px;color:#78909d;font-size:.72rem;line-height:1.45}
+.albums-page-footer-note-r445{width:min(1180px,calc(100% - 28px));margin:0 auto 56px;padding:18px 20px;border:1px solid rgba(255,255,255,.08);border-radius:20px;background:rgba(255,255,255,.025);color:#8fa4af;text-align:center;font-size:.82rem;line-height:1.55}
+@media(max-width:760px){
+  .albums-hub-card-r445{grid-template-columns:1fr;padding:18px;border-radius:26px;gap:18px}
+  .albums-hub-covers-r445{width:min(100%,420px);margin:auto}
+  .albums-hub-copy-r445{text-align:center;justify-items:center}
+  .albums-page-top-inner-r445{min-height:64px}
+  .albums-page-brand-r445{display:none}
+  .albums-page-langs-r445{gap:4px}
+  .albums-page-lang-r445{min-width:34px;min-height:38px;padding:0 9px}
+  .albums-page-hero-r445{padding-top:42px}
+  .album-download-r445{width:100%!important;flex-basis:100%!important}
+}
+.albums-page-r445 .reveal{opacity:1!important;transform:none!important;visibility:visible!important}

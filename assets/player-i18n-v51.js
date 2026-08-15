@@ -41,7 +41,9 @@
   const desc = document.querySelector('meta[name="description"]'); if (desc) desc.content = t('description');
   const params = new URLSearchParams(location.search);
   const returnTarget = ['album-ocean','album-illusion','discography'].includes(params.get('return')) ? params.get('return') : (params.get('collection') === 'illusion' ? 'album-illusion' : 'album-ocean');
-  const homePath = `${lang === 'ru' ? '/' : `/${lang}/`}#${returnTarget}`;
+  const fromAlbums = params.get('from') === 'albums';
+  const homeBase = fromAlbums ? (lang === 'ru' ? '/albums.html' : `/${lang}/albums.html`) : (lang === 'ru' ? '/' : `/${lang}/`);
+  const homePath = `${homeBase}#${returnTarget}`;
   ['homeBrand','homeBtn'].forEach(id => { const el=document.getElementById(id); if(el) el.href=homePath; });
   const pairs = [
     ['#siteFrame','title','homeFrame'], ['#homeBrand','aria-label','backHome'], ['.brand-copy span','textContent','officialPlayer'], ['.page-label span','textContent','universe'],

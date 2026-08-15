@@ -1,0 +1,31 @@
+ANDRIK Control — R445
+Date: 15.08.2026
+Base: R444 — FINAL ALBUMS HUB + R2 MULTIPART ZIP + ADMIN GLOBE LOWER
+
+PLANET -> WORLD MAP PORTAL
+1. Added a dedicated visual-only portal layer between the Admin globe and the listener world map.
+2. Admin globe click now: green/cyan pulse -> globe expands to viewport -> world map texture fades in -> navigation to the existing map.
+3. The map itself, country/city data, zoom, source selection, and existing map rendering logic are not rewritten.
+4. On map arrival, the transition overlay dissolves into the already-loaded real map.
+
+MAP -> ADMIN RETURN
+1. Existing upward map-to-admin gestures now use the reverse transition when available.
+2. Portrait map end-pull, focused landscape swipe, and landscape bottom swipe are covered.
+3. The world map contracts back toward the stored Admin globe position, then Control opens.
+4. On Admin arrival, the final small portal crossfades into the real globe and emits a short pulse.
+
+SAFETY
+- SessionStorage markers are short-lived (8 seconds) and only affect the transition.
+- prefers-reduced-motion bypasses animation and navigates normally.
+- If the portal runtime is unavailable, every return path falls back to the previous location.assign behavior.
+- No map API, city history, ecosystem map, album ZIP API, or R2 logic was modified for this feature.
+
+VERSION
+- Control display / Worker release / cache reset synchronized to R445.
+- New assets: planet-map-transition-r445.css / planet-map-transition-r445.js.
+
+VALIDATION
+- Node syntax check: transition JS, Worker, service worker, current album/version JS.
+- Inline script syntax check for control-home.html and analytics-admin.html.
+- Local href/src asset reference check: 0 missing files.
+- ZIP integrity test.
