@@ -1,0 +1,24 @@
+ANDRIK Control — R449
+Date: 15.08.2026
+Base: R448
+
+FIXED — PLANET <-> WORLD MAP TRANSITION ONLY
+1. Removed the full-diagonal physical portal layer that could create a multi-million-pixel GPU surface on Android.
+2. Portal now keeps a small fixed DOM surface (232–320 CSS px) and expands/shrinks only with compositor transform.
+3. Removed the two-frame start delay; transition begins after one painted frame.
+4. Frozen the cloned globe's child animations/transitions during the portal so they do not compete with the map animation.
+5. Pre-decodes the world-map transition image while the admin hub is idle to avoid first-tap image decode jank.
+6. Added hard timeout protection around Web Animations promises so a browser animation bug cannot leave navigation waiting forever.
+7. Added navigation watchdog on both directions: planet -> map and map -> admin always complete.
+8. Shortened heavy transition stages while preserving the visible portal effect.
+9. Existing map return hooks remain compatible through R449, R448 and R446 aliases.
+
+PRESERVED
+- R448 archive/null guard
+- R448 globe vertical position
+- R447 YouTube/city baseline
+- R446 albums/R2 ZIP logic
+- Existing map/country/city implementation and map layout
+
+VERSION
+- Control display/worker release: R449
