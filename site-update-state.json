@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786778056521-d38562cd3f",
-  "release": "R441",
-  "archiveName": "R441-R440-ADMIN-FOURTH-CARD-ARCHIVE-DAY-CALENDAR-LIFT-SAFE-FULL.zip",
-  "sourceHead": "8fd1f917596ea64c10a83e568b11fadf528efd21",
-  "backupSha": "8fd1f917596ea64c10a83e568b11fadf528efd21",
-  "backupTag": "control-backup-20260815071412-8fd1f91-r441-c85a0",
+  "operationId": "publish-1786787635293-7d26ee548a",
+  "release": "R443",
+  "archiveName": "R443-R442-R2-ALBUM-ZIP-INSPECTOR-BUILDER-SAFE-FULL-1.zip",
+  "sourceHead": "ee23866109e632a8bae36d20cd90ac5d3b8b5d15",
+  "backupSha": "ee23866109e632a8bae36d20cd90ac5d3b8b5d15",
+  "backupTag": "control-backup-20260815095351-ee23866-r443-35b3d",
   "autoRecovery": true,
-  "generatedAt": "2026-08-15T07:14:16.521Z"
+  "generatedAt": "2026-08-15T09:53:55.293Z"
 }

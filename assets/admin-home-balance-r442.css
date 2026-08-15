@@ -1,0 +1,74 @@
+/* ANDRIK R442 — portrait Admin hub: all four menu cards stay visible; quick reports and globe use the free lower space. */
+@media screen and (orientation:portrait){
+  body.control-home-page.control-menu-visible .control-menu-page .control-swipe-page-inner{
+    padding-top:9px!important;
+    padding-bottom:max(74px,calc(66px + env(safe-area-inset-bottom)))!important;
+    display:flex!important;
+    flex-direction:column!important;
+    overflow:hidden!important;
+  }
+  body.control-home-page.control-menu-visible .control-menu-page .control-menu-heading{
+    flex:0 0 auto!important;
+    margin:0 0 8px!important;
+  }
+  body.control-home-page.control-menu-visible .control-menu-page .control-home-menu{
+    flex:0 0 auto!important;
+    min-height:0!important;
+    height:auto!important;
+    max-height:none!important;
+    margin:2px 0 0!important;
+    display:grid!important;
+    grid-template-columns:1fr!important;
+    grid-template-rows:repeat(4,64px)!important;
+    grid-auto-rows:unset!important;
+    align-content:start!important;
+    gap:9px!important;
+    overflow:visible!important;
+  }
+  body.control-home-page.control-menu-visible .control-menu-page .control-home-menu-card{
+    box-sizing:border-box!important;
+    min-height:64px!important;
+    height:64px!important;
+    max-height:64px!important;
+    padding:9px 12px!important;
+    grid-template-columns:38px minmax(0,1fr) 18px!important;
+    gap:10px!important;
+    border-radius:17px!important;
+    overflow:hidden!important;
+  }
+  body.control-home-page.control-menu-visible .control-menu-page .control-home-menu-card>span{
+    width:38px!important;height:38px!important;min-width:38px!important;font-size:1.18rem!important;
+  }
+  body.control-home-page.control-menu-visible .control-menu-page .control-home-menu-card strong{
+    font-size:1rem!important;line-height:1.08!important;
+  }
+  body.control-home-page.control-menu-visible .control-menu-page .control-home-menu-card small{font-size:.59rem!important}
+  body.control-home-page.control-menu-visible .admin-hub-quick-r418{
+    flex:0 0 auto!important;margin-top:11px!important;gap:8px!important;
+  }
+  body.control-home-page.control-menu-visible .admin-hub-quick-r418 a{
+    min-height:39px!important;padding:6px 9px!important;font-size:.75rem!important;
+  }
+  body.control-home-page.control-menu-visible .admin-hub-globe-r418{
+    flex:0 0 auto!important;margin:22px auto 0!important;transform:scale(1.04)!important;transform-origin:top center!important;margin-bottom:2px!important;
+  }
+  body.control-home-page.control-menu-visible .admin-hub-swipe-hint-r418{flex:0 0 auto!important;margin:7px 4px 0!important}
+}
+@media screen and (orientation:portrait) and (max-height:740px){
+  body.control-home-page.control-menu-visible .control-menu-page .control-swipe-page-inner{
+    padding-top:5px!important;padding-bottom:max(68px,calc(60px + env(safe-area-inset-bottom)))!important;
+  }
+  body.control-home-page.control-menu-visible .control-menu-page .control-menu-heading{margin-bottom:5px!important}
+  body.control-home-page.control-menu-visible .control-menu-page .control-home-menu{grid-template-rows:repeat(4,56px)!important;gap:6px!important}
+  body.control-home-page.control-menu-visible .control-menu-page .control-home-menu-card{min-height:56px!important;height:56px!important;max-height:56px!important;padding:6px 10px!important}
+  body.control-home-page.control-menu-visible .admin-hub-quick-r418{margin-top:7px!important}
+  body.control-home-page.control-menu-visible .admin-hub-quick-r418 a{min-height:34px!important}
+  body.control-home-page.control-menu-visible .admin-hub-globe-r418{margin-top:8px!important;transform:scale(.82)!important;margin-bottom:-17px!important}
+  body.control-home-page.control-menu-visible .admin-hub-swipe-hint-r418{margin-top:3px!important}
+}
+@media screen and (orientation:portrait) and (max-height:650px){
+  body.control-home-page.control-menu-visible .control-menu-page .control-home-menu{grid-template-rows:repeat(4,52px)!important;gap:5px!important}
+  body.control-home-page.control-menu-visible .control-menu-page .control-home-menu-card{min-height:52px!important;height:52px!important;max-height:52px!important;padding:5px 9px!important}
+  body.control-home-page.control-menu-visible .admin-hub-quick-r418{margin-top:5px!important}
+  body.control-home-page.control-menu-visible .admin-hub-globe-r418{margin-top:5px!important;transform:scale(.76)!important;margin-bottom:-24px!important}
+}

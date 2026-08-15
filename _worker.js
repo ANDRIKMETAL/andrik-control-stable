@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R441', number:441, version:'55.00', full:'55.00 LIVE WEB AI FINAL R441', siteUpdater:'55.00-r356' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R443', number:443, version:'55.00', full:'55.00 LIVE WEB AI FINAL R443', siteUpdater:'55.00-r356' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -10226,8 +10226,11 @@ async function handleDailySummaryArchiveR440(request, env) {
   });
 }
 
-// R441: direct immutable archive-day loader.
-async function handleDailySummaryArchiveDayR441(request, env) {
+// R442: fast immutable archive-day loader.
+// Green calendar days already point to persisted daily-owner-summary-window:<date> rows.
+// Return that stored payload immediately; expensive activity/city reconstruction must never
+// hold the archive screen on "Собираем актуальные цифры…".
+async function handleDailySummaryArchiveDayR442(request, env) {
   if (!adminAuthorized(request, env)) return json({ok:false,error:'unauthorized'},401);
   const db=requireDb(env);
   await ensurePushAutomationSchema(db);
@@ -10236,29 +10239,22 @@ async function handleDailySummaryArchiveDayR441(request, env) {
   if(!window || !window.completed){
     return json({ok:false,error:'invalid-archive-window',details:'Архивный день недоступен или ещё не завершён.'},400);
   }
+
   const storedRow=await getPushState(db,`daily-owner-summary-window:${window.key}`).catch(()=>null);
   let snapshot=parseStoredDailySummarySnapshotR271(storedRow,window.key);
-  if(!snapshot) snapshot=await findDailySummarySnapshotR271(db,window).catch(()=>null);
+  if(!snapshot){
+    snapshot=await findDailySummarySnapshotR271(db,window).catch(()=>null);
+  }
   if(!snapshot){
     return json({ok:false,error:'archive-summary-not-found',details:'Сохранённая сводка за этот день не найдена.'},404);
   }
-  const [activityResult, fallbackCities] = await Promise.all([
-    db.prepare(`
-      SELECT id, type, source, audience, title, message, url,
-             video_id AS videoId, video_title AS videoTitle,
-             status, created_at AS createdAt
-      FROM push_history
-      WHERE type IN ('youtube-comment','youtube-comment-count','youtube-subscriber','youtube-subscriber-count','youtube-like','site-subscriber','comment-live','comment-pending','auto-release','auto-release-retry','release-publish')
-        AND datetime(created_at) >= datetime(?1)
-        AND datetime(created_at) < datetime(?2)
-      ORDER BY datetime(created_at) DESC
-      LIMIT 200
-    `).bind(window.startAt,window.endAt).all().catch(()=>({results:[]})),
-    (Array.isArray(snapshot.cities) && snapshot.cities.length)
-      ? Promise.resolve(snapshot.cities)
-      : collectDailyCityActivityR370(db,window,snapshot.sentAt || window.endAt).catch(()=>[])
+
+  const rawMetrics=(snapshot.metrics && typeof snapshot.metrics==='object')?snapshot.metrics:{};
+  const repairedMetrics=await Promise.race([
+    repairHistoricalYoutubeViewsR440(db,window,rawMetrics).catch(()=>rawMetrics),
+    new Promise(resolve=>setTimeout(()=>resolve(rawMetrics),1200))
   ]);
-  const repairedMetrics=await repairHistoricalYoutubeViewsR440(db,window,snapshot.metrics || {}).catch(()=>snapshot.metrics || {});
+
   return json({
     ok:true,
     archive:true,
@@ -10267,12 +10263,13 @@ async function handleDailySummaryArchiveDayR441(request, env) {
     windowStartAt:window.startAt,
     windowEndAt:window.endAt,
     summary:controlHomeSummaryFromDailyMetricsR271(repairedMetrics),
-    cityActivity:Array.isArray(fallbackCities)?fallbackCities:[],
+    cityActivity:Array.isArray(snapshot.cities)?snapshot.cities.slice(0,50):[],
     cityMapActivity:[],
-    activity:activityResult?.results || [],
-    summarySource:'archive-direct-r441',
+    activity:[],
+    summarySource:'archive-fast-r442',
     summaryView:'completed-push',
     pushSentAt:snapshot.sentAt || '',
+    autoUpdatedAt:snapshot.sentAt || storedRow?.updatedAt || window.endAt,
     updatedAt:snapshot.sentAt || storedRow?.updatedAt || window.endAt
   });
 }
@@ -13272,6 +13269,163 @@ async function handleMusicMp3PutR314(request, env) {
   await bucket.put(key,body,{httpMetadata:{contentType:'audio/mpeg',contentDisposition:`attachment; filename="${name}"`},customMetadata:metadata});
   return json({ok:true,key,url:`https://music.andrikmetal.com/${key}`,size:body.byteLength,metadata});
 }
+
+
+// === R443: album ZIP inspector / builder for ANDRIK R2 ===
+const MUSIC_ALBUMS_R443 = Object.freeze({
+  'illusion-of-life': Object.freeze({
+    slug:'illusion-of-life', label:'Illusion of Life', prefix:'albums/illusion-of-life/',
+    zipKey:'albums/illusion-of-life/ANDRIK-Illusion-of-Life-MP3.zip',
+    zipName:'ANDRIK-Illusion-of-Life-MP3.zip', expectedTracks:10
+  }),
+  'ocean': Object.freeze({
+    slug:'ocean', label:'OCEAN', prefix:'albums/ocean/',
+    zipKey:'albums/ocean/ANDRIK-OCEAN-MP3.zip',
+    zipName:'ANDRIK-OCEAN-MP3.zip', expectedTracks:10
+  })
+});
+function musicAlbumDefR443(value){
+  const slug=String(value||'').trim().toLowerCase();
+  return MUSIC_ALBUMS_R443[slug]||null;
+}
+function musicAlbumTrackSortR443(a,b){
+  const ta=parseInt(a?.customMetadata?.track||'',10), tb=parseInt(b?.customMetadata?.track||'',10);
+  if(Number.isFinite(ta)&&Number.isFinite(tb)&&ta!==tb)return ta-tb;
+  if(Number.isFinite(ta)&&!Number.isFinite(tb))return -1;
+  if(!Number.isFinite(ta)&&Number.isFinite(tb))return 1;
+  return String(a?.key||'').localeCompare(String(b?.key||''),'ru',{numeric:true,sensitivity:'base'});
+}
+function musicZipSafeNameR443(value){
+  return String(value||'').replace(/[\\/:*?\"<>|\u0000-\u001f]/g,' ').replace(/\s+/g,' ').trim().slice(0,180);
+}
+function musicZipEntryNameR443(object,index){
+  const m=object?.customMetadata||{};
+  const rawBase=String(object?.key||'').split('/').pop()?.replace(/\.mp3$/i,'')||`track-${index+1}`;
+  const title=musicZipSafeNameR443(m.title||rawBase.replace(/[_-]+/g,' '))||`Track ${index+1}`;
+  const n=parseInt(m.track||'',10);
+  const prefix=Number.isFinite(n)&&n>0?String(n).padStart(2,'0')+' - ':String(index+1).padStart(2,'0')+' - ';
+  return `${prefix}${title}.mp3`;
+}
+async function musicAlbumObjectsR443(bucket,def){
+  const listed=await bucket.list({prefix:def.prefix,limit:1000,include:['customMetadata']});
+  return (listed.objects||[]).filter(o=>/\.mp3$/i.test(o.key)).sort(musicAlbumTrackSortR443);
+}
+async function musicAlbumStatusOneR443(bucket,def,includeTracks=true){
+  const tracks=await musicAlbumObjectsR443(bucket,def);
+  const zip=await bucket.head(def.zipKey).catch(()=>null);
+  const totalBytes=tracks.reduce((sum,o)=>sum+Number(o.size||0),0);
+  return {
+    slug:def.slug,label:def.label,prefix:def.prefix,expectedTracks:def.expectedTracks,
+    trackCount:tracks.length,totalBytes,complete:tracks.length>=def.expectedTracks,
+    tracks:includeTracks?tracks.map((o,i)=>({
+      key:o.key,title:o.customMetadata?.title||musicZipEntryNameR443(o,i).replace(/^\d+\s*-\s*|\.mp3$/gi,''),
+      track:o.customMetadata?.track||String(i+1),size:Number(o.size||0),uploaded:o.uploaded||null
+    })):undefined,
+    zip:{exists:Boolean(zip),key:def.zipKey,name:def.zipName,size:Number(zip?.size||0),uploaded:zip?.uploaded||null,
+      downloadUrl:`/api/music/album-download?album=${encodeURIComponent(def.slug)}`}
+  };
+}
+async function handleMusicAlbumsStatusR443(request,env){
+  if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
+  const bucket=getMusicBucketR314(env); if(!bucket)return json({ok:false,error:'music-bucket-not-configured'},503);
+  const url=new URL(request.url), requested=musicAlbumDefR443(url.searchParams.get('album'));
+  const defs=requested?[requested]:Object.values(MUSIC_ALBUMS_R443);
+  const albums=[];
+  for(const def of defs)albums.push(await musicAlbumStatusOneR443(bucket,def,true));
+  return json({ok:true,albums,checkedAt:new Date().toISOString()});
+}
+
+const ZIP_CRC_TABLE_R443=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=(c&1)?(0xedb88320^(c>>>1)):(c>>>1);t[n]=c>>>0;}return t;})();
+function zipCrcUpdateR443(crc,bytes){let c=crc>>>0;for(let i=0;i<bytes.length;i++)c=ZIP_CRC_TABLE_R443[(c^bytes[i])&255]^(c>>>8);return c>>>0;}
+function zipU16R443(view,off,v){view.setUint16(off,v&0xffff,true)}
+function zipU32R443(view,off,v){view.setUint32(off,v>>>0,true)}
+function zipDosR443(date){
+  const d=date instanceof Date&&!Number.isNaN(date.valueOf())?date:new Date();
+  const y=Math.max(1980,Math.min(2107,d.getUTCFullYear()));
+  const tm=((d.getUTCHours()&31)<<11)|((d.getUTCMinutes()&63)<<5)|((Math.floor(d.getUTCSeconds()/2))&31);
+  const dt=(((y-1980)&127)<<9)|(((d.getUTCMonth()+1)&15)<<5)|(d.getUTCDate()&31);
+  return {time:tm,date:dt};
+}
+function zipLocalHeaderR443(nameBytes,dos){
+  const b=new Uint8Array(30+nameBytes.length),v=new DataView(b.buffer);
+  zipU32R443(v,0,0x04034b50);zipU16R443(v,4,20);zipU16R443(v,6,0x0808);zipU16R443(v,8,0);
+  zipU16R443(v,10,dos.time);zipU16R443(v,12,dos.date);zipU32R443(v,14,0);zipU32R443(v,18,0);zipU32R443(v,22,0);
+  zipU16R443(v,26,nameBytes.length);zipU16R443(v,28,0);b.set(nameBytes,30);return b;
+}
+function zipDescriptorR443(crc,size){const b=new Uint8Array(16),v=new DataView(b.buffer);zipU32R443(v,0,0x08074b50);zipU32R443(v,4,crc);zipU32R443(v,8,size);zipU32R443(v,12,size);return b;}
+function zipCentralHeaderR443(meta){
+  const b=new Uint8Array(46+meta.nameBytes.length),v=new DataView(b.buffer);
+  zipU32R443(v,0,0x02014b50);zipU16R443(v,4,20);zipU16R443(v,6,20);zipU16R443(v,8,0x0808);zipU16R443(v,10,0);
+  zipU16R443(v,12,meta.dos.time);zipU16R443(v,14,meta.dos.date);zipU32R443(v,16,meta.crc);zipU32R443(v,20,meta.size);zipU32R443(v,24,meta.size);
+  zipU16R443(v,28,meta.nameBytes.length);zipU16R443(v,30,0);zipU16R443(v,32,0);zipU16R443(v,34,0);zipU16R443(v,36,0);zipU32R443(v,38,0);zipU32R443(v,42,meta.localOffset);
+  b.set(meta.nameBytes,46);return b;
+}
+function zipEndR443(count,centralSize,centralOffset){const b=new Uint8Array(22),v=new DataView(b.buffer);zipU32R443(v,0,0x06054b50);zipU16R443(v,4,0);zipU16R443(v,6,0);zipU16R443(v,8,count);zipU16R443(v,10,count);zipU32R443(v,12,centralSize);zipU32R443(v,16,centralOffset);zipU16R443(v,20,0);return b;}
+function createStoredAlbumZipStreamR443(bucket,objects){
+  const encoder=new TextEncoder();
+  const files=objects.map((o,i)=>({object:o,nameBytes:encoder.encode(musicZipEntryNameR443(o,i)),dos:zipDosR443(o.uploaded?new Date(o.uploaded):new Date())}));
+  let index=0,phase='header',reader=null,crc=0xffffffff,size=0,offset=0,current=null,central=[],centralIndex=0,centralOffset=0,centralSize=0;
+  const emit=(controller,bytes)=>{offset+=bytes.byteLength;controller.enqueue(bytes)};
+  return new ReadableStream({
+    async pull(controller){
+      try{
+        while(true){
+          if(phase==='header'){
+            if(index>=files.length){centralOffset=offset;phase='central';continue;}
+            current=files[index];
+            const object=await bucket.get(current.object.key);
+            if(!object)throw new Error(`R2 object disappeared: ${current.object.key}`);
+            reader=object.body.getReader();crc=0xffffffff;size=0;current.localOffset=offset;
+            const h=zipLocalHeaderR443(current.nameBytes,current.dos);phase='data';emit(controller,h);return;
+          }
+          if(phase==='data'){
+            const result=await reader.read();
+            if(!result.done){const chunk=result.value instanceof Uint8Array?result.value:new Uint8Array(result.value);crc=zipCrcUpdateR443(crc,chunk);size+=chunk.byteLength;emit(controller,chunk);return;}
+            try{reader.releaseLock()}catch(_){} reader=null;phase='descriptor';continue;
+          }
+          if(phase==='descriptor'){
+            const finalCrc=(crc^0xffffffff)>>>0, desc=zipDescriptorR443(finalCrc,size);
+            central.push({nameBytes:current.nameBytes,dos:current.dos,crc:finalCrc,size,localOffset:current.localOffset});
+            index++;phase='header';emit(controller,desc);return;
+          }
+          if(phase==='central'){
+            if(centralIndex<central.length){const h=zipCentralHeaderR443(central[centralIndex++]);centralSize+=h.byteLength;emit(controller,h);return;}
+            phase='eocd';continue;
+          }
+          if(phase==='eocd'){const end=zipEndR443(central.length,centralSize,centralOffset);phase='done';emit(controller,end);return;}
+          controller.close();return;
+        }
+      }catch(error){try{await reader?.cancel()}catch(_){}controller.error(error);}
+    },
+    async cancel(){try{await reader?.cancel()}catch(_){}}
+  });
+}
+async function handleMusicAlbumBuildR443(request,env){
+  if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
+  const bucket=getMusicBucketR314(env); if(!bucket)return json({ok:false,error:'music-bucket-not-configured'},503);
+  const def=musicAlbumDefR443(new URL(request.url).searchParams.get('album')); if(!def)return json({ok:false,error:'invalid-album'},400);
+  const objects=await musicAlbumObjectsR443(bucket,def);
+  if(!objects.length)return json({ok:false,error:'album-empty',message:`В R2 не найдено MP3 для ${def.label}.`},409);
+  if(objects.some(o=>Number(o.size||0)>=0xffffffff))return json({ok:false,error:'zip64-required',message:'Один из MP3 больше 4 ГБ.'},413);
+  const totalBytes=objects.reduce((sum,o)=>sum+Number(o.size||0),0);
+  const stream=createStoredAlbumZipStreamR443(bucket,objects);
+  const builtAt=new Date().toISOString();
+  await bucket.put(def.zipKey,stream,{httpMetadata:{contentType:'application/zip',contentDisposition:`attachment; filename="${def.zipName}"`},customMetadata:{source:'ANDRIK Control R443',album:def.label,trackCount:String(objects.length),sourceBytes:String(totalBytes),builtAt}});
+  const status=await musicAlbumStatusOneR443(bucket,def,true);
+  return json({ok:true,album:status,message:`${def.label}: ZIP собран из ${objects.length} MP3 и сохранён в R2.`});
+}
+async function handleMusicAlbumDownloadR443(request,env){
+  const bucket=getMusicBucketR314(env); if(!bucket)return json({ok:false,error:'music-bucket-not-configured'},503);
+  const def=musicAlbumDefR443(new URL(request.url).searchParams.get('album')); if(!def)return json({ok:false,error:'invalid-album'},400);
+  const object=await bucket.get(def.zipKey);
+  if(!object)return json({ok:false,error:'zip-not-built',message:'Архив альбома ещё не собран.'},404);
+  const h=new Headers();h.set('content-type','application/zip');h.set('content-disposition',`attachment; filename="${def.zipName}"`);h.set('cache-control','public, max-age=3600');h.set('x-content-type-options','nosniff');
+  if(object.size)h.set('content-length',String(object.size));
+  if(request.method==='HEAD')return new Response(null,{status:200,headers:h});
+  return new Response(object.body,{status:200,headers:h});
+}
+// === End R443 album ZIP inspector / builder ===
+
 async function handleMusicSinglesListR316(request, env) {
   const bucket=getMusicBucketR314(env); if(!bucket) return json({ok:false,error:'music-bucket-not-configured'},503);
   const listed=await bucket.list({prefix:'singles/',limit:1000,include:['customMetadata']});
@@ -13395,7 +13549,7 @@ async function routeApi(request, env, ctx) {
       return await handleAutomationRun(request, env);
     }
     if (path === '/api/control/daily-summary/archive' && request.method === 'GET') return await handleDailySummaryArchiveR440(request, env);
-    if (path === '/api/control/daily-summary/archive/day' && request.method === 'GET') return await handleDailySummaryArchiveDayR441(request, env);
+    if (path === '/api/control/daily-summary/archive/day' && request.method === 'GET') return await handleDailySummaryArchiveDayR442(request, env);
     if (path === '/api/control/daily-summary/auto-refresh' && request.method === 'POST') return await handleControlSummaryAutoRefreshR403(request, env);
     if (path === '/api/control/daily-summary/send' && request.method === 'POST') return await handleManualDailyOwnerSummary(request, env);
     if (path === '/api/push/retry-latest' && request.method === 'POST') return await handleRetryLatestPush(request, env);
@@ -13412,6 +13566,9 @@ async function routeApi(request, env, ctx) {
     if (path === '/api/comments/moderate' && request.method === 'GET') return await handleAdminCommentsGet(request, env);
     if (path === '/api/comments/moderate' && request.method === 'POST') return await handleAdminCommentsPost(request, env, ctx);
     if (path === '/api/youtube-captions' && request.method === 'GET') return await handleYoutubeCaptions(request, env);
+    if (path === '/api/control/music/albums' && request.method === 'GET') return await handleMusicAlbumsStatusR443(request, env);
+    if (path === '/api/control/music/albums/build' && request.method === 'POST') return await handleMusicAlbumBuildR443(request, env);
+    if (path === '/api/music/album-download' && (request.method === 'GET' || request.method === 'HEAD')) return await handleMusicAlbumDownloadR443(request, env);
     if (path === '/api/music/singles' && request.method === 'GET') return await handleMusicSinglesListR316(request, env);
     if (path === '/api/music/downloads' && request.method === 'GET') return await handleMusicDownloadsR322(request, env);
     if (path === '/api/music/download' && request.method === 'GET') return await handleMusicDownloadR327(request, env);
@@ -13499,7 +13656,7 @@ function controlRecoveryServiceWorkerSource() {
 }
 
 function controlRecoveryPage() {
-  return `<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#02060a"><meta name="robots" content="noindex,nofollow"><title>Восстановление Control ANDRIK</title><style>*{box-sizing:border-box}html,body{min-height:100%;margin:0;background:#02060a;color:#eff8ff;font-family:system-ui,-apple-system,Segoe UI,sans-serif}body{display:grid;place-items:center;padding:22px}.c{width:min(100%,520px);padding:30px 22px;border:1px solid #244455;border-radius:28px;background:linear-gradient(#081923,#030c13);text-align:center}.e{font-size:58px}h1{font-size:clamp(30px,8vw,44px);margin:12px 0}.s{color:#abc0cc;line-height:1.55}.b{display:inline-flex;min-height:54px;align-items:center;justify-content:center;margin-top:20px;padding:0 22px;border:1px solid #315b70;border-radius:999px;color:#eff8ff;text-decoration:none;font-weight:800;background:#0a2432}</style></head><body><main class="c"><div class="e">🟢</div><h1>Восстанавливаем Control</h1><p class="s" id="s">Заменяем старый перехват страниц безопасной версией…</p><a class="b" id="b" href="/control-home.html?page=menu&source=recovery&v=55.00-r441" hidden>Открыть Control</a></main><script>(async()=>{const s=document.getElementById('s'),b=document.getElementById('b'),go='/control-home.html?page=menu&source=recovery&v=55.00-r441&t='+Date.now();b.href=go;try{if('caches'in window){const k=await caches.keys();await Promise.all(k.filter(n=>n.startsWith('andrik-control-')||n.startsWith('andrik-site-')).map(n=>caches.delete(n)))}if('serviceWorker'in navigator){const r=await navigator.serviceWorker.register('/service-worker.js?v=54.96-control-recovery',{scope:'/',updateViaCache:'none'});if(r.installing)r.installing.postMessage({type:'SKIP_WAITING'});if(r.waiting)r.waiting.postMessage({type:'SKIP_WAITING'});await r.update().catch(()=>{});await new Promise(x=>setTimeout(x,1200))}s.textContent='Готово. Открываем админ-панель…';s.style.color='#bfffd9';b.hidden=false;setTimeout(()=>location.replace(go),650)}catch(e){s.textContent='Нажмите кнопку ниже. '+String(e&&e.message||e);s.style.color='#ffb9b9';b.hidden=false}})();</script></body></html>`;
+  return `<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#02060a"><meta name="robots" content="noindex,nofollow"><title>Восстановление Control ANDRIK</title><style>*{box-sizing:border-box}html,body{min-height:100%;margin:0;background:#02060a;color:#eff8ff;font-family:system-ui,-apple-system,Segoe UI,sans-serif}body{display:grid;place-items:center;padding:22px}.c{width:min(100%,520px);padding:30px 22px;border:1px solid #244455;border-radius:28px;background:linear-gradient(#081923,#030c13);text-align:center}.e{font-size:58px}h1{font-size:clamp(30px,8vw,44px);margin:12px 0}.s{color:#abc0cc;line-height:1.55}.b{display:inline-flex;min-height:54px;align-items:center;justify-content:center;margin-top:20px;padding:0 22px;border:1px solid #315b70;border-radius:999px;color:#eff8ff;text-decoration:none;font-weight:800;background:#0a2432}</style></head><body><main class="c"><div class="e">🟢</div><h1>Восстанавливаем Control</h1><p class="s" id="s">Заменяем старый перехват страниц безопасной версией…</p><a class="b" id="b" href="/control-home.html?page=menu&source=recovery&v=55.00-r442" hidden>Открыть Control</a></main><script>(async()=>{const s=document.getElementById('s'),b=document.getElementById('b'),go='/control-home.html?page=menu&source=recovery&v=55.00-r442&t='+Date.now();b.href=go;try{if('caches'in window){const k=await caches.keys();await Promise.all(k.filter(n=>n.startsWith('andrik-control-')||n.startsWith('andrik-site-')).map(n=>caches.delete(n)))}if('serviceWorker'in navigator){const r=await navigator.serviceWorker.register('/service-worker.js?v=54.96-control-recovery',{scope:'/',updateViaCache:'none'});if(r.installing)r.installing.postMessage({type:'SKIP_WAITING'});if(r.waiting)r.waiting.postMessage({type:'SKIP_WAITING'});await r.update().catch(()=>{});await new Promise(x=>setTimeout(x,1200))}s.textContent='Готово. Открываем админ-панель…';s.style.color='#bfffd9';b.hidden=false;setTimeout(()=>location.replace(go),650)}catch(e){s.textContent='Нажмите кнопку ниже. '+String(e&&e.message||e);s.style.color='#ffb9b9';b.hidden=false}})();</script></body></html>`;
 }
 
 
@@ -13621,7 +13778,7 @@ export default {
           const allowedSide = (page === 'google' || page === 'youtube') && source === 'admin-hub-swipe';
           const allowedMap = page === 'map' && source === 'admin-globe';
           if (!allowedSide && !allowedMap) {
-            const adminUrl = new URL('/control-home.html?page=menu&source=launch-guard-r441&v=55.00-r441', url);
+            const adminUrl = new URL('/control-home.html?page=menu&source=launch-guard-r442&v=55.00-r442', url);
             return Response.redirect(adminUrl.toString(), 302);
           }
         }

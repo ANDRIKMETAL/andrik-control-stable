@@ -1,4 +1,4 @@
-/* Control ANDRIK R441 — stable summary + direct archive-day loading. */
+/* Control ANDRIK R442 — stable summary + in-place archive-day loading. */
 (() => {
   const KEY_SESSION='andrik-comments-admin-key';
   const KEY_LOCAL='andrik-comments-admin-key-persistent';
@@ -15,6 +15,8 @@
   const PUSH_SUMMARY_SNAPSHOT_ID=/^[a-z0-9][a-z0-9:_-]{5,119}$/i.test(PUSH_SUMMARY_SNAPSHOT_RAW)?PUSH_SUMMARY_SNAPSHOT_RAW:'';
   const IS_PUSH_SUMMARY_VIEW=LOCATION_PARAMS.get('source')==='push'&&Boolean(PUSH_SUMMARY_WINDOW_KEY);
   const IS_ARCHIVE_SUMMARY_VIEW=IS_PUSH_SUMMARY_VIEW&&LOCATION_PARAMS.get('archive')==='1';
+  let runtimeArchiveWindowKeyR442=IS_ARCHIVE_SUMMARY_VIEW?PUSH_SUMMARY_WINDOW_KEY:'';
+  const isArchiveViewR442=()=>Boolean(runtimeArchiveWindowKeyR442);
   const eventMeta=type=>({
     'youtube-like':['👍','Новый лайк YouTube'],
     'youtube-comment':['💬','Комментарий YouTube'],
@@ -75,7 +77,9 @@
     if(!lastManualUpdatedAtR396)lastManualUpdatedAtR396=readStoredClockR396(SUMMARY_MANUAL_AT_KEY_R396);
     const auto=compactClockR396(lastAutoUpdatedAtR396);
     const manual=manualBusy?'…':compactClockR396(lastManualUpdatedAtR396);
-    box.innerHTML=`<span class="summary-clock-r401"><b>Авто:</b> ${escapeHtml(auto)}</span><span class="summary-clock-r401"><b>Ручное:</b> ${escapeHtml(manual)}</span>`;
+    const archiveButton=$('controlSummaryArchiveR442');
+    box.innerHTML=`<span class="summary-clock-r401"><b>Авто:</b> ${escapeHtml(auto)}</span><span class="summary-calendar-slot-r442" aria-hidden="false"></span><span class="summary-clock-r401"><b>Ручное:</b> ${escapeHtml(manual)}</span>`;
+    if(archiveButton)box.querySelector('.summary-calendar-slot-r442')?.appendChild(archiveButton);
     box.title=`Последнее автообновление: ${auto}; последнее ручное обновление: ${manual}`;
   }
 
@@ -324,26 +328,33 @@
   }
 
   function renderSummary(data){
-    const pushSnapshot=IS_PUSH_SUMMARY_VIEW||data?.summaryView==='completed-push';
-    if(IS_ARCHIVE_SUMMARY_VIEW&&PUSH_SUMMARY_WINDOW_KEY){
+    const archiveView=isArchiveViewR442();
+    const archiveKey=runtimeArchiveWindowKeyR442||PUSH_SUMMARY_WINDOW_KEY;
+    const pushSnapshot=IS_PUSH_SUMMARY_VIEW||archiveView||data?.summaryView==='completed-push';
+    if(archiveView&&archiveKey){
       const title=$('controlHomeTitle');
-      if(title){const [y,m,d]=PUSH_SUMMARY_WINDOW_KEY.split('-');title.textContent=`Сводка за ${d}.${m}.${y}`;}
+      if(title){const [y,m,d]=archiveKey.split('-');title.textContent=`Сводка за ${d}.${m}.${y}`;}
+    }else if(!IS_PUSH_SUMMARY_VIEW){
+      const title=$('controlHomeTitle');
+      if(title)title.textContent='Сводка за сегодня';
     }
     document.body.classList.toggle('control-push-summary-view',pushSnapshot);
     const sourceBox=$('controlSummarySource');
     if(sourceBox){
       sourceBox.hidden=!pushSnapshot;
-      sourceBox.textContent=pushSnapshot?(IS_ARCHIVE_SUMMARY_VIEW?'Архив сводок · завершённый период 06:05 → 06:05':'Сводка из push · данные этого уведомления'):'';
+      sourceBox.textContent=pushSnapshot?(archiveView?'Архив сводок · завершённый период 06:05 → 06:05':'Сводка из push · данные этого уведомления'):'';
     }
     const s=data.summary||{};
     const yDelta=Number(s.youtubeViewDelta||0);
+    const periodNote=archiveView?'за завершённые 24 часа':'с 06:05 сегодня';
+    const subscriberNote=archiveView?'прирост за 24 часа':'прирост с 06:05';
     const items=[
-      ['👤',number(s.siteSubscribers),'Новых подписчиков сайта','за последние 24 часа','site','/analytics-admin.html?page=site'],
-      ['👤',number(s.youtubeSubscribers),'Подписчиков YouTube','прирост за 24 часа','youtube','/youtube-admin.html?refresh=1&v=55.00n'],
+      ['👤',number(s.siteSubscribers),'Новых подписчиков сайта',periodNote,'site','/analytics-admin.html?page=site'],
+      ['👤',number(s.youtubeSubscribers),'Подписчиков YouTube',subscriberNote,'youtube','/youtube-admin.html?refresh=1&v=55.00n'],
       ['💬',number(s.siteComments),'Сообщений сообщества',`${number(s.siteLikes)} лайков`,'site','/comments-admin.html'],
       ['👍',number(s.youtubeLikes),'Лайков YouTube',`${number(s.youtubeComments)} комментариев`,'youtube','/youtube-admin.html?refresh=1&v=55.00n'],
-      ['👀',number(s.websiteViews),'Просмотров сайта','за последние 24 часа','site','/analytics-admin.html?page=site'],
-      ['▶️',number(yDelta),'Просмотров канала','за последние 24 часа','youtube','/youtube-admin.html?refresh=1&v=55.00n']
+      ['👀',number(s.websiteViews),'Просмотров сайта',periodNote,'site','/analytics-admin.html?page=site'],
+      ['▶️',number(yDelta),'Просмотров канала',periodNote,'youtube','/youtube-admin.html?refresh=1&v=55.00n']
     ];
     const summaryBox=$('controlHomeSummary');
     if(summaryBox)summaryBox.innerHTML=items.map(item=>summaryCard(...item)).join('');
@@ -351,7 +362,7 @@
     if(releaseCount)releaseCount.textContent=number(s.releases);
     renderGeoDelta(s);
     renderDailyCitiesR370(data);
-    absorbUpdateTimesR396(data);
+    if(!archiveView)absorbUpdateTimesR396(data);
     renderUpdateTimesR396();
     syncCarouselClones();
   }
@@ -362,7 +373,7 @@
     allActivityEvents=Array.isArray(events)?events:[];
     if(!allActivityEvents.length){
       box.innerHTML='<div class="admin-empty">За последние 24 часа новых событий пока нет. Тихая смена 🌙</div>';
-      if(foot)foot.textContent=IS_PUSH_SUMMARY_VIEW?'← Завершённый период · «24 часа» — полный список':(summaryMode?'← Сводка за сегодня · «24 часа» — полный список':'← Сводка · «24 часа» — полный список');
+      if(foot)foot.textContent=(IS_PUSH_SUMMARY_VIEW||isArchiveViewR442())?'← Завершённый период · «24 часа» — полный список':(summaryMode?'← Сводка за сегодня · «24 часа» — полный список':'← Сводка · «24 часа» — полный список');
       if(!$('controlActivityModal')?.hidden)renderActivityModal();
       syncCarouselClones();
       return;
@@ -379,6 +390,9 @@
   let activeSummaryWindowKey=activeViewWindowKey();
   async function load({silent=false,forceLive=false}={}){
     if(loading)return;
+    // R442: once a calendar day is opened in-place it is immutable on this screen.
+    // Background/visibility refreshes must not silently replace archive cards with live data.
+    if(isArchiveViewR442()&&!IS_ARCHIVE_SUMMARY_VIEW)return;
     loading=true;
   if(summaryMode){
     const cached=IS_PUSH_SUMMARY_VIEW?null:readHomeCache();
@@ -404,7 +418,7 @@
       if(IS_ARCHIVE_SUMMARY_VIEW){
         // R441: archived days are immutable. Load the persisted day directly instead
         // of routing through /api/control/home and its live-refresh/schema path.
-        const archiveQuery=new URLSearchParams({window:PUSH_SUMMARY_WINDOW_KEY,v:'55.00-r441',t:String(Date.now())});
+        const archiveQuery=new URLSearchParams({window:PUSH_SUMMARY_WINDOW_KEY,v:'55.00-r442',t:String(Date.now())});
         data=await api(`/api/control/daily-summary/archive/day?${archiveQuery.toString()}`,{timeoutMs:10000});
       }else{
         const query=new URLSearchParams({v:'55.00-r405'});
@@ -667,6 +681,26 @@
       }
     }
   }
+
+  window.andrikApplyArchiveSummaryR442=(data,key)=>{
+    const safe=/^\d{4}-\d{2}-\d{2}$/.test(String(key||''))?String(key):'';
+    if(!safe||!data||typeof data!=='object')return false;
+    runtimeArchiveWindowKeyR442=safe;
+    activeSummaryWindowKey=safe;
+    renderSummary(data);
+    renderActivity(Array.isArray(data.activity)?data.activity:[]);
+    try{
+      const url=new URL(location.href);
+      url.searchParams.set('page','summary');
+      url.searchParams.set('source','push');
+      url.searchParams.set('archive','1');
+      url.searchParams.set('summaryWindow',safe);
+      url.searchParams.set('v','55.00-r442');
+      history.replaceState({archive:true,summaryWindow:safe},'',url.pathname+url.search);
+    }catch(_){}
+    try{window.scrollTo({top:0,behavior:'auto'})}catch(_){window.scrollTo(0,0)}
+    return true;
+  };
 
   const dailySummaryButton=$('controlSummaryRefresh');
   if(dailySummaryButton){
