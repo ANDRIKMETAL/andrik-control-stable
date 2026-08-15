@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786777210032-d0e05ea8da",
-  "release": "R440",
-  "archiveName": "R440-R439-YOUTUBE-VIEWS-SUMMARY-ARCHIVE-ADMIN-BALANCE-SAFE-FULL.zip",
-  "sourceHead": "0910f1a9b5d7d627c15a914171c82517216de3a1",
-  "backupSha": "0910f1a9b5d7d627c15a914171c82517216de3a1",
-  "backupTag": "control-backup-20260815070005-0910f1a-r440-f80dc",
+  "operationId": "publish-1786778056521-d38562cd3f",
+  "release": "R441",
+  "archiveName": "R441-R440-ADMIN-FOURTH-CARD-ARCHIVE-DAY-CALENDAR-LIFT-SAFE-FULL.zip",
+  "sourceHead": "8fd1f917596ea64c10a83e568b11fadf528efd21",
+  "backupSha": "8fd1f917596ea64c10a83e568b11fadf528efd21",
+  "backupTag": "control-backup-20260815071412-8fd1f91-r441-c85a0",
   "autoRecovery": true,
-  "generatedAt": "2026-08-15T07:00:10.032Z"
+  "generatedAt": "2026-08-15T07:14:16.521Z"
 }

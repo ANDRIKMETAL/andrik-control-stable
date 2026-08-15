@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R440', number:440, version:'55.00', full:'55.00 LIVE WEB AI FINAL R440', siteUpdater:'55.00-r356' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R441', number:441, version:'55.00', full:'55.00 LIVE WEB AI FINAL R441', siteUpdater:'55.00-r356' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -10226,6 +10226,57 @@ async function handleDailySummaryArchiveR440(request, env) {
   });
 }
 
+// R441: direct immutable archive-day loader.
+async function handleDailySummaryArchiveDayR441(request, env) {
+  if (!adminAuthorized(request, env)) return json({ok:false,error:'unauthorized'},401);
+  const db=requireDb(env);
+  await ensurePushAutomationSchema(db);
+  const url=new URL(request.url);
+  const window=getBratislavaSummaryWindowByKeyR271(url.searchParams.get('window'));
+  if(!window || !window.completed){
+    return json({ok:false,error:'invalid-archive-window',details:'Архивный день недоступен или ещё не завершён.'},400);
+  }
+  const storedRow=await getPushState(db,`daily-owner-summary-window:${window.key}`).catch(()=>null);
+  let snapshot=parseStoredDailySummarySnapshotR271(storedRow,window.key);
+  if(!snapshot) snapshot=await findDailySummarySnapshotR271(db,window).catch(()=>null);
+  if(!snapshot){
+    return json({ok:false,error:'archive-summary-not-found',details:'Сохранённая сводка за этот день не найдена.'},404);
+  }
+  const [activityResult, fallbackCities] = await Promise.all([
+    db.prepare(`
+      SELECT id, type, source, audience, title, message, url,
+             video_id AS videoId, video_title AS videoTitle,
+             status, created_at AS createdAt
+      FROM push_history
+      WHERE type IN ('youtube-comment','youtube-comment-count','youtube-subscriber','youtube-subscriber-count','youtube-like','site-subscriber','comment-live','comment-pending','auto-release','auto-release-retry','release-publish')
+        AND datetime(created_at) >= datetime(?1)
+        AND datetime(created_at) < datetime(?2)
+      ORDER BY datetime(created_at) DESC
+      LIMIT 200
+    `).bind(window.startAt,window.endAt).all().catch(()=>({results:[]})),
+    (Array.isArray(snapshot.cities) && snapshot.cities.length)
+      ? Promise.resolve(snapshot.cities)
+      : collectDailyCityActivityR370(db,window,snapshot.sentAt || window.endAt).catch(()=>[])
+  ]);
+  const repairedMetrics=await repairHistoricalYoutubeViewsR440(db,window,snapshot.metrics || {}).catch(()=>snapshot.metrics || {});
+  return json({
+    ok:true,
+    archive:true,
+    period:'06:05-auto-cycle',
+    windowKey:window.key,
+    windowStartAt:window.startAt,
+    windowEndAt:window.endAt,
+    summary:controlHomeSummaryFromDailyMetricsR271(repairedMetrics),
+    cityActivity:Array.isArray(fallbackCities)?fallbackCities:[],
+    cityMapActivity:[],
+    activity:activityResult?.results || [],
+    summarySource:'archive-direct-r441',
+    summaryView:'completed-push',
+    pushSentAt:snapshot.sentAt || '',
+    updatedAt:snapshot.sentAt || storedRow?.updatedAt || window.endAt
+  });
+}
+
 async function handleControlHome(request, env) {
   if (!adminAuthorized(request, env)) return json({ ok:false, error:'unauthorized' },401);
   const db = requireDb(env);
@@ -13344,6 +13395,7 @@ async function routeApi(request, env, ctx) {
       return await handleAutomationRun(request, env);
     }
     if (path === '/api/control/daily-summary/archive' && request.method === 'GET') return await handleDailySummaryArchiveR440(request, env);
+    if (path === '/api/control/daily-summary/archive/day' && request.method === 'GET') return await handleDailySummaryArchiveDayR441(request, env);
     if (path === '/api/control/daily-summary/auto-refresh' && request.method === 'POST') return await handleControlSummaryAutoRefreshR403(request, env);
     if (path === '/api/control/daily-summary/send' && request.method === 'POST') return await handleManualDailyOwnerSummary(request, env);
     if (path === '/api/push/retry-latest' && request.method === 'POST') return await handleRetryLatestPush(request, env);
@@ -13447,7 +13499,7 @@ function controlRecoveryServiceWorkerSource() {
 }
 
 function controlRecoveryPage() {
-  return `<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#02060a"><meta name="robots" content="noindex,nofollow"><title>Восстановление Control ANDRIK</title><style>*{box-sizing:border-box}html,body{min-height:100%;margin:0;background:#02060a;color:#eff8ff;font-family:system-ui,-apple-system,Segoe UI,sans-serif}body{display:grid;place-items:center;padding:22px}.c{width:min(100%,520px);padding:30px 22px;border:1px solid #244455;border-radius:28px;background:linear-gradient(#081923,#030c13);text-align:center}.e{font-size:58px}h1{font-size:clamp(30px,8vw,44px);margin:12px 0}.s{color:#abc0cc;line-height:1.55}.b{display:inline-flex;min-height:54px;align-items:center;justify-content:center;margin-top:20px;padding:0 22px;border:1px solid #315b70;border-radius:999px;color:#eff8ff;text-decoration:none;font-weight:800;background:#0a2432}</style></head><body><main class="c"><div class="e">🟢</div><h1>Восстанавливаем Control</h1><p class="s" id="s">Заменяем старый перехват страниц безопасной версией…</p><a class="b" id="b" href="/control-home.html?page=menu&source=recovery&v=55.00-r440" hidden>Открыть Control</a></main><script>(async()=>{const s=document.getElementById('s'),b=document.getElementById('b'),go='/control-home.html?page=menu&source=recovery&v=55.00-r440&t='+Date.now();b.href=go;try{if('caches'in window){const k=await caches.keys();await Promise.all(k.filter(n=>n.startsWith('andrik-control-')||n.startsWith('andrik-site-')).map(n=>caches.delete(n)))}if('serviceWorker'in navigator){const r=await navigator.serviceWorker.register('/service-worker.js?v=54.96-control-recovery',{scope:'/',updateViaCache:'none'});if(r.installing)r.installing.postMessage({type:'SKIP_WAITING'});if(r.waiting)r.waiting.postMessage({type:'SKIP_WAITING'});await r.update().catch(()=>{});await new Promise(x=>setTimeout(x,1200))}s.textContent='Готово. Открываем админ-панель…';s.style.color='#bfffd9';b.hidden=false;setTimeout(()=>location.replace(go),650)}catch(e){s.textContent='Нажмите кнопку ниже. '+String(e&&e.message||e);s.style.color='#ffb9b9';b.hidden=false}})();</script></body></html>`;
+  return `<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#02060a"><meta name="robots" content="noindex,nofollow"><title>Восстановление Control ANDRIK</title><style>*{box-sizing:border-box}html,body{min-height:100%;margin:0;background:#02060a;color:#eff8ff;font-family:system-ui,-apple-system,Segoe UI,sans-serif}body{display:grid;place-items:center;padding:22px}.c{width:min(100%,520px);padding:30px 22px;border:1px solid #244455;border-radius:28px;background:linear-gradient(#081923,#030c13);text-align:center}.e{font-size:58px}h1{font-size:clamp(30px,8vw,44px);margin:12px 0}.s{color:#abc0cc;line-height:1.55}.b{display:inline-flex;min-height:54px;align-items:center;justify-content:center;margin-top:20px;padding:0 22px;border:1px solid #315b70;border-radius:999px;color:#eff8ff;text-decoration:none;font-weight:800;background:#0a2432}</style></head><body><main class="c"><div class="e">🟢</div><h1>Восстанавливаем Control</h1><p class="s" id="s">Заменяем старый перехват страниц безопасной версией…</p><a class="b" id="b" href="/control-home.html?page=menu&source=recovery&v=55.00-r441" hidden>Открыть Control</a></main><script>(async()=>{const s=document.getElementById('s'),b=document.getElementById('b'),go='/control-home.html?page=menu&source=recovery&v=55.00-r441&t='+Date.now();b.href=go;try{if('caches'in window){const k=await caches.keys();await Promise.all(k.filter(n=>n.startsWith('andrik-control-')||n.startsWith('andrik-site-')).map(n=>caches.delete(n)))}if('serviceWorker'in navigator){const r=await navigator.serviceWorker.register('/service-worker.js?v=54.96-control-recovery',{scope:'/',updateViaCache:'none'});if(r.installing)r.installing.postMessage({type:'SKIP_WAITING'});if(r.waiting)r.waiting.postMessage({type:'SKIP_WAITING'});await r.update().catch(()=>{});await new Promise(x=>setTimeout(x,1200))}s.textContent='Готово. Открываем админ-панель…';s.style.color='#bfffd9';b.hidden=false;setTimeout(()=>location.replace(go),650)}catch(e){s.textContent='Нажмите кнопку ниже. '+String(e&&e.message||e);s.style.color='#ffb9b9';b.hidden=false}})();</script></body></html>`;
 }
 
 
@@ -13569,7 +13621,7 @@ export default {
           const allowedSide = (page === 'google' || page === 'youtube') && source === 'admin-hub-swipe';
           const allowedMap = page === 'map' && source === 'admin-globe';
           if (!allowedSide && !allowedMap) {
-            const adminUrl = new URL('/control-home.html?page=menu&source=launch-guard-r440&v=55.00-r440', url);
+            const adminUrl = new URL('/control-home.html?page=menu&source=launch-guard-r441&v=55.00-r441', url);
             return Response.redirect(adminUrl.toString(), 302);
           }
         }

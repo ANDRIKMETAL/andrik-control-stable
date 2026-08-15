@@ -1,4 +1,4 @@
-/* Control ANDRIK R398 — route-independent auto checkpoint + stable summary first paint. */
+/* Control ANDRIK R441 — stable summary + direct archive-day loading. */
 (() => {
   const KEY_SESSION='andrik-comments-admin-key';
   const KEY_LOCAL='andrik-comments-admin-key-persistent';
@@ -400,10 +400,18 @@
     if(showRefreshEffect)shell?.classList.add('is-refreshing');
     else shell?.classList.remove('is-refreshing');
     try{
-      const query=new URLSearchParams({v:'55.00-r405'});
-      if(forceLive||IS_PUSH_SUMMARY_VIEW)query.set('refresh','1');
-      if(IS_PUSH_SUMMARY_VIEW){query.set('source','push');query.set('window',PUSH_SUMMARY_WINDOW_KEY);if(PUSH_SUMMARY_SNAPSHOT_ID)query.set('snapshot',PUSH_SUMMARY_SNAPSHOT_ID)}
-      let data=await api(`/api/control/home?${query.toString()}`,{timeoutMs:forceLive&&!IS_PUSH_SUMMARY_VIEW?20000:12000});
+      let data;
+      if(IS_ARCHIVE_SUMMARY_VIEW){
+        // R441: archived days are immutable. Load the persisted day directly instead
+        // of routing through /api/control/home and its live-refresh/schema path.
+        const archiveQuery=new URLSearchParams({window:PUSH_SUMMARY_WINDOW_KEY,v:'55.00-r441',t:String(Date.now())});
+        data=await api(`/api/control/daily-summary/archive/day?${archiveQuery.toString()}`,{timeoutMs:10000});
+      }else{
+        const query=new URLSearchParams({v:'55.00-r405'});
+        if(forceLive||IS_PUSH_SUMMARY_VIEW)query.set('refresh','1');
+        if(IS_PUSH_SUMMARY_VIEW){query.set('source','push');query.set('window',PUSH_SUMMARY_WINDOW_KEY);if(PUSH_SUMMARY_SNAPSHOT_ID)query.set('snapshot',PUSH_SUMMARY_SNAPSHOT_ID)}
+        data=await api(`/api/control/home?${query.toString()}`,{timeoutMs:forceLive&&!IS_PUSH_SUMMARY_VIEW?20000:12000});
+      }
       if(!forceLive&&!IS_PUSH_SUMMARY_VIEW){
         const summary=data?.summary||{};
         const numericKeys=['websiteUsers','websiteViews','siteSubscribers','siteComments','siteLikes','youtubeComments','youtubeSubscribers','youtubeLikes','youtubeViews','youtubeViewDelta','releases'];
