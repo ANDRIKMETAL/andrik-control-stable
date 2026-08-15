@@ -1,0 +1,45 @@
+/* ANDRIK R446 — restore compact summary clocks + right calendar; keep the whole summary in one screen. */
+.control-home-page .control-summary-page .control-home-hero-copy #controlHomeUpdated,
+body.control-home-page.control-summary-visible #controlHomeUpdated,
+body.control-home-page.control-report-standalone.control-summary-visible #controlHomeUpdated{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr) 36px!important;
+  align-items:center!important;
+  justify-items:center!important;
+  gap:4px!important;
+  width:100%!important;
+  margin:-2px auto 4px!important;
+  padding:0 4px!important;
+  min-height:34px!important;
+  white-space:nowrap!important;
+  overflow:visible!important;
+  font-size:clamp(.61rem,2.6vw,.74rem)!important;
+  line-height:1.1!important;
+}
+#controlHomeUpdated .summary-clock-r401{display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:4px!important;min-width:0!important;white-space:nowrap!important}
+#controlHomeUpdated .summary-calendar-slot-r442{width:36px!important;height:32px!important;display:grid!important;place-items:center!important;overflow:visible!important}
+#controlHomeUpdated .summary-calendar-slot-r442 .control-summary-archive-button-r442{
+  width:32px!important;height:32px!important;font-size:.96rem!important;transform:translateY(-6px)!important;
+}
+#controlHomeUpdated .summary-calendar-slot-r442 .control-summary-archive-button-r442:active{transform:translateY(-6px) scale(.94)!important}
+/* The summary used to fit without a long vertical tail. R446 restores that compact geometry. */
+body.control-home-page.control-summary-visible .control-summary-page,
+body.control-home-page.control-report-standalone.control-summary-visible .control-summary-page{
+  overflow-y:hidden!important;overflow-x:hidden!important;overscroll-behavior:none!important;
+}
+body.control-home-page.control-summary-visible .control-summary-page>.control-swipe-page-inner,
+body.control-home-page.control-report-standalone.control-summary-visible .control-summary-page>.control-swipe-page-inner{
+  height:100%!important;min-height:0!important;max-height:100%!important;padding-bottom:max(90px,calc(78px + env(safe-area-inset-bottom)))!important;overflow:hidden!important;
+}
+body.control-home-page.control-summary-visible .control-summary-page .control-home-hero{padding-top:14px!important;padding-bottom:8px!important}
+body.control-home-page.control-summary-visible .control-summary-page .control-home-hero h1{margin-bottom:5px!important}
+body.control-home-page.control-summary-visible .control-summary-page .control-home-summary{gap:7px!important;margin-top:5px!important}
+body.control-home-page.control-summary-visible .control-summary-page .control-home-summary-item{min-height:0!important;padding-top:9px!important;padding-bottom:9px!important}
+body.control-home-page.control-summary-visible .control-summary-dual-r375{margin-top:6px!important;margin-bottom:0!important}
+body.control-home-page.control-summary-visible .control-summary-mini-r375{min-height:0!important}
+@media(max-width:390px){
+  .control-home-page .control-summary-page .control-home-hero-copy #controlHomeUpdated,
+  body.control-home-page.control-summary-visible #controlHomeUpdated{grid-template-columns:minmax(0,1fr) minmax(0,1fr) 32px!important;gap:2px!important;font-size:.59rem!important}
+  #controlHomeUpdated .summary-calendar-slot-r442{width:32px!important}
+  #controlHomeUpdated .summary-calendar-slot-r442 .control-summary-archive-button-r442{width:30px!important;height:30px!important;font-size:.9rem!important;transform:translateY(-5px)!important}
+}

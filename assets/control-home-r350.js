@@ -78,7 +78,7 @@
     const auto=compactClockR396(lastAutoUpdatedAtR396);
     const manual=manualBusy?'…':compactClockR396(lastManualUpdatedAtR396);
     const archiveButton=$('controlSummaryArchiveR442');
-    box.innerHTML=`<span class="summary-clock-r401"><b>Авто:</b> ${escapeHtml(auto)}</span><span class="summary-calendar-slot-r442" aria-hidden="false"></span><span class="summary-clock-r401"><b>Ручное:</b> ${escapeHtml(manual)}</span>`;
+    box.innerHTML=`<span class="summary-clock-r401"><b>Авто:</b> ${escapeHtml(auto)}</span><span class="summary-clock-r401"><b>Ручное:</b> ${escapeHtml(manual)}</span><span class="summary-calendar-slot-r442" aria-hidden="false"></span>`;
     if(archiveButton)box.querySelector('.summary-calendar-slot-r442')?.appendChild(archiveButton);
     box.title=`Последнее автообновление: ${auto}; последнее ручное обновление: ${manual}`;
   }

@@ -1,4 +1,4 @@
-/* ANDRIK R445 — public album ZIP availability */
+/* ANDRIK R446 — public album ZIP availability */
 (()=>{'use strict';
   const buttons=[...document.querySelectorAll('[data-album-download]')];if(!buttons.length)return;
   const lang=(document.documentElement.lang||'ru').toLowerCase();

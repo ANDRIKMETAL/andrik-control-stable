@@ -1,0 +1,23 @@
+ANDRIK Control / Site — R446
+Date: 15.08.2026
+Base: R445
+
+SUMMARY UI
+- Auto and Manual clocks restored to one horizontal row.
+- Calendar moved back to the right and lifted slightly.
+- Summary page compacted to remove the new long vertical scroll tail.
+- YouTube view counter logic is not artificially capped or fabricated; existing R410/R440 source-of-truth remains unchanged.
+
+PUBLIC ALBUMS
+- Main-page paired album covers forced to true square aspect ratio with no vertical stretching.
+- Dedicated Albums page now has one clean heading only; duplicate Albums heading/subheading block removed.
+- Album ZIP download action is a flat green full-width button; label no longer includes file size, preventing clipping.
+- ZIP size remains available as the button title.
+- Floating player access added to Albums page; player-shell bridge restored there.
+- RU/UA/SK/EN kept in sync.
+
+PRESERVED
+- R445 planet-to-world-map portal transition.
+- R444 R2 multipart album ZIP creation/download routes.
+- Existing map/city logic.
+- Admin planet lower placement.

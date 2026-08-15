@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R445', number:445, version:'55.00', full:'55.00 LIVE WEB AI FINAL R445', siteUpdater:'55.00-r356' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R446', number:446, version:'55.00', full:'55.00 LIVE WEB AI FINAL R446', siteUpdater:'55.00-r356' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -13271,8 +13271,8 @@ async function handleMusicMp3PutR314(request, env) {
 }
 
 
-// === R445: album ZIP inspector + browser multipart builder for ANDRIK R2 ===
-const MUSIC_ALBUMS_R445 = Object.freeze({
+// === R446: album ZIP inspector + browser multipart builder for ANDRIK R2 ===
+const MUSIC_ALBUMS_R446 = Object.freeze({
   'illusion-of-life': Object.freeze({
     slug:'illusion-of-life', label:'Illusion of Life', prefix:'albums/illusion-of-life/',
     zipKey:'albums/illusion-of-life/ANDRIK-Illusion-of-Life-MP3.zip',
@@ -13284,29 +13284,29 @@ const MUSIC_ALBUMS_R445 = Object.freeze({
     zipName:'ANDRIK-OCEAN-MP3.zip'
   })
 });
-function musicAlbumDefR445(value){
+function musicAlbumDefR446(value){
   const slug=String(value||'').trim().toLowerCase();
-  return MUSIC_ALBUMS_R445[slug]||null;
+  return MUSIC_ALBUMS_R446[slug]||null;
 }
-function musicAlbumTrackSortR445(a,b){
+function musicAlbumTrackSortR446(a,b){
   const ta=parseInt(a?.customMetadata?.track||'',10), tb=parseInt(b?.customMetadata?.track||'',10);
   if(Number.isFinite(ta)&&Number.isFinite(tb)&&ta!==tb)return ta-tb;
   if(Number.isFinite(ta)&&!Number.isFinite(tb))return -1;
   if(!Number.isFinite(ta)&&Number.isFinite(tb))return 1;
   return String(a?.key||'').localeCompare(String(b?.key||''),'ru',{numeric:true,sensitivity:'base'});
 }
-function musicZipSafeNameR445(value){
+function musicZipSafeNameR446(value){
   return String(value||'').replace(/[\\/:*?\"<>|\u0000-\u001f]/g,' ').replace(/\s+/g,' ').trim().slice(0,180);
 }
-function musicZipEntryNameR445(object,index){
+function musicZipEntryNameR446(object,index){
   const m=object?.customMetadata||{};
   const rawBase=String(object?.key||'').split('/').pop()?.replace(/\.mp3$/i,'')||`track-${index+1}`;
-  const title=musicZipSafeNameR445(m.title||rawBase.replace(/[_-]+/g,' '))||`Track ${index+1}`;
+  const title=musicZipSafeNameR446(m.title||rawBase.replace(/[_-]+/g,' '))||`Track ${index+1}`;
   const n=parseInt(m.track||'',10);
   const prefix=Number.isFinite(n)&&n>0?String(n).padStart(2,'0')+' - ':String(index+1).padStart(2,'0')+' - ';
   return `${prefix}${title}.mp3`;
 }
-function musicAlbumDuplicateScoreR445(object){
+function musicAlbumDuplicateScoreR446(object){
   const m=object?.customMetadata||{}, title=String(m.title||'');
   let score=0;
   if(/[А-Яа-яЁёІіЇїЄє]/.test(title))score+=100;
@@ -13316,11 +13316,11 @@ function musicAlbumDuplicateScoreR445(object){
   if(Number.isFinite(uploaded))score+=Math.min(4,uploaded/1e15);
   return score;
 }
-async function musicAlbumObjectsR445(bucket,def){
+async function musicAlbumObjectsR446(bucket,def){
   const listed=await bucket.list({prefix:def.prefix,limit:1000,include:['customMetadata']});
-  return (listed.objects||[]).filter(o=>/\.mp3$/i.test(o.key)).sort(musicAlbumTrackSortR445);
+  return (listed.objects||[]).filter(o=>/\.mp3$/i.test(o.key)).sort(musicAlbumTrackSortR446);
 }
-function musicAlbumArchiveSelectionR445(objects){
+function musicAlbumArchiveSelectionR446(objects){
   const selected=[], loose=[], groups=new Map(), duplicates=[];
   for(const object of objects){
     const n=parseInt(object?.customMetadata?.track||'',10);
@@ -13329,16 +13329,16 @@ function musicAlbumArchiveSelectionR445(objects){
     }else loose.push(object);
   }
   [...groups.keys()].sort((a,b)=>a-b).forEach(n=>{
-    const arr=groups.get(n).slice().sort((a,b)=>musicAlbumDuplicateScoreR445(b)-musicAlbumDuplicateScoreR445(a));
+    const arr=groups.get(n).slice().sort((a,b)=>musicAlbumDuplicateScoreR446(b)-musicAlbumDuplicateScoreR446(a));
     selected.push(arr[0]);
     if(arr.length>1)duplicates.push({track:n,keptKey:arr[0].key,omittedKeys:arr.slice(1).map(o=>o.key)});
   });
   selected.push(...loose);
-  return {selected:selected.sort(musicAlbumTrackSortR445),duplicates};
+  return {selected:selected.sort(musicAlbumTrackSortR446),duplicates};
 }
-async function musicAlbumStatusOneR445(bucket,def,includeTracks=true){
-  const source=await musicAlbumObjectsR445(bucket,def);
-  const archive=musicAlbumArchiveSelectionR445(source);
+async function musicAlbumStatusOneR446(bucket,def,includeTracks=true){
+  const source=await musicAlbumObjectsR446(bucket,def);
+  const archive=musicAlbumArchiveSelectionR446(source);
   const tracks=archive.selected;
   const zip=await bucket.head(def.zipKey).catch(()=>null);
   const totalBytes=tracks.reduce((sum,o)=>sum+Number(o.size||0),0);
@@ -13348,52 +13348,52 @@ async function musicAlbumStatusOneR445(bucket,def,includeTracks=true){
     duplicateCount:archive.duplicates.length,duplicates:archive.duplicates,
     tracks:includeTracks?tracks.map((o,i)=>({
       key:o.key,
-      title:o.customMetadata?.title||musicZipEntryNameR445(o,i).replace(/^\d+\s*-\s*|\.mp3$/gi,''),
-      entryName:musicZipEntryNameR445(o,i),
+      title:o.customMetadata?.title||musicZipEntryNameR446(o,i).replace(/^\d+\s*-\s*|\.mp3$/gi,''),
+      entryName:musicZipEntryNameR446(o,i),
       track:o.customMetadata?.track||String(i+1),size:Number(o.size||0),uploaded:o.uploaded||null
     })):undefined,
     zip:{exists:Boolean(zip),key:def.zipKey,name:def.zipName,size:Number(zip?.size||0),uploaded:zip?.uploaded||null,
       downloadUrl:`/api/music/album-download?album=${encodeURIComponent(def.slug)}`}
   };
 }
-async function handleMusicAlbumsStatusR445(request,env){
+async function handleMusicAlbumsStatusR446(request,env){
   if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
   const bucket=getMusicBucketR314(env); if(!bucket)return json({ok:false,error:'music-bucket-not-configured'},503);
-  const url=new URL(request.url), requested=musicAlbumDefR445(url.searchParams.get('album'));
-  const defs=requested?[requested]:Object.values(MUSIC_ALBUMS_R445);
+  const url=new URL(request.url), requested=musicAlbumDefR446(url.searchParams.get('album'));
+  const defs=requested?[requested]:Object.values(MUSIC_ALBUMS_R446);
   const albums=[];
-  for(const def of defs)albums.push(await musicAlbumStatusOneR445(bucket,def,true));
-  return json({ok:true,albums,checkedAt:new Date().toISOString(),builder:'browser-multipart-r445'});
+  for(const def of defs)albums.push(await musicAlbumStatusOneR446(bucket,def,true));
+  return json({ok:true,albums,checkedAt:new Date().toISOString(),builder:'browser-multipart-r446'});
 }
-async function handleMusicAlbumsPublicStatusR445(request,env){
+async function handleMusicAlbumsPublicStatusR446(request,env){
   const bucket=getMusicBucketR314(env); if(!bucket)return json({ok:false,error:'music-bucket-not-configured'},503);
   const albums=[];
-  for(const def of Object.values(MUSIC_ALBUMS_R445)){
+  for(const def of Object.values(MUSIC_ALBUMS_R446)){
     const zip=await bucket.head(def.zipKey).catch(()=>null);
     albums.push({slug:def.slug,label:def.label,zip:{exists:Boolean(zip),size:Number(zip?.size||0),uploaded:zip?.uploaded||null,downloadUrl:`/api/music/album-download?album=${encodeURIComponent(def.slug)}`}});
   }
   return json({ok:true,albums,checkedAt:new Date().toISOString()},200,JSON_HEADERS);
 }
-function musicAlbumUploadIdR445(request){
+function musicAlbumUploadIdR446(request){
   const value=String(new URL(request.url).searchParams.get('uploadId')||'').trim();
   return value&&value.length<=512?value:'';
 }
-async function handleMusicAlbumMultipartStartR445(request,env){
+async function handleMusicAlbumMultipartStartR446(request,env){
   if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
   const bucket=getMusicBucketR314(env); if(!bucket)return json({ok:false,error:'music-bucket-not-configured'},503);
-  const def=musicAlbumDefR445(new URL(request.url).searchParams.get('album')); if(!def)return json({ok:false,error:'invalid-album'},400);
-  const status=await musicAlbumStatusOneR445(bucket,def,true);
+  const def=musicAlbumDefR446(new URL(request.url).searchParams.get('album')); if(!def)return json({ok:false,error:'invalid-album'},400);
+  const status=await musicAlbumStatusOneR446(bucket,def,true);
   if(!status.trackCount)return json({ok:false,error:'album-empty',message:`В R2 не найдено MP3 для ${def.label}.`},409);
   const upload=await bucket.createMultipartUpload(def.zipKey,{
     httpMetadata:{contentType:'application/zip',contentDisposition:`attachment; filename=\"${def.zipName}\"`},
-    customMetadata:{source:'ANDRIK Control R445 browser multipart',album:def.label,trackCount:String(status.trackCount),sourceBytes:String(status.totalBytes),builtAt:new Date().toISOString()}
+    customMetadata:{source:'ANDRIK Control R446 browser multipart',album:def.label,trackCount:String(status.trackCount),sourceBytes:String(status.totalBytes),builtAt:new Date().toISOString()}
   });
   return json({ok:true,album:status,uploadId:upload.uploadId,key:upload.key,zipName:def.zipName,partSize:8*1024*1024});
 }
-async function handleMusicAlbumMultipartPartR445(request,env){
+async function handleMusicAlbumMultipartPartR446(request,env){
   if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
   const bucket=getMusicBucketR314(env); if(!bucket)return json({ok:false,error:'music-bucket-not-configured'},503);
-  const url=new URL(request.url),def=musicAlbumDefR445(url.searchParams.get('album')),uploadId=musicAlbumUploadIdR445(request),partNumber=parseInt(url.searchParams.get('partNumber')||'',10);
+  const url=new URL(request.url),def=musicAlbumDefR446(url.searchParams.get('album')),uploadId=musicAlbumUploadIdR446(request),partNumber=parseInt(url.searchParams.get('partNumber')||'',10);
   if(!def||!uploadId||!Number.isFinite(partNumber)||partNumber<1||partNumber>10000)return json({ok:false,error:'invalid-multipart-request'},400);
   if(!request.body)return json({ok:false,error:'missing-part-body'},400);
   try{
@@ -13404,10 +13404,10 @@ async function handleMusicAlbumMultipartPartR445(request,env){
     return json({ok:false,error:'multipart-part-failed',message:cleanPlainText(error?.message||error,420)},502);
   }
 }
-async function handleMusicAlbumMultipartCompleteR445(request,env){
+async function handleMusicAlbumMultipartCompleteR446(request,env){
   if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
   const bucket=getMusicBucketR314(env); if(!bucket)return json({ok:false,error:'music-bucket-not-configured'},503);
-  const url=new URL(request.url),def=musicAlbumDefR445(url.searchParams.get('album')),uploadId=musicAlbumUploadIdR445(request);
+  const url=new URL(request.url),def=musicAlbumDefR446(url.searchParams.get('album')),uploadId=musicAlbumUploadIdR446(request);
   if(!def||!uploadId)return json({ok:false,error:'invalid-multipart-request'},400);
   const body=await request.json().catch(()=>null), parts=Array.isArray(body?.parts)?body.parts:[];
   const normalized=parts.map(p=>({partNumber:parseInt(p?.partNumber,10),etag:String(p?.etag||'')})).filter(p=>Number.isFinite(p.partNumber)&&p.partNumber>0&&p.etag).sort((a,b)=>a.partNumber-b.partNumber);
@@ -13415,23 +13415,23 @@ async function handleMusicAlbumMultipartCompleteR445(request,env){
   try{
     const upload=bucket.resumeMultipartUpload(def.zipKey,uploadId);
     const object=await upload.complete(normalized);
-    const status=await musicAlbumStatusOneR445(bucket,def,true);
+    const status=await musicAlbumStatusOneR446(bucket,def,true);
     return json({ok:true,album:status,etag:object?.httpEtag||'',message:`${def.label}: ZIP сохранён в R2 ✅`});
   }catch(error){
     return json({ok:false,error:'multipart-complete-failed',message:cleanPlainText(error?.message||error,420)},502);
   }
 }
-async function handleMusicAlbumMultipartAbortR445(request,env){
+async function handleMusicAlbumMultipartAbortR446(request,env){
   if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
   const bucket=getMusicBucketR314(env); if(!bucket)return json({ok:false,error:'music-bucket-not-configured'},503);
-  const url=new URL(request.url),def=musicAlbumDefR445(url.searchParams.get('album')),uploadId=musicAlbumUploadIdR445(request);
+  const url=new URL(request.url),def=musicAlbumDefR446(url.searchParams.get('album')),uploadId=musicAlbumUploadIdR446(request);
   if(!def||!uploadId)return json({ok:false,error:'invalid-multipart-request'},400);
   try{await bucket.resumeMultipartUpload(def.zipKey,uploadId).abort();return json({ok:true});}
   catch(error){return json({ok:false,error:'multipart-abort-failed',message:cleanPlainText(error?.message||error,300)},400);}
 }
-async function handleMusicAlbumDownloadR445(request,env){
+async function handleMusicAlbumDownloadR446(request,env){
   const bucket=getMusicBucketR314(env); if(!bucket)return json({ok:false,error:'music-bucket-not-configured'},503);
-  const def=musicAlbumDefR445(new URL(request.url).searchParams.get('album')); if(!def)return json({ok:false,error:'invalid-album'},400);
+  const def=musicAlbumDefR446(new URL(request.url).searchParams.get('album')); if(!def)return json({ok:false,error:'invalid-album'},400);
   const object=await bucket.get(def.zipKey);
   if(!object)return json({ok:false,error:'zip-not-built',message:'Архив альбома ещё не собран.'},404);
   const h=new Headers();h.set('content-type','application/zip');h.set('content-disposition',`attachment; filename=\"${def.zipName}\"`);h.set('cache-control','public, max-age=3600');h.set('x-content-type-options','nosniff');
@@ -13439,7 +13439,7 @@ async function handleMusicAlbumDownloadR445(request,env){
   if(request.method==='HEAD')return new Response(null,{status:200,headers:h});
   return new Response(object.body,{status:200,headers:h});
 }
-// === End R445 album ZIP inspector / multipart builder ===
+// === End R446 album ZIP inspector / multipart builder ===
 
 async function handleMusicSinglesListR316(request, env) {
   const bucket=getMusicBucketR314(env); if(!bucket) return json({ok:false,error:'music-bucket-not-configured'},503);
@@ -13581,13 +13581,13 @@ async function routeApi(request, env, ctx) {
     if (path === '/api/comments/moderate' && request.method === 'GET') return await handleAdminCommentsGet(request, env);
     if (path === '/api/comments/moderate' && request.method === 'POST') return await handleAdminCommentsPost(request, env, ctx);
     if (path === '/api/youtube-captions' && request.method === 'GET') return await handleYoutubeCaptions(request, env);
-    if (path === '/api/control/music/albums' && request.method === 'GET') return await handleMusicAlbumsStatusR445(request, env);
-    if (path === '/api/control/music/albums/mpu/start' && request.method === 'POST') return await handleMusicAlbumMultipartStartR445(request, env);
-    if (path === '/api/control/music/albums/mpu/part' && request.method === 'PUT') return await handleMusicAlbumMultipartPartR445(request, env);
-    if (path === '/api/control/music/albums/mpu/complete' && request.method === 'POST') return await handleMusicAlbumMultipartCompleteR445(request, env);
-    if (path === '/api/control/music/albums/mpu/abort' && request.method === 'DELETE') return await handleMusicAlbumMultipartAbortR445(request, env);
-    if (path === '/api/music/albums/status' && request.method === 'GET') return await handleMusicAlbumsPublicStatusR445(request, env);
-    if (path === '/api/music/album-download' && (request.method === 'GET' || request.method === 'HEAD')) return await handleMusicAlbumDownloadR445(request, env);
+    if (path === '/api/control/music/albums' && request.method === 'GET') return await handleMusicAlbumsStatusR446(request, env);
+    if (path === '/api/control/music/albums/mpu/start' && request.method === 'POST') return await handleMusicAlbumMultipartStartR446(request, env);
+    if (path === '/api/control/music/albums/mpu/part' && request.method === 'PUT') return await handleMusicAlbumMultipartPartR446(request, env);
+    if (path === '/api/control/music/albums/mpu/complete' && request.method === 'POST') return await handleMusicAlbumMultipartCompleteR446(request, env);
+    if (path === '/api/control/music/albums/mpu/abort' && request.method === 'DELETE') return await handleMusicAlbumMultipartAbortR446(request, env);
+    if (path === '/api/music/albums/status' && request.method === 'GET') return await handleMusicAlbumsPublicStatusR446(request, env);
+    if (path === '/api/music/album-download' && (request.method === 'GET' || request.method === 'HEAD')) return await handleMusicAlbumDownloadR446(request, env);
     if (path === '/api/music/singles' && request.method === 'GET') return await handleMusicSinglesListR316(request, env);
     if (path === '/api/music/downloads' && request.method === 'GET') return await handleMusicDownloadsR322(request, env);
     if (path === '/api/music/download' && request.method === 'GET') return await handleMusicDownloadR327(request, env);
@@ -13675,7 +13675,7 @@ function controlRecoveryServiceWorkerSource() {
 }
 
 function controlRecoveryPage() {
-  return `<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#02060a"><meta name="robots" content="noindex,nofollow"><title>Восстановление Control ANDRIK</title><style>*{box-sizing:border-box}html,body{min-height:100%;margin:0;background:#02060a;color:#eff8ff;font-family:system-ui,-apple-system,Segoe UI,sans-serif}body{display:grid;place-items:center;padding:22px}.c{width:min(100%,520px);padding:30px 22px;border:1px solid #244455;border-radius:28px;background:linear-gradient(#081923,#030c13);text-align:center}.e{font-size:58px}h1{font-size:clamp(30px,8vw,44px);margin:12px 0}.s{color:#abc0cc;line-height:1.55}.b{display:inline-flex;min-height:54px;align-items:center;justify-content:center;margin-top:20px;padding:0 22px;border:1px solid #315b70;border-radius:999px;color:#eff8ff;text-decoration:none;font-weight:800;background:#0a2432}</style></head><body><main class="c"><div class="e">🟢</div><h1>Восстанавливаем Control</h1><p class="s" id="s">Заменяем старый перехват страниц безопасной версией…</p><a class="b" id="b" href="/control-home.html?page=menu&source=recovery&v=55.00-r445" hidden>Открыть Control</a></main><script>(async()=>{const s=document.getElementById('s'),b=document.getElementById('b'),go='/control-home.html?page=menu&source=recovery&v=55.00-r445&t='+Date.now();b.href=go;try{if('caches'in window){const k=await caches.keys();await Promise.all(k.filter(n=>n.startsWith('andrik-control-')||n.startsWith('andrik-site-')).map(n=>caches.delete(n)))}if('serviceWorker'in navigator){const r=await navigator.serviceWorker.register('/service-worker.js?v=54.96-control-recovery',{scope:'/',updateViaCache:'none'});if(r.installing)r.installing.postMessage({type:'SKIP_WAITING'});if(r.waiting)r.waiting.postMessage({type:'SKIP_WAITING'});await r.update().catch(()=>{});await new Promise(x=>setTimeout(x,1200))}s.textContent='Готово. Открываем админ-панель…';s.style.color='#bfffd9';b.hidden=false;setTimeout(()=>location.replace(go),650)}catch(e){s.textContent='Нажмите кнопку ниже. '+String(e&&e.message||e);s.style.color='#ffb9b9';b.hidden=false}})();</script></body></html>`;
+  return `<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#02060a"><meta name="robots" content="noindex,nofollow"><title>Восстановление Control ANDRIK</title><style>*{box-sizing:border-box}html,body{min-height:100%;margin:0;background:#02060a;color:#eff8ff;font-family:system-ui,-apple-system,Segoe UI,sans-serif}body{display:grid;place-items:center;padding:22px}.c{width:min(100%,520px);padding:30px 22px;border:1px solid #244455;border-radius:28px;background:linear-gradient(#081923,#030c13);text-align:center}.e{font-size:58px}h1{font-size:clamp(30px,8vw,44px);margin:12px 0}.s{color:#abc0cc;line-height:1.55}.b{display:inline-flex;min-height:54px;align-items:center;justify-content:center;margin-top:20px;padding:0 22px;border:1px solid #315b70;border-radius:999px;color:#eff8ff;text-decoration:none;font-weight:800;background:#0a2432}</style></head><body><main class="c"><div class="e">🟢</div><h1>Восстанавливаем Control</h1><p class="s" id="s">Заменяем старый перехват страниц безопасной версией…</p><a class="b" id="b" href="/control-home.html?page=menu&source=recovery&v=55.00-r446" hidden>Открыть Control</a></main><script>(async()=>{const s=document.getElementById('s'),b=document.getElementById('b'),go='/control-home.html?page=menu&source=recovery&v=55.00-r446&t='+Date.now();b.href=go;try{if('caches'in window){const k=await caches.keys();await Promise.all(k.filter(n=>n.startsWith('andrik-control-')||n.startsWith('andrik-site-')).map(n=>caches.delete(n)))}if('serviceWorker'in navigator){const r=await navigator.serviceWorker.register('/service-worker.js?v=54.96-control-recovery',{scope:'/',updateViaCache:'none'});if(r.installing)r.installing.postMessage({type:'SKIP_WAITING'});if(r.waiting)r.waiting.postMessage({type:'SKIP_WAITING'});await r.update().catch(()=>{});await new Promise(x=>setTimeout(x,1200))}s.textContent='Готово. Открываем админ-панель…';s.style.color='#bfffd9';b.hidden=false;setTimeout(()=>location.replace(go),650)}catch(e){s.textContent='Нажмите кнопку ниже. '+String(e&&e.message||e);s.style.color='#ffb9b9';b.hidden=false}})();</script></body></html>`;
 }
 
 
@@ -13797,7 +13797,7 @@ export default {
           const allowedSide = (page === 'google' || page === 'youtube') && source === 'admin-hub-swipe';
           const allowedMap = page === 'map' && source === 'admin-globe';
           if (!allowedSide && !allowedMap) {
-            const adminUrl = new URL('/control-home.html?page=menu&source=launch-guard-r445&v=55.00-r445', url);
+            const adminUrl = new URL('/control-home.html?page=menu&source=launch-guard-r446&v=55.00-r446', url);
             return Response.redirect(adminUrl.toString(), 302);
           }
         }

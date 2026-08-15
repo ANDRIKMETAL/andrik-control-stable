@@ -1,4 +1,4 @@
-ANDRIK Control — R445
+ANDRIK Control — R446
 Date: 15.08.2026
 Base: R444 — FINAL ALBUMS HUB + R2 MULTIPART ZIP + ADMIN GLOBE LOWER
 
@@ -21,8 +21,8 @@ SAFETY
 - No map API, city history, ecosystem map, album ZIP API, or R2 logic was modified for this feature.
 
 VERSION
-- Control display / Worker release / cache reset synchronized to R445.
-- New assets: planet-map-transition-r445.css / planet-map-transition-r445.js.
+- Control display / Worker release / cache reset synchronized to R446.
+- New assets: planet-map-transition-r446.css / planet-map-transition-r446.js.
 
 VALIDATION
 - Node syntax check: transition JS, Worker, service worker, current album/version JS.
