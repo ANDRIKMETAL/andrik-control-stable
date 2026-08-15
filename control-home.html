@@ -5,7 +5,7 @@
 <meta name="google" content="notranslate"><meta charset="utf-8"/>
 <meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/>
 <meta content="#02060a" name="theme-color"/>
-<meta content="R439" name="andrik-control-release"/>
+<meta content="R440" name="andrik-control-release"/>
 <meta content="Live Web AI" name="apple-mobile-web-app-title"/>
 <meta content="dark" name="color-scheme"/>
 <meta content="noindex,nofollow,noarchive" name="robots"/><script>document.documentElement.dataset.controlInitialPage=(new URLSearchParams(location.search).get('page')||'menu').toLowerCase();</script>
@@ -736,6 +736,8 @@ body.control-push-summary-view .control-summary-source{display:block}
 <link rel="stylesheet" href="/assets/control-summary-layout-r410.css?v=55.00-r412">
 <link rel="stylesheet" href="/assets/admin-home-hub-r423.css?v=55.00-r423">
 <link rel="stylesheet" href="/assets/admin-home-landscape-scroll-r431.css?v=55.00-r431">
+<link rel="stylesheet" href="/assets/admin-home-balance-r440.css?v=55.00-r440">
+<link rel="stylesheet" href="/assets/control-summary-archive-r440.css?v=55.00-r440">
 </head>
 <body class="trika-standalone-page comments-admin-page control-page control-home-page r137-eye-motion-page">
 <nav class="topbar control-topbar control-home-topbar"><div class="wrap nav-shell control-home-topbar-minimal"><a class="control-center-logo" id="controlCenterLogo" href="https://andrikmetal.com/" aria-label="Открыть главный сайт ANDRIK"><img class="logo-ok" src="/assets/control-topbar-eye-triangle.jpg?v=55.00-r129" alt=""/><img class="logo-error" src="/assets/andrik-control-red-triangle-192.png" alt=""/></a></div></nav>
@@ -747,7 +749,7 @@ body.control-push-summary-view .control-summary-source{display:block}
       <section class="control-swipe-page control-summary-page" data-page="summary" data-logical-page="0" aria-label="Сводка за сегодня">
         <div class="control-swipe-page-inner">
           <header class="control-home-hero">
-            <div class="control-home-hero-copy"><div class="control-summary-source" id="controlSummarySource" hidden></div><div class="control-summary-eyebrow-row"></div><h1 id="controlHomeTitle">Сводка за сегодня</h1><div class="control-home-updated" id="controlHomeUpdated">Авто: — · Ручное: —</div></div>
+            <div class="control-home-hero-copy"><div class="control-summary-source" id="controlSummarySource" hidden></div><div class="control-summary-eyebrow-row"></div><h1 id="controlHomeTitle">Сводка за сегодня</h1><button class="control-summary-archive-button-r440" id="controlSummaryArchiveR440" type="button" aria-label="Открыть архив сводок по дням" title="Архив сводок">📅</button><div class="control-home-updated" id="controlHomeUpdated">Авто: — · Ручное: —</div></div>
             <div class="control-home-summary" id="controlHomeSummary"><div class="admin-empty">Собираем сводку…</div></div>
             <div class="control-summary-dual-r375" id="controlSummaryDualR375">
               <button class="control-summary-mini-r375 is-city" id="controlCitiesDayR375" type="button" aria-haspopup="dialog" aria-controls="controlCityModalR375">
@@ -775,7 +777,7 @@ body.control-push-summary-view .control-summary-source{display:block}
             <a href="/control-home.html?page=summary&amp;source=admin-quick-r423&amp;v=55.00-r423">📊 <span>Сводка</span></a>
             <a href="/control-home.html?page=activity&amp;source=admin-quick-r423&amp;v=55.00-r423">⚡ <span>Активность</span></a>
           </div>
-          <a class="admin-hub-globe-r418" id="adminHubGlobeR418" href="/analytics-admin.html?page=map&amp;source=admin-globe&amp;v=55.00-r439" aria-label="Открыть карту слушателей">
+          <a class="admin-hub-globe-r418" id="adminHubGlobeR418" href="/analytics-admin.html?page=map&amp;source=admin-globe&amp;v=55.00-r440" aria-label="Открыть карту слушателей">
             <span class="admin-hub-globe-halo-r418" aria-hidden="true"></span>
             <span class="admin-hub-globe-sphere-r418" id="adminHubGlobeSphereR418" aria-hidden="true">
               <span class="admin-hub-globe-texture-r418" id="adminHubGlobeTextureR418"></span>
@@ -786,10 +788,10 @@ body.control-push-summary-view .control-summary-source{display:block}
             <strong>Карта</strong>
           </a>
           <div class="admin-hub-swipe-hint-r418" aria-hidden="true"><span>← Google Analytics</span><span>YouTube →</span></div>
-          <footer class="control-version-footer" aria-label="Текущая версия"><strong>Live Web AI</strong><span>R439</span></footer>
-          <div class="control-split-version-r181" aria-label="Live Web AI, версия R439">
+          <footer class="control-version-footer" aria-label="Текущая версия"><strong>Live Web AI</strong><span>R440</span></footer>
+          <div class="control-split-version-r181" aria-label="Live Web AI, версия R440">
             <span class="control-split-brand-r181">Live Web AI</span>
-            <span class="control-split-number-r181">R439</span>
+            <span class="control-split-number-r181">R440</span>
           </div>
         </div>
       </section>
@@ -842,7 +844,7 @@ body.control-push-summary-view .control-summary-source{display:block}
 <script defer src="/assets/admin-home-hub-r418.js?v=55.00-r423"></script>
 
 <script defer src="/assets/admin-quick-nav-r423.js?v=55.00-r423"></script>
-<script defer src="/assets/control-summary-layout-r410.js?v=55.00-r412"></script><script defer src="/assets/control-home-r350.js?v=55.00-r412"></script><script defer src="/assets/control-status-eye-v55-00-r88.js?v=55.00-r88"></script><script defer src="/assets/control-version-v55-00-final-r1.js?v=55.00-final-r1"></script>
+<script defer src="/assets/control-summary-layout-r410.js?v=55.00-r412"></script><script defer src="/assets/control-home-r350.js?v=55.00-r440"></script><script defer src="/assets/control-summary-archive-r440.js?v=55.00-r440"></script><script defer src="/assets/control-status-eye-v55-00-r88.js?v=55.00-r88"></script><script defer src="/assets/control-version-v55-00-final-r1.js?v=55.00-final-r1"></script>
 
 
 <script defer src="/assets/control-live-eye-v55-00-r265.js?v=55.00-r265"></script><script defer src="/assets/control-version-v55-00-r3n.js?v=55.00-r3n"></script><script defer src="/assets/control-version-v55-00-final-stable-github.js?v=55.00-final-stable-github"></script><script defer src="/assets/control-menu-return-map-v55-00-r33.js?v=55.00-final-r33"></script>
@@ -854,7 +856,7 @@ body.control-push-summary-view .control-summary-source{display:block}
 <script id="r181-admin-menu-lock-script">
 (()=>{
   'use strict';
-  const FALLBACK_VERSION=document.querySelector('meta[name="andrik-control-release"]')?.content?.trim()||'R439';
+  const FALLBACK_VERSION=document.querySelector('meta[name="andrik-control-release"]')?.content?.trim()||'R440';
   let VERSION=FALLBACK_VERSION;
 
   const cleanVersion=value=>{
@@ -928,12 +930,12 @@ body.control-push-summary-view .control-summary-source{display:block}
   [500,1800].forEach(ms=>setTimeout(confirmInstalledVersion,ms));
 })();
 </script>
-<script defer src="/assets/control-version-sync-r439.js?v=55.00-r439"></script>
+<script defer src="/assets/control-version-sync-r440.js?v=55.00-r440"></script>
 <script>
 (()=>{
   const apply=()=>{
-    document.querySelectorAll('.control-version-footer span,.control-split-number-r181').forEach(el=>{el.textContent='R439';});
-    document.querySelectorAll('[aria-label*="версия R"]').forEach(el=>el.setAttribute('aria-label','Live Web AI, версия R439'));
+    document.querySelectorAll('.control-version-footer span,.control-split-number-r181').forEach(el=>{el.textContent='R440';});
+    document.querySelectorAll('[aria-label*="версия R"]').forEach(el=>el.setAttribute('aria-label','Live Web AI, версия R440'));
   };
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',apply,{once:true}); else apply();
   window.addEventListener('pageshow',apply,{passive:true});

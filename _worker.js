@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R439', number:439, version:'55.00', full:'55.00 LIVE WEB AI FINAL R439', siteUpdater:'55.00-r356' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R440', number:440, version:'55.00', full:'55.00 LIVE WEB AI FINAL R440', siteUpdater:'55.00-r356' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -8755,7 +8755,8 @@ async function collectDailyOwnerSummary(env, { liveExternal = true, windowOverri
   ]);
   const ytBaseline = ytBaselineBefore || ytBaselineAfter;
   const gaBaseline = gaBaselineBefore || gaBaselineAfter;
-  const ytNow = parseSnapshotMetrics(ytLatest);
+  let ytNow = parseSnapshotMetrics(ytLatest);
+  ytNow = await mergeYoutubeCurrentCountsR440(db, ytNow, ytLatest?.created_at || '', window);
   const ytStart = parseSnapshotMetrics(ytBaseline);
   const gaSnapshot = parseSnapshotMetrics(gaLatest);
   const gaStart = { ...parseSnapshotMetrics(gaBaseline), __snapshotFound:Boolean(gaBaseline) };
@@ -9577,6 +9578,52 @@ function parseSnapshotMetrics(row) {
 }
 
 
+// R440: the 5-minute YouTube cron already stores the newest cumulative channel
+// counters in push_state. R410 read only platform_snapshots for the current value; those
+// snapshots are much less frequent, so after a clean 06:05 baseline the screen could sit
+// at 0 even while likes and real channel views were growing. Prefer the newer cron count
+// for the ACTIVE window, while keeping historical/completed windows snapshot-only.
+function parseYoutubeCountsCheckpointR440(row) {
+  if (!row?.value) return null;
+  try {
+    const parsed=JSON.parse(row.value || '{}') || {};
+    const views=Number(parsed.views);
+    const subscribers=Number(parsed.subscribers);
+    const updatedAt=cleanPlainText(row.updatedAt || parsed.updatedAt || '',80);
+    if (!Number.isFinite(views) || views < 0) return null;
+    return {
+      views,
+      subscribers:Number.isFinite(subscribers) && subscribers >= 0 ? subscribers : null,
+      updatedAt,
+      mode:cleanPlainText(parsed.mode || 'youtube-counts-last-summary',80)
+    };
+  } catch (_) { return null; }
+}
+
+async function mergeYoutubeCurrentCountsR440(db, snapshotMetrics={}, snapshotAt='', window=null) {
+  if (window?.completed) return snapshotMetrics || {};
+  const row=await getPushState(db,'youtube-counts-last-summary').catch(()=>null);
+  const checkpoint=parseYoutubeCountsCheckpointR440(row);
+  if (!checkpoint) return snapshotMetrics || {};
+  const stateMs=Date.parse(checkpoint.updatedAt || '');
+  const snapMs=Date.parse(snapshotAt || snapshotMetrics?.updatedAt || '');
+  const startMs=Date.parse(window?.startAt || '');
+  const endMs=Date.parse(window?.endAt || '');
+  if (Number.isFinite(startMs) && Number.isFinite(stateMs) && stateMs < startMs - 60000) return snapshotMetrics || {};
+  if (Number.isFinite(endMs) && Number.isFinite(stateMs) && stateMs >= endMs + 60000) return snapshotMetrics || {};
+  // Do not replace a newer full snapshot with an older checkpoint.
+  if (Number.isFinite(snapMs) && Number.isFinite(stateMs) && stateMs + 30000 < snapMs) return snapshotMetrics || {};
+  const base={...(snapshotMetrics || {})};
+  const snapshotViews=Number(base.views);
+  // A successful channels request for an established channel should not turn a known
+  // positive total into zero. This guards transient malformed checkpoint payloads.
+  if (checkpoint.views > 0 || !Number.isFinite(snapshotViews) || snapshotViews <= 0) base.views=checkpoint.views;
+  if (checkpoint.subscribers !== null) base.subscribers=checkpoint.subscribers;
+  base.__currentCountsSource='youtube-cron-r440';
+  base.__currentCountsAt=checkpoint.updatedAt || '';
+  return base;
+}
+
 // R410: durable YouTube view baseline for the active 06:05 -> 06:05 summary window.
 // The previous implementation derived the baseline only from platform_snapshots. Those
 // snapshots are intentionally trimmed, so the 06:05 baseline could disappear later in
@@ -10083,6 +10130,26 @@ async function getControlSummaryUpdateTimesR396(db, windowKey = '') {
   };
 }
 
+// R440: completed days can be repaired from cumulative YouTube channel snapshots.
+// This is especially useful for the R410/R439 period where the stored daily metric could
+// be zero even though likes and views existed. We only raise a stored value; we never
+// erase a larger historical high-water value.
+async function repairHistoricalYoutubeViewsR440(db, window, metrics={}) {
+  if (!window?.completed) return metrics || {};
+  const [beforeRow,endRow]=await Promise.all([
+    db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform='youtube' AND datetime(created_at) <= datetime(?1) ORDER BY datetime(created_at) DESC LIMIT 1`).bind(window.startAt).first().catch(()=>null),
+    db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform='youtube' AND datetime(created_at) <= datetime(?1) ORDER BY datetime(created_at) DESC LIMIT 1`).bind(window.endAt).first().catch(()=>null)
+  ]);
+  const before=parseSnapshotMetrics(beforeRow);
+  const end=parseSnapshotMetrics(endRow);
+  const beforeViews=Number(before?.views), endViews=Number(end?.views);
+  if(!Number.isFinite(beforeViews)||!Number.isFinite(endViews)||beforeViews<0||endViews<beforeViews) return metrics || {};
+  const repaired=Math.max(0,endViews-beforeViews);
+  const stored=Math.max(0,Number(metrics?.youtubeViewDelta || 0));
+  if(repaired<=stored) return metrics || {};
+  return {...(metrics||{}),youtubeViewDelta:repaired,youtubeViews:repaired,youtubeViewRepairSource:'platform-snapshots-r440'};
+}
+
 async function handleControlHomePushSnapshotR271(db, window) {
   const snapshot = await findDailySummarySnapshotR271(db, window);
   if (!snapshot) {
@@ -10105,13 +10172,14 @@ async function handleControlHomePushSnapshotR271(db, window) {
     LIMIT 200
   `).bind(window.startAt, window.endAt).all();
 
+  const repairedMetricsR440=await repairHistoricalYoutubeViewsR440(db,window,snapshot.metrics || {});
   return json({
     ok:true,
     period:'06:05-auto-cycle',
     windowKey:window.key,
     windowStartAt:window.startAt,
     windowEndAt:window.endAt,
-    summary:controlHomeSummaryFromDailyMetricsR271(snapshot.metrics),
+    summary:controlHomeSummaryFromDailyMetricsR271(repairedMetricsR440),
     cityActivity:(Array.isArray(snapshot.cities) && snapshot.cities.length)
       ? snapshot.cities
       : await collectDailyCityActivityR370(db, window, snapshot.sentAt || window.endAt).catch(() => []),
@@ -10120,6 +10188,41 @@ async function handleControlHomePushSnapshotR271(db, window) {
     summaryView:'completed-push',
     pushSentAt:snapshot.sentAt || '',
     updatedAt:snapshot.sentAt || new Date().toISOString()
+  });
+}
+
+// R440: compact 45-day archive index for the daily-summary calendar.
+// The actual archived payloads already existed as daily-owner-summary-window:<date>;
+// this endpoint only exposes which completed days are available.
+async function handleDailySummaryArchiveR440(request, env) {
+  if (!adminAuthorized(request, env)) return json({ok:false,error:'unauthorized'},401);
+  const db=requireDb(env);
+  await ensurePushAutomationSchema(db);
+  const rows=await db.prepare(`
+    SELECT key, updated_at AS updatedAt
+    FROM push_state
+    WHERE key LIKE 'daily-owner-summary-window:%'
+    ORDER BY key DESC
+    LIMIT 60
+  `).all().catch(()=>({results:[]}));
+  const current=getBratislavaSummaryWindow();
+  const entries=[];
+  const seen=new Set();
+  for(const row of rows?.results || []){
+    const key=cleanPlainText(String(row?.key || '').replace('daily-owner-summary-window:',''),20);
+    if(seen.has(key)) continue;
+    const window=getBratislavaSummaryWindowByKeyR271(key);
+    if(!window || !window.completed) continue;
+    seen.add(key);
+    entries.push({key,sentAt:cleanPlainText(row?.updatedAt || '',80)});
+  }
+  entries.sort((a,b)=>String(b.key).localeCompare(String(a.key)));
+  return json({
+    ok:true,
+    currentWindowKey:current.key,
+    cutoffLabel:'06:05 Europe/Bratislava',
+    maxDays:45,
+    entries:entries.slice(0,45)
   });
 }
 
@@ -10297,7 +10400,8 @@ async function handleControlHome(request, env) {
   ]);
   const ytBaseline = ytBaselineBefore || ytBaselineAfter;
   const gaBaseline = gaBaselineBefore || gaBaselineAfter;
-  const ytNow = parseSnapshotMetrics(ytLatest);
+  let ytNow = parseSnapshotMetrics(ytLatest);
+  ytNow = await mergeYoutubeCurrentCountsR440(db, ytNow, ytLatest?.created_at || '', window);
   const ytStart = parseSnapshotMetrics(ytBaseline);
   const gaStart = { ...parseSnapshotMetrics(gaBaseline), __snapshotFound:Boolean(gaBaseline) };
   const gaBeforeMidnight = parseSnapshotMetrics(gaRollover);
@@ -13239,6 +13343,7 @@ async function routeApi(request, env, ctx) {
       if(/ANDRIK-Central-Cron\/1\.0/i.test(ua)) return await handleLegacyExternalCronR400(request,env,ctx);
       return await handleAutomationRun(request, env);
     }
+    if (path === '/api/control/daily-summary/archive' && request.method === 'GET') return await handleDailySummaryArchiveR440(request, env);
     if (path === '/api/control/daily-summary/auto-refresh' && request.method === 'POST') return await handleControlSummaryAutoRefreshR403(request, env);
     if (path === '/api/control/daily-summary/send' && request.method === 'POST') return await handleManualDailyOwnerSummary(request, env);
     if (path === '/api/push/retry-latest' && request.method === 'POST') return await handleRetryLatestPush(request, env);
@@ -13342,7 +13447,7 @@ function controlRecoveryServiceWorkerSource() {
 }
 
 function controlRecoveryPage() {
-  return `<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#02060a"><meta name="robots" content="noindex,nofollow"><title>Восстановление Control ANDRIK</title><style>*{box-sizing:border-box}html,body{min-height:100%;margin:0;background:#02060a;color:#eff8ff;font-family:system-ui,-apple-system,Segoe UI,sans-serif}body{display:grid;place-items:center;padding:22px}.c{width:min(100%,520px);padding:30px 22px;border:1px solid #244455;border-radius:28px;background:linear-gradient(#081923,#030c13);text-align:center}.e{font-size:58px}h1{font-size:clamp(30px,8vw,44px);margin:12px 0}.s{color:#abc0cc;line-height:1.55}.b{display:inline-flex;min-height:54px;align-items:center;justify-content:center;margin-top:20px;padding:0 22px;border:1px solid #315b70;border-radius:999px;color:#eff8ff;text-decoration:none;font-weight:800;background:#0a2432}</style></head><body><main class="c"><div class="e">🟢</div><h1>Восстанавливаем Control</h1><p class="s" id="s">Заменяем старый перехват страниц безопасной версией…</p><a class="b" id="b" href="/control-home.html?page=menu&source=recovery&v=55.00-r439" hidden>Открыть Control</a></main><script>(async()=>{const s=document.getElementById('s'),b=document.getElementById('b'),go='/control-home.html?page=menu&source=recovery&v=55.00-r439&t='+Date.now();b.href=go;try{if('caches'in window){const k=await caches.keys();await Promise.all(k.filter(n=>n.startsWith('andrik-control-')||n.startsWith('andrik-site-')).map(n=>caches.delete(n)))}if('serviceWorker'in navigator){const r=await navigator.serviceWorker.register('/service-worker.js?v=54.96-control-recovery',{scope:'/',updateViaCache:'none'});if(r.installing)r.installing.postMessage({type:'SKIP_WAITING'});if(r.waiting)r.waiting.postMessage({type:'SKIP_WAITING'});await r.update().catch(()=>{});await new Promise(x=>setTimeout(x,1200))}s.textContent='Готово. Открываем админ-панель…';s.style.color='#bfffd9';b.hidden=false;setTimeout(()=>location.replace(go),650)}catch(e){s.textContent='Нажмите кнопку ниже. '+String(e&&e.message||e);s.style.color='#ffb9b9';b.hidden=false}})();</script></body></html>`;
+  return `<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#02060a"><meta name="robots" content="noindex,nofollow"><title>Восстановление Control ANDRIK</title><style>*{box-sizing:border-box}html,body{min-height:100%;margin:0;background:#02060a;color:#eff8ff;font-family:system-ui,-apple-system,Segoe UI,sans-serif}body{display:grid;place-items:center;padding:22px}.c{width:min(100%,520px);padding:30px 22px;border:1px solid #244455;border-radius:28px;background:linear-gradient(#081923,#030c13);text-align:center}.e{font-size:58px}h1{font-size:clamp(30px,8vw,44px);margin:12px 0}.s{color:#abc0cc;line-height:1.55}.b{display:inline-flex;min-height:54px;align-items:center;justify-content:center;margin-top:20px;padding:0 22px;border:1px solid #315b70;border-radius:999px;color:#eff8ff;text-decoration:none;font-weight:800;background:#0a2432}</style></head><body><main class="c"><div class="e">🟢</div><h1>Восстанавливаем Control</h1><p class="s" id="s">Заменяем старый перехват страниц безопасной версией…</p><a class="b" id="b" href="/control-home.html?page=menu&source=recovery&v=55.00-r440" hidden>Открыть Control</a></main><script>(async()=>{const s=document.getElementById('s'),b=document.getElementById('b'),go='/control-home.html?page=menu&source=recovery&v=55.00-r440&t='+Date.now();b.href=go;try{if('caches'in window){const k=await caches.keys();await Promise.all(k.filter(n=>n.startsWith('andrik-control-')||n.startsWith('andrik-site-')).map(n=>caches.delete(n)))}if('serviceWorker'in navigator){const r=await navigator.serviceWorker.register('/service-worker.js?v=54.96-control-recovery',{scope:'/',updateViaCache:'none'});if(r.installing)r.installing.postMessage({type:'SKIP_WAITING'});if(r.waiting)r.waiting.postMessage({type:'SKIP_WAITING'});await r.update().catch(()=>{});await new Promise(x=>setTimeout(x,1200))}s.textContent='Готово. Открываем админ-панель…';s.style.color='#bfffd9';b.hidden=false;setTimeout(()=>location.replace(go),650)}catch(e){s.textContent='Нажмите кнопку ниже. '+String(e&&e.message||e);s.style.color='#ffb9b9';b.hidden=false}})();</script></body></html>`;
 }
 
 
@@ -13464,7 +13569,7 @@ export default {
           const allowedSide = (page === 'google' || page === 'youtube') && source === 'admin-hub-swipe';
           const allowedMap = page === 'map' && source === 'admin-globe';
           if (!allowedSide && !allowedMap) {
-            const adminUrl = new URL('/control-home.html?page=menu&source=launch-guard-r439&v=55.00-r439', url);
+            const adminUrl = new URL('/control-home.html?page=menu&source=launch-guard-r440&v=55.00-r440', url);
             return Response.redirect(adminUrl.toString(), 302);
           }
         }

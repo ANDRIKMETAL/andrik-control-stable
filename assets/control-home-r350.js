@@ -14,6 +14,7 @@
   const PUSH_SUMMARY_SNAPSHOT_RAW=String(LOCATION_PARAMS.get('summarySnapshot')||'');
   const PUSH_SUMMARY_SNAPSHOT_ID=/^[a-z0-9][a-z0-9:_-]{5,119}$/i.test(PUSH_SUMMARY_SNAPSHOT_RAW)?PUSH_SUMMARY_SNAPSHOT_RAW:'';
   const IS_PUSH_SUMMARY_VIEW=LOCATION_PARAMS.get('source')==='push'&&Boolean(PUSH_SUMMARY_WINDOW_KEY);
+  const IS_ARCHIVE_SUMMARY_VIEW=IS_PUSH_SUMMARY_VIEW&&LOCATION_PARAMS.get('archive')==='1';
   const eventMeta=type=>({
     'youtube-like':['👍','Новый лайк YouTube'],
     'youtube-comment':['💬','Комментарий YouTube'],
@@ -324,11 +325,15 @@
 
   function renderSummary(data){
     const pushSnapshot=IS_PUSH_SUMMARY_VIEW||data?.summaryView==='completed-push';
+    if(IS_ARCHIVE_SUMMARY_VIEW&&PUSH_SUMMARY_WINDOW_KEY){
+      const title=$('controlHomeTitle');
+      if(title){const [y,m,d]=PUSH_SUMMARY_WINDOW_KEY.split('-');title.textContent=`Сводка за ${d}.${m}.${y}`;}
+    }
     document.body.classList.toggle('control-push-summary-view',pushSnapshot);
     const sourceBox=$('controlSummarySource');
     if(sourceBox){
       sourceBox.hidden=!pushSnapshot;
-      sourceBox.textContent=pushSnapshot?'Сводка из push · данные этого уведомления':'';
+      sourceBox.textContent=pushSnapshot?(IS_ARCHIVE_SUMMARY_VIEW?'Архив сводок · завершённый период 06:05 → 06:05':'Сводка из push · данные этого уведомления'):'';
     }
     const s=data.summary||{};
     const yDelta=Number(s.youtubeViewDelta||0);

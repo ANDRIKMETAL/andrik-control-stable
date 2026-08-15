@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786740232163-968b6e9259",
-  "release": "R439",
-  "archiveName": "R439-R438-ECOSYSTEM-MUSIC-PUSH-MAP-RECOVERY-SAFE-FULL.zip",
-  "sourceHead": "2585cefe56d497c9df97dd90f2a884419a5748e6",
-  "backupSha": "2585cefe56d497c9df97dd90f2a884419a5748e6",
-  "backupTag": "control-backup-20260814204348-2585cef-r439-26a9d",
+  "operationId": "publish-1786777210032-d0e05ea8da",
+  "release": "R440",
+  "archiveName": "R440-R439-YOUTUBE-VIEWS-SUMMARY-ARCHIVE-ADMIN-BALANCE-SAFE-FULL.zip",
+  "sourceHead": "0910f1a9b5d7d627c15a914171c82517216de3a1",
+  "backupSha": "0910f1a9b5d7d627c15a914171c82517216de3a1",
+  "backupTag": "control-backup-20260815070005-0910f1a-r440-f80dc",
   "autoRecovery": true,
-  "generatedAt": "2026-08-14T20:43:52.163Z"
+  "generatedAt": "2026-08-15T07:00:10.032Z"
 }
