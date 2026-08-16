@@ -5,7 +5,7 @@
 <meta name="google" content="notranslate"><meta charset="utf-8"/>
 <meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/>
 <meta content="#02060a" name="theme-color"/>
-<meta content="R458" name="andrik-control-release"/>
+<meta content="R459" name="andrik-control-release"/>
 <meta content="Live Web AI" name="apple-mobile-web-app-title"/>
 <meta content="dark" name="color-scheme"/>
 <meta content="noindex,nofollow,noarchive" name="robots"/><script>document.documentElement.dataset.controlInitialPage=(new URLSearchParams(location.search).get('page')||'menu').toLowerCase();</script>
@@ -746,48 +746,43 @@ body.control-push-summary-view .control-summary-source{display:block}
 <link rel="stylesheet" href="/assets/planet-map-transition-r450.css?v=55.00-r450">
 <script>try{if(Date.now()-Number(sessionStorage.getItem('andrik-portal-return-r450')||sessionStorage.getItem('andrik-portal-return-r449')||0)<8000)document.documentElement.classList.add('andrik-portal-return-pending-r450')}catch(_){}</script>
 
-<style id="andrik-r458-admin-bottom-only">
-/* R458 — Admin panel only. Protection/Guard logic is untouched. */
+<style id="andrik-r459-admin-bottom-stable-glow-only">
+/* R459 — Admin panel only. Protection/Guard logic remains untouched. */
 @media screen and (orientation:portrait){
-  body.control-home-page.control-menu-visible .control-attack-fab{
-    display:none!important;
-  }
+  body.control-home-page.control-menu-visible .control-attack-fab{display:none!important;}
 
-  /* One compact central version capsule between Protection and Update. */
-  body.control-home-page.control-menu-visible .control-split-version-r181{
+  /* Body-level fixed capsule: cannot drift with the transformed swipe track after reopening. */
+  body.control-home-page.control-menu-visible > .control-split-version-r181{
     display:flex!important;
     position:fixed!important;
     inset:auto!important;
     left:50%!important;
     right:auto!important;
-    bottom:calc(42px + env(safe-area-inset-bottom))!important;
+    bottom:calc(50px + env(safe-area-inset-bottom))!important;
     width:auto!important;
-    min-width:138px!important;
-    max-width:170px!important;
-    height:24px!important;
-    padding:0 11px!important;
+    min-width:132px!important;
+    max-width:158px!important;
+    height:22px!important;
+    padding:0 9px!important;
     transform:translateX(-50%)!important;
     align-items:center!important;
     justify-content:center!important;
-    gap:4px!important;
-    border:1px solid rgba(124,190,218,.18)!important;
+    gap:3px!important;
+    border:1px solid rgba(124,190,218,.16)!important;
     border-radius:999px!important;
-    background:rgba(3,12,18,.82)!important;
-    box-shadow:0 6px 16px rgba(0,0,0,.28),0 0 12px rgba(76,207,255,.07)!important;
+    background:rgba(3,12,18,.84)!important;
+    box-shadow:0 5px 14px rgba(0,0,0,.28),0 0 10px rgba(76,207,255,.06)!important;
     color:#91a8b5!important;
-    font:800 .54rem/1 system-ui,-apple-system,"Segoe UI",sans-serif!important;
-    letter-spacing:.04em!important;
+    font:800 .51rem/1 system-ui,-apple-system,"Segoe UI",sans-serif!important;
+    letter-spacing:.035em!important;
     white-space:nowrap!important;
     overflow:hidden!important;
     pointer-events:none!important;
-    z-index:2147482350!important;
+    z-index:2147483000!important;
   }
-  body.control-home-page.control-menu-visible .control-split-version-r181 > span{
+  body.control-home-page.control-menu-visible > .control-split-version-r181 > span{
     position:static!important;
     inset:auto!important;
-    left:auto!important;
-    right:auto!important;
-    bottom:auto!important;
     width:auto!important;
     height:auto!important;
     min-width:0!important;
@@ -797,27 +792,36 @@ body.control-push-summary-view .control-summary-source{display:block}
     margin:0!important;
     transform:none!important;
     border:0!important;
-    border-radius:0!important;
     background:transparent!important;
     box-shadow:none!important;
     color:inherit!important;
     font:inherit!important;
     letter-spacing:inherit!important;
     overflow:visible!important;
-    text-overflow:clip!important;
   }
-  body.control-home-page.control-menu-visible .control-split-number-r181::before{
-    content:" ";
+  body.control-home-page.control-menu-visible > .control-split-version-r181 .control-split-number-r181::before{content:" ";}
+
+  /* No cyan contour/ring — glow only. */
+  body.control-home-page.control-menu-visible .admin-hub-globe-halo-r418{
+    border:0!important;
+    outline:0!important;
+    background:radial-gradient(circle,rgba(84,190,255,.12) 0%,rgba(52,143,255,.07) 42%,rgba(37,107,230,.035) 58%,transparent 72%)!important;
+    box-shadow:0 0 34px rgba(77,183,255,.30)!important;
+  }
+  body.control-home-page.control-menu-visible .admin-hub-globe-sphere-r418{
+    border:0!important;
+    outline:0!important;
+    box-shadow:inset -16px -10px 25px rgba(0,0,0,.78),inset 8px 6px 16px rgba(83,194,255,.05),0 0 25px rgba(80,188,255,.24)!important;
   }
 }
 @media screen and (orientation:portrait) and (max-width:390px){
-  body.control-home-page.control-menu-visible .control-split-version-r181{
-    bottom:calc(40px + env(safe-area-inset-bottom))!important;
-    min-width:132px!important;
-    max-width:158px!important;
-    height:22px!important;
-    padding:0 9px!important;
-    font-size:.51rem!important;
+  body.control-home-page.control-menu-visible > .control-split-version-r181{
+    bottom:calc(47px + env(safe-area-inset-bottom))!important;
+    min-width:126px!important;
+    max-width:148px!important;
+    height:21px!important;
+    padding:0 8px!important;
+    font-size:.49rem!important;
   }
 }
 </style>
@@ -861,7 +865,7 @@ body.control-push-summary-view .control-summary-source{display:block}
             <a href="/control-home.html?page=summary&amp;source=admin-quick-r423&amp;v=55.00-r423">📊 <span>Сводка</span></a>
             <a href="/control-home.html?page=activity&amp;source=admin-quick-r423&amp;v=55.00-r423">⚡ <span>Активность</span></a>
           </div>
-          <a class="admin-hub-globe-r418" id="adminHubGlobeR418" href="/analytics-admin.html?page=map&amp;source=admin-globe&amp;v=55.00-r458" aria-label="Открыть карту слушателей">
+          <a class="admin-hub-globe-r418" id="adminHubGlobeR418" href="/analytics-admin.html?page=map&amp;source=admin-globe&amp;v=55.00-r459" aria-label="Открыть карту слушателей">
             <span class="admin-hub-globe-halo-r418" aria-hidden="true"></span>
             <span class="admin-hub-globe-sphere-r418" id="adminHubGlobeSphereR418" aria-hidden="true">
               <span class="admin-hub-globe-texture-r418" id="adminHubGlobeTextureR418"></span>
@@ -872,11 +876,7 @@ body.control-push-summary-view .control-summary-source{display:block}
             <strong>Карта</strong>
           </a>
           <div class="admin-hub-swipe-hint-r418" aria-hidden="true"><span>← Google Analytics</span><span>YouTube →</span></div>
-          <footer class="control-version-footer" aria-label="Текущая версия"><strong>Live Web AI</strong><span>R458</span></footer>
-          <div class="control-split-version-r181" aria-label="Live Web AI, версия R458">
-            <span class="control-split-brand-r181">Live Web AI</span>
-            <span class="control-split-number-r181">R458</span>
-          </div>
+          <footer class="control-version-footer" aria-label="Текущая версия"><strong>Live Web AI</strong><span>R459</span></footer>
         </div>
       </section>
 
@@ -906,6 +906,11 @@ body.control-push-summary-view .control-summary-source{display:block}
     </div>
   </div>
 </main>
+<div class="control-split-version-r181" aria-label="Live Web AI, версия R459">
+  <span class="control-split-brand-r181">Live Web AI</span>
+  <span class="control-split-number-r181">R459</span>
+</div>
+
 <a class="control-protection-fab" href="/protection-admin.html?v=55.00-r214" aria-label="Открыть защиту"><span class="protection-fab-icon" aria-hidden="true">🛡️</span><span class="protection-fab-label">Защита</span></a>
 <a class="control-update-fab" href="/site-update-admin.html?v=55.00-r214" aria-label="Обновить сайт"><span class="update-fab-icon" aria-hidden="true">↻</span><span class="update-fab-label">Обновить</span></a>
 <a class="control-comment-collection-button" href="/comment-collection.html?v=55.00n" aria-label="Открыть коллекцию комментариев"><span aria-hidden="true">💬</span><span>Комментарии</span></a>
@@ -940,7 +945,7 @@ body.control-push-summary-view .control-summary-source{display:block}
 <script id="r181-admin-menu-lock-script">
 (()=>{
   'use strict';
-  const FALLBACK_VERSION=document.querySelector('meta[name="andrik-control-release"]')?.content?.trim()||'R458';
+  const FALLBACK_VERSION=document.querySelector('meta[name="andrik-control-release"]')?.content?.trim()||'R459';
   let VERSION=FALLBACK_VERSION;
 
   const cleanVersion=value=>{
@@ -1018,8 +1023,8 @@ body.control-push-summary-view .control-summary-source{display:block}
 <script>
 (()=>{
   const apply=()=>{
-    document.querySelectorAll('.control-version-footer span,.control-split-number-r181').forEach(el=>{el.textContent='R458';});
-    document.querySelectorAll('[aria-label*="версия R"]').forEach(el=>el.setAttribute('aria-label','Live Web AI, версия R458'));
+    document.querySelectorAll('.control-version-footer span,.control-split-number-r181').forEach(el=>{el.textContent='R459';});
+    document.querySelectorAll('[aria-label*="версия R"]').forEach(el=>el.setAttribute('aria-label','Live Web AI, версия R459'));
   };
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',apply,{once:true}); else apply();
   window.addEventListener('pageshow',apply,{passive:true});
