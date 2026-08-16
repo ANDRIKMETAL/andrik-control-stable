@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786901198202-8bc0bd6738",
-  "release": "R469",
-  "archiveName": "R469-R468-EXACT-LIVE-YOUTUBE-COUNTERS-SAFE-FULL.zip",
-  "sourceHead": "864a930d0f665a1d20fedcb801cfd8a487432475",
-  "backupSha": "864a930d0f665a1d20fedcb801cfd8a487432475",
-  "backupTag": "control-backup-20260816172634-864a930-r469-defac",
+  "operationId": "publish-1786923406804-d32c809657",
+  "release": "R470",
+  "archiveName": "R470-R469-TRIKA-PROMO-COMPACT-SINGLES-SAFE-FULL.zip",
+  "sourceHead": "d5c234333ef66aac47a26fd51cb22e6ba1dccd70",
+  "backupSha": "d5c234333ef66aac47a26fd51cb22e6ba1dccd70",
+  "backupTag": "control-backup-20260816233642-d5c2343-r470-45e6a",
   "autoRecovery": true,
-  "generatedAt": "2026-08-16T17:26:38.202Z"
+  "generatedAt": "2026-08-16T23:36:46.804Z"
 }
