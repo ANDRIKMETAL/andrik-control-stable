@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786866823625-f03d11eec2",
-  "release": "R459",
-  "archiveName": "R459-R458-ADMIN-CAPSULE-VIEWPORT-LOCK-GLOW-ONLY-SAFE-FULL.zip",
-  "sourceHead": "492fe09ca9750189ebe1ccc18ba507aad3df232a",
-  "backupSha": "492fe09ca9750189ebe1ccc18ba507aad3df232a",
-  "backupTag": "control-backup-20260816075339-492fe09-r459-9213d",
+  "operationId": "publish-1786878688732-1d7a98279b",
+  "release": "R460",
+  "archiveName": "R460-R459-FALSE-WARNING-CLEANUP-MONITOR-TUNING-SAFE-FULL.zip",
+  "sourceHead": "377043d8501a93d1821d13a1c905ae210223bf1a",
+  "backupSha": "377043d8501a93d1821d13a1c905ae210223bf1a",
+  "backupTag": "control-backup-20260816111124-377043d-r460-aa7bd",
   "autoRecovery": true,
-  "generatedAt": "2026-08-16T07:53:43.625Z"
+  "generatedAt": "2026-08-16T11:11:28.732Z"
 }

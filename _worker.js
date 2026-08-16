@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R457', number:457, version:'55.00', full:'55.00 LIVE WEB AI FINAL R457', siteUpdater:'55.00-r356' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R460', number:460, version:'55.00', full:'55.00 LIVE WEB AI FINAL R460', siteUpdater:'55.00-r356' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -1145,9 +1145,9 @@ function getNativeMonitorTargets(env) {
   let healthUrl = 'https://control.andrikmetal.com/api/health';
   try { healthUrl = new URL('/api/health', controlOrigin).toString(); } catch (_) {}
   return [
-    { id:'site', name:'Сайт ANDRIK', url:publicOrigin, kind:'asset', assetPath:'/index.html', accept:'text/html', warningMs:1200, timeoutMs:5000 },
-    { id:'control', name:'Control ANDRIK', url:controlOrigin, kind:'asset', assetPath:'/analytics-admin.html', accept:'text/html', warningMs:1200, timeoutMs:5000 },
-    { id:'health', name:'Worker + D1', url:healthUrl, kind:'database', accept:'application/json', warningMs:800, timeoutMs:5000 }
+    { id:'site', name:'Сайт ANDRIK', url:publicOrigin, kind:'asset', assetPath:'/index.html', accept:'text/html', warningMs:2800, timeoutMs:5000 },
+    { id:'control', name:'Control ANDRIK', url:controlOrigin, kind:'asset', assetPath:'/analytics-admin.html', accept:'text/html', warningMs:2800, timeoutMs:5000 },
+    { id:'health', name:'Worker + D1', url:healthUrl, kind:'database', accept:'application/json', warningMs:2200, timeoutMs:5000 }
   ];
 }
 
@@ -3733,7 +3733,7 @@ async function handleCheckPlaylist(request, env) {
       };
       await setPushState(db, 'playlist-last-check-summary', JSON.stringify(summary));
       await recordSystemLog(env, {
-        scope: 'youtube', level: 'warning', event: 'playlist-seeded',
+        scope: 'youtube', level: 'info', event: 'playlist-seeded',
         message: `Первый запуск: запомнено ${items.length} существующих видео без рассылки.`,
         details: summary
       }).catch(() => {});
@@ -6909,8 +6909,8 @@ async function handleFastYoutubeEngagementR333(request,env,options={}){
     if(summary.ok)await setPushState(db,'youtube-fast-engagement-last-success-at-r376',startedAt).catch(()=>{});
     await recordSystemLog(env,{
       scope:'youtube-fast-engagement',
-      level:summary.ok?'info':failed>0?'error':'warning',
-      event:summary.ok?'fast-check-success':'fast-check-warning',
+      level:failed>0?'error':'info',
+      event:summary.ok?'fast-check-success':failed>0?'fast-check-failed':'fast-check-retry',
       message:`YouTube fast 2m: отправлено ${summary.sent}, ошибок ${summary.failed}, занятых like-claim ${busyLikeClaims}, восстановлено stale ${staleLikeClaimsRecovered}.`,
       details:summary
     }).catch(()=>{});
@@ -7021,7 +7021,7 @@ async function handleCronYoutubeEventsLiteR416(request, env, options = {}) {
     errors.length?Promise.resolve():setPushState(db,'youtube-events-last-success-at',summary.checkedAt).catch(()=>{})
   ]);
   if(errors.length){
-    await recordSystemLog(env,{scope:'youtube-events',level:'warning',event:'cron-lite-r416-degraded',message:'Cron-safe YouTube check завершён частично, без тяжёлого fallback.',details:{errors}}).catch(()=>{});
+    await recordSystemLog(env,{scope:'youtube-events',level:'info',event:'cron-lite-r416-retry',message:'Cron-safe YouTube check: временный API retry, повтор будет автоматически.',details:{errors}}).catch(()=>{});
   }
   // Always acknowledge cron with 200. Upstream/API problems remain visible in the payload
   // and logs but must not make the external Worker launch its CPU-heavy legacy fallback.
@@ -7149,7 +7149,7 @@ async function handleCheckYoutubeEvents(request, env) {
       await setPushState(db, 'youtube-events-last-success-at', startedAt);
       const summary = { seeded:true, comments:comments.length, visibleSubscribers:subscribersResult.items.length, videos:videos.length, warnings };
       await setPushState(db, 'youtube-events-last-check-summary', JSON.stringify(summary));
-      await recordSystemLog(env, { scope:'youtube-events', level:'warning', event:'seeded', message:'YouTube-события запомнены без старых уведомлений.', details:summary }).catch(() => {});
+      await recordSystemLog(env, { scope:'youtube-events', level:'info', event:'seeded', message:'YouTube-события запомнены без старых уведомлений.', details:summary }).catch(() => {});
       return json({ ok:true, ...summary, checkedAt:startedAt });
     }
 
@@ -11500,11 +11500,17 @@ async function handleControlObservability(request, env) {
         COUNT(*) AS total
       FROM system_logs
       WHERE datetime(created_at) >= datetime('now','-24 hours')
+        AND NOT (scope='youtube-fast-engagement' AND event IN ('fast-check-warning','fast-check-retry'))
+        AND NOT (scope='youtube-events' AND event IN ('seeded','cron-lite-r416-degraded','cron-lite-r416-retry'))
+        AND NOT (scope='youtube' AND event='playlist-seeded')
     `).first(),
     db.prepare(`
       SELECT scope, level, event, message, details_json AS detailsJson, created_at AS createdAt
       FROM system_logs
       WHERE level IN ('error','warning')
+        AND NOT (scope='youtube-fast-engagement' AND event IN ('fast-check-warning','fast-check-retry'))
+        AND NOT (scope='youtube-events' AND event IN ('seeded','cron-lite-r416-degraded','cron-lite-r416-retry'))
+        AND NOT (scope='youtube' AND event='playlist-seeded')
       ORDER BY datetime(created_at) DESC
       LIMIT 20
     `).all(),

@@ -1,0 +1,12 @@
+R460 — FALSE WARNING CLEANUP + MONITOR LATENCY TUNING
+
+- База: полный R459 без пересборки интерфейса.
+- Guard/Protection, карта, планета, плеер, сводка и push-доставка не отключались.
+- Реальные ошибки API/Worker/D1/HTTP и неудачные push остаются ошибками.
+- Повторяемый YouTube fast retry с 0 неудачных push больше не засоряет пользовательский warning-журнал.
+- Одноразовые YouTube seed-события больше не считаются предупреждениями.
+- Cron-safe временный YouTube API retry остаётся в диагностике как info и автоматически повторяется.
+- Старые benign fast-check/seed/cron-lite warning за последние 24 часа исключаются из жёлтого счётчика сразу.
+- Порог медленного ответа: Сайт/Control 2800 мс, Worker+D1 2200 мс. Реальный timeout оставлен 5000 мс.
+- Версия Control обновлена до R460.
+- Внешнее Cloudflare предупреждение Unsupported cron в отдельном andrik-push Worker этой сборкой не меняется: его код находится вне сайта.
