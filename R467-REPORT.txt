@@ -1,0 +1,14 @@
+R467 — EXACT YOUTUBE DAILY SUMMARY SAFE FULL
+
+Base: production R462 + deployed R466 installer backup hotfix.
+
+Changed only daily YouTube summary logic and release labels:
+1. YouTube likes for an exact archive date now come from the YouTube Analytics day row for that same YYYY-MM-DD.
+2. YouTube channel views for that date now come from the same exact YouTube Analytics day row.
+3. Old cumulative/push high-water values can no longer override an exact Analytics day (fixes inflated likes such as 69 and false 0 views).
+4. Exact day values are persisted in D1 under youtube-exact-day-r467:<date> once observed, so archive values remain stable.
+5. Existing 06:05 live fallback remains in use only until YouTube Analytics publishes the exact calendar-day row.
+6. R466 site-updater backup hang guard is preserved.
+7. CENTRAL_CRON_SECRET_R462, Cron triggers, D1 schema, maps, music, subscriptions, player and monitoring are unchanged.
+
+Important: YouTube Analytics API exposes daily views and likes. This build does not claim unique-person viewers; the card remains channel views per day.

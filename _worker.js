@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R462', number:462, version:'55.00', full:'55.00 LIVE WEB AI FINAL R462', siteUpdater:'55.00-r356' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R467', number:467, version:'55.00', full:'55.00 LIVE WEB AI FINAL R467', siteUpdater:'55.00-r356' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -8494,6 +8494,74 @@ function latestYouTubeStudioDailyMetric(youtube = {}, metric = 'likes') {
   return Math.max(0, Number(row?.[metric] || 0));
 }
 
+// R467: the completed daily YouTube cards must match YouTube Analytics for the
+// exact calendar date shown by the archive. Do not mix cumulative channel deltas,
+// push-event deltas or an older trend row into these two values. If Analytics has
+// not published that date yet, keep the previous live/fallback value until the
+// exact row appears; once it appears, persist it so old archive days stay exact.
+function youtubeStudioExactDayMetricsR467(youtube = {}, day = '') {
+  const safeDay = cleanPlainText(day || '', 20);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(safeDay)) return null;
+  const rows = Array.isArray(youtube?.studio?.trend) ? youtube.studio.trend : [];
+  const row = rows.find(item => String(item?.day || '') === safeDay);
+  if (!row) return null;
+  const likes = Number(row?.likes);
+  const views = Number(row?.views);
+  if (!Number.isFinite(likes) || !Number.isFinite(views)) return null;
+  return {
+    day:safeDay,
+    likes:Math.max(0, likes),
+    views:Math.max(0, views),
+    source:'youtube-analytics-day-r467'
+  };
+}
+
+async function resolveYoutubeExactDayMetricsR467(db, day = '', youtube = null) {
+  const safeDay = cleanPlainText(day || '', 20);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(safeDay)) return null;
+
+  let exact = youtubeStudioExactDayMetricsR467(youtube || {}, safeDay);
+  if (!exact) {
+    const latest = await db.prepare(`
+      SELECT metrics_json, created_at
+      FROM platform_snapshots
+      WHERE platform='youtube'
+      ORDER BY datetime(created_at) DESC
+      LIMIT 1
+    `).first().catch(() => null);
+    exact = youtubeStudioExactDayMetricsR467(parseSnapshotMetrics(latest), safeDay);
+  }
+
+  const stateKey = `youtube-exact-day-r467:${safeDay}`;
+  if (exact) {
+    await setPushState(db, stateKey, JSON.stringify({...exact, updatedAt:new Date().toISOString()})).catch(() => {});
+    return exact;
+  }
+
+  const stored = await getPushState(db, stateKey).catch(() => null);
+  if (!stored?.value) return null;
+  try {
+    const parsed = JSON.parse(stored.value || '{}') || {};
+    if (parsed.day !== safeDay) return null;
+    const likes = Number(parsed.likes), views = Number(parsed.views);
+    if (!Number.isFinite(likes) || !Number.isFinite(views)) return null;
+    return {day:safeDay, likes:Math.max(0,likes), views:Math.max(0,views), source:'youtube-exact-day-state-r467'};
+  } catch (_) { return null; }
+}
+
+function applyYoutubeExactDayMetricsR467(metrics = {}, exact = null) {
+  if (!exact) return metrics || {};
+  return {
+    ...(metrics || {}),
+    youtubeLikes:Math.max(0, Number(exact.likes || 0)),
+    youtubeViews:Math.max(0, Number(exact.views || 0)),
+    youtubeViewDelta:Math.max(0, Number(exact.views || 0)),
+    youtubeDailyExact:true,
+    youtubeDailyDate:exact.day,
+    youtubeDailySource:exact.source || 'youtube-analytics-day-r467'
+  };
+}
+
 function sumYoutubeLikeHistoryDeltas(rows = []) {
   return (Array.isArray(rows) ? rows : []).reduce((sum, row) => {
     let details = {};
@@ -8815,6 +8883,7 @@ async function collectDailyOwnerSummary(env, { liveExternal = true, windowOverri
     ? Math.max(0, Number(ytNow.likesTotal || 0) - Number(ytStart.likesTotal || 0)) : 0;
   const youtubeCommentSnapshotDelta = ytBaseline && Number.isFinite(Number(ytNow.commentsTotal)) && Number.isFinite(Number(ytStart.commentsTotal))
     ? Math.max(0, Number(ytNow.commentsTotal || 0) - Number(ytStart.commentsTotal || 0)) : 0;
+  const youtubeExactDayR467 = await resolveYoutubeExactDayMetricsR467(db, window.key, ytNow);
   const youtubeCountries = normalizeDailyCountryRows(ytNow?.studio?.countries || []);
   const youtubeDailyCountries = normalizeDailyCountryRows(ytNow?.studio?.dailyCountries || [])
     .map(item => ({ ...item, delta:item.value }));
@@ -8837,9 +8906,13 @@ async function collectDailyOwnerSummary(env, { liveExternal = true, windowOverri
     windowStartAt: window.startAt,
     windowEndAt: window.endAt,
     youtubeSubscribers: Math.max(youtubeSubscriberDelta, sumYoutubeSubscriberHistoryDeltas(youtubeSubscriberRows?.results || [])),
-    youtubeLikes: Math.max(youtubeLikeSnapshotDelta, sumYoutubeLikeHistoryDeltas(youtubeLikeRows?.results || [])),
+    // R467: exact calendar-day totals from YouTube Analytics when that row is available.
+    youtubeLikes: youtubeExactDayR467 ? youtubeExactDayR467.likes : Math.max(youtubeLikeSnapshotDelta, sumYoutubeLikeHistoryDeltas(youtubeLikeRows?.results || [])),
     youtubeComments: Math.max(youtubeCommentSnapshotDelta, Number(youtubeEvents?.comments || 0)),
-    youtubeViewDelta: youtubeViewDeltaR410,
+    youtubeViewDelta: youtubeExactDayR467 ? youtubeExactDayR467.views : youtubeViewDeltaR410,
+    youtubeDailyExact:Boolean(youtubeExactDayR467),
+    youtubeDailyDate:youtubeExactDayR467?.day || '',
+    youtubeDailySource:youtubeExactDayR467?.source || '',
     siteUsers: Math.max(Number(siteWindow?.users || 0), googleSummaryWindowMetric(googleCurrent, gaStart, gaBeforeMidnight, window, 'activeUsers')),
     siteViews: Math.max(Number(siteWindow?.views || 0), googleSummaryWindowMetric(googleCurrent, gaStart, gaBeforeMidnight, window, 'screenPageViews')),
     siteSubscribers: Number(siteSubscribers?.total || 0),
@@ -9844,6 +9917,11 @@ async function persistControlHomeHighWaterFromMetricsR260(db, windowKey, metrics
     countryDate:metrics?.countryDate || ''
   });
   const merged = mergeControlHomeSummaryR213(previous, incoming);
+  if (metrics?.youtubeDailyExact === true && cleanPlainText(metrics?.youtubeDailyDate || '',20) === windowKey) {
+    merged.youtubeLikes = incoming.youtubeLikes;
+    merged.youtubeViews = incoming.youtubeViews;
+    merged.youtubeViewDelta = incoming.youtubeViewDelta;
+  }
   await setPushState(db, key, JSON.stringify({
     windowKey,
     summary:merged,
@@ -10292,13 +10370,15 @@ async function handleControlHomePushSnapshotR271(db, window) {
   `).bind(window.startAt, window.endAt).all();
 
   const repairedMetricsR440=await repairHistoricalYoutubeViewsR440(db,window,snapshot.metrics || {});
+  const exactYoutubeR467=await resolveYoutubeExactDayMetricsR467(db,window.key);
+  const exactMetricsR467=applyYoutubeExactDayMetricsR467(repairedMetricsR440,exactYoutubeR467);
   return json({
     ok:true,
     period:'06:05-auto-cycle',
     windowKey:window.key,
     windowStartAt:window.startAt,
     windowEndAt:window.endAt,
-    summary:controlHomeSummaryFromDailyMetricsR271(repairedMetricsR440),
+    summary:controlHomeSummaryFromDailyMetricsR271(exactMetricsR467),
     cityActivity:(Array.isArray(snapshot.cities) && snapshot.cities.length)
       ? snapshot.cities
       : await collectDailyCityActivityR370(db, window, snapshot.sentAt || window.endAt).catch(() => []),
@@ -10373,6 +10453,8 @@ async function handleDailySummaryArchiveDayR442(request, env) {
     repairHistoricalYoutubeViewsR440(db,window,rawMetrics).catch(()=>rawMetrics),
     new Promise(resolve=>setTimeout(()=>resolve(rawMetrics),1200))
   ]);
+  const exactYoutubeR467=await resolveYoutubeExactDayMetricsR467(db,window.key);
+  const exactArchiveMetricsR467=applyYoutubeExactDayMetricsR467(repairedMetrics,exactYoutubeR467);
 
   return json({
     ok:true,
@@ -10381,7 +10463,7 @@ async function handleDailySummaryArchiveDayR442(request, env) {
     windowKey:window.key,
     windowStartAt:window.startAt,
     windowEndAt:window.endAt,
-    summary:controlHomeSummaryFromDailyMetricsR271(repairedMetrics),
+    summary:controlHomeSummaryFromDailyMetricsR271(exactArchiveMetricsR467),
     cityActivity:Array.isArray(snapshot.cities)?snapshot.cities.slice(0,50):[],
     cityMapActivity:[],
     activity:[],
@@ -10414,6 +10496,8 @@ async function handleControlHome(request, env) {
     if (requestedPushSnapshotId) {
       const exact = await findExactDailySummarySnapshotR366(db, requestedPushWindow, requestedPushSnapshotId);
       if (exact) {
+        const exactYoutubeR467 = await resolveYoutubeExactDayMetricsR467(db, requestedPushWindow.key);
+        const exactPushMetricsR467 = applyYoutubeExactDayMetricsR467(exact.metrics, exactYoutubeR467);
         const activityResult = await db.prepare(`
           SELECT id, type, source, audience, title, message, url,
                  video_id AS videoId, video_title AS videoTitle,
@@ -10431,7 +10515,7 @@ async function handleControlHome(request, env) {
           windowKey:requestedPushWindow.key,
           windowStartAt:requestedPushWindow.startAt,
           windowEndAt:requestedPushWindow.endAt,
-          summary:controlHomeSummaryFromDailyMetricsR271(exact.metrics),
+          summary:controlHomeSummaryFromDailyMetricsR271(exactPushMetricsR467),
           cityActivity:(Array.isArray(exact.cities) && exact.cities.length)
             ? exact.cities
             : await collectDailyCityActivityR370(db, requestedPushWindow, exact.sentAt || requestedPushWindow.endAt).catch(() => []),
@@ -10587,6 +10671,7 @@ async function handleControlHome(request, env) {
     ? Math.max(0, Number(ytNow.likesTotal || 0) - Number(ytStart.likesTotal || 0)) : 0;
   const youtubeCommentSnapshotDelta = ytBaseline && Number.isFinite(Number(ytNow.commentsTotal)) && Number.isFinite(Number(ytStart.commentsTotal))
     ? Math.max(0, Number(ytNow.commentsTotal || 0) - Number(ytStart.commentsTotal || 0)) : 0;
+  const youtubeExactDayR467 = await resolveYoutubeExactDayMetricsR467(db, window.key, ytNow);
   const storedPushMetrics = parseStoredDailySummaryMetricsForWindow(latestDailySummaryState, window.key);
   const historyPushMetrics = parseDailySummaryMetricsForWindow(latestDailySummaryPush, window.key);
   const logPushMetrics = parseDailySummaryMetricsForWindow(latestDailySummaryLog, window.key);
@@ -10607,12 +10692,11 @@ async function handleControlHome(request, env) {
     siteLikes:Math.max(Number(siteLikes?.total || 0),dailyMetric(pushMetrics,'siteLikes')),
     youtubeComments:Math.max(youtubeCommentSnapshotDelta,Number(youtubeEvents?.comments || 0),dailyMetric(pushMetrics,'youtubeComments')),
     youtubeSubscribers:Math.max(youtubeSubscriberDelta,sumYoutubeSubscriberHistoryDeltas(youtubeSubscriberRows?.results || []),dailyMetric(pushMetrics,'youtubeSubscribers')),
-    youtubeLikes:Math.max(youtubeLikeSnapshotDelta,sumYoutubeLikeHistoryDeltas(youtubeLikeRows?.results || []),dailyMetric(pushMetrics,'youtubeLikes')),
-    // R410: the live daily view counter is authoritative because it uses the persisted
-    // 06:05 baseline. Old push checkpoints may contain values from the retired transient
-    // snapshot baseline and must not resurrect them after migration/rollover.
-    youtubeViews:youtubeViewDelta,
-    youtubeViewDelta:youtubeViewDelta,
+    // R467: when YouTube Analytics already has this exact date, it wins over all
+    // cumulative/push high-water values. This fixes inflated likes and zero views.
+    youtubeLikes:youtubeExactDayR467 ? youtubeExactDayR467.likes : Math.max(youtubeLikeSnapshotDelta,sumYoutubeLikeHistoryDeltas(youtubeLikeRows?.results || []),dailyMetric(pushMetrics,'youtubeLikes')),
+    youtubeViews:youtubeExactDayR467 ? youtubeExactDayR467.views : youtubeViewDelta,
+    youtubeViewDelta:youtubeExactDayR467 ? youtubeExactDayR467.views : youtubeViewDelta,
     releases:Math.max(Number(releases?.total || 0),dailyMetric(pushMetrics,'releases'),latestYoutubeReleaseCountForWindow(latestYoutubeState, window)),
     countryDeltas:liveCountryDeltas.length?liveCountryDeltas:pushCountryDeltas,
     totalCountries:Math.max(youtubeCountries.length,dailyMetric(pushMetrics,'totalCountries')),
@@ -10623,7 +10707,10 @@ async function handleControlHome(request, env) {
   const highWaterKeyR213 = `control-home-high-water-r213:${window.key}`;
   const previousHighWaterRowR213 = await getPushState(db, highWaterKeyR213).catch(() => null);
   const previousHighWaterR213 = parseControlHomeHighWaterR213(previousHighWaterRowR213);
-  const summaryR213 = mergeControlHomeSummaryR213(previousHighWaterR213, liveSummaryR213);
+  let summaryR213 = mergeControlHomeSummaryR213(previousHighWaterR213, liveSummaryR213);
+  // R467: exact Analytics day values are authoritative and must be allowed to
+  // decrease a previously polluted high-water value (for example 69 fake likes).
+  summaryR213 = applyYoutubeExactDayMetricsR467(summaryR213, youtubeExactDayR467);
   const previousSerializedR213 = JSON.stringify(normalizeControlHomeSummaryR213(previousHighWaterR213));
   const nextSerializedR213 = JSON.stringify(summaryR213);
   let highWaterUpdatedAtR401 = cleanPlainText(previousHighWaterRowR213?.updatedAt || '',80);
