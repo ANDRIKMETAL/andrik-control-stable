@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786864454639-1e377df6a4",
-  "release": "R455",
-  "archiveName": "R455-R454-PROTECTION-FAST-RECOVERY-OWNER-SESSION-SAFE-FULL.zip",
-  "sourceHead": "73ad1ac5c9c8653df87c1130a5d779b4eca5a0fc",
-  "backupSha": "73ad1ac5c9c8653df87c1130a5d779b4eca5a0fc",
-  "backupTag": "control-backup-20260816071410-73ad1ac-r455-3ab76",
+  "operationId": "publish-1786865148418-335e348e48",
+  "release": "R457",
+  "archiveName": "R457-R456-PROTECTION-100-LIVE-FALLBACK-EVENT-WIDTH-SAFE-FULL.zip",
+  "sourceHead": "d135072228093fc6b945b9f09a411664730e718e",
+  "backupSha": "d135072228093fc6b945b9f09a411664730e718e",
+  "backupTag": "control-backup-20260816072544-d135072-r457-fc47b",
   "autoRecovery": true,
-  "generatedAt": "2026-08-16T07:14:14.639Z"
+  "generatedAt": "2026-08-16T07:25:48.418Z"
 }

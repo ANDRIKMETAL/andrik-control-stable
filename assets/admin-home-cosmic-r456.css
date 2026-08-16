@@ -1,0 +1,95 @@
+/* ANDRIK R456 — safe visual patch on the proven R452/R451 Admin geometry.
+   IMPORTANT: do not alter globe size, globe position, texture colors, or GA/YouTube flow geometry here. */
+@media screen and (orientation:portrait){
+  body.control-home-page.control-menu-visible .control-menu-page .control-swipe-page-inner{
+    position:relative!important;
+    isolation:isolate!important;
+  }
+  body.control-home-page.control-menu-visible .control-menu-page .control-swipe-page-inner::before,
+  body.control-home-page.control-menu-visible .control-menu-page .control-swipe-page-inner::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    pointer-events:none;
+    z-index:0;
+  }
+  body.control-home-page.control-menu-visible .control-menu-page .control-swipe-page-inner::before{
+    opacity:.48;
+    background:
+      radial-gradient(circle at 7% 16%,rgba(255,255,255,.92) 0 1px,transparent 1.8px),
+      radial-gradient(circle at 17% 36%,rgba(213,239,255,.78) 0 1px,transparent 1.8px),
+      radial-gradient(circle at 29% 19%,rgba(255,255,255,.70) 0 1px,transparent 1.7px),
+      radial-gradient(circle at 41% 31%,rgba(255,255,255,.88) 0 1px,transparent 1.8px),
+      radial-gradient(circle at 55% 14%,rgba(205,235,255,.75) 0 1px,transparent 1.8px),
+      radial-gradient(circle at 68% 28%,rgba(255,255,255,.86) 0 1px,transparent 1.7px),
+      radial-gradient(circle at 82% 17%,rgba(216,241,255,.72) 0 1px,transparent 1.8px),
+      radial-gradient(circle at 93% 38%,rgba(255,255,255,.90) 0 1px,transparent 1.8px),
+      radial-gradient(circle at 12% 58%,rgba(255,255,255,.72) 0 1px,transparent 1.8px),
+      radial-gradient(circle at 25% 73%,rgba(211,238,255,.78) 0 1px,transparent 1.8px),
+      radial-gradient(circle at 38% 54%,rgba(255,255,255,.86) 0 1px,transparent 1.7px),
+      radial-gradient(circle at 51% 79%,rgba(255,255,255,.70) 0 1px,transparent 1.8px),
+      radial-gradient(circle at 65% 61%,rgba(213,239,255,.82) 0 1px,transparent 1.8px),
+      radial-gradient(circle at 78% 76%,rgba(255,255,255,.88) 0 1px,transparent 1.8px),
+      radial-gradient(circle at 91% 66%,rgba(255,255,255,.74) 0 1px,transparent 1.8px),
+      radial-gradient(circle at 9% 89%,rgba(255,255,255,.82) 0 1px,transparent 1.8px),
+      radial-gradient(circle at 33% 92%,rgba(209,236,255,.72) 0 1px,transparent 1.8px),
+      radial-gradient(circle at 58% 91%,rgba(255,255,255,.90) 0 1px,transparent 1.8px),
+      radial-gradient(circle at 85% 90%,rgba(213,239,255,.78) 0 1px,transparent 1.8px);
+  }
+  body.control-home-page.control-menu-visible .control-menu-page .control-swipe-page-inner::after{
+    opacity:.16;
+    animation:andrikStarsR456 4.8s ease-in-out infinite alternate;
+    background:
+      radial-gradient(circle at 14% 24%,rgba(255,255,255,.95) 0 1.4px,transparent 2.3px),
+      radial-gradient(circle at 34% 42%,rgba(198,232,255,.92) 0 1.3px,transparent 2.2px),
+      radial-gradient(circle at 61% 23%,rgba(255,255,255,.96) 0 1.4px,transparent 2.3px),
+      radial-gradient(circle at 86% 49%,rgba(198,232,255,.90) 0 1.3px,transparent 2.2px),
+      radial-gradient(circle at 22% 81%,rgba(255,255,255,.94) 0 1.4px,transparent 2.3px),
+      radial-gradient(circle at 72% 84%,rgba(205,236,255,.92) 0 1.3px,transparent 2.2px);
+  }
+  @keyframes andrikStarsR456{
+    0%{opacity:.08}
+    45%{opacity:.30}
+    100%{opacity:.15}
+  }
+  body.control-home-page.control-menu-visible .control-menu-page .control-swipe-page-inner>*{
+    position:relative;
+    z-index:1;
+  }
+
+  /* Blue/cyan light only around the existing R452 globe. No hue/filter on the texture. */
+  body.control-home-page.control-menu-visible .admin-hub-globe-halo-r418{
+    border-color:rgba(104,205,255,.34)!important;
+    background:radial-gradient(circle,rgba(89,197,255,.11) 0%,rgba(49,141,255,.07) 48%,transparent 70%)!important;
+    box-shadow:0 0 28px rgba(82,191,255,.30),inset 0 0 22px rgba(82,191,255,.08)!important;
+  }
+  body.control-home-page.control-menu-visible .admin-hub-globe-sphere-r418{
+    border-color:rgba(108,208,255,.38)!important;
+    box-shadow:inset -16px -10px 25px rgba(0,0,0,.78),inset 8px 6px 16px rgba(83,194,255,.06),0 0 25px rgba(80,188,255,.24)!important;
+  }
+
+  /* Compact labels between the three bottom round buttons, without overlap. */
+  body.control-home-page.control-menu-visible .control-split-version-r181{
+    font-size:.54rem!important;
+    letter-spacing:.035em!important;
+  }
+  body.control-home-page.control-menu-visible .control-split-version-r181>span{
+    height:21px!important;
+    bottom:calc(49px + env(safe-area-inset-bottom))!important;
+    padding:0 5px!important;
+  }
+  body.control-home-page.control-menu-visible .control-split-brand-r181{
+    left:21.5%!important;
+    width:18.5%!important;
+  }
+  body.control-home-page.control-menu-visible .control-split-number-r181{
+    right:21.5%!important;
+    width:18.5%!important;
+  }
+}
+@media screen and (orientation:portrait) and (max-width:390px){
+  body.control-home-page.control-menu-visible .control-split-version-r181{font-size:.50rem!important}
+  body.control-home-page.control-menu-visible .control-split-version-r181>span{height:20px!important;bottom:calc(45px + env(safe-area-inset-bottom))!important}
+  body.control-home-page.control-menu-visible .control-split-brand-r181{left:21.5%!important;width:18%!important}
+  body.control-home-page.control-menu-visible .control-split-number-r181{right:21.5%!important;width:18%!important}
+}

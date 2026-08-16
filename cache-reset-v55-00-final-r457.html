@@ -7,7 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <title>Очистка Control — R453</title>
+  <title>Очистка Control — R457</title>
   <style>
     *{box-sizing:border-box}
     html,body{
@@ -143,7 +143,7 @@
 </head>
 <body>
   <main class="box">
-    <span class="badge">СТРАНИЦА ОЧИСТКИ R453</span>
+    <span class="badge">СТРАНИЦА ОЧИСТКИ R457</span>
     <h1 id="title">Чистим кэш Control</h1>
     <p id="status">Не закрывай страницу. После завершения появится кнопка открытия Control.</p>
 
@@ -157,7 +157,7 @@
 
     <div class="result" id="result">Подготовка…</div>
 
-    <a class="btn" id="open" href="/control-home.html?page=menu&v=55.00-r453">Открыть Control</a>
+    <a class="btn" id="open" href="/control-home.html?page=menu&v=55.00-r457">Открыть Control</a>
     <div class="small">Автоматического перехода больше нет.</div>
   </main>
 
@@ -171,7 +171,7 @@
   const title=document.getElementById('title');
   const open=document.getElementById('open');
   const stamp=Date.now();
-  const target='/control-home.html?page=menu&v=55.00-r453&fresh='+stamp;
+  const target='/control-home.html?page=menu&v=55.00-r457&fresh='+stamp;
 
   const step=id=>document.getElementById(id);
   const run=id=>{
@@ -248,7 +248,7 @@
       '/assets/map-layer-color-r354.js?cache-bust='+stamp,
       '/assets/country-list-scroll-r354.css?cache-bust='+stamp,
       '/assets/country-list-scroll-r354.js?cache-bust='+stamp,
-      '/assets/control-version-sync-r453.js?cache-bust='+stamp,
+      '/assets/control-version-sync-r456.js?cache-bust='+stamp,
       '/assets/control-home-r350.js?cache-bust='+stamp,
       '/assets/control-summary-polish-r448.css?cache-bust='+stamp,
       '/assets/album-zip-admin-r446.js?cache-bust='+stamp,
@@ -259,7 +259,7 @@
       '/assets/admin-home-hub-r423.css?cache-bust='+stamp,
       '/assets/admin-home-balance-r446.css?cache-bust='+stamp,
       '/assets/admin-home-balance-r450.css?cache-bust='+stamp,
-      '/assets/admin-home-balance-r453.css?cache-bust='+stamp,
+      '/assets/admin-home-balance-r456.css?cache-bust='+stamp,
       '/assets/planet-map-transition-r450.css?cache-bust='+stamp,
       '/assets/planet-map-transition-r450.js?cache-bust='+stamp,
       '/assets/admin-home-landscape-scroll-r432.css?cache-bust='+stamp,
@@ -276,9 +276,9 @@
       '/assets/singles-r349.js?cache-bust='+stamp,
       '/assets/ecosystem-map-r337.css?cache-bust='+stamp,
       '/assets/ecosystem-map-r450.js?cache-bust='+stamp,
-      '/assets/ecosystem-map-r453.js?cache-bust='+stamp,
+      '/assets/ecosystem-map-r456.js?cache-bust='+stamp,
       '/assets/map-history-anchors-r450.css?cache-bust='+stamp,
-      '/assets/map-history-anchors-r453.css?cache-bust='+stamp,
+      '/assets/map-history-anchors-r456.css?cache-bust='+stamp,
       '/assets/country-activity-r337.js?cache-bust='+stamp,
       '/assets/map-monthly-r337.js?cache-bust='+stamp,
       '/assets/country-focus-compact-r339.css?cache-bust='+stamp,
@@ -313,7 +313,7 @@
       headers:{'Cache-Control':'no-cache, no-store, max-age=0','Pragma':'no-cache'}
     }).catch(()=>null);
     // Also run one lightweight release check now, so a release published before
-    // R453 installation: clear stale UI/assets and open the current Control build.
+    // R457 installation: clear stale UI/assets and open the current Control build.
     await fetch('/api/automation/youtube-fast',{
       method:'POST',
       cache:'no-store',
@@ -348,7 +348,7 @@
   }
 })();
 </script>
-<script defer src="/assets/control-version-sync-r453.js?v=55.00-r453"></script>
+<script defer src="/assets/control-version-sync-r456.js?v=55.00-r457"></script>
 <link rel="preload" as="style" href="/assets/map-total-compact-r348.css?cache-bust=1">
 </body>
 </html>

@@ -1,0 +1,17 @@
+R456 — PROTECTION STABLE RESTORE + R451 GLOBE VISUAL SAFE
+
+Base: R452 proven full build.
+Protection restoration:
+- _worker.js protection/DNS/header/Guard logic restored exactly from R452 (no R455 AbortController/timeouts).
+- protection-admin.html restored to stable protection-admin-r211.js.
+- owner-session-r197.js restored to stable R452 copy.
+- Only release metadata/cache-busting changed to R456.
+
+Admin globe:
+- R451/R452 exact globe geometry and position retained.
+- Original globe texture colors retained; no hue-rotate/filter.
+- Only halo/outer border changed from green to cyan/blue.
+- Star dust added behind Admin content without layout changes.
+- Live Web AI and R456 pills reduced to avoid bottom round buttons.
+
+Map/history: all R452 country-memory/Brazil/centered-caption changes retained.

@@ -1,0 +1,9 @@
+R457 — PROTECTION 100% GUARD SCORE + LIVE FALLBACK + EVENT WIDTH FIX
+
+Fixes:
+1. Guard connected now receives the full Guard score; the old nested status.ok assumption caused the visible 88% even while Guard was connected.
+2. Live monitoring loads from the lightweight /api/control/monitor endpoint first, so it no longer depends on the heavy dashboard response to show data.
+3. The heavy dashboard continues in the background without a client AbortController timeout.
+4. Abort errors are translated into a neutral background-refresh message instead of replacing good live data with an error panel.
+5. Events panel/card/header/filter/buttons are hard-contained to the mobile viewport; right-side clipping is prevented.
+6. Admin globe visual asset from R456 is intentionally left untouched.
