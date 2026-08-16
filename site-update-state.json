@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786923406804-d32c809657",
-  "release": "R470",
-  "archiveName": "R470-R469-TRIKA-PROMO-COMPACT-SINGLES-SAFE-FULL.zip",
-  "sourceHead": "d5c234333ef66aac47a26fd51cb22e6ba1dccd70",
-  "backupSha": "d5c234333ef66aac47a26fd51cb22e6ba1dccd70",
-  "backupTag": "control-backup-20260816233642-d5c2343-r470-45e6a",
+  "operationId": "publish-1786924394840-dde5d923fc",
+  "release": "R471",
+  "archiveName": "R471-R470-R2-NATIVE-LYRA-PROMO-SAFE-FULL.zip",
+  "sourceHead": "d6cad803098ea0c2111748cae6d4060cc1160bdf",
+  "backupSha": "d6cad803098ea0c2111748cae6d4060cc1160bdf",
+  "backupTag": "control-backup-20260816235310-d6cad80-r471-b40d8",
   "autoRecovery": true,
-  "generatedAt": "2026-08-16T23:36:46.804Z"
+  "generatedAt": "2026-08-16T23:53:15.479Z"
 }

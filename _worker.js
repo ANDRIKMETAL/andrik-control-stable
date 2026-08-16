@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R470', number:470, version:'55.00', full:'55.00 LIVE WEB AI FINAL R470', siteUpdater:'55.00-r356' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R471', number:471, version:'55.00', full:'55.00 LIVE WEB AI FINAL R471', siteUpdater:'55.00-r356' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -14102,6 +14102,58 @@ async function handleMusicMp3DeleteR314(request, env) {
   await bucket.delete(key); return json({ok:true,key});
 }
 
+
+// === R471: Lyra / TRIKA promo video in R2 ===
+const PROMO_VIDEO_KEY_R471 = 'promo/lyra-trika-2026.mp4';
+async function handlePromoVideoUploadR471(request, env){
+  if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
+  const bucket=getMusicBucketR314(env);
+  if(!bucket)return json({ok:false,error:'music-bucket-not-configured',message:'R2 MUSIC_BUCKET не подключён.'},503);
+  const len=Number(request.headers.get('content-length')||0);
+  if(len>95*1024*1024)return json({ok:false,error:'file-too-large',message:'Максимум 95 МБ.'},413);
+  const type=String(request.headers.get('content-type')||'').toLowerCase();
+  if(type && !type.includes('video/mp4') && !type.includes('application/octet-stream'))return json({ok:false,error:'invalid-content-type',message:'Нужен MP4.'},415);
+  if(!request.body)return json({ok:false,error:'empty-body'},400);
+  await bucket.put(PROMO_VIDEO_KEY_R471,request.body,{
+    httpMetadata:{contentType:'video/mp4',cacheControl:'public, max-age=86400'},
+    customMetadata:{source:'ANDRIK Control R471',title:'Lyra — Voice and Face of ANDRIK · TRIKA promo',release:'2026-08-20'}
+  });
+  const object=await bucket.head(PROMO_VIDEO_KEY_R471);
+  return json({ok:true,key:PROMO_VIDEO_KEY_R471,size:Number(object?.size||len||0),url:'/api/media/promo/lyra-trika.mp4',publicUrl:'https://music.andrikmetal.com/'+PROMO_VIDEO_KEY_R471});
+}
+async function handlePromoVideoStatusR471(request, env){
+  if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
+  const bucket=getMusicBucketR314(env);if(!bucket)return json({ok:false,error:'music-bucket-not-configured'},503);
+  const object=await bucket.head(PROMO_VIDEO_KEY_R471).catch(()=>null);
+  return json({ok:true,exists:Boolean(object),key:PROMO_VIDEO_KEY_R471,size:Number(object?.size||0),uploaded:object?.uploaded||null,url:'/api/media/promo/lyra-trika.mp4'});
+}
+async function handlePromoVideoPublicR471(request, env){
+  const bucket=getMusicBucketR314(env);if(!bucket)return new Response('R2 unavailable',{status:503});
+  const isHead=request.method==='HEAD';
+  let object;
+  try{
+    object=isHead?await bucket.head(PROMO_VIDEO_KEY_R471):await bucket.get(PROMO_VIDEO_KEY_R471,{range:request.headers});
+  }catch(_){ object=null; }
+  if(!object)return new Response(null,{status:404,headers:{'cache-control':'no-store'}});
+  const h=new Headers();
+  if(typeof object.writeHttpMetadata==='function')object.writeHttpMetadata(h);
+  h.set('content-type','video/mp4');
+  h.set('accept-ranges','bytes');
+  h.set('cache-control','public, max-age=3600');
+  if(object.httpEtag)h.set('etag',object.httpEtag);
+  let status=200;
+  const range=object.range;
+  if(range && Number.isFinite(range.offset) && Number.isFinite(range.length)){
+    status=206;
+    const total=Number(object.size||0);
+    h.set('content-range',`bytes ${range.offset}-${range.offset+range.length-1}/${total}`);
+    h.set('content-length',String(range.length));
+  }else if(object.size){ h.set('content-length',String(object.size)); }
+  if(isHead)return new Response(null,{status:200,headers:h});
+  return new Response(object.body,{status,headers:h});
+}
+// === End R471 promo video ===
+
 async function routeApi(request, env, ctx) {
   const url = new URL(request.url);
   const path = url.pathname.replace(/\/+$/, '') || '/';
@@ -14182,6 +14234,9 @@ async function routeApi(request, env, ctx) {
     if (path === '/api/control/music/albums/mpu/part' && request.method === 'PUT') return await handleMusicAlbumMultipartPartR446(request, env);
     if (path === '/api/control/music/albums/mpu/complete' && request.method === 'POST') return await handleMusicAlbumMultipartCompleteR446(request, env);
     if (path === '/api/control/music/albums/mpu/abort' && request.method === 'DELETE') return await handleMusicAlbumMultipartAbortR446(request, env);
+    if (path === '/api/control/media/promo-r471' && request.method === 'PUT') return await handlePromoVideoUploadR471(request, env);
+    if (path === '/api/control/media/promo-r471/status' && request.method === 'GET') return await handlePromoVideoStatusR471(request, env);
+    if (path === '/api/media/promo/lyra-trika.mp4' && (request.method === 'GET' || request.method === 'HEAD')) return await handlePromoVideoPublicR471(request, env);
     if (path === '/api/music/albums/status' && request.method === 'GET') return await handleMusicAlbumsPublicStatusR446(request, env);
     if (path === '/api/music/album-download' && (request.method === 'GET' || request.method === 'HEAD')) return await handleMusicAlbumDownloadR446(request, env);
     if (path === '/api/music/singles' && request.method === 'GET') return await handleMusicSinglesListR316(request, env);
