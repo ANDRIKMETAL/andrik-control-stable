@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R450', number:450, version:'55.00', full:'55.00 LIVE WEB AI FINAL R450', siteUpdater:'55.00-r356' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R451', number:451, version:'55.00', full:'55.00 LIVE WEB AI FINAL R451', siteUpdater:'55.00-r356' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -2878,10 +2878,33 @@ async function handleControlEcosystemMap(request, env) {
   })).filter(row => row.country && Number.isFinite(row.latitude) && Number.isFinite(row.longitude));
   const links = {};
   for (const row of linkRowsRaw?.results || []) links[cleanPlainText(row.type || '', 40)] = Number(row.value || 0);
-  const historyCountryMapR450 = new Map();
+  // R451 — the overview remembers EVERY country ever known by the project.
+  // R450 already kept all-time first-party site/push geography. R451 additionally
+  // restores the persistent YouTube country memory used by the new-country alerts.
+  // This is marker-only history: it never changes rolling totals or country lists.
+  const historyCountryMapR451 = new Map();
   for (const row of [...normalizeCountries(historySiteCountriesRaw), ...normalizeCountries(historyPushCountriesRaw)]) {
     if (!row.country) continue;
-    historyCountryMapR450.set(row.country,{country:row.country,value:1});
+    historyCountryMapR451.set(row.country,{country:row.country,value:1,source:'first-party-history'});
+  }
+  const youtubeKnownStateR451 = await getPushState(db, 'youtube-audience-known-countries-v54-24').catch(() => null);
+  let youtubeKnownCountriesR451 = [];
+  try {
+    const parsed = JSON.parse(youtubeKnownStateR451?.value || '[]');
+    youtubeKnownCountriesR451 = Array.isArray(parsed) ? parsed : [];
+  } catch (_) { youtubeKnownCountriesR451 = []; }
+  for (const raw of youtubeKnownCountriesR451) {
+    const country = cleanPlainText(raw || '', 120).trim();
+    if (!country || country === '(не задано)') continue;
+    const key = country.toLocaleUpperCase('ru');
+    if (!historyCountryMapR451.has(key)) historyCountryMapR451.set(key,{country,value:1,source:'youtube-known-history'});
+  }
+  // Explicit continuity anchors requested by the owner after they had already
+  // fallen outside the rolling window before R450 started local history.
+  // They are visual-only and will be naturally deduplicated by ISO on the client.
+  for (const country of ['Мексика','Бразилия']) {
+    const key = country.toLocaleUpperCase('ru');
+    if (!historyCountryMapR451.has(key)) historyCountryMapR451.set(key,{country,value:1,source:'owner-confirmed-history'});
   }
   const pushCounts = await getPushAudienceCounts(env).catch(() => ({}));
   return json({
@@ -2889,8 +2912,8 @@ async function handleControlEcosystemMap(request, env) {
     updatedAt:new Date().toISOString(),
     periodDays:30,
     privacy:{ rawIpStored:false, coordinatePrecision:'0.1-degree', adminOnly:true },
-    diagnostics:{ recovery:'R450', schemaWarnings },
-    historyCountries:[...historyCountryMapR450.values()],
+    diagnostics:{ recovery:'R451', schemaWarnings, historicalCountryAnchors:historyCountryMapR451.size, youtubeKnownCountries:youtubeKnownCountriesR451.length },
+    historyCountries:[...historyCountryMapR451.values()],
     site:{
       countries:normalizeCountries(siteCountriesRaw), points:normalizePoints(sitePointsRaw),
       weeklyCountries:normalizeWeekly(siteWeeklyRaw), previousWeekCountries:normalizeWeekly(sitePreviousWeeklyRaw)
@@ -13770,7 +13793,7 @@ function controlRecoveryServiceWorkerSource() {
 }
 
 function controlRecoveryPage() {
-  return `<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#02060a"><meta name="robots" content="noindex,nofollow"><title>Восстановление Control ANDRIK</title><style>*{box-sizing:border-box}html,body{min-height:100%;margin:0;background:#02060a;color:#eff8ff;font-family:system-ui,-apple-system,Segoe UI,sans-serif}body{display:grid;place-items:center;padding:22px}.c{width:min(100%,520px);padding:30px 22px;border:1px solid #244455;border-radius:28px;background:linear-gradient(#081923,#030c13);text-align:center}.e{font-size:58px}h1{font-size:clamp(30px,8vw,44px);margin:12px 0}.s{color:#abc0cc;line-height:1.55}.b{display:inline-flex;min-height:54px;align-items:center;justify-content:center;margin-top:20px;padding:0 22px;border:1px solid #315b70;border-radius:999px;color:#eff8ff;text-decoration:none;font-weight:800;background:#0a2432}</style></head><body><main class="c"><div class="e">🟢</div><h1>Восстанавливаем Control</h1><p class="s" id="s">Заменяем старый перехват страниц безопасной версией…</p><a class="b" id="b" href="/control-home.html?page=menu&source=recovery&v=55.00-r450" hidden>Открыть Control</a></main><script>(async()=>{const s=document.getElementById('s'),b=document.getElementById('b'),go='/control-home.html?page=menu&source=recovery&v=55.00-r450&t='+Date.now();b.href=go;try{if('caches'in window){const k=await caches.keys();await Promise.all(k.filter(n=>n.startsWith('andrik-control-')||n.startsWith('andrik-site-')).map(n=>caches.delete(n)))}if('serviceWorker'in navigator){const r=await navigator.serviceWorker.register('/service-worker.js?v=54.96-control-recovery',{scope:'/',updateViaCache:'none'});if(r.installing)r.installing.postMessage({type:'SKIP_WAITING'});if(r.waiting)r.waiting.postMessage({type:'SKIP_WAITING'});await r.update().catch(()=>{});await new Promise(x=>setTimeout(x,1200))}s.textContent='Готово. Открываем админ-панель…';s.style.color='#bfffd9';b.hidden=false;setTimeout(()=>location.replace(go),650)}catch(e){s.textContent='Нажмите кнопку ниже. '+String(e&&e.message||e);s.style.color='#ffb9b9';b.hidden=false}})();</script></body></html>`;
+  return `<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#02060a"><meta name="robots" content="noindex,nofollow"><title>Восстановление Control ANDRIK</title><style>*{box-sizing:border-box}html,body{min-height:100%;margin:0;background:#02060a;color:#eff8ff;font-family:system-ui,-apple-system,Segoe UI,sans-serif}body{display:grid;place-items:center;padding:22px}.c{width:min(100%,520px);padding:30px 22px;border:1px solid #244455;border-radius:28px;background:linear-gradient(#081923,#030c13);text-align:center}.e{font-size:58px}h1{font-size:clamp(30px,8vw,44px);margin:12px 0}.s{color:#abc0cc;line-height:1.55}.b{display:inline-flex;min-height:54px;align-items:center;justify-content:center;margin-top:20px;padding:0 22px;border:1px solid #315b70;border-radius:999px;color:#eff8ff;text-decoration:none;font-weight:800;background:#0a2432}</style></head><body><main class="c"><div class="e">🟢</div><h1>Восстанавливаем Control</h1><p class="s" id="s">Заменяем старый перехват страниц безопасной версией…</p><a class="b" id="b" href="/control-home.html?page=menu&source=recovery&v=55.00-r451" hidden>Открыть Control</a></main><script>(async()=>{const s=document.getElementById('s'),b=document.getElementById('b'),go='/control-home.html?page=menu&source=recovery&v=55.00-r451&t='+Date.now();b.href=go;try{if('caches'in window){const k=await caches.keys();await Promise.all(k.filter(n=>n.startsWith('andrik-control-')||n.startsWith('andrik-site-')).map(n=>caches.delete(n)))}if('serviceWorker'in navigator){const r=await navigator.serviceWorker.register('/service-worker.js?v=54.96-control-recovery',{scope:'/',updateViaCache:'none'});if(r.installing)r.installing.postMessage({type:'SKIP_WAITING'});if(r.waiting)r.waiting.postMessage({type:'SKIP_WAITING'});await r.update().catch(()=>{});await new Promise(x=>setTimeout(x,1200))}s.textContent='Готово. Открываем админ-панель…';s.style.color='#bfffd9';b.hidden=false;setTimeout(()=>location.replace(go),650)}catch(e){s.textContent='Нажмите кнопку ниже. '+String(e&&e.message||e);s.style.color='#ffb9b9';b.hidden=false}})();</script></body></html>`;
 }
 
 
@@ -13892,7 +13915,7 @@ export default {
           const allowedSide = (page === 'google' || page === 'youtube') && source === 'admin-hub-swipe';
           const allowedMap = page === 'map' && source === 'admin-globe';
           if (!allowedSide && !allowedMap) {
-            const adminUrl = new URL('/control-home.html?page=menu&source=launch-guard-r450&v=55.00-r450', url);
+            const adminUrl = new URL('/control-home.html?page=menu&source=launch-guard-r451&v=55.00-r451', url);
             return Response.redirect(adminUrl.toString(), 302);
           }
         }
