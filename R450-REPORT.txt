@@ -1,0 +1,33 @@
+ANDRIK Control — R450
+Date: 16.08.2026
+Base: R449
+
+FIXED — MAP COUNTRY DOTS / CAPTIONS / PLANET RETURN
+1. ALL ecosystem map now has persistent historical country anchors.
+   - Countries seen earlier do not disappear from the white-dot overview when a rolling 30/28-day window moves forward.
+   - Historical anchors are visual-only and do NOT change current country values, lists, or totals.
+   - Current countries keep normal live/current marker behavior.
+2. Worker now returns all-time historical country presence from site ecosystem events and push geography.
+   - This allows previously seen countries such as Mexico to return to the ALL overview immediately when they exist in D1 history.
+   - Browser localStorage additionally remembers countries seen in YouTube/current layers from R450 onward.
+3. Individual layers remain rolling/current:
+   - Site / Music: 30-day window (+ LIVE 60 min where applicable).
+   - YouTube: truthful 28-day YouTube geography window.
+   - Push: current active geographic subscriptions.
+4. Map captions standardized to one compact pattern:
+   - ANDRIK · общая карта · 30 дней + LIVE 60 мин.
+   - Сайт ANDRIK · карта · 30 дней + LIVE 60 мин.
+   - YouTube ANDRIK · карта · 28 дней.
+   - Музыка ANDRIK · карта · 30 дней + LIVE 60 мин.
+   - Push ANDRIK · карта · активные подписки.
+5. Fixed planet -> map entry after returning from map to Admin.
+   - Added Android/PWA bfcache hard re-arm.
+   - Clears stale transition layers and hidden-sphere state.
+   - Resets navigation lock on pageshow and after return animation.
+   - Added navigation watchdog so a cancelled navigation never leaves the globe locked.
+6. Rotating Admin planet made slightly larger (sphere 94 -> 102 px, halo 108 -> 116 px) without moving the R448 vertical layout.
+7. Daily summary logic was intentionally NOT changed in R450. The user is observing today's reset separately.
+
+VERSION
+- Control display/worker release: R450
+- Cache reset: /cache-reset-v55-00-final-r450.html

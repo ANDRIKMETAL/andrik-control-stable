@@ -1,0 +1,9 @@
+/* ANDRIK R450 — persistent country anchors are visible only on the ALL ecosystem map. */
+#worldMap[data-ecosystem-layer="all"] .world-map-dot.is-history-anchor-r450{
+  opacity:.58;
+  filter:saturate(.45) brightness(.94);
+  pointer-events:none;
+}
+#worldMap[data-ecosystem-layer="all"] .world-map-dot.is-history-anchor-r450 i{
+  opacity:.72;
+}

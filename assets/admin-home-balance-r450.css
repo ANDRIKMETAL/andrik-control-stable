@@ -1,0 +1,12 @@
+/* ANDRIK R450 — slightly larger rotating globe only; keep the R448 vertical layout unchanged. */
+body.control-home-page.control-menu-visible .admin-hub-globe-r418{
+  width:130px!important;
+}
+body.control-home-page.control-menu-visible .admin-hub-globe-sphere-r418{
+  width:102px!important;
+  height:102px!important;
+}
+body.control-home-page.control-menu-visible .admin-hub-globe-halo-r418{
+  width:116px!important;
+  height:116px!important;
+}

@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786804377437-fc31711932",
-  "release": "R449",
-  "archiveName": "R449-R448-GPU-LIGHT-PLANET-MAP-TRANSITION-SAFE-FULL.zip",
-  "sourceHead": "f3b4b2482b708d252aff78a28a8a3bccb4e6dcd7",
-  "backupSha": "f3b4b2482b708d252aff78a28a8a3bccb4e6dcd7",
-  "backupTag": "control-backup-20260815143253-f3b4b24-r449-e37e3",
+  "operationId": "publish-1786860968961-25d7c9b8b8",
+  "release": "R450",
+  "archiveName": "R450-R449-PERSISTENT-MAP-COUNTRIES-PORTAL-REARM-GLOBE-SIZE-SAFE-FULL.zip",
+  "sourceHead": "e76052084b0c28b5264cc57f8210cf1b99a8d2c0",
+  "backupSha": "e76052084b0c28b5264cc57f8210cf1b99a8d2c0",
+  "backupTag": "control-backup-20260816061604-e760520-r450-b5162",
   "autoRecovery": true,
-  "generatedAt": "2026-08-15T14:32:57.437Z"
+  "generatedAt": "2026-08-16T06:16:08.961Z"
 }

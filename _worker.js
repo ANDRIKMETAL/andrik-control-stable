@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R449', number:449, version:'55.00', full:'55.00 LIVE WEB AI FINAL R449', siteUpdater:'55.00-r356' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R450', number:450, version:'55.00', full:'55.00 LIVE WEB AI FINAL R450', siteUpdater:'55.00-r356' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -2729,7 +2729,7 @@ async function handleControlEcosystemMap(request, env) {
   const safeQueryR439 = task => Promise.resolve().then(task).catch(() => ({ results:[] }));
 
   const age = "-30 days";
-  const [siteCountriesRaw, sitePointsRaw, musicCountriesRaw, musicPointsRaw, pushCountriesRaw, pushPointsRaw, linkRowsRaw, recentRaw] = await Promise.all([
+  const [siteCountriesRaw, sitePointsRaw, musicCountriesRaw, musicPointsRaw, pushCountriesRaw, pushPointsRaw, linkRowsRaw, recentRaw, historySiteCountriesRaw, historyPushCountriesRaw] = await Promise.all([
     safeQueryR439(() => db.prepare(`
       SELECT country, COUNT(DISTINCT visitor_hash) AS value, COUNT(*) AS events
       FROM site_visit_events
@@ -2794,6 +2794,20 @@ async function handleControlEcosystemMap(request, env) {
       FROM site_visit_events
       WHERE datetime(created_at)>=datetime('now','-60 minutes')
       ORDER BY datetime(created_at) DESC LIMIT 40
+    `).all()),
+    // R450 — marker-only country history for the ALL map. No rolling date filter:
+    // once the ecosystem has seen a country, its anchor can stay visible on the overview.
+    safeQueryR439(() => db.prepare(`
+      SELECT country, COUNT(*) AS value, MAX(created_at) AS lastAt
+      FROM site_visit_events
+      WHERE country<>'' AND event_type IN ('visit','music-download','music-listen','telegram-open','youtube-open','spotify-open','apple-music-open','soundcloud-open','amazon-music-open')
+      GROUP BY country ORDER BY lastAt DESC LIMIT 180
+    `).all()),
+    safeQueryR439(() => db.prepare(`
+      SELECT country, COUNT(*) AS value, MAX(COALESCE(last_seen_at,created_at)) AS lastAt
+      FROM push_subscribers
+      WHERE country<>''
+      GROUP BY country ORDER BY lastAt DESC LIMIT 180
     `).all())
   ]);
   const [siteWeeklyRaw, sitePreviousWeeklyRaw, musicWeeklyRaw, musicPreviousWeeklyRaw, pushWeeklyRaw, pushPreviousWeeklyRaw] = await Promise.all([
@@ -2864,13 +2878,19 @@ async function handleControlEcosystemMap(request, env) {
   })).filter(row => row.country && Number.isFinite(row.latitude) && Number.isFinite(row.longitude));
   const links = {};
   for (const row of linkRowsRaw?.results || []) links[cleanPlainText(row.type || '', 40)] = Number(row.value || 0);
+  const historyCountryMapR450 = new Map();
+  for (const row of [...normalizeCountries(historySiteCountriesRaw), ...normalizeCountries(historyPushCountriesRaw)]) {
+    if (!row.country) continue;
+    historyCountryMapR450.set(row.country,{country:row.country,value:1});
+  }
   const pushCounts = await getPushAudienceCounts(env).catch(() => ({}));
   return json({
     ok:true,
     updatedAt:new Date().toISOString(),
     periodDays:30,
     privacy:{ rawIpStored:false, coordinatePrecision:'0.1-degree', adminOnly:true },
-    diagnostics:{ recovery:'R439', schemaWarnings },
+    diagnostics:{ recovery:'R450', schemaWarnings },
+    historyCountries:[...historyCountryMapR450.values()],
     site:{
       countries:normalizeCountries(siteCountriesRaw), points:normalizePoints(sitePointsRaw),
       weeklyCountries:normalizeWeekly(siteWeeklyRaw), previousWeekCountries:normalizeWeekly(sitePreviousWeeklyRaw)
@@ -13750,7 +13770,7 @@ function controlRecoveryServiceWorkerSource() {
 }
 
 function controlRecoveryPage() {
-  return `<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#02060a"><meta name="robots" content="noindex,nofollow"><title>Восстановление Control ANDRIK</title><style>*{box-sizing:border-box}html,body{min-height:100%;margin:0;background:#02060a;color:#eff8ff;font-family:system-ui,-apple-system,Segoe UI,sans-serif}body{display:grid;place-items:center;padding:22px}.c{width:min(100%,520px);padding:30px 22px;border:1px solid #244455;border-radius:28px;background:linear-gradient(#081923,#030c13);text-align:center}.e{font-size:58px}h1{font-size:clamp(30px,8vw,44px);margin:12px 0}.s{color:#abc0cc;line-height:1.55}.b{display:inline-flex;min-height:54px;align-items:center;justify-content:center;margin-top:20px;padding:0 22px;border:1px solid #315b70;border-radius:999px;color:#eff8ff;text-decoration:none;font-weight:800;background:#0a2432}</style></head><body><main class="c"><div class="e">🟢</div><h1>Восстанавливаем Control</h1><p class="s" id="s">Заменяем старый перехват страниц безопасной версией…</p><a class="b" id="b" href="/control-home.html?page=menu&source=recovery&v=55.00-r449" hidden>Открыть Control</a></main><script>(async()=>{const s=document.getElementById('s'),b=document.getElementById('b'),go='/control-home.html?page=menu&source=recovery&v=55.00-r449&t='+Date.now();b.href=go;try{if('caches'in window){const k=await caches.keys();await Promise.all(k.filter(n=>n.startsWith('andrik-control-')||n.startsWith('andrik-site-')).map(n=>caches.delete(n)))}if('serviceWorker'in navigator){const r=await navigator.serviceWorker.register('/service-worker.js?v=54.96-control-recovery',{scope:'/',updateViaCache:'none'});if(r.installing)r.installing.postMessage({type:'SKIP_WAITING'});if(r.waiting)r.waiting.postMessage({type:'SKIP_WAITING'});await r.update().catch(()=>{});await new Promise(x=>setTimeout(x,1200))}s.textContent='Готово. Открываем админ-панель…';s.style.color='#bfffd9';b.hidden=false;setTimeout(()=>location.replace(go),650)}catch(e){s.textContent='Нажмите кнопку ниже. '+String(e&&e.message||e);s.style.color='#ffb9b9';b.hidden=false}})();</script></body></html>`;
+  return `<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#02060a"><meta name="robots" content="noindex,nofollow"><title>Восстановление Control ANDRIK</title><style>*{box-sizing:border-box}html,body{min-height:100%;margin:0;background:#02060a;color:#eff8ff;font-family:system-ui,-apple-system,Segoe UI,sans-serif}body{display:grid;place-items:center;padding:22px}.c{width:min(100%,520px);padding:30px 22px;border:1px solid #244455;border-radius:28px;background:linear-gradient(#081923,#030c13);text-align:center}.e{font-size:58px}h1{font-size:clamp(30px,8vw,44px);margin:12px 0}.s{color:#abc0cc;line-height:1.55}.b{display:inline-flex;min-height:54px;align-items:center;justify-content:center;margin-top:20px;padding:0 22px;border:1px solid #315b70;border-radius:999px;color:#eff8ff;text-decoration:none;font-weight:800;background:#0a2432}</style></head><body><main class="c"><div class="e">🟢</div><h1>Восстанавливаем Control</h1><p class="s" id="s">Заменяем старый перехват страниц безопасной версией…</p><a class="b" id="b" href="/control-home.html?page=menu&source=recovery&v=55.00-r450" hidden>Открыть Control</a></main><script>(async()=>{const s=document.getElementById('s'),b=document.getElementById('b'),go='/control-home.html?page=menu&source=recovery&v=55.00-r450&t='+Date.now();b.href=go;try{if('caches'in window){const k=await caches.keys();await Promise.all(k.filter(n=>n.startsWith('andrik-control-')||n.startsWith('andrik-site-')).map(n=>caches.delete(n)))}if('serviceWorker'in navigator){const r=await navigator.serviceWorker.register('/service-worker.js?v=54.96-control-recovery',{scope:'/',updateViaCache:'none'});if(r.installing)r.installing.postMessage({type:'SKIP_WAITING'});if(r.waiting)r.waiting.postMessage({type:'SKIP_WAITING'});await r.update().catch(()=>{});await new Promise(x=>setTimeout(x,1200))}s.textContent='Готово. Открываем админ-панель…';s.style.color='#bfffd9';b.hidden=false;setTimeout(()=>location.replace(go),650)}catch(e){s.textContent='Нажмите кнопку ниже. '+String(e&&e.message||e);s.style.color='#ffb9b9';b.hidden=false}})();</script></body></html>`;
 }
 
 
@@ -13872,7 +13892,7 @@ export default {
           const allowedSide = (page === 'google' || page === 'youtube') && source === 'admin-hub-swipe';
           const allowedMap = page === 'map' && source === 'admin-globe';
           if (!allowedSide && !allowedMap) {
-            const adminUrl = new URL('/control-home.html?page=menu&source=launch-guard-r449&v=55.00-r449', url);
+            const adminUrl = new URL('/control-home.html?page=menu&source=launch-guard-r450&v=55.00-r450', url);
             return Response.redirect(adminUrl.toString(), 302);
           }
         }

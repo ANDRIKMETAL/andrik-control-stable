@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="ru" translate="no" class="notranslate"><head><script>(function(){try{var u=new URL(location.href),p=(u.searchParams.get('page')||'').toLowerCase(),s=(u.searchParams.get('source')||'').toLowerCase();var ok=(p==='map'&&s==='admin-globe')||((p==='google'||p==='youtube')&&s==='admin-hub-swipe');if(!ok){location.replace('/control-home.html?page=menu&source=launch-guard-r428&v=55.00-r428');}}catch(_){}})();</script>
-<meta name="andrik-control-release" content="R418">
+<meta name="andrik-control-release" content="R450">
 <link rel="stylesheet" href="/assets/control-sleep-mode-r193.css?v=55.00-r193"><script defer src="/assets/control-sleep-mode-r193.js?v=55.00-r193"></script>
 
 <meta name="google" content="notranslate"><meta charset="utf-8"/>
@@ -23,8 +23,9 @@
 <link href="/assets/control-v54-04.css?v=54.05" rel="stylesheet"/>
 <link href="/assets/control-v54-07.css?v=54.07" rel="stylesheet"/>
 <link href="/assets/control-v54-08.css?v=54.08" rel="stylesheet"/>
-<link rel="stylesheet" href="/assets/planet-map-transition-r449.css?v=55.00-r449">
-<script>try{if(Date.now()-Number(sessionStorage.getItem('andrik-portal-map-open-r449')||0)<8000)document.documentElement.classList.add('andrik-portal-map-arrival-pending-r449')}catch(_){}</script>
+<link rel="stylesheet" href="/assets/planet-map-transition-r450.css?v=55.00-r450">
+<link rel="stylesheet" href="/assets/map-history-anchors-r450.css?v=55.00-r450">
+<script>try{if(Date.now()-Number(sessionStorage.getItem('andrik-portal-map-open-r450')||sessionStorage.getItem('andrik-portal-map-open-r449')||0)<8000)document.documentElement.classList.add('andrik-portal-map-arrival-pending-r450')}catch(_){}</script>
 <title>Live Web AI — статистика ANDRIK</title><link rel="prefetch" href="/control-home.html?page=menu&amp;v=54.66"/>
 <link href="/assets/control-v54-09.css?v=54.09" rel="stylesheet"/>
 <link href="/assets/control-v54-18.css?v=54.18" rel="stylesheet"/>
@@ -1778,20 +1779,33 @@ body.analytics-admin-page.is-country-returning #worldMap .world-map-dot.is-selec
     const metricLabel=String(options.metricLabel||'').trim();
     const visualLayer=String(options.layer||map.dataset.ecosystemLayer||window.__andrikEcosystemActiveLayer||'').trim().toLowerCase();
     const isYoutubeVisual=visualLayer==='youtube'||String(options.source||'').toLowerCase().includes('youtube')||String(options.source||'').toLowerCase()==='audience';
-    const markerCountries=[...new Map(clean.map(item=>[
+    /* R450: the ALL map may receive a persistent marker-only country set. It affects dots only;
+       the country list and totals still use the current rolling-period rows in `clean`. */
+    const markerInput=Array.isArray(options.markerRows)?options.markerRows:clean;
+    const markerClean=markerInput.map(item=>{
+      const rawCountry=String(item?.country??item?.code??item?.name??'').trim();
+      const code=resolveCountryIsoR380(rawCountry)||String(item?.code||'').trim().toUpperCase();
+      const name=translateCountry(code||rawCountry);
+      return {...item,rawCountry,code,name,value:Math.max(1,Number(item?.views??item?.activeUsers??item?.value??1))};
+    }).filter(item=>item.name&&item.name!=='(не задано)');
+    const markerMax=Math.max(1,...markerClean.filter(item=>!item.historyOnly).map(item=>item.value));
+    const markerCountries=[...new Map(markerClean.map(item=>[
       (/^[A-Z]{2}$/.test(String(item.code||''))?String(item.code).toUpperCase():String(item.name||'')),item
     ])).values()];
     const markers=markerCountries.map(item=>({item,geo:worldCountryGeoR380(item)})).filter(entry=>entry.geo).map(({item,geo})=>{
       const [lon,lat]=geo;
       const x=(lon+180)/360*100;
       const y=(85-lat)/145*100;
-      const power=.5+item.value/max*.5;
-      const size=8+Math.round(item.value/max*13);
+      const historical=Boolean(item.historyOnly);
+      const power=historical?.46:(.5+item.value/markerMax*.5);
+      const size=historical?7:(8+Math.round(item.value/markerMax*13));
       const encoded=encodeURIComponent(item.name);
       const selected=item.name===selectedWorldCountry?' is-selected':'';
       const unit=metricLabel?` ${metricLabel}`:'';
       const youtubeClass=isYoutubeVisual?' r356-youtube-dot':'';
-      return `<span class="world-map-dot${selected}${youtubeClass}" data-country="${encoded}" data-code="${escapeHtml(item.code)}" aria-current="${selected?'true':'false'}" style="left:${x.toFixed(2)}%;top:${y.toFixed(2)}%;--power:${power};--dot:${size}px" title="${escapeHtml(item.name)}: ${number(item.value)}${escapeHtml(unit)}"><i></i></span>`;
+      const historyClass=historical?' is-history-anchor-r450':'';
+      const title=historical?`${item.name} · страна была на карте ранее`:`${item.name}: ${number(item.value)}${unit}`;
+      return `<span class="world-map-dot${selected}${youtubeClass}${historyClass}" data-country="${encoded}" data-code="${escapeHtml(item.code)}" aria-current="${selected?'true':'false'}" style="left:${x.toFixed(2)}%;top:${y.toFixed(2)}%;--power:${power};--dot:${size}px" title="${escapeHtml(title)}"><i></i></span>`;
     }).join('');
     const points=(Array.isArray(options.points)?options.points:[]).filter(point=>Number.isFinite(Number(point?.latitude))&&Number.isFinite(Number(point?.longitude))).slice(0,180);
     const pointMax=Math.max(1,...points.map(point=>Number(point?.value||0)));
@@ -2212,7 +2226,7 @@ body.analytics-admin-page.is-country-returning #worldMap .world-map-dot.is-selec
         setEndPullProgress(Math.min(92,Math.abs(dy)),true);
         if(mapEndPullText)mapEndPullText.textContent='Открываем админ-панель…';
         apply(true,0,0);
-        window.setTimeout(()=>{const u='/control-home.html?source=map-end-pull&page=menu&v=55.00-r446';if(typeof window.andrikMapPortalCloseR446==='function')window.andrikMapPortalCloseR446(u);else location.assign(u)},210);
+        window.setTimeout(()=>{const u='/control-home.html?source=map-end-pull&page=menu&v=55.00-r450';if(typeof window.andrikMapPortalCloseR450==='function')window.andrikMapPortalCloseR450(u);else if(typeof window.andrikMapPortalCloseR446==='function')window.andrikMapPortalCloseR446(u);else location.assign(u)},210);
         return;
       }
       if(mode==='vertical-up')bounceMapEnd();
@@ -3571,7 +3585,7 @@ body.analytics-admin-page.is-country-returning #worldMap .world-map-dot.is-selec
       leaving=true;zone.classList.add('is-ready');
       const label=zone.querySelector('.r179-focused-map-handle');
       if(label)label.textContent='Открываем админ-панель…';
-      setTimeout(()=>{const u='/control-home.html?page=menu&source=focused-map-swipe&v=55.00-r446';if(typeof window.andrikMapPortalCloseR446==='function')window.andrikMapPortalCloseR446(u);else location.assign(u)},120);
+      setTimeout(()=>{const u='/control-home.html?page=menu&source=focused-map-swipe&v=55.00-r450';if(typeof window.andrikMapPortalCloseR450==='function')window.andrikMapPortalCloseR450(u);else if(typeof window.andrikMapPortalCloseR446==='function')window.andrikMapPortalCloseR446(u);else location.assign(u)},120);
       return;
     }
     reset();
@@ -4105,7 +4119,7 @@ body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #mapFocusAct
       navigating=true;
       zone.classList.add('is-r257-ready');
       if(label)label.textContent='Открываем Админ-панель…';
-      setTimeout(()=>{const u='/control-home.html?page=menu&source=landscape-bottom-swipe&v=55.00-r446';if(typeof window.andrikMapPortalCloseR446==='function')window.andrikMapPortalCloseR446(u);else location.assign(u)},110);
+      setTimeout(()=>{const u='/control-home.html?page=menu&source=landscape-bottom-swipe&v=55.00-r450';if(typeof window.andrikMapPortalCloseR450==='function')window.andrikMapPortalCloseR450(u);else if(typeof window.andrikMapPortalCloseR446==='function')window.andrikMapPortalCloseR446(u);else location.assign(u)},110);
     };
     zone.addEventListener('pointerdown',event=>{
       if(!isLandscape()||event.isPrimary===false)return;
@@ -4280,7 +4294,7 @@ body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #mapFocusAct
 <link rel="stylesheet" href="/assets/ecosystem-map-r337.css?v=55.00-r337">
 <link rel="stylesheet" href="/assets/country-focus-compact-r339.css?v=55.00-r340">
 <link rel="stylesheet" href="/assets/map-total-compact-r348.css?v=55.00-r405">
-<script defer src="/assets/ecosystem-map-r347.js?v=55.00-r405"></script>
+<script defer src="/assets/ecosystem-map-r450.js?v=55.00-r450"></script>
 <script defer src="/assets/map-layer-color-r354.js?v=55.00-r354"></script>
 <script defer src="/assets/country-shapes-r341.js?v=55.00-r341"></script>
 <link rel="stylesheet" href="/assets/country-map-r352.css?v=55.00-r384">
@@ -4576,5 +4590,5 @@ body .country-scroll-overlay-r258::before{margin:0 0 10px!important;}
 }
 </style>
 <link rel="stylesheet" href="/assets/landscape-world-scroll-r428.css?v=55.00-r428">
-<script defer src="/assets/planet-map-transition-r449.js?v=55.00-r449"></script>
+<script defer src="/assets/planet-map-transition-r450.js?v=55.00-r450"></script>
 </body></html>
