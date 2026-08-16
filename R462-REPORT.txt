@@ -1,0 +1,12 @@
+R462 — DUAL CRON SECRET SAFE MIGRATION
+
+Base: R461 CLEAN SAFE FULL.
+
+Changed:
+1. Existing CRON_SECRET remains valid. No old Worker migration is required.
+2. Added second Cron-only secret CENTRAL_CRON_SECRET_R462.
+3. cronAuthorized accepts either CRON_SECRET or CENTRAL_CRON_SECRET_R462.
+4. New standalone Cron Worker uses only CENTRAL_CRON_SECRET_R462.
+5. Three schedules supported: */2, */5, */15.
+6. Guard, D1, map, player, push, admin access and old CRON_SECRET are not changed.
+7. Cache reset updated to R462.

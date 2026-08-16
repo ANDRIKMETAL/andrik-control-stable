@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R461', number:461, version:'55.00', full:'55.00 LIVE WEB AI FINAL R461', siteUpdater:'55.00-r356' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R462', number:462, version:'55.00', full:'55.00 LIVE WEB AI FINAL R462', siteUpdater:'55.00-r356' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -2534,10 +2534,11 @@ async function sendOwnerPush(env, payload) {
 }
 
 function cronAuthorized(request, env) {
-  const expected = String(env.CRON_SECRET || '');
-  if (!expected) return false;
-  const supplied = request.headers.get('x-cron-key') || '';
-  return supplied.length === expected.length && supplied === expected;
+  const supplied = String(request.headers.get('x-cron-key') || '').trim();
+  if (!supplied) return false;
+  const keys = [env.CRON_SECRET, env.CENTRAL_CRON_SECRET_R462]
+    .map(value => String(value || '').trim()).filter(Boolean);
+  return keys.some(expected => supplied.length === expected.length && supplied === expected);
 }
 
 function requireDb(env) {

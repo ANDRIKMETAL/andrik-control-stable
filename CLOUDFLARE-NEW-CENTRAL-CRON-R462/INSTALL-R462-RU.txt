@@ -1,0 +1,19 @@
+ANDRIK CENTRAL CRON R462 — ПЛАВНЫЙ ПЕРЕХОД БЕЗ ПРАВКИ СТАРОГО WORKER
+
+1. Сначала установить сайт R462 и открыть cache-reset-v55-00-final-r462.html.
+2. В Cloudflare Pages-проекте Control добавить Secret CENTRAL_CRON_SECRET_R462.
+3. В новом Worker andrik-central-cron-r461 (можно оставить это имя) добавить Secret CENTRAL_CRON_SECRET_R462 с ТОЧНО ТЕМ ЖЕ значением.
+4. В новом Worker заменить код на ANDRIK-CENTRAL-CRON-R462.js и Deploy.
+5. Добавить Cron Triggers:
+   */2 * * * *
+   */5 * * * *
+   */15 * * * *
+6. Открыть /health. Должно быть ok:true, version:R462, secretConfigured:true.
+7. Подождать 2–5 минут и проверить Центральный Cron в Control.
+8. Только когда новый Cron работает, отключить триггеры у старого andrik-push-cron. Старый Worker не удалять.
+
+ВАЖНО:
+- старый CRON_SECRET не меняется и продолжает работать;
+- новый ключ CENTRAL_CRON_SECRET_R462 отдельный;
+- Control R462 принимает оба ключа только на Cron-маршрутах;
+- GitHub token, GUARD_KEY, SITE_KEY сюда не использовать.

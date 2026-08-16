@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786879313155-03dad8a957",
-  "release": "R461",
-  "archiveName": "R461-R460-NEW-CENTRAL-CRON-WORKER-CLEAN-SAFE-FULL.zip",
-  "sourceHead": "eefef8c1a4cdfcc86aa8c9d05b8ff8d5ed6872b4",
-  "backupSha": "eefef8c1a4cdfcc86aa8c9d05b8ff8d5ed6872b4",
-  "backupTag": "control-backup-20260816112149-eefef8c-r461-2097c",
+  "operationId": "publish-1786881925681-a3213e0323",
+  "release": "R462",
+  "archiveName": "R462-R461-DUAL-CRON-SECRET-SAFE-FULL.zip",
+  "sourceHead": "9e4c9f79751107ec8a242e9d26dc6bc3801da827",
+  "backupSha": "9e4c9f79751107ec8a242e9d26dc6bc3801da827",
+  "backupTag": "control-backup-20260816120520-9e4c9f7-r462-cd27a",
   "autoRecovery": true,
-  "generatedAt": "2026-08-16T11:21:53.155Z"
+  "generatedAt": "2026-08-16T12:05:25.681Z"
 }
