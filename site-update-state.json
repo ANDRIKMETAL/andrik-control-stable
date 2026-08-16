@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786865148418-335e348e48",
-  "release": "R457",
-  "archiveName": "R457-R456-PROTECTION-100-LIVE-FALLBACK-EVENT-WIDTH-SAFE-FULL.zip",
-  "sourceHead": "d135072228093fc6b945b9f09a411664730e718e",
-  "backupSha": "d135072228093fc6b945b9f09a411664730e718e",
-  "backupTag": "control-backup-20260816072544-d135072-r457-fc47b",
+  "operationId": "publish-1786866084237-ab5ac4fc80",
+  "release": "R458",
+  "archiveName": "R458-R457-ADMIN-ONLY-NO-ATTACK-ONE-VERSION-CAPSULE-SAFE-FULL.zip",
+  "sourceHead": "3d89125b969265a73653a21a10be8b9288a628f4",
+  "backupSha": "3d89125b969265a73653a21a10be8b9288a628f4",
+  "backupTag": "control-backup-20260816074120-3d89125-r458-b66d5",
   "autoRecovery": true,
-  "generatedAt": "2026-08-16T07:25:48.418Z"
+  "generatedAt": "2026-08-16T07:41:24.237Z"
 }

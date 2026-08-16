@@ -1,0 +1,7 @@
+R458 — ADMIN PANEL ONLY
+
+Changes:
+1. Removed the orange Attack Map floating button from the Admin panel. The Attack Map remains available from Protection.
+2. Replaced the two separate Live Web AI / Rxxx capsules with one compact centered capsule: Live Web AI R458.
+3. Updated Admin panel visible version to R458.
+4. Protection, Guard, live monitoring, events, Worker security logic and protection assets were not modified.
