@@ -1,0 +1,8 @@
+R453 — ADMIN GLOBE BLUE HALO + STARFIELD + LABEL CENTER
+Base: R452 full archive
+Changes:
+- Centers Live Web AI and version pills vertically with bottom circular controls.
+- Removes green glow from admin globe and replaces it with blue/cyan glow.
+- Adds subtle star-dust/twinkling star background to admin panel only.
+- Monitoring globe untouched.
+- Preserves R452 map/history/country behavior.

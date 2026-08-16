@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786861899046-f29b925a8e",
-  "release": "R451",
-  "archiveName": "R451-R450-ALL-COUNTRY-MEMORY-LARGER-LOWER-GLOBE-SAFE-FULL.zip",
-  "sourceHead": "36a39a3cd991695c36b551cc9e6b64ec60b37c7c",
-  "backupSha": "36a39a3cd991695c36b551cc9e6b64ec60b37c7c",
-  "backupTag": "control-backup-20260816063135-36a39a3-r451-fe84e",
+  "operationId": "publish-1786863383458-ef69b2d5d2",
+  "release": "R453",
+  "archiveName": "R453-R452-ADMIN-GLOBE-BLUE-HALO-STARFIELD-LABEL-CENTER-SAFE-FULL-2.zip",
+  "sourceHead": "dd586933d13ecab4305b4275a4d866c920769f4e",
+  "backupSha": "dd586933d13ecab4305b4275a4d866c920769f4e",
+  "backupTag": "control-backup-20260816065619-dd58693-r453-c7cbb",
   "autoRecovery": true,
-  "generatedAt": "2026-08-16T06:31:39.046Z"
+  "generatedAt": "2026-08-16T06:56:23.458Z"
 }

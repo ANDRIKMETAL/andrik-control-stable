@@ -1,0 +1,25 @@
+ANDRIK Control — R452
+Date: 16.08.2026
+Base: R451
+
+FIXED — ALL-TIME COUNTRY HISTORY + INTERACTIVE OLD COUNTRIES + CENTERED MAP CAPTIONS
+1. Captions above the map are centered in portrait on every map layer.
+2. ALL overview caption is exactly: “Общая карта за всё время!”
+3. Historical countries on the ALL map are now fully interactive.
+   - Old white anchors can be tapped / keyboard-opened.
+   - They use the same world zoom -> country silhouette transition as current countries.
+   - Selected country name/flag now has a matching list row, so the country label can render correctly.
+4. Expanded ALL-country list now includes historical countries after current rolling-period countries.
+   - Current countries keep their real values and ranking.
+   - Historical-only rows show “архив” instead of a fake number.
+   - Historical rows do NOT change totals, 28/30-day metrics, or rankings.
+5. Country assets verified: 172 world ISO coordinates and 172 country silhouette mini-maps match 1:1.
+   - Brazil BR: flag + world coordinate + silhouette present.
+   - Mexico MX: flag + world coordinate + silhouette present.
+6. World zoom no longer depends on the old small GEO name table; any supported ISO historical country can zoom.
+7. R451 persistent YouTube/site/push country memory is preserved unchanged.
+8. Admin globe geometry and R450 portal transition/re-arm behavior are intentionally unchanged.
+
+VERSION
+- Control/worker release: R452
+- Cache reset: /cache-reset-v55-00-final-r452.html

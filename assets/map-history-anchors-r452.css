@@ -1,0 +1,23 @@
+/* ANDRIK R452 — historical countries are interactive on the ALL map and remain visually distinct. */
+#worldMap[data-ecosystem-layer="all"] .world-map-dot.is-history-anchor-r450{
+  opacity:.78;
+  filter:saturate(.72) brightness(1.08);
+  pointer-events:auto!important;
+  cursor:pointer;
+  touch-action:manipulation;
+}
+#worldMap[data-ecosystem-layer="all"] .world-map-dot.is-history-anchor-r450 i{
+  opacity:.90;
+}
+#worldCountries .world-country-button.is-history-country-r452{
+  opacity:.92;
+}
+#worldCountries .world-country-button.is-history-country-r452>em{
+  font-size:.72rem!important;
+  letter-spacing:.02em;
+  color:#9fc3d3!important;
+  font-weight:750!important;
+}
+#worldCountries .world-country-button.is-history-country-r452.is-selected>em{
+  color:#fff2b0!important;
+}
