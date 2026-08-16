@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R452', number:452, version:'55.00', full:'55.00 LIVE WEB AI FINAL R452', siteUpdater:'55.00-r356' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R455', number:455, version:'55.00', full:'55.00 LIVE WEB AI FINAL R455', siteUpdater:'55.00-r356' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -420,11 +420,14 @@ async function securityRateLimit(db, request, env, event, limit, windowSeconds, 
 }
 
 async function fetchTxtRecords(name) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 4500);
   try {
     const url = new URL('https://cloudflare-dns.com/dns-query');
     url.searchParams.set('name', name);
     url.searchParams.set('type', 'TXT');
     const response = await fetch(url.toString(), {
+      signal:controller.signal,
       headers:{ accept:'application/dns-json' },
       cf:{ cacheTtl:300, cacheEverything:true }
     });
@@ -433,6 +436,8 @@ async function fetchTxtRecords(name) {
     return (data.Answer || []).map(item => String(item.data || '').replace(/^"|"$/g, '').replace(/"\s+"/g, ''));
   } catch (_) {
     return [];
+  } finally {
+    clearTimeout(timer);
   }
 }
 
@@ -464,7 +469,7 @@ async function fetchGuardStatus(env, run = false) {
   }
 
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), run ? 105000 : 16000);
+  const timer = setTimeout(() => controller.abort(), run ? 105000 : 7000);
   try {
     const response = await fetch(endpoint, {
       method: run ? 'POST' : 'GET',
@@ -567,12 +572,14 @@ async function handleControlProtectionStatus(request, env) {
   }
 
   let headerStatus = { hsts:false, frame:false, nosniff:false };
+  const headerController = new AbortController();
+  const headerTimer = setTimeout(() => headerController.abort(), 4500);
   try {
     const probe = new URL('/control-home.html', request.url);
     probe.searchParams.set('security_probe', String(Date.now()));
     const response = await fetch(probe.toString(), {
-      method:'GET', cache:'no-store',
-      headers:{ 'cache-control':'no-cache', 'user-agent':'ANDRIK-Control-R155-Security' }
+      method:'GET', cache:'no-store', signal:headerController.signal,
+      headers:{ 'cache-control':'no-cache', 'user-agent':'ANDRIK-Control-R455-Security' }
     });
     const csp = response.headers.get('content-security-policy') || '';
     headerStatus = {
@@ -581,7 +588,10 @@ async function handleControlProtectionStatus(request, env) {
       nosniff:(response.headers.get('x-content-type-options') || '').toLowerCase() === 'nosniff'
     };
     try { await response.body?.cancel(); } catch (_) {}
-  } catch (_) {}
+  } catch (_) {
+  } finally {
+    clearTimeout(headerTimer);
+  }
 
   const spf = spfRecords.some(value => /^v=spf1\b/i.test(value));
   const dmarcRecord = dmarcRecords.find(value => /^v=dmarc1\b/i.test(value)) || '';

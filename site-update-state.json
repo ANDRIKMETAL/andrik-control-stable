@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786863383458-ef69b2d5d2",
-  "release": "R453",
-  "archiveName": "R453-R452-ADMIN-GLOBE-BLUE-HALO-STARFIELD-LABEL-CENTER-SAFE-FULL-2.zip",
-  "sourceHead": "dd586933d13ecab4305b4275a4d866c920769f4e",
-  "backupSha": "dd586933d13ecab4305b4275a4d866c920769f4e",
-  "backupTag": "control-backup-20260816065619-dd58693-r453-c7cbb",
+  "operationId": "publish-1786864454639-1e377df6a4",
+  "release": "R455",
+  "archiveName": "R455-R454-PROTECTION-FAST-RECOVERY-OWNER-SESSION-SAFE-FULL.zip",
+  "sourceHead": "73ad1ac5c9c8653df87c1130a5d779b4eca5a0fc",
+  "backupSha": "73ad1ac5c9c8653df87c1130a5d779b4eca5a0fc",
+  "backupTag": "control-backup-20260816071410-73ad1ac-r455-3ab76",
   "autoRecovery": true,
-  "generatedAt": "2026-08-16T06:56:23.458Z"
+  "generatedAt": "2026-08-16T07:14:14.639Z"
 }

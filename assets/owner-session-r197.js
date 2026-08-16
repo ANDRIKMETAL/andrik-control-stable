@@ -5,6 +5,7 @@
   const KEY_LOCAL = 'andrik-comments-admin-key-persistent';
   const TOKEN_KEY = 'andrik-owner-session-token-r197';
   const SENTINEL = '__ANDRIK_OWNER_SESSION_R197__';
+  const LEGACY_SENTINELS = new Set([SENTINEL, '__ANDRIK_OWNER_SESSION__']);
   const TOKEN_HEADER = 'x-andrik-owner-token';
   const KEY_NAMES = new Set([KEY_SESSION, KEY_LOCAL]);
   const nativeFetch = window.fetch.bind(window);
@@ -24,7 +25,7 @@
 
   const captureRaw = value => {
     const text = String(value || '').trim();
-    if (text && text !== SENTINEL) runtimeRawKey = text;
+    if (text && !LEGACY_SENTINELS.has(text)) runtimeRawKey = text;
     return runtimeRawKey;
   };
 
@@ -45,12 +46,12 @@
 
   const legacyStoredRaw = () => {
     const values = [safeGet(localStorage, KEY_LOCAL), safeGet(sessionStorage, KEY_SESSION)];
-    return values.find(value => value && value !== SENTINEL) || '';
+    return values.find(value => value && !LEGACY_SENTINELS.has(value)) || '';
   };
 
   const hasStoredMarker = () => (
-    safeGet(localStorage, KEY_LOCAL) === SENTINEL ||
-    safeGet(sessionStorage, KEY_SESSION) === SENTINEL
+    LEGACY_SENTINELS.has(safeGet(localStorage, KEY_LOCAL)) ||
+    LEGACY_SENTINELS.has(safeGet(sessionStorage, KEY_SESSION))
   );
 
   const dispatch = value => {
@@ -83,7 +84,7 @@
     if (KEY_NAMES.has(String(key))) {
       const text = String(value || '').trim();
       if (!text) return nativeRemoveItem.call(this, key);
-      if (text === SENTINEL) return nativeSetItem.call(this, key, SENTINEL);
+      if (LEGACY_SENTINELS.has(text)) return nativeSetItem.call(this, key, SENTINEL);
       captureRaw(text);
       return undefined;
     }
@@ -127,7 +128,7 @@
 
   async function establish(rawKey = '') {
     const raw = String(rawKey || runtimeRawKey || '').trim();
-    if (!raw || raw === SENTINEL) return status();
+    if (!raw || LEGACY_SENTINELS.has(raw)) return status();
     captureRaw(raw);
     if (establishing) return establishing;
 
@@ -174,7 +175,7 @@
 
   async function ensure(rawKey = '') {
     const raw = String(rawKey || '').trim();
-    if (raw && raw !== SENTINEL) return establish(raw);
+    if (raw && !LEGACY_SENTINELS.has(raw)) return establish(raw);
     if (active) return { ok:true, owner:true, cached:true };
 
     const current = await status();
@@ -232,11 +233,11 @@
     const next = { ...init };
     const headers = normalizedHeaders(input, next.headers);
     const supplied = readAuthorization(headers);
-    const raw = supplied && supplied !== SENTINEL ? captureRaw(supplied) : '';
+    const raw = supplied && !LEGACY_SENTINELS.has(supplied) ? captureRaw(supplied) : '';
     const token = storedToken();
 
     if (sameOriginApi) next.credentials = 'include';
-    if (supplied === SENTINEL) headers.delete('authorization');
+    if (LEGACY_SENTINELS.has(supplied)) headers.delete('authorization');
     if (isProtectedApi(requestUrl) && token && !headers.has(TOKEN_HEADER)) {
       headers.set(TOKEN_HEADER, token);
     }
