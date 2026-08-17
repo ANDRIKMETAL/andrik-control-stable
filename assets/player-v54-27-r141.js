@@ -2387,7 +2387,7 @@ setupMediaSession();
 updateCollectionUI(currentKey);
 ensureYouTubeApi();
 
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('/service-worker.js?v=55.00-r485', { updateViaCache: 'none' }).catch(() => {});
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('/service-worker.js?v=55.00-r486', { updateViaCache: 'none' }).catch(() => {});
 window.setTimeout(() => {
   if (!ready) stateText.textContent = tr('pressPlay');
 }, 14000);

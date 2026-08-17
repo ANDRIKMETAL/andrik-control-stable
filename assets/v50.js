@@ -165,7 +165,7 @@
           cleanUrl.searchParams.delete('_updated');
           history.replaceState(null, '', cleanUrl.pathname + cleanUrl.search + cleanUrl.hash);
         }
-        const registration = await navigator.serviceWorker.register('/service-worker.js?v=55.00-r485', { updateViaCache: 'none' });
+        const registration = await navigator.serviceWorker.register('/service-worker.js?v=55.00-r486', { updateViaCache: 'none' });
         const lang = (document.documentElement.lang || 'ru').toLowerCase();
         const copy = lang.startsWith('uk')
           ? { text: 'Доступна нова версія ANDRIK', button: 'Оновити', working: 'Оновлення…' }

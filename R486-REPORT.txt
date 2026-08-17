@@ -1,0 +1,6 @@
+R486 — REMOVE YA EST FROM ALBUMS
+
+- Removed the Я ЕСТЬ R2 video card completely from the bottom of /albums.html.
+- Dedicated /clips.html remains unchanged.
+- Album cards, fast MP3 libraries, TRIKA countdown and main menu clips card remain unchanged.
+- Public Service Worker bumped to 55.00-r486 so the removed block cannot survive from stale cache.

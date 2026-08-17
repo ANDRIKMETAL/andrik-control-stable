@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786969637337-4083e4627a",
-  "release": "R485",
-  "archiveName": "R485-R484-HARD-CACHE-RESET-CLIPS-MENU-FIX-SAFE-FULL.zip",
-  "sourceHead": "44a188b27869c138360416ea42ca91492b10ce61",
-  "backupSha": "44a188b27869c138360416ea42ca91492b10ce61",
-  "backupTag": "control-backup-20260817122712-44a188b-r485-14621",
+  "operationId": "publish-1786969959916-0590cbfb86",
+  "release": "R486",
+  "archiveName": "R486-R485-REMOVE-YA-EST-FROM-ALBUMS-SAFE-FULL.zip",
+  "sourceHead": "5f7a48c26ec2f70f59984e22f0f53e23f94cef60",
+  "backupSha": "5f7a48c26ec2f70f59984e22f0f53e23f94cef60",
+  "backupTag": "control-backup-20260817123235-5f7a48c-r486-89b7a",
   "autoRecovery": true,
-  "generatedAt": "2026-08-17T12:27:17.337Z"
+  "generatedAt": "2026-08-17T12:32:39.916Z"
 }

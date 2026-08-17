@@ -181,7 +181,7 @@
     set('serviceCacheResetMessage','Открываем безопасную очистку…');
     location.href=`/cache-reset.html?manual=1&force=1&fresh=${Date.now()}`;
   });
-  if(IS_CONTROL_HOST&&'serviceWorker'in navigator)navigator.serviceWorker.register('/service-worker.js?v=55.00-r485',{scope:'/',updateViaCache:'none'}).catch(()=>{});
+  if(IS_CONTROL_HOST&&'serviceWorker'in navigator)navigator.serviceWorker.register('/service-worker.js?v=55.00-r486',{scope:'/',updateViaCache:'none'}).catch(()=>{});
   if(installButton){installButton.hidden=!IS_CONTROL_HOST;if(IS_CONTROL_HOST&&isStandalone()){installButton.hidden=false;installButton.disabled=true;installButton.textContent='ANDRIK Control установлен'}}
   window.addEventListener('beforeinstallprompt',event=>{if(!IS_CONTROL_HOST)return;event.preventDefault();installPrompt=event;if(installButton&&!isStandalone()){installButton.hidden=false;installButton.disabled=false;installButton.textContent='Установить ANDRIK Control'}});
   installButton?.addEventListener('click',async()=>{if(isStandalone()){msg.textContent='Приложение уже установлено.';return}if(!installPrompt){msg.textContent='Откройте меню Chrome и выберите «Установить приложение».';return}installPrompt.prompt();await installPrompt.userChoice;installPrompt=null});
