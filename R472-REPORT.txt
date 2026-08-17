@@ -1,0 +1,23 @@
+R472 — REMOVE LEGACY OCEAN HOME PROMO SAFE FULL
+Date: 2026-08-17
+Base: R471 — R2 NATIVE LYRA PROMO VIDEO SAFE FULL
+
+HOME PAGE CLEANUP
+- Removed the large legacy OCEAN promotional hero from RU / UK / SK / EN home pages.
+- Removed only the home-page OCEAN hero: title/copy, album buttons, OCEAN poster and the YA EST card that lived inside that hero.
+- OCEAN itself is NOT deleted: Albums pages, album links, player, ZIP downloads and discography hub remain intact.
+- Main flow is now: TRIKA countdown → Lyra/TRIKA native R2 promo → compact Singles → current lower sections.
+- Preserved a zero-height #top anchor so the ANDRIK logo still returns to the top.
+- Repointed the old dead “Video/Clip” home-nav item to the current Lyra/TRIKA promo section and renamed it Promo.
+
+PRESERVED
+- R471 native R2 promo player and /promo-video-admin.html uploader.
+- R471 R2 media endpoints and object key unchanged.
+- R470 compact home Singles.
+- R469 exact live YouTube counters.
+- Albums, player, map, push, admin, Control and site updater logic unchanged.
+
+VERSION / CACHE
+- Control display bumped to R472.
+- Public service-worker cache bumped to 55.00-r472.
+- Added cache-reset-v55-00-final-r472.html.
