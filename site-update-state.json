@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786945535154-54cf394598",
-  "release": "R476",
-  "archiveName": "R476-R475-COMPACT-LYRA-PROMO-MOBILE-SAFE-FULL.zip",
-  "sourceHead": "faf828c14159c2aef136f3c100fa2d21c84726c2",
-  "backupSha": "faf828c14159c2aef136f3c100fa2d21c84726c2",
-  "backupTag": "control-backup-20260817054531-faf828c-r476-621f4",
+  "operationId": "publish-1786961842331-1f25e6fa43",
+  "release": "R477",
+  "archiveName": "R477-R476-FAST-NATIVE-ALBUM-LIBRARY-SAFE-FULL.zip",
+  "sourceHead": "a7797791f1da2ccbeab9b7801ee17a8a29974332",
+  "backupSha": "a7797791f1da2ccbeab9b7801ee17a8a29974332",
+  "backupTag": "control-backup-20260817101718-a779779-r477-a403f",
   "autoRecovery": true,
-  "generatedAt": "2026-08-17T05:45:35.154Z"
+  "generatedAt": "2026-08-17T10:17:22.331Z"
 }
