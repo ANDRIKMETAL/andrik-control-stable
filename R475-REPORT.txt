@@ -1,0 +1,22 @@
+R475 — HOME LYRA PROMO FIRST + TRIKA COUNTDOWN SECOND SAFE FULL
+
+Base: R474 — YOUTUBE 5M WATCHDOG STATUS SAFE FULL
+Date: 2026-08-17
+
+CHANGED ONLY HOMEPAGE ORDER
+1. Lyra / TRIKA promo video is now the first content block below the top navigation.
+2. TRIKA release countdown now sits immediately below the promo video.
+3. Singles remain immediately after the countdown.
+4. Same order applied to RU / UA / SK / EN homepages.
+
+PRESERVED
+- R474 5-minute watchdog and R473 2-minute YouTube comment/like repair unchanged.
+- R471 native R2 promo player unchanged.
+- R472 removed OCEAN home promo remains removed.
+- Singles, albums, map, push, analytics, counters and admin logic untouched.
+
+VERSION / CACHE
+- Control display: R475.
+- Worker release: R475.
+- service-worker cache: 55.00-r475.
+- cache-reset-v55-00-final-r475.html added.

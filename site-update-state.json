@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786943334239-f3b36a94d0",
-  "release": "R474",
-  "archiveName": "R474-R473-YOUTUBE-5M-WATCHDOG-STATUS-SAFE-FULL.zip",
-  "sourceHead": "60c739e8fc8feb1a56bf459f59fcf8af8f2434c0",
-  "backupSha": "60c739e8fc8feb1a56bf459f59fcf8af8f2434c0",
-  "backupTag": "control-backup-20260817050848-60c739e-r474-a93f1",
+  "operationId": "publish-1786945535154-54cf394598",
+  "release": "R476",
+  "archiveName": "R476-R475-COMPACT-LYRA-PROMO-MOBILE-SAFE-FULL.zip",
+  "sourceHead": "faf828c14159c2aef136f3c100fa2d21c84726c2",
+  "backupSha": "faf828c14159c2aef136f3c100fa2d21c84726c2",
+  "backupTag": "control-backup-20260817054531-faf828c-r476-621f4",
   "autoRecovery": true,
-  "generatedAt": "2026-08-17T05:08:54.239Z"
+  "generatedAt": "2026-08-17T05:45:35.154Z"
 }

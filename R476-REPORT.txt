@@ -1,0 +1,26 @@
+R476 — COMPACT LYRA PROMO MOBILE SAFE FULL
+
+Base: R475 — HOME LYRA PROMO FIRST + COUNTDOWN SECOND
+Date: 2026-08-17
+
+CHANGED ONLY PROMO PRESENTATION ON PHONES
+1. Lyra promo remains the first homepage block.
+2. TRIKA countdown remains immediately below it.
+3. Mobile promo card padding/header spacing reduced.
+4. Native R2 video width reduced to 280 CSS px on phones so much more/all of the 9:16 frame fits on the first screen.
+5. Video uses object-fit: contain to guarantee no image crop.
+6. Promo action buttons made smaller to reduce total block height.
+7. Same styling applies to RU / UA / SK / EN homepages.
+
+PRESERVED
+- R474 5-minute watchdog.
+- R473 2-minute YouTube comments/likes repair and owner push repair.
+- R471 native R2 promo playback.
+- R472 OCEAN home promo removal.
+- Singles, albums, map, push, analytics, counters and admin logic unchanged.
+
+VERSION / CACHE
+- Control display: R476.
+- Worker release: R476.
+- service-worker cache: 55.00-r476.
+- cache-reset-v55-00-final-r476.html added.
