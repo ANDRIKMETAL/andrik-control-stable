@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R482', number:482, version:'55.00', full:'55.00 LIVE WEB AI FINAL R482', siteUpdater:'55.00-r356' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R483', number:483, version:'55.00', full:'55.00 LIVE WEB AI FINAL R483', siteUpdater:'55.00-r356' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -14370,6 +14370,22 @@ async function handleYaEstVideoPublicR478(request,env,forceDownload=false){
 
 // === R481: native visual fragment "ПРОСНИСЬ" in R2 ===
 const PROSNIS_VIDEO_KEY_R481 = 'clips/prosnis-fragment-2026.mp4';
+
+async function handleProsnisVideoPutR483(request,env){
+  if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
+  const bucket=getMusicBucketR314(env);if(!bucket)return json({ok:false,error:'music-bucket-not-configured',message:'R2 MUSIC_BUCKET не подключён.'},503);
+  const len=Number(request.headers.get('content-length')||0);
+  if(len>95*1024*1024)return json({ok:false,error:'file-too-large',message:'Максимум 95 МБ.'},413);
+  const type=String(request.headers.get('content-type')||'').toLowerCase();
+  if(type&&!type.includes('video/mp4')&&!type.includes('application/octet-stream'))return json({ok:false,error:'invalid-content-type',message:'Нужен MP4.'},415);
+  if(!request.body)return json({ok:false,error:'empty-body'},400);
+  try{
+    await bucket.put(PROSNIS_VIDEO_KEY_R481,request.body,{httpMetadata:{contentType:'video/mp4',cacheControl:'public, max-age=86400'},customMetadata:{source:'ANDRIK Control R483 direct upload',title:'ANDRIK — ПРОСНИСЬ · Visual Fragment',release:'2026'}});
+    const object=await bucket.head(PROSNIS_VIDEO_KEY_R481);
+    return json({ok:true,key:PROSNIS_VIDEO_KEY_R481,size:Number(object?.size||len||0),url:'/api/media/video/prosnis-fragment.mp4'});
+  }catch(error){return json({ok:false,error:'prosnis-upload-failed',message:cleanPlainText(error?.message||error,420)},502);}
+}
+
 async function handleProsnisVideoMpuStartR481(request,env){
   if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
   const bucket=getMusicBucketR314(env);if(!bucket)return json({ok:false,error:'music-bucket-not-configured'},503);
@@ -14540,6 +14556,7 @@ async function routeApi(request, env, ctx) {
     if (path === '/api/control/media/ya-est-r478/status' && request.method === 'GET') return await handleYaEstVideoStatusR478(request, env);
     if (path === '/api/media/video/ya-est.mp4' && (request.method === 'GET' || request.method === 'HEAD')) return await handleYaEstVideoPublicR478(request, env);
     if (path === '/download/ANDRIK-Ya-Est-Official-Video-2026.mp4' && (request.method === 'GET' || request.method === 'HEAD')) return await handleYaEstVideoPublicR478(request, env, true);
+    if (path === '/api/control/media/prosnis-r483' && request.method === 'PUT') return await handleProsnisVideoPutR483(request, env);
     if (path === '/api/control/media/prosnis-r481/mpu/start' && request.method === 'POST') return await handleProsnisVideoMpuStartR481(request, env);
     if (path === '/api/control/media/prosnis-r481/mpu/part' && request.method === 'PUT') return await handleProsnisVideoMpuPartR481(request, env);
     if (path === '/api/control/media/prosnis-r481/mpu/complete' && request.method === 'POST') return await handleProsnisVideoMpuCompleteR481(request, env);
