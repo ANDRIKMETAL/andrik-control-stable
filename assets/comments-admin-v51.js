@@ -483,7 +483,7 @@
   document.getElementById('adminPushSendAll')?.addEventListener('click',()=>sendPush('all',document.getElementById('adminPushTitle').value.trim()||'ANDRIK',document.getElementById('adminPushMessage').value.trim(),document.getElementById('adminPushUrl').value.trim()||'https://andrikmetal.com/','adminPushBroadcastStatus'));
   updatePushPreview();
   if (IS_CONTROL_HOST && 'serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/service-worker.js?v=54.36', { scope: '/', updateViaCache: 'none' })
+    navigator.serviceWorker.register('/service-worker.js?v=55.00-r485', { scope: '/', updateViaCache: 'none' })
       .catch(error => console.warn('ANDRIK Control service worker:', error));
   }
 

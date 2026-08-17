@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786969407553-faacb59a8d",
-  "release": "R484",
-  "archiveName": "R484-R483-CLIPS-MENU-CARD-COMPACT-COVER-SAFE-FULL.zip",
-  "sourceHead": "f9275e732dcf66110a1dda8d8ad694a856ffdd2a",
-  "backupSha": "f9275e732dcf66110a1dda8d8ad694a856ffdd2a",
-  "backupTag": "control-backup-20260817122323-f9275e7-r484-30008",
+  "operationId": "publish-1786969637337-4083e4627a",
+  "release": "R485",
+  "archiveName": "R485-R484-HARD-CACHE-RESET-CLIPS-MENU-FIX-SAFE-FULL.zip",
+  "sourceHead": "44a188b27869c138360416ea42ca91492b10ce61",
+  "backupSha": "44a188b27869c138360416ea42ca91492b10ce61",
+  "backupTag": "control-backup-20260817122712-44a188b-r485-14621",
   "autoRecovery": true,
-  "generatedAt": "2026-08-17T12:23:28.398Z"
+  "generatedAt": "2026-08-17T12:27:17.337Z"
 }
