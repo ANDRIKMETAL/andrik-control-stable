@@ -1,0 +1,29 @@
+R474 — 5-MINUTE YOUTUBE WATCHDOG STATUS SAFE FULL
+
+Base: R473 — YOUTUBE COMMENTS + OWNER PUSH REPAIR + 5M RESCUE
+Date: 2026-08-17
+
+FIXED
+1. The 5-minute reserve no longer looks dead while the 2-minute engagement cron is healthy.
+2. Every */5 invocation records an independent lightweight watchdog heartbeat in D1.
+3. The watchdog does NOT duplicate the healthy 2-minute YouTube API scan, so R416 CPU/1102 protection is preserved.
+4. If the 2-minute path becomes stale (>6 min), the existing R473 CPU-safe engagement rescue still runs and the reserve state records the rescue result.
+5. Service diagnostics now show:
+   - Быстрый cron 2 мин
+   - Резерв 5 мин with its own current timestamp/status
+   - Последний успешный контроль using the newest successful fast/full timestamp
+6. Direct-video comment repair, owner push repair, likes, release logic, daily summary and counters are unchanged.
+
+PRESERVED
+- R473 direct YouTube comments and OneSignal stale-ID repair.
+- R472 home layout.
+- R471 native R2 Lyra promo.
+- R469 exact live YouTube counters.
+- R416 CPU-safe split cron architecture.
+- R405 atomic daily summary behavior.
+
+VERSION / CACHE
+- Control display: R474.
+- Worker release: R474.
+- public service worker cache: 55.00-r474.
+- cache-reset-v55-00-final-r474.html added.

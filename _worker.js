@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R473', number:473, version:'55.00', full:'55.00 LIVE WEB AI FINAL R473', siteUpdater:'55.00-r356' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R474', number:474, version:'55.00', full:'55.00 LIVE WEB AI FINAL R474', siteUpdater:'55.00-r356' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -7700,7 +7700,7 @@ async function handleYoutubeEventsStatus(request, env) {
   if (!adminAuthorized(request, env)) return json({ ok:false, error:'unauthorized' }, 401);
   const db = requireDb(env);
   await Promise.all([ensurePushAutomationSchema(db), ensureControlV1Schema(db), ensurePlatformAnalyticsSchema(db)]);
-  const [lastCheck,lastSuccess,lastStatus,lastSummary,fastLastAt,fastLastSuccess,fastLastStatus,fastLastResult,fallbackLastAt,todayRows,lastFailure,lastLog] = await Promise.all([
+  const [lastCheck,lastSuccess,lastStatus,lastSummary,fastLastAt,fastLastSuccess,fastLastStatus,fastLastResult,fallbackLastAt,reserveLastAt,reserveStatus,reserveSummary,todayRows,lastFailure,lastLog] = await Promise.all([
     getPushState(db,'youtube-events-last-check-at'),
     getPushState(db,'youtube-events-last-success-at'),
     getPushState(db,'youtube-events-last-check-status'),
@@ -7710,6 +7710,9 @@ async function handleYoutubeEventsStatus(request, env) {
     getPushState(db,'youtube-fast-engagement-last-status-r376'),
     getPushState(db,'youtube-fast-engagement-last-result-r333'),
     getPushState(db,'youtube-engagement-fallback-5m-last-at-r473'),
+    getPushState(db,'youtube-reserve-5m-last-at-r474'),
+    getPushState(db,'youtube-reserve-5m-last-status-r474'),
+    getPushState(db,'youtube-reserve-5m-last-summary-r474'),
     db.prepare(`
       SELECT type,status,COUNT(*) AS total
       FROM push_history
@@ -7732,6 +7735,7 @@ async function handleYoutubeEventsStatus(request, env) {
   ]);
   let summary={};try{summary=JSON.parse(lastSummary?.value||'{}')}catch(_){}
   let fastSummary={};try{fastSummary=JSON.parse(fastLastResult?.value||'{}')}catch(_){}
+  let reserveSummaryParsed={};try{reserveSummaryParsed=JSON.parse(reserveSummary?.value||'{}')}catch(_){}
   const fastLastAtValue=fastLastAt?.value||fastLastAt?.updatedAt||'';
   const fastAgeMinutes=fastLastAtValue?Math.max(0,Math.round((Date.now()-Date.parse(fastLastAtValue))/60000)):null;
   const fastStatusValue=fastLastStatus?.value||(fastSummary?.ok===false?'failed':fastSummary?.ok===true?'success':'never');
@@ -7752,9 +7756,16 @@ async function handleYoutubeEventsStatus(request, env) {
       AND COALESCE(json_extract(details_json,'$.parentId'),'')<>COALESCE(json_extract(details_json,'$.commentId'),'')
   `).first().catch(()=>null);
   today.repliesSent=Number(replyRow?.total||0);
+  const successCandidates=[lastSuccess?.value||lastSuccess?.updatedAt||'',fastLastSuccess?.value||fastLastSuccess?.updatedAt||''].filter(Boolean);
+  const effectiveSuccessAt=successCandidates.sort((a,b)=>(Date.parse(b)||0)-(Date.parse(a)||0))[0]||'';
   return json({
     ok:true,version:ANDRIK_CONTROL_RELEASE.full,
-    status:lastStatus?.value||'never',lastCheckAt:lastCheck?.value||lastCheck?.updatedAt||'',lastSuccessAt:lastSuccess?.value||lastSuccess?.updatedAt||'',
+    status:lastStatus?.value||'never',lastCheckAt:lastCheck?.value||lastCheck?.updatedAt||'',lastSuccessAt:lastSuccess?.value||lastSuccess?.updatedAt||'',effectiveSuccessAt,
+    reserve:{
+      lastCheckAt:reserveLastAt?.value||reserveLastAt?.updatedAt||'',
+      status:reserveStatus?.value||'never',
+      summary:reserveSummaryParsed
+    },
     fast:{
       status:fastStatusValue,
       healthy:fastHealthy,
@@ -9917,8 +9928,45 @@ async function handleCronYoutubeEventsAckR416(request, env) {
   return json({ok:true,healthy:true,degraded:false,skipped:true,mode:'youtube-cron-fallback-ack-r416',reason:'fast-engagement-owned-by-2m-gateway',checkedAt:new Date().toISOString()},200);
 }
 
+// R474: lightweight 5-minute watchdog for the engagement chain.
+// It never repeats the healthy 2-minute YouTube API scan.  Instead it verifies
+// that the fast path is fresh and records an independent backup heartbeat.  If
+// the fast path becomes stale, the existing CPU-safe rescue below takes over.
+async function markYoutubeReserveFiveMinuteR474(env, extra = {}) {
+  const db=requireDb(env);
+  const [fastAtState,fastStatusState,fastResultState]=await Promise.all([
+    getPushState(db,'youtube-fast-engagement-last-at-r333').catch(()=>null),
+    getPushState(db,'youtube-fast-engagement-last-status-r376').catch(()=>null),
+    getPushState(db,'youtube-fast-engagement-last-result-r333').catch(()=>null)
+  ]);
+  const at=new Date().toISOString();
+  const fastAt=String(fastAtState?.value||fastAtState?.updatedAt||'');
+  const fastMs=Date.parse(fastAt);
+  const ageMinutes=Number.isFinite(fastMs)?Math.max(0,(Date.now()-fastMs)/60000):999;
+  let fastResult={};try{fastResult=JSON.parse(fastResultState?.value||'{}')}catch(_){fastResult={}}
+  const fastStatus=String(fastStatusState?.value||(fastResult?.ok===false?'failed':fastResult?.ok===true?'success':'never'));
+  const healthy=ageMinutes<=6 && fastStatus!=='failed';
+  const summary={
+    mode:'5m-watchdog-r474',
+    healthy,
+    fastStatus,
+    fastLastAt:fastAt,
+    fastAgeMinutes:Math.round(ageMinutes),
+    directComments:fastResult?.commentMode==='direct-video-r473'||fastResult?.commentMode==='direct-video-r474',
+    checkedAt:at,
+    ...extra
+  };
+  await Promise.all([
+    setPushState(db,'youtube-reserve-5m-last-at-r474',at).catch(()=>{}),
+    setPushState(db,'youtube-reserve-5m-last-status-r474',healthy?'success':'warning').catch(()=>{}),
+    setPushState(db,'youtube-reserve-5m-last-summary-r474',JSON.stringify(summary)).catch(()=>{})
+  ]);
+  return summary;
+}
+
 async function runCronFiveMinuteSliceR434(request, env, clock) {
   const local=getBratislavaClock();
+  const reserveWatchR474=await markYoutubeReserveFiveMinuteR474(env,{source:'gateway-5m-r474'}).catch(error=>({healthy:false,error:cleanPlainText(error?.message||error,300)}));
   // R469: reserve the exact 06:05 local slot for the daily YouTube view/like baseline.
   // This is one bounded daily job and does not re-enable the old heavy reconciler loop.
   if(local.hour===6 && local.minute===5){
@@ -9957,8 +10005,14 @@ async function runCronFiveMinuteSliceR434(request, env, clock) {
     const fallbackTurn=(Math.floor(Number(local.minute||0)/5)%2)===0;
     if(fastAge>6 && fallbackTurn){
       const fallback=await responseData(await handleFastYoutubeEngagementR333(request,env,{skipCheckpoint:true}));
-      await setPushState(db,'youtube-engagement-fallback-5m-last-at-r473',new Date().toISOString()).catch(()=>{});
-      return {task:'engagement-fallback',value:{...fallback,mode:'5m-rescue-r473',fastAgeMinutes:Math.round(fastAge)}};
+      const rescueAt=new Date().toISOString();
+      await Promise.all([
+        setPushState(db,'youtube-engagement-fallback-5m-last-at-r473',rescueAt).catch(()=>{}),
+        setPushState(db,'youtube-reserve-5m-last-at-r474',rescueAt).catch(()=>{}),
+        setPushState(db,'youtube-reserve-5m-last-status-r474',fallback?.ok===false?'warning':'success').catch(()=>{}),
+        setPushState(db,'youtube-reserve-5m-last-summary-r474',JSON.stringify({mode:'5m-rescue-r474',rescue:true,fastAgeMinutes:Math.round(fastAge),fallback,checkedAt:rescueAt})).catch(()=>{})
+      ]);
+      return {task:'engagement-fallback',value:{...fallback,mode:'5m-rescue-r474',fastAgeMinutes:Math.round(fastAge)}};
     }
   }catch(_){/* release path remains primary if fallback inspection fails */}
 

@@ -6,7 +6,7 @@
   const state=document.getElementById('serviceAccessState');
   const msg=document.getElementById('serviceAccessMessage');
   const IS_CONTROL_HOST=location.hostname.toLowerCase()==='control.andrikmetal.com';
-  const MAIN_PUSH_ADMIN_URL='https://andrikmetal.com/service-admin.html?owner-push=1&v=55.00-r473';
+  const MAIN_PUSH_ADMIN_URL='https://andrikmetal.com/service-admin.html?owner-push=1&v=55.00-r474';
   let installPrompt=null;
   let lastDiagnosticText='';
   let lastSystemText='';

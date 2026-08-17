@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786942860964-302a96fca6",
-  "release": "R473",
-  "archiveName": "R473-R472-YOUTUBE-COMMENTS-OWNER-PUSH-REPAIR-5M-RESCUE-SAFE-FULL.zip",
-  "sourceHead": "9b8e7d5a21dfe742c044bde6ac0cf45b436fb315",
-  "backupSha": "9b8e7d5a21dfe742c044bde6ac0cf45b436fb315",
-  "backupTag": "control-backup-20260817050056-9b8e7d5-r473-c2665",
+  "operationId": "publish-1786943334239-f3b36a94d0",
+  "release": "R474",
+  "archiveName": "R474-R473-YOUTUBE-5M-WATCHDOG-STATUS-SAFE-FULL.zip",
+  "sourceHead": "60c739e8fc8feb1a56bf459f59fcf8af8f2434c0",
+  "backupSha": "60c739e8fc8feb1a56bf459f59fcf8af8f2434c0",
+  "backupTag": "control-backup-20260817050848-60c739e-r474-a93f1",
   "autoRecovery": true,
-  "generatedAt": "2026-08-17T05:01:00.964Z"
+  "generatedAt": "2026-08-17T05:08:54.239Z"
 }
