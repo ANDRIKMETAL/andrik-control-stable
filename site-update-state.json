@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786961842331-1f25e6fa43",
-  "release": "R477",
-  "archiveName": "R477-R476-FAST-NATIVE-ALBUM-LIBRARY-SAFE-FULL.zip",
-  "sourceHead": "a7797791f1da2ccbeab9b7801ee17a8a29974332",
-  "backupSha": "a7797791f1da2ccbeab9b7801ee17a8a29974332",
-  "backupTag": "control-backup-20260817101718-a779779-r477-a403f",
+  "operationId": "publish-1786963796701-098a2c315a",
+  "release": "R479",
+  "archiveName": "R479-R478-APPROVED-TRIKA-COVER-COUNTDOWN-3-COVER-HOME-SAFE-FULL.zip",
+  "sourceHead": "3be94a9f0de4bc3b3c9ef52871d03c2b72e9f0af",
+  "backupSha": "3be94a9f0de4bc3b3c9ef52871d03c2b72e9f0af",
+  "backupTag": "control-backup-20260817104951-3be94a9-r479-bd505",
   "autoRecovery": true,
-  "generatedAt": "2026-08-17T10:17:22.331Z"
+  "generatedAt": "2026-08-17T10:49:57.775Z"
 }

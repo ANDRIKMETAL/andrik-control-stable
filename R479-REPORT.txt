@@ -1,0 +1,16 @@
+R479 — APPROVED TRIKA COVER + COUNTDOWN UNDER ART + THREE-COVER HOME HUB SAFE FULL
+
+Base: R478.
+
+Changes:
+1. Exact approved TRIKA / THE THIRD ALBUM cover added as optimized WebP.
+2. TRIKA remains the first album and now spans the full top row on the Albums page.
+3. TRIKA cover keeps a soft breathing/pulsing animation.
+4. Release countdown moved directly below the TRIKA cover.
+5. OCEAN and Illusion of Life remain below TRIKA.
+6. Home page ALBUMS hub now shows three covers: TRIKA, OCEAN, Illusion of Life.
+7. Home countdown remains removed; countdown exists only with TRIKA on Albums page.
+8. Existing R477 fast native MP3 libraries preserved.
+9. Existing R478 native R2 video block / upload logic preserved.
+10. RU / UA / SK / EN updated consistently.
+11. Control / Worker display version: R479.

@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R477', number:477, version:'55.00', full:'55.00 LIVE WEB AI FINAL R477', siteUpdater:'55.00-r356' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R479', number:479, version:'55.00', full:'55.00 LIVE WEB AI FINAL R479', siteUpdater:'55.00-r356' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -14303,6 +14303,69 @@ async function handleMusicMp3DeleteR314(request, env) {
 }
 
 
+
+// === R478: native official clip "Я ЕСТЬ" in R2, browser multipart upload ===
+const YA_EST_VIDEO_KEY_R478 = 'clips/ya-est-official-2026.mp4';
+function mediaUploadIdR478(request){
+  const value=String(new URL(request.url).searchParams.get('uploadId')||'').trim();
+  return value&&value.length<=512?value:'';
+}
+async function handleYaEstVideoMpuStartR478(request,env){
+  if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
+  const bucket=getMusicBucketR314(env);if(!bucket)return json({ok:false,error:'music-bucket-not-configured'},503);
+  try{
+    const upload=await bucket.createMultipartUpload(YA_EST_VIDEO_KEY_R478,{
+      httpMetadata:{contentType:'video/mp4',cacheControl:'public, max-age=86400'},
+      customMetadata:{source:'ANDRIK Control R478 browser multipart',title:'ANDRIK — Я ЕСТЬ · Official Video',release:'2026'}
+    });
+    return json({ok:true,uploadId:upload.uploadId,key:upload.key,partSize:8*1024*1024});
+  }catch(error){return json({ok:false,error:'multipart-start-failed',message:cleanPlainText(error?.message||error,420)},502);}
+}
+async function handleYaEstVideoMpuPartR478(request,env){
+  if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
+  const bucket=getMusicBucketR314(env);if(!bucket)return json({ok:false,error:'music-bucket-not-configured'},503);
+  const url=new URL(request.url),uploadId=mediaUploadIdR478(request),partNumber=parseInt(url.searchParams.get('partNumber')||'',10);
+  if(!uploadId||!Number.isFinite(partNumber)||partNumber<1||partNumber>10000)return json({ok:false,error:'invalid-multipart-request'},400);
+  if(!request.body)return json({ok:false,error:'missing-part-body'},400);
+  try{const upload=bucket.resumeMultipartUpload(YA_EST_VIDEO_KEY_R478,uploadId);const part=await upload.uploadPart(partNumber,request.body);return json({ok:true,partNumber:part.partNumber,etag:part.etag});}
+  catch(error){return json({ok:false,error:'multipart-part-failed',message:cleanPlainText(error?.message||error,420)},502);}
+}
+async function handleYaEstVideoMpuCompleteR478(request,env){
+  if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
+  const bucket=getMusicBucketR314(env);if(!bucket)return json({ok:false,error:'music-bucket-not-configured'},503);
+  const uploadId=mediaUploadIdR478(request);if(!uploadId)return json({ok:false,error:'invalid-multipart-request'},400);
+  const body=await request.json().catch(()=>null),parts=Array.isArray(body?.parts)?body.parts:[];
+  const normalized=parts.map(p=>({partNumber:parseInt(p?.partNumber,10),etag:String(p?.etag||'')})).filter(p=>Number.isFinite(p.partNumber)&&p.partNumber>0&&p.etag).sort((a,b)=>a.partNumber-b.partNumber);
+  if(!normalized.length||normalized.length!==parts.length)return json({ok:false,error:'invalid-multipart-parts'},400);
+  try{const upload=bucket.resumeMultipartUpload(YA_EST_VIDEO_KEY_R478,uploadId);const object=await upload.complete(normalized);const head=await bucket.head(YA_EST_VIDEO_KEY_R478);return json({ok:true,key:YA_EST_VIDEO_KEY_R478,size:Number(head?.size||0),etag:object?.httpEtag||'',url:'/api/media/video/ya-est.mp4'});}
+  catch(error){return json({ok:false,error:'multipart-complete-failed',message:cleanPlainText(error?.message||error,420)},502);}
+}
+async function handleYaEstVideoMpuAbortR478(request,env){
+  if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
+  const bucket=getMusicBucketR314(env);if(!bucket)return json({ok:false,error:'music-bucket-not-configured'},503);
+  const uploadId=mediaUploadIdR478(request);if(!uploadId)return json({ok:false,error:'invalid-multipart-request'},400);
+  try{await bucket.resumeMultipartUpload(YA_EST_VIDEO_KEY_R478,uploadId).abort();return json({ok:true});}
+  catch(error){return json({ok:false,error:'multipart-abort-failed',message:cleanPlainText(error?.message||error,300)},400);}
+}
+async function handleYaEstVideoStatusR478(request,env){
+  if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
+  const bucket=getMusicBucketR314(env);if(!bucket)return json({ok:false,error:'music-bucket-not-configured'},503);
+  const object=await bucket.head(YA_EST_VIDEO_KEY_R478).catch(()=>null);
+  return json({ok:true,exists:Boolean(object),key:YA_EST_VIDEO_KEY_R478,size:Number(object?.size||0),uploaded:object?.uploaded||null,url:'/api/media/video/ya-est.mp4'});
+}
+async function handleYaEstVideoPublicR478(request,env){
+  const bucket=getMusicBucketR314(env);if(!bucket)return new Response('R2 unavailable',{status:503});
+  const isHead=request.method==='HEAD';let object;
+  try{object=isHead?await bucket.head(YA_EST_VIDEO_KEY_R478):await bucket.get(YA_EST_VIDEO_KEY_R478,{range:request.headers});}catch(_){object=null;}
+  if(!object)return new Response(null,{status:404,headers:{'cache-control':'no-store'}});
+  const h=new Headers();if(typeof object.writeHttpMetadata==='function')object.writeHttpMetadata(h);h.set('content-type','video/mp4');h.set('accept-ranges','bytes');h.set('cache-control','public, max-age=3600');h.set('x-content-type-options','nosniff');if(object.httpEtag)h.set('etag',object.httpEtag);
+  let status=200;const range=object.range;
+  if(range&&Number.isFinite(range.offset)&&Number.isFinite(range.length)){status=206;const total=Number(object.size||0);h.set('content-range',`bytes ${range.offset}-${range.offset+range.length-1}/${total}`);h.set('content-length',String(range.length));}
+  else if(object.size)h.set('content-length',String(object.size));
+  if(isHead)return new Response(null,{status:200,headers:h});return new Response(object.body,{status,headers:h});
+}
+// === End R478 official clip ===
+
 // === R471: Lyra / TRIKA promo video in R2 ===
 const PROMO_VIDEO_KEY_R471 = 'promo/lyra-trika-2026.mp4';
 async function handlePromoVideoUploadR471(request, env){
@@ -14434,6 +14497,12 @@ async function routeApi(request, env, ctx) {
     if (path === '/api/control/music/albums/mpu/part' && request.method === 'PUT') return await handleMusicAlbumMultipartPartR446(request, env);
     if (path === '/api/control/music/albums/mpu/complete' && request.method === 'POST') return await handleMusicAlbumMultipartCompleteR446(request, env);
     if (path === '/api/control/music/albums/mpu/abort' && request.method === 'DELETE') return await handleMusicAlbumMultipartAbortR446(request, env);
+    if (path === '/api/control/media/ya-est-r478/mpu/start' && request.method === 'POST') return await handleYaEstVideoMpuStartR478(request, env);
+    if (path === '/api/control/media/ya-est-r478/mpu/part' && request.method === 'PUT') return await handleYaEstVideoMpuPartR478(request, env);
+    if (path === '/api/control/media/ya-est-r478/mpu/complete' && request.method === 'POST') return await handleYaEstVideoMpuCompleteR478(request, env);
+    if (path === '/api/control/media/ya-est-r478/mpu/abort' && request.method === 'DELETE') return await handleYaEstVideoMpuAbortR478(request, env);
+    if (path === '/api/control/media/ya-est-r478/status' && request.method === 'GET') return await handleYaEstVideoStatusR478(request, env);
+    if (path === '/api/media/video/ya-est.mp4' && (request.method === 'GET' || request.method === 'HEAD')) return await handleYaEstVideoPublicR478(request, env);
     if (path === '/api/control/media/promo-r471' && request.method === 'PUT') return await handlePromoVideoUploadR471(request, env);
     if (path === '/api/control/media/promo-r471/status' && request.method === 'GET') return await handlePromoVideoStatusR471(request, env);
     if (path === '/api/media/promo/lyra-trika.mp4' && (request.method === 'GET' || request.method === 'HEAD')) return await handlePromoVideoPublicR471(request, env);
