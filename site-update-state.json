@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786968513331-a3555945c4",
-  "release": "R483",
-  "archiveName": "R483-R482-DEDICATED-CLIPS-COMPACT-PROSNIS-DIRECT-R2-UPLOAD-FIX-SAFE-FULL.zip",
-  "sourceHead": "e2faddd49f822163010802360b93462879faa7f7",
-  "backupSha": "e2faddd49f822163010802360b93462879faa7f7",
-  "backupTag": "control-backup-20260817120828-e2faddd-r483-9705b",
+  "operationId": "publish-1786969407553-faacb59a8d",
+  "release": "R484",
+  "archiveName": "R484-R483-CLIPS-MENU-CARD-COMPACT-COVER-SAFE-FULL.zip",
+  "sourceHead": "f9275e732dcf66110a1dda8d8ad694a856ffdd2a",
+  "backupSha": "f9275e732dcf66110a1dda8d8ad694a856ffdd2a",
+  "backupTag": "control-backup-20260817122323-f9275e7-r484-30008",
   "autoRecovery": true,
-  "generatedAt": "2026-08-17T12:08:33.331Z"
+  "generatedAt": "2026-08-17T12:23:28.398Z"
 }

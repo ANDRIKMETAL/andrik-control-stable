@@ -1,0 +1,7 @@
+R484 — MAIN MENU CLIPS CARD
+
+- Added separate compact “CLIPS” card to the main page after Albums in RU/UA/SK/EN.
+- Used user-approved clip cover as compact teaser image.
+- Fixed Russian top navigation link: “Клипы” now opens /clips.html instead of scrolling to #clips.
+- Removed old large clips block from RU home page to keep clips as a separate page only.
+- Added new shared CSS asset home-clips-hub-r484.css and new cover asset clips-cover-awake-r484.webp.

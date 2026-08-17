@@ -7,7 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <title>Очистка Control — R479</title>
+  <title>Очистка Control — R483</title>
   <style>
     *{box-sizing:border-box}
     html,body{
@@ -143,7 +143,7 @@
 </head>
 <body>
   <main class="box">
-    <span class="badge">СТРАНИЦА ОЧИСТКИ R479</span>
+    <span class="badge">СТРАНИЦА ОЧИСТКИ R483</span>
     <h1 id="title">Чистим кэш Control</h1>
     <p id="status">Не закрывай страницу. После завершения появится кнопка открытия Control.</p>
 
@@ -157,7 +157,7 @@
 
     <div class="result" id="result">Подготовка…</div>
 
-    <a class="btn" id="open" href="/control-home.html?page=menu&v=55.00-r479">Открыть Control</a>
+    <a class="btn" id="open" href="/control-home.html?page=menu&v=55.00-r484">Открыть Control</a>
     <div class="small">Автоматического перехода больше нет.</div>
   </main>
 
@@ -171,7 +171,7 @@
   const title=document.getElementById('title');
   const open=document.getElementById('open');
   const stamp=Date.now();
-  const target='/control-home.html?page=menu&v=55.00-r479&fresh='+stamp;
+  const target='/control-home.html?page=menu&v=55.00-r484&fresh='+stamp;
 
   const step=id=>document.getElementById(id);
   const run=id=>{
@@ -255,8 +255,8 @@
       '/assets/album-zip-admin-r446.css?cache-bust='+stamp,
       '/assets/albums-r448.css?cache-bust='+stamp,
       '/assets/albums-r448.js?cache-bust='+stamp,
-      '/assets/albums-fast-library-r479.css?cache-bust='+stamp,
-      '/assets/albums-fast-library-r479.js?cache-bust='+stamp,
+      '/assets/albums-fast-library-r481.css?cache-bust='+stamp,
+      '/assets/albums-fast-library-r481.js?cache-bust='+stamp,
       '/albums.html?cache-bust='+stamp,
       '/assets/admin-home-hub-r423.css?cache-bust='+stamp,
       '/assets/admin-home-balance-r446.css?cache-bust='+stamp,
@@ -315,7 +315,7 @@
       headers:{'Cache-Control':'no-cache, no-store, max-age=0','Pragma':'no-cache'}
     }).catch(()=>null);
     // Also run one lightweight release check now, so a release published before
-    // R479 installation: clear stale UI/assets and open the current Control build.
+    // R483 installation: clear stale UI/assets and open the current Control build.
     await fetch('/api/automation/youtube-fast',{
       method:'POST',
       cache:'no-store',
@@ -350,7 +350,7 @@
   }
 })();
 </script>
-<script defer src="/assets/control-version-sync-r482.js?v=55.00-r482"></script>
+<script defer src="/assets/control-version-sync-r484.js?v=55.00-r484"></script>
 <link rel="preload" as="style" href="/assets/map-total-compact-r348.css?cache-bust=1">
 </body>
 </html>

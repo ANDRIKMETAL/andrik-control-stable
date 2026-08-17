@@ -1,0 +1,13 @@
+
+.clips-hub-section-r484{padding:8px 0 10px}
+.clips-hub-section-r484 .wrap{width:min(100% - 28px,920px);margin-inline:auto}
+.clips-hub-card-r484{display:grid;grid-template-columns:minmax(0,300px) minmax(0,1fr);gap:18px;align-items:center;text-decoration:none;color:#f5fbff;padding:18px;border:1px solid rgba(100,205,233,.24);border-radius:28px;background:radial-gradient(circle at 82% 0,rgba(16,112,135,.16),transparent 36%),linear-gradient(180deg,rgba(4,13,20,.97),rgba(2,7,11,.99));box-shadow:0 20px 50px rgba(0,0,0,.28)}
+.clips-hub-media-r484{position:relative;overflow:hidden;border-radius:22px;border:1px solid rgba(109,209,235,.16);background:#02060a;aspect-ratio:16/9}
+.clips-hub-media-r484 img{display:block;width:100%;height:100%;object-fit:cover}
+.clips-hub-copy-r484 h2{margin:6px 0 10px;font-size:clamp(2rem,6vw,3.55rem);line-height:.95}
+.clips-hub-copy-r484 p{margin:0;color:#9fb4be;line-height:1.56}
+.clips-hub-kicker-r484{display:inline-flex;align-items:center;gap:8px;margin-top:14px;color:#9edbea;border:1px solid rgba(109,208,233,.22);border-radius:999px;padding:8px 12px;font-size:.74rem;font-weight:900;letter-spacing:.08em}
+.clips-hub-open-r484{display:inline-flex;align-items:center;justify-content:center;margin-top:16px;padding:15px 24px;border-radius:999px;border:1px solid rgba(125,214,237,.34);background:rgba(12,74,90,.34);color:#e6fbff;font-weight:900;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+.section-divider-clips-hub-r484 span{background:linear-gradient(90deg,transparent,rgba(228,183,92,.7),transparent)}
+@media(max-width:760px){.clips-hub-card-r484{grid-template-columns:1fr;gap:14px;padding:14px;border-radius:24px}.clips-hub-media-r484{max-width:320px;margin:0 auto;border-radius:18px}.clips-hub-copy-r484{text-align:left}.clips-hub-copy-r484 h2{font-size:clamp(1.9rem,9vw,3rem)}.clips-hub-open-r484{width:100%;justify-content:center}.clips-hub-kicker-r484{margin-top:12px}}
+@media(max-width:560px){.clips-hub-section-r484 .wrap{width:calc(100% - 16px)}.clips-hub-card-r484{padding:12px}.clips-hub-media-r484{max-width:280px}.clips-hub-copy-r484 p{font-size:.92rem}.clips-hub-kicker-r484{font-size:.66rem;padding:7px 10px}.clips-hub-open-r484{font-size:1rem;padding:14px 20px}}
