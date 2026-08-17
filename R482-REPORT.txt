@@ -1,0 +1,13 @@
+ANDRIK R482 REPORT
+==================
+
+BASE: R481
+CHANGE: remove bundled local Проснись MP4 from deployment package.
+
+1. Главная: раздел КЛИПЫ сохранён — Я ЕСТЬ сверху, ПРОСНИСЬ ниже.
+2. ПРОСНИСЬ теперь R2-only: /api/media/video/prosnis-fragment.mp4.
+3. Локальный встроенный MP4 fallback удалён полностью.
+4. Загрузчик Control → Видео R2 сохранён; multipart upload идёт в clips/prosnis-fragment-2026.mp4.
+5. MP4 ↓ скачивает оригинал из R2 через /download/ANDRIK-Prosnis-Fragment-2026.mp4.
+6. Раздел альбомов, быстрые MP3-библиотеки и удаление синей плавающей кнопки сохранены.
+7. Runtime release: R482.

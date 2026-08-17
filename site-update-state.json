@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786963796701-098a2c315a",
-  "release": "R479",
-  "archiveName": "R479-R478-APPROVED-TRIKA-COVER-COUNTDOWN-3-COVER-HOME-SAFE-FULL.zip",
-  "sourceHead": "3be94a9f0de4bc3b3c9ef52871d03c2b72e9f0af",
-  "backupSha": "3be94a9f0de4bc3b3c9ef52871d03c2b72e9f0af",
-  "backupTag": "control-backup-20260817104951-3be94a9-r479-bd505",
+  "operationId": "publish-1786967021230-bff20ec624",
+  "release": "R482",
+  "archiveName": "R482-R481-HOME-CLIPS-R2-ONLY-NO-BUNDLED-PROSNIS-SAFE-FULL.zip",
+  "sourceHead": "b2e776ffaef2e2802d017093b6eda34e2089d4d4",
+  "backupSha": "b2e776ffaef2e2802d017093b6eda34e2089d4d4",
+  "backupTag": "control-backup-20260817114336-b2e776f-r482-4c67b",
   "autoRecovery": true,
-  "generatedAt": "2026-08-17T10:49:57.775Z"
+  "generatedAt": "2026-08-17T11:43:41.230Z"
 }
