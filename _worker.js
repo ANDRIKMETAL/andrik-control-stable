@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R472', number:472, version:'55.00', full:'55.00 LIVE WEB AI FINAL R472', siteUpdater:'55.00-r356' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R473', number:473, version:'55.00', full:'55.00 LIVE WEB AI FINAL R473', siteUpdater:'55.00-r356' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -2140,6 +2140,34 @@ function oneSignalConfigured(env) {
   return Boolean(env.ONESIGNAL_APP_ID && getOneSignalApiKey(env));
 }
 
+// R473: OneSignal may return HTTP 200 together with invalid_player_ids.  Those
+// subscription ids are dead and must not stay registered as an owner device.
+function oneSignalInvalidSubscriptionIdsR473(responseData = {}) {
+  const errors = responseData && typeof responseData === 'object' ? responseData.errors : null;
+  const raw = errors && typeof errors === 'object' ? errors.invalid_player_ids : null;
+  const ids = Array.isArray(raw) ? raw : [];
+  return [...new Set(ids.map(id => cleanPlainText(id, 80)).filter(id => /^[0-9a-f-]{30,80}$/i.test(id)))];
+}
+
+async function pruneInvalidOneSignalSubscriptionsR473(env, ids = [], context = '') {
+  const invalid = [...new Set((Array.isArray(ids) ? ids : []).filter(Boolean))];
+  if (!invalid.length || !env.COMMENTS_DB) return { removed:0, ids:[] };
+  const db = env.COMMENTS_DB;
+  await ensurePushAutomationSchema(db);
+  let removed = 0;
+  for (const id of invalid) {
+    const deleted = await db.prepare(`DELETE FROM push_admin_devices WHERE subscription_id = ?`).bind(id).run().catch(()=>null);
+    removed += Math.max(0, Number(deleted?.meta?.changes || 0));
+    await db.prepare(`UPDATE push_subscribers SET status='inactive', updated_at=datetime('now') WHERE subscription_id = ?`).bind(id).run().catch(()=>{});
+  }
+  await recordSystemLog(env, {
+    scope:'push', level:'warning', event:'invalid-subscription-pruned-r473',
+    message:`OneSignal сообщил о ${invalid.length} недействительных push-подписках; старые записи очищены.`,
+    details:{ context:cleanPlainText(context,120), invalidCount:invalid.length, ownerRowsRemoved:removed }
+  }).catch(()=>{});
+  return { removed, ids:invalid };
+}
+
 async function upsertPushSubscriber(db, {
   subscriptionId,
   active = true,
@@ -2448,6 +2476,10 @@ async function sendOneSignalPush(env, {
     return { ok:false, error:errorCode, message:errorMessage };
   }
   const responseData = await response.json().catch(() => ({}));
+  const invalidSubscriptionIdsR473 = oneSignalInvalidSubscriptionIdsR473(responseData);
+  if (invalidSubscriptionIdsR473.length) {
+    await pruneInvalidOneSignalSubscriptionsR473(env, invalidSubscriptionIdsR473, `${audience}:${history?.type || name || title}`).catch(()=>{});
+  }
   if (!response.ok) {
     console.error('OneSignal push failed', response.status, responseData);
     const errorText = JSON.stringify(responseData?.errors || responseData || 'onesignal-error');
@@ -2469,6 +2501,15 @@ async function sendOneSignalPush(env, {
       details: { audience, httpStatus: response.status, response: responseData, title, url }
     }).catch(() => {});
     return { ok: false, status: response.status, error: responseData?.errors || 'onesignal-error', data: responseData };
+  }
+  if (audience === 'owner' && Array.isArray(payload.include_subscription_ids) && payload.include_subscription_ids.length &&
+      payload.include_subscription_ids.every(id => invalidSubscriptionIdsR473.includes(id))) {
+    const errorCode='owner-subscription-invalid';
+    if (history) await recordPushHistory(env, {
+      ...history, audience, status:'failed', title, message, url, error:errorCode,
+      details:{ ...(history?.details && typeof history.details==='object'?history.details:{}), response:responseData, invalidOwnerIds:invalidSubscriptionIdsR473.length }
+    }).catch(()=>{});
+    return { ok:false, error:errorCode, data:responseData, invalidSubscriptionIds:invalidSubscriptionIdsR473 };
   }
   const oneSignalId = cleanPlainText(responseData?.id || responseData?.external_id || '', 120);
   // OneSignal returns HTTP 200 with an empty id when the request is valid,
@@ -2524,8 +2565,15 @@ async function sendOneSignalPush(env, {
 
 async function getOwnerSubscriptionIds(env) {
   if (!env.COMMENTS_DB) return [];
-  const result = await env.COMMENTS_DB.prepare('SELECT subscription_id FROM push_admin_devices ORDER BY updated_at DESC LIMIT 20').all();
-  return (result.results || []).map(row => row.subscription_id).filter(Boolean);
+  const result = await env.COMMENTS_DB.prepare(`
+    SELECT d.subscription_id
+    FROM push_admin_devices d
+    LEFT JOIN push_subscribers s ON s.subscription_id=d.subscription_id
+    WHERE COALESCE(s.status,'active')='active'
+    ORDER BY datetime(d.updated_at) DESC
+    LIMIT 20
+  `).all();
+  return [...new Set((result.results || []).map(row => row.subscription_id).filter(Boolean))];
 }
 
 async function sendOwnerPush(env, payload) {
@@ -3040,6 +3088,13 @@ async function handleAdminPushDevice(request, env) {
   const subscriptionId = cleanPlainText(body.subscriptionId, 80);
   const label = cleanPlainText(body.label, 80) || 'ANDRIK owner device';
   if (!/^[0-9a-f-]{30,80}$/i.test(subscriptionId)) return json({ ok: false, error: 'validation' }, 400);
+  // R473: OneSignal can rotate the subscription id after a browser/SW update.
+  // Replace older ids for the same physical browser (stable UA prefix) instead of
+  // letting an obsolete owner id receive all future alerts.
+  const labelPrefix=cleanPlainText(label,80).slice(0,42);
+  if(labelPrefix){
+    await db.prepare(`DELETE FROM push_admin_devices WHERE subscription_id<>? AND substr(label,1,42)=?`).bind(subscriptionId,labelPrefix).run().catch(()=>{});
+  }
   await db.prepare(`
     INSERT INTO push_admin_devices (subscription_id, label, created_at, updated_at)
     VALUES (?, ?, datetime('now'), datetime('now'))
@@ -4103,7 +4158,7 @@ async function handlePushDiagnosticLog(request, env) {
   }
   const latest = parsePushSummary(latestState?.value);
   const lines = [
-    'ANDRIK PUSH / YOUTUBE DIAGNOSTIC LOG v51.79',
+    `ANDRIK PUSH / YOUTUBE DIAGNOSTIC LOG ${ANDRIK_CONTROL_RELEASE.short}`,
     `Generated: ${new Date().toISOString()}`,
     '',
     '[CONFIG]',
@@ -6738,21 +6793,22 @@ async function fetchFastYoutubeCommentsR436(env,db,channelId){
 async function fetchFastYoutubeLikesR333(env,db){
   const allIds=await loadFastYoutubeVideoIdsR333(db,200);
   if(!allIds.length)return [];
-  // R434: keep the newest upload in EVERY 2-minute like request. The remaining
-  // 23 slots still rotate through the historical pool, so CPU/API cost stays the
-  // same while a fresh release can no longer wait for the alternate rotation.
-  const newestId=allIds[0];
-  const rotatingPool=allIds.slice(1);
+  // R473: keep the three newest uploads in every 2-minute sample.  This makes
+  // comment/like monitoring deterministic for fresh releases while the remaining
+  // 21 slots rotate through the historical catalogue.
+  const pinned=allIds.slice(0,Math.min(3,allIds.length));
+  const rotatingPool=allIds.slice(pinned.length);
   const offsetRow=await getPushState(db,'youtube-fast-like-offset-r416').catch(()=>null);
   const rawOffset=Math.max(0,Number(offsetRow?.value || 0));
   const offset=rotatingPool.length ? rawOffset % rotatingPool.length : 0;
   const take=Math.min(24,allIds.length);
-  const rotatingTake=Math.max(0,take-1);
-  const ids=[newestId];
+  const rotatingTake=Math.max(0,take-pinned.length);
+  const ids=[...pinned];
   for(let i=0;i<rotatingTake;i++)ids.push(rotatingPool[(offset+i)%rotatingPool.length]);
   const nextOffset=rotatingPool.length ? (offset+rotatingTake)%rotatingPool.length : 0;
   await setPushState(db,'youtube-fast-like-offset-r416',String(nextOffset)).catch(()=>{});
   const {data}=await youtubeApiJson(env,'videos',{part:'snippet,statistics',id:ids.join(','),maxResults:24});
+  const order=new Map(ids.map((id,index)=>[id,index]));
   return (data.items || []).map(video=>({
     videoId:cleanPlainText(video.id || '',40),
     title:cleanPlainText(video?.snippet?.title || 'Видео ANDRIK',180),
@@ -6761,7 +6817,58 @@ async function fetchFastYoutubeLikesR333(env,db){
     likes:Number(video?.statistics?.likeCount || 0),
     comments:Number(video?.statistics?.commentCount || 0),
     url:`https://www.youtube.com/watch?v=${encodeURIComponent(video.id || '')}`
-  })).filter(x=>x.videoId);
+  })).filter(x=>x.videoId).sort((a,b)=>(order.get(a.videoId)??999)-(order.get(b.videoId)??999));
+}
+
+async function selectFastYoutubeCommentTargetsR473(db,videos=[]){
+  const list=Array.isArray(videos)?videos.filter(v=>v?.videoId):[];
+  const recent=list.slice(0,3);
+  const targets=[...recent];
+  const ids=list.map(v=>v.videoId);
+  let baselines=new Map();
+  if(ids.length){
+    const placeholders=ids.map(()=>'?').join(',');
+    const rows=await db.prepare(`
+      SELECT video_id AS videoId,count_value AS countValue
+      FROM youtube_event_seen
+      WHERE event_type='comment-count' AND video_id IN (${placeholders})
+    `).bind(...ids).all().catch(()=>({results:[]}));
+    baselines=new Map((rows.results||[]).map(row=>[cleanPlainText(row.videoId||'',40),Math.max(0,Number(row.countValue||0))]));
+  }
+  const state=[];
+  for(const video of list){
+    const key=`comment-count:${video.videoId}`;
+    const before=baselines.has(video.videoId)?baselines.get(video.videoId):null;
+    state.push({video,key,before});
+    const current=Math.max(0,Number(video.comments||0));
+    if((before===null && current>0) || (before!==null && current>before)){
+      if(!targets.some(row=>row.videoId===video.videoId) && targets.length<8)targets.push(video);
+    }
+  }
+  return {targets,state};
+}
+
+function isBenignYoutubeCommentWarningR473(value=''){
+  return /comments? (?:are )?disabled|disabled comments|has disabled comments/i.test(String(value||''));
+}
+
+async function fetchFastYoutubeCommentsDirectR473(env,db,videos=[],ownerChannelId=''){
+  const plan=await selectFastYoutubeCommentTargetsR473(db,videos);
+  const direct=await fetchYoutubeCommentsForVideos(env,plan.targets,ownerChannelId).catch(error=>({items:[],warnings:[cleanPlainText(error?.message||error,260)]}));
+  // Only persist counters that were actually observed in the videos.list response.
+  // Missing/new rows are seeded once; later changes trigger an immediate direct probe.
+  for(const row of plan.state){
+    const current=Math.max(0,Number(row.video.comments||0));
+    if(row.before===null || current>row.before){
+      await saveYoutubeEventRow(db,{
+        key:row.key,type:'comment-count',resourceId:row.video.videoId,videoId:row.video.videoId,
+        title:row.video.title,countValue:current,url:row.video.url,
+        payload:{videoId:row.video.videoId,title:row.video.title,comments:current,mode:'fast-direct-r473'}
+      }).catch(()=>{});
+    }
+  }
+  const warnings=(direct.warnings||[]).filter(w=>!isBenignYoutubeCommentWarningR473(w));
+  return {items:uniqueYoutubeComments(direct.items||[]),warnings,targets:plan.targets.map(v=>v.videoId)};
 }
 
 async function handleFastYoutubeEngagementR333(request,env,options={}){
@@ -6779,12 +6886,17 @@ async function handleFastYoutubeEngagementR333(request,env,options={}){
     if(!channelId)channelId=await resolveYoutubeWebSubChannelIdR332(env,db);
     if(!channelId)throw new Error('youtube-channel-id-unavailable');
 
-    const settled=await Promise.allSettled([fetchFastYoutubeCommentsR436(env,db,channelId),fetchFastYoutubeLikesR333(env,db)]);
-    const comments=settled[0].status==='fulfilled'?settled[0].value:[];
-    const videos=settled[1].status==='fulfilled'?settled[1].value:[];
-    // R469: persist observed like-count growth independently of notification delivery.
-    // This is the authoritative live daily-like accumulator.
-    if (settled[1].status==='fulfilled') {
+    // R473: the legacy channel-wide commentThreads query started returning
+    // allThreadsRelatedToChannelId/not-found for a valid @andrikmetal channel.
+    // Likes/video statistics are fetched first; comments are then read directly
+    // from the newest videos plus any video whose public commentCount changed.
+    const videoSettled=await Promise.allSettled([fetchFastYoutubeLikesR333(env,db)]);
+    const videos=videoSettled[0].status==='fulfilled'?videoSettled[0].value:[];
+    const directComments=videos.length
+      ? await fetchFastYoutubeCommentsDirectR473(env,db,videos,channelId)
+      : {items:[],warnings:[cleanPlainText(videoSettled[0].reason?.message||'youtube-videos-unavailable',240)],targets:[]};
+    const comments=directComments.items||[];
+    if (videoSettled[0].status==='fulfilled') {
       await recordYoutubeObservedLikeBatchR469(db,videos,startedAt).catch(()=>{});
     }
     const videoMap=new Map(videos.map(v=>[v.videoId,v]));
@@ -6894,11 +7006,16 @@ async function handleFastYoutubeEngagementR333(request,env,options={}){
       notifications.push({type:'like',videoId:item.videoId,ok:Boolean(result.ok),delta,total:item.likes,error:result.error || ''});
     }
 
-    const warnings=settled.map(r=>r.status==='rejected'?cleanPlainText(r.reason?.message || r.reason,240):'').filter(Boolean);
+    const warnings=[
+      ...(videoSettled.map(r=>r.status==='rejected'?cleanPlainText(r.reason?.message || r.reason,240):'').filter(Boolean)),
+      ...((directComments.warnings||[]).map(item=>cleanPlainText(item,240)).filter(Boolean))
+    ];
     const failed=notifications.filter(x=>!x.ok).length;
     const summary={
       ok:warnings.length===0 && failed===0,
       commentsSeen:comments.length,
+      commentMode:'direct-video-r473',
+      commentTargets:(directComments.targets||[]).length,
       videosChecked:videos.length,
       commentsSent:notifications.filter(x=>x.type==='comment'&&x.ok).length,
       likesSent:notifications.filter(x=>x.type==='like'&&x.ok).length,
@@ -7098,11 +7215,14 @@ async function handleCheckYoutubeEvents(request, env) {
       }, identity.updatedAt || startedAt).catch(() => {});
     }
 
-    const commentProbeVideos = [];
+    // R473 manual/full check: always inspect the newest three videos directly,
+    // then add any sampled video whose public comment count increased.
+    const commentProbeVideos = [...videos.slice(0, 3)];
     for (const video of videos.slice(0, 24)) {
       const previous = await getYoutubeEventRow(db, `comment-count:${video.videoId}`);
       const before = Number(previous?.countValue || 0);
-      if ((!previous && video.comments > 0) || (previous && video.comments > before)) commentProbeVideos.push(video);
+      if (((!previous && video.comments > 0) || (previous && video.comments > before)) &&
+          !commentProbeVideos.some(row=>row.videoId===video.videoId)) commentProbeVideos.push(video);
       if (commentProbeVideos.length >= 12) break;
     }
     const videoCommentResult = await fetchYoutubeCommentsForVideos(env, commentProbeVideos, identity.channelId).catch(error => ({ items:[], warnings:[cleanPlainText(error?.message || error, 260)] }));
@@ -7117,7 +7237,14 @@ async function handleCheckYoutubeEvents(request, env) {
         };
       })
       .filter(item => !isYoutubeOwnerComment(item, identity));
-    const warnings = settled.map(result => result.status === 'rejected' ? cleanPlainText(result.reason?.message || result.reason, 260) : '').filter(Boolean);
+    const warnings = settled.map((result,index) => {
+      if(result.status!=='rejected')return '';
+      const message=cleanPlainText(result.reason?.message || result.reason,260);
+      // R473: the legacy channel-wide comment query is no longer authoritative.
+      // Direct videoId probes above remain the reliable comment source.
+      if(index===0 && /allThreadsRelatedToChannelId|channel identified.*could not be found/i.test(message))return '';
+      return message;
+    }).filter(Boolean);
     if (subscribersResult.error) warnings.push(`Подписчики: ${subscribersResult.error}`);
     if (videoCommentResult.warnings?.length) warnings.push(...videoCommentResult.warnings.map(item => `Комментарии: ${item}`));
 
@@ -7573,7 +7700,7 @@ async function handleYoutubeEventsStatus(request, env) {
   if (!adminAuthorized(request, env)) return json({ ok:false, error:'unauthorized' }, 401);
   const db = requireDb(env);
   await Promise.all([ensurePushAutomationSchema(db), ensureControlV1Schema(db), ensurePlatformAnalyticsSchema(db)]);
-  const [lastCheck,lastSuccess,lastStatus,lastSummary,fastLastAt,fastLastSuccess,fastLastStatus,fastLastResult,todayRows,lastFailure,lastLog] = await Promise.all([
+  const [lastCheck,lastSuccess,lastStatus,lastSummary,fastLastAt,fastLastSuccess,fastLastStatus,fastLastResult,fallbackLastAt,todayRows,lastFailure,lastLog] = await Promise.all([
     getPushState(db,'youtube-events-last-check-at'),
     getPushState(db,'youtube-events-last-success-at'),
     getPushState(db,'youtube-events-last-check-status'),
@@ -7582,6 +7709,7 @@ async function handleYoutubeEventsStatus(request, env) {
     getPushState(db,'youtube-fast-engagement-last-success-at-r376'),
     getPushState(db,'youtube-fast-engagement-last-status-r376'),
     getPushState(db,'youtube-fast-engagement-last-result-r333'),
+    getPushState(db,'youtube-engagement-fallback-5m-last-at-r473'),
     db.prepare(`
       SELECT type,status,COUNT(*) AS total
       FROM push_history
@@ -7632,6 +7760,7 @@ async function handleYoutubeEventsStatus(request, env) {
       healthy:fastHealthy,
       lastCheckAt:fastLastAtValue,
       lastSuccessAt:fastLastSuccess?.value||fastLastSuccess?.updatedAt||'',
+      fallbackLastAt:fallbackLastAt?.value||fallbackLastAt?.updatedAt||'',
       ageMinutes:fastAgeMinutes,
       staleLikeClaims:Number(fastSummary?.staleLikeClaimsRecovered||0),
       summary:fastSummary,
@@ -9815,6 +9944,23 @@ async function runCronFiveMinuteSliceR434(request, env, clock) {
       return {task:'daily-summary',value:{ok:false,error:cleanPlainText(error?.message||error,500)}};
     }
   }
+
+  // R473 reserve: if the dedicated */2 engagement trigger has stopped for more
+  // than six minutes, every second */5 slice temporarily becomes a lightweight
+  // engagement rescue.  The alternating 5-minute slices still keep release checks
+  // alive, avoiding the old CPU-heavy full reconciler that caused error 1102.
+  try{
+    const db=requireDb(env);
+    const fastState=await getPushState(db,'youtube-fast-engagement-last-at-r333').catch(()=>null);
+    const fastMs=Date.parse(String(fastState?.value||fastState?.updatedAt||''));
+    const fastAge=Number.isFinite(fastMs)?Math.max(0,(Date.now()-fastMs)/60000):999;
+    const fallbackTurn=(Math.floor(Number(local.minute||0)/5)%2)===0;
+    if(fastAge>6 && fallbackTurn){
+      const fallback=await responseData(await handleFastYoutubeEngagementR333(request,env,{skipCheckpoint:true}));
+      await setPushState(db,'youtube-engagement-fallback-5m-last-at-r473',new Date().toISOString()).catch(()=>{});
+      return {task:'engagement-fallback',value:{...fallback,mode:'5m-rescue-r473',fastAgeMinutes:Math.round(fastAge)}};
+    }
+  }catch(_){/* release path remains primary if fallback inspection fails */}
 
   const release=await responseData(await handleFastYoutubeReleaseCheckR332(request,env));
   const releaseFailed=release?.ok===false || release?.httpOk===false;

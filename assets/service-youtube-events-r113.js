@@ -33,14 +33,16 @@
     paintKpi('youtubeEventsErrors',errors,errors?'error':'');
     const fastAge=Number.isFinite(Number(fast.ageMinutes))?` · ${Number(fast.ageMinutes)} мин. назад`:'';
     set('youtubeEventsFastCheck',`Быстрый cron 2 мин: ${fmt(fast.lastCheckAt)}${fastAge}`);
-    set('youtubeEventsFastResult',`Быстрый результат: ${fastStatus==='success'?'успех':fastStatus==='warning'?'предупреждение':fastStatus==='failed'?'ОШИБКА':'ожидает'} · отправлено ${Number(fast.summary?.sent||0)} · ошибок ${Number(fast.summary?.failed||0)} · восстановлено stale ${Number(fast.staleLikeClaims||0)}`);
-    set('youtubeEventsLastCheck',`Полная проверка 5 мин: ${fmt(data.lastCheckAt)}`);
+    const commentDirect=fast.summary?.commentMode==='direct-video-r473';
+    const commentNote=commentDirect?` · комментарии: прямой контроль ${Number(fast.summary?.commentTargets||0)} видео`:'';
+    set('youtubeEventsFastResult',`Быстрый результат: ${fastStatus==='success'?'успех':fastStatus==='warning'?'предупреждение':fastStatus==='failed'?'ОШИБКА':'ожидает'} · отправлено ${Number(fast.summary?.sent||0)} · ошибок ${Number(fast.summary?.failed||0)}${commentNote} · восстановлено stale ${Number(fast.staleLikeClaims||0)}`);
+    set('youtubeEventsLastCheck',`Резерв 5 мин: ${fast.fallbackLastAt?fmt(fast.fallbackLastAt):'готов (включится при сбое */2)'}`);
     set('youtubeEventsLastSuccess',`Последний полный успех: ${fmt(data.lastSuccessAt)}`);
     const message=fastHardError
       ?`Быстрый 2-минутный cron требует внимания${fast.error?`: ${fast.error}`:''}.`
       :data.lastError?`Последняя ошибка: ${data.lastError}`
       :queue?`В очереди ${queue}. Нажмите «Повторить очередь».`
-      :'2-минутный и полный YouTube-контроль работают без выявленных потерь.';
+      :commentDirect?'Комментарии проверяются напрямую по видео; 2-минутный контроль активен ✅':'YouTube-контроль работает без выявленных потерь.';
     set('youtubeEventsMessage',message);
   }
   async function load(){

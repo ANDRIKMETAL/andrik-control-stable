@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786925041092-7d14e31d59",
-  "release": "R472",
-  "archiveName": "R472-R471-REMOVE-OCEAN-HOME-PROMO-SAFE-FULL.zip",
-  "sourceHead": "9c5b4110df66a39261bea25dfe0cb0440e59c736",
-  "backupSha": "9c5b4110df66a39261bea25dfe0cb0440e59c736",
-  "backupTag": "control-backup-20260817000357-9c5b411-r472-85255",
+  "operationId": "publish-1786942860964-302a96fca6",
+  "release": "R473",
+  "archiveName": "R473-R472-YOUTUBE-COMMENTS-OWNER-PUSH-REPAIR-5M-RESCUE-SAFE-FULL.zip",
+  "sourceHead": "9b8e7d5a21dfe742c044bde6ac0cf45b436fb315",
+  "backupSha": "9b8e7d5a21dfe742c044bde6ac0cf45b436fb315",
+  "backupTag": "control-backup-20260817050056-9b8e7d5-r473-c2665",
   "autoRecovery": true,
-  "generatedAt": "2026-08-17T00:04:01.092Z"
+  "generatedAt": "2026-08-17T05:01:00.964Z"
 }

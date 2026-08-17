@@ -6,7 +6,7 @@
   const state=document.getElementById('serviceAccessState');
   const msg=document.getElementById('serviceAccessMessage');
   const IS_CONTROL_HOST=location.hostname.toLowerCase()==='control.andrikmetal.com';
-  const MAIN_PUSH_ADMIN_URL='https://andrikmetal.com/service-admin.html?owner-push=1';
+  const MAIN_PUSH_ADMIN_URL='https://andrikmetal.com/service-admin.html?owner-push=1&v=55.00-r473';
   let installPrompt=null;
   let lastDiagnosticText='';
   let lastSystemText='';
@@ -84,7 +84,7 @@
   }
 
   async function sendPush(audience,title,message,url,statusId){if(!getKey()){set(statusId,'Сначала сохраните ключ.');return}saveKey();set(statusId,'Отправка…');try{const data=await api('/api/push/send',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({audience,title,message,url})});set(statusId,data.oneSignalId?`OneSignal принял сообщение ✅ ID: ${data.oneSignalId}`:'Отправлено ✅');await loadDiagnosticLog()}catch(error){set(statusId,`Ошибка: ${translatePushError(error.message)}`);await loadDiagnosticLog()}}
-  function translatePushError(value){const text=String(value||'');if(text.includes('no-subscribers-matched'))return 'OneSignal не нашёл активных подписчиков. Переподключите уведомления на телефонах и повторите тест.';if(text.includes('owner-device-not-registered'))return 'Телефон владельца не зарегистрирован.';if(text.includes('push-not-configured'))return 'OneSignal не настроен.';return text}
+  function translatePushError(value){const text=String(value||'');if(text.includes('no-subscribers-matched'))return 'OneSignal не нашёл активных подписчиков. Переподключите уведомления на телефонах и повторите тест.';if(text.includes('owner-device-not-registered'))return 'Телефон владельца не зарегистрирован.';if(text.includes('owner-subscription-invalid'))return 'Старая push-подписка телефона недействительна. Нажмите «Подключить мой телефон» ещё раз.';if(text.includes('push-not-configured'))return 'OneSignal не настроен.';return text}
   async function registerOwnerPush(){if(IS_CONTROL_HOST){set('adminPushStatus','Открываем основной домен ANDRIK. Разрешение Web Push привязано к нему.');const opened=window.open(MAIN_PUSH_ADMIN_URL,'_blank','noopener,noreferrer');if(!opened)location.href=MAIN_PUSH_ADMIN_URL;return}if(!getKey()){set('adminPushStatus','Сначала сохраните ключ.');return}saveKey();set('adminPushStatus','Запрашиваем разрешение…');const pushState=await window.AndrikPush?.status();if(pushState?.originMismatch){set('adminPushStatus',`Откройте основной домен ${pushState.siteOrigin||'ANDRIK'}.`);return}const subscriptionId=await window.AndrikPush?.subscribe();if(!subscriptionId){set('adminPushStatus','Подписка не создана. Проверьте разрешение уведомлений в Chrome.');return}try{await api('/api/push/admin-device',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({subscriptionId,label:navigator.userAgent.slice(0,70)})});set('adminPushStatus','Телефон владельца подключён ✅');await loadDiagnosticLog()}catch(error){set('adminPushStatus',`Ошибка: ${error.message}`)}}
   function pushAttemptLabel(attempt){if(!attempt)return 'Попыток автоматической отправки пока нет';if(attempt.status==='sent'&&attempt.oneSignalId)return `Принято OneSignal · ID ${attempt.oneSignalId}`;if(attempt.error==='no-subscribers-matched')return 'Не доставлено: активные подписчики не найдены';if(attempt.status==='failed')return `Ошибка: ${attempt.error||'неизвестно'}`;return `${attempt.status||'—'}${attempt.error?` · ${attempt.error}`:''}`}
   function renderYoutubeDiagnostics(data={}){
@@ -154,6 +154,15 @@
   document.getElementById('serviceForget')?.addEventListener('click',async()=>{await window.AndrikOwnerSession?.clear?.();keyInput.value='';remember.checked=false;try{sessionStorage.removeItem(KEY_SESSION);localStorage.removeItem(KEY_LOCAL)}catch(_){}access(false,'Защищённая сессия удалена с этого устройства.');});
   const ownerButton=document.getElementById('adminPushRegister');if(ownerButton&&!IS_CONTROL_HOST)ownerButton.textContent='Подключить мой телефон';
   document.getElementById('adminPushRegister')?.addEventListener('click',registerOwnerPush);
+  // R473: Control opens the main origin with ?owner-push=1.  If the owner
+  // session/key is already saved there, repair the current OneSignal subscription
+  // automatically instead of requiring another manual button press.
+  if(!IS_CONTROL_HOST && new URLSearchParams(location.search).get('owner-push')==='1'){
+    setTimeout(()=>{
+      if(getKey()) registerOwnerPush();
+      else set('adminPushStatus','Введите ADMIN_KEY выше, сохраните его и нажмите «Подключить мой телефон».');
+    },900);
+  }
   document.getElementById('serviceYoutubeOauthConnect')?.addEventListener('click',connectYoutubeOauth);
   document.getElementById('serviceSearchConsoleRefresh')?.addEventListener('click',()=>loadSearchConsoleDiagnostic(true));
   document.getElementById('adminPushTestOwner')?.addEventListener('click',()=>sendPush('owner','ANDRIK Control','Тестовое уведомление владельца работает.','https://andrikmetal.com/','adminPushStatus'));
