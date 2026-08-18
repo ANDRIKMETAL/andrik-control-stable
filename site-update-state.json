@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1786969959916-0590cbfb86",
-  "release": "R486",
-  "archiveName": "R486-R485-REMOVE-YA-EST-FROM-ALBUMS-SAFE-FULL.zip",
-  "sourceHead": "5f7a48c26ec2f70f59984e22f0f53e23f94cef60",
-  "backupSha": "5f7a48c26ec2f70f59984e22f0f53e23f94cef60",
-  "backupTag": "control-backup-20260817123235-5f7a48c-r486-89b7a",
+  "operationId": "publish-1787041131621-013160070e",
+  "release": "R487",
+  "archiveName": "R487-INSTAGRAM-INSIGHTS-UNIFIED-SOCIAL-GRAPH-SAFE-FULL.zip",
+  "sourceHead": "cbc2efe8513bdd56e8496f27aca7da17ff68a700",
+  "backupSha": "cbc2efe8513bdd56e8496f27aca7da17ff68a700",
+  "backupTag": "control-backup-20260818081847-cbc2efe-r487-029f2",
   "autoRecovery": true,
-  "generatedAt": "2026-08-17T12:32:39.916Z"
+  "generatedAt": "2026-08-18T08:18:51.621Z"
 }

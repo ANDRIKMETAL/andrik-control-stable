@@ -1,0 +1,34 @@
+ANDRIK CONTROL R487
+
+BASE: R486-R485-REMOVE-YA-EST-FROM-ALBUMS-SAFE-FULL
+
+ADDED
+1. Instagram Insights via Instagram API with Instagram Login.
+   - Worker secret: INSTAGRAM_ACCESS_TOKEN
+   - Optional variable: INSTAGRAM_API_VERSION (default v26.0)
+   - No Facebook Page is required for this Instagram path.
+   - Token is never placed in HTML/JS or returned by the control API.
+
+2. New owner endpoint: /api/control/social-overview
+   - Aligns Site (GA4), Instagram, and YouTube on the same 28 completed days.
+   - Returns daily views and 28-day totals.
+   - Instagram refreshes live when missing/stale; central snapshots also save it.
+
+3. Analytics UI: new “Общий график” card in Google Analytics page.
+   - Site / Instagram / YouTube totals
+   - Three-line daily graph
+   - Instagram reach, profile views, interactions
+   - Instagram also appears in the general connected-platform list after the first snapshot.
+   - Prepared to add TikTok / Facebook / Threads later.
+
+4. YouTube Studio range corrected to a true 28 completed days (was 27).
+
+5. Version bumped to R487; service worker cache version bumped to 55.00-r487.
+
+DEPLOYMENT NOTE
+After publishing the build, add the generated Instagram User Access Token in Cloudflare as a Worker/Pages secret named exactly:
+INSTAGRAM_ACCESS_TOKEN
+Do not place the token in source code.
+
+CACHE RESET
+/cache-reset-v55-00-final-r487.html

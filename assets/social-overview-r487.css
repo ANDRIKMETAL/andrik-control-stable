@@ -1,0 +1,29 @@
+/* ANDRIK R487 — unified 28-day Site + Instagram + YouTube chart. */
+.social-overview-r487-card{position:relative;overflow:hidden}
+.social-overview-r487-card::before{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle at 18% 4%,rgba(74,211,255,.07),transparent 34%),radial-gradient(circle at 84% 12%,rgba(232,84,255,.055),transparent 31%)}
+.social-overview-r487-card>.admin-card-title-row,.social-overview-r487-kpis,.social-overview-r487-chart,.social-overview-r487-meta{position:relative;z-index:1}
+.social-overview-r487-refresh{min-height:36px;padding:0 12px;border:1px solid rgba(136,207,238,.24);border-radius:999px;background:rgba(8,31,43,.78);color:#dff6ff;font:800 .72rem/1 system-ui;white-space:nowrap;cursor:pointer}
+.social-overview-r487-refresh:disabled{opacity:.55;cursor:default}
+.social-overview-r487-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin:14px 0 12px}
+.social-overview-r487-kpi{min-width:0;padding:12px 10px;border:1px solid rgba(125,192,220,.15);border-radius:17px;background:rgba(4,20,29,.72)}
+.social-overview-r487-kpi span{display:flex;align-items:center;gap:6px;color:#9fb6c2;font-size:.65rem;font-weight:850;letter-spacing:.04em;text-transform:uppercase}
+.social-overview-r487-kpi span::before{content:"";width:8px;height:8px;border-radius:50%;box-shadow:0 0 12px currentColor;background:currentColor}
+.social-overview-r487-kpi.is-site span{color:#63d8ff}.social-overview-r487-kpi.is-instagram span{color:#e77cff}.social-overview-r487-kpi.is-youtube span{color:#ff6576}
+.social-overview-r487-kpi strong{display:block;margin-top:6px;color:#f4fbff;font-size:clamp(1.12rem,4.1vw,1.48rem);line-height:1;font-weight:900;letter-spacing:-.035em}
+.social-overview-r487-kpi small{display:block;margin-top:5px;color:#8097a3;font-size:.61rem;line-height:1.25}
+.social-overview-r487-chart{min-height:250px;padding:8px 3px 0;border-top:1px solid rgba(133,195,222,.10)}
+.social-overview-r487-svg{display:block;width:100%;height:auto;min-height:232px;overflow:visible}
+.social-overview-r487-grid{stroke:rgba(147,190,211,.13);stroke-width:1;stroke-dasharray:4 6}
+.social-overview-r487-axis-label{fill:#7e98a6;font:700 10px/1 system-ui}
+.social-overview-r487-date-label{fill:#78909c;font:750 9.5px/1 system-ui}
+.social-overview-r487-path{fill:none;stroke-width:2.8;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 0 4px rgba(255,255,255,.08))}
+.social-overview-r487-path.is-site{stroke:#53d0ff}.social-overview-r487-path.is-instagram{stroke:#e66bff}.social-overview-r487-path.is-youtube{stroke:#ff5d70}
+.social-overview-r487-dot{stroke:#06131b;stroke-width:1.4}.social-overview-r487-dot.is-site{fill:#53d0ff}.social-overview-r487-dot.is-instagram{fill:#e66bff}.social-overview-r487-dot.is-youtube{fill:#ff5d70}
+.social-overview-r487-meta{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:9px;padding-top:10px;border-top:1px solid rgba(134,194,219,.10);color:#8298a4;font-size:.65rem;line-height:1.35}
+.social-overview-r487-meta strong{color:#b8ced9;font-weight:800}
+.social-overview-r487-instagram-extra{display:flex;flex-wrap:wrap;gap:6px 12px;margin-top:9px;color:#a9bec8;font-size:.67rem}
+.social-overview-r487-instagram-extra b{color:#f1f8fb}
+.social-overview-r487-warning{margin-top:10px;padding:9px 11px;border:1px solid rgba(255,188,86,.20);border-radius:13px;background:rgba(73,47,7,.28);color:#ffdca0;font-size:.68rem;line-height:1.4}
+.social-overview-r487-empty{min-height:220px;display:grid;place-items:center;color:#91a8b4;text-align:center;padding:24px}
+@media(max-width:430px){.social-overview-r487-kpis{gap:6px}.social-overview-r487-kpi{padding:10px 8px;border-radius:15px}.social-overview-r487-kpi span{font-size:.57rem}.social-overview-r487-kpi strong{font-size:1.05rem}.social-overview-r487-chart{min-height:220px}.social-overview-r487-svg{min-height:205px}.social-overview-r487-meta{align-items:flex-start;flex-direction:column}}
+@media(orientation:landscape){.social-overview-r487-card{max-width:900px;margin-left:auto;margin-right:auto}.social-overview-r487-chart{min-height:230px}.social-overview-r487-svg{max-height:270px}}
