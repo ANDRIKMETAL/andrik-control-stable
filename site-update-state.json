@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787075983143-903cd713d7",
-  "release": "R507",
-  "archiveName": "R507-FOUR-SOCIAL-CARDS-NO-FACEBOOK-MAP-GRAPH-SAFE-FULL.zip",
-  "sourceHead": "ba0914ecb3020b9160b68289a94d7bb9e2edd989",
-  "backupSha": "ba0914ecb3020b9160b68289a94d7bb9e2edd989",
-  "backupTag": "control-backup-20260818175937-ba0914e-r507-436bb",
+  "operationId": "publish-1787076621046-25d55a3389",
+  "release": "R508",
+  "archiveName": "R508-TIKTOK-TOGGLE-ONE-LINE-GRAPH-UP-SAFE-FULL.zip",
+  "sourceHead": "a57db2dc9417030a5839ce7f9fd5cfae294ab7dd",
+  "backupSha": "a57db2dc9417030a5839ce7f9fd5cfae294ab7dd",
+  "backupTag": "control-backup-20260818181015-a57db2d-r508-2a4e9",
   "autoRecovery": true,
-  "generatedAt": "2026-08-18T17:59:43.143Z"
+  "generatedAt": "2026-08-18T18:10:21.046Z"
 }
