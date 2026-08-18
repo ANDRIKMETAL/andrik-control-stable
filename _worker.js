@@ -6307,7 +6307,7 @@ async function handleYoutubeOAuthCallback(request, env, ctx) {
 
   // Root is the installed ANDRIK Control start page. Android can hand this
   // navigation directly to the Control PWA after Google closes the consent flow.
-  return Response.redirect('https://control.andrikmetal.com/social-center-admin.html?youtube=connected&v=55.00-r504', 302);
+  return Response.redirect('https://control.andrikmetal.com/social-center-admin.html?youtube=connected&v=55.00-r505', 302);
 }
 
 async function handleYoutubeOAuthDisconnect(request, env) {
@@ -6632,7 +6632,7 @@ async function handleTikTokOAuthCallbackR503(request, env) {
   const config = tiktokOAuthClientR503(env,mode);
   const oauthError = cleanPlainText(url.searchParams.get('error') || '',160);
   const description = cleanPlainText(url.searchParams.get('error_description') || '',260);
-  const back=`https://control.andrikmetal.com/social-center-admin.html?tiktok_mode=${encodeURIComponent(mode)}&v=55.00-r504`;
+  const back=`https://control.andrikmetal.com/social-center-admin.html?tiktok_mode=${encodeURIComponent(mode)}&v=55.00-r505`;
   if (oauthError) return Response.redirect(`${back}&tiktok=denied&reason=${encodeURIComponent(description || oauthError)}`,302);
   const code = String(url.searchParams.get('code') || '');
   if (!config.configured || !code) {

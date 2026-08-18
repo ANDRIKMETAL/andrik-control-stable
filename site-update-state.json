@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787069461952-f7d60e7956",
-  "release": "R504",
-  "archiveName": "R504-COMPACT-SOCIAL-CENTER-TIKTOK-SAFE-REFRESH-SAFE-FULL.zip",
-  "sourceHead": "910bbe1ce4bdc3935561bc71b588fbc77aa0879e",
-  "backupSha": "910bbe1ce4bdc3935561bc71b588fbc77aa0879e",
-  "backupTag": "control-backup-20260818161055-910bbe1-r504-7c5ca",
+  "operationId": "publish-1787070046482-90f710fd7c",
+  "release": "R505",
+  "archiveName": "R505-INSTAGRAM-REAL-METRICS-NO-TIKTOK-MAP-SAFE-FULL.zip",
+  "sourceHead": "c6ca931c613b5e96091f18b895343626dee69b85",
+  "backupSha": "c6ca931c613b5e96091f18b895343626dee69b85",
+  "backupTag": "control-backup-20260818162040-c6ca931-r505-21c78",
   "autoRecovery": true,
-  "generatedAt": "2026-08-18T16:11:01.952Z"
+  "generatedAt": "2026-08-18T16:20:46.482Z"
 }
