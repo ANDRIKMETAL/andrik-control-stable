@@ -1,4 +1,4 @@
-ANDRIK R500 — PUBLIC PRIVACY & TERMS
+ANDRIK R501 — PUBLIC PRIVACY & TERMS
 Base: R499 COMPACT MAP CORNER CONTROLS
 
 ADDED
@@ -8,8 +8,8 @@ ADDED
 - Privacy page documents optional TikTok OAuth/analytics data, website analytics, comments and push notifications.
 - Terms page documents ANDRIK Control social integrations and third-party platform dependency.
 - Legal pages added to the public service-worker core cache and sitemap discovery.
-- Service Worker generation bumped to 55.00-r500.
-- Control release metadata/display bumped to R500.
+- Service Worker generation bumped to 55.00-r501.
+- Control release metadata/display bumped to R501.
 
 TIKTOK APP FIELDS AFTER DEPLOY
 Privacy Policy URL: https://andrikmetal.com/privacy.html

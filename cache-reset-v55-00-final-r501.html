@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#03070b">
-<title>ANDRIK — очистка сайта R500</title>
+<title>ANDRIK — очистка сайта R499</title>
 <style>
 *{box-sizing:border-box}
 body{margin:0;min-height:100vh;display:grid;place-items:center;padding:20px;background:#03070b;color:#f4fbff;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
@@ -32,22 +32,22 @@ small{display:block;margin-top:12px;color:#607b87}
 </head>
 <body>
 <main class="box">
-<span class="badge">SITE RESET · R500</span>
+<span class="badge">SITE RESET · R499</span>
 <h1 id="title">Очищаем сайт ANDRIK</h1>
 <p>Эта страница удаляет старый кэш сайта и старый Service Worker. Автоматического перехода нет.</p>
 <div class="bar"><span id="bar"></span></div>
 <div class="steps">
   <div class="step" id="caches"><span class="dot"></span><span>Удаление Cache Storage</span></div>
   <div class="step" id="workers"><span class="dot"></span><span>Удаление старого Service Worker сайта</span></div>
-  <div class="step" id="network"><span class="dot"></span><span>Загрузка R500 напрямую с сервера</span></div>
-  <div class="step" id="freshsw"><span class="dot"></span><span>Установка нового Service Worker R500</span></div>
+  <div class="step" id="network"><span class="dot"></span><span>Загрузка R499 напрямую с сервера</span></div>
+  <div class="step" id="freshsw"><span class="dot"></span><span>Установка нового Service Worker R499</span></div>
 </div>
 <div class="result" id="result">Подготовка…</div>
 <div class="buttons">
 <a class="btn site" id="site" href="/">Открыть свежий сайт</a>
 <a class="btn clips" id="clips" href="/social-center-admin.html">Открыть Центр соцсетей</a>
 </div>
-<small>После очистки Control откроет R500 без старого кэша. Кнопка справа ведёт прямо в новый «Центр соцсетей».</small>
+<small>После очистки Control откроет R499 без старого кэша. Кнопка справа ведёт прямо в новый «Центр соцсетей».</small>
 </main>
 <script>
 (async()=>{
@@ -98,9 +98,9 @@ try{
     '/assets/social-center-r498.js?fresh='+stamp,
     '/assets/ecosystem-map-r498.css?fresh='+stamp,
     '/assets/ecosystem-map-r498.js?fresh='+stamp,
-    '/assets/control-version-sync-r500.js?fresh='+stamp,
-    '/assets/map-controls-compact-r499.css?v=55.00-r500&fresh='+stamp,
-    '/service-worker.js?v=55.00-r500&fresh='+stamp
+    '/assets/control-version-sync-r499.js?fresh='+stamp,
+    '/assets/map-controls-compact-r499.css?fresh='+stamp,
+    '/service-worker.js?v=55.00-r499&fresh='+stamp
   ];
   const rs=await Promise.allSettled(urls.map(u=>fetch(u,{
     cache:'no-store',
@@ -112,13 +112,13 @@ try{
 
   run('freshsw'); bar.style.width='86%';
   if('serviceWorker' in navigator){
-    const reg=await navigator.serviceWorker.register('/service-worker.js?v=55.00-r500',{scope:'/',updateViaCache:'none'});
+    const reg=await navigator.serviceWorker.register('/service-worker.js?v=55.00-r499',{scope:'/',updateViaCache:'none'});
     await reg.update().catch(()=>{});
     try{await navigator.serviceWorker.ready}catch(_){}
   }
   done('freshsw'); bar.style.width='100%';
 
-  title.textContent='R500 загружена';
+  title.textContent='R499 загружена';
   result.className='result ok';
   result.textContent=`Готово. Удалено кэшей: ${deleted}. Старых Worker: ${removed}. Ошибок свежей загрузки: ${failures}.`;
   site.href='/?fresh='+stamp;
