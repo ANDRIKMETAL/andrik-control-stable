@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R502', number:502, version:'55.00', full:'55.00 LIVE WEB AI FINAL R502', siteUpdater:'55.00-r356' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R506', number:506, version:'55.00', full:'55.00 LIVE WEB AI FINAL R506', siteUpdater:'55.00-r356' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -6307,7 +6307,7 @@ async function handleYoutubeOAuthCallback(request, env, ctx) {
 
   // Root is the installed ANDRIK Control start page. Android can hand this
   // navigation directly to the Control PWA after Google closes the consent flow.
-  return Response.redirect('https://control.andrikmetal.com/social-center-admin.html?youtube=connected&v=55.00-r505', 302);
+  return Response.redirect('https://control.andrikmetal.com/social-center-admin.html?youtube=connected&v=55.00-r506', 302);
 }
 
 async function handleYoutubeOAuthDisconnect(request, env) {
@@ -6632,7 +6632,7 @@ async function handleTikTokOAuthCallbackR503(request, env) {
   const config = tiktokOAuthClientR503(env,mode);
   const oauthError = cleanPlainText(url.searchParams.get('error') || '',160);
   const description = cleanPlainText(url.searchParams.get('error_description') || '',260);
-  const back=`https://control.andrikmetal.com/social-center-admin.html?tiktok_mode=${encodeURIComponent(mode)}&v=55.00-r505`;
+  const back=`https://control.andrikmetal.com/social-center-admin.html?tiktok_mode=${encodeURIComponent(mode)}&v=55.00-r506`;
   if (oauthError) return Response.redirect(`${back}&tiktok=denied&reason=${encodeURIComponent(description || oauthError)}`,302);
   const code = String(url.searchParams.get('code') || '');
   if (!config.configured || !code) {
@@ -8858,16 +8858,16 @@ async function fetchInstagramMediaCountsR491(env, accountId, startDate, endDate)
     const items = allItems.filter(item => {
       const stamp = cleanPlainText(item?.timestamp || '', 40).slice(0,10);
       return /^\d{4}-\d{2}-\d{2}$/.test(stamp) && stamp >= startDate && stamp <= endDate;
-    }).slice(0, 50);
+    }).slice(0, 24);
     let likes = 0, comments = 0;
     for (const item of items) {
       likes += Math.max(0, Number(item?.like_count || 0));
       comments += Math.max(0, Number(item?.comments_count || 0));
     }
 
-    // R491: Meta exposes media-level shares, saved and total_interactions.
-    // Query each recent media object once, in small batches, so one unsupported
-    // media item cannot blank the rest of the 28-day engagement summary.
+    // R506: keep media-level Insights under the Workers Free subrequest ceiling.
+    // Daily/monthly Instagram Insights already consume multiple requests, so cap
+    // media-level shares/saved/interaction probes at 24 recent items.
     let shares = 0, saves = 0, totalInteractions = 0;
     let sharesSamples = 0, savesSamples = 0, interactionSamples = 0, failedInsights = 0;
     const batchSize = 6;
@@ -9102,6 +9102,139 @@ async function fetchInstagramAnalytics(env) {
   };
 }
 
+
+function facebookConfigR506(env) {
+  const token = String(env.FACEBOOK_PAGE_ACCESS_TOKEN || env.META_PAGE_ACCESS_TOKEN || env.FACEBOOK_ACCESS_TOKEN || '').trim();
+  const pageId = cleanPlainText(env.FACEBOOK_PAGE_ID || env.META_PAGE_ID || '', 100);
+  const pageName = cleanPlainText(env.FACEBOOK_PAGE_NAME || env.META_PAGE_NAME || 'Андрик Гвоздь', 160);
+  let version = cleanPlainText(env.FACEBOOK_GRAPH_VERSION || 'v26.0', 20);
+  if (!/^v\d+\.\d+$/i.test(version)) version = 'v26.0';
+  return { token, pageId, pageName, version, configured:Boolean(token && pageId) };
+}
+
+async function facebookGraphGetR506(env, path, params = {}, timeoutMs = 9000) {
+  const config = facebookConfigR506(env);
+  if (!config.configured) throw new Error('facebook-page-token-not-configured');
+  const safePath = String(path || '').replace(/^\/+/, '');
+  const url = new URL(`https://graph.facebook.com/${config.version}/${safePath}`);
+  Object.entries(params || {}).forEach(([key,value]) => {
+    if (value !== undefined && value !== null && value !== '') url.searchParams.set(key, String(value));
+  });
+  const response = await fetchWithAbortTimeoutR409(url.toString(), {
+    headers:{ authorization:`Bearer ${config.token}`, accept:'application/json' }
+  }, timeoutMs, 'facebook-api-timeout');
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data?.error?.message || `facebook-api-${response.status}`);
+  return data;
+}
+
+function facebookInsightTrendR506(payload, metricName = '') {
+  const item = (Array.isArray(payload?.data) ? payload.data : []).find(row => String(row?.name || '') === metricName) || payload?.data?.[0] || {};
+  return (Array.isArray(item?.values) ? item.values : []).map(entry => ({
+    day:cleanPlainText(entry?.end_time || '', 40).slice(0,10),
+    value:Number(entry?.value || 0)
+  })).filter(row => /^\d{4}-\d{2}-\d{2}$/.test(row.day) && Number.isFinite(row.value));
+}
+
+function facebookSummaryCountR506(value) {
+  const direct = value?.summary?.total_count;
+  if (Number.isFinite(Number(direct))) return Math.max(0, Number(direct));
+  if (Number.isFinite(Number(value?.count))) return Math.max(0, Number(value.count));
+  return 0;
+}
+
+async function fetchFacebookPublishedPostsR506(env, pageId, startDate, today) {
+  const fields = 'id,created_time,reactions.limit(0).summary(true),comments.limit(0).summary(true),shares';
+  let payload;
+  try {
+    payload = await facebookGraphGetR506(env, `${pageId}/published_posts`, { fields, since:startDate, until:today, limit:100 }, 9500);
+  } catch (firstError) {
+    try {
+      payload = await facebookGraphGetR506(env, `${pageId}/posts`, { fields, since:startDate, until:today, limit:100 }, 9500);
+    } catch (_) { throw firstError; }
+  }
+  const posts = Array.isArray(payload?.data) ? payload.data : [];
+  let reactions=0, comments=0, shares=0;
+  for (const post of posts) {
+    reactions += facebookSummaryCountR506(post?.reactions);
+    comments += facebookSummaryCountR506(post?.comments);
+    shares += Math.max(0, Number(post?.shares?.count || 0));
+  }
+  return { posts:posts.length, reactions, comments, shares };
+}
+
+async function fetchFacebookAnalyticsR506(env) {
+  const config = facebookConfigR506(env);
+  if (!config.configured) return { configured:false, connected:false, error:'FACEBOOK_PAGE_ACCESS_TOKEN или FACEBOOK_PAGE_ID не настроены' };
+  const today = getBratislavaClock().date;
+  const endDate = shiftIsoCalendarDate(today, -1);
+  const startDate = shiftIsoCalendarDate(endDate, -27);
+  const partialErrors = [];
+
+  const profile = await facebookGraphGetR506(env, config.pageId, { fields:'id,name,followers_count,fan_count,link' }, 8500);
+  const pageId = cleanPlainText(profile?.id || config.pageId, 100);
+  const pageName = cleanPlainText(profile?.name || config.pageName || 'Facebook', 160);
+
+  const candidates = [
+    {key:'reach', metric:'page_impressions_unique', label:'охват'},
+    {key:'views', metric:'page_views_total', label:'просмотры страницы'},
+    {key:'interactions', metric:'page_post_engagements', label:'взаимодействия'}
+  ];
+  const metricResults = await Promise.allSettled(candidates.map(item =>
+    facebookGraphGetR506(env, `${pageId}/insights`, { metric:item.metric, period:'day', since:startDate, until:today }, 9000)
+  ));
+  const maps = {};
+  const availability = {};
+  metricResults.forEach((result,index) => {
+    const item=candidates[index];
+    const rows=result.status==='fulfilled' ? facebookInsightTrendR506(result.value,item.metric) : [];
+    availability[item.key]=result.status==='fulfilled' && rows.length>0;
+    maps[item.key]=new Map(rows.map(row=>[row.day,Math.max(0,Number(row.value||0))]));
+    if(result.status==='rejected')partialErrors.push(`${item.metric}: ${cleanPlainText(result.reason?.message || result.reason,180)}`);
+  });
+
+  const trend=[];
+  for (let day=startDate; day<=endDate; day=shiftIsoCalendarDate(day,1)) {
+    trend.push({
+      day,
+      reach:availability.reach ? Number(maps.reach?.get(day)||0) : null,
+      views:availability.views ? Number(maps.views?.get(day)||0) : null,
+      interactions:availability.interactions ? Number(maps.interactions?.get(day)||0) : null
+    });
+  }
+  const sumField = field => trend.reduce((sum,row)=>sum+(row?.[field]!==null&&row?.[field]!==undefined&&Number.isFinite(Number(row[field]))?Math.max(0,Number(row[field])):0),0);
+
+  let postCounts={posts:null,reactions:null,comments:null,shares:null};
+  try {
+    const counts=await fetchFacebookPublishedPostsR506(env,pageId,startDate,today);
+    postCounts={posts:counts.posts,reactions:counts.reactions,comments:counts.comments,shares:counts.shares};
+  } catch (error) { partialErrors.push(`posts: ${cleanPlainText(error?.message || error,180)}`); }
+
+  let metricKey='interactions', metricLabel='взаимодействия';
+  if (availability.reach) { metricKey='reach'; metricLabel='охват'; }
+  else if (availability.views) { metricKey='views'; metricLabel='просмотры страницы'; }
+  const total = availability[metricKey] ? sumField(metricKey) : null;
+
+  return {
+    configured:true, connected:true, pageId, pageName, profileUrl:cleanPlainText(profile?.link || '',700),
+    startDate,endDate,metricKey,metricLabel,total,
+    summary:{
+      followers:Number.isFinite(Number(profile?.followers_count))?Math.max(0,Number(profile.followers_count)):null,
+      fans:Number.isFinite(Number(profile?.fan_count))?Math.max(0,Number(profile.fan_count)):null,
+      reach:availability.reach?sumField('reach'):null,
+      views:availability.views?sumField('views'):null,
+      interactions:availability.interactions?sumField('interactions'):null,
+      posts:postCounts.posts,reactions:postCounts.reactions,comments:postCounts.comments,shares:postCounts.shares
+    },
+    summaryAvailability:{
+      followers:Number.isFinite(Number(profile?.followers_count)),fans:Number.isFinite(Number(profile?.fan_count)),
+      reach:Boolean(availability.reach),views:Boolean(availability.views),interactions:Boolean(availability.interactions),
+      posts:postCounts.posts!==null,reactions:postCounts.reactions!==null,comments:postCounts.comments!==null,shares:postCounts.shares!==null
+    },
+    trend, partialErrors, updatedAt:new Date().toISOString()
+  };
+}
+
 function normalizeSocialDayR487(value) {
   const raw = cleanPlainText(value || '', 40);
   if (/^\d{8}$/.test(raw)) return `${raw.slice(0,4)}-${raw.slice(4,6)}-${raw.slice(6,8)}`;
@@ -9145,8 +9278,11 @@ async function handleControlSocialOverviewR487(request, env) {
   await ensurePlatformAnalyticsSchema(db);
   const requestUrlR503 = new URL(request.url);
   const refresh = requestUrlR503.searchParams.get('refresh') === '1';
+  const fastR506 = requestUrlR503.searchParams.get('fast') === '1';
   const refreshSourceR504 = cleanPlainText(requestUrlR503.searchParams.get('refresh_source') || '',40).toLowerCase();
   const onlyTikTokRefreshR504 = refreshSourceR504 === 'tiktok';
+  const sourceWantedR506 = source => !refreshSourceR504 || refreshSourceR504 === source;
+  const forceSourceR506 = source => refresh || refreshSourceR504 === source;
   const tiktokModeR503 = normalizeTikTokModeR503(requestUrlR503.searchParams.get('tiktok_mode'));
   const tiktokSnapshotR503 = tiktokSnapshotPlatformR503(tiktokModeR503);
   let [gaRow, ytRow, igRow, fbRow, ttRow] = await Promise.all([
@@ -9167,7 +9303,7 @@ async function handleControlSocialOverviewR487(request, env) {
 
   // R504: keep external refreshes separated on the Workers Free plan. TikTok
   // refreshes alone; GA/YouTube/Instagram never share the same forced invocation with it.
-  const shouldRefreshGoogleR504 = !onlyTikTokRefreshR504 && (refresh || !gaRow || latestSnapshotAgeMinutesR487(gaRow) > 30 || !Array.isArray(google?.trend) || !google.trend.length);
+  const shouldRefreshGoogleR504 = !fastR506 && sourceWantedR506('site') && (forceSourceR506('site') || !gaRow || latestSnapshotAgeMinutesR487(gaRow) > 30 || !Array.isArray(google?.trend) || !google.trend.length);
   if (shouldRefreshGoogleR504) {
     try {
       const live = await fetchGoogleSiteAnalytics(env);
@@ -9186,7 +9322,7 @@ async function handleControlSocialOverviewR487(request, env) {
   }
 
   const previousStudio = youtube?.studio || {};
-  const shouldRefreshYoutube = !onlyTikTokRefreshR504 && (refresh || !ytRow || latestSnapshotAgeMinutesR487(ytRow) > 30 || !previousStudio?.connected || !Array.isArray(previousStudio?.trend) || !previousStudio.trend.length);
+  const shouldRefreshYoutube = !fastR506 && sourceWantedR506('youtube') && (forceSourceR506('youtube') || !ytRow || latestSnapshotAgeMinutesR487(ytRow) > 30 || !previousStudio?.connected || !Array.isArray(previousStudio?.trend) || !previousStudio.trend.length);
   if (shouldRefreshYoutube) {
     try {
       const studio = await fetchYouTubeStudioAnalytics(env);
@@ -9217,7 +9353,7 @@ async function handleControlSocialOverviewR487(request, env) {
     } catch (error) { liveErrors.youtube = cleanPlainText(error?.message || error, 300); }
   }
 
-  const shouldRefreshInstagramR504 = !onlyTikTokRefreshR504 && igConfig.configured && (refresh || !igRow || latestSnapshotAgeMinutesR487(igRow) > 30 || !instagram?.connected || !Array.isArray(instagram?.trend));
+  const shouldRefreshInstagramR504 = !fastR506 && sourceWantedR506('instagram') && igConfig.configured && (forceSourceR506('instagram') || !igRow || latestSnapshotAgeMinutesR487(igRow) > 30 || !instagram?.connected || !Array.isArray(instagram?.trend));
   if (shouldRefreshInstagramR504) {
     try {
       const live = await fetchInstagramAnalytics(env);
@@ -9230,9 +9366,23 @@ async function handleControlSocialOverviewR487(request, env) {
   if (!instagram?.configured && !igConfig.configured) instagram = { configured:false, connected:false, error:'INSTAGRAM_ACCESS_TOKEN не настроен' };
   if (liveErrors.instagram && !instagram?.connected) instagram = { ...instagram, configured:igConfig.configured, connected:false, error:liveErrors.instagram };
 
+  const fbConfigR506 = facebookConfigR506(env);
+  const shouldRefreshFacebookR506 = !fastR506 && sourceWantedR506('facebook') && fbConfigR506.configured && (forceSourceR506('facebook') || !fbRow || latestSnapshotAgeMinutesR487(fbRow) > 30 || !facebook?.connected || !Array.isArray(facebook?.trend));
+  if (shouldRefreshFacebookR506) {
+    try {
+      const live = await fetchFacebookAnalyticsR506(env);
+      if (live?.configured) {
+        await savePlatformSnapshot(db,'facebook',live,forceSourceR506('facebook')?'manual-social-center-r506':'social-center-r506');
+        facebook=live; fbRow={created_at:live.updatedAt || new Date().toISOString()};
+      }
+    } catch (error) { liveErrors.facebook=cleanPlainText(error?.message || error,300); }
+  }
+  if (!facebook?.configured && !fbConfigR506.configured) facebook={configured:false,connected:false,error:'FACEBOOK_PAGE_ACCESS_TOKEN не настроен'};
+  if (liveErrors.facebook && !facebook?.connected) facebook={...facebook,configured:fbConfigR506.configured,connected:false,error:liveErrors.facebook};
+
   const tiktokAuthR503 = await tiktokOAuthStatusR503(env,tiktokModeR503).catch(()=>({mode:tiktokModeR503,availableModes:tiktokAvailableModesR503(env),configured:tiktokOAuthClientR503(env,tiktokModeR503).configured,connected:false,scope:''}));
-  const otherExternalRefreshR504 = shouldRefreshGoogleR504 || shouldRefreshYoutube || shouldRefreshInstagramR504;
-  const shouldRefreshTikTokR504 = tiktokAuthR503.connected && (onlyTikTokRefreshR504 || (!otherExternalRefreshR504 && (refresh || !ttRow || latestSnapshotAgeMinutesR487(ttRow) > 30 || !tiktok?.connected)));
+  const otherExternalRefreshR504 = shouldRefreshGoogleR504 || shouldRefreshYoutube || shouldRefreshInstagramR504 || shouldRefreshFacebookR506;
+  const shouldRefreshTikTokR504 = !fastR506 && sourceWantedR506('tiktok') && tiktokAuthR503.connected && (forceSourceR506('tiktok') || (!otherExternalRefreshR504 && (!ttRow || latestSnapshotAgeMinutesR487(ttRow) > 30 || !tiktok?.connected)));
   if (shouldRefreshTikTokR504) {
     try {
       const live = await fetchTikTokAnalyticsR503(env,tiktokModeR503);
@@ -9283,7 +9433,8 @@ async function handleControlSocialOverviewR487(request, env) {
     const field = fields.find(name=>row?.[name]!==null&&row?.[name]!==undefined&&Number.isFinite(Number(row[name])));
     return [day, field ? Math.max(0,Number(row[field])) : null];
   }).filter(([day,value])=>day&&value!==null));
-  const fbMapR498 = genericTrendMapR498(facebook,['views','reach','impressions','interactions']);
+  const fbPreferredFieldsR506 = [facebook?.metricKey,'reach','views','interactions','impressions'].filter(Boolean);
+  const fbMapR498 = genericTrendMapR498(facebook,fbPreferredFieldsR506);
   const tiktokDailyR503 = await getTikTokDailyTrendR503(db,startDate,endDate,tiktokModeR503);
   const ttMapR498 = new Map(tiktokDailyR503.map(row=>[row.day,Math.max(0,Number(row.views||0))]));
   const facebookReady = Boolean(facebook?.connected && fbMapR498.size);
@@ -9327,9 +9478,10 @@ async function handleControlSocialOverviewR487(request, env) {
         summary:instagram?.summary || {}, summaryAvailability:instagram?.summaryAvailability || {}, summarySource:instagram?.summarySource || {}, mediaCounts:instagram?.mediaCounts || {}, partialErrors:instagram?.partialErrors || [], error:instagram?.error || liveErrors.instagram || ''
       },
       facebook:{
-        configured:Boolean(env.FACEBOOK_PAGE_ACCESS_TOKEN || env.META_PAGE_ACCESS_TOKEN || env.FACEBOOK_ACCESS_TOKEN || facebook?.configured), connected:facebookReady, trendConnected:facebookReady,
-        name:'Facebook', pageName:cleanPlainText(facebook?.pageName || facebook?.name || 'ANDRIK',120), profileUrl:cleanPlainText(facebook?.profileUrl || '',700), metricLabel:cleanPlainText(facebook?.metricLabel || 'охват/взаимодействия',80),
-        source:'Facebook Page Insights', updatedAt:fbRow?.created_at || facebook?.updatedAt || '', error:cleanPlainText(facebook?.error || '',220)
+        configured:Boolean(fbConfigR506.configured || facebook?.configured), connected:Boolean(facebook?.connected), trendConnected:facebookReady,
+        name:'Facebook', pageId:cleanPlainText(facebook?.pageId || fbConfigR506.pageId || '',100), pageName:cleanPlainText(facebook?.pageName || facebook?.name || fbConfigR506.pageName || 'ANDRIK',120), profileUrl:cleanPlainText(facebook?.profileUrl || '',700), metricLabel:cleanPlainText(facebook?.metricLabel || 'взаимодействия',80),
+        metricKey:cleanPlainText(facebook?.metricKey || 'interactions',40), source:'Facebook Page Insights', updatedAt:fbRow?.created_at || facebook?.updatedAt || '',
+        summary:facebook?.summary || {}, summaryAvailability:facebook?.summaryAvailability || {}, partialErrors:Array.isArray(facebook?.partialErrors)?facebook.partialErrors:[], error:cleanPlainText(liveErrors.facebook || facebook?.error || '',220)
       },
       tiktok:{
         mode:tiktokModeR503, availableModes:tiktokAuthR503.availableModes || tiktokAvailableModesR503(env),
@@ -9340,7 +9492,7 @@ async function handleControlSocialOverviewR487(request, env) {
         error:cleanPlainText(liveErrors.tiktok || tiktok?.error || '',220), partialErrors:Array.isArray(tiktok?.partialErrors)?tiktok.partialErrors:[]
       }
     },
-    diagnostics:{ refresh, refreshSource:refreshSourceR504, liveErrors, tiktokMode:tiktokModeR503, tiktokSnapshot:tiktokSnapshotR503 },
+    diagnostics:{ refresh, fast:fastR506, refreshSource:refreshSourceR504, liveErrors, tiktokMode:tiktokModeR503, tiktokSnapshot:tiktokSnapshotR503 },
     updatedAt:new Date().toISOString()
   });
 }
@@ -15867,7 +16019,7 @@ async function routeApi(request, env, ctx) {
 function controlRecoveryServiceWorkerSource() {
   return [
     "'use strict';",
-    "const VERSION='54.95';",
+    "const VERSION='55.00-r506';",
     "async function clearCaches(){if(!self.caches)return;const keys=await caches.keys();await Promise.all(keys.filter(name=>name.startsWith('andrik-control-')||name.startsWith('andrik-site-')).map(name=>caches.delete(name)));}",
     "self.addEventListener('install',event=>event.waitUntil(self.skipWaiting()));",
     "self.addEventListener('activate',event=>event.waitUntil((async()=>{await clearCaches();await self.clients.claim();})()));",
@@ -15877,7 +16029,7 @@ function controlRecoveryServiceWorkerSource() {
 }
 
 function controlRecoveryPage() {
-  return `<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#02060a"><meta name="robots" content="noindex,nofollow"><title>Восстановление Control ANDRIK</title><style>*{box-sizing:border-box}html,body{min-height:100%;margin:0;background:#02060a;color:#eff8ff;font-family:system-ui,-apple-system,Segoe UI,sans-serif}body{display:grid;place-items:center;padding:22px}.c{width:min(100%,520px);padding:30px 22px;border:1px solid #244455;border-radius:28px;background:linear-gradient(#081923,#030c13);text-align:center}.e{font-size:58px}h1{font-size:clamp(30px,8vw,44px);margin:12px 0}.s{color:#abc0cc;line-height:1.55}.b{display:inline-flex;min-height:54px;align-items:center;justify-content:center;margin-top:20px;padding:0 22px;border:1px solid #315b70;border-radius:999px;color:#eff8ff;text-decoration:none;font-weight:800;background:#0a2432}</style></head><body><main class="c"><div class="e">🟢</div><h1>Восстанавливаем Control</h1><p class="s" id="s">Заменяем старый перехват страниц безопасной версией…</p><a class="b" id="b" href="/control-home.html?page=menu&source=recovery&v=55.00-r457" hidden>Открыть Control</a></main><script>(async()=>{const s=document.getElementById('s'),b=document.getElementById('b'),go='/control-home.html?page=menu&source=recovery&v=55.00-r457&t='+Date.now();b.href=go;try{if('caches'in window){const k=await caches.keys();await Promise.all(k.filter(n=>n.startsWith('andrik-control-')||n.startsWith('andrik-site-')).map(n=>caches.delete(n)))}if('serviceWorker'in navigator){const r=await navigator.serviceWorker.register('/service-worker.js?v=54.96-control-recovery',{scope:'/',updateViaCache:'none'});if(r.installing)r.installing.postMessage({type:'SKIP_WAITING'});if(r.waiting)r.waiting.postMessage({type:'SKIP_WAITING'});await r.update().catch(()=>{});await new Promise(x=>setTimeout(x,1200))}s.textContent='Готово. Открываем админ-панель…';s.style.color='#bfffd9';b.hidden=false;setTimeout(()=>location.replace(go),650)}catch(e){s.textContent='Нажмите кнопку ниже. '+String(e&&e.message||e);s.style.color='#ffb9b9';b.hidden=false}})();</script></body></html>`;
+  return `<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#02060a"><meta name="robots" content="noindex,nofollow"><title>Восстановление Control ANDRIK</title><style>*{box-sizing:border-box}html,body{min-height:100%;margin:0;background:#02060a;color:#eff8ff;font-family:system-ui,-apple-system,Segoe UI,sans-serif}body{display:grid;place-items:center;padding:22px}.c{width:min(100%,520px);padding:30px 22px;border:1px solid #244455;border-radius:28px;background:linear-gradient(#081923,#030c13);text-align:center}.e{font-size:58px}h1{font-size:clamp(30px,8vw,44px);margin:12px 0}.s{color:#abc0cc;line-height:1.55}.b{display:inline-flex;min-height:54px;align-items:center;justify-content:center;margin-top:20px;padding:0 22px;border:1px solid #315b70;border-radius:999px;color:#eff8ff;text-decoration:none;font-weight:800;background:#0a2432}</style></head><body><main class="c"><div class="e">🟢</div><h1>Восстанавливаем Control</h1><p class="s" id="s">Заменяем старый перехват страниц безопасной версией…</p><a class="b" id="b" href="/control-home.html?page=menu&source=recovery&v=55.00-r506" hidden>Открыть Control</a></main><script>(async()=>{const s=document.getElementById('s'),b=document.getElementById('b'),go='/control-home.html?page=menu&source=recovery&v=55.00-r506&t='+Date.now();b.href=go;try{if('caches'in window){const k=await caches.keys();await Promise.all(k.filter(n=>n.startsWith('andrik-control-')||n.startsWith('andrik-site-')).map(n=>caches.delete(n)))}if('serviceWorker'in navigator){const r=await navigator.serviceWorker.register('/service-worker.js?v=55.00-r506-control-recovery',{scope:'/',updateViaCache:'none'});if(r.installing)r.installing.postMessage({type:'SKIP_WAITING'});if(r.waiting)r.waiting.postMessage({type:'SKIP_WAITING'});await r.update().catch(()=>{});await new Promise(x=>setTimeout(x,1200))}s.textContent='Готово. Открываем админ-панель…';s.style.color='#bfffd9';b.hidden=false;setTimeout(()=>location.replace(go),650)}catch(e){s.textContent='Нажмите кнопку ниже. '+String(e&&e.message||e);s.style.color='#ffb9b9';b.hidden=false}})();</script></body></html>`;
 }
 
 

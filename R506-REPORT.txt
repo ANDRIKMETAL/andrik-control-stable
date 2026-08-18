@@ -1,0 +1,13 @@
+ANDRIK R506 — FAST SOCIAL CENTER + FACEBOOK PAGE INSIGHTS
+
+Base: R505.
+
+Changes:
+- Facebook Page API wired to FACEBOOK_PAGE_ACCESS_TOKEN / FACEBOOK_PAGE_ID / FACEBOOK_PAGE_NAME / FACEBOOK_GRAPH_VERSION.
+- Facebook followers, Page likes, daily Page Insights and post reactions/comments/shares when available.
+- Social Center renders cached data immediately; fast=1 reads D1 only and never waits for external APIs.
+- Background refresh runs each source in a separate Worker invocation to avoid Cloudflare subrequest spikes.
+- Manual refresh also updates sources sequentially while current numbers remain visible.
+- Facebook detail panel is hidden until the first successful snapshot; setup panel disappears after connection.
+- Facebook map button hides automatically if Meta does not provide geography, preventing an empty map.
+- TikTok remains analytics-only (no geography layer).
