@@ -1,0 +1,12 @@
+ANDRIK R499 — COMPACT MAP CORNER CONTROLS
+Base: R498 SOCIAL MAP FOUNDATION
+
+FIXED
+- Portrait map orientation button reduced from 52px to 38px.
+- Portrait 7-day growth button reduced from 52px to 38px.
+- Left/right offsets tightened to 8px and bottom aligned at 14px.
+- Both controls now clear the central ecosystem-layer switcher.
+- Visual icon/font sizes reduced proportionally.
+- Landscape return-orientation button reduced to 42px.
+- World map geometry, country markers, platform layers and data logic untouched.
+- Service Worker cache generation bumped to 55.00-r499.

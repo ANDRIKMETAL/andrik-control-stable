@@ -1,0 +1,50 @@
+/* ANDRIK R499 — portrait map corner controls compact fix.
+   Keeps the orientation and 7-day growth buttons fully inside the green frame
+   and clear of the ecosystem layer switcher. No map geometry is changed. */
+@media screen and (orientation:portrait){
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap .map-orientation-fab,
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap .map-growth-fab-r237{
+    width:38px!important;
+    height:38px!important;
+    min-width:38px!important;
+    min-height:38px!important;
+    max-width:38px!important;
+    max-height:38px!important;
+    bottom:14px!important;
+    padding:0!important;
+    margin:0!important;
+    border-width:1.25px!important;
+    box-shadow:0 7px 17px rgba(0,0,0,.43),0 0 0 1px rgba(255,255,255,.045) inset,0 0 13px rgba(115,227,255,.18)!important;
+    transform:none!important;
+    overflow:visible!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap .map-orientation-fab{
+    left:8px!important;
+    right:auto!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap .map-growth-fab-r237{
+    right:8px!important;
+    left:auto!important;
+    font:950 1rem/1 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap .map-orientation-fab .map-orientation-fab-icon{
+    font:900 1.05rem/1 Arial,Helvetica,sans-serif!important;
+  }
+}
+
+/* Landscape keeps the same compact visual language for the return button. */
+@media screen and (orientation:landscape){
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap .map-orientation-fab{
+    width:42px!important;
+    height:42px!important;
+    min-width:42px!important;
+    min-height:42px!important;
+    max-width:42px!important;
+    max-height:42px!important;
+    left:12px!important;
+    bottom:12px!important;
+  }
+  body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap .map-orientation-fab .map-orientation-fab-icon{
+    font:900 1.12rem/1 Arial,Helvetica,sans-serif!important;
+  }
+}
