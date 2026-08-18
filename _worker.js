@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R497', number:497, version:'55.00', full:'55.00 LIVE WEB AI FINAL R497', siteUpdater:'55.00-r356' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R498', number:498, version:'55.00', full:'55.00 LIVE WEB AI FINAL R498', siteUpdater:'55.00-r356' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -2759,6 +2759,71 @@ async function handleOwnerSessionDelete(request) {
 }
 
 
+
+// R498 — social geography adapters. No platform is ever faked: empty API data stays empty.
+function normalizeSnapshotGeoCountriesR498(metrics = {}) {
+  const rows = metrics?.geoCountries || metrics?.audienceCountries || metrics?.countries || metrics?.geography?.countries || [];
+  const merged = new Map();
+  for (const row of Array.isArray(rows) ? rows : []) {
+    const country = cleanPlainText(row?.country || row?.name || row?.code || '', 120).trim();
+    const value = Math.max(0, Number(row?.value ?? row?.views ?? row?.reach ?? row?.followers ?? row?.count ?? 0));
+    if (!country || !Number.isFinite(value) || value <= 0) continue;
+    merged.set(country, (merged.get(country) || 0) + value);
+  }
+  return [...merged.entries()].map(([country,value]) => ({ country, value })).sort((a,b)=>b.value-a.value).slice(0,120);
+}
+function normalizeSnapshotGeoPointsR498(metrics = {}) {
+  const rows = metrics?.geoPoints || metrics?.points || metrics?.geography?.points || [];
+  return (Array.isArray(rows) ? rows : []).map(row => ({
+    country:cleanPlainText(row?.country || row?.code || '',120),
+    region:cleanPlainText(row?.region || '',120), city:cleanPlainText(row?.city || '',120),
+    latitude:Number(row?.latitude), longitude:Number(row?.longitude),
+    value:Math.max(0,Number(row?.value ?? row?.views ?? row?.reach ?? row?.count ?? 0))
+  })).filter(row=>row.country&&Number.isFinite(row.latitude)&&Number.isFinite(row.longitude)&&row.value>0).slice(0,180);
+}
+function parseInstagramCountryBreakdownR498(payload) {
+  const merged = new Map();
+  for (const item of Array.isArray(payload?.data) ? payload.data : []) {
+    const breakdowns = item?.total_value?.breakdowns || item?.breakdowns || [];
+    for (const breakdown of Array.isArray(breakdowns) ? breakdowns : []) {
+      const keys = Array.isArray(breakdown?.dimension_keys) ? breakdown.dimension_keys.map(x=>String(x||'').toLowerCase()) : [];
+      if (keys.length && !keys.includes('country')) continue;
+      for (const result of Array.isArray(breakdown?.results) ? breakdown.results : []) {
+        const values = Array.isArray(result?.dimension_values) ? result.dimension_values : [];
+        const country = cleanPlainText(values[0] || result?.country || '',120).trim();
+        const value = Math.max(0,Number(result?.value || 0));
+        if (!country || !Number.isFinite(value) || value <= 0) continue;
+        merged.set(country,(merged.get(country)||0)+value);
+      }
+    }
+  }
+  return [...merged.entries()].map(([country,value])=>({country,value})).sort((a,b)=>b.value-a.value).slice(0,120);
+}
+async function fetchInstagramCountryGeographyR498(env, accountId) {
+  if (!accountId || !instagramConfigR487(env).configured) return { countries:[], metric:'', error:'' };
+  const attempts = [
+    ['reached_audience_demographics','last_30_days'],
+    ['engaged_audience_demographics','last_30_days'],
+    ['follower_demographics','last_30_days']
+  ];
+  let lastError = '';
+  for (const [metric,timeframe] of attempts) {
+    try {
+      const payload = await instagramApiGetR487(env, `${accountId}/insights`, {
+        metric, period:'lifetime', metric_type:'total_value', timeframe, breakdown:'country'
+      }, 8500);
+      const countries = parseInstagramCountryBreakdownR498(payload);
+      if (countries.length) return { countries, metric, error:'' };
+    } catch (error) { lastError = cleanPlainText(error?.message || error,220); }
+  }
+  return { countries:[], metric:'', error:lastError };
+}
+async function latestPlatformMetricsR498(db, platform) {
+  try {
+    const row = await db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform=? ORDER BY datetime(created_at) DESC LIMIT 1`).bind(platform).first();
+    return { metrics:parseSnapshotMetrics(row), createdAt:row?.created_at || '' };
+  } catch (_) { return { metrics:{}, createdAt:'' }; }
+}
 async function handleControlEcosystemMap(request, env) {
   if (!adminAuthorized(request, env)) return json({ ok:false, error:'unauthorized' }, 401);
   const db = requireDb(env);
@@ -2955,6 +3020,50 @@ async function handleControlEcosystemMap(request, env) {
     const key = country.toLocaleUpperCase('ru');
     if (!historyCountryMapR452.has(key)) historyCountryMapR452.set(key,{country,value:1,source:'owner-confirmed-history'});
   }
+  const [igLatestR498, fbLatestR498, ttLatestR498] = await Promise.all([
+    latestPlatformMetricsR498(db,'instagram'), latestPlatformMetricsR498(db,'facebook'), latestPlatformMetricsR498(db,'tiktok')
+  ]);
+  let instagramCountriesR498 = normalizeSnapshotGeoCountriesR498(igLatestR498.metrics);
+  let instagramGeoMetricR498 = cleanPlainText(igLatestR498.metrics?.geoMetric || '',80);
+  let instagramGeoErrorR498 = cleanPlainText(igLatestR498.metrics?.geoError || '',220);
+  const instagramGeoAttemptAgeR498 = latestSnapshotAgeMinutesR487({ created_at:igLatestR498.metrics?.geoAttemptAt || '' });
+  const instagramGeoShouldProbeR498 = instagramConfigR487(env).configured && (
+    (instagramCountriesR498.length && latestSnapshotAgeMinutesR487({created_at:igLatestR498.metrics?.geoUpdatedAt || igLatestR498.createdAt}) > 360) ||
+    (!instagramCountriesR498.length && instagramGeoAttemptAgeR498 > 360)
+  );
+  if (instagramGeoShouldProbeR498) {
+    let accountId = cleanPlainText(igLatestR498.metrics?.accountId || '',100);
+    let baseMetrics = igLatestR498.metrics || {};
+    const geoAttemptAt = new Date().toISOString();
+    try {
+      if (!accountId) {
+        const live = await fetchInstagramAnalytics(env);
+        if (live?.connected) { accountId = live.accountId || ''; baseMetrics = live; }
+      }
+      const geo = await fetchInstagramCountryGeographyR498(env, accountId);
+      instagramGeoErrorR498 = geo.error || '';
+      if (geo.countries.length) {
+        instagramCountriesR498 = geo.countries;
+        instagramGeoMetricR498 = geo.metric;
+      }
+      await savePlatformSnapshot(db,'instagram',{
+        ...baseMetrics,
+        geoCountries:geo.countries.length ? geo.countries : instagramCountriesR498,
+        geoMetric:geo.metric || instagramGeoMetricR498,
+        geoUpdatedAt:geo.countries.length ? geoAttemptAt : cleanPlainText(baseMetrics?.geoUpdatedAt || '',80),
+        geoAttemptAt, geoError:instagramGeoErrorR498
+      },'instagram-geo-r498').catch(()=>{});
+    } catch (error) {
+      instagramGeoErrorR498 = cleanPlainText(error?.message || error,220);
+      await savePlatformSnapshot(db,'instagram',{...baseMetrics,geoCountries:instagramCountriesR498,geoMetric:instagramGeoMetricR498,geoAttemptAt,geoError:instagramGeoErrorR498},'instagram-geo-r498-error').catch(()=>{});
+    }
+  }
+  const facebookCountriesR498 = normalizeSnapshotGeoCountriesR498(fbLatestR498.metrics);
+  const tiktokCountriesR498 = normalizeSnapshotGeoCountriesR498(ttLatestR498.metrics);
+  for (const row of [...instagramCountriesR498,...facebookCountriesR498,...tiktokCountriesR498]) {
+    const key = String(row.country||'').toLocaleUpperCase('ru');
+    if (key && !historyCountryMapR452.has(key)) historyCountryMapR452.set(key,{country:row.country,value:1,source:'social-history-r498'});
+  }
   const pushCounts = await getPushAudienceCounts(env).catch(() => ({}));
   return json({
     ok:true,
@@ -2966,6 +3075,21 @@ async function handleControlEcosystemMap(request, env) {
     site:{
       countries:normalizeCountries(siteCountriesRaw), points:normalizePoints(sitePointsRaw),
       weeklyCountries:normalizeWeekly(siteWeeklyRaw), previousWeekCountries:normalizeWeekly(sitePreviousWeeklyRaw)
+    },
+    instagram:{
+      connected:Boolean(igLatestR498.metrics?.connected), configured:instagramConfigR487(env).configured,
+      countries:instagramCountriesR498, points:normalizeSnapshotGeoPointsR498(igLatestR498.metrics), weeklyCountries:[], previousWeekCountries:[],
+      metric:instagramGeoMetricR498, error:instagramGeoErrorR498
+    },
+    facebook:{
+      connected:Boolean(fbLatestR498.metrics?.connected), configured:Boolean(env.FACEBOOK_PAGE_ACCESS_TOKEN || env.META_PAGE_ACCESS_TOKEN || env.FACEBOOK_ACCESS_TOKEN),
+      countries:facebookCountriesR498, points:normalizeSnapshotGeoPointsR498(fbLatestR498.metrics), weeklyCountries:[], previousWeekCountries:[],
+      error:cleanPlainText(fbLatestR498.metrics?.error || '',220)
+    },
+    tiktok:{
+      connected:Boolean(ttLatestR498.metrics?.connected), configured:Boolean(env.TIKTOK_ACCESS_TOKEN || env.TIKTOK_CLIENT_KEY || env.TIKTOK_CLIENT_ID),
+      countries:tiktokCountriesR498, points:normalizeSnapshotGeoPointsR498(ttLatestR498.metrics), weeklyCountries:[], previousWeekCountries:[],
+      error:cleanPlainText(ttLatestR498.metrics?.error || '',220)
     },
     music:{
       countries:normalizeCountries(musicCountriesRaw), points:normalizePoints(musicPointsRaw),
@@ -6170,7 +6294,7 @@ async function handleYoutubeOAuthCallback(request, env, ctx) {
 
   // Root is the installed ANDRIK Control start page. Android can hand this
   // navigation directly to the Control PWA after Google closes the consent flow.
-  return Response.redirect('https://control.andrikmetal.com/social-center-admin.html?youtube=connected&v=55.00-r497', 302);
+  return Response.redirect('https://control.andrikmetal.com/social-center-admin.html?youtube=connected&v=55.00-r498', 302);
 }
 
 async function handleYoutubeOAuthDisconnect(request, env) {
@@ -8635,16 +8759,20 @@ async function handleControlSocialOverviewR487(request, env) {
   const db = requireDb(env);
   await ensurePlatformAnalyticsSchema(db);
   const refresh = new URL(request.url).searchParams.get('refresh') === '1';
-  let [gaRow, ytRow, igRow] = await Promise.all([
+  let [gaRow, ytRow, igRow, fbRow, ttRow] = await Promise.all([
     db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform='google-analytics' ORDER BY datetime(created_at) DESC LIMIT 1`).first(),
     db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform='youtube' ORDER BY datetime(created_at) DESC LIMIT 1`).first(),
-    db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform='instagram' ORDER BY datetime(created_at) DESC LIMIT 1`).first()
+    db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform='instagram' ORDER BY datetime(created_at) DESC LIMIT 1`).first(),
+    db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform='facebook' ORDER BY datetime(created_at) DESC LIMIT 1`).first(),
+    db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform='tiktok' ORDER BY datetime(created_at) DESC LIMIT 1`).first()
   ]);
 
   let google = parseSnapshotMetrics(gaRow);
   let youtube = parseSnapshotMetrics(ytRow);
   let instagram = parseSnapshotMetrics(igRow);
-  const liveErrors = { site:'', youtube:'', instagram:'' };
+  let facebook = parseSnapshotMetrics(fbRow);
+  let tiktok = parseSnapshotMetrics(ttRow);
+  const liveErrors = { site:'', youtube:'', instagram:'', facebook:'', tiktok:'' };
   const igConfig = instagramConfigR487(env);
 
   // R491: Social Center heals stale/missing snapshots itself. This prevents the
@@ -8660,7 +8788,7 @@ async function handleControlSocialOverviewR487(request, env) {
           trend:live.trend || [], countries:live.countries || [], pages:live.pages || [], devices:live.devices || [],
           updatedAt:live.updatedAt || new Date().toISOString()
         };
-        await savePlatformSnapshot(db, 'google-analytics', metrics, refresh ? 'manual-social-center-r497' : 'social-center-r497');
+        await savePlatformSnapshot(db, 'google-analytics', metrics, refresh ? 'manual-social-center-r498' : 'social-center-r498');
         google = metrics; gaRow = { created_at:metrics.updatedAt };
       }
     } catch (error) { liveErrors.site = cleanPlainText(error?.message || error, 300); }
@@ -8687,7 +8815,7 @@ async function handleControlSocialOverviewR487(request, env) {
           },
           updatedAt:new Date().toISOString()
         };
-        await savePlatformSnapshot(db, 'youtube', metrics, refresh ? 'manual-social-center-r497' : 'social-center-r497');
+        await savePlatformSnapshot(db, 'youtube', metrics, refresh ? 'manual-social-center-r498' : 'social-center-r498');
         youtube = metrics; ytRow = { created_at:metrics.updatedAt };
         if (!Array.isArray(studio?.trend) || !studio.trend.length) {
           liveErrors.youtube = cleanPlainText(studio?.trendError || studio?.partialErrors?.[0] || 'YouTube Analytics вернул пустой дневной ряд', 300);
@@ -8702,7 +8830,7 @@ async function handleControlSocialOverviewR487(request, env) {
     try {
       const live = await fetchInstagramAnalytics(env);
       if (live?.configured) {
-        await savePlatformSnapshot(db, 'instagram', live, refresh ? 'manual-social-center-r497' : 'social-center-r497');
+        await savePlatformSnapshot(db, 'instagram', live, refresh ? 'manual-social-center-r498' : 'social-center-r498');
         instagram = live; igRow = { created_at:live.updatedAt || new Date().toISOString() };
       }
     } catch (error) { liveErrors.instagram = cleanPlainText(error?.message || error, 300); }
@@ -8744,13 +8872,24 @@ async function handleControlSocialOverviewR487(request, env) {
   const youtubeReady = Boolean(youtube?.studio?.connected && Array.isArray(youtube?.studio?.trend) && youtube.studio.trend.length);
   const instagramReady = Boolean(instagram?.connected && Array.isArray(instagram?.trend) && instagram.trend.length);
   const instagramSeriesReady = Boolean(instagramReady && igMap.size);
+  const genericTrendMapR498 = (metrics, fields) => new Map((Array.isArray(metrics?.trend)?metrics.trend:[]).map(row => {
+    const day = normalizeSocialDayR487(row?.day || row?.date);
+    const field = fields.find(name=>row?.[name]!==null&&row?.[name]!==undefined&&Number.isFinite(Number(row[name])));
+    return [day, field ? Math.max(0,Number(row[field])) : null];
+  }).filter(([day,value])=>day&&value!==null));
+  const fbMapR498 = genericTrendMapR498(facebook,['views','reach','impressions','interactions']);
+  const ttMapR498 = genericTrendMapR498(tiktok,['views','videoViews','reach','interactions']);
+  const facebookReady = Boolean(facebook?.connected && fbMapR498.size);
+  const tiktokReady = Boolean(tiktok?.connected && ttMapR498.size);
   const trend = [];
   for (let day = startDate; day <= endDate; day = shiftIsoCalendarDate(day, 1)) {
     trend.push({
       day,
       site:siteReady ? Number(siteMap.get(day) || 0) : null,
       youtube:youtubeReady ? Number(ytMap.get(day) || 0) : null,
-      instagram:instagramSeriesReady ? Number(igMap.get(day) || 0) : null
+      instagram:instagramSeriesReady ? Number(igMap.get(day) || 0) : null,
+      facebook:facebookReady ? Number(fbMapR498.get(day) || 0) : null,
+      tiktok:tiktokReady ? Number(ttMapR498.get(day) || 0) : null
     });
   }
   const sum = key => trend.reduce((total, row) => total + (Number.isFinite(Number(row[key])) ? Math.max(0, Number(row[key])) : 0), 0);
@@ -8768,7 +8907,7 @@ async function handleControlSocialOverviewR487(request, env) {
   return json({
     ok:true,
     period:{ startDate, endDate, days:28, label:'28 завершённых дней' },
-    totals:{ site:siteReady ? sum('site') : null, youtube:youtubeReady ? sum('youtube') : null, instagram:instagramTotal },
+    totals:{ site:siteReady ? sum('site') : null, youtube:youtubeReady ? sum('youtube') : null, instagram:instagramTotal, facebook:facebookReady ? sum('facebook') : null, tiktok:tiktokReady ? sum('tiktok') : null },
     trend,
     platforms:{
       site:{ configured:siteReady, connected:siteReady, name:'Сайт', source:'GA4 + Live Web AI', updatedAt:gaRow?.created_at || google?.updatedAt || '', firstPartyDays:siteFirstPartyTrend.length, firstPartyViews:siteFirstPartyTrend.reduce((sum,row)=>sum+Math.max(0,Number(row?.views||0)),0), firstPartyUsers:Math.max(0,...siteFirstPartyTrend.map(row=>Number(row?.users||0))), error:liveErrors.site },
@@ -8778,6 +8917,16 @@ async function handleControlSocialOverviewR487(request, env) {
         accountId:instagram?.accountId || '', profileUrl:`https://www.instagram.com/${encodeURIComponent(instagram?.username || 'andrikmetal')}/`,
         source:'Instagram Insights', updatedAt:igRow?.created_at || instagram?.updatedAt || '', metricLabel:instagramMetricLabel, trendField:instagramTrendField, trendConnected:instagramSeriesReady,
         summary:instagram?.summary || {}, summaryAvailability:instagram?.summaryAvailability || {}, summarySource:instagram?.summarySource || {}, mediaCounts:instagram?.mediaCounts || {}, partialErrors:instagram?.partialErrors || [], error:instagram?.error || liveErrors.instagram || ''
+      },
+      facebook:{
+        configured:Boolean(env.FACEBOOK_PAGE_ACCESS_TOKEN || env.META_PAGE_ACCESS_TOKEN || env.FACEBOOK_ACCESS_TOKEN || facebook?.configured), connected:facebookReady, trendConnected:facebookReady,
+        name:'Facebook', pageName:cleanPlainText(facebook?.pageName || facebook?.name || 'ANDRIK',120), profileUrl:cleanPlainText(facebook?.profileUrl || '',700), metricLabel:cleanPlainText(facebook?.metricLabel || 'охват/взаимодействия',80),
+        source:'Facebook Page Insights', updatedAt:fbRow?.created_at || facebook?.updatedAt || '', error:cleanPlainText(facebook?.error || '',220)
+      },
+      tiktok:{
+        configured:Boolean(env.TIKTOK_ACCESS_TOKEN || env.TIKTOK_CLIENT_KEY || env.TIKTOK_CLIENT_ID || tiktok?.configured), connected:tiktokReady, trendConnected:tiktokReady,
+        name:'TikTok', handle:cleanPlainText(tiktok?.handle || tiktok?.username || '@andrikmetal',120), profileUrl:cleanPlainText(tiktok?.profileUrl || '',700), metricLabel:cleanPlainText(tiktok?.metricLabel || 'просмотры видео',80),
+        source:'TikTok API', updatedAt:ttRow?.created_at || tiktok?.updatedAt || '', error:cleanPlainText(tiktok?.error || '',220)
       }
     },
     diagnostics:{ refresh, liveErrors },

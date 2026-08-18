@@ -1,0 +1,17 @@
+ANDRIK CONTROL / LIVE WEB AI — R498
+Social platform map foundation
+
+Changes from R497:
+- Adds map layers for Instagram, Facebook and TikTok without touching stable world-map geometry.
+- Keeps existing ALL / Site / YouTube / Music / Push layers.
+- Unified requested colors: Site green, YouTube red, Instagram yellow, Facebook blue, TikTok pink.
+- Instagram map can use real Meta audience-country breakdown when Instagram Insights exposes it; no synthetic geography is generated.
+- Facebook and TikTok map layers are API-ready and remain honestly empty until OAuth/data is connected.
+- Social Center now has five platform slots and five-line graph support.
+- Facebook/TikTok snapshot adapters are ready for future OAuth collectors.
+- R498 version/cache reset/service-worker bump included.
+
+Safety:
+- Existing R497 site, YouTube and Instagram analytics flows are preserved.
+- No secrets are stored in client code.
+- No fake Facebook/TikTok numbers or map points are created.

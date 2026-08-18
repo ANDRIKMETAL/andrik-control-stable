@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787049902778-b1bf727638",
-  "release": "R497",
-  "archiveName": "R497-SOCIAL-CENTER-CENTERED-TOTAL-YOUTUBE-FINAL-SAFE-FULL.zip",
-  "sourceHead": "7c03602fa1357436af75c36b1e8ff37feae0ec88",
-  "backupSha": "7c03602fa1357436af75c36b1e8ff37feae0ec88",
-  "backupTag": "control-backup-20260818104458-7c03602-r497-3f471",
+  "operationId": "publish-1787051916921-0489e47d9d",
+  "release": "R498",
+  "archiveName": "R498-SOCIAL-MAP-INSTAGRAM-FACEBOOK-TIKTOK-FOUNDATION-SAFE-FULL.zip",
+  "sourceHead": "803cbd383f2e03d906c46a0c04b392f4d813bc22",
+  "backupSha": "803cbd383f2e03d906c46a0c04b392f4d813bc22",
+  "backupTag": "control-backup-20260818111831-803cbd3-r498-1d739",
   "autoRecovery": true,
-  "generatedAt": "2026-08-18T10:45:02.778Z"
+  "generatedAt": "2026-08-18T11:18:36.921Z"
 }
