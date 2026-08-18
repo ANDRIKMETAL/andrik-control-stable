@@ -1,0 +1,15 @@
+ANDRIK CONTROL R492 — YOUTUBE READONLY OAUTH RECONNECT + CLEAN DIAGNOSTICS
+
+Base: R491.
+
+Changes:
+1. The YouTube card ALWAYS contains “Переподключить YouTube”, even when OAuth is currently healthy.
+2. Reconnect opens Google account selection + fresh consent and returns directly to Social Center.
+3. OAuth now requests only youtube.readonly + yt-analytics.readonly; unnecessary youtube.force-ssl was removed.
+4. After successful callback Social Center automatically performs one live refresh.
+5. YouTube Analytics daily-query failures are no longer hidden behind a generic message; the real Google error is surfaced.
+6. YouTube platform metadata now distinguishes OAuth connected from daily Analytics series ready.
+7. Fixed stale internal R490 reconnect naming and the version-ready event number bug.
+8. analytics-admin now loads the current R492 version synchronizer instead of stale R488.
+9. R491 site 28-day + Instagram engagement corrections are preserved unchanged.
+10. Current cache reset: /cache-reset-v55-00-final-r492.html

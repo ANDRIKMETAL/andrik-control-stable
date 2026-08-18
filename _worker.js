@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R491', number:491, version:'55.00', full:'55.00 LIVE WEB AI FINAL R491', siteUpdater:'55.00-r356' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R492', number:492, version:'55.00', full:'55.00 LIVE WEB AI FINAL R492', siteUpdater:'55.00-r356' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -6111,12 +6111,14 @@ async function handleYoutubeOAuthStart(request, env) {
   url.searchParams.set('redirect_uri', config.redirectUri);
   url.searchParams.set('response_type','code');
   url.searchParams.set('access_type','offline');
-  url.searchParams.set('prompt','consent');
+  // R492: always let the owner choose the correct Google account and issue a fresh
+  // refresh token. Keep the permission surface read-only and exactly aligned with
+  // Google Auth Platform -> Data access.
+  url.searchParams.set('prompt','select_account consent');
   url.searchParams.set('include_granted_scopes','true');
   url.searchParams.set('scope',[
     'https://www.googleapis.com/auth/yt-analytics.readonly',
-    'https://www.googleapis.com/auth/youtube.readonly',
-    'https://www.googleapis.com/auth/youtube.force-ssl'
+    'https://www.googleapis.com/auth/youtube.readonly'
   ].join(' '));
   url.searchParams.set('state',state);
   return json({ ok:true, url:url.toString(), redirectUri:config.redirectUri });
@@ -6168,7 +6170,7 @@ async function handleYoutubeOAuthCallback(request, env, ctx) {
 
   // Root is the installed ANDRIK Control start page. Android can hand this
   // navigation directly to the Control PWA after Google closes the consent flow.
-  return Response.redirect('https://control.andrikmetal.com/analytics-admin.html?page=youtube&youtube=connected&v=54.76', 302);
+  return Response.redirect('https://control.andrikmetal.com/social-center-admin.html?youtube=connected&v=55.00-r492', 302);
 }
 
 async function handleYoutubeOAuthDisconnect(request, env) {
@@ -8113,6 +8115,7 @@ async function fetchYouTubeStudioAnalytics(env) {
     youtubeAnalyticsQuery(env, accessToken,{...base,dimensions:'sharingService',metrics:'shares',sort:'-shares',maxResults:8})
   ]);
   const val=i=>results[i].status==='fulfilled'?results[i].value:[];
+  const resultError=i=>results[i].status==='rejected'?cleanPlainText(results[i].reason?.message||results[i].reason,260):'';
   const summary=val(0)[0]||{};
   const demographics=val(4);
   const ageMap={},genderMap={};
@@ -8135,6 +8138,8 @@ async function fetchYouTubeStudioAnalytics(env) {
     age:Object.entries(ageMap).map(([ageGroup,viewerPercentage])=>({ageGroup,viewerPercentage})).sort((a,b)=>b.viewerPercentage-a.viewerPercentage),
     gender:Object.entries(genderMap).map(([gender,viewerPercentage])=>({gender,viewerPercentage})).sort((a,b)=>b.viewerPercentage-a.viewerPercentage),
     sharing:val(5).map(r=>({sharingService:String(r.sharingService||''),shares:Number(r.shares||0)})),
+    summaryError:resultError(0),
+    trendError:resultError(1),
     partialErrors:results.map((r,i)=>r.status==='rejected'?cleanPlainText(r.reason?.message||r.reason,260):'').filter(Boolean),
     updatedAt:new Date().toISOString()
   };
@@ -8599,7 +8604,7 @@ async function handleControlSocialOverviewR487(request, env) {
           trend:live.trend || [], countries:live.countries || [], pages:live.pages || [], devices:live.devices || [],
           updatedAt:live.updatedAt || new Date().toISOString()
         };
-        await savePlatformSnapshot(db, 'google-analytics', metrics, refresh ? 'manual-social-center-r491' : 'social-center-r491');
+        await savePlatformSnapshot(db, 'google-analytics', metrics, refresh ? 'manual-social-center-r492' : 'social-center-r492');
         google = metrics; gaRow = { created_at:metrics.updatedAt };
       }
     } catch (error) { liveErrors.site = cleanPlainText(error?.message || error, 300); }
@@ -8626,8 +8631,11 @@ async function handleControlSocialOverviewR487(request, env) {
           },
           updatedAt:new Date().toISOString()
         };
-        await savePlatformSnapshot(db, 'youtube', metrics, refresh ? 'manual-social-center-r491' : 'social-center-r491');
+        await savePlatformSnapshot(db, 'youtube', metrics, refresh ? 'manual-social-center-r492' : 'social-center-r492');
         youtube = metrics; ytRow = { created_at:metrics.updatedAt };
+        if (!Array.isArray(studio?.trend) || !studio.trend.length) {
+          liveErrors.youtube = cleanPlainText(studio?.trendError || studio?.partialErrors?.[0] || 'YouTube Analytics вернул пустой дневной ряд', 300);
+        }
       } else if (!studio?.connected) {
         liveErrors.youtube = studio?.configured ? 'YouTube Studio OAuth не вернул подключение' : 'YouTube Studio OAuth не настроен';
       }
@@ -8638,7 +8646,7 @@ async function handleControlSocialOverviewR487(request, env) {
     try {
       const live = await fetchInstagramAnalytics(env);
       if (live?.configured) {
-        await savePlatformSnapshot(db, 'instagram', live, refresh ? 'manual-social-center-r491' : 'social-center-r491');
+        await savePlatformSnapshot(db, 'instagram', live, refresh ? 'manual-social-center-r492' : 'social-center-r492');
         instagram = live; igRow = { created_at:live.updatedAt || new Date().toISOString() };
       }
     } catch (error) { liveErrors.instagram = cleanPlainText(error?.message || error, 300); }
@@ -8708,7 +8716,7 @@ async function handleControlSocialOverviewR487(request, env) {
     trend,
     platforms:{
       site:{ configured:siteReady, connected:siteReady, name:'Сайт', source:'GA4 + Live Web AI', updatedAt:gaRow?.created_at || google?.updatedAt || '', firstPartyDays:siteFirstPartyTrend.length, firstPartyViews:siteFirstPartyTrend.reduce((sum,row)=>sum+Math.max(0,Number(row?.views||0)),0), firstPartyUsers:Math.max(0,...siteFirstPartyTrend.map(row=>Number(row?.users||0))), error:liveErrors.site },
-      youtube:{ configured:Boolean(youtube?.configured || youtube?.studio?.configured), connected:youtubeReady, name:'YouTube', handle:youtube?.handle || '@andrikmetal', source:'YouTube Analytics', updatedAt:ytRow?.created_at || youtube?.updatedAt || '', error:liveErrors.youtube || youtube?.studio?.error || '', reconnectRequired:youtubeRefreshTokenFatalR490(liveErrors.youtube || youtube?.studio?.error || ''), partialErrors:youtube?.studio?.partialErrors || [] },
+      youtube:{ configured:Boolean(youtube?.configured || youtube?.studio?.configured), connected:youtubeReady, oauthConnected:Boolean(youtube?.studio?.connected), canReconnect:Boolean(youtubeOAuthClient(env).configured), name:'YouTube', handle:youtube?.handle || '@andrikmetal', source:'YouTube Analytics', updatedAt:ytRow?.created_at || youtube?.updatedAt || '', error:liveErrors.youtube || youtube?.studio?.trendError || youtube?.studio?.error || '', reconnectRequired:youtubeRefreshTokenFatalR490(liveErrors.youtube || youtube?.studio?.trendError || youtube?.studio?.error || ''), partialErrors:youtube?.studio?.partialErrors || [] },
       instagram:{
         configured:Boolean(igConfig.configured), connected:instagramReady, name:'Instagram', username:instagram?.username || 'andrikmetal',
         accountId:instagram?.accountId || '', profileUrl:`https://www.instagram.com/${encodeURIComponent(instagram?.username || 'andrikmetal')}/`,
