@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787073217147-e62da593ee",
-  "release": "R506",
-  "archiveName": "R506-FAST-SOCIAL-CENTER-FACEBOOK-PAGE-INSIGHTS-SAFE-FULL.zip",
-  "sourceHead": "f5404ebbb4e80c6e6057270f2bf9ea6825231c3b",
-  "backupSha": "f5404ebbb4e80c6e6057270f2bf9ea6825231c3b",
-  "backupTag": "control-backup-20260818171330-f5404eb-r506-f1b63",
+  "operationId": "publish-1787075983143-903cd713d7",
+  "release": "R507",
+  "archiveName": "R507-FOUR-SOCIAL-CARDS-NO-FACEBOOK-MAP-GRAPH-SAFE-FULL.zip",
+  "sourceHead": "ba0914ecb3020b9160b68289a94d7bb9e2edd989",
+  "backupSha": "ba0914ecb3020b9160b68289a94d7bb9e2edd989",
+  "backupTag": "control-backup-20260818175937-ba0914e-r507-436bb",
   "autoRecovery": true,
-  "generatedAt": "2026-08-18T17:13:37.147Z"
+  "generatedAt": "2026-08-18T17:59:43.143Z"
 }

@@ -1,0 +1,9 @@
+ANDRIK R507 — FOUR PLATFORM SOCIAL CENTER / NO FACEBOOK
+
+- Removed Facebook from Social Center cards, graph toggles, trend, totals, warnings and live-detail blocks.
+- TikTok now occupies the fourth compact card in a stable 2 × 2 platform grid.
+- Removed Facebook map button, map layer, map points and Facebook contribution to the combined map/history.
+- Worker no longer fetches Facebook during Social Center refreshes and no longer emits Facebook into Social Center/map payloads.
+- Site / YouTube / Instagram / TikTok connections are preserved.
+- Cloudflare FACEBOOK_* variables may remain; R507 ignores them.
+- Social Center keeps R506 instant cached-first loading behavior.

@@ -3033,8 +3033,8 @@ async function handleControlEcosystemMap(request, env) {
     const key = country.toLocaleUpperCase('ru');
     if (!historyCountryMapR452.has(key)) historyCountryMapR452.set(key,{country,value:1,source:'owner-confirmed-history'});
   }
-  const [igLatestR498, fbLatestR498, ttLatestR498] = await Promise.all([
-    latestPlatformMetricsR498(db,'instagram'), latestPlatformMetricsR498(db,'facebook'), latestPlatformMetricsR498(db,'tiktok')
+  const [igLatestR498, ttLatestR498] = await Promise.all([
+    latestPlatformMetricsR498(db,'instagram'), latestPlatformMetricsR498(db,'tiktok')
   ]);
   let instagramCountriesR498 = normalizeSnapshotGeoCountriesR498(igLatestR498.metrics);
   let instagramGeoMetricR498 = cleanPlainText(igLatestR498.metrics?.geoMetric || '',80);
@@ -3071,9 +3071,8 @@ async function handleControlEcosystemMap(request, env) {
       await savePlatformSnapshot(db,'instagram',{...baseMetrics,geoCountries:instagramCountriesR498,geoMetric:instagramGeoMetricR498,geoAttemptAt,geoError:instagramGeoErrorR498},'instagram-geo-r498-error').catch(()=>{});
     }
   }
-  const facebookCountriesR498 = normalizeSnapshotGeoCountriesR498(fbLatestR498.metrics);
   const tiktokCountriesR498 = normalizeSnapshotGeoCountriesR498(ttLatestR498.metrics);
-  for (const row of [...instagramCountriesR498,...facebookCountriesR498,...tiktokCountriesR498]) {
+  for (const row of [...instagramCountriesR498,...tiktokCountriesR498]) {
     const key = String(row.country||'').toLocaleUpperCase('ru');
     if (key && !historyCountryMapR452.has(key)) historyCountryMapR452.set(key,{country:row.country,value:1,source:'social-history-r498'});
   }
@@ -3093,11 +3092,6 @@ async function handleControlEcosystemMap(request, env) {
       connected:Boolean(igLatestR498.metrics?.connected), configured:instagramConfigR487(env).configured,
       countries:instagramCountriesR498, points:normalizeSnapshotGeoPointsR498(igLatestR498.metrics), weeklyCountries:[], previousWeekCountries:[],
       metric:instagramGeoMetricR498, error:instagramGeoErrorR498
-    },
-    facebook:{
-      connected:Boolean(fbLatestR498.metrics?.connected), configured:Boolean(env.FACEBOOK_PAGE_ACCESS_TOKEN || env.META_PAGE_ACCESS_TOKEN || env.FACEBOOK_ACCESS_TOKEN),
-      countries:facebookCountriesR498, points:normalizeSnapshotGeoPointsR498(fbLatestR498.metrics), weeklyCountries:[], previousWeekCountries:[],
-      error:cleanPlainText(fbLatestR498.metrics?.error || '',220)
     },
     tiktok:{
       connected:Boolean(ttLatestR498.metrics?.connected), configured:Boolean(env.TIKTOK_ACCESS_TOKEN || env.TIKTOK_CLIENT_KEY || env.TIKTOK_CLIENT_ID),
@@ -9103,138 +9097,6 @@ async function fetchInstagramAnalytics(env) {
 }
 
 
-function facebookConfigR506(env) {
-  const token = String(env.FACEBOOK_PAGE_ACCESS_TOKEN || env.META_PAGE_ACCESS_TOKEN || env.FACEBOOK_ACCESS_TOKEN || '').trim();
-  const pageId = cleanPlainText(env.FACEBOOK_PAGE_ID || env.META_PAGE_ID || '', 100);
-  const pageName = cleanPlainText(env.FACEBOOK_PAGE_NAME || env.META_PAGE_NAME || 'Андрик Гвоздь', 160);
-  let version = cleanPlainText(env.FACEBOOK_GRAPH_VERSION || 'v26.0', 20);
-  if (!/^v\d+\.\d+$/i.test(version)) version = 'v26.0';
-  return { token, pageId, pageName, version, configured:Boolean(token && pageId) };
-}
-
-async function facebookGraphGetR506(env, path, params = {}, timeoutMs = 9000) {
-  const config = facebookConfigR506(env);
-  if (!config.configured) throw new Error('facebook-page-token-not-configured');
-  const safePath = String(path || '').replace(/^\/+/, '');
-  const url = new URL(`https://graph.facebook.com/${config.version}/${safePath}`);
-  Object.entries(params || {}).forEach(([key,value]) => {
-    if (value !== undefined && value !== null && value !== '') url.searchParams.set(key, String(value));
-  });
-  const response = await fetchWithAbortTimeoutR409(url.toString(), {
-    headers:{ authorization:`Bearer ${config.token}`, accept:'application/json' }
-  }, timeoutMs, 'facebook-api-timeout');
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data?.error?.message || `facebook-api-${response.status}`);
-  return data;
-}
-
-function facebookInsightTrendR506(payload, metricName = '') {
-  const item = (Array.isArray(payload?.data) ? payload.data : []).find(row => String(row?.name || '') === metricName) || payload?.data?.[0] || {};
-  return (Array.isArray(item?.values) ? item.values : []).map(entry => ({
-    day:cleanPlainText(entry?.end_time || '', 40).slice(0,10),
-    value:Number(entry?.value || 0)
-  })).filter(row => /^\d{4}-\d{2}-\d{2}$/.test(row.day) && Number.isFinite(row.value));
-}
-
-function facebookSummaryCountR506(value) {
-  const direct = value?.summary?.total_count;
-  if (Number.isFinite(Number(direct))) return Math.max(0, Number(direct));
-  if (Number.isFinite(Number(value?.count))) return Math.max(0, Number(value.count));
-  return 0;
-}
-
-async function fetchFacebookPublishedPostsR506(env, pageId, startDate, today) {
-  const fields = 'id,created_time,reactions.limit(0).summary(true),comments.limit(0).summary(true),shares';
-  let payload;
-  try {
-    payload = await facebookGraphGetR506(env, `${pageId}/published_posts`, { fields, since:startDate, until:today, limit:100 }, 9500);
-  } catch (firstError) {
-    try {
-      payload = await facebookGraphGetR506(env, `${pageId}/posts`, { fields, since:startDate, until:today, limit:100 }, 9500);
-    } catch (_) { throw firstError; }
-  }
-  const posts = Array.isArray(payload?.data) ? payload.data : [];
-  let reactions=0, comments=0, shares=0;
-  for (const post of posts) {
-    reactions += facebookSummaryCountR506(post?.reactions);
-    comments += facebookSummaryCountR506(post?.comments);
-    shares += Math.max(0, Number(post?.shares?.count || 0));
-  }
-  return { posts:posts.length, reactions, comments, shares };
-}
-
-async function fetchFacebookAnalyticsR506(env) {
-  const config = facebookConfigR506(env);
-  if (!config.configured) return { configured:false, connected:false, error:'FACEBOOK_PAGE_ACCESS_TOKEN или FACEBOOK_PAGE_ID не настроены' };
-  const today = getBratislavaClock().date;
-  const endDate = shiftIsoCalendarDate(today, -1);
-  const startDate = shiftIsoCalendarDate(endDate, -27);
-  const partialErrors = [];
-
-  const profile = await facebookGraphGetR506(env, config.pageId, { fields:'id,name,followers_count,fan_count,link' }, 8500);
-  const pageId = cleanPlainText(profile?.id || config.pageId, 100);
-  const pageName = cleanPlainText(profile?.name || config.pageName || 'Facebook', 160);
-
-  const candidates = [
-    {key:'reach', metric:'page_impressions_unique', label:'охват'},
-    {key:'views', metric:'page_views_total', label:'просмотры страницы'},
-    {key:'interactions', metric:'page_post_engagements', label:'взаимодействия'}
-  ];
-  const metricResults = await Promise.allSettled(candidates.map(item =>
-    facebookGraphGetR506(env, `${pageId}/insights`, { metric:item.metric, period:'day', since:startDate, until:today }, 9000)
-  ));
-  const maps = {};
-  const availability = {};
-  metricResults.forEach((result,index) => {
-    const item=candidates[index];
-    const rows=result.status==='fulfilled' ? facebookInsightTrendR506(result.value,item.metric) : [];
-    availability[item.key]=result.status==='fulfilled' && rows.length>0;
-    maps[item.key]=new Map(rows.map(row=>[row.day,Math.max(0,Number(row.value||0))]));
-    if(result.status==='rejected')partialErrors.push(`${item.metric}: ${cleanPlainText(result.reason?.message || result.reason,180)}`);
-  });
-
-  const trend=[];
-  for (let day=startDate; day<=endDate; day=shiftIsoCalendarDate(day,1)) {
-    trend.push({
-      day,
-      reach:availability.reach ? Number(maps.reach?.get(day)||0) : null,
-      views:availability.views ? Number(maps.views?.get(day)||0) : null,
-      interactions:availability.interactions ? Number(maps.interactions?.get(day)||0) : null
-    });
-  }
-  const sumField = field => trend.reduce((sum,row)=>sum+(row?.[field]!==null&&row?.[field]!==undefined&&Number.isFinite(Number(row[field]))?Math.max(0,Number(row[field])):0),0);
-
-  let postCounts={posts:null,reactions:null,comments:null,shares:null};
-  try {
-    const counts=await fetchFacebookPublishedPostsR506(env,pageId,startDate,today);
-    postCounts={posts:counts.posts,reactions:counts.reactions,comments:counts.comments,shares:counts.shares};
-  } catch (error) { partialErrors.push(`posts: ${cleanPlainText(error?.message || error,180)}`); }
-
-  let metricKey='interactions', metricLabel='взаимодействия';
-  if (availability.reach) { metricKey='reach'; metricLabel='охват'; }
-  else if (availability.views) { metricKey='views'; metricLabel='просмотры страницы'; }
-  const total = availability[metricKey] ? sumField(metricKey) : null;
-
-  return {
-    configured:true, connected:true, pageId, pageName, profileUrl:cleanPlainText(profile?.link || '',700),
-    startDate,endDate,metricKey,metricLabel,total,
-    summary:{
-      followers:Number.isFinite(Number(profile?.followers_count))?Math.max(0,Number(profile.followers_count)):null,
-      fans:Number.isFinite(Number(profile?.fan_count))?Math.max(0,Number(profile.fan_count)):null,
-      reach:availability.reach?sumField('reach'):null,
-      views:availability.views?sumField('views'):null,
-      interactions:availability.interactions?sumField('interactions'):null,
-      posts:postCounts.posts,reactions:postCounts.reactions,comments:postCounts.comments,shares:postCounts.shares
-    },
-    summaryAvailability:{
-      followers:Number.isFinite(Number(profile?.followers_count)),fans:Number.isFinite(Number(profile?.fan_count)),
-      reach:Boolean(availability.reach),views:Boolean(availability.views),interactions:Boolean(availability.interactions),
-      posts:postCounts.posts!==null,reactions:postCounts.reactions!==null,comments:postCounts.comments!==null,shares:postCounts.shares!==null
-    },
-    trend, partialErrors, updatedAt:new Date().toISOString()
-  };
-}
-
 function normalizeSocialDayR487(value) {
   const raw = cleanPlainText(value || '', 40);
   if (/^\d{8}$/.test(raw)) return `${raw.slice(0,4)}-${raw.slice(4,6)}-${raw.slice(6,8)}`;
@@ -9285,20 +9147,18 @@ async function handleControlSocialOverviewR487(request, env) {
   const forceSourceR506 = source => refresh || refreshSourceR504 === source;
   const tiktokModeR503 = normalizeTikTokModeR503(requestUrlR503.searchParams.get('tiktok_mode'));
   const tiktokSnapshotR503 = tiktokSnapshotPlatformR503(tiktokModeR503);
-  let [gaRow, ytRow, igRow, fbRow, ttRow] = await Promise.all([
+  let [gaRow, ytRow, igRow, ttRow] = await Promise.all([
     db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform='google-analytics' ORDER BY datetime(created_at) DESC LIMIT 1`).first(),
     db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform='youtube' ORDER BY datetime(created_at) DESC LIMIT 1`).first(),
     db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform='instagram' ORDER BY datetime(created_at) DESC LIMIT 1`).first(),
-    db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform='facebook' ORDER BY datetime(created_at) DESC LIMIT 1`).first(),
     db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform=?1 ORDER BY datetime(created_at) DESC LIMIT 1`).bind(tiktokSnapshotR503).first()
   ]);
 
   let google = parseSnapshotMetrics(gaRow);
   let youtube = parseSnapshotMetrics(ytRow);
   let instagram = parseSnapshotMetrics(igRow);
-  let facebook = parseSnapshotMetrics(fbRow);
   let tiktok = parseSnapshotMetrics(ttRow);
-  const liveErrors = { site:'', youtube:'', instagram:'', facebook:'', tiktok:'' };
+  const liveErrors = { site:'', youtube:'', instagram:'', tiktok:'' };
   const igConfig = instagramConfigR487(env);
 
   // R504: keep external refreshes separated on the Workers Free plan. TikTok
@@ -9366,22 +9226,9 @@ async function handleControlSocialOverviewR487(request, env) {
   if (!instagram?.configured && !igConfig.configured) instagram = { configured:false, connected:false, error:'INSTAGRAM_ACCESS_TOKEN не настроен' };
   if (liveErrors.instagram && !instagram?.connected) instagram = { ...instagram, configured:igConfig.configured, connected:false, error:liveErrors.instagram };
 
-  const fbConfigR506 = facebookConfigR506(env);
-  const shouldRefreshFacebookR506 = !fastR506 && sourceWantedR506('facebook') && fbConfigR506.configured && (forceSourceR506('facebook') || !fbRow || latestSnapshotAgeMinutesR487(fbRow) > 30 || !facebook?.connected || !Array.isArray(facebook?.trend));
-  if (shouldRefreshFacebookR506) {
-    try {
-      const live = await fetchFacebookAnalyticsR506(env);
-      if (live?.configured) {
-        await savePlatformSnapshot(db,'facebook',live,forceSourceR506('facebook')?'manual-social-center-r506':'social-center-r506');
-        facebook=live; fbRow={created_at:live.updatedAt || new Date().toISOString()};
-      }
-    } catch (error) { liveErrors.facebook=cleanPlainText(error?.message || error,300); }
-  }
-  if (!facebook?.configured && !fbConfigR506.configured) facebook={configured:false,connected:false,error:'FACEBOOK_PAGE_ACCESS_TOKEN не настроен'};
-  if (liveErrors.facebook && !facebook?.connected) facebook={...facebook,configured:fbConfigR506.configured,connected:false,error:liveErrors.facebook};
 
   const tiktokAuthR503 = await tiktokOAuthStatusR503(env,tiktokModeR503).catch(()=>({mode:tiktokModeR503,availableModes:tiktokAvailableModesR503(env),configured:tiktokOAuthClientR503(env,tiktokModeR503).configured,connected:false,scope:''}));
-  const otherExternalRefreshR504 = shouldRefreshGoogleR504 || shouldRefreshYoutube || shouldRefreshInstagramR504 || shouldRefreshFacebookR506;
+  const otherExternalRefreshR504 = shouldRefreshGoogleR504 || shouldRefreshYoutube || shouldRefreshInstagramR504;
   const shouldRefreshTikTokR504 = !fastR506 && sourceWantedR506('tiktok') && tiktokAuthR503.connected && (forceSourceR506('tiktok') || (!otherExternalRefreshR504 && (!ttRow || latestSnapshotAgeMinutesR487(ttRow) > 30 || !tiktok?.connected)));
   if (shouldRefreshTikTokR504) {
     try {
@@ -9433,11 +9280,8 @@ async function handleControlSocialOverviewR487(request, env) {
     const field = fields.find(name=>row?.[name]!==null&&row?.[name]!==undefined&&Number.isFinite(Number(row[name])));
     return [day, field ? Math.max(0,Number(row[field])) : null];
   }).filter(([day,value])=>day&&value!==null));
-  const fbPreferredFieldsR506 = [facebook?.metricKey,'reach','views','interactions','impressions'].filter(Boolean);
-  const fbMapR498 = genericTrendMapR498(facebook,fbPreferredFieldsR506);
   const tiktokDailyR503 = await getTikTokDailyTrendR503(db,startDate,endDate,tiktokModeR503);
   const ttMapR498 = new Map(tiktokDailyR503.map(row=>[row.day,Math.max(0,Number(row.views||0))]));
-  const facebookReady = Boolean(facebook?.connected && fbMapR498.size);
   const tiktokConnectedR503 = Boolean(tiktokAuthR503.connected && tiktok?.connected);
   const tiktokTrendReadyR503 = Boolean(tiktokConnectedR503 && ttMapR498.size);
   const trend = [];
@@ -9447,7 +9291,6 @@ async function handleControlSocialOverviewR487(request, env) {
       site:siteReady ? Number(siteMap.get(day) || 0) : null,
       youtube:youtubeReady ? Number(ytMap.get(day) || 0) : null,
       instagram:instagramSeriesReady ? Number(igMap.get(day) || 0) : null,
-      facebook:facebookReady ? Number(fbMapR498.get(day) || 0) : null,
       tiktok:tiktokTrendReadyR503 ? Number(ttMapR498.get(day) || 0) : null
     });
   }
@@ -9466,7 +9309,7 @@ async function handleControlSocialOverviewR487(request, env) {
   return json({
     ok:true,
     period:{ startDate, endDate, days:28, label:'28 завершённых дней' },
-    totals:{ site:siteReady ? sum('site') : null, youtube:youtubeReady ? sum('youtube') : null, instagram:instagramTotal, facebook:facebookReady ? sum('facebook') : null, tiktok:tiktokTrendReadyR503 ? sum('tiktok') : null },
+    totals:{ site:siteReady ? sum('site') : null, youtube:youtubeReady ? sum('youtube') : null, instagram:instagramTotal, tiktok:tiktokTrendReadyR503 ? sum('tiktok') : null },
     trend,
     platforms:{
       site:{ configured:siteReady, connected:siteReady, name:'Сайт', source:'GA4 + Live Web AI', updatedAt:gaRow?.created_at || google?.updatedAt || '', firstPartyDays:siteFirstPartyTrend.length, firstPartyViews:siteFirstPartyTrend.reduce((sum,row)=>sum+Math.max(0,Number(row?.views||0)),0), firstPartyUsers:Math.max(0,...siteFirstPartyTrend.map(row=>Number(row?.users||0))), error:liveErrors.site },
@@ -9476,12 +9319,6 @@ async function handleControlSocialOverviewR487(request, env) {
         accountId:instagram?.accountId || '', profileUrl:`https://www.instagram.com/${encodeURIComponent(instagram?.username || 'andrikmetal')}/`,
         source:'Instagram Insights', updatedAt:igRow?.created_at || instagram?.updatedAt || '', metricLabel:instagramMetricLabel, trendField:instagramTrendField, trendConnected:instagramSeriesReady,
         summary:instagram?.summary || {}, summaryAvailability:instagram?.summaryAvailability || {}, summarySource:instagram?.summarySource || {}, mediaCounts:instagram?.mediaCounts || {}, partialErrors:instagram?.partialErrors || [], error:instagram?.error || liveErrors.instagram || ''
-      },
-      facebook:{
-        configured:Boolean(fbConfigR506.configured || facebook?.configured), connected:Boolean(facebook?.connected), trendConnected:facebookReady,
-        name:'Facebook', pageId:cleanPlainText(facebook?.pageId || fbConfigR506.pageId || '',100), pageName:cleanPlainText(facebook?.pageName || facebook?.name || fbConfigR506.pageName || 'ANDRIK',120), profileUrl:cleanPlainText(facebook?.profileUrl || '',700), metricLabel:cleanPlainText(facebook?.metricLabel || 'взаимодействия',80),
-        metricKey:cleanPlainText(facebook?.metricKey || 'interactions',40), source:'Facebook Page Insights', updatedAt:fbRow?.created_at || facebook?.updatedAt || '',
-        summary:facebook?.summary || {}, summaryAvailability:facebook?.summaryAvailability || {}, partialErrors:Array.isArray(facebook?.partialErrors)?facebook.partialErrors:[], error:cleanPlainText(liveErrors.facebook || facebook?.error || '',220)
       },
       tiktok:{
         mode:tiktokModeR503, availableModes:tiktokAuthR503.availableModes || tiktokAvailableModesR503(env),
