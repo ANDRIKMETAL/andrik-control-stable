@@ -1,14 +1,14 @@
 {
   "schema": 1,
   "updaterVersion": "55.00-r356",
-  "operation": "publish",
-  "reinstall": false,
-  "operationId": "publish-1787068177022-1769818593",
+  "operation": "reinstall",
+  "reinstall": true,
+  "operationId": "reinstall-1787068337140-e713555dff",
   "release": "R503",
   "archiveName": "R503-TIKTOK-SANDBOX-PRODUCTION-SWITCH-SAFE-FULL.zip",
-  "sourceHead": "b4e1be180e3fd9b931ff0559efe6542fd70986b2",
-  "backupSha": "b4e1be180e3fd9b931ff0559efe6542fd70986b2",
-  "backupTag": "control-backup-20260818154931-b4e1be1-r503-64e62",
+  "sourceHead": "942b8e0d3b865acb1e11c0910ddc385537e44f66",
+  "backupSha": "942b8e0d3b865acb1e11c0910ddc385537e44f66",
+  "backupTag": "control-backup-20260818155212-942b8e0-r503-8a9d5",
   "autoRecovery": true,
-  "generatedAt": "2026-08-18T15:49:37.022Z"
+  "generatedAt": "2026-08-18T15:52:17.140Z"
 }
