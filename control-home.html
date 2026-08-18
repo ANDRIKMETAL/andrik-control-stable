@@ -5,7 +5,7 @@
 <meta name="google" content="notranslate"><meta charset="utf-8"/>
 <meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/>
 <meta content="#02060a" name="theme-color"/>
-<meta content="R474" name="andrik-control-release"/>
+<meta content="R509" name="andrik-control-release"/>
 <meta content="Live Web AI" name="apple-mobile-web-app-title"/>
 <meta content="dark" name="color-scheme"/>
 <meta content="noindex,nofollow,noarchive" name="robots"/><script>document.documentElement.dataset.controlInitialPage=(new URLSearchParams(location.search).get('page')||'menu').toLowerCase();</script>
@@ -732,6 +732,7 @@ body.control-push-summary-view .control-summary-source{display:block}
 <script defer src="/assets/control-cache-reset-r305.js?v=55.00-r305"></script>
 <link rel="stylesheet" href="/assets/control-home-city-list-r370.css?v=55.00-r370">
 <link rel="stylesheet" href="/assets/control-home-summary-r375.css?v=55.00-r412">
+<link rel="stylesheet" href="/assets/control-summary-platforms-r509.css?v=55.00-r509">
 <link rel="stylesheet" href="/assets/control-summary-clocks-r401.css?v=55.00-r412">
 <link rel="stylesheet" href="/assets/control-summary-layout-r410.css?v=55.00-r412">
 <link rel="stylesheet" href="/assets/admin-home-hub-r423.css?v=55.00-r423">
@@ -879,7 +880,7 @@ body.control-push-summary-view .control-summary-source{display:block}
             <strong>Карта</strong>
           </a>
           
-          <footer class="control-version-footer" aria-label="Текущая версия"><strong>Live Web AI</strong><span>R474</span></footer>
+          <footer class="control-version-footer" aria-label="Текущая версия"><strong>Live Web AI</strong><span>R509</span></footer>
         </div>
       </section>
 
@@ -909,9 +910,9 @@ body.control-push-summary-view .control-summary-source{display:block}
     </div>
   </div>
 </main>
-<div class="control-split-version-r181" aria-label="Live Web AI, версия R474">
+<div class="control-split-version-r181" aria-label="Live Web AI, версия R509">
   <span class="control-split-brand-r181">Live Web AI</span>
-  <span class="control-split-number-r181">R474</span>
+  <span class="control-split-number-r181">R509</span>
 </div>
 
 <a class="control-protection-fab" href="/protection-admin.html?v=55.00-r214" aria-label="Открыть защиту"><span class="protection-fab-icon" aria-hidden="true">🛡️</span><span class="protection-fab-label">Защита</span></a>
@@ -936,7 +937,7 @@ body.control-push-summary-view .control-summary-source{display:block}
 <script defer src="/assets/planet-map-transition-r450.js?v=55.00-r450"></script>
 
 <script defer src="/assets/admin-quick-nav-r423.js?v=55.00-r423"></script>
-<script defer src="/assets/control-summary-layout-r410.js?v=55.00-r412"></script><script defer src="/assets/control-home-r448.js?v=55.00-r448"></script><script defer src="/assets/control-summary-archive-r448.js?v=55.00-r448"></script><script defer src="/assets/control-status-eye-v55-00-r88.js?v=55.00-r88"></script><script defer src="/assets/control-version-v55-00-final-r1.js?v=55.00-final-r1"></script>
+<script defer src="/assets/control-summary-layout-r410.js?v=55.00-r412"></script><script defer src="/assets/control-home-r509.js?v=55.00-r509"></script><script defer src="/assets/control-summary-archive-r448.js?v=55.00-r448"></script><script defer src="/assets/control-status-eye-v55-00-r88.js?v=55.00-r88"></script><script defer src="/assets/control-version-v55-00-final-r1.js?v=55.00-final-r1"></script>
 
 
 <script defer src="/assets/control-live-eye-v55-00-r265.js?v=55.00-r265"></script><script defer src="/assets/control-version-v55-00-r3n.js?v=55.00-r3n"></script><script defer src="/assets/control-version-v55-00-final-stable-github.js?v=55.00-final-stable-github"></script><script defer src="/assets/control-menu-return-map-v55-00-r33.js?v=55.00-final-r33"></script>
@@ -948,7 +949,7 @@ body.control-push-summary-view .control-summary-source{display:block}
 <script id="r181-admin-menu-lock-script">
 (()=>{
   'use strict';
-  const FALLBACK_VERSION=document.querySelector('meta[name="andrik-control-release"]')?.content?.trim()||'R474';
+  const FALLBACK_VERSION=document.querySelector('meta[name="andrik-control-release"]')?.content?.trim()||'R509';
   let VERSION=FALLBACK_VERSION;
 
   const cleanVersion=value=>{
@@ -1026,8 +1027,8 @@ body.control-push-summary-view .control-summary-source{display:block}
 <script>
 (()=>{
   const apply=()=>{
-    document.querySelectorAll('.control-version-footer span,.control-split-number-r181').forEach(el=>{el.textContent='R474';});
-    document.querySelectorAll('[aria-label*="версия R"]').forEach(el=>el.setAttribute('aria-label','Live Web AI, версия R474'));
+    document.querySelectorAll('.control-version-footer span,.control-split-number-r181').forEach(el=>{el.textContent='R509';});
+    document.querySelectorAll('[aria-label*="версия R"]').forEach(el=>el.setAttribute('aria-label','Live Web AI, версия R509'));
   };
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',apply,{once:true}); else apply();
   window.addEventListener('pageshow',apply,{passive:true});

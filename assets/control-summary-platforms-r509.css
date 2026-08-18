@@ -1,0 +1,70 @@
+/* ANDRIK R509 — compact four-platform summary cards. */
+.control-home-page .control-home-summary{
+  display:grid!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  grid-template-rows:none!important;
+  gap:10px!important;
+  margin:0!important;
+  flex:0 0 auto!important;
+  min-height:0!important;
+  align-content:start!important;
+}
+.control-platform-card-r509{
+  position:relative!important;
+  min-width:0!important;
+  min-height:146px!important;
+  padding:12px 12px 11px!important;
+  border:1px solid rgba(122,204,235,.18)!important;
+  border-radius:22px!important;
+  overflow:hidden!important;
+  text-decoration:none!important;
+  color:#f5fbff!important;
+  background:linear-gradient(145deg,rgba(7,27,38,.94),rgba(3,13,20,.98))!important;
+  box-shadow:inset 0 0 28px rgba(255,255,255,.018),0 12px 28px rgba(0,0,0,.16)!important;
+  isolation:isolate!important;
+}
+.control-platform-card-r509:active{transform:scale(.985)!important}
+.control-platform-card-r509>header{position:relative;z-index:2;display:flex!important;align-items:center!important;gap:8px!important;margin:0 0 9px!important}
+.control-platform-card-r509>header>div{min-width:0!important}
+.control-platform-card-r509>header strong{display:block!important;font:950 .9rem/1.05 system-ui,-apple-system,"Segoe UI",sans-serif!important;white-space:nowrap!important}
+.control-platform-card-r509>header small{display:block!important;margin-top:2px!important;color:#75909c!important;font:750 .52rem/1.1 system-ui,-apple-system,"Segoe UI",sans-serif!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+.control-platform-icon-r509{width:30px!important;height:30px!important;flex:0 0 30px!important;display:grid!important;place-items:center!important;border-radius:10px!important;background:rgba(255,255,255,.055)!important;font:1000 1rem/1 system-ui!important}
+.control-platform-watermark-r509{position:absolute!important;z-index:0!important;right:-5px!important;bottom:-16px!important;font:1000 6.5rem/1 system-ui,-apple-system,"Segoe UI",sans-serif!important;opacity:.055!important;transform:rotate(-7deg)!important;pointer-events:none!important;user-select:none!important}
+.control-platform-metrics-r509{position:relative;z-index:2;display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:7px 9px!important;align-content:start!important}
+.control-platform-metric-r509{min-width:0!important;padding:5px 0!important;border-top:1px solid rgba(255,255,255,.045)!important}
+.control-platform-metric-r509 strong{display:block!important;font:1000 1.16rem/.98 system-ui,-apple-system,"Segoe UI",sans-serif!important;white-space:nowrap!important;letter-spacing:.01em!important}
+.control-platform-metric-r509 small{display:block!important;margin-top:3px!important;color:#9bb0ba!important;font:800 .55rem/1.08 system-ui,-apple-system,"Segoe UI",sans-serif!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+.control-platform-nochange-r509{grid-column:1/-1!important;align-self:center!important;padding:13px 2px!important;color:#5d7681!important;font:800 .6rem/1.2 system-ui!important}
+.control-platform-card-r509.is-site{border-color:rgba(64,211,172,.28)!important;background:linear-gradient(145deg,rgba(4,40,39,.92),rgba(3,17,22,.98))!important}
+.control-platform-card-r509.is-site .control-platform-icon-r509{color:#72efc6!important;background:rgba(63,217,172,.11)!important}
+.control-platform-card-r509.is-site .control-platform-watermark-r509{color:#56e0b7!important}
+.control-platform-card-r509.is-youtube{border-color:rgba(255,87,105,.28)!important;background:linear-gradient(145deg,rgba(49,12,23,.92),rgba(15,9,16,.98))!important}
+.control-platform-card-r509.is-youtube .control-platform-icon-r509{color:#ff6677!important;background:rgba(255,77,99,.11)!important}
+.control-platform-card-r509.is-youtube .control-platform-watermark-r509{color:#ff4f65!important}
+.control-platform-card-r509.is-instagram{border-color:rgba(244,190,66,.28)!important;background:linear-gradient(145deg,rgba(43,31,9,.91),rgba(15,13,18,.98))!important}
+.control-platform-card-r509.is-instagram .control-platform-icon-r509{color:#ffd35e!important;background:rgba(244,190,66,.11)!important}
+.control-platform-card-r509.is-instagram .control-platform-watermark-r509{color:#ffcc4d!important}
+.control-platform-card-r509.is-tiktok{border-color:rgba(236,72,158,.28)!important;background:linear-gradient(145deg,rgba(40,10,35,.92),rgba(7,18,25,.98))!important}
+.control-platform-card-r509.is-tiktok .control-platform-icon-r509{color:#ff67b5!important;background:rgba(239,74,160,.11)!important}
+.control-platform-card-r509.is-tiktok .control-platform-watermark-r509{color:#ff55ad!important}
+.control-home-page .control-summary-dual-r375.has-single-r509{grid-template-columns:1fr!important}
+.control-home-page .control-summary-dual-r375.has-single-r509 .control-summary-mini-r375.is-city{width:100%!important}
+.control-summary-mini-r375[hidden]{display:none!important}
+.control-city-modal-row-r375>em{display:flex!important;align-items:baseline!important;gap:3px!important;white-space:nowrap!important}
+.control-city-modal-row-r375>em>small{display:inline!important;margin:0!important;color:#6fa3b7!important;font-size:.52rem!important;font-weight:900!important}
+@media(max-width:390px){
+  .control-home-page .control-home-summary{gap:8px!important}
+  .control-platform-card-r509{min-height:134px!important;padding:10px!important;border-radius:19px!important}
+  .control-platform-card-r509>header{margin-bottom:7px!important;gap:7px!important}
+  .control-platform-icon-r509{width:27px!important;height:27px!important;flex-basis:27px!important;font-size:.9rem!important}
+  .control-platform-card-r509>header strong{font-size:.82rem!important}
+  .control-platform-card-r509>header small{font-size:.48rem!important}
+  .control-platform-metrics-r509{gap:5px 7px!important}
+  .control-platform-metric-r509 strong{font-size:1.02rem!important}
+  .control-platform-metric-r509 small{font-size:.49rem!important}
+  .control-platform-watermark-r509{font-size:5.7rem!important}
+}
+@media(orientation:landscape){
+  .control-home-page .control-home-summary{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:8px!important}
+  .control-platform-card-r509{min-height:122px!important}
+}

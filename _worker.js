@@ -12235,6 +12235,53 @@ async function handleDailySummaryArchiveDayR442(request, env) {
   });
 }
 
+
+// R509 — calendar-day YouTube counters for the visible "Сводка за сегодня" card.
+// The legacy owner-summary accumulator uses 06:05→06:05 for push continuity. The UI,
+// however, says "за сегодня", so views/subscribers here use the channel total delta
+// from the snapshot nearest 00:00 Europe/Bratislava. This value is returned separately
+// and never pollutes the durable 06:05 high-water accumulator.
+async function getYoutubeCalendarTodayR509(db) {
+  const day=getBratislavaClock().date;
+  const startAt=bratislavaLocalDateTimeToIso(day,0,0);
+  const startMs=Date.parse(startAt||'');
+  if(!Number.isFinite(startMs)) return {day,views:null,subscribers:null,likes:null,comments:null,source:'missing-midnight'};
+  const [latest,before,after]=await Promise.all([
+    db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform='youtube' ORDER BY datetime(created_at) DESC LIMIT 1`).first().catch(()=>null),
+    db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform='youtube' AND datetime(created_at) <= datetime(?1) ORDER BY datetime(created_at) DESC LIMIT 1`).bind(startAt).first().catch(()=>null),
+    db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform='youtube' AND datetime(created_at) >= datetime(?1) ORDER BY datetime(created_at) ASC LIMIT 1`).bind(startAt).first().catch(()=>null)
+  ]);
+  let current=parseSnapshotMetrics(latest);
+  current=await mergeYoutubeCurrentCountsR440(db,current,latest?.created_at||'',getBratislavaSummaryWindow()).catch(()=>current);
+  const candidates=[before,after].map(row=>{
+    const metrics=parseSnapshotMetrics(row);
+    const at=cleanPlainText(row?.created_at||metrics?.updatedAt||'',80);
+    const atMs=Date.parse(at||'');
+    return {row,metrics,at,atMs,distance:Number.isFinite(atMs)?Math.abs(atMs-startMs):Number.POSITIVE_INFINITY};
+  }).filter(item=>Number.isFinite(item.atMs)).sort((a,b)=>a.distance-b.distance);
+  const baseline=candidates[0]||null;
+  // Do not fabricate "today" from a snapshot many hours away from midnight.
+  if(!baseline || baseline.distance>150*60*1000){
+    return {day,views:null,subscribers:null,likes:null,comments:null,source:'no-near-midnight-snapshot',updatedAt:latest?.created_at||''};
+  }
+  const delta=(field)=>{
+    const now=Number(current?.[field]);
+    const base=Number(baseline.metrics?.[field]);
+    if(!Number.isFinite(now)||!Number.isFinite(base)||now<base) return null;
+    return Math.max(0,now-base);
+  };
+  return {
+    day,
+    views:delta('views'),
+    subscribers:delta('subscribers'),
+    likes:delta('likesTotal'),
+    comments:delta('commentsTotal'),
+    baselineAt:baseline.at,
+    updatedAt:cleanPlainText(current?.__currentCountsAt||latest?.created_at||'',80),
+    source:'youtube-calendar-midnight-r509'
+  };
+}
+
 async function handleControlHome(request, env) {
   if (!adminAuthorized(request, env)) return json({ ok:false, error:'unauthorized' },401);
   const db = requireDb(env);
@@ -12294,7 +12341,7 @@ async function handleControlHome(request, env) {
   // the expensive full collector. Return current-window high-water immediately,
   // even when it is zero, then let the client request a silent live refresh.
   if (!forceRefresh) {
-    const [highWaterRowR395, pushStateRowR395, activityResultR395, cityActivityR395, cityMapActivityR395] = await Promise.all([
+    const [highWaterRowR395, pushStateRowR395, activityResultR395, cityActivityR395, cityMapActivityR395, youtubeTodayR509] = await Promise.all([
       getPushState(db, `control-home-high-water-r213:${window.key}`).catch(() => null),
       getPushState(db, `daily-owner-summary-window:${window.key}`).catch(() => null),
       db.prepare(`
@@ -12308,7 +12355,8 @@ async function handleControlHome(request, env) {
         LIMIT 200
       `).bind(window.startAt).all().catch(() => ({ results:[] })),
       collectDailyCityActivityR370(db, window).catch(() => []),
-      collectMapCityActivity30dR395(db).catch(() => [])
+      collectMapCityActivity30dR395(db).catch(() => []),
+      getYoutubeCalendarTodayR509(db).catch(() => ({day:getBratislavaClock().date,views:null,subscribers:null,likes:null,comments:null,source:'error'}))
     ]);
     const highWaterR395 = parseControlHomeHighWaterEnvelopeR394(highWaterRowR395);
     const fastSnapshotR395 = parseStoredDailySummarySnapshotR271(pushStateRowR395, window.key);
@@ -12340,6 +12388,7 @@ async function handleControlHome(request, env) {
       windowStartAt:window.startAt,
       windowEndAt:window.endAt,
       summary:mergedFastSummaryR395,
+      youtubeToday:youtubeTodayR509 || null,
       cityActivity:Array.isArray(cityActivityR395) ? cityActivityR395 : [],
       cityMapActivity:Array.isArray(cityMapActivityR395) ? cityMapActivityR395 : [],
       activity:activityResultR395?.results || [],
@@ -12503,6 +12552,7 @@ async function handleControlHome(request, env) {
     ytLatest?.created_at || '',
     gaLatest?.created_at || ''
   );
+  const youtubeTodayR509=await getYoutubeCalendarTodayR509(db).catch(() => ({day:getBratislavaClock().date,views:null,subscribers:null,likes:null,comments:null,source:'error'}));
   return json({
     ok:true,
     period:'06:05-auto-cycle',
@@ -12510,6 +12560,7 @@ async function handleControlHome(request, env) {
     windowStartAt:window.startAt,
     windowEndAt:window.endAt,
     summary:summaryR213,
+    youtubeToday:youtubeTodayR509 || null,
     cityActivity:Array.isArray(cityActivity)?cityActivity:[],
     cityMapActivity:Array.isArray(cityMapActivityR395)?cityMapActivityR395:[],
     activity:activityResult.results || [],
