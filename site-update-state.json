@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787047863060-19d5afe099",
-  "release": "R495",
-  "archiveName": "R495-YOUTUBE-ANALYTICS-OWNER-FORBIDDEN-FIX-SAFE-FULL.zip",
-  "sourceHead": "0f4ad635edbaab94e7afbf3caf3459acebe1c4c8",
-  "backupSha": "0f4ad635edbaab94e7afbf3caf3459acebe1c4c8",
-  "backupTag": "control-backup-20260818101042-0f4ad63-r495-999be",
+  "operationId": "publish-1787048919696-5a27213da3",
+  "release": "R496",
+  "archiveName": "R496-ONE-TIME-YOUTUBE-OWNER-RECONNECT-SAFE-FULL.zip",
+  "sourceHead": "bef2cf2698afdd669515b5677ce76b9aa00f081d",
+  "backupSha": "bef2cf2698afdd669515b5677ce76b9aa00f081d",
+  "backupTag": "control-backup-20260818102831-bef2cf2-r496-bd8cb",
   "autoRecovery": true,
-  "generatedAt": "2026-08-18T10:11:03.060Z"
+  "generatedAt": "2026-08-18T10:28:39.696Z"
 }

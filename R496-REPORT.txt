@@ -1,0 +1,11 @@
+ANDRIK CONTROL / LIVE WEB AI — R496
+One-time YouTube owner OAuth correction
+
+Changes from R495:
+- Adds a temporary YouTube button only when OAuth is connected but the selected Google account owns no YouTube channel (or does not own @andrikmetal).
+- Button label: «Разово выбрать владельца YouTube».
+- OAuth start keeps Google account chooser + consent and the existing read-only scopes.
+- After the correct owner account is authorized and YouTube data becomes available, the button disappears automatically.
+- Does not restore a permanent reconnect control.
+- Preserves R495 owner-channel diagnostics, Site + YouTube + Instagram, and TikTok as the only next platform.
+- Bumps visible/runtime version to R496 and cache-reset/service-worker references accordingly.
