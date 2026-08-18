@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787080214065-8dfd6abed1",
-  "release": "R509",
-  "archiveName": "R509-FOUR-PLATFORM-DAILY-SUMMARY-CITY-PEOPLE-YOUTUBE-TODAY-SAFE-FULL.zip",
-  "sourceHead": "9e005262575730c1c7d6929ff4be4d498dc85570",
-  "backupSha": "9e005262575730c1c7d6929ff4be4d498dc85570",
-  "backupTag": "control-backup-20260818191002-9e00526-r509-e4e5c",
+  "operationId": "publish-1787081061102-ba2acc0d79",
+  "release": "R510",
+  "archiveName": "R510-SUMMARY-CARDS-NO-OVERLAP-YOUTUBE-STABLE-RELEASES-RESTORED-SAFE-FULL.zip",
+  "sourceHead": "dc64934d1012a3ba0885c6970c7308251681556e",
+  "backupSha": "dc64934d1012a3ba0885c6970c7308251681556e",
+  "backupTag": "control-backup-20260818192417-dc64934-r510-2edc3",
   "autoRecovery": true,
-  "generatedAt": "2026-08-18T19:10:14.065Z"
+  "generatedAt": "2026-08-18T19:24:21.102Z"
 }
