@@ -1,0 +1,10 @@
+ANDRIK R513 — INSTAGRAM/TIKTOK DETAIL ANALYTICS RECOVERY
+
+- Fixed TikTok detail page ID mismatch introduced in R512: page used detail*R512 IDs while loader still targeted R511 IDs.
+- Instagram and TikTok now share a single R513 detail contract and immutable R513 JS/CSS assets.
+- Detail pages paint the last good Social Center snapshot immediately when available.
+- Fast snapshot request no longer waits several seconds for owner-session bootstrap before first attempt; owner wait is used only as a 401/403 retry.
+- Empty/partial background responses never erase already rendered analytics.
+- Automatic forced refresh runs only when the platform snapshot is older than 10 minutes; manual refresh remains available.
+- Social Center / analytics / YouTube / Instagram / TikTok swipe routing updated to R513.
+- No Facebook map or Facebook analytics code was restored.

@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787084511642-8d27a7fdc1",
-  "release": "R512",
-  "archiveName": "R512-SOCIAL-SWIPE-FIX-SITE-GA4-YOUTUBE-CLEAN-SAFE-FULL.zip",
-  "sourceHead": "8d7ab19c577a4ededa0a2f145759febe4670537e",
-  "backupSha": "8d7ab19c577a4ededa0a2f145759febe4670537e",
-  "backupTag": "control-backup-20260818202137-8d7ab19-r512-60ea3",
+  "operationId": "publish-1787085540340-040a6db32f",
+  "release": "R513",
+  "archiveName": "R513-INSTAGRAM-TIKTOK-ANALYTICS-RECOVERY-STABLE-DETAIL-SAFE-FULL.zip",
+  "sourceHead": "f6fb67e1e0871f49db9d1054eee0413aa97ebf93",
+  "backupSha": "f6fb67e1e0871f49db9d1054eee0413aa97ebf93",
+  "backupTag": "control-backup-20260818203855-f6fb67e-r513-f1e23",
   "autoRecovery": true,
-  "generatedAt": "2026-08-18T20:21:51.642Z"
+  "generatedAt": "2026-08-18T20:39:00.340Z"
 }
