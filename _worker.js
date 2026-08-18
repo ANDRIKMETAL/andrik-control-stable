@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R487', number:487, version:'55.00', full:'55.00 LIVE WEB AI FINAL R487', siteUpdater:'55.00-r356' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R488', number:488, version:'55.00', full:'55.00 LIVE WEB AI FINAL R488', siteUpdater:'55.00-r356' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -8222,7 +8222,19 @@ async function fetchInstagramAnalytics(env) {
   const today = getBratislavaClock().date;
   const endDate = shiftIsoCalendarDate(today, -1);
   const startDate = shiftIsoCalendarDate(endDate, -27);
-  const profile = await instagramApiGetR487(env, 'me', { fields:'id,username' }, 8000);
+  let profile;
+  try {
+    profile = await instagramApiGetR487(env, 'me', { fields:'id,username' }, 8000);
+  } catch (profileError) {
+    const fallbackUrl = new URL('https://graph.instagram.com/me');
+    fallbackUrl.searchParams.set('fields', 'id,username');
+    const fallbackResponse = await fetchWithAbortTimeoutR409(fallbackUrl.toString(), {
+      headers:{ authorization:`Bearer ${config.token}`, accept:'application/json' }
+    }, 8000, 'instagram-profile-timeout');
+    const fallbackData = await fallbackResponse.json().catch(() => ({}));
+    if (!fallbackResponse.ok) throw profileError;
+    profile = fallbackData;
+  }
   const accountId = cleanPlainText(profile?.id || '', 100);
   if (!accountId) throw new Error('instagram-user-id-missing');
   const username = cleanPlainText(profile?.username || 'andrikmetal', 100);

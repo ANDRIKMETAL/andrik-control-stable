@@ -27,3 +27,8 @@
 .social-overview-r487-empty{min-height:220px;display:grid;place-items:center;color:#91a8b4;text-align:center;padding:24px}
 @media(max-width:430px){.social-overview-r487-kpis{gap:6px}.social-overview-r487-kpi{padding:10px 8px;border-radius:15px}.social-overview-r487-kpi span{font-size:.57rem}.social-overview-r487-kpi strong{font-size:1.05rem}.social-overview-r487-chart{min-height:220px}.social-overview-r487-svg{min-height:205px}.social-overview-r487-meta{align-items:flex-start;flex-direction:column}}
 @media(orientation:landscape){.social-overview-r487-card{max-width:900px;margin-left:auto;margin-right:auto}.social-overview-r487-chart{min-height:230px}.social-overview-r487-svg{max-height:270px}}
+
+/* R488 — entry into the dedicated Social Center. */
+.social-overview-r487-head-actions{display:flex;align-items:center;gap:7px;position:relative;z-index:2}
+.social-overview-r487-center-link{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:0 12px;border:1px solid rgba(218,124,239,.24);border-radius:999px;background:rgba(63,24,72,.42);color:#f2dfff;text-decoration:none;font:850 .7rem/1 system-ui;white-space:nowrap}
+@media(max-width:520px){.social-overview-r487-head-actions{width:100%;justify-content:flex-end;margin-top:8px}.social-overview-r487-center-link,.social-overview-r487-refresh{min-height:34px;padding-inline:10px}}

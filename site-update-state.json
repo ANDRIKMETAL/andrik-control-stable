@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787041131621-013160070e",
-  "release": "R487",
-  "archiveName": "R487-INSTAGRAM-INSIGHTS-UNIFIED-SOCIAL-GRAPH-SAFE-FULL.zip",
-  "sourceHead": "cbc2efe8513bdd56e8496f27aca7da17ff68a700",
-  "backupSha": "cbc2efe8513bdd56e8496f27aca7da17ff68a700",
-  "backupTag": "control-backup-20260818081847-cbc2efe-r487-029f2",
+  "operationId": "publish-1787041565390-525dabe577",
+  "release": "R488",
+  "archiveName": "R488-SOCIAL-CENTER-SITE-YOUTUBE-INSTAGRAM-SAFE-FULL-1.zip",
+  "sourceHead": "9148cb84c4a971ee9efd740f7ffcb8f0d41c4cb8",
+  "backupSha": "9148cb84c4a971ee9efd740f7ffcb8f0d41c4cb8",
+  "backupTag": "control-backup-20260818082601-9148cb8-r488-afb55",
   "autoRecovery": true,
-  "generatedAt": "2026-08-18T08:18:51.621Z"
+  "generatedAt": "2026-08-18T08:26:05.390Z"
 }

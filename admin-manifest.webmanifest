@@ -34,6 +34,12 @@
   ],
   "shortcuts": [
     {
+      "name": "Центр соцсетей",
+      "short_name": "Соцсети",
+      "description": "Сайт, YouTube и Instagram за 28 дней",
+      "url": "/social-center-admin.html?source=app-shortcut-social&v=55.00-r488"
+    },
+    {
       "name": "YouTube — статистика",
       "short_name": "YouTube",
       "description": "Открыть статистику канала ANDRIK",
@@ -47,5 +53,5 @@
       ]
     }
   ],
-  "version": "55.00-final-r418"
+  "version": "55.00-final-r488"
 }
