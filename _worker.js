@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R493', number:493, version:'55.00', full:'55.00 LIVE WEB AI FINAL R493', siteUpdater:'55.00-r356' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R495', number:494, version:'55.00', full:'55.00 LIVE WEB AI FINAL R495', siteUpdater:'55.00-r356' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -6170,7 +6170,7 @@ async function handleYoutubeOAuthCallback(request, env, ctx) {
 
   // Root is the installed ANDRIK Control start page. Android can hand this
   // navigation directly to the Control PWA after Google closes the consent flow.
-  return Response.redirect('https://control.andrikmetal.com/social-center-admin.html?youtube=connected&v=55.00-r493', 302);
+  return Response.redirect('https://control.andrikmetal.com/social-center-admin.html?youtube=connected&v=55.00-r495', 302);
 }
 
 async function handleYoutubeOAuthDisconnect(request, env) {
@@ -8087,15 +8087,67 @@ async function buildPlatformControlData(env, google = {}, youtube = {}, searchCo
   };
 }
 
+function youtubeGoogleErrorTextR495(data, status, label='YouTube') {
+  const message=cleanPlainText(data?.error?.message || data?.error_description || data?.error || `${label}-${status}`, 260);
+  const statusName=cleanPlainText(data?.error?.status || '', 80);
+  const reasons=[...new Set((Array.isArray(data?.error?.errors)?data.error.errors:[]).map(item=>cleanPlainText(item?.reason || '',80)).filter(Boolean))];
+  const suffix=[statusName, reasons.length?reasons.join(', '):''].filter(Boolean).join(' · ');
+  return `${label} ${status}: ${message}${suffix?` [${suffix}]`:''}`;
+}
+
 async function youtubeAnalyticsQuery(env, accessToken, params={}) {
   const url=new URL('https://youtubeanalytics.googleapis.com/v2/reports');
   Object.entries(params).forEach(([key,value])=>{if(value!==undefined&&value!==null&&value!=='')url.searchParams.set(key,String(value))});
   await trackObservabilityUsage(env, 'youtube-analytics-api', 0, 1, { dimensions:cleanPlainText(params.dimensions || 'summary',120), metrics:cleanPlainText(params.metrics || '',240) }).catch(() => {});
   const response=await fetchWithAbortTimeoutR409(url,{headers:{authorization:`Bearer ${accessToken}`,accept:'application/json'}},8000,'youtube-analytics-timeout');
   const data=await response.json().catch(()=>({}));
-  if(!response.ok) throw new Error(data?.error?.message||`youtube-analytics-${response.status}`);
+  if(!response.ok) throw new Error(youtubeGoogleErrorTextR495(data,response.status,'YouTube Analytics'));
   const headers=(data.columnHeaders||[]).map(x=>x.name);
   return (data.rows||[]).map(row=>Object.fromEntries(headers.map((name,index)=>[name,row[index]])));
+}
+
+async function youtubeOAuthOwnedChannelR495(env, accessToken) {
+  const url=new URL('https://www.googleapis.com/youtube/v3/channels');
+  url.searchParams.set('part','id,snippet');
+  url.searchParams.set('mine','true');
+  url.searchParams.set('maxResults','50');
+  await trackObservabilityUsage(env,'youtube-data-api',1,1,{endpoint:'channels',mode:'oauth-owner-check-r495'}).catch(()=>{});
+  const response=await fetchWithAbortTimeoutR409(url.toString(),{headers:{authorization:`Bearer ${accessToken}`,accept:'application/json'}},8000,'youtube-owner-check-timeout');
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok) throw new Error(youtubeGoogleErrorTextR495(data,response.status,'YouTube Data'));
+  const items=Array.isArray(data?.items)?data.items:[];
+  if(!items.length) throw new Error('YouTube OAuth: выбранный Google-аккаунт не возвращает ни одного собственного YouTube-канала');
+  return items.map(item=>({
+    id:cleanPlainText(item?.id||'',120),
+    title:cleanPlainText(item?.snippet?.title||'',160),
+    customUrl:cleanPlainText(item?.snippet?.customUrl||'',160)
+  })).filter(item=>item.id);
+}
+
+async function resolveYoutubeAnalyticsOwnerR495(env, accessToken) {
+  const handle=cleanPlainText(env.YOUTUBE_CHANNEL_HANDLE || '@andrikmetal',100);
+  let targetId=cleanPlainText(env.YOUTUBE_CHANNEL_ID || '',120);
+  let targetTitle='';
+  if(!targetId) {
+    try {
+      const identity=await fetchYoutubeMonitorIdentity(env);
+      targetId=cleanPlainText(identity?.channelId||'',120);
+      targetTitle=cleanPlainText(identity?.title||'',160);
+    } catch (_) {}
+  }
+  const owned=await youtubeOAuthOwnedChannelR495(env,accessToken);
+  let selected=null;
+  if(targetId) selected=owned.find(item=>item.id===targetId)||null;
+  if(!selected && handle) {
+    const normalized=handle.replace(/^@/,'').toLowerCase();
+    selected=owned.find(item=>String(item.customUrl||'').replace(/^@/,'').toLowerCase()===normalized)||null;
+  }
+  if(!selected && owned.length===1 && !targetId) selected=owned[0];
+  if(!selected) {
+    const ownedText=owned.map(item=>`${item.title||'канал'} (${item.id})`).join(', ');
+    throw new Error(`YouTube OAuth: выбранный Google-аккаунт не владеет каналом ${handle}${targetTitle?` «${targetTitle}»`:''}. Доступные каналы: ${ownedText}`);
+  }
+  return {channelId:selected.id,title:selected.title||targetTitle||'ANDRIK',handle,ownedChannels:owned};
 }
 
 async function fetchYouTubeStudioAnalytics(env) {
@@ -8103,14 +8155,18 @@ async function fetchYouTubeStudioAnalytics(env) {
   const refreshToken=await getYoutubeRefreshToken(env);
   if(!config.configured || !refreshToken) return {configured:config.configured,connected:false};
   const accessToken=await getYoutubeOAuthAccessToken(env);
+  const owner=await resolveYoutubeAnalyticsOwnerR495(env,accessToken);
   const startDate=isoDateDaysAgo(28), endDate=isoDateDaysAgo(1);
   const dailyDate=isoDateDaysAgo(1);
-  const base={ids:'channel==MINE',startDate,endDate};
+  // Use the concrete channel ID verified through OAuth instead of channel==MINE.
+  // This avoids ambiguous/default-channel resolution for Brand Accounts and guarantees
+  // that Analytics is requested only for a channel actually owned by the OAuth user.
+  const base={ids:`channel==${owner.channelId}`,startDate,endDate};
   const results=await Promise.allSettled([
     youtubeAnalyticsQuery(env, accessToken,{...base,metrics:'views,estimatedMinutesWatched,averageViewDuration,likes,comments,shares,subscribersGained,subscribersLost'}),
     youtubeAnalyticsQuery(env, accessToken,{...base,dimensions:'day',metrics:'views,likes,comments,shares',sort:'day'}),
     youtubeAnalyticsQuery(env, accessToken,{...base,dimensions:'country',metrics:'views,estimatedMinutesWatched',sort:'-views',maxResults:200}),
-    youtubeAnalyticsQuery(env, accessToken,{ids:'channel==MINE',startDate:dailyDate,endDate:dailyDate,dimensions:'country',metrics:'views,estimatedMinutesWatched',sort:'-views',maxResults:200}),
+    youtubeAnalyticsQuery(env, accessToken,{ids:`channel==${owner.channelId}`,startDate:dailyDate,endDate:dailyDate,dimensions:'country',metrics:'views,estimatedMinutesWatched',sort:'-views',maxResults:200}),
     youtubeAnalyticsQuery(env, accessToken,{...base,dimensions:'ageGroup,gender',metrics:'viewerPercentage'}),
     youtubeAnalyticsQuery(env, accessToken,{...base,dimensions:'sharingService',metrics:'shares',sort:'-shares',maxResults:8})
   ]);
@@ -8127,7 +8183,7 @@ async function fetchYouTubeStudioAnalytics(env) {
   const countries=cleanCountries(val(2));
   const dailyCountries=cleanCountries(val(3));
   return {
-    configured:true,connected:true,startDate,endDate,dailyDate,
+    configured:true,connected:true,startDate,endDate,dailyDate,channelId:owner.channelId,channelTitle:owner.title,oauthOwnedChannels:owner.ownedChannels,
     summary:{
       views:Number(summary.views||0), estimatedMinutesWatched:Number(summary.estimatedMinutesWatched||0), averageViewDuration:Number(summary.averageViewDuration||0), likes:Number(summary.likes||0), comments:Number(summary.comments||0), shares:Number(summary.shares||0), subscribersGained:Number(summary.subscribersGained||0), subscribersLost:Number(summary.subscribersLost||0)
     },
@@ -8604,7 +8660,7 @@ async function handleControlSocialOverviewR487(request, env) {
           trend:live.trend || [], countries:live.countries || [], pages:live.pages || [], devices:live.devices || [],
           updatedAt:live.updatedAt || new Date().toISOString()
         };
-        await savePlatformSnapshot(db, 'google-analytics', metrics, refresh ? 'manual-social-center-r493' : 'social-center-r493');
+        await savePlatformSnapshot(db, 'google-analytics', metrics, refresh ? 'manual-social-center-r495' : 'social-center-r495');
         google = metrics; gaRow = { created_at:metrics.updatedAt };
       }
     } catch (error) { liveErrors.site = cleanPlainText(error?.message || error, 300); }
@@ -8631,7 +8687,7 @@ async function handleControlSocialOverviewR487(request, env) {
           },
           updatedAt:new Date().toISOString()
         };
-        await savePlatformSnapshot(db, 'youtube', metrics, refresh ? 'manual-social-center-r493' : 'social-center-r493');
+        await savePlatformSnapshot(db, 'youtube', metrics, refresh ? 'manual-social-center-r495' : 'social-center-r495');
         youtube = metrics; ytRow = { created_at:metrics.updatedAt };
         if (!Array.isArray(studio?.trend) || !studio.trend.length) {
           liveErrors.youtube = cleanPlainText(studio?.trendError || studio?.partialErrors?.[0] || 'YouTube Analytics вернул пустой дневной ряд', 300);
@@ -8646,7 +8702,7 @@ async function handleControlSocialOverviewR487(request, env) {
     try {
       const live = await fetchInstagramAnalytics(env);
       if (live?.configured) {
-        await savePlatformSnapshot(db, 'instagram', live, refresh ? 'manual-social-center-r493' : 'social-center-r493');
+        await savePlatformSnapshot(db, 'instagram', live, refresh ? 'manual-social-center-r495' : 'social-center-r495');
         instagram = live; igRow = { created_at:live.updatedAt || new Date().toISOString() };
       }
     } catch (error) { liveErrors.instagram = cleanPlainText(error?.message || error, 300); }
