@@ -1,6 +1,6 @@
 'use strict';
 
-const VERSION = '55.00-r499';
+const VERSION = '55.00-r500';
 const IS_CONTROL_HOST = self.location.hostname.toLowerCase() === 'control.andrikmetal.com';
 
 async function deleteControlCaches(){
@@ -36,7 +36,7 @@ if(IS_CONTROL_HOST){
   const OFFLINE = '/offline.html';
   const PUBLIC_HOME = '/';
   const CORE = [
-    '/', '/index.html', '/offline.html', '/open-youtube.html?v=55.00-r213',
+    '/', '/index.html', '/privacy.html', '/terms.html', '/offline.html', '/open-youtube.html?v=55.00-r213',
     '/manifest.webmanifest?v=55.00-r87', '/assets/v50.js?v=54.42', '/assets/v50-26.css?v=52.03',
     '/assets/pwa-install.css', '/assets/pwa-install.js', '/assets/push-v54-07.js?v=54.07',
     '/assets/app-links-v50.js?v=55.00-r213',

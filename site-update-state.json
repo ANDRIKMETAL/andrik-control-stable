@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787055179368-0d9c1ceb71",
-  "release": "R499",
-  "archiveName": "R499-COMPACT-MAP-CORNER-BUTTONS-SAFE-FULL.zip",
-  "sourceHead": "735a9c3b4ad4958966b6badae47690cca5e40320",
-  "backupSha": "735a9c3b4ad4958966b6badae47690cca5e40320",
-  "backupTag": "control-backup-20260818121253-735a9c3-r499-fbef2",
+  "operationId": "publish-1787062813219-c41ba93abb",
+  "release": "R500",
+  "archiveName": "R500-PUBLIC-PRIVACY-TERMS-TIKTOK-READY-SAFE-FULL.zip",
+  "sourceHead": "b5612270e6bc11942974f09d08f5fc6116bde26b",
+  "backupSha": "b5612270e6bc11942974f09d08f5fc6116bde26b",
+  "backupTag": "control-backup-20260818142007-b561227-r500-078f6",
   "autoRecovery": true,
-  "generatedAt": "2026-08-18T12:12:59.368Z"
+  "generatedAt": "2026-08-18T14:20:13.219Z"
 }
