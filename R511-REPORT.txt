@@ -1,0 +1,11 @@
+ANDRIK R511 — SOCIAL PLATFORM SWIPE / DETAIL ANALYTICS
+
+- Main Social Center is compact: Site, YouTube, Instagram, TikTok overview + shared 28-day chart.
+- Removed the large Instagram and TikTok detail grids from the Social Center main page.
+- Horizontal swipe in the old Analytics/YouTube internal carousel is disabled.
+- New Social Center swipe order: Overview -> Site/GA4 -> YouTube Studio -> Instagram -> TikTok -> Overview.
+- Instagram detail: KPIs, 28-day chart, audience age/gender/countries/cities when Meta returns them.
+- TikTok detail: profile/video KPIs, server-snapshot daily chart, strongest videos + engagement rate.
+- Facebook layer removed from world map UI and active map runtime uses the Facebook-free R507 map adapter.
+- Instagram demographic fetching is capped to four subrequests per refresh to stay within Worker subrequest budget.
+- Worker / UI release: R511.

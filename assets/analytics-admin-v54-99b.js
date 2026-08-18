@@ -649,7 +649,7 @@
       if(!gesture.mode&&Math.max(Math.abs(dx),Math.abs(dy))>8){
         if(gesture.canPullRefresh&&dy>0&&Math.abs(dy)>Math.abs(dx)*1.05)gesture.mode='vertical-down';
         else if(gesture.canOpenSections&&dy<0&&Math.abs(dy)>Math.abs(dx)*1.05)gesture.mode='vertical-up';
-        else if(Math.abs(dx)>Math.abs(dy)*1.05)gesture.mode='horizontal';
+        else if(Math.abs(dx)>Math.abs(dy)*1.05)gesture.mode='external-horizontal';
         else gesture.mode='vertical-scroll';
       }
       if(gesture.mode==='vertical-down'){

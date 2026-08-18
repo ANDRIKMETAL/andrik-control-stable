@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787081061102-ba2acc0d79",
-  "release": "R510",
-  "archiveName": "R510-SUMMARY-CARDS-NO-OVERLAP-YOUTUBE-STABLE-RELEASES-RESTORED-SAFE-FULL.zip",
-  "sourceHead": "dc64934d1012a3ba0885c6970c7308251681556e",
-  "backupSha": "dc64934d1012a3ba0885c6970c7308251681556e",
-  "backupTag": "control-backup-20260818192417-dc64934-r510-2edc3",
+  "operationId": "publish-1787083617480-ff3e588b22",
+  "release": "R511",
+  "archiveName": "R511-SOCIAL-SWIPE-INSTAGRAM-AUDIENCE-TIKTOK-ANALYTICS-NO-FACEBOOK-MAP-SAFE-FULL.zip",
+  "sourceHead": "a54fb67c3295e2f08865d0467f2d6b6f83a38ac0",
+  "backupSha": "a54fb67c3295e2f08865d0467f2d6b6f83a38ac0",
+  "backupTag": "control-backup-20260818200645-a54fb67-r511-3b2cd",
   "autoRecovery": true,
-  "generatedAt": "2026-08-18T19:24:21.102Z"
+  "generatedAt": "2026-08-18T20:06:57.480Z"
 }

@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R506', number:506, version:'55.00', full:'55.00 LIVE WEB AI FINAL R506', siteUpdater:'55.00-r356' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R511', number:511, version:'55.00', full:'55.00 LIVE WEB AI FINAL R511', siteUpdater:'55.00-r356' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -6585,18 +6585,37 @@ async function getTikTokDailyTrendR503(db, startDate, endDate, mode = 'sandbox')
     let metrics = {};
     try { metrics = JSON.parse(row?.metrics_json || '{}'); } catch (_) {}
     if (!metrics?.connected || metrics?.summary?.allVideosFetched === false) continue;
-    const totalViews = Number(metrics?.counters?.totalViews ?? metrics?.summary?.totalVideoViews);
-    if (!Number.isFinite(totalViews)) continue;
+    const summary=metrics?.summary||{};
+    const totals={
+      views:Number(metrics?.counters?.totalViews ?? summary?.totalVideoViews),
+      likes:Number(summary?.profileLikes ?? metrics?.counters?.totalLikes ?? summary?.totalVideoLikes),
+      comments:Number(metrics?.counters?.totalComments ?? summary?.totalVideoComments),
+      shares:Number(metrics?.counters?.totalShares ?? summary?.totalVideoShares),
+      followers:Number(summary?.followerCount),
+      videos:Number(summary?.videoCount)
+    };
+    if (!Number.isFinite(totals.views)) continue;
+    Object.keys(totals).forEach(key=>{ if (!Number.isFinite(totals[key])) totals[key]=null; else totals[key]=Math.max(0,totals[key]); });
     const previous = byDay.get(day);
-    if (!previous || String(row.created_at || '') > String(previous.createdAt || '')) byDay.set(day,{day,totalViews:Math.max(0,totalViews),createdAt:row.created_at || ''});
+    if (!previous || String(row.created_at || '') > String(previous.createdAt || '')) byDay.set(day,{day,...totals,createdAt:row.created_at || ''});
   }
   const days = [...byDay.values()].sort((a,b)=>a.day.localeCompare(b.day));
   const output = [];
+  const delta=(a,b)=>Number.isFinite(Number(a))&&Number.isFinite(Number(b))?Math.max(0,Number(a)-Number(b)):null;
   for (let i=1;i<days.length;i++) {
     const current=days[i], previous=days[i-1];
     if (current.day < startDate || current.day > endDate) continue;
     if (previous.day !== shiftIsoCalendarDate(current.day,-1)) continue;
-    output.push({ day:current.day, views:Math.max(0,current.totalViews-previous.totalViews) });
+    output.push({
+      day:current.day,
+      views:delta(current.views,previous.views),
+      likes:delta(current.likes,previous.likes),
+      comments:delta(current.comments,previous.comments),
+      shares:delta(current.shares,previous.shares),
+      followers:delta(current.followers,previous.followers),
+      videos:delta(current.videos,previous.videos),
+      totals:{views:current.views,likes:current.likes,comments:current.comments,shares:current.shares,followers:current.followers,videos:current.videos}
+    });
   }
   return output;
 }
@@ -8909,6 +8928,53 @@ async function fetchInstagramMediaCountsR491(env, accountId, startDate, endDate)
   }
 }
 
+
+function parseInstagramDemographicBreakdownR511(payload, breakdown) {
+  const wanted=String(breakdown||'').toLowerCase();
+  const out=[];
+  for (const item of Array.isArray(payload?.data) ? payload.data : []) {
+    const groups=item?.total_value?.breakdowns || item?.breakdowns || [];
+    for (const group of Array.isArray(groups) ? groups : []) {
+      const keys=(Array.isArray(group?.dimension_keys)?group.dimension_keys:[]).map(v=>String(v||'').toLowerCase());
+      if (keys.length && !keys.includes(wanted)) continue;
+      for (const row of Array.isArray(group?.results)?group.results:[]) {
+        const values=Array.isArray(row?.dimension_values)?row.dimension_values:[];
+        const label=cleanPlainText(values[0] || row?.dimension || '',160).trim();
+        const value=Math.max(0,Number(row?.value||0));
+        if (!label || !Number.isFinite(value) || value<=0) continue;
+        out.push({ label, value });
+      }
+    }
+  }
+  return out.sort((a,b)=>b.value-a.value).slice(0,45);
+}
+
+async function fetchInstagramDemographicsR511(env, accountId) {
+  if (!accountId || !instagramConfigR487(env).configured) return { available:false, metric:'', timeframe:'last_30_days', age:[], gender:[], country:[], city:[], error:'' };
+  // R511 SAFE: one audience metric x four breakdowns = four subrequests.
+  // The rest of Instagram analytics already consumes most of the Worker subrequest budget,
+  // so never cascade through 3 demographic metrics in the same invocation.
+  const metric='reached_audience_demographics';
+  const breakdowns=['age','gender','country','city'];
+  let lastError='';
+  const settled=await Promise.allSettled(breakdowns.map(breakdown=>instagramApiGetR487(env, `${accountId}/insights`, {
+    metric,
+    period:'lifetime',
+    metric_type:'total_value',
+    timeframe:'last_30_days',
+    breakdown
+  }, 9000)));
+  const result={ available:false, metric, timeframe:'last_30_days', age:[], gender:[], country:[], city:[], error:'' };
+  settled.forEach((entry,index)=>{
+    const key=breakdowns[index];
+    if (entry.status==='fulfilled') result[key]=parseInstagramDemographicBreakdownR511(entry.value,key);
+    else lastError=cleanPlainText(entry.reason?.message || entry.reason,220);
+  });
+  result.available=breakdowns.some(key=>Array.isArray(result[key])&&result[key].length>0);
+  result.error=result.available?'':lastError;
+  return result;
+}
+
 async function fetchInstagramAnalytics(env) {
   const config = instagramConfigR487(env);
   if (!config.configured) return { configured:false, connected:false, error:'INSTAGRAM_ACCESS_TOKEN не настроен' };
@@ -9045,6 +9111,11 @@ async function fetchInstagramAnalytics(env) {
     partialErrors.push(`media insights: ${mediaCounts.error}`);
   }
 
+  let demographics={ available:false, metric:'', timeframe:'last_30_days', age:[], gender:[], country:[], city:[], error:'' };
+  try { demographics=await fetchInstagramDemographicsR511(env, accountId); }
+  catch (error) { demographics.error=cleanPlainText(error?.message || error,220); }
+  if (demographics.error && !demographics.available) partialErrors.push(`demographics: ${demographics.error}`);
+
   const normalize = metric => summaryAvailability[metric] ? Math.max(0, Number(summary[metric] || 0)) : null;
   return {
     configured:true,
@@ -9087,6 +9158,7 @@ async function fetchInstagramAnalytics(env) {
       saves:summarySource.saves
     },
     mediaCounts:{ available:Boolean(mediaCounts.available), mediaCount:Number(mediaCounts.mediaCount||0), insightMediaCount:Number(mediaCounts.insightMediaCount||0), failedInsights:Number(mediaCounts.failedInsights||0), availability:mediaCounts.availability||{} },
+    demographics,
     trend,
     trendAvailable:Boolean(Object.values(dailyAvailability).some(Boolean)),
     dailyAvailability,
@@ -9318,14 +9390,14 @@ async function handleControlSocialOverviewR487(request, env) {
         configured:Boolean(igConfig.configured), connected:instagramReady, name:'Instagram', username:instagram?.username || 'andrikmetal',
         accountId:instagram?.accountId || '', profileUrl:`https://www.instagram.com/${encodeURIComponent(instagram?.username || 'andrikmetal')}/`,
         source:'Instagram Insights', updatedAt:igRow?.created_at || instagram?.updatedAt || '', metricLabel:instagramMetricLabel, trendField:instagramTrendField, trendConnected:instagramSeriesReady,
-        summary:instagram?.summary || {}, summaryAvailability:instagram?.summaryAvailability || {}, summarySource:instagram?.summarySource || {}, mediaCounts:instagram?.mediaCounts || {}, partialErrors:instagram?.partialErrors || [], error:instagram?.error || liveErrors.instagram || ''
+        summary:instagram?.summary || {}, summaryAvailability:instagram?.summaryAvailability || {}, summarySource:instagram?.summarySource || {}, mediaCounts:instagram?.mediaCounts || {}, demographics:instagram?.demographics || {}, trend:Array.isArray(instagram?.trend)?instagram.trend:[], dailyAvailability:instagram?.dailyAvailability || {}, partialErrors:instagram?.partialErrors || [], error:instagram?.error || liveErrors.instagram || ''
       },
       tiktok:{
         mode:tiktokModeR503, availableModes:tiktokAuthR503.availableModes || tiktokAvailableModesR503(env),
         configured:Boolean(tiktokAuthR503.configured), connected:tiktokConnectedR503, oauthConnected:Boolean(tiktokAuthR503.connected), trendConnected:tiktokTrendReadyR503,
         name:'TikTok', handle:cleanPlainText(tiktok?.handle || '@andrikmetal',120), displayName:cleanPlainText(tiktok?.displayName || 'ANDRIK',120), profileUrl:cleanPlainText(tiktok?.profileUrl || 'https://www.tiktok.com/@andrikmetal',700),
         metricLabel:tiktokTrendReadyR503?'прирост просмотров':'текущий срез видео', source:`TikTok Display API · ${tiktokModeR503}`, updatedAt:ttRow?.created_at || tiktok?.updatedAt || '',
-        summary:tiktok?.summary || {}, recentVideos:Array.isArray(tiktok?.recentVideos)?tiktok.recentVideos:[], grantedScopes:cleanPlainText(tiktokAuthR503.scope || tiktok?.scope || '',1200),
+        summary:tiktok?.summary || {}, dailyTrend:Array.isArray(tiktokDailyR503)?tiktokDailyR503:[], recentVideos:Array.isArray(tiktok?.recentVideos)?tiktok.recentVideos:[], grantedScopes:cleanPlainText(tiktokAuthR503.scope || tiktok?.scope || '',1200),
         error:cleanPlainText(liveErrors.tiktok || tiktok?.error || '',220), partialErrors:Array.isArray(tiktok?.partialErrors)?tiktok.partialErrors:[]
       }
     },
