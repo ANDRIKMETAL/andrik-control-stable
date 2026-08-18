@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R488', number:488, version:'55.00', full:'55.00 LIVE WEB AI FINAL R488', siteUpdater:'55.00-r356' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R489', number:489, version:'55.00', full:'55.00 LIVE WEB AI FINAL R489', siteUpdater:'55.00-r356' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -8249,12 +8249,9 @@ async function fetchInstagramAnalytics(env) {
   const dailyAvailability = {};
   dailyResults.forEach((result, index) => {
     const name = metricNames[index];
-    dailyAvailability[name] = result.status === 'fulfilled';
-    dailyMaps[name] = new Map(
-      result.status === 'fulfilled'
-        ? instagramInsightTrendR487(result.value, name).map(row => [row.day, row.value])
-        : []
-    );
+    const rows = result.status === 'fulfilled' ? instagramInsightTrendR487(result.value, name) : [];
+    dailyAvailability[name] = result.status === 'fulfilled' && rows.length > 0;
+    dailyMaps[name] = new Map(rows.map(row => [row.day, row.value]));
   });
   const trend = [];
   for (let day = startDate; day <= endDate; day = shiftIsoCalendarDate(day, 1)) {
@@ -8312,7 +8309,7 @@ async function fetchInstagramAnalytics(env) {
       saves:Math.max(0, Number(month.saves || 0))
     },
     trend,
-    trendAvailable:Boolean(dailyAvailability.views),
+    trendAvailable:Boolean(dailyAvailability.views || dailyAvailability.reach || dailyAvailability.profile_views),
     dailyAvailability,
     partialErrors,
     updatedAt:new Date().toISOString()
@@ -8336,71 +8333,139 @@ async function handleControlSocialOverviewR487(request, env) {
   const db = requireDb(env);
   await ensurePlatformAnalyticsSchema(db);
   const refresh = new URL(request.url).searchParams.get('refresh') === '1';
-  const [gaRow, ytRow, igInitialRow] = await Promise.all([
+  let [gaRow, ytRow, igRow] = await Promise.all([
     db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform='google-analytics' ORDER BY datetime(created_at) DESC LIMIT 1`).first(),
     db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform='youtube' ORDER BY datetime(created_at) DESC LIMIT 1`).first(),
     db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform='instagram' ORDER BY datetime(created_at) DESC LIMIT 1`).first()
   ]);
-  let igRow = igInitialRow;
+
+  let google = parseSnapshotMetrics(gaRow);
+  let youtube = parseSnapshotMetrics(ytRow);
   let instagram = parseSnapshotMetrics(igRow);
-  let instagramLiveError = '';
+  const liveErrors = { site:'', youtube:'', instagram:'' };
   const igConfig = instagramConfigR487(env);
-  if (igConfig.configured && (refresh || !igRow || latestSnapshotAgeMinutesR487(igRow) > 30)) {
+
+  // R489: Social Center heals stale/missing snapshots itself. This prevents the
+  // center from showing “waiting” while the dedicated GA/YouTube screens already work.
+  if (refresh || !gaRow || latestSnapshotAgeMinutesR487(gaRow) > 30 || !Array.isArray(google?.trend) || !google.trend.length) {
+    try {
+      const live = await fetchGoogleSiteAnalytics(env);
+      if (live?.configured) {
+        const metrics = {
+          configured:true,
+          propertyId:live.propertyId || '', propertyName:live.propertyName || 'andrikmetal.com', propertySource:live.propertySource || '',
+          realtime:live.realtime || {}, today:live.today || {}, week:live.week || {}, month:live.month || {},
+          trend:live.trend || [], countries:live.countries || [], pages:live.pages || [], devices:live.devices || [],
+          updatedAt:live.updatedAt || new Date().toISOString()
+        };
+        await savePlatformSnapshot(db, 'google-analytics', metrics, refresh ? 'manual-social-center-r489' : 'social-center-r489');
+        google = metrics; gaRow = { created_at:metrics.updatedAt };
+      }
+    } catch (error) { liveErrors.site = cleanPlainText(error?.message || error, 300); }
+  }
+
+  const previousStudio = youtube?.studio || {};
+  const shouldRefreshYoutube = refresh || !ytRow || latestSnapshotAgeMinutesR487(ytRow) > 30 || !previousStudio?.connected || !Array.isArray(previousStudio?.trend) || !previousStudio.trend.length;
+  if (shouldRefreshYoutube) {
+    try {
+      const studio = await fetchYouTubeStudioAnalytics(env);
+      if (studio?.connected) {
+        const metrics = {
+          ...youtube,
+          configured:true,
+          handle:youtube?.handle || cleanPlainText(env.YOUTUBE_CHANNEL_HANDLE || '@andrikmetal', 100),
+          title:youtube?.title || 'ANDRIK',
+          studio:{
+            ...previousStudio,
+            ...studio,
+            configured:true, connected:true, workerManaged:true,
+            summary:studio.summary || {}, trend:studio.trend || [], countries:studio.countries || [], dailyCountries:studio.dailyCountries || [],
+            age:studio.age || [], gender:studio.gender || [], sharing:studio.sharing || [], partialErrors:studio.partialErrors || [],
+            updatedAt:studio.updatedAt || new Date().toISOString()
+          },
+          updatedAt:new Date().toISOString()
+        };
+        await savePlatformSnapshot(db, 'youtube', metrics, refresh ? 'manual-social-center-r489' : 'social-center-r489');
+        youtube = metrics; ytRow = { created_at:metrics.updatedAt };
+      } else if (!studio?.connected) {
+        liveErrors.youtube = studio?.configured ? 'YouTube Studio OAuth не вернул подключение' : 'YouTube Studio OAuth не настроен';
+      }
+    } catch (error) { liveErrors.youtube = cleanPlainText(error?.message || error, 300); }
+  }
+
+  if (igConfig.configured && (refresh || !igRow || latestSnapshotAgeMinutesR487(igRow) > 30 || !instagram?.connected || !Array.isArray(instagram?.trend))) {
     try {
       const live = await fetchInstagramAnalytics(env);
       if (live?.configured) {
-        await savePlatformSnapshot(db, 'instagram', live, refresh ? 'manual-social-overview-r487' : 'social-overview-r487');
-        instagram = live;
-        igRow = { created_at:live.updatedAt || new Date().toISOString() };
+        await savePlatformSnapshot(db, 'instagram', live, refresh ? 'manual-social-center-r489' : 'social-center-r489');
+        instagram = live; igRow = { created_at:live.updatedAt || new Date().toISOString() };
       }
-    } catch (error) {
-      instagramLiveError = cleanPlainText(error?.message || error, 300);
-    }
+    } catch (error) { liveErrors.instagram = cleanPlainText(error?.message || error, 300); }
   }
   if (!instagram?.configured && !igConfig.configured) instagram = { configured:false, connected:false, error:'INSTAGRAM_ACCESS_TOKEN не настроен' };
-  if (instagramLiveError && !instagram?.connected) instagram = { ...instagram, configured:igConfig.configured, connected:false, error:instagramLiveError };
+  if (liveErrors.instagram && !instagram?.connected) instagram = { ...instagram, configured:igConfig.configured, connected:false, error:liveErrors.instagram };
 
-  const google = parseSnapshotMetrics(gaRow);
-  const youtube = parseSnapshotMetrics(ytRow);
   const today = getBratislavaClock().date;
   const endDate = shiftIsoCalendarDate(today, -1);
   const startDate = shiftIsoCalendarDate(endDate, -27);
   const gaMap = new Map((Array.isArray(google?.trend) ? google.trend : []).map(row => [normalizeSocialDayR487(row?.date), Math.max(0, Number(row?.screenPageViews || 0))]));
   const ytMap = new Map((Array.isArray(youtube?.studio?.trend) ? youtube.studio.trend : []).map(row => [normalizeSocialDayR487(row?.day), Math.max(0, Number(row?.views || 0))]));
-  const igMap = new Map((Array.isArray(instagram?.trend) ? instagram.trend : [])
-    .filter(row => Number.isFinite(Number(row?.views)))
-    .map(row => [normalizeSocialDayR487(row?.day), Math.max(0, Number(row.views))]));
-  const siteReady = Boolean(gaRow && google?.configured !== false);
-  const youtubeReady = Boolean(ytRow && youtube?.studio?.connected && Array.isArray(youtube?.studio?.trend));
-  const instagramReady = Boolean(instagram?.connected && instagram?.trendAvailable !== false && Array.isArray(instagram?.trend));
+
+  const igTrend = Array.isArray(instagram?.trend) ? instagram.trend : [];
+  const sumField = field => igTrend.reduce((sum,row) => sum + (Number.isFinite(Number(row?.[field])) ? Math.max(0,Number(row[field])) : 0), 0);
+  const hasField = field => igTrend.some(row => row?.[field] !== null && row?.[field] !== undefined && Number.isFinite(Number(row[field])));
+  const igViewSum = sumField('views');
+  const igReachSum = sumField('reach');
+  const igProfileSum = sumField('profileViews');
+  let instagramTrendField = 'views';
+  let instagramMetricLabel = 'просмотры';
+  if ((!hasField('views') || igViewSum === 0) && hasField('reach') && igReachSum > 0) { instagramTrendField='reach'; instagramMetricLabel='охват'; }
+  else if ((!hasField('views') || igViewSum === 0) && (!hasField('reach') || igReachSum === 0) && hasField('profileViews') && igProfileSum > 0) { instagramTrendField='profileViews'; instagramMetricLabel='просмотры профиля'; }
+  const igMap = new Map(igTrend
+    .filter(row => Number.isFinite(Number(row?.[instagramTrendField])))
+    .map(row => [normalizeSocialDayR487(row?.day), Math.max(0, Number(row[instagramTrendField]))]));
+
+  const siteReady = Boolean(google?.configured !== false && Array.isArray(google?.trend) && google.trend.length);
+  const youtubeReady = Boolean(youtube?.studio?.connected && Array.isArray(youtube?.studio?.trend) && youtube.studio.trend.length);
+  const instagramReady = Boolean(instagram?.connected && Array.isArray(instagram?.trend) && instagram.trend.length);
+  const instagramSeriesReady = Boolean(instagramReady && igMap.size);
   const trend = [];
   for (let day = startDate; day <= endDate; day = shiftIsoCalendarDate(day, 1)) {
     trend.push({
       day,
       site:siteReady ? Number(gaMap.get(day) || 0) : null,
       youtube:youtubeReady ? Number(ytMap.get(day) || 0) : null,
-      instagram:instagramReady ? Number(igMap.get(day) || 0) : null
+      instagram:instagramSeriesReady ? Number(igMap.get(day) || 0) : null
     });
   }
   const sum = key => trend.reduce((total, row) => total + (Number.isFinite(Number(row[key])) ? Math.max(0, Number(row[key])) : 0), 0);
+  let instagramTotal = instagramReady ? sum('instagram') : null;
+  // If Meta returns a 28-day scalar but no daily series for the chosen metric,
+  // keep the real scalar on the card instead of a misleading zero.
+  if (instagramReady && (!instagramTotal || instagramTotal <= 0)) {
+    const summary = instagram?.summary || {};
+    if (instagramTrendField === 'reach' && Number(summary.reach) > 0) instagramTotal = Number(summary.reach);
+    else if (instagramTrendField === 'profileViews' && Number(summary.profileViews) > 0) instagramTotal = Number(summary.profileViews);
+    else if (Number(summary.views) > 0) instagramTotal = Number(summary.views);
+    else if (Number(summary.reach) > 0) { instagramTotal=Number(summary.reach); instagramMetricLabel='охват'; }
+  }
+
   return json({
     ok:true,
     period:{ startDate, endDate, days:28, label:'28 завершённых дней' },
-    totals:{
-      site:siteReady ? sum('site') : null,
-      youtube:youtubeReady ? sum('youtube') : null,
-      instagram:instagramReady ? sum('instagram') : null
-    },
+    totals:{ site:siteReady ? sum('site') : null, youtube:youtubeReady ? sum('youtube') : null, instagram:instagramTotal },
     trend,
     platforms:{
-      site:{ configured:siteReady, name:'Сайт', source:'Google Analytics 4', updatedAt:gaRow?.created_at || google?.updatedAt || '' },
-      youtube:{ configured:Boolean(youtube?.configured), connected:youtubeReady, name:'YouTube', source:'YouTube Analytics', updatedAt:ytRow?.created_at || youtube?.updatedAt || '' },
+      site:{ configured:siteReady, connected:siteReady, name:'Сайт', source:'Google Analytics 4', updatedAt:gaRow?.created_at || google?.updatedAt || '', error:liveErrors.site },
+      youtube:{ configured:Boolean(youtube?.configured || youtube?.studio?.configured), connected:youtubeReady, name:'YouTube', handle:youtube?.handle || '@andrikmetal', source:'YouTube Analytics', updatedAt:ytRow?.created_at || youtube?.updatedAt || '', error:liveErrors.youtube || youtube?.studio?.error || '', partialErrors:youtube?.studio?.partialErrors || [] },
       instagram:{
         configured:Boolean(igConfig.configured), connected:instagramReady, name:'Instagram', username:instagram?.username || 'andrikmetal',
-        accountId:instagram?.accountId || '', source:'Instagram Insights', updatedAt:igRow?.created_at || instagram?.updatedAt || '',
-        summary:instagram?.summary || {}, partialErrors:instagram?.partialErrors || [], error:instagram?.error || instagramLiveError || ''
+        accountId:instagram?.accountId || '', profileUrl:`https://www.instagram.com/${encodeURIComponent(instagram?.username || 'andrikmetal')}/`,
+        source:'Instagram Insights', updatedAt:igRow?.created_at || instagram?.updatedAt || '', metricLabel:instagramMetricLabel, trendField:instagramTrendField, trendConnected:instagramSeriesReady,
+        summary:instagram?.summary || {}, partialErrors:instagram?.partialErrors || [], error:instagram?.error || liveErrors.instagram || ''
       }
     },
+    diagnostics:{ refresh, liveErrors },
     updatedAt:new Date().toISOString()
   });
 }

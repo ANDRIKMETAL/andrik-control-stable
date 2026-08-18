@@ -62,3 +62,14 @@
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
   Pragma: no-cache
   Expires: 0
+
+/cache-reset-v55-00-final-r489.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+  Pragma: no-cache
+  Expires: 0
+
+/control-home.html
+  Cache-Control: no-cache, must-revalidate
+
+/social-center-admin.html
+  Cache-Control: no-cache, must-revalidate

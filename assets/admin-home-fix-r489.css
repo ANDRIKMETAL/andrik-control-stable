@@ -1,0 +1,17 @@
+/* ANDRIK R489 — Admin home: keep version below the globe, remove obsolete swipe labels. */
+body.control-home-page.control-menu-visible .admin-hub-swipe-hint-r418{display:none!important}
+body.control-home-page.control-menu-visible .control-split-version-r181{display:none!important}
+body.control-home-page.control-menu-visible .control-menu-page .control-version-footer{
+  position:relative!important;inset:auto!important;left:auto!important;right:auto!important;bottom:auto!important;
+  width:max-content!important;max-width:72vw!important;min-height:22px!important;margin:12px auto 92px!important;padding:4px 13px!important;
+  display:flex!important;align-items:center!important;justify-content:center!important;gap:8px!important;
+  border:1px solid rgba(92,205,236,.18)!important;border-radius:999px!important;background:rgba(4,17,24,.72)!important;
+  box-shadow:0 8px 24px rgba(0,0,0,.18)!important;z-index:3!important;color:#7c9eaa!important;pointer-events:none!important;
+}
+body.control-home-page.control-menu-visible .control-menu-page .control-version-footer strong,
+body.control-home-page.control-menu-visible .control-menu-page .control-version-footer span{font-size:.58rem!important;color:#7898a5!important;overflow:visible!important}
+body.control-home-page.control-menu-visible .admin-hub-globe-r418{margin-bottom:0!important}
+body.control-home-page.control-menu-visible .control-menu-page .control-swipe-page-inner{padding-bottom:max(118px,calc(104px + env(safe-area-inset-bottom)))!important}
+@media screen and (orientation:portrait) and (max-height:740px){
+  body.control-home-page.control-menu-visible .control-menu-page .control-version-footer{margin-top:8px!important;margin-bottom:88px!important}
+}

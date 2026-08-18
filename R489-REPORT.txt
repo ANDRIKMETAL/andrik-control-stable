@@ -1,0 +1,20 @@
+ANDRIK PUSH / SOCIAL CENTER R489
+
+BASE: R488
+
+FIXES:
+1. Admin home: removed obsolete Google Analytics / YouTube swipe hint.
+2. Admin home: Live Web AI R489 version pill is now below the globe, never over the planet.
+3. Social Center: live refreshes stale GA + YouTube Studio + Instagram snapshots (30 min threshold; manual refresh forces all).
+4. YouTube: center uses live YouTube Analytics trend even when old snapshot was missing/disconnected.
+5. Instagram: direct account @andrikmetal is visible and clickable.
+6. Instagram graph: prefers views; automatically falls back to reach (or profile views) when Meta returns no useful views series.
+7. Instagram unavailable metrics are no longer silently interpreted as a valid zero series.
+8. Social Center shows platform diagnostics when YouTube/Instagram data is unavailable.
+
+SECRETS:
+- INSTAGRAM_ACCESS_TOKEN remains server-side only.
+- Existing YouTube OAuth secrets/refresh token are reused.
+
+CACHE RESET:
+/cache-reset-v55-00-final-r489.html
