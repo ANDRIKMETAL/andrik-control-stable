@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787066228162-47e3914da2",
-  "release": "R502",
-  "archiveName": "R502-TIKTOK-OAUTH-DISPLAY-API-SAFE-FULL.zip",
-  "sourceHead": "134524840ef312de1dfdcc73696c9c6548c05cfd",
-  "backupSha": "134524840ef312de1dfdcc73696c9c6548c05cfd",
-  "backupTag": "control-backup-20260818151703-1345248-r502-8e68b",
+  "operationId": "publish-1787068177022-1769818593",
+  "release": "R503",
+  "archiveName": "R503-TIKTOK-SANDBOX-PRODUCTION-SWITCH-SAFE-FULL.zip",
+  "sourceHead": "b4e1be180e3fd9b931ff0559efe6542fd70986b2",
+  "backupSha": "b4e1be180e3fd9b931ff0559efe6542fd70986b2",
+  "backupTag": "control-backup-20260818154931-b4e1be1-r503-64e62",
   "autoRecovery": true,
-  "generatedAt": "2026-08-18T15:17:08.162Z"
+  "generatedAt": "2026-08-18T15:49:37.022Z"
 }

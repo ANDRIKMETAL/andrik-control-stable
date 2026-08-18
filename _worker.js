@@ -6307,7 +6307,7 @@ async function handleYoutubeOAuthCallback(request, env, ctx) {
 
   // Root is the installed ANDRIK Control start page. Android can hand this
   // navigation directly to the Control PWA after Google closes the consent flow.
-  return Response.redirect('https://control.andrikmetal.com/social-center-admin.html?youtube=connected&v=55.00-r502', 302);
+  return Response.redirect('https://control.andrikmetal.com/social-center-admin.html?youtube=connected&v=55.00-r503', 302);
 }
 
 async function handleYoutubeOAuthDisconnect(request, env) {
@@ -6319,64 +6319,102 @@ async function handleYoutubeOAuthDisconnect(request, env) {
 }
 
 
-const TIKTOK_OAUTH_REDIRECT_URI_R502 = 'https://andrikmetal.com/api/oauth/tiktok/callback';
+const TIKTOK_OAUTH_REDIRECT_URI_R503 = 'https://andrikmetal.com/api/oauth/tiktok/callback';
 
-function tiktokOAuthClientR502(env) {
-  const clientKey = String(env.TIKTOK_CLIENT_KEY || env.TIKTOK_CLIENT_ID || '').trim();
-  const clientSecret = String(env.TIKTOK_CLIENT_SECRET || '').trim();
-  const configuredRedirect = String(env.TIKTOK_REDIRECT_URI || '').trim();
-  const redirectUri = configuredRedirect || TIKTOK_OAUTH_REDIRECT_URI_R502;
-  const scopes = [...new Set(String(env.TIKTOK_SCOPES || 'user.info.basic,user.info.stats,video.list')
-    .split(/[\s,]+/).map(value => value.trim()).filter(Boolean))];
-  return { clientKey, clientSecret, redirectUri, scopes, configured:Boolean(clientKey && clientSecret && redirectUri) };
+function normalizeTikTokModeR503(value) {
+  return String(value || '').trim().toLowerCase() === 'production' ? 'production' : 'sandbox';
 }
 
-async function tiktokTokenCryptoKeyR502(env) {
-  const config = tiktokOAuthClientR502(env);
-  const raw = `${String(env.COMMENTS_ADMIN_KEY || '')}|${String(env.CRON_SECRET || '')}|${config.clientSecret}|ANDRIK-TIKTOK-OAUTH-v1`;
+function tiktokOAuthClientR503(env, mode = 'sandbox') {
+  const selectedMode = normalizeTikTokModeR503(mode);
+  const sandbox = selectedMode === 'sandbox';
+  const clientKey = String(sandbox ? (env.TIKTOK_SANDBOX_CLIENT_KEY || '') : (env.TIKTOK_CLIENT_KEY || env.TIKTOK_CLIENT_ID || '')).trim();
+  const clientSecret = String(sandbox ? (env.TIKTOK_SANDBOX_CLIENT_SECRET || '') : (env.TIKTOK_CLIENT_SECRET || '')).trim();
+  const configuredRedirect = String(sandbox ? (env.TIKTOK_SANDBOX_REDIRECT_URI || env.TIKTOK_REDIRECT_URI || '') : (env.TIKTOK_REDIRECT_URI || '')).trim();
+  const redirectUri = configuredRedirect || TIKTOK_OAUTH_REDIRECT_URI_R503;
+  const scopeSource = sandbox ? (env.TIKTOK_SANDBOX_SCOPES || env.TIKTOK_SCOPES) : env.TIKTOK_SCOPES;
+  const scopes = [...new Set(String(scopeSource || 'user.info.basic,user.info.stats,video.list')
+    .split(/[\s,]+/).map(value => value.trim()).filter(Boolean))];
+  return { mode:selectedMode, clientKey, clientSecret, redirectUri, scopes, configured:Boolean(clientKey && clientSecret && redirectUri) };
+}
+
+function tiktokAvailableModesR503(env) {
+  const sandbox=tiktokOAuthClientR503(env,'sandbox');
+  const production=tiktokOAuthClientR503(env,'production');
+  return { sandbox:sandbox.configured, production:production.configured };
+}
+
+async function makeTikTokOAuthStateR503(env, mode) {
+  const payload = base64UrlEncodeText(JSON.stringify({ iat:Date.now(), nonce:crypto.randomUUID(), tiktokMode:normalizeTikTokModeR503(mode) }));
+  const key = await youtubeOAuthHmacKey(env);
+  const signature = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(payload));
+  return `${payload}.${base64UrlEncodeBytes(signature)}`;
+}
+
+async function verifyTikTokOAuthStateR503(env, state) {
+  const [payload, signature] = String(state || '').split('.');
+  if (!payload || !signature) return null;
+  const key = await youtubeOAuthHmacKey(env);
+  const ok = await crypto.subtle.verify('HMAC', key, base64UrlDecodeBytes(signature), new TextEncoder().encode(payload));
+  if (!ok) return null;
+  try {
+    const data = JSON.parse(new TextDecoder().decode(base64UrlDecodeBytes(payload)));
+    if (Number(data.iat || 0) <= Date.now() - 15 * 60 * 1000) return null;
+    return { mode:normalizeTikTokModeR503(data.tiktokMode), iat:Number(data.iat||0) };
+  } catch (_) { return null; }
+}
+
+async function tiktokTokenCryptoKeyR503(env, mode) {
+  const config = tiktokOAuthClientR503(env,mode);
+  const raw = `${String(env.COMMENTS_ADMIN_KEY || '')}|${String(env.CRON_SECRET || '')}|${config.clientSecret}|ANDRIK-TIKTOK-OAUTH-v2|${config.mode}`;
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(raw));
   return crypto.subtle.importKey('raw', digest, { name:'AES-GCM' }, false, ['encrypt','decrypt']);
 }
 
-async function encryptTikTokTokenR502(env, token) {
+async function encryptTikTokTokenR503(env, mode, token) {
   if (!token) return '';
   const iv = crypto.getRandomValues(new Uint8Array(12));
-  const key = await tiktokTokenCryptoKeyR502(env);
+  const key = await tiktokTokenCryptoKeyR503(env,mode);
   const encrypted = await crypto.subtle.encrypt({ name:'AES-GCM', iv }, key, new TextEncoder().encode(String(token)));
   return `${base64UrlEncodeBytes(iv)}.${base64UrlEncodeBytes(encrypted)}`;
 }
 
-async function decryptTikTokTokenR502(env, value) {
+async function decryptTikTokTokenR503(env, mode, value) {
   const [ivRaw, dataRaw] = String(value || '').split('.');
   if (!ivRaw || !dataRaw) return '';
-  const key = await tiktokTokenCryptoKeyR502(env);
+  const key = await tiktokTokenCryptoKeyR503(env,mode);
   const decrypted = await crypto.subtle.decrypt({ name:'AES-GCM', iv:base64UrlDecodeBytes(ivRaw) }, key, base64UrlDecodeBytes(dataRaw));
   return new TextDecoder().decode(decrypted);
 }
 
-async function readTikTokTokenRowR502(env) {
+async function readTikTokTokenRowR503(env, mode) {
   if (!env.COMMENTS_DB) return null;
   const db = requireDb(env);
   await ensureControlV1Schema(db);
-  return db.prepare(`SELECT * FROM tiktok_oauth_tokens WHERE id='primary' LIMIT 1`).first();
+  const selectedMode=normalizeTikTokModeR503(mode);
+  let row=await db.prepare(`SELECT * FROM tiktok_oauth_tokens WHERE id=?1 LIMIT 1`).bind(selectedMode).first();
+  // Backward compatibility for the original R502 production row.
+  if (!row && selectedMode === 'production') row=await db.prepare(`SELECT * FROM tiktok_oauth_tokens WHERE id='primary' LIMIT 1`).first();
+  return row;
 }
 
-async function saveTikTokTokenResponseR502(env, data, previous = null) {
+async function saveTikTokTokenResponseR503(env, mode, data, previous = null) {
+  const selectedMode=normalizeTikTokModeR503(mode);
   const db = requireDb(env);
   await ensureControlV1Schema(db);
   const accessToken = String(data?.access_token || '').trim();
-  const refreshToken = String(data?.refresh_token || '').trim() || (previous ? await decryptTikTokTokenR502(env, previous.refresh_token_enc).catch(()=> '') : '');
+  const refreshToken = String(data?.refresh_token || '').trim() || (previous ? await decryptTikTokTokenR503(env,selectedMode,previous.refresh_token_enc).catch(()=> '') : '');
   if (!accessToken || !refreshToken) throw new Error('tiktok-token-response-incomplete');
   const now = Date.now();
   const accessExpiresAt = new Date(now + Math.max(300, Number(data?.expires_in || 86400)) * 1000).toISOString();
   const refreshExpiresAt = new Date(now + Math.max(3600, Number(data?.refresh_expires_in || 31536000)) * 1000).toISOString();
   const [accessEnc, refreshEnc] = await Promise.all([
-    encryptTikTokTokenR502(env, accessToken),
-    encryptTikTokTokenR502(env, refreshToken)
+    encryptTikTokTokenR503(env,selectedMode,accessToken),
+    encryptTikTokTokenR503(env,selectedMode,refreshToken)
   ]);
   await db.prepare(`
     INSERT INTO tiktok_oauth_tokens(id,open_id,access_token_enc,refresh_token_enc,scope,access_expires_at,refresh_expires_at,created_at,updated_at)
-    VALUES('primary',?,?,?,?,?,?,datetime('now'),datetime('now'))
+    VALUES(?,?,?,?,?,?,?,datetime('now'),datetime('now'))
     ON CONFLICT(id) DO UPDATE SET
       open_id=excluded.open_id,
       access_token_enc=excluded.access_token_enc,
@@ -6386,18 +6424,21 @@ async function saveTikTokTokenResponseR502(env, data, previous = null) {
       refresh_expires_at=excluded.refresh_expires_at,
       updated_at=datetime('now')
   `).bind(
-    cleanPlainText(data?.open_id || previous?.open_id || '', 160), accessEnc, refreshEnc,
+    selectedMode, cleanPlainText(data?.open_id || previous?.open_id || '', 160), accessEnc, refreshEnc,
     cleanPlainText(data?.scope || previous?.scope || '', 1200), accessExpiresAt, refreshExpiresAt
   ).run();
-  return { accessToken, refreshToken, openId:cleanPlainText(data?.open_id || previous?.open_id || '',160), scope:cleanPlainText(data?.scope || previous?.scope || '',1200), accessExpiresAt, refreshExpiresAt };
+  return { mode:selectedMode, accessToken, refreshToken, openId:cleanPlainText(data?.open_id || previous?.open_id || '',160), scope:cleanPlainText(data?.scope || previous?.scope || '',1200), accessExpiresAt, refreshExpiresAt };
 }
 
-async function tiktokOAuthStatusR502(env) {
-  const config = tiktokOAuthClientR502(env);
-  const row = await readTikTokTokenRowR502(env).catch(()=>null);
+async function tiktokOAuthStatusR503(env, mode = 'sandbox') {
+  const selectedMode=normalizeTikTokModeR503(mode);
+  const config = tiktokOAuthClientR503(env,selectedMode);
+  const row = await readTikTokTokenRowR503(env,selectedMode).catch(()=>null);
   const refreshExpiry = Date.parse(row?.refresh_expires_at || '');
   const connected = Boolean(row?.refresh_token_enc && (!Number.isFinite(refreshExpiry) || refreshExpiry > Date.now()));
   return {
+    mode:selectedMode,
+    availableModes:tiktokAvailableModesR503(env),
     configured:config.configured,
     connected,
     openId:cleanPlainText(row?.open_id || '',160),
@@ -6408,18 +6449,19 @@ async function tiktokOAuthStatusR502(env) {
   };
 }
 
-async function getTikTokAccessSessionR502(env) {
-  const config = tiktokOAuthClientR502(env);
-  if (!config.configured) throw new Error('tiktok-oauth-client-not-configured');
-  const row = await readTikTokTokenRowR502(env);
-  if (!row?.refresh_token_enc) throw new Error('tiktok-oauth-not-connected');
+async function getTikTokAccessSessionR503(env, mode = 'sandbox') {
+  const selectedMode=normalizeTikTokModeR503(mode);
+  const config = tiktokOAuthClientR503(env,selectedMode);
+  if (!config.configured) throw new Error(`tiktok-${selectedMode}-oauth-client-not-configured`);
+  const row = await readTikTokTokenRowR503(env,selectedMode);
+  if (!row?.refresh_token_enc) throw new Error(`tiktok-${selectedMode}-oauth-not-connected`);
   const accessExpiry = Date.parse(row.access_expires_at || '');
   if (row.access_token_enc && Number.isFinite(accessExpiry) && accessExpiry > Date.now() + 10 * 60 * 1000) {
-    const accessToken = await decryptTikTokTokenR502(env, row.access_token_enc).catch(()=> '');
-    if (accessToken) return { accessToken, openId:row.open_id || '', scope:row.scope || '', accessExpiresAt:row.access_expires_at || '', refreshExpiresAt:row.refresh_expires_at || '' };
+    const accessToken = await decryptTikTokTokenR503(env,selectedMode,row.access_token_enc).catch(()=> '');
+    if (accessToken) return { mode:selectedMode, accessToken, openId:row.open_id || '', scope:row.scope || '', accessExpiresAt:row.access_expires_at || '', refreshExpiresAt:row.refresh_expires_at || '' };
   }
-  const refreshToken = await decryptTikTokTokenR502(env, row.refresh_token_enc).catch(()=> '');
-  if (!refreshToken) throw new Error('tiktok-refresh-token-unreadable');
+  const refreshToken = await decryptTikTokTokenR503(env,selectedMode,row.refresh_token_enc).catch(()=> '');
+  if (!refreshToken) throw new Error(`tiktok-${selectedMode}-refresh-token-unreadable`);
   const body = new URLSearchParams({
     client_key:config.clientKey,
     client_secret:config.clientSecret,
@@ -6431,23 +6473,24 @@ async function getTikTokAccessSessionR502(env) {
   }, 9000, 'tiktok-token-refresh-timeout');
   const data = await response.json().catch(()=>({}));
   if (!response.ok || !data?.access_token) throw new Error(cleanPlainText(data?.error_description || data?.error || `tiktok-token-refresh-${response.status}`,300));
-  const saved = await saveTikTokTokenResponseR502(env, data, row);
-  return { accessToken:saved.accessToken, openId:saved.openId, scope:saved.scope, accessExpiresAt:saved.accessExpiresAt, refreshExpiresAt:saved.refreshExpiresAt };
+  const saved = await saveTikTokTokenResponseR503(env,selectedMode,data,row);
+  return { mode:selectedMode, accessToken:saved.accessToken, openId:saved.openId, scope:saved.scope, accessExpiresAt:saved.accessExpiresAt, refreshExpiresAt:saved.refreshExpiresAt };
 }
 
-function tiktokApiErrorR502(data, status = 200) {
+function tiktokApiErrorR503(data, status = 200) {
   const code = data?.error?.code;
   if (status >= 400) return cleanPlainText(data?.error?.message || data?.error_description || data?.error || `tiktok-api-${status}`,300);
   if (code !== undefined && code !== null && code !== 0 && code !== '0' && code !== 'ok') return cleanPlainText(data?.error?.message || code,300);
   return '';
 }
 
-async function fetchTikTokAnalyticsR502(env) {
-  const config = tiktokOAuthClientR502(env);
-  if (!config.configured) return { configured:false, connected:false, error:'TikTok OAuth client не настроен' };
-  const auth = await tiktokOAuthStatusR502(env);
-  if (!auth.connected) return { configured:true, connected:false, oauthConnected:false, error:'TikTok OAuth ещё не подключён' };
-  const session = await getTikTokAccessSessionR502(env);
+async function fetchTikTokAnalyticsR503(env, mode = 'sandbox') {
+  const selectedMode=normalizeTikTokModeR503(mode);
+  const config = tiktokOAuthClientR503(env,selectedMode);
+  if (!config.configured) return { mode:selectedMode, configured:false, connected:false, error:`TikTok ${selectedMode} OAuth client не настроен` };
+  const auth = await tiktokOAuthStatusR503(env,selectedMode);
+  if (!auth.connected) return { mode:selectedMode, configured:true, connected:false, oauthConnected:false, error:`TikTok ${selectedMode} OAuth ещё не подключён` };
+  const session = await getTikTokAccessSessionR503(env,selectedMode);
   const granted = new Set(String(session.scope || '').split(',').map(v=>v.trim()).filter(Boolean));
   const headers = { authorization:`Bearer ${session.accessToken}`, accept:'application/json' };
   const userFields = ['open_id','display_name','avatar_url'];
@@ -6459,7 +6502,7 @@ async function fetchTikTokAnalyticsR502(env) {
   try {
     const response = await fetchWithAbortTimeoutR409(userUrl.toString(), { headers }, 8500, 'tiktok-user-info-timeout');
     const data = await response.json().catch(()=>({}));
-    const error = tiktokApiErrorR502(data, response.status);
+    const error = tiktokApiErrorR503(data, response.status);
     if (error) throw new Error(error);
     user = data?.data?.user || {};
   } catch (error) { userError = cleanPlainText(error?.message || error,300); }
@@ -6479,7 +6522,7 @@ async function fetchTikTokAnalyticsR502(env) {
           method:'POST', headers:{...headers,'content-type':'application/json'}, body:JSON.stringify(body)
         }, 9000, 'tiktok-video-list-timeout');
         const data = await response.json().catch(()=>({}));
-        const error = tiktokApiErrorR502(data, response.status);
+        const error = tiktokApiErrorR503(data, response.status);
         if (error) throw new Error(error);
         const batch = Array.isArray(data?.data?.videos) ? data.data.videos : [];
         videos.push(...batch);
@@ -6506,7 +6549,7 @@ async function fetchTikTokAnalyticsR502(env) {
     totalVideoShares:sum('share_count')
   };
   return {
-    configured:true, connected:true, oauthConnected:true,
+    mode:selectedMode, configured:true, connected:true, oauthConnected:true,
     openId:cleanPlainText(user?.open_id || session.openId || '',160),
     displayName:cleanPlainText(user?.display_name || 'ANDRIK',120),
     handle:'@andrikmetal',
@@ -6524,7 +6567,7 @@ async function fetchTikTokAnalyticsR502(env) {
   };
 }
 
-function bratislavaDateFromIsoR502(value) {
+function bratislavaDateFromIsoR503(value) {
   const date = new Date(value || '');
   if (!Number.isFinite(date.getTime())) return '';
   try {
@@ -6534,11 +6577,16 @@ function bratislavaDateFromIsoR502(value) {
   } catch (_) { return date.toISOString().slice(0,10); }
 }
 
-async function getTikTokDailyTrendR502(db, startDate, endDate) {
-  const result = await db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform='tiktok' ORDER BY datetime(created_at) ASC LIMIT 240`).all().catch(()=>({results:[]}));
+function tiktokSnapshotPlatformR503(mode) {
+  return `tiktok-${normalizeTikTokModeR503(mode)}`;
+}
+
+async function getTikTokDailyTrendR503(db, startDate, endDate, mode = 'sandbox') {
+  const platform=tiktokSnapshotPlatformR503(mode);
+  const result = await db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform=?1 ORDER BY datetime(created_at) ASC LIMIT 240`).bind(platform).all().catch(()=>({results:[]}));
   const byDay = new Map();
   for (const row of result?.results || []) {
-    const day = bratislavaDateFromIsoR502(row?.created_at);
+    const day = bratislavaDateFromIsoR503(row?.created_at);
     if (!day) continue;
     let metrics = {};
     try { metrics = JSON.parse(row?.metrics_json || '{}'); } catch (_) {}
@@ -6559,30 +6607,36 @@ async function getTikTokDailyTrendR502(db, startDate, endDate) {
   return output;
 }
 
-async function handleTikTokOAuthStartR502(request, env) {
+async function handleTikTokOAuthStartR503(request, env) {
   if (!adminAuthorized(request, env)) return json({ok:false,error:'unauthorized'},401);
-  const config = tiktokOAuthClientR502(env);
-  if (!config.configured) return json({ok:false,error:'tiktok-oauth-client-not-configured'},409);
-  const state = await makeYoutubeOAuthState(env);
+  const requestUrl=new URL(request.url);
+  const mode=normalizeTikTokModeR503(requestUrl.searchParams.get('mode'));
+  const config = tiktokOAuthClientR503(env,mode);
+  if (!config.configured) return json({ok:false,error:`tiktok-${mode}-oauth-client-not-configured`,mode,availableModes:tiktokAvailableModesR503(env)},409);
+  const state = await makeTikTokOAuthStateR503(env,mode);
   const url = new URL('https://www.tiktok.com/v2/auth/authorize/');
   url.searchParams.set('client_key',config.clientKey);
   url.searchParams.set('response_type','code');
   url.searchParams.set('scope',config.scopes.join(','));
   url.searchParams.set('redirect_uri',config.redirectUri);
   url.searchParams.set('state',state);
-  return json({ok:true,url:url.toString(),redirectUri:config.redirectUri,scopes:config.scopes});
+  return json({ok:true,mode,url:url.toString(),redirectUri:config.redirectUri,scopes:config.scopes,availableModes:tiktokAvailableModesR503(env)});
 }
 
-async function handleTikTokOAuthCallbackR502(request, env) {
+async function handleTikTokOAuthCallbackR503(request, env) {
   const url = new URL(request.url);
-  const config = tiktokOAuthClientR502(env);
+  const state = String(url.searchParams.get('state') || '');
+  const verifiedState=await verifyTikTokOAuthStateR503(env,state);
+  if (!verifiedState) return new Response('TikTok OAuth verification failed',{status:400,headers:{'content-type':'text/plain; charset=utf-8','cache-control':'no-store'}});
+  const mode=verifiedState.mode;
+  const config = tiktokOAuthClientR503(env,mode);
   const oauthError = cleanPlainText(url.searchParams.get('error') || '',160);
   const description = cleanPlainText(url.searchParams.get('error_description') || '',260);
-  if (oauthError) return Response.redirect(`https://control.andrikmetal.com/social-center-admin.html?tiktok=denied&reason=${encodeURIComponent(description || oauthError)}&v=55.00-r502`,302);
+  const back=`https://control.andrikmetal.com/social-center-admin.html?tiktok_mode=${encodeURIComponent(mode)}&v=55.00-r503`;
+  if (oauthError) return Response.redirect(`${back}&tiktok=denied&reason=${encodeURIComponent(description || oauthError)}`,302);
   const code = String(url.searchParams.get('code') || '');
-  const state = String(url.searchParams.get('state') || '');
-  if (!config.configured || !code || !await verifyYoutubeOAuthState(env,state)) {
-    return new Response('TikTok OAuth verification failed',{status:400,headers:{'content-type':'text/plain; charset=utf-8','cache-control':'no-store'}});
+  if (!config.configured || !code) {
+    return new Response(`TikTok ${mode} OAuth verification failed`,{status:400,headers:{'content-type':'text/plain; charset=utf-8','cache-control':'no-store'}});
   }
   const body = new URLSearchParams({
     client_key:config.clientKey, client_secret:config.clientSecret, code,
@@ -6594,39 +6648,46 @@ async function handleTikTokOAuthCallbackR502(request, env) {
   const data = await response.json().catch(()=>({}));
   if (!response.ok || !data?.access_token || !data?.refresh_token) {
     const message=cleanPlainText(data?.error_description || data?.error || `tiktok-oauth-${response.status}`,300);
-    return Response.redirect(`https://control.andrikmetal.com/social-center-admin.html?tiktok=error&reason=${encodeURIComponent(message)}&v=55.00-r502`,302);
+    return Response.redirect(`${back}&tiktok=error&reason=${encodeURIComponent(message)}`,302);
   }
-  await saveTikTokTokenResponseR502(env,data,null);
+  await saveTikTokTokenResponseR503(env,mode,data,null);
   let syncError='';
   try {
     const db=requireDb(env);
-    const live=await fetchTikTokAnalyticsR502(env);
-    if (live?.connected) await savePlatformSnapshot(db,'tiktok',live,'TikTok Display API · OAuth R502');
+    const live=await fetchTikTokAnalyticsR503(env,mode);
+    if (live?.connected) await savePlatformSnapshot(db,tiktokSnapshotPlatformR503(mode),live,`TikTok Display API · OAuth R503 · ${mode}`);
   } catch(error) { syncError=cleanPlainText(error?.message || error,220); }
   const suffix=syncError?`&sync=${encodeURIComponent(syncError)}`:'';
-  return Response.redirect(`https://control.andrikmetal.com/social-center-admin.html?tiktok=connected&v=55.00-r502${suffix}`,302);
+  return Response.redirect(`${back}&tiktok=connected${suffix}`,302);
 }
 
-async function handleTikTokOAuthStatusR502(request, env) {
+async function handleTikTokOAuthStatusR503(request, env) {
   if (!adminAuthorized(request, env)) return json({ok:false,error:'unauthorized'},401);
-  const status=await tiktokOAuthStatusR502(env);
+  const mode=normalizeTikTokModeR503(new URL(request.url).searchParams.get('mode'));
+  const status=await tiktokOAuthStatusR503(env,mode);
   return json({ok:true,...status});
 }
 
-async function handleTikTokOAuthDisconnectR502(request, env) {
+async function handleTikTokOAuthDisconnectR503(request, env) {
   if (!adminAuthorized(request, env)) return json({ok:false,error:'unauthorized'},401);
-  const config=tiktokOAuthClientR502(env);
-  const row=await readTikTokTokenRowR502(env);
+  const url=new URL(request.url);
+  let mode=normalizeTikTokModeR503(url.searchParams.get('mode'));
+  if (request.method === 'POST') {
+    try { const body=await request.clone().json(); if(body?.mode)mode=normalizeTikTokModeR503(body.mode); } catch(_) {}
+  }
+  const config=tiktokOAuthClientR503(env,mode);
+  const row=await readTikTokTokenRowR503(env,mode);
   if (row?.access_token_enc && config.configured) {
-    const token=await decryptTikTokTokenR502(env,row.access_token_enc).catch(()=> '');
+    const token=await decryptTikTokTokenR503(env,mode,row.access_token_enc).catch(()=> '');
     if (token) {
       const body=new URLSearchParams({client_key:config.clientKey,client_secret:config.clientSecret,token});
       await fetchWithAbortTimeoutR409('https://open.tiktokapis.com/v2/oauth/revoke/',{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body},7000,'tiktok-revoke-timeout').catch(()=>null);
     }
   }
   const db=requireDb(env);await ensureControlV1Schema(db);
-  await db.prepare(`DELETE FROM tiktok_oauth_tokens WHERE id='primary'`).run();
-  return json({ok:true});
+  await db.prepare(`DELETE FROM tiktok_oauth_tokens WHERE id=?1`).bind(mode).run();
+  if(mode==='production')await db.prepare(`DELETE FROM tiktok_oauth_tokens WHERE id='primary'`).run();
+  return json({ok:true,mode});
 }
 
 
@@ -9082,13 +9143,16 @@ async function handleControlSocialOverviewR487(request, env) {
   if (!adminAuthorized(request, env)) return json({ ok:false, error:'unauthorized' }, 401);
   const db = requireDb(env);
   await ensurePlatformAnalyticsSchema(db);
-  const refresh = new URL(request.url).searchParams.get('refresh') === '1';
+  const requestUrlR503 = new URL(request.url);
+  const refresh = requestUrlR503.searchParams.get('refresh') === '1';
+  const tiktokModeR503 = normalizeTikTokModeR503(requestUrlR503.searchParams.get('tiktok_mode'));
+  const tiktokSnapshotR503 = tiktokSnapshotPlatformR503(tiktokModeR503);
   let [gaRow, ytRow, igRow, fbRow, ttRow] = await Promise.all([
     db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform='google-analytics' ORDER BY datetime(created_at) DESC LIMIT 1`).first(),
     db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform='youtube' ORDER BY datetime(created_at) DESC LIMIT 1`).first(),
     db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform='instagram' ORDER BY datetime(created_at) DESC LIMIT 1`).first(),
     db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform='facebook' ORDER BY datetime(created_at) DESC LIMIT 1`).first(),
-    db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform='tiktok' ORDER BY datetime(created_at) DESC LIMIT 1`).first()
+    db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform=?1 ORDER BY datetime(created_at) DESC LIMIT 1`).bind(tiktokSnapshotR503).first()
   ]);
 
   let google = parseSnapshotMetrics(gaRow);
@@ -9162,17 +9226,17 @@ async function handleControlSocialOverviewR487(request, env) {
   if (!instagram?.configured && !igConfig.configured) instagram = { configured:false, connected:false, error:'INSTAGRAM_ACCESS_TOKEN не настроен' };
   if (liveErrors.instagram && !instagram?.connected) instagram = { ...instagram, configured:igConfig.configured, connected:false, error:liveErrors.instagram };
 
-  const tiktokAuthR502 = await tiktokOAuthStatusR502(env).catch(()=>({configured:tiktokOAuthClientR502(env).configured,connected:false,scope:''}));
-  if (tiktokAuthR502.connected && (refresh || !ttRow || latestSnapshotAgeMinutesR487(ttRow) > 30 || !tiktok?.connected)) {
+  const tiktokAuthR503 = await tiktokOAuthStatusR503(env,tiktokModeR503).catch(()=>({mode:tiktokModeR503,availableModes:tiktokAvailableModesR503(env),configured:tiktokOAuthClientR503(env,tiktokModeR503).configured,connected:false,scope:''}));
+  if (tiktokAuthR503.connected && (refresh || !ttRow || latestSnapshotAgeMinutesR487(ttRow) > 30 || !tiktok?.connected)) {
     try {
-      const live = await fetchTikTokAnalyticsR502(env);
+      const live = await fetchTikTokAnalyticsR503(env,tiktokModeR503);
       if (live?.connected) {
-        await savePlatformSnapshot(db,'tiktok',live,refresh ? 'manual-social-center-r502' : 'social-center-r502');
+        await savePlatformSnapshot(db,tiktokSnapshotR503,live,refresh ? `manual-social-center-r503-${tiktokModeR503}` : `social-center-r503-${tiktokModeR503}`);
         tiktok=live; ttRow={created_at:live.updatedAt || new Date().toISOString()};
       }
     } catch (error) { liveErrors.tiktok=cleanPlainText(error?.message || error,300); }
   }
-  if (liveErrors.tiktok && !tiktok?.connected) tiktok={...tiktok,configured:tiktokAuthR502.configured,connected:false,error:liveErrors.tiktok};
+  if (liveErrors.tiktok && !tiktok?.connected) tiktok={...tiktok,mode:tiktokModeR503,configured:tiktokAuthR503.configured,connected:false,error:liveErrors.tiktok};
 
   const today = getBratislavaClock().date;
   const endDate = shiftIsoCalendarDate(today, -1);
@@ -9214,11 +9278,11 @@ async function handleControlSocialOverviewR487(request, env) {
     return [day, field ? Math.max(0,Number(row[field])) : null];
   }).filter(([day,value])=>day&&value!==null));
   const fbMapR498 = genericTrendMapR498(facebook,['views','reach','impressions','interactions']);
-  const tiktokDailyR502 = await getTikTokDailyTrendR502(db,startDate,endDate);
-  const ttMapR498 = new Map(tiktokDailyR502.map(row=>[row.day,Math.max(0,Number(row.views||0))]));
+  const tiktokDailyR503 = await getTikTokDailyTrendR503(db,startDate,endDate,tiktokModeR503);
+  const ttMapR498 = new Map(tiktokDailyR503.map(row=>[row.day,Math.max(0,Number(row.views||0))]));
   const facebookReady = Boolean(facebook?.connected && fbMapR498.size);
-  const tiktokConnectedR502 = Boolean(tiktokAuthR502.connected && tiktok?.connected);
-  const tiktokTrendReadyR502 = Boolean(tiktokConnectedR502 && ttMapR498.size);
+  const tiktokConnectedR503 = Boolean(tiktokAuthR503.connected && tiktok?.connected);
+  const tiktokTrendReadyR503 = Boolean(tiktokConnectedR503 && ttMapR498.size);
   const trend = [];
   for (let day = startDate; day <= endDate; day = shiftIsoCalendarDate(day, 1)) {
     trend.push({
@@ -9227,7 +9291,7 @@ async function handleControlSocialOverviewR487(request, env) {
       youtube:youtubeReady ? Number(ytMap.get(day) || 0) : null,
       instagram:instagramSeriesReady ? Number(igMap.get(day) || 0) : null,
       facebook:facebookReady ? Number(fbMapR498.get(day) || 0) : null,
-      tiktok:tiktokTrendReadyR502 ? Number(ttMapR498.get(day) || 0) : null
+      tiktok:tiktokTrendReadyR503 ? Number(ttMapR498.get(day) || 0) : null
     });
   }
   const sum = key => trend.reduce((total, row) => total + (Number.isFinite(Number(row[key])) ? Math.max(0, Number(row[key])) : 0), 0);
@@ -9245,7 +9309,7 @@ async function handleControlSocialOverviewR487(request, env) {
   return json({
     ok:true,
     period:{ startDate, endDate, days:28, label:'28 завершённых дней' },
-    totals:{ site:siteReady ? sum('site') : null, youtube:youtubeReady ? sum('youtube') : null, instagram:instagramTotal, facebook:facebookReady ? sum('facebook') : null, tiktok:tiktokTrendReadyR502 ? sum('tiktok') : null },
+    totals:{ site:siteReady ? sum('site') : null, youtube:youtubeReady ? sum('youtube') : null, instagram:instagramTotal, facebook:facebookReady ? sum('facebook') : null, tiktok:tiktokTrendReadyR503 ? sum('tiktok') : null },
     trend,
     platforms:{
       site:{ configured:siteReady, connected:siteReady, name:'Сайт', source:'GA4 + Live Web AI', updatedAt:gaRow?.created_at || google?.updatedAt || '', firstPartyDays:siteFirstPartyTrend.length, firstPartyViews:siteFirstPartyTrend.reduce((sum,row)=>sum+Math.max(0,Number(row?.views||0)),0), firstPartyUsers:Math.max(0,...siteFirstPartyTrend.map(row=>Number(row?.users||0))), error:liveErrors.site },
@@ -9262,14 +9326,15 @@ async function handleControlSocialOverviewR487(request, env) {
         source:'Facebook Page Insights', updatedAt:fbRow?.created_at || facebook?.updatedAt || '', error:cleanPlainText(facebook?.error || '',220)
       },
       tiktok:{
-        configured:Boolean(tiktokAuthR502.configured), connected:tiktokConnectedR502, oauthConnected:Boolean(tiktokAuthR502.connected), trendConnected:tiktokTrendReadyR502,
+        mode:tiktokModeR503, availableModes:tiktokAuthR503.availableModes || tiktokAvailableModesR503(env),
+        configured:Boolean(tiktokAuthR503.configured), connected:tiktokConnectedR503, oauthConnected:Boolean(tiktokAuthR503.connected), trendConnected:tiktokTrendReadyR503,
         name:'TikTok', handle:cleanPlainText(tiktok?.handle || '@andrikmetal',120), displayName:cleanPlainText(tiktok?.displayName || 'ANDRIK',120), profileUrl:cleanPlainText(tiktok?.profileUrl || 'https://www.tiktok.com/@andrikmetal',700),
-        metricLabel:tiktokTrendReadyR502?'прирост просмотров':'текущий срез видео', source:'TikTok Display API', updatedAt:ttRow?.created_at || tiktok?.updatedAt || '',
-        summary:tiktok?.summary || {}, recentVideos:Array.isArray(tiktok?.recentVideos)?tiktok.recentVideos:[], grantedScopes:cleanPlainText(tiktokAuthR502.scope || tiktok?.scope || '',1200),
+        metricLabel:tiktokTrendReadyR503?'прирост просмотров':'текущий срез видео', source:`TikTok Display API · ${tiktokModeR503}`, updatedAt:ttRow?.created_at || tiktok?.updatedAt || '',
+        summary:tiktok?.summary || {}, recentVideos:Array.isArray(tiktok?.recentVideos)?tiktok.recentVideos:[], grantedScopes:cleanPlainText(tiktokAuthR503.scope || tiktok?.scope || '',1200),
         error:cleanPlainText(liveErrors.tiktok || tiktok?.error || '',220), partialErrors:Array.isArray(tiktok?.partialErrors)?tiktok.partialErrors:[]
       }
     },
-    diagnostics:{ refresh, liveErrors },
+    diagnostics:{ refresh, liveErrors, tiktokMode:tiktokModeR503, tiktokSnapshot:tiktokSnapshotR503 },
     updatedAt:new Date().toISOString()
   });
 }
@@ -9494,13 +9559,19 @@ async function refreshControlSnapshots(env, { force = false } = {}) {
   }
 
 
-  try {
-    const ttStatus=await tiktokOAuthStatusR502(env);
-    if (ttStatus.connected) {
-      const tt=await fetchTikTokAnalyticsR502(env);
-      if (tt?.connected) { await savePlatformSnapshot(db,'tiktok',tt,'TikTok Display API · hourly snapshot R502'); stored.push('tiktok'); }
-    }
-  } catch (error) { errors.push(`TikTok: ${cleanPlainText(error?.message || error,260)}`); }
+  for (const tiktokMode of ['production','sandbox']) {
+    try {
+      const ttStatus=await tiktokOAuthStatusR503(env,tiktokMode);
+      if (ttStatus.connected) {
+        const tt=await fetchTikTokAnalyticsR503(env,tiktokMode);
+        if (tt?.connected) {
+          const platform=tiktokSnapshotPlatformR503(tiktokMode);
+          await savePlatformSnapshot(db,platform,tt,`TikTok Display API · hourly snapshot R503 · ${tiktokMode}`);
+          stored.push(platform);
+        }
+      }
+    } catch (error) { errors.push(`TikTok ${tiktokMode}: ${cleanPlainText(error?.message || error,260)}`); }
+  }
 
   const finishedAt = new Date().toISOString();
   await setPushState(db, 'control-snapshots-last-at', finishedAt);
@@ -15756,10 +15827,10 @@ async function routeApi(request, env, ctx) {
     if (path === '/api/control/youtube-oauth/start' && request.method === 'GET') return await handleYoutubeOAuthStart(request, env);
     if ((path === '/api/control/youtube-oauth/callback' || path === '/oauth/youtube/callback') && request.method === 'GET') return await handleYoutubeOAuthCallback(request, env, ctx);
     if (path === '/api/control/youtube-oauth/disconnect' && request.method === 'POST') return await handleYoutubeOAuthDisconnect(request, env);
-    if (path === '/api/control/tiktok-oauth/status' && request.method === 'GET') return await handleTikTokOAuthStatusR502(request, env);
-    if (path === '/api/control/tiktok-oauth/start' && request.method === 'GET') return await handleTikTokOAuthStartR502(request, env);
-    if (path === '/api/oauth/tiktok/callback' && request.method === 'GET') return await handleTikTokOAuthCallbackR502(request, env);
-    if (path === '/api/control/tiktok-oauth/disconnect' && request.method === 'POST') return await handleTikTokOAuthDisconnectR502(request, env);
+    if (path === '/api/control/tiktok-oauth/status' && request.method === 'GET') return await handleTikTokOAuthStatusR503(request, env);
+    if (path === '/api/control/tiktok-oauth/start' && request.method === 'GET') return await handleTikTokOAuthStartR503(request, env);
+    if (path === '/api/oauth/tiktok/callback' && request.method === 'GET') return await handleTikTokOAuthCallbackR503(request, env);
+    if (path === '/api/control/tiktok-oauth/disconnect' && request.method === 'POST') return await handleTikTokOAuthDisconnectR503(request, env);
     if (path === '/api/control/comment-collection' && request.method === 'GET') return await handleControlCommentCollection(request, env);
     if (path === '/api/control/youtube-comment' && request.method === 'GET') return await handleYoutubeCommentDetail(request, env);
     if (path === '/api/control/youtube-comment/reply' && request.method === 'POST') return await handleYoutubeCommentReply(request, env);
