@@ -1,14 +1,14 @@
 {
   "schema": 1,
   "updaterVersion": "55.00-r356",
-  "operation": "publish",
-  "reinstall": false,
-  "operationId": "publish-1787048919696-5a27213da3",
+  "operation": "reinstall",
+  "reinstall": true,
+  "operationId": "reinstall-1787049378013-4aa2eb0385",
   "release": "R496",
-  "archiveName": "R496-ONE-TIME-YOUTUBE-OWNER-RECONNECT-SAFE-FULL.zip",
-  "sourceHead": "bef2cf2698afdd669515b5677ce76b9aa00f081d",
-  "backupSha": "bef2cf2698afdd669515b5677ce76b9aa00f081d",
-  "backupTag": "control-backup-20260818102831-bef2cf2-r496-bd8cb",
+  "archiveName": "R496-ONE-TIME-YOUTUBE-OWNER-RECONNECT-INSTALL-FIX-SAFE-FULL.zip",
+  "sourceHead": "22a27bb7317e763bc9df676a8373dcaeb4d5f6c0",
+  "backupSha": "22a27bb7317e763bc9df676a8373dcaeb4d5f6c0",
+  "backupTag": "control-backup-20260818103605-22a27bb-r496-2dff8",
   "autoRecovery": true,
-  "generatedAt": "2026-08-18T10:28:39.696Z"
+  "generatedAt": "2026-08-18T10:36:18.013Z"
 }
