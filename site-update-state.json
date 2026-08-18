@@ -1,14 +1,14 @@
 {
   "schema": 1,
   "updaterVersion": "55.00-r356",
-  "operation": "reinstall",
-  "reinstall": true,
-  "operationId": "reinstall-1787068337140-e713555dff",
-  "release": "R503",
-  "archiveName": "R503-TIKTOK-SANDBOX-PRODUCTION-SWITCH-SAFE-FULL.zip",
-  "sourceHead": "942b8e0d3b865acb1e11c0910ddc385537e44f66",
-  "backupSha": "942b8e0d3b865acb1e11c0910ddc385537e44f66",
-  "backupTag": "control-backup-20260818155212-942b8e0-r503-8a9d5",
+  "operation": "publish",
+  "reinstall": false,
+  "operationId": "publish-1787069461952-f7d60e7956",
+  "release": "R504",
+  "archiveName": "R504-COMPACT-SOCIAL-CENTER-TIKTOK-SAFE-REFRESH-SAFE-FULL.zip",
+  "sourceHead": "910bbe1ce4bdc3935561bc71b588fbc77aa0879e",
+  "backupSha": "910bbe1ce4bdc3935561bc71b588fbc77aa0879e",
+  "backupTag": "control-backup-20260818161055-910bbe1-r504-7c5ca",
   "autoRecovery": true,
-  "generatedAt": "2026-08-18T15:52:17.140Z"
+  "generatedAt": "2026-08-18T16:11:01.952Z"
 }

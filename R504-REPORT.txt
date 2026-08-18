@@ -1,0 +1,13 @@
+ANDRIK R504 — COMPACT SOCIAL CENTER + TIKTOK SAFE REFRESH
+
+Changes:
+- Removed visible Production selector from TikTok platform card; Sandbox remains active for pre-review testing.
+- Removed visible “Открыть / Открыть канал / Открыть TikTok” labels; connected cards remain clickable.
+- Compact platform-card captions and spacing.
+- Moved “ИТОГ · За 28 дней” above the graph so it is immediately visible.
+- TikTok appears in the 28-day list as “копим” until enough daily snapshots exist; no fake 28-day TikTok total is invented.
+- Removed informational yellow TikTok warning after successful connection.
+- Suppressed stale Cloudflare subrequest-limit text from user-facing warnings.
+- Refresh button now forces only TikTok while other platforms use cached/stale refresh logic, reducing Free Worker subrequest pressure.
+- OAuth return no longer forces a full all-platform refresh; callback snapshot is reused.
+- Release/cache/service worker updated to R504.

@@ -6307,7 +6307,7 @@ async function handleYoutubeOAuthCallback(request, env, ctx) {
 
   // Root is the installed ANDRIK Control start page. Android can hand this
   // navigation directly to the Control PWA after Google closes the consent flow.
-  return Response.redirect('https://control.andrikmetal.com/social-center-admin.html?youtube=connected&v=55.00-r503', 302);
+  return Response.redirect('https://control.andrikmetal.com/social-center-admin.html?youtube=connected&v=55.00-r504', 302);
 }
 
 async function handleYoutubeOAuthDisconnect(request, env) {
@@ -6632,7 +6632,7 @@ async function handleTikTokOAuthCallbackR503(request, env) {
   const config = tiktokOAuthClientR503(env,mode);
   const oauthError = cleanPlainText(url.searchParams.get('error') || '',160);
   const description = cleanPlainText(url.searchParams.get('error_description') || '',260);
-  const back=`https://control.andrikmetal.com/social-center-admin.html?tiktok_mode=${encodeURIComponent(mode)}&v=55.00-r503`;
+  const back=`https://control.andrikmetal.com/social-center-admin.html?tiktok_mode=${encodeURIComponent(mode)}&v=55.00-r504`;
   if (oauthError) return Response.redirect(`${back}&tiktok=denied&reason=${encodeURIComponent(description || oauthError)}`,302);
   const code = String(url.searchParams.get('code') || '');
   if (!config.configured || !code) {
@@ -9145,6 +9145,8 @@ async function handleControlSocialOverviewR487(request, env) {
   await ensurePlatformAnalyticsSchema(db);
   const requestUrlR503 = new URL(request.url);
   const refresh = requestUrlR503.searchParams.get('refresh') === '1';
+  const refreshSourceR504 = cleanPlainText(requestUrlR503.searchParams.get('refresh_source') || '',40).toLowerCase();
+  const onlyTikTokRefreshR504 = refreshSourceR504 === 'tiktok';
   const tiktokModeR503 = normalizeTikTokModeR503(requestUrlR503.searchParams.get('tiktok_mode'));
   const tiktokSnapshotR503 = tiktokSnapshotPlatformR503(tiktokModeR503);
   let [gaRow, ytRow, igRow, fbRow, ttRow] = await Promise.all([
@@ -9163,9 +9165,10 @@ async function handleControlSocialOverviewR487(request, env) {
   const liveErrors = { site:'', youtube:'', instagram:'', facebook:'', tiktok:'' };
   const igConfig = instagramConfigR487(env);
 
-  // R491: Social Center heals stale/missing snapshots itself. This prevents the
-  // center from showing “waiting” while the dedicated GA/YouTube screens already work.
-  if (refresh || !gaRow || latestSnapshotAgeMinutesR487(gaRow) > 30 || !Array.isArray(google?.trend) || !google.trend.length) {
+  // R504: keep external refreshes separated on the Workers Free plan. TikTok
+  // refreshes alone; GA/YouTube/Instagram never share the same forced invocation with it.
+  const shouldRefreshGoogleR504 = !onlyTikTokRefreshR504 && (refresh || !gaRow || latestSnapshotAgeMinutesR487(gaRow) > 30 || !Array.isArray(google?.trend) || !google.trend.length);
+  if (shouldRefreshGoogleR504) {
     try {
       const live = await fetchGoogleSiteAnalytics(env);
       if (live?.configured) {
@@ -9183,7 +9186,7 @@ async function handleControlSocialOverviewR487(request, env) {
   }
 
   const previousStudio = youtube?.studio || {};
-  const shouldRefreshYoutube = refresh || !ytRow || latestSnapshotAgeMinutesR487(ytRow) > 30 || !previousStudio?.connected || !Array.isArray(previousStudio?.trend) || !previousStudio.trend.length;
+  const shouldRefreshYoutube = !onlyTikTokRefreshR504 && (refresh || !ytRow || latestSnapshotAgeMinutesR487(ytRow) > 30 || !previousStudio?.connected || !Array.isArray(previousStudio?.trend) || !previousStudio.trend.length);
   if (shouldRefreshYoutube) {
     try {
       const studio = await fetchYouTubeStudioAnalytics(env);
@@ -9214,7 +9217,8 @@ async function handleControlSocialOverviewR487(request, env) {
     } catch (error) { liveErrors.youtube = cleanPlainText(error?.message || error, 300); }
   }
 
-  if (igConfig.configured && (refresh || !igRow || latestSnapshotAgeMinutesR487(igRow) > 30 || !instagram?.connected || !Array.isArray(instagram?.trend))) {
+  const shouldRefreshInstagramR504 = !onlyTikTokRefreshR504 && igConfig.configured && (refresh || !igRow || latestSnapshotAgeMinutesR487(igRow) > 30 || !instagram?.connected || !Array.isArray(instagram?.trend));
+  if (shouldRefreshInstagramR504) {
     try {
       const live = await fetchInstagramAnalytics(env);
       if (live?.configured) {
@@ -9227,7 +9231,9 @@ async function handleControlSocialOverviewR487(request, env) {
   if (liveErrors.instagram && !instagram?.connected) instagram = { ...instagram, configured:igConfig.configured, connected:false, error:liveErrors.instagram };
 
   const tiktokAuthR503 = await tiktokOAuthStatusR503(env,tiktokModeR503).catch(()=>({mode:tiktokModeR503,availableModes:tiktokAvailableModesR503(env),configured:tiktokOAuthClientR503(env,tiktokModeR503).configured,connected:false,scope:''}));
-  if (tiktokAuthR503.connected && (refresh || !ttRow || latestSnapshotAgeMinutesR487(ttRow) > 30 || !tiktok?.connected)) {
+  const otherExternalRefreshR504 = shouldRefreshGoogleR504 || shouldRefreshYoutube || shouldRefreshInstagramR504;
+  const shouldRefreshTikTokR504 = tiktokAuthR503.connected && (onlyTikTokRefreshR504 || (!otherExternalRefreshR504 && (refresh || !ttRow || latestSnapshotAgeMinutesR487(ttRow) > 30 || !tiktok?.connected)));
+  if (shouldRefreshTikTokR504) {
     try {
       const live = await fetchTikTokAnalyticsR503(env,tiktokModeR503);
       if (live?.connected) {
@@ -9334,7 +9340,7 @@ async function handleControlSocialOverviewR487(request, env) {
         error:cleanPlainText(liveErrors.tiktok || tiktok?.error || '',220), partialErrors:Array.isArray(tiktok?.partialErrors)?tiktok.partialErrors:[]
       }
     },
-    diagnostics:{ refresh, liveErrors, tiktokMode:tiktokModeR503, tiktokSnapshot:tiktokSnapshotR503 },
+    diagnostics:{ refresh, refreshSource:refreshSourceR504, liveErrors, tiktokMode:tiktokModeR503, tiktokSnapshot:tiktokSnapshotR503 },
     updatedAt:new Date().toISOString()
   });
 }
