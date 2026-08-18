@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R492', number:492, version:'55.00', full:'55.00 LIVE WEB AI FINAL R492', siteUpdater:'55.00-r356' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R493', number:493, version:'55.00', full:'55.00 LIVE WEB AI FINAL R493', siteUpdater:'55.00-r356' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -6170,7 +6170,7 @@ async function handleYoutubeOAuthCallback(request, env, ctx) {
 
   // Root is the installed ANDRIK Control start page. Android can hand this
   // navigation directly to the Control PWA after Google closes the consent flow.
-  return Response.redirect('https://control.andrikmetal.com/social-center-admin.html?youtube=connected&v=55.00-r492', 302);
+  return Response.redirect('https://control.andrikmetal.com/social-center-admin.html?youtube=connected&v=55.00-r493', 302);
 }
 
 async function handleYoutubeOAuthDisconnect(request, env) {
@@ -8604,7 +8604,7 @@ async function handleControlSocialOverviewR487(request, env) {
           trend:live.trend || [], countries:live.countries || [], pages:live.pages || [], devices:live.devices || [],
           updatedAt:live.updatedAt || new Date().toISOString()
         };
-        await savePlatformSnapshot(db, 'google-analytics', metrics, refresh ? 'manual-social-center-r492' : 'social-center-r492');
+        await savePlatformSnapshot(db, 'google-analytics', metrics, refresh ? 'manual-social-center-r493' : 'social-center-r493');
         google = metrics; gaRow = { created_at:metrics.updatedAt };
       }
     } catch (error) { liveErrors.site = cleanPlainText(error?.message || error, 300); }
@@ -8631,7 +8631,7 @@ async function handleControlSocialOverviewR487(request, env) {
           },
           updatedAt:new Date().toISOString()
         };
-        await savePlatformSnapshot(db, 'youtube', metrics, refresh ? 'manual-social-center-r492' : 'social-center-r492');
+        await savePlatformSnapshot(db, 'youtube', metrics, refresh ? 'manual-social-center-r493' : 'social-center-r493');
         youtube = metrics; ytRow = { created_at:metrics.updatedAt };
         if (!Array.isArray(studio?.trend) || !studio.trend.length) {
           liveErrors.youtube = cleanPlainText(studio?.trendError || studio?.partialErrors?.[0] || 'YouTube Analytics вернул пустой дневной ряд', 300);
@@ -8646,7 +8646,7 @@ async function handleControlSocialOverviewR487(request, env) {
     try {
       const live = await fetchInstagramAnalytics(env);
       if (live?.configured) {
-        await savePlatformSnapshot(db, 'instagram', live, refresh ? 'manual-social-center-r492' : 'social-center-r492');
+        await savePlatformSnapshot(db, 'instagram', live, refresh ? 'manual-social-center-r493' : 'social-center-r493');
         instagram = live; igRow = { created_at:live.updatedAt || new Date().toISOString() };
       }
     } catch (error) { liveErrors.instagram = cleanPlainText(error?.message || error, 300); }

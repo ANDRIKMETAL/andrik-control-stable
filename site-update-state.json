@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787046894669-a9c1046bf0",
-  "release": "R492",
-  "archiveName": "R492-YOUTUBE-READONLY-OAUTH-RECONNECT-CLEAN-DIAGNOSTICS-SAFE-FULL.zip",
-  "sourceHead": "98cd68fdf748c5a2aeeecfba640755172dda9818",
-  "backupSha": "98cd68fdf748c5a2aeeecfba640755172dda9818",
-  "backupTag": "control-backup-20260818095450-98cd68f-r492-6762c",
+  "operationId": "publish-1787047010847-51a36f9db9",
+  "release": "R493",
+  "archiveName": "R493-SOCIAL-CENTER-TIKTOK-ONLY-YOUTUBE-RECONNECT-SAFE-FULL.zip",
+  "sourceHead": "67d82d4e4b1809bf37f42c39c1a0e27d79741374",
+  "backupSha": "67d82d4e4b1809bf37f42c39c1a0e27d79741374",
+  "backupTag": "control-backup-20260818095646-67d82d4-r493-befae",
   "autoRecovery": true,
-  "generatedAt": "2026-08-18T09:54:54.669Z"
+  "generatedAt": "2026-08-18T09:56:50.847Z"
 }

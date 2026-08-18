@@ -1,0 +1,12 @@
+ANDRIK R493
+
+Base: R492
+
+Changes:
+- Removed Facebook and Threads from Social Center UI and graph controls.
+- TikTok is the only reserved next platform.
+- Platform grid now contains Site, YouTube, Instagram, TikTok only.
+- Connected counter denominator changed from 6 to 4.
+- Hero and next-connection copy updated: no mentions of Facebook or Threads.
+- YouTube reconnect button and R492 OAuth fixes preserved.
+- Release/cache/service-worker references advanced to R493.
