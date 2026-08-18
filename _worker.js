@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R489', number:489, version:'55.00', full:'55.00 LIVE WEB AI FINAL R489', siteUpdater:'55.00-r356' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R490', number:490, version:'55.00', full:'55.00 LIVE WEB AI FINAL R490', siteUpdater:'55.00-r356' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -6035,24 +6035,70 @@ async function handleYoutubeOAuthStatus(request, env) {
   return json({ ok:true, ...status });
 }
 
+function youtubeRefreshTokenFatalR490(message) {
+  return /invalid_grant|expired|revoked|token has been expired|token has been revoked/i.test(String(message || ''));
+}
+
+async function getYoutubeRefreshTokenCandidatesR490(env) {
+  const candidates = [];
+  if (env.COMMENTS_DB) {
+    try {
+      const db = requireDb(env);
+      await ensureControlV1Schema(db);
+      const row = await db.prepare(`SELECT refresh_token_enc FROM youtube_oauth_tokens WHERE id='primary' LIMIT 1`).first();
+      if (row?.refresh_token_enc) {
+        const token = await decryptYoutubeRefreshToken(env, row.refresh_token_enc).catch(() => '');
+        if (token) candidates.push({ token, source:'d1' });
+      }
+    } catch (_) {}
+  }
+  const secret = String(env.YOUTUBE_OAUTH_REFRESH_TOKEN || env.YOUTUBE_REFRESH_TOKEN || '').trim();
+  if (secret && !candidates.some(item => item.token === secret)) candidates.push({ token:secret, source:'cloudflare-secret' });
+  return candidates;
+}
+
 async function getYoutubeOAuthAccessToken(env) {
   const now = Math.floor(Date.now()/1000);
   if (youtubeOAuthAccessCache?.token && youtubeOAuthAccessCache.expiresAt > now + 60) return youtubeOAuthAccessCache.token;
   const config = youtubeOAuthClient(env);
   if (!config.configured) throw new Error('youtube-oauth-client-not-configured');
-  const refreshToken = await getYoutubeRefreshToken(env);
-  if (!refreshToken) throw new Error('youtube-oauth-not-connected');
-  const body = new URLSearchParams({
-    client_id: config.clientId,
-    client_secret: config.clientSecret,
-    refresh_token: refreshToken,
-    grant_type: 'refresh_token'
-  });
-  const response = await fetchWithAbortTimeoutR409('https://oauth2.googleapis.com/token', { method:'POST', headers:{'content-type':'application/x-www-form-urlencoded'}, body }, 7000, 'youtube-oauth-token-timeout');
-  const data = await response.json().catch(()=>({}));
-  if (!response.ok || !data.access_token) throw new Error(data.error_description || data.error || `youtube-oauth-token-${response.status}`);
-  youtubeOAuthAccessCache = { token:data.access_token, expiresAt:now+Number(data.expires_in||3600) };
-  return data.access_token;
+  const candidates = await getYoutubeRefreshTokenCandidatesR490(env);
+  if (!candidates.length) throw new Error('youtube-oauth-not-connected');
+  let lastError = 'youtube-oauth-token-refresh-failed';
+  let staleD1 = false;
+  for (const candidate of candidates) {
+    const body = new URLSearchParams({
+      client_id: config.clientId,
+      client_secret: config.clientSecret,
+      refresh_token: candidate.token,
+      grant_type: 'refresh_token'
+    });
+    try {
+      const response = await fetchWithAbortTimeoutR409('https://oauth2.googleapis.com/token', { method:'POST', headers:{'content-type':'application/x-www-form-urlencoded'}, body }, 7000, 'youtube-oauth-token-timeout');
+      const data = await response.json().catch(()=>({}));
+      if (!response.ok || !data.access_token) {
+        const message = cleanPlainText(data.error_description || data.error || `youtube-oauth-token-${response.status}`, 300);
+        lastError = message;
+        if (candidate.source === 'd1' && youtubeRefreshTokenFatalR490(message)) { staleD1 = true; continue; }
+        if (candidate.source !== 'd1' && youtubeRefreshTokenFatalR490(message)) continue;
+        continue;
+      }
+      youtubeOAuthAccessCache = { token:data.access_token, expiresAt:now+Number(data.expires_in||3600), source:candidate.source };
+      // If an old D1 refresh token was revoked but the Cloudflare secret still works,
+      // remove the stale D1 row so future cold starts do not hit the bad token first.
+      if (staleD1 && candidate.source === 'cloudflare-secret' && env.COMMENTS_DB) {
+        try {
+          const db = requireDb(env);
+          await db.prepare(`DELETE FROM youtube_oauth_tokens WHERE id='primary'`).run();
+        } catch (_) {}
+      }
+      return data.access_token;
+    } catch (error) {
+      lastError = cleanPlainText(error?.message || error, 300);
+      if (candidate.source === 'd1' && youtubeRefreshTokenFatalR490(lastError)) { staleD1 = true; continue; }
+    }
+  }
+  throw new Error(lastError);
 }
 
 async function handleYoutubeOAuthStart(request, env) {
@@ -8216,6 +8262,27 @@ function instagramInsightTrendR487(payload, metricName = '') {
   })).filter(row => /^\d{4}-\d{2}-\d{2}$/.test(row.day) && Number.isFinite(row.value));
 }
 
+async function fetchInstagramMediaCountsR490(env, accountId, startDate, endDate) {
+  try {
+    const payload = await instagramApiGetR487(env, `${accountId}/media`, {
+      fields:'id,timestamp,like_count,comments_count,media_type,media_product_type',
+      limit:100
+    }, 9000);
+    const items = Array.isArray(payload?.data) ? payload.data : [];
+    let likes = 0, comments = 0, mediaCount = 0;
+    for (const item of items) {
+      const stamp = cleanPlainText(item?.timestamp || '', 40).slice(0,10);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(stamp) || stamp < startDate || stamp > endDate) continue;
+      mediaCount += 1;
+      likes += Math.max(0, Number(item?.like_count || 0));
+      comments += Math.max(0, Number(item?.comments_count || 0));
+    }
+    return { available:true, likes, comments, mediaCount };
+  } catch (error) {
+    return { available:false, likes:null, comments:null, mediaCount:0, error:cleanPlainText(error?.message || error, 220) };
+  }
+}
+
 async function fetchInstagramAnalytics(env) {
   const config = instagramConfigR487(env);
   if (!config.configured) return { configured:false, connected:false, error:'INSTAGRAM_ACCESS_TOKEN не настроен' };
@@ -8239,57 +8306,102 @@ async function fetchInstagramAnalytics(env) {
   if (!accountId) throw new Error('instagram-user-id-missing');
   const username = cleanPlainText(profile?.username || 'andrikmetal', 100);
 
-  const dailyResults = await Promise.allSettled([
-    instagramApiGetR487(env, `${accountId}/insights`, { metric:'views', period:'day', since:startDate, until:today }, 9000),
-    instagramApiGetR487(env, `${accountId}/insights`, { metric:'reach', period:'day', since:startDate, until:today }, 9000),
-    instagramApiGetR487(env, `${accountId}/insights`, { metric:'profile_views', period:'day', since:startDate, until:today }, 9000)
-  ]);
-  const metricNames = ['views','reach','profile_views'];
+  const metrics = ['views','reach','profile_views','accounts_engaged','total_interactions','likes','comments','shares','saves'];
+  const dailyResults = await Promise.allSettled(metrics.map(metric =>
+    instagramApiGetR487(env, `${accountId}/insights`, { metric, period:'day', since:startDate, until:today }, 9000)
+  ));
   const dailyMaps = {};
   const dailyAvailability = {};
+  const partialErrors = [];
   dailyResults.forEach((result, index) => {
-    const name = metricNames[index];
+    const name = metrics[index];
     const rows = result.status === 'fulfilled' ? instagramInsightTrendR487(result.value, name) : [];
     dailyAvailability[name] = result.status === 'fulfilled' && rows.length > 0;
     dailyMaps[name] = new Map(rows.map(row => [row.day, row.value]));
+    if (result.status === 'rejected') partialErrors.push(`${name} daily: ${cleanPlainText(result.reason?.message || result.reason, 180)}`);
   });
+
   const trend = [];
   for (let day = startDate; day <= endDate; day = shiftIsoCalendarDate(day, 1)) {
     trend.push({
       day,
       views:dailyAvailability.views ? Number(dailyMaps.views?.get(day) || 0) : null,
       reach:dailyAvailability.reach ? Number(dailyMaps.reach?.get(day) || 0) : null,
-      profileViews:dailyAvailability.profile_views ? Number(dailyMaps.profile_views?.get(day) || 0) : null
+      profileViews:dailyAvailability.profile_views ? Number(dailyMaps.profile_views?.get(day) || 0) : null,
+      accountsEngaged:dailyAvailability.accounts_engaged ? Number(dailyMaps.accounts_engaged?.get(day) || 0) : null,
+      totalInteractions:dailyAvailability.total_interactions ? Number(dailyMaps.total_interactions?.get(day) || 0) : null,
+      likes:dailyAvailability.likes ? Number(dailyMaps.likes?.get(day) || 0) : null,
+      comments:dailyAvailability.comments ? Number(dailyMaps.comments?.get(day) || 0) : null,
+      shares:dailyAvailability.shares ? Number(dailyMaps.shares?.get(day) || 0) : null,
+      saves:dailyAvailability.saves ? Number(dailyMaps.saves?.get(day) || 0) : null
     });
   }
 
-  const monthlyMetrics = ['views','reach','profile_views','accounts_engaged','total_interactions','likes','comments','shares','saves'];
-  const monthlyResults = await Promise.allSettled(monthlyMetrics.map(metric =>
+  const monthlyResults = await Promise.allSettled(metrics.map(metric =>
     instagramApiGetR487(env, `${accountId}/insights`, { metric, period:'days_28' }, 8500)
   ));
   const month = {};
-  const partialErrors = [];
+  const monthlyAvailability = {};
   monthlyResults.forEach((result, index) => {
-    const metric = monthlyMetrics[index];
+    const metric = metrics[index];
     if (result.status === 'fulfilled') {
       const value = instagramInsightScalarR487(result.value);
-      if (value !== null) month[metric] = Math.max(0, value);
+      monthlyAvailability[metric] = value !== null;
+      if (value !== null) month[metric] = Math.max(0, Number(value));
     } else {
-      partialErrors.push(`${metric}: ${cleanPlainText(result.reason?.message || result.reason, 180)}`);
+      monthlyAvailability[metric] = false;
+      partialErrors.push(`${metric} 28d: ${cleanPlainText(result.reason?.message || result.reason, 180)}`);
     }
   });
-  dailyResults.forEach((result, index) => {
-    if (result.status === 'rejected') partialErrors.push(`${metricNames[index]} daily: ${cleanPlainText(result.reason?.message || result.reason, 180)}`);
-  });
-  const trendViews = dailyAvailability.views
-    ? trend.reduce((sum, row) => sum + Math.max(0, Number(row.views || 0)), 0)
-    : null;
-  const trendProfileViews = dailyAvailability.profile_views
-    ? trend.reduce((sum, row) => sum + Math.max(0, Number(row.profileViews || 0)), 0)
-    : null;
-  if (!Number.isFinite(Number(month.views)) && Number.isFinite(trendViews)) month.views = trendViews;
-  if (!Number.isFinite(Number(month.profile_views)) && Number.isFinite(trendProfileViews)) month.profile_views = trendProfileViews;
 
+  const fieldMap = {
+    views:'views', reach:'reach', profile_views:'profileViews', accounts_engaged:'accountsEngaged',
+    total_interactions:'totalInteractions', likes:'likes', comments:'comments', shares:'shares', saves:'saves'
+  };
+  const dailySum = metric => {
+    const field = fieldMap[metric];
+    if (!dailyAvailability[metric] || !field) return null;
+    return trend.reduce((sum,row) => sum + Math.max(0, Number(row?.[field] || 0)), 0);
+  };
+  const summary = {};
+  const summaryAvailability = {};
+  const summarySource = {};
+  for (const metric of metrics) {
+    if (monthlyAvailability[metric]) {
+      summary[metric] = Math.max(0, Number(month[metric] || 0));
+      summaryAvailability[metric] = true;
+      summarySource[metric] = 'days_28';
+    } else {
+      const fallback = dailySum(metric);
+      if (fallback !== null) {
+        summary[metric] = Math.max(0, Number(fallback));
+        summaryAvailability[metric] = true;
+        summarySource[metric] = 'daily-sum';
+      } else {
+        summary[metric] = null;
+        summaryAvailability[metric] = false;
+        summarySource[metric] = 'unavailable';
+      }
+    }
+  }
+
+  // R490 fallback: like_count/comments_count on the user's own recent media are
+  // available with the basic Instagram professional-account permission. Use them
+  // only when account-level Insights did not return a usable value (or returned an
+  // obviously empty 0 while recent media has engagement).
+  const mediaCounts = await fetchInstagramMediaCountsR490(env, accountId, startDate, endDate);
+  if (mediaCounts.available) {
+    if (!summaryAvailability.likes || (Number(summary.likes) === 0 && mediaCounts.likes > 0)) {
+      summary.likes = mediaCounts.likes; summaryAvailability.likes = true; summarySource.likes = 'media-counts';
+    }
+    if (!summaryAvailability.comments || (Number(summary.comments) === 0 && mediaCounts.comments > 0)) {
+      summary.comments = mediaCounts.comments; summaryAvailability.comments = true; summarySource.comments = 'media-counts';
+    }
+  } else if (mediaCounts.error) {
+    partialErrors.push(`media counts: ${mediaCounts.error}`);
+  }
+
+  const normalize = metric => summaryAvailability[metric] ? Math.max(0, Number(summary[metric] || 0)) : null;
   return {
     configured:true,
     connected:true,
@@ -8298,19 +8410,43 @@ async function fetchInstagramAnalytics(env) {
     startDate,
     endDate,
     summary:{
-      views:Math.max(0, Number(month.views || 0)),
-      reach:Math.max(0, Number(month.reach || 0)),
-      profileViews:Math.max(0, Number(month.profile_views || 0)),
-      accountsEngaged:Math.max(0, Number(month.accounts_engaged || 0)),
-      totalInteractions:Math.max(0, Number(month.total_interactions || 0)),
-      likes:Math.max(0, Number(month.likes || 0)),
-      comments:Math.max(0, Number(month.comments || 0)),
-      shares:Math.max(0, Number(month.shares || 0)),
-      saves:Math.max(0, Number(month.saves || 0))
+      views:normalize('views'),
+      reach:normalize('reach'),
+      profileViews:normalize('profile_views'),
+      accountsEngaged:normalize('accounts_engaged'),
+      totalInteractions:normalize('total_interactions'),
+      likes:normalize('likes'),
+      comments:normalize('comments'),
+      shares:normalize('shares'),
+      saves:normalize('saves')
     },
+    summaryAvailability:{
+      views:summaryAvailability.views,
+      reach:summaryAvailability.reach,
+      profileViews:summaryAvailability.profile_views,
+      accountsEngaged:summaryAvailability.accounts_engaged,
+      totalInteractions:summaryAvailability.total_interactions,
+      likes:summaryAvailability.likes,
+      comments:summaryAvailability.comments,
+      shares:summaryAvailability.shares,
+      saves:summaryAvailability.saves
+    },
+    summarySource:{
+      views:summarySource.views,
+      reach:summarySource.reach,
+      profileViews:summarySource.profile_views,
+      accountsEngaged:summarySource.accounts_engaged,
+      totalInteractions:summarySource.total_interactions,
+      likes:summarySource.likes,
+      comments:summarySource.comments,
+      shares:summarySource.shares,
+      saves:summarySource.saves
+    },
+    mediaCounts:{ available:Boolean(mediaCounts.available), mediaCount:Number(mediaCounts.mediaCount||0) },
     trend,
-    trendAvailable:Boolean(dailyAvailability.views || dailyAvailability.reach || dailyAvailability.profile_views),
+    trendAvailable:Boolean(Object.values(dailyAvailability).some(Boolean)),
     dailyAvailability,
+    monthlyAvailability,
     partialErrors,
     updatedAt:new Date().toISOString()
   };
@@ -8345,7 +8481,7 @@ async function handleControlSocialOverviewR487(request, env) {
   const liveErrors = { site:'', youtube:'', instagram:'' };
   const igConfig = instagramConfigR487(env);
 
-  // R489: Social Center heals stale/missing snapshots itself. This prevents the
+  // R490: Social Center heals stale/missing snapshots itself. This prevents the
   // center from showing “waiting” while the dedicated GA/YouTube screens already work.
   if (refresh || !gaRow || latestSnapshotAgeMinutesR487(gaRow) > 30 || !Array.isArray(google?.trend) || !google.trend.length) {
     try {
@@ -8358,7 +8494,7 @@ async function handleControlSocialOverviewR487(request, env) {
           trend:live.trend || [], countries:live.countries || [], pages:live.pages || [], devices:live.devices || [],
           updatedAt:live.updatedAt || new Date().toISOString()
         };
-        await savePlatformSnapshot(db, 'google-analytics', metrics, refresh ? 'manual-social-center-r489' : 'social-center-r489');
+        await savePlatformSnapshot(db, 'google-analytics', metrics, refresh ? 'manual-social-center-r490' : 'social-center-r490');
         google = metrics; gaRow = { created_at:metrics.updatedAt };
       }
     } catch (error) { liveErrors.site = cleanPlainText(error?.message || error, 300); }
@@ -8385,7 +8521,7 @@ async function handleControlSocialOverviewR487(request, env) {
           },
           updatedAt:new Date().toISOString()
         };
-        await savePlatformSnapshot(db, 'youtube', metrics, refresh ? 'manual-social-center-r489' : 'social-center-r489');
+        await savePlatformSnapshot(db, 'youtube', metrics, refresh ? 'manual-social-center-r490' : 'social-center-r490');
         youtube = metrics; ytRow = { created_at:metrics.updatedAt };
       } else if (!studio?.connected) {
         liveErrors.youtube = studio?.configured ? 'YouTube Studio OAuth не вернул подключение' : 'YouTube Studio OAuth не настроен';
@@ -8397,7 +8533,7 @@ async function handleControlSocialOverviewR487(request, env) {
     try {
       const live = await fetchInstagramAnalytics(env);
       if (live?.configured) {
-        await savePlatformSnapshot(db, 'instagram', live, refresh ? 'manual-social-center-r489' : 'social-center-r489');
+        await savePlatformSnapshot(db, 'instagram', live, refresh ? 'manual-social-center-r490' : 'social-center-r490');
         instagram = live; igRow = { created_at:live.updatedAt || new Date().toISOString() };
       }
     } catch (error) { liveErrors.instagram = cleanPlainText(error?.message || error, 300); }
@@ -8412,11 +8548,12 @@ async function handleControlSocialOverviewR487(request, env) {
   const ytMap = new Map((Array.isArray(youtube?.studio?.trend) ? youtube.studio.trend : []).map(row => [normalizeSocialDayR487(row?.day), Math.max(0, Number(row?.views || 0))]));
 
   const igTrend = Array.isArray(instagram?.trend) ? instagram.trend : [];
-  const sumField = field => igTrend.reduce((sum,row) => sum + (Number.isFinite(Number(row?.[field])) ? Math.max(0,Number(row[field])) : 0), 0);
+  const sumField = field => igTrend.reduce((sum,row) => sum + (row?.[field] !== null && row?.[field] !== undefined && Number.isFinite(Number(row[field])) ? Math.max(0,Number(row[field])) : 0), 0);
   const hasField = field => igTrend.some(row => row?.[field] !== null && row?.[field] !== undefined && Number.isFinite(Number(row[field])));
   const igViewSum = sumField('views');
   const igReachSum = sumField('reach');
   const igProfileSum = sumField('profileViews');
+  const igAvailability = instagram?.summaryAvailability || {};
   let instagramTrendField = 'views';
   let instagramMetricLabel = 'просмотры';
   if ((!hasField('views') || igViewSum === 0) && hasField('reach') && igReachSum > 0) { instagramTrendField='reach'; instagramMetricLabel='охват'; }
@@ -8439,15 +8576,15 @@ async function handleControlSocialOverviewR487(request, env) {
     });
   }
   const sum = key => trend.reduce((total, row) => total + (Number.isFinite(Number(row[key])) ? Math.max(0, Number(row[key])) : 0), 0);
-  let instagramTotal = instagramReady ? sum('instagram') : null;
-  // If Meta returns a 28-day scalar but no daily series for the chosen metric,
-  // keep the real scalar on the card instead of a misleading zero.
-  if (instagramReady && (!instagramTotal || instagramTotal <= 0)) {
+  let instagramTotal = null;
+  // R490: the platform card uses Meta's real 28-day scalar. Never sum daily reach
+  // into a fake monthly unique reach value (the same account can be reached on many days).
+  if (instagramReady) {
     const summary = instagram?.summary || {};
-    if (instagramTrendField === 'reach' && Number(summary.reach) > 0) instagramTotal = Number(summary.reach);
-    else if (instagramTrendField === 'profileViews' && Number(summary.profileViews) > 0) instagramTotal = Number(summary.profileViews);
-    else if (Number(summary.views) > 0) instagramTotal = Number(summary.views);
-    else if (Number(summary.reach) > 0) { instagramTotal=Number(summary.reach); instagramMetricLabel='охват'; }
+    if (igAvailability.views && summary.views !== null) { instagramTotal=Number(summary.views); instagramMetricLabel='просмотры'; }
+    else if (igAvailability.reach && summary.reach !== null) { instagramTotal=Number(summary.reach); instagramMetricLabel='охват'; }
+    else if (igAvailability.profileViews && summary.profileViews !== null) { instagramTotal=Number(summary.profileViews); instagramMetricLabel='просмотры профиля'; }
+    else if (instagramSeriesReady) instagramTotal = sum('instagram');
   }
 
   return json({
@@ -8457,12 +8594,12 @@ async function handleControlSocialOverviewR487(request, env) {
     trend,
     platforms:{
       site:{ configured:siteReady, connected:siteReady, name:'Сайт', source:'Google Analytics 4', updatedAt:gaRow?.created_at || google?.updatedAt || '', error:liveErrors.site },
-      youtube:{ configured:Boolean(youtube?.configured || youtube?.studio?.configured), connected:youtubeReady, name:'YouTube', handle:youtube?.handle || '@andrikmetal', source:'YouTube Analytics', updatedAt:ytRow?.created_at || youtube?.updatedAt || '', error:liveErrors.youtube || youtube?.studio?.error || '', partialErrors:youtube?.studio?.partialErrors || [] },
+      youtube:{ configured:Boolean(youtube?.configured || youtube?.studio?.configured), connected:youtubeReady, name:'YouTube', handle:youtube?.handle || '@andrikmetal', source:'YouTube Analytics', updatedAt:ytRow?.created_at || youtube?.updatedAt || '', error:liveErrors.youtube || youtube?.studio?.error || '', reconnectRequired:youtubeRefreshTokenFatalR490(liveErrors.youtube || youtube?.studio?.error || ''), partialErrors:youtube?.studio?.partialErrors || [] },
       instagram:{
         configured:Boolean(igConfig.configured), connected:instagramReady, name:'Instagram', username:instagram?.username || 'andrikmetal',
         accountId:instagram?.accountId || '', profileUrl:`https://www.instagram.com/${encodeURIComponent(instagram?.username || 'andrikmetal')}/`,
         source:'Instagram Insights', updatedAt:igRow?.created_at || instagram?.updatedAt || '', metricLabel:instagramMetricLabel, trendField:instagramTrendField, trendConnected:instagramSeriesReady,
-        summary:instagram?.summary || {}, partialErrors:instagram?.partialErrors || [], error:instagram?.error || liveErrors.instagram || ''
+        summary:instagram?.summary || {}, summaryAvailability:instagram?.summaryAvailability || {}, summarySource:instagram?.summarySource || {}, mediaCounts:instagram?.mediaCounts || {}, partialErrors:instagram?.partialErrors || [], error:instagram?.error || liveErrors.instagram || ''
       }
     },
     diagnostics:{ refresh, liveErrors },
