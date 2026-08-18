@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787043246874-f8f2853fe8",
-  "release": "R490",
-  "archiveName": "R490-SOCIAL-CENTER-INSTAGRAM-METRICS-YOUTUBE-OAUTH-RECOVERY-SAFE-FULL.zip",
-  "sourceHead": "bb1e1dc5a914470f94ace058a230772798b0f324",
-  "backupSha": "bb1e1dc5a914470f94ace058a230772798b0f324",
-  "backupTag": "control-backup-20260818085401-bb1e1dc-r490-cce7c",
+  "operationId": "publish-1787044252635-aa7acd6062",
+  "release": "R491",
+  "archiveName": "R491-SOCIAL-CENTER-SITE-28D-INSTAGRAM-ENGAGEMENT-SAFE-FULL.zip",
+  "sourceHead": "5f7ec424ee23b6f9abdfad5d919d4ea94736fa9a",
+  "backupSha": "5f7ec424ee23b6f9abdfad5d919d4ea94736fa9a",
+  "backupTag": "control-backup-20260818091048-5f7ec42-r491-6996c",
   "autoRecovery": true,
-  "generatedAt": "2026-08-18T08:54:06.874Z"
+  "generatedAt": "2026-08-18T09:10:52.635Z"
 }

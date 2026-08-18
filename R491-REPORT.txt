@@ -1,0 +1,12 @@
+ANDRIK CONTROL R491 — SOCIAL CENTER DATA CORRECTION
+
+Base: R490.
+
+Changes:
+1. Site 28-day total and graph no longer depend on sparse GA4 trend alone.
+2. Social Center merges GA4 page views with the first-party Live Web AI site_visit_events counter day-by-day using MAX, never SUM, to avoid double counting.
+3. Instagram recent-media fallback now also aggregates shares, saved and total_interactions for media published in the completed 28-day window.
+4. Likes/comments remain sourced from media counters when account Insights are unavailable.
+5. Reach/profile/accounts engaged are never fabricated by summing media-level unique metrics.
+6. R490 YouTube OAuth recovery and all previous map/push/admin behavior are preserved.
+7. Cache reset: /cache-reset-v55-00-final-r491.html
