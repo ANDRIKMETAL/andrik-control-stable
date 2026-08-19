@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R516', number:516, version:'55.00', full:'55.00 LIVE WEB AI FINAL R516', siteUpdater:'55.00-r356' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R519', number:519, version:'55.00', full:'55.00 LIVE WEB AI FINAL R519', siteUpdater:'55.00-r356' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -15463,14 +15463,25 @@ const TRIKA_TRACKS_R517 = Object.freeze([null,
   'Персонаж','Плен иллюзий','Другой путь','Вечный покой','Тёмная ночь души','Мир затих','Бессмертный крик','Жидкий, как ртуть','Начало пути','Белый холст','Проснись','Радость бытия','Свет проектора','Сними 3D-очки','Битва теней','I Am','Наблюдатель'
 ]);
 function trikaNormalizeR517(value){return String(value||'').toLowerCase().replace(/ё/g,'е').replace(/[«»“”„'’`]/g,'').replace(/[^a-zа-я0-9]+/gi,' ').trim()}
+function trikaCanonicalNumberR519(value){
+  const probe=trikaNormalizeR517(value).replace(/^\d{1,2}\s+/,'').trim();
+  if(!probe)return 0;
+  for(let i=1;i<TRIKA_TRACKS_R517.length;i++){
+    const target=trikaNormalizeR517(TRIKA_TRACKS_R517[i]);
+    if(probe===target||probe.endsWith(' '+target))return i;
+  }
+  return 0;
+}
 function trikaTrackNumberR517(object){
   const key=String(object?.key||''),m=object?.customMetadata||{};
   if(!/^albums\/trika\//i.test(key))return 0;
-  const direct=parseInt(m.track||'',10);if(Number.isFinite(direct)&&direct>=1&&direct<=17)return direct;
   const base=key.split('/').pop()?.replace(/\.mp3$/i,'')||'';
+  // R519: title is the source of truth for TRIKA. This repairs a bad ID3/R2 track number
+  // without requiring a re-upload (e.g. “Бессмертный крик” accidentally tagged as track 1).
+  const byTitle=trikaCanonicalNumberR519(m.title);if(byTitle)return byTitle;
+  const byFileTitle=trikaCanonicalNumberR519(base.replace(/[_-]+/g,' '));if(byFileTitle)return byFileTitle;
   const lead=base.match(/^\s*(\d{1,2})(?:\D|$)/);if(lead){const n=parseInt(lead[1],10);if(n>=1&&n<=17)return n}
-  const probe=trikaNormalizeR517(m.title||base.replace(/[_-]+/g,' '));
-  for(let i=1;i<TRIKA_TRACKS_R517.length;i++)if(probe===trikaNormalizeR517(TRIKA_TRACKS_R517[i]))return i;
+  const direct=parseInt(m.track||'',10);if(Number.isFinite(direct)&&direct>=1&&direct<=17)return direct;
   return 0;
 }
 function trikaTrackTitleR517(object){const n=trikaTrackNumberR517(object);return n?TRIKA_TRACKS_R517[n]:''}

@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787182884481-bba6c173bb",
-  "release": "R517",
-  "archiveName": "R517-TRIKA-DIRECT-LINKS-YOUTUBE-MUSIC-17-TRACK-ORDER-ZIP-READY-SAFE-FULL.zip",
-  "sourceHead": "bb987c06d6b49bdc34627520238c034be5e253d0",
-  "backupSha": "bb987c06d6b49bdc34627520238c034be5e253d0",
-  "backupTag": "control-backup-20260819234120-bb987c0-r517-739a6",
+  "operationId": "publish-1787183808441-34394162dc",
+  "release": "R519",
+  "archiveName": "R519-TRIKA-TRACK07-ZIP-FIX-LIVE-ALBUM-CLEAN-NO-APPLE-SAFE-FULL.zip",
+  "sourceHead": "aee75c9f22f077e17d6c4353a8dac0f98d037a8f",
+  "backupSha": "aee75c9f22f077e17d6c4353a8dac0f98d037a8f",
+  "backupTag": "control-backup-20260819235644-aee75c9-r519-7bc6e",
   "autoRecovery": true,
-  "generatedAt": "2026-08-19T23:41:24.481Z"
+  "generatedAt": "2026-08-19T23:56:48.441Z"
 }
