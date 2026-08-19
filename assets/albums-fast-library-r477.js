@@ -2,7 +2,8 @@
 (()=>{'use strict';
   const albums=[
     {id:'album-illusion',folder:'albums/illusion-of-life',expected:11},
-    {id:'album-ocean',folder:'albums/ocean',expected:10}
+    {id:'album-ocean',folder:'albums/ocean',expected:10},
+    {id:'album-trika',folder:'albums/trika',expected:17}
   ];
   const lang=(document.documentElement.lang||'ru').toLowerCase();
   const i18n={

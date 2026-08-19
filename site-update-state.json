@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787085540340-040a6db32f",
-  "release": "R513",
-  "archiveName": "R513-INSTAGRAM-TIKTOK-ANALYTICS-RECOVERY-STABLE-DETAIL-SAFE-FULL.zip",
-  "sourceHead": "f6fb67e1e0871f49db9d1054eee0413aa97ebf93",
-  "backupSha": "f6fb67e1e0871f49db9d1054eee0413aa97ebf93",
-  "backupTag": "control-backup-20260818203855-f6fb67e-r513-f1e23",
+  "operationId": "publish-1787111432003-71e7c33fb1",
+  "release": "R514",
+  "archiveName": "R514-TRIKA-RELEASE-FOUNDATION-SPOTIFY-APPLE-AMAZON-MP3-READY-SAFE-FULL.zip",
+  "sourceHead": "33621d6754e98a53fbec207598bd1d6276b36ab1",
+  "backupSha": "33621d6754e98a53fbec207598bd1d6276b36ab1",
+  "backupTag": "control-backup-20260819035022-33621d6-r514-61075",
   "autoRecovery": true,
-  "generatedAt": "2026-08-18T20:39:00.340Z"
+  "generatedAt": "2026-08-19T03:50:32.003Z"
 }

@@ -5,7 +5,7 @@
     document.querySelectorAll('.trika-release-r478[data-release]').forEach(box=>{
       const target=Date.parse(box.dataset.release||''); if(!Number.isFinite(target))return;
       const diff=target-Date.now(),grid=box.querySelector('.trika-countdown-grid-r478'),done=box.querySelector('.trika-countdown-done-r478');
-      if(diff<=0){if(grid)grid.hidden=true;if(done)done.hidden=false;return}
+      if(diff<=0){if(grid)grid.hidden=true;if(done)done.hidden=false;const card=box.closest('.album-trika-r478');const badge=card?.querySelector('.album-trika-soon-badge-r478');if(badge)badge.hidden=true;return}
       if(grid)grid.hidden=false;if(done)done.hidden=true;
       let s=Math.floor(diff/1000);const d=Math.floor(s/86400);s%=86400;const h=Math.floor(s/3600);s%=3600;const m=Math.floor(s/60);const sec=s%60;
       const vals={days:d,hours:h,minutes:m,seconds:sec};Object.entries(vals).forEach(([k,v])=>{const el=box.querySelector(`[data-unit="${k}"]`);if(el)el.textContent=pad(v)});
