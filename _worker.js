@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R511', number:511, version:'55.00', full:'55.00 LIVE WEB AI FINAL R511', siteUpdater:'55.00-r356' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R516', number:516, version:'55.00', full:'55.00 LIVE WEB AI FINAL R516', siteUpdater:'55.00-r356' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -6577,9 +6577,13 @@ function tiktokSnapshotPlatformR503(mode) {
 
 async function getTikTokDailyTrendR503(db, startDate, endDate, mode = 'sandbox') {
   const platform=tiktokSnapshotPlatformR503(mode);
-  const result = await db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform=?1 ORDER BY datetime(created_at) ASC LIMIT 240`).bind(platform).all().catch(()=>({results:[]}));
+  // R516: always read the NEWEST retained snapshots. The old ASC + LIMIT 240
+  // eventually froze the chart on the oldest ~10 days once the table grew.
+  const result = await db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform=?1 ORDER BY datetime(created_at) DESC LIMIT 1000`).bind(platform).all().catch(()=>({results:[]}));
+  const sourceRows=(result?.results || []).slice().sort((a,b)=>String(a?.created_at||'').localeCompare(String(b?.created_at||'')));
   const byDay = new Map();
-  for (const row of result?.results || []) {
+  let usableSnapshots=0;
+  for (const row of sourceRows) {
     const day = bratislavaDateFromIsoR503(row?.created_at);
     if (!day) continue;
     let metrics = {};
@@ -6596,28 +6600,61 @@ async function getTikTokDailyTrendR503(db, startDate, endDate, mode = 'sandbox')
     };
     if (!Number.isFinite(totals.views)) continue;
     Object.keys(totals).forEach(key=>{ if (!Number.isFinite(totals[key])) totals[key]=null; else totals[key]=Math.max(0,totals[key]); });
-    const previous = byDay.get(day);
-    if (!previous || String(row.created_at || '') > String(previous.createdAt || '')) byDay.set(day,{day,...totals,createdAt:row.created_at || ''});
+    usableSnapshots++;
+    const point={day,...totals,createdAt:row?.created_at || ''};
+    const bucket=byDay.get(day);
+    if (!bucket) byDay.set(day,{day,first:point,last:point,count:1});
+    else {
+      bucket.count++;
+      if (String(point.createdAt) < String(bucket.first.createdAt)) bucket.first=point;
+      if (String(point.createdAt) > String(bucket.last.createdAt)) bucket.last=point;
+    }
   }
-  const days = [...byDay.values()].sort((a,b)=>a.day.localeCompare(b.day));
-  const output = [];
+  const dayKeys=[...byDay.keys()].sort();
+  const output=[];
   const delta=(a,b)=>Number.isFinite(Number(a))&&Number.isFinite(Number(b))?Math.max(0,Number(a)-Number(b)):null;
-  for (let i=1;i<days.length;i++) {
-    const current=days[i], previous=days[i-1];
-    if (current.day < startDate || current.day > endDate) continue;
-    if (previous.day !== shiftIsoCalendarDate(current.day,-1)) continue;
+  let bootstrapDays=0;
+  for (const day of dayKeys) {
+    if (day < startDate || day > endDate) continue;
+    const current=byDay.get(day);
+    const previous=byDay.get(shiftIsoCalendarDate(day,-1));
+    // Preferred baseline = final snapshot of the preceding day (near midnight).
+    // For the very first connected day there is no prior-day baseline, so bootstrap
+    // from that day's first snapshot if at least two snapshots exist. This lets a
+    // brand-new TikTok connection appear on the graph the next day instead of waiting
+    // for two whole calendar days.
+    const baseline=previous?.last || (current?.count>1 ? current.first : null);
+    if (!baseline || !current?.last) continue;
+    const bootstrap=!previous;
+    if (bootstrap) bootstrapDays++;
     output.push({
-      day:current.day,
-      views:delta(current.views,previous.views),
-      likes:delta(current.likes,previous.likes),
-      comments:delta(current.comments,previous.comments),
-      shares:delta(current.shares,previous.shares),
-      followers:delta(current.followers,previous.followers),
-      videos:delta(current.videos,previous.videos),
-      totals:{views:current.views,likes:current.likes,comments:current.comments,shares:current.shares,followers:current.followers,videos:current.videos}
+      day,
+      views:delta(current.last.views,baseline.views),
+      likes:delta(current.last.likes,baseline.likes),
+      comments:delta(current.last.comments,baseline.comments),
+      shares:delta(current.last.shares,baseline.shares),
+      followers:delta(current.last.followers,baseline.followers),
+      videos:delta(current.last.videos,baseline.videos),
+      totals:{views:current.last.views,likes:current.last.likes,comments:current.last.comments,shares:current.last.shares,followers:current.last.followers,videos:current.last.videos},
+      snapshotCount:current.count,
+      bootstrap
     });
   }
-  return output;
+  return {
+    rows:output,
+    diagnostics:{
+      platform,
+      retainedSnapshots:sourceRows.length,
+      usableSnapshots,
+      sourceDays:dayKeys.length,
+      firstSourceDay:dayKeys[0] || '',
+      lastSourceDay:dayKeys[dayKeys.length-1] || '',
+      trendRows:output.length,
+      firstTrendDay:output[0]?.day || '',
+      lastTrendDay:output[output.length-1]?.day || '',
+      bootstrapDays
+    }
+  };
 }
 
 async function handleTikTokOAuthStartR503(request, env) {
@@ -9352,7 +9389,11 @@ async function handleControlSocialOverviewR487(request, env) {
     const field = fields.find(name=>row?.[name]!==null&&row?.[name]!==undefined&&Number.isFinite(Number(row[name])));
     return [day, field ? Math.max(0,Number(row[field])) : null];
   }).filter(([day,value])=>day&&value!==null));
-  const tiktokDailyR503 = await getTikTokDailyTrendR503(db,startDate,endDate,tiktokModeR503);
+  // R516: collect TikTok through TODAY once. The common 28-day graph keeps only
+  // completed days, while the dedicated TikTok page may also show today's partial point.
+  const tiktokTrendPackR516 = await getTikTokDailyTrendR503(db,startDate,today,tiktokModeR503);
+  const tiktokDailyDetailR516 = Array.isArray(tiktokTrendPackR516?.rows) ? tiktokTrendPackR516.rows : [];
+  const tiktokDailyR503 = tiktokDailyDetailR516.filter(row=>row?.day && row.day <= endDate);
   const ttMapR498 = new Map(tiktokDailyR503.map(row=>[row.day,Math.max(0,Number(row.views||0))]));
   const tiktokConnectedR503 = Boolean(tiktokAuthR503.connected && tiktok?.connected);
   const tiktokTrendReadyR503 = Boolean(tiktokConnectedR503 && ttMapR498.size);
@@ -9397,7 +9438,8 @@ async function handleControlSocialOverviewR487(request, env) {
         configured:Boolean(tiktokAuthR503.configured), connected:tiktokConnectedR503, oauthConnected:Boolean(tiktokAuthR503.connected), trendConnected:tiktokTrendReadyR503,
         name:'TikTok', handle:cleanPlainText(tiktok?.handle || '@andrikmetal',120), displayName:cleanPlainText(tiktok?.displayName || 'ANDRIK',120), profileUrl:cleanPlainText(tiktok?.profileUrl || 'https://www.tiktok.com/@andrikmetal',700),
         metricLabel:tiktokTrendReadyR503?'прирост просмотров':'текущий срез видео', source:`TikTok Display API · ${tiktokModeR503}`, updatedAt:ttRow?.created_at || tiktok?.updatedAt || '',
-        summary:tiktok?.summary || {}, dailyTrend:Array.isArray(tiktokDailyR503)?tiktokDailyR503:[], recentVideos:Array.isArray(tiktok?.recentVideos)?tiktok.recentVideos:[], grantedScopes:cleanPlainText(tiktokAuthR503.scope || tiktok?.scope || '',1200),
+        summary:tiktok?.summary || {}, dailyTrend:tiktokDailyDetailR516, recentVideos:Array.isArray(tiktok?.recentVideos)?tiktok.recentVideos:[], grantedScopes:cleanPlainText(tiktokAuthR503.scope || tiktok?.scope || '',1200),
+        trendDiagnostics:{...(tiktokTrendPackR516?.diagnostics || {}),completedRows:tiktokDailyR503.length,detailRows:tiktokDailyDetailR516.length,completedThrough:endDate,detailThrough:today},
         error:cleanPlainText(liveErrors.tiktok || tiktok?.error || '',220), partialErrors:Array.isArray(tiktok?.partialErrors)?tiktok.partialErrors:[]
       }
     },
@@ -9466,12 +9508,16 @@ async function savePlatformSnapshot(db, platform, metrics, source = '') {
     crypto.randomUUID(), cleanPlainText(platform, 40), '', new Date().toISOString(),
     JSON.stringify(metrics || {}), cleanPlainText(source, 120)
   ).run();
+  // R516: TikTok needs enough hourly history to build a real 28-day daily graph.
+  // 240 hourly snapshots cover only ~10 days, so retain 1000 for TikTok modes while
+  // leaving the established retention unchanged for all other platforms.
+  const retention=/^tiktok-(sandbox|production)$/i.test(String(platform||'')) ? 1000 : 240;
   await db.prepare(`
     DELETE FROM platform_snapshots
     WHERE id IN (
-      SELECT id FROM platform_snapshots WHERE platform = ? ORDER BY created_at DESC LIMIT -1 OFFSET 240
+      SELECT id FROM platform_snapshots WHERE platform = ? ORDER BY created_at DESC LIMIT -1 OFFSET ?
     )
-  `).bind(platform).run().catch(() => {});
+  `).bind(platform,retention).run().catch(() => {});
 }
 
 

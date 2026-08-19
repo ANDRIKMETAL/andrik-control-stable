@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787111991231-d02f8a61ea",
-  "release": "R515",
-  "archiveName": "R515-TRIKA-SMART-LINK-404-FIX-RELEASE-READY-SAFE-FULL.zip",
-  "sourceHead": "63509b8bc0dea814565214a91fdfd49b2bd736cc",
-  "backupSha": "63509b8bc0dea814565214a91fdfd49b2bd736cc",
-  "backupTag": "control-backup-20260819035936-63509b8-r515-e061d",
+  "operationId": "publish-1787165378180-0011157b2b",
+  "release": "R516",
+  "archiveName": "R516-TIKTOK-GRAPH-BOOTSTRAP-28D-HISTORY-VERSION-SYNC-SAFE-FULL.zip",
+  "sourceHead": "09dd5a23d911c708f716bbdf17b33c1fbbd54644",
+  "backupSha": "09dd5a23d911c708f716bbdf17b33c1fbbd54644",
+  "backupTag": "control-backup-20260819184932-09dd5a2-r516-69f20",
   "autoRecovery": true,
-  "generatedAt": "2026-08-19T03:59:51.231Z"
+  "generatedAt": "2026-08-19T18:49:38.180Z"
 }
