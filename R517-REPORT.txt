@@ -1,0 +1,13 @@
+ANDRIK R517 — TRIKA RELEASE LINKS + 17 TRACKS + ZIP READY
+
+- Base: R516 (TikTok graph fixes preserved).
+- TRIKA Spotify direct album link updated.
+- YouTube Music direct official album playlist added.
+- Apple Music is visibly pending and non-clickable until the album appears.
+- Amazon Music keeps the verified Too.fm smart-link fallback because the supplied Amazon URL duplicated Spotify.
+- Built-in player now opens TRIKA as an official 17-track YouTube album collection.
+- TRIKA fast R2 list is forced to the canonical 17-track order from the release tracklist.
+- Worker now recognises albums/trika in ZIP inspector/builder/download status.
+- ZIP key: albums/trika/ANDRIK-TRIKA-MP3-320kbps.zip.
+- Canonical track order: 1..17 as supplied.
+- Public album ZIP availability endpoint now includes TRIKA automatically.

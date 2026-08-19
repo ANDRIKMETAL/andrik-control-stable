@@ -40,7 +40,7 @@
   document.title = t('title');
   const desc = document.querySelector('meta[name="description"]'); if (desc) desc.content = t('description');
   const params = new URLSearchParams(location.search);
-  const returnTarget = ['album-ocean','album-illusion','discography'].includes(params.get('return')) ? params.get('return') : (params.get('collection') === 'illusion' ? 'album-illusion' : 'album-ocean');
+  const returnTarget = ['album-trika','album-ocean','album-illusion','discography'].includes(params.get('return')) ? params.get('return') : (params.get('collection') === 'trika' ? 'album-trika' : (params.get('collection') === 'illusion' ? 'album-illusion' : 'album-ocean'));
   const fromAlbums = params.get('from') === 'albums';
   const homeBase = fromAlbums ? (lang === 'ru' ? '/albums.html' : `/${lang}/albums.html`) : (lang === 'ru' ? '/' : `/${lang}/`);
   const homePath = `${homeBase}#${returnTarget}`;

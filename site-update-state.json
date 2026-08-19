@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787165378180-0011157b2b",
-  "release": "R516",
-  "archiveName": "R516-TIKTOK-GRAPH-BOOTSTRAP-28D-HISTORY-VERSION-SYNC-SAFE-FULL.zip",
-  "sourceHead": "09dd5a23d911c708f716bbdf17b33c1fbbd54644",
-  "backupSha": "09dd5a23d911c708f716bbdf17b33c1fbbd54644",
-  "backupTag": "control-backup-20260819184932-09dd5a2-r516-69f20",
+  "operationId": "publish-1787182884481-bba6c173bb",
+  "release": "R517",
+  "archiveName": "R517-TRIKA-DIRECT-LINKS-YOUTUBE-MUSIC-17-TRACK-ORDER-ZIP-READY-SAFE-FULL.zip",
+  "sourceHead": "bb987c06d6b49bdc34627520238c034be5e253d0",
+  "backupSha": "bb987c06d6b49bdc34627520238c034be5e253d0",
+  "backupTag": "control-backup-20260819234120-bb987c0-r517-739a6",
   "autoRecovery": true,
-  "generatedAt": "2026-08-19T18:49:38.180Z"
+  "generatedAt": "2026-08-19T23:41:24.481Z"
 }

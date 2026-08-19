@@ -5,6 +5,8 @@
     {id:'album-ocean',folder:'albums/ocean',expected:10},
     {id:'album-trika',folder:'albums/trika',expected:17}
   ];
+
+  const trikaCanonicalR517=[null,'Персонаж','Плен иллюзий','Другой путь','Вечный покой','Тёмная ночь души','Мир затих','Бессмертный крик','Жидкий, как ртуть','Начало пути','Белый холст','Проснись','Радость бытия','Свет проектора','Сними 3D-очки','Битва теней','I Am','Наблюдатель'];
   const lang=(document.documentElement.lang||'ru').toLowerCase();
   const i18n={
     ru:{open:'Быстро прослушать треки',hint:'Нативный MP3-плеер: мгновенная перемотка, скорость и скачивание.',loading:'Загрузка треков…',download:'Скачать MP3',tracks:'треков',empty:'MP3 этого альбома пока не найдены.',error:'Не удалось загрузить список. Нажми, чтобы повторить.',retry:'Повторить'},
@@ -55,7 +57,7 @@
       const row=document.createElement('section');row.className='album-fast-track-r477';
       const head=document.createElement('div');head.className='album-fast-track-head-r477';
       const num=document.createElement('span');num.className='album-fast-track-num-r477';const n=normalizeNumber(t.track)||index+1;num.textContent=String(n).padStart(2,'0');
-      const title=document.createElement('strong');title.className='album-fast-track-title-r477';title.textContent=String(t.title||t.key?.split('/').pop()?.replace(/\.mp3$/i,'').replace(/[_-]+/g,' ')||`Track ${n}`);
+      const title=document.createElement('strong');title.className='album-fast-track-title-r477';title.textContent=String(def.folder==='albums/trika'&&trikaCanonicalR517[n]?trikaCanonicalR517[n]:(t.title||t.key?.split('/').pop()?.replace(/\.mp3$/i,'').replace(/[_-]+/g,' ')||`Track ${n}`));
       const download=document.createElement('a');download.className='album-fast-download-r477';download.href='/api/music/download?key='+encodeURIComponent(t.key);download.textContent='⬇ MP3';download.title=copy.download;download.setAttribute('aria-label',`${copy.download}: ${title.textContent}`);
       head.append(num,title,download);
       const audio=document.createElement('audio');audio.className='album-fast-audio-r477';audio.controls=true;audio.preload='metadata';audio.playsInline=true;audio.src=t.url||('https://music.andrikmetal.com/'+t.key);audio.setAttribute('aria-label',title.textContent);

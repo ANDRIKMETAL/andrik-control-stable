@@ -39,7 +39,7 @@
   }
 
   async function load(album=''){
-    setStatus(album?'Проверяем альбом в R2…':'Проверяем два альбома в R2…');
+    setStatus(album?'Проверяем альбом в R2…':'Проверяем три альбома в R2…');
     try{
       const d=await requestJson('/api/control/music/albums'+(album?'?album='+encodeURIComponent(album):''));
       (d.albums||[]).forEach(a=>cache.set(a.slug,a));
