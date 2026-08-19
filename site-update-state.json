@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787111432003-71e7c33fb1",
-  "release": "R514",
-  "archiveName": "R514-TRIKA-RELEASE-FOUNDATION-SPOTIFY-APPLE-AMAZON-MP3-READY-SAFE-FULL.zip",
-  "sourceHead": "33621d6754e98a53fbec207598bd1d6276b36ab1",
-  "backupSha": "33621d6754e98a53fbec207598bd1d6276b36ab1",
-  "backupTag": "control-backup-20260819035022-33621d6-r514-61075",
+  "operationId": "publish-1787111991231-d02f8a61ea",
+  "release": "R515",
+  "archiveName": "R515-TRIKA-SMART-LINK-404-FIX-RELEASE-READY-SAFE-FULL.zip",
+  "sourceHead": "63509b8bc0dea814565214a91fdfd49b2bd736cc",
+  "backupSha": "63509b8bc0dea814565214a91fdfd49b2bd736cc",
+  "backupTag": "control-backup-20260819035936-63509b8-r515-e061d",
   "autoRecovery": true,
-  "generatedAt": "2026-08-19T03:50:32.003Z"
+  "generatedAt": "2026-08-19T03:59:51.231Z"
 }
