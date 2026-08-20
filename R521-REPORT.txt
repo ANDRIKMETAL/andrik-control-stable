@@ -1,0 +1,5 @@
+ANDRIK R521
+- TRIKA built-in player button returned to the same compact centered size as the other albums.
+- Removed the “ZIP becomes active after build” sentence in RU/UA/SK/EN.
+- Kept the 17 MP3 / 320 kbps archive quality note.
+- Service Worker / Control release metadata bumped to R521.
