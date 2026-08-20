@@ -1,6 +1,6 @@
 'use strict';
 
-const VERSION = '55.00-r519';
+const VERSION = '55.00-r520';
 const IS_CONTROL_HOST = self.location.hostname.toLowerCase() === 'control.andrikmetal.com';
 
 async function deleteControlCaches(){
@@ -45,6 +45,7 @@ if(IS_CONTROL_HOST){
     '/singles.html?v=55.00-r330', '/albums.html?v=55.00-r519', '/uk/albums.html?v=55.00-r519', '/sk/albums.html?v=55.00-r519', '/en/albums.html?v=55.00-r519', '/assets/albums-r446.css?v=55.00-r446', '/assets/albums-r446.js?v=55.00-r446', '/assets/albums-fast-library-r477.js?v=55.00-r519', '/assets/albums-trika-release-r519.css?v=55.00-r519', '/assets/singles-r316.css?v=330', '/assets/singles-r316.js?v=330',
     '/assets/home-singles-nav-r330.css?v=55.00-r330', '/assets/home-singles-nav-r330.js?v=55.00-r330',
     '/assets/home-promo-r471.css?v=55.00-r471',
+    '/assets/home-trika-live-r520.css?v=55.00-r520',
     '/assets/home-promo-r471.js?v=55.00-r471',
     '/assets/albums-fast-library-r477.css?v=55.00-r477', '/assets/albums-fast-library-r477.js?v=55.00-r477',
     '/assets/albums-release-r478.css?v=55.00-r478', '/assets/albums-release-r478.js?v=55.00-r478', '/assets/ya-est-video-wide-v51.webp',

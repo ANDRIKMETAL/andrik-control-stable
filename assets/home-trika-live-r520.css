@@ -1,0 +1,12 @@
+
+/* ANDRIK R520 — TRIKA release banner */
+.trika-live-r520{padding:16px 0 4px}
+.trika-live-card-r520{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:14px;text-decoration:none;color:#f7fbff;border:1px solid rgba(104,239,175,.36);border-radius:26px;padding:16px 18px;background:linear-gradient(135deg,rgba(9,91,64,.34),rgba(5,24,34,.92) 58%,rgba(91,59,7,.22));box-shadow:0 14px 44px rgba(0,0,0,.28),inset 0 0 28px rgba(91,236,170,.055)}
+.trika-live-badge-r520{display:grid;place-items:center;width:58px;height:58px;border-radius:18px;background:rgba(77,231,156,.10);border:1px solid rgba(77,231,156,.28);font-size:1.05rem;font-weight:900;letter-spacing:.12em;color:#8ff3bf}
+.trika-live-copy-r520{display:grid;gap:3px;min-width:0}
+.trika-live-copy-r520 b{font-size:.76rem;letter-spacing:.16em;color:#90eac1}
+.trika-live-copy-r520 strong{font-size:1.34rem;line-height:1.08}
+.trika-live-copy-r520 small{font-size:.92rem;color:#b8c6cf}
+.trika-live-open-r520{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 15px;border-radius:999px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.055);font-weight:800;white-space:nowrap}
+.trika-live-card-r520:active{transform:scale(.992)}
+@media(max-width:620px){.trika-live-r520{padding-top:10px}.trika-live-card-r520{grid-template-columns:auto minmax(0,1fr);padding:14px;gap:11px;border-radius:22px}.trika-live-badge-r520{width:50px;height:50px;border-radius:16px}.trika-live-copy-r520 b{font-size:.68rem}.trika-live-copy-r520 strong{font-size:1.16rem}.trika-live-copy-r520 small{font-size:.82rem}.trika-live-open-r520{grid-column:1/-1;width:100%;min-height:42px;margin-top:2px}}

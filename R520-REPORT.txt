@@ -1,0 +1,6 @@
+ANDRIK R520
+- Instagram demographic block auto-hides when Meta returns no audience breakdown data.
+- Album R2 status chips fixed to a stable 2x2 grid; no right overflow on mobile.
+- Homepage: TRIKA third-album release banner links directly to Albums on RU/UA/SK/EN.
+- Release admin: one-click confirmed broadcast button sends TRIKA release push to all active subscribers.
+- Worker/service-worker release bumped to R520.

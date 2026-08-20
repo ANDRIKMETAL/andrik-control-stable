@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html class="notranslate" lang="ru" translate="no"><head>
-<meta content="R418" name="andrik-control-release"/>
+<meta content="R520" name="andrik-control-release"/>
 <link href="/assets/control-sleep-mode-r193.css?v=55.00-r193" rel="stylesheet"/><script defer="" src="/assets/control-sleep-mode-r193.js?v=55.00-r193"></script>
 <meta content="notranslate" name="google"/><meta charset="utf-8">
 <meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport">
@@ -53,7 +53,7 @@ if (location.hostname.toLowerCase() === 'control.andrikmetal.com') {
 <script defer="" src="/assets/control-cache-reset-r306.js?v=55.00-r306"></script>
 <link href="/assets/lyrics-mp3-r2-r314.css?v=55.00-r335" rel="stylesheet"/>
 <link href="/assets/mp3-tag-editor-r317.css?v=55.00-r321" rel="stylesheet"/>
-<link href="/assets/album-zip-admin-r446.css?v=55.00-r446" rel="stylesheet"/>
+<link href="/assets/album-zip-admin-r520.css?v=55.00-r520" rel="stylesheet"/>
 </link></meta></meta></head>
 <body class="trika-standalone-page comments-admin-page control-page lyrics-admin-page" data-control-section="releases"><nav class="topbar control-topbar control-detail-topbar"><div class="wrap nav-shell"><a aria-label="Открыть главный сайт ANDRIK" class="control-center-logo" href="https://andrikmetal.com/" id="controlCenterLogo"><img alt="" class="logo-ok" src="/assets/control-topbar-eye-triangle.jpg?v=55.00-r129"/><img alt="" class="logo-error" src="/assets/andrik-control-red-triangle-192.png"/></a><div class="nav-links control-nav-links control-detail-nav"><a href="/admin/">⌂ Главная</a></div></div></nav>
 <main class="admin-main"><div class="wrap"><header class="admin-header control-header"><span class="eyeline">ANDRIK Lyrics Engine</span><h1>Синхронизация текстов</h1><p>Вставьте текст, отметьте начало каждой строки, затем автоматически распределите слова. Плеер будет подсвечивать строку и текущее слово.</p></header>
@@ -82,9 +82,14 @@ if (location.hostname.toLowerCase() === 'control.andrikmetal.com') {
 </details>
 </section>
 <section class="admin-control-card admin-control-card-wide album-zip-card-r446" id="albumZipCardR446">
-<div class="admin-card-title-row album-zip-head-r446"><div><span class="eyeline">ANDRIK Music · R2 · R448</span><h2>💿 Архивы альбомов</h2><p>Проверяет MP3 прямо в облаке <strong>andrik-music</strong>. Кнопка «Собрать ZIP» потоково читает MP3 через браузер, собирает ZIP без перекодирования и загружает его частями обратно в R2. Это обходит лимиты памяти и CPU Worker. Исходные MP3 не изменяются.</p></div><button class="btn" id="albumZipRefreshR446" type="button">Проверить R2</button></div>
+<div class="admin-card-title-row album-zip-head-r446"><div><span class="eyeline">ANDRIK Music · R2 · R520</span><h2>💿 Архивы альбомов</h2><p>Проверяет MP3 прямо в облаке <strong>andrik-music</strong>. Кнопка «Собрать ZIP» потоково читает MP3 через браузер, собирает ZIP без перекодирования и загружает его частями обратно в R2. Это обходит лимиты памяти и CPU Worker. Исходные MP3 не изменяются.</p></div><button class="btn" id="albumZipRefreshR446" type="button">Проверить R2</button></div>
 <div class="album-zip-grid-r446" id="albumZipGridR446"><div class="admin-empty">Проверяем Illusion of Life и OCEAN…</div></div>
 <div class="admin-status album-zip-status-r446" id="albumZipStatusR446">Подключаемся к R2…</div>
+</section>
+<section class="admin-control-card admin-control-card-wide trika-release-push-r520" aria-label="Релизное уведомление ТРИКА">
+<div class="trika-release-push-copy-r520"><span class="eyeline">ТРИКА · РЕЛИЗ 20.08.2026</span><strong>📣 Альбом уже вышел</strong><p>Одной кнопкой отправит всем активным подписчикам уведомление со ссылкой на раздел «Альбомы», где доступны площадки и полный MP3 ZIP.</p></div>
+<div class="trika-release-push-actions-r520"><button class="btn btn-primary" id="trikaReleasePushAllR520" type="button">🚀 Отправить релиз ТРИКА всем</button></div>
+<div class="admin-status" id="trikaReleasePushStatusR520">Сообщение готово. Перед отправкой появится подтверждение.</div>
 </section>
 
 <section aria-labelledby="bulkLyricsTitle" class="bulk-lyrics-card" id="bulkLyricsImport">
@@ -134,12 +139,13 @@ if (location.hostname.toLowerCase() === 'control.andrikmetal.com') {
 </div>
 </div>
 <section class="admin-list-section"><div class="admin-card-title-row"><div><h2>Сохранённые тексты</h2><p>Нажмите на песню, чтобы открыть её в редакторе.</p></div><button class="btn" id="lyricsRefreshList" type="button">Обновить</button></div><div class="admin-list" id="lyricsAdminList"><div class="admin-empty">Загружаем список…</div></div></section>
-<footer class="control-version-footer"><strong>Live Web AI · профиль ANDRIK · v55.00 LIVE WEB AI FINAL R418</strong><span>единая шапка · горизонтальный режим · 30.07.2026</span></footer></div></main><script src="https://www.youtube.com/iframe_api"></script><script defer="" src="/assets/lyrics-admin-v54-28.js?v=54.30"></script><script defer="" src="/assets/control-bulk-lyrics-v51.js?v=54.28"></script><script defer="" src="/assets/control-version-v54-92.js?v=54.92"></script><script defer="" src="/assets/control-status-eye-v55-00-r88.js?v=55.00-r88"></script><script defer="" src="/assets/control-version-v54-99b.js?v=54.99b"></script><script defer="" src="/assets/control-version-v55-00-final-r1.js?v=55.00-final-r1"></script><script defer="" src="/assets/control-version-v55-00-final-r2.js?v=55.00-final-r2"></script><script defer="" src="/assets/control-version-v55-00-final-r21.js?v=55.00-final-r21"></script><script defer="" src="/assets/control-live-eye-v55-00-r265.js?v=55.00-r265"></script><script defer="" src="/assets/control-version-v55-00-r3n.js?v=55.00-r3n"></script><script defer="" src="/assets/control-version-v55-00-final-stable-github.js?v=55.00-final-stable-github"></script><script defer="" src="/assets/admin-carousel-embed-v55-00-final.js?v=55.00-r185"></script><script defer="" src="/assets/control-version-v55-00-r115.js?v=55.00-r115"></script><script defer="" src="/assets/unified-glow-r139.js?v=55.00-r142"></script>
+<footer class="control-version-footer"><strong>Live Web AI · профиль ANDRIK · v55.00 LIVE WEB AI FINAL R520</strong><span>единая шапка · горизонтальный режим · 30.07.2026</span></footer></div></main><script src="https://www.youtube.com/iframe_api"></script><script defer="" src="/assets/lyrics-admin-v54-28.js?v=54.30"></script><script defer="" src="/assets/control-bulk-lyrics-v51.js?v=54.28"></script><script defer="" src="/assets/control-version-v54-92.js?v=54.92"></script><script defer="" src="/assets/control-status-eye-v55-00-r88.js?v=55.00-r88"></script><script defer="" src="/assets/control-version-v54-99b.js?v=54.99b"></script><script defer="" src="/assets/control-version-v55-00-final-r1.js?v=55.00-final-r1"></script><script defer="" src="/assets/control-version-v55-00-final-r2.js?v=55.00-final-r2"></script><script defer="" src="/assets/control-version-v55-00-final-r21.js?v=55.00-final-r21"></script><script defer="" src="/assets/control-live-eye-v55-00-r265.js?v=55.00-r265"></script><script defer="" src="/assets/control-version-v55-00-r3n.js?v=55.00-r3n"></script><script defer="" src="/assets/control-version-v55-00-final-stable-github.js?v=55.00-final-stable-github"></script><script defer="" src="/assets/admin-carousel-embed-v55-00-final.js?v=55.00-r185"></script><script defer="" src="/assets/control-version-v55-00-r115.js?v=55.00-r115"></script><script defer="" src="/assets/unified-glow-r139.js?v=55.00-r142"></script>
 <script defer="" src="/assets/control-mini-player-r141.js?v=55.00-r144"></script>
 <script defer="" src="/assets/control-version-sync-r482.js?v=55.00-r482"></script>
 <script defer="" src="/assets/lyrics-mp3-r2-r314.js?v=55.00-r335"></script>
 <script defer="" src="/assets/wav-to-mp3-r324.js?v=55.00-r324"></script>
 <script defer="" src="/assets/mp3-tag-editor-r317.js?v=55.00-r324"></script>
-<script defer="" src="/assets/album-zip-admin-r446.js?v=55.00-r446"></script>
+<script defer="" src="/assets/album-zip-admin-r446.js?v=55.00-r520"></script>
+<script defer="" src="/assets/trika-release-push-r520.js?v=55.00-r520"></script>
 <script defer="" src="/assets/control-version-sync-r482.js?v=55.00-r482"></script>
 </body></html>

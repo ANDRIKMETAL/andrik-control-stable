@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787183808441-34394162dc",
-  "release": "R519",
-  "archiveName": "R519-TRIKA-TRACK07-ZIP-FIX-LIVE-ALBUM-CLEAN-NO-APPLE-SAFE-FULL.zip",
-  "sourceHead": "aee75c9f22f077e17d6c4353a8dac0f98d037a8f",
-  "backupSha": "aee75c9f22f077e17d6c4353a8dac0f98d037a8f",
-  "backupTag": "control-backup-20260819235644-aee75c9-r519-7bc6e",
+  "operationId": "publish-1787184952261-f7fd0f29e6",
+  "release": "R520",
+  "archiveName": "R520-INSTAGRAM-AUDIENCE-CLEAN-R2-MOBILE-FIX-TRIKA-LIVE-BANNER-RELEASE-PUSH-SAFE-FULL.zip",
+  "sourceHead": "48fcbb162bc20ee81e5c8771f8384f0c47e8b52c",
+  "backupSha": "48fcbb162bc20ee81e5c8771f8384f0c47e8b52c",
+  "backupTag": "control-backup-20260820001547-48fcbb1-r520-b0ffd",
   "autoRecovery": true,
-  "generatedAt": "2026-08-19T23:56:48.441Z"
+  "generatedAt": "2026-08-20T00:15:52.261Z"
 }

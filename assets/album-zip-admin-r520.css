@@ -1,0 +1,34 @@
+/* ANDRIK R446 — R2 album ZIP builder */
+.album-zip-card-r446{margin-top:16px}
+.album-zip-card-r446 .album-zip-head-r446{align-items:flex-start;gap:14px}
+.album-zip-card-r446 .album-zip-grid-r446{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:14px}
+.album-zip-card-r446 .album-zip-item-r446{border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:14px;background:rgba(255,255,255,.035);display:flex;flex-direction:column;gap:10px;min-width:0}
+.album-zip-card-r446 .album-zip-item-r446 strong{font-size:1.04rem}
+.album-zip-card-r446 .album-zip-stats-r446{display:flex;flex-wrap:wrap;gap:7px}
+.album-zip-card-r446 .album-zip-pill-r446{font-size:.78rem;padding:5px 8px;border-radius:999px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.09)}
+.album-zip-card-r446 .album-zip-pill-r446.ok{background:rgba(44,190,96,.12);border-color:rgba(44,190,96,.35)}
+.album-zip-card-r446 .album-zip-pill-r446.warn{background:rgba(255,190,30,.10);border-color:rgba(255,190,30,.28)}
+.album-zip-card-r446 .album-zip-note-r446{padding:8px 10px;border-radius:12px;background:rgba(75,179,255,.08);border:1px solid rgba(75,179,255,.16);color:#b8d9eb;font-size:.72rem;line-height:1.4}
+.album-zip-card-r446 .album-zip-tracks-r446{font-size:.79rem;line-height:1.35;color:var(--muted,#aeb6bd);max-height:150px;overflow:auto;padding-right:3px}
+.album-zip-card-r446 .album-zip-track-r446{display:flex;justify-content:space-between;gap:10px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.055)}
+.album-zip-card-r446 .album-zip-track-r446:last-child{border-bottom:0}
+.album-zip-card-r446 .album-zip-track-r446 span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.album-zip-card-r446 .album-zip-progress-r446{height:7px;border-radius:999px;overflow:hidden;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.08)}
+.album-zip-card-r446 .album-zip-progress-r446>span{display:block;width:0;height:100%;border-radius:inherit;background:linear-gradient(90deg,#4dc7ff,#69f3a8);box-shadow:0 0 14px rgba(77,199,255,.45);transition:width .18s linear}
+.album-zip-card-r446 .album-zip-actions-r446{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:auto}
+.album-zip-card-r446 .album-zip-actions-r446 .btn:last-child{grid-column:1/-1}
+.album-zip-card-r446 .album-zip-status-r446{margin-top:12px}
+.album-zip-card-r446 .is-building{pointer-events:none;opacity:.78}
+@media(max-width:620px){.album-zip-card-r446 .album-zip-grid-r446{grid-template-columns:1fr}.album-zip-card-r446 .album-zip-actions-r446{grid-template-columns:1fr 1fr}}
+
+/* R520 — mobile-safe album ZIP stats and release broadcast */
+.album-zip-card-r446 .album-zip-stats-r446{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;width:100%;max-width:100%}
+.album-zip-card-r446 .album-zip-pill-r446{display:flex;align-items:center;justify-content:center;width:100%;max-width:100%;min-width:0;box-sizing:border-box;white-space:nowrap;text-align:center;overflow:hidden;text-overflow:ellipsis}
+.album-zip-card-r446 .album-zip-track-r446 span:last-child{flex:0 0 auto;white-space:nowrap}
+.trika-release-push-r520{margin-top:16px;border-color:rgba(117,238,176,.30)!important;background:linear-gradient(145deg,rgba(16,84,63,.20),rgba(255,255,255,.025))!important}
+.trika-release-push-r520 .trika-release-push-copy-r520{display:grid;gap:5px}
+.trika-release-push-r520 .trika-release-push-copy-r520 strong{font-size:1.25rem}
+.trika-release-push-r520 .trika-release-push-copy-r520 p{margin:0;color:var(--muted,#aeb6bd);line-height:1.45}
+.trika-release-push-r520 .trika-release-push-actions-r520{display:grid;grid-template-columns:1fr;gap:10px;margin-top:12px}
+.trika-release-push-r520 .trika-release-push-actions-r520 .btn{width:100%;min-height:54px;font-weight:800}
+@media(max-width:420px){.album-zip-card-r446 .album-zip-pill-r446{font-size:.72rem;padding:6px 5px}.album-zip-card-r446 .album-zip-item-r446{padding-left:12px;padding-right:12px}}
