@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787185204838-e94bfb0917",
-  "release": "R521",
-  "archiveName": "R521-TRIKA-BUTTONS-MATCH-OTHER-ALBUMS-NO-ZIP-BUILD-TEXT-SAFE-FULL.zip",
-  "sourceHead": "a7e3afb22eae21e9384b153719f5f319f0a0b8af",
-  "backupSha": "a7e3afb22eae21e9384b153719f5f319f0a0b8af",
-  "backupTag": "control-backup-20260820002000-a7e3afb-r521-18584",
+  "operationId": "publish-1787185569761-525a597025",
+  "release": "R522",
+  "archiveName": "R522-TRIKA-TAG-UPRIGHT-LAYOUT-CLEAN-SAFE-FULL.zip",
+  "sourceHead": "9ac7d77979b7deec2cb5a080adf05ea7cda27377",
+  "backupSha": "9ac7d77979b7deec2cb5a080adf05ea7cda27377",
+  "backupTag": "control-backup-20260820002605-9ac7d77-r522-27912",
   "autoRecovery": true,
-  "generatedAt": "2026-08-20T00:20:04.838Z"
+  "generatedAt": "2026-08-20T00:26:09.761Z"
 }

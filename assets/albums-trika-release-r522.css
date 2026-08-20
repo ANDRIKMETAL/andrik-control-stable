@@ -1,0 +1,23 @@
+/* ANDRIK R522 — TRIKA mobile layout polish */
+.trika-release-actions-r515 .album-platform-link{pointer-events:auto!important;opacity:1!important;filter:none!important}
+#album-trika .trika-release-actions-r515{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:10px!important}
+#album-trika .trika-release-actions-r515 .youtube-music-btn-r517{border-color:rgba(255,74,74,.42)!important;background:linear-gradient(145deg,rgba(82,16,20,.88),rgba(35,8,12,.94))!important}
+#album-trika .trika-release-actions-r515 .trika-player-r517{grid-column:1/-1!important;width:min(100%,360px)!important;justify-self:center!important}
+#album-trika .trika-release-actions-r515 .album-download-r446{grid-column:1/-1!important;width:100%!important}
+#album-trika .trika-visual-r479{display:block!important}
+#album-trika .album-art-trika-r478{width:100%!important}
+#album-trika .album-tags{display:flex!important;flex-wrap:wrap!important;align-items:center!important;gap:8px!important;margin-bottom:12px!important}
+#album-trika .album-tags .tag{font-size:.94rem!important;line-height:1.1!important;padding:10px 16px!important;white-space:nowrap!important}
+#album-trika .album-desc{margin-bottom:14px!important}
+@media(max-width:700px){
+  #album-trika .album-tags{gap:8px 8px!important;justify-content:flex-start!important}
+  #album-trika .album-tags .tag{font-size:.82rem!important;padding:9px 14px!important}
+  #album-trika .trika-release-actions-r515{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:7px!important;margin-top:2px!important}
+  #album-trika .trika-release-actions-r515 .album-platform-link{min-width:0!important;padding-left:6px!important;padding-right:6px!important}
+  #album-trika .trika-release-actions-r515 .album-platform-label{font-size:.66rem!important;line-height:1.1!important;text-align:center!important}
+}
+@media(max-width:420px){
+  #album-trika .album-tags{gap:6px!important}
+  #album-trika .album-tags .tag{font-size:.78rem!important;padding:8px 12px!important}
+  #album-trika .trika-release-actions-r515{gap:6px!important}
+}
