@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="ru" translate="no" class="notranslate"><head><script>(function(){try{var u=new URL(location.href),p=(u.searchParams.get('page')||'').toLowerCase(),s=(u.searchParams.get('source')||'').toLowerCase();var sitePages=['google','site','analytics','ga','ga4','website'];if(sitePages.indexOf(p)!==-1)document.documentElement.classList.add('analytics-route-google-r539');else if(p==='youtube')document.documentElement.classList.add('analytics-route-youtube-r539');else document.documentElement.classList.add('analytics-route-map-r539');var ok=(p==='map'&&s==='admin-globe')||sitePages.indexOf(p)!==-1||p==='youtube';if(!ok){location.replace('/control-home.html?page=menu&source=launch-guard-r530&v=55.00-r530');}}catch(_){}})();</script>
-<meta name="andrik-control-release" content="R539">
+<meta name="andrik-control-release" content="R540">
 <link rel="stylesheet" href="/assets/control-sleep-mode-r193.css?v=55.00-r193"><script defer src="/assets/control-sleep-mode-r193.js?v=55.00-r193"></script>
 
 <meta name="google" content="notranslate"><meta charset="utf-8"/>
@@ -1057,7 +1057,7 @@ body.analytics-admin-page.is-country-returning #worldMap .world-map-dot.is-selec
 <section class="analytics-main-chart"><article class="admin-control-card analytics-chart-card"><div class="admin-card-title-row analytics-inline-actions"><div><span class="eyeline">Последние 30 дней</span><h2>Динамика посещений</h2></div><div class="analytics-title-actions"><span class="analytics-legend">Пользователи / просмотры</span></div></div><div class="analytics-chart" id="analyticsTrend"><div class="admin-empty">Загружаем график…</div></div></article></section>
           <section class="analytics-site-geography"><article class="admin-control-card analytics-list-card analytics-site-country-card"><div class="admin-card-title-row"><div><span class="eyeline">Google Analytics · за 30 дней</span><h2>География сайта</h2><p>Страны, из которых заходили посетители сайта.</p></div></div><div id="analyticsCountries"><div class="admin-empty">Загружаем географию сайта…</div></div></article></section>
           <section class="analytics-columns"><article class="admin-control-card analytics-list-card"><div class="admin-card-title-row"><div><span class="eyeline">За 30 дней</span><h2>Популярные страницы</h2></div></div><div class="analytics-list" id="analyticsPages"><div class="admin-empty">Загружаем страницы…</div></div></article><article class="admin-control-card analytics-list-card" id="analyticsDevicesCard"><div class="admin-card-title-row"><div><span class="eyeline">За 30 дней</span><h2>Устройства</h2><p>Распределение пользователей по типу устройства.</p></div></div><div class="analytics-list" id="analyticsDevices"><div class="admin-empty">Загружаем устройства…</div></div></article></section>
-          <footer class="control-version-footer"><strong>Live Web AI · ANDRIK · версия R539</strong><span>Google Analytics · текущие 30 дней · 21.08.2026</span></footer>
+          <footer class="control-version-footer"><strong>Live Web AI · ANDRIK · версия R540</strong><span>Google Analytics · текущие 30 дней · 21.08.2026</span></footer>
           <div class="analytics-swipe-hint analytics-site-hint"><button type="button" data-swipe-go="2">← YouTube</button><button type="button" data-swipe-go="1">Карта слушателей →</button></div>
         </div>
       </section>
@@ -1125,7 +1125,7 @@ body.analytics-admin-page.is-country-returning #worldMap .world-map-dot.is-selec
           </section>
           <details class="youtube-hidden-data"><summary>Что YouTube не отдаёт через API</summary><div class="youtube-hidden-data-body"><p><strong>Лайки:</strong> видно количество, но не имена людей, поставивших лайк.</p><p><strong>Подписчики:</strong> точный счётчик и прирост доступны, но имена скрытых/непубличных подписчиков не выдаются.</p><p><strong>Поделились:</strong> видно площадку и количество, но не конкретного получателя ссылки.</p><p><strong>Возраст и пол:</strong> показываются только когда YouTube набрал достаточную выборку для защиты приватности.</p></div></details>
 <section class="admin-control-card youtube-service-card"><div class="admin-card-title-row"><div><span class="eyeline">🔔 Реакции канала</span><h2>Проверка уведомлений перенесена</h2><p>Комментарии, подписчики и лайки теперь проверяются в разделе «Служебное».</p></div></div><div class="admin-actions"><a class="btn btn-primary" href="/service-admin.html">Открыть Служебное</a></div></section>
-          <footer class="control-version-footer"><strong>Live Web AI · ANDRIK · версия R539</strong><span>Центр соцсетей · свайп между платформами</span></footer>
+          <footer class="control-version-footer"><strong>Live Web AI · ANDRIK · версия R540</strong><span>Центр соцсетей · свайп между платформами</span></footer>
           <div class="analytics-swipe-hint analytics-youtube-hint"><button type="button" data-swipe-go="1">← Карта слушателей</button><button type="button" data-swipe-go="0">Google Analytics →</button></div>
         </div>
       </section>
@@ -2148,7 +2148,7 @@ body.analytics-admin-page.is-country-returning #worldMap .world-map-dot.is-selec
     const ytCached=readYoutubeMapCache();
     renderWorldMap(ytCached?.countries||[],ytCached?.countries?.length?{source:'cache'}:{loading:true,source:'loading'});
     if(gaCached?.google){
-      try{renderKpis(gaCached.google);renderTrend(gaCached.google.trend||[])}catch(_){}
+      try{renderGoogleData(gaCached.google,{updatedAt:gaCached.google.updatedAt||''})}catch(_){}
     }
   }
   function growthRowsFromPayload(data){
@@ -2602,6 +2602,15 @@ body.analytics-admin-page.is-country-returning #worldMap .world-map-dot.is-selec
     }catch(error){
       const unauthorized=error.message==='unauthorized';
       authState(!unauthorized,unauthorized?'Ключ не принят':'Доступ подтверждён');
+      const cached=readGaCache()?.google;
+      if(cached){
+        try{renderGoogleData(cached,{updatedAt:cached.updatedAt||''})}catch(_){}
+      }else{
+        ['analyticsPages','analyticsCountries','analyticsDevices'].forEach(id=>{
+          const node=$(id);
+          if(node&&/Загружаем/i.test(node.textContent||''))node.innerHTML='<div class="admin-empty">Данные временно недоступны. Обновите страницу позже.</div>';
+        });
+      }
       if($('analyticsMessage')){$('analyticsMessage').textContent=`Аналитика: ${error.message}`;$('analyticsMessage').className='control-analytics-status is-warning'}
     }
     // YouTube geography and Search Console update independently. A slow Worker
@@ -2611,6 +2620,15 @@ body.analytics-admin-page.is-country-returning #worldMap .world-map-dot.is-selec
   if('caches' in window){
     caches.keys().then(keys=>Promise.all(keys.map(key=>caches.open(key).then(cache=>cache.delete('/assets/illusion-of-life-top-v50.webp'))))).catch(()=>{});
   }
+
+  const deviceWatchdog=setTimeout(()=>{
+    const box=$('analyticsDevices');
+    if(box&&/Загружаем устройства/i.test(box.textContent||'')){
+      const cached=readGaCache()?.google;
+      if(cached){try{renderGoogleData(cached,{updatedAt:cached.updatedAt||''})}catch(_){}}
+      if(/Загружаем устройства/i.test(box.textContent||''))box.innerHTML='<div class="admin-empty">Разбивка устройств сейчас не получена.</div>';
+    }
+  },6500);
 
   const startupWatchdog=setTimeout(()=>{
     const auth=$('analyticsAuthText');
@@ -2630,12 +2648,12 @@ body.analytics-admin-page.is-country-returning #worldMap .world-map-dot.is-selec
   if(window.__andrikLatestCountryGrowth)renderGrowthMapFallback(window.__andrikLatestCountryGrowth);
 
   setupAnalyticsSwipe();
-  try{renderCachedMap()}catch(error){console.warn('R539 map cache render skipped:',error)}
+  try{renderCachedMap()}catch(error){console.warn('R540 map cache render skipped:',error)}
   const cachedAudience=readAudienceCache();
-  if(cachedAudience?.data){try{renderSearchConsole(cachedAudience.data.searchEngines||[],cachedAudience.data.searchConsole||{});emitAudienceData(cachedAudience.data)}catch(error){console.warn('R539 cached audience render skipped:',error)}}
+  if(cachedAudience?.data){try{renderSearchConsole(cachedAudience.data.searchEngines||[],cachedAudience.data.searchConsole||{});emitAudienceData(cachedAudience.data)}catch(error){console.warn('R540 cached audience render skipped:',error)}}
   setTimeout(load,20);
   refreshTimer=setInterval(()=>{if(!document.hidden)load()},120000);
-  window.addEventListener('beforeunload',()=>{clearTimeout(startupWatchdog);if(refreshTimer)clearInterval(refreshTimer)});
+  window.addEventListener('beforeunload',()=>{clearTimeout(startupWatchdog);clearTimeout(deviceWatchdog);if(refreshTimer)clearInterval(refreshTimer)});
 })();
 
 </script>
@@ -4707,6 +4725,6 @@ body .country-scroll-overlay-r258::before{margin:0 0 10px!important;}
 <link rel="stylesheet" href="/assets/map-controls-compact-r499.css?v=55.00-r499">
 <script defer src="/assets/planet-map-transition-r450.js?v=55.00-r450"></script>
 <script defer src="/assets/youtube-admin-v55-00f.js?v=55.00f"></script>
-<script defer src="/assets/control-version-sync-r537.js?v=55.00-r537"></script>
+<script defer src="/assets/control-version-sync-r540.js?v=55.00-r540"></script>
 <script defer src="/assets/social-platform-swipe-r524.js?v=55.00-r524"></script>
 </body></html>

@@ -13021,9 +13021,11 @@ async function handleControlGoogleAnalytics(request, env) {
   const snapshotStale=!Number.isFinite(snapshotMs)||Date.now()-snapshotMs>30*60*1000||deviceShapeStale||deviceShapeSuspicious;
   let refreshError='';
 
-  // R530: one fresh GA4 pull at most every 30 minutes (or explicitly on refresh).
-  // No more falling back to an old July "richer" snapshot just because it has more rows.
-  if(forceRefresh||!latestRow||snapshotStale){
+  // R540: never make the normal Analytics page wait for a slow GA4 repair request.
+  // Return the latest snapshot + first-party data immediately. A live GA4 pull is
+  // reserved for an explicit refresh, or when there is no snapshot at all.
+  const shouldLiveRefresh=forceRefresh||!latestRow;
+  if(shouldLiveRefresh){
     try{
       const fresh=await Promise.race([
         fetchGoogleSiteAnalytics(env),
@@ -13032,7 +13034,7 @@ async function handleControlGoogleAnalytics(request, env) {
       if(fresh?.configured){
         latest={...fresh,configured:true};
         latestRow={created_at:fresh.updatedAt||new Date().toISOString()};
-        await savePlatformSnapshot(db,'google-analytics',latest,forceRefresh?'Google Analytics Data API · manual R537':'Google Analytics Data API · auto freshness R537');
+        await savePlatformSnapshot(db,'google-analytics',latest,forceRefresh?'Google Analytics Data API · manual R540':'Google Analytics Data API · bootstrap R540');
       }
     }catch(error){refreshError=cleanPlainText(error?.message||error,300);}
   }
@@ -13051,7 +13053,7 @@ async function handleControlGoogleAnalytics(request, env) {
   if(hasSnapshot||live.configured||firstParty.configured){
     return json({
       ok:true,partial:!hasSnapshot,
-      source:firstParty.configured?'ga4+live-web-ai-r537':'ga4-r537',
+      source:firstParty.configured?'ga4+live-web-ai-r540':'ga4-r540',
       google,website:google,snapshotAt:latestRow?.created_at||'',refreshError,
       updatedAt:new Date().toISOString()
     });

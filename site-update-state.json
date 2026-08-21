@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787311724702-390cb71742",
-  "release": "R539",
-  "archiveName": "R539-GOOGLE-ANALYTICS-ROUTE-LOCK-MAP-FALLBACK-FIX-SAFE-FULL.zip",
-  "sourceHead": "c60d5cf8283afb4259448ef71e12945234ac1333",
-  "backupSha": "c60d5cf8283afb4259448ef71e12945234ac1333",
-  "backupTag": "control-backup-20260821112840-c60d5cf-r539-bfa54",
+  "operationId": "publish-1787312172478-c63e65636a",
+  "release": "R540",
+  "archiveName": "R540-ANALYTICS-DEVICE-LOAD-NO-HANG-VERSION-CACHE-FIX-SAFE-FULL.zip",
+  "sourceHead": "347987ce97bddfb237ae2c27818ba8985af660d3",
+  "backupSha": "347987ce97bddfb237ae2c27818ba8985af660d3",
+  "backupTag": "control-backup-20260821113607-347987c-r540-4851f",
   "autoRecovery": true,
-  "generatedAt": "2026-08-21T11:28:44.702Z"
+  "generatedAt": "2026-08-21T11:36:12.478Z"
 }
