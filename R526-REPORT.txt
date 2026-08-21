@@ -1,0 +1,26 @@
+R526 — SOCIAL PARITY / YOUTUBE DEEP / TIKTOK CARD FIX
+
+YouTube:
+- 28-day top videos from YouTube Analytics (video dimension).
+- top engagement list (ER) for 28-day candidates.
+- graph metric switch: views, watch time, likes, comments, shares, subscribers net.
+- 7-day country growth vs previous week.
+- overall channel top kept separately.
+- profile link kept at top; compact equal KPI cards from R525 kept.
+- notification check remains moved to Service.
+- human-readable Android system share label.
+- collapsed note describing unavailable/private API data.
+
+TikTok:
+- Social Center TikTok card now shows real current total video views instead of accumulated daily-history delta.
+- daily graph uses true daily deltas when they exist; if a metric has no daily change, it falls back to the real stored counter history instead of a fake zero-only line.
+- heading clarified as daily dynamics / real counters.
+
+Instagram:
+- Added Strong Reels section.
+- Uses the already-fetched own-media list and existing per-media insights; no fake values.
+- Ranks Reels by real interactions available from Meta (likes/comments/shares/saves/total interactions).
+- Section hides completely if Meta returns no Reels.
+
+Shared:
+- Similar detailed-page pattern across YouTube / Instagram / TikTok: profile link, KPI cards, daily graph switches, top content, no-empty policy.

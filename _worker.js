@@ -8737,11 +8737,13 @@ async function fetchYouTubeStudioAnalytics(env) {
   const base={ids:`channel==${owner.channelId}`,startDate,endDate};
   const results=await Promise.allSettled([
     youtubeAnalyticsQuery(env, accessToken,{...base,metrics:'views,estimatedMinutesWatched,averageViewDuration,likes,comments,shares,subscribersGained,subscribersLost'}),
-    youtubeAnalyticsQuery(env, accessToken,{...base,dimensions:'day',metrics:'views,likes,comments,shares',sort:'day'}),
+    youtubeAnalyticsQuery(env, accessToken,{...base,dimensions:'day',metrics:'views,estimatedMinutesWatched,likes,comments,shares,subscribersGained,subscribersLost',sort:'day'}),
     youtubeAnalyticsQuery(env, accessToken,{...base,dimensions:'country',metrics:'views,estimatedMinutesWatched',sort:'-views',maxResults:200}),
     youtubeAnalyticsQuery(env, accessToken,{ids:`channel==${owner.channelId}`,startDate:dailyDate,endDate:dailyDate,dimensions:'country',metrics:'views,estimatedMinutesWatched',sort:'-views',maxResults:200}),
     youtubeAnalyticsQuery(env, accessToken,{...base,dimensions:'ageGroup,gender',metrics:'viewerPercentage'}),
-    youtubeAnalyticsQuery(env, accessToken,{...base,dimensions:'sharingService',metrics:'shares',sort:'-shares',maxResults:8})
+    youtubeAnalyticsQuery(env, accessToken,{...base,dimensions:'sharingService',metrics:'shares',sort:'-shares',maxResults:8}),
+    youtubeAnalyticsQuery(env, accessToken,{...base,dimensions:'video',metrics:'views,estimatedMinutesWatched,likes,comments,shares,subscribersGained',sort:'-views',maxResults:10}),
+    youtubeAnalyticsQuery(env, accessToken,{...base,dimensions:'video',metrics:'views,estimatedMinutesWatched,likes,comments,shares,subscribersGained',sort:'-likes',maxResults:10})
   ]);
   const val=i=>results[i].status==='fulfilled'?results[i].value:[];
   const resultError=i=>results[i].status==='rejected'?cleanPlainText(results[i].reason?.message||results[i].reason,260):'';
@@ -8760,7 +8762,9 @@ async function fetchYouTubeStudioAnalytics(env) {
     summary:{
       views:Number(summary.views||0), estimatedMinutesWatched:Number(summary.estimatedMinutesWatched||0), averageViewDuration:Number(summary.averageViewDuration||0), likes:Number(summary.likes||0), comments:Number(summary.comments||0), shares:Number(summary.shares||0), subscribersGained:Number(summary.subscribersGained||0), subscribersLost:Number(summary.subscribersLost||0)
     },
-    trend:val(1).map(r=>({day:String(r.day||''),views:Number(r.views||0),likes:Number(r.likes||0),comments:Number(r.comments||0),shares:Number(r.shares||0)})),
+    trend:val(1).map(r=>({day:String(r.day||''),views:Number(r.views||0),estimatedMinutesWatched:Number(r.estimatedMinutesWatched||0),likes:Number(r.likes||0),comments:Number(r.comments||0),shares:Number(r.shares||0),subscribersGained:Number(r.subscribersGained||0),subscribersLost:Number(r.subscribersLost||0)})),
+    topVideos28:val(6).map(r=>({videoId:cleanPlainText(r.video||'',80),views:Number(r.views||0),estimatedMinutesWatched:Number(r.estimatedMinutesWatched||0),likes:Number(r.likes||0),comments:Number(r.comments||0),shares:Number(r.shares||0),subscribersGained:Number(r.subscribersGained||0)})).filter(r=>r.videoId),
+    engagementVideos28:val(7).map(r=>({videoId:cleanPlainText(r.video||'',80),views:Number(r.views||0),estimatedMinutesWatched:Number(r.estimatedMinutesWatched||0),likes:Number(r.likes||0),comments:Number(r.comments||0),shares:Number(r.shares||0),subscribersGained:Number(r.subscribersGained||0)})).filter(r=>r.videoId),
     countries,
     dailyCountries,
     countryCount:countries.length,
@@ -8915,7 +8919,7 @@ function instagramMediaInsightMapR491(payload) {
 async function fetchInstagramMediaCountsR491(env, accountId, startDate, endDate) {
   try {
     const payload = await instagramApiGetR487(env, `${accountId}/media`, {
-      fields:'id,timestamp,like_count,comments_count,media_type,media_product_type',
+      fields:'id,timestamp,like_count,comments_count,media_type,media_product_type,permalink,caption,thumbnail_url,media_url',
       limit:100
     }, 9000);
     const allItems = Array.isArray(payload?.data) ? payload.data : [];
@@ -8934,6 +8938,19 @@ async function fetchInstagramMediaCountsR491(env, accountId, startDate, endDate)
     // media-level shares/saved/interaction probes at 24 recent items.
     let shares = 0, saves = 0, totalInteractions = 0;
     let sharesSamples = 0, savesSamples = 0, interactionSamples = 0, failedInsights = 0;
+    const mediaDetails = items.map(item=>({
+      id:cleanPlainText(item?.id||'',120),
+      timestamp:cleanPlainText(item?.timestamp||'',50),
+      mediaType:cleanPlainText(item?.media_type||'',40),
+      mediaProductType:cleanPlainText(item?.media_product_type||'',40),
+      permalink:cleanPlainText(item?.permalink||'',900),
+      caption:cleanPlainText(item?.caption||'',240),
+      coverUrl:cleanPlainText(item?.thumbnail_url||item?.media_url||'',900),
+      likes:Math.max(0,Number(item?.like_count||0)),
+      comments:Math.max(0,Number(item?.comments_count||0)),
+      shares:null,saves:null,totalInteractions:null
+    }));
+    const mediaById=new Map(mediaDetails.map(item=>[item.id,item]));
     const batchSize = 6;
     for (let i = 0; i < items.length; i += batchSize) {
       const batch = items.slice(i, i + batchSize);
@@ -8942,14 +8959,23 @@ async function fetchInstagramMediaCountsR491(env, accountId, startDate, endDate)
           metric:'shares,saved,total_interactions'
         }, 8500)
       ));
-      results.forEach(result => {
+      results.forEach((result,index) => {
+        const source=batch[index]||{};
+        const detail=mediaById.get(cleanPlainText(source?.id||'',120));
         if (result.status !== 'fulfilled') { failedInsights += 1; return; }
         const map = instagramMediaInsightMapR491(result.value);
-        if (Number.isFinite(Number(map.shares))) { shares += Math.max(0, Number(map.shares)); sharesSamples += 1; }
-        if (Number.isFinite(Number(map.saved))) { saves += Math.max(0, Number(map.saved)); savesSamples += 1; }
-        if (Number.isFinite(Number(map.total_interactions))) { totalInteractions += Math.max(0, Number(map.total_interactions)); interactionSamples += 1; }
+        if (Number.isFinite(Number(map.shares))) { shares += Math.max(0, Number(map.shares)); sharesSamples += 1; if(detail)detail.shares=Math.max(0,Number(map.shares)); }
+        if (Number.isFinite(Number(map.saved))) { saves += Math.max(0, Number(map.saved)); savesSamples += 1; if(detail)detail.saves=Math.max(0,Number(map.saved)); }
+        if (Number.isFinite(Number(map.total_interactions))) { totalInteractions += Math.max(0, Number(map.total_interactions)); interactionSamples += 1; if(detail)detail.totalInteractions=Math.max(0,Number(map.total_interactions)); }
       });
     }
+    const scored=mediaDetails.map(item=>{
+      const components=Math.max(0,Number(item.likes||0))+Math.max(0,Number(item.comments||0))+Math.max(0,Number(item.shares||0))+Math.max(0,Number(item.saves||0));
+      const score=Number.isFinite(Number(item.totalInteractions))?Math.max(components,Number(item.totalInteractions||0)):components;
+      return {...item,score};
+    });
+    const reels=scored.filter(item=>String(item.mediaProductType||'').toUpperCase()==='REELS');
+    const topReels=reels.slice().sort((a,b)=>Number(b.score||0)-Number(a.score||0)||Number(b.likes||0)-Number(a.likes||0)).slice(0,6);
 
     return {
       available:true,
@@ -8960,6 +8986,7 @@ async function fetchInstagramMediaCountsR491(env, accountId, startDate, endDate)
       mediaCount:items.length,
       insightMediaCount:Math.max(sharesSamples, savesSamples, interactionSamples),
       failedInsights,
+      topReels,
       availability:{
         likes:true,
         comments:true,
@@ -8972,7 +8999,7 @@ async function fetchInstagramMediaCountsR491(env, accountId, startDate, endDate)
     return {
       available:false,
       likes:null, comments:null, shares:null, saves:null, totalInteractions:null,
-      mediaCount:0, insightMediaCount:0, failedInsights:0,
+      mediaCount:0, insightMediaCount:0, failedInsights:0, topReels:[],
       availability:{likes:false,comments:false,shares:false,saves:false,totalInteractions:false},
       error:cleanPlainText(error?.message || error, 220)
     };
@@ -9226,6 +9253,7 @@ async function fetchInstagramAnalytics(env) {
       saves:summarySource.saves
     },
     mediaCounts:{ available:Boolean(mediaCounts.available), mediaCount:Number(mediaCounts.mediaCount||0), insightMediaCount:Number(mediaCounts.insightMediaCount||0), failedInsights:Number(mediaCounts.failedInsights||0), availability:mediaCounts.availability||{} },
+    topReels:Array.isArray(mediaCounts.topReels)?mediaCounts.topReels:[],
     demographics,
     trend,
     trendAvailable:Boolean(Object.values(dailyAvailability).some(Boolean)),
@@ -9462,7 +9490,7 @@ async function handleControlSocialOverviewR487(request, env) {
         configured:Boolean(igConfig.configured), connected:instagramReady, name:'Instagram', username:instagram?.username || 'andrikmetal',
         accountId:instagram?.accountId || '', profileUrl:`https://www.instagram.com/${encodeURIComponent(instagram?.username || 'andrikmetal')}/`,
         source:'Instagram Insights', updatedAt:igRow?.created_at || instagram?.updatedAt || '', metricLabel:instagramMetricLabel, trendField:instagramTrendField, trendConnected:instagramSeriesReady,
-        summary:instagram?.summary || {}, summaryAvailability:instagram?.summaryAvailability || {}, summarySource:instagram?.summarySource || {}, profileStats:instagram?.profileStats || {}, mediaCounts:instagram?.mediaCounts || {}, demographics:instagram?.demographics || {}, trend:Array.isArray(instagram?.trend)?instagram.trend:[], dailyAvailability:instagram?.dailyAvailability || {}, partialErrors:instagram?.partialErrors || [], error:instagram?.error || liveErrors.instagram || ''
+        summary:instagram?.summary || {}, summaryAvailability:instagram?.summaryAvailability || {}, summarySource:instagram?.summarySource || {}, profileStats:instagram?.profileStats || {}, mediaCounts:instagram?.mediaCounts || {}, topReels:Array.isArray(instagram?.topReels)?instagram.topReels:[], demographics:instagram?.demographics || {}, trend:Array.isArray(instagram?.trend)?instagram.trend:[], dailyAvailability:instagram?.dailyAvailability || {}, partialErrors:instagram?.partialErrors || [], error:instagram?.error || liveErrors.instagram || ''
       },
       tiktok:{
         mode:tiktokModeR503, availableModes:tiktokAuthR503.availableModes || tiktokAvailableModesR503(env),
@@ -9515,6 +9543,33 @@ async function fetchYouTubeChannelAnalytics(env) {
     previousWeekEndDate:growth.previousWeekEndDate || '',
     partialErrors:[...(studioBase.partialErrors || []), ...(growth.error ? [growth.error] : []), ...((growth.errors || []))]
   };
+  let recentVideos = [], topVideos = [], videosError = '';
+  try {
+    const db = requireDb(env);
+    const identity = await fetchYoutubeMonitorIdentity(env);
+    const videoStats = await fetchYoutubeVideoStats(env, db, identity.uploadsPlaylistId);
+    const allVideoStats = Array.isArray(videoStats) ? videoStats : [];
+    const byId = new Map(allVideoStats.map(item=>[String(item.videoId||''),item]));
+    recentVideos = allVideoStats.slice(0, 12);
+    topVideos = allVideoStats.slice().sort((a,b)=>Number(b.views||0)-Number(a.views||0) || String(b.publishedAt||'').localeCompare(String(a.publishedAt||''))).slice(0, 6);
+    const enrich = row => {
+      const meta=byId.get(String(row?.videoId||''))||{};
+      return {
+        ...row,
+        title:cleanPlainText(meta.title || `Видео ${row?.videoId||''}`,180),
+        publishedAt:cleanPlainText(meta.publishedAt || '',50),
+        thumbnail:cleanPlainText(meta.thumbnail || '',900),
+        url:cleanPlainText(meta.url || (row?.videoId?`https://www.youtube.com/watch?v=${encodeURIComponent(row.videoId)}`:''),900)
+      };
+    };
+    studio.topVideos28=(Array.isArray(studio.topVideos28)?studio.topVideos28:[]).map(enrich);
+    const engagementPool=[...(Array.isArray(studio.engagementVideos28)?studio.engagementVideos28:[]),...(Array.isArray(studio.topVideos28)?studio.topVideos28:[])];
+    const uniqueEngagement=new Map();
+    engagementPool.forEach(row=>{if(row?.videoId&&!uniqueEngagement.has(row.videoId))uniqueEngagement.set(row.videoId,enrich(row));});
+    studio.engagementVideos28=[...uniqueEngagement.values()].map(row=>{const views=Math.max(0,Number(row.views||0));const interactions=Math.max(0,Number(row.likes||0))+Math.max(0,Number(row.comments||0))+Math.max(0,Number(row.shares||0));return {...row,engagementRate:views?100*interactions/views:0,interactions};}).sort((a,b)=>Number(b.engagementRate||0)-Number(a.engagementRate||0)||Number(b.interactions||0)-Number(a.interactions||0)).slice(0,6);
+  } catch (error) {
+    videosError = cleanPlainText(error?.message || error, 260);
+  }
   return {
     configured: true,
     channelId: cleanPlainText(channel.id, 100),
@@ -9525,6 +9580,9 @@ async function fetchYouTubeChannelAnalytics(env) {
     hiddenSubscribers: Boolean(statistics.hiddenSubscriberCount),
     videos: Number(statistics.videoCount || 0),
     studio,
+    recentVideos,
+    topVideos,
+    partialErrors:[...(studio.partialErrors || []), ...(videosError ? [videosError] : [])],
     updatedAt: new Date().toISOString()
   };
 }

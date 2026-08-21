@@ -1,0 +1,96 @@
+(()=>{
+  'use strict';
+  if(window.__ANDRIK_SOCIAL_DETAIL_R526__)return;window.__ANDRIK_SOCIAL_DETAIL_R526__=true;
+  const platform=document.body?.dataset?.socialDetail||'';
+  if(!['instagram','tiktok'].includes(platform))return;
+  const $=id=>document.getElementById(id);const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  const present=v=>v!==null&&v!==undefined&&v!==''&&Number.isFinite(Number(v));
+  const full=v=>present(v)?new Intl.NumberFormat('ru-RU').format(Math.round(Number(v))):'—';
+  const compact=v=>present(v)?new Intl.NumberFormat('ru-RU',{notation:Math.abs(Number(v))>=10000?'compact':'standard',maximumFractionDigits:1}).format(Number(v)):'—';
+  const KEY_SESSION='andrik-comments-admin-key',KEY_LOCAL='andrik-comments-admin-key-persistent',CACHE='andrik-social-center-data-r526';
+  let lastGood=null;
+  const getKey=()=>{try{return localStorage.getItem(KEY_LOCAL)||sessionStorage.getItem(KEY_SESSION)||''}catch(_){return''}};
+  async function waitOwner(max=1800){const st=Date.now();while(!window.AndrikOwnerSession&&Date.now()-st<max)await new Promise(r=>setTimeout(r,40));const o=window.AndrikOwnerSession;if(!o)return false;if(o.isActive?.())return true;try{const x=await o.ready?.();return Boolean(x?.owner||o.isActive?.())}catch(_){return false}}
+  const ownerHeaders=()=>{const headers={accept:'application/json'};const key=String(getKey()||'').trim();if(key&&!/^__ANDRIK_OWNER_SESSION_/i.test(key))headers.authorization=`Bearer ${key}`;return headers};
+  async function api({fast=true,source=''}={}){const q=new URLSearchParams({tiktok_mode:'sandbox'});if(fast)q.set('fast','1');if(source)q.set('refresh_source',source);const run=async()=>{const c=new AbortController(),tm=setTimeout(()=>c.abort(),source?32000:12000);try{const r=await fetch(`/api/control/social-overview?${q}`,{headers:ownerHeaders(),credentials:'include',cache:'no-store',signal:c.signal});const d=await r.json().catch(()=>({}));if(!r.ok){const err=new Error(d?.details||d?.error||`HTTP ${r.status}`);err.status=r.status;throw err}return d}finally{clearTimeout(tm)}};try{return await run()}catch(e){if(e?.status===401||e?.status===403){await waitOwner();return await run()}throw e}}
+  const readCache=()=>{try{return JSON.parse(localStorage.getItem(CACHE)||'null')}catch(_){return null}};
+  const saveCache=d=>{if(d?.ok)try{localStorage.setItem(CACHE,JSON.stringify(d))}catch(_){}};
+  const isoDay=v=>{const m=String(v||'').match(/^\d{4}-(\d{2})-(\d{2})/);return m?`${m[2]}.${m[1]}`:String(v||'')};
+  const chartState={field:'',rows:[],options:[]};
+  function renderChart(){const host=$('detailChartR513'),tog=$('detailTogglesR513');if(!host||!tog)return;const usable=chartState.options.filter(o=>chartState.rows.some(r=>present(r?.[o.field])));if(!usable.length){tog.innerHTML='';host.innerHTML='<div class="sd-empty">Дневная история ещё копится. После нескольких сохранённых снимков здесь появится график.</div>';return}if(!usable.some(o=>o.field===chartState.field))chartState.field=usable[0].field;tog.innerHTML=usable.map(o=>`<button class="sd-toggle${o.field===chartState.field?' is-active':''}" type="button" data-detail-field="${esc(o.field)}">${esc(o.label)}</button>`).join('');const rows=chartState.rows.filter(r=>present(r?.[chartState.field]));if(rows.length===1){const r=rows[0],v=Math.max(0,Number(r[chartState.field]||0));host.innerHTML=`<div class="sd-one-point"><strong>${esc(compact(v))}</strong><span>${esc(isoDay(r.day))}</span><small>${r.bootstrap?'первый накопленный день · базовая точка уже создана':'1 дневная точка · следующий снимок продолжит линию'}</small></div>`;tog.querySelectorAll('[data-detail-field]').forEach(b=>b.addEventListener('click',()=>{chartState.field=b.dataset.detailField;renderChart()}));return}const W=720,H=220,pad={l:44,r:16,t:18,b:30};const vals=rows.map(r=>Math.max(0,Number(r[chartState.field]||0))),max=Math.max(1,...vals),min=Math.min(0,...vals);const innerW=W-pad.l-pad.r,innerH=H-pad.t-pad.b;const x=i=>pad.l+(rows.length===1?innerW/2:i*innerW/(rows.length-1));const y=v=>pad.t+innerH-(Math.max(0,v)/max)*innerH;const points=rows.map((r,i)=>`${x(i).toFixed(1)},${y(Number(r[chartState.field]||0)).toFixed(1)}`).join(' ');const ticks=[0,.25,.5,.75,1];host.innerHTML=`<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-label="График"><g>${ticks.map(t=>`<line class="sd-gridline" x1="${pad.l}" y1="${(pad.t+innerH-innerH*t).toFixed(1)}" x2="${W-pad.r}" y2="${(pad.t+innerH-innerH*t).toFixed(1)}"/>`).join('')}</g><polyline class="sd-line" points="${points}"/>${rows.map((r,i)=>`<circle class="sd-dot" cx="${x(i).toFixed(1)}" cy="${y(Number(r[chartState.field]||0)).toFixed(1)}" r="2.6"/>`).join('')}<text class="sd-axis" x="${pad.l}" y="${H-8}">${esc(isoDay(rows[0].day))}</text><text class="sd-axis" text-anchor="end" x="${W-pad.r}" y="${H-8}">${esc(isoDay(rows[rows.length-1].day))}</text><text class="sd-axis" x="4" y="${pad.t+5}">${esc(compact(max))}</text><text class="sd-axis" x="4" y="${pad.t+innerH}">0</text></svg>`;tog.querySelectorAll('[data-detail-field]').forEach(b=>b.addEventListener('click',()=>{chartState.field=b.dataset.detailField;renderChart()}));}
+  const percent=v=>present(v)?`${new Intl.NumberFormat('ru-RU',{minimumFractionDigits:1,maximumFractionDigits:1}).format(Number(v))}%`:'—';
+  function kpisInto(id,items){const box=$(id);if(!box)return 0;const use=items.filter(([,v])=>present(v));box.innerHTML=use.length?use.map(([label,v,format])=>`<div class="sd-kpi"><span>${esc(label)}</span><strong>${esc(format==='percent'?percent(v):full(v))}</strong></div>`).join(''):'';return use.length}
+  const kpis=items=>kpisInto('detailKpisR513',items);
+  const flag=code=>{const c=String(code||'').trim().toUpperCase();return /^[A-Z]{2}$/.test(c)?String.fromCodePoint(...[...c].map(ch=>127397+ch.charCodeAt())):''};
+  function audienceCard(title,rows,type){const total=(rows||[]).reduce((s,r)=>s+Math.max(0,Number(r?.value||0)),0);if(!rows?.length)return'';return `<article class="sd-audience-card"><h3>${esc(title)}</h3>${rows.slice(0,type==='city'?8:10).map(r=>{let label=String(r.label||'');if(type==='gender')label=label==='F'?'Женщины':label==='M'?'Мужчины':'Не указано';if(type==='country')label=`${flag(label)} ${label}`.trim();const pct=total?100*Number(r.value||0)/total:0;return `<div class="sd-bar-row"><span title="${esc(label)}">${esc(label)}</span><div class="sd-bar"><i style="width:${Math.max(2,pct).toFixed(1)}%"></i></div><b>${pct.toFixed(0)}%</b></div>`}).join('')}</article>`}
+  function renderInstagram(ig){
+    kpis([['Просмотры',ig.summary?.views],['Охват',ig.summary?.reach],['Взаимодействия',ig.summary?.totalInteractions],['Просмотры профиля',ig.summary?.profileViews],['Лайки',ig.summary?.likes],['Комментарии',ig.summary?.comments],['Сохранения',ig.summary?.saves],['Репосты',ig.summary?.shares],['Вовлечённые',ig.summary?.accountsEngaged]]);
+    const ps=ig.profileStats||{},profileSection=document.querySelector('[data-instagram-profile-r523]');
+    const profileCount=kpisInto('instagramProfileKpisR523',[['Подписчики',ps.followersCount],['Подписки',ps.followsCount],['Публикации',ps.mediaCount]]);
+    if(profileSection)profileSection.hidden=!profileCount;
+    const profileNote=$('instagramProfileNoteR523');if(profileNote&&profileCount){const type=String(ps.accountType||'').toUpperCase();profileNote.textContent=type.includes('CREATOR')?'аккаунт автора':type.includes('BUSINESS')?'бизнес-аккаунт':'текущий срез'}
+    chartState.rows=Array.isArray(ig.trend)?ig.trend:[];
+    chartState.options=[{field:'views',label:'Просмотры'},{field:'reach',label:'Охват'},{field:'totalInteractions',label:'Взаим.'},{field:'profileViews',label:'Профиль'},{field:'accountsEngaged',label:'Вовлечённые'},{field:'likes',label:'Лайки'},{field:'comments',label:'Комменты'},{field:'saves',label:'Сохранения'},{field:'shares',label:'Репосты'}];
+    chartState.field=chartState.rows.some(r=>present(r?.views))?'views':'reach';renderChart();
+    const d=ig.demographics||{},box=$('instagramAudienceR513');if(box){const html=[audienceCard('Возраст',d.age,'age'),audienceCard('Пол',d.gender,'gender'),audienceCard('Страны',d.country,'country'),audienceCard('Города',d.city,'city')].filter(Boolean).join('');const section=box.closest('.sd-card');if(!html){if(section)section.hidden=true}else{if(section)section.hidden=false;box.innerHTML=html;const note=$('instagramAudienceNoteR513');if(note){const source={reached_audience_demographics:'охваченная аудитория',engaged_audience_demographics:'вовлечённая аудитория',follower_demographics:'подписчики'}[d.metric]||'аудитория';note.textContent=`Источник: ${source} · последние 30 дней.`}}}
+    const reelSection=$('instagramReelsSectionR526'),reelList=$('instagramReelsR526');
+    const reels=Array.isArray(ig.topReels)?ig.topReels:[];
+    if(reelSection&&reelList){
+      reelSection.hidden=!reels.length;
+      reelList.innerHTML=reels.length?reels.slice(0,6).map((v,i)=>{
+        const likes=Math.max(0,Number(v.likes||0)),comments=Math.max(0,Number(v.comments||0)),shares=Math.max(0,Number(v.shares||0)),saves=Math.max(0,Number(v.saves||0));
+        const interactions=Math.max(0,Number(v.score||v.totalInteractions||likes+comments+shares+saves));
+        const date=v.timestamp?new Date(v.timestamp).toLocaleDateString('ru-RU',{day:'2-digit',month:'2-digit'}):'';
+        const title=String(v.caption||'').trim()||`Reel #${i+1}`;const url=String(v.permalink||'').trim(),cover=String(v.coverUrl||'').trim();
+        const coverHtml=cover?`<a class="sd-video-cover" ${url?`href="${esc(url)}" target="_blank" rel="noopener"`:''}><img src="${esc(cover)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.closest('.sd-video-cover')?.remove()"></a>`:'';
+        const openHtml=url?`<a class="sd-video-open" href="${esc(url)}" target="_blank" rel="noopener">Открыть ↗</a>`:'';
+        return `<article class="sd-video sd-instagram-video${cover?'':' is-no-cover'}">${coverHtml}<div class="sd-video-main"><div class="sd-video-title-row"><h3>${esc(title)}</h3>${openHtml}</div><p>${esc([date,`${full(interactions)} взаимодействий`].filter(Boolean).join(' · '))}</p><div class="sd-video-foot"><span class="sd-er">ТОП #${i+1}</span><div class="sd-video-stats"><span>❤ <b>${full(likes)}</b></span><span>💬 <b>${full(comments)}</b></span>${present(v.shares)?`<span>↗ <b>${full(shares)}</b></span>`:''}${present(v.saves)?`<span>🔖 <b>${full(saves)}</b></span>`:''}</div></div></div></article>`
+      }).join(''):'';
+    }
+  }
+  function renderTikTok(tt){
+    const s=tt.summary||{};
+    kpis([
+      ['Подписчики',s.followerCount],['Подписки',s.followingCount],['Лайки профиля',s.profileLikes],['Видео',s.videoCount],
+      ['Просмотры видео',s.totalVideoViews],['Лайки видео',s.totalVideoLikes],['Комментарии',s.totalVideoComments],['Репосты',s.totalVideoShares],
+      ['Средние просмотры',s.averageVideoViews],['ER видео',s.videoEngagementRate,'percent']
+    ]);
+    const rawRows=Array.isArray(tt.dailyTrend)?tt.dailyTrend:[];
+    chartState.rows=rawRows.map(r=>({
+      ...r,
+      followersTotal:r?.totals?.followers,likesTotal:r?.totals?.likes,commentsTotal:r?.totals?.comments,sharesTotal:r?.totals?.shares,videosTotal:r?.totals?.videos,viewsTotal:r?.totals?.views
+    }));
+    const smartField=(delta,total)=>chartState.rows.some(r=>present(r?.[delta])&&Math.abs(Number(r[delta]))>0)?delta:total;
+    chartState.options=[
+      {field:smartField('views','viewsTotal'),label:'Просмотры'},
+      {field:smartField('followers','followersTotal'),label:'Подписчики'},
+      {field:smartField('likes','likesTotal'),label:'Лайки'},
+      {field:smartField('comments','commentsTotal'),label:'Комменты'},
+      {field:smartField('shares','sharesTotal'),label:'Репосты'},
+      {field:smartField('videos','videosTotal'),label:'Видео'}
+    ];
+    chartState.field=chartState.options[0]?.field||'views';renderChart();
+    const diag=tt.trendDiagnostics||{},chart=$('detailChartR513');
+    if(chart&&diag.usableSnapshots!==undefined)chart.dataset.snapshotStatus=`${Number(diag.usableSnapshots||0)} snapshots / ${Number(diag.detailRows||0)} days`;
+    const list=$('tiktokVideosR513');
+    const top=Array.isArray(tt.topVideos)&&tt.topVideos.length?tt.topVideos:(Array.isArray(tt.recentVideos)?tt.recentVideos:[]);
+    const duration=v=>{const n=Math.max(0,Math.round(Number(v||0)));if(!n)return'';const m=Math.floor(n/60),sec=String(n%60).padStart(2,'0');return `${m}:${sec}`};
+    if(list){
+      list.innerHTML=top.length?top.slice(0,6).map((v,i)=>{
+        const views=Math.max(0,Number(v.views||0)),eng=Math.max(0,Number(v.likes||0))+Math.max(0,Number(v.comments||0))+Math.max(0,Number(v.shares||0)),er=views?100*eng/views:0;
+        const date=v.createTime?new Date(Number(v.createTime)*1000).toLocaleDateString('ru-RU',{day:'2-digit',month:'2-digit'}):'';
+        const dur=duration(v.duration),meta=[date,dur,`${full(views)} просмотров`].filter(Boolean).join(' · ');
+        const url=String(v.shareUrl||'').trim(),cover=String(v.coverUrl||'').trim();
+        const coverHtml=cover?`<a class="sd-video-cover" ${url?`href="${esc(url)}" target="_blank" rel="noopener"`:''} aria-label="Открыть ролик"><img src="${esc(cover)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.closest('.sd-video-cover')?.remove()"></a>`:'';
+        const openHtml=url?`<a class="sd-video-open" href="${esc(url)}" target="_blank" rel="noopener">Открыть ↗</a>`:'';
+        return `<article class="sd-video${cover?'':' is-no-cover'}">${coverHtml}<div class="sd-video-main"><div class="sd-video-title-row"><h3>${esc(v.title||`Ролик #${i+1}`)}</h3>${openHtml}</div><p>${esc(meta)}</p><div class="sd-video-foot"><span class="sd-er">ER ${er.toFixed(1)}%</span><div class="sd-video-stats"><span>❤ <b>${esc(full(v.likes))}</b></span><span>💬 <b>${esc(full(v.comments))}</b></span><span>↗ <b>${esc(full(v.shares))}</b></span></div></div></div></article>`
+      }).join(''):'<div class="sd-empty">TikTok пока не вернул список роликов.</div>';
+    }
+  }
+  const meaningful=p=>{if(!p||typeof p!=='object')return false;const s=p.summary||{},ps=p.profileStats||{};const vals=platform==='instagram'?[s.views,s.reach,s.totalInteractions,s.profileViews,s.likes,s.comments,s.saves,s.shares,s.accountsEngaged,ps.followersCount,ps.followsCount,ps.mediaCount]:[s.followerCount,s.followingCount,s.profileLikes,s.videoCount,s.totalVideoViews,s.totalVideoLikes,s.totalVideoComments,s.totalVideoShares];return vals.some(present)||(platform==='instagram'&&Array.isArray(p.trend)&&p.trend.length)||(platform==='tiktok'&&Array.isArray(p.recentVideos)&&p.recentVideos.length)};
+  function render(data,{preserve=true}={}){if(!data?.ok)return false;const p=data.platforms?.[platform]||{};if(!meaningful(p)){if(preserve&&lastGood)return false;const warn=$('detailWarningR513');if(warn){warn.hidden=false;warn.textContent=p.error||'Сохранённые данные пока не получены. Нажмите обновить.'}return false}saveCache(data);lastGood=data;$('detailUpdatedR513').textContent=p.updatedAt?`обновлено ${new Date(p.updatedAt).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})}`:'сохранённый снимок';if(platform==='instagram')renderInstagram(p);else renderTikTok(p);const warn=$('detailWarningR513');if(warn){const errs=(Array.isArray(p.partialErrors)?p.partialErrors:[]).filter(Boolean);warn.hidden=!p.error&&!errs.length;warn.textContent=p.error||errs[0]||''};return true}
+  async function refresh(force=false){const b=$('detailRefreshR513');if(b){b.disabled=true;b.textContent='…'}try{const d=await api(force?{fast:false,source:platform}:{fast:true});const ok=render(d,{preserve:true});if(!ok&&!lastGood&&force===false){const fresh=await api({fast:false,source:platform});render(fresh,{preserve:false})}return d}catch(e){const w=$('detailWarningR513');if(w){w.hidden=false;w.textContent=e?.message||'Ошибка загрузки'}return null}finally{if(b){b.disabled=false;b.textContent='↻'}}}
+  const ageMinutes=v=>{const ms=Date.parse(v||'');return Number.isFinite(ms)?Math.max(0,(Date.now()-ms)/60000):Infinity};
+  const boot=()=>{const c=readCache();if(c?.ok)render(c,{preserve:false});$('detailRefreshR513')?.addEventListener('click',()=>refresh(true));refresh(false).then(d=>{const p=d?.platforms?.[platform]||lastGood?.platforms?.[platform]||{},ps=p?.profileStats||{};const needsInstagramProfile=platform==='instagram'&&![ps.followersCount,ps.followsCount,ps.mediaCount].some(present);if(needsInstagramProfile||ageMinutes(p.updatedAt)>10)setTimeout(()=>refresh(true),700)});};
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
+})();

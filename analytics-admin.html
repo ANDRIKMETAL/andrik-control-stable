@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="ru" translate="no" class="notranslate"><head><script>(function(){try{var u=new URL(location.href),p=(u.searchParams.get('page')||'').toLowerCase(),s=(u.searchParams.get('source')||'').toLowerCase();var ok=(p==='map'&&s==='admin-globe')||((p==='google'||p==='youtube')&&s==='admin-hub-swipe')||(p==='google'&&s==='social-center');if(!ok){location.replace('/control-home.html?page=menu&source=launch-guard-r428&v=55.00-r428');}}catch(_){}})();</script>
-<meta name="andrik-control-release" content="R524">
+<meta name="andrik-control-release" content="R526">
 <link rel="stylesheet" href="/assets/control-sleep-mode-r193.css?v=55.00-r193"><script defer src="/assets/control-sleep-mode-r193.js?v=55.00-r193"></script>
 
 <meta name="google" content="notranslate"><meta charset="utf-8"/>
@@ -175,6 +175,15 @@
 .analytics-v54-46-page .analytics-map-pane.is-growth-open{touch-action:pan-y!important;overscroll-behavior-y:contain!important}
 @media(max-width:430px){.country-growth-panel{max-height:calc(100dvh - 190px);padding:15px}.country-growth-head{top:-15px;margin:-15px -15px 14px;padding:15px 15px 10px}.country-growth-row{padding:10px 9px;gap:8px}.country-growth-value{font-size:.94rem}}
 
+.analytics-youtube-pane .analytics-youtube-header>p{white-space:nowrap!important;overflow:hidden;text-overflow:ellipsis}
+.analytics-youtube-pane .youtube-kpi-unified #analyticsYoutube,.analytics-youtube-pane .youtube-kpi-unified #youtubeStudioKpis{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important}
+.analytics-youtube-pane .youtube-kpi-unified #analyticsYoutube>.analytics-kpi,.analytics-youtube-pane .youtube-kpi-unified #youtubeStudioKpis>.analytics-kpi{min-height:86px!important}
+.analytics-youtube-pane #analyticsYoutube>.analytics-kpi:nth-child(-n+3),.analytics-youtube-pane #youtubeStudioKpis>.analytics-kpi{display:grid!important;grid-template-columns:40px minmax(0,1fr)!important;align-items:center!important;justify-content:stretch!important;gap:12px!important;text-align:left!important}
+.analytics-youtube-pane #analyticsYoutube>.analytics-kpi:nth-child(-n+3)>.analytics-kpi-copy,.analytics-youtube-pane #youtubeStudioKpis>.analytics-kpi>.analytics-kpi-copy{width:100%!important;text-align:left!important;justify-items:start!important;align-items:start!important}
+.analytics-youtube-pane #analyticsYoutube>.analytics-kpi:nth-child(-n+3) small,.analytics-youtube-pane #analyticsYoutube>.analytics-kpi:nth-child(-n+3) strong,.analytics-youtube-pane #analyticsYoutube>.analytics-kpi:nth-child(-n+3) em,.analytics-youtube-pane #youtubeStudioKpis>.analytics-kpi small,.analytics-youtube-pane #youtubeStudioKpis>.analytics-kpi strong,.analytics-youtube-pane #youtubeStudioKpis>.analytics-kpi em{text-align:left!important;width:100%!important}
+.analytics-youtube-pane .youtube-service-card{margin-top:14px;border-color:rgba(145,208,255,.2)!important;background:linear-gradient(145deg,rgba(8,20,34,.88),rgba(4,11,18,.95))!important}
+.analytics-youtube-pane .youtube-video-list{display:grid;gap:10px}.analytics-youtube-pane .youtube-video-row{display:grid;grid-template-columns:56px 1fr auto;gap:12px;align-items:center;padding:12px;border:1px solid rgba(145,208,255,.13);border-radius:18px;background:rgba(255,255,255,.02)}.analytics-youtube-pane .youtube-video-rank{display:grid;place-items:center;width:56px;height:56px;border-radius:16px;background:rgba(255,255,255,.05);font-size:1rem;font-weight:900;color:#dff3ff}.analytics-youtube-pane .youtube-video-copy{min-width:0;display:grid;gap:4px}.analytics-youtube-pane .youtube-video-copy strong{font-size:.9rem;line-height:1.2;color:#f5fbff}.analytics-youtube-pane .youtube-video-copy p{margin:0;color:#91a7b8;font-size:.76rem;line-height:1.28}.analytics-youtube-pane .youtube-video-stats{display:flex;flex-wrap:wrap;gap:8px}.analytics-youtube-pane .youtube-video-stats span{padding:5px 8px;border-radius:999px;background:rgba(145,208,255,.08);font-size:.7rem;color:#d4ebff}.analytics-youtube-pane .youtube-video-open{white-space:nowrap;text-decoration:none;color:#dff3ff;font-weight:800;padding:10px 12px;border-radius:14px;border:1px solid rgba(145,208,255,.18);background:rgba(7,19,31,.78)}
+@media(max-width:540px){.analytics-youtube-pane .youtube-kpi-unified #analyticsYoutube,.analytics-youtube-pane .youtube-kpi-unified #youtubeStudioKpis{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important}.analytics-youtube-pane .youtube-video-row{grid-template-columns:56px 1fr}.analytics-youtube-pane .youtube-video-open{grid-column:1/-1;justify-self:start}}
 </style>
 <link href="/assets/control-v54-67.css?v=54.67" rel="stylesheet"/><link href="/assets/control-v54-68.css?v=54.68" rel="stylesheet"/>
 <link href="/assets/control-v54-72.css?v=54.72" rel="stylesheet"/><link href="/assets/control-v54-73.css?v=54.73" rel="stylesheet"/><link href="/assets/control-v54-76.css?v=54.76" rel="stylesheet"/><link href="/assets/control-v54-77.css?v=54.77" rel="stylesheet"/><link href="/assets/control-v54-78.css?v=54.78" rel="stylesheet"/>
@@ -999,6 +1008,7 @@ body.analytics-admin-page.is-country-returning #worldMap .world-map-dot.is-selec
 #analyticsSwipeDots,.analytics-swipe-hint{display:none!important}
 </style>
 <link rel="stylesheet" href="/assets/social-platform-swipe-r524.css?v=55.00-r524">
+<link rel="stylesheet" href="/assets/youtube-r526.css?v=55.00-r526">
 </head>
 <body class="trika-standalone-page comments-admin-page control-page analytics-admin-page analytics-swipe-page analytics-v54-33-page analytics-v54-46-page">
 <nav class="topbar control-topbar control-detail-topbar"><div class="wrap nav-shell analytics-topbar-minimal"><a class="control-center-logo" id="controlCenterLogo" href="https://andrikmetal.com/" aria-label="Открыть главный сайт ANDRIK"><img class="logo-ok" src="/assets/control-topbar-eye-triangle.jpg" alt=""/><img class="logo-error" src="/assets/andrik-control-red-triangle-192.png" alt=""/></a></div></nav>
@@ -1031,7 +1041,7 @@ body.analytics-admin-page.is-country-returning #worldMap .world-map-dot.is-selec
 <section class="analytics-main-chart social-overview-r487-section"><article class="admin-control-card social-overview-r487-card"><div class="admin-card-title-row analytics-inline-actions"><div><span class="eyeline">ANDRIK · 28 ДНЕЙ</span><h2>Общий график</h2><p>Единая динамика: сайт, YouTube, Instagram, TikTok.</p></div><div class="social-overview-r487-head-actions"><a class="social-overview-r487-center-link" href="/social-center-admin.html?source=analytics&v=55.00-r513">Центр соцсетей</a><button class="social-overview-r487-refresh" id="socialOverviewRefreshR487" type="button">Обновить</button></div></div><div class="social-overview-r487-kpis" id="socialOverviewKpisR487"><div class="admin-empty">Загружаем сохранённые данные…</div></div><div class="social-overview-r487-chart" id="socialOverviewChartR487"><div class="social-overview-r487-empty">Загружаем общий график…</div></div><div class="social-overview-r487-instagram-extra" id="socialOverviewInstagramExtraR487"></div><div class="social-overview-r487-warning" id="socialOverviewWarningR487" hidden></div><div class="social-overview-r487-meta" id="socialOverviewMetaR487"><span>28 завершённых дней</span><span>обновляем данные…</span></div></article></section>
           <section class="analytics-site-geography"><article class="admin-control-card analytics-list-card analytics-site-country-card"><div class="admin-card-title-row"><div><span class="eyeline">Google Analytics · за 30 дней</span><h2>География сайта</h2><p>Страны, из которых заходили посетители сайта.</p></div></div><div id="analyticsCountries"><div class="admin-empty">Загружаем географию сайта…</div></div></article></section>
           <section class="analytics-columns"><article class="admin-control-card analytics-list-card"><div class="admin-card-title-row"><div><span class="eyeline">За 30 дней</span><h2>Популярные страницы</h2></div></div><div class="analytics-list" id="analyticsPages"><div class="admin-empty">Загружаем страницы…</div></div></article><article class="admin-control-card analytics-list-card"><div class="admin-card-title-row"><div><span class="eyeline">За 30 дней</span><h2>Устройства</h2></div></div><div class="analytics-list" id="analyticsDevices"><div class="admin-empty">Загружаем устройства…</div></div></article></section>
-          <footer class="control-version-footer"><strong>Live Web AI · профиль ANDRIK · v55.00 LIVE WEB AI FINAL R511</strong><span>внутренняя горизонтальная карусель отключена · свайп платформ перенесён в Центр соцсетей · 18.08.2026</span></footer>
+          <footer class="control-version-footer"><strong>Live Web AI · профиль ANDRIK · v55.00 LIVE WEB AI FINAL R526</strong><span>внутренняя горизонтальная карусель отключена · свайп платформ перенесён в Центр соцсетей · 18.08.2026</span></footer>
           <div class="analytics-swipe-hint analytics-site-hint"><button type="button" data-swipe-go="2">← YouTube</button><button type="button" data-swipe-go="1">Карта слушателей →</button></div>
         </div>
       </section>
@@ -1071,14 +1081,14 @@ body.analytics-admin-page.is-country-returning #worldMap .world-map-dot.is-selec
           <header class="youtube-compact-header analytics-youtube-header">
             <span class="eyeline">Официальный канал ANDRIK</span>
             <div class="youtube-title-status-row"><h1>YouTube</h1><div class="youtube-studio-gate youtube-studio-gate-inline" id="youtubeStudioGate"><div class="admin-empty">Проверяем данные Worker…</div></div></div>
-            <p>Канал · Studio · реакции · аудитория · альбомы</p>
-            <section class="admin-auth-strip youtube-auth-inline" id="youtubeAuthStrip"><span class="admin-auth-dot"></span><strong id="youtubeAuthText">Проверяем доступ…</strong><a href="/service-admin.html">Служебное</a></section>
+            <p>Канал · Studio · реакции · аудитория</p>
+            <section class="admin-auth-strip youtube-auth-inline" id="youtubeAuthStrip"><span class="admin-auth-dot"></span><strong id="youtubeAuthText">Проверяем доступ…</strong><a href="/service-admin.html">Служебное</a></section><div class="admin-actions" style="margin-top:10px"><a class="btn" id="youtubeProfileLink" href="https://www.youtube.com/@andrikmetal" target="_blank" rel="noopener">↗ Открыть профиль</a></div>
           </header>
           <section class="admin-control-card analytics-chart-card analytics-youtube-trend-card" id="youtubeStudioTrendCard" hidden>
             <div class="admin-card-title-row"><div><span class="eyeline">📈 Динамика канала</span><h2>График YouTube</h2><p>Просмотры и реакции по дням.</p></div></div>
-            <div class="analytics-chart youtube-integrated-trend" id="youtubeStudioTrend"></div>
+            <div class="youtube-trend-toggles" id="youtubeStudioTrendToggles"></div><div class="analytics-chart youtube-integrated-trend" id="youtubeStudioTrend"></div>
           </section>
-          <section class="admin-control-card analytics-youtube-card youtube-channel-card youtube-unified-card analytics-youtube-unified">
+          <section class="admin-control-card analytics-youtube-card youtube-channel-card youtube-unified-card analytics-youtube-unified youtube-kpi-unified">
             <div class="analytics-youtube-grid" id="analyticsYoutube"><div class="admin-empty">Загружаем канал…</div></div>
             <div class="youtube-studio-section youtube-studio-integrated" id="youtubeStudioSection" hidden>
               <div class="analytics-youtube-studio-kpis" id="youtubeStudioKpis"></div>
@@ -1089,14 +1099,17 @@ body.analytics-admin-page.is-country-returning #worldMap .world-map-dot.is-selec
             <article class="admin-control-card analytics-list-card"><div class="admin-card-title-row"><div><span class="eyeline">⚥ Аудитория</span><h2>Пол</h2></div></div><div class="analytics-list" id="youtubeStudioGender"></div></article>
             <article class="admin-control-card analytics-list-card analytics-sharing-card"><div class="admin-card-title-row"><div><span class="eyeline">↗️ Поделились</span><h2>Площадки</h2></div></div><div class="analytics-list" id="youtubeStudioSharing"></div></article>
           </section>
+          <section class="admin-control-card youtube-top-videos-card" id="youtubeTop28Section" hidden><div class="admin-card-title-row"><div><span class="eyeline">🔥 28 ДНЕЙ</span><h2>Сильные видео за месяц</h2><p>Реальные просмотры и реакции YouTube Analytics за 28 завершённых дней.</p></div></div><div class="youtube-video-list" id="youtubeTop28"></div></section>
+<section class="admin-control-card youtube-top-videos-card" id="youtubeEngagement28Section" hidden><div class="admin-card-title-row"><div><span class="eyeline">⚡ ВОВЛЕЧЕНИЕ</span><h2>Лучшие по ER</h2><p>Реакции относительно просмотров за тот же 28-дневный период.</p></div></div><div class="youtube-video-list" id="youtubeEngagement28"></div></section>
+<section class="admin-control-card analytics-list-card youtube-country-card" id="youtubeCountryGrowthSection" hidden><div class="admin-card-title-row"><div><span class="eyeline">🌍 7 ДНЕЙ</span><h2>Рост по странам</h2><p>Просмотры за неделю и разница с предыдущей неделей.</p></div></div><div class="analytics-list" id="youtubeCountryGrowth"></div></section>
+<section class="admin-control-card youtube-top-videos-card" id="youtubeTopVideosSection" hidden><div class="admin-card-title-row"><div><span class="eyeline">🏆 ВСЁ ВРЕМЯ</span><h2>Общий топ канала</h2><p>Текущие счётчики просмотров YouTube Data API.</p></div></div><div class="youtube-video-list" id="youtubeTopVideos"><div class="admin-empty">Загружаем ролики…</div></div></section>
           <section class="admin-control-card album-control-card youtube-album-catalog analytics-youtube-albums">
             <div class="admin-card-title-row"><div><span class="eyeline">Каталог</span><h2>Альбомы</h2><p>Релизы ANDRIK на YouTube.</p></div></div>
             <div class="control-album-grid" id="albumStats"><div class="admin-empty">Загружаем альбомы…</div></div>
           </section>
-          <section class="analytics-layout youtube-control-layout youtube-control-layout-page youtube-monitor-only-layout youtube-monitor-bottom analytics-youtube-monitor">
-            <article class="admin-control-card youtube-monitor-card"><div class="admin-card-title-row analytics-inline-actions"><div><span class="eyeline">🔔 Реакции канала</span><h2>Уведомления YouTube</h2><p>Комментарии, подписчики и лайки.</p></div><button class="btn btn-primary analytics-mini-btn" id="youtubeEventsRun" type="button">Проверить сейчас</button></div><div id="youtubeMonitor" class="youtube-monitor-status"><div class="admin-empty">Загружаем сохранённый статус…</div></div></article>
-          </section>
-          <footer class="control-version-footer"><strong>Live Web AI · профиль ANDRIK · v55.00 LIVE WEB AI FINAL R511</strong><span>внутренняя горизонтальная карусель отключена · свайп платформ перенесён в Центр соцсетей · 18.08.2026</span></footer>
+          <details class="youtube-hidden-data"><summary>Что YouTube не отдаёт через API</summary><div class="youtube-hidden-data-body"><p><strong>Лайки:</strong> видно количество, но не имена людей, поставивших лайк.</p><p><strong>Подписчики:</strong> точный счётчик и прирост доступны, но имена скрытых/непубличных подписчиков не выдаются.</p><p><strong>Поделились:</strong> видно площадку и количество, но не конкретного получателя ссылки.</p><p><strong>Возраст и пол:</strong> показываются только когда YouTube набрал достаточную выборку для защиты приватности.</p></div></details>
+<section class="admin-control-card youtube-service-card"><div class="admin-card-title-row"><div><span class="eyeline">🔔 Реакции канала</span><h2>Проверка уведомлений перенесена</h2><p>Комментарии, подписчики и лайки теперь проверяются в разделе «Служебное».</p></div></div><div class="admin-actions"><a class="btn btn-primary" href="/service-admin.html">Открыть Служебное</a></div></section>
+          <footer class="control-version-footer"><strong>Live Web AI · профиль ANDRIK · v55.00 LIVE WEB AI FINAL R526</strong><span>внутренняя горизонтальная карусель отключена · свайп платформ перенесён в Центр соцсетей · 18.08.2026</span></footer>
           <div class="analytics-swipe-hint analytics-youtube-hint"><button type="button" data-swipe-go="1">← Карта слушателей</button><button type="button" data-swipe-go="0">Google Analytics →</button></div>
         </div>
       </section>
@@ -4618,6 +4631,7 @@ body .country-scroll-overlay-r258::before{margin:0 0 10px!important;}
 <link rel="stylesheet" href="/assets/map-controls-compact-r499.css?v=55.00-r499">
 <script defer src="/assets/planet-map-transition-r450.js?v=55.00-r450"></script>
 <script defer src="/assets/social-overview-r487.js?v=55.00-r487"></script>
+<script defer src="/assets/youtube-admin-v55-00f.js?v=55.00f"></script>
 <script defer src="/assets/control-version-sync-r506.js?v=55.00-r506"></script>
 <script defer src="/assets/social-platform-swipe-r524.js?v=55.00-r524"></script>
 </body></html>

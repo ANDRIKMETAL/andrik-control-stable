@@ -1,0 +1,10 @@
+
+/* R526 — YouTube parity: compact cards, metric toggles, top content, country growth. */
+.youtube-trend-toggles{display:flex;flex-wrap:wrap;gap:7px;margin:4px 0 10px}
+.youtube-trend-toggle{min-height:34px;padding:0 10px;border:1px solid rgba(137,205,236,.16);border-radius:999px;background:rgba(7,25,35,.82);color:#8aa5b2;font:800 .68rem/1 system-ui;cursor:pointer}
+.youtube-trend-toggle.is-active{color:#fff;border-color:rgba(255,106,123,.48);background:rgba(122,27,43,.42)}
+.youtube-single-bars .analytics-day-bars b{display:none!important}.youtube-single-bars .analytics-day-bars i{width:min(9px,72%)!important;margin-inline:auto!important;border-radius:999px 999px 2px 2px!important}
+.youtube-country-delta{display:block!important;margin-top:3px!important;font-size:.62rem!important;color:#78929f!important}.youtube-country-delta.is-up{color:#76e6ae!important}.youtube-country-delta.is-down{color:#ff9aab!important}
+.youtube-hidden-data{margin-top:14px;border:1px solid rgba(145,208,255,.15);border-radius:20px;background:rgba(5,17,26,.68);overflow:hidden}.youtube-hidden-data>summary{cursor:pointer;list-style:none;padding:14px 16px;font-weight:850;color:#dff5ff}.youtube-hidden-data>summary::-webkit-details-marker{display:none}.youtube-hidden-data>summary::after{content:'Показать';float:right;color:#84bcd0;font-size:.72rem}.youtube-hidden-data[open]>summary::after{content:'Скрыть'}.youtube-hidden-data-body{padding:0 16px 15px;color:#8fa6b2;font-size:.75rem;line-height:1.5}.youtube-hidden-data-body p{margin:7px 0}.youtube-hidden-data-body strong{color:#e9f7ff}
+.youtube-country-card .analytics-list-row>div{min-width:0}.youtube-country-card .analytics-list-row em{min-width:72px;text-align:right}
+@media(max-width:540px){.youtube-trend-toggles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.youtube-trend-toggle{padding:0 5px;font-size:.62rem}.youtube-country-card .analytics-list-row{grid-template-columns:34px minmax(0,1fr) 78px!important}}

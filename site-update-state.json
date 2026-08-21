@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787292124235-3cce14e593",
-  "release": "R524",
-  "archiveName": "R524-TIKTOK-REAL-METRICS-MOBILE-GA4-SAFE-FULL.zip",
-  "sourceHead": "d424819112c16acd8e3397acdb007c74a946c6e5",
-  "backupSha": "d424819112c16acd8e3397acdb007c74a946c6e5",
-  "backupTag": "control-backup-20260821060159-d424819-r524-bdefc",
+  "operationId": "publish-1787293587169-64e74bdc4a",
+  "release": "R526",
+  "archiveName": "R526-SOCIAL-PARITY-YOUTUBE-TIKTOK-INSTAGRAM-SAFE-FULL.zip",
+  "sourceHead": "a8aaf0f127d8861c7778c7c2eabce3b7968d935c",
+  "backupSha": "a8aaf0f127d8861c7778c7c2eabce3b7968d935c",
+  "backupTag": "control-backup-20260821062622-a8aaf0f-r526-e66fc",
   "autoRecovery": true,
-  "generatedAt": "2026-08-21T06:02:04.235Z"
+  "generatedAt": "2026-08-21T06:26:27.169Z"
 }
