@@ -7395,7 +7395,7 @@ async function fetchYoutubeVideoStats(env, db, uploadsPlaylistId = '') {
   const chunks = [];
   for (let index = 0; index < ids.length; index += 50) chunks.push(ids.slice(index, index + 50));
   const settled = await Promise.allSettled(chunks.map(chunk => youtubeApiJson(env, 'videos', {
-    part: 'snippet,statistics,contentDetails',
+    part: 'snippet,statistics',
     id: chunk.join(','),
     maxResults: 50
   })));
@@ -7411,7 +7411,6 @@ async function fetchYoutubeVideoStats(env, db, uploadsPlaylistId = '') {
     views: Number(video?.statistics?.viewCount || 0),
     likes: Number(video?.statistics?.likeCount || 0),
     comments: Number(video?.statistics?.commentCount || 0),
-    duration: cleanPlainText(video?.contentDetails?.duration || '', 40),
     url: `https://www.youtube.com/watch?v=${encodeURIComponent(video.id)}`
   })).filter(item => item.videoId)
     .sort((a, b) => String(b.publishedAt || '').localeCompare(String(a.publishedAt || '')));
@@ -8917,32 +8916,11 @@ async function fetchYouTubeStudioAnalytics(env) {
     youtubeAnalyticsQuery(env, accessToken,{ids:`channel==${owner.channelId}`,startDate:dailyDate,endDate:dailyDate,dimensions:'country',metrics:'views,estimatedMinutesWatched',sort:'-views',maxResults:200}),
     youtubeAnalyticsQuery(env, accessToken,{...base,dimensions:'ageGroup,gender',metrics:'viewerPercentage'}),
     youtubeAnalyticsQuery(env, accessToken,{...base,dimensions:'sharingService',metrics:'shares',sort:'-shares',maxResults:8}),
-    youtubeAnalyticsQuery(env, accessToken,{...base,dimensions:'video',metrics:'views,estimatedMinutesWatched,likes,comments,shares,subscribersGained',sort:'-views',maxResults:50}),
-    youtubeAnalyticsQuery(env, accessToken,{...base,dimensions:'video',metrics:'views,estimatedMinutesWatched,likes,comments,shares,subscribersGained',sort:'-likes',maxResults:20})
+    youtubeAnalyticsQuery(env, accessToken,{...base,dimensions:'video',metrics:'views,estimatedMinutesWatched,likes,comments,shares,subscribersGained',sort:'-views',maxResults:10}),
+    youtubeAnalyticsQuery(env, accessToken,{...base,dimensions:'video',metrics:'views,estimatedMinutesWatched,likes,comments,shares,subscribersGained',sort:'-likes',maxResults:10})
   ]);
   const val=i=>results[i].status==='fulfilled'?results[i].value:[];
   const resultError=i=>results[i].status==='rejected'?cleanPlainText(results[i].reason?.message||results[i].reason,260):'';
-  // R542: `video,creatorContentType` is not a valid unfiltered basic-video report.
-  // First get the actual top video IDs, then use those IDs as a video filter in the
-  // playback-details report where creatorContentType is supported. The Analytics API
-  // explicitly allows a multi-value video filter to be repeated as a dimension.
-  let contentTypeRows=[];
-  let contentTypeError='';
-  try {
-    const candidateIds=[...new Set(val(6).map(r=>cleanPlainText(r?.video||'',80)).filter(Boolean))].slice(0,50);
-    if(candidateIds.length){
-      contentTypeRows=await youtubeAnalyticsQuery(env,accessToken,{
-        ...base,
-        filters:`video==${candidateIds.join(',')}`,
-        dimensions:'video,creatorContentType',
-        metrics:'views,estimatedMinutesWatched,likes,comments,shares,subscribersGained',
-        sort:'-views',
-        maxResults:100
-      });
-    }
-  } catch(error){
-    contentTypeError=cleanPlainText(error?.message||error,260);
-  }
   const summary=val(0)[0]||{};
   const demographics=val(4);
   const ageMap={},genderMap={};
@@ -8961,8 +8939,6 @@ async function fetchYouTubeStudioAnalytics(env) {
     trend:val(1).map(r=>({day:String(r.day||''),views:Number(r.views||0),estimatedMinutesWatched:Number(r.estimatedMinutesWatched||0),likes:Number(r.likes||0),comments:Number(r.comments||0),shares:Number(r.shares||0),subscribersGained:Number(r.subscribersGained||0),subscribersLost:Number(r.subscribersLost||0)})),
     topVideos28:val(6).map(r=>({videoId:cleanPlainText(r.video||'',80),views:Number(r.views||0),estimatedMinutesWatched:Number(r.estimatedMinutesWatched||0),likes:Number(r.likes||0),comments:Number(r.comments||0),shares:Number(r.shares||0),subscribersGained:Number(r.subscribersGained||0)})).filter(r=>r.videoId),
     engagementVideos28:val(7).map(r=>({videoId:cleanPlainText(r.video||'',80),views:Number(r.views||0),estimatedMinutesWatched:Number(r.estimatedMinutesWatched||0),likes:Number(r.likes||0),comments:Number(r.comments||0),shares:Number(r.shares||0),subscribersGained:Number(r.subscribersGained||0)})).filter(r=>r.videoId),
-    topShorts28:contentTypeRows.filter(r=>String(r.creatorContentType||'').toUpperCase()==='SHORTS').slice(0,4).map(r=>({videoId:cleanPlainText(r.video||'',80),creatorContentType:'SHORTS',views:Number(r.views||0),estimatedMinutesWatched:Number(r.estimatedMinutesWatched||0),likes:Number(r.likes||0),comments:Number(r.comments||0),shares:Number(r.shares||0),subscribersGained:Number(r.subscribersGained||0)})).filter(r=>r.videoId),
-    topVideosRegular28:contentTypeRows.filter(r=>String(r.creatorContentType||'').toUpperCase()==='VIDEO_ON_DEMAND').slice(0,4).map(r=>({videoId:cleanPlainText(r.video||'',80),creatorContentType:'VIDEO_ON_DEMAND',views:Number(r.views||0),estimatedMinutesWatched:Number(r.estimatedMinutesWatched||0),likes:Number(r.likes||0),comments:Number(r.comments||0),shares:Number(r.shares||0),subscribersGained:Number(r.subscribersGained||0)})).filter(r=>r.videoId),
     countries,
     dailyCountries,
     countryCount:countries.length,
@@ -8971,7 +8947,7 @@ async function fetchYouTubeStudioAnalytics(env) {
     sharing:val(5).map(r=>({sharingService:String(r.sharingService||''),shares:Number(r.shares||0)})),
     summaryError:resultError(0),
     trendError:resultError(1),
-    partialErrors:[...results.map((r,i)=>r.status==='rejected'?cleanPlainText(r.reason?.message||r.reason,260):'').filter(Boolean),...(contentTypeError?[contentTypeError]:[])],
+    partialErrors:results.map((r,i)=>r.status==='rejected'?cleanPlainText(r.reason?.message||r.reason,260):'').filter(Boolean),
     updatedAt:new Date().toISOString()
   };
 }
@@ -9761,8 +9737,6 @@ async function fetchYouTubeChannelAnalytics(env) {
       };
     };
     studio.topVideos28=(Array.isArray(studio.topVideos28)?studio.topVideos28:[]).map(enrich);
-    studio.topShorts28=(Array.isArray(studio.topShorts28)?studio.topShorts28:[]).map(row=>{const item=enrich(row);return {...item,url:item.videoId?`https://www.youtube.com/shorts/${encodeURIComponent(item.videoId)}`:item.url};});
-    studio.topVideosRegular28=(Array.isArray(studio.topVideosRegular28)?studio.topVideosRegular28:[]).map(enrich);
     const engagementPool=[...(Array.isArray(studio.engagementVideos28)?studio.engagementVideos28:[]),...(Array.isArray(studio.topVideos28)?studio.topVideos28:[])];
     const uniqueEngagement=new Map();
     engagementPool.forEach(row=>{if(row?.videoId&&!uniqueEngagement.has(row.videoId))uniqueEngagement.set(row.videoId,enrich(row));});
