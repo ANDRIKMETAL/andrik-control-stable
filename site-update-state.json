@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787310538223-f7aef4b955",
-  "release": "R536",
-  "archiveName": "R536-DAILY-CITIES-DEVICES-VERSION-FIX-SAFE-FULL.zip",
-  "sourceHead": "ed8cedc9e38dfa33efc142fd9ad1a879049d5e3b",
-  "backupSha": "ed8cedc9e38dfa33efc142fd9ad1a879049d5e3b",
-  "backupTag": "control-backup-20260821110854-ed8cedc-r536-b4537",
+  "operationId": "publish-1787310896049-68bbd4bed9",
+  "release": "R537",
+  "archiveName": "R537-GA-DEVICES-VERSION-CLEAN-FIX-SAFE-FULL.zip",
+  "sourceHead": "f5d685b907a645085ca578a79a3a396312a9adaa",
+  "backupSha": "f5d685b907a645085ca578a79a3a396312a9adaa",
+  "backupTag": "control-backup-20260821111451-f5d685b-r537-1926d",
   "autoRecovery": true,
-  "generatedAt": "2026-08-21T11:08:58.223Z"
+  "generatedAt": "2026-08-21T11:14:56.049Z"
 }

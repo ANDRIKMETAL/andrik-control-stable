@@ -1749,7 +1749,7 @@ async function getSiteFirstParty30dR530(db) {
     trend:(trendResult?.results||[]).map(row=>({date:cleanPlainText(row?.date||'',20),activeUsers:Math.max(0,Number(row?.activeUsers||0)),screenPageViews:Math.max(0,Number(row?.screenPageViews||0))})),
     countries:(countryResult?.results||[]).map(row=>({country:cleanPlainText(row?.country||'',8).toUpperCase(),activeUsers:Math.max(0,Number(row?.activeUsers||0))})),
     pages:(pageResult?.results||[]).map(row=>({pageTitle:'',pagePath:normalizeSitePath(row?.pagePath||'/'),screenPageViews:Math.max(0,Number(row?.screenPageViews||0)),activeUsers:Math.max(0,Number(row?.activeUsers||0))})).filter(row=>isPublicSitePathR531(row.pagePath)),
-    devices:(deviceResult?.results||[]).map(row=>({deviceCategory:cleanPlainText(row?.deviceCategory||'',40),sessions:Math.max(0,Number(row?.activeUsers||0)),activeUsers:Math.max(0,Number(row?.activeUsers||0)),screenPageViews:Math.max(0,Number(row?.screenPageViews||0))})).filter(row=>row.deviceCategory&&row.activeUsers>0),
+    devices:(deviceResult?.results||[]).map(row=>({deviceCategory:cleanPlainText(row?.deviceCategory||'',40),sessions:Math.max(0,Number(row?.activeUsers||0)),totalUsers:Math.max(0,Number(row?.activeUsers||0)),activeUsers:Math.max(0,Number(row?.activeUsers||0)),screenPageViews:Math.max(0,Number(row?.screenPageViews||0))})).filter(row=>row.deviceCategory&&row.activeUsers>0),
     month:{activeUsers:Math.max(0,Number(monthRow?.activeUsers||0)),screenPageViews:Math.max(0,Number(monthRow?.screenPageViews||0))},
     week:{activeUsers:Math.max(0,Number(weekRow?.activeUsers||0)),screenPageViews:Math.max(0,Number(weekRow?.screenPageViews||0))},
     updatedAt:new Date().toISOString()
@@ -1794,8 +1794,9 @@ function mergeGoogleWithFirstPartyR530(google={}, firstParty={}) {
   for(const item of [...(Array.isArray(google?.devices)?google.devices:[]),...(Array.isArray(firstParty?.devices)?firstParty.devices:[])]){
     const key=cleanPlainText(item?.deviceCategory||'',40).trim().toLowerCase();
     if(!key)continue;
-    const prev=deviceMap.get(key)||{deviceCategory:key,sessions:0,activeUsers:0,screenPageViews:0};
+    const prev=deviceMap.get(key)||{deviceCategory:key,sessions:0,totalUsers:0,activeUsers:0,screenPageViews:0};
     prev.sessions=Math.max(Number(prev.sessions||0),Number(item?.sessions||0));
+    prev.totalUsers=Math.max(Number(prev.totalUsers||0),Number(item?.totalUsers||item?.activeUsers||0));
     prev.activeUsers=Math.max(Number(prev.activeUsers||0),Number(item?.activeUsers||0));
     prev.screenPageViews=Math.max(Number(prev.screenPageViews||0),Number(item?.screenPageViews||0));
     deviceMap.set(key,prev);
@@ -6020,7 +6021,7 @@ async function fetchGoogleSiteAnalytics(env) {
     googleAnalyticsPost(accessToken, property.id, 'runReport', {
       dateRanges: [{ startDate: '30daysAgo', endDate: 'today' }],
       dimensions: [{ name: 'deviceCategory' }],
-      metrics: [{ name: 'sessions' }, { name: 'activeUsers' }, { name: 'screenPageViews' }],
+      metrics: [{ name: 'sessions' }, { name: 'totalUsers' }, { name: 'activeUsers' }, { name: 'screenPageViews' }],
       orderBys: [{ metric: { metricName: 'sessions' }, desc: true }],
       limit: '8'
     })
@@ -6037,7 +6038,7 @@ async function fetchGoogleSiteAnalytics(env) {
     trend: gaRows(trendReport, ['date'], ['activeUsers', 'screenPageViews']),
     countries: gaRows(countriesReport, ['country'], ['activeUsers']),
     pages: gaRows(pagesReport, ['pageTitle', 'pagePath'], ['screenPageViews', 'activeUsers']),
-    devices: gaRows(devicesReport, ['deviceCategory'], ['sessions', 'activeUsers', 'screenPageViews']),
+    devices: gaRows(devicesReport, ['deviceCategory'], ['sessions', 'totalUsers', 'activeUsers', 'screenPageViews']),
     updatedAt: new Date().toISOString()
   };
 }
@@ -12971,7 +12972,7 @@ function deviceQualityR536(devices=[]) {
   const rows=(Array.isArray(devices)?devices:[]).filter(row=>row&&String(row.deviceCategory||'').trim());
   return {
     categories:rows.filter(row=>Number(row.activeUsers||row.sessions||row.screenPageViews||0)>0).length,
-    users:rows.reduce((sum,row)=>sum+Math.max(0,Number(row.activeUsers||0)),0),
+    users:rows.reduce((sum,row)=>sum+Math.max(0,Number(row.totalUsers||row.activeUsers||0)),0),
     sessions:rows.reduce((sum,row)=>sum+Math.max(0,Number(row.sessions||0)),0),
     views:rows.reduce((sum,row)=>sum+Math.max(0,Number(row.screenPageViews||0)),0)
   };
@@ -13014,7 +13015,10 @@ async function handleControlGoogleAnalytics(request, env) {
   let latest=parseSnapshotMetrics(latestRow);
   const snapshotMs=Date.parse(latestRow?.created_at||latest?.updatedAt||'');
   const deviceShapeStale=!Array.isArray(latest?.devices)||!latest.devices.some(item=>Number.isFinite(Number(item?.sessions)));
-  const snapshotStale=!Number.isFinite(snapshotMs)||Date.now()-snapshotMs>30*60*1000||deviceShapeStale;
+  const latestDeviceQ=deviceQualityR536(latest?.devices||[]);
+  const latestMonthUsers=Math.max(0,Number(latest?.month?.activeUsers||0));
+  const deviceShapeSuspicious=latestMonthUsers>=5&&(latestDeviceQ.users<Math.max(2,Math.floor(latestMonthUsers*0.20))||(latestMonthUsers>=8&&latestDeviceQ.categories<2));
+  const snapshotStale=!Number.isFinite(snapshotMs)||Date.now()-snapshotMs>30*60*1000||deviceShapeStale||deviceShapeSuspicious;
   let refreshError='';
 
   // R530: one fresh GA4 pull at most every 30 minutes (or explicitly on refresh).
@@ -13028,7 +13032,7 @@ async function handleControlGoogleAnalytics(request, env) {
       if(fresh?.configured){
         latest={...fresh,configured:true};
         latestRow={created_at:fresh.updatedAt||new Date().toISOString()};
-        await savePlatformSnapshot(db,'google-analytics',latest,forceRefresh?'Google Analytics Data API · manual R536':'Google Analytics Data API · auto freshness R536');
+        await savePlatformSnapshot(db,'google-analytics',latest,forceRefresh?'Google Analytics Data API · manual R537':'Google Analytics Data API · auto freshness R537');
       }
     }catch(error){refreshError=cleanPlainText(error?.message||error,300);}
   }
@@ -13047,7 +13051,7 @@ async function handleControlGoogleAnalytics(request, env) {
   if(hasSnapshot||live.configured||firstParty.configured){
     return json({
       ok:true,partial:!hasSnapshot,
-      source:firstParty.configured?'ga4+live-web-ai-r536':'ga4-r536',
+      source:firstParty.configured?'ga4+live-web-ai-r537':'ga4-r537',
       google,website:google,snapshotAt:latestRow?.created_at||'',refreshError,
       updatedAt:new Date().toISOString()
     });
