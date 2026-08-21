@@ -1,8 +1,0 @@
-R528
-- Google Analytics/site pane restored from user-supplied R522 reference.
-- Google site data fetch restored to R522 implementation.
-- Site card route fixed to page=google from Social Center.
-- YouTube profile button moved upward.
-- YouTube country growth moved under a spoiler.
-- YouTube third channel card centered.
-- YouTube notification check made explicit again in Service page.

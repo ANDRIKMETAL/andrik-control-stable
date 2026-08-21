@@ -1,9 +1,0 @@
-ANDRIK CONTROL / LIVE WEB AI — R497
-Social Center finish: centered monthly total
-
-Changes from R496:
-- Centers the entire «Общий итог» block horizontally: label, value and subtitle.
-- Keeps the working Site + YouTube + Instagram monthly dashboard and combined graph unchanged.
-- Removes the temporary one-time YouTube owner reconnect UI/code now that the correct channel owner OAuth is connected.
-- Keeps TikTok as the only next platform.
-- Bumps visible/runtime version and cache reset to R497.

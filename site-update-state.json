@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787309239461-caa00f6e71",
-  "release": "R534",
-  "archiveName": "R534-UPDATER-RECOVERY-CLEAN-NO-DEBUG-SAFE-FULL.zip",
-  "sourceHead": "343935b7b03f381ff8a6e4724b45249ed42af374",
-  "backupSha": "343935b7b03f381ff8a6e4724b45249ed42af374",
-  "backupTag": "control-backup-20260821104713-343935b-r534-49295",
+  "operationId": "publish-1787309958853-72d5b772cb",
+  "release": "R535",
+  "archiveName": "R535-ANALYTICS-CLEAN-PAGES-TRANSLATED-DEDUPED-SAFE-FULL.zip",
+  "sourceHead": "57cbd603e9c1befed54505ee1ffd59285568f81e",
+  "backupSha": "57cbd603e9c1befed54505ee1ffd59285568f81e",
+  "backupTag": "control-backup-20260821105913-57cbd60-r535-831a9",
   "autoRecovery": true,
-  "generatedAt": "2026-08-21T10:47:19.461Z"
+  "generatedAt": "2026-08-21T10:59:18.853Z"
 }

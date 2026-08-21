@@ -1,8 +1,0 @@
-R525 report
-- YouTube: renamed DIRECT_SYSTEM_ACTIVITY_DIALOG to human-friendly Android system share label.
-- YouTube: KPI cards made compact and uniform in 2-column mobile layout.
-- YouTube: added top header button “Открыть профиль”.
-- YouTube: subtitle kept on one line.
-- YouTube: notification check removed from page and replaced with link to Service page.
-- YouTube: added “Лучшие видео канала” block based on recent videos sorted by views.
-- Worker: /api/control/audience now returns youtube recentVideos/topVideos for UI.

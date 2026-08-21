@@ -1680,7 +1680,7 @@ async function getSiteLiveMetrics(db) {
 // are intentionally excluded from site geography and page statistics.
 function isPublicSitePathR531(value='') {
   const path=normalizeSitePath(value||'/').toLowerCase();
-  if (path.startsWith('/cache-reset')) return false;
+  if (path.startsWith('/cache-reset') || path.startsWith('/site-cache-reset')) return false;
   if (path==='/offline.html' || path==='/open-youtube.html' || path==='/comment-collection.html') return false;
   if (path.startsWith('/admin/')) return false;
   if (/(?:^|\/)(?:analytics|control-home|service|youtube|instagram|tiktok|comments|lyrics|observability|protection|promo-video|site-update|attack-map)-admin\.html$/.test(path)) return false;
@@ -1696,28 +1696,28 @@ async function getSiteFirstParty30dR530(db) {
     db.prepare(`
       SELECT local_date AS date, COUNT(*) AS screenPageViews, COUNT(DISTINCT visitor_hash) AS activeUsers
       FROM site_visit_events
-      WHERE event_type='visit' AND local_date>=?1 AND local_date<=?2 AND path NOT LIKE '/cache-reset%' AND path NOT LIKE '%-admin.html' AND path NOT LIKE '/admin/%' AND path NOT IN ('/offline.html','/open-youtube.html','/comment-collection.html')
+      WHERE event_type='visit' AND local_date>=?1 AND local_date<=?2 AND path NOT LIKE '/cache-reset%' AND path NOT LIKE '/site-cache-reset%' AND path NOT LIKE '%-admin.html' AND path NOT LIKE '/admin/%' AND path NOT IN ('/offline.html','/open-youtube.html','/comment-collection.html')
       GROUP BY local_date ORDER BY local_date ASC
     `).bind(startDate,endDate).all().catch(()=>({results:[]})),
     db.prepare(`
       SELECT country, COUNT(DISTINCT visitor_hash) AS activeUsers
       FROM site_visit_events
-      WHERE event_type='visit' AND local_date>=?1 AND local_date<=?2 AND path NOT LIKE '/cache-reset%' AND path NOT LIKE '%-admin.html' AND path NOT LIKE '/admin/%' AND path NOT IN ('/offline.html','/open-youtube.html','/comment-collection.html') AND country<>''
+      WHERE event_type='visit' AND local_date>=?1 AND local_date<=?2 AND path NOT LIKE '/cache-reset%' AND path NOT LIKE '/site-cache-reset%' AND path NOT LIKE '%-admin.html' AND path NOT LIKE '/admin/%' AND path NOT IN ('/offline.html','/open-youtube.html','/comment-collection.html') AND country<>''
       GROUP BY country ORDER BY activeUsers DESC LIMIT 250
     `).bind(startDate,endDate).all().catch(()=>({results:[]})),
     db.prepare(`
       SELECT path AS pagePath, COUNT(*) AS screenPageViews, COUNT(DISTINCT visitor_hash) AS activeUsers
       FROM site_visit_events
-      WHERE event_type='visit' AND local_date>=?1 AND local_date<=?2 AND path NOT LIKE '/cache-reset%' AND path NOT LIKE '%-admin.html' AND path NOT LIKE '/admin/%' AND path NOT IN ('/offline.html','/open-youtube.html','/comment-collection.html') AND path<>''
+      WHERE event_type='visit' AND local_date>=?1 AND local_date<=?2 AND path NOT LIKE '/cache-reset%' AND path NOT LIKE '/site-cache-reset%' AND path NOT LIKE '%-admin.html' AND path NOT LIKE '/admin/%' AND path NOT IN ('/offline.html','/open-youtube.html','/comment-collection.html') AND path<>''
       GROUP BY path ORDER BY screenPageViews DESC, activeUsers DESC LIMIT 30
     `).bind(startDate,endDate).all().catch(()=>({results:[]})),
     db.prepare(`
       SELECT COUNT(*) AS screenPageViews, COUNT(DISTINCT visitor_hash) AS activeUsers
-      FROM site_visit_events WHERE event_type='visit' AND local_date>=?1 AND local_date<=?2 AND path NOT LIKE '/cache-reset%' AND path NOT LIKE '%-admin.html' AND path NOT LIKE '/admin/%' AND path NOT IN ('/offline.html','/open-youtube.html','/comment-collection.html')
+      FROM site_visit_events WHERE event_type='visit' AND local_date>=?1 AND local_date<=?2 AND path NOT LIKE '/cache-reset%' AND path NOT LIKE '/site-cache-reset%' AND path NOT LIKE '%-admin.html' AND path NOT LIKE '/admin/%' AND path NOT IN ('/offline.html','/open-youtube.html','/comment-collection.html')
     `).bind(startDate,endDate).first().catch(()=>null),
     db.prepare(`
       SELECT COUNT(*) AS screenPageViews, COUNT(DISTINCT visitor_hash) AS activeUsers
-      FROM site_visit_events WHERE event_type='visit' AND local_date>=?1 AND local_date<=?2 AND path NOT LIKE '/cache-reset%' AND path NOT LIKE '%-admin.html' AND path NOT LIKE '/admin/%' AND path NOT IN ('/offline.html','/open-youtube.html','/comment-collection.html')
+      FROM site_visit_events WHERE event_type='visit' AND local_date>=?1 AND local_date<=?2 AND path NOT LIKE '/cache-reset%' AND path NOT LIKE '/site-cache-reset%' AND path NOT LIKE '%-admin.html' AND path NOT LIKE '/admin/%' AND path NOT IN ('/offline.html','/open-youtube.html','/comment-collection.html')
     `).bind(weekStart,endDate).first().catch(()=>null)
   ]);
   return {

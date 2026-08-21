@@ -1,5 +1,0 @@
-ANDRIK R512
-- Fixed platform swipe on Android/iOS with explicit touchstart/touchmove/touchend handling.
-- Site card now opens the GA4/Site analytics pane from Social Center instead of being rejected by launch guard.
-- Removed Albums catalog from YouTube Studio and removed “albums” from its header subtitle.
-- Updated Social Center / Instagram / TikTok / YouTube / analytics swipe routing to R512.

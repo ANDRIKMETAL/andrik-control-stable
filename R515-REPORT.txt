@@ -1,9 +1,0 @@
-ANDRIK R515 — TRIKA SMART-LINK 404 FIX
-
-- Fixed all TRIKA Spotify / Apple Music / Amazon Music buttons in RU / UA / SK / EN.
-- Removed invalid Feature.fm direct-service routes (/spotify, /apple, /amazon) that returned 404.
-- All three branded platform buttons now open the confirmed Too Lost TRIKA smart link: https://too.fm/22bbmmk
-- This keeps the release card usable before and after release without inventing unsupported direct-store URLs.
-- TRIKA local album ZIP / MP3 foundation from R514 is preserved.
-- Added immutable R515 TRIKA CSS asset and bumped public service-worker cache version to R515 so stale album pages are replaced.
-- No Instagram/TikTok analytics, Control, maps, YouTube, or other album links were changed.

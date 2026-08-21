@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="ru" translate="no" class="notranslate"><head><script>(function(){try{var u=new URL(location.href),p=(u.searchParams.get('page')||'').toLowerCase(),s=(u.searchParams.get('source')||'').toLowerCase();var sitePages=['google','site','analytics','ga','ga4','website'];var ok=(p==='map'&&s==='admin-globe')||sitePages.indexOf(p)!==-1||p==='youtube';if(!ok){location.replace('/control-home.html?page=menu&source=launch-guard-r530&v=55.00-r530');}}catch(_){}})();</script>
-<meta name="andrik-control-release" content="R531">
+<meta name="andrik-control-release" content="R535">
 <link rel="stylesheet" href="/assets/control-sleep-mode-r193.css?v=55.00-r193"><script defer src="/assets/control-sleep-mode-r193.js?v=55.00-r193"></script>
 
 <meta name="google" content="notranslate"><meta charset="utf-8"/>
@@ -1052,7 +1052,7 @@ body.analytics-admin-page.is-country-returning #worldMap .world-map-dot.is-selec
 <section class="analytics-main-chart"><article class="admin-control-card analytics-chart-card"><div class="admin-card-title-row analytics-inline-actions"><div><span class="eyeline">Последние 30 дней</span><h2>Динамика посещений</h2></div><div class="analytics-title-actions"><span class="analytics-legend">Пользователи / просмотры</span></div></div><div class="analytics-chart" id="analyticsTrend"><div class="admin-empty">Загружаем график…</div></div></article></section>
           <section class="analytics-site-geography"><article class="admin-control-card analytics-list-card analytics-site-country-card"><div class="admin-card-title-row"><div><span class="eyeline">Google Analytics · за 30 дней</span><h2>География сайта</h2><p>Страны, из которых заходили посетители сайта.</p></div></div><div id="analyticsCountries"><div class="admin-empty">Загружаем географию сайта…</div></div></article></section>
           <section class="analytics-columns"><article class="admin-control-card analytics-list-card"><div class="admin-card-title-row"><div><span class="eyeline">За 30 дней</span><h2>Популярные страницы</h2></div></div><div class="analytics-list" id="analyticsPages"><div class="admin-empty">Загружаем страницы…</div></div></article><article class="admin-control-card analytics-list-card"><div class="admin-card-title-row"><div><span class="eyeline">За 30 дней</span><h2>Устройства</h2></div></div><div class="analytics-list" id="analyticsDevices"><div class="admin-empty">Загружаем устройства…</div></div></article></section>
-          <footer class="control-version-footer"><strong>Live Web AI · профиль ANDRIK · v55.00 LIVE WEB AI FINAL R531</strong><span>Google Analytics восстановлен по R450 · 21.08.2026</span></footer>
+          <footer class="control-version-footer"><strong>Live Web AI · профиль ANDRIK · v55.00 LIVE WEB AI FINAL R535</strong><span>Google Analytics восстановлен по R450 · 21.08.2026</span></footer>
           <div class="analytics-swipe-hint analytics-site-hint"><button type="button" data-swipe-go="2">← YouTube</button><button type="button" data-swipe-go="1">Карта слушателей →</button></div>
         </div>
       </section>
@@ -1120,7 +1120,7 @@ body.analytics-admin-page.is-country-returning #worldMap .world-map-dot.is-selec
           </section>
           <details class="youtube-hidden-data"><summary>Что YouTube не отдаёт через API</summary><div class="youtube-hidden-data-body"><p><strong>Лайки:</strong> видно количество, но не имена людей, поставивших лайк.</p><p><strong>Подписчики:</strong> точный счётчик и прирост доступны, но имена скрытых/непубличных подписчиков не выдаются.</p><p><strong>Поделились:</strong> видно площадку и количество, но не конкретного получателя ссылки.</p><p><strong>Возраст и пол:</strong> показываются только когда YouTube набрал достаточную выборку для защиты приватности.</p></div></details>
 <section class="admin-control-card youtube-service-card"><div class="admin-card-title-row"><div><span class="eyeline">🔔 Реакции канала</span><h2>Проверка уведомлений перенесена</h2><p>Комментарии, подписчики и лайки теперь проверяются в разделе «Служебное».</p></div></div><div class="admin-actions"><a class="btn btn-primary" href="/service-admin.html">Открыть Служебное</a></div></section>
-          <footer class="control-version-footer"><strong>Live Web AI · профиль ANDRIK · v55.00 LIVE WEB AI FINAL R531</strong><span>внутренняя горизонтальная карусель отключена · свайп платформ перенесён в Центр соцсетей · 18.08.2026</span></footer>
+          <footer class="control-version-footer"><strong>Live Web AI · профиль ANDRIK · v55.00 LIVE WEB AI FINAL R535</strong><span>внутренняя горизонтальная карусель отключена · свайп платформ перенесён в Центр соцсетей · 18.08.2026</span></footer>
           <div class="analytics-swipe-hint analytics-youtube-hint"><button type="button" data-swipe-go="1">← Карта слушателей</button><button type="button" data-swipe-go="0">Google Analytics →</button></div>
         </div>
       </section>
@@ -1340,47 +1340,77 @@ body.analytics-admin-page.is-country-returning #worldMap .world-map-dot.is-selec
     if(raw==='/'||raw==='')return '/';
     return raw.replace(/\/+$/,'')||'/';
   };
+  const pageLanguageLabel=path=>{
+    const clean=normalizePath(path).toLowerCase();
+    if(clean==='/en'||clean.startsWith('/en/'))return'Английская версия';
+    if(clean==='/sk'||clean.startsWith('/sk/'))return'Словацкая версия';
+    if(clean==='/uk'||clean.startsWith('/uk/'))return'Украинская версия';
+    return'Русская версия';
+  };
+  const canonicalPublicPagePath=path=>{
+    let clean=normalizePath(path).split('?')[0].split('#')[0];
+    if(clean==='/index.html')return'/';
+    clean=clean.replace(/^\/(en|sk|uk)\/index\.html$/,'/$1');
+    clean=clean.replace(/\.html$/,'');
+    return normalizePath(clean);
+  };
+  const isVisibleAnalyticsPage=path=>{
+    const clean=normalizePath(path).toLowerCase().split('?')[0].split('#')[0];
+    if(!clean)return false;
+    if(/^\/(?:site-)?cache-reset(?:-|\.|\/|$)/.test(clean))return false;
+    if(clean.startsWith('/admin/')||clean==='/admin')return false;
+    if(/(?:^|\/)(?:analytics|control-home|service|youtube|instagram|tiktok|comments|lyrics|observability|protection|promo-video|site-update|attack-map)-admin(?:\.html)?$/.test(clean))return false;
+    if(['/offline','/offline.html','/open-youtube','/open-youtube.html','/comment-collection','/comment-collection.html','/cmd_sco','/service-worker.js'].includes(clean))return false;
+    if(/\/(?:manifest[^/]*\.webmanifest|sitemap[^/]*\.xml|robots\.txt|favicon\.ico)$/.test(clean))return false;
+    return true;
+  };
   const pageSectionLabel=(path,title)=>{
-    const clean=normalizePath(path);
+    const clean=canonicalPublicPagePath(path);
+    const section=clean.replace(/^\/(en|sk|uk)(?=\/|$)/,'')||'/';
     const map={
       '/':'Главная',
-      '/en':'Главная',
-      '/sk':'Главная',
-      '/uk':'Главная',
-      '/player.html':'Плеер',
-      '/comments.html':'Сообщество',
-      '/trika.html':'Трика',
-      '/en/comments.html':'Сообщество',
-      '/sk/comments.html':'Сообщество',
-      '/uk/comments.html':'Сообщество',
-      '/en/trika.html':'Трика',
-      '/sk/trika.html':'Трика',
-      '/uk/trika.html':'Трика',
-      '/offline.html':'Офлайн-страница',
-      '/cmd_sco':'Страница Search Console'
+      '/player':'Плеер',
+      '/comments':'Сообщество',
+      '/trika':'Трика',
+      '/singles':'Синглы',
+      '/albums':'Альбомы',
+      '/clips':'Клипы',
+      '/privacy':'Политика конфиденциальности',
+      '/terms':'Условия использования'
     };
-    if(map[clean])return map[clean];
+    if(map[section])return map[section];
     const originalTitle=String(title||'').trim();
     const simplified=originalTitle.replace(/\s*[|｜].*$/,'').trim();
     const t=simplified.toLowerCase();
-    if(t.includes('comment')||t.includes('community'))return'Сообщество';
+    if(t.includes('comment')||t.includes('community')||t.includes('коммент'))return'Сообщество';
     if(t.includes('player')||t.includes('плеер'))return'Плеер';
     if(t.includes('trika')||t.includes('трика'))return'Трика';
-    return simplified||clean||'Страница';
+    if(t.includes('single')||t.includes('сингл'))return'Синглы';
+    if(t.includes('album')||t.includes('альбом'))return'Альбомы';
+    if(t.includes('clip')||t.includes('клип'))return'Клипы';
+    return simplified||section.replace(/^\//,'')||'Страница';
   };
   const pageVersionLabel=path=>{
-    const clean=normalizePath(path);
-    const map={
-      '/':'Русская версия · /',
-      '/en':'Английская версия · /en/',
-      '/sk':'Словацкая версия · /sk/',
-      '/uk':'Украинская версия · /uk/',
-      '/comments.html':'Сообщество · /comments.html',
-      '/player.html':'Плеер · /player.html',
-      '/trika.html':'Раздел Трика · /trika.html',
-      '/cmd_sco':'Служебный маршрут · /cmd_sco'
-    };
-    return map[clean]||clean;
+    const clean=canonicalPublicPagePath(path);
+    const lang=pageLanguageLabel(clean);
+    const shown=clean==='/'?'/':`${clean}/`;
+    return`${lang} · ${shown}`;
+  };
+  const prepareVisibleAnalyticsPages=items=>{
+    const merged=new Map();
+    for(const item of (Array.isArray(items)?items:[])){
+      const rawPath=normalizePath(item?.pagePath||'/');
+      if(!isVisibleAnalyticsPage(rawPath))continue;
+      const key=canonicalPublicPagePath(rawPath);
+      const prev=merged.get(key)||{...item,pagePath:key,screenPageViews:0,activeUsers:0};
+      prev.screenPageViews+=Math.max(0,Number(item?.screenPageViews||0));
+      prev.activeUsers=Math.max(Number(prev.activeUsers||0),Number(item?.activeUsers||0));
+      if(!prev.pageTitle&&item?.pageTitle)prev.pageTitle=item.pageTitle;
+      merged.set(key,prev);
+    }
+    return[...merged.values()]
+      .sort((a,b)=>Number(b.screenPageViews||0)-Number(a.screenPageViews||0)||Number(b.activeUsers||0)-Number(a.activeUsers||0)||String(a.pagePath||'').localeCompare(String(b.pagePath||''),'ru'))
+      .slice(0,20);
   };
   let ownerTransportPromise=null;
   async function waitOwnerSessionTransport(maxWaitMs=8000,force=false){
@@ -2453,7 +2483,7 @@ body.analytics-admin-page.is-country-returning #worldMap .world-map-dot.is-selec
       return;
     }
     renderKpis(ga);renderTrend(ga.trend||[]);
-    renderList('analyticsPages',(ga.pages||[]).map(item=>({...item,pageLabel:pageSectionLabel(item.pagePath,item.pageTitle),pagePathLabel:pageVersionLabel(item.pagePath)})),'screenPageViews','pageLabel','pagePathLabel');
+    renderList('analyticsPages',prepareVisibleAnalyticsPages(ga.pages||[]).map(item=>({...item,pageLabel:pageSectionLabel(item.pagePath,item.pageTitle),pagePathLabel:pageVersionLabel(item.pagePath)})),'screenPageViews','pageLabel','pagePathLabel');
     renderCountrySpoiler(ga.countries||[]);
     renderList('analyticsDevices',(ga.devices||[]).map(item=>({
       ...item,
