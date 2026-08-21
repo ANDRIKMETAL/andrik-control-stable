@@ -13154,20 +13154,18 @@ async function handleControlGoogleDevicesR544(request, env) {
   }
 }
 
-// R550 — reliable YouTube top content.
-// The page waits for one focused server request. The main YouTube dashboard is not touched.
-function normalizeYoutubeTopContentR548(row = {}, type = '') {
+// R552 — focused YouTube top content.
+ // One official Top videos report returns video + creatorContentType + the counters we need.
+ // The main YouTube dashboard stays independent: this endpoint is used only by the two top pages.
+function normalizeYoutubeTopContentR552(row = {}, type = '') {
   const videoId=cleanPlainText(row?.videoId||row?.video||'',80);
-  const contentType=cleanPlainText(row?.creatorContentType||type||'',40).toUpperCase();
   return {
     videoId,
-    creatorContentType:contentType,
+    creatorContentType:cleanPlainText(row?.creatorContentType||type||'',40).toUpperCase(),
     views:Math.max(0,Number(row?.views||0)),
-    estimatedMinutesWatched:Math.max(0,Number(row?.estimatedMinutesWatched||0)),
     likes:Math.max(0,Number(row?.likes||0)),
     comments:Math.max(0,Number(row?.comments||0)),
     shares:Math.max(0,Number(row?.shares||0)),
-    subscribersGained:Math.max(0,Number(row?.subscribersGained||0)),
     title:cleanPlainText(row?.title||'',220),
     publishedAt:cleanPlainText(row?.publishedAt||'',60),
     thumbnail:cleanPlainText(row?.thumbnail||'',900),
@@ -13175,11 +13173,19 @@ function normalizeYoutubeTopContentR548(row = {}, type = '') {
   };
 }
 
-async function refreshYoutubeTopContentSnapshotR548(env) {
+async function refreshYoutubeTopContentR552(env) {
   const db=requireDb(env);
   await ensurePlatformAnalyticsSchema(db);
-  const latestRow=await db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform='youtube' ORDER BY datetime(created_at) DESC LIMIT 1`).first().catch(()=>null);
+
+  const latestRow=await db.prepare(`
+    SELECT metrics_json, created_at
+    FROM platform_snapshots
+    WHERE platform='youtube'
+    ORDER BY datetime(created_at) DESC
+    LIMIT 1
+  `).first().catch(()=>null);
   const previous=parseSnapshotMetrics(latestRow);
+
   const accessToken=await getYoutubeOAuthAccessToken(env);
   let channelId=cleanPlainText(previous?.channelId||previous?.studio?.channelId||env.YOUTUBE_CHANNEL_ID||'',120);
   if(!channelId){
@@ -13187,84 +13193,79 @@ async function refreshYoutubeTopContentSnapshotR548(env) {
     channelId=owner.channelId;
   }
   if(!channelId) throw new Error('youtube-top-channel-id-missing');
-  const startDate=isoDateDaysAgo(28), endDate=isoDateDaysAgo(1);
-  const diagnostics=[];
-  const baseParams={ids:`channel==${channelId}`,startDate,endDate,sort:'-views',maxResults:50};
 
-  // Two independent reports are requested in parallel:
-  // 1) stable top-video report with all counters;
-  // 2) the same top report with creatorContentType and only views.
-  // Keeping the type report light avoids one optional metric breaking the whole top.
-  const [metricsResult,typeResult]=await Promise.allSettled([
-    youtubeAnalyticsQuery(env,accessToken,{...baseParams,dimensions:'video',metrics:'views,estimatedMinutesWatched,likes,comments,shares,subscribersGained'}),
-    youtubeAnalyticsQuery(env,accessToken,{...baseParams,dimensions:'video,creatorContentType',metrics:'views',maxResults:200})
-  ]);
+  const startDate=isoDateDaysAgo(28);
+  const endDate=isoDateDaysAgo(1);
 
-  let rows=metricsResult.status==='fulfilled'
-    ? metricsResult.value.map(row=>normalizeYoutubeTopContentR548(row)).filter(row=>row.videoId)
-    : [];
-  if(metricsResult.status==='rejected') diagnostics.push(`top-metrics: ${cleanPlainText(metricsResult.reason?.message||metricsResult.reason,220)}`);
+  // Official YouTube Analytics "Top videos" report:
+  // required dimension video, optional creatorContentType, sort -views, <=200 rows.
+  const report=await youtubeAnalyticsQuery(env,accessToken,{
+    ids:`channel==${channelId}`,
+    startDate,
+    endDate,
+    dimensions:'video,creatorContentType',
+    metrics:'views,likes,comments,shares',
+    sort:'-views',
+    maxResults:200
+  });
 
-  const typedRows=typeResult.status==='fulfilled'
-    ? typeResult.value.map(row=>normalizeYoutubeTopContentR548(row)).filter(row=>row.videoId)
-    : [];
-  if(typeResult.status==='rejected') diagnostics.push(`top-types: ${cleanPlainText(typeResult.reason?.message||typeResult.reason,220)}`);
+  const rows=(Array.isArray(report)?report:[])
+    .map(row=>normalizeYoutubeTopContentR552(row))
+    .filter(row=>row.videoId && (row.creatorContentType==='SHORTS' || row.creatorContentType==='VIDEO_ON_DEMAND'));
 
-  // If the full metrics query is temporarily unavailable, the lightweight typed report
-  // is still enough to show a real top (with views and zeroes for unavailable counters).
-  if(!rows.length && typedRows.length) rows=typedRows.map(row=>({...row}));
+  let shorts=rows.filter(row=>row.creatorContentType==='SHORTS')
+    .sort((a,b)=>b.views-a.views)
+    .slice(0,4);
+  let videos=rows.filter(row=>row.creatorContentType==='VIDEO_ON_DEMAND')
+    .sort((a,b)=>b.views-a.views)
+    .slice(0,4);
 
-  const typeMap=new Map();
-  for(const row of typedRows){
-    if(row.videoId && row.creatorContentType) typeMap.set(row.videoId,row.creatorContentType);
-  }
-
-  // If YouTube refuses the combined video+creatorContentType report for this account,
-  // classify the highest-ranked candidates individually. These requests run concurrently.
-  const candidates=rows.slice(0,40);
-  const missing=candidates.filter(row=>!typeMap.get(row.videoId));
-  if(missing.length){
-    const classified=await Promise.allSettled(missing.map(row=>youtubeAnalyticsQuery(env,accessToken,{
-      ids:`channel==${channelId}`,
-      startDate,endDate,
-      dimensions:'creatorContentType',
-      metrics:'views',
-      filters:`video==${row.videoId}`
-    })));
-    classified.forEach((result,index)=>{
-      if(result.status!=='fulfilled') return;
-      const list=(Array.isArray(result.value)?result.value:[])
-        .map(item=>normalizeYoutubeTopContentR548(item))
-        .filter(item=>item.creatorContentType)
-        .sort((a,b)=>b.views-a.views);
-      if(list[0]?.creatorContentType) typeMap.set(missing[index].videoId,list[0].creatorContentType);
+  // Reuse titles/thumbnails already known by the normal YouTube page first.
+  const metaMap=new Map();
+  const addKnownMeta=item=>{
+    const id=cleanPlainText(item?.videoId||item?.id||'',80);
+    if(!id) return;
+    const current=metaMap.get(id)||{};
+    metaMap.set(id,{
+      title:cleanPlainText(item?.title||current.title||'',220),
+      publishedAt:cleanPlainText(item?.publishedAt||current.publishedAt||'',60),
+      thumbnail:cleanPlainText(item?.thumbnail||current.thumbnail||'',900)
     });
-  }
+  };
+  [
+    ...(Array.isArray(previous?.recentVideos)?previous.recentVideos:[]),
+    ...(Array.isArray(previous?.topVideos)?previous.topVideos:[]),
+    ...(Array.isArray(previous?.studio?.topShorts28)?previous.studio.topShorts28:[]),
+    ...(Array.isArray(previous?.studio?.topRegularVideos28)?previous.studio.topRegularVideos28:[])
+  ].forEach(addKnownMeta);
 
-  rows=rows.map(row=>({...row,creatorContentType:typeMap.get(row.videoId)||row.creatorContentType||'UNSPECIFIED'}));
-  let shorts=rows.filter(row=>row.creatorContentType==='SHORTS').sort((a,b)=>b.views-a.views).slice(0,4);
-  let videos=rows.filter(row=>row.creatorContentType==='VIDEO_ON_DEMAND').sort((a,b)=>b.views-a.views).slice(0,4);
-
-  // Enrich only the eight cards that will be shown. API-key call first, OAuth fallback second.
   const selected=[...shorts,...videos];
   const ids=[...new Set(selected.map(row=>row.videoId).filter(Boolean))];
-  const metaMap=new Map();
-  if(ids.length){
-    let data=null;
-    try{ data=await youtubeApiJson(env,'videos',{part:'snippet',id:ids.join(','),maxResults:50},{timeoutMs:6500}); }
-    catch(firstError){
-      diagnostics.push(`video-meta-key: ${cleanPlainText(firstError?.message||firstError,180)}`);
-      try{ data=await youtubeApiJson(env,'videos',{part:'snippet',id:ids.join(','),maxResults:50},{timeoutMs:6500,oauth:true}); }
-      catch(secondError){ diagnostics.push(`video-meta-oauth: ${cleanPlainText(secondError?.message||secondError,180)}`); }
-    }
-    for(const item of (data?.data?.items||[])){
-      const id=cleanPlainText(item?.id||'',80);
-      if(!id)continue;
-      metaMap.set(id,{
-        title:cleanPlainText(item?.snippet?.title||'',220),
-        publishedAt:cleanPlainText(item?.snippet?.publishedAt||'',60),
-        thumbnail:cleanPlainText(item?.snippet?.thumbnails?.high?.url||item?.snippet?.thumbnails?.medium?.url||item?.snippet?.thumbnails?.default?.url||'',900)
-      });
+  const missingMeta=ids.filter(id=>!metaMap.get(id)?.title);
+
+  // At most one inexpensive Data API request for titles and thumbnails.
+  if(missingMeta.length){
+    try{
+      const response=await youtubeApiJson(env,'videos',{
+        part:'snippet',
+        id:missingMeta.join(','),
+        maxResults:50
+      },{timeoutMs:6000});
+      for(const item of (response?.data?.items||[])){
+        const id=cleanPlainText(item?.id||'',80);
+        if(!id) continue;
+        metaMap.set(id,{
+          title:cleanPlainText(item?.snippet?.title||'',220),
+          publishedAt:cleanPlainText(item?.snippet?.publishedAt||'',60),
+          thumbnail:cleanPlainText(
+            item?.snippet?.thumbnails?.high?.url||
+            item?.snippet?.thumbnails?.medium?.url||
+            item?.snippet?.thumbnails?.default?.url||'',900
+          )
+        });
+      }
+    }catch(_){
+      // Cards still render with the canonical YouTube thumbnail and ID-based title.
     }
   }
 
@@ -13272,25 +13273,26 @@ async function refreshYoutubeTopContentSnapshotR548(env) {
     const meta=metaMap.get(row.videoId)||{};
     return {
       ...row,
-      ...meta,
       title:cleanPlainText(meta.title||row.title||`Видео ${row.videoId}`,220),
-      url:isShort?`https://www.youtube.com/shorts/${encodeURIComponent(row.videoId)}`:`https://www.youtube.com/watch?v=${encodeURIComponent(row.videoId)}`
+      publishedAt:cleanPlainText(meta.publishedAt||row.publishedAt||'',60),
+      thumbnail:cleanPlainText(meta.thumbnail||row.thumbnail||`https://i.ytimg.com/vi/${encodeURIComponent(row.videoId)}/hqdefault.jpg`,900),
+      url:isShort
+        ? `https://www.youtube.com/shorts/${encodeURIComponent(row.videoId)}`
+        : `https://www.youtube.com/watch?v=${encodeURIComponent(row.videoId)}`
     };
   };
+
   shorts=shorts.map(row=>enrich(row,true));
   videos=videos.map(row=>enrich(row,false));
   const updatedAt=new Date().toISOString();
 
-  // D1 is now only a cache. Even if saving fails, the current request still returns cards.
+  // Save as a cache only; a D1 write failure never blocks the current response.
   try{
     const merged={
       ...previous,
-      configured:true,
       channelId,
       studio:{
         ...(previous?.studio||{}),
-        configured:true,
-        connected:true,
         topVideos28:rows,
         topShorts28:shorts,
         topRegularVideos28:videos,
@@ -13300,61 +13302,88 @@ async function refreshYoutubeTopContentSnapshotR548(env) {
       },
       updatedAt
     };
-    await savePlatformSnapshot(db,'youtube',merged,'YouTube top content R550');
-  }catch(saveError){
-    diagnostics.push(`d1-save: ${cleanPlainText(saveError?.message||saveError,180)}`);
-  }
+    await savePlatformSnapshot(db,'youtube',merged,'YouTube top content R552');
+  }catch(_){}
 
-  return {shorts,videos,startDate,endDate,updatedAt,diagnostics};
+  return {shorts,videos,startDate,endDate,updatedAt};
 }
 
-async function handleControlYoutubeTopContentR548(request, env, ctx) {
-  if (!adminAuthorized(request, env)) return json({ ok:false, error:'unauthorized' }, 401);
+async function handleControlYoutubeTopContentR552(request, env) {
+  if (!adminAuthorized(request, env)) return json({ok:false,error:'unauthorized'},401);
+
   const url=new URL(request.url);
+  const wanted=url.searchParams.get('type')==='videos'?'videos':'shorts';
   const force=url.searchParams.get('refresh')==='1';
   const db=requireDb(env);
   await ensurePlatformAnalyticsSchema(db);
-  const row=await db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform='youtube' ORDER BY datetime(created_at) DESC LIMIT 1`).first().catch(()=>null);
-  const snap=parseSnapshotMetrics(row);
-  const studio=snap?.studio||{};
-  const cachedShorts=Array.isArray(studio.topShorts28)?studio.topShorts28.map(row=>normalizeYoutubeTopContentR548(row,'SHORTS')).filter(row=>row.videoId).slice(0,4):[];
-  const cachedVideos=Array.isArray(studio.topRegularVideos28)?studio.topRegularVideos28.map(row=>normalizeYoutubeTopContentR548(row,'VIDEO_ON_DEMAND')).filter(row=>row.videoId).slice(0,4):[];
-  const cacheReady=Boolean(cachedShorts.length||cachedVideos.length);
 
-  if(cacheReady && !force){
+  const latestRow=await db.prepare(`
+    SELECT metrics_json, created_at
+    FROM platform_snapshots
+    WHERE platform='youtube'
+    ORDER BY datetime(created_at) DESC
+    LIMIT 1
+  `).first().catch(()=>null);
+  const snap=parseSnapshotMetrics(latestRow);
+  const studio=snap?.studio||{};
+
+  const cachedShorts=(Array.isArray(studio.topShorts28)?studio.topShorts28:[])
+    .map(row=>normalizeYoutubeTopContentR552(row,'SHORTS'))
+    .filter(row=>row.videoId)
+    .sort((a,b)=>b.views-a.views)
+    .slice(0,4);
+  const cachedVideos=(Array.isArray(studio.topRegularVideos28)?studio.topRegularVideos28:[])
+    .map(row=>normalizeYoutubeTopContentR552(row,'VIDEO_ON_DEMAND'))
+    .filter(row=>row.videoId)
+    .sort((a,b)=>b.views-a.views)
+    .slice(0,4);
+
+  const wantedCached=wanted==='videos'?cachedVideos:cachedShorts;
+  if(wantedCached.length && !force){
     return json({
-      ok:true,available:true,warming:false,
+      ok:true,
+      available:true,
+      source:'youtube-top-cache-r552',
+      shorts:cachedShorts,
+      videos:cachedVideos,
       startDate:studio.topContentStartDate||studio.startDate||isoDateDaysAgo(28),
       endDate:studio.topContentEndDate||studio.endDate||isoDateDaysAgo(1),
-      shorts:cachedShorts,videos:cachedVideos,
-      source:'youtube-d1-cache-r550',
-      updatedAt:studio.topContentUpdatedAt||row?.created_at||snap?.updatedAt||''
+      updatedAt:studio.topContentUpdatedAt||latestRow?.created_at||snap?.updatedAt||''
     });
   }
 
   try{
     const fresh=await Promise.race([
-      refreshYoutubeTopContentSnapshotR548(env),
-      new Promise((_,reject)=>setTimeout(()=>reject(new Error('youtube-top-r550-timeout')),19000))
+      refreshYoutubeTopContentR552(env),
+      new Promise((_,reject)=>setTimeout(()=>reject(new Error('youtube-top-r552-timeout')),18000))
     ]);
     return json({
       ok:true,
-      available:Boolean(fresh.shorts.length||fresh.videos.length),
-      warming:false,
-      shorts:fresh.shorts,
-      videos:fresh.videos,
-      startDate:fresh.startDate,
-      endDate:fresh.endDate,
-      source:'youtube-live-top-r550',
-      updatedAt:fresh.updatedAt,
-      diagnostics:fresh.diagnostics||[]
+      available:Boolean((wanted==='videos'?fresh.videos:fresh.shorts).length),
+      source:'youtube-top-live-r552',
+      ...fresh
     });
   }catch(error){
-    // Never discard a usable cached top because one live refresh failed.
-    if(cacheReady){
-      return json({ok:true,available:true,warming:false,shorts:cachedShorts,videos:cachedVideos,source:'youtube-d1-cache-after-refresh-error-r550',updatedAt:studio.topContentUpdatedAt||row?.created_at||'',refreshError:cleanPlainText(error?.message||error,260)});
+    if(wantedCached.length){
+      return json({
+        ok:true,
+        available:true,
+        source:'youtube-top-cache-fallback-r552',
+        shorts:cachedShorts,
+        videos:cachedVideos,
+        updatedAt:studio.topContentUpdatedAt||latestRow?.created_at||'',
+        refreshError:cleanPlainText(error?.message||error,260)
+      });
     }
-    return json({ok:false,available:false,warming:false,shorts:[],videos:[],source:'youtube-top-r550-error',error:cleanPlainText(error?.message||error,300),updatedAt:new Date().toISOString()},200);
+    return json({
+      ok:false,
+      available:false,
+      source:'youtube-top-error-r552',
+      shorts:[],
+      videos:[],
+      error:cleanPlainText(error?.message||error,300),
+      updatedAt:new Date().toISOString()
+    },200);
   }
 }
 
@@ -16559,7 +16588,7 @@ async function routeApi(request, env, ctx) {
     if (path === '/api/control/social-overview' && request.method === 'GET') return await handleControlSocialOverviewR487(request, env);
     if (path === '/api/control/ecosystem-map' && request.method === 'GET') return await handleControlEcosystemMap(request, env);
     if (path === '/api/control/audience' && request.method === 'GET') return await handleControlAudience(request, env);
-    if (path === '/api/control/youtube-top-content' && request.method === 'GET') return await handleControlYoutubeTopContentR548(request, env, ctx);
+    if (path === '/api/control/youtube-top-content' && request.method === 'GET') return await handleControlYoutubeTopContentR552(request, env);
     if (path === '/api/control/search-console' && request.method === 'GET') return await handleControlSearchConsole(request, env);
     if (path === '/api/control/snapshots/refresh' && request.method === 'POST') return await handleControlSnapshotsRefresh(request, env);
     if (path === '/api/control/country-growth' && request.method === 'GET') return await handleControlCountryGrowth(request, env);
