@@ -13148,6 +13148,12 @@ async function handleControlGoogleDevicesR544(request, env) {
 // dashboard. If this report fails, the core YouTube page remains fully operational.
 async function handleControlYoutubeTopContentR544(request, env) {
   if (!adminAuthorized(request, env)) return json({ ok:false, error:'unauthorized' }, 401);
+  const startDate = isoDateDaysAgo(28), endDate = isoDateDaysAgo(1);
+  const durationSeconds = value => {
+    const m=String(value||'').match(/^P(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?)?$/i);
+    if(!m)return 0;
+    return Number(m[1]||0)*86400+Number(m[2]||0)*3600+Number(m[3]||0)*60+Number(m[4]||0);
+  };
   try {
     const config = youtubeOAuthClient(env);
     const refreshToken = await getYoutubeRefreshToken(env);
@@ -13155,18 +13161,37 @@ async function handleControlYoutubeTopContentR544(request, env) {
       return json({ ok:true, available:false, shorts:[], videos:[], error:'youtube-studio-not-connected' });
     }
     const accessToken = await getYoutubeOAuthAccessToken(env);
-    const owner = await resolveYoutubeAnalyticsOwnerR495(env, accessToken);
-    const startDate = isoDateDaysAgo(28), endDate = isoDateDaysAgo(1);
-    const rows = await youtubeAnalyticsQuery(env, accessToken, {
-      ids:`channel==${owner.channelId}`,
-      startDate,
-      endDate,
-      dimensions:'video,creatorContentType',
-      metrics:'views,likes,comments,shares',
-      sort:'-views',
-      maxResults:80
-    });
-    const normalized = (Array.isArray(rows)?rows:[]).map(row=>({
+
+    // Prefer the already verified channel ID. Only fall back to the owner lookup when needed.
+    let channelId=cleanPlainText(env.YOUTUBE_CHANNEL_ID||'',120);
+    if(!channelId){
+      try{
+        const db=requireDb(env);
+        await ensurePlatformAnalyticsSchema(db);
+        const row=await db.prepare(`SELECT metrics_json FROM platform_snapshots WHERE platform='youtube' ORDER BY created_at DESC LIMIT 1`).first();
+        const snap=parseSnapshotMetrics(row);
+        channelId=cleanPlainText(snap?.channelId||snap?.studio?.channelId||'',120);
+      }catch(_){ }
+    }
+    if(!channelId){
+      const owner=await resolveYoutubeAnalyticsOwnerR495(env,accessToken);
+      channelId=owner.channelId;
+    }
+    const base={ids:`channel==${channelId}`,startDate,endDate};
+
+    let rows=[];
+    let exactError='';
+    try{
+      rows=await youtubeAnalyticsQuery(env,accessToken,{
+        ...base,
+        dimensions:'video,creatorContentType',
+        metrics:'views,likes,comments,shares',
+        sort:'-views',
+        maxResults:80
+      });
+    }catch(error){ exactError=cleanPlainText(error?.message||error,280); }
+
+    let normalized=(Array.isArray(rows)?rows:[]).map(row=>({
       videoId:cleanPlainText(row?.video||'',80),
       creatorContentType:cleanPlainText(row?.creatorContentType||'',40).toUpperCase(),
       views:Math.max(0,Number(row?.views||0)),
@@ -13174,29 +13199,81 @@ async function handleControlYoutubeTopContentR544(request, env) {
       comments:Math.max(0,Number(row?.comments||0)),
       shares:Math.max(0,Number(row?.shares||0))
     })).filter(row=>row.videoId);
-    const shortsBase=normalized.filter(row=>row.creatorContentType==='SHORTS').slice(0,4);
-    const videosBase=normalized.filter(row=>row.creatorContentType==='VIDEO_ON_DEMAND').slice(0,4);
-    const ids=[...new Set([...shortsBase,...videosBase].map(row=>row.videoId))];
+
+    // Reliable fallback: the plain video report is already used by the main Studio panel.
+    // If the combined creatorContentType report is rejected by YouTube, classify those
+    // top videos by duration. On this channel Shorts are short-form uploads; <= 180 s
+    // also covers YouTube's current 3-minute Shorts limit.
+    let fallbackUsed=false;
+    if(!normalized.length){
+      fallbackUsed=true;
+      let plain=[];
+      try{
+        plain=await youtubeAnalyticsQuery(env,accessToken,{
+          ...base,
+          dimensions:'video',
+          metrics:'views,likes,comments,shares',
+          sort:'-views',
+          maxResults:40
+        });
+      }catch(_){ }
+      normalized=(Array.isArray(plain)?plain:[]).map(row=>({
+        videoId:cleanPlainText(row?.video||'',80),
+        creatorContentType:'',
+        views:Math.max(0,Number(row?.views||0)),
+        likes:Math.max(0,Number(row?.likes||0)),
+        comments:Math.max(0,Number(row?.comments||0)),
+        shares:Math.max(0,Number(row?.shares||0))
+      })).filter(row=>row.videoId);
+
+      // Last fallback: use the latest stored Studio top list instead of returning an empty panel.
+      if(!normalized.length){
+        try{
+          const db=requireDb(env);
+          await ensurePlatformAnalyticsSchema(db);
+          const row=await db.prepare(`SELECT metrics_json FROM platform_snapshots WHERE platform='youtube' ORDER BY created_at DESC LIMIT 1`).first();
+          const snap=parseSnapshotMetrics(row);
+          normalized=(Array.isArray(snap?.studio?.topVideos28)?snap.studio.topVideos28:[]).map(item=>({
+            videoId:cleanPlainText(item?.videoId||'',80),creatorContentType:'',views:Math.max(0,Number(item?.views||0)),likes:Math.max(0,Number(item?.likes||0)),comments:Math.max(0,Number(item?.comments||0)),shares:Math.max(0,Number(item?.shares||0)),title:cleanPlainText(item?.title||'',220),publishedAt:cleanPlainText(item?.publishedAt||'',60),thumbnail:cleanPlainText(item?.thumbnail||'',900)
+          })).filter(row=>row.videoId);
+        }catch(_){ }
+      }
+    }
+
+    const ids=[...new Set(normalized.slice(0,80).map(row=>row.videoId))];
     let metaMap=new Map();
     if(ids.length){
       try{
-        const metaResult=await youtubeApiJson(env,'videos',{part:'snippet',id:ids.join(','),maxResults:50},{timeoutMs:5000});
+        const metaResult=await youtubeApiJson(env,'videos',{part:'snippet,contentDetails',id:ids.slice(0,50).join(','),maxResults:50},{timeoutMs:6000});
         metaMap=new Map((metaResult?.data?.items||[]).map(item=>[cleanPlainText(item?.id||'',80),{
           title:cleanPlainText(item?.snippet?.title||'',220),
           publishedAt:cleanPlainText(item?.snippet?.publishedAt||'',60),
-          thumbnail:item?.snippet?.thumbnails?.medium?.url||item?.snippet?.thumbnails?.default?.url||''
+          thumbnail:item?.snippet?.thumbnails?.medium?.url||item?.snippet?.thumbnails?.default?.url||'',
+          durationSeconds:durationSeconds(item?.contentDetails?.duration||'')
         }]));
       }catch(_){ }
     }
-    const enrich=(row,isShort)=>{
+
+    const enriched=normalized.map(row=>{
       const meta=metaMap.get(row.videoId)||{};
-      return {...row,...meta,url:isShort?`https://www.youtube.com/shorts/${encodeURIComponent(row.videoId)}`:`https://www.youtube.com/watch?v=${encodeURIComponent(row.videoId)}`};
-    };
+      let type=row.creatorContentType;
+      if(!type && Number(meta.durationSeconds||0)>0) type=Number(meta.durationSeconds)<=180?'SHORTS':'VIDEO_ON_DEMAND';
+      return {...row,...meta,creatorContentType:type};
+    });
+    const make=(row,isShort)=>({
+      ...row,
+      title:cleanPlainText(row.title||`Видео ${row.videoId}`,220),
+      url:isShort?`https://www.youtube.com/shorts/${encodeURIComponent(row.videoId)}`:`https://www.youtube.com/watch?v=${encodeURIComponent(row.videoId)}`
+    });
+    const shorts=enriched.filter(row=>row.creatorContentType==='SHORTS').sort((a,b)=>b.views-a.views).slice(0,4).map(row=>make(row,true));
+    const videos=enriched.filter(row=>row.creatorContentType==='VIDEO_ON_DEMAND').sort((a,b)=>b.views-a.views).slice(0,4).map(row=>make(row,false));
+
     return json({
-      ok:true,available:true,startDate,endDate,
-      shorts:shortsBase.map(row=>enrich(row,true)),
-      videos:videosBase.map(row=>enrich(row,false)),
-      source:'youtube-analytics-creatorContentType-r544',
+      ok:true,
+      available:Boolean(shorts.length||videos.length),
+      startDate,endDate,shorts,videos,
+      source:fallbackUsed?'youtube-analytics-video-duration-fallback-r546':'youtube-analytics-creatorContentType-r546',
+      exactError,
       updatedAt:new Date().toISOString()
     });
   } catch (error) {

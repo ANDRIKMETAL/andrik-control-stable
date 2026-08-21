@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="ru" translate="no" class="notranslate"><head>
-<meta name="andrik-control-release" content="R545">
+<meta name="andrik-control-release" content="R546">
 <link rel="stylesheet" href="/assets/control-sleep-mode-r193.css?v=55.00-r193"><script defer src="/assets/control-sleep-mode-r193.js?v=55.00-r193"></script>
 
 <meta name="google" content="notranslate"><meta charset="utf-8"/>
@@ -58,19 +58,11 @@
 .youtube-admin-page .youtube-header-links{margin-top:6px!important;margin-bottom:5px!important}
 .youtube-admin-page .youtube-profile-link{position:relative;z-index:3;padding:7px 11px!important;border-radius:14px!important;font-size:.72rem!important;min-height:0!important;line-height:1.05!important}
 .youtube-admin-page .youtube-kpi-unified #analyticsYoutube>.analytics-kpi:last-child{grid-column:1/-1!important;width:calc(50% - 5px)!important;max-width:290px!important;justify-self:center!important}
-.youtube-content-launcher{margin-top:12px;border:1px solid rgba(145,208,255,.16);border-radius:22px;background:linear-gradient(145deg,rgba(8,20,34,.86),rgba(4,11,18,.96));overflow:hidden}
-.youtube-content-launcher>summary{list-style:none;cursor:pointer;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;padding:16px 18px}
-.youtube-content-launcher>summary::-webkit-details-marker{display:none}
-.youtube-content-launcher-icon{display:grid;place-items:center;width:42px;height:42px;border-radius:14px;background:rgba(145,208,255,.08);font-size:1.1rem}
-.youtube-content-launcher>summary span:nth-child(2){display:grid;gap:3px;min-width:0}
-.youtube-content-launcher>summary small{color:#9ecbff;font-size:.62rem;font-weight:900;letter-spacing:.14em}
-.youtube-content-launcher>summary strong{color:#f5fbff;font-size:1.05rem;line-height:1.1}
-.youtube-content-launcher>summary em{font-style:normal;color:#9ecbff;font-size:.72rem;font-weight:800}
-.youtube-content-launcher[open]>summary em{font-size:0}
-.youtube-content-launcher[open]>summary em::after{content:'Скрыть';font-size:.72rem}
-.youtube-content-launcher-body{padding:0 16px 16px}
-.youtube-content-launcher-body>p{margin:0 0 12px;color:#91a7b8;font-size:.78rem;line-height:1.45}
-@media(max-width:540px){.youtube-admin-page .youtube-header-links{margin-top:4px!important}.youtube-admin-page .youtube-profile-link{padding:6px 10px!important;font-size:.68rem!important}.youtube-admin-page .youtube-kpi-unified #analyticsYoutube>.analytics-kpi:last-child{width:100%!important;max-width:calc(50% - 4px)!important}.youtube-content-launcher>summary{padding:14px 15px}.youtube-content-launcher-icon{width:38px;height:38px}}
+
+.youtube-content-nav-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
+.youtube-content-nav-card{display:grid;grid-template-columns:auto 1fr;align-items:center;gap:12px;padding:16px 18px;border:1px solid rgba(145,208,255,.16);border-radius:22px;background:linear-gradient(145deg,rgba(8,20,34,.86),rgba(4,11,18,.96));text-decoration:none;color:#eef6ff;min-width:0}
+.youtube-content-nav-card>span:last-child{display:grid;gap:4px;min-width:0}.youtube-content-nav-card small{color:#9ecbff;font-size:.62rem;font-weight:900;letter-spacing:.14em}.youtube-content-nav-card strong{font-size:1.04rem;line-height:1.12}.youtube-content-nav-card em{font-style:normal;color:#9ecbff;font-size:.72rem;font-weight:800}.youtube-content-launcher-icon{display:grid;place-items:center;width:42px;height:42px;border-radius:14px;background:rgba(145,208,255,.08);font-size:1.1rem}
+@media(max-width:540px){.youtube-content-nav-grid{grid-template-columns:1fr}.youtube-content-nav-card{padding:14px 15px}.youtube-content-launcher-icon{width:38px;height:38px}.youtube-admin-page .youtube-header-links{margin-top:4px!important}.youtube-admin-page .youtube-profile-link{padding:6px 10px!important;font-size:.68rem!important}.youtube-admin-page .youtube-kpi-unified #analyticsYoutube>.analytics-kpi:last-child{width:100%!important;max-width:calc(50% - 4px)!important}}
 </style>
 <link href="/assets/control-v54-72.css?v=54.72" rel="stylesheet"/>
 <link href="/assets/control-v54-74.css?v=54.74" rel="stylesheet"/>
@@ -118,12 +110,14 @@
 
 
 <details class="andrik-spoiler youtube-country-spoiler" id="youtubeCountryGrowthSection" hidden><summary>🌍 Рост по странам · 7 дней</summary><div class="andrik-spoiler-body"><p style="margin:0 0 14px;color:#91a7b8">Просмотры за неделю и разница с предыдущей неделей.</p><div class="analytics-list" id="youtubeCountryGrowth"></div></div></details>
-<details class="youtube-content-launcher" id="youtubeTopShortsSection"><summary><span class="youtube-content-launcher-icon">🔥</span><span><small>TOP SHORTS · 28 ДНЕЙ</small><strong>Лучшие Shorts</strong></span><em>Открыть</em></summary><div class="youtube-content-launcher-body"><p>До 4 Shorts с наибольшим числом просмотров за 28 завершённых дней.</p><div class="youtube-video-list" id="youtubeTopShorts"><div class="admin-empty">Откройте раздел — данные загрузятся отдельно.</div></div></div></details>
-<details class="youtube-content-launcher" id="youtubeTopVideosRegularSection"><summary><span class="youtube-content-launcher-icon">🎬</span><span><small>TOP ВИДЕО · 28 ДНЕЙ</small><strong>Лучшие видео</strong></span><em>Открыть</em></summary><div class="youtube-content-launcher-body"><p>До 4 обычных видео с наибольшим числом просмотров за 28 завершённых дней.</p><div class="youtube-video-list" id="youtubeTopVideosRegular"><div class="admin-empty">Откройте раздел — данные загрузятся отдельно.</div></div></div></details>
-<footer class="control-version-footer"><strong>Live Web AI · профиль ANDRIK · v55.00 LIVE WEB AI FINAL R545</strong><span>YouTube Studio · свайп платформ через Центр соцсетей · 18.08.2026</span></footer>
+<section class="youtube-content-nav-grid" aria-label="Топ контента YouTube">
+  <a class="youtube-content-nav-card" href="/youtube-top-shorts.html?v=55.00-r546"><span class="youtube-content-launcher-icon">🔥</span><span><small>TOP SHORTS · 28 ДНЕЙ</small><strong>Лучшие Shorts</strong><em>Открыть отдельный раздел →</em></span></a>
+  <a class="youtube-content-nav-card" href="/youtube-top-videos.html?v=55.00-r546"><span class="youtube-content-launcher-icon">🎬</span><span><small>TOP ВИДЕО · 28 ДНЕЙ</small><strong>Лучшие видео</strong><em>Открыть отдельный раздел →</em></span></a>
+</section>
+<footer class="control-version-footer"><strong>Live Web AI · профиль ANDRIK · v55.00 LIVE WEB AI FINAL R546</strong><span>YouTube Studio · свайп платформ через Центр соцсетей · 18.08.2026</span></footer>
 </div></main>
-<script defer src="/assets/youtube-admin-v55-00k.js?v=55.00k-r545"></script><script defer src="/assets/control-status-eye-v55-00-r88.js?v=55.00-r88"></script><script defer src="/assets/control-version-v55-00-final-r1.js?v=55.00-final-r1"></script><script defer src="/assets/control-version-v55-00-final-r2.js?v=55.00-final-r2"></script><script defer src="/assets/control-version-v55-00-final-r21.js?v=55.00-final-r21"></script><script defer src="/assets/control-live-eye-v55-00-r265.js?v=55.00-r265"></script><script defer src="/assets/control-version-v55-00-r115.js?v=55.00-r115"></script><script defer src="/assets/unified-glow-r139.js?v=55.00-r142"></script>
+<script defer src="/assets/youtube-admin-v55-00k.js?v=55.00k-r546"></script><script defer src="/assets/control-status-eye-v55-00-r88.js?v=55.00-r88"></script><script defer src="/assets/control-version-v55-00-final-r1.js?v=55.00-final-r1"></script><script defer src="/assets/control-version-v55-00-final-r2.js?v=55.00-final-r2"></script><script defer src="/assets/control-version-v55-00-final-r21.js?v=55.00-final-r21"></script><script defer src="/assets/control-live-eye-v55-00-r265.js?v=55.00-r265"></script><script defer src="/assets/control-version-v55-00-r115.js?v=55.00-r115"></script><script defer src="/assets/unified-glow-r139.js?v=55.00-r142"></script>
 <script defer src="/assets/control-mini-player-r141.js?v=55.00-r144"></script>
-<script defer src="/assets/control-version-sync-r545.js?v=55.00-r545"></script>
+<script defer src="/assets/control-version-sync-r546.js?v=55.00-r546"></script>
 <script defer src="/assets/social-platform-swipe-r524.js?v=55.00-r524"></script>
 </body></html>
