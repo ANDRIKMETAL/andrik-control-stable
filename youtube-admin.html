@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="ru" translate="no" class="notranslate"><head>
-<meta name="andrik-control-release" content="R527">
+<meta name="andrik-control-release" content="R528">
 <link rel="stylesheet" href="/assets/control-sleep-mode-r193.css?v=55.00-r193"><script defer src="/assets/control-sleep-mode-r193.js?v=55.00-r193"></script>
 
 <meta name="google" content="notranslate"><meta charset="utf-8"/>
@@ -54,6 +54,11 @@
 .youtube-video-open{white-space:nowrap;text-decoration:none;color:#dff3ff;font-weight:800;padding:10px 12px;border-radius:14px;border:1px solid rgba(145,208,255,.18);background:rgba(7,19,31,.78)}
 @media (max-width:540px){.youtube-title-status-row{align-items:center!important;flex-wrap:nowrap!important}.youtube-studio-gate-inline{max-width:49%!important;width:auto!important}.youtube-profile-link{margin-left:0}.youtube-kpi-unified #analyticsYoutube,.youtube-kpi-unified #youtubeStudioKpis{grid-template-columns:repeat(2,minmax(0,1fr))!important}.youtube-header-links{display:flex;justify-content:center;gap:8px}.youtube-header-links a{padding:10px 12px;font-size:.86rem}.youtube-kpi-unified #analyticsYoutube>.analytics-kpi:last-child{max-width:100%}}
 @media (max-width:420px){.youtube-monitor-grid span{font-size:.85rem;padding:10px 6px}.youtube-video-row{grid-template-columns:56px 1fr;align-items:start}.youtube-video-open{grid-column:1/-1;justify-self:start}.youtube-video-rank{width:56px;height:56px;border-radius:16px}.youtube-kpi-unified #analyticsYoutube,.youtube-kpi-unified #youtubeStudioKpis{gap:8px!important}}
+
+.youtube-admin-page .youtube-header-links{margin-top:-20px!important;margin-bottom:4px!important}
+.youtube-admin-page .youtube-profile-link{position:relative;z-index:3}
+.youtube-admin-page .youtube-kpi-unified #analyticsYoutube>.analytics-kpi:last-child{grid-column:1/-1!important;width:calc(50% - 5px)!important;max-width:290px!important;justify-self:center!important}
+@media(max-width:540px){.youtube-admin-page .youtube-header-links{margin-top:-14px!important}.youtube-admin-page .youtube-kpi-unified #analyticsYoutube>.analytics-kpi:last-child{width:100%!important;max-width:calc(50% - 4px)!important}}
 </style>
 <link href="/assets/control-v54-72.css?v=54.72" rel="stylesheet"/>
 <link href="/assets/control-v54-74.css?v=54.74" rel="stylesheet"/>
@@ -72,6 +77,7 @@
 <script defer src="/assets/control-cache-reset-r306.js?v=55.00-r306"></script>
 <link rel="stylesheet" href="/assets/social-platform-swipe-r524.css?v=55.00-r524">
 <link rel="stylesheet" href="/assets/youtube-r526.css?v=55.00-r526">
+<link rel="stylesheet" href="/assets/youtube-r528.css?v=55.00-r528">
 </head>
 <body class="trika-standalone-page comments-admin-page control-page analytics-admin-page youtube-admin-page youtube-v54-02-page">
 <nav class="topbar control-topbar control-detail-topbar youtube-topbar-clean"><div class="wrap nav-shell analytics-topbar-minimal"><a class="control-center-logo" id="controlCenterLogo" href="https://andrikmetal.com/" aria-label="Открыть главный сайт ANDRIK"><img class="logo-ok" src="/assets/control-topbar-eye-triangle.jpg?v=55.00-r129" alt=""/><img class="logo-error" src="/assets/andrik-control-red-triangle-192.png" alt=""/></a></div></nav>
@@ -99,8 +105,8 @@
 </section>
 
 
-<section class="admin-control-card analytics-list-card youtube-country-card" id="youtubeCountryGrowthSection" hidden><div class="admin-card-title-row"><div><span class="eyeline">🌍 7 ДНЕЙ</span><h2>Рост по странам</h2><p>Просмотры за неделю и разница с предыдущей неделей.</p></div></div><div class="analytics-list" id="youtubeCountryGrowth"></div></section>
-<footer class="control-version-footer"><strong>Live Web AI · профиль ANDRIK · v55.00 LIVE WEB AI FINAL R527</strong><span>YouTube Studio · свайп платформ через Центр соцсетей · 18.08.2026</span></footer>
+<details class="andrik-spoiler youtube-country-spoiler" id="youtubeCountryGrowthSection" hidden><summary>🌍 Рост по странам · 7 дней</summary><div class="andrik-spoiler-body"><p style="margin:0 0 14px;color:#91a7b8">Просмотры за неделю и разница с предыдущей неделей.</p><div class="analytics-list" id="youtubeCountryGrowth"></div></div></details>
+<footer class="control-version-footer"><strong>Live Web AI · профиль ANDRIK · v55.00 LIVE WEB AI FINAL R528</strong><span>YouTube Studio · свайп платформ через Центр соцсетей · 18.08.2026</span></footer>
 </div></main>
 <script defer src="/assets/youtube-admin-v55-00f.js?v=55.00f"></script><script defer src="/assets/control-status-eye-v55-00-r88.js?v=55.00-r88"></script><script defer src="/assets/control-version-v55-00-final-r1.js?v=55.00-final-r1"></script><script defer src="/assets/control-version-v55-00-final-r2.js?v=55.00-final-r2"></script><script defer src="/assets/control-version-v55-00-final-r21.js?v=55.00-final-r21"></script><script defer src="/assets/control-live-eye-v55-00-r265.js?v=55.00-r265"></script><script defer src="/assets/control-version-v55-00-r115.js?v=55.00-r115"></script><script defer src="/assets/unified-glow-r139.js?v=55.00-r142"></script>
 <script defer src="/assets/control-mini-player-r141.js?v=55.00-r144"></script>

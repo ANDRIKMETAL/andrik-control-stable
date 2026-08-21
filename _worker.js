@@ -5853,20 +5853,6 @@ async function fetchGoogleSiteAnalytics(env) {
       dateRanges: [{ startDate: '30daysAgo', endDate: 'today' }], dimensions: [{ name: 'deviceCategory' }], metrics: [{ name: 'activeUsers' }], orderBys: [{ metric: { metricName: 'activeUsers' }, desc: true }], limit: '8'
     })
   ]);
-  let agesReport = null;
-  let gendersReport = null;
-  try {
-    agesReport = await googleAnalyticsPost(accessToken, property.id, 'runReport', {
-      dateRanges: [{ startDate: '30daysAgo', endDate: 'today' }], dimensions: [{ name: 'userAgeBracket' }], metrics: [{ name: 'activeUsers' }],
-      orderBys: [{ metric: { metricName: 'activeUsers' }, desc: true }], limit: '12'
-    });
-  } catch (_) {}
-  try {
-    gendersReport = await googleAnalyticsPost(accessToken, property.id, 'runReport', {
-      dateRanges: [{ startDate: '30daysAgo', endDate: 'today' }], dimensions: [{ name: 'userGender' }], metrics: [{ name: 'activeUsers' }],
-      orderBys: [{ metric: { metricName: 'activeUsers' }, desc: true }], limit: '8'
-    });
-  } catch (_) {}
   return {
     configured: true,
     propertyId: property.id,
@@ -5880,8 +5866,6 @@ async function fetchGoogleSiteAnalytics(env) {
     countries: gaRows(countriesReport, ['country'], ['activeUsers']),
     pages: gaRows(pagesReport, ['pageTitle', 'pagePath'], ['screenPageViews', 'activeUsers']),
     devices: gaRows(devicesReport, ['deviceCategory'], ['activeUsers']),
-    ages: gaRows(agesReport, ['userAgeBracket'], ['activeUsers']),
-    genders: gaRows(gendersReport, ['userGender'], ['activeUsers']),
     updatedAt: new Date().toISOString()
   };
 }

@@ -1,0 +1,52 @@
+/* R528 — compact YouTube header and centered third KPI */
+.youtube-admin-page .youtube-compact-header{
+  padding-top:0!important;
+  margin-top:0!important;
+}
+.youtube-admin-page .youtube-header-links{
+  margin:-18px auto 2px!important;
+  display:flex!important;
+  justify-content:center!important;
+  align-items:center!important;
+}
+.youtube-admin-page .youtube-profile-link{
+  margin:0 auto!important;
+  min-width:0!important;
+  width:auto!important;
+  padding:10px 18px!important;
+}
+.youtube-admin-page .youtube-compact-header>.eyeline{
+  margin-top:0!important;
+}
+.youtube-admin-page .youtube-compact-header>p{
+  width:100%!important;
+  max-width:none!important;
+  white-space:nowrap!important;
+  text-wrap:nowrap!important;
+  overflow:visible!important;
+  text-overflow:clip!important;
+  font-size:clamp(.68rem,3vw,.82rem)!important;
+  line-height:1.15!important;
+}
+.youtube-admin-page #analyticsYoutube{
+  display:grid!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:10px!important;
+}
+.youtube-admin-page #analyticsYoutube>.analytics-kpi:last-child{
+  grid-column:1/-1!important;
+  width:calc(50% - 5px)!important;
+  max-width:none!important;
+  justify-self:center!important;
+}
+.youtube-admin-page .youtube-country-spoiler{
+  margin-top:16px!important;
+}
+.youtube-admin-page .youtube-country-spoiler>summary{
+  min-height:62px!important;
+}
+@media(max-width:540px){
+  .youtube-admin-page .youtube-header-links{margin:-22px auto 0!important}
+  .youtube-admin-page #analyticsYoutube>.analytics-kpi:last-child{width:calc(50% - 4px)!important}
+  .youtube-admin-page .youtube-compact-header>p{font-size:.69rem!important;letter-spacing:0!important}
+}
