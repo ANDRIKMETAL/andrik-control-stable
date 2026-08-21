@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787309958853-72d5b772cb",
-  "release": "R535",
-  "archiveName": "R535-ANALYTICS-CLEAN-PAGES-TRANSLATED-DEDUPED-SAFE-FULL.zip",
-  "sourceHead": "57cbd603e9c1befed54505ee1ffd59285568f81e",
-  "backupSha": "57cbd603e9c1befed54505ee1ffd59285568f81e",
-  "backupTag": "control-backup-20260821105913-57cbd60-r535-831a9",
+  "operationId": "publish-1787310538223-f7aef4b955",
+  "release": "R536",
+  "archiveName": "R536-DAILY-CITIES-DEVICES-VERSION-FIX-SAFE-FULL.zip",
+  "sourceHead": "ed8cedc9e38dfa33efc142fd9ad1a879049d5e3b",
+  "backupSha": "ed8cedc9e38dfa33efc142fd9ad1a879049d5e3b",
+  "backupTag": "control-backup-20260821110854-ed8cedc-r536-b4537",
   "autoRecovery": true,
-  "generatedAt": "2026-08-21T10:59:18.853Z"
+  "generatedAt": "2026-08-21T11:08:58.223Z"
 }

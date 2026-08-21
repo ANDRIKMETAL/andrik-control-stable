@@ -1437,6 +1437,7 @@ async function ensureSiteMetricsSchema(db) {
         acquisition_source TEXT NOT NULL DEFAULT '',
         acquisition_medium TEXT NOT NULL DEFAULT '',
         referrer_host TEXT NOT NULL DEFAULT '',
+        device_category TEXT NOT NULL DEFAULT '',
         local_date TEXT NOT NULL,
         created_at TEXT NOT NULL DEFAULT (datetime('now'))
       )
@@ -1451,7 +1452,8 @@ async function ensureSiteMetricsSchema(db) {
       `ALTER TABLE site_visit_events ADD COLUMN longitude REAL`,
       `ALTER TABLE site_visit_events ADD COLUMN acquisition_source TEXT NOT NULL DEFAULT ''`,
       `ALTER TABLE site_visit_events ADD COLUMN acquisition_medium TEXT NOT NULL DEFAULT ''`,
-      `ALTER TABLE site_visit_events ADD COLUMN referrer_host TEXT NOT NULL DEFAULT ''`
+      `ALTER TABLE site_visit_events ADD COLUMN referrer_host TEXT NOT NULL DEFAULT ''`,
+      `ALTER TABLE site_visit_events ADD COLUMN device_category TEXT NOT NULL DEFAULT ''`
     ];
     for (const sql of siteGeoAlterations) {
       await db.prepare(sql).run().catch(error => {
@@ -1605,6 +1607,15 @@ function normalizeSitePath(value) {
   return path.startsWith('/') ? path : `/${path}`;
 }
 
+function detectDeviceCategoryR536(request) {
+  const mobileHint=cleanPlainText(request?.headers?.get?.('sec-ch-ua-mobile')||'',8).trim();
+  const ua=cleanPlainText(request?.headers?.get?.('user-agent')||'',500).toLowerCase();
+  if (/ipad|tablet|kindle|silk/.test(ua) || (/android/.test(ua) && !/mobile/.test(ua))) return 'tablet';
+  if (mobileHint==='?1' || /iphone|ipod|android.*mobile|windows phone|mobile/.test(ua)) return 'mobile';
+  if (mobileHint==='?0' || /windows|macintosh|cros|x11|linux/.test(ua)) return 'desktop';
+  return 'other';
+}
+
 async function handleSiteVisit(request, env) {
   if (!isSameOrigin(request)) return json({ ok:false, error:'origin' }, 403);
   const db = requireDb(env);
@@ -1627,6 +1638,7 @@ async function handleSiteVisit(request, env) {
   const acquisitionSource = cleanPlainText(body.acquisitionSource || '', 180).toLowerCase();
   const acquisitionMedium = cleanPlainText(body.acquisitionMedium || '', 80).toLowerCase();
   const referrerHost = cleanPlainText(body.referrerHost || '', 180).toLowerCase().replace(/[^a-z0-9._:-]/g, '');
+  const deviceCategory = detectDeviceCategoryR536(request);
   const cf = request.cf || {};
   const country = cleanPlainText(cf.country || '', 8).toUpperCase();
   const region = cleanPlainText(cf.region || cf.regionCode || '', 120);
@@ -1638,11 +1650,11 @@ async function handleSiteVisit(request, env) {
   const longitude = Number.isFinite(lonRaw) ? Math.round(lonRaw * 10) / 10 : null;
   await db.prepare(`
     INSERT INTO site_visit_events(
-      id, visitor_hash, path, event_type, target, country, region, city, latitude, longitude, acquisition_source, acquisition_medium, referrer_host, local_date, created_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+      id, visitor_hash, path, event_type, target, country, region, city, latitude, longitude, acquisition_source, acquisition_medium, referrer_host, device_category, local_date, created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
   `).bind(
     crypto.randomUUID(), visitorHash, normalizeSitePath(body.path), eventType, target,
-    country, region, city, latitude, longitude, acquisitionSource, acquisitionMedium, referrerHost, localDate
+    country, region, city, latitude, longitude, acquisitionSource, acquisitionMedium, referrerHost, deviceCategory, localDate
   ).run();
   // Keep this lightweight first-party counter small; long-term analytics remains in GA4.
   await recordCountryCityHistoryR418(db,{localDate,country,region,city,eventType}).catch(() => {});
@@ -1692,7 +1704,7 @@ async function getSiteFirstParty30dR530(db) {
   const endDate = getBratislavaClock().date;
   const startDate = shiftIsoCalendarDate(endDate, -29);
   const weekStart = shiftIsoCalendarDate(endDate, -6);
-  const [trendResult,countryResult,pageResult,monthRow,weekRow] = await Promise.all([
+  const [trendResult,countryResult,pageResult,deviceResult,monthRow,weekRow] = await Promise.all([
     db.prepare(`
       SELECT local_date AS date, COUNT(*) AS screenPageViews, COUNT(DISTINCT visitor_hash) AS activeUsers
       FROM site_visit_events
@@ -1712,6 +1724,18 @@ async function getSiteFirstParty30dR530(db) {
       GROUP BY path ORDER BY screenPageViews DESC, activeUsers DESC LIMIT 30
     `).bind(startDate,endDate).all().catch(()=>({results:[]})),
     db.prepare(`
+      SELECT device_category AS deviceCategory,
+             COUNT(DISTINCT visitor_hash) AS activeUsers,
+             COUNT(*) AS screenPageViews
+      FROM site_visit_events
+      WHERE event_type='visit' AND local_date>=?1 AND local_date<=?2
+        AND device_category<>''
+        AND path NOT LIKE '/cache-reset%' AND path NOT LIKE '/site-cache-reset%'
+        AND path NOT LIKE '%-admin.html' AND path NOT LIKE '/admin/%'
+        AND path NOT IN ('/offline.html','/open-youtube.html','/comment-collection.html')
+      GROUP BY device_category ORDER BY activeUsers DESC, screenPageViews DESC
+    `).bind(startDate,endDate).all().catch(()=>({results:[]})),
+    db.prepare(`
       SELECT COUNT(*) AS screenPageViews, COUNT(DISTINCT visitor_hash) AS activeUsers
       FROM site_visit_events WHERE event_type='visit' AND local_date>=?1 AND local_date<=?2 AND path NOT LIKE '/cache-reset%' AND path NOT LIKE '/site-cache-reset%' AND path NOT LIKE '%-admin.html' AND path NOT LIKE '/admin/%' AND path NOT IN ('/offline.html','/open-youtube.html','/comment-collection.html')
     `).bind(startDate,endDate).first().catch(()=>null),
@@ -1725,6 +1749,7 @@ async function getSiteFirstParty30dR530(db) {
     trend:(trendResult?.results||[]).map(row=>({date:cleanPlainText(row?.date||'',20),activeUsers:Math.max(0,Number(row?.activeUsers||0)),screenPageViews:Math.max(0,Number(row?.screenPageViews||0))})),
     countries:(countryResult?.results||[]).map(row=>({country:cleanPlainText(row?.country||'',8).toUpperCase(),activeUsers:Math.max(0,Number(row?.activeUsers||0))})),
     pages:(pageResult?.results||[]).map(row=>({pageTitle:'',pagePath:normalizeSitePath(row?.pagePath||'/'),screenPageViews:Math.max(0,Number(row?.screenPageViews||0)),activeUsers:Math.max(0,Number(row?.activeUsers||0))})).filter(row=>isPublicSitePathR531(row.pagePath)),
+    devices:(deviceResult?.results||[]).map(row=>({deviceCategory:cleanPlainText(row?.deviceCategory||'',40),sessions:Math.max(0,Number(row?.activeUsers||0)),activeUsers:Math.max(0,Number(row?.activeUsers||0)),screenPageViews:Math.max(0,Number(row?.screenPageViews||0))})).filter(row=>row.deviceCategory&&row.activeUsers>0),
     month:{activeUsers:Math.max(0,Number(monthRow?.activeUsers||0)),screenPageViews:Math.max(0,Number(monthRow?.screenPageViews||0))},
     week:{activeUsers:Math.max(0,Number(weekRow?.activeUsers||0)),screenPageViews:Math.max(0,Number(weekRow?.screenPageViews||0))},
     updatedAt:new Date().toISOString()
@@ -1765,11 +1790,23 @@ function mergeGoogleWithFirstPartyR530(google={}, firstParty={}) {
     pageMap.set(path,prev);
   }
   const pages=[...pageMap.values()].sort((a,b)=>Number(b.screenPageViews||0)-Number(a.screenPageViews||0)||Number(b.activeUsers||0)-Number(a.activeUsers||0)).slice(0,20);
+  const deviceMap=new Map();
+  for(const item of [...(Array.isArray(google?.devices)?google.devices:[]),...(Array.isArray(firstParty?.devices)?firstParty.devices:[])]){
+    const key=cleanPlainText(item?.deviceCategory||'',40).trim().toLowerCase();
+    if(!key)continue;
+    const prev=deviceMap.get(key)||{deviceCategory:key,sessions:0,activeUsers:0,screenPageViews:0};
+    prev.sessions=Math.max(Number(prev.sessions||0),Number(item?.sessions||0));
+    prev.activeUsers=Math.max(Number(prev.activeUsers||0),Number(item?.activeUsers||0));
+    prev.screenPageViews=Math.max(Number(prev.screenPageViews||0),Number(item?.screenPageViews||0));
+    deviceMap.set(key,prev);
+  }
+  const devices=[...deviceMap.values()].filter(row=>row.activeUsers>0||row.sessions>0||row.screenPageViews>0).sort((a,b)=>Number(b.activeUsers||0)-Number(a.activeUsers||0)||Number(b.sessions||0)-Number(a.sessions||0));
   return {
     ...(google||{}),
     trend:trend.length?trend:(google?.trend||[]),
     countries,
     pages,
+    devices,
     week:{...(google?.week||{}),activeUsers:Math.max(Number(google?.week?.activeUsers||0),Number(firstParty?.week?.activeUsers||0)),screenPageViews:Math.max(Number(google?.week?.screenPageViews||0),Number(firstParty?.week?.screenPageViews||0))},
     month:{...(google?.month||{}),activeUsers:Math.max(Number(google?.month?.activeUsers||0),Number(firstParty?.month?.activeUsers||0)),screenPageViews:Math.max(Number(google?.month?.screenPageViews||0),Number(firstParty?.month?.screenPageViews||0))},
     firstParty30d:{startDate,endDate,users:Number(firstParty?.month?.activeUsers||0),views:Number(firstParty?.month?.screenPageViews||0),updatedAt:firstParty.updatedAt||''}
@@ -12930,6 +12967,42 @@ async function handleControlHome(request, env) {
   });
 }
 
+function deviceQualityR536(devices=[]) {
+  const rows=(Array.isArray(devices)?devices:[]).filter(row=>row&&String(row.deviceCategory||'').trim());
+  return {
+    categories:rows.filter(row=>Number(row.activeUsers||row.sessions||row.screenPageViews||0)>0).length,
+    users:rows.reduce((sum,row)=>sum+Math.max(0,Number(row.activeUsers||0)),0),
+    sessions:rows.reduce((sum,row)=>sum+Math.max(0,Number(row.sessions||0)),0),
+    views:rows.reduce((sum,row)=>sum+Math.max(0,Number(row.screenPageViews||0)),0)
+  };
+}
+
+async function recoverRecentDeviceRowsR536(db, current={}) {
+  const currentQ=deviceQualityR536(current?.devices||[]);
+  const monthUsers=Math.max(0,Number(current?.month?.activeUsers||0));
+  const suspicious=(monthUsers>=5 && currentQ.users<Math.max(2,Math.floor(monthUsers*0.15))) || (monthUsers>=8 && currentQ.categories<2);
+  if(!suspicious)return current;
+  const rows=await db.prepare(`
+    SELECT metrics_json, created_at
+    FROM platform_snapshots
+    WHERE platform='google-analytics' AND datetime(created_at)>=datetime('now','-14 days')
+    ORDER BY datetime(created_at) DESC LIMIT 24
+  `).all().catch(()=>({results:[]}));
+  const propertyId=cleanPlainText(current?.propertyId||'',80);
+  let best=null,bestQ=currentQ,bestAt='';
+  for(const row of rows?.results||[]){
+    const snap=parseSnapshotMetrics(row);
+    if(propertyId&&snap?.propertyId&&cleanPlainText(snap.propertyId,80)!==propertyId)continue;
+    const q=deviceQualityR536(snap?.devices||[]);
+    if(q.categories<2 && q.users<=bestQ.users)continue;
+    const score=q.categories*100000+q.users*100+q.views;
+    const bestScore=bestQ.categories*100000+bestQ.users*100+bestQ.views;
+    if(score>bestScore){best=snap;bestQ=q;bestAt=cleanPlainText(row?.created_at||'',80);}
+  }
+  if(!best?.devices?.length)return current;
+  return {...current,devices:best.devices,deviceRecoveryAt:bestAt,deviceRecoverySource:'recent-ga4-snapshot-r536'};
+}
+
 async function handleControlGoogleAnalytics(request, env) {
   if (!adminAuthorized(request, env)) return json({ ok:false, error:'unauthorized' }, 401);
   const db=requireDb(env);
@@ -12955,7 +13028,7 @@ async function handleControlGoogleAnalytics(request, env) {
       if(fresh?.configured){
         latest={...fresh,configured:true};
         latestRow={created_at:fresh.updatedAt||new Date().toISOString()};
-        await savePlatformSnapshot(db,'google-analytics',latest,forceRefresh?'Google Analytics Data API · manual R531':'Google Analytics Data API · auto freshness R531');
+        await savePlatformSnapshot(db,'google-analytics',latest,forceRefresh?'Google Analytics Data API · manual R536':'Google Analytics Data API · auto freshness R536');
       }
     }catch(error){refreshError=cleanPlainText(error?.message||error,300);}
   }
@@ -12968,12 +13041,13 @@ async function handleControlGoogleAnalytics(request, env) {
     ...(latest||{}),configured:hasSnapshot?latest?.configured!==false:false,
     updatedAt:latestRow?.created_at||latest?.updatedAt||''
   },live);
+  google=await recoverRecentDeviceRowsR536(db,google);
   google=mergeGoogleWithFirstPartyR530(google,firstParty);
 
   if(hasSnapshot||live.configured||firstParty.configured){
     return json({
       ok:true,partial:!hasSnapshot,
-      source:firstParty.configured?'ga4+live-web-ai-r531':'ga4-r531',
+      source:firstParty.configured?'ga4+live-web-ai-r536':'ga4-r536',
       google,website:google,snapshotAt:latestRow?.created_at||'',refreshError,
       updatedAt:new Date().toISOString()
     });

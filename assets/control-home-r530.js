@@ -263,19 +263,19 @@
     const citySource=Array.isArray(data?.cityTodayActivity)?data.cityTodayActivity:(Array.isArray(data?.cityActivity)?data.cityActivity:[]);
     const cityCount=citySource.filter(row=>Number(row?.visitors||row?.opens||0)>0).length;
     const cards=[
-      platformCardR509({key:'site',title:'Сайт',icon:'⌂',scope:archive?'24 часа':'сегодня',href:'/analytics-admin.html?page=google&source=admin-hub-swipe&v=55.00-r530',metrics:[
+      platformCardR509({key:'site',title:'Сайт',icon:'⌂',scope:archive?'24 часа':'сегодня',href:'/analytics-admin.html?page=google&source=admin-hub-swipe&v=55.00-r536',metrics:[
         platformMetricR509(s.websiteUsers,'посетители'),
         platformMetricR509(s.websiteViews,'просмотры'),
         platformMetricR509(cityCount,'города'),
         platformMetricR509(s.siteSubscribers,'новые подписчики','+')
       ]}),
-      platformCardR509({key:'youtube',title:'YouTube',icon:'▶',scope:archive?'точный день':'с 00:00',href:'/youtube-admin.html?refresh=1&v=55.00-r530',metrics:[
+      platformCardR509({key:'youtube',title:'YouTube',icon:'▶',scope:archive?'точный день':'с 00:00',href:'/youtube-admin.html?refresh=1&v=55.00-r536',metrics:[
         platformMetricR509(ytViews,'просмотры'),
         platformMetricR509(ytSubs,'подписчики','+'),
         platformMetricR509(ytLikes,'лайки'),
         platformMetricR509(ytComments,'комментарии')
       ]}),
-      platformCardR509({key:'instagram',title:'Instagram',icon:'◎',scope:archive?'нет архивного среза':'свежий срез · 28 дней',href:'/instagram-admin.html?source=summary&v=55.00-r530',metrics:archive?[]:[
+      platformCardR509({key:'instagram',title:'Instagram',icon:'◎',scope:archive?'нет архивного среза':'свежий срез · 28 дней',href:'/instagram-admin.html?source=summary&v=55.00-r536',metrics:archive?[]:[
         platformMetricR509(ig.reach,'охват'),
         platformMetricR509(ig.totalInteractions,'взаимодействия'),
         platformMetricR509(ig.likes,'лайки'),
@@ -283,7 +283,7 @@
         platformMetricR509(ig.saves,'сохранения'),
         platformMetricR509(ig.shares,'репосты')
       ]}),
-      platformCardR509({key:'tiktok',title:'TikTok',icon:'♪',scope:archive?'нет архивного среза':'текущий срез',href:'/tiktok-admin.html?source=summary&v=55.00-r530',metrics:archive?[]:[
+      platformCardR509({key:'tiktok',title:'TikTok',icon:'♪',scope:archive?'нет архивного среза':'текущий срез',href:'/tiktok-admin.html?source=summary&v=55.00-r536',metrics:archive?[]:[
         platformMetricR509(tt.totalVideoViews,'просмотры'),
         platformMetricR509(tt.totalVideoLikes??tt.profileLikes,'лайки'),
         platformMetricR509(tt.totalVideoComments,'комментарии'),
@@ -302,7 +302,7 @@
     if(Date.now()-socialFetchAtR509<30000)return null;
     socialFetchAtR509=Date.now();
     const mode=(()=>{try{return String(localStorage.getItem('andrik-tiktok-oauth-mode-r506')||'sandbox')}catch(_){return'sandbox'}})();
-    socialFetchPromiseR509=api(`/api/control/social-overview?fast=1&tiktok_mode=${encodeURIComponent(mode)}&v=55.00-r530`,{timeoutMs:9000})
+    socialFetchPromiseR509=api(`/api/control/social-overview?fast=1&tiktok_mode=${encodeURIComponent(mode)}&v=55.00-r536`,{timeoutMs:9000})
       .then(fresh=>{if(fresh?.ok){latestSocialDataR509=fresh;saveSocialCacheR509(fresh);renderPlatformSummaryR509(latestHomeDataR509||data)}return fresh})
       .catch(()=>null)
       .finally(()=>{socialFetchPromiseR509=null});
@@ -387,10 +387,11 @@
     const box=$('controlCityModalListR375');
     if(!box)return;
     const title=$('controlCityModalTitleR375');
-    const rows=dailyCityRowsR375.length?dailyCityRowsR375:mapCityRowsR395;
-    if(title)title.textContent=dailyCityRowsR375.length?'📍 Города за день':'📍 Города на карте';
+    const currentToday=!isArchiveViewR442()&&!IS_PUSH_SUMMARY_VIEW;
+    const rows=dailyCityRowsR375;
+    if(title)title.textContent=currentToday?'📍 Города за сегодня':'📍 Города за день';
     if(!rows.length){
-      box.innerHTML='<div class="admin-empty">Города с доступной географией пока не зафиксированы.</div>';
+      box.innerHTML=`<div class="admin-empty">${currentToday?'Сегодня городов с зафиксированной активностью пока нет.':'Для этого дня города не зафиксированы.'}</div>`;
       return;
     }
     box.innerHTML=rows.map((item,index)=>{
@@ -425,18 +426,26 @@
   }
 
   function renderDailyCitiesR370(data={}){
-    const sourceRows=(!isArchiveViewR442()&&!IS_PUSH_SUMMARY_VIEW&&Array.isArray(data.cityTodayActivity))?data.cityTodayActivity:data.cityActivity;
+    const currentToday=!isArchiveViewR442()&&!IS_PUSH_SUMMARY_VIEW;
+    const sourceRows=currentToday
+      ? (Array.isArray(data.cityTodayActivity)?data.cityTodayActivity:[])
+      : (Array.isArray(data.cityActivity)?data.cityActivity:[]);
     const incoming=Array.isArray(sourceRows)?sourceRows.filter(item=>Number(item?.opens||0)>0):[];
-    const cached=readCityCacheR374(data);
+    // R536: current summary is strictly calendar-day data. Never replace an empty
+    // today with the 30-day map, and never revive yesterday/old cities from cache.
+    const cached=currentToday?[]:readCityCacheR374(data);
     const rows=mergeCityRowsR374(cached,incoming);
-    if(incoming.length)writeCityCacheR374(data,rows);
+    if(!currentToday&&incoming.length)writeCityCacheR374(data,rows);
     dailyCityRowsR375=rows.slice(0,50);
-    mapCityRowsR395=mergeCityRowsR374([],Array.isArray(data.cityMapActivity)?data.cityMapActivity:[]).slice(0,80);
-    const visibleRows=dailyCityRowsR375.length?dailyCityRowsR375:mapCityRowsR395;
+    mapCityRowsR395=[];
     const count=$('controlCityCountR375');
-    if(count)count.textContent=number(visibleRows.length);
+    if(count)count.textContent=number(dailyCityRowsR375.length);
     const button=$('controlCitiesDayR375');
-    if(button){button.classList.toggle('is-empty',visibleRows.length===0);const label=button.querySelector('small');if(label)label.textContent=dailyCityRowsR375.length?'Города за день':'Города на карте';}
+    if(button){
+      button.classList.toggle('is-empty',dailyCityRowsR375.length===0);
+      const label=button.querySelector('small');
+      if(label)label.textContent=currentToday?'Города за сегодня':'Города за день';
+    }
     if(!$('controlCityModalR375')?.hidden)renderCityModalR375();
   }
 

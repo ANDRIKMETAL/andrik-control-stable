@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="ru" translate="no" class="notranslate"><head><script>(function(){try{var u=new URL(location.href),p=(u.searchParams.get('page')||'').toLowerCase(),s=(u.searchParams.get('source')||'').toLowerCase();var sitePages=['google','site','analytics','ga','ga4','website'];var ok=(p==='map'&&s==='admin-globe')||sitePages.indexOf(p)!==-1||p==='youtube';if(!ok){location.replace('/control-home.html?page=menu&source=launch-guard-r530&v=55.00-r530');}}catch(_){}})();</script>
-<meta name="andrik-control-release" content="R535">
+<meta name="andrik-control-release" content="R536">
 <link rel="stylesheet" href="/assets/control-sleep-mode-r193.css?v=55.00-r193"><script defer src="/assets/control-sleep-mode-r193.js?v=55.00-r193"></script>
 
 <meta name="google" content="notranslate"><meta charset="utf-8"/>
@@ -1052,7 +1052,7 @@ body.analytics-admin-page.is-country-returning #worldMap .world-map-dot.is-selec
 <section class="analytics-main-chart"><article class="admin-control-card analytics-chart-card"><div class="admin-card-title-row analytics-inline-actions"><div><span class="eyeline">Последние 30 дней</span><h2>Динамика посещений</h2></div><div class="analytics-title-actions"><span class="analytics-legend">Пользователи / просмотры</span></div></div><div class="analytics-chart" id="analyticsTrend"><div class="admin-empty">Загружаем график…</div></div></article></section>
           <section class="analytics-site-geography"><article class="admin-control-card analytics-list-card analytics-site-country-card"><div class="admin-card-title-row"><div><span class="eyeline">Google Analytics · за 30 дней</span><h2>География сайта</h2><p>Страны, из которых заходили посетители сайта.</p></div></div><div id="analyticsCountries"><div class="admin-empty">Загружаем географию сайта…</div></div></article></section>
           <section class="analytics-columns"><article class="admin-control-card analytics-list-card"><div class="admin-card-title-row"><div><span class="eyeline">За 30 дней</span><h2>Популярные страницы</h2></div></div><div class="analytics-list" id="analyticsPages"><div class="admin-empty">Загружаем страницы…</div></div></article><article class="admin-control-card analytics-list-card"><div class="admin-card-title-row"><div><span class="eyeline">За 30 дней</span><h2>Устройства</h2></div></div><div class="analytics-list" id="analyticsDevices"><div class="admin-empty">Загружаем устройства…</div></div></article></section>
-          <footer class="control-version-footer"><strong>Live Web AI · профиль ANDRIK · v55.00 LIVE WEB AI FINAL R535</strong><span>Google Analytics восстановлен по R450 · 21.08.2026</span></footer>
+          <footer class="control-version-footer"><strong>Live Web AI · ANDRIK · версия R536</strong><span>Google Analytics · текущие 30 дней · 21.08.2026</span></footer>
           <div class="analytics-swipe-hint analytics-site-hint"><button type="button" data-swipe-go="2">← YouTube</button><button type="button" data-swipe-go="1">Карта слушателей →</button></div>
         </div>
       </section>
@@ -1120,7 +1120,7 @@ body.analytics-admin-page.is-country-returning #worldMap .world-map-dot.is-selec
           </section>
           <details class="youtube-hidden-data"><summary>Что YouTube не отдаёт через API</summary><div class="youtube-hidden-data-body"><p><strong>Лайки:</strong> видно количество, но не имена людей, поставивших лайк.</p><p><strong>Подписчики:</strong> точный счётчик и прирост доступны, но имена скрытых/непубличных подписчиков не выдаются.</p><p><strong>Поделились:</strong> видно площадку и количество, но не конкретного получателя ссылки.</p><p><strong>Возраст и пол:</strong> показываются только когда YouTube набрал достаточную выборку для защиты приватности.</p></div></details>
 <section class="admin-control-card youtube-service-card"><div class="admin-card-title-row"><div><span class="eyeline">🔔 Реакции канала</span><h2>Проверка уведомлений перенесена</h2><p>Комментарии, подписчики и лайки теперь проверяются в разделе «Служебное».</p></div></div><div class="admin-actions"><a class="btn btn-primary" href="/service-admin.html">Открыть Служебное</a></div></section>
-          <footer class="control-version-footer"><strong>Live Web AI · профиль ANDRIK · v55.00 LIVE WEB AI FINAL R535</strong><span>внутренняя горизонтальная карусель отключена · свайп платформ перенесён в Центр соцсетей · 18.08.2026</span></footer>
+          <footer class="control-version-footer"><strong>Live Web AI · ANDRIK · версия R536</strong><span>Центр соцсетей · свайп между платформами</span></footer>
           <div class="analytics-swipe-hint analytics-youtube-hint"><button type="button" data-swipe-go="1">← Карта слушателей</button><button type="button" data-swipe-go="0">Google Analytics →</button></div>
         </div>
       </section>
@@ -2485,12 +2485,20 @@ body.analytics-admin-page.is-country-returning #worldMap .world-map-dot.is-selec
     renderKpis(ga);renderTrend(ga.trend||[]);
     renderList('analyticsPages',prepareVisibleAnalyticsPages(ga.pages||[]).map(item=>({...item,pageLabel:pageSectionLabel(item.pagePath,item.pageTitle),pagePathLabel:pageVersionLabel(item.pagePath)})),'screenPageViews','pageLabel','pagePathLabel');
     renderCountrySpoiler(ga.countries||[]);
-    renderList('analyticsDevices',(ga.devices||[]).map(item=>({
+    const deviceRows=(ga.devices||[]).map(item=>({
       ...item,
       deviceCategory:translateDevice(item.deviceCategory),
-      deviceCount:Math.max(0,Number(item.sessions??item.activeUsers??0)),
+      deviceCount:Math.max(0,Number(item.activeUsers??item.sessions??0)),
       deviceDetail:`${number(item.activeUsers||0)} польз. · ${number(item.screenPageViews||0)} просмотров`
-    })).filter(item=>item.deviceCount>0),'deviceCount','deviceCategory','deviceDetail');
+    })).filter(item=>item.deviceCount>0);
+    const deviceUsers=deviceRows.reduce((sum,item)=>sum+Math.max(0,Number(item.activeUsers||0)),0);
+    const monthUsers=Math.max(0,Number(ga?.month?.activeUsers||0));
+    const deviceCredible=deviceRows.length>1 || deviceUsers>=Math.min(3,monthUsers) || monthUsers<=2;
+    if(deviceCredible){
+      renderList('analyticsDevices',deviceRows,'deviceCount','deviceCategory','deviceDetail');
+    }else if($('analyticsDevices')){
+      $('analyticsDevices').innerHTML='<div class="admin-empty">GA4 обновляет разбивку устройств. Один неполный срез скрыт, чтобы не показывать ошибочную цифру.</div>';
+    }
     if($('analyticsPropertyLabel'))$('analyticsPropertyLabel').textContent=ga.propertyId?`${ga.propertyName||'andrikmetal.com'} · GA4 property ${ga.propertyId}`:`${ga.propertyName||'andrikmetal.com'} · живой счётчик`;
     if($('analyticsMessage')){const source=ga.firstParty30d?.views>0?'GA4 + Live Web AI':'Google Analytics';$('analyticsMessage').textContent=`${source} · автообновление каждые 2 минуты · ${dateTime(ga.updatedAt||data.updatedAt)}`;$('analyticsMessage').className='control-analytics-status is-good'}
     saveGaCache(ga);
