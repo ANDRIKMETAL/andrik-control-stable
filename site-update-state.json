@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787293587169-64e74bdc4a",
-  "release": "R526",
-  "archiveName": "R526-SOCIAL-PARITY-YOUTUBE-TIKTOK-INSTAGRAM-SAFE-FULL.zip",
-  "sourceHead": "a8aaf0f127d8861c7778c7c2eabce3b7968d935c",
-  "backupSha": "a8aaf0f127d8861c7778c7c2eabce3b7968d935c",
-  "backupTag": "control-backup-20260821062622-a8aaf0f-r526-e66fc",
+  "operationId": "publish-1787294853713-7b1ddd1b32",
+  "release": "R527",
+  "archiveName": "R527-YOUTUBE-CLEAN-SITE-RESTORE-GA-DEMOGRAPHICS-SAFE-FULL.zip",
+  "sourceHead": "6742a513822b0f912783429b6b565a4e54c14434",
+  "backupSha": "6742a513822b0f912783429b6b565a4e54c14434",
+  "backupTag": "control-backup-20260821064729-6742a51-r527-8323a",
   "autoRecovery": true,
-  "generatedAt": "2026-08-21T06:26:27.169Z"
+  "generatedAt": "2026-08-21T06:47:33.713Z"
 }
