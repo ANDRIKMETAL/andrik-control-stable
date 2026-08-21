@@ -8,7 +8,7 @@
   const source=String(params.get('source')||'').toLowerCase();
   const routes=[
     {name:'Обзор',url:'/social-center-admin.html?source=social-center&v=55.00-r524'},
-    {name:'Сайт · GA4',url:'/analytics-admin.html?page=google&source=social-center&v=55.00-r524'},
+    {name:'Сайт · GA4',url:'/analytics-admin.html?page=google&source=direct-ga-r539&v=55.00-r539&source=direct-ga-r539&v=55.00-r539'},
     {name:'YouTube Studio',url:'/youtube-admin.html?source=social-center&v=55.00-r524'},
     {name:'Instagram',url:'/instagram-admin.html?source=social-center&v=55.00-r524'},
     {name:'TikTok',url:'/tiktok-admin.html?source=social-center&v=55.00-r524'}

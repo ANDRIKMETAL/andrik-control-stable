@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787310896049-68bbd4bed9",
-  "release": "R537",
-  "archiveName": "R537-GA-DEVICES-VERSION-CLEAN-FIX-SAFE-FULL.zip",
-  "sourceHead": "f5d685b907a645085ca578a79a3a396312a9adaa",
-  "backupSha": "f5d685b907a645085ca578a79a3a396312a9adaa",
-  "backupTag": "control-backup-20260821111451-f5d685b-r537-1926d",
+  "operationId": "publish-1787311724702-390cb71742",
+  "release": "R539",
+  "archiveName": "R539-GOOGLE-ANALYTICS-ROUTE-LOCK-MAP-FALLBACK-FIX-SAFE-FULL.zip",
+  "sourceHead": "c60d5cf8283afb4259448ef71e12945234ac1333",
+  "backupSha": "c60d5cf8283afb4259448ef71e12945234ac1333",
+  "backupTag": "control-backup-20260821112840-c60d5cf-r539-bfa54",
   "autoRecovery": true,
-  "generatedAt": "2026-08-21T11:14:56.049Z"
+  "generatedAt": "2026-08-21T11:28:44.702Z"
 }

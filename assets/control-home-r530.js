@@ -36,7 +36,7 @@
     window.scrollTo(0,0);
     const prefetch=document.createElement('link');
     prefetch.rel='prefetch';
-    prefetch.href='/analytics-admin.html?page=google&source=admin-hub-swipe&v=55.00-r420';
+    prefetch.href='/analytics-admin.html?page=google&source=direct-ga-r539&v=55.00-r539&source=direct-ga-r539&v=55.00-r539';
     document.head.appendChild(prefetch);
   }catch(_){}
 
@@ -263,7 +263,7 @@
     const citySource=Array.isArray(data?.cityTodayActivity)?data.cityTodayActivity:(Array.isArray(data?.cityActivity)?data.cityActivity:[]);
     const cityCount=citySource.filter(row=>Number(row?.visitors||row?.opens||0)>0).length;
     const cards=[
-      platformCardR509({key:'site',title:'Сайт',icon:'⌂',scope:archive?'24 часа':'сегодня',href:'/analytics-admin.html?page=google&source=admin-hub-swipe&v=55.00-r536',metrics:[
+      platformCardR509({key:'site',title:'Сайт',icon:'⌂',scope:archive?'24 часа':'сегодня',href:'/analytics-admin.html?page=google&source=direct-ga-r539&v=55.00-r539&source=direct-ga-r539&v=55.00-r539',metrics:[
         platformMetricR509(s.websiteUsers,'посетители'),
         platformMetricR509(s.websiteViews,'просмотры'),
         platformMetricR509(cityCount,'города'),

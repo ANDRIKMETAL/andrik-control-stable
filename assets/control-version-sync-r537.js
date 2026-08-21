@@ -1,9 +1,9 @@
-/* ANDRIK R537 — current display version; keeps human-readable Russian footer. */
+/* ANDRIK R538 — current display version; keeps human-readable Russian footer. */
 (()=>{
   'use strict';
-  if(window.__ANDRIK_VERSION_SYNC_R537__)return;
-  window.__ANDRIK_VERSION_SYNC_R537__=true;
-  const RELEASE='R537';
+  if(window.__ANDRIK_VERSION_SYNC_R538__)return;
+  window.__ANDRIK_VERSION_SYNC_R538__=true;
+  const RELEASE='R538';
   const apply=()=>{
     let meta=document.querySelector('meta[name="andrik-control-release"]');
     if(!meta&&document.head){meta=document.createElement('meta');meta.name='andrik-control-release';document.head.appendChild(meta)}
