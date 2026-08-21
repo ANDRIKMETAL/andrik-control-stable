@@ -387,7 +387,7 @@
     if(!box)return;
     const title=$('controlCityModalTitleR375');
     const rows=dailyCityRowsR375.length?dailyCityRowsR375:mapCityRowsR395;
-    if(title)title.textContent=dailyCityRowsR375.length?'📍 Города за день':'📍 Города на карте';
+    if(title)title.textContent=dailyCityRowsR375.length?'📍 Города за день · экосистема ANDRIK':'📍 Города на карте · экосистема ANDRIK';
     if(!rows.length){
       box.innerHTML='<div class="admin-empty">Города с доступной географией пока не зафиксированы.</div>';
       return;
@@ -398,7 +398,7 @@
       const regionLine=region&&region.toLocaleLowerCase('ru')!==place.toLocaleLowerCase('ru')?`<small>${escapeHtml(region)}</small>`:'';
       const traffic=(Array.isArray(item?.trafficSources)?item.trafficSources:[]).filter(src=>Number(src?.events||0)>0).slice(0,3);
       const sourceText=traffic.length
-        ? traffic.map(src=>`${escapeHtml(src?.icon||'↗️')} ${escapeHtml(src?.label||'Источник')} ${number(src?.events||0)}`).join(' · ')
+        ? traffic.map(src=>`${escapeHtml(src?.icon||'↗️')} ${escapeHtml(src?.label||'Источник')} ${number(src?.events||0)} действий`).join(' · ')
         : '↗ Источник не сохранён';
       const sourceClass=traffic.length?'control-city-source-inline-r447':'control-city-source-inline-r447 is-unknown';
       const people=Math.max(0,Number(item?.visitors||0))||Math.max(0,Number(item?.opens||0));

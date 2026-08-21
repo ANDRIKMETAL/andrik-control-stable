@@ -1678,6 +1678,15 @@ async function getSiteLiveMetrics(db) {
 // This is used as a factual fallback/supplement when GA4 returns a sparse or stale
 // dimensional report. Only real `visit` rows are used here; YouTube/music/push opens
 // are intentionally excluded from site geography and page statistics.
+function isPublicSitePathR531(value='') {
+  const path=normalizeSitePath(value||'/').toLowerCase();
+  if (path.startsWith('/cache-reset')) return false;
+  if (path==='/offline.html' || path==='/open-youtube.html' || path==='/comment-collection.html') return false;
+  if (path.startsWith('/admin/')) return false;
+  if (/(?:^|\/)(?:analytics|control-home|service|youtube|instagram|tiktok|comments|lyrics|observability|protection|promo-video|site-update|attack-map)-admin\.html$/.test(path)) return false;
+  return true;
+}
+
 async function getSiteFirstParty30dR530(db) {
   await ensureSiteMetricsSchema(db);
   const endDate = getBratislavaClock().date;
@@ -1687,35 +1696,35 @@ async function getSiteFirstParty30dR530(db) {
     db.prepare(`
       SELECT local_date AS date, COUNT(*) AS screenPageViews, COUNT(DISTINCT visitor_hash) AS activeUsers
       FROM site_visit_events
-      WHERE event_type='visit' AND local_date>=?1 AND local_date<=?2
+      WHERE event_type='visit' AND local_date>=?1 AND local_date<=?2 AND path NOT LIKE '/cache-reset%' AND path NOT LIKE '%-admin.html' AND path NOT LIKE '/admin/%' AND path NOT IN ('/offline.html','/open-youtube.html','/comment-collection.html')
       GROUP BY local_date ORDER BY local_date ASC
     `).bind(startDate,endDate).all().catch(()=>({results:[]})),
     db.prepare(`
       SELECT country, COUNT(DISTINCT visitor_hash) AS activeUsers
       FROM site_visit_events
-      WHERE event_type='visit' AND local_date>=?1 AND local_date<=?2 AND country<>''
+      WHERE event_type='visit' AND local_date>=?1 AND local_date<=?2 AND path NOT LIKE '/cache-reset%' AND path NOT LIKE '%-admin.html' AND path NOT LIKE '/admin/%' AND path NOT IN ('/offline.html','/open-youtube.html','/comment-collection.html') AND country<>''
       GROUP BY country ORDER BY activeUsers DESC LIMIT 250
     `).bind(startDate,endDate).all().catch(()=>({results:[]})),
     db.prepare(`
       SELECT path AS pagePath, COUNT(*) AS screenPageViews, COUNT(DISTINCT visitor_hash) AS activeUsers
       FROM site_visit_events
-      WHERE event_type='visit' AND local_date>=?1 AND local_date<=?2 AND path<>''
+      WHERE event_type='visit' AND local_date>=?1 AND local_date<=?2 AND path NOT LIKE '/cache-reset%' AND path NOT LIKE '%-admin.html' AND path NOT LIKE '/admin/%' AND path NOT IN ('/offline.html','/open-youtube.html','/comment-collection.html') AND path<>''
       GROUP BY path ORDER BY screenPageViews DESC, activeUsers DESC LIMIT 30
     `).bind(startDate,endDate).all().catch(()=>({results:[]})),
     db.prepare(`
       SELECT COUNT(*) AS screenPageViews, COUNT(DISTINCT visitor_hash) AS activeUsers
-      FROM site_visit_events WHERE event_type='visit' AND local_date>=?1 AND local_date<=?2
+      FROM site_visit_events WHERE event_type='visit' AND local_date>=?1 AND local_date<=?2 AND path NOT LIKE '/cache-reset%' AND path NOT LIKE '%-admin.html' AND path NOT LIKE '/admin/%' AND path NOT IN ('/offline.html','/open-youtube.html','/comment-collection.html')
     `).bind(startDate,endDate).first().catch(()=>null),
     db.prepare(`
       SELECT COUNT(*) AS screenPageViews, COUNT(DISTINCT visitor_hash) AS activeUsers
-      FROM site_visit_events WHERE event_type='visit' AND local_date>=?1 AND local_date<=?2
+      FROM site_visit_events WHERE event_type='visit' AND local_date>=?1 AND local_date<=?2 AND path NOT LIKE '/cache-reset%' AND path NOT LIKE '%-admin.html' AND path NOT LIKE '/admin/%' AND path NOT IN ('/offline.html','/open-youtube.html','/comment-collection.html')
     `).bind(weekStart,endDate).first().catch(()=>null)
   ]);
   return {
     configured:true,startDate,endDate,
     trend:(trendResult?.results||[]).map(row=>({date:cleanPlainText(row?.date||'',20),activeUsers:Math.max(0,Number(row?.activeUsers||0)),screenPageViews:Math.max(0,Number(row?.screenPageViews||0))})),
     countries:(countryResult?.results||[]).map(row=>({country:cleanPlainText(row?.country||'',8).toUpperCase(),activeUsers:Math.max(0,Number(row?.activeUsers||0))})),
-    pages:(pageResult?.results||[]).map(row=>({pageTitle:'',pagePath:normalizeSitePath(row?.pagePath||'/'),screenPageViews:Math.max(0,Number(row?.screenPageViews||0)),activeUsers:Math.max(0,Number(row?.activeUsers||0))})),
+    pages:(pageResult?.results||[]).map(row=>({pageTitle:'',pagePath:normalizeSitePath(row?.pagePath||'/'),screenPageViews:Math.max(0,Number(row?.screenPageViews||0)),activeUsers:Math.max(0,Number(row?.activeUsers||0))})).filter(row=>isPublicSitePathR531(row.pagePath)),
     month:{activeUsers:Math.max(0,Number(monthRow?.activeUsers||0)),screenPageViews:Math.max(0,Number(monthRow?.screenPageViews||0))},
     week:{activeUsers:Math.max(0,Number(weekRow?.activeUsers||0)),screenPageViews:Math.max(0,Number(weekRow?.screenPageViews||0))},
     updatedAt:new Date().toISOString()
@@ -1735,10 +1744,19 @@ function mergeGoogleWithFirstPartyR530(google={}, firstParty={}) {
       trend.push({date:day,activeUsers:Math.max(0,Number(ga.activeUsers||0),Number(fp.activeUsers||0)),screenPageViews:Math.max(0,Number(ga.screenPageViews||0),Number(fp.screenPageViews||0))});
     }
   }
-  const countries=[...(Array.isArray(google?.countries)?google.countries:[]),...(Array.isArray(firstParty?.countries)?firstParty.countries:[])];
+  const countryMap=new Map();
+  for(const item of [...(Array.isArray(google?.countries)?google.countries:[]),...(Array.isArray(firstParty?.countries)?firstParty.countries:[])]){
+    const key=cleanPlainText(item?.country||'',120).trim();
+    if(!key)continue;
+    const prev=countryMap.get(key)||{...item,activeUsers:0};
+    prev.activeUsers=Math.max(Number(prev.activeUsers||0),Number(item?.activeUsers||0));
+    countryMap.set(key,prev);
+  }
+  const countries=[...countryMap.values()].sort((a,b)=>Number(b.activeUsers||0)-Number(a.activeUsers||0)||String(a.country||'').localeCompare(String(b.country||'')));
   const pageMap=new Map();
   for(const item of [...(Array.isArray(google?.pages)?google.pages:[]),...(Array.isArray(firstParty?.pages)?firstParty.pages:[])]){
     const path=normalizeSitePath(item?.pagePath||'/');
+    if(!isPublicSitePathR531(path))continue;
     const prev=pageMap.get(path)||{pageTitle:'',pagePath:path,screenPageViews:0,activeUsers:0};
     const title=cleanPlainText(item?.pageTitle||'',180);
     if(title&&!prev.pageTitle)prev.pageTitle=title;
@@ -5963,7 +5981,11 @@ async function fetchGoogleSiteAnalytics(env) {
       dateRanges: [{ startDate: '30daysAgo', endDate: 'today' }], dimensions: [{ name: 'pageTitle' }, { name: 'pagePath' }], metrics: [{ name: 'screenPageViews' }, { name: 'activeUsers' }], orderBys: [{ metric: { metricName: 'screenPageViews' }, desc: true }], limit: '10'
     }),
     googleAnalyticsPost(accessToken, property.id, 'runReport', {
-      dateRanges: [{ startDate: '30daysAgo', endDate: 'today' }], dimensions: [{ name: 'deviceCategory' }], metrics: [{ name: 'activeUsers' }], orderBys: [{ metric: { metricName: 'activeUsers' }, desc: true }], limit: '8'
+      dateRanges: [{ startDate: '30daysAgo', endDate: 'today' }],
+      dimensions: [{ name: 'deviceCategory' }],
+      metrics: [{ name: 'sessions' }, { name: 'activeUsers' }, { name: 'screenPageViews' }],
+      orderBys: [{ metric: { metricName: 'sessions' }, desc: true }],
+      limit: '8'
     })
   ]);
   return {
@@ -5978,7 +6000,7 @@ async function fetchGoogleSiteAnalytics(env) {
     trend: gaRows(trendReport, ['date'], ['activeUsers', 'screenPageViews']),
     countries: gaRows(countriesReport, ['country'], ['activeUsers']),
     pages: gaRows(pagesReport, ['pageTitle', 'pagePath'], ['screenPageViews', 'activeUsers']),
-    devices: gaRows(devicesReport, ['deviceCategory'], ['activeUsers']),
+    devices: gaRows(devicesReport, ['deviceCategory'], ['sessions', 'activeUsers', 'screenPageViews']),
     updatedAt: new Date().toISOString()
   };
 }
@@ -5993,7 +6015,7 @@ function trafficSourceLabelR438(source = '', medium = '', channel = '') {
   const rawChannel = cleanPlainText(channel || '', 120);
   const hay = `${rawSource} ${rawMedium} ${rawChannel}`.toLowerCase();
   if (!rawSource || rawSource === '(unknown)' || rawSource === '(not set)' || rawSource === 'unknown') return { key:'unknown', label:'Источник не сохранён', icon:'❔' };
-  if (rawSource === '(direct)' || (rawMedium === '(none)' && /direct/i.test(rawChannel))) return { key:'direct', label:'Прямой вход', icon:'🌐' };
+  if (rawSource === '(direct)' || (rawMedium === '(none)' && /direct/i.test(rawChannel))) return { key:'direct', label:'Прямой вход на сайт', icon:'🌐' };
   if (/youtube|youtu\.be/.test(hay)) return { key:'youtube', label:'YouTube', icon:'▶️' };
   if (/spotify/.test(hay)) return { key:'spotify', label:'Spotify', icon:'🟢' };
   if (/soundcloud/.test(hay)) return { key:'soundcloud', label:'SoundCloud', icon:'☁️' };
@@ -8653,13 +8675,14 @@ async function fetchGoogleSearchConsoleAnalytics(env) {
   if (accessibleSites.length && !accessibleSites.some(item => item.siteUrl === siteUrl)) {
     throw new Error(`search-console-service-account-no-access:${serviceAccountEmail || 'unknown'}:${configuredSiteUrl}`);
   }
-  const startDate = isoDateDaysAgo(32);
-  const endDate = isoDateDaysAgo(2);
+  const todayBratislava = getBratislavaClock().date;
+  const endDate = shiftIsoCalendarDate(todayBratislava, -2);
+  const startDate = `${endDate.slice(0,7)}-01`;
   const [summaryReport, queriesReport, pagesReport, trendReport] = await Promise.all([
-    googleSearchConsoleQuery(accessToken, siteUrl, { startDate, endDate, rowLimit: 1, dataState:'final' }),
-    googleSearchConsoleQuery(accessToken, siteUrl, { startDate, endDate, dimensions: ['query'], rowLimit: 8, dataState: 'final' }),
-    googleSearchConsoleQuery(accessToken, siteUrl, { startDate, endDate, dimensions: ['page'], rowLimit: 8, dataState: 'final' }),
-    googleSearchConsoleQuery(accessToken, siteUrl, { startDate, endDate, dimensions: ['date'], rowLimit: 1000, dataState: 'final' })
+    googleSearchConsoleQuery(accessToken, siteUrl, { startDate, endDate, rowLimit: 1, dataState:'all' }),
+    googleSearchConsoleQuery(accessToken, siteUrl, { startDate, endDate, dimensions: ['query'], rowLimit: 8, dataState: 'all' }),
+    googleSearchConsoleQuery(accessToken, siteUrl, { startDate, endDate, dimensions: ['page'], rowLimit: 8, dataState: 'all' }),
+    googleSearchConsoleQuery(accessToken, siteUrl, { startDate, endDate, dimensions: ['date'], rowLimit: 1000, dataState: 'all' })
   ]);
   const summary = summaryReport?.rows?.[0] || {};
   const normalizeRows = report => (report?.rows || []).map(row => ({
@@ -12917,7 +12940,8 @@ async function handleControlGoogleAnalytics(request, env) {
   let latestRow=await db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform='google-analytics' ORDER BY datetime(created_at) DESC LIMIT 1`).first().catch(()=>null);
   let latest=parseSnapshotMetrics(latestRow);
   const snapshotMs=Date.parse(latestRow?.created_at||latest?.updatedAt||'');
-  const snapshotStale=!Number.isFinite(snapshotMs)||Date.now()-snapshotMs>30*60*1000;
+  const deviceShapeStale=!Array.isArray(latest?.devices)||!latest.devices.some(item=>Number.isFinite(Number(item?.sessions)));
+  const snapshotStale=!Number.isFinite(snapshotMs)||Date.now()-snapshotMs>30*60*1000||deviceShapeStale;
   let refreshError='';
 
   // R530: one fresh GA4 pull at most every 30 minutes (or explicitly on refresh).
@@ -12931,7 +12955,7 @@ async function handleControlGoogleAnalytics(request, env) {
       if(fresh?.configured){
         latest={...fresh,configured:true};
         latestRow={created_at:fresh.updatedAt||new Date().toISOString()};
-        await savePlatformSnapshot(db,'google-analytics',latest,forceRefresh?'Google Analytics Data API · manual R530':'Google Analytics Data API · auto freshness R530');
+        await savePlatformSnapshot(db,'google-analytics',latest,forceRefresh?'Google Analytics Data API · manual R531':'Google Analytics Data API · auto freshness R531');
       }
     }catch(error){refreshError=cleanPlainText(error?.message||error,300);}
   }
@@ -12949,7 +12973,7 @@ async function handleControlGoogleAnalytics(request, env) {
   if(hasSnapshot||live.configured||firstParty.configured){
     return json({
       ok:true,partial:!hasSnapshot,
-      source:firstParty.configured?'ga4+live-web-ai-r530':'ga4-r530',
+      source:firstParty.configured?'ga4+live-web-ai-r531':'ga4-r531',
       google,website:google,snapshotAt:latestRow?.created_at||'',refreshError,
       updatedAt:new Date().toISOString()
     });
@@ -12969,20 +12993,27 @@ async function handleControlSearchConsole(request, env) {
   await ensurePlatformAnalyticsSchema(db);
   const refresh = new URL(request.url).searchParams.get('refresh') === '1';
   let liveError = '';
-  if (refresh) {
+  const existingRow = await db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform='google-search-console' ORDER BY created_at DESC LIMIT 1`).first().catch(()=>null);
+  const existingSnapshot = parseSnapshotMetrics(existingRow);
+  const expectedEnd = shiftIsoCalendarDate(getBratislavaClock().date,-2);
+  const expectedStart = `${expectedEnd.slice(0,7)}-01`;
+  const existingMs = Date.parse(existingRow?.created_at || existingSnapshot?.updatedAt || '');
+  const stale = !Number.isFinite(existingMs) || Date.now()-existingMs > 3*60*60*1000;
+  const wrongMonth = cleanPlainText(existingSnapshot?.period?.startDate||'',20) !== expectedStart;
+  if (refresh || !existingRow || stale || wrongMonth) {
     try {
       const live = await Promise.race([
         fetchGoogleSearchConsoleAnalytics(env),
         new Promise((_, reject) => setTimeout(() => reject(new Error('search-console-timeout')), 11500))
       ]);
       if (live?.configured) {
-        await savePlatformSnapshot(db,'google-search-console',live,'manual-control-refresh');
+        await savePlatformSnapshot(db,'google-search-console',live,refresh?'manual-control-refresh-r531':'auto-current-month-r531');
         return json({ ok:true, searchConsole:live, updatedAt:new Date().toISOString() });
       }
       liveError = live?.error || 'search-console-not-configured';
     } catch (error) { liveError = searchConsoleErrorMessage(error); }
   }
-  const row = await db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform='google-search-console' ORDER BY created_at DESC LIMIT 1`).first();
+  const row = existingRow || await db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform='google-search-console' ORDER BY created_at DESC LIMIT 1`).first();
   const snapshot = parseSnapshotMetrics(row);
   const credentials = parseGoogleSearchConsoleCredentials(env);
   if (row) {
@@ -14016,8 +14047,12 @@ function siteUpdateNormalizePath(rawPath) {
 }
 
 function siteUpdateIgnoredPath(path) {
-  return path === '.DS_Store' || path.endsWith('/.DS_Store') || path === 'Thumbs.db' ||
-    path.startsWith('__MACOSX/') || path.startsWith('.git/') || path.startsWith('node_modules/');
+  const value = String(path || '');
+  const base = value.split('/').pop();
+  return value === '.DS_Store' || value.endsWith('/.DS_Store') || value === 'Thumbs.db' ||
+    value.startsWith('__MACOSX/') || value.startsWith('.git/') || value.startsWith('node_modules/') ||
+    value.startsWith('_inline_check/') || value.startsWith('_inline_check2/') || value.startsWith('_inline_check3/') ||
+    /^R\d{1,6}-REPORT\.txt$/i.test(base) || /\.err$/i.test(base);
 }
 
 function siteUpdateForbiddenPath(path) {

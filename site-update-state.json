@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787307092280-6318cde943",
-  "release": "R530",
-  "archiveName": "R530-DATE-FIX-GA4-FIRSTPARTY-CITIES-YOUTUBE-LIVE-SAFE-FULL.zip",
-  "sourceHead": "23c2aa6c81e07bf404de7f7afa8ab74b193b3e21",
-  "backupSha": "23c2aa6c81e07bf404de7f7afa8ab74b193b3e21",
-  "backupTag": "control-backup-20260821101127-23c2aa6-r530-71ec6",
+  "operationId": "publish-1787309239461-caa00f6e71",
+  "release": "R534",
+  "archiveName": "R534-UPDATER-RECOVERY-CLEAN-NO-DEBUG-SAFE-FULL.zip",
+  "sourceHead": "343935b7b03f381ff8a6e4724b45249ed42af374",
+  "backupSha": "343935b7b03f381ff8a6e4724b45249ed42af374",
+  "backupTag": "control-backup-20260821104713-343935b-r534-49295",
   "autoRecovery": true,
-  "generatedAt": "2026-08-21T10:11:32.280Z"
+  "generatedAt": "2026-08-21T10:47:19.461Z"
 }
