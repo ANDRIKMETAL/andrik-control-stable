@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787318414183-7f7e49aeb2",
-  "release": "R546",
-  "archiveName": "R546-YOUTUBE-SEPARATE-TOP-SECTIONS-CLEAN-SAFE-FULL.zip",
-  "sourceHead": "5706f572d5fc1d5a531264bfbe14a6dcc838f432",
-  "backupSha": "5706f572d5fc1d5a531264bfbe14a6dcc838f432",
-  "backupTag": "control-backup-20260821132008-5706f57-r546-cf1d5",
+  "operationId": "publish-1787318966033-35eef73e4e",
+  "release": "R547",
+  "archiveName": "R547-YOUTUBE-TOP-WORKING-PROFILE-POSITION-SAFE-FULL.zip",
+  "sourceHead": "bbdcab4bf06f5ca328a1a364e63e063eb1bf58f4",
+  "backupSha": "bbdcab4bf06f5ca328a1a364e63e063eb1bf58f4",
+  "backupTag": "control-backup-20260821132921-bbdcab4-r547-62541",
   "autoRecovery": true,
-  "generatedAt": "2026-08-21T13:20:14.183Z"
+  "generatedAt": "2026-08-21T13:29:26.033Z"
 }

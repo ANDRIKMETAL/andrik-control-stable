@@ -1,0 +1,7 @@
+/* R547 — profile button lives in the free space under YouTube title. */
+.youtube-admin-page .youtube-profile-under-title{margin:2px auto 8px!important;display:flex!important;justify-content:center!important}
+.youtube-admin-page .youtube-profile-under-title .youtube-profile-link{padding:6px 12px!important;font-size:.76rem!important;line-height:1!important;border-radius:999px!important;min-height:0!important}
+.youtube-admin-page .youtube-title-only{display:block!important;margin-bottom:0!important}
+.youtube-admin-page .youtube-title-only h1{margin-bottom:0!important}
+.youtube-admin-page .youtube-studio-gate-below-profile{margin:0 auto 8px!important;max-width:max-content!important}
+@media(max-width:540px){.youtube-admin-page .youtube-profile-under-title{margin:1px auto 7px!important}.youtube-admin-page .youtube-profile-under-title .youtube-profile-link{padding:5px 11px!important;font-size:.72rem!important}}

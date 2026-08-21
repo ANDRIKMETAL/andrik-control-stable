@@ -8916,7 +8916,7 @@ async function fetchYouTubeStudioAnalytics(env) {
     youtubeAnalyticsQuery(env, accessToken,{ids:`channel==${owner.channelId}`,startDate:dailyDate,endDate:dailyDate,dimensions:'country',metrics:'views,estimatedMinutesWatched',sort:'-views',maxResults:200}),
     youtubeAnalyticsQuery(env, accessToken,{...base,dimensions:'ageGroup,gender',metrics:'viewerPercentage'}),
     youtubeAnalyticsQuery(env, accessToken,{...base,dimensions:'sharingService',metrics:'shares',sort:'-shares',maxResults:8}),
-    youtubeAnalyticsQuery(env, accessToken,{...base,dimensions:'video',metrics:'views,estimatedMinutesWatched,likes,comments,shares,subscribersGained',sort:'-views',maxResults:10}),
+    youtubeAnalyticsQuery(env, accessToken,{...base,dimensions:'video',metrics:'views,estimatedMinutesWatched,likes,comments,shares,subscribersGained',sort:'-views',maxResults:40}),
     youtubeAnalyticsQuery(env, accessToken,{...base,dimensions:'video',metrics:'views,estimatedMinutesWatched,likes,comments,shares,subscribersGained',sort:'-likes',maxResults:10})
   ]);
   const val=i=>results[i].status==='fulfilled'?results[i].value:[];
@@ -13144,9 +13144,11 @@ async function handleControlGoogleDevicesR544(request, env) {
   }
 }
 
-// R544 — top Shorts / regular videos are loaded independently from the main YouTube
-// dashboard. If this report fails, the core YouTube page remains fully operational.
-async function handleControlYoutubeTopContentR544(request, env) {
+// R547 — fast top Shorts / regular videos. The endpoint starts from the latest
+// already-saved YouTube Studio snapshot, so opening the separate Top pages never waits
+// for a chain of live OAuth calls. Exact creatorContentType is attempted briefly; if
+// YouTube does not answer in time we safely classify the same videos by duration.
+async function handleControlYoutubeTopContentR547(request, env) {
   if (!adminAuthorized(request, env)) return json({ ok:false, error:'unauthorized' }, 401);
   const startDate = isoDateDaysAgo(28), endDate = isoDateDaysAgo(1);
   const durationSeconds = value => {
@@ -13154,130 +13156,123 @@ async function handleControlYoutubeTopContentR544(request, env) {
     if(!m)return 0;
     return Number(m[1]||0)*86400+Number(m[2]||0)*3600+Number(m[3]||0)*60+Number(m[4]||0);
   };
+  const normalize = row => ({
+    videoId:cleanPlainText(row?.videoId||row?.video||'',80),
+    views:Math.max(0,Number(row?.views||0)),
+    likes:Math.max(0,Number(row?.likes||0)),
+    comments:Math.max(0,Number(row?.comments||0)),
+    shares:Math.max(0,Number(row?.shares||0)),
+    title:cleanPlainText(row?.title||'',220),
+    publishedAt:cleanPlainText(row?.publishedAt||'',60),
+    thumbnail:cleanPlainText(row?.thumbnail||'',900),
+    url:cleanPlainText(row?.url||'',900)
+  });
   try {
-    const config = youtubeOAuthClient(env);
-    const refreshToken = await getYoutubeRefreshToken(env);
-    if (!config.configured || !refreshToken) {
-      return json({ ok:true, available:false, shorts:[], videos:[], error:'youtube-studio-not-connected' });
-    }
-    const accessToken = await getYoutubeOAuthAccessToken(env);
+    const db=requireDb(env);
+    await ensurePlatformAnalyticsSchema(db);
+    const row=await db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform='youtube' ORDER BY created_at DESC LIMIT 1`).first();
+    const snap=parseSnapshotMetrics(row);
+    let pool=(Array.isArray(snap?.studio?.topVideos28)?snap.studio.topVideos28:[]).map(normalize).filter(x=>x.videoId);
+    let accessToken='';
+    let channelId=cleanPlainText(snap?.channelId||snap?.studio?.channelId||env.YOUTUBE_CHANNEL_ID||'',120);
+    let liveError='';
 
-    // Prefer the already verified channel ID. Only fall back to the owner lookup when needed.
-    let channelId=cleanPlainText(env.YOUTUBE_CHANNEL_ID||'',120);
-    if(!channelId){
+    // If an older snapshot contains too few candidates, make ONE short live top-video
+    // request. It is capped so it can never block the page for tens of seconds.
+    if(pool.length < 12){
       try{
-        const db=requireDb(env);
-        await ensurePlatformAnalyticsSchema(db);
-        const row=await db.prepare(`SELECT metrics_json FROM platform_snapshots WHERE platform='youtube' ORDER BY created_at DESC LIMIT 1`).first();
-        const snap=parseSnapshotMetrics(row);
-        channelId=cleanPlainText(snap?.channelId||snap?.studio?.channelId||'',120);
-      }catch(_){ }
+        const config=youtubeOAuthClient(env);
+        const refreshToken=await getYoutubeRefreshToken(env);
+        if(config.configured && refreshToken){
+          accessToken=await Promise.race([
+            getYoutubeOAuthAccessToken(env),
+            new Promise((_,reject)=>setTimeout(()=>reject(new Error('youtube-top-token-timeout')),3500))
+          ]);
+          if(!channelId){
+            const owner=await Promise.race([
+              resolveYoutubeAnalyticsOwnerR495(env,accessToken),
+              new Promise((_,reject)=>setTimeout(()=>reject(new Error('youtube-top-owner-timeout')),3500))
+            ]);
+            channelId=owner.channelId;
+          }
+          const live=await Promise.race([
+            youtubeAnalyticsQuery(env,accessToken,{ids:`channel==${channelId}`,startDate,endDate,dimensions:'video',metrics:'views,likes,comments,shares',sort:'-views',maxResults:40}),
+            new Promise((_,reject)=>setTimeout(()=>reject(new Error('youtube-top-live-timeout')),5000))
+          ]);
+          const livePool=(Array.isArray(live)?live:[]).map(normalize).filter(x=>x.videoId);
+          if(livePool.length) pool=livePool;
+        }
+      }catch(error){liveError=cleanPlainText(error?.message||error,260);}
     }
-    if(!channelId){
-      const owner=await resolveYoutubeAnalyticsOwnerR495(env,accessToken);
-      channelId=owner.channelId;
+
+    // Absolute fallback to the Data API lifetime top list already stored in the same
+    // snapshot. Better to show real channel videos than an empty page.
+    if(!pool.length){
+      pool=(Array.isArray(snap?.topVideos)?snap.topVideos:[]).map(normalize).filter(x=>x.videoId);
     }
-    const base={ids:`channel==${channelId}`,startDate,endDate};
+    if(!pool.length){
+      return json({ok:true,available:false,startDate,endDate,shorts:[],videos:[],error:liveError||'youtube-top-no-snapshot-data',updatedAt:new Date().toISOString()});
+    }
 
-    let rows=[];
-    let exactError='';
-    try{
-      rows=await youtubeAnalyticsQuery(env,accessToken,{
-        ...base,
-        dimensions:'video,creatorContentType',
-        metrics:'views,likes,comments,shares',
-        sort:'-views',
-        maxResults:80
-      });
-    }catch(error){ exactError=cleanPlainText(error?.message||error,280); }
+    pool=pool.slice(0,40);
+    const ids=[...new Set(pool.map(x=>x.videoId))].slice(0,40);
 
-    let normalized=(Array.isArray(rows)?rows:[]).map(row=>({
-      videoId:cleanPlainText(row?.video||'',80),
-      creatorContentType:cleanPlainText(row?.creatorContentType||'',40).toUpperCase(),
-      views:Math.max(0,Number(row?.views||0)),
-      likes:Math.max(0,Number(row?.likes||0)),
-      comments:Math.max(0,Number(row?.comments||0)),
-      shares:Math.max(0,Number(row?.shares||0))
-    })).filter(row=>row.videoId);
-
-    // Reliable fallback: the plain video report is already used by the main Studio panel.
-    // If the combined creatorContentType report is rejected by YouTube, classify those
-    // top videos by duration. On this channel Shorts are short-form uploads; <= 180 s
-    // also covers YouTube's current 3-minute Shorts limit.
-    let fallbackUsed=false;
-    if(!normalized.length){
-      fallbackUsed=true;
-      let plain=[];
+    // Metadata is a cheap Data API call and gives titles/thumbnails plus duration.
+    const metaPromise=(async()=>{
       try{
-        plain=await youtubeAnalyticsQuery(env,accessToken,{
-          ...base,
-          dimensions:'video',
-          metrics:'views,likes,comments,shares',
-          sort:'-views',
-          maxResults:40
-        });
-      }catch(_){ }
-      normalized=(Array.isArray(plain)?plain:[]).map(row=>({
-        videoId:cleanPlainText(row?.video||'',80),
-        creatorContentType:'',
-        views:Math.max(0,Number(row?.views||0)),
-        likes:Math.max(0,Number(row?.likes||0)),
-        comments:Math.max(0,Number(row?.comments||0)),
-        shares:Math.max(0,Number(row?.shares||0))
-      })).filter(row=>row.videoId);
-
-      // Last fallback: use the latest stored Studio top list instead of returning an empty panel.
-      if(!normalized.length){
-        try{
-          const db=requireDb(env);
-          await ensurePlatformAnalyticsSchema(db);
-          const row=await db.prepare(`SELECT metrics_json FROM platform_snapshots WHERE platform='youtube' ORDER BY created_at DESC LIMIT 1`).first();
-          const snap=parseSnapshotMetrics(row);
-          normalized=(Array.isArray(snap?.studio?.topVideos28)?snap.studio.topVideos28:[]).map(item=>({
-            videoId:cleanPlainText(item?.videoId||'',80),creatorContentType:'',views:Math.max(0,Number(item?.views||0)),likes:Math.max(0,Number(item?.likes||0)),comments:Math.max(0,Number(item?.comments||0)),shares:Math.max(0,Number(item?.shares||0)),title:cleanPlainText(item?.title||'',220),publishedAt:cleanPlainText(item?.publishedAt||'',60),thumbnail:cleanPlainText(item?.thumbnail||'',900)
-          })).filter(row=>row.videoId);
-        }catch(_){ }
-      }
-    }
-
-    const ids=[...new Set(normalized.slice(0,80).map(row=>row.videoId))];
-    let metaMap=new Map();
-    if(ids.length){
-      try{
-        const metaResult=await youtubeApiJson(env,'videos',{part:'snippet,contentDetails',id:ids.slice(0,50).join(','),maxResults:50},{timeoutMs:6000});
-        metaMap=new Map((metaResult?.data?.items||[]).map(item=>[cleanPlainText(item?.id||'',80),{
+        const result=await youtubeApiJson(env,'videos',{part:'snippet,contentDetails',id:ids.join(','),maxResults:50},{timeoutMs:5500});
+        return new Map((result?.data?.items||[]).map(item=>[cleanPlainText(item?.id||'',80),{
           title:cleanPlainText(item?.snippet?.title||'',220),
           publishedAt:cleanPlainText(item?.snippet?.publishedAt||'',60),
-          thumbnail:item?.snippet?.thumbnails?.medium?.url||item?.snippet?.thumbnails?.default?.url||'',
+          thumbnail:cleanPlainText(item?.snippet?.thumbnails?.medium?.url||item?.snippet?.thumbnails?.default?.url||'',900),
           durationSeconds:durationSeconds(item?.contentDetails?.duration||'')
         }]));
-      }catch(_){ }
-    }
+      }catch(_){return new Map();}
+    })();
 
-    const enriched=normalized.map(row=>{
-      const meta=metaMap.get(row.videoId)||{};
-      let type=row.creatorContentType;
+    // Exact content type: official top-video report supports video + optional
+    // creatorContentType when the metric is views. Importantly, do NOT request
+    // likes/comments/shares in this report — that was what made the old request invalid.
+    const typePromise=(async()=>{
+      try{
+        if(!accessToken) accessToken=await Promise.race([
+          getYoutubeOAuthAccessToken(env),
+          new Promise((_,reject)=>setTimeout(()=>reject(new Error('youtube-top-type-token-timeout')),3000))
+        ]);
+        if(!channelId){
+          const owner=await Promise.race([
+            resolveYoutubeAnalyticsOwnerR495(env,accessToken),
+            new Promise((_,reject)=>setTimeout(()=>reject(new Error('youtube-top-type-owner-timeout')),3000))
+          ]);
+          channelId=owner.channelId;
+        }
+        const typed=await Promise.race([
+          youtubeAnalyticsQuery(env,accessToken,{ids:`channel==${channelId}`,startDate,endDate,dimensions:'video,creatorContentType',metrics:'views',sort:'-views',maxResults:200}),
+          new Promise((_,reject)=>setTimeout(()=>reject(new Error('youtube-top-type-timeout')),4500))
+        ]);
+        return new Map((Array.isArray(typed)?typed:[]).map(x=>[cleanPlainText(x?.video||'',80),cleanPlainText(x?.creatorContentType||'',40).toUpperCase()]));
+      }catch(_){return new Map();}
+    })();
+
+    const [metaMap,typeMap]=await Promise.all([metaPromise,typePromise]);
+    const enriched=pool.map(base=>{
+      const meta=metaMap.get(base.videoId)||{};
+      let type=typeMap.get(base.videoId)||'';
       if(!type && Number(meta.durationSeconds||0)>0) type=Number(meta.durationSeconds)<=180?'SHORTS':'VIDEO_ON_DEMAND';
-      return {...row,...meta,creatorContentType:type};
+      return {...base,...meta,title:cleanPlainText(meta.title||base.title||`Видео ${base.videoId}`,220),thumbnail:cleanPlainText(meta.thumbnail||base.thumbnail||'',900),publishedAt:cleanPlainText(meta.publishedAt||base.publishedAt||'',60),creatorContentType:type};
     });
-    const make=(row,isShort)=>({
-      ...row,
-      title:cleanPlainText(row.title||`Видео ${row.videoId}`,220),
-      url:isShort?`https://www.youtube.com/shorts/${encodeURIComponent(row.videoId)}`:`https://www.youtube.com/watch?v=${encodeURIComponent(row.videoId)}`
-    });
-    const shorts=enriched.filter(row=>row.creatorContentType==='SHORTS').sort((a,b)=>b.views-a.views).slice(0,4).map(row=>make(row,true));
-    const videos=enriched.filter(row=>row.creatorContentType==='VIDEO_ON_DEMAND').sort((a,b)=>b.views-a.views).slice(0,4).map(row=>make(row,false));
+    const make=(x,isShort)=>({...x,url:isShort?`https://www.youtube.com/shorts/${encodeURIComponent(x.videoId)}`:(x.url||`https://www.youtube.com/watch?v=${encodeURIComponent(x.videoId)}`)});
+    let shorts=enriched.filter(x=>x.creatorContentType==='SHORTS').sort((a,b)=>b.views-a.views).slice(0,4).map(x=>make(x,true));
+    let videos=enriched.filter(x=>x.creatorContentType==='VIDEO_ON_DEMAND').sort((a,b)=>b.views-a.views).slice(0,4).map(x=>make(x,false));
 
-    return json({
-      ok:true,
-      available:Boolean(shorts.length||videos.length),
-      startDate,endDate,shorts,videos,
-      source:fallbackUsed?'youtube-analytics-video-duration-fallback-r546':'youtube-analytics-creatorContentType-r546',
-      exactError,
-      updatedAt:new Date().toISOString()
-    });
-  } catch (error) {
-    return json({ ok:true, available:false, shorts:[], videos:[], error:cleanPlainText(error?.message||error,320), updatedAt:new Date().toISOString() });
+    // If exact type and duration are both unavailable for a stored row, never leave both
+    // pages blank: unknown candidates stay in regular Videos, which is the safer bucket.
+    if(!videos.length){
+      videos=enriched.filter(x=>x.creatorContentType!=='SHORTS').sort((a,b)=>b.views-a.views).slice(0,4).map(x=>make(x,false));
+    }
+    return json({ok:true,available:Boolean(shorts.length||videos.length),startDate,endDate,shorts,videos,source:'youtube-snapshot-fast-r547',liveError,updatedAt:new Date().toISOString()});
+  } catch(error){
+    return json({ok:true,available:false,startDate,endDate,shorts:[],videos:[],error:cleanPlainText(error?.message||error,320),updatedAt:new Date().toISOString()});
   }
 }
 
@@ -16482,7 +16477,7 @@ async function routeApi(request, env, ctx) {
     if (path === '/api/control/social-overview' && request.method === 'GET') return await handleControlSocialOverviewR487(request, env);
     if (path === '/api/control/ecosystem-map' && request.method === 'GET') return await handleControlEcosystemMap(request, env);
     if (path === '/api/control/audience' && request.method === 'GET') return await handleControlAudience(request, env);
-    if (path === '/api/control/youtube-top-content' && request.method === 'GET') return await handleControlYoutubeTopContentR544(request, env);
+    if (path === '/api/control/youtube-top-content' && request.method === 'GET') return await handleControlYoutubeTopContentR547(request, env);
     if (path === '/api/control/search-console' && request.method === 'GET') return await handleControlSearchConsole(request, env);
     if (path === '/api/control/snapshots/refresh' && request.method === 'POST') return await handleControlSnapshotsRefresh(request, env);
     if (path === '/api/control/country-growth' && request.method === 'GET') return await handleControlCountryGrowth(request, env);
