@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="ru" translate="no" class="notranslate"><head><script>(function(){try{var u=new URL(location.href),p=(u.searchParams.get('page')||'').toLowerCase(),s=(u.searchParams.get('source')||'').toLowerCase();var sitePages=['google','site','analytics','ga','ga4','website'];if(sitePages.indexOf(p)!==-1)document.documentElement.classList.add('analytics-route-google-r539');else if(p==='youtube')document.documentElement.classList.add('analytics-route-youtube-r539');else document.documentElement.classList.add('analytics-route-map-r539');var ok=(p==='map'&&s==='admin-globe')||sitePages.indexOf(p)!==-1||p==='youtube';if(!ok){location.replace('/control-home.html?page=menu&source=launch-guard-r530&v=55.00-r530');}}catch(_){}})();</script>
-<meta name="andrik-control-release" content="R544">
+<meta name="andrik-control-release" content="R545">
 <link rel="stylesheet" href="/assets/control-sleep-mode-r193.css?v=55.00-r193"><script defer src="/assets/control-sleep-mode-r193.js?v=55.00-r193"></script>
 
 <meta name="google" content="notranslate"><meta charset="utf-8"/>
@@ -202,6 +202,17 @@ html.analytics-route-google-r539 body:not([data-analytics-page]) .analytics-yout
 .search-console-line-trend .sc-line.is-impression,.search-console-line-trend .sc-dot.is-impression{stroke:#7e87ff;fill:#7e87ff}
 .search-console-line-trend .sc-dot{vector-effect:non-scaling-stroke}
 @media(max-width:540px){.search-console-line-trend svg{height:205px!important}.analytics-site-pane .analytics-chart-card{overflow:hidden!important}}
+
+.analytics-pages-spoiler{overflow:hidden}
+.analytics-pages-spoiler>summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:22px 24px}
+.analytics-pages-spoiler>summary::-webkit-details-marker{display:none}
+.analytics-pages-spoiler>summary span{display:grid;gap:6px}
+.analytics-pages-spoiler>summary strong{font-size:clamp(1.35rem,5.8vw,2rem);line-height:1.05;color:#f5fbff}
+.analytics-pages-spoiler>summary em{font-style:normal;color:#9ecbff;font-size:.8rem;font-weight:800}
+.analytics-pages-spoiler[open]>summary em{font-size:0}
+.analytics-pages-spoiler[open]>summary em::after{content:'Скрыть';font-size:.8rem}
+.analytics-pages-spoiler-body{padding:0 20px 20px}
+@media(max-width:540px){.analytics-pages-spoiler>summary{padding:18px 20px}.analytics-pages-spoiler-body{padding:0 16px 16px}}
 </style>
 <link href="/assets/control-v54-67.css?v=54.67" rel="stylesheet"/><link href="/assets/control-v54-68.css?v=54.68" rel="stylesheet"/>
 <link href="/assets/control-v54-72.css?v=54.72" rel="stylesheet"/><link href="/assets/control-v54-73.css?v=54.73" rel="stylesheet"/><link href="/assets/control-v54-76.css?v=54.76" rel="stylesheet"/><link href="/assets/control-v54-77.css?v=54.77" rel="stylesheet"/><link href="/assets/control-v54-78.css?v=54.78" rel="stylesheet"/>
@@ -1057,8 +1068,8 @@ body.analytics-admin-page.is-country-returning #worldMap .world-map-dot.is-selec
 </section>
 <section class="analytics-main-chart"><article class="admin-control-card analytics-chart-card"><div class="admin-card-title-row analytics-inline-actions"><div><span class="eyeline">Последние 30 дней</span><h2>Динамика посещений</h2></div><div class="analytics-title-actions"><span class="analytics-legend">Пользователи / просмотры</span></div></div><div class="analytics-chart" id="analyticsTrend"><div class="admin-empty">Загружаем график…</div></div></article></section>
           <section class="analytics-site-geography"><article class="admin-control-card analytics-list-card analytics-site-country-card"><div class="admin-card-title-row"><div><span class="eyeline">Google Analytics · за 30 дней</span><h2>География сайта</h2><p>Страны, из которых заходили посетители сайта.</p></div></div><div id="analyticsCountries"><div class="admin-empty">Загружаем географию сайта…</div></div></article></section>
-          <section class="analytics-columns"><article class="admin-control-card analytics-list-card"><div class="admin-card-title-row"><div><span class="eyeline">За 30 дней</span><h2>Популярные страницы</h2></div></div><div class="analytics-list" id="analyticsPages"><div class="admin-empty">Загружаем страницы…</div></div></article><article class="admin-control-card analytics-list-card" id="analyticsDevicesCard" hidden><div class="admin-card-title-row"><div><span class="eyeline">За 30 дней</span><h2>Устройства</h2><p>Распределение пользователей по типу устройства.</p></div></div><div class="analytics-list" id="analyticsDevices"><div class="admin-empty">Загружаем устройства…</div></div></article></section>
-          <footer class="control-version-footer"><strong>Live Web AI · ANDRIK · версия R544</strong><span>Google Analytics · текущие 30 дней · 21.08.2026</span></footer>
+          <section class="analytics-columns"><details class="admin-control-card analytics-list-card analytics-pages-spoiler" id="analyticsPagesSpoiler"><summary><span><small class="eyeline">За 30 дней</small><strong>Популярные страницы</strong></span><em>Показать</em></summary><div class="analytics-pages-spoiler-body"><div class="analytics-list" id="analyticsPages"><div class="admin-empty">Загружаем страницы…</div></div></div></details><article class="admin-control-card analytics-list-card" id="analyticsDevicesCard" hidden><div class="admin-card-title-row"><div><span class="eyeline">За 30 дней</span><h2>Устройства</h2><p>Распределение пользователей по типу устройства.</p></div></div><div class="analytics-list" id="analyticsDevices"><div class="admin-empty">Загружаем устройства…</div></div></article></section>
+          <footer class="control-version-footer"><strong>Live Web AI · ANDRIK · версия R545</strong><span>Google Analytics · текущие 30 дней · 21.08.2026</span></footer>
           <div class="analytics-swipe-hint analytics-site-hint"><button type="button" data-swipe-go="2">← YouTube</button><button type="button" data-swipe-go="1">Карта слушателей →</button></div>
         </div>
       </section>
@@ -1123,7 +1134,7 @@ body.analytics-admin-page.is-country-returning #worldMap .world-map-dot.is-selec
           </section>
           <details class="youtube-hidden-data"><summary>Что YouTube не отдаёт через API</summary><div class="youtube-hidden-data-body"><p><strong>Лайки:</strong> видно количество, но не имена людей, поставивших лайк.</p><p><strong>Подписчики:</strong> точный счётчик и прирост доступны, но имена скрытых/непубличных подписчиков не выдаются.</p><p><strong>Поделились:</strong> видно площадку и количество, но не конкретного получателя ссылки.</p><p><strong>Возраст и пол:</strong> показываются только когда YouTube набрал достаточную выборку для защиты приватности.</p></div></details>
 <section class="admin-control-card youtube-service-card"><div class="admin-card-title-row"><div><span class="eyeline">🔔 Реакции канала</span><h2>Проверка уведомлений перенесена</h2><p>Комментарии, подписчики и лайки теперь проверяются в разделе «Служебное».</p></div></div><div class="admin-actions"><a class="btn btn-primary" href="/service-admin.html">Открыть Служебное</a></div></section>
-          <footer class="control-version-footer"><strong>Live Web AI · ANDRIK · версия R544</strong><span>Центр соцсетей · свайп между платформами</span></footer>
+          <footer class="control-version-footer"><strong>Live Web AI · ANDRIK · версия R545</strong><span>Центр соцсетей · свайп между платформами</span></footer>
           <div class="analytics-swipe-hint analytics-youtube-hint"><button type="button" data-swipe-go="1">← Карта слушателей</button><button type="button" data-swipe-go="0">Google Analytics →</button></div>
         </div>
       </section>
@@ -2478,26 +2489,26 @@ body.analytics-admin-page.is-country-returning #worldMap .world-map-dot.is-selec
   }
   let refreshTimer=null;
 
-  let googleDevicesR544Promise=null,googleDevicesR544LoadedAt=0;
-  async function loadGoogleDevicesR544(force=false){
+  let googleDevicesR545Promise=null,googleDevicesR545LoadedAt=0;
+  async function loadGoogleDevicesR545(force=false){
     const card=$('analyticsDevicesCard'),box=$('analyticsDevices');
     if(!card||!box||!getKey())return;
-    if(!force&&Date.now()-googleDevicesR544LoadedAt<60000)return;
-    if(googleDevicesR544Promise)return googleDevicesR544Promise;
-    googleDevicesR544Promise=(async()=>{
+    if(!force&&Date.now()-googleDevicesR545LoadedAt<60000)return;
+    if(googleDevicesR545Promise)return googleDevicesR545Promise;
+    googleDevicesR545Promise=(async()=>{
       const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),7000);
       try{
         const response=await fetch('/api/control/google-devices?v=55.00-r544',{headers:{accept:'application/json',authorization:`Bearer ${getKey()}`},cache:'no-store',signal:controller.signal});
         const data=await response.json().catch(()=>({}));
         if(!response.ok)throw new Error(data.error||`HTTP ${response.status}`);
         const rows=(data.devices||[]).map(item=>({...item,deviceCategory:translateDevice(item.deviceCategory),activeUsers:Math.max(0,Number(item.activeUsers||0))})).filter(item=>item.activeUsers>0);
-        if(rows.length){card.hidden=false;renderList('analyticsDevices',rows,'activeUsers','deviceCategory');googleDevicesR544LoadedAt=Date.now();}
+        if(rows.length){card.hidden=false;renderList('analyticsDevices',rows,'activeUsers','deviceCategory');googleDevicesR545LoadedAt=Date.now();}
         else{card.hidden=true;box.innerHTML='';}
       }catch(_){
         if(!box.querySelector('.analytics-list-row')){card.hidden=true;box.innerHTML='';}
-      }finally{clearTimeout(timer);googleDevicesR544Promise=null;}
+      }finally{clearTimeout(timer);googleDevicesR545Promise=null;}
     })();
-    return googleDevicesR544Promise;
+    return googleDevicesR545Promise;
   }
   function renderGoogleData(ga,data={}){
     if((!ga?.configured||ga?.error)&&!ga?.liveCounter?.configured){
@@ -2523,7 +2534,7 @@ body.analytics-admin-page.is-country-returning #worldMap .world-map-dot.is-selec
       if(deviceCard)deviceCard.hidden=false;
       renderList('analyticsDevices',cachedDeviceRows,'activeUsers','deviceCategory');
     }else if(deviceCard){deviceCard.hidden=true;}
-    void loadGoogleDevicesR544();
+    void loadGoogleDevicesR545();
     if($('analyticsPropertyLabel'))$('analyticsPropertyLabel').textContent=ga.propertyId?`${ga.propertyName||'andrikmetal.com'} · GA4 property ${ga.propertyId}`:`${ga.propertyName||'andrikmetal.com'} · живой счётчик`;
     if($('analyticsMessage')){const source=ga.firstParty30d?.views>0?'GA4 + Live Web AI':'Google Analytics';$('analyticsMessage').textContent=`${source} · автообновление каждые 2 минуты · ${dateTime(ga.updatedAt||data.updatedAt)}`;$('analyticsMessage').className='control-analytics-status is-good'}
     saveGaCache(ga);
@@ -4744,6 +4755,6 @@ body .country-scroll-overlay-r258::before{margin:0 0 10px!important;}
 <link rel="stylesheet" href="/assets/map-controls-compact-r499.css?v=55.00-r499">
 <script defer src="/assets/planet-map-transition-r450.js?v=55.00-r450"></script>
 <script defer src="/assets/youtube-admin-v55-00j.js?v=55.00j-r544"></script>
-<script defer src="/assets/control-version-sync-r544.js?v=55.00-r544"></script>
+<script defer src="/assets/control-version-sync-r545.js?v=55.00-r545"></script>
 <script defer src="/assets/social-platform-swipe-r524.js?v=55.00-r524"></script>
 </body></html>
