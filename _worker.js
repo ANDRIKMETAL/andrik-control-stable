@@ -8917,7 +8917,8 @@ async function fetchYouTubeStudioAnalytics(env) {
     youtubeAnalyticsQuery(env, accessToken,{...base,dimensions:'ageGroup,gender',metrics:'viewerPercentage'}),
     youtubeAnalyticsQuery(env, accessToken,{...base,dimensions:'sharingService',metrics:'shares',sort:'-shares',maxResults:8}),
     youtubeAnalyticsQuery(env, accessToken,{...base,dimensions:'video',metrics:'views,estimatedMinutesWatched,likes,comments,shares,subscribersGained',sort:'-views',maxResults:10}),
-    youtubeAnalyticsQuery(env, accessToken,{...base,dimensions:'video',metrics:'views,estimatedMinutesWatched,likes,comments,shares,subscribersGained',sort:'-likes',maxResults:10})
+    youtubeAnalyticsQuery(env, accessToken,{...base,dimensions:'video',metrics:'views,estimatedMinutesWatched,likes,comments,shares,subscribersGained',sort:'-likes',maxResults:10}),
+    youtubeAnalyticsQuery(env, accessToken,{...base,dimensions:'video,creatorContentType',metrics:'views,estimatedMinutesWatched,likes,comments,shares,subscribersGained',sort:'-views',maxResults:100})
   ]);
   const val=i=>results[i].status==='fulfilled'?results[i].value:[];
   const resultError=i=>results[i].status==='rejected'?cleanPlainText(results[i].reason?.message||results[i].reason,260):'';
@@ -8939,6 +8940,8 @@ async function fetchYouTubeStudioAnalytics(env) {
     trend:val(1).map(r=>({day:String(r.day||''),views:Number(r.views||0),estimatedMinutesWatched:Number(r.estimatedMinutesWatched||0),likes:Number(r.likes||0),comments:Number(r.comments||0),shares:Number(r.shares||0),subscribersGained:Number(r.subscribersGained||0),subscribersLost:Number(r.subscribersLost||0)})),
     topVideos28:val(6).map(r=>({videoId:cleanPlainText(r.video||'',80),views:Number(r.views||0),estimatedMinutesWatched:Number(r.estimatedMinutesWatched||0),likes:Number(r.likes||0),comments:Number(r.comments||0),shares:Number(r.shares||0),subscribersGained:Number(r.subscribersGained||0)})).filter(r=>r.videoId),
     engagementVideos28:val(7).map(r=>({videoId:cleanPlainText(r.video||'',80),views:Number(r.views||0),estimatedMinutesWatched:Number(r.estimatedMinutesWatched||0),likes:Number(r.likes||0),comments:Number(r.comments||0),shares:Number(r.shares||0),subscribersGained:Number(r.subscribersGained||0)})).filter(r=>r.videoId),
+    topShorts28:val(8).filter(r=>String(r.creatorContentType||'').toUpperCase()==='SHORTS').slice(0,4).map(r=>({videoId:cleanPlainText(r.video||'',80),creatorContentType:'SHORTS',views:Number(r.views||0),estimatedMinutesWatched:Number(r.estimatedMinutesWatched||0),likes:Number(r.likes||0),comments:Number(r.comments||0),shares:Number(r.shares||0),subscribersGained:Number(r.subscribersGained||0)})).filter(r=>r.videoId),
+    topVideosRegular28:val(8).filter(r=>String(r.creatorContentType||'').toUpperCase()==='VIDEO_ON_DEMAND').slice(0,4).map(r=>({videoId:cleanPlainText(r.video||'',80),creatorContentType:'VIDEO_ON_DEMAND',views:Number(r.views||0),estimatedMinutesWatched:Number(r.estimatedMinutesWatched||0),likes:Number(r.likes||0),comments:Number(r.comments||0),shares:Number(r.shares||0),subscribersGained:Number(r.subscribersGained||0)})).filter(r=>r.videoId),
     countries,
     dailyCountries,
     countryCount:countries.length,
@@ -9737,6 +9740,8 @@ async function fetchYouTubeChannelAnalytics(env) {
       };
     };
     studio.topVideos28=(Array.isArray(studio.topVideos28)?studio.topVideos28:[]).map(enrich);
+    studio.topShorts28=(Array.isArray(studio.topShorts28)?studio.topShorts28:[]).map(row=>{const item=enrich(row);return {...item,url:item.videoId?`https://www.youtube.com/shorts/${encodeURIComponent(item.videoId)}`:item.url};});
+    studio.topVideosRegular28=(Array.isArray(studio.topVideosRegular28)?studio.topVideosRegular28:[]).map(enrich);
     const engagementPool=[...(Array.isArray(studio.engagementVideos28)?studio.engagementVideos28:[]),...(Array.isArray(studio.topVideos28)?studio.topVideos28:[])];
     const uniqueEngagement=new Map();
     engagementPool.forEach(row=>{if(row?.videoId&&!uniqueEngagement.has(row.videoId))uniqueEngagement.set(row.videoId,enrich(row));});

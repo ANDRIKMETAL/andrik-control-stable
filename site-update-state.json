@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787312172478-c63e65636a",
-  "release": "R540",
-  "archiveName": "R540-ANALYTICS-DEVICE-LOAD-NO-HANG-VERSION-CACHE-FIX-SAFE-FULL.zip",
-  "sourceHead": "347987ce97bddfb237ae2c27818ba8985af660d3",
-  "backupSha": "347987ce97bddfb237ae2c27818ba8985af660d3",
-  "backupTag": "control-backup-20260821113607-347987c-r540-4851f",
+  "operationId": "publish-1787313281798-3508a773be",
+  "release": "R541",
+  "archiveName": "R541-YOUTUBE-TOP-SHORTS-VIDEOS-28D-SAFE-FULL.zip",
+  "sourceHead": "4badbf2a6a7eb8c5b7231971525e19fe24eb8989",
+  "backupSha": "4badbf2a6a7eb8c5b7231971525e19fe24eb8989",
+  "backupTag": "control-backup-20260821115436-4badbf2-r541-e45b5",
   "autoRecovery": true,
-  "generatedAt": "2026-08-21T11:36:12.478Z"
+  "generatedAt": "2026-08-21T11:54:41.798Z"
 }
