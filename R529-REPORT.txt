@@ -1,0 +1,6 @@
+R529
+- Google Analytics site UI restored to the exact R450 structure: GA4 cards, Search Console, one 30-day visits chart, geography, popular pages, devices.
+- Removed the duplicate social "Общий график" from the Google Analytics page and its page-only CSS/JS includes.
+- Added live GA4 refresh on explicit page refresh.
+- Added safe recovery of richer country/page/device/trend arrays from recent D1 GA snapshots for the same GA property when the latest snapshot is unexpectedly sparse.
+- Current headline totals remain from the latest snapshot/live counter.

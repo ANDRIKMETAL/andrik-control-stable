@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787301808789-57d5763eae",
-  "release": "R528",
-  "archiveName": "R528-GOOGLE-SITE-R522-RESTORE-YOUTUBE-CLEAN-SAFE-FULL.zip",
-  "sourceHead": "052ba2bc4c318a74a57e7fa666656823500f9587",
-  "backupSha": "052ba2bc4c318a74a57e7fa666656823500f9587",
-  "backupTag": "control-backup-20260821084324-052ba2b-r528-e4923",
+  "operationId": "publish-1787306150011-0b08cc1b14",
+  "release": "R529",
+  "archiveName": "R529-GOOGLE-ANALYTICS-R450-EXACT-RESTORE-HISTORY-RECOVERY-SAFE-FULL.zip",
+  "sourceHead": "269e3edeee1d46251c86ee637b14d1699ca390a5",
+  "backupSha": "269e3edeee1d46251c86ee637b14d1699ca390a5",
+  "backupTag": "control-backup-20260821095545-269e3ed-r529-5ee60",
   "autoRecovery": true,
-  "generatedAt": "2026-08-21T08:43:28.789Z"
+  "generatedAt": "2026-08-21T09:55:50.011Z"
 }

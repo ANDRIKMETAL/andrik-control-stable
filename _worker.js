@@ -12797,38 +12797,113 @@ async function handleControlGoogleAnalytics(request, env) {
     ensureSiteMetricsSchema(db)
   ]);
 
-  const [snapshotResult, liveResult] = await Promise.allSettled([
+  const url = new URL(request.url);
+  const forceRefresh = url.searchParams.get('refresh') === '1';
+  let liveRefreshError = '';
+
+  // R529: when the owner explicitly refreshes Google Analytics, query GA4 now and
+  // write a fresh full snapshot. This avoids depending only on the central Cron.
+  if (forceRefresh) {
+    try {
+      const fresh = await Promise.race([
+        fetchGoogleSiteAnalytics(env),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('google-analytics-live-timeout')), 11500))
+      ]);
+      if (fresh?.configured) {
+        await savePlatformSnapshot(db, 'google-analytics', {
+          configured:true,
+          propertyId:fresh.propertyId || '',
+          propertyName:fresh.propertyName || 'andrikmetal.com',
+          propertySource:fresh.propertySource || '',
+          realtime:fresh.realtime || {}, today:fresh.today || {}, week:fresh.week || {}, month:fresh.month || {},
+          trend:fresh.trend || [], countries:fresh.countries || [], pages:fresh.pages || [], devices:fresh.devices || [],
+          updatedAt:fresh.updatedAt || new Date().toISOString()
+        }, 'Google Analytics Data API · manual R529');
+      }
+    } catch (error) {
+      liveRefreshError = cleanPlainText(error?.message || error, 300);
+    }
+  }
+
+  const [snapshotsResult, liveResult] = await Promise.allSettled([
     db.prepare(`
       SELECT metrics_json, created_at
       FROM platform_snapshots
       WHERE platform='google-analytics'
       ORDER BY datetime(created_at) DESC
-      LIMIT 1
-    `).first(),
+      LIMIT 80
+    `).all(),
     getSiteLiveMetrics(db)
   ]);
 
-  const row = snapshotResult.status === 'fulfilled' ? snapshotResult.value : null;
-  const snapshot = parseSnapshotMetrics(row);
+  const rows = snapshotsResult.status === 'fulfilled' ? (snapshotsResult.value?.results || []) : [];
+  const latestRow = rows[0] || null;
+  const latest = parseSnapshotMetrics(latestRow);
   const live = liveResult.status === 'fulfilled'
     ? liveResult.value
     : { configured:false, today:{}, realtime:{} };
 
-  const hasSnapshot = Boolean(row);
+  // R529: cache resets can expose a newer but unexpectedly sparse snapshot. Keep
+  // current headline totals, but recover dimensional lists/trend from the most
+  // recent richer snapshot for the same GA4 property. No old/different property
+  // data is mixed in.
+  const propertyId = cleanPlainText(latest?.propertyId || '', 120);
+  const candidates = rows.map(row => ({ row, metrics:parseSnapshotMetrics(row) }))
+    .filter(item => {
+      const candidateProperty = cleanPlainText(item.metrics?.propertyId || '', 120);
+      return !propertyId || !candidateProperty || candidateProperty === propertyId;
+    });
+
+  const chooseArray = (field, minUseful = 2) => {
+    const current = Array.isArray(latest?.[field]) ? latest[field] : [];
+    if (current.length >= minUseful) return { value:current, recovered:false, at:latestRow?.created_at || '' };
+    let best = null;
+    for (const item of candidates) {
+      const value = Array.isArray(item.metrics?.[field]) ? item.metrics[field] : [];
+      if (!value.length) continue;
+      if (!best || value.length > best.value.length) best = { value, at:item.row?.created_at || '' };
+      // Prefer the first sufficiently rich recent snapshot rather than an ancient max.
+      if (value.length >= minUseful) { best = { value, at:item.row?.created_at || '' }; break; }
+    }
+    return best ? { ...best, recovered:best.value !== current } : { value:current, recovered:false, at:latestRow?.created_at || '' };
+  };
+
+  const trendPick = chooseArray('trend', 5);
+  const countriesPick = chooseArray('countries', 2);
+  const pagesPick = chooseArray('pages', 2);
+  const devicesPick = chooseArray('devices', 2);
+
+  const recoveredSnapshot = {
+    ...latest,
+    trend:trendPick.value,
+    countries:countriesPick.value,
+    pages:pagesPick.value,
+    devices:devicesPick.value,
+    historyFallback:{
+      used:Boolean(trendPick.recovered || countriesPick.recovered || pagesPick.recovered || devicesPick.recovered),
+      trendAt:trendPick.at,
+      countriesAt:countriesPick.at,
+      pagesAt:pagesPick.at,
+      devicesAt:devicesPick.at
+    }
+  };
+
+  const hasSnapshot = Boolean(latestRow);
   const google = mergeGoogleWithSiteLive({
-    ...snapshot,
-    configured:hasSnapshot ? snapshot.configured !== false : false,
-    updatedAt:row?.created_at || snapshot.updatedAt || ''
+    ...recoveredSnapshot,
+    configured:hasSnapshot ? recoveredSnapshot.configured !== false : false,
+    updatedAt:latestRow?.created_at || recoveredSnapshot.updatedAt || ''
   }, live);
 
   if (hasSnapshot || live.configured) {
     return json({
       ok:true,
       partial:!hasSnapshot,
-      source:hasSnapshot ? 'snapshot+live-counter' : 'live-counter',
+      source:hasSnapshot ? (google.historyFallback?.used ? 'snapshot+history-recovery+live-counter' : 'snapshot+live-counter') : 'live-counter',
       google,
       website:google,
-      snapshotAt:row?.created_at || '',
+      snapshotAt:latestRow?.created_at || '',
+      refreshError:liveRefreshError,
       updatedAt:new Date().toISOString()
     });
   }
@@ -12858,6 +12933,7 @@ async function handleControlGoogleAnalytics(request, env) {
       devices:[],
       liveCounter:live
     },
+    refreshError:liveRefreshError,
     updatedAt:new Date().toISOString()
   });
 }
