@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787329816306-65d1064731",
-  "release": "R553",
-  "archiveName": "R553-YOUTUBE-TOP-VIDEOS-LIVE-EYE-FIX-SAFE-FULL.zip",
-  "sourceHead": "4b1d962bf62d0876d803245cf4e431ace085503d",
-  "backupSha": "4b1d962bf62d0876d803245cf4e431ace085503d",
-  "backupTag": "control-backup-20260821163011-4b1d962-r553-fac99",
+  "operationId": "publish-1787330564444-1404b3a29f",
+  "release": "R554",
+  "archiveName": "R554-YOUTUBE-TOP-AUTH-TIMING-FIX-SAFE-FULL.zip",
+  "sourceHead": "978c68f13344d4c756a1efb2098d2eb72c496b36",
+  "backupSha": "978c68f13344d4c756a1efb2098d2eb72c496b36",
+  "backupTag": "control-backup-20260821164239-978c68f-r554-d7748",
   "autoRecovery": true,
-  "generatedAt": "2026-08-21T16:30:16.306Z"
+  "generatedAt": "2026-08-21T16:42:44.444Z"
 }
