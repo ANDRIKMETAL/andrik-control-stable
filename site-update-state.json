@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787306150011-0b08cc1b14",
-  "release": "R529",
-  "archiveName": "R529-GOOGLE-ANALYTICS-R450-EXACT-RESTORE-HISTORY-RECOVERY-SAFE-FULL.zip",
-  "sourceHead": "269e3edeee1d46251c86ee637b14d1699ca390a5",
-  "backupSha": "269e3edeee1d46251c86ee637b14d1699ca390a5",
-  "backupTag": "control-backup-20260821095545-269e3ed-r529-5ee60",
+  "operationId": "publish-1787307092280-6318cde943",
+  "release": "R530",
+  "archiveName": "R530-DATE-FIX-GA4-FIRSTPARTY-CITIES-YOUTUBE-LIVE-SAFE-FULL.zip",
+  "sourceHead": "23c2aa6c81e07bf404de7f7afa8ab74b193b3e21",
+  "backupSha": "23c2aa6c81e07bf404de7f7afa8ab74b193b3e21",
+  "backupTag": "control-backup-20260821101127-23c2aa6-r530-71ec6",
   "autoRecovery": true,
-  "generatedAt": "2026-08-21T09:55:50.011Z"
+  "generatedAt": "2026-08-21T10:11:32.280Z"
 }

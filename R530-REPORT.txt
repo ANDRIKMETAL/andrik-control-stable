@@ -1,0 +1,10 @@
+R530
+- Removed R529 old-snapshot richness recovery that could resurrect July trend rows.
+- GA4 is refreshed automatically when its snapshot is older than 30 minutes; manual refresh still forces it.
+- Site 30-day trend/countries/pages are supplemented with real first-party `visit` events from D1 (max merge, never double-summed).
+- Trend always spans the current rolling 30 calendar days, so stale July endpoints cannot define the axis.
+- Popular pages now recover real paths recorded by the site counter.
+- Geography now supplements GA4 with actual site visits, excluding YouTube/music/push opens.
+- Summary Site link uses the universally allowed admin-hub-swipe route; Social Center Site link fixed the same way.
+- YouTube channel identity refreshes when older than 10 minutes before computing today delta.
+- Summary city list now uses Bratislava calendar day 00:00→now; if no daily rows exist, the card explicitly switches to “Города на карте” and shows the same count as the modal.

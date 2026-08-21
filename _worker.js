@@ -1672,6 +1672,119 @@ async function getSiteLiveMetrics(db) {
   };
 }
 
+
+
+// R530 — rolling calendar-day site analytics from ANDRIK first-party events.
+// This is used as a factual fallback/supplement when GA4 returns a sparse or stale
+// dimensional report. Only real `visit` rows are used here; YouTube/music/push opens
+// are intentionally excluded from site geography and page statistics.
+async function getSiteFirstParty30dR530(db) {
+  await ensureSiteMetricsSchema(db);
+  const endDate = getBratislavaClock().date;
+  const startDate = shiftIsoCalendarDate(endDate, -29);
+  const weekStart = shiftIsoCalendarDate(endDate, -6);
+  const [trendResult,countryResult,pageResult,monthRow,weekRow] = await Promise.all([
+    db.prepare(`
+      SELECT local_date AS date, COUNT(*) AS screenPageViews, COUNT(DISTINCT visitor_hash) AS activeUsers
+      FROM site_visit_events
+      WHERE event_type='visit' AND local_date>=?1 AND local_date<=?2
+      GROUP BY local_date ORDER BY local_date ASC
+    `).bind(startDate,endDate).all().catch(()=>({results:[]})),
+    db.prepare(`
+      SELECT country, COUNT(DISTINCT visitor_hash) AS activeUsers
+      FROM site_visit_events
+      WHERE event_type='visit' AND local_date>=?1 AND local_date<=?2 AND country<>''
+      GROUP BY country ORDER BY activeUsers DESC LIMIT 250
+    `).bind(startDate,endDate).all().catch(()=>({results:[]})),
+    db.prepare(`
+      SELECT path AS pagePath, COUNT(*) AS screenPageViews, COUNT(DISTINCT visitor_hash) AS activeUsers
+      FROM site_visit_events
+      WHERE event_type='visit' AND local_date>=?1 AND local_date<=?2 AND path<>''
+      GROUP BY path ORDER BY screenPageViews DESC, activeUsers DESC LIMIT 30
+    `).bind(startDate,endDate).all().catch(()=>({results:[]})),
+    db.prepare(`
+      SELECT COUNT(*) AS screenPageViews, COUNT(DISTINCT visitor_hash) AS activeUsers
+      FROM site_visit_events WHERE event_type='visit' AND local_date>=?1 AND local_date<=?2
+    `).bind(startDate,endDate).first().catch(()=>null),
+    db.prepare(`
+      SELECT COUNT(*) AS screenPageViews, COUNT(DISTINCT visitor_hash) AS activeUsers
+      FROM site_visit_events WHERE event_type='visit' AND local_date>=?1 AND local_date<=?2
+    `).bind(weekStart,endDate).first().catch(()=>null)
+  ]);
+  return {
+    configured:true,startDate,endDate,
+    trend:(trendResult?.results||[]).map(row=>({date:cleanPlainText(row?.date||'',20),activeUsers:Math.max(0,Number(row?.activeUsers||0)),screenPageViews:Math.max(0,Number(row?.screenPageViews||0))})),
+    countries:(countryResult?.results||[]).map(row=>({country:cleanPlainText(row?.country||'',8).toUpperCase(),activeUsers:Math.max(0,Number(row?.activeUsers||0))})),
+    pages:(pageResult?.results||[]).map(row=>({pageTitle:'',pagePath:normalizeSitePath(row?.pagePath||'/'),screenPageViews:Math.max(0,Number(row?.screenPageViews||0)),activeUsers:Math.max(0,Number(row?.activeUsers||0))})),
+    month:{activeUsers:Math.max(0,Number(monthRow?.activeUsers||0)),screenPageViews:Math.max(0,Number(monthRow?.screenPageViews||0))},
+    week:{activeUsers:Math.max(0,Number(weekRow?.activeUsers||0)),screenPageViews:Math.max(0,Number(weekRow?.screenPageViews||0))},
+    updatedAt:new Date().toISOString()
+  };
+}
+
+function mergeGoogleWithFirstPartyR530(google={}, firstParty={}) {
+  if (!firstParty?.configured) return google||{};
+  const startDate=cleanPlainText(firstParty.startDate||'',20);
+  const endDate=cleanPlainText(firstParty.endDate||'',20);
+  const gaTrend=new Map((Array.isArray(google?.trend)?google.trend:[]).map(row=>[cleanPlainText(row?.date||'',20),row]));
+  const fpTrend=new Map((Array.isArray(firstParty?.trend)?firstParty.trend:[]).map(row=>[cleanPlainText(row?.date||'',20),row]));
+  const trend=[];
+  if(startDate&&endDate){
+    for(let day=startDate;day<=endDate;day=shiftIsoCalendarDate(day,1)){
+      const ga=gaTrend.get(day)||{}; const fp=fpTrend.get(day)||{};
+      trend.push({date:day,activeUsers:Math.max(0,Number(ga.activeUsers||0),Number(fp.activeUsers||0)),screenPageViews:Math.max(0,Number(ga.screenPageViews||0),Number(fp.screenPageViews||0))});
+    }
+  }
+  const countries=[...(Array.isArray(google?.countries)?google.countries:[]),...(Array.isArray(firstParty?.countries)?firstParty.countries:[])];
+  const pageMap=new Map();
+  for(const item of [...(Array.isArray(google?.pages)?google.pages:[]),...(Array.isArray(firstParty?.pages)?firstParty.pages:[])]){
+    const path=normalizeSitePath(item?.pagePath||'/');
+    const prev=pageMap.get(path)||{pageTitle:'',pagePath:path,screenPageViews:0,activeUsers:0};
+    const title=cleanPlainText(item?.pageTitle||'',180);
+    if(title&&!prev.pageTitle)prev.pageTitle=title;
+    prev.screenPageViews=Math.max(Number(prev.screenPageViews||0),Number(item?.screenPageViews||0));
+    prev.activeUsers=Math.max(Number(prev.activeUsers||0),Number(item?.activeUsers||0));
+    pageMap.set(path,prev);
+  }
+  const pages=[...pageMap.values()].sort((a,b)=>Number(b.screenPageViews||0)-Number(a.screenPageViews||0)||Number(b.activeUsers||0)-Number(a.activeUsers||0)).slice(0,20);
+  return {
+    ...(google||{}),
+    trend:trend.length?trend:(google?.trend||[]),
+    countries,
+    pages,
+    week:{...(google?.week||{}),activeUsers:Math.max(Number(google?.week?.activeUsers||0),Number(firstParty?.week?.activeUsers||0)),screenPageViews:Math.max(Number(google?.week?.screenPageViews||0),Number(firstParty?.week?.screenPageViews||0))},
+    month:{...(google?.month||{}),activeUsers:Math.max(Number(google?.month?.activeUsers||0),Number(firstParty?.month?.activeUsers||0)),screenPageViews:Math.max(Number(google?.month?.screenPageViews||0),Number(firstParty?.month?.screenPageViews||0))},
+    firstParty30d:{startDate,endDate,users:Number(firstParty?.month?.activeUsers||0),views:Number(firstParty?.month?.screenPageViews||0),updatedAt:firstParty.updatedAt||''}
+  };
+}
+
+async function collectCalendarDayCityActivityR530(db) {
+  const day=getBratislavaClock().date;
+  const startAt=bratislavaLocalDateTimeToIso(day,0,0);
+  const endAt=new Date().toISOString();
+  return collectCityActivityWindowR395(db,startAt,endAt,{limit:50,includePush:true});
+}
+
+async function refreshYoutubeIdentityIfStaleR530(env,db,maxAgeMs=10*60*1000) {
+  const row=await getPushState(db,'youtube-counts-last-summary').catch(()=>null);
+  const previous=parseYoutubeCountsCheckpointR440(row);
+  const previousMs=Date.parse(previous?.updatedAt||'');
+  if(Number.isFinite(previousMs)&&Date.now()-previousMs<=maxAgeMs)return {refreshed:false,updatedAt:previous.updatedAt};
+  const identity=await fetchYoutubeMonitorIdentity(env);
+  const now=new Date().toISOString();
+  const payload={
+    subscribers:Number(identity.subscribers||0),views:Number(identity.views||0),
+    likesTotal:previous?.likesTotal??null,commentsTotal:previous?.commentsTotal??null,
+    trackedVideos:previous?.trackedVideos??null,mode:'summary-live-r530',updatedAt:now
+  };
+  await Promise.all([
+    setPushState(db,'youtube-counts-last-at',now),
+    setPushState(db,'youtube-counts-last-summary',JSON.stringify(payload)),
+    mergeYoutubeIdentityIntoLatestSnapshot(db,{...identity,likesTotal:payload.likesTotal,commentsTotal:payload.commentsTotal},'youtube-summary-live-r530')
+  ]);
+  return {refreshed:true,updatedAt:now,views:Number(identity.views||0),subscribers:Number(identity.subscribers||0)};
+}
+
 async function getSiteWindowMetrics(db, startAt, endAt = '') {
   await ensureSiteMetricsSchema(db);
   const safeStart = cleanPlainText(startAt || '', 80);
@@ -12548,7 +12661,8 @@ async function handleControlHome(request, env) {
   // the expensive full collector. Return current-window high-water immediately,
   // even when it is zero, then let the client request a silent live refresh.
   if (!forceRefresh) {
-    const [highWaterRowR395, pushStateRowR395, activityResultR395, cityActivityR395, cityMapActivityR395, youtubeTodayR509] = await Promise.all([
+    await refreshYoutubeIdentityIfStaleR530(env,db).catch(()=>null);
+    const [highWaterRowR395, pushStateRowR395, activityResultR395, cityActivityR395, cityTodayActivityR530, cityMapActivityR395, youtubeTodayR509] = await Promise.all([
       getPushState(db, `control-home-high-water-r213:${window.key}`).catch(() => null),
       getPushState(db, `daily-owner-summary-window:${window.key}`).catch(() => null),
       db.prepare(`
@@ -12562,6 +12676,7 @@ async function handleControlHome(request, env) {
         LIMIT 200
       `).bind(window.startAt).all().catch(() => ({ results:[] })),
       collectDailyCityActivityR370(db, window).catch(() => []),
+      collectCalendarDayCityActivityR530(db).catch(() => []),
       collectMapCityActivity30dR395(db).catch(() => []),
       getYoutubeCalendarTodayR509(db).catch(() => ({day:getBratislavaClock().date,views:null,subscribers:null,likes:null,comments:null,source:'error'}))
     ]);
@@ -12597,6 +12712,7 @@ async function handleControlHome(request, env) {
       summary:mergedFastSummaryR395,
       youtubeToday:youtubeTodayR509 || null,
       cityActivity:Array.isArray(cityActivityR395) ? cityActivityR395 : [],
+      cityTodayActivity:Array.isArray(cityTodayActivityR530) ? cityTodayActivityR530 : [],
       cityMapActivity:Array.isArray(cityMapActivityR395) ? cityMapActivityR395 : [],
       activity:activityResultR395?.results || [],
       summarySource:accumulatorIsCurrentR395 ? 'auto-accumulator-fast-r395' : (fastSnapshotR395 ? 'push-fast-r395' : 'fast-current-empty-r395'),
@@ -12615,7 +12731,8 @@ async function handleControlHome(request, env) {
 
   // R260 DAILY ACCUMULATOR: the screen uses one Bratislava window, 06:05 → next 06:05.
   // Sending a push only records a checkpoint. It never resets counters; only the window key changes at 06:05.
-  const [siteSubscribers, siteComments, siteLikes, youtubeEvents, youtubeLikeRows, youtubeSubscriberRows, releases, latestYoutubeState, activityResult, ytLatest, ytBaselineBefore, ytBaselineAfter, gaLatest, gaBaselineBefore, gaBaselineAfter, gaRollover, automationAt, automationStatus, automationSummary, siteLive, siteWindow, latestDailySummaryState, latestDailySummaryPush, latestDailySummaryLog, cityActivity] = await Promise.all([
+  await refreshYoutubeIdentityIfStaleR530(env,db).catch(()=>null);
+  const [siteSubscribers, siteComments, siteLikes, youtubeEvents, youtubeLikeRows, youtubeSubscriberRows, releases, latestYoutubeState, activityResult, ytLatest, ytBaselineBefore, ytBaselineAfter, gaLatest, gaBaselineBefore, gaBaselineAfter, gaRollover, automationAt, automationStatus, automationSummary, siteLive, siteWindow, latestDailySummaryState, latestDailySummaryPush, latestDailySummaryLog, cityActivity, cityTodayActivityR530] = await Promise.all([
     db.prepare(`SELECT COUNT(*) AS total FROM push_history WHERE type='site-subscriber' AND datetime(created_at) >= datetime(?1)`).bind(window.startAt).first(),
     db.prepare(`SELECT COUNT(*) AS total FROM comments WHERE datetime(created_at) >= datetime(?1)`).bind(window.startAt).first(),
     db.prepare(`SELECT COUNT(*) AS total FROM comment_likes WHERE datetime(created_at) >= datetime(?1)`).bind(window.startAt).first(),
@@ -12670,7 +12787,8 @@ async function handleControlHome(request, env) {
       ORDER BY datetime(created_at) DESC
       LIMIT 1
     `).first(),
-    collectDailyCityActivityR370(db, window, new Date().toISOString())
+    collectDailyCityActivityR370(db, window, new Date().toISOString()),
+    collectCalendarDayCityActivityR530(db).catch(()=>[])
   ]);
   const ytBaseline = ytBaselineBefore || ytBaselineAfter;
   const gaBaseline = gaBaselineBefore || gaBaselineAfter;
@@ -12769,6 +12887,7 @@ async function handleControlHome(request, env) {
     summary:summaryR213,
     youtubeToday:youtubeTodayR509 || null,
     cityActivity:Array.isArray(cityActivity)?cityActivity:[],
+    cityTodayActivity:Array.isArray(cityTodayActivityR530)?cityTodayActivityR530:[],
     cityMapActivity:Array.isArray(cityMapActivityR395)?cityMapActivityR395:[],
     activity:activityResult.results || [],
     automation:{
@@ -12790,152 +12909,52 @@ async function handleControlHome(request, env) {
 
 async function handleControlGoogleAnalytics(request, env) {
   if (!adminAuthorized(request, env)) return json({ ok:false, error:'unauthorized' }, 401);
+  const db=requireDb(env);
+  await Promise.all([ensurePlatformAnalyticsSchema(db),ensureSiteMetricsSchema(db)]);
+  const url=new URL(request.url);
+  const forceRefresh=url.searchParams.get('refresh')==='1';
 
-  const db = requireDb(env);
-  await Promise.all([
-    ensurePlatformAnalyticsSchema(db),
-    ensureSiteMetricsSchema(db)
-  ]);
+  let latestRow=await db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform='google-analytics' ORDER BY datetime(created_at) DESC LIMIT 1`).first().catch(()=>null);
+  let latest=parseSnapshotMetrics(latestRow);
+  const snapshotMs=Date.parse(latestRow?.created_at||latest?.updatedAt||'');
+  const snapshotStale=!Number.isFinite(snapshotMs)||Date.now()-snapshotMs>30*60*1000;
+  let refreshError='';
 
-  const url = new URL(request.url);
-  const forceRefresh = url.searchParams.get('refresh') === '1';
-  let liveRefreshError = '';
-
-  // R529: when the owner explicitly refreshes Google Analytics, query GA4 now and
-  // write a fresh full snapshot. This avoids depending only on the central Cron.
-  if (forceRefresh) {
-    try {
-      const fresh = await Promise.race([
+  // R530: one fresh GA4 pull at most every 30 minutes (or explicitly on refresh).
+  // No more falling back to an old July "richer" snapshot just because it has more rows.
+  if(forceRefresh||!latestRow||snapshotStale){
+    try{
+      const fresh=await Promise.race([
         fetchGoogleSiteAnalytics(env),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('google-analytics-live-timeout')), 11500))
+        new Promise((_,reject)=>setTimeout(()=>reject(new Error('google-analytics-live-timeout')),11500))
       ]);
-      if (fresh?.configured) {
-        await savePlatformSnapshot(db, 'google-analytics', {
-          configured:true,
-          propertyId:fresh.propertyId || '',
-          propertyName:fresh.propertyName || 'andrikmetal.com',
-          propertySource:fresh.propertySource || '',
-          realtime:fresh.realtime || {}, today:fresh.today || {}, week:fresh.week || {}, month:fresh.month || {},
-          trend:fresh.trend || [], countries:fresh.countries || [], pages:fresh.pages || [], devices:fresh.devices || [],
-          updatedAt:fresh.updatedAt || new Date().toISOString()
-        }, 'Google Analytics Data API · manual R529');
+      if(fresh?.configured){
+        latest={...fresh,configured:true};
+        latestRow={created_at:fresh.updatedAt||new Date().toISOString()};
+        await savePlatformSnapshot(db,'google-analytics',latest,forceRefresh?'Google Analytics Data API · manual R530':'Google Analytics Data API · auto freshness R530');
       }
-    } catch (error) {
-      liveRefreshError = cleanPlainText(error?.message || error, 300);
-    }
+    }catch(error){refreshError=cleanPlainText(error?.message||error,300);}
   }
 
-  const [snapshotsResult, liveResult] = await Promise.allSettled([
-    db.prepare(`
-      SELECT metrics_json, created_at
-      FROM platform_snapshots
-      WHERE platform='google-analytics'
-      ORDER BY datetime(created_at) DESC
-      LIMIT 80
-    `).all(),
-    getSiteLiveMetrics(db)
-  ]);
+  const [liveResult,firstPartyResult]=await Promise.allSettled([getSiteLiveMetrics(db),getSiteFirstParty30dR530(db)]);
+  const live=liveResult.status==='fulfilled'?liveResult.value:{configured:false,today:{},realtime:{}};
+  const firstParty=firstPartyResult.status==='fulfilled'?firstPartyResult.value:{configured:false,trend:[],countries:[],pages:[]};
+  const hasSnapshot=Boolean(latestRow)||Boolean(latest?.configured);
+  let google=mergeGoogleWithSiteLive({
+    ...(latest||{}),configured:hasSnapshot?latest?.configured!==false:false,
+    updatedAt:latestRow?.created_at||latest?.updatedAt||''
+  },live);
+  google=mergeGoogleWithFirstPartyR530(google,firstParty);
 
-  const rows = snapshotsResult.status === 'fulfilled' ? (snapshotsResult.value?.results || []) : [];
-  const latestRow = rows[0] || null;
-  const latest = parseSnapshotMetrics(latestRow);
-  const live = liveResult.status === 'fulfilled'
-    ? liveResult.value
-    : { configured:false, today:{}, realtime:{} };
-
-  // R529: cache resets can expose a newer but unexpectedly sparse snapshot. Keep
-  // current headline totals, but recover dimensional lists/trend from the most
-  // recent richer snapshot for the same GA4 property. No old/different property
-  // data is mixed in.
-  const propertyId = cleanPlainText(latest?.propertyId || '', 120);
-  const candidates = rows.map(row => ({ row, metrics:parseSnapshotMetrics(row) }))
-    .filter(item => {
-      const candidateProperty = cleanPlainText(item.metrics?.propertyId || '', 120);
-      return !propertyId || !candidateProperty || candidateProperty === propertyId;
-    });
-
-  const chooseArray = (field, minUseful = 2) => {
-    const current = Array.isArray(latest?.[field]) ? latest[field] : [];
-    if (current.length >= minUseful) return { value:current, recovered:false, at:latestRow?.created_at || '' };
-    let best = null;
-    for (const item of candidates) {
-      const value = Array.isArray(item.metrics?.[field]) ? item.metrics[field] : [];
-      if (!value.length) continue;
-      if (!best || value.length > best.value.length) best = { value, at:item.row?.created_at || '' };
-      // Prefer the first sufficiently rich recent snapshot rather than an ancient max.
-      if (value.length >= minUseful) { best = { value, at:item.row?.created_at || '' }; break; }
-    }
-    return best ? { ...best, recovered:best.value !== current } : { value:current, recovered:false, at:latestRow?.created_at || '' };
-  };
-
-  const trendPick = chooseArray('trend', 5);
-  const countriesPick = chooseArray('countries', 2);
-  const pagesPick = chooseArray('pages', 2);
-  const devicesPick = chooseArray('devices', 2);
-
-  const recoveredSnapshot = {
-    ...latest,
-    trend:trendPick.value,
-    countries:countriesPick.value,
-    pages:pagesPick.value,
-    devices:devicesPick.value,
-    historyFallback:{
-      used:Boolean(trendPick.recovered || countriesPick.recovered || pagesPick.recovered || devicesPick.recovered),
-      trendAt:trendPick.at,
-      countriesAt:countriesPick.at,
-      pagesAt:pagesPick.at,
-      devicesAt:devicesPick.at
-    }
-  };
-
-  const hasSnapshot = Boolean(latestRow);
-  const google = mergeGoogleWithSiteLive({
-    ...recoveredSnapshot,
-    configured:hasSnapshot ? recoveredSnapshot.configured !== false : false,
-    updatedAt:latestRow?.created_at || recoveredSnapshot.updatedAt || ''
-  }, live);
-
-  if (hasSnapshot || live.configured) {
+  if(hasSnapshot||live.configured||firstParty.configured){
     return json({
-      ok:true,
-      partial:!hasSnapshot,
-      source:hasSnapshot ? (google.historyFallback?.used ? 'snapshot+history-recovery+live-counter' : 'snapshot+live-counter') : 'live-counter',
-      google,
-      website:google,
-      snapshotAt:latestRow?.created_at || '',
-      refreshError:liveRefreshError,
+      ok:true,partial:!hasSnapshot,
+      source:firstParty.configured?'ga4+live-web-ai-r530':'ga4-r530',
+      google,website:google,snapshotAt:latestRow?.created_at||'',refreshError,
       updatedAt:new Date().toISOString()
     });
   }
-
-  return json({
-    ok:true,
-    partial:true,
-    source:'not-ready',
-    google:{
-      configured:false,
-      error:'snapshot-not-ready',
-      details:'Последний снимок GA4 ещё не создан центральным Cron.',
-      trend:[],
-      countries:[],
-      pages:[],
-      devices:[],
-      week:{},
-      month:{},
-      liveCounter:live
-    },
-    website:{
-      configured:false,
-      error:'snapshot-not-ready',
-      trend:[],
-      countries:[],
-      pages:[],
-      devices:[],
-      liveCounter:live
-    },
-    refreshError:liveRefreshError,
-    updatedAt:new Date().toISOString()
-  });
+  return json({ok:true,partial:true,source:'not-ready',google:{configured:false,error:'snapshot-not-ready',trend:[],countries:[],pages:[],devices:[],week:{},month:{},liveCounter:live},website:{configured:false,error:'snapshot-not-ready',trend:[],countries:[],pages:[],devices:[],liveCounter:live},refreshError,updatedAt:new Date().toISOString()});
 }
 
 async function handleControlSnapshotsRefresh(request, env) {
