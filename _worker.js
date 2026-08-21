@@ -1,4 +1,4 @@
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R521', number:521, version:'55.00', full:'55.00 LIVE WEB AI FINAL R521', siteUpdater:'55.00-r356' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R524', number:524, version:'55.00', full:'55.00 LIVE WEB AI FINAL R524', siteUpdater:'55.00-r356' });
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -6509,7 +6509,7 @@ async function fetchTikTokAnalyticsR503(env, mode = 'sandbox') {
       let cursor = null;
       for (let page = 0; page < 5; page++) {
         const listUrl = new URL('https://open.tiktokapis.com/v2/video/list/');
-        listUrl.searchParams.set('fields','id,create_time,share_url,title,video_description,like_count,comment_count,share_count,view_count');
+        listUrl.searchParams.set('fields','id,create_time,cover_image_url,share_url,title,video_description,duration,like_count,comment_count,share_count,view_count');
         const body = { max_count:20 };
         if (cursor !== null) body.cursor = cursor;
         const response = await fetchWithAbortTimeoutR409(listUrl.toString(), {
@@ -6542,6 +6542,22 @@ async function fetchTikTokAnalyticsR503(env, mode = 'sandbox') {
     totalVideoComments:sum('comment_count'),
     totalVideoShares:sum('share_count')
   };
+  summary.averageVideoViews = videos.length ? summary.totalVideoViews / videos.length : null;
+  const videoEngagements = summary.totalVideoLikes + summary.totalVideoComments + summary.totalVideoShares;
+  summary.videoEngagementRate = summary.totalVideoViews > 0 ? (100 * videoEngagements / summary.totalVideoViews) : null;
+  const normalizeVideoR524 = row => ({
+    id:cleanPlainText(row?.id || '',80),
+    title:cleanPlainText(row?.title || row?.video_description || '',180),
+    createTime:Number(row?.create_time||0),
+    shareUrl:cleanPlainText(row?.share_url || '',900),
+    coverUrl:cleanPlainText(row?.cover_image_url || '',900),
+    duration:Math.max(0,Number(row?.duration||0)),
+    views:Math.max(0,Number(row?.view_count||0)),
+    likes:Math.max(0,Number(row?.like_count||0)),
+    comments:Math.max(0,Number(row?.comment_count||0)),
+    shares:Math.max(0,Number(row?.share_count||0))
+  });
+  const topVideos = videos.slice().sort((a,b)=>Number(b?.view_count||0)-Number(a?.view_count||0)).slice(0,6).map(normalizeVideoR524);
   return {
     mode:selectedMode, configured:true, connected:true, oauthConnected:true,
     openId:cleanPlainText(user?.open_id || session.openId || '',160),
@@ -6552,10 +6568,8 @@ async function fetchTikTokAnalyticsR503(env, mode = 'sandbox') {
     scope:cleanPlainText(session.scope || '',1200),
     summary,
     counters:{ totalViews:summary.totalVideoViews, totalLikes:summary.totalVideoLikes, totalComments:summary.totalVideoComments, totalShares:summary.totalVideoShares },
-    recentVideos:videos.slice(0,12).map(row=>({
-      id:cleanPlainText(row?.id || '',80), title:cleanPlainText(row?.title || row?.video_description || '',180), createTime:Number(row?.create_time||0), shareUrl:cleanPlainText(row?.share_url || '',900),
-      views:Math.max(0,Number(row?.view_count||0)), likes:Math.max(0,Number(row?.like_count||0)), comments:Math.max(0,Number(row?.comment_count||0)), shares:Math.max(0,Number(row?.share_count||0))
-    })),
+    topVideos,
+    recentVideos:videos.slice(0,12).map(normalizeVideoR524),
     partialErrors:[userError,videoError].filter(Boolean),
     updatedAt:new Date().toISOString()
   };
@@ -9019,21 +9033,37 @@ async function fetchInstagramAnalytics(env) {
   const endDate = shiftIsoCalendarDate(today, -1);
   const startDate = shiftIsoCalendarDate(endDate, -27);
   let profile;
+  // R523: ask for live profile counters in the SAME profile request. If Meta ever
+  // rejects one of the optional fields, immediately fall back to the proven
+  // id+username request so Instagram analytics never breaks because of a card.
   try {
-    profile = await instagramApiGetR487(env, 'me', { fields:'id,username' }, 8000);
-  } catch (profileError) {
-    const fallbackUrl = new URL('https://graph.instagram.com/me');
-    fallbackUrl.searchParams.set('fields', 'id,username');
-    const fallbackResponse = await fetchWithAbortTimeoutR409(fallbackUrl.toString(), {
-      headers:{ authorization:`Bearer ${config.token}`, accept:'application/json' }
-    }, 8000, 'instagram-profile-timeout');
-    const fallbackData = await fallbackResponse.json().catch(() => ({}));
-    if (!fallbackResponse.ok) throw profileError;
-    profile = fallbackData;
+    profile = await instagramApiGetR487(env, 'me', {
+      fields:'id,username,followers_count,follows_count,media_count,account_type'
+    }, 8000);
+  } catch (extendedProfileError) {
+    try {
+      profile = await instagramApiGetR487(env, 'me', { fields:'id,username' }, 8000);
+    } catch (profileError) {
+      const fallbackUrl = new URL('https://graph.instagram.com/me');
+      fallbackUrl.searchParams.set('fields', 'id,username');
+      const fallbackResponse = await fetchWithAbortTimeoutR409(fallbackUrl.toString(), {
+        headers:{ authorization:`Bearer ${config.token}`, accept:'application/json' }
+      }, 8000, 'instagram-profile-timeout');
+      const fallbackData = await fallbackResponse.json().catch(() => ({}));
+      if (!fallbackResponse.ok) throw profileError;
+      profile = fallbackData;
+    }
   }
   const accountId = cleanPlainText(profile?.id || '', 100);
   if (!accountId) throw new Error('instagram-user-id-missing');
   const username = cleanPlainText(profile?.username || 'andrikmetal', 100);
+  const profileNumber = value => value !== null && value !== undefined && value !== '' && Number.isFinite(Number(value)) ? Math.max(0, Number(value)) : null;
+  const profileStats = {
+    followersCount:profileNumber(profile?.followers_count),
+    followsCount:profileNumber(profile?.follows_count),
+    mediaCount:profileNumber(profile?.media_count),
+    accountType:cleanPlainText(profile?.account_type || '', 60)
+  };
 
   const metrics = ['views','reach','profile_views','accounts_engaged','total_interactions','likes','comments','shares','saves'];
   const dailyResults = await Promise.allSettled(metrics.map(metric =>
@@ -9159,6 +9189,7 @@ async function fetchInstagramAnalytics(env) {
     connected:true,
     accountId,
     username,
+    profileStats,
     startDate,
     endDate,
     summary:{
@@ -9431,14 +9462,14 @@ async function handleControlSocialOverviewR487(request, env) {
         configured:Boolean(igConfig.configured), connected:instagramReady, name:'Instagram', username:instagram?.username || 'andrikmetal',
         accountId:instagram?.accountId || '', profileUrl:`https://www.instagram.com/${encodeURIComponent(instagram?.username || 'andrikmetal')}/`,
         source:'Instagram Insights', updatedAt:igRow?.created_at || instagram?.updatedAt || '', metricLabel:instagramMetricLabel, trendField:instagramTrendField, trendConnected:instagramSeriesReady,
-        summary:instagram?.summary || {}, summaryAvailability:instagram?.summaryAvailability || {}, summarySource:instagram?.summarySource || {}, mediaCounts:instagram?.mediaCounts || {}, demographics:instagram?.demographics || {}, trend:Array.isArray(instagram?.trend)?instagram.trend:[], dailyAvailability:instagram?.dailyAvailability || {}, partialErrors:instagram?.partialErrors || [], error:instagram?.error || liveErrors.instagram || ''
+        summary:instagram?.summary || {}, summaryAvailability:instagram?.summaryAvailability || {}, summarySource:instagram?.summarySource || {}, profileStats:instagram?.profileStats || {}, mediaCounts:instagram?.mediaCounts || {}, demographics:instagram?.demographics || {}, trend:Array.isArray(instagram?.trend)?instagram.trend:[], dailyAvailability:instagram?.dailyAvailability || {}, partialErrors:instagram?.partialErrors || [], error:instagram?.error || liveErrors.instagram || ''
       },
       tiktok:{
         mode:tiktokModeR503, availableModes:tiktokAuthR503.availableModes || tiktokAvailableModesR503(env),
         configured:Boolean(tiktokAuthR503.configured), connected:tiktokConnectedR503, oauthConnected:Boolean(tiktokAuthR503.connected), trendConnected:tiktokTrendReadyR503,
         name:'TikTok', handle:cleanPlainText(tiktok?.handle || '@andrikmetal',120), displayName:cleanPlainText(tiktok?.displayName || 'ANDRIK',120), profileUrl:cleanPlainText(tiktok?.profileUrl || 'https://www.tiktok.com/@andrikmetal',700),
         metricLabel:tiktokTrendReadyR503?'прирост просмотров':'текущий срез видео', source:`TikTok Display API · ${tiktokModeR503}`, updatedAt:ttRow?.created_at || tiktok?.updatedAt || '',
-        summary:tiktok?.summary || {}, dailyTrend:tiktokDailyDetailR516, recentVideos:Array.isArray(tiktok?.recentVideos)?tiktok.recentVideos:[], grantedScopes:cleanPlainText(tiktokAuthR503.scope || tiktok?.scope || '',1200),
+        summary:tiktok?.summary || {}, dailyTrend:tiktokDailyDetailR516, topVideos:Array.isArray(tiktok?.topVideos)?tiktok.topVideos:[], recentVideos:Array.isArray(tiktok?.recentVideos)?tiktok.recentVideos:[], grantedScopes:cleanPlainText(tiktokAuthR503.scope || tiktok?.scope || '',1200),
         trendDiagnostics:{...(tiktokTrendPackR516?.diagnostics || {}),completedRows:tiktokDailyR503.length,detailRows:tiktokDailyDetailR516.length,completedThrough:endDate,detailThrough:today},
         error:cleanPlainText(liveErrors.tiktok || tiktok?.error || '',220), partialErrors:Array.isArray(tiktok?.partialErrors)?tiktok.partialErrors:[]
       }

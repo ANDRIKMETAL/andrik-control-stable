@@ -1,0 +1,10 @@
+R523 — INSTAGRAM REAL-METRICS EXPANSION SAFE FULL
+
+1. Instagram main 28-day cards now include real Views when Meta returns them.
+2. Instagram profile request now also asks for followers_count, follows_count and media_count in the same API call.
+3. If Meta rejects any optional profile field, the Worker automatically falls back to the proven id+username request; analytics stays alive.
+4. New “ПРОФИЛЬ СЕЙЧАС” card appears only when at least one real profile counter exists. No empty placeholders are shown.
+5. Instagram daily graph exposes every actually available series: Views, Reach, Interactions, Profile Views, Engaged Accounts, Likes, Comments, Saves, Shares. Unavailable toggles are hidden automatically.
+6. Audience age/gender/country/city section remains hidden when Meta returns no real demographic rows. No synthetic values were added.
+7. Existing TikTok, YouTube, Site, albums, push and map logic are unchanged.
+8. Added cache reset: /cache-reset-v55-00-final-r523.html

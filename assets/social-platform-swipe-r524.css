@@ -1,0 +1,6 @@
+html.social-platform-swipe-r524-active{overscroll-behavior-x:none}
+html.social-platform-swipe-r524-active body{touch-action:pan-y pinch-zoom;overscroll-behavior-x:none;transition:transform .13s ease;transform:translate3d(var(--social-swipe-r524-x,0),0,0)}
+html.social-platform-swipe-r524-leaving body{opacity:.88;transition:opacity .09s ease,transform .09s ease}
+.social-platform-swipe-r524-toast{position:fixed;z-index:2147483000;left:50%;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%);display:flex;align-items:center;gap:9px;min-height:31px;padding:0 12px;border:1px solid rgba(129,215,243,.20);border-radius:999px;background:rgba(2,13,20,.88);backdrop-filter:blur(14px);box-shadow:0 8px 30px rgba(0,0,0,.30);color:#7d9daa;font:800 .59rem/1 system-ui,-apple-system,"Segoe UI",sans-serif;pointer-events:none;opacity:.94;transition:opacity .24s ease,transform .24s ease}
+.social-platform-swipe-r524-toast span{color:#8ae6fb;font-size:1rem}.social-platform-swipe-r524-toast b{color:#c8eaf4;white-space:nowrap}.social-platform-swipe-r524-toast.is-hidden{opacity:0;transform:translate(-50%,8px)}
+@media(max-width:420px){.social-platform-swipe-r524-toast{font-size:.56rem;bottom:calc(9px + env(safe-area-inset-bottom))}}

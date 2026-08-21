@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787185569761-525a597025",
-  "release": "R522",
-  "archiveName": "R522-TRIKA-TAG-UPRIGHT-LAYOUT-CLEAN-SAFE-FULL.zip",
-  "sourceHead": "9ac7d77979b7deec2cb5a080adf05ea7cda27377",
-  "backupSha": "9ac7d77979b7deec2cb5a080adf05ea7cda27377",
-  "backupTag": "control-backup-20260820002605-9ac7d77-r522-27912",
+  "operationId": "publish-1787292124235-3cce14e593",
+  "release": "R524",
+  "archiveName": "R524-TIKTOK-REAL-METRICS-MOBILE-GA4-SAFE-FULL.zip",
+  "sourceHead": "d424819112c16acd8e3397acdb007c74a946c6e5",
+  "backupSha": "d424819112c16acd8e3397acdb007c74a946c6e5",
+  "backupTag": "control-backup-20260821060159-d424819-r524-bdefc",
   "autoRecovery": true,
-  "generatedAt": "2026-08-20T00:26:09.761Z"
+  "generatedAt": "2026-08-21T06:02:04.235Z"
 }
