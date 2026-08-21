@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="ru" translate="no" class="notranslate"><head><script>(function(){try{var u=new URL(location.href),p=(u.searchParams.get('page')||'').toLowerCase(),s=(u.searchParams.get('source')||'').toLowerCase();var sitePages=['google','site','analytics','ga','ga4','website'];if(sitePages.indexOf(p)!==-1)document.documentElement.classList.add('analytics-route-google-r539');else if(p==='youtube')document.documentElement.classList.add('analytics-route-youtube-r539');else document.documentElement.classList.add('analytics-route-map-r539');var ok=(p==='map'&&s==='admin-globe')||sitePages.indexOf(p)!==-1||p==='youtube';if(!ok){location.replace('/control-home.html?page=menu&source=launch-guard-r530&v=55.00-r530');}}catch(_){}})();</script>
-<meta name="andrik-control-release" content="R545">
+<meta name="andrik-control-release" content="R556">
 <link rel="stylesheet" href="/assets/control-sleep-mode-r193.css?v=55.00-r193"><script defer src="/assets/control-sleep-mode-r193.js?v=55.00-r193"></script>
 
 <meta name="google" content="notranslate"><meta charset="utf-8"/>
@@ -1071,7 +1071,7 @@ body.analytics-admin-page.is-country-returning #worldMap .world-map-dot.is-selec
 <section class="analytics-main-chart"><article class="admin-control-card analytics-chart-card"><div class="admin-card-title-row analytics-inline-actions"><div><span class="eyeline">Последние 30 дней</span><h2>Динамика посещений</h2></div><div class="analytics-title-actions"><span class="analytics-legend">Пользователи / просмотры</span></div></div><div class="analytics-chart" id="analyticsTrend"><div class="admin-empty">Загружаем график…</div></div></article></section>
           <section class="analytics-site-geography"><article class="admin-control-card analytics-list-card analytics-site-country-card"><div class="admin-card-title-row"><div><span class="eyeline">Google Analytics · за 30 дней</span><h2>География сайта</h2><p>Страны, из которых заходили посетители сайта.</p></div></div><div id="analyticsCountries"><div class="admin-empty">Загружаем географию сайта…</div></div></article></section>
           <section class="analytics-columns"><details class="admin-control-card analytics-list-card analytics-pages-spoiler" id="analyticsPagesSpoiler"><summary><span><small class="eyeline">За 30 дней</small><strong>Популярные страницы</strong></span><em>Показать</em></summary><div class="analytics-pages-spoiler-body"><div class="analytics-list" id="analyticsPages"><div class="admin-empty">Загружаем страницы…</div></div></div></details><article class="admin-control-card analytics-list-card" id="analyticsDevicesCard" hidden><div class="admin-card-title-row"><div><span class="eyeline">За 30 дней</span><h2>Устройства</h2><p>Распределение пользователей по типу устройства.</p></div></div><div class="analytics-list" id="analyticsDevices"><div class="admin-empty">Загружаем устройства…</div></div></article></section>
-          <footer class="control-version-footer"><strong>Live Web AI · ANDRIK · версия R546</strong><span>Google Analytics · текущие 30 дней · 21.08.2026</span></footer>
+          <footer class="control-version-footer"><strong>Live Web AI · ANDRIK · версия R556</strong><span>Google Analytics · текущие 30 дней · 21.08.2026</span></footer>
           <div class="analytics-swipe-hint analytics-site-hint"><button type="button" data-swipe-go="2">← YouTube</button><button type="button" data-swipe-go="1">Карта слушателей →</button></div>
         </div>
       </section>
@@ -1138,7 +1138,7 @@ body.analytics-admin-page.is-country-returning #worldMap .world-map-dot.is-selec
             <div class="admin-card-title-row"><div><span class="eyeline">Каталог</span><h2>Альбомы</h2><p>Релизы ANDRIK на YouTube.</p></div></div>
             <div class="control-album-grid" id="albumStats"><div class="admin-empty">Загружаем альбомы…</div></div>
           </section>
-<footer class="control-version-footer"><strong>Live Web AI · ANDRIK · версия R546</strong><span>Центр соцсетей · свайп между платформами</span></footer>
+<footer class="control-version-footer"><strong>Live Web AI · ANDRIK · версия R556</strong><span>Центр соцсетей · свайп между платформами</span></footer>
           <div class="analytics-swipe-hint analytics-youtube-hint"><button type="button" data-swipe-go="1">← Карта слушателей</button><button type="button" data-swipe-go="0">Google Analytics →</button></div>
         </div>
       </section>
@@ -1526,6 +1526,21 @@ body.analytics-admin-page.is-country-returning #worldMap .world-map-dot.is-selec
     const monthNames=['январь','февраль','март','апрель','май','июнь','июль','август','сентябрь','октябрь','ноябрь','декабрь'];
     const periodMatch=periodStart.match(/^\d{4}-(\d{2})-01$/);
     const searchMonthLabel=periodMatch?monthNames[Math.max(0,Number(periodMatch[1])-1)]:'текущий месяц';
+    // R556: cached Search Console data from a previous month must never flash on screen.
+    // Determine the Bratislava month client-side and wait for the dedicated current-month endpoint.
+    let currentMonthPrefix='';
+    try{
+      const parts=Object.fromEntries(new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Bratislava',year:'numeric',month:'2-digit'}).formatToParts(new Date()).filter(p=>p.type!=='literal').map(p=>[p.type,p.value]));
+      currentMonthPrefix=`${parts.year}-${parts.month}`;
+    }catch(_){currentMonthPrefix=new Date().toISOString().slice(0,7)}
+    const staleMonth=Boolean(connected&&periodStart&&currentMonthPrefix&&!periodStart.startsWith(currentMonthPrefix));
+    if(staleMonth){
+      const currentName=monthNames[Math.max(0,Number(currentMonthPrefix.slice(5,7))-1)]||'текущий месяц';
+      if(periodLabel)periodLabel.textContent=`Google · ${currentName} · обновляем`;
+      if(box)box.innerHTML='<div class="search-console-message"><strong>Обновляем Search Console за текущий месяц…</strong><small>Снимок прошлого месяца скрыт, чтобы не показывать устаревший график.</small></div>';
+      if(trendBox)trendBox.innerHTML='<div class="admin-empty">Получаем свежую динамику текущего месяца…</div>';
+      return;
+    }
     if(periodLabel)periodLabel.textContent=`Google · ${searchMonthLabel}${periodEnd?` · до ${shortDate(periodEnd)}`:''}`;
     if(openLink){openLink.hidden=false;openLink.href=SEARCH_CONSOLE_URL}
     if(!connected){
@@ -4759,6 +4774,6 @@ body .country-scroll-overlay-r258::before{margin:0 0 10px!important;}
 <link rel="stylesheet" href="/assets/map-controls-compact-r499.css?v=55.00-r499">
 <script defer src="/assets/planet-map-transition-r450.js?v=55.00-r450"></script>
 <script defer src="/assets/youtube-admin-v55-00j.js?v=55.00j-r544"></script>
-<script defer src="/assets/control-version-sync-r545.js?v=55.00-r545"></script>
+<script defer src="/assets/control-version-sync-r556.js?v=55.00-r556"></script>
 <script defer src="/assets/social-platform-swipe-r524.js?v=55.00-r524"></script>
 </body></html>

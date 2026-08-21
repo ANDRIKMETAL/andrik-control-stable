@@ -8717,10 +8717,11 @@ async function fetchGoogleSearchConsoleAnalytics(env) {
   const todayBratislava = getBratislavaClock().date;
   const endDate = shiftIsoCalendarDate(todayBratislava, -2);
   const startDate = `${endDate.slice(0,7)}-01`;
-  const [summaryReport, queriesReport, pagesReport, trendReport] = await Promise.all([
+  // R556 — dashboard only needs current-month summary + daily trend.
+  // Two Search Console calls are materially faster and avoid the old 4-call request
+  // timing out and falling back to a stale July snapshot.
+  const [summaryReport, trendReport] = await Promise.all([
     googleSearchConsoleQuery(accessToken, siteUrl, { startDate, endDate, rowLimit: 1, dataState:'all' }),
-    googleSearchConsoleQuery(accessToken, siteUrl, { startDate, endDate, dimensions: ['query'], rowLimit: 8, dataState: 'all' }),
-    googleSearchConsoleQuery(accessToken, siteUrl, { startDate, endDate, dimensions: ['page'], rowLimit: 8, dataState: 'all' }),
     googleSearchConsoleQuery(accessToken, siteUrl, { startDate, endDate, dimensions: ['date'], rowLimit: 1000, dataState: 'all' })
   ]);
   const summary = summaryReport?.rows?.[0] || {};
@@ -8743,8 +8744,8 @@ async function fetchGoogleSearchConsoleAnalytics(env) {
     impressions: Number(summary.impressions || 0),
     ctr: Number(summary.ctr || 0),
     position: Number(summary.position || 0),
-    queries: normalizeRows(queriesReport),
-    pages: normalizeRows(pagesReport),
+    queries: [],
+    pages: [],
     trend: (trendReport?.rows || []).map(row => ({
       date: cleanPlainText(row?.keys?.[0] || '', 20),
       clicks: Number(row?.clicks || 0),
@@ -13095,7 +13096,7 @@ async function handleControlSearchConsole(request, env) {
     try {
       const live = await Promise.race([
         fetchGoogleSearchConsoleAnalytics(env),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('search-console-timeout')), 11500))
+        new Promise((_, reject) => setTimeout(() => reject(new Error('search-console-timeout')), 18000))
       ]);
       if (live?.configured) {
         await savePlatformSnapshot(db,'google-search-console',live,refresh?'manual-control-refresh-r531':'auto-current-month-r531');
@@ -13107,6 +13108,25 @@ async function handleControlSearchConsole(request, env) {
   const row = existingRow || await db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform='google-search-console' ORDER BY created_at DESC LIMIT 1`).first();
   const snapshot = parseSnapshotMetrics(row);
   const credentials = parseGoogleSearchConsoleCredentials(env);
+  // R556: never present a previous-month snapshot as if it were the current month.
+  // If Google is temporarily slow, the UI shows "обновляем август" instead of July.
+  const snapshotStart = cleanPlainText(snapshot?.period?.startDate||'',20);
+  if (row && snapshotStart && snapshotStart !== expectedStart) {
+    const error = liveError || 'search-console-current-month-refresh-pending';
+    return json({
+      ok:true,
+      searchConsole:{
+        configured:Boolean(credentials && getGoogleSearchConsoleSiteUrl(env)),
+        connected:false,
+        siteUrl:getGoogleSearchConsoleSiteUrl(env),
+        serviceAccountEmail:cleanPlainText(credentials?.client_email||'',180),
+        period:{startDate:expectedStart,endDate:expectedEnd},
+        error,
+        friendlyError:'Обновляем данные Search Console за текущий месяц. Старый месячный снимок скрыт.'
+      },
+      updatedAt:new Date().toISOString()
+    });
+  }
   if (row) {
     const error = snapshot.error || liveError || '';
     return json({
