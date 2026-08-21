@@ -7395,7 +7395,7 @@ async function fetchYoutubeVideoStats(env, db, uploadsPlaylistId = '') {
   const chunks = [];
   for (let index = 0; index < ids.length; index += 50) chunks.push(ids.slice(index, index + 50));
   const settled = await Promise.allSettled(chunks.map(chunk => youtubeApiJson(env, 'videos', {
-    part: 'snippet,statistics',
+    part: 'snippet,statistics,contentDetails',
     id: chunk.join(','),
     maxResults: 50
   })));
@@ -7411,6 +7411,7 @@ async function fetchYoutubeVideoStats(env, db, uploadsPlaylistId = '') {
     views: Number(video?.statistics?.viewCount || 0),
     likes: Number(video?.statistics?.likeCount || 0),
     comments: Number(video?.statistics?.commentCount || 0),
+    durationSeconds: youtubeIsoDurationSecondsR555(video?.contentDetails?.duration || ''),
     url: `https://www.youtube.com/watch?v=${encodeURIComponent(video.id)}`
   })).filter(item => item.videoId)
     .sort((a, b) => String(b.publishedAt || '').localeCompare(String(a.publishedAt || '')));
@@ -13169,8 +13170,18 @@ function normalizeYoutubeTopContentR552(row = {}, type = '') {
     title:cleanPlainText(row?.title||'',220),
     publishedAt:cleanPlainText(row?.publishedAt||'',60),
     thumbnail:cleanPlainText(row?.thumbnail||'',900),
-    url:cleanPlainText(row?.url||'',900)
+    url:cleanPlainText(row?.url||'',900),
+    durationSeconds:Math.max(0,Number(row?.durationSeconds||row?.duration||0))
   };
+}
+
+// R555 — YouTube Shorts can be up to 3 minutes. For the separate "Лучшие видео"
+// page we only accept true long-form uploads (> 180 s), never a Short that was
+// previously guessed as VIDEO_ON_DEMAND by a fallback/cache.
+function youtubeIsoDurationSecondsR555(value='') {
+  const m=String(value||'').trim().match(/^P(?:(\d+(?:\.\d+)?)D)?(?:T(?:(\d+(?:\.\d+)?)H)?(?:(\d+(?:\.\d+)?)M)?(?:(\d+(?:\.\d+)?)S)?)?$/i);
+  if(!m) return 0;
+  return Math.max(0,Math.round((Number(m[1]||0)*86400)+(Number(m[2]||0)*3600)+(Number(m[3]||0)*60)+Number(m[4]||0)));
 }
 
 async function refreshYoutubeTopContentR552(env) {
@@ -13216,9 +13227,12 @@ async function refreshYoutubeTopContentR552(env) {
   let shorts=rows.filter(row=>row.creatorContentType==='SHORTS')
     .sort((a,b)=>b.views-a.views)
     .slice(0,4);
-  let videos=rows.filter(row=>row.creatorContentType==='VIDEO_ON_DEMAND')
+  // Do not trust creatorContentType alone here: old snapshots/fallbacks could label
+  // Shorts as VIDEO_ON_DEMAND. Duration verification below is the final gate.
+  const regularCandidates=rows.filter(row=>row.creatorContentType==='VIDEO_ON_DEMAND')
     .sort((a,b)=>b.views-a.views)
-    .slice(0,4);
+    .slice(0,100);
+  let videos=[];
 
   // Reuse titles/thumbnails already known by the normal YouTube page first.
   const metaMap=new Map();
@@ -13229,7 +13243,8 @@ async function refreshYoutubeTopContentR552(env) {
     metaMap.set(id,{
       title:cleanPlainText(item?.title||current.title||'',220),
       publishedAt:cleanPlainText(item?.publishedAt||current.publishedAt||'',60),
-      thumbnail:cleanPlainText(item?.thumbnail||current.thumbnail||'',900)
+      thumbnail:cleanPlainText(item?.thumbnail||current.thumbnail||'',900),
+      durationSeconds:Math.max(0,Number(item?.durationSeconds||item?.duration||current.durationSeconds||0))
     });
   };
   [
@@ -13239,35 +13254,43 @@ async function refreshYoutubeTopContentR552(env) {
     ...(Array.isArray(previous?.studio?.topRegularVideos28)?previous.studio.topRegularVideos28:[])
   ].forEach(addKnownMeta);
 
-  const selected=[...shorts,...videos];
-  const ids=[...new Set(selected.map(row=>row.videoId).filter(Boolean))];
-  const missingMeta=ids.filter(id=>!metaMap.get(id)?.title);
-
-  // At most one inexpensive Data API request for titles and thumbnails.
-  if(missingMeta.length){
+  // Resolve duration for regular candidates. A single videos.list handles up to 50 IDs;
+  // at most two chunks are needed to find four long-form videos. This also enriches
+  // titles/thumbnails, so no extra request is required later.
+  const candidateIds=[...new Set([...shorts,...regularCandidates].map(row=>row.videoId).filter(Boolean))];
+  for(let offset=0; offset<candidateIds.length && offset<100; offset+=50){
+    const chunk=candidateIds.slice(offset,offset+50);
+    if(!chunk.length) break;
     try{
       const response=await youtubeApiJson(env,'videos',{
-        part:'snippet',
-        id:missingMeta.join(','),
+        part:'snippet,contentDetails',
+        id:chunk.join(','),
         maxResults:50
-      },{timeoutMs:6000});
+      },{timeoutMs:6500});
       for(const item of (response?.data?.items||[])){
         const id=cleanPlainText(item?.id||'',80);
         if(!id) continue;
+        const current=metaMap.get(id)||{};
         metaMap.set(id,{
-          title:cleanPlainText(item?.snippet?.title||'',220),
-          publishedAt:cleanPlainText(item?.snippet?.publishedAt||'',60),
+          title:cleanPlainText(item?.snippet?.title||current.title||'',220),
+          publishedAt:cleanPlainText(item?.snippet?.publishedAt||current.publishedAt||'',60),
           thumbnail:cleanPlainText(
             item?.snippet?.thumbnails?.high?.url||
             item?.snippet?.thumbnails?.medium?.url||
-            item?.snippet?.thumbnails?.default?.url||'',900
-          )
+            item?.snippet?.thumbnails?.default?.url||current.thumbnail||'',900
+          ),
+          durationSeconds:youtubeIsoDurationSecondsR555(item?.contentDetails?.duration||'') || Math.max(0,Number(current.durationSeconds||0))
         });
       }
-    }catch(_){
-      // Cards still render with the canonical YouTube thumbnail and ID-based title.
-    }
+    }catch(_){ }
+    const verifiedCount=regularCandidates.filter(row=>Number(metaMap.get(row.videoId)?.durationSeconds||row.durationSeconds||0)>180).length;
+    if(verifiedCount>=4) break;
   }
+
+  videos=regularCandidates
+    .map(row=>({...row,durationSeconds:Math.max(0,Number(metaMap.get(row.videoId)?.durationSeconds||row.durationSeconds||0))}))
+    .filter(row=>row.durationSeconds>180)
+    .slice(0,4);
 
   const enrich=(row,isShort)=>{
     const meta=metaMap.get(row.videoId)||{};
@@ -13276,6 +13299,7 @@ async function refreshYoutubeTopContentR552(env) {
       title:cleanPlainText(meta.title||row.title||`Видео ${row.videoId}`,220),
       publishedAt:cleanPlainText(meta.publishedAt||row.publishedAt||'',60),
       thumbnail:cleanPlainText(meta.thumbnail||row.thumbnail||`https://i.ytimg.com/vi/${encodeURIComponent(row.videoId)}/hqdefault.jpg`,900),
+      durationSeconds:Math.max(0,Number(meta.durationSeconds||row.durationSeconds||0)),
       url:isShort
         ? `https://www.youtube.com/shorts/${encodeURIComponent(row.videoId)}`
         : `https://www.youtube.com/watch?v=${encodeURIComponent(row.videoId)}`
@@ -13314,11 +13338,12 @@ async function youtubePublicRegularFallbackR553(env, db) {
   const rows=await fetchYoutubeVideoStats(env,db,identity.uploadsPlaylistId);
   const cutoff=Date.now()-29*24*60*60*1000;
   const isObviousShort=row=>/\bshorts?\b|#shorts/i.test(String(row?.title||''));
+  const isLongForm=row=>Math.max(0,Number(row?.durationSeconds||row?.duration||0))>180;
   let pool=(Array.isArray(rows)?rows:[]).filter(row=>{
     const published=Date.parse(row?.publishedAt||'');
-    return row?.videoId && !isObviousShort(row) && Number.isFinite(published) && published>=cutoff;
+    return row?.videoId && isLongForm(row) && !isObviousShort(row) && Number.isFinite(published) && published>=cutoff;
   });
-  if(!pool.length) pool=(Array.isArray(rows)?rows:[]).filter(row=>row?.videoId && !isObviousShort(row));
+  if(!pool.length) pool=(Array.isArray(rows)?rows:[]).filter(row=>row?.videoId && isLongForm(row) && !isObviousShort(row));
   return pool.sort((a,b)=>Number(b.views||0)-Number(a.views||0))
     .slice(0,4)
     .map(row=>normalizeYoutubeTopContentR552({
@@ -13360,7 +13385,7 @@ async function handleControlYoutubeTopContentR552(request, env) {
   const regularSeen=new Set();
   let cachedVideos=regularCachePool
     .map(row=>normalizeYoutubeTopContentR552(row,'VIDEO_ON_DEMAND'))
-    .filter(row=>row.videoId && !regularSeen.has(row.videoId) && regularSeen.add(row.videoId))
+    .filter(row=>row.videoId && row.durationSeconds>180 && !regularSeen.has(row.videoId) && regularSeen.add(row.videoId))
     .sort((a,b)=>b.views-a.views)
     .slice(0,4);
 
@@ -13385,7 +13410,7 @@ async function handleControlYoutubeTopContentR552(request, env) {
         if(!pool.length) continue;
         const seen=new Set();
         const found=pool.map(item=>normalizeYoutubeTopContentR552(item,'VIDEO_ON_DEMAND'))
-          .filter(item=>item.videoId && !seen.has(item.videoId) && seen.add(item.videoId))
+          .filter(item=>item.videoId && item.durationSeconds>180 && !seen.has(item.videoId) && seen.add(item.videoId))
           .sort((a,b)=>b.views-a.views).slice(0,4);
         if(found.length){cachedVideos=found;break}
       }
