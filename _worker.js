@@ -13115,6 +13115,95 @@ async function handleControlSearchConsole(request, env) {
   return json({ ok:true, searchConsole:{ configured, connected:false, siteUrl:getGoogleSearchConsoleSiteUrl(env), serviceAccountEmail:cleanPlainText(credentials?.client_email || '',180), error, friendlyError:searchConsoleErrorMessage(error) }, updatedAt:new Date().toISOString() });
 }
 
+
+// R544 — isolated GA4 device breakdown restored from the old R405 logic.
+// This endpoint is intentionally separate from the main Google Analytics payload so a
+// slow/partial device report can never block the Analytics page.
+async function handleControlGoogleDevicesR544(request, env) {
+  if (!adminAuthorized(request, env)) return json({ ok:false, error:'unauthorized' }, 401);
+  try {
+    const credentialsConfigured = Boolean(String(env.GOOGLE_ANALYTICS_CREDENTIALS || '').trim());
+    if (!credentialsConfigured) return json({ ok:true, configured:false, devices:[] });
+    const accessToken = await getGoogleAnalyticsAccessToken(env);
+    const property = await resolveGoogleAnalyticsProperty(env, accessToken);
+    const report = await Promise.race([
+      googleAnalyticsPost(accessToken, property.id, 'runReport', {
+        dateRanges: [{ startDate:'30daysAgo', endDate:'today' }],
+        dimensions: [{ name:'deviceCategory' }],
+        metrics: [{ name:'activeUsers' }],
+        orderBys: [{ metric:{ metricName:'activeUsers' }, desc:true }],
+        limit:'8'
+      }),
+      new Promise((_, reject)=>setTimeout(()=>reject(new Error('google-devices-timeout')), 6500))
+    ]);
+    const devices = gaRows(report, ['deviceCategory'], ['activeUsers'])
+      .filter(row=>cleanPlainText(row?.deviceCategory||'',40) && Number(row?.activeUsers||0)>0);
+    return json({ ok:true, configured:true, propertyId:property.id, devices, updatedAt:new Date().toISOString() });
+  } catch (error) {
+    return json({ ok:true, configured:true, devices:[], error:cleanPlainText(error?.message||error,300), updatedAt:new Date().toISOString() });
+  }
+}
+
+// R544 — top Shorts / regular videos are loaded independently from the main YouTube
+// dashboard. If this report fails, the core YouTube page remains fully operational.
+async function handleControlYoutubeTopContentR544(request, env) {
+  if (!adminAuthorized(request, env)) return json({ ok:false, error:'unauthorized' }, 401);
+  try {
+    const config = youtubeOAuthClient(env);
+    const refreshToken = await getYoutubeRefreshToken(env);
+    if (!config.configured || !refreshToken) {
+      return json({ ok:true, available:false, shorts:[], videos:[], error:'youtube-studio-not-connected' });
+    }
+    const accessToken = await getYoutubeOAuthAccessToken(env);
+    const owner = await resolveYoutubeAnalyticsOwnerR495(env, accessToken);
+    const startDate = isoDateDaysAgo(28), endDate = isoDateDaysAgo(1);
+    const rows = await youtubeAnalyticsQuery(env, accessToken, {
+      ids:`channel==${owner.channelId}`,
+      startDate,
+      endDate,
+      dimensions:'video,creatorContentType',
+      metrics:'views,likes,comments,shares',
+      sort:'-views',
+      maxResults:80
+    });
+    const normalized = (Array.isArray(rows)?rows:[]).map(row=>({
+      videoId:cleanPlainText(row?.video||'',80),
+      creatorContentType:cleanPlainText(row?.creatorContentType||'',40).toUpperCase(),
+      views:Math.max(0,Number(row?.views||0)),
+      likes:Math.max(0,Number(row?.likes||0)),
+      comments:Math.max(0,Number(row?.comments||0)),
+      shares:Math.max(0,Number(row?.shares||0))
+    })).filter(row=>row.videoId);
+    const shortsBase=normalized.filter(row=>row.creatorContentType==='SHORTS').slice(0,4);
+    const videosBase=normalized.filter(row=>row.creatorContentType==='VIDEO_ON_DEMAND').slice(0,4);
+    const ids=[...new Set([...shortsBase,...videosBase].map(row=>row.videoId))];
+    let metaMap=new Map();
+    if(ids.length){
+      try{
+        const metaResult=await youtubeApiJson(env,'videos',{part:'snippet',id:ids.join(','),maxResults:50},{timeoutMs:5000});
+        metaMap=new Map((metaResult?.data?.items||[]).map(item=>[cleanPlainText(item?.id||'',80),{
+          title:cleanPlainText(item?.snippet?.title||'',220),
+          publishedAt:cleanPlainText(item?.snippet?.publishedAt||'',60),
+          thumbnail:item?.snippet?.thumbnails?.medium?.url||item?.snippet?.thumbnails?.default?.url||''
+        }]));
+      }catch(_){ }
+    }
+    const enrich=(row,isShort)=>{
+      const meta=metaMap.get(row.videoId)||{};
+      return {...row,...meta,url:isShort?`https://www.youtube.com/shorts/${encodeURIComponent(row.videoId)}`:`https://www.youtube.com/watch?v=${encodeURIComponent(row.videoId)}`};
+    };
+    return json({
+      ok:true,available:true,startDate,endDate,
+      shorts:shortsBase.map(row=>enrich(row,true)),
+      videos:videosBase.map(row=>enrich(row,false)),
+      source:'youtube-analytics-creatorContentType-r544',
+      updatedAt:new Date().toISOString()
+    });
+  } catch (error) {
+    return json({ ok:true, available:false, shorts:[], videos:[], error:cleanPlainText(error?.message||error,320), updatedAt:new Date().toISOString() });
+  }
+}
+
 async function handleControlAudience(request, env) {
   if (!adminAuthorized(request, env)) return json({ ok:false, error:'unauthorized' }, 401);
   const db = requireDb(env);
@@ -16312,9 +16401,11 @@ async function routeApi(request, env, ctx) {
     if (path === '/api/control/dashboard' && request.method === 'GET') return await handleControlDashboard(request, env);
     if (path === '/api/control/system' && request.method === 'GET') return await handleControlSystem(request, env);
     if (path === '/api/control/google-analytics' && request.method === 'GET') return await handleControlGoogleAnalytics(request, env);
+    if (path === '/api/control/google-devices' && request.method === 'GET') return await handleControlGoogleDevicesR544(request, env);
     if (path === '/api/control/social-overview' && request.method === 'GET') return await handleControlSocialOverviewR487(request, env);
     if (path === '/api/control/ecosystem-map' && request.method === 'GET') return await handleControlEcosystemMap(request, env);
     if (path === '/api/control/audience' && request.method === 'GET') return await handleControlAudience(request, env);
+    if (path === '/api/control/youtube-top-content' && request.method === 'GET') return await handleControlYoutubeTopContentR544(request, env);
     if (path === '/api/control/search-console' && request.method === 'GET') return await handleControlSearchConsole(request, env);
     if (path === '/api/control/snapshots/refresh' && request.method === 'POST') return await handleControlSnapshotsRefresh(request, env);
     if (path === '/api/control/country-growth' && request.method === 'GET') return await handleControlCountryGrowth(request, env);
