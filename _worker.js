@@ -13308,6 +13308,27 @@ async function refreshYoutubeTopContentR552(env) {
   return {shorts,videos,startDate,endDate,updatedAt};
 }
 
+
+async function youtubePublicRegularFallbackR553(env, db) {
+  const identity=await fetchYoutubeMonitorIdentity(env);
+  const rows=await fetchYoutubeVideoStats(env,db,identity.uploadsPlaylistId);
+  const cutoff=Date.now()-29*24*60*60*1000;
+  const isObviousShort=row=>/\bshorts?\b|#shorts/i.test(String(row?.title||''));
+  let pool=(Array.isArray(rows)?rows:[]).filter(row=>{
+    const published=Date.parse(row?.publishedAt||'');
+    return row?.videoId && !isObviousShort(row) && Number.isFinite(published) && published>=cutoff;
+  });
+  if(!pool.length) pool=(Array.isArray(rows)?rows:[]).filter(row=>row?.videoId && !isObviousShort(row));
+  return pool.sort((a,b)=>Number(b.views||0)-Number(a.views||0))
+    .slice(0,4)
+    .map(row=>normalizeYoutubeTopContentR552({
+      ...row,
+      creatorContentType:'VIDEO_ON_DEMAND',
+      shares:0,
+      url:row.url||`https://www.youtube.com/watch?v=${encodeURIComponent(row.videoId)}`
+    },'VIDEO_ON_DEMAND'));
+}
+
 async function handleControlYoutubeTopContentR552(request, env) {
   if (!adminAuthorized(request, env)) return json({ok:false,error:'unauthorized'},401);
 
@@ -13332,11 +13353,44 @@ async function handleControlYoutubeTopContentR552(request, env) {
     .filter(row=>row.videoId)
     .sort((a,b)=>b.views-a.views)
     .slice(0,4);
-  const cachedVideos=(Array.isArray(studio.topRegularVideos28)?studio.topRegularVideos28:[])
+  const regularCachePool=[
+    ...(Array.isArray(studio.topRegularVideos28)?studio.topRegularVideos28:[]),
+    ...(Array.isArray(studio.topVideos28)?studio.topVideos28.filter(row=>String(row?.creatorContentType||'').toUpperCase()==='VIDEO_ON_DEMAND'):[])
+  ];
+  const regularSeen=new Set();
+  let cachedVideos=regularCachePool
     .map(row=>normalizeYoutubeTopContentR552(row,'VIDEO_ON_DEMAND'))
-    .filter(row=>row.videoId)
+    .filter(row=>row.videoId && !regularSeen.has(row.videoId) && regularSeen.add(row.videoId))
     .sort((a,b)=>b.views-a.views)
     .slice(0,4);
+
+  // R553: if the latest snapshot lost topRegularVideos28, recover the last exact 28-day
+  // VIDEO_ON_DEMAND rows from recent YouTube snapshots before touching OAuth again.
+  if(!cachedVideos.length){
+    try{
+      const history=await db.prepare(`
+        SELECT metrics_json, created_at
+        FROM platform_snapshots
+        WHERE platform='youtube'
+        ORDER BY datetime(created_at) DESC
+        LIMIT 32
+      `).all();
+      for(const row of (history?.results||[])){
+        const snapRow=parseSnapshotMetrics(row);
+        const st=snapRow?.studio||{};
+        const pool=[
+          ...(Array.isArray(st.topRegularVideos28)?st.topRegularVideos28:[]),
+          ...(Array.isArray(st.topVideos28)?st.topVideos28.filter(item=>String(item?.creatorContentType||'').toUpperCase()==='VIDEO_ON_DEMAND'):[])
+        ];
+        if(!pool.length) continue;
+        const seen=new Set();
+        const found=pool.map(item=>normalizeYoutubeTopContentR552(item,'VIDEO_ON_DEMAND'))
+          .filter(item=>item.videoId && !seen.has(item.videoId) && seen.add(item.videoId))
+          .sort((a,b)=>b.views-a.views).slice(0,4);
+        if(found.length){cachedVideos=found;break}
+      }
+    }catch(_){}
+  }
 
   const wantedCached=wanted==='videos'?cachedVideos:cachedShorts;
   if(wantedCached.length && !force){
@@ -13368,17 +13422,39 @@ async function handleControlYoutubeTopContentR552(request, env) {
       return json({
         ok:true,
         available:true,
-        source:'youtube-top-cache-fallback-r552',
+        source:'youtube-top-cache-fallback-r553',
         shorts:cachedShorts,
         videos:cachedVideos,
         updatedAt:studio.topContentUpdatedAt||latestRow?.created_at||'',
         refreshError:cleanPlainText(error?.message||error,260)
       });
     }
+    // R553: regular videos must not stay blank just because Studio OAuth is temporarily
+    // unavailable. Use the public channel/Data API as a last resort. This never touches
+    // the main YouTube dashboard and requires no Analytics OAuth token.
+    if(wanted==='videos'){
+      try{
+        const publicVideos=await Promise.race([
+          youtubePublicRegularFallbackR553(env,db),
+          new Promise((_,reject)=>setTimeout(()=>reject(new Error('youtube-public-video-fallback-timeout')),9000))
+        ]);
+        if(publicVideos.length){
+          return json({
+            ok:true,
+            available:true,
+            source:'youtube-public-regular-fallback-r553',
+            shorts:cachedShorts,
+            videos:publicVideos,
+            updatedAt:new Date().toISOString(),
+            refreshError:cleanPlainText(error?.message||error,260)
+          });
+        }
+      }catch(_){}
+    }
     return json({
       ok:false,
       available:false,
-      source:'youtube-top-error-r552',
+      source:'youtube-top-error-r553',
       shorts:[],
       videos:[],
       error:cleanPlainText(error?.message||error,300),
