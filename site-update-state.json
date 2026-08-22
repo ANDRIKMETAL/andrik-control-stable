@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787439646810-18e8831f8a",
-  "release": "R561",
-  "archiveName": "R561-SCORDALUS-HOME-REDESIGN-BEYOND-RADIO-READY-SAFE-FULL.zip",
-  "sourceHead": "ce5dfa63c72b7557371916b74c7e5b2008e43dd7",
-  "backupSha": "ce5dfa63c72b7557371916b74c7e5b2008e43dd7",
-  "backupTag": "control-backup-20260822230040-ce5dfa6-r561-61dd8",
+  "operationId": "publish-1787440191658-4bf50760cb",
+  "release": "R562",
+  "archiveName": "R562-R560-RESTORE-LYRA-HERO-NAV-SAFE-FULL.zip",
+  "sourceHead": "9204db9b68ae3cc85288b0cd331525c5a33cb153",
+  "backupSha": "9204db9b68ae3cc85288b0cd331525c5a33cb153",
+  "backupTag": "control-backup-20260822230945-9204db9-r562-8c2fb",
   "autoRecovery": true,
-  "generatedAt": "2026-08-22T23:00:49.530Z"
+  "generatedAt": "2026-08-22T23:09:53.847Z"
 }

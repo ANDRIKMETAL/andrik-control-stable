@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#03070b">
 <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
 <meta http-equiv="Pragma" content="no-cache">
-<title>ANDRIK — безопасная очистка R560</title>
+<title>ANDRIK — безопасная очистка R562</title>
 <style>
 *{box-sizing:border-box}
 body{margin:0;min-height:100vh;display:grid;place-items:center;padding:20px;background:#03070b;color:#f4fbff;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
@@ -34,14 +34,14 @@ small{display:block;margin-top:12px;color:#607b87;line-height:1.45}
 </head>
 <body>
 <main class="box">
-<span class="badge">SAFE RESET · R560</span>
+<span class="badge">SAFE RESET · R562</span>
 <h1 id="title">Очищаем Control</h1>
 <p>Эта версия специально не загружает десятки файлов на шаге 3. Поэтому зависнуть на третьем пункте она не может.</p>
 <div class="bar"><span id="bar"></span></div>
 <div class="steps">
   <div class="step" id="stepCaches"><span class="dot"></span><span>1. Удаление Cache Storage</span></div>
   <div class="step" id="stepWorkers"><span class="dot"></span><span>2. Отключение старого Service Worker</span></div>
-  <div class="step" id="stepReady"><span class="dot"></span><span>3. Подготовка чистого запуска R560</span></div>
+  <div class="step" id="stepReady"><span class="dot"></span><span>3. Подготовка чистого запуска R562</span></div>
 </div>
 <div class="result" id="result">Подготовка…</div>
 <div class="buttons">
@@ -102,15 +102,15 @@ try{
   // ВАЖНО: здесь намеренно НЕТ fetch(), регистрации SW и ожидания сети.
   // После unregister текущая вкладка может ещё числиться старым client до навигации.
   // Поэтому новый документ открывается отдельной навигацией с cache-bust.
-  try{sessionStorage.setItem('andrik-clean-launch-r560',String(stamp))}catch(_){ }
+  try{sessionStorage.setItem('andrik-clean-launch-r562',String(stamp))}catch(_){ }
   done('stepReady');
   bar.style.width='100%';
 
-  title.textContent='R560 готова';
+  title.textContent='R562 готова';
   result.className='result ok';
   result.textContent=`Готово. Удалено кэшей: ${deletedCaches}. Отключено старых Worker: ${removedWorkers}. Шаг 3 выполнен без сетевых запросов.`;
-  control.href='/control-home.html?page=menu&v=55.00-r560&fresh='+stamp;
-  site.href='/?v=55.00-r560&fresh='+stamp;
+  control.href='/control-home.html?page=menu&v=55.00-r562&fresh='+stamp;
+  site.href='/?v=55.00-r562&fresh='+stamp;
   control.classList.add('show');
   site.classList.add('show');
 }catch(error){
@@ -118,11 +118,11 @@ try{
   // Даже при редкой ошибке браузерного API не блокируем пользователя.
   ['stepCaches','stepWorkers','stepReady'].forEach(id=>done(id));
   bar.style.width='100%';
-  title.textContent='Можно открывать R560';
+  title.textContent='Можно открывать R562';
   result.className='result ok';
   result.textContent='Браузер не дал выполнить один из служебных API, но очистка не блокируется. Открой Control — запрос пойдёт с новым cache-bust.';
-  control.href='/control-home.html?page=menu&v=55.00-r560&fresh='+stamp;
-  site.href='/?v=55.00-r560&fresh='+stamp;
+  control.href='/control-home.html?page=menu&v=55.00-r562&fresh='+stamp;
+  site.href='/?v=55.00-r562&fresh='+stamp;
   control.classList.add('show');
   site.classList.add('show');
 }
