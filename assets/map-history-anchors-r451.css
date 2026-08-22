@@ -1,9 +1,0 @@
-/* ANDRIK R451 — historical country anchors stay visible on the ALL ecosystem map only. */
-#worldMap[data-ecosystem-layer="all"] .world-map-dot.is-history-anchor-r450{
-  opacity:.74;
-  filter:saturate(.68) brightness(1.04);
-  pointer-events:none;
-}
-#worldMap[data-ecosystem-layer="all"] .world-map-dot.is-history-anchor-r450 i{
-  opacity:.86;
-}

@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html class="notranslate" lang="ru" translate="no"><head>
-<meta content="R520" name="andrik-control-release"/>
+<meta content="R560" name="andrik-control-release"/>
 <link href="/assets/control-sleep-mode-r193.css?v=55.00-r193" rel="stylesheet"/><script defer="" src="/assets/control-sleep-mode-r193.js?v=55.00-r193"></script>
 <meta content="notranslate" name="google"/><meta charset="utf-8">
 <meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport">
@@ -51,7 +51,7 @@ if (location.hostname.toLowerCase() === 'control.andrikmetal.com') {
 <link href="/assets/admin-carousel-smooth-r185.css?v=55.00-r185" rel="stylesheet"/>
 <link href="/assets/lyrics-title-r190.css?v=55.00-r190" rel="stylesheet"/>
 <script defer="" src="/assets/control-cache-reset-r306.js?v=55.00-r306"></script>
-<link href="/assets/lyrics-mp3-r2-r314.css?v=55.00-r335" rel="stylesheet"/>
+<link href="/assets/lyrics-single-r2-r560.css?v=55.00-r560" rel="stylesheet"/>
 <link href="/assets/mp3-tag-editor-r317.css?v=55.00-r321" rel="stylesheet"/>
 <link href="/assets/album-zip-admin-r520.css?v=55.00-r520" rel="stylesheet"/>
 </link></meta></meta></head>
@@ -102,11 +102,19 @@ if (location.hostname.toLowerCase() === 'control.andrikmetal.com') {
 <div class="bulk-lyrics-list" id="bulkLyricsList"><div class="admin-empty">Выберите несколько TXT/LRC или один ZIP. Каждый файл считается отдельной песней.</div></div>
 <details class="bulk-lyrics-help"><summary>Как лучше называть файлы</summary><p><code>01 - Исток.txt</code>, <code>Тёмная ночь души.lrc</code> или <code>CB7Attn7qOo - I AM.txt</code>. Если совпадение не найдено, песню можно выбрать вручную перед импортом.</p></details>
 </section>
-<section class="admin-control-card admin-control-card-wide mp3-r2-card" id="mp3R2Card">
-<div class="admin-card-title-row"><div><span class="eyeline">ANDRIK Music · R2</span><h2>Быстрая загрузка MP3 сингла</h2><p>Старый быстрый режим без конвертации WAV и без пакетного редактора. Для альбомов используйте первый раздел сверху.</p></div><span class="mp3-r2-badge" id="mp3R2Badge">Нет файла</span></div>
-<input accept="audio/mpeg,.mp3" hidden="" id="mp3R2File" type="file"/>
-<div class="admin-actions mp3-r2-actions"><button class="btn btn-primary" id="mp3R2Choose" type="button">⬆ Загрузить MP3</button><button class="btn" disabled="" id="mp3R2Copy" type="button">🔗 Скопировать ссылку</button><button class="btn admin-danger" disabled="" id="mp3R2Delete" type="button">Удалить MP3</button></div>
-<div class="admin-status" id="mp3R2Status">Выберите MP3. Имя будет безопасно приведено к латинице/цифрам.</div>
+<section class="admin-control-card admin-control-card-wide mp3-r2-card single-r2-card-r560" id="mp3R2Card">
+<div class="admin-card-title-row"><div><span class="eyeline">ANDRIK Music · SINGLE</span><h2>Сингл: WAV / MP3 → MP3 320 → R2</h2></div><span class="mp3-r2-badge" id="mp3R2Badge">Нет файла</span></div>
+<div class="single-r2-grid-r560">
+<label class="single-r2-title-r560">Название сингла<input id="singleR2TitleR560" type="text" autocomplete="off" placeholder="Например: Свобода"></label>
+<label class="single-r2-file-r560"><span>Аудио</span><button class="btn" id="singleR2ChooseAudioR560" type="button">🎵 WAV / MP3</button><small id="singleR2AudioNameR560">Файл не выбран</small></label>
+<label class="single-r2-file-r560"><span>Обложка</span><button class="btn" id="singleR2ChooseCoverR560" type="button">🖼 JPG / PNG</button><small id="singleR2CoverNameR560">Без обложки</small></label>
+</div>
+<input accept="audio/mpeg,audio/wav,audio/x-wav,.mp3,.wav" hidden id="singleR2AudioR560" type="file">
+<input accept="image/jpeg,image/png,.jpg,.jpeg,.png" hidden id="singleR2CoverR560" type="file">
+<button class="btn btn-primary single-r2-upload-r560" disabled id="singleR2UploadR560" type="button">⬆ Конвертировать + теги + загрузить в R2</button>
+<div class="single-r2-progress-r560" aria-hidden="true"><span id="singleR2ProgressBarR560"></span></div>
+<div class="single-r2-mini-actions-r560"><button class="btn" disabled id="singleR2RenameR560" type="button">✎ Название</button><button class="btn" disabled id="mp3R2Copy" type="button">🔗 Ссылка</button><button class="btn admin-danger" disabled id="mp3R2Delete" type="button">Удалить</button></div>
+<div class="admin-status" id="mp3R2Status">WAV или MP3 + обложка → MP3 320 kbps с тегами → R2.</div>
 </section>
 <section class="lyrics-workspace">
 <div class="lyrics-setup-card"><div class="admin-editor-grid"><label>ID или ссылка YouTube<input id="lyricsVideoId" placeholder="Вставьте ID или ссылку на видео"/></label><label>Название песни<input id="lyricsTitle" placeholder="Название песни"/></label><label>Исполнитель<input id="lyricsArtist" value="ANDRIK"/></label><label class="admin-checkbox"><input checked="" id="lyricsEnabled" type="checkbox"/> Показывать в плеере</label></div><div class="admin-actions"><button class="btn" id="lyricsOpenVideo" type="button">Открыть видео</button><button class="btn" id="lyricsFillVideo" type="button">Заполнить данные из видео</button><button class="btn" id="lyricsLoad" type="button">Загрузить сохранённый текст</button></div><div class="admin-status" id="lyricsAdminMessage"></div></div>
@@ -142,7 +150,7 @@ if (location.hostname.toLowerCase() === 'control.andrikmetal.com') {
 <footer class="control-version-footer"><strong>Live Web AI · профиль ANDRIK · v55.00 LIVE WEB AI FINAL R520</strong><span>единая шапка · горизонтальный режим · 30.07.2026</span></footer></div></main><script src="https://www.youtube.com/iframe_api"></script><script defer="" src="/assets/lyrics-admin-v54-28.js?v=54.30"></script><script defer="" src="/assets/control-bulk-lyrics-v51.js?v=54.28"></script><script defer="" src="/assets/control-version-v54-92.js?v=54.92"></script><script defer="" src="/assets/control-status-eye-v55-00-r88.js?v=55.00-r88"></script><script defer="" src="/assets/control-version-v54-99b.js?v=54.99b"></script><script defer="" src="/assets/control-version-v55-00-final-r1.js?v=55.00-final-r1"></script><script defer="" src="/assets/control-version-v55-00-final-r2.js?v=55.00-final-r2"></script><script defer="" src="/assets/control-version-v55-00-final-r21.js?v=55.00-final-r21"></script><script defer="" src="/assets/control-live-eye-v55-00-r265.js?v=55.00-r265"></script><script defer="" src="/assets/control-version-v55-00-r3n.js?v=55.00-r3n"></script><script defer="" src="/assets/control-version-v55-00-final-stable-github.js?v=55.00-final-stable-github"></script><script defer="" src="/assets/admin-carousel-embed-v55-00-final.js?v=55.00-r185"></script><script defer="" src="/assets/control-version-v55-00-r115.js?v=55.00-r115"></script><script defer="" src="/assets/unified-glow-r139.js?v=55.00-r142"></script>
 <script defer="" src="/assets/control-mini-player-r141.js?v=55.00-r144"></script>
 <script defer="" src="/assets/control-version-sync-r482.js?v=55.00-r482"></script>
-<script defer="" src="/assets/lyrics-mp3-r2-r314.js?v=55.00-r335"></script>
+<script defer="" src="/assets/lyrics-single-r2-r560.js?v=55.00-r560"></script>
 <script defer="" src="/assets/wav-to-mp3-r324.js?v=55.00-r324"></script>
 <script defer="" src="/assets/mp3-tag-editor-r317.js?v=55.00-r324"></script>
 <script defer="" src="/assets/album-zip-admin-r446.js?v=55.00-r520"></script>

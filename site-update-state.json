@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787382991138-505e81b3a3",
-  "release": "R559",
-  "archiveName": "R559-FAST-LONG-CLIPS-DIRECT-R2-RANGE-FIX-SAFE-FULL.zip",
-  "sourceHead": "02ba671f2ce140cb921e5adc17ab50c71daa6ca9",
-  "backupSha": "02ba671f2ce140cb921e5adc17ab50c71daa6ca9",
-  "backupTag": "control-backup-20260822071626-02ba671-r559-c9111",
+  "operationId": "publish-1787433741315-0990ab7c2e",
+  "release": "R560",
+  "archiveName": "R560-SINGLE-WAV-COVER-COMPACT-CLEAN-SAFE-FULL.zip",
+  "sourceHead": "1968a896fb6229faf72b178efe2aa6b12e792499",
+  "backupSha": "1968a896fb6229faf72b178efe2aa6b12e792499",
+  "backupTag": "control-backup-20260822212217-1968a89-r560-01606",
   "autoRecovery": true,
-  "generatedAt": "2026-08-22T07:16:31.138Z"
+  "generatedAt": "2026-08-22T21:22:21.315Z"
 }
