@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787333530754-dbc7cd2e9c",
-  "release": "R556",
-  "archiveName": "R556-YOUTUBE-CACHE-GSC-AUGUST-LAYOUT-SAFE-FULL.zip",
-  "sourceHead": "c5baeeb1b19fdcc790e1156298a8819462bf890f",
-  "backupSha": "c5baeeb1b19fdcc790e1156298a8819462bf890f",
-  "backupTag": "control-backup-20260821173201-c5baeeb-r556-1c41b",
+  "operationId": "publish-1787377978970-0801029219",
+  "release": "R557",
+  "archiveName": "R557-JOY-OF-BEING-CLIPS-R2-GSC-FIX-SAFE-FULL.zip",
+  "sourceHead": "37d259e5350702141e8013142205ce78d1e19a60",
+  "backupSha": "37d259e5350702141e8013142205ce78d1e19a60",
+  "backupTag": "control-backup-20260822055254-37d259e-r557-3093f",
   "autoRecovery": true,
-  "generatedAt": "2026-08-21T17:32:10.754Z"
+  "generatedAt": "2026-08-22T05:52:59.745Z"
 }

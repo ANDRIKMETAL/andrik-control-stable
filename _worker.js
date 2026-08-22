@@ -8708,22 +8708,35 @@ async function fetchGoogleSearchConsoleAnalytics(env) {
   const serviceAccountEmail = cleanPlainText(credentials?.client_email || '', 180);
   if (!credentials || !configuredSiteUrl) return { configured:false, connected:false, siteUrl:configuredSiteUrl, serviceAccountEmail };
   const accessToken = await getGoogleSearchConsoleAccessToken(env);
-  let accessibleSites = [];
-  try { accessibleSites = await listGoogleSearchConsoleSites(accessToken); } catch (_) {}
-  const siteUrl = resolveGoogleSearchConsoleSite(configuredSiteUrl, accessibleSites);
-  if (accessibleSites.length && !accessibleSites.some(item => item.siteUrl === siteUrl)) {
-    throw new Error(`search-console-service-account-no-access:${serviceAccountEmail || 'unknown'}:${configuredSiteUrl}`);
-  }
   const todayBratislava = getBratislavaClock().date;
   const endDate = shiftIsoCalendarDate(todayBratislava, -2);
   const startDate = `${endDate.slice(0,7)}-01`;
-  // R556 — dashboard only needs current-month summary + daily trend.
-  // Two Search Console calls are materially faster and avoid the old 4-call request
-  // timing out and falling back to a stale July snapshot.
-  const [summaryReport, trendReport] = await Promise.all([
-    googleSearchConsoleQuery(accessToken, siteUrl, { startDate, endDate, rowLimit: 1, dataState:'all' }),
-    googleSearchConsoleQuery(accessToken, siteUrl, { startDate, endDate, dimensions: ['date'], rowLimit: 1000, dataState: 'all' })
+  // R557 — fast path: query the configured property immediately.
+  // Listing every Search Console property first was adding enough latency that
+  // the mobile dashboard could time out before the current-month snapshot arrived.
+  // Only fall back to the sites list when the configured property itself is rejected.
+  let accessibleSites = [];
+  let siteUrl = configuredSiteUrl;
+  const runReports = candidate => Promise.all([
+    googleSearchConsoleQuery(accessToken, candidate, { startDate, endDate, rowLimit: 1, dataState:'all' }),
+    googleSearchConsoleQuery(accessToken, candidate, { startDate, endDate, dimensions: ['date'], rowLimit: 1000, dataState: 'all' })
   ]);
+  let summaryReport, trendReport;
+  try {
+    [summaryReport, trendReport] = await runReports(siteUrl);
+  } catch (firstError) {
+    try { accessibleSites = await listGoogleSearchConsoleSites(accessToken); } catch (_) { accessibleSites = []; }
+    const resolvedSite = resolveGoogleSearchConsoleSite(configuredSiteUrl, accessibleSites);
+    if (resolvedSite && resolvedSite !== siteUrl) {
+      siteUrl = resolvedSite;
+      [summaryReport, trendReport] = await runReports(siteUrl);
+    } else {
+      if (accessibleSites.length && !accessibleSites.some(item => item.siteUrl === siteUrl)) {
+        throw new Error(`search-console-service-account-no-access:${serviceAccountEmail || 'unknown'}:${configuredSiteUrl}`);
+      }
+      throw firstError;
+    }
+  }
   const summary = summaryReport?.rows?.[0] || {};
   const normalizeRows = report => (report?.rows || []).map(row => ({
     key: cleanPlainText(row?.keys?.[0] || '', 500),
@@ -13096,7 +13109,7 @@ async function handleControlSearchConsole(request, env) {
     try {
       const live = await Promise.race([
         fetchGoogleSearchConsoleAnalytics(env),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('search-console-timeout')), 18000))
+        new Promise((_, reject) => setTimeout(() => reject(new Error('search-console-timeout')), 28000))
       ]);
       if (live?.configured) {
         await savePlatformSnapshot(db,'google-search-console',live,refresh?'manual-control-refresh-r531':'auto-current-month-r531');
@@ -16469,6 +16482,67 @@ async function handleYaEstVideoPublicR478(request,env,forceDownload=false){
 }
 // === End R478 official clip ===
 
+// === R557: native official clip "JOY OF BEING" in R2, browser multipart upload ===
+const JOY_OF_BEING_VIDEO_KEY_R557 = 'clips/joy-of-being-official-2026.mp4';
+async function handleJoyOfBeingVideoMpuStartR557(request,env){
+  if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
+  const bucket=getMusicBucketR314(env);if(!bucket)return json({ok:false,error:'music-bucket-not-configured'},503);
+  try{
+    const upload=await bucket.createMultipartUpload(JOY_OF_BEING_VIDEO_KEY_R557,{
+      httpMetadata:{contentType:'video/mp4',cacheControl:'public, max-age=86400'},
+      customMetadata:{source:'ANDRIK Control R557 browser multipart',title:'ANDRIK — JOY OF BEING · Official Music Video',release:'2026'}
+    });
+    return json({ok:true,uploadId:upload.uploadId,key:upload.key,partSize:8*1024*1024});
+  }catch(error){return json({ok:false,error:'multipart-start-failed',message:cleanPlainText(error?.message||error,420)},502);}
+}
+async function handleJoyOfBeingVideoMpuPartR557(request,env){
+  if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
+  const bucket=getMusicBucketR314(env);if(!bucket)return json({ok:false,error:'music-bucket-not-configured'},503);
+  const url=new URL(request.url),uploadId=mediaUploadIdR478(request),partNumber=parseInt(url.searchParams.get('partNumber')||'',10);
+  if(!uploadId||!Number.isFinite(partNumber)||partNumber<1||partNumber>10000)return json({ok:false,error:'invalid-multipart-request'},400);
+  if(!request.body)return json({ok:false,error:'missing-part-body'},400);
+  try{const upload=bucket.resumeMultipartUpload(JOY_OF_BEING_VIDEO_KEY_R557,uploadId);const part=await upload.uploadPart(partNumber,request.body);return json({ok:true,partNumber:part.partNumber,etag:part.etag});}
+  catch(error){return json({ok:false,error:'multipart-part-failed',message:cleanPlainText(error?.message||error,420)},502);}
+}
+async function handleJoyOfBeingVideoMpuCompleteR557(request,env){
+  if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
+  const bucket=getMusicBucketR314(env);if(!bucket)return json({ok:false,error:'music-bucket-not-configured'},503);
+  const uploadId=mediaUploadIdR478(request);if(!uploadId)return json({ok:false,error:'invalid-multipart-request'},400);
+  const body=await request.json().catch(()=>null),parts=Array.isArray(body?.parts)?body.parts:[];
+  const normalized=parts.map(p=>({partNumber:parseInt(p?.partNumber,10),etag:String(p?.etag||'')})).filter(p=>Number.isFinite(p.partNumber)&&p.partNumber>0&&p.etag).sort((a,b)=>a.partNumber-b.partNumber);
+  if(!normalized.length||normalized.length!==parts.length)return json({ok:false,error:'invalid-multipart-parts'},400);
+  try{const upload=bucket.resumeMultipartUpload(JOY_OF_BEING_VIDEO_KEY_R557,uploadId);const object=await upload.complete(normalized);const head=await bucket.head(JOY_OF_BEING_VIDEO_KEY_R557);return json({ok:true,key:JOY_OF_BEING_VIDEO_KEY_R557,size:Number(head?.size||0),etag:object?.httpEtag||'',url:'/api/media/video/joy-of-being.mp4'});}
+  catch(error){return json({ok:false,error:'multipart-complete-failed',message:cleanPlainText(error?.message||error,420)},502);}
+}
+async function handleJoyOfBeingVideoMpuAbortR557(request,env){
+  if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
+  const bucket=getMusicBucketR314(env);if(!bucket)return json({ok:false,error:'music-bucket-not-configured'},503);
+  const uploadId=mediaUploadIdR478(request);if(!uploadId)return json({ok:false,error:'invalid-multipart-request'},400);
+  try{await bucket.resumeMultipartUpload(JOY_OF_BEING_VIDEO_KEY_R557,uploadId).abort();return json({ok:true});}
+  catch(error){return json({ok:false,error:'multipart-abort-failed',message:cleanPlainText(error?.message||error,300)},400);}
+}
+async function handleJoyOfBeingVideoStatusR557(request,env){
+  if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
+  const bucket=getMusicBucketR314(env);if(!bucket)return json({ok:false,error:'music-bucket-not-configured'},503);
+  const object=await bucket.head(JOY_OF_BEING_VIDEO_KEY_R557).catch(()=>null);
+  return json({ok:true,exists:Boolean(object),key:JOY_OF_BEING_VIDEO_KEY_R557,size:Number(object?.size||0),uploaded:object?.uploaded||null,url:'/api/media/video/joy-of-being.mp4'});
+}
+async function handleJoyOfBeingVideoPublicR557(request,env,forceDownload=false){
+  const bucket=getMusicBucketR314(env);if(!bucket)return new Response('R2 unavailable',{status:503});
+  const url=new URL(request.url);const isHead=request.method==='HEAD';
+  const download=forceDownload||url.searchParams.get('download')==='1';let object;
+  try{object=isHead?await bucket.head(JOY_OF_BEING_VIDEO_KEY_R557):await bucket.get(JOY_OF_BEING_VIDEO_KEY_R557,{range:request.headers});}catch(_){object=null;}
+  if(!object)return new Response(null,{status:404,headers:{'cache-control':'no-store'}});
+  const h=new Headers();if(typeof object.writeHttpMetadata==='function')object.writeHttpMetadata(h);h.set('content-type','video/mp4');h.set('accept-ranges','bytes');h.set('cache-control',download?'private, no-store':'public, max-age=3600');h.set('x-content-type-options','nosniff');if(object.httpEtag)h.set('etag',object.httpEtag);
+  if(download)h.set('content-disposition','attachment; filename="ANDRIK-Joy-Of-Being-Official-Music-Video-2026.mp4"');
+  let status=200;const range=object.range;
+  if(range&&Number.isFinite(range.offset)&&Number.isFinite(range.length)){status=206;const total=Number(object.size||0);h.set('content-range',`bytes ${range.offset}-${range.offset+range.length-1}/${total}`);h.set('content-length',String(range.length));}
+  else if(object.size)h.set('content-length',String(object.size));
+  if(isHead)return new Response(null,{status:200,headers:h});return new Response(object.body,{status,headers:h});
+}
+// === End R557 JOY OF BEING official clip ===
+
+
 // === R481: native visual fragment "ПРОСНИСЬ" in R2 ===
 const PROSNIS_VIDEO_KEY_R481 = 'clips/prosnis-fragment-2026.mp4';
 
@@ -16543,7 +16617,7 @@ async function handlePromoVideoStatusR471(request, env){
   const object=await bucket.head(PROMO_VIDEO_KEY_R471).catch(()=>null);
   return json({ok:true,exists:Boolean(object),key:PROMO_VIDEO_KEY_R471,size:Number(object?.size||0),uploaded:object?.uploaded||null,url:'/api/media/promo/lyra-trika.mp4'});
 }
-async function handlePromoVideoPublicR471(request, env){
+async function handlePromoVideoPublicR471(request, env, forceDownload=false){
   const bucket=getMusicBucketR314(env);if(!bucket)return new Response('R2 unavailable',{status:503});
   const isHead=request.method==='HEAD';
   let object;
@@ -16555,8 +16629,10 @@ async function handlePromoVideoPublicR471(request, env){
   if(typeof object.writeHttpMetadata==='function')object.writeHttpMetadata(h);
   h.set('content-type','video/mp4');
   h.set('accept-ranges','bytes');
-  h.set('cache-control','public, max-age=3600');
+  const download=forceDownload||new URL(request.url).searchParams.get('download')==='1';
+  h.set('cache-control',download?'private, no-store':'public, max-age=3600');
   if(object.httpEtag)h.set('etag',object.httpEtag);
+  if(download)h.set('content-disposition','attachment; filename="ANDRIK-Lyra-TRIKA-Promo-2026.mp4"');
   let status=200;
   const range=object.range;
   if(range && Number.isFinite(range.offset) && Number.isFinite(range.length)){
@@ -16657,6 +16733,13 @@ async function routeApi(request, env, ctx) {
     if (path === '/api/control/media/ya-est-r478/status' && request.method === 'GET') return await handleYaEstVideoStatusR478(request, env);
     if (path === '/api/media/video/ya-est.mp4' && (request.method === 'GET' || request.method === 'HEAD')) return await handleYaEstVideoPublicR478(request, env);
     if (path === '/download/ANDRIK-Ya-Est-Official-Video-2026.mp4' && (request.method === 'GET' || request.method === 'HEAD')) return await handleYaEstVideoPublicR478(request, env, true);
+    if (path === '/api/control/media/joy-of-being-r557/mpu/start' && request.method === 'POST') return await handleJoyOfBeingVideoMpuStartR557(request, env);
+    if (path === '/api/control/media/joy-of-being-r557/mpu/part' && request.method === 'PUT') return await handleJoyOfBeingVideoMpuPartR557(request, env);
+    if (path === '/api/control/media/joy-of-being-r557/mpu/complete' && request.method === 'POST') return await handleJoyOfBeingVideoMpuCompleteR557(request, env);
+    if (path === '/api/control/media/joy-of-being-r557/mpu/abort' && request.method === 'DELETE') return await handleJoyOfBeingVideoMpuAbortR557(request, env);
+    if (path === '/api/control/media/joy-of-being-r557/status' && request.method === 'GET') return await handleJoyOfBeingVideoStatusR557(request, env);
+    if (path === '/api/media/video/joy-of-being.mp4' && (request.method === 'GET' || request.method === 'HEAD')) return await handleJoyOfBeingVideoPublicR557(request, env);
+    if (path === '/download/ANDRIK-Joy-Of-Being-Official-Music-Video-2026.mp4' && (request.method === 'GET' || request.method === 'HEAD')) return await handleJoyOfBeingVideoPublicR557(request, env, true);
     if (path === '/api/control/media/prosnis-r483' && request.method === 'PUT') return await handleProsnisVideoPutR483(request, env);
     if (path === '/api/control/media/prosnis-r481/mpu/start' && request.method === 'POST') return await handleProsnisVideoMpuStartR481(request, env);
     if (path === '/api/control/media/prosnis-r481/mpu/part' && request.method === 'PUT') return await handleProsnisVideoMpuPartR481(request, env);
@@ -16668,6 +16751,7 @@ async function routeApi(request, env, ctx) {
     if (path === '/api/control/media/promo-r471' && request.method === 'PUT') return await handlePromoVideoUploadR471(request, env);
     if (path === '/api/control/media/promo-r471/status' && request.method === 'GET') return await handlePromoVideoStatusR471(request, env);
     if (path === '/api/media/promo/lyra-trika.mp4' && (request.method === 'GET' || request.method === 'HEAD')) return await handlePromoVideoPublicR471(request, env);
+    if (path === '/download/ANDRIK-Lyra-TRIKA-Promo-2026.mp4' && (request.method === 'GET' || request.method === 'HEAD')) return await handlePromoVideoPublicR471(request, env, true);
     if (path === '/api/music/albums/status' && request.method === 'GET') return await handleMusicAlbumsPublicStatusR446(request, env);
     if (path === '/api/music/album-download' && (request.method === 'GET' || request.method === 'HEAD')) return await handleMusicAlbumDownloadR446(request, env);
     if (path === '/api/music/singles' && request.method === 'GET') return await handleMusicSinglesListR316(request, env);

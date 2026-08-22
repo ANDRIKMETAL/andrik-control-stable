@@ -1,6 +1,6 @@
 'use strict';
 
-const VERSION = '55.00-r536';
+const VERSION = '55.00-r557';
 const IS_CONTROL_HOST = self.location.hostname.toLowerCase() === 'control.andrikmetal.com';
 
 async function deleteControlCaches(){
@@ -44,14 +44,12 @@ if(IS_CONTROL_HOST){
     '/assets/home-fast-r213.js?v=55.00-r213',
     '/singles.html?v=55.00-r330', '/albums.html?v=55.00-r519', '/uk/albums.html?v=55.00-r519', '/sk/albums.html?v=55.00-r519', '/en/albums.html?v=55.00-r519', '/assets/albums-r446.css?v=55.00-r446', '/assets/albums-r446.js?v=55.00-r446', '/assets/albums-fast-library-r477.js?v=55.00-r519', '/assets/albums-trika-release-r519.css?v=55.00-r519', '/assets/singles-r316.css?v=330', '/assets/singles-r316.js?v=330',
     '/assets/home-singles-nav-r330.css?v=55.00-r330', '/assets/home-singles-nav-r330.js?v=55.00-r330',
-    '/assets/home-promo-r471.css?v=55.00-r471',
     '/assets/home-trika-live-r520.css?v=55.00-r520',
-    '/assets/home-promo-r471.js?v=55.00-r471',
     '/assets/albums-fast-library-r477.css?v=55.00-r477', '/assets/albums-fast-library-r477.js?v=55.00-r477',
     '/assets/albums-release-r478.css?v=55.00-r478', '/assets/albums-release-r478.js?v=55.00-r478', '/assets/ya-est-video-wide-v51.webp',
-    '/clips.html?v=55.00-r485', '/uk/clips.html?v=55.00-r485', '/sk/clips.html?v=55.00-r485', '/en/clips.html?v=55.00-r485',
-    '/assets/clips-r483.css?v=55.00-r483', '/assets/clips-r483.js?v=55.00-r483',
-    '/assets/home-clips-hub-r484.css?v=55.00-r484', '/assets/clips-cover-awake-r484.webp',
+    '/clips.html?v=55.00-r557', '/uk/clips.html?v=55.00-r557', '/sk/clips.html?v=55.00-r557', '/en/clips.html?v=55.00-r557',
+    '/assets/clips-r557.css?v=55.00-r557', '/assets/clips-r557.js?v=55.00-r557',
+    '/assets/home-clips-hub-r484.css?v=55.00-r484', '/assets/joy-of-being-video-r557.webp',
     '/assets/lyra-trika-promo-r471.jpg',
     '/player.html?v=55.00-r141', '/assets/player-v54-27-r141.js?v=55.00-r141',
     '/assets/player-v54-27.css?v=54.27', '/assets/player-v54-53.css?v=54.54',
