@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787381148189-fd05405fdc",
-  "release": "R558",
-  "archiveName": "R558-SEARCH-CONSOLE-R554-CORE-RESTORE-JOY-R2-SAFE-FULL.zip",
-  "sourceHead": "f3ebdd6a761c47c8ea58d95c08b037d948e81ebf",
-  "backupSha": "f3ebdd6a761c47c8ea58d95c08b037d948e81ebf",
-  "backupTag": "control-backup-20260822064543-f3ebdd6-r558-7fd20",
+  "operationId": "publish-1787382991138-505e81b3a3",
+  "release": "R559",
+  "archiveName": "R559-FAST-LONG-CLIPS-DIRECT-R2-RANGE-FIX-SAFE-FULL.zip",
+  "sourceHead": "02ba671f2ce140cb921e5adc17ab50c71daa6ca9",
+  "backupSha": "02ba671f2ce140cb921e5adc17ab50c71daa6ca9",
+  "backupTag": "control-backup-20260822071626-02ba671-r559-c9111",
   "autoRecovery": true,
-  "generatedAt": "2026-08-22T06:45:48.189Z"
+  "generatedAt": "2026-08-22T07:16:31.138Z"
 }

@@ -16385,6 +16385,79 @@ async function handleMusicMp3DeleteR314(request, env) {
 
 
 
+
+// === R559: hardened MP4 byte-range serving for long-form clips ===
+function parseVideoRangeR559(value,total,chunkSize=4*1024*1024){
+  const raw=String(value||'').trim();
+  if(!raw)return null;
+  const m=/^bytes\s*=\s*([^,]+)$/i.exec(raw);
+  if(!m)return {invalid:true};
+  const spec=m[1].trim();
+  let start=0,end=total-1;
+  if(/^\d+-\d*$/.test(spec)){
+    const parts=spec.split('-');
+    start=Number(parts[0]);
+    if(!Number.isFinite(start)||start<0||start>=total)return {invalid:true};
+    if(parts[1]!==''){
+      end=Math.min(total-1,Number(parts[1]));
+      if(!Number.isFinite(end)||end<start)return {invalid:true};
+    }else{
+      end=Math.min(total-1,start+chunkSize-1);
+    }
+  }else if(/^-\d+$/.test(spec)){
+    const suffix=Math.min(total,Number(spec.slice(1)));
+    if(!Number.isFinite(suffix)||suffix<=0)return {invalid:true};
+    start=Math.max(0,total-suffix);
+    end=total-1;
+  }else return {invalid:true};
+  return {offset:start,length:end-start+1,end};
+}
+async function serveVideoObjectR559(request,env,key,{download=false,filename='ANDRIK-video.mp4'}={}){
+  const bucket=getMusicBucketR314(env);
+  if(!bucket)return new Response('R2 unavailable',{status:503});
+  const isHead=request.method==='HEAD';
+  const head=await bucket.head(key).catch(()=>null);
+  if(!head)return new Response(null,{status:404,headers:{'cache-control':'no-store'}});
+  const total=Number(head.size||0);
+  const headers=new Headers();
+  if(typeof head.writeHttpMetadata==='function')head.writeHttpMetadata(headers);
+  headers.set('content-type','video/mp4');
+  headers.set('accept-ranges','bytes');
+  headers.set('cache-control',download?'private, no-store':'public, max-age=3600');
+  headers.set('x-content-type-options','nosniff');
+  if(head.httpEtag)headers.set('etag',head.httpEtag);
+  if(download)headers.set('content-disposition',`attachment; filename="${filename}"`);
+  if(isHead){if(total)headers.set('content-length',String(total));return new Response(null,{status:200,headers});}
+  if(download){
+    const object=await bucket.get(key).catch(()=>null);
+    if(!object)return new Response(null,{status:404,headers:{'cache-control':'no-store'}});
+    if(total)headers.set('content-length',String(total));
+    return new Response(object.body,{status:200,headers});
+  }
+  const parsed=parseVideoRangeR559(request.headers.get('range'),total);
+  if(parsed?.invalid){headers.set('content-range',`bytes */${total}`);return new Response(null,{status:416,headers});}
+  if(parsed){
+    const object=await bucket.get(key,{range:{offset:parsed.offset,length:parsed.length}}).catch(()=>null);
+    if(!object)return new Response(null,{status:404,headers:{'cache-control':'no-store'}});
+    headers.set('content-range',`bytes ${parsed.offset}-${parsed.end}/${total}`);
+    headers.set('content-length',String(parsed.length));
+    return new Response(object.body,{status:206,headers});
+  }
+  // Initial non-range request: only return the first chunk. Browsers that need
+  // more data will immediately follow with a Range request.
+  const firstLength=Math.min(total,4*1024*1024);
+  const object=await bucket.get(key,{range:{offset:0,length:firstLength}}).catch(()=>null);
+  if(!object)return new Response(null,{status:404,headers:{'cache-control':'no-store'}});
+  if(firstLength<total){
+    headers.set('content-range',`bytes 0-${firstLength-1}/${total}`);
+    headers.set('content-length',String(firstLength));
+    return new Response(object.body,{status:206,headers});
+  }
+  headers.set('content-length',String(total));
+  return new Response(object.body,{status:200,headers});
+}
+// === End R559 hardened MP4 serving ===
+
 // === R478: native official clip "Я ЕСТЬ" in R2, browser multipart upload ===
 const YA_EST_VIDEO_KEY_R478 = 'clips/ya-est-official-2026.mp4';
 function mediaUploadIdR478(request){
@@ -16435,17 +16508,7 @@ async function handleYaEstVideoStatusR478(request,env){
   return json({ok:true,exists:Boolean(object),key:YA_EST_VIDEO_KEY_R478,size:Number(object?.size||0),uploaded:object?.uploaded||null,url:'/api/media/video/ya-est.mp4'});
 }
 async function handleYaEstVideoPublicR478(request,env,forceDownload=false){
-  const bucket=getMusicBucketR314(env);if(!bucket)return new Response('R2 unavailable',{status:503});
-  const url=new URL(request.url);const isHead=request.method==='HEAD';
-  const download=forceDownload||url.searchParams.get('download')==='1';let object;
-  try{object=isHead?await bucket.head(YA_EST_VIDEO_KEY_R478):await bucket.get(YA_EST_VIDEO_KEY_R478,{range:request.headers});}catch(_){object=null;}
-  if(!object)return new Response(null,{status:404,headers:{'cache-control':'no-store'}});
-  const h=new Headers();if(typeof object.writeHttpMetadata==='function')object.writeHttpMetadata(h);h.set('content-type','video/mp4');h.set('accept-ranges','bytes');h.set('cache-control',download?'private, no-store':'public, max-age=3600');h.set('x-content-type-options','nosniff');if(object.httpEtag)h.set('etag',object.httpEtag);
-  if(download)h.set('content-disposition','attachment; filename="ANDRIK-Ya-Est-Official-Video-2026.mp4"');
-  let status=200;const range=object.range;
-  if(range&&Number.isFinite(range.offset)&&Number.isFinite(range.length)){status=206;const total=Number(object.size||0);h.set('content-range',`bytes ${range.offset}-${range.offset+range.length-1}/${total}`);h.set('content-length',String(range.length));}
-  else if(object.size)h.set('content-length',String(object.size));
-  if(isHead)return new Response(null,{status:200,headers:h});return new Response(object.body,{status,headers:h});
+  return serveVideoObjectR559(request,env,YA_EST_VIDEO_KEY_R478,{download:forceDownload||new URL(request.url).searchParams.get('download')==='1',filename:'ANDRIK-Ya-Est-Official-Video-2026.mp4'});
 }
 // === End R478 official clip ===
 
@@ -16495,17 +16558,7 @@ async function handleJoyOfBeingVideoStatusR557(request,env){
   return json({ok:true,exists:Boolean(object),key:JOY_OF_BEING_VIDEO_KEY_R557,size:Number(object?.size||0),uploaded:object?.uploaded||null,url:'/api/media/video/joy-of-being.mp4'});
 }
 async function handleJoyOfBeingVideoPublicR557(request,env,forceDownload=false){
-  const bucket=getMusicBucketR314(env);if(!bucket)return new Response('R2 unavailable',{status:503});
-  const url=new URL(request.url);const isHead=request.method==='HEAD';
-  const download=forceDownload||url.searchParams.get('download')==='1';let object;
-  try{object=isHead?await bucket.head(JOY_OF_BEING_VIDEO_KEY_R557):await bucket.get(JOY_OF_BEING_VIDEO_KEY_R557,{range:request.headers});}catch(_){object=null;}
-  if(!object)return new Response(null,{status:404,headers:{'cache-control':'no-store'}});
-  const h=new Headers();if(typeof object.writeHttpMetadata==='function')object.writeHttpMetadata(h);h.set('content-type','video/mp4');h.set('accept-ranges','bytes');h.set('cache-control',download?'private, no-store':'public, max-age=3600');h.set('x-content-type-options','nosniff');if(object.httpEtag)h.set('etag',object.httpEtag);
-  if(download)h.set('content-disposition','attachment; filename="ANDRIK-Joy-Of-Being-Official-Music-Video-2026.mp4"');
-  let status=200;const range=object.range;
-  if(range&&Number.isFinite(range.offset)&&Number.isFinite(range.length)){status=206;const total=Number(object.size||0);h.set('content-range',`bytes ${range.offset}-${range.offset+range.length-1}/${total}`);h.set('content-length',String(range.length));}
-  else if(object.size)h.set('content-length',String(object.size));
-  if(isHead)return new Response(null,{status:200,headers:h});return new Response(object.body,{status,headers:h});
+  return serveVideoObjectR559(request,env,JOY_OF_BEING_VIDEO_KEY_R557,{download:forceDownload||new URL(request.url).searchParams.get('download')==='1',filename:'ANDRIK-Joy-Of-Being-Official-Music-Video-2026.mp4'});
 }
 // === End R557 JOY OF BEING official clip ===
 
@@ -16552,10 +16605,7 @@ async function handleProsnisVideoStatusR481(request,env){
   if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);const bucket=getMusicBucketR314(env);if(!bucket)return json({ok:false,error:'music-bucket-not-configured'},503);const object=await bucket.head(PROSNIS_VIDEO_KEY_R481).catch(()=>null);return json({ok:true,exists:Boolean(object),key:PROSNIS_VIDEO_KEY_R481,size:Number(object?.size||0),uploaded:object?.uploaded||null,url:'/api/media/video/prosnis-fragment.mp4'});
 }
 async function handleProsnisVideoPublicR481(request,env,forceDownload=false){
-  const bucket=getMusicBucketR314(env);if(!bucket)return new Response('R2 unavailable',{status:503});const url=new URL(request.url),isHead=request.method==='HEAD',download=forceDownload||url.searchParams.get('download')==='1';let object;
-  try{object=isHead?await bucket.head(PROSNIS_VIDEO_KEY_R481):await bucket.get(PROSNIS_VIDEO_KEY_R481,{range:request.headers});}catch(_){object=null;}if(!object)return new Response(null,{status:404,headers:{'cache-control':'no-store'}});
-  const h=new Headers();if(typeof object.writeHttpMetadata==='function')object.writeHttpMetadata(h);h.set('content-type','video/mp4');h.set('accept-ranges','bytes');h.set('cache-control',download?'private, no-store':'public, max-age=3600');h.set('x-content-type-options','nosniff');if(object.httpEtag)h.set('etag',object.httpEtag);if(download)h.set('content-disposition','attachment; filename="ANDRIK-Prosnis-Fragment-2026.mp4"');
-  let status=200;const range=object.range;if(range&&Number.isFinite(range.offset)&&Number.isFinite(range.length)){status=206;const total=Number(object.size||0);h.set('content-range',`bytes ${range.offset}-${range.offset+range.length-1}/${total}`);h.set('content-length',String(range.length));}else if(object.size)h.set('content-length',String(object.size));if(isHead)return new Response(null,{status:200,headers:h});return new Response(object.body,{status,headers:h});
+  return serveVideoObjectR559(request,env,PROSNIS_VIDEO_KEY_R481,{download:forceDownload||new URL(request.url).searchParams.get('download')==='1',filename:'ANDRIK-Prosnis-Fragment-2026.mp4'});
 }
 // === End R481 PROSNIS fragment ===
 
@@ -16584,32 +16634,8 @@ async function handlePromoVideoStatusR471(request, env){
   const object=await bucket.head(PROMO_VIDEO_KEY_R471).catch(()=>null);
   return json({ok:true,exists:Boolean(object),key:PROMO_VIDEO_KEY_R471,size:Number(object?.size||0),uploaded:object?.uploaded||null,url:'/api/media/promo/lyra-trika.mp4'});
 }
-async function handlePromoVideoPublicR471(request, env, forceDownload=false){
-  const bucket=getMusicBucketR314(env);if(!bucket)return new Response('R2 unavailable',{status:503});
-  const isHead=request.method==='HEAD';
-  let object;
-  try{
-    object=isHead?await bucket.head(PROMO_VIDEO_KEY_R471):await bucket.get(PROMO_VIDEO_KEY_R471,{range:request.headers});
-  }catch(_){ object=null; }
-  if(!object)return new Response(null,{status:404,headers:{'cache-control':'no-store'}});
-  const h=new Headers();
-  if(typeof object.writeHttpMetadata==='function')object.writeHttpMetadata(h);
-  h.set('content-type','video/mp4');
-  h.set('accept-ranges','bytes');
-  const download=forceDownload||new URL(request.url).searchParams.get('download')==='1';
-  h.set('cache-control',download?'private, no-store':'public, max-age=3600');
-  if(object.httpEtag)h.set('etag',object.httpEtag);
-  if(download)h.set('content-disposition','attachment; filename="ANDRIK-Lyra-TRIKA-Promo-2026.mp4"');
-  let status=200;
-  const range=object.range;
-  if(range && Number.isFinite(range.offset) && Number.isFinite(range.length)){
-    status=206;
-    const total=Number(object.size||0);
-    h.set('content-range',`bytes ${range.offset}-${range.offset+range.length-1}/${total}`);
-    h.set('content-length',String(range.length));
-  }else if(object.size){ h.set('content-length',String(object.size)); }
-  if(isHead)return new Response(null,{status:200,headers:h});
-  return new Response(object.body,{status,headers:h});
+async function handlePromoVideoPublicR471(request,env,forceDownload=false){
+  return serveVideoObjectR559(request,env,PROMO_VIDEO_KEY_R471,{download:forceDownload||new URL(request.url).searchParams.get('download')==='1',filename:'ANDRIK-Lyra-TRIKA-Promo-2026.mp4'});
 }
 // === End R471 promo video ===
 

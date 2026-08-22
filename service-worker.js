@@ -1,6 +1,6 @@
 'use strict';
 
-const VERSION = '55.00-r558';
+const VERSION = '55.00-r559';
 const IS_CONTROL_HOST = self.location.hostname.toLowerCase() === 'control.andrikmetal.com';
 
 async function deleteControlCaches(){
@@ -47,8 +47,8 @@ if(IS_CONTROL_HOST){
     '/assets/home-trika-live-r520.css?v=55.00-r520',
     '/assets/albums-fast-library-r477.css?v=55.00-r477', '/assets/albums-fast-library-r477.js?v=55.00-r477',
     '/assets/albums-release-r478.css?v=55.00-r478', '/assets/albums-release-r478.js?v=55.00-r478', '/assets/ya-est-video-wide-v51.webp',
-    '/clips.html?v=55.00-r557', '/uk/clips.html?v=55.00-r557', '/sk/clips.html?v=55.00-r557', '/en/clips.html?v=55.00-r557',
-    '/assets/clips-r557.css?v=55.00-r557', '/assets/clips-r557.js?v=55.00-r557',
+    '/clips.html?v=55.00-r559', '/uk/clips.html?v=55.00-r559', '/sk/clips.html?v=55.00-r559', '/en/clips.html?v=55.00-r559',
+    '/assets/clips-r557.css?v=55.00-r557', '/assets/clips-r559.js?v=55.00-r559',
     '/assets/home-clips-hub-r484.css?v=55.00-r484', '/assets/joy-of-being-video-r557.webp',
     '/assets/lyra-trika-promo-r471.jpg',
     '/player.html?v=55.00-r141', '/assets/player-v54-27-r141.js?v=55.00-r141',
