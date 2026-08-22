@@ -1,244 +1,343 @@
 <!DOCTYPE html>
-
 <html lang="ru">
 <head>
 <meta charset="utf-8"/>
-<script>
-(()=>{try{
-  const supported=new Set(['ru','uk','sk','en']);
-  const root=document.documentElement;
-  let page=(root.lang||'ru').toLowerCase().split('-')[0];
-  if(location.pathname.endsWith('/player.html')){
-    const query=(new URLSearchParams(location.search).get('lang')||'').toLowerCase();
-    let saved='';
-    try{saved=(localStorage.getItem('andrikPreferredLanguage')||'').toLowerCase()}catch(_){}
-    if(supported.has(query)) page=query;
-    else if(supported.has(saved)) page=saved;
-    root.lang=page;
-  }
-  let manual='';
-  try{manual=(sessionStorage.getItem('andrikManualLanguage')||'').toLowerCase()}catch(_){}
-  if(supported.has(page)&&manual===page){
-    root.setAttribute('translate','no');
-    root.classList.add('notranslate');
-    const meta=document.createElement('meta');
-    meta.name='google';
-    meta.content='notranslate';
-    document.head.appendChild(meta);
-  }
-}catch(_){}})();
-</script>
-<meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/>
-<title>ANDRIK — OCEAN | Официальный сайт</title>
-<meta content="Официальный сайт ANDRIK — кинематографичный Modern Epic Heavy Metal, вдохновлённый Трикой и недвойственностью. Альбом OCEAN, клип «Я ЕСТЬ», дискография и музыкальные площадки." name="description"/>
-<meta content="#030507" name="theme-color"/>
-<meta content="dark" name="color-scheme"/>
-<link href="https://andrikmetal.com/" rel="canonical"/><link href="https://andrikmetal.com/" hreflang="ru" rel="alternate"/><link href="https://andrikmetal.com/uk/" hreflang="uk" rel="alternate"/><link href="https://andrikmetal.com/sk/" hreflang="sk" rel="alternate"/><link href="https://andrikmetal.com/en/" hreflang="en" rel="alternate"/><link href="https://andrikmetal.com/" hreflang="x-default" rel="alternate"/>
-<meta content="website" property="og:type"/>
-<meta content="ANDRIK — OCEAN" property="og:title"/>
-<meta content="Кинематографичный Modern Epic Heavy Metal, вдохновлённый Трикой и недвойственностью. Альбом OCEAN и официальный клип «Я ЕСТЬ»." property="og:description"/>
-<meta content="https://andrikmetal.com/" property="og:url"/>
-<meta content="https://andrikmetal.com/assets/andrik-ocean-poster-v50.webp" property="og:image"/>
-<meta content="1536" property="og:image:width"/>
-<meta content="1024" property="og:image:height"/>
-<meta content="summary_large_image" name="twitter:card"/>
-<meta content="ANDRIK — OCEAN" name="twitter:title"/>
-<meta content="ANDRIK — музыка пробуждения, вдохновлённая Трикой. Альбом OCEAN и клип «Я ЕСТЬ»." name="twitter:description"/>
-<meta content="https://andrikmetal.com/assets/andrik-ocean-poster-v50.webp" name="twitter:image"/>
-<link href="/favicon.ico" rel="icon"/>
-<link href="/assets/andrik-site-illusion-r87-180.png" rel="apple-touch-icon"/>
-<link href="/manifest.webmanifest?v=55.00-r87" rel="manifest"/>
-<link href="/assets/v50-26.css?v=52.03" rel="stylesheet"/>
-<link href="/assets/pwa-install.css" rel="stylesheet"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<title>ANDRIK — BEYOND | Официальный сайт</title>
+<meta name="description" content="Официальный сайт ANDRIK. Modern Epic Heavy Metal, Лира как голос проекта, новый альбом BEYOND, клипы, альбомы, музыкальные площадки и философия Трики."/>
+<meta name="theme-color" content="#06080d"/>
+<meta name="color-scheme" content="dark"/>
+<link rel="canonical" href="https://andrikmetal.com/"/>
+<link rel="alternate" hreflang="ru" href="https://andrikmetal.com/"/>
+<link rel="alternate" hreflang="uk" href="https://andrikmetal.com/uk/"/>
+<link rel="alternate" hreflang="sk" href="https://andrikmetal.com/sk/"/>
+<link rel="alternate" hreflang="en" href="https://andrikmetal.com/en/"/>
+<link rel="alternate" hreflang="x-default" href="https://andrikmetal.com/"/>
+<meta property="og:type" content="website"/>
+<meta property="og:title" content="ANDRIK — BEYOND"/>
+<meta property="og:description" content="Новый визуальный дом ANDRIK: Лира, 4-й альбом BEYOND, клипы, дискография и музыкальные площадки."/>
+<meta property="og:url" content="https://andrikmetal.com/"/>
+<meta property="og:image" content="https://andrikmetal.com/assets/beyond-cover-r561.png"/>
+<meta property="og:image:width" content="1254"/>
+<meta property="og:image:height" content="1254"/>
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="ANDRIK — BEYOND"/>
+<meta name="twitter:description" content="Modern Epic Heavy Metal. Лира, новый альбом BEYOND, клипы и дискография ANDRIK."/>
+<meta name="twitter:image" content="https://andrikmetal.com/assets/beyond-cover-r561.png"/>
+<link rel="icon" href="/favicon.ico"/>
+<link rel="apple-touch-icon" href="/assets/andrik-site-illusion-r87-180.png"/>
+<link rel="manifest" href="/manifest.webmanifest?v=55.00-r87"/>
+<link rel="stylesheet" href="/assets/pwa-install.css"/>
+<link rel="stylesheet" href="/assets/home-redesign-r561.css?v=55.61"/>
 <script type="application/ld+json">
-  {
-    "@context":"https://schema.org",
-    "@type":"MusicGroup",
-    "name":"ANDRIK",
-    "url":"https://andrikmetal.com/",
-    "image":"https://andrikmetal.com/assets/andrik-ocean-poster-v50.webp",
-    "email":"andrikmetal@gmail.com",
-    "description":"Кинематографичный Modern Epic Heavy Metal, вдохновлённый философией Трики, недвойственностью и исследованием сознания.",
-    "genre":["Epic Heavy Metal","Cinematic Metal","Symphonic Metal"],
-    "album":[
-      {"@type":"MusicAlbum","name":"OCEAN","datePublished":"2026-07-20","numTracks":10,"url":"https://youtube.com/playlist?list=PLOWKqAipKxhk"},
-      {"@type":"MusicAlbum","name":"Illusion of Life","datePublished":"2026"}
-    ],
-    "sameAs":[
-      "https://youtube.com/@andrikmetal",
-      "https://open.spotify.com/album/75Xp5YlFl91z5c1yT1n1KU",
-      "https://music.apple.com/sk/artist/andrik/6783139479",
-      "https://soundcloud.com/andrikmetal",
-      "https://www.instagram.com/andrikmetal/",
-      "https://www.tiktok.com/@andrikmetal",
-      "https://x.com/andrikmetal",
-      "https://www.pinterest.com/andrikmetal/",
-      "https://www.facebook.com/andrikmetal/"
-    ]
-  }
-  </script>
-<style id="r27-site-center-fix">
-/* R27 — public site centering + kill stray control pagers/left sliver */
-html,body{max-width:100%;overflow-x:hidden!important;overscroll-behavior-x:none!important;}
-body{position:relative;left:0!important;right:0!important;}
-body::before{content:none!important;}
-main,.topbar,.site-footer,section,header,footer,.wrap{max-width:100%;}
-.topbar,.hero,.section,.site-footer,main{overflow-x:clip;}
-[class*="control-section-pager"],[class*="control-section-swipe-indicator"],[class*="control-section-preview"],[class*="control-section-swipe-toast"],.control-swipe-indicator,.control-pull-indicator,.analytics-swipe-dots{display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important;}
-</style>
-<link href="/assets/home-fast-r213.css?v=55.00-r213" rel="stylesheet"/>
-<style id="andrik-single-download-r312">
-.single-download-r312{padding:8px 0 34px}.single-download-r312 .single-download-card{max-width:760px;margin:0 auto;padding:20px;border:1px solid rgba(222,178,92,.42);border-radius:24px;background:linear-gradient(145deg,rgba(25,20,14,.94),rgba(8,8,10,.96));box-shadow:0 0 30px rgba(214,158,55,.10),inset 0 1px 0 rgba(255,255,255,.05);text-align:center}.single-download-r312 .single-kicker{display:block;margin-bottom:7px;color:#caa45e;font-size:.72rem;font-weight:800;letter-spacing:.18em;text-transform:uppercase}.single-download-r312 h2{margin:0 0 5px;font-size:clamp(1.35rem,5vw,2rem);line-height:1.05}.single-download-r312 p{margin:0 0 16px;color:rgba(255,255,255,.68);font-size:.92rem}.single-download-r312 .single-download-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:58px;border:1px solid rgba(255,218,135,.72);border-radius:17px;background:linear-gradient(135deg,#e0b35e,#9b6824);color:#100c06;text-decoration:none;font-weight:900;letter-spacing:.055em;box-shadow:0 0 24px rgba(218,164,65,.24);transition:transform .16s ease,box-shadow .16s ease}.single-download-r312 .single-download-btn:active{transform:scale(.985)}.single-download-r312 .single-download-btn svg{width:22px;height:22px;fill:currentColor}.single-download-r312 .single-download-note{display:block;margin-top:10px;color:rgba(255,255,255,.48);font-size:.75rem}.single-download-r312 .single-download-btn.is-unavailable{opacity:.72}
-</style>
-<link href="/assets/singles-r560.css?v=55.00-r560" rel="stylesheet"/>
-<link href="/assets/home-singles-nav-r330.css?v=55.00-r349" rel="stylesheet"/>
-
-
-<link href="/assets/albums-r447.css?v=55.00-r447" rel="stylesheet"/><link href="/assets/albums-r479.css?v=55.00-r479" rel="stylesheet"/><link href="/assets/home-clips-hub-r484.css?v=55.00-r484" rel="stylesheet"/><link href="/assets/home-trika-live-r520.css?v=55.00-r520" rel="stylesheet"/></head>
-<body class="home-fast-r213">
+{
+  "@context":"https://schema.org",
+  "@type":"MusicGroup",
+  "name":"ANDRIK",
+  "url":"https://andrikmetal.com/",
+  "image":"https://andrikmetal.com/assets/beyond-cover-r561.png",
+  "email":"andrikmetal@gmail.com",
+  "description":"Независимый Modern Epic Heavy Metal проект ANDRIK. Лира — голос проекта. Новый альбом BEYOND, клипы, альбомы и музыкальные площадки.",
+  "genre":["Epic Heavy Metal","Cinematic Metal","Symphonic Metal"],
+  "sameAs":[
+    "https://youtube.com/@andrikmetal",
+    "https://open.spotify.com/album/75Xp5YlFl91z5c1yT1n1KU",
+    "https://music.amazon.com/albums/B0HDKGPLZ3",
+    "https://soundcloud.com/andrikmetal",
+    "https://www.instagram.com/andrikmetal/",
+    "https://www.tiktok.com/@andrikmetal",
+    "https://x.com/andrikmetal"
+  ]
+}
+</script>
+</head>
+<body class="redesign-r561" id="top">
 <a class="skip-link" href="#content">Перейти к содержанию</a>
-<audio id="andrikAudio" loop="" preload="none" src="/assets/andrik-motif.mp3"></audio>
-<nav aria-label="Основная навигация" class="topbar">
-<div class="wrap nav-shell">
-<div class="brand-cluster">
-<a aria-label="ANDRIK — главная" class="brand" href="#top">
-<span aria-hidden="true" class="brand-eye"></span>
-<span>ANDRIK</span>
-</a>
-</div>
-<div class="nav-links" id="siteMenu"><a href="#links">Площадки</a><a href="#discography">Альбомы</a><a href="/clips.html">Клипы</a><a href="/trika.html#page-top">Вдохновение</a><a href="#about">О проекте</a><a href="/comments.html#page-top">Сообщество</a></div>
-<div class="nav-tools">
-<button aria-controls="siteMenu" aria-expanded="false" aria-label="Открыть меню" class="icon-btn nav-toggle" data-close-label="Закрыть меню" data-open-label="Открыть меню" id="navToggle" title="Меню" type="button">
-<svg aria-hidden="true" viewbox="0 0 24 24"><path d="M4 6h16v2H4V6Zm0 5h16v2H4v-2Zm0 5h16v2H4v-2Z"></path></svg>
-</button>
-<div class="language-picker"><button aria-controls="languageMenu" aria-expanded="false" aria-label="Выбрать язык" class="icon-btn language-toggle" title="Выбрать язык" type="button"><svg aria-hidden="true" viewbox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm6.92 9h-3.05a15.8 15.8 0 0 0-1.26-5.08A8.03 8.03 0 0 1 18.92 11ZM12 4c.93 1.13 1.68 3.05 1.86 5H10.14C10.32 7.05 11.07 5.13 12 4ZM9.39 5.92A15.8 15.8 0 0 0 8.13 11H5.08a8.03 8.03 0 0 1 4.31-5.08ZM5.08 13h3.05c.16 1.91.6 3.69 1.26 5.08A8.03 8.03 0 0 1 5.08 13ZM12 20c-.93-1.13-1.68-3.05-1.86-5h3.72c-.18 1.95-.93 3.87-1.86 5Zm2.61-1.92c.66-1.39 1.1-3.17 1.26-5h3.05a8.03 8.03 0 0 1-4.31 5.08Z"></path></svg></button><div aria-label="Выбрать язык" class="language-dropdown" id="languageMenu" role="menu"><a aria-current="page" class="language-option active" href="/" lang="ru" role="menuitem"><span class="language-label"><span aria-hidden="true" class="language-flag">🇷🇺</span>Русский</span><span aria-hidden="true" class="language-check">✓</span></a><a class="language-option" href="/uk/" lang="uk" role="menuitem"><span class="language-label"><span aria-hidden="true" class="language-flag">🇺🇦</span>Українська</span></a><a class="language-option" href="/sk/" lang="sk" role="menuitem"><span class="language-label"><span aria-hidden="true" class="language-flag">🇸🇰</span>Slovenčina</span></a><a class="language-option" href="/en/" lang="en" role="menuitem"><span class="language-label"><span aria-hidden="true" class="language-flag">🌐</span>English</span></a></div></div>
-<button aria-label="Установить приложение" class="icon-btn pwa-install-btn" id="pwaInstallButton" title="Установить приложение" type="button">
-<svg aria-hidden="true" viewbox="0 0 24 24"><path d="M11 3h2v9.2l3.2-3.2 1.4 1.4-5.6 5.6-5.6-5.6L7.8 9l3.2 3.2V3Zm-6 14h14v3H5v-3Z"></path></svg>
-</button>
-<button aria-label="Включить музыкальный мотив" class="icon-btn" data-play-label="Включить музыкальный мотив" data-stop-label="Выключить музыкальный мотив" id="audioToggle" title="Музыкальный мотив" type="button">
-<svg aria-hidden="true" viewbox="0 0 24 24"><path d="M9 18V5l11-2v13.2A3.8 3.8 0 1 1 18 13V7.2L11 8.5V18a3.8 3.8 0 1 1-2-3.35V18Z"></path></svg>
-</button>
-</div>
-</div>
-</nav>
-<div aria-hidden="true" id="top"></div>
+<header class="topbar-r561">
+  <div class="wrap inner">
+    <a class="brand-r561" href="#top" aria-label="ANDRIK — главная"><span class="brand-eye-r561" aria-hidden="true"></span><span>ANDRIK</span></a>
+    <nav class="nav-r561" id="mainNav" aria-label="Основная навигация">
+      <a href="#release">Новый релиз</a>
+      <a href="#links">Площадки</a>
+      <a href="#discography">Альбомы</a>
+      <a href="#clips">Клипы</a>
+      <a href="#lyra">Лира</a>
+      <a href="#radio">Радио</a>
+    </nav>
+    <div class="header-tools-r561">
+      <div class="lang-switch-r561" aria-label="Язык сайта">
+        <a class="active" href="/">RU</a>
+        <a href="/uk/">UK</a>
+        <a href="/sk/">SK</a>
+        <a href="/en/">EN</a>
+      </div>
+      <button class="menu-btn-r561" id="menuBtn" aria-controls="mainNav" aria-expanded="false" aria-label="Открыть меню" type="button">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16v2H4V6Zm0 5h16v2H4v-2Zm0 5h16v2H4v-2Z"></path></svg>
+      </button>
+      <button class="menu-btn-r561 pwa-install-btn" id="pwaInstallButton" aria-label="Установить приложение" title="Установить приложение" type="button">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 3h2v9.2l3.2-3.2 1.4 1.4-5.6 5.6-5.6-5.6L7.8 9l3.2 3.2V3Zm-6 14h14v3H5v-3Z"></path></svg>
+      </button>
+    </div>
+  </div>
+</header>
+
 <main id="content">
-<section class="trika-live-r520" aria-label="ТРЕТИЙ АЛЬБОМ ВЫШЕЛ"><div class="wrap"><a class="trika-live-card-r520" href="/albums.html#album-trika"><span class="trika-live-badge-r520">III</span><span class="trika-live-copy-r520"><b>ТРЕТИЙ АЛЬБОМ ВЫШЕЛ</b><strong>ТРИКА — СЛУШАТЬ · СКАЧАТЬ</strong><small>Spotify · YouTube Music · Amazon Music · MP3 ZIP</small></span><span class="trika-live-open-r520">АЛЬБОМЫ →</span></a></div></section>
-<section class="andrik-singles-r316" id="singles"><div class="wrap"><div class="andrik-singles-card"><div class="andrik-singles-head"><h2><span>ANDRIK · MUSIC</span> — СИНГЛЫ</h2><p>Слушать онлайн · скачать MP3 бесплатно</p></div><div data-limit="1" id="andrikSinglesList"><div class="andrik-singles-empty">Загружаем синглы…</div></div><a class="andrik-singles-more" href="/singles.html?v=55.00-r560">Все синглы →</a></div></div></section>
-<section aria-live="polite" class="youtube-news-shell" hidden="" id="youtubeLatestNews"><div class="wrap"><a class="youtube-news-card direct-app-link" data-force-app="youtube" data-web-url="https://youtube.com/@andrikmetal" href="https://youtube.com/@andrikmetal" rel="noopener external"><span aria-hidden="true" class="youtube-news-icon">▶</span><span class="youtube-news-copy"><span class="youtube-news-eyeline youtube-news-badge">YouTube</span><strong class="youtube-news-title">ANDRIK</strong><time class="youtube-news-meta"></time></span><span class="youtube-news-action">Смотреть ↗</span></a></div></section>
-<section aria-labelledby="links-title" class="section" id="links">
-<div class="wrap">
-<div class="section-head reveal">
-<div><span class="eyeline">Слушайте там, где вам удобно</span><h2 class="section-title" id="links-title">Музыкальные площадки</h2></div>
-<p class="section-sub">Быстрые ссылки на YouTube, SoundCloud и соцсети ANDRIK.</p>
-</div>
-<div class="platform-grid">
-<a class="platform-card reveal" data-app-package="com.google.android.youtube" data-force-app="youtube" data-web-url="https://www.youtube.com/@andrikmetal" href="https://www.youtube.com/@andrikmetal" rel="noopener">
-<span class="platform-icon"><svg aria-hidden="true" viewbox="0 0 24 24"><path d="M21.6 7.1a2.8 2.8 0 0 0-2-2C17.9 4.6 12 4.6 12 4.6s-5.9 0-7.6.5a2.8 2.8 0 0 0-2 2A29 29 0 0 0 2 12a29 29 0 0 0 .4 4.9 2.8 2.8 0 0 0 2 2c1.7.5 7.6.5 7.6.5s5.9 0 7.6-.5a2.8 2.8 0 0 0 2-2A29 29 0 0 0 22 12a29 29 0 0 0-.4-4.9ZM10 15.2V8.8l5.5 3.2-5.5 3.2Z"></path></svg></span>
-<span><span class="platform-name">YouTube</span><br/><span class="platform-note">Профиль ANDRIK</span></span><span class="platform-arrow">↗</span>
-</a>
-<a class="platform-card reveal" data-app-package="com.soundcloud.android" data-force-app="soundcloud" data-web-url="https://soundcloud.com/andrikmetal" href="https://soundcloud.com/andrikmetal" rel="noopener" target="_blank">
-<span class="platform-icon"><svg aria-hidden="true" viewbox="0 0 24 24"><path d="M1.5 14.4c-.3 0-.5.2-.5.5v2.2c0 .3.2.5.5.5s.5-.2.5-.5v-2.2c0-.3-.2-.5-.5-.5Zm2-.9c-.4 0-.6.3-.6.7v3.6c0 .4.2.7.6.7s.6-.3.6-.7v-3.6c0-.4-.2-.7-.6-.7Zm2.1-1.1c-.4 0-.7.3-.7.8v5.1c0 .5.3.8.7.8.4 0 .7-.3.7-.8v-5.1c0-.5-.3-.8-.7-.8Zm2.2-4.2c-.5 0-.8.4-.8.9v9.2c0 .5.3.9.8.9s.8-.4.8-.9V9.1c0-.5-.3-.9-.8-.9Zm8.2 3.1a4.4 4.4 0 0 0-1.4.2 5.7 5.7 0 0 0-5.4-3.8v10.9H16a3.7 3.7 0 1 0 0-7.3Z"></path></svg></span>
-<span><span class="platform-name">SoundCloud</span><br/><span class="platform-note">Профиль ANDRIK</span></span><span class="platform-arrow">↗</span>
-</a>
-</div>
-<div aria-label="Социальные платформы ANDRIK" class="platform-mini-grid">
-<a aria-label="Instagram ANDRIK" class="platform-mini-card platform-instagram reveal" data-app-package="com.instagram.android" data-web-url="https://www.instagram.com/andrikmetal/" href="https://www.instagram.com/andrikmetal/" rel="noopener" target="_blank" title="Instagram">
-<svg aria-hidden="true" viewbox="0 0 24 24"><path d="M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5Zm0 2a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3H7Zm5 3.2A4.8 4.8 0 1 1 12 16.8 4.8 4.8 0 0 1 12 7.2Zm0 2A2.8 2.8 0 1 0 12 14.8 2.8 2.8 0 0 0 12 9.2Zm5.05-3.35a1.15 1.15 0 1 1 0 2.3 1.15 1.15 0 0 1 0-2.3Z" fill-rule="evenodd"></path></svg>
-</a>
-<a aria-label="TikTok ANDRIK" class="platform-mini-card platform-tiktok reveal" data-app-package="com.zhiliaoapp.musically" data-web-url="https://www.tiktok.com/@andrikmetal" href="https://www.tiktok.com/@andrikmetal" rel="noopener" target="_blank" title="TikTok">
-<svg aria-hidden="true" viewbox="0 0 24 24"><path d="M15.4 2h3.05c.2 1.66 1.13 3.1 2.55 3.93V9a8.27 8.27 0 0 1-3.55-1.05v7.12a6.07 6.07 0 1 1-5.23-6.01v3.1a3.03 3.03 0 1 0 2.18 2.91V2Z"></path></svg>
-</a>
-<a aria-label="Telegram ANDRIK" class="platform-mini-card platform-telegram reveal" href="https://t.me/andrik_heavymetal" rel="noopener" target="_blank" title="Telegram">
-<svg aria-hidden="true" viewbox="0 0 24 24"><path d="M21.8 4.2 18.5 19a1.2 1.2 0 0 1-1.8.73l-4.1-3.04-2.1 2.04a1 1 0 0 1-1.7-.56l-.3-4.25L16.2 7c.36-.32-.08-.48-.56-.18L6 12.92l-4-.98a1.02 1.02 0 0 1-.05-1.95L20.2 3a1.25 1.25 0 0 1 1.6 1.2Z"></path></svg>
-</a>
-<a aria-label="X ANDRIK" class="platform-mini-card platform-x reveal" data-app-package="com.twitter.android" data-force-app="x" data-web-fallback="https://x.com/andrikmetal" data-web-url="https://x.com/andrikmetal" href="intent://x.com/andrikmetal#Intent;scheme=https;package=com.twitter.android;S.browser_fallback_url=https%3A%2F%2Fx.com%2Fandrikmetal;end" rel="noopener" title="X">
-<svg aria-hidden="true" viewbox="0 0 24 24"><path d="M18.9 2H22l-6.77 7.74L23.2 22h-6.25l-4.9-6.7L6.2 22H3.1l7.24-8.28L.8 2h6.36l4.42 6.05L18.9 2Zm-1.1 18h1.73L6.18 3.9H4.32L17.8 20Z"></path></svg>
-</a>
-<a aria-label="Pinterest ANDRIK" class="platform-mini-card platform-pinterest reveal" data-app-package="com.pinterest" data-force-app="pinterest" data-web-fallback="https://www.pinterest.com/andrikmetal/" data-web-url="https://www.pinterest.com/andrikmetal/" href="intent://www.pinterest.com/andrikmetal/#Intent;scheme=https;package=com.pinterest;S.browser_fallback_url=https%3A%2F%2Fwww.pinterest.com%2Fandrikmetal%2F;end" rel="noopener" title="Pinterest">
-<svg aria-hidden="true" viewbox="0 0 24 24"><path d="M12.2 2C6.7 2 4 5.9 4 9.2c0 2.5.95 4.7 3 5.5.34.14.64 0 .74-.37.07-.25.23-.9.3-1.17.1-.37.06-.5-.2-.8-.58-.68-.95-1.56-.95-2.8 0-3.6 2.7-6.84 7.04-6.84 3.84 0 5.95 2.35 5.95 5.48 0 4.12-1.82 7.6-4.53 7.6-1.5 0-2.62-1.24-2.26-2.75.43-1.8 1.26-3.74 1.26-5.04 0-1.16-.62-2.13-1.91-2.13-1.52 0-2.74 1.57-2.74 3.67 0 1.34.45 2.25.45 2.25l-1.82 7.7c-.54 2.29-.08 5.1-.04 5.38.02.17.24.21.34.08.14-.18 1.98-2.45 2.6-4.71.17-.64 1-3.9 1-3.9.5.95 1.94 1.78 3.47 1.78 4.57 0 7.67-4.16 7.67-9.73C23.37 5.3 19.8 2 12.2 2Z"></path></svg>
-</a>
-<a aria-label="Facebook ANDRIK" class="platform-mini-card platform-facebook reveal" href="https://www.facebook.com/andrikmetal/" rel="noopener" target="_blank" title="Facebook">
-<svg aria-hidden="true" viewbox="0 0 24 24"><path d="M13.6 22v-9h3l.45-3.5H13.6V7.27c0-1.01.28-1.7 1.73-1.7h1.84V2.45c-.32-.04-1.41-.14-2.68-.14-2.65 0-4.47 1.62-4.47 4.59v2.6H7v3.5h3.02v9h3.58Z"></path></svg>
-</a>
-</div>
-</div>
-</section>
-<section aria-labelledby="discography-title" class="section albums-hub-section-r446" id="discography"><div class="wrap"><a class="albums-hub-card-r446 reveal" href="/albums.html"><div class="albums-hub-covers-r446 albums-hub-covers-three-r479"><img alt="TRIKA — The Third Album" decoding="async" height="1254" loading="lazy" src="/assets/trika-third-album-cover-r479.webp" width="1254"/><img alt="OCEAN" decoding="async" height="900" loading="lazy" src="/assets/ocean-cover-v51-crop.webp" width="900"/><img alt="Illusion of Life" decoding="async" height="1536" loading="lazy" src="/assets/illusion-of-life-static-v52.jpg" width="1536"/></div><div class="albums-hub-copy-r446"><span class="eyeline">ДИСКОГРАФИЯ ANDRIK</span><h2 id="discography-title">АЛЬБОМЫ</h2><p>ТРИКА, OCEAN и Illusion of Life — обложки, площадки, встроенный плеер и полные ZIP-архивы MP3.</p><span class="albums-hub-open-r446">Открыть альбомы →</span></div></a></div></section><section aria-labelledby="clips-hub-title-r484" class="section clips-hub-section-r484" id="clips">
-<div class="wrap">
-<a class="clips-hub-card-r484 reveal" href="/clips.html">
-<div class="clips-hub-media-r484"><img alt="ANDRIK clips cover" decoding="async" loading="lazy" src="/assets/joy-of-being-video-r557.webp" width="1200" height="675"/></div>
-<div class="clips-hub-copy-r484"><span class="eyeline">ВИДЕОТЕКА ANDRIK</span><h2 id="clips-hub-title-r484">КЛИПЫ</h2><p>JOY OF BEING, «Я ЕСТЬ», «ПРОСНИСЬ» и видео Лиры — смотри прямо на сайте, быстро, независимо от YouTube и с загрузкой MP4.</p><span class="clips-hub-kicker-r484">ОТДЕЛЬНЫЙ РАЗДЕЛ</span><span class="clips-hub-open-r484">Открыть клипы →</span></div>
-</a>
-</div>
-</section>
-<div aria-hidden="true" class="section-divider section-divider-clips-hub-r484"><span></span></div>
-<div aria-hidden="true" class="section-divider section-divider-trika"><span></span></div>
-<section aria-labelledby="inspiration-title" class="section inspiration-section" id="inspiration">
-<div class="wrap">
-<a aria-label="Духовный источник проекта Вдохновение: Трика Откройте философский источник музыки ANDRIK. +" class="inspiration-spoiler reveal direct-chapter-link" href="/trika.html#page-top">
-<span class="inspiration-summary-copy"><span class="eyeline">Духовный источник проекта</span><strong id="inspiration-title">Вдохновение: Трика</strong><small>Откройте философский источник музыки ANDRIK.</small></span>
-<span aria-hidden="true" class="inspiration-plus">+</span>
-</a>
-</div>
-</section><section aria-labelledby="comments-spoiler-title" class="section comments-spoiler-section" id="comments">
-<div class="wrap">
-<a aria-label="Голоса слушателей Комментарии Отзывы о музыке, клипах и философии ANDRIK. +" class="comments-home-spoiler reveal direct-chapter-link" href="/comments.html#page-top">
-<span class="comments-spoiler-copy"><span class="eyeline">Голоса слушателей</span><strong id="comments-spoiler-title">Комментарии</strong><small>Отзывы о музыке, клипах и философии ANDRIK.</small></span>
-<span aria-hidden="true" class="comments-spoiler-plus">+</span>
-</a>
-</div>
-</section>
-<div aria-hidden="true" class="section-divider section-divider-gold"><span></span></div>
-<section aria-labelledby="about-title" class="philosophy" id="about">
-<div class="wrap philosophy-panel reveal">
-<div class="philosophy-copy">
-<span class="eyeline">Философия ANDRIK</span>
-<blockquote id="about-title">Музыка Пробуждения.</blockquote>
-<p>ANDRIK — независимый кинематографичный Modern Epic Heavy Metal проект. Мощный женский вокал, мелодические гитарные соло и песни о свободе, пробуждении и природе Сознания.</p>
-</div>
-</div>
-</section>
+  <section class="hero-r561" aria-labelledby="hero-title">
+    <div class="hero-media-r561">
+      <img class="hero-poster-r561" src="/assets/lyra-hero-beyond-r561.jpg" alt="Лира — голос ANDRIK" aria-hidden="true"/>
+      <video class="hero-video-r561" autoplay muted loop playsinline preload="metadata" poster="/assets/lyra-hero-beyond-r561.jpg">
+        <source src="/assets/lyra-hero-beyond-r561.mp4" type="video/mp4"/>
+      </video>
+    </div>
+    <div class="hero-content-r561">
+      <div class="wrap hero-card-r561">
+        <span class="eyebrow-r561"><span class="dot-live-r561" aria-hidden="true"></span>Лира • голос проекта ANDRIK</span>
+        <h1 class="hero-title-r561" id="hero-title">BEYOND</h1>
+        <p class="hero-sub-r561">Новый визуальный дом ANDRIK: живая Лира на первом экране, четкая дискография, клипы, музыкальные площадки и путь к следующему шагу — YouTube Radio 24/7.</p>
+        <div class="hero-actions-r561">
+          <a class="pill-btn" href="#release">Слушать / смотреть</a>
+          <a class="ghost-btn" href="/albums.html">Открыть альбомы</a>
+        </div>
+        <div class="hero-platforms-r561" aria-label="Основные площадки">
+          <a class="platform-btn" href="https://youtube.com/@andrikmetal" target="_blank" rel="noopener">YouTube</a>
+          <a class="platform-btn" href="https://open.spotify.com/album/75Xp5YlFl91z5c1yT1n1KU" target="_blank" rel="noopener">Spotify</a>
+          <a class="platform-btn" href="https://music.amazon.com/albums/B0HDKGPLZ3" target="_blank" rel="noopener">Amazon Music</a>
+          <a class="platform-btn" href="/clips.html">Клипы</a>
+        </div>
+        <a class="hero-scroll-r561" href="#release">↓ Открыть новый экран</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="section-r561" id="release" aria-labelledby="release-title">
+    <div class="wrap">
+      <div class="section-head-r561">
+        <div>
+          <span class="section-kicker-r561">4-й альбом</span>
+          <h2 class="section-title-r561" id="release-title">Новый релиз: BEYOND</h2>
+        </div>
+        <p class="section-desc-r561">Обложка уже встроена в сайт. Альбом задуман как две главы: 8 русских песен и 8 английских. Ниже — фокус на ключевые треки и быстрый вход в разделы сайта.</p>
+      </div>
+      <article class="release-card-r561">
+        <a class="release-cover-r561" href="/albums.html" aria-label="Открыть раздел альбомов ANDRIK"><img src="/assets/beyond-cover-r561.png" alt="Обложка альбома BEYOND" width="1254" height="1254"/></a>
+        <div>
+          <div class="release-meta-r561">
+            <span class="meta-chip-r561">16 треков</span>
+            <span class="meta-chip-r561">8 RU + 8 EN</span>
+            <span class="meta-chip-r561">20 сентября 2026</span>
+          </div>
+          <h3>BEYOND</h3>
+          <p>Фокус нового этапа ANDRIK: идентичность, свобода, тишина, персона, выход за пределы ума и возвращение к простому живому присутствию. Визуально сайт теперь поддерживает именно эту атмосферу — меньше шума, больше образа и музыки.</p>
+          <ul class="tracklist-r561" aria-label="Ключевые песни BEYOND">
+            <li>01. Просто живи</li>
+            <li>02. Ты уже достоин</li>
+            <li>03. Мираж остаётся</li>
+            <li>04. Дуккха</li>
+            <li>09. WE ARE ONE</li>
+            <li>10. Wake UP</li>
+            <li>13. PERSONA</li>
+            <li>14. BEYOND MAN</li>
+          </ul>
+          <div class="hero-actions-r561">
+            <a class="pill-btn" href="/albums.html">Открыть альбомы</a>
+            <a class="ghost-btn" href="/clips.html">Открыть клипы</a>
+          </div>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section class="section-r561" aria-labelledby="paths-title">
+    <div class="wrap">
+      <div class="section-head-r561">
+        <div>
+          <span class="section-kicker-r561">Быстрый вход</span>
+          <h2 class="section-title-r561" id="paths-title">Выбери путь</h2>
+        </div>
+      </div>
+      <div class="quick-grid-r561">
+        <a class="tile-r561" href="/albums.html"><strong>Альбомы</strong><p>Все альбомы ANDRIK — обложки, встроенный плеер, площадки и ZIP.</p><span class="tile-link-r561">Открыть →</span></a>
+        <a class="tile-r561" href="/clips.html"><strong>Клипы</strong><p>JOY OF BEING, «Я ЕСТЬ», «ПРОСНИСЬ» и видео Лиры в отдельном разделе.</p><span class="tile-link-r561">Смотреть →</span></a>
+        <a class="tile-r561" href="/trika.html#page-top"><strong>Вдохновение</strong><p>Философский источник проекта: Трика, недвойственность и сознание.</p><span class="tile-link-r561">Читать →</span></a>
+        <a class="tile-r561" href="/comments.html#page-top"><strong>Комментарии</strong><p>Отзывы слушателей, живые реакции и ощущение сообщества ANDRIK.</p><span class="tile-link-r561">Перейти →</span></a>
+      </div>
+    </div>
+  </section>
+
+  <section class="section-r561" id="links" aria-labelledby="links-title">
+    <div class="wrap">
+      <div class="section-head-r561">
+        <div>
+          <span class="section-kicker-r561">Слушать там, где удобно</span>
+          <h2 class="section-title-r561" id="links-title">Музыкальные площадки</h2>
+        </div>
+        <p class="section-desc-r561">Секцию упростили и сделали визуально чище: только нужные кнопки и ясные маршруты без перегруза.</p>
+      </div>
+      <div class="platform-grid-r561">
+        <a class="platform-card-r561 tile-r561" href="https://youtube.com/@andrikmetal" target="_blank" rel="noopener"><span class="label">Видео и премьеры</span><strong>YouTube</strong><span>Клипы, шортсы, официальный аудио и будущий эфир Radio 24/7.</span></a>
+        <a class="platform-card-r561 tile-r561" href="https://open.spotify.com/album/75Xp5YlFl91z5c1yT1n1KU" target="_blank" rel="noopener"><span class="label">Streaming</span><strong>Spotify</strong><span>Основное присутствие на стриминге и удобная точка для новых слушателей.</span></a>
+        <a class="platform-card-r561 tile-r561" href="https://music.amazon.com/albums/B0HDKGPLZ3" target="_blank" rel="noopener"><span class="label">Streaming</span><strong>Amazon Music</strong><span>Подготовленная площадка под новые альбомы и карточки релизов.</span></a>
+        <a class="platform-card-r561 tile-r561" href="https://soundcloud.com/andrikmetal" target="_blank" rel="noopener"><span class="label">Community</span><strong>SoundCloud</strong><span>Еще один вход в музыку ANDRIK и альтернативное прослушивание.</span></a>
+        <a class="platform-card-r561 tile-r561" href="https://www.instagram.com/andrikmetal/" target="_blank" rel="noopener"><span class="label">Social</span><strong>Instagram / TikTok</strong><span>Лира, визуалы, шортсы и повседневное движение проекта.</span></a>
+      </div>
+    </div>
+  </section>
+
+  <section class="section-r561" id="discography" aria-labelledby="discography-title">
+    <div class="wrap">
+      <div class="section-head-r561">
+        <div>
+          <span class="section-kicker-r561">Дискография ANDRIK</span>
+          <h2 class="section-title-r561" id="discography-title">Четыре главы</h2>
+        </div>
+        <p class="section-desc-r561">Главная теперь подаёт альбомы как полноценные эпохи: отдельные обложки, единая сетка и быстрый переход в общий раздел.</p>
+      </div>
+      <div class="disco-grid-r561">
+        <a class="album-card-r561 release-card-r561 tile-r561" style="display:block" href="/albums.html"><img src="/assets/beyond-cover-r561.png" alt="BEYOND" width="1254" height="1254"/><div class="album-card-copy-r561"><span class="year">2026 • 4 альбом</span><h3>BEYOND</h3><p>Новая эпоха ANDRIK — маски, выход за пределы и целостность RU/EN.</p></div></a>
+        <a class="album-card-r561 tile-r561" href="/albums.html"><img src="/assets/trika-third-album-cover-r479.webp" alt="TRIKA" width="1254" height="1254"/><div class="album-card-copy-r561"><span class="year">2026 • 3 альбом</span><h3>ТРИКА</h3><p>Мощный философский релиз с крупной тематической аркой.</p></div></a>
+        <a class="album-card-r561 tile-r561" href="/albums.html"><img src="/assets/ocean-cover-v51-crop.webp" alt="OCEAN" width="900" height="900"/><div class="album-card-copy-r561"><span class="year">2026 • 2 альбом</span><h3>OCEAN</h3><p>Глубина, простор, море и первые крупные визуальные миры проекта.</p></div></a>
+        <a class="album-card-r561 tile-r561" href="/albums.html"><img src="/assets/illusion-of-life-static-v52.jpg" alt="Illusion of Life" width="1536" height="1536"/><div class="album-card-copy-r561"><span class="year">2026 • 1 альбом</span><h3>Illusion of Life</h3><p>Точка старта и основа всей дальнейшей философии ANDRIK.</p></div></a>
+      </div>
+    </div>
+  </section>
+
+  <section class="section-r561" id="clips" aria-labelledby="clips-title">
+    <div class="wrap">
+      <div class="section-head-r561">
+        <div>
+          <span class="section-kicker-r561">Видеотека</span>
+          <h2 class="section-title-r561" id="clips-title">Клипы и визуалы</h2>
+        </div>
+      </div>
+      <div class="feature-grid-r561">
+        <article class="feature-card-r561">
+          <img src="/assets/joy-of-being-video-r557.webp" alt="JOY OF BEING" width="1200" height="675"/>
+          <div class="feature-card-copy-r561">
+            <h3>JOY OF BEING</h3>
+            <p>Большой визуальный блок вместо перегруженной карточки: крупный кадр, ясное название и прямой переход в раздел клипов.</p>
+            <a class="pill-btn" href="/clips.html">Открыть клипы</a>
+          </div>
+        </article>
+        <div class="mini-stack-r561">
+          <article class="feature-card-r561">
+            <img src="/assets/ya-est-video-wide-v51.webp" alt="Я ЕСТЬ" width="1200" height="675"/>
+            <div class="feature-card-copy-r561">
+              <h3>Я ЕСТЬ</h3>
+              <p>Отдельный раздел с быстрым открытием видео и будущими короткими вертикальными версиями.</p>
+            </div>
+          </article>
+          <article class="feature-card-r561">
+            <img src="/assets/prosnis-cover-v25-square.webp" alt="Wake Up / Проснись" width="1000" height="1000"/>
+            <div class="feature-card-copy-r561">
+              <h3>Wake UP / ПРОСНИСЬ</h3>
+              <p>Сингл и клип живут как самостоятельная единица и при этом работают на альбомную эпоху BEYOND.</p>
+            </div>
+          </article>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section-r561" id="lyra" aria-labelledby="lyra-title">
+    <div class="wrap">
+      <div class="section-head-r561">
+        <div>
+          <span class="section-kicker-r561">Лицо проекта</span>
+          <h2 class="section-title-r561" id="lyra-title">LYRA — The Voice of ANDRIK</h2>
+        </div>
+      </div>
+      <article class="lyra-card-r561">
+        <img src="/assets/andrik-lira-trika-v58.webp" alt="Лира — голос ANDRIK" width="1024" height="1024"/>
+        <div class="lyra-copy-r561">
+          <h3>Живое лицо на первом экране</h3>
+          <p>По духу Scordalus, но со своим характером: посетитель сразу встречается глазами с Лирой, а уже потом погружается в альбомы, клипы и философию проекта. Это делает главную более музыкальной, цельной и современной.</p>
+          <p>Использована спокойная живая анимация — почти неподвижный кадр с дыханием, влажными волосами и взглядом прямо в зрителя. Так Лира работает как полноценный hero-образ проекта.</p>
+          <a class="ghost-btn" href="#top">Вернуться к началу</a>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section class="section-r561" aria-labelledby="deep-title">
+    <div class="wrap two-up-r561">
+      <article class="small-panel-r561">
+        <span class="section-kicker-r561">Философия</span>
+        <h3 id="deep-title">Вдохновение: Трика</h3>
+        <p>Смысловой фундамент проекта оставлен, но теперь он не заглушает музыку. На главной — короткий вход, дальше — отдельная глубокая страница.</p>
+        <a class="tile-link-r561" href="/trika.html#page-top">Открыть Трику →</a>
+      </article>
+      <article class="small-panel-r561">
+        <span class="section-kicker-r561">Сообщество</span>
+        <h3>Комментарии слушателей</h3>
+        <p>Отзывы и живые реакции сохранены как отдельный маршрут. На главной остался только красивый и понятный вход без перегруза длинным текстом.</p>
+        <a class="tile-link-r561" href="/comments.html#page-top">Смотреть комментарии →</a>
+      </article>
+    </div>
+  </section>
+
+  <section class="section-r561" id="radio" aria-labelledby="radio-title">
+    <div class="wrap">
+      <div class="section-head-r561">
+        <div>
+          <span class="section-kicker-r561">Следующий шаг</span>
+          <h2 class="section-title-r561" id="radio-title">ANDRIK Metal Radio 24/7</h2>
+        </div>
+      </div>
+      <article class="radio-card-r561">
+        <div>
+          <span class="radio-state-r561"><span class="dot-live-r561" aria-hidden="true"></span>Скоро в эфире</span>
+          <p class="section-desc-r561">Следующим этапом после редизайна главной станет YouTube-радио, которое будет играть музыку ANDRIK с R2. На сайте уже оставлен блок под этот формат, чтобы потом просто подключить кнопку и прямой эфир.</p>
+        </div>
+        <ul class="radio-list-r561">
+          <li>круглосуточный визуальный стрим в YouTube</li>
+          <li>бегущая строка с площадками и сайтом</li>
+          <li>очередь клипов / official audio / редких версий</li>
+          <li>единый вход с главной страницы ANDRIK</li>
+        </ul>
+      </article>
+    </div>
+  </section>
 </main>
-<footer class="footer">
-<div class="wrap footer-grid">
-<div><div class="footer-brand">ANDRIK</div><p class="footer-copy">© <span data-year="">2026</span> ANDRIK Records. Все права защищены.</p></div>
-<div class="footer-links"><a data-app-package="com.google.android.youtube" data-force-app="youtube" data-web-url="https://youtube.com/@andrikmetal" href="https://youtube.com/@andrikmetal" rel="noopener">YouTube</a><a data-app-package="com.instagram.android" data-web-url="https://www.instagram.com/andrikmetal/" href="https://www.instagram.com/andrikmetal/" rel="noopener" target="_blank">Instagram</a><a data-app-package="com.zhiliaoapp.musically" data-web-url="https://www.tiktok.com/@andrikmetal" href="https://www.tiktok.com/@andrikmetal" rel="noopener" target="_blank">TikTok</a><a href="https://t.me/andrik_heavymetal" rel="noopener" target="_blank">Telegram</a><a data-app-package="com.twitter.android" data-force-app="x" data-web-fallback="https://x.com/andrikmetal" data-web-url="https://x.com/andrikmetal" href="intent://x.com/andrikmetal#Intent;scheme=https;package=com.twitter.android;S.browser_fallback_url=https%3A%2F%2Fx.com%2Fandrikmetal;end" rel="noopener">X</a><a class="footer-legal-link" href="/privacy.html">Privacy Policy</a><a class="footer-legal-link" href="/terms.html">Terms of Service</a></div>
-</div>
-<div class="wrap footer-contact">
-<a aria-label="Написать ANDRIK на электронную почту" class="footer-email" href="mailto:andrikmetal@gmail.com">
-<svg aria-hidden="true" viewbox="0 0 24 24"><path d="M4 5h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z"></path><path d="m22 7-10 7L2 7"></path></svg>
-<span>andrikmetal@gmail.com</span>
-</a>
-</div>
+
+<footer class="footer-r561">
+  <div class="wrap footer-panel-r561">
+    <div class="footer-main-r561">
+      <div>
+        <div class="footer-brand-r561">ANDRIK</div>
+        <p class="footer-copy-r561">Modern Epic Heavy Metal. Лира, BEYOND, клипы, альбомы и философия пробуждения. Новый первый экран сделан по принципу: сначала образ и музыка, потом вся остальная глубина.</p>
+      </div>
+      <div class="footer-links-r561">
+        <a href="/albums.html">Альбомы</a>
+        <a href="/clips.html">Клипы</a>
+        <a href="https://youtube.com/@andrikmetal" target="_blank" rel="noopener">YouTube</a>
+        <a href="https://www.instagram.com/andrikmetal/" target="_blank" rel="noopener">Instagram</a>
+        <a href="https://www.tiktok.com/@andrikmetal" target="_blank" rel="noopener">TikTok</a>
+        <a href="/privacy.html">Privacy</a>
+        <a href="/terms.html">Terms</a>
+      </div>
+    </div>
+    <div class="footer-bottom-r561">
+      <span>© <span id="yearNow">2026</span> ANDRIK Records</span>
+      <a href="mailto:andrikmetal@gmail.com">andrikmetal@gmail.com</a>
+    </div>
+  </div>
 </footer>
-<script defer="" src="/assets/pwa-install.js"></script>
-<script defer="" src="/assets/v50.js?v=54.42"></script>
-<script defer="" src="/assets/app-links-v50.js?v=55.00-r213"></script>
-<script defer="" src="/assets/player-shell-bridge-r136.js?v=55.00-r136"></script>
-<script defer="" src="/assets/push-v54-07.js?v=54.07"></script>
-<script defer="" src="/assets/youtube-news-v51.js?v=52.03"></script>
-<script defer="" src="/assets/site-live-r438.js?v=55.00-r438"></script>
-<script id="r27-site-cleanup">
+
+<script defer src="/assets/pwa-install.js"></script>
+<script>
 (()=>{
-  const bad='[class*="control-section-pager"],[class*="control-section-swipe-indicator"],[class*="control-section-preview"],[class*="control-section-swipe-toast"],.control-swipe-indicator,.control-pull-indicator,.analytics-swipe-dots';
-  const badBodyClasses=['control-section-swipe-r3q','control-section-swipe-r3u','control-section-carousel','control-section-carousel-r3k','control-section-carousel-r3n','admin-carousel-embedded'];
-  const clean=()=>{
-    try{document.querySelectorAll(bad).forEach(el=>el.remove());}catch(_){}
-    try{badBodyClasses.forEach(c=>document.body.classList.remove(c));}catch(_){}
-    try{document.documentElement.classList.remove('admin-carousel-embedded');}catch(_){}
-    try{document.documentElement.style.removeProperty('--control-section-swipe-x');document.documentElement.style.removeProperty('--control-section-swipe-progress');}catch(_){}
-    try{document.body.style.removeProperty('transform');document.documentElement.style.removeProperty('transform');}catch(_){}
-    try{window.scrollTo({left:0,behavior:'instant'});}catch(_){ try{window.scrollTo(0,window.scrollY||0);}catch(__){} }
-  };
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',clean,{once:true}); else clean();
-  const start=()=>{ if(!document.body)return setTimeout(start,50); clean(); try{new MutationObserver(clean).observe(document.body,{childList:true,subtree:true});}catch(_){} };
-  start();
+  const btn=document.getElementById('menuBtn');
+  const nav=document.getElementById('mainNav');
+  if(btn&&nav){
+    btn.addEventListener('click',()=>{
+      const open=nav.classList.toggle('open');
+      btn.setAttribute('aria-expanded',String(open));
+      btn.setAttribute('aria-label',open?'Закрыть меню':'Открыть меню');
+    });
+    nav.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>{nav.classList.remove('open');btn.setAttribute('aria-expanded','false');btn.setAttribute('aria-label','Открыть меню')}));
+  }
+  const year=document.getElementById('yearNow'); if(year) year.textContent=String(new Date().getFullYear());
 })();
 </script>
-<script defer="" src="/assets/home-fast-r213.js?v=55.00-r213"></script>
-<script defer="" src="/assets/control-version-sync-r482.js?v=55.00-r482"></script>
-<script defer="" src="/assets/singles-r349.js?v=55.00-r349"></script>
-<script defer="" src="/assets/home-singles-nav-r330.js?v=55.00-r349"></script>
 </body>
 </html>

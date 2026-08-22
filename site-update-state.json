@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787433741315-0990ab7c2e",
-  "release": "R560",
-  "archiveName": "R560-SINGLE-WAV-COVER-COMPACT-CLEAN-SAFE-FULL.zip",
-  "sourceHead": "1968a896fb6229faf72b178efe2aa6b12e792499",
-  "backupSha": "1968a896fb6229faf72b178efe2aa6b12e792499",
-  "backupTag": "control-backup-20260822212217-1968a89-r560-01606",
+  "operationId": "publish-1787439646810-18e8831f8a",
+  "release": "R561",
+  "archiveName": "R561-SCORDALUS-HOME-REDESIGN-BEYOND-RADIO-READY-SAFE-FULL.zip",
+  "sourceHead": "ce5dfa63c72b7557371916b74c7e5b2008e43dd7",
+  "backupSha": "ce5dfa63c72b7557371916b74c7e5b2008e43dd7",
+  "backupTag": "control-backup-20260822230040-ce5dfa6-r561-61dd8",
   "autoRecovery": true,
-  "generatedAt": "2026-08-22T21:22:21.315Z"
+  "generatedAt": "2026-08-22T23:00:49.530Z"
 }
