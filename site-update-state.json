@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787440191658-4bf50760cb",
-  "release": "R562",
-  "archiveName": "R562-R560-RESTORE-LYRA-HERO-NAV-SAFE-FULL.zip",
-  "sourceHead": "9204db9b68ae3cc85288b0cd331525c5a33cb153",
-  "backupSha": "9204db9b68ae3cc85288b0cd331525c5a33cb153",
-  "backupTag": "control-backup-20260822230945-9204db9-r562-8c2fb",
+  "operationId": "publish-1787440477666-5e04dc063f",
+  "release": "R563",
+  "archiveName": "R563-R560-LIGHT-LYRA-SCRIPT-HERO-SAFE-FULL.zip",
+  "sourceHead": "d1a30c5e1cd65d8eab498c1f86cb0c0a2ff809cb",
+  "backupSha": "d1a30c5e1cd65d8eab498c1f86cb0c0a2ff809cb",
+  "backupTag": "control-backup-20260822231433-d1a30c5-r563-626ff",
   "autoRecovery": true,
-  "generatedAt": "2026-08-22T23:09:53.847Z"
+  "generatedAt": "2026-08-22T23:14:38.461Z"
 }
