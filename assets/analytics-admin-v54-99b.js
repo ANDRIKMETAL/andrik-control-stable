@@ -725,7 +725,7 @@
   async function loadSearchConsole(force=false){
     if(searchConsoleRequest&&!force)return searchConsoleRequest;
     if(!getKey())return null;
-    const request=api(`/api/control/search-console${force?'?refresh=1':''}`,32000);
+    const request=api(`/api/control/search-console${force?'?refresh=1':''}`,12500);
     searchConsoleRequest=request;
     try{
       const data=await request;

@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787377978970-0801029219",
-  "release": "R557",
-  "archiveName": "R557-JOY-OF-BEING-CLIPS-R2-GSC-FIX-SAFE-FULL.zip",
-  "sourceHead": "37d259e5350702141e8013142205ce78d1e19a60",
-  "backupSha": "37d259e5350702141e8013142205ce78d1e19a60",
-  "backupTag": "control-backup-20260822055254-37d259e-r557-3093f",
+  "operationId": "publish-1787381148189-fd05405fdc",
+  "release": "R558",
+  "archiveName": "R558-SEARCH-CONSOLE-R554-CORE-RESTORE-JOY-R2-SAFE-FULL.zip",
+  "sourceHead": "f3ebdd6a761c47c8ea58d95c08b037d948e81ebf",
+  "backupSha": "f3ebdd6a761c47c8ea58d95c08b037d948e81ebf",
+  "backupTag": "control-backup-20260822064543-f3ebdd6-r558-7fd20",
   "autoRecovery": true,
-  "generatedAt": "2026-08-22T05:52:59.745Z"
+  "generatedAt": "2026-08-22T06:45:48.189Z"
 }

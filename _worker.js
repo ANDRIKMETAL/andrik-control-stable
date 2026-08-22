@@ -8708,35 +8708,21 @@ async function fetchGoogleSearchConsoleAnalytics(env) {
   const serviceAccountEmail = cleanPlainText(credentials?.client_email || '', 180);
   if (!credentials || !configuredSiteUrl) return { configured:false, connected:false, siteUrl:configuredSiteUrl, serviceAccountEmail };
   const accessToken = await getGoogleSearchConsoleAccessToken(env);
+  let accessibleSites = [];
+  try { accessibleSites = await listGoogleSearchConsoleSites(accessToken); } catch (_) {}
+  const siteUrl = resolveGoogleSearchConsoleSite(configuredSiteUrl, accessibleSites);
+  if (accessibleSites.length && !accessibleSites.some(item => item.siteUrl === siteUrl)) {
+    throw new Error(`search-console-service-account-no-access:${serviceAccountEmail || 'unknown'}:${configuredSiteUrl}`);
+  }
   const todayBratislava = getBratislavaClock().date;
   const endDate = shiftIsoCalendarDate(todayBratislava, -2);
   const startDate = `${endDate.slice(0,7)}-01`;
-  // R557 — fast path: query the configured property immediately.
-  // Listing every Search Console property first was adding enough latency that
-  // the mobile dashboard could time out before the current-month snapshot arrived.
-  // Only fall back to the sites list when the configured property itself is rejected.
-  let accessibleSites = [];
-  let siteUrl = configuredSiteUrl;
-  const runReports = candidate => Promise.all([
-    googleSearchConsoleQuery(accessToken, candidate, { startDate, endDate, rowLimit: 1, dataState:'all' }),
-    googleSearchConsoleQuery(accessToken, candidate, { startDate, endDate, dimensions: ['date'], rowLimit: 1000, dataState: 'all' })
+  const [summaryReport, queriesReport, pagesReport, trendReport] = await Promise.all([
+    googleSearchConsoleQuery(accessToken, siteUrl, { startDate, endDate, rowLimit: 1, dataState:'all' }),
+    googleSearchConsoleQuery(accessToken, siteUrl, { startDate, endDate, dimensions: ['query'], rowLimit: 8, dataState: 'all' }),
+    googleSearchConsoleQuery(accessToken, siteUrl, { startDate, endDate, dimensions: ['page'], rowLimit: 8, dataState: 'all' }),
+    googleSearchConsoleQuery(accessToken, siteUrl, { startDate, endDate, dimensions: ['date'], rowLimit: 1000, dataState: 'all' })
   ]);
-  let summaryReport, trendReport;
-  try {
-    [summaryReport, trendReport] = await runReports(siteUrl);
-  } catch (firstError) {
-    try { accessibleSites = await listGoogleSearchConsoleSites(accessToken); } catch (_) { accessibleSites = []; }
-    const resolvedSite = resolveGoogleSearchConsoleSite(configuredSiteUrl, accessibleSites);
-    if (resolvedSite && resolvedSite !== siteUrl) {
-      siteUrl = resolvedSite;
-      [summaryReport, trendReport] = await runReports(siteUrl);
-    } else {
-      if (accessibleSites.length && !accessibleSites.some(item => item.siteUrl === siteUrl)) {
-        throw new Error(`search-console-service-account-no-access:${serviceAccountEmail || 'unknown'}:${configuredSiteUrl}`);
-      }
-      throw firstError;
-    }
-  }
   const summary = summaryReport?.rows?.[0] || {};
   const normalizeRows = report => (report?.rows || []).map(row => ({
     key: cleanPlainText(row?.keys?.[0] || '', 500),
@@ -8757,8 +8743,8 @@ async function fetchGoogleSearchConsoleAnalytics(env) {
     impressions: Number(summary.impressions || 0),
     ctr: Number(summary.ctr || 0),
     position: Number(summary.position || 0),
-    queries: [],
-    pages: [],
+    queries: normalizeRows(queriesReport),
+    pages: normalizeRows(pagesReport),
     trend: (trendReport?.rows || []).map(row => ({
       date: cleanPlainText(row?.keys?.[0] || '', 20),
       clicks: Number(row?.clicks || 0),
@@ -13109,7 +13095,7 @@ async function handleControlSearchConsole(request, env) {
     try {
       const live = await Promise.race([
         fetchGoogleSearchConsoleAnalytics(env),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('search-console-timeout')), 28000))
+        new Promise((_, reject) => setTimeout(() => reject(new Error('search-console-timeout')), 11500))
       ]);
       if (live?.configured) {
         await savePlatformSnapshot(db,'google-search-console',live,refresh?'manual-control-refresh-r531':'auto-current-month-r531');
@@ -13121,25 +13107,6 @@ async function handleControlSearchConsole(request, env) {
   const row = existingRow || await db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform='google-search-console' ORDER BY created_at DESC LIMIT 1`).first();
   const snapshot = parseSnapshotMetrics(row);
   const credentials = parseGoogleSearchConsoleCredentials(env);
-  // R556: never present a previous-month snapshot as if it were the current month.
-  // If Google is temporarily slow, the UI shows "обновляем август" instead of July.
-  const snapshotStart = cleanPlainText(snapshot?.period?.startDate||'',20);
-  if (row && snapshotStart && snapshotStart !== expectedStart) {
-    const error = liveError || 'search-console-current-month-refresh-pending';
-    return json({
-      ok:true,
-      searchConsole:{
-        configured:Boolean(credentials && getGoogleSearchConsoleSiteUrl(env)),
-        connected:false,
-        siteUrl:getGoogleSearchConsoleSiteUrl(env),
-        serviceAccountEmail:cleanPlainText(credentials?.client_email||'',180),
-        period:{startDate:expectedStart,endDate:expectedEnd},
-        error,
-        friendlyError:'Обновляем данные Search Console за текущий месяц. Старый месячный снимок скрыт.'
-      },
-      updatedAt:new Date().toISOString()
-    });
-  }
   if (row) {
     const error = snapshot.error || liveError || '';
     return json({
