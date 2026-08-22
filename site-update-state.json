@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787440477666-5e04dc063f",
-  "release": "R563",
-  "archiveName": "R563-R560-LIGHT-LYRA-SCRIPT-HERO-SAFE-FULL.zip",
-  "sourceHead": "d1a30c5e1cd65d8eab498c1f86cb0c0a2ff809cb",
-  "backupSha": "d1a30c5e1cd65d8eab498c1f86cb0c0a2ff809cb",
-  "backupTag": "control-backup-20260822231433-d1a30c5-r563-626ff",
+  "operationId": "publish-1787443150984-150b3c6ce0",
+  "release": "R565",
+  "archiveName": "R565-SITE-PLUS-RADIO-GITHUB-BRIDGE-SAFE-FULL.zip",
+  "sourceHead": "1dc04941b99e117f0a29885c39d25167efa130dc",
+  "backupSha": "1dc04941b99e117f0a29885c39d25167efa130dc",
+  "backupTag": "control-backup-20260822235906-1dc0494-r565-5ca68",
   "autoRecovery": true,
-  "generatedAt": "2026-08-22T23:14:38.461Z"
+  "generatedAt": "2026-08-22T23:59:12.229Z"
 }

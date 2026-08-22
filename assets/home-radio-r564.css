@@ -1,0 +1,6 @@
+.lyra-hero-r564__radio{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:50px;margin:12px 0 2px;padding:0 16px;border:1px solid rgba(255,95,95,.34);border-radius:16px;background:linear-gradient(135deg,rgba(106,17,33,.55),rgba(32,12,20,.74));color:#fff;text-decoration:none;font-weight:900;letter-spacing:.07em;text-transform:uppercase;box-shadow:0 0 24px rgba(255,70,85,.08),inset 0 1px 0 rgba(255,255,255,.06)}
+.lyra-hero-r564__radio-dot{width:9px;height:9px;border-radius:50%;background:#ff5262;box-shadow:0 0 0 4px rgba(255,82,98,.12),0 0 16px rgba(255,82,98,.78);animation:andrikRadioPulseR564 1.5s ease-in-out infinite}
+.lyra-hero-r564__radio small{font-size:.67rem;font-weight:800;letter-spacing:.12em;color:rgba(255,255,255,.66)}
+@keyframes andrikRadioPulseR564{0%,100%{transform:scale(.86);opacity:.7}50%{transform:scale(1.12);opacity:1}}
+@media(max-width:640px){.lyra-hero-r564__radio{min-height:48px;font-size:.88rem;border-radius:15px}}
+@media(prefers-reduced-motion:reduce){.lyra-hero-r564__radio-dot{animation:none}}

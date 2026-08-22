@@ -16787,6 +16787,7 @@ async function routeApi(request, env, ctx) {
     if (path === '/api/control/ecosystem-map' && request.method === 'GET') return await handleControlEcosystemMap(request, env);
     if (path === '/api/control/audience' && request.method === 'GET') return await handleControlAudience(request, env);
     if (path === '/api/control/youtube-top-content' && request.method === 'GET') return await handleControlYoutubeTopContentR552(request, env);
+    if (path === '/api/control/youtube-live-r565' && request.method === 'GET') return await handleControlYoutubeLiveR565(request, env);
     if (path === '/api/control/search-console' && request.method === 'GET') return await handleControlSearchConsole(request, env);
     if (path === '/api/control/snapshots/refresh' && request.method === 'POST') return await handleControlSnapshotsRefresh(request, env);
     if (path === '/api/control/country-growth' && request.method === 'GET') return await handleControlCountryGrowth(request, env);
@@ -16894,6 +16895,78 @@ function allowControlPlayerFrame(response, url, isControlHost) {
 function controlAssetFailurePage(error) {
   const safe = String(error?.message || error || 'unknown').replace(/[<>&"']/g, '');
   return `<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Control ANDRIK — восстановление</title><style>body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;background:#02060a;color:#eef8ff;font:18px/1.5 system-ui}.c{max-width:560px;padding:26px;border:1px solid #294654;border-radius:24px;background:#07131b}a{color:#bcecff}</style></head><body><main class="c"><h1>Control временно не получил файл</h1><p>Откройте встроенное восстановление:</p><p><a href="/cache-reset.html?v=5469">Восстановить Control ANDRIK</a></p><small>${safe}</small></main></body></html>`;
+}
+
+
+// R565 — YouTube Live Studio state for ANDRIK Metal Radio 24/7.
+async function handleControlYoutubeLiveR565(request, env) {
+  if (!adminAuthorized(request, env)) return json({ok:false,error:'unauthorized'},401);
+  const requestUrl=new URL(request.url);
+  const videoId=cleanPlainText(requestUrl.searchParams.get('id') || 'jBDuQ45RbeE',80);
+  try {
+    const accessToken=await getYoutubeOAuthAccessToken(env);
+    const authHeaders={authorization:`Bearer ${accessToken}`,accept:'application/json'};
+    const ytFetch=async(url,label)=>{
+      const response=await fetchWithAbortTimeoutR409(url,{headers:authHeaders},8000,`youtube-live-r565-${label}-timeout`);
+      const data=await response.json().catch(()=>({}));
+      if(!response.ok) throw new Error(youtubeGoogleErrorTextR495(data,response.status,label));
+      return data;
+    };
+
+    const videoUrl=new URL('https://www.googleapis.com/youtube/v3/videos');
+    videoUrl.searchParams.set('part','snippet,status,statistics,liveStreamingDetails');
+    videoUrl.searchParams.set('id',videoId);
+    const broadcastUrl=new URL('https://www.googleapis.com/youtube/v3/liveBroadcasts');
+    broadcastUrl.searchParams.set('part','id,snippet,status,contentDetails');
+    broadcastUrl.searchParams.set('id',videoId);
+    const [videoData,broadcastData]=await Promise.all([
+      ytFetch(videoUrl.toString(),'YouTube Live video'),
+      ytFetch(broadcastUrl.toString(),'YouTube Live broadcast')
+    ]);
+    const video=Array.isArray(videoData?.items)?videoData.items[0]||null:null;
+    const broadcast=Array.isArray(broadcastData?.items)?broadcastData.items[0]||null:null;
+    const boundStreamId=cleanPlainText(broadcast?.contentDetails?.boundStreamId||'',120);
+    let liveStream=null;
+    if(boundStreamId){
+      const streamUrl=new URL('https://www.googleapis.com/youtube/v3/liveStreams');
+      streamUrl.searchParams.set('part','id,snippet,status,cdn');
+      streamUrl.searchParams.set('id',boundStreamId);
+      const streamData=await ytFetch(streamUrl.toString(),'YouTube Live stream').catch(()=>({items:[]}));
+      liveStream=Array.isArray(streamData?.items)?streamData.items[0]||null:null;
+    }
+    const details=video?.liveStreamingDetails||{};
+    const statistics=video?.statistics||{};
+    const health=liveStream?.status?.healthStatus||{};
+    return json({
+      ok:true,
+      videoId,
+      title:cleanPlainText(video?.snippet?.title||broadcast?.snippet?.title||'ANDRIK Metal Radio 24/7',220),
+      lifeCycleStatus:cleanPlainText(broadcast?.status?.lifeCycleStatus||'',80),
+      privacyStatus:cleanPlainText(broadcast?.status?.privacyStatus||video?.status?.privacyStatus||'',80),
+      recordingStatus:cleanPlainText(broadcast?.status?.recordingStatus||'',80),
+      streamStatus:cleanPlainText(liveStream?.status?.streamStatus||'',80),
+      healthStatus:cleanPlainText(health?.status||'',80),
+      healthIssues:Array.isArray(health?.configurationIssues)?health.configurationIssues.slice(0,8).map(item=>({
+        type:cleanPlainText(item?.type||'',100),
+        severity:cleanPlainText(item?.severity||'',80),
+        reason:cleanPlainText(item?.reason||'',240),
+        description:cleanPlainText(item?.description||'',360)
+      })):[],
+      concurrentViewers:Math.max(0,Number(details?.concurrentViewers||0)),
+      actualStartTime:cleanPlainText(details?.actualStartTime||broadcast?.snippet?.actualStartTime||'',80),
+      scheduledStartTime:cleanPlainText(details?.scheduledStartTime||broadcast?.snippet?.scheduledStartTime||'',80),
+      views:Math.max(0,Number(statistics?.viewCount||0)),
+      likes:Math.max(0,Number(statistics?.likeCount||0)),
+      comments:Math.max(0,Number(statistics?.commentCount||0)),
+      boundStreamId,
+      studioUrl:`https://studio.youtube.com/video/${encodeURIComponent(videoId)}/livestreaming`,
+      analyticsUrl:`https://studio.youtube.com/video/${encodeURIComponent(videoId)}/analytics/tab-overview/period-default`,
+      watchUrl:`https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`,
+      updatedAt:new Date().toISOString()
+    });
+  } catch(error) {
+    return json({ok:false,videoId,error:cleanPlainText(error?.message||error,500)},503);
+  }
 }
 
 export default {
