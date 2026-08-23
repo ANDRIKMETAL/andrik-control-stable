@@ -10,21 +10,21 @@ TIMER_FILE="/etc/systemd/system/andrik-radio-update.timer"
 UPDATE_SERVICE_FILE="/etc/systemd/system/andrik-radio-update.service"
 
 if [ "${EUID}" -ne 0 ]; then
-  echo "Запусти: sudo bash install-andrik-radio.sh"
+  echo "Запусти: sudo bash install-andrik-radio-lite.sh"
   exit 1
 fi
 
 if ! command -v apt-get >/dev/null 2>&1; then
-  echo "Нужна Ubuntu/Debian VM. Для Oracle Always Free выбери Ubuntu 24.04."
+  echo "Нужна Ubuntu/Debian VM."
   exit 1
 fi
 
-echo "[1/7] Устанавливаю FFmpeg, Node.js, Git и шрифты..."
+echo "[1/7] FFmpeg + Node.js + Git..."
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -y
-apt-get install -y --no-install-recommends ffmpeg nodejs git ca-certificates curl fonts-dejavu-core
+apt-get install -y --no-install-recommends ffmpeg nodejs git ca-certificates curl
 
-echo "[2/7] Загружаю актуальный ANDRIK Control из GitHub..."
+echo "[2/7] ANDRIK Control main..."
 if [ -d "$APP_DIR/.git" ]; then
   git -C "$APP_DIR" fetch --depth 1 origin main
   git -C "$APP_DIR" reset --hard origin/main
@@ -34,26 +34,30 @@ else
 fi
 
 SERVER="$APP_DIR/radio247/server.mjs"
-VISUAL="$APP_DIR/radio247/assets/audio-visual-loop-r566.webm"
+VISUAL="$APP_DIR/radio247/assets/audio-visual-loop-r569-h264.mp4"
+
 if [ ! -s "$SERVER" ]; then
-  echo "Ошибка: не найден $SERVER"
+  echo "Ошибка: нет $SERVER"
   exit 1
 fi
+
 if [ ! -s "$VISUAL" ]; then
-  echo "Ошибка: не найден $VISUAL"
+  echo "Ошибка: нет $VISUAL"
   exit 1
 fi
 
 echo "[3/7] YouTube Stream Key"
-echo "Ключ не показывается и будет сохранён только на этой VM в $ENV_FILE"
+echo "Ключ хранится только на VM в $ENV_FILE"
 if [ -z "${YOUTUBE_STREAM_KEY:-}" ]; then
   read -rsp "Вставь YouTube Stream Key и нажми Enter: " YOUTUBE_STREAM_KEY
   echo
 fi
+
 YOUTUBE_STREAM_KEY="${YOUTUBE_STREAM_KEY//$'\r'/}"
 YOUTUBE_STREAM_KEY="${YOUTUBE_STREAM_KEY//$'\n'/}"
+
 if [ -z "$YOUTUBE_STREAM_KEY" ]; then
-  echo "Stream Key пустой. Установка остановлена."
+  echo "Stream Key пустой."
   exit 2
 fi
 
@@ -69,16 +73,16 @@ EOF
 chmod 600 "$ENV_FILE"
 unset YOUTUBE_STREAM_KEY
 
-echo "[4/7] Создаю системный сервис 24/7..."
+echo "[4/7] systemd 24/7..."
 cat > "$SERVICE_FILE" <<EOF
 [Unit]
-Description=ANDRIK Metal Radio 24/7 - R568 Oracle Free
+Description=ANDRIK Metal Radio 24/7 - R569 LITE
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=simple
-WorkingDirectory=$APP_DIR
+WorkingDirectory=$APP_DIR/radio247
 EnvironmentFile=$ENV_FILE
 ExecStart=/usr/bin/node $SERVER
 Restart=always
@@ -97,7 +101,7 @@ ReadWritePaths=/tmp
 WantedBy=multi-user.target
 EOF
 
-echo "[5/7] Добавляю безопасное автообновление из main раз в сутки..."
+echo "[5/7] Автообновление раз в сутки..."
 cat > "$UPDATE_SCRIPT" <<'SH2'
 #!/usr/bin/env bash
 set -Eeuo pipefail
@@ -136,11 +140,10 @@ RandomizedDelaySec=600
 WantedBy=timers.target
 EOF
 
-echo "[6/7] Запускаю радио..."
+echo "[6/7] Запуск..."
 systemctl daemon-reload
 systemctl enable --now andrik-radio.service
 systemctl enable --now andrik-radio-update.timer
-
 sleep 8
 
 echo "[7/7] Проверка..."
@@ -148,16 +151,17 @@ if systemctl is-active --quiet andrik-radio.service; then
   echo "SERVICE: ACTIVE"
 else
   echo "SERVICE: НЕ ЗАПУЩЕН"
-  journalctl -u andrik-radio.service -n 60 --no-pager || true
+  journalctl -u andrik-radio.service -n 80 --no-pager || true
   exit 3
 fi
 
 curl -fsS --max-time 5 http://127.0.0.1:8080/status || true
 echo
 echo "============================================================"
-echo "ANDRIK RADIO установлено."
-echo "Логи:     sudo journalctl -u andrik-radio -f"
-echo "Статус:   sudo systemctl status andrik-radio --no-pager"
-echo "Рестарт:  sudo systemctl restart andrik-radio"
-echo "Обновить: sudo andrik-radio-update"
+echo "ANDRIK RADIO R569-LITE установлено."
+echo "Видео: H.264 stream copy — без постоянного x264-кодирования."
+echo "Кодируется только аудио MP3 -> AAC."
+echo "Логи:    sudo journalctl -u andrik-radio -f"
+echo "Статус:  sudo systemctl status andrik-radio --no-pager"
+echo "Рестарт: sudo systemctl restart andrik-radio"
 echo "============================================================"

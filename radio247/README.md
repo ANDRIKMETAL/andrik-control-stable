@@ -1,47 +1,32 @@
-# ANDRIK METAL RADIO 24/7 — R568 FREE VM
-
-## Архитектура
-
-R2 MP3 → бесплатная Linux VM → FFmpeg → YouTube RTMPS.
-
-Cloudflare Container больше НЕ используется.
-Workers Paid за $5/месяц для радио НЕ нужен.
+# ANDRIK METAL RADIO 24/7 — R569 LITE
 
 ## Что играет
+- только MP3 из `albums/*` в R2;
+- клипов и Shorts в радио нет;
+- очередь перемешивается автоматически;
+- новые альбомные MP3 подхватываются автоматически.
 
-- все MP3 из `albums/*` через `https://andrikmetal.com/api/music/downloads`;
-- `albums/beyond/*` попадёт в очередь автоматически после загрузки 4-го альбома;
-- каждый цикл перемешивает весь альбомный каталог;
-- клипы и Shorts исключены;
-- единый STREAM-визуал: `assets/audio-visual-loop-r566.webm`;
-- поверх визуала: NOW PLAYING + альбом + бегущая строка.
+## LITE
+Визуал заранее подготовлен как:
 
-## Движок
+`assets/audio-visual-loop-r569-h264.mp4`
 
-`server.mjs` — R568, MP3 ONLY.
+Во время эфира видео идет:
 
-## Бесплатный запуск
+`-c:v copy`
 
-Скрипты лежат в:
+То есть сервер НЕ кодирует H.264 24/7.
+FFmpeg кодирует только аудио MP3 → AAC 128 kbps.
 
-`radio247/oracle/`
+Это существенно легче для маленькой бесплатной/дешевой VM.
 
-Главный:
-`install-andrik-radio.sh`
+## Схема
+R2 MP3 → Linux VM → FFmpeg → YouTube RTMPS
 
-Он устанавливает FFmpeg/Node/Git, берет актуальный `main`,
-создает systemd-сервис с автоперезапуском и ежедневным обновлением.
+Cloudflare Containers не используются.
 
-YouTube Stream Key хранится только на VM в `/etc/andrik-radio.env`.
-Ключ нельзя коммитить в GitHub.
+## Установка
+`radio247/vm-lite/install-andrik-radio-lite.sh`
 
-## Важно
-
-Старые файлы Cloudflare Container удалены:
-- `wrangler.toml`
-- `Dockerfile`
-- `src/index.ts`
-- зависимость `@cloudflare/containers`
-
-Панель YouTube Control R568 больше не ждёт
-`radio.andrikmetal.com/status`; состояние эфира определяется через YouTube API.
+YouTube Stream Key хранится только на VM:
+`/etc/andrik-radio.env`

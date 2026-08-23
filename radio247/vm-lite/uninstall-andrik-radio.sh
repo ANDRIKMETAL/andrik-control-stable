@@ -13,4 +13,4 @@ rm -f /etc/systemd/system/andrik-radio.service \
       /etc/andrik-radio.env
 systemctl daemon-reload
 rm -rf /opt/andrik-radio
-echo "ANDRIK Radio удалено с VM."
+echo "ANDRIK Radio удалено."

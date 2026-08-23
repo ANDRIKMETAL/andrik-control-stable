@@ -83,7 +83,7 @@ function renderYoutube(data){
     const issues=Array.isArray(data?.healthIssues)?data.healthIssues:[];
     note.textContent=issues.length
       ?`YouTube: ${parts.join(' • ')} · ${issues[0]?.reason||issues[0]?.description||'есть предупреждение'}`
-      :`R568 FREE VM · YouTube: ${parts.join(' • ')||'готов'} · ${new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}`;
+      :`R569 FREE VM · YouTube: ${parts.join(' • ')||'готов'} · ${new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}`;
   }
 }
 

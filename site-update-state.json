@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787447501083-6976993f02",
-  "release": "R568",
-  "archiveName": "R568-LIVE-LYRA-ORACLE-FREE-RADIO-SAFE-FULL.zip",
-  "sourceHead": "b2b17d9ebcb59b8d5720068a5020a4cd6f902f4f",
-  "backupSha": "b2b17d9ebcb59b8d5720068a5020a4cd6f902f4f",
-  "backupTag": "control-backup-20260823011136-b2b17d9-r568-b8a59",
+  "operationId": "publish-1787449966655-13f8fd8cf4",
+  "release": "R569",
+  "archiveName": "R569-LIVE-LYRA-MP3-RADIO-LITE-SAFE-FULL.zip",
+  "sourceHead": "a0cd1495289f73d26e53ac3615a4790b3df5bcf9",
+  "backupSha": "a0cd1495289f73d26e53ac3615a4790b3df5bcf9",
+  "backupTag": "control-backup-20260823015242-a0cd149-r569-077e5",
   "autoRecovery": true,
-  "generatedAt": "2026-08-23T01:11:41.927Z"
+  "generatedAt": "2026-08-23T01:52:47.922Z"
 }
