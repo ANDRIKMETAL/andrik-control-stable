@@ -11579,6 +11579,100 @@ async function markYoutubeReserveFiveMinuteR474(env, extra = {}) {
   return summary;
 }
 
+
+// R585: radio LIVE has its own lifecycle trigger.
+// The release pipeline only notices a newly published YouTube item; starting an
+// already-created live broadcast does not create a new release. This lightweight
+// 5-minute check detects an authenticated broadcast transition to LIVE and sends
+// exactly one public push per broadcast id.
+async function maybeSendRadioLiveStartPushR585(env) {
+  const db=requireDb(env);
+  await ensurePushAutomationSchema(db);
+
+  if(!oneSignalConfigured(env)) return {ok:true,skipped:true,reason:'onesignal-not-configured'};
+
+  let accessToken='';
+  try{
+    accessToken=await getYoutubeOAuthAccessToken(env);
+  }catch(error){
+    return {ok:false,skipped:true,reason:'youtube-oauth-unavailable',error:cleanPlainText(error?.message||error,300)};
+  }
+
+  const url=new URL('https://www.googleapis.com/youtube/v3/liveBroadcasts');
+  url.searchParams.set('part','id,snippet,status');
+  url.searchParams.set('mine','true');
+  url.searchParams.set('maxResults','25');
+
+  let data={};
+  try{
+    const response=await fetchWithAbortTimeoutR409(
+      url.toString(),
+      {headers:{authorization:`Bearer ${accessToken}`,accept:'application/json'}},
+      8000,
+      'radio-live-push-r585-timeout'
+    );
+    data=await response.json().catch(()=>({}));
+    if(!response.ok){
+      return {ok:false,skipped:true,reason:'youtube-live-api-failed',error:youtubeGoogleErrorTextR495(data,response.status,'radio live push')};
+    }
+  }catch(error){
+    return {ok:false,skipped:true,reason:'youtube-live-api-error',error:cleanPlainText(error?.message||error,300)};
+  }
+
+  const items=Array.isArray(data?.items)?data.items:[];
+  const live=items.find(item=>String(item?.status?.lifeCycleStatus||'').toLowerCase()==='live') || null;
+  if(!live?.id) return {ok:true,skipped:true,reason:'no-live-broadcast'};
+
+  const videoId=cleanPlainText(live.id,80);
+  const rawTitle=cleanPlainText(live?.snippet?.title||'ANDRIK METAL RADIO — LIVE',220);
+  if(!isAndrikRadioLiveR576(rawTitle)){
+    return {ok:true,skipped:true,reason:'live-is-not-radio',videoId,title:rawTitle};
+  }
+
+  const onceKey=`radio-live-start-r585:${videoId}`;
+  const claim=await claimPushOnce(db,onceKey,new Date().toISOString());
+  if(!claim) return {ok:true,skipped:true,reason:'already-sent-or-claimed',videoId};
+
+  const watchUrl=`https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`;
+  const thumb=live?.snippet?.thumbnails?.high?.url || live?.snippet?.thumbnails?.medium?.url || '';
+  const pushMeta=youtubePushMetaR576(rawTitle,watchUrl);
+
+  const result=await sendOneSignalPush(env,{
+    title:pushMeta.title,
+    message:pushMeta.message,
+    url:watchUrl,
+    image:thumb,
+    webButtons:[pushMeta.button],
+    audience:'all',
+    name:`radio-live-${videoId}`,
+    history:{
+      type:'radio-live-start',
+      source:'YouTube Live',
+      videoId,
+      videoTitle:rawTitle,
+      details:{automatic:true,trigger:'live-transition-r585'}
+    }
+  });
+
+  if(!result?.ok){
+    await releasePushOnceClaim(db,onceKey).catch(()=>{});
+    return {ok:false,error:result?.error||'live-push-failed',videoId};
+  }
+
+  const at=new Date().toISOString();
+  await Promise.all([
+    setPushState(db,'radio-live-last-push-video-r585',videoId).catch(()=>{}),
+    setPushState(db,'radio-live-last-push-at-r585',at).catch(()=>{}),
+    recordSystemLog(env,{
+      scope:'push',level:'info',event:'radio-live-start-push-r585',
+      message:`LIVE push отправлен: ${rawTitle}`,
+      details:{videoId,watchUrl,oneSignalId:result.oneSignalId||'',at}
+    }).catch(()=>{})
+  ]);
+
+  return {ok:true,sent:true,videoId,title:rawTitle,oneSignalId:result.oneSignalId||'',at};
+}
+
 async function runCronFiveMinuteSliceR434(request, env, clock) {
   const local=getBratislavaClock();
   const reserveWatchR474=await markYoutubeReserveFiveMinuteR474(env,{source:'gateway-5m-r474'}).catch(error=>({healthy:false,error:cleanPlainText(error?.message||error,300)}));
@@ -11597,6 +11691,22 @@ async function runCronFiveMinuteSliceR434(request, env, clock) {
   // We keep the lightweight CPU-safe paths: release is always first priority; when
   // no release push was sent, the same 5-minute invocation may do the tiny subscriber
   // count tail check. If a release was sent, subscriber waits for the next */5 slot.
+  // R585: detect a real radio broadcast becoming LIVE independently from release publication.
+  // If the stream was already started before R585 was deployed, the first 5-minute
+  // pass sends the missing LIVE push once, then the claim prevents duplicates.
+  try{
+    const livePushR585=await maybeSendRadioLiveStartPushR585(env);
+    if(livePushR585?.sent){
+      return {task:'radio-live-push',value:livePushR585};
+    }
+  }catch(error){
+    await recordSystemLog(env,{
+      scope:'push',level:'warning',event:'radio-live-start-check-failed-r585',
+      message:'Не удалось проверить LIVE-пуш радио.',
+      details:{error:cleanPlainText(error?.message||error,400)}
+    }).catch(()=>{});
+  }
+
   if(local.hour===5 || local.hour===17){
     try{
       const summaryAttempt=await maybeSendDailyOwnerSummary(env);
