@@ -22,7 +22,7 @@ fi
 echo "[1/7] FFmpeg + Node.js + Git..."
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -y
-apt-get install -y --no-install-recommends ffmpeg nodejs git ca-certificates curl
+apt-get install -y --no-install-recommends ffmpeg nodejs git ca-certificates curl fonts-dejavu-core
 
 echo "[2/7] ANDRIK Control main..."
 if [ -d "$APP_DIR/.git" ]; then
@@ -69,6 +69,8 @@ YOUTUBE_LIVE_URL=https://www.youtube.com/@andrikmetal/live
 AUDIO_VISUAL=$VISUAL
 PORT=8080
 NODE_ENV=production
+VISUAL_TRIM_END=0.55
+RADIO_CACHE_DIR=/tmp/andrik-radio-r570
 EOF
 chmod 600 "$ENV_FILE"
 unset YOUTUBE_STREAM_KEY
@@ -76,7 +78,7 @@ unset YOUTUBE_STREAM_KEY
 echo "[4/7] systemd 24/7..."
 cat > "$SERVICE_FILE" <<EOF
 [Unit]
-Description=ANDRIK Metal Radio 24/7 - R569 LITE
+Description=ANDRIK Metal Radio 24/7 - R570 LITE
 After=network-online.target
 Wants=network-online.target
 
@@ -158,9 +160,9 @@ fi
 curl -fsS --max-time 5 http://127.0.0.1:8080/status || true
 echo
 echo "============================================================"
-echo "ANDRIK RADIO R569-LITE установлено."
-echo "Видео: H.264 stream copy — без постоянного x264-кодирования."
-echo "Кодируется только аудио MP3 -> AAC."
+echo "ANDRIK RADIO R570-LITE установлено."
+echo "Видео: чистый H.264 loop + PREV/NOW/NEXT + бегущая строка."
+echo "Оверлей рендерится коротким циклом заранее; во время трека H.264 идёт stream-copy."
 echo "Логи:    sudo journalctl -u andrik-radio -f"
 echo "Статус:  sudo systemctl status andrik-radio --no-pager"
 echo "Рестарт: sudo systemctl restart andrik-radio"

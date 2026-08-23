@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787449966655-13f8fd8cf4",
-  "release": "R569",
-  "archiveName": "R569-LIVE-LYRA-MP3-RADIO-LITE-SAFE-FULL.zip",
-  "sourceHead": "a0cd1495289f73d26e53ac3615a4790b3df5bcf9",
-  "backupSha": "a0cd1495289f73d26e53ac3615a4790b3df5bcf9",
-  "backupTag": "control-backup-20260823015242-a0cd149-r569-077e5",
+  "operationId": "publish-1787453380047-6a60b67455",
+  "release": "R570",
+  "archiveName": "R570-RADIO-PREV-NEXT-TICKER-LOOP-FIX-SAFE-FULL.zip",
+  "sourceHead": "620d1eb5057e099b2910aabd77fddbb05f30225e",
+  "backupSha": "620d1eb5057e099b2910aabd77fddbb05f30225e",
+  "backupTag": "control-backup-20260823024935-620d1eb-r570-41d2f",
   "autoRecovery": true,
-  "generatedAt": "2026-08-23T01:52:47.922Z"
+  "generatedAt": "2026-08-23T02:49:40.375Z"
 }
