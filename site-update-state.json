@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787475991729-f5e62d406f",
-  "release": "R589",
-  "archiveName": "R589-SEAMLESS-3MIN-NOW-YELLOW-TICKER-FIX-SAFE-FULL.zip",
-  "sourceHead": "d9571b1c302b240bcf4742ebd64fd9ba19076ca2",
-  "backupSha": "d9571b1c302b240bcf4742ebd64fd9ba19076ca2",
-  "backupTag": "control-backup-20260823090625-d9571b1-r589-f6f1f",
+  "operationId": "publish-1787478258827-9a6970cdd7",
+  "release": "R592",
+  "archiveName": "R592-UNIVERSAL-YOUTUBE-MULTIPLATFORM-TICKER-SAFE-FULL.zip",
+  "sourceHead": "8a043d0502f4cd06d6c16ba99a7d94b2800a4d36",
+  "backupSha": "8a043d0502f4cd06d6c16ba99a7d94b2800a4d36",
+  "backupTag": "control-backup-20260823094412-8a043d0-r592-b5abc",
   "autoRecovery": true,
-  "generatedAt": "2026-08-23T09:06:34.550Z"
+  "generatedAt": "2026-08-23T09:44:18.827Z"
 }

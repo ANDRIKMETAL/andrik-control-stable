@@ -18,18 +18,18 @@ const STREAM_KEY = String(process.env.YOUTUBE_STREAM_KEY || '').trim();
 const STREAM_URL = STREAM_KEY ? `rtmps://a.rtmps.youtube.com:443/live2/${STREAM_KEY}` : '';
 const YOUTUBE_LIVE_URL = process.env.YOUTUBE_LIVE_URL || 'https://www.youtube.com/@andrikmetal/live';
 const VISUAL_TRIM_END = Math.max(0, Number(process.env.VISUAL_TRIM_END || '0.55') || 0.55);
-const CACHE_DIR = process.env.RADIO_CACHE_DIR || '/tmp/andrik-radio-r589';
+const CACHE_DIR = process.env.RADIO_CACHE_DIR || '/tmp/andrik-radio-r592';
 const CLEAN_VISUAL = `${CACHE_DIR}/visual-seamless.mp4`;
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R589-SEAMLESS-3MIN-OVERLAY-FIX',
+  version: 'R592-UNIVERSAL-YOUTUBE-AND-TICKER',
   mode: 'MP3 ONLY / SEAMLESS VISUAL + LIVE OVERLAY',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
   producerRunning: false,
-  overlayMode: '180s SEAMLESS COVER / YELLOW NOW BOX / NO PREV / TICKER LARGE',
+  overlayMode: '180s DIRECT LOOP / YELLOW NOW / MULTIPLATFORM CTA TICKER',
   visualTrimEnd: VISUAL_TRIM_END,
   libraryTracks: 0,
   cycle: 0,
@@ -90,7 +90,7 @@ function albumName(item){
 
 async function loadLibrary(){
   const url=`${PLAYLIST_URL}${PLAYLIST_URL.includes('?')?'&':'?'}ts=${Date.now()}`;
-  const response=await fetch(url,{headers:{'user-agent':'ANDRIK-Radio-24-7-R589-3MIN'}});
+  const response=await fetch(url,{headers:{'user-agent':'ANDRIK-Radio-24-7-R592-3MIN'}});
   if(!response.ok)throw new Error(`R2 library HTTP ${response.status}`);
 
   const data=await response.json();
@@ -244,15 +244,11 @@ function producerArgs(item,duration,offset,visualPath,previous,next){
   const currentFile=`${CACHE_DIR}/current-live-${key}.txt`;
   const nextFile=`${CACHE_DIR}/next-live-${key}.txt`;
   const tickerFile=`${CACHE_DIR}/ticker-live-${key}.txt`;
-  const visualList=`${CACHE_DIR}/visual-list-${key}.txt`;
 
   writeFileSync(currentFile,`СЕЙЧАС: ${trackLabel(item,'ANDRIK')}`,'utf8');
   writeFileSync(nextFile,`ДАЛЬШЕ: ${trackLabel(next,'НОВЫЙ ЦИКЛ')}`,'utf8');
-  const unit=`ANDRIK METAL RADIO 24/7   •   СЕЙЧАС: ${trackLabel(item,'ANDRIK')}   •   ДАЛЬШЕ: ${trackLabel(next,'—')}   •   ANDRIKMETAL.COM   •   `;
+  const unit=`ANDRIK METAL RADIO 24/7   •   СЕЙЧАС: ${trackLabel(item,'ANDRIK')}   •   ДАЛЬШЕ: ${trackLabel(next,'—')}   •   СЛУШАЙТЕ ANDRIK: SPOTIFY • APPLE MUSIC • AMAZON MUSIC • YOUTUBE   •   ПОДПИСЫВАЙТЕСЬ • СТАВЬТЕ ЛАЙКИ • КОММЕНТИРУЙТЕ • И ПРОСТО КАЙФУЙТЕ   •   ANDRIKMETAL.COM   •   `;
   writeFileSync(tickerFile,unit.repeat(8),'utf8');
-
-  const escapedVisual=String(visualPath);
-  writeFileSync(visualList,Array(20).fill(`file '${escapedVisual}'`).join('\\n')+'\\n','utf8');
 
   const font=chooseFont();
   const fontPart=font?`fontfile='${ffFilterPath(font)}':`:'';
@@ -270,9 +266,9 @@ function producerArgs(item,duration,offset,visualPath,previous,next){
     `drawtext=${fontPart}textfile='${tickerPath}':fontcolor=white:fontsize=25:x='w-mod(t*120,text_w/8+w)':y=h-44:shadowcolor=black@1:shadowx=1:shadowy=1`
   ].join(',');
 
-  return {tempFiles:[currentFile,nextFile,tickerFile,visualList],args:[
+  return {tempFiles:[currentFile,nextFile,tickerFile],args:[
     '-hide_banner','-loglevel','warning','-re','-i',item.url,
-    '-f','concat','-safe','0','-re','-i',visualList,
+    '-stream_loop','-1','-re','-i',visualPath,
     '-map','1:v:0','-map','0:a:0','-t',duration.toFixed(3),
     '-vf',vf,
     '-c:v','libx264','-preset','ultrafast','-tune','zerolatency',

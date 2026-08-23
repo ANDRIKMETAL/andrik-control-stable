@@ -42,10 +42,7 @@ function youtubeAppLauncherUrl(targetUrl) {
     const allowed = new Set(['youtube.com', 'www.youtube.com', 'm.youtube.com', 'music.youtube.com', 'youtu.be']);
     if (parsed.protocol === 'https:' && allowed.has(parsed.hostname.toLowerCase())) target = parsed.href;
   } catch (_) {}
-  // R212: push notifications open the real YouTube HTTPS link directly.
-  // Android hands it to the installed YouTube app; if no handler exists,
-  // the same URL opens normally in the browser. No intermediate Control page.
-  return target;
+  return `https://andrikmetal.com/open-youtube.html?target=${encodeURIComponent(target)}&src=push&r=592`;
 }
 
 function normalizeTitle(value) {
@@ -2321,14 +2318,14 @@ function isAndrikRadioLiveR576(value) {
   return radio && live;
 }
 
-function youtubeAppOpenUrlR587(url) {
+function youtubeAppOpenUrlR592(url) {
   const target=cleanPlainText(url||'https://www.youtube.com/@andrikmetal/live',1000);
-  return `https://andrikmetal.com/open-youtube.html?target=${encodeURIComponent(target)}&src=push&r=587`;
+  return `https://andrikmetal.com/open-youtube.html?target=${encodeURIComponent(target)}&src=push&r=592`;
 }
 
 function youtubePushMetaR576(title, url) {
   const live=isAndrikRadioLiveR576(title);
-  const appUrl=youtubeAppOpenUrlR587(url);
+  const appUrl=youtubeAppOpenUrlR592(url);
   if(live) return {
     live:true,
     title:'🔴 ANDRIK METAL RADIO — LIVE',

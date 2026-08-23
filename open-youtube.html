@@ -37,7 +37,8 @@ p{opacity:.72}
       return;
     }
     const u=new URL(target);
-    const intent=`intent://${u.host}${u.pathname}${u.search}${u.hash}#Intent;scheme=https;action=android.intent.action.VIEW;category=android.intent.category.BROWSABLE;package=com.google.android.youtube;S.browser_fallback_url=${encodeURIComponent(target)};end`;
+    // R592 universal Android handler: no hardcoded package.
+    const intent=`intent://${u.host}${u.pathname}${u.search}${u.hash}#Intent;scheme=https;action=android.intent.action.VIEW;category=android.intent.category.BROWSABLE;S.browser_fallback_url=${encodeURIComponent(target)};end`;
     try{ location.replace(intent); }
     catch(_){ location.replace(target); }
   }
@@ -48,6 +49,7 @@ p{opacity:.72}
     launch();
   });
 
+  // Push click lands here first, then immediately gives the link to Android.
   setTimeout(launch,30);
 })();
 </script>

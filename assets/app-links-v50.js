@@ -15,10 +15,11 @@
   }
 
   function youtubeIntent(webUrl) {
-    // R586: force the Android YouTube package directly.
-    // No Android chooser. If YouTube is absent, browser_fallback_url stays
-    // in the browser instead of launching a second generic HTTPS intent.
-    return httpsIntent(webUrl, 'com.google.android.youtube', webUrl);
+    // R592: DO NOT force one package.
+    // Android sends the YouTube link to whichever compatible client is configured
+    // as the default handler: original YouTube, ReVanced/RVX, GreenTuber, Vanced,
+    // or another YouTube-capable app. If none exists, browser_fallback_url opens web.
+    return httpsIntent(webUrl, '', webUrl);
   }
 
   function spotifyIntent(url) {
@@ -63,41 +64,23 @@
   function normalizeLink(link) {
     const webUrl = link.getAttribute('data-web-url') || link.getAttribute('href');
     if (!webUrl) return;
-
-    // Keep a normal HTTPS href for copy/share/accessibility.
     link.setAttribute('href', webUrl);
     link.setAttribute('rel', 'noopener noreferrer external');
-
-    if (isAndroid && link.hasAttribute('data-force-app')) {
-      link.removeAttribute('target');
-    } else {
-      link.setAttribute('target', '_blank');
-    }
+    if (isAndroid && link.hasAttribute('data-force-app')) link.removeAttribute('target');
+    else link.setAttribute('target', '_blank');
   }
 
   function openAndroidApp(event, link) {
     if (!isAndroid) return;
-
     const kind = link.getAttribute('data-force-app');
     const webUrl = link.getAttribute('data-web-url') || link.getAttribute('href');
     if (!kind || !webUrl) return;
-
     event.preventDefault();
-
     const intentUrl = forcedIntent(kind, webUrl);
-
-    // IMPORTANT: one navigation only.
-    // The intent itself has browser_fallback_url. We intentionally do NOT
-    // schedule a second window.location = https://... because that generic
-    // URL is what caused Android to show "Chrome / YouTube" chooser.
-    try {
-      window.top.location.assign(intentUrl);
-    } catch (_) {
-      try {
-        window.location.assign(intentUrl);
-      } catch (__) {
-        window.location.assign(webUrl);
-      }
+    try { window.top.location.assign(intentUrl); }
+    catch (_) {
+      try { window.location.assign(intentUrl); }
+      catch (__) { window.location.assign(webUrl); }
     }
   }
 
@@ -106,7 +89,6 @@
   }
 
   document.addEventListener('DOMContentLoaded', () => prepareAll());
-
   document.addEventListener('click', event => {
     const link = event.target.closest?.(APP_LINK_SELECTOR);
     if (!link) return;
