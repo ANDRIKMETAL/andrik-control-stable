@@ -2323,7 +2323,7 @@ function isAndrikRadioLiveR576(value) {
 
 function youtubeAppOpenUrlR592(url) {
   // R600: same direct path for the radio/live notification metadata.
-  return youtubeAppLauncherUrl(url||'https://www.youtube.com/live/lZkV9kPpBUQ');
+  return youtubeAppLauncherUrl(url||'https://www.youtube.com/@andrikmetal/live');
 }
 
 function youtubePushMetaR576(title, url) {
@@ -17307,13 +17307,27 @@ async function handleControlYoutubeLiveR565(request, env) {
       activeUrl.searchParams.set('maxResults','25');
       const activeData=await ytFetch(activeUrl.toString(),'my broadcasts');
       const activeItems=Array.isArray(activeData?.items)?activeData.items:[];
-      broadcast=activeItems.find(item=>String(item?.status?.lifeCycleStatus||'').toLowerCase()==='live') || null;
+      // R608: follow not only LIVE, but also the broadcast currently waiting for the encoder.
+      // This prevents Control/site buttons from falling back to an obsolete old broadcast
+      // while YouTube is in created/ready/testing/liveStarting state.
+      const lifeRank={live:100,livestarting:95,testing:90,teststarting:85,ready:80,created:70};
+      const candidates=activeItems.filter(item=>{
+        const life=String(item?.status?.lifeCycleStatus||'').toLowerCase().replace(/[^a-z]/g,'');
+        return !['complete','revoked'].includes(life);
+      }).sort((a,b)=>{
+        const al=String(a?.status?.lifeCycleStatus||'').toLowerCase().replace(/[^a-z]/g,'');
+        const bl=String(b?.status?.lifeCycleStatus||'').toLowerCase().replace(/[^a-z]/g,'');
+        const rank=(lifeRank[bl]||0)-(lifeRank[al]||0);
+        if(rank)return rank;
+        const at=Date.parse(a?.snippet?.scheduledStartTime||a?.snippet?.actualStartTime||0)||0;
+        const bt=Date.parse(b?.snippet?.scheduledStartTime||b?.snippet?.actualStartTime||0)||0;
+        return bt-at;
+      });
+      broadcast=candidates[0] || null;
       videoId=cleanPlainText(broadcast?.id||'',80);
 
-      // R578 fallback: liveBroadcasts.list can briefly return an empty list after a
-      // new broadcast is created/started. Resolve the authenticated channel and ask
-      // search.list for the currently LIVE video instead of leaving Control stuck on
-      // «Проверяем эфир…».
+      // R608 fallback: if list briefly misses the current broadcast, resolve the channel
+      // and search both LIVE and UPCOMING events before using the stable channel/live URL.
       if(!videoId){
         const channelUrl=new URL('https://www.googleapis.com/youtube/v3/channels');
         channelUrl.searchParams.set('part','id');
@@ -17322,15 +17336,18 @@ async function handleControlYoutubeLiveR565(request, env) {
         const channelData=await ytFetch(channelUrl.toString(),'mine channel');
         const channelId=cleanPlainText(channelData?.items?.[0]?.id||'',100);
         if(channelId){
-          const searchUrl=new URL('https://www.googleapis.com/youtube/v3/search');
-          searchUrl.searchParams.set('part','id,snippet');
-          searchUrl.searchParams.set('channelId',channelId);
-          searchUrl.searchParams.set('eventType','live');
-          searchUrl.searchParams.set('type','video');
-          searchUrl.searchParams.set('maxResults','5');
-          const searchData=await ytFetch(searchUrl.toString(),'live search');
-          const liveItem=Array.isArray(searchData?.items)?searchData.items.find(item=>item?.id?.videoId)||null:null;
-          videoId=cleanPlainText(liveItem?.id?.videoId||'',80);
+          for(const eventType of ['live','upcoming']){
+            const searchUrl=new URL('https://www.googleapis.com/youtube/v3/search');
+            searchUrl.searchParams.set('part','id,snippet');
+            searchUrl.searchParams.set('channelId',channelId);
+            searchUrl.searchParams.set('eventType',eventType);
+            searchUrl.searchParams.set('type','video');
+            searchUrl.searchParams.set('maxResults','5');
+            const searchData=await ytFetch(searchUrl.toString(),`${eventType} search`);
+            const liveItem=Array.isArray(searchData?.items)?searchData.items.find(item=>item?.id?.videoId)||null:null;
+            videoId=cleanPlainText(liveItem?.id?.videoId||'',80);
+            if(videoId)break;
+          }
         }
       }
     }
@@ -17342,7 +17359,7 @@ async function handleControlYoutubeLiveR565(request, env) {
         concurrentViewers:0,views:0,likes:0,comments:0,boundStreamId:'',
         studioUrl:'https://studio.youtube.com/channel/UC/livestreaming',
         analyticsUrl:'https://studio.youtube.com/',
-        watchUrl:'https://www.youtube.com/live/lZkV9kPpBUQ',
+        watchUrl:'https://www.youtube.com/@andrikmetal/live',
         updatedAt:new Date().toISOString()
       });
     }
@@ -17375,9 +17392,11 @@ async function handleControlYoutubeLiveR565(request, env) {
     const health=liveStream?.status?.healthStatus||{};
     const lifeCycleStatus=cleanPlainText(broadcast?.status?.lifeCycleStatus||'',80);
     const streamStatus=cleanPlainText(liveStream?.status?.streamStatus||'',80);
-    const active=lifeCycleStatus.toLowerCase()==='live' || streamStatus.toLowerCase()==='active' || Boolean(details?.actualStartTime && !details?.actualEndTime);
+    const broadcastLive=lifeCycleStatus.toLowerCase()==='live' || Boolean(details?.actualStartTime && !details?.actualEndTime);
+    const signalActive=streamStatus.toLowerCase()==='active';
+    const active=broadcastLive;
     return json({
-      ok:true,active,videoId,
+      ok:true,active,signalActive,broadcastLive,videoId,
       title:cleanPlainText(video?.snippet?.title||broadcast?.snippet?.title||'ANDRIK Metal Radio 24/7',220),
       lifeCycleStatus,
       privacyStatus:cleanPlainText(broadcast?.status?.privacyStatus||video?.status?.privacyStatus||'',80),

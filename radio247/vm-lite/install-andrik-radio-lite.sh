@@ -69,7 +69,7 @@ umask 077
 cat > "$ENV_FILE" <<EOF
 YOUTUBE_STREAM_KEY=$YOUTUBE_STREAM_KEY
 PLAYLIST_URL=https://andrikmetal.com/api/music/downloads
-YOUTUBE_LIVE_URL=https://www.youtube.com/live/lZkV9kPpBUQ
+YOUTUBE_LIVE_URL=https://www.youtube.com/@andrikmetal/live
 DAY_VISUAL=$DAY_VISUAL
 EVENING_VISUAL=$EVENING_VISUAL
 NIGHT_VISUAL=$NIGHT_VISUAL
