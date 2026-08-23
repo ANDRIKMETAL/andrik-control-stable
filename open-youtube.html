@@ -6,17 +6,25 @@
 <meta name="robots" content="noindex,nofollow,noarchive">
 <title>ANDRIK — YouTube</title>
 <style>
-html,body{background:#05070a;color:#fff;font-family:system-ui;margin:0;min-height:100%}
-main{min-height:100vh;display:grid;place-items:center;padding:24px;box-sizing:border-box;text-align:center}
-a{display:inline-block;font-size:20px;padding:16px 22px;border:1px solid #465063;border-radius:16px;color:#fff;text-decoration:none}
-p{opacity:.72}
+html,body{margin:0;min-height:100%;background:#05070a;color:#fff;font-family:system-ui}
+main{min-height:100vh;display:grid;place-items:center;padding:22px;box-sizing:border-box}
+.card{width:min(520px,100%);text-align:center}
+h1{font-size:24px;margin:0 0 10px}
+p{opacity:.7;margin:0 0 18px}
+a{display:flex;align-items:center;justify-content:center;min-height:62px;border-radius:18px;
+background:#e62117;color:#fff;text-decoration:none;font-size:20px;font-weight:900;padding:0 18px}
+.small{display:block;margin-top:15px;color:#adb5c2;font-size:13px}
 </style>
 </head>
 <body>
-<main><div>
-<p>Открываем YouTube…</p>
-<a id="go" href="https://www.youtube.com/@andrikmetal/live">▶ Открыть эфир</a>
-</div></main>
+<main>
+  <div class="card">
+    <h1>ANDRIK METAL RADIO</h1>
+    <p>Открыть эфир в установленном YouTube / ReVanced / RVX</p>
+    <a id="go" href="#">▶ Открыть в YouTube</a>
+    <span class="small">Если YouTube-клиента нет — откроется веб-версия.</span>
+  </div>
+</main>
 <script>
 (()=>{
   const fallback='https://www.youtube.com/@andrikmetal/live';
@@ -25,32 +33,29 @@ p{opacity:.72}
   try{
     const raw=new URLSearchParams(location.search).get('target')||fallback;
     const u=new URL(raw);
-    if(u.protocol==='https:'&&allowed.has(u.hostname.toLowerCase()))target=u.href;
+    if(u.protocol==='https:' && allowed.has(u.hostname.toLowerCase())) target=u.href;
   }catch(_){}
 
   const go=document.getElementById('go');
   go.href=target;
 
-  function launch(){
-    if(!/Android/i.test(navigator.userAgent||'')){
-      location.replace(target);
-      return;
-    }
-    const u=new URL(target);
-    // R592 universal Android handler: no hardcoded package.
-    const intent=`intent://${u.host}${u.pathname}${u.search}${u.hash}#Intent;scheme=https;action=android.intent.action.VIEW;category=android.intent.category.BROWSABLE;S.browser_fallback_url=${encodeURIComponent(target)};end`;
-    try{ location.replace(intent); }
-    catch(_){ location.replace(target); }
-  }
-
   go.addEventListener('click',e=>{
     if(!/Android/i.test(navigator.userAgent||'')) return;
     e.preventDefault();
-    launch();
-  });
 
-  // Push click lands here first, then immediately gives the link to Android.
-  setTimeout(launch,30);
+    let left=false;
+    const mark=()=>{left=true};
+    document.addEventListener('visibilitychange',()=>{if(document.hidden)mark()},{once:true});
+    window.addEventListener('pagehide',mark,{once:true});
+    window.addEventListener('blur',mark,{once:true});
+
+    // Real user tap -> Chrome is allowed to launch the external client.
+    location.href=`vnd.youtube:${target}`;
+
+    setTimeout(()=>{
+      if(!left && !document.hidden) location.href=target;
+    },1100);
+  });
 })();
 </script>
 </body>
