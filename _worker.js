@@ -16261,6 +16261,11 @@ async function handleMusicMp3PutR314(request, env) {
 
 // === R446: album ZIP inspector + browser multipart builder for ANDRIK R2 ===
 const MUSIC_ALBUMS_R446 = Object.freeze({
+  'beyond': Object.freeze({
+    slug:'beyond', label:'BEYOND', prefix:'albums/beyond/',
+    zipKey:'albums/beyond/ANDRIK-BEYOND-MP3-320kbps.zip',
+    zipName:'ANDRIK-BEYOND-MP3-320kbps.zip', expectedTracks:17
+  }),
   'illusion-of-life': Object.freeze({
     slug:'illusion-of-life', label:'Illusion of Life', prefix:'albums/illusion-of-life/',
     zipKey:'albums/illusion-of-life/ANDRIK-Illusion-of-Life-MP3.zip',
@@ -16277,6 +16282,31 @@ const MUSIC_ALBUMS_R446 = Object.freeze({
     zipName:'ANDRIK-TRIKA-MP3-320kbps.zip', expectedTracks:17
   })
 });
+const BEYOND_TRACKS_R601 = Object.freeze([null,
+  'Просто живи','Вне сценария','Свобода','Тишина','Ты уже достоин','Внутренний Гуру','Дуккха','Мираж остаётся',
+  'WE ARE ONE','WAKE UP','JOY OF BEING','DARK NIGHT OF THE SOUL','PERSONA','BEYOND MAN','LIQUID LIKE MERCURY','YOU’RE ALREADY WORTHY'
+]);
+function beyondNormalizeR601(value){return String(value||'').toLowerCase().replace(/ё/g,'е').replace(/[«»“”„'’`]/g,'').replace(/[^a-zа-я0-9]+/gi,' ').trim()}
+function beyondCanonicalNumberR601(value){
+  const probe=beyondNormalizeR601(value).replace(/^\d{1,2}\s+/,'').trim();
+  if(!probe)return 0;
+  for(let i=1;i<BEYOND_TRACKS_R601.length;i++){
+    const target=beyondNormalizeR601(BEYOND_TRACKS_R601[i]);
+    if(probe===target||probe.endsWith(' '+target))return i;
+  }
+  return 0;
+}
+function beyondTrackNumberR601(object){
+  const key=String(object?.key||''),m=object?.customMetadata||{};
+  if(!/^albums\/beyond\//i.test(key))return 0;
+  const base=key.split('/').pop()?.replace(/\.mp3$/i,'')||'';
+  const byTitle=beyondCanonicalNumberR601(m.title);if(byTitle)return byTitle;
+  const byFile=beyondCanonicalNumberR601(base.replace(/[_-]+/g,' '));if(byFile)return byFile;
+  const lead=base.match(/^\s*(\d{1,2})(?:\D|$)/);if(lead){const n=parseInt(lead[1],10);if(n>=1&&n<=99)return n}
+  const direct=parseInt(m.track||'',10);if(Number.isFinite(direct)&&direct>=1&&direct<=99)return direct;
+  return 0;
+}
+function beyondTrackTitleR601(object){const n=beyondTrackNumberR601(object);return n&&BEYOND_TRACKS_R601[n]?BEYOND_TRACKS_R601[n]:''}
 const TRIKA_TRACKS_R517 = Object.freeze([null,
   'Персонаж','Плен иллюзий','Другой путь','Вечный покой','Тёмная ночь души','Мир затих','Бессмертный крик','Жидкий, как ртуть','Начало пути','Белый холст','Проснись','Радость бытия','Свет проектора','Сними 3D-очки','Битва теней','I Am','Наблюдатель'
 ]);
@@ -16309,7 +16339,7 @@ function musicAlbumDefR446(value){
   return MUSIC_ALBUMS_R446[slug]||null;
 }
 function musicAlbumTrackSortR446(a,b){
-  const ta=trikaTrackNumberR517(a)||parseInt(a?.customMetadata?.track||'',10), tb=trikaTrackNumberR517(b)||parseInt(b?.customMetadata?.track||'',10);
+  const ta=beyondTrackNumberR601(a)||trikaTrackNumberR517(a)||parseInt(a?.customMetadata?.track||'',10), tb=beyondTrackNumberR601(b)||trikaTrackNumberR517(b)||parseInt(b?.customMetadata?.track||'',10);
   if(Number.isFinite(ta)&&Number.isFinite(tb)&&ta!==tb)return ta-tb;
   if(Number.isFinite(ta)&&!Number.isFinite(tb))return -1;
   if(!Number.isFinite(ta)&&Number.isFinite(tb))return 1;
@@ -16321,9 +16351,9 @@ function musicZipSafeNameR446(value){
 function musicZipEntryNameR446(object,index){
   const m=object?.customMetadata||{};
   const rawBase=String(object?.key||'').split('/').pop()?.replace(/\.mp3$/i,'')||`track-${index+1}`;
-  const canonical=trikaTrackTitleR517(object);
+  const canonical=beyondTrackTitleR601(object)||trikaTrackTitleR517(object);
   const title=musicZipSafeNameR446(canonical||m.title||rawBase.replace(/[_-]+/g,' '))||`Track ${index+1}`;
-  const n=trikaTrackNumberR517(object)||parseInt(m.track||'',10);
+  const n=beyondTrackNumberR601(object)||trikaTrackNumberR517(object)||parseInt(m.track||'',10);
   const prefix=Number.isFinite(n)&&n>0?String(n).padStart(2,'0')+' - ':String(index+1).padStart(2,'0')+' - ';
   return `${prefix}${title}.mp3`;
 }
@@ -16344,7 +16374,7 @@ async function musicAlbumObjectsR446(bucket,def){
 function musicAlbumArchiveSelectionR446(objects){
   const selected=[], loose=[], groups=new Map(), duplicates=[];
   for(const object of objects){
-    const n=trikaTrackNumberR517(object)||parseInt(object?.customMetadata?.track||'',10);
+    const n=beyondTrackNumberR601(object)||trikaTrackNumberR517(object)||parseInt(object?.customMetadata?.track||'',10);
     if(Number.isFinite(n)&&n>0){
       const arr=groups.get(n)||[];arr.push(object);groups.set(n,arr);
     }else loose.push(object);
@@ -16369,9 +16399,9 @@ async function musicAlbumStatusOneR446(bucket,def,includeTracks=true){
     duplicateCount:archive.duplicates.length,duplicates:archive.duplicates,
     tracks:includeTracks?tracks.map((o,i)=>({
       key:o.key,
-      title:trikaTrackTitleR517(o)||o.customMetadata?.title||musicZipEntryNameR446(o,i).replace(/^\d+\s*-\s*|\.mp3$/gi,''),
+      title:beyondTrackTitleR601(o)||trikaTrackTitleR517(o)||o.customMetadata?.title||musicZipEntryNameR446(o,i).replace(/^\d+\s*-\s*|\.mp3$/gi,''),
       entryName:musicZipEntryNameR446(o,i),
-      track:String(trikaTrackNumberR517(o)||parseInt(o.customMetadata?.track||'',10)||i+1),size:Number(o.size||0),uploaded:o.uploaded||null
+      track:String(beyondTrackNumberR601(o)||trikaTrackNumberR517(o)||parseInt(o.customMetadata?.track||'',10)||i+1),size:Number(o.size||0),uploaded:o.uploaded||null
     })):undefined,
     zip:{exists:Boolean(zip),key:def.zipKey,name:def.zipName,size:Number(zip?.size||0),uploaded:zip?.uploaded||null,
       downloadUrl:`/api/music/album-download?album=${encodeURIComponent(def.slug)}`}

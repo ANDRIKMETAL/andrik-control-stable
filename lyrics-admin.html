@@ -61,9 +61,9 @@ if (location.hostname.toLowerCase() === 'control.andrikmetal.com') {
 <section class="admin-auth-strip" id="lyricsAuthStrip"><span class="admin-auth-dot"></span><strong id="lyricsAuthText">Проверяем доступ…</strong><a href="/service-admin.html">Служебное</a></section>
 <input hidden="" id="lyricsAdminKey" type="password"/>
 <section class="admin-control-card admin-control-card-wide beyond-upload-r566" id="beyondUploadR566">
-<div class="admin-card-title-row"><div><span class="eyeline">4-Й АЛЬБОМ · R2 · СКРЫТАЯ ПОДГОТОВКА</span><h2>BEYOND — загрузить весь альбом в R2</h2><p>Загрузит WAV/MP3 в <code>albums/beyond/</code>. На публичной странице альбом пока не появится, но радио автоматически увидит эти MP3 и добавит их в случайную очередь.</p></div><span class="mp3-r2-badge">16 треков</span></div>
-<div class="beyond-upload-actions-r566"><button class="btn btn-primary" id="beyondPickR566" type="button">＋ Выбрать 16 WAV / MP3</button><button class="btn" id="beyondCoverR566" type="button">🖼 Обложка альбома</button><button class="btn btn-primary" id="beyondUploadR566Btn" type="button" disabled>⬆ Загрузить BEYOND в R2</button></div>
-<div class="admin-status" id="beyondStatusR566">Готово к скрытой загрузке. Альбом не добавляется в публичную дискографию.</div>
+<div class="admin-card-title-row"><div><span class="eyeline">4-Й АЛЬБОМ · R2 · ОПУБЛИКОВАН НА САЙТЕ</span><h2>BEYOND — загрузить весь альбом в R2</h2><p>Загрузит WAV/MP3 в <code>albums/beyond/</code>. Альбом уже показывается первым в публичной дискографии. Эти MP3 также автоматически участвуют в радио.</p></div><span class="mp3-r2-badge">17 треков</span></div>
+<div class="beyond-upload-actions-r566"><button class="btn btn-primary" id="beyondPickR566" type="button">＋ Выбрать 17 WAV / MP3</button><button class="btn" id="beyondCoverR566" type="button">🖼 Обложка альбома</button><button class="btn btn-primary" id="beyondUploadR566Btn" type="button" disabled>⬆ Загрузить BEYOND в R2</button></div>
+<div class="admin-status" id="beyondStatusR566">Готово к загрузке BEYOND. После загрузки можно собрать ZIP ниже.</div>
 </section>
 <section class="admin-control-card admin-control-card-wide mp3-tag-editor-card" id="mp3TagEditorCard">
 <details id="mp3TagEditorDetails" open="">
@@ -87,7 +87,7 @@ if (location.hostname.toLowerCase() === 'control.andrikmetal.com') {
 </div>
 </details>
 </section>
-<details class="legacy-albums-r566"><summary>💿 Предыдущие альбомы и ZIP · уже загружены в R2</summary><div class="legacy-albums-r566__body"><section class="admin-control-card admin-control-card-wide album-zip-card-r446" id="albumZipCardR446">
+<details class="legacy-albums-r566" open><summary>💿 Альбомы и ZIP · проверить / собрать / скачать</summary><div class="legacy-albums-r566__body"><section class="admin-control-card admin-control-card-wide album-zip-card-r446" id="albumZipCardR446">
 <div class="admin-card-title-row album-zip-head-r446"><div><span class="eyeline">ANDRIK Music · R2 · R520</span><h2>💿 Архивы альбомов</h2><p>Проверяет MP3 прямо в облаке <strong>andrik-music</strong>. Кнопка «Собрать ZIP» потоково читает MP3 через браузер, собирает ZIP без перекодирования и загружает его частями обратно в R2. Это обходит лимиты памяти и CPU Worker. Исходные MP3 не изменяются.</p></div><button class="btn" id="albumZipRefreshR446" type="button">Проверить R2</button></div>
 <div class="album-zip-grid-r446" id="albumZipGridR446"><div class="admin-empty">Проверяем Illusion of Life и OCEAN…</div></div>
 <div class="admin-status album-zip-status-r446" id="albumZipStatusR446">Подключаемся к R2…</div>

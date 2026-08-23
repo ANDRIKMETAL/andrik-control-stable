@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787493203635-2f1c2e00af",
-  "release": "R600",
-  "archiveName": "R600-CLEAN-LIGHT-LYRA-PUSH-DIRECT-YOUTUBE-SAFE-FULL.zip",
-  "sourceHead": "0915b80bdfaf39df2d2c488633ef061febd73e89",
-  "backupSha": "0915b80bdfaf39df2d2c488633ef061febd73e89",
-  "backupTag": "control-backup-20260823135317-0915b80-r600-0688d",
+  "operationId": "publish-1787494612327-a6c1bdbc62",
+  "release": "R601",
+  "archiveName": "R601-CLEAN-LIGHT-LYRA-BEYOND-PUBLIC-ALBUM-R2-ZIP-SAFE-FULL.zip",
+  "sourceHead": "263909d5478159cfdc2948fe3aad29b63b23d4aa",
+  "backupSha": "263909d5478159cfdc2948fe3aad29b63b23d4aa",
+  "backupTag": "control-backup-20260823141646-263909d-r601-ce981",
   "autoRecovery": true,
-  "generatedAt": "2026-08-23T13:53:23.635Z"
+  "generatedAt": "2026-08-23T14:16:53.337Z"
 }
