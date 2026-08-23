@@ -11,42 +11,32 @@ import {
 
 const PORT = Number(process.env.PORT || 8080);
 const PLAYLIST_URL = process.env.PLAYLIST_URL || 'https://andrikmetal.com/api/music/downloads';
-const AUDIO_VISUAL = process.env.AUDIO_VISUAL || new URL('./assets/audio-visual-r575-3min-compact.mp4', import.meta.url).pathname;
 const STREAM_KEY = String(process.env.YOUTUBE_STREAM_KEY || '').trim();
 const STREAM_URL = STREAM_KEY ? `rtmps://a.rtmps.youtube.com:443/live2/${STREAM_KEY}` : '';
 const YOUTUBE_LIVE_URL = process.env.YOUTUBE_LIVE_URL || 'https://www.youtube.com/live/lZkV9kPpBUQ';
-const VISUAL_TRIM_END = Math.max(0, Number(process.env.VISUAL_TRIM_END || '0.55') || 0.55);
-const CACHE_DIR = process.env.RADIO_CACHE_DIR || '/tmp/andrik-radio-r592';
-
-// Exactly two full native ANDRIK clips from R2. Short promo/fragment videos are intentionally excluded.
-const FEATURED_VIDEOS = [
-  {
-    type:'video',
-    title:'JOY OF BEING',
-    album:'ОФИЦИАЛЬНЫЙ КЛИП',
-    key:'clips/joy-of-being-official-2026.mp4',
-    url:'https://music.andrikmetal.com/clips/joy-of-being-official-2026.mp4'
-  },
-  {
-    type:'video',
-    title:'Я ЕСТЬ',
-    album:'ОФИЦИАЛЬНЫЙ КЛИП',
-    key:'clips/ya-est-official-2026.mp4',
-    url:'https://music.andrikmetal.com/clips/ya-est-official-2026.mp4'
-  }
-];
+const CACHE_DIR = process.env.RADIO_CACHE_DIR || '/tmp/andrik-radio-r607';
+const VISUAL_TIME_ZONE = process.env.VISUAL_TIME_ZONE || 'Europe/Bratislava';
+const DAY_VISUAL = process.env.DAY_VISUAL || new URL('./assets/stream-day-r607.mp4', import.meta.url).pathname;
+const EVENING_VISUAL = process.env.EVENING_VISUAL || new URL('./assets/stream-evening-r607.mp4', import.meta.url).pathname;
+const NIGHT_VISUAL = process.env.NIGHT_VISUAL || new URL('./assets/stream-night-r607.mp4', import.meta.url).pathname;
+const DISABLED_ALBUM_PREFIXES = Object.freeze([
+  'albums/illusion-of-life/',
+  'albums/ocean/'
+]);
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R599-R2-TWO-FULL-CLIPS',
-  mode: 'MP3 + 2 FULL R2 CLIPS / AAC-LC 48kHz STEREO / LIVE OVERLAY',
+  version: 'R607-DAYPART-MP3-ONLY',
+  mode: 'MP3 ONLY / DAY-EVENING-NIGHT VISUALS / AAC-LC 48kHz STEREO',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
   producerRunning: false,
-  overlayMode: 'YELLOW NOW / NEXT / MULTIPLATFORM CTA TICKER',
+  overlayMode: 'YELLOW NOW / MULTIPLATFORM CTA TICKER',
   audioMode: 'AAC-LC 48kHz stereo 160kbps / async normalized at producer + publisher',
-  visualTrimEnd: VISUAL_TRIM_END,
+  visualTimeZone: VISUAL_TIME_ZONE,
+  visualPeriod: null,
+  visualPath: null,
   libraryTracks: 0,
   libraryVideos: 0,
   cycle: 0,
@@ -106,7 +96,7 @@ function albumName(item){
 
 async function loadLibrary(){
   const url=`${PLAYLIST_URL}${PLAYLIST_URL.includes('?')?'&':'?'}ts=${Date.now()}`;
-  const response=await fetch(url,{headers:{'user-agent':'ANDRIK-Radio-24-7-R599'}});
+  const response=await fetch(url,{headers:{'user-agent':'ANDRIK-Radio-24-7-R607'}});
   if(!response.ok)throw new Error(`R2 library HTTP ${response.status}`);
 
   const data=await response.json();
@@ -114,7 +104,9 @@ async function loadLibrary(){
   const albums=uniqueByUrl(source.filter(item=>{
     const key=String(item?.key||'');
     const url=String(item?.url||'');
-    return /^albums\//i.test(key) && /^https:\/\//i.test(url) && /\.mp3(?:$|\?)/i.test(url);
+    const keyLower=key.toLowerCase();
+    const disabled=DISABLED_ALBUM_PREFIXES.some(prefix=>keyLower.startsWith(prefix));
+    return /^albums\//i.test(key) && !disabled && /^https:\/\//i.test(url) && /\.mp3(?:$|\?)/i.test(url);
   }).map(item=>({
     type:'track',
     title:cleanText(item.title||item.name||'ANDRIK'),
@@ -124,28 +116,17 @@ async function loadLibrary(){
     url:String(item.url||'')
   })));
 
-  if(!albums.length)throw new Error('R2 album library is empty');
+  if(!albums.length)throw new Error('R2 active MP3 library is empty');
 
-  const videos=FEATURED_VIDEOS.map(item=>({...item}));
-  library=uniqueByUrl([...albums,...videos]);
+  library=albums;
   state.libraryTracks=albums.length;
-  state.libraryVideos=videos.length;
+  state.libraryVideos=0;
   state.lastLibraryRefresh=new Date().toISOString();
   return library;
 }
 
 function buildQueue(){
-  const tracks=shuffle(library.filter(item=>item.type!=='video'));
-  const videos=shuffle(library.filter(item=>item.type==='video'));
-  const out=[...tracks];
-
-  // Each full clip appears exactly once per radio cycle and the two clips are kept apart.
-  const gap=Math.max(1,Math.floor(tracks.length/(videos.length+1)));
-  videos.forEach((video,index)=>{
-    const position=Math.max(1,Math.min(out.length,(index+1)*gap+index));
-    out.splice(position,0,video);
-  });
-
+  const out=shuffle(library);
   state.cycle++;
   state.queueLength=out.length;
   return out;
@@ -202,12 +183,32 @@ function prepareCacheDir(){
   mkdirSync(CACHE_DIR,{recursive:true});
 }
 
-async function ensureCleanVisual(){
+function localHourInTimeZone(timeZone=VISUAL_TIME_ZONE){
+  const parts=new Intl.DateTimeFormat('en-GB',{
+    timeZone,
+    hour:'2-digit',
+    hourCycle:'h23'
+  }).formatToParts(new Date());
+  const hour=Number(parts.find(part=>part.type==='hour')?.value||0);
+  return Number.isFinite(hour)?hour:0;
+}
+
+function visualPeriodForHour(hour){
+  if(hour>=8 && hour<17)return 'day';
+  if(hour>=17 && hour<22)return 'evening';
+  return 'night';
+}
+
+async function ensureScheduledVisual(){
   prepareCacheDir();
-  if(!existsSync(AUDIO_VISUAL) || statSync(AUDIO_VISUAL).size<1000000){
-    throw new Error(`R582 3-minute visual missing or too small: ${AUDIO_VISUAL}`);
+  const period=visualPeriodForHour(localHourInTimeZone());
+  const path=period==='day' ? DAY_VISUAL : period==='evening' ? EVENING_VISUAL : NIGHT_VISUAL;
+  if(!existsSync(path) || statSync(path).size<500000){
+    throw new Error(`R607 ${period} visual missing or too small: ${path}`);
   }
-  return AUDIO_VISUAL;
+  state.visualPeriod=period;
+  state.visualPath=path;
+  return path;
 }
 
 function trackLabel(item,fallback='—'){
@@ -268,39 +269,34 @@ function producerArgs(item,duration,offset,visualPath,previous,next){
   prepareCacheDir();
   const key=createHash('sha1').update([previous?.url||'',item?.url||'',next?.url||'',Date.now()].join('|')).digest('hex').slice(0,12);
   const currentFile=`${CACHE_DIR}/current-live-${key}.txt`;
-  const nextFile=`${CACHE_DIR}/next-live-${key}.txt`;
   const tickerFile=`${CACHE_DIR}/ticker-live-${key}.txt`;
 
   writeFileSync(currentFile,`СЕЙЧАС: ${trackLabel(item,'ANDRIK')}`,'utf8');
-  writeFileSync(nextFile,`ДАЛЬШЕ: ${trackLabel(next,'НОВЫЙ ЦИКЛ')}`,'utf8');
   const unit=`ANDRIK METAL RADIO 24/7   •   СЕЙЧАС: ${trackLabel(item,'ANDRIK')}   •   ДАЛЬШЕ: ${trackLabel(next,'—')}   •   СЛУШАЙТЕ ANDRIK: SPOTIFY • APPLE MUSIC • AMAZON MUSIC • YOUTUBE   •   ПОДПИСЫВАЙТЕСЬ • СТАВЬТЕ ЛАЙКИ • КОММЕНТИРУЙТЕ • И ПРОСТО КАЙФУЙТЕ   •   ANDRIKMETAL.COM   •   `;
   writeFileSync(tickerFile,unit.repeat(8),'utf8');
 
   const font=chooseFont();
   const fontPart=font?`fontfile='${ffFilterPath(font)}':`:'';
-  const curPath=ffFilterPath(currentFile), nextPath=ffFilterPath(nextFile), tickerPath=ffFilterPath(tickerFile);
+  const curPath=ffFilterPath(currentFile), tickerPath=ffFilterPath(tickerFile);
 
   const vf=[
-    ...(item.type==='video'
-      ? ['setpts=PTS-STARTPTS','scale=1280:720:force_original_aspect_ratio=decrease','pad=1280:720:(ow-iw)/2:(oh-ih)/2','setsar=1']
-      : []),
+    'scale=1280:720:force_original_aspect_ratio=decrease',
+    'pad=1280:720:(ow-iw)/2:(oh-ih)/2',
+    'setsar=1',
     'fps=24',
     `tpad=stop_mode=clone:stop_duration=${Math.ceil(duration)+10}`,
     'format=yuv420p',
     'drawbox=x=0:y=ih-165:w=iw:h=165:color=black@0.56:t=fill',
     'drawbox=x=iw*0.12:y=ih-126:w=iw*0.76:h=56:color=black@0.90:t=fill',
     'drawbox=x=iw*0.12:y=ih-126:w=iw*0.76:h=56:color=yellow@0.55:t=2',
-    `drawtext=${fontPart}textfile='${nextPath}':fontcolor=white@0.95:fontsize=22:x=w-text_w-28:y=h-160:shadowcolor=black@0.9:shadowx=2:shadowy=2`,
     `drawtext=${fontPart}textfile='${curPath}':fontcolor=yellow:fontsize=36:x=(w-text_w)/2:y=h-116:shadowcolor=black@1:shadowx=2:shadowy=2`,
     'drawbox=x=0:y=ih-52:w=iw:h=52:color=black@0.88:t=fill',
     `drawtext=${fontPart}textfile='${tickerPath}':fontcolor=white:fontsize=25:x='w-mod(t*120,text_w/8+w)':y=h-44:shadowcolor=black@1:shadowx=1:shadowy=1`
   ].join(',');
 
-  const inputArgs=item.type==='video'
-    ? ['-hide_banner','-loglevel','warning','-re','-i',item.url,'-map','0:v:0','-map','0:a:0']
-    : ['-hide_banner','-loglevel','warning','-re','-i',item.url,'-stream_loop','-1','-re','-i',visualPath,'-map','1:v:0','-map','0:a:0'];
+  const inputArgs=['-hide_banner','-loglevel','warning','-re','-i',item.url,'-stream_loop','-1','-re','-i',visualPath,'-map','1:v:0','-map','0:a:0'];
 
-  return {tempFiles:[currentFile,nextFile,tickerFile],args:[
+  return {tempFiles:[currentFile,tickerFile],args:[
     ...inputArgs,
     '-t',duration.toFixed(3),
     '-vf',vf,
@@ -317,7 +313,7 @@ function producerArgs(item,duration,offset,visualPath,previous,next){
 
 async function playItem(previous,item,next,following){
   const duration=await probeDuration(item.url);
-  const visualPath=item.type==='video' ? '' : await ensureCleanVisual();
+  const visualPath=await ensureScheduledVisual();
   state.previous=previous?{type:previous.type||'track',title:previous.title,album:previous.album||'',url:previous.url||''}:null;
   state.current={type:item.type||'track',title:item.title,album:item.album||'',url:item.url,startedAt:new Date().toISOString(),duration};
   state.next=next?{type:next.type||'track',title:next.title,album:next.album||'',url:next.url||''}:null;
@@ -405,7 +401,9 @@ function publicStatus(){
     mode:state.mode,
     overlayMode:state.overlayMode,
     audioMode:state.audioMode,
-    visualTrimEnd:state.visualTrimEnd,
+    visualTimeZone:state.visualTimeZone,
+    visualPeriod:state.visualPeriod,
+    visualPath:state.visualPath,
     publisherRunning:state.publisherRunning,
     producerRunning:state.producerRunning,
     libraryTracks:state.libraryTracks,
@@ -460,7 +458,7 @@ const server=http.createServer((req,res)=>{
 });
 
 server.listen(PORT,'0.0.0.0',()=>{
-  console.log(`ANDRIK Radio R599-R2-TWO-FULL-CLIPS listening on :${PORT}`);
+  console.log(`ANDRIK Radio R607-DAYPART-MP3-ONLY listening on :${PORT}`);
   radioLoop();
 });
 

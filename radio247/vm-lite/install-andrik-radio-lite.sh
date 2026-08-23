@@ -34,17 +34,21 @@ else
 fi
 
 SERVER="$APP_DIR/radio247/server.mjs"
-VISUAL="$APP_DIR/radio247/assets/audio-visual-r575-3min-compact.mp4"
+DAY_VISUAL="$APP_DIR/radio247/assets/stream-day-r607.mp4"
+EVENING_VISUAL="$APP_DIR/radio247/assets/stream-evening-r607.mp4"
+NIGHT_VISUAL="$APP_DIR/radio247/assets/stream-night-r607.mp4"
 
 if [ ! -s "$SERVER" ]; then
   echo "Ошибка: нет $SERVER"
   exit 1
 fi
 
-if [ ! -s "$VISUAL" ]; then
-  echo "Ошибка: нет $VISUAL"
-  exit 1
-fi
+for VISUAL in "$DAY_VISUAL" "$EVENING_VISUAL" "$NIGHT_VISUAL"; do
+  if [ ! -s "$VISUAL" ]; then
+    echo "Ошибка: нет $VISUAL"
+    exit 1
+  fi
+done
 
 echo "[3/7] YouTube Stream Key"
 echo "Ключ хранится только на VM в $ENV_FILE"
@@ -66,11 +70,13 @@ cat > "$ENV_FILE" <<EOF
 YOUTUBE_STREAM_KEY=$YOUTUBE_STREAM_KEY
 PLAYLIST_URL=https://andrikmetal.com/api/music/downloads
 YOUTUBE_LIVE_URL=https://www.youtube.com/live/lZkV9kPpBUQ
-AUDIO_VISUAL=$VISUAL
+DAY_VISUAL=$DAY_VISUAL
+EVENING_VISUAL=$EVENING_VISUAL
+NIGHT_VISUAL=$NIGHT_VISUAL
+VISUAL_TIME_ZONE=Europe/Bratislava
 PORT=8080
 NODE_ENV=production
-VISUAL_TRIM_END=0.55
-RADIO_CACHE_DIR=/tmp/andrik-radio-r597
+RADIO_CACHE_DIR=/tmp/andrik-radio-r607
 EOF
 chmod 600 "$ENV_FILE"
 unset YOUTUBE_STREAM_KEY
@@ -78,7 +84,7 @@ unset YOUTUBE_STREAM_KEY
 echo "[4/7] systemd 24/7..."
 cat > "$SERVICE_FILE" <<EOF
 [Unit]
-Description=ANDRIK Metal Radio 24/7 - R597 AUDIO HARDENED
+Description=ANDRIK Metal Radio 24/7 - R607 DAYPART MP3 ONLY
 After=network-online.target
 Wants=network-online.target
 
@@ -160,9 +166,10 @@ fi
 curl -fsS --max-time 5 http://127.0.0.1:8080/status || true
 echo
 echo "============================================================"
-echo "ANDRIK RADIO R597-AUDIO-HARDENED установлено."
-echo "Видео: H.264 loop + PREV/NOW/NEXT + бегущая строка."
-echo "Аудио: MP3 → AAC-LC 48 kHz stereo 160 kbps; повторная нормализация перед YouTube."
+echo "ANDRIK RADIO R607-DAYPART-MP3-ONLY установлено."
+echo "Видео: 08:00 день / 17:00 вечер / 22:00 ночь · H.264 loop."
+echo "Аудио: только MP3 активных альбомов; OCEAN и Illusion of Life выключены; клипы выключены."
+echo "Оверлей: текущий трек в жёлтой плашке + бегущая строка; отдельный NEXT убран."
 echo "Логи:    sudo journalctl -u andrik-radio -f"
 echo "Статус:  sudo systemctl status andrik-radio --no-pager"
 echo "Рестарт: sudo systemctl restart andrik-radio"

@@ -1,40 +1,36 @@
-# ANDRIK METAL RADIO 24/7 — R570 LITE
+# ANDRIK METAL RADIO 24/7 — R607
 
-## Что исправлено
-- предыдущая песня отображается в кадре;
-- текущая песня отображается по центру;
-- следующая песня отображается в кадре;
-- добавлена бегущая строка снизу;
-- хвост исходного 10-секундного визуала автоматически обрезается на 0.55 с, чтобы убрать чёрный блик при зацикливании;
-- MP3 по-прежнему берутся только из `albums/*` в R2.
+## Эфир
+- Только MP3 из активных альбомов.
+- `albums/ocean/*` и `albums/illusion-of-life/*` исключены из очереди.
+- Видеоклипы в эфир не вставляются.
+- Очередь перемешивается автоматически.
 
-## Почему это всё ещё LITE
-Текстовый оверлей не кодируется 24/7. Для каждой песни заранее создаётся короткий H.264 loop с PREV/NOW/NEXT и тикером, после чего весь трек идёт через `-c:v copy`. Кодируется только MP3 → AAC 128 kbps. Следующий overlay готовится заранее во время текущего трека.
+## Визуал по времени суток
+Часовой пояс: `Europe/Bratislava`.
 
-## Схема
-R2 MP3 → AWS EC2 → короткий prerender overlay → H.264 copy + AAC → YouTube RTMPS
+- 08:00–16:59 — `assets/stream-day-r607.mp4`
+- 17:00–21:59 — `assets/stream-evening-r607.mp4`
+- 22:00–07:59 — `assets/stream-night-r607.mp4`
 
-## Установка
-`radio247/vm-lite/install-andrik-radio-lite.sh`
+Смена происходит на границе следующей песни, чтобы не обрывать текущий MP3.
 
-YouTube Stream Key хранится только на VM: `/etc/andrik-radio.env`.
+## Оверлей
+- Текущий трек остаётся в центральной жёлтой плашке.
+- Отдельный `NEXT` справа убран.
+- Нижняя бегущая строка сохранена; в ней есть `СЕЙЧАС`, `ДАЛЬШЕ`, платформы и `ANDRIKMETAL.COM`.
 
+## Аудио
+MP3 → AAC-LC 48 kHz stereo 160 kbps. Финальный RTMPS-публикатор повторно нормализует аудио перед YouTube.
 
-## R571 FIX
-- previous label lowered;
-- full-track pre-rendered overlay, no ticker reset, no 10s loop blink.
+## Быстрый запуск на уже настроенной VM
+```bash
+sudo bash /opt/andrik-radio/radio247/vm-lite/start-andrik-radio-r607.sh
+```
 
+## Первая установка
+```bash
+sudo bash /opt/andrik-radio/radio247/vm-lite/install-andrik-radio-lite.sh
+```
 
-## R575 LONG LOOP FIX
-- New user-supplied 3:01.5 visual compressed from ~49 MB to ~5.6 MB (1280x720, H.264).
-- The same file is referenced 4 times by concat-demuxer, so the runtime visual is ~12 minutes without storing 4 physical copies.
-- No `-stream_loop` on the short visual; ticker filter runs continuously for the whole song.
-- Previous and next are aligned on the same row; current track font increased.
-
-
-## R597 AUDIO HARDENED
-- Убрано сквозное `-c copy` для AAC на финальном RTMPS-публикаторе.
-- Аудио нормализуется на 48 kHz stereo и повторно кодируется в AAC-LC 160 kbps непосредственно перед YouTube.
-- На уровне трека добавлен `aresample=48000:async=1:first_pts=0`, чтобы выровнять таймстампы MP3/AAC.
-- На финальном публикаторе добавлен `aresample=48000:async=1000:first_pts=0`, чтобы переживать границы песен и MPEG-TS discontinuity без потери звука.
-- Видео по-прежнему идёт через `-c:v copy` на финальном публикаторе, поэтому лишней видеонагрузки нет.
+YouTube Stream Key хранится только на VM в `/etc/andrik-radio.env`.

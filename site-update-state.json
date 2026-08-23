@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787505348781-fe49df4e4f",
-  "release": "R606",
-  "archiveName": "R606-CLEAN-LIGHT-LYRA-YOUTUBE-SHORTS-LIVE-TOP6-PERMANENT-SAFE-FULL.zip",
-  "sourceHead": "dccec3339bf66f284af7b968e0eb60eefcef224d",
-  "backupSha": "dccec3339bf66f284af7b968e0eb60eefcef224d",
+  "operationId": "publish-1787525441200-9709dc8bc5",
+  "release": "R607",
+  "archiveName": "R607-DAYPART-MP3-ONLY-STREAM-COMPACT-SAFE-FULL.zip",
+  "sourceHead": "db079757b4c71ed7bfb49fd1dfb1bccb1cfa745d",
+  "backupSha": "db079757b4c71ed7bfb49fd1dfb1bccb1cfa745d",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-23T17:15:48.781Z"
+  "generatedAt": "2026-08-23T22:50:44.222Z"
 }
