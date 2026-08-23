@@ -6368,11 +6368,28 @@ async function getYoutubeOAuthRuntimeStatus(env, { verify = false } = {}) {
   return status;
 }
 
+async function getYoutubeStoredScopeR609(env) {
+  if (!env.COMMENTS_DB) return '';
+  try {
+    const db = requireDb(env);
+    await ensureControlV1Schema(db);
+    const row = await db.prepare(`SELECT scope FROM youtube_oauth_tokens WHERE id='primary' LIMIT 1`).first();
+    return cleanPlainText(row?.scope || '', 1400);
+  } catch (_) { return ''; }
+}
+
+function youtubeCanManageLiveR609(scope='') {
+  const set = new Set(String(scope || '').split(/\s+/).map(x=>x.trim()).filter(Boolean));
+  return set.has('https://www.googleapis.com/auth/youtube.force-ssl') ||
+    set.has('https://www.googleapis.com/auth/youtube');
+}
+
 async function handleYoutubeOAuthStatus(request, env) {
   if (!adminAuthorized(request, env)) return json({ ok:false, error:'unauthorized' }, 401);
   const verify = new URL(request.url).searchParams.get('verify') === '1';
   const status = await getYoutubeOAuthRuntimeStatus(env, { verify });
-  return json({ ok:true, ...status });
+  const scope = await getYoutubeStoredScopeR609(env);
+  return json({ ok:true, ...status, scope, canManageLive:youtubeCanManageLiveR609(scope) });
 }
 
 function youtubeRefreshTokenFatalR490(message) {
@@ -6451,14 +6468,14 @@ async function handleYoutubeOAuthStart(request, env) {
   url.searchParams.set('redirect_uri', config.redirectUri);
   url.searchParams.set('response_type','code');
   url.searchParams.set('access_type','offline');
-  // R492: always let the owner choose the correct Google account and issue a fresh
-  // refresh token. Keep the permission surface read-only and exactly aligned with
-  // Google Auth Platform -> Data access.
+  // R609: the owner explicitly asked Control to manage the 24/7 live broadcast.
+  // youtube.force-ssl is required by liveBroadcasts.update/transition; analytics stays read-only.
+  // Always request fresh consent so an older read-only refresh token is replaced.
   url.searchParams.set('prompt','select_account consent');
   url.searchParams.set('include_granted_scopes','true');
   url.searchParams.set('scope',[
     'https://www.googleapis.com/auth/yt-analytics.readonly',
-    'https://www.googleapis.com/auth/youtube.readonly'
+    'https://www.googleapis.com/auth/youtube.force-ssl'
   ].join(' '));
   url.searchParams.set('state',state);
   return json({ ok:true, url:url.toString(), redirectUri:config.redirectUri });
@@ -17085,6 +17102,7 @@ async function routeApi(request, env, ctx) {
     if (path === '/api/push/history' && request.method === 'GET') return await handlePushHistory(request, env);
     if (path === '/api/public/youtube-like-glow' && request.method === 'GET') return await handlePublicYoutubeLikeGlow(request, env);
     if (path === '/api/public/youtube-latest' && request.method === 'GET') return await handlePublicYoutubeLatest(request, env);
+    if (path === '/api/public/youtube-live-target' && request.method === 'GET') return await handlePublicYoutubeLiveTargetR610(request, env);
     if (path === '/api/comments/config' && request.method === 'GET') return await handleCommentsConfig(request, env);
     if (path === '/api/comments/google-session' && request.method === 'POST') return await handleCommentsGoogleSession(request, env);
     if (path === '/api/comments' && request.method === 'GET') return await handlePublicComments(request, env);
@@ -17169,6 +17187,8 @@ async function routeApi(request, env, ctx) {
     if (path === '/api/control/audience' && request.method === 'GET') return await handleControlAudience(request, env);
     if (path === '/api/control/youtube-top-content' && request.method === 'GET') return await handleControlYoutubeTopContentR552(request, env);
     if (path === '/api/control/youtube-live-r565' && request.method === 'GET') return await handleControlYoutubeLiveR565(request, env);
+    if (path === '/api/control/youtube-live-r609/auto' && request.method === 'POST') return await handleYoutubeLiveAutoR609(request, env);
+    if (path === '/api/control/youtube-live-r609/start' && request.method === 'POST') return await handleYoutubeLiveStartR609(request, env);
     if (path === '/api/control/search-console' && request.method === 'GET') return await handleControlSearchConsole(request, env);
     if (path === '/api/control/snapshots/refresh' && request.method === 'POST') return await handleControlSnapshotsRefresh(request, env);
     if (path === '/api/control/country-growth' && request.method === 'GET') return await handleControlCountryGrowth(request, env);
@@ -17278,6 +17298,204 @@ function controlAssetFailurePage(error) {
   return `<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Control ANDRIK — восстановление</title><style>body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;background:#02060a;color:#eef8ff;font:18px/1.5 system-ui}.c{max-width:560px;padding:26px;border:1px solid #294654;border-radius:24px;background:#07131b}a{color:#bcecff}</style></head><body><main class="c"><h1>Control временно не получил файл</h1><p>Откройте встроенное восстановление:</p><p><a href="/cache-reset.html?v=5469">Восстановить Control ANDRIK</a></p><small>${safe}</small></main></body></html>`;
 }
 
+
+// R609 — authenticated live-broadcast control for ANDRIK 24/7 radio.
+// It is intentionally admin-only. AWS can call it with ADMIN_KEY without ever receiving OAuth tokens.
+function youtubeLifeKeyR609(value='') {
+  return String(value || '').toLowerCase().replace(/[^a-z]/g,'');
+}
+
+function youtubeGoogleReasonR609(data={}) {
+  const errors = data?.error?.errors;
+  if (Array.isArray(errors) && errors[0]?.reason) return cleanPlainText(errors[0].reason,160);
+  return cleanPlainText(data?.error?.status || data?.error?.message || '',240);
+}
+
+async function youtubeFetchR609(accessToken, url, options={}, label='youtube-live-r609') {
+  const headers = new Headers(options.headers || {});
+  headers.set('authorization',`Bearer ${accessToken}`);
+  headers.set('accept','application/json');
+  if (options.body && !headers.has('content-type')) headers.set('content-type','application/json');
+  const response = await fetchWithAbortTimeoutR409(url,{...options,headers},10000,`${label}-timeout`);
+  const data = await response.json().catch(()=>({}));
+  if (!response.ok) {
+    const reason = youtubeGoogleReasonR609(data);
+    const error = new Error(youtubeGoogleErrorTextR495(data,response.status,label));
+    error.httpStatus=response.status;
+    error.reason=reason;
+    error.payload=data;
+    throw error;
+  }
+  return data;
+}
+
+async function youtubeCurrentBroadcastR609(env, accessToken) {
+  const listUrl=new URL('https://www.googleapis.com/youtube/v3/liveBroadcasts');
+  listUrl.searchParams.set('part','id,snippet,status,contentDetails');
+  listUrl.searchParams.set('mine','true');
+  listUrl.searchParams.set('maxResults','25');
+  const data=await youtubeFetchR609(accessToken,listUrl.toString(),{},'youtube-live-r609-list');
+  const items=Array.isArray(data?.items)?data.items:[];
+  const lifeRank={live:100,livestarting:95,testing:90,teststarting:85,ready:80,created:70};
+  const candidates=items.filter(item=>!['complete','revoked'].includes(youtubeLifeKeyR609(item?.status?.lifeCycleStatus))).sort((a,b)=>{
+    const al=youtubeLifeKeyR609(a?.status?.lifeCycleStatus), bl=youtubeLifeKeyR609(b?.status?.lifeCycleStatus);
+    const rank=(lifeRank[bl]||0)-(lifeRank[al]||0); if(rank)return rank;
+    const at=Date.parse(a?.snippet?.scheduledStartTime||a?.snippet?.actualStartTime||0)||0;
+    const bt=Date.parse(b?.snippet?.scheduledStartTime||b?.snippet?.actualStartTime||0)||0;
+    return bt-at;
+  });
+  const broadcast=candidates[0]||null;
+  if(!broadcast)return {broadcast:null,stream:null,streamStatus:''};
+  const boundStreamId=cleanPlainText(broadcast?.contentDetails?.boundStreamId||'',120);
+  let stream=null;
+  if(boundStreamId){
+    const streamUrl=new URL('https://www.googleapis.com/youtube/v3/liveStreams');
+    streamUrl.searchParams.set('part','id,status,cdn,snippet');
+    streamUrl.searchParams.set('id',boundStreamId);
+    const streamData=await youtubeFetchR609(accessToken,streamUrl.toString(),{},'youtube-live-r609-stream').catch(()=>({items:[]}));
+    stream=Array.isArray(streamData?.items)?streamData.items[0]||null:null;
+  }
+  return {broadcast,stream,streamStatus:cleanPlainText(stream?.status?.streamStatus||'',80)};
+}
+
+function youtubeUpdateContentDetailsR609(broadcast, autoStart=true, autoStop=false) {
+  const snippet=broadcast?.snippet||{};
+  const cd=broadcast?.contentDetails||{};
+  const monitor=cd?.monitorStream||{};
+  const outSnippet={
+    title:cleanPlainText(snippet.title||'ANDRIK METAL RADIO — LIVE 24/7',220),
+    description:String(snippet.description||''),
+    scheduledStartTime:snippet.scheduledStartTime
+  };
+  if(snippet.scheduledEndTime)outSnippet.scheduledEndTime=snippet.scheduledEndTime;
+  if(snippet.categoryId)outSnippet.categoryId=String(snippet.categoryId);
+  const outDetails={
+    monitorStream:{
+      enableMonitorStream:Boolean(monitor.enableMonitorStream),
+      broadcastStreamDelayMs:Math.max(0,Number(monitor.broadcastStreamDelayMs||0))
+    },
+    enableAutoStart:Boolean(autoStart),
+    enableAutoStop:Boolean(autoStop)
+  };
+  for(const key of ['enableEmbed','enableDvr','recordFromStart']){
+    if(typeof cd[key]==='boolean')outDetails[key]=cd[key];
+  }
+  if(cd.closedCaptionsType)outDetails.closedCaptionsType=cd.closedCaptionsType;
+  if(cd.projection)outDetails.projection=cd.projection;
+  if(cd.latencyPreference)outDetails.latencyPreference=cd.latencyPreference;
+  else if(typeof cd.enableLowLatency==='boolean')outDetails.enableLowLatency=cd.enableLowLatency;
+  return {id:broadcast.id,snippet:outSnippet,contentDetails:outDetails};
+}
+
+async function handleYoutubeLiveAutoR609(request, env) {
+  if (!adminAuthorized(request, env)) return json({ok:false,error:'unauthorized'},401);
+  try{
+    const accessToken=await getYoutubeOAuthAccessToken(env);
+    const {broadcast,streamStatus}=await youtubeCurrentBroadcastR609(env,accessToken);
+    if(!broadcast)return json({ok:false,error:'youtube-broadcast-not-found'},404);
+    const life=youtubeLifeKeyR609(broadcast?.status?.lifeCycleStatus);
+    if(!['created','ready'].includes(life)){
+      return json({ok:false,error:'broadcast-not-editable',message:`Автостарт можно менять только created/ready. Сейчас: ${life||'unknown'}`,lifeCycleStatus:life,streamStatus},409);
+    }
+    if(String(streamStatus||'').toLowerCase()==='active'){
+      return json({ok:false,error:'stream-active-stop-encoder-first',message:'Сначала останови encoder: YouTube разрешает менять Auto-start только при неактивном stream.',lifeCycleStatus:life,streamStatus},409);
+    }
+    const body=youtubeUpdateContentDetailsR609(broadcast,true,false);
+    const updateUrl=new URL('https://www.googleapis.com/youtube/v3/liveBroadcasts');
+    updateUrl.searchParams.set('part','snippet,contentDetails');
+    const updated=await youtubeFetchR609(accessToken,updateUrl.toString(),{method:'PUT',body:JSON.stringify(body)},'youtube-live-r609-update');
+    return json({ok:true,videoId:broadcast.id,lifeCycleStatus:life,streamStatus,enableAutoStart:Boolean(updated?.contentDetails?.enableAutoStart),enableAutoStop:Boolean(updated?.contentDetails?.enableAutoStop),watchUrl:`https://www.youtube.com/watch?v=${encodeURIComponent(broadcast.id)}`});
+  }catch(error){
+    const reason=cleanPlainText(error?.reason||'',180);
+    const insufficient=/insufficient|scope|permission/i.test(`${reason} ${error?.message||''}`);
+    return json({ok:false,error:insufficient?'youtube-oauth-write-scope-required':'youtube-live-auto-failed',reason,message:cleanPlainText(error?.message||error,500),reconnectUrl:'https://andrikmetal.com/service-admin.html?youtube-reconnect=r609'},insufficient?403:503);
+  }
+}
+
+async function youtubeTransitionR609(accessToken,id,status){
+  const url=new URL('https://www.googleapis.com/youtube/v3/liveBroadcasts/transition');
+  url.searchParams.set('broadcastStatus',status);
+  url.searchParams.set('id',id);
+  url.searchParams.set('part','id,status,contentDetails');
+  return youtubeFetchR609(accessToken,url.toString(),{method:'POST'},`youtube-live-r609-transition-${status}`);
+}
+
+async function youtubeWaitLifeR609(env,accessToken,id,expected,timeoutMs=30000){
+  const deadline=Date.now()+timeoutMs;
+  let last='';
+  while(Date.now()<deadline){
+    const url=new URL('https://www.googleapis.com/youtube/v3/liveBroadcasts');
+    url.searchParams.set('part','id,status,contentDetails');
+    url.searchParams.set('id',id);
+    const data=await youtubeFetchR609(accessToken,url.toString(),{},'youtube-live-r609-poll');
+    const item=Array.isArray(data?.items)?data.items[0]||null:null;
+    last=youtubeLifeKeyR609(item?.status?.lifeCycleStatus);
+    if(expected.includes(last))return {item,life:last};
+    await new Promise(resolve=>setTimeout(resolve,2500));
+  }
+  return {item:null,life:last};
+}
+
+async function handleYoutubeLiveStartR609(request, env) {
+  if (!adminAuthorized(request, env)) return json({ok:false,error:'unauthorized'},401);
+  try{
+    const accessToken=await getYoutubeOAuthAccessToken(env);
+    let {broadcast,streamStatus}=await youtubeCurrentBroadcastR609(env,accessToken);
+    if(!broadcast)return json({ok:false,error:'youtube-broadcast-not-found'},404);
+    const id=cleanPlainText(broadcast.id||'',100);
+    let life=youtubeLifeKeyR609(broadcast?.status?.lifeCycleStatus);
+    if(life==='live')return json({ok:true,alreadyLive:true,videoId:id,lifeCycleStatus:life,streamStatus,watchUrl:`https://www.youtube.com/watch?v=${encodeURIComponent(id)}`});
+    if(String(streamStatus||'').toLowerCase()!=='active'){
+      return json({ok:false,error:'youtube-stream-inactive',message:'Encoder ещё не дошёл до YouTube.',videoId:id,lifeCycleStatus:life,streamStatus},409);
+    }
+    const monitorEnabled=Boolean(broadcast?.contentDetails?.monitorStream?.enableMonitorStream);
+    if(['teststarting'].includes(life)){
+      const waited=await youtubeWaitLifeR609(env,accessToken,id,['testing'],30000); life=waited.life;
+    }
+    if(['created','ready'].includes(life) && monitorEnabled){
+      await youtubeTransitionR609(accessToken,id,'testing');
+      const waited=await youtubeWaitLifeR609(env,accessToken,id,['testing'],30000); life=waited.life;
+    }
+    if(life==='testing' || (['created','ready'].includes(life) && !monitorEnabled)){
+      await youtubeTransitionR609(accessToken,id,'live');
+    }
+    const final=await youtubeWaitLifeR609(env,accessToken,id,['live','livestarting'],35000);
+    return json({ok:['live','livestarting'].includes(final.life),videoId:id,lifeCycleStatus:final.life||life,streamStatus,watchUrl:`https://www.youtube.com/watch?v=${encodeURIComponent(id)}`},['live','livestarting'].includes(final.life)?200:503);
+  }catch(error){
+    const reason=cleanPlainText(error?.reason||'',180);
+    const insufficient=/insufficient|scope|permission/i.test(`${reason} ${error?.message||''}`);
+    return json({ok:false,error:insufficient?'youtube-oauth-write-scope-required':'youtube-live-start-failed',reason,message:cleanPlainText(error?.message||error,500),reconnectUrl:'https://andrikmetal.com/service-admin.html?youtube-reconnect=r609'},insufficient?403:503);
+  }
+}
+
+// R610 — public live target for the public site. Returns only the current YouTube
+// watch URL / video id, never OAuth tokens or Studio/admin data. This lets Android
+// resolve a real video id before a user taps the Radio button, so YouTube / ReVanced
+// / RVX opens first and the browser is only the fallback.
+async function handlePublicYoutubeLiveTargetR610(request, env) {
+  const fallback='https://www.youtube.com/@andrikmetal/live';
+  try {
+    const accessToken=await getYoutubeOAuthAccessToken(env);
+    const {broadcast,streamStatus}=await youtubeCurrentBroadcastR609(env,accessToken);
+    const videoId=cleanPlainText(broadcast?.id||'',80);
+    if(!videoId){
+      return json({ok:true,videoId:'',watchUrl:fallback,lifeCycleStatus:'',streamStatus:'',active:false},200,PUBLIC_CACHE_HEADERS);
+    }
+    const lifeCycleStatus=youtubeLifeKeyR609(broadcast?.status?.lifeCycleStatus);
+    const active=lifeCycleStatus==='live';
+    return json({
+      ok:true,
+      videoId,
+      watchUrl:`https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`,
+      lifeCycleStatus,
+      streamStatus:cleanPlainText(streamStatus||'',80),
+      active
+    },200,PUBLIC_CACHE_HEADERS);
+  } catch (_) {
+    // Site navigation must keep working even if Google/OAuth is temporarily unavailable.
+    return json({ok:true,videoId:'',watchUrl:fallback,lifeCycleStatus:'',streamStatus:'',active:false},200,PUBLIC_CACHE_HEADERS);
+  }
+}
 
 // R578 — YouTube Live Studio state: follow CURRENT live video with fallback detection.
 async function handleControlYoutubeLiveR565(request, env) {

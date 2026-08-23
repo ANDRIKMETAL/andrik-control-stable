@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787526991304-51607a730d",
-  "release": "R608",
-  "archiveName": "R608-YOUTUBE-LIVE-TARGET-FIX-MP3-DAYPART-SAFE-FULL.zip",
-  "sourceHead": "3c9dc38f716f2ee04b51c2922dba1a3b4c58edbd",
-  "backupSha": "3c9dc38f716f2ee04b51c2922dba1a3b4c58edbd",
+  "operationId": "publish-1787527753674-fdb1a50e34",
+  "release": "R610",
+  "archiveName": "R610-YOUTUBE-APP-OPEN-FIRST-SAFE-FULL.zip",
+  "sourceHead": "bfa20e7e7b9d2790e75ea46ac220677117a00459",
+  "backupSha": "bfa20e7e7b9d2790e75ea46ac220677117a00459",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-23T23:16:31.677Z"
+  "generatedAt": "2026-08-23T23:29:14.145Z"
 }

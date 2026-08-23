@@ -35,8 +35,11 @@
     try{
       const data=await api('/api/control/youtube-oauth/status?verify=1');
       if(data.connected){
-        stateEl.className='service-access-state is-ready';stateEl.textContent='Подключено';button.textContent='Переподключить YouTube Studio';
-        messageEl.textContent='Refresh token проверен сервером. Полная статистика Studio доступна.';
+        const manage=Boolean(data.canManageLive);
+        stateEl.className=`service-access-state ${manage?'is-ready':'is-error'}`;
+        stateEl.textContent=manage?'Подключено · LIVE API':'Нужно переподключить';
+        button.textContent='Переподключить YouTube Studio';
+        messageEl.textContent=manage?'Готово: статистика + управление эфиром разрешены.':'Старый OAuth только для чтения. Нажмите «Переподключить YouTube Studio» и подтвердите Google-доступ к управлению эфиром.';
       }else{
         stateEl.className='service-access-state is-error';stateEl.textContent=data.clientConfigured?'Не подключено':'OAuth не настроен';button.textContent=data.clientConfigured?'Подключить YouTube Studio':'Настроить OAuth';
         messageEl.textContent=data.clientConfigured?'Нажмите кнопку и подтвердите доступ Google.':'В Cloudflare Pages нужны YOUTUBE_OAUTH_CLIENT_ID и YOUTUBE_OAUTH_CLIENT_SECRET.';
@@ -50,6 +53,23 @@
     const button=document.getElementById('serviceYoutubeOauthConnect');if(button){button.disabled=true;button.textContent='Открываем Google…'}
     try{const data=await api('/api/control/youtube-oauth/start');if(!data.url)throw new Error('Ссылка авторизации не получена');location.assign(data.url)}
     catch(error){set('serviceYoutubeOauthMessage',`YouTube Studio: ${error.message}`);if(button){button.disabled=false;button.textContent='Подключить YouTube Studio'}}
+  }
+
+  async function configureYoutubeLiveAuto(){
+    if(!getKey()){set('serviceYoutubeOauthMessage','Сначала сохраните ADMIN_KEY.');return}
+    const button=document.getElementById('serviceYoutubeAutoConfig');if(button)button.disabled=true;
+    set('serviceYoutubeOauthMessage','Настраиваем Auto-start ON / Auto-stop OFF… Encoder должен быть остановлен.');
+    try{const data=await api('/api/control/youtube-live-r609/auto',{method:'POST'});set('serviceYoutubeOauthMessage',`Готово ✅ Auto-start ${data.enableAutoStart?'ON':'OFF'} · Auto-stop ${data.enableAutoStop?'ON':'OFF'}.`)}
+    catch(error){const reconnect=error.data?.error==='youtube-oauth-write-scope-required';set('serviceYoutubeOauthMessage',reconnect?'Нужно переподключить YouTube Studio и подтвердить новое разрешение Google.':`Не получилось: ${error.message}`)}
+    finally{if(button)button.disabled=false}
+  }
+  async function startYoutubeLiveNow(){
+    if(!getKey()){set('serviceYoutubeOauthMessage','Сначала сохраните ADMIN_KEY.');return}
+    const button=document.getElementById('serviceYoutubeStartNow');if(button)button.disabled=true;
+    set('serviceYoutubeOauthMessage','Команда запуска отправлена YouTube…');
+    try{const data=await api('/api/control/youtube-live-r609/start',{method:'POST'});set('serviceYoutubeOauthMessage',data.alreadyLive?'Эфир уже LIVE ✅':`YouTube: ${data.lifeCycleStatus||'команда принята'} ✅`)}
+    catch(error){set('serviceYoutubeOauthMessage',error.data?.error==='youtube-stream-inactive'?'Сначала запусти encoder на AWS.':error.data?.error==='youtube-oauth-write-scope-required'?'Нужно переподключить YouTube Studio.':`Запуск: ${error.message}`)}
+    finally{if(button)button.disabled=false}
   }
 
   function renderSearchConsoleDiagnostic(sc={}){
@@ -164,6 +184,8 @@
     },900);
   }
   document.getElementById('serviceYoutubeOauthConnect')?.addEventListener('click',connectYoutubeOauth);
+  document.getElementById('serviceYoutubeAutoConfig')?.addEventListener('click',configureYoutubeLiveAuto);
+  document.getElementById('serviceYoutubeStartNow')?.addEventListener('click',startYoutubeLiveNow);
   document.getElementById('serviceSearchConsoleRefresh')?.addEventListener('click',()=>loadSearchConsoleDiagnostic(true));
   document.getElementById('adminPushTestOwner')?.addEventListener('click',()=>sendPush('owner','ANDRIK Control','Тестовое уведомление владельца работает.','https://andrikmetal.com/','adminPushStatus'));
   document.getElementById('adminPlaylistInspect')?.addEventListener('click',()=>inspectPlaylist());
