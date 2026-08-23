@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787462497196-28bda6409a",
-  "release": "R582",
-  "archiveName": "R582-3MIN-COVER-NEXT-UP-GREENTUBER-CLEAN-SAFE-FULL.zip",
-  "sourceHead": "74e05a28528c5508bb5422e7b4b1e6550946f8ea",
-  "backupSha": "74e05a28528c5508bb5422e7b4b1e6550946f8ea",
-  "backupTag": "control-backup-20260823052131-74e05a2-r582-8fa51",
+  "operationId": "publish-1787464519673-7809a9c3c7",
+  "release": "R584",
+  "archiveName": "R584-YOUTUBE-INGEST-FIX-CLEAN-VERIFIED-SAFE-FULL.zip",
+  "sourceHead": "89cbb0fd61a2624bbbbb51c985c5dc4976bb1e2d",
+  "backupSha": "89cbb0fd61a2624bbbbb51c985c5dc4976bb1e2d",
+  "backupTag": "control-backup-20260823055513-89cbb0f-r584-55646",
   "autoRecovery": true,
-  "generatedAt": "2026-08-23T05:21:37.196Z"
+  "generatedAt": "2026-08-23T05:55:19.673Z"
 }

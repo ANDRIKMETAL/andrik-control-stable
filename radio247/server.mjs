@@ -23,13 +23,13 @@ const CLEAN_VISUAL = `${CACHE_DIR}/visual-seamless.mp4`;
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R582-3MIN-FORCED-NEXT-UP',
+  version: 'R584-YOUTUBE-INGEST-FIX',
   mode: 'MP3 ONLY / SEAMLESS VISUAL + LIVE OVERLAY',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
   producerRunning: false,
-  overlayMode: 'LIVE TICKER / 181.5s COVER / NEXT RIGHT UP / NO 10s LOOP',
+  overlayMode: '181.5s COVER / YOUTUBE CBR INGEST / PREV+NEXT SAME LEVEL',
   visualTrimEnd: VISUAL_TRIM_END,
   libraryTracks: 0,
   cycle: 0,
@@ -199,9 +199,14 @@ function startPublisher(){
   const args=[
     '-hide_banner','-loglevel','warning',
     '-fflags','+genpts+discardcorrupt',
+    '-analyzeduration','5000000','-probesize','5000000',
     '-i','pipe:0',
     '-map','0:v:0','-map','0:a:0',
     '-c','copy',
+    '-flvflags','no_duration_filesize',
+    '-flush_packets','1',
+    '-muxdelay','0','-muxpreload','0',
+    '-rtmp_live','live',
     '-f','flv',
     STREAM_URL
   ];
@@ -263,9 +268,9 @@ function producerArgs(item,duration,offset,visualPath,previous,next){
     'drawbox=x=0:y=ih-150:w=iw:h=150:color=black@0.58:t=fill',
     `drawtext=${fontPart}textfile='${prevPath}':fontcolor=white@0.92:fontsize=20:x=28:y=h-124:shadowcolor=black@0.8:shadowx=2:shadowy=2`,
     `drawtext=${fontPart}textfile='${curPath}':fontcolor=white:fontsize=30:x=(w-text_w)/2:y=h-92:shadowcolor=black@0.9:shadowx=2:shadowy=2`,
-    `drawtext=${fontPart}textfile='${nextPath}':fontcolor=white@0.92:fontsize=20:x=w-text_w-28:y=h-146:shadowcolor=black@0.8:shadowx=2:shadowy=2`,
+    `drawtext=${fontPart}textfile='${nextPath}':fontcolor=white@0.92:fontsize=20:x=w-text_w-28:y=h-124:shadowcolor=black@0.8:shadowx=2:shadowy=2`,
     'drawbox=x=0:y=ih-34:w=iw:h=34:color=black@0.82:t=fill',
-    `drawtext=${fontPart}textfile='${tickerPath}':fontcolor=white:fontsize=19:x=w-mod(t*110\,text_w/8+w):y=h-27:shadowcolor=black@0.9:shadowx=1:shadowy=1`
+    `drawtext=${fontPart}textfile='${tickerPath}':fontcolor=white:fontsize=19:x='w-mod(t*110,text_w/8+w)':y=h-27:shadowcolor=black@0.9:shadowx=1:shadowy=1`
   ].join(',');
 
   return {tempFiles:[previousFile,currentFile,nextFile,tickerFile,visualList],args:[
@@ -273,10 +278,13 @@ function producerArgs(item,duration,offset,visualPath,previous,next){
     '-f','concat','-safe','0','-re','-i',visualList,
     '-map','1:v:0','-map','0:a:0','-t',duration.toFixed(3),
     '-vf',vf,
-    '-c:v','libx264','-preset','ultrafast','-tune','zerolatency','-crf','30',
-    '-maxrate','1800k','-bufsize','3600k','-g','48','-keyint_min','48','-sc_threshold','0','-threads','2','-pix_fmt','yuv420p',
+    '-c:v','libx264','-preset','ultrafast','-tune','zerolatency',
+    '-profile:v','main','-level:v','3.1',
+    '-b:v','3000k','-minrate','3000k','-maxrate','3000k','-bufsize','6000k',
+    '-x264-params','nal-hrd=cbr:force-cfr=1:repeat-headers=1',
+    '-g','48','-keyint_min','48','-sc_threshold','0','-r','24','-threads','2','-pix_fmt','yuv420p',
     '-c:a','aac','-b:a','128k','-ar','44100','-ac','2',
-    '-output_ts_offset',offset.toFixed(3),'-mpegts_flags','+initial_discontinuity','-f','mpegts','pipe:1'
+    '-output_ts_offset',offset.toFixed(3),'-mpegts_flags','+initial_discontinuity+resend_headers','-f','mpegts','pipe:1'
   ]};
 }
 
@@ -408,7 +416,7 @@ const server=http.createServer((req,res)=>{
 });
 
 server.listen(PORT,'0.0.0.0',()=>{
-  console.log(`ANDRIK Radio R582-3MIN-FORCED-NEXT-UP listening on :${PORT}`);
+  console.log(`ANDRIK Radio R584-YOUTUBE-INGEST-FIX listening on :${PORT}`);
   radioLoop();
 });
 
