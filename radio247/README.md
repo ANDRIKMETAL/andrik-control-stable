@@ -18,3 +18,8 @@ R2 MP3 → AWS EC2 → короткий prerender overlay → H.264 copy + AAC �
 `radio247/vm-lite/install-andrik-radio-lite.sh`
 
 YouTube Stream Key хранится только на VM: `/etc/andrik-radio.env`.
+
+
+## R571 FIX
+- previous label lowered;
+- full-track pre-rendered overlay, no ticker reset, no 10s loop blink.

@@ -17,21 +17,21 @@ const AUDIO_VISUAL = process.env.AUDIO_VISUAL || new URL('./assets/audio-visual-
 const STREAM_KEY = String(process.env.YOUTUBE_STREAM_KEY || '').trim();
 const STREAM_URL = STREAM_KEY ? `rtmps://a.rtmps.youtube.com:443/live2/${STREAM_KEY}` : '';
 const YOUTUBE_LIVE_URL = process.env.YOUTUBE_LIVE_URL || 'https://www.youtube.com/@andrikmetal/live';
-const VISUAL_TRIM_END = Math.max(0, Number(process.env.VISUAL_TRIM_END || '0.55') || 0.55);
+const VISUAL_TRIM_END = Math.max(0, Number(process.env.VISUAL_TRIM_END || '0.80') || 0.80);
 const CACHE_DIR = process.env.RADIO_CACHE_DIR || '/tmp/andrik-radio-r570';
 const CLEAN_VISUAL = `${CACHE_DIR}/visual-clean.mp4`;
 const OVERLAY_CACHE_LIMIT = Math.max(6, Number(process.env.OVERLAY_CACHE_LIMIT || 18) || 18);
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R570-LITE',
+  version: 'R571-LITE',
   mode: 'MP3 ONLY / PRE-RENDERED H264 OVERLAY COPY',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
   producerRunning: false,
   overlayPreparing: false,
-  overlayMode: 'PRE-RENDERED 10s LOOP',
+  overlayMode: 'FULL-TRACK PRE-RENDERED H264',
   visualTrimEnd: VISUAL_TRIM_END,
   libraryTracks: 0,
   cycle: 0,
@@ -93,7 +93,7 @@ function albumName(item){
 
 async function loadLibrary(){
   const url=`${PLAYLIST_URL}${PLAYLIST_URL.includes('?')?'&':'?'}ts=${Date.now()}`;
-  const response=await fetch(url,{headers:{'user-agent':'ANDRIK-Radio-24-7-R570-LITE'}});
+  const response=await fetch(url,{headers:{'user-agent':'ANDRIK-Radio-24-7-R571-LITE'}});
   if(!response.ok)throw new Error(`R2 library HTTP ${response.status}`);
 
   const data=await response.json();
@@ -237,8 +237,9 @@ function pruneOverlayCache(keepPath=''){
   }catch(_){ }
 }
 
-async function prepareOverlayVisual(previous,item,next){
-  const key=overlayKey(previous,item,next);
+
+async function prepareOverlayVisual(previous,item,next,duration){
+  const key=overlayKey(previous,item,next)+`-${Math.round(duration*1000)}`;
   const output=`${CACHE_DIR}/overlay-${key}.mp4`;
   if(existsSync(output) && statSync(output).size>20000)return output;
   if(overlayPromises.has(key))return overlayPromises.get(key);
@@ -255,11 +256,11 @@ async function prepareOverlayVisual(previous,item,next){
     writeFileSync(previousFile,`← ${trackLabel(previous,'СТАРТ ЭФИРА')}`,'utf8');
     writeFileSync(currentFile,`▶ СЕЙЧАС: ${trackLabel(item,'ANDRIK')}`,'utf8');
     writeFileSync(nextFile,`${trackLabel(next,'ДАЛЬШЕ — НОВЫЙ ЦИКЛ')} →`,'utf8');
-    writeFileSync(
-      tickerFile,
-      `ANDRIK METAL RADIO 24/7   •   СЕЙЧАС: ${trackLabel(item,'ANDRIK')}   •   ДАЛЬШЕ: ${trackLabel(next,'—')}   •   ANDRIKMETAL.COM   •   `,
-      'utf8'
-    );
+    const tickerText=(
+      `ANDRIK METAL RADIO 24/7   •   СЕЙЧАС: ${trackLabel(item,'ANDRIK')}   •   `+
+      `ДАЛЬШЕ: ${trackLabel(next,'—')}   •   ANDRIKMETAL.COM   •   `
+    ).repeat(4);
+    writeFileSync(tickerFile,tickerText,'utf8');
 
     const fontPart=font?`fontfile='${ffFilterPath(font)}':`:'';
     const prevPath=ffFilterPath(previousFile);
@@ -267,30 +268,30 @@ async function prepareOverlayVisual(previous,item,next){
     const nextPath=ffFilterPath(nextFile);
     const tickerPath=ffFilterPath(tickerFile);
     const vf=[
-      'fps=24',
+      'fps=20',
       'format=yuv420p',
       'drawbox=x=0:y=ih-150:w=iw:h=150:color=black@0.58:t=fill',
-      `drawtext=${fontPart}textfile='${prevPath}':fontcolor=white@0.92:fontsize=20:x=28:y=h-137:shadowcolor=black@0.8:shadowx=2:shadowy=2`,
+      `drawtext=${fontPart}textfile='${prevPath}':fontcolor=white@0.92:fontsize=20:x=28:y=h-120:shadowcolor=black@0.8:shadowx=2:shadowy=2`,
       `drawtext=${fontPart}textfile='${curPath}':fontcolor=white:fontsize=25:x=(w-text_w)/2:y=h-100:shadowcolor=black@0.9:shadowx=2:shadowy=2`,
       `drawtext=${fontPart}textfile='${nextPath}':fontcolor=white@0.92:fontsize=20:x=w-text_w-28:y=h-62:shadowcolor=black@0.8:shadowx=2:shadowy=2`,
       'drawbox=x=0:y=ih-34:w=iw:h=34:color=black@0.82:t=fill',
-      `drawtext=${fontPart}textfile='${tickerPath}':fontcolor=white:fontsize=19:x=w-mod(t*110\\,text_w+w):y=h-27:shadowcolor=black@0.9:shadowx=1:shadowy=1`
+      `drawtext=${fontPart}textfile='${tickerPath}':fontcolor=white:fontsize=19:x=w-mod(t*110\,text_w+w):y=h-27:shadowcolor=black@0.9:shadowx=1:shadowy=1`
     ].join(',');
 
     const args=[
       '-y','-hide_banner','-loglevel','warning',
-      '-i',cleanVisual,
-      '-an',
+      '-stream_loop','-1','-i',cleanVisual,
+      '-an','-t',duration.toFixed(3),
       '-vf',vf,
-      '-c:v','libx264','-preset','superfast','-crf','27',
+      '-c:v','libx264','-preset','ultrafast','-crf','29',
       '-profile:v','main','-level','3.1',
-      '-g','48','-keyint_min','48','-sc_threshold','0',
+      '-g','40','-keyint_min','40','-sc_threshold','0',
       '-pix_fmt','yuv420p','-movflags','+faststart',
       output
     ];
 
     try{
-      await runCapture('ffmpeg',args,{timeoutMs:120000});
+      await runCapture('ffmpeg',args,{timeoutMs:Math.max(120000, Math.ceil(duration*3000))});
       pruneOverlayCache(output);
       return output;
     }finally{
@@ -351,12 +352,12 @@ function startPublisher(){
 }
 
 function producerArgs(item,duration,offset,visualPath){
-  // LITE R570: overlay рендерится один раз на короткий цикл,
-  // затем весь трек использует H.264 stream-copy. 24/7 x264 здесь нет.
+  // R571 LITE: для каждой песни заранее рендерится ПОЛНЫЙ overlay-видеофайл,
+  // поэтому в эфире нет ни ресета ticker, ни чёрного блика на каждом 10-секундном цикле.
   return [
     '-hide_banner','-loglevel','warning',
     '-re','-i',item.url,
-    '-stream_loop','-1','-re','-i',visualPath,
+    '-re','-i',visualPath,
     '-map','1:v:0','-map','0:a:0',
     '-t',duration.toFixed(3),'-shortest',
     '-c:v','copy',
@@ -368,11 +369,10 @@ function producerArgs(item,duration,offset,visualPath){
   ];
 }
 
+
 async function playItem(previous,item,next,following){
-  const [duration,visualPath]=await Promise.all([
-    probeDuration(item.url),
-    prepareOverlayVisual(previous,item,next)
-  ]);
+  const duration=await probeDuration(item.url);
+  const visualPath=await prepareOverlayVisual(previous,item,next,duration);
 
   state.previous=previous?{
     type:'track',title:previous.title,album:previous.album||'',url:previous.url||''
@@ -388,9 +388,11 @@ async function playItem(previous,item,next,following){
   state.next=next?{type:'track',title:next.title,album:next.album||'',url:next.url||''}:null;
   state.producerRunning=true;
 
-  // Пока текущая песня играет, заранее готовим 10-секундный overlay для следующей.
+  // Пока текущая песня играет, заранее готовим ПОЛНЫЙ overlay для следующей песни.
   if(next){
-    prepareOverlayVisual(item,next,following).catch(()=>{});
+    probeDuration(next.url)
+      .then(nextDuration=>prepareOverlayVisual(item,next,following,nextDuration))
+      .catch(()=>{});
   }
 
   producer=spawn('ffmpeg',producerArgs(item,duration,timelineOffset,visualPath),{stdio:['ignore','pipe','pipe']});
@@ -525,7 +527,7 @@ const server=http.createServer((req,res)=>{
 });
 
 server.listen(PORT,'0.0.0.0',()=>{
-  console.log(`ANDRIK Radio R570-LITE listening on :${PORT}`);
+  console.log(`ANDRIK Radio R571-LITE listening on :${PORT}`);
   radioLoop();
 });
 

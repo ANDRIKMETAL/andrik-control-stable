@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787453380047-6a60b67455",
-  "release": "R570",
-  "archiveName": "R570-RADIO-PREV-NEXT-TICKER-LOOP-FIX-SAFE-FULL.zip",
-  "sourceHead": "620d1eb5057e099b2910aabd77fddbb05f30225e",
-  "backupSha": "620d1eb5057e099b2910aabd77fddbb05f30225e",
-  "backupTag": "control-backup-20260823024935-620d1eb-r570-41d2f",
+  "operationId": "publish-1787455701296-fc18cdbe58",
+  "release": "R571",
+  "archiveName": "R571-RADIO-FLICKER-TICKER-FIX-SAFE-FULL.zip",
+  "sourceHead": "862370fdddc1744dac1332f3e1cc9492419e328b",
+  "backupSha": "862370fdddc1744dac1332f3e1cc9492419e328b",
+  "backupTag": "control-backup-20260823032816-862370f-r571-ffcef",
   "autoRecovery": true,
-  "generatedAt": "2026-08-23T02:49:40.375Z"
+  "generatedAt": "2026-08-23T03:28:21.296Z"
 }
