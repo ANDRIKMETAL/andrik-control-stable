@@ -65,7 +65,7 @@ umask 077
 cat > "$ENV_FILE" <<EOF
 YOUTUBE_STREAM_KEY=$YOUTUBE_STREAM_KEY
 PLAYLIST_URL=https://andrikmetal.com/api/music/downloads
-YOUTUBE_LIVE_URL=https://www.youtube.com/@andrikmetal/live
+YOUTUBE_LIVE_URL=https://www.youtube.com/live/lZkV9kPpBUQ
 AUDIO_VISUAL=$VISUAL
 PORT=8080
 NODE_ENV=production

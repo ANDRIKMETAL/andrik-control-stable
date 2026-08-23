@@ -42,7 +42,7 @@ function youtubeAppLauncherUrl(targetUrl) {
     const allowed = new Set(['youtube.com', 'www.youtube.com', 'm.youtube.com', 'music.youtube.com', 'youtu.be']);
     if (parsed.protocol === 'https:' && allowed.has(parsed.hostname.toLowerCase())) target = parsed.href;
   } catch (_) {}
-  return `https://andrikmetal.com/open-youtube.html?target=${encodeURIComponent(target)}&src=push&r=592`;
+  return `https://andrikmetal.com/open-youtube.html?target=${encodeURIComponent(target)}&src=push&r=595`;
 }
 
 function normalizeTitle(value) {
@@ -2319,8 +2319,8 @@ function isAndrikRadioLiveR576(value) {
 }
 
 function youtubeAppOpenUrlR592(url) {
-  const target=cleanPlainText(url||'https://www.youtube.com/@andrikmetal/live',1000);
-  return `https://andrikmetal.com/open-youtube.html?target=${encodeURIComponent(target)}&src=push&r=592`;
+  const target=cleanPlainText(url||'https://www.youtube.com/live/lZkV9kPpBUQ',1000);
+  return `https://andrikmetal.com/open-youtube.html?target=${encodeURIComponent(target)}&src=push&r=595`;
 }
 
 function youtubePushMetaR576(title, url) {
@@ -17197,7 +17197,7 @@ async function handleControlYoutubeLiveR565(request, env) {
         concurrentViewers:0,views:0,likes:0,comments:0,boundStreamId:'',
         studioUrl:'https://studio.youtube.com/channel/UC/livestreaming',
         analyticsUrl:'https://studio.youtube.com/',
-        watchUrl:'https://www.youtube.com/@andrikmetal/live',
+        watchUrl:'https://www.youtube.com/live/lZkV9kPpBUQ',
         updatedAt:new Date().toISOString()
       });
     }

@@ -4,6 +4,28 @@
   const isAndroid = /Android/i.test(navigator.userAgent || '');
   const selector = 'a[data-force-app="youtube"][data-web-url]';
 
+  function youtubeVideoId(rawUrl) {
+    try {
+      const u = new URL(rawUrl, location.href);
+      const host = u.hostname.toLowerCase();
+
+      if (host === 'youtu.be') {
+        return u.pathname.split('/').filter(Boolean)[0] || '';
+      }
+
+      if (host.endsWith('youtube.com')) {
+        const watch = u.searchParams.get('v');
+        if (watch) return watch;
+
+        const parts = u.pathname.split('/').filter(Boolean);
+        if (parts[0] === 'live' || parts[0] === 'shorts' || parts[0] === 'embed') {
+          return parts[1] || '';
+        }
+      }
+    } catch (_) {}
+    return '';
+  }
+
   function openYoutubeFromRealTap(event, link) {
     if (!isAndroid) return;
 
@@ -12,29 +34,33 @@
 
     event.preventDefault();
 
-    // YouTube-compatible Android clients (stock YouTube, ReVanced/RVX/Vanced)
-    // inherit the vnd.youtube VIEW intent from YouTube.
-    // IMPORTANT: this runs synchronously inside the REAL click gesture.
-    const appUrl = `vnd.youtube:${webUrl}`;
+    const videoId = youtubeVideoId(webUrl);
 
-    let leftPage = false;
-    const markLeft = () => { leftPage = true; };
-    document.addEventListener('visibilitychange', () => {
-      if (document.hidden) markLeft();
-    }, {once:true});
-    window.addEventListener('pagehide', markLeft, {once:true});
-    window.addEventListener('blur', markLeft, {once:true});
+    // For a real video/live page use ONLY the raw video id.
+    // This is what YouTube/ReVanced expects for the vnd.youtube scheme.
+    if (videoId) {
+      let leftPage = false;
+      const markLeft = () => { leftPage = true; };
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden) markLeft();
+      }, {once:true});
+      window.addEventListener('pagehide', markLeft, {once:true});
+      window.addEventListener('blur', markLeft, {once:true});
 
-    try {
-      window.location.href = appUrl;
-    } catch (_) {}
+      try {
+        window.location.href = `vnd.youtube:${videoId}`;
+      } catch (_) {}
 
-    // If there is no app that handles vnd.youtube, keep a web fallback.
-    setTimeout(() => {
-      if (!leftPage && !document.hidden) {
-        window.location.href = webUrl;
-      }
-    }, 1100);
+      // Only if no installed YouTube-compatible client took the intent.
+      setTimeout(() => {
+        if (!leftPage && !document.hidden) window.location.href = webUrl;
+      }, 1200);
+      return;
+    }
+
+    // Channel/profile links have no video id.
+    // Let Android handle the normal HTTPS link with the user's configured default app.
+    window.location.href = webUrl;
   }
 
   function prepare(root=document) {
@@ -48,6 +74,7 @@
   }
 
   document.addEventListener('DOMContentLoaded', () => prepare());
+
   document.addEventListener('click', event => {
     const link = event.target.closest?.(selector);
     if (!link) return;
