@@ -16384,6 +16384,98 @@ async function handleMusicMp3DeleteR314(request, env) {
 }
 
 
+// === R572: safe exact-byte MP3 duplicate cleaner ===
+async function musicSha256BufferR572(buffer){
+  const digest=await crypto.subtle.digest('SHA-256',buffer);
+  return [...new Uint8Array(digest)].map(byte=>byte.toString(16).padStart(2,'0')).join('');
+}
+function musicDedupeCanonicalScoreR572(object){
+  const m=object?.customMetadata||{};
+  const key=String(object?.key||'');
+  const base=key.split('/').pop()||'';
+  let score=0;
+  if(m.title)score+=12;
+  if(m.album)score+=8;
+  if(m.track)score+=8;
+  if(m.artist)score+=4;
+  if(m.year)score+=2;
+  if(!/^track_\d+\.mp3$/i.test(base))score+=8;
+  if(/^\d{1,2}[-_. ]/.test(base))score+=2;
+  return score;
+}
+function musicDedupePickCanonicalR572(objects){
+  return [...objects].sort((a,b)=>{
+    const scoreDiff=musicDedupeCanonicalScoreR572(b)-musicDedupeCanonicalScoreR572(a);
+    if(scoreDiff)return scoreDiff;
+    const au=Date.parse(a?.uploaded||0)||0,bu=Date.parse(b?.uploaded||0)||0;
+    if(au!==bu)return au-bu; // при равном качестве сохраняем более старый оригинал
+    return String(a?.key||'').localeCompare(String(b?.key||''),'en',{numeric:true,sensitivity:'base'});
+  })[0];
+}
+async function musicFindExactDuplicatesR572(bucket){
+  const listed=await bucket.list({limit:1000,include:['customMetadata']});
+  const objects=(listed.objects||[]).filter(o=>musicObjectKeyR317(o.key));
+
+  // Никогда автоматически не удаляем одинаковый MP3 из разных разделов.
+  // singles/X и albums/Y/X могут быть намеренно нужны сайту отдельно.
+  const candidates=new Map();
+  for(const object of objects){
+    const folder=String(object.key).split('/').slice(0,-1).join('/');
+    const size=Number(object.size||0);
+    if(!size)continue;
+    const key=`${folder}|${size}`;
+    if(!candidates.has(key))candidates.set(key,[]);
+    candidates.get(key).push(object);
+  }
+
+  const duplicateGroups=[];
+  for(const group of candidates.values()){
+    if(group.length<2)continue;
+    const hashes=new Map();
+    for(const object of group){
+      const body=await bucket.get(object.key);
+      if(!body)continue;
+      const bytes=await body.arrayBuffer();
+      const hash=await musicSha256BufferR572(bytes);
+      if(!hashes.has(hash))hashes.set(hash,[]);
+      hashes.get(hash).push(object);
+    }
+    for(const [hash,same] of hashes.entries()){
+      if(same.length<2)continue;
+      const keep=musicDedupePickCanonicalR572(same);
+      const remove=same.filter(x=>x.key!==keep.key);
+      duplicateGroups.push({
+        folder:String(keep.key).split('/').slice(0,-1).join('/'),
+        size:Number(keep.size||0),
+        sha256:hash,
+        keep:{key:keep.key,title:keep.customMetadata?.title||'',uploaded:keep.uploaded||null},
+        remove:remove.map(x=>({key:x.key,title:x.customMetadata?.title||'',uploaded:x.uploaded||null}))
+      });
+    }
+  }
+  const deleteKeys=duplicateGroups.flatMap(g=>g.remove.map(x=>x.key));
+  return {objectsScanned:objects.length,duplicateGroups,deleteKeys};
+}
+async function handleMusicDedupeR572(request,env){
+  if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
+  const bucket=getMusicBucketR314(env);
+  if(!bucket)return json({ok:false,error:'music-bucket-not-configured'},503);
+  try{
+    const report=await musicFindExactDuplicatesR572(bucket);
+    if(request.method==='GET'){
+      return json({ok:true,dryRun:true,objectsScanned:report.objectsScanned,duplicateCount:report.deleteKeys.length,groups:report.duplicateGroups});
+    }
+    const body=await request.json().catch(()=>null);
+    if(body?.confirm!=='DELETE_EXACT_DUPLICATES')return json({ok:false,error:'confirmation-required'},400);
+    if(report.deleteKeys.length)await bucket.delete(report.deleteKeys);
+    return json({ok:true,deleted:report.deleteKeys.length,deletedKeys:report.deleteKeys,kept:report.duplicateGroups.map(g=>g.keep.key),groups:report.duplicateGroups});
+  }catch(error){
+    return json({ok:false,error:'dedupe-failed',message:cleanPlainText(error?.message||error,500)},500);
+  }
+}
+// === End R572 R2 exact duplicate cleaner ===
+
+
 
 
 // === R559: hardened MP4 byte-range serving for long-form clips ===
@@ -16755,6 +16847,7 @@ async function routeApi(request, env, ctx) {
     if (path === '/api/control/music/mp3' && request.method === 'PUT') return await handleMusicMp3PutR314(request, env);
     if (path === '/api/control/music/mp3' && request.method === 'PATCH') return await handleMusicMp3PatchR335(request, env);
     if (path === '/api/control/music/mp3' && request.method === 'DELETE') return await handleMusicMp3DeleteR314(request, env);
+    if (path === '/api/control/music/dedupe' && (request.method === 'GET' || request.method === 'POST')) return await handleMusicDedupeR572(request, env);
     if (path === '/api/lyrics' && request.method === 'GET') return await handlePublicLyrics(request, env);
     if (path === '/api/lyrics/admin' && request.method === 'GET') return await handleAdminLyricsGet(request, env);
     if (path === '/api/lyrics/catalog' && request.method === 'GET') return await handleAdminLyricsCatalog(request, env);

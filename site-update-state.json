@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787455701296-fc18cdbe58",
-  "release": "R571",
-  "archiveName": "R571-RADIO-FLICKER-TICKER-FIX-SAFE-FULL.zip",
-  "sourceHead": "862370fdddc1744dac1332f3e1cc9492419e328b",
-  "backupSha": "862370fdddc1744dac1332f3e1cc9492419e328b",
-  "backupTag": "control-backup-20260823032816-862370f-r571-ffcef",
+  "operationId": "publish-1787455805303-8a454cc87e",
+  "release": "R572",
+  "archiveName": "R572-R2-EXACT-DUPLICATE-CLEANER-SAFE-FULL.zip",
+  "sourceHead": "b27eb82be9a3b4691f42764c1c8491e1b1881129",
+  "backupSha": "b27eb82be9a3b4691f42764c1c8491e1b1881129",
+  "backupTag": "control-backup-20260823033000-b27eb82-r572-ffe3a",
   "autoRecovery": true,
-  "generatedAt": "2026-08-23T03:28:21.296Z"
+  "generatedAt": "2026-08-23T03:30:05.303Z"
 }
