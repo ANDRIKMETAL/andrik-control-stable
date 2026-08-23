@@ -18,18 +18,18 @@ const STREAM_KEY = String(process.env.YOUTUBE_STREAM_KEY || '').trim();
 const STREAM_URL = STREAM_KEY ? `rtmps://a.rtmps.youtube.com:443/live2/${STREAM_KEY}` : '';
 const YOUTUBE_LIVE_URL = process.env.YOUTUBE_LIVE_URL || 'https://www.youtube.com/@andrikmetal/live';
 const VISUAL_TRIM_END = Math.max(0, Number(process.env.VISUAL_TRIM_END || '0.55') || 0.55);
-const CACHE_DIR = process.env.RADIO_CACHE_DIR || '/tmp/andrik-radio-r582';
+const CACHE_DIR = process.env.RADIO_CACHE_DIR || '/tmp/andrik-radio-r588';
 const CLEAN_VISUAL = `${CACHE_DIR}/visual-seamless.mp4`;
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R584-YOUTUBE-INGEST-FIX',
+  version: 'R588-3MIN-VIDEO-UPGRADED',
   mode: 'MP3 ONLY / SEAMLESS VISUAL + LIVE OVERLAY',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
   producerRunning: false,
-  overlayMode: '181.5s COVER / YOUTUBE CBR INGEST / PREV+NEXT SAME LEVEL',
+  overlayMode: '180s COVER / BIG YELLOW NOW BOX / NO PREV / TICKER LARGE',
   visualTrimEnd: VISUAL_TRIM_END,
   libraryTracks: 0,
   cycle: 0,
@@ -90,7 +90,7 @@ function albumName(item){
 
 async function loadLibrary(){
   const url=`${PLAYLIST_URL}${PLAYLIST_URL.includes('?')?'&':'?'}ts=${Date.now()}`;
-  const response=await fetch(url,{headers:{'user-agent':'ANDRIK-Radio-24-7-R582-3MIN'}});
+  const response=await fetch(url,{headers:{'user-agent':'ANDRIK-Radio-24-7-R588-3MIN'}});
   if(!response.ok)throw new Error(`R2 library HTTP ${response.status}`);
 
   const data=await response.json();
@@ -185,10 +185,11 @@ async function ensureCleanVisual(){
 
 function trackLabel(item,fallback='—'){
   if(!item)return fallback;
-  const title=shortText(item.title||'ANDRIK',46);
+  const title=shortText(item.title||'ANDRIK',48);
   const album=shortText(item.album||'',24);
-  return album ? `${title} · ${album}` : title;
+  return album ? `${title} (${album})` : title;
 }
+
 
 function startPublisher(){
   if(!STREAM_URL){
@@ -240,40 +241,37 @@ function startPublisher(){
 function producerArgs(item,duration,offset,visualPath,previous,next){
   prepareCacheDir();
   const key=createHash('sha1').update([previous?.url||'',item?.url||'',next?.url||'',Date.now()].join('|')).digest('hex').slice(0,12);
-  const previousFile=`${CACHE_DIR}/prev-live-${key}.txt`;
   const currentFile=`${CACHE_DIR}/current-live-${key}.txt`;
   const nextFile=`${CACHE_DIR}/next-live-${key}.txt`;
   const tickerFile=`${CACHE_DIR}/ticker-live-${key}.txt`;
   const visualList=`${CACHE_DIR}/visual-list-${key}.txt`;
 
-  writeFileSync(previousFile,`← ${trackLabel(previous,'СТАРТ ЭФИРА')}`,'utf8');
-  writeFileSync(currentFile,`▶ СЕЙЧАС: ${trackLabel(item,'ANDRIK')}`,'utf8');
-  writeFileSync(nextFile,`ДАЛЬШЕ: ${trackLabel(next,'НОВЫЙ ЦИКЛ')} →`,'utf8');
+  writeFileSync(currentFile,`СЕЙЧАС: ${trackLabel(item,'ANDRIK')}`,'utf8');
+  writeFileSync(nextFile,`ДАЛЬШЕ: ${trackLabel(next,'НОВЫЙ ЦИКЛ')}`,'utf8');
   const unit=`ANDRIK METAL RADIO 24/7   •   СЕЙЧАС: ${trackLabel(item,'ANDRIK')}   •   ДАЛЬШЕ: ${trackLabel(next,'—')}   •   ANDRIKMETAL.COM   •   `;
   writeFileSync(tickerFile,unit.repeat(8),'utf8');
 
-  // Один компактный 3-минутный MP4 физически хранится один раз (~5.6 MB).
-  // Concat-demuxer читает тот же файл 4 раза как один непрерывный 12-минутный visual.
-  // Это убирает demux restart/black flash от -stream_loop на каждом коротком цикле.
   const escapedVisual=String(visualPath);
-  writeFileSync(visualList,Array(20).fill(`file '${escapedVisual}'`).join('\n')+'\n','utf8');
+  writeFileSync(visualList,Array(20).fill(`file '${escapedVisual}'`).join('
+')+'
+','utf8');
 
   const font=chooseFont();
   const fontPart=font?`fontfile='${ffFilterPath(font)}':`:'';
-  const prevPath=ffFilterPath(previousFile), curPath=ffFilterPath(currentFile), nextPath=ffFilterPath(nextFile), tickerPath=ffFilterPath(tickerFile);
+  const curPath=ffFilterPath(currentFile), nextPath=ffFilterPath(nextFile), tickerPath=ffFilterPath(tickerFile);
   const vf=[
     'fps=24',
     `tpad=stop_mode=clone:stop_duration=${Math.ceil(duration)+10}`,
     'format=yuv420p',
-    'drawbox=x=0:y=ih-150:w=iw:h=150:color=black@0.58:t=fill',
-    `drawtext=${fontPart}textfile='${prevPath}':fontcolor=white@0.92:fontsize=20:x=28:y=h-124:shadowcolor=black@0.8:shadowx=2:shadowy=2`,
-    `drawtext=${fontPart}textfile='${curPath}':fontcolor=white:fontsize=30:x=(w-text_w)/2:y=h-92:shadowcolor=black@0.9:shadowx=2:shadowy=2`,
-    `drawtext=${fontPart}textfile='${nextPath}':fontcolor=white@0.92:fontsize=20:x=w-text_w-28:y=h-124:shadowcolor=black@0.8:shadowx=2:shadowy=2`,
-    'drawbox=x=0:y=ih-34:w=iw:h=34:color=black@0.82:t=fill',
-    `drawtext=${fontPart}textfile='${tickerPath}':fontcolor=white:fontsize=19:x='w-mod(t*110,text_w/8+w)':y=h-27:shadowcolor=black@0.9:shadowx=1:shadowy=1`
+    'drawbox=x=0:y=ih-165:w=iw:h=165:color=black@0.56:t=fill',
+    'drawbox=x=w*0.18:y=ih-112:w=w*0.64:h=42:color=black@0.88:t=fill',
+    `drawtext=${fontPart}textfile='${nextPath}':fontcolor=white@0.95:fontsize=22:x=w-text_w-28:y=h-138:shadowcolor=black@0.9:shadowx=2:shadowy=2`,
+    `drawtext=${fontPart}textfile='${curPath}':fontcolor=yellow:fontsize=36:x=(w-text_w)/2:y=h-104:shadowcolor=black@1:shadowx=2:shadowy=2`,
+    'drawbox=x=0:y=ih-46:w=iw:h=46:color=black@0.86:t=fill',
+    `drawtext=${fontPart}textfile='${tickerPath}':fontcolor=white:fontsize=24:x='w-mod(t*120,text_w/8+w)':y=h-39:shadowcolor=black@1:shadowx=1:shadowy=1`
   ].join(',');
 
-  return {tempFiles:[previousFile,currentFile,nextFile,tickerFile,visualList],args:[
+  return {tempFiles:[currentFile,nextFile,tickerFile,visualList],args:[
     '-hide_banner','-loglevel','warning','-re','-i',item.url,
     '-f','concat','-safe','0','-re','-i',visualList,
     '-map','1:v:0','-map','0:a:0','-t',duration.toFixed(3),

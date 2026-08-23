@@ -2321,20 +2321,28 @@ function isAndrikRadioLiveR576(value) {
   return radio && live;
 }
 
+function youtubeAppOpenUrlR587(url) {
+  const target=cleanPlainText(url||'https://www.youtube.com/@andrikmetal/live',1000);
+  return `https://andrikmetal.com/open-youtube.html?target=${encodeURIComponent(target)}&src=push&r=587`;
+}
+
 function youtubePushMetaR576(title, url) {
   const live=isAndrikRadioLiveR576(title);
+  const appUrl=youtubeAppOpenUrlR587(url);
   if(live) return {
     live:true,
     title:'🔴 ANDRIK METAL RADIO — LIVE',
     message:'Трансляция уже идёт. Заходи в эфир — ANDRIK 24/7. 🎸',
-    button:{id:'watch-live',text:'🔴 Открыть эфир',url},
+    url:appUrl,
+    button:{id:'watch-live',text:'🔴 Открыть эфир',url:appUrl},
     name:'live'
   };
   return {
     live:false,
     title:`🎵 ${compactYoutubePushTitle(title,'Новый релиз')}`,
     message:'Новый релиз ANDRIK уже доступен на YouTube',
-    button:{id:'listen-now',text:'▶️ Слушать на YouTube',url},
+    url:appUrl,
+    button:{id:'listen-now',text:'▶️ Слушать на YouTube',url:appUrl},
     name:'release'
   };
 }
@@ -3897,7 +3905,7 @@ async function pushYoutubeReleaseItemR332(env, db, item, origin='websub') {
   const result = await sendOneSignalPush(env, {
     title:pushMeta.title,
     message:pushMeta.message,
-    url:releaseUrl,
+    url:pushMeta.url,
     image:item.thumbnail || '',
     webButtons:[pushMeta.button],
     audience:'all',
@@ -4145,7 +4153,7 @@ async function handleCheckPlaylist(request, env) {
       const result = await sendOneSignalPush(env, {
         title: pushMeta.title,
         message: pushMeta.message,
-        url: releaseUrl,
+        url: pushMeta.url,
         image: item.thumbnail,
         webButtons: [pushMeta.button],
         audience: 'all',
@@ -4399,7 +4407,7 @@ async function handleRetryLatestPush(request, env) {
   const result = await sendOneSignalPush(env, {
     title: pushMeta.title,
     message: pushMeta.message,
-    url: releaseUrl,
+    url: pushMeta.url,
     image: item.thumbnail,
     webButtons: [pushMeta.button],
     audience: 'all',
@@ -11640,7 +11648,7 @@ async function maybeSendRadioLiveStartPushR585(env) {
   const result=await sendOneSignalPush(env,{
     title:pushMeta.title,
     message:pushMeta.message,
-    url:watchUrl,
+    url:pushMeta.url,
     image:thumb,
     webButtons:[pushMeta.button],
     audience:'all',

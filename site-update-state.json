@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787466359570-5032dcb3f5",
-  "release": "R585",
-  "archiveName": "R585-RADIO-LIVE-PUSH-FIX-CLEAN-SAFE-FULL.zip",
-  "sourceHead": "1f989645f622ed047a6942cc33bf54f217235677",
-  "backupSha": "1f989645f622ed047a6942cc33bf54f217235677",
-  "backupTag": "control-backup-20260823062553-1f98964-r585-d5dee",
+  "operationId": "publish-1787469636082-5cd7e9222a",
+  "release": "R588",
+  "archiveName": "R588-3MIN-VIDEO-LOOP-NOW-BOX-TICKER-UP-SAFE-FULL.zip",
+  "sourceHead": "2fb8461195cbc12f6d3c94fcb6700acaad50cc39",
+  "backupSha": "2fb8461195cbc12f6d3c94fcb6700acaad50cc39",
+  "backupTag": "control-backup-20260823072029-2fb8461-r588-fdce6",
   "autoRecovery": true,
-  "generatedAt": "2026-08-23T06:25:59.570Z"
+  "generatedAt": "2026-08-23T07:20:38.891Z"
 }

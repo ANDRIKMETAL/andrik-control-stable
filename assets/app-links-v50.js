@@ -14,6 +14,13 @@
     }
   }
 
+  function youtubeIntent(webUrl) {
+    // R586: force the Android YouTube package directly.
+    // No Android chooser. If YouTube is absent, browser_fallback_url stays
+    // in the browser instead of launching a second generic HTTPS intent.
+    return httpsIntent(webUrl, 'com.google.android.youtube', webUrl);
+  }
+
   function spotifyIntent(url) {
     const match = String(url || '').match(/open\.spotify\.com\/album\/([A-Za-z0-9]+)/i);
     if (!match) return httpsIntent(url, 'com.spotify.music', url);
@@ -32,6 +39,8 @@
 
   function forcedIntent(kind, webUrl) {
     switch (kind) {
+      case 'youtube':
+        return youtubeIntent(webUrl);
       case 'ytmusic':
         return httpsIntent(webUrl, 'com.google.android.apps.youtube.music', webUrl);
       case 'spotify':
@@ -54,57 +63,42 @@
   function normalizeLink(link) {
     const webUrl = link.getAttribute('data-web-url') || link.getAttribute('href');
     if (!webUrl) return;
+
+    // Keep a normal HTTPS href for copy/share/accessibility.
     link.setAttribute('href', webUrl);
     link.setAttribute('rel', 'noopener noreferrer external');
-    if (isAndroid && link.hasAttribute('data-force-app')) link.removeAttribute('target');
-    else link.setAttribute('target', '_blank');
-  }
 
-  function openYoutubeGreenTuber(event, link, webUrl) {
-    event.preventDefault();
-
-    // Direct user click -> current GreenTuber package first.
-    // If the app is absent and the page stays visible, try the older GreenTuber package.
-    // Only after both attempts do we open the YouTube website.
-    const primary = httpsIntent(webUrl, 'by.green.tuber', '');
-    const legacy = httpsIntent(webUrl, 'tr.green.tuber', '');
-
-    let leftPage = false;
-    const markLeft = () => { if (document.hidden) leftPage = true; };
-    document.addEventListener('visibilitychange', markLeft, {passive:true});
-
-    try { window.top.location.assign(primary); }
-    catch (_) { try { window.location.assign(primary); } catch (__) {} }
-
-    window.setTimeout(() => {
-      if (leftPage || document.hidden) return;
-      try { window.top.location.assign(legacy); }
-      catch (_) { try { window.location.assign(legacy); } catch (__) {} }
-    }, 650);
-
-    window.setTimeout(() => {
-      document.removeEventListener('visibilitychange', markLeft);
-      if (leftPage || document.hidden) return;
-      try { window.top.location.assign(webUrl); }
-      catch (_) { window.location.assign(webUrl); }
-    }, 1500);
+    if (isAndroid && link.hasAttribute('data-force-app')) {
+      link.removeAttribute('target');
+    } else {
+      link.setAttribute('target', '_blank');
+    }
   }
 
   function openAndroidApp(event, link) {
     if (!isAndroid) return;
+
     const kind = link.getAttribute('data-force-app');
     const webUrl = link.getAttribute('data-web-url') || link.getAttribute('href');
     if (!kind || !webUrl) return;
 
-    if (kind === 'youtube') {
-      openYoutubeGreenTuber(event, link, webUrl);
-      return;
-    }
-
     event.preventDefault();
+
     const intentUrl = forcedIntent(kind, webUrl);
-    try { window.top.location.assign(intentUrl); }
-    catch (_) { try { window.location.assign(intentUrl); } catch (__) { window.location.assign(webUrl); } }
+
+    // IMPORTANT: one navigation only.
+    // The intent itself has browser_fallback_url. We intentionally do NOT
+    // schedule a second window.location = https://... because that generic
+    // URL is what caused Android to show "Chrome / YouTube" chooser.
+    try {
+      window.top.location.assign(intentUrl);
+    } catch (_) {
+      try {
+        window.location.assign(intentUrl);
+      } catch (__) {
+        window.location.assign(webUrl);
+      }
+    }
   }
 
   function prepareAll(root = document) {
@@ -112,6 +106,7 @@
   }
 
   document.addEventListener('DOMContentLoaded', () => prepareAll());
+
   document.addEventListener('click', event => {
     const link = event.target.closest?.(APP_LINK_SELECTOR);
     if (!link) return;
