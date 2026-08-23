@@ -11,8 +11,7 @@ export class AndrikRadio extends Container {
     YOUTUBE_STREAM_KEY: env.YOUTUBE_STREAM_KEY || "",
     PLAYLIST_URL: env.PLAYLIST_URL || "https://andrikmetal.com/api/music/downloads",
     YOUTUBE_LIVE_URL: env.YOUTUBE_LIVE_URL || "https://www.youtube.com/@andrikmetal/live",
-    AUDIO_VISUAL: "/app/assets/audio-visual-loop-r566.webm",
-    QR_FILE: "/app/assets/andrik-qr-r566.png"
+    AUDIO_VISUAL: "/app/assets/audio-visual-loop-r566.webm"
   };
 
   override async onActivityExpired() {

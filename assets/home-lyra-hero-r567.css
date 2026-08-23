@@ -153,3 +153,15 @@
   .footer-qr-r566__link{width:min(190px,56vw);}
 }
 @media(prefers-reduced-motion:reduce){.lyra-hero-r566__video{display:none!important;}}
+\n\n/* R567 — robust real video: positive stacking, MP4/H.264, never disabled by reduced-motion */
+.lyra-hero-r567{isolation:isolate!important;}
+.lyra-hero-r567 .lyra-hero-r562__media{position:absolute!important;inset:0!important;z-index:0!important;overflow:hidden!important;}
+.lyra-hero-r567 .lyra-hero-r567__poster{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;object-fit:cover!important;object-position:center center!important;z-index:0!important;transform:none!important;opacity:1!important;transition:opacity .32s ease!important;}
+.lyra-hero-r567 .lyra-hero-r567__video{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;object-fit:cover!important;object-position:center center!important;z-index:1!important;display:block!important;opacity:0;transition:opacity .32s ease;background:#05070b;}
+.lyra-hero-r567.video-playing .lyra-hero-r567__video{opacity:1!important;}
+.lyra-hero-r567.video-playing .lyra-hero-r567__poster{opacity:0!important;}
+.lyra-hero-r567 .lyra-hero-r563__glow{z-index:2!important;}
+.lyra-hero-r567::before{z-index:2!important;}
+.lyra-hero-r567 .lyra-hero-r566__badge-wrap{z-index:5!important;}
+.lyra-hero-r567 .lyra-hero-r562__inner{position:relative!important;z-index:4!important;}
+@media(prefers-reduced-motion:reduce){.lyra-hero-r567 .lyra-hero-r567__video{display:block!important;}}

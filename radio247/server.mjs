@@ -5,7 +5,6 @@ import { spawn } from 'node:child_process';
 const PORT = Number(process.env.PORT || 8080);
 const PLAYLIST_URL = process.env.PLAYLIST_URL || 'https://andrikmetal.com/api/music/downloads';
 const AUDIO_VISUAL = process.env.AUDIO_VISUAL || '/app/assets/audio-visual-loop-r566.webm';
-const QR_FILE = process.env.QR_FILE || '/app/assets/andrik-qr-r566.png';
 const STREAM_KEY = String(process.env.YOUTUBE_STREAM_KEY || '').trim();
 const STREAM_URL = STREAM_KEY ? `rtmps://a.rtmps.youtube.com:443/live2/${STREAM_KEY}` : '';
 const YOUTUBE_LIVE_URL = process.env.YOUTUBE_LIVE_URL || 'https://www.youtube.com/@andrikmetal/live';
@@ -13,22 +12,16 @@ const FONT = '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf';
 const FONT_BOLD = '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf';
 const TICKER_FILE = '/tmp/andrik-radio-ticker.txt';
 
-const CLIPS = [
-  { type:'clip', title:'JOY OF BEING', label:'OFFICIAL MUSIC VIDEO', url:'https://music.andrikmetal.com/clips/joy-of-being-official-2026.mp4', format:'wide' },
-  { type:'clip', title:'Я ЕСТЬ', label:'OFFICIAL MUSIC VIDEO', url:'https://music.andrikmetal.com/clips/ya-est-official-2026.mp4', format:'wide' },
-  { type:'clip', title:'Лира — голос и лицо ANDRIK', label:'SHORT / PROMO', url:'https://music.andrikmetal.com/promo/lyra-trika-2026.mp4', format:'vertical' },
-  { type:'clip', title:'ПРОСНИСЬ', label:'VISUAL SHORT', url:'https://music.andrikmetal.com/clips/prosnis-fragment-2026.mp4', format:'vertical' }
-];
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R566',
+  version: 'R567',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
   producerRunning: false,
   libraryTracks: 0,
-  clipCount: CLIPS.length,
+  playbackMode: 'MP3 ONLY',
   cycle: 0,
   queueLength: 0,
   queuePosition: 0,
@@ -50,12 +43,11 @@ let running = false;
 let stopping = false;
 let titleSerial = 0;
 
-fs.writeFileSync(TICKER_FILE, 'ANDRIK METAL RADIO 24/7   •   ANDRIKMETAL.COM   •   YOUTUBE   •   SPOTIFY   •   APPLE MUSIC   •   AMAZON MUSIC   •   NEW MUSIC • OFFICIAL VIDEOS • RU / EN', 'utf8');
+fs.writeFileSync(TICKER_FILE, 'ANDRIK METAL RADIO 24/7   •   ANDRIKMETAL.COM   •   YOUTUBE   •   SPOTIFY   •   APPLE MUSIC   •   AMAZON MUSIC   •   NEW MUSIC • MP3 RADIO • RU / EN', 'utf8');
 
 
 function ensureLocalVisuals(){
   if(!fs.existsSync(AUDIO_VISUAL)||fs.statSync(AUDIO_VISUAL).size<1000)throw new Error('audio visual loop missing');
-  if(!fs.existsSync(QR_FILE)||fs.statSync(QR_FILE).size<1000)throw new Error('QR overlay missing');
 }
 
 function shuffle(items){
@@ -75,7 +67,7 @@ function albumName(item){
 
 async function loadLibrary(){
   const url=`${PLAYLIST_URL}${PLAYLIST_URL.includes('?')?'&':'?'}ts=${Date.now()}`;
-  const response=await fetch(url,{headers:{'user-agent':'ANDRIK-Radio-24-7-R566'}});
+  const response=await fetch(url,{headers:{'user-agent':'ANDRIK-Radio-24-7-R567'}});
   if(!response.ok)throw new Error(`R2 library HTTP ${response.status}`);
   const data=await response.json();
   const source=Array.isArray(data.tracks)?data.tracks:[];
@@ -99,22 +91,7 @@ async function loadLibrary(){
 }
 
 function buildQueue(){
-  const audio=shuffle(library);
-  const clips=shuffle(CLIPS);
-  const out=[];
-  if(!audio.length)return clips;
-  const baseGap=Math.max(3,Math.floor(audio.length/(clips.length+1)));
-  let clipIndex=0;
-  let untilClip=baseGap+Math.floor(Math.random()*3);
-  for(const track of audio){
-    out.push(track);
-    untilClip--;
-    if(untilClip<=0&&clipIndex<clips.length){
-      out.push(clips[clipIndex++]);
-      untilClip=baseGap+Math.floor(Math.random()*4);
-    }
-  }
-  while(clipIndex<clips.length)out.push(clips[clipIndex++]);
+  const out=shuffle(library);
   state.cycle++;
   state.queueLength=out.length;
   return out;
@@ -169,31 +146,6 @@ function audioProducerArgs(item,probe,offset){
   ];
 }
 
-function clipProducerArgs(item,probe,offset){
-  const titleFile=writeTextFile('clip-title',item.title);
-  const labelFile=writeTextFile('clip-label',item.label);
-  const filter=`[0:v]split=2[bgsrc][fgsrc];`+
-    `[bgsrc]scale=1280:720:force_original_aspect_ratio=increase,crop=1280:720,gblur=sigma=24[bg];`+
-    `[fgsrc]scale=1280:720:force_original_aspect_ratio=decrease[fg];`+
-    `[bg][fg]overlay=(W-w)/2:(H-h)/2[tmp];`+
-    `[1:v]scale=145:145[qr];`+
-    `[tmp][qr]overlay=22:18[tmpqr];`+
-    `[tmpqr]drawtext=fontfile=${FONT_BOLD}:text='ANDRIKMETAL':x=w-text_w-28:y=30:fontsize=30:fontcolor=white:shadowx=2:shadowy=2[tmpbrand];`+
-    `[tmpbrand]drawbox=x=25:y=545:w=675:h=104:color=black@0.52:t=fill[tmp2];`+
-    `[tmp2]drawtext=fontfile=${FONT_BOLD}:textfile=${titleFile}:x=48:y=560:fontsize=35:fontcolor=white:shadowx=2:shadowy=2[tmp3];`+
-    `[tmp3]drawtext=fontfile=${FONT}:textfile=${labelFile}:x=50:y=608:fontsize=18:fontcolor=0x9fd6ff[tmp4];`+
-    `[tmp4]drawbox=x=0:y=672:w=1280:h=48:color=black@0.76:t=fill[tmp5];`+
-    `[tmp5]drawtext=fontfile=${FONT_BOLD}:textfile=${TICKER_FILE}:x=w-mod(t*125\,w+tw):y=685:fontsize=21:fontcolor=white[v]`;
-  return [
-    '-hide_banner','-loglevel','warning','-re','-i',item.url,
-    '-loop','1','-framerate','1','-i',QR_FILE,
-    '-filter_complex',filter,'-map','[v]','-map','0:a:0',
-    '-r','30','-c:v','libx264','-preset','ultrafast','-tune','zerolatency','-profile:v','main','-level','3.1','-pix_fmt','yuv420p','-b:v','2800k','-maxrate','3400k','-bufsize','5600k','-g','60','-keyint_min','60',
-    '-c:a','aac','-b:a','160k','-ar','44100','-ac','2',
-    '-output_ts_offset',offset.toFixed(3),'-mpegts_flags','+initial_discontinuity','-f','mpegts','pipe:1'
-  ];
-}
-
 function startPublisher(){
   if(!STREAM_URL){
     state.lastError='YOUTUBE_STREAM_KEY is not configured yet';
@@ -223,7 +175,7 @@ async function playItem(item,next){
   state.current={type:item.type,title:item.title,album:item.album||'',label:item.label||'',url:item.url,startedAt:new Date().toISOString(),duration:probe.duration};
   state.next=next?{type:next.type,title:next.title,album:next.album||'',label:next.label||''}:null;
   state.producerRunning=true;
-  const args=item.type==='clip'?clipProducerArgs(item,probe,timelineOffset):audioProducerArgs(item,probe,timelineOffset);
+  const args=audioProducerArgs(item,probe,timelineOffset);
   producer=spawn('ffmpeg',args,{stdio:['ignore','pipe','pipe']});
   producer.stderr.on('data',d=>{
     const line=String(d||'').trim();
@@ -280,7 +232,7 @@ function publicStatus(){
     publisherRunning:state.publisherRunning,
     producerRunning:state.producerRunning,
     libraryTracks:state.libraryTracks,
-    clipCount:state.clipCount,
+    playbackMode:state.playbackMode,
     cycle:state.cycle,
     queueLength:state.queueLength,
     queuePosition:state.queuePosition,
@@ -303,12 +255,12 @@ const server=http.createServer(async(req,res)=>{
     res.writeHead(200,headers);res.end(JSON.stringify(publicStatus()));return;
   }
   if(url.pathname==='/library'){
-    res.writeHead(200,headers);res.end(JSON.stringify({ok:true,albums:library.length,clips:CLIPS,current:state.current,next:state.next}));return;
+    res.writeHead(200,headers);res.end(JSON.stringify({ok:true,tracks:library.length,mode:'MP3 ONLY',current:state.current,next:state.next}));return;
   }
   res.writeHead(404,headers);res.end(JSON.stringify({ok:false,error:'not-found'}));
 });
 
-server.listen(PORT,'0.0.0.0',()=>{console.log(`ANDRIK Radio R565 listening on :${PORT}`);radioLoop();});
+server.listen(PORT,'0.0.0.0',()=>{console.log(`ANDRIK Radio R567 listening on :${PORT}`);radioLoop();});
 
 function shutdown(){
   stopping=true;

@@ -1,6 +1,6 @@
 (()=>{
 'use strict';
-const root=document.getElementById('youtubeRadioR566');
+const root=document.getElementById('youtubeRadioR565');
 if(!root)return;
 const statusUrl='https://radio.andrikmetal.com/status';
 const streamId='jBDuQ45RbeE';
@@ -14,18 +14,18 @@ const number=v=>new Intl.NumberFormat('ru-RU').format(Math.max(0,Number(v)||0));
 function clock(sec){const n=Math.max(0,Number(sec)||0);if(n<60)return Math.round(n)+' сек';const h=Math.floor(n/3600),m=Math.floor((n%3600)/60);return h?`${h} ч ${m} мин`:`${m} мин`;}
 function renderRadio(data){
   const live=Boolean(data?.ok&&data?.publisherRunning);
-  const pill=$('youtubeRadioLiveR566');
+  const pill=$('youtubeRadioLiveR565');
   if(pill){pill.classList.toggle('is-live',live);pill.querySelector('span').textContent=live?'ЭФИР ИДЁТ':'ОЖИДАЕТ ЗАПУСКА';}
-  text('youtubeRadioTracksR566',number(data?.libraryTracks));
-  text('youtubeRadioClipsR566',number(data?.clipCount||4));
-  text('youtubeRadioCycleR566',String(data?.cycle||0));
-  text('youtubeRadioUptimeR566',clock(data?.uptimeSeconds||0));
+  text('youtubeRadioTracksR565',number(data?.libraryTracks));
+  text('youtubeRadioModeR565',safe(data?.playbackMode)||'MP3 ONLY');
+  text('youtubeRadioCycleR565',String(data?.cycle||0));
+  text('youtubeRadioUptimeR565',clock(data?.uptimeSeconds||0));
   const cur=data?.current||{};
-  text('youtubeRadioNowTitleR566',safe(cur.title)||'Поток ещё не стартовал');
-  text('youtubeRadioNowMetaR566',[safe(cur.album),cur.type==='clip'?'КЛИП':'MP3 ИЗ R2'].filter(Boolean).join(' • ')||'R2 → YouTube');
+  text('youtubeRadioNowTitleR565',safe(cur.title)||'Поток ещё не стартовал');
+  text('youtubeRadioNowMetaR565',[safe(cur.album),'MP3 ИЗ R2'].filter(Boolean).join(' • ')||'R2 → YouTube');
   const next=data?.next||{};
-  text('youtubeRadioNextR566',safe(next.title)?`Дальше: ${next.title}`:'Дальше: очередь формируется');
-  const note=$('youtubeRadioNoteR566');
+  text('youtubeRadioNextR565',safe(next.title)?`Дальше: ${next.title}`:'Дальше: очередь формируется');
+  const note=$('youtubeRadioNoteR565');
   if(note)note.textContent=data?.lastError?`Radio: ${String(data.lastError).slice(0,220)}`:`R2/FFmpeg: OK · ${new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}`;
 }
 function healthLabel(data){
@@ -37,11 +37,11 @@ function healthLabel(data){
   return 'ЖДЁТ СИГНАЛ';
 }
 function renderYoutube(data){
-  text('youtubeRadioViewersR566',number(data?.concurrentViewers));
-  text('youtubeRadioViewsR566',number(data?.views));
-  text('youtubeRadioLikesR566',number(data?.likes));
-  text('youtubeRadioHealthR566',healthLabel(data));
-  const note=$('youtubeRadioNoteR566');
+  text('youtubeRadioViewersR565',number(data?.concurrentViewers));
+  text('youtubeRadioViewsR565',number(data?.views));
+  text('youtubeRadioLikesR565',number(data?.likes));
+  text('youtubeRadioHealthR565',healthLabel(data));
+  const note=$('youtubeRadioNoteR565');
   if(note&&data?.ok){
     const parts=[safe(data.lifeCycleStatus),safe(data.streamStatus),safe(data.privacyStatus)].filter(Boolean);
     const issues=Array.isArray(data.healthIssues)?data.healthIssues:[];
@@ -50,12 +50,12 @@ function renderYoutube(data){
 }
 async function loadRadio(){
   try{const res=await fetch(statusUrl+'?ts='+Date.now(),{cache:'no-store',mode:'cors'});if(!res.ok)throw new Error('HTTP '+res.status);renderRadio(await res.json());}
-  catch(_){const pill=$('youtubeRadioLiveR566');if(pill){pill.classList.remove('is-live');pill.querySelector('span').textContent='РАДИО НЕ ПОДКЛЮЧЕНО';}text('youtubeRadioNowTitleR566','Ожидаем deploy radio.andrikmetal.com');text('youtubeRadioNowMetaR566','Cloudflare Container ещё не отвечает');}
+  catch(_){const pill=$('youtubeRadioLiveR565');if(pill){pill.classList.remove('is-live');pill.querySelector('span').textContent='РАДИО НЕ ПОДКЛЮЧЕНО';}text('youtubeRadioNowTitleR565','Ожидаем deploy radio.andrikmetal.com');text('youtubeRadioNowMetaR565','Cloudflare Container ещё не отвечает');}
 }
 async function loadYoutube(){
   const key=getKey();if(!key)return;
   try{const res=await fetch(`/api/control/youtube-live-r565?id=${encodeURIComponent(streamId)}&ts=${Date.now()}`,{headers:{accept:'application/json',authorization:`Bearer ${key}`},cache:'no-store'});const data=await res.json().catch(()=>({}));if(!res.ok)throw new Error(data.error||'HTTP '+res.status);renderYoutube(data);}
-  catch(error){text('youtubeRadioHealthR566','НЕТ ДАННЫХ');}
+  catch(error){text('youtubeRadioHealthR565','НЕТ ДАННЫХ');}
 }
 function loadAll(){loadRadio();loadYoutube();}
 loadAll();setInterval(loadAll,15000);
