@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787481044965-aa47b049ee",
-  "release": "R595",
-  "archiveName": "R595-DIRECT-LIVE-YOUTUBE-APP-FIX-SAFE-FULL.zip",
-  "sourceHead": "bd9e7f9aae7834c44c13acbdc7b5d4fb21f659ac",
-  "backupSha": "bd9e7f9aae7834c44c13acbdc7b5d4fb21f659ac",
-  "backupTag": "control-backup-20260823103038-bd9e7f9-r595-e5256",
+  "operationId": "publish-1787481603598-129efa18d5",
+  "release": "R596",
+  "archiveName": "R596-CLEAN-LIGHT-LYRA-ALL-LANGUAGES-SAFE-FULL.zip",
+  "sourceHead": "dc2d0ea7677d976c4b83e7158068af040bb36fbc",
+  "backupSha": "dc2d0ea7677d976c4b83e7158068af040bb36fbc",
+  "backupTag": "control-backup-20260823103957-dc2d0ea-r596-d268e",
   "autoRecovery": true,
-  "generatedAt": "2026-08-23T10:30:45.365Z"
+  "generatedAt": "2026-08-23T10:40:07.203Z"
 }
