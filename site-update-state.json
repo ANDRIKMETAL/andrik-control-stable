@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787457023234-1520bb157d",
-  "release": "R573",
-  "archiveName": "R573-RADIO-SEAMLESS-TICKER-FIX-SAFE-FULL.zip",
-  "sourceHead": "d5744172d7532179c6866557e44c5f4e20f2fb86",
-  "backupSha": "d5744172d7532179c6866557e44c5f4e20f2fb86",
-  "backupTag": "control-backup-20260823035018-d574417-r573-c9304",
+  "operationId": "publish-1787457729208-44cc87b4fd",
+  "release": "R574",
+  "archiveName": "R574-RADIO-PRODUCER-FIX-SAFE-FULL.zip",
+  "sourceHead": "e6a064911c315da4ab5dc0551f4ae2c7b884d296",
+  "backupSha": "e6a064911c315da4ab5dc0551f4ae2c7b884d296",
+  "backupTag": "control-backup-20260823040204-e6a0649-r574-8aa0d",
   "autoRecovery": true,
-  "generatedAt": "2026-08-23T03:50:23.234Z"
+  "generatedAt": "2026-08-23T04:02:09.208Z"
 }
