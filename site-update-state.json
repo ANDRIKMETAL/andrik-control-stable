@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787455805303-8a454cc87e",
-  "release": "R572",
-  "archiveName": "R572-R2-EXACT-DUPLICATE-CLEANER-SAFE-FULL.zip",
-  "sourceHead": "b27eb82be9a3b4691f42764c1c8491e1b1881129",
-  "backupSha": "b27eb82be9a3b4691f42764c1c8491e1b1881129",
-  "backupTag": "control-backup-20260823033000-b27eb82-r572-ffe3a",
+  "operationId": "publish-1787457023234-1520bb157d",
+  "release": "R573",
+  "archiveName": "R573-RADIO-SEAMLESS-TICKER-FIX-SAFE-FULL.zip",
+  "sourceHead": "d5744172d7532179c6866557e44c5f4e20f2fb86",
+  "backupSha": "d5744172d7532179c6866557e44c5f4e20f2fb86",
+  "backupTag": "control-backup-20260823035018-d574417-r573-c9304",
   "autoRecovery": true,
-  "generatedAt": "2026-08-23T03:30:05.303Z"
+  "generatedAt": "2026-08-23T03:50:23.234Z"
 }
