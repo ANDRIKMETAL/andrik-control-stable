@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787481603598-129efa18d5",
-  "release": "R596",
-  "archiveName": "R596-CLEAN-LIGHT-LYRA-ALL-LANGUAGES-SAFE-FULL.zip",
-  "sourceHead": "dc2d0ea7677d976c4b83e7158068af040bb36fbc",
-  "backupSha": "dc2d0ea7677d976c4b83e7158068af040bb36fbc",
-  "backupTag": "control-backup-20260823103957-dc2d0ea-r596-d268e",
+  "operationId": "publish-1787482694551-98d87397fe",
+  "release": "R597",
+  "archiveName": "R597-CLEAN-LIGHT-LYRA-RADIO-AUDIO-FIX-SAFE-FULL.zip",
+  "sourceHead": "17886b74ec70c00e2a527c9a48a0e821045b3a65",
+  "backupSha": "17886b74ec70c00e2a527c9a48a0e821045b3a65",
+  "backupTag": "control-backup-20260823105808-17886b7-r597-7da21",
   "autoRecovery": true,
-  "generatedAt": "2026-08-23T10:40:07.203Z"
+  "generatedAt": "2026-08-23T10:58:14.963Z"
 }

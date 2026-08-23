@@ -23,13 +23,14 @@ const CLEAN_VISUAL = `${CACHE_DIR}/visual-seamless.mp4`;
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R592-UNIVERSAL-YOUTUBE-AND-TICKER',
-  mode: 'MP3 ONLY / SEAMLESS VISUAL + LIVE OVERLAY',
+  version: 'R597-YOUTUBE-AUDIO-HARDENED',
+  mode: 'MP3 ONLY / AAC-LC 48kHz STEREO / SEAMLESS VISUAL + LIVE OVERLAY',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
   producerRunning: false,
   overlayMode: '180s DIRECT LOOP / YELLOW NOW / MULTIPLATFORM CTA TICKER',
+  audioMode: 'AAC-LC 48kHz stereo 160kbps / async normalized at producer + publisher',
   visualTrimEnd: VISUAL_TRIM_END,
   libraryTracks: 0,
   cycle: 0,
@@ -203,7 +204,9 @@ function startPublisher(){
     '-analyzeduration','5000000','-probesize','5000000',
     '-i','pipe:0',
     '-map','0:v:0','-map','0:a:0',
-    '-c','copy',
+    '-c:v','copy',
+    '-af','aresample=48000:async=1000:first_pts=0',
+    '-c:a','aac','-profile:a','aac_low','-b:a','160k','-ar','48000','-ac','2',
     '-flvflags','no_duration_filesize',
     '-flush_packets','1',
     '-muxdelay','0','-muxpreload','0',
@@ -276,7 +279,8 @@ function producerArgs(item,duration,offset,visualPath,previous,next){
     '-b:v','3000k','-minrate','3000k','-maxrate','3000k','-bufsize','6000k',
     '-x264-params','nal-hrd=cbr:force-cfr=1:repeat-headers=1',
     '-g','48','-keyint_min','48','-sc_threshold','0','-r','24','-threads','2','-pix_fmt','yuv420p',
-    '-c:a','aac','-b:a','128k','-ar','44100','-ac','2',
+    '-af','aresample=48000:async=1:first_pts=0',
+    '-c:a','aac','-profile:a','aac_low','-b:a','160k','-ar','48000','-ac','2',
     '-output_ts_offset',offset.toFixed(3),'-mpegts_flags','+initial_discontinuity+resend_headers','-f','mpegts','pipe:1'
   ]};
 }
@@ -357,6 +361,7 @@ function publicStatus(){
     version:state.version,
     mode:state.mode,
     overlayMode:state.overlayMode,
+    audioMode:state.audioMode,
     visualTrimEnd:state.visualTrimEnd,
     publisherRunning:state.publisherRunning,
     producerRunning:state.producerRunning,
@@ -409,7 +414,7 @@ const server=http.createServer((req,res)=>{
 });
 
 server.listen(PORT,'0.0.0.0',()=>{
-  console.log(`ANDRIK Radio R584-YOUTUBE-INGEST-FIX listening on :${PORT}`);
+  console.log(`ANDRIK Radio R597-YOUTUBE-AUDIO-HARDENED listening on :${PORT}`);
   radioLoop();
 });
 

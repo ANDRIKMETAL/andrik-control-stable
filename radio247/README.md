@@ -30,3 +30,11 @@ YouTube Stream Key хранится только на VM: `/etc/andrik-radio.env
 - The same file is referenced 4 times by concat-demuxer, so the runtime visual is ~12 minutes without storing 4 physical copies.
 - No `-stream_loop` on the short visual; ticker filter runs continuously for the whole song.
 - Previous and next are aligned on the same row; current track font increased.
+
+
+## R597 AUDIO HARDENED
+- Убрано сквозное `-c copy` для AAC на финальном RTMPS-публикаторе.
+- Аудио нормализуется на 48 kHz stereo и повторно кодируется в AAC-LC 160 kbps непосредственно перед YouTube.
+- На уровне трека добавлен `aresample=48000:async=1:first_pts=0`, чтобы выровнять таймстампы MP3/AAC.
+- На финальном публикаторе добавлен `aresample=48000:async=1000:first_pts=0`, чтобы переживать границы песен и MPEG-TS discontinuity без потери звука.
+- Видео по-прежнему идёт через `-c:v copy` на финальном публикаторе, поэтому лишней видеонагрузки нет.
