@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787457729208-44cc87b4fd",
-  "release": "R574",
-  "archiveName": "R574-RADIO-PRODUCER-FIX-SAFE-FULL.zip",
-  "sourceHead": "e6a064911c315da4ab5dc0551f4ae2c7b884d296",
-  "backupSha": "e6a064911c315da4ab5dc0551f4ae2c7b884d296",
-  "backupTag": "control-backup-20260823040204-e6a0649-r574-8aa0d",
+  "operationId": "publish-1787459404369-2791403bc6",
+  "release": "R577",
+  "archiveName": "R577-YOUTUBE-APP-FIRST-LIVE-CONTROL-FIX-SAFE-FULL.zip",
+  "sourceHead": "a2c8cf4c8debc8c4805e1e1673800ecbca0480ff",
+  "backupSha": "a2c8cf4c8debc8c4805e1e1673800ecbca0480ff",
+  "backupTag": "control-backup-20260823042958-a2c8cf4-r577-ec629",
   "autoRecovery": true,
-  "generatedAt": "2026-08-23T04:02:09.208Z"
+  "generatedAt": "2026-08-23T04:30:06.850Z"
 }

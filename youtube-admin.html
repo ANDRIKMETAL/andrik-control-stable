@@ -118,7 +118,7 @@
     <div class="youtube-radio-copy-r565">
       <div class="youtube-radio-live-r565" id="youtubeRadioLiveR565"><i aria-hidden="true"></i><span>ПРОВЕРЯЕМ ЭФИР</span></div>
       <h2 id="youtubeRadioTitleR565">ANDRIK Metal Radio 24/7</h2>
-      <p>R2 → Cloudflare Container → YouTube Live. Только MP3 из R2: все альбомы в случайном порядке. Клипы и Shorts в радио отключены.</p>
+      <p>R2 → AWS EC2 → FFmpeg → YouTube Live. Только MP3 из альбомов, случайная очередь, эфир 24/7.</p>
     </div>
   </div>
   <div class="youtube-radio-stats-r565">
@@ -140,9 +140,9 @@
     <span id="youtubeRadioNextR565">Дальше: —</span>
   </div>
   <div class="youtube-radio-actions-r565">
-    <a href="https://studio.youtube.com/video/jBDuQ45RbeE/livestreaming" target="_blank" rel="noopener">⚙ Настройки стрима</a>
-    <a href="https://studio.youtube.com/video/jBDuQ45RbeE/analytics/tab-overview/period-default" target="_blank" rel="noopener">📈 Аналитика эфира</a>
-    <a href="https://www.youtube.com/@andrikmetal/live" target="_blank" rel="noopener">🔴 Открыть эфир</a>
+    <a id="youtubeRadioStudioR576" href="https://studio.youtube.com/" target="_blank" rel="noopener">⚙ Настройки стрима</a>
+    <a id="youtubeRadioAnalyticsR576" href="https://studio.youtube.com/" target="_blank" rel="noopener">📈 Аналитика эфира</a>
+    <a id="youtubeRadioWatchR576" data-force-app="youtube" data-web-url="https://www.youtube.com/@andrikmetal/live" href="https://www.youtube.com/@andrikmetal/live" rel="noopener external">🔴 Открыть эфир</a>
   </div>
   <div class="youtube-radio-note-r565" id="youtubeRadioNoteR565">Статус загрузится автоматически.</div>
 </section>
@@ -164,12 +164,13 @@
   <div class="andrik-spoiler-body"><div class="analytics-list" id="youtubeStudioSharing"></div></div>
 </details>
 
-<footer class="control-version-footer"><strong>Live Web AI · профиль ANDRIK · R567 RADIO</strong><span>YouTube Studio · Radio 24/7 · аналитика · состояние · настройки · 23.08.2026</span></footer>
+<footer class="control-version-footer"><strong>Live Web AI · профиль ANDRIK · R576 AUTO LIVE</strong><span>YouTube Studio · Radio 24/7 · аналитика · состояние · настройки · 23.08.2026</span></footer>
 </div></main>
 <script defer src="/assets/youtube-admin-v55-00k.js?v=55.00k-r546"></script><script defer src="/assets/control-status-eye-v55-00-r88.js?v=55.00-r88"></script><script defer src="/assets/control-version-v55-00-final-r1.js?v=55.00-final-r1"></script><script defer src="/assets/control-version-v55-00-final-r2.js?v=55.00-final-r2"></script><script defer src="/assets/control-version-v55-00-final-r21.js?v=55.00-final-r21"></script><script defer src="/assets/control-live-eye-v55-00-r265.js?v=55.00-r265"></script><script defer src="/assets/control-version-v55-00-r115.js?v=55.00-r115"></script><script defer src="/assets/unified-glow-r139.js?v=55.00-r142"></script>
 <script defer src="/assets/control-mini-player-r141.js?v=55.00-r144"></script>
 <script defer src="/assets/control-version-sync-r558.js?v=55.00-r558"></script>
 <script defer src="/assets/social-platform-swipe-r524.js?v=55.00-r524"></script>
 <script defer src="/assets/youtube-top-prefetch-r556.js?v=55.00-r556"></script>
-<script defer src="/assets/youtube-radio-r571.js?v=55.00-r571"></script>
+<script defer src="/assets/youtube-radio-r577.js?v=55.00-r577"></script>
+<script defer src="/assets/app-links-v50.js?v=55.00-r577"></script>
 </body></html>

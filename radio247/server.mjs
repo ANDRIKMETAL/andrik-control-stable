@@ -13,7 +13,7 @@ import {
 
 const PORT = Number(process.env.PORT || 8080);
 const PLAYLIST_URL = process.env.PLAYLIST_URL || 'https://andrikmetal.com/api/music/downloads';
-const AUDIO_VISUAL = process.env.AUDIO_VISUAL || new URL('./assets/audio-visual-loop-r569-h264.mp4', import.meta.url).pathname;
+const AUDIO_VISUAL = process.env.AUDIO_VISUAL || new URL('./assets/audio-visual-r575-3min-compact.mp4', import.meta.url).pathname;
 const STREAM_KEY = String(process.env.YOUTUBE_STREAM_KEY || '').trim();
 const STREAM_URL = STREAM_KEY ? `rtmps://a.rtmps.youtube.com:443/live2/${STREAM_KEY}` : '';
 const YOUTUBE_LIVE_URL = process.env.YOUTUBE_LIVE_URL || 'https://www.youtube.com/@andrikmetal/live';
@@ -23,13 +23,13 @@ const CLEAN_VISUAL = `${CACHE_DIR}/visual-seamless.mp4`;
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R574-SEAMLESS-FIX',
+  version: 'R575-LONG-LOOP-FIX',
   mode: 'MP3 ONLY / SEAMLESS VISUAL + LIVE OVERLAY',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
   producerRunning: false,
-  overlayMode: 'LIVE TICKER / NO 10s RESET',
+  overlayMode: 'LIVE TICKER / 12m CONCAT VISUAL / NO LOOP RESET',
   visualTrimEnd: VISUAL_TRIM_END,
   libraryTracks: 0,
   cycle: 0,
@@ -90,7 +90,7 @@ function albumName(item){
 
 async function loadLibrary(){
   const url=`${PLAYLIST_URL}${PLAYLIST_URL.includes('?')?'&':'?'}ts=${Date.now()}`;
-  const response=await fetch(url,{headers:{'user-agent':'ANDRIK-Radio-24-7-R574-SEAMLESS-FIX'}});
+  const response=await fetch(url,{headers:{'user-agent':'ANDRIK-Radio-24-7-R575-LONG-LOOP-FIX'}});
   if(!response.ok)throw new Error(`R2 library HTTP ${response.status}`);
 
   const data=await response.json();
@@ -174,29 +174,13 @@ function prepareCacheDir(){
 }
 
 
+
 async function ensureCleanVisual(){
-  if(cleanVisualPromise)return cleanVisualPromise;
-  cleanVisualPromise=(async()=>{
-    prepareCacheDir();
-    if(existsSync(CLEAN_VISUAL) && statSync(CLEAN_VISUAL).size>20000)return CLEAN_VISUAL;
-    const sourceDuration=await probeDuration(AUDIO_VISUAL);
-    const cleanDuration=Math.max(2,sourceDuration-VISUAL_TRIM_END);
-    const filter=[
-      `[0:v]trim=duration=${cleanDuration.toFixed(3)},setpts=PTS-STARTPTS,fps=24,format=yuv420p,split=2[f][r]`,
-      `[r]reverse,setpts=PTS-STARTPTS[rr]`,
-      `[f][rr]concat=n=2:v=1:a=0,format=yuv420p[v]`
-    ].join(';');
-    const args=[
-      '-y','-hide_banner','-loglevel','warning','-i',AUDIO_VISUAL,
-      '-filter_complex',filter,'-map','[v]','-an',
-      '-c:v','libx264','-preset','veryfast','-crf','25',
-      '-g','48','-keyint_min','48','-sc_threshold','0',
-      '-pix_fmt','yuv420p','-movflags','+faststart',CLEAN_VISUAL
-    ];
-    await runCapture('ffmpeg',args,{timeoutMs:90000});
-    return CLEAN_VISUAL;
-  })().catch(error=>{cleanVisualPromise=null;throw error;});
-  return cleanVisualPromise;
+  prepareCacheDir();
+  if(!existsSync(AUDIO_VISUAL) || statSync(AUDIO_VISUAL).size<1000000){
+    throw new Error(`R575 visual missing or too small: ${AUDIO_VISUAL}`);
+  }
+  return AUDIO_VISUAL;
 }
 
 function trackLabel(item,fallback='—'){
@@ -247,6 +231,7 @@ function startPublisher(){
 }
 
 
+
 function producerArgs(item,duration,offset,visualPath,previous,next){
   prepareCacheDir();
   const key=createHash('sha1').update([previous?.url||'',item?.url||'',next?.url||'',Date.now()].join('|')).digest('hex').slice(0,12);
@@ -254,26 +239,38 @@ function producerArgs(item,duration,offset,visualPath,previous,next){
   const currentFile=`${CACHE_DIR}/current-live-${key}.txt`;
   const nextFile=`${CACHE_DIR}/next-live-${key}.txt`;
   const tickerFile=`${CACHE_DIR}/ticker-live-${key}.txt`;
+  const visualList=`${CACHE_DIR}/visual-list-${key}.txt`;
+
   writeFileSync(previousFile,`← ${trackLabel(previous,'СТАРТ ЭФИРА')}`,'utf8');
   writeFileSync(currentFile,`▶ СЕЙЧАС: ${trackLabel(item,'ANDRIK')}`,'utf8');
   writeFileSync(nextFile,`${trackLabel(next,'ДАЛЬШЕ — НОВЫЙ ЦИКЛ')} →`,'utf8');
   const unit=`ANDRIK METAL RADIO 24/7   •   СЕЙЧАС: ${trackLabel(item,'ANDRIK')}   •   ДАЛЬШЕ: ${trackLabel(next,'—')}   •   ANDRIKMETAL.COM   •   `;
   writeFileSync(tickerFile,unit.repeat(8),'utf8');
+
+  // Один компактный 3-минутный MP4 физически хранится один раз (~5.6 MB).
+  // Concat-demuxer читает тот же файл 4 раза как один непрерывный 12-минутный visual.
+  // Это убирает demux restart/black flash от -stream_loop на каждом коротком цикле.
+  const escapedVisual=String(visualPath);
+  writeFileSync(visualList,Array(4).fill(`file '${escapedVisual}'`).join('\n')+'\n','utf8');
+
   const font=chooseFont();
   const fontPart=font?`fontfile='${ffFilterPath(font)}':`:'';
   const prevPath=ffFilterPath(previousFile), curPath=ffFilterPath(currentFile), nextPath=ffFilterPath(nextFile), tickerPath=ffFilterPath(tickerFile);
   const vf=[
-    'fps=24','format=yuv420p',
+    'fps=24',
+    `tpad=stop_mode=clone:stop_duration=${Math.ceil(duration)+10}`,
+    'format=yuv420p',
     'drawbox=x=0:y=ih-150:w=iw:h=150:color=black@0.58:t=fill',
-    `drawtext=${fontPart}textfile='${prevPath}':fontcolor=white@0.92:fontsize=20:x=28:y=h-118:shadowcolor=black@0.8:shadowx=2:shadowy=2`,
-    `drawtext=${fontPart}textfile='${curPath}':fontcolor=white:fontsize=25:x=(w-text_w)/2:y=h-100:shadowcolor=black@0.9:shadowx=2:shadowy=2`,
-    `drawtext=${fontPart}textfile='${nextPath}':fontcolor=white@0.92:fontsize=20:x=w-text_w-28:y=h-62:shadowcolor=black@0.8:shadowx=2:shadowy=2`,
+    `drawtext=${fontPart}textfile='${prevPath}':fontcolor=white@0.92:fontsize=20:x=28:y=h-124:shadowcolor=black@0.8:shadowx=2:shadowy=2`,
+    `drawtext=${fontPart}textfile='${curPath}':fontcolor=white:fontsize=30:x=(w-text_w)/2:y=h-92:shadowcolor=black@0.9:shadowx=2:shadowy=2`,
+    `drawtext=${fontPart}textfile='${nextPath}':fontcolor=white@0.92:fontsize=20:x=w-text_w-28:y=h-124:shadowcolor=black@0.8:shadowx=2:shadowy=2`,
     'drawbox=x=0:y=ih-34:w=iw:h=34:color=black@0.82:t=fill',
-    `drawtext=${fontPart}textfile='${tickerPath}':fontcolor=white:fontsize=19:x=w-mod(t*110\\,text_w/8+w):y=h-27:shadowcolor=black@0.9:shadowx=1:shadowy=1`
+    `drawtext=${fontPart}textfile='${tickerPath}':fontcolor=white:fontsize=19:x=w-mod(t*110\,text_w/8+w):y=h-27:shadowcolor=black@0.9:shadowx=1:shadowy=1`
   ].join(',');
-  return {tempFiles:[previousFile,currentFile,nextFile,tickerFile],args:[
+
+  return {tempFiles:[previousFile,currentFile,nextFile,tickerFile,visualList],args:[
     '-hide_banner','-loglevel','warning','-re','-i',item.url,
-    '-stream_loop','-1','-re','-i',visualPath,
+    '-f','concat','-safe','0','-re','-i',visualList,
     '-map','1:v:0','-map','0:a:0','-t',duration.toFixed(3),
     '-vf',vf,
     '-c:v','libx264','-preset','ultrafast','-tune','zerolatency','-crf','30',
@@ -411,7 +408,7 @@ const server=http.createServer((req,res)=>{
 });
 
 server.listen(PORT,'0.0.0.0',()=>{
-  console.log(`ANDRIK Radio R574-SEAMLESS-FIX listening on :${PORT}`);
+  console.log(`ANDRIK Radio R575-LONG-LOOP-FIX listening on :${PORT}`);
   radioLoop();
 });
 

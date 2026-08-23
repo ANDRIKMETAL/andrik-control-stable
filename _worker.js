@@ -2314,6 +2314,31 @@ function compactYoutubePushTitle(value, fallback = 'ANDRIK') {
   return cleanPlainText(normalized || fallback, 72);
 }
 
+function isAndrikRadioLiveR576(value) {
+  const text=cleanPlainText(value||'',220).toLowerCase();
+  const radio=text.includes('radio') || text.includes('радио') || text.includes('24/7');
+  const live=text.includes('live') || text.includes('эфир') || text.includes('трансляц') || text.includes('24/7');
+  return radio && live;
+}
+
+function youtubePushMetaR576(title, url) {
+  const live=isAndrikRadioLiveR576(title);
+  if(live) return {
+    live:true,
+    title:'🔴 ANDRIK METAL RADIO — LIVE',
+    message:'Трансляция уже идёт. Заходи в эфир — ANDRIK 24/7. 🎸',
+    button:{id:'watch-live',text:'🔴 Открыть эфир',url},
+    name:'live'
+  };
+  return {
+    live:false,
+    title:`🎵 ${compactYoutubePushTitle(title,'Новый релиз')}`,
+    message:'Новый релиз ANDRIK уже доступен на YouTube',
+    button:{id:'listen-now',text:'▶️ Слушать на YouTube',url},
+    name:'release'
+  };
+}
+
 function getOneSignalApiKey(env) {
   return String(env.ONESIGNAL_APP_API_KEY || env.ONESIGNAL_REST_API_KEY || '');
 }
@@ -3868,15 +3893,16 @@ async function pushYoutubeReleaseItemR332(env, db, item, origin='websub') {
 
   const releaseTitle = normalizeReleaseTitle(item.title);
   const releaseUrl = `https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`;
+  const pushMeta=youtubePushMetaR576(releaseTitle,releaseUrl);
   const result = await sendOneSignalPush(env, {
-    title:`🎵 ${compactYoutubePushTitle(releaseTitle, 'Новый релиз')}`,
-    message:'Новый релиз ANDRIK уже доступен на YouTube',
+    title:pushMeta.title,
+    message:pushMeta.message,
     url:releaseUrl,
     image:item.thumbnail || '',
-    webButtons:[{id:'listen-now',text:'▶️ Слушать на YouTube',url:releaseUrl}],
+    webButtons:[pushMeta.button],
     audience:'all',
-    name:`release-${videoId}`,
-    history:{type:'auto-release',source:item.source || 'YouTube',videoId,videoTitle:releaseTitle,details:{origin}}
+    name:`${pushMeta.name}-${videoId}`,
+    history:{type:'auto-release',source:item.source || 'YouTube',videoId,videoTitle:releaseTitle,details:{origin,liveBroadcast:pushMeta.live}}
   });
   await upsertReleaseHistory(db, {
     videoId,
@@ -4115,15 +4141,16 @@ async function handleCheckPlaylist(request, env) {
         message: `Отправляем уведомление о «${releaseTitle}».`,
         details: { videoId: item.videoId, releaseUrl, source: item.source }
       }).catch(() => {});
+      const pushMeta=youtubePushMetaR576(releaseTitle,releaseUrl);
       const result = await sendOneSignalPush(env, {
-        title: `🎵 ${compactYoutubePushTitle(releaseTitle, 'Новый релиз')}`,
-        message: 'Новый релиз ANDRIK уже доступен на YouTube',
+        title: pushMeta.title,
+        message: pushMeta.message,
         url: releaseUrl,
         image: item.thumbnail,
-        webButtons: [{ id: 'listen-now', text: '▶️ Слушать на YouTube', url: releaseUrl }],
+        webButtons: [pushMeta.button],
         audience: 'all',
-        name: `release-${item.videoId}`,
-        history: { type: 'auto-release', source: item.source || 'YouTube', videoId: item.videoId, videoTitle: releaseTitle }
+        name: `${pushMeta.name}-${item.videoId}`,
+        history: { type: 'auto-release', source: item.source || 'YouTube', videoId: item.videoId, videoTitle: releaseTitle, details:{liveBroadcast:pushMeta.live} }
       });
       await upsertReleaseHistory(db, {
         videoId: item.videoId,
@@ -4368,15 +4395,16 @@ async function handleRetryLatestPush(request, env) {
     message: `Владелец запустил повторный push последнего видео «${releaseTitle}».`,
     details: { videoId: item.videoId, releaseUrl }
   }).catch(() => {});
+  const pushMeta=youtubePushMetaR576(releaseTitle,releaseUrl);
   const result = await sendOneSignalPush(env, {
-    title: `🎵 ${compactYoutubePushTitle(releaseTitle, 'Новый релиз')}`,
-    message: 'Новый релиз ANDRIK уже доступен на YouTube',
+    title: pushMeta.title,
+    message: pushMeta.message,
     url: releaseUrl,
     image: item.thumbnail,
-    webButtons: [{ id: 'listen-now', text: '▶️ Слушать на YouTube', url: releaseUrl }],
+    webButtons: [pushMeta.button],
     audience: 'all',
-    name: `retry-release-${item.videoId}-${Date.now()}`,
-    history: { type: 'auto-release-retry', source: 'ANDRIK Control', videoId: item.videoId, videoTitle: releaseTitle }
+    name: `retry-${pushMeta.name}-${item.videoId}-${Date.now()}`,
+    history: { type: 'auto-release-retry', source: 'ANDRIK Control', videoId: item.videoId, videoTitle: releaseTitle, details:{liveBroadcast:pushMeta.live} }
   });
   await upsertReleaseHistory(db, {
     videoId: item.videoId, title: releaseTitle, url: releaseUrl, source: 'ANDRIK Control retry',
@@ -16991,33 +17019,87 @@ function controlAssetFailurePage(error) {
 }
 
 
-// R565 — YouTube Live Studio state for ANDRIK Metal Radio 24/7.
+// R577 — YouTube Live Studio state: follow CURRENT live video with fallback detection.
 async function handleControlYoutubeLiveR565(request, env) {
   if (!adminAuthorized(request, env)) return json({ok:false,error:'unauthorized'},401);
   const requestUrl=new URL(request.url);
-  const videoId=cleanPlainText(requestUrl.searchParams.get('id') || 'jBDuQ45RbeE',80);
+  const requestedId=cleanPlainText(requestUrl.searchParams.get('id') || '',80);
+  const followActive=!requestedId || requestedId==='auto' || requestUrl.searchParams.get('active')==='1';
   try {
     const accessToken=await getYoutubeOAuthAccessToken(env);
     const authHeaders={authorization:`Bearer ${accessToken}`,accept:'application/json'};
     const ytFetch=async(url,label)=>{
-      const response=await fetchWithAbortTimeoutR409(url,{headers:authHeaders},8000,`youtube-live-r565-${label}-timeout`);
+      const response=await fetchWithAbortTimeoutR409(url,{headers:authHeaders},8000,`youtube-live-r576-${label}-timeout`);
       const data=await response.json().catch(()=>({}));
       if(!response.ok) throw new Error(youtubeGoogleErrorTextR495(data,response.status,label));
       return data;
     };
 
+    let videoId=followActive?'':requestedId;
+    let broadcast=null;
+
+    if(followActive){
+      const activeUrl=new URL('https://www.googleapis.com/youtube/v3/liveBroadcasts');
+      activeUrl.searchParams.set('part','id,snippet,status,contentDetails');
+      activeUrl.searchParams.set('broadcastStatus','active');
+      activeUrl.searchParams.set('mine','true');
+      activeUrl.searchParams.set('maxResults','10');
+      const activeData=await ytFetch(activeUrl.toString(),'active broadcasts');
+      const activeItems=Array.isArray(activeData?.items)?activeData.items:[];
+      broadcast=activeItems.find(item=>String(item?.status?.lifeCycleStatus||'').toLowerCase()==='live') || activeItems[0] || null;
+      videoId=cleanPlainText(broadcast?.id||'',80);
+
+      // R577 fallback: liveBroadcasts.list can briefly return an empty list after a
+      // new broadcast is created/started. Resolve the authenticated channel and ask
+      // search.list for the currently LIVE video instead of leaving Control stuck on
+      // «Проверяем эфир…».
+      if(!videoId){
+        const channelUrl=new URL('https://www.googleapis.com/youtube/v3/channels');
+        channelUrl.searchParams.set('part','id');
+        channelUrl.searchParams.set('mine','true');
+        channelUrl.searchParams.set('maxResults','1');
+        const channelData=await ytFetch(channelUrl.toString(),'mine channel');
+        const channelId=cleanPlainText(channelData?.items?.[0]?.id||'',100);
+        if(channelId){
+          const searchUrl=new URL('https://www.googleapis.com/youtube/v3/search');
+          searchUrl.searchParams.set('part','id,snippet');
+          searchUrl.searchParams.set('channelId',channelId);
+          searchUrl.searchParams.set('eventType','live');
+          searchUrl.searchParams.set('type','video');
+          searchUrl.searchParams.set('maxResults','5');
+          const searchData=await ytFetch(searchUrl.toString(),'live search');
+          const liveItem=Array.isArray(searchData?.items)?searchData.items.find(item=>item?.id?.videoId)||null:null;
+          videoId=cleanPlainText(liveItem?.id?.videoId||'',80);
+        }
+      }
+    }
+
+    if(!videoId){
+      return json({
+        ok:true,active:false,videoId:'',title:'ANDRIK Metal Radio 24/7',
+        lifeCycleStatus:'',privacyStatus:'',recordingStatus:'',streamStatus:'',healthStatus:'',healthIssues:[],
+        concurrentViewers:0,views:0,likes:0,comments:0,boundStreamId:'',
+        studioUrl:'https://studio.youtube.com/channel/UC/livestreaming',
+        analyticsUrl:'https://studio.youtube.com/',
+        watchUrl:'https://www.youtube.com/@andrikmetal/live',
+        updatedAt:new Date().toISOString()
+      });
+    }
+
     const videoUrl=new URL('https://www.googleapis.com/youtube/v3/videos');
     videoUrl.searchParams.set('part','snippet,status,statistics,liveStreamingDetails');
     videoUrl.searchParams.set('id',videoId);
-    const broadcastUrl=new URL('https://www.googleapis.com/youtube/v3/liveBroadcasts');
-    broadcastUrl.searchParams.set('part','id,snippet,status,contentDetails');
-    broadcastUrl.searchParams.set('id',videoId);
-    const [videoData,broadcastData]=await Promise.all([
-      ytFetch(videoUrl.toString(),'YouTube Live video'),
-      ytFetch(broadcastUrl.toString(),'YouTube Live broadcast')
-    ]);
+
+    if(!broadcast){
+      const broadcastUrl=new URL('https://www.googleapis.com/youtube/v3/liveBroadcasts');
+      broadcastUrl.searchParams.set('part','id,snippet,status,contentDetails');
+      broadcastUrl.searchParams.set('id',videoId);
+      const broadcastData=await ytFetch(broadcastUrl.toString(),'broadcast by id');
+      broadcast=Array.isArray(broadcastData?.items)?broadcastData.items[0]||null:null;
+    }
+
+    const videoData=await ytFetch(videoUrl.toString(),'YouTube Live video');
     const video=Array.isArray(videoData?.items)?videoData.items[0]||null:null;
-    const broadcast=Array.isArray(broadcastData?.items)?broadcastData.items[0]||null:null;
     const boundStreamId=cleanPlainText(broadcast?.contentDetails?.boundStreamId||'',120);
     let liveStream=null;
     if(boundStreamId){
@@ -17030,35 +17112,33 @@ async function handleControlYoutubeLiveR565(request, env) {
     const details=video?.liveStreamingDetails||{};
     const statistics=video?.statistics||{};
     const health=liveStream?.status?.healthStatus||{};
+    const lifeCycleStatus=cleanPlainText(broadcast?.status?.lifeCycleStatus||'',80);
+    const streamStatus=cleanPlainText(liveStream?.status?.streamStatus||'',80);
+    const active=lifeCycleStatus.toLowerCase()==='live' || streamStatus.toLowerCase()==='active' || Boolean(details?.actualStartTime && !details?.actualEndTime);
     return json({
-      ok:true,
-      videoId,
+      ok:true,active,videoId,
       title:cleanPlainText(video?.snippet?.title||broadcast?.snippet?.title||'ANDRIK Metal Radio 24/7',220),
-      lifeCycleStatus:cleanPlainText(broadcast?.status?.lifeCycleStatus||'',80),
+      lifeCycleStatus,
       privacyStatus:cleanPlainText(broadcast?.status?.privacyStatus||video?.status?.privacyStatus||'',80),
       recordingStatus:cleanPlainText(broadcast?.status?.recordingStatus||'',80),
-      streamStatus:cleanPlainText(liveStream?.status?.streamStatus||'',80),
+      streamStatus,
       healthStatus:cleanPlainText(health?.status||'',80),
       healthIssues:Array.isArray(health?.configurationIssues)?health.configurationIssues.slice(0,8).map(item=>({
-        type:cleanPlainText(item?.type||'',100),
-        severity:cleanPlainText(item?.severity||'',80),
-        reason:cleanPlainText(item?.reason||'',240),
-        description:cleanPlainText(item?.description||'',360)
+        type:cleanPlainText(item?.type||'',100),severity:cleanPlainText(item?.severity||'',80),
+        reason:cleanPlainText(item?.reason||'',240),description:cleanPlainText(item?.description||'',360)
       })):[],
       concurrentViewers:Math.max(0,Number(details?.concurrentViewers||0)),
       actualStartTime:cleanPlainText(details?.actualStartTime||broadcast?.snippet?.actualStartTime||'',80),
       scheduledStartTime:cleanPlainText(details?.scheduledStartTime||broadcast?.snippet?.scheduledStartTime||'',80),
-      views:Math.max(0,Number(statistics?.viewCount||0)),
-      likes:Math.max(0,Number(statistics?.likeCount||0)),
-      comments:Math.max(0,Number(statistics?.commentCount||0)),
-      boundStreamId,
+      views:Math.max(0,Number(statistics?.viewCount||0)),likes:Math.max(0,Number(statistics?.likeCount||0)),
+      comments:Math.max(0,Number(statistics?.commentCount||0)),boundStreamId,
       studioUrl:`https://studio.youtube.com/video/${encodeURIComponent(videoId)}/livestreaming`,
       analyticsUrl:`https://studio.youtube.com/video/${encodeURIComponent(videoId)}/analytics/tab-overview/period-default`,
       watchUrl:`https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`,
       updatedAt:new Date().toISOString()
     });
   } catch(error) {
-    return json({ok:false,videoId,error:cleanPlainText(error?.message||error,500)},503);
+    return json({ok:false,error:cleanPlainText(error?.message||error,500)},503);
   }
 }
 

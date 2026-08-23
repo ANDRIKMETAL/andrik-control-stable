@@ -23,3 +23,10 @@ YouTube Stream Key хранится только на VM: `/etc/andrik-radio.env
 ## R571 FIX
 - previous label lowered;
 - full-track pre-rendered overlay, no ticker reset, no 10s loop blink.
+
+
+## R575 LONG LOOP FIX
+- New user-supplied 3:01.5 visual compressed from ~49 MB to ~5.6 MB (1280x720, H.264).
+- The same file is referenced 4 times by concat-demuxer, so the runtime visual is ~12 minutes without storing 4 physical copies.
+- No `-stream_loop` on the short visual; ticker filter runs continuously for the whole song.
+- Previous and next are aligned on the same row; current track font increased.

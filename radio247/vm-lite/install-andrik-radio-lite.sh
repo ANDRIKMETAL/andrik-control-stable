@@ -34,7 +34,7 @@ else
 fi
 
 SERVER="$APP_DIR/radio247/server.mjs"
-VISUAL="$APP_DIR/radio247/assets/audio-visual-loop-r569-h264.mp4"
+VISUAL="$APP_DIR/radio247/assets/audio-visual-r575-3min-compact.mp4"
 
 if [ ! -s "$SERVER" ]; then
   echo "Ошибка: нет $SERVER"
