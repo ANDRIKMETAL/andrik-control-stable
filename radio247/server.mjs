@@ -18,18 +18,18 @@ const STREAM_KEY = String(process.env.YOUTUBE_STREAM_KEY || '').trim();
 const STREAM_URL = STREAM_KEY ? `rtmps://a.rtmps.youtube.com:443/live2/${STREAM_KEY}` : '';
 const YOUTUBE_LIVE_URL = process.env.YOUTUBE_LIVE_URL || 'https://www.youtube.com/@andrikmetal/live';
 const VISUAL_TRIM_END = Math.max(0, Number(process.env.VISUAL_TRIM_END || '0.55') || 0.55);
-const CACHE_DIR = process.env.RADIO_CACHE_DIR || '/tmp/andrik-radio-r573';
+const CACHE_DIR = process.env.RADIO_CACHE_DIR || '/tmp/andrik-radio-r582';
 const CLEAN_VISUAL = `${CACHE_DIR}/visual-seamless.mp4`;
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R575-LONG-LOOP-FIX',
+  version: 'R582-3MIN-FORCED-NEXT-UP',
   mode: 'MP3 ONLY / SEAMLESS VISUAL + LIVE OVERLAY',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
   producerRunning: false,
-  overlayMode: 'LIVE TICKER / 12m CONCAT VISUAL / NO LOOP RESET',
+  overlayMode: 'LIVE TICKER / 181.5s COVER / NEXT RIGHT UP / NO 10s LOOP',
   visualTrimEnd: VISUAL_TRIM_END,
   libraryTracks: 0,
   cycle: 0,
@@ -90,7 +90,7 @@ function albumName(item){
 
 async function loadLibrary(){
   const url=`${PLAYLIST_URL}${PLAYLIST_URL.includes('?')?'&':'?'}ts=${Date.now()}`;
-  const response=await fetch(url,{headers:{'user-agent':'ANDRIK-Radio-24-7-R575-LONG-LOOP-FIX'}});
+  const response=await fetch(url,{headers:{'user-agent':'ANDRIK-Radio-24-7-R582-3MIN'}});
   if(!response.ok)throw new Error(`R2 library HTTP ${response.status}`);
 
   const data=await response.json();
@@ -178,7 +178,7 @@ function prepareCacheDir(){
 async function ensureCleanVisual(){
   prepareCacheDir();
   if(!existsSync(AUDIO_VISUAL) || statSync(AUDIO_VISUAL).size<1000000){
-    throw new Error(`R575 visual missing or too small: ${AUDIO_VISUAL}`);
+    throw new Error(`R582 3-minute visual missing or too small: ${AUDIO_VISUAL}`);
   }
   return AUDIO_VISUAL;
 }
@@ -243,7 +243,7 @@ function producerArgs(item,duration,offset,visualPath,previous,next){
 
   writeFileSync(previousFile,`← ${trackLabel(previous,'СТАРТ ЭФИРА')}`,'utf8');
   writeFileSync(currentFile,`▶ СЕЙЧАС: ${trackLabel(item,'ANDRIK')}`,'utf8');
-  writeFileSync(nextFile,`${trackLabel(next,'ДАЛЬШЕ — НОВЫЙ ЦИКЛ')} →`,'utf8');
+  writeFileSync(nextFile,`ДАЛЬШЕ: ${trackLabel(next,'НОВЫЙ ЦИКЛ')} →`,'utf8');
   const unit=`ANDRIK METAL RADIO 24/7   •   СЕЙЧАС: ${trackLabel(item,'ANDRIK')}   •   ДАЛЬШЕ: ${trackLabel(next,'—')}   •   ANDRIKMETAL.COM   •   `;
   writeFileSync(tickerFile,unit.repeat(8),'utf8');
 
@@ -251,7 +251,7 @@ function producerArgs(item,duration,offset,visualPath,previous,next){
   // Concat-demuxer читает тот же файл 4 раза как один непрерывный 12-минутный visual.
   // Это убирает demux restart/black flash от -stream_loop на каждом коротком цикле.
   const escapedVisual=String(visualPath);
-  writeFileSync(visualList,Array(4).fill(`file '${escapedVisual}'`).join('\n')+'\n','utf8');
+  writeFileSync(visualList,Array(20).fill(`file '${escapedVisual}'`).join('\n')+'\n','utf8');
 
   const font=chooseFont();
   const fontPart=font?`fontfile='${ffFilterPath(font)}':`:'';
@@ -263,7 +263,7 @@ function producerArgs(item,duration,offset,visualPath,previous,next){
     'drawbox=x=0:y=ih-150:w=iw:h=150:color=black@0.58:t=fill',
     `drawtext=${fontPart}textfile='${prevPath}':fontcolor=white@0.92:fontsize=20:x=28:y=h-124:shadowcolor=black@0.8:shadowx=2:shadowy=2`,
     `drawtext=${fontPart}textfile='${curPath}':fontcolor=white:fontsize=30:x=(w-text_w)/2:y=h-92:shadowcolor=black@0.9:shadowx=2:shadowy=2`,
-    `drawtext=${fontPart}textfile='${nextPath}':fontcolor=white@0.92:fontsize=20:x=w-text_w-28:y=h-124:shadowcolor=black@0.8:shadowx=2:shadowy=2`,
+    `drawtext=${fontPart}textfile='${nextPath}':fontcolor=white@0.92:fontsize=20:x=w-text_w-28:y=h-146:shadowcolor=black@0.8:shadowx=2:shadowy=2`,
     'drawbox=x=0:y=ih-34:w=iw:h=34:color=black@0.82:t=fill',
     `drawtext=${fontPart}textfile='${tickerPath}':fontcolor=white:fontsize=19:x=w-mod(t*110\,text_w/8+w):y=h-27:shadowcolor=black@0.9:shadowx=1:shadowy=1`
   ].join(',');
@@ -408,7 +408,7 @@ const server=http.createServer((req,res)=>{
 });
 
 server.listen(PORT,'0.0.0.0',()=>{
-  console.log(`ANDRIK Radio R575-LONG-LOOP-FIX listening on :${PORT}`);
+  console.log(`ANDRIK Radio R582-3MIN-FORCED-NEXT-UP listening on :${PORT}`);
   radioLoop();
 });
 

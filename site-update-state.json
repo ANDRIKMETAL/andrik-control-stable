@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787460897961-533a177acb",
-  "release": "R579",
-  "archiveName": "R579-CONTROL-LIVE-JS-LOAD-FIX-SAFE-FULL.zip",
-  "sourceHead": "96d61cb61044ee03e1aac9231e4baeffae586d8e",
-  "backupSha": "96d61cb61044ee03e1aac9231e4baeffae586d8e",
-  "backupTag": "control-backup-20260823045451-96d61cb-r579-b6f5b",
+  "operationId": "publish-1787462497196-28bda6409a",
+  "release": "R582",
+  "archiveName": "R582-3MIN-COVER-NEXT-UP-GREENTUBER-CLEAN-SAFE-FULL.zip",
+  "sourceHead": "74e05a28528c5508bb5422e7b4b1e6550946f8ea",
+  "backupSha": "74e05a28528c5508bb5422e7b4b1e6550946f8ea",
+  "backupTag": "control-backup-20260823052131-74e05a2-r582-8fa51",
   "autoRecovery": true,
-  "generatedAt": "2026-08-23T04:54:57.961Z"
+  "generatedAt": "2026-08-23T05:21:37.196Z"
 }
