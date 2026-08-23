@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787469636082-5cd7e9222a",
-  "release": "R588",
-  "archiveName": "R588-3MIN-VIDEO-LOOP-NOW-BOX-TICKER-UP-SAFE-FULL.zip",
-  "sourceHead": "2fb8461195cbc12f6d3c94fcb6700acaad50cc39",
-  "backupSha": "2fb8461195cbc12f6d3c94fcb6700acaad50cc39",
-  "backupTag": "control-backup-20260823072029-2fb8461-r588-fdce6",
+  "operationId": "publish-1787475991729-f5e62d406f",
+  "release": "R589",
+  "archiveName": "R589-SEAMLESS-3MIN-NOW-YELLOW-TICKER-FIX-SAFE-FULL.zip",
+  "sourceHead": "d9571b1c302b240bcf4742ebd64fd9ba19076ca2",
+  "backupSha": "d9571b1c302b240bcf4742ebd64fd9ba19076ca2",
+  "backupTag": "control-backup-20260823090625-d9571b1-r589-f6f1f",
   "autoRecovery": true,
-  "generatedAt": "2026-08-23T07:20:38.891Z"
+  "generatedAt": "2026-08-23T09:06:34.550Z"
 }

@@ -18,18 +18,18 @@ const STREAM_KEY = String(process.env.YOUTUBE_STREAM_KEY || '').trim();
 const STREAM_URL = STREAM_KEY ? `rtmps://a.rtmps.youtube.com:443/live2/${STREAM_KEY}` : '';
 const YOUTUBE_LIVE_URL = process.env.YOUTUBE_LIVE_URL || 'https://www.youtube.com/@andrikmetal/live';
 const VISUAL_TRIM_END = Math.max(0, Number(process.env.VISUAL_TRIM_END || '0.55') || 0.55);
-const CACHE_DIR = process.env.RADIO_CACHE_DIR || '/tmp/andrik-radio-r588';
+const CACHE_DIR = process.env.RADIO_CACHE_DIR || '/tmp/andrik-radio-r589';
 const CLEAN_VISUAL = `${CACHE_DIR}/visual-seamless.mp4`;
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R588-3MIN-VIDEO-UPGRADED',
+  version: 'R589-SEAMLESS-3MIN-OVERLAY-FIX',
   mode: 'MP3 ONLY / SEAMLESS VISUAL + LIVE OVERLAY',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
   producerRunning: false,
-  overlayMode: '180s COVER / BIG YELLOW NOW BOX / NO PREV / TICKER LARGE',
+  overlayMode: '180s SEAMLESS COVER / YELLOW NOW BOX / NO PREV / TICKER LARGE',
   visualTrimEnd: VISUAL_TRIM_END,
   libraryTracks: 0,
   cycle: 0,
@@ -90,7 +90,7 @@ function albumName(item){
 
 async function loadLibrary(){
   const url=`${PLAYLIST_URL}${PLAYLIST_URL.includes('?')?'&':'?'}ts=${Date.now()}`;
-  const response=await fetch(url,{headers:{'user-agent':'ANDRIK-Radio-24-7-R588-3MIN'}});
+  const response=await fetch(url,{headers:{'user-agent':'ANDRIK-Radio-24-7-R589-3MIN'}});
   if(!response.ok)throw new Error(`R2 library HTTP ${response.status}`);
 
   const data=await response.json();
@@ -252,9 +252,7 @@ function producerArgs(item,duration,offset,visualPath,previous,next){
   writeFileSync(tickerFile,unit.repeat(8),'utf8');
 
   const escapedVisual=String(visualPath);
-  writeFileSync(visualList,Array(20).fill(`file '${escapedVisual}'`).join('
-')+'
-','utf8');
+  writeFileSync(visualList,Array(20).fill(`file '${escapedVisual}'`).join('\\n')+'\\n','utf8');
 
   const font=chooseFont();
   const fontPart=font?`fontfile='${ffFilterPath(font)}':`:'';
@@ -264,11 +262,12 @@ function producerArgs(item,duration,offset,visualPath,previous,next){
     `tpad=stop_mode=clone:stop_duration=${Math.ceil(duration)+10}`,
     'format=yuv420p',
     'drawbox=x=0:y=ih-165:w=iw:h=165:color=black@0.56:t=fill',
-    'drawbox=x=w*0.18:y=ih-112:w=w*0.64:h=42:color=black@0.88:t=fill',
-    `drawtext=${fontPart}textfile='${nextPath}':fontcolor=white@0.95:fontsize=22:x=w-text_w-28:y=h-138:shadowcolor=black@0.9:shadowx=2:shadowy=2`,
-    `drawtext=${fontPart}textfile='${curPath}':fontcolor=yellow:fontsize=36:x=(w-text_w)/2:y=h-104:shadowcolor=black@1:shadowx=2:shadowy=2`,
-    'drawbox=x=0:y=ih-46:w=iw:h=46:color=black@0.86:t=fill',
-    `drawtext=${fontPart}textfile='${tickerPath}':fontcolor=white:fontsize=24:x='w-mod(t*120,text_w/8+w)':y=h-39:shadowcolor=black@1:shadowx=1:shadowy=1`
+    'drawbox=x=iw*0.12:y=ih-126:w=iw*0.76:h=56:color=black@0.90:t=fill',
+    'drawbox=x=iw*0.12:y=ih-126:w=iw*0.76:h=56:color=yellow@0.55:t=2',
+    `drawtext=${fontPart}textfile='${nextPath}':fontcolor=white@0.95:fontsize=22:x=w-text_w-28:y=h-160:shadowcolor=black@0.9:shadowx=2:shadowy=2`,
+    `drawtext=${fontPart}textfile='${curPath}':fontcolor=yellow:fontsize=36:x=(w-text_w)/2:y=h-116:shadowcolor=black@1:shadowx=2:shadowy=2`,
+    'drawbox=x=0:y=ih-52:w=iw:h=52:color=black@0.88:t=fill',
+    `drawtext=${fontPart}textfile='${tickerPath}':fontcolor=white:fontsize=25:x='w-mod(t*120,text_w/8+w)':y=h-44:shadowcolor=black@1:shadowx=1:shadowy=1`
   ].join(',');
 
   return {tempFiles:[currentFile,nextFile,tickerFile,visualList],args:[
