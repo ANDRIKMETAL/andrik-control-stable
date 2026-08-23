@@ -15,7 +15,7 @@ const TICKER_FILE = '/tmp/andrik-radio-ticker.txt';
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R567',
+  version: 'R568',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
@@ -67,7 +67,7 @@ function albumName(item){
 
 async function loadLibrary(){
   const url=`${PLAYLIST_URL}${PLAYLIST_URL.includes('?')?'&':'?'}ts=${Date.now()}`;
-  const response=await fetch(url,{headers:{'user-agent':'ANDRIK-Radio-24-7-R567'}});
+  const response=await fetch(url,{headers:{'user-agent':'ANDRIK-Radio-24-7-R568'}});
   if(!response.ok)throw new Error(`R2 library HTTP ${response.status}`);
   const data=await response.json();
   const source=Array.isArray(data.tracks)?data.tracks:[];
@@ -260,7 +260,7 @@ const server=http.createServer(async(req,res)=>{
   res.writeHead(404,headers);res.end(JSON.stringify({ok:false,error:'not-found'}));
 });
 
-server.listen(PORT,'0.0.0.0',()=>{console.log(`ANDRIK Radio R567 listening on :${PORT}`);radioLoop();});
+server.listen(PORT,'0.0.0.0',()=>{console.log(`ANDRIK Radio R568 listening on :${PORT}`);radioLoop();});
 
 function shutdown(){
   stopping=true;
