@@ -13354,8 +13354,9 @@ async function refreshYoutubeTopContentR552(env) {
   const startDate=isoDateDaysAgo(28);
   const endDate=isoDateDaysAgo(1);
 
-  // Official YouTube Analytics "Top videos" report:
-  // required dimension video, optional creatorContentType, sort -views, <=200 rows.
+  // R604: keep the official 28-day Analytics report as a discovery/fallback source,
+  // but overlay it with CURRENT videos.statistics counters so a Short that explodes
+  // today appears immediately instead of waiting for the completed-day Analytics lag.
   const report=await youtubeAnalyticsQuery(env,accessToken,{
     ids:`channel==${channelId}`,
     startDate,
@@ -13366,19 +13367,73 @@ async function refreshYoutubeTopContentR552(env) {
     maxResults:200
   });
 
-  const rows=(Array.isArray(report)?report:[])
+  const analyticsRows=(Array.isArray(report)?report:[])
     .map(row=>normalizeYoutubeTopContentR552(row))
     .filter(row=>row.videoId && (row.creatorContentType==='SHORTS' || row.creatorContentType==='VIDEO_ON_DEMAND'));
 
-  let shorts=rows.filter(row=>row.creatorContentType==='SHORTS')
-    .sort((a,b)=>b.views-a.views)
-    .slice(0,4);
-  // Do not trust creatorContentType alone here: old snapshots/fallbacks could label
-  // Shorts as VIDEO_ON_DEMAND. Duration verification below is the final gate.
-  const regularCandidates=rows.filter(row=>row.creatorContentType==='VIDEO_ON_DEMAND')
-    .sort((a,b)=>b.views-a.views)
-    .slice(0,100);
-  let videos=[];
+  let currentRows=[];
+  try{
+    const identity=await fetchYoutubeMonitorIdentity(env);
+    currentRows=await fetchYoutubeVideoStats(env,db,identity.uploadsPlaylistId);
+  }catch(_){
+    currentRows=[];
+  }
+
+  const currentById=new Map((Array.isArray(currentRows)?currentRows:[])
+    .filter(row=>row?.videoId)
+    .map(row=>[String(row.videoId),row]));
+  const analyticsTypeById=new Map(analyticsRows.map(row=>[row.videoId,row.creatorContentType]));
+
+  const mergeCurrent=(row,type='')=>{
+    const live=currentById.get(row.videoId)||{};
+    return normalizeYoutubeTopContentR552({
+      ...row,
+      ...live,
+      videoId:row.videoId||live.videoId,
+      creatorContentType:type||row.creatorContentType||'',
+      // videos.statistics is lifetime/current and must win whenever it is available.
+      views:live.videoId?Number(live.views||0):Number(row.views||0),
+      likes:live.videoId?Number(live.likes||0):Number(row.likes||0),
+      comments:live.videoId?Number(live.comments||0):Number(row.comments||0),
+      shares:Number(row.shares||0),
+      durationSeconds:Number(live.durationSeconds||row.durationSeconds||0),
+      title:live.title||row.title||'',
+      publishedAt:live.publishedAt||row.publishedAt||'',
+      thumbnail:live.thumbnail||row.thumbnail||'',
+      url:live.url||row.url||''
+    },type||row.creatorContentType||'');
+  };
+
+  const dedupeHighest=rows=>{
+    const map=new Map();
+    for(const row of rows){
+      if(!row?.videoId) continue;
+      const prev=map.get(row.videoId);
+      if(!prev || Number(row.views||0)>Number(prev.views||0)) map.set(row.videoId,row);
+      else map.set(row.videoId,{...row,...prev});
+    }
+    return [...map.values()];
+  };
+
+  // Current uploads are the critical R604 addition. If Analytics does not know a
+  // just-published Short yet, duration <= 180 s lets it enter the live Shorts pool.
+  const currentShortRows=(Array.isArray(currentRows)?currentRows:[])
+    .filter(row=>row?.videoId && Number(row.durationSeconds||0)>0 && Number(row.durationSeconds||0)<=180)
+    .map(row=>normalizeYoutubeTopContentR552({...row,creatorContentType:'SHORTS',url:`https://www.youtube.com/shorts/${encodeURIComponent(row.videoId)}`},'SHORTS'));
+
+  const currentLongRows=(Array.isArray(currentRows)?currentRows:[])
+    .filter(row=>row?.videoId && Number(row.durationSeconds||0)>180)
+    .map(row=>normalizeYoutubeTopContentR552({...row,creatorContentType:'VIDEO_ON_DEMAND'},'VIDEO_ON_DEMAND'));
+
+  let shorts=dedupeHighest([
+    ...analyticsRows.filter(row=>row.creatorContentType==='SHORTS').map(row=>mergeCurrent(row,'SHORTS')),
+    ...currentShortRows
+  ]).sort((a,b)=>b.views-a.views).slice(0,6);
+
+  const regularCandidates=dedupeHighest([
+    ...analyticsRows.filter(row=>row.creatorContentType==='VIDEO_ON_DEMAND').map(row=>mergeCurrent(row,'VIDEO_ON_DEMAND')),
+    ...currentLongRows
+  ]).sort((a,b)=>b.views-a.views).slice(0,120);
 
   // Reuse titles/thumbnails already known by the normal YouTube page first.
   const metaMap=new Map();
@@ -13397,19 +13452,17 @@ async function refreshYoutubeTopContentR552(env) {
     ...(Array.isArray(previous?.recentVideos)?previous.recentVideos:[]),
     ...(Array.isArray(previous?.topVideos)?previous.topVideos:[]),
     ...(Array.isArray(previous?.studio?.topShorts28)?previous.studio.topShorts28:[]),
-    ...(Array.isArray(previous?.studio?.topRegularVideos28)?previous.studio.topRegularVideos28:[])
+    ...(Array.isArray(previous?.studio?.topRegularVideos28)?previous.studio.topRegularVideos28:[]),
+    ...(Array.isArray(currentRows)?currentRows:[])
   ].forEach(addKnownMeta);
 
-  // Resolve duration for regular candidates. A single videos.list handles up to 50 IDs;
-  // at most two chunks are needed to find four long-form videos. This also enriches
-  // titles/thumbnails, so no extra request is required later.
   const candidateIds=[...new Set([...shorts,...regularCandidates].map(row=>row.videoId).filter(Boolean))];
-  for(let offset=0; offset<candidateIds.length && offset<100; offset+=50){
+  for(let offset=0; offset<candidateIds.length && offset<120; offset+=50){
     const chunk=candidateIds.slice(offset,offset+50);
     if(!chunk.length) break;
     try{
       const response=await youtubeApiJson(env,'videos',{
-        part:'snippet,contentDetails',
+        part:'snippet,contentDetails,statistics',
         id:chunk.join(','),
         maxResults:50
       },{timeoutMs:6500});
@@ -13417,67 +13470,80 @@ async function refreshYoutubeTopContentR552(env) {
         const id=cleanPlainText(item?.id||'',80);
         if(!id) continue;
         const current=metaMap.get(id)||{};
+        const row=currentById.get(id)||{};
+        const durationSeconds=youtubeIsoDurationSecondsR555(item?.contentDetails?.duration||'') || Math.max(0,Number(row.durationSeconds||current.durationSeconds||0));
+        const stats={
+          views:Number(item?.statistics?.viewCount ?? row.views ?? 0),
+          likes:Number(item?.statistics?.likeCount ?? row.likes ?? 0),
+          comments:Number(item?.statistics?.commentCount ?? row.comments ?? 0)
+        };
+        currentById.set(id,{...row,videoId:id,...stats,durationSeconds});
         metaMap.set(id,{
-          title:cleanPlainText(item?.snippet?.title||current.title||'',220),
-          publishedAt:cleanPlainText(item?.snippet?.publishedAt||current.publishedAt||'',60),
+          title:cleanPlainText(item?.snippet?.title||row.title||current.title||'',220),
+          publishedAt:cleanPlainText(item?.snippet?.publishedAt||row.publishedAt||current.publishedAt||'',60),
           thumbnail:cleanPlainText(
             item?.snippet?.thumbnails?.high?.url||
             item?.snippet?.thumbnails?.medium?.url||
-            item?.snippet?.thumbnails?.default?.url||current.thumbnail||'',900
+            item?.snippet?.thumbnails?.default?.url||row.thumbnail||current.thumbnail||'',900
           ),
-          durationSeconds:youtubeIsoDurationSecondsR555(item?.contentDetails?.duration||'') || Math.max(0,Number(current.durationSeconds||0))
+          durationSeconds
         });
       }
     }catch(_){ }
     const verifiedCount=regularCandidates.filter(row=>Number(metaMap.get(row.videoId)?.durationSeconds||row.durationSeconds||0)>180).length;
-    if(verifiedCount>=4) break;
+    if(verifiedCount>=6) break;
   }
-
-  videos=regularCandidates
-    .map(row=>({...row,durationSeconds:Math.max(0,Number(metaMap.get(row.videoId)?.durationSeconds||row.durationSeconds||0))}))
-    .filter(row=>row.durationSeconds>180)
-    .slice(0,4);
 
   const enrich=(row,isShort)=>{
     const meta=metaMap.get(row.videoId)||{};
+    const live=currentById.get(row.videoId)||{};
     return {
       ...row,
-      title:cleanPlainText(meta.title||row.title||`Видео ${row.videoId}`,220),
-      publishedAt:cleanPlainText(meta.publishedAt||row.publishedAt||'',60),
-      thumbnail:cleanPlainText(meta.thumbnail||row.thumbnail||`https://i.ytimg.com/vi/${encodeURIComponent(row.videoId)}/hqdefault.jpg`,900),
-      durationSeconds:Math.max(0,Number(meta.durationSeconds||row.durationSeconds||0)),
+      views:live.videoId?Math.max(0,Number(live.views||0)):Math.max(0,Number(row.views||0)),
+      likes:live.videoId?Math.max(0,Number(live.likes||0)):Math.max(0,Number(row.likes||0)),
+      comments:live.videoId?Math.max(0,Number(live.comments||0)):Math.max(0,Number(row.comments||0)),
+      title:cleanPlainText(meta.title||live.title||row.title||`Видео ${row.videoId}`,220),
+      publishedAt:cleanPlainText(meta.publishedAt||live.publishedAt||row.publishedAt||'',60),
+      thumbnail:cleanPlainText(meta.thumbnail||live.thumbnail||row.thumbnail||`https://i.ytimg.com/vi/${encodeURIComponent(row.videoId)}/hqdefault.jpg`,900),
+      durationSeconds:Math.max(0,Number(meta.durationSeconds||live.durationSeconds||row.durationSeconds||0)),
       url:isShort
         ? `https://www.youtube.com/shorts/${encodeURIComponent(row.videoId)}`
         : `https://www.youtube.com/watch?v=${encodeURIComponent(row.videoId)}`
     };
   };
 
-  shorts=shorts.map(row=>enrich(row,true));
-  videos=videos.map(row=>enrich(row,false));
+  shorts=shorts.map(row=>enrich(row,true)).sort((a,b)=>b.views-a.views).slice(0,6);
+  const videos=regularCandidates
+    .map(row=>enrich(row,false))
+    .filter(row=>row.durationSeconds>180)
+    .sort((a,b)=>b.views-a.views)
+    .slice(0,6);
+
   const updatedAt=new Date().toISOString();
 
-  // Save as a cache only; a D1 write failure never blocks the current response.
+  // Save the live counters into the same snapshot slots so older Control pages still
+  // have a valid fallback. Field names are kept for backward compatibility.
   try{
     const merged={
       ...previous,
       channelId,
       studio:{
         ...(previous?.studio||{}),
-        topVideos28:rows,
+        topVideos28:analyticsRows,
         topShorts28:shorts,
         topRegularVideos28:videos,
         topContentStartDate:startDate,
         topContentEndDate:endDate,
-        topContentUpdatedAt:updatedAt
+        topContentUpdatedAt:updatedAt,
+        topContentMode:'CURRENT_STATISTICS_R604'
       },
       updatedAt
     };
-    await savePlatformSnapshot(db,'youtube',merged,'YouTube top content R552');
-  }catch(_){}
+    await savePlatformSnapshot(db,'youtube',merged,'YouTube top content R604 current statistics');
+  }catch(_){ }
 
-  return {shorts,videos,startDate,endDate,updatedAt};
+  return {shorts,videos,startDate,endDate,updatedAt,mode:'current-statistics-r604'};
 }
-
 
 async function youtubePublicRegularFallbackR553(env, db) {
   const identity=await fetchYoutubeMonitorIdentity(env);
@@ -13491,7 +13557,7 @@ async function youtubePublicRegularFallbackR553(env, db) {
   });
   if(!pool.length) pool=(Array.isArray(rows)?rows:[]).filter(row=>row?.videoId && isLongForm(row) && !isObviousShort(row));
   return pool.sort((a,b)=>Number(b.views||0)-Number(a.views||0))
-    .slice(0,4)
+    .slice(0,6)
     .map(row=>normalizeYoutubeTopContentR552({
       ...row,
       creatorContentType:'VIDEO_ON_DEMAND',
@@ -13523,7 +13589,7 @@ async function handleControlYoutubeTopContentR552(request, env) {
     .map(row=>normalizeYoutubeTopContentR552(row,'SHORTS'))
     .filter(row=>row.videoId)
     .sort((a,b)=>b.views-a.views)
-    .slice(0,4);
+    .slice(0,6);
   const regularCachePool=[
     ...(Array.isArray(studio.topRegularVideos28)?studio.topRegularVideos28:[]),
     ...(Array.isArray(studio.topVideos28)?studio.topVideos28.filter(row=>String(row?.creatorContentType||'').toUpperCase()==='VIDEO_ON_DEMAND'):[])
@@ -13533,7 +13599,7 @@ async function handleControlYoutubeTopContentR552(request, env) {
     .map(row=>normalizeYoutubeTopContentR552(row,'VIDEO_ON_DEMAND'))
     .filter(row=>row.videoId && row.durationSeconds>180 && !regularSeen.has(row.videoId) && regularSeen.add(row.videoId))
     .sort((a,b)=>b.views-a.views)
-    .slice(0,4);
+    .slice(0,6);
 
   // R553: if the latest snapshot lost topRegularVideos28, recover the last exact 28-day
   // VIDEO_ON_DEMAND rows from recent YouTube snapshots before touching OAuth again.
@@ -13557,7 +13623,7 @@ async function handleControlYoutubeTopContentR552(request, env) {
         const seen=new Set();
         const found=pool.map(item=>normalizeYoutubeTopContentR552(item,'VIDEO_ON_DEMAND'))
           .filter(item=>item.videoId && item.durationSeconds>180 && !seen.has(item.videoId) && seen.add(item.videoId))
-          .sort((a,b)=>b.views-a.views).slice(0,4);
+          .sort((a,b)=>b.views-a.views).slice(0,6);
         if(found.length){cachedVideos=found;break}
       }
     }catch(_){}

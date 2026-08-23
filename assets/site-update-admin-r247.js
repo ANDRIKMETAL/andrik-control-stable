@@ -1,6 +1,6 @@
 (() => {
   'use strict';
-  const SITE_UPDATE_UI_VERSION='55.00-r247';
+  const SITE_UPDATE_UI_VERSION='55.00-r605';
   const KEY_SESSION='andrik-comments-admin-key',KEY_LOCAL='andrik-comments-admin-key-persistent',AUTO_RECOVERY_KEY='andrik-site-update-auto-recovery',CACHE_REFRESH_PREFIX='andrik-site-update-cache-refresh:',PENDING_DEPLOY_KEY='andrik-site-update-pending-deploy-r247';
   const byId=id=>document.getElementById(id),keyInput=byId('siteUpdateAdminKey'),archiveInput=byId('siteUpdateArchive'),previewButton=byId('siteUpdatePreview'),publishButton=byId('siteUpdatePublish'),confirmInput=byId('siteUpdateConfirm'),autoRecoveryInput=byId('siteUpdateAutoRecovery');
   let previewData=null,lastRelease='',lastPublish=null,lastOperationId='',operation=false;
@@ -646,7 +646,15 @@
     setResultState('','В процессе');setText('siteUpdateResultTitle',reinstall?'Повторная установка запущена':'Обновление запущено');setText('siteUpdateResultText','Создаём защитный backup…');setBusy(true);
     let backupData=null,publishData=null,releaseData=null;
     try{
-      backupData=await createBackup(release);stage('backup','done');setText('siteUpdateResultText','Backup готов. Отправляем commit в GitHub…');
+      // R605: Stage 2 can never block installation. The exact pre-update HEAD
+      // from Preview is already an immutable recovery point and becomes the parent
+      // of the new commit. Auto-recovery uses backupSha, so a separate Git tag is
+      // optional metadata, not a safety requirement. This removes a whole GitHub
+      // refs API call from the critical path.
+      const safetySha=String(previewData?.headSha||'').trim();
+      if(!/^[0-9a-f]{40}$/i.test(safetySha))throw new Error('Не удалось закрепить предыдущий Commit для восстановления. Повтори проверку ZIP.');
+      backupData={ok:true,sha:safetySha,short:safetySha.slice(0,7),tag:'',immutable:true,mode:'parent-commit'};
+      stage('backup','done');setText('siteUpdateResultText',`Backup закреплён по Commit ${backupData.short}. Отправляем обновление в GitHub…`);
       stage('commit','running');
       const form=new FormData();
       form.append('archive',file,file.name);

@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787498019979-8781846ae2",
-  "release": "R603",
-  "archiveName": "R603-CLEAN-LIGHT-LYRA-BEYOND-PLAYER-ZIP-HOME-ORDER-SAFE-FULL.zip",
-  "sourceHead": "abefae61cba53409c9914f0944d0fe52136eb0ec",
-  "backupSha": "abefae61cba53409c9914f0944d0fe52136eb0ec",
-  "backupTag": "control-backup-20260823151333-abefae6-r603-5f9da",
+  "operationId": "publish-1787505036622-fe58c21989",
+  "release": "R605",
+  "archiveName": "R605-CLEAN-LIGHT-LYRA-INSTALL-STAGE2-PERMANENT-FIX-SAFE-FULL.zip",
+  "sourceHead": "04b648c9827b839a63463b5cf752be063a8e8260",
+  "backupSha": "04b648c9827b839a63463b5cf752be063a8e8260",
+  "backupTag": "control-backup-20260823171030-04b648c-r605-6684d",
   "autoRecovery": true,
-  "generatedAt": "2026-08-23T15:13:39.979Z"
+  "generatedAt": "2026-08-23T17:10:36.622Z"
 }
