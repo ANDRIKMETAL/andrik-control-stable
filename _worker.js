@@ -17019,7 +17019,7 @@ function controlAssetFailurePage(error) {
 }
 
 
-// R577 — YouTube Live Studio state: follow CURRENT live video with fallback detection.
+// R578 — YouTube Live Studio state: follow CURRENT live video with fallback detection.
 async function handleControlYoutubeLiveR565(request, env) {
   if (!adminAuthorized(request, env)) return json({ok:false,error:'unauthorized'},401);
   const requestUrl=new URL(request.url);
@@ -17029,7 +17029,7 @@ async function handleControlYoutubeLiveR565(request, env) {
     const accessToken=await getYoutubeOAuthAccessToken(env);
     const authHeaders={authorization:`Bearer ${accessToken}`,accept:'application/json'};
     const ytFetch=async(url,label)=>{
-      const response=await fetchWithAbortTimeoutR409(url,{headers:authHeaders},8000,`youtube-live-r576-${label}-timeout`);
+      const response=await fetchWithAbortTimeoutR409(url,{headers:authHeaders},8000,`youtube-live-r578-${label}-timeout`);
       const data=await response.json().catch(()=>({}));
       if(!response.ok) throw new Error(youtubeGoogleErrorTextR495(data,response.status,label));
       return data;
@@ -17041,15 +17041,16 @@ async function handleControlYoutubeLiveR565(request, env) {
     if(followActive){
       const activeUrl=new URL('https://www.googleapis.com/youtube/v3/liveBroadcasts');
       activeUrl.searchParams.set('part','id,snippet,status,contentDetails');
-      activeUrl.searchParams.set('broadcastStatus','active');
+      // R578: YouTube may reject mine+broadcastStatus together with
+      // incompatibleParameters. Ask for our broadcasts only, then filter LIVE locally.
       activeUrl.searchParams.set('mine','true');
-      activeUrl.searchParams.set('maxResults','10');
-      const activeData=await ytFetch(activeUrl.toString(),'active broadcasts');
+      activeUrl.searchParams.set('maxResults','25');
+      const activeData=await ytFetch(activeUrl.toString(),'my broadcasts');
       const activeItems=Array.isArray(activeData?.items)?activeData.items:[];
-      broadcast=activeItems.find(item=>String(item?.status?.lifeCycleStatus||'').toLowerCase()==='live') || activeItems[0] || null;
+      broadcast=activeItems.find(item=>String(item?.status?.lifeCycleStatus||'').toLowerCase()==='live') || null;
       videoId=cleanPlainText(broadcast?.id||'',80);
 
-      // R577 fallback: liveBroadcasts.list can briefly return an empty list after a
+      // R578 fallback: liveBroadcasts.list can briefly return an empty list after a
       // new broadcast is created/started. Resolve the authenticated channel and ask
       // search.list for the currently LIVE video instead of leaving Control stuck on
       // «Проверяем эфир…».

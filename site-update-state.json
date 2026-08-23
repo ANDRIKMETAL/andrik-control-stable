@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787459404369-2791403bc6",
-  "release": "R577",
-  "archiveName": "R577-YOUTUBE-APP-FIRST-LIVE-CONTROL-FIX-SAFE-FULL.zip",
-  "sourceHead": "a2c8cf4c8debc8c4805e1e1673800ecbca0480ff",
-  "backupSha": "a2c8cf4c8debc8c4805e1e1673800ecbca0480ff",
-  "backupTag": "control-backup-20260823042958-a2c8cf4-r577-ec629",
+  "operationId": "publish-1787460105509-d5b1a68a1d",
+  "release": "R578",
+  "archiveName": "R578-CONTROL-LIVE-API-FIX-SAFE-FULL.zip",
+  "sourceHead": "4e67fc324d82507224eb79e6357e1dc713934686",
+  "backupSha": "4e67fc324d82507224eb79e6357e1dc713934686",
+  "backupTag": "control-backup-20260823044139-4e67fc3-r578-454e8",
   "autoRecovery": true,
-  "generatedAt": "2026-08-23T04:30:06.850Z"
+  "generatedAt": "2026-08-23T04:41:45.509Z"
 }

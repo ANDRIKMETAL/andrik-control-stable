@@ -27,7 +27,7 @@
         // YouTube Music remains package-specific.
         return `intent://${parsed.host}${parsed.pathname}${parsed.search}${parsed.hash}#Intent;scheme=https;package=com.google.android.apps.youtube.music;action=android.intent.action.VIEW;category=android.intent.category.BROWSABLE;S.browser_fallback_url=${encodeFallback(parsed.href)};end`;
       }
-      // R577: DO NOT pin ordinary YouTube links to com.google.android.youtube.
+      // R578: DO NOT pin ordinary YouTube links to com.google.android.youtube.
       // Android is allowed to send the HTTPS YouTube URL to the user's chosen/default
       // compatible handler (official YouTube, ReVanced/mod build, etc.). If there is
       // no suitable app, the browser_fallback_url opens the normal YouTube website.
