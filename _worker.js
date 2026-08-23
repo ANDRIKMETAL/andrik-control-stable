@@ -13566,6 +13566,29 @@ async function youtubePublicRegularFallbackR553(env, db) {
     },'VIDEO_ON_DEMAND'));
 }
 
+
+// R606: Shorts must not depend on YouTube Analytics/OAuth completed-day reports.
+// Read the uploads playlist through the public Data API and rank by CURRENT lifetime
+// statistics. This makes a just-published Short appear immediately.
+async function youtubePublicCurrentShortsR606(env, db) {
+  const identity=await fetchYoutubeMonitorIdentity(env);
+  const rows=await fetchYoutubeVideoStats(env,db,identity.uploadsPlaylistId);
+  const seen=new Set();
+  return (Array.isArray(rows)?rows:[])
+    .filter(row=>{
+      const duration=Math.max(0,Number(row?.durationSeconds||row?.duration||0));
+      return row?.videoId && duration>0 && duration<=180 && !seen.has(row.videoId) && seen.add(row.videoId);
+    })
+    .sort((a,b)=>Number(b.views||0)-Number(a.views||0))
+    .slice(0,6)
+    .map(row=>normalizeYoutubeTopContentR552({
+      ...row,
+      creatorContentType:'SHORTS',
+      shares:0,
+      url:`https://www.youtube.com/shorts/${encodeURIComponent(row.videoId)}`
+    },'SHORTS'));
+}
+
 async function handleControlYoutubeTopContentR552(request, env) {
   if (!adminAuthorized(request, env)) return json({ok:false,error:'unauthorized'},401);
 
@@ -13641,6 +13664,29 @@ async function handleControlYoutubeTopContentR552(request, env) {
       endDate:studio.topContentEndDate||studio.endDate||isoDateDaysAgo(1),
       updatedAt:studio.topContentUpdatedAt||latestRow?.created_at||snap?.updatedAt||''
     });
+  }
+
+  // R606: for Shorts, force refresh goes to public CURRENT counters first.
+  // It does not wait for Analytics to close the day and does not require Studio OAuth.
+  if(force && wanted==='shorts'){
+    try{
+      const publicShorts=await Promise.race([
+        youtubePublicCurrentShortsR606(env,db),
+        new Promise((_,reject)=>setTimeout(()=>reject(new Error('youtube-public-shorts-r606-timeout')),10000))
+      ]);
+      if(publicShorts.length){
+        const updatedAt=new Date().toISOString();
+        return json({
+          ok:true,
+          available:true,
+          source:'youtube-public-current-shorts-r606',
+          shorts:publicShorts,
+          videos:cachedVideos,
+          updatedAt,
+          mode:'current-statistics-r606'
+        });
+      }
+    }catch(_){}
   }
 
   try{

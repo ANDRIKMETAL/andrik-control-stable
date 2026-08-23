@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787505036622-fe58c21989",
-  "release": "R605",
-  "archiveName": "R605-CLEAN-LIGHT-LYRA-INSTALL-STAGE2-PERMANENT-FIX-SAFE-FULL.zip",
-  "sourceHead": "04b648c9827b839a63463b5cf752be063a8e8260",
-  "backupSha": "04b648c9827b839a63463b5cf752be063a8e8260",
-  "backupTag": "control-backup-20260823171030-04b648c-r605-6684d",
+  "operationId": "publish-1787505348781-fe49df4e4f",
+  "release": "R606",
+  "archiveName": "R606-CLEAN-LIGHT-LYRA-YOUTUBE-SHORTS-LIVE-TOP6-PERMANENT-SAFE-FULL.zip",
+  "sourceHead": "dccec3339bf66f284af7b968e0eb60eefcef224d",
+  "backupSha": "dccec3339bf66f284af7b968e0eb60eefcef224d",
+  "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-23T17:10:36.622Z"
+  "generatedAt": "2026-08-23T17:15:48.781Z"
 }
