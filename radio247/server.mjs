@@ -4,9 +4,8 @@ import { spawn } from 'node:child_process';
 
 const PORT = Number(process.env.PORT || 8080);
 const PLAYLIST_URL = process.env.PLAYLIST_URL || 'https://andrikmetal.com/api/music/downloads';
-const STREAM_COVER = process.env.STREAM_COVER || '/tmp/andrik-stream-cover-r565.webp';
-const STREAM_COVER_URL = process.env.STREAM_COVER_URL || 'https://andrikmetal.com/assets/andrik-stream-cover-r565.webp';
-const STREAM_COVER_FALLBACK_URL = process.env.STREAM_COVER_FALLBACK_URL || 'https://andrikmetal.com/assets/lyra-hero-r563.webp';
+const AUDIO_VISUAL = process.env.AUDIO_VISUAL || '/app/assets/audio-visual-loop-r566.webm';
+const QR_FILE = process.env.QR_FILE || '/app/assets/andrik-qr-r566.png';
 const STREAM_KEY = String(process.env.YOUTUBE_STREAM_KEY || '').trim();
 const STREAM_URL = STREAM_KEY ? `rtmps://a.rtmps.youtube.com:443/live2/${STREAM_KEY}` : '';
 const YOUTUBE_LIVE_URL = process.env.YOUTUBE_LIVE_URL || 'https://www.youtube.com/@andrikmetal/live';
@@ -23,7 +22,7 @@ const CLIPS = [
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R565',
+  version: 'R566',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
@@ -54,19 +53,9 @@ let titleSerial = 0;
 fs.writeFileSync(TICKER_FILE, 'ANDRIK METAL RADIO 24/7   •   ANDRIKMETAL.COM   •   YOUTUBE   •   SPOTIFY   •   APPLE MUSIC   •   AMAZON MUSIC   •   NEW MUSIC • OFFICIAL VIDEOS • RU / EN', 'utf8');
 
 
-async function ensureStreamCover(){
-  if(fs.existsSync(STREAM_COVER) && fs.statSync(STREAM_COVER).size>1000)return STREAM_COVER;
-  for(const remote of [STREAM_COVER_URL,STREAM_COVER_FALLBACK_URL]){
-    try{
-      const r=await fetch(remote,{headers:{'user-agent':'ANDRIK-Radio-24-7-R565'}});
-      if(!r.ok)continue;
-      const buf=Buffer.from(await r.arrayBuffer());
-      if(buf.length<1000)continue;
-      fs.writeFileSync(STREAM_COVER,buf);
-      return STREAM_COVER;
-    }catch(_){ }
-  }
-  throw new Error('stream cover unavailable');
+function ensureLocalVisuals(){
+  if(!fs.existsSync(AUDIO_VISUAL)||fs.statSync(AUDIO_VISUAL).size<1000)throw new Error('audio visual loop missing');
+  if(!fs.existsSync(QR_FILE)||fs.statSync(QR_FILE).size<1000)throw new Error('QR overlay missing');
 }
 
 function shuffle(items){
@@ -86,7 +75,7 @@ function albumName(item){
 
 async function loadLibrary(){
   const url=`${PLAYLIST_URL}${PLAYLIST_URL.includes('?')?'&':'?'}ts=${Date.now()}`;
-  const response=await fetch(url,{headers:{'user-agent':'ANDRIK-Radio-24-7-R565'}});
+  const response=await fetch(url,{headers:{'user-agent':'ANDRIK-Radio-24-7-R566'}});
   if(!response.ok)throw new Error(`R2 library HTTP ${response.status}`);
   const data=await response.json();
   const source=Array.isArray(data.tracks)?data.tracks:[];
@@ -161,31 +150,16 @@ function audioProducerArgs(item,probe,offset){
   const titleFile=writeTextFile('title',item.title);
   const subFile=writeTextFile('sub',`${item.album}${item.track?` • TRACK ${item.track}`:''}`);
   const duration=probe.duration.toFixed(3);
-  const base=[
+  const filter=`[1:v]scale=1280:720:force_original_aspect_ratio=increase,crop=1280:720,format=yuv420p[bg];`+
+    `[bg]drawbox=x=0:y=568:w=1280:h=104:color=black@0.52:t=fill[tmp];`+
+    `[tmp]drawtext=fontfile=${FONT_BOLD}:text='NOW PLAYING':x=42:y=582:fontsize=19:fontcolor=0x8ed8ff:shadowx=2:shadowy=2[tmp2];`+
+    `[tmp2]drawtext=fontfile=${FONT_BOLD}:textfile=${titleFile}:x=42:y=610:fontsize=34:fontcolor=white:shadowx=2:shadowy=2[tmp3];`+
+    `[tmp3]drawtext=fontfile=${FONT}:textfile=${subFile}:x=780:y=620:fontsize=19:fontcolor=0xd5deea:shadowx=2:shadowy=2[tmp4];`+
+    `[tmp4]drawbox=x=0:y=672:w=1280:h=48:color=black@0.76:t=fill[tmp5];`+
+    `[tmp5]drawtext=fontfile=${FONT_BOLD}:textfile=${TICKER_FILE}:x=w-mod(t*125\,w+tw):y=685:fontsize=21:fontcolor=white[v]`;
+  return [
     '-hide_banner','-loglevel','warning','-re','-i',item.url,
-    '-loop','1','-framerate','30','-i',STREAM_COVER
-  ];
-  let filter;
-  if(probe.hasVideo){
-    filter=`[1:v]scale=1280:720,format=yuv420p[bg];`+
-      `[0:v:0]scale=520:520:force_original_aspect_ratio=decrease,pad=520:520:(ow-iw)/2:(oh-ih)/2:color=black@0[cover];`+
-      `[bg][cover]overlay=70:100[tmp];`+
-      `[tmp]drawbox=x=630:y=112:w=590:h=410:color=black@0.44:t=fill[tmp2];`+
-      `[tmp2]drawtext=fontfile=${FONT_BOLD}:text='NOW PLAYING':x=675:y=155:fontsize=28:fontcolor=0x79c9ff:shadowx=2:shadowy=2[tmp3];`+
-      `[tmp3]drawtext=fontfile=${FONT_BOLD}:textfile=${titleFile}:x=675:y=210:fontsize=46:fontcolor=white:line_spacing=8:shadowx=3:shadowy=3[tmp4];`+
-      `[tmp4]drawtext=fontfile=${FONT}:textfile=${subFile}:x=675:y=340:fontsize=25:fontcolor=0xd6dde8:shadowx=2:shadowy=2[tmp5];`+
-      `[tmp5]drawbox=x=0:y=672:w=1280:h=48:color=black@0.72:t=fill[tmp6];`+
-      `[tmp6]drawtext=fontfile=${FONT_BOLD}:textfile=${TICKER_FILE}:x=w-mod(t*125\\,w+tw):y=685:fontsize=21:fontcolor=white[v]`;
-  }else{
-    filter=`[1:v]scale=1280:720,format=yuv420p[bg];`+
-      `[bg]drawbox=x=90:y=170:w=1100:h=300:color=black@0.44:t=fill[tmp2];`+
-      `[tmp2]drawtext=fontfile=${FONT_BOLD}:text='NOW PLAYING':x=(w-text_w)/2:y=205:fontsize=28:fontcolor=0x79c9ff[tmp3];`+
-      `[tmp3]drawtext=fontfile=${FONT_BOLD}:textfile=${titleFile}:x=(w-text_w)/2:y=265:fontsize=54:fontcolor=white:shadowx=3:shadowy=3[tmp4];`+
-      `[tmp4]drawtext=fontfile=${FONT}:textfile=${subFile}:x=(w-text_w)/2:y=355:fontsize=28:fontcolor=0xd6dde8[tmp5];`+
-      `[tmp5]drawbox=x=0:y=672:w=1280:h=48:color=black@0.72:t=fill[tmp6];`+
-      `[tmp6]drawtext=fontfile=${FONT_BOLD}:textfile=${TICKER_FILE}:x=w-mod(t*125\\,w+tw):y=685:fontsize=21:fontcolor=white[v]`;
-  }
-  return [...base,
+    '-stream_loop','-1','-i',AUDIO_VISUAL,
     '-filter_complex',filter,
     '-map','[v]','-map','0:a:0',
     '-t',duration,'-shortest',
@@ -202,13 +176,17 @@ function clipProducerArgs(item,probe,offset){
     `[bgsrc]scale=1280:720:force_original_aspect_ratio=increase,crop=1280:720,gblur=sigma=24[bg];`+
     `[fgsrc]scale=1280:720:force_original_aspect_ratio=decrease[fg];`+
     `[bg][fg]overlay=(W-w)/2:(H-h)/2[tmp];`+
-    `[tmp]drawbox=x=28:y=24:w=650:h=96:color=black@0.48:t=fill[tmp2];`+
-    `[tmp2]drawtext=fontfile=${FONT_BOLD}:textfile=${titleFile}:x=48:y=40:fontsize=36:fontcolor=white:shadowx=2:shadowy=2[tmp3];`+
-    `[tmp3]drawtext=fontfile=${FONT}:textfile=${labelFile}:x=50:y=86:fontsize=18:fontcolor=0x9fd6ff[tmp4];`+
-    `[tmp4]drawbox=x=0:y=672:w=1280:h=48:color=black@0.72:t=fill[tmp5];`+
-    `[tmp5]drawtext=fontfile=${FONT_BOLD}:textfile=${TICKER_FILE}:x=w-mod(t*125\\,w+tw):y=685:fontsize=21:fontcolor=white[v]`;
+    `[1:v]scale=145:145[qr];`+
+    `[tmp][qr]overlay=22:18[tmpqr];`+
+    `[tmpqr]drawtext=fontfile=${FONT_BOLD}:text='ANDRIKMETAL':x=w-text_w-28:y=30:fontsize=30:fontcolor=white:shadowx=2:shadowy=2[tmpbrand];`+
+    `[tmpbrand]drawbox=x=25:y=545:w=675:h=104:color=black@0.52:t=fill[tmp2];`+
+    `[tmp2]drawtext=fontfile=${FONT_BOLD}:textfile=${titleFile}:x=48:y=560:fontsize=35:fontcolor=white:shadowx=2:shadowy=2[tmp3];`+
+    `[tmp3]drawtext=fontfile=${FONT}:textfile=${labelFile}:x=50:y=608:fontsize=18:fontcolor=0x9fd6ff[tmp4];`+
+    `[tmp4]drawbox=x=0:y=672:w=1280:h=48:color=black@0.76:t=fill[tmp5];`+
+    `[tmp5]drawtext=fontfile=${FONT_BOLD}:textfile=${TICKER_FILE}:x=w-mod(t*125\,w+tw):y=685:fontsize=21:fontcolor=white[v]`;
   return [
     '-hide_banner','-loglevel','warning','-re','-i',item.url,
+    '-loop','1','-framerate','1','-i',QR_FILE,
     '-filter_complex',filter,'-map','[v]','-map','0:a:0',
     '-r','30','-c:v','libx264','-preset','ultrafast','-tune','zerolatency','-profile:v','main','-level','3.1','-pix_fmt','yuv420p','-b:v','2800k','-maxrate','3400k','-bufsize','5600k','-g','60','-keyint_min','60',
     '-c:a','aac','-b:a','160k','-ar','44100','-ac','2',
@@ -269,7 +247,7 @@ async function playItem(item,next){
 async function radioLoop(){
   if(running)return;
   running=true;
-  try{await ensureStreamCover();}catch(error){state.lastError=String(error);setTimeout(()=>process.exit(23),60000).unref();return;}
+  try{ensureLocalVisuals();}catch(error){state.lastError=String(error);setTimeout(()=>process.exit(23),60000).unref();return;}
   if(!startPublisher())return;
   while(!stopping){
     try{

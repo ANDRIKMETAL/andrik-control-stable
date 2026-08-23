@@ -11,9 +11,8 @@ export class AndrikRadio extends Container {
     YOUTUBE_STREAM_KEY: env.YOUTUBE_STREAM_KEY || "",
     PLAYLIST_URL: env.PLAYLIST_URL || "https://andrikmetal.com/api/music/downloads",
     YOUTUBE_LIVE_URL: env.YOUTUBE_LIVE_URL || "https://www.youtube.com/@andrikmetal/live",
-    STREAM_COVER: "/tmp/andrik-stream-cover-r565.webp",
-    STREAM_COVER_URL: env.STREAM_COVER_URL || "https://andrikmetal.com/assets/andrik-stream-cover-r565.webp",
-    STREAM_COVER_FALLBACK_URL: env.STREAM_COVER_FALLBACK_URL || "https://andrikmetal.com/assets/lyra-hero-r563.webp"
+    AUDIO_VISUAL: "/app/assets/audio-visual-loop-r566.webm",
+    QR_FILE: "/app/assets/andrik-qr-r566.png"
   };
 
   override async onActivityExpired() {

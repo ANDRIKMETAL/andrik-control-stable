@@ -1,47 +1,28 @@
-# ANDRIK METAL RADIO 24/7 — R565
+# ANDRIK METAL RADIO 24/7 — R566
 
-Готово для Cloudflare Workers Builds без компьютера.
+Cloudflare Container / Workers Builds, без компьютера.
 
 ## Что играет
 
-- только MP3 из папок `albums/*` в R2 через `https://andrikmetal.com/api/music/downloads`;
-- все альбомные треки перемешиваются заново каждый цикл;
-- между песнями автоматически вставляются 4 видео из R2:
-  - `clips/joy-of-being-official-2026.mp4`
-  - `clips/ya-est-official-2026.mp4`
-  - `promo/lyra-trika-2026.mp4`
-  - `clips/prosnis-fragment-2026.mp4`
-- у MP3 используется встроенная обложка ID3;
-- если встроенная обложка не читается — используется общая обложка STREAM;
-- поверх аудио выводятся NOW PLAYING, альбом и бегущая строка;
-- вертикальные ролики автоматически вписываются в 16:9 с размытым фоном.
+- все MP3 из `albums/*` в R2 через `https://andrikmetal.com/api/music/downloads`;
+- `albums/beyond/*` автоматически попадает в радио сразу после скрытой загрузки 4-го альбома;
+- каждый цикл перемешивает весь альбомный каталог;
+- 2 полных клипа + 2 вертикальных ролика из R2 вставляются между треками;
+- для ВСЕХ аудиотреков используется единый 10-секундный зацикленный визуал `assets/audio-visual-loop-r566.webm` (~500 KB);
+- на визуале уже есть QR слева и `ANDRIKMETAL` справа;
+- поверх аудио добавляется только компактный NOW PLAYING + бегущая строка;
+- на клипы радио автоматически накладывает QR слева сверху и `ANDRIKMETAL` справа сверху.
 
-## GitHub / Cloudflare без ПК
+## GitHub / Cloudflare
 
 Репозиторий: `ANDRIKMETAL/andrik-control-stable`
 
-Корневая папка проекта для Workers Builds: `radio247`
-
-Worker: `andrik-radio-247`
-
-Custom Domain: `radio.andrikmetal.com`
+Root directory: `radio247`
 
 Deploy command: `npx wrangler deploy`
 
-Секрет, который нужно добавить в Cloudflare после первого импорта проекта:
+Secret: `YOUTUBE_STREAM_KEY`
 
-`YOUTUBE_STREAM_KEY`
+Status: `https://radio.andrikmetal.com/status`
 
-Тип: **Secret**.
-
-После добавления секрета Cloudflare создаст новую версию Worker. Если контейнер до этого стартовал без ключа, он сам завершится и на следующем heartbeat поднимется уже с ключом.
-
-## Проверка
-
-Статус радио:
-
-`https://radio.andrikmetal.com/status`
-
-Сам эфир:
-
-`https://www.youtube.com/@andrikmetal/live`
+Live: `https://www.youtube.com/@andrikmetal/live`

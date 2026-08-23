@@ -129,3 +129,27 @@
 
 .lyra-hero-r563__glow{position:absolute;inset:-12%;z-index:-2;pointer-events:none;background:radial-gradient(circle at var(--lyra-glow-x,52%) var(--lyra-glow-y,34%),rgba(126,188,255,.10),transparent 26%),radial-gradient(circle at 66% 72%,rgba(207,164,91,.08),transparent 30%);mix-blend-mode:screen;opacity:.72;filter:blur(18px);animation:lyraGlow563 8s ease-in-out infinite alternate;}
 @keyframes lyraGlow563{0%{opacity:.48;transform:scale(1)}100%{opacity:.82;transform:scale(1.035)}}
+
+
+/* R566 — real lightweight Lyra video + badge above head + compact bottom controls */
+.lyra-hero-r566 .lyra-hero-r562__poster{z-index:-4;transform:none!important;object-position:center center;}
+.lyra-hero-r566__video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center center;z-index:-3;display:block;background:#05070b;}
+.lyra-hero-r566__badge-wrap{position:absolute;z-index:4;top:14px;left:50%;transform:translateX(-50%);width:min(100%,1180px);display:flex;justify-content:center;pointer-events:none;padding:0 14px;}
+.lyra-hero-r566__badge-wrap .lyra-hero-r562__badge{margin:0;pointer-events:auto;background:rgba(6,9,14,.64);box-shadow:0 8px 30px rgba(0,0,0,.28);}
+.lyra-hero-r566 .lyra-hero-r562__inner{align-items:flex-end;padding-top:96px;padding-bottom:22px;}
+.lyra-hero-r566 .lyra-hero-r562__panel{width:min(100%,720px);}
+.lyra-hero-r566 .lyra-hero-r562__primary{margin-bottom:10px;}
+.lyra-hero-r566 .lyra-hero-r562__btn{min-height:54px;}
+.footer-qr-r566{display:flex;justify-content:center;padding:22px 0 8px;}
+.footer-qr-r566__link{display:block;width:min(220px,58vw);border-radius:24px;overflow:hidden;box-shadow:0 0 34px rgba(45,225,210,.14);}
+.footer-qr-r566__link img{display:block;width:100%;height:auto;}
+@media(max-width:560px){
+  .lyra-hero-r566__badge-wrap{top:10px;padding:0 12px;}
+  .lyra-hero-r566__badge-wrap .lyra-hero-r562__badge{font-size:.67rem;letter-spacing:.105em;padding:8px 11px;}
+  .lyra-hero-r566 .lyra-hero-r562__inner{padding-top:88px;padding-bottom:18px;}
+  .lyra-hero-r566 .lyra-hero-r562__primary{margin-bottom:9px;}
+  .lyra-hero-r566 .lyra-hero-r562__btn{min-height:50px;font-size:.88rem;}
+  .lyra-hero-r566 .lyra-hero-r562__nav a{min-height:47px;}
+  .footer-qr-r566__link{width:min(190px,56vw);}
+}
+@media(prefers-reduced-motion:reduce){.lyra-hero-r566__video{display:none!important;}}

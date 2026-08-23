@@ -7,8 +7,6 @@ workers_dev = true
 [vars]
 PLAYLIST_URL = "https://andrikmetal.com/api/music/downloads"
 YOUTUBE_LIVE_URL = "https://www.youtube.com/@andrikmetal/live"
-STREAM_COVER_URL = "https://andrikmetal.com/assets/andrik-stream-cover-r565.webp"
-STREAM_COVER_FALLBACK_URL = "https://andrikmetal.com/assets/lyra-hero-r563.webp"
 
 [triggers]
 crons = ["*/5 * * * *"]

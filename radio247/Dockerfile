@@ -6,6 +6,7 @@ RUN apt-get update \
 
 WORKDIR /app
 COPY server.mjs /app/server.mjs
+COPY assets /app/assets
 
 EXPOSE 8080
 CMD ["node", "/app/server.mjs"]

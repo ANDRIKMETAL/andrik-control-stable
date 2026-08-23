@@ -97,7 +97,7 @@ async function stageIncoming(files){
   }
 }
 
-const albumNames={'singles':'Синглы ANDRIK','albums/illusion-of-life':'Illusion of Life','albums/ocean':'OCEAN','albums/trika':'ТРИКА'};
+const albumNames={'singles':'Синглы ANDRIK','albums/beyond':'BEYOND','albums/illusion-of-life':'Illusion of Life','albums/ocean':'OCEAN','albums/trika':'ТРИКА'};
 const enc=new TextEncoder();
 function auth(extra={}){const h={...extra};const k=$('lyricsAdminKey')?.value?.trim();if(k)h['x-admin-key']=k;return h}
 function setStatus(t,kind=''){els.status.textContent=t;els.badge.textContent=kind==='ok'?'Готово ✓':kind==='error'?'Ошибка':'Работа';els.badge.classList.toggle('ok',kind==='ok')}
