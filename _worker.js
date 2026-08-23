@@ -42,7 +42,10 @@ function youtubeAppLauncherUrl(targetUrl) {
     const allowed = new Set(['youtube.com', 'www.youtube.com', 'm.youtube.com', 'music.youtube.com', 'youtu.be']);
     if (parsed.protocol === 'https:' && allowed.has(parsed.hostname.toLowerCase())) target = parsed.href;
   } catch (_) {}
-  return `https://andrikmetal.com/open-youtube.html?target=${encodeURIComponent(target)}&src=push&r=595`;
+  // R600: notification taps go straight to the YouTube URL. Android can hand the
+  // HTTPS app-link directly to YouTube / ReVanced / RVX without our intermediate
+  // confirmation page. Browser remains the natural fallback when no client owns it.
+  return target;
 }
 
 function normalizeTitle(value) {
@@ -2319,8 +2322,8 @@ function isAndrikRadioLiveR576(value) {
 }
 
 function youtubeAppOpenUrlR592(url) {
-  const target=cleanPlainText(url||'https://www.youtube.com/live/lZkV9kPpBUQ',1000);
-  return `https://andrikmetal.com/open-youtube.html?target=${encodeURIComponent(target)}&src=push&r=595`;
+  // R600: same direct path for the radio/live notification metadata.
+  return youtubeAppLauncherUrl(url||'https://www.youtube.com/live/lZkV9kPpBUQ');
 }
 
 function youtubePushMetaR576(title, url) {
