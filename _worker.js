@@ -16667,6 +16667,7 @@ async function handleMusicAlbumMultipartAbortR446(request,env){
 async function handleMusicAlbumDownloadR446(request,env){
   const bucket=getMusicBucketR314(env); if(!bucket)return json({ok:false,error:'music-bucket-not-configured'},503);
   const def=musicAlbumDefR446(new URL(request.url).searchParams.get('album')); if(!def)return json({ok:false,error:'invalid-album'},400);
+  if(def.slug==='trika')return json({ok:false,error:'official-release-only',message:'TRIKA доступна через официальный YouTube Music / стриминговые площадки.'},410);
   const object=await bucket.get(def.zipKey);
   if(!object)return json({ok:false,error:'zip-not-built',message:'Архив альбома ещё не собран.'},404);
   const h=new Headers();h.set('content-type','application/zip');h.set('content-disposition',`attachment; filename=\"${def.zipName}\"`);h.set('cache-control','public, max-age=3600');h.set('x-content-type-options','nosniff');

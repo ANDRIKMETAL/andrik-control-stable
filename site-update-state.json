@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787586286397-c2889d431d",
-  "release": "R630",
-  "archiveName": "R630-RADIO-HUB-CITY-MAP-R629-STABLE-ENGINE-SAFE-FULL.zip",
-  "sourceHead": "4557e97becb080be372af68ffc20c5b05e79d78a",
-  "backupSha": "4557e97becb080be372af68ffc20c5b05e79d78a",
+  "operationId": "publish-1787588079398-b553f008ac",
+  "release": "R631",
+  "archiveName": "R631-AUDIO-FAST-STABLE-TRIKA-OFFICIAL-RADIO-HUB-SAFE-FULL.zip",
+  "sourceHead": "defb5d7689ac55677a6e0288edbfdc7d16b88dd9",
+  "backupSha": "defb5d7689ac55677a6e0288edbfdc7d16b88dd9",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-24T15:44:46.823Z"
+  "generatedAt": "2026-08-24T16:14:40.228Z"
 }
