@@ -16671,19 +16671,16 @@ async function publishSingleReleaseR616(env,{key,title,url='',publishedAt=''}={}
 async function handleMusicSinglePublishR616(request,env){
   if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
   const bucket=getMusicBucketR314(env);if(!bucket)return json({ok:false,error:'music-bucket-not-configured'},503);
-  let body={};try{body=await readJsonBody(request)}catch(_){body={}}
-  let key=musicObjectKeyR317(body?.key||'');
-  let object=null;
-  if(key&&/^singles\//i.test(key))object=await bucket.head(key).catch(()=>null);
-  if(!object){
-    const listed=await bucket.list({prefix:'singles/',limit:1000,include:['customMetadata']});
-    const items=(listed.objects||[]).filter(o=>/\.mp3$/i.test(o.key)).sort((a,b)=>{
-      const am=a.customMetadata||{},bm=b.customMetadata||{};
-      const at=Date.parse(am.publishedAt||a.uploaded||0)||0,bt=Date.parse(bm.publishedAt||b.uploaded||0)||0;
-      return bt-at;
-    });
-    object=items[0]||null;key=object?.key||'';
-  }
+  // R617: publish-latest must always use the newest public single from R2.
+  // This prevents a stale admin tab from sending a PUSH for an older track.
+  const listed=await bucket.list({prefix:'singles/',limit:1000,include:['customMetadata']});
+  const items=(listed.objects||[]).filter(o=>/\.mp3$/i.test(o.key)).sort((a,b)=>{
+    const am=a.customMetadata||{},bm=b.customMetadata||{};
+    const at=Date.parse(am.publishedAt||a.uploaded||0)||0,bt=Date.parse(bm.publishedAt||b.uploaded||0)||0;
+    if(bt!==at)return bt-at;
+    return String(b.key||'').localeCompare(String(a.key||''),'ru',{numeric:true,sensitivity:'base'});
+  });
+  const object=items[0]||null,key=object?.key||'';
   if(!object||!key)return json({ok:false,error:'single-not-found'},404);
   const m=object.customMetadata||{};
   const fallback=key.split('/').pop().replace(/(?:\.mp3)+$/ig,'').replace(/[_-]+/g,' ');

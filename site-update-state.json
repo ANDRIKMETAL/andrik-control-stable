@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787548594423-eea11658fb",
-  "release": "R616",
-  "archiveName": "R616-SINGLE-SYNC-AUTO-PUSH-LIVE-HOME-DEDUPE-SAFE-FULL.zip",
-  "sourceHead": "4b3403059870c1377e3c16533aeb7e8cf124591a",
-  "backupSha": "4b3403059870c1377e3c16533aeb7e8cf124591a",
+  "operationId": "publish-1787549383879-ee10c1691e",
+  "release": "R617",
+  "archiveName": "R617-LATEST-SINGLE-PUSH-FIX-SAFE-FULL.zip",
+  "sourceHead": "be59a4f1415d8088cbfedf43c9fecdf97ecccac6",
+  "backupSha": "be59a4f1415d8088cbfedf43c9fecdf97ecccac6",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-24T05:16:34.423Z"
+  "generatedAt": "2026-08-24T05:29:43.879Z"
 }
