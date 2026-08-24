@@ -6473,6 +6473,9 @@ async function handleYoutubeOAuthStart(request, env) {
   // Always request fresh consent so an older read-only refresh token is replaced.
   url.searchParams.set('prompt','select_account consent');
   url.searchParams.set('include_granted_scopes','true');
+  // R618: optional server-side account hint. The account chooser stays enabled.
+  const loginHint = String(env.YOUTUBE_OAUTH_LOGIN_HINT || '').trim();
+  if (loginHint) url.searchParams.set('login_hint', loginHint);
   url.searchParams.set('scope',[
     'https://www.googleapis.com/auth/yt-analytics.readonly',
     'https://www.googleapis.com/auth/youtube.force-ssl'

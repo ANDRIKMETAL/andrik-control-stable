@@ -103,15 +103,46 @@
     const button=$('youtubeStudioConnect');
     if(!getKey()){
       authState(false,'Сначала сохраните ключ владельца в разделе «Служебное».');
-      location.href='/service-admin.html?return=youtube&v=54.89';
+      location.href='/service-admin.html?return=youtube&v=55.00-r618';
       return;
     }
+
+    // R618: force Google OAuth out of the installed Control/PWA view on Android.
+    // The browser window is opened synchronously from the tap, then navigated
+    // to the signed OAuth URL returned by the Worker after the API call.
+    let oauthWindow=null;
+    try{
+      oauthWindow=window.open('about:blank','andrikYoutubeOAuthR618');
+      if(oauthWindow){
+        try{oauthWindow.opener=null}catch(_){}
+        try{
+          oauthWindow.document.title='ANDRIK · Google OAuth';
+          oauthWindow.document.body.innerHTML='<div style="font-family:system-ui;padding:28px;background:#071015;color:#e9f8ff;min-height:100vh"><h2 style="margin:0 0 10px">Открываем Google…</h2><p style="opacity:.8">Подключение YouTube Studio.</p></div>';
+        }catch(_){}
+      }
+    }catch(_){oauthWindow=null}
+
     if(button){button.disabled=true;button.textContent='Открываем Google…'}
+    authState(true,'Открываем Google в отдельной вкладке браузера…');
     try{
       const result=await api('/api/control/youtube-oauth/start');
       if(!result?.url)throw new Error('Ссылка авторизации не получена');
-      location.assign(result.url);
+      if(oauthWindow&&!oauthWindow.closed){
+        oauthWindow.location.replace(result.url);
+      }else{
+        const link=document.createElement('a');
+        link.href=result.url;
+        link.target='_blank';
+        link.rel='noopener external';
+        link.referrerPolicy='no-referrer';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+      }
+      if(button){button.disabled=false;button.textContent='Переподключить Studio'}
+      authState(true,'Google открыт отдельно. Выберите аккаунт канала ANDRIK и разрешите доступ.');
     }catch(error){
+      try{if(oauthWindow&&!oauthWindow.closed)oauthWindow.close()}catch(_){}
       const message=String(error?.message||error);
       if(button){button.disabled=false;button.textContent='Подключить Studio'}
       if(message.includes('youtube-oauth-client-not-configured')){

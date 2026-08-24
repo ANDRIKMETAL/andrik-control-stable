@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787549383879-ee10c1691e",
-  "release": "R617",
-  "archiveName": "R617-LATEST-SINGLE-PUSH-FIX-SAFE-FULL.zip",
-  "sourceHead": "be59a4f1415d8088cbfedf43c9fecdf97ecccac6",
-  "backupSha": "be59a4f1415d8088cbfedf43c9fecdf97ecccac6",
+  "operationId": "publish-1787563629341-6ca39f3c3a",
+  "release": "R618",
+  "archiveName": "R618-YOUTUBE-OAUTH-EXTERNAL-BROWSER-FIX-SAFE-FULL.zip",
+  "sourceHead": "dde93cfee4d0b90005bb92a3bef5611e57c65203",
+  "backupSha": "dde93cfee4d0b90005bb92a3bef5611e57c65203",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-24T05:29:43.879Z"
+  "generatedAt": "2026-08-24T09:27:09.341Z"
 }
