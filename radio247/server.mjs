@@ -32,11 +32,13 @@ const EVENING_VISUAL = process.env.EVENING_VISUAL || `${VISUAL_CACHE_DIR}/stream
 const NIGHT_VISUAL = process.env.NIGHT_VISUAL || `${VISUAL_CACHE_DIR}/stream-night-master-r620.mp4`;
 const EMERGENCY_VISUAL = process.env.EMERGENCY_VISUAL || new URL('../assets/live-eye-r223.mp4', import.meta.url).pathname;
 const QR_OVERLAY = process.env.QR_OVERLAY || new URL('../assets/andrik-qr-r612.png', import.meta.url).pathname;
-const OUTPUT_TIMESHIFT_SECONDS = Number(process.env.OUTPUT_TIMESHIFT_SECONDS || 6);
-const TIMESTAMP_GUARD_SECONDS = Number(process.env.TIMESTAMP_GUARD_SECONDS || 0.06);
-const VIDEO_BITRATE = process.env.VIDEO_BITRATE || '8000k';
+const OUTPUT_TIMESHIFT_SECONDS = Number(process.env.OUTPUT_TIMESHIFT_SECONDS || 0);
+const TIMESTAMP_GUARD_SECONDS = Number(process.env.TIMESTAMP_GUARD_SECONDS || 0.02);
+const VIDEO_BITRATE = process.env.VIDEO_BITRATE || '4500k';
 const AUDIO_BITRATE = process.env.AUDIO_BITRATE || '192k';
 const LIBRARY_REFRESH_MS = Math.max(60000, Number(process.env.LIBRARY_REFRESH_MS || 120000));
+const LIVE_TICKER_FILE = process.env.LIVE_TICKER_FILE || `${CACHE_DIR}/live-ticker.txt`;
+const DEFAULT_LIVE_TICKER = 'ANDRIK METAL RADIO 24/7   •   ANDRIKMETAL.COM   •   НОВЫЕ СИНГЛЫ И АЛЬБОМЫ ANDRIK   •   ПОДПИСЫВАЙТЕСЬ • СТАВЬТЕ ЛАЙКИ • КОММЕНТИРУЙТЕ   •   ';
 const DISABLED_ALBUM_PREFIXES = Object.freeze([
   'albums/illusion-of-life/',
   'albums/ocean/'
@@ -44,14 +46,14 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R622-PRIVATE-R2-PULL-1080P25-AUDIO-CLEAN-LIVE-TARGET-DEVICE-OAUTH',
-  mode: 'AUTO SINGLES + DEDUPE / PRIVATE R2 MASTER -> LOCAL AWS CACHE / 1080p25 / 6s OUTPUT FIFO / RTMPS RECOVERY / LOCAL MP3 CACHE + 2-TRACK PREFETCH / DAYPART VISUALS + QR',
+  version: 'R629-LOWLOAD-1080P25-LIVE-TICKER-AUDIO-STABLE',
+  mode: 'AUTO SINGLES + DEDUPE / PRIVATE R2 MASTER -> LOCAL AWS CACHE / 1080p25 LOW-LOAD / DIRECT RTMPS / LIVE TICKER / DAYPART VISUALS + QR',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
   producerRunning: false,
-  overlayMode: 'QR TOP-LEFT / YELLOW NOW / MULTIPLATFORM CTA TICKER',
-  audioMode: 'LOCAL MP3 CACHE + 2-TRACK PREFETCH / PTS REBUILD / AAC-LC 48kHz stereo 192kbps',
+  overlayMode: 'QR TOP-LEFT / YELLOW TRACK TEXT WITH BLACK OUTLINE / LIVE TICKER / NO BARS',
+  audioMode: 'LOCAL MP3 CACHE + 2-TRACK PREFETCH / PTS REBUILD / AAC-LC 48kHz stereo 192kbps / DIRECT RTMPS NO FIFO',
   visualTimeZone: VISUAL_TIME_ZONE,
   visualPeriod: null,
   visualPath: null,
@@ -512,15 +514,8 @@ function startPublisher(){
     '-c:v','copy','-c:a','copy',
     '-tag:v','7','-tag:a','10',
     '-tcp_nodelay','1',
-    '-f','fifo',
-    '-fifo_format','flv',
-    '-queue_size','4096',
-    '-timeshift',`${Math.max(0,OUTPUT_TIMESHIFT_SECONDS)}s`,
-    '-drop_pkts_on_overflow','1',
-    '-attempt_recovery','1',
-    '-recover_any_error','1',
-    '-recovery_wait_time','1',
-    '-restart_with_keyframe','1',
+    // R629: direct RTMPS. No fifo/timeshift queue that can accumulate delay or duplicate/drop audio packets.
+    '-f','flv','-flvflags','no_duration_filesize',
     STREAM_URL
   ];
 
@@ -552,34 +547,32 @@ function producerArgs(item,duration,offset,visualPath,previous,next){
   prepareCacheDir();
   const key=createHash('sha1').update([previous?.url||'',item?.url||'',next?.url||'',Date.now()].join('|')).digest('hex').slice(0,12);
   const currentFile=`${CACHE_DIR}/current-live-${key}.txt`;
-  const tickerFile=`${CACHE_DIR}/ticker-live-${key}.txt`;
 
-  writeFileSync(currentFile,`СЕЙЧАС: ${trackLabel(item,'ANDRIK')}`,'utf8');
-  const unit=`ANDRIK METAL RADIO 24/7   •   СЕЙЧАС: ${trackLabel(item,'ANDRIK')}   •   ДАЛЬШЕ: ${trackLabel(next,'—')}   •   СЛУШАЙТЕ ANDRIK: SPOTIFY • APPLE MUSIC • AMAZON MUSIC • YOUTUBE   •   ПОДПИСЫВАЙТЕСЬ • СТАВЬТЕ ЛАЙКИ • КОММЕНТИРУЙТЕ • И ПРОСТО КАЙФУЙТЕ   •   ANDRIKMETAL.COM   •   `;
-  writeFileSync(tickerFile,unit.repeat(8),'utf8');
+  // R629: only the track title remains above the ticker. No “СЕЙЧАС:” prefix.
+  writeFileSync(currentFile,trackLabel(item,'ANDRIK'),'utf8');
+  if(!existsSync(LIVE_TICKER_FILE)) writeFileSync(LIVE_TICKER_FILE,DEFAULT_LIVE_TICKER,'utf8');
 
   const font=chooseFont();
   const fontPart=font?`fontfile='${ffFilterPath(font)}':`:'';
-  const curPath=ffFilterPath(currentFile), tickerPath=ffFilterPath(tickerFile);
+  const curPath=ffFilterPath(currentFile), tickerPath=ffFilterPath(LIVE_TICKER_FILE);
 
   if(!existsSync(QR_OVERLAY) || statSync(QR_OVERLAY).size<20000){
     throw new Error(`R615 QR overlay missing or too small: ${QR_OVERLAY}`);
   }
 
   const baseVf=[
-    'scale=1920:1080:flags=lanczos',
+    // R629 low-load 1080p: original masters stay 1080p, but filters/encoder are cheaper.
+    'scale=1920:1080:flags=fast_bilinear',
     'setsar=1',
     'fps=25',
     `tpad=stop_mode=clone:stop_duration=${Math.ceil(duration)+10}`,
     'format=yuv420p',
-    'drawbox=x=0:y=ih-260:w=iw:h=260:color=black@0.56:t=fill',
-    'drawbox=x=iw*0.10:y=ih-205:w=iw*0.80:h=96:color=black@0.90:t=fill',
-    'drawbox=x=iw*0.10:y=ih-205:w=iw*0.80:h=96:color=yellow@0.55:t=4',
-    `drawtext=${fontPart}textfile='${curPath}':fontcolor=yellow:fontsize=58:x=(w-text_w)/2:y=h-188:shadowcolor=black@1:shadowx=3:shadowy=3`,
-    'drawbox=x=0:y=ih-90:w=iw:h=90:color=black@0.88:t=fill',
-    `drawtext=${fontPart}textfile='${tickerPath}':fontcolor=white:fontsize=38:x='w-mod(t*190,text_w/8+w)':y=h-68:shadowcolor=black@1:shadowx=2:shadowy=2`
+    // No translucent strips and no yellow plaque. Just outlined text over the video.
+    `drawtext=${fontPart}textfile='${curPath}':fontcolor=yellow:fontsize=56:x=(w-text_w)/2:y=h-158:borderw=4:bordercolor=black@1:shadowcolor=black@1:shadowx=2:shadowy=2`,
+    // Stable file + reload=1 makes the running line update live without restarting FFmpeg.
+    `drawtext=${fontPart}textfile='${tickerPath}':reload=25:fontcolor=yellow:fontsize=36:x='w-mod(t*180,text_w+w)':y=h-58:borderw=3:bordercolor=black@1:shadowcolor=black@1:shadowx=1:shadowy=1`
   ].join(',');
-  const filterComplex=`[1:v]${baseVf}[base];[2:v]scale=180:180:flags=lanczos,format=yuva420p[qr];[base][qr]overlay=24:24:format=yuv420[outv]`;
+  const filterComplex=`[1:v]${baseVf}[base];[2:v]scale=180:180:flags=lanczos,format=yuva420p[qr];[base][qr]overlay=8:24:format=yuv420[outv]`;
 
   const inputArgs=[
     '-hide_banner','-loglevel','warning',
@@ -590,15 +583,15 @@ function producerArgs(item,duration,offset,visualPath,previous,next){
     '-map','[outv]','-map','0:a:0'
   ];
 
-  return {tempFiles:[currentFile,tickerFile],args:[
+  return {tempFiles:[currentFile],args:[
     ...inputArgs,
     '-t',duration.toFixed(3),
-    '-c:v','libx264','-preset','superfast','-tune','zerolatency',
+    '-c:v','libx264','-preset','ultrafast','-tune','zerolatency',
     '-profile:v','high','-level:v','4.1',
-    '-b:v',VIDEO_BITRATE,'-minrate',VIDEO_BITRATE,'-maxrate',VIDEO_BITRATE,'-bufsize','16000k',
+    '-b:v',VIDEO_BITRATE,'-minrate',VIDEO_BITRATE,'-maxrate',VIDEO_BITRATE,'-bufsize','9000k',
     '-x264-params','nal-hrd=cbr:force-cfr=1:repeat-headers=1',
     '-g','50','-keyint_min','50','-sc_threshold','0','-r','25','-threads','2','-pix_fmt','yuv420p',
-    '-af','aresample=48000:first_pts=0,asetpts=N/SR/TB',
+    '-af','aresample=48000:async=1:first_pts=0,asetpts=N/SR/TB',
     '-c:a','aac','-profile:a','aac_low','-aac_coder','twoloop','-b:a',AUDIO_BITRATE,'-ar','48000','-ac','2',
     '-flush_packets','1',
     '-muxdelay','0','-muxpreload','0',
@@ -776,7 +769,7 @@ const server=http.createServer((req,res)=>{
 });
 
 server.listen(PORT,'0.0.0.0',()=>{
-  console.log(`ANDRIK Radio R622-PRIVATE-R2-PULL-1080P-AUDIO-CLEAN listening on :${PORT}`);
+  console.log(`ANDRIK Radio R629-LOWLOAD-1080P-LIVE-TICKER listening on :${PORT}`);
   radioLoop();
 });
 

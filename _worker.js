@@ -17429,7 +17429,8 @@ const RADIO_REMOTE_R627 = {
   pairPrefix:'radio-remote-r627:pair:',
   agentKey:'radio-remote-r627:agent',
   commandKey:'radio-remote-r627:command',
-  resultKey:'radio-remote-r627:result'
+  resultKey:'radio-remote-r627:result',
+  tickerKey:'radio-remote-r627:ticker'
 };
 
 async function sha256HexR627(value){
@@ -17492,16 +17493,28 @@ async function handleRadioAgentPairConsumeR627(request,env){
 async function handleRadioRemoteStatusR627(request,env){
   if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
   const db=env.COMMENTS_DB;if(!db)return json({ok:false,error:'database-not-configured'},503);
-  const [agentRow,cmdRow,resultRow]=await Promise.all([
+  const [agentRow,cmdRow,resultRow,tickerRow]=await Promise.all([
     getPushState(db,RADIO_REMOTE_R627.agentKey).catch(()=>null),
     getPushState(db,RADIO_REMOTE_R627.commandKey).catch(()=>null),
-    getPushState(db,RADIO_REMOTE_R627.resultKey).catch(()=>null)
+    getPushState(db,RADIO_REMOTE_R627.resultKey).catch(()=>null),
+    getPushState(db,RADIO_REMOTE_R627.tickerKey).catch(()=>null)
   ]);
   const agent=parseStateValueR627(agentRow)||{};
   const command=parseStateValueR627(cmdRow);
   const result=parseStateValueR627(resultRow);
+  const ticker=parseStateValueR627(tickerRow)||null;
   const lastSeenMs=Date.parse(agent.lastSeen||'')||0;
-  return json({ok:true,paired:Boolean(agent.tokenHash),online:Boolean(lastSeenMs&&Date.now()-lastSeenMs<25000),agent:{pairedAt:agent.pairedAt||null,lastSeen:agent.lastSeen||null,version:agent.version||null,status:agent.status||null},command,result});
+  return json({ok:true,paired:Boolean(agent.tokenHash),online:Boolean(lastSeenMs&&Date.now()-lastSeenMs<25000),agent:{pairedAt:agent.pairedAt||null,lastSeen:agent.lastSeen||null,version:agent.version||null,status:agent.status||null},command,result,ticker});
+}
+async function handleRadioRemoteTickerR629(request,env){
+  if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
+  const db=env.COMMENTS_DB;if(!db)return json({ok:false,error:'database-not-configured'},503);
+  const body=await request.json().catch(()=>({}));
+  let text=String(body.text??'').replace(/[\r\n\t]+/g,' ').replace(/\s+/g,' ').trim();
+  if(text.length>240)text=text.slice(0,240).trim();
+  const ticker={text,updatedAt:new Date().toISOString(),source:'owner-control-r629'};
+  await setPushState(db,RADIO_REMOTE_R627.tickerKey,JSON.stringify(ticker));
+  return json({ok:true,ticker});
 }
 async function handleRadioRemoteCommandR627(request,env){
   if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
@@ -17530,12 +17543,16 @@ async function handleRadioAgentPollR627(request,env){
   agent.lastSeen=new Date().toISOString();agent.version=String(body.version||agent.version||'R627');
   if(body.status&&typeof body.status==='object')agent.status=body.status;
   await setPushState(db,RADIO_REMOTE_R627.agentKey,JSON.stringify(agent));
-  const row=await getPushState(db,RADIO_REMOTE_R627.commandKey).catch(()=>null);
+  const [row,tickerRow]=await Promise.all([
+    getPushState(db,RADIO_REMOTE_R627.commandKey).catch(()=>null),
+    getPushState(db,RADIO_REMOTE_R627.tickerKey).catch(()=>null)
+  ]);
+  const ticker=parseStateValueR627(tickerRow)||null;
   const command=parseStateValueR627(row);
-  if(!command||command.state!=='queued')return json({ok:true,command:null});
+  if(!command||command.state!=='queued')return json({ok:true,command:null,ticker});
   command.state='running';command.claimedAt=new Date().toISOString();
   await setPushState(db,RADIO_REMOTE_R627.commandKey,JSON.stringify(command));
-  return json({ok:true,command});
+  return json({ok:true,command,ticker});
 }
 async function handleRadioAgentResultR627(request,env){
   if(!await radioAgentAuthorizedR627(request,env))return json({ok:false,error:'unauthorized-agent'},401);
@@ -17646,6 +17663,7 @@ async function routeApi(request, env, ctx) {
     if (path === '/api/control/radio-remote-r627/pair/create' && request.method === 'POST') return await handleRadioRemotePairCreateR627(request, env);
     if (path === '/api/control/radio-remote-r627/status' && request.method === 'GET') return await handleRadioRemoteStatusR627(request, env);
     if (path === '/api/control/radio-remote-r627/command' && request.method === 'POST') return await handleRadioRemoteCommandR627(request, env);
+    if (path === '/api/control/radio-remote-r627/ticker' && request.method === 'POST') return await handleRadioRemoteTickerR629(request, env);
     if (path === '/api/radio-agent-r627/pair/consume' && request.method === 'POST') return await handleRadioAgentPairConsumeR627(request, env);
     if (path === '/api/radio-agent-r627/poll' && request.method === 'POST') return await handleRadioAgentPollR627(request, env);
     if (path === '/api/radio-agent-r627/result' && request.method === 'POST') return await handleRadioAgentResultR627(request, env);

@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787582193371-40e7919b3c",
-  "release": "R627",
-  "archiveName": "R627-WEB-RADIO-CONTROL-BUTTONS-AWS-AGENT-SAFE-AUTOSTART-FULL.zip",
-  "sourceHead": "3538fcc073ac91d43047bde3fd74971e6bb2957c",
-  "backupSha": "3538fcc073ac91d43047bde3fd74971e6bb2957c",
+  "operationId": "publish-1787586158290-f6589e8caf",
+  "release": "R629",
+  "archiveName": "R629-RADIO-STABILITY-LIVE-TICKER-DIRECT-RTMPS-SAFE-FULL.zip",
+  "sourceHead": "6ecad725219857bf16ddfc86212da0335d8f80ae",
+  "backupSha": "6ecad725219857bf16ddfc86212da0335d8f80ae",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-24T14:36:33.884Z"
+  "generatedAt": "2026-08-24T15:42:39.292Z"
 }
