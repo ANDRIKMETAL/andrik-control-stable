@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787599616572-5060e8ca22",
-  "release": "R643",
-  "archiveName": "R643-D1-FINAL-R607-FULLSCREEN-1080P-R642-APP-SAFE-FULL-3.zip",
-  "sourceHead": "5fb1b9f51e74c66cd09842b7b7b97ac0843106c0",
-  "backupSha": "5fb1b9f51e74c66cd09842b7b7b97ac0843106c0",
+  "operationId": "publish-1787599999887-46acebde62",
+  "release": "R644",
+  "archiveName": "R644-APP-FIRST-RESTORED-R643-D1-RADIO-SAFE-FULL.zip",
+  "sourceHead": "183ebab123545d8c135d3ba78aff611b2d489874",
+  "backupSha": "183ebab123545d8c135d3ba78aff611b2d489874",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-24T19:26:56.998Z"
+  "generatedAt": "2026-08-24T19:33:19.887Z"
 }
