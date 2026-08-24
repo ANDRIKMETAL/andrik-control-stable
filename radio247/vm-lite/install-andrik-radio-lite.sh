@@ -73,10 +73,14 @@ YOUTUBE_LIVE_URL=https://www.youtube.com/@andrikmetal/live
 DAY_VISUAL=$DAY_VISUAL
 EVENING_VISUAL=$EVENING_VISUAL
 NIGHT_VISUAL=$NIGHT_VISUAL
+QR_OVERLAY=$APP_DIR/assets/andrik-qr-r612.png
 VISUAL_TIME_ZONE=Europe/Bratislava
+OUTPUT_TIMESHIFT_SECONDS=6
+VIDEO_BITRATE=1000k
+AUDIO_BITRATE=128k
 PORT=8080
 NODE_ENV=production
-RADIO_CACHE_DIR=/tmp/andrik-radio-r607
+RADIO_CACHE_DIR=/tmp/andrik-radio-r612
 EOF
 chmod 600 "$ENV_FILE"
 unset YOUTUBE_STREAM_KEY
@@ -84,7 +88,7 @@ unset YOUTUBE_STREAM_KEY
 echo "[4/7] systemd 24/7..."
 cat > "$SERVICE_FILE" <<EOF
 [Unit]
-Description=ANDRIK Metal Radio 24/7 - R607 DAYPART MP3 ONLY
+Description=ANDRIK Metal Radio 24/7 - R612 STABLE FIFO QR
 After=network-online.target
 Wants=network-online.target
 
@@ -166,10 +170,10 @@ fi
 curl -fsS --max-time 5 http://127.0.0.1:8080/status || true
 echo
 echo "============================================================"
-echo "ANDRIK RADIO R607-DAYPART-MP3-ONLY установлено."
+echo "ANDRIK RADIO R612-STABLE-FIFO-QR установлено."
 echo "Видео: 08:00 день / 17:00 вечер / 22:00 ночь · H.264 loop."
 echo "Аудио: только MP3 активных альбомов; OCEAN и Illusion of Life выключены; клипы выключены."
-echo "Оверлей: текущий трек в жёлтой плашке + бегущая строка; отдельный NEXT убран."
+echo "Оверлей: QR andrikmetal.com слева сверху + текущий трек в жёлтой плашке + бегущая строка; отдельный NEXT убран."
 echo "Логи:    sudo journalctl -u andrik-radio -f"
 echo "Статус:  sudo systemctl status andrik-radio --no-pager"
 echo "Рестарт: sudo systemctl restart andrik-radio"

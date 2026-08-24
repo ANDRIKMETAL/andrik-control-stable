@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787530006231-841bbc8809",
-  "release": "R611",
-  "archiveName": "R611-ANTI-BUFFER-MP3-CACHE-480P-SAFE-FULL.zip",
-  "sourceHead": "fc35c6f255fac039a2dc91c2eff67433f84b3d64",
-  "backupSha": "fc35c6f255fac039a2dc91c2eff67433f84b3d64",
+  "operationId": "publish-1787531575739-04e1d8cc94",
+  "release": "R612",
+  "archiveName": "R612-QR-STABLE-FIFO-ANTI-BUFFER-SAFE-FULL.zip",
+  "sourceHead": "f6ee45ba5d41f93385c672f6dac73ed97c9bc77c",
+  "backupSha": "f6ee45ba5d41f93385c672f6dac73ed97c9bc77c",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-24T00:06:46.231Z"
+  "generatedAt": "2026-08-24T00:32:56.559Z"
 }

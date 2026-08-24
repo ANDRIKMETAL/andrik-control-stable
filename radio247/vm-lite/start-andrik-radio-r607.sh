@@ -19,7 +19,7 @@ echo "[1/4] Забираю последнюю сборку main..."
 git fetch --depth 1 origin main
 git reset --hard origin/main
 
-echo "[2/4] Проверяю три визуала..."
+echo "[2/4] Проверяю три визуала и QR..."
 for f in \
   "$APP_DIR/radio247/assets/stream-day-r607.mp4" \
   "$APP_DIR/radio247/assets/stream-evening-r607.mp4" \
@@ -29,6 +29,10 @@ for f in \
     exit 3
   fi
 done
+if [ ! -s "$APP_DIR/assets/andrik-qr-r612.png" ]; then
+  echo "Нет QR: $APP_DIR/assets/andrik-qr-r612.png"
+  exit 3
+fi
 
 echo "[3/4] Перезапускаю эфир..."
 systemctl daemon-reload
