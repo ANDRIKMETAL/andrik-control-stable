@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787590998575-fbd498e9a1",
-  "release": "R635",
-  "archiveName": "R635-RADIO-CONTROL-UNLOCK-STUCK-COMMAND-SAFE-FULL.zip",
-  "sourceHead": "ce97a08ed293d811f5ee0f9c84febb12815a6f9e",
-  "backupSha": "ce97a08ed293d811f5ee0f9c84febb12815a6f9e",
+  "operationId": "publish-1787591680222-879452fe6c",
+  "release": "R636",
+  "archiveName": "R636-R613-AUDIO-STABLE-FIFO-CONTROL-SAFE-FULL.zip",
+  "sourceHead": "7e821bcfde34e240794b8c2ced88b37aa927d118",
+  "backupSha": "7e821bcfde34e240794b8c2ced88b37aa927d118",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-24T17:03:18.575Z"
+  "generatedAt": "2026-08-24T17:14:41.683Z"
 }

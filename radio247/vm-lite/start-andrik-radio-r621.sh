@@ -54,12 +54,12 @@ updates={
 'DAY_VISUAL_URL':'https://andrikmetal.com/api/media/radio-visual-r621?slot=day&download=1',
 'EVENING_VISUAL_URL':'https://andrikmetal.com/api/media/radio-visual-r621?slot=evening&download=1',
 'NIGHT_VISUAL_URL':'https://andrikmetal.com/api/media/radio-visual-r621?slot=night&download=1',
-'VIDEO_BITRATE':'8000k',
-'AUDIO_BITRATE':'192k',
+'VIDEO_BITRATE':'1000k',
+'AUDIO_BITRATE':'128k',
 'RADIO_CACHE_DIR':'/var/cache/andrik-radio-r621',
 'VISUAL_TIME_ZONE':'Europe/Bratislava',
 'OUTPUT_TIMESHIFT_SECONDS':'6',
-'TIMESTAMP_GUARD_SECONDS':'0.06'
+'TIMESTAMP_GUARD_SECONDS':'0'
 }
 lines=s.splitlines()
 out=[]; seen=set()

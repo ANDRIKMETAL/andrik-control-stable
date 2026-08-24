@@ -20,10 +20,10 @@ from pathlib import Path
 p=Path('/etc/andrik-radio.env')
 s=p.read_text() if p.exists() else ''
 updates={
- 'VIDEO_BITRATE':'4000k',
- 'AUDIO_BITRATE':'160k',
- 'OUTPUT_TIMESHIFT_SECONDS':'0',
- 'TIMESTAMP_GUARD_SECONDS':'0.02',
+ 'VIDEO_BITRATE':'1000k',
+ 'AUDIO_BITRATE':'128k',
+ 'OUTPUT_TIMESHIFT_SECONDS':'6',
+ 'TIMESTAMP_GUARD_SECONDS':'0',
  'LIVE_TICKER_FILE':'/var/cache/andrik-radio-r622/live-ticker.txt',
  'TRIKA_OFFICIAL_PLAYLIST_URL':'https://music.youtube.com/playlist?list=OLAK5uy_kwBXo5kmbLBvDgSO7Cnd-9BJBezQkV2bo',
 }

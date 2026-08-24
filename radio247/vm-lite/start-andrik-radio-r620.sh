@@ -54,12 +54,12 @@ updates={
 'DAY_VISUAL_URL':'https://music.andrikmetal.com/radio/stream-day-master-r620.mp4',
 'EVENING_VISUAL_URL':'https://music.andrikmetal.com/radio/stream-evening-master-r620.mp4',
 'NIGHT_VISUAL_URL':'https://music.andrikmetal.com/radio/stream-night-master-r620.mp4',
-'VIDEO_BITRATE':'8000k',
-'AUDIO_BITRATE':'192k',
+'VIDEO_BITRATE':'1000k',
+'AUDIO_BITRATE':'128k',
 'RADIO_CACHE_DIR':'/var/cache/andrik-radio-r620',
 'VISUAL_TIME_ZONE':'Europe/Bratislava',
 'OUTPUT_TIMESHIFT_SECONDS':'6',
-'TIMESTAMP_GUARD_SECONDS':'0.06'
+'TIMESTAMP_GUARD_SECONDS':'0'
 }
 lines=s.splitlines()
 out=[]; seen=set()

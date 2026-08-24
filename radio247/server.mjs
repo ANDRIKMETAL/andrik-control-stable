@@ -32,10 +32,10 @@ const EVENING_VISUAL = process.env.EVENING_VISUAL || `${VISUAL_CACHE_DIR}/stream
 const NIGHT_VISUAL = process.env.NIGHT_VISUAL || `${VISUAL_CACHE_DIR}/stream-night-master-r620.mp4`;
 const EMERGENCY_VISUAL = process.env.EMERGENCY_VISUAL || new URL('../assets/live-eye-r223.mp4', import.meta.url).pathname;
 const QR_OVERLAY = process.env.QR_OVERLAY || new URL('../assets/andrik-qr-r612.png', import.meta.url).pathname;
-const OUTPUT_TIMESHIFT_SECONDS = Number(process.env.OUTPUT_TIMESHIFT_SECONDS || 0);
-const TIMESTAMP_GUARD_SECONDS = Number(process.env.TIMESTAMP_GUARD_SECONDS || 0.02);
-const VIDEO_BITRATE = process.env.VIDEO_BITRATE || '4500k';
-const AUDIO_BITRATE = process.env.AUDIO_BITRATE || '192k';
+const OUTPUT_TIMESHIFT_SECONDS = 6; // R636: locked to last known stable R613 buffer
+const TIMESTAMP_GUARD_SECONDS = 0; // R636: R613 timeline behavior
+const VIDEO_BITRATE = '1000k'; // R636: locked stable bitrate; ignores stale AWS env
+const AUDIO_BITRATE = '128k'; // R636: locked stable AAC bitrate; ignores stale AWS env
 const LIBRARY_REFRESH_MS = Math.max(60000, Number(process.env.LIBRARY_REFRESH_MS || 120000));
 const LIVE_TICKER_FILE = process.env.LIVE_TICKER_FILE || `${CACHE_DIR}/live-ticker.txt`;
 const DEFAULT_LIVE_TICKER = 'ANDRIK METAL RADIO 24/7   •   ANDRIKMETAL.COM   •   НОВЫЕ СИНГЛЫ И АЛЬБОМЫ ANDRIK   •   ПОДПИСЫВАЙТЕСЬ • СТАВЬТЕ ЛАЙКИ • КОММЕНТИРУЙТЕ   •   ';
@@ -46,14 +46,14 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R629-LOWLOAD-1080P25-LIVE-TICKER-AUDIO-STABLE',
-  mode: 'AUTO SINGLES + DEDUPE / PRIVATE R2 MASTER -> LOCAL AWS CACHE / 1080p25 LOW-LOAD / DIRECT RTMPS / LIVE TICKER / DAYPART VISUALS + QR',
+  version: 'R636-R613-AUDIO-ENGINE-STABLE-FIFO-LIVE-TICKER',
+  mode: 'AUTO SINGLES + DEDUPE / R613 STABLE STREAM CORE / 480p24 / 6s OUTPUT FIFO / LIVE TICKER / DAYPART VISUALS + QR',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
   producerRunning: false,
   overlayMode: 'QR TOP-LEFT / YELLOW TRACK TEXT WITH BLACK OUTLINE / LIVE TICKER / NO BARS',
-  audioMode: 'LOCAL MP3 CACHE + 2-TRACK PREFETCH / PTS REBUILD / AAC-LC 48kHz stereo 192kbps / DIRECT RTMPS NO FIFO',
+  audioMode: 'LOCAL MP3 CACHE + 2-TRACK PREFETCH / R613 STABLE CLOCK / AAC-LC 48kHz stereo 128kbps / 6s FIFO',
   visualTimeZone: VISUAL_TIME_ZONE,
   visualPeriod: null,
   visualPath: null,
@@ -514,8 +514,16 @@ function startPublisher(){
     '-c:v','copy','-c:a','copy',
     '-tag:v','7','-tag:a','10',
     '-tcp_nodelay','1',
-    // R629: direct RTMPS. No fifo/timeshift queue that can accumulate delay or duplicate/drop audio packets.
-    '-f','flv','-flvflags','no_duration_filesize',
+    // R636: restore the exact stable R613 publisher buffer/recovery layer.
+    '-f','fifo',
+    '-fifo_format','flv',
+    '-queue_size','4096',
+    '-timeshift',`${OUTPUT_TIMESHIFT_SECONDS}s`,
+    '-drop_pkts_on_overflow','1',
+    '-attempt_recovery','1',
+    '-recover_any_error','1',
+    '-recovery_wait_time','1',
+    '-restart_with_keyframe','1',
     STREAM_URL
   ];
 
@@ -561,18 +569,18 @@ function producerArgs(item,duration,offset,visualPath,previous,next){
   }
 
   const baseVf=[
-    // R629 low-load 1080p: original masters stay 1080p, but filters/encoder are cheaper.
-    'scale=1920:1080:flags=fast_bilinear',
+    // R636: R613 proven low-load video path. Keep the current clean text style, remove the 1080p CPU spike.
+    'scale=854:480:force_original_aspect_ratio=decrease:flags=fast_bilinear',
+    'pad=854:480:(ow-iw)/2:(oh-ih)/2',
     'setsar=1',
-    'fps=25',
+    'fps=24',
     `tpad=stop_mode=clone:stop_duration=${Math.ceil(duration)+10}`,
     'format=yuv420p',
-    // No translucent strips and no yellow plaque. Just outlined text over the video.
-    `drawtext=${fontPart}textfile='${curPath}':fontcolor=yellow:fontsize=56:x=(w-text_w)/2:y=h-158:borderw=4:bordercolor=black@1:shadowcolor=black@1:shadowx=2:shadowy=2`,
-    // Stable file + reload=1 makes the running line update live without restarting FFmpeg.
-    `drawtext=${fontPart}textfile='${tickerPath}':reload=25:fontcolor=yellow:fontsize=36:x='w-mod(t*180,text_w+w)':y=h-58:borderw=3:bordercolor=black@1:shadowcolor=black@1:shadowx=1:shadowy=1`
+    `drawtext=${fontPart}textfile='${curPath}':fontcolor=yellow:fontsize=27:x=(w-text_w)/2:y=h-82:borderw=3:bordercolor=black@1:shadowcolor=black@1:shadowx=2:shadowy=2`,
+    // Live ticker remains editable from the current R635 control panel.
+    `drawtext=${fontPart}textfile='${tickerPath}':reload=24:fontcolor=yellow:fontsize=19:x='w-mod(t*92,text_w+w)':y=h-32:borderw=2:bordercolor=black@1:shadowcolor=black@1:shadowx=1:shadowy=1`
   ].join(',');
-  const filterComplex=`[1:v]${baseVf}[base];[2:v]scale=180:180:flags=lanczos,format=yuva420p[qr];[base][qr]overlay=8:24:format=yuv420[outv]`;
+  const filterComplex=`[1:v]${baseVf}[base];[2:v]scale=128:128:flags=lanczos,format=yuva420p[qr];[base][qr]overlay=16:16:format=yuv420[outv]`;
 
   const inputArgs=[
     '-hide_banner','-loglevel','warning',
@@ -586,16 +594,16 @@ function producerArgs(item,duration,offset,visualPath,previous,next){
   return {tempFiles:[currentFile],args:[
     ...inputArgs,
     '-t',duration.toFixed(3),
-    '-c:v','libx264','-preset','ultrafast','-tune','zerolatency',
-    '-profile:v','high','-level:v','4.1',
-    '-b:v',VIDEO_BITRATE,'-minrate',VIDEO_BITRATE,'-maxrate',VIDEO_BITRATE,'-bufsize','9000k',
+    // R636: exact R613 encoder/audio timing core.
+    '-c:v','libx264','-preset','superfast','-tune','zerolatency',
+    '-profile:v','main','-level:v','3.0',
+    '-b:v',VIDEO_BITRATE,'-minrate',VIDEO_BITRATE,'-maxrate',VIDEO_BITRATE,'-bufsize','2000k',
     '-x264-params','nal-hrd=cbr:force-cfr=1:repeat-headers=1',
-    '-g','50','-keyint_min','50','-sc_threshold','0','-r','25','-threads','2','-pix_fmt','yuv420p',
-    '-af','aresample=48000:async=1:first_pts=0,asetpts=N/SR/TB',
-    '-c:a','aac','-profile:a','aac_low','-aac_coder','twoloop','-b:a',AUDIO_BITRATE,'-ar','48000','-ac','2',
+    '-g','48','-keyint_min','48','-sc_threshold','0','-r','24','-threads','2','-pix_fmt','yuv420p',
+    '-af','aresample=48000:async=1:first_pts=0',
+    '-c:a','aac','-profile:a','aac_low','-b:a',AUDIO_BITRATE,'-ar','48000','-ac','2',
     '-flush_packets','1',
-    '-muxdelay','0','-muxpreload','0',
-    '-output_ts_offset',offset.toFixed(6),'-mpegts_flags','+resend_headers+initial_discontinuity','-f','mpegts','pipe:1'
+    '-output_ts_offset',offset.toFixed(3),'-mpegts_flags','+resend_headers','-f','mpegts','pipe:1'
   ]};
 }
 
@@ -634,10 +642,8 @@ async function playItem(previous,item,next,following,localAudioPath){
     for(const path of spec.tempFiles){try{unlinkSync(path);}catch(_){ }}
   }
 
-  // R614: keep every new MPEG-TS segment strictly after the previous one.
-  // MP3 duration can be estimated a few milliseconds short and AAC/H.264 packet grids
-  // can otherwise overlap at a track boundary, producing Non-monotonic DTS in FLV/RTMPS.
-  timelineOffset += duration + TIMESTAMP_GUARD_SECONDS;
+  // R636: restore R613 segment timeline behavior; the output FIFO absorbs short jitter safely.
+  timelineOffset += duration;
 }
 
 async function radioLoop(){
