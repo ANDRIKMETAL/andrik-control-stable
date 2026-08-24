@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787596805522-88557bab21",
-  "release": "R641",
-  "archiveName": "R641-D1-FINAL-RADIO-FULLSCREEN-16x9-SAFE-FULL.zip",
-  "sourceHead": "3643d0751b0c5f798c9e05619b54ff7b0a1e12eb",
-  "backupSha": "3643d0751b0c5f798c9e05619b54ff7b0a1e12eb",
+  "operationId": "publish-1787597066778-5bfaf81715",
+  "release": "R642",
+  "archiveName": "R642-D1-FINAL-RADIO-APP-RESTORED-16x9-SAFE-FULL.zip",
+  "sourceHead": "13d8b437ec4b41ef8e6180f90a2b96bafc5ac23d",
+  "backupSha": "13d8b437ec4b41ef8e6180f90a2b96bafc5ac23d",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-24T18:40:05.522Z"
+  "generatedAt": "2026-08-24T18:44:26.778Z"
 }
