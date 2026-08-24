@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787589048844-56e00414a9",
-  "release": "R632",
-  "archiveName": "R632-HEARTBEAT-AUTO-REBIND-AUDIO-STABLE-TRIKA-OFFICIAL-SAFE-FULL.zip",
-  "sourceHead": "ea1cf65b7a5e8bec8be75172880db43b88292a5e",
-  "backupSha": "ea1cf65b7a5e8bec8be75172880db43b88292a5e",
+  "operationId": "publish-1787590066359-283d199a0d",
+  "release": "R633",
+  "archiveName": "R633-FRESH-BROADCAST-EXACT-STREAM-BIND-HEARTBEAT-AUDIO-STABLE-SAFE-FULL.zip",
+  "sourceHead": "1d05a34f7adffa5ec46dcc9088501bd61e8fc4e9",
+  "backupSha": "1d05a34f7adffa5ec46dcc9088501bd61e8fc4e9",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-24T16:30:49.289Z"
+  "generatedAt": "2026-08-24T16:47:46.758Z"
 }
