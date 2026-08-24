@@ -1,14 +1,14 @@
 {
   "schema": 1,
   "updaterVersion": "55.00-r356",
-  "operation": "publish",
-  "reinstall": false,
-  "operationId": "publish-1787601911005-5df1564bc3",
+  "operation": "reinstall",
+  "reinstall": true,
+  "operationId": "reinstall-1787602030591-cabec47b79",
   "release": "R647",
-  "archiveName": "R647-YOUTUBE-APP-FIRST-HARD-FIX-R646-QR-R643-D1-FULLSCREEN-SAFE-FULL.zip",
-  "sourceHead": "b88b6869a3fe8541674683506776f91a717917c7",
-  "backupSha": "b88b6869a3fe8541674683506776f91a717917c7",
+  "archiveName": "R647-YOUTUBE-APP-FIRST-HARD-FIX-R646-QR-R643-D1-FULLSCREEN-SAFE-FULL-1.zip",
+  "sourceHead": "5faec5e8d8b6b8c0dddabf9cf71f06d16070d5c9",
+  "backupSha": "5faec5e8d8b6b8c0dddabf9cf71f06d16070d5c9",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-24T20:05:11.005Z"
+  "generatedAt": "2026-08-24T20:07:10.591Z"
 }
