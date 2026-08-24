@@ -39,8 +39,8 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R615-AUTO-SINGLES-DEDUPE-TIMESTAMP-CONTINUITY',
-  mode: 'AUTO SINGLES + CROSS-CATALOG DEDUPE / TIMESTAMP CONTINUITY FIX / 480p24 ~1.15Mbps / 6s OUTPUT FIFO / RTMPS RECOVERY / LOCAL MP3 CACHE + 2-TRACK PREFETCH / DAYPART VISUALS + QR',
+  version: 'R616-AUTO-SINGLES-PUBLISH-DEDUPE-TIMESTAMP-CONTINUITY',
+  mode: 'AUTO SINGLES + RELEASE PUBLISH + EXTENSION-SAFE CROSS-CATALOG DEDUPE / TIMESTAMP CONTINUITY FIX / 480p24 ~1.15Mbps / 6s OUTPUT FIFO / RTMPS RECOVERY / LOCAL MP3 CACHE + 2-TRACK PREFETCH / DAYPART VISUALS + QR',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
@@ -113,7 +113,7 @@ function albumName(item){
 }
 
 function identityText(value){
-  return cleanText(value)
+  return cleanText(value).replace(/(?:\.(?:mp3|wav))+$/ig,'')
     .replace(/\s*[\[(]\s*(?:beyond|trika|трика|ocean|illusion of life|синглы andrik|singles andrik)\s*[\])]\s*$/iu,'')
     .replace(/^andrik\s*[-–—:|]\s*/iu,'')
     .normalize('NFKD')
@@ -128,7 +128,7 @@ function keyBaseName(item){
   return String(item?.key||'')
     .split('/')
     .pop()
-    .replace(/\.mp3$/i,'')
+    .replace(/(?:\.mp3)+$/ig,'')
     .replace(/[_-]+/g,' ');
 }
 
@@ -186,7 +186,7 @@ function librarySignature(items){
 async function loadLibrary(){
   const previousSignature=librarySignature(library);
   const url=`${PLAYLIST_URL}${PLAYLIST_URL.includes('?')?'&':'?'}ts=${Date.now()}`;
-  const response=await fetch(url,{headers:{'user-agent':'ANDRIK-Radio-24-7-R615'}});
+  const response=await fetch(url,{headers:{'user-agent':'ANDRIK-Radio-24-7-R616'}});
   if(!response.ok)throw new Error(`R2 library HTTP ${response.status}`);
 
   const data=await response.json();

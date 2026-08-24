@@ -38,3 +38,6 @@
   .single-r2-mini-actions-r560 .btn{min-height:35px;font-size:.68rem;padding:5px}
   .single-r2-card-r560 .admin-status{margin-top:6px!important;padding:7px 8px!important;font-size:.70rem!important}
 }
+
+/* R616 */
+.single-r2-publish-r616{width:100%;margin-top:10px;border-color:rgba(255,205,92,.55)!important;background:linear-gradient(135deg,rgba(80,57,10,.85),rgba(20,18,10,.95))!important;color:#ffe7a2!important;font-weight:900!important}
