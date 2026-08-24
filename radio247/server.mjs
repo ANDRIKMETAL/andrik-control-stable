@@ -21,16 +21,21 @@ const STREAM_URL = STREAM_KEY ? `rtmps://a.rtmps.youtube.com:443/live2/${STREAM_
 const YOUTUBE_LIVE_URL = process.env.YOUTUBE_LIVE_URL || 'https://www.youtube.com/@andrikmetal/live';
 const CACHE_DIR = process.env.RADIO_CACHE_DIR || '/tmp/andrik-radio-r611';
 const AUDIO_CACHE_DIR = `${CACHE_DIR}/audio`;
+const VISUAL_CACHE_DIR = `${CACHE_DIR}/visuals`;
 const MAX_CACHED_TRACKS = 7;
 const VISUAL_TIME_ZONE = process.env.VISUAL_TIME_ZONE || 'Europe/Bratislava';
-const DAY_VISUAL = process.env.DAY_VISUAL || new URL('./assets/stream-day-r607.mp4', import.meta.url).pathname;
-const EVENING_VISUAL = process.env.EVENING_VISUAL || new URL('./assets/stream-evening-r607.mp4', import.meta.url).pathname;
-const NIGHT_VISUAL = process.env.NIGHT_VISUAL || new URL('./assets/stream-night-r607.mp4', import.meta.url).pathname;
+const DAY_VISUAL_URL = process.env.DAY_VISUAL_URL || 'https://music.andrikmetal.com/radio/stream-day-master-r620.mp4';
+const EVENING_VISUAL_URL = process.env.EVENING_VISUAL_URL || 'https://music.andrikmetal.com/radio/stream-evening-master-r620.mp4';
+const NIGHT_VISUAL_URL = process.env.NIGHT_VISUAL_URL || 'https://music.andrikmetal.com/radio/stream-night-master-r620.mp4';
+const DAY_VISUAL = process.env.DAY_VISUAL || `${VISUAL_CACHE_DIR}/stream-day-master-r620.mp4`;
+const EVENING_VISUAL = process.env.EVENING_VISUAL || `${VISUAL_CACHE_DIR}/stream-evening-master-r620.mp4`;
+const NIGHT_VISUAL = process.env.NIGHT_VISUAL || `${VISUAL_CACHE_DIR}/stream-night-master-r620.mp4`;
+const EMERGENCY_VISUAL = process.env.EMERGENCY_VISUAL || new URL('../assets/live-eye-r223.mp4', import.meta.url).pathname;
 const QR_OVERLAY = process.env.QR_OVERLAY || new URL('../assets/andrik-qr-r612.png', import.meta.url).pathname;
 const OUTPUT_TIMESHIFT_SECONDS = Number(process.env.OUTPUT_TIMESHIFT_SECONDS || 6);
 const TIMESTAMP_GUARD_SECONDS = Number(process.env.TIMESTAMP_GUARD_SECONDS || 0.06);
-const VIDEO_BITRATE = process.env.VIDEO_BITRATE || '1000k';
-const AUDIO_BITRATE = process.env.AUDIO_BITRATE || '128k';
+const VIDEO_BITRATE = process.env.VIDEO_BITRATE || '8000k';
+const AUDIO_BITRATE = process.env.AUDIO_BITRATE || '192k';
 const LIBRARY_REFRESH_MS = Math.max(60000, Number(process.env.LIBRARY_REFRESH_MS || 120000));
 const DISABLED_ALBUM_PREFIXES = Object.freeze([
   'albums/illusion-of-life/',
@@ -39,14 +44,14 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R616-AUTO-SINGLES-PUBLISH-DEDUPE-TIMESTAMP-CONTINUITY',
-  mode: 'AUTO SINGLES + RELEASE PUBLISH + EXTENSION-SAFE CROSS-CATALOG DEDUPE / TIMESTAMP CONTINUITY FIX / 480p24 ~1.15Mbps / 6s OUTPUT FIFO / RTMPS RECOVERY / LOCAL MP3 CACHE + 2-TRACK PREFETCH / DAYPART VISUALS + QR',
+  version: 'R620-R2-1080P25-AUDIO-CLEAN-LIVE-TARGET-DEVICE-OAUTH',
+  mode: 'AUTO SINGLES + DEDUPE / R2 MASTER VISUAL CACHE / 1080p25 / 6s OUTPUT FIFO / RTMPS RECOVERY / LOCAL MP3 CACHE + 2-TRACK PREFETCH / DAYPART VISUALS + QR',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
   producerRunning: false,
   overlayMode: 'QR TOP-LEFT / YELLOW NOW / MULTIPLATFORM CTA TICKER',
-  audioMode: 'LOCAL MP3 CACHE + 2-TRACK PREFETCH / AAC-LC 48kHz stereo 128kbps',
+  audioMode: 'LOCAL MP3 CACHE + 2-TRACK PREFETCH / PTS REBUILD / AAC-LC 48kHz stereo 192kbps',
   visualTimeZone: VISUAL_TIME_ZONE,
   visualPeriod: null,
   visualPath: null,
@@ -318,6 +323,7 @@ function ffFilterPath(path){
 function prepareCacheDir(){
   mkdirSync(CACHE_DIR,{recursive:true});
   mkdirSync(AUDIO_CACHE_DIR,{recursive:true});
+  mkdirSync(VISUAL_CACHE_DIR,{recursive:true});
 }
 
 function audioCachePath(item){
@@ -414,16 +420,73 @@ function visualPeriodForHour(hour){
   return 'night';
 }
 
+async function downloadVisualToCache(url,dest,label){
+  prepareCacheDir();
+  try{
+    if(existsSync(dest) && statSync(dest).size>2*1024*1024)return dest;
+  }catch(_){}
+  let lastError=null;
+  for(let attempt=1;attempt<=3;attempt++){
+    const tmp=`${dest}.part-${process.pid}-${Date.now()}-${attempt}`;
+    const controller=new AbortController();
+    const timer=setTimeout(()=>controller.abort(),120000);
+    try{
+      const response=await fetch(url,{headers:{'user-agent':'ANDRIK-Radio-R620-VisualCache'},signal:controller.signal});
+      if(!response.ok)throw new Error(`${label} visual HTTP ${response.status}`);
+      if(!response.body)throw new Error(`${label} visual empty response`);
+      await pipeline(Readable.fromWeb(response.body),createWriteStream(tmp,{flags:'w'}));
+      if(!existsSync(tmp) || statSync(tmp).size<2*1024*1024)throw new Error(`${label} visual file too small`);
+      renameSync(tmp,dest);
+      return dest;
+    }catch(error){
+      lastError=error;
+      try{unlinkSync(tmp)}catch(_){}
+      if(attempt<3)await sleep(1200*attempt);
+    }finally{clearTimeout(timer)}
+  }
+  throw lastError||new Error(`${label} visual download failed`);
+}
+
+function visualSpecForPeriod(period){
+  if(period==='day')return {period,path:DAY_VISUAL,url:DAY_VISUAL_URL};
+  if(period==='evening')return {period,path:EVENING_VISUAL,url:EVENING_VISUAL_URL};
+  return {period:'night',path:NIGHT_VISUAL,url:NIGHT_VISUAL_URL};
+}
+
+async function ensureVisualSpec(spec){
+  try{
+    if(existsSync(spec.path) && statSync(spec.path).size>2*1024*1024)return spec.path;
+  }catch(_){}
+  if(/^https:\/\//i.test(spec.url||''))return downloadVisualToCache(spec.url,spec.path,spec.period);
+  if(existsSync(spec.url||'') && statSync(spec.url).size>500000)return spec.url;
+  throw new Error(`R620 ${spec.period} visual unavailable: ${spec.url||spec.path}`);
+}
+
+function prefetchAllVisuals(){
+  for(const period of ['day','evening','night']){
+    const spec=visualSpecForPeriod(period);
+    ensureVisualSpec(spec).catch(error=>console.error('[visual-prefetch]',cleanText(error?.message||error)));
+  }
+}
+
 async function ensureScheduledVisual(){
   prepareCacheDir();
   const period=visualPeriodForHour(localHourInTimeZone());
-  const path=period==='day' ? DAY_VISUAL : period==='evening' ? EVENING_VISUAL : NIGHT_VISUAL;
-  if(!existsSync(path) || statSync(path).size<500000){
-    throw new Error(`R615 ${period} visual missing or too small: ${path}`);
+  const spec=visualSpecForPeriod(period);
+  try{
+    const path=await ensureVisualSpec(spec);
+    state.visualPeriod=period;
+    state.visualPath=path;
+    return path;
+  }catch(error){
+    if(existsSync(EMERGENCY_VISUAL) && statSync(EMERGENCY_VISUAL).size>300000){
+      state.lastError=`R620 ${period} R2 visual fallback: ${cleanText(error?.message||error)}`;
+      state.visualPeriod=`${period}-emergency`;
+      state.visualPath=EMERGENCY_VISUAL;
+      return EMERGENCY_VISUAL;
+    }
+    throw error;
   }
-  state.visualPeriod=period;
-  state.visualPath=path;
-  return path;
 }
 
 function trackLabel(item,fallback='—'){
@@ -504,20 +567,19 @@ function producerArgs(item,duration,offset,visualPath,previous,next){
   }
 
   const baseVf=[
-    'scale=854:480:force_original_aspect_ratio=decrease',
-    'pad=854:480:(ow-iw)/2:(oh-ih)/2',
+    'scale=1920:1080:flags=lanczos',
     'setsar=1',
-    'fps=24',
+    'fps=25',
     `tpad=stop_mode=clone:stop_duration=${Math.ceil(duration)+10}`,
     'format=yuv420p',
-    'drawbox=x=0:y=ih-118:w=iw:h=118:color=black@0.56:t=fill',
-    'drawbox=x=iw*0.10:y=ih-91:w=iw*0.80:h=43:color=black@0.90:t=fill',
-    'drawbox=x=iw*0.10:y=ih-91:w=iw*0.80:h=43:color=yellow@0.55:t=2',
-    `drawtext=${fontPart}textfile='${curPath}':fontcolor=yellow:fontsize=27:x=(w-text_w)/2:y=h-84:shadowcolor=black@1:shadowx=2:shadowy=2`,
-    'drawbox=x=0:y=ih-40:w=iw:h=40:color=black@0.88:t=fill',
-    `drawtext=${fontPart}textfile='${tickerPath}':fontcolor=white:fontsize=19:x='w-mod(t*92,text_w/8+w)':y=h-33:shadowcolor=black@1:shadowx=1:shadowy=1`
+    'drawbox=x=0:y=ih-260:w=iw:h=260:color=black@0.56:t=fill',
+    'drawbox=x=iw*0.10:y=ih-205:w=iw*0.80:h=96:color=black@0.90:t=fill',
+    'drawbox=x=iw*0.10:y=ih-205:w=iw*0.80:h=96:color=yellow@0.55:t=4',
+    `drawtext=${fontPart}textfile='${curPath}':fontcolor=yellow:fontsize=58:x=(w-text_w)/2:y=h-188:shadowcolor=black@1:shadowx=3:shadowy=3`,
+    'drawbox=x=0:y=ih-90:w=iw:h=90:color=black@0.88:t=fill',
+    `drawtext=${fontPart}textfile='${tickerPath}':fontcolor=white:fontsize=38:x='w-mod(t*190,text_w/8+w)':y=h-68:shadowcolor=black@1:shadowx=2:shadowy=2`
   ].join(',');
-  const filterComplex=`[1:v]${baseVf}[base];[2:v]scale=128:128:flags=lanczos,format=yuva420p[qr];[base][qr]overlay=16:16:format=yuv420[outv]`;
+  const filterComplex=`[1:v]${baseVf}[base];[2:v]scale=180:180:flags=lanczos,format=yuva420p[qr];[base][qr]overlay=24:24:format=yuv420[outv]`;
 
   const inputArgs=[
     '-hide_banner','-loglevel','warning',
@@ -532,12 +594,12 @@ function producerArgs(item,duration,offset,visualPath,previous,next){
     ...inputArgs,
     '-t',duration.toFixed(3),
     '-c:v','libx264','-preset','superfast','-tune','zerolatency',
-    '-profile:v','main','-level:v','3.0',
-    '-b:v',VIDEO_BITRATE,'-minrate',VIDEO_BITRATE,'-maxrate',VIDEO_BITRATE,'-bufsize','2000k',
+    '-profile:v','high','-level:v','4.1',
+    '-b:v',VIDEO_BITRATE,'-minrate',VIDEO_BITRATE,'-maxrate',VIDEO_BITRATE,'-bufsize','16000k',
     '-x264-params','nal-hrd=cbr:force-cfr=1:repeat-headers=1',
-    '-g','48','-keyint_min','48','-sc_threshold','0','-r','24','-threads','2','-pix_fmt','yuv420p',
-    '-af','aresample=48000:async=1:first_pts=0',
-    '-c:a','aac','-profile:a','aac_low','-b:a',AUDIO_BITRATE,'-ar','48000','-ac','2',
+    '-g','50','-keyint_min','50','-sc_threshold','0','-r','25','-threads','2','-pix_fmt','yuv420p',
+    '-af','aresample=48000:first_pts=0,asetpts=N/SR/TB',
+    '-c:a','aac','-profile:a','aac_low','-aac_coder','twoloop','-b:a',AUDIO_BITRATE,'-ar','48000','-ac','2',
     '-flush_packets','1',
     '-muxdelay','0','-muxpreload','0',
     '-output_ts_offset',offset.toFixed(6),'-mpegts_flags','+resend_headers+initial_discontinuity','-f','mpegts','pipe:1'
@@ -590,6 +652,7 @@ async function radioLoop(){
   running=true;
 
   prepareCacheDir();
+  prefetchAllVisuals();
   if(!startPublisher())return;
 
   while(!stopping){
@@ -713,7 +776,7 @@ const server=http.createServer((req,res)=>{
 });
 
 server.listen(PORT,'0.0.0.0',()=>{
-  console.log(`ANDRIK Radio R615-AUTO-SINGLES-DEDUPE listening on :${PORT}`);
+  console.log(`ANDRIK Radio R620-R2-1080P-AUDIO-CLEAN listening on :${PORT}`);
   radioLoop();
 });
 

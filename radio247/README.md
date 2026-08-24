@@ -1,36 +1,38 @@
-# ANDRIK METAL RADIO 24/7 — R607
+# ANDRIK Metal Radio 24/7 — R620
 
-## Эфир
-- Только MP3 из активных альбомов.
-- `albums/ocean/*` и `albums/illusion-of-life/*` исключены из очереди.
-- Видеоклипы в эфир не вставляются.
-- Очередь перемешивается автоматически.
+Текущая схема:
 
-## Визуал по времени суток
-Часовой пояс: `Europe/Bratislava`.
+- MP3: R2 → локальный кэш AWS → FFmpeg.
+- Визуалы: оригинальные 1080p25 master-файлы в R2 → локальный постоянный AWS cache.
+- В репозитории/ZIP сайта три radio-video больше не хранятся.
+- YouTube output: 1920×1080, 25 fps, H.264 High, 5 Mbps CBR.
+- Audio: AAC-LC 48 kHz stereo 192 kbps, regenerated audio PTS; async time-stretch отключён.
+- QR, «СЕЙЧАС» и ticker накладываются на AWS.
 
-- 08:00–16:59 — `assets/stream-day-r607.mp4`
-- 17:00–21:59 — `assets/stream-evening-r607.mp4`
-- 22:00–07:59 — `assets/stream-night-r607.mp4`
+## R2 visuals
 
-Смена происходит на границе следующей песни, чтобы не обрывать текущий MP3.
+- 08:00–16:59 — `https://music.andrikmetal.com/radio/stream-day-master-r620.mp4`
+- 17:00–21:59 — `https://music.andrikmetal.com/radio/stream-evening-master-r620.mp4`
+- 22:00–07:59 — `https://music.andrikmetal.com/radio/stream-night-master-r620.mp4`
 
-## Оверлей
-- Текущий трек остаётся в центральной жёлтой плашке.
-- Отдельный `NEXT` справа убран.
-- Нижняя бегущая строка сохранена; в ней есть `СЕЙЧАС`, `ДАЛЬШЕ`, платформы и `ANDRIKMETAL.COM`.
+Загрузка: `/radio-visuals-admin.html`
 
-## Аудио
-MP3 → AAC-LC 48 kHz stereo 160 kbps. Финальный RTMPS-публикатор повторно нормализует аудио перед YouTube.
+Соответствие исходников:
+- day ← `1000380218.mp4`
+- evening ← `1000380224.mp4`
+- night ← `1000380219.mp4`
 
-## Быстрый запуск на уже настроенной VM
+После загрузки R2 на AWS:
+
 ```bash
-sudo bash /opt/andrik-radio/radio247/vm-lite/start-andrik-radio-r607.sh
+sudo bash /opt/andrik-radio/radio247/vm-lite/start-andrik-radio-r620.sh
 ```
 
-## Первая установка
+Альтернативная YouTube авторизация из AWS-консоли:
+
 ```bash
-sudo bash /opt/andrik-radio/radio247/vm-lite/install-andrik-radio-lite.sh
+sudo bash /opt/andrik-radio/radio247/vm-lite/install-youtube-device-console-r620.sh
+sudo andrik-youtube auth
 ```
 
-YouTube Stream Key хранится только на VM в `/etc/andrik-radio.env`.
+Нужен отдельный Google OAuth Client типа **TVs and Limited Input devices**.

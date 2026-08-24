@@ -28,53 +28,47 @@ background:#e62117;color:#fff;text-decoration:none;font-size:20px;font-weight:90
 <script>
 (()=>{
   const fallback='https://www.youtube.com/@andrikmetal/live';
-  const allowed=new Set(['youtube.com','www.youtube.com','m.youtube.com','music.youtube.com','youtu.be']);
+  const api='/api/public/youtube-live-target';
+  const go=document.getElementById('go');
+  let target=fallback;
 
   function videoId(rawUrl){
     try{
-      const u=new URL(rawUrl,location.href);
-      const host=u.hostname.toLowerCase();
-      if(host==='youtu.be') return u.pathname.split('/').filter(Boolean)[0]||'';
+      const u=new URL(rawUrl,location.href),host=u.hostname.toLowerCase();
+      if(host==='youtu.be')return u.pathname.split('/').filter(Boolean)[0]||'';
       if(host.endsWith('youtube.com')){
-        const v=u.searchParams.get('v');
-        if(v) return v;
-        const p=u.pathname.split('/').filter(Boolean);
-        if(p[0]==='live'||p[0]==='shorts'||p[0]==='embed') return p[1]||'';
+        const v=u.searchParams.get('v');if(v)return v;
+        const p=u.pathname.split('/').filter(Boolean);if(['live','shorts','embed'].includes(p[0]))return p[1]||'';
       }
     }catch(_){}
     return '';
   }
 
-  let target=fallback;
-  try{
-    const raw=new URLSearchParams(location.search).get('target')||fallback;
-    const u=new URL(raw);
-    if(u.protocol==='https:'&&allowed.has(u.hostname.toLowerCase())) target=u.href;
-  }catch(_){}
+  async function resolveLive(fresh=true){
+    try{
+      const r=await fetch(`${api}?fresh=${fresh?'1':'0'}&ts=${Date.now()}`,{cache:'no-store',headers:{accept:'application/json'}});
+      const d=await r.json().catch(()=>({}));
+      const u=String(d?.watchUrl||'');
+      if(r.ok&&d?.active!==false&&videoId(u)){target=u;go.href=u;return u}
+    }catch(_){}
+    target=fallback;go.href=fallback;return fallback;
+  }
 
-  const go=document.getElementById('go');
-  go.href=target;
-
-  go.addEventListener('click',e=>{
-    if(!/Android/i.test(navigator.userAgent||'')) return;
+  go.addEventListener('click',async e=>{
     e.preventDefault();
-
-    const id=videoId(target);
-    if(!id){ location.href=target; return; }
-
-    let left=false;
-    const mark=()=>{left=true};
-    document.addEventListener('visibilitychange',()=>{if(document.hidden)mark()},{once:true});
-    window.addEventListener('pagehide',mark,{once:true});
-    window.addEventListener('blur',mark,{once:true});
-
-    // Correct format: raw YouTube video id, not the whole https URL.
-    location.href=`vnd.youtube:${id}`;
-
-    setTimeout(()=>{
-      if(!left&&!document.hidden) location.href=target;
-    },1200);
+    const live=await resolveLive(true);
+    const id=videoId(live);
+    if(/Android/i.test(navigator.userAgent||'')&&id){
+      let left=false;const mark=()=>{left=true};
+      document.addEventListener('visibilitychange',()=>{if(document.hidden)mark()},{once:true});
+      window.addEventListener('pagehide',mark,{once:true});window.addEventListener('blur',mark,{once:true});
+      location.href=`vnd.youtube:${id}`;
+      setTimeout(()=>{if(!left&&!document.hidden)location.href=live},1200);
+      return;
+    }
+    location.href=live;
   });
+  resolveLive(false);
 })();
 </script>
 </body>

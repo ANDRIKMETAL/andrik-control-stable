@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<title>ANDRIK · Radio 1080p Masters</title>
+<style>
+:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:#05070a;color:#f7f8fa;font-family:system-ui,-apple-system,Segoe UI,sans-serif}.wrap{width:min(760px,100%);margin:auto;padding:18px 14px 40px}h1{font-size:24px;margin:4px 0 8px}p{color:#aeb7c3;line-height:1.45}.note{padding:12px 14px;border:1px solid #28313c;border-radius:14px;background:#0c1118;margin:14px 0}.grid{display:grid;gap:12px}.card{padding:15px;border:1px solid #29323d;border-radius:18px;background:#0b1016}.row{display:flex;gap:10px;align-items:center;justify-content:space-between}.slot{font-size:18px;font-weight:900}.meta{font-size:13px;color:#9eabb8;margin:5px 0 12px}.state{font-size:13px;font-weight:800}.state.ok{color:#70e38d}.state.bad{color:#ffb45c}input[type=file]{width:100%;padding:10px;border-radius:12px;background:#111823;border:1px solid #303b49;color:#fff}button,a.btn{display:flex;align-items:center;justify-content:center;width:100%;min-height:48px;border:0;border-radius:13px;margin-top:10px;font-weight:900;font-size:15px;text-decoration:none;background:#f2c84b;color:#090b0e}button:disabled{opacity:.45}.progress{height:7px;background:#1a232e;border-radius:999px;overflow:hidden;margin-top:10px}.bar{height:100%;width:0;background:#f2c84b;transition:width .15s}.top{display:flex;gap:8px}.top>*{flex:1}.small{font-size:12px;color:#7f8a98}.ready{font-size:15px;font-weight:900;margin-top:14px}.ready.ok{color:#70e38d}.ready.bad{color:#ffb45c}
+</style>
+</head>
+<body><main class="wrap">
+<h1>📡 RADIO · 1080p MASTERS → R2</h1>
+<p>Три оригинальных заставки хранятся только в R2. После загрузки AWS скачает их в локальный кэш и будет отдавать YouTube 1080p25.</p>
+<div class="note"><b>Правильное соответствие оригиналов:</b><br>☀️ День — <code>1000380218.mp4</code><br>🌆 Вечер — <code>1000380224.mp4</code><br>🌙 Ночь — <code>1000380219.mp4</code></div>
+<div class="top"><button id="refresh">Проверить R2</button><button id="forget">Сменить ADMIN_KEY</button></div>
+<div class="grid" id="grid"></div>
+<div id="ready" class="ready bad">Проверяем R2…</div>
+<p class="small">R620 · Файлы сайта эти видео больше не содержат.</p>
+</main>
+<script>
+(()=>{
+'use strict';
+const KEY_SESSION='andrik-comments-admin-key',KEY_LOCAL='andrik-comments-admin-key-persistent';
+const specs=[
+ {slot:'day',icon:'☀️',name:'ДЕНЬ',expected:'1000380218.mp4'},
+ {slot:'evening',icon:'🌆',name:'ВЕЧЕР',expected:'1000380224.mp4'},
+ {slot:'night',icon:'🌙',name:'НОЧЬ',expected:'1000380219.mp4'}
+];
+function getKey(){try{return localStorage.getItem(KEY_LOCAL)||sessionStorage.getItem(KEY_SESSION)||''}catch(_){return''}}
+function setKey(v){try{localStorage.setItem(KEY_LOCAL,v);sessionStorage.setItem(KEY_SESSION,v)}catch(_){}}
+function ensureKey(){let k=getKey();if(!k){k=prompt('ADMIN_KEY:')||'';if(k)setKey(k)}return k}
+const grid=document.getElementById('grid'),ready=document.getElementById('ready');
+for(const s of specs){
+ const el=document.createElement('section');el.className='card';el.dataset.slot=s.slot;el.innerHTML=`<div class="row"><div class="slot">${s.icon} ${s.name}</div><div class="state bad" data-state>не загружен</div></div><div class="meta">Оригинал: ${s.expected}</div><input type="file" accept="video/mp4,.mp4"><button data-upload>Загрузить в R2</button><div class="progress"><div class="bar"></div></div><div class="small" data-msg></div>`;grid.appendChild(el);
+ el.querySelector('[data-upload]').addEventListener('click',()=>upload(s,el));
+}
+function fmt(n){n=Number(n)||0;return n>1024*1024?(n/1024/1024).toFixed(1)+' МБ':Math.round(n/1024)+' КБ'}
+async function status(){const k=ensureKey();if(!k){ready.textContent='Нужен ADMIN_KEY';return}ready.textContent='Проверяем R2…';try{const r=await fetch('/api/control/radio-visuals-r620/status?ts='+Date.now(),{headers:{authorization:'Bearer '+k},cache:'no-store'});const d=await r.json();if(!r.ok)throw new Error(d.error||'HTTP '+r.status);for(const s of specs){const el=grid.querySelector(`[data-slot="${s.slot}"]`),x=d.visuals?.[s.slot]||{},st=el.querySelector('[data-state]');st.textContent=x.exists?'✓ '+fmt(x.size):'не загружен';st.className='state '+(x.exists?'ok':'bad');el.querySelector('[data-msg]').textContent=x.exists?x.publicUrl:''}ready.textContent=d.ready?'✅ Все 3 master-видео готовы. Можно обновлять AWS.':'⚠️ Сначала загрузите все 3 оригинала.';ready.className='ready '+(d.ready?'ok':'bad')}catch(e){ready.textContent='Ошибка: '+e.message;ready.className='ready bad'}}
+function upload(s,el){const k=ensureKey(),file=el.querySelector('input').files[0];if(!k)return;if(!file){alert('Выбери '+s.expected);return}const btn=el.querySelector('[data-upload]'),bar=el.querySelector('.bar'),msg=el.querySelector('[data-msg]');btn.disabled=true;msg.textContent='Загрузка '+file.name+'…';bar.style.width='0%';const x=new XMLHttpRequest();x.open('PUT','/api/control/radio-visuals-r620?slot='+encodeURIComponent(s.slot));x.setRequestHeader('Authorization','Bearer '+k);x.setRequestHeader('Content-Type','video/mp4');x.upload.onprogress=e=>{if(e.lengthComputable)bar.style.width=Math.round(e.loaded/e.total*100)+'%'};x.onload=()=>{btn.disabled=false;let d={};try{d=JSON.parse(x.responseText||'{}')}catch(_){}if(x.status>=200&&x.status<300){bar.style.width='100%';msg.textContent='Готово ✓ '+fmt(d.size);status()}else{msg.textContent='Ошибка '+x.status+': '+(d.message||d.error||'upload failed')}};x.onerror=()=>{btn.disabled=false;msg.textContent='Ошибка сети'};x.send(file)}
+document.getElementById('refresh').onclick=status;document.getElementById('forget').onclick=()=>{try{localStorage.removeItem(KEY_LOCAL);sessionStorage.removeItem(KEY_SESSION)}catch(_){};ensureKey();status()};status();
+})();
+</script></body></html>
