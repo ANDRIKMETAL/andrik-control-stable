@@ -17,7 +17,7 @@ import { pipeline } from 'node:stream/promises';
 const PORT = Number(process.env.PORT || 8080);
 const PLAYLIST_URL = process.env.PLAYLIST_URL || 'https://andrikmetal.com/api/music/downloads';
 const STREAM_KEY = String(process.env.YOUTUBE_STREAM_KEY || '').trim();
-const STREAM_URL = STREAM_KEY ? `rtmps://a.rtmps.youtube.com:443/live2/${STREAM_KEY}` : '';
+const STREAM_URL = String(process.env.STREAM_URL_OVERRIDE || '').trim() || (STREAM_KEY ? `rtmps://a.rtmps.youtube.com:443/live2/${STREAM_KEY}` : '');
 const YOUTUBE_LIVE_URL = process.env.YOUTUBE_LIVE_URL || 'https://www.youtube.com/@andrikmetal/live';
 const CACHE_DIR = process.env.RADIO_CACHE_DIR || '/var/cache/andrik-radio-r622';
 const AUDIO_CACHE_DIR = `${CACHE_DIR}/audio`;
@@ -32,12 +32,15 @@ const EVENING_VISUAL = process.env.EVENING_VISUAL || `${VISUAL_CACHE_DIR}/stream
 const NIGHT_VISUAL = process.env.NIGHT_VISUAL || `${VISUAL_CACHE_DIR}/stream-night-master-r620.mp4`;
 const EMERGENCY_VISUAL = process.env.EMERGENCY_VISUAL || new URL('../assets/live-eye-r223.mp4', import.meta.url).pathname;
 const QR_OVERLAY = process.env.QR_OVERLAY || new URL('../assets/andrik-qr-r612.png', import.meta.url).pathname;
-const OUTPUT_TIMESHIFT_SECONDS = 6; // R636: locked to last known stable R613 buffer
-const TIMESTAMP_GUARD_SECONDS = 0; // R636: R613 timeline behavior
-const VIDEO_BITRATE = '1000k'; // R636: locked stable bitrate; ignores stale AWS env
-const AUDIO_BITRATE = '128k'; // R636: locked stable AAC bitrate; ignores stale AWS env
+const OUTPUT_TIMESHIFT_SECONDS = 6; // R637: network recovery cushion; packets are NEVER dropped
+const VIDEO_BITRATE = '4500k'; // R637: 1080p25 low-motion radio visual, bounded CBR
+const AUDIO_BITRATE = '128k'; // YouTube Live recommendation for stereo AAC
+const AUDIO_SAMPLE_RATE = 44100; // YouTube Live recommendation for stereo
+const VIDEO_FPS = 25;
+const VIDEO_GOP = 50; // exactly 2 seconds at 25 fps
 const LIBRARY_REFRESH_MS = Math.max(60000, Number(process.env.LIBRARY_REFRESH_MS || 120000));
 const LIVE_TICKER_FILE = process.env.LIVE_TICKER_FILE || `${CACHE_DIR}/live-ticker.txt`;
+const LIVE_CURRENT_FILE = process.env.LIVE_CURRENT_FILE || `${CACHE_DIR}/current-live.txt`;
 const DEFAULT_LIVE_TICKER = 'ANDRIK METAL RADIO 24/7   •   ANDRIKMETAL.COM   •   НОВЫЕ СИНГЛЫ И АЛЬБОМЫ ANDRIK   •   ПОДПИСЫВАЙТЕСЬ • СТАВЬТЕ ЛАЙКИ • КОММЕНТИРУЙТЕ   •   ';
 const DISABLED_ALBUM_PREFIXES = Object.freeze([
   'albums/illusion-of-life/',
@@ -46,14 +49,14 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R636-R613-AUDIO-ENGINE-STABLE-FIFO-LIVE-TICKER',
-  mode: 'AUTO SINGLES + DEDUPE / R613 STABLE STREAM CORE / 480p24 / 6s OUTPUT FIFO / LIVE TICKER / DAYPART VISUALS + QR',
+  version: 'R637-CONTINUOUS-PCM-ONE-AAC-1080P25-NODROP',
+  mode: 'AUTO SINGLES + DEDUPE / ONE LONG-LIVED 1080p25 ENCODER / CONTINUOUS PCM / ONE AAC CLOCK / NO TS CONCAT / NO PACKET DROP / LIVE TICKER + QR',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
   producerRunning: false,
   overlayMode: 'QR TOP-LEFT / YELLOW TRACK TEXT WITH BLACK OUTLINE / LIVE TICKER / NO BARS',
-  audioMode: 'LOCAL MP3 CACHE + 2-TRACK PREFETCH / R613 STABLE CLOCK / AAC-LC 48kHz stereo 128kbps / 6s FIFO',
+  audioMode: 'LOCAL MP3 CACHE + 2-TRACK PREFETCH / MP3→PCM 44.1kHz / ONE LONG-LIVED AAC-LC 128kbps ENCODER / CONTINUOUS SAMPLE CLOCK',
   visualTimeZone: VISUAL_TIME_ZONE,
   visualPeriod: null,
   visualPath: null,
@@ -79,7 +82,6 @@ let producer = null;
 let library = [];
 let queue = [];
 let queueIndex = 0;
-let timelineOffset = 0;
 let running = false;
 let stopping = false;
 let lastPlayed = null;
@@ -498,152 +500,130 @@ function trackLabel(item,fallback='—'){
   return album ? `${title} (${album})` : title;
 }
 
-function startPublisher(){
+function startPublisher(visualPath){
   if(!STREAM_URL){
     state.lastError='YOUTUBE_STREAM_KEY is not configured';
     return false;
   }
+  prepareCacheDir();
+  if(!existsSync(LIVE_TICKER_FILE)) writeFileSync(LIVE_TICKER_FILE,DEFAULT_LIVE_TICKER,'utf8');
+  if(!existsSync(LIVE_CURRENT_FILE)) writeFileSync(LIVE_CURRENT_FILE,'ANDRIK','utf8');
+  if(!existsSync(visualPath) || statSync(visualPath).size<300000) throw new Error(`visual missing: ${visualPath}`);
+  if(!existsSync(QR_OVERLAY) || statSync(QR_OVERLAY).size<20000) throw new Error(`QR overlay missing: ${QR_OVERLAY}`);
 
+  const font=chooseFont();
+  const fontPart=font?`fontfile='${ffFilterPath(font)}':`:'';
+  const curPath=ffFilterPath(LIVE_CURRENT_FILE);
+  const tickerPath=ffFilterPath(LIVE_TICKER_FILE);
+  const vf=[
+    'scale=1920:1080:force_original_aspect_ratio=decrease:flags=fast_bilinear',
+    'pad=1920:1080:(ow-iw)/2:(oh-ih)/2',
+    'setsar=1',
+    `fps=${VIDEO_FPS}`,
+    'format=yuv420p',
+    `drawtext=${fontPart}textfile='${curPath}':reload=${VIDEO_FPS}:fontcolor=yellow:fontsize=44:x=(w-text_w)/2:y=h-148:borderw=4:bordercolor=black@1:shadowcolor=black@1:shadowx=2:shadowy=2`,
+    `drawtext=${fontPart}textfile='${tickerPath}':reload=${VIDEO_FPS}:fontcolor=yellow:fontsize=28:x='w-mod(t*110,text_w+w)':y=h-58:borderw=3:bordercolor=black@1:shadowcolor=black@1:shadowx=2:shadowy=2`
+  ].join(',');
+  const filterComplex=`[0:v]${vf}[base];[1:v]scale=160:160:flags=lanczos,format=yuva420p[qr];[base][qr]overlay=24:24:format=yuv420[outv]`;
+
+  // R637 architecture: one FFmpeg owns the video encoder, AAC encoder and RTMPS
+  // muxer for the ENTIRE broadcast. Track decoders feed raw PCM into fd 3. Raw
+  // PCM has no per-track timestamps, so the master creates one continuous sample
+  // clock and AAC can never reset at song boundaries.
   const args=[
     '-hide_banner','-loglevel','warning',
-    '-fflags','+genpts+discardcorrupt',
-    '-analyzeduration','5000000','-probesize','5000000',
-    '-thread_queue_size','8192',
-    '-i','pipe:0',
-    '-map','0:v:0','-map','0:a:0',
-    '-c:v','copy','-c:a','copy',
-    '-tag:v','7','-tag:a','10',
-    '-tcp_nodelay','1',
-    // R636: restore the exact stable R613 publisher buffer/recovery layer.
-    '-f','fifo',
-    '-fifo_format','flv',
-    '-queue_size','4096',
+    '-thread_queue_size','8192','-re','-stream_loop','-1','-i',visualPath,
+    '-loop','1','-framerate','1','-i',QR_OVERLAY,
+    '-thread_queue_size','8192','-f','s16le','-ar',String(AUDIO_SAMPLE_RATE),'-ac','2','-i','pipe:3',
+    '-filter_complex',filterComplex,
+    '-map','[outv]','-map','2:a:0',
+    '-shortest',
+    '-c:v','libx264','-preset','ultrafast','-tune','zerolatency',
+    '-profile:v','high','-level:v','4.1',
+    '-b:v',VIDEO_BITRATE,'-minrate',VIDEO_BITRATE,'-maxrate',VIDEO_BITRATE,'-bufsize','9000k',
+    '-x264-params',`nal-hrd=cbr:force-cfr=1:repeat-headers=1:keyint=${VIDEO_GOP}:min-keyint=${VIDEO_GOP}:scenecut=0`,
+    '-g',String(VIDEO_GOP),'-keyint_min',String(VIDEO_GOP),'-sc_threshold','0','-bf','2','-refs','1','-coder','1','-r',String(VIDEO_FPS),'-pix_fmt','yuv420p',
+    '-c:a','aac','-profile:a','aac_low','-b:a',AUDIO_BITRATE,'-ar',String(AUDIO_SAMPLE_RATE),'-ac','2',
+    '-max_muxing_queue_size','4096','-flush_packets','1',
+    // FIFO is only a network recovery layer now. Never discard packets: a full
+    // queue applies backpressure instead of destroying AAC frames.
+    '-f','fifo','-fifo_format','flv','-queue_size','8192',
     '-timeshift',`${OUTPUT_TIMESHIFT_SECONDS}s`,
-    '-drop_pkts_on_overflow','1',
-    '-attempt_recovery','1',
-    '-recover_any_error','1',
-    '-recovery_wait_time','1',
-    '-restart_with_keyframe','1',
+    '-drop_pkts_on_overflow','0',
+    '-attempt_recovery','1','-recover_any_error','1','-recovery_wait_time','1','-restart_with_keyframe','1',
     STREAM_URL
   ];
 
-  publisher=spawn('ffmpeg',args,{stdio:['pipe','ignore','pipe']});
+  publisher=spawn('ffmpeg',args,{stdio:['ignore','ignore','pipe','pipe']});
   state.publisherRunning=true;
   state.streamStartedAt=new Date().toISOString();
-
+  const audioSink=publisher.stdio[3];
+  audioSink.on('error',err=>{
+    if(!stopping && !/EPIPE|ECONNRESET|ERR_STREAM_DESTROYED/i.test(String(err?.code||err?.message||err))) state.lastError=`audio-pipe: ${String(err)}`;
+  });
   publisher.stderr.on('data',d=>{
     const line=String(d||'').trim();
     if(line){
       state.lastFfmpegLine=line.slice(-1000);
-      if(/error|fail|invalid|broken pipe/i.test(line))state.lastError=line.slice(-700);
-      console.error('[publisher]',line);
+      if(/error|fail|invalid|broken pipe|non-monoton/i.test(line))state.lastError=line.slice(-700);
+      console.error('[master]',line);
     }
   });
-
   publisher.on('exit',(code,signal)=>{
     state.publisherRunning=false;
-    state.lastExit={layer:'publisher',code,signal,at:new Date().toISOString()};
+    state.lastExit={layer:'master',code,signal,at:new Date().toISOString()};
     publisher=null;
-    if(!stopping)setTimeout(()=>process.exit(code||22),2500).unref();
+    if(!stopping)setTimeout(()=>process.exit(code||22),1500).unref();
   });
-
   publisher.on('error',err=>{state.lastError=String(err);});
   return true;
 }
 
-function producerArgs(item,duration,offset,visualPath,previous,next){
-  prepareCacheDir();
-  const key=createHash('sha1').update([previous?.url||'',item?.url||'',next?.url||'',Date.now()].join('|')).digest('hex').slice(0,12);
-  const currentFile=`${CACHE_DIR}/current-live-${key}.txt`;
-
-  // R629: only the track title remains above the ticker. No “СЕЙЧАС:” prefix.
-  writeFileSync(currentFile,trackLabel(item,'ANDRIK'),'utf8');
-  if(!existsSync(LIVE_TICKER_FILE)) writeFileSync(LIVE_TICKER_FILE,DEFAULT_LIVE_TICKER,'utf8');
-
-  const font=chooseFont();
-  const fontPart=font?`fontfile='${ffFilterPath(font)}':`:'';
-  const curPath=ffFilterPath(currentFile), tickerPath=ffFilterPath(LIVE_TICKER_FILE);
-
-  if(!existsSync(QR_OVERLAY) || statSync(QR_OVERLAY).size<20000){
-    throw new Error(`R615 QR overlay missing or too small: ${QR_OVERLAY}`);
-  }
-
-  const baseVf=[
-    // R636: R613 proven low-load video path. Keep the current clean text style, remove the 1080p CPU spike.
-    'scale=854:480:force_original_aspect_ratio=decrease:flags=fast_bilinear',
-    'pad=854:480:(ow-iw)/2:(oh-ih)/2',
-    'setsar=1',
-    'fps=24',
-    `tpad=stop_mode=clone:stop_duration=${Math.ceil(duration)+10}`,
-    'format=yuv420p',
-    `drawtext=${fontPart}textfile='${curPath}':fontcolor=yellow:fontsize=27:x=(w-text_w)/2:y=h-82:borderw=3:bordercolor=black@1:shadowcolor=black@1:shadowx=2:shadowy=2`,
-    // Live ticker remains editable from the current R635 control panel.
-    `drawtext=${fontPart}textfile='${tickerPath}':reload=24:fontcolor=yellow:fontsize=19:x='w-mod(t*92,text_w+w)':y=h-32:borderw=2:bordercolor=black@1:shadowcolor=black@1:shadowx=1:shadowy=1`
-  ].join(',');
-  const filterComplex=`[1:v]${baseVf}[base];[2:v]scale=128:128:flags=lanczos,format=yuva420p[qr];[base][qr]overlay=16:16:format=yuv420[outv]`;
-
-  const inputArgs=[
+function decoderArgs(localAudioPath){
+  return [
     '-hide_banner','-loglevel','warning',
-    '-thread_queue_size','4096','-re','-i',item.localAudioPath||item.url,
-    '-thread_queue_size','4096','-stream_loop','-1','-i',visualPath,
-    '-loop','1','-framerate','1','-i',QR_OVERLAY,
-    '-filter_complex',filterComplex,
-    '-map','[outv]','-map','0:a:0'
+    '-fflags','+genpts+discardcorrupt','-err_detect','ignore_err',
+    '-re','-i',localAudioPath,
+    '-map','0:a:0','-vn','-sn','-dn',
+    '-af',`aresample=${AUDIO_SAMPLE_RATE}`,
+    '-c:a','pcm_s16le','-ar',String(AUDIO_SAMPLE_RATE),'-ac','2',
+    '-f','s16le','pipe:1'
   ];
-
-  return {tempFiles:[currentFile],args:[
-    ...inputArgs,
-    '-t',duration.toFixed(3),
-    // R636: exact R613 encoder/audio timing core.
-    '-c:v','libx264','-preset','superfast','-tune','zerolatency',
-    '-profile:v','main','-level:v','3.0',
-    '-b:v',VIDEO_BITRATE,'-minrate',VIDEO_BITRATE,'-maxrate',VIDEO_BITRATE,'-bufsize','2000k',
-    '-x264-params','nal-hrd=cbr:force-cfr=1:repeat-headers=1',
-    '-g','48','-keyint_min','48','-sc_threshold','0','-r','24','-threads','2','-pix_fmt','yuv420p',
-    '-af','aresample=48000:async=1:first_pts=0',
-    '-c:a','aac','-profile:a','aac_low','-b:a',AUDIO_BITRATE,'-ar','48000','-ac','2',
-    '-flush_packets','1',
-    '-output_ts_offset',offset.toFixed(3),'-mpegts_flags','+resend_headers','-f','mpegts','pipe:1'
-  ]};
 }
 
 async function playItem(previous,item,next,following,localAudioPath){
-  const playableItem={...item,localAudioPath};
   const duration=await probeDuration(localAudioPath||item.url);
-  const visualPath=await ensureScheduledVisual();
   state.previous=previous?{type:previous.type||'track',title:previous.title,album:previous.album||'',url:previous.url||''}:null;
   state.current={type:item.type||'track',title:item.title,album:item.album||'',url:item.url,startedAt:new Date().toISOString(),duration};
   state.next=next?{type:next.type||'track',title:next.title,album:next.album||'',url:next.url||''}:null;
+  writeFileSync(LIVE_CURRENT_FILE,trackLabel(item,'ANDRIK'),'utf8');
+
+  const audioSink=publisher?.stdio?.[3];
+  if(!publisher || publisher.exitCode!==null || !audioSink || audioSink.destroyed) throw new Error('master audio pipe unavailable');
+
   state.producerRunning=true;
-  const spec=producerArgs(playableItem,duration,timelineOffset,visualPath,previous,next);
-  producer=spawn('ffmpeg',spec.args,{stdio:['ignore','pipe','pipe']});
+  producer=spawn('ffmpeg',decoderArgs(localAudioPath),{stdio:['ignore','pipe','pipe']});
   producer.stderr.on('data',d=>{
     const line=String(d||'').trim();
     if(line){
       state.lastFfmpegLine=line.slice(-1000);
-      if(/error|fail|invalid/i.test(line))state.lastError=line.slice(-700);
-      console.error('[producer]',line);
+      if(/error|fail|invalid|corrupt/i.test(line))state.lastError=line.slice(-700);
+      console.error('[decoder]',line);
     }
   });
 
-  try{
-    await new Promise((resolve,reject)=>{
-      if(!publisher?.stdin)return reject(new Error('publisher stdin unavailable'));
-      producer.stdout.pipe(publisher.stdin,{end:false});
-      producer.once('error',reject);
-      producer.once('exit',(code,signal)=>{
-        state.producerRunning=false;
-        producer=null;
-        if(code===0||signal==='SIGTERM')resolve();
-        else reject(new Error(`producer exit ${code||signal}`));
-      });
+  await new Promise((resolve,reject)=>{
+    const source=producer.stdout;
+    source.pipe(audioSink,{end:false});
+    producer.once('error',reject);
+    producer.once('exit',(code,signal)=>{
+      try{source.unpipe(audioSink);}catch(_){}
+      state.producerRunning=false;
+      producer=null;
+      if(code===0 || stopping) resolve();
+      else reject(new Error(`decoder exit ${code||signal}`));
     });
-  }finally{
-    for(const path of spec.tempFiles){try{unlinkSync(path);}catch(_){ }}
-  }
-
-  // R636: restore R613 segment timeline behavior; the output FIFO absorbs short jitter safely.
-  timelineOffset += duration;
+  });
 }
 
 async function radioLoop(){
@@ -652,7 +632,8 @@ async function radioLoop(){
 
   prepareCacheDir();
   prefetchAllVisuals();
-  if(!startPublisher())return;
+  const startupVisual=await ensureScheduledVisual();
+  if(!startPublisher(startupVisual))return;
 
   while(!stopping){
     try{
@@ -689,7 +670,7 @@ async function radioLoop(){
       producer=null;
       state.producerRunning=false;
 
-      await sleep(5000);
+      await sleep(1000);
 
       if(/library|HTTP|empty/i.test(String(error)))library=[];
       else queueIndex++;
@@ -709,6 +690,9 @@ function publicStatus(){
     outputTimeshiftSeconds:OUTPUT_TIMESHIFT_SECONDS,
     videoBitrate:VIDEO_BITRATE,
     audioBitrate:AUDIO_BITRATE,
+    audioSampleRate:AUDIO_SAMPLE_RATE,
+    videoFps:VIDEO_FPS,
+    videoGop:VIDEO_GOP,
     qrOverlay:QR_OVERLAY,
     visualTimeZone:state.visualTimeZone,
     visualPeriod:state.visualPeriod,
@@ -733,6 +717,7 @@ function publicStatus(){
     lastLibraryRefresh:state.lastLibraryRefresh,
     lastExit:state.lastExit,
     lastError:state.lastError,
+    lastFfmpegLine:state.lastFfmpegLine,
     youtubeLiveUrl:YOUTUBE_LIVE_URL
   };
 }
@@ -775,17 +760,46 @@ const server=http.createServer((req,res)=>{
 });
 
 server.listen(PORT,'0.0.0.0',()=>{
-  console.log(`ANDRIK Radio R629-LOWLOAD-1080P-LIVE-TICKER listening on :${PORT}`);
+  console.log(`ANDRIK Radio R637-CONTINUOUS-PCM-ONE-AAC-1080P25-NODROP listening on :${PORT}`);
   radioLoop();
 });
 
-function shutdown(){
-  stopping=true;
-  if(producer&&producer.exitCode===null)producer.kill('SIGTERM');
-  if(publisher&&publisher.exitCode===null)publisher.kill('SIGTERM');
-  server.close(()=>process.exit(0));
-  setTimeout(()=>process.exit(0),5000).unref();
+let shutdownStarted=false;
+function waitChildExit(child,timeoutMs){
+  return new Promise(resolve=>{
+    if(!child || child.exitCode!==null)return resolve(true);
+    let done=false;
+    const finish=value=>{if(done)return;done=true;clearTimeout(timer);resolve(value);};
+    const timer=setTimeout(()=>finish(false),timeoutMs);
+    child.once('exit',()=>finish(true));
+  });
 }
 
-process.on('SIGTERM',shutdown);
-process.on('SIGINT',shutdown);
+async function shutdown(){
+  if(shutdownStarted)return;
+  shutdownStarted=true;
+  stopping=true;
+  try{server.close();}catch(_){}
+
+  // First stop only the current MP3 decoder. The master AAC encoder remains alive.
+  const activeDecoder=producer;
+  if(activeDecoder&&activeDecoder.exitCode===null)activeDecoder.kill('SIGTERM');
+  await waitChildExit(activeDecoder,2500);
+
+  // EOF on the persistent PCM fd lets -shortest flush AAC/FLV naturally. This is
+  // the normal stop path used by systemctl and prevents broken YouTube archives.
+  const activeMaster=publisher;
+  try{
+    const sink=activeMaster?.stdio?.[3];
+    if(sink && !sink.destroyed && !sink.writableEnded)sink.end();
+  }catch(_){}
+  let clean=await waitChildExit(activeMaster,9000);
+  if(!clean && activeMaster&&activeMaster.exitCode===null){
+    activeMaster.kill('SIGTERM');
+    clean=await waitChildExit(activeMaster,2500);
+  }
+  process.exit(0);
+}
+
+process.once('SIGTERM',()=>{shutdown().catch(()=>process.exit(0));});
+process.once('SIGINT',()=>{shutdown().catch(()=>process.exit(0));});

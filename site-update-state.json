@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787591680222-879452fe6c",
-  "release": "R636",
-  "archiveName": "R636-R613-AUDIO-STABLE-FIFO-CONTROL-SAFE-FULL.zip",
-  "sourceHead": "7e821bcfde34e240794b8c2ced88b37aa927d118",
-  "backupSha": "7e821bcfde34e240794b8c2ced88b37aa927d118",
+  "operationId": "publish-1787594979150-d4d0b90bd0",
+  "release": "R637",
+  "archiveName": "R637-CONTINUOUS-AUDIO-1080P-PUSH-METADATA-SAFE-FULL.zip",
+  "sourceHead": "1799cead1046eb8eeeae325617b79ec331fbf2a5",
+  "backupSha": "1799cead1046eb8eeeae325617b79ec331fbf2a5",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-24T17:14:41.683Z"
+  "generatedAt": "2026-08-24T18:09:40.087Z"
 }

@@ -81,8 +81,9 @@ QR_OVERLAY=$APP_DIR/assets/andrik-qr-r612.png
 VISUAL_TIME_ZONE=Europe/Bratislava
 OUTPUT_TIMESHIFT_SECONDS=6
 TIMESTAMP_GUARD_SECONDS=0
-VIDEO_BITRATE=1000k
+VIDEO_BITRATE=4500k
 AUDIO_BITRATE=128k
+AUDIO_SAMPLE_RATE=44100
 PORT=8080
 NODE_ENV=production
 RADIO_CACHE_DIR=$CACHE_DIR
@@ -93,7 +94,7 @@ unset YOUTUBE_STREAM_KEY
 echo "[4/7] systemd 24/7..."
 cat > "$SERVICE_FILE" <<EOF
 [Unit]
-Description=ANDRIK Metal Radio 24/7 - R621 R2 PROXY 1080p25 AUDIO CLEAN
+Description=ANDRIK Metal Radio 24/7 - R637 CONTINUOUS PCM ONE AAC 1080p25
 After=network-online.target
 Wants=network-online.target
 
@@ -106,7 +107,7 @@ Restart=always
 RestartSec=8
 StartLimitIntervalSec=0
 KillSignal=SIGTERM
-TimeoutStopSec=15
+TimeoutStopSec=25
 LimitNOFILE=65535
 NoNewPrivileges=true
 PrivateTmp=true
@@ -158,6 +159,9 @@ WantedBy=timers.target
 EOF
 
 echo "[6/7] Запуск..."
+if [ -s "$APP_DIR/radio247/vm-lite/youtube-device-console-r637.mjs" ]; then
+  install -m 755 "$APP_DIR/radio247/vm-lite/youtube-device-console-r637.mjs" /usr/local/sbin/andrik-youtube
+fi
 systemctl daemon-reload
 systemctl enable --now andrik-radio.service
 systemctl enable --now andrik-radio-update.timer

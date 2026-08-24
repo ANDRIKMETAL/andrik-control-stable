@@ -14448,49 +14448,58 @@ function isAndrikGuardHealthProbe(request) {
 }
 
 async function runYoutubeEventsFromGuardHealth(env) {
+  // R637 reserve only: Guard does NOTHING while the dedicated cron paths are fresh.
+  // If */2 comments/likes or */5 subscriber polling goes stale, one bounded reserve
+  // pass runs in waitUntil. This avoids both silent push loss and the old heavy 1102 loop.
   if (!env.COMMENTS_DB || !String(env.CRON_SECRET || '').trim()) return { ok:false, skipped:true, reason:'bridge-not-configured' };
-  const db = requireDb(env);
-  await Promise.all([ensurePushAutomationSchema(db), ensureControlV1Schema(db), ensurePlatformAnalyticsSchema(db)]);
-  const lockKey = 'youtube-guard-health-bridge-lock-r302';
-  const lastCheck = await getPushState(db, 'youtube-events-last-check-at').catch(() => null);
-  const lastMs = Date.parse(lastCheck?.value || lastCheck?.updatedAt || '');
-  if (Number.isFinite(lastMs) && Date.now() - lastMs < 7 * 60 * 1000) {
-    return { ok:true, skipped:true, reason:'recent-youtube-check', lastCheckAt:lastCheck?.value || lastCheck?.updatedAt || '' };
+  const db=requireDb(env);
+  await Promise.all([ensurePushAutomationSchema(db),ensureControlV1Schema(db),ensurePlatformAnalyticsSchema(db)]);
+  const [fastState,subscriberState]=await Promise.all([
+    getPushState(db,'youtube-fast-engagement-last-at-r333').catch(()=>null),
+    getPushState(db,'youtube-counts-last-at').catch(()=>null)
+  ]);
+  const ageMinutes=value=>{
+    const ms=Date.parse(String(value?.value||value?.updatedAt||''));
+    return Number.isFinite(ms)?Math.max(0,(Date.now()-ms)/60000):999;
+  };
+  const fastAge=ageMinutes(fastState);
+  const subscriberAge=ageMinutes(subscriberState);
+  if(fastAge<=4 && subscriberAge<=7){
+    return {ok:true,skipped:true,reason:'dedicated-cron-fresh',fastAgeMinutes:Math.round(fastAge),subscriberAgeMinutes:Math.round(subscriberAge)};
   }
-  await db.prepare(`DELETE FROM push_state WHERE key=? AND updated_at < datetime('now','-15 minutes')`).bind(lockKey).run().catch(() => {});
-  if (!await claimPushOnce(db, lockKey, new Date().toISOString())) return { ok:true, skipped:true, reason:'bridge-already-running' };
-  try {
-    await setPushState(db, 'youtube-guard-health-bridge-last-at-r302', new Date().toISOString()).catch(() => {});
-    const synthetic = new Request('https://control.andrikmetal.com/api/push/check-youtube-events', {
-      method:'POST',
-      headers:{
-        'x-cron-key':String(env.CRON_SECRET || ''),
-        'user-agent':'ANDRIK-Guard-Health-Bridge/R302',
-        accept:'application/json'
-      }
-    });
-    const response = await handleCronYoutubeEventsAckR416(synthetic, env);
-    const payload = await response.clone().json().catch(() => ({}));
-    if (!response.ok || payload?.ok === false) {
-      throw new Error(cleanPlainText(payload?.details || payload?.error || `youtube-events-http-${response.status}`, 500));
+
+  const lockKey='youtube-guard-reserve-lock-r637';
+  await db.prepare(`DELETE FROM push_state WHERE key=? AND updated_at < datetime('now','-8 minutes')`).bind(lockKey).run().catch(()=>{});
+  if(!await claimPushOnce(db,lockKey,new Date().toISOString())) return {ok:true,skipped:true,reason:'reserve-already-running'};
+  const synthetic=new Request('https://control.andrikmetal.com/api/automation/youtube-guard-reserve-r637',{
+    method:'POST',headers:{'x-cron-key':String(env.CRON_SECRET||''),'user-agent':'ANDRIK-Guard-Reserve/R637',accept:'application/json'}
+  });
+  const result={ok:true,mode:'guard-reserve-r637',fastAgeMinutes:Math.round(fastAge),subscriberAgeMinutes:Math.round(subscriberAge),engagement:null,subscriber:null,checkedAt:new Date().toISOString()};
+  try{
+    if(fastAge>4){
+      result.engagement=await responseData(await handleFastYoutubeEngagementR333(synthetic,env,{skipCheckpoint:true}));
+      if(result.engagement?.ok===false || result.engagement?.httpOk===false)result.ok=false;
     }
-    await setPushState(db, 'youtube-guard-health-bridge-last-ok-r302', new Date().toISOString()).catch(() => {});
-    await recordSystemLog(env, {
-      scope:'youtube-events', level:'info', event:'guard-health-bridge-ok',
-      message:'Guard health-check запустил фоновую проверку комментариев, лайков и подписчиков YouTube.',
-      details:{ checkedAt:payload?.checkedAt || new Date().toISOString(), commentsSent:payload?.commentsSent || 0, likesSent:payload?.likesSent || 0, subscribersSent:payload?.subscribersSent || 0 }
-    }).catch(() => {});
-    return { ok:true, payload };
-  } catch (error) {
-    const message = cleanPlainText(error?.message || error, 500);
-    await setPushState(db, 'youtube-guard-health-bridge-last-error-r302', message).catch(() => {});
-    await recordSystemLog(env, {
-      scope:'youtube-events', level:'error', event:'guard-health-bridge-failed',
-      message:'Фоновая проверка YouTube от Guard завершилась ошибкой.', details:{ error:message }
-    }).catch(() => {});
-    return { ok:false, error:message };
-  } finally {
-    await releasePushOnceClaim(db, lockKey).catch(() => {});
+    if(subscriberAge>7){
+      result.subscriber=await handleFastYoutubeSubscriberCountR416(synthetic,env,{source:'guard-reserve-r637'});
+      if(result.subscriber?.ok===false)result.ok=false;
+    }
+    const at=new Date().toISOString();
+    await Promise.all([
+      setPushState(db,'youtube-guard-reserve-last-at-r637',at).catch(()=>{}),
+      setPushState(db,'youtube-guard-reserve-last-result-r637',JSON.stringify(result).slice(0,12000)).catch(()=>{})
+    ]);
+    await recordSystemLog(env,{
+      scope:'youtube-events',level:result.ok?'info':'warning',event:'guard-reserve-r637',
+      message:`Guard reserve: comments/likes ${fastAge>4?'checked':'fresh'}, subscribers ${subscriberAge>7?'checked':'fresh'}.`,details:result
+    }).catch(()=>{});
+    return result;
+  }catch(error){
+    result.ok=false;result.error=cleanPlainText(error?.message||error,500);
+    await setPushState(db,'youtube-guard-reserve-last-error-r637',result.error).catch(()=>{});
+    return result;
+  }finally{
+    await releasePushOnceClaim(db,lockKey).catch(()=>{});
   }
 }
 
@@ -14499,10 +14508,11 @@ async function handlePublicHealth(request, env, ctx) {
   // Its normal /api/health probe now also starts the YouTube event checker in
   // the background, so comment/like pushes no longer depend on opening Control.
   if (isAndrikGuardHealthProbe(request) && ctx?.waitUntil && env.COMMENTS_DB) {
-    // R416: Guard is a health probe only. The old bridge duplicated YouTube +
-    // summary work inside the same HTTP CPU slice and could create hidden 1102s.
     const db=requireDb(env);
-    ctx.waitUntil(setPushState(db,'guard-health-last-wakeup-r416',new Date().toISOString()).catch(()=>{}));
+    ctx.waitUntil(Promise.all([
+      setPushState(db,'guard-health-last-wakeup-r637',new Date().toISOString()).catch(()=>{}),
+      runYoutubeEventsFromGuardHealth(env).catch(()=>({ok:false}))
+    ]));
   }
   const health = await buildAndrikHealthSnapshot(env, { checkSite:true });
   const statusCode = health.status === 'down' ? 503 : 200;
