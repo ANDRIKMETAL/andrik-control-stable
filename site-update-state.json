@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787586158290-f6589e8caf",
-  "release": "R629",
-  "archiveName": "R629-RADIO-STABILITY-LIVE-TICKER-DIRECT-RTMPS-SAFE-FULL.zip",
-  "sourceHead": "6ecad725219857bf16ddfc86212da0335d8f80ae",
-  "backupSha": "6ecad725219857bf16ddfc86212da0335d8f80ae",
+  "operationId": "publish-1787586286397-c2889d431d",
+  "release": "R630",
+  "archiveName": "R630-RADIO-HUB-CITY-MAP-R629-STABLE-ENGINE-SAFE-FULL.zip",
+  "sourceHead": "4557e97becb080be372af68ffc20c5b05e79d78a",
+  "backupSha": "4557e97becb080be372af68ffc20c5b05e79d78a",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-24T15:42:39.292Z"
+  "generatedAt": "2026-08-24T15:44:46.823Z"
 }
