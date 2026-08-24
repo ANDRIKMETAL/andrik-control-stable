@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787531575739-04e1d8cc94",
-  "release": "R612",
-  "archiveName": "R612-QR-STABLE-FIFO-ANTI-BUFFER-SAFE-FULL.zip",
-  "sourceHead": "f6ee45ba5d41f93385c672f6dac73ed97c9bc77c",
-  "backupSha": "f6ee45ba5d41f93385c672f6dac73ed97c9bc77c",
+  "operationId": "publish-1787531824412-c67021b4b5",
+  "release": "R613",
+  "archiveName": "R613-QR-STREAM-ONLY-HOMEPAGE-CLEAN-STABLE-SAFE-FULL.zip",
+  "sourceHead": "c44f719612b67ed76c590182f43a1b0977520bac",
+  "backupSha": "c44f719612b67ed76c590182f43a1b0977520bac",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-24T00:32:56.559Z"
+  "generatedAt": "2026-08-24T00:37:04.412Z"
 }
