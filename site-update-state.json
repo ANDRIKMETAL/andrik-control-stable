@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787594979150-d4d0b90bd0",
-  "release": "R637",
-  "archiveName": "R637-CONTINUOUS-AUDIO-1080P-PUSH-METADATA-SAFE-FULL.zip",
-  "sourceHead": "1799cead1046eb8eeeae325617b79ec331fbf2a5",
-  "backupSha": "1799cead1046eb8eeeae325617b79ec331fbf2a5",
+  "operationId": "publish-1787596051828-7d598eccab",
+  "release": "R639",
+  "archiveName": "R639-D1-FINAL-RADIO-APP-LINKS-SAFE-FULL.zip",
+  "sourceHead": "86a125eaccb61c65af32d3b017c73a8add6c42fd",
+  "backupSha": "86a125eaccb61c65af32d3b017c73a8add6c42fd",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-24T18:09:40.087Z"
+  "generatedAt": "2026-08-24T18:27:31.828Z"
 }

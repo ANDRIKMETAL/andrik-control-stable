@@ -1,4 +1,5 @@
 const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R524', number:524, version:'55.00', full:'55.00 LIVE WEB AI FINAL R524', siteUpdater:'55.00-r356' });
+const ANDRIK_D1_EFFICIENCY_RELEASE = 'R638-D1-FINAL';
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
 const OWNER_SESSION_TOKEN_HEADER = 'x-andrik-owner-token';
@@ -263,6 +264,10 @@ async function ensureSecuritySchema(db) {
   await db.prepare(`ALTER TABLE security_events ADD COLUMN city TEXT NOT NULL DEFAULT ''`).run().catch(() => {});
   await db.prepare(`ALTER TABLE security_events ADD COLUMN colo TEXT NOT NULL DEFAULT ''`).run().catch(() => {});
   await db.prepare(`CREATE INDEX IF NOT EXISTS idx_security_events_country_created ON security_events(country, created_at DESC)`).run();
+  // R638 D1: these dashboard queries wrap timestamps in datetime(...). Expression
+  // indexes let SQLite/D1 seek the requested window instead of scanning the table.
+  await db.prepare(`CREATE INDEX IF NOT EXISTS idx_security_events_created_dt_r638 ON security_events(datetime(created_at) DESC)`).run().catch(() => {});
+  await db.prepare(`CREATE INDEX IF NOT EXISTS idx_security_events_kind_created_dt_r638 ON security_events(kind, datetime(created_at) DESC)`).run().catch(() => {});
 }
 
 async function securityIpHash(request, env) {
@@ -866,6 +871,9 @@ async function ensureCommentsV4Schema(db) {
     await db.prepare(`CREATE INDEX IF NOT EXISTS idx_comments_pinned_created ON comments(status, is_pinned DESC, pinned_at DESC, created_at DESC)`).run();
     await db.prepare(`CREATE INDEX IF NOT EXISTS idx_comments_author_hash ON comments(author_hash, status, created_at DESC)`).run();
     await db.prepare(`CREATE INDEX IF NOT EXISTS idx_comments_song_status ON comments(song_slug, status, created_at DESC)`).run();
+    // R638 D1: summary/control queries use datetime(created_at) for comments/likes.
+    await db.prepare(`CREATE INDEX IF NOT EXISTS idx_comments_created_dt_r638 ON comments(datetime(created_at) DESC)`).run().catch(() => {});
+    await db.prepare(`CREATE INDEX IF NOT EXISTS idx_comment_likes_created_dt_r638 ON comment_likes(datetime(created_at) DESC)`).run().catch(() => {});
   })();
   try {
     await commentsSchemaV4Promise;
@@ -943,6 +951,8 @@ async function ensurePushAutomationSchema(db) {
     await db.prepare(`CREATE INDEX IF NOT EXISTS idx_push_history_created ON push_history(created_at DESC)`).run();
     await db.prepare(`CREATE INDEX IF NOT EXISTS idx_push_history_type_created ON push_history(type, created_at DESC)`).run();
     await db.prepare(`CREATE INDEX IF NOT EXISTS idx_push_history_video ON push_history(video_id, created_at DESC)`).run();
+    await db.prepare(`CREATE INDEX IF NOT EXISTS idx_push_history_created_dt_r638 ON push_history(datetime(created_at) DESC)`).run().catch(() => {});
+    await db.prepare(`CREATE INDEX IF NOT EXISTS idx_push_history_type_created_dt_r638 ON push_history(type, datetime(created_at) DESC)`).run().catch(() => {});
     await db.prepare(`
       CREATE TABLE IF NOT EXISTS system_logs (
         id TEXT PRIMARY KEY,
@@ -956,6 +966,8 @@ async function ensurePushAutomationSchema(db) {
     `).run();
     await db.prepare(`CREATE INDEX IF NOT EXISTS idx_system_logs_created ON system_logs(created_at DESC)`).run();
     await db.prepare(`CREATE INDEX IF NOT EXISTS idx_system_logs_scope_created ON system_logs(scope, created_at DESC)`).run();
+    await db.prepare(`CREATE INDEX IF NOT EXISTS idx_system_logs_created_dt_r638 ON system_logs(datetime(created_at) DESC)`).run().catch(() => {});
+    await db.prepare(`CREATE INDEX IF NOT EXISTS idx_system_logs_scope_created_dt_r638 ON system_logs(scope, datetime(created_at) DESC)`).run().catch(() => {});
     await db.prepare(`
       CREATE TABLE IF NOT EXISTS push_subscribers (
         subscription_id TEXT PRIMARY KEY,
@@ -986,6 +998,7 @@ async function ensurePushAutomationSchema(db) {
     }
     await db.prepare(`CREATE INDEX IF NOT EXISTS idx_push_subscribers_status_seen ON push_subscribers(status, last_seen_at DESC)`).run();
     await db.prepare(`CREATE INDEX IF NOT EXISTS idx_push_subscribers_geo ON push_subscribers(status, country, region, city)`).run().catch(() => {});
+    await db.prepare(`CREATE INDEX IF NOT EXISTS idx_push_subscribers_created_dt_r638 ON push_subscribers(status, source, datetime(created_at) DESC)`).run().catch(() => {});
   })();
   try {
     await pushAutomationSchemaPromise;
@@ -1134,6 +1147,11 @@ async function ensureNativeMonitorSchema(db) {
     `).run();
     await db.prepare(`CREATE INDEX IF NOT EXISTS idx_control_monitor_incidents_time ON control_monitor_incidents(started_at DESC)`).run();
     await db.prepare(`CREATE INDEX IF NOT EXISTS idx_control_monitor_incidents_target ON control_monitor_incidents(target_id, started_at DESC)`).run();
+    // R638 D1: checked_at/started_at are frequently queried through datetime(...).
+    await db.prepare(`CREATE INDEX IF NOT EXISTS idx_control_monitor_samples_dt_r638 ON control_monitor_samples(datetime(checked_at) DESC)`).run().catch(() => {});
+    await db.prepare(`CREATE INDEX IF NOT EXISTS idx_control_monitor_samples_target_dt_r638 ON control_monitor_samples(target_id, datetime(checked_at) DESC)`).run().catch(() => {});
+    await db.prepare(`CREATE INDEX IF NOT EXISTS idx_control_monitor_incidents_dt_r638 ON control_monitor_incidents(datetime(started_at) DESC)`).run().catch(() => {});
+    await db.prepare(`CREATE INDEX IF NOT EXISTS idx_control_monitor_incidents_target_dt_r638 ON control_monitor_incidents(target_id, datetime(started_at) DESC)`).run().catch(() => {});
   })();
   try { await nativeMonitorSchemaPromise; }
   catch (error) { nativeMonitorSchemaPromise = null; throw error; }
@@ -1464,6 +1482,15 @@ async function ensureSiteMetricsSchema(db) {
     await db.prepare(`CREATE INDEX IF NOT EXISTS idx_site_visit_visitor_date ON site_visit_events(visitor_hash, local_date)`).run();
     await db.prepare(`CREATE INDEX IF NOT EXISTS idx_site_visit_geo ON site_visit_events(event_type, country, region, city, created_at DESC)`).run().catch(() => {});
     await db.prepare(`CREATE INDEX IF NOT EXISTS idx_site_visit_source_r438 ON site_visit_events(event_type, country, city, acquisition_source, local_date)`).run().catch(() => {});
+    // R638 D1: the first-party dashboard uses these exact filter shapes. The old
+    // indexes started with the wrong columns and the realtime query had no usable
+    // datetime(created_at) index, so a tiny LIVE counter could scan 62 days.
+    await db.prepare(`CREATE INDEX IF NOT EXISTS idx_site_visit_created_dt_r638 ON site_visit_events(datetime(created_at) DESC)`).run().catch(() => {});
+    await db.prepare(`CREATE INDEX IF NOT EXISTS idx_site_visit_type_created_dt_r638 ON site_visit_events(event_type, datetime(created_at) DESC)`).run().catch(() => {});
+    await db.prepare(`CREATE INDEX IF NOT EXISTS idx_site_visit_type_date_visitor_r638 ON site_visit_events(event_type, local_date, visitor_hash)`).run().catch(() => {});
+    await db.prepare(`CREATE INDEX IF NOT EXISTS idx_site_visit_type_date_country_visitor_r638 ON site_visit_events(event_type, local_date, country, visitor_hash)`).run().catch(() => {});
+    await db.prepare(`CREATE INDEX IF NOT EXISTS idx_site_visit_type_date_path_visitor_r638 ON site_visit_events(event_type, local_date, path, visitor_hash)`).run().catch(() => {});
+    await db.prepare(`CREATE INDEX IF NOT EXISTS idx_site_visit_type_date_device_visitor_r638 ON site_visit_events(event_type, local_date, device_category, visitor_hash)`).run().catch(() => {});
   })();
   try { await siteMetricsSchemaPromise; }
   catch (error) { siteMetricsSchemaPromise = null; throw error; }
@@ -1551,14 +1578,10 @@ async function handleControlCountryCityHistoryR418(request, env) {
   let date=parseHistoryDateR418(url.searchParams.get('date'),today) || today;
   if (date>today) date=today;
   const mode=String(url.searchParams.get('mode') || 'all').toLowerCase()==='daily' ? 'daily' : 'all';
-  await db.prepare(`
-    INSERT OR REPLACE INTO country_city_daily_history(local_date,country,region,city,opens,first_at,last_at)
-    SELECT local_date,country,region,city,COUNT(*) AS opens,MIN(created_at),MAX(created_at)
-    FROM site_visit_events
-    WHERE country=?1 AND (?2='all' OR local_date=?3) AND (city<>'' OR region<>'')
-      AND event_type IN ('visit','music-download','music-listen','telegram-open','youtube-open','spotify-open','apple-music-open','soundcloud-open','amazon-music-open')
-    GROUP BY local_date,country,region,city
-  `).bind(country,mode,date).run().catch(() => {});
+  // R638 D1: country_city_daily_history is already updated incrementally on every
+  // first-party event. The old UI rebuilt it from raw site_visit_events on every
+  // country click. Keep only the one-time migration/backfill marker.
+  await ensureCountryCityHistoryBackfillR418(db).catch(() => {});
   let rowsResult;
   if (mode==='daily') {
     rowsResult=await db.prepare(`
@@ -1658,8 +1681,44 @@ async function handleSiteVisit(request, env) {
   ).run();
   // Keep this lightweight first-party counter small; long-term analytics remains in GA4.
   await recordCountryCityHistoryR418(db,{localDate,country,region,city,eventType}).catch(() => {});
-  await db.prepare(`DELETE FROM site_visit_events WHERE local_date < date('now','-62 days')`).run().catch(() => {});
+  // R638 D1: retention used to execute a DELETE range check for every single site
+  // event. Run it at most once per UTC day; the live write path stays one-row cheap.
+  await maybeTrimSiteVisitEventsR638(db).catch(() => {});
   return json({ ok:true, localDate, eventType });
+}
+
+const D1_SITE_REPORT_CACHE_MS_R638 = 6 * 60 * 60 * 1000;
+const D1_CITY_DAY_CACHE_MS_R638 = 10 * 60 * 1000;
+const D1_CITY_30D_CACHE_MS_R638 = 6 * 60 * 60 * 1000;
+const D1_ECOSYSTEM_AGG_CACHE_MS_R638 = 6 * 60 * 60 * 1000;
+
+function d1UtcTimestampMsR638(value='') {
+  const raw=String(value||'').trim();
+  if(!raw)return NaN;
+  if(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(?:\.\d+)?$/.test(raw))return Date.parse(raw.replace(' ','T')+'Z');
+  return Date.parse(raw);
+}
+
+async function readD1JsonCacheR638(db,key,maxAgeMs){
+  const row=await getPushState(db,key).catch(()=>null);
+  const at=d1UtcTimestampMsR638(row?.updatedAt||'');
+  if(!row?.value||!Number.isFinite(at)||Date.now()-at<0||Date.now()-at>Math.max(1000,Number(maxAgeMs||0)))return null;
+  try{return {value:JSON.parse(row.value),updatedAt:row.updatedAt||'',ageMs:Date.now()-at};}catch(_){return null;}
+}
+
+async function writeD1JsonCacheR638(db,key,value){
+  try{await setPushState(db,key,JSON.stringify(value));return true;}catch(_){return false;}
+}
+
+async function maybeTrimSiteVisitEventsR638(db){
+  const key='d1-maintenance:site-visit-retention-r638';
+  const state=await getPushState(db,key).catch(()=>null);
+  const last=d1UtcTimestampMsR638(state?.updatedAt||'');
+  if(Number.isFinite(last)&&Date.now()-last<23*60*60*1000)return {ok:true,skipped:true};
+  // Claim first so a slow cleanup is not duplicated by concurrent page views.
+  await setPushState(db,key,new Date().toISOString()).catch(()=>{});
+  const result=await db.prepare(`DELETE FROM site_visit_events WHERE local_date < date('now','-62 days')`).run().catch(()=>null);
+  return {ok:true,changes:Number(result?.meta?.changes||0)};
 }
 
 async function getSiteLiveMetrics(db) {
@@ -1672,7 +1731,7 @@ async function getSiteLiveMetrics(db) {
     `).bind(localDate).first(),
     db.prepare(`
       SELECT COUNT(*) AS views, COUNT(DISTINCT visitor_hash) AS users
-      FROM site_visit_events WHERE created_at >= datetime('now','-30 minutes') AND event_type = 'visit'
+      FROM site_visit_events WHERE datetime(created_at) >= datetime('now','-30 minutes') AND event_type = 'visit'
     `).first()
   ]);
   return {
@@ -1699,11 +1758,16 @@ function isPublicSitePathR531(value='') {
   return true;
 }
 
-async function getSiteFirstParty30dR530(db) {
+async function getSiteFirstParty30dR530(db, options={}) {
   await ensureSiteMetricsSchema(db);
   const endDate = getBratislavaClock().date;
   const startDate = shiftIsoCalendarDate(endDate, -29);
   const weekStart = shiftIsoCalendarDate(endDate, -6);
+  const cacheKey='d1-cache:site-first-party-30d-r638';
+  if(!options?.force){
+    const cached=await readD1JsonCacheR638(db,cacheKey,D1_SITE_REPORT_CACHE_MS_R638);
+    if(cached?.value?.configured&&cached.value.endDate===endDate)return {...cached.value,d1Cache:{hit:true,updatedAt:cached.updatedAt,ttlHours:6}};
+  }
   const [trendResult,countryResult,pageResult,deviceResult,monthRow,weekRow] = await Promise.all([
     db.prepare(`
       SELECT local_date AS date, COUNT(*) AS screenPageViews, COUNT(DISTINCT visitor_hash) AS activeUsers
@@ -1744,7 +1808,7 @@ async function getSiteFirstParty30dR530(db) {
       FROM site_visit_events WHERE event_type='visit' AND local_date>=?1 AND local_date<=?2 AND path NOT LIKE '/cache-reset%' AND path NOT LIKE '/site-cache-reset%' AND path NOT LIKE '%-admin.html' AND path NOT LIKE '/admin/%' AND path NOT IN ('/offline.html','/open-youtube.html','/comment-collection.html')
     `).bind(weekStart,endDate).first().catch(()=>null)
   ]);
-  return {
+  const result={
     configured:true,startDate,endDate,
     trend:(trendResult?.results||[]).map(row=>({date:cleanPlainText(row?.date||'',20),activeUsers:Math.max(0,Number(row?.activeUsers||0)),screenPageViews:Math.max(0,Number(row?.screenPageViews||0))})),
     countries:(countryResult?.results||[]).map(row=>({country:cleanPlainText(row?.country||'',8).toUpperCase(),activeUsers:Math.max(0,Number(row?.activeUsers||0))})),
@@ -1754,6 +1818,8 @@ async function getSiteFirstParty30dR530(db) {
     week:{activeUsers:Math.max(0,Number(weekRow?.activeUsers||0)),screenPageViews:Math.max(0,Number(weekRow?.screenPageViews||0))},
     updatedAt:new Date().toISOString()
   };
+  await writeD1JsonCacheR638(db,cacheKey,result);
+  return {...result,d1Cache:{hit:false,updatedAt:result.updatedAt,ttlHours:6}};
 }
 
 function mergeGoogleWithFirstPartyR530(google={}, firstParty={}) {
@@ -1816,9 +1882,14 @@ function mergeGoogleWithFirstPartyR530(google={}, firstParty={}) {
 
 async function collectCalendarDayCityActivityR530(db) {
   const day=getBratislavaClock().date;
+  const cacheKey='d1-cache:calendar-city-r638';
+  const cached=await readD1JsonCacheR638(db,cacheKey,D1_CITY_DAY_CACHE_MS_R638);
+  if(cached?.value?.day===day&&Array.isArray(cached.value.rows))return cached.value.rows;
   const startAt=bratislavaLocalDateTimeToIso(day,0,0);
   const endAt=new Date().toISOString();
-  return collectCityActivityWindowR395(db,startAt,endAt,{limit:50,includePush:true});
+  const rows=await collectCityActivityWindowR395(db,startAt,endAt,{limit:50,includePush:true});
+  await writeD1JsonCacheR638(db,cacheKey,{day,rows});
+  return rows;
 }
 
 async function refreshYoutubeIdentityIfStaleR530(env,db,maxAgeMs=10*60*1000) {
@@ -1911,6 +1982,7 @@ async function ensureControlV1Schema(db) {
     `).run();
     await db.prepare(`CREATE INDEX IF NOT EXISTS idx_release_history_published ON release_history(published_at DESC)`).run();
     await db.prepare(`CREATE INDEX IF NOT EXISTS idx_release_history_push ON release_history(push_status, published_at DESC)`).run();
+    await db.prepare(`CREATE INDEX IF NOT EXISTS idx_release_history_published_dt_r638 ON release_history(datetime(published_at) DESC)`).run().catch(() => {});
 
     await db.prepare(`
       CREATE TABLE IF NOT EXISTS backup_history (
@@ -1928,6 +2000,7 @@ async function ensureControlV1Schema(db) {
       )
     `).run();
     await db.prepare(`CREATE INDEX IF NOT EXISTS idx_backup_history_created ON backup_history(created_at DESC)`).run();
+    await db.prepare(`CREATE INDEX IF NOT EXISTS idx_backup_history_created_dt_r638 ON backup_history(datetime(created_at) DESC)`).run().catch(() => {});
 
     await db.prepare(`
       CREATE TABLE IF NOT EXISTS backup_snapshots (
@@ -1937,6 +2010,7 @@ async function ensureControlV1Schema(db) {
       )
     `).run();
     await db.prepare(`CREATE INDEX IF NOT EXISTS idx_backup_snapshots_created ON backup_snapshots(created_at DESC)`).run();
+    await db.prepare(`CREATE INDEX IF NOT EXISTS idx_backup_snapshots_created_dt_r638 ON backup_snapshots(datetime(created_at) DESC)`).run().catch(() => {});
 
     await db.prepare(`
       CREATE TABLE IF NOT EXISTS youtube_oauth_tokens (
@@ -2226,6 +2300,21 @@ async function recordPushHistory(env, entry = {}) {
 }
 
 
+async function maybeTrimSystemLogsR638(db){
+  const key='d1-maintenance:system-log-trim-r638';
+  const state=await getPushState(db,key).catch(()=>null);
+  const last=d1UtcTimestampMsR638(state?.updatedAt||'');
+  if(Number.isFinite(last)&&Date.now()-last<6*60*60*1000)return {ok:true,skipped:true};
+  await setPushState(db,key,new Date().toISOString()).catch(()=>{});
+  const result=await db.prepare(`
+    DELETE FROM system_logs
+    WHERE id IN (
+      SELECT id FROM system_logs ORDER BY created_at DESC LIMIT -1 OFFSET 600
+    )
+  `).run().catch(()=>null);
+  return {ok:true,changes:Number(result?.meta?.changes||0)};
+}
+
 async function recordSystemLog(env, entry = {}) {
   if (!env.COMMENTS_DB) return;
   const db = env.COMMENTS_DB;
@@ -2245,13 +2334,9 @@ async function recordSystemLog(env, entry = {}) {
     cleanPlainText(entry.message || '', 700),
     safeDetails
   ).run();
-  // Keep the diagnostics compact while preserving several weeks of normal activity.
-  await db.prepare(`
-    DELETE FROM system_logs
-    WHERE id IN (
-      SELECT id FROM system_logs ORDER BY created_at DESC LIMIT -1 OFFSET 600
-    )
-  `).run().catch(() => {});
+  // R638 D1: the old code scanned the 600-row tail after EVERY log insert.
+  // Keep exactly the same retention target, but run the trim at most once / 6h.
+  await maybeTrimSystemLogsR638(db).catch(() => {});
 }
 
 async function cacheLatestYoutubeItem(db, item, meta = {}) {
@@ -3039,6 +3124,104 @@ async function latestPlatformMetricsR498(db, platform) {
     return { metrics:parseSnapshotMetrics(row), createdAt:row?.created_at || '' };
   } catch (_) { return { metrics:{}, createdAt:'' }; }
 }
+async function getEcosystemSiteAggregatesR638(db,{force=false}={}){
+  const cacheKey='d1-cache:ecosystem-site-aggregates-r638';
+  if(!force){
+    const cached=await readD1JsonCacheR638(db,cacheKey,D1_ECOSYSTEM_AGG_CACHE_MS_R638);
+    if(cached?.value?.version==='r638')return {...cached.value,d1Cache:{hit:true,updatedAt:cached.updatedAt}};
+  }
+  const age='-30 days';
+  const safe=task=>Promise.resolve().then(task).catch(()=>({results:[]}));
+  const [siteCountries,sitePoints,musicCountries,musicPoints,linkRows,siteWeekly,sitePrevious,musicWeekly,musicPrevious,historySite] = await Promise.all([
+    safe(()=>db.prepare(`
+      SELECT country, COUNT(DISTINCT visitor_hash) AS value, COUNT(*) AS events
+      FROM site_visit_events
+      WHERE event_type='visit' AND country<>'' AND datetime(created_at)>=datetime('now', ?)
+      GROUP BY country ORDER BY value DESC, events DESC LIMIT 120
+    `).bind(age).all()),
+    safe(()=>db.prepare(`
+      SELECT country, MAX(region) AS region, MAX(city) AS city,
+             ROUND(AVG(latitude),1) AS latitude, ROUND(AVG(longitude),1) AS longitude,
+             COUNT(DISTINCT visitor_hash) AS value, COUNT(*) AS events, MAX(created_at) AS lastAt
+      FROM site_visit_events
+      WHERE event_type='visit' AND country<>'' AND latitude IS NOT NULL AND longitude IS NOT NULL
+        AND datetime(created_at)>=datetime('now', ?)
+      GROUP BY country, region, city, ROUND(latitude,1), ROUND(longitude,1)
+      ORDER BY value DESC, events DESC LIMIT 180
+    `).bind(age).all()),
+    safe(()=>db.prepare(`
+      SELECT country, COUNT(*) AS value,
+             SUM(CASE WHEN event_type='music-download' THEN 1 ELSE 0 END) AS downloads,
+             SUM(CASE WHEN event_type='music-listen' THEN 1 ELSE 0 END) AS listens
+      FROM site_visit_events
+      WHERE event_type IN ('music-download','music-listen') AND country<>'' AND datetime(created_at)>=datetime('now', ?)
+      GROUP BY country ORDER BY value DESC LIMIT 120
+    `).bind(age).all()),
+    safe(()=>db.prepare(`
+      SELECT country, MAX(region) AS region, MAX(city) AS city,
+             ROUND(AVG(latitude),1) AS latitude, ROUND(AVG(longitude),1) AS longitude,
+             COUNT(*) AS value,
+             SUM(CASE WHEN event_type='music-download' THEN 1 ELSE 0 END) AS downloads,
+             SUM(CASE WHEN event_type='music-listen' THEN 1 ELSE 0 END) AS listens,
+             MAX(created_at) AS lastAt
+      FROM site_visit_events
+      WHERE event_type IN ('music-download','music-listen') AND country<>''
+        AND latitude IS NOT NULL AND longitude IS NOT NULL AND datetime(created_at)>=datetime('now', ?)
+      GROUP BY country, region, city, ROUND(latitude,1), ROUND(longitude,1)
+      ORDER BY value DESC LIMIT 180
+    `).bind(age).all()),
+    safe(()=>db.prepare(`
+      SELECT event_type AS type, COUNT(*) AS value
+      FROM site_visit_events
+      WHERE event_type IN ('telegram-open','youtube-open','spotify-open','apple-music-open','soundcloud-open','amazon-music-open')
+        AND datetime(created_at)>=datetime('now', ?)
+      GROUP BY event_type ORDER BY value DESC
+    `).bind(age).all()),
+    safe(()=>db.prepare(`
+      SELECT country, COUNT(DISTINCT visitor_hash) AS value
+      FROM site_visit_events
+      WHERE event_type='visit' AND country<>'' AND datetime(created_at)>=datetime('now','-7 days')
+      GROUP BY country ORDER BY value DESC LIMIT 120
+    `).all()),
+    safe(()=>db.prepare(`
+      SELECT country, COUNT(DISTINCT visitor_hash) AS value
+      FROM site_visit_events
+      WHERE event_type='visit' AND country<>''
+        AND datetime(created_at)>=datetime('now','-14 days') AND datetime(created_at)<datetime('now','-7 days')
+      GROUP BY country ORDER BY value DESC LIMIT 120
+    `).all()),
+    safe(()=>db.prepare(`
+      SELECT country, COUNT(*) AS value
+      FROM site_visit_events
+      WHERE event_type IN ('music-download','music-listen') AND country<>''
+        AND datetime(created_at)>=datetime('now','-7 days')
+      GROUP BY country ORDER BY value DESC LIMIT 120
+    `).all()),
+    safe(()=>db.prepare(`
+      SELECT country, COUNT(*) AS value
+      FROM site_visit_events
+      WHERE event_type IN ('music-download','music-listen') AND country<>''
+        AND datetime(created_at)>=datetime('now','-14 days') AND datetime(created_at)<datetime('now','-7 days')
+      GROUP BY country ORDER BY value DESC LIMIT 120
+    `).all()),
+    // Persistent history is already maintained incrementally; do not rescan all raw events.
+    safe(()=>db.prepare(`
+      SELECT country, SUM(opens) AS value, MAX(last_at) AS lastAt
+      FROM country_city_daily_history
+      WHERE country<>'' GROUP BY country ORDER BY lastAt DESC LIMIT 180
+    `).all())
+  ]);
+  const payload={
+    version:'r638',generatedAt:new Date().toISOString(),
+    siteCountries:siteCountries.results||[],sitePoints:sitePoints.results||[],
+    musicCountries:musicCountries.results||[],musicPoints:musicPoints.results||[],
+    linkRows:linkRows.results||[],siteWeekly:siteWeekly.results||[],sitePrevious:sitePrevious.results||[],
+    musicWeekly:musicWeekly.results||[],musicPrevious:musicPrevious.results||[],historySite:historySite.results||[]
+  };
+  await writeD1JsonCacheR638(db,cacheKey,payload);
+  return {...payload,d1Cache:{hit:false,updatedAt:payload.generatedAt}};
+}
+
 async function handleControlEcosystemMap(request, env) {
   if (!adminAuthorized(request, env)) return json({ ok:false, error:'unauthorized' }, 401);
   const db = requireDb(env);
@@ -3058,44 +3241,22 @@ async function handleControlEcosystemMap(request, env) {
   const safeQueryR439 = task => Promise.resolve().then(task).catch(() => ({ results:[] }));
 
   const age = "-30 days";
-  const [siteCountriesRaw, sitePointsRaw, musicCountriesRaw, musicPointsRaw, pushCountriesRaw, pushPointsRaw, linkRowsRaw, recentRaw, historySiteCountriesRaw, historyPushCountriesRaw] = await Promise.all([
-    safeQueryR439(() => db.prepare(`
-      SELECT country, COUNT(DISTINCT visitor_hash) AS value, COUNT(*) AS events
-      FROM site_visit_events
-      WHERE event_type='visit' AND country<>'' AND datetime(created_at)>=datetime('now', ?)
-      GROUP BY country ORDER BY value DESC, events DESC LIMIT 120
-    `).bind(age).all()),
-    safeQueryR439(() => db.prepare(`
-      SELECT country, MAX(region) AS region, MAX(city) AS city,
-             ROUND(AVG(latitude),1) AS latitude, ROUND(AVG(longitude),1) AS longitude,
-             COUNT(DISTINCT visitor_hash) AS value, COUNT(*) AS events, MAX(created_at) AS lastAt
-      FROM site_visit_events
-      WHERE event_type='visit' AND country<>'' AND latitude IS NOT NULL AND longitude IS NOT NULL
-        AND datetime(created_at)>=datetime('now', ?)
-      GROUP BY country, region, city, ROUND(latitude,1), ROUND(longitude,1)
-      ORDER BY value DESC, events DESC LIMIT 180
-    `).bind(age).all()),
-    safeQueryR439(() => db.prepare(`
-      SELECT country, COUNT(*) AS value,
-             SUM(CASE WHEN event_type='music-download' THEN 1 ELSE 0 END) AS downloads,
-             SUM(CASE WHEN event_type='music-listen' THEN 1 ELSE 0 END) AS listens
-      FROM site_visit_events
-      WHERE event_type IN ('music-download','music-listen') AND country<>'' AND datetime(created_at)>=datetime('now', ?)
-      GROUP BY country ORDER BY value DESC LIMIT 120
-    `).bind(age).all()),
-    safeQueryR439(() => db.prepare(`
-      SELECT country, MAX(region) AS region, MAX(city) AS city,
-             ROUND(AVG(latitude),1) AS latitude, ROUND(AVG(longitude),1) AS longitude,
-             COUNT(*) AS value,
-             SUM(CASE WHEN event_type='music-download' THEN 1 ELSE 0 END) AS downloads,
-             SUM(CASE WHEN event_type='music-listen' THEN 1 ELSE 0 END) AS listens,
-             MAX(created_at) AS lastAt
-      FROM site_visit_events
-      WHERE event_type IN ('music-download','music-listen') AND country<>''
-        AND latitude IS NOT NULL AND longitude IS NOT NULL AND datetime(created_at)>=datetime('now', ?)
-      GROUP BY country, region, city, ROUND(latitude,1), ROUND(longitude,1)
-      ORDER BY value DESC LIMIT 180
-    `).bind(age).all()),
+  const forceRefreshR638=new URL(request.url).searchParams.get('refresh')==='1';
+  await ensureCountryCityHistorySchemaR418(db).catch(()=>{});
+  const siteAggR638=await getEcosystemSiteAggregatesR638(db,{force:forceRefreshR638});
+  const siteCountriesRaw={results:siteAggR638.siteCountries||[]};
+  const sitePointsRaw={results:siteAggR638.sitePoints||[]};
+  const musicCountriesRaw={results:siteAggR638.musicCountries||[]};
+  const musicPointsRaw={results:siteAggR638.musicPoints||[]};
+  const linkRowsRaw={results:siteAggR638.linkRows||[]};
+  const historySiteCountriesRaw={results:siteAggR638.historySite||[]};
+  const siteWeeklyRaw={results:siteAggR638.siteWeekly||[]};
+  const sitePreviousWeeklyRaw={results:siteAggR638.sitePrevious||[]};
+  const musicWeeklyRaw={results:siteAggR638.musicWeekly||[]};
+  const musicPreviousWeeklyRaw={results:siteAggR638.musicPrevious||[]};
+
+  // Push audience is tiny and the 60-minute event tail is indexed, so keep those LIVE.
+  const [pushCountriesRaw,pushPointsRaw,recentRaw,historyPushCountriesRaw,pushWeeklyRaw,pushPreviousWeeklyRaw] = await Promise.all([
     safeQueryR439(() => db.prepare(`
       SELECT country, COUNT(*) AS value
       FROM push_subscribers
@@ -3112,60 +3273,15 @@ async function handleControlEcosystemMap(request, env) {
       ORDER BY value DESC LIMIT 180
     `).all()),
     safeQueryR439(() => db.prepare(`
-      SELECT event_type AS type, COUNT(*) AS value
-      FROM site_visit_events
-      WHERE event_type IN ('telegram-open','youtube-open','spotify-open','apple-music-open','soundcloud-open','amazon-music-open')
-        AND datetime(created_at)>=datetime('now', ?)
-      GROUP BY event_type ORDER BY value DESC
-    `).bind(age).all()),
-    safeQueryR439(() => db.prepare(`
       SELECT event_type AS type, country, region, city, latitude, longitude, target, created_at AS createdAt
       FROM site_visit_events
       WHERE datetime(created_at)>=datetime('now','-60 minutes')
       ORDER BY datetime(created_at) DESC LIMIT 40
     `).all()),
-    // R450 — marker-only country history for the ALL map. No rolling date filter:
-    // once the ecosystem has seen a country, its anchor can stay visible on the overview.
-    safeQueryR439(() => db.prepare(`
-      SELECT country, COUNT(*) AS value, MAX(created_at) AS lastAt
-      FROM site_visit_events
-      WHERE country<>'' AND event_type IN ('visit','music-download','music-listen','telegram-open','youtube-open','spotify-open','apple-music-open','soundcloud-open','amazon-music-open')
-      GROUP BY country ORDER BY lastAt DESC LIMIT 180
-    `).all()),
     safeQueryR439(() => db.prepare(`
       SELECT country, COUNT(*) AS value, MAX(COALESCE(last_seen_at,created_at)) AS lastAt
       FROM push_subscribers
-      WHERE country<>''
-      GROUP BY country ORDER BY lastAt DESC LIMIT 180
-    `).all())
-  ]);
-  const [siteWeeklyRaw, sitePreviousWeeklyRaw, musicWeeklyRaw, musicPreviousWeeklyRaw, pushWeeklyRaw, pushPreviousWeeklyRaw] = await Promise.all([
-    safeQueryR439(() => db.prepare(`
-      SELECT country, COUNT(DISTINCT visitor_hash) AS value
-      FROM site_visit_events
-      WHERE event_type='visit' AND country<>'' AND datetime(created_at)>=datetime('now','-7 days')
-      GROUP BY country ORDER BY value DESC LIMIT 120
-    `).all()),
-    safeQueryR439(() => db.prepare(`
-      SELECT country, COUNT(DISTINCT visitor_hash) AS value
-      FROM site_visit_events
-      WHERE event_type='visit' AND country<>''
-        AND datetime(created_at)>=datetime('now','-14 days') AND datetime(created_at)<datetime('now','-7 days')
-      GROUP BY country ORDER BY value DESC LIMIT 120
-    `).all()),
-    safeQueryR439(() => db.prepare(`
-      SELECT country, COUNT(*) AS value
-      FROM site_visit_events
-      WHERE event_type IN ('music-download','music-listen') AND country<>''
-        AND datetime(created_at)>=datetime('now','-7 days')
-      GROUP BY country ORDER BY value DESC LIMIT 120
-    `).all()),
-    safeQueryR439(() => db.prepare(`
-      SELECT country, COUNT(*) AS value
-      FROM site_visit_events
-      WHERE event_type IN ('music-download','music-listen') AND country<>''
-        AND datetime(created_at)>=datetime('now','-14 days') AND datetime(created_at)<datetime('now','-7 days')
-      GROUP BY country ORDER BY value DESC LIMIT 120
+      WHERE country<>'' GROUP BY country ORDER BY lastAt DESC LIMIT 180
     `).all()),
     safeQueryR439(() => db.prepare(`
       SELECT country, COUNT(*) AS value
@@ -3284,7 +3400,7 @@ async function handleControlEcosystemMap(request, env) {
     updatedAt:new Date().toISOString(),
     periodDays:30,
     privacy:{ rawIpStored:false, coordinatePrecision:'0.1-degree', adminOnly:true },
-    diagnostics:{ recovery:'R452', schemaWarnings, historicalCountryAnchors:historyCountryMapR452.size, youtubeKnownCountries:youtubeKnownCountriesR452.length },
+    diagnostics:{ recovery:'R638-D1', schemaWarnings, historicalCountryAnchors:historyCountryMapR452.size, youtubeKnownCountries:youtubeKnownCountriesR452.length, d1AggregateCache:siteAggR638.d1Cache||null },
     historyCountries:[...historyCountryMapR452.values()],
     site:{
       countries:normalizeCountries(siteCountriesRaw), points:normalizePoints(sitePointsRaw),
@@ -7116,6 +7232,9 @@ async function ensurePlatformAnalyticsSchema(db) {
     `).run();
     await db.prepare(`CREATE INDEX IF NOT EXISTS idx_youtube_event_type_seen ON youtube_event_seen(event_type, first_seen_at DESC)`).run();
     await db.prepare(`CREATE INDEX IF NOT EXISTS idx_youtube_event_video ON youtube_event_seen(video_id, last_seen_at DESC)`).run();
+    // R638 D1: the fast 2-minute loader filters by event_type and sorts LAST seen,
+    // while the old composite index sorted FIRST seen. Match the real query.
+    await db.prepare(`CREATE INDEX IF NOT EXISTS idx_youtube_event_type_last_dt_r638 ON youtube_event_seen(event_type, datetime(last_seen_at) DESC)`).run().catch(() => {});
     await db.prepare(`
       CREATE TABLE IF NOT EXISTS platform_accounts (
         platform TEXT PRIMARY KEY,
@@ -7139,6 +7258,7 @@ async function ensurePlatformAnalyticsSchema(db) {
       )
     `).run();
     await db.prepare(`CREATE INDEX IF NOT EXISTS idx_platform_snapshots_platform_created ON platform_snapshots(platform, created_at DESC)`).run();
+    await db.prepare(`CREATE INDEX IF NOT EXISTS idx_platform_snapshots_platform_created_dt_r638 ON platform_snapshots(platform, datetime(created_at) DESC)`).run().catch(() => {});
     const accounts = [
       ['youtube', '', 'ANDRIK', 'https://www.youtube.com/@andrikmetal', 'connected'],
       ['instagram', '', '@andrikmetal', 'https://www.instagram.com/andrikmetal/', 'connected'],
@@ -12559,6 +12679,12 @@ async function collectDailyCityActivityR370(db, window, cutoffAt = '') {
   const windowStart = cleanPlainText(window?.startAt || '', 80);
   const windowEnd = cleanPlainText(window?.endAt || '', 80);
   if (!windowStart || !windowEnd) return [];
+  const activeWindowKey=!cutoffAt&&window?.key ? cleanPlainText(window.key,50) : '';
+  const activeCacheKey=activeWindowKey ? 'd1-cache:city-window-r638' : '';
+  if(activeCacheKey){
+    const cached=await readD1JsonCacheR638(db,activeCacheKey,D1_CITY_DAY_CACHE_MS_R638);
+    if(cached?.value?.windowKey===activeWindowKey&&Array.isArray(cached.value.rows))return cached.value.rows;
+  }
   let effectiveEnd = windowEnd;
   const cutoffMs = Date.parse(cutoffAt || '');
   const endMs = Date.parse(windowEnd);
@@ -12568,13 +12694,22 @@ async function collectDailyCityActivityR370(db, window, cutoffAt = '') {
   } else if (Number.isFinite(endMs) && endMs > Date.now()) {
     effectiveEnd = new Date().toISOString();
   }
-  return collectCityActivityWindowR395(db, windowStart, effectiveEnd, { limit:50, includePush:true });
+  const rows=await collectCityActivityWindowR395(db, windowStart, effectiveEnd, { limit:50, includePush:true });
+  if(activeCacheKey)await writeD1JsonCacheR638(db,activeCacheKey,{windowKey:activeWindowKey,rows});
+  return rows;
 }
 
-async function collectMapCityActivity30dR395(db) {
+async function collectMapCityActivity30dR395(db, options={}) {
+  const cacheKey='d1-cache:city-map-30d-r638';
+  if(!options?.force){
+    const cached=await readD1JsonCacheR638(db,cacheKey,D1_CITY_30D_CACHE_MS_R638);
+    if(Array.isArray(cached?.value))return cached.value;
+  }
   const endAt = new Date().toISOString();
   const startAt = new Date(Date.now() - 30 * 86400000).toISOString();
-  return collectCityActivityWindowR395(db, startAt, endAt, { limit:80, includePush:true, pushAllActive:true });
+  const rows=await collectCityActivityWindowR395(db, startAt, endAt, { limit:80, includePush:true, pushAllActive:true });
+  await writeD1JsonCacheR638(db,cacheKey,rows);
+  return rows;
 }
 
 function parseStoredDailySummarySnapshotR271(row, windowKey) {
@@ -13250,7 +13385,7 @@ async function handleControlGoogleAnalytics(request, env) {
     }catch(error){refreshError=cleanPlainText(error?.message||error,300);}
   }
 
-  const [liveResult,firstPartyResult]=await Promise.allSettled([getSiteLiveMetrics(db),getSiteFirstParty30dR530(db)]);
+  const [liveResult,firstPartyResult]=await Promise.allSettled([getSiteLiveMetrics(db),getSiteFirstParty30dR530(db,{force:forceRefresh})]);
   const live=liveResult.status==='fulfilled'?liveResult.value:{configured:false,today:{},realtime:{}};
   const firstParty=firstPartyResult.status==='fulfilled'?firstPartyResult.value:{configured:false,trend:[],countries:[],pages:[]};
   const hasSnapshot=Boolean(latestRow)||Boolean(latest?.configured);
