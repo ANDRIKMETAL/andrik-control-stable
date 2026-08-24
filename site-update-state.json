@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787576754277-c510d95d29",
-  "release": "R625",
-  "archiveName": "R625-WEB-PAIR-DEVICE-OAUTH-AWS-CONSOLE-1080P-SAFE-FULL.zip",
-  "sourceHead": "a840deb76919396528da5d656976c850dd0904cc",
-  "backupSha": "a840deb76919396528da5d656976c850dd0904cc",
+  "operationId": "publish-1787579632605-101afac6da",
+  "release": "R626",
+  "archiveName": "R626-WEB-DEVICE-OAUTH-LINK-NO-CONSOLE-1080P-SAFE-FULL.zip",
+  "sourceHead": "360262b9a333080d63dbb2fade35a62b35a65180",
+  "backupSha": "360262b9a333080d63dbb2fade35a62b35a65180",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-24T13:05:54.822Z"
+  "generatedAt": "2026-08-24T13:53:53.185Z"
 }

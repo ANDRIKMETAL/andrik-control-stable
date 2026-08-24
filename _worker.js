@@ -17120,6 +17120,125 @@ async function handleYoutubeDevicePairConsumeR625(request,env){
   await db.prepare(`DELETE FROM youtube_device_pair_r625 WHERE pair_code=?`).bind(code).run();
   return json({ok:true,clientId:String(row.clientId||''),clientSecret:String(row.clientSecret||''),expiresAt:String(row.expiresAt||''),oneTime:true});
 }
+
+
+// === R626: Device OAuth fully in website, AWS auto-syncs token later ===
+const YOUTUBE_DEVICE_WEB_SCOPE_R626 = 'https://www.googleapis.com/auth/youtube';
+const YOUTUBE_DEVICE_CODE_URL_R626 = 'https://oauth2.googleapis.com/device/code';
+const YOUTUBE_DEVICE_TOKEN_URL_R626 = 'https://oauth2.googleapis.com/token';
+const YOUTUBE_DEVICE_WEB_TRANSFER_TTL_R626 = 30 * 60;
+
+async function ensureYoutubeDeviceWebSchemaR626(db){
+  await db.prepare(`
+    CREATE TABLE IF NOT EXISTS youtube_device_web_r626 (
+      session_id TEXT PRIMARY KEY,
+      client_id TEXT NOT NULL,
+      client_secret TEXT NOT NULL,
+      device_code TEXT NOT NULL,
+      user_code TEXT NOT NULL,
+      verification_url TEXT NOT NULL,
+      interval_sec INTEGER NOT NULL DEFAULT 5,
+      status TEXT NOT NULL DEFAULT 'pending',
+      refresh_token TEXT NOT NULL DEFAULT '',
+      scope TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      expires_at TEXT NOT NULL,
+      authorized_at TEXT NOT NULL DEFAULT ''
+    )
+  `).run();
+  await db.prepare(`CREATE INDEX IF NOT EXISTS idx_youtube_device_web_r626_expires ON youtube_device_web_r626(expires_at)`).run().catch(()=>{});
+  await db.prepare(`CREATE INDEX IF NOT EXISTS idx_youtube_device_web_r626_client ON youtube_device_web_r626(client_id)`).run().catch(()=>{});
+}
+
+function youtubeDeviceWebSessionR626(){ return youtubeDevicePairCodeR625(24); }
+function youtubeDeviceWebSessionNormalizeR626(v){ return String(v||'').toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,40); }
+
+async function handleYoutubeDeviceWebStartR626(request,env){
+  if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
+  const db=requireDb(env); await ensureYoutubeDeviceWebSchemaR626(db);
+  const body=await request.json().catch(()=>null);
+  const clientId=String(body?.clientId||'').trim();
+  const clientSecret=String(body?.clientSecret||'').trim();
+  if(!youtubeDeviceClientIdValidR625(clientId))return json({ok:false,error:'invalid-client-id',message:'Client ID должен оканчиваться на .apps.googleusercontent.com'},400);
+  if(!youtubeDeviceClientSecretValidR625(clientSecret))return json({ok:false,error:'invalid-client-secret',message:'Client Secret выглядит неверно.'},400);
+  await db.prepare(`DELETE FROM youtube_device_web_r626 WHERE datetime(expires_at) <= datetime('now')`).run().catch(()=>{});
+  const form=new URLSearchParams({client_id:clientId,scope:YOUTUBE_DEVICE_WEB_SCOPE_R626});
+  const gr=await fetch(YOUTUBE_DEVICE_CODE_URL_R626,{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body:form.toString()});
+  const gd=await gr.json().catch(()=>({}));
+  if(!gr.ok)return json({ok:false,error:String(gd?.error||'google-device-code-failed'),message:String(gd?.error_description||gd?.error||`Google HTTP ${gr.status}`)},502);
+  const deviceCode=String(gd?.device_code||'').trim(), userCode=String(gd?.user_code||'').trim();
+  const verificationUrl=String(gd?.verification_url||gd?.verification_uri||'https://www.google.com/device').trim();
+  const interval=Math.max(5,Number(gd?.interval||5));
+  const expiresIn=Math.max(60,Math.min(1800,Number(gd?.expires_in||1800)));
+  if(!deviceCode||!userCode)return json({ok:false,error:'google-device-code-empty'},502);
+  const sessionId=youtubeDeviceWebSessionR626();
+  const expiresAt=new Date(Date.now()+expiresIn*1000).toISOString();
+  await db.prepare(`
+    INSERT INTO youtube_device_web_r626(session_id,client_id,client_secret,device_code,user_code,verification_url,interval_sec,status,refresh_token,scope,created_at,expires_at,authorized_at)
+    VALUES(?,?,?,?,?,?,?,'pending','','',datetime('now'),?,'')
+  `).bind(sessionId,clientId,clientSecret,deviceCode,userCode,verificationUrl,interval,expiresAt).run();
+  return json({ok:true,sessionId,userCode,verificationUrl,interval,expiresIn,expiresAt});
+}
+
+async function handleYoutubeDeviceWebPollR626(request,env){
+  if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
+  const db=requireDb(env); await ensureYoutubeDeviceWebSchemaR626(db);
+  const body=await request.json().catch(()=>null);
+  const sessionId=youtubeDeviceWebSessionNormalizeR626(body?.sessionId||'');
+  if(sessionId.length<12)return json({ok:false,error:'invalid-session'},400);
+  const row=await db.prepare(`SELECT * FROM youtube_device_web_r626 WHERE session_id=? LIMIT 1`).bind(sessionId).first().catch(()=>null);
+  if(!row)return json({ok:false,error:'session-not-found'},404);
+  if(String(row.status||'')==='authorized' && String(row.refresh_token||''))return json({ok:true,status:'authorized',authorized:true,authorizedAt:String(row.authorized_at||'')});
+  if(new Date(String(row.expires_at||0)).getTime()<=Date.now())return json({ok:false,error:'expired',status:'expired'},410);
+  const form=new URLSearchParams({
+    client_id:String(row.client_id||''),
+    client_secret:String(row.client_secret||''),
+    device_code:String(row.device_code||''),
+    grant_type:'urn:ietf:params:oauth:grant-type:device_code'
+  });
+  const gr=await fetch(YOUTUBE_DEVICE_TOKEN_URL_R626,{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body:form.toString()});
+  const gd=await gr.json().catch(()=>({}));
+  if(gr.ok && gd?.access_token){
+    const refresh=String(gd?.refresh_token||'').trim();
+    if(!refresh)return json({ok:false,error:'refresh-token-missing',message:'Google не вернул refresh token.'},502);
+    const authorizedAt=new Date().toISOString();
+    const transferExpiresAt=new Date(Date.now()+YOUTUBE_DEVICE_WEB_TRANSFER_TTL_R626*1000).toISOString();
+    await db.prepare(`UPDATE youtube_device_web_r626 SET status='authorized',refresh_token=?,scope=?,authorized_at=?,expires_at=?,device_code='' WHERE session_id=?`)
+      .bind(refresh,String(gd?.scope||YOUTUBE_DEVICE_WEB_SCOPE_R626),authorizedAt,transferExpiresAt,sessionId).run();
+    return json({ok:true,status:'authorized',authorized:true,authorizedAt,transferExpiresAt});
+  }
+  const err=String(gd?.error||'').trim();
+  if(err==='authorization_pending'||err==='slow_down')return json({ok:true,status:'pending',authorized:false,slowDown:err==='slow_down'});
+  if(err==='access_denied'){
+    await db.prepare(`UPDATE youtube_device_web_r626 SET status='denied' WHERE session_id=?`).bind(sessionId).run().catch(()=>{});
+    return json({ok:false,error:'access_denied',status:'denied',message:'Доступ отклонён в Google.'},403);
+  }
+  if(err==='expired_token'){
+    await db.prepare(`UPDATE youtube_device_web_r626 SET status='expired' WHERE session_id=?`).bind(sessionId).run().catch(()=>{});
+    return json({ok:false,error:'expired_token',status:'expired',message:'Код Google истёк. Начни авторизацию заново.'},410);
+  }
+  if(err==='invalid_client')return json({ok:false,error:'invalid_client',message:'Google отклонил OAuth Client. Проверь тип TVs and Limited Input devices.'},400);
+  return json({ok:false,error:err||'google-token-failed',message:String(gd?.error_description||err||`Google HTTP ${gr.status}`)},502);
+}
+
+async function handleYoutubeDeviceWebConsumeR626(request,env){
+  const db=requireDb(env); await ensureYoutubeDeviceWebSchemaR626(db);
+  const body=await request.json().catch(()=>null);
+  const clientId=String(body?.clientId||'').trim(), clientSecret=String(body?.clientSecret||'').trim();
+  if(!youtubeDeviceClientIdValidR625(clientId)||!youtubeDeviceClientSecretValidR625(clientSecret))return json({ok:false,error:'invalid-client'},400);
+  await db.prepare(`DELETE FROM youtube_device_web_r626 WHERE datetime(expires_at) <= datetime('now')`).run().catch(()=>{});
+  const row=await db.prepare(`
+    SELECT session_id AS sessionId,client_id AS clientId,client_secret AS clientSecret,refresh_token AS refreshToken,scope,authorized_at AS authorizedAt
+    FROM youtube_device_web_r626
+    WHERE client_id=? AND client_secret=? AND status='authorized' AND refresh_token<>'' AND datetime(expires_at)>datetime('now')
+    ORDER BY datetime(authorized_at) DESC LIMIT 1
+  `).bind(clientId,clientSecret).first().catch(()=>null);
+  if(!row)return json({ok:false,error:'authorized-package-not-found'},404);
+  await db.prepare(`DELETE FROM youtube_device_web_r626 WHERE session_id=?`).bind(String(row.sessionId||'')).run();
+  return json({ok:true,clientId:String(row.clientId||''),clientSecret:String(row.clientSecret||''),refreshToken:String(row.refreshToken||''),scope:String(row.scope||YOUTUBE_DEVICE_WEB_SCOPE_R626),authorizedAt:String(row.authorizedAt||''),oneTime:true});
+}
+// === End R626 website Device OAuth ===
+
 // === End R625 Device OAuth pairing bridge ===
 
 // === End R621 public-read radio visuals ===
@@ -17389,6 +17508,9 @@ async function routeApi(request, env, ctx) {
     if (path === '/api/control/music/albums/mpu/abort' && request.method === 'DELETE') return await handleMusicAlbumMultipartAbortR446(request, env);
     if (path === '/api/control/youtube-device-pair-r625/create' && request.method === 'POST') return await handleYoutubeDevicePairCreateR625(request, env);
     if (path === '/api/control/youtube-device-pair-r625/consume' && request.method === 'POST') return await handleYoutubeDevicePairConsumeR625(request, env);
+    if (path === '/api/control/youtube-device-web-r626/start' && request.method === 'POST') return await handleYoutubeDeviceWebStartR626(request, env);
+    if (path === '/api/control/youtube-device-web-r626/poll' && request.method === 'POST') return await handleYoutubeDeviceWebPollR626(request, env);
+    if (path === '/api/control/youtube-device-web-r626/consume' && request.method === 'POST') return await handleYoutubeDeviceWebConsumeR626(request, env);
     if (path === '/api/control/radio-visuals-r620' && request.method === 'PUT') return await handleRadioVisualPutR620(request, env);
     if (path === '/api/control/radio-visuals-r620/status' && request.method === 'GET') return await handleRadioVisualStatusR620(request, env);
     if (path === '/api/control/radio-visuals-r620/file' && (request.method === 'GET' || request.method === 'HEAD')) return await handleRadioVisualPrivateR622(request, env);
