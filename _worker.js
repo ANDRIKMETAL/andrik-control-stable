@@ -17424,6 +17424,138 @@ async function handlePromoVideoPublicR471(request,env,forceDownload=false){
 }
 // === End R471 promo video ===
 
+// === R627 ANDRIK Radio web remote control: Cloudflare command queue -> AWS polling agent ===
+const RADIO_REMOTE_R627 = {
+  pairPrefix:'radio-remote-r627:pair:',
+  agentKey:'radio-remote-r627:agent',
+  commandKey:'radio-remote-r627:command',
+  resultKey:'radio-remote-r627:result'
+};
+
+async function sha256HexR627(value){
+  const bytes=new TextEncoder().encode(String(value||''));
+  const hash=await crypto.subtle.digest('SHA-256',bytes);
+  return [...new Uint8Array(hash)].map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+function radioPairCodeR627(){
+  const alphabet='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const bytes=new Uint8Array(10);crypto.getRandomValues(bytes);
+  return [...bytes].map(b=>alphabet[b%alphabet.length]).join('');
+}
+function radioAgentTokenR627(){
+  const bytes=new Uint8Array(32);crypto.getRandomValues(bytes);
+  return [...bytes].map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+async function deletePushStateR627(db,key){
+  await db.prepare('DELETE FROM push_state WHERE key = ?').bind(key).run();
+}
+async function radioAgentAuthorizedR627(request,env){
+  const db=env.COMMENTS_DB;if(!db)return false;
+  const raw=String(request.headers.get('authorization')||'');
+  const token=raw.replace(/^Bearer\s+/i,'').trim();
+  if(!token)return false;
+  const row=await getPushState(db,RADIO_REMOTE_R627.agentKey).catch(()=>null);
+  if(!row?.value)return false;
+  let saved={};try{saved=JSON.parse(row.value)}catch(_){return false}
+  const supplied=await sha256HexR627(token);
+  return Boolean(saved.tokenHash&&timingSafeTextEqual(saved.tokenHash,supplied));
+}
+function parseStateValueR627(row){
+  if(!row?.value)return null;try{return JSON.parse(row.value)}catch(_){return null}
+}
+async function handleRadioRemotePairCreateR627(request,env){
+  if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
+  const db=env.COMMENTS_DB;if(!db)return json({ok:false,error:'database-not-configured'},503);
+  const code=radioPairCodeR627();
+  const expiresAt=Date.now()+15*60*1000;
+  await setPushState(db,RADIO_REMOTE_R627.pairPrefix+code,JSON.stringify({code,expiresAt,createdAt:new Date().toISOString()}));
+  return json({ok:true,code,expiresAt:new Date(expiresAt).toISOString(),command:`sudo andrik-radio-web pair ${code}`});
+}
+async function handleRadioAgentPairConsumeR627(request,env){
+  const db=env.COMMENTS_DB;if(!db)return json({ok:false,error:'database-not-configured'},503);
+  const body=await request.json().catch(()=>({}));
+  const code=String(body.code||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+  if(code.length<8)return json({ok:false,error:'invalid-code'},400);
+  const key=RADIO_REMOTE_R627.pairPrefix+code;
+  const row=await getPushState(db,key).catch(()=>null);
+  const pack=parseStateValueR627(row);
+  if(!pack||Number(pack.expiresAt||0)<Date.now()){
+    if(row)await deletePushStateR627(db,key).catch(()=>{});
+    return json({ok:false,error:'pair-code-expired-or-not-found'},404);
+  }
+  const token=radioAgentTokenR627();
+  const tokenHash=await sha256HexR627(token);
+  await setPushState(db,RADIO_REMOTE_R627.agentKey,JSON.stringify({tokenHash,pairedAt:new Date().toISOString(),lastSeen:null,version:'R627'}));
+  await deletePushStateR627(db,key).catch(()=>{});
+  return json({ok:true,token,pollUrl:'https://andrikmetal.com/api/radio-agent-r627/poll',resultUrl:'https://andrikmetal.com/api/radio-agent-r627/result'});
+}
+async function handleRadioRemoteStatusR627(request,env){
+  if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
+  const db=env.COMMENTS_DB;if(!db)return json({ok:false,error:'database-not-configured'},503);
+  const [agentRow,cmdRow,resultRow]=await Promise.all([
+    getPushState(db,RADIO_REMOTE_R627.agentKey).catch(()=>null),
+    getPushState(db,RADIO_REMOTE_R627.commandKey).catch(()=>null),
+    getPushState(db,RADIO_REMOTE_R627.resultKey).catch(()=>null)
+  ]);
+  const agent=parseStateValueR627(agentRow)||{};
+  const command=parseStateValueR627(cmdRow);
+  const result=parseStateValueR627(resultRow);
+  const lastSeenMs=Date.parse(agent.lastSeen||'')||0;
+  return json({ok:true,paired:Boolean(agent.tokenHash),online:Boolean(lastSeenMs&&Date.now()-lastSeenMs<25000),agent:{pairedAt:agent.pairedAt||null,lastSeen:agent.lastSeen||null,version:agent.version||null,status:agent.status||null},command,result});
+}
+async function handleRadioRemoteCommandR627(request,env){
+  if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
+  const db=env.COMMENTS_DB;if(!db)return json({ok:false,error:'database-not-configured'},503);
+  const body=await request.json().catch(()=>({}));
+  const action=String(body.action||'').trim().toLowerCase();
+  const allowed=new Set(['start','recover','stop','restart','status','auto-safe']);
+  if(!allowed.has(action))return json({ok:false,error:'invalid-action'},400);
+  const agent=parseStateValueR627(await getPushState(db,RADIO_REMOTE_R627.agentKey).catch(()=>null))||{};
+  if(!agent.tokenHash)return json({ok:false,error:'aws-agent-not-paired'},409);
+  const existing=parseStateValueR627(await getPushState(db,RADIO_REMOTE_R627.commandKey).catch(()=>null));
+  if(existing&&['queued','running'].includes(String(existing.state||''))){
+    const age=Date.now()-(Date.parse(existing.createdAt||'')||Date.now());
+    if(age<180000)return json({ok:false,error:'command-busy',command:existing},409);
+  }
+  const id=crypto.randomUUID();
+  const command={id,action,state:'queued',createdAt:new Date().toISOString(),requestedBy:'owner-control-r627'};
+  await setPushState(db,RADIO_REMOTE_R627.commandKey,JSON.stringify(command));
+  return json({ok:true,command});
+}
+async function handleRadioAgentPollR627(request,env){
+  if(!await radioAgentAuthorizedR627(request,env))return json({ok:false,error:'unauthorized-agent'},401);
+  const db=env.COMMENTS_DB;if(!db)return json({ok:false,error:'database-not-configured'},503);
+  const body=await request.json().catch(()=>({}));
+  const agent=parseStateValueR627(await getPushState(db,RADIO_REMOTE_R627.agentKey).catch(()=>null))||{};
+  agent.lastSeen=new Date().toISOString();agent.version=String(body.version||agent.version||'R627');
+  if(body.status&&typeof body.status==='object')agent.status=body.status;
+  await setPushState(db,RADIO_REMOTE_R627.agentKey,JSON.stringify(agent));
+  const row=await getPushState(db,RADIO_REMOTE_R627.commandKey).catch(()=>null);
+  const command=parseStateValueR627(row);
+  if(!command||command.state!=='queued')return json({ok:true,command:null});
+  command.state='running';command.claimedAt=new Date().toISOString();
+  await setPushState(db,RADIO_REMOTE_R627.commandKey,JSON.stringify(command));
+  return json({ok:true,command});
+}
+async function handleRadioAgentResultR627(request,env){
+  if(!await radioAgentAuthorizedR627(request,env))return json({ok:false,error:'unauthorized-agent'},401);
+  const db=env.COMMENTS_DB;if(!db)return json({ok:false,error:'database-not-configured'},503);
+  const body=await request.json().catch(()=>({}));
+  const id=String(body.id||'');
+  const current=parseStateValueR627(await getPushState(db,RADIO_REMOTE_R627.commandKey).catch(()=>null));
+  if(!current||current.id!==id)return json({ok:false,error:'command-id-mismatch'},409);
+  current.state=body.ok?'done':'error';current.finishedAt=new Date().toISOString();current.ok=Boolean(body.ok);
+  const output=String(body.output||'').slice(-12000);
+  const result={id,action:current.action,ok:Boolean(body.ok),finishedAt:current.finishedAt,output,status:body.status||null};
+  await Promise.all([
+    setPushState(db,RADIO_REMOTE_R627.commandKey,JSON.stringify(current)),
+    setPushState(db,RADIO_REMOTE_R627.resultKey,JSON.stringify(result))
+  ]);
+  return json({ok:true});
+}
+// === End R627 radio remote control ===
+
+
 async function routeApi(request, env, ctx) {
   const url = new URL(request.url);
   const path = url.pathname.replace(/\/+$/, '') || '/';
@@ -17511,6 +17643,13 @@ async function routeApi(request, env, ctx) {
     if (path === '/api/control/youtube-device-web-r626/start' && request.method === 'POST') return await handleYoutubeDeviceWebStartR626(request, env);
     if (path === '/api/control/youtube-device-web-r626/poll' && request.method === 'POST') return await handleYoutubeDeviceWebPollR626(request, env);
     if (path === '/api/control/youtube-device-web-r626/consume' && request.method === 'POST') return await handleYoutubeDeviceWebConsumeR626(request, env);
+    if (path === '/api/control/radio-remote-r627/pair/create' && request.method === 'POST') return await handleRadioRemotePairCreateR627(request, env);
+    if (path === '/api/control/radio-remote-r627/status' && request.method === 'GET') return await handleRadioRemoteStatusR627(request, env);
+    if (path === '/api/control/radio-remote-r627/command' && request.method === 'POST') return await handleRadioRemoteCommandR627(request, env);
+    if (path === '/api/radio-agent-r627/pair/consume' && request.method === 'POST') return await handleRadioAgentPairConsumeR627(request, env);
+    if (path === '/api/radio-agent-r627/poll' && request.method === 'POST') return await handleRadioAgentPollR627(request, env);
+    if (path === '/api/radio-agent-r627/result' && request.method === 'POST') return await handleRadioAgentResultR627(request, env);
+
     if (path === '/api/control/radio-visuals-r620' && request.method === 'PUT') return await handleRadioVisualPutR620(request, env);
     if (path === '/api/control/radio-visuals-r620/status' && request.method === 'GET') return await handleRadioVisualStatusR620(request, env);
     if (path === '/api/control/radio-visuals-r620/file' && (request.method === 'GET' || request.method === 'HEAD')) return await handleRadioVisualPrivateR622(request, env);
