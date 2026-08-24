@@ -17030,6 +17030,98 @@ async function handleRadioVisualStatusR620(request,env){
   }
   return json({ok:true,ready:Object.values(out).every(x=>x.exists&&x.size>2*1024*1024),visuals:out});
 }
+
+
+// === R625: one-time Device OAuth pairing bridge (website -> AWS) ===
+const YOUTUBE_DEVICE_PAIR_TTL_SECONDS_R625 = 15 * 60;
+const YOUTUBE_DEVICE_PAIR_ALPHABET_R625 = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+
+async function ensureYoutubeDevicePairSchemaR625(db){
+  await db.prepare(`
+    CREATE TABLE IF NOT EXISTS youtube_device_pair_r625 (
+      pair_code TEXT PRIMARY KEY,
+      client_id TEXT NOT NULL,
+      client_secret TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      expires_at TEXT NOT NULL,
+      consumed_at TEXT NOT NULL DEFAULT ''
+    )
+  `).run();
+  await db.prepare(`CREATE INDEX IF NOT EXISTS idx_youtube_device_pair_r625_expires ON youtube_device_pair_r625(expires_at)`).run().catch(()=>{});
+}
+
+function youtubeDevicePairCodeR625(length=10){
+  const bytes=new Uint8Array(length);
+  crypto.getRandomValues(bytes);
+  let out='';
+  for(const b of bytes) out+=YOUTUBE_DEVICE_PAIR_ALPHABET_R625[b % YOUTUBE_DEVICE_PAIR_ALPHABET_R625.length];
+  return out;
+}
+
+function youtubeDeviceClientIdValidR625(value){
+  const v=String(value||'').trim();
+  return v.length>=30 && v.length<=512 && /\.apps\.googleusercontent\.com$/i.test(v) && !/[\s<>]/.test(v);
+}
+function youtubeDeviceClientSecretValidR625(value){
+  const v=String(value||'').trim();
+  return v.length>=8 && v.length<=512 && !/[\r\n<>]/.test(v);
+}
+function youtubeDevicePairCodeNormalizeR625(value){
+  return String(value||'').toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,20);
+}
+
+async function handleYoutubeDevicePairCreateR625(request,env){
+  if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
+  const db=requireDb(env);
+  await ensureYoutubeDevicePairSchemaR625(db);
+  const body=await request.json().catch(()=>null);
+  const clientId=String(body?.clientId||'').trim();
+  const clientSecret=String(body?.clientSecret||'').trim();
+  if(!youtubeDeviceClientIdValidR625(clientId))return json({ok:false,error:'invalid-client-id',message:'Client ID должен оканчиваться на .apps.googleusercontent.com'},400);
+  if(!youtubeDeviceClientSecretValidR625(clientSecret))return json({ok:false,error:'invalid-client-secret',message:'Client Secret выглядит неверно.'},400);
+
+  await db.prepare(`DELETE FROM youtube_device_pair_r625 WHERE datetime(expires_at) <= datetime('now') OR consumed_at <> ''`).run().catch(()=>{});
+  let code='';
+  for(let i=0;i<8;i++){
+    const candidate=youtubeDevicePairCodeR625(10);
+    const exists=await db.prepare(`SELECT 1 AS ok FROM youtube_device_pair_r625 WHERE pair_code=? LIMIT 1`).bind(candidate).first().catch(()=>null);
+    if(!exists){code=candidate;break;}
+  }
+  if(!code)return json({ok:false,error:'pair-code-generation-failed'},503);
+  const expiresAt=new Date(Date.now()+YOUTUBE_DEVICE_PAIR_TTL_SECONDS_R625*1000).toISOString();
+  await db.prepare(`
+    INSERT INTO youtube_device_pair_r625(pair_code,client_id,client_secret,created_at,expires_at,consumed_at)
+    VALUES(?,?,?,datetime('now'),?,'')
+  `).bind(code,clientId,clientSecret,expiresAt).run();
+  return json({
+    ok:true,
+    code,
+    expiresAt,
+    expiresIn:YOUTUBE_DEVICE_PAIR_TTL_SECONDS_R625,
+    message:'Одноразовый код создан. Client ID/Secret будут удалены сразу после получения AWS.'
+  });
+}
+
+async function handleYoutubeDevicePairConsumeR625(request,env){
+  const db=requireDb(env);
+  await ensureYoutubeDevicePairSchemaR625(db);
+  const body=await request.json().catch(()=>null);
+  const code=youtubeDevicePairCodeNormalizeR625(body?.code||'');
+  if(code.length<8)return json({ok:false,error:'invalid-pair-code'},400);
+  await db.prepare(`DELETE FROM youtube_device_pair_r625 WHERE datetime(expires_at) <= datetime('now') OR consumed_at <> ''`).run().catch(()=>{});
+  const row=await db.prepare(`
+    SELECT pair_code AS pairCode, client_id AS clientId, client_secret AS clientSecret, expires_at AS expiresAt
+    FROM youtube_device_pair_r625
+    WHERE pair_code=? AND consumed_at='' AND datetime(expires_at) > datetime('now')
+    LIMIT 1
+  `).bind(code).first().catch(()=>null);
+  if(!row)return json({ok:false,error:'pair-code-not-found-or-expired'},404);
+  // Delete before returning so the credential bundle is strictly one-time.
+  await db.prepare(`DELETE FROM youtube_device_pair_r625 WHERE pair_code=?`).bind(code).run();
+  return json({ok:true,clientId:String(row.clientId||''),clientSecret:String(row.clientSecret||''),expiresAt:String(row.expiresAt||''),oneTime:true});
+}
+// === End R625 Device OAuth pairing bridge ===
+
 // === End R621 public-read radio visuals ===
 
 // === R478: native official clip "Я ЕСТЬ" in R2, browser multipart upload ===
@@ -17295,6 +17387,8 @@ async function routeApi(request, env, ctx) {
     if (path === '/api/control/music/albums/mpu/part' && request.method === 'PUT') return await handleMusicAlbumMultipartPartR446(request, env);
     if (path === '/api/control/music/albums/mpu/complete' && request.method === 'POST') return await handleMusicAlbumMultipartCompleteR446(request, env);
     if (path === '/api/control/music/albums/mpu/abort' && request.method === 'DELETE') return await handleMusicAlbumMultipartAbortR446(request, env);
+    if (path === '/api/control/youtube-device-pair-r625/create' && request.method === 'POST') return await handleYoutubeDevicePairCreateR625(request, env);
+    if (path === '/api/control/youtube-device-pair-r625/consume' && request.method === 'POST') return await handleYoutubeDevicePairConsumeR625(request, env);
     if (path === '/api/control/radio-visuals-r620' && request.method === 'PUT') return await handleRadioVisualPutR620(request, env);
     if (path === '/api/control/radio-visuals-r620/status' && request.method === 'GET') return await handleRadioVisualStatusR620(request, env);
     if (path === '/api/control/radio-visuals-r620/file' && (request.method === 'GET' || request.method === 'HEAD')) return await handleRadioVisualPrivateR622(request, env);

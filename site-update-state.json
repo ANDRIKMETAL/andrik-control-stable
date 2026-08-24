@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787572948547-8ef6ae9c54",
-  "release": "R624",
-  "archiveName": "R624-AWS-CONSOLE-ONE-BUTTON-LIVE-DEVICE-OAUTH-1080P-SAFE-FULL.zip",
-  "sourceHead": "cbb07582172f8eb3255adf4e1f45af733ddbca36",
-  "backupSha": "cbb07582172f8eb3255adf4e1f45af733ddbca36",
+  "operationId": "publish-1787576754277-c510d95d29",
+  "release": "R625",
+  "archiveName": "R625-WEB-PAIR-DEVICE-OAUTH-AWS-CONSOLE-1080P-SAFE-FULL.zip",
+  "sourceHead": "a840deb76919396528da5d656976c850dd0904cc",
+  "backupSha": "a840deb76919396528da5d656976c850dd0904cc",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-24T12:02:29.410Z"
+  "generatedAt": "2026-08-24T13:05:54.822Z"
 }
