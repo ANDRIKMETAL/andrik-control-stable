@@ -76,6 +76,7 @@ NIGHT_VISUAL=$NIGHT_VISUAL
 QR_OVERLAY=$APP_DIR/assets/andrik-qr-r612.png
 VISUAL_TIME_ZONE=Europe/Bratislava
 OUTPUT_TIMESHIFT_SECONDS=6
+TIMESTAMP_GUARD_SECONDS=0.06
 VIDEO_BITRATE=1000k
 AUDIO_BITRATE=128k
 PORT=8080
@@ -88,7 +89,7 @@ unset YOUTUBE_STREAM_KEY
 echo "[4/7] systemd 24/7..."
 cat > "$SERVICE_FILE" <<EOF
 [Unit]
-Description=ANDRIK Metal Radio 24/7 - R612 STABLE FIFO QR
+Description=ANDRIK Metal Radio 24/7 - R614 TIMESTAMP CONTINUITY QR
 After=network-online.target
 Wants=network-online.target
 
@@ -170,7 +171,7 @@ fi
 curl -fsS --max-time 5 http://127.0.0.1:8080/status || true
 echo
 echo "============================================================"
-echo "ANDRIK RADIO R612-STABLE-FIFO-QR установлено."
+echo "ANDRIK RADIO R614-TIMESTAMP-CONTINUITY-QR установлено."
 echo "Видео: 08:00 день / 17:00 вечер / 22:00 ночь · H.264 loop."
 echo "Аудио: только MP3 активных альбомов; OCEAN и Illusion of Life выключены; клипы выключены."
 echo "Оверлей: QR andrikmetal.com слева сверху + текущий трек в жёлтой плашке + бегущая строка; отдельный NEXT убран."

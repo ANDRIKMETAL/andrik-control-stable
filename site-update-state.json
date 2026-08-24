@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787531824412-c67021b4b5",
-  "release": "R613",
-  "archiveName": "R613-QR-STREAM-ONLY-HOMEPAGE-CLEAN-STABLE-SAFE-FULL.zip",
-  "sourceHead": "c44f719612b67ed76c590182f43a1b0977520bac",
-  "backupSha": "c44f719612b67ed76c590182f43a1b0977520bac",
+  "operationId": "publish-1787545773982-b0a8c66e00",
+  "release": "R615",
+  "archiveName": "R615-AUTO-SINGLES-DEDUPE-TIMESTAMP-SAFE-FULL.zip",
+  "sourceHead": "1da635acc87cd7a872056cef8f4f23cd53472935",
+  "backupSha": "1da635acc87cd7a872056cef8f4f23cd53472935",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-24T00:37:04.412Z"
+  "generatedAt": "2026-08-24T04:29:34.391Z"
 }

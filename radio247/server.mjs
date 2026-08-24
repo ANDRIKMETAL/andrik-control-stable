@@ -28,8 +28,10 @@ const EVENING_VISUAL = process.env.EVENING_VISUAL || new URL('./assets/stream-ev
 const NIGHT_VISUAL = process.env.NIGHT_VISUAL || new URL('./assets/stream-night-r607.mp4', import.meta.url).pathname;
 const QR_OVERLAY = process.env.QR_OVERLAY || new URL('../assets/andrik-qr-r612.png', import.meta.url).pathname;
 const OUTPUT_TIMESHIFT_SECONDS = Number(process.env.OUTPUT_TIMESHIFT_SECONDS || 6);
+const TIMESTAMP_GUARD_SECONDS = Number(process.env.TIMESTAMP_GUARD_SECONDS || 0.06);
 const VIDEO_BITRATE = process.env.VIDEO_BITRATE || '1000k';
 const AUDIO_BITRATE = process.env.AUDIO_BITRATE || '128k';
+const LIBRARY_REFRESH_MS = Math.max(60000, Number(process.env.LIBRARY_REFRESH_MS || 120000));
 const DISABLED_ALBUM_PREFIXES = Object.freeze([
   'albums/illusion-of-life/',
   'albums/ocean/'
@@ -37,8 +39,8 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R612-STABLE-FIFO-QR-DAYPART-MP3-ONLY',
-  mode: 'STABLE / 480p24 ~1.15Mbps / 6s OUTPUT FIFO / RTMPS RECOVERY / LOCAL MP3 CACHE + 2-TRACK PREFETCH / DAYPART VISUALS + QR',
+  version: 'R615-AUTO-SINGLES-DEDUPE-TIMESTAMP-CONTINUITY',
+  mode: 'AUTO SINGLES + CROSS-CATALOG DEDUPE / TIMESTAMP CONTINUITY FIX / 480p24 ~1.15Mbps / 6s OUTPUT FIFO / RTMPS RECOVERY / LOCAL MP3 CACHE + 2-TRACK PREFETCH / DAYPART VISUALS + QR',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
@@ -49,6 +51,9 @@ const state = {
   visualPeriod: null,
   visualPath: null,
   libraryTracks: 0,
+  libraryAlbumTracks: 0,
+  librarySingleTracks: 0,
+  duplicateSinglesSkipped: 0,
   libraryVideos: 0,
   cycle: 0,
   queueLength: 0,
@@ -102,39 +107,158 @@ function albumName(item){
   const album=cleanText(item.album||'');
   if(album)return album;
   const key=String(item.key||'');
+  if(/^singles\//i.test(key))return 'СИНГЛ';
   const m=/^albums\/([^/]+)\//i.exec(key);
   return m ? m[1].replace(/[_-]+/g,' ') : 'ANDRIK';
 }
 
-async function loadLibrary(){
-  const url=`${PLAYLIST_URL}${PLAYLIST_URL.includes('?')?'&':'?'}ts=${Date.now()}`;
-  const response=await fetch(url,{headers:{'user-agent':'ANDRIK-Radio-24-7-R612'}});
-  if(!response.ok)throw new Error(`R2 library HTTP ${response.status}`);
+function identityText(value){
+  return cleanText(value)
+    .replace(/\s*[\[(]\s*(?:beyond|trika|трика|ocean|illusion of life|синглы andrik|singles andrik)\s*[\])]\s*$/iu,'')
+    .replace(/^andrik\s*[-–—:|]\s*/iu,'')
+    .normalize('NFKD')
+    .replace(/\p{M}+/gu,'')
+    .toLocaleLowerCase('ru-RU')
+    .replace(/[^\p{L}\p{N}]+/gu,' ')
+    .replace(/\s+/g,' ')
+    .trim();
+}
 
-  const data=await response.json();
-  const source=Array.isArray(data.tracks)?data.tracks:[];
-  const albums=uniqueByUrl(source.filter(item=>{
-    const key=String(item?.key||'');
-    const url=String(item?.url||'');
-    const keyLower=key.toLowerCase();
-    const disabled=DISABLED_ALBUM_PREFIXES.some(prefix=>keyLower.startsWith(prefix));
-    return /^albums\//i.test(key) && !disabled && /^https:\/\//i.test(url) && /\.mp3(?:$|\?)/i.test(url);
-  }).map(item=>({
+function keyBaseName(item){
+  return String(item?.key||'')
+    .split('/')
+    .pop()
+    .replace(/\.mp3$/i,'')
+    .replace(/[_-]+/g,' ');
+}
+
+function identityCandidates(item){
+  const out=[];
+  const title=identityText(item?.title||item?.name||'');
+  const base=identityText(keyBaseName(item));
+  if(title && !/^track \d+$/i.test(title))out.push(`title:${title}`);
+  if(base && !/^track \d+$/i.test(base))out.push(`file:${base}`);
+  return [...new Set(out)];
+}
+
+function primaryIdentity(item){
+  return identityCandidates(item)[0] || `url:${String(item?.url||'')}`;
+}
+
+function prepareTrack(item,sourceType){
+  const track={
     type:'track',
+    sourceType,
     title:cleanText(item.title||item.name||'ANDRIK'),
     album:albumName(item),
     track:cleanText(item.track||''),
     key:String(item.key||''),
     url:String(item.url||'')
-  })));
+  };
+  track.identity=primaryIdentity(track);
+  return track;
+}
 
-  if(!albums.length)throw new Error('R2 active MP3 library is empty');
+function mergeAlbumsAndSingles(albums,singles){
+  // Album copy wins over the single copy. This means a single can play immediately
+  // after upload, but once the same song appears in an active album it is heard only once.
+  const albumIds=new Set(albums.flatMap(identityCandidates));
+  const singleIds=new Set();
+  const keptSingles=[];
+  let skipped=0;
 
-  library=albums;
-  state.libraryTracks=albums.length;
+  for(const item of singles){
+    const ids=identityCandidates(item);
+    if(ids.some(id=>albumIds.has(id)) || ids.some(id=>singleIds.has(id))){
+      skipped++;
+      continue;
+    }
+    ids.forEach(id=>singleIds.add(id));
+    keptSingles.push(item);
+  }
+  return {tracks:[...albums,...keptSingles],singles:keptSingles,skipped};
+}
+
+function librarySignature(items){
+  return items.map(item=>`${item.url}|${item.identity}`).sort().join('\n');
+}
+
+async function loadLibrary(){
+  const previousSignature=librarySignature(library);
+  const url=`${PLAYLIST_URL}${PLAYLIST_URL.includes('?')?'&':'?'}ts=${Date.now()}`;
+  const response=await fetch(url,{headers:{'user-agent':'ANDRIK-Radio-24-7-R615'}});
+  if(!response.ok)throw new Error(`R2 library HTTP ${response.status}`);
+
+  const data=await response.json();
+  const source=Array.isArray(data.tracks)?data.tracks:[];
+  const validMp3=item=>{
+    const url=String(item?.url||'');
+    return /^https:\/\//i.test(url) && /\.mp3(?:$|\?)/i.test(url);
+  };
+
+  const albums=uniqueByUrl(source.filter(item=>{
+    const key=String(item?.key||'');
+    const keyLower=key.toLowerCase();
+    const disabled=DISABLED_ALBUM_PREFIXES.some(prefix=>keyLower.startsWith(prefix));
+    return /^albums\//i.test(key) && !disabled && validMp3(item);
+  }).map(item=>prepareTrack(item,'album')));
+
+  const singles=uniqueByUrl(source.filter(item=>{
+    const key=String(item?.key||'');
+    return /^singles\/[^/]+\.mp3$/i.test(key) && validMp3(item);
+  }).map(item=>prepareTrack(item,'single')));
+
+  const merged=mergeAlbumsAndSingles(albums,singles);
+  if(!merged.tracks.length)throw new Error('R2 active MP3 library is empty');
+
+  library=merged.tracks;
+  state.libraryTracks=library.length;
+  state.libraryAlbumTracks=albums.length;
+  state.librarySingleTracks=merged.singles.length;
+  state.duplicateSinglesSkipped=merged.skipped;
   state.libraryVideos=0;
   state.lastLibraryRefresh=new Date().toISOString();
-  return library;
+  const changed=previousSignature!==librarySignature(library);
+  return {library,changed};
+}
+
+function addIdentityCandidates(target,item){
+  for(const id of identityCandidates(item))target.add(id);
+  if(!identityCandidates(item).length)target.add(primaryIdentity(item));
+}
+
+function identityAlreadySeen(target,item){
+  const ids=identityCandidates(item);
+  return ids.length ? ids.some(id=>target.has(id)) : target.has(primaryIdentity(item));
+}
+
+function reconcileQueueWithLibrary(){
+  if(!queue.length)return;
+
+  const played=queue.slice(0,queueIndex);
+  const playedIds=new Set();
+  played.forEach(item=>addIdentityCandidates(playedIds,item));
+  const liveByUrl=new Map(library.map(item=>[item.url,item]));
+  const remaining=[];
+  const remainingIds=new Set();
+
+  for(const oldItem of queue.slice(queueIndex)){
+    const live=liveByUrl.get(oldItem.url);
+    if(!live)continue;
+    if(identityAlreadySeen(playedIds,live)||identityAlreadySeen(remainingIds,live))continue;
+    remaining.push(live);
+    addIdentityCandidates(remainingIds,live);
+  }
+
+  const additions=[];
+  for(const item of library){
+    if(identityAlreadySeen(playedIds,item)||identityAlreadySeen(remainingIds,item))continue;
+    additions.push(item);
+    addIdentityCandidates(remainingIds,item);
+  }
+
+  queue=[...played,...shuffle([...remaining,...additions])];
+  state.queueLength=queue.length;
 }
 
 function buildQueue(){
@@ -295,7 +419,7 @@ async function ensureScheduledVisual(){
   const period=visualPeriodForHour(localHourInTimeZone());
   const path=period==='day' ? DAY_VISUAL : period==='evening' ? EVENING_VISUAL : NIGHT_VISUAL;
   if(!existsSync(path) || statSync(path).size<500000){
-    throw new Error(`R612 ${period} visual missing or too small: ${path}`);
+    throw new Error(`R615 ${period} visual missing or too small: ${path}`);
   }
   state.visualPeriod=period;
   state.visualPath=path;
@@ -376,7 +500,7 @@ function producerArgs(item,duration,offset,visualPath,previous,next){
   const curPath=ffFilterPath(currentFile), tickerPath=ffFilterPath(tickerFile);
 
   if(!existsSync(QR_OVERLAY) || statSync(QR_OVERLAY).size<20000){
-    throw new Error(`R612 QR overlay missing or too small: ${QR_OVERLAY}`);
+    throw new Error(`R615 QR overlay missing or too small: ${QR_OVERLAY}`);
   }
 
   const baseVf=[
@@ -415,7 +539,8 @@ function producerArgs(item,duration,offset,visualPath,previous,next){
     '-af','aresample=48000:async=1:first_pts=0',
     '-c:a','aac','-profile:a','aac_low','-b:a',AUDIO_BITRATE,'-ar','48000','-ac','2',
     '-flush_packets','1',
-    '-output_ts_offset',offset.toFixed(3),'-mpegts_flags','+resend_headers','-f','mpegts','pipe:1'
+    '-muxdelay','0','-muxpreload','0',
+    '-output_ts_offset',offset.toFixed(6),'-mpegts_flags','+resend_headers+initial_discontinuity','-f','mpegts','pipe:1'
   ]};
 }
 
@@ -454,7 +579,10 @@ async function playItem(previous,item,next,following,localAudioPath){
     for(const path of spec.tempFiles){try{unlinkSync(path);}catch(_){ }}
   }
 
-  timelineOffset += duration;
+  // R614: keep every new MPEG-TS segment strictly after the previous one.
+  // MP3 duration can be estimated a few milliseconds short and AAC/H.264 packet grids
+  // can otherwise overlap at a track boundary, producing Non-monotonic DTS in FLV/RTMPS.
+  timelineOffset += duration + TIMESTAMP_GUARD_SECONDS;
 }
 
 async function radioLoop(){
@@ -467,8 +595,9 @@ async function radioLoop(){
   while(!stopping){
     try{
       const refreshAt=Date.parse(state.lastLibraryRefresh||0);
-      if(!library.length || !refreshAt || Date.now()-refreshAt>30*60*1000){
-        await loadLibrary();
+      if(!library.length || !refreshAt || Date.now()-refreshAt>LIBRARY_REFRESH_MS){
+        const refreshed=await loadLibrary();
+        if(refreshed.changed && queue.length)reconcileQueueWithLibrary();
       }
 
       if(!queue.length || queueIndex>=queue.length){
@@ -525,6 +654,10 @@ function publicStatus(){
     publisherRunning:state.publisherRunning,
     producerRunning:state.producerRunning,
     libraryTracks:state.libraryTracks,
+    libraryAlbumTracks:state.libraryAlbumTracks,
+    librarySingleTracks:state.librarySingleTracks,
+    duplicateSinglesSkipped:state.duplicateSinglesSkipped,
+    libraryRefreshSeconds:Math.round(LIBRARY_REFRESH_MS/1000),
     libraryVideos:state.libraryVideos,
     cycle:state.cycle,
     queueLength:state.queueLength,
@@ -561,6 +694,10 @@ const server=http.createServer((req,res)=>{
     res.end(JSON.stringify({
       ok:true,
       tracks:state.libraryTracks,
+      albumTracks:state.libraryAlbumTracks,
+      singleTracks:state.librarySingleTracks,
+      duplicateSinglesSkipped:state.duplicateSinglesSkipped,
+      libraryRefreshSeconds:Math.round(LIBRARY_REFRESH_MS/1000),
       videos:state.libraryVideos,
       total:library.length,
       mode:state.mode,
@@ -576,7 +713,7 @@ const server=http.createServer((req,res)=>{
 });
 
 server.listen(PORT,'0.0.0.0',()=>{
-  console.log(`ANDRIK Radio R612-STABLE-FIFO-QR listening on :${PORT}`);
+  console.log(`ANDRIK Radio R615-AUTO-SINGLES-DEDUPE listening on :${PORT}`);
   radioLoop();
 });
 
