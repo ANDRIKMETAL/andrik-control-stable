@@ -40,3 +40,7 @@ sudo andrik-youtube auth
 
 ## R621 public radio visual proxy
 AWS no longer reads the private R2 custom domain directly. Only day/evening/night masters are exposed read-only through `/api/media/radio-visual-r621`; uploads stay ADMIN_KEY protected.
+
+
+## R622 private master pull
+AWS downloads the three daypart masters once through an ADMIN_KEY-protected endpoint, validates them, then restarts with persistent local copies.

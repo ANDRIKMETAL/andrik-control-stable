@@ -19,14 +19,14 @@ const PLAYLIST_URL = process.env.PLAYLIST_URL || 'https://andrikmetal.com/api/mu
 const STREAM_KEY = String(process.env.YOUTUBE_STREAM_KEY || '').trim();
 const STREAM_URL = STREAM_KEY ? `rtmps://a.rtmps.youtube.com:443/live2/${STREAM_KEY}` : '';
 const YOUTUBE_LIVE_URL = process.env.YOUTUBE_LIVE_URL || 'https://www.youtube.com/@andrikmetal/live';
-const CACHE_DIR = process.env.RADIO_CACHE_DIR || '/tmp/andrik-radio-r611';
+const CACHE_DIR = process.env.RADIO_CACHE_DIR || '/var/cache/andrik-radio-r622';
 const AUDIO_CACHE_DIR = `${CACHE_DIR}/audio`;
 const VISUAL_CACHE_DIR = `${CACHE_DIR}/visuals`;
 const MAX_CACHED_TRACKS = 7;
 const VISUAL_TIME_ZONE = process.env.VISUAL_TIME_ZONE || 'Europe/Bratislava';
-const DAY_VISUAL_URL = process.env.DAY_VISUAL_URL || 'https://andrikmetal.com/api/media/radio-visual-r621?slot=day&download=1';
-const EVENING_VISUAL_URL = process.env.EVENING_VISUAL_URL || 'https://andrikmetal.com/api/media/radio-visual-r621?slot=evening&download=1';
-const NIGHT_VISUAL_URL = process.env.NIGHT_VISUAL_URL || 'https://andrikmetal.com/api/media/radio-visual-r621?slot=night&download=1';
+const DAY_VISUAL_URL = process.env.DAY_VISUAL_URL || '/var/cache/andrik-radio-r622/visuals/stream-day-master-r620.mp4';
+const EVENING_VISUAL_URL = process.env.EVENING_VISUAL_URL || '/var/cache/andrik-radio-r622/visuals/stream-evening-master-r620.mp4';
+const NIGHT_VISUAL_URL = process.env.NIGHT_VISUAL_URL || '/var/cache/andrik-radio-r622/visuals/stream-night-master-r620.mp4';
 const DAY_VISUAL = process.env.DAY_VISUAL || `${VISUAL_CACHE_DIR}/stream-day-master-r620.mp4`;
 const EVENING_VISUAL = process.env.EVENING_VISUAL || `${VISUAL_CACHE_DIR}/stream-evening-master-r620.mp4`;
 const NIGHT_VISUAL = process.env.NIGHT_VISUAL || `${VISUAL_CACHE_DIR}/stream-night-master-r620.mp4`;
@@ -44,8 +44,8 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R621-PUBLIC-R2-PROXY-1080P25-AUDIO-CLEAN-LIVE-TARGET-DEVICE-OAUTH',
-  mode: 'AUTO SINGLES + DEDUPE / R2 MASTER VISUAL CACHE / 1080p25 / 6s OUTPUT FIFO / RTMPS RECOVERY / LOCAL MP3 CACHE + 2-TRACK PREFETCH / DAYPART VISUALS + QR',
+  version: 'R622-PRIVATE-R2-PULL-1080P25-AUDIO-CLEAN-LIVE-TARGET-DEVICE-OAUTH',
+  mode: 'AUTO SINGLES + DEDUPE / PRIVATE R2 MASTER -> LOCAL AWS CACHE / 1080p25 / 6s OUTPUT FIFO / RTMPS RECOVERY / LOCAL MP3 CACHE + 2-TRACK PREFETCH / DAYPART VISUALS + QR',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
@@ -459,7 +459,7 @@ async function ensureVisualSpec(spec){
   }catch(_){}
   if(/^https:\/\//i.test(spec.url||''))return downloadVisualToCache(spec.url,spec.path,spec.period);
   if(existsSync(spec.url||'') && statSync(spec.url).size>500000)return spec.url;
-  throw new Error(`R621 ${spec.period} visual unavailable: ${spec.url||spec.path}`);
+  throw new Error(`R622 ${spec.period} visual unavailable: ${spec.url||spec.path}`);
 }
 
 function prefetchAllVisuals(){
@@ -480,7 +480,7 @@ async function ensureScheduledVisual(){
     return path;
   }catch(error){
     if(existsSync(EMERGENCY_VISUAL) && statSync(EMERGENCY_VISUAL).size>300000){
-      state.lastError=`R621 ${period} R2 visual fallback: ${cleanText(error?.message||error)}`;
+      state.lastError=`R622 ${period} local visual fallback: ${cleanText(error?.message||error)}`;
       state.visualPeriod=`${period}-emergency`;
       state.visualPath=EMERGENCY_VISUAL;
       return EMERGENCY_VISUAL;
@@ -776,7 +776,7 @@ const server=http.createServer((req,res)=>{
 });
 
 server.listen(PORT,'0.0.0.0',()=>{
-  console.log(`ANDRIK Radio R621-R2-PROXY-1080P-AUDIO-CLEAN listening on :${PORT}`);
+  console.log(`ANDRIK Radio R622-PRIVATE-R2-PULL-1080P-AUDIO-CLEAN listening on :${PORT}`);
   radioLoop();
 });
 

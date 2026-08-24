@@ -17008,6 +17008,18 @@ async function handleRadioVisualPublicR621(request,env){
     filename:`ANDRIK-radio-${slot}-master-r620.mp4`
   });
 }
+// R622: AWS pulls the masters through an authenticated control endpoint.
+// This avoids public R2/Access/WAF rules entirely while keeping the bucket private.
+async function handleRadioVisualPrivateR622(request,env){
+  if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
+  const slot=radioVisualSlotR620(request);
+  if(!slot)return json({ok:false,error:'invalid-slot',allowed:['day','evening','night']},400);
+  const key=RADIO_VISUAL_KEYS_R620[slot];
+  return serveVideoObjectR559(request,env,key,{
+    download:true,
+    filename:`ANDRIK-radio-${slot}-master-r620.mp4`
+  });
+}
 async function handleRadioVisualStatusR620(request,env){
   if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
   const bucket=getMusicBucketR314(env);if(!bucket)return json({ok:false,error:'music-bucket-not-configured'},503);
@@ -17284,6 +17296,7 @@ async function routeApi(request, env, ctx) {
     if (path === '/api/control/music/albums/mpu/abort' && request.method === 'DELETE') return await handleMusicAlbumMultipartAbortR446(request, env);
     if (path === '/api/control/radio-visuals-r620' && request.method === 'PUT') return await handleRadioVisualPutR620(request, env);
     if (path === '/api/control/radio-visuals-r620/status' && request.method === 'GET') return await handleRadioVisualStatusR620(request, env);
+    if (path === '/api/control/radio-visuals-r620/file' && (request.method === 'GET' || request.method === 'HEAD')) return await handleRadioVisualPrivateR622(request, env);
     if (path === '/api/media/radio-visual-r621' && (request.method === 'GET' || request.method === 'HEAD')) return await handleRadioVisualPublicR621(request, env);
     if (path === '/api/control/media/ya-est-r478/mpu/start' && request.method === 'POST') return await handleYaEstVideoMpuStartR478(request, env);
     if (path === '/api/control/media/ya-est-r478/mpu/part' && request.method === 'PUT') return await handleYaEstVideoMpuPartR478(request, env);
