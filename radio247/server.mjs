@@ -24,12 +24,15 @@ const AUDIO_CACHE_DIR = `${CACHE_DIR}/audio`;
 const VISUAL_CACHE_DIR = `${CACHE_DIR}/visuals`;
 const MAX_CACHED_TRACKS = 7;
 const VISUAL_TIME_ZONE = process.env.VISUAL_TIME_ZONE || 'Europe/Bratislava';
-const DAY_VISUAL_URL = process.env.DAY_VISUAL_URL || '/var/cache/andrik-radio-r622/visuals/stream-day-master-r620.mp4';
-const EVENING_VISUAL_URL = process.env.EVENING_VISUAL_URL || '/var/cache/andrik-radio-r622/visuals/stream-evening-master-r620.mp4';
-const NIGHT_VISUAL_URL = process.env.NIGHT_VISUAL_URL || '/var/cache/andrik-radio-r622/visuals/stream-night-master-r620.mp4';
-const DAY_VISUAL = process.env.DAY_VISUAL || `${VISUAL_CACHE_DIR}/stream-day-master-r620.mp4`;
-const EVENING_VISUAL = process.env.EVENING_VISUAL || `${VISUAL_CACHE_DIR}/stream-evening-master-r620.mp4`;
-const NIGHT_VISUAL = process.env.NIGHT_VISUAL || `${VISUAL_CACHE_DIR}/stream-night-master-r620.mp4`;
+// R643: keep every R642 D1/app/push fix, but restore the proven full-frame
+// R613/R607 day/evening/night visuals. R620 master files contain baked-in black
+// letterbox bars, so stale AWS/R2 visual env values must not be allowed to win.
+const DAY_VISUAL = new URL('./assets/stream-day-r607.mp4', import.meta.url).pathname;
+const EVENING_VISUAL = new URL('./assets/stream-evening-r607.mp4', import.meta.url).pathname;
+const NIGHT_VISUAL = new URL('./assets/stream-night-r607.mp4', import.meta.url).pathname;
+const DAY_VISUAL_URL = DAY_VISUAL;
+const EVENING_VISUAL_URL = EVENING_VISUAL;
+const NIGHT_VISUAL_URL = NIGHT_VISUAL;
 const EMERGENCY_VISUAL = process.env.EMERGENCY_VISUAL || new URL('../assets/live-eye-r223.mp4', import.meta.url).pathname;
 const QR_OVERLAY = process.env.QR_OVERLAY || new URL('../assets/andrik-qr-r612.png', import.meta.url).pathname;
 const OUTPUT_TIMESHIFT_SECONDS = 6; // R637: network recovery cushion; packets are NEVER dropped
@@ -49,13 +52,13 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R641-COVER-CROP-1080P25-NODROP',
-  mode: 'AUTO SINGLES + DEDUPE / ONE LONG-LIVED 1080p25 ENCODER / CONTINUOUS PCM / ONE AAC CLOCK / NO TS CONCAT / NO PACKET DROP / LIVE TICKER + QR / COVER+CROP 16:9',
+  version: 'R643-D1-FINAL-R607-FULLFRAME-1080P-CONTINUOUS-AUDIO',
+  mode: 'R642 D1+APP RESTORE / R607 FULL-FRAME VISUALS / 1080p25 / CONTINUOUS PCM + ONE AAC CLOCK / NO PACKET DROP / LIVE TICKER + QR',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
   producerRunning: false,
-  overlayMode: 'QR TOP-LEFT / YELLOW TRACK TEXT WITH BLACK OUTLINE / LIVE TICKER / FULLSCREEN 16:9 COVER+CROP / NO BARS',
+  overlayMode: 'R607 DAY/EVENING/NIGHT FULL-FRAME / COVER+CROP 1920x1080 / QR / YELLOW TRACK + LIVE TICKER / NO BLACK BARS',
   audioMode: 'LOCAL MP3 CACHE + 2-TRACK PREFETCH / MP3→PCM 44.1kHz / ONE LONG-LIVED AAC-LC 128kbps ENCODER / CONTINUOUS SAMPLE CLOCK',
   visualTimeZone: VISUAL_TIME_ZONE,
   visualPeriod: null,
@@ -516,7 +519,7 @@ function startPublisher(visualPath){
   const curPath=ffFilterPath(LIVE_CURRENT_FILE);
   const tickerPath=ffFilterPath(LIVE_TICKER_FILE);
   const vf=[
-    'scale=1920:1080:force_original_aspect_ratio=increase:flags=fast_bilinear',
+    'scale=1920:1080:force_original_aspect_ratio=increase:flags=lanczos',
     'crop=1920:1080',
     'setsar=1',
     `fps=${VIDEO_FPS}`,
@@ -760,7 +763,7 @@ const server=http.createServer((req,res)=>{
 });
 
 server.listen(PORT,'0.0.0.0',()=>{
-  console.log(`ANDRIK Radio R637-CONTINUOUS-PCM-ONE-AAC-1080P25-NODROP listening on :${PORT}`);
+  console.log(`ANDRIK Radio R643-D1-FINAL-R607-FULLFRAME-1080P-CONTINUOUS-AUDIO listening on :${PORT}`);
   radioLoop();
 });
 
