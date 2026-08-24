@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787590066359-283d199a0d",
-  "release": "R633",
-  "archiveName": "R633-FRESH-BROADCAST-EXACT-STREAM-BIND-HEARTBEAT-AUDIO-STABLE-SAFE-FULL.zip",
-  "sourceHead": "1d05a34f7adffa5ec46dcc9088501bd61e8fc4e9",
-  "backupSha": "1d05a34f7adffa5ec46dcc9088501bd61e8fc4e9",
+  "operationId": "publish-1787590474314-f95c730e4b",
+  "release": "R634",
+  "archiveName": "R634-FAST-STOP-FRESH-BROADCAST-AUDIO-STABLE-SAFE-FULL.zip",
+  "sourceHead": "2bb156e758c9cb8e6806a0a21edaea27dbe2589c",
+  "backupSha": "2bb156e758c9cb8e6806a0a21edaea27dbe2589c",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-24T16:47:46.758Z"
+  "generatedAt": "2026-08-24T16:54:34.951Z"
 }
