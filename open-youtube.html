@@ -27,48 +27,21 @@ background:#e62117;color:#fff;text-decoration:none;font-size:20px;font-weight:90
 </main>
 <script>
 (()=>{
-  const fallback='https://www.youtube.com/@andrikmetal/live';
   const api='/api/public/youtube-live-target';
+  const fallback='/radio-live';
   const go=document.getElementById('go');
-  let target=fallback;
-
+  const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   function videoId(rawUrl){
-    try{
-      const u=new URL(rawUrl,location.href),host=u.hostname.toLowerCase();
-      if(host==='youtu.be')return u.pathname.split('/').filter(Boolean)[0]||'';
-      if(host.endsWith('youtube.com')){
-        const v=u.searchParams.get('v');if(v)return v;
-        const p=u.pathname.split('/').filter(Boolean);if(['live','shorts','embed'].includes(p[0]))return p[1]||'';
-      }
-    }catch(_){}
-    return '';
+    try{const u=new URL(rawUrl,location.href),h=u.hostname.toLowerCase();if(h==='youtu.be')return u.pathname.split('/').filter(Boolean)[0]||'';if(h.endsWith('youtube.com')){const v=u.searchParams.get('v');if(v)return v;const p=u.pathname.split('/').filter(Boolean);if(['live','shorts','embed'].includes(p[0]))return p[1]||''}}catch(_){}return '';
   }
-
-  async function resolveLive(fresh=true){
-    try{
-      const r=await fetch(`${api}?fresh=${fresh?'1':'0'}&ts=${Date.now()}`,{cache:'no-store',headers:{accept:'application/json'}});
-      const d=await r.json().catch(()=>({}));
-      const u=String(d?.watchUrl||'');
-      if(r.ok&&d?.active!==false&&videoId(u)){target=u;go.href=u;return u}
-    }catch(_){}
-    target=fallback;go.href=fallback;return fallback;
+  async function resolveLive(retry=false){
+    for(const wait of retry?[0,450,900]:[0]){if(wait)await sleep(wait);try{const r=await fetch(`${api}?fresh=1&ts=${Date.now()}`,{cache:'no-store',headers:{accept:'application/json'}});const d=await r.json().catch(()=>({}));const id=String(d?.videoId||videoId(d?.watchUrl)||'').trim();if(r.ok&&d?.active===true&&id)return {id,url:`https://www.youtube.com/watch?v=${encodeURIComponent(id)}`}}catch(_){}}
+    return null;
   }
-
-  go.addEventListener('click',async e=>{
-    e.preventDefault();
-    const live=await resolveLive(true);
-    const id=videoId(live);
-    if(/Android/i.test(navigator.userAgent||'')&&id){
-      let left=false;const mark=()=>{left=true};
-      document.addEventListener('visibilitychange',()=>{if(document.hidden)mark()},{once:true});
-      window.addEventListener('pagehide',mark,{once:true});window.addEventListener('blur',mark,{once:true});
-      location.href=`vnd.youtube:${id}`;
-      setTimeout(()=>{if(!left&&!document.hidden)location.href=live},1200);
-      return;
-    }
-    location.href=live;
-  });
-  resolveLive(false);
+  function intent(x){return `intent://www.youtube.com/watch?v=${encodeURIComponent(x.id)}#Intent;scheme=https;S.browser_fallback_url=${encodeURIComponent(x.url)};end`}
+  go.href=fallback;
+  go.addEventListener('click',async e=>{e.preventDefault();go.textContent='Ищу текущий LIVE…';const x=await resolveLive(true);go.textContent='▶ Открыть эфир';if(x){if(/Android/i.test(navigator.userAgent||'')){location.href=intent(x);return}location.href=x.url;return}location.href=fallback});
+  resolveLive(false).then(x=>{if(x)go.href=x.url});
 })();
 </script>
 </body>

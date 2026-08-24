@@ -2,18 +2,29 @@
 import fs from 'node:fs';
 import process from 'node:process';
 import readline from 'node:readline/promises';
+import { spawnSync } from 'node:child_process';
 
-const AUTH_FILE=process.env.ANDRIK_YOUTUBE_DEVICE_AUTH_FILE||'/etc/andrik-youtube-device-r620.json';
+const AUTH_FILE=process.env.ANDRIK_YOUTUBE_DEVICE_AUTH_FILE||'/etc/andrik-youtube-device.json';
+const LEGACY_AUTH_FILE='/etc/andrik-youtube-device-r620.json';
 const SCOPE='https://www.googleapis.com/auth/youtube';
 const DEVICE_CODE_URL='https://oauth2.googleapis.com/device/code';
 const TOKEN_URL='https://oauth2.googleapis.com/token';
 const API='https://www.googleapis.com/youtube/v3';
+const RADIO_SERVICE='andrik-radio.service';
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const clean=v=>String(v??'').trim();
 
-function readAuth(){try{return JSON.parse(fs.readFileSync(AUTH_FILE,'utf8'))}catch(_){return {}}}
+function migrateLegacy(){
+  try{
+    if(!fs.existsSync(AUTH_FILE)&&fs.existsSync(LEGACY_AUTH_FILE)){
+      fs.copyFileSync(LEGACY_AUTH_FILE,AUTH_FILE);
+      fs.chmodSync(AUTH_FILE,0o600);
+    }
+  }catch(_){}
+}
+function readAuth(){migrateLegacy();try{return JSON.parse(fs.readFileSync(AUTH_FILE,'utf8'))}catch(_){return {}}}
 function writeAuth(data){fs.writeFileSync(AUTH_FILE,JSON.stringify(data,null,2)+'\n',{mode:0o600});try{fs.chmodSync(AUTH_FILE,0o600)}catch(_){}}
-async function promptSecret(label){const rl=readline.createInterface({input:process.stdin,output:process.stdout});try{return clean(await rl.question(label))}finally{rl.close()}}
+async function promptVisible(label){const rl=readline.createInterface({input:process.stdin,output:process.stdout});try{return clean(await rl.question(label))}finally{rl.close()}}
 async function jsonFetch(url,options={}){const r=await fetch(url,options);const d=await r.json().catch(()=>({}));if(!r.ok){const e=new Error(clean(d?.error_description||d?.error?.message||d?.error||`HTTP ${r.status}`));e.status=r.status;e.payload=d;throw e}return d}
 async function apiFetch(token,path,params={},options={}){const u=new URL(API+path);for(const [k,v] of Object.entries(params))if(v!==undefined&&v!==null&&v!=='')u.searchParams.set(k,String(v));const headers=new Headers(options.headers||{});headers.set('authorization','Bearer '+token);headers.set('accept','application/json');if(options.body&&!headers.has('content-type'))headers.set('content-type','application/json');return jsonFetch(u,{...options,headers});}
 
@@ -22,11 +33,12 @@ async function ensureClient({forcePrompt=false}={}){
   let clientId=clean(process.env.YOUTUBE_DEVICE_CLIENT_ID||a.clientId);
   let clientSecret=clean(process.env.YOUTUBE_DEVICE_CLIENT_SECRET||a.clientSecret);
   if(forcePrompt||!clientId){
-    console.log('\nСоздай в Google Cloud OAuth client типа: TVs and Limited Input devices.');
-    clientId=await promptSecret('TV/Device Client ID: ');
+    console.log('\nНужен ОТДЕЛЬНЫЙ OAuth Client: “TVs and Limited Input devices”.');
+    console.log('Обычный Web client сюда не подходит.');
+    clientId=await promptVisible('TV/Device Client ID: ');
   }
-  if(forcePrompt||!clientSecret)clientSecret=await promptSecret('TV/Device Client Secret: ');
-  if(!clientId||!clientSecret)throw new Error('device-oauth-client-empty');
+  if(forcePrompt||!clientSecret)clientSecret=await promptVisible('TV/Device Client Secret: ');
+  if(!clientId||!clientSecret)throw new Error('TV/Device Client ID или Secret пустой.');
   return {...a,clientId,clientSecret};
 }
 
@@ -36,10 +48,10 @@ async function auth(){
   const d=await jsonFetch(DEVICE_CODE_URL,{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body});
   const verify=clean(d.verification_url||d.verification_uri||'https://www.google.com/device');
   console.log('\n============================================================');
-  console.log('1) Открой:',verify);
+  console.log('1) Открой на телефоне:',verify);
   console.log('2) Введи код:',d.user_code);
-  console.log('3) Разреши доступ аккаунту, который владеет каналом ANDRIK.');
-  console.log('Жду подтверждение здесь автоматически…');
+  console.log('3) Выбери аккаунт-владелец канала ANDRIK и нажми Разрешить.');
+  console.log('4) Ничего больше в AWS не нажимай — здесь идёт автоматическое ожидание.');
   console.log('============================================================\n');
   let interval=Math.max(5,Number(d.interval||5));
   const deadline=Date.now()+Math.max(60,Number(d.expires_in||1800))*1000;
@@ -50,9 +62,10 @@ async function auth(){
     const j=await r.json().catch(()=>({}));
     if(r.ok&&j.access_token){
       const refresh=clean(j.refresh_token||base.refreshToken);
-      if(!refresh)throw new Error('refresh-token-missing');
+      if(!refresh)throw new Error('Google не вернул refresh token.');
       writeAuth({clientId:base.clientId,clientSecret:base.clientSecret,refreshToken:refresh,scope:clean(j.scope||SCOPE),authorizedAt:new Date().toISOString()});
-      console.log('ГОТОВО ✅ Консоль YouTube авторизована. Токен хранится только на AWS в',AUTH_FILE);
+      console.log('ГОТОВО ✅ YouTube Console авторизована.');
+      console.log('Токен хранится только на AWS:',AUTH_FILE,'(0600)');
       await status();
       return;
     }
@@ -61,19 +74,19 @@ async function auth(){
     if(err==='slow_down'){interval+=5;continue}
     if(err==='access_denied')throw new Error('Доступ отклонён в Google.');
     if(err==='expired_token')throw new Error('Код истёк. Запусти auth ещё раз.');
+    if(err==='invalid_client')throw new Error('Неверный тип OAuth Client. Нужен именно “TVs and Limited Input devices”.');
     throw new Error(clean(j.error_description||err||`token HTTP ${r.status}`));
   }
-  throw new Error('device-code-expired');
+  throw new Error('Код авторизации истёк.');
 }
 
 async function accessToken(){
   const a=readAuth();
-  if(!a.clientId||!a.clientSecret||!a.refreshToken)throw new Error('Сначала: sudo andrik-youtube auth');
+  if(!a.clientId||!a.clientSecret||!a.refreshToken)throw new Error('Сначала выполни: sudo andrik-youtube auth');
   const body=new URLSearchParams({client_id:a.clientId,client_secret:a.clientSecret,refresh_token:a.refreshToken,grant_type:'refresh_token'});
   const d=await jsonFetch(TOKEN_URL,{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body});
   return d.access_token;
 }
-
 function life(x){return clean(x?.status?.lifeCycleStatus).toLowerCase()}
 async function current(token){
   const d=await apiFetch(token,'/liveBroadcasts',{part:'id,snippet,status,contentDetails',mine:'true',maxResults:'25'});
@@ -90,7 +103,6 @@ async function current(token){
   if(sid){const x=await apiFetch(token,'/liveStreams',{part:'id,status,cdn,snippet',id:sid});stream=Array.isArray(x.items)?x.items[0]||null:null}
   return {broadcast:b,stream,streamStatus:clean(stream?.status?.streamStatus).toLowerCase()};
 }
-
 function printState(x){
   const b=x.broadcast;if(!b){console.log('YouTube: активный/готовый broadcast не найден.');return}
   console.log('YouTube:',clean(b?.snippet?.title)||'ANDRIK');
@@ -110,18 +122,20 @@ function updateBody(b){
   if(cd.closedCaptionsType)contentDetails.closedCaptionsType=cd.closedCaptionsType;if(cd.projection)contentDetails.projection=cd.projection;if(cd.latencyPreference)contentDetails.latencyPreference=cd.latencyPreference;else if(typeof cd.enableLowLatency==='boolean')contentDetails.enableLowLatency=cd.enableLowLatency;
   return {id:b.id,snippet,contentDetails};
 }
-
-async function autostart(){
-  const token=await accessToken(),x=await current(token);if(!x.broadcast)throw new Error('broadcast-not-found');
-  const l=life(x.broadcast);if(!['created','ready'].includes(l))throw new Error('Auto-start меняется только в created/ready. Сейчас: '+l);
-  if(x.streamStatus==='active')throw new Error('Сначала останови encoder: sudo systemctl stop andrik-radio');
+async function configureAutostart(token,x){
+  if(!x.broadcast)throw new Error('broadcast-not-found');
+  const l=life(x.broadcast);
+  if(!['created','ready'].includes(l))throw new Error('Auto-start меняется только в created/ready. Сейчас: '+l);
+  if(x.streamStatus==='active')throw new Error('Stream ещё active. Сначала останови encoder.');
   const updated=await apiFetch(token,'/liveBroadcasts',{part:'snippet,contentDetails'},{method:'PUT',body:JSON.stringify(updateBody(x.broadcast))});
   console.log('ГОТОВО ✅ Auto-start ON · Auto-stop OFF');
   console.log('videoId:',updated.id);
+  return updated;
 }
-
+async function autostart(){const token=await accessToken(),x=await current(token);return configureAutostart(token,x)}
 async function transition(token,id,status){return apiFetch(token,'/liveBroadcasts/transition',{broadcastStatus:status,id,part:'id,status,contentDetails'},{method:'POST'})}
 async function waitLife(token,id,expected,timeoutMs=35000){const end=Date.now()+timeoutMs;let last='';while(Date.now()<end){const d=await apiFetch(token,'/liveBroadcasts',{part:'id,status,contentDetails',id});const b=Array.isArray(d.items)?d.items[0]||null:null;last=life(b);if(expected.includes(last))return last;await sleep(2500)}return last}
+async function waitStream(token,wanted='active',timeoutMs=60000){const end=Date.now()+timeoutMs;let last='';while(Date.now()<end){const x=await current(token);last=x.streamStatus;if(last===wanted)return x;await sleep(2500)}throw new Error(`Stream не стал ${wanted}. Последний статус: ${last||'unknown'}`)}
 async function start(){
   const token=await accessToken();let x=await current(token);if(!x.broadcast)throw new Error('broadcast-not-found');
   const id=x.broadcast.id;let l=life(x.broadcast);if(l==='live'){console.log('Уже LIVE ✅ https://www.youtube.com/watch?v='+id);return}
@@ -134,23 +148,47 @@ async function start(){
   if(!['live','livestarting'].includes(l))throw new Error('YouTube не перешёл в LIVE. Статус: '+l);
   console.log('ГОТОВО 🔴',l.toUpperCase(),'https://www.youtube.com/watch?v='+id);
 }
-
+function systemctl(...args){const r=spawnSync('systemctl',args,{stdio:'inherit'});if(r.status!==0)throw new Error('systemctl '+args.join(' ')+' failed')}
+async function autoSafe(){
+  const token=await accessToken();let x=await current(token);printState(x);if(!x.broadcast)throw new Error('broadcast-not-found');
+  if(life(x.broadcast)==='live'){console.log('Эфир уже LIVE — ничего не трогаю ✅');return}
+  const wasActive=x.streamStatus==='active';
+  if(wasActive){console.log('Останавливаю encoder на несколько секунд для настройки Auto-start…');systemctl('stop',RADIO_SERVICE);await waitStream(token,'inactive',30000).catch(()=>sleep(6000));x=await current(token)}
+  try{await configureAutostart(token,x)}finally{
+    console.log('Запускаю ANDRIK Radio…');systemctl('start',RADIO_SERVICE);
+  }
+  x=await waitStream(token,'active',70000);
+  console.log('Сигнал снова ACTIVE ✅');
+  const l=life(x.broadcast);
+  if(l!=='live'){
+    console.log('Жду Auto-start YouTube…');
+    const after=await waitLife(token,x.broadcast.id,['live','livestarting'],25000);
+    if(!['live','livestarting'].includes(after)){
+      console.log('Auto-start не сработал сам → выполняю безопасный transition.');
+      await start();
+    }else console.log('ГОТОВО 🔴 YouTube запустился автоматически.');
+  }
+}
 async function recover(){
-  const token=await accessToken(),x=await current(token);printState(x);if(!x.broadcast)throw new Error('broadcast-not-found');
+  const token=await accessToken();let x=await current(token);printState(x);if(!x.broadcast)throw new Error('broadcast-not-found');
   if(life(x.broadcast)==='live'){console.log('Ничего делать не надо — эфир уже LIVE ✅');return}
-  if(x.streamStatus!=='active'){console.log('Сигнала нет. Сначала: sudo systemctl restart andrik-radio');return}
-  console.log('Сигнал есть, broadcast не LIVE → запускаю transition…');
+  if(x.streamStatus!=='active'){
+    console.log('Сигнала нет → перезапускаю andrik-radio…');
+    systemctl('restart',RADIO_SERVICE);
+    x=await waitStream(token,'active',70000);
+    console.log('Сигнал ACTIVE ✅');
+  }
   await start();
 }
-
 async function main(){
   const cmd=clean(process.argv[2]||'status').toLowerCase();
   if(cmd==='auth')return auth();
   if(cmd==='status')return status();
   if(cmd==='autostart'||cmd==='auto')return autostart();
+  if(cmd==='auto-safe'||cmd==='autosafe'||cmd==='setup-live')return autoSafe();
   if(cmd==='start')return start();
   if(cmd==='recover'||cmd==='fix')return recover();
-  console.log('ANDRIK YouTube Console R620');
-  console.log('Команды: auth | status | autostart | start | recover');
+  console.log('ANDRIK YouTube Console R623');
+  console.log('Команды: auth | status | auto | auto-safe | start | recover');
 }
 main().catch(e=>{console.error('ОШИБКА:',e.message||e);process.exitCode=1});

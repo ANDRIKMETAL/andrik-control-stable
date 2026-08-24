@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787570937650-2a644f1f58",
-  "release": "R622",
-  "archiveName": "R622-PRIVATE-R2-PULL-1080P-AUDIO-LIVE-TARGET-SAFE-FULL.zip",
-  "sourceHead": "4bfdcaf5132ec79cfd8fa7ef9095e299f2b3b72c",
-  "backupSha": "4bfdcaf5132ec79cfd8fa7ef9095e299f2b3b72c",
+  "operationId": "publish-1787572948547-8ef6ae9c54",
+  "release": "R624",
+  "archiveName": "R624-AWS-CONSOLE-ONE-BUTTON-LIVE-DEVICE-OAUTH-1080P-SAFE-FULL.zip",
+  "sourceHead": "cbb07582172f8eb3255adf4e1f45af733ddbca36",
+  "backupSha": "cbb07582172f8eb3255adf4e1f45af733ddbca36",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-24T11:28:58.099Z"
+  "generatedAt": "2026-08-24T12:02:29.410Z"
 }

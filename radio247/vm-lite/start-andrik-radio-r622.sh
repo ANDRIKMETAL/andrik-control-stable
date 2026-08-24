@@ -24,7 +24,10 @@ mkdir -p "$VIS_DIR" "$STAGE_DIR"
 chmod 700 "$CACHE_DIR" "$VIS_DIR" "$STAGE_DIR" 2>/dev/null || true
 
 fetch_master(){
-  local slot="$1" name="$2" tmp="$STAGE_DIR/$name.part" final="$STAGE_DIR/$name"
+  local slot="$1"
+  local name="$2"
+  local tmp="$STAGE_DIR/$name.part"
+  local final="$STAGE_DIR/$name"
   rm -f "$tmp" "$final"
   echo "  ↓ $slot"
   local code size probe

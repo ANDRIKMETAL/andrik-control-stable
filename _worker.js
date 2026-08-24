@@ -17279,7 +17279,8 @@ async function routeApi(request, env, ctx) {
     if (path === '/api/push/history' && request.method === 'GET') return await handlePushHistory(request, env);
     if (path === '/api/public/youtube-like-glow' && request.method === 'GET') return await handlePublicYoutubeLikeGlow(request, env);
     if (path === '/api/public/youtube-latest' && request.method === 'GET') return await handlePublicYoutubeLatest(request, env);
-    if (path === '/api/public/youtube-live-target' && request.method === 'GET') return await handlePublicYoutubeLiveTargetR610(request, env);
+    if (path === '/api/public/youtube-live-target' && request.method === 'GET') return await handlePublicYoutubeLiveTargetR623(request, env);
+    if (path === '/radio-live' && request.method === 'GET') return await handlePublicYoutubeRadioGoR623(request, env);
     if (path === '/api/comments/config' && request.method === 'GET') return await handleCommentsConfig(request, env);
     if (path === '/api/comments/google-session' && request.method === 'POST') return await handleCommentsGoogleSession(request, env);
     if (path === '/api/comments' && request.method === 'GET') return await handlePublicComments(request, env);
@@ -17694,6 +17695,129 @@ async function youtubePublicLiveByApiKeyR619(env, {fresh=false} = {}) {
   const result=videoId?{videoId,watchUrl:`https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`,active:true,source:'data-api-live-search-r619'}:null;
   youtubePublicLiveFallbackCacheR619={expiresAt:now+45*1000,data:result};
   return result;
+}
+
+
+// R623 — low-quota exact LIVE resolver for the public Radio button.
+// First checks the channel uploads playlist + videos.list (cheap Data API calls),
+// then falls back to the old eventType=live search. The site never intentionally
+// opens /@andrikmetal/live when no verified LIVE video id is known.
+let youtubePublicLiveUploadsCacheR623 = {expiresAt:0,data:null,channelId:'',uploadsId:''};
+
+async function youtubePublicChannelAndUploadsR623(env){
+  const apiKey=String(env.YOUTUBE_API_KEY||'').trim();
+  if(!apiKey)return {apiKey:'',channelId:'',uploadsId:''};
+  let channelId=cleanPlainText(env.YOUTUBE_CHANNEL_ID||youtubePublicLiveUploadsCacheR623.channelId||'',120);
+  if(!channelId && env.COMMENTS_DB){
+    try{channelId=await resolveYoutubeWebSubChannelIdR332(env,requireDb(env));}catch(_){}
+  }
+  if(!channelId){
+    const u=new URL('https://www.googleapis.com/youtube/v3/channels');
+    u.searchParams.set('part','id');
+    u.searchParams.set('forHandle',String(env.YOUTUBE_CHANNEL_HANDLE||'@andrikmetal').replace(/^@/,''));
+    u.searchParams.set('maxResults','1');
+    u.searchParams.set('key',apiKey);
+    const r=await fetchWithAbortTimeoutR409(u.toString(),{headers:{accept:'application/json'}},7000,'youtube-radio-r623-channel');
+    const d=await r.json().catch(()=>({}));
+    if(r.ok)channelId=cleanPlainText(d?.items?.[0]?.id||'',120);
+  }
+  if(!channelId)return {apiKey,channelId:'',uploadsId:''};
+
+  let uploadsId=cleanPlainText(youtubePublicLiveUploadsCacheR623.uploadsId||'',120);
+  if(!uploadsId || youtubePublicLiveUploadsCacheR623.channelId!==channelId){
+    const u=new URL('https://www.googleapis.com/youtube/v3/channels');
+    u.searchParams.set('part','contentDetails');
+    u.searchParams.set('id',channelId);
+    u.searchParams.set('maxResults','1');
+    u.searchParams.set('key',apiKey);
+    const r=await fetchWithAbortTimeoutR409(u.toString(),{headers:{accept:'application/json'}},7000,'youtube-radio-r623-uploads');
+    const d=await r.json().catch(()=>({}));
+    if(r.ok)uploadsId=cleanPlainText(d?.items?.[0]?.contentDetails?.relatedPlaylists?.uploads||'',120);
+  }
+  youtubePublicLiveUploadsCacheR623.channelId=channelId;
+  youtubePublicLiveUploadsCacheR623.uploadsId=uploadsId;
+  return {apiKey,channelId,uploadsId};
+}
+
+async function youtubePublicLiveByUploadsR623(env,{fresh=false}={}){
+  const now=Date.now();
+  if(!fresh && youtubePublicLiveUploadsCacheR623.data && youtubePublicLiveUploadsCacheR623.expiresAt>now){
+    return youtubePublicLiveUploadsCacheR623.data;
+  }
+  const {apiKey,uploadsId}=await youtubePublicChannelAndUploadsR623(env);
+  if(!apiKey||!uploadsId)return null;
+
+  const p=new URL('https://www.googleapis.com/youtube/v3/playlistItems');
+  p.searchParams.set('part','contentDetails');
+  p.searchParams.set('playlistId',uploadsId);
+  p.searchParams.set('maxResults','15');
+  p.searchParams.set('key',apiKey);
+  const pr=await fetchWithAbortTimeoutR409(p.toString(),{headers:{accept:'application/json'}},7000,'youtube-radio-r623-playlist');
+  const pd=await pr.json().catch(()=>({}));
+  if(!pr.ok)return null;
+  const ids=[...new Set((Array.isArray(pd?.items)?pd.items:[]).map(x=>cleanPlainText(x?.contentDetails?.videoId||'',80)).filter(Boolean))].slice(0,15);
+  if(!ids.length)return null;
+
+  const v=new URL('https://www.googleapis.com/youtube/v3/videos');
+  v.searchParams.set('part','id,snippet,liveStreamingDetails');
+  v.searchParams.set('id',ids.join(','));
+  v.searchParams.set('key',apiKey);
+  const vr=await fetchWithAbortTimeoutR409(v.toString(),{headers:{accept:'application/json'}},7000,'youtube-radio-r623-videos');
+  const vd=await vr.json().catch(()=>({}));
+  if(!vr.ok)return null;
+  const live=(Array.isArray(vd?.items)?vd.items:[]).filter(item=>{
+    const content=String(item?.snippet?.liveBroadcastContent||'').toLowerCase();
+    const details=item?.liveStreamingDetails||{};
+    return content==='live' || (Boolean(details.actualStartTime) && !details.actualEndTime);
+  }).sort((a,b)=>{
+    const at=Date.parse(a?.liveStreamingDetails?.actualStartTime||a?.snippet?.publishedAt||0)||0;
+    const bt=Date.parse(b?.liveStreamingDetails?.actualStartTime||b?.snippet?.publishedAt||0)||0;
+    return bt-at;
+  })[0]||null;
+  const videoId=cleanPlainText(live?.id||'',80);
+  const result=videoId?{videoId,watchUrl:`https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`,active:true,source:'uploads-live-probe-r623'}:null;
+  youtubePublicLiveUploadsCacheR623.data=result;
+  youtubePublicLiveUploadsCacheR623.expiresAt=now+(result?20*1000:8*1000);
+  return result;
+}
+
+async function resolvePublicYoutubeLiveR623(env,{fresh=false}={}){
+  // Exact private Live API remains first when the existing Worker OAuth is usable.
+  try{
+    const accessToken=await getYoutubeOAuthAccessToken(env);
+    const {broadcast,streamStatus}=await youtubeCurrentBroadcastR609(env,accessToken);
+    const videoId=cleanPlainText(broadcast?.id||'',80);
+    const lifeCycleStatus=youtubeLifeKeyR609(broadcast?.status?.lifeCycleStatus);
+    if(videoId&&lifeCycleStatus==='live'){
+      return {videoId,watchUrl:`https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`,lifeCycleStatus,streamStatus:cleanPlainText(streamStatus||'',80),active:true,source:'oauth-live-r623'};
+    }
+  }catch(_){}
+
+  // Cheap public probe first; it does not depend on Studio OAuth.
+  try{
+    const found=await youtubePublicLiveByUploadsR623(env,{fresh});
+    if(found)return {...found,lifeCycleStatus:'live',streamStatus:'active'};
+  }catch(_){}
+
+  // Final public fallback: YouTube eventType=live search.
+  try{
+    const found=await youtubePublicLiveByApiKeyR619(env,{fresh});
+    if(found)return {...found,lifeCycleStatus:'live',streamStatus:'active'};
+  }catch(_){}
+  return null;
+}
+
+async function handlePublicYoutubeLiveTargetR623(request,env){
+  const fresh=new URL(request.url).searchParams.get('fresh')==='1';
+  const found=await resolvePublicYoutubeLiveR623(env,{fresh});
+  if(found)return json({ok:true,...found},200,JSON_HEADERS);
+  return json({ok:true,videoId:'',watchUrl:'',lifeCycleStatus:'',streamStatus:'',active:false,source:'no-verified-live-r623',fallbackUrl:'/radio-live'},200,JSON_HEADERS);
+}
+
+async function handlePublicYoutubeRadioGoR623(request,env){
+  const found=await resolvePublicYoutubeLiveR623(env,{fresh:true});
+  const target=found?.videoId?found.watchUrl:'https://www.youtube.com/@andrikmetal/streams';
+  return new Response(null,{status:302,headers:{location:target,'cache-control':'no-store, max-age=0','referrer-policy':'no-referrer'}});
 }
 
 async function handlePublicYoutubeLiveTargetR610(request, env) {
