@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787599999887-46acebde62",
-  "release": "R644",
-  "archiveName": "R644-APP-FIRST-RESTORED-R643-D1-RADIO-SAFE-FULL.zip",
-  "sourceHead": "183ebab123545d8c135d3ba78aff611b2d489874",
-  "backupSha": "183ebab123545d8c135d3ba78aff611b2d489874",
+  "operationId": "publish-1787601491497-a7173660db",
+  "release": "R646",
+  "archiveName": "R646-PERMANENT-QR-GUARD-R645-APP-R643-D1-FULLSCREEN-SAFE-FULL.zip",
+  "sourceHead": "6cffb68d1023b5fc900e3c41c7d8f07e59b54ac7",
+  "backupSha": "6cffb68d1023b5fc900e3c41c7d8f07e59b54ac7",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-24T19:33:19.887Z"
+  "generatedAt": "2026-08-24T19:58:12.729Z"
 }
