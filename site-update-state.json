@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787590474314-f95c730e4b",
-  "release": "R634",
-  "archiveName": "R634-FAST-STOP-FRESH-BROADCAST-AUDIO-STABLE-SAFE-FULL.zip",
-  "sourceHead": "2bb156e758c9cb8e6806a0a21edaea27dbe2589c",
-  "backupSha": "2bb156e758c9cb8e6806a0a21edaea27dbe2589c",
+  "operationId": "publish-1787590998575-fbd498e9a1",
+  "release": "R635",
+  "archiveName": "R635-RADIO-CONTROL-UNLOCK-STUCK-COMMAND-SAFE-FULL.zip",
+  "sourceHead": "ce97a08ed293d811f5ee0f9c84febb12815a6f9e",
+  "backupSha": "ce97a08ed293d811f5ee0f9c84febb12815a6f9e",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-24T16:54:34.951Z"
+  "generatedAt": "2026-08-24T17:03:18.575Z"
 }
