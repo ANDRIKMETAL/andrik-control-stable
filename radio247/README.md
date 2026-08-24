@@ -3,7 +3,7 @@
 Текущая схема:
 
 - MP3: R2 → локальный кэш AWS → FFmpeg.
-- Визуалы: оригинальные 1080p25 master-файлы в R2 → локальный постоянный AWS cache.
+- Визуалы: оригинальные 1080p25 master-файлы в R2 → публичный read-only Worker proxy → локальный постоянный AWS cache.
 - В репозитории/ZIP сайта три radio-video больше не хранятся.
 - YouTube output: 1920×1080, 25 fps, H.264 High, 5 Mbps CBR.
 - Audio: AAC-LC 48 kHz stereo 192 kbps, regenerated audio PTS; async time-stretch отключён.
@@ -36,3 +36,7 @@ sudo andrik-youtube auth
 ```
 
 Нужен отдельный Google OAuth Client типа **TVs and Limited Input devices**.
+
+
+## R621 public radio visual proxy
+AWS no longer reads the private R2 custom domain directly. Only day/evening/night masters are exposed read-only through `/api/media/radio-visual-r621`; uploads stay ADMIN_KEY protected.

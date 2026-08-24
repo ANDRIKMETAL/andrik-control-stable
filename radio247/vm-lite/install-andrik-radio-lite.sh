@@ -34,10 +34,10 @@ else
 fi
 
 SERVER="$APP_DIR/radio247/server.mjs"
-DAY_VISUAL_URL="https://music.andrikmetal.com/radio/stream-day-master-r620.mp4"
-EVENING_VISUAL_URL="https://music.andrikmetal.com/radio/stream-evening-master-r620.mp4"
-NIGHT_VISUAL_URL="https://music.andrikmetal.com/radio/stream-night-master-r620.mp4"
-CACHE_DIR="/var/cache/andrik-radio-r620"
+DAY_VISUAL_URL="https://andrikmetal.com/api/media/radio-visual-r621?slot=day&download=1"
+EVENING_VISUAL_URL="https://andrikmetal.com/api/media/radio-visual-r621?slot=evening&download=1"
+NIGHT_VISUAL_URL="https://andrikmetal.com/api/media/radio-visual-r621?slot=night&download=1"
+CACHE_DIR="/var/cache/andrik-radio-r621"
 
 if [ ! -s "$SERVER" ]; then
   echo "Ошибка: нет $SERVER"
@@ -46,7 +46,7 @@ fi
 
 echo "[2b/7] Проверяю 1080p master-видео в R2..."
 for VISUAL_URL in "$DAY_VISUAL_URL" "$EVENING_VISUAL_URL" "$NIGHT_VISUAL_URL"; do
-  if ! curl -fsSL --range 0-0 --max-time 20 -o /dev/null "$VISUAL_URL"; then
+  if ! curl -fsSI --max-time 20 -o /dev/null "$VISUAL_URL"; then
     echo "Ошибка: R2 visual недоступен: $VISUAL_URL"
     echo "Сначала загрузи 3 оригинала через radio-visuals-admin.html"
     exit 1
@@ -93,7 +93,7 @@ unset YOUTUBE_STREAM_KEY
 echo "[4/7] systemd 24/7..."
 cat > "$SERVICE_FILE" <<EOF
 [Unit]
-Description=ANDRIK Metal Radio 24/7 - R620 R2 1080p25 AUDIO CLEAN
+Description=ANDRIK Metal Radio 24/7 - R621 R2 PROXY 1080p25 AUDIO CLEAN
 After=network-online.target
 Wants=network-online.target
 
@@ -112,7 +112,7 @@ NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=full
 ProtectHome=true
-ReadWritePaths=/tmp /var/cache/andrik-radio-r620
+ReadWritePaths=/tmp /var/cache/andrik-radio-r621
 
 [Install]
 WantedBy=multi-user.target
@@ -175,7 +175,7 @@ fi
 curl -fsS --max-time 5 http://127.0.0.1:8080/status || true
 echo
 echo "============================================================"
-echo "ANDRIK RADIO R620-R2-1080P-AUDIO-CLEAN установлено."
+echo "ANDRIK RADIO R621-R2-PROXY-1080P-AUDIO-CLEAN установлено."
 echo "Видео: R2 master → локальный AWS cache → 1920×1080 25fps · 08:00/17:00/22:00."
 echo "Аудио: MP3 → PTS rebuild → AAC-LC 48kHz stereo 192k; OCEAN и Illusion of Life выключены."
 echo "Оверлей: QR andrikmetal.com слева сверху + текущий трек в жёлтой плашке + бегущая строка; отдельный NEXT убран."

@@ -16994,17 +16994,31 @@ async function handleRadioVisualPutR620(request,env){
   const object=await bucket.head(key);
   return json({ok:true,slot,key,size:Number(object?.size||len||0),uploaded:object?.uploaded||null,publicUrl:'https://music.andrikmetal.com/'+key});
 }
+function radioVisualPublicUrlR621(slot){
+  return `https://andrikmetal.com/api/media/radio-visual-r621?slot=${encodeURIComponent(slot)}&download=1`;
+}
+async function handleRadioVisualPublicR621(request,env){
+  const slot=radioVisualSlotR620(request);
+  if(!slot)return json({ok:false,error:'invalid-slot',allowed:['day','evening','night']},400);
+  const key=RADIO_VISUAL_KEYS_R620[slot];
+  // R621 exposes read-only access to exactly the three radio master objects.
+  // Upload/update remains protected by ADMIN_KEY on /api/control/radio-visuals-r620.
+  return serveVideoObjectR559(request,env,key,{
+    download:new URL(request.url).searchParams.get('download')==='1',
+    filename:`ANDRIK-radio-${slot}-master-r620.mp4`
+  });
+}
 async function handleRadioVisualStatusR620(request,env){
   if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
   const bucket=getMusicBucketR314(env);if(!bucket)return json({ok:false,error:'music-bucket-not-configured'},503);
   const out={};
   for(const [slot,key] of Object.entries(RADIO_VISUAL_KEYS_R620)){
     const object=await bucket.head(key).catch(()=>null);
-    out[slot]={exists:Boolean(object),key,size:Number(object?.size||0),uploaded:object?.uploaded||null,publicUrl:'https://music.andrikmetal.com/'+key};
+    out[slot]={exists:Boolean(object),key,size:Number(object?.size||0),uploaded:object?.uploaded||null,publicUrl:radioVisualPublicUrlR621(slot)};
   }
   return json({ok:true,ready:Object.values(out).every(x=>x.exists&&x.size>2*1024*1024),visuals:out});
 }
-// === End R620 radio visuals ===
+// === End R621 public-read radio visuals ===
 
 // === R478: native official clip "Я ЕСТЬ" in R2, browser multipart upload ===
 const YA_EST_VIDEO_KEY_R478 = 'clips/ya-est-official-2026.mp4';
@@ -17270,6 +17284,7 @@ async function routeApi(request, env, ctx) {
     if (path === '/api/control/music/albums/mpu/abort' && request.method === 'DELETE') return await handleMusicAlbumMultipartAbortR446(request, env);
     if (path === '/api/control/radio-visuals-r620' && request.method === 'PUT') return await handleRadioVisualPutR620(request, env);
     if (path === '/api/control/radio-visuals-r620/status' && request.method === 'GET') return await handleRadioVisualStatusR620(request, env);
+    if (path === '/api/media/radio-visual-r621' && (request.method === 'GET' || request.method === 'HEAD')) return await handleRadioVisualPublicR621(request, env);
     if (path === '/api/control/media/ya-est-r478/mpu/start' && request.method === 'POST') return await handleYaEstVideoMpuStartR478(request, env);
     if (path === '/api/control/media/ya-est-r478/mpu/part' && request.method === 'PUT') return await handleYaEstVideoMpuPartR478(request, env);
     if (path === '/api/control/media/ya-est-r478/mpu/complete' && request.method === 'POST') return await handleYaEstVideoMpuCompleteR478(request, env);
