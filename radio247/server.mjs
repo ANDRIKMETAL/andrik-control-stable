@@ -49,13 +49,13 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R637-CONTINUOUS-PCM-ONE-AAC-1080P25-NODROP',
-  mode: 'AUTO SINGLES + DEDUPE / ONE LONG-LIVED 1080p25 ENCODER / CONTINUOUS PCM / ONE AAC CLOCK / NO TS CONCAT / NO PACKET DROP / LIVE TICKER + QR',
+  version: 'R641-COVER-CROP-1080P25-NODROP',
+  mode: 'AUTO SINGLES + DEDUPE / ONE LONG-LIVED 1080p25 ENCODER / CONTINUOUS PCM / ONE AAC CLOCK / NO TS CONCAT / NO PACKET DROP / LIVE TICKER + QR / COVER+CROP 16:9',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
   producerRunning: false,
-  overlayMode: 'QR TOP-LEFT / YELLOW TRACK TEXT WITH BLACK OUTLINE / LIVE TICKER / NO BARS',
+  overlayMode: 'QR TOP-LEFT / YELLOW TRACK TEXT WITH BLACK OUTLINE / LIVE TICKER / FULLSCREEN 16:9 COVER+CROP / NO BARS',
   audioMode: 'LOCAL MP3 CACHE + 2-TRACK PREFETCH / MP3→PCM 44.1kHz / ONE LONG-LIVED AAC-LC 128kbps ENCODER / CONTINUOUS SAMPLE CLOCK',
   visualTimeZone: VISUAL_TIME_ZONE,
   visualPeriod: null,
@@ -516,8 +516,8 @@ function startPublisher(visualPath){
   const curPath=ffFilterPath(LIVE_CURRENT_FILE);
   const tickerPath=ffFilterPath(LIVE_TICKER_FILE);
   const vf=[
-    'scale=1920:1080:force_original_aspect_ratio=decrease:flags=fast_bilinear',
-    'pad=1920:1080:(ow-iw)/2:(oh-ih)/2',
+    'scale=1920:1080:force_original_aspect_ratio=increase:flags=fast_bilinear',
+    'crop=1920:1080',
     'setsar=1',
     `fps=${VIDEO_FPS}`,
     'format=yuv420p',

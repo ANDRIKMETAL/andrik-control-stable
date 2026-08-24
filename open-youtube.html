@@ -38,9 +38,9 @@ background:#e62117;color:#fff;text-decoration:none;font-size:20px;font-weight:90
     for(const wait of retry?[0,450,900]:[0]){if(wait)await sleep(wait);try{const r=await fetch(`${api}?fresh=1&ts=${Date.now()}`,{cache:'no-store',headers:{accept:'application/json'}});const d=await r.json().catch(()=>({}));const id=String(d?.videoId||videoId(d?.watchUrl)||'').trim();if(r.ok&&d?.active===true&&id)return {id,url:`https://www.youtube.com/watch?v=${encodeURIComponent(id)}`}}catch(_){}}
     return null;
   }
-  function intent(x){return `intent://www.youtube.com/watch?v=${encodeURIComponent(x.id)}#Intent;scheme=https;S.browser_fallback_url=${encodeURIComponent(x.url)};end`}
+  function appUri(x){return `vnd.youtube:${encodeURIComponent(x.id)}`}
   go.href=fallback;
-  go.addEventListener('click',async e=>{e.preventDefault();go.textContent='Ищу текущий LIVE…';const x=await resolveLive(true);go.textContent='▶ Открыть эфир';if(x){if(/Android/i.test(navigator.userAgent||'')){location.href=intent(x);return}location.href=x.url;return}location.href=fallback});
+  go.addEventListener('click',async e=>{e.preventDefault();go.textContent='Ищу текущий LIVE…';const x=await resolveLive(true);go.textContent='▶ Открыть эфир';if(x){if(/Android/i.test(navigator.userAgent||'')){location.href=appUri(x);return}location.href=x.url;return}location.href=fallback});
   resolveLive(false).then(x=>{if(x)go.href=x.url});
 })();
 </script>
