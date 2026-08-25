@@ -9,6 +9,8 @@ const CONFIG='/etc/andrik-radio-web-r627.json';
 const CONFIG_CANDIDATES=[CONFIG,'/etc/andrik-radio-web.json','/etc/andrik-radio-web-r629.json','/etc/andrik-radio-web-r630.json','/etc/andrik-radio-web-r631.json'];
 const TICKER_FILE='/var/cache/andrik-radio-r622/live-ticker.txt';
 const VISUAL_DIR='/var/cache/andrik-radio-r622/visuals';
+const VISUAL_PROTECT_FILES=[`${VISUAL_DIR}/.protect-local-visuals-r656`,`${VISUAL_DIR}/.protect-local-visuals-r655`];
+function visualsProtected(){return VISUAL_PROTECT_FILES.some(path=>fs.existsSync(path));}
 const RADIO_ENV='/etc/andrik-radio.env';
 const VISUAL_FILES=Object.freeze({day:'stream-day-master-r620.mp4',evening:'stream-evening-master-r620.mp4',night:'stream-night-master-r620.mp4'});
 const DEFAULT_TICKER='ANDRIK METAL RADIO 24/7   •   ANDRIKMETAL.COM   •   НОВЫЕ СИНГЛЫ И АЛЬБОМЫ ANDRIK   •   ПОДПИСЫВАЙТЕСЬ • СТАВЬТЕ ЛАЙКИ • КОММЕНТИРУЙТЕ   •   ';
@@ -44,10 +46,10 @@ function writeTicker(text){const value=clean(text).replace(/[\r\n\t]+/g,' ').rep
 async function localStatus(){
   try{
     const r=await fetch('http://127.0.0.1:8080/status',{signal:AbortSignal.timeout(2500)});const d=await r.json();const c=d.current||{},n=d.next||{};
-    return {service:run('systemctl',['is-active','andrik-radio.service'],8000).output.trim(),producer:Boolean(d.producerRunning),publisher:Boolean(d.publisherRunning),current:c.title||'',next:n.title||'',audio:d.audioMode||'',version:d.version||'',visualPeriod:d.visualPeriod||'',visualPath:d.visualPath||'',forceVisualSlot:d.forceVisualSlot||'',ticker:currentTicker(),busy:busy?{id:busy.id,action:busy.action,since:busy.since}:null};
+    return {service:run('systemctl',['is-active','andrik-radio.service'],8000).output.trim(),producer:Boolean(d.producerRunning),publisher:Boolean(d.publisherRunning),current:c.title||'',next:n.title||'',audio:d.audioMode||'',version:d.version||'',visualPeriod:d.visualPeriod||'',visualPath:d.visualPath||'',forceVisualSlot:d.forceVisualSlot||'',visualProtected:visualsProtected(),ticker:currentTicker(),busy:busy?{id:busy.id,action:busy.action,since:busy.since}:null};
   }catch(_){return {service:run('systemctl',['is-active','andrik-radio.service'],8000).output.trim(),producer:false,publisher:false,current:'',next:'',ticker:currentTicker(),busy:busy?{id:busy.id,action:busy.action,since:busy.since}:null,error:'local-status-unavailable'};}
 }
-async function pair(code){code=clean(code).toUpperCase().replace(/[^A-Z0-9]/g,'');if(code.length<8)throw new Error('Нужен короткий аварийный код привязки.');const d=await jsonFetch(BASE+'/api/radio-agent-r627/pair/consume',{method:'POST',headers:{'content-type':'application/json','user-agent':'ANDRIK-Radio-Web-Agent-R650'},body:JSON.stringify({code})});writeConfig({token:d.token,pairedAt:new Date().toISOString(),base:BASE,version:'R650'});console.log('ГОТОВО ✅ AWS привязан.');}
+async function pair(code){code=clean(code).toUpperCase().replace(/[^A-Z0-9]/g,'');if(code.length<8)throw new Error('Нужен короткий аварийный код привязки.');const d=await jsonFetch(BASE+'/api/radio-agent-r627/pair/consume',{method:'POST',headers:{'content-type':'application/json','user-agent':'ANDRIK-Radio-Web-Agent-R650'},body:JSON.stringify({code})});writeConfig({token:d.token,pairedAt:new Date().toISOString(),base:BASE,version:'R656'});console.log('ГОТОВО ✅ AWS привязан.');}
 function normalizeSlot(value){const slot=clean(value).toLowerCase();return Object.prototype.hasOwnProperty.call(VISUAL_FILES,slot)?slot:'';}
 function updateForceVisualSlot(slot=''){
   slot=normalizeSlot(slot);
@@ -59,21 +61,35 @@ function updateForceVisualSlot(slot=''){
   fs.renameSync(tmp,RADIO_ENV);try{fs.chmodSync(RADIO_ENV,0o600)}catch(_){}
   return slot;
 }
-async function downloadVisualR650(slot,headers){
+function localVisualInfo(slot){
+  slot=normalizeSlot(slot);if(!slot)return null;
+  const final=`${VISUAL_DIR}/${VISUAL_FILES[slot]}`;
+  try{
+    const st=fs.statSync(final);if(st.size<2*1024*1024)return null;
+    const probe=run('ffprobe',['-v','error','-select_streams','v:0','-show_entries','stream=codec_name,width,height,display_aspect_ratio','-of','default=nw=1',final],20000);
+    if(!probe.ok)return null;
+    return {slot,size:st.size,probe:probe.output,path:final,kept:true};
+  }catch(_){return null;}
+}
+async function downloadVisualR650(slot,headers,{force=false}={}){
   slot=normalizeSlot(slot);if(!slot)throw new Error('invalid visual slot');
   fs.mkdirSync(VISUAL_DIR,{recursive:true});
-  const final=`${VISUAL_DIR}/${VISUAL_FILES[slot]}`;const tmp=`${final}.r650-${process.pid}-${Date.now()}.part`;
-  const r=await fetch(`${BASE}/api/radio-agent-r650/visual?slot=${encodeURIComponent(slot)}&download=1`,{headers:{authorization:headers.authorization,'user-agent':'ANDRIK-Radio-Web-Agent-R650'},signal:AbortSignal.timeout(180000)});
+  const existing=localVisualInfo(slot);
+  // R656: normal sync/bootstrap MUST NOT replace any working local DAY/EVENING/NIGHT master.
+  // Only an explicit "visual-now" request may force a replacement.
+  if(!force && visualsProtected() && existing)return existing;
+  const final=`${VISUAL_DIR}/${VISUAL_FILES[slot]}`;const tmp=`${final}.r656-${process.pid}-${Date.now()}.part`;
+  const r=await fetch(`${BASE}/api/radio-agent-r650/visual?slot=${encodeURIComponent(slot)}&download=1`,{headers:{authorization:headers.authorization,'user-agent':'ANDRIK-Radio-Web-Agent-R656'},signal:AbortSignal.timeout(180000)});
   if(!r.ok)throw new Error(`R2 ${slot}: HTTP ${r.status}`);if(!r.body)throw new Error(`R2 ${slot}: empty body`);
   try{
     await pipeline(Readable.fromWeb(r.body),fs.createWriteStream(tmp,{mode:0o600}));
     const st=fs.statSync(tmp);if(st.size<2*1024*1024)throw new Error(`R2 ${slot}: file too small (${st.size})`);
     const probe=run('ffprobe',['-v','error','-select_streams','v:0','-show_entries','stream=codec_name,width,height,display_aspect_ratio','-of','default=nw=1',tmp],20000);
     if(!probe.ok)throw new Error(`R2 ${slot}: ffprobe failed`);
-    fs.renameSync(tmp,final);return {slot,size:st.size,probe:probe.output};
+    fs.renameSync(tmp,final);return {slot,size:st.size,probe:probe.output,path:final,kept:false};
   }catch(e){try{fs.unlinkSync(tmp)}catch(_){}throw e;}
 }
-async function syncVisualsR650(headers){const out=[];for(const slot of ['day','evening','night'])out.push(await downloadVisualR650(slot,headers));return out;}
+async function syncVisualsR650(headers){const out=[];for(const slot of ['day','evening','night'])out.push(await downloadVisualR650(slot,headers,{force:false}));return out;}
 async function execute(action,command={},headers={}){
   if(action==='start'||action==='auto-safe')return runAsync('/usr/local/sbin/andrik-youtube',['auto-safe'],240000);
   if(action==='recover')return runAsync('/usr/local/sbin/andrik-youtube',['recover'],240000);
@@ -89,13 +105,16 @@ async function execute(action,command={},headers={}){
   }
   if(action==='visual-now'){
     const slot=normalizeSlot(command.slot);if(!slot)return {ok:false,output:'Неверный visual slot'};
-    const x=await downloadVisualR650(slot,headers);updateForceVisualSlot(slot);
+    const x=await downloadVisualR650(slot,headers,{force:true});updateForceVisualSlot(slot);
     const r=await runAsync('systemctl',['restart','andrik-radio.service'],90000);
     return {ok:r.ok,output:`VISUAL NOW ${slot.toUpperCase()} ✅\n${(x.size/1024/1024).toFixed(1)} MB\n${x.probe}\n\n${r.output}`};
   }
   if(action==='visual-auto'){
-    const rows=await syncVisualsR650(headers);updateForceVisualSlot('');const r=await runAsync('systemctl',['restart','andrik-radio.service'],90000);
-    return {ok:r.ok,output:`VISUAL AUTO DAY/EVENING/NIGHT ✅\n${rows.map(x=>`${x.slot}: ${(x.size/1024/1024).toFixed(1)} MB`).join(' · ')}\n${r.output}`};
+    // R656: AUTO only clears the manual slot and restarts on the already-protected local masters.
+    // It never downloads/replaces visual files.
+    updateForceVisualSlot('');
+    const r=await runAsync('systemctl',['restart','andrik-radio.service'],90000);
+    return {ok:r.ok,output:`VISUAL AUTO DAY/EVENING/NIGHT ✅\nProtected local masters · no R2 overwrite\n${r.output}`};
   }
   return {ok:false,output:'Неизвестная команда: '+action};
 }
@@ -111,7 +130,7 @@ async function daemon(){
       const headers={'content-type':'application/json','authorization':'Bearer '+cfg.token,'user-agent':'ANDRIK-Radio-Web-Agent-R650'};
       const status=await localStatus();
       // Heartbeat always continues, even while start/recover is running.
-      const d=await jsonFetch(BASE+'/api/radio-agent-r627/poll',{method:'POST',headers,body:JSON.stringify({version:'R650',status})});
+      const d=await jsonFetch(BASE+'/api/radio-agent-r627/poll',{method:'POST',headers,body:JSON.stringify({version:'R656',status})});
       if(d.ticker && typeof d.ticker.text==='string' && clean(d.ticker.text)!==clean(status.ticker))writeTicker(d.ticker.text);
       if(d.command && !busy){
         const {id,action}=d.command;
@@ -125,6 +144,6 @@ async function daemon(){
     await sleep(4000);
   }
 }
-async function bootstrapVisuals(){const cfg=readConfig();if(!cfg.token)throw new Error('AWS agent token not found — R627 pairing is required');const headers={'authorization':'Bearer '+cfg.token,'user-agent':'ANDRIK-Radio-Web-Agent-R650'};const rows=await syncVisualsR650(headers);updateForceVisualSlot('');const r=await runAsync('systemctl',['restart','andrik-radio.service'],90000);console.log('R2 VISUALS ✅',rows.map(x=>`${x.slot} ${(x.size/1024/1024).toFixed(1)}MB`).join(' · '));console.log(r.output);if(!r.ok)process.exitCode=3;}
-async function main(){const cmd=clean(process.argv[2]||'status').toLowerCase();if(cmd==='pair')return pair(process.argv[3]);if(cmd==='daemon')return daemon();if(cmd==='bootstrap-visuals')return bootstrapVisuals();if(cmd==='status'){const cfg=readConfig();console.log(cfg.token?'PAIRED ✅':'NOT PAIRED ❌');console.log(await localStatus());return}console.log('ANDRIK Radio Web Agent R650 · commands: daemon | status | bootstrap-visuals');}
+async function bootstrapVisuals(){const cfg=readConfig();if(!cfg.token)throw new Error('AWS agent token not found — R627 pairing is required');const headers={'authorization':'Bearer '+cfg.token,'user-agent':'ANDRIK-Radio-Web-Agent-R656'};const rows=await syncVisualsR650(headers);if(!visualsProtected())updateForceVisualSlot('');const r=await runAsync('systemctl',['restart','andrik-radio.service'],90000);console.log('R2 VISUALS ✅',rows.map(x=>`${x.slot} ${(x.size/1024/1024).toFixed(1)}MB${x.kept?' KEEP':''}`).join(' · '));console.log(r.output);if(!r.ok)process.exitCode=3;}
+async function main(){const cmd=clean(process.argv[2]||'status').toLowerCase();if(cmd==='pair')return pair(process.argv[3]);if(cmd==='daemon')return daemon();if(cmd==='bootstrap-visuals')return bootstrapVisuals();if(cmd==='status'){const cfg=readConfig();console.log(cfg.token?'PAIRED ✅':'NOT PAIRED ❌');console.log(await localStatus());return}console.log('ANDRIK Radio Web Agent R656 · commands: daemon | status | bootstrap-visuals');}
 main().catch(e=>{console.error('ОШИБКА:',e.message||e);process.exitCode=1});

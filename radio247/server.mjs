@@ -22,7 +22,6 @@ const YOUTUBE_LIVE_URL = process.env.YOUTUBE_LIVE_URL || 'https://www.youtube.co
 const CACHE_DIR = process.env.RADIO_CACHE_DIR || '/var/cache/andrik-radio-r622';
 const AUDIO_CACHE_DIR = `${CACHE_DIR}/audio`;
 const VISUAL_CACHE_DIR = `${CACHE_DIR}/visuals`;
-const CLIP_CACHE_DIR = `${CACHE_DIR}/clips`;
 const MAX_CACHED_TRACKS = 7;
 const VISUAL_TIME_ZONE = process.env.VISUAL_TIME_ZONE || 'Europe/Bratislava';
 const FORCE_VISUAL_SLOT = ['day','evening','night'].includes(String(process.env.FORCE_VISUAL_SLOT||'').trim().toLowerCase()) ? String(process.env.FORCE_VISUAL_SLOT).trim().toLowerCase() : '';
@@ -52,23 +51,16 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
   'albums/ocean/'
 ]);
 
-// R654: the two full native ANDRIK music videos from R2. They are inserted
-// between songs all day, never back-to-back, and cached locally before playback.
-const CLIPS = Object.freeze([
-  { type:'clip', sourceType:'clip', title:'JOY OF BEING', album:'OFFICIAL MUSIC VIDEO', key:'clips/joy-of-being-official-2026.mp4', url:'https://music.andrikmetal.com/clips/joy-of-being-official-2026.mp4' },
-  { type:'clip', sourceType:'clip', title:'Я ЕСТЬ', album:'OFFICIAL MUSIC VIDEO', key:'clips/ya-est-official-2026.mp4', url:'https://music.andrikmetal.com/clips/ya-est-official-2026.mp4' }
-]);
-
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R654-R653-PUSH-R649-FULLSCREEN-TWO-R2-CLIPS-CONTINUOUS-AUDIO',
-  mode: 'R654 + R653 PUSH / TWO NATIVE R2 CLIPS BETWEEN SONGS / R649 FULLSCREEN DAY-EVENING-NIGHT / ONE LONG-LIVED AAC CLOCK / NO PACKET DROP / LIVE TICKER + QR',
+  version: 'R656-AUTO-DAY-EVENING-NIGHT-R649-FULLSCREEN-LOCK-R653-PUSH-CONTINUOUS-AUDIO',
+  mode: 'R656 AUTO DAY-EVENING-NIGHT + R653 PUSH / R649 DIRECT 1920x1080 / ALL LOCAL VISUALS LOCKED / NO CROP / CONTINUOUS PCM + ONE AAC CLOCK / NO PACKET DROP / LIVE TICKER + QR',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
   producerRunning: false,
-  overlayMode: 'R649 DIRECT 1920x1080 BACKGROUND + FULL 1920x1080 R2 CLIPS / NO CROP / NO PAD / QR / YELLOW TRACK + LIVE TICKER',
-  audioMode: 'MP3 + R2 CLIP AUDIO → PCM 44.1kHz / ONE LONG-LIVED AAC-LC 128kbps ENCODER / CONTINUOUS SAMPLE CLOCK',
+  overlayMode: 'R655 LOCAL VISUAL PROTECTED / DAY LOCK / R649 DIRECT SCALE 1920x1080 / NO CROP / NO PAD / QR / YELLOW TRACK + LIVE TICKER / FULL SCREEN',
+  audioMode: 'LOCAL MP3 CACHE + 2-TRACK PREFETCH / MP3→PCM 44.1kHz / ONE LONG-LIVED AAC-LC 128kbps ENCODER / CONTINUOUS SAMPLE CLOCK',
   visualTimeZone: VISUAL_TIME_ZONE,
   visualPeriod: null,
   visualPath: null,
@@ -76,8 +68,7 @@ const state = {
   libraryAlbumTracks: 0,
   librarySingleTracks: 0,
   duplicateSinglesSkipped: 0,
-  libraryVideos: CLIPS.length,
-  videoSourceMode: 'background',
+  libraryVideos: 0,
   cycle: 0,
   queueLength: 0,
   queuePosition: 0,
@@ -92,8 +83,6 @@ const state = {
 
 let publisher = null;
 let producer = null;
-let visualProducer = null;
-let visualSwitching = false;
 let library = [];
 let queue = [];
 let queueIndex = 0;
@@ -101,7 +90,6 @@ let running = false;
 let stopping = false;
 let lastPlayed = null;
 const prefetchJobs = new Map();
-const clipPrefetchJobs = new Map();
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const cleanText = value => String(value || '').replace(/[\r\n\t]+/g, ' ').replace(/\s+/g, ' ').trim();
@@ -241,7 +229,7 @@ async function loadLibrary(){
   state.libraryAlbumTracks=albums.length;
   state.librarySingleTracks=merged.singles.length;
   state.duplicateSinglesSkipped=merged.skipped;
-  state.libraryVideos=CLIPS.length;
+  state.libraryVideos=0;
   state.lastLibraryRefresh=new Date().toISOString();
   const changed=previousSignature!==librarySignature(library);
   return {library,changed};
@@ -260,50 +248,37 @@ function identityAlreadySeen(target,item){
 function reconcileQueueWithLibrary(){
   if(!queue.length)return;
 
-  // Preserve the already played prefix. For the remainder, rebuild a fresh
-  // interleaved cycle so newly uploaded songs appear quickly and the two clips
-  // stay between songs rather than being randomly adjacent.
   const played=queue.slice(0,queueIndex);
-  const playedTrackIds=new Set();
-  played.filter(item=>item.type!=='clip').forEach(item=>addIdentityCandidates(playedTrackIds,item));
-  const remainingTracks=library.filter(item=>!identityAlreadySeen(playedTrackIds,item));
-  const tail=buildInterleavedQueue(remainingTracks,false);
-  queue=[...played,...tail];
+  const playedIds=new Set();
+  played.forEach(item=>addIdentityCandidates(playedIds,item));
+  const liveByUrl=new Map(library.map(item=>[item.url,item]));
+  const remaining=[];
+  const remainingIds=new Set();
+
+  for(const oldItem of queue.slice(queueIndex)){
+    const live=liveByUrl.get(oldItem.url);
+    if(!live)continue;
+    if(identityAlreadySeen(playedIds,live)||identityAlreadySeen(remainingIds,live))continue;
+    remaining.push(live);
+    addIdentityCandidates(remainingIds,live);
+  }
+
+  const additions=[];
+  for(const item of library){
+    if(identityAlreadySeen(playedIds,item)||identityAlreadySeen(remainingIds,item))continue;
+    additions.push(item);
+    addIdentityCandidates(remainingIds,item);
+  }
+
+  queue=[...played,...shuffle([...remaining,...additions])];
   state.queueLength=queue.length;
 }
 
-function buildInterleavedQueue(trackSource=library,countCycle=true){
-  const audio=shuffle(trackSource);
-  const clips=shuffle(CLIPS);
-  const out=[];
-  if(!audio.length)return out;
-
-  // One appearance of each full clip per music cycle. The gap adapts to the
-  // library size and is never below 3 songs, so videos never run back-to-back.
-  const baseGap=Math.max(3,Math.floor(audio.length/(clips.length+1)));
-  let clipIndex=0;
-  let untilClip=baseGap+Math.floor(Math.random()*3);
-  for(const track of audio){
-    out.push(track);
-    untilClip--;
-    if(untilClip<=0 && clipIndex<clips.length){
-      out.push(clips[clipIndex++]);
-      untilClip=baseGap+Math.floor(Math.random()*3);
-    }
-  }
-  while(clipIndex<clips.length){
-    // If too few tracks remain, put the clip before the final song when possible.
-    const clip=clips[clipIndex++];
-    if(out.length>1 && out[out.length-1]?.type==='track') out.splice(out.length-1,0,clip);
-    else out.push(clip);
-  }
-  if(countCycle)state.cycle++;
+function buildQueue(){
+  const out=shuffle(library);
+  state.cycle++;
   state.queueLength=out.length;
   return out;
-}
-
-function buildQueue(){
-  return buildInterleavedQueue(library,true);
 }
 
 function runCapture(command,args,{timeoutMs=20000}={}){
@@ -357,7 +332,6 @@ function prepareCacheDir(){
   mkdirSync(CACHE_DIR,{recursive:true});
   mkdirSync(AUDIO_CACHE_DIR,{recursive:true});
   mkdirSync(VISUAL_CACHE_DIR,{recursive:true});
-  mkdirSync(CLIP_CACHE_DIR,{recursive:true});
 }
 
 function audioCachePath(item){
@@ -436,60 +410,6 @@ function prefetchTrack(item){
   downloadTrackToCache(item).catch(error=>{
     console.error('[prefetch]',cleanText(error?.message||error));
   });
-}
-
-function clipCachePath(item){
-  const id=createHash('sha1').update(String(item?.url||'')).digest('hex').slice(0,24);
-  return `${CLIP_CACHE_DIR}/${id}.mp4`;
-}
-
-async function downloadClipToCache(item){
-  prepareCacheDir();
-  const dest=clipCachePath(item);
-  try{
-    if(existsSync(dest) && statSync(dest).size>2*1024*1024)return dest;
-  }catch(_){}
-  if(clipPrefetchJobs.has(dest))return clipPrefetchJobs.get(dest);
-
-  const job=(async()=>{
-    let lastError=null;
-    for(let attempt=1;attempt<=3;attempt++){
-      const tmp=`${dest}.part-${process.pid}-${Date.now()}-${attempt}`;
-      const controller=new AbortController();
-      const timer=setTimeout(()=>controller.abort(),5*60*1000);
-      try{
-        const response=await fetch(item.url,{headers:{'user-agent':'ANDRIK-Radio-R654-ClipCache'},signal:controller.signal});
-        if(!response.ok)throw new Error(`clip cache HTTP ${response.status}`);
-        if(!response.body)throw new Error('clip cache empty response body');
-        await pipeline(Readable.fromWeb(response.body),createWriteStream(tmp,{flags:'w'}));
-        if(!existsSync(tmp) || statSync(tmp).size<2*1024*1024)throw new Error('clip cache file too small');
-        renameSync(tmp,dest);
-        return dest;
-      }catch(error){
-        lastError=error;
-        try{unlinkSync(tmp);}catch(_){}
-        if(attempt<3)await sleep(1500*attempt);
-      }finally{clearTimeout(timer)}
-    }
-    throw lastError||new Error('clip cache download failed');
-  })();
-  clipPrefetchJobs.set(dest,job);
-  try{return await job;}finally{clipPrefetchJobs.delete(dest)}
-}
-
-function prefetchClip(item){
-  if(item?.type!=='clip' || !item?.url)return;
-  downloadClipToCache(item).catch(error=>console.error('[clip-prefetch]',cleanText(error?.message||error)));
-}
-
-function prefetchClips(){
-  CLIPS.forEach(prefetchClip);
-}
-
-function prefetchItem(item){
-  if(!item?.url)return;
-  if(item.type==='clip')prefetchClip(item);
-  else prefetchTrack(item);
 }
 
 function localHourInTimeZone(timeZone=VISUAL_TIME_ZONE){
@@ -585,25 +505,7 @@ function trackLabel(item,fallback='—'){
   return album ? `${title} (${album})` : title;
 }
 
-function masterVideoFilter(){
-  const font=chooseFont();
-  const fontPart=font?`fontfile='${ffFilterPath(font)}':`:'';
-  const curPath=ffFilterPath(LIVE_CURRENT_FILE);
-  const tickerPath=ffFilterPath(LIVE_TICKER_FILE);
-  return [
-    // Incoming source is already full-frame, but keep the R649 direct stretch as
-    // the final safety net for both background videos and official clips.
-    'scale=1920:1080:flags=lanczos',
-    'setsar=1',
-    `fps=${VIDEO_FPS}`,
-    `setpts=N/(${VIDEO_FPS}*TB)`,
-    'format=yuv420p',
-    `drawtext=${fontPart}textfile='${curPath}':reload=${VIDEO_FPS}:fontcolor=yellow:fontsize=44:x=(w-text_w)/2:y=h-148:borderw=4:bordercolor=black@1:shadowcolor=black@1:shadowx=2:shadowy=2`,
-    `drawtext=${fontPart}textfile='${tickerPath}':reload=${VIDEO_FPS}:fontcolor=yellow:fontsize=28:x='w-mod(t*110,text_w+w)':y=h-58:borderw=3:bordercolor=black@1:shadowcolor=black@1:shadowx=2:shadowy=2`
-  ].join(',');
-}
-
-function startPublisher(){
+function startPublisher(visualPath){
   if(!STREAM_URL){
     state.lastError='YOUTUBE_STREAM_KEY is not configured';
     return false;
@@ -611,16 +513,31 @@ function startPublisher(){
   prepareCacheDir();
   if(!existsSync(LIVE_TICKER_FILE)) writeFileSync(LIVE_TICKER_FILE,DEFAULT_LIVE_TICKER,'utf8');
   if(!existsSync(LIVE_CURRENT_FILE)) writeFileSync(LIVE_CURRENT_FILE,'ANDRIK','utf8');
+  if(!existsSync(visualPath) || statSync(visualPath).size<300000) throw new Error(`visual missing: ${visualPath}`);
   if(!existsSync(QR_OVERLAY) || statSync(QR_OVERLAY).size<20000) throw new Error(`QR overlay missing: ${QR_OVERLAY}`);
 
-  const filterComplex=`[0:v]${masterVideoFilter()}[base];[1:v]scale=160:160:flags=lanczos,format=yuva420p[qr];[base][qr]overlay=24:24:format=yuv420[outv]`;
+  const font=chooseFont();
+  const fontPart=font?`fontfile='${ffFilterPath(font)}':`:'';
+  const curPath=ffFilterPath(LIVE_CURRENT_FILE);
+  const tickerPath=ffFilterPath(LIVE_TICKER_FILE);
+  const vf=[
+    // R655 preserves the exact working R649 hotfix. Fill 1920x1080 directly; never crop.
+    'scale=1920:1080:flags=lanczos',
+    'setsar=1',
+    `fps=${VIDEO_FPS}`,
+    'format=yuv420p',
+    `drawtext=${fontPart}textfile='${curPath}':reload=${VIDEO_FPS}:fontcolor=yellow:fontsize=44:x=(w-text_w)/2:y=h-148:borderw=4:bordercolor=black@1:shadowcolor=black@1:shadowx=2:shadowy=2`,
+    `drawtext=${fontPart}textfile='${tickerPath}':reload=${VIDEO_FPS}:fontcolor=yellow:fontsize=28:x='w-mod(t*110,text_w+w)':y=h-58:borderw=3:bordercolor=black@1:shadowcolor=black@1:shadowx=2:shadowy=2`
+  ].join(',');
+  const filterComplex=`[0:v]${vf}[base];[1:v]scale=160:160:flags=lanczos,format=yuva420p[qr];[base][qr]overlay=24:24:format=yuv420[outv]`;
 
-  // R654 keeps the R637 audio guarantee intact: one master owns AAC for the
-  // entire broadcast. Video also enters through one long-lived pipe, allowing
-  // a background loop or an official clip to be swapped without restarting RTMPS.
+  // R637 architecture: one FFmpeg owns the video encoder, AAC encoder and RTMPS
+  // muxer for the ENTIRE broadcast. Track decoders feed raw PCM into fd 3. Raw
+  // PCM has no per-track timestamps, so the master creates one continuous sample
+  // clock and AAC can never reset at song boundaries.
   const args=[
     '-hide_banner','-loglevel','warning',
-    '-thread_queue_size','8192','-f','rawvideo','-pixel_format','yuv420p','-video_size','1920x1080','-framerate',String(VIDEO_FPS),'-i','pipe:4',
+    '-thread_queue_size','8192','-re','-stream_loop','-1','-i',visualPath,
     '-loop','1','-framerate','1','-i',QR_OVERLAY,
     '-thread_queue_size','8192','-f','s16le','-ar',String(AUDIO_SAMPLE_RATE),'-ac','2','-i','pipe:3',
     '-filter_complex',filterComplex,
@@ -633,6 +550,8 @@ function startPublisher(){
     '-g',String(VIDEO_GOP),'-keyint_min',String(VIDEO_GOP),'-sc_threshold','0','-bf','2','-refs','1','-coder','1','-r',String(VIDEO_FPS),'-pix_fmt','yuv420p',
     '-c:a','aac','-profile:a','aac_low','-b:a',AUDIO_BITRATE,'-ar',String(AUDIO_SAMPLE_RATE),'-ac','2',
     '-max_muxing_queue_size','4096','-flush_packets','1',
+    // FIFO is only a network recovery layer now. Never discard packets: a full
+    // queue applies backpressure instead of destroying AAC frames.
     '-f','fifo','-fifo_format','flv','-queue_size','8192',
     '-timeshift',`${OUTPUT_TIMESHIFT_SECONDS}s`,
     '-drop_pkts_on_overflow','0',
@@ -640,19 +559,18 @@ function startPublisher(){
     STREAM_URL
   ];
 
-  publisher=spawn('ffmpeg',args,{stdio:['ignore','ignore','pipe','pipe','pipe']});
+  publisher=spawn('ffmpeg',args,{stdio:['ignore','ignore','pipe','pipe']});
   state.publisherRunning=true;
   state.streamStartedAt=new Date().toISOString();
-  for(const [name,sink] of [['audio',publisher.stdio[3]],['video',publisher.stdio[4]]]){
-    sink.on('error',err=>{
-      if(!stopping && !/EPIPE|ECONNRESET|ERR_STREAM_DESTROYED/i.test(String(err?.code||err?.message||err))) state.lastError=`${name}-pipe: ${String(err)}`;
-    });
-  }
+  const audioSink=publisher.stdio[3];
+  audioSink.on('error',err=>{
+    if(!stopping && !/EPIPE|ECONNRESET|ERR_STREAM_DESTROYED/i.test(String(err?.code||err?.message||err))) state.lastError=`audio-pipe: ${String(err)}`;
+  });
   publisher.stderr.on('data',d=>{
     const line=String(d||'').trim();
     if(line){
       state.lastFfmpegLine=line.slice(-1000);
-      if(/error|fail|invalid|broken pipe|non-monoton|continuity/i.test(line))state.lastError=line.slice(-700);
+      if(/error|fail|invalid|broken pipe|non-monoton/i.test(line))state.lastError=line.slice(-700);
       console.error('[master]',line);
     }
   });
@@ -664,58 +582,6 @@ function startPublisher(){
   });
   publisher.on('error',err=>{state.lastError=String(err);});
   return true;
-}
-
-function sourceVideoArgs(path,{loop=false}={}){
-  const args=['-hide_banner','-loglevel','warning','-fflags','+genpts+discardcorrupt','-err_detect','ignore_err','-re'];
-  if(loop)args.push('-stream_loop','-1');
-  args.push('-i',path,
-    '-map','0:v:0','-an','-sn','-dn',
-    '-vf',`scale=1920:1080:flags=lanczos,setsar=1,fps=${VIDEO_FPS},format=yuv420p`,
-    '-pix_fmt','yuv420p','-f','rawvideo','pipe:1');
-  return args;
-}
-
-function startBackgroundVisual(visualPath){
-  const videoSink=publisher?.stdio?.[4];
-  if(!publisher || publisher.exitCode!==null || !videoSink || videoSink.destroyed) throw new Error('master video pipe unavailable');
-  if(!existsSync(visualPath) || statSync(visualPath).size<300000)throw new Error(`visual missing: ${visualPath}`);
-
-  visualSwitching=false;
-  state.videoSourceMode='background';
-  state.visualPath=visualPath;
-  visualProducer=spawn('ffmpeg',sourceVideoArgs(visualPath,{loop:true}),{stdio:['pipe','pipe','pipe']});
-  const source=visualProducer.stdout;
-  source.pipe(videoSink,{end:false});
-  visualProducer.stderr.on('data',d=>{
-    const line=String(d||'').trim();
-    if(line && /error|fail|invalid|corrupt/i.test(line))state.lastError=line.slice(-700);
-  });
-  visualProducer.once('exit',(code,signal)=>{
-    try{source.unpipe(videoSink)}catch(_){}
-    visualProducer=null;
-    if(!stopping && !visualSwitching && state.videoSourceMode==='background'){
-      state.lastExit={layer:'background-video',code,signal,at:new Date().toISOString()};
-      setTimeout(()=>process.exit(code||23),1200).unref();
-    }
-  });
-  visualProducer.once('error',err=>{state.lastError=`background-video: ${String(err)}`});
-  return true;
-}
-
-async function stopBackgroundVisual(){
-  const active=visualProducer;
-  if(!active || active.exitCode!==null){visualProducer=null;return;}
-  visualSwitching=true;
-  // Keep stdout connected while SIGTERM is handled so FFmpeg completes the
-  // current raw-video frame. Unpiping first could cut a 3,110,400-byte frame
-  // in half and permanently shift every following frame.
-  try{active.stdin?.write('q\n');}catch(_){}
-  let clean=await waitChildExit(active,2200);
-  if(!clean && active.exitCode===null){active.kill('SIGTERM');clean=await waitChildExit(active,900);}
-  if(!clean && active.exitCode===null){active.kill('SIGKILL');await waitChildExit(active,500);}
-  try{active.stdout?.unpipe(publisher?.stdio?.[4])}catch(_){}
-  visualProducer=null;
 }
 
 function decoderArgs(localAudioPath){
@@ -730,34 +596,15 @@ function decoderArgs(localAudioPath){
   ];
 }
 
-function clipProducerArgs(localClipPath){
-  return [
-    '-hide_banner','-loglevel','warning','-fflags','+genpts+discardcorrupt','-err_detect','ignore_err','-re','-i',localClipPath,
-    '-map','0:v:0','-an','-sn','-dn',
-    '-vf',`scale=1920:1080:flags=lanczos,setsar=1,fps=${VIDEO_FPS},format=yuv420p`,
-    '-pix_fmt','yuv420p','-f','rawvideo','pipe:1',
-    '-map','0:a:0','-vn','-sn','-dn','-af',`aresample=${AUDIO_SAMPLE_RATE}`,
-    '-c:a','pcm_s16le','-ar',String(AUDIO_SAMPLE_RATE),'-ac','2','-f','s16le','pipe:3'
-  ];
-}
-
-function setNowPlaying(previous,item,next,duration){
+async function playItem(previous,item,next,following,localAudioPath){
+  const duration=await probeDuration(localAudioPath||item.url);
   state.previous=previous?{type:previous.type||'track',title:previous.title,album:previous.album||'',url:previous.url||''}:null;
   state.current={type:item.type||'track',title:item.title,album:item.album||'',url:item.url,startedAt:new Date().toISOString(),duration};
   state.next=next?{type:next.type||'track',title:next.title,album:next.album||'',url:next.url||''}:null;
-  writeFileSync(LIVE_CURRENT_FILE,item.type==='clip'?`${item.title} • OFFICIAL MUSIC VIDEO`:trackLabel(item,'ANDRIK'),'utf8');
-}
-
-async function playTrack(previous,item,next,localAudioPath){
-  const duration=await probeDuration(localAudioPath||item.url);
-  setNowPlaying(previous,item,next,duration);
+  writeFileSync(LIVE_CURRENT_FILE,trackLabel(item,'ANDRIK'),'utf8');
 
   const audioSink=publisher?.stdio?.[3];
   if(!publisher || publisher.exitCode!==null || !audioSink || audioSink.destroyed) throw new Error('master audio pipe unavailable');
-  if(!visualProducer || visualProducer.exitCode!==null){
-    const background=await ensureScheduledVisual();
-    startBackgroundVisual(background);
-  }
 
   state.producerRunning=true;
   producer=spawn('ffmpeg',decoderArgs(localAudioPath),{stdio:['ignore','pipe','pipe']});
@@ -775,59 +622,13 @@ async function playTrack(previous,item,next,localAudioPath){
     source.pipe(audioSink,{end:false});
     producer.once('error',reject);
     producer.once('exit',(code,signal)=>{
-      try{source.unpipe(audioSink)}catch(_){}
+      try{source.unpipe(audioSink);}catch(_){}
       state.producerRunning=false;
       producer=null;
-      if(code===0 || stopping)resolve();
+      if(code===0 || stopping) resolve();
       else reject(new Error(`decoder exit ${code||signal}`));
     });
   });
-}
-
-async function playClip(previous,item,next,localClipPath){
-  const duration=await probeDuration(localClipPath||item.url);
-  setNowPlaying(previous,item,next,duration);
-
-  const audioSink=publisher?.stdio?.[3];
-  const videoSink=publisher?.stdio?.[4];
-  if(!publisher || publisher.exitCode!==null || !audioSink || audioSink.destroyed || !videoSink || videoSink.destroyed)throw new Error('master media pipes unavailable');
-
-  await stopBackgroundVisual();
-  state.videoSourceMode='clip';
-  visualSwitching=true;
-  state.producerRunning=true;
-  producer=spawn('ffmpeg',clipProducerArgs(localClipPath),{stdio:['ignore','pipe','pipe','pipe']});
-  const videoSource=producer.stdout;
-  const audioSource=producer.stdio[3];
-  videoSource.pipe(videoSink,{end:false});
-  audioSource.pipe(audioSink,{end:false});
-  producer.stderr.on('data',d=>{
-    const line=String(d||'').trim();
-    if(line){
-      state.lastFfmpegLine=line.slice(-1000);
-      if(/error|fail|invalid|corrupt/i.test(line))state.lastError=line.slice(-700);
-      console.error('[clip]',line);
-    }
-  });
-
-  let clipError=null;
-  await new Promise((resolve,reject)=>{
-    producer.once('error',reject);
-    producer.once('exit',(code,signal)=>{
-      try{videoSource.unpipe(videoSink)}catch(_){}
-      try{audioSource.unpipe(audioSink)}catch(_){}
-      state.producerRunning=false;
-      producer=null;
-      if(code===0 || stopping)resolve();
-      else reject(new Error(`clip decoder exit ${code||signal}`));
-    });
-  }).catch(error=>{clipError=error});
-
-  // Resume the currently selected day/evening/night video immediately after the clip.
-  const background=await ensureScheduledVisual();
-  visualSwitching=false;
-  startBackgroundVisual(background);
-  if(clipError)throw clipError;
 }
 
 async function radioLoop(){
@@ -836,10 +637,8 @@ async function radioLoop(){
 
   prepareCacheDir();
   prefetchAllVisuals();
-  prefetchClips();
   const startupVisual=await ensureScheduledVisual();
-  if(!startPublisher())return;
-  startBackgroundVisual(startupVisual);
+  if(!startPublisher(startupVisual))return;
 
   while(!stopping){
     try{
@@ -859,19 +658,12 @@ async function radioLoop(){
       const following=queue[queueIndex+2]||queue[1]||queue[0]||null;
       state.queuePosition=queueIndex+1;
 
-      prefetchItem(next);
-      prefetchItem(following);
-      if(item.type==='clip'){
-        const localClipPath=await downloadClipToCache(item);
-        await playClip(lastPlayed,item,next,localClipPath);
-      }else{
-        const localAudioPath=await downloadTrackToCache(item);
-        const keep=[localAudioPath];
-        if(next?.type!=='clip')keep.push(audioCachePath(next||{}));
-        if(following?.type!=='clip')keep.push(audioCachePath(following||{}));
-        pruneAudioCache(keep);
-        await playTrack(lastPlayed,item,next,localAudioPath);
-      }
+      const localAudioPath=await downloadTrackToCache(item);
+      prefetchTrack(next);
+      prefetchTrack(following);
+      pruneAudioCache([localAudioPath,audioCachePath(next||{}),audioCachePath(following||{})]);
+
+      await playItem(lastPlayed,item,next,following,localAudioPath);
       lastPlayed=item;
       queueIndex++;
       state.lastError='';
@@ -882,13 +674,6 @@ async function radioLoop(){
       if(producer && producer.exitCode===null)producer.kill('SIGTERM');
       producer=null;
       state.producerRunning=false;
-      if(state.videoSourceMode==='clip'){
-        try{
-          const background=await ensureScheduledVisual();
-          visualSwitching=false;
-          if(!visualProducer)startBackgroundVisual(background);
-        }catch(_){}
-      }
 
       await sleep(1000);
 
@@ -926,8 +711,6 @@ function publicStatus(){
     duplicateSinglesSkipped:state.duplicateSinglesSkipped,
     libraryRefreshSeconds:Math.round(LIBRARY_REFRESH_MS/1000),
     libraryVideos:state.libraryVideos,
-    videoSourceMode:state.videoSourceMode,
-    clips:CLIPS.map(({title,url})=>({title,url})),
     cycle:state.cycle,
     queueLength:state.queueLength,
     queuePosition:state.queuePosition,
@@ -969,7 +752,6 @@ const server=http.createServer((req,res)=>{
       duplicateSinglesSkipped:state.duplicateSinglesSkipped,
       libraryRefreshSeconds:Math.round(LIBRARY_REFRESH_MS/1000),
       videos:state.libraryVideos,
-      clips:CLIPS.map(({title,url})=>({title,url})),
       total:library.length,
       mode:state.mode,
       previous:state.previous,
@@ -984,7 +766,7 @@ const server=http.createServer((req,res)=>{
 });
 
 server.listen(PORT,'0.0.0.0',()=>{
-  console.log(`ANDRIK Radio R654 TWO-R2-CLIPS + CONTINUOUS-AUDIO listening on :${PORT}`);
+  console.log(`ANDRIK Radio R643-D1-FINAL-R607-FULLFRAME-1080P-CONTINUOUS-AUDIO listening on :${PORT}`);
   radioLoop();
 });
 
@@ -1005,22 +787,17 @@ async function shutdown(){
   stopping=true;
   try{server.close();}catch(_){}
 
-  // Stop current song/clip producer and the background video source first.
+  // First stop only the current MP3 decoder. The master AAC encoder remains alive.
   const activeDecoder=producer;
   if(activeDecoder&&activeDecoder.exitCode===null)activeDecoder.kill('SIGTERM');
   await waitChildExit(activeDecoder,2500);
-  const activeVisual=visualProducer;
-  visualSwitching=true;
-  if(activeVisual&&activeVisual.exitCode===null)activeVisual.kill('SIGTERM');
-  await waitChildExit(activeVisual,1800);
 
-  // EOF on both persistent media pipes lets the single AAC/H.264 master flush
-  // FLV naturally, preserving the clean YouTube archive stop path.
+  // EOF on the persistent PCM fd lets -shortest flush AAC/FLV naturally. This is
+  // the normal stop path used by systemctl and prevents broken YouTube archives.
   const activeMaster=publisher;
   try{
-    for(const sink of [activeMaster?.stdio?.[3],activeMaster?.stdio?.[4]]){
-      if(sink && !sink.destroyed && !sink.writableEnded)sink.end();
-    }
+    const sink=activeMaster?.stdio?.[3];
+    if(sink && !sink.destroyed && !sink.writableEnded)sink.end();
   }catch(_){}
   let clean=await waitChildExit(activeMaster,9000);
   if(!clean && activeMaster&&activeMaster.exitCode===null){
