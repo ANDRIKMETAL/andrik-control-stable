@@ -24,6 +24,7 @@ const AUDIO_CACHE_DIR = `${CACHE_DIR}/audio`;
 const VISUAL_CACHE_DIR = `${CACHE_DIR}/visuals`;
 const MAX_CACHED_TRACKS = 7;
 const VISUAL_TIME_ZONE = process.env.VISUAL_TIME_ZONE || 'Europe/Bratislava';
+const FORCE_VISUAL_SLOT = ['day','evening','night'].includes(String(process.env.FORCE_VISUAL_SLOT||'').trim().toLowerCase()) ? String(process.env.FORCE_VISUAL_SLOT).trim().toLowerCase() : '';
 // R649: use the owner's three normal 16:9 master videos from R2 again.
 // The apply script downloads them to the local AWS visual cache before restart.
 // Runtime rendering is always full-bleed: COVER -> center CROP -> 1920x1080, never PAD.
@@ -52,8 +53,8 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R649-R2-MASTERS-FULLBLEED-1080P-CONTINUOUS-AUDIO',
-  mode: 'R648 PUSH+D1+APP / R2 DAY-EVENING-NIGHT MASTERS / FULL-BLEED 1080p25 / CONTINUOUS PCM + ONE AAC CLOCK / NO PACKET DROP / LIVE TICKER + QR',
+  version: 'R650-WEB-VISUAL-CONTROL-FULLBLEED-1080P-CONTINUOUS-AUDIO',
+  mode: 'R650 WEB VISUAL CONTROL / R648 PUSH+D1+APP / R2 DAY-EVENING-NIGHT / FULL-BLEED 1080p25 / CONTINUOUS PCM + ONE AAC CLOCK / NO PACKET DROP / LIVE TICKER + QR',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
@@ -478,11 +479,12 @@ function prefetchAllVisuals(){
 
 async function ensureScheduledVisual(){
   prepareCacheDir();
-  const period=visualPeriodForHour(localHourInTimeZone());
+  const scheduled=visualPeriodForHour(localHourInTimeZone());
+  const period=FORCE_VISUAL_SLOT || scheduled;
   const spec=visualSpecForPeriod(period);
   try{
     const path=await ensureVisualSpec(spec);
-    state.visualPeriod=period;
+    state.visualPeriod=FORCE_VISUAL_SLOT?`manual-${period}`:period;
     state.visualPath=path;
     return path;
   }catch(error){
@@ -698,6 +700,7 @@ function publicStatus(){
     videoGop:VIDEO_GOP,
     qrOverlay:QR_OVERLAY,
     visualTimeZone:state.visualTimeZone,
+    forceVisualSlot:FORCE_VISUAL_SLOT||null,
     visualPeriod:state.visualPeriod,
     visualPath:state.visualPath,
     publisherRunning:state.publisherRunning,

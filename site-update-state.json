@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787630448095-f5c8e9ffea",
-  "release": "R649",
-  "archiveName": "R649-R2-MASTERS-FULLSCREEN-R648-PUSH-STEP3-R647-APP-R646-QR-SAFE-FULL.zip",
-  "sourceHead": "631d284404cd1015f9e381630c0f23a691f7dec9",
-  "backupSha": "631d284404cd1015f9e381630c0f23a691f7dec9",
+  "operationId": "publish-1787632075678-5e506f4d28",
+  "release": "R650",
+  "archiveName": "R650-WEB-VISUAL-CONTROL-R2-AWS-FULLSCREEN-R648-PUSH-R647-APP-R646-QR-SAFE-FULL-1.zip",
+  "sourceHead": "622f031f9102f8cc2a925cf926e0ec5293cad0e7",
+  "backupSha": "622f031f9102f8cc2a925cf926e0ec5293cad0e7",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-25T04:00:48.488Z"
+  "generatedAt": "2026-08-25T04:27:56.084Z"
 }

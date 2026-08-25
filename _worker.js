@@ -17219,6 +17219,20 @@ async function handleRadioVisualPrivateR622(request,env){
     filename:`ANDRIK-radio-${slot}-master-r620.mp4`
   });
 }
+
+// R650: the already-paired AWS web agent can fetch only the three known visual slots.
+// This removes ADMIN_KEY from AWS completely: the phone/browser keeps owner auth,
+// while AWS uses its own hashed agent token that was paired once in R627.
+async function handleRadioAgentVisualR650(request,env){
+  if(!await radioAgentAuthorizedR627(request,env))return json({ok:false,error:'unauthorized-agent'},401);
+  const slot=radioVisualSlotR620(request);
+  if(!slot)return json({ok:false,error:'invalid-slot',allowed:['day','evening','night']},400);
+  const key=RADIO_VISUAL_KEYS_R620[slot];
+  return serveVideoObjectR559(request,env,key,{
+    download:true,
+    filename:`ANDRIK-radio-${slot}-master-r650.mp4`
+  });
+}
 async function handleRadioVisualStatusR620(request,env){
   if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
   const bucket=getMusicBucketR314(env);if(!bucket)return json({ok:false,error:'music-bucket-not-configured'},503);
@@ -17720,8 +17734,11 @@ async function handleRadioRemoteCommandR627(request,env){
   const db=env.COMMENTS_DB;if(!db)return json({ok:false,error:'database-not-configured'},503);
   const body=await request.json().catch(()=>({}));
   const action=String(body.action||'').trim().toLowerCase();
-  const allowed=new Set(['start','recover','stop','restart','status','auto-safe']);
+  const allowed=new Set(['start','recover','stop','restart','status','auto-safe','visual-sync','visual-now','visual-auto']);
   if(!allowed.has(action))return json({ok:false,error:'invalid-action'},400);
+  const slot=String(body.slot||'').trim().toLowerCase();
+  if(action==='visual-now' && !Object.prototype.hasOwnProperty.call(RADIO_VISUAL_KEYS_R620,slot))
+    return json({ok:false,error:'invalid-slot',allowed:['day','evening','night']},400);
   const agent=parseStateValueR627(await getPushState(db,RADIO_REMOTE_R627.agentKey).catch(()=>null))||{};
   if(!agent.tokenHash)return json({ok:false,error:'aws-agent-not-paired'},409);
   const existing=parseStateValueR627(await getPushState(db,RADIO_REMOTE_R627.commandKey).catch(()=>null));
@@ -17730,7 +17747,7 @@ async function handleRadioRemoteCommandR627(request,env){
     if(age<180000)return json({ok:false,error:'command-busy',command:existing},409);
   }
   const id=crypto.randomUUID();
-  const command={id,action,state:'queued',createdAt:new Date().toISOString(),requestedBy:'owner-control-r627'};
+  const command={id,action,state:'queued',createdAt:new Date().toISOString(),requestedBy:'owner-control-r650',...(action==='visual-now'?{slot}:{})};
   await setPushState(db,RADIO_REMOTE_R627.commandKey,JSON.stringify(command));
   return json({ok:true,command});
 }
@@ -17866,6 +17883,7 @@ async function routeApi(request, env, ctx) {
     if (path === '/api/radio-agent-r627/pair/consume' && request.method === 'POST') return await handleRadioAgentPairConsumeR627(request, env);
     if (path === '/api/radio-agent-r627/poll' && request.method === 'POST') return await handleRadioAgentPollR627(request, env);
     if (path === '/api/radio-agent-r627/result' && request.method === 'POST') return await handleRadioAgentResultR627(request, env);
+    if (path === '/api/radio-agent-r650/visual' && (request.method === 'GET' || request.method === 'HEAD')) return await handleRadioAgentVisualR650(request, env);
 
     if (path === '/api/control/radio-visuals-r620' && request.method === 'PUT') return await handleRadioVisualPutR620(request, env);
     if (path === '/api/control/radio-visuals-r620/status' && request.method === 'GET') return await handleRadioVisualStatusR620(request, env);
