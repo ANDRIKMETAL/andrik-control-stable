@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787650513321-34a662ca4d",
-  "release": "R660",
-  "archiveName": "R660-MAP-CITIES-COUNTRY-SPOILER-RADIO-UNTOUCHED-SAFE-FULL.zip",
-  "sourceHead": "cb10760e2702d5c886c2bac9eb0d503c6b3efcab",
-  "backupSha": "cb10760e2702d5c886c2bac9eb0d503c6b3efcab",
+  "operationId": "publish-1787653784854-5c17ac424a",
+  "release": "R661",
+  "archiveName": "R661-PUSH-NO-DELAY-MAP-DOTS-RADIO-UNTOUCHED-SAFE-FULL.zip",
+  "sourceHead": "37388ce3dc0b843d779ebf3c35265363ad0dd488",
+  "backupSha": "37388ce3dc0b843d779ebf3c35265363ad0dd488",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-25T09:35:13.321Z"
+  "generatedAt": "2026-08-25T10:29:44.854Z"
 }

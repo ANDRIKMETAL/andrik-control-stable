@@ -2572,12 +2572,15 @@ function pushTopicToken(value, fallback = 'andrik-event') {
 // event and an accumulated +N counter inside the notification itself.
 function ownerPushPresentation(history = null, name = '') {
   const type = cleanPlainText(history?.type || '', 80).toLowerCase();
+  // R661: owner events are real-time signals. Do not allow an old comment/like/
+  // subscriber notification to wake up hours later after Android/Chrome resumes.
+  // Daily summary may live for an hour; every other owner event expires in 5 min.
   return {
     androidGroup: 'andrik-single-eye',
     threadId: 'andrik-single-eye',
     collapseId: 'andrik-single-eye',
     webPushTopic: 'andrik-single-eye',
-    ttl: type === 'daily-summary' ? 86400 : 43200
+    ttl: type === 'daily-summary' ? 3600 : 300
   };
 }
 
@@ -2589,24 +2592,10 @@ function ownerPushStackLabel(count) {
 }
 
 async function nextOwnerPushStack(env, history = null) {
-  const type = cleanPlainText(history?.type || '', 80).toLowerCase();
-  if (!env.COMMENTS_DB) return { enabled:true, count:1, windowMinutes:30, key:'andrik-single-eye' };
-  const db = env.COMMENTS_DB;
-  await ensurePushAutomationSchema(db);
-  const stateKey = 'owner-push-stack-r187';
-  const now = Date.now();
-  const windowMs = 30 * 60 * 1000;
-  let previous = {};
-  try {
-    const row = await getPushState(db, stateKey);
-    previous = JSON.parse(row?.value || '{}');
-  } catch (_) { previous = {}; }
-  const lastAtMs = Date.parse(previous?.lastAt || '');
-  const withinWindow = Number.isFinite(lastAtMs) && now - lastAtMs >= 0 && now - lastAtMs <= windowMs;
-  const count = withinWindow ? Math.min(99, Math.max(1, Number(previous?.count || 0)) + 1) : 1;
-  const value = { count, lastAt:new Date(now).toISOString(), firstAt:withinWindow ? (previous?.firstAt || previous?.lastAt || new Date(now).toISOString()) : new Date(now).toISOString(), lastType:type };
-  await setPushState(db, stateKey, JSON.stringify(value));
-  return { enabled:true, count, windowMinutes:30, key:'andrik-single-eye' };
+  // R661: disable the old 30-minute +N presentation. It reached +99 and made
+  // a freshly delivered push look like a delayed bundle of old events. The
+  // universal collapse/topic above still keeps only the newest eye notification.
+  return { enabled:false, count:1, windowMinutes:0, key:'andrik-single-eye' };
 }
 
 async function sendOneSignalPush(env, {

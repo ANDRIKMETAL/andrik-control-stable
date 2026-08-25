@@ -1,7 +1,7 @@
 (()=>{
   'use strict';
-  if(window.__ANDRIK_RADIO_COUNTRIES_R660__)return;
-  window.__ANDRIK_RADIO_COUNTRIES_R660__=true;
+  if(window.__ANDRIK_RADIO_COUNTRIES_R661__)return;
+  window.__ANDRIK_RADIO_COUNTRIES_R661__=true;
 
   const q=s=>document.querySelector(s);
   const qa=s=>[...document.querySelectorAll(s)];
@@ -91,7 +91,7 @@
     if(!layer||!empty||!cityList||!countryList)return;
     layer.innerHTML='';
     const countries=countryData.rows||[];
-    const totalLive=livePoints(window.__ANDRIK_RADIO_LAST_MAP_R660__||{}).reduce((sum,p)=>sum+p.value,0);
+    const totalLive=livePoints(window.__ANDRIK_RADIO_LAST_MAP_R661__||{}).reduce((sum,p)=>sum+p.value,0);
     set('[data-radio-country-count]',fmt(countries.length));
     set('[data-radio-city-count]',fmt(points.length));
     set('[data-radio-event-count]',fmt(totalLive));
@@ -100,18 +100,18 @@
     set('[data-radio-city-period]',cityData.period||'24 часа');
 
     const maxCountry=Math.max(1,...countries.map(x=>x.views));
-    const countryPositions=spreadCountryPositions(countries);
+    const countryPositions=spreadCountryPositions(countries.slice(0,18));
     for(const row of countryPositions){
       const dot=document.createElement('button');dot.type='button';dot.className='radio-country-dot';
-      const size=10+Math.round(8*Math.sqrt(row.views/maxCountry));
-      dot.style.left=`${row.x.toFixed(2)}%`;dot.style.top=`${row.y.toFixed(2)}%`;dot.style.width=`${size}px`;dot.style.height=`${size}px`;
+      const size=7+Math.round(3*Math.sqrt(row.views/maxCountry));
+      dot.style.left=`${row.x.toFixed(2)}%`;dot.style.top=`${row.y.toFixed(2)}%`;dot.style.setProperty('--dot-size',`${size}px`);
       dot.title=`${countryName(row.country)}: ${fmt(row.views)} просмотров · ${countryData.period}`;dot.setAttribute('aria-label',dot.title);layer.appendChild(dot);
     }
     const maxCity=Math.max(1,...points.map(p=>p.value));
     for(const p of points){
       const {x,y}=pos(p.latitude,p.longitude);const dot=document.createElement('button');dot.type='button';dot.className=cityData.dotClass||'radio-city-dot is-fallback';
-      if(p.value>1)dot.dataset.count=String(p.value);
-      dot.style.left=`${x.toFixed(2)}%`;dot.style.top=`${y.toFixed(2)}%`;dot.style.width=`${11+Math.round(6*Math.sqrt(p.value/maxCity))}px`;dot.style.height=dot.style.width;
+      if(cityData.mode==='live' && p.value>1)dot.dataset.count=String(p.value);
+      dot.style.left=`${x.toFixed(2)}%`;dot.style.top=`${y.toFixed(2)}%`;dot.style.setProperty('--dot-size',`${10+Math.round(3*Math.sqrt(p.value/maxCity))}px`);
       dot.title=`${cityData.mode==='live'?'LIVE':'24 ч'}: ${p.city}${p.country?' · '+countryName(p.country):''}: ${p.value}`;dot.setAttribute('aria-label',dot.title);layer.appendChild(dot);
     }
 
@@ -134,7 +134,7 @@
     const state=q('[data-radio-city-state]');if(state)state.textContent='Обновляем…';
     try{
       const d=await fetchJson(`/api/control/ecosystem-map?ts=${Date.now()}`),countryData=youtubeCountries(d),cityData=cityAudience(d);
-      window.__ANDRIK_RADIO_LAST_MAP_R660__=d;
+      window.__ANDRIK_RADIO_LAST_MAP_R661__=d;
       renderMap(cityData,countryData);
       if(state){state.textContent=cityData.mode==='live'?'LIVE + страны':cityData.points.length?'24 ч + страны':countryData.rows.length?countryData.period:'Нет географии';state.className='state '+((cityData.points.length||countryData.rows.length)?'service-access-state is-ready':'')}
     }catch(e){
@@ -145,5 +145,5 @@
   async function refresh(){await Promise.allSettled([loadViewers(),loadMap()])}
   refresh();timer=setInterval(refresh,30000);
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh()});
-  window.AndrikRadioCountriesR660={refresh};
+  window.AndrikRadioCountriesR661={refresh};
 })();
