@@ -18200,6 +18200,7 @@ async function routeApi(request, env, ctx) {
     if (path === '/api/control/youtube-live-r565' && request.method === 'GET') return await handleControlYoutubeLiveR565(request, env);
     if (path === '/api/control/youtube-live-r609/auto' && request.method === 'POST') return await handleYoutubeLiveAutoR609(request, env);
     if (path === '/api/control/youtube-live-r609/start' && request.method === 'POST') return await handleYoutubeLiveStartR609(request, env);
+    if (path === '/api/control/youtube-live-r665/stop' && request.method === 'POST') return await handleYoutubeLiveStopR665(request, env);
     if (path === '/api/control/search-console' && request.method === 'GET') return await handleControlSearchConsole(request, env);
     if (path === '/api/control/snapshots/refresh' && request.method === 'POST') return await handleControlSnapshotsRefresh(request, env);
     if (path === '/api/control/country-growth' && request.method === 'GET') return await handleControlCountryGrowth(request, env);
@@ -18477,6 +18478,39 @@ async function handleYoutubeLiveStartR609(request, env) {
     const reason=cleanPlainText(error?.reason||'',180);
     const insufficient=/insufficient|scope|permission/i.test(`${reason} ${error?.message||''}`);
     return json({ok:false,error:insufficient?'youtube-oauth-write-scope-required':'youtube-live-start-failed',reason,message:cleanPlainText(error?.message||error,500),reconnectUrl:'https://andrikmetal.com/service-admin.html?youtube-reconnect=r609'},insufficient?403:503);
+  }
+}
+
+
+// R665 — complete the current YouTube broadcast before OVH stops the encoder.
+// This endpoint is owner-session/admin protected by the normal Control API wrapper.
+async function handleYoutubeLiveStopR665(request, env) {
+  if (!adminAuthorized(request, env)) return json({ok:false,error:'unauthorized'},401);
+  try{
+    const accessToken=await getYoutubeOAuthAccessToken(env);
+    let {broadcast,streamStatus}=await youtubeCurrentBroadcastR609(env,accessToken);
+    if(!broadcast)return json({ok:true,alreadyStopped:true,videoId:'',lifeCycleStatus:'',streamStatus});
+    const id=cleanPlainText(broadcast.id||'',100);
+    let life=youtubeLifeKeyR609(broadcast?.status?.lifeCycleStatus);
+    const watchUrl=`https://www.youtube.com/watch?v=${encodeURIComponent(id)}`;
+    if(['complete','revoked'].includes(life))return json({ok:true,alreadyStopped:true,videoId:id,lifeCycleStatus:life,streamStatus,watchUrl});
+    if(life==='livestarting'){
+      const waited=await youtubeWaitLifeR609(env,accessToken,id,['live'],20000);
+      life=waited.life||life;
+    }
+    if(life==='live'){
+      await youtubeTransitionR609(accessToken,id,'complete');
+      const final=await youtubeWaitLifeR609(env,accessToken,id,['complete'],35000);
+      const finalLife=final.life||life;
+      return json({ok:finalLife==='complete',videoId:id,lifeCycleStatus:finalLife,streamStatus,watchUrl},finalLife==='complete'?200:503);
+    }
+    // created/ready/testing are not public LIVE. The OVH encoder may be stopped
+    // immediately without forcing a synthetic live->complete transition.
+    return json({ok:true,alreadyNotLive:true,videoId:id,lifeCycleStatus:life,streamStatus,watchUrl});
+  }catch(error){
+    const reason=cleanPlainText(error?.reason||'',180);
+    const insufficient=/insufficient|scope|permission/i.test(`${reason} ${error?.message||''}`);
+    return json({ok:false,error:insufficient?'youtube-oauth-write-scope-required':'youtube-live-stop-failed',reason,message:cleanPlainText(error?.message||error,500),reconnectUrl:'https://andrikmetal.com/service-admin.html?youtube-reconnect=r609'},insufficient?403:503);
   }
 }
 

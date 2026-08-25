@@ -1,3 +1,13 @@
+# R665 — OVH native radio control
+
+Control больше не вызывает старый AWS helper `/usr/local/sbin/andrik-youtube`. Новый OVH Agent R665 нативно управляет `andrik-radio.service`, а Cloudflare Worker переводит YouTube в LIVE/complete через OAuth.
+
+Разовая установка агента на OVH после деплоя R665:
+
+```bash
+curl -fsSL https://andrikmetal.com/radio247/vm-lite/install-ovh-agent-r665.sh | sudo bash
+```
+
 # ANDRIK Metal Radio 24/7 — R620
 
 Текущая схема:

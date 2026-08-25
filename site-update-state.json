@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787669540744-d4b1e4e114",
-  "release": "R664",
-  "archiveName": "R664-ONE-CLICK-RADIO-VIDEO-OVH-SAFE-FULL.zip",
-  "sourceHead": "74f2a64a6f21e05dcd389cddd795037abe0228e6",
-  "backupSha": "74f2a64a6f21e05dcd389cddd795037abe0228e6",
+  "operationId": "publish-1787671769092-d785d8b797",
+  "release": "R665",
+  "archiveName": "R665-OVH-NATIVE-RADIO-START-STOP-YOUTUBE-LIVE-SAFE-FULL.zip",
+  "sourceHead": "e2af90a97c784ed09ab90d1c6fc8f789a67f9683",
+  "backupSha": "e2af90a97c784ed09ab90d1c6fc8f789a67f9683",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-25T14:52:20.744Z"
+  "generatedAt": "2026-08-25T15:29:29.531Z"
 }
