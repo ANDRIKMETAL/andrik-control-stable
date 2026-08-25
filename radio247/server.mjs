@@ -24,15 +24,15 @@ const AUDIO_CACHE_DIR = `${CACHE_DIR}/audio`;
 const VISUAL_CACHE_DIR = `${CACHE_DIR}/visuals`;
 const MAX_CACHED_TRACKS = 7;
 const VISUAL_TIME_ZONE = process.env.VISUAL_TIME_ZONE || 'Europe/Bratislava';
-// R643: keep every R642 D1/app/push fix, but restore the proven full-frame
-// R613/R607 day/evening/night visuals. R620 master files contain baked-in black
-// letterbox bars, so stale AWS/R2 visual env values must not be allowed to win.
-const DAY_VISUAL = new URL('./assets/stream-day-r607.mp4', import.meta.url).pathname;
-const EVENING_VISUAL = new URL('./assets/stream-evening-r607.mp4', import.meta.url).pathname;
-const NIGHT_VISUAL = new URL('./assets/stream-night-r607.mp4', import.meta.url).pathname;
-const DAY_VISUAL_URL = DAY_VISUAL;
-const EVENING_VISUAL_URL = EVENING_VISUAL;
-const NIGHT_VISUAL_URL = NIGHT_VISUAL;
+// R649: use the owner's three normal 16:9 master videos from R2 again.
+// The apply script downloads them to the local AWS visual cache before restart.
+// Runtime rendering is always full-bleed: COVER -> center CROP -> 1920x1080, never PAD.
+const DAY_VISUAL = process.env.DAY_VISUAL || `${VISUAL_CACHE_DIR}/stream-day-master-r620.mp4`;
+const EVENING_VISUAL = process.env.EVENING_VISUAL || `${VISUAL_CACHE_DIR}/stream-evening-master-r620.mp4`;
+const NIGHT_VISUAL = process.env.NIGHT_VISUAL || `${VISUAL_CACHE_DIR}/stream-night-master-r620.mp4`;
+const DAY_VISUAL_URL = process.env.DAY_VISUAL_URL || DAY_VISUAL;
+const EVENING_VISUAL_URL = process.env.EVENING_VISUAL_URL || EVENING_VISUAL;
+const NIGHT_VISUAL_URL = process.env.NIGHT_VISUAL_URL || NIGHT_VISUAL;
 const EMERGENCY_VISUAL = process.env.EMERGENCY_VISUAL || new URL('../assets/live-eye-r223.mp4', import.meta.url).pathname;
 const QR_OVERLAY = process.env.QR_OVERLAY || new URL('../assets/andrik-qr-r612.png', import.meta.url).pathname;
 const OUTPUT_TIMESHIFT_SECONDS = 6; // R637: network recovery cushion; packets are NEVER dropped
@@ -52,13 +52,13 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R643-D1-FINAL-R607-FULLFRAME-1080P-CONTINUOUS-AUDIO',
-  mode: 'R642 D1+APP RESTORE / R607 FULL-FRAME VISUALS / 1080p25 / CONTINUOUS PCM + ONE AAC CLOCK / NO PACKET DROP / LIVE TICKER + QR',
+  version: 'R649-R2-MASTERS-FULLBLEED-1080P-CONTINUOUS-AUDIO',
+  mode: 'R648 PUSH+D1+APP / R2 DAY-EVENING-NIGHT MASTERS / FULL-BLEED 1080p25 / CONTINUOUS PCM + ONE AAC CLOCK / NO PACKET DROP / LIVE TICKER + QR',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
   producerRunning: false,
-  overlayMode: 'R607 DAY/EVENING/NIGHT FULL-FRAME / COVER+CROP 1920x1080 / QR / YELLOW TRACK + LIVE TICKER / NO BLACK BARS',
+  overlayMode: 'R2 DAY/EVENING/NIGHT MASTERS / COVER+CROP 1920x1080 / NO PAD / QR / YELLOW TRACK + LIVE TICKER / FULL SCREEN',
   audioMode: 'LOCAL MP3 CACHE + 2-TRACK PREFETCH / MP3→PCM 44.1kHz / ONE LONG-LIVED AAC-LC 128kbps ENCODER / CONTINUOUS SAMPLE CLOCK',
   visualTimeZone: VISUAL_TIME_ZONE,
   visualPeriod: null,

@@ -15166,7 +15166,7 @@ async function siteUpdateGithubRequest(config, route, options = {}) {
   const timeoutMs = Math.max(5000, Math.min(180000, Number(options.timeoutMs || defaultTimeout)));
   const retryableRoute = method === 'GET' || method === 'PATCH' ||
     /\/git\/(?:blobs|trees|commits)(?:\/|$)/.test(route);
-  const attempts = retryableRoute ? 3 : 1;
+  const attempts = retryableRoute ? 6 : 1; // R649: one client Commit, GitHub transient retries stay inside this Worker request
   let lastError = null;
 
   for (let attempt = 1; attempt <= attempts; attempt++) {
