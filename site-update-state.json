@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787653784854-5c17ac424a",
-  "release": "R661",
-  "archiveName": "R661-PUSH-NO-DELAY-MAP-DOTS-RADIO-UNTOUCHED-SAFE-FULL.zip",
-  "sourceHead": "37388ce3dc0b843d779ebf3c35265363ad0dd488",
-  "backupSha": "37388ce3dc0b843d779ebf3c35265363ad0dd488",
+  "operationId": "publish-1787655266547-4875ef0485",
+  "release": "R662",
+  "archiveName": "R662-MAP-FIT-R2-CHUNK-UPLOAD-RADIO-UNTOUCHED-SAFE-FULL.zip",
+  "sourceHead": "82157da3d011f81c081cdd6c5ac681f5bcfb664d",
+  "backupSha": "82157da3d011f81c081cdd6c5ac681f5bcfb664d",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-25T10:29:44.854Z"
+  "generatedAt": "2026-08-25T10:54:26.547Z"
 }
