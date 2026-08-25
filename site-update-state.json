@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787635034020-b7105a76b5",
-  "release": "R651",
-  "archiveName": "R651-R649-STRETCH-R2-VIDEO-PICKER-FAST-INSTALL-SAFE-FULL.zip",
-  "sourceHead": "6fc5bdd51b3183500d45b19de7dc30ee19fd0a3d",
-  "backupSha": "6fc5bdd51b3183500d45b19de7dc30ee19fd0a3d",
+  "operationId": "publish-1787635635518-51509f654c",
+  "release": "R652",
+  "archiveName": "R652-CLEAN-R649-FULLSCREEN-R2-PICKER-NO-TAILS-SAFE-FULL-1.zip",
+  "sourceHead": "474c42c208a0ecda03c09c5b1227687e2539f2c3",
+  "backupSha": "474c42c208a0ecda03c09c5b1227687e2539f2c3",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-25T05:17:14.500Z"
+  "generatedAt": "2026-08-25T05:27:15.904Z"
 }
