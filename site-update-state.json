@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787671769092-d785d8b797",
-  "release": "R665",
-  "archiveName": "R665-OVH-NATIVE-RADIO-START-STOP-YOUTUBE-LIVE-SAFE-FULL.zip",
-  "sourceHead": "e2af90a97c784ed09ab90d1c6fc8f789a67f9683",
-  "backupSha": "e2af90a97c784ed09ab90d1c6fc8f789a67f9683",
+  "operationId": "publish-1787674097582-5bbe8af12c",
+  "release": "R666",
+  "archiveName": "R666-YOUTUBE-OAUTH-RECONNECT-OVH-RADIO-UNTOUCHED-SAFE-FULL.zip",
+  "sourceHead": "a79d1496b7431ed94dfe94081391560931b281c5",
+  "backupSha": "a79d1496b7431ed94dfe94081391560931b281c5",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-25T15:29:29.531Z"
+  "generatedAt": "2026-08-25T16:08:17.582Z"
 }

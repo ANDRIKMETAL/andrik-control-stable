@@ -51,7 +51,7 @@
     if(!getKey()){set('serviceYoutubeOauthMessage','Сначала сохраните ADMIN_KEY.');return}
     saveKey();
     const button=document.getElementById('serviceYoutubeOauthConnect');if(button){button.disabled=true;button.textContent='Открываем Google…'}
-    try{const data=await api('/api/control/youtube-oauth/start');if(!data.url)throw new Error('Ссылка авторизации не получена');location.assign(data.url)}
+    try{const data=await api('/api/control/youtube-oauth/start');if(!data.url)throw new Error('Ссылка авторизации не получена');try{window.top.location.assign(data.url)}catch(_){location.assign(data.url)}}
     catch(error){set('serviceYoutubeOauthMessage',`YouTube Studio: ${error.message}`);if(button){button.disabled=false;button.textContent='Подключить YouTube Studio'}}
   }
 
@@ -68,7 +68,7 @@
     const button=document.getElementById('serviceYoutubeStartNow');if(button)button.disabled=true;
     set('serviceYoutubeOauthMessage','Команда запуска отправлена YouTube…');
     try{const data=await api('/api/control/youtube-live-r609/start',{method:'POST'});set('serviceYoutubeOauthMessage',data.alreadyLive?'Эфир уже LIVE ✅':`YouTube: ${data.lifeCycleStatus||'команда принята'} ✅`)}
-    catch(error){set('serviceYoutubeOauthMessage',error.data?.error==='youtube-stream-inactive'?'Сначала запусти encoder на AWS.':error.data?.error==='youtube-oauth-write-scope-required'?'Нужно переподключить YouTube Studio.':`Запуск: ${error.message}`)}
+    catch(error){set('serviceYoutubeOauthMessage',error.data?.error==='youtube-stream-inactive'?'Сначала запусти encoder на OVH.':error.data?.error==='youtube-oauth-write-scope-required'?'Нужно переподключить YouTube Studio.':`Запуск: ${error.message}`)}
     finally{if(button)button.disabled=false}
   }
 
