@@ -50,10 +50,6 @@
     const ticker=tickerTextFrom(data);lastServerTicker=ticker;
     document.querySelectorAll('[data-radio-ticker-input]').forEach(el=>{if(document.activeElement!==el&&el.value!==ticker)el.value=ticker});
     document.querySelectorAll('[data-radio-ticker-live]').forEach(el=>el.textContent=ticker||'—');
-    document.querySelectorAll('[data-radio-agent-note]').forEach(el=>{
-      el.hidden=hasR665Agent(data);
-      el.textContent=hasR665Agent(data)?'':`⚠ Сейчас ${version||'старый агент'}. Для полного R665 (точный stop/start без ENOENT) один раз установи OVH Agent R665 командой из инструкции.`;
-    });
   }
 
   async function refresh(){
@@ -214,7 +210,28 @@
     finally{tickerSaving=false}
   }
 
+  function setYoutubeOauthMessage(text,kind=''){
+    document.querySelectorAll('[data-radio-youtube-oauth-message]').forEach(el=>{el.textContent=text;el.dataset.kind=kind});
+  }
+
+  async function reconnectYoutube(){
+    const button=document.querySelector('[data-radio-youtube-oauth-connect]');
+    if(button){button.disabled=true;button.textContent='ОТКРЫВАЮ GOOGLE…'}
+    setYoutubeOauthMessage('Готовлю одноразовую ссылку Google…','work');
+    try{
+      const result=await api('/api/control/youtube-oauth/start');
+      if(!result?.url)throw new Error('Ссылка Google не получена');
+      setYoutubeOauthMessage('Открываю Google. Выбери аккаунт канала ANDRIK Metal и подтверди разрешения.','ok');
+      // Same-tab navigation is deliberate on Android: no popup blocker and no embedded iframe.
+      window.location.assign(result.url);
+    }catch(e){
+      setYoutubeOauthMessage(`YouTube OAuth: ${e.message||e}`,'bad');
+      if(button){button.disabled=false;button.textContent='🔐 ПЕРЕПОДКЛЮЧИТЬ YOUTUBE'}
+    }
+  }
+
   document.addEventListener('click',e=>{
+    const oauth=e.target.closest('[data-radio-youtube-oauth-connect]');if(oauth){e.preventDefault();reconnectYoutube();return}
     const b=e.target.closest('[data-radio-action]');
     if(b){e.preventDefault();const a=b.dataset.radioAction;if(a==='start')startSequence();else if(a==='recover')startSequence({recover:true});else if(a==='stop')stopSequence();else if(a==='status')statusSequence();else if(a==='auto-safe')autoSequence();else if(a==='restart')restartOnly();return}
     const t=e.target.closest('[data-radio-ticker-apply]');if(t){e.preventDefault();const input=document.querySelector('[data-radio-ticker-input]');if(input)saveTicker(input.value)}
