@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787644039622-9ae42e35b5",
-  "release": "R656",
-  "archiveName": "R656-AUTO-DAY-EVENING-NIGHT-FULLSCREEN-LOCK-R653-PUSH-SAFE-FULL.zip",
-  "sourceHead": "3d2205ba6d7fcebe1b8bdb70a07565a8d463439f",
-  "backupSha": "3d2205ba6d7fcebe1b8bdb70a07565a8d463439f",
+  "operationId": "publish-1787644695111-83165bfb4a",
+  "release": "R657",
+  "archiveName": "R657-CLEAN-LIGHT-R656-AUTO-FULLSCREEN-R653-PUSH-SAFE-FULL.zip",
+  "sourceHead": "6006d650c81ec0649955a0013a365094babe05d5",
+  "backupSha": "6006d650c81ec0649955a0013a365094babe05d5",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-25T07:47:20.447Z"
+  "generatedAt": "2026-08-25T07:58:32.338Z"
 }
