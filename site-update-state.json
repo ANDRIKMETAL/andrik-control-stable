@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787655722646-6c1f8072d0",
-  "release": "R663",
-  "archiveName": "R663-LIVE-LINK-FIX-MAP-FIT-R2-CHUNK-RADIO-UNTOUCHED-SAFE-FULL.zip",
-  "sourceHead": "52abcdf4748b0cf0d5390132276a2dc22ef544c8",
-  "backupSha": "52abcdf4748b0cf0d5390132276a2dc22ef544c8",
+  "operationId": "publish-1787669540744-d4b1e4e114",
+  "release": "R664",
+  "archiveName": "R664-ONE-CLICK-RADIO-VIDEO-OVH-SAFE-FULL.zip",
+  "sourceHead": "74f2a64a6f21e05dcd389cddd795037abe0228e6",
+  "backupSha": "74f2a64a6f21e05dcd389cddd795037abe0228e6",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-25T11:02:02.646Z"
+  "generatedAt": "2026-08-25T14:52:20.744Z"
 }
