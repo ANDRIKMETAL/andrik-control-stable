@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787647366454-549b322964",
-  "release": "R658",
-  "archiveName": "R658-COUNTRIES-AUTO-FULLSCREEN-PUSH-CACHE-CLEAN-SAFE-FULL.zip",
-  "sourceHead": "1d405a9058b0ee0834540b68f3a2e0d4996559ec",
-  "backupSha": "1d405a9058b0ee0834540b68f3a2e0d4996559ec",
+  "operationId": "publish-1787647754684-b3e5272b49",
+  "release": "R659",
+  "archiveName": "R659-PERMANENT-FULLSCREEN-GUARD-R658-PUSH-MAP-CACHE-SAFE-FULL.zip",
+  "sourceHead": "c8732db5ff8652827c921427226cb74516a24a46",
+  "backupSha": "c8732db5ff8652827c921427226cb74516a24a46",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-25T08:42:46.823Z"
+  "generatedAt": "2026-08-25T08:49:15.552Z"
 }
