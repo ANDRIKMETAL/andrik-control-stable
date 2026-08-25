@@ -25,9 +25,9 @@ const VISUAL_CACHE_DIR = `${CACHE_DIR}/visuals`;
 const MAX_CACHED_TRACKS = 7;
 const VISUAL_TIME_ZONE = process.env.VISUAL_TIME_ZONE || 'Europe/Bratislava';
 const FORCE_VISUAL_SLOT = ['day','evening','night'].includes(String(process.env.FORCE_VISUAL_SLOT||'').trim().toLowerCase()) ? String(process.env.FORCE_VISUAL_SLOT).trim().toLowerCase() : '';
-// R649: use the owner's three normal 16:9 master videos from R2 again.
-// The apply script downloads them to the local AWS visual cache before restart.
-// Runtime rendering is always full-bleed: COVER -> center CROP -> 1920x1080, never PAD.
+// R651: DAY / EVENING / NIGHT are owner-selected R2 videos cached locally on AWS.
+// IMPORTANT: preserve the exact working R649 hotfix behavior: direct 1920x1080 scale,
+// no crop and no pad. This intentionally fills the whole 16:9 frame every time.
 const DAY_VISUAL = process.env.DAY_VISUAL || `${VISUAL_CACHE_DIR}/stream-day-master-r620.mp4`;
 const EVENING_VISUAL = process.env.EVENING_VISUAL || `${VISUAL_CACHE_DIR}/stream-evening-master-r620.mp4`;
 const NIGHT_VISUAL = process.env.NIGHT_VISUAL || `${VISUAL_CACHE_DIR}/stream-night-master-r620.mp4`;
@@ -53,13 +53,13 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R650-WEB-VISUAL-CONTROL-FULLBLEED-1080P-CONTINUOUS-AUDIO',
-  mode: 'R650 WEB VISUAL CONTROL / R648 PUSH+D1+APP / R2 DAY-EVENING-NIGHT / FULL-BLEED 1080p25 / CONTINUOUS PCM + ONE AAC CLOCK / NO PACKET DROP / LIVE TICKER + QR',
+  version: 'R651-R649-STRETCH-R2-PICKER-1080P-CONTINUOUS-AUDIO',
+  mode: 'R651 R649-STRETCH + R2 VIDEO PICKER / R648 PUSH+D1+APP / DAY-EVENING-NIGHT / EXACT 1920x1080 NO CROP / CONTINUOUS PCM + ONE AAC CLOCK / NO PACKET DROP / LIVE TICKER + QR',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
   producerRunning: false,
-  overlayMode: 'R2 DAY/EVENING/NIGHT MASTERS / COVER+CROP 1920x1080 / NO PAD / QR / YELLOW TRACK + LIVE TICKER / FULL SCREEN',
+  overlayMode: 'R2 OWNER-SELECTED DAY/EVENING/NIGHT / R649 DIRECT SCALE 1920x1080 / NO CROP / NO PAD / QR / YELLOW TRACK + LIVE TICKER / FULL SCREEN',
   audioMode: 'LOCAL MP3 CACHE + 2-TRACK PREFETCH / MP3→PCM 44.1kHz / ONE LONG-LIVED AAC-LC 128kbps ENCODER / CONTINUOUS SAMPLE CLOCK',
   visualTimeZone: VISUAL_TIME_ZONE,
   visualPeriod: null,
@@ -521,8 +521,8 @@ function startPublisher(visualPath){
   const curPath=ffFilterPath(LIVE_CURRENT_FILE);
   const tickerPath=ffFilterPath(LIVE_TICKER_FILE);
   const vf=[
-    'scale=1920:1080:force_original_aspect_ratio=increase:flags=lanczos',
-    'crop=1920:1080',
+    // R651 = exact working R649 hotfix. Fill 1920x1080 directly; never crop.
+    'scale=1920:1080:flags=lanczos',
     'setsar=1',
     `fps=${VIDEO_FPS}`,
     'format=yuv420p',

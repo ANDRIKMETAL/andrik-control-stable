@@ -17239,10 +17239,79 @@ async function handleRadioVisualStatusR620(request,env){
   const out={};
   for(const [slot,key] of Object.entries(RADIO_VISUAL_KEYS_R620)){
     const object=await bucket.head(key).catch(()=>null);
-    out[slot]={exists:Boolean(object),key,size:Number(object?.size||0),uploaded:object?.uploaded||null,publicUrl:radioVisualPublicUrlR621(slot)};
+    out[slot]={exists:Boolean(object),key,size:Number(object?.size||0),uploaded:object?.uploaded||null,publicUrl:radioVisualPublicUrlR621(slot),sourceKey:String(object?.customMetadata?.sourceKey||''),sourceName:String(object?.customMetadata?.sourceName||'')};
   }
   return json({ok:true,ready:Object.values(out).every(x=>x.exists&&x.size>2*1024*1024),visuals:out});
 }
+
+
+// === R651: choose EXISTING MP4 objects from R2 and assign them to radio slots ===
+function radioVisualCandidateKeyR651(value){
+  const key=String(value||'').trim();
+  if(!key || key.length>900 || !/\.mp4$/i.test(key))return '';
+  if(/[\u0000-\u001f\u007f]/.test(key))return '';
+  return key;
+}
+async function handleRadioVisualLibraryR651(request,env){
+  if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
+  const bucket=getMusicBucketR314(env);if(!bucket)return json({ok:false,error:'music-bucket-not-configured'},503);
+  const objects=[];
+  let cursor='';
+  for(let page=0;page<8;page++){
+    const listed=await bucket.list({limit:1000,include:['customMetadata'],...(cursor?{cursor}:{})});
+    objects.push(...(listed.objects||[]));
+    if(!listed.truncated || !listed.cursor)break;
+    cursor=listed.cursor;
+  }
+  const slotKeys=new Set(Object.values(RADIO_VISUAL_KEYS_R620));
+  const preferredNames=new Set(['1000380218.mp4','1000380224.mp4','1000380219.mp4']);
+  const videos=objects
+    .filter(o=>radioVisualCandidateKeyR651(o.key) && Number(o.size||0)>500000)
+    .map(o=>{
+      const m=o.customMetadata||{};
+      const base=String(o.key||'').split('/').pop()||String(o.key||'');
+      const name=String(m.title||base||o.key).trim();
+      return {key:o.key,name,size:Number(o.size||0),uploaded:o.uploaded||null,isRadioSlot:slotKeys.has(o.key),preferred:preferredNames.has(base),sourceKey:String(m.sourceKey||'')};
+    })
+    .sort((a,b)=>{
+      if(a.preferred!==b.preferred)return a.preferred?-1:1;
+      if(a.isRadioSlot!==b.isRadioSlot)return a.isRadioSlot?1:-1;
+      const au=Date.parse(a.uploaded||0)||0,bu=Date.parse(b.uploaded||0)||0;
+      if(bu!==au)return bu-au;
+      return String(a.key).localeCompare(String(b.key),'ru',{numeric:true,sensitivity:'base'});
+    });
+  return json({ok:true,count:videos.length,videos,truncated:objects.length>=8000});
+}
+async function handleRadioVisualAssignR651(request,env){
+  if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
+  const bucket=getMusicBucketR314(env);if(!bucket)return json({ok:false,error:'music-bucket-not-configured'},503);
+  const body=await request.json().catch(()=>null);
+  const slot=String(body?.slot||'').trim().toLowerCase();
+  if(!Object.prototype.hasOwnProperty.call(RADIO_VISUAL_KEYS_R620,slot))return json({ok:false,error:'invalid-slot'},400);
+  const sourceKey=radioVisualCandidateKeyR651(body?.key||'');
+  if(!sourceKey)return json({ok:false,error:'invalid-source-key',message:'Выбери MP4 из R2.'},400);
+  const targetKey=RADIO_VISUAL_KEYS_R620[slot];
+  const source=await bucket.get(sourceKey).catch(()=>null);
+  if(!source)return json({ok:false,error:'source-not-found',message:'Выбранный MP4 больше не найден в R2.'},404);
+  if(Number(source.size||0)<500000)return json({ok:false,error:'source-too-small'},400);
+  if(sourceKey!==targetKey){
+    const meta=source.customMetadata||{};
+    await bucket.put(targetKey,source.body,{
+      httpMetadata:{contentType:'video/mp4',cacheControl:'no-store'},
+      customMetadata:{
+        source:'ANDRIK R651 selected existing R2 video',
+        sourceKey,
+        sourceName:String(meta.title||sourceKey.split('/').pop()||sourceKey).slice(0,500),
+        slot,
+        assignedBy:'radio-visuals-admin-r651',
+        assignedAt:new Date().toISOString()
+      }
+    });
+  }
+  const object=await bucket.head(targetKey).catch(()=>null);
+  return json({ok:true,slot,sourceKey,targetKey,size:Number(object?.size||source.size||0),uploaded:object?.uploaded||null,message:`${slot.toUpperCase()}: выбранный R2 MP4 назначен ✅`});
+}
+// === End R651 ===
 
 
 // === R625: one-time Device OAuth pairing bridge (website -> AWS) ===
@@ -17888,6 +17957,8 @@ async function routeApi(request, env, ctx) {
     if (path === '/api/control/radio-visuals-r620' && request.method === 'PUT') return await handleRadioVisualPutR620(request, env);
     if (path === '/api/control/radio-visuals-r620/status' && request.method === 'GET') return await handleRadioVisualStatusR620(request, env);
     if (path === '/api/control/radio-visuals-r620/file' && (request.method === 'GET' || request.method === 'HEAD')) return await handleRadioVisualPrivateR622(request, env);
+    if (path === '/api/control/radio-visuals-r651/library' && request.method === 'GET') return await handleRadioVisualLibraryR651(request, env);
+    if (path === '/api/control/radio-visuals-r651/assign' && request.method === 'POST') return await handleRadioVisualAssignR651(request, env);
     if (path === '/api/media/radio-visual-r621' && (request.method === 'GET' || request.method === 'HEAD')) return await handleRadioVisualPublicR621(request, env);
     if (path === '/api/control/media/ya-est-r478/mpu/start' && request.method === 'POST') return await handleYaEstVideoMpuStartR478(request, env);
     if (path === '/api/control/media/ya-est-r478/mpu/part' && request.method === 'PUT') return await handleYaEstVideoMpuPartR478(request, env);
