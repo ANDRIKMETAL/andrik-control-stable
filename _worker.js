@@ -8113,6 +8113,10 @@ async function handleFastYoutubeSubscriberCountR416(request, env, options = {}) 
     // by the engagement/full YouTube paths. R468 replaced the whole object here, which
     // silently dropped likesTotal and left the live summary stuck on an old snapshot.
     const previousCountsR469=parseYoutubeCountsCheckpointR440(await getPushState(db,'youtube-counts-last-summary').catch(()=>null));
+    // R653: dedicated subscriber-poll heartbeat. Do NOT reuse youtube-counts-last-at:
+    // ordinary analytics/summary refreshes also touch that generic key and used to make
+    // the reserve cron believe subscriber polling was fresh, silently skipping +1 pushes.
+    await setPushState(db,'youtube-subscriber-poll-last-at-r653',startedAt).catch(()=>{});
     await setPushState(db,'youtube-counts-last-at',startedAt).catch(()=>{});
     await setPushState(db,'youtube-counts-last-summary',JSON.stringify({
       subscribers:current,
@@ -8687,6 +8691,8 @@ async function handleCheckYoutubeEvents(request, env) {
       warnings
     };
     const failedEventDelivery = notifications.some(item => !item.ok);
+    // R653: full/manual reconciliation has completed real subscriber comparison too.
+    await setPushState(db,'youtube-subscriber-poll-last-at-r653',startedAt).catch(()=>{});
     await setPushState(db, 'youtube-events-last-check-status', (warnings.length || failedEventDelivery || summary.commentsQueued || summary.subscribersQueued || summary.likesQueued) ? 'warning' : 'success');
     if (!failedEventDelivery) await setPushState(db, 'youtube-events-last-success-at', startedAt);
     await setPushState(db, 'youtube-events-last-check-summary', JSON.stringify({ ...summary, failedEventDelivery }));
@@ -8706,7 +8712,7 @@ async function handleYoutubeEventsStatus(request, env) {
   if (!adminAuthorized(request, env)) return json({ ok:false, error:'unauthorized' }, 401);
   const db = requireDb(env);
   await Promise.all([ensurePushAutomationSchema(db), ensureControlV1Schema(db), ensurePlatformAnalyticsSchema(db)]);
-  const [lastCheck,lastSuccess,lastStatus,lastSummary,fastLastAt,fastLastSuccess,fastLastStatus,fastLastResult,fallbackLastAt,reserveLastAt,reserveStatus,reserveSummary,todayRows,lastFailure,lastLog] = await Promise.all([
+  const [lastCheck,lastSuccess,lastStatus,lastSummary,fastLastAt,fastLastSuccess,fastLastStatus,fastLastResult,fallbackLastAt,reserveLastAt,reserveStatus,reserveSummary,subscriberPollLastAt,todayRows,lastFailure,lastLog] = await Promise.all([
     getPushState(db,'youtube-events-last-check-at'),
     getPushState(db,'youtube-events-last-success-at'),
     getPushState(db,'youtube-events-last-check-status'),
@@ -8719,6 +8725,7 @@ async function handleYoutubeEventsStatus(request, env) {
     getPushState(db,'youtube-reserve-5m-last-at-r474'),
     getPushState(db,'youtube-reserve-5m-last-status-r474'),
     getPushState(db,'youtube-reserve-5m-last-summary-r474'),
+    getPushState(db,'youtube-subscriber-poll-last-at-r653'),
     db.prepare(`
       SELECT type,status,COUNT(*) AS total
       FROM push_history
@@ -8771,6 +8778,10 @@ async function handleYoutubeEventsStatus(request, env) {
       lastCheckAt:reserveLastAt?.value||reserveLastAt?.updatedAt||'',
       status:reserveStatus?.value||'never',
       summary:reserveSummaryParsed
+    },
+    subscriberPoll:{
+      lastCheckAt:subscriberPollLastAt?.value||subscriberPollLastAt?.updatedAt||'',
+      source:'dedicated-r653'
     },
     fast:{
       status:fastStatusValue,
@@ -11668,7 +11679,7 @@ async function runLegacyExternalCronReserveR648(request, env) {
   }
 
   const [subscriberAt,engagementAt]=await Promise.all([
-    getPushState(db,'youtube-counts-last-at').catch(()=>null),
+    getPushState(db,'youtube-subscriber-poll-last-at-r653').catch(()=>null),
     getPushState(db,'youtube-fast-engagement-last-at-r333').catch(()=>null)
   ]);
   const subscriberAge=ageMinutes(subscriberAt);
@@ -14644,7 +14655,7 @@ async function runYoutubeEventsFromGuardHealth(env) {
   await Promise.all([ensurePushAutomationSchema(db),ensureControlV1Schema(db),ensurePlatformAnalyticsSchema(db)]);
   const [fastState,subscriberState]=await Promise.all([
     getPushState(db,'youtube-fast-engagement-last-at-r333').catch(()=>null),
-    getPushState(db,'youtube-counts-last-at').catch(()=>null)
+    getPushState(db,'youtube-subscriber-poll-last-at-r653').catch(()=>null)
   ]);
   const ageMinutes=value=>{
     const ms=Date.parse(String(value?.value||value?.updatedAt||''));

@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787635635518-51509f654c",
-  "release": "R652",
-  "archiveName": "R652-CLEAN-R649-FULLSCREEN-R2-PICKER-NO-TAILS-SAFE-FULL-1.zip",
-  "sourceHead": "474c42c208a0ecda03c09c5b1227687e2539f2c3",
-  "backupSha": "474c42c208a0ecda03c09c5b1227687e2539f2c3",
+  "operationId": "publish-1787640736248-851e78dc10",
+  "release": "R654",
+  "archiveName": "R654-TWO-NATIVE-R2-CLIPS-BETWEEN-SONGS-R653-PUSH-R649-FULLSCREEN-SAFE-FULL-1.zip",
+  "sourceHead": "c7a8dae2d9e623b137fcc7cb98b5d979268d0673",
+  "backupSha": "c7a8dae2d9e623b137fcc7cb98b5d979268d0673",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-25T05:27:15.904Z"
+  "generatedAt": "2026-08-25T06:52:16.813Z"
 }
