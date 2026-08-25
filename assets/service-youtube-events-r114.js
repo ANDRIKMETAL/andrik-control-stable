@@ -16,7 +16,7 @@
     const strong=box.querySelector('strong');if(strong)strong.textContent=String(value??0);
   }
   function render(data={}){
-    const summary=data.summary||{},today=data.today||{},fast=data.fast||{},reserve=data.reserve||{};
+    const summary=data.summary||{},today=data.today||{},fast=data.fast||{},reserve=data.reserve||{},subscriberPoll=data.subscriberPoll||{};
     const status=String(data.status||'never');
     const fastStatus=String(fast.status||'never');
     const fastHardError=fastStatus==='failed'||fast.healthy===false;
@@ -32,7 +32,7 @@
     paintKpi('youtubeEventsQueue',queue,queue?'warning':'');
     paintKpi('youtubeEventsErrors',errors,errors?'error':'');
     const fastAge=Number.isFinite(Number(fast.ageMinutes))?` · ${Number(fast.ageMinutes)} мин. назад`:'';
-    set('youtubeEventsFastCheck',`Быстрый cron 2 мин: ${fmt(fast.lastCheckAt)}${fastAge}`);
+    set('youtubeEventsFastCheck',`Быстрый cron 2 мин: ${fmt(fast.lastCheckAt)}${fastAge} · подписчики: ${subscriberPoll.lastCheckAt?fmt(subscriberPoll.lastCheckAt):'ожидает'} · последний доставленный total ${Number(subscriberPoll.lastNotifiedTotal||0)}`);
     const commentDirect=['direct-video-r473','direct-video-r474'].includes(fast.summary?.commentMode);
     const commentNote=commentDirect?` · комментарии: прямой контроль ${Number(fast.summary?.commentTargets||0)} видео`:'';
     set('youtubeEventsFastResult',`Быстрый результат: ${fastStatus==='success'?'успех':fastStatus==='warning'?'предупреждение':fastStatus==='failed'?'ОШИБКА':'ожидает'} · отправлено ${Number(fast.summary?.sent||0)} · ошибок ${Number(fast.summary?.failed||0)}${commentNote} · восстановлено stale ${Number(fast.staleLikeClaims||0)}`);

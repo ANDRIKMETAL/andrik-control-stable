@@ -3351,9 +3351,20 @@ async function handleControlEcosystemMap(request, env) {
     const key = country.toLocaleUpperCase('ru');
     if (!historyCountryMapR452.has(key)) historyCountryMapR452.set(key,{country,value:1,source:'owner-confirmed-history'});
   }
-  const [igLatestR498, ttLatestR498] = await Promise.all([
-    latestPlatformMetricsR498(db,'instagram'), latestPlatformMetricsR498(db,'tiktok')
+  const [ytLatestR658, igLatestR498, ttLatestR498] = await Promise.all([
+    latestPlatformMetricsR498(db,'youtube'), latestPlatformMetricsR498(db,'instagram'), latestPlatformMetricsR498(db,'tiktok')
   ]);
+  // R658 radio-country fallback: YouTube does not expose the city of the current
+  // concurrent viewer. Reuse the latest already-cached Studio country analytics so
+  // the radio map can still show real audience countries without another API call.
+  const youtubeStudioR658=ytLatestR658.metrics?.studio||{};
+  const normalizeYoutubeCountriesR658=rows=>(Array.isArray(rows)?rows:[]).map(row=>({
+    country:cleanPlainText(row?.country||'',8).toUpperCase(),
+    views:Math.max(0,Number(row?.views||row?.value||0)),
+    estimatedMinutesWatched:Math.max(0,Number(row?.estimatedMinutesWatched||0))
+  })).filter(row=>row.country&&row.country!=='ZZ'&&row.views>0).sort((a,b)=>b.views-a.views).slice(0,120);
+  const youtubeCountriesR658=normalizeYoutubeCountriesR658(youtubeStudioR658.countries);
+  const youtubeDailyCountriesR658=normalizeYoutubeCountriesR658(youtubeStudioR658.dailyCountries);
   let instagramCountriesR498 = normalizeSnapshotGeoCountriesR498(igLatestR498.metrics);
   let instagramGeoMetricR498 = cleanPlainText(igLatestR498.metrics?.geoMetric || '',80);
   let instagramGeoErrorR498 = cleanPlainText(igLatestR498.metrics?.geoError || '',220);
@@ -3402,6 +3413,15 @@ async function handleControlEcosystemMap(request, env) {
     privacy:{ rawIpStored:false, coordinatePrecision:'0.1-degree', adminOnly:true },
     diagnostics:{ recovery:'R638-D1', schemaWarnings, historicalCountryAnchors:historyCountryMapR452.size, youtubeKnownCountries:youtubeKnownCountriesR452.length, d1AggregateCache:siteAggR638.d1Cache||null },
     historyCountries:[...historyCountryMapR452.values()],
+    youtube:{
+      countries:youtubeCountriesR658,
+      dailyCountries:youtubeDailyCountriesR658,
+      dailyDate:cleanPlainText(youtubeStudioR658.dailyDate||'',20),
+      startDate:cleanPlainText(youtubeStudioR658.startDate||'',20),
+      endDate:cleanPlainText(youtubeStudioR658.endDate||'',20),
+      updatedAt:cleanPlainText(youtubeStudioR658.updatedAt||ytLatestR658.createdAt||'',80),
+      source:'cached-studio-r658'
+    },
     site:{
       countries:normalizeCountries(siteCountriesRaw), points:normalizePoints(sitePointsRaw),
       weeklyCountries:normalizeWeekly(siteWeeklyRaw), previousWeekCountries:normalizeWeekly(sitePreviousWeeklyRaw)
@@ -8080,11 +8100,40 @@ async function handleFastYoutubeSubscriberCountR416(request, env, options = {}) 
     let sent=false;
     let pushError='';
 
+    // R658: notification delivery has its OWN subscriber total, independent from the
+    // analytics/event baseline. A full/manual reconciler may legitimately advance
+    // youtube_event_seen, but that must never erase a still-undelivered +1 push.
+    const notifiedKeyR658='youtube-subscriber-last-notified-total-r658';
+    const notifiedStateR658=await getPushState(db,notifiedKeyR658).catch(()=>null);
+    let notifiedTotalR658=Number(notifiedStateR658?.value);
+    if(!Number.isFinite(notifiedTotalR658) || notifiedTotalR658<0){
+      let historyTotalR658=NaN;
+      try{
+        const row=await db.prepare(`
+          SELECT details_json AS detailsJson
+          FROM push_history
+          WHERE type='youtube-subscriber-count' AND status='sent'
+          ORDER BY datetime(created_at) DESC LIMIT 1
+        `).first();
+        const details=JSON.parse(row?.detailsJson||'{}');
+        historyTotalR658=Number(details?.totalSubscribers);
+      }catch(_){ }
+      notifiedTotalR658=Number.isFinite(historyTotalR658)&&historyTotalR658>=0 ? historyTotalR658 : before;
+      await setPushState(db,notifiedKeyR658,String(notifiedTotalR658)).catch(()=>{});
+    }
+
     if(!previous){
       await saveYoutubeEventRow(db,{key,type:'subscriber-count',resourceId:identity.channelId,title:identity.title,countValue:current,url:identity.channelUrl,payload:{...identity,seededBy:'cron-lite-r416'}});
-    }else if(!identity.hiddenSubscribers && current>before){
-      const delta=current-before;
-      const onceKey=`push-once:youtube-subscriber-lite-r416:${before}:${current}`;
+      // First ever seed must not generate a historical notification storm.
+      if(!notifiedStateR658) await setPushState(db,notifiedKeyR658,String(current)).catch(()=>{});
+      notifiedTotalR658=current;
+    }else if(!identity.hiddenSubscribers && current>Math.min(before,notifiedTotalR658)){
+      // If the event baseline was advanced without a successful owner push, the
+      // dedicated notified total intentionally remains behind and this becomes a catch-up.
+      const deliveryBaseR658=Math.min(before,notifiedTotalR658);
+      const delta=current-deliveryBaseR658;
+      const deliveryModeR658=current>before?'cron-lite-r658':'catchup-r658';
+      const onceKey=`push-once:youtube-subscriber-r658:${deliveryBaseR658}:${current}`;
       const claimed=await claimPushOnce(db,onceKey,startedAt);
       if(claimed){
         const channelAppUrl=youtubeAppLauncherUrl(identity.channelUrl);
@@ -8092,21 +8141,32 @@ async function handleFastYoutubeSubscriberCountR416(request, env, options = {}) 
           title:delta===1?'👤 Новый подписчик YouTube':`👤 +${delta} подписчика YouTube`,
           message:`На канале теперь ${current} подписчиков`,
           url:channelAppUrl,
-          name:`youtube-subscriber-lite-r416-${before}-to-${current}`,
+          name:`youtube-subscriber-r658-${deliveryBaseR658}-to-${current}`,
           webButtons:[{id:'open-youtube',text:'▶️ Открыть YouTube',url:channelAppUrl}],
-          history:{type:'youtube-subscriber-count',source:'YouTube',videoTitle:identity.title,details:{previousSubscribers:before,totalSubscribers:current,delta,deliveryMode:'cron-lite-r416'}}
+          history:{type:'youtube-subscriber-count',source:'YouTube',videoTitle:identity.title,details:{previousSubscribers:deliveryBaseR658,baselineSubscribers:before,lastNotifiedSubscribers:notifiedTotalR658,totalSubscribers:current,delta,deliveryMode:deliveryModeR658}}
         });
         sent=Boolean(result.ok);
         pushError=cleanPlainText(result.error || '',300);
         if(sent){
-          await saveYoutubeEventRow(db,{key,type:'subscriber-count',resourceId:identity.channelId,title:identity.title,countValue:current,url:identity.channelUrl,payload:{...identity,deliveryMode:'cron-lite-r416'}});
+          await Promise.all([
+            saveYoutubeEventRow(db,{key,type:'subscriber-count',resourceId:identity.channelId,title:identity.title,countValue:current,url:identity.channelUrl,payload:{...identity,deliveryMode:deliveryModeR658}}),
+            setPushState(db,notifiedKeyR658,String(current))
+          ]);
+          notifiedTotalR658=current;
         }else{
+          // Keep the dedicated notified total behind so the next poll retries even
+          // if another analytics path already moved youtube_event_seen to current.
           await releasePushOnceClaim(db,onceKey).catch(()=>{});
         }
       }
     }else if(current!==before){
-      // A decrease is a new baseline, never a notification.
-      await saveYoutubeEventRow(db,{key,type:'subscriber-count',resourceId:identity.channelId,title:identity.title,countValue:current,url:identity.channelUrl,payload:{...identity,baselineReset:true,deliveryMode:'cron-lite-r416'}});
+      // A decrease is a new baseline, never a notification. Reset the delivery
+      // watermark too so a later genuine rise to the same absolute total can notify.
+      await Promise.all([
+        saveYoutubeEventRow(db,{key,type:'subscriber-count',resourceId:identity.channelId,title:identity.title,countValue:current,url:identity.channelUrl,payload:{...identity,baselineReset:true,deliveryMode:'cron-lite-r658'}}),
+        setPushState(db,notifiedKeyR658,String(current))
+      ]);
+      notifiedTotalR658=current;
     }
 
     // R469: subscriber polling must NEVER erase the likes/comments checkpoint written
@@ -8126,7 +8186,7 @@ async function handleFastYoutubeSubscriberCountR416(request, env, options = {}) 
       mode:'cron-lite-r469',
       updatedAt:startedAt
     })).catch(()=>{});
-    return {ok:!pushError,subscribers:current,previousSubscribers:before,delta:Math.max(0,current-before),sent,error:pushError,checkedAt:startedAt};
+    return {ok:!pushError,subscribers:current,previousSubscribers:before,lastNotifiedSubscribers:notifiedTotalR658,delta:Math.max(0,current-before),sent,error:pushError,checkedAt:startedAt,mode:'subscriber-watermark-r658'};
   } catch(error) {
     return {ok:false,error:cleanPlainText(error?.message || error,400),checkedAt:startedAt};
   }
@@ -8657,6 +8717,13 @@ async function handleCheckYoutubeEvents(request, env) {
       await saveYoutubeEventRow(db, { key:`comment-count:${item.videoId}`, type:'comment-count', resourceId:item.videoId, videoId:item.videoId, title:item.title, countValue:item.comments, url:item.url, payload:item });
     }
     if (!subscriberCountDeferred) await saveYoutubeEventRow(db, { key:'channel-subscriber-count', type:'subscriber-count', resourceId:identity.channelId, title:identity.title, countValue:identity.subscribers, url:identity.channelUrl, payload:identity });
+    // R658: successful full/manual subscriber delivery also advances the independent
+    // delivery watermark. Decreases reset it. This prevents the fast cron from either
+    // missing a +1 or duplicating a named subscriber notification.
+    const subscriberDeliveredR658=notifications.some(item=>['subscriber','subscriber-count'].includes(item.type)&&item.ok);
+    if(subscriberDropped || (subscriberDelta>0 && subscriberDeliveredR658)){
+      await setPushState(db,'youtube-subscriber-last-notified-total-r658',String(identity.subscribers)).catch(()=>{});
+    }
 
     const summary = {
       seeded:false,
@@ -8712,7 +8779,7 @@ async function handleYoutubeEventsStatus(request, env) {
   if (!adminAuthorized(request, env)) return json({ ok:false, error:'unauthorized' }, 401);
   const db = requireDb(env);
   await Promise.all([ensurePushAutomationSchema(db), ensureControlV1Schema(db), ensurePlatformAnalyticsSchema(db)]);
-  const [lastCheck,lastSuccess,lastStatus,lastSummary,fastLastAt,fastLastSuccess,fastLastStatus,fastLastResult,fallbackLastAt,reserveLastAt,reserveStatus,reserveSummary,subscriberPollLastAt,todayRows,lastFailure,lastLog] = await Promise.all([
+  const [lastCheck,lastSuccess,lastStatus,lastSummary,fastLastAt,fastLastSuccess,fastLastStatus,fastLastResult,fallbackLastAt,reserveLastAt,reserveStatus,reserveSummary,subscriberPollLastAt,subscriberNotifiedTotalR658,todayRows,lastFailure,lastLog] = await Promise.all([
     getPushState(db,'youtube-events-last-check-at'),
     getPushState(db,'youtube-events-last-success-at'),
     getPushState(db,'youtube-events-last-check-status'),
@@ -8726,6 +8793,7 @@ async function handleYoutubeEventsStatus(request, env) {
     getPushState(db,'youtube-reserve-5m-last-status-r474'),
     getPushState(db,'youtube-reserve-5m-last-summary-r474'),
     getPushState(db,'youtube-subscriber-poll-last-at-r653'),
+    getPushState(db,'youtube-subscriber-last-notified-total-r658'),
     db.prepare(`
       SELECT type,status,COUNT(*) AS total
       FROM push_history
@@ -8781,7 +8849,9 @@ async function handleYoutubeEventsStatus(request, env) {
     },
     subscriberPoll:{
       lastCheckAt:subscriberPollLastAt?.value||subscriberPollLastAt?.updatedAt||'',
-      source:'dedicated-r653'
+      source:'dedicated-r653',
+      lastNotifiedTotal:Number(subscriberNotifiedTotalR658?.value||0),
+      deliveryWatermark:'r658'
     },
     fast:{
       status:fastStatusValue,

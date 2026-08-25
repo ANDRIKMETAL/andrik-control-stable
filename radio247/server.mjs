@@ -25,6 +25,7 @@ const VISUAL_CACHE_DIR = `${CACHE_DIR}/visuals`;
 const MAX_CACHED_TRACKS = 7;
 const VISUAL_TIME_ZONE = process.env.VISUAL_TIME_ZONE || 'Europe/Bratislava';
 const FORCE_VISUAL_SLOT = ['day','evening','night'].includes(String(process.env.FORCE_VISUAL_SLOT||'').trim().toLowerCase()) ? String(process.env.FORCE_VISUAL_SLOT).trim().toLowerCase() : '';
+const VISUAL_AUTO_SCHEDULE_R658 = String(process.env.VISUAL_AUTO_SCHEDULE_R658||'').trim()==='1';
 // R651: DAY / EVENING / NIGHT are owner-selected R2 videos cached locally on AWS.
 // IMPORTANT: preserve the exact working R649 hotfix behavior: direct 1920x1080 scale,
 // no crop and no pad. This intentionally fills the whole 16:9 frame every time.
@@ -53,13 +54,13 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R656-AUTO-DAY-EVENING-NIGHT-R649-FULLSCREEN-LOCK-R653-PUSH-CONTINUOUS-AUDIO',
-  mode: 'R656 AUTO DAY-EVENING-NIGHT + R653 PUSH / R649 DIRECT 1920x1080 / ALL LOCAL VISUALS LOCKED / NO CROP / CONTINUOUS PCM + ONE AAC CLOCK / NO PACKET DROP / LIVE TICKER + QR',
+  version: 'R658-EXACT-AUTO-FULLSCREEN-R658-PUSH-WATERMARK-R649-CONTINUOUS-AUDIO',
+  mode: 'R658 EXACT AUTO DAY-EVENING-NIGHT / KNOWN-GOOD FORCE SLOT + R649 DIRECT 1920x1080 / R658 PUSH WATERMARK / ALL LOCAL VISUALS LOCKED / CONTINUOUS PCM + ONE AAC CLOCK / NO PACKET DROP',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
   producerRunning: false,
-  overlayMode: 'R655 LOCAL VISUAL PROTECTED / DAY LOCK / R649 DIRECT SCALE 1920x1080 / NO CROP / NO PAD / QR / YELLOW TRACK + LIVE TICKER / FULL SCREEN',
+  overlayMode: 'R658 AUTO FORCE SLOT / ALL 3 LOCAL VISUALS PROTECTED / R649 DIRECT SCALE 1920x1080 / NO CROP / NO PAD / QR / FULL SCREEN',
   audioMode: 'LOCAL MP3 CACHE + 2-TRACK PREFETCH / MP3→PCM 44.1kHz / ONE LONG-LIVED AAC-LC 128kbps ENCODER / CONTINUOUS SAMPLE CLOCK',
   visualTimeZone: VISUAL_TIME_ZONE,
   visualPeriod: null,
@@ -484,7 +485,7 @@ async function ensureScheduledVisual(){
   const spec=visualSpecForPeriod(period);
   try{
     const path=await ensureVisualSpec(spec);
-    state.visualPeriod=FORCE_VISUAL_SLOT?`manual-${period}`:period;
+    state.visualPeriod=VISUAL_AUTO_SCHEDULE_R658?`auto-${period}`:(FORCE_VISUAL_SLOT?`manual-${period}`:period);
     state.visualPath=path;
     return path;
   }catch(error){
@@ -701,6 +702,7 @@ function publicStatus(){
     qrOverlay:QR_OVERLAY,
     visualTimeZone:state.visualTimeZone,
     forceVisualSlot:FORCE_VISUAL_SLOT||null,
+    visualAutoSchedule:VISUAL_AUTO_SCHEDULE_R658,
     visualPeriod:state.visualPeriod,
     visualPath:state.visualPath,
     publisherRunning:state.publisherRunning,
