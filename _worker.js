@@ -11644,17 +11644,70 @@ function cronAgeMinutesR394(value) {
 // We identify its stable UA, save the daily Auto checkpoint immediately, return 200 fast,
 // and run the schedule-aware gateway in ctx.waitUntil. A synthetic combined cron expression
 // marks 2m/5m/15m as due; existing D1 slot claims ensure each class runs only once per slot.
+async function runLegacyExternalCronReserveR648(request, env) {
+  const db=requireDb(env);
+  const local=getBratislavaClock();
+  const now=Date.now();
+  const ageMinutes=row=>{
+    const ms=Date.parse(String(row?.value||row?.updatedAt||''));
+    return Number.isFinite(ms)?Math.max(0,(now-ms)/60000):999;
+  };
+
+  // R648: the old external andrik-push-cron can still call only /api/automation/run.
+  // R416 turned that route into an ACK-only endpoint, which can silently stop the
+  // morning/evening owner summary and subscriber polling when the external Worker has
+  // not yet been upgraded to the dedicated /cron-gateway routes.  Keep this bridge
+  // CPU-safe: every wake-up runs at most ONE lightweight rescue duty.
+  if(local.hour===5 || local.hour===17){
+    const slot=local.hour>=17?'17':'05';
+    const sent=await getPushState(db,`daily-owner-summary-auto-slot:${local.date}:${slot}`).catch(()=>null);
+    if(!sent?.value){
+      try{return {task:'daily-summary-rescue',value:await maybeSendDailyOwnerSummary(env)}}
+      catch(error){return {task:'daily-summary-rescue',value:{ok:false,error:cleanPlainText(error?.message||error,500)}}}
+    }
+  }
+
+  const [subscriberAt,engagementAt]=await Promise.all([
+    getPushState(db,'youtube-counts-last-at').catch(()=>null),
+    getPushState(db,'youtube-fast-engagement-last-at-r333').catch(()=>null)
+  ]);
+  const subscriberAge=ageMinutes(subscriberAt);
+  const engagementAge=ageMinutes(engagementAt);
+
+  if(subscriberAge>7){
+    const value=await handleFastYoutubeSubscriberCountR416(request,env,{source:'legacy-reserve-r648'});
+    return {task:'subscriber-rescue',subscriberAgeMinutes:Math.round(subscriberAge),value};
+  }
+  if(engagementAge>4){
+    const response=await handleFastYoutubeEngagementR333(request,env,{skipCheckpoint:true});
+    const value=await responseData(response).catch(error=>({ok:false,error:cleanPlainText(error?.message||error,400)}));
+    return {task:'engagement-rescue',engagementAgeMinutes:Math.round(engagementAge),value};
+  }
+
+  const value=await checkpointDailySummaryAutoR398(env,'legacy-cron-reserve-r648').catch(error=>({ok:false,error:cleanPlainText(error?.message||error,300)}));
+  return {task:'checkpoint',subscriberAgeMinutes:Math.round(subscriberAge),engagementAgeMinutes:Math.round(engagementAge),value};
+}
+
 async function handleLegacyExternalCronR400(request, env, ctx) {
   if(!adminAuthorized(request,env) && !cronAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
   const db=requireDb(env);
-  const receivedAt=await touchCronSchedulerHeartbeatR394(db,'legacy-external-r416').catch(()=>new Date().toISOString());
+  const receivedAt=await touchCronSchedulerHeartbeatR394(db,'legacy-external-r648').catch(()=>new Date().toISOString());
   await Promise.all([
     setPushState(db,'legacy-external-cron-r400-last-at',receivedAt).catch(()=>{}),
-    setPushState(db,'legacy-external-cron-r400-last-checkpoint',JSON.stringify({ok:true,skipped:true,reason:'dedicated-gateway-owns-work-r416'})).catch(()=>{})
+    setPushState(db,'legacy-external-cron-r400-last-checkpoint',JSON.stringify({ok:true,reason:'reserve-r648'})).catch(()=>{})
   ]);
-  // Fast compatibility ACK only. The external Worker already has dedicated */2, */5
-  // and */15 calls to /cron-gateway; doing the same work again here doubled CPU load.
-  return json({ok:true,version:ANDRIK_CONTROL_RELEASE.short,mode:'legacy-external-fast-ack-r416',receivedAt,gateway:'owned-by-dedicated-cron-gateway'},200);
+  if(ctx?.waitUntil){
+    ctx.waitUntil((async()=>{
+      const result=await runLegacyExternalCronReserveR648(request,env);
+      const at=new Date().toISOString();
+      await Promise.all([
+        setPushState(db,'legacy-external-cron-r648-last-at',at).catch(()=>{}),
+        setPushState(db,'legacy-external-cron-r648-last-result',JSON.stringify(result).slice(0,12000)).catch(()=>{})
+      ]);
+      await recordSystemLog(env,{scope:'automation',level:result?.value?.ok===false?'warning':'info',event:'legacy-reserve-r648',message:`Legacy Cron reserve: ${result?.task||'unknown'}.`,details:result}).catch(()=>{});
+    })().catch(error=>recordSystemLog(env,{scope:'automation',level:'error',event:'legacy-reserve-r648-failed',message:cleanPlainText(error?.message||error,500)}).catch(()=>{})));
+  }
+  return json({ok:true,version:ANDRIK_CONTROL_RELEASE.short,mode:'legacy-external-reserve-r648',receivedAt,reserve:true},200);
 }
 
 // R399: dedicated lightweight endpoint for the external andrik-push-cron Worker.

@@ -1,6 +1,6 @@
 (() => {
   'use strict';
-  const SITE_UPDATE_UI_VERSION='55.00-r643-retry';
+  const SITE_UPDATE_UI_VERSION='55.00-r648-step3';
   const KEY_SESSION='andrik-comments-admin-key',KEY_LOCAL='andrik-comments-admin-key-persistent',AUTO_RECOVERY_KEY='andrik-site-update-auto-recovery',CACHE_REFRESH_PREFIX='andrik-site-update-cache-refresh:',PENDING_DEPLOY_KEY='andrik-site-update-pending-deploy-r247';
   const byId=id=>document.getElementById(id),keyInput=byId('siteUpdateAdminKey'),archiveInput=byId('siteUpdateArchive'),previewButton=byId('siteUpdatePreview'),publishButton=byId('siteUpdatePublish'),confirmInput=byId('siteUpdateConfirm'),autoRecoveryInput=byId('siteUpdateAutoRecovery');
   let previewData=null,lastRelease='',lastPublish=null,lastOperationId='',operation=false;
@@ -614,7 +614,7 @@
     else schedulePendingResume(5000);
     return data;
   }
-  async function publishCommitWithRetry(buildForm,maxAttempts=4){
+  async function publishCommitWithRetry(buildForm,maxAttempts=1){
     let lastError=null;
     for(let attempt=1;attempt<=maxAttempts;attempt++){
       try{
@@ -686,7 +686,7 @@
         form.append('confirm','yes');
         return form;
       };
-      publishData=await publishCommitWithRetry(buildPublishForm,4);
+      publishData=await publishCommitWithRetry(buildPublishForm,1);
       if(publishData.noChanges){
         stage('commit','done');stage('release','skipped');stage('deploy','skipped');
         setResultState('done','Без изменений');setText('siteUpdateResultTitle','Изменений нет');setText('siteUpdateResultText',publishData.message);return
