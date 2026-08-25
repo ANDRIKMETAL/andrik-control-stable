@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787675410014-de5f349aa8",
-  "release": "R667",
-  "archiveName": "R667-RADIO-CLEAN-YOUTUBE-OAUTH-DIRECT-OVH-UNTOUCHED-SAFE-FULL.zip",
-  "sourceHead": "57d49d9795a01d8d683583bae9513e1c251e0a97",
-  "backupSha": "57d49d9795a01d8d683583bae9513e1c251e0a97",
+  "operationId": "publish-1787685682810-0b137abc1f",
+  "release": "R668",
+  "archiveName": "R668-VISUAL-AUTO-RESTORE-DAY-EVENING-NIGHT-OVH-SAFE-FULL.zip",
+  "sourceHead": "44efb1d8a83fb1e85575f8f9e5c668d2ffa15b47",
+  "backupSha": "44efb1d8a83fb1e85575f8f9e5c668d2ffa15b47",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-25T16:30:10.014Z"
+  "generatedAt": "2026-08-25T19:21:22.810Z"
 }
