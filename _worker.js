@@ -3256,7 +3256,7 @@ async function handleControlEcosystemMap(request, env) {
   const musicPreviousWeeklyRaw={results:siteAggR638.musicPrevious||[]};
 
   // Push audience is tiny and the 60-minute event tail is indexed, so keep those LIVE.
-  const [pushCountriesRaw,pushPointsRaw,recentRaw,historyPushCountriesRaw,pushWeeklyRaw,pushPreviousWeeklyRaw] = await Promise.all([
+  const [pushCountriesRaw,pushPointsRaw,recentRaw,historyPushCountriesRaw,pushWeeklyRaw,pushPreviousWeeklyRaw,radioRecent24Raw,siteRecent24Raw] = await Promise.all([
     safeQueryR439(() => db.prepare(`
       SELECT country, COUNT(*) AS value
       FROM push_subscribers
@@ -3295,6 +3295,33 @@ async function handleControlEcosystemMap(request, env) {
       WHERE status='active' AND source<>'owner' AND country<>''
         AND datetime(created_at)>=datetime('now','-14 days') AND datetime(created_at)<datetime('now','-7 days')
       GROUP BY country ORDER BY value DESC LIMIT 120
+    `).all()),
+    // R660 — city fallback for the radio card. YouTube does not expose the city of
+    // the current concurrent viewer, so keep a truthful 24h history of launches
+    // toward the radio/YouTube surface. This is never labelled as live.
+    safeQueryR439(() => db.prepare(`
+      SELECT country, MAX(region) AS region, MAX(city) AS city,
+             ROUND(AVG(latitude),1) AS latitude, ROUND(AVG(longitude),1) AS longitude,
+             COUNT(*) AS value, MAX(created_at) AS lastAt
+      FROM site_visit_events
+      WHERE event_type IN ('radio-open','youtube-open','youtube-live-open','live-open','radio-listen','stream-open')
+        AND country<>'' AND latitude IS NOT NULL AND longitude IS NOT NULL
+        AND datetime(created_at)>=datetime('now','-24 hours')
+      GROUP BY country, region, city, ROUND(latitude,1), ROUND(longitude,1)
+      ORDER BY value DESC, lastAt DESC LIMIT 100
+    `).all()),
+    // Last-resort audience-city fallback: recent first-party site visitors. It lets
+    // the owner see where the audience is coming from even when a viewer entered
+    // YouTube directly and therefore produced no radio-open signal.
+    safeQueryR439(() => db.prepare(`
+      SELECT country, MAX(region) AS region, MAX(city) AS city,
+             ROUND(AVG(latitude),1) AS latitude, ROUND(AVG(longitude),1) AS longitude,
+             COUNT(DISTINCT visitor_hash) AS value, COUNT(*) AS events, MAX(created_at) AS lastAt
+      FROM site_visit_events
+      WHERE event_type='visit' AND country<>'' AND latitude IS NOT NULL AND longitude IS NOT NULL
+        AND datetime(created_at)>=datetime('now','-24 hours')
+      GROUP BY country, region, city, ROUND(latitude,1), ROUND(longitude,1)
+      ORDER BY value DESC, events DESC, lastAt DESC LIMIT 100
     `).all())
   ]);
   const normalizeWeekly = rows => (rows?.results || []).map(row => ({
@@ -3422,8 +3449,12 @@ async function handleControlEcosystemMap(request, env) {
       updatedAt:cleanPlainText(youtubeStudioR658.updatedAt||ytLatestR658.createdAt||'',80),
       source:'cached-studio-r658'
     },
+    radio:{
+      recent24h:normalizePoints(radioRecent24Raw)
+    },
     site:{
       countries:normalizeCountries(siteCountriesRaw), points:normalizePoints(sitePointsRaw),
+      recent24hPoints:normalizePoints(siteRecent24Raw),
       weeklyCountries:normalizeWeekly(siteWeeklyRaw), previousWeekCountries:normalizeWeekly(sitePreviousWeeklyRaw)
     },
     instagram:{

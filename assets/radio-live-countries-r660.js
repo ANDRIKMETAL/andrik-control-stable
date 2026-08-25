@@ -1,7 +1,7 @@
 (()=>{
   'use strict';
-  if(window.__ANDRIK_RADIO_COUNTRIES_R658__)return;
-  window.__ANDRIK_RADIO_COUNTRIES_R658__=true;
+  if(window.__ANDRIK_RADIO_COUNTRIES_R660__)return;
+  window.__ANDRIK_RADIO_COUNTRIES_R660__=true;
 
   const q=s=>document.querySelector(s);
   const qa=s=>[...document.querySelectorAll(s)];
@@ -45,6 +45,34 @@
     for(const p of direct){const key=`${p.country}|${p.city}|${p.latitude.toFixed(2)}|${p.longitude.toFixed(2)}`;const cur=merged.get(key)||{...p,value:0};cur.value+=p.value;cur.time=Math.max(cur.time||0,p.time||0);merged.set(key,cur)}
     return [...merged.values()].sort((a,b)=>b.value-a.value||b.time-a.time).slice(0,80);
   }
+  function normalizeFallbackPoints(rows,label){
+    return (Array.isArray(rows)?rows:[]).map(item=>normPoint(item,label)).filter(Boolean)
+      .sort((a,b)=>b.value-a.value||b.time-a.time).slice(0,80);
+  }
+  function cityAudience(data){
+    const live=livePoints(data);
+    if(live.length)return {points:live,mode:'live',title:'LIVE-города',period:'60 минут',dotClass:'radio-city-dot',note:'Красные точки — открытия эфира через сайт за последние 60 минут.'};
+    const radio24=normalizeFallbackPoints(data?.radio?.recent24h,'Переход в эфир · 24 ч');
+    if(radio24.length)return {points:radio24,mode:'radio24',title:'Города переходов в эфир',period:'24 часа',dotClass:'radio-city-dot is-fallback',note:'Голубые точки — города переходов в эфир/YouTube через сайт за последние 24 часа.'};
+    const site24=normalizeFallbackPoints(data?.site?.recent24hPoints,'Аудитория сайта · 24 ч');
+    if(site24.length)return {points:site24,mode:'site24',title:'Города аудитории',period:'24 часа',dotClass:'radio-city-dot is-fallback',note:'Голубые точки — города аудитории ANDRIK за последние 24 часа. Текущий зритель YouTube может смотреть напрямую, и YouTube не отдаёт его город поминутно.'};
+    return {points:[],mode:'none',title:'Города аудитории',period:'24 часа',dotClass:'radio-city-dot is-fallback',note:'Городов за последние 24 часа пока нет.'};
+  }
+  function spreadCountryPositions(rows){
+    const placed=[];
+    return rows.map(row=>{
+      const geo=ISO_GEO[row.country];if(!geo)return {...row,x:50,y:50};
+      const [lon,lat]=geo;const base=pos(lat,lon);let best={...base},bestScore=-1;
+      const offsets=[[0,0],[2.2,0],[-2.2,0],[0,2.8],[0,-2.8],[3.2,2.4],[-3.2,2.4],[3.2,-2.4],[-3.2,-2.4],[5,0],[-5,0]];
+      for(const [dx,dy] of offsets){
+        const x=Math.max(2,Math.min(98,base.x+dx)),y=Math.max(3,Math.min(97,base.y+dy));
+        const nearest=placed.length?Math.min(...placed.map(p=>Math.hypot((p.x-x)*1.25,p.y-y))):999;
+        if(nearest>bestScore){bestScore=nearest;best={x,y}}
+        if(nearest>=6.2)break;
+      }
+      placed.push(best);return {...row,...best};
+    });
+  }
   function youtubeCountries(data){
     const daily=Array.isArray(data?.youtube?.dailyCountries)?data.youtube.dailyCountries:[];
     const rolling=Array.isArray(data?.youtube?.countries)?data.youtube.countries:[];
@@ -57,34 +85,42 @@
   function pos(latitude,longitude){
     return {x:Math.max(0,Math.min(100,(longitude+180)/360*100)),y:Math.max(0,Math.min(100,(85-latitude)/145*100))};
   }
-  function renderMap(points,countryData){
+  function renderMap(cityData,countryData){
+    const points=cityData.points||[];
     const layer=q('[data-radio-city-map]'),empty=q('[data-radio-city-empty]'),cityList=q('[data-radio-city-list]'),countryList=q('[data-radio-country-list]');
     if(!layer||!empty||!cityList||!countryList)return;
     layer.innerHTML='';
     const countries=countryData.rows||[];
-    const totalLive=points.reduce((s,p)=>s+p.value,0);
+    const totalLive=livePoints(window.__ANDRIK_RADIO_LAST_MAP_R660__||{}).reduce((sum,p)=>sum+p.value,0);
     set('[data-radio-country-count]',fmt(countries.length));
+    set('[data-radio-city-count]',fmt(points.length));
     set('[data-radio-event-count]',fmt(totalLive));
     set('[data-radio-country-period]',countryData.period||'YouTube');
+    set('[data-radio-city-title]',cityData.title||'Города аудитории');
+    set('[data-radio-city-period]',cityData.period||'24 часа');
 
     const maxCountry=Math.max(1,...countries.map(x=>x.views));
-    for(const row of countries){
-      const geo=ISO_GEO[row.country];if(!geo)continue;const [lon,lat]=geo;const {x,y}=pos(lat,lon);
-      const dot=document.createElement('button');dot.type='button';dot.className='radio-country-dot';dot.dataset.count=String(row.views);
-      const size=13+Math.round(12*Math.sqrt(row.views/maxCountry));dot.style.left=`${x.toFixed(2)}%`;dot.style.top=`${y.toFixed(2)}%`;dot.style.width=`${size}px`;dot.style.height=`${size}px`;
-      dot.title=`${countryName(row.country)}: ${fmt(row.views)} просмотров · ${countryData.period}`;layer.appendChild(dot);
+    const countryPositions=spreadCountryPositions(countries);
+    for(const row of countryPositions){
+      const dot=document.createElement('button');dot.type='button';dot.className='radio-country-dot';
+      const size=10+Math.round(8*Math.sqrt(row.views/maxCountry));
+      dot.style.left=`${row.x.toFixed(2)}%`;dot.style.top=`${row.y.toFixed(2)}%`;dot.style.width=`${size}px`;dot.style.height=`${size}px`;
+      dot.title=`${countryName(row.country)}: ${fmt(row.views)} просмотров · ${countryData.period}`;dot.setAttribute('aria-label',dot.title);layer.appendChild(dot);
     }
-    const maxLive=Math.max(1,...points.map(p=>p.value));
+    const maxCity=Math.max(1,...points.map(p=>p.value));
     for(const p of points){
-      const {x,y}=pos(p.latitude,p.longitude);const dot=document.createElement('button');dot.type='button';dot.className='radio-city-dot';dot.dataset.count=String(p.value);
-      dot.style.left=`${x.toFixed(2)}%`;dot.style.top=`${y.toFixed(2)}%`;dot.style.width=`${12+Math.round(8*p.value/maxLive)}px`;dot.style.height=dot.style.width;dot.title=`LIVE: ${p.city}${p.country?' · '+countryName(p.country):''}: ${p.value}`;layer.appendChild(dot);
+      const {x,y}=pos(p.latitude,p.longitude);const dot=document.createElement('button');dot.type='button';dot.className=cityData.dotClass||'radio-city-dot is-fallback';
+      if(p.value>1)dot.dataset.count=String(p.value);
+      dot.style.left=`${x.toFixed(2)}%`;dot.style.top=`${y.toFixed(2)}%`;dot.style.width=`${11+Math.round(6*Math.sqrt(p.value/maxCity))}px`;dot.style.height=dot.style.width;
+      dot.title=`${cityData.mode==='live'?'LIVE':'24 ч'}: ${p.city}${p.country?' · '+countryName(p.country):''}: ${p.value}`;dot.setAttribute('aria-label',dot.title);layer.appendChild(dot);
     }
 
     const hasAny=countries.length||points.length;empty.hidden=Boolean(hasAny);
-    if(!hasAny)empty.textContent='Пока нет географии. YouTube-страны появятся после следующего обновления Studio, LIVE-точки — после открытий эфира через сайт.';
+    if(!hasAny)empty.textContent='Пока нет географии за последние 24 часа. Страны появятся из YouTube Studio после следующего обновления.';
 
-    countryList.innerHTML=countries.length?countries.slice(0,10).map((r,i)=>`<div class="radio-city-row radio-country-row"><b>${countryFlag(r.country)}</b><div><strong>${esc(countryName(r.country))}</strong><small>${esc(countryData.period)} · просмотры</small></div><em>${fmt(r.views)}</em></div>`).join(''):'<div class="radio-list-empty">Пока нет стран YouTube.</div>';
-    cityList.innerHTML=points.length?points.slice(0,8).map((p,i)=>`<div class="radio-city-row"><b>${i+1}</b><div><strong>${esc(p.city)}</strong><small>${esc([p.region,p.country?countryName(p.country):''].filter(Boolean).join(' · ')||'LIVE эфир')}</small></div><em>${fmt(p.value)}</em></div>`).join(''):'<div class="radio-list-empty">LIVE-городов за 60 минут пока нет.</div>';
+    countryList.innerHTML=countries.length?countries.map((r)=>`<div class="radio-city-row radio-country-row"><b>${countryFlag(r.country)}</b><div><strong>${esc(countryName(r.country))}</strong><small>${esc(countryData.period)} · просмотры</small></div><em>${fmt(r.views)}</em></div>`).join(''):'<div class="radio-list-empty">Пока нет стран YouTube.</div>';
+    cityList.innerHTML=points.length?points.slice(0,12).map((p,i)=>`<div class="radio-city-row"><b>${i+1}</b><div><strong>${esc(p.city)}</strong><small>${esc([p.region,p.country?countryName(p.country):''].filter(Boolean).join(' · ')||cityData.title)}</small></div><em>${fmt(p.value)}</em></div>`).join(''):'<div class="radio-list-empty">Городов за последние 24 часа пока нет.</div>';
+    set('[data-radio-city-note]',cityData.note||'');
   }
   async function fetchJson(path){
     const r=await fetch(path,{credentials:'include',cache:'no-store',headers:headers()}),d=await r.json().catch(()=>({}));
@@ -97,16 +133,17 @@
   async function loadMap(){
     const state=q('[data-radio-city-state]');if(state)state.textContent='Обновляем…';
     try{
-      const d=await fetchJson(`/api/control/ecosystem-map?ts=${Date.now()}`),points=livePoints(d),countryData=youtubeCountries(d);
-      renderMap(points,countryData);
-      if(state){state.textContent=points.length&&countryData.rows.length?'LIVE + страны':points.length?'LIVE · 60 мин':countryData.rows.length?countryData.period:'Нет географии';state.className='state '+((points.length||countryData.rows.length)?'service-access-state is-ready':'')}
+      const d=await fetchJson(`/api/control/ecosystem-map?ts=${Date.now()}`),countryData=youtubeCountries(d),cityData=cityAudience(d);
+      window.__ANDRIK_RADIO_LAST_MAP_R660__=d;
+      renderMap(cityData,countryData);
+      if(state){state.textContent=cityData.mode==='live'?'LIVE + страны':cityData.points.length?'24 ч + страны':countryData.rows.length?countryData.period:'Нет географии';state.className='state '+((cityData.points.length||countryData.rows.length)?'service-access-state is-ready':'')}
     }catch(e){
-      renderMap([],{rows:[],period:'YouTube'});const empty=q('[data-radio-city-empty]');if(empty)empty.textContent=e.status===401?'Нужен вход владельца для карты стран.':`Карта временно недоступна: ${e.message}`;
+      renderMap({points:[],mode:'none',title:'Города аудитории',period:'24 часа',dotClass:'radio-city-dot is-fallback',note:''},{rows:[],period:'YouTube'});const empty=q('[data-radio-city-empty]');if(empty)empty.textContent=e.status===401?'Нужен вход владельца для карты стран.':`Карта временно недоступна: ${e.message}`;
       if(state){state.textContent='Ошибка';state.className='state service-access-state is-error'}
     }
   }
   async function refresh(){await Promise.allSettled([loadViewers(),loadMap()])}
   refresh();timer=setInterval(refresh,30000);
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh()});
-  window.AndrikRadioCountriesR658={refresh};
+  window.AndrikRadioCountriesR660={refresh};
 })();
