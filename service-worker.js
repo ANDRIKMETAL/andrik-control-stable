@@ -1,6 +1,6 @@
 'use strict';
 
-const VERSION = '55.00-r669';
+const VERSION = '55.00-r671';
 const IS_CONTROL_HOST = self.location.hostname.toLowerCase() === 'control.andrikmetal.com';
 
 async function deleteControlCaches(){
@@ -38,7 +38,7 @@ if(IS_CONTROL_HOST){
   const CORE = [
     '/', '/index.html', '/privacy.html', '/terms.html', '/offline.html', '/open-youtube.html?v=55.00-r623',
     '/manifest.webmanifest?v=55.00-r87', '/assets/v50.js?v=54.42', '/assets/v50-26.css?v=52.03',
-    '/assets/pwa-install.css', '/assets/pwa-install.js', '/assets/push-v54-07.js?v=54.07',
+    '/assets/pwa-install.css', '/assets/pwa-install.js', '/assets/push-v54-08.js?v=54.08-r671',
     '/assets/app-links-r663.js?v=55.00-r663',
     '/beyond-player.html?v=55.00-r601', '/assets/beyond-cover-r601.webp', '/assets/beyond-player-r601.css?v=55.00-r601', '/assets/beyond-player-r601.js?v=55.00-r601', '/assets/albums-beyond-r601.css?v=55.00-r601', '/assets/albums-fast-library-r601.js?v=55.00-r601', '/assets/home-albums-four-r601.css?v=55.00-r601',
     '/assets/home-fast-r213.css?v=55.00-r213',
