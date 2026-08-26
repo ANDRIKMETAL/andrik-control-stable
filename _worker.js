@@ -10867,6 +10867,97 @@ async function maybeSendNewCountryAlerts(env, currentRows = []) {
 }
 
 
+// R679: "new country" must mean the same thing in push as it does in the
+// YouTube country-growth card: the country exists in the current week but did
+// not exist in the previous week. The old lifetime-known-country set could
+// suppress a perfectly valid "новая страна" row (for example BG) forever.
+function normalizeWeeklyCountryRowsR679(rows = []) {
+  return (Array.isArray(rows) ? rows : [])
+    .map(row => {
+      const raw = cleanPlainText(row?.country || row?.name || '', 80).trim();
+      if (!raw) return null;
+      const meta = dailyCountryMeta(raw);
+      const views = Math.max(0, Number(row?.views || row?.value || row?.count || 0));
+      return {
+        key: raw.toUpperCase(),
+        country: meta.name || raw,
+        flag: meta.flag || '🌍',
+        views
+      };
+    })
+    .filter(Boolean)
+    .filter(item => item.key && item.views > 0);
+}
+
+async function maybeSendWeeklyNewCountryAlertsR679(env, studio = {}) {
+  const db = requireDb(env);
+  await ensurePushAutomationSchema(db);
+  const current = normalizeWeeklyCountryRowsR679(studio?.weeklyCountries || []);
+  const previous = normalizeWeeklyCountryRowsR679(studio?.previousWeekCountries || []);
+
+  // When weekly comparison is unavailable, keep the old historical detector as
+  // a safe fallback rather than manufacturing a whole batch of "new" countries.
+  if (!current.length || !previous.length) {
+    const fallbackRows = Array.isArray(studio?.countries) ? studio.countries : [];
+    const fallback = await maybeSendNewCountryAlerts(env, fallbackRows);
+    return { ...fallback, mode:'historical-fallback-r679' };
+  }
+
+  const previousKeys = new Set(previous.map(item => item.key));
+  const fresh = current.filter(item => !previousKeys.has(item.key));
+  const weekKey = cleanPlainText(studio?.weekStartDate || studio?.weekEndDate || 'current-week', 30);
+  const totalCountries = Math.max(
+    Number(studio?.countryCount || 0),
+    Array.isArray(studio?.countries) ? studio.countries.length : 0,
+    current.length
+  );
+  const delivered = [];
+  const failed = [];
+
+  for (const item of fresh.slice(0, 8)) {
+    const stateKey = `youtube-weekly-new-country-r679:${weekKey}:${item.key}`;
+    const already = await getPushState(db, stateKey).catch(() => null);
+    if (already?.value) continue;
+
+    const title = `🌍 ↑ Новая страна · ${item.country}`;
+    const message = `${item.flag} ${item.country} появилась в аудитории ANDRIK за эту неделю · ${item.views} просмотров${totalCountries ? ` · всего стран ${totalCountries}` : ''}`;
+    const result = await sendOwnerPush(env, {
+      title,
+      message,
+      url:'https://control.andrikmetal.com/analytics-admin.html',
+      icon:'https://andrikmetal.com/assets/andrik-like-glow-green-192.png',
+      name:`new-country-week-r679-${weekKey}-${item.key}`,
+      ttl:86400,
+      data:{country:item.country,countryCode:item.key,weekKey,views:item.views,totalCountries,event:'youtube-new-country-r679'},
+      history:{
+        type:'country-new',source:'youtube-studio-weekly',title,message,
+        url:'https://control.andrikmetal.com/analytics-admin.html',
+        details:{country:item.country,countryCode:item.key,flag:item.flag,views:item.views,totalCountries,weekKey,deliveryMode:'weekly-growth-r679'}
+      }
+    }).catch(error => ({ok:false,error:cleanPlainText(error?.message || error,300)}));
+
+    if (result?.ok) {
+      await setPushState(db, stateKey, new Date().toISOString()).catch(() => {});
+      delivered.push(item.country);
+    } else {
+      failed.push({country:item.country,error:cleanPlainText(result?.error || 'push-failed',220)});
+    }
+  }
+
+  return {
+    ok:failed.length===0,
+    sent:delivered.length,
+    failed:failed.length,
+    totalCountries,
+    countries:fresh.map(item => item.country),
+    delivered,
+    failures:failed,
+    weekKey,
+    mode:'weekly-growth-r679'
+  };
+}
+
+
 function latestYouTubeStudioDailyMetric(youtube = {}, metric = 'likes') {
   const rows = Array.isArray(youtube?.studio?.trend) ? youtube.studio.trend : [];
   if (!rows.length) return 0;
@@ -12450,7 +12541,7 @@ async function runCronMaintenanceSliceR416(env, clock) {
     if(quarter===0){
       tasks.snapshots=await refreshControlSnapshots(env,{force:false});
       if(tasks.snapshots?.youtube?.studio?.countries){
-        tasks.newCountries=await maybeSendNewCountryAlerts(env,tasks.snapshots.youtube.studio.countries).catch(error=>({ok:false,error:cleanPlainText(error?.message||error,300)}));
+        tasks.newCountries=await maybeSendWeeklyNewCountryAlertsR679(env,tasks.snapshots.youtube.studio).catch(error=>({ok:false,error:cleanPlainText(error?.message||error,300)}));
       }else tasks.newCountries={ok:true,skipped:true,reason:'no-fresh-youtube-countries'};
     }else if(quarter===1){
       tasks.nativeMonitor=await runNativeMonitor(env,{sendNotifications:true,source:'cron-slice-r416'});
@@ -12611,7 +12702,7 @@ async function handleAutomationRun(request, env, options = {}) {
     if (!tasks.snapshots.ok && !tasks.snapshots.skipped) errors.push(`snapshots: ${(tasks.snapshots.errors || []).join(' · ') || 'failed'}`);
   } catch (error) { tasks.snapshots={ok:false,error:cleanPlainText(error?.message || error,500)}; errors.push(`snapshots: ${tasks.snapshots.error}`); }
   try {
-    tasks.newCountries = await maybeSendNewCountryAlerts(env, tasks.snapshots?.youtube?.studio?.countries || []);
+    tasks.newCountries = await maybeSendWeeklyNewCountryAlertsR679(env, tasks.snapshots?.youtube?.studio || {});
     if (!tasks.newCountries.ok && !tasks.newCountries.skipped) errors.push(`newCountries: ${tasks.newCountries.error || 'failed'}`);
   } catch (error) { tasks.newCountries={ok:false,error:cleanPlainText(error?.message || error,500)}; errors.push(`newCountries: ${tasks.newCountries.error}`); }
   try {

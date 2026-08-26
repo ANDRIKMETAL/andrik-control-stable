@@ -1,0 +1,8 @@
+R679 — NEW COUNTRY PUSH + COUNTRY NAMES
+
+- New-country push now follows the same weekly comparison shown in the YouTube country-growth card.
+- A country present this week and absent last week generates one owner push per week, with D1 deduplication.
+- Failed delivery is not marked delivered, so it can retry after the owner device is available.
+- BG/KG and other ISO country codes are rendered as Russian country names; Intl.DisplayNames is the fallback for future codes.
+- R678 owner push, single-eye grouping, subscriber/unsubscriber styling, R677 live uptime and Search Console graph are preserved.
+- Radio/OVH/FFmpeg/visuals are untouched.

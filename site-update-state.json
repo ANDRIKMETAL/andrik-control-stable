@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787708355230-0672b39545",
-  "release": "R678",
-  "archiveName": "R678-GREEN-SUBSCRIBER-SINGLE-EYE-CRON-RECOVERY-R677-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "7f754b31ee9218ca177c29d32c247cd176fbd25a",
-  "backupSha": "7f754b31ee9218ca177c29d32c247cd176fbd25a",
+  "operationId": "publish-1787708808902-1b78a04b5f",
+  "release": "R679",
+  "archiveName": "R679-NEW-COUNTRY-PUSH-COUNTRY-NAMES-R678-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "d5bd582131713bb0446d23991522084b482f6ab8",
+  "backupSha": "d5bd582131713bb0446d23991522084b482f6ab8",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-26T01:39:15.230Z"
+  "generatedAt": "2026-08-26T01:46:48.902Z"
 }
