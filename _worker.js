@@ -2114,10 +2114,16 @@ async function backfillReleaseHistory(db) {
 }
 
 async function setPushState(db, key, value) {
+  // R684 D1 guard: identical state is a no-op. Timestamp/heartbeat keys still
+  // update normally because their value changes; stable flags/status strings no
+  // longer burn a D1 row write every cron cycle.
   await db.prepare(`
     INSERT INTO push_state (key, value, updated_at)
     VALUES (?, ?, datetime('now'))
-    ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = datetime('now')
+    ON CONFLICT(key) DO UPDATE SET
+      value = excluded.value,
+      updated_at = datetime('now')
+    WHERE push_state.value IS NOT excluded.value
   `).bind(key, String(value ?? '')).run();
 }
 

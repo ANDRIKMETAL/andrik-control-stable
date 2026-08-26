@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787710411153-535e8b7b39",
-  "release": "R682",
-  "archiveName": "R682-RADIO-COMPACT-YOUTUBE-MOVE-ADMIN-GLOBE-CLEAN-R681-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "a1c0de34cee20975456554997e69187b8324b605",
-  "backupSha": "a1c0de34cee20975456554997e69187b8324b605",
+  "operationId": "publish-1787714256316-9f5729268f",
+  "release": "R684",
+  "archiveName": "R684-D1-GUARD-JOY-OF-BEING-VIDEO-INTERMISSION-R683-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "99dd7198559cd94fd20199eea2b3093d9592cf67",
+  "backupSha": "99dd7198559cd94fd20199eea2b3093d9592cf67",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-26T02:13:31.153Z"
+  "generatedAt": "2026-08-26T03:17:36.706Z"
 }

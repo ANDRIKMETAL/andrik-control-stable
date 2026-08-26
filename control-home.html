@@ -834,10 +834,15 @@ body.control-push-summary-view .control-summary-source{display:block}
 <link rel="stylesheet" href="/assets/admin-home-fix-r489.css?v=55.00-r489">
 <link rel="stylesheet" href="/assets/control-summary-platforms-r510.css?v=55.00-r510">
 
-<style id="r682-admin-bottom-clean">
-/* R682: the swipe dots were only a page-position indicator. On the Admin menu they sat over the globe and created a dark dead zone. Swiping remains enabled without them. */
+<style id="r683-admin-bottom-clean">
+/* R683: remove the remaining artificial bottom dead-space completely.
+   Protection/Update buttons remain fixed; the globe is no longer lifted by an empty strip. */
 body.control-home-page.control-menu-visible .control-swipe-indicator{display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important}
-@media screen and (orientation:portrait){body.control-home-page.control-menu-visible .control-menu-page .control-swipe-page-inner{padding-bottom:max(56px,calc(44px + env(safe-area-inset-bottom)))!important}}
+@media screen and (orientation:portrait){
+  body.control-home-page.control-menu-visible .control-menu-page,
+  body.control-home-page.control-menu-visible .control-menu-page .control-swipe-page-inner{padding-bottom:0!important;margin-bottom:0!important}
+  body.control-home-page.control-menu-visible .admin-hub-globe-r418{margin-bottom:0!important}
+}
 </style>
 </head>
 <body class="trika-standalone-page comments-admin-page control-page control-home-page r137-eye-motion-page">

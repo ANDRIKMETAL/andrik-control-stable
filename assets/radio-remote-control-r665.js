@@ -243,7 +243,8 @@
   });
 
   window.AndrikRadioRemoteR665={refresh,start:()=>startSequence(),recover:()=>startSequence({recover:true}),stop:stopSequence,status:statusSequence,saveTicker};
-  const boot=()=>{refresh();timer=setInterval(refresh,5000)};
+  const arm=()=>{if(timer)clearInterval(timer);timer=null;if(document.hidden)return;timer=setInterval(refresh,5000)};
+  const boot=()=>{if(!document.hidden)refresh();arm()};
   if(window.AndrikOwnerSession?.ready)window.AndrikOwnerSession.ready().finally(boot);else boot();
-  document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh()});
+  document.addEventListener('visibilitychange',()=>{if(document.hidden){if(timer)clearInterval(timer);timer=null;return}refresh();arm()});
 })();

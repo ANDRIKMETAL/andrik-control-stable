@@ -46,6 +46,14 @@ const VIDEO_GOP = 50; // exactly 2 seconds at 25 fps
 const LIBRARY_REFRESH_MS = Math.max(60000, Number(process.env.LIBRARY_REFRESH_MS || 120000));
 const LIVE_TICKER_FILE = process.env.LIVE_TICKER_FILE || `${CACHE_DIR}/live-ticker.txt`;
 const LIVE_CURRENT_FILE = process.env.LIVE_CURRENT_FILE || `${CACHE_DIR}/current-live.txt`;
+const CLIP_CACHE_DIR = `${CACHE_DIR}/clips`;
+const JOY_OF_BEING_CLIP_URL = process.env.JOY_OF_BEING_CLIP_URL || 'https://music.andrikmetal.com/clips/joy-of-being-official-2026.mp4';
+const JOY_OF_BEING_CLIP_ENABLED = String(process.env.JOY_OF_BEING_CLIP_ENABLED || '1').trim() !== '0';
+const JOY_OF_BEING_CLIP_PATH = `${CLIP_CACHE_DIR}/joy-of-being-official-2026.mp4`;
+const JOY_OF_BEING_CLIP = Object.freeze({
+  type:'clip', sourceType:'r2-video', title:'JOY OF BEING', album:'OFFICIAL MUSIC VIDEO',
+  key:'clips/joy-of-being-official-2026.mp4', url:JOY_OF_BEING_CLIP_URL, identity:'clip:joy-of-being'
+});
 const DEFAULT_LIVE_TICKER = 'ANDRIK METAL RADIO 24/7   •   ANDRIKMETAL.COM   •   НОВЫЕ СИНГЛЫ И АЛЬБОМЫ ANDRIK   •   ПОДПИСЫВАЙТЕСЬ • СТАВЬТЕ ЛАЙКИ • КОММЕНТИРУЙТЕ   •   ';
 const DISABLED_ALBUM_PREFIXES = Object.freeze([
   'albums/illusion-of-life/',
@@ -54,14 +62,14 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R659-PERMANENT-FULLSCREEN-GUARD-R658-PUSH-WATERMARK-R649-CONTINUOUS-AUDIO',
-  mode: 'R659 PERMANENT FULLSCREEN GUARD + AUTO DAY-EVENING-NIGHT / R649 DIRECT 1920x1080 / R658 PUSH WATERMARK / CONTINUOUS PCM + ONE AAC CLOCK / NO PACKET DROP',
+  version: 'R684-D1-GUARD-JOY-OF-BEING-VIDEO-INTERMISSION-R659-FULLSCREEN',
+  mode: 'R684 MP3 + JOY OF BEING VIDEO / AUTO DAY-EVENING-NIGHT / QR + LIVE TICKER / MP3 CONTINUOUS PCM MASTER',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
   producerRunning: false,
   overlayMode: 'R658 AUTO FORCE SLOT / ALL 3 LOCAL VISUALS PROTECTED / R649 DIRECT SCALE 1920x1080 / NO CROP / NO PAD / QR / FULL SCREEN',
-  audioMode: 'LOCAL MP3 CACHE + 2-TRACK PREFETCH / MP3→PCM 44.1kHz / ONE LONG-LIVED AAC-LC 128kbps ENCODER / CONTINUOUS SAMPLE CLOCK',
+  audioMode: 'LOCAL MP3 CACHE + JOY OF BEING R2 VIDEO CACHE / MP3 CONTINUOUS PCM + AAC-LC 128kbps',
   visualTimeZone: VISUAL_TIME_ZONE,
   visualPeriod: null,
   visualPath: null,
@@ -69,7 +77,7 @@ const state = {
   libraryAlbumTracks: 0,
   librarySingleTracks: 0,
   duplicateSinglesSkipped: 0,
-  libraryVideos: 0,
+  libraryVideos: JOY_OF_BEING_CLIP_ENABLED ? 1 : 0,
   cycle: 0,
   queueLength: 0,
   queuePosition: 0,
@@ -90,6 +98,9 @@ let queueIndex = 0;
 let running = false;
 let stopping = false;
 let lastPlayed = null;
+let clipPublisher = null;
+let intentionalPublisherSwitch = false;
+let clipPrefetchJob = null;
 const prefetchJobs = new Map();
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -230,7 +241,7 @@ async function loadLibrary(){
   state.libraryAlbumTracks=albums.length;
   state.librarySingleTracks=merged.singles.length;
   state.duplicateSinglesSkipped=merged.skipped;
-  state.libraryVideos=0;
+  state.libraryVideos=JOY_OF_BEING_CLIP_ENABLED?1:0;
   state.lastLibraryRefresh=new Date().toISOString();
   const changed=previousSignature!==librarySignature(library);
   return {library,changed};
@@ -271,12 +282,24 @@ function reconcileQueueWithLibrary(){
     addIdentityCandidates(remainingIds,item);
   }
 
-  queue=[...played,...shuffle([...remaining,...additions])];
+  let fresh=shuffle([...remaining,...additions]);
+  const alreadyPlayedClip=played.some(item=>item?.type==='clip');
+  const pendingClip=queue.slice(queueIndex).some(item=>item?.type==='clip');
+  if(JOY_OF_BEING_CLIP_ENABLED && pendingClip && !alreadyPlayedClip && fresh.length){
+    const slot=fresh.length>1?1+Math.floor(Math.random()*fresh.length):fresh.length;
+    fresh.splice(slot,0,JOY_OF_BEING_CLIP);
+  }
+  queue=[...played,...fresh];
   state.queueLength=queue.length;
 }
 
 function buildQueue(){
   const out=shuffle(library);
+  if(JOY_OF_BEING_CLIP_ENABLED && out.length>=2){
+    // One official video per complete shuffled cycle, always BETWEEN songs.
+    const slot=1+Math.floor(Math.random()*(out.length-1));
+    out.splice(slot,0,JOY_OF_BEING_CLIP);
+  }
   state.cycle++;
   state.queueLength=out.length;
   return out;
@@ -333,6 +356,7 @@ function prepareCacheDir(){
   mkdirSync(CACHE_DIR,{recursive:true});
   mkdirSync(AUDIO_CACHE_DIR,{recursive:true});
   mkdirSync(VISUAL_CACHE_DIR,{recursive:true});
+  mkdirSync(CLIP_CACHE_DIR,{recursive:true});
 }
 
 function audioCachePath(item){
@@ -411,6 +435,36 @@ function prefetchTrack(item){
   downloadTrackToCache(item).catch(error=>{
     console.error('[prefetch]',cleanText(error?.message||error));
   });
+}
+
+async function downloadJoyOfBeingClip(){
+  if(!JOY_OF_BEING_CLIP_ENABLED)throw new Error('JOY OF BEING clip disabled');
+  prepareCacheDir();
+  try{
+    if(existsSync(JOY_OF_BEING_CLIP_PATH) && statSync(JOY_OF_BEING_CLIP_PATH).size>1000000)return JOY_OF_BEING_CLIP_PATH;
+  }catch(_){ }
+  const tmp=`${JOY_OF_BEING_CLIP_PATH}.part-${process.pid}-${Date.now()}`;
+  const controller=new AbortController();
+  const timer=setTimeout(()=>controller.abort(),180000);
+  try{
+    const response=await fetch(JOY_OF_BEING_CLIP_URL,{headers:{'user-agent':'ANDRIK-Radio-R684-Clip'},signal:controller.signal});
+    if(!response.ok)throw new Error(`JOY clip HTTP ${response.status}`);
+    if(!response.body)throw new Error('JOY clip empty response');
+    await pipeline(Readable.fromWeb(response.body),createWriteStream(tmp,{flags:'w'}));
+    if(!existsSync(tmp)||statSync(tmp).size<1000000)throw new Error('JOY clip file too small');
+    renameSync(tmp,JOY_OF_BEING_CLIP_PATH);
+    return JOY_OF_BEING_CLIP_PATH;
+  }finally{
+    clearTimeout(timer);
+    try{if(existsSync(tmp))unlinkSync(tmp)}catch(_){ }
+  }
+}
+
+function prefetchJoyOfBeingClip(){
+  if(!JOY_OF_BEING_CLIP_ENABLED||clipPrefetchJob)return;
+  clipPrefetchJob=downloadJoyOfBeingClip()
+    .catch(error=>console.error('[clip-prefetch]',cleanText(error?.message||error)))
+    .finally(()=>{clipPrefetchJob=null});
 }
 
 function localHourInTimeZone(timeZone=VISUAL_TIME_ZONE){
@@ -562,7 +616,7 @@ function startPublisher(visualPath){
 
   publisher=spawn('ffmpeg',args,{stdio:['ignore','ignore','pipe','pipe']});
   state.publisherRunning=true;
-  state.streamStartedAt=new Date().toISOString();
+  if(!state.streamStartedAt)state.streamStartedAt=new Date().toISOString();
   const audioSink=publisher.stdio[3];
   audioSink.on('error',err=>{
     if(!stopping && !/EPIPE|ECONNRESET|ERR_STREAM_DESTROYED/i.test(String(err?.code||err?.message||err))) state.lastError=`audio-pipe: ${String(err)}`;
@@ -577,12 +631,122 @@ function startPublisher(visualPath){
   });
   publisher.on('exit',(code,signal)=>{
     state.publisherRunning=false;
-    state.lastExit={layer:'master',code,signal,at:new Date().toISOString()};
+    // A master exit at a planned clip boundary is not a radio failure. Keep
+    // lastExit reserved for real exits so the control panel stays truthful.
+    if(!intentionalPublisherSwitch)state.lastExit={layer:'master',code,signal,at:new Date().toISOString()};
     publisher=null;
-    if(!stopping)setTimeout(()=>process.exit(code||22),1500).unref();
+    if(!stopping && !intentionalPublisherSwitch)setTimeout(()=>process.exit(code||22),1500).unref();
   });
   publisher.on('error',err=>{state.lastError=String(err);});
   return true;
+}
+
+async function stopMasterForClip(){
+  const active=publisher;
+  if(!active || active.exitCode!==null){publisher=null;state.publisherRunning=false;return;}
+  intentionalPublisherSwitch=true;
+  try{
+    const sink=active?.stdio?.[3];
+    if(sink && !sink.destroyed && !sink.writableEnded)sink.end();
+  }catch(_){ }
+  let clean=await waitChildExit(active,9000);
+  if(!clean && active.exitCode===null){
+    try{active.kill('SIGTERM')}catch(_){ }
+    clean=await waitChildExit(active,2500);
+  }
+  if(!clean && active.exitCode===null){try{active.kill('SIGKILL')}catch(_){ }}
+  publisher=null;
+  state.publisherRunning=false;
+}
+
+function clipFilterComplex(){
+  const font=chooseFont();
+  const fontPart=font?`fontfile='${ffFilterPath(font)}':`:'';
+  const curPath=ffFilterPath(LIVE_CURRENT_FILE);
+  const tickerPath=ffFilterPath(LIVE_TICKER_FILE);
+  const vf=[
+    'scale=1920:1080:flags=lanczos',
+    'setsar=1',
+    `fps=${VIDEO_FPS}`,
+    'format=yuv420p',
+    `drawtext=${fontPart}textfile='${curPath}':reload=${VIDEO_FPS}:fontcolor=yellow:fontsize=44:x=(w-text_w)/2:y=h-148:borderw=4:bordercolor=black@1:shadowcolor=black@1:shadowx=2:shadowy=2`,
+    `drawtext=${fontPart}textfile='${tickerPath}':reload=${VIDEO_FPS}:fontcolor=yellow:fontsize=28:x='w-mod(t*110,text_w+w)':y=h-58:borderw=3:bordercolor=black@1:shadowcolor=black@1:shadowx=2:shadowy=2`
+  ].join(',');
+  return `[0:v]${vf}[base];[1:v]scale=160:160:flags=lanczos,format=yuva420p[qr];[base][qr]overlay=24:24:format=yuv420[outv]`;
+}
+
+async function playJoyOfBeingClip(previous,item,next){
+  let clipPath='';
+  try{clipPath=await downloadJoyOfBeingClip()}
+  catch(error){
+    state.lastError=`JOY clip cache: ${cleanText(error?.message||error)}`;
+    console.error('[joy-clip]',state.lastError);
+    return false;
+  }
+  const duration=await probeDuration(clipPath).catch(()=>0);
+  state.previous=previous?{type:previous.type||'track',title:previous.title,album:previous.album||'',url:previous.url||''}:null;
+  state.current={type:'clip',title:item.title,album:item.album,url:item.url,startedAt:new Date().toISOString(),duration};
+  state.next=next?{type:next.type||'track',title:next.title,album:next.album||'',url:next.url||''}:null;
+  writeFileSync(LIVE_CURRENT_FILE,'🎬 КЛИП · ANDRIK — JOY OF BEING','utf8');
+
+  try{
+    await stopMasterForClip();
+    if(stopping)return false;
+    await sleep(350);
+    const args=[
+      '-hide_banner','-loglevel','warning','-re','-i',clipPath,
+      '-loop','1','-framerate','1','-i',QR_OVERLAY,
+      '-filter_complex',clipFilterComplex(),
+      '-map','[outv]','-map','0:a:0',
+      '-shortest',
+      '-c:v','libx264','-preset','ultrafast','-tune','zerolatency',
+      '-profile:v','high','-level:v','4.1',
+      '-b:v',VIDEO_BITRATE,'-minrate',VIDEO_BITRATE,'-maxrate',VIDEO_BITRATE,'-bufsize','9000k',
+      '-x264-params',`nal-hrd=cbr:force-cfr=1:repeat-headers=1:keyint=${VIDEO_GOP}:min-keyint=${VIDEO_GOP}:scenecut=0`,
+      '-g',String(VIDEO_GOP),'-keyint_min',String(VIDEO_GOP),'-sc_threshold','0','-bf','2','-refs','1','-coder','1','-r',String(VIDEO_FPS),'-pix_fmt','yuv420p',
+      '-c:a','aac','-profile:a','aac_low','-b:a',AUDIO_BITRATE,'-ar',String(AUDIO_SAMPLE_RATE),'-ac','2',
+      '-max_muxing_queue_size','4096','-flush_packets','1',
+      '-f','fifo','-fifo_format','flv','-queue_size','8192',
+      '-timeshift',`${OUTPUT_TIMESHIFT_SECONDS}s`,
+      '-drop_pkts_on_overflow','0',
+      '-attempt_recovery','1','-recover_any_error','1','-recovery_wait_time','1','-restart_with_keyframe','1',
+      STREAM_URL
+    ];
+    clipPublisher=spawn('ffmpeg',args,{stdio:['ignore','ignore','pipe']});
+    state.publisherRunning=true;state.producerRunning=true;
+    clipPublisher.stderr.on('data',d=>{
+      const line=String(d||'').trim();
+      if(line){
+        state.lastFfmpegLine=line.slice(-1000);
+        if(/error|fail|invalid|broken pipe|non-monoton/i.test(line))state.lastError=line.slice(-700);
+        console.error('[clip]',line);
+      }
+    });
+    await new Promise((resolve,reject)=>{
+      clipPublisher.once('error',reject);
+      clipPublisher.once('exit',(code,signal)=>{
+        if(code===0||stopping)resolve();else reject(new Error(`clip publisher exit ${code||signal}`));
+      });
+    });
+    return !stopping;
+  }catch(error){
+    state.lastError=`JOY clip: ${cleanText(error?.message||error)}`;
+    console.error('[joy-clip]',error);
+    return false;
+  }finally{
+    clipPublisher=null;
+    state.publisherRunning=false;state.producerRunning=false;
+    if(!stopping){
+      try{
+        const visual=await ensureScheduledVisual();
+        if(!startPublisher(visual))throw new Error('master restart after clip failed');
+      }catch(error){
+        intentionalPublisherSwitch=false;
+        throw error;
+      }
+    }
+    intentionalPublisherSwitch=false;
+  }
 }
 
 function decoderArgs(localAudioPath){
@@ -640,6 +804,7 @@ async function radioLoop(){
   prefetchAllVisuals();
   const startupVisual=await ensureScheduledVisual();
   if(!startPublisher(startupVisual))return;
+  prefetchJoyOfBeingClip();
 
   while(!stopping){
     try{
@@ -659,10 +824,23 @@ async function radioLoop(){
       const following=queue[queueIndex+2]||queue[1]||queue[0]||null;
       state.queuePosition=queueIndex+1;
 
+      if(item?.type==='clip'){
+        if(next?.type==='track')prefetchTrack(next);
+        if(following?.type==='track')prefetchTrack(following);
+        const clipPlayed=await playJoyOfBeingClip(lastPlayed,item,next);
+        lastPlayed=item;
+        queueIndex++;
+        if(clipPlayed)state.lastError='';
+        continue;
+      }
+
       const localAudioPath=await downloadTrackToCache(item);
-      prefetchTrack(next);
-      prefetchTrack(following);
-      pruneAudioCache([localAudioPath,audioCachePath(next||{}),audioCachePath(following||{})]);
+      if(next?.type==='track')prefetchTrack(next);else prefetchJoyOfBeingClip();
+      if(following?.type==='track')prefetchTrack(following);
+      const keep=[localAudioPath];
+      if(next?.type==='track')keep.push(audioCachePath(next));
+      if(following?.type==='track')keep.push(audioCachePath(following));
+      pruneAudioCache(keep);
 
       await playItem(lastPlayed,item,next,following,localAudioPath);
       lastPlayed=item;
@@ -768,7 +946,7 @@ const server=http.createServer((req,res)=>{
 });
 
 server.listen(PORT,'0.0.0.0',()=>{
-  console.log(`ANDRIK Radio R643-D1-FINAL-R607-FULLFRAME-1080P-CONTINUOUS-AUDIO listening on :${PORT}`);
+  console.log(`ANDRIK Radio R684-D1-GUARD-JOY-VIDEO listening on :${PORT}`);
   radioLoop();
 });
 
@@ -789,7 +967,12 @@ async function shutdown(){
   stopping=true;
   try{server.close();}catch(_){}
 
-  // First stop only the current MP3 decoder. The master AAC encoder remains alive.
+  // Stop a finite video intermission first if it is active.
+  const activeClip=clipPublisher;
+  if(activeClip&&activeClip.exitCode===null){try{activeClip.kill('SIGTERM')}catch(_){ }}
+  await waitChildExit(activeClip,3000);
+
+  // Then stop the current MP3 decoder.
   const activeDecoder=producer;
   if(activeDecoder&&activeDecoder.exitCode===null)activeDecoder.kill('SIGTERM');
   await waitChildExit(activeDecoder,2500);

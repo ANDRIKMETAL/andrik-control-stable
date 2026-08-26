@@ -1,0 +1,8 @@
+R683 — ADMIN BOTTOM STRIP / TRIKA BADGE / RADIO MAP CLARITY
+
+Changes:
+1) Admin panel: removed the remaining portrait bottom dead-space/black strip below the globe. Protection and Update FABs stay in place; swipe dots remain hidden.
+2) Radio: removed the OFFICIAL pill from the TRIKA canonical-release card.
+3) Radio map: renamed confusing “LIVE-сигналов · 60 мин” to “LIVE-переходов · 60 мин”. This is the count of geolocated stream/radio opening events detected during the last 60 minutes; zero does not mean the stream is down.
+4) Radio map: added visible “Обновлено” timestamp after each successful map refresh (and “Последняя попытка” on error). Automatic refresh remains every 30 seconds.
+5) R681 D1 economy protections and R682 radio/YouTube layout are preserved.
