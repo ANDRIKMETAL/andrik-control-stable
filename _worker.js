@@ -18747,6 +18747,7 @@ async function routeApi(request, env, ctx) {
     if (path === '/api/control/youtube-live-r609/start' && request.method === 'POST') return await handleYoutubeLiveStartR609(request, env);
     if (path === '/api/control/youtube-live-r687/ensure' && request.method === 'POST') return await handleYoutubeLiveEnsureR687(request, env);
     if (path === '/api/control/youtube-live-r688/ensure' && request.method === 'POST') return await handleYoutubeLiveEnsureR688(request, env);
+    if (path === '/api/control/youtube-live-r689/ensure' && request.method === 'POST') return await handleYoutubeLiveEnsureR689(request, env);
     if (path === '/api/control/youtube-live-r665/stop' && request.method === 'POST') return await handleYoutubeLiveStopR665(request, env);
     if (path === '/api/control/search-console' && request.method === 'GET') return await handleControlSearchConsole(request, env);
     if (path === '/api/control/snapshots/refresh' && request.method === 'POST') return await handleControlSnapshotsRefresh(request, env);
@@ -19335,6 +19336,160 @@ async function handleYoutubeLiveEnsureR688(request, env) {
     const insufficient=/insufficient|scope|permission/i.test(`${reason} ${error?.message||''}`);
     const status=Number(error?.httpStatus||0)===409?409:(insufficient?403:503);
     return json({ok:false,error:insufficient?'youtube-oauth-write-scope-required':(reason||'youtube-live-r688-failed'),reason,message:cleanPlainText(error?.message||error,600),reconnectUrl:'https://andrikmetal.com/radio-control-admin.html?youtube-reconnect=r688'},status);
+  }
+}
+
+
+// R689 — deterministic READY -> TESTING -> LIVE recovery for reusable ACTIVE streams.
+// R688 proved that the encoder and binding are correct, but this channel returned
+// invalidTransition for a direct READY -> LIVE call while the reusable stream was
+// already ACTIVE. R689 uses YouTube's explicit testing path instead: create a fresh
+// broadcast with monitor enabled + autoStart disabled, bind it to the already ACTIVE
+// reusable stream, transition READY -> TESTING, then TESTING -> LIVE. No encoder bounce
+// and no phone/session dependency are required.
+async function youtubeCreateBroadcastR689(accessToken,template=null) {
+  const radioTemplate=/andrik|radio|metal/i.test(String(template?.snippet?.title||''))?template:null;
+  const title=cleanPlainText(radioTemplate?.snippet?.title || '🔴 ANDRIK METAL RADIO 24/7 — Heavy Metal • Female Vocals • Original Music',100);
+  const description=String(radioTemplate?.snippet?.description || '').slice(0,5000);
+  const body={
+    snippet:{
+      title,
+      description,
+      scheduledStartTime:new Date(Date.now()+3000).toISOString()
+    },
+    status:{privacyStatus:'public',selfDeclaredMadeForKids:false},
+    contentDetails:{
+      monitorStream:{enableMonitorStream:true,broadcastStreamDelayMs:0},
+      enableAutoStart:false,
+      enableAutoStop:false,
+      enableDvr:true,
+      enableEmbed:true,
+      recordFromStart:true
+    }
+  };
+  const categoryId=cleanPlainText(radioTemplate?.snippet?.categoryId||'',30);
+  if(categoryId)body.snippet.categoryId=categoryId;
+  const url=new URL('https://www.googleapis.com/youtube/v3/liveBroadcasts');
+  url.searchParams.set('part','snippet,status,contentDetails');
+  return youtubeFetchR609(accessToken,url.toString(),{method:'POST',body:JSON.stringify(body)},'youtube-live-r689-insert');
+}
+function youtubeTransitionPendingR689(error) {
+  const reason=String(error?.reason||'').toLowerCase().replace(/[^a-z]/g,'');
+  return ['redundanttransition','errorstreaminactive','errorexecutingtransition'].includes(reason);
+}
+async function youtubeKickExactBroadcastR689(accessToken,broadcast,streamStatus='active') {
+  const id=cleanPlainText(broadcast?.id||'',100);
+  if(!id)throw new Error('youtube-broadcast-id-missing-r689');
+  const watchUrl=`https://www.youtube.com/watch?v=${encodeURIComponent(id)}`;
+  if(String(streamStatus||'').toLowerCase()!=='active'){
+    const e=new Error('Encoder ещё не дошёл до активного YouTube stream.');e.httpStatus=409;e.reason='youtube-active-stream-not-found';throw e;
+  }
+  const fresh=await youtubeGetExactBroadcastR688(accessToken,id)||broadcast;
+  const life=youtubeLifeKeyR609(fresh?.status?.lifeCycleStatus);
+  const monitorEnabled=Boolean(fresh?.contentDetails?.monitorStream?.enableMonitorStream);
+  const autoStart=Boolean(fresh?.contentDetails?.enableAutoStart);
+  if(life==='live')return {ok:true,pending:false,videoId:id,lifeCycleStatus:life,streamStatus,watchUrl,stage:'live'};
+  if(life==='livestarting')return {ok:false,pending:true,videoId:id,lifeCycleStatus:life,streamStatus,watchUrl,stage:'live'};
+  if(life==='teststarting')return {ok:false,pending:true,videoId:id,lifeCycleStatus:life,streamStatus,watchUrl,stage:'testing'};
+  if(life==='created')return {ok:false,pending:true,videoId:id,lifeCycleStatus:life,streamStatus,watchUrl,stage:'await-ready'};
+  if(autoStart || !monitorEnabled){
+    return {ok:false,pending:false,recreate:true,videoId:id,lifeCycleStatus:life,streamStatus,watchUrl,stage:'recreate-tested'};
+  }
+  let target='';
+  if(life==='ready')target='testing';
+  else if(life==='testing')target='live';
+  else {
+    const e=new Error(`YouTube broadcast нельзя запустить из статуса ${life||'unknown'}.`);e.httpStatus=409;e.reason='youtube-invalid-life-r689';throw e;
+  }
+  try{
+    const transitioned=await youtubeTransitionR609(accessToken,id,target);
+    const after=youtubeLifeKeyR609(transitioned?.status?.lifeCycleStatus)||life;
+    if(after==='live')return {ok:true,pending:false,videoId:id,lifeCycleStatus:after,streamStatus,watchUrl,stage:'live',transitionIssued:true};
+    return {ok:false,pending:true,videoId:id,lifeCycleStatus:after,streamStatus,watchUrl,stage:target,transitionIssued:true};
+  }catch(error){
+    if(youtubeTransitionPendingR689(error)){
+      return {ok:false,pending:true,videoId:id,lifeCycleStatus:life,streamStatus,watchUrl,stage:target,transitionIssued:true,transitionReason:cleanPlainText(error?.reason||'',180)};
+    }
+    throw error;
+  }
+}
+
+async function handleYoutubeLiveEnsureR689(request, env) {
+  if (!adminAuthorized(request, env)) return json({ok:false,error:'unauthorized'},401);
+  try{
+    const accessToken=await getYoutubeOAuthAccessToken(env);
+    const [broadcasts,streams]=await Promise.all([
+      youtubeListBroadcastsR687(accessToken),
+      youtubeListStreamsR687(accessToken)
+    ]);
+    const activeStreams=streams.filter(item=>String(item?.status?.streamStatus||'').toLowerCase()==='active').sort((a,b)=>youtubeStreamTimeR687(b)-youtubeStreamTimeR687(a));
+    if(!activeStreams.length){
+      return json({ok:false,error:'youtube-active-stream-not-found',message:'OVH encoder работает, но YouTube ещё не пометил его stream как ACTIVE.',activeStreams:0},409);
+    }
+    const nonComplete=broadcasts.filter(item=>!['complete','revoked'].includes(youtubeLifeKeyR609(item?.status?.lifeCycleStatus)));
+    const activeIds=new Set(activeStreams.map(item=>cleanPlainText(item?.id||'',120)).filter(Boolean));
+    const radioBroadcasts=nonComplete.filter(youtubeRadioLikeR687);
+    const testedBound=radioBroadcasts.filter(item=>
+      activeIds.has(cleanPlainText(item?.contentDetails?.boundStreamId||'',120)) &&
+      item?.contentDetails?.enableAutoStop!==true &&
+      item?.contentDetails?.enableAutoStart!==true &&
+      Boolean(item?.contentDetails?.monitorStream?.enableMonitorStream)
+    ).sort((a,b)=>{
+      const rank={live:100,livestarting:95,testing:90,teststarting:85,ready:80,created:70};
+      const ar=rank[youtubeLifeKeyR609(a?.status?.lifeCycleStatus)]||0;
+      const br=rank[youtubeLifeKeyR609(b?.status?.lifeCycleStatus)]||0;
+      return (br-ar)||(youtubeBroadcastTimeR687(b)-youtubeBroadcastTimeR687(a));
+    });
+    let broadcast=testedBound[0]||null;
+    let stream=null;
+    let mode='reuse-tested-bound';
+    if(broadcast){
+      const sid=cleanPlainText(broadcast?.contentDetails?.boundStreamId||'',120);
+      stream=activeStreams.find(item=>cleanPlainText(item?.id||'',120)===sid)||null;
+    }
+    if(!stream){
+      if(activeStreams.length===1)stream=activeStreams[0];
+      else stream=activeStreams.find(item=>/andrik/i.test(String(item?.snippet?.title||''))&&/(radio|metal)/i.test(String(item?.snippet?.title||'')))||null;
+    }
+    if(!stream){
+      return json({ok:false,error:'youtube-active-stream-ambiguous',message:'YouTube видит несколько ACTIVE streams. Не буду привязывать радио наугад.',activeStreams:activeStreams.length},409);
+    }
+    const streamId=cleanPlainText(stream?.id||'',120);
+    if(!broadcast){
+      const template=[...broadcasts].sort((a,b)=>youtubeBroadcastTimeR687(b)-youtubeBroadcastTimeR687(a)).find(youtubeRadioLikeR687)||null;
+      const created=await youtubeCreateBroadcastR689(accessToken,template);
+      broadcast=await youtubeBindR687(accessToken,cleanPlainText(created?.id||'',100),streamId);
+      mode='create-tested-and-bind';
+    }
+    const videoId=cleanPlainText(broadcast?.id||'',100);
+    const streamStatus=cleanPlainText(stream?.status?.streamStatus||'',80);
+    let kicked=await youtubeKickExactBroadcastR689(accessToken,broadcast,streamStatus);
+    if(kicked.recreate){
+      const created=await youtubeCreateBroadcastR689(accessToken,broadcast);
+      broadcast=await youtubeBindR687(accessToken,cleanPlainText(created?.id||'',100),streamId);
+      kicked=await youtubeKickExactBroadcastR689(accessToken,broadcast,streamStatus);
+      mode='replace-with-tested-and-bind';
+    }
+    return json({
+      ok:Boolean(kicked.ok),
+      pending:Boolean(kicked.pending),
+      mode,
+      created:mode!=='reuse-tested-bound',
+      videoId:cleanPlainText(broadcast?.id||videoId,100),
+      streamId,
+      boundStreamId:cleanPlainText(broadcast?.contentDetails?.boundStreamId||streamId,120),
+      streamStatus,
+      lifeCycleStatus:kicked.lifeCycleStatus,
+      stage:kicked.stage,
+      transitionIssued:Boolean(kicked.transitionIssued),
+      transitionReason:kicked.transitionReason||'',
+      watchUrl:kicked.watchUrl
+    });
+  }catch(error){
+    const reason=cleanPlainText(error?.reason||'',180);
+    const insufficient=/insufficient|scope|permission/i.test(`${reason} ${error?.message||''}`);
+    const status=Number(error?.httpStatus||0)===409?409:(insufficient?403:503);
+    return json({ok:false,error:insufficient?'youtube-oauth-write-scope-required':(reason||'youtube-live-r689-failed'),reason,message:cleanPlainText(error?.message||error,600),reconnectUrl:'https://andrikmetal.com/radio-control-admin.html?youtube-reconnect=r689'},status);
   }
 }
 

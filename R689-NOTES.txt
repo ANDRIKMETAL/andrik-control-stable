@@ -1,0 +1,9 @@
+R689 — RADIO READY→TESTING→LIVE RECOVERY
+
+- Preserves R688/R687 ACTIVE-stream discovery and OVH R658-safe restart path.
+- Fixes observed YouTube 403 invalidTransition on direct READY -> LIVE.
+- Creates a fresh radio broadcast with monitorStream enabled, enableAutoStart=false and enableAutoStop=false.
+- Binds it to the already ACTIVE reusable YouTube stream.
+- Uses deterministic READY -> TESTING -> LIVE transitions, polling asynchronous states.
+- Does not depend on the phone/browser session once OVH is running.
+- Does not expose or copy the YouTube stream key into Cloudflare.
