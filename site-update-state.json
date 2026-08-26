@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787685682810-0b137abc1f",
-  "release": "R668",
-  "archiveName": "R668-VISUAL-AUTO-RESTORE-DAY-EVENING-NIGHT-OVH-SAFE-FULL.zip",
-  "sourceHead": "44efb1d8a83fb1e85575f8f9e5c668d2ffa15b47",
-  "backupSha": "44efb1d8a83fb1e85575f8f9e5c668d2ffa15b47",
+  "operationId": "publish-1787703415509-6ff000387b",
+  "release": "R669",
+  "archiveName": "R669-YOUTUBE-LIVE-CHAT-LIKES-PUSH-OVH-RADIO-UNTOUCHED-SAFE-FULL.zip",
+  "sourceHead": "314e171389524a12041a6c4893d9efbbc43fc608",
+  "backupSha": "314e171389524a12041a6c4893d9efbbc43fc608",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-25T19:21:22.810Z"
+  "generatedAt": "2026-08-26T00:16:55.509Z"
 }

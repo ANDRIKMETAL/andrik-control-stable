@@ -7866,6 +7866,221 @@ async function fetchFastYoutubeLikesR333(env,db){
   })).filter(x=>x.videoId).sort((a,b)=>(order.get(a.videoId)??999)-(order.get(b.videoId)??999));
 }
 
+
+// R669: keep the currently active radio broadcast pinned in the 2-minute
+// engagement scan and poll its LIVE CHAT. This path intentionally uses the
+// public YouTube Data API key when available, so owner push monitoring keeps
+// working even when the Studio OAuth token is temporarily expired/revoked.
+async function fetchYoutubeActiveLiveEngagementR669(env,db){
+  const currentKey='youtube-live-current-video-r669';
+  const discoveryKey='youtube-live-discovery-last-at-r669';
+  const [currentState,radioState,discoveryState]=await Promise.all([
+    getPushState(db,currentKey).catch(()=>null),
+    getPushState(db,'radio-live-last-push-video-r585').catch(()=>null),
+    getPushState(db,discoveryKey).catch(()=>null)
+  ]);
+  const candidateIds=[...new Set([
+    cleanPlainText(currentState?.value||'',80),
+    cleanPlainText(radioState?.value||'',80)
+  ].filter(Boolean))];
+
+  const probeVideo=async ids=>{
+    const list=[...new Set((Array.isArray(ids)?ids:[ids]).map(id=>cleanPlainText(id||'',80)).filter(Boolean))].slice(0,5);
+    if(!list.length)return null;
+    const {data,mode}=await youtubeApiJson(env,'videos',{
+      part:'snippet,statistics,liveStreamingDetails',id:list.join(','),maxResults:list.length
+    });
+    const items=Array.isArray(data?.items)?data.items:[];
+    const item=items.find(row=>{
+      const details=row?.liveStreamingDetails||{};
+      return String(row?.snippet?.liveBroadcastContent||'').toLowerCase()==='live' || Boolean(details?.actualStartTime&&!details?.actualEndTime);
+    })||null;
+    if(!item)return null;
+    const details=item?.liveStreamingDetails||{};
+    const stats=item?.statistics||{};
+    const snippet=item?.snippet||{};
+    const video={
+      videoId:cleanPlainText(item.id||'',40),
+      title:cleanPlainText(snippet.title||'ANDRIK METAL RADIO 24/7',180),
+      publishedAt:cleanPlainText(details.actualStartTime||snippet.publishedAt||'',50),
+      thumbnail:snippet?.thumbnails?.high?.url||snippet?.thumbnails?.medium?.url||'',
+      likes:Math.max(0,Number(stats.likeCount||0)),
+      comments:Math.max(0,Number(stats.commentCount||0)),
+      url:`https://www.youtube.com/watch?v=${encodeURIComponent(item.id||'')}`,
+      isLive:true
+    };
+    return {video,liveChatId:cleanPlainText(details.activeLiveChatId||'',180),warning:'',source:cleanPlainText(mode||'key',80)};
+  };
+
+  try{
+    // Normal 2-minute path: one cheap videos.list for the already-known LIVE id.
+    const known=await probeVideo(candidateIds);
+    if(known?.video){
+      await setPushState(db,currentKey,known.video.videoId).catch(()=>{});
+      return {...known,source:'pinned-live-r669'};
+    }
+
+    // Cheap discovery first. It costs only playlistItems + videos and may resolve
+    // the stream without the expensive eventType=live search.
+    let found=null;
+    try{found=await youtubePublicLiveByUploadsR623(env,{fresh:true});}catch(_){found=null;}
+
+    // eventType=live search costs 100 quota units. Throttle it heavily when there
+    // is no known live id, but run it immediately when a previously pinned stream ended.
+    if(!found?.videoId){
+      const lastDiscoveryMs=Date.parse(String(discoveryState?.value||discoveryState?.updatedAt||''));
+      const staleKnown=Boolean(cleanPlainText(currentState?.value||'',80));
+      const discoveryDue=staleKnown || !Number.isFinite(lastDiscoveryMs) || Date.now()-lastDiscoveryMs>=30*60*1000;
+      if(discoveryDue){
+        await setPushState(db,discoveryKey,new Date().toISOString()).catch(()=>{});
+        try{found=await youtubePublicLiveByApiKeyR619(env,{fresh:true});}catch(_){found=null;}
+      }
+    }
+
+    const discoveredId=cleanPlainText(found?.videoId||'',80);
+    if(!discoveredId){
+      if(candidateIds.length)await setPushState(db,currentKey,'').catch(()=>{});
+      return {video:null,liveChatId:'',warning:'',source:'no-live-r669'};
+    }
+    const discovered=await probeVideo([discoveredId]);
+    if(discovered?.video){
+      await setPushState(db,currentKey,discovered.video.videoId).catch(()=>{});
+      return {...discovered,source:cleanPlainText(found?.source||'discovered-live-r669',100)};
+    }
+    return {video:null,liveChatId:'',warning:'',source:'discovery-not-live-r669'};
+  }catch(error){
+    return {video:null,liveChatId:'',warning:cleanPlainText(error?.message||error,260),source:'live-probe-error-r669'};
+  }
+}
+
+function parseYoutubeLiveChatMessageR669(raw={},live={}){
+  const snippet=raw?.snippet||{};
+  const author=raw?.authorDetails||{};
+  const type=cleanPlainText(snippet.type||'',80);
+  let text=cleanPlainText(snippet.displayMessage||snippet?.textMessageDetails?.messageText||'',420);
+  if(type==='superChatEvent'){
+    const d=snippet?.superChatDetails||{};
+    const amount=cleanPlainText(d.amountDisplayString||'',80);
+    const comment=cleanPlainText(d.userComment||text||'',300);
+    text=[amount,comment].filter(Boolean).join(' · ')||'Super Chat';
+  }else if(type==='superStickerEvent'){
+    const d=snippet?.superStickerDetails||{};
+    const amount=cleanPlainText(d.amountDisplayString||'',80);
+    const alt=cleanPlainText(d?.superStickerMetadata?.altText||'',160);
+    text=[amount,alt].filter(Boolean).join(' · ')||'Super Sticker';
+  }else if(type==='newSponsorEvent'){
+    text=text||'Новый участник канала';
+  }else if(type==='memberMilestoneChatEvent'){
+    text=text||'Сообщение участника канала';
+  }
+  return {
+    id:cleanPlainText(raw?.id||'',180),
+    liveChatId:cleanPlainText(live.liveChatId||'',180),
+    videoId:cleanPlainText(live?.video?.videoId||'',80),
+    videoTitle:cleanPlainText(live?.video?.title||'ANDRIK METAL RADIO 24/7',180),
+    thumbnail:cleanPlainText(live?.video?.thumbnail||'',700),
+    author:cleanPlainText(author.displayName||'Зритель YouTube',120),
+    authorChannelId:cleanPlainText(author.channelId||'',120),
+    authorIsOwner:Boolean(author.isChatOwner),
+    authorIsModerator:Boolean(author.isChatModerator),
+    type,
+    text:text||'Сообщение в LIVE-чате',
+    publishedAt:cleanPlainText(snippet.publishedAt||'',60),
+    url:live?.video?.url||'https://www.youtube.com/@andrikmetal/live'
+  };
+}
+
+async function checkYoutubeLiveChatPushR669(env,db,live={}){
+  const liveChatId=cleanPlainText(live?.liveChatId||'',180);
+  const videoId=cleanPlainText(live?.video?.videoId||'',80);
+  if(!liveChatId||!videoId)return {ok:true,active:Boolean(videoId),seen:0,sent:0,failed:0,seeded:false,warning:'',videoId,liveChatId};
+
+  const tokenKey=`youtube-livechat-page-r669:${liveChatId}`;
+  const seededKey=`youtube-livechat-seeded-r669:${liveChatId}`;
+  const globalCheckKey='youtube-livechat-last-check-at-r669';
+  const [tokenState,seededState,globalState]=await Promise.all([
+    getPushState(db,tokenKey).catch(()=>null),
+    getPushState(db,seededKey).catch(()=>null),
+    getPushState(db,globalCheckKey).catch(()=>null)
+  ]);
+  const params={liveChatId,part:'id,snippet,authorDetails',maxResults:200};
+  const pageToken=cleanPlainText(tokenState?.value||'',500);
+  if(pageToken)params.pageToken=pageToken;
+
+  let data={};
+  try{
+    ({data}=await youtubeApiJson(env,'liveChatMessages',params,{timeoutMs:8000}));
+  }catch(error){
+    // A stale nextPageToken can occur after a reconnect. Retry once from the
+    // current chat window; per-message D1 keys still prevent duplicates.
+    if(pageToken){
+      try{({data}=await youtubeApiJson(env,'liveChatMessages',{liveChatId,part:'id,snippet,authorDetails',maxResults:200},{timeoutMs:8000}));}
+      catch(second){
+        await setPushState(db,globalCheckKey,new Date().toISOString()).catch(()=>{});
+        return {ok:false,active:true,seen:0,sent:0,failed:0,seeded:Boolean(seededState),warning:cleanPlainText(second?.message||second,260),videoId,liveChatId};
+      }
+    }else{
+      await setPushState(db,globalCheckKey,new Date().toISOString()).catch(()=>{});
+      return {ok:false,active:true,seen:0,sent:0,failed:0,seeded:Boolean(seededState),warning:cleanPlainText(error?.message||error,260),videoId,liveChatId};
+    }
+  }
+
+  const rows=(Array.isArray(data?.items)?data.items:[]).map(item=>parseYoutubeLiveChatMessageR669(item,live)).filter(item=>item.id);
+  const nowIso=new Date().toISOString();
+  const priorGlobalMs=Date.parse(String(globalState?.value||globalState?.updatedAt||''));
+  const firstSeed=Boolean(!seededState?.value);
+  const recentFirstSeedCutoff=Number.isFinite(priorGlobalMs)&&Date.now()-priorGlobalMs<30*60*1000?priorGlobalMs:Date.now();
+  const notifications=[];
+
+  for(const item of rows){
+    const key=`livechat:${item.id}`;
+    if(await getYoutubeEventRow(db,key))continue;
+    const publishedMs=Date.parse(item.publishedAt||'');
+    const shouldSilentlySeed=firstSeed && (!Number.isFinite(publishedMs)||publishedMs<=recentFirstSeedCutoff);
+    if(item.authorIsOwner || shouldSilentlySeed){
+      await saveYoutubeEventRow(db,{key,type:'live-chat',resourceId:item.id,videoId:item.videoId,author:item.author,title:item.text,url:item.url,payload:{...item,seededSilently:shouldSilentlySeed,mode:'livechat-r669'}}).catch(()=>{});
+      continue;
+    }
+
+    const onceKey=`push-once:youtube-livechat:${item.id}`;
+    let claimed=await claimPushOnce(db,onceKey,nowIso);
+    if(!claimed){
+      await db.prepare(`DELETE FROM push_state WHERE key=? AND updated_at < datetime('now','-8 minutes')`).bind(onceKey).run().catch(()=>{});
+      claimed=await claimPushOnce(db,onceKey,nowIso);
+    }
+    if(!claimed)continue;
+
+    const special=item.type==='superChatEvent'?'💰':item.type==='superStickerEvent'?'✨':'💬';
+    const result=await sendOwnerPush(env,{
+      title:`${special} LIVE · ${item.author}`,
+      message:String(item.text||'Сообщение в LIVE-чате').slice(0,180),
+      url:youtubeAppLauncherUrl(item.url),
+      image:item.thumbnail||'',
+      name:`youtube-livechat-${item.id}`,
+      ttl:7200,
+      data:{liveChatMessageId:item.id,liveChatId:item.liveChatId,videoId:item.videoId,type:item.type},
+      webButtons:[{id:'open-youtube-live',text:'🔴 Открыть эфир',url:youtubeAppLauncherUrl(item.url)}],
+      history:{type:'youtube-live-chat',source:'YouTube Live Chat',videoId:item.videoId,videoTitle:item.videoTitle,details:{messageId:item.id,liveChatId:item.liveChatId,author:item.author,publishedAt:item.publishedAt,messageType:item.type,deliveryMode:'livechat-r669'}}
+    });
+    if(result.ok){
+      await saveYoutubeEventRow(db,{key,type:'live-chat',resourceId:item.id,videoId:item.videoId,author:item.author,title:item.text,url:item.url,payload:item}).catch(()=>{});
+    }else await releasePushOnceClaim(db,onceKey).catch(()=>{});
+    notifications.push({type:'live-chat',id:item.id,ok:Boolean(result.ok),error:cleanPlainText(result.error||'',260)});
+  }
+
+  await Promise.all([
+    setPushState(db,seededKey,'1').catch(()=>{}),
+    setPushState(db,globalCheckKey,nowIso).catch(()=>{}),
+    data?.nextPageToken?setPushState(db,tokenKey,cleanPlainText(data.nextPageToken,500)).catch(()=>{}):Promise.resolve()
+  ]);
+  return {
+    ok:!notifications.some(item=>!item.ok),active:true,seen:rows.length,
+    sent:notifications.filter(item=>item.ok).length,
+    failed:notifications.filter(item=>!item.ok).length,
+    seeded:firstSeed,warning:'',videoId,liveChatId,notifications
+  };
+}
+
 async function selectFastYoutubeCommentTargetsR473(db,videos=[]){
   const list=Array.isArray(videos)?videos.filter(v=>v?.videoId):[];
   const recent=list.slice(0,3);
@@ -7936,13 +8151,20 @@ async function handleFastYoutubeEngagementR333(request,env,options={}){
     // allThreadsRelatedToChannelId/not-found for a valid @andrikmetal channel.
     // Likes/video statistics are fetched first; comments are then read directly
     // from the newest videos plus any video whose public commentCount changed.
-    const videoSettled=await Promise.allSettled([fetchFastYoutubeLikesR333(env,db)]);
-    const videos=videoSettled[0].status==='fulfilled'?videoSettled[0].value:[];
+    const videoSettled=await Promise.allSettled([fetchFastYoutubeLikesR333(env,db),fetchYoutubeActiveLiveEngagementR669(env,db)]);
+    const catalogueVideos=videoSettled[0].status==='fulfilled'?videoSettled[0].value:[];
+    const liveProbe=videoSettled[1].status==='fulfilled'?videoSettled[1].value:{video:null,liveChatId:'',warning:cleanPlainText(videoSettled[1].reason?.message||videoSettled[1].reason||'',260),source:'probe-rejected-r669'};
+    const videos=[...catalogueVideos];
+    if(liveProbe?.video){
+      const index=videos.findIndex(row=>row.videoId===liveProbe.video.videoId);
+      if(index>=0)videos[index]={...videos[index],...liveProbe.video,isLive:true};
+      else videos.unshift(liveProbe.video);
+    }
     const directComments=videos.length
       ? await fetchFastYoutubeCommentsDirectR473(env,db,videos,channelId)
       : {items:[],warnings:[cleanPlainText(videoSettled[0].reason?.message||'youtube-videos-unavailable',240)],targets:[]};
     const comments=directComments.items||[];
-    if (videoSettled[0].status==='fulfilled') {
+    if (videoSettled[0].status==='fulfilled' || liveProbe?.video) {
       await recordYoutubeObservedLikeBatchR469(db,videos,startedAt).catch(()=>{});
     }
     const videoMap=new Map(videos.map(v=>[v.videoId,v]));
@@ -7995,7 +8217,7 @@ async function handleFastYoutubeEngagementR333(request,env,options={}){
     for(const item of videos){
       // R434 repair is safe here because it only acts on a recent video with a
       // confirmed release push and no previously confirmed like notification.
-      await ensureYoutubeReleaseLikeZeroBaselineR434(db,item,'engagement-2m-r434',{force:false}).catch(()=>{});
+      if(!item.isLive)await ensureYoutubeReleaseLikeZeroBaselineR434(db,item,'engagement-2m-r434',{force:false}).catch(()=>{});
       const key=`like-count:${item.videoId}`;
       const previous=await getYoutubeEventRow(db,key);
       if(!previous){
@@ -8052,18 +8274,33 @@ async function handleFastYoutubeEngagementR333(request,env,options={}){
       notifications.push({type:'like',videoId:item.videoId,ok:Boolean(result.ok),delta,total:item.likes,error:result.error || ''});
     }
 
+    // R669: LIVE chat is a different YouTube surface from ordinary comments.
+    // Poll it every 2 minutes and deliver unseen viewer messages to the owner.
+    const liveChat=await checkYoutubeLiveChatPushR669(env,db,liveProbe).catch(error=>({
+      ok:false,active:Boolean(liveProbe?.video),seen:0,sent:0,failed:0,seeded:false,
+      warning:cleanPlainText(error?.message||error,260),videoId:liveProbe?.video?.videoId||'',liveChatId:liveProbe?.liveChatId||'',notifications:[]
+    }));
+    if(Array.isArray(liveChat.notifications))notifications.push(...liveChat.notifications);
+
     const warnings=[
       ...(videoSettled.map(r=>r.status==='rejected'?cleanPlainText(r.reason?.message || r.reason,240):'').filter(Boolean)),
-      ...((directComments.warnings||[]).map(item=>cleanPlainText(item,240)).filter(Boolean))
+      ...((directComments.warnings||[]).map(item=>cleanPlainText(item,240)).filter(Boolean)),
+      ...(liveProbe?.warning?[`LIVE: ${cleanPlainText(liveProbe.warning,240)}`]:[]),
+      ...(liveChat?.warning?[`LIVE chat: ${cleanPlainText(liveChat.warning,240)}`]:[])
     ];
     const failed=notifications.filter(x=>!x.ok).length;
     const summary={
       ok:warnings.length===0 && failed===0,
-      commentsSeen:comments.length,
-      commentMode:'direct-video-r473',
+      commentsSeen:comments.length+Math.max(0,Number(liveChat?.seen||0)),
+      commentMode:'direct-video+livechat-r669',
       commentTargets:(directComments.targets||[]).length,
       videosChecked:videos.length,
-      commentsSent:notifications.filter(x=>x.type==='comment'&&x.ok).length,
+      liveVideoId:cleanPlainText(liveProbe?.video?.videoId||'',80),
+      liveVideoPinned:Boolean(liveProbe?.video),
+      liveChatActive:Boolean(liveProbe?.liveChatId),
+      liveChatSeen:Math.max(0,Number(liveChat?.seen||0)),
+      liveChatSent:Math.max(0,Number(liveChat?.sent||0)),
+      commentsSent:notifications.filter(x=>['comment','live-chat'].includes(x.type)&&x.ok).length,
       likesSent:notifications.filter(x=>x.type==='like'&&x.ok).length,
       sent:notifications.filter(x=>x.ok).length,
       failed,
@@ -8845,7 +9082,7 @@ async function handleYoutubeEventsStatus(request, env) {
   for(const row of (todayRows.results||[])){
     const n=Number(row.total||0),sent=row.status==='sent';
     if(!sent){today.failed+=n;continue}
-    if(row.type==='youtube-comment')today.commentsSent+=n;
+    if(row.type==='youtube-comment'||row.type==='youtube-live-chat')today.commentsSent+=n;
     if(row.type==='youtube-like')today.likesSent+=n;
     if(row.type==='youtube-subscriber'||row.type==='youtube-subscriber-count')today.subscribersSent+=n;
   }
