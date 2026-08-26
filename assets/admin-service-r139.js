@@ -6,7 +6,7 @@
   const state=document.getElementById('serviceAccessState');
   const msg=document.getElementById('serviceAccessMessage');
   const IS_CONTROL_HOST=location.hostname.toLowerCase()==='control.andrikmetal.com';
-  const MAIN_PUSH_ADMIN_URL='https://andrikmetal.com/service-admin.html?owner-push=1&v=55.00-r672';
+  const MAIN_PUSH_ADMIN_URL='https://andrikmetal.com/service-admin.html?owner-push=1&v=55.00-r675';
   let installPrompt=null;
   let lastDiagnosticText='';
   let lastSystemText='';
@@ -109,37 +109,55 @@
   async function sendPush(audience,title,message,url,statusId){if(!getKey()){set(statusId,'Сначала сохраните ключ.');return}saveKey();set(statusId,'Отправка…');try{const data=await api('/api/push/send',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({audience,title,message,url})});set(statusId,data.oneSignalId?`OneSignal принял сообщение ✅ ID: ${data.oneSignalId}`:'Отправлено ✅');await loadDiagnosticLog()}catch(error){set(statusId,`Ошибка: ${translatePushError(error.message)}`);await loadDiagnosticLog()}}
   function translatePushError(value){const text=String(value||'');if(text.includes('no-subscribers-matched'))return 'OneSignal не нашёл активных подписчиков. Переподключите уведомления на телефонах и повторите тест.';if(text.includes('owner-device-not-registered'))return 'Телефон владельца не зарегистрирован.';if(text.includes('owner-subscription-invalid'))return 'Старая push-подписка телефона недействительна. Нажмите «Подключить мой телефон» ещё раз.';if(text.includes('push-not-configured'))return 'OneSignal не настроен.';return text}
   async function registerOwnerPush(){
-    if(IS_CONTROL_HOST){set('adminPushStatus','Открываем основной домен ANDRIK. Разрешение Web Push привязано к нему.');const opened=window.open(MAIN_PUSH_ADMIN_URL,'_blank','noopener,noreferrer');if(!opened)location.href=MAIN_PUSH_ADMIN_URL;return}
-    if(!getKey()){set('adminPushStatus','Сначала сохраните ключ.');return}
-    saveKey();
-    set('adminPushStatus','Проверяем push-подписку…');
-    let pushState=await window.AndrikPush?.status();
-    if(pushState?.originMismatch){set('adminPushStatus',`Откройте основной домен ${pushState.siteOrigin||'ANDRIK'}.`);return}
-    let subscriptionId=pushState?.subscriptionId||null;
-    if(!subscriptionId)subscriptionId=await window.AndrikPush?.subscribe();
-    if(!subscriptionId){
-      pushState=await window.AndrikPush?.status();
-      if(pushState?.browserPermission==='granted'){
-        set('adminPushStatus','Разрешение Chrome есть ✅ Восстанавливаю OneSignal-подписку и отдельный push-worker…');
-        subscriptionId=await window.AndrikPush?.repairSubscription?.();
-        if(subscriptionId){
-          await api('/api/push/admin-device',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({subscriptionId,label:navigator.userAgent.slice(0,70)})});
-          set('adminPushStatus','Телефон владельца подключён ✅');
-          await loadSystem();await loadDiagnosticLog();
-          return;
-        }
-      }
-      pushState=await window.AndrikPush?.status();
-      const nativeText=pushState?.nativeSubscription?'Native push создан, но OneSignal ID ещё не выдан.':'Native push-подписка ещё не создана.';
-      const workerText=pushState?.workerActive?'worker ✅':'worker ❌';
-      set('adminPushStatus',pushState?.browserPermission==='denied'?'Уведомления заблокированы для andrikmetal.com в Chrome.':`Разрешение Chrome есть ✅ ${nativeText} ${workerText}. Нажми кнопку ещё раз через 10 секунд.`);
+    const button=document.getElementById('adminPushRegister');
+    if(button){button.disabled=false;button.classList.remove('is-busy')}
+    if(IS_CONTROL_HOST){
+      set('adminPushStatus','Открываю основной andrikmetal.com — push создаётся только там…');
+      location.href=MAIN_PUSH_ADMIN_URL;
       return;
     }
+    if(!getKey()){set('adminPushStatus','Сначала сохраните ADMIN_KEY выше.');return}
+    saveKey();
     try{
+      set('adminPushStatus','1/3 · Проверяю Chrome и OneSignal…');
+      let pushState=await window.AndrikPush?.status();
+      if(pushState?.originMismatch){set('adminPushStatus',`Открой основной домен ${pushState.siteOrigin||'andrikmetal.com'}.`);return}
+      if(pushState?.browserPermission==='denied'){
+        set('adminPushStatus','Уведомления для andrikmetal.com заблокированы в Chrome. Разреши их в настройках сайта.');return;
+      }
+      let subscriptionId=String(pushState?.subscriptionId||'').trim();
+      if(!subscriptionId){
+        set('adminPushStatus','2/3 · Создаю push-worker и подписку…');
+        subscriptionId=String(await window.AndrikPush?.repairSubscription?.()||'').trim();
+      }
+      if(!subscriptionId){
+        pushState=await window.AndrikPush?.status();
+        const repairKey='andrik-owner-push-r675-reload';
+        const alreadyRepaired=sessionStorage.getItem(repairKey)==='1';
+        if(!alreadyRepaired){
+          sessionStorage.setItem(repairKey,'1');
+          set('adminPushStatus','2/3 · OneSignal завис после старых worker. Чищу ТОЛЬКО OneSignal и один раз перезагружаю страницу…');
+          await window.AndrikPush?.hardResetSubscription?.();
+          setTimeout(()=>location.replace('/service-admin.html?owner-push=1&push-repair=1&v=55.00-r675&t='+Date.now()),650);
+          return;
+        }
+        sessionStorage.removeItem(repairKey);
+        const workerText=pushState?.workerActive?'worker ✅':'worker ❌';
+        const nativeText=pushState?.nativeSubscription?'native ✅':'native ❌';
+        const extra=pushState?.workerError?` · ${pushState.workerError}`:'';
+        set('adminPushStatus',`OneSignal не выдал ID. ${workerText} · ${nativeText}${extra}. Кнопка активна — можно повторить.`);
+        return;
+      }
+      sessionStorage.removeItem('andrik-owner-push-r675-reload');
+      set('adminPushStatus','3/3 · Регистрирую этот телефон владельцем…');
       await api('/api/push/admin-device',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({subscriptionId,label:navigator.userAgent.slice(0,70)})});
-      set('adminPushStatus','Телефон владельца подключён ✅');
+      set('adminPushStatus','✅ Телефон владельца подключён. Сейчас можно нажать «Тестовый push мне».');
       await loadSystem();await loadDiagnosticLog();
-    }catch(error){set('adminPushStatus',`Ошибка: ${error.message}`)}
+    }catch(error){
+      set('adminPushStatus',`Ошибка подключения push: ${translatePushError(error?.message||error)}`);
+    }finally{
+      if(button){button.disabled=false;button.classList.remove('is-busy')}
+    }
   }
   function pushAttemptLabel(attempt){if(!attempt)return 'Попыток автоматической отправки пока нет';if(attempt.status==='sent'&&attempt.oneSignalId)return `Принято OneSignal · ID ${attempt.oneSignalId}`;if(attempt.error==='no-subscribers-matched')return 'Не доставлено: активные подписчики не найдены';if(attempt.status==='failed')return `Ошибка: ${attempt.error||'неизвестно'}`;return `${attempt.status||'—'}${attempt.error?` · ${attempt.error}`:''}`}
   function renderYoutubeDiagnostics(data={}){
@@ -216,7 +234,7 @@
     setTimeout(()=>{
       if(getKey()) registerOwnerPush();
       else set('adminPushStatus','Введите ADMIN_KEY выше, сохраните его и нажмите «Подключить мой телефон».');
-    },900);
+    },1200);
   }
   document.getElementById('serviceYoutubeOauthConnect')?.addEventListener('click',connectYoutubeOauth);
   document.getElementById('serviceYoutubeAutoConfig')?.addEventListener('click',configureYoutubeLiveAuto);

@@ -297,11 +297,11 @@
               // R673: old cache-reset pages removed the OneSignal worker. Recover
               // the subscription automatically when permission is still granted.
               try{
-                await ensureOneSignalWorkerR673();
+                await ensureOneSignalWorkerR675();
                 await OneSignal.User.PushSubscription.optIn();
                 currentId=await waitForSubscriptionId(OneSignal,20000);
                 if(currentId)await syncSubscription(currentId,true);
-              }catch(error){console.warn('ANDRIK OneSignal auto-resubscribe R673:',error)}
+              }catch(error){console.warn('ANDRIK OneSignal auto-resubscribe R675:',error)}
             }
             resolve();
           }catch(error){reject(error)}
@@ -333,11 +333,11 @@
       check();
     });
   }
-  async function ensureOneSignalWorkerR673(){
+  async function ensureOneSignalWorkerR675(){
     if(!('serviceWorker' in navigator))return null;
     const scope=String(config?.serviceWorkerScope||'/push/onesignal/');
     const rawPath=String(config?.serviceWorkerPath||'/push/onesignal/OneSignalSDKWorker.js');
-    const workerUrl=new URL(rawPath, location.origin.endsWith('/')?location.origin:location.origin+'/').pathname;
+    const workerUrl=new URL(rawPath, location.origin+'/').pathname; window.__andrikPushWorkerError='';
     try{
       let registration=await navigator.serviceWorker.getRegistration(scope);
       if(!registration){
@@ -348,7 +348,7 @@
       const started=Date.now();
       while(!registration.active && Date.now()-started<12000){await sleep(300)}
       return registration;
-    }catch(error){console.warn('ANDRIK OneSignal worker R673:',error);return null}
+    }catch(error){window.__andrikPushWorkerError=String(error?.message||error||'worker-register-failed');console.warn('ANDRIK OneSignal worker R675:',error);return null}
   }
   async function repairSubscription(existingSdk=null){
     const OneSignal=existingSdk||await init();
@@ -357,21 +357,21 @@
     if(id)return id;
     const permission=(typeof Notification!=='undefined'?Notification.permission:'default');
     if(permission==='granted'){
-      await ensureOneSignalWorkerR673();
+      await ensureOneSignalWorkerR675();
       try{await OneSignal.Notifications.requestPermission({fallbackToSettings:true})}catch(_){}
-      try{await OneSignal.User.PushSubscription.optIn()}catch(error){console.warn('ANDRIK OneSignal optIn R673:',error)}
-      id=await waitForSubscriptionId(OneSignal,20000);
+      try{await OneSignal.User.PushSubscription.optIn()}catch(error){console.warn('ANDRIK OneSignal optIn R675:',error)}
+      id=await waitForSubscriptionId(OneSignal,9000);
       if(id)return id;
       // One retry clears an SDK-level opt-out but keeps the browser permission
       // and the dedicated OneSignal worker intact.
       try{await OneSignal.User.PushSubscription.optOut()}catch(_){}
       await sleep(700);
       try{await OneSignal.User.PushSubscription.optIn()}catch(_){}
-      id=await waitForSubscriptionId(OneSignal,30000);
+      id=await waitForSubscriptionId(OneSignal,9000);
       return id||null;
     }
     try{await OneSignal.User.PushSubscription.optIn()}catch(_){}
-    return await waitForSubscriptionId(OneSignal,30000);
+    return await waitForSubscriptionId(OneSignal,9000);
   }
   async function subscribe(skipIntro=false){
     const OneSignal=await init(); if(!OneSignal){setButtonState('off',t.unsupported);return null}
@@ -441,7 +441,7 @@
       workerActive=Boolean(registration?.active);
       nativeSubscription=Boolean(await registration?.pushManager?.getSubscription?.());
     }catch(_){}
-    return {configured:Boolean(config?.enabled),supported:Boolean(OneSignal?.Notifications?.isPushSupported?.()),browserPermission:(typeof Notification!=='undefined'?Notification.permission:'unknown'),optedIn:Boolean(OneSignal?.User?.PushSubscription?.optedIn),subscriptionId:OneSignal?.User?.PushSubscription?.id || null,pushToken:OneSignal?.User?.PushSubscription?.token || null,nativeSubscription,workerActive,originMismatch,siteOrigin:configuredOrigin || config?.siteOrigin || ''}
+    return {configured:Boolean(config?.enabled),supported:Boolean(OneSignal?.Notifications?.isPushSupported?.()),browserPermission:(typeof Notification!=='undefined'?Notification.permission:'unknown'),optedIn:Boolean(OneSignal?.User?.PushSubscription?.optedIn),subscriptionId:OneSignal?.User?.PushSubscription?.id || null,pushToken:OneSignal?.User?.PushSubscription?.token || null,nativeSubscription,workerActive,workerError:String(window.__andrikPushWorkerError||''),originMismatch,siteOrigin:configuredOrigin || config?.siteOrigin || ''}
   }
   window.AndrikPush={init,subscribe,repairSubscription,hardResetSubscription,getSubscriptionId,status,syncSubscription,requestPermissionFlow,cleanupLegacyPushSubscriptions,clearGenericWelcomeNotifications};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();

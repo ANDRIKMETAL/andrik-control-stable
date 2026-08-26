@@ -190,18 +190,31 @@ html.analytics-route-google-r539 body:not([data-analytics-page]) .analytics-yout
 .analytics-youtube-pane .youtube-video-list{display:grid;gap:10px}.analytics-youtube-pane .youtube-video-row{display:grid;grid-template-columns:56px 1fr auto;gap:12px;align-items:center;padding:12px;border:1px solid rgba(145,208,255,.13);border-radius:18px;background:rgba(255,255,255,.02)}.analytics-youtube-pane .youtube-video-rank{display:grid;place-items:center;width:56px;height:56px;border-radius:16px;background:rgba(255,255,255,.05);font-size:1rem;font-weight:900;color:#dff3ff}.analytics-youtube-pane .youtube-video-copy{min-width:0;display:grid;gap:4px}.analytics-youtube-pane .youtube-video-copy strong{font-size:.9rem;line-height:1.2;color:#f5fbff}.analytics-youtube-pane .youtube-video-copy p{margin:0;color:#91a7b8;font-size:.76rem;line-height:1.28}.analytics-youtube-pane .youtube-video-stats{display:flex;flex-wrap:wrap;gap:8px}.analytics-youtube-pane .youtube-video-stats span{padding:5px 8px;border-radius:999px;background:rgba(145,208,255,.08);font-size:.7rem;color:#d4ebff}.analytics-youtube-pane .youtube-video-open{white-space:nowrap;text-decoration:none;color:#dff3ff;font-weight:800;padding:10px 12px;border-radius:14px;border:1px solid rgba(145,208,255,.18);background:rgba(7,19,31,.78)}
 @media(max-width:540px){.analytics-youtube-pane .youtube-kpi-unified #analyticsYoutube,.analytics-youtube-pane .youtube-kpi-unified #youtubeStudioKpis{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important}.analytics-youtube-pane .youtube-video-row{grid-template-columns:56px 1fr}.analytics-youtube-pane .youtube-video-open{grid-column:1/-1;justify-self:start}}
 
-/* R531 — mobile-safe GA axis + Search Console distinct line chart */
+/* R674 — Search Console: clean KPI icons + readable dual-axis chart */
 .analytics-site-pane .analytics-trend-panel,.analytics-site-pane .analytics-bars{box-sizing:border-box!important;max-width:100%!important;width:100%!important}
 .analytics-site-pane .analytics-trend-panel{overflow:hidden!important}
 .analytics-site-pane .analytics-day small{overflow:hidden!important;text-overflow:clip!important;max-width:100%!important}
-.search-console-line-trend{box-sizing:border-box!important;max-width:100%!important;width:100%!important;height:auto!important;overflow:hidden!important;padding:14px 10px 34px!important;border:1px solid rgba(140,205,238,.12)!important;border-radius:22px!important;background:rgba(3,12,19,.56)!important}
-.search-console-line-trend svg{display:block;width:100%!important;height:230px!important;overflow:visible}
-.search-console-line-trend .sc-grid{stroke:rgba(130,184,210,.10);stroke-width:1.5}
-.search-console-line-trend .sc-line{fill:none;stroke-width:7;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}
-.search-console-line-trend .sc-line.is-click,.search-console-line-trend .sc-dot.is-click{stroke:#9edfff;fill:#9edfff}
-.search-console-line-trend .sc-line.is-impression,.search-console-line-trend .sc-dot.is-impression{stroke:#7e87ff;fill:#7e87ff}
-.search-console-line-trend .sc-dot{vector-effect:non-scaling-stroke}
-@media(max-width:540px){.search-console-line-trend svg{height:205px!important}.analytics-site-pane .analytics-chart-card{overflow:hidden!important}}
+.search-console-kpis{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:12px!important}
+.search-console-kpi{display:grid!important;grid-template-columns:minmax(0,1fr) 46px!important;align-items:center!important;gap:10px!important;min-height:104px!important;padding:17px 16px!important;border-radius:22px!important;background:linear-gradient(145deg,rgba(9,27,38,.94),rgba(4,13,21,.97))!important;box-shadow:inset 0 0 0 1px rgba(126,213,255,.035),0 14px 34px rgba(0,0,0,.18)!important}
+.search-console-kpi-copy{min-width:0}.search-console-kpi small{font-size:.79rem!important;color:#9fb2c1!important}.search-console-kpi strong{margin-top:7px!important;font-size:clamp(1.7rem,7vw,2.25rem)!important;color:#f7fbff!important;letter-spacing:-.035em!important}
+.search-console-kpi-icon{width:44px;height:44px;display:grid;place-items:center;border-radius:50%;border:1px solid rgba(104,235,178,.20);background:rgba(20,118,77,.12);box-shadow:inset 0 0 18px rgba(60,220,150,.06)}
+.search-console-kpi-icon svg{width:23px;height:23px;fill:none;stroke:#63e5a7;stroke-width:2.1;stroke-linecap:round;stroke-linejoin:round}
+.search-console-kpi.is-impressions .search-console-kpi-icon,.search-console-kpi.is-position .search-console-kpi-icon{border-color:rgba(139,126,255,.22);background:rgba(87,67,185,.12)}
+.search-console-kpi.is-impressions .search-console-kpi-icon svg,.search-console-kpi.is-position .search-console-kpi-icon svg{stroke:#9b8cff}
+.search-console-line-trend{box-sizing:border-box!important;max-width:100%!important;width:100%!important;height:auto!important;overflow:hidden!important;margin-top:18px!important;padding:16px 12px 12px!important;border:1px solid rgba(140,205,238,.14)!important;border-radius:24px!important;background:linear-gradient(180deg,rgba(4,15,24,.92),rgba(2,9,15,.92))!important;box-shadow:inset 0 0 0 1px rgba(130,210,245,.025),0 18px 48px rgba(0,0,0,.22)!important}
+.sc-chart-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 4px 10px;flex-wrap:wrap}
+.sc-chart-legend{display:flex;align-items:center;gap:16px;flex-wrap:wrap;color:#b1c1cd;font-size:.78rem;font-weight:850}.sc-chart-legend span{display:inline-flex;align-items:center;gap:7px}.sc-legend-dot{width:16px;height:7px;border-radius:999px;background:#78ddff;box-shadow:0 0 14px rgba(120,221,255,.28)}.sc-legend-dot.is-impressions{background:#8a7dff;box-shadow:0 0 14px rgba(138,125,255,.25)}
+.sc-chart-title{color:#7690a3;font-size:.68rem;font-weight:850;letter-spacing:.05em;text-transform:uppercase}
+.search-console-line-trend svg{display:block;width:100%!important;height:auto!important;aspect-ratio:1.78/1;min-height:224px;overflow:visible}
+.search-console-line-trend .sc-grid{stroke:rgba(135,190,215,.12);stroke-width:1;stroke-dasharray:5 8;vector-effect:non-scaling-stroke}
+.search-console-line-trend .sc-axis{stroke:rgba(135,190,215,.18);stroke-width:1;vector-effect:non-scaling-stroke}
+.search-console-line-trend .sc-axis-label{fill:#8fa5b6;font-size:17px;font-weight:750}.search-console-line-trend .sc-axis-title{fill:#71899b;font-size:15px;font-weight:850}.search-console-line-trend .sc-x-label{fill:#8298a9;font-size:16px;font-weight:760}
+.search-console-line-trend .sc-line{fill:none;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}
+.search-console-line-trend .sc-line.is-click{stroke:#78ddff;filter:drop-shadow(0 0 5px rgba(120,221,255,.20))}.search-console-line-trend .sc-line.is-impression{stroke:#8a7dff;filter:drop-shadow(0 0 5px rgba(138,125,255,.18))}
+.search-console-line-trend .sc-dot{stroke-width:2;vector-effect:non-scaling-stroke;cursor:pointer}.search-console-line-trend .sc-dot.is-click{stroke:#c9f4ff;fill:#78ddff}.search-console-line-trend .sc-dot.is-impression{stroke:#d5ceff;fill:#8a7dff}.search-console-line-trend .sc-dot.is-latest{r:6}
+.sc-chart-tooltip{position:absolute;z-index:3;left:50%;top:54px;transform:translateX(-50%);display:none;min-width:150px;padding:9px 12px;border:1px solid rgba(151,215,245,.22);border-radius:14px;background:rgba(3,12,20,.96);box-shadow:0 12px 32px rgba(0,0,0,.35);color:#eef8ff;text-align:center;font-size:.73rem;font-weight:760;pointer-events:none}.sc-chart-tooltip.is-visible{display:block}.sc-chart-tooltip strong{display:block;margin-bottom:3px;color:#fff;font-size:.78rem}.sc-chart-tooltip span{display:block;color:#a8bac7}
+.search-console-key{margin-top:10px!important}.search-console-key .sc-data-note{display:block!important;width:100%;padding:0 4px;color:#8fa5b6;font-size:.72rem;font-weight:760;line-height:1.45}
+@media(max-width:540px){.search-console-kpis{gap:10px!important}.search-console-kpi{min-height:96px!important;padding:15px 14px!important}.search-console-kpi-icon{width:40px;height:40px}.search-console-kpi-icon svg{width:21px;height:21px}.search-console-line-trend{padding:14px 8px 10px!important}.search-console-line-trend svg{min-height:238px;aspect-ratio:1.48/1}.sc-chart-legend{gap:13px;font-size:.75rem}.sc-chart-title{display:none}.search-console-line-trend .sc-axis-label{font-size:16px}.search-console-line-trend .sc-x-label{font-size:15px}.analytics-site-pane .analytics-chart-card{overflow:hidden!important}}
 
 .analytics-pages-spoiler{overflow:hidden}
 .analytics-pages-spoiler>summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:22px 24px}
@@ -1543,34 +1556,42 @@ body.analytics-admin-page.is-country-returning #worldMap .world-map-dot.is-selec
       if(trendBox)trendBox.innerHTML='<div class="admin-empty">Ждём первый снимок Search Console.</div>';
       return;
     }
+    const kpiIcon=(kind)=>{
+      if(kind==='clicks')return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17l5-5 4 4 7-9"/><path d="M16 7h4v4"/></svg>';
+      if(kind==='impressions')return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z"/><circle cx="12" cy="12" r="2.7"/></svg>';
+      if(kind==='ctr')return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3l9 8-5 1 3 6-3 1-3-6-4 3z"/><path d="M16 4v3M20 8h-3M18.5 5.5l-2 2"/></svg>';
+      return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19v-5M10 19V9M15 19V4M20 19v-8"/></svg>';
+    };
     if(box)box.innerHTML=`<div class="search-console-kpis">
-      <article class="search-console-kpi"><small>Клики</small><strong>${number(clicks)}</strong></article>
-      <article class="search-console-kpi"><small>Показы</small><strong>${number(impressions)}</strong></article>
-      <article class="search-console-kpi"><small>CTR</small><strong>${(ctr*100).toLocaleString('ru-RU',{maximumFractionDigits:1})}%</strong></article>
-      <article class="search-console-kpi"><small>Средняя позиция</small><strong>${position?position.toLocaleString('ru-RU',{maximumFractionDigits:1}):'—'}</strong></article>
+      <article class="search-console-kpi is-clicks"><div class="search-console-kpi-copy"><small>Клики</small><strong>${number(clicks)}</strong></div><span class="search-console-kpi-icon">${kpiIcon('clicks')}</span></article>
+      <article class="search-console-kpi is-impressions"><div class="search-console-kpi-copy"><small>Показы</small><strong>${number(impressions)}</strong></div><span class="search-console-kpi-icon">${kpiIcon('impressions')}</span></article>
+      <article class="search-console-kpi is-ctr"><div class="search-console-kpi-copy"><small>CTR</small><strong>${(ctr*100).toLocaleString('ru-RU',{maximumFractionDigits:1})}%</strong></div><span class="search-console-kpi-icon">${kpiIcon('ctr')}</span></article>
+      <article class="search-console-kpi is-position"><div class="search-console-kpi-copy"><small>Средняя позиция</small><strong>${position?position.toLocaleString('ru-RU',{maximumFractionDigits:1}):'—'}</strong></div><span class="search-console-kpi-icon">${kpiIcon('position')}</span></article>
     </div>`;
     const rows=Array.isArray(details?.trend)?details.trend:[];
     if(!trendBox)return;
     if(!rows.length){trendBox.innerHTML='<div class="search-console-message">Сводные данные получены. Дневная динамика появится после следующего обновления API.</div>';return}
-    const maxClicks=Math.max(1,...rows.map(row=>Number(row.clicks||0)));
-    const maxImpressions=Math.max(1,...rows.map(row=>Number(row.impressions||0)));
-    const axisIndices=[0,Math.floor((rows.length-1)/2),Math.max(0,rows.length-1)];
-    const axisDates=axisIndices.map(index=>compactAxisDate(rows[index]?.date||''));
-    const width=1000,height=300,padX=24,padY=22;
-    const usableW=width-padX*2,usableH=height-padY*2;
-    const point=(row,index,key,max)=>{
-      const x=rows.length<=1?width/2:padX+(index/(rows.length-1))*usableW;
-      const y=height-padY-(Math.max(0,Number(row?.[key]||0))/Math.max(1,max))*usableH;
-      return [x,y];
-    };
-    const poly=(key,max)=>rows.map((row,index)=>point(row,index,key,max).map(v=>v.toFixed(1)).join(',')).join(' ');
-    const clickPoints=poly('clicks',maxClicks),impressionPoints=poly('impressions',maxImpressions);
-    const dots=rows.map((row,index)=>{const [cx,cy]=point(row,index,'clicks',maxClicks),[ix,iy]=point(row,index,'impressions',maxImpressions);const label=compactAxisDate(row.date||'');return `<circle class="sc-dot is-click" cx="${cx}" cy="${cy}" r="4"><title>${escapeHtml(label)}: ${number(row.clicks)} кликов</title></circle><circle class="sc-dot is-impression" cx="${ix}" cy="${iy}" r="4"><title>${escapeHtml(label)}: ${number(row.impressions)} показов</title></circle>`}).join('');
-    trendBox.innerHTML=`<div class="search-console-trend search-console-line-trend" role="button" tabindex="0" aria-pressed="false" aria-label="Подсветить график Search Console"><svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" aria-hidden="true"><line class="sc-grid" x1="${padX}" y1="${height*.33}" x2="${width-padX}" y2="${height*.33}"/><line class="sc-grid" x1="${padX}" y1="${height*.66}" x2="${width-padX}" y2="${height*.66}"/><polyline class="sc-line is-click" points="${clickPoints}"/><polyline class="sc-line is-impression" points="${impressionPoints}"/>${dots}</svg><div class="search-console-axis"><span>${escapeHtml(axisDates[0]||'')}</span><span>${escapeHtml(axisDates[1]||'')}</span><span>${escapeHtml(axisDates[2]||'')}</span></div></div><div class="search-console-key"><span><i></i>Клики</span><span><i class="is-impressions"></i>Показы</span><span>${escapeHtml(searchMonthLabel)} · данные Search Console задерживаются примерно на 2 дня</span></div>`;
+    const rawMaxClicks=Math.max(0,...rows.map(row=>Number(row.clicks||0)));
+    const rawMaxImpressions=Math.max(0,...rows.map(row=>Number(row.impressions||0)));
+    const clickMax=Math.max(3,Math.ceil(rawMaxClicks));
+    const impressionStep=rawMaxImpressions<=20?5:rawMaxImpressions<=60?10:rawMaxImpressions<=120?20:rawMaxImpressions<=300?50:100;
+    const impressionMax=Math.max(impressionStep*3,Math.ceil(rawMaxImpressions/impressionStep)*impressionStep);
+    const width=720,height=390,left=60,right=60,top=42,bottom=58;
+    const plotW=width-left-right,plotH=height-top-bottom;
+    const xAt=index=>rows.length<=1?left+plotW/2:left+(index/(rows.length-1))*plotW;
+    const yAt=(value,max)=>top+plotH-(Math.max(0,Number(value||0))/Math.max(1,max))*plotH;
+    const poly=(key,max)=>rows.map((row,index)=>`${xAt(index).toFixed(1)},${yAt(row?.[key],max).toFixed(1)}`).join(' ');
+    const clickPoints=poly('clicks',clickMax),impressionPoints=poly('impressions',impressionMax);
+    const gridLevels=[0,1,2,3];
+    const grids=gridLevels.map(level=>{const frac=level/3,y=top+plotH-frac*plotH;const leftLabel=Math.round(clickMax*frac);const rightLabel=Math.round(impressionMax*frac);return `<line class="sc-grid" x1="${left}" y1="${y}" x2="${width-right}" y2="${y}"/><text class="sc-axis-label" x="${left-12}" y="${y+6}" text-anchor="end">${leftLabel}</text><text class="sc-axis-label" x="${width-right+12}" y="${y+6}" text-anchor="start">${rightLabel}</text>`}).join('');
+    const xIndices=[0,Math.round((rows.length-1)/3),Math.round((rows.length-1)*2/3),Math.max(0,rows.length-1)].filter((v,i,a)=>a.indexOf(v)===i);
+    const xLabels=xIndices.map(index=>`<text class="sc-x-label" x="${xAt(index)}" y="${height-20}" text-anchor="middle">${escapeHtml(compactAxisDate(rows[index]?.date||''))}</text>`).join('');
+    const dots=rows.map((row,index)=>{const cx=xAt(index),cy=yAt(row.clicks,clickMax),iy=yAt(row.impressions,impressionMax),latest=index===rows.length-1?' is-latest':'';const label=compactAxisDate(row.date||'');return `<circle class="sc-dot is-click${latest}" data-index="${index}" data-kind="click" cx="${cx}" cy="${cy}" r="4"><title>${escapeHtml(label)}: ${number(row.clicks)} кликов</title></circle><circle class="sc-dot is-impression${latest}" data-index="${index}" data-kind="impression" cx="${cx}" cy="${iy}" r="4"><title>${escapeHtml(label)}: ${number(row.impressions)} показов</title></circle>`}).join('');
+    trendBox.innerHTML=`<div class="search-console-trend search-console-line-trend" aria-label="График Search Console"><div class="sc-chart-head"><div class="sc-chart-legend"><span><i class="sc-legend-dot"></i>Клики</span><span><i class="sc-legend-dot is-impressions"></i>Показы</span></div><span class="sc-chart-title">Динамика по дням</span></div><div class="sc-chart-tooltip" id="scChartTooltip"></div><svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Клики и показы по дням"><text class="sc-axis-title" x="${left}" y="24">Клики</text><text class="sc-axis-title" x="${width-right}" y="24" text-anchor="end">Показы</text>${grids}<line class="sc-axis" x1="${left}" y1="${top}" x2="${left}" y2="${top+plotH}"/><line class="sc-axis" x1="${width-right}" y1="${top}" x2="${width-right}" y2="${top+plotH}"/><polyline class="sc-line is-click" points="${clickPoints}"/><polyline class="sc-line is-impression" points="${impressionPoints}"/>${dots}${xLabels}</svg></div><div class="search-console-key"><span class="sc-data-note">${escapeHtml(searchMonthLabel)} · данные Search Console задерживаются примерно на 2 дня</span></div>`;
     const chart=trendBox.querySelector('.search-console-trend');
-    const toggleChart=()=>{const active=chart?.classList.toggle('is-chart-highlighted');chart?.setAttribute('aria-pressed',active?'true':'false')};
-    chart?.addEventListener('click',toggleChart);
-    chart?.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleChart()}});
+    const tooltip=trendBox.querySelector('#scChartTooltip');
+    const showTip=index=>{const row=rows[index];if(!row||!tooltip)return;tooltip.innerHTML=`<strong>${escapeHtml(compactAxisDate(row.date||''))}</strong><span>${number(row.clicks)} кликов · ${number(row.impressions)} показов</span>`;tooltip.classList.add('is-visible');clearTimeout(showTip._timer);showTip._timer=setTimeout(()=>tooltip.classList.remove('is-visible'),2400)};
+    chart?.querySelectorAll('.sc-dot').forEach(dot=>{dot.addEventListener('click',event=>{event.stopPropagation();showTip(Number(dot.dataset.index||0))});dot.addEventListener('touchstart',event=>{event.stopPropagation();showTip(Number(dot.dataset.index||0))},{passive:true})});
   }
   function renderYoutubeFocus(platforms=[]){
     const box=$('youtubeHub');
