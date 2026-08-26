@@ -1,0 +1,84 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#05070a"><title>ANDRIK · Push Repair R676</title><style>body{margin:0;background:#05070a;color:#eef8ff;font-family:system-ui,-apple-system,sans-serif;min-height:100vh;display:grid;place-items:center;padding:22px;box-sizing:border-box}.card{width:min(560px,100%);border:1px solid rgba(116,210,255,.22);border-radius:28px;background:linear-gradient(180deg,#09131d,#050a10);padding:24px;box-sizing:border-box;box-shadow:0 24px 80px #0008}h1{margin:0 0 10px;font-size:1.55rem}p{color:#b9cedc;line-height:1.55}.step{margin:13px 0;padding:13px 15px;border-radius:17px;background:#ffffff08;border:1px solid #ffffff10}.ok{color:#91efbd}.bad{color:#ff9c9c}.btn{display:block;width:100%;padding:14px 16px;border-radius:999px;border:1px solid #9ddfff55;background:#d9f3ff;color:#07111a;font-weight:800;font-size:1rem;margin-top:16px}</style></head><body><main class="card"><h1>🔔 ANDRIK Push · ремонт</h1><p>Здесь чинится только OneSignal. Радио, OVH, сайт и ADMIN_KEY не меняются.</p><div class="step" id="s1">1/4 · Проверяю разрешение Chrome…</div><div class="step" id="s2">2/4 · Жду…</div><div class="step" id="s3">3/4 · Жду…</div><div class="step" id="s4">4/4 · Жду…</div><button class="btn" id="back" hidden>Вернуться в Служебное</button></main><script>
+(async()=>{
+ const $=id=>document.getElementById(id), set=(id,text,cls='')=>{const e=$(id);e.textContent=text;e.className='step '+cls};
+ const back=$('back'); back.onclick=()=>location.replace('/service-admin.html?v=55.00-r676&t='+Date.now());
+ const fail=(msg)=>{set('s4','❌ '+msg,'bad');back.hidden=false;};
+ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+ try{
+   if(!('serviceWorker' in navigator))throw new Error('Chrome не поддерживает service worker');
+   if(typeof Notification==='undefined')throw new Error('Notification API недоступен');
+   if(Notification.permission!=='granted')throw new Error('Уведомления Chrome не разрешены для andrikmetal.com');
+   set('s1','1/4 · Разрешение Chrome есть ✅','ok');
+
+   const cfgRes=await fetch('/api/push/config',{cache:'no-store',headers:{accept:'application/json'}});
+   if(!cfgRes.ok)throw new Error('Не удалось получить OneSignal config: HTTP '+cfgRes.status);
+   const cfg=await cfgRes.json();
+   if(!cfg.enabled||!cfg.appId)throw new Error('OneSignal не настроен на сервере');
+   const scope=String(cfg.serviceWorkerScope||'/push/onesignal/');
+   const raw=String(cfg.serviceWorkerPath||'push/onesignal/OneSignalSDKWorker.js').replace(/^\/+/, '');
+   const workerUrl='/'+raw;
+
+   set('s2','2/4 · Полностью очищаю только старое состояние OneSignal…');
+   const regs=await navigator.serviceWorker.getRegistrations();
+   for(const r of regs){
+     if(r.scope===new URL(scope,location.origin).href){
+       try{const sub=await r.pushManager.getSubscription();if(sub)await sub.unsubscribe()}catch(_){}
+       try{await r.unregister()}catch(_){}
+     }
+   }
+   try{for(let i=localStorage.length-1;i>=0;i--){const k=localStorage.key(i);if(k&&/onesignal/i.test(k))localStorage.removeItem(k)}}catch(_){}
+   try{
+     if(indexedDB.databases){
+       const dbs=await indexedDB.databases();
+       for(const d of dbs||[]){
+         if(!d?.name||!/onesignal/i.test(d.name))continue;
+         await new Promise(resolve=>{const req=indexedDB.deleteDatabase(d.name);let done=false;const end=()=>{if(done)return;done=true;resolve()};req.onsuccess=end;req.onerror=end;req.onblocked=end;setTimeout(end,2500)});
+       }
+     }
+   }catch(_){}
+   set('s2','2/4 · Старое состояние OneSignal очищено ✅','ok');
+
+   set('s3','3/4 · Проверяю и запускаю OneSignal worker…');
+   const probe=await fetch(workerUrl+'?r676='+Date.now(),{cache:'no-store'});
+   const ct=String(probe.headers.get('content-type')||'');
+   if(!probe.ok)throw new Error('Worker-файл недоступен: HTTP '+probe.status);
+   if(!/javascript|ecmascript/i.test(ct))throw new Error('Worker имеет неверный Content-Type: '+(ct||'пусто'));
+   let reg=await navigator.serviceWorker.register(workerUrl,{scope,updateViaCache:'none'});
+   let w=reg.installing||reg.waiting||reg.active;
+   if(w&&!reg.active){
+     await new Promise(resolve=>{let done=false;const end=()=>{if(done)return;done=true;resolve()};const check=()=>{if(w.state==='activated'||w.state==='redundant')end()};w.addEventListener('statechange',check);check();setTimeout(end,15000)});
+   }
+   reg=await navigator.serviceWorker.getRegistration(scope)||reg;
+   const state=reg.active?.state||reg.installing?.state||reg.waiting?.state||'нет';
+   if(!reg.active)throw new Error('Worker не активировался, состояние: '+state);
+   set('s3','3/4 · OneSignal worker активен ✅','ok');
+
+   set('s4','4/4 · Создаю новую push-подписку OneSignal…');
+   window.OneSignalDeferred=window.OneSignalDeferred||[];
+   const sdkLoaded=new Promise((resolve,reject)=>{const sc=document.createElement('script');sc.src='https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js';sc.defer=true;sc.onload=resolve;sc.onerror=()=>reject(new Error('Не загрузился OneSignal SDK'));document.head.appendChild(sc)});
+   await sdkLoaded;
+   const id=await new Promise((resolve,reject)=>{
+     let finished=false;const finish=v=>{if(finished)return;finished=true;resolve(v||'')};
+     window.OneSignalDeferred.push(async OneSignal=>{
+       try{
+         await OneSignal.init({appId:cfg.appId,serviceWorkerPath:raw,serviceWorkerParam:{scope},notifyButton:{enable:false},welcomeNotification:{disable:true},autoResubscribe:true});
+         try{await OneSignal.User.PushSubscription.optIn()}catch(_){}
+         const read=()=>String(OneSignal.User.PushSubscription.id||'').trim();
+         let v=read(); if(v)return finish(v);
+         const onChange=()=>{v=read();if(v){try{OneSignal.User.PushSubscription.removeEventListener('change',onChange)}catch(_){}finish(v)}};
+         try{OneSignal.User.PushSubscription.addEventListener('change',onChange)}catch(_){}
+         for(let i=0;i<75&&!finished;i++){await sleep(400);v=read();if(v){try{OneSignal.User.PushSubscription.removeEventListener('change',onChange)}catch(_){}return finish(v)}}
+         finish('');
+       }catch(e){reject(e)}
+     });
+     setTimeout(()=>finish(''),35000);
+   });
+   if(!id)throw new Error('OneSignal worker активен, но SDK не выдал Subscription ID');
+   try{sessionStorage.setItem('andrik-owner-push-subscription-r676',id)}catch(_){}
+   try{await fetch('/api/push/subscriber',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({subscriptionId:id,active:true,source:'site',label:navigator.userAgent.slice(0,110)}),cache:'no-store'})}catch(_){}
+   set('s4','4/4 · Push-подписка создана ✅ Возвращаюсь в контрольку…','ok');
+   await sleep(900);
+   location.replace('/service-admin.html?owner-push=1&push-repair=done&v=55.00-r676&t='+Date.now());
+ }catch(e){fail(String(e?.message||e));}
+})();
+</script></body></html>

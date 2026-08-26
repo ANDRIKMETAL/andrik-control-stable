@@ -80,6 +80,8 @@
   let readyPromise = null;
   let originMismatch = false;
   let configuredOrigin = '';
+  let initError = '';
+  let workerState = '';
 
   function addStyle(){
     if(document.getElementById('andrik-push-style')) return;
@@ -291,24 +293,20 @@
             };
             update();
             OneSignal.User.PushSubscription.addEventListener('change',update);
-            let currentId=OneSignal.User.PushSubscription.id||'';
+            const currentId=OneSignal.User.PushSubscription.id||'';
             if(currentId)await syncSubscription(currentId,Boolean(OneSignal.User.PushSubscription.optedIn));
-            else if(typeof Notification!=='undefined' && Notification.permission==='granted'){
-              // R673: old cache-reset pages removed the OneSignal worker. Recover
-              // the subscription automatically when permission is still granted.
-              try{
-                await ensureOneSignalWorkerR675();
-                await OneSignal.User.PushSubscription.optIn();
-                currentId=await waitForSubscriptionId(OneSignal,20000);
-                if(currentId)await syncSubscription(currentId,true);
-              }catch(error){console.warn('ANDRIK OneSignal auto-resubscribe R675:',error)}
+            // R676: do not block page init for 20-30 seconds. If permission is
+            // already granted, let the SDK try optIn in the background; the
+            // owner repair flow performs the deterministic wait separately.
+            if(!currentId && typeof Notification!=='undefined' && Notification.permission==='granted'){
+              setTimeout(()=>{ try{ OneSignal.User.PushSubscription.optIn(); }catch(_){} },0);
             }
             resolve();
           }catch(error){reject(error)}
         });
       });
       return sdk;
-    })().catch(error=>{console.warn('ANDRIK push init:',error); setButtonState('off',t.failed); return null});
+    })().catch(error=>{initError=String(error?.message||error||'push-init-failed');console.warn('ANDRIK push init:',error); setButtonState('off',t.failed); return null});
     return readyPromise;
   }
   const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -336,8 +334,8 @@
   async function ensureOneSignalWorkerR675(){
     if(!('serviceWorker' in navigator))return null;
     const scope=String(config?.serviceWorkerScope||'/push/onesignal/');
-    const rawPath=String(config?.serviceWorkerPath||'/push/onesignal/OneSignalSDKWorker.js');
-    const workerUrl=new URL(rawPath, location.origin+'/').pathname; window.__andrikPushWorkerError='';
+    const rawPath=String(config?.serviceWorkerPath||'push/onesignal/OneSignalSDKWorker.js').replace(/^\/+/, '');
+    const workerUrl=new URL('/'+rawPath, location.origin).pathname; window.__andrikPushWorkerError=''; workerState='';
     try{
       let registration=await navigator.serviceWorker.getRegistration(scope);
       if(!registration){
@@ -345,10 +343,20 @@
       }else{
         try{await registration.update()}catch(_){}
       }
-      const started=Date.now();
-      while(!registration.active && Date.now()-started<12000){await sleep(300)}
+      const probe=registration.installing||registration.waiting||registration.active;
+      if(probe)workerState=String(probe.state||'');
+      if(probe && !registration.active){
+        await new Promise(resolve=>{
+          let done=false;
+          const finish=()=>{if(done)return;done=true;resolve()};
+          const onState=()=>{workerState=String(probe.state||'');if(probe.state==='activated'||probe.state==='redundant')finish()};
+          probe.addEventListener?.('statechange',onState); onState(); setTimeout(finish,12000);
+        });
+      }
+      workerState=String(registration.active?.state||registration.installing?.state||registration.waiting?.state||workerState||'');
+      if(!registration.active && workerState==='redundant') window.__andrikPushWorkerError='worker-became-redundant';
       return registration;
-    }catch(error){window.__andrikPushWorkerError=String(error?.message||error||'worker-register-failed');console.warn('ANDRIK OneSignal worker R675:',error);return null}
+    }catch(error){window.__andrikPushWorkerError=String(error?.message||error||'worker-register-failed');workerState='error';console.warn('ANDRIK OneSignal worker R676:',error);return null}
   }
   async function repairSubscription(existingSdk=null){
     const OneSignal=existingSdk||await init();
@@ -358,7 +366,6 @@
     const permission=(typeof Notification!=='undefined'?Notification.permission:'default');
     if(permission==='granted'){
       await ensureOneSignalWorkerR675();
-      try{await OneSignal.Notifications.requestPermission({fallbackToSettings:true})}catch(_){}
       try{await OneSignal.User.PushSubscription.optIn()}catch(error){console.warn('ANDRIK OneSignal optIn R675:',error)}
       id=await waitForSubscriptionId(OneSignal,9000);
       if(id)return id;
@@ -441,7 +448,7 @@
       workerActive=Boolean(registration?.active);
       nativeSubscription=Boolean(await registration?.pushManager?.getSubscription?.());
     }catch(_){}
-    return {configured:Boolean(config?.enabled),supported:Boolean(OneSignal?.Notifications?.isPushSupported?.()),browserPermission:(typeof Notification!=='undefined'?Notification.permission:'unknown'),optedIn:Boolean(OneSignal?.User?.PushSubscription?.optedIn),subscriptionId:OneSignal?.User?.PushSubscription?.id || null,pushToken:OneSignal?.User?.PushSubscription?.token || null,nativeSubscription,workerActive,workerError:String(window.__andrikPushWorkerError||''),originMismatch,siteOrigin:configuredOrigin || config?.siteOrigin || ''}
+    return {configured:Boolean(config?.enabled),supported:Boolean(OneSignal?.Notifications?.isPushSupported?.()),browserPermission:(typeof Notification!=='undefined'?Notification.permission:'unknown'),optedIn:Boolean(OneSignal?.User?.PushSubscription?.optedIn),subscriptionId:OneSignal?.User?.PushSubscription?.id || null,pushToken:OneSignal?.User?.PushSubscription?.token || null,nativeSubscription,workerActive,workerState,workerError:String(window.__andrikPushWorkerError||''),initError,originMismatch,siteOrigin:configuredOrigin || config?.siteOrigin || ''}
   }
   window.AndrikPush={init,subscribe,repairSubscription,hardResetSubscription,getSubscriptionId,status,syncSubscription,requestPermissionFlow,cleanupLegacyPushSubscriptions,clearGenericWelcomeNotifications};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();

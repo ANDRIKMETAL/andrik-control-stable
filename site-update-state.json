@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787706757633-242c419be2",
-  "release": "R675",
-  "archiveName": "R675-OWNER-PUSH-WORKER-REPAIR-R674-GRAPH-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "cd678da9afa9ce8bb927e6fdacf999bd1f9477d9",
-  "backupSha": "cd678da9afa9ce8bb927e6fdacf999bd1f9477d9",
+  "operationId": "publish-1787707424315-9f48b78d64",
+  "release": "R676",
+  "archiveName": "R676-OWNER-PUSH-DETERMINISTIC-REPAIR-R674-GRAPH-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "6d2ad8dba49893e6d478485ac9c806c3dca12abd",
+  "backupSha": "6d2ad8dba49893e6d478485ac9c806c3dca12abd",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-26T01:12:37.633Z"
+  "generatedAt": "2026-08-26T01:23:44.315Z"
 }
