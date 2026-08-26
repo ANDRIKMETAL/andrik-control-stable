@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787705497041-fe95812995",
-  "release": "R672",
-  "archiveName": "R672-OWNER-PUSH-HARD-RESET-SEARCH-CONSOLE-STALE-FIX-OVH-RADIO-UNTOUCHED-SAFE-FULL.zip",
-  "sourceHead": "0170118887f680aa844dc57578aeb723dbd24e02",
-  "backupSha": "0170118887f680aa844dc57578aeb723dbd24e02",
+  "operationId": "publish-1787706036266-a26ecaef4e",
+  "release": "R673",
+  "archiveName": "R673-PUSH-PRESERVE-AUTO-RESUBSCRIBE-OWNER-DEVICE-OVH-RADIO-UNTOUCHED-SAFE-FULL.zip",
+  "sourceHead": "28a26aef0717dccc877f77bf7b1eb3f60fc9b3df",
+  "backupSha": "28a26aef0717dccc877f77bf7b1eb3f60fc9b3df",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-26T00:51:37.041Z"
+  "generatedAt": "2026-08-26T01:00:36.266Z"
 }

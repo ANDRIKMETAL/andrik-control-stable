@@ -279,7 +279,7 @@
               notifyButton:{enable:false},
               welcomeNotification:{disable:true},
               allowLocalhostAsSecureOrigin:false,
-              autoResubscribe:false
+              autoResubscribe:true
             });
             sdk=OneSignal;
             try{await OneSignal.User.setLanguage(lang)}catch(_){}
@@ -291,8 +291,18 @@
             };
             update();
             OneSignal.User.PushSubscription.addEventListener('change',update);
-            const currentId=OneSignal.User.PushSubscription.id||'';
+            let currentId=OneSignal.User.PushSubscription.id||'';
             if(currentId)await syncSubscription(currentId,Boolean(OneSignal.User.PushSubscription.optedIn));
+            else if(typeof Notification!=='undefined' && Notification.permission==='granted'){
+              // R673: old cache-reset pages removed the OneSignal worker. Recover
+              // the subscription automatically when permission is still granted.
+              try{
+                await ensureOneSignalWorkerR673();
+                await OneSignal.User.PushSubscription.optIn();
+                currentId=await waitForSubscriptionId(OneSignal,20000);
+                if(currentId)await syncSubscription(currentId,true);
+              }catch(error){console.warn('ANDRIK OneSignal auto-resubscribe R673:',error)}
+            }
             resolve();
           }catch(error){reject(error)}
         });
@@ -323,25 +333,45 @@
       check();
     });
   }
+  async function ensureOneSignalWorkerR673(){
+    if(!('serviceWorker' in navigator))return null;
+    const scope=String(config?.serviceWorkerScope||'/push/onesignal/');
+    const rawPath=String(config?.serviceWorkerPath||'/push/onesignal/OneSignalSDKWorker.js');
+    const workerUrl=new URL(rawPath, location.origin.endsWith('/')?location.origin:location.origin+'/').pathname;
+    try{
+      let registration=await navigator.serviceWorker.getRegistration(scope);
+      if(!registration){
+        registration=await navigator.serviceWorker.register(workerUrl,{scope,updateViaCache:'none'});
+      }else{
+        try{await registration.update()}catch(_){}
+      }
+      const started=Date.now();
+      while(!registration.active && Date.now()-started<12000){await sleep(300)}
+      return registration;
+    }catch(error){console.warn('ANDRIK OneSignal worker R673:',error);return null}
+  }
   async function repairSubscription(existingSdk=null){
     const OneSignal=existingSdk||await init();
     if(!OneSignal)return null;
     let id=String(OneSignal.User.PushSubscription.id||'').trim();
     if(id)return id;
-    try{await OneSignal.User.PushSubscription.optIn()}catch(_){}
-    id=await waitForSubscriptionId(OneSignal,8000);
-    if(id)return id;
-    // R672: Chrome/Android can report permission granted and optedIn=true while
-    // OneSignal has no Subscription ID/token. Re-arm the OneSignal subscription
-    // once instead of incorrectly telling the owner to re-enable Chrome permission.
     const permission=(typeof Notification!=='undefined'?Notification.permission:'default');
     if(permission==='granted'){
+      await ensureOneSignalWorkerR673();
+      try{await OneSignal.Notifications.requestPermission({fallbackToSettings:true})}catch(_){}
+      try{await OneSignal.User.PushSubscription.optIn()}catch(error){console.warn('ANDRIK OneSignal optIn R673:',error)}
+      id=await waitForSubscriptionId(OneSignal,20000);
+      if(id)return id;
+      // One retry clears an SDK-level opt-out but keeps the browser permission
+      // and the dedicated OneSignal worker intact.
       try{await OneSignal.User.PushSubscription.optOut()}catch(_){}
       await sleep(700);
       try{await OneSignal.User.PushSubscription.optIn()}catch(_){}
       id=await waitForSubscriptionId(OneSignal,30000);
+      return id||null;
     }
-    return id||null;
+    try{await OneSignal.User.PushSubscription.optIn()}catch(_){}
+    return await waitForSubscriptionId(OneSignal,30000);
   }
   async function subscribe(skipIntro=false){
     const OneSignal=await init(); if(!OneSignal){setButtonState('off',t.unsupported);return null}

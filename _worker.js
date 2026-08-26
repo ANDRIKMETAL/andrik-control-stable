@@ -3500,7 +3500,7 @@ async function handlePushConfig(_request, env) {
   return json({
     enabled: Boolean(env.ONESIGNAL_APP_ID),
     appId: String(env.ONESIGNAL_APP_ID || ''),
-    serviceWorkerPath: 'push/onesignal/OneSignalSDKWorker.js',
+    serviceWorkerPath: '/push/onesignal/OneSignalSDKWorker.js',
     serviceWorkerScope: '/push/onesignal/',
     siteOrigin: String(env.ONESIGNAL_SITE_ORIGIN || 'https://andrikmetal.com')
   }, 200, PUBLIC_CACHE_HEADERS);

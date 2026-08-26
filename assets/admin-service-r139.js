@@ -119,17 +119,20 @@
     if(!subscriptionId)subscriptionId=await window.AndrikPush?.subscribe();
     if(!subscriptionId){
       pushState=await window.AndrikPush?.status();
-      const params=new URLSearchParams(location.search);
-      const hardDone=params.get('push-reset')==='1';
-      if(pushState?.browserPermission==='granted'&&!hardDone){
-        set('adminPushStatus','Разрешение есть ✅ OneSignal завис без Subscription ID. Сейчас автоматически пересоздаю только push-службу…');
-        await window.AndrikPush?.hardResetSubscription?.();
-        params.set('owner-push','1');params.set('push-reset','1');params.set('v','55.00-r672');params.set('fresh',Date.now());
-        setTimeout(()=>location.replace(`${location.pathname}?${params.toString()}`),500);
-        return;
+      if(pushState?.browserPermission==='granted'){
+        set('adminPushStatus','Разрешение Chrome есть ✅ Восстанавливаю OneSignal-подписку и отдельный push-worker…');
+        subscriptionId=await window.AndrikPush?.repairSubscription?.();
+        if(subscriptionId){
+          await api('/api/push/admin-device',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({subscriptionId,label:navigator.userAgent.slice(0,70)})});
+          set('adminPushStatus','Телефон владельца подключён ✅');
+          await loadSystem();await loadDiagnosticLog();
+          return;
+        }
       }
-      const nativeText=pushState?.nativeSubscription?'Native push есть, но OneSignal ID не восстановлен.':'Native push-подписка тоже не создана.';
-      set('adminPushStatus',pushState?.browserPermission==='denied'?'Уведомления заблокированы для andrikmetal.com в Chrome.':`Разрешение Chrome есть ✅ ${nativeText} Это уже не проблема разрешения Chrome.`);
+      pushState=await window.AndrikPush?.status();
+      const nativeText=pushState?.nativeSubscription?'Native push создан, но OneSignal ID ещё не выдан.':'Native push-подписка ещё не создана.';
+      const workerText=pushState?.workerActive?'worker ✅':'worker ❌';
+      set('adminPushStatus',pushState?.browserPermission==='denied'?'Уведомления заблокированы для andrikmetal.com в Chrome.':`Разрешение Chrome есть ✅ ${nativeText} ${workerText}. Нажми кнопку ещё раз через 10 секунд.`);
       return;
     }
     try{
