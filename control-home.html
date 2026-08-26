@@ -833,6 +833,12 @@ body.control-push-summary-view .control-summary-source{display:block}
 <link rel="stylesheet" href="/assets/social-center-r498.css?v=55.00-r499">
 <link rel="stylesheet" href="/assets/admin-home-fix-r489.css?v=55.00-r489">
 <link rel="stylesheet" href="/assets/control-summary-platforms-r510.css?v=55.00-r510">
+
+<style id="r682-admin-bottom-clean">
+/* R682: the swipe dots were only a page-position indicator. On the Admin menu they sat over the globe and created a dark dead zone. Swiping remains enabled without them. */
+body.control-home-page.control-menu-visible .control-swipe-indicator{display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important}
+@media screen and (orientation:portrait){body.control-home-page.control-menu-visible .control-menu-page .control-swipe-page-inner{padding-bottom:max(56px,calc(44px + env(safe-area-inset-bottom)))!important}}
+</style>
 </head>
 <body class="trika-standalone-page comments-admin-page control-page control-home-page r137-eye-motion-page">
 <nav class="topbar control-topbar control-home-topbar"><div class="wrap nav-shell control-home-topbar-minimal"><a class="control-center-logo" id="controlCenterLogo" href="https://andrikmetal.com/" aria-label="Открыть главный сайт ANDRIK"><img class="logo-ok" src="/assets/control-topbar-eye-triangle.jpg?v=55.00-r129" alt=""/><img class="logo-error" src="/assets/andrik-control-red-triangle-192.png" alt=""/></a></div></nav>

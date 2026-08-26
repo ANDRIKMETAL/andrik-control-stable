@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787709234181-0d699ec6c6",
-  "release": "R680",
-  "archiveName": "R680-ADMIN-SWIPE-NEW-YOUTUBE-ANALYTICS-R679-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "93617b5b2e875e193522cfe346e08e73035ea7e0",
-  "backupSha": "93617b5b2e875e193522cfe346e08e73035ea7e0",
+  "operationId": "publish-1787710411153-535e8b7b39",
+  "release": "R682",
+  "archiveName": "R682-RADIO-COMPACT-YOUTUBE-MOVE-ADMIN-GLOBE-CLEAN-R681-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "a1c0de34cee20975456554997e69187b8324b605",
+  "backupSha": "a1c0de34cee20975456554997e69187b8324b605",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-26T01:53:54.181Z"
+  "generatedAt": "2026-08-26T02:13:31.153Z"
 }

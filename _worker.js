@@ -2317,6 +2317,16 @@ async function maybeTrimSystemLogsR638(db){
 
 async function recordSystemLog(env, entry = {}) {
   if (!env.COMMENTS_DB) return;
+  // R681 D1 economy: do not persist high-frequency healthy heartbeats as log rows.
+  // Warnings/errors are always retained; status is already available in push_state.
+  const logScope=cleanPlainText(entry.scope || 'system',40);
+  const logLevel=cleanPlainText(entry.level || 'info',20);
+  const logEvent=cleanPlainText(entry.event || '',80);
+  const routineHealthyLog = logLevel==='info' && (
+    (logScope==='youtube-fast-engagement' && logEvent==='fast-check-success') ||
+    (logScope==='automation' && logEvent==='legacy-reserve-r648')
+  );
+  if(routineHealthyLog)return;
   const db = env.COMMENTS_DB;
   await ensurePushAutomationSchema(db);
   const safeDetails = (() => {
@@ -7927,7 +7937,7 @@ async function fetchYoutubeActiveLiveEngagementR669(env,db){
     // Normal 2-minute path: one cheap videos.list for the already-known LIVE id.
     const known=await probeVideo(candidateIds);
     if(known?.video){
-      await setPushState(db,currentKey,known.video.videoId).catch(()=>{});
+      if(cleanPlainText(currentState?.value||'',80)!==known.video.videoId)await setPushState(db,currentKey,known.video.videoId).catch(()=>{});
       return {...known,source:'pinned-live-r669'};
     }
 
@@ -7950,12 +7960,12 @@ async function fetchYoutubeActiveLiveEngagementR669(env,db){
 
     const discoveredId=cleanPlainText(found?.videoId||'',80);
     if(!discoveredId){
-      if(candidateIds.length)await setPushState(db,currentKey,'').catch(()=>{});
+      if(cleanPlainText(currentState?.value||'',80))await setPushState(db,currentKey,'').catch(()=>{});
       return {video:null,liveChatId:'',warning:'',source:'no-live-r669'};
     }
     const discovered=await probeVideo([discoveredId]);
     if(discovered?.video){
-      await setPushState(db,currentKey,discovered.video.videoId).catch(()=>{});
+      if(cleanPlainText(currentState?.value||'',80)!==discovered.video.videoId)await setPushState(db,currentKey,discovered.video.videoId).catch(()=>{});
       return {...discovered,source:cleanPlainText(found?.source||'discovered-live-r669',100)};
     }
     return {video:null,liveChatId:'',warning:'',source:'discovery-not-live-r669'};
@@ -8079,11 +8089,13 @@ async function checkYoutubeLiveChatPushR669(env,db,live={}){
     notifications.push({type:'live-chat',id:item.id,ok:Boolean(result.ok),error:cleanPlainText(result.error||'',260)});
   }
 
-  await Promise.all([
-    setPushState(db,seededKey,'1').catch(()=>{}),
-    setPushState(db,globalCheckKey,nowIso).catch(()=>{}),
-    data?.nextPageToken?setPushState(db,tokenKey,cleanPlainText(data.nextPageToken,500)).catch(()=>{}):Promise.resolve()
-  ]);
+  const stateWrites=[setPushState(db,globalCheckKey,nowIso).catch(()=>{})];
+  // R681 D1 economy: seed is immutable after the first successful poll and the page
+  // token is written only when YouTube actually advances it.
+  if(firstSeed)stateWrites.push(setPushState(db,seededKey,'1').catch(()=>{}));
+  const nextPageToken=cleanPlainText(data?.nextPageToken||'',500);
+  if(nextPageToken&&nextPageToken!==pageToken)stateWrites.push(setPushState(db,tokenKey,nextPageToken).catch(()=>{}));
+  await Promise.all(stateWrites);
   return {
     ok:!notifications.some(item=>!item.ok),active:true,seen:rows.length,
     sent:notifications.filter(item=>item.ok).length,
@@ -8152,7 +8164,9 @@ async function handleFastYoutubeEngagementR333(request,env,options={}){
     : await checkpointDailySummaryAutoR398(env,'youtube-fast-2m').catch(error=>({ok:false,error:cleanPlainText(error?.message||error,300)}));
   const startedAt=new Date().toISOString();
   await setPushState(db,'youtube-fast-engagement-last-at-r333',startedAt).catch(()=>{});
-  await setPushState(db,'youtube-fast-engagement-last-status-r376','running').catch(()=>{});
+  // R681 D1 economy: do not write a transient 'running' state every two minutes.
+  // The previous result remains visible until the current check atomically publishes
+  // its final success/warning/failure status below.
   try{
     let channelId=(await getPushState(db,'youtube-websub-channel-id-r332').catch(()=>null))?.value || '';
     if(!channelId)channelId=await resolveYoutubeWebSubChannelIdR332(env,db);
@@ -11234,17 +11248,20 @@ async function recordYoutubeObservedLikeBatchR469(db, videos=[], startedAt='') {
   const observedKey='youtube-live-like-observed-r469';
   const previous=parseYoutubeObservedLikesR469(await getPushState(db,observedKey).catch(()=>null));
   let delta=0;
+  let observedChanged=false;
   for (const video of videos) {
     const id=cleanPlainText(video?.videoId || '',50);
     const current=Number(video?.likes);
     if (!id || !Number.isFinite(current) || current<0) continue;
     const before=Number(previous[id]);
     if (Number.isFinite(before) && current>before) delta += current-before;
+    if(!Number.isFinite(before)||current!==before)observedChanged=true;
     // A public like counter may decrease. Store the current value so a later genuine
     // increase is measured from the new baseline instead of a historical high-water.
     previous[id]=Math.max(0,current);
   }
-  await setPushState(db,observedKey,JSON.stringify({counts:previous,updatedAt:at})).catch(()=>{});
+  // R681 D1 economy: identical public counters do not need a new D1 write every 2m.
+  if(observedChanged)await setPushState(db,observedKey,JSON.stringify({counts:previous,updatedAt:at})).catch(()=>{});
 
   if (delta>0) {
     const next={
@@ -18370,7 +18387,10 @@ async function handleRadioRemoteStatusR627(request,env){
   const result=parseStateValueR627(resultRow);
   const ticker=parseStateValueR627(tickerRow)||null;
   const lastSeenMs=Date.parse(agent.lastSeen||'')||0;
-  return json({ok:true,paired:Boolean(agent.tokenHash),online:Boolean(lastSeenMs&&Date.now()-lastSeenMs<25000),agent:{pairedAt:agent.pairedAt||null,lastSeen:agent.lastSeen||null,version:agent.version||null,status:agent.status||null},command,result,ticker});
+  // R681 D1 economy: the OVH agent still polls every 4s for near-instant commands,
+  // but its persisted heartbeat is intentionally throttled to ~30s. Allow two
+  // missed persisted heartbeats before the UI calls the agent offline.
+  return json({ok:true,paired:Boolean(agent.tokenHash),online:Boolean(lastSeenMs&&Date.now()-lastSeenMs<75000),agent:{pairedAt:agent.pairedAt||null,lastSeen:agent.lastSeen||null,version:agent.version||null,status:agent.status||null},command,result,ticker});
 }
 async function handleRadioRemoteTickerR629(request,env){
   if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
@@ -18409,9 +18429,26 @@ async function handleRadioAgentPollR627(request,env){
   const db=env.COMMENTS_DB;if(!db)return json({ok:false,error:'database-not-configured'},503);
   const body=await request.json().catch(()=>({}));
   const agent=parseStateValueR627(await getPushState(db,RADIO_REMOTE_R627.agentKey).catch(()=>null))||{};
-  agent.lastSeen=new Date().toISOString();agent.version=String(body.version||agent.version||'R627');
-  if(body.status&&typeof body.status==='object')agent.status=body.status;
-  await setPushState(db,RADIO_REMOTE_R627.agentKey,JSON.stringify(agent));
+  const nowIso=new Date().toISOString();
+  const nowMs=Date.now();
+  const previousLastSeenMs=Date.parse(agent.lastSeen||'');
+  const incomingVersion=String(body.version||agent.version||'R627');
+  const incomingStatus=body.status&&typeof body.status==='object'?body.status:null;
+  let statusChanged=false;
+  if(incomingStatus){
+    try{statusChanged=JSON.stringify(incomingStatus)!==JSON.stringify(agent.status||null)}catch(_){statusChanged=true}
+  }
+  const heartbeatDue=!Number.isFinite(previousLastSeenMs)||nowMs-previousLastSeenMs>=30000;
+  const versionChanged=incomingVersion!==String(agent.version||'');
+  // R681 D1 economy: command latency stays 4s because every poll is answered, but
+  // do not UPDATE push_state on every poll. Persist only a 30s heartbeat or a real
+  // status/version change. This removes ~18.7k needless D1 updates/day per agent.
+  if(heartbeatDue||statusChanged||versionChanged){
+    agent.lastSeen=nowIso;
+    agent.version=incomingVersion;
+    if(incomingStatus)agent.status=incomingStatus;
+    await setPushState(db,RADIO_REMOTE_R627.agentKey,JSON.stringify(agent));
+  }
   const [row,tickerRow]=await Promise.all([
     getPushState(db,RADIO_REMOTE_R627.commandKey).catch(()=>null),
     getPushState(db,RADIO_REMOTE_R627.tickerKey).catch(()=>null)

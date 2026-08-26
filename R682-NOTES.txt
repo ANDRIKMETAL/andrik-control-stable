@@ -1,0 +1,12 @@
+R682 — RADIO UI CLEANUP / ADMIN GLOBE BOTTOM CLEAN
+
+Changes:
+1) Removed the 24/7 Radio live-status block from youtube-admin.html.
+2) Added the same live-status data to radio-control-admin.html, compacted:
+   - no explanatory R2/OVH/FFmpeg paragraph
+   - no small NOW PLAYING meta/next lines
+   - no duplicate stream action links/note
+   - keeps live state, MP3 count, mode, queue, uptime, viewers, views, likes, health, now-playing title.
+3) Moved YouTube OAuth reconnect card to the very end of Radio page.
+4) Hid the Admin-menu swipe indicator pill and reduced its bottom dead-space so it no longer covers/clips the globe. Swipe gestures remain enabled.
+5) Preserves all R681 D1 economy/free-tier protections.
