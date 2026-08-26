@@ -1,0 +1,9 @@
+R692 — ROBUST RADIO CLIP UPLOAD + QR PNG REPAIR
+
+1) Исправлена ошибка «Ошибка сети» при загрузке клипа: части по 5 MiB, fetch вместо XHR, 5 повторов.
+2) Worker сначала полностью принимает 5 MiB часть, затем передаёт её в R2 — без нестабильного сквозного stream.
+3) Ошибка PNG разобрана: FF D8 FF E0 = JPEG/JFIF, лежавший под именем .png.
+4) Новый installer-r692 заменяет повреждённый QR на настоящий PNG из GitHub и проверяет PNG signature.
+5) R690 full-frame fit/pad сохранён. DAY / EVENING / NIGHT сохранены. JOY OF BEING и случайные клипы сохранены.
+6) После деплоя выполнить один раз:
+   curl -fsSL https://raw.githubusercontent.com/ANDRIKMETAL/andrik-control-stable/main/radio247/vm-lite/install-r692-radio-clips-qr-fix.sh | sudo env ANDRIK_SITE_BASE=https://raw.githubusercontent.com/ANDRIKMETAL/andrik-control-stable/main bash

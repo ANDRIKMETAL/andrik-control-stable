@@ -63,8 +63,8 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R691-R2-RADIO-CLIP-LIBRARY-R690-FULL-FRAME-FIT',
-  mode: 'R691 MP3 + RANDOM R2 VIDEO CLIPS / AUTO DAY-EVENING-NIGHT / QR + LIVE TICKER / R690 FULL-FRAME FIT',
+  version: 'R692-R2-RADIO-CLIP-LIBRARY-R690-FULL-FRAME-FIT-QR-REPAIRED',
+  mode: 'R692 MP3 + RANDOM R2 VIDEO CLIPS / ROBUST R2 UPLOAD / AUTO DAY-EVENING-NIGHT / QR REPAIR / R690 FULL-FRAME FIT',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
@@ -232,7 +232,7 @@ async function loadRadioClipsR691(){
   const builtIn=JOY_OF_BEING_CLIP_ENABLED?[prepareClip(JOY_OF_BEING_CLIP)]:[];
   try{
     const url=`${RADIO_CLIPS_URL_R691}${RADIO_CLIPS_URL_R691.includes('?')?'&':'?'}ts=${Date.now()}`;
-    const response=await fetch(url,{headers:{'user-agent':'ANDRIK-Radio-R691-Clips'},signal:AbortSignal.timeout(20000)});
+    const response=await fetch(url,{headers:{'user-agent':'ANDRIK-Radio-R692-Clips'},signal:AbortSignal.timeout(20000)});
     if(!response.ok)throw new Error(`R2 radio clips HTTP ${response.status}`);
     const data=await response.json();
     const dynamic=(Array.isArray(data?.clips)?data.clips:[])
@@ -257,7 +257,7 @@ async function loadRadioClipsR691(){
 async function loadLibrary(){
   const previousSignature=librarySignature([...library,...clipLibrary]);
   const url=`${PLAYLIST_URL}${PLAYLIST_URL.includes('?')?'&':'?'}ts=${Date.now()}`;
-  const response=await fetch(url,{headers:{'user-agent':'ANDRIK-Radio-24-7-R691'}});
+  const response=await fetch(url,{headers:{'user-agent':'ANDRIK-Radio-24-7-R692'}});
   if(!response.ok)throw new Error(`R2 library HTTP ${response.status}`);
 
   const data=await response.json();
