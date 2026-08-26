@@ -2639,10 +2639,13 @@ async function sendOneSignalPush(env, {
     : message;
   // For the owner feed the universal stack wins over event-specific topics.
   // This keeps one eye icon in the Android status bar instead of one icon per event.
-  const resolvedAndroidGroup = cleanPlainText(ownerStack.enabled ? presentation.androidGroup : (androidGroup || presentation.androidGroup || ''), 64);
-  const resolvedThreadId = cleanPlainText(ownerStack.enabled ? presentation.threadId : (threadId || presentation.threadId || ''), 64);
-  const resolvedCollapseId = cleanPlainText(ownerStack.enabled ? presentation.collapseId : (collapseId || presentation.collapseId || ''), 64);
-  const resolvedWebPushTopic = cleanPlainText(ownerStack.enabled ? presentation.webPushTopic : (webPushTopic || presentation.webPushTopic || ''), 64);
+  // R678: owner notifications must ALWAYS share one replacement topic/group.
+  // R677 still allowed event-specific like/comment topics to override the universal
+  // owner topic, which produced two eye icons in Android's status bar.
+  const resolvedAndroidGroup = cleanPlainText(audience === 'owner' ? presentation.androidGroup : (androidGroup || presentation.androidGroup || ''), 64);
+  const resolvedThreadId = cleanPlainText(audience === 'owner' ? presentation.threadId : (threadId || presentation.threadId || ''), 64);
+  const resolvedCollapseId = cleanPlainText(audience === 'owner' ? presentation.collapseId : (collapseId || presentation.collapseId || ''), 64);
+  const resolvedWebPushTopic = cleanPlainText(audience === 'owner' ? presentation.webPushTopic : (webPushTopic || presentation.webPushTopic || ''), 64);
   const resolvedTtl = Number.isFinite(Number(ttl ?? presentation.ttl)) ? Math.max(0, Math.min(2419200, Number(ttl ?? presentation.ttl))) : null;
   const notificationIcon = cleanPlainText(icon || 'https://andrikmetal.com/assets/andrik-eye-v22-192.png', 700);
   const payload = {
@@ -8403,8 +8406,9 @@ async function handleFastYoutubeSubscriberCountR416(request, env, options = {}) 
       if(claimed){
         const channelAppUrl=youtubeAppLauncherUrl(identity.channelUrl);
         const result=await sendOwnerPush(env,{
-          title:delta===1?'👤 Новый подписчик YouTube':`👤 +${delta} подписчика YouTube`,
+          title:delta===1?'🟢 ↑ Новый подписчик YouTube':`🟢 ↑ +${delta} подписчика YouTube`,
           message:`На канале теперь ${current} подписчиков`,
+          icon:'https://andrikmetal.com/assets/live-web-ai-green-eye-r97-192.png',
           url:channelAppUrl,
           name:`youtube-subscriber-r658-${deliveryBaseR658}-to-${current}`,
           webButtons:[{id:'open-youtube',text:'▶️ Открыть YouTube',url:channelAppUrl}],
@@ -8861,8 +8865,9 @@ async function handleCheckYoutubeEvents(request, env) {
       const subscriberTarget = item.url || identity.channelUrl;
       const subscriberAppUrl = youtubeAppLauncherUrl(subscriberTarget);
       const result = await sendOwnerPush(env, {
-        title: '👤 Новый подписчик YouTube',
+        title: '🟢 ↑ Новый подписчик YouTube',
         message: `${item.title} подписался на ANDRIK`,
+        icon:'https://andrikmetal.com/assets/live-web-ai-green-eye-r97-192.png',
         url: subscriberAppUrl,
         name: `youtube-subscriber-${item.id}`,
         webButtons: [{ id:'open-youtube', text:'▶️ Открыть в YouTube', url:subscriberAppUrl }],
@@ -8904,8 +8909,9 @@ async function handleCheckYoutubeEvents(request, env) {
       if (ownsSubscriberRise) {
         const channelAppUrl = youtubeAppLauncherUrl(identity.channelUrl);
         const result = await sendOwnerPush(env, {
-          title: unnamedSubscriberDelta === 1 ? '👤 Новый подписчик YouTube' : `👤 +${unnamedSubscriberDelta} подписчика YouTube`,
+          title: unnamedSubscriberDelta === 1 ? '🟢 ↑ Новый подписчик YouTube' : `🟢 ↑ +${unnamedSubscriberDelta} подписчика YouTube`,
           message: subscriberMessage,
+          icon:'https://andrikmetal.com/assets/live-web-ai-green-eye-r97-192.png',
           url: channelAppUrl,
           name: `youtube-subscriber-count-${previousSubscriberCount}-to-${identity.subscribers}`,
           webButtons: [{ id:'open-youtube', text:'▶️ Открыть в YouTube', url:channelAppUrl }],
@@ -9145,8 +9151,17 @@ async function handleYoutubeEventsStatus(request, env) {
   let reserveSummaryParsed={};try{reserveSummaryParsed=JSON.parse(reserveSummary?.value||'{}')}catch(_){}
   const fastLastAtValue=fastLastAt?.value||fastLastAt?.updatedAt||'';
   const fastAgeMinutes=fastLastAtValue?Math.max(0,Math.round((Date.now()-Date.parse(fastLastAtValue))/60000)):null;
-  const fastStatusValue=fastLastStatus?.value||(fastSummary?.ok===false?'failed':fastSummary?.ok===true?'success':'never');
-  const fastHealthy=fastAgeMinutes===null?null:(fastAgeMinutes<=6 && !['failed'].includes(fastStatusValue));
+  const rawFastStatusValue=fastLastStatus?.value||(fastSummary?.ok===false?'failed':fastSummary?.ok===true?'success':'never');
+  // R678: if the richer full YouTube check succeeded AFTER a transient 2-minute
+  // delivery failure, do not leave the control panel red until the next fast tick.
+  // The next genuine fast failure after that success will still surface normally.
+  const fullSuccessAtValue=lastSuccess?.value||lastSuccess?.updatedAt||'';
+  const fastRecoveredByFull=rawFastStatusValue==='failed'
+    && Number.isFinite(Date.parse(fullSuccessAtValue))
+    && Number.isFinite(Date.parse(fastLastAtValue))
+    && Date.parse(fullSuccessAtValue)>Date.parse(fastLastAtValue);
+  const fastStatusValue=fastRecoveredByFull?'success':rawFastStatusValue;
+  const fastHealthy=fastAgeMinutes===null?null:(fastAgeMinutes<=6 && fastStatusValue!=='failed');
   const today={commentsSent:0,repliesSent:0,likesSent:0,subscribersSent:0,failed:0};
   for(const row of (todayRows.results||[])){
     const n=Number(row.total||0),sent=row.status==='sent';
@@ -9188,7 +9203,8 @@ async function handleYoutubeEventsStatus(request, env) {
       ageMinutes:fastAgeMinutes,
       staleLikeClaims:Number(fastSummary?.staleLikeClaimsRecovered||0),
       summary:fastSummary,
-      error:cleanPlainText(fastSummary?.error||'',300)
+      error:cleanPlainText(fastSummary?.error||'',300),
+      recoveredByFull:fastRecoveredByFull
     },
     summary,today,lastError:cleanPlainText(lastFailure?.error||lastFailure?.message||'',300),lastFailure:lastFailure||null,lastLog:lastLog||null,updatedAt:new Date().toISOString()
   });

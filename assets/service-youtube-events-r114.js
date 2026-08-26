@@ -35,7 +35,7 @@
     set('youtubeEventsFastCheck',`Быстрый cron 2 мин: ${fmt(fast.lastCheckAt)}${fastAge} · подписчики: ${subscriberPoll.lastCheckAt?fmt(subscriberPoll.lastCheckAt):'ожидает'} · последний доставленный total ${Number(subscriberPoll.lastNotifiedTotal||0)}`);
     const commentDirect=['direct-video-r473','direct-video-r474','direct-video+livechat-r669'].includes(fast.summary?.commentMode);
     const commentNote=commentDirect?` · комментарии: прямой контроль ${Number(fast.summary?.commentTargets||0)} видео`:'';
-    set('youtubeEventsFastResult',`Быстрый результат: ${fastStatus==='success'?'успех':fastStatus==='warning'?'предупреждение':fastStatus==='failed'?'ОШИБКА':'ожидает'} · отправлено ${Number(fast.summary?.sent||0)} · LIVE-чат ${Number(fast.summary?.liveChatSent||0)} · LIVE лайки ${fast.summary?.liveVideoPinned?'в контроле':'—'} · ошибок ${Number(fast.summary?.failed||0)}${commentNote} · восстановлено stale ${Number(fast.staleLikeClaims||0)}`);
+    set('youtubeEventsFastResult',`Быстрый результат: ${fast.recoveredByFull?'восстановлен полным контролем':fastStatus==='success'?'успех':fastStatus==='warning'?'предупреждение':fastStatus==='failed'?'ОШИБКА':'ожидает'} · отправлено ${Number(fast.summary?.sent||0)} · LIVE-чат ${Number(fast.summary?.liveChatSent||0)} · LIVE лайки ${fast.summary?.liveVideoPinned?'в контроле':'—'} · ошибок ${Number(fast.summary?.failed||0)}${commentNote} · восстановлено stale ${Number(fast.staleLikeClaims||0)}`);
     set('youtubeEventsLastCheck',`Резерв 5 мин: ${reserve.lastCheckAt?fmt(reserve.lastCheckAt):'ожидает первого цикла'} · ${reserve.status==='success'?'готов':reserve.status==='warning'?'контроль':'ожидает'}`);
     set('youtubeEventsLastSuccess',`Последний успешный контроль: ${fmt(data.effectiveSuccessAt||data.lastSuccessAt)}`);
     const ownerMissing=String(data.lastError||fast.error||'').includes('owner-device-not-registered');
@@ -43,7 +43,7 @@
       ?'⚠ Телефон владельца не зарегистрирован. В блоке «Телефон владельца» нажми «Подключить через основной сайт».'
       :fastHardError
       ?`Быстрый 2-минутный cron требует внимания${fast.error?`: ${fast.error}`:''}.`
-      :data.lastError?`Последняя ошибка: ${data.lastError}`
+      :data.lastError&&effectiveStatus!=='success'?`Последняя ошибка: ${data.lastError}`
       :queue?`В очереди ${queue}. Нажмите «Повторить очередь».`
       :commentDirect?'Комментарии проверяются напрямую по видео; 2-минутный контроль активен ✅':'YouTube-контроль работает без выявленных потерь.';
     set('youtubeEventsMessage',message);

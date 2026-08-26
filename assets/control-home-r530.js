@@ -21,8 +21,8 @@
     'youtube-like':['👍','Новый лайк YouTube'],
     'youtube-comment':['💬','Комментарий YouTube'],
     'youtube-comment-count':['💬','Новый комментарий YouTube'],
-    'youtube-subscriber':['👤','Новый подписчик YouTube'],
-    'youtube-subscriber-count':['👤','Рост подписчиков YouTube'],
+    'youtube-subscriber':['↑','Новый подписчик YouTube'],
+    'youtube-subscriber-count':['↑','Рост подписчиков YouTube'],
     'youtube-unsubscriber':['🔻','Отписка YouTube'],
     'site-subscriber':['👤','Новый подписчик сайта'],
     'comment-live':['💬','Новый комментарий'],
@@ -156,8 +156,8 @@
     const href=event.url||'/admin/';
     const external=/^https?:\/\//i.test(href)&&!href.includes('control.andrikmetal.com');
     const attrs=modal?' data-activity-modal-link="true"':'';
-    const unsubClass=event.type==='youtube-unsubscriber'?' is-unsubscriber':'';
-    return `<a class="control-home-activity-row${modal?' is-modal-row':''}${unsubClass}" href="${escapeHtml(href)}"${external?' target="_blank" rel="noopener"':''}${attrs}><span class="control-home-activity-icon">${icon}</span><div><strong>${escapeHtml(event.title||label)}</strong><p>${escapeHtml(event.message||label)}</p><small>${escapeHtml(relative(event.createdAt))}</small></div><b>›</b></a>`;
+    const eventToneClass=event.type==='youtube-unsubscriber'?' is-unsubscriber':(['youtube-subscriber','youtube-subscriber-count'].includes(event.type)?' is-subscriber':'');
+    return `<a class="control-home-activity-row${modal?' is-modal-row':''}${eventToneClass}" href="${escapeHtml(href)}"${external?' target="_blank" rel="noopener"':''}${attrs}><span class="control-home-activity-icon">${icon}</span><div><strong>${escapeHtml(event.title||label)}</strong><p>${escapeHtml(event.message||label)}</p><small>${escapeHtml(relative(event.createdAt))}</small></div><b>›</b></a>`;
   }
 
   function renderActivityModal(){

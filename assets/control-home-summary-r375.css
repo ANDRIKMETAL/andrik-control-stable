@@ -76,3 +76,7 @@ body.control-home-page.control-report-standalone.control-summary-visible .contro
 
 /* R677 unsubscribe event */
 .control-home-activity-row.is-unsubscriber{border-color:rgba(255,92,104,.30)!important;background:rgba(95,18,28,.16)!important}.control-home-activity-row.is-unsubscriber strong{color:#ff7a88!important}.control-home-activity-row.is-unsubscriber p{color:#e8aeb5!important}.control-home-activity-row.is-unsubscriber .control-home-activity-icon{color:#ff6676!important}
+
+/* R678 subscriber event */
+.control-home-activity-row.is-subscriber{border-color:rgba(64,222,135,.30)!important;background:rgba(16,78,50,.16)!important}
+.control-home-activity-row.is-subscriber strong{color:#78f0ad!important}.control-home-activity-row.is-subscriber p{color:#aee8c6!important}.control-home-activity-row.is-subscriber .control-home-activity-icon{color:#53e996!important}
