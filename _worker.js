@@ -7980,6 +7980,86 @@ async function fetchYoutubeActiveLiveEngagementR669(env,db){
   }
 }
 
+// R686: YouTube LIVE custom emoji are returned by the API as tokens such as
+// :hand-pink-waving:. Android notifications cannot render those YouTube-only
+// assets, so translate the common tokens to ordinary Unicode emoji before the
+// text is sent to OneSignal. Unknown YouTube-style colored tokens are removed
+// instead of leaking raw :token-names: into the notification.
+const YOUTUBE_LIVE_EMOJI_R686=Object.freeze({
+  'hand-pink-waving':'👋',
+  'thumbs-up-pink':'👍',
+  'thumbs-down-pink':'👎',
+  'hand-orange-covering-eyes':'🙈',
+  'hand-green-crystal-ball':'🔮',
+  'hand-yellow-palm-forward':'✋',
+  'hand-pink-thumb-and-index-finger-crossed':'🤞',
+  'body-blue-raised-arms':'🙌',
+  'face-red-heart-shape':'❤️',
+  'face-orange-frowning':'☹️',
+  'face-yellow-smiling':'😊',
+  'face-green-smiling':'😊',
+  'face-blue-smiling':'😊',
+  'face-purple-crying':'😭',
+  'face-yellow-crying':'😭',
+  'face-green-tears':'🥹',
+  'face-pink-tears':'🥹',
+  'face-blue-wide-eyes':'😳',
+  'face-purple-wide-eyes':'😳',
+  'face-orange-raised-eyebrow':'🤨',
+  'face-fuchsia-tongue-out':'😛',
+  'face-red-droopy-eyes':'😴',
+  'face-purple-smiling-fangs':'😈',
+  'face-green-sweating':'😅',
+  'face-purple-sweating':'😅',
+  'face-blue-star-eyes':'🤩',
+  'face-blue-heart-eyes':'😍',
+  'face-fuchsia-poop-shape':'💩',
+  'eyes-purple-crying':'😭',
+  'trophy-yellow-smiling':'🏆',
+  'glasses-purple-yellow-diamond':'😎',
+  'text-green-game-over':'🎮',
+  'text-red-game-over':'🎮'
+});
+
+function youtubeLiveEmojiToUnicodeR686(value){
+  const colorWord=/(?:^|-)(?:pink|purple|red|orange|yellow|green|blue|fuchsia)(?:-|$)/i;
+  let text=String(value??'');
+  text=text.replace(/:([a-z0-9][a-z0-9_-]{1,96}):/gi,(full,raw)=>{
+    const key=String(raw||'').toLowerCase();
+    if(YOUTUBE_LIVE_EMOJI_R686[key])return YOUTUBE_LIVE_EMOJI_R686[key];
+    // Semantic fallbacks cover future YouTube variants without keeping the
+    // ugly internal token in the push notification.
+    if(/(?:waving|wave)/.test(key))return '👋';
+    if(/thumbs-up/.test(key))return '👍';
+    if(/thumbs-down/.test(key))return '👎';
+    if(/covering-eyes/.test(key))return '🙈';
+    if(/crystal-ball/.test(key))return '🔮';
+    if(/palm-forward/.test(key))return '✋';
+    if(/(?:finger-crossed|crossed-finger)/.test(key))return '🤞';
+    if(/raised-arms/.test(key))return '🙌';
+    if(/heart-eyes/.test(key))return '😍';
+    if(/star-eyes/.test(key))return '🤩';
+    if(/heart/.test(key))return '❤️';
+    if(/(?:crying|tears)/.test(key))return '😭';
+    if(/sweating/.test(key))return '😅';
+    if(/frowning/.test(key))return '☹️';
+    if(/smiling/.test(key))return '😊';
+    if(/wide-eyes/.test(key))return '😳';
+    if(/raised-eyebrow/.test(key))return '🤨';
+    if(/tongue-out/.test(key))return '😛';
+    if(/droopy-eyes/.test(key))return '😴';
+    if(/fangs/.test(key))return '😈';
+    if(/poop/.test(key))return '💩';
+    if(/trophy/.test(key))return '🏆';
+    if(/game-over/.test(key))return '🎮';
+    // Only strip tokens that look like YouTube's own colored custom emoji.
+    // A viewer typing an arbitrary literal :word: keeps their text untouched.
+    if(colorWord.test(key))return '';
+    return full;
+  });
+  return cleanPlainText(text.replace(/[ \t]{2,}/g,' ').replace(/\s+([!?.,])/g,'$1'),420);
+}
+
 function parseYoutubeLiveChatMessageR669(raw={},live={}){
   const snippet=raw?.snippet||{};
   const author=raw?.authorDetails||{};
@@ -8000,6 +8080,7 @@ function parseYoutubeLiveChatMessageR669(raw={},live={}){
   }else if(type==='memberMilestoneChatEvent'){
     text=text||'Сообщение участника канала';
   }
+  text=youtubeLiveEmojiToUnicodeR686(text);
   return {
     id:cleanPlainText(raw?.id||'',180),
     liveChatId:cleanPlainText(live.liveChatId||'',180),
