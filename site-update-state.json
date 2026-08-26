@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787757343536-118e0ddcfc",
-  "release": "R690",
-  "archiveName": "R690-RADIO-FULL-FRAME-FIT-NO-CROP-R689-LIVE-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "fec4c3a33489c18f1c4837bde71e7c61002d84cd",
-  "backupSha": "fec4c3a33489c18f1c4837bde71e7c61002d84cd",
+  "operationId": "publish-1787775419485-06046e8e1e",
+  "release": "R691",
+  "archiveName": "R691-RADIO-R2-RANDOM-VIDEO-CLIPS-R690-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "0bbb667602d1d2b153b3477eb5d135d01b099c7b",
+  "backupSha": "0bbb667602d1d2b153b3477eb5d135d01b099c7b",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-26T15:15:44.625Z"
+  "generatedAt": "2026-08-26T20:16:59.916Z"
 }

@@ -47,12 +47,13 @@ const LIBRARY_REFRESH_MS = Math.max(60000, Number(process.env.LIBRARY_REFRESH_MS
 const LIVE_TICKER_FILE = process.env.LIVE_TICKER_FILE || `${CACHE_DIR}/live-ticker.txt`;
 const LIVE_CURRENT_FILE = process.env.LIVE_CURRENT_FILE || `${CACHE_DIR}/current-live.txt`;
 const CLIP_CACHE_DIR = `${CACHE_DIR}/clips`;
+const RADIO_CLIPS_URL_R691 = process.env.RADIO_CLIPS_URL_R691 || 'https://andrikmetal.com/api/music/radio-clips-r691';
 const JOY_OF_BEING_CLIP_URL = process.env.JOY_OF_BEING_CLIP_URL || 'https://music.andrikmetal.com/clips/joy-of-being-official-2026.mp4';
 const JOY_OF_BEING_CLIP_ENABLED = String(process.env.JOY_OF_BEING_CLIP_ENABLED || '1').trim() !== '0';
 const JOY_OF_BEING_CLIP_PATH = `${CLIP_CACHE_DIR}/joy-of-being-official-2026.mp4`;
 const JOY_OF_BEING_CLIP = Object.freeze({
   type:'clip', sourceType:'r2-video', title:'JOY OF BEING', album:'OFFICIAL MUSIC VIDEO',
-  key:'clips/joy-of-being-official-2026.mp4', url:JOY_OF_BEING_CLIP_URL, identity:'clip:joy-of-being'
+  key:'clips/joy-of-being-official-2026.mp4', url:JOY_OF_BEING_CLIP_URL, identity:'clip:joy-of-being', builtIn:true
 });
 const DEFAULT_LIVE_TICKER = 'ANDRIK METAL RADIO 24/7   •   ANDRIKMETAL.COM   •   НОВЫЕ СИНГЛЫ И АЛЬБОМЫ ANDRIK   •   ПОДПИСЫВАЙТЕСЬ • СТАВЬТЕ ЛАЙКИ • КОММЕНТИРУЙТЕ   •   ';
 const DISABLED_ALBUM_PREFIXES = Object.freeze([
@@ -62,14 +63,14 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R684-D1-GUARD-JOY-OF-BEING-VIDEO-INTERMISSION-R659-FULLSCREEN',
-  mode: 'R684 MP3 + JOY OF BEING VIDEO / AUTO DAY-EVENING-NIGHT / QR + LIVE TICKER / MP3 CONTINUOUS PCM MASTER',
+  version: 'R691-R2-RADIO-CLIP-LIBRARY-R690-FULL-FRAME-FIT',
+  mode: 'R691 MP3 + RANDOM R2 VIDEO CLIPS / AUTO DAY-EVENING-NIGHT / QR + LIVE TICKER / R690 FULL-FRAME FIT',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
   producerRunning: false,
-  overlayMode: 'R658 AUTO FORCE SLOT / ALL 3 LOCAL VISUALS PROTECTED / R649 DIRECT SCALE 1920x1080 / NO CROP / NO PAD / QR / FULL SCREEN',
-  audioMode: 'LOCAL MP3 CACHE + JOY OF BEING R2 VIDEO CACHE / MP3 CONTINUOUS PCM + AAC-LC 128kbps',
+  overlayMode: 'R658 AUTO FORCE SLOT / ALL 3 LOCAL VISUALS PROTECTED / R690 FIT 1920x1080 / ASPECT PRESERVED / NO CROP / QR / FULL SCREEN',
+  audioMode: 'LOCAL MP3 CACHE + R2 VIDEO CLIP CACHE / MP3 CONTINUOUS PCM + AAC-LC 128kbps',
   visualTimeZone: VISUAL_TIME_ZONE,
   visualPeriod: null,
   visualPath: null,
@@ -93,6 +94,7 @@ const state = {
 let publisher = null;
 let producer = null;
 let library = [];
+let clipLibrary = JOY_OF_BEING_CLIP_ENABLED ? [JOY_OF_BEING_CLIP] : [];
 let queue = [];
 let queueIndex = 0;
 let running = false;
@@ -100,7 +102,7 @@ let stopping = false;
 let lastPlayed = null;
 let clipPublisher = null;
 let intentionalPublisherSwitch = false;
-let clipPrefetchJob = null;
+const clipPrefetchJobs = new Map();
 const prefetchJobs = new Map();
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -138,7 +140,7 @@ function albumName(item){
 }
 
 function identityText(value){
-  return cleanText(value).replace(/(?:\.(?:mp3|wav))+$/ig,'')
+  return cleanText(value).replace(/(?:\.(?:mp3|wav|mp4))+$/ig,'')
     .replace(/\s*[\[(]\s*(?:beyond|trika|трика|ocean|illusion of life|синглы andrik|singles andrik)\s*[\])]\s*$/iu,'')
     .replace(/^andrik\s*[-–—:|]\s*/iu,'')
     .normalize('NFKD')
@@ -153,11 +155,15 @@ function keyBaseName(item){
   return String(item?.key||'')
     .split('/')
     .pop()
-    .replace(/(?:\.mp3)+$/ig,'')
+    .replace(/(?:\.(?:mp3|mp4))+$/ig,'')
     .replace(/[_-]+/g,' ');
 }
 
 function identityCandidates(item){
+  if(item?.type==='clip'){
+    const key=cleanText(item?.key||item?.url||item?.title||'clip');
+    return [`clip:${key}`];
+  }
   const out=[];
   const title=identityText(item?.title||item?.name||'');
   const base=identityText(keyBaseName(item));
@@ -184,6 +190,20 @@ function prepareTrack(item,sourceType){
   return track;
 }
 
+function prepareClip(item){
+  const clip={
+    type:'clip',
+    sourceType:'r2-video',
+    title:cleanText(item?.title||item?.name||'ANDRIK VIDEO'),
+    album:cleanText(item?.album||'OFFICIAL VIDEO'),
+    key:String(item?.key||''),
+    url:String(item?.url||''),
+    builtIn:Boolean(item?.builtIn)
+  };
+  clip.identity=primaryIdentity(clip);
+  return clip;
+}
+
 function mergeAlbumsAndSingles(albums,singles){
   // Album copy wins over the single copy. This means a single can play immediately
   // after upload, but once the same song appears in an active album it is heard only once.
@@ -208,10 +228,36 @@ function librarySignature(items){
   return items.map(item=>`${item.url}|${item.identity}`).sort().join('\n');
 }
 
+async function loadRadioClipsR691(){
+  const builtIn=JOY_OF_BEING_CLIP_ENABLED?[prepareClip(JOY_OF_BEING_CLIP)]:[];
+  try{
+    const url=`${RADIO_CLIPS_URL_R691}${RADIO_CLIPS_URL_R691.includes('?')?'&':'?'}ts=${Date.now()}`;
+    const response=await fetch(url,{headers:{'user-agent':'ANDRIK-Radio-R691-Clips'},signal:AbortSignal.timeout(20000)});
+    if(!response.ok)throw new Error(`R2 radio clips HTTP ${response.status}`);
+    const data=await response.json();
+    const dynamic=(Array.isArray(data?.clips)?data.clips:[])
+      .filter(item=>/^https:\/\//i.test(String(item?.url||'')) && /\.mp4(?:$|\?)/i.test(String(item?.url||'')))
+      .map(prepareClip);
+    const byUrl=new Map();
+    for(const clip of [...builtIn,...dynamic])if(clip.url&&!byUrl.has(clip.url))byUrl.set(clip.url,clip);
+    clipLibrary=[...byUrl.values()];
+  }catch(error){
+    console.error('[radio-clips]',cleanText(error?.message||error));
+    if(!clipLibrary.length)clipLibrary=builtIn;
+    else{
+      const dynamic=clipLibrary.filter(item=>!item.builtIn);
+      clipLibrary=[...builtIn,...dynamic.filter(item=>item.url!==JOY_OF_BEING_CLIP_URL)];
+    }
+  }
+  state.libraryVideos=clipLibrary.length;
+  clipLibrary.forEach(prefetchClip);
+  return clipLibrary;
+}
+
 async function loadLibrary(){
-  const previousSignature=librarySignature(library);
+  const previousSignature=librarySignature([...library,...clipLibrary]);
   const url=`${PLAYLIST_URL}${PLAYLIST_URL.includes('?')?'&':'?'}ts=${Date.now()}`;
-  const response=await fetch(url,{headers:{'user-agent':'ANDRIK-Radio-24-7-R616'}});
+  const response=await fetch(url,{headers:{'user-agent':'ANDRIK-Radio-24-7-R691'}});
   if(!response.ok)throw new Error(`R2 library HTTP ${response.status}`);
 
   const data=await response.json();
@@ -237,14 +283,15 @@ async function loadLibrary(){
   if(!merged.tracks.length)throw new Error('R2 active MP3 library is empty');
 
   library=merged.tracks;
+  await loadRadioClipsR691();
   state.libraryTracks=library.length;
   state.libraryAlbumTracks=albums.length;
   state.librarySingleTracks=merged.singles.length;
   state.duplicateSinglesSkipped=merged.skipped;
-  state.libraryVideos=JOY_OF_BEING_CLIP_ENABLED?1:0;
+  state.libraryVideos=clipLibrary.length;
   state.lastLibraryRefresh=new Date().toISOString();
-  const changed=previousSignature!==librarySignature(library);
-  return {library,changed};
+  const changed=previousSignature!==librarySignature([...library,...clipLibrary]);
+  return {library,clipLibrary,changed};
 }
 
 function addIdentityCandidates(target,item){
@@ -257,49 +304,42 @@ function identityAlreadySeen(target,item){
   return ids.length ? ids.some(id=>target.has(id)) : target.has(primaryIdentity(item));
 }
 
+function mixTracksAndClipsR691(tracks,clips){
+  const shuffledTracks=shuffle(tracks);
+  const shuffledClips=shuffle(clips);
+  if(!shuffledTracks.length)return shuffledClips;
+  if(!shuffledClips.length||shuffledTracks.length<2)return [...shuffledTracks,...shuffledClips];
+  const gapCount=shuffledTracks.length-1;
+  const gaps=shuffle(Array.from({length:gapCount},(_,i)=>i));
+  const buckets=Array.from({length:gapCount},()=>[]);
+  shuffledClips.forEach((clip,i)=>buckets[gaps[i%gapCount]].push(clip));
+  const out=[];
+  shuffledTracks.forEach((track,i)=>{
+    out.push(track);
+    if(i<gapCount&&buckets[i].length)out.push(...buckets[i]);
+  });
+  return out;
+}
+
 function reconcileQueueWithLibrary(){
   if(!queue.length)return;
-
   const played=queue.slice(0,queueIndex);
   const playedIds=new Set();
   played.forEach(item=>addIdentityCandidates(playedIds,item));
-  const liveByUrl=new Map(library.map(item=>[item.url,item]));
-  const remaining=[];
-  const remainingIds=new Set();
-
-  for(const oldItem of queue.slice(queueIndex)){
-    const live=liveByUrl.get(oldItem.url);
-    if(!live)continue;
-    if(identityAlreadySeen(playedIds,live)||identityAlreadySeen(remainingIds,live))continue;
-    remaining.push(live);
-    addIdentityCandidates(remainingIds,live);
+  const candidates=[];
+  const seen=new Set();
+  for(const item of [...library,...clipLibrary]){
+    if(identityAlreadySeen(playedIds,item)||identityAlreadySeen(seen,item))continue;
+    candidates.push(item);
+    addIdentityCandidates(seen,item);
   }
-
-  const additions=[];
-  for(const item of library){
-    if(identityAlreadySeen(playedIds,item)||identityAlreadySeen(remainingIds,item))continue;
-    additions.push(item);
-    addIdentityCandidates(remainingIds,item);
-  }
-
-  let fresh=shuffle([...remaining,...additions]);
-  const alreadyPlayedClip=played.some(item=>item?.type==='clip');
-  const pendingClip=queue.slice(queueIndex).some(item=>item?.type==='clip');
-  if(JOY_OF_BEING_CLIP_ENABLED && pendingClip && !alreadyPlayedClip && fresh.length){
-    const slot=fresh.length>1?1+Math.floor(Math.random()*fresh.length):fresh.length;
-    fresh.splice(slot,0,JOY_OF_BEING_CLIP);
-  }
+  const fresh=mixTracksAndClipsR691(candidates.filter(x=>x.type!=='clip'),candidates.filter(x=>x.type==='clip'));
   queue=[...played,...fresh];
   state.queueLength=queue.length;
 }
 
 function buildQueue(){
-  const out=shuffle(library);
-  if(JOY_OF_BEING_CLIP_ENABLED && out.length>=2){
-    // One official video per complete shuffled cycle, always BETWEEN songs.
-    const slot=1+Math.floor(Math.random()*(out.length-1));
-    out.splice(slot,0,JOY_OF_BEING_CLIP);
-  }
+  const out=mixTracksAndClipsR691(library,clipLibrary);
   state.cycle++;
   state.queueLength=out.length;
   return out;
@@ -437,34 +477,44 @@ function prefetchTrack(item){
   });
 }
 
-async function downloadJoyOfBeingClip(){
-  if(!JOY_OF_BEING_CLIP_ENABLED)throw new Error('JOY OF BEING clip disabled');
-  prepareCacheDir();
-  try{
-    if(existsSync(JOY_OF_BEING_CLIP_PATH) && statSync(JOY_OF_BEING_CLIP_PATH).size>1000000)return JOY_OF_BEING_CLIP_PATH;
-  }catch(_){ }
-  const tmp=`${JOY_OF_BEING_CLIP_PATH}.part-${process.pid}-${Date.now()}`;
-  const controller=new AbortController();
-  const timer=setTimeout(()=>controller.abort(),180000);
-  try{
-    const response=await fetch(JOY_OF_BEING_CLIP_URL,{headers:{'user-agent':'ANDRIK-Radio-R684-Clip'},signal:controller.signal});
-    if(!response.ok)throw new Error(`JOY clip HTTP ${response.status}`);
-    if(!response.body)throw new Error('JOY clip empty response');
-    await pipeline(Readable.fromWeb(response.body),createWriteStream(tmp,{flags:'w'}));
-    if(!existsSync(tmp)||statSync(tmp).size<1000000)throw new Error('JOY clip file too small');
-    renameSync(tmp,JOY_OF_BEING_CLIP_PATH);
-    return JOY_OF_BEING_CLIP_PATH;
-  }finally{
-    clearTimeout(timer);
-    try{if(existsSync(tmp))unlinkSync(tmp)}catch(_){ }
-  }
+function clipCachePathR691(item){
+  if(String(item?.url||'')===JOY_OF_BEING_CLIP_URL)return JOY_OF_BEING_CLIP_PATH;
+  const base=String(item?.key||item?.title||'clip').split('/').pop().replace(/\.mp4$/i,'')
+    .normalize('NFKD').replace(/[^a-zA-Z0-9_-]+/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,'').slice(0,56)||'clip';
+  const hash=createHash('sha1').update(String(item?.url||item?.key||item?.title||base)).digest('hex').slice(0,10);
+  return `${CLIP_CACHE_DIR}/${base}-${hash}.mp4`;
 }
 
-function prefetchJoyOfBeingClip(){
-  if(!JOY_OF_BEING_CLIP_ENABLED||clipPrefetchJob)return;
-  clipPrefetchJob=downloadJoyOfBeingClip()
-    .catch(error=>console.error('[clip-prefetch]',cleanText(error?.message||error)))
-    .finally(()=>{clipPrefetchJob=null});
+async function downloadRadioClipR691(item){
+  if(!item?.url)throw new Error('radio clip URL missing');
+  prepareCacheDir();
+  const dest=clipCachePathR691(item);
+  try{if(existsSync(dest)&&statSync(dest).size>500000)return dest}catch(_){ }
+  if(clipPrefetchJobs.has(dest))return clipPrefetchJobs.get(dest);
+  const job=(async()=>{
+    const tmp=`${dest}.part-${process.pid}-${Date.now()}`;
+    const controller=new AbortController();
+    const timer=setTimeout(()=>controller.abort(),240000);
+    try{
+      const response=await fetch(item.url,{headers:{'user-agent':'ANDRIK-Radio-R691-Clip'},signal:controller.signal});
+      if(!response.ok)throw new Error(`clip HTTP ${response.status}`);
+      if(!response.body)throw new Error('clip empty response');
+      await pipeline(Readable.fromWeb(response.body),createWriteStream(tmp,{flags:'w'}));
+      if(!existsSync(tmp)||statSync(tmp).size<500000)throw new Error('clip file too small');
+      renameSync(tmp,dest);
+      return dest;
+    }finally{
+      clearTimeout(timer);
+      try{if(existsSync(tmp))unlinkSync(tmp)}catch(_){ }
+    }
+  })();
+  clipPrefetchJobs.set(dest,job);
+  try{return await job}finally{clipPrefetchJobs.delete(dest)}
+}
+
+function prefetchClip(item){
+  if(!item?.url)return;
+  downloadRadioClipR691(item).catch(error=>console.error('[clip-prefetch]',cleanText(error?.message||error)));
 }
 
 function localHourInTimeZone(timeZone=VISUAL_TIME_ZONE){
@@ -678,19 +728,19 @@ function clipFilterComplex(){
   return `[0:v]${vf}[base];[1:v]scale=160:160:flags=lanczos,format=yuva420p[qr];[base][qr]overlay=24:24:format=yuv420[outv]`;
 }
 
-async function playJoyOfBeingClip(previous,item,next){
+async function playVideoClipR691(previous,item,next){
   let clipPath='';
-  try{clipPath=await downloadJoyOfBeingClip()}
+  try{clipPath=await downloadRadioClipR691(item)}
   catch(error){
-    state.lastError=`JOY clip cache: ${cleanText(error?.message||error)}`;
-    console.error('[joy-clip]',state.lastError);
+    state.lastError=`VIDEO clip cache: ${cleanText(error?.message||error)}`;
+    console.error('[video-clip]',state.lastError);
     return false;
   }
   const duration=await probeDuration(clipPath).catch(()=>0);
   state.previous=previous?{type:previous.type||'track',title:previous.title,album:previous.album||'',url:previous.url||''}:null;
   state.current={type:'clip',title:item.title,album:item.album,url:item.url,startedAt:new Date().toISOString(),duration};
   state.next=next?{type:next.type||'track',title:next.title,album:next.album||'',url:next.url||''}:null;
-  writeFileSync(LIVE_CURRENT_FILE,'🎬 КЛИП · ANDRIK — JOY OF BEING','utf8');
+  writeFileSync(LIVE_CURRENT_FILE,`🎬 КЛИП · ANDRIK — ${shortText(item.title||'VIDEO',52)}`,'utf8');
 
   try{
     await stopMasterForClip();
@@ -733,8 +783,8 @@ async function playJoyOfBeingClip(previous,item,next){
     });
     return !stopping;
   }catch(error){
-    state.lastError=`JOY clip: ${cleanText(error?.message||error)}`;
-    console.error('[joy-clip]',error);
+    state.lastError=`VIDEO clip: ${cleanText(error?.message||error)}`;
+    console.error('[video-clip]',error);
     return false;
   }finally{
     clipPublisher=null;
@@ -807,7 +857,6 @@ async function radioLoop(){
   prefetchAllVisuals();
   const startupVisual=await ensureScheduledVisual();
   if(!startPublisher(startupVisual))return;
-  prefetchJoyOfBeingClip();
 
   while(!stopping){
     try{
@@ -829,8 +878,8 @@ async function radioLoop(){
 
       if(item?.type==='clip'){
         if(next?.type==='track')prefetchTrack(next);
-        if(following?.type==='track')prefetchTrack(following);
-        const clipPlayed=await playJoyOfBeingClip(lastPlayed,item,next);
+        if(following?.type==='track')prefetchTrack(following);else if(following?.type==='clip')prefetchClip(following);
+        const clipPlayed=await playVideoClipR691(lastPlayed,item,next);
         lastPlayed=item;
         queueIndex++;
         if(clipPlayed)state.lastError='';
@@ -838,8 +887,8 @@ async function radioLoop(){
       }
 
       const localAudioPath=await downloadTrackToCache(item);
-      if(next?.type==='track')prefetchTrack(next);else prefetchJoyOfBeingClip();
-      if(following?.type==='track')prefetchTrack(following);
+      if(next?.type==='track')prefetchTrack(next);else if(next?.type==='clip')prefetchClip(next);
+      if(following?.type==='track')prefetchTrack(following);else if(following?.type==='clip')prefetchClip(following);
       const keep=[localAudioPath];
       if(next?.type==='track')keep.push(audioCachePath(next));
       if(following?.type==='track')keep.push(audioCachePath(following));
@@ -949,7 +998,7 @@ const server=http.createServer((req,res)=>{
 });
 
 server.listen(PORT,'0.0.0.0',()=>{
-  console.log(`ANDRIK Radio R684-D1-GUARD-JOY-VIDEO listening on :${PORT}`);
+  console.log(`ANDRIK Radio R691-R2-RADIO-CLIPS listening on :${PORT}`);
   radioLoop();
 });
 
