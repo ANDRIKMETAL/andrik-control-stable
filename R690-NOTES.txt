@@ -1,0 +1,12 @@
+R690 — RADIO FULL-FRAME FIT
+
+Изменено только формирование видеокадра OVH:
+- scale 1920x1080 с force_original_aspect_ratio=decrease
+- pad до 1920x1080
+- crop OFF
+- stretch OFF
+- одинаково для master visuals и клипа
+- R689 YouTube READY→TESTING→LIVE логика сохранена без изменений
+
+После деплоя сайта на OVH один раз выполнить:
+curl -fsSL https://andrikmetal.com/radio247/vm-lite/apply-r690-full-frame-fit.sh | sudo bash

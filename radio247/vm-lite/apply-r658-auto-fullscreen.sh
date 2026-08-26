@@ -13,11 +13,20 @@ ENV_FILE=/etc/andrik-radio.env
 [ -s "$AUTO_SRC" ] || { echo "СТОП: нет $AUTO_SRC"; exit 4; }
 node --check "$SERVER" >/dev/null; node --check "$AGENT_SRC" >/dev/null; bash -n "$AUTO_SRC"
 
-# Exact confirmed fullscreen transform. No alternate cover/crop path is allowed.
-sed -i "s|'scale=1920:1080:force_original_aspect_ratio=increase:flags=lanczos',|'scale=1920:1080:flags=lanczos',|; /'crop=1920:1080',/d" "$SERVER"
+# R690 full-frame FIT transform. Preserve aspect ratio, never crop or stretch.
+python3 - "$SERVER" <<'PY'
+from pathlib import Path
+import re, sys
+p=Path(sys.argv[1]); s=p.read_text(encoding='utf-8')
+s=re.sub(r"^[ \t]*'crop=1920:1080',[ \t]*\n", "", s, flags=re.M)
+s=re.sub(r"'scale=1920:1080(?::force_original_aspect_ratio=(?:increase|decrease))?:flags=[^']+',(?:\n[ \t]*'pad=1920:1080:[^']+',)?",
+         "'scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos',\n    'pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black',", s)
+p.write_text(s,encoding='utf-8')
+PY
 node --check "$SERVER" >/dev/null
-grep -q "'scale=1920:1080:flags=lanczos'" "$SERVER" || { echo 'СТОП: direct scale отсутствует'; exit 5; }
-if grep -q "force_original_aspect_ratio=increase\|'crop=1920:1080'" "$SERVER"; then echo 'СТОП: найден crop/cover'; exit 6; fi
+grep -q "force_original_aspect_ratio=decrease:flags=lanczos" "$SERVER" || { echo 'СТОП: FIT scale отсутствует'; exit 5; }
+grep -q "pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black" "$SERVER" || { echo 'СТОП: FIT pad отсутствует'; exit 6; }
+if grep -q "force_original_aspect_ratio=increase\|'crop=1920:1080'" "$SERVER"; then echo 'СТОП: найден crop/cover'; exit 7; fi
 
 mkdir -p "$VISUAL_DIR"; touch "$ENV_FILE"
 sed -i '/^[[:space:]]*VISUAL_AUTO_SCHEDULE_R658[[:space:]]*=/d' "$ENV_FILE"
@@ -58,13 +67,13 @@ systemctl daemon-reload
 systemctl enable --now andrik-visual-auto-r658.timer >/dev/null
 systemctl restart andrik-radio-web-control.service
 
-# Apply the same proven FORCE + direct-scale recipe immediately for the CURRENT period.
+# Apply the same proven FORCE + full-frame FIT recipe immediately for the CURRENT period.
 /usr/local/sbin/andrik-visual-auto-r658 force
 sleep 8
 
-echo 'R658 AUTO EXACT FULLSCREEN ✅'
+echo 'R658 AUTO FULL-FRAME FIT ✅'
 echo 'DAY 08:00–17:00 · EVENING 17:00–22:00 · NIGHT 22:00–08:00 · Europe/Bratislava'
-echo 'Every time switch re-applies direct 1920x1080 and the proper FORCE slot before restart.'
+echo 'Every time switch re-applies FIT 1920x1080 and the proper FORCE slot before restart.'
 curl -fsS http://127.0.0.1:8080/status || true
 echo
 systemctl is-active andrik-visual-auto-r658.timer || true

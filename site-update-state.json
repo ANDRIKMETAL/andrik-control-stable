@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787756316841-c23002e885",
-  "release": "R689",
-  "archiveName": "R689-RADIO-TESTING-PATH-INVALID-TRANSITION-FIX-R688-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "15ac52189179348efe2f58cda3919ba0acbce956",
-  "backupSha": "15ac52189179348efe2f58cda3919ba0acbce956",
+  "operationId": "publish-1787757343536-118e0ddcfc",
+  "release": "R690",
+  "archiveName": "R690-RADIO-FULL-FRAME-FIT-NO-CROP-R689-LIVE-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "fec4c3a33489c18f1c4837bde71e7c61002d84cd",
+  "backupSha": "fec4c3a33489c18f1c4837bde71e7c61002d84cd",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-26T14:58:36.841Z"
+  "generatedAt": "2026-08-26T15:15:44.625Z"
 }

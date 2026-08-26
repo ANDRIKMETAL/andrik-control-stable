@@ -27,11 +27,28 @@ esac
 [ -s "$visual" ] || exit 0
 size="$(stat -c%s "$visual" 2>/dev/null || echo 0)"; [ "$size" -ge 2000000 ] || exit 0
 
-# R658: reproduce the exact command that is confirmed working on the live VM.
-# This is deliberately enforced on EVERY scheduled switch before restart.
-sed -i "s|'scale=1920:1080:force_original_aspect_ratio=increase:flags=lanczos',|'scale=1920:1080:flags=lanczos',|; /'crop=1920:1080',/d" "$SERVER"
+# R690: enforce full-frame FIT on every scheduled switch.
+# Source aspect ratio is preserved; no crop and no stretch. Non-16:9 material is padded.
+python3 - "$SERVER" <<'PY'
+from pathlib import Path
+import re, sys
+p=Path(sys.argv[1])
+s=p.read_text(encoding='utf-8')
+# Remove legacy crop/cover/direct-stretch variants around the 1080 transform.
+s=re.sub(r"^[ \t]*'crop=1920:1080',[ \t]*\n", "", s, flags=re.M)
+s=re.sub(r"'scale=1920:1080(?::force_original_aspect_ratio=(?:increase|decrease))?:flags=[^']+',(?:\n[ \t]*'pad=1920:1080:[^']+',)?",
+         "'scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos',\n    'pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black',", s)
+if "'scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos'," not in s:
+    raise SystemExit('R690 FIT scale not found')
+if "'pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black'," not in s:
+    raise SystemExit('R690 FIT pad not found')
+if 'force_original_aspect_ratio=increase' in s or "'crop=1920:1080'" in s:
+    raise SystemExit('R690: legacy crop/cover still present')
+p.write_text(s,encoding='utf-8')
+PY
 node --check "$SERVER" >/dev/null
-grep -q "'scale=1920:1080:flags=lanczos'" "$SERVER" || exit 0
+grep -q "force_original_aspect_ratio=decrease:flags=lanczos" "$SERVER" || exit 0
+grep -q "pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black" "$SERVER" || exit 0
 if grep -q "force_original_aspect_ratio=increase\|'crop=1920:1080'" "$SERVER"; then exit 0; fi
 
 mkdir -p "$VISUAL_DIR"; touch "$ENV_FILE"
@@ -61,5 +78,5 @@ fi
 sed -i '/^[[:space:]]*FORCE_VISUAL_SLOT[[:space:]]*=/d' "$ENV_FILE"
 printf 'FORCE_VISUAL_SLOT=%s\n' "$desired" >> "$ENV_FILE"
 chmod 600 "$ENV_FILE" || true
-logger -t andrik-visual-auto-r658 "AUTO exact-fullscreen: ${current_period:-unknown} -> auto-$desired"
+logger -t andrik-visual-auto-r658 "AUTO full-frame-fit: ${current_period:-unknown} -> auto-$desired"
 systemctl restart "$SERVICE"

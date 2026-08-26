@@ -23,7 +23,7 @@ esac
 [ -s "$visual" ] || exit 0
 size="$(stat -c%s "$visual" 2>/dev/null || echo 0)"; [ "$size" -ge 2000000 ] || exit 0
 
-# Always enforce the confirmed fullscreen transform BEFORE deciding/restarting.
+# Always enforce the R690 full-frame FIT transform BEFORE deciding/restarting.
 "$GUARD" >/dev/null
 mkdir -p "$VISUAL_DIR"; touch "$ENV_FILE"
 sed -i '/^[[:space:]]*VISUAL_AUTO_SCHEDULE_R658[[:space:]]*=/d' "$ENV_FILE"
@@ -46,5 +46,5 @@ fi
 sed -i '/^[[:space:]]*FORCE_VISUAL_SLOT[[:space:]]*=/d' "$ENV_FILE"
 printf 'FORCE_VISUAL_SLOT=%s\n' "$desired" >> "$ENV_FILE"
 chmod 600 "$ENV_FILE" || true
-logger -t andrik-visual-auto-r659 "AUTO guarded-fullscreen: ${current_period:-unknown} -> auto-$desired"
+logger -t andrik-visual-auto-r659 "AUTO guarded-fit: ${current_period:-unknown} -> auto-$desired"
 systemctl restart "$SERVICE"

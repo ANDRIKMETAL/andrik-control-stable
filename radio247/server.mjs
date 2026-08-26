@@ -576,8 +576,9 @@ function startPublisher(visualPath){
   const curPath=ffFilterPath(LIVE_CURRENT_FILE);
   const tickerPath=ffFilterPath(LIVE_TICKER_FILE);
   const vf=[
-    // R655 preserves the exact working R649 hotfix. Fill 1920x1080 directly; never crop.
-    'scale=1920:1080:flags=lanczos',
+    // R690 FIT: preserve the complete source frame. Never crop or stretch.
+    'scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos',
+    'pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black',
     'setsar=1',
     `fps=${VIDEO_FPS}`,
     'format=yuv420p',
@@ -665,7 +666,9 @@ function clipFilterComplex(){
   const curPath=ffFilterPath(LIVE_CURRENT_FILE);
   const tickerPath=ffFilterPath(LIVE_TICKER_FILE);
   const vf=[
-    'scale=1920:1080:flags=lanczos',
+    // R690 FIT: clips also keep their full frame inside 1920x1080.
+    'scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos',
+    'pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black',
     'setsar=1',
     `fps=${VIDEO_FPS}`,
     'format=yuv420p',
