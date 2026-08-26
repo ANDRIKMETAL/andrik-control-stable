@@ -1,0 +1,9 @@
+R677 — subscriber-loss push + radio uptime + Search Console readability
+
+- Pushes subscriber losses. Public nicknames are shown when YouTube exposes them; private losses are generic.
+- Uses red unsubscribe marker/icon; Android/Chrome owns notification text color.
+- YouTube Radio shows elapsed LIVE time from actualStartTime and refreshes every 30 sec.
+- Replaces stale AWS labels with OVH VPS in radio card.
+- Search Console graph is larger on mobile and no longer inherits the old 54dvh chart height.
+- KPI icons reduced/repositioned so CTR never overlaps.
+- Preserves R676 owner-push repair and working Search Console.

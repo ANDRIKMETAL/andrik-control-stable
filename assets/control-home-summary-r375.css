@@ -73,3 +73,6 @@ body.control-home-page.control-report-standalone.control-summary-visible .contro
   .control-city-panel-r375{max-height:84dvh!important;width:min(78vw,760px)!important}
   .control-home-page .control-summary-dual-r375{max-width:760px!important;margin-inline:auto!important}
 }
+
+/* R677 unsubscribe event */
+.control-home-activity-row.is-unsubscriber{border-color:rgba(255,92,104,.30)!important;background:rgba(95,18,28,.16)!important}.control-home-activity-row.is-unsubscriber strong{color:#ff7a88!important}.control-home-activity-row.is-unsubscriber p{color:#e8aeb5!important}.control-home-activity-row.is-unsubscriber .control-home-activity-icon{color:#ff6676!important}

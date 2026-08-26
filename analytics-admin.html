@@ -215,6 +215,27 @@ html.analytics-route-google-r539 body:not([data-analytics-page]) .analytics-yout
 .sc-chart-tooltip{position:absolute;z-index:3;left:50%;top:54px;transform:translateX(-50%);display:none;min-width:150px;padding:9px 12px;border:1px solid rgba(151,215,245,.22);border-radius:14px;background:rgba(3,12,20,.96);box-shadow:0 12px 32px rgba(0,0,0,.35);color:#eef8ff;text-align:center;font-size:.73rem;font-weight:760;pointer-events:none}.sc-chart-tooltip.is-visible{display:block}.sc-chart-tooltip strong{display:block;margin-bottom:3px;color:#fff;font-size:.78rem}.sc-chart-tooltip span{display:block;color:#a8bac7}
 .search-console-key{margin-top:10px!important}.search-console-key .sc-data-note{display:block!important;width:100%;padding:0 4px;color:#8fa5b6;font-size:.72rem;font-weight:760;line-height:1.45}
 @media(max-width:540px){.search-console-kpis{gap:10px!important}.search-console-kpi{min-height:96px!important;padding:15px 14px!important}.search-console-kpi-icon{width:40px;height:40px}.search-console-kpi-icon svg{width:21px;height:21px}.search-console-line-trend{padding:14px 8px 10px!important}.search-console-line-trend svg{min-height:238px;aspect-ratio:1.48/1}.sc-chart-legend{gap:13px;font-size:.75rem}.sc-chart-title{display:none}.search-console-line-trend .sc-axis-label{font-size:16px}.search-console-line-trend .sc-x-label{font-size:15px}.analytics-site-pane .analytics-chart-card{overflow:hidden!important}}
+/* R677 — make Search Console chart truly large on phones; keep KPI icons away from values */
+.analytics-admin-page .search-console-line-trend{height:auto!important;min-height:0!important;padding:16px 10px 14px!important}
+.analytics-admin-page .search-console-line-trend svg{width:100%!important;height:clamp(310px,58vw,390px)!important;min-height:310px!important;aspect-ratio:auto!important}
+.search-console-kpi{grid-template-columns:minmax(0,1fr) 40px!important;gap:6px!important}
+.search-console-kpi-icon{width:38px!important;height:38px!important}
+.search-console-kpi-icon svg{width:20px!important;height:20px!important}
+.search-console-kpi.is-ctr strong{font-size:clamp(1.55rem,6.2vw,1.95rem)!important}
+@media(max-width:540px){
+  .analytics-admin-page .search-console-line-trend{padding:14px 4px 12px!important;border-radius:22px!important}
+  .analytics-admin-page .search-console-line-trend svg{height:330px!important;min-height:330px!important}
+  .search-console-kpi{grid-template-columns:minmax(0,1fr) 34px!important;gap:4px!important;padding:14px 12px!important}
+  .search-console-kpi-icon{width:32px!important;height:32px!important}
+  .search-console-kpi-icon svg{width:18px!important;height:18px!important}
+  .search-console-kpi strong{font-size:clamp(1.55rem,6.5vw,1.95rem)!important}
+  .search-console-kpi.is-ctr strong{font-size:clamp(1.45rem,6vw,1.8rem)!important}
+  .search-console-line-trend .sc-axis-label{font-size:18px!important}
+  .search-console-line-trend .sc-axis-title{font-size:17px!important}
+  .search-console-line-trend .sc-x-label{font-size:17px!important}
+  .sc-chart-legend{font-size:.82rem!important;gap:16px!important;padding-left:6px}
+}
+
 
 .analytics-pages-spoiler{overflow:hidden}
 .analytics-pages-spoiler>summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:22px 24px}
@@ -1576,7 +1597,7 @@ body.analytics-admin-page.is-country-returning #worldMap .world-map-dot.is-selec
     const clickMax=Math.max(3,Math.ceil(rawMaxClicks));
     const impressionStep=rawMaxImpressions<=20?5:rawMaxImpressions<=60?10:rawMaxImpressions<=120?20:rawMaxImpressions<=300?50:100;
     const impressionMax=Math.max(impressionStep*3,Math.ceil(rawMaxImpressions/impressionStep)*impressionStep);
-    const width=720,height=390,left=60,right=60,top=42,bottom=58;
+    const width=720,height=470,left=62,right=62,top=46,bottom=62;
     const plotW=width-left-right,plotH=height-top-bottom;
     const xAt=index=>rows.length<=1?left+plotW/2:left+(index/(rows.length-1))*plotW;
     const yAt=(value,max)=>top+plotH-(Math.max(0,Number(value||0))/Math.max(1,max))*plotH;

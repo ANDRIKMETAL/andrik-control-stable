@@ -4269,7 +4269,11 @@ async function handleCheckPlaylist(request, env) {
       await setPushState(db, 'playlist-seeded', '1');
       await setPushState(db, 'playlist-seeded-at', startedAt);
       await setPushState(db, 'playlist-last-check-status', 'seeded');
-      const summary = {
+      await setPushState(db, 'youtube-visible-subscriber-snapshot-r677', JSON.stringify({
+      at:startedAt, count:identity.subscribers, items:currentVisibleSubscribersR677
+    })).catch(()=>{});
+
+    const summary = {
         checked: items.length,
         newCount: 0,
         notified: 0,
@@ -8717,6 +8721,24 @@ async function handleCheckYoutubeEvents(request, env) {
     const subscriberDelta = !identity.hiddenSubscribers && previousSubscriberCount > 0 && identity.subscribers > previousSubscriberCount
       ? identity.subscribers - previousSubscriberCount : 0;
     const subscriberDropped = !identity.hiddenSubscribers && previousSubscriberCount > 0 && identity.subscribers < previousSubscriberCount;
+    // R677: detect subscriber losses. YouTube only exposes names for PUBLIC
+    // subscriptions, so a nickname is shown when a previously visible subscriber
+    // disappears at the same time the channel total falls. Private losses remain generic.
+    let previousVisibleSubscribersR677 = [];
+    try {
+      const row = await getPushState(db, 'youtube-visible-subscriber-snapshot-r677');
+      const parsed = JSON.parse(String(row?.value || '{}'));
+      previousVisibleSubscribersR677 = Array.isArray(parsed?.items) ? parsed.items : [];
+    } catch (_) {}
+    const currentVisibleSubscribersR677 = (subscribersResult.items || []).slice(0, 50).map(item => ({
+      id: cleanPlainText(item.id,180), title: cleanPlainText(item.title,120),
+      channelId: cleanPlainText(item.channelId,120), url: cleanPlainText(item.url,500)
+    })).filter(item => item.id);
+    const currentVisibleIdsR677 = new Set(currentVisibleSubscribersR677.map(item => item.id));
+    const subscriberLossDeltaR677 = subscriberDropped ? Math.max(0, previousSubscriberCount - identity.subscribers) : 0;
+    const visibleUnsubscribersR677 = subscriberLossDeltaR677 > 0
+      ? previousVisibleSubscribersR677.filter(item => item?.id && !currentVisibleIdsR677.has(item.id)).slice(0, subscriberLossDeltaR677)
+      : [];
     const visibleCreditStateR331 = subscriberDropped
       ? { count:0, updatedAt:'' }
       : await getYoutubeSubscriberVisibleCreditR331(db);
@@ -8768,6 +8790,47 @@ async function handleCheckYoutubeEvents(request, env) {
     // Count-only comment notifications are intentionally disabled. YouTube counts
     // include replies written by the channel owner, which caused false admin alerts.
     // Detailed external comments above remain the single source of comment push alerts.
+    // R677 unsubscribe push: red marker/icon. Browser notification text color is
+    // controlled by Android/Chrome, so use a red symbol and icon instead.
+    if (subscriberLossDeltaR677 > 0) {
+      const namedCountR677 = Math.min(subscriberLossDeltaR677, visibleUnsubscribersR677.length);
+      for (const item of visibleUnsubscribersR677.slice(0, namedCountR677)) {
+        const onceKey = `push-once:youtube-unsubscriber-r677:${previousSubscriberCount}:${identity.subscribers}:${item.id}`;
+        if (!await claimPushOnce(db, onceKey, startedAt)) continue;
+        const target = item.url || identity.channelUrl;
+        const appUrl = youtubeAppLauncherUrl(target);
+        const result = await sendOwnerPush(env, {
+          title:'🔻 ОТПИСКА YOUTUBE',
+          message:`${item.title || 'Публичный подписчик'} отписался от ANDRIK · теперь ${identity.subscribers}`,
+          url:appUrl,
+          icon:'https://andrikmetal.com/assets/andrik-control-red-triangle-192.png',
+          name:`youtube-unsubscriber-r677-${item.id}-${identity.subscribers}`,
+          ttl:86400,
+          webButtons:[{id:'open-youtube',text:'▶️ Открыть канал',url:appUrl}],
+          history:{type:'youtube-unsubscriber',source:'YouTube',videoTitle:item.title || 'Отписка YouTube',details:{subscriberId:item.id,previousSubscribers:previousSubscriberCount,totalSubscribers:identity.subscribers,delta:-1,visibility:'public'}}
+        });
+        if (!result.ok) await releasePushOnceClaim(db, onceKey);
+        notifications.push({type:'unsubscriber',id:item.id,ok:Boolean(result.ok),url:target,error:result.error||''});
+      }
+      const unnamedLossR677 = Math.max(0, subscriberLossDeltaR677 - namedCountR677);
+      if (unnamedLossR677 > 0) {
+        const onceKey = `push-once:youtube-unsubscriber-count-r677:${previousSubscriberCount}:${identity.subscribers}`;
+        if (await claimPushOnce(db, onceKey, startedAt)) {
+          const channelAppUrl = youtubeAppLauncherUrl(identity.channelUrl);
+          const result = await sendOwnerPush(env, {
+            title: unnamedLossR677===1 ? '🔻 −1 подписчик YouTube' : `🔻 −${unnamedLossR677} подписчика YouTube`,
+            message:`На канале теперь ${identity.subscribers}. YouTube не показывает имя приватной отписки.`,
+            url:channelAppUrl,
+            icon:'https://andrikmetal.com/assets/andrik-control-red-triangle-192.png',
+            name:`youtube-unsubscriber-count-r677-${previousSubscriberCount}-to-${identity.subscribers}`,
+            ttl:86400,
+            history:{type:'youtube-unsubscriber',source:'YouTube',videoTitle:identity.title,details:{previousSubscribers:previousSubscriberCount,totalSubscribers:identity.subscribers,delta:-unnamedLossR677,visibility:'private-or-unknown'}}
+          });
+          if (!result.ok) await releasePushOnceClaim(db, onceKey);
+          notifications.push({type:'unsubscriber',delta:-unnamedLossR677,ok:Boolean(result.ok),url:identity.channelUrl,error:result.error||''});
+        }
+      }
+    }
     const visibleSubscriberBatch = newVisibleSubscribers.slice().reverse().slice(0, 6);
     for (const item of visibleSubscriberBatch) {
       const onceKey = `push-once:youtube-subscriber:${item.id}`;
@@ -9001,6 +9064,8 @@ async function handleCheckYoutubeEvents(request, env) {
       subscriberDelta,
       subscriberPreviousCount:previousSubscriberCount,
       subscriberCurrentCount:identity.subscribers,
+      subscriberLossDelta:subscriberLossDeltaR677,
+      visibleUnsubscribers:visibleUnsubscribersR677.length,
       subscriberBaselineMode:'current-count-r331',
       subscriberVisibleCreditPending:pendingVisibleCreditR331,
       subscriberVisibleDeliveredNow:visibleDeliveredNowR331,
