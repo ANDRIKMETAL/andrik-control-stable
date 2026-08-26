@@ -331,7 +331,7 @@
     try{await OneSignal.User.PushSubscription.optIn()}catch(_){}
     id=await waitForSubscriptionId(OneSignal,8000);
     if(id)return id;
-    // R671: Chrome/Android can report permission granted and optedIn=true while
+    // R672: Chrome/Android can report permission granted and optedIn=true while
     // OneSignal has no Subscription ID/token. Re-arm the OneSignal subscription
     // once instead of incorrectly telling the owner to re-enable Chrome permission.
     const permission=(typeof Notification!=='undefined'?Notification.permission:'default');
@@ -376,8 +376,43 @@
     if(state?.optedIn){setButtonState('on',t.on);return state.subscriptionId || null}
     return await subscribe(false);
   }
+  async function hardResetSubscription(){
+    if(originMismatch)return false;
+    try{
+      const desiredScope=new URL(config?.serviceWorkerScope||'/push/onesignal/',location.origin).href;
+      if('serviceWorker' in navigator){
+        const registrations=await navigator.serviceWorker.getRegistrations();
+        for(const registration of registrations){
+          if(registration.scope!==desiredScope)continue;
+          try{const sub=await registration.pushManager?.getSubscription?.();if(sub)await sub.unsubscribe()}catch(_){}
+          try{await registration.unregister()}catch(_){}
+        }
+      }
+      try{
+        if(indexedDB?.databases){
+          const dbs=await indexedDB.databases();
+          for(const item of dbs||[]){if(/onesignal/i.test(String(item?.name||''))&&item.name)indexedDB.deleteDatabase(item.name)}
+        }
+      }catch(_){}
+      try{
+        for(let i=localStorage.length-1;i>=0;i--){const key=localStorage.key(i);if(key&&/onesignal/i.test(key))localStorage.removeItem(key)}
+      }catch(_){}
+      sdk=null; readyPromise=null;
+      return true;
+    }catch(error){console.warn('ANDRIK push hard reset:',error);return false}
+  }
   async function getSubscriptionId(){const OneSignal=await init();return OneSignal?.User?.PushSubscription?.id || null}
-  async function status(){const OneSignal=await init();return {configured:Boolean(config?.enabled),supported:Boolean(OneSignal?.Notifications?.isPushSupported?.()),browserPermission:(typeof Notification!=='undefined'?Notification.permission:'unknown'),optedIn:Boolean(OneSignal?.User?.PushSubscription?.optedIn),subscriptionId:OneSignal?.User?.PushSubscription?.id || null,pushToken:OneSignal?.User?.PushSubscription?.token || null,originMismatch,siteOrigin:configuredOrigin || config?.siteOrigin || ''}}
-  window.AndrikPush={init,subscribe,repairSubscription,getSubscriptionId,status,syncSubscription,requestPermissionFlow,cleanupLegacyPushSubscriptions,clearGenericWelcomeNotifications};
+  async function status(){
+    const OneSignal=await init();
+    let nativeSubscription=false,workerActive=false;
+    try{
+      const scope=config?.serviceWorkerScope||'/push/onesignal/';
+      const registration=await navigator.serviceWorker?.getRegistration?.(scope);
+      workerActive=Boolean(registration?.active);
+      nativeSubscription=Boolean(await registration?.pushManager?.getSubscription?.());
+    }catch(_){}
+    return {configured:Boolean(config?.enabled),supported:Boolean(OneSignal?.Notifications?.isPushSupported?.()),browserPermission:(typeof Notification!=='undefined'?Notification.permission:'unknown'),optedIn:Boolean(OneSignal?.User?.PushSubscription?.optedIn),subscriptionId:OneSignal?.User?.PushSubscription?.id || null,pushToken:OneSignal?.User?.PushSubscription?.token || null,nativeSubscription,workerActive,originMismatch,siteOrigin:configuredOrigin || config?.siteOrigin || ''}
+  }
+  window.AndrikPush={init,subscribe,repairSubscription,hardResetSubscription,getSubscriptionId,status,syncSubscription,requestPermissionFlow,cleanupLegacyPushSubscriptions,clearGenericWelcomeNotifications};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();

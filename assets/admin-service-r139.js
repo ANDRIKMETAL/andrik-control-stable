@@ -6,7 +6,7 @@
   const state=document.getElementById('serviceAccessState');
   const msg=document.getElementById('serviceAccessMessage');
   const IS_CONTROL_HOST=location.hostname.toLowerCase()==='control.andrikmetal.com';
-  const MAIN_PUSH_ADMIN_URL='https://andrikmetal.com/service-admin.html?owner-push=1&v=55.00-r671';
+  const MAIN_PUSH_ADMIN_URL='https://andrikmetal.com/service-admin.html?owner-push=1&v=55.00-r672';
   let installPrompt=null;
   let lastDiagnosticText='';
   let lastSystemText='';
@@ -76,20 +76,23 @@
     const stateEl=document.getElementById('serviceSearchConsoleState');
     const detailsEl=document.getElementById('serviceSearchConsoleDetails');
     if(!stateEl||!detailsEl)return;
-    const connected=Boolean(sc.connected);
+    const error=String(sc.friendlyError||sc.error||'').trim();
+    const stale=Boolean(sc.stale||error);
+    const connected=Boolean(sc.connected)&&!stale;
     const configured=Boolean(sc.configured);
     const email=String(sc.serviceAccountEmail||'').trim();
     const site=String(sc.siteUrl||'sc-domain:andrikmetal.com');
-    const error=String(sc.friendlyError||sc.error||'').trim();
-    stateEl.className=`service-access-state ${connected?'is-ready':configured?'':'is-error'}`;
-    stateEl.textContent=connected?'Подключено':configured?'Нужен доступ':'Не настроено';
-    detailsEl.className=`service-search-console-details ${connected?'is-good':error?'is-error':''}`;
+    const lastSuccess=String(sc.lastSuccessfulAt||sc.updatedAt||'').trim();
+    stateEl.className=`service-access-state ${connected?'is-ready':configured?'is-error':'is-error'}`;
+    stateEl.textContent=connected?'Подключено':configured?'НЕ ОБНОВЛЯЕТСЯ':'Не настроено';
+    detailsEl.className=`service-search-console-details ${connected?'is-good':'is-error'}`;
     if(connected){
       detailsEl.innerHTML=`<strong>Search Console работает ✅</strong>${escapeHtml(site)} · ${Number(sc.clicks||0).toLocaleString('ru-RU')} кликов · ${Number(sc.impressions||0).toLocaleString('ru-RU')} показов${sc.updatedAt?`<br>Обновлено: ${escapeHtml(formatDate(sc.updatedAt))}`:''}`;
       return;
     }
-    const message=error||'Ожидается первая проверка.';
-    detailsEl.innerHTML=`<strong>${escapeHtml(message)}</strong>${email?`Service account: ${escapeHtml(email)}<br>`:''}Ресурс: ${escapeHtml(site)}`;
+    const message=error||'Свежие данные Search Console не получены.';
+    const saved=(Number(sc.clicks||0)||Number(sc.impressions||0)||lastSuccess)?`<br>Последний сохранённый снимок: ${Number(sc.clicks||0).toLocaleString('ru-RU')} кликов · ${Number(sc.impressions||0).toLocaleString('ru-RU')} показов${lastSuccess?` · ${escapeHtml(formatDate(lastSuccess))}`:''}`:'';
+    detailsEl.innerHTML=`<strong>${escapeHtml(message)}</strong>${email?`Service account: ${escapeHtml(email)}<br>`:''}Ресурс: ${escapeHtml(site)}${saved}`;
   }
   async function loadSearchConsoleDiagnostic(force=false){
     if(!getKey()){renderSearchConsoleDiagnostic({configured:false,error:'Сначала сохраните ADMIN_KEY.'});return null}
@@ -105,7 +108,36 @@
 
   async function sendPush(audience,title,message,url,statusId){if(!getKey()){set(statusId,'Сначала сохраните ключ.');return}saveKey();set(statusId,'Отправка…');try{const data=await api('/api/push/send',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({audience,title,message,url})});set(statusId,data.oneSignalId?`OneSignal принял сообщение ✅ ID: ${data.oneSignalId}`:'Отправлено ✅');await loadDiagnosticLog()}catch(error){set(statusId,`Ошибка: ${translatePushError(error.message)}`);await loadDiagnosticLog()}}
   function translatePushError(value){const text=String(value||'');if(text.includes('no-subscribers-matched'))return 'OneSignal не нашёл активных подписчиков. Переподключите уведомления на телефонах и повторите тест.';if(text.includes('owner-device-not-registered'))return 'Телефон владельца не зарегистрирован.';if(text.includes('owner-subscription-invalid'))return 'Старая push-подписка телефона недействительна. Нажмите «Подключить мой телефон» ещё раз.';if(text.includes('push-not-configured'))return 'OneSignal не настроен.';return text}
-  async function registerOwnerPush(){if(IS_CONTROL_HOST){set('adminPushStatus','Открываем основной домен ANDRIK. Разрешение Web Push привязано к нему.');const opened=window.open(MAIN_PUSH_ADMIN_URL,'_blank','noopener,noreferrer');if(!opened)location.href=MAIN_PUSH_ADMIN_URL;return}if(!getKey()){set('adminPushStatus','Сначала сохраните ключ.');return}saveKey();set('adminPushStatus','Запрашиваем разрешение…');const pushState=await window.AndrikPush?.status();if(pushState?.originMismatch){set('adminPushStatus',`Откройте основной домен ${pushState.siteOrigin||'ANDRIK'}.`);return}let subscriptionId=pushState?.subscriptionId||null;if(!subscriptionId)subscriptionId=await window.AndrikPush?.subscribe();if(!subscriptionId&&pushState?.browserPermission==='granted'){set('adminPushStatus','Chrome уже разрешил уведомления ✅ Но OneSignal не выдал Subscription ID. Автовосстановление не завершилось — обнови страницу и нажми кнопку ещё раз.');return}if(!subscriptionId){set('adminPushStatus',pushState?.browserPermission==='denied'?'Уведомления заблокированы для andrikmetal.com в Chrome.':'OneSignal ещё не создал push-подписку. Нажми кнопку ещё раз через несколько секунд.');return}try{await api('/api/push/admin-device',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({subscriptionId,label:navigator.userAgent.slice(0,70)})});set('adminPushStatus','Телефон владельца подключён ✅');await loadDiagnosticLog()}catch(error){set('adminPushStatus',`Ошибка: ${error.message}`)}}
+  async function registerOwnerPush(){
+    if(IS_CONTROL_HOST){set('adminPushStatus','Открываем основной домен ANDRIK. Разрешение Web Push привязано к нему.');const opened=window.open(MAIN_PUSH_ADMIN_URL,'_blank','noopener,noreferrer');if(!opened)location.href=MAIN_PUSH_ADMIN_URL;return}
+    if(!getKey()){set('adminPushStatus','Сначала сохраните ключ.');return}
+    saveKey();
+    set('adminPushStatus','Проверяем push-подписку…');
+    let pushState=await window.AndrikPush?.status();
+    if(pushState?.originMismatch){set('adminPushStatus',`Откройте основной домен ${pushState.siteOrigin||'ANDRIK'}.`);return}
+    let subscriptionId=pushState?.subscriptionId||null;
+    if(!subscriptionId)subscriptionId=await window.AndrikPush?.subscribe();
+    if(!subscriptionId){
+      pushState=await window.AndrikPush?.status();
+      const params=new URLSearchParams(location.search);
+      const hardDone=params.get('push-reset')==='1';
+      if(pushState?.browserPermission==='granted'&&!hardDone){
+        set('adminPushStatus','Разрешение есть ✅ OneSignal завис без Subscription ID. Сейчас автоматически пересоздаю только push-службу…');
+        await window.AndrikPush?.hardResetSubscription?.();
+        params.set('owner-push','1');params.set('push-reset','1');params.set('v','55.00-r672');params.set('fresh',Date.now());
+        setTimeout(()=>location.replace(`${location.pathname}?${params.toString()}`),500);
+        return;
+      }
+      const nativeText=pushState?.nativeSubscription?'Native push есть, но OneSignal ID не восстановлен.':'Native push-подписка тоже не создана.';
+      set('adminPushStatus',pushState?.browserPermission==='denied'?'Уведомления заблокированы для andrikmetal.com в Chrome.':`Разрешение Chrome есть ✅ ${nativeText} Это уже не проблема разрешения Chrome.`);
+      return;
+    }
+    try{
+      await api('/api/push/admin-device',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({subscriptionId,label:navigator.userAgent.slice(0,70)})});
+      set('adminPushStatus','Телефон владельца подключён ✅');
+      await loadSystem();await loadDiagnosticLog();
+    }catch(error){set('adminPushStatus',`Ошибка: ${error.message}`)}
+  }
   function pushAttemptLabel(attempt){if(!attempt)return 'Попыток автоматической отправки пока нет';if(attempt.status==='sent'&&attempt.oneSignalId)return `Принято OneSignal · ID ${attempt.oneSignalId}`;if(attempt.error==='no-subscribers-matched')return 'Не доставлено: активные подписчики не найдены';if(attempt.status==='failed')return `Ошибка: ${attempt.error||'неизвестно'}`;return `${attempt.status||'—'}${attempt.error?` · ${attempt.error}`:''}`}
   function renderYoutubeDiagnostics(data={}){
     const box=document.getElementById('adminPlaylistDiagnostics');if(!box)return;

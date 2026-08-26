@@ -4779,11 +4779,15 @@ async function handleControlSystem(request, env) {
   const searchConsoleCredentials = parseGoogleSearchConsoleCredentials(env);
   const searchConsoleSnapshot = parseSnapshotMetrics(searchConsoleRow);
   const searchConsoleConfigured = Boolean(searchConsoleCredentials && getGoogleSearchConsoleSiteUrl(env));
-  const searchConsoleConnected = Boolean(searchConsoleRow && searchConsoleSnapshot.connected);
+  const searchConsoleRowMs = Date.parse(searchConsoleRow?.created_at || '');
+  const searchConsoleFresh = Number.isFinite(searchConsoleRowMs) && Date.now()-searchConsoleRowMs < 6*60*60*1000;
+  const searchConsoleConnected = Boolean(searchConsoleRow && searchConsoleSnapshot.connected && searchConsoleFresh);
   const searchConsoleStatus = searchConsoleConnected ? 'good' : searchConsoleConfigured ? 'warning' : 'error';
   const searchConsoleLabel = searchConsoleConnected
     ? `Search Console подключён · ${Number(searchConsoleSnapshot.clicks || 0)} кликов · обновлено ${formatSystemDateLabel(searchConsoleRow.created_at)}`
-    : searchConsoleConfigured
+    : searchConsoleConfigured && searchConsoleRow
+      ? `Search Console не обновляется · последний снимок ${formatSystemDateLabel(searchConsoleRow.created_at)}`
+      : searchConsoleConfigured
       ? `Ключ найден · выдайте доступ ${cleanPlainText(searchConsoleCredentials?.client_email || '',120)} к ${getGoogleSearchConsoleSiteUrl(env)}`
       : 'Search Console не настроен';
   const youtubeAuth = await safeRead(
@@ -13835,14 +13839,22 @@ async function handleControlSearchConsole(request, env) {
   const credentials = parseGoogleSearchConsoleCredentials(env);
   if (row) {
     const error = snapshot.error || liveError || '';
+    const lastSuccessfulAt = row.created_at || snapshot.updatedAt || '';
+    const snapshotMs = Date.parse(lastSuccessfulAt);
+    const snapshotStale = !Number.isFinite(snapshotMs) || Date.now()-snapshotMs > 3*60*60*1000 || wrongMonth;
+    const unhealthy = Boolean(error) || snapshotStale;
     return json({
       ok:true,
       searchConsole:{
         ...snapshot,
+        connected:Boolean(snapshot.connected) && !unhealthy,
+        configured:Boolean(credentials && getGoogleSearchConsoleSiteUrl(env)),
+        stale:unhealthy,
+        lastSuccessfulAt,
         serviceAccountEmail:cleanPlainText(snapshot.serviceAccountEmail || credentials?.client_email || '',180),
-        updatedAt:row.created_at || snapshot.updatedAt || '',
+        updatedAt:lastSuccessfulAt,
         error,
-        friendlyError:error ? searchConsoleErrorMessage(error) : ''
+        friendlyError:error ? searchConsoleErrorMessage(error) : (snapshotStale ? 'Последний снимок Search Console устарел. Нажмите «Проверить и обновить».' : '')
       },
       updatedAt:new Date().toISOString()
     });
