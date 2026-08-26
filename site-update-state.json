@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787714256316-9f5729268f",
-  "release": "R684",
-  "archiveName": "R684-D1-GUARD-JOY-OF-BEING-VIDEO-INTERMISSION-R683-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "99dd7198559cd94fd20199eea2b3093d9592cf67",
-  "backupSha": "99dd7198559cd94fd20199eea2b3093d9592cf67",
+  "operationId": "publish-1787716909731-cf9bfaeea8",
+  "release": "R685",
+  "archiveName": "R685-REVOLUT-SUPPORT-FOOTER-R684-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "c32b153c90a8cf706c17ef02bcd79e033bbbff48",
+  "backupSha": "c32b153c90a8cf706c17ef02bcd79e033bbbff48",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-26T03:17:36.706Z"
+  "generatedAt": "2026-08-26T04:01:50.551Z"
 }
