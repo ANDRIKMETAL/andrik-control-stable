@@ -1,0 +1,8 @@
+R680 — ADMIN HOME YOUTUBE SWIPE TARGET
+
+- Admin panel YouTube side-swipe now opens /youtube-admin.html (the current YouTube analytics / Studio page).
+- Removed the old side-swipe target /analytics-admin.html?page=youtube.
+- Added cache-busted assets/admin-home-hub-r680.js.
+- Updated prefetch/speculation target to the current YouTube page.
+- Safe cache reset preserves OneSignal/service workers and returns to Admin panel for immediate swipe testing.
+- R679 push/country/cron/radio/OVH changes preserved.
