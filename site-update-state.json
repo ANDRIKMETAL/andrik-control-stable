@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787755167256-08e2a7071e",
-  "release": "R687",
-  "archiveName": "R687-RADIO-SELF-HEAL-YOUTUBE-ACTIVE-STREAM-BIND-R686-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "03bdf59f0584b0b50510f4aea89684e23fc509b6",
-  "backupSha": "03bdf59f0584b0b50510f4aea89684e23fc509b6",
+  "operationId": "publish-1787755989821-93024f3bb4",
+  "release": "R688",
+  "archiveName": "R688-RADIO-READY-TO-LIVE-STATE-MACHINE-R687-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "26cd7674652a8fe9a24c372077e1d3f116080e6b",
+  "backupSha": "26cd7674652a8fe9a24c372077e1d3f116080e6b",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-26T14:39:27.256Z"
+  "generatedAt": "2026-08-26T14:53:09.821Z"
 }

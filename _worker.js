@@ -18746,6 +18746,7 @@ async function routeApi(request, env, ctx) {
     if (path === '/api/control/youtube-live-r609/auto' && request.method === 'POST') return await handleYoutubeLiveAutoR609(request, env);
     if (path === '/api/control/youtube-live-r609/start' && request.method === 'POST') return await handleYoutubeLiveStartR609(request, env);
     if (path === '/api/control/youtube-live-r687/ensure' && request.method === 'POST') return await handleYoutubeLiveEnsureR687(request, env);
+    if (path === '/api/control/youtube-live-r688/ensure' && request.method === 'POST') return await handleYoutubeLiveEnsureR688(request, env);
     if (path === '/api/control/youtube-live-r665/stop' && request.method === 'POST') return await handleYoutubeLiveStopR665(request, env);
     if (path === '/api/control/search-console' && request.method === 'GET') return await handleControlSearchConsole(request, env);
     if (path === '/api/control/snapshots/refresh' && request.method === 'POST') return await handleControlSnapshotsRefresh(request, env);
@@ -19080,6 +19081,7 @@ async function youtubeCreateBroadcastR687(accessToken,template=null) {
     status:{privacyStatus:'public',selfDeclaredMadeForKids:false},
     contentDetails:{
       monitorStream:{enableMonitorStream:false,broadcastStreamDelayMs:0},
+      enableAutoStart:false,
       enableAutoStop:false,
       enableDvr:true,
       enableEmbed:true,
@@ -19204,6 +19206,135 @@ async function handleYoutubeLiveEnsureR687(request, env) {
     const insufficient=/insufficient|scope|permission/i.test(`${reason} ${error?.message||''}`);
     const status=Number(error?.httpStatus||0)===409?409:(insufficient?403:503);
     return json({ok:false,error:insufficient?'youtube-oauth-write-scope-required':(reason||'youtube-live-r687-failed'),reason,message:cleanPlainText(error?.message||error,600),reconnectUrl:'https://andrikmetal.com/radio-control-admin.html?youtube-reconnect=r687'},status);
+  }
+}
+
+
+// R688 — non-blocking LIVE transition state machine.
+// R687 proved the important half: OVH reaches YouTube, the matching liveStream becomes
+// ACTIVE and the broadcast is bound correctly. Some YouTube transitions legitimately
+// remain READY/TEST_STARTING/LIVE_STARTING for tens of seconds. R688 never treats that
+// asynchronous propagation as a hard failure: every Control poll re-reads the exact
+// broadcast and advances only the next valid transition step.
+async function youtubeGetExactBroadcastR688(accessToken,id) {
+  const url=new URL('https://www.googleapis.com/youtube/v3/liveBroadcasts');
+  url.searchParams.set('part','id,snippet,status,contentDetails');
+  url.searchParams.set('id',id);
+  const data=await youtubeFetchR609(accessToken,url.toString(),{},'youtube-live-r688-exact-broadcast');
+  return Array.isArray(data?.items)?data.items[0]||null:null;
+}
+function youtubeTransitionPendingR688(error) {
+  const reason=String(error?.reason||'').toLowerCase().replace(/[^a-z]/g,'');
+  return ['redundanttransition','errorstreaminactive','errorexecutingtransition'].includes(reason);
+}
+async function youtubeKickExactBroadcastR688(accessToken,broadcast,streamStatus='active') {
+  const id=cleanPlainText(broadcast?.id||'',100);
+  if(!id)throw new Error('youtube-broadcast-id-missing-r688');
+  const watchUrl=`https://www.youtube.com/watch?v=${encodeURIComponent(id)}`;
+  if(String(streamStatus||'').toLowerCase()!=='active'){
+    const e=new Error('Encoder ещё не дошёл до активного YouTube stream.');e.httpStatus=409;e.reason='youtube-active-stream-not-found';throw e;
+  }
+  const fresh=await youtubeGetExactBroadcastR688(accessToken,id)||broadcast;
+  let life=youtubeLifeKeyR609(fresh?.status?.lifeCycleStatus);
+  const monitorEnabled=Boolean(fresh?.contentDetails?.monitorStream?.enableMonitorStream);
+  if(life==='live')return {ok:true,pending:false,videoId:id,lifeCycleStatus:life,streamStatus,watchUrl,stage:'live'};
+  if(life==='livestarting')return {ok:false,pending:true,videoId:id,lifeCycleStatus:life,streamStatus,watchUrl,stage:'live'};
+  if(life==='teststarting')return {ok:false,pending:true,videoId:id,lifeCycleStatus:life,streamStatus,watchUrl,stage:'testing'};
+  if(life==='created')return {ok:false,pending:true,videoId:id,lifeCycleStatus:life,streamStatus,watchUrl,stage:'await-ready'};
+
+  let target='';
+  if(life==='testing')target='live';
+  else if(life==='ready')target=monitorEnabled?'testing':'live';
+  else {
+    const e=new Error(`YouTube broadcast нельзя запустить из статуса ${life||'unknown'}.`);e.httpStatus=409;e.reason='youtube-invalid-life-r688';throw e;
+  }
+
+  try{
+    const transitioned=await youtubeTransitionR609(accessToken,id,target);
+    const after=youtubeLifeKeyR609(transitioned?.status?.lifeCycleStatus)||life;
+    if(after==='live')return {ok:true,pending:false,videoId:id,lifeCycleStatus:after,streamStatus,watchUrl,stage:'live'};
+    return {ok:false,pending:true,videoId:id,lifeCycleStatus:after,streamStatus,watchUrl,stage:target,transitionIssued:true};
+  }catch(error){
+    // YouTube can answer redundant/transition-in-progress while its state endpoint still
+    // reports READY for a short time. That is progress, not a reason to kill the start.
+    if(youtubeTransitionPendingR688(error)){
+      return {ok:false,pending:true,videoId:id,lifeCycleStatus:life,streamStatus,watchUrl,stage:target,transitionIssued:true,transitionReason:cleanPlainText(error?.reason||'',180)};
+    }
+    throw error;
+  }
+}
+
+async function handleYoutubeLiveEnsureR688(request, env) {
+  if (!adminAuthorized(request, env)) return json({ok:false,error:'unauthorized'},401);
+  try{
+    const accessToken=await getYoutubeOAuthAccessToken(env);
+    const [broadcasts,streams]=await Promise.all([
+      youtubeListBroadcastsR687(accessToken),
+      youtubeListStreamsR687(accessToken)
+    ]);
+    const activeStreams=streams.filter(item=>String(item?.status?.streamStatus||'').toLowerCase()==='active').sort((a,b)=>youtubeStreamTimeR687(b)-youtubeStreamTimeR687(a));
+    if(!activeStreams.length){
+      return json({ok:false,error:'youtube-active-stream-not-found',message:'OVH encoder работает, но YouTube ещё не пометил его stream как ACTIVE.',activeStreams:0},409);
+    }
+
+    const nonComplete=broadcasts.filter(item=>!['complete','revoked'].includes(youtubeLifeKeyR609(item?.status?.lifeCycleStatus)));
+    const activeIds=new Set(activeStreams.map(item=>cleanPlainText(item?.id||'',120)).filter(Boolean));
+    const radioBroadcasts=nonComplete.filter(youtubeRadioLikeR687);
+    const boundActive=radioBroadcasts.filter(item=>activeIds.has(cleanPlainText(item?.contentDetails?.boundStreamId||'',120))&&item?.contentDetails?.enableAutoStop!==true).sort((a,b)=>{
+      const rank={live:100,livestarting:95,testing:90,teststarting:85,ready:80,created:70};
+      const ar=rank[youtubeLifeKeyR609(a?.status?.lifeCycleStatus)]||0;
+      const br=rank[youtubeLifeKeyR609(b?.status?.lifeCycleStatus)]||0;
+      return (br-ar)||(youtubeBroadcastTimeR687(b)-youtubeBroadcastTimeR687(a));
+    });
+
+    let broadcast=boundActive[0]||null;
+    let stream=null;
+    let mode='reuse-bound';
+    if(broadcast){
+      const sid=cleanPlainText(broadcast?.contentDetails?.boundStreamId||'',120);
+      stream=activeStreams.find(item=>cleanPlainText(item?.id||'',120)===sid)||null;
+    }else{
+      if(activeStreams.length===1)stream=activeStreams[0];
+      else stream=activeStreams.find(item=>/andrik/i.test(String(item?.snippet?.title||''))&&/(radio|metal)/i.test(String(item?.snippet?.title||'')))||null;
+      if(!stream){
+        return json({ok:false,error:'youtube-active-stream-ambiguous',message:'YouTube видит несколько ACTIVE streams. Не буду привязывать радио наугад.',activeStreams:activeStreams.length},409);
+      }
+      const streamId=cleanPlainText(stream?.id||'',120);
+      // R688 deliberately creates a clean broadcast instead of inheriting unknown Studio
+      // monitor/test settings from an abandoned READY event.
+      const template=[...broadcasts].sort((a,b)=>youtubeBroadcastTimeR687(b)-youtubeBroadcastTimeR687(a)).find(youtubeRadioLikeR687)||null;
+      const created=await youtubeCreateBroadcastR687(accessToken,template);
+      broadcast=await youtubeBindR687(accessToken,cleanPlainText(created?.id||'',100),streamId);
+      mode='create-and-bind';
+    }
+
+    if(!stream){
+      return json({ok:false,error:'youtube-stream-binding-pending',message:'ACTIVE stream найден, но bind ещё не появился. Повторяю.'},409);
+    }
+    const streamId=cleanPlainText(stream?.id||'',120);
+    const videoId=cleanPlainText(broadcast?.id||'',100);
+    const streamStatus=cleanPlainText(stream?.status?.streamStatus||'',80);
+    const kicked=await youtubeKickExactBroadcastR688(accessToken,broadcast,streamStatus);
+    return json({
+      ok:Boolean(kicked.ok),
+      pending:Boolean(kicked.pending),
+      mode,
+      created:mode==='create-and-bind',
+      videoId,
+      streamId,
+      boundStreamId:cleanPlainText(broadcast?.contentDetails?.boundStreamId||streamId,120),
+      streamStatus,
+      lifeCycleStatus:kicked.lifeCycleStatus,
+      stage:kicked.stage,
+      transitionIssued:Boolean(kicked.transitionIssued),
+      transitionReason:kicked.transitionReason||'',
+      watchUrl:kicked.watchUrl
+    });
+  }catch(error){
+    const reason=cleanPlainText(error?.reason||'',180);
+    const insufficient=/insufficient|scope|permission/i.test(`${reason} ${error?.message||''}`);
+    const status=Number(error?.httpStatus||0)===409?409:(insufficient?403:503);
+    return json({ok:false,error:insufficient?'youtube-oauth-write-scope-required':(reason||'youtube-live-r688-failed'),reason,message:cleanPlainText(error?.message||error,600),reconnectUrl:'https://andrikmetal.com/radio-control-admin.html?youtube-reconnect=r688'},status);
   }
 }
 

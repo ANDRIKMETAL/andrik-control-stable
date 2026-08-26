@@ -1,0 +1,9 @@
+R688 — RADIO READY→LIVE STATE MACHINE
+
+- Preserves R687 ACTIVE-stream discovery and bind.
+- Fixes false failure when YouTube remains READY/TEST_STARTING/LIVE_STARTING asynchronously.
+- Start is now a non-blocking state machine: every poll re-reads the exact broadcast and advances the next valid transition.
+- Handles monitor-stream testing stage automatically.
+- Reissues safe transition attempts while YouTube is propagating state.
+- Creates a clean broadcast with monitor disabled and autoStart/autoStop disabled when no active radio broadcast is bound.
+- R658-safe OVH restart path preserved.
