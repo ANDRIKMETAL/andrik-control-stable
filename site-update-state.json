@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787703415509-6ff000387b",
-  "release": "R669",
-  "archiveName": "R669-YOUTUBE-LIVE-CHAT-LIKES-PUSH-OVH-RADIO-UNTOUCHED-SAFE-FULL.zip",
-  "sourceHead": "314e171389524a12041a6c4893d9efbbc43fc608",
-  "backupSha": "314e171389524a12041a6c4893d9efbbc43fc608",
+  "operationId": "publish-1787704300611-806149d6a2",
+  "release": "R670",
+  "archiveName": "R670-LIVE-CHAT-ENDPOINT-OWNER-PUSH-REPAIR-OVH-RADIO-UNTOUCHED-SAFE-FULL.zip",
+  "sourceHead": "05ab6ade31652df2a6dc74c41d14155abe06136d",
+  "backupSha": "05ab6ade31652df2a6dc74c41d14155abe06136d",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-26T00:16:55.509Z"
+  "generatedAt": "2026-08-26T00:31:40.611Z"
 }

@@ -8009,12 +8009,12 @@ async function checkYoutubeLiveChatPushR669(env,db,live={}){
 
   let data={};
   try{
-    ({data}=await youtubeApiJson(env,'liveChatMessages',params,{timeoutMs:8000}));
+    ({data}=await youtubeApiJson(env,'liveChat/messages',params,{timeoutMs:8000}));
   }catch(error){
     // A stale nextPageToken can occur after a reconnect. Retry once from the
     // current chat window; per-message D1 keys still prevent duplicates.
     if(pageToken){
-      try{({data}=await youtubeApiJson(env,'liveChatMessages',{liveChatId,part:'id,snippet,authorDetails',maxResults:200},{timeoutMs:8000}));}
+      try{({data}=await youtubeApiJson(env,'liveChat/messages',{liveChatId,part:'id,snippet,authorDetails',maxResults:200},{timeoutMs:8000}));}
       catch(second){
         await setPushState(db,globalCheckKey,new Date().toISOString()).catch(()=>{});
         return {ok:false,active:true,seen:0,sent:0,failed:0,seeded:Boolean(seededState),warning:cleanPlainText(second?.message||second,260),videoId,liveChatId};

@@ -38,7 +38,10 @@
     set('youtubeEventsFastResult',`Быстрый результат: ${fastStatus==='success'?'успех':fastStatus==='warning'?'предупреждение':fastStatus==='failed'?'ОШИБКА':'ожидает'} · отправлено ${Number(fast.summary?.sent||0)} · LIVE-чат ${Number(fast.summary?.liveChatSent||0)} · LIVE лайки ${fast.summary?.liveVideoPinned?'в контроле':'—'} · ошибок ${Number(fast.summary?.failed||0)}${commentNote} · восстановлено stale ${Number(fast.staleLikeClaims||0)}`);
     set('youtubeEventsLastCheck',`Резерв 5 мин: ${reserve.lastCheckAt?fmt(reserve.lastCheckAt):'ожидает первого цикла'} · ${reserve.status==='success'?'готов':reserve.status==='warning'?'контроль':'ожидает'}`);
     set('youtubeEventsLastSuccess',`Последний успешный контроль: ${fmt(data.effectiveSuccessAt||data.lastSuccessAt)}`);
-    const message=fastHardError
+    const ownerMissing=String(data.lastError||fast.error||'').includes('owner-device-not-registered');
+    const message=ownerMissing
+      ?'⚠ Телефон владельца не зарегистрирован. В блоке «Телефон владельца» нажми «Подключить через основной сайт».'
+      :fastHardError
       ?`Быстрый 2-минутный cron требует внимания${fast.error?`: ${fast.error}`:''}.`
       :data.lastError?`Последняя ошибка: ${data.lastError}`
       :queue?`В очереди ${queue}. Нажмите «Повторить очередь».`
