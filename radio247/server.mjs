@@ -63,8 +63,8 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R692-R2-RADIO-CLIP-LIBRARY-R690-FULL-FRAME-FIT-QR-REPAIRED',
-  mode: 'R692 MP3 + RANDOM R2 VIDEO CLIPS / ROBUST R2 UPLOAD / AUTO DAY-EVENING-NIGHT / QR REPAIR / R690 FULL-FRAME FIT',
+  version: 'R693-R2-RADIO-CLIPS-R690-FULL-FRAME-FIT-AUDIO-ART-FIX',
+  mode: 'R693 MP3 + RANDOM R2 VIDEO CLIPS / ROBUST R2 UPLOAD / STRIP BROKEN EMBEDDED ART / AUTO DAY-EVENING-NIGHT / R690 FULL-FRAME FIT',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
@@ -232,7 +232,7 @@ async function loadRadioClipsR691(){
   const builtIn=JOY_OF_BEING_CLIP_ENABLED?[prepareClip(JOY_OF_BEING_CLIP)]:[];
   try{
     const url=`${RADIO_CLIPS_URL_R691}${RADIO_CLIPS_URL_R691.includes('?')?'&':'?'}ts=${Date.now()}`;
-    const response=await fetch(url,{headers:{'user-agent':'ANDRIK-Radio-R692-Clips'},signal:AbortSignal.timeout(20000)});
+    const response=await fetch(url,{headers:{'user-agent':'ANDRIK-Radio-R691-Clips'},signal:AbortSignal.timeout(20000)});
     if(!response.ok)throw new Error(`R2 radio clips HTTP ${response.status}`);
     const data=await response.json();
     const dynamic=(Array.isArray(data?.clips)?data.clips:[])
@@ -257,7 +257,7 @@ async function loadRadioClipsR691(){
 async function loadLibrary(){
   const previousSignature=librarySignature([...library,...clipLibrary]);
   const url=`${PLAYLIST_URL}${PLAYLIST_URL.includes('?')?'&':'?'}ts=${Date.now()}`;
-  const response=await fetch(url,{headers:{'user-agent':'ANDRIK-Radio-24-7-R692'}});
+  const response=await fetch(url,{headers:{'user-agent':'ANDRIK-Radio-24-7-R691'}});
   if(!response.ok)throw new Error(`R2 library HTTP ${response.status}`);
 
   const data=await response.json();
@@ -452,7 +452,24 @@ async function downloadTrackToCache(item){
         if(!response.body)throw new Error('MP3 cache empty response body');
         await pipeline(Readable.fromWeb(response.body),createWriteStream(tmp,{flags:'w'}));
         if(!existsSync(tmp) || statSync(tmp).size<256000)throw new Error('MP3 cache file too small');
-        renameSync(tmp,dest);
+
+        // R693: some source MP3 files contain an attached cover whose ID3 metadata says PNG
+        // while the actual bytes are JPEG (FF D8 FF E0). FFmpeg then prints misleading
+        // "Invalid PNG signature" even though the QR overlay is a valid PNG. Strip every
+        // attached-picture/video stream once while caching; audio is copied bit-for-bit.
+        const cleanTmp=`${dest}.clean-${process.pid}-${Date.now()}-${attempt}`;
+        try{
+          await runCapture('ffmpeg',[
+            '-hide_banner','-loglevel','quiet','-y','-i',tmp,
+            '-map','0:a:0','-vn','-sn','-dn','-c:a','copy','-map_metadata','0',cleanTmp
+          ],{timeoutMs:30000});
+          if(!existsSync(cleanTmp) || statSync(cleanTmp).size<256000)throw new Error('MP3 audio-only cache file too small');
+          unlinkSync(tmp);
+          renameSync(cleanTmp,dest);
+        }catch(error){
+          try{if(existsSync(cleanTmp))unlinkSync(cleanTmp)}catch(_){ }
+          throw error;
+        }
         pruneAudioCache([dest]);
         return dest;
       }catch(error){
@@ -830,8 +847,9 @@ async function playItem(previous,item,next,following,localAudioPath){
     const line=String(d||'').trim();
     if(line){
       state.lastFfmpegLine=line.slice(-1000);
-      if(/error|fail|invalid|corrupt/i.test(line))state.lastError=line.slice(-700);
-      console.error('[decoder]',line);
+      const brokenArtProbe=/Invalid PNG signature|Could not find codec parameters for stream 1 \(Video: png/i.test(line);
+      if(!brokenArtProbe && /error|fail|invalid|corrupt/i.test(line))state.lastError=line.slice(-700);
+      if(!brokenArtProbe)console.error('[decoder]',line);
     }
   });
 

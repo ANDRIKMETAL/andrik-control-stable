@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787776593785-973bfe3a69",
-  "release": "R692",
-  "archiveName": "R692-RADIO-CLIP-UPLOAD-NETWORK-QR-PNG-FIX-R691-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "f8653c3b7bde03c40cdab0a047db10fae6e5fe1b",
-  "backupSha": "f8653c3b7bde03c40cdab0a047db10fae6e5fe1b",
+  "operationId": "publish-1787777235338-7d913464d0",
+  "release": "R693",
+  "archiveName": "R693-FULL-FRAME-MP3-ART-PNG-FIX-CLIP-UPLOAD-R692-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "8a708ce992cc48edc4e9424e8cb84ec9418e8cf0",
+  "backupSha": "8a708ce992cc48edc4e9424e8cb84ec9418e8cf0",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-26T20:36:34.287Z"
+  "generatedAt": "2026-08-26T20:47:15.776Z"
 }

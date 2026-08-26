@@ -18002,7 +18002,7 @@ async function handleRadioVisualAssignR651(request,env){
 // === End R651 ===
 
 
-// === R692: robust owner-uploaded video clips for random radio intermissions ===
+// === R693: robust owner-uploaded video clips for random radio intermissions ===
 const RADIO_CLIP_PREFIX_R691 = 'radio/clips/';
 function radioClipUploadIdR691(request){
   const value=String(new URL(request.url).searchParams.get('uploadId')||'').trim();
@@ -18061,7 +18061,7 @@ async function handleRadioClipMpuStartR691(request,env){
       httpMetadata:{contentType:'video/mp4',cacheControl:'public, max-age=3600'},
       customMetadata:{source:'ANDRIK R691 radio clip upload',title,sourceName,expectedSize:String(expectedSize),uploadedBy:'radio-visuals-admin-r691',radioClip:'1'}
     });
-    return json({ok:true,key,title,uploadId:upload.uploadId,partSize:5*1024*1024,expectedSize,uploadMode:'R692-buffered-parts'});
+    return json({ok:true,key,title,uploadId:upload.uploadId,partSize:5*1024*1024,expectedSize,uploadMode:'R693-buffered-parts'});
   }catch(error){return json({ok:false,error:'multipart-start-failed',message:cleanPlainText(error?.message||error,420)},502);}
 }
 async function handleRadioClipMpuPartR691(request,env){
@@ -18071,14 +18071,14 @@ async function handleRadioClipMpuPartR691(request,env){
   if(!uploadId||!key||!Number.isFinite(partNumber)||partNumber<1||partNumber>10000)return json({ok:false,error:'invalid-multipart-request'},400);
   if(!request.body)return json({ok:false,error:'missing-part-body'},400);
   try{
-    // R692: buffer each 5 MiB browser part before handing it to R2.
+    // R693: buffer each 5 MiB browser part before handing it to R2.
     // This avoids intermittent mobile/Worker stream disconnects that surfaced as XHR status 0 / "Ошибка сети".
     const bytes=await request.arrayBuffer();
     if(!bytes.byteLength)return json({ok:false,error:'empty-part-body'},400);
     if(bytes.byteLength>6*1024*1024)return json({ok:false,error:'part-too-large',message:'Часть больше 6 МБ. Обнови страницу R692 и повтори загрузку.'},413);
     const upload=bucket.resumeMultipartUpload(key,uploadId);
     const part=await upload.uploadPart(partNumber,bytes);
-    return json({ok:true,key,partNumber:part.partNumber,etag:part.etag,partBytes:bytes.byteLength,uploadMode:'R692-buffered'});
+    return json({ok:true,key,partNumber:part.partNumber,etag:part.etag,partBytes:bytes.byteLength,uploadMode:'R693-buffered'});
   }catch(error){return json({ok:false,error:'multipart-part-failed',message:cleanPlainText(error?.message||error,420)},502);}
 }
 async function handleRadioClipMpuCompleteR691(request,env){
@@ -18108,7 +18108,7 @@ async function handleRadioClipMpuAbortR691(request,env){
   try{await bucket.resumeMultipartUpload(key,uploadId).abort();return json({ok:true,key});}
   catch(error){return json({ok:false,error:'multipart-abort-failed',message:cleanPlainText(error?.message||error,300)},400);}
 }
-// === End R692 robust random radio clips ===
+// === End R693 robust random radio clips ===
 
 
 // === R625: one-time Device OAuth pairing bridge (website -> AWS) ===
