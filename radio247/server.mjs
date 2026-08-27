@@ -63,14 +63,14 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R700-R2-RADIO-CLIPS-HARD-CUT-HANDOFF',
-  mode: 'R699 MP3 + RANDOM R2 VIDEO CLIPS / GUARDED CLIP→MP3 HANDOFF / STRICT SAFE INSET RECOVERY / METAL TITLES / AUTO DAY-EVENING-NIGHT',
+  version: 'R701-R2-RADIO-CLIPS-PERSISTENT-PUBLISHER',
+  mode: 'R701 MP3 + RANDOM R2 VIDEO CLIPS / ONE PERSISTENT YOUTUBE PUBLISHER / CLIP STALL WATCHDOG / FULL-FRAME FIT / METAL TITLES / AUTO DAY-EVENING-NIGHT',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
   producerRunning: false,
-  overlayMode: 'R697 1920x1080 FIT / NO COVER CROP / STRICT LARGE-INSET RECOVERY ONLY / TIGHT METAL TITLE / QR / FULL SCREEN',
-  audioMode: 'LOCAL MP3 CACHE + R2 VIDEO CLIP CACHE / MP3 CONTINUOUS PCM + AAC-LC 128kbps',
+  overlayMode: 'R701 1920x1080 FIT / NO CROP / PERSISTENT VIDEO FEED / TIGHT METAL TITLE / QR / FULL SCREEN',
+  audioMode: 'R701 ONE PERSISTENT RTMPS MASTER / MP3 + CLIP PCM FEED / AAC-LC 128kbps',
   visualTimeZone: VISUAL_TIME_ZONE,
   visualPeriod: null,
   visualPath: null,
@@ -100,7 +100,11 @@ let queueIndex = 0;
 let running = false;
 let stopping = false;
 let lastPlayed = null;
-let clipPublisher = null;
+let clipPublisher = null; // R701: finite clip A/V feeder, NOT the YouTube publisher
+let visualProducer = null;
+let visualProducerPath = '';
+let clipActive = false;
+let visualSwitching = false;
 let intentionalPublisherSwitch = false;
 const clipPrefetchJobs = new Map();
 const prefetchJobs = new Map();
@@ -701,6 +705,84 @@ function trackLabel(item,fallback='—'){
   return album ? `${title} (${album})` : title;
 }
 
+function normalVideoProducerArgs(visualPath){
+  return [
+    '-hide_banner','-loglevel','warning',
+    '-re','-stream_loop','-1','-i',visualPath,
+    '-an','-sn','-dn',
+    '-vf',`scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1,fps=${VIDEO_FPS},format=yuvj420p`,
+    '-c:v','mjpeg','-q:v','5','-pix_fmt','yuvj420p',
+    '-f','mjpeg','pipe:1'
+  ];
+}
+
+async function stopNormalVisualProducerR701(){
+  const active=visualProducer;
+  if(!active)return;
+  const videoSink=publisher?.stdio?.[4];
+  try{if(active.stdout && videoSink)active.stdout.unpipe(videoSink)}catch(_){ }
+  if(active.exitCode===null){
+    try{active.kill('SIGTERM')}catch(_){ }
+    if(!(await waitChildExit(active,120)) && active.exitCode===null){
+      try{active.kill('SIGKILL')}catch(_){ }
+      await waitChildExit(active,100);
+    }
+  }
+  if(visualProducer===active)visualProducer=null;
+}
+
+function startNormalVisualProducerR701(visualPath){
+  if(stopping || clipActive)return false;
+  const videoSink=publisher?.stdio?.[4];
+  if(!publisher || publisher.exitCode!==null || !videoSink || videoSink.destroyed || videoSink.writableEnded){
+    throw new Error('R701 master video pipe unavailable');
+  }
+  if(visualProducer && visualProducer.exitCode===null && visualProducerPath===visualPath)return true;
+
+  const child=spawn('ffmpeg',normalVideoProducerArgs(visualPath),{stdio:['ignore','pipe','pipe']});
+  visualProducer=child;
+  visualProducerPath=visualPath;
+  child.stdout.pipe(videoSink,{end:false});
+  child.stdout.on('error',err=>{
+    if(!stopping && !/EPIPE|ECONNRESET|ERR_STREAM_DESTROYED/i.test(String(err?.code||err?.message||err)))state.lastError=`visual-pipe: ${String(err)}`;
+  });
+  child.stderr.on('data',d=>{
+    const line=String(d||'').trim();
+    if(line){
+      state.lastFfmpegLine=line.slice(-1000);
+      if(/error|fail|invalid|broken pipe/i.test(line))state.lastError=line.slice(-700);
+      console.error('[visual-feed]',line);
+    }
+  });
+  child.on('exit',(code,signal)=>{
+    const isCurrent=visualProducer===child;
+    if(isCurrent)visualProducer=null;
+    try{if(child.stdout && videoSink)child.stdout.unpipe(videoSink)}catch(_){ }
+    if(isCurrent && !stopping && !clipActive && !visualSwitching){
+      state.lastError=`R701 visual feeder exit ${code??signal}; restarting`;
+      setTimeout(()=>ensureNormalVisualProducerR701().catch(err=>{state.lastError=`R701 visual restart: ${cleanText(err?.message||err)}`;}),120).unref();
+    }
+  });
+  child.on('error',err=>{
+    if(visualProducer===child)state.lastError=`R701 visual feeder: ${String(err)}`;
+  });
+  return true;
+}
+
+async function ensureNormalVisualProducerR701(){
+  if(stopping || clipActive)return true;
+  const visual=await ensureScheduledVisual();
+  if(visualProducer && visualProducer.exitCode===null && visualProducerPath===visual)return true;
+  visualSwitching=true;
+  try{
+    await stopNormalVisualProducerR701();
+    if(stopping || clipActive)return true;
+    return startNormalVisualProducerR701(visual);
+  }finally{
+    visualSwitching=false;
+  }
+}
+
 function startPublisher(visualPath){
   if(!STREAM_URL){
     state.lastError='YOUTUBE_STREAM_KEY is not configured';
@@ -719,9 +801,6 @@ function startPublisher(visualPath){
   const curPath=ffFilterPath(LIVE_CURRENT_FILE);
   const tickerPath=ffFilterPath(LIVE_TICKER_FILE);
   const vf=[
-    // R695: normal radio visuals preserve the whole source frame.
-    'scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos',
-    'pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black',
     'setsar=1',
     `fps=${VIDEO_FPS}`,
     'format=yuv420p',
@@ -731,18 +810,16 @@ function startPublisher(visualPath){
   ].join(',');
   const filterComplex=`[0:v]${vf}[base];[1:v]scale=160:160:flags=lanczos,format=yuva420p[qr];[base][qr]overlay=24:24:format=yuv420[outv]`;
 
-  // R637 architecture: one FFmpeg owns the video encoder, AAC encoder and RTMPS
-  // muxer for the ENTIRE broadcast. Track decoders feed raw PCM into fd 3. Raw
-  // PCM has no per-track timestamps, so the master creates one continuous sample
-  // clock and AAC can never reset at song boundaries.
+  // R701: YouTube sees ONE publisher for the whole broadcast. Neither MP3→CLIP
+  // nor CLIP→MP3 closes RTMPS anymore. A lightweight local MJPEG video feeder
+  // and raw PCM audio feeder are swapped behind this permanent master instead.
   const args=[
     '-hide_banner','-loglevel','warning',
-    '-thread_queue_size','8192','-re','-stream_loop','-1','-i',visualPath,
+    '-thread_queue_size','2048','-f','mjpeg','-framerate',String(VIDEO_FPS),'-i','pipe:4',
     '-loop','1','-framerate','1','-i',QR_OVERLAY,
     '-thread_queue_size','8192','-probesize','32','-analyzeduration','0','-f','s16le','-ar',String(AUDIO_SAMPLE_RATE),'-ac','2','-i','pipe:3',
     '-filter_complex',filterComplex,
     '-map','[outv]','-map','2:a:0',
-    '-shortest',
     '-c:v','libx264','-preset','ultrafast','-tune','zerolatency',
     '-profile:v','high','-level:v','4.1',
     '-b:v',VIDEO_BITRATE,'-minrate',VIDEO_BITRATE,'-maxrate',VIDEO_BITRATE,'-bufsize','9000k',
@@ -750,8 +827,6 @@ function startPublisher(visualPath){
     '-g',String(VIDEO_GOP),'-keyint_min',String(VIDEO_GOP),'-sc_threshold','0','-bf','2','-refs','1','-coder','1','-r',String(VIDEO_FPS),'-pix_fmt','yuv420p',
     '-c:a','aac','-profile:a','aac_low','-b:a',AUDIO_BITRATE,'-ar',String(AUDIO_SAMPLE_RATE),'-ac','2',
     '-max_muxing_queue_size','4096','-flush_packets','1',
-    // FIFO is only a network recovery layer now. Never discard packets: a full
-    // queue applies backpressure instead of destroying AAC frames.
     '-f','fifo','-fifo_format','flv','-queue_size','8192',
     '-timeshift',`${OUTPUT_TIMESHIFT_SECONDS}s`,
     '-drop_pkts_on_overflow','0',
@@ -759,17 +834,17 @@ function startPublisher(visualPath){
     STREAM_URL
   ];
 
-  // R700: keep the child identity local. A late 'exit' event from the OLD master
-  // must never null out the NEW master created after a clip. That race was the
-  // reason MP3 items were skipped and the same clip appeared to repeat forever.
-  const thisPublisher=spawn('ffmpeg',args,{stdio:['ignore','ignore','pipe','pipe']});
+  const thisPublisher=spawn('ffmpeg',args,{stdio:['ignore','ignore','pipe','pipe','pipe']});
   publisher=thisPublisher;
   state.publisherRunning=true;
   if(!state.streamStartedAt)state.streamStartedAt=new Date().toISOString();
   const audioSink=thisPublisher.stdio[3];
-  audioSink.on('error',err=>{
-    if(!stopping && !/EPIPE|ECONNRESET|ERR_STREAM_DESTROYED/i.test(String(err?.code||err?.message||err))) state.lastError=`audio-pipe: ${String(err)}`;
-  });
+  const videoSink=thisPublisher.stdio[4];
+  for(const [label,sink] of [['audio',audioSink],['video',videoSink]]){
+    sink.on('error',err=>{
+      if(!stopping && !/EPIPE|ECONNRESET|ERR_STREAM_DESTROYED/i.test(String(err?.code||err?.message||err)))state.lastError=`${label}-pipe: ${String(err)}`;
+    });
+  }
   thisPublisher.stderr.on('data',d=>{
     const line=String(d||'').trim();
     if(line){
@@ -780,94 +855,64 @@ function startPublisher(visualPath){
   });
   thisPublisher.on('exit',(code,signal)=>{
     const isCurrent=publisher===thisPublisher;
-    if(isCurrent){
-      state.publisherRunning=false;
-      publisher=null;
-    }
-    // A late exit belonging to the previous clip boundary is harmless and must
-    // not tear down the replacement publisher.
-    if(isCurrent && !intentionalPublisherSwitch)state.lastExit={layer:'master',code,signal,at:new Date().toISOString()};
-    if(isCurrent && !stopping && !intentionalPublisherSwitch)setTimeout(()=>process.exit(code||22),1500).unref();
+    if(isCurrent){state.publisherRunning=false;publisher=null;}
+    if(isCurrent && !stopping)state.lastExit={layer:'master',code,signal,at:new Date().toISOString()};
+    if(isCurrent && !stopping)setTimeout(()=>process.exit(code||22),900).unref();
   });
-  thisPublisher.on('error',err=>{
-    if(publisher===thisPublisher)state.lastError=String(err);
-  });
+  thisPublisher.on('error',err=>{if(publisher===thisPublisher)state.lastError=String(err);});
   return true;
 }
 
-async function stopMasterForClip(){
-  const active=publisher;
-  if(!active || active.exitCode!==null){publisher=null;state.publisherRunning=false;return;}
-  intentionalPublisherSwitch=true;
-  try{
-    const sink=active?.stdio?.[3];
-    if(sink && !sink.destroyed && !sink.writableEnded)sink.end();
-  }catch(_){ }
-  // R698: don't let the old FIFO drain hold the picture for seconds.
-  let clean=await waitChildExit(active,220);
-  if(!clean && active.exitCode===null){
-    try{active.kill('SIGTERM')}catch(_){ }
-    clean=await waitChildExit(active,260);
+async function ensureMasterForTrackR701(){
+  const audioSink=publisher?.stdio?.[3];
+  const videoSink=publisher?.stdio?.[4];
+  if(publisher && publisher.exitCode===null && audioSink && !audioSink.destroyed && !audioSink.writableEnded && videoSink && !videoSink.destroyed && !videoSink.writableEnded){
+    await ensureNormalVisualProducerR701();
+    return true;
   }
-  if(!clean && active.exitCode===null){
-    try{active.kill('SIGKILL')}catch(_){ }
-    await waitChildExit(active,160);
-  }
-  if(publisher===active)publisher=null;
-  if(!publisher)state.publisherRunning=false;
-}
 
-async function ensureMasterForTrackR700(){
-  const sink=publisher?.stdio?.[3];
-  if(publisher && publisher.exitCode===null && sink && !sink.destroyed && !sink.writableEnded)return true;
-
-  // If an unusable child is still around, remove only that exact child before
-  // creating the replacement. Never let an old exit handler clobber the new one.
+  await stopNormalVisualProducerR701();
   const stale=publisher;
   if(stale && stale.exitCode===null){
     try{stale.kill('SIGTERM')}catch(_){ }
-    if(!(await waitChildExit(stale,180)) && stale.exitCode===null){
-      try{stale.kill('SIGKILL')}catch(_){ }
-      await waitChildExit(stale,120);
-    }
+    if(!(await waitChildExit(stale,180)) && stale.exitCode===null){try{stale.kill('SIGKILL')}catch(_){ }}
+    await waitChildExit(stale,120);
     if(publisher===stale)publisher=null;
   }
-
   const visual=await ensureScheduledVisual();
-  if(!startPublisher(visual))throw new Error('R700 master restart for MP3 failed');
-  // stdio is created synchronously, but give ffmpeg a tiny startup window and
-  // verify the exact replacement process is still alive before feeding PCM.
-  for(let i=0;i<6;i++){
+  if(!startPublisher(visual))throw new Error('R701 persistent master restart failed');
+  startNormalVisualProducerR701(visual);
+  for(let i=0;i<8;i++){
     const current=publisher;
-    const currentSink=current?.stdio?.[3];
-    if(current && current.exitCode===null && currentSink && !currentSink.destroyed && !currentSink.writableEnded)return true;
+    const a=current?.stdio?.[3],v=current?.stdio?.[4];
+    if(current && current.exitCode===null && a && !a.destroyed && !a.writableEnded && v && !v.destroyed && !v.writableEnded)return true;
     await sleep(35);
   }
-  throw new Error('R700 master audio pipe unavailable after restart');
+  throw new Error('R701 master A/V pipes unavailable after restart');
 }
 
-function clipFilterComplex(insetCrop=''){
-  const font=chooseFont();
-  const titleFont=chooseTitleFont();
-  const fontPart=font?`fontfile='${ffFilterPath(font)}':`:'';
-  const titleFontPart=titleFont?`fontfile='${ffFilterPath(titleFont)}':`:'';
-  const curPath=ffFilterPath(LIVE_CURRENT_FILE);
-  const tickerPath=ffFilterPath(LIVE_TICKER_FILE);
-  const vf=[
-    // R695: if the MP4 has its own black canvas around a smaller picture, remove
-    // only that detected empty inset. The visible frame itself is still FIT, never
-    // cover-cropped or stretched.
-    ...(insetCrop?[insetCrop]:[]),
-    'scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos',
-    'pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black',
-    'setsar=1',
-    `fps=${VIDEO_FPS}`,
-    'format=yuv420p',
-    `drawtext=${titleFontPart}textfile='${curPath}':reload=${VIDEO_FPS}:fontcolor=red@0.01:fontsize=58:x=(w-text_w)/2:y=h-188:borderw=8:bordercolor=red@0.58`,
-    `drawtext=${titleFontPart}textfile='${curPath}':reload=${VIDEO_FPS}:fontcolor=0xF3EFE8:fontsize=58:x=(w-text_w)/2:y=h-188:borderw=3:bordercolor=black@1:shadowcolor=black@0.95:shadowx=3:shadowy=3:box=1:boxcolor=black@0.36:boxborderw=18`,
-    `drawtext=${fontPart}textfile='${tickerPath}':reload=${VIDEO_FPS}:fontcolor=yellow:fontsize=28:x='w-mod(t*110,text_w+w)':y=h-58:borderw=3:bordercolor=black@1:shadowcolor=black@1:shadowx=2:shadowy=2`
-  ].join(',');
-  return `[0:v]${vf}[base];[1:v]scale=160:160:flags=lanczos,format=yuva420p[qr];[base][qr]overlay=24:24:format=yuv420[outv]`;
+function clipFeederArgsR701(clipPath){
+  return [
+    '-hide_banner','-loglevel','warning',
+    '-stats_period','0.5','-progress','pipe:4','-nostats',
+    '-fflags','+genpts+discardcorrupt','-err_detect','ignore_err','-re','-i',clipPath,
+    '-filter_complex',`[0:v]scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1,fps=${VIDEO_FPS},format=yuvj420p[v]`,
+    '-map','[v]','-an','-sn','-dn','-c:v','mjpeg','-q:v','5','-pix_fmt','yuvj420p','-f','mjpeg','pipe:1',
+    '-map','0:a:0?','-vn','-sn','-dn','-af',`aresample=${AUDIO_SAMPLE_RATE}`,'-c:a','pcm_s16le','-ar',String(AUDIO_SAMPLE_RATE),'-ac','2','-f','s16le','pipe:3'
+  ];
+}
+
+async function stopClipFeederR701(child,videoSink,audioSink){
+  if(!child)return;
+  try{if(child.stdout&&videoSink)child.stdout.unpipe(videoSink)}catch(_){ }
+  try{if(child.stdio?.[3]&&audioSink)child.stdio[3].unpipe(audioSink)}catch(_){ }
+  if(child.exitCode===null){
+    try{child.kill('SIGTERM')}catch(_){ }
+    if(!(await waitChildExit(child,100)) && child.exitCode===null){
+      try{child.kill('SIGKILL')}catch(_){ }
+      await waitChildExit(child,90);
+    }
+  }
 }
 
 async function playVideoClipR691(previous,item,next){
@@ -884,90 +929,105 @@ async function playVideoClipR691(previous,item,next){
   state.next=next?{type:next.type||'track',title:next.title,album:next.album||'',url:next.url||''}:null;
   writeFileSync(LIVE_CURRENT_FILE,`КЛИП • ANDRIK — ${shortText(item.title||'VIDEO',34)}`,'utf8');
 
+  let stallTimer=null;
+  let child=null;
+  let videoSink=null;
+  let audioSink=null;
+  let forcedReason='';
   try{
-    const insetCrop=''; // R700: clip frame is always FULL-FRAME FIT, never auto-cropped
-    await stopMasterForClip();
+    await ensureMasterForTrackR701();
+    clipActive=true;
+    await stopNormalVisualProducerR701();
     if(stopping)return false;
-    await sleep(80);
-    const hardStopArgs=duration>1?['-t',String(duration+0.12)]:[];
-    const args=[
-      '-hide_banner','-loglevel','warning','-fflags','+genpts+discardcorrupt','-err_detect','ignore_err','-re','-i',clipPath,
-      '-loop','1','-framerate','1','-i',QR_OVERLAY,
-      '-filter_complex',clipFilterComplex(insetCrop),
-      '-map','[outv]','-map','0:a:0',
-      '-shortest',...hardStopArgs,'-avoid_negative_ts','make_zero',
-      '-c:v','libx264','-preset','ultrafast','-tune','zerolatency',
-      '-profile:v','high','-level:v','4.1',
-      '-b:v',VIDEO_BITRATE,'-minrate',VIDEO_BITRATE,'-maxrate',VIDEO_BITRATE,'-bufsize','9000k',
-      '-x264-params',`nal-hrd=cbr:force-cfr=1:repeat-headers=1:keyint=${VIDEO_GOP}:min-keyint=${VIDEO_GOP}:scenecut=0`,
-      '-g',String(VIDEO_GOP),'-keyint_min',String(VIDEO_GOP),'-sc_threshold','0','-bf','2','-refs','1','-coder','1','-r',String(VIDEO_FPS),'-pix_fmt','yuv420p',
-      '-c:a','aac','-profile:a','aac_low','-b:a',AUDIO_BITRATE,'-ar',String(AUDIO_SAMPLE_RATE),'-ac','2',
-      '-max_muxing_queue_size','1024','-flush_packets','1',
-      // R700: clips publish directly to RTMPS. Do NOT wrap a finite clip in the
-      // FIFO recovery muxer: FIFO can keep draining/reconnecting after the MP4
-      // has ended and leave YouTube frozen on the last frame.
-      '-f','flv','-flvflags','no_duration_filesize',
-      STREAM_URL
-    ];
-    clipPublisher=spawn('ffmpeg',args,{stdio:['ignore','ignore','pipe']});
-    state.publisherRunning=true;state.producerRunning=true;
-    clipPublisher.stderr.on('data',d=>{
+
+    videoSink=publisher?.stdio?.[4];
+    audioSink=publisher?.stdio?.[3];
+    if(!publisher || publisher.exitCode!==null || !videoSink || videoSink.destroyed || videoSink.writableEnded || !audioSink || audioSink.destroyed || audioSink.writableEnded){
+      throw new Error('R701 persistent master pipes unavailable before clip');
+    }
+
+    // R701: the clip is only a LOCAL feeder. YouTube RTMPS stays open in the
+    // permanent master, so there is no reconnect/frozen-last-frame handoff.
+    child=spawn('ffmpeg',clipFeederArgsR701(clipPath),{stdio:['ignore','pipe','pipe','pipe','pipe']});
+    clipPublisher=child;
+    state.publisherRunning=true;
+    state.producerRunning=true;
+    child.stdout.pipe(videoSink,{end:false});
+    child.stdio[3].pipe(audioSink,{end:false});
+    child.stdout.on('error',()=>{});
+    child.stdio[3].on('error',()=>{});
+
+    let progressBuffer='';
+    let lastProgressAt=Date.now();
+    let lastOutTime=0;
+    const startedAt=Date.now();
+    child.stdio[4].on('data',d=>{
+      progressBuffer+=String(d||'');
+      const lines=progressBuffer.split(/\r?\n/);
+      progressBuffer=lines.pop()||'';
+      for(const line of lines){
+        const m=/^out_time_(?:us|ms)=(\d+)/.exec(line.trim());
+        if(m){
+          const value=Number(m[1]||0);
+          if(value>lastOutTime){lastOutTime=value;lastProgressAt=Date.now();}
+        }
+      }
+    });
+    child.stderr.on('data',d=>{
       const line=String(d||'').trim();
       if(line){
         state.lastFfmpegLine=line.slice(-1000);
         if(/error|fail|invalid|broken pipe|non-monoton/i.test(line))state.lastError=line.slice(-700);
-        console.error('[clip]',line);
+        console.error('[clip-feed]',line);
       }
     });
+
+    // If decode/pipe progress stops in the MIDDLE of a clip, do not wait for its
+    // nominal duration. Cut the broken local feeder after 2.2 s and move to MP3.
+    stallTimer=setInterval(()=>{
+      if(!child || child.exitCode!==null || stopping)return;
+      const now=Date.now();
+      if(now-startedAt>3500 && now-lastProgressAt>2200){
+        forcedReason='progress-stall';
+        state.lastError='R701 clip feeder stalled >2.2s — forcing MP3 handoff';
+        try{child.kill('SIGKILL')}catch(_){ }
+      }
+    },250);
+    stallTimer.unref?.();
+
     const clipExit=new Promise(resolve=>{
-      const child=clipPublisher;
       child.once('error',error=>resolve({kind:'error',error}));
       child.once('exit',(code,signal)=>resolve({kind:'exit',code,signal}));
     });
-
-    // R700 HARD CUT: the clip boundary is driven by the MP4 duration, not by
-    // FFmpeg/FIFO cleanup. When the media time is over, terminate the finite
-    // publisher immediately and hand the stream key back to the permanent MP3
-    // master. This prevents a dead last frame from hanging for tens of seconds.
-    const hardBoundaryMs=duration>1
-      ? Math.max(1200,Math.ceil((duration+0.18)*1000))
-      : 120000;
-    const ended=await Promise.race([
-      clipExit,
-      sleep(hardBoundaryMs).then(()=>({kind:'deadline'}))
-    ]);
-
-    if(ended?.kind==='error')throw ended.error;
-    if(ended?.kind==='exit' && ended.code!==0 && !stopping){
-      throw new Error(`clip publisher exit ${ended.code??ended.signal}`);
+    const hardBoundaryMs=duration>1?Math.max(1800,Math.ceil((duration+0.9)*1000)):120000;
+    let ended=await Promise.race([clipExit,sleep(hardBoundaryMs).then(()=>({kind:'deadline'}))]);
+    if(ended?.kind==='deadline'){
+      forcedReason='duration-deadline';
+      state.lastError='R701 clip duration deadline — forcing MP3 handoff';
+      if(child.exitCode===null){try{child.kill('SIGKILL')}catch(_){ }}
+      await waitChildExit(child,120);
+      ended={kind:'exit',code:child.exitCode,signal:child.signalCode};
+    }
+    if(ended?.kind==='error' && !forcedReason)throw ended.error;
+    if(ended?.kind==='exit' && ended.code!==0 && !stopping && !forcedReason){
+      throw new Error(`R701 clip feeder exit ${ended.code??ended.signal}`);
     }
 
-    if(clipPublisher && clipPublisher.exitCode===null){
-      // At the exact end do not ask the muxer to flush/recover. Kill the finite
-      // publisher and free RTMPS now. SIGTERM gets only 90 ms, then SIGKILL.
-      try{clipPublisher.kill('SIGTERM')}catch(_){ }
-      if(!(await waitChildExit(clipPublisher,90)) && clipPublisher.exitCode===null){
-        try{clipPublisher.kill('SIGKILL')}catch(_){ }
-        await waitChildExit(clipPublisher,90);
-      }
-    }
-
-    // Tiny socket-release gap only; do not leave the last clip frame parked.
-    await sleep(35);
     return !stopping;
   }catch(error){
-    state.lastError=`VIDEO clip: ${cleanText(error?.message||error)}`;
+    state.lastError=`VIDEO clip R701: ${cleanText(error?.message||error)}`;
     console.error('[video-clip]',error);
     return false;
   }finally{
-    clipPublisher=null;
-    state.publisherRunning=false;state.producerRunning=false;
-    // R700: the replacement master is a normal live publisher, not part of the
-    // intentional shutdown. Clear the switch flag BEFORE starting it.
-    intentionalPublisherSwitch=false;
+    if(stallTimer)clearInterval(stallTimer);
+    await stopClipFeederR701(child,videoSink,audioSink);
+    if(clipPublisher===child)clipPublisher=null;
+    state.producerRunning=false;
+    clipActive=false;
+    // R701: resume the normal radio visual on the SAME live publisher immediately.
     if(!stopping){
-      await ensureMasterForTrackR700();
-      await sleep(10);
+      try{await ensureNormalVisualProducerR701();}catch(error){state.lastError=`R701 resume visual: ${cleanText(error?.message||error)}`;}
+      await sleep(20);
     }
   }
 }
@@ -993,9 +1053,9 @@ async function playItem(previous,item,next,following,localAudioPath){
 
   // R700: after a clip, repair/recreate the master before touching the MP3.
   // This prevents one transition fault from skipping every MP3 in the queue.
-  await ensureMasterForTrackR700();
+  await ensureMasterForTrackR701();
   const audioSink=publisher?.stdio?.[3];
-  if(!publisher || publisher.exitCode!==null || !audioSink || audioSink.destroyed || audioSink.writableEnded) throw new Error('R700 master audio pipe unavailable');
+  if(!publisher || publisher.exitCode!==null || !audioSink || audioSink.destroyed || audioSink.writableEnded) throw new Error('R701 master audio pipe unavailable');
 
   state.producerRunning=true;
   producer=spawn('ffmpeg',decoderArgs(localAudioPath),{stdio:['ignore','pipe','pipe']});
@@ -1031,6 +1091,7 @@ async function radioLoop(){
   prefetchAllVisuals();
   const startupVisual=await ensureScheduledVisual();
   if(!startPublisher(startupVisual))return;
+  startNormalVisualProducerR701(startupVisual);
 
   while(!stopping){
     try{
@@ -1100,7 +1161,7 @@ async function radioLoop(){
       await sleep(1000);
 
       if(/library|HTTP|empty/i.test(String(error)))library=[];
-      else if(/R700 master|master audio pipe|publisher/i.test(String(error))){
+      else if(/R701 master|master audio pipe|publisher|clip feeder/i.test(String(error))){
         // Transition errors retry the SAME MP3 after a short recovery. Do not
         // skip the whole MP3 queue and race back to the same video clip.
         await sleep(180);
@@ -1193,7 +1254,7 @@ const server=http.createServer((req,res)=>{
 });
 
 server.listen(PORT,'0.0.0.0',()=>{
-  console.log(`ANDRIK Radio R691-R2-RADIO-CLIPS listening on :${PORT}`);
+  console.log(`ANDRIK Radio R701-PERSISTENT-PUBLISHER listening on :${PORT}`);
   radioLoop();
 });
 
@@ -1214,28 +1275,30 @@ async function shutdown(){
   stopping=true;
   try{server.close();}catch(_){}
 
-  // Stop a finite video intermission first if it is active.
+  // R701: stop local feeders first; the single YouTube publisher is stopped last.
   const activeClip=clipPublisher;
   if(activeClip&&activeClip.exitCode===null){try{activeClip.kill('SIGTERM')}catch(_){ }}
-  await waitChildExit(activeClip,3000);
+  await waitChildExit(activeClip,1000);
 
-  // Then stop the current MP3 decoder.
+  await stopNormalVisualProducerR701();
+
   const activeDecoder=producer;
   if(activeDecoder&&activeDecoder.exitCode===null)activeDecoder.kill('SIGTERM');
-  await waitChildExit(activeDecoder,2500);
+  await waitChildExit(activeDecoder,1000);
 
-  // EOF on the persistent PCM fd lets -shortest flush AAC/FLV naturally. This is
-  // the normal stop path used by systemctl and prevents broken YouTube archives.
   const activeMaster=publisher;
   try{
-    const sink=activeMaster?.stdio?.[3];
-    if(sink && !sink.destroyed && !sink.writableEnded)sink.end();
+    const audioSink=activeMaster?.stdio?.[3];
+    const videoSink=activeMaster?.stdio?.[4];
+    if(audioSink && !audioSink.destroyed && !audioSink.writableEnded)audioSink.end();
+    if(videoSink && !videoSink.destroyed && !videoSink.writableEnded)videoSink.end();
   }catch(_){}
-  let clean=await waitChildExit(activeMaster,9000);
+  let clean=await waitChildExit(activeMaster,1200);
   if(!clean && activeMaster&&activeMaster.exitCode===null){
-    activeMaster.kill('SIGTERM');
-    clean=await waitChildExit(activeMaster,2500);
+    try{activeMaster.kill('SIGTERM')}catch(_){ }
+    clean=await waitChildExit(activeMaster,700);
   }
+  if(!clean && activeMaster&&activeMaster.exitCode===null){try{activeMaster.kill('SIGKILL')}catch(_){ }}
   process.exit(0);
 }
 

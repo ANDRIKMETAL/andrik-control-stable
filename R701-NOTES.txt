@@ -1,0 +1,8 @@
+R701 PERSISTENT PUBLISHER
+- One YouTube RTMPS publisher stays alive for MP3 and video clips.
+- Clip and normal visual are local MJPEG feeders into the permanent master.
+- Audio remains PCM-fed into the same permanent master.
+- No RTMPS disconnect/reconnect at MP3<->clip boundaries.
+- Mid-clip progress watchdog kills a stalled local clip feeder after about 2.2 seconds and advances to MP3.
+- FULL-FRAME FIT 1920x1080, no auto-crop.
+- R700/R699 queue guards, metal title, compact black title box, QR and DAY/EVENING/NIGHT preserved.
