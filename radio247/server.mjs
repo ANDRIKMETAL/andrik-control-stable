@@ -27,8 +27,8 @@ const VISUAL_TIME_ZONE = process.env.VISUAL_TIME_ZONE || 'Europe/Bratislava';
 const FORCE_VISUAL_SLOT = ['morning','day','evening','night'].includes(String(process.env.FORCE_VISUAL_SLOT||'').trim().toLowerCase()) ? String(process.env.FORCE_VISUAL_SLOT).trim().toLowerCase() : '';
 const VISUAL_AUTO_SCHEDULE_R658 = String(process.env.VISUAL_AUTO_SCHEDULE_R658||'').trim()==='1';
 // MORNING / DAY / EVENING / NIGHT are owner-selected R2 videos cached locally on OVH.
-// R705 preserves R704/R703 schedule: MORNING 06-12, DAY 12-18, EVENING 18-24, NIGHT 00-06.
-// R705 makes each period equalizer clearly visible on mobile while keeping it inside the title/ticker gap.
+// R706 preserves R705/R703 schedule: MORNING 06-12, DAY 12-18, EVENING 18-24, NIGHT 00-06.
+// R706 keeps the visible mobile-safe placement and replaces static drawbox geometry with true frame-evaluated GEQ motion.
 // R702 permanent rule is preserved: every source is auto-FIT into 1920x1080 with the complete
 // source frame preserved. The user never has to stretch MP4 manually; crop/cover is OFF.
 const MORNING_VISUAL = process.env.MORNING_VISUAL || `${VISUAL_CACHE_DIR}/stream-morning-master-r703.mp4`;
@@ -67,13 +67,13 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R705-VISIBLE-FOUR-LIVE-EQUALIZERS-R704-PRESERVED',
-  mode: 'R705 VISIBLE FOUR LIVE EQUALIZERS / R704+R703 VISUAL CYCLES / R702 MP3+CLIP ENGINE PRESERVED',
+  version: 'R706-TRUE-MOTION-FOUR-EQUALIZERS-R705-PRESERVED',
+  mode: 'R706 TRUE FRAME-ANIMATED FOUR EQUALIZERS / R705 VISIBILITY / R703 VISUAL CYCLES / R702 MP3+CLIP ENGINE PRESERVED',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
   producerRunning: false,
-  overlayMode: 'R705 VISIBLE 4-SLOT LIVE EQUALIZER / BETWEEN TRACK TITLE + TICKER / R704 PRESERVED / R702 AUTO FIT NO CROP',
+  overlayMode: 'R706 TRUE-MOTION 4-SLOT EQUALIZER / GEQ FRAME ENGINE / BETWEEN TITLE + TICKER / R702 AUTO FIT NO CROP',
   audioMode: 'R702 PERSISTENT RTMPS / MP3 CACHE MUX FIX / PRELOADED CLIP HANDOFF / AAC-LC 128kbps',
   visualTimeZone: VISUAL_TIME_ZONE,
   visualPeriod: null,
@@ -99,7 +99,8 @@ const state = {
   lastHandoffMs: null,
   mp3CacheFailures: 0,
   equalizerPeriod: null,
-  equalizerStyle: null
+  equalizerStyle: null,
+  equalizerEngine: 'R706-GEQ-FRAME-ANIMATED'
 };
 
 let publisher = null;
@@ -823,49 +824,49 @@ function startSilenceBridgeR702(){
   return true;
 }
 
-// R705: four clearly visible but still restrained procedural equalizers. They are intentionally NOT audio-reactive:
-// the radio swaps MP3 sources behind one persistent YouTube publisher, so a synthetic smooth
-// motion layer is safer and never stalls the real audio path. The line lives only in the empty
-// strip between the current-track title (y=h-188) and ticker (y=h-58).
+// R706: four genuinely frame-animated procedural equalizers.
+// R704/R705 used drawbox expressions containing t. On the deployed FFmpeg path those
+// box dimensions are effectively resolved at filter init, so the shape can look frozen.
+// R706 moves animation into GEQ, where N is evaluated for every generated frame.
+// This is still synthetic/non-audio-reactive by design: it never touches the stable R702 audio path.
 function equalizerPeriodR704(){
   return FORCE_VISUAL_SLOT || visualPeriodForHour(localHourInTimeZone());
 }
 
 function equalizerStyleR704(period){
   const styles={
-    morning:{name:'morning-soft-gold-visible',bars:32,barWidth:8,span:1480,minH:7,ampH:24,speed:0.92,speed2:0.39,phase:0.53,color:'0xFFE2B6',line:'0xFFF0D6',alpha:0.90,lineAlpha:0.76},
-    day:{name:'day-steel-visible',bars:38,barWidth:8,span:1500,minH:7,ampH:28,speed:1.28,speed2:0.53,phase:0.47,color:'0xEEF3F7',line:'0xFFFFFF',alpha:0.92,lineAlpha:0.80},
-    evening:{name:'evening-amber-visible',bars:34,barWidth:8,span:1490,minH:7,ampH:30,speed:1.08,speed2:0.45,phase:0.51,color:'0xF0B86E',line:'0xFFD69A',alpha:0.92,lineAlpha:0.80},
-    night:{name:'night-blue-visible',bars:30,barWidth:8,span:1460,minH:6,ampH:22,speed:0.76,speed2:0.31,phase:0.59,color:'0xB9DDF5',line:'0xE1F1FF',alpha:0.88,lineAlpha:0.72}
+    morning:{name:'morning-soft-gold-motion',span:1500,layerH:58,spacing:34,barWidth:6,minH:7,ampH:38,nSpeed:0.095,nSpeed2:0.041,xPhase:0.047,xPhase2:0.020,r:255,g:226,b:184,barAlpha:220,lineAlpha:175},
+    day:{name:'day-steel-motion',span:1510,layerH:60,spacing:31,barWidth:6,minH:8,ampH:42,nSpeed:0.145,nSpeed2:0.061,xPhase:0.052,xPhase2:0.024,r:238,g:245,b:250,barAlpha:230,lineAlpha:190},
+    evening:{name:'evening-amber-motion',span:1500,layerH:62,spacing:33,barWidth:6,minH:8,ampH:44,nSpeed:0.118,nSpeed2:0.049,xPhase:0.049,xPhase2:0.022,r:245,g:183,b:104,barAlpha:232,lineAlpha:190},
+    night:{name:'night-blue-motion',span:1480,layerH:56,spacing:36,barWidth:5,minH:6,ampH:35,nSpeed:0.078,nSpeed2:0.033,xPhase:0.044,xPhase2:0.018,r:186,g:221,b:246,barAlpha:210,lineAlpha:165}
   };
   return styles[period]||styles.day;
 }
 
-function liveEqualizerFiltersR704(period){
+function liveEqualizerFilterComplexR706(period){
   const s=equalizerStyleR704(period);
-  const left=Math.round((1920-s.span)/2);
-  const baseOffset=88; // R705: visible baseline in the real mobile gap between title and ticker
-  const filters=[
-    `drawbox=x=${left}:y=ih-${baseOffset}:w=${s.span}:h=3:color=${s.line}@${s.lineAlpha}:t=fill`
-  ];
-  for(let i=0;i<s.bars;i++){
-    const center=i/(Math.max(1,s.bars-1));
-    const x=Math.round(left + center*s.span - s.barWidth/2);
-    const phase=(i*s.phase).toFixed(3);
-    const phase2=(i*s.phase*0.71+1.17).toFixed(3);
-    const height=`${s.minH}+${s.ampH}*(0.50+0.50*sin(t*${s.speed.toFixed(3)}+${phase}))*(0.72+0.28*(0.50+0.50*sin(t*${s.speed2.toFixed(3)}+${phase2})))`;
-    filters.push(`drawbox=x=${x}:y='ih-${baseOffset}-(${height})':w=${s.barWidth}:h='${height}':color=${s.color}@${s.alpha}:t=fill`);
-  }
-  return filters.join(',');
+  const baselineY=s.layerH-3;
+  // Two slow waves multiply together so neighboring bars breathe at different heights.
+  // N is the generated-frame index, therefore this changes on every frame in FFmpeg.
+  const h=`${s.minH}+${s.ampH}*(0.50+0.50*sin(N*${s.nSpeed.toFixed(4)}+X*${s.xPhase.toFixed(4)}))*(0.72+0.28*(0.50+0.50*sin(N*${s.nSpeed2.toFixed(4)}+X*${s.xPhase2.toFixed(4)}+1.17)))`;
+  const bars=`lt(mod(X,${s.spacing}),${s.barWidth})*gte(Y,${baselineY}-(${h}))*lte(Y,${baselineY})`;
+  const baseline=`lt(abs(Y-${baselineY}),1.35)`;
+  const alpha=`if(${baseline},${s.lineAlpha},if(${bars},${s.barAlpha},0))`;
+  const overlayTop=88+s.layerH-3; // keeps baseline exactly at y=ih-88, same safe R705 position
+  return `
+[0:v]scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1,fps=${VIDEO_FPS},setpts=PTS-STARTPTS,format=yuv420p[bg];
+nullsrc=s=${s.span}x${s.layerH}:r=${VIDEO_FPS},setpts=PTS-STARTPTS,format=rgba,geq=r='${s.r}':g='${s.g}':b='${s.b}':a='${alpha}'[eq];
+[bg][eq]overlay=x=(W-w)/2:y=H-${overlayTop}:shortest=1:format=auto,format=yuvj420p[outv]`.replace(/\n/g,'');
 }
 
 function normalVideoProducerArgs(visualPath,period=equalizerPeriodR704()){
-  const equalizer=liveEqualizerFiltersR704(period);
+  const graph=liveEqualizerFilterComplexR706(period);
   return [
     '-hide_banner','-loglevel','warning',
     '-re','-stream_loop','-1','-i',visualPath,
     '-an','-sn','-dn',
-    '-vf',`scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1,fps=${VIDEO_FPS},${equalizer},format=yuvj420p`,
+    '-filter_complex',graph,
+    '-map','[outv]',
     '-c:v','mjpeg','-q:v','5','-pix_fmt','yuvj420p',
     '-f','mjpeg','pipe:1'
   ];
@@ -1395,6 +1396,7 @@ function publicStatus(){
     visualPath:state.visualPath,
     equalizerPeriod:state.equalizerPeriod,
     equalizerStyle:state.equalizerStyle,
+    equalizerEngine:state.equalizerEngine,
     publisherRunning:state.publisherRunning,
     producerRunning:state.producerRunning,
     audioBridgeRunning:state.audioBridgeRunning,
