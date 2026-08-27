@@ -26,11 +26,9 @@ const MAX_CACHED_TRACKS = 10;
 const VISUAL_TIME_ZONE = process.env.VISUAL_TIME_ZONE || 'Europe/Bratislava';
 const FORCE_VISUAL_SLOT = ['morning','day','evening','night'].includes(String(process.env.FORCE_VISUAL_SLOT||'').trim().toLowerCase()) ? String(process.env.FORCE_VISUAL_SLOT).trim().toLowerCase() : '';
 const VISUAL_AUTO_SCHEDULE_R658 = String(process.env.VISUAL_AUTO_SCHEDULE_R658||'').trim()==='1';
-// MORNING / DAY / EVENING / NIGHT are owner-selected R2 videos cached locally on OVH.
-// R707 preserves R706 true-motion equalizers and the R703 four-period schedule.
-// R707 also hard-syncs the on-screen track title to the actual PCM handoff and prevents raw-audio queue drift.
-// R702 permanent rule is preserved: every source is auto-FIT into 1920x1080 with the complete
-// source frame preserved. The user never has to stretch MP4 manually; crop/cover is OFF.
+// R651: DAY / EVENING / NIGHT are owner-selected R2 videos cached locally on AWS.
+// IMPORTANT: preserve the exact working R649 hotfix behavior: direct 1920x1080 scale,
+// no crop and no pad. This intentionally fills the whole 16:9 frame every time.
 const MORNING_VISUAL = process.env.MORNING_VISUAL || `${VISUAL_CACHE_DIR}/stream-morning-master-r703.mp4`;
 const DAY_VISUAL = process.env.DAY_VISUAL || `${VISUAL_CACHE_DIR}/stream-day-master-r620.mp4`;
 const EVENING_VISUAL = process.env.EVENING_VISUAL || `${VISUAL_CACHE_DIR}/stream-evening-master-r620.mp4`;
@@ -41,12 +39,8 @@ const EVENING_VISUAL_URL = process.env.EVENING_VISUAL_URL || EVENING_VISUAL;
 const NIGHT_VISUAL_URL = process.env.NIGHT_VISUAL_URL || NIGHT_VISUAL;
 const EMERGENCY_VISUAL = process.env.EMERGENCY_VISUAL || new URL('../assets/live-eye-r223.mp4', import.meta.url).pathname;
 const QR_OVERLAY = process.env.QR_OVERLAY || new URL('../assets/andrik-qr-r612.png', import.meta.url).pathname;
-const OUTPUT_TIMESHIFT_SECONDS = 6; // R711: restore the proven R695 network recovery cushion
-const AUDIO_INPUT_QUEUE_PACKETS = 16; // R707: bounded raw-PCM queue; prevents title/audio drift over long uptime
-const VIDEO_INPUT_QUEUE_PACKETS = 512; // R711: ~20 s feeder cushion; prevents short local stalls from freezing YouTube
-const VIDEO_BITRATE = '4500k'; // R711: exact proven R695 YouTube CBR profile
-const VIDEO_BUFSIZE = '9000k'; // R711: exact proven R695 VBV buffer
-const VIDEO_FEEDER_Q = '8'; // R711: keep lighter local feeder while restoring R695 final transport
+const OUTPUT_TIMESHIFT_SECONDS = 6; // R637: network recovery cushion; packets are NEVER dropped
+const VIDEO_BITRATE = '4500k'; // R637: 1080p25 low-motion radio visual, bounded CBR
 const AUDIO_BITRATE = '128k'; // YouTube Live recommendation for stereo AAC
 const AUDIO_SAMPLE_RATE = 44100; // YouTube Live recommendation for stereo
 const VIDEO_FPS = 25;
@@ -71,14 +65,14 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R711-R695-YOUTUBE-TRANSPORT-FULLFIT-R2-DELETE',
-  mode: 'R711 R695 YOUTUBE TRANSPORT / 512-FRAME ANTI-STALL / R709 VISUAL LIBRARY / R707 TITLE / R706 EQ / R702 HANDOFF',
+  version: 'R712-R678-R695-DIRECT-YOUTUBE-ENGINE-FULLFIT-R2',
+  mode: 'R712 DIRECT R678/R695 YOUTUBE ENGINE / ONE VIDEO ENCODE / MP3 + RANDOM R2 CLIPS / 4 VISUAL SLOTS / NO MJPEG FEEDER',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
   producerRunning: false,
-  overlayMode: 'R709 R708/R707 PRESERVED / R706 TRUE-MOTION 4-SLOT EQ / AUTO FIT NO CROP',
-  audioMode: 'R711 R695 RTMPS 4500K/9000K/6S / R707 BOUNDED PCM / AAC-LC 128kbps',
+  overlayMode: 'R712 1920x1080 FIT / NO CROP / METAL TITLE / QR / DIRECT VIDEO INPUT',
+  audioMode: 'R678/R695 DIRECT MASTER / MP3 CONTINUOUS PCM + AAC-LC 128kbps / 4500k CBR / 9000k VBV / 6s FIFO',
   visualTimeZone: VISUAL_TIME_ZONE,
   visualPeriod: null,
   visualPath: null,
@@ -97,19 +91,13 @@ const state = {
   lastExit: null,
   lastError: '',
   lastFfmpegLine: '',
-  phase: 'startup',
-  audioBridgeRunning: false,
-  handoffCount: 0,
-  lastHandoffMs: null,
-  mp3CacheFailures: 0,
   equalizerPeriod: null,
   equalizerStyle: null,
-  equalizerEngine: 'R706-GEQ-FRAME-ANIMATED'
+  equalizerEngine: 'R712-STABILITY-MODE-OFF'
 };
 
 let publisher = null;
 let producer = null;
-let silenceProducer = null; // R702 keeps the master audio clock alive between finite sources
 let library = [];
 let clipLibrary = JOY_OF_BEING_CLIP_ENABLED ? [JOY_OF_BEING_CLIP] : [];
 let queue = [];
@@ -117,26 +105,12 @@ let queueIndex = 0;
 let running = false;
 let stopping = false;
 let lastPlayed = null;
-let clipPublisher = null; // R702: finite clip A/V feeder; the YouTube publisher remains persistent
-let visualProducer = null;
-let visualProducerPath = '';
-let clipActive = false;
-let visualSwitching = false;
+let clipPublisher = null;
 let intentionalPublisherSwitch = false;
 const clipPrefetchJobs = new Map();
 const prefetchJobs = new Map();
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
-const cleanText = value => String(value || '').replace(/[\r\n\t]+/g, ' ').replace(/\s+/g, ' ').trim();
-const shortText = (value, max = 52) => {
-  const s = cleanText(value);
-  return s.length <= max ? s : `${s.slice(0, Math.max(1, max - 1)).trim()}…`;
-};
-
-function childAlive(child){
-  return Boolean(child && child.exitCode===null && child.signalCode===null);
-}
-
 function promiseTimeout(promise,ms,label='operation'){
   let timer=null;
   return Promise.race([
@@ -144,6 +118,11 @@ function promiseTimeout(promise,ms,label='operation'){
     new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error(`${label} timeout ${ms}ms`)),ms);})
   ]).finally(()=>{if(timer)clearTimeout(timer);});
 }
+const cleanText = value => String(value || '').replace(/[\r\n\t]+/g, ' ').replace(/\s+/g, ' ').trim();
+const shortText = (value, max = 52) => {
+  const s = cleanText(value);
+  return s.length <= max ? s : `${s.slice(0, Math.max(1, max - 1)).trim()}…`;
+};
 
 function shuffle(items){
   const list=[...items];
@@ -262,28 +241,25 @@ function librarySignature(items){
 }
 
 async function loadRadioClipsR691(){
-  const fallbackBuiltIn=JOY_OF_BEING_CLIP_ENABLED?[prepareClip(JOY_OF_BEING_CLIP)]:[];
+  const builtIn=JOY_OF_BEING_CLIP_ENABLED?[prepareClip(JOY_OF_BEING_CLIP)]:[];
   try{
     const url=`${RADIO_CLIPS_URL_R691}${RADIO_CLIPS_URL_R691.includes('?')?'&':'?'}ts=${Date.now()}`;
-    const response=await fetch(url,{headers:{'user-agent':'ANDRIK-Radio-R702-Clips'},signal:AbortSignal.timeout(20000)});
+    const response=await fetch(url,{headers:{'user-agent':'ANDRIK-Radio-R691-Clips'},signal:AbortSignal.timeout(20000)});
     if(!response.ok)throw new Error(`R2 radio clips HTTP ${response.status}`);
     const data=await response.json();
-    const remoteBuiltIn=(JOY_OF_BEING_CLIP_ENABLED && Array.isArray(data?.builtIn)?data.builtIn:[])
-      .filter(item=>/^https:\/\//i.test(String(item?.url||'')) && /\.mp4(?:$|\?)/i.test(String(item?.url||'')))
-      .map(item=>prepareClip({...item,builtIn:true}));
-    const builtIn=remoteBuiltIn.length?remoteBuiltIn:fallbackBuiltIn;
     const dynamic=(Array.isArray(data?.clips)?data.clips:[])
       .filter(item=>/^https:\/\//i.test(String(item?.url||'')) && /\.mp4(?:$|\?)/i.test(String(item?.url||'')))
       .map(prepareClip);
-    const byIdentity=new Map();
-    for(const clip of [...builtIn,...dynamic]){
-      const key=String(clip.key||clip.url||clip.identity||'');
-      if(key&&!byIdentity.has(key))byIdentity.set(key,clip);
-    }
-    clipLibrary=[...byIdentity.values()];
+    const byUrl=new Map();
+    for(const clip of [...builtIn,...dynamic])if(clip.url&&!byUrl.has(clip.url))byUrl.set(clip.url,clip);
+    clipLibrary=[...byUrl.values()];
   }catch(error){
     console.error('[radio-clips]',cleanText(error?.message||error));
-    if(!clipLibrary.length)clipLibrary=fallbackBuiltIn;
+    if(!clipLibrary.length)clipLibrary=builtIn;
+    else{
+      const dynamic=clipLibrary.filter(item=>!item.builtIn);
+      clipLibrary=[...builtIn,...dynamic.filter(item=>item.url!==JOY_OF_BEING_CLIP_URL)];
+    }
   }
   state.libraryVideos=clipLibrary.length;
   clipLibrary.forEach(prefetchClip);
@@ -414,19 +390,6 @@ async function probeDuration(url){
   return duration;
 }
 
-async function probeVideoDurationR702(path){
-  try{
-    const raw=await runCapture(
-      'ffprobe',
-      ['-v','error','-select_streams','v:0','-show_entries','stream=duration','-of','default=noprint_wrappers=1:nokey=1',path],
-      {timeoutMs:12000}
-    );
-    const duration=Number(String(raw).trim());
-    if(Number.isFinite(duration) && duration>0.1)return duration;
-  }catch(_){ }
-  return probeDuration(path);
-}
-
 async function probeVideoSize(path){
   const raw=await runCapture(
     'ffprobe',
@@ -439,9 +402,10 @@ async function probeVideoSize(path){
 }
 
 async function detectInsetBlackFrameCrop(path){
-  // R697: remove ONLY a very large, stable, symmetric black canvas around a smaller
-  // picture. Normal footage, dark edges, cinematic bars and ordinary 16:9 clips must
-  // never be cropped. After this optional recovery every clip is FIT into 1920x1080.
+  // R695: some uploaded MP4 files already contain a 16:9 picture boxed inside a
+  // larger black canvas. A normal FIT keeps that black canvas and makes the real
+  // picture look tiny. Detect ONLY a large, symmetric inset on BOTH axes. We never
+  // crop ordinary footage, portrait clips, cinematic bars or visible image content.
   let size;
   try{size=await probeVideoSize(path)}catch(_){return ''}
   if(!size.width||!size.height)return '';
@@ -464,11 +428,7 @@ async function detectInsetBlackFrameCrop(path){
     const key=`${m[1]}:${m[2]}:${m[3]}:${m[4]}`;
     counts.set(key,(counts.get(key)||0)+1);
   }
-  const ranked=[...counts.entries()].sort((a,b)=>b[1]-a[1]);
-  const best=ranked[0]?.[0]||'';
-  const bestCount=ranked[0]?.[1]||0;
-  // R697: refuse cropdetect unless the same crop dominates most sampled frames.
-  if(bestCount<18)return '';
+  const best=[...counts.entries()].sort((a,b)=>b[1]-a[1])[0]?.[0]||'';
   const parts=best.split(':').map(Number);
   if(parts.length!==4||parts.some(v=>!Number.isFinite(v)))return '';
   const [cw,ch,x,y]=parts;
@@ -477,14 +437,10 @@ async function detectInsetBlackFrameCrop(path){
   const cutX=size.width-cw,cutY=size.height-ch;
   const symmetricX=Math.abs(x-right)<=Math.max(10,Math.round(size.width*0.035));
   const symmetricY=Math.abs(y-bottom)<=Math.max(10,Math.round(size.height*0.035));
-  // Total removed canvas must be at least 24% on BOTH axes. This still fixes the
-  // tiny-picture-in-black-canvas upload, but prevents cropdetect from shaving real clips.
-  const largeInsetX=cutX>=Math.round(size.width*0.24);
-  const largeInsetY=cutY>=Math.round(size.height*0.24);
-  const enoughVisible=cw>=Math.round(size.width*0.50)&&ch>=Math.round(size.height*0.50);
-  const srcRatio=size.width/size.height, cropRatio=cw/ch;
-  const ratioPreserved=Math.abs(cropRatio-srcRatio)/srcRatio<=0.035;
-  if(!(symmetricX&&symmetricY&&largeInsetX&&largeInsetY&&enoughVisible&&ratioPreserved))return '';
+  const largeInsetX=cutX>=Math.round(size.width*0.08);
+  const largeInsetY=cutY>=Math.round(size.height*0.08);
+  const enoughVisible=cw>=Math.round(size.width*0.45)&&ch>=Math.round(size.height*0.45);
+  if(!(symmetricX&&symmetricY&&largeInsetX&&largeInsetY&&enoughVisible))return '';
   return `crop=${cw}:${ch}:${x}:${y}`;
 }
 
@@ -527,18 +483,16 @@ function audioCachePath(item){
   return `${AUDIO_CACHE_DIR}/${id}.mp3`;
 }
 
-function cachedAudioPathR702(item){
+function cachedAudioPathR712(item){
   if(!item?.url)return '';
   const path=audioCachePath(item);
   try{return existsSync(path)&&statSync(path).size>256000?path:''}catch(_){return ''}
 }
 
-async function ensureNextTrackReadyR702(item){
+async function ensureNextTrackReadyR712(item){
   if(item?.type!=='track')return '';
-  const ready=cachedAudioPathR702(item);
+  const ready=cachedAudioPathR712(item);
   if(ready)return ready;
-  // The normal previous track has already been prefetching this file. We only grant a
-  // short grace here; a clip is never allowed to start unless the following MP3 is local.
   return promiseTimeout(downloadTrackToCache(item),5000,'next MP3 preload');
 }
 
@@ -595,11 +549,11 @@ async function downloadTrackToCache(item){
         // while the actual bytes are JPEG (FF D8 FF E0). FFmpeg then prints misleading
         // "Invalid PNG signature" even though the QR overlay is a valid PNG. Strip every
         // attached-picture/video stream once while caching; audio is copied bit-for-bit.
-        const cleanTmp=`${dest}.clean-${process.pid}-${Date.now()}-${attempt}.mp3`; // R702: valid MP3 output suffix
+        const cleanTmp=`${dest}.clean-${process.pid}-${Date.now()}-${attempt}`;
         try{
           await runCapture('ffmpeg',[
             '-hide_banner','-loglevel','quiet','-y','-i',tmp,
-            '-map','0:a:0','-vn','-sn','-dn','-c:a','copy','-map_metadata','0','-f','mp3',cleanTmp
+            '-map','0:a:0','-vn','-sn','-dn','-c:a','copy','-map_metadata','0',cleanTmp
           ],{timeoutMs:30000});
           if(!existsSync(cleanTmp) || statSync(cleanTmp).size<256000)throw new Error('MP3 audio-only cache file too small');
           unlinkSync(tmp);
@@ -612,7 +566,6 @@ async function downloadTrackToCache(item){
         return dest;
       }catch(error){
         lastError=error;
-        state.mp3CacheFailures++;
         try{unlinkSync(tmp);}catch(_){ }
         if(attempt<3)await sleep(900*attempt);
       }finally{
@@ -634,6 +587,7 @@ function prefetchTrack(item){
 }
 
 function clipCachePathR691(item){
+  if(String(item?.url||'')===JOY_OF_BEING_CLIP_URL)return JOY_OF_BEING_CLIP_PATH;
   const base=String(item?.key||item?.title||'clip').split('/').pop().replace(/\.mp4$/i,'')
     .normalize('NFKD').replace(/[^a-zA-Z0-9_-]+/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,'').slice(0,56)||'clip';
   const hash=createHash('sha1').update(String(item?.url||item?.key||item?.title||base)).digest('hex').slice(0,10);
@@ -750,19 +704,18 @@ async function ensureScheduledVisual(){
     state.visualPath=path;
     return path;
   }catch(error){
-    // R703 safe rollout: until MORNING is uploaded, 06:00-12:00 temporarily uses DAY.
-    // This lets the four-slot build be deployed before the new MP4 exists without breaking radio.
+    // R712 safe four-slot rollout: until MORNING exists, use DAY rather than killing the radio.
     if(period==='morning'){
       try{
         const fallback=await ensureVisualSpec(visualSpecForPeriod('day'));
-        state.lastError=`R703 morning not assigned yet — temporary DAY fallback: ${cleanText(error?.message||error)}`;
+        state.lastError=`R712 morning not assigned yet — temporary DAY fallback: ${cleanText(error?.message||error)}`;
         state.visualPeriod=VISUAL_AUTO_SCHEDULE_R658?'auto-morning-fallback-day':'morning-fallback-day';
         state.visualPath=fallback;
         return fallback;
       }catch(_){ }
     }
     if(existsSync(EMERGENCY_VISUAL) && statSync(EMERGENCY_VISUAL).size>300000){
-      state.lastError=`R703 ${period} local visual fallback: ${cleanText(error?.message||error)}`;
+      state.lastError=`R622 ${period} local visual fallback: ${cleanText(error?.message||error)}`;
       state.visualPeriod=`${period}-emergency`;
       state.visualPath=EMERGENCY_VISUAL;
       return EMERGENCY_VISUAL;
@@ -771,181 +724,17 @@ async function ensureScheduledVisual(){
   }
 }
 
+function equalizerStatusR712(){
+  state.equalizerPeriod=FORCE_VISUAL_SLOT || visualPeriodForHour(localHourInTimeZone());
+  state.equalizerStyle='disabled-stability';
+  return state.equalizerPeriod;
+}
+
 function trackLabel(item,fallback='—'){
   if(!item)return fallback;
   const title=shortText(item.title||'ANDRIK',48);
   const album=shortText(item.album||'',24);
   return album ? `${title} (${album})` : title;
-}
-
-function silenceFeederArgsR702(){
-  return [
-    '-hide_banner','-loglevel','error',
-    '-re','-f','lavfi','-i',`anullsrc=r=${AUDIO_SAMPLE_RATE}:cl=stereo`,
-    '-map','0:a:0','-vn','-sn','-dn',
-    '-c:a','pcm_s16le','-ar',String(AUDIO_SAMPLE_RATE),'-ac','2',
-    '-f','s16le','pipe:1'
-  ];
-}
-
-async function stopSilenceBridgeR702(){
-  const active=silenceProducer;
-  if(!active){state.audioBridgeRunning=false;return;}
-  const audioSink=publisher?.stdio?.[3];
-  try{if(active.stdout&&audioSink)active.stdout.unpipe(audioSink)}catch(_){ }
-  if(childAlive(active)){
-    try{active.kill('SIGTERM')}catch(_){ }
-    if(!(await waitChildExit(active,180)) && childAlive(active)){
-      try{active.kill('SIGKILL')}catch(_){ }
-      await waitChildExit(active,120);
-    }
-  }
-  if(silenceProducer===active)silenceProducer=null;
-  state.audioBridgeRunning=false;
-}
-
-function startSilenceBridgeR702(){
-  if(stopping || clipActive || childAlive(producer))return false;
-  const audioSink=publisher?.stdio?.[3];
-  if(!childAlive(publisher)||!audioSink||audioSink.destroyed||audioSink.writableEnded)return false;
-  if(childAlive(silenceProducer)){state.audioBridgeRunning=true;return true;}
-  const child=spawn('ffmpeg',silenceFeederArgsR702(),{stdio:['ignore','pipe','pipe']});
-  silenceProducer=child;
-  state.audioBridgeRunning=true;
-  child.stdout.pipe(audioSink,{end:false});
-  child.stdout.on('error',()=>{});
-  child.stderr.on('data',d=>{
-    const line=String(d||'').trim();
-    if(line)console.error('[silence-bridge]',line);
-  });
-  child.on('exit',()=>{
-    if(silenceProducer===child)silenceProducer=null;
-    state.audioBridgeRunning=false;
-  });
-  child.on('error',err=>{
-    if(silenceProducer===child)state.lastError=`R702 silence bridge: ${cleanText(err?.message||err)}`;
-  });
-  return true;
-}
-
-// R706: four genuinely frame-animated procedural equalizers.
-// R704/R705 used drawbox expressions containing t. On the deployed FFmpeg path those
-// box dimensions are effectively resolved at filter init, so the shape can look frozen.
-// R706 moves animation into GEQ, where N is evaluated for every generated frame.
-// This is still synthetic/non-audio-reactive by design: it never touches the stable R702 audio path.
-function equalizerPeriodR704(){
-  return FORCE_VISUAL_SLOT || visualPeriodForHour(localHourInTimeZone());
-}
-
-function equalizerStyleR704(period){
-  const styles={
-    morning:{name:'morning-soft-gold-motion',span:1500,layerH:58,spacing:34,barWidth:6,minH:7,ampH:38,nSpeed:0.095,nSpeed2:0.041,xPhase:0.047,xPhase2:0.020,r:255,g:226,b:184,barAlpha:220,lineAlpha:175},
-    day:{name:'day-steel-motion',span:1510,layerH:60,spacing:31,barWidth:6,minH:8,ampH:42,nSpeed:0.145,nSpeed2:0.061,xPhase:0.052,xPhase2:0.024,r:238,g:245,b:250,barAlpha:230,lineAlpha:190},
-    evening:{name:'evening-amber-motion',span:1500,layerH:62,spacing:33,barWidth:6,minH:8,ampH:44,nSpeed:0.118,nSpeed2:0.049,xPhase:0.049,xPhase2:0.022,r:245,g:183,b:104,barAlpha:232,lineAlpha:190},
-    night:{name:'night-blue-motion',span:1480,layerH:56,spacing:36,barWidth:5,minH:6,ampH:35,nSpeed:0.078,nSpeed2:0.033,xPhase:0.044,xPhase2:0.018,r:186,g:221,b:246,barAlpha:210,lineAlpha:165}
-  };
-  return styles[period]||styles.day;
-}
-
-function liveEqualizerFilterComplexR706(period){
-  const s=equalizerStyleR704(period);
-  const baselineY=s.layerH-3;
-  // Two slow waves multiply together so neighboring bars breathe at different heights.
-  // N is the generated-frame index, therefore this changes on every frame in FFmpeg.
-  const h=`${s.minH}+${s.ampH}*(0.50+0.50*sin(N*${s.nSpeed.toFixed(4)}+X*${s.xPhase.toFixed(4)}))*(0.72+0.28*(0.50+0.50*sin(N*${s.nSpeed2.toFixed(4)}+X*${s.xPhase2.toFixed(4)}+1.17)))`;
-  const bars=`lt(mod(X,${s.spacing}),${s.barWidth})*gte(Y,${baselineY}-(${h}))*lte(Y,${baselineY})`;
-  const baseline=`lt(abs(Y-${baselineY}),1.35)`;
-  const alpha=`if(${baseline},${s.lineAlpha},if(${bars},${s.barAlpha},0))`;
-  const overlayTop=88+s.layerH-3; // keeps baseline exactly at y=ih-88, same safe R705 position
-  return `
-[0:v]scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1,fps=${VIDEO_FPS},setpts=PTS-STARTPTS,format=yuv420p[bg];
-nullsrc=s=${s.span}x${s.layerH}:r=${VIDEO_FPS},setpts=PTS-STARTPTS,format=rgba,geq=r='${s.r}':g='${s.g}':b='${s.b}':a='${alpha}'[eq];
-[bg][eq]overlay=x=(W-w)/2:y=H-${overlayTop}:shortest=1:format=auto,format=yuvj420p[outv]`.replace(/\n/g,'');
-}
-
-function normalVideoProducerArgs(visualPath,period=equalizerPeriodR704()){
-  const graph=liveEqualizerFilterComplexR706(period);
-  return [
-    '-hide_banner','-loglevel','warning',
-    '-re','-stream_loop','-1','-i',visualPath,
-    '-an','-sn','-dn',
-    '-filter_complex',graph,
-    '-map','[outv]',
-    '-c:v','mjpeg','-q:v',VIDEO_FEEDER_Q,'-pix_fmt','yuvj420p',
-    '-f','mjpeg','pipe:1'
-  ];
-}
-
-async function stopNormalVisualProducerR701(){
-  const active=visualProducer;
-  if(!active)return;
-  const videoSink=publisher?.stdio?.[4];
-  try{if(active.stdout && videoSink)active.stdout.unpipe(videoSink)}catch(_){ }
-  if(childAlive(active)){
-    try{active.kill('SIGTERM')}catch(_){ }
-    if(!(await waitChildExit(active,120)) && childAlive(active)){
-      try{active.kill('SIGKILL')}catch(_){ }
-      await waitChildExit(active,100);
-    }
-  }
-  if(visualProducer===active)visualProducer=null;
-}
-
-function startNormalVisualProducerR701(visualPath){
-  if(stopping || clipActive)return false;
-  const videoSink=publisher?.stdio?.[4];
-  if(!childAlive(publisher) || !videoSink || videoSink.destroyed || videoSink.writableEnded){
-    throw new Error('R702 master video pipe unavailable');
-  }
-  if(childAlive(visualProducer) && visualProducerPath===visualPath)return true;
-
-  const eqPeriod=equalizerPeriodR704();
-  const eqStyle=equalizerStyleR704(eqPeriod);
-  state.equalizerPeriod=eqPeriod;
-  state.equalizerStyle=eqStyle.name;
-  const child=spawn('ffmpeg',normalVideoProducerArgs(visualPath,eqPeriod),{stdio:['ignore','pipe','pipe']});
-  visualProducer=child;
-  visualProducerPath=visualPath;
-  child.stdout.pipe(videoSink,{end:false});
-  child.stdout.on('error',err=>{
-    if(!stopping && !/EPIPE|ECONNRESET|ERR_STREAM_DESTROYED/i.test(String(err?.code||err?.message||err)))state.lastError=`visual-pipe: ${String(err)}`;
-  });
-  child.stderr.on('data',d=>{
-    const line=String(d||'').trim();
-    if(line){
-      state.lastFfmpegLine=line.slice(-1000);
-      if(/error|fail|invalid|broken pipe/i.test(line))state.lastError=line.slice(-700);
-      console.error('[visual-feed]',line);
-    }
-  });
-  child.on('exit',(code,signal)=>{
-    const isCurrent=visualProducer===child;
-    if(isCurrent)visualProducer=null;
-    try{if(child.stdout && videoSink)child.stdout.unpipe(videoSink)}catch(_){ }
-    if(isCurrent && !stopping && !clipActive && !visualSwitching){
-      state.lastError=`R702 visual feeder exit ${code??signal}; restarting`;
-      setTimeout(()=>ensureNormalVisualProducerR701().catch(err=>{state.lastError=`R702 visual restart: ${cleanText(err?.message||err)}`;}),120).unref();
-    }
-  });
-  child.on('error',err=>{
-    if(visualProducer===child)state.lastError=`R702 visual feeder: ${String(err)}`;
-  });
-  return true;
-}
-
-async function ensureNormalVisualProducerR701(){
-  if(stopping || clipActive)return true;
-  const visual=await ensureScheduledVisual();
-  const desiredEqPeriod=equalizerPeriodR704();
-  if(childAlive(visualProducer) && visualProducerPath===visual && state.equalizerPeriod===desiredEqPeriod)return true;
-  visualSwitching=true;
-  try{
-    await stopNormalVisualProducerR701();
-    if(stopping || clipActive)return true;
-    return startNormalVisualProducerR701(visual);
-  }finally{
-    visualSwitching=false;
-  }
 }
 
 function startPublisher(visualPath){
@@ -965,33 +754,43 @@ function startPublisher(visualPath){
   const titleFontPart=titleFont?`fontfile='${ffFilterPath(titleFont)}':`:'';
   const curPath=ffFilterPath(LIVE_CURRENT_FILE);
   const tickerPath=ffFilterPath(LIVE_TICKER_FILE);
+  equalizerStatusR712();
   const vf=[
+    // R712: exact R678/R695 direct path. No MJPEG feeder and no heavy GEQ stage.
+    'scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos',
+    'pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black',
     'setsar=1',
     `fps=${VIDEO_FPS}`,
     'format=yuv420p',
+    'drawbox=x=92:y=ih-208:w=iw-184:h=92:color=black@0.30:t=fill',
+    'drawbox=x=125:y=ih-208:w=iw-250:h=3:color=red@0.82:t=fill',
     `drawtext=${titleFontPart}textfile='${curPath}':reload=${VIDEO_FPS}:fontcolor=red@0.01:fontsize=58:x=(w-text_w)/2:y=h-188:borderw=8:bordercolor=red@0.58`,
-    `drawtext=${titleFontPart}textfile='${curPath}':reload=${VIDEO_FPS}:fontcolor=0xF3EFE8:fontsize=58:x=(w-text_w)/2:y=h-188:borderw=3:bordercolor=black@1:shadowcolor=black@0.95:shadowx=3:shadowy=3:box=1:boxcolor=black@0.36:boxborderw=18`,
+    `drawtext=${titleFontPart}textfile='${curPath}':reload=${VIDEO_FPS}:fontcolor=0xF3EFE8:fontsize=58:x=(w-text_w)/2:y=h-188:borderw=3:bordercolor=black@1:shadowcolor=black@0.95:shadowx=3:shadowy=3`,
     `drawtext=${fontPart}textfile='${tickerPath}':reload=${VIDEO_FPS}:fontcolor=yellow:fontsize=28:x='w-mod(t*110,text_w+w)':y=h-58:borderw=3:bordercolor=black@1:shadowcolor=black@1:shadowx=2:shadowy=2`
   ].join(',');
   const filterComplex=`[0:v]${vf}[base];[1:v]scale=160:160:flags=lanczos,format=yuva420p[qr];[base][qr]overlay=24:24:format=yuv420[outv]`;
 
-  // R702: YouTube sees ONE publisher for the whole broadcast. Neither MP3→CLIP
-  // nor CLIP→MP3 closes RTMPS anymore. A lightweight local MJPEG video feeder
-  // and raw PCM audio feeder are swapped behind this permanent master instead.
+  // R637 architecture: one FFmpeg owns the video encoder, AAC encoder and RTMPS
+  // muxer for the ENTIRE broadcast. Track decoders feed raw PCM into fd 3. Raw
+  // PCM has no per-track timestamps, so the master creates one continuous sample
+  // clock and AAC can never reset at song boundaries.
   const args=[
     '-hide_banner','-loglevel','warning',
-    '-thread_queue_size',String(VIDEO_INPUT_QUEUE_PACKETS),'-f','mjpeg','-framerate',String(VIDEO_FPS),'-i','pipe:4',
+    '-thread_queue_size','8192','-re','-stream_loop','-1','-i',visualPath,
     '-loop','1','-framerate','1','-i',QR_OVERLAY,
-    '-thread_queue_size',String(AUDIO_INPUT_QUEUE_PACKETS),'-probesize','32','-analyzeduration','0','-f','s16le','-ar',String(AUDIO_SAMPLE_RATE),'-ac','2','-i','pipe:3',
+    '-thread_queue_size','8192','-f','s16le','-ar',String(AUDIO_SAMPLE_RATE),'-ac','2','-i','pipe:3',
     '-filter_complex',filterComplex,
     '-map','[outv]','-map','2:a:0',
+    '-shortest',
     '-c:v','libx264','-preset','ultrafast','-tune','zerolatency',
     '-profile:v','high','-level:v','4.1',
-    '-b:v',VIDEO_BITRATE,'-minrate',VIDEO_BITRATE,'-maxrate',VIDEO_BITRATE,'-bufsize',VIDEO_BUFSIZE,
+    '-b:v',VIDEO_BITRATE,'-minrate',VIDEO_BITRATE,'-maxrate',VIDEO_BITRATE,'-bufsize','9000k',
     '-x264-params',`nal-hrd=cbr:force-cfr=1:repeat-headers=1:keyint=${VIDEO_GOP}:min-keyint=${VIDEO_GOP}:scenecut=0`,
     '-g',String(VIDEO_GOP),'-keyint_min',String(VIDEO_GOP),'-sc_threshold','0','-bf','2','-refs','1','-coder','1','-r',String(VIDEO_FPS),'-pix_fmt','yuv420p',
     '-c:a','aac','-profile:a','aac_low','-b:a',AUDIO_BITRATE,'-ar',String(AUDIO_SAMPLE_RATE),'-ac','2',
     '-max_muxing_queue_size','4096','-flush_packets','1',
+    // FIFO is only a network recovery layer now. Never discard packets: a full
+    // queue applies backpressure instead of destroying AAC frames.
     '-f','fifo','-fifo_format','flv','-queue_size','8192',
     '-timeshift',`${OUTPUT_TIMESHIFT_SECONDS}s`,
     '-drop_pkts_on_overflow','0',
@@ -999,18 +798,14 @@ function startPublisher(visualPath){
     STREAM_URL
   ];
 
-  const thisPublisher=spawn('ffmpeg',args,{stdio:['ignore','ignore','pipe','pipe','pipe']});
-  publisher=thisPublisher;
+  publisher=spawn('ffmpeg',args,{stdio:['ignore','ignore','pipe','pipe']});
   state.publisherRunning=true;
   if(!state.streamStartedAt)state.streamStartedAt=new Date().toISOString();
-  const audioSink=thisPublisher.stdio[3];
-  const videoSink=thisPublisher.stdio[4];
-  for(const [label,sink] of [['audio',audioSink],['video',videoSink]]){
-    sink.on('error',err=>{
-      if(!stopping && !/EPIPE|ECONNRESET|ERR_STREAM_DESTROYED/i.test(String(err?.code||err?.message||err)))state.lastError=`${label}-pipe: ${String(err)}`;
-    });
-  }
-  thisPublisher.stderr.on('data',d=>{
+  const audioSink=publisher.stdio[3];
+  audioSink.on('error',err=>{
+    if(!stopping && !/EPIPE|ECONNRESET|ERR_STREAM_DESTROYED/i.test(String(err?.code||err?.message||err))) state.lastError=`audio-pipe: ${String(err)}`;
+  });
+  publisher.stderr.on('data',d=>{
     const line=String(d||'').trim();
     if(line){
       state.lastFfmpegLine=line.slice(-1000);
@@ -1018,68 +813,58 @@ function startPublisher(visualPath){
       console.error('[master]',line);
     }
   });
-  thisPublisher.on('exit',(code,signal)=>{
-    const isCurrent=publisher===thisPublisher;
-    if(isCurrent){state.publisherRunning=false;publisher=null;}
-    if(isCurrent && !stopping)state.lastExit={layer:'master',code,signal,at:new Date().toISOString()};
-    if(isCurrent && !stopping)setTimeout(()=>process.exit(code||22),900).unref();
+  publisher.on('exit',(code,signal)=>{
+    state.publisherRunning=false;
+    // A master exit at a planned clip boundary is not a radio failure. Keep
+    // lastExit reserved for real exits so the control panel stays truthful.
+    if(!intentionalPublisherSwitch)state.lastExit={layer:'master',code,signal,at:new Date().toISOString()};
+    publisher=null;
+    if(!stopping && !intentionalPublisherSwitch)setTimeout(()=>process.exit(code||22),1500).unref();
   });
-  thisPublisher.on('error',err=>{if(publisher===thisPublisher)state.lastError=String(err);});
-  state.phase='idle-bridge';
-  startSilenceBridgeR702();
+  publisher.on('error',err=>{state.lastError=String(err);});
   return true;
 }
 
-async function ensureMasterForTrackR701(){
-  const audioSink=publisher?.stdio?.[3];
-  const videoSink=publisher?.stdio?.[4];
-  if(childAlive(publisher) && audioSink && !audioSink.destroyed && !audioSink.writableEnded && videoSink && !videoSink.destroyed && !videoSink.writableEnded){
-    await ensureNormalVisualProducerR701();
-    return true;
+async function stopMasterForClip(){
+  const active=publisher;
+  if(!active || active.exitCode!==null){publisher=null;state.publisherRunning=false;return;}
+  intentionalPublisherSwitch=true;
+  try{
+    const sink=active?.stdio?.[3];
+    if(sink && !sink.destroyed && !sink.writableEnded)sink.end();
+  }catch(_){ }
+  let clean=await waitChildExit(active,9000);
+  if(!clean && active.exitCode===null){
+    try{active.kill('SIGTERM')}catch(_){ }
+    clean=await waitChildExit(active,2500);
   }
-
-  await stopNormalVisualProducerR701();
-  const stale=publisher;
-  if(childAlive(stale)){
-    try{stale.kill('SIGTERM')}catch(_){ }
-    if(!(await waitChildExit(stale,180)) && childAlive(stale)){try{stale.kill('SIGKILL')}catch(_){ }}
-    await waitChildExit(stale,120);
-    if(publisher===stale)publisher=null;
-  }
-  const visual=await ensureScheduledVisual();
-  if(!startPublisher(visual))throw new Error('R702 persistent master restart failed');
-  startNormalVisualProducerR701(visual);
-  for(let i=0;i<8;i++){
-    const current=publisher;
-    const a=current?.stdio?.[3],v=current?.stdio?.[4];
-    if(childAlive(current) && a && !a.destroyed && !a.writableEnded && v && !v.destroyed && !v.writableEnded)return true;
-    await sleep(35);
-  }
-  throw new Error('R702 master A/V pipes unavailable after restart');
+  if(!clean && active.exitCode===null){try{active.kill('SIGKILL')}catch(_){ }}
+  publisher=null;
+  state.publisherRunning=false;
 }
 
-function clipFeederArgsR701(clipPath){
-  return [
-    '-hide_banner','-loglevel','warning',
-    '-stats_period','0.5','-progress','pipe:4','-nostats',
-    '-fflags','+genpts+discardcorrupt','-err_detect','ignore_err','-re','-i',clipPath,
-    '-filter_complex',`[0:v]scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1,fps=${VIDEO_FPS},format=yuvj420p[v]`,
-    '-map','[v]','-an','-sn','-dn','-c:v','mjpeg','-q:v',VIDEO_FEEDER_Q,'-pix_fmt','yuvj420p','-f','mjpeg','pipe:1',
-    '-map','0:a:0?','-vn','-sn','-dn','-af',`aresample=${AUDIO_SAMPLE_RATE}`,'-c:a','pcm_s16le','-ar',String(AUDIO_SAMPLE_RATE),'-ac','2','-f','s16le','pipe:3'
-  ];
-}
-
-async function stopClipFeederR701(child,videoSink,audioSink){
-  if(!child)return;
-  try{if(child.stdout&&videoSink)child.stdout.unpipe(videoSink)}catch(_){ }
-  try{if(child.stdio?.[3]&&audioSink)child.stdio[3].unpipe(audioSink)}catch(_){ }
-  if(childAlive(child)){
-    try{child.kill('SIGTERM')}catch(_){ }
-    if(!(await waitChildExit(child,100)) && childAlive(child)){
-      try{child.kill('SIGKILL')}catch(_){ }
-      await waitChildExit(child,90);
-    }
-  }
+function clipFilterComplex(insetCrop=''){
+  const font=chooseFont();
+  const titleFont=chooseTitleFont();
+  const fontPart=font?`fontfile='${ffFilterPath(font)}':`:'';
+  const titleFontPart=titleFont?`fontfile='${ffFilterPath(titleFont)}':`:'';
+  const curPath=ffFilterPath(LIVE_CURRENT_FILE);
+  const tickerPath=ffFilterPath(LIVE_TICKER_FILE);
+  const vf=[
+    // R712: FULL FRAME FIT. Never crop any clip pixels; scale down and pad only if needed.
+    ...(insetCrop?[insetCrop]:[]),
+    'scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos',
+    'pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black',
+    'setsar=1',
+    `fps=${VIDEO_FPS}`,
+    'format=yuv420p',
+    'drawbox=x=92:y=ih-208:w=iw-184:h=92:color=black@0.30:t=fill',
+    'drawbox=x=125:y=ih-208:w=iw-250:h=3:color=red@0.82:t=fill',
+    `drawtext=${titleFontPart}textfile='${curPath}':reload=${VIDEO_FPS}:fontcolor=red@0.01:fontsize=58:x=(w-text_w)/2:y=h-188:borderw=8:bordercolor=red@0.58`,
+    `drawtext=${titleFontPart}textfile='${curPath}':reload=${VIDEO_FPS}:fontcolor=0xF3EFE8:fontsize=58:x=(w-text_w)/2:y=h-188:borderw=3:bordercolor=black@1:shadowcolor=black@0.95:shadowx=3:shadowy=3`,
+    `drawtext=${fontPart}textfile='${tickerPath}':reload=${VIDEO_FPS}:fontcolor=yellow:fontsize=28:x='w-mod(t*110,text_w+w)':y=h-58:borderw=3:bordercolor=black@1:shadowcolor=black@1:shadowx=2:shadowy=2`
+  ].join(',');
+  return `[0:v]${vf}[base];[1:v]scale=160:160:flags=lanczos,format=yuva420p[qr];[base][qr]overlay=24:24:format=yuv420[outv]`;
 }
 
 async function playVideoClipR691(previous,item,next){
@@ -1090,132 +875,71 @@ async function playVideoClipR691(previous,item,next){
     console.error('[video-clip]',state.lastError);
     return false;
   }
-  const duration=await probeVideoDurationR702(clipPath).catch(()=>0);
+  const duration=await probeDuration(clipPath).catch(()=>0);
   state.previous=previous?{type:previous.type||'track',title:previous.title,album:previous.album||'',url:previous.url||''}:null;
   state.current={type:'clip',title:item.title,album:item.album,url:item.url,startedAt:new Date().toISOString(),duration};
   state.next=next?{type:next.type||'track',title:next.title,album:next.album||'',url:next.url||''}:null;
   writeFileSync(LIVE_CURRENT_FILE,`КЛИП • ANDRIK — ${shortText(item.title||'VIDEO',34)}`,'utf8');
-  state.phase='clip';
 
-  let stallTimer=null;
-  let child=null;
-  let videoSink=null;
-  let audioSink=null;
-  let forcedReason='';
   try{
-    await ensureMasterForTrackR701();
-    await stopSilenceBridgeR702();
-    clipActive=true;
-    await stopNormalVisualProducerR701();
+    const insetCrop=''; // R712 NO CROP — FULL FRAME FIT
+    // R712: crop detection intentionally disabled; preserve the complete source frame.
+    await stopMasterForClip();
     if(stopping)return false;
-
-    videoSink=publisher?.stdio?.[4];
-    audioSink=publisher?.stdio?.[3];
-    if(!childAlive(publisher) || !videoSink || videoSink.destroyed || videoSink.writableEnded || !audioSink || audioSink.destroyed || audioSink.writableEnded){
-      throw new Error('R701 persistent master pipes unavailable before clip');
-    }
-
-    // R702: the clip is only a LOCAL feeder. YouTube RTMPS stays open in the
-    // permanent master, so there is no reconnect/frozen-last-frame handoff.
-    child=spawn('ffmpeg',clipFeederArgsR701(clipPath),{stdio:['ignore','pipe','pipe','pipe','pipe']});
-    clipPublisher=child;
-    state.publisherRunning=true;
-    state.producerRunning=true;
-    child.stdout.pipe(videoSink,{end:false});
-    child.stdio[3].pipe(audioSink,{end:false});
-    child.stdout.on('error',()=>{});
-    child.stdio[3].on('error',()=>{});
-
-    let progressBuffer='';
-    let lastProgressAt=Date.now();
-    let lastOutTime=0;
-    let lastVideoFrameAt=Date.now();
-    let lastVideoFrame=0;
-    const startedAt=Date.now();
-    child.stdio[4].on('data',d=>{
-      progressBuffer+=String(d||'');
-      const lines=progressBuffer.split(/\r?\n/);
-      progressBuffer=lines.pop()||'';
-      for(const line of lines){
-        const text=line.trim();
-        const fm=/^frame=(\d+)/.exec(text);
-        if(fm){
-          const frame=Number(fm[1]||0);
-          if(frame>lastVideoFrame){lastVideoFrame=frame;lastVideoFrameAt=Date.now();}
-        }
-        const m=/^out_time_(?:us|ms)=(\d+)/.exec(text);
-        if(m){
-          const value=Number(m[1]||0);
-          if(value>lastOutTime){lastOutTime=value;lastProgressAt=Date.now();}
-        }
-      }
-    });
-    child.stderr.on('data',d=>{
+    await sleep(350);
+    const args=[
+      '-hide_banner','-loglevel','warning','-re','-i',clipPath,
+      '-loop','1','-framerate','1','-i',QR_OVERLAY,
+      '-filter_complex',clipFilterComplex(insetCrop),
+      '-map','[outv]','-map','0:a:0',
+      '-shortest',
+      '-c:v','libx264','-preset','ultrafast','-tune','zerolatency',
+      '-profile:v','high','-level:v','4.1',
+      '-b:v',VIDEO_BITRATE,'-minrate',VIDEO_BITRATE,'-maxrate',VIDEO_BITRATE,'-bufsize','9000k',
+      '-x264-params',`nal-hrd=cbr:force-cfr=1:repeat-headers=1:keyint=${VIDEO_GOP}:min-keyint=${VIDEO_GOP}:scenecut=0`,
+      '-g',String(VIDEO_GOP),'-keyint_min',String(VIDEO_GOP),'-sc_threshold','0','-bf','2','-refs','1','-coder','1','-r',String(VIDEO_FPS),'-pix_fmt','yuv420p',
+      '-c:a','aac','-profile:a','aac_low','-b:a',AUDIO_BITRATE,'-ar',String(AUDIO_SAMPLE_RATE),'-ac','2',
+      '-max_muxing_queue_size','4096','-flush_packets','1',
+      '-f','fifo','-fifo_format','flv','-queue_size','8192',
+      '-timeshift',`${OUTPUT_TIMESHIFT_SECONDS}s`,
+      '-drop_pkts_on_overflow','0',
+      '-attempt_recovery','1','-recover_any_error','1','-recovery_wait_time','1','-restart_with_keyframe','1',
+      STREAM_URL
+    ];
+    clipPublisher=spawn('ffmpeg',args,{stdio:['ignore','ignore','pipe']});
+    state.publisherRunning=true;state.producerRunning=true;
+    clipPublisher.stderr.on('data',d=>{
       const line=String(d||'').trim();
       if(line){
         state.lastFfmpegLine=line.slice(-1000);
         if(/error|fail|invalid|broken pipe|non-monoton/i.test(line))state.lastError=line.slice(-700);
-        console.error('[clip-feed]',line);
+        console.error('[clip]',line);
       }
     });
-
-    // If decode/pipe progress stops in the MIDDLE of a clip, do not wait for its
-    // nominal duration. Cut the broken local feeder after 2.2 s and move to MP3.
-    stallTimer=setInterval(()=>{
-      if(!childAlive(child) || stopping)return;
-      const now=Date.now();
-      const videoStopped=now-startedAt>3000 && now-lastVideoFrameAt>1400;
-      const allStopped=now-startedAt>3500 && now-lastProgressAt>2200;
-      if(videoStopped || allStopped){
-        forcedReason=videoStopped?'video-frame-stall':'progress-stall';
-        state.lastError=`R702 clip ${forcedReason} — forcing immediate MP3 handoff`;
-        try{child.kill('SIGKILL')}catch(_){ }
-      }
-    },250);
-    stallTimer.unref?.();
-
-    const clipExit=new Promise(resolve=>{
-      child.once('error',error=>resolve({kind:'error',error}));
-      child.once('exit',(code,signal)=>resolve({kind:'exit',code,signal}));
+    await new Promise((resolve,reject)=>{
+      clipPublisher.once('error',reject);
+      clipPublisher.once('exit',(code,signal)=>{
+        if(code===0||stopping)resolve();else reject(new Error(`clip publisher exit ${code||signal}`));
+      });
     });
-    const hardBoundaryMs=duration>1?Math.max(1800,Math.ceil((duration+0.25)*1000)):120000;
-    let ended=await Promise.race([clipExit,sleep(hardBoundaryMs).then(()=>({kind:'deadline'}))]);
-    if(ended?.kind==='deadline'){
-      forcedReason='duration-deadline';
-      state.lastError='R702 clip video duration reached — forcing MP3 handoff';
-      if(childAlive(child)){try{child.kill('SIGKILL')}catch(_){ }}
-      await waitChildExit(child,120);
-      ended={kind:'exit',code:child.exitCode,signal:child.signalCode};
-    }
-    if(ended?.kind==='error' && !forcedReason)throw ended.error;
-    if(ended?.kind==='exit' && ended.code!==0 && !stopping && !forcedReason){
-      throw new Error(`R702 clip feeder exit ${ended.code??ended.signal}`);
-    }
-
     return !stopping;
   }catch(error){
-    state.lastError=`VIDEO clip R702: ${cleanText(error?.message||error)}`;
+    state.lastError=`VIDEO clip: ${cleanText(error?.message||error)}`;
     console.error('[video-clip]',error);
     return false;
   }finally{
-    const handoffStarted=Date.now();
-    if(stallTimer)clearInterval(stallTimer);
-    await stopClipFeederR701(child,videoSink,audioSink);
-    if(clipPublisher===child)clipPublisher=null;
-    state.producerRunning=false;
-    clipActive=false;
+    clipPublisher=null;
+    state.publisherRunning=false;state.producerRunning=false;
     if(!stopping){
-      startSilenceBridgeR702();
-      // R707: never announce the next MP3 before its PCM actually enters the master.
-      // Keep a neutral handoff label; playItem() switches the title at the real audio pipe boundary.
-      state.current={type:'handoff',title:'',album:'',url:'',startedAt:null,duration:null,pending:true};
-      writeFileSync(LIVE_CURRENT_FILE,'ANDRIK METAL RADIO 24/7','utf8');
-      state.phase='clip-to-track';
-      try{await ensureNormalVisualProducerR701();}catch(error){state.lastError=`R702 resume visual: ${cleanText(error?.message||error)}`;}
-      state.handoffCount++;
-      state.lastHandoffMs=Date.now()-handoffStarted;
-      await sleep(10);
+      try{
+        const visual=await ensureScheduledVisual();
+        if(!startPublisher(visual))throw new Error('master restart after clip failed');
+      }catch(error){
+        intentionalPublisherSwitch=false;
+        throw error;
+      }
     }
+    intentionalPublisherSwitch=false;
   }
 }
 
@@ -1234,13 +958,12 @@ function decoderArgs(localAudioPath){
 async function playItem(previous,item,next,following,localAudioPath){
   const duration=await probeDuration(localAudioPath||item.url);
   state.previous=previous?{type:previous.type||'track',title:previous.title,album:previous.album||'',url:previous.url||''}:null;
+  state.current={type:item.type||'track',title:item.title,album:item.album||'',url:item.url,startedAt:new Date().toISOString(),duration};
+  state.next=next?{type:next.type||'track',title:next.title,album:next.album||'',url:next.url||''}:null;
+  writeFileSync(LIVE_CURRENT_FILE,`ANDRIK — ${shortText(item.title||'TRACK',42)}`,'utf8');
 
-  // R707: prepare every layer first. The visible title is changed only when the
-  // corresponding PCM feeder is about to be connected to the persistent master.
-  await ensureMasterForTrackR701();
-  await stopSilenceBridgeR702();
   const audioSink=publisher?.stdio?.[3];
-  if(!childAlive(publisher) || !audioSink || audioSink.destroyed || audioSink.writableEnded) throw new Error('R707 master audio pipe unavailable');
+  if(!publisher || publisher.exitCode!==null || !audioSink || audioSink.destroyed) throw new Error('master audio pipe unavailable');
 
   state.producerRunning=true;
   producer=spawn('ffmpeg',decoderArgs(localAudioPath),{stdio:['ignore','pipe','pipe']});
@@ -1254,29 +977,18 @@ async function playItem(previous,item,next,following,localAudioPath){
     }
   });
 
-  try{
-    await new Promise((resolve,reject)=>{
-      const source=producer.stdout;
-
-      // R707 exact boundary: no next-title pre-roll. With the raw PCM input queue
-      // bounded to 16 packets, video text and audible audio cannot drift apart over time.
-      state.current={type:item.type||'track',title:item.title,album:item.album||'',url:item.url,startedAt:new Date().toISOString(),duration};
-      state.next=next?{type:next.type||'track',title:next.title,album:next.album||'',url:next.url||''}:null;
-      state.phase='track';
-      writeFileSync(LIVE_CURRENT_FILE,`ANDRIK — ${shortText(item.title||'TRACK',42)}`,'utf8');
-      source.pipe(audioSink,{end:false});
-      producer.once('error',reject);
-      producer.once('exit',(code,signal)=>{
-        try{source.unpipe(audioSink);}catch(_){}
-        state.producerRunning=false;
-        producer=null;
-        if(code===0 || stopping) resolve();
-        else reject(new Error(`decoder exit ${code||signal}`));
-      });
+  await new Promise((resolve,reject)=>{
+    const source=producer.stdout;
+    source.pipe(audioSink,{end:false});
+    producer.once('error',reject);
+    producer.once('exit',(code,signal)=>{
+      try{source.unpipe(audioSink);}catch(_){}
+      state.producerRunning=false;
+      producer=null;
+      if(code===0 || stopping) resolve();
+      else reject(new Error(`decoder exit ${code||signal}`));
     });
-  }finally{
-    if(!stopping){state.phase='idle-bridge';startSilenceBridgeR702();}
-  }
+  });
 }
 
 async function radioLoop(){
@@ -1287,7 +999,6 @@ async function radioLoop(){
   prefetchAllVisuals();
   const startupVisual=await ensureScheduledVisual();
   if(!startPublisher(startupVisual))return;
-  startNormalVisualProducerR701(startupVisual);
 
   while(!stopping){
     try{
@@ -1302,37 +1013,17 @@ async function radioLoop(){
         queueIndex=0;
       }
 
-      let item=queue[queueIndex];
-      // R697: never allow two video clips back-to-back. If reconciliation or an
-      // earlier failed track creates adjacency, pull the nearest MP3 forward.
-      if(item?.type==='clip' && lastPlayed?.type==='clip'){
-        const trackPos=queue.findIndex((x,i)=>i>queueIndex&&x?.type!=='clip');
-        if(trackPos>queueIndex){
-          [queue[queueIndex],queue[trackPos]]=[queue[trackPos],queue[queueIndex]];
-          item=queue[queueIndex];
-        }else{
-          queue=buildQueue();
-          queueIndex=0;
-          item=queue[0];
-        }
-      }
-      if(item?.type==='clip' && queue[queueIndex+1]?.type==='clip'){
-        const trackPos=queue.findIndex((x,i)=>i>queueIndex+1&&x?.type!=='clip');
-        if(trackPos>queueIndex+1)[queue[queueIndex+1],queue[trackPos]]=[queue[trackPos],queue[queueIndex+1]];
-      }
+      const item=queue[queueIndex];
       const next=queue[queueIndex+1]||queue[0]||null;
       const following=queue[queueIndex+2]||queue[1]||queue[0]||null;
       state.queuePosition=queueIndex+1;
 
       if(item?.type==='clip'){
         if(next?.type==='track'){
-          state.phase='prepare-clip-next-mp3';
           try{
-            await ensureNextTrackReadyR702(next);
+            await ensureNextTrackReadyR712(next);
           }catch(error){
-            // Never enter a clip if its following MP3 is not ready. The clip is deferred
-            // for this cycle and the next item gets a normal chance to play.
-            state.lastError=`R702 clip deferred: next MP3 not ready: ${cleanText(error?.message||error)}`;
+            state.lastError=`R712 clip deferred: next MP3 not ready: ${cleanText(error?.message||error)}`;
             console.error('[clip-deferred]',state.lastError);
             queueIndex++;
             continue;
@@ -1362,18 +1053,14 @@ async function radioLoop(){
       state.lastError=String(error?.stack||error).slice(-1200);
       console.error('[radio]',error);
 
-      if(childAlive(producer))producer.kill('SIGTERM');
+      if(producer && producer.exitCode===null)producer.kill('SIGTERM');
       producer=null;
       state.producerRunning=false;
 
       await sleep(1000);
 
       if(/library|HTTP|empty/i.test(String(error)))library=[];
-      else if(/R70[27] master|master audio pipe|publisher|clip feeder/i.test(String(error))){
-        // Transition errors retry the SAME MP3 after a short recovery. Do not
-        // skip the whole MP3 queue and race back to the same video clip.
-        await sleep(180);
-      }else queueIndex++;
+      else queueIndex++;
     }
   }
 }
@@ -1381,20 +1068,18 @@ async function radioLoop(){
 function publicStatus(){
   const now=Date.now();
   return {
-    ok:Boolean(state.publisherRunning&&(state.producerRunning||state.audioBridgeRunning)),
+    ok:Boolean(state.publisherRunning&&state.producerRunning),
     service:state.service,
     version:state.version,
     mode:state.mode,
     overlayMode:state.overlayMode,
     audioMode:state.audioMode,
+    engine:'R678-R695-DIRECT-FFMPEG',
+    videoPipeline:'DIRECT MP4 -> SCALE/TEXT/QR -> x264 -> FIFO -> RTMPS (NO MJPEG, NO GEQ)',
     outputTimeshiftSeconds:OUTPUT_TIMESHIFT_SECONDS,
     videoBitrate:VIDEO_BITRATE,
     audioBitrate:AUDIO_BITRATE,
     audioSampleRate:AUDIO_SAMPLE_RATE,
-    audioInputQueuePackets:AUDIO_INPUT_QUEUE_PACKETS,
-    videoInputQueuePackets:VIDEO_INPUT_QUEUE_PACKETS,
-    videoBuffer:VIDEO_BUFSIZE,
-    videoFeederQ:VIDEO_FEEDER_Q,
     videoFps:VIDEO_FPS,
     videoGop:VIDEO_GOP,
     qrOverlay:QR_OVERLAY,
@@ -1408,11 +1093,6 @@ function publicStatus(){
     equalizerEngine:state.equalizerEngine,
     publisherRunning:state.publisherRunning,
     producerRunning:state.producerRunning,
-    audioBridgeRunning:state.audioBridgeRunning,
-    phase:state.phase,
-    handoffCount:state.handoffCount,
-    lastHandoffMs:state.lastHandoffMs,
-    mp3CacheFailures:state.mp3CacheFailures,
     libraryTracks:state.libraryTracks,
     libraryAlbumTracks:state.libraryAlbumTracks,
     librarySingleTracks:state.librarySingleTracks,
@@ -1474,14 +1154,14 @@ const server=http.createServer((req,res)=>{
 });
 
 server.listen(PORT,'0.0.0.0',()=>{
-  console.log(`ANDRIK Radio R711-R695-TRANSPORT-FULLFIT listening on :${PORT}`);
+  console.log(`ANDRIK Radio R691-R2-RADIO-CLIPS listening on :${PORT}`);
   radioLoop();
 });
 
 let shutdownStarted=false;
 function waitChildExit(child,timeoutMs){
   return new Promise(resolve=>{
-    if(!childAlive(child))return resolve(true);
+    if(!child || child.exitCode!==null)return resolve(true);
     let done=false;
     const finish=value=>{if(done)return;done=true;clearTimeout(timer);resolve(value);};
     const timer=setTimeout(()=>finish(false),timeoutMs);
@@ -1495,31 +1175,28 @@ async function shutdown(){
   stopping=true;
   try{server.close();}catch(_){}
 
-  // R702: stop local feeders first; the single YouTube publisher is stopped last.
+  // Stop a finite video intermission first if it is active.
   const activeClip=clipPublisher;
-  if(childAlive(activeClip)){try{activeClip.kill('SIGTERM')}catch(_){ }}
-  await waitChildExit(activeClip,1000);
+  if(activeClip&&activeClip.exitCode===null){try{activeClip.kill('SIGTERM')}catch(_){ }}
+  await waitChildExit(activeClip,3000);
 
-  await stopNormalVisualProducerR701();
-  await stopSilenceBridgeR702();
-
+  // Then stop the current MP3 decoder.
   const activeDecoder=producer;
-  if(childAlive(activeDecoder))activeDecoder.kill('SIGTERM');
-  await waitChildExit(activeDecoder,1000);
+  if(activeDecoder&&activeDecoder.exitCode===null)activeDecoder.kill('SIGTERM');
+  await waitChildExit(activeDecoder,2500);
 
+  // EOF on the persistent PCM fd lets -shortest flush AAC/FLV naturally. This is
+  // the normal stop path used by systemctl and prevents broken YouTube archives.
   const activeMaster=publisher;
   try{
-    const audioSink=activeMaster?.stdio?.[3];
-    const videoSink=activeMaster?.stdio?.[4];
-    if(audioSink && !audioSink.destroyed && !audioSink.writableEnded)audioSink.end();
-    if(videoSink && !videoSink.destroyed && !videoSink.writableEnded)videoSink.end();
+    const sink=activeMaster?.stdio?.[3];
+    if(sink && !sink.destroyed && !sink.writableEnded)sink.end();
   }catch(_){}
-  let clean=await waitChildExit(activeMaster,1200);
-  if(!clean && childAlive(activeMaster)){
-    try{activeMaster.kill('SIGTERM')}catch(_){ }
-    clean=await waitChildExit(activeMaster,700);
+  let clean=await waitChildExit(activeMaster,9000);
+  if(!clean && activeMaster&&activeMaster.exitCode===null){
+    activeMaster.kill('SIGTERM');
+    clean=await waitChildExit(activeMaster,2500);
   }
-  if(!clean && childAlive(activeMaster)){try{activeMaster.kill('SIGKILL')}catch(_){ }}
   process.exit(0);
 }
 
