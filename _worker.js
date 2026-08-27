@@ -17794,6 +17794,7 @@ async function serveVideoObjectR559(request,env,key,{download=false,filename='AN
 
 // === R620: 1080p master visuals for ANDRIK Metal Radio in R2 ===
 const RADIO_VISUAL_KEYS_R620 = Object.freeze({
+  morning:'radio/stream-morning-master-r703.mp4',
   day:'radio/stream-day-master-r620.mp4',
   evening:'radio/stream-evening-master-r620.mp4',
   night:'radio/stream-night-master-r620.mp4'
@@ -17805,7 +17806,7 @@ function radioVisualSlotR620(request){
 async function handleRadioVisualPutR620(request,env){
   if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
   const bucket=getMusicBucketR314(env);if(!bucket)return json({ok:false,error:'music-bucket-not-configured'},503);
-  const slot=radioVisualSlotR620(request);if(!slot)return json({ok:false,error:'invalid-slot',allowed:['day','evening','night']},400);
+  const slot=radioVisualSlotR620(request);if(!slot)return json({ok:false,error:'invalid-slot',allowed:['morning','day','evening','night']},400);
   const len=Number(request.headers.get('content-length')||0);
   if(len>95*1024*1024)return json({ok:false,error:'file-too-large',message:'Максимум 95 МБ на один master.'},413);
   const type=String(request.headers.get('content-type')||'').toLowerCase();
@@ -17828,7 +17829,7 @@ function radioVisualUploadIdR662(request){
 async function handleRadioVisualMpuStartR662(request,env){
   if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
   const bucket=getMusicBucketR314(env);if(!bucket)return json({ok:false,error:'music-bucket-not-configured'},503);
-  const slot=radioVisualSlotR620(request);if(!slot)return json({ok:false,error:'invalid-slot',allowed:['day','evening','night']},400);
+  const slot=radioVisualSlotR620(request);if(!slot)return json({ok:false,error:'invalid-slot',allowed:['morning','day','evening','night']},400);
   const body=await request.json().catch(()=>({}));
   const expectedSize=Math.max(0,Number(body?.size)||0);
   if(expectedSize>5*1024*1024*1024)return json({ok:false,error:'file-too-large',message:'Максимум 5 ГБ.'},413);
@@ -17886,9 +17887,9 @@ function radioVisualPublicUrlR621(slot){
 }
 async function handleRadioVisualPublicR621(request,env){
   const slot=radioVisualSlotR620(request);
-  if(!slot)return json({ok:false,error:'invalid-slot',allowed:['day','evening','night']},400);
+  if(!slot)return json({ok:false,error:'invalid-slot',allowed:['morning','day','evening','night']},400);
   const key=RADIO_VISUAL_KEYS_R620[slot];
-  // R621 exposes read-only access to exactly the three radio master objects.
+  // R703 exposes read-only access to exactly the four radio master objects.
   // Upload/update remains protected by ADMIN_KEY on /api/control/radio-visuals-r620.
   return serveVideoObjectR559(request,env,key,{
     download:new URL(request.url).searchParams.get('download')==='1',
@@ -17900,7 +17901,7 @@ async function handleRadioVisualPublicR621(request,env){
 async function handleRadioVisualPrivateR622(request,env){
   if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
   const slot=radioVisualSlotR620(request);
-  if(!slot)return json({ok:false,error:'invalid-slot',allowed:['day','evening','night']},400);
+  if(!slot)return json({ok:false,error:'invalid-slot',allowed:['morning','day','evening','night']},400);
   const key=RADIO_VISUAL_KEYS_R620[slot];
   return serveVideoObjectR559(request,env,key,{
     download:true,
@@ -17908,13 +17909,13 @@ async function handleRadioVisualPrivateR622(request,env){
   });
 }
 
-// R650: the already-paired AWS web agent can fetch only the three known visual slots.
+// R703: the already-paired OVH web agent can fetch only the four known visual slots.
 // This removes ADMIN_KEY from AWS completely: the phone/browser keeps owner auth,
 // while AWS uses its own hashed agent token that was paired once in R627.
 async function handleRadioAgentVisualR650(request,env){
   if(!await radioAgentAuthorizedR627(request,env))return json({ok:false,error:'unauthorized-agent'},401);
   const slot=radioVisualSlotR620(request);
-  if(!slot)return json({ok:false,error:'invalid-slot',allowed:['day','evening','night']},400);
+  if(!slot)return json({ok:false,error:'invalid-slot',allowed:['morning','day','evening','night']},400);
   const key=RADIO_VISUAL_KEYS_R620[slot];
   return serveVideoObjectR559(request,env,key,{
     download:true,
@@ -17929,7 +17930,7 @@ async function handleRadioVisualStatusR620(request,env){
     const object=await bucket.head(key).catch(()=>null);
     out[slot]={exists:Boolean(object),key,size:Number(object?.size||0),uploaded:object?.uploaded||null,publicUrl:radioVisualPublicUrlR621(slot),sourceKey:String(object?.customMetadata?.sourceKey||''),sourceName:String(object?.customMetadata?.sourceName||'')};
   }
-  return json({ok:true,ready:Object.values(out).every(x=>x.exists&&x.size>2*1024*1024),visuals:out});
+  return json({ok:true,ready:['day','evening','night'].every(slot=>out[slot]?.exists&&out[slot]?.size>2*1024*1024),allFourReady:['morning','day','evening','night'].every(slot=>out[slot]?.exists&&out[slot]?.size>2*1024*1024),morningReady:Boolean(out.morning?.exists&&out.morning?.size>2*1024*1024),schedule:{timeZone:'Europe/Bratislava',morning:'06:00-12:00',day:'12:00-18:00',evening:'18:00-24:00',night:'00:00-06:00'},visuals:out});
 }
 
 
@@ -18618,7 +18619,7 @@ async function handleRadioRemoteCommandR627(request,env){
   if(!allowed.has(action))return json({ok:false,error:'invalid-action'},400);
   const slot=String(body.slot||'').trim().toLowerCase();
   if(action==='visual-now' && !Object.prototype.hasOwnProperty.call(RADIO_VISUAL_KEYS_R620,slot))
-    return json({ok:false,error:'invalid-slot',allowed:['day','evening','night']},400);
+    return json({ok:false,error:'invalid-slot',allowed:['morning','day','evening','night']},400);
   const agent=parseStateValueR627(await getPushState(db,RADIO_REMOTE_R627.agentKey).catch(()=>null))||{};
   if(!agent.tokenHash)return json({ok:false,error:'aws-agent-not-paired'},409);
   const existing=parseStateValueR627(await getPushState(db,RADIO_REMOTE_R627.commandKey).catch(()=>null));

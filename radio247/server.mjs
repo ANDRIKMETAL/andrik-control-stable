@@ -24,14 +24,17 @@ const AUDIO_CACHE_DIR = `${CACHE_DIR}/audio`;
 const VISUAL_CACHE_DIR = `${CACHE_DIR}/visuals`;
 const MAX_CACHED_TRACKS = 10;
 const VISUAL_TIME_ZONE = process.env.VISUAL_TIME_ZONE || 'Europe/Bratislava';
-const FORCE_VISUAL_SLOT = ['day','evening','night'].includes(String(process.env.FORCE_VISUAL_SLOT||'').trim().toLowerCase()) ? String(process.env.FORCE_VISUAL_SLOT).trim().toLowerCase() : '';
+const FORCE_VISUAL_SLOT = ['morning','day','evening','night'].includes(String(process.env.FORCE_VISUAL_SLOT||'').trim().toLowerCase()) ? String(process.env.FORCE_VISUAL_SLOT).trim().toLowerCase() : '';
 const VISUAL_AUTO_SCHEDULE_R658 = String(process.env.VISUAL_AUTO_SCHEDULE_R658||'').trim()==='1';
-// DAY / EVENING / NIGHT are owner-selected R2 videos cached locally on OVH.
-// R702 permanent rule: every source is auto-FIT into 1920x1080 with the complete
+// MORNING / DAY / EVENING / NIGHT are owner-selected R2 videos cached locally on OVH.
+// R703 schedule (Europe/Bratislava): MORNING 06-12, DAY 12-18, EVENING 18-24, NIGHT 00-06.
+// R702 permanent rule is preserved: every source is auto-FIT into 1920x1080 with the complete
 // source frame preserved. The user never has to stretch MP4 manually; crop/cover is OFF.
+const MORNING_VISUAL = process.env.MORNING_VISUAL || `${VISUAL_CACHE_DIR}/stream-morning-master-r703.mp4`;
 const DAY_VISUAL = process.env.DAY_VISUAL || `${VISUAL_CACHE_DIR}/stream-day-master-r620.mp4`;
 const EVENING_VISUAL = process.env.EVENING_VISUAL || `${VISUAL_CACHE_DIR}/stream-evening-master-r620.mp4`;
 const NIGHT_VISUAL = process.env.NIGHT_VISUAL || `${VISUAL_CACHE_DIR}/stream-night-master-r620.mp4`;
+const MORNING_VISUAL_URL = process.env.MORNING_VISUAL_URL || MORNING_VISUAL;
 const DAY_VISUAL_URL = process.env.DAY_VISUAL_URL || DAY_VISUAL;
 const EVENING_VISUAL_URL = process.env.EVENING_VISUAL_URL || EVENING_VISUAL;
 const NIGHT_VISUAL_URL = process.env.NIGHT_VISUAL_URL || NIGHT_VISUAL;
@@ -63,13 +66,13 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R702-MP3-HANDOFF-AUTO-FIT-FINAL',
-  mode: 'R702 MP3 + RANDOM R2 CLIPS / MP3 CACHE FIX / NEXT MP3 PRELOADED / VIDEO-FRAME WATCHDOG / AUTO FIT / ONE PUBLISHER',
+  version: 'R703-FOUR-VISUAL-CYCLES-R702-ENGINE',
+  mode: 'R703 FOUR VISUAL CYCLES / R702 MP3+CLIP ENGINE PRESERVED / MORNING 06-12 / DAY 12-18 / EVENING 18-24 / NIGHT 00-06',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
   producerRunning: false,
-  overlayMode: 'R702 AUTO FIT 1920x1080 / COMPLETE FRAME / NO CROP / NO MANUAL STRETCH / QR / FULL SCREEN',
+  overlayMode: 'R703 4-SLOT AUTO / R702 AUTO FIT 1920x1080 / COMPLETE FRAME / NO CROP / QR / FULL SCREEN',
   audioMode: 'R702 PERSISTENT RTMPS / MP3 CACHE MUX FIX / PRELOADED CLIP HANDOFF / AAC-LC 128kbps',
   visualTimeZone: VISUAL_TIME_ZONE,
   visualPeriod: null,
@@ -672,8 +675,9 @@ function localHourInTimeZone(timeZone=VISUAL_TIME_ZONE){
 }
 
 function visualPeriodForHour(hour){
-  if(hour>=8 && hour<17)return 'day';
-  if(hour>=17 && hour<22)return 'evening';
+  if(hour>=6 && hour<12)return 'morning';
+  if(hour>=12 && hour<18)return 'day';
+  if(hour>=18)return 'evening';
   return 'night';
 }
 
@@ -705,6 +709,7 @@ async function downloadVisualToCache(url,dest,label){
 }
 
 function visualSpecForPeriod(period){
+  if(period==='morning')return {period,path:MORNING_VISUAL,url:MORNING_VISUAL_URL};
   if(period==='day')return {period,path:DAY_VISUAL,url:DAY_VISUAL_URL};
   if(period==='evening')return {period,path:EVENING_VISUAL,url:EVENING_VISUAL_URL};
   return {period:'night',path:NIGHT_VISUAL,url:NIGHT_VISUAL_URL};
@@ -720,7 +725,7 @@ async function ensureVisualSpec(spec){
 }
 
 function prefetchAllVisuals(){
-  for(const period of ['day','evening','night']){
+  for(const period of ['morning','day','evening','night']){
     const spec=visualSpecForPeriod(period);
     ensureVisualSpec(spec).catch(error=>console.error('[visual-prefetch]',cleanText(error?.message||error)));
   }
@@ -737,8 +742,19 @@ async function ensureScheduledVisual(){
     state.visualPath=path;
     return path;
   }catch(error){
+    // R703 safe rollout: until MORNING is uploaded, 06:00-12:00 temporarily uses DAY.
+    // This lets the four-slot build be deployed before the new MP4 exists without breaking radio.
+    if(period==='morning'){
+      try{
+        const fallback=await ensureVisualSpec(visualSpecForPeriod('day'));
+        state.lastError=`R703 morning not assigned yet — temporary DAY fallback: ${cleanText(error?.message||error)}`;
+        state.visualPeriod=VISUAL_AUTO_SCHEDULE_R658?'auto-morning-fallback-day':'morning-fallback-day';
+        state.visualPath=fallback;
+        return fallback;
+      }catch(_){ }
+    }
     if(existsSync(EMERGENCY_VISUAL) && statSync(EMERGENCY_VISUAL).size>300000){
-      state.lastError=`R622 ${period} local visual fallback: ${cleanText(error?.message||error)}`;
+      state.lastError=`R703 ${period} local visual fallback: ${cleanText(error?.message||error)}`;
       state.visualPeriod=`${period}-emergency`;
       state.visualPath=EMERGENCY_VISUAL;
       return EMERGENCY_VISUAL;

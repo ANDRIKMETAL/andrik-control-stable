@@ -1,0 +1,23 @@
+ANDRIK R703 — FOUR VISUAL CYCLES
+Date: 2026-08-27
+Base: R702-MP3-HANDOFF-AUTO-FIT-FINAL
+
+PURPOSE
+Add a fourth MORNING radio visual without touching the now-stable R702 MP3/clip handoff engine.
+
+SCHEDULE — Europe/Bratislava
+- MORNING: 06:00–12:00
+- DAY: 12:00–18:00
+- EVENING: 18:00–24:00
+- NIGHT: 00:00–06:00
+
+SAFE ROLLOUT
+- New R2 slot: radio/stream-morning-master-r703.mp4
+- Until MORNING is assigned/uploaded, 06:00–12:00 safely falls back to the existing DAY visual.
+- DAY / EVENING / NIGHT remain untouched.
+- R702 MP3 cache fix, next-MP3 preload, clip frame watchdog, silence bridge, persistent publisher and AUTO-FIT/no-crop rules are preserved.
+
+CONTROL
+- radio-visuals-admin.html now shows 4 cards and allows upload/assign/put-now for MORNING too.
+- Remote agent understands MORNING.
+- New R703 auto scheduler switches all four periods every minute and never requires manual video resizing.

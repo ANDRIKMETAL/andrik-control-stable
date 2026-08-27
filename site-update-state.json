@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787809522061-25a5fe3ef2",
-  "release": "R702",
-  "archiveName": "R702-MP3-HANDOFF-AUTO-FIT-FINAL-R701-PRESERVED-SAFE-FULL-2.zip",
-  "sourceHead": "c2aad66dcdcf6c77680b46d2290602871288c9fb",
-  "backupSha": "c2aad66dcdcf6c77680b46d2290602871288c9fb",
+  "operationId": "publish-1787811634212-f2fce8076c",
+  "release": "R703",
+  "archiveName": "R703-FOUR-VISUAL-CYCLES-MORNING-R702-PRESERVED-SAFE-FULL-1.zip",
+  "sourceHead": "33dd7f036214b3797f5b3f4e382ea5a56146c5c9",
+  "backupSha": "33dd7f036214b3797f5b3f4e382ea5a56146c5c9",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-27T05:45:22.424Z"
+  "generatedAt": "2026-08-27T06:20:35.070Z"
 }

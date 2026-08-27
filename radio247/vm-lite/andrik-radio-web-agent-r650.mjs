@@ -13,8 +13,8 @@ const VISUAL_PROTECT_FILES=[`${VISUAL_DIR}/.protect-local-visuals-r656`,`${VISUA
 function visualsProtected(){return VISUAL_PROTECT_FILES.some(path=>fs.existsSync(path));}
 const RADIO_ENV='/etc/andrik-radio.env';
 const VISUAL_MANUAL_MARKER='/var/cache/andrik-radio-r622/visuals/.manual-visual-r658';
-const VISUAL_AUTO_R658='/usr/local/sbin/andrik-visual-auto-r658';
-const VISUAL_FILES=Object.freeze({day:'stream-day-master-r620.mp4',evening:'stream-evening-master-r620.mp4',night:'stream-night-master-r620.mp4'});
+const VISUAL_AUTO_R658='/usr/local/sbin/andrik-visual-auto-r703';
+const VISUAL_FILES=Object.freeze({morning:'stream-morning-master-r703.mp4',day:'stream-day-master-r620.mp4',evening:'stream-evening-master-r620.mp4',night:'stream-night-master-r620.mp4'});
 const DEFAULT_TICKER='ANDRIK METAL RADIO 24/7   •   ANDRIKMETAL.COM   •   НОВЫЕ СИНГЛЫ И АЛЬБОМЫ ANDRIK   •   ПОДПИСЫВАЙТЕСЬ • СТАВЬТЕ ЛАЙКИ • КОММЕНТИРУЙТЕ   •   ';
 const BASE=process.env.ANDRIK_CONTROL_BASE||'https://andrikmetal.com';
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
@@ -99,7 +99,7 @@ async function downloadVisualR650(slot,headers,{force=false}={}){
     fs.renameSync(tmp,final);return {slot,size:st.size,probe:probe.output,path:final,kept:false};
   }catch(e){try{fs.unlinkSync(tmp)}catch(_){}throw e;}
 }
-async function syncVisualsR650(headers){const out=[];for(const slot of ['day','evening','night'])out.push(await downloadVisualR650(slot,headers,{force:false}));return out;}
+async function syncVisualsR650(headers){const out=[];for(const slot of ['morning','day','evening','night'])out.push(await downloadVisualR650(slot,headers,{force:false}));return out;}
 async function execute(action,command={},headers={}){
   if(action==='start'||action==='auto-safe')return runAsync('/usr/local/sbin/andrik-youtube',['auto-safe'],240000);
   if(action==='recover')return runAsync('/usr/local/sbin/andrik-youtube',['recover'],240000);

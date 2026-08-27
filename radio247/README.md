@@ -69,3 +69,21 @@ AWS downloads the three daypart masters once through an ADMIN_KEY-protected endp
 ```bash
 curl -fsSL https://raw.githubusercontent.com/ANDRIKMETAL/andrik-control-stable/main/radio247/vm-lite/install-r702-radio-handoff-final.sh | sudo env ANDRIK_SITE_BASE=https://raw.githubusercontent.com/ANDRIKMETAL/andrik-control-stable/main bash
 ```
+
+
+## R703 — четыре визуальных периода
+
+Стабильный R702 MP3/clip engine сохранён без изменений. Добавлен четвёртый master slot и точное расписание Europe/Bratislava:
+
+- MORNING 06:00–12:00 — `radio/stream-morning-master-r703.mp4`
+- DAY 12:00–18:00 — `radio/stream-day-master-r620.mp4`
+- EVENING 18:00–24:00 — `radio/stream-evening-master-r620.mp4`
+- NIGHT 00:00–06:00 — `radio/stream-night-master-r620.mp4`
+
+MORNING можно назначить позже через `/radio-visuals-admin.html`. Пока его нет, утренний период безопасно использует DAY, поэтому текущий эфир не ломается.
+
+После деплоя R703 на OVH выполнить один раз:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/ANDRIKMETAL/andrik-control-stable/main/radio247/vm-lite/install-r703-four-visual-cycles.sh | sudo env ANDRIK_SITE_BASE=https://raw.githubusercontent.com/ANDRIKMETAL/andrik-control-stable/main bash
+```
