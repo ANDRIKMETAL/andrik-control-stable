@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787811634212-f2fce8076c",
-  "release": "R703",
-  "archiveName": "R703-FOUR-VISUAL-CYCLES-MORNING-R702-PRESERVED-SAFE-FULL-1.zip",
-  "sourceHead": "33dd7f036214b3797f5b3f4e382ea5a56146c5c9",
-  "backupSha": "33dd7f036214b3797f5b3f4e382ea5a56146c5c9",
+  "operationId": "publish-1787817797674-2c241d8c55",
+  "release": "R704",
+  "archiveName": "R704-FOUR-LIVE-EQUALIZERS-R703-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "daba7b4e05abcaaf91adc9e28c7afffe64ddcdf2",
+  "backupSha": "daba7b4e05abcaaf91adc9e28c7afffe64ddcdf2",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-27T06:20:35.070Z"
+  "generatedAt": "2026-08-27T08:03:18.094Z"
 }

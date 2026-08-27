@@ -27,7 +27,8 @@ const VISUAL_TIME_ZONE = process.env.VISUAL_TIME_ZONE || 'Europe/Bratislava';
 const FORCE_VISUAL_SLOT = ['morning','day','evening','night'].includes(String(process.env.FORCE_VISUAL_SLOT||'').trim().toLowerCase()) ? String(process.env.FORCE_VISUAL_SLOT).trim().toLowerCase() : '';
 const VISUAL_AUTO_SCHEDULE_R658 = String(process.env.VISUAL_AUTO_SCHEDULE_R658||'').trim()==='1';
 // MORNING / DAY / EVENING / NIGHT are owner-selected R2 videos cached locally on OVH.
-// R703 schedule (Europe/Bratislava): MORNING 06-12, DAY 12-18, EVENING 18-24, NIGHT 00-06.
+// R704 preserves R703 schedule: MORNING 06-12, DAY 12-18, EVENING 18-24, NIGHT 00-06.
+// R704 adds a different subtle continuously animated equalizer for each period.
 // R702 permanent rule is preserved: every source is auto-FIT into 1920x1080 with the complete
 // source frame preserved. The user never has to stretch MP4 manually; crop/cover is OFF.
 const MORNING_VISUAL = process.env.MORNING_VISUAL || `${VISUAL_CACHE_DIR}/stream-morning-master-r703.mp4`;
@@ -66,13 +67,13 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R703-FOUR-VISUAL-CYCLES-R702-ENGINE',
-  mode: 'R703 FOUR VISUAL CYCLES / R702 MP3+CLIP ENGINE PRESERVED / MORNING 06-12 / DAY 12-18 / EVENING 18-24 / NIGHT 00-06',
+  version: 'R704-FOUR-LIVE-EQUALIZERS-R703-PRESERVED',
+  mode: 'R704 FOUR LIVE EQUALIZERS / R703 FOUR VISUAL CYCLES / R702 MP3+CLIP ENGINE PRESERVED',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
   producerRunning: false,
-  overlayMode: 'R703 4-SLOT AUTO / R702 AUTO FIT 1920x1080 / COMPLETE FRAME / NO CROP / QR / FULL SCREEN',
+  overlayMode: 'R704 4-SLOT LIVE EQUALIZER / BETWEEN TRACK TITLE + TICKER / R703 AUTO 4-SLOT / R702 AUTO FIT NO CROP',
   audioMode: 'R702 PERSISTENT RTMPS / MP3 CACHE MUX FIX / PRELOADED CLIP HANDOFF / AAC-LC 128kbps',
   visualTimeZone: VISUAL_TIME_ZONE,
   visualPeriod: null,
@@ -96,7 +97,9 @@ const state = {
   audioBridgeRunning: false,
   handoffCount: 0,
   lastHandoffMs: null,
-  mp3CacheFailures: 0
+  mp3CacheFailures: 0,
+  equalizerPeriod: null,
+  equalizerStyle: null
 };
 
 let publisher = null;
@@ -820,12 +823,49 @@ function startSilenceBridgeR702(){
   return true;
 }
 
-function normalVideoProducerArgs(visualPath){
+// R704: four subtle procedural equalizers. They are intentionally NOT audio-reactive:
+// the radio swaps MP3 sources behind one persistent YouTube publisher, so a synthetic smooth
+// motion layer is safer and never stalls the real audio path. The line lives only in the empty
+// strip between the current-track title (y=h-188) and ticker (y=h-58).
+function equalizerPeriodR704(){
+  return FORCE_VISUAL_SLOT || visualPeriodForHour(localHourInTimeZone());
+}
+
+function equalizerStyleR704(period){
+  const styles={
+    morning:{name:'morning-soft-gold',bars:20,barWidth:8,span:1380,minH:4,ampH:13,speed:0.88,speed2:0.37,phase:0.63,color:'0xFFE2B6',line:'0xFFF0D6',alpha:0.58,lineAlpha:0.42},
+    day:{name:'day-steel',bars:28,barWidth:7,span:1420,minH:4,ampH:17,speed:1.24,speed2:0.51,phase:0.49,color:'0xE8EDF2',line:'0xF4F6F8',alpha:0.62,lineAlpha:0.46},
+    evening:{name:'evening-amber',bars:24,barWidth:8,span:1400,minH:5,ampH:19,speed:1.04,speed2:0.43,phase:0.57,color:'0xE9B36D',line:'0xF3C98C',alpha:0.62,lineAlpha:0.48},
+    night:{name:'night-blue',bars:22,barWidth:7,span:1380,minH:3,ampH:12,speed:0.72,speed2:0.29,phase:0.67,color:'0xAFCFE8',line:'0xD6E8F5',alpha:0.54,lineAlpha:0.38}
+  };
+  return styles[period]||styles.day;
+}
+
+function liveEqualizerFiltersR704(period){
+  const s=equalizerStyleR704(period);
+  const left=Math.round((1920-s.span)/2);
+  const baseOffset=84; // baseline y = h-84; safely above ticker and below title box
+  const filters=[
+    `drawbox=x=${left}:y=ih-${baseOffset}:w=${s.span}:h=2:color=${s.line}@${s.lineAlpha}:t=fill`
+  ];
+  for(let i=0;i<s.bars;i++){
+    const center=i/(Math.max(1,s.bars-1));
+    const x=Math.round(left + center*s.span - s.barWidth/2);
+    const phase=(i*s.phase).toFixed(3);
+    const phase2=(i*s.phase*0.71+1.17).toFixed(3);
+    const height=`${s.minH}+${s.ampH}*(0.50+0.50*sin(t*${s.speed.toFixed(3)}+${phase}))*(0.72+0.28*(0.50+0.50*sin(t*${s.speed2.toFixed(3)}+${phase2})))`;
+    filters.push(`drawbox=x=${x}:y='ih-${baseOffset}-(${height})':w=${s.barWidth}:h='${height}':color=${s.color}@${s.alpha}:t=fill`);
+  }
+  return filters.join(',');
+}
+
+function normalVideoProducerArgs(visualPath,period=equalizerPeriodR704()){
+  const equalizer=liveEqualizerFiltersR704(period);
   return [
     '-hide_banner','-loglevel','warning',
     '-re','-stream_loop','-1','-i',visualPath,
     '-an','-sn','-dn',
-    '-vf',`scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1,fps=${VIDEO_FPS},format=yuvj420p`,
+    '-vf',`scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1,fps=${VIDEO_FPS},${equalizer},format=yuvj420p`,
     '-c:v','mjpeg','-q:v','5','-pix_fmt','yuvj420p',
     '-f','mjpeg','pipe:1'
   ];
@@ -854,7 +894,11 @@ function startNormalVisualProducerR701(visualPath){
   }
   if(childAlive(visualProducer) && visualProducerPath===visualPath)return true;
 
-  const child=spawn('ffmpeg',normalVideoProducerArgs(visualPath),{stdio:['ignore','pipe','pipe']});
+  const eqPeriod=equalizerPeriodR704();
+  const eqStyle=equalizerStyleR704(eqPeriod);
+  state.equalizerPeriod=eqPeriod;
+  state.equalizerStyle=eqStyle.name;
+  const child=spawn('ffmpeg',normalVideoProducerArgs(visualPath,eqPeriod),{stdio:['ignore','pipe','pipe']});
   visualProducer=child;
   visualProducerPath=visualPath;
   child.stdout.pipe(videoSink,{end:false});
@@ -1348,6 +1392,8 @@ function publicStatus(){
     visualAutoSchedule:VISUAL_AUTO_SCHEDULE_R658,
     visualPeriod:state.visualPeriod,
     visualPath:state.visualPath,
+    equalizerPeriod:state.equalizerPeriod,
+    equalizerStyle:state.equalizerStyle,
     publisherRunning:state.publisherRunning,
     producerRunning:state.producerRunning,
     audioBridgeRunning:state.audioBridgeRunning,
