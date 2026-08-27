@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787819399147-7958583ff2",
-  "release": "R706",
-  "archiveName": "R706-TRUE-MOTION-FOUR-LIVE-EQUALIZERS-R705-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "44596c04c0a86affe213e03c04dd8721c76a00dd",
-  "backupSha": "44596c04c0a86affe213e03c04dd8721c76a00dd",
+  "operationId": "publish-1787824291229-d73c78b842",
+  "release": "R707",
+  "archiveName": "R707-MORNING-SLOT-EXACT-TITLE-SYNC-R706-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "4889bf826f51f43821b769db1b62196ea00120ee",
+  "backupSha": "4889bf826f51f43821b769db1b62196ea00120ee",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-27T08:29:59.554Z"
+  "generatedAt": "2026-08-27T09:51:31.650Z"
 }

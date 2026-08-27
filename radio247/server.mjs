@@ -27,8 +27,8 @@ const VISUAL_TIME_ZONE = process.env.VISUAL_TIME_ZONE || 'Europe/Bratislava';
 const FORCE_VISUAL_SLOT = ['morning','day','evening','night'].includes(String(process.env.FORCE_VISUAL_SLOT||'').trim().toLowerCase()) ? String(process.env.FORCE_VISUAL_SLOT).trim().toLowerCase() : '';
 const VISUAL_AUTO_SCHEDULE_R658 = String(process.env.VISUAL_AUTO_SCHEDULE_R658||'').trim()==='1';
 // MORNING / DAY / EVENING / NIGHT are owner-selected R2 videos cached locally on OVH.
-// R706 preserves R705/R703 schedule: MORNING 06-12, DAY 12-18, EVENING 18-24, NIGHT 00-06.
-// R706 keeps the visible mobile-safe placement and replaces static drawbox geometry with true frame-evaluated GEQ motion.
+// R707 preserves R706 true-motion equalizers and the R703 four-period schedule.
+// R707 also hard-syncs the on-screen track title to the actual PCM handoff and prevents raw-audio queue drift.
 // R702 permanent rule is preserved: every source is auto-FIT into 1920x1080 with the complete
 // source frame preserved. The user never has to stretch MP4 manually; crop/cover is OFF.
 const MORNING_VISUAL = process.env.MORNING_VISUAL || `${VISUAL_CACHE_DIR}/stream-morning-master-r703.mp4`;
@@ -41,7 +41,8 @@ const EVENING_VISUAL_URL = process.env.EVENING_VISUAL_URL || EVENING_VISUAL;
 const NIGHT_VISUAL_URL = process.env.NIGHT_VISUAL_URL || NIGHT_VISUAL;
 const EMERGENCY_VISUAL = process.env.EMERGENCY_VISUAL || new URL('../assets/live-eye-r223.mp4', import.meta.url).pathname;
 const QR_OVERLAY = process.env.QR_OVERLAY || new URL('../assets/andrik-qr-r612.png', import.meta.url).pathname;
-const OUTPUT_TIMESHIFT_SECONDS = 1; // R702: one persistent publisher, minimal recovery cushion
+const OUTPUT_TIMESHIFT_SECONDS = 1; // one persistent publisher, minimal recovery cushion
+const AUDIO_INPUT_QUEUE_PACKETS = 16; // R707: bounded raw-PCM queue; prevents title/audio drift over long uptime
 const VIDEO_BITRATE = '4500k'; // R637: 1080p25 low-motion radio visual, bounded CBR
 const AUDIO_BITRATE = '128k'; // YouTube Live recommendation for stereo AAC
 const AUDIO_SAMPLE_RATE = 44100; // YouTube Live recommendation for stereo
@@ -67,14 +68,14 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R706-TRUE-MOTION-FOUR-EQUALIZERS-R705-PRESERVED',
-  mode: 'R706 TRUE FRAME-ANIMATED FOUR EQUALIZERS / R705 VISIBILITY / R703 VISUAL CYCLES / R702 MP3+CLIP ENGINE PRESERVED',
+  version: 'R707-EXACT-TITLE-SYNC-MORNING-SLOT-R706-PRESERVED',
+  mode: 'R707 EXACT TRACK-TITLE SYNC / 4-SLOT MORNING-DAY-EVENING-NIGHT / R706 TRUE-MOTION EQ / R702 MP3+CLIP PRESERVED',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
   producerRunning: false,
-  overlayMode: 'R706 TRUE-MOTION 4-SLOT EQUALIZER / GEQ FRAME ENGINE / BETWEEN TITLE + TICKER / R702 AUTO FIT NO CROP',
-  audioMode: 'R702 PERSISTENT RTMPS / MP3 CACHE MUX FIX / PRELOADED CLIP HANDOFF / AAC-LC 128kbps',
+  overlayMode: 'R707 EXACT TITLE HANDOFF / R706 TRUE-MOTION 4-SLOT EQ / BETWEEN TITLE + TICKER / AUTO FIT NO CROP',
+  audioMode: 'R707 BOUNDED PCM QUEUE / EXACT TITLE AT AUDIO PIPE / PERSISTENT RTMPS / AAC-LC 128kbps',
   visualTimeZone: VISUAL_TIME_ZONE,
   visualPeriod: null,
   visualPath: null,
@@ -978,7 +979,7 @@ function startPublisher(visualPath){
     '-hide_banner','-loglevel','warning',
     '-thread_queue_size','2048','-f','mjpeg','-framerate',String(VIDEO_FPS),'-i','pipe:4',
     '-loop','1','-framerate','1','-i',QR_OVERLAY,
-    '-thread_queue_size','8192','-probesize','32','-analyzeduration','0','-f','s16le','-ar',String(AUDIO_SAMPLE_RATE),'-ac','2','-i','pipe:3',
+    '-thread_queue_size',String(AUDIO_INPUT_QUEUE_PACKETS),'-probesize','32','-analyzeduration','0','-f','s16le','-ar',String(AUDIO_SAMPLE_RATE),'-ac','2','-i','pipe:3',
     '-filter_complex',filterComplex,
     '-map','[outv]','-map','2:a:0',
     '-c:v','libx264','-preset','ultrafast','-tune','zerolatency',
@@ -1202,12 +1203,10 @@ async function playVideoClipR691(previous,item,next){
     clipActive=false;
     if(!stopping){
       startSilenceBridgeR702();
-      if(next?.type==='track'){
-        state.current={type:'track',title:next.title,album:next.album||'',url:next.url||'',startedAt:null,duration:null,pending:true};
-        writeFileSync(LIVE_CURRENT_FILE,`ANDRIK — ${shortText(next.title||'TRACK',42)}`,'utf8');
-      }else{
-        writeFileSync(LIVE_CURRENT_FILE,'ANDRIK METAL RADIO 24/7','utf8');
-      }
+      // R707: never announce the next MP3 before its PCM actually enters the master.
+      // Keep a neutral handoff label; playItem() switches the title at the real audio pipe boundary.
+      state.current={type:'handoff',title:'',album:'',url:'',startedAt:null,duration:null,pending:true};
+      writeFileSync(LIVE_CURRENT_FILE,'ANDRIK METAL RADIO 24/7','utf8');
       state.phase='clip-to-track';
       try{await ensureNormalVisualProducerR701();}catch(error){state.lastError=`R702 resume visual: ${cleanText(error?.message||error)}`;}
       state.handoffCount++;
@@ -1232,17 +1231,13 @@ function decoderArgs(localAudioPath){
 async function playItem(previous,item,next,following,localAudioPath){
   const duration=await probeDuration(localAudioPath||item.url);
   state.previous=previous?{type:previous.type||'track',title:previous.title,album:previous.album||'',url:previous.url||''}:null;
-  state.current={type:item.type||'track',title:item.title,album:item.album||'',url:item.url,startedAt:new Date().toISOString(),duration};
-  state.next=next?{type:next.type||'track',title:next.title,album:next.album||'',url:next.url||''}:null;
-  writeFileSync(LIVE_CURRENT_FILE,`ANDRIK — ${shortText(item.title||'TRACK',42)}`,'utf8');
-  state.phase='track';
 
-  // R702: after a clip the MP3 is already local; keep one master and swap only local feeders.
-  // This prevents one transition fault from skipping every MP3 in the queue.
+  // R707: prepare every layer first. The visible title is changed only when the
+  // corresponding PCM feeder is about to be connected to the persistent master.
   await ensureMasterForTrackR701();
   await stopSilenceBridgeR702();
   const audioSink=publisher?.stdio?.[3];
-  if(!childAlive(publisher) || !audioSink || audioSink.destroyed || audioSink.writableEnded) throw new Error('R702 master audio pipe unavailable');
+  if(!childAlive(publisher) || !audioSink || audioSink.destroyed || audioSink.writableEnded) throw new Error('R707 master audio pipe unavailable');
 
   state.producerRunning=true;
   producer=spawn('ffmpeg',decoderArgs(localAudioPath),{stdio:['ignore','pipe','pipe']});
@@ -1259,6 +1254,13 @@ async function playItem(previous,item,next,following,localAudioPath){
   try{
     await new Promise((resolve,reject)=>{
       const source=producer.stdout;
+
+      // R707 exact boundary: no next-title pre-roll. With the raw PCM input queue
+      // bounded to 16 packets, video text and audible audio cannot drift apart over time.
+      state.current={type:item.type||'track',title:item.title,album:item.album||'',url:item.url,startedAt:new Date().toISOString(),duration};
+      state.next=next?{type:next.type||'track',title:next.title,album:next.album||'',url:next.url||''}:null;
+      state.phase='track';
+      writeFileSync(LIVE_CURRENT_FILE,`ANDRIK — ${shortText(item.title||'TRACK',42)}`,'utf8');
       source.pipe(audioSink,{end:false});
       producer.once('error',reject);
       producer.once('exit',(code,signal)=>{
@@ -1364,7 +1366,7 @@ async function radioLoop(){
       await sleep(1000);
 
       if(/library|HTTP|empty/i.test(String(error)))library=[];
-      else if(/R702 master|master audio pipe|publisher|clip feeder/i.test(String(error))){
+      else if(/R70[27] master|master audio pipe|publisher|clip feeder/i.test(String(error))){
         // Transition errors retry the SAME MP3 after a short recovery. Do not
         // skip the whole MP3 queue and race back to the same video clip.
         await sleep(180);
@@ -1386,6 +1388,7 @@ function publicStatus(){
     videoBitrate:VIDEO_BITRATE,
     audioBitrate:AUDIO_BITRATE,
     audioSampleRate:AUDIO_SAMPLE_RATE,
+    audioInputQueuePackets:AUDIO_INPUT_QUEUE_PACKETS,
     videoFps:VIDEO_FPS,
     videoGop:VIDEO_GOP,
     qrOverlay:QR_OVERLAY,
