@@ -39,6 +39,14 @@ const EVENING_VISUAL_URL = process.env.EVENING_VISUAL_URL || EVENING_VISUAL;
 const NIGHT_VISUAL_URL = process.env.NIGHT_VISUAL_URL || NIGHT_VISUAL;
 const EMERGENCY_VISUAL = process.env.EMERGENCY_VISUAL || new URL('../assets/live-eye-r223.mp4', import.meta.url).pathname;
 const QR_OVERLAY = process.env.QR_OVERLAY || new URL('../assets/andrik-qr-r612.png', import.meta.url).pathname;
+// R714 lightweight pre-rendered transparent equalizers. They are tiny local MOV loops,
+// so the proven R713 direct YouTube encoder stays direct and does not spend CPU on GEQ.
+const EQUALIZER_FILES_R714 = Object.freeze({
+  morning: new URL('../assets/equalizer-morning-r714.mov', import.meta.url).pathname,
+  day: new URL('../assets/equalizer-day-r714.mov', import.meta.url).pathname,
+  evening: new URL('../assets/equalizer-evening-r714.mov', import.meta.url).pathname,
+  night: new URL('../assets/equalizer-night-r714.mov', import.meta.url).pathname
+});
 const OUTPUT_TIMESHIFT_SECONDS = 6; // R637: network recovery cushion; packets are NEVER dropped
 const VIDEO_BITRATE = '4500k'; // R637: 1080p25 low-motion radio visual, bounded CBR
 const AUDIO_BITRATE = '128k'; // YouTube Live recommendation for stereo AAC
@@ -65,13 +73,13 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R713-R678-R695-DIRECT-YOUTUBE-MP3-HOTFIX-FULLFIT-R2',
-  mode: 'R713 DIRECT R678/R695 YOUTUBE ENGINE / MP3 CACHE FORMAT HOTFIX / ONE VIDEO ENCODE / RANDOM R2 CLIPS / 4 VISUAL SLOTS / NO MJPEG FEEDER',
+  version: 'R714-R713-STABLE-DIRECT-4-EQ-CLEAN-TITLE-R2',
+  mode: 'R714 R713 STABLE DIRECT YOUTUBE / 4 TIME-OF-DAY EQUALIZERS / CLEAN TITLE / RANDOM R2 CLIPS / 4 VISUAL SLOTS / NO MJPEG FEEDER',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
   producerRunning: false,
-  overlayMode: 'R713 1920x1080 FIT / NO CROP / METAL TITLE / QR / DIRECT VIDEO INPUT',
+  overlayMode: 'R714 1920x1080 FIT / NO CROP / CLEAN TITLE / 4 PERIOD EQ / QR / DIRECT VIDEO INPUT',
   audioMode: 'R678/R695 DIRECT MASTER / MP3 CONTINUOUS PCM + AAC-LC 128kbps / 4500k CBR / 9000k VBV / 6s FIFO',
   visualTimeZone: VISUAL_TIME_ZONE,
   visualPeriod: null,
@@ -93,7 +101,7 @@ const state = {
   lastFfmpegLine: '',
   equalizerPeriod: null,
   equalizerStyle: null,
-  equalizerEngine: 'R713-STABILITY-MODE-OFF'
+  equalizerEngine: 'R714-DIRECT-LIGHT-LOOP-4-PERIOD'
 };
 
 let publisher = null;
@@ -724,10 +732,28 @@ async function ensureScheduledVisual(){
   }
 }
 
-function equalizerStatusR712(){
-  state.equalizerPeriod=FORCE_VISUAL_SLOT || visualPeriodForHour(localHourInTimeZone());
-  state.equalizerStyle='disabled-stability';
-  return state.equalizerPeriod;
+// R714: four visibly different animated equalizers without the old MJPEG feeder
+// and without real-time GEQ generation. Tiny transparent local loops are much lighter.
+function equalizerPeriodR714(){
+  return FORCE_VISUAL_SLOT || visualPeriodForHour(localHourInTimeZone());
+}
+
+function equalizerSpecR714(period){
+  const styles={
+    morning:{name:'morning-soft-gold-motion',path:EQUALIZER_FILES_R714.morning},
+    day:{name:'day-steel-fast-motion',path:EQUALIZER_FILES_R714.day},
+    evening:{name:'evening-amber-pulse-motion',path:EQUALIZER_FILES_R714.evening},
+    night:{name:'night-blue-slow-motion',path:EQUALIZER_FILES_R714.night}
+  };
+  return styles[period]||styles.day;
+}
+
+function equalizerStatusR714(){
+  const period=equalizerPeriodR714();
+  const style=equalizerSpecR714(period);
+  state.equalizerPeriod=period;
+  state.equalizerStyle=style.name;
+  return {period,...style};
 }
 
 function trackLabel(item,fallback='—'){
@@ -754,21 +780,21 @@ function startPublisher(visualPath){
   const titleFontPart=titleFont?`fontfile='${ffFilterPath(titleFont)}':`:'';
   const curPath=ffFilterPath(LIVE_CURRENT_FILE);
   const tickerPath=ffFilterPath(LIVE_TICKER_FILE);
-  equalizerStatusR712();
+  const eq=equalizerStatusR714();
+  if(!existsSync(eq.path) || statSync(eq.path).size<20000) throw new Error(`equalizer missing: ${eq.path}`);
   const vf=[
-    // R712: exact R678/R695 direct path. No MJPEG feeder and no heavy GEQ stage.
+    // R714 keeps the proven R713 direct input/encoder path. The EQ is a tiny
+    // pre-rendered transparent loop; there is still no MJPEG feeder and no live GEQ.
     'scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos',
     'pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black',
     'setsar=1',
     `fps=${VIDEO_FPS}`,
     'format=yuv420p',
-    'drawbox=x=92:y=ih-208:w=iw-184:h=92:color=black@0.30:t=fill',
-    'drawbox=x=125:y=ih-208:w=iw-250:h=3:color=red@0.82:t=fill',
-    `drawtext=${titleFontPart}textfile='${curPath}':reload=${VIDEO_FPS}:fontcolor=red@0.01:fontsize=58:x=(w-text_w)/2:y=h-188:borderw=8:bordercolor=red@0.58`,
+    // Clean track title: no red separator, no translucent backing strip, no red halo.
     `drawtext=${titleFontPart}textfile='${curPath}':reload=${VIDEO_FPS}:fontcolor=0xF3EFE8:fontsize=58:x=(w-text_w)/2:y=h-188:borderw=3:bordercolor=black@1:shadowcolor=black@0.95:shadowx=3:shadowy=3`,
     `drawtext=${fontPart}textfile='${tickerPath}':reload=${VIDEO_FPS}:fontcolor=yellow:fontsize=28:x='w-mod(t*110,text_w+w)':y=h-58:borderw=3:bordercolor=black@1:shadowcolor=black@1:shadowx=2:shadowy=2`
   ].join(',');
-  const filterComplex=`[0:v]${vf}[base];[1:v]scale=160:160:flags=lanczos,format=yuva420p[qr];[base][qr]overlay=24:24:format=yuv420[outv]`;
+  const filterComplex=`[0:v]${vf}[base];[3:v]format=argb[eq];[base][eq]overlay=x=(W-w)/2:y=H-142:shortest=1:format=auto,format=yuv420p[eqbase];[1:v]scale=160:160:flags=lanczos,format=yuva420p[qr];[eqbase][qr]overlay=24:24:format=yuv420[outv]`;
 
   // R637 architecture: one FFmpeg owns the video encoder, AAC encoder and RTMPS
   // muxer for the ENTIRE broadcast. Track decoders feed raw PCM into fd 3. Raw
@@ -779,6 +805,7 @@ function startPublisher(visualPath){
     '-thread_queue_size','8192','-re','-stream_loop','-1','-i',visualPath,
     '-loop','1','-framerate','1','-i',QR_OVERLAY,
     '-thread_queue_size','8192','-f','s16le','-ar',String(AUDIO_SAMPLE_RATE),'-ac','2','-i','pipe:3',
+    '-re','-stream_loop','-1','-i',eq.path,
     '-filter_complex',filterComplex,
     '-map','[outv]','-map','2:a:0',
     '-shortest',
@@ -858,9 +885,6 @@ function clipFilterComplex(insetCrop=''){
     'setsar=1',
     `fps=${VIDEO_FPS}`,
     'format=yuv420p',
-    'drawbox=x=92:y=ih-208:w=iw-184:h=92:color=black@0.30:t=fill',
-    'drawbox=x=125:y=ih-208:w=iw-250:h=3:color=red@0.82:t=fill',
-    `drawtext=${titleFontPart}textfile='${curPath}':reload=${VIDEO_FPS}:fontcolor=red@0.01:fontsize=58:x=(w-text_w)/2:y=h-188:borderw=8:bordercolor=red@0.58`,
     `drawtext=${titleFontPart}textfile='${curPath}':reload=${VIDEO_FPS}:fontcolor=0xF3EFE8:fontsize=58:x=(w-text_w)/2:y=h-188:borderw=3:bordercolor=black@1:shadowcolor=black@0.95:shadowx=3:shadowy=3`,
     `drawtext=${fontPart}textfile='${tickerPath}':reload=${VIDEO_FPS}:fontcolor=yellow:fontsize=28:x='w-mod(t*110,text_w+w)':y=h-58:borderw=3:bordercolor=black@1:shadowcolor=black@1:shadowx=2:shadowy=2`
   ].join(',');
@@ -1075,7 +1099,7 @@ function publicStatus(){
     overlayMode:state.overlayMode,
     audioMode:state.audioMode,
     engine:'R678-R695-DIRECT-FFMPEG',
-    videoPipeline:'DIRECT MP4 -> SCALE/TEXT/QR -> x264 -> FIFO -> RTMPS (NO MJPEG, NO GEQ)',
+    videoPipeline:'DIRECT MP4 -> CLEAN TEXT + LIGHT 4-PERIOD EQ LOOP + QR -> x264 -> FIFO -> RTMPS (NO MJPEG FEEDER, NO LIVE GEQ)',
     outputTimeshiftSeconds:OUTPUT_TIMESHIFT_SECONDS,
     videoBitrate:VIDEO_BITRATE,
     audioBitrate:AUDIO_BITRATE,

@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787847832609-f4e616f551",
-  "release": "R713",
-  "archiveName": "R713-FFMPEG-234-MP3-CACHE-HOTFIX-R712-DIRECT-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "2e43fcaeea6a82e4f81470c392a63cf4fbd55f79",
-  "backupSha": "2e43fcaeea6a82e4f81470c392a63cf4fbd55f79",
+  "operationId": "publish-1787848832781-c377d2e691",
+  "release": "R714",
+  "archiveName": "R714-DIRECT-STABLE-4-TIME-EQ-CLEAN-TITLE-R2-R713-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "0c4843ff5e2f14b5e1893b79fc8338b356958f52",
+  "backupSha": "0c4843ff5e2f14b5e1893b79fc8338b356958f52",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-27T16:23:53.273Z"
+  "generatedAt": "2026-08-27T16:40:35.011Z"
 }
