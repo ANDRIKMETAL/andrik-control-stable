@@ -65,13 +65,13 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R712-R678-R695-DIRECT-YOUTUBE-ENGINE-FULLFIT-R2',
-  mode: 'R712 DIRECT R678/R695 YOUTUBE ENGINE / ONE VIDEO ENCODE / MP3 + RANDOM R2 CLIPS / 4 VISUAL SLOTS / NO MJPEG FEEDER',
+  version: 'R713-R678-R695-DIRECT-YOUTUBE-MP3-HOTFIX-FULLFIT-R2',
+  mode: 'R713 DIRECT R678/R695 YOUTUBE ENGINE / MP3 CACHE FORMAT HOTFIX / ONE VIDEO ENCODE / RANDOM R2 CLIPS / 4 VISUAL SLOTS / NO MJPEG FEEDER',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
   producerRunning: false,
-  overlayMode: 'R712 1920x1080 FIT / NO CROP / METAL TITLE / QR / DIRECT VIDEO INPUT',
+  overlayMode: 'R713 1920x1080 FIT / NO CROP / METAL TITLE / QR / DIRECT VIDEO INPUT',
   audioMode: 'R678/R695 DIRECT MASTER / MP3 CONTINUOUS PCM + AAC-LC 128kbps / 4500k CBR / 9000k VBV / 6s FIFO',
   visualTimeZone: VISUAL_TIME_ZONE,
   visualPeriod: null,
@@ -93,7 +93,7 @@ const state = {
   lastFfmpegLine: '',
   equalizerPeriod: null,
   equalizerStyle: null,
-  equalizerEngine: 'R712-STABILITY-MODE-OFF'
+  equalizerEngine: 'R713-STABILITY-MODE-OFF'
 };
 
 let publisher = null;
@@ -549,11 +549,11 @@ async function downloadTrackToCache(item){
         // while the actual bytes are JPEG (FF D8 FF E0). FFmpeg then prints misleading
         // "Invalid PNG signature" even though the QR overlay is a valid PNG. Strip every
         // attached-picture/video stream once while caching; audio is copied bit-for-bit.
-        const cleanTmp=`${dest}.clean-${process.pid}-${Date.now()}-${attempt}`;
+        const cleanTmp=`${dest}.clean-${process.pid}-${Date.now()}-${attempt}.mp3`; // R713: valid output suffix, prevents ffmpeg exit 234/EINVAL
         try{
           await runCapture('ffmpeg',[
-            '-hide_banner','-loglevel','quiet','-y','-i',tmp,
-            '-map','0:a:0','-vn','-sn','-dn','-c:a','copy','-map_metadata','0',cleanTmp
+            '-hide_banner','-loglevel','error','-y','-i',tmp,
+            '-map','0:a:0','-vn','-sn','-dn','-c:a','copy','-map_metadata','0','-f','mp3',cleanTmp
           ],{timeoutMs:30000});
           if(!existsSync(cleanTmp) || statSync(cleanTmp).size<256000)throw new Error('MP3 audio-only cache file too small');
           unlinkSync(tmp);

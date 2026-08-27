@@ -1,0 +1,12 @@
+R713 — FFmpeg exit 234 MP3 CACHE HOTFIX
+
+Root cause found from live R712 status:
+- ffmpeg exit 234 = EINVAL (-22) while cleaning a newly downloaded MP3.
+- R712 regressed to a temporary output filename without a usable .mp3 suffix and without explicit -f mp3.
+- Existing cached songs could play, but the first uncached song could fail repeatedly; this looked like a stream freeze while YouTube transport stayed connected.
+
+R713 fixes only that regression on top of R712:
+- clean temp file ends in .mp3
+- explicit -f mp3 is set for the audio-only cache copy
+- ffmpeg cache-clean errors use loglevel error so the panel can show the real reason next time
+- R678/R695 direct YouTube engine, 4500k/9000k/6s FIFO, NO MJPEG, FULL FIT, 4 visual slots, R2 clips/delete preserved

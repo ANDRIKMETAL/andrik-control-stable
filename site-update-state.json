@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787846363434-26919a5e6d",
-  "release": "R712",
-  "archiveName": "R712-R678-R695-DIRECT-YOUTUBE-STABLE-FULLFIT-R2-R711-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "7ab9357bf9c7885f87aa61c0d5475580b5ca1a16",
-  "backupSha": "7ab9357bf9c7885f87aa61c0d5475580b5ca1a16",
+  "operationId": "publish-1787847832609-f4e616f551",
+  "release": "R713",
+  "archiveName": "R713-FFMPEG-234-MP3-CACHE-HOTFIX-R712-DIRECT-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "2e43fcaeea6a82e4f81470c392a63cf4fbd55f79",
+  "backupSha": "2e43fcaeea6a82e4f81470c392a63cf4fbd55f79",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-27T15:59:23.932Z"
+  "generatedAt": "2026-08-27T16:23:53.273Z"
 }
