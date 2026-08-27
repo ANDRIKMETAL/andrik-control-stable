@@ -1,0 +1,25 @@
+R710 — YOUTUBE STABILITY + SAFE R2 DELETE
+
+YOUTUBE / OVH STABILITY
+- Final YouTube output remains 1920x1080 / 25 fps / H.264 / AAC-LC.
+- Video CBR reduced from 4500k to 4000k to leave more OVH uplink headroom during short network jitter.
+- VBV buffer tightened to 6000k to smooth outgoing RTMPS bursts.
+- FIFO timeshift increased from 1 s to 3 s so short uplink stalls do not immediately propagate into the live source.
+- Huge 2048-frame MJPEG input queue replaced by a bounded 64-frame queue (~2.6 s at 25 fps). This prevents an old-video backlog after a temporary output stall.
+- Internal MJPEG feeder quality changed from q=5 to q=8. The feeder is local only; final YouTube output is still H.264 1080p. This reduces CPU and pipe pressure on OVH.
+- R707 exact-title / bounded PCM queue is preserved.
+- R706 animated equalizer is preserved.
+- R702 persistent publisher and MP3 <-> clip handoff are preserved.
+- AUTO FIT / NO CROP is preserved.
+
+R2 DELETE
+- radio/visual-library/*.mp4 sources can now be deleted from the Video Control page.
+- Active MORNING / DAY / EVENING / NIGHT slot copies are protected and remain in R2/OVH after deleting their old source file.
+- Owner-uploaded radio/clips/*.mp4 have their own Delete button.
+- Built-in JOY OF BEING and system slot masters are protected from these delete actions.
+- Radio library refreshes every ~120 seconds and reconciles the remaining queue, so a deleted clip drops out of future rotation automatically.
+
+DEPLOY
+1. Deploy this R710 site archive.
+2. Open cache-reset-v55-00-final-r710.html once.
+3. Run the one R710 installer command shown on radio-visuals-admin.html to update OVH engine + agent.

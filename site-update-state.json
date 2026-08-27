@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787827573826-0937a8efaa",
-  "release": "R709",
-  "archiveName": "R709-VISUAL-LIBRARY-MORNING-FINAL-R708-PRESERVED-SAFE-FULL-1.zip",
-  "sourceHead": "26513755b67154f530d73659833e7a7efba5911f",
-  "backupSha": "26513755b67154f530d73659833e7a7efba5911f",
+  "operationId": "publish-1787838208643-2f5a1d9280",
+  "release": "R710",
+  "archiveName": "R710-YOUTUBE-STABILITY-R2-DELETE-R709-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "d77f0b8da23c9200e4bb7f5d5c6057c42579d12c",
+  "backupSha": "d77f0b8da23c9200e4bb7f5d5c6057c42579d12c",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-27T10:46:14.257Z"
+  "generatedAt": "2026-08-27T13:43:29.185Z"
 }

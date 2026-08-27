@@ -17835,7 +17835,7 @@ function radioVisualSourceNameR709(value){
 }
 function radioVisualLibraryKeyR709(value){
   const key=String(value||'').trim();
-  return /^radio\/visual-library\/[a-zA-Z0-9._() -]+\.mp4$/i.test(key)?key:'';
+  return /^radio\/visual-library\/[\p{L}\p{N}._() -]+\.mp4$/iu.test(key)?key:'';
 }
 function radioVisualUploadKeyR709(request,slot){
   const requested=radioVisualLibraryKeyR709(new URL(request.url).searchParams.get('key')||'');
@@ -18024,6 +18024,24 @@ async function handleRadioVisualAssignR651(request,env){
 }
 // === End R651 ===
 
+// === R710: safe owner deletion of old R2 visual-library sources ===
+async function handleRadioVisualLibraryDeleteR710(request,env){
+  if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
+  const bucket=getMusicBucketR314(env);if(!bucket)return json({ok:false,error:'music-bucket-not-configured'},503);
+  const key=radioVisualLibraryKeyR709(new URL(request.url).searchParams.get('key')||'');
+  if(!key)return json({ok:false,error:'protected-or-invalid-key',message:'Удалять можно только исходники из radio/visual-library/. Активные slot master защищены.'},400);
+  const object=await bucket.head(key).catch(()=>null);
+  if(!object)return json({ok:false,error:'not-found',message:'Этого исходника уже нет в R2.'},404);
+  const referencedBy=[];
+  for(const [slot,slotKey] of Object.entries(RADIO_VISUAL_KEYS_R620)){
+    const slotObject=await bucket.head(slotKey).catch(()=>null);
+    if(String(slotObject?.customMetadata?.sourceKey||'')===key)referencedBy.push(slot);
+  }
+  await bucket.delete(key);
+  return json({ok:true,key,deletedSize:Number(object.size||0),referencedBy,message:referencedBy.length?`Исходник удалён из библиотеки. Активные копии ${referencedBy.join(', ')} сохранены.`:'Исходник удалён из R2.'});
+}
+// === End R710 visual delete ===
+
 
 // === R693: robust owner-uploaded video clips for random radio intermissions ===
 const RADIO_CLIP_PREFIX_R691 = 'radio/clips/';
@@ -18143,6 +18161,19 @@ async function handleRadioClipMpuAbortR691(request,env){
   catch(error){return json({ok:false,error:'multipart-abort-failed',message:cleanPlainText(error?.message||error,300)},400);}
 }
 // === End R693 robust random radio clips ===
+
+// === R710: safe delete for owner-uploaded random radio clips ===
+async function handleRadioClipDeleteR710(request,env){
+  if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
+  const bucket=getMusicBucketR314(env);if(!bucket)return json({ok:false,error:'music-bucket-not-configured'},503);
+  const key=radioClipKeyR691(new URL(request.url).searchParams.get('key')||'');
+  if(!key)return json({ok:false,error:'protected-or-invalid-key',message:'Удалять здесь можно только клипы из radio/clips/. Встроенный JOY OF BEING защищён.'},400);
+  const object=await bucket.head(key).catch(()=>null);
+  if(!object)return json({ok:false,error:'not-found',message:'Этого клипа уже нет в R2.'},404);
+  await bucket.delete(key);
+  return json({ok:true,key,deletedSize:Number(object.size||0),refreshSeconds:120,message:'Клип удалён из R2. Радио уберёт его из библиотеки при ближайшем обновлении (до ~2 минут).'});
+}
+// === End R710 clip delete ===
 
 
 // === R625: one-time Device OAuth pairing bridge (website -> AWS) ===
@@ -18813,8 +18844,10 @@ async function routeApi(request, env, ctx) {
     if (path === '/api/control/radio-visuals-r620/status' && request.method === 'GET') return await handleRadioVisualStatusR620(request, env);
     if (path === '/api/control/radio-visuals-r620/file' && (request.method === 'GET' || request.method === 'HEAD')) return await handleRadioVisualPrivateR622(request, env);
     if (path === '/api/control/radio-visuals-r651/library' && request.method === 'GET') return await handleRadioVisualLibraryR651(request, env);
+    if (path === '/api/control/radio-visuals-r651/library' && request.method === 'DELETE') return await handleRadioVisualLibraryDeleteR710(request, env);
     if (path === '/api/control/radio-visuals-r651/assign' && request.method === 'POST') return await handleRadioVisualAssignR651(request, env);
     if (path === '/api/control/radio-clips-r691' && request.method === 'GET') return await handleRadioClipsListR691(request, env, true);
+    if (path === '/api/control/radio-clips-r691' && request.method === 'DELETE') return await handleRadioClipDeleteR710(request, env);
     if (path === '/api/control/radio-clips-r691/mpu/start' && request.method === 'POST') return await handleRadioClipMpuStartR691(request, env);
     if (path === '/api/control/radio-clips-r691/mpu/part' && request.method === 'PUT') return await handleRadioClipMpuPartR691(request, env);
     if (path === '/api/control/radio-clips-r691/mpu/complete' && request.method === 'POST') return await handleRadioClipMpuCompleteR691(request, env);

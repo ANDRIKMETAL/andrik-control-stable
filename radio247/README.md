@@ -87,3 +87,20 @@ MORNING можно назначить позже через `/radio-visuals-admi
 ```bash
 curl -fsSL https://raw.githubusercontent.com/ANDRIKMETAL/andrik-control-stable/main/radio247/vm-lite/install-r703-four-visual-cycles.sh | sudo env ANDRIK_SITE_BASE=https://raw.githubusercontent.com/ANDRIKMETAL/andrik-control-stable/main bash
 ```
+
+## R710 — YouTube stability + safe R2 delete
+
+R710 keeps the R709 visual library, R707 exact-title PCM handoff, R706 animated equalizer and R702 persistent publisher, but reduces ingest stalls:
+
+- YouTube H.264 CBR: 4000 kbps at 1080p25.
+- RTMPS recovery cushion: 3 seconds.
+- MJPEG input queue: 64 frames instead of 2048.
+- Local feeder: q=8 to reduce OVH CPU/pipe pressure.
+- Safe DELETE controls for `radio/visual-library/*.mp4` and owner `radio/clips/*.mp4`.
+- Active slot masters and built-in JOY OF BEING are protected.
+
+After deploying R710, run once on OVH:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/ANDRIKMETAL/andrik-control-stable/main/radio247/vm-lite/install-r710-youtube-stability-r2-delete.sh | sudo env ANDRIK_SITE_BASE=https://raw.githubusercontent.com/ANDRIKMETAL/andrik-control-stable/main bash
+```

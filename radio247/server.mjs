@@ -41,9 +41,12 @@ const EVENING_VISUAL_URL = process.env.EVENING_VISUAL_URL || EVENING_VISUAL;
 const NIGHT_VISUAL_URL = process.env.NIGHT_VISUAL_URL || NIGHT_VISUAL;
 const EMERGENCY_VISUAL = process.env.EMERGENCY_VISUAL || new URL('../assets/live-eye-r223.mp4', import.meta.url).pathname;
 const QR_OVERLAY = process.env.QR_OVERLAY || new URL('../assets/andrik-qr-r612.png', import.meta.url).pathname;
-const OUTPUT_TIMESHIFT_SECONDS = 1; // one persistent publisher, minimal recovery cushion
+const OUTPUT_TIMESHIFT_SECONDS = 3; // R710: absorb short OVH/RTMPS jitter without tearing down the persistent publisher
 const AUDIO_INPUT_QUEUE_PACKETS = 16; // R707: bounded raw-PCM queue; prevents title/audio drift over long uptime
-const VIDEO_BITRATE = '4500k'; // R637: 1080p25 low-motion radio visual, bounded CBR
+const VIDEO_INPUT_QUEUE_PACKETS = 64; // R710: ~2.6 s max MJPEG input backlog instead of the old 2048-frame queue
+const VIDEO_BITRATE = '4000k'; // R710: safer 1080p25 CBR headroom for occasional OVH uplink jitter
+const VIDEO_BUFSIZE = '6000k'; // R710: tighter VBV smooths RTMPS bursts without starving YouTube
+const VIDEO_FEEDER_Q = '8'; // R710: lighter local MJPEG handoff; final YouTube image is still H.264 1080p
 const AUDIO_BITRATE = '128k'; // YouTube Live recommendation for stereo AAC
 const AUDIO_SAMPLE_RATE = 44100; // YouTube Live recommendation for stereo
 const VIDEO_FPS = 25;
@@ -68,14 +71,14 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R709-VISUAL-LIBRARY-MORNING-FINAL-R708-PRESERVED',
-  mode: 'R709 ORIGINAL-FILENAME VISUAL LIBRARY + 4 SLOT ASSIGN / R708 AGENT ESM / R707 EXACT TITLE / R706 EQ / R702 HANDOFF',
+  version: 'R710-YOUTUBE-STABILITY-R2-DELETE-R709-PRESERVED',
+  mode: 'R710 YOUTUBE INGEST STABILITY / R709 VISUAL LIBRARY / R707 EXACT TITLE / R706 EQ / R702 HANDOFF',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
   producerRunning: false,
   overlayMode: 'R709 R708/R707 PRESERVED / R706 TRUE-MOTION 4-SLOT EQ / AUTO FIT NO CROP',
-  audioMode: 'R707 BOUNDED PCM QUEUE / EXACT TITLE AT AUDIO PIPE / PERSISTENT RTMPS / AAC-LC 128kbps',
+  audioMode: 'R710 JITTER-SAFE RTMPS / R707 BOUNDED PCM QUEUE / EXACT TITLE / AAC-LC 128kbps',
   visualTimeZone: VISUAL_TIME_ZONE,
   visualPeriod: null,
   visualPath: null,
@@ -868,7 +871,7 @@ function normalVideoProducerArgs(visualPath,period=equalizerPeriodR704()){
     '-an','-sn','-dn',
     '-filter_complex',graph,
     '-map','[outv]',
-    '-c:v','mjpeg','-q:v','5','-pix_fmt','yuvj420p',
+    '-c:v','mjpeg','-q:v',VIDEO_FEEDER_Q,'-pix_fmt','yuvj420p',
     '-f','mjpeg','pipe:1'
   ];
 }
@@ -977,14 +980,14 @@ function startPublisher(visualPath){
   // and raw PCM audio feeder are swapped behind this permanent master instead.
   const args=[
     '-hide_banner','-loglevel','warning',
-    '-thread_queue_size','2048','-f','mjpeg','-framerate',String(VIDEO_FPS),'-i','pipe:4',
+    '-thread_queue_size',String(VIDEO_INPUT_QUEUE_PACKETS),'-f','mjpeg','-framerate',String(VIDEO_FPS),'-i','pipe:4',
     '-loop','1','-framerate','1','-i',QR_OVERLAY,
     '-thread_queue_size',String(AUDIO_INPUT_QUEUE_PACKETS),'-probesize','32','-analyzeduration','0','-f','s16le','-ar',String(AUDIO_SAMPLE_RATE),'-ac','2','-i','pipe:3',
     '-filter_complex',filterComplex,
     '-map','[outv]','-map','2:a:0',
     '-c:v','libx264','-preset','ultrafast','-tune','zerolatency',
     '-profile:v','high','-level:v','4.1',
-    '-b:v',VIDEO_BITRATE,'-minrate',VIDEO_BITRATE,'-maxrate',VIDEO_BITRATE,'-bufsize','9000k',
+    '-b:v',VIDEO_BITRATE,'-minrate',VIDEO_BITRATE,'-maxrate',VIDEO_BITRATE,'-bufsize',VIDEO_BUFSIZE,
     '-x264-params',`nal-hrd=cbr:force-cfr=1:repeat-headers=1:keyint=${VIDEO_GOP}:min-keyint=${VIDEO_GOP}:scenecut=0`,
     '-g',String(VIDEO_GOP),'-keyint_min',String(VIDEO_GOP),'-sc_threshold','0','-bf','2','-refs','1','-coder','1','-r',String(VIDEO_FPS),'-pix_fmt','yuv420p',
     '-c:a','aac','-profile:a','aac_low','-b:a',AUDIO_BITRATE,'-ar',String(AUDIO_SAMPLE_RATE),'-ac','2',
@@ -1061,7 +1064,7 @@ function clipFeederArgsR701(clipPath){
     '-stats_period','0.5','-progress','pipe:4','-nostats',
     '-fflags','+genpts+discardcorrupt','-err_detect','ignore_err','-re','-i',clipPath,
     '-filter_complex',`[0:v]scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1,fps=${VIDEO_FPS},format=yuvj420p[v]`,
-    '-map','[v]','-an','-sn','-dn','-c:v','mjpeg','-q:v','5','-pix_fmt','yuvj420p','-f','mjpeg','pipe:1',
+    '-map','[v]','-an','-sn','-dn','-c:v','mjpeg','-q:v',VIDEO_FEEDER_Q,'-pix_fmt','yuvj420p','-f','mjpeg','pipe:1',
     '-map','0:a:0?','-vn','-sn','-dn','-af',`aresample=${AUDIO_SAMPLE_RATE}`,'-c:a','pcm_s16le','-ar',String(AUDIO_SAMPLE_RATE),'-ac','2','-f','s16le','pipe:3'
   ];
 }
@@ -1389,6 +1392,9 @@ function publicStatus(){
     audioBitrate:AUDIO_BITRATE,
     audioSampleRate:AUDIO_SAMPLE_RATE,
     audioInputQueuePackets:AUDIO_INPUT_QUEUE_PACKETS,
+    videoInputQueuePackets:VIDEO_INPUT_QUEUE_PACKETS,
+    videoBuffer:VIDEO_BUFSIZE,
+    videoFeederQ:VIDEO_FEEDER_Q,
     videoFps:VIDEO_FPS,
     videoGop:VIDEO_GOP,
     qrOverlay:QR_OVERLAY,
