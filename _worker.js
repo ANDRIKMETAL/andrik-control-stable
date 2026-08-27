@@ -18833,6 +18833,7 @@ async function routeApi(request, env, ctx) {
     if (path === '/api/control/radio-remote-r627/ticker' && request.method === 'POST') return await handleRadioRemoteTickerR629(request, env);
     if (path === '/api/radio-agent-r627/pair/consume' && request.method === 'POST') return await handleRadioAgentPairConsumeR627(request, env);
     if (path === '/api/radio-agent-r627/poll' && request.method === 'POST') return await handleRadioAgentPollR627(request, env);
+    if (path === '/api/radio-agent-r715/youtube-ensure' && request.method === 'POST') return await handleRadioAgentYoutubeEnsureR715(request, env);
     if (path === '/api/radio-agent-r627/result' && request.method === 'POST') return await handleRadioAgentResultR627(request, env);
     if (path === '/api/radio-agent-r650/visual' && (request.method === 'GET' || request.method === 'HEAD')) return await handleRadioAgentVisualR650(request, env);
 
@@ -19596,6 +19597,103 @@ async function youtubeKickExactBroadcastR689(accessToken,broadcast,streamStatus=
   }
 }
 
+
+
+// R715 — OVH-agent initiated YouTube LIVE self-heal.
+// The radio agent is already authenticated with its own bearer token. Every few minutes
+// it asks Control to verify that the reusable ACTIVE ingest is attached to a real LIVE
+// broadcast. This restores YouTube's native red LIVE badge/ring after encoder restarts
+// without bouncing the encoder or changing the proven R713 transport.
+async function youtubeRadioAgentEnsureCoreR715(env){
+  const accessToken=await getYoutubeOAuthAccessToken(env);
+  const [broadcasts,streams]=await Promise.all([
+    youtubeListBroadcastsR687(accessToken),
+    youtubeListStreamsR687(accessToken)
+  ]);
+  const activeStreams=streams.filter(item=>String(item?.status?.streamStatus||'').toLowerCase()==='active')
+    .sort((a,b)=>youtubeStreamTimeR687(b)-youtubeStreamTimeR687(a));
+  if(!activeStreams.length){
+    return {ok:true,active:false,pending:true,skipped:true,reason:'youtube-active-stream-not-found',lifeCycleStatus:'',streamStatus:'inactive'};
+  }
+  const activeIds=new Set(activeStreams.map(item=>cleanPlainText(item?.id||'',120)).filter(Boolean));
+  const nonComplete=broadcasts.filter(item=>!['complete','revoked'].includes(youtubeLifeKeyR609(item?.status?.lifeCycleStatus)));
+  const radioBroadcasts=nonComplete.filter(youtubeRadioLikeR687);
+  const rank={live:100,livestarting:95,testing:90,teststarting:85,ready:80,created:70};
+  const boundCandidates=radioBroadcasts.filter(item=>activeIds.has(cleanPlainText(item?.contentDetails?.boundStreamId||'',120)))
+    .sort((a,b)=>{
+      const ar=rank[youtubeLifeKeyR609(a?.status?.lifeCycleStatus)]||0;
+      const br=rank[youtubeLifeKeyR609(b?.status?.lifeCycleStatus)]||0;
+      return (br-ar)||(youtubeBroadcastTimeR687(b)-youtubeBroadcastTimeR687(a));
+    });
+
+  let broadcast=boundCandidates[0]||null;
+  let stream=null;
+  let mode='reuse-bound';
+  if(broadcast){
+    const sid=cleanPlainText(broadcast?.contentDetails?.boundStreamId||'',120);
+    stream=activeStreams.find(item=>cleanPlainText(item?.id||'',120)===sid)||null;
+  }
+  if(!stream){
+    stream=activeStreams.length===1
+      ? activeStreams[0]
+      : activeStreams.find(item=>/andrik/i.test(String(item?.snippet?.title||''))&&/(radio|metal)/i.test(String(item?.snippet?.title||'')))||null;
+  }
+  if(!stream){
+    return {ok:true,active:false,pending:true,skipped:true,reason:'youtube-active-stream-ambiguous',activeStreams:activeStreams.length};
+  }
+  const streamId=cleanPlainText(stream?.id||'',120);
+  const streamStatus=cleanPlainText(stream?.status?.streamStatus||'',80);
+  const wasLive=youtubeLifeKeyR609(broadcast?.status?.lifeCycleStatus)==='live';
+
+  // R689 requires a tested broadcast (monitor enabled, autoStart/autoStop off).
+  const tested=Boolean(broadcast?.contentDetails?.monitorStream?.enableMonitorStream) &&
+    broadcast?.contentDetails?.enableAutoStart!==true && broadcast?.contentDetails?.enableAutoStop!==true;
+  if(!broadcast || !tested){
+    const template=broadcast || [...broadcasts].sort((a,b)=>youtubeBroadcastTimeR687(b)-youtubeBroadcastTimeR687(a)).find(youtubeRadioLikeR687)||null;
+    const created=await youtubeCreateBroadcastR689(accessToken,template);
+    broadcast=await youtubeBindR687(accessToken,cleanPlainText(created?.id||'',100),streamId);
+    mode=broadcast?'create-tested-and-bind':'create-failed';
+  }
+
+  let kicked=null;
+  for(let attempt=0;attempt<6;attempt++){
+    kicked=await youtubeKickExactBroadcastR689(accessToken,broadcast,streamStatus);
+    if(kicked?.recreate){
+      const created=await youtubeCreateBroadcastR689(accessToken,broadcast);
+      broadcast=await youtubeBindR687(accessToken,cleanPlainText(created?.id||'',100),streamId);
+      mode='replace-with-tested-and-bind';
+      continue;
+    }
+    if(kicked?.ok || kicked?.lifeCycleStatus==='live')break;
+    if(!kicked?.pending)break;
+    await new Promise(resolve=>setTimeout(resolve,1100));
+  }
+  const life=cleanPlainText(kicked?.lifeCycleStatus||broadcast?.status?.lifeCycleStatus||'',80);
+  const active=life.toLowerCase()==='live';
+  return {
+    ok:true,
+    active,
+    pending:!active,
+    recovered:active&&!wasLive,
+    mode,
+    videoId:cleanPlainText(broadcast?.id||kicked?.videoId||'',100),
+    streamId,
+    boundStreamId:cleanPlainText(broadcast?.contentDetails?.boundStreamId||streamId,120),
+    streamStatus,
+    lifeCycleStatus:life,
+    stage:kicked?.stage||'',
+    watchUrl:kicked?.watchUrl||''
+  };
+}
+
+async function handleRadioAgentYoutubeEnsureR715(request,env){
+  if(!await radioAgentAuthorizedR627(request,env))return json({ok:false,error:'unauthorized-agent'},401);
+  try{
+    return json(await youtubeRadioAgentEnsureCoreR715(env),200);
+  }catch(error){
+    return json({ok:false,active:false,pending:true,error:cleanPlainText(error?.reason||error?.message||error,500)},200);
+  }
+}
 async function handleYoutubeLiveEnsureR689(request, env) {
   if (!adminAuthorized(request, env)) return json({ok:false,error:'unauthorized'},401);
   try{

@@ -1,14 +1,14 @@
 {
   "schema": 1,
   "updaterVersion": "55.00-r356",
-  "operation": "reinstall",
-  "reinstall": true,
-  "operationId": "reinstall-1787849181149-a667eb78e1",
-  "release": "R714",
-  "archiveName": "R714-DIRECT-STABLE-4-TIME-EQ-CLEAN-TITLE-R2-R713-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "218c20f6867e286060f40716c6c85b6708864d37",
-  "backupSha": "218c20f6867e286060f40716c6c85b6708864d37",
+  "operation": "publish",
+  "reinstall": false,
+  "operationId": "publish-1787850241926-b19330c45c",
+  "release": "R715",
+  "archiveName": "R715-STABLE-YOUTUBE-4-AUDIO-EQ-AUTO-LIVE-CLEAN-TITLE-R2-R714-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "0c1c698609c6c8f6c617cd12eda6005471bf7521",
+  "backupSha": "0c1c698609c6c8f6c617cd12eda6005471bf7521",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-27T16:46:21.149Z"
+  "generatedAt": "2026-08-27T17:04:02.419Z"
 }
