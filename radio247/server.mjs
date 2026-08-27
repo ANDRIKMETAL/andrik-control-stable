@@ -39,6 +39,14 @@ const EVENING_VISUAL_URL = process.env.EVENING_VISUAL_URL || EVENING_VISUAL;
 const NIGHT_VISUAL_URL = process.env.NIGHT_VISUAL_URL || NIGHT_VISUAL;
 const EMERGENCY_VISUAL = process.env.EMERGENCY_VISUAL || new URL('../assets/live-eye-r223.mp4', import.meta.url).pathname;
 const QR_OVERLAY = process.env.QR_OVERLAY || new URL('../assets/andrik-qr-r612.png', import.meta.url).pathname;
+// R717: R706's proven visible motion is pre-rendered into four tiny transparent loops.
+ // This keeps the R715/R713 direct YouTube publisher: no MJPEG feeder, no showfreqs audio branch.
+const EQUALIZER_FILES_R717 = Object.freeze({
+  morning: new URL('../assets/equalizer-morning-r717.mov', import.meta.url).pathname,
+  day: new URL('../assets/equalizer-day-r717.mov', import.meta.url).pathname,
+  evening: new URL('../assets/equalizer-evening-r717.mov', import.meta.url).pathname,
+  night: new URL('../assets/equalizer-night-r717.mov', import.meta.url).pathname
+});
 const OUTPUT_TIMESHIFT_SECONDS = 6; // R637: network recovery cushion; packets are NEVER dropped
 const VIDEO_BITRATE = '4500k'; // R637: 1080p25 low-motion radio visual, bounded CBR
 const AUDIO_BITRATE = '128k'; // YouTube Live recommendation for stereo AAC
@@ -65,13 +73,13 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R716-R715-STABLE-DIRECT-VISIBLE-4-AUDIO-EQ-AUTO-LIVE-R2',
-  mode: 'R716 R715 STABLE DIRECT YOUTUBE / VISIBLE AUDIO-REACTIVE 4 TIME EQ / CLEAN TITLE / RANDOM R2 CLIPS / AUTO LIVE SELF-HEAL / NO EXTRA VIDEO INPUT',
+  version: 'R717-R715-STABLE-DIRECT-R706-VISIBLE-4-EQ-AUTO-LIVE-R2',
+  mode: 'R717 R715 STABLE DIRECT YOUTUBE / R706 VISIBLE MOTION 4 TIME EQ LOOPS / CLEAN TITLE / RANDOM R2 CLIPS / AUTO LIVE SELF-HEAL / NO MJPEG',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
   producerRunning: false,
-  overlayMode: 'R716 1920x1080 FIT / NO CROP / CLEAN TITLE / VISIBLE AUDIO EQ ABOVE TITLE / QR / DIRECT VIDEO INPUT',
+  overlayMode: 'R717 1920x1080 FIT / NO CROP / CLEAN TITLE / R706 VISIBLE EQ ABOVE TITLE / QR / DIRECT VIDEO INPUT',
   audioMode: 'R678/R695 DIRECT MASTER / MP3 CONTINUOUS PCM + AAC-LC 128kbps / 4500k CBR / 9000k VBV / 6s FIFO',
   visualTimeZone: VISUAL_TIME_ZONE,
   visualPeriod: null,
@@ -93,7 +101,7 @@ const state = {
   lastFfmpegLine: '',
   equalizerPeriod: null,
   equalizerStyle: null,
-  equalizerEngine: 'R716-VISIBLE-AUDIO-SHOWFREQS-4-SLOT-NO-EXTRA-VIDEO-INPUT'
+  equalizerEngine: 'R717-R706-PRERENDERED-QTRLE-4-SLOT-DIRECT'
 };
 
 let publisher = null;
@@ -724,17 +732,13 @@ async function ensureScheduledVisual(){
   }
 }
 
-function equalizerSpecR716(){
+function equalizerSpecR717(){
   const period=FORCE_VISUAL_SLOT || visualPeriodForHour(localHourInTimeZone());
-  // R716: four genuinely different, audio-reactive bar layouts. The EQ branch is
-  // visual-only: gain is applied AFTER asplit and never changes the broadcast audio.
-  // Every layout shares the same baseline just above the track title, so it cannot
-  // disappear behind the title/ticker on phones after YouTube scaling.
   const specs={
-    morning:{name:'morning-gold-rise-48',colors:'0xF6C85F|0xFFE4A1',ascale:'cbrt',fscale:'log',winSize:2048,overlap:'0.75',averaging:4,width:1056,height:64,grid:22,gap:5,gain:'3.8'},
-    day:{name:'day-steel-fast-64',colors:'0xBFD2E5|0xFFFFFF',ascale:'cbrt',fscale:'log',winSize:1024,overlap:'0.50',averaging:1,width:1152,height:60,grid:18,gap:4,gain:'3.8'},
-    evening:{name:'evening-amber-pulse-44',colors:'0xFF9F43|0xFFD08A',ascale:'cbrt',fscale:'log',winSize:2048,overlap:'0.75',averaging:2,width:1100,height:72,grid:25,gap:6,gain:'4.2'},
-    night:{name:'night-blue-breathe-36',colors:'0x5AA9FF|0x9AD9FF',ascale:'cbrt',fscale:'log',winSize:4096,overlap:'0.875',averaging:6,width:1008,height:58,grid:28,gap:7,gain:'3.4'}
+    morning:{name:'morning-soft-gold-motion-r706',path:EQUALIZER_FILES_R717.morning},
+    day:{name:'day-steel-motion-r706',path:EQUALIZER_FILES_R717.day},
+    evening:{name:'evening-amber-motion-r706',path:EQUALIZER_FILES_R717.evening},
+    night:{name:'night-blue-motion-r706',path:EQUALIZER_FILES_R717.night}
   };
   const spec=specs[period]||specs.day;
   state.equalizerPeriod=period;
@@ -766,7 +770,8 @@ function startPublisher(visualPath){
   const titleFontPart=titleFont?`fontfile='${ffFilterPath(titleFont)}':`:'';
   const curPath=ffFilterPath(LIVE_CURRENT_FILE);
   const tickerPath=ffFilterPath(LIVE_TICKER_FILE);
-  const eq=equalizerSpecR716();
+  const eq=equalizerSpecR717();
+  if(!existsSync(eq.path) || statSync(eq.path).size<20000) throw new Error(`equalizer missing: ${eq.path}`);
   const vf=[
     // R712: exact R678/R695 direct path. No MJPEG feeder and no heavy GEQ stage.
     'scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos',
@@ -777,13 +782,11 @@ function startPublisher(visualPath){
     `drawtext=${titleFontPart}textfile='${curPath}':reload=${VIDEO_FPS}:fontcolor=0xF3EFE8:fontsize=58:x=(w-text_w)/2:y=h-188:borderw=3:bordercolor=black@1:shadowcolor=black@0.95:shadowx=3:shadowy=3`,
     `drawtext=${fontPart}textfile='${tickerPath}':reload=${VIDEO_FPS}:fontcolor=yellow:fontsize=28:x='w-mod(t*110,text_w+w)':y=h-58:borderw=3:bordercolor=black@1:shadowcolor=black@1:shadowx=2:shadowy=2`
   ].join(',');
-  // R716: use the EXISTING PCM audio only. The visual branch gets its own gain,
-  // chunky-bar mask and opacity. Broadcast audio [aout] is untouched. No fourth video
-  // input, no QTRLE loop, no MJPEG feeder and no second video clock are introduced.
-  const eqFilter=`volume=${eq.gain},showfreqs=s=${eq.width}x${eq.height}:rate=${VIDEO_FPS}:mode=bar:ascale=${eq.ascale}:fscale=${eq.fscale}:win_size=${eq.winSize}:overlap=${eq.overlap}:averaging=${eq.averaging}:colors=${eq.colors}:cmode=combined:minamp=0.000000001,format=rgba,drawgrid=w=${eq.grid}:h=999:t=${eq.gap}:c=black@1,colorkey=0x000000:0.10:0.03,colorchannelmixer=aa=0.94,setpts=PTS-STARTPTS`;
-  // Baseline = 888 px on a 1080p frame: EQ ends 4 px above title (title starts at 892).
-  // This is deliberately NOT the old red separator and adds no translucent title strip.
-  const filterComplex=`[2:a]asplit=2[aout][aeq];[aeq]${eqFilter}[eqv];[0:v]${vf}[base];[base][eqv]overlay=x=(W-w)/2:y=H-h-192:shortest=1:format=auto,format=yuv420p[eqbase];[1:v]scale=160:160:flags=lanczos,format=yuva420p[qr];[eqbase][qr]overlay=24:24:format=yuv420[outv]`;
+  // R717: visible motion from the proven R706 design, but pre-rendered to a tiny
+  // transparent QTRLE loop. The stable R715/R713 publisher still owns the only 1080p
+  // encoder and the original PCM audio path is untouched.
+  // EQ bottom is y=870, leaving a clear gap above the title at y=892.
+  const filterComplex=`[0:v]${vf}[base];[3:v]fps=${VIDEO_FPS},format=argb,setpts=PTS-STARTPTS[eqv];[base][eqv]overlay=x=(W-w)/2:y=H-h-210:shortest=1:format=auto,format=yuv420p[eqbase];[1:v]scale=160:160:flags=lanczos,format=yuva420p[qr];[eqbase][qr]overlay=24:24:format=yuv420[outv]`;
 
   // R637 architecture: one FFmpeg owns the video encoder, AAC encoder and RTMPS
   // muxer for the ENTIRE broadcast. Track decoders feed raw PCM into fd 3. Raw
@@ -794,8 +797,9 @@ function startPublisher(visualPath){
     '-thread_queue_size','8192','-re','-stream_loop','-1','-i',visualPath,
     '-loop','1','-framerate','1','-i',QR_OVERLAY,
     '-thread_queue_size','8192','-f','s16le','-ar',String(AUDIO_SAMPLE_RATE),'-ac','2','-i','pipe:3',
+    '-thread_queue_size','64','-re','-stream_loop','-1','-i',eq.path,
     '-filter_complex',filterComplex,
-    '-map','[outv]','-map','[aout]',
+    '-map','[outv]','-map','2:a:0',
     '-shortest',
     '-c:v','libx264','-preset','ultrafast','-tune','zerolatency',
     '-profile:v','high','-level:v','4.1',
@@ -1087,7 +1091,7 @@ function publicStatus(){
     overlayMode:state.overlayMode,
     audioMode:state.audioMode,
     engine:'R678-R695-DIRECT-FFMPEG',
-    videoPipeline:'DIRECT MP4 + EXISTING PCM AUDIO EQ -> CLEAN TEXT/QR -> x264 -> FIFO -> RTMPS (NO MJPEG, NO EXTRA VIDEO INPUT)',
+    videoPipeline:'DIRECT MP4 + TINY R706 EQ LOOP -> CLEAN TEXT/QR -> x264 -> FIFO -> RTMPS (NO MJPEG, AUDIO UNTOUCHED)',
     outputTimeshiftSeconds:OUTPUT_TIMESHIFT_SECONDS,
     videoBitrate:VIDEO_BITRATE,
     audioBitrate:AUDIO_BITRATE,

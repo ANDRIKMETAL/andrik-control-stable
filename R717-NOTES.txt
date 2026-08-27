@@ -1,0 +1,30 @@
+ANDRIK R717 — R706 VISIBLE EQ + R715 STABLE YOUTUBE PRESERVED
+Date: 2026-08-27
+
+WHY
+- R706 is the last supplied build where the moving four-period equalizer was visibly working.
+- R706 also used a separate full-frame MJPEG producer (pipe:4) plus a live GEQ stage and only a 1-second output cushion.
+- The later stability line moved to 4500k CBR / 9000k VBV / FIFO 8192 / 6-second timeshift and then removed the MJPEG feeder in R712.
+- R715/R716 kept the stable direct transport, but the new showfreqs equalizer was not visible in the real YouTube output.
+
+R717
+- Does NOT restore the old R706 1080p MJPEG producer.
+- Does NOT use showfreqs and does NOT touch the broadcast PCM audio.
+- Recreates the proven R706 visual motion as four tiny transparent local QTRLE loops.
+- The main publisher remains the R715/R713 direct architecture and still owns the only 1080p x264 encoder.
+- Output stays: 1080p25, 4500k CBR, 9000k VBV, GOP 50, FIFO queue 8192, timeshift 6s, drop_pkts_on_overflow=0.
+- Equalizer is placed above the title with a safe gap.
+- Four time slots:
+  morning: soft gold
+  day: bright steel
+  evening: amber
+  night: blue
+- Red separator and translucent title strip remain removed.
+- R713 MP3 cache hotfix, R2 clip/delete behavior, FULL FIT / NO CROP, R715 AUTO LIVE agent are preserved.
+
+VALIDATION
+- node --check server.mjs: PASS
+- bash -n installer: PASS
+- all four EQ loops: qtrle + argb: PASS
+- local FFmpeg 1080p25 / 4500k smoke test: PASS
+- live server code contains no MJPEG encoder, no pipe:4, no normalVideoProducer, no live R706 GEQ producer, no showfreqs audio branch.
