@@ -41,12 +41,12 @@ const EVENING_VISUAL_URL = process.env.EVENING_VISUAL_URL || EVENING_VISUAL;
 const NIGHT_VISUAL_URL = process.env.NIGHT_VISUAL_URL || NIGHT_VISUAL;
 const EMERGENCY_VISUAL = process.env.EMERGENCY_VISUAL || new URL('../assets/live-eye-r223.mp4', import.meta.url).pathname;
 const QR_OVERLAY = process.env.QR_OVERLAY || new URL('../assets/andrik-qr-r612.png', import.meta.url).pathname;
-const OUTPUT_TIMESHIFT_SECONDS = 3; // R710: absorb short OVH/RTMPS jitter without tearing down the persistent publisher
+const OUTPUT_TIMESHIFT_SECONDS = 6; // R711: restore the proven R695 network recovery cushion
 const AUDIO_INPUT_QUEUE_PACKETS = 16; // R707: bounded raw-PCM queue; prevents title/audio drift over long uptime
-const VIDEO_INPUT_QUEUE_PACKETS = 64; // R710: ~2.6 s max MJPEG input backlog instead of the old 2048-frame queue
-const VIDEO_BITRATE = '4000k'; // R710: safer 1080p25 CBR headroom for occasional OVH uplink jitter
-const VIDEO_BUFSIZE = '6000k'; // R710: tighter VBV smooths RTMPS bursts without starving YouTube
-const VIDEO_FEEDER_Q = '8'; // R710: lighter local MJPEG handoff; final YouTube image is still H.264 1080p
+const VIDEO_INPUT_QUEUE_PACKETS = 512; // R711: ~20 s feeder cushion; prevents short local stalls from freezing YouTube
+const VIDEO_BITRATE = '4500k'; // R711: exact proven R695 YouTube CBR profile
+const VIDEO_BUFSIZE = '9000k'; // R711: exact proven R695 VBV buffer
+const VIDEO_FEEDER_Q = '8'; // R711: keep lighter local feeder while restoring R695 final transport
 const AUDIO_BITRATE = '128k'; // YouTube Live recommendation for stereo AAC
 const AUDIO_SAMPLE_RATE = 44100; // YouTube Live recommendation for stereo
 const VIDEO_FPS = 25;
@@ -71,14 +71,14 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R710-YOUTUBE-STABILITY-R2-DELETE-R709-PRESERVED',
-  mode: 'R710 YOUTUBE INGEST STABILITY / R709 VISUAL LIBRARY / R707 EXACT TITLE / R706 EQ / R702 HANDOFF',
+  version: 'R711-R695-YOUTUBE-TRANSPORT-FULLFIT-R2-DELETE',
+  mode: 'R711 R695 YOUTUBE TRANSPORT / 512-FRAME ANTI-STALL / R709 VISUAL LIBRARY / R707 TITLE / R706 EQ / R702 HANDOFF',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
   producerRunning: false,
   overlayMode: 'R709 R708/R707 PRESERVED / R706 TRUE-MOTION 4-SLOT EQ / AUTO FIT NO CROP',
-  audioMode: 'R710 JITTER-SAFE RTMPS / R707 BOUNDED PCM QUEUE / EXACT TITLE / AAC-LC 128kbps',
+  audioMode: 'R711 R695 RTMPS 4500K/9000K/6S / R707 BOUNDED PCM / AAC-LC 128kbps',
   visualTimeZone: VISUAL_TIME_ZONE,
   visualPeriod: null,
   visualPath: null,
@@ -1474,7 +1474,7 @@ const server=http.createServer((req,res)=>{
 });
 
 server.listen(PORT,'0.0.0.0',()=>{
-  console.log(`ANDRIK Radio R702-MP3-HANDOFF-AUTO-FIT listening on :${PORT}`);
+  console.log(`ANDRIK Radio R711-R695-TRANSPORT-FULLFIT listening on :${PORT}`);
   radioLoop();
 });
 

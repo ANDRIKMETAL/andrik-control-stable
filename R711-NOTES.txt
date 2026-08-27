@@ -1,0 +1,21 @@
+R711 — R695 YOUTUBE TRANSPORT + ANTI-STALL + FULL-FIT BUTTON
+
+YOUTUBE / OVH
+- Restores the proven R695 final YouTube transport: 4500k CBR, 9000k VBV, 6 s FIFO timeshift.
+- Keeps the newer single persistent YouTube publisher from R702, so MP3 <-> clip handoff does not intentionally disconnect RTMPS.
+- Raises the local MJPEG master input cushion from 64 to 512 frames (~20 s at 25 fps), protecting the final encoder from short local feeder stalls.
+- R707 audio queue stays at 16 packets to preserve exact title/audio sync.
+- Final output stays H.264 High 4.1, 1920x1080, 25 fps, GOP 50, AAC-LC 128k / 44.1 kHz.
+
+FULL FRAME / NO CROP
+- Adds “🖥 ВЕСЬ ЭКРАН · NO CROP” to radio control.
+- OVH helper creates a timestamped backup, disables the historical insetCrop line if present, changes cover to FIT, removes common 1920x1080 crop filters, validates server.mjs, restarts radio and returns /status.
+- On syntax failure it automatically restores the backup.
+
+PRESERVED
+- R709 visual library + safe R2 delete.
+- MORNING / DAY / EVENING / NIGHT.
+- R706 live equalizer.
+- R707 exact title sync.
+- R702 persistent publisher / MP3-clip handoff.
+- AUTO FIT / NO CROP.
