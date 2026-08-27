@@ -1,0 +1,6 @@
+R694 — DANCE OF DEATH display title
+
+1) Existing R2 object radio/clips/1000381070.mp4 is returned by the radio-clips API as DANCE OF DEATH.
+2) No 211 MB re-upload is required.
+3) AWS R693 already polls the public clip API every ~120 seconds, so it receives the new title automatically after site deploy.
+4) R693 radio engine, R690 FULL FRAME, MP3 art fix, JOY OF BEING, DAY/EVENING/NIGHT and clip rotation are unchanged.

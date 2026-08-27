@@ -18004,6 +18004,11 @@ async function handleRadioVisualAssignR651(request,env){
 
 // === R693: robust owner-uploaded video clips for random radio intermissions ===
 const RADIO_CLIP_PREFIX_R691 = 'radio/clips/';
+// R694: friendly display titles for already-uploaded radio clips.
+// This changes metadata returned by the API only; the 211 MB MP4 in R2 is NOT re-uploaded.
+const RADIO_CLIP_TITLE_OVERRIDES_R694 = Object.freeze({
+  'radio/clips/1000381070.mp4':'DANCE OF DEATH'
+});
 function radioClipUploadIdR691(request){
   const value=String(new URL(request.url).searchParams.get('uploadId')||'').trim();
   return value&&value.length<=512?value:'';
@@ -18033,7 +18038,8 @@ async function listRadioClipsR691(bucket){
     .filter(o=>radioClipKeyR691(o.key)&&Number(o.size||0)>500000)
     .map(o=>{
       const meta=o.customMetadata||{},base=String(o.key||'').split('/').pop().replace(/\.mp4$/i,'').replace(/[-_]+/g,' ');
-      return {key:o.key,title:radioClipTitleR691(meta.title||base),size:Number(o.size||0),uploaded:o.uploaded||null,url:radioClipDirectUrlR691(o)};
+      const overrideTitle=RADIO_CLIP_TITLE_OVERRIDES_R694[o.key]||'';
+      return {key:o.key,title:radioClipTitleR691(overrideTitle||meta.title||base),size:Number(o.size||0),uploaded:o.uploaded||null,url:radioClipDirectUrlR691(o)};
     })
     .sort((a,b)=>(Date.parse(b.uploaded||0)||0)-(Date.parse(a.uploaded||0)||0));
 }
