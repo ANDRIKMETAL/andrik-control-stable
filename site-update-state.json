@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787801513936-9133387a79",
-  "release": "R697",
-  "archiveName": "R697-FAST-SWITCH-SAFE-FIT-R696-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "61de893c03098eb1f39c0b0ca5d1d5268e0dad6a",
-  "backupSha": "61de893c03098eb1f39c0b0ca5d1d5268e0dad6a",
+  "operationId": "publish-1787802682768-8273a26656",
+  "release": "R698",
+  "archiveName": "R698-INSTANT-PCM-SWITCH-R697-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "c0f4d5b5640df57a7d95bc73142a3a3bf75c73e1",
+  "backupSha": "c0f4d5b5640df57a7d95bc73142a3a3bf75c73e1",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-27T03:31:54.426Z"
+  "generatedAt": "2026-08-27T03:51:23.189Z"
 }

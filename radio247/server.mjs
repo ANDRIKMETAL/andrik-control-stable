@@ -37,7 +37,7 @@ const EVENING_VISUAL_URL = process.env.EVENING_VISUAL_URL || EVENING_VISUAL;
 const NIGHT_VISUAL_URL = process.env.NIGHT_VISUAL_URL || NIGHT_VISUAL;
 const EMERGENCY_VISUAL = process.env.EMERGENCY_VISUAL || new URL('../assets/live-eye-r223.mp4', import.meta.url).pathname;
 const QR_OVERLAY = process.env.QR_OVERLAY || new URL('../assets/andrik-qr-r612.png', import.meta.url).pathname;
-const OUTPUT_TIMESHIFT_SECONDS = 2; // R697: shorter recovery cushion for much faster clip <-> MP3 switching
+const OUTPUT_TIMESHIFT_SECONDS = 1; // R698: minimal recovery cushion for faster clip <-> MP3 switching
 const VIDEO_BITRATE = '4500k'; // R637: 1080p25 low-motion radio visual, bounded CBR
 const AUDIO_BITRATE = '128k'; // YouTube Live recommendation for stereo AAC
 const AUDIO_SAMPLE_RATE = 44100; // YouTube Live recommendation for stereo
@@ -63,7 +63,7 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R697-R2-RADIO-CLIPS-FAST-SWITCH-SAFE-FIT',
+  version: 'R698-R2-RADIO-CLIPS-INSTANT-PCM-SWITCH',
   mode: 'R697 MP3 + RANDOM R2 VIDEO CLIPS / FAST CLIP SWITCH / STRICT SAFE INSET RECOVERY / METAL TITLES / AUTO DAY-EVENING-NIGHT',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
@@ -739,7 +739,7 @@ function startPublisher(visualPath){
     '-hide_banner','-loglevel','warning',
     '-thread_queue_size','8192','-re','-stream_loop','-1','-i',visualPath,
     '-loop','1','-framerate','1','-i',QR_OVERLAY,
-    '-thread_queue_size','8192','-f','s16le','-ar',String(AUDIO_SAMPLE_RATE),'-ac','2','-i','pipe:3',
+    '-thread_queue_size','8192','-probesize','32','-analyzeduration','0','-f','s16le','-ar',String(AUDIO_SAMPLE_RATE),'-ac','2','-i','pipe:3',
     '-filter_complex',filterComplex,
     '-map','[outv]','-map','2:a:0',
     '-shortest',
@@ -794,12 +794,16 @@ async function stopMasterForClip(){
     const sink=active?.stdio?.[3];
     if(sink && !sink.destroyed && !sink.writableEnded)sink.end();
   }catch(_){ }
-  let clean=await waitChildExit(active,1200);
+  // R698: don't let the old FIFO drain hold the picture for seconds.
+  let clean=await waitChildExit(active,220);
   if(!clean && active.exitCode===null){
     try{active.kill('SIGTERM')}catch(_){ }
-    clean=await waitChildExit(active,700);
+    clean=await waitChildExit(active,260);
   }
-  if(!clean && active.exitCode===null){try{active.kill('SIGKILL')}catch(_){ }}
+  if(!clean && active.exitCode===null){
+    try{active.kill('SIGKILL')}catch(_){ }
+    await waitChildExit(active,160);
+  }
   publisher=null;
   state.publisherRunning=false;
 }
@@ -878,12 +882,24 @@ async function playVideoClipR691(previous,item,next){
         console.error('[clip]',line);
       }
     });
-    await new Promise((resolve,reject)=>{
+    const clipExit=new Promise((resolve,reject)=>{
       clipPublisher.once('error',reject);
       clipPublisher.once('exit',(code,signal)=>{
-        if(code===0||stopping)resolve();else reject(new Error(`clip publisher exit ${code||signal}`));
+        if(code===0||stopping)resolve('exit');else reject(new Error(`clip publisher exit ${code||signal}`));
       });
     });
+    // R698: a broken FIFO/network close can no longer freeze the last clip frame
+    // indefinitely. At the measured clip end + 0.9 s, force the boundary.
+    const watchdogMs=Math.max(1800,Math.ceil(duration*1000)+900);
+    const ended=await Promise.race([clipExit,sleep(watchdogMs).then(()=> 'watchdog')]);
+    if(ended==='watchdog' && clipPublisher && clipPublisher.exitCode===null){
+      console.warn('[clip] R698 end watchdog forced fast handoff');
+      try{clipPublisher.kill('SIGTERM')}catch(_){ }
+      if(!(await waitChildExit(clipPublisher,260)) && clipPublisher.exitCode===null){
+        try{clipPublisher.kill('SIGKILL')}catch(_){ }
+        await waitChildExit(clipPublisher,160);
+      }
+    }
     return !stopping;
   }catch(error){
     state.lastError=`VIDEO clip: ${cleanText(error?.message||error)}`;
@@ -896,9 +912,10 @@ async function playVideoClipR691(previous,item,next){
       try{
         const visual=await ensureScheduledVisual();
         if(!startPublisher(visual))throw new Error('master restart after clip failed');
-        // R697: let the new RTMP encoder attach before the next MP3 decoder starts.
-        await sleep(220);
-        if(!publisher || publisher.exitCode!==null)throw new Error('master exited during fast restart after clip');
+        // R698: raw PCM probing is disabled for this known s16le stream, so the
+        // next MP3 may feed the master almost immediately instead of waiting ~25 s.
+        await sleep(45);
+        if(!publisher || publisher.exitCode!==null)throw new Error('master exited during instant restart after clip');
       }catch(error){
         intentionalPublisherSwitch=false;
         throw error;
