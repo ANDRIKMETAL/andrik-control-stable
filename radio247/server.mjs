@@ -63,13 +63,13 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R693-R2-RADIO-CLIPS-R690-FULL-FRAME-FIT-AUDIO-ART-FIX',
-  mode: 'R693 MP3 + RANDOM R2 VIDEO CLIPS / ROBUST R2 UPLOAD / STRIP BROKEN EMBEDDED ART / AUTO DAY-EVENING-NIGHT / R690 FULL-FRAME FIT',
+  version: 'R695-R2-RADIO-CLIPS-SAFE-FRAME-METAL-TITLES',
+  mode: 'R695 MP3 + RANDOM R2 VIDEO CLIPS / SAFE INSET FRAME RECOVERY / METAL TITLES / STRIP BROKEN EMBEDDED ART / AUTO DAY-EVENING-NIGHT',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
   producerRunning: false,
-  overlayMode: 'R658 AUTO FORCE SLOT / ALL 3 LOCAL VISUALS PROTECTED / R690 FIT 1920x1080 / ASPECT PRESERVED / NO CROP / QR / FULL SCREEN',
+  overlayMode: 'R695 1920x1080 FIT / VISIBLE CONTENT PRESERVED / INSET BLACK FRAME AUTO-REMOVED FOR CLIPS / METAL TITLE / QR / FULL SCREEN',
   audioMode: 'LOCAL MP3 CACHE + R2 VIDEO CLIP CACHE / MP3 CONTINUOUS PCM + AAC-LC 128kbps',
   visualTimeZone: VISUAL_TIME_ZONE,
   visualPeriod: null,
@@ -378,6 +378,60 @@ async function probeDuration(url){
   return duration;
 }
 
+async function probeVideoSize(path){
+  const raw=await runCapture(
+    'ffprobe',
+    ['-v','error','-select_streams','v:0','-show_entries','stream=width,height','-of','csv=s=x:p=0',path],
+    {timeoutMs:25000}
+  );
+  const match=/^(\d+)x(\d+)$/m.exec(String(raw).trim());
+  if(!match)throw new Error('Invalid video dimensions');
+  return {width:Number(match[1]),height:Number(match[2])};
+}
+
+async function detectInsetBlackFrameCrop(path){
+  // R695: some uploaded MP4 files already contain a 16:9 picture boxed inside a
+  // larger black canvas. A normal FIT keeps that black canvas and makes the real
+  // picture look tiny. Detect ONLY a large, symmetric inset on BOTH axes. We never
+  // crop ordinary footage, portrait clips, cinematic bars or visible image content.
+  let size;
+  try{size=await probeVideoSize(path)}catch(_){return ''}
+  if(!size.width||!size.height)return '';
+  const stderr=await new Promise(resolve=>{
+    const child=spawn('ffmpeg',[
+      '-hide_banner','-loglevel','info','-ss','0.35','-i',path,
+      '-an','-sn','-dn','-vf','cropdetect=limit=4:round=2:reset=0',
+      '-frames:v','48','-f','null','-'
+    ],{stdio:['ignore','ignore','pipe']});
+    let err='';
+    const timer=setTimeout(()=>{try{child.kill('SIGKILL')}catch(_){}},9000);
+    child.stderr.on('data',d=>{err=(err+String(d)).slice(-180000)});
+    child.once('error',()=>{clearTimeout(timer);resolve('')});
+    child.once('exit',()=>{clearTimeout(timer);resolve(err)});
+  });
+  const matches=[...String(stderr).matchAll(/crop=(\d+):(\d+):(\d+):(\d+)/g)];
+  if(!matches.length)return '';
+  const counts=new Map();
+  for(const m of matches.slice(-28)){
+    const key=`${m[1]}:${m[2]}:${m[3]}:${m[4]}`;
+    counts.set(key,(counts.get(key)||0)+1);
+  }
+  const best=[...counts.entries()].sort((a,b)=>b[1]-a[1])[0]?.[0]||'';
+  const parts=best.split(':').map(Number);
+  if(parts.length!==4||parts.some(v=>!Number.isFinite(v)))return '';
+  const [cw,ch,x,y]=parts;
+  const right=size.width-cw-x,bottom=size.height-ch-y;
+  if(cw<=0||ch<=0||x<0||y<0||right<0||bottom<0)return '';
+  const cutX=size.width-cw,cutY=size.height-ch;
+  const symmetricX=Math.abs(x-right)<=Math.max(10,Math.round(size.width*0.035));
+  const symmetricY=Math.abs(y-bottom)<=Math.max(10,Math.round(size.height*0.035));
+  const largeInsetX=cutX>=Math.round(size.width*0.08);
+  const largeInsetY=cutY>=Math.round(size.height*0.08);
+  const enoughVisible=cw>=Math.round(size.width*0.45)&&ch>=Math.round(size.height*0.45);
+  if(!(symmetricX&&symmetricY&&largeInsetX&&largeInsetY&&enoughVisible))return '';
+  return `crop=${cw}:${ch}:${x}:${y}`;
+}
+
 function chooseFont(){
   const candidates=[
     '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
@@ -386,6 +440,19 @@ function chooseFont(){
     '/usr/share/fonts/truetype/freefont/FreeSansBold.ttf'
   ];
   return candidates.find(existsSync)||'';
+}
+
+function chooseTitleFont(){
+  // R695: use a condensed heavy italic face already present on standard Ubuntu/OVH
+  // installs. It stays readable in Cyrillic/Latin and visually matches the sharper
+  // ANDRIK metal artwork better than the old plain yellow system font.
+  const candidates=[
+    '/usr/share/fonts/truetype/dejavu/DejaVuSansCondensed-BoldOblique.ttf',
+    '/usr/share/fonts/truetype/dejavu/DejaVuSansCondensed-Bold.ttf',
+    '/usr/share/fonts/truetype/dejavu/DejaVuSans-BoldOblique.ttf',
+    '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'
+  ];
+  return candidates.find(existsSync)||chooseFont();
 }
 
 function ffFilterPath(path){
@@ -639,17 +706,22 @@ function startPublisher(visualPath){
   if(!existsSync(QR_OVERLAY) || statSync(QR_OVERLAY).size<20000) throw new Error(`QR overlay missing: ${QR_OVERLAY}`);
 
   const font=chooseFont();
+  const titleFont=chooseTitleFont();
   const fontPart=font?`fontfile='${ffFilterPath(font)}':`:'';
+  const titleFontPart=titleFont?`fontfile='${ffFilterPath(titleFont)}':`:'';
   const curPath=ffFilterPath(LIVE_CURRENT_FILE);
   const tickerPath=ffFilterPath(LIVE_TICKER_FILE);
   const vf=[
-    // R690 FIT: preserve the complete source frame. Never crop or stretch.
+    // R695: normal radio visuals preserve the whole source frame.
     'scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos',
     'pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black',
     'setsar=1',
     `fps=${VIDEO_FPS}`,
     'format=yuv420p',
-    `drawtext=${fontPart}textfile='${curPath}':reload=${VIDEO_FPS}:fontcolor=yellow:fontsize=44:x=(w-text_w)/2:y=h-148:borderw=4:bordercolor=black@1:shadowcolor=black@1:shadowx=2:shadowy=2`,
+    'drawbox=x=92:y=ih-208:w=iw-184:h=92:color=black@0.30:t=fill',
+    'drawbox=x=125:y=ih-208:w=iw-250:h=3:color=red@0.82:t=fill',
+    `drawtext=${titleFontPart}textfile='${curPath}':reload=${VIDEO_FPS}:fontcolor=red@0.01:fontsize=58:x=(w-text_w)/2:y=h-188:borderw=8:bordercolor=red@0.58`,
+    `drawtext=${titleFontPart}textfile='${curPath}':reload=${VIDEO_FPS}:fontcolor=0xF3EFE8:fontsize=58:x=(w-text_w)/2:y=h-188:borderw=3:bordercolor=black@1:shadowcolor=black@0.95:shadowx=3:shadowy=3`,
     `drawtext=${fontPart}textfile='${tickerPath}':reload=${VIDEO_FPS}:fontcolor=yellow:fontsize=28:x='w-mod(t*110,text_w+w)':y=h-58:borderw=3:bordercolor=black@1:shadowcolor=black@1:shadowx=2:shadowy=2`
   ].join(',');
   const filterComplex=`[0:v]${vf}[base];[1:v]scale=160:160:flags=lanczos,format=yuva420p[qr];[base][qr]overlay=24:24:format=yuv420[outv]`;
@@ -727,19 +799,27 @@ async function stopMasterForClip(){
   state.publisherRunning=false;
 }
 
-function clipFilterComplex(){
+function clipFilterComplex(insetCrop=''){
   const font=chooseFont();
+  const titleFont=chooseTitleFont();
   const fontPart=font?`fontfile='${ffFilterPath(font)}':`:'';
+  const titleFontPart=titleFont?`fontfile='${ffFilterPath(titleFont)}':`:'';
   const curPath=ffFilterPath(LIVE_CURRENT_FILE);
   const tickerPath=ffFilterPath(LIVE_TICKER_FILE);
   const vf=[
-    // R690 FIT: clips also keep their full frame inside 1920x1080.
+    // R695: if the MP4 has its own black canvas around a smaller picture, remove
+    // only that detected empty inset. The visible frame itself is still FIT, never
+    // cover-cropped or stretched.
+    ...(insetCrop?[insetCrop]:[]),
     'scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos',
     'pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black',
     'setsar=1',
     `fps=${VIDEO_FPS}`,
     'format=yuv420p',
-    `drawtext=${fontPart}textfile='${curPath}':reload=${VIDEO_FPS}:fontcolor=yellow:fontsize=44:x=(w-text_w)/2:y=h-148:borderw=4:bordercolor=black@1:shadowcolor=black@1:shadowx=2:shadowy=2`,
+    'drawbox=x=92:y=ih-208:w=iw-184:h=92:color=black@0.30:t=fill',
+    'drawbox=x=125:y=ih-208:w=iw-250:h=3:color=red@0.82:t=fill',
+    `drawtext=${titleFontPart}textfile='${curPath}':reload=${VIDEO_FPS}:fontcolor=red@0.01:fontsize=58:x=(w-text_w)/2:y=h-188:borderw=8:bordercolor=red@0.58`,
+    `drawtext=${titleFontPart}textfile='${curPath}':reload=${VIDEO_FPS}:fontcolor=0xF3EFE8:fontsize=58:x=(w-text_w)/2:y=h-188:borderw=3:bordercolor=black@1:shadowcolor=black@0.95:shadowx=3:shadowy=3`,
     `drawtext=${fontPart}textfile='${tickerPath}':reload=${VIDEO_FPS}:fontcolor=yellow:fontsize=28:x='w-mod(t*110,text_w+w)':y=h-58:borderw=3:bordercolor=black@1:shadowcolor=black@1:shadowx=2:shadowy=2`
   ].join(',');
   return `[0:v]${vf}[base];[1:v]scale=160:160:flags=lanczos,format=yuva420p[qr];[base][qr]overlay=24:24:format=yuv420[outv]`;
@@ -757,16 +837,18 @@ async function playVideoClipR691(previous,item,next){
   state.previous=previous?{type:previous.type||'track',title:previous.title,album:previous.album||'',url:previous.url||''}:null;
   state.current={type:'clip',title:item.title,album:item.album,url:item.url,startedAt:new Date().toISOString(),duration};
   state.next=next?{type:next.type||'track',title:next.title,album:next.album||'',url:next.url||''}:null;
-  writeFileSync(LIVE_CURRENT_FILE,`🎬 КЛИП · ANDRIK — ${shortText(item.title||'VIDEO',52)}`,'utf8');
+  writeFileSync(LIVE_CURRENT_FILE,`КЛИП • ANDRIK — ${shortText(item.title||'VIDEO',34)}`,'utf8');
 
   try{
+    const insetCrop=await detectInsetBlackFrameCrop(clipPath).catch(()=> '');
+    if(insetCrop)console.log('[clip-frame] R695 removed encoded black inset:',insetCrop);
     await stopMasterForClip();
     if(stopping)return false;
     await sleep(350);
     const args=[
       '-hide_banner','-loglevel','warning','-re','-i',clipPath,
       '-loop','1','-framerate','1','-i',QR_OVERLAY,
-      '-filter_complex',clipFilterComplex(),
+      '-filter_complex',clipFilterComplex(insetCrop),
       '-map','[outv]','-map','0:a:0',
       '-shortest',
       '-c:v','libx264','-preset','ultrafast','-tune','zerolatency',
@@ -836,7 +918,7 @@ async function playItem(previous,item,next,following,localAudioPath){
   state.previous=previous?{type:previous.type||'track',title:previous.title,album:previous.album||'',url:previous.url||''}:null;
   state.current={type:item.type||'track',title:item.title,album:item.album||'',url:item.url,startedAt:new Date().toISOString(),duration};
   state.next=next?{type:next.type||'track',title:next.title,album:next.album||'',url:next.url||''}:null;
-  writeFileSync(LIVE_CURRENT_FILE,trackLabel(item,'ANDRIK'),'utf8');
+  writeFileSync(LIVE_CURRENT_FILE,`ANDRIK — ${shortText(item.title||'TRACK',42)}`,'utf8');
 
   const audioSink=publisher?.stdio?.[3];
   if(!publisher || publisher.exitCode!==null || !audioSink || audioSink.destroyed) throw new Error('master audio pipe unavailable');

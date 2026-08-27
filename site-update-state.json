@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787791330118-915ef4121e",
-  "release": "R694",
-  "archiveName": "R694-DANCE-OF-DEATH-CLIP-TITLE-R693-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "8ec2af3d42c7ada35a418dd0fb41faabfa848abc",
-  "backupSha": "8ec2af3d42c7ada35a418dd0fb41faabfa848abc",
+  "operationId": "publish-1787800800932-4a95c2d172",
+  "release": "R695",
+  "archiveName": "R695-SAFE-CLIP-FRAME-METAL-TITLES-R694-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "cd1905a2bb7533f94fe658069d425ed9b70b2aef",
+  "backupSha": "cd1905a2bb7533f94fe658069d425ed9b70b2aef",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-27T00:42:10.118Z"
+  "generatedAt": "2026-08-27T03:20:01.374Z"
 }
