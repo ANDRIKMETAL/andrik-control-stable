@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787825518423-65c1e70741",
-  "release": "R708",
-  "archiveName": "R708-AGENT-ESM-MORNING-PULL-R707-PRESERVED-SAFE-FULL-3.zip",
-  "sourceHead": "1c7d892534db1667e320bcdd9bf69c4a920f2e61",
-  "backupSha": "1c7d892534db1667e320bcdd9bf69c4a920f2e61",
+  "operationId": "publish-1787827573826-0937a8efaa",
+  "release": "R709",
+  "archiveName": "R709-VISUAL-LIBRARY-MORNING-FINAL-R708-PRESERVED-SAFE-FULL-1.zip",
+  "sourceHead": "26513755b67154f530d73659833e7a7efba5911f",
+  "backupSha": "26513755b67154f530d73659833e7a7efba5911f",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-27T10:11:58.841Z"
+  "generatedAt": "2026-08-27T10:46:14.257Z"
 }

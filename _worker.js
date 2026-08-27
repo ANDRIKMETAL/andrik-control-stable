@@ -17826,6 +17826,21 @@ function radioVisualUploadIdR662(request){
   const value=String(new URL(request.url).searchParams.get('uploadId')||'').trim();
   return value&&value.length<=512?value:'';
 }
+function radioVisualSourceNameR709(value){
+  const raw=cleanPlainText(String(value||'radio-master.mp4'),240)||'radio-master.mp4';
+  const base=(raw.split(/[\/]/).pop()||'radio-master.mp4').trim();
+  const safe=base.replace(/[\u0000-\u001f\u007f]/g,'').replace(/[^\p{L}\p{N}._() -]+/gu,'_').replace(/\s+/g,' ').slice(0,180);
+  const name=/\.mp4$/i.test(safe)?safe:(safe+'.mp4');
+  return name||('radio-visual-'+Date.now()+'.mp4');
+}
+function radioVisualLibraryKeyR709(value){
+  const key=String(value||'').trim();
+  return /^radio\/visual-library\/[a-zA-Z0-9._() -]+\.mp4$/i.test(key)?key:'';
+}
+function radioVisualUploadKeyR709(request,slot){
+  const requested=radioVisualLibraryKeyR709(new URL(request.url).searchParams.get('key')||'');
+  return requested||RADIO_VISUAL_KEYS_R620[slot]||''; // legacy cached R662 page remains compatible
+}
 async function handleRadioVisualMpuStartR662(request,env){
   if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
   const bucket=getMusicBucketR314(env);if(!bucket)return json({ok:false,error:'music-bucket-not-configured'},503);
@@ -17833,14 +17848,17 @@ async function handleRadioVisualMpuStartR662(request,env){
   const body=await request.json().catch(()=>({}));
   const expectedSize=Math.max(0,Number(body?.size)||0);
   if(expectedSize>5*1024*1024*1024)return json({ok:false,error:'file-too-large',message:'Максимум 5 ГБ.'},413);
-  const sourceName=cleanPlainText(String(body?.name||'radio-master.mp4'),240)||'radio-master.mp4';
-  const key=RADIO_VISUAL_KEYS_R620[slot];
+  const sourceName=radioVisualSourceNameR709(body?.name||'radio-master.mp4');
+  // R709 ROOT FIX: upload the original MP4 into the normal R2 library FIRST.
+  // Only after multipart verification does Control assign/copy it to the requested slot.
+  // This means MORNING behaves exactly like DAY/EVENING/NIGHT and never lies because an old slot already exists.
+  const key='radio/visual-library/'+sourceName;
   try{
     const upload=await bucket.createMultipartUpload(key,{
-      httpMetadata:{contentType:'video/mp4',cacheControl:'public, max-age=31536000, immutable'},
-      customMetadata:{source:'ANDRIK R662 browser multipart',slot,sourceName,expectedSize:String(expectedSize),uploadedBy:'radio-visuals-admin-r662'}
+      httpMetadata:{contentType:'video/mp4',cacheControl:'no-store'},
+      customMetadata:{source:'ANDRIK R709 visual library upload',slot,sourceName,expectedSize:String(expectedSize),uploadedBy:'radio-visuals-admin-r709',uploadedAt:new Date().toISOString()}
     });
-    return json({ok:true,slot,key,uploadId:upload.uploadId,partSize:8*1024*1024,expectedSize});
+    return json({ok:true,slot,key,sourceKey:key,sourceName,uploadId:upload.uploadId,partSize:8*1024*1024,expectedSize});
   }catch(error){return json({ok:false,error:'multipart-start-failed',message:cleanPlainText(error?.message||error,420)},502);}
 }
 async function handleRadioVisualMpuPartR662(request,env){
@@ -17849,10 +17867,11 @@ async function handleRadioVisualMpuPartR662(request,env){
   const slot=radioVisualSlotR620(request),uploadId=radioVisualUploadIdR662(request),url=new URL(request.url),partNumber=parseInt(url.searchParams.get('partNumber')||'',10);
   if(!slot||!uploadId||!Number.isFinite(partNumber)||partNumber<1||partNumber>10000)return json({ok:false,error:'invalid-multipart-request'},400);
   if(!request.body)return json({ok:false,error:'missing-part-body'},400);
+  const key=radioVisualUploadKeyR709(request,slot);if(!key)return json({ok:false,error:'invalid-upload-key'},400);
   try{
-    const upload=bucket.resumeMultipartUpload(RADIO_VISUAL_KEYS_R620[slot],uploadId);
+    const upload=bucket.resumeMultipartUpload(key,uploadId);
     const part=await upload.uploadPart(partNumber,request.body);
-    return json({ok:true,slot,partNumber:part.partNumber,etag:part.etag});
+    return json({ok:true,slot,key,partNumber:part.partNumber,etag:part.etag});
   }catch(error){return json({ok:false,error:'multipart-part-failed',message:cleanPlainText(error?.message||error,420)},502);}
 }
 async function handleRadioVisualMpuCompleteR662(request,env){
@@ -17863,14 +17882,16 @@ async function handleRadioVisualMpuCompleteR662(request,env){
   const body=await request.json().catch(()=>null),parts=Array.isArray(body?.parts)?body.parts:[];
   const normalized=parts.map(p=>({partNumber:parseInt(p?.partNumber,10),etag:String(p?.etag||'')})).filter(p=>Number.isFinite(p.partNumber)&&p.partNumber>0&&p.etag).sort((a,b)=>a.partNumber-b.partNumber);
   if(!normalized.length||normalized.length!==parts.length)return json({ok:false,error:'invalid-multipart-parts'},400);
-  const expectedSize=Math.max(0,Number(body?.size)||0),key=RADIO_VISUAL_KEYS_R620[slot];
+  const expectedSize=Math.max(0,Number(body?.size)||0),key=radioVisualUploadKeyR709(request,slot);
+  if(!key)return json({ok:false,error:'invalid-upload-key'},400);
   try{
     const upload=bucket.resumeMultipartUpload(key,uploadId);
     const completed=await upload.complete(normalized);
     const head=await bucket.head(key);
     const actualSize=Number(head?.size||0),verified=!expectedSize||actualSize===expectedSize;
-    if(!verified)return json({ok:false,error:'multipart-size-mismatch',message:`R2 получил ${actualSize} байт вместо ${expectedSize}. Slot не подтверждён.`,slot,key,size:actualSize,expectedSize},409);
-    return json({ok:true,slot,key,size:actualSize,expectedSize,verified:true,etag:completed?.httpEtag||'',uploaded:head?.uploaded||null,publicUrl:'https://music.andrikmetal.com/'+key});
+    if(!verified)return json({ok:false,error:'multipart-size-mismatch',message:`R2 получил ${actualSize} байт вместо ${expectedSize}. Новый исходник НЕ назначен.`,slot,key,size:actualSize,expectedSize},409);
+    const sourceName=String(head?.customMetadata?.sourceName||key.split('/').pop()||key);
+    return json({ok:true,slot,key,sourceKey:key,sourceName,size:actualSize,expectedSize,verified:true,etag:completed?.httpEtag||'',uploaded:head?.uploaded||null,publicUrl:'https://music.andrikmetal.com/'+key});
   }catch(error){return json({ok:false,error:'multipart-complete-failed',message:cleanPlainText(error?.message||error,420)},502);}
 }
 async function handleRadioVisualMpuAbortR662(request,env){
@@ -17878,7 +17899,8 @@ async function handleRadioVisualMpuAbortR662(request,env){
   const bucket=getMusicBucketR314(env);if(!bucket)return json({ok:false,error:'music-bucket-not-configured'},503);
   const slot=radioVisualSlotR620(request),uploadId=radioVisualUploadIdR662(request);
   if(!slot||!uploadId)return json({ok:false,error:'invalid-multipart-request'},400);
-  try{await bucket.resumeMultipartUpload(RADIO_VISUAL_KEYS_R620[slot],uploadId).abort();return json({ok:true,slot});}
+  const key=radioVisualUploadKeyR709(request,slot);if(!key)return json({ok:false,error:'invalid-upload-key'},400);
+  try{await bucket.resumeMultipartUpload(key,uploadId).abort();return json({ok:true,slot,key});}
   catch(error){return json({ok:false,error:'multipart-abort-failed',message:cleanPlainText(error?.message||error,300)},400);}
 }
 // === End R662 multipart radio upload ===
@@ -17959,7 +17981,7 @@ async function handleRadioVisualLibraryR651(request,env){
     .map(o=>{
       const m=o.customMetadata||{};
       const base=String(o.key||'').split('/').pop()||String(o.key||'');
-      const name=String(m.title||base||o.key).trim();
+      const name=String(m.title||m.sourceName||base||o.key).trim();
       return {key:o.key,name,size:Number(o.size||0),uploaded:o.uploaded||null,isRadioSlot:slotKeys.has(o.key),preferred:preferredNames.has(base),sourceKey:String(m.sourceKey||'')};
     })
     .sort((a,b)=>{
