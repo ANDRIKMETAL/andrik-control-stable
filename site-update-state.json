@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787805286146-5fe4978ac0",
-  "release": "R701",
-  "archiveName": "R701-PERSISTENT-PUBLISHER-CLIP-WATCHDOG-R700-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "b3e2aad0aae580e5c149386410cc866b95b92756",
-  "backupSha": "b3e2aad0aae580e5c149386410cc866b95b92756",
+  "operationId": "publish-1787809522061-25a5fe3ef2",
+  "release": "R702",
+  "archiveName": "R702-MP3-HANDOFF-AUTO-FIT-FINAL-R701-PRESERVED-SAFE-FULL-2.zip",
+  "sourceHead": "c2aad66dcdcf6c77680b46d2290602871288c9fb",
+  "backupSha": "c2aad66dcdcf6c77680b46d2290602871288c9fb",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-27T04:34:46.566Z"
+  "generatedAt": "2026-08-27T05:45:22.424Z"
 }

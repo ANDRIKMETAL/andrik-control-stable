@@ -54,3 +54,18 @@ AWS no longer reads the private R2 custom domain directly. Only day/evening/nigh
 
 ## R622 private master pull
 AWS downloads the three daypart masters once through an ADMIN_KEY-protected endpoint, validates them, then restarts with persistent local copies.
+
+## R702 — MP3 handoff final + permanent AUTO FIT
+
+- Корень пропажи MP3 исправлен: FFmpeg cache-clean временно пишет в настоящий `.mp3` и использует явный `-f mp3` muxer.
+- Следующий MP3 должен быть локально готов до старта клипа.
+- Конец клипа контролируется по video-stream duration и реальному `frame=` progress, поэтому последний кадр не зависает из-за более длинной audio/container дорожки.
+- Между локальными источниками master получает короткий silence bridge; RTMPS publisher не закрывается.
+- После клипа сразу возвращается текущий DAY / EVENING / NIGHT visual, подпись переключается на следующий MP3 и запускается его звук.
+- Постоянное правило видео: MP4 загружается как есть; весь исходный кадр автоматически FIT-вписывается в 1920×1080, crop/cover OFF, ручное растягивание не требуется.
+
+После деплоя R702 на OVH выполнить один раз:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/ANDRIKMETAL/andrik-control-stable/main/radio247/vm-lite/install-r702-radio-handoff-final.sh | sudo env ANDRIK_SITE_BASE=https://raw.githubusercontent.com/ANDRIKMETAL/andrik-control-stable/main bash
+```

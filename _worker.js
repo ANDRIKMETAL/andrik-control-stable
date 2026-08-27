@@ -18048,7 +18048,12 @@ async function handleRadioClipsListR691(request,env,admin=false){
   const bucket=getMusicBucketR314(env);if(!bucket)return json({ok:false,error:'music-bucket-not-configured'},503);
   try{
     const clips=await listRadioClipsR691(bucket);
-    return json({ok:true,count:clips.length,clips,refreshSeconds:120,builtIn:[{title:'JOY OF BEING',key:'clips/joy-of-being-official-2026.mp4',url:'https://music.andrikmetal.com/clips/joy-of-being-official-2026.mp4'}]});
+    const joyKey='clips/joy-of-being-official-2026.mp4';
+    const joyObject=await bucket.head(joyKey).catch(()=>null);
+    const joyStamp=Date.parse(joyObject?.uploaded||0)||0;
+    const joyUrl=`https://music.andrikmetal.com/${joyKey}${joyStamp?`?v=${joyStamp}`:''}`;
+    const builtIn=[{title:'JOY OF BEING',key:joyKey,size:Number(joyObject?.size||0),uploaded:joyObject?.uploaded||null,url:joyUrl}];
+    return json({ok:true,count:clips.length,clips,refreshSeconds:120,builtIn});
   }catch(error){return json({ok:false,error:'radio-clips-list-failed',message:cleanPlainText(error?.message||error,420)},502);}
 }
 async function handleRadioClipMpuStartR691(request,env){
