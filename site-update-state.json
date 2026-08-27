@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787824291229-d73c78b842",
-  "release": "R707",
-  "archiveName": "R707-MORNING-SLOT-EXACT-TITLE-SYNC-R706-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "4889bf826f51f43821b769db1b62196ea00120ee",
-  "backupSha": "4889bf826f51f43821b769db1b62196ea00120ee",
+  "operationId": "publish-1787825518423-65c1e70741",
+  "release": "R708",
+  "archiveName": "R708-AGENT-ESM-MORNING-PULL-R707-PRESERVED-SAFE-FULL-3.zip",
+  "sourceHead": "1c7d892534db1667e320bcdd9bf69c4a920f2e61",
+  "backupSha": "1c7d892534db1667e320bcdd9bf69c4a920f2e61",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-27T09:51:31.650Z"
+  "generatedAt": "2026-08-27T10:11:58.841Z"
 }
