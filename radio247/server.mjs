@@ -27,8 +27,8 @@ const VISUAL_TIME_ZONE = process.env.VISUAL_TIME_ZONE || 'Europe/Bratislava';
 const FORCE_VISUAL_SLOT = ['morning','day','evening','night'].includes(String(process.env.FORCE_VISUAL_SLOT||'').trim().toLowerCase()) ? String(process.env.FORCE_VISUAL_SLOT).trim().toLowerCase() : '';
 const VISUAL_AUTO_SCHEDULE_R658 = String(process.env.VISUAL_AUTO_SCHEDULE_R658||'').trim()==='1';
 // MORNING / DAY / EVENING / NIGHT are owner-selected R2 videos cached locally on OVH.
-// R704 preserves R703 schedule: MORNING 06-12, DAY 12-18, EVENING 18-24, NIGHT 00-06.
-// R704 adds a different subtle continuously animated equalizer for each period.
+// R705 preserves R704/R703 schedule: MORNING 06-12, DAY 12-18, EVENING 18-24, NIGHT 00-06.
+// R705 makes each period equalizer clearly visible on mobile while keeping it inside the title/ticker gap.
 // R702 permanent rule is preserved: every source is auto-FIT into 1920x1080 with the complete
 // source frame preserved. The user never has to stretch MP4 manually; crop/cover is OFF.
 const MORNING_VISUAL = process.env.MORNING_VISUAL || `${VISUAL_CACHE_DIR}/stream-morning-master-r703.mp4`;
@@ -67,13 +67,13 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R704-FOUR-LIVE-EQUALIZERS-R703-PRESERVED',
-  mode: 'R704 FOUR LIVE EQUALIZERS / R703 FOUR VISUAL CYCLES / R702 MP3+CLIP ENGINE PRESERVED',
+  version: 'R705-VISIBLE-FOUR-LIVE-EQUALIZERS-R704-PRESERVED',
+  mode: 'R705 VISIBLE FOUR LIVE EQUALIZERS / R704+R703 VISUAL CYCLES / R702 MP3+CLIP ENGINE PRESERVED',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
   producerRunning: false,
-  overlayMode: 'R704 4-SLOT LIVE EQUALIZER / BETWEEN TRACK TITLE + TICKER / R703 AUTO 4-SLOT / R702 AUTO FIT NO CROP',
+  overlayMode: 'R705 VISIBLE 4-SLOT LIVE EQUALIZER / BETWEEN TRACK TITLE + TICKER / R704 PRESERVED / R702 AUTO FIT NO CROP',
   audioMode: 'R702 PERSISTENT RTMPS / MP3 CACHE MUX FIX / PRELOADED CLIP HANDOFF / AAC-LC 128kbps',
   visualTimeZone: VISUAL_TIME_ZONE,
   visualPeriod: null,
@@ -823,7 +823,7 @@ function startSilenceBridgeR702(){
   return true;
 }
 
-// R704: four subtle procedural equalizers. They are intentionally NOT audio-reactive:
+// R705: four clearly visible but still restrained procedural equalizers. They are intentionally NOT audio-reactive:
 // the radio swaps MP3 sources behind one persistent YouTube publisher, so a synthetic smooth
 // motion layer is safer and never stalls the real audio path. The line lives only in the empty
 // strip between the current-track title (y=h-188) and ticker (y=h-58).
@@ -833,10 +833,10 @@ function equalizerPeriodR704(){
 
 function equalizerStyleR704(period){
   const styles={
-    morning:{name:'morning-soft-gold',bars:20,barWidth:8,span:1380,minH:4,ampH:13,speed:0.88,speed2:0.37,phase:0.63,color:'0xFFE2B6',line:'0xFFF0D6',alpha:0.58,lineAlpha:0.42},
-    day:{name:'day-steel',bars:28,barWidth:7,span:1420,minH:4,ampH:17,speed:1.24,speed2:0.51,phase:0.49,color:'0xE8EDF2',line:'0xF4F6F8',alpha:0.62,lineAlpha:0.46},
-    evening:{name:'evening-amber',bars:24,barWidth:8,span:1400,minH:5,ampH:19,speed:1.04,speed2:0.43,phase:0.57,color:'0xE9B36D',line:'0xF3C98C',alpha:0.62,lineAlpha:0.48},
-    night:{name:'night-blue',bars:22,barWidth:7,span:1380,minH:3,ampH:12,speed:0.72,speed2:0.29,phase:0.67,color:'0xAFCFE8',line:'0xD6E8F5',alpha:0.54,lineAlpha:0.38}
+    morning:{name:'morning-soft-gold-visible',bars:32,barWidth:8,span:1480,minH:7,ampH:24,speed:0.92,speed2:0.39,phase:0.53,color:'0xFFE2B6',line:'0xFFF0D6',alpha:0.90,lineAlpha:0.76},
+    day:{name:'day-steel-visible',bars:38,barWidth:8,span:1500,minH:7,ampH:28,speed:1.28,speed2:0.53,phase:0.47,color:'0xEEF3F7',line:'0xFFFFFF',alpha:0.92,lineAlpha:0.80},
+    evening:{name:'evening-amber-visible',bars:34,barWidth:8,span:1490,minH:7,ampH:30,speed:1.08,speed2:0.45,phase:0.51,color:'0xF0B86E',line:'0xFFD69A',alpha:0.92,lineAlpha:0.80},
+    night:{name:'night-blue-visible',bars:30,barWidth:8,span:1460,minH:6,ampH:22,speed:0.76,speed2:0.31,phase:0.59,color:'0xB9DDF5',line:'0xE1F1FF',alpha:0.88,lineAlpha:0.72}
   };
   return styles[period]||styles.day;
 }
@@ -844,9 +844,9 @@ function equalizerStyleR704(period){
 function liveEqualizerFiltersR704(period){
   const s=equalizerStyleR704(period);
   const left=Math.round((1920-s.span)/2);
-  const baseOffset=84; // baseline y = h-84; safely above ticker and below title box
+  const baseOffset=88; // R705: visible baseline in the real mobile gap between title and ticker
   const filters=[
-    `drawbox=x=${left}:y=ih-${baseOffset}:w=${s.span}:h=2:color=${s.line}@${s.lineAlpha}:t=fill`
+    `drawbox=x=${left}:y=ih-${baseOffset}:w=${s.span}:h=3:color=${s.line}@${s.lineAlpha}:t=fill`
   ];
   for(let i=0;i<s.bars;i++){
     const center=i/(Math.max(1,s.bars-1));
@@ -931,7 +931,8 @@ function startNormalVisualProducerR701(visualPath){
 async function ensureNormalVisualProducerR701(){
   if(stopping || clipActive)return true;
   const visual=await ensureScheduledVisual();
-  if(childAlive(visualProducer) && visualProducerPath===visual)return true;
+  const desiredEqPeriod=equalizerPeriodR704();
+  if(childAlive(visualProducer) && visualProducerPath===visual && state.equalizerPeriod===desiredEqPeriod)return true;
   visualSwitching=true;
   try{
     await stopNormalVisualProducerR701();

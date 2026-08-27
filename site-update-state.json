@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787817797674-2c241d8c55",
-  "release": "R704",
-  "archiveName": "R704-FOUR-LIVE-EQUALIZERS-R703-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "daba7b4e05abcaaf91adc9e28c7afffe64ddcdf2",
-  "backupSha": "daba7b4e05abcaaf91adc9e28c7afffe64ddcdf2",
+  "operationId": "publish-1787818328398-48b1242104",
+  "release": "R705",
+  "archiveName": "R705-VISIBLE-FOUR-LIVE-EQUALIZERS-R704-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "fa1eeb2a316ea9494cabad344822f3bb894da04f",
+  "backupSha": "fa1eeb2a316ea9494cabad344822f3bb894da04f",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-27T08:03:18.094Z"
+  "generatedAt": "2026-08-27T08:12:08.928Z"
 }
