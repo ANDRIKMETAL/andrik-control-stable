@@ -65,13 +65,13 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R715-R713-STABLE-DIRECT-AUDIO-EQ-AUTO-LIVE-R2',
-  mode: 'R715 R713 STABLE DIRECT YOUTUBE / AUDIO-REACTIVE 4 TIME EQ / CLEAN TITLE / RANDOM R2 CLIPS / AUTO LIVE SELF-HEAL / NO EXTRA VIDEO INPUT',
+  version: 'R716-R715-STABLE-DIRECT-VISIBLE-4-AUDIO-EQ-AUTO-LIVE-R2',
+  mode: 'R716 R715 STABLE DIRECT YOUTUBE / VISIBLE AUDIO-REACTIVE 4 TIME EQ / CLEAN TITLE / RANDOM R2 CLIPS / AUTO LIVE SELF-HEAL / NO EXTRA VIDEO INPUT',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
   producerRunning: false,
-  overlayMode: 'R715 1920x1080 FIT / NO CROP / CLEAN TITLE / AUDIO EQ / QR / DIRECT VIDEO INPUT',
+  overlayMode: 'R716 1920x1080 FIT / NO CROP / CLEAN TITLE / VISIBLE AUDIO EQ ABOVE TITLE / QR / DIRECT VIDEO INPUT',
   audioMode: 'R678/R695 DIRECT MASTER / MP3 CONTINUOUS PCM + AAC-LC 128kbps / 4500k CBR / 9000k VBV / 6s FIFO',
   visualTimeZone: VISUAL_TIME_ZONE,
   visualPeriod: null,
@@ -93,7 +93,7 @@ const state = {
   lastFfmpegLine: '',
   equalizerPeriod: null,
   equalizerStyle: null,
-  equalizerEngine: 'R715-AUDIO-SHOWFREQS-NO-EXTRA-VIDEO-INPUT'
+  equalizerEngine: 'R716-VISIBLE-AUDIO-SHOWFREQS-4-SLOT-NO-EXTRA-VIDEO-INPUT'
 };
 
 let publisher = null;
@@ -724,13 +724,17 @@ async function ensureScheduledVisual(){
   }
 }
 
-function equalizerSpecR715(){
+function equalizerSpecR716(){
   const period=FORCE_VISUAL_SLOT || visualPeriodForHour(localHourInTimeZone());
+  // R716: four genuinely different, audio-reactive bar layouts. The EQ branch is
+  // visual-only: gain is applied AFTER asplit and never changes the broadcast audio.
+  // Every layout shares the same baseline just above the track title, so it cannot
+  // disappear behind the title/ticker on phones after YouTube scaling.
   const specs={
-    morning:{name:'morning-gold-soft',colors:'0xF6C85F|0xFFE4A1',ascale:'sqrt',fscale:'log',winSize:2048,overlap:'0.75',averaging:4},
-    day:{name:'day-steel-fast',colors:'0xDCE7F3|0xFFFFFF',ascale:'log',fscale:'lin',winSize:1024,overlap:'0.50',averaging:1},
-    evening:{name:'evening-amber-pulse',colors:'0xFF9F43|0xFFD08A',ascale:'log',fscale:'log',winSize:2048,overlap:'0.75',averaging:2},
-    night:{name:'night-blue-slow',colors:'0x5AA9FF|0x9AD9FF',ascale:'cbrt',fscale:'log',winSize:4096,overlap:'0.875',averaging:6}
+    morning:{name:'morning-gold-rise-48',colors:'0xF6C85F|0xFFE4A1',ascale:'cbrt',fscale:'log',winSize:2048,overlap:'0.75',averaging:4,width:1056,height:64,grid:22,gap:5,gain:'3.8'},
+    day:{name:'day-steel-fast-64',colors:'0xBFD2E5|0xFFFFFF',ascale:'cbrt',fscale:'log',winSize:1024,overlap:'0.50',averaging:1,width:1152,height:60,grid:18,gap:4,gain:'3.8'},
+    evening:{name:'evening-amber-pulse-44',colors:'0xFF9F43|0xFFD08A',ascale:'cbrt',fscale:'log',winSize:2048,overlap:'0.75',averaging:2,width:1100,height:72,grid:25,gap:6,gain:'4.2'},
+    night:{name:'night-blue-breathe-36',colors:'0x5AA9FF|0x9AD9FF',ascale:'cbrt',fscale:'log',winSize:4096,overlap:'0.875',averaging:6,width:1008,height:58,grid:28,gap:7,gain:'3.4'}
   };
   const spec=specs[period]||specs.day;
   state.equalizerPeriod=period;
@@ -762,7 +766,7 @@ function startPublisher(visualPath){
   const titleFontPart=titleFont?`fontfile='${ffFilterPath(titleFont)}':`:'';
   const curPath=ffFilterPath(LIVE_CURRENT_FILE);
   const tickerPath=ffFilterPath(LIVE_TICKER_FILE);
-  const eq=equalizerSpecR715();
+  const eq=equalizerSpecR716();
   const vf=[
     // R712: exact R678/R695 direct path. No MJPEG feeder and no heavy GEQ stage.
     'scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos',
@@ -773,11 +777,13 @@ function startPublisher(visualPath){
     `drawtext=${titleFontPart}textfile='${curPath}':reload=${VIDEO_FPS}:fontcolor=0xF3EFE8:fontsize=58:x=(w-text_w)/2:y=h-188:borderw=3:bordercolor=black@1:shadowcolor=black@0.95:shadowx=3:shadowy=3`,
     `drawtext=${fontPart}textfile='${tickerPath}':reload=${VIDEO_FPS}:fontcolor=yellow:fontsize=28:x='w-mod(t*110,text_w+w)':y=h-58:borderw=3:bordercolor=black@1:shadowcolor=black@1:shadowx=2:shadowy=2`
   ].join(',');
-  // R715: the equalizer is generated from the EXISTING PCM audio input. There is
-  // no fourth video input, no QTRLE decoder, no MJPEG feeder and no second video clock.
-  // This keeps the proven R713/R678/R695 YouTube transport while restoring 4 live EQ styles.
-  const eqFilter=`showfreqs=s=1040x46:rate=${VIDEO_FPS}:mode=bar:ascale=${eq.ascale}:fscale=${eq.fscale}:win_size=${eq.winSize}:overlap=${eq.overlap}:averaging=${eq.averaging}:colors=${eq.colors}:cmode=combined,format=rgba,colorkey=0x000000:0.10:0.03`;
-  const filterComplex=`[2:a]asplit=2[aout][aeq];[aeq]${eqFilter}[eqv];[0:v]${vf}[base];[base][eqv]overlay=x=(W-w)/2:y=H-142:shortest=1:format=auto,format=yuv420p[eqbase];[1:v]scale=160:160:flags=lanczos,format=yuva420p[qr];[eqbase][qr]overlay=24:24:format=yuv420[outv]`;
+  // R716: use the EXISTING PCM audio only. The visual branch gets its own gain,
+  // chunky-bar mask and opacity. Broadcast audio [aout] is untouched. No fourth video
+  // input, no QTRLE loop, no MJPEG feeder and no second video clock are introduced.
+  const eqFilter=`volume=${eq.gain},showfreqs=s=${eq.width}x${eq.height}:rate=${VIDEO_FPS}:mode=bar:ascale=${eq.ascale}:fscale=${eq.fscale}:win_size=${eq.winSize}:overlap=${eq.overlap}:averaging=${eq.averaging}:colors=${eq.colors}:cmode=combined:minamp=0.000000001,format=rgba,drawgrid=w=${eq.grid}:h=999:t=${eq.gap}:c=black@1,colorkey=0x000000:0.10:0.03,colorchannelmixer=aa=0.94,setpts=PTS-STARTPTS`;
+  // Baseline = 888 px on a 1080p frame: EQ ends 4 px above title (title starts at 892).
+  // This is deliberately NOT the old red separator and adds no translucent title strip.
+  const filterComplex=`[2:a]asplit=2[aout][aeq];[aeq]${eqFilter}[eqv];[0:v]${vf}[base];[base][eqv]overlay=x=(W-w)/2:y=H-h-192:shortest=1:format=auto,format=yuv420p[eqbase];[1:v]scale=160:160:flags=lanczos,format=yuva420p[qr];[eqbase][qr]overlay=24:24:format=yuv420[outv]`;
 
   // R637 architecture: one FFmpeg owns the video encoder, AAC encoder and RTMPS
   // muxer for the ENTIRE broadcast. Track decoders feed raw PCM into fd 3. Raw
