@@ -63,7 +63,7 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R699-R2-RADIO-CLIPS-PUBLISHER-HANDOFF-GUARD',
+  version: 'R700-R2-RADIO-CLIPS-HARD-CUT-HANDOFF',
   mode: 'R699 MP3 + RANDOM R2 VIDEO CLIPS / GUARDED CLIP→MP3 HANDOFF / STRICT SAFE INSET RECOVERY / METAL TITLES / AUTO DAY-EVENING-NIGHT',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
@@ -759,7 +759,7 @@ function startPublisher(visualPath){
     STREAM_URL
   ];
 
-  // R699: keep the child identity local. A late 'exit' event from the OLD master
+  // R700: keep the child identity local. A late 'exit' event from the OLD master
   // must never null out the NEW master created after a clip. That race was the
   // reason MP3 items were skipped and the same clip appeared to repeat forever.
   const thisPublisher=spawn('ffmpeg',args,{stdio:['ignore','ignore','pipe','pipe']});
@@ -817,7 +817,7 @@ async function stopMasterForClip(){
   if(!publisher)state.publisherRunning=false;
 }
 
-async function ensureMasterForTrackR699(){
+async function ensureMasterForTrackR700(){
   const sink=publisher?.stdio?.[3];
   if(publisher && publisher.exitCode===null && sink && !sink.destroyed && !sink.writableEnded)return true;
 
@@ -834,7 +834,7 @@ async function ensureMasterForTrackR699(){
   }
 
   const visual=await ensureScheduledVisual();
-  if(!startPublisher(visual))throw new Error('R699 master restart for MP3 failed');
+  if(!startPublisher(visual))throw new Error('R700 master restart for MP3 failed');
   // stdio is created synchronously, but give ffmpeg a tiny startup window and
   // verify the exact replacement process is still alive before feeding PCM.
   for(let i=0;i<6;i++){
@@ -843,7 +843,7 @@ async function ensureMasterForTrackR699(){
     if(current && current.exitCode===null && currentSink && !currentSink.destroyed && !currentSink.writableEnded)return true;
     await sleep(35);
   }
-  throw new Error('R699 master audio pipe unavailable after restart');
+  throw new Error('R700 master audio pipe unavailable after restart');
 }
 
 function clipFilterComplex(insetCrop=''){
@@ -885,8 +885,7 @@ async function playVideoClipR691(previous,item,next){
   writeFileSync(LIVE_CURRENT_FILE,`КЛИП • ANDRIK — ${shortText(item.title||'VIDEO',34)}`,'utf8');
 
   try{
-    const insetCrop=await detectInsetBlackFrameCrop(clipPath).catch(()=> '');
-    if(insetCrop)console.log('[clip-frame] R697 removed verified large encoded black inset:',insetCrop);
+    const insetCrop=''; // R700: clip frame is always FULL-FRAME FIT, never auto-cropped
     await stopMasterForClip();
     if(stopping)return false;
     await sleep(80);
@@ -903,11 +902,11 @@ async function playVideoClipR691(previous,item,next){
       '-x264-params',`nal-hrd=cbr:force-cfr=1:repeat-headers=1:keyint=${VIDEO_GOP}:min-keyint=${VIDEO_GOP}:scenecut=0`,
       '-g',String(VIDEO_GOP),'-keyint_min',String(VIDEO_GOP),'-sc_threshold','0','-bf','2','-refs','1','-coder','1','-r',String(VIDEO_FPS),'-pix_fmt','yuv420p',
       '-c:a','aac','-profile:a','aac_low','-b:a',AUDIO_BITRATE,'-ar',String(AUDIO_SAMPLE_RATE),'-ac','2',
-      '-max_muxing_queue_size','4096','-flush_packets','1',
-      '-f','fifo','-fifo_format','flv','-queue_size','8192',
-      '-timeshift',`${OUTPUT_TIMESHIFT_SECONDS}s`,
-      '-drop_pkts_on_overflow','0',
-      '-attempt_recovery','1','-recover_any_error','1','-recovery_wait_time','1','-restart_with_keyframe','1',
+      '-max_muxing_queue_size','1024','-flush_packets','1',
+      // R700: clips publish directly to RTMPS. Do NOT wrap a finite clip in the
+      // FIFO recovery muxer: FIFO can keep draining/reconnecting after the MP4
+      // has ended and leave YouTube frozen on the last frame.
+      '-f','flv','-flvflags','no_duration_filesize',
       STREAM_URL
     ];
     clipPublisher=spawn('ffmpeg',args,{stdio:['ignore','ignore','pipe']});
@@ -920,24 +919,41 @@ async function playVideoClipR691(previous,item,next){
         console.error('[clip]',line);
       }
     });
-    const clipExit=new Promise((resolve,reject)=>{
-      clipPublisher.once('error',reject);
-      clipPublisher.once('exit',(code,signal)=>{
-        if(code===0||stopping)resolve('exit');else reject(new Error(`clip publisher exit ${code||signal}`));
-      });
+    const clipExit=new Promise(resolve=>{
+      const child=clipPublisher;
+      child.once('error',error=>resolve({kind:'error',error}));
+      child.once('exit',(code,signal)=>resolve({kind:'exit',code,signal}));
     });
-    // R698: a broken FIFO/network close can no longer freeze the last clip frame
-    // indefinitely. At the measured clip end + 0.9 s, force the boundary.
-    const watchdogMs=Math.max(1800,Math.ceil(duration*1000)+900);
-    const ended=await Promise.race([clipExit,sleep(watchdogMs).then(()=> 'watchdog')]);
-    if(ended==='watchdog' && clipPublisher && clipPublisher.exitCode===null){
-      console.warn('[clip] R698 end watchdog forced fast handoff');
+
+    // R700 HARD CUT: the clip boundary is driven by the MP4 duration, not by
+    // FFmpeg/FIFO cleanup. When the media time is over, terminate the finite
+    // publisher immediately and hand the stream key back to the permanent MP3
+    // master. This prevents a dead last frame from hanging for tens of seconds.
+    const hardBoundaryMs=duration>1
+      ? Math.max(1200,Math.ceil((duration+0.18)*1000))
+      : 120000;
+    const ended=await Promise.race([
+      clipExit,
+      sleep(hardBoundaryMs).then(()=>({kind:'deadline'}))
+    ]);
+
+    if(ended?.kind==='error')throw ended.error;
+    if(ended?.kind==='exit' && ended.code!==0 && !stopping){
+      throw new Error(`clip publisher exit ${ended.code??ended.signal}`);
+    }
+
+    if(clipPublisher && clipPublisher.exitCode===null){
+      // At the exact end do not ask the muxer to flush/recover. Kill the finite
+      // publisher and free RTMPS now. SIGTERM gets only 90 ms, then SIGKILL.
       try{clipPublisher.kill('SIGTERM')}catch(_){ }
-      if(!(await waitChildExit(clipPublisher,260)) && clipPublisher.exitCode===null){
+      if(!(await waitChildExit(clipPublisher,90)) && clipPublisher.exitCode===null){
         try{clipPublisher.kill('SIGKILL')}catch(_){ }
-        await waitChildExit(clipPublisher,160);
+        await waitChildExit(clipPublisher,90);
       }
     }
+
+    // Tiny socket-release gap only; do not leave the last clip frame parked.
+    await sleep(35);
     return !stopping;
   }catch(error){
     state.lastError=`VIDEO clip: ${cleanText(error?.message||error)}`;
@@ -946,12 +962,12 @@ async function playVideoClipR691(previous,item,next){
   }finally{
     clipPublisher=null;
     state.publisherRunning=false;state.producerRunning=false;
-    // R699: the replacement master is a normal live publisher, not part of the
+    // R700: the replacement master is a normal live publisher, not part of the
     // intentional shutdown. Clear the switch flag BEFORE starting it.
     intentionalPublisherSwitch=false;
     if(!stopping){
-      await ensureMasterForTrackR699();
-      await sleep(35);
+      await ensureMasterForTrackR700();
+      await sleep(10);
     }
   }
 }
@@ -975,11 +991,11 @@ async function playItem(previous,item,next,following,localAudioPath){
   state.next=next?{type:next.type||'track',title:next.title,album:next.album||'',url:next.url||''}:null;
   writeFileSync(LIVE_CURRENT_FILE,`ANDRIK — ${shortText(item.title||'TRACK',42)}`,'utf8');
 
-  // R699: after a clip, repair/recreate the master before touching the MP3.
+  // R700: after a clip, repair/recreate the master before touching the MP3.
   // This prevents one transition fault from skipping every MP3 in the queue.
-  await ensureMasterForTrackR699();
+  await ensureMasterForTrackR700();
   const audioSink=publisher?.stdio?.[3];
-  if(!publisher || publisher.exitCode!==null || !audioSink || audioSink.destroyed || audioSink.writableEnded) throw new Error('R699 master audio pipe unavailable');
+  if(!publisher || publisher.exitCode!==null || !audioSink || audioSink.destroyed || audioSink.writableEnded) throw new Error('R700 master audio pipe unavailable');
 
   state.producerRunning=true;
   producer=spawn('ffmpeg',decoderArgs(localAudioPath),{stdio:['ignore','pipe','pipe']});
@@ -1084,7 +1100,7 @@ async function radioLoop(){
       await sleep(1000);
 
       if(/library|HTTP|empty/i.test(String(error)))library=[];
-      else if(/R699 master|master audio pipe|publisher/i.test(String(error))){
+      else if(/R700 master|master audio pipe|publisher/i.test(String(error))){
         // Transition errors retry the SAME MP3 after a short recovery. Do not
         // skip the whole MP3 queue and race back to the same video clip.
         await sleep(180);

@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787803054557-ec95467765",
-  "release": "R699",
-  "archiveName": "R699-PUBLISHER-HANDOFF-GUARD-R698-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "6ec5c84f23784146f75a9e6f95b08d5a6ccad755",
-  "backupSha": "6ec5c84f23784146f75a9e6f95b08d5a6ccad755",
+  "operationId": "publish-1787804063834-9aac763720",
+  "release": "R700",
+  "archiveName": "R700-HARD-CUT-CLIP-HANDOFF-R699-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "7ecf5e96dd0e97acb54214d181b822f2a88db9b3",
+  "backupSha": "7ecf5e96dd0e97acb54214d181b822f2a88db9b3",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-27T03:57:34.894Z"
+  "generatedAt": "2026-08-27T04:14:24.299Z"
 }
