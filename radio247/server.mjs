@@ -63,8 +63,8 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R698-R2-RADIO-CLIPS-INSTANT-PCM-SWITCH',
-  mode: 'R697 MP3 + RANDOM R2 VIDEO CLIPS / FAST CLIP SWITCH / STRICT SAFE INSET RECOVERY / METAL TITLES / AUTO DAY-EVENING-NIGHT',
+  version: 'R699-R2-RADIO-CLIPS-PUBLISHER-HANDOFF-GUARD',
+  mode: 'R699 MP3 + RANDOM R2 VIDEO CLIPS / GUARDED CLIP→MP3 HANDOFF / STRICT SAFE INSET RECOVERY / METAL TITLES / AUTO DAY-EVENING-NIGHT',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
@@ -759,14 +759,18 @@ function startPublisher(visualPath){
     STREAM_URL
   ];
 
-  publisher=spawn('ffmpeg',args,{stdio:['ignore','ignore','pipe','pipe']});
+  // R699: keep the child identity local. A late 'exit' event from the OLD master
+  // must never null out the NEW master created after a clip. That race was the
+  // reason MP3 items were skipped and the same clip appeared to repeat forever.
+  const thisPublisher=spawn('ffmpeg',args,{stdio:['ignore','ignore','pipe','pipe']});
+  publisher=thisPublisher;
   state.publisherRunning=true;
   if(!state.streamStartedAt)state.streamStartedAt=new Date().toISOString();
-  const audioSink=publisher.stdio[3];
+  const audioSink=thisPublisher.stdio[3];
   audioSink.on('error',err=>{
     if(!stopping && !/EPIPE|ECONNRESET|ERR_STREAM_DESTROYED/i.test(String(err?.code||err?.message||err))) state.lastError=`audio-pipe: ${String(err)}`;
   });
-  publisher.stderr.on('data',d=>{
+  thisPublisher.stderr.on('data',d=>{
     const line=String(d||'').trim();
     if(line){
       state.lastFfmpegLine=line.slice(-1000);
@@ -774,15 +778,20 @@ function startPublisher(visualPath){
       console.error('[master]',line);
     }
   });
-  publisher.on('exit',(code,signal)=>{
-    state.publisherRunning=false;
-    // A master exit at a planned clip boundary is not a radio failure. Keep
-    // lastExit reserved for real exits so the control panel stays truthful.
-    if(!intentionalPublisherSwitch)state.lastExit={layer:'master',code,signal,at:new Date().toISOString()};
-    publisher=null;
-    if(!stopping && !intentionalPublisherSwitch)setTimeout(()=>process.exit(code||22),1500).unref();
+  thisPublisher.on('exit',(code,signal)=>{
+    const isCurrent=publisher===thisPublisher;
+    if(isCurrent){
+      state.publisherRunning=false;
+      publisher=null;
+    }
+    // A late exit belonging to the previous clip boundary is harmless and must
+    // not tear down the replacement publisher.
+    if(isCurrent && !intentionalPublisherSwitch)state.lastExit={layer:'master',code,signal,at:new Date().toISOString()};
+    if(isCurrent && !stopping && !intentionalPublisherSwitch)setTimeout(()=>process.exit(code||22),1500).unref();
   });
-  publisher.on('error',err=>{state.lastError=String(err);});
+  thisPublisher.on('error',err=>{
+    if(publisher===thisPublisher)state.lastError=String(err);
+  });
   return true;
 }
 
@@ -804,8 +813,37 @@ async function stopMasterForClip(){
     try{active.kill('SIGKILL')}catch(_){ }
     await waitChildExit(active,160);
   }
-  publisher=null;
-  state.publisherRunning=false;
+  if(publisher===active)publisher=null;
+  if(!publisher)state.publisherRunning=false;
+}
+
+async function ensureMasterForTrackR699(){
+  const sink=publisher?.stdio?.[3];
+  if(publisher && publisher.exitCode===null && sink && !sink.destroyed && !sink.writableEnded)return true;
+
+  // If an unusable child is still around, remove only that exact child before
+  // creating the replacement. Never let an old exit handler clobber the new one.
+  const stale=publisher;
+  if(stale && stale.exitCode===null){
+    try{stale.kill('SIGTERM')}catch(_){ }
+    if(!(await waitChildExit(stale,180)) && stale.exitCode===null){
+      try{stale.kill('SIGKILL')}catch(_){ }
+      await waitChildExit(stale,120);
+    }
+    if(publisher===stale)publisher=null;
+  }
+
+  const visual=await ensureScheduledVisual();
+  if(!startPublisher(visual))throw new Error('R699 master restart for MP3 failed');
+  // stdio is created synchronously, but give ffmpeg a tiny startup window and
+  // verify the exact replacement process is still alive before feeding PCM.
+  for(let i=0;i<6;i++){
+    const current=publisher;
+    const currentSink=current?.stdio?.[3];
+    if(current && current.exitCode===null && currentSink && !currentSink.destroyed && !currentSink.writableEnded)return true;
+    await sleep(35);
+  }
+  throw new Error('R699 master audio pipe unavailable after restart');
 }
 
 function clipFilterComplex(insetCrop=''){
@@ -908,20 +946,13 @@ async function playVideoClipR691(previous,item,next){
   }finally{
     clipPublisher=null;
     state.publisherRunning=false;state.producerRunning=false;
-    if(!stopping){
-      try{
-        const visual=await ensureScheduledVisual();
-        if(!startPublisher(visual))throw new Error('master restart after clip failed');
-        // R698: raw PCM probing is disabled for this known s16le stream, so the
-        // next MP3 may feed the master almost immediately instead of waiting ~25 s.
-        await sleep(45);
-        if(!publisher || publisher.exitCode!==null)throw new Error('master exited during instant restart after clip');
-      }catch(error){
-        intentionalPublisherSwitch=false;
-        throw error;
-      }
-    }
+    // R699: the replacement master is a normal live publisher, not part of the
+    // intentional shutdown. Clear the switch flag BEFORE starting it.
     intentionalPublisherSwitch=false;
+    if(!stopping){
+      await ensureMasterForTrackR699();
+      await sleep(35);
+    }
   }
 }
 
@@ -944,8 +975,11 @@ async function playItem(previous,item,next,following,localAudioPath){
   state.next=next?{type:next.type||'track',title:next.title,album:next.album||'',url:next.url||''}:null;
   writeFileSync(LIVE_CURRENT_FILE,`ANDRIK — ${shortText(item.title||'TRACK',42)}`,'utf8');
 
+  // R699: after a clip, repair/recreate the master before touching the MP3.
+  // This prevents one transition fault from skipping every MP3 in the queue.
+  await ensureMasterForTrackR699();
   const audioSink=publisher?.stdio?.[3];
-  if(!publisher || publisher.exitCode!==null || !audioSink || audioSink.destroyed) throw new Error('master audio pipe unavailable');
+  if(!publisher || publisher.exitCode!==null || !audioSink || audioSink.destroyed || audioSink.writableEnded) throw new Error('R699 master audio pipe unavailable');
 
   state.producerRunning=true;
   producer=spawn('ffmpeg',decoderArgs(localAudioPath),{stdio:['ignore','pipe','pipe']});
@@ -1050,7 +1084,11 @@ async function radioLoop(){
       await sleep(1000);
 
       if(/library|HTTP|empty/i.test(String(error)))library=[];
-      else queueIndex++;
+      else if(/R699 master|master audio pipe|publisher/i.test(String(error))){
+        // Transition errors retry the SAME MP3 after a short recovery. Do not
+        // skip the whole MP3 queue and race back to the same video clip.
+        await sleep(180);
+      }else queueIndex++;
     }
   }
 }

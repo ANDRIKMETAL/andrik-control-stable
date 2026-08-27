@@ -1,0 +1,6 @@
+R699 — CLIP→MP3 PUBLISHER HANDOFF GUARD
+
+- Fixed master publisher race after a clip: a late exit event from the old FFmpeg child can no longer null the new publisher.
+- MP3 playback now verifies/repairs the master before feeding PCM.
+- A transition failure retries the same MP3 instead of skipping all tracks until the next video clip.
+- Keeps R698 fast 1s buffer, clip end watchdog, R697 strict safe-fit 1920x1080, no back-to-back clips, R696 compact title bar, QR and ticker.

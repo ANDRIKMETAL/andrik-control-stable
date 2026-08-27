@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787802682768-8273a26656",
-  "release": "R698",
-  "archiveName": "R698-INSTANT-PCM-SWITCH-R697-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "c0f4d5b5640df57a7d95bc73142a3a3bf75c73e1",
-  "backupSha": "c0f4d5b5640df57a7d95bc73142a3a3bf75c73e1",
+  "operationId": "publish-1787803054557-ec95467765",
+  "release": "R699",
+  "archiveName": "R699-PUBLISHER-HANDOFF-GUARD-R698-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "6ec5c84f23784146f75a9e6f95b08d5a6ccad755",
+  "backupSha": "6ec5c84f23784146f75a9e6f95b08d5a6ccad755",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-27T03:51:23.189Z"
+  "generatedAt": "2026-08-27T03:57:34.894Z"
 }
