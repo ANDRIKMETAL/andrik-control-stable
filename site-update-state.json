@@ -1,14 +1,14 @@
 {
   "schema": 1,
   "updaterVersion": "55.00-r356",
-  "operation": "publish",
-  "reinstall": false,
-  "operationId": "publish-1787848832781-c377d2e691",
+  "operation": "reinstall",
+  "reinstall": true,
+  "operationId": "reinstall-1787849181149-a667eb78e1",
   "release": "R714",
   "archiveName": "R714-DIRECT-STABLE-4-TIME-EQ-CLEAN-TITLE-R2-R713-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "0c4843ff5e2f14b5e1893b79fc8338b356958f52",
-  "backupSha": "0c4843ff5e2f14b5e1893b79fc8338b356958f52",
+  "sourceHead": "218c20f6867e286060f40716c6c85b6708864d37",
+  "backupSha": "218c20f6867e286060f40716c6c85b6708864d37",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-27T16:40:35.011Z"
+  "generatedAt": "2026-08-27T16:46:21.149Z"
 }
