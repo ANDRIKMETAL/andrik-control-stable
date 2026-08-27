@@ -37,7 +37,7 @@ const EVENING_VISUAL_URL = process.env.EVENING_VISUAL_URL || EVENING_VISUAL;
 const NIGHT_VISUAL_URL = process.env.NIGHT_VISUAL_URL || NIGHT_VISUAL;
 const EMERGENCY_VISUAL = process.env.EMERGENCY_VISUAL || new URL('../assets/live-eye-r223.mp4', import.meta.url).pathname;
 const QR_OVERLAY = process.env.QR_OVERLAY || new URL('../assets/andrik-qr-r612.png', import.meta.url).pathname;
-const OUTPUT_TIMESHIFT_SECONDS = 6; // R637: network recovery cushion; packets are NEVER dropped
+const OUTPUT_TIMESHIFT_SECONDS = 2; // R697: shorter recovery cushion for much faster clip <-> MP3 switching
 const VIDEO_BITRATE = '4500k'; // R637: 1080p25 low-motion radio visual, bounded CBR
 const AUDIO_BITRATE = '128k'; // YouTube Live recommendation for stereo AAC
 const AUDIO_SAMPLE_RATE = 44100; // YouTube Live recommendation for stereo
@@ -63,13 +63,13 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R695-R2-RADIO-CLIPS-SAFE-FRAME-METAL-TITLES',
-  mode: 'R695 MP3 + RANDOM R2 VIDEO CLIPS / SAFE INSET FRAME RECOVERY / METAL TITLES / STRIP BROKEN EMBEDDED ART / AUTO DAY-EVENING-NIGHT',
+  version: 'R697-R2-RADIO-CLIPS-FAST-SWITCH-SAFE-FIT',
+  mode: 'R697 MP3 + RANDOM R2 VIDEO CLIPS / FAST CLIP SWITCH / STRICT SAFE INSET RECOVERY / METAL TITLES / AUTO DAY-EVENING-NIGHT',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
   producerRunning: false,
-  overlayMode: 'R695 1920x1080 FIT / VISIBLE CONTENT PRESERVED / INSET BLACK FRAME AUTO-REMOVED FOR CLIPS / METAL TITLE / QR / FULL SCREEN',
+  overlayMode: 'R697 1920x1080 FIT / NO COVER CROP / STRICT LARGE-INSET RECOVERY ONLY / TIGHT METAL TITLE / QR / FULL SCREEN',
   audioMode: 'LOCAL MP3 CACHE + R2 VIDEO CLIP CACHE / MP3 CONTINUOUS PCM + AAC-LC 128kbps',
   visualTimeZone: VISUAL_TIME_ZONE,
   visualPeriod: null,
@@ -390,10 +390,9 @@ async function probeVideoSize(path){
 }
 
 async function detectInsetBlackFrameCrop(path){
-  // R695: some uploaded MP4 files already contain a 16:9 picture boxed inside a
-  // larger black canvas. A normal FIT keeps that black canvas and makes the real
-  // picture look tiny. Detect ONLY a large, symmetric inset on BOTH axes. We never
-  // crop ordinary footage, portrait clips, cinematic bars or visible image content.
+  // R697: remove ONLY a very large, stable, symmetric black canvas around a smaller
+  // picture. Normal footage, dark edges, cinematic bars and ordinary 16:9 clips must
+  // never be cropped. After this optional recovery every clip is FIT into 1920x1080.
   let size;
   try{size=await probeVideoSize(path)}catch(_){return ''}
   if(!size.width||!size.height)return '';
@@ -416,7 +415,11 @@ async function detectInsetBlackFrameCrop(path){
     const key=`${m[1]}:${m[2]}:${m[3]}:${m[4]}`;
     counts.set(key,(counts.get(key)||0)+1);
   }
-  const best=[...counts.entries()].sort((a,b)=>b[1]-a[1])[0]?.[0]||'';
+  const ranked=[...counts.entries()].sort((a,b)=>b[1]-a[1]);
+  const best=ranked[0]?.[0]||'';
+  const bestCount=ranked[0]?.[1]||0;
+  // R697: refuse cropdetect unless the same crop dominates most sampled frames.
+  if(bestCount<18)return '';
   const parts=best.split(':').map(Number);
   if(parts.length!==4||parts.some(v=>!Number.isFinite(v)))return '';
   const [cw,ch,x,y]=parts;
@@ -425,10 +428,14 @@ async function detectInsetBlackFrameCrop(path){
   const cutX=size.width-cw,cutY=size.height-ch;
   const symmetricX=Math.abs(x-right)<=Math.max(10,Math.round(size.width*0.035));
   const symmetricY=Math.abs(y-bottom)<=Math.max(10,Math.round(size.height*0.035));
-  const largeInsetX=cutX>=Math.round(size.width*0.08);
-  const largeInsetY=cutY>=Math.round(size.height*0.08);
-  const enoughVisible=cw>=Math.round(size.width*0.45)&&ch>=Math.round(size.height*0.45);
-  if(!(symmetricX&&symmetricY&&largeInsetX&&largeInsetY&&enoughVisible))return '';
+  // Total removed canvas must be at least 24% on BOTH axes. This still fixes the
+  // tiny-picture-in-black-canvas upload, but prevents cropdetect from shaving real clips.
+  const largeInsetX=cutX>=Math.round(size.width*0.24);
+  const largeInsetY=cutY>=Math.round(size.height*0.24);
+  const enoughVisible=cw>=Math.round(size.width*0.50)&&ch>=Math.round(size.height*0.50);
+  const srcRatio=size.width/size.height, cropRatio=cw/ch;
+  const ratioPreserved=Math.abs(cropRatio-srcRatio)/srcRatio<=0.035;
+  if(!(symmetricX&&symmetricY&&largeInsetX&&largeInsetY&&enoughVisible&&ratioPreserved))return '';
   return `crop=${cw}:${ch}:${x}:${y}`;
 }
 
@@ -718,10 +725,8 @@ function startPublisher(visualPath){
     'setsar=1',
     `fps=${VIDEO_FPS}`,
     'format=yuv420p',
-    'drawbox=x=92:y=ih-208:w=iw-184:h=92:color=black@0.30:t=fill',
-    'drawbox=x=125:y=ih-208:w=iw-250:h=3:color=red@0.82:t=fill',
     `drawtext=${titleFontPart}textfile='${curPath}':reload=${VIDEO_FPS}:fontcolor=red@0.01:fontsize=58:x=(w-text_w)/2:y=h-188:borderw=8:bordercolor=red@0.58`,
-    `drawtext=${titleFontPart}textfile='${curPath}':reload=${VIDEO_FPS}:fontcolor=0xF3EFE8:fontsize=58:x=(w-text_w)/2:y=h-188:borderw=3:bordercolor=black@1:shadowcolor=black@0.95:shadowx=3:shadowy=3`,
+    `drawtext=${titleFontPart}textfile='${curPath}':reload=${VIDEO_FPS}:fontcolor=0xF3EFE8:fontsize=58:x=(w-text_w)/2:y=h-188:borderw=3:bordercolor=black@1:shadowcolor=black@0.95:shadowx=3:shadowy=3:box=1:boxcolor=black@0.36:boxborderw=18`,
     `drawtext=${fontPart}textfile='${tickerPath}':reload=${VIDEO_FPS}:fontcolor=yellow:fontsize=28:x='w-mod(t*110,text_w+w)':y=h-58:borderw=3:bordercolor=black@1:shadowcolor=black@1:shadowx=2:shadowy=2`
   ].join(',');
   const filterComplex=`[0:v]${vf}[base];[1:v]scale=160:160:flags=lanczos,format=yuva420p[qr];[base][qr]overlay=24:24:format=yuv420[outv]`;
@@ -789,10 +794,10 @@ async function stopMasterForClip(){
     const sink=active?.stdio?.[3];
     if(sink && !sink.destroyed && !sink.writableEnded)sink.end();
   }catch(_){ }
-  let clean=await waitChildExit(active,9000);
+  let clean=await waitChildExit(active,1200);
   if(!clean && active.exitCode===null){
     try{active.kill('SIGTERM')}catch(_){ }
-    clean=await waitChildExit(active,2500);
+    clean=await waitChildExit(active,700);
   }
   if(!clean && active.exitCode===null){try{active.kill('SIGKILL')}catch(_){ }}
   publisher=null;
@@ -816,10 +821,8 @@ function clipFilterComplex(insetCrop=''){
     'setsar=1',
     `fps=${VIDEO_FPS}`,
     'format=yuv420p',
-    'drawbox=x=92:y=ih-208:w=iw-184:h=92:color=black@0.30:t=fill',
-    'drawbox=x=125:y=ih-208:w=iw-250:h=3:color=red@0.82:t=fill',
     `drawtext=${titleFontPart}textfile='${curPath}':reload=${VIDEO_FPS}:fontcolor=red@0.01:fontsize=58:x=(w-text_w)/2:y=h-188:borderw=8:bordercolor=red@0.58`,
-    `drawtext=${titleFontPart}textfile='${curPath}':reload=${VIDEO_FPS}:fontcolor=0xF3EFE8:fontsize=58:x=(w-text_w)/2:y=h-188:borderw=3:bordercolor=black@1:shadowcolor=black@0.95:shadowx=3:shadowy=3`,
+    `drawtext=${titleFontPart}textfile='${curPath}':reload=${VIDEO_FPS}:fontcolor=0xF3EFE8:fontsize=58:x=(w-text_w)/2:y=h-188:borderw=3:bordercolor=black@1:shadowcolor=black@0.95:shadowx=3:shadowy=3:box=1:boxcolor=black@0.36:boxborderw=18`,
     `drawtext=${fontPart}textfile='${tickerPath}':reload=${VIDEO_FPS}:fontcolor=yellow:fontsize=28:x='w-mod(t*110,text_w+w)':y=h-58:borderw=3:bordercolor=black@1:shadowcolor=black@1:shadowx=2:shadowy=2`
   ].join(',');
   return `[0:v]${vf}[base];[1:v]scale=160:160:flags=lanczos,format=yuva420p[qr];[base][qr]overlay=24:24:format=yuv420[outv]`;
@@ -841,16 +844,17 @@ async function playVideoClipR691(previous,item,next){
 
   try{
     const insetCrop=await detectInsetBlackFrameCrop(clipPath).catch(()=> '');
-    if(insetCrop)console.log('[clip-frame] R695 removed encoded black inset:',insetCrop);
+    if(insetCrop)console.log('[clip-frame] R697 removed verified large encoded black inset:',insetCrop);
     await stopMasterForClip();
     if(stopping)return false;
-    await sleep(350);
+    await sleep(80);
+    const hardStopArgs=duration>1?['-t',String(duration+0.12)]:[];
     const args=[
-      '-hide_banner','-loglevel','warning','-re','-i',clipPath,
+      '-hide_banner','-loglevel','warning','-fflags','+genpts+discardcorrupt','-err_detect','ignore_err','-re','-i',clipPath,
       '-loop','1','-framerate','1','-i',QR_OVERLAY,
       '-filter_complex',clipFilterComplex(insetCrop),
       '-map','[outv]','-map','0:a:0',
-      '-shortest',
+      '-shortest',...hardStopArgs,'-avoid_negative_ts','make_zero',
       '-c:v','libx264','-preset','ultrafast','-tune','zerolatency',
       '-profile:v','high','-level:v','4.1',
       '-b:v',VIDEO_BITRATE,'-minrate',VIDEO_BITRATE,'-maxrate',VIDEO_BITRATE,'-bufsize','9000k',
@@ -892,6 +896,9 @@ async function playVideoClipR691(previous,item,next){
       try{
         const visual=await ensureScheduledVisual();
         if(!startPublisher(visual))throw new Error('master restart after clip failed');
+        // R697: let the new RTMP encoder attach before the next MP3 decoder starts.
+        await sleep(220);
+        if(!publisher || publisher.exitCode!==null)throw new Error('master exited during fast restart after clip');
       }catch(error){
         intentionalPublisherSwitch=false;
         throw error;
@@ -971,7 +978,24 @@ async function radioLoop(){
         queueIndex=0;
       }
 
-      const item=queue[queueIndex];
+      let item=queue[queueIndex];
+      // R697: never allow two video clips back-to-back. If reconciliation or an
+      // earlier failed track creates adjacency, pull the nearest MP3 forward.
+      if(item?.type==='clip' && lastPlayed?.type==='clip'){
+        const trackPos=queue.findIndex((x,i)=>i>queueIndex&&x?.type!=='clip');
+        if(trackPos>queueIndex){
+          [queue[queueIndex],queue[trackPos]]=[queue[trackPos],queue[queueIndex]];
+          item=queue[queueIndex];
+        }else{
+          queue=buildQueue();
+          queueIndex=0;
+          item=queue[0];
+        }
+      }
+      if(item?.type==='clip' && queue[queueIndex+1]?.type==='clip'){
+        const trackPos=queue.findIndex((x,i)=>i>queueIndex+1&&x?.type!=='clip');
+        if(trackPos>queueIndex+1)[queue[queueIndex+1],queue[trackPos]]=[queue[trackPos],queue[queueIndex+1]];
+      }
       const next=queue[queueIndex+1]||queue[0]||null;
       const following=queue[queueIndex+2]||queue[1]||queue[0]||null;
       state.queuePosition=queueIndex+1;

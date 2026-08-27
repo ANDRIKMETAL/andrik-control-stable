@@ -1,0 +1,14 @@
+R697 · FAST SWITCH + STRICT SAFE FIT
+
+- Clip -> MP3 and MP3 -> clip switching made substantially faster.
+- RTMP fifo timeshift reduced from 6s to 2s.
+- Planned master stop wait reduced from 9s to 1.2s, then fast TERM fallback.
+- Clip starts after only 80ms handoff pause.
+- After clip, master gets a short 220ms attach window before MP3 decoding begins.
+- Clips get an explicit duration guard so a finished clip cannot sit on the last frame indefinitely.
+- Two video clips are never allowed back-to-back; nearest MP3 is moved between them.
+- Strict inset recovery: cropdetect must be stable on at least 18 sampled frames.
+- Black inset must remove at least 24% of BOTH canvas axes and preserve aspect ratio.
+- Normal 16:9 footage, dark edges and cinematic bars stay uncropped.
+- Final video path remains FIT 1920x1080 + PAD, no cover crop and no stretch.
+- R696 compact title plaque and no red top line preserved.

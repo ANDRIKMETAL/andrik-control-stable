@@ -1,0 +1,5 @@
+R696
+- Compact black title plaque now fits only the title width for clips and songs.
+- Removed the long black stripe under titles.
+- Removed the red line above the title.
+- Preserved R695 safe clip frame handling: only symmetric empty black inset is trimmed; visible video still FITs into 1920x1080 with no crop/stretch.
