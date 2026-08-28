@@ -1,0 +1,11 @@
+R736 — SHORT BOUNDARY DIP + ACTUAL NEXT
+
+1. Stable R732/R735 transport is preserved exactly: video input queue 1024, audio input queue 8, ONE RTMPS.
+2. Fade start lead stays 2.40 s because real listening confirmed its START is now correct.
+3. Long black screen is removed: 0.65 s fade-out -> 0.05 s black -> 0.30 s same-feeder fade-in/recovery.
+4. The new track still has no separate late feeder fade-in.
+5. NEXT no longer skips clips to search for the next MP3.
+6. NEXT predicts the actual immediate item with scheduler priority:
+   SPECIAL 60 -> SPECIAL 30 -> radio bumper -> actual queue item (MP3 or clip).
+7. Normal clip is shown as: NEXT • КЛИП • <title>.
+8. Background visual continuity from R735 is preserved.

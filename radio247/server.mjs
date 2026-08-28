@@ -56,9 +56,10 @@ const TRACK_AUDIO_TRUE_PEAK_R726 = -1.5;
 const TRACK_AUDIO_LRA_R726 = 11;
 const TRACK_AUDIO_FADE_IN_R726 = 0.55;
 const TRACK_AUDIO_FADE_OUT_R726 = 0.75;
-const VIDEO_FADE_SECONDS_R726 = 1.25; // R735: fade-out duration on the OLD track only
-const VIDEO_BLACK_HOLD_SECONDS_R734 = 0.20; // hold full black just before the real audio handoff
-const VIDEO_FADE_LEAD_SECONDS_R735 = 2.40; // compensate encoded-video handoff cushion: fade is authored earlier on old track
+const VIDEO_FADE_SECONDS_R726 = 0.65; // R736: short cinematic fade-out on the OLD track
+const VIDEO_FADE_IN_SECONDS_R736 = 0.30; // R736: same-feeder recovery so black can never hang into the new song
+const VIDEO_BLACK_HOLD_SECONDS_R736 = 0.05; // almost no dead-black hold
+const VIDEO_FADE_LEAD_SECONDS_R735 = 2.40; // keep the empirically correct lead that made fade START at the right moment
 // R721 keeps the proven 100-frame / 4-second exact-periodic QTRLE loops from R720.
 // The EQ is encoded inside the current local H264 feeder, while the YouTube RTMPS
 // publisher stays open permanently across MP3, clip and visual-period switches.
@@ -105,13 +106,13 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R735-EARLY-FADE-CONTINUOUS-VISUAL-R734-PRESERVED',
-  mode: 'R735 R734/R732 TRANSPORT PRESERVED + EARLY OLD-TRACK FADE + CONTINUOUS VISUAL SEEK',
+  version: 'R736-SHORT-DIP-ACTUAL-NEXT-R735-PRESERVED',
+  mode: 'R736 R735/R732 TRANSPORT PRESERVED + SHORT BOUNDARY DIP + ACTUAL NEXT ITEM',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
   producerRunning: false,
-  overlayMode: 'R735 CURRENT/PREVIOUS/NEXT T-8s + EARLY OLD-TRACK FADEOUT + CONTINUOUS BACKGROUND LOOP',
+  overlayMode: 'R736 CURRENT/PREVIOUS/ACTUAL-NEXT T-8s + 0.65s OUT / 0.05s BLACK / 0.30s IN + CONTINUOUS BACKGROUND',
   audioMode: 'R732 R729 PCM TRANSPORT + AUDIO QUEUE 8 + R726 LOUDNORM -14 LUFS / ONE RTMPS',
   visualTimeZone: VISUAL_TIME_ZONE,
   visualPeriod: null,
@@ -952,16 +953,15 @@ function normalVideoFilterComplexR721({fadeIn=false,trackDuration=0}={}){
   const ctaPhase=(Date.now()/1000)%CTA_PERIOD_SECONDS_R722;
   const ctaEnable=`lt(mod(t+${ctaPhase.toFixed(3)}\,${CTA_PERIOD_SECONDS_R722})\,${CTA_SHOW_SECONDS_R722})`;
   const fades=[];
-  // R734: NEVER fade the new song in. The persistent H264 publisher can retain a
-  // small amount of already-encoded video around feeder handoff; a new-feeder fade-in
-  // can therefore become visible after the new audio has already started. Put the
-  // entire cinematic transition on the OLD track instead: fade fully to black before
-  // its audio handoff, hold black briefly, then the next feeder appears immediately.
-  if(Number(trackDuration)>VIDEO_FADE_SECONDS_R726+VIDEO_BLACK_HOLD_SECONDS_R734+VIDEO_FADE_LEAD_SECONDS_R735+1){
-    // R735: the encoded H264 feeder has a small cushion before frames reach the master.
-    // Author the old-track fade earlier so the VIEWER sees it before the next audio starts.
-    const outAt=Math.max(0,Number(trackDuration)-VIDEO_FADE_SECONDS_R726-VIDEO_BLACK_HOLD_SECONDS_R734-VIDEO_FADE_LEAD_SECONDS_R735);
+  // R736: keep the lead that finally made the fade START at the right moment,
+  // but never leave the old feeder black while the next audio is already playing.
+  // The SAME old feeder now performs a short dip: OUT -> 0.05s BLACK -> IN.
+  // If the next feeder replaces it during this dip, the next feeder is already full-bright.
+  if(Number(trackDuration)>VIDEO_FADE_SECONDS_R726+VIDEO_BLACK_HOLD_SECONDS_R736+VIDEO_FADE_IN_SECONDS_R736+VIDEO_FADE_LEAD_SECONDS_R735+1){
+    const outAt=Math.max(0,Number(trackDuration)-VIDEO_FADE_SECONDS_R726-VIDEO_BLACK_HOLD_SECONDS_R736-VIDEO_FADE_LEAD_SECONDS_R735);
+    const inAt=outAt+VIDEO_FADE_SECONDS_R726+VIDEO_BLACK_HOLD_SECONDS_R736;
     fades.push(`fade=t=out:st=${outAt.toFixed(3)}:d=${VIDEO_FADE_SECONDS_R726.toFixed(2)}:color=black`);
+    fades.push(`fade=t=in:st=${inAt.toFixed(3)}:d=${VIDEO_FADE_IN_SECONDS_R736.toFixed(2)}:color=black`);
   }
   const finish=fades.length?`${fades.join(',')},format=yuv420p`:'format=yuv420p';
   return `[0:v]setpts=PTS-STARTPTS,${vf}[base];[2:v]fps=${VIDEO_FPS},setpts=N/(${VIDEO_FPS}*TB),format=yuva420p[eqv];[base][eqv]overlay=x=(W-w)/2:y=H-h-64:shortest=0:format=yuv420,format=yuv420p[eqbase];[1:v]scale=160:160:flags=lanczos,format=yuva420p[qr];[eqbase][qr]overlay=x=W-w-24:y=24:shortest=0:format=yuv420,format=yuv420p[qrbase];[3:v]format=yuva420p[cta];[qrbase][cta]overlay=x=(W-w)/2:y=46:shortest=0:format=yuv420:enable='${ctaEnable}'[ctabase];[ctabase]${finish}[outv]`;
@@ -1339,14 +1339,40 @@ function decoderArgs(localAudioPath,duration){
   ];
 }
 
+function peekNextBumperR736(){
+  const available=[...bumperLibrary].sort((a,b)=>bumperSlotR724(a)-bumperSlotR724(b));
+  if(!available.length)return null;
+  let idx=available.findIndex(x=>bumperSlotR724(x)>lastBumperSlotR724);
+  if(idx<0)idx=0;
+  return available[idx]||null;
+}
+function predictedImmediateNextR736(next,durationSeconds=0){
+  const endAt=Date.now()+Math.max(0,Number(durationSeconds)||0)*1000;
+  // Use the same priority as the real post-song scheduler: 60m special -> 30m special -> bumper -> queue item.
+  if(specialHourlyInsertR727 && endAt-lastSpecialHourlyPlayedAtR727>=SPECIAL_HOURLY_INTERVAL_MS_R727)return specialHourlyInsertR727;
+  if(specialInsertR726 && endAt-lastSpecialPlayedAtR726>=SPECIAL_INTERVAL_MS_R726)return specialInsertR726;
+  if(bumperLibrary.length && songsSinceBumperR724+1>=bumperAfterSongsR724)return peekNextBumperR736()||next||null;
+  return next||null;
+}
+function nextOverlayTextR736(item){
+  if(!item)return '';
+  const title=shortText(item.title||'ANDRIK',32);
+  if(isSpecialHourlyInsertR727(item))return `NEXT • СПЕЦ 60 • ${title}`;
+  if(isSpecialInsertR726(item))return `NEXT • СПЕЦ 30 • ${title}`;
+  if(item.sourceType==='radio-bumper')return `NEXT • ЗАСТАВКА • ${title}`;
+  if(item.type==='clip')return `NEXT • КЛИП • ${title}`;
+  return `NEXT • ANDRIK — ${title}`;
+}
+
 async function playItem(previous,item,next,following,localAudioPath,nextTrackPreview=null){
   const duration=await probeDuration(localAudioPath||item.url);
+  const actualNextR736=predictedImmediateNextR736(next,duration);
   state.previous=previous?{type:previous.type||'track',title:previous.title,album:previous.album||'',url:previous.url||''}:null;
-  state.next=next?{type:next.type||'track',title:next.title,album:next.album||'',url:next.url||''}:null;
+  state.next=actualNextR736?{type:actualNextR736.sourceType?.startsWith('radio-special')?'special':(actualNextR736.sourceType==='radio-bumper'?'bumper':(actualNextR736.type||'track')),title:actualNextR736.title,album:actualNextR736.album||'',url:actualNextR736.url||''}:null;
 
   // R732: write the exact three labels BEFORE spawning this song's feeder.
   // The bounded raw-audio input queue prevents the radio loop from getting tens of seconds
-  // ahead of what the listener actually hears. PREVIOUS/NEXT remain FFmpeg-frame-timed.
+  // ahead of what the listener actually hears. PREVIOUS/NEXT remain FFmpeg-frame-timed; R736 NEXT is the actual immediate item.
   // R731: write the exact three labels BEFORE spawning this song's feeder. Normal
   // feeders load them once and FFmpeg itself reveals PREVIOUS/NEXT only at T-8s.
   // No Node wall-clock timer can get ahead of the audio anymore.
@@ -1355,8 +1381,9 @@ async function playItem(previous,item,next,following,localAudioPath,nextTrackPre
   writeOverlayFileR726(LIVE_CURRENT_FILE,`ANDRIK — ${shortText(item.title||'TRACK',42)}`);
   writeOverlayFileR726(LIVE_PREVIOUS_FILE_R726,previousForOverlayR733?.type==='track'
     ? `PREVIOUS • ANDRIK — ${shortText(previousForOverlayR733.title||'TRACK',32)}` : '');
-  writeOverlayFileR726(LIVE_NEXT_FILE_R726,nextTrackPreview?.type==='track'
-    ? `NEXT • ANDRIK — ${shortText(nextTrackPreview.title||'TRACK',32)}` : '');
+  // R736: NEXT means literally the item that will play immediately after this MP3.
+  // It may be an MP3, normal clip, 30/60-minute special, or the 4–6-song station bumper.
+  writeOverlayFileR726(LIVE_NEXT_FILE_R726,nextOverlayTextR736(actualNextR736));
   await ensureNormalVideoFeederR721({force:true,fadeIn:false,trackDuration:duration});
 
   const audioSink=publisher?.stdio?.[3];
@@ -1566,17 +1593,19 @@ function publicStatus(){
     overlayPixelPath:'YUV420-NO-ARGB-R732',
     trackUiClock:'ffmpeg-frame-bound-R732-audio-lead-bounded',
     nextPreviewSeconds:NEXT_PREVIEW_SECONDS_R726,
-    nextPreviewTiming:'FFMPEG_PREVIEW_WINDOW_R733_PTS_ANCHORED',
+    nextPreviewTiming:'FFMPEG_ACTUAL_NEXT_R736_PTS_ANCHORED',
     nextPreviewHideBeforeEndSeconds:NEXT_PREVIEW_HIDE_BEFORE_END_R726,
     audioNormalizationTargetLufs:TRACK_AUDIO_TARGET_I_R726,
     audioTruePeakDb:TRACK_AUDIO_TRUE_PEAK_R726,
     audioFadeInSeconds:TRACK_AUDIO_FADE_IN_R726,
     audioFadeOutSeconds:TRACK_AUDIO_FADE_OUT_R726,
     videoFadeSeconds:VIDEO_FADE_SECONDS_R726,
-      videoFadeStrategy:'OLD_TRACK_EARLY_LEAD_R735',
-      videoFadeInEnabled:false,
-      videoBlackHoldSeconds:VIDEO_BLACK_HOLD_SECONDS_R734,
+      videoFadeStrategy:'SHORT_BOUNDARY_DIP_R736',
+      videoFadeInEnabled:true,
+      videoFadeInSeconds:VIDEO_FADE_IN_SECONDS_R736,
+      videoBlackHoldSeconds:VIDEO_BLACK_HOLD_SECONDS_R736,
       videoFadeLeadSeconds:VIDEO_FADE_LEAD_SECONDS_R735,
+      nextPreviewSource:'ACTUAL_IMMEDIATE_ITEM_R736',
     visualTimelineAnchor:'PTS-STARTPTS-R733',
     visualContinuityMode:state.visualContinuityMode,
     visualLoopOffsetSeconds:state.visualLoopOffsetSeconds,

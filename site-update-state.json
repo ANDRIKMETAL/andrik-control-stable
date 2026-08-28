@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787936483493-ea50b9b788",
-  "release": "R735",
-  "archiveName": "R735-EARLY-FADE-CONTINUOUS-VISUAL-R734-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "0e605adc723c227cef2ad430d166dd8913b8cce5",
-  "backupSha": "0e605adc723c227cef2ad430d166dd8913b8cce5",
+  "operationId": "publish-1787937529228-2689ab13a7",
+  "release": "R736",
+  "archiveName": "R736-SHORT-DIP-ACTUAL-NEXT-R735-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "74a2eadbc08827c1b5498c28a24b2f16d303d9f9",
+  "backupSha": "74a2eadbc08827c1b5498c28a24b2f16d303d9f9",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-28T17:01:23.931Z"
+  "generatedAt": "2026-08-28T17:18:49.607Z"
 }
