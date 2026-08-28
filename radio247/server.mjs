@@ -6,6 +6,7 @@ import {
   existsSync,
   mkdirSync,
   readdirSync,
+  readFileSync,
   renameSync,
   statSync,
   unlinkSync,
@@ -102,13 +103,13 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R732-R729-TRANSPORT-TITLE-LOCK-PREVNEXT-NO-ARGB',
-  mode: 'R732 R729 TRANSPORT + BOUNDED AUDIO LEAD + TITLE LOCK + FFMPEG PREVIOUS/NEXT + NO-ARGB OVERLAY',
+  version: 'R733-FADE-PTS-PREVIOUS-FALLBACK-R732-PRESERVED',
+  mode: 'R733 R732 TRANSPORT PRESERVED + PTS-ANCHORED FADES + PREVIOUS FALLBACK',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
   producerRunning: false,
-  overlayMode: 'R732 STATIC CURRENT + FFMPEG-TIMED PREVIOUS/NEXT T-8s + 1.25s BLACK FADE + YUV420 OVERLAYS',
+  overlayMode: 'R733 PTS-ANCHORED CURRENT/PREVIOUS/NEXT T-8s + 1.25s BLACK FADE + YUV420 OVERLAYS',
   audioMode: 'R732 R729 PCM TRANSPORT + AUDIO QUEUE 8 + R726 LOUDNORM -14 LUFS / ONE RTMPS',
   visualTimeZone: VISUAL_TIME_ZONE,
   visualPeriod: null,
@@ -242,6 +243,19 @@ function antiRepeatClipOrderR726(clips){
 }
 function writeOverlayFileR726(path,text=''){
   try{writeFileSync(path,String(text||''),'utf8')}catch(error){state.lastError=`R726 overlay file: ${cleanText(error?.message||error)}`;}
+}
+function previousTrackFallbackR733(previous){
+  if(previousTrackForPreviewR726?.type==='track')return previousTrackForPreviewR726;
+  if(previous?.type==='track')return previous;
+  // After a service restart the in-memory previous-track pointer is empty, but
+  // current-live.txt still contains the title that was on air before the restart.
+  // Reuse only a normal ANDRIK track title, never a clip/station label.
+  try{
+    const raw=cleanText(readFileSync(LIVE_CURRENT_FILE,'utf8'));
+    const m=/^ANDRIK\s+[—-]\s+(.+)$/i.exec(raw);
+    if(m&&m[1])return {type:'track',title:cleanText(m[1]),album:'',url:'',identity:`r733-file:${cleanText(m[1]).toLowerCase()}`};
+  }catch(_){ }
+  return null;
 }
 function clearNextPreviewR726({invalidate=false}={}){
   if(invalidate)trackUiGenerationR730++;
@@ -939,7 +953,7 @@ function normalVideoFilterComplexR721({fadeIn=false,trackDuration=0}={}){
     fades.push(`fade=t=out:st=${outAt.toFixed(3)}:d=${VIDEO_FADE_SECONDS_R726.toFixed(2)}:color=black`);
   }
   const finish=fades.length?`${fades.join(',')},format=yuv420p`:'format=yuv420p';
-  return `[0:v]${vf}[base];[2:v]fps=${VIDEO_FPS},setpts=N/(${VIDEO_FPS}*TB),format=yuva420p[eqv];[base][eqv]overlay=x=(W-w)/2:y=H-h-64:shortest=0:format=yuv420,format=yuv420p[eqbase];[1:v]scale=160:160:flags=lanczos,format=yuva420p[qr];[eqbase][qr]overlay=x=W-w-24:y=24:shortest=0:format=yuv420,format=yuv420p[qrbase];[3:v]format=yuva420p[cta];[qrbase][cta]overlay=x=(W-w)/2:y=46:shortest=0:format=yuv420:enable='${ctaEnable}'[ctabase];[ctabase]${finish}[outv]`;
+  return `[0:v]setpts=PTS-STARTPTS,${vf}[base];[2:v]fps=${VIDEO_FPS},setpts=N/(${VIDEO_FPS}*TB),format=yuva420p[eqv];[base][eqv]overlay=x=(W-w)/2:y=H-h-64:shortest=0:format=yuv420,format=yuv420p[eqbase];[1:v]scale=160:160:flags=lanczos,format=yuva420p[qr];[eqbase][qr]overlay=x=W-w-24:y=24:shortest=0:format=yuv420,format=yuv420p[qrbase];[3:v]format=yuva420p[cta];[qrbase][cta]overlay=x=(W-w)/2:y=46:shortest=0:format=yuv420:enable='${ctaEnable}'[ctabase];[ctabase]${finish}[outv]`;
 }
 
 function clipFilterComplexR721(){
@@ -1301,9 +1315,10 @@ async function playItem(previous,item,next,following,localAudioPath,nextTrackPre
   // feeders load them once and FFmpeg itself reveals PREVIOUS/NEXT only at T-8s.
   // No Node wall-clock timer can get ahead of the audio anymore.
   clearNextPreviewR726({invalidate:true});
+  const previousForOverlayR733=previousTrackFallbackR733(previous);
   writeOverlayFileR726(LIVE_CURRENT_FILE,`ANDRIK — ${shortText(item.title||'TRACK',42)}`);
-  writeOverlayFileR726(LIVE_PREVIOUS_FILE_R726,previousTrackForPreviewR726?.type==='track'
-    ? `PREVIOUS • ANDRIK — ${shortText(previousTrackForPreviewR726.title||'TRACK',32)}` : '');
+  writeOverlayFileR726(LIVE_PREVIOUS_FILE_R726,previousForOverlayR733?.type==='track'
+    ? `PREVIOUS • ANDRIK — ${shortText(previousForOverlayR733.title||'TRACK',32)}` : '');
   writeOverlayFileR726(LIVE_NEXT_FILE_R726,nextTrackPreview?.type==='track'
     ? `NEXT • ANDRIK — ${shortText(nextTrackPreview.title||'TRACK',32)}` : '');
   await ensureNormalVideoFeederR721({force:true,fadeIn:true,trackDuration:duration});
@@ -1498,7 +1513,7 @@ function publicStatus(){
     overlayMode:state.overlayMode,
     audioMode:state.audioMode,
     engine:'R732-R729-PERSISTENT-H264-RELAY-BOUNDED-AUDIO-CLOCK',
-    videoPipeline:'R732 R729 H264 TRANSPORT + FFMPEG-FRAME CURRENT/PREVIOUS/NEXT + 1.25s BLACK FADES + YUV420 OVERLAYS / ONE RTMPS',
+    videoPipeline:'R733 R732 H264 TRANSPORT PRESERVED + PTS-STARTPTS FADES/PREVNEXT + YUV420 OVERLAYS / ONE RTMPS',
     outputTimeshiftSeconds:OUTPUT_TIMESHIFT_SECONDS,
     videoBitrate:VIDEO_BITRATE,
     audioBitrate:AUDIO_BITRATE,
@@ -1515,13 +1530,15 @@ function publicStatus(){
     overlayPixelPath:'YUV420-NO-ARGB-R732',
     trackUiClock:'ffmpeg-frame-bound-R732-audio-lead-bounded',
     nextPreviewSeconds:NEXT_PREVIEW_SECONDS_R726,
-    nextPreviewTiming:'FFMPEG_PREVIEW_WINDOW_R732',
+    nextPreviewTiming:'FFMPEG_PREVIEW_WINDOW_R733_PTS_ANCHORED',
     nextPreviewHideBeforeEndSeconds:NEXT_PREVIEW_HIDE_BEFORE_END_R726,
     audioNormalizationTargetLufs:TRACK_AUDIO_TARGET_I_R726,
     audioTruePeakDb:TRACK_AUDIO_TRUE_PEAK_R726,
     audioFadeInSeconds:TRACK_AUDIO_FADE_IN_R726,
     audioFadeOutSeconds:TRACK_AUDIO_FADE_OUT_R726,
     videoFadeSeconds:VIDEO_FADE_SECONDS_R726,
+    visualTimelineAnchor:'PTS-STARTPTS-R733',
+    previousPreviewFallback:'MEMORY-PREVIOUS-OR-CURRENT-FILE-R733',
     antiRepeatTrackHistory:TRACK_HISTORY_LIMIT_R726,
     qrPosition:'top-right',
     visualTimeZone:state.visualTimeZone,
@@ -1640,7 +1657,7 @@ const server=http.createServer((req,res)=>{
 });
 
 server.listen(PORT,'0.0.0.0',()=>{
-  console.log(`ANDRIK Radio R732 R729-TRANSPORT + TITLE LOCK + PREVIOUS/NEXT + NO-ARGB listening on :${PORT}`);
+  console.log(`ANDRIK Radio R733 R732-TRANSPORT + PTS-FADE + PREVIOUS-FALLBACK listening on :${PORT}`);
   radioLoop();
 });
 

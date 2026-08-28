@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787933744095-45c817a8ef",
-  "release": "R732",
-  "archiveName": "R732-R729-TRANSPORT-TITLE-LOCK-PREVNEXT-NO-ARGB-R729-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "d5523eece6a7a4c87e1e19eeb19406a4c251099d",
-  "backupSha": "d5523eece6a7a4c87e1e19eeb19406a4c251099d",
+  "operationId": "publish-1787934702289-d69f523fe7",
+  "release": "R733",
+  "archiveName": "R733-FADE-PTS-PREVIOUS-FALLBACK-R732-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "a41d86a0f86b322382ca7eaed75ed266f0989dc3",
+  "backupSha": "a41d86a0f86b322382ca7eaed75ed266f0989dc3",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-28T16:15:44.523Z"
+  "generatedAt": "2026-08-28T16:31:42.705Z"
 }

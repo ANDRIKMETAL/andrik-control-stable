@@ -1,0 +1,9 @@
+R733 — visual-only sync fix on top of stable R732 transport
+
+- R732 transport is preserved exactly: video input queue 1024, audio input queue 8, ONE RTMPS.
+- Normal MP3 visual timeline is reset with setpts=PTS-STARTPTS before PREVIOUS/NEXT and fade timing.
+  This removes delayed fade caused by source MP4 timestamp offsets/edit lists.
+- PREVIOUS uses: in-memory last song -> previous track argument -> pre-restart current-live.txt fallback.
+  This makes the left PREVIOUS label available even on the first MP3 after a service restart when possible.
+- NEXT/PREVIOUS remain visible only in the FFmpeg frame window T-8.0s to T-0.30s.
+- Fade remains 1.25 seconds. Audio/loudness/network transport are untouched.
