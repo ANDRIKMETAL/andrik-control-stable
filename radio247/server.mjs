@@ -56,8 +56,9 @@ const TRACK_AUDIO_TRUE_PEAK_R726 = -1.5;
 const TRACK_AUDIO_LRA_R726 = 11;
 const TRACK_AUDIO_FADE_IN_R726 = 0.55;
 const TRACK_AUDIO_FADE_OUT_R726 = 0.75;
-const VIDEO_FADE_SECONDS_R726 = 1.25; // R734: fade-out duration on the OLD track only
+const VIDEO_FADE_SECONDS_R726 = 1.25; // R735: fade-out duration on the OLD track only
 const VIDEO_BLACK_HOLD_SECONDS_R734 = 0.20; // hold full black just before the real audio handoff
+const VIDEO_FADE_LEAD_SECONDS_R735 = 2.40; // compensate encoded-video handoff cushion: fade is authored earlier on old track
 // R721 keeps the proven 100-frame / 4-second exact-periodic QTRLE loops from R720.
 // The EQ is encoded inside the current local H264 feeder, while the YouTube RTMPS
 // publisher stays open permanently across MP3, clip and visual-period switches.
@@ -104,13 +105,13 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R734-BOUNDARY-FADEOUT-NO-LATE-FADEIN-R733-PRESERVED',
-  mode: 'R734 R733/R732 TRANSPORT PRESERVED + OLD-TRACK BOUNDARY FADEOUT + NO LATE FADEIN',
+  version: 'R735-EARLY-FADE-CONTINUOUS-VISUAL-R734-PRESERVED',
+  mode: 'R735 R734/R732 TRANSPORT PRESERVED + EARLY OLD-TRACK FADE + CONTINUOUS VISUAL SEEK',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
   producerRunning: false,
-  overlayMode: 'R734 CURRENT/PREVIOUS/NEXT T-8s + OLD-TRACK 1.25s FADEOUT + 0.20s BLACK HOLD + NO NEW-TRACK FADEIN',
+  overlayMode: 'R735 CURRENT/PREVIOUS/NEXT T-8s + EARLY OLD-TRACK FADEOUT + CONTINUOUS BACKGROUND LOOP',
   audioMode: 'R732 R729 PCM TRANSPORT + AUDIO QUEUE 8 + R726 LOUDNORM -14 LUFS / ONE RTMPS',
   visualTimeZone: VISUAL_TIME_ZONE,
   visualPeriod: null,
@@ -144,7 +145,9 @@ const state = {
   lastFfmpegLine: '',
   equalizerPeriod: null,
   equalizerStyle: null,
-  equalizerEngine: 'R721-EXACT-PERIODIC-QTRLE-FEEDER-4-SLOT'
+  equalizerEngine: 'R721-EXACT-PERIODIC-QTRLE-FEEDER-4-SLOT',
+  visualLoopOffsetSeconds: 0,
+  visualContinuityMode: 'R735-WALLCLOCK-SEEK-CONTINUITY'
 };
 
 let publisher = null;
@@ -183,6 +186,7 @@ let previousTrackForPreviewR726 = null;
 let trackUiGenerationR730 = 0;
 const clipPrefetchJobs = new Map();
 const prefetchJobs = new Map();
+const visualContinuityR735 = new Map();
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 function promiseTimeout(promise,ms,label='operation'){
@@ -953,8 +957,10 @@ function normalVideoFilterComplexR721({fadeIn=false,trackDuration=0}={}){
   // can therefore become visible after the new audio has already started. Put the
   // entire cinematic transition on the OLD track instead: fade fully to black before
   // its audio handoff, hold black briefly, then the next feeder appears immediately.
-  if(Number(trackDuration)>VIDEO_FADE_SECONDS_R726+VIDEO_BLACK_HOLD_SECONDS_R734+1){
-    const outAt=Math.max(0,Number(trackDuration)-VIDEO_FADE_SECONDS_R726-VIDEO_BLACK_HOLD_SECONDS_R734);
+  if(Number(trackDuration)>VIDEO_FADE_SECONDS_R726+VIDEO_BLACK_HOLD_SECONDS_R734+VIDEO_FADE_LEAD_SECONDS_R735+1){
+    // R735: the encoded H264 feeder has a small cushion before frames reach the master.
+    // Author the old-track fade earlier so the VIEWER sees it before the next audio starts.
+    const outAt=Math.max(0,Number(trackDuration)-VIDEO_FADE_SECONDS_R726-VIDEO_BLACK_HOLD_SECONDS_R734-VIDEO_FADE_LEAD_SECONDS_R735);
     fades.push(`fade=t=out:st=${outAt.toFixed(3)}:d=${VIDEO_FADE_SECONDS_R726.toFixed(2)}:color=black`);
   }
   const finish=fades.length?`${fades.join(',')},format=yuv420p`:'format=yuv420p';
@@ -1051,10 +1057,31 @@ function startPublisher(){
   return true;
 }
 
-function normalVideoFeederArgsR721(visualPath,eqPath,{fadeIn=false,trackDuration=0}={}){
+async function visualLoopOffsetR735(visualPath){
+  const now=Date.now();
+  let st=null;
+  try{st=statSync(visualPath);}catch(_){return 0;}
+  let rec=visualContinuityR735.get(visualPath);
+  const changed=!rec || rec.size!==st.size || rec.mtimeMs!==st.mtimeMs;
+  if(changed){
+    let duration=0;
+    try{duration=await probeDuration(visualPath);}catch(_){duration=0;}
+    rec={anchorMs:now,duration,size:st.size,mtimeMs:st.mtimeMs};
+    visualContinuityR735.set(visualPath,rec);
+    state.visualLoopOffsetSeconds=0;
+    return 0;
+  }
+  if(!Number.isFinite(rec.duration)||rec.duration<=0)return 0;
+  const offset=Math.max(0,((now-rec.anchorMs)/1000)%rec.duration);
+  state.visualLoopOffsetSeconds=Number(offset.toFixed(3));
+  return offset;
+}
+
+function normalVideoFeederArgsR721(visualPath,eqPath,{fadeIn=false,trackDuration=0,visualOffsetSeconds=0}={}){
+  const visualSeek=Number(visualOffsetSeconds)>0.05 ? ['-ss',Number(visualOffsetSeconds).toFixed(3)] : [];
   return [
     '-hide_banner','-loglevel','warning',
-    '-thread_queue_size','64','-re','-stream_loop','-1','-i',visualPath,
+    '-thread_queue_size','64','-re','-stream_loop','-1',...visualSeek,'-i',visualPath,
     '-loop','1','-framerate','1','-i',QR_OVERLAY,
     '-thread_queue_size','32','-re','-stream_loop','-1','-i',eqPath,
     '-loop','1','-framerate','1','-i',CTA_OVERLAY_R722,
@@ -1080,7 +1107,7 @@ async function stopNormalVideoFeederR721(){
   if(videoFeeder===active)videoFeeder=null;
 }
 
-function startNormalVideoFeederR721(visualPath,{fadeIn=false,trackDuration=0}={}){
+function startNormalVideoFeederR721(visualPath,{fadeIn=false,trackDuration=0,visualOffsetSeconds=0}={}){
   if(stopping || clipActive)return false;
   const videoSink=publisher?.stdio?.[4];
   if(!publisher || publisher.exitCode!==null || !videoSink || videoSink.destroyed || videoSink.writableEnded)throw new Error('R721 persistent video pipe unavailable');
@@ -1090,7 +1117,7 @@ function startNormalVideoFeederR721(visualPath,{fadeIn=false,trackDuration=0}={}
   if(!existsSync(CTA_OVERLAY_R722) || statSync(CTA_OVERLAY_R722).size<5000)throw new Error(`R722 CTA overlay missing: ${CTA_OVERLAY_R722}`);
   if(!existsSync(eq.path) || statSync(eq.path).size<20000)throw new Error(`equalizer missing: ${eq.path}`);
 
-  const child=spawn('ffmpeg',normalVideoFeederArgsR721(visualPath,eq.path,{fadeIn,trackDuration}),{stdio:['ignore','pipe','pipe']});
+  const child=spawn('ffmpeg',normalVideoFeederArgsR721(visualPath,eq.path,{fadeIn,trackDuration,visualOffsetSeconds}),{stdio:['ignore','pipe','pipe']});
   videoFeeder=child;
   videoFeederPath=visualPath;
   videoFeederPeriod=eq.period;
@@ -1127,7 +1154,11 @@ async function ensureNormalVideoFeederR721({force=false,fadeIn=false,trackDurati
     await stopNormalVideoFeederR721();
     if(stopping || clipActive)return true;
     const plannedDuration=trackDuration===null ? remainingTrackSecondsR726() : Math.max(0,Number(trackDuration)||0);
-    return startNormalVideoFeederR721(visual,{fadeIn,trackDuration:plannedDuration});
+    // R735: song boundaries still restart only the overlay/timing feeder, but the selected
+    // MORNING/DAY/EVENING/NIGHT MP4 resumes at its wall-clock loop position instead of 0:00.
+    // This preserves FFmpeg-frame-timed NEXT/PREVIOUS without visually restarting the background.
+    const visualOffsetSeconds=await visualLoopOffsetR735(visual);
+    return startNormalVideoFeederR721(visual,{fadeIn,trackDuration:plannedDuration,visualOffsetSeconds});
   }finally{
     visualSwitching=false;
   }
@@ -1517,8 +1548,8 @@ function publicStatus(){
     mode:state.mode,
     overlayMode:state.overlayMode,
     audioMode:state.audioMode,
-    engine:'R732-R729-PERSISTENT-H264-RELAY-BOUNDED-AUDIO-CLOCK',
-    videoPipeline:'R733 R732 H264 TRANSPORT PRESERVED + PTS-STARTPTS FADES/PREVNEXT + YUV420 OVERLAYS / ONE RTMPS',
+    engine:'R735-R732-PERSISTENT-H264-RELAY-BOUNDED-AUDIO-CLOCK',
+    videoPipeline:'R735 R732 TRANSPORT + EARLY OLD-TRACK FADE + WALLCLOCK VISUAL LOOP CONTINUITY / ONE RTMPS',
     outputTimeshiftSeconds:OUTPUT_TIMESHIFT_SECONDS,
     videoBitrate:VIDEO_BITRATE,
     audioBitrate:AUDIO_BITRATE,
@@ -1542,10 +1573,13 @@ function publicStatus(){
     audioFadeInSeconds:TRACK_AUDIO_FADE_IN_R726,
     audioFadeOutSeconds:TRACK_AUDIO_FADE_OUT_R726,
     videoFadeSeconds:VIDEO_FADE_SECONDS_R726,
-      videoFadeStrategy:'OLD_TRACK_ONLY_R734',
+      videoFadeStrategy:'OLD_TRACK_EARLY_LEAD_R735',
       videoFadeInEnabled:false,
       videoBlackHoldSeconds:VIDEO_BLACK_HOLD_SECONDS_R734,
+      videoFadeLeadSeconds:VIDEO_FADE_LEAD_SECONDS_R735,
     visualTimelineAnchor:'PTS-STARTPTS-R733',
+    visualContinuityMode:state.visualContinuityMode,
+    visualLoopOffsetSeconds:state.visualLoopOffsetSeconds,
     previousPreviewFallback:'MEMORY-PREVIOUS-OR-CURRENT-FILE-R733',
     antiRepeatTrackHistory:TRACK_HISTORY_LIMIT_R726,
     qrPosition:'top-right',

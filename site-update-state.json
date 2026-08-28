@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787935507217-25d8d04d50",
-  "release": "R734",
-  "archiveName": "R734-BOUNDARY-FADEOUT-NO-LATE-FADEIN-R733-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "e77280cdc559b3cf3946fca0a75b0b5c0b29e208",
-  "backupSha": "e77280cdc559b3cf3946fca0a75b0b5c0b29e208",
+  "operationId": "publish-1787936483493-ea50b9b788",
+  "release": "R735",
+  "archiveName": "R735-EARLY-FADE-CONTINUOUS-VISUAL-R734-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "0e605adc723c227cef2ad430d166dd8913b8cce5",
+  "backupSha": "0e605adc723c227cef2ad430d166dd8913b8cce5",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-28T16:45:07.622Z"
+  "generatedAt": "2026-08-28T17:01:23.931Z"
 }

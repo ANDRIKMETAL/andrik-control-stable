@@ -1,0 +1,9 @@
+R735 — EARLY FADE + CONTINUOUS BACKGROUND VISUAL
+
+1. Stable R732 transport is preserved exactly: H264 input queue 1024, PCM audio input queue 8, ONE RTMPS.
+2. Old-track video fade is authored 2.40 s earlier to compensate the encoded-video handoff cushion.
+3. New-track fade-in remains disabled, so a new song cannot begin and then darken afterward.
+4. MORNING / DAY / EVENING / NIGHT background MP4 no longer restarts visually from 0:00 on every MP3 boundary.
+5. The per-song overlay feeder still restarts for frame-accurate CURRENT/PREVIOUS/NEXT timing, but it seeks the background MP4 to the wall-clock loop position.
+6. If the visual file itself is replaced, the continuity anchor resets automatically for the new file.
+7. CURRENT / PREVIOUS / NEXT, -14 LUFS, anti-repeat, bumpers 4–6 songs, specials 30/60 min, QR, CTA and EQ are preserved.
