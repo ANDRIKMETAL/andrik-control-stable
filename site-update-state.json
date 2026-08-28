@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787921977362-6ad298af87",
-  "release": "R725",
-  "archiveName": "R725-CTA-2MIN-BUMPERS-4-6-R724-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "860dd29599e4930192c805d336dff35e62b5eaeb",
-  "backupSha": "860dd29599e4930192c805d336dff35e62b5eaeb",
+  "operationId": "publish-1787926375149-95c95a6813",
+  "release": "R727",
+  "archiveName": "R727-DUAL-SPECIAL30-60-R726-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "b326691c4f3a296b8ad45275c91c38f1b248b05b",
+  "backupSha": "b326691c4f3a296b8ad45275c91c38f1b248b05b",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-28T12:59:37.734Z"
+  "generatedAt": "2026-08-28T14:12:55.687Z"
 }

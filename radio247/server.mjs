@@ -45,6 +45,17 @@ const CTA_PERIOD_SECONDS_R722 = 120; // R725: every 2 minutes during the normal 
 const TITLE_HANDOFF_DELAY_MS_R724 = Math.max(0, Math.min(5000, Number(process.env.TITLE_HANDOFF_DELAY_MS_R724 || 1800)));
 const BUMPER_MIN_SONGS_R724 = 4;
 const BUMPER_MAX_SONGS_R724 = 6;
+const SPECIAL_INTERVAL_MS_R726 = Math.max(10*60*1000, Number(process.env.SPECIAL_INTERVAL_MS_R726 || 30*60*1000));
+const SPECIAL_HOURLY_INTERVAL_MS_R727 = Math.max(30*60*1000, Number(process.env.SPECIAL_HOURLY_INTERVAL_MS_R727 || 60*60*1000));
+const NEXT_PREVIEW_SECONDS_R726 = 8;
+const NEXT_PREVIEW_HIDE_BEFORE_END_R726 = 0.8;
+const TRACK_HISTORY_LIMIT_R726 = 20;
+const TRACK_AUDIO_TARGET_I_R726 = -14;
+const TRACK_AUDIO_TRUE_PEAK_R726 = -1.5;
+const TRACK_AUDIO_LRA_R726 = 11;
+const TRACK_AUDIO_FADE_IN_R726 = 0.55;
+const TRACK_AUDIO_FADE_OUT_R726 = 0.75;
+const VIDEO_FADE_SECONDS_R726 = 0.65;
 // R721 keeps the proven 100-frame / 4-second exact-periodic QTRLE loops from R720.
 // The EQ is encoded inside the current local H264 feeder, while the YouTube RTMPS
 // publisher stays open permanently across MP3, clip and visual-period switches.
@@ -63,8 +74,12 @@ const VIDEO_GOP = 50; // exactly 2 seconds at 25 fps
 const LIBRARY_REFRESH_MS = Math.max(60000, Number(process.env.LIBRARY_REFRESH_MS || 120000));
 const LIVE_TICKER_FILE = process.env.LIVE_TICKER_FILE || `${CACHE_DIR}/live-ticker.txt`;
 const LIVE_CURRENT_FILE = process.env.LIVE_CURRENT_FILE || `${CACHE_DIR}/current-live.txt`;
+const LIVE_PREVIOUS_FILE_R726 = process.env.LIVE_PREVIOUS_FILE_R726 || `${CACHE_DIR}/previous-live-r726.txt`;
+const LIVE_NEXT_FILE_R726 = process.env.LIVE_NEXT_FILE_R726 || `${CACHE_DIR}/next-live-r726.txt`;
 const CLIP_CACHE_DIR = `${CACHE_DIR}/clips`;
 const RADIO_CLIPS_URL_R691 = process.env.RADIO_CLIPS_URL_R691 || 'https://andrikmetal.com/api/music/radio-clips-r691';
+const RADIO_SPECIAL_KEY_R726 = 'radio/clips/radio-special-30min.mp4';
+const RADIO_SPECIAL_HOURLY_KEY_R727 = 'radio/clips/radio-special-60min.mp4';
 const JOY_OF_BEING_CLIP_URL = process.env.JOY_OF_BEING_CLIP_URL || 'https://music.andrikmetal.com/clips/joy-of-being-official-2026.mp4';
 const JOY_OF_BEING_CLIP_ENABLED = String(process.env.JOY_OF_BEING_CLIP_ENABLED || '1').trim() !== '0';
 const JOY_OF_BEING_CLIP_PATH = `${CLIP_CACHE_DIR}/joy-of-being-official-2026.mp4`;
@@ -85,14 +100,14 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R725-CTA-2MIN-BUMPERS-4-6-R724-PRESERVED',
-  mode: 'R725 CTA 8s/2min + 3 RADIO BUMPERS EACH 4-6 SONGS + R724 TITLE SYNC + QR RIGHT + Я ЕСТЬ / R723-R721 PRESERVED',
+  version: 'R727-DUAL-SPECIAL30-60-R726-PRESERVED',
+  mode: 'R727 SPECIAL 30MIN + SPECIAL 60MIN + R726 LOUDNESS/FADE/NEXT/ANTIREPEAT + R725 PRESERVED',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
   producerRunning: false,
-  overlayMode: 'R725 CTA 8s EVERY 2min + R724 QR RIGHT + DELAYED TITLE HANDOFF / R723 GREEN QR + RED TITLE + EQ',
-  audioMode: 'R721 PERSISTENT PCM CLOCK + AAC-LC 128kbps / ONE RTMPS SESSION / 4500k H264 RELAY / 6s FIFO',
+  overlayMode: 'R726 PREVIOUS/NEXT T-8s + TRACK FADE TO/FROM BLACK + R725 CTA 2min + QR RIGHT + RED TITLE + EQ',
+  audioMode: 'R726 TRACK LOUDNORM -14 LUFS + 0.55/0.75s AUDIO FADES / R721 PERSISTENT PCM + ONE RTMPS',
   visualTimeZone: VISUAL_TIME_ZONE,
   visualPeriod: null,
   visualPath: null,
@@ -103,6 +118,13 @@ const state = {
   duplicateSinglesSkipped: 0,
   libraryVideos: JOY_OF_BEING_CLIP_ENABLED ? 2 : 1,
   libraryBumpers: 0,
+  librarySpecial: 0,
+  librarySpecial30: 0,
+  librarySpecial60: 0,
+  specialIntervalSeconds: Math.round(SPECIAL_INTERVAL_MS_R726/1000),
+  specialHourlyIntervalSeconds: Math.round(SPECIAL_HOURLY_INTERVAL_MS_R727/1000),
+  lastSpecialPlayedAt: null,
+  lastSpecialHourlyPlayedAt: null,
   songsSinceBumper: 0,
   nextBumperAfterSongs: 0,
   lastBumperSlot: 0,
@@ -126,6 +148,8 @@ let producer = null;
 let library = [];
 let clipLibrary = JOY_OF_BEING_CLIP_ENABLED ? [JOY_OF_BEING_CLIP,YA_EST_CLIP_R724] : [YA_EST_CLIP_R724];
 let bumperLibrary = [];
+let specialInsertR726 = null;
+let specialHourlyInsertR727 = null;
 let queue = [];
 let queueIndex = 0;
 let running = false;
@@ -145,6 +169,13 @@ let liveTitleGenerationR724 = 0;
 let songsSinceBumperR724 = 0;
 let bumperAfterSongsR724 = BUMPER_MIN_SONGS_R724 + Math.floor(Math.random()*(BUMPER_MAX_SONGS_R724-BUMPER_MIN_SONGS_R724+1));
 let lastBumperSlotR724 = 0;
+let lastSpecialPlayedAtR726 = Date.now();
+let lastSpecialHourlyPlayedAtR727 = Date.now();
+let nextPreviewShowTimerR726 = null;
+let nextPreviewHideTimerR726 = null;
+const recentTrackIdsR726 = [];
+let lastClipIdentityR726 = '';
+let previousTrackForPreviewR726 = null;
 const clipPrefetchJobs = new Map();
 const prefetchJobs = new Map();
 
@@ -176,6 +207,62 @@ function setLiveTitleR724(text,{delayMs=0}={}){
 function bumperSlotR724(item){
   const m=/^radio\/clips\/radio-bumper-([123])\.mp4$/i.exec(String(item?.key||''));
   return m?Number(m[1]):0;
+}
+function isSpecialInsertR726(item){
+  return Boolean(item?.special30min) || String(item?.key||'').toLowerCase()===RADIO_SPECIAL_KEY_R726;
+}
+function isSpecialHourlyInsertR727(item){
+  return Boolean(item?.special60min) || String(item?.key||'').toLowerCase()===RADIO_SPECIAL_HOURLY_KEY_R727;
+}
+function isAnySpecialInsertR727(item){return isSpecialInsertR726(item)||isSpecialHourlyInsertR727(item);}
+function rememberTrackR726(item){
+  const id=primaryIdentity(item);
+  if(!id)return;
+  const i=recentTrackIdsR726.indexOf(id);
+  if(i>=0)recentTrackIdsR726.splice(i,1);
+  recentTrackIdsR726.push(id);
+  while(recentTrackIdsR726.length>TRACK_HISTORY_LIMIT_R726)recentTrackIdsR726.shift();
+}
+function antiRepeatTrackOrderR726(tracks){
+  const recent=new Set(recentTrackIdsR726);
+  const fresh=shuffle(tracks.filter(x=>!recent.has(primaryIdentity(x))));
+  const old=tracks.filter(x=>recent.has(primaryIdentity(x))).sort((a,b)=>recentTrackIdsR726.indexOf(primaryIdentity(a))-recentTrackIdsR726.indexOf(primaryIdentity(b)));
+  return [...fresh,...old];
+}
+function antiRepeatClipOrderR726(clips){
+  const out=shuffle(clips);
+  if(out.length>1 && primaryIdentity(out[0])===lastClipIdentityR726){
+    const swapIndex=out.findIndex((x,i)=>i>0&&primaryIdentity(x)!==lastClipIdentityR726);
+    if(swapIndex>0)[out[0],out[swapIndex]]=[out[swapIndex],out[0]];
+  }
+  return out;
+}
+function writeOverlayFileR726(path,text=''){
+  try{writeFileSync(path,String(text||''),'utf8')}catch(error){state.lastError=`R726 overlay file: ${cleanText(error?.message||error)}`;}
+}
+function clearNextPreviewR726(){
+  if(nextPreviewShowTimerR726){clearTimeout(nextPreviewShowTimerR726);nextPreviewShowTimerR726=null;}
+  if(nextPreviewHideTimerR726){clearTimeout(nextPreviewHideTimerR726);nextPreviewHideTimerR726=null;}
+  writeOverlayFileR726(LIVE_PREVIOUS_FILE_R726,'');
+  writeOverlayFileR726(LIVE_NEXT_FILE_R726,'');
+}
+function scheduleNextPreviewR726(previousTrack,nextTrack,duration){
+  clearNextPreviewR726();
+  if(!Number.isFinite(duration)||duration<=NEXT_PREVIEW_SECONDS_R726+1)return;
+  const showMs=Math.max(0,(duration-NEXT_PREVIEW_SECONDS_R726)*1000);
+  const hideMs=Math.max(showMs+300,(duration-NEXT_PREVIEW_HIDE_BEFORE_END_R726)*1000);
+  nextPreviewShowTimerR726=setTimeout(()=>{
+    nextPreviewShowTimerR726=null;
+    if(previousTrack?.type==='track')writeOverlayFileR726(LIVE_PREVIOUS_FILE_R726,`РАНЕЕ • ANDRIK — ${shortText(previousTrack.title||'TRACK',32)}`);
+    if(nextTrack?.type==='track')writeOverlayFileR726(LIVE_NEXT_FILE_R726,`NEXT • ANDRIK — ${shortText(nextTrack.title||'TRACK',32)}`);
+  },showMs);
+  nextPreviewShowTimerR726.unref?.();
+  nextPreviewHideTimerR726=setTimeout(()=>{nextPreviewHideTimerR726=null;writeOverlayFileR726(LIVE_PREVIOUS_FILE_R726,'');writeOverlayFileR726(LIVE_NEXT_FILE_R726,'');},hideMs);
+  nextPreviewHideTimerR726.unref?.();
+}
+function remainingTrackSecondsR726(){
+  if(state.current?.type!=='track'||!state.current?.startedAt||!Number(state.current?.duration))return 0;
+  return Math.max(0,Number(state.current.duration)-(Date.now()-Date.parse(state.current.startedAt))/1000);
 }
 function randomBumperGapR724(){return BUMPER_MIN_SONGS_R724+Math.floor(Math.random()*(BUMPER_MAX_SONGS_R724-BUMPER_MIN_SONGS_R724+1));}
 function nextBumperR724(){
@@ -281,7 +368,9 @@ function prepareClip(item){
     key:String(item?.key||''),
     url:String(item?.url||''),
     builtIn:Boolean(item?.builtIn),
-    bumperSlot:Number(item?.bumperSlot)||0
+    bumperSlot:Number(item?.bumperSlot)||0,
+    special30min:Boolean(item?.special30min),
+    special60min:Boolean(item?.special60min)
   };
   clip.identity=primaryIdentity(clip);
   return clip;
@@ -322,31 +411,40 @@ async function loadRadioClipsR691(){
     const data=await response.json();
     const dynamic=(Array.isArray(data?.clips)?data.clips:[])
       .filter(item=>/^https:\/\//i.test(String(item?.url||'')) && /\.mp4(?:$|\?)/i.test(String(item?.url||'')))
-      .map(item=>prepareClip({...item,bumperSlot:Number(item?.bumperSlot)||bumperSlotR724(item)}));
+      .map(item=>prepareClip({...item,bumperSlot:Number(item?.bumperSlot)||bumperSlotR724(item),special30min:Boolean(item?.special30min)||isSpecialInsertR726(item),special60min:Boolean(item?.special60min)||isSpecialHourlyInsertR727(item)}));
     const bumpersBySlot=new Map();
+    specialInsertR726=null;
+    specialHourlyInsertR727=null;
     for(const item of dynamic){
       const slot=bumperSlotR724(item)||Number(item.bumperSlot)||0;
       if(slot>=1&&slot<=3&&!bumpersBySlot.has(slot))bumpersBySlot.set(slot,{...item,bumperSlot:slot,sourceType:'radio-bumper'});
+      else if(isSpecialInsertR726(item)&&!specialInsertR726)specialInsertR726={...item,special30min:true,sourceType:'radio-special-30',title:'ANDRIK METAL RADIO • SPECIAL 30'};
+      else if(isSpecialHourlyInsertR727(item)&&!specialHourlyInsertR727)specialHourlyInsertR727={...item,special60min:true,sourceType:'radio-special-60',title:'ANDRIK METAL RADIO • SPECIAL 60'};
     }
     bumperLibrary=[...bumpersBySlot.values()].sort((a,b)=>a.bumperSlot-b.bumperSlot);
-    const normalDynamic=dynamic.filter(item=>!bumperSlotR724(item)&&!Number(item.bumperSlot));
+    const normalDynamic=dynamic.filter(item=>!bumperSlotR724(item)&&!Number(item.bumperSlot)&&!isAnySpecialInsertR727(item));
     const byUrl=new Map();
     for(const clip of [...builtIn,...normalDynamic])if(clip.url&&!byUrl.has(clip.url))byUrl.set(clip.url,clip);
     clipLibrary=[...byUrl.values()];
   }catch(error){
     console.error('[radio-clips-r724]',cleanText(error?.message||error));
-    const existingDynamic=clipLibrary.filter(item=>!item.builtIn&&!bumperSlotR724(item));
+    const existingDynamic=clipLibrary.filter(item=>!item.builtIn&&!bumperSlotR724(item)&&!isAnySpecialInsertR727(item));
     clipLibrary=[...builtIn,...existingDynamic.filter(item=>!builtIn.some(b=>b.url===item.url))];
   }
   state.libraryVideos=clipLibrary.length;
   state.libraryBumpers=bumperLibrary.length;
+  state.librarySpecial=(specialInsertR726?1:0)+(specialHourlyInsertR727?1:0);
+  state.librarySpecial30=specialInsertR726?1:0;
+  state.librarySpecial60=specialHourlyInsertR727?1:0;
   clipLibrary.forEach(prefetchClip);
   bumperLibrary.forEach(prefetchClip);
+  if(specialInsertR726)prefetchClip(specialInsertR726);
+  if(specialHourlyInsertR727)prefetchClip(specialHourlyInsertR727);
   return clipLibrary;
 }
 
 async function loadLibrary(){
-  const previousSignature=librarySignature([...library,...clipLibrary,...bumperLibrary]);
+  const previousSignature=librarySignature([...library,...clipLibrary,...bumperLibrary,...(specialInsertR726?[specialInsertR726]:[]),...(specialHourlyInsertR727?[specialHourlyInsertR727]:[])]);
   const url=`${PLAYLIST_URL}${PLAYLIST_URL.includes('?')?'&':'?'}ts=${Date.now()}`;
   const response=await fetch(url,{headers:{'user-agent':'ANDRIK-Radio-24-7-R691'}});
   if(!response.ok)throw new Error(`R2 library HTTP ${response.status}`);
@@ -382,8 +480,11 @@ async function loadLibrary(){
   state.libraryVideos=clipLibrary.length;
   state.libraryBumpers=bumperLibrary.length;
   state.lastLibraryRefresh=new Date().toISOString();
-  const changed=previousSignature!==librarySignature([...library,...clipLibrary,...bumperLibrary]);
-  return {library,clipLibrary,bumperLibrary,changed};
+  state.librarySpecial=(specialInsertR726?1:0)+(specialHourlyInsertR727?1:0);
+  state.librarySpecial30=specialInsertR726?1:0;
+  state.librarySpecial60=specialHourlyInsertR727?1:0;
+  const changed=previousSignature!==librarySignature([...library,...clipLibrary,...bumperLibrary,...(specialInsertR726?[specialInsertR726]:[]),...(specialHourlyInsertR727?[specialHourlyInsertR727]:[])]);
+  return {library,clipLibrary,bumperLibrary,specialInsertR726,specialHourlyInsertR727,changed};
 }
 
 function addIdentityCandidates(target,item){
@@ -397,8 +498,8 @@ function identityAlreadySeen(target,item){
 }
 
 function mixTracksAndClipsR691(tracks,clips){
-  const shuffledTracks=shuffle(tracks);
-  const shuffledClips=shuffle(clips);
+  const shuffledTracks=antiRepeatTrackOrderR726(tracks);
+  const shuffledClips=antiRepeatClipOrderR726(clips);
   if(!shuffledTracks.length)return shuffledClips;
   if(!shuffledClips.length||shuffledTracks.length<2)return [...shuffledTracks,...shuffledClips];
   const gapCount=shuffledTracks.length-1;
@@ -502,6 +603,8 @@ function prepareCacheDir(){
   mkdirSync(AUDIO_CACHE_DIR,{recursive:true});
   mkdirSync(VISUAL_CACHE_DIR,{recursive:true});
   mkdirSync(CLIP_CACHE_DIR,{recursive:true});
+  if(!existsSync(LIVE_PREVIOUS_FILE_R726))writeFileSync(LIVE_PREVIOUS_FILE_R726,'','utf8');
+  if(!existsSync(LIVE_NEXT_FILE_R726))writeFileSync(LIVE_NEXT_FILE_R726,'','utf8');
 }
 
 function audioCachePath(item){
@@ -784,6 +887,8 @@ function titleOverlayFiltersR721(){
   const titleFontPart=titleFont?`fontfile='${ffFilterPath(titleFont)}':`:'';
   const curPath=ffFilterPath(LIVE_CURRENT_FILE);
   const tickerPath=ffFilterPath(LIVE_TICKER_FILE);
+  const prevPath=ffFilterPath(LIVE_PREVIOUS_FILE_R726);
+  const nextPath=ffFilterPath(LIVE_NEXT_FILE_R726);
   return [
     // R721: keep every source pixel. 16:9 fills 1920x1080; any other aspect is padded.
     'scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos',
@@ -797,17 +902,26 @@ function titleOverlayFiltersR721(){
     'drawbox=x=92:y=ih-208:w=iw-184:h=4:color=0xE00026@0.96:t=fill',
     `drawtext=${titleFontPart}textfile='${curPath}':reload=${VIDEO_FPS}:fontcolor=white@0.01:fontsize=58:x=(w-text_w)/2:y=h-188:borderw=8:bordercolor=black@0.92`,
     `drawtext=${titleFontPart}textfile='${curPath}':reload=${VIDEO_FPS}:fontcolor=0xF8F4EE:fontsize=58:x=(w-text_w)/2:y=h-188:borderw=4:bordercolor=0xD60024@1:shadowcolor=black@1:shadowx=4:shadowy=4`,
+    `drawtext=${fontPart}textfile='${prevPath}':reload=1:fontcolor=white@0.97:fontsize=26:x=58:y=h-292:borderw=2:bordercolor=black@0.95:box=1:boxcolor=black@0.36:boxborderw=11`,
+    `drawtext=${fontPart}textfile='${nextPath}':reload=1:fontcolor=white@0.97:fontsize=26:x=w-text_w-58:y=h-292:borderw=2:bordercolor=black@0.95:box=1:boxcolor=black@0.36:boxborderw=11`,
     `drawtext=${fontPart}textfile='${tickerPath}':reload=${VIDEO_FPS}:fontcolor=yellow:fontsize=28:x='w-mod(t*110,text_w+w)':y=h-58:borderw=3:bordercolor=black@1:shadowcolor=black@1:shadowx=2:shadowy=2`
   ].join(',');
 }
 
-function normalVideoFilterComplexR721(){
+function normalVideoFilterComplexR721({fadeIn=false,trackDuration=0}={}){
   const vf=titleOverlayFiltersR721();
-  // R722: keep the R721 seamless EQ and add one compact SUBSCRIBE + thumbs-up LIKE card.
-  // It is visible for 8 seconds every 5 minutes. The CTA is intentionally NOT burned
-  // into owner video clips, so short official clips remain clean and unobstructed.
-  const ctaEnable=`lt(mod(t\,${CTA_PERIOD_SECONDS_R722})\,${CTA_SHOW_SECONDS_R722})`;
-  return `[0:v]${vf}[base];[2:v]fps=${VIDEO_FPS},setpts=N/(${VIDEO_FPS}*TB),format=argb[eqv];[base][eqv]overlay=x=(W-w)/2:y=H-h-64:shortest=0:format=auto,format=yuv420p[eqbase];[1:v]scale=160:160:flags=lanczos,format=yuva420p[qr];[eqbase][qr]overlay=x=W-w-24:y=24:shortest=0:format=auto,format=yuv420p[qrbase];[3:v]format=rgba[cta];[qrbase][cta]overlay=x=(W-w)/2:y=46:shortest=0:format=auto:enable='${ctaEnable}',format=yuv420p[outv]`;
+  // R726: CTA remains tied to wall-clock phase even though the normal feeder is restarted
+  // at song boundaries to produce a real fade-to-black / fade-from-black transition.
+  const ctaPhase=(Date.now()/1000)%CTA_PERIOD_SECONDS_R722;
+  const ctaEnable=`lt(mod(t+${ctaPhase.toFixed(3)}\,${CTA_PERIOD_SECONDS_R722})\,${CTA_SHOW_SECONDS_R722})`;
+  const fades=[];
+  if(fadeIn)fades.push(`fade=t=in:st=0:d=${VIDEO_FADE_SECONDS_R726.toFixed(2)}:color=black`);
+  if(Number(trackDuration)>VIDEO_FADE_SECONDS_R726*2){
+    const outAt=Math.max(0,Number(trackDuration)-VIDEO_FADE_SECONDS_R726);
+    fades.push(`fade=t=out:st=${outAt.toFixed(3)}:d=${VIDEO_FADE_SECONDS_R726.toFixed(2)}:color=black`);
+  }
+  const finish=fades.length?`${fades.join(',')},format=yuv420p`:'format=yuv420p';
+  return `[0:v]${vf}[base];[2:v]fps=${VIDEO_FPS},setpts=N/(${VIDEO_FPS}*TB),format=argb[eqv];[base][eqv]overlay=x=(W-w)/2:y=H-h-64:shortest=0:format=auto,format=yuv420p[eqbase];[1:v]scale=160:160:flags=lanczos,format=yuva420p[qr];[eqbase][qr]overlay=x=W-w-24:y=24:shortest=0:format=auto,format=yuv420p[qrbase];[3:v]format=rgba[cta];[qrbase][cta]overlay=x=(W-w)/2:y=46:shortest=0:format=auto:enable='${ctaEnable}'[ctabase];[ctabase]${finish}[outv]`;
 }
 
 function clipFilterComplexR721(){
@@ -900,14 +1014,14 @@ function startPublisher(){
   return true;
 }
 
-function normalVideoFeederArgsR721(visualPath,eqPath){
+function normalVideoFeederArgsR721(visualPath,eqPath,{fadeIn=false,trackDuration=0}={}){
   return [
     '-hide_banner','-loglevel','warning',
     '-thread_queue_size','64','-re','-stream_loop','-1','-i',visualPath,
     '-loop','1','-framerate','1','-i',QR_OVERLAY,
     '-thread_queue_size','32','-re','-stream_loop','-1','-i',eqPath,
     '-loop','1','-framerate','1','-i',CTA_OVERLAY_R722,
-    '-filter_complex',normalVideoFilterComplexR721(),
+    '-filter_complex',normalVideoFilterComplexR721({fadeIn,trackDuration}),
     '-map','[outv]','-an','-sn','-dn',
     ...h264EncoderArgsR721(),
     '-f','h264','pipe:1'
@@ -929,7 +1043,7 @@ async function stopNormalVideoFeederR721(){
   if(videoFeeder===active)videoFeeder=null;
 }
 
-function startNormalVideoFeederR721(visualPath){
+function startNormalVideoFeederR721(visualPath,{fadeIn=false,trackDuration=0}={}){
   if(stopping || clipActive)return false;
   const videoSink=publisher?.stdio?.[4];
   if(!publisher || publisher.exitCode!==null || !videoSink || videoSink.destroyed || videoSink.writableEnded)throw new Error('R721 persistent video pipe unavailable');
@@ -939,7 +1053,7 @@ function startNormalVideoFeederR721(visualPath){
   if(!existsSync(CTA_OVERLAY_R722) || statSync(CTA_OVERLAY_R722).size<5000)throw new Error(`R722 CTA overlay missing: ${CTA_OVERLAY_R722}`);
   if(!existsSync(eq.path) || statSync(eq.path).size<20000)throw new Error(`equalizer missing: ${eq.path}`);
 
-  const child=spawn('ffmpeg',normalVideoFeederArgsR721(visualPath,eq.path),{stdio:['ignore','pipe','pipe']});
+  const child=spawn('ffmpeg',normalVideoFeederArgsR721(visualPath,eq.path,{fadeIn,trackDuration}),{stdio:['ignore','pipe','pipe']});
   videoFeeder=child;
   videoFeederPath=visualPath;
   videoFeederPeriod=eq.period;
@@ -966,7 +1080,7 @@ function startNormalVideoFeederR721(visualPath){
   return true;
 }
 
-async function ensureNormalVideoFeederR721({force=false}={}){
+async function ensureNormalVideoFeederR721({force=false,fadeIn=false,trackDuration=null}={}){
   if(stopping || clipActive)return true;
   const visual=await ensureScheduledVisual();
   const period=activeVisualPeriodR721();
@@ -975,7 +1089,8 @@ async function ensureNormalVideoFeederR721({force=false}={}){
   try{
     await stopNormalVideoFeederR721();
     if(stopping || clipActive)return true;
-    return startNormalVideoFeederR721(visual);
+    const plannedDuration=trackDuration===null ? remainingTrackSecondsR726() : Math.max(0,Number(trackDuration)||0);
+    return startNormalVideoFeederR721(visual,{fadeIn,trackDuration:plannedDuration});
   }finally{
     visualSwitching=false;
   }
@@ -1011,7 +1126,7 @@ async function probeHasAudioR721(path){
   }catch(_){return false}
 }
 
-function clipFeederArgsR721(clipPath,{hasAudio=true,duration=0,isBumper=false}={}){
+function clipFeederArgsR721(clipPath,{hasAudio=true,duration=0,isStationInsert=false}={}){
   const args=[
     '-hide_banner','-loglevel','warning','-stats_period','0.5','-progress','pipe:4','-nostats',
     '-fflags','+genpts+discardcorrupt','-err_detect','ignore_err','-re','-i',clipPath,
@@ -1019,7 +1134,7 @@ function clipFeederArgsR721(clipPath,{hasAudio=true,duration=0,isBumper=false}={
   ];
   if(!hasAudio)args.push('-f','lavfi','-i',`anullsrc=r=${AUDIO_SAMPLE_RATE}:cl=stereo`);
   args.push(
-    '-filter_complex',isBumper?bumperFilterComplexR724():clipFilterComplexR721(),
+    '-filter_complex',isStationInsert?bumperFilterComplexR724():clipFilterComplexR721(),
     '-map','[outv]','-an','-sn','-dn',
     ...h264EncoderArgsR721(),
     '-f','h264','pipe:1',
@@ -1055,9 +1170,11 @@ async function playVideoClipR691(previous,item,next){
   const duration=await probeDuration(clipPath).catch(()=>0);
   const hasAudio=await probeHasAudioR721(clipPath);
   state.previous=previous?{type:previous.type||'track',title:previous.title,album:previous.album||'',url:previous.url||''}:null;
-  state.current={type:item.sourceType==='radio-bumper'?'bumper':'clip',title:item.title,album:item.album,url:item.url,startedAt:new Date().toISOString(),duration};
+  const stationInsert=item.sourceType==='radio-bumper'||item.sourceType==='radio-special';
+  state.current={type:item.sourceType==='radio-special'?'special':(item.sourceType==='radio-bumper'?'bumper':'clip'),title:item.title,album:item.album,url:item.url,startedAt:new Date().toISOString(),duration};
   state.next=next?{type:next.type||'track',title:next.title,album:next.album||'',url:next.url||''}:null;
-  setLiveTitleR724(item.sourceType==='radio-bumper'?'ANDRIK METAL RADIO':`КЛИП • ANDRIK — ${shortText(item.title||'VIDEO',34)}`);
+  clearNextPreviewR726();
+  setLiveTitleR724(stationInsert?'ANDRIK METAL RADIO':`КЛИП • ANDRIK — ${shortText(item.title||'VIDEO',34)}`);
 
   let child=null,videoSink=null,audioSink=null,stallTimer=null,forcedReason='';
   try{
@@ -1069,7 +1186,7 @@ async function playVideoClipR691(previous,item,next){
     audioSink=publisher?.stdio?.[3];
     if(!videoSink || videoSink.destroyed || videoSink.writableEnded || !audioSink || audioSink.destroyed || audioSink.writableEnded)throw new Error('R721 persistent A/V pipes unavailable before clip');
 
-    child=spawn('ffmpeg',clipFeederArgsR721(clipPath,{hasAudio,duration,isBumper:item.sourceType==='radio-bumper'}),{stdio:['ignore','pipe','pipe','pipe','pipe']});
+    child=spawn('ffmpeg',clipFeederArgsR721(clipPath,{hasAudio,duration,isStationInsert:stationInsert}),{stdio:['ignore','pipe','pipe','pipe','pipe']});
     clipPublisher=child;
     state.producerRunning=true;
     child.stdout.pipe(videoSink,{end:false});
@@ -1125,6 +1242,7 @@ async function playVideoClipR691(previous,item,next){
     await stopClipFeederR721(child,videoSink,audioSink);
     if(clipPublisher===child)clipPublisher=null;
     state.producerRunning=false;
+    if(item.sourceType==='r2-video')lastClipIdentityR726=primaryIdentity(item);
     clipActive=false;
     if(!stopping){
       try{await ensureNormalVideoFeederR721({force:true});}catch(error){state.lastError=`R721 resume visual: ${cleanText(error?.message||error)}`;}
@@ -1133,30 +1251,39 @@ async function playVideoClipR691(previous,item,next){
   }
 }
 
-function decoderArgs(localAudioPath){
+function decoderArgs(localAudioPath,duration){
+  const outStart=Math.max(0,Number(duration||0)-TRACK_AUDIO_FADE_OUT_R726);
+  const af=[
+    `loudnorm=I=${TRACK_AUDIO_TARGET_I_R726}:LRA=${TRACK_AUDIO_LRA_R726}:TP=${TRACK_AUDIO_TRUE_PEAK_R726}`,
+    `afade=t=in:st=0:d=${TRACK_AUDIO_FADE_IN_R726}`,
+    `afade=t=out:st=${outStart.toFixed(3)}:d=${TRACK_AUDIO_FADE_OUT_R726}`,
+    `aresample=${AUDIO_SAMPLE_RATE}`
+  ].join(',');
   return [
     '-hide_banner','-loglevel','warning',
     '-fflags','+genpts+discardcorrupt','-err_detect','ignore_err',
     '-re','-i',localAudioPath,
     '-map','0:a:0','-vn','-sn','-dn',
-    '-af',`aresample=${AUDIO_SAMPLE_RATE}`,
+    '-af',af,
     '-c:a','pcm_s16le','-ar',String(AUDIO_SAMPLE_RATE),'-ac','2',
     '-f','s16le','pipe:1'
   ];
 }
 
-async function playItem(previous,item,next,following,localAudioPath){
+async function playItem(previous,item,next,following,localAudioPath,nextTrackPreview=null){
   const duration=await probeDuration(localAudioPath||item.url);
   state.previous=previous?{type:previous.type||'track',title:previous.title,album:previous.album||'',url:previous.url||''}:null;
   state.current={type:item.type||'track',title:item.title,album:item.album||'',url:item.url,startedAt:new Date().toISOString(),duration};
   state.next=next?{type:next.type||'track',title:next.title,album:next.album||'',url:next.url||''}:null;
   setLiveTitleR724(`ANDRIK — ${shortText(item.title||'TRACK',42)}`,{delayMs:previous?.type==='track'?TITLE_HANDOFF_DELAY_MS_R724:0});
+  scheduleNextPreviewR726(previousTrackForPreviewR726,nextTrackPreview,duration);
+  await ensureNormalVideoFeederR721({force:true,fadeIn:true,trackDuration:duration});
 
   const audioSink=publisher?.stdio?.[3];
   if(!publisher || publisher.exitCode!==null || !audioSink || audioSink.destroyed) throw new Error('master audio pipe unavailable');
 
   state.producerRunning=true;
-  producer=spawn('ffmpeg',decoderArgs(localAudioPath),{stdio:['ignore','pipe','pipe']});
+  producer=spawn('ffmpeg',decoderArgs(localAudioPath,duration),{stdio:['ignore','pipe','pipe']});
   producer.stderr.on('data',d=>{
     const line=String(d||'').trim();
     if(line){
@@ -1167,18 +1294,25 @@ async function playItem(previous,item,next,following,localAudioPath){
     }
   });
 
-  await new Promise((resolve,reject)=>{
-    const source=producer.stdout;
-    source.pipe(audioSink,{end:false});
-    producer.once('error',reject);
-    producer.once('exit',(code,signal)=>{
-      try{source.unpipe(audioSink);}catch(_){}
-      state.producerRunning=false;
-      producer=null;
-      if(code===0 || stopping) resolve();
-      else reject(new Error(`decoder exit ${code||signal}`));
+  let playedOkR726=false;
+  try{
+    await new Promise((resolve,reject)=>{
+      const source=producer.stdout;
+      source.pipe(audioSink,{end:false});
+      producer.once('error',reject);
+      producer.once('exit',(code,signal)=>{
+        try{source.unpipe(audioSink);}catch(_){}
+        state.producerRunning=false;
+        producer=null;
+        if(code===0 || stopping) resolve();
+        else reject(new Error(`decoder exit ${code||signal}`));
+      });
     });
-  });
+    playedOkR726=true;
+  }finally{
+    clearNextPreviewR726();
+  }
+  if(playedOkR726){rememberTrackR726(item);previousTrackForPreviewR726=item;}
 }
 
 async function radioLoop(){
@@ -1209,6 +1343,7 @@ async function radioLoop(){
       const item=queue[queueIndex];
       const next=queue[queueIndex+1]||queue[0]||null;
       const following=queue[queueIndex+2]||queue[1]||queue[0]||null;
+      const nextTrackPreview=queue.slice(queueIndex+1).find(x=>x?.type==='track')||queue.find(x=>x?.type==='track')||null;
       state.queuePosition=queueIndex+1;
 
       if(item?.type==='clip'){
@@ -1238,14 +1373,50 @@ async function radioLoop(){
       if(following?.type==='track')keep.push(audioCachePath(following));
       pruneAudioCache(keep);
 
-      await playItem(lastPlayed,item,next,following,localAudioPath);
+      await playItem(lastPlayed,item,next,following,localAudioPath,nextTrackPreview);
       lastPlayed=item;
       queueIndex++;
       songsSinceBumperR724++;
       state.songsSinceBumper=songsSinceBumperR724;
       state.nextBumperAfterSongs=bumperAfterSongsR724;
 
-      if(!stopping && bumperLibrary.length && songsSinceBumperR724>=bumperAfterSongsR724){
+      let specialPlayedR726=false;
+      let specialHourlyPlayedR727=false;
+      const nowSpecialR727=Date.now();
+      if(!stopping && specialHourlyInsertR727 && nowSpecialR727-lastSpecialHourlyPlayedAtR727>=SPECIAL_HOURLY_INTERVAL_MS_R727){
+        // R727: hourly station ID has priority at the hour mark so 30min + 60min never play back-to-back.
+        moveUpcomingClipAfterTrackR724();
+        const afterSpecial=queue[queueIndex]||null;
+        if(afterSpecial?.type==='track'){
+          try{await ensureNextTrackReadyR712(afterSpecial)}catch(error){console.error('[special60-prefetch]',cleanText(error?.message||error));}
+        }
+        specialHourlyPlayedR727=await playVideoClipR691(item,specialHourlyInsertR727,afterSpecial);
+        if(specialHourlyPlayedR727){
+          lastPlayed=specialHourlyInsertR727;
+          lastSpecialHourlyPlayedAtR727=Date.now();
+          state.lastSpecialHourlyPlayedAt=new Date(lastSpecialHourlyPlayedAtR727).toISOString();
+          lastSpecialPlayedAtR726=lastSpecialHourlyPlayedAtR727;
+          state.lastSpecialPlayedAt=new Date(lastSpecialPlayedAtR726).toISOString();
+          state.lastError='';
+        }
+      }
+      if(!specialHourlyPlayedR727 && !stopping && specialInsertR726 && Date.now()-lastSpecialPlayedAtR726>=SPECIAL_INTERVAL_MS_R726){
+        // R726/R727: 30-minute station ID is inserted only BETWEEN songs, never interrupts music.
+        moveUpcomingClipAfterTrackR724();
+        const afterSpecial=queue[queueIndex]||null;
+        if(afterSpecial?.type==='track'){
+          try{await ensureNextTrackReadyR712(afterSpecial)}catch(error){console.error('[special30-prefetch]',cleanText(error?.message||error));}
+        }
+        specialPlayedR726=await playVideoClipR691(item,specialInsertR726,afterSpecial);
+        if(specialPlayedR726){
+          lastPlayed=specialInsertR726;
+          lastSpecialPlayedAtR726=Date.now();
+          state.lastSpecialPlayedAt=new Date(lastSpecialPlayedAtR726).toISOString();
+          state.lastError='';
+        }
+      }
+
+      if(!specialHourlyPlayedR727 && !specialPlayedR726 && !stopping && bumperLibrary.length && songsSinceBumperR724>=bumperAfterSongsR724){
         // Keep a station bumper between SONGS, never bumper -> normal clip back-to-back.
         moveUpcomingClipAfterTrackR724();
         const bumper=nextBumperR724();
@@ -1291,8 +1462,8 @@ function publicStatus(){
     mode:state.mode,
     overlayMode:state.overlayMode,
     audioMode:state.audioMode,
-    engine:'R724-PERSISTENT-H264-RELAY-SETTS-BUMPERS',
-    videoPipeline:'R724 TITLE-HANDOFF + 3 BUMPERS / 6-8 SONGS + QR RIGHT + Я ЕСТЬ / R723-R721 PERSISTENT SETTS H264 RELAY',
+    engine:'R726-PERSISTENT-H264-RELAY-POLISHED',
+    videoPipeline:'R726 A/V SONG FADES + PREVIOUS/NEXT T-8s + SPECIAL 30MIN + R725 3 BUMPERS 4-6 + QR RIGHT / R721 ONE RTMPS',
     outputTimeshiftSeconds:OUTPUT_TIMESHIFT_SECONDS,
     videoBitrate:VIDEO_BITRATE,
     audioBitrate:AUDIO_BITRATE,
@@ -1304,6 +1475,13 @@ function publicStatus(){
     subscribeLikeShowSeconds:CTA_SHOW_SECONDS_R722,
     subscribeLikePeriodSeconds:CTA_PERIOD_SECONDS_R722,
     titleHandoffDelayMs:TITLE_HANDOFF_DELAY_MS_R724,
+    nextPreviewSeconds:NEXT_PREVIEW_SECONDS_R726,
+    audioNormalizationTargetLufs:TRACK_AUDIO_TARGET_I_R726,
+    audioTruePeakDb:TRACK_AUDIO_TRUE_PEAK_R726,
+    audioFadeInSeconds:TRACK_AUDIO_FADE_IN_R726,
+    audioFadeOutSeconds:TRACK_AUDIO_FADE_OUT_R726,
+    videoFadeSeconds:VIDEO_FADE_SECONDS_R726,
+    antiRepeatTrackHistory:TRACK_HISTORY_LIMIT_R726,
     qrPosition:'top-right',
     visualTimeZone:state.visualTimeZone,
     forceVisualSlot:runtimeForceVisualSlot||null,
@@ -1326,6 +1504,17 @@ function publicStatus(){
     libraryRefreshSeconds:Math.round(LIBRARY_REFRESH_MS/1000),
     libraryVideos:state.libraryVideos,
     libraryBumpers:state.libraryBumpers,
+    librarySpecial:state.librarySpecial,
+    librarySpecial30:state.librarySpecial30,
+    librarySpecial60:state.librarySpecial60,
+    specialIntervalSeconds:Math.round(SPECIAL_INTERVAL_MS_R726/1000),
+    specialHourlyIntervalSeconds:Math.round(SPECIAL_HOURLY_INTERVAL_MS_R727/1000),
+    specialLoaded:Boolean(specialInsertR726),
+    specialHourlyLoaded:Boolean(specialHourlyInsertR727),
+    lastSpecialPlayedAt:state.lastSpecialPlayedAt,
+    lastSpecialHourlyPlayedAt:state.lastSpecialHourlyPlayedAt,
+    specialDueInSeconds:specialInsertR726?Math.max(0,Math.ceil((SPECIAL_INTERVAL_MS_R726-(Date.now()-lastSpecialPlayedAtR726))/1000)):null,
+    specialHourlyDueInSeconds:specialHourlyInsertR727?Math.max(0,Math.ceil((SPECIAL_HOURLY_INTERVAL_MS_R727-(Date.now()-lastSpecialHourlyPlayedAtR727))/1000)):null,
     bumperSlots:bumperLibrary.map(x=>x.bumperSlot||bumperSlotR724(x)).filter(Boolean),
     songsSinceBumper:songsSinceBumperR724,
     nextBumperAfterSongs:bumperAfterSongsR724,
@@ -1387,6 +1576,12 @@ const server=http.createServer((req,res)=>{
       libraryRefreshSeconds:Math.round(LIBRARY_REFRESH_MS/1000),
       videos:state.libraryVideos,
       bumpers:state.libraryBumpers,
+      special30min:state.librarySpecial30,
+      special60min:state.librarySpecial60,
+      specialLoaded:Boolean(specialInsertR726),
+      specialHourlyLoaded:Boolean(specialHourlyInsertR727),
+      specialDueInSeconds:specialInsertR726?Math.max(0,Math.ceil((SPECIAL_INTERVAL_MS_R726-(Date.now()-lastSpecialPlayedAtR726))/1000)):null,
+      specialHourlyDueInSeconds:specialHourlyInsertR727?Math.max(0,Math.ceil((SPECIAL_HOURLY_INTERVAL_MS_R727-(Date.now()-lastSpecialHourlyPlayedAtR727))/1000)):null,
       bumperSlots:bumperLibrary.map(x=>x.bumperSlot||bumperSlotR724(x)).filter(Boolean),
       songsSinceBumper:songsSinceBumperR724,
       nextBumperAfterSongs:bumperAfterSongsR724,
@@ -1404,7 +1599,7 @@ const server=http.createServer((req,res)=>{
 });
 
 server.listen(PORT,'0.0.0.0',()=>{
-  console.log(`ANDRIK Radio R724 BUMPERS + TITLE SYNC + QR RIGHT / R721-PERSISTENT-LIVE listening on :${PORT}`);
+  console.log(`ANDRIK Radio R726 POLISH + SPECIAL30 + LOUDNORM + FADE + NEXT + ANTIREPEAT / R721-PERSISTENT-LIVE listening on :${PORT}`);
   radioLoop();
 });
 
