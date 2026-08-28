@@ -39,6 +39,9 @@ const EVENING_VISUAL_URL = process.env.EVENING_VISUAL_URL || EVENING_VISUAL;
 const NIGHT_VISUAL_URL = process.env.NIGHT_VISUAL_URL || NIGHT_VISUAL;
 const EMERGENCY_VISUAL = process.env.EMERGENCY_VISUAL || new URL('../assets/live-eye-r223.mp4', import.meta.url).pathname;
 const QR_OVERLAY = process.env.QR_OVERLAY || new URL('../assets/andrik-qr-r612.png', import.meta.url).pathname;
+const CTA_OVERLAY_R722 = process.env.CTA_OVERLAY_R722 || new URL('../assets/subscribe-like-r722.png', import.meta.url).pathname;
+const CTA_SHOW_SECONDS_R722 = 8;
+const CTA_PERIOD_SECONDS_R722 = 300; // every 5 minutes during the normal radio visual
 // R721 keeps the proven 100-frame / 4-second exact-periodic QTRLE loops from R720.
 // The EQ is encoded inside the current local H264 feeder, while the YouTube RTMPS
 // publisher stays open permanently across MP3, clip and visual-period switches.
@@ -74,13 +77,13 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R721-PERSISTENT-LIVE-NOCROP-RED-TITLE-SEAMLESS-EQ',
-  mode: 'R721 ONE PERSISTENT RTMPS / TRUE NO-CROP FIT / RED LINE+OUTLINE+TITLE SHADOW / EXACT EQ / NO CLIP RECONNECT',
+  version: 'R723-GREEN-QR-R722-PRESERVED',
+  mode: 'R723 CLEAN GREEN QR / R722 SUBSCRIBE-LIKE / R721 PERSISTENT LIVE / TRUE NO-CROP FIT / RED TITLE / EXACT EQ',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
   producerRunning: false,
-  overlayMode: 'R721 1920x1080 TRUE FIT / RED LINE + RED/BLACK TITLE OUTLINE + TRANSLUCENT TITLE SHADOW / EQ BELOW TITLE / QR',
+  overlayMode: 'R723 CLEAN GREEN QR / NO BLACK FRAME + R722 CTA + RED TITLE + EQ',
   audioMode: 'R721 PERSISTENT PCM CLOCK + AAC-LC 128kbps / ONE RTMPS SESSION / 4500k H264 RELAY / 6s FIFO',
   visualTimeZone: VISUAL_TIME_ZONE,
   visualPeriod: null,
@@ -740,8 +743,11 @@ function titleOverlayFiltersR721(){
 
 function normalVideoFilterComplexR721(){
   const vf=titleOverlayFiltersR721();
-  // setpts=N/(fps*TB) removes any timestamp discontinuity from -stream_loop at 4s -> 0s.
-  return `[0:v]${vf}[base];[2:v]fps=${VIDEO_FPS},setpts=N/(${VIDEO_FPS}*TB),format=argb[eqv];[base][eqv]overlay=x=(W-w)/2:y=H-h-64:shortest=0:format=auto,format=yuv420p[eqbase];[1:v]scale=160:160:flags=lanczos,format=yuva420p[qr];[eqbase][qr]overlay=24:24:shortest=0:format=auto,format=yuv420p[outv]`;
+  // R722: keep the R721 seamless EQ and add one compact SUBSCRIBE + thumbs-up LIKE card.
+  // It is visible for 8 seconds every 5 minutes. The CTA is intentionally NOT burned
+  // into owner video clips, so short official clips remain clean and unobstructed.
+  const ctaEnable=`lt(mod(t\,${CTA_PERIOD_SECONDS_R722})\,${CTA_SHOW_SECONDS_R722})`;
+  return `[0:v]${vf}[base];[2:v]fps=${VIDEO_FPS},setpts=N/(${VIDEO_FPS}*TB),format=argb[eqv];[base][eqv]overlay=x=(W-w)/2:y=H-h-64:shortest=0:format=auto,format=yuv420p[eqbase];[1:v]scale=160:160:flags=lanczos,format=yuva420p[qr];[eqbase][qr]overlay=24:24:shortest=0:format=auto,format=yuv420p[qrbase];[3:v]format=rgba[cta];[qrbase][cta]overlay=x=(W-w)/2:y=46:shortest=0:format=auto:enable='${ctaEnable}',format=yuv420p[outv]`;
 }
 
 function clipFilterComplexR721(){
@@ -831,6 +837,7 @@ function normalVideoFeederArgsR721(visualPath,eqPath){
     '-thread_queue_size','64','-re','-stream_loop','-1','-i',visualPath,
     '-loop','1','-framerate','1','-i',QR_OVERLAY,
     '-thread_queue_size','32','-re','-stream_loop','-1','-i',eqPath,
+    '-loop','1','-framerate','1','-i',CTA_OVERLAY_R722,
     '-filter_complex',normalVideoFilterComplexR721(),
     '-map','[outv]','-an','-sn','-dn',
     ...h264EncoderArgsR721(),
@@ -860,6 +867,7 @@ function startNormalVideoFeederR721(visualPath){
   const eq=equalizerSpecR721();
   if(!existsSync(visualPath) || statSync(visualPath).size<300000)throw new Error(`visual missing: ${visualPath}`);
   if(!existsSync(QR_OVERLAY) || statSync(QR_OVERLAY).size<20000)throw new Error(`QR overlay missing: ${QR_OVERLAY}`);
+  if(!existsSync(CTA_OVERLAY_R722) || statSync(CTA_OVERLAY_R722).size<5000)throw new Error(`R722 CTA overlay missing: ${CTA_OVERLAY_R722}`);
   if(!existsSync(eq.path) || statSync(eq.path).size<20000)throw new Error(`equalizer missing: ${eq.path}`);
 
   const child=spawn('ffmpeg',normalVideoFeederArgsR721(visualPath,eq.path),{stdio:['ignore','pipe','pipe']});
@@ -1191,7 +1199,7 @@ function publicStatus(){
     overlayMode:state.overlayMode,
     audioMode:state.audioMode,
     engine:'R721-PERSISTENT-H264-RELAY-SETTS',
-    videoPipeline:'ONE x264 H264 FEEDER -> PERSISTENT SETTS H264 RELAY -> FIFO -> SAME RTMPS SESSION (NO CROP / NO CLIP RECONNECT / NO MJPEG)',
+    videoPipeline:'R723 R722 R721 PERSISTENT SETTS H264 RELAY + CLEAN GREEN QR + PERIODIC CTA (NO CROP / NO CLIP RECONNECT / NO MJPEG)',
     outputTimeshiftSeconds:OUTPUT_TIMESHIFT_SECONDS,
     videoBitrate:VIDEO_BITRATE,
     audioBitrate:AUDIO_BITRATE,
@@ -1199,6 +1207,9 @@ function publicStatus(){
     videoFps:VIDEO_FPS,
     videoGop:VIDEO_GOP,
     qrOverlay:QR_OVERLAY,
+    subscribeLikeOverlay:CTA_OVERLAY_R722,
+    subscribeLikeShowSeconds:CTA_SHOW_SECONDS_R722,
+    subscribeLikePeriodSeconds:CTA_PERIOD_SECONDS_R722,
     visualTimeZone:state.visualTimeZone,
     forceVisualSlot:runtimeForceVisualSlot||null,
     visualAutoSchedule:runtimeVisualAutoSchedule,
@@ -1289,7 +1300,7 @@ const server=http.createServer((req,res)=>{
 });
 
 server.listen(PORT,'0.0.0.0',()=>{
-  console.log(`ANDRIK Radio R721-PERSISTENT-LIVE listening on :${PORT}`);
+  console.log(`ANDRIK Radio R723-GREEN-QR / R721-PERSISTENT-LIVE listening on :${PORT}`);
   radioLoop();
 });
 

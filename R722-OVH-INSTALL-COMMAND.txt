@@ -1,0 +1,1 @@
+curl -fsSL https://andrikmetal.com/radio247/vm-lite/install-r722-subscribe-like-r721-preserved.sh | sudo env ANDRIK_SITE_BASE=https://andrikmetal.com bash

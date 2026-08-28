@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787910690127-9a4d6ab8d9",
-  "release": "R721",
-  "archiveName": "R721-PERSISTENT-LIVE-NOCROP-RED-TITLE-SEAMLESS-EQ-R720-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "01aa69cc755b34e4b37602dadb9312aed89bbf14",
-  "backupSha": "01aa69cc755b34e4b37602dadb9312aed89bbf14",
+  "operationId": "publish-1787912870138-787470c8aa",
+  "release": "R723",
+  "archiveName": "R723-GREEN-QR-R722-SUBSCRIBE-LIKE-R721-LIVE-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "d6f19b55871abfcff3dfa6cfa182c66fb7f908bf",
+  "backupSha": "d6f19b55871abfcff3dfa6cfa182c66fb7f908bf",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-28T09:51:30.628Z"
+  "generatedAt": "2026-08-28T10:27:51.616Z"
 }
