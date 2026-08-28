@@ -42,10 +42,10 @@ const QR_OVERLAY = process.env.QR_OVERLAY || new URL('../assets/andrik-qr-r612.p
 // R717: R706's proven visible motion is pre-rendered into four tiny transparent loops.
  // This keeps the R715/R713 direct YouTube publisher: no MJPEG feeder, no showfreqs audio branch.
 const EQUALIZER_FILES_R717 = Object.freeze({
-  morning: new URL('../assets/equalizer-morning-r717.mov', import.meta.url).pathname,
-  day: new URL('../assets/equalizer-day-r717.mov', import.meta.url).pathname,
-  evening: new URL('../assets/equalizer-evening-r717.mov', import.meta.url).pathname,
-  night: new URL('../assets/equalizer-night-r717.mov', import.meta.url).pathname
+  morning: new URL('../assets/equalizer-morning-r719.mov', import.meta.url).pathname,
+  day: new URL('../assets/equalizer-day-r719.mov', import.meta.url).pathname,
+  evening: new URL('../assets/equalizer-evening-r719.mov', import.meta.url).pathname,
+  night: new URL('../assets/equalizer-night-r719.mov', import.meta.url).pathname
 });
 const OUTPUT_TIMESHIFT_SECONDS = 6; // R637: network recovery cushion; packets are NEVER dropped
 const VIDEO_BITRATE = '4500k'; // R637: 1080p25 low-motion radio visual, bounded CBR
@@ -73,13 +73,13 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R718-FULLSCREEN-INSET-FIX-EQ-BELOW-TITLE-R715-STABLE',
-  mode: 'R718 FULLSCREEN INSET AUTO-CROP + STRETCH / R715 STABLE DIRECT YOUTUBE / R706 VISIBLE MOTION 4 TIME EQ / EQ BELOW TITLE / AUTO LIVE / NO MJPEG',
+  version: 'R719-SEAMLESS-EQ-LOOP-R718-PRESERVED',
+  mode: 'R719 SEAMLESS 4S EQ LOOP / R718 FULLSCREEN + EQ BELOW TITLE / R715 STABLE DIRECT YOUTUBE / AUTO LIVE / NO MJPEG',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
   producerRunning: false,
-  overlayMode: 'R718 1920x1080 FULLSCREEN / SAFE BLACK-INSET CROP + STRETCH / CLEAN TITLE / R706 EQ BELOW TITLE / QR / DIRECT VIDEO INPUT',
+  overlayMode: 'R719 1920x1080 FULLSCREEN / SEAMLESS PERIODIC EQ BELOW TITLE / CLEAN TITLE / QR / DIRECT VIDEO INPUT',
   audioMode: 'R678/R695 DIRECT MASTER / MP3 CONTINUOUS PCM + AAC-LC 128kbps / 4500k CBR / 9000k VBV / 6s FIFO',
   visualTimeZone: VISUAL_TIME_ZONE,
   visualPeriod: null,
@@ -102,7 +102,7 @@ const state = {
   lastFfmpegLine: '',
   equalizerPeriod: null,
   equalizerStyle: null,
-  equalizerEngine: 'R718-R706-PRERENDERED-QTRLE-4-SLOT-DIRECT'
+  equalizerEngine: 'R719-SEAMLESS-PERIODIC-QTRLE-4-SLOT-DIRECT'
 };
 
 let publisher = null;
@@ -736,7 +736,7 @@ async function ensureScheduledVisual(){
   }
 }
 
-function equalizerSpecR718(){
+function equalizerSpecR719(){
   const period=FORCE_VISUAL_SLOT || visualPeriodForHour(localHourInTimeZone());
   const specs={
     morning:{name:'morning-soft-gold-motion-r706',path:EQUALIZER_FILES_R717.morning},
@@ -774,7 +774,7 @@ function startPublisher(visualPath){
   const titleFontPart=titleFont?`fontfile='${ffFilterPath(titleFont)}':`:'';
   const curPath=ffFilterPath(LIVE_CURRENT_FILE);
   const tickerPath=ffFilterPath(LIVE_TICKER_FILE);
-  const eq=equalizerSpecR718();
+  const eq=equalizerSpecR719();
   if(!existsSync(eq.path) || statSync(eq.path).size<20000) throw new Error(`equalizer missing: ${eq.path}`);
   const visualCrop=String(state.visualInsetCrop||'');
   const vf=[
@@ -789,10 +789,10 @@ function startPublisher(visualPath){
     `drawtext=${titleFontPart}textfile='${curPath}':reload=${VIDEO_FPS}:fontcolor=0xF3EFE8:fontsize=58:x=(w-text_w)/2:y=h-188:borderw=3:bordercolor=black@1:shadowcolor=black@0.95:shadowx=3:shadowy=3`,
     `drawtext=${fontPart}textfile='${tickerPath}':reload=${VIDEO_FPS}:fontcolor=yellow:fontsize=28:x='w-mod(t*110,text_w+w)':y=h-58:borderw=3:bordercolor=black@1:shadowcolor=black@1:shadowx=2:shadowy=2`
   ].join(',');
-  // R718: visible motion from the proven R706 design, but pre-rendered to a tiny
+  // R719: seamless 4-second periodic motion pre-rendered to a tiny
   // transparent QTRLE loop. The stable R715/R713 publisher still owns the only 1080p
   // encoder and the original PCM audio path is untouched.
-  // R718: title starts at h-188; ticker starts at h-58. Keep the EQ bottom fixed
+  // R719: title starts at h-188; ticker starts at h-58. Keep the EQ bottom fixed
   // at h-64, so it sits BETWEEN the title and ticker with a small safe gap.
   const filterComplex=`[0:v]${vf}[base];[3:v]fps=${VIDEO_FPS},format=argb,setpts=PTS-STARTPTS[eqv];[base][eqv]overlay=x=(W-w)/2:y=H-h-64:shortest=1:format=auto,format=yuv420p[eqbase];[1:v]scale=160:160:flags=lanczos,format=yuva420p[qr];[eqbase][qr]overlay=24:24:format=yuv420[outv]`;
 

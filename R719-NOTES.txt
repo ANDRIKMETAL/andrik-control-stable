@@ -1,0 +1,33 @@
+ANDRIK R719 — SEAMLESS EQ LOOP / R718 PRESERVED
+Date: 2026-08-28
+
+WHY
+- R718 is visually correct: fullscreen is fixed and the equalizer sits below the track title.
+- The four R717 QTRLE equalizer assets are 4.000 s / 100 frames, but their last frame does not meet the first frame smoothly.
+- Measured seam jump in the old files was much larger than a normal frame step, which caused a visible twitch every 4 seconds.
+
+R719
+- Preserves the entire R718 radio/video/YouTube pipeline.
+- Replaces only the four tiny transparent equalizer loops and updates their asset references/version.
+- Each new loop is exactly 100 frames at 25 fps (4.000 s).
+- Motion is generated only from integer harmonics of the 4-second cycle, so frame 100 is mathematically identical to frame 0.
+- The 99 -> 0 transition is therefore one normal animation step, not a reset.
+- EQ remains below the track title at H-h-64 and above the ticker.
+- Morning/day/evening/night color/style separation is preserved.
+- QTRLE + ARGB transparency is preserved.
+- R718 fullscreen black-inset detection + 1920x1080 stretch is preserved.
+- R715 stable YouTube transport is untouched: 1080p25, 4500k CBR, 9000k VBV, GOP 50, FIFO 8192, 6 s timeshift, no packet dropping.
+- No R706 MJPEG/GEQ and no showfreqs branch.
+
+SEAM VALIDATION (new loops)
+- morning: wrap/normal-step ratio ~0.89
+- day: wrap/normal-step ratio ~0.89
+- evening: wrap/normal-step ratio ~0.89
+- night: wrap/normal-step ratio ~0.99
+A ratio near 1 means the loop boundary is visually the same size as an ordinary adjacent-frame transition.
+
+VALIDATION
+- node --check server.mjs: PASS
+- bash -n installer: PASS
+- all 4 loops: qtrle + argb + 25 fps + 100 frames: PASS
+- R718 fullscreen and EQ placement checks preserved.

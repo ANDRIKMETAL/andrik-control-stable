@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787888247018-c33386d105",
-  "release": "R718",
-  "archiveName": "R718-FULLSCREEN-EQ-BELOW-TITLE-R715-STABLE-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "ff9a849a0545434196bc4f0950ac6bffd8800c5f",
-  "backupSha": "ff9a849a0545434196bc4f0950ac6bffd8800c5f",
+  "operationId": "publish-1787888782189-0b29ae32a6",
+  "release": "R719",
+  "archiveName": "R719-SEAMLESS-EQ-R718-FULLSCREEN-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "3c0362d08ec5441b4d395fdf9c918c23792a54f6",
+  "backupSha": "3c0362d08ec5441b4d395fdf9c918c23792a54f6",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-28T03:37:27.559Z"
+  "generatedAt": "2026-08-28T03:46:24.582Z"
 }
