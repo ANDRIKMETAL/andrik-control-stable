@@ -25,18 +25,20 @@ let lastYoutubeEnsureAtR715=0;
 async function maybeEnsureYoutubeLiveR715(headers,status){
   if(!status || status.service!=='active' || !status.publisher)return null;
   const now=Date.now();
-  if(now-lastYoutubeEnsureAtR715<180000)return null;
+  // R720: check YouTube LIVE every ~60 s while the encoder is publishing, so the public LIVE badge
+  // is recovered quickly after a transient YouTube/API state drop.
+  if(now-lastYoutubeEnsureAtR715<60000)return null;
   lastYoutubeEnsureAtR715=now;
   try{
     const d=await jsonFetch(BASE+'/api/radio-agent-r715/youtube-ensure',{method:'POST',headers,body:'{}'});
     const live=Boolean(d?.active)||String(d?.lifeCycleStatus||'').toLowerCase()==='live';
-    if(!live && d?.pending)lastYoutubeEnsureAtR715=Date.now()-150000; // retry in ~30 s while YouTube moves CREATED/READY/TESTING -> LIVE
+    if(!live && d?.pending)lastYoutubeEnsureAtR715=Date.now()-40000; // retry in ~20 s while YouTube moves CREATED/READY/TESTING -> LIVE
     if(d?.recovered || !live || d?.ok===false){
       console.log(new Date().toISOString(),'YouTube LIVE self-heal:',JSON.stringify(d));
     }
     return d;
   }catch(e){
-    lastYoutubeEnsureAtR715=Date.now()-150000; // retry in ~30 s after temporary Control/API failure
+    lastYoutubeEnsureAtR715=Date.now()-40000; // retry in ~20 s after temporary Control/API failure
     console.error(new Date().toISOString(),'YouTube LIVE self-heal:',e.message||e);
     return null;
   }

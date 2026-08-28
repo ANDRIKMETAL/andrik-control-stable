@@ -1,0 +1,17 @@
+R720 — NO CROP + RED TITLE + EXACT SEAMLESS EQ + LIVE GUARD
+
+1. TRUE FULL FRAME FIT / NO CROP is permanent in both MP3 visuals and owner MP4 clips:
+   scale=1920x1080 force_original_aspect_ratio=decrease + pad.
+   The old automatic black-inset crop is disabled in the active pipeline, so dark artwork
+   can never be mistaken for a border and cut.
+2. Red separator above the current-song title is restored.
+3. Current-song title is white with a red outline and black drop shadow, matching the
+   HEAVY STREAM reference screenshot.
+4. Four EQ loops were rebuilt as exact mathematical 4-second periods (100 frames at 25 fps).
+   Boundary frame motion matches ordinary adjacent motion, removing the visible end-loop kick.
+5. Old R659 ExecStartPre fullscreen guard is removed by the installer and by the FULL FIT helper.
+   FULL FIT no longer rewrites server.mjs; it only verifies R720 and cleanly restarts.
+6. YouTube LIVE self-heal check is shortened to ~60 s with ~20 s pending retry, so LIVE state
+   recovers faster after temporary API/broadcast-state drops.
+7. R715/R713 direct YouTube transport, 1080p25, 4500k CBR, 9000k VBV, FIFO 8192,
+   6 s timeshift, MP3 exit-234 hotfix, R2 clips/delete, 4 visual slots and scheduler are preserved.

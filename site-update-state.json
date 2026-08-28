@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787888782189-0b29ae32a6",
-  "release": "R719",
-  "archiveName": "R719-SEAMLESS-EQ-R718-FULLSCREEN-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "3c0362d08ec5441b4d395fdf9c918c23792a54f6",
-  "backupSha": "3c0362d08ec5441b4d395fdf9c918c23792a54f6",
+  "operationId": "publish-1787903905630-7851bd2af3",
+  "release": "R720",
+  "archiveName": "R720-NOCROP-RED-TITLE-SEAMLESS-EQ-LIVE-GUARD-R719-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "af31ae8926f30aff20418b33fb861d2569141223",
+  "backupSha": "af31ae8926f30aff20418b33fb861d2569141223",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-28T03:46:24.582Z"
+  "generatedAt": "2026-08-28T07:58:28.376Z"
 }

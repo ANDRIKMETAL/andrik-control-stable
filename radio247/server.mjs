@@ -39,13 +39,13 @@ const EVENING_VISUAL_URL = process.env.EVENING_VISUAL_URL || EVENING_VISUAL;
 const NIGHT_VISUAL_URL = process.env.NIGHT_VISUAL_URL || NIGHT_VISUAL;
 const EMERGENCY_VISUAL = process.env.EMERGENCY_VISUAL || new URL('../assets/live-eye-r223.mp4', import.meta.url).pathname;
 const QR_OVERLAY = process.env.QR_OVERLAY || new URL('../assets/andrik-qr-r612.png', import.meta.url).pathname;
-// R717: R706's proven visible motion is pre-rendered into four tiny transparent loops.
- // This keeps the R715/R713 direct YouTube publisher: no MJPEG feeder, no showfreqs audio branch.
-const EQUALIZER_FILES_R717 = Object.freeze({
-  morning: new URL('../assets/equalizer-morning-r719.mov', import.meta.url).pathname,
-  day: new URL('../assets/equalizer-day-r719.mov', import.meta.url).pathname,
-  evening: new URL('../assets/equalizer-evening-r719.mov', import.meta.url).pathname,
-  night: new URL('../assets/equalizer-night-r719.mov', import.meta.url).pathname
+// R720: exact-periodic 4-second QTRLE loops. Frame-to-frame motion stays continuous
+// across the 4s -> 0s boundary, so the equalizer has no visible end-of-loop kick.
+const EQUALIZER_FILES_R720 = Object.freeze({
+  morning: new URL('../assets/equalizer-morning-r720.mov', import.meta.url).pathname,
+  day: new URL('../assets/equalizer-day-r720.mov', import.meta.url).pathname,
+  evening: new URL('../assets/equalizer-evening-r720.mov', import.meta.url).pathname,
+  night: new URL('../assets/equalizer-night-r720.mov', import.meta.url).pathname
 });
 const OUTPUT_TIMESHIFT_SECONDS = 6; // R637: network recovery cushion; packets are NEVER dropped
 const VIDEO_BITRATE = '4500k'; // R637: 1080p25 low-motion radio visual, bounded CBR
@@ -73,13 +73,13 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R719-SEAMLESS-EQ-LOOP-R718-PRESERVED',
-  mode: 'R719 SEAMLESS 4S EQ LOOP / R718 FULLSCREEN + EQ BELOW TITLE / R715 STABLE DIRECT YOUTUBE / AUTO LIVE / NO MJPEG',
+  version: 'R720-NOCROP-RED-TITLE-SEAMLESS-EQ-LIVE-GUARD',
+  mode: 'R720 TRUE NO-CROP FIT / RED TITLE LINE+OUTLINE / EXACT PERIODIC EQ / R715 DIRECT YOUTUBE / FAST AUTO LIVE',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
   producerRunning: false,
-  overlayMode: 'R719 1920x1080 FULLSCREEN / SEAMLESS PERIODIC EQ BELOW TITLE / CLEAN TITLE / QR / DIRECT VIDEO INPUT',
+  overlayMode: 'R720 1920x1080 TRUE NO-CROP FIT / RED LINE + RED TITLE OUTLINE / EQ BELOW TITLE / QR / DIRECT VIDEO INPUT',
   audioMode: 'R678/R695 DIRECT MASTER / MP3 CONTINUOUS PCM + AAC-LC 128kbps / 4500k CBR / 9000k VBV / 6s FIFO',
   visualTimeZone: VISUAL_TIME_ZONE,
   visualPeriod: null,
@@ -102,7 +102,7 @@ const state = {
   lastFfmpegLine: '',
   equalizerPeriod: null,
   equalizerStyle: null,
-  equalizerEngine: 'R719-SEAMLESS-PERIODIC-QTRLE-4-SLOT-DIRECT'
+  equalizerEngine: 'R720-EXACT-PERIODIC-QTRLE-4-SLOT-DIRECT'
 };
 
 let publisher = null;
@@ -711,7 +711,7 @@ async function ensureScheduledVisual(){
     const path=await ensureVisualSpec(spec);
     state.visualPeriod=VISUAL_AUTO_SCHEDULE_R658?`auto-${period}`:(FORCE_VISUAL_SLOT?`manual-${period}`:period);
     state.visualPath=path;
-    state.visualInsetCrop=await detectInsetBlackFrameCrop(path).catch(()=> '');
+    state.visualInsetCrop=''; // R720: never crop scheduled visual
     return path;
   }catch(error){
     // R712 safe four-slot rollout: until MORNING exists, use DAY rather than killing the radio.
@@ -721,7 +721,7 @@ async function ensureScheduledVisual(){
         state.lastError=`R712 morning not assigned yet — temporary DAY fallback: ${cleanText(error?.message||error)}`;
         state.visualPeriod=VISUAL_AUTO_SCHEDULE_R658?'auto-morning-fallback-day':'morning-fallback-day';
         state.visualPath=fallback;
-        state.visualInsetCrop=await detectInsetBlackFrameCrop(fallback).catch(()=> '');
+        state.visualInsetCrop=''; // R720: never crop DAY fallback
         return fallback;
       }catch(_){ }
     }
@@ -729,20 +729,20 @@ async function ensureScheduledVisual(){
       state.lastError=`R622 ${period} local visual fallback: ${cleanText(error?.message||error)}`;
       state.visualPeriod=`${period}-emergency`;
       state.visualPath=EMERGENCY_VISUAL;
-      state.visualInsetCrop=await detectInsetBlackFrameCrop(EMERGENCY_VISUAL).catch(()=> '');
+      state.visualInsetCrop=''; // R720: never crop emergency visual
       return EMERGENCY_VISUAL;
     }
     throw error;
   }
 }
 
-function equalizerSpecR719(){
+function equalizerSpecR720(){
   const period=FORCE_VISUAL_SLOT || visualPeriodForHour(localHourInTimeZone());
   const specs={
-    morning:{name:'morning-soft-gold-motion-r706',path:EQUALIZER_FILES_R717.morning},
-    day:{name:'day-steel-motion-r706',path:EQUALIZER_FILES_R717.day},
-    evening:{name:'evening-amber-motion-r706',path:EQUALIZER_FILES_R717.evening},
-    night:{name:'night-blue-motion-r706',path:EQUALIZER_FILES_R717.night}
+    morning:{name:'morning-soft-gold-seamless-r720',path:EQUALIZER_FILES_R720.morning},
+    day:{name:'day-steel-seamless-r720',path:EQUALIZER_FILES_R720.day},
+    evening:{name:'evening-amber-seamless-r720',path:EQUALIZER_FILES_R720.evening},
+    night:{name:'night-blue-seamless-r720',path:EQUALIZER_FILES_R720.night}
   };
   const spec=specs[period]||specs.day;
   state.equalizerPeriod=period;
@@ -774,25 +774,26 @@ function startPublisher(visualPath){
   const titleFontPart=titleFont?`fontfile='${ffFilterPath(titleFont)}':`:'';
   const curPath=ffFilterPath(LIVE_CURRENT_FILE);
   const tickerPath=ffFilterPath(LIVE_TICKER_FILE);
-  const eq=equalizerSpecR719();
+  const eq=equalizerSpecR720();
   if(!existsSync(eq.path) || statSync(eq.path).size<20000) throw new Error(`equalizer missing: ${eq.path}`);
-  const visualCrop=String(state.visualInsetCrop||'');
   const vf=[
-    // R718: if an R2 master contains a 16:9 picture boxed inside a larger black
-    // canvas, remove only that large symmetric black inset, then stretch the real
-    // picture to the full 1920x1080 frame. Ordinary full-frame visuals are never cropped.
-    ...(visualCrop?[visualCrop]:[]),
-    'scale=1920:1080:flags=lanczos',
+    // R720 TRUE NO-CROP: preserve the complete source frame. A 16:9 source fills
+    // 1920x1080 exactly; any other aspect ratio is letter/pillar-boxed rather than cut.
+    'scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos',
+    'pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black',
     'setsar=1',
     `fps=${VIDEO_FPS}`,
     'format=yuv420p',
-    `drawtext=${titleFontPart}textfile='${curPath}':reload=${VIDEO_FPS}:fontcolor=0xF3EFE8:fontsize=58:x=(w-text_w)/2:y=h-188:borderw=3:bordercolor=black@1:shadowcolor=black@0.95:shadowx=3:shadowy=3`,
+    // Red separator + white title with red outline and a black drop shadow, matching
+    // the proven HEAVY STREAM look while keeping the background clean.
+    'drawbox=x=92:y=ih-208:w=iw-184:h=4:color=0xE00026@0.96:t=fill',
+    `drawtext=${titleFontPart}textfile='${curPath}':reload=${VIDEO_FPS}:fontcolor=0xF8F4EE:fontsize=58:x=(w-text_w)/2:y=h-188:borderw=4:bordercolor=0xD60024@1:shadowcolor=black@1:shadowx=4:shadowy=4`,
     `drawtext=${fontPart}textfile='${tickerPath}':reload=${VIDEO_FPS}:fontcolor=yellow:fontsize=28:x='w-mod(t*110,text_w+w)':y=h-58:borderw=3:bordercolor=black@1:shadowcolor=black@1:shadowx=2:shadowy=2`
   ].join(',');
-  // R719: seamless 4-second periodic motion pre-rendered to a tiny
+  // R720: mathematically periodic 4-second motion pre-rendered to a tiny
   // transparent QTRLE loop. The stable R715/R713 publisher still owns the only 1080p
   // encoder and the original PCM audio path is untouched.
-  // R719: title starts at h-188; ticker starts at h-58. Keep the EQ bottom fixed
+  // R720: title starts at h-188; ticker starts at h-58. Keep the EQ bottom fixed
   // at h-64, so it sits BETWEEN the title and ticker with a small safe gap.
   const filterComplex=`[0:v]${vf}[base];[3:v]fps=${VIDEO_FPS},format=argb,setpts=PTS-STARTPTS[eqv];[base][eqv]overlay=x=(W-w)/2:y=H-h-64:shortest=1:format=auto,format=yuv420p[eqbase];[1:v]scale=160:160:flags=lanczos,format=yuva420p[qr];[eqbase][qr]overlay=24:24:format=yuv420[outv]`;
 
@@ -878,14 +879,15 @@ function clipFilterComplex(insetCrop=''){
   const curPath=ffFilterPath(LIVE_CURRENT_FILE);
   const tickerPath=ffFilterPath(LIVE_TICKER_FILE);
   const vf=[
-    // R718: remove only a detected large symmetric black inset, then stretch
-    // the actual clip picture to 1920x1080. This prevents the boxed/tiny frame.
-    ...(insetCrop?[insetCrop]:[]),
-    'scale=1920:1080:flags=lanczos',
+    // R720 TRUE NO-CROP for owner MP4 clips too. Never run cropdetect here: dark
+    // artwork may legitimately contain black edges and must remain fully visible.
+    'scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos',
+    'pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black',
     'setsar=1',
     `fps=${VIDEO_FPS}`,
     'format=yuv420p',
-    `drawtext=${titleFontPart}textfile='${curPath}':reload=${VIDEO_FPS}:fontcolor=0xF3EFE8:fontsize=58:x=(w-text_w)/2:y=h-188:borderw=3:bordercolor=black@1:shadowcolor=black@0.95:shadowx=3:shadowy=3`,
+    'drawbox=x=92:y=ih-208:w=iw-184:h=4:color=0xE00026@0.96:t=fill',
+    `drawtext=${titleFontPart}textfile='${curPath}':reload=${VIDEO_FPS}:fontcolor=0xF8F4EE:fontsize=58:x=(w-text_w)/2:y=h-188:borderw=4:bordercolor=0xD60024@1:shadowcolor=black@1:shadowx=4:shadowy=4`,
     `drawtext=${fontPart}textfile='${tickerPath}':reload=${VIDEO_FPS}:fontcolor=yellow:fontsize=28:x='w-mod(t*110,text_w+w)':y=h-58:borderw=3:bordercolor=black@1:shadowcolor=black@1:shadowx=2:shadowy=2`
   ].join(',');
   return `[0:v]${vf}[base];[1:v]scale=160:160:flags=lanczos,format=yuva420p[qr];[base][qr]overlay=24:24:format=yuv420[outv]`;
@@ -906,7 +908,7 @@ async function playVideoClipR691(previous,item,next){
   writeFileSync(LIVE_CURRENT_FILE,`КЛИП • ANDRIK — ${shortText(item.title||'VIDEO',34)}`,'utf8');
 
   try{
-    const insetCrop=await detectInsetBlackFrameCrop(clipPath).catch(()=> ''); // R718 SAFE BLACK-INSET ONLY
+    const insetCrop=''; // R720: absolute no-crop policy
     await stopMasterForClip();
     if(stopping)return false;
     await sleep(350);
@@ -1098,7 +1100,7 @@ function publicStatus(){
     overlayMode:state.overlayMode,
     audioMode:state.audioMode,
     engine:'R678-R695-DIRECT-FFMPEG',
-    videoPipeline:'DIRECT MP4 + TINY R706 EQ LOOP -> CLEAN TEXT/QR -> x264 -> FIFO -> RTMPS (NO MJPEG, AUDIO UNTOUCHED)',
+    videoPipeline:'DIRECT MP4 TRUE FIT + TINY R720 PERIODIC EQ -> RED TITLE/QR -> x264 -> FIFO -> RTMPS (NO CROP, NO MJPEG, AUDIO UNTOUCHED)',
     outputTimeshiftSeconds:OUTPUT_TIMESHIFT_SECONDS,
     videoBitrate:VIDEO_BITRATE,
     audioBitrate:AUDIO_BITRATE,
