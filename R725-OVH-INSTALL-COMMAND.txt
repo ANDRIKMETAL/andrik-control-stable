@@ -1,0 +1,1 @@
+curl -fsSL https://andrikmetal.com/radio247/vm-lite/install-r725-cta-2min-bumpers-4-6-r724-preserved.sh | sudo env ANDRIK_SITE_BASE=https://andrikmetal.com bash

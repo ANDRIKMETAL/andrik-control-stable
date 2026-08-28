@@ -41,10 +41,10 @@ const EMERGENCY_VISUAL = process.env.EMERGENCY_VISUAL || new URL('../assets/live
 const QR_OVERLAY = process.env.QR_OVERLAY || new URL('../assets/andrik-qr-r612.png', import.meta.url).pathname;
 const CTA_OVERLAY_R722 = process.env.CTA_OVERLAY_R722 || new URL('../assets/subscribe-like-r722.png', import.meta.url).pathname;
 const CTA_SHOW_SECONDS_R722 = 8;
-const CTA_PERIOD_SECONDS_R722 = 300; // every 5 minutes during the normal radio visual
+const CTA_PERIOD_SECONDS_R722 = 120; // R725: every 2 minutes during the normal radio visual
 const TITLE_HANDOFF_DELAY_MS_R724 = Math.max(0, Math.min(5000, Number(process.env.TITLE_HANDOFF_DELAY_MS_R724 || 1800)));
-const BUMPER_MIN_SONGS_R724 = 6;
-const BUMPER_MAX_SONGS_R724 = 8;
+const BUMPER_MIN_SONGS_R724 = 4;
+const BUMPER_MAX_SONGS_R724 = 6;
 // R721 keeps the proven 100-frame / 4-second exact-periodic QTRLE loops from R720.
 // The EQ is encoded inside the current local H264 feeder, while the YouTube RTMPS
 // publisher stays open permanently across MP3, clip and visual-period switches.
@@ -85,13 +85,13 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R724-BUMPERS-TITLE-SYNC-QR-RIGHT-YA-EST',
-  mode: 'R724 TITLE SYNC + 3 RADIO BUMPERS EACH 6-8 SONGS + QR RIGHT + Я ЕСТЬ / R723-R721 PRESERVED',
+  version: 'R725-CTA-2MIN-BUMPERS-4-6-R724-PRESERVED',
+  mode: 'R725 CTA 8s/2min + 3 RADIO BUMPERS EACH 4-6 SONGS + R724 TITLE SYNC + QR RIGHT + Я ЕСТЬ / R723-R721 PRESERVED',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
   producerRunning: false,
-  overlayMode: 'R724 QR RIGHT + DELAYED TITLE HANDOFF / R723 GREEN QR + R722 CTA + RED TITLE + EQ',
+  overlayMode: 'R725 CTA 8s EVERY 2min + R724 QR RIGHT + DELAYED TITLE HANDOFF / R723 GREEN QR + RED TITLE + EQ',
   audioMode: 'R721 PERSISTENT PCM CLOCK + AAC-LC 128kbps / ONE RTMPS SESSION / 4500k H264 RELAY / 6s FIFO',
   visualTimeZone: VISUAL_TIME_ZONE,
   visualPeriod: null,
