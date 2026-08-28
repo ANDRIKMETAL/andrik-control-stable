@@ -106,13 +106,13 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R736-SHORT-DIP-ACTUAL-NEXT-R735-PRESERVED',
-  mode: 'R736 R735/R732 TRANSPORT PRESERVED + SHORT BOUNDARY DIP + ACTUAL NEXT ITEM',
+  version: 'R737-SAFE-ALPHA-OVERLAY-FADE-R736-PRESERVED',
+  mode: 'R737 R736/R732 TRANSPORT PRESERVED + SAFE BLACK ALPHA OVERLAY + ACTUAL NEXT ITEM',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
   producerRunning: false,
-  overlayMode: 'R736 CURRENT/PREVIOUS/ACTUAL-NEXT T-8s + 0.65s OUT / 0.05s BLACK / 0.30s IN + CONTINUOUS BACKGROUND',
+  overlayMode: 'R737 CURRENT/PREVIOUS/ACTUAL-NEXT T-8s + SAFE BLACK ALPHA MASK 0.65/0.05/0.30 + CONTINUOUS BACKGROUND',
   audioMode: 'R732 R729 PCM TRANSPORT + AUDIO QUEUE 8 + R726 LOUDNORM -14 LUFS / ONE RTMPS',
   visualTimeZone: VISUAL_TIME_ZONE,
   visualPeriod: null,
@@ -952,19 +952,20 @@ function normalVideoFilterComplexR721({fadeIn=false,trackDuration=0}={}){
   // at song boundaries to produce a real fade-to-black / fade-from-black transition.
   const ctaPhase=(Date.now()/1000)%CTA_PERIOD_SECONDS_R722;
   const ctaEnable=`lt(mod(t+${ctaPhase.toFixed(3)}\,${CTA_PERIOD_SECONDS_R722})\,${CTA_SHOW_SECONDS_R722})`;
-  const fades=[];
-  // R736: keep the lead that finally made the fade START at the right moment,
-  // but never leave the old feeder black while the next audio is already playing.
-  // The SAME old feeder now performs a short dip: OUT -> 0.05s BLACK -> IN.
-  // If the next feeder replaces it during this dip, the next feeder is already full-bright.
+  // R737: NEVER run fade filters on the real video. The R736 black-screen bug was
+  // caused by fading the already-darkened base stream back "in". Instead generate a
+  // separate opaque BLACK mask whose ALPHA alone rises/falls, then overlay that mask
+  // over the untouched live picture. Even if the mask chain misbehaves, the base video
+  // is never destructively changed and the next feeder always starts full-bright.
+  let maskChain='';
+  let finalChain='[ctabase]format=yuv420p[outv]';
   if(Number(trackDuration)>VIDEO_FADE_SECONDS_R726+VIDEO_BLACK_HOLD_SECONDS_R736+VIDEO_FADE_IN_SECONDS_R736+VIDEO_FADE_LEAD_SECONDS_R735+1){
     const outAt=Math.max(0,Number(trackDuration)-VIDEO_FADE_SECONDS_R726-VIDEO_BLACK_HOLD_SECONDS_R736-VIDEO_FADE_LEAD_SECONDS_R735);
-    const inAt=outAt+VIDEO_FADE_SECONDS_R726+VIDEO_BLACK_HOLD_SECONDS_R736;
-    fades.push(`fade=t=out:st=${outAt.toFixed(3)}:d=${VIDEO_FADE_SECONDS_R726.toFixed(2)}:color=black`);
-    fades.push(`fade=t=in:st=${inAt.toFixed(3)}:d=${VIDEO_FADE_IN_SECONDS_R736.toFixed(2)}:color=black`);
+    const recoverAt=outAt+VIDEO_FADE_SECONDS_R726+VIDEO_BLACK_HOLD_SECONDS_R736;
+    maskChain=`color=c=black@1.0:s=1920x1080:r=${VIDEO_FPS},format=yuva420p,fade=t=in:st=${outAt.toFixed(3)}:d=${VIDEO_FADE_SECONDS_R726.toFixed(2)}:alpha=1,fade=t=out:st=${recoverAt.toFixed(3)}:d=${VIDEO_FADE_IN_SECONDS_R736.toFixed(2)}:alpha=1[blackmask];`;
+    finalChain='[ctabase][blackmask]overlay=x=0:y=0:shortest=1:format=yuv420,format=yuv420p[outv]';
   }
-  const finish=fades.length?`${fades.join(',')},format=yuv420p`:'format=yuv420p';
-  return `[0:v]setpts=PTS-STARTPTS,${vf}[base];[2:v]fps=${VIDEO_FPS},setpts=N/(${VIDEO_FPS}*TB),format=yuva420p[eqv];[base][eqv]overlay=x=(W-w)/2:y=H-h-64:shortest=0:format=yuv420,format=yuv420p[eqbase];[1:v]scale=160:160:flags=lanczos,format=yuva420p[qr];[eqbase][qr]overlay=x=W-w-24:y=24:shortest=0:format=yuv420,format=yuv420p[qrbase];[3:v]format=yuva420p[cta];[qrbase][cta]overlay=x=(W-w)/2:y=46:shortest=0:format=yuv420:enable='${ctaEnable}'[ctabase];[ctabase]${finish}[outv]`;
+  return `[0:v]setpts=PTS-STARTPTS,${vf}[base];[2:v]fps=${VIDEO_FPS},setpts=N/(${VIDEO_FPS}*TB),format=yuva420p[eqv];[base][eqv]overlay=x=(W-w)/2:y=H-h-64:shortest=0:format=yuv420,format=yuv420p[eqbase];[1:v]scale=160:160:flags=lanczos,format=yuva420p[qr];[eqbase][qr]overlay=x=W-w-24:y=24:shortest=0:format=yuv420,format=yuv420p[qrbase];[3:v]format=yuva420p[cta];[qrbase][cta]overlay=x=(W-w)/2:y=46:shortest=0:format=yuv420:enable='${ctaEnable}'[ctabase];${maskChain}${finalChain}`;
 }
 
 function clipFilterComplexR721(){
@@ -1593,19 +1594,21 @@ function publicStatus(){
     overlayPixelPath:'YUV420-NO-ARGB-R732',
     trackUiClock:'ffmpeg-frame-bound-R732-audio-lead-bounded',
     nextPreviewSeconds:NEXT_PREVIEW_SECONDS_R726,
-    nextPreviewTiming:'FFMPEG_ACTUAL_NEXT_R736_PTS_ANCHORED',
+    nextPreviewTiming:'FFMPEG_ACTUAL_NEXT_R737_PTS_ANCHORED',
     nextPreviewHideBeforeEndSeconds:NEXT_PREVIEW_HIDE_BEFORE_END_R726,
     audioNormalizationTargetLufs:TRACK_AUDIO_TARGET_I_R726,
     audioTruePeakDb:TRACK_AUDIO_TRUE_PEAK_R726,
     audioFadeInSeconds:TRACK_AUDIO_FADE_IN_R726,
     audioFadeOutSeconds:TRACK_AUDIO_FADE_OUT_R726,
     videoFadeSeconds:VIDEO_FADE_SECONDS_R726,
-      videoFadeStrategy:'SHORT_BOUNDARY_DIP_R736',
+      videoFadeStrategy:'SAFE_BLACK_ALPHA_MASK_R737',
       videoFadeInEnabled:true,
+      videoBaseNeverFaded:true,
+      videoOverlayMask:'BLACK_ALPHA_ONLY_R737',
       videoFadeInSeconds:VIDEO_FADE_IN_SECONDS_R736,
       videoBlackHoldSeconds:VIDEO_BLACK_HOLD_SECONDS_R736,
       videoFadeLeadSeconds:VIDEO_FADE_LEAD_SECONDS_R735,
-      nextPreviewSource:'ACTUAL_IMMEDIATE_ITEM_R736',
+      nextPreviewSource:'ACTUAL_IMMEDIATE_ITEM_R737',
     visualTimelineAnchor:'PTS-STARTPTS-R733',
     visualContinuityMode:state.visualContinuityMode,
     visualLoopOffsetSeconds:state.visualLoopOffsetSeconds,

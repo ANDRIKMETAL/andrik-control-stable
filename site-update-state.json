@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787937529228-2689ab13a7",
-  "release": "R736",
-  "archiveName": "R736-SHORT-DIP-ACTUAL-NEXT-R735-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "74a2eadbc08827c1b5498c28a24b2f16d303d9f9",
-  "backupSha": "74a2eadbc08827c1b5498c28a24b2f16d303d9f9",
+  "operationId": "publish-1787938781538-b6ec5c15bc",
+  "release": "R737",
+  "archiveName": "R737-SAFE-ALPHA-OVERLAY-FADE-R736-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "5b770befe0254358db00c40de5b7e8534edb991a",
+  "backupSha": "5b770befe0254358db00c40de5b7e8534edb991a",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-28T17:18:49.607Z"
+  "generatedAt": "2026-08-28T17:39:41.926Z"
 }
