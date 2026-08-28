@@ -73,17 +73,18 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R717-R715-STABLE-DIRECT-R706-VISIBLE-4-EQ-AUTO-LIVE-R2',
-  mode: 'R717 R715 STABLE DIRECT YOUTUBE / R706 VISIBLE MOTION 4 TIME EQ LOOPS / CLEAN TITLE / RANDOM R2 CLIPS / AUTO LIVE SELF-HEAL / NO MJPEG',
+  version: 'R718-FULLSCREEN-INSET-FIX-EQ-BELOW-TITLE-R715-STABLE',
+  mode: 'R718 FULLSCREEN INSET AUTO-CROP + STRETCH / R715 STABLE DIRECT YOUTUBE / R706 VISIBLE MOTION 4 TIME EQ / EQ BELOW TITLE / AUTO LIVE / NO MJPEG',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
   producerRunning: false,
-  overlayMode: 'R717 1920x1080 FIT / NO CROP / CLEAN TITLE / R706 VISIBLE EQ ABOVE TITLE / QR / DIRECT VIDEO INPUT',
+  overlayMode: 'R718 1920x1080 FULLSCREEN / SAFE BLACK-INSET CROP + STRETCH / CLEAN TITLE / R706 EQ BELOW TITLE / QR / DIRECT VIDEO INPUT',
   audioMode: 'R678/R695 DIRECT MASTER / MP3 CONTINUOUS PCM + AAC-LC 128kbps / 4500k CBR / 9000k VBV / 6s FIFO',
   visualTimeZone: VISUAL_TIME_ZONE,
   visualPeriod: null,
   visualPath: null,
+  visualInsetCrop: '',
   libraryTracks: 0,
   libraryAlbumTracks: 0,
   librarySingleTracks: 0,
@@ -101,7 +102,7 @@ const state = {
   lastFfmpegLine: '',
   equalizerPeriod: null,
   equalizerStyle: null,
-  equalizerEngine: 'R717-R706-PRERENDERED-QTRLE-4-SLOT-DIRECT'
+  equalizerEngine: 'R718-R706-PRERENDERED-QTRLE-4-SLOT-DIRECT'
 };
 
 let publisher = null;
@@ -410,7 +411,7 @@ async function probeVideoSize(path){
 }
 
 async function detectInsetBlackFrameCrop(path){
-  // R695: some uploaded MP4 files already contain a 16:9 picture boxed inside a
+  // R718: some uploaded MP4/master files already contain a 16:9 picture boxed inside a
   // larger black canvas. A normal FIT keeps that black canvas and makes the real
   // picture look tiny. Detect ONLY a large, symmetric inset on BOTH axes. We never
   // crop ordinary footage, portrait clips, cinematic bars or visible image content.
@@ -420,7 +421,7 @@ async function detectInsetBlackFrameCrop(path){
   const stderr=await new Promise(resolve=>{
     const child=spawn('ffmpeg',[
       '-hide_banner','-loglevel','info','-ss','0.35','-i',path,
-      '-an','-sn','-dn','-vf','cropdetect=limit=4:round=2:reset=0',
+      '-an','-sn','-dn','-vf','cropdetect=limit=24:round=2:reset=0',
       '-frames:v','48','-f','null','-'
     ],{stdio:['ignore','ignore','pipe']});
     let err='';
@@ -710,6 +711,7 @@ async function ensureScheduledVisual(){
     const path=await ensureVisualSpec(spec);
     state.visualPeriod=VISUAL_AUTO_SCHEDULE_R658?`auto-${period}`:(FORCE_VISUAL_SLOT?`manual-${period}`:period);
     state.visualPath=path;
+    state.visualInsetCrop=await detectInsetBlackFrameCrop(path).catch(()=> '');
     return path;
   }catch(error){
     // R712 safe four-slot rollout: until MORNING exists, use DAY rather than killing the radio.
@@ -719,6 +721,7 @@ async function ensureScheduledVisual(){
         state.lastError=`R712 morning not assigned yet — temporary DAY fallback: ${cleanText(error?.message||error)}`;
         state.visualPeriod=VISUAL_AUTO_SCHEDULE_R658?'auto-morning-fallback-day':'morning-fallback-day';
         state.visualPath=fallback;
+        state.visualInsetCrop=await detectInsetBlackFrameCrop(fallback).catch(()=> '');
         return fallback;
       }catch(_){ }
     }
@@ -726,13 +729,14 @@ async function ensureScheduledVisual(){
       state.lastError=`R622 ${period} local visual fallback: ${cleanText(error?.message||error)}`;
       state.visualPeriod=`${period}-emergency`;
       state.visualPath=EMERGENCY_VISUAL;
+      state.visualInsetCrop=await detectInsetBlackFrameCrop(EMERGENCY_VISUAL).catch(()=> '');
       return EMERGENCY_VISUAL;
     }
     throw error;
   }
 }
 
-function equalizerSpecR717(){
+function equalizerSpecR718(){
   const period=FORCE_VISUAL_SLOT || visualPeriodForHour(localHourInTimeZone());
   const specs={
     morning:{name:'morning-soft-gold-motion-r706',path:EQUALIZER_FILES_R717.morning},
@@ -770,23 +774,27 @@ function startPublisher(visualPath){
   const titleFontPart=titleFont?`fontfile='${ffFilterPath(titleFont)}':`:'';
   const curPath=ffFilterPath(LIVE_CURRENT_FILE);
   const tickerPath=ffFilterPath(LIVE_TICKER_FILE);
-  const eq=equalizerSpecR717();
+  const eq=equalizerSpecR718();
   if(!existsSync(eq.path) || statSync(eq.path).size<20000) throw new Error(`equalizer missing: ${eq.path}`);
+  const visualCrop=String(state.visualInsetCrop||'');
   const vf=[
-    // R712: exact R678/R695 direct path. No MJPEG feeder and no heavy GEQ stage.
-    'scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos',
-    'pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black',
+    // R718: if an R2 master contains a 16:9 picture boxed inside a larger black
+    // canvas, remove only that large symmetric black inset, then stretch the real
+    // picture to the full 1920x1080 frame. Ordinary full-frame visuals are never cropped.
+    ...(visualCrop?[visualCrop]:[]),
+    'scale=1920:1080:flags=lanczos',
     'setsar=1',
     `fps=${VIDEO_FPS}`,
     'format=yuv420p',
     `drawtext=${titleFontPart}textfile='${curPath}':reload=${VIDEO_FPS}:fontcolor=0xF3EFE8:fontsize=58:x=(w-text_w)/2:y=h-188:borderw=3:bordercolor=black@1:shadowcolor=black@0.95:shadowx=3:shadowy=3`,
     `drawtext=${fontPart}textfile='${tickerPath}':reload=${VIDEO_FPS}:fontcolor=yellow:fontsize=28:x='w-mod(t*110,text_w+w)':y=h-58:borderw=3:bordercolor=black@1:shadowcolor=black@1:shadowx=2:shadowy=2`
   ].join(',');
-  // R717: visible motion from the proven R706 design, but pre-rendered to a tiny
+  // R718: visible motion from the proven R706 design, but pre-rendered to a tiny
   // transparent QTRLE loop. The stable R715/R713 publisher still owns the only 1080p
   // encoder and the original PCM audio path is untouched.
-  // EQ bottom is y=870, leaving a clear gap above the title at y=892.
-  const filterComplex=`[0:v]${vf}[base];[3:v]fps=${VIDEO_FPS},format=argb,setpts=PTS-STARTPTS[eqv];[base][eqv]overlay=x=(W-w)/2:y=H-h-210:shortest=1:format=auto,format=yuv420p[eqbase];[1:v]scale=160:160:flags=lanczos,format=yuva420p[qr];[eqbase][qr]overlay=24:24:format=yuv420[outv]`;
+  // R718: title starts at h-188; ticker starts at h-58. Keep the EQ bottom fixed
+  // at h-64, so it sits BETWEEN the title and ticker with a small safe gap.
+  const filterComplex=`[0:v]${vf}[base];[3:v]fps=${VIDEO_FPS},format=argb,setpts=PTS-STARTPTS[eqv];[base][eqv]overlay=x=(W-w)/2:y=H-h-64:shortest=1:format=auto,format=yuv420p[eqbase];[1:v]scale=160:160:flags=lanczos,format=yuva420p[qr];[eqbase][qr]overlay=24:24:format=yuv420[outv]`;
 
   // R637 architecture: one FFmpeg owns the video encoder, AAC encoder and RTMPS
   // muxer for the ENTIRE broadcast. Track decoders feed raw PCM into fd 3. Raw
@@ -870,10 +878,10 @@ function clipFilterComplex(insetCrop=''){
   const curPath=ffFilterPath(LIVE_CURRENT_FILE);
   const tickerPath=ffFilterPath(LIVE_TICKER_FILE);
   const vf=[
-    // R712: FULL FRAME FIT. Never crop any clip pixels; scale down and pad only if needed.
+    // R718: remove only a detected large symmetric black inset, then stretch
+    // the actual clip picture to 1920x1080. This prevents the boxed/tiny frame.
     ...(insetCrop?[insetCrop]:[]),
-    'scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos',
-    'pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black',
+    'scale=1920:1080:flags=lanczos',
     'setsar=1',
     `fps=${VIDEO_FPS}`,
     'format=yuv420p',
@@ -898,8 +906,7 @@ async function playVideoClipR691(previous,item,next){
   writeFileSync(LIVE_CURRENT_FILE,`КЛИП • ANDRIK — ${shortText(item.title||'VIDEO',34)}`,'utf8');
 
   try{
-    const insetCrop=''; // R712 NO CROP — FULL FRAME FIT
-    // R712: crop detection intentionally disabled; preserve the complete source frame.
+    const insetCrop=await detectInsetBlackFrameCrop(clipPath).catch(()=> ''); // R718 SAFE BLACK-INSET ONLY
     await stopMasterForClip();
     if(stopping)return false;
     await sleep(350);
@@ -1104,6 +1111,7 @@ function publicStatus(){
     visualAutoSchedule:VISUAL_AUTO_SCHEDULE_R658,
     visualPeriod:state.visualPeriod,
     visualPath:state.visualPath,
+    visualInsetCrop:state.visualInsetCrop||'',
     equalizerPeriod:state.equalizerPeriod,
     equalizerStyle:state.equalizerStyle,
     equalizerEngine:state.equalizerEngine,

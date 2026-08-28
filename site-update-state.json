@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787855515354-1d347cc16c",
-  "release": "R717",
-  "archiveName": "R717-R706-VISIBLE-EQ-R715-STABLE-YOUTUBE-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "acea067ed7ac9504fcba8444e51f0cfa73b7a1b4",
-  "backupSha": "acea067ed7ac9504fcba8444e51f0cfa73b7a1b4",
+  "operationId": "publish-1787888247018-c33386d105",
+  "release": "R718",
+  "archiveName": "R718-FULLSCREEN-EQ-BELOW-TITLE-R715-STABLE-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "ff9a849a0545434196bc4f0950ac6bffd8800c5f",
+  "backupSha": "ff9a849a0545434196bc4f0950ac6bffd8800c5f",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-27T18:31:57.628Z"
+  "generatedAt": "2026-08-28T03:37:27.559Z"
 }
