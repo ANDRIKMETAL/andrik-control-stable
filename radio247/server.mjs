@@ -42,6 +42,9 @@ const QR_OVERLAY = process.env.QR_OVERLAY || new URL('../assets/andrik-qr-r612.p
 const CTA_OVERLAY_R722 = process.env.CTA_OVERLAY_R722 || new URL('../assets/subscribe-like-r722.png', import.meta.url).pathname;
 const CTA_SHOW_SECONDS_R722 = 8;
 const CTA_PERIOD_SECONDS_R722 = 300; // every 5 minutes during the normal radio visual
+const TITLE_HANDOFF_DELAY_MS_R724 = Math.max(0, Math.min(5000, Number(process.env.TITLE_HANDOFF_DELAY_MS_R724 || 1800)));
+const BUMPER_MIN_SONGS_R724 = 6;
+const BUMPER_MAX_SONGS_R724 = 8;
 // R721 keeps the proven 100-frame / 4-second exact-periodic QTRLE loops from R720.
 // The EQ is encoded inside the current local H264 feeder, while the YouTube RTMPS
 // publisher stays open permanently across MP3, clip and visual-period switches.
@@ -65,9 +68,14 @@ const RADIO_CLIPS_URL_R691 = process.env.RADIO_CLIPS_URL_R691 || 'https://andrik
 const JOY_OF_BEING_CLIP_URL = process.env.JOY_OF_BEING_CLIP_URL || 'https://music.andrikmetal.com/clips/joy-of-being-official-2026.mp4';
 const JOY_OF_BEING_CLIP_ENABLED = String(process.env.JOY_OF_BEING_CLIP_ENABLED || '1').trim() !== '0';
 const JOY_OF_BEING_CLIP_PATH = `${CLIP_CACHE_DIR}/joy-of-being-official-2026.mp4`;
+const YA_EST_CLIP_URL_R724 = process.env.YA_EST_CLIP_URL_R724 || 'https://music.andrikmetal.com/clips/ya-est-official-2026.mp4';
 const JOY_OF_BEING_CLIP = Object.freeze({
   type:'clip', sourceType:'r2-video', title:'JOY OF BEING', album:'OFFICIAL MUSIC VIDEO',
   key:'clips/joy-of-being-official-2026.mp4', url:JOY_OF_BEING_CLIP_URL, identity:'clip:joy-of-being', builtIn:true
+});
+const YA_EST_CLIP_R724 = Object.freeze({
+  type:'clip', sourceType:'r2-video', title:'Я ЕСТЬ', album:'OFFICIAL MUSIC VIDEO',
+  key:'clips/ya-est-official-2026.mp4', url:YA_EST_CLIP_URL_R724, identity:'clip:ya-est', builtIn:true
 });
 const DEFAULT_LIVE_TICKER = 'ANDRIK METAL RADIO 24/7   •   ANDRIKMETAL.COM   •   НОВЫЕ СИНГЛЫ И АЛЬБОМЫ ANDRIK   •   ПОДПИСЫВАЙТЕСЬ • СТАВЬТЕ ЛАЙКИ • КОММЕНТИРУЙТЕ   •   ';
 const DISABLED_ALBUM_PREFIXES = Object.freeze([
@@ -77,13 +85,13 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R723-GREEN-QR-R722-PRESERVED',
-  mode: 'R723 CLEAN GREEN QR / R722 SUBSCRIBE-LIKE / R721 PERSISTENT LIVE / TRUE NO-CROP FIT / RED TITLE / EXACT EQ',
+  version: 'R724-BUMPERS-TITLE-SYNC-QR-RIGHT-YA-EST',
+  mode: 'R724 TITLE SYNC + 3 RADIO BUMPERS EACH 6-8 SONGS + QR RIGHT + Я ЕСТЬ / R723-R721 PRESERVED',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
   producerRunning: false,
-  overlayMode: 'R723 CLEAN GREEN QR / NO BLACK FRAME + R722 CTA + RED TITLE + EQ',
+  overlayMode: 'R724 QR RIGHT + DELAYED TITLE HANDOFF / R723 GREEN QR + R722 CTA + RED TITLE + EQ',
   audioMode: 'R721 PERSISTENT PCM CLOCK + AAC-LC 128kbps / ONE RTMPS SESSION / 4500k H264 RELAY / 6s FIFO',
   visualTimeZone: VISUAL_TIME_ZONE,
   visualPeriod: null,
@@ -93,7 +101,11 @@ const state = {
   libraryAlbumTracks: 0,
   librarySingleTracks: 0,
   duplicateSinglesSkipped: 0,
-  libraryVideos: JOY_OF_BEING_CLIP_ENABLED ? 1 : 0,
+  libraryVideos: JOY_OF_BEING_CLIP_ENABLED ? 2 : 1,
+  libraryBumpers: 0,
+  songsSinceBumper: 0,
+  nextBumperAfterSongs: 0,
+  lastBumperSlot: 0,
   cycle: 0,
   queueLength: 0,
   queuePosition: 0,
@@ -112,7 +124,8 @@ const state = {
 let publisher = null;
 let producer = null;
 let library = [];
-let clipLibrary = JOY_OF_BEING_CLIP_ENABLED ? [JOY_OF_BEING_CLIP] : [];
+let clipLibrary = JOY_OF_BEING_CLIP_ENABLED ? [JOY_OF_BEING_CLIP,YA_EST_CLIP_R724] : [YA_EST_CLIP_R724];
+let bumperLibrary = [];
 let queue = [];
 let queueIndex = 0;
 let running = false;
@@ -127,6 +140,11 @@ let visualSwitching = false;
 let scheduleTimerR721 = null;
 let runtimeForceVisualSlot = FORCE_VISUAL_SLOT;
 let runtimeVisualAutoSchedule = VISUAL_AUTO_SCHEDULE_R658;
+let liveTitleTimerR724 = null;
+let liveTitleGenerationR724 = 0;
+let songsSinceBumperR724 = 0;
+let bumperAfterSongsR724 = BUMPER_MIN_SONGS_R724 + Math.floor(Math.random()*(BUMPER_MAX_SONGS_R724-BUMPER_MIN_SONGS_R724+1));
+let lastBumperSlotR724 = 0;
 const clipPrefetchJobs = new Map();
 const prefetchJobs = new Map();
 
@@ -143,6 +161,38 @@ const shortText = (value, max = 52) => {
   const s = cleanText(value);
   return s.length <= max ? s : `${s.slice(0, Math.max(1, max - 1)).trim()}…`;
 };
+
+function setLiveTitleR724(text,{delayMs=0}={}){
+  liveTitleGenerationR724++;
+  const generation=liveTitleGenerationR724;
+  if(liveTitleTimerR724){clearTimeout(liveTitleTimerR724);liveTitleTimerR724=null;}
+  const commit=()=>{
+    if(generation!==liveTitleGenerationR724||stopping)return;
+    try{writeFileSync(LIVE_CURRENT_FILE,text,'utf8')}catch(error){state.lastError=`R724 title write: ${cleanText(error?.message||error)}`;}
+  };
+  if(delayMs>0)liveTitleTimerR724=setTimeout(()=>{liveTitleTimerR724=null;commit();},delayMs);
+  else commit();
+}
+function bumperSlotR724(item){
+  const m=/^radio\/clips\/radio-bumper-([123])\.mp4$/i.exec(String(item?.key||''));
+  return m?Number(m[1]):0;
+}
+function randomBumperGapR724(){return BUMPER_MIN_SONGS_R724+Math.floor(Math.random()*(BUMPER_MAX_SONGS_R724-BUMPER_MIN_SONGS_R724+1));}
+function nextBumperR724(){
+  const available=[...bumperLibrary].sort((a,b)=>bumperSlotR724(a)-bumperSlotR724(b));
+  if(!available.length)return null;
+  let idx=available.findIndex(x=>bumperSlotR724(x)>lastBumperSlotR724);
+  if(idx<0)idx=0;
+  const item=available[idx];
+  lastBumperSlotR724=bumperSlotR724(item)||lastBumperSlotR724;
+  state.lastBumperSlot=lastBumperSlotR724;
+  return item;
+}
+function moveUpcomingClipAfterTrackR724(){
+  if(queue[queueIndex]?.type!=='clip')return;
+  const trackPos=queue.findIndex((x,i)=>i>queueIndex&&x?.type==='track');
+  if(trackPos>queueIndex)[queue[queueIndex],queue[trackPos]]=[queue[trackPos],queue[queueIndex]];
+}
 
 function shuffle(items){
   const list=[...items];
@@ -230,7 +280,8 @@ function prepareClip(item){
     album:cleanText(item?.album||'OFFICIAL VIDEO'),
     key:String(item?.key||''),
     url:String(item?.url||''),
-    builtIn:Boolean(item?.builtIn)
+    builtIn:Boolean(item?.builtIn),
+    bumperSlot:Number(item?.bumperSlot)||0
   };
   clip.identity=primaryIdentity(clip);
   return clip;
@@ -261,33 +312,41 @@ function librarySignature(items){
 }
 
 async function loadRadioClipsR691(){
-  const builtIn=JOY_OF_BEING_CLIP_ENABLED?[prepareClip(JOY_OF_BEING_CLIP)]:[];
+  const builtIn=[];
+  if(JOY_OF_BEING_CLIP_ENABLED)builtIn.push(prepareClip(JOY_OF_BEING_CLIP));
+  builtIn.push(prepareClip(YA_EST_CLIP_R724));
   try{
     const url=`${RADIO_CLIPS_URL_R691}${RADIO_CLIPS_URL_R691.includes('?')?'&':'?'}ts=${Date.now()}`;
-    const response=await fetch(url,{headers:{'user-agent':'ANDRIK-Radio-R691-Clips'},signal:AbortSignal.timeout(20000)});
+    const response=await fetch(url,{headers:{'user-agent':'ANDRIK-Radio-R724-Clips-Bumpers'},signal:AbortSignal.timeout(20000)});
     if(!response.ok)throw new Error(`R2 radio clips HTTP ${response.status}`);
     const data=await response.json();
     const dynamic=(Array.isArray(data?.clips)?data.clips:[])
       .filter(item=>/^https:\/\//i.test(String(item?.url||'')) && /\.mp4(?:$|\?)/i.test(String(item?.url||'')))
-      .map(prepareClip);
+      .map(item=>prepareClip({...item,bumperSlot:Number(item?.bumperSlot)||bumperSlotR724(item)}));
+    const bumpersBySlot=new Map();
+    for(const item of dynamic){
+      const slot=bumperSlotR724(item)||Number(item.bumperSlot)||0;
+      if(slot>=1&&slot<=3&&!bumpersBySlot.has(slot))bumpersBySlot.set(slot,{...item,bumperSlot:slot,sourceType:'radio-bumper'});
+    }
+    bumperLibrary=[...bumpersBySlot.values()].sort((a,b)=>a.bumperSlot-b.bumperSlot);
+    const normalDynamic=dynamic.filter(item=>!bumperSlotR724(item)&&!Number(item.bumperSlot));
     const byUrl=new Map();
-    for(const clip of [...builtIn,...dynamic])if(clip.url&&!byUrl.has(clip.url))byUrl.set(clip.url,clip);
+    for(const clip of [...builtIn,...normalDynamic])if(clip.url&&!byUrl.has(clip.url))byUrl.set(clip.url,clip);
     clipLibrary=[...byUrl.values()];
   }catch(error){
-    console.error('[radio-clips]',cleanText(error?.message||error));
-    if(!clipLibrary.length)clipLibrary=builtIn;
-    else{
-      const dynamic=clipLibrary.filter(item=>!item.builtIn);
-      clipLibrary=[...builtIn,...dynamic.filter(item=>item.url!==JOY_OF_BEING_CLIP_URL)];
-    }
+    console.error('[radio-clips-r724]',cleanText(error?.message||error));
+    const existingDynamic=clipLibrary.filter(item=>!item.builtIn&&!bumperSlotR724(item));
+    clipLibrary=[...builtIn,...existingDynamic.filter(item=>!builtIn.some(b=>b.url===item.url))];
   }
   state.libraryVideos=clipLibrary.length;
+  state.libraryBumpers=bumperLibrary.length;
   clipLibrary.forEach(prefetchClip);
+  bumperLibrary.forEach(prefetchClip);
   return clipLibrary;
 }
 
 async function loadLibrary(){
-  const previousSignature=librarySignature([...library,...clipLibrary]);
+  const previousSignature=librarySignature([...library,...clipLibrary,...bumperLibrary]);
   const url=`${PLAYLIST_URL}${PLAYLIST_URL.includes('?')?'&':'?'}ts=${Date.now()}`;
   const response=await fetch(url,{headers:{'user-agent':'ANDRIK-Radio-24-7-R691'}});
   if(!response.ok)throw new Error(`R2 library HTTP ${response.status}`);
@@ -321,9 +380,10 @@ async function loadLibrary(){
   state.librarySingleTracks=merged.singles.length;
   state.duplicateSinglesSkipped=merged.skipped;
   state.libraryVideos=clipLibrary.length;
+  state.libraryBumpers=bumperLibrary.length;
   state.lastLibraryRefresh=new Date().toISOString();
-  const changed=previousSignature!==librarySignature([...library,...clipLibrary]);
-  return {library,clipLibrary,changed};
+  const changed=previousSignature!==librarySignature([...library,...clipLibrary,...bumperLibrary]);
+  return {library,clipLibrary,bumperLibrary,changed};
 }
 
 function addIdentityCandidates(target,item){
@@ -747,12 +807,21 @@ function normalVideoFilterComplexR721(){
   // It is visible for 8 seconds every 5 minutes. The CTA is intentionally NOT burned
   // into owner video clips, so short official clips remain clean and unobstructed.
   const ctaEnable=`lt(mod(t\,${CTA_PERIOD_SECONDS_R722})\,${CTA_SHOW_SECONDS_R722})`;
-  return `[0:v]${vf}[base];[2:v]fps=${VIDEO_FPS},setpts=N/(${VIDEO_FPS}*TB),format=argb[eqv];[base][eqv]overlay=x=(W-w)/2:y=H-h-64:shortest=0:format=auto,format=yuv420p[eqbase];[1:v]scale=160:160:flags=lanczos,format=yuva420p[qr];[eqbase][qr]overlay=24:24:shortest=0:format=auto,format=yuv420p[qrbase];[3:v]format=rgba[cta];[qrbase][cta]overlay=x=(W-w)/2:y=46:shortest=0:format=auto:enable='${ctaEnable}',format=yuv420p[outv]`;
+  return `[0:v]${vf}[base];[2:v]fps=${VIDEO_FPS},setpts=N/(${VIDEO_FPS}*TB),format=argb[eqv];[base][eqv]overlay=x=(W-w)/2:y=H-h-64:shortest=0:format=auto,format=yuv420p[eqbase];[1:v]scale=160:160:flags=lanczos,format=yuva420p[qr];[eqbase][qr]overlay=x=W-w-24:y=24:shortest=0:format=auto,format=yuv420p[qrbase];[3:v]format=rgba[cta];[qrbase][cta]overlay=x=(W-w)/2:y=46:shortest=0:format=auto:enable='${ctaEnable}',format=yuv420p[outv]`;
 }
 
 function clipFilterComplexR721(){
   const vf=titleOverlayFiltersR721();
-  return `[0:v]${vf}[base];[1:v]scale=160:160:flags=lanczos,format=yuva420p[qr];[base][qr]overlay=24:24:shortest=1:format=auto,format=yuv420p[outv]`;
+  return `[0:v]${vf}[base];[1:v]scale=160:160:flags=lanczos,format=yuva420p[qr];[base][qr]overlay=x=W-w-24:y=24:shortest=1:format=auto,format=yuv420p[outv]`;
+}
+
+function bumperFilterComplexR724(){
+  const vf=[
+    `scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos`,
+    `pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black`,
+    `setsar=1`,`fps=${VIDEO_FPS}`
+  ].join(',');
+  return `[0:v]${vf}[base];[1:v]scale=160:160:flags=lanczos,format=yuva420p[qr];[base][qr]overlay=x=W-w-24:y=24:shortest=1:format=auto,format=yuv420p[outv]`;
 }
 
 function h264EncoderArgsR721(){
@@ -942,7 +1011,7 @@ async function probeHasAudioR721(path){
   }catch(_){return false}
 }
 
-function clipFeederArgsR721(clipPath,{hasAudio=true,duration=0}={}){
+function clipFeederArgsR721(clipPath,{hasAudio=true,duration=0,isBumper=false}={}){
   const args=[
     '-hide_banner','-loglevel','warning','-stats_period','0.5','-progress','pipe:4','-nostats',
     '-fflags','+genpts+discardcorrupt','-err_detect','ignore_err','-re','-i',clipPath,
@@ -950,7 +1019,7 @@ function clipFeederArgsR721(clipPath,{hasAudio=true,duration=0}={}){
   ];
   if(!hasAudio)args.push('-f','lavfi','-i',`anullsrc=r=${AUDIO_SAMPLE_RATE}:cl=stereo`);
   args.push(
-    '-filter_complex',clipFilterComplexR721(),
+    '-filter_complex',isBumper?bumperFilterComplexR724():clipFilterComplexR721(),
     '-map','[outv]','-an','-sn','-dn',
     ...h264EncoderArgsR721(),
     '-f','h264','pipe:1',
@@ -986,9 +1055,9 @@ async function playVideoClipR691(previous,item,next){
   const duration=await probeDuration(clipPath).catch(()=>0);
   const hasAudio=await probeHasAudioR721(clipPath);
   state.previous=previous?{type:previous.type||'track',title:previous.title,album:previous.album||'',url:previous.url||''}:null;
-  state.current={type:'clip',title:item.title,album:item.album,url:item.url,startedAt:new Date().toISOString(),duration};
+  state.current={type:item.sourceType==='radio-bumper'?'bumper':'clip',title:item.title,album:item.album,url:item.url,startedAt:new Date().toISOString(),duration};
   state.next=next?{type:next.type||'track',title:next.title,album:next.album||'',url:next.url||''}:null;
-  writeFileSync(LIVE_CURRENT_FILE,`КЛИП • ANDRIK — ${shortText(item.title||'VIDEO',34)}`,'utf8');
+  setLiveTitleR724(item.sourceType==='radio-bumper'?'ANDRIK METAL RADIO':`КЛИП • ANDRIK — ${shortText(item.title||'VIDEO',34)}`);
 
   let child=null,videoSink=null,audioSink=null,stallTimer=null,forcedReason='';
   try{
@@ -1000,7 +1069,7 @@ async function playVideoClipR691(previous,item,next){
     audioSink=publisher?.stdio?.[3];
     if(!videoSink || videoSink.destroyed || videoSink.writableEnded || !audioSink || audioSink.destroyed || audioSink.writableEnded)throw new Error('R721 persistent A/V pipes unavailable before clip');
 
-    child=spawn('ffmpeg',clipFeederArgsR721(clipPath,{hasAudio,duration}),{stdio:['ignore','pipe','pipe','pipe','pipe']});
+    child=spawn('ffmpeg',clipFeederArgsR721(clipPath,{hasAudio,duration,isBumper:item.sourceType==='radio-bumper'}),{stdio:['ignore','pipe','pipe','pipe','pipe']});
     clipPublisher=child;
     state.producerRunning=true;
     child.stdout.pipe(videoSink,{end:false});
@@ -1081,7 +1150,7 @@ async function playItem(previous,item,next,following,localAudioPath){
   state.previous=previous?{type:previous.type||'track',title:previous.title,album:previous.album||'',url:previous.url||''}:null;
   state.current={type:item.type||'track',title:item.title,album:item.album||'',url:item.url,startedAt:new Date().toISOString(),duration};
   state.next=next?{type:next.type||'track',title:next.title,album:next.album||'',url:next.url||''}:null;
-  writeFileSync(LIVE_CURRENT_FILE,`ANDRIK — ${shortText(item.title||'TRACK',42)}`,'utf8');
+  setLiveTitleR724(`ANDRIK — ${shortText(item.title||'TRACK',42)}`,{delayMs:previous?.type==='track'?TITLE_HANDOFF_DELAY_MS_R724:0});
 
   const audioSink=publisher?.stdio?.[3];
   if(!publisher || publisher.exitCode!==null || !audioSink || audioSink.destroyed) throw new Error('master audio pipe unavailable');
@@ -1172,6 +1241,30 @@ async function radioLoop(){
       await playItem(lastPlayed,item,next,following,localAudioPath);
       lastPlayed=item;
       queueIndex++;
+      songsSinceBumperR724++;
+      state.songsSinceBumper=songsSinceBumperR724;
+      state.nextBumperAfterSongs=bumperAfterSongsR724;
+
+      if(!stopping && bumperLibrary.length && songsSinceBumperR724>=bumperAfterSongsR724){
+        // Keep a station bumper between SONGS, never bumper -> normal clip back-to-back.
+        moveUpcomingClipAfterTrackR724();
+        const bumper=nextBumperR724();
+        const afterBumper=queue[queueIndex]||null;
+        if(bumper){
+          if(afterBumper?.type==='track'){
+            try{await ensureNextTrackReadyR712(afterBumper)}catch(error){console.error('[bumper-prefetch]',cleanText(error?.message||error));}
+          }
+          const bumperPlayed=await playVideoClipR691(item,bumper,afterBumper);
+          if(bumperPlayed){
+            lastPlayed=bumper;
+            songsSinceBumperR724=0;
+            bumperAfterSongsR724=randomBumperGapR724();
+            state.songsSinceBumper=0;
+            state.nextBumperAfterSongs=bumperAfterSongsR724;
+            state.lastError='';
+          }
+        }
+      }
       state.lastError='';
     }catch(error){
       state.lastError=String(error?.stack||error).slice(-1200);
@@ -1198,8 +1291,8 @@ function publicStatus(){
     mode:state.mode,
     overlayMode:state.overlayMode,
     audioMode:state.audioMode,
-    engine:'R721-PERSISTENT-H264-RELAY-SETTS',
-    videoPipeline:'R723 R722 R721 PERSISTENT SETTS H264 RELAY + CLEAN GREEN QR + PERIODIC CTA (NO CROP / NO CLIP RECONNECT / NO MJPEG)',
+    engine:'R724-PERSISTENT-H264-RELAY-SETTS-BUMPERS',
+    videoPipeline:'R724 TITLE-HANDOFF + 3 BUMPERS / 6-8 SONGS + QR RIGHT + Я ЕСТЬ / R723-R721 PERSISTENT SETTS H264 RELAY',
     outputTimeshiftSeconds:OUTPUT_TIMESHIFT_SECONDS,
     videoBitrate:VIDEO_BITRATE,
     audioBitrate:AUDIO_BITRATE,
@@ -1210,6 +1303,8 @@ function publicStatus(){
     subscribeLikeOverlay:CTA_OVERLAY_R722,
     subscribeLikeShowSeconds:CTA_SHOW_SECONDS_R722,
     subscribeLikePeriodSeconds:CTA_PERIOD_SECONDS_R722,
+    titleHandoffDelayMs:TITLE_HANDOFF_DELAY_MS_R724,
+    qrPosition:'top-right',
     visualTimeZone:state.visualTimeZone,
     forceVisualSlot:runtimeForceVisualSlot||null,
     visualAutoSchedule:runtimeVisualAutoSchedule,
@@ -1230,6 +1325,11 @@ function publicStatus(){
     duplicateSinglesSkipped:state.duplicateSinglesSkipped,
     libraryRefreshSeconds:Math.round(LIBRARY_REFRESH_MS/1000),
     libraryVideos:state.libraryVideos,
+    libraryBumpers:state.libraryBumpers,
+    bumperSlots:bumperLibrary.map(x=>x.bumperSlot||bumperSlotR724(x)).filter(Boolean),
+    songsSinceBumper:songsSinceBumperR724,
+    nextBumperAfterSongs:bumperAfterSongsR724,
+    lastBumperSlot:lastBumperSlotR724,
     cycle:state.cycle,
     queueLength:state.queueLength,
     queuePosition:state.queuePosition,
@@ -1286,6 +1386,10 @@ const server=http.createServer((req,res)=>{
       duplicateSinglesSkipped:state.duplicateSinglesSkipped,
       libraryRefreshSeconds:Math.round(LIBRARY_REFRESH_MS/1000),
       videos:state.libraryVideos,
+      bumpers:state.libraryBumpers,
+      bumperSlots:bumperLibrary.map(x=>x.bumperSlot||bumperSlotR724(x)).filter(Boolean),
+      songsSinceBumper:songsSinceBumperR724,
+      nextBumperAfterSongs:bumperAfterSongsR724,
       total:library.length,
       mode:state.mode,
       previous:state.previous,
@@ -1300,7 +1404,7 @@ const server=http.createServer((req,res)=>{
 });
 
 server.listen(PORT,'0.0.0.0',()=>{
-  console.log(`ANDRIK Radio R723-GREEN-QR / R721-PERSISTENT-LIVE listening on :${PORT}`);
+  console.log(`ANDRIK Radio R724 BUMPERS + TITLE SYNC + QR RIGHT / R721-PERSISTENT-LIVE listening on :${PORT}`);
   radioLoop();
 });
 
@@ -1319,6 +1423,7 @@ async function shutdown(){
   if(shutdownStarted)return;
   shutdownStarted=true;
   stopping=true;
+  if(liveTitleTimerR724){clearTimeout(liveTitleTimerR724);liveTitleTimerR724=null;}
   if(scheduleTimerR721)clearInterval(scheduleTimerR721);
   try{server.close();}catch(_){ }
 

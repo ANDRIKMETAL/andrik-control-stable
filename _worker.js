@@ -18045,6 +18045,8 @@ async function handleRadioVisualLibraryDeleteR710(request,env){
 
 // === R693: robust owner-uploaded video clips for random radio intermissions ===
 const RADIO_CLIP_PREFIX_R691 = 'radio/clips/';
+const RADIO_BUMPER_KEYS_R724 = Object.freeze({1:'radio/clips/radio-bumper-1.mp4',2:'radio/clips/radio-bumper-2.mp4',3:'radio/clips/radio-bumper-3.mp4'});
+function radioBumperSlotR724(value){const m=/^radio\/clips\/radio-bumper-([123])\.mp4$/i.exec(String(value||''));return m?Number(m[1]):0;}
 // R694: friendly display titles for already-uploaded radio clips.
 // This changes metadata returned by the API only; the 211 MB MP4 in R2 is NOT re-uploaded.
 const RADIO_CLIP_TITLE_OVERRIDES_R694 = Object.freeze({
@@ -18080,7 +18082,7 @@ async function listRadioClipsR691(bucket){
     .map(o=>{
       const meta=o.customMetadata||{},base=String(o.key||'').split('/').pop().replace(/\.mp4$/i,'').replace(/[-_]+/g,' ');
       const overrideTitle=RADIO_CLIP_TITLE_OVERRIDES_R694[o.key]||'';
-      return {key:o.key,title:radioClipTitleR691(overrideTitle||meta.title||base),size:Number(o.size||0),uploaded:o.uploaded||null,url:radioClipDirectUrlR691(o)};
+      return {key:o.key,title:radioClipTitleR691(overrideTitle||meta.title||base),size:Number(o.size||0),uploaded:o.uploaded||null,url:radioClipDirectUrlR691(o),bumperSlot:Number(meta.radioBumper||0)||radioBumperSlotR724(o.key)};
     })
     .sort((a,b)=>(Date.parse(b.uploaded||0)||0)-(Date.parse(a.uploaded||0)||0));
 }
@@ -18093,8 +18095,15 @@ async function handleRadioClipsListR691(request,env,admin=false){
     const joyObject=await bucket.head(joyKey).catch(()=>null);
     const joyStamp=Date.parse(joyObject?.uploaded||0)||0;
     const joyUrl=`https://music.andrikmetal.com/${joyKey}${joyStamp?`?v=${joyStamp}`:''}`;
-    const builtIn=[{title:'JOY OF BEING',key:joyKey,size:Number(joyObject?.size||0),uploaded:joyObject?.uploaded||null,url:joyUrl}];
-    return json({ok:true,count:clips.length,clips,refreshSeconds:120,builtIn});
+    const yaKey='clips/ya-est-official-2026.mp4';
+    const yaObject=await bucket.head(yaKey).catch(()=>null);
+    const yaStamp=Date.parse(yaObject?.uploaded||0)||0;
+    const yaUrl=`https://music.andrikmetal.com/${yaKey}${yaStamp?`?v=${yaStamp}`:''}`;
+    const builtIn=[
+      {title:'JOY OF BEING',key:joyKey,size:Number(joyObject?.size||0),uploaded:joyObject?.uploaded||null,url:joyUrl},
+      {title:'Я ЕСТЬ',key:yaKey,size:Number(yaObject?.size||0),uploaded:yaObject?.uploaded||null,url:yaUrl}
+    ];
+    return json({ok:true,count:clips.length,clips,refreshSeconds:120,builtIn,bumperSlots:clips.filter(x=>x.bumperSlot).map(x=>x.bumperSlot)});
   }catch(error){return json({ok:false,error:'radio-clips-list-failed',message:cleanPlainText(error?.message||error,420)},502);}
 }
 async function handleRadioClipMpuStartR691(request,env){
@@ -18106,14 +18115,15 @@ async function handleRadioClipMpuStartR691(request,env){
   if(expectedSize>5*1024*1024*1024)return json({ok:false,error:'file-too-large',message:'Максимум 5 ГБ.'},413);
   const sourceName=cleanPlainText(String(body?.name||'andrik-video.mp4'),240)||'andrik-video.mp4';
   const fallback=sourceName.replace(/\.mp4$/i,'').replace(/[-_]+/g,' ');
-  const title=radioClipTitleR691(body?.title,fallback||'ANDRIK VIDEO');
-  const key=`${RADIO_CLIP_PREFIX_R691}${radioClipSlugR691(title||fallback)}.mp4`;
+  const bumperSlot=[1,2,3].includes(Number(body?.bumperSlot))?Number(body.bumperSlot):0;
+  const title=bumperSlot?`ЗАСТАВКА ${bumperSlot}`:radioClipTitleR691(body?.title,fallback||'ANDRIK VIDEO');
+  const key=bumperSlot?RADIO_BUMPER_KEYS_R724[bumperSlot]:`${RADIO_CLIP_PREFIX_R691}${radioClipSlugR691(title||fallback)}.mp4`;
   try{
     const upload=await bucket.createMultipartUpload(key,{
       httpMetadata:{contentType:'video/mp4',cacheControl:'public, max-age=3600'},
-      customMetadata:{source:'ANDRIK R691 radio clip upload',title,sourceName,expectedSize:String(expectedSize),uploadedBy:'radio-visuals-admin-r691',radioClip:'1'}
+      customMetadata:{source:bumperSlot?'ANDRIK R724 radio bumper upload':'ANDRIK R691 radio clip upload',title,sourceName,expectedSize:String(expectedSize),uploadedBy:'radio-visuals-admin-r724',radioClip:'1',...(bumperSlot?{radioBumper:String(bumperSlot)}:{})}
     });
-    return json({ok:true,key,title,uploadId:upload.uploadId,partSize:5*1024*1024,expectedSize,uploadMode:'R693-buffered-parts'});
+    return json({ok:true,key,title,bumperSlot,uploadId:upload.uploadId,partSize:5*1024*1024,expectedSize,uploadMode:'R724-buffered-parts'});
   }catch(error){return json({ok:false,error:'multipart-start-failed',message:cleanPlainText(error?.message||error,420)},502);}
 }
 async function handleRadioClipMpuPartR691(request,env){

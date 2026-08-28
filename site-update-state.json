@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787912870138-787470c8aa",
-  "release": "R723",
-  "archiveName": "R723-GREEN-QR-R722-SUBSCRIBE-LIKE-R721-LIVE-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "d6f19b55871abfcff3dfa6cfa182c66fb7f908bf",
-  "backupSha": "d6f19b55871abfcff3dfa6cfa182c66fb7f908bf",
+  "operationId": "publish-1787921510638-fcddc2ff2d",
+  "release": "R724",
+  "archiveName": "R724-TITLE-SYNC-3-BUMPERS-6-8-SONGS-QR-RIGHT-YA-EST-R723-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "7606692fce2e697aee91636d3c59f1bd4723ea01",
+  "backupSha": "7606692fce2e697aee91636d3c59f1bd4723ea01",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-28T10:27:51.616Z"
+  "generatedAt": "2026-08-28T12:51:51.106Z"
 }
