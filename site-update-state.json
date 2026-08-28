@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787931257069-8f466acec1",
-  "release": "R730",
-  "archiveName": "R730-MEDIA-CLOCK-TITLE-FADE-SYNC-R729-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "2e3ae6a3ca929586cbf5bf9e3c4e84354c3fd582",
-  "backupSha": "2e3ae6a3ca929586cbf5bf9e3c4e84354c3fd582",
+  "operationId": "publish-1787932457851-ba247988f7",
+  "release": "R731",
+  "archiveName": "R731-FFMPEG-PREVNEXT-STABLE-BUFFER-FADE-R730-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "0192fdb62cee4a21beb654770c59338d89571b72",
+  "backupSha": "0192fdb62cee4a21beb654770c59338d89571b72",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-28T15:34:17.623Z"
+  "generatedAt": "2026-08-28T15:54:18.198Z"
 }

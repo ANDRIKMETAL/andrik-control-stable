@@ -1,0 +1,3 @@
+curl -fsSL --retry 5 --retry-all-errors \
+"https://raw.githubusercontent.com/ANDRIKMETAL/andrik-control-stable/main/radio247/vm-lite/install-r731-ffmpeg-prevnext-stable-buffer-fade-r730-preserved.sh" \
+| sudo env ANDRIK_SITE_BASE="https://raw.githubusercontent.com/ANDRIKMETAL/andrik-control-stable/main" bash

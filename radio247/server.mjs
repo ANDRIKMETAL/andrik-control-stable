@@ -48,14 +48,14 @@ const BUMPER_MAX_SONGS_R724 = 6;
 const SPECIAL_INTERVAL_MS_R726 = Math.max(10*60*1000, Number(process.env.SPECIAL_INTERVAL_MS_R726 || 30*60*1000));
 const SPECIAL_HOURLY_INTERVAL_MS_R727 = Math.max(30*60*1000, Number(process.env.SPECIAL_HOURLY_INTERVAL_MS_R727 || 60*60*1000));
 const NEXT_PREVIEW_SECONDS_R726 = 8;
-const NEXT_PREVIEW_HIDE_BEFORE_END_R726 = 0.8;
+const NEXT_PREVIEW_HIDE_BEFORE_END_R726 = 0.30; // R731: keep PREVIOUS/NEXT visible almost to the handoff
 const TRACK_HISTORY_LIMIT_R726 = 20;
 const TRACK_AUDIO_TARGET_I_R726 = -14;
 const TRACK_AUDIO_TRUE_PEAK_R726 = -1.5;
 const TRACK_AUDIO_LRA_R726 = 11;
 const TRACK_AUDIO_FADE_IN_R726 = 0.55;
 const TRACK_AUDIO_FADE_OUT_R726 = 0.75;
-const VIDEO_FADE_SECONDS_R726 = 0.90; // R730: clearly visible, media-clock aligned
+const VIDEO_FADE_SECONDS_R726 = 1.25; // R731: clearly visible fade-to-black / fade-from-black
 // R721 keeps the proven 100-frame / 4-second exact-periodic QTRLE loops from R720.
 // The EQ is encoded inside the current local H264 feeder, while the YouTube RTMPS
 // publisher stays open permanently across MP3, clip and visual-period switches.
@@ -70,7 +70,7 @@ const VIDEO_BITRATE = '4500k'; // R637: 1080p25 low-motion radio visual, bounded
 const AUDIO_BITRATE = '128k'; // YouTube Live recommendation for stereo AAC
 const AUDIO_SAMPLE_RATE = 44100; // YouTube Live recommendation for stereo
 const VIDEO_FPS = 25;
-const MEDIA_INPUT_QUEUE_PACKETS_R730 = 64; // local pipes: bound latency, prevent title/audio drift
+const MEDIA_INPUT_QUEUE_PACKETS_R731 = 8192; // restore proven stable publisher buffering; UI sync is now FFmpeg-frame-bound
 const VIDEO_GOP = 50; // exactly 2 seconds at 25 fps
 const LIBRARY_REFRESH_MS = Math.max(60000, Number(process.env.LIBRARY_REFRESH_MS || 120000));
 const LIVE_TICKER_FILE = process.env.LIVE_TICKER_FILE || `${CACHE_DIR}/live-ticker.txt`;
@@ -101,14 +101,14 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R730-MEDIA-CLOCK-TITLE-FADE-SYNC-R729-PRESERVED',
-  mode: 'R730 MEDIA-CLOCK TITLES + VISIBLE FADE + R729/R728/R727 PRESERVED',
+  version: 'R731-FFMPEG-PREVNEXT-STABLE-BUFFER-FADE-R730-PRESERVED',
+  mode: 'R731 FFMPEG-FRAME PREVIOUS/NEXT + STABLE BUFFER + VISIBLE FADE + R730 PRESERVED',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
   producerRunning: false,
-  overlayMode: 'R730 CURRENT/PREVIOUS/NEXT MEDIA-CLOCK + 0.90s BLACK FADE + R725 CTA/QR/TITLE/EQ',
-  audioMode: 'R730 BOUNDED PCM QUEUE + R726 LOUDNORM -14 LUFS + AUDIO FADES / ONE RTMPS',
+  overlayMode: 'R731 STATIC CURRENT + FFMPEG-TIMED PREVIOUS/NEXT T-8s + 1.25s BLACK FADE + R725 CTA/QR/TITLE/EQ',
+  audioMode: 'R731 STABLE 8192 INPUT QUEUES + R726 LOUDNORM -14 LUFS + AUDIO FADES / ONE RTMPS',
   visualTimeZone: VISUAL_TIME_ZONE,
   visualPeriod: null,
   visualPath: null,
@@ -890,7 +890,7 @@ function trackLabel(item,fallback='—'){
   return album ? `${title} (${album})` : title;
 }
 
-function titleOverlayFiltersR721(){
+function titleOverlayFiltersR721({dynamicTitle=true,showPreview=false,previewDuration=0}={}){
   const font=chooseFont();
   const titleFont=chooseTitleFont();
   const fontPart=font?`fontfile='${ffFilterPath(font)}':`:'';
@@ -899,6 +899,13 @@ function titleOverlayFiltersR721(){
   const tickerPath=ffFilterPath(LIVE_TICKER_FILE);
   const prevPath=ffFilterPath(LIVE_PREVIOUS_FILE_R726);
   const nextPath=ffFilterPath(LIVE_NEXT_FILE_R726);
+  const titleReload=dynamicTitle?`:reload=${VIDEO_FPS}`:'';
+  const d=Math.max(0,Number(previewDuration)||0);
+  const previewStart=Math.max(0,d-NEXT_PREVIEW_SECONDS_R726);
+  const previewEnd=Math.max(previewStart+0.25,d-NEXT_PREVIEW_HIDE_BEFORE_END_R726);
+  const previewEnable=showPreview&&d>NEXT_PREVIEW_SECONDS_R726+0.5
+    ? `:enable='between(t\,${previewStart.toFixed(3)}\,${previewEnd.toFixed(3)})'`
+    : `:enable='0'`;
   return [
     // R721: keep every source pixel. 16:9 fills 1920x1080; any other aspect is padded.
     'scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos',
@@ -906,20 +913,20 @@ function titleOverlayFiltersR721(){
     'setsar=1',
     `fps=${VIDEO_FPS}`,
     'format=yuv420p',
-    // The requested HEAVY STREAM title treatment from the reference screenshot:
-    // translucent black strip, red separator, black outer stroke, red inner stroke.
+    // R731: normal-track textfiles are loaded ONCE by this feeder. Their timing is then
+    // physically bound to video-frame t, so wall-clock timers cannot flash stale titles.
     'drawbox=x=0:y=ih-204:w=iw:h=88:color=black@0.38:t=fill',
     'drawbox=x=92:y=ih-208:w=iw-184:h=4:color=0xE00026@0.96:t=fill',
-    `drawtext=${titleFontPart}textfile='${curPath}':reload=${VIDEO_FPS}:fontcolor=white@0.01:fontsize=58:x=(w-text_w)/2:y=h-188:borderw=8:bordercolor=black@0.92`,
-    `drawtext=${titleFontPart}textfile='${curPath}':reload=${VIDEO_FPS}:fontcolor=0xF8F4EE:fontsize=58:x=(w-text_w)/2:y=h-188:borderw=4:bordercolor=0xD60024@1:shadowcolor=black@1:shadowx=4:shadowy=4`,
-    `drawtext=${fontPart}textfile='${prevPath}':reload=1:fontcolor=white@0.97:fontsize=26:x=58:y=h-292:borderw=2:bordercolor=black@0.95:box=1:boxcolor=black@0.36:boxborderw=11`,
-    `drawtext=${fontPart}textfile='${nextPath}':reload=1:fontcolor=white@0.97:fontsize=26:x=w-text_w-58:y=h-292:borderw=2:bordercolor=black@0.95:box=1:boxcolor=black@0.36:boxborderw=11`,
+    `drawtext=${titleFontPart}textfile='${curPath}'${titleReload}:fontcolor=white@0.01:fontsize=58:x=(w-text_w)/2:y=h-188:borderw=8:bordercolor=black@0.92`,
+    `drawtext=${titleFontPart}textfile='${curPath}'${titleReload}:fontcolor=0xF8F4EE:fontsize=58:x=(w-text_w)/2:y=h-188:borderw=4:bordercolor=0xD60024@1:shadowcolor=black@1:shadowx=4:shadowy=4`,
+    `drawtext=${fontPart}textfile='${prevPath}':fontcolor=white@1:fontsize=32:x=58:y=h-305:borderw=3:bordercolor=black@1:box=1:boxcolor=black@0.64:boxborderw=13${previewEnable}`,
+    `drawtext=${fontPart}textfile='${nextPath}':fontcolor=white@1:fontsize=32:x=w-text_w-58:y=h-305:borderw=3:bordercolor=black@1:box=1:boxcolor=black@0.64:boxborderw=13${previewEnable}`,
     `drawtext=${fontPart}textfile='${tickerPath}':reload=${VIDEO_FPS}:fontcolor=yellow:fontsize=28:x='w-mod(t*110,text_w+w)':y=h-58:borderw=3:bordercolor=black@1:shadowcolor=black@1:shadowx=2:shadowy=2`
   ].join(',');
 }
 
 function normalVideoFilterComplexR721({fadeIn=false,trackDuration=0}={}){
-  const vf=titleOverlayFiltersR721();
+  const vf=titleOverlayFiltersR721({dynamicTitle:false,showPreview:true,previewDuration:trackDuration});
   // R726: CTA remains tied to wall-clock phase even though the normal feeder is restarted
   // at song boundaries to produce a real fade-to-black / fade-from-black transition.
   const ctaPhase=(Date.now()/1000)%CTA_PERIOD_SECONDS_R722;
@@ -935,7 +942,7 @@ function normalVideoFilterComplexR721({fadeIn=false,trackDuration=0}={}){
 }
 
 function clipFilterComplexR721(){
-  const vf=titleOverlayFiltersR721();
+  const vf=titleOverlayFiltersR721({dynamicTitle:true,showPreview:false});
   return `[0:v]${vf}[base];[1:v]scale=160:160:flags=lanczos,format=yuva420p[qr];[base][qr]overlay=x=W-w-24:y=24:shortest=1:format=auto,format=yuv420p[outv]`;
 }
 
@@ -977,8 +984,8 @@ function startPublisher(){
   // 1/25-second timestamp, independent of feeder process restarts. No video re-encode here.
   const args=[
     '-hide_banner','-loglevel','warning',
-    '-thread_queue_size',String(MEDIA_INPUT_QUEUE_PACKETS_R730),'-fflags','+genpts+discardcorrupt','-framerate',String(VIDEO_FPS),'-f','h264','-i','pipe:4',
-    '-thread_queue_size',String(MEDIA_INPUT_QUEUE_PACKETS_R730),'-f','s16le','-ar',String(AUDIO_SAMPLE_RATE),'-ac','2','-i','pipe:3',
+    '-thread_queue_size',String(MEDIA_INPUT_QUEUE_PACKETS_R731),'-fflags','+genpts+discardcorrupt','-framerate',String(VIDEO_FPS),'-f','h264','-i','pipe:4',
+    '-thread_queue_size',String(MEDIA_INPUT_QUEUE_PACKETS_R731),'-f','s16le','-ar',String(AUDIO_SAMPLE_RATE),'-ac','2','-i','pipe:3',
     '-map','0:v:0','-map','1:a:0',
     '-c:v','copy',
     '-bsf:v',`setts=time_base=1/${VIDEO_FPS}:pts=N:dts=N:duration=1`,
@@ -1286,9 +1293,15 @@ async function playItem(previous,item,next,following,localAudioPath,nextTrackPre
   state.previous=previous?{type:previous.type||'track',title:previous.title,album:previous.album||'',url:previous.url||''}:null;
   state.next=next?{type:next.type||'track',title:next.title,album:next.album||'',url:next.url||''}:null;
 
-  // R730: prepare the new visual while the old title is still valid. The fade-in begins
-  // from black; CURRENT changes only at the actual audio handoff, not during prefetch/setup.
+  // R731: write the exact three labels BEFORE spawning this song's feeder. Normal
+  // feeders load them once and FFmpeg itself reveals PREVIOUS/NEXT only at T-8s.
+  // No Node wall-clock timer can get ahead of the audio anymore.
   clearNextPreviewR726({invalidate:true});
+  writeOverlayFileR726(LIVE_CURRENT_FILE,`ANDRIK — ${shortText(item.title||'TRACK',42)}`);
+  writeOverlayFileR726(LIVE_PREVIOUS_FILE_R726,previousTrackForPreviewR726?.type==='track'
+    ? `PREVIOUS • ANDRIK — ${shortText(previousTrackForPreviewR726.title||'TRACK',32)}` : '');
+  writeOverlayFileR726(LIVE_NEXT_FILE_R726,nextTrackPreview?.type==='track'
+    ? `NEXT • ANDRIK — ${shortText(nextTrackPreview.title||'TRACK',32)}` : '');
   await ensureNormalVideoFeederR721({force:true,fadeIn:true,trackDuration:duration});
 
   const audioSink=publisher?.stdio?.[3];
@@ -1297,9 +1310,8 @@ async function playItem(previous,item,next,following,localAudioPath,nextTrackPre
   const mediaStartedAt=Date.now();
   state.current={type:item.type||'track',title:item.title,album:item.album||'',url:item.url,startedAt:new Date(mediaStartedAt).toISOString(),duration};
   const currentIdentity=primaryIdentity(state.current);
-  const uiGeneration=trackUiGenerationR730;
   setLiveTitleR724(`ANDRIK — ${shortText(item.title||'TRACK',42)}`,{delayMs:0});
-  scheduleNextPreviewR726(previousTrackForPreviewR726,nextTrackPreview,duration,currentIdentity,uiGeneration);
+  // R731: PREVIOUS/NEXT visibility is FFmpeg-frame-timed in the video filter.
 
   state.producerRunning=true;
   producer=spawn('ffmpeg',decoderArgs(localAudioPath,duration),{stdio:['ignore','pipe','pipe']});
@@ -1481,8 +1493,8 @@ function publicStatus(){
     mode:state.mode,
     overlayMode:state.overlayMode,
     audioMode:state.audioMode,
-    engine:'R730-PERSISTENT-H264-RELAY-MEDIA-CLOCK',
-    videoPipeline:'R730 MEDIA-CLOCK CURRENT/PREVIOUS/NEXT + 0.90s BLACK FADES + R729/R727 PRESERVED / ONE RTMPS',
+    engine:'R731-PERSISTENT-H264-RELAY-FFMPEG-UI-CLOCK',
+    videoPipeline:'R731 FFMPEG-FRAME CURRENT/PREVIOUS/NEXT + 1.25s BLACK FADES + R730/R729 PRESERVED / ONE RTMPS',
     outputTimeshiftSeconds:OUTPUT_TIMESHIFT_SECONDS,
     videoBitrate:VIDEO_BITRATE,
     audioBitrate:AUDIO_BITRATE,
@@ -1494,9 +1506,11 @@ function publicStatus(){
     subscribeLikeShowSeconds:CTA_SHOW_SECONDS_R722,
     subscribeLikePeriodSeconds:CTA_PERIOD_SECONDS_R722,
     titleHandoffDelayMs:TITLE_HANDOFF_DELAY_MS_R724,
-    mediaInputQueuePackets:MEDIA_INPUT_QUEUE_PACKETS_R730,
-    trackUiClock:'audio-handoff-bound-R730',
+    mediaInputQueuePackets:MEDIA_INPUT_QUEUE_PACKETS_R731,
+    trackUiClock:'ffmpeg-frame-bound-R731',
     nextPreviewSeconds:NEXT_PREVIEW_SECONDS_R726,
+    nextPreviewTiming:'FFMPEG_PREVIEW_WINDOW_R731',
+    nextPreviewHideBeforeEndSeconds:NEXT_PREVIEW_HIDE_BEFORE_END_R726,
     audioNormalizationTargetLufs:TRACK_AUDIO_TARGET_I_R726,
     audioTruePeakDb:TRACK_AUDIO_TRUE_PEAK_R726,
     audioFadeInSeconds:TRACK_AUDIO_FADE_IN_R726,
