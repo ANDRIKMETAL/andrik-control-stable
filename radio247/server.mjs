@@ -56,7 +56,8 @@ const TRACK_AUDIO_TRUE_PEAK_R726 = -1.5;
 const TRACK_AUDIO_LRA_R726 = 11;
 const TRACK_AUDIO_FADE_IN_R726 = 0.55;
 const TRACK_AUDIO_FADE_OUT_R726 = 0.75;
-const VIDEO_FADE_SECONDS_R726 = 1.25; // R731: clearly visible fade-to-black / fade-from-black
+const VIDEO_FADE_SECONDS_R726 = 1.25; // R734: fade-out duration on the OLD track only
+const VIDEO_BLACK_HOLD_SECONDS_R734 = 0.20; // hold full black just before the real audio handoff
 // R721 keeps the proven 100-frame / 4-second exact-periodic QTRLE loops from R720.
 // The EQ is encoded inside the current local H264 feeder, while the YouTube RTMPS
 // publisher stays open permanently across MP3, clip and visual-period switches.
@@ -103,13 +104,13 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R733-FADE-PTS-PREVIOUS-FALLBACK-R732-PRESERVED',
-  mode: 'R733 R732 TRANSPORT PRESERVED + PTS-ANCHORED FADES + PREVIOUS FALLBACK',
+  version: 'R734-BOUNDARY-FADEOUT-NO-LATE-FADEIN-R733-PRESERVED',
+  mode: 'R734 R733/R732 TRANSPORT PRESERVED + OLD-TRACK BOUNDARY FADEOUT + NO LATE FADEIN',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
   producerRunning: false,
-  overlayMode: 'R733 PTS-ANCHORED CURRENT/PREVIOUS/NEXT T-8s + 1.25s BLACK FADE + YUV420 OVERLAYS',
+  overlayMode: 'R734 CURRENT/PREVIOUS/NEXT T-8s + OLD-TRACK 1.25s FADEOUT + 0.20s BLACK HOLD + NO NEW-TRACK FADEIN',
   audioMode: 'R732 R729 PCM TRANSPORT + AUDIO QUEUE 8 + R726 LOUDNORM -14 LUFS / ONE RTMPS',
   visualTimeZone: VISUAL_TIME_ZONE,
   visualPeriod: null,
@@ -947,9 +948,13 @@ function normalVideoFilterComplexR721({fadeIn=false,trackDuration=0}={}){
   const ctaPhase=(Date.now()/1000)%CTA_PERIOD_SECONDS_R722;
   const ctaEnable=`lt(mod(t+${ctaPhase.toFixed(3)}\,${CTA_PERIOD_SECONDS_R722})\,${CTA_SHOW_SECONDS_R722})`;
   const fades=[];
-  if(fadeIn)fades.push(`fade=t=in:st=0:d=${VIDEO_FADE_SECONDS_R726.toFixed(2)}:color=black`);
-  if(Number(trackDuration)>VIDEO_FADE_SECONDS_R726*2){
-    const outAt=Math.max(0,Number(trackDuration)-VIDEO_FADE_SECONDS_R726);
+  // R734: NEVER fade the new song in. The persistent H264 publisher can retain a
+  // small amount of already-encoded video around feeder handoff; a new-feeder fade-in
+  // can therefore become visible after the new audio has already started. Put the
+  // entire cinematic transition on the OLD track instead: fade fully to black before
+  // its audio handoff, hold black briefly, then the next feeder appears immediately.
+  if(Number(trackDuration)>VIDEO_FADE_SECONDS_R726+VIDEO_BLACK_HOLD_SECONDS_R734+1){
+    const outAt=Math.max(0,Number(trackDuration)-VIDEO_FADE_SECONDS_R726-VIDEO_BLACK_HOLD_SECONDS_R734);
     fades.push(`fade=t=out:st=${outAt.toFixed(3)}:d=${VIDEO_FADE_SECONDS_R726.toFixed(2)}:color=black`);
   }
   const finish=fades.length?`${fades.join(',')},format=yuv420p`:'format=yuv420p';
@@ -1321,7 +1326,7 @@ async function playItem(previous,item,next,following,localAudioPath,nextTrackPre
     ? `PREVIOUS • ANDRIK — ${shortText(previousForOverlayR733.title||'TRACK',32)}` : '');
   writeOverlayFileR726(LIVE_NEXT_FILE_R726,nextTrackPreview?.type==='track'
     ? `NEXT • ANDRIK — ${shortText(nextTrackPreview.title||'TRACK',32)}` : '');
-  await ensureNormalVideoFeederR721({force:true,fadeIn:true,trackDuration:duration});
+  await ensureNormalVideoFeederR721({force:true,fadeIn:false,trackDuration:duration});
 
   const audioSink=publisher?.stdio?.[3];
   if(!publisher || publisher.exitCode!==null || !audioSink || audioSink.destroyed) throw new Error('master audio pipe unavailable');
@@ -1537,6 +1542,9 @@ function publicStatus(){
     audioFadeInSeconds:TRACK_AUDIO_FADE_IN_R726,
     audioFadeOutSeconds:TRACK_AUDIO_FADE_OUT_R726,
     videoFadeSeconds:VIDEO_FADE_SECONDS_R726,
+      videoFadeStrategy:'OLD_TRACK_ONLY_R734',
+      videoFadeInEnabled:false,
+      videoBlackHoldSeconds:VIDEO_BLACK_HOLD_SECONDS_R734,
     visualTimelineAnchor:'PTS-STARTPTS-R733',
     previousPreviewFallback:'MEMORY-PREVIOUS-OR-CURRENT-FILE-R733',
     antiRepeatTrackHistory:TRACK_HISTORY_LIMIT_R726,

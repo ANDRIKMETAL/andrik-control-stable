@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787934702289-d69f523fe7",
-  "release": "R733",
-  "archiveName": "R733-FADE-PTS-PREVIOUS-FALLBACK-R732-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "a41d86a0f86b322382ca7eaed75ed266f0989dc3",
-  "backupSha": "a41d86a0f86b322382ca7eaed75ed266f0989dc3",
+  "operationId": "publish-1787935507217-25d8d04d50",
+  "release": "R734",
+  "archiveName": "R734-BOUNDARY-FADEOUT-NO-LATE-FADEIN-R733-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "e77280cdc559b3cf3946fca0a75b0b5c0b29e208",
+  "backupSha": "e77280cdc559b3cf3946fca0a75b0b5c0b29e208",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-28T16:31:42.705Z"
+  "generatedAt": "2026-08-28T16:45:07.622Z"
 }
