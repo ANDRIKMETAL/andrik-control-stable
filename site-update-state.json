@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787926375149-95c95a6813",
-  "release": "R727",
-  "archiveName": "R727-DUAL-SPECIAL30-60-R726-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "b326691c4f3a296b8ad45275c91c38f1b248b05b",
-  "backupSha": "b326691c4f3a296b8ad45275c91c38f1b248b05b",
+  "operationId": "publish-1787927625640-44be475724",
+  "release": "R729",
+  "archiveName": "R729-SPECIAL-UPLOAD-FIX-R728-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "d081c02a0b5e5f8e92f9ba5415a813201e8e6ed4",
+  "backupSha": "d081c02a0b5e5f8e92f9ba5415a813201e8e6ed4",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-28T14:12:55.687Z"
+  "generatedAt": "2026-08-28T14:33:46.109Z"
 }

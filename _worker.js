@@ -18177,6 +18177,47 @@ async function handleRadioClipMpuAbortR691(request,env){
   try{await bucket.resumeMultipartUpload(key,uploadId).abort();return json({ok:true,key});}
   catch(error){return json({ok:false,error:'multipart-abort-failed',message:cleanPlainText(error?.message||error,300)},400);}
 }
+
+// === R729: direct, atomic upload for the two short special station IDs ===
+// These files are small (Kling/Suno bumpers) and do not need multipart upload.
+// One same-origin XHR -> Worker -> R2 removes the fragile 5 MiB + short-final-part handoff
+// that surfaced on Android as `Failed to fetch` around ~80%.
+async function handleRadioSpecialDirectUploadR729(request,env){
+  if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
+  const bucket=getMusicBucketR314(env);if(!bucket)return json({ok:false,error:'music-bucket-not-configured'},503);
+  const url=new URL(request.url),slot=String(url.searchParams.get('slot')||'').trim();
+  const is30=slot==='30',is60=slot==='60';
+  if(!is30&&!is60)return json({ok:false,error:'invalid-special-slot',message:'slot должен быть 30 или 60'},400);
+  if(!request.body)return json({ok:false,error:'missing-file-body'},400);
+  const key=is60?RADIO_SPECIAL_HOURLY_KEY_R727:RADIO_SPECIAL_KEY_R726;
+  const expectedSize=Math.max(0,Number(request.headers.get('x-andrik-file-size')||request.headers.get('content-length')||0)||0);
+  if(!expectedSize)return json({ok:false,error:'empty-file'},400);
+  // Special station IDs are intentionally short. Keep the direct route comfortably below
+  // common edge upload limits and use normal clip multipart for genuinely large videos.
+  if(expectedSize>96*1024*1024)return json({ok:false,error:'special-file-too-large',message:'Спецвставка больше 96 МБ. Сожми MP4 или используй обычную загрузку клипа.'},413);
+  let sourceName='special.mp4';
+  try{sourceName=decodeURIComponent(String(request.headers.get('x-andrik-file-name')||sourceName)).slice(0,240)||sourceName}catch(_){sourceName='special.mp4'}
+  const title=is60?'СПЕЦЗАСТАВКА • 60 МИНУТ':'СПЕЦЗАСТАВКА • 30 МИНУТ';
+  try{
+    // R2 PUT is atomic for this fixed key: an interrupted request does not expose a partial MP4.
+    await bucket.put(key,request.body,{
+      httpMetadata:{contentType:'video/mp4',cacheControl:'public, max-age=3600'},
+      customMetadata:{
+        source:is60?'ANDRIK R729 direct special 60min upload':'ANDRIK R729 direct special 30min upload',
+        title,sourceName,expectedSize:String(expectedSize),uploadedBy:'radio-visuals-admin-r729',radioClip:'1',
+        ...(is30?{radioSpecial30min:'1'}:{}),...(is60?{radioSpecial60min:'1'}:{})
+      }
+    });
+    const head=await bucket.head(key);
+    const actualSize=Number(head?.size||0);
+    if(actualSize!==expectedSize)return json({ok:false,error:'special-size-mismatch',message:`R2 подтвердил ${actualSize} байт вместо ${expectedSize}.`,key,size:actualSize,expectedSize},409);
+    return json({ok:true,key,title,size:actualSize,expectedSize,verified:true,special30min:is30,special60min:is60,uploaded:head?.uploaded||null,url:radioClipDirectUrlR691(head),uploadMode:'R729-direct-atomic'});
+  }catch(error){
+    return json({ok:false,error:'special-direct-upload-failed',message:cleanPlainText(error?.message||error,420)},502);
+  }
+}
+// === End R729 special direct upload ===
+
 // === End R693 robust random radio clips ===
 
 // === R710: safe delete for owner-uploaded random radio clips ===
@@ -18702,6 +18743,7 @@ async function handleRadioRemoteCommandR627(request,env){
   await setPushState(db,RADIO_REMOTE_R627.commandKey,JSON.stringify(command));
   return json({ok:true,command});
 }
+function radioAgentVersionNumberR728(value){const m=String(value||'').match(/R(\d{3})/i);return m?Number(m[1]):0;}
 async function handleRadioAgentPollR627(request,env){
   if(!await radioAgentAuthorizedR627(request,env))return json({ok:false,error:'unauthorized-agent'},401);
   const db=env.COMMENTS_DB;if(!db)return json({ok:false,error:'database-not-configured'},503);
@@ -18712,6 +18754,15 @@ async function handleRadioAgentPollR627(request,env){
   const previousLastSeenMs=Date.parse(agent.lastSeen||'');
   const incomingVersion=String(body.version||agent.version||'R627');
   const incomingStatus=body.status&&typeof body.status==='object'?body.status:null;
+  const currentAgentNumberR728=radioAgentVersionNumberR728(agent.version);
+  const incomingAgentNumberR728=radioAgentVersionNumberR728(incomingVersion);
+  // R728: once the persistent R721+ agent has checked in, legacy R658/R715 daemons
+  // are not allowed to overwrite the displayed agent version or steal queued commands.
+  const staleLegacyAgentR728=currentAgentNumberR728>=721 && incomingAgentNumberR728>0 && incomingAgentNumberR728<721;
+  if(staleLegacyAgentR728){
+    const tickerRow=await getPushState(db,RADIO_REMOTE_R627.tickerKey).catch(()=>null);
+    return json({ok:true,command:null,ticker:parseStateValueR627(tickerRow)||null,ignoredLegacyAgent:true,activeVersion:agent.version||null});
+  }
   let statusChanged=false;
   if(incomingStatus){
     try{statusChanged=JSON.stringify(incomingStatus)!==JSON.stringify(agent.status||null)}catch(_){statusChanged=true}
@@ -18870,6 +18921,7 @@ async function routeApi(request, env, ctx) {
     if (path === '/api/control/radio-clips-r691/mpu/part' && request.method === 'PUT') return await handleRadioClipMpuPartR691(request, env);
     if (path === '/api/control/radio-clips-r691/mpu/complete' && request.method === 'POST') return await handleRadioClipMpuCompleteR691(request, env);
     if (path === '/api/control/radio-clips-r691/mpu/abort' && request.method === 'DELETE') return await handleRadioClipMpuAbortR691(request, env);
+    if (path === '/api/control/radio-special-r729/upload' && request.method === 'PUT') return await handleRadioSpecialDirectUploadR729(request, env);
     if (path === '/api/music/radio-clips-r691' && request.method === 'GET') return await handleRadioClipsListR691(request, env, false);
     if (path === '/api/media/radio-visual-r621' && (request.method === 'GET' || request.method === 'HEAD')) return await handleRadioVisualPublicR621(request, env);
     if (path === '/api/control/media/ya-est-r478/mpu/start' && request.method === 'POST') return await handleYaEstVideoMpuStartR478(request, env);

@@ -1,0 +1,9 @@
+R728 — UI + single-agent cleanup
+
+1. Убрана устаревшая кнопка FULL-FIT из Radio Control. NO CROP/FIT остаются встроены в движок.
+2. Старый результат full-fit больше не показывается красной ошибкой в Видео эфира и Radio Control.
+3. ADMIN_KEY перенесён в низ страницы Видео эфира.
+4. Исправлена причина прыжков Agent R715/R658: старый andrik-radio-web-control.service отключается и маскируется, остаётся один andrik-radio-web.service с Agent R721.
+5. Worker R728 не позволяет legacy Agent < R721 перезаписать версию/статус и забрать новые команды после появления R721.
+6. R727/R726/R725/R721 потоковые функции не менялись.
+7. R728 installer не перезапускает andrik-radio.service.
