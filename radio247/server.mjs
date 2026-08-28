@@ -42,7 +42,7 @@ const QR_OVERLAY = process.env.QR_OVERLAY || new URL('../assets/andrik-qr-r612.p
 const CTA_OVERLAY_R722 = process.env.CTA_OVERLAY_R722 || new URL('../assets/subscribe-like-r722.png', import.meta.url).pathname;
 const CTA_SHOW_SECONDS_R722 = 8;
 const CTA_PERIOD_SECONDS_R722 = 120; // R725: every 2 minutes during the normal radio visual
-const TITLE_HANDOFF_DELAY_MS_R724 = Math.max(0, Math.min(5000, Number(process.env.TITLE_HANDOFF_DELAY_MS_R724 || 1800)));
+const TITLE_HANDOFF_DELAY_MS_R724 = 0; // R730: title changes only on the real media handoff
 const BUMPER_MIN_SONGS_R724 = 4;
 const BUMPER_MAX_SONGS_R724 = 6;
 const SPECIAL_INTERVAL_MS_R726 = Math.max(10*60*1000, Number(process.env.SPECIAL_INTERVAL_MS_R726 || 30*60*1000));
@@ -55,7 +55,7 @@ const TRACK_AUDIO_TRUE_PEAK_R726 = -1.5;
 const TRACK_AUDIO_LRA_R726 = 11;
 const TRACK_AUDIO_FADE_IN_R726 = 0.55;
 const TRACK_AUDIO_FADE_OUT_R726 = 0.75;
-const VIDEO_FADE_SECONDS_R726 = 0.65;
+const VIDEO_FADE_SECONDS_R726 = 0.90; // R730: clearly visible, media-clock aligned
 // R721 keeps the proven 100-frame / 4-second exact-periodic QTRLE loops from R720.
 // The EQ is encoded inside the current local H264 feeder, while the YouTube RTMPS
 // publisher stays open permanently across MP3, clip and visual-period switches.
@@ -70,6 +70,7 @@ const VIDEO_BITRATE = '4500k'; // R637: 1080p25 low-motion radio visual, bounded
 const AUDIO_BITRATE = '128k'; // YouTube Live recommendation for stereo AAC
 const AUDIO_SAMPLE_RATE = 44100; // YouTube Live recommendation for stereo
 const VIDEO_FPS = 25;
+const MEDIA_INPUT_QUEUE_PACKETS_R730 = 64; // local pipes: bound latency, prevent title/audio drift
 const VIDEO_GOP = 50; // exactly 2 seconds at 25 fps
 const LIBRARY_REFRESH_MS = Math.max(60000, Number(process.env.LIBRARY_REFRESH_MS || 120000));
 const LIVE_TICKER_FILE = process.env.LIVE_TICKER_FILE || `${CACHE_DIR}/live-ticker.txt`;
@@ -100,14 +101,14 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R727-DUAL-SPECIAL30-60-R726-PRESERVED',
-  mode: 'R727 SPECIAL 30MIN + SPECIAL 60MIN + R726 LOUDNESS/FADE/NEXT/ANTIREPEAT + R725 PRESERVED',
+  version: 'R730-MEDIA-CLOCK-TITLE-FADE-SYNC-R729-PRESERVED',
+  mode: 'R730 MEDIA-CLOCK TITLES + VISIBLE FADE + R729/R728/R727 PRESERVED',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
   producerRunning: false,
-  overlayMode: 'R726 PREVIOUS/NEXT T-8s + TRACK FADE TO/FROM BLACK + R725 CTA 2min + QR RIGHT + RED TITLE + EQ',
-  audioMode: 'R726 TRACK LOUDNORM -14 LUFS + 0.55/0.75s AUDIO FADES / R721 PERSISTENT PCM + ONE RTMPS',
+  overlayMode: 'R730 CURRENT/PREVIOUS/NEXT MEDIA-CLOCK + 0.90s BLACK FADE + R725 CTA/QR/TITLE/EQ',
+  audioMode: 'R730 BOUNDED PCM QUEUE + R726 LOUDNORM -14 LUFS + AUDIO FADES / ONE RTMPS',
   visualTimeZone: VISUAL_TIME_ZONE,
   visualPeriod: null,
   visualPath: null,
@@ -176,6 +177,7 @@ let nextPreviewHideTimerR726 = null;
 const recentTrackIdsR726 = [];
 let lastClipIdentityR726 = '';
 let previousTrackForPreviewR726 = null;
+let trackUiGenerationR730 = 0;
 const clipPrefetchJobs = new Map();
 const prefetchJobs = new Map();
 
@@ -240,24 +242,32 @@ function antiRepeatClipOrderR726(clips){
 function writeOverlayFileR726(path,text=''){
   try{writeFileSync(path,String(text||''),'utf8')}catch(error){state.lastError=`R726 overlay file: ${cleanText(error?.message||error)}`;}
 }
-function clearNextPreviewR726(){
+function clearNextPreviewR726({invalidate=false}={}){
+  if(invalidate)trackUiGenerationR730++;
   if(nextPreviewShowTimerR726){clearTimeout(nextPreviewShowTimerR726);nextPreviewShowTimerR726=null;}
   if(nextPreviewHideTimerR726){clearTimeout(nextPreviewHideTimerR726);nextPreviewHideTimerR726=null;}
   writeOverlayFileR726(LIVE_PREVIOUS_FILE_R726,'');
   writeOverlayFileR726(LIVE_NEXT_FILE_R726,'');
 }
-function scheduleNextPreviewR726(previousTrack,nextTrack,duration){
+function scheduleNextPreviewR726(previousTrack,nextTrack,duration,currentIdentity,generation){
   clearNextPreviewR726();
   if(!Number.isFinite(duration)||duration<=NEXT_PREVIEW_SECONDS_R726+1)return;
   const showMs=Math.max(0,(duration-NEXT_PREVIEW_SECONDS_R726)*1000);
   const hideMs=Math.max(showMs+300,(duration-NEXT_PREVIEW_HIDE_BEFORE_END_R726)*1000);
+  const stillCurrent=()=>generation===trackUiGenerationR730 && state.current?.type==='track' && primaryIdentity(state.current)===currentIdentity;
   nextPreviewShowTimerR726=setTimeout(()=>{
     nextPreviewShowTimerR726=null;
+    if(!stillCurrent())return;
     if(previousTrack?.type==='track')writeOverlayFileR726(LIVE_PREVIOUS_FILE_R726,`РАНЕЕ • ANDRIK — ${shortText(previousTrack.title||'TRACK',32)}`);
     if(nextTrack?.type==='track')writeOverlayFileR726(LIVE_NEXT_FILE_R726,`NEXT • ANDRIK — ${shortText(nextTrack.title||'TRACK',32)}`);
   },showMs);
   nextPreviewShowTimerR726.unref?.();
-  nextPreviewHideTimerR726=setTimeout(()=>{nextPreviewHideTimerR726=null;writeOverlayFileR726(LIVE_PREVIOUS_FILE_R726,'');writeOverlayFileR726(LIVE_NEXT_FILE_R726,'');},hideMs);
+  nextPreviewHideTimerR726=setTimeout(()=>{
+    nextPreviewHideTimerR726=null;
+    if(!stillCurrent())return;
+    writeOverlayFileR726(LIVE_PREVIOUS_FILE_R726,'');
+    writeOverlayFileR726(LIVE_NEXT_FILE_R726,'');
+  },hideMs);
   nextPreviewHideTimerR726.unref?.();
 }
 function remainingTrackSecondsR726(){
@@ -967,8 +977,8 @@ function startPublisher(){
   // 1/25-second timestamp, independent of feeder process restarts. No video re-encode here.
   const args=[
     '-hide_banner','-loglevel','warning',
-    '-thread_queue_size','1024','-fflags','+genpts+discardcorrupt','-framerate',String(VIDEO_FPS),'-f','h264','-i','pipe:4',
-    '-thread_queue_size','8192','-f','s16le','-ar',String(AUDIO_SAMPLE_RATE),'-ac','2','-i','pipe:3',
+    '-thread_queue_size',String(MEDIA_INPUT_QUEUE_PACKETS_R730),'-fflags','+genpts+discardcorrupt','-framerate',String(VIDEO_FPS),'-f','h264','-i','pipe:4',
+    '-thread_queue_size',String(MEDIA_INPUT_QUEUE_PACKETS_R730),'-f','s16le','-ar',String(AUDIO_SAMPLE_RATE),'-ac','2','-i','pipe:3',
     '-map','0:v:0','-map','1:a:0',
     '-c:v','copy',
     '-bsf:v',`setts=time_base=1/${VIDEO_FPS}:pts=N:dts=N:duration=1`,
@@ -1173,8 +1183,7 @@ async function playVideoClipR691(previous,item,next){
   const stationInsert=item.sourceType==='radio-bumper'||item.sourceType==='radio-special';
   state.current={type:item.sourceType==='radio-special'?'special':(item.sourceType==='radio-bumper'?'bumper':'clip'),title:item.title,album:item.album,url:item.url,startedAt:new Date().toISOString(),duration};
   state.next=next?{type:next.type||'track',title:next.title,album:next.album||'',url:next.url||''}:null;
-  clearNextPreviewR726();
-  setLiveTitleR724(stationInsert?'ANDRIK METAL RADIO':`КЛИП • ANDRIK — ${shortText(item.title||'VIDEO',34)}`);
+  clearNextPreviewR726({invalidate:true});
 
   let child=null,videoSink=null,audioSink=null,stallTimer=null,forcedReason='';
   try{
@@ -1191,6 +1200,8 @@ async function playVideoClipR691(previous,item,next){
     state.producerRunning=true;
     child.stdout.pipe(videoSink,{end:false});
     child.stdio[3].pipe(audioSink,{end:false});
+    state.current.startedAt=new Date().toISOString();
+    setLiveTitleR724(stationInsert?'ANDRIK METAL RADIO':`КЛИП • ANDRIK — ${shortText(item.title||'VIDEO',34)}`,{delayMs:0});
     child.stdout.on('error',()=>{});child.stdio[3].on('error',()=>{});
 
     let progressBuffer='',lastProgressAt=Date.now(),lastOutTime=0;
@@ -1273,14 +1284,22 @@ function decoderArgs(localAudioPath,duration){
 async function playItem(previous,item,next,following,localAudioPath,nextTrackPreview=null){
   const duration=await probeDuration(localAudioPath||item.url);
   state.previous=previous?{type:previous.type||'track',title:previous.title,album:previous.album||'',url:previous.url||''}:null;
-  state.current={type:item.type||'track',title:item.title,album:item.album||'',url:item.url,startedAt:new Date().toISOString(),duration};
   state.next=next?{type:next.type||'track',title:next.title,album:next.album||'',url:next.url||''}:null;
-  setLiveTitleR724(`ANDRIK — ${shortText(item.title||'TRACK',42)}`,{delayMs:previous?.type==='track'?TITLE_HANDOFF_DELAY_MS_R724:0});
-  scheduleNextPreviewR726(previousTrackForPreviewR726,nextTrackPreview,duration);
+
+  // R730: prepare the new visual while the old title is still valid. The fade-in begins
+  // from black; CURRENT changes only at the actual audio handoff, not during prefetch/setup.
+  clearNextPreviewR726({invalidate:true});
   await ensureNormalVideoFeederR721({force:true,fadeIn:true,trackDuration:duration});
 
   const audioSink=publisher?.stdio?.[3];
   if(!publisher || publisher.exitCode!==null || !audioSink || audioSink.destroyed) throw new Error('master audio pipe unavailable');
+
+  const mediaStartedAt=Date.now();
+  state.current={type:item.type||'track',title:item.title,album:item.album||'',url:item.url,startedAt:new Date(mediaStartedAt).toISOString(),duration};
+  const currentIdentity=primaryIdentity(state.current);
+  const uiGeneration=trackUiGenerationR730;
+  setLiveTitleR724(`ANDRIK — ${shortText(item.title||'TRACK',42)}`,{delayMs:0});
+  scheduleNextPreviewR726(previousTrackForPreviewR726,nextTrackPreview,duration,currentIdentity,uiGeneration);
 
   state.producerRunning=true;
   producer=spawn('ffmpeg',decoderArgs(localAudioPath,duration),{stdio:['ignore','pipe','pipe']});
@@ -1310,7 +1329,7 @@ async function playItem(previous,item,next,following,localAudioPath,nextTrackPre
     });
     playedOkR726=true;
   }finally{
-    clearNextPreviewR726();
+    clearNextPreviewR726({invalidate:true});
   }
   if(playedOkR726){rememberTrackR726(item);previousTrackForPreviewR726=item;}
 }
@@ -1462,8 +1481,8 @@ function publicStatus(){
     mode:state.mode,
     overlayMode:state.overlayMode,
     audioMode:state.audioMode,
-    engine:'R726-PERSISTENT-H264-RELAY-POLISHED',
-    videoPipeline:'R726 A/V SONG FADES + PREVIOUS/NEXT T-8s + SPECIAL 30MIN + R725 3 BUMPERS 4-6 + QR RIGHT / R721 ONE RTMPS',
+    engine:'R730-PERSISTENT-H264-RELAY-MEDIA-CLOCK',
+    videoPipeline:'R730 MEDIA-CLOCK CURRENT/PREVIOUS/NEXT + 0.90s BLACK FADES + R729/R727 PRESERVED / ONE RTMPS',
     outputTimeshiftSeconds:OUTPUT_TIMESHIFT_SECONDS,
     videoBitrate:VIDEO_BITRATE,
     audioBitrate:AUDIO_BITRATE,
@@ -1475,6 +1494,8 @@ function publicStatus(){
     subscribeLikeShowSeconds:CTA_SHOW_SECONDS_R722,
     subscribeLikePeriodSeconds:CTA_PERIOD_SECONDS_R722,
     titleHandoffDelayMs:TITLE_HANDOFF_DELAY_MS_R724,
+    mediaInputQueuePackets:MEDIA_INPUT_QUEUE_PACKETS_R730,
+    trackUiClock:'audio-handoff-bound-R730',
     nextPreviewSeconds:NEXT_PREVIEW_SECONDS_R726,
     audioNormalizationTargetLufs:TRACK_AUDIO_TARGET_I_R726,
     audioTruePeakDb:TRACK_AUDIO_TRUE_PEAK_R726,
@@ -1599,7 +1620,7 @@ const server=http.createServer((req,res)=>{
 });
 
 server.listen(PORT,'0.0.0.0',()=>{
-  console.log(`ANDRIK Radio R726 POLISH + SPECIAL30 + LOUDNORM + FADE + NEXT + ANTIREPEAT / R721-PERSISTENT-LIVE listening on :${PORT}`);
+  console.log(`ANDRIK Radio R730 MEDIA-CLOCK TITLE + FADE SYNC / R729-R727 PRESERVED listening on :${PORT}`);
   radioLoop();
 });
 

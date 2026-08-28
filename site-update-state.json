@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787927625640-44be475724",
-  "release": "R729",
-  "archiveName": "R729-SPECIAL-UPLOAD-FIX-R728-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "d081c02a0b5e5f8e92f9ba5415a813201e8e6ed4",
-  "backupSha": "d081c02a0b5e5f8e92f9ba5415a813201e8e6ed4",
+  "operationId": "publish-1787931257069-8f466acec1",
+  "release": "R730",
+  "archiveName": "R730-MEDIA-CLOCK-TITLE-FADE-SYNC-R729-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "2e3ae6a3ca929586cbf5bf9e3c4e84354c3fd582",
+  "backupSha": "2e3ae6a3ca929586cbf5bf9e3c4e84354c3fd582",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-28T14:33:46.109Z"
+  "generatedAt": "2026-08-28T15:34:17.623Z"
 }
