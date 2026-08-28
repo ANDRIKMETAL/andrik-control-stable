@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787938781538-b6ec5c15bc",
-  "release": "R737",
-  "archiveName": "R737-SAFE-ALPHA-OVERLAY-FADE-R736-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "5b770befe0254358db00c40de5b7e8534edb991a",
-  "backupSha": "5b770befe0254358db00c40de5b7e8534edb991a",
+  "operationId": "publish-1787951969266-56dc8179e6",
+  "release": "R738",
+  "archiveName": "R738-AV-LOCK-INSERT-AUDIO-EARLY-TITLE-FADE-R737-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "daa46a334f42a2737b513259e3020a883928d980",
+  "backupSha": "daa46a334f42a2737b513259e3020a883928d980",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-28T17:39:41.926Z"
+  "generatedAt": "2026-08-28T21:19:29.686Z"
 }

@@ -59,7 +59,10 @@ const TRACK_AUDIO_FADE_OUT_R726 = 0.75;
 const VIDEO_FADE_SECONDS_R726 = 0.65; // R736: short cinematic fade-out on the OLD track
 const VIDEO_FADE_IN_SECONDS_R736 = 0.30; // R736: same-feeder recovery so black can never hang into the new song
 const VIDEO_BLACK_HOLD_SECONDS_R736 = 0.05; // almost no dead-black hold
-const VIDEO_FADE_LEAD_SECONDS_R735 = 2.40; // keep the empirically correct lead that made fade START at the right moment
+const VIDEO_FADE_LEAD_SECONDS_R735 = 3.80; // R738: move the SAFE mask earlier so it finishes before the next audible item starts
+const TITLE_VISUAL_LEAD_SECONDS_R738 = 3.20; // compensate persistent video path latency; CURRENT is preloaded early but appears at the real handoff
+const CLIP_PRE_DRAIN_MS_R738 = 900; // let the bounded MP3 PCM queue drain while the normal visual keeps running
+const CLIP_POST_DRAIN_MS_R738 = 650; // let the clip PCM/video tail drain before the next MP3 feeder starts
 // R721 keeps the proven 100-frame / 4-second exact-periodic QTRLE loops from R720.
 // The EQ is encoded inside the current local H264 feeder, while the YouTube RTMPS
 // publisher stays open permanently across MP3, clip and visual-period switches.
@@ -106,13 +109,13 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R737-SAFE-ALPHA-OVERLAY-FADE-R736-PRESERVED',
-  mode: 'R737 R736/R732 TRANSPORT PRESERVED + SAFE BLACK ALPHA OVERLAY + ACTUAL NEXT ITEM',
+  version: 'R738-AV-LOCK-INSERT-AUDIO-EARLY-TITLE-FADE-R737-PRESERVED',
+  mode: 'R738 R737/R732 TRANSPORT PRESERVED + EARLY SAFE FADE/TITLE + CLIP A/V PTS LOCK + INSERT AUDIO HANDOFF',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
   producerRunning: false,
-  overlayMode: 'R737 CURRENT/PREVIOUS/ACTUAL-NEXT T-8s + SAFE BLACK ALPHA MASK 0.65/0.05/0.30 + CONTINUOUS BACKGROUND',
+  overlayMode: 'R738 CURRENT PRELOAD 3.20s + ACTUAL NEXT T-8s + SAFE ALPHA MASK EARLY 3.80s + CONTINUOUS BACKGROUND',
   audioMode: 'R732 R729 PCM TRANSPORT + AUDIO QUEUE 8 + R726 LOUDNORM -14 LUFS / ONE RTMPS',
   visualTimeZone: VISUAL_TIME_ZONE,
   visualPeriod: null,
@@ -148,7 +151,10 @@ const state = {
   equalizerStyle: null,
   equalizerEngine: 'R721-EXACT-PERIODIC-QTRLE-FEEDER-4-SLOT',
   visualLoopOffsetSeconds: 0,
-  visualContinuityMode: 'R735-WALLCLOCK-SEEK-CONTINUITY'
+  visualContinuityMode: 'R735-WALLCLOCK-SEEK-CONTINUITY',
+  clipAvSyncMode: 'R738-PTS0-ASYNC-FIRSTPTS0',
+  clipPreDrainMs: CLIP_PRE_DRAIN_MS_R738,
+  clipPostDrainMs: CLIP_POST_DRAIN_MS_R738
 };
 
 let publisher = null;
@@ -920,7 +926,7 @@ function titleOverlayFiltersR721({dynamicTitle=true,showPreview=false,previewDur
   const tickerPath=ffFilterPath(LIVE_TICKER_FILE);
   const prevPath=ffFilterPath(LIVE_PREVIOUS_FILE_R726);
   const nextPath=ffFilterPath(LIVE_NEXT_FILE_R726);
-  const titleReload=dynamicTitle?`:reload=${VIDEO_FPS}`:'';
+  const titleReload=dynamicTitle?`:reload=1`:'';
   const d=Math.max(0,Number(previewDuration)||0);
   const previewStart=Math.max(0,d-NEXT_PREVIEW_SECONDS_R726);
   const previewEnd=Math.max(previewStart+0.25,d-NEXT_PREVIEW_HIDE_BEFORE_END_R726);
@@ -947,12 +953,12 @@ function titleOverlayFiltersR721({dynamicTitle=true,showPreview=false,previewDur
 }
 
 function normalVideoFilterComplexR721({fadeIn=false,trackDuration=0}={}){
-  const vf=titleOverlayFiltersR721({dynamicTitle:false,showPreview:true,previewDuration:trackDuration});
+  const vf=titleOverlayFiltersR721({dynamicTitle:true,showPreview:true,previewDuration:trackDuration});
   // R726: CTA remains tied to wall-clock phase even though the normal feeder is restarted
   // at song boundaries to produce a real fade-to-black / fade-from-black transition.
   const ctaPhase=(Date.now()/1000)%CTA_PERIOD_SECONDS_R722;
   const ctaEnable=`lt(mod(t+${ctaPhase.toFixed(3)}\,${CTA_PERIOD_SECONDS_R722})\,${CTA_SHOW_SECONDS_R722})`;
-  // R737: NEVER run fade filters on the real video. The R736 black-screen bug was
+  // R738/R737: NEVER run fade filters on the real video. R738 only shifts the safe mask earlier. The R736 black-screen bug was
   // caused by fading the already-darkened base stream back "in". Instead generate a
   // separate opaque BLACK mask whose ALPHA alone rises/falls, then overlay that mask
   // over the untouched live picture. Even if the mask chain misbehaves, the base video
@@ -970,7 +976,7 @@ function normalVideoFilterComplexR721({fadeIn=false,trackDuration=0}={}){
 
 function clipFilterComplexR721(){
   const vf=titleOverlayFiltersR721({dynamicTitle:true,showPreview:false});
-  return `[0:v]${vf}[base];[1:v]scale=160:160:flags=lanczos,format=yuva420p[qr];[base][qr]overlay=x=W-w-24:y=24:shortest=1:format=yuv420,format=yuv420p[outv]`;
+  return `[0:v]setpts=PTS-STARTPTS,${vf}[base];[1:v]scale=160:160:flags=lanczos,format=yuva420p[qr];[base][qr]overlay=x=W-w-24:y=24:shortest=1:format=yuv420,format=yuv420p[outv]`;
 }
 
 function bumperFilterComplexR724(){
@@ -979,7 +985,7 @@ function bumperFilterComplexR724(){
     `pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black`,
     `setsar=1`,`fps=${VIDEO_FPS}`
   ].join(',');
-  return `[0:v]${vf}[base];[1:v]scale=160:160:flags=lanczos,format=yuva420p[qr];[base][qr]overlay=x=W-w-24:y=24:shortest=1:format=yuv420,format=yuv420p[outv]`;
+  return `[0:v]setpts=PTS-STARTPTS,${vf}[base];[1:v]scale=160:160:flags=lanczos,format=yuva420p[qr];[base][qr]overlay=x=W-w-24:y=24:shortest=1:format=yuv420,format=yuv420p[outv]`;
 }
 
 function h264EncoderArgsR721(){
@@ -1189,9 +1195,15 @@ async function applyVisualModeR721({slot='',auto=false,forceReload=false}={}){
 }
 
 async function probeHasAudioR721(path){
+  // R738: two-stage probe. Some short R2 station IDs have odd metadata and the old
+  // single ffprobe query could return no index even though FFmpeg can decode audio.
   try{
-    const raw=await runCapture('ffprobe',['-v','error','-select_streams','a:0','-show_entries','stream=index','-of','csv=p=0',path],{timeoutMs:15000});
-    return /\d/.test(String(raw));
+    const raw=await runCapture('ffprobe',['-v','error','-select_streams','a:0','-show_entries','stream=codec_type,channels,sample_rate','-of','csv=p=0',path],{timeoutMs:15000});
+    if(/audio|\d/i.test(String(raw)))return true;
+  }catch(_){ }
+  try{
+    await runCapture('ffmpeg',['-hide_banner','-loglevel','error','-i',path,'-map','0:a:0','-t','0.10','-f','null','-'],{timeoutMs:15000});
+    return true;
   }catch(_){return false}
 }
 
@@ -1208,7 +1220,7 @@ function clipFeederArgsR721(clipPath,{hasAudio=true,duration=0,isStationInsert=f
     ...h264EncoderArgsR721(),
     '-f','h264','pipe:1',
     '-map',hasAudio?'0:a:0':'2:a:0','-vn','-sn','-dn',
-    '-af',`aresample=${AUDIO_SAMPLE_RATE}`,'-c:a','pcm_s16le','-ar',String(AUDIO_SAMPLE_RATE),'-ac','2'
+    '-af',`aresample=${AUDIO_SAMPLE_RATE}:async=1:first_pts=0,asetpts=PTS-STARTPTS`,'-c:a','pcm_s16le','-ar',String(AUDIO_SAMPLE_RATE),'-ac','2'
   );
   if(duration>0)args.push('-t',String(Math.max(0.5,duration)));
   args.push('-f','s16le','pipe:3');
@@ -1238,21 +1250,32 @@ async function playVideoClipR691(previous,item,next){
   }
   const duration=await probeDuration(clipPath).catch(()=>0);
   const hasAudio=await probeHasAudioR721(clipPath);
-  state.previous=previous?{type:previous.type||'track',title:previous.title,album:previous.album||'',url:previous.url||''}:null;
-  const stationInsert=item.sourceType==='radio-bumper'||item.sourceType==='radio-special';
-  state.current={type:item.sourceType==='radio-special'?'special':(item.sourceType==='radio-bumper'?'bumper':'clip'),title:item.title,album:item.album,url:item.url,startedAt:new Date().toISOString(),duration};
-  state.next=next?{type:next.type||'track',title:next.title,album:next.album||'',url:next.url||''}:null;
+  const stationInsert=item.sourceType==='radio-bumper'||String(item.sourceType||'').startsWith('radio-special');
+  if(stationInsert && !hasAudio){
+    state.lastError=`R738 station insert skipped: audio stream missing in ${shortText(item.title||'INSERT',40)}`;
+    console.error('[station-insert-audio]',state.lastError);
+    return false;
+  }
   clearNextPreviewR726({invalidate:true});
 
   let child=null,videoSink=null,audioSink=null,stallTimer=null,forcedReason='';
   try{
     if(!publisher || publisher.exitCode!==null)throw new Error('R721 persistent master unavailable before clip');
+    // R738: the MP3 decoder has exited, but up to ~1s of bounded PCM may still be
+    // inside the persistent master. Keep the normal visual alive while that tail drains.
+    // This prevents a station ID/clip picture from appearing over the previous MP3 audio.
+    if(CLIP_PRE_DRAIN_MS_R738>0)await sleep(CLIP_PRE_DRAIN_MS_R738);
+    if(stopping)return false;
     clipActive=true;
     await stopNormalVideoFeederR721();
     if(stopping)return false;
     videoSink=publisher?.stdio?.[4];
     audioSink=publisher?.stdio?.[3];
     if(!videoSink || videoSink.destroyed || videoSink.writableEnded || !audioSink || audioSink.destroyed || audioSink.writableEnded)throw new Error('R721 persistent A/V pipes unavailable before clip');
+
+    state.previous=previous?{type:previous.type||'track',title:previous.title,album:previous.album||'',url:previous.url||''}:null;
+    state.current={type:String(item.sourceType||'').startsWith('radio-special')?'special':(item.sourceType==='radio-bumper'?'bumper':'clip'),title:item.title,album:item.album,url:item.url,startedAt:new Date().toISOString(),duration};
+    state.next=next?{type:next.type||'track',title:next.title,album:next.album||'',url:next.url||''}:null;
 
     child=spawn('ffmpeg',clipFeederArgsR721(clipPath,{hasAudio,duration,isStationInsert:stationInsert}),{stdio:['ignore','pipe','pipe','pipe','pipe']});
     clipPublisher=child;
@@ -1313,6 +1336,9 @@ async function playVideoClipR691(previous,item,next){
     if(clipPublisher===child)clipPublisher=null;
     state.producerRunning=false;
     if(item.sourceType==='r2-video')lastClipIdentityR726=primaryIdentity(item);
+    // R738: drain the final synchronized clip PCM/video tail before the normal MP3
+    // feeder is resumed, so clip audio cannot spill into the next song.
+    if(!stopping && CLIP_POST_DRAIN_MS_R738>0)await sleep(CLIP_POST_DRAIN_MS_R738);
     clipActive=false;
     if(!stopping){
       try{await ensureNormalVideoFeederR721({force:true});}catch(error){state.lastError=`R721 resume visual: ${cleanText(error?.message||error)}`;}
@@ -1364,6 +1390,15 @@ function nextOverlayTextR736(item){
   if(item.type==='clip')return `NEXT • КЛИП • ${title}`;
   return `NEXT • ANDRIK — ${title}`;
 }
+function currentOverlayTextR738(item){
+  if(!item)return 'ANDRIK';
+  if(item.sourceType==='radio-bumper'||String(item.sourceType||'').startsWith('radio-special'))return 'ANDRIK METAL RADIO';
+  if(item.type==='clip')return `КЛИП • ANDRIK — ${shortText(item.title||'VIDEO',34)}`;
+  return `ANDRIK — ${shortText(item.title||'TRACK',42)}`;
+}
+function isVideoHandoffR738(item){
+  return Boolean(item && (item.type==='clip'||item.sourceType==='radio-bumper'||String(item.sourceType||'').startsWith('radio-special')));
+}
 
 async function playItem(previous,item,next,following,localAudioPath,nextTrackPreview=null){
   const duration=await probeDuration(localAudioPath||item.url);
@@ -1394,6 +1429,15 @@ async function playItem(previous,item,next,following,localAudioPath,nextTrackPre
   state.current={type:item.type||'track',title:item.title,album:item.album||'',url:item.url,startedAt:new Date(mediaStartedAt).toISOString(),duration};
   const currentIdentity=primaryIdentity(state.current);
   setLiveTitleR724(`ANDRIK — ${shortText(item.title||'TRACK',42)}`,{delayMs:0});
+  // R738: CURRENT text is reloaded every frame. Preload the next CURRENT early enough
+  // to compensate only the persistent VIDEO path latency. For video inserts we subtract
+  // their deliberate PCM-drain pause so the title still lands on the visible handoff.
+  if(actualNextR736){
+    const videoPauseSeconds=isVideoHandoffR738(actualNextR736)?CLIP_PRE_DRAIN_MS_R738/1000:0;
+    const preloadLead=Math.max(0.25,TITLE_VISUAL_LEAD_SECONDS_R738-videoPauseSeconds);
+    const preloadDelayMs=Math.max(0,Math.round((duration-preloadLead)*1000));
+    setLiveTitleR724(currentOverlayTextR738(actualNextR736),{delayMs:preloadDelayMs});
+  }
   // R731: PREVIOUS/NEXT visibility is FFmpeg-frame-timed in the video filter.
 
   state.producerRunning=true;
@@ -1576,8 +1620,8 @@ function publicStatus(){
     mode:state.mode,
     overlayMode:state.overlayMode,
     audioMode:state.audioMode,
-    engine:'R735-R732-PERSISTENT-H264-RELAY-BOUNDED-AUDIO-CLOCK',
-    videoPipeline:'R735 R732 TRANSPORT + EARLY OLD-TRACK FADE + WALLCLOCK VISUAL LOOP CONTINUITY / ONE RTMPS',
+    engine:'R738-R732-PERSISTENT-H264-RELAY-BOUNDED-AUDIO-CLOCK-CLIP-PTS0',
+    videoPipeline:'R738 R737 SAFE ALPHA + EARLIER LEAD + DYNAMIC CURRENT / R732 TRANSPORT / ONE RTMPS',
     outputTimeshiftSeconds:OUTPUT_TIMESHIFT_SECONDS,
     videoBitrate:VIDEO_BITRATE,
     audioBitrate:AUDIO_BITRATE,
@@ -1594,21 +1638,26 @@ function publicStatus(){
     overlayPixelPath:'YUV420-NO-ARGB-R732',
     trackUiClock:'ffmpeg-frame-bound-R732-audio-lead-bounded',
     nextPreviewSeconds:NEXT_PREVIEW_SECONDS_R726,
-    nextPreviewTiming:'FFMPEG_ACTUAL_NEXT_R737_PTS_ANCHORED',
+    nextPreviewTiming:'FFMPEG_ACTUAL_NEXT_R738_PTS_ANCHORED',
     nextPreviewHideBeforeEndSeconds:NEXT_PREVIEW_HIDE_BEFORE_END_R726,
     audioNormalizationTargetLufs:TRACK_AUDIO_TARGET_I_R726,
     audioTruePeakDb:TRACK_AUDIO_TRUE_PEAK_R726,
     audioFadeInSeconds:TRACK_AUDIO_FADE_IN_R726,
     audioFadeOutSeconds:TRACK_AUDIO_FADE_OUT_R726,
     videoFadeSeconds:VIDEO_FADE_SECONDS_R726,
-      videoFadeStrategy:'SAFE_BLACK_ALPHA_MASK_R737',
+      videoFadeStrategy:'SAFE_BLACK_ALPHA_MASK_EARLY_R738',
       videoFadeInEnabled:true,
       videoBaseNeverFaded:true,
-      videoOverlayMask:'BLACK_ALPHA_ONLY_R737',
+      videoOverlayMask:'BLACK_ALPHA_ONLY_R738',
       videoFadeInSeconds:VIDEO_FADE_IN_SECONDS_R736,
       videoBlackHoldSeconds:VIDEO_BLACK_HOLD_SECONDS_R736,
       videoFadeLeadSeconds:VIDEO_FADE_LEAD_SECONDS_R735,
-      nextPreviewSource:'ACTUAL_IMMEDIATE_ITEM_R737',
+      titleVisualLeadSeconds:TITLE_VISUAL_LEAD_SECONDS_R738,
+      clipAvSyncMode:'PTS0+ARESAMPLE_ASYNC_FIRSTPTS0_R738',
+      clipPreDrainMs:CLIP_PRE_DRAIN_MS_R738,
+      clipPostDrainMs:CLIP_POST_DRAIN_MS_R738,
+      stationInsertAudioRequired:true,
+      nextPreviewSource:'ACTUAL_IMMEDIATE_ITEM_R738',
     visualTimelineAnchor:'PTS-STARTPTS-R733',
     visualContinuityMode:state.visualContinuityMode,
     visualLoopOffsetSeconds:state.visualLoopOffsetSeconds,
