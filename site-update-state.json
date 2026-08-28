@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787903905630-7851bd2af3",
-  "release": "R720",
-  "archiveName": "R720-NOCROP-RED-TITLE-SEAMLESS-EQ-LIVE-GUARD-R719-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "af31ae8926f30aff20418b33fb861d2569141223",
-  "backupSha": "af31ae8926f30aff20418b33fb861d2569141223",
+  "operationId": "publish-1787910690127-9a4d6ab8d9",
+  "release": "R721",
+  "archiveName": "R721-PERSISTENT-LIVE-NOCROP-RED-TITLE-SEAMLESS-EQ-R720-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "01aa69cc755b34e4b37602dadb9312aed89bbf14",
+  "backupSha": "01aa69cc755b34e4b37602dadb9312aed89bbf14",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-28T07:58:28.376Z"
+  "generatedAt": "2026-08-28T09:51:30.628Z"
 }
