@@ -70,7 +70,8 @@ const VIDEO_BITRATE = '4500k'; // R637: 1080p25 low-motion radio visual, bounded
 const AUDIO_BITRATE = '128k'; // YouTube Live recommendation for stereo AAC
 const AUDIO_SAMPLE_RATE = 44100; // YouTube Live recommendation for stereo
 const VIDEO_FPS = 25;
-const MEDIA_INPUT_QUEUE_PACKETS_R731 = 8192; // restore proven stable publisher buffering; UI sync is now FFmpeg-frame-bound
+const VIDEO_INPUT_QUEUE_PACKETS_R732 = 1024; // exact R729/R721 proven H264 input cushion
+const AUDIO_INPUT_QUEUE_PACKETS_R732 = 8; // ~0.74 s FFmpeg raw-packet cushion; ~1 s incl. pipe; prevents 20–30 s title/audio drift
 const VIDEO_GOP = 50; // exactly 2 seconds at 25 fps
 const LIBRARY_REFRESH_MS = Math.max(60000, Number(process.env.LIBRARY_REFRESH_MS || 120000));
 const LIVE_TICKER_FILE = process.env.LIVE_TICKER_FILE || `${CACHE_DIR}/live-ticker.txt`;
@@ -101,14 +102,14 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R731-FFMPEG-PREVNEXT-STABLE-BUFFER-FADE-R730-PRESERVED',
-  mode: 'R731 FFMPEG-FRAME PREVIOUS/NEXT + STABLE BUFFER + VISIBLE FADE + R730 PRESERVED',
+  version: 'R732-R729-TRANSPORT-TITLE-LOCK-PREVNEXT-NO-ARGB',
+  mode: 'R732 R729 TRANSPORT + BOUNDED AUDIO LEAD + TITLE LOCK + FFMPEG PREVIOUS/NEXT + NO-ARGB OVERLAY',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
   producerRunning: false,
-  overlayMode: 'R731 STATIC CURRENT + FFMPEG-TIMED PREVIOUS/NEXT T-8s + 1.25s BLACK FADE + R725 CTA/QR/TITLE/EQ',
-  audioMode: 'R731 STABLE 8192 INPUT QUEUES + R726 LOUDNORM -14 LUFS + AUDIO FADES / ONE RTMPS',
+  overlayMode: 'R732 STATIC CURRENT + FFMPEG-TIMED PREVIOUS/NEXT T-8s + 1.25s BLACK FADE + YUV420 OVERLAYS',
+  audioMode: 'R732 R729 PCM TRANSPORT + AUDIO QUEUE 8 + R726 LOUDNORM -14 LUFS / ONE RTMPS',
   visualTimeZone: VISUAL_TIME_ZONE,
   visualPeriod: null,
   visualPath: null,
@@ -938,12 +939,12 @@ function normalVideoFilterComplexR721({fadeIn=false,trackDuration=0}={}){
     fades.push(`fade=t=out:st=${outAt.toFixed(3)}:d=${VIDEO_FADE_SECONDS_R726.toFixed(2)}:color=black`);
   }
   const finish=fades.length?`${fades.join(',')},format=yuv420p`:'format=yuv420p';
-  return `[0:v]${vf}[base];[2:v]fps=${VIDEO_FPS},setpts=N/(${VIDEO_FPS}*TB),format=argb[eqv];[base][eqv]overlay=x=(W-w)/2:y=H-h-64:shortest=0:format=auto,format=yuv420p[eqbase];[1:v]scale=160:160:flags=lanczos,format=yuva420p[qr];[eqbase][qr]overlay=x=W-w-24:y=24:shortest=0:format=auto,format=yuv420p[qrbase];[3:v]format=rgba[cta];[qrbase][cta]overlay=x=(W-w)/2:y=46:shortest=0:format=auto:enable='${ctaEnable}'[ctabase];[ctabase]${finish}[outv]`;
+  return `[0:v]${vf}[base];[2:v]fps=${VIDEO_FPS},setpts=N/(${VIDEO_FPS}*TB),format=yuva420p[eqv];[base][eqv]overlay=x=(W-w)/2:y=H-h-64:shortest=0:format=yuv420,format=yuv420p[eqbase];[1:v]scale=160:160:flags=lanczos,format=yuva420p[qr];[eqbase][qr]overlay=x=W-w-24:y=24:shortest=0:format=yuv420,format=yuv420p[qrbase];[3:v]format=yuva420p[cta];[qrbase][cta]overlay=x=(W-w)/2:y=46:shortest=0:format=yuv420:enable='${ctaEnable}'[ctabase];[ctabase]${finish}[outv]`;
 }
 
 function clipFilterComplexR721(){
   const vf=titleOverlayFiltersR721({dynamicTitle:true,showPreview:false});
-  return `[0:v]${vf}[base];[1:v]scale=160:160:flags=lanczos,format=yuva420p[qr];[base][qr]overlay=x=W-w-24:y=24:shortest=1:format=auto,format=yuv420p[outv]`;
+  return `[0:v]${vf}[base];[1:v]scale=160:160:flags=lanczos,format=yuva420p[qr];[base][qr]overlay=x=W-w-24:y=24:shortest=1:format=yuv420,format=yuv420p[outv]`;
 }
 
 function bumperFilterComplexR724(){
@@ -952,7 +953,7 @@ function bumperFilterComplexR724(){
     `pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black`,
     `setsar=1`,`fps=${VIDEO_FPS}`
   ].join(',');
-  return `[0:v]${vf}[base];[1:v]scale=160:160:flags=lanczos,format=yuva420p[qr];[base][qr]overlay=x=W-w-24:y=24:shortest=1:format=auto,format=yuv420p[outv]`;
+  return `[0:v]${vf}[base];[1:v]scale=160:160:flags=lanczos,format=yuva420p[qr];[base][qr]overlay=x=W-w-24:y=24:shortest=1:format=yuv420,format=yuv420p[outv]`;
 }
 
 function h264EncoderArgsR721(){
@@ -984,8 +985,8 @@ function startPublisher(){
   // 1/25-second timestamp, independent of feeder process restarts. No video re-encode here.
   const args=[
     '-hide_banner','-loglevel','warning',
-    '-thread_queue_size',String(MEDIA_INPUT_QUEUE_PACKETS_R731),'-fflags','+genpts+discardcorrupt','-framerate',String(VIDEO_FPS),'-f','h264','-i','pipe:4',
-    '-thread_queue_size',String(MEDIA_INPUT_QUEUE_PACKETS_R731),'-f','s16le','-ar',String(AUDIO_SAMPLE_RATE),'-ac','2','-i','pipe:3',
+    '-thread_queue_size',String(VIDEO_INPUT_QUEUE_PACKETS_R732),'-fflags','+genpts+discardcorrupt','-framerate',String(VIDEO_FPS),'-f','h264','-i','pipe:4',
+    '-thread_queue_size',String(AUDIO_INPUT_QUEUE_PACKETS_R732),'-f','s16le','-ar',String(AUDIO_SAMPLE_RATE),'-ac','2','-i','pipe:3',
     '-map','0:v:0','-map','1:a:0',
     '-c:v','copy',
     '-bsf:v',`setts=time_base=1/${VIDEO_FPS}:pts=N:dts=N:duration=1`,
@@ -1293,6 +1294,9 @@ async function playItem(previous,item,next,following,localAudioPath,nextTrackPre
   state.previous=previous?{type:previous.type||'track',title:previous.title,album:previous.album||'',url:previous.url||''}:null;
   state.next=next?{type:next.type||'track',title:next.title,album:next.album||'',url:next.url||''}:null;
 
+  // R732: write the exact three labels BEFORE spawning this song's feeder.
+  // The bounded raw-audio input queue prevents the radio loop from getting tens of seconds
+  // ahead of what the listener actually hears. PREVIOUS/NEXT remain FFmpeg-frame-timed.
   // R731: write the exact three labels BEFORE spawning this song's feeder. Normal
   // feeders load them once and FFmpeg itself reveals PREVIOUS/NEXT only at T-8s.
   // No Node wall-clock timer can get ahead of the audio anymore.
@@ -1493,8 +1497,8 @@ function publicStatus(){
     mode:state.mode,
     overlayMode:state.overlayMode,
     audioMode:state.audioMode,
-    engine:'R731-PERSISTENT-H264-RELAY-FFMPEG-UI-CLOCK',
-    videoPipeline:'R731 FFMPEG-FRAME CURRENT/PREVIOUS/NEXT + 1.25s BLACK FADES + R730/R729 PRESERVED / ONE RTMPS',
+    engine:'R732-R729-PERSISTENT-H264-RELAY-BOUNDED-AUDIO-CLOCK',
+    videoPipeline:'R732 R729 H264 TRANSPORT + FFMPEG-FRAME CURRENT/PREVIOUS/NEXT + 1.25s BLACK FADES + YUV420 OVERLAYS / ONE RTMPS',
     outputTimeshiftSeconds:OUTPUT_TIMESHIFT_SECONDS,
     videoBitrate:VIDEO_BITRATE,
     audioBitrate:AUDIO_BITRATE,
@@ -1506,10 +1510,12 @@ function publicStatus(){
     subscribeLikeShowSeconds:CTA_SHOW_SECONDS_R722,
     subscribeLikePeriodSeconds:CTA_PERIOD_SECONDS_R722,
     titleHandoffDelayMs:TITLE_HANDOFF_DELAY_MS_R724,
-    mediaInputQueuePackets:MEDIA_INPUT_QUEUE_PACKETS_R731,
-    trackUiClock:'ffmpeg-frame-bound-R731',
+    videoInputQueuePackets:VIDEO_INPUT_QUEUE_PACKETS_R732,
+    audioInputQueuePackets:AUDIO_INPUT_QUEUE_PACKETS_R732,
+    overlayPixelPath:'YUV420-NO-ARGB-R732',
+    trackUiClock:'ffmpeg-frame-bound-R732-audio-lead-bounded',
     nextPreviewSeconds:NEXT_PREVIEW_SECONDS_R726,
-    nextPreviewTiming:'FFMPEG_PREVIEW_WINDOW_R731',
+    nextPreviewTiming:'FFMPEG_PREVIEW_WINDOW_R732',
     nextPreviewHideBeforeEndSeconds:NEXT_PREVIEW_HIDE_BEFORE_END_R726,
     audioNormalizationTargetLufs:TRACK_AUDIO_TARGET_I_R726,
     audioTruePeakDb:TRACK_AUDIO_TRUE_PEAK_R726,
@@ -1634,7 +1640,7 @@ const server=http.createServer((req,res)=>{
 });
 
 server.listen(PORT,'0.0.0.0',()=>{
-  console.log(`ANDRIK Radio R730 MEDIA-CLOCK TITLE + FADE SYNC / R729-R727 PRESERVED listening on :${PORT}`);
+  console.log(`ANDRIK Radio R732 R729-TRANSPORT + TITLE LOCK + PREVIOUS/NEXT + NO-ARGB listening on :${PORT}`);
   radioLoop();
 });
 
