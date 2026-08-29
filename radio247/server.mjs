@@ -55,15 +55,15 @@ const TRACK_AUDIO_TARGET_I_R726 = -14;
 const TRACK_AUDIO_TRUE_PEAK_R726 = -1.5;
 const TRACK_AUDIO_LRA_R726 = 11;
 const TRACK_AUDIO_FADE_IN_R726 = 0.55;
-const TRACK_AUDIO_FADE_OUT_R726 = 0.75;
+const TRACK_AUDIO_FADE_OUT_R726 = 1.25; // R743: clearly audible but short old-track fade-out
 const VIDEO_FADE_SECONDS_R726 = 0.65; // R736: short cinematic fade-out on the OLD track
 const VIDEO_FADE_IN_SECONDS_R736 = 0.30; // R736: same-feeder recovery so black can never hang into the new song
 const VIDEO_BLACK_HOLD_SECONDS_R736 = 0.05; // almost no dead-black hold
-const VIDEO_FADE_LEAD_SECONDS_R735 = 3.80; // R738: move the SAFE mask earlier so it finishes before the next audible item starts
+const VIDEO_FADE_LEAD_SECONDS_R735 = 2.40; // R743: restore empirically correct pre-boundary lead from R735
 const TITLE_VISUAL_LEAD_SECONDS_R738 = 3.20; // compensate persistent video path latency; CURRENT is preloaded early but appears at the real handoff
 const CLIP_PRE_DRAIN_MS_R738 = 900; // let the bounded MP3 PCM queue drain while the normal visual keeps running
 const CLIP_POST_DRAIN_MS_R738 = 650; // let the clip PCM/video tail drain before the next MP3 feeder starts
-const VIDEO_TIMELINE_COMP_DEFAULT_R739 = Math.max(0,Math.min(20,Number(process.env.VIDEO_TIMELINE_COMP_SECONDS_R739 || 8.0))); // viewer-observed stale-video tail; runtime-adjustable without restart
+const VIDEO_TIMELINE_COMP_DEFAULT_R739 = 0.0; // R743: disable R739 global compensation; it hid/late-shifted proven R732 boundary UI
 const CLIP_PREP_NICE_R742 = 12; // background clip preparation yields CPU to the live stream
 const CLIP_PREP_TIMEOUT_MS_R742 = 45*60*1000;
 const CLIP_PREP_MIN_BYTES_R742 = 500000; // prepared 1080p H264+AAC cache sanity check
@@ -113,13 +113,13 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R742-PREPARED-CLIP-COPY-YOUTUBE-HEALTH-R739-PRESERVED',
-  mode: 'R742 R739/R738/R732 PRESERVED + PREPARED H264 CLIP CACHE + LOW-CPU LIVE COPY + A/V LOCK',
+  version: 'R743-RESTORE-MP3-BOUNDARY-UI-FADE-R742-PRESERVED',
+  mode: 'R743 R742 CLIP COPY PRESERVED + R732 MP3 BOUNDARY UI RESTORED + SAFE 2.40s VIDEO DIP + 1.25s AUDIO FADE',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
   producerRunning: false,
-  overlayMode: 'R742 R739 ACTUAL NEXT + SAFE ALPHA MASK + RUNTIME TIMELINE COMP + PREPARED CLIPS',
+  overlayMode: 'R743 R732-STYLE CURRENT/PREVIOUS/NEXT T-8s + SAFE ALPHA MASK 2.40s LEAD + PREPARED CLIPS',
   audioMode: 'R732 R729 PCM TRANSPORT + AUDIO QUEUE 8 + R726 LOUDNORM -14 LUFS / ONE RTMPS',
   visualTimeZone: VISUAL_TIME_ZONE,
   visualPeriod: null,
@@ -160,7 +160,7 @@ const state = {
   clipPreDrainMs: CLIP_PRE_DRAIN_MS_R738,
   clipPostDrainMs: CLIP_POST_DRAIN_MS_R738,
   videoTimelineCompensationSeconds: VIDEO_TIMELINE_COMP_DEFAULT_R739,
-  videoTimelineCompensationMode: 'R739-RUNTIME-ADJUSTABLE',
+  videoTimelineCompensationMode: 'R743-DISABLED-FOR-MP3-BOUNDARY',
   clipPlaybackMode: 'R742-PREPARED-H264-COPY',
   clipPreparationMode: 'R742-SERIAL-NICE12-ONE-THREAD',
   preparedClipReady: 0,
@@ -1059,11 +1059,10 @@ function titleOverlayFiltersR721({dynamicTitle=true,showPreview=false,previewDur
   const nextPath=ffFilterPath(LIVE_NEXT_FILE_R726);
   const titleReload=dynamicTitle?`:reload=1`:'';
   const d=Math.max(0,Number(previewDuration)||0);
-  // R739: compensate the persistent H264 video tail before it reaches the viewer.
-  // Runtime-adjustable; fine tuning does not need a service restart.
-  const comp=Math.max(0,Number(videoTimelineCompR739)||0);
-  const previewStart=Math.max(0,d-NEXT_PREVIEW_SECONDS_R726-comp);
-  const previewEnd=Math.max(previewStart+0.25,d-NEXT_PREVIEW_HIDE_BEFORE_END_R726-comp);
+  // R743: restore the proven R732/R733 frame-bound window. PREVIOUS/NEXT are
+  // visible during the ACTUAL final 8 seconds of this feeder, with no guessed global offset.
+  const previewStart=Math.max(0,d-NEXT_PREVIEW_SECONDS_R726);
+  const previewEnd=Math.max(previewStart+0.25,d-NEXT_PREVIEW_HIDE_BEFORE_END_R726);
   const previewEnable=showPreview&&d>NEXT_PREVIEW_SECONDS_R726+0.5
     ? `:enable='between(t\,${previewStart.toFixed(3)}\,${previewEnd.toFixed(3)})'`
     : `:enable='0'`;
@@ -1087,7 +1086,7 @@ function titleOverlayFiltersR721({dynamicTitle=true,showPreview=false,previewDur
 }
 
 function normalVideoFilterComplexR721({fadeIn=false,trackDuration=0}={}){
-  const vf=titleOverlayFiltersR721({dynamicTitle:true,showPreview:true,previewDuration:trackDuration});
+  const vf=titleOverlayFiltersR721({dynamicTitle:false,showPreview:true,previewDuration:trackDuration}); // R743: freeze CURRENT for this MP3; next feeder owns next title
   // R726: CTA remains tied to wall-clock phase even though the normal feeder is restarted
   // at song boundaries to produce a real fade-to-black / fade-from-black transition.
   const ctaPhase=(Date.now()/1000)%CTA_PERIOD_SECONDS_R722;
@@ -1100,8 +1099,9 @@ function normalVideoFilterComplexR721({fadeIn=false,trackDuration=0}={}){
   let maskChain='';
   let finalChain='[ctabase]format=yuv420p[outv]';
   if(Number(trackDuration)>VIDEO_FADE_SECONDS_R726+VIDEO_BLACK_HOLD_SECONDS_R736+VIDEO_FADE_IN_SECONDS_R736+VIDEO_FADE_LEAD_SECONDS_R735+1){
-    const comp=Math.max(0,Number(videoTimelineCompR739)||0);
-    const outAt=Math.max(0,Number(trackDuration)-VIDEO_FADE_SECONDS_R726-VIDEO_BLACK_HOLD_SECONDS_R736-VIDEO_FADE_LEAD_SECONDS_R735-comp);
+    // R743: do not subtract R739's guessed 8s compensation. R735's 2.40s lead
+    // was the point where the user observed the fade START at the correct boundary.
+    const outAt=Math.max(0,Number(trackDuration)-VIDEO_FADE_SECONDS_R726-VIDEO_BLACK_HOLD_SECONDS_R736-VIDEO_FADE_LEAD_SECONDS_R735);
     const recoverAt=outAt+VIDEO_FADE_SECONDS_R726+VIDEO_BLACK_HOLD_SECONDS_R736;
     maskChain=`color=c=black@1.0:s=1920x1080:r=${VIDEO_FPS},format=yuva420p,fade=t=in:st=${outAt.toFixed(3)}:d=${VIDEO_FADE_SECONDS_R726.toFixed(2)}:alpha=1,fade=t=out:st=${recoverAt.toFixed(3)}:d=${VIDEO_FADE_IN_SECONDS_R736.toFixed(2)}:alpha=1[blackmask];`;
     finalChain='[ctabase][blackmask]overlay=x=0:y=0:shortest=1:format=yuv420,format=yuv420p[outv]';
@@ -1573,16 +1573,10 @@ async function playItem(previous,item,next,following,localAudioPath,nextTrackPre
   state.current={type:item.type||'track',title:item.title,album:item.album||'',url:item.url,startedAt:new Date(mediaStartedAt).toISOString(),duration};
   const currentIdentity=primaryIdentity(state.current);
   setLiveTitleR724(`ANDRIK — ${shortText(item.title||'TRACK',42)}`,{delayMs:0});
-  // R738: CURRENT text is reloaded every frame. Preload the next CURRENT early enough
-  // to compensate only the persistent VIDEO path latency. For video inserts we subtract
-  // their deliberate PCM-drain pause so the title still lands on the visible handoff.
-  if(actualNextR736){
-    const videoPauseSeconds=isVideoHandoffR738(actualNextR736)?CLIP_PRE_DRAIN_MS_R738/1000:0;
-    const preloadLead=Math.max(0.25,TITLE_VISUAL_LEAD_SECONDS_R738+Math.max(0,Number(videoTimelineCompR739)||0)-videoPauseSeconds);
-    const preloadDelayMs=Math.max(0,Math.round((duration-preloadLead)*1000));
-    setLiveTitleR724(currentOverlayTextR738(actualNextR736),{delayMs:preloadDelayMs});
-  }
-  // R731: PREVIOUS/NEXT visibility is FFmpeg-frame-timed in the video filter.
+  // R743: NEVER preload the future CURRENT into the old song. The next track/clip
+  // writes its own CURRENT exactly when its feeder is created. This restores the
+  // R732 behavior that previously matched the audible handoff.
+  // PREVIOUS/NEXT remain FFmpeg-frame-timed in the final 8 seconds.
 
   state.producerRunning=true;
   producer=spawn('ffmpeg',decoderArgs(localAudioPath,duration),{stdio:['ignore','pipe','pipe']});
@@ -1782,14 +1776,16 @@ function publicStatus(){
     overlayPixelPath:'YUV420-NO-ARGB-R732',
     trackUiClock:'ffmpeg-frame-bound-R732-audio-lead-bounded',
     nextPreviewSeconds:NEXT_PREVIEW_SECONDS_R726,
-    nextPreviewTiming:'FFMPEG_ACTUAL_NEXT_R738_PTS_ANCHORED',
+    nextPreviewTiming:'R743-R732-FINAL-8S-NO-GLOBAL-COMP',
+    mp3BoundaryMode:'R743-R732-RESTORED',
+    currentTitleHandoff:'NEXT-FEEDER-OWNS-CURRENT-R743',
     nextPreviewHideBeforeEndSeconds:NEXT_PREVIEW_HIDE_BEFORE_END_R726,
     audioNormalizationTargetLufs:TRACK_AUDIO_TARGET_I_R726,
     audioTruePeakDb:TRACK_AUDIO_TRUE_PEAK_R726,
     audioFadeInSeconds:TRACK_AUDIO_FADE_IN_R726,
     audioFadeOutSeconds:TRACK_AUDIO_FADE_OUT_R726,
     videoFadeSeconds:VIDEO_FADE_SECONDS_R726,
-      videoFadeStrategy:'SAFE_BLACK_ALPHA_MASK_EARLY_R738',
+      videoFadeStrategy:'R743-SAFE-ALPHA-2.40S-LEAD',
       videoFadeInEnabled:true,
       videoBaseNeverFaded:true,
       videoOverlayMask:'BLACK_ALPHA_ONLY_R738',
@@ -1798,7 +1794,7 @@ function publicStatus(){
       videoFadeLeadSeconds:VIDEO_FADE_LEAD_SECONDS_R735,
       titleVisualLeadSeconds:TITLE_VISUAL_LEAD_SECONDS_R738,
       videoTimelineCompensationSeconds:videoTimelineCompR739,
-      videoTimelineCompensationMode:'R739-RUNTIME-ADJUSTABLE',
+      videoTimelineCompensationMode:'R743-DISABLED-FOR-MP3-BOUNDARY',
       clipAvSyncMode:'PTS0+ARESAMPLE_ASYNC_FIRSTPTS0_R738',
       clipPreDrainMs:CLIP_PRE_DRAIN_MS_R738,
       clipPostDrainMs:CLIP_POST_DRAIN_MS_R738,
