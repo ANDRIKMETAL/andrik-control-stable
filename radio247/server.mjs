@@ -65,7 +65,7 @@ const TRACK_AUDIO_FADE_OUT_R726 = 1.25; // R743: clearly audible but short old-t
 const VIDEO_FADE_SECONDS_R726 = 0.65; // R736: short cinematic fade-out on the OLD track
 const VIDEO_FADE_IN_SECONDS_R736 = 0.30; // R736: same-feeder recovery so black can never hang into the new song
 const VIDEO_BLACK_HOLD_SECONDS_R736 = 0.05; // almost no dead-black hold
-const VIDEO_FADE_LEAD_SECONDS_R735 = 2.40; // R743: restore empirically correct pre-boundary lead from R735
+const VIDEO_FADE_LEAD_SECONDS_R735 = 0.40; // R751: user-tuned — start darkening exactly 2.0s later than R750
 const TITLE_VISUAL_LEAD_SECONDS_R738 = 3.20; // compensate persistent video path latency; CURRENT is preloaded early but appears at the real handoff
 const CLIP_PRE_DRAIN_MS_R738 = 900; // let the bounded MP3 PCM queue drain while the normal visual keeps running
 const CLIP_POST_DRAIN_MS_R738 = 650; // let the clip PCM/video tail drain before the next MP3 feeder starts
@@ -84,7 +84,7 @@ const LOUDNESS_BACKGROUND_NICE_R750 = Math.max(10,Math.min(19,Number(process.env
 // R750: keep the 6 s FIFO timeshift, but never allow minutes of queued packets to back-pressure
 // the live A/V pipes. A bounded FIFO with overflow drop keeps YouTube receiving fresh media.
 const OUTPUT_FIFO_QUEUE_PACKETS_R750 = Math.max(768,Math.min(4096,Number(process.env.OUTPUT_FIFO_QUEUE_PACKETS_R750 || 2048)));
-const MASTER_BACKPRESSURE_STUCK_MS_R750 = Math.max(5000,Math.min(30000,Number(process.env.MASTER_BACKPRESSURE_STUCK_MS_R750 || 10000)));
+const MASTER_BACKPRESSURE_STUCK_MS_R750 = Math.max(10000,Math.min(120000,Number(process.env.MASTER_BACKPRESSURE_STUCK_MS_R750 || 30000))); // R751: only no-progress stalls, not normal needDrain
 const MASTER_BACKPRESSURE_WATCHDOG_INTERVAL_MS_R750 = Math.max(500,Math.min(5000,Number(process.env.MASTER_BACKPRESSURE_WATCHDOG_INTERVAL_MS_R750 || 1000)));
 const LOUDNESS_CACHE_SUFFIX_R747 = '.r747-loudnorm.json';
 // R749: harden mandatory MP4 inserts without touching the proven ONE-RTMPS transport.
@@ -95,7 +95,7 @@ const LOUDNESS_CACHE_SUFFIX_R747 = '.r747-loudnorm.json';
 const INSERT_PREROLL_ARM_GRACE_MS_R749 = Math.max(2500,Math.min(15000,Number(process.env.INSERT_PREROLL_ARM_GRACE_MS_R749 || 6000)));
 const VIDEO_SOURCE_WATCHDOG_INTERVAL_MS_R749 = Math.max(500,Math.min(5000,Number(process.env.VIDEO_SOURCE_WATCHDOG_INTERVAL_MS_R749 || 1000)));
 const VIDEO_SOURCE_STUCK_MS_R749 = Math.max(1200,Math.min(10000,Number(process.env.VIDEO_SOURCE_STUCK_MS_R749 || 2500)));
-const INSERT_AUDIO_START_TIMEOUT_MS_R749 = Math.max(500,Math.min(5000,Number(process.env.INSERT_AUDIO_START_TIMEOUT_MS_R749 || 1500)));
+const INSERT_AUDIO_START_TIMEOUT_MS_R749 = Math.max(1000,Math.min(12000,Number(process.env.INSERT_AUDIO_START_TIMEOUT_MS_R749 || 4000))); // R751: slow AAC/MP4 startup must skip safely, never crash
 // R721 keeps the proven 100-frame / 4-second exact-periodic QTRLE loops from R720.
 // The EQ is encoded inside the current local H264 feeder, while the YouTube RTMPS
 // publisher stays open permanently across MP3, clip and visual-period switches.
@@ -142,8 +142,8 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R750-STREAM-HEALTH-NONBLOCKING-LOUDNESS-R749-PRESERVED',
-  mode: 'R750 STREAM HEALTH + NONBLOCKING LOUDNESS + R749 INSERT IRONCLAD + R748 UI + R746 SELF-HEAL',
+  version: 'R751-CRASH-PROOF-INSERT-PROGRESS-GUARD-FADE-LATE-R750-PRESERVED',
+  mode: 'R751 CRASH-PROOF INSERT + PROGRESS BACKPRESSURE GUARD + FADE +2S + R750/R749/R748/R746 PRESERVED',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
@@ -270,6 +270,9 @@ const loudnessPendingR750 = new Set();
 let loudnessSerialR750 = Promise.resolve();
 let masterBackpressureWatchdogTimerR750 = null;
 let masterBackpressureSinceR750 = 0;
+let masterBackpressureAudioBytesR751 = 0;
+let masterBackpressureVideoBytesR751 = 0;
+let masterBackpressureLastProgressAtR751 = 0;
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 function promiseTimeout(promise,ms,label='operation'){
@@ -1481,7 +1484,14 @@ function scheduleTransportSelfHealR746(rawLine,thisPublisher){
 }
 
 function masterBackpressureWatchdogTickR750(){
-  if(stopping||!publisher||publisher.exitCode!==null){masterBackpressureSinceR750=0;state.publisherBackpressureSince=null;return;}
+  if(stopping||!publisher||publisher.exitCode!==null){
+    masterBackpressureSinceR750=0;
+    masterBackpressureLastProgressAtR751=0;
+    masterBackpressureAudioBytesR751=0;
+    masterBackpressureVideoBytesR751=0;
+    state.publisherBackpressureSince=null;
+    return;
+  }
   const audioSink=publisher?.stdio?.[3];
   const videoSink=publisher?.stdio?.[4];
   const blocked=Boolean(
@@ -1489,22 +1499,44 @@ function masterBackpressureWatchdogTickR750(){
     Number(audioSink?.writableLength||0)>Math.max(32768,Number(audioSink?.writableHighWaterMark||0)) ||
     Number(videoSink?.writableLength||0)>Math.max(32768,Number(videoSink?.writableHighWaterMark||0))
   );
-  if(!blocked){masterBackpressureSinceR750=0;state.publisherBackpressureSince=null;return;}
   const now=Date.now();
-  if(!masterBackpressureSinceR750){
+  const audioBytes=Number(audioSink?.bytesWritten||0);
+  const videoBytes=Number(videoSink?.bytesWritten||0);
+  const progressed=audioBytes>masterBackpressureAudioBytesR751 || videoBytes>masterBackpressureVideoBytesR751;
+  masterBackpressureAudioBytesR751=audioBytes;
+  masterBackpressureVideoBytesR751=videoBytes;
+
+  // R751: writableNeedDrain is NORMAL on a paced FFmpeg pipe. Never restart merely
+  // because Node reports backpressure. Restart only when the blocked pipe makes ZERO
+  // byte progress for the full guard window.
+  if(!blocked){
+    masterBackpressureSinceR750=0;
+    masterBackpressureLastProgressAtR751=now;
+    state.publisherBackpressureSince=null;
+    return;
+  }
+  if(progressed){
     masterBackpressureSinceR750=now;
+    masterBackpressureLastProgressAtR751=now;
     state.publisherBackpressureSince=new Date(now).toISOString();
     return;
   }
-  if(now-masterBackpressureSinceR750<MASTER_BACKPRESSURE_STUCK_MS_R750)return;
+  if(!masterBackpressureSinceR750){
+    masterBackpressureSinceR750=now;
+    masterBackpressureLastProgressAtR751=now;
+    state.publisherBackpressureSince=new Date(now).toISOString();
+    return;
+  }
+  const noProgressMs=now-Math.max(masterBackpressureLastProgressAtR751||masterBackpressureSinceR750,masterBackpressureSinceR750);
+  if(noProgressMs<MASTER_BACKPRESSURE_STUCK_MS_R750)return;
   state.transportHealthy=false;
   state.transportSelfHealPending=true;
   state.publisherBackpressureRecoveries=Number(state.publisherBackpressureRecoveries||0)+1;
   state.lastPublisherBackpressureAt=new Date().toISOString();
   state.lastTransportFatalAt=state.lastPublisherBackpressureAt;
-  state.lastTransportFatalReason=`R750 master pipe backpressure ${now-masterBackpressureSinceR750}ms`;
-  state.lastError=`R750 STREAM STALL: ${state.lastTransportFatalReason}`;
-  console.error('[r750-stream-health]',state.lastError,'— exiting so systemd rebuilds the ONE RTMPS publisher');
+  state.lastTransportFatalReason=`R751 master pipe NO-PROGRESS ${noProgressMs}ms`;
+  state.lastError=`R751 STREAM STALL: ${state.lastTransportFatalReason}`;
+  console.error('[r751-stream-health]',state.lastError,'— systemd rebuilds the ONE RTMPS publisher');
   process.exit(76);
 }
 
@@ -1887,6 +1919,10 @@ async function playVideoClipR691(previous,item,next){
         if(code===0||stopping)resolve(); else reject(new Error(`R749 clip audio exit ${code||signal}`));
       });
     });
+    // R751: attach a rejection handler IMMEDIATELY. If first-PCM startup times out,
+    // the outer fallback kills this child before clipExitPromise is awaited. In R749/R750
+    // that late exit rejection was unhandled and Node 18 terminated the whole radio service.
+    clipExitPromise.catch(()=>{});
     audioChild.stdout.pipe(audioSink,{end:false});
     audioChild.stdout.on('error',()=>{});
     audioChild.stderr.on('data',d=>{
@@ -2332,8 +2368,8 @@ function publicStatus(){
     mode:state.mode,
     overlayMode:state.overlayMode,
     audioMode:state.audioMode,
-    engine:'R750-STREAM-HEALTH-NONBLOCKING-LOUDNESS-R749-R748-R746',
-    videoPipeline:'R750 LIVE FIFO GUARD + R749 GUARDED INSERT + R748 UI + R743 MP3 CLOCK + R746 SELF-HEAL',
+    engine:'R751-CRASH-PROOF-INSERT-PROGRESS-GUARD-FADE-LATE-R750-R749-R748-R746',
+    videoPipeline:'R751 PROGRESS-AWARE FIFO GUARD + CRASH-PROOF INSERT + R750/R749/R748 PRESERVED',
     outputTimeshiftSeconds:OUTPUT_TIMESHIFT_SECONDS,
     videoBitrate:VIDEO_BITRATE,
     audioBitrate:AUDIO_BITRATE,
@@ -2372,7 +2408,7 @@ function publicStatus(){
     loudnessBackgroundNice:LOUDNESS_BACKGROUND_NICE_R750,
     loudnessBackgroundPending:loudnessPendingR750.size,
     videoFadeSeconds:VIDEO_FADE_SECONDS_R726,
-      videoFadeStrategy:'R748-R747-R743-BLACK-ALPHA-0.65S-HOLD-0.05S-LIGHT-0.30S',
+      videoFadeStrategy:'R751-LATE+2S-BLACK-ALPHA-0.65S-HOLD-0.05S-LIGHT-0.30S',
       videoFadeInEnabled:true,
       videoBaseNeverFaded:true,
       videoOverlayMask:'BLACK_ALPHA_ONLY_R738',
@@ -2407,6 +2443,7 @@ function publicStatus(){
       videoSourceStuckMs:VIDEO_SOURCE_STUCK_MS_R749,
       insertPrerollArmGraceMs:INSERT_PREROLL_ARM_GRACE_MS_R749,
       insertAudioStartTimeoutMs:INSERT_AUDIO_START_TIMEOUT_MS_R749,
+      insertUnhandledRejectionGuard:'R751-IMMEDIATE-CLIP-EXIT-CATCH',
       insertRecoveryCount:insertRecoveryCountR749,
       insertAudioStartFailures:insertAudioStartFailuresR749,
       lastInsertRecoveryAt:state.lastInsertRecoveryAt||null,
@@ -2431,10 +2468,11 @@ function publicStatus(){
     equalizerEngine:state.equalizerEngine,
     publisherRunning:state.publisherRunning,
     transportHealthy:state.transportHealthy!==false,
-    transportWatchdogMode:'R750-BOUNDED-FIFO-BACKPRESSURE-SYSTEMD-SELFHEAL+R746-RTMPS-TLS',
+    transportWatchdogMode:'R751-PROGRESS-AWARE-BACKPRESSURE-30S+R750-FIFO+R746-RTMPS-TLS',
     outputFifoQueuePackets:OUTPUT_FIFO_QUEUE_PACKETS_R750,
     outputDropPacketsOnOverflow:true,
     masterBackpressureWatchdogMs:MASTER_BACKPRESSURE_STUCK_MS_R750,
+    masterBackpressureDetection:'R751-BLOCKED-PLUS-ZERO-BYTE-PROGRESS',
     publisherBackpressureSince:state.publisherBackpressureSince||null,
     publisherBackpressureRecoveries:Number(state.publisherBackpressureRecoveries||0),
     lastPublisherBackpressureAt:state.lastPublisherBackpressureAt||null,

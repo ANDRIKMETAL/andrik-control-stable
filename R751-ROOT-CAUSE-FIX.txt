@@ -1,0 +1,15 @@
+R751 ROOT CAUSE FIX — 2026-08-29
+
+Observed from live journal:
+1) SPECIAL 30 insert PCM did not start within 1500 ms.
+2) R749/R750 fallback correctly aborted the insert, but clipExitPromise later rejected with
+   "R749 clip audio exit 255" before that promise had an attached rejection handler.
+3) Node.js 18 treated it as an unhandled rejection and terminated the whole service (status=1/FAILURE).
+4) Separately, R750 treated persistent writableNeedDrain as a hard stream stall after 10 s and
+   intentionally exited with status=76 even though pipe bytes could still be progressing.
+
+R751 changes:
+- clipExitPromise gets an immediate rejection handler, so insert failure cannot terminate Node.
+- insert audio startup guard = 4000 ms; failure safely skips insert and restores normal visual.
+- backpressure watchdog requires BOTH blocked state AND zero byte progress for 30 s.
+- fade lead 2.40 -> 0.40, moving darkening exactly 2 seconds later.
