@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788016096804-eb44e27320",
-  "release": "R758",
-  "archiveName": "R758-GUARANTEED-MP3-BOUNDARY-FADE-R757-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "75dace4762bf1f8a5f9d7b4acb79470129a307bc",
-  "backupSha": "75dace4762bf1f8a5f9d7b4acb79470129a307bc",
+  "operationId": "publish-1788016624076-9eaa0295a9",
+  "release": "R759",
+  "archiveName": "R759-PERMANENT-FULLSCREEN-1920X1080-DIRECT-SCALE-R758-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "fffab0de5295492a46adccb5eda5f566316ba2fe",
+  "backupSha": "fffab0de5295492a46adccb5eda5f566316ba2fe",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-29T15:08:17.240Z"
+  "generatedAt": "2026-08-29T15:17:04.459Z"
 }

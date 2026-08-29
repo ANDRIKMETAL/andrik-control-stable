@@ -147,7 +147,7 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R758-GUARANTEED-MP3-BOUNDARY-FADE-R757-PRESERVED',
+  version: 'R759-PERMANENT-FULLSCREEN-1920X1080-DIRECT-SCALE-R758-PRESERVED',
   mode: 'R758 GUARANTEED MP3→MP3 BLACK BOUNDARY + R757/R756 STABILITY PRESERVED',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
@@ -933,8 +933,7 @@ function preparedClipFilterComplexR742(titleFile,tickerFile,{stationInsert=false
   const tickerPath=ffFilterPath(tickerFile);
   const base=[
     'setpts=PTS-STARTPTS',
-    'scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos',
-    'pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black',
+    'scale=1920:1080:flags=lanczos',
     'setsar=1','setdar=16/9',`fps=${VIDEO_FPS}`,'format=yuv420p'
   ];
   if(!stationInsert){
@@ -1032,8 +1031,7 @@ function clipLiveVideoFilterR757({duration=0,showPreview=false}={}){
       : `between(t\,${outroStart.toFixed(3)}\,${outroEnd.toFixed(3)})`;
   }
   const vf=[
-    'scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos',
-    'pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black',
+    'scale=1920:1080:flags=lanczos',
     'setsar=1','setdar=16/9',`fps=${VIDEO_FPS}`,'format=yuv420p',
     // R757: clip starts from real black after the MP3 has faded fully out.
     `fade=t=in:st=0:d=${VIDEO_INSERT_FADE_IN_SECONDS_R757.toFixed(2)}`
@@ -1073,7 +1071,7 @@ function clipPreparedVideoOnlyArgsR744(readyPath,{duration=0}={}){
     '-hide_banner','-loglevel','warning','-fflags','+genpts+discardcorrupt','-err_detect','ignore_err',
     '-re','-i',readyPath,
     '-map','0:v:0','-an','-sn','-dn',
-    '-vf',`scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1,setdar=16/9,fps=${VIDEO_FPS},format=yuv420p`,
+    '-vf',`scale=1920:1080:flags=lanczos,setsar=1,setdar=16/9,fps=${VIDEO_FPS},format=yuv420p`,
     ...h264EncoderArgsR721()
   ];
   if(duration>0)args.push('-t',String(Math.max(0.5,duration)));
@@ -1398,9 +1396,8 @@ function titleOverlayFiltersR721({dynamicTitle=true,showPreview=false,previewDur
   }
   const previewEnable=`:enable='${previewExpr}'`;
   return [
-    // R721: keep every source pixel. 16:9 fills 1920x1080; any other aspect is padded.
-    'scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos',
-    'pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black',
+    // R759: permanent fullscreen. Every video source is forced to the exact 1920x1080 canvas; no crop/pad/auto-aspect branch exists.
+    'scale=1920:1080:flags=lanczos',
     'setsar=1','setdar=16/9',
     `fps=${VIDEO_FPS}`,
     'format=yuv420p',
@@ -1495,8 +1492,7 @@ function clipFilterComplexR721(){
 
 function bumperFilterComplexR724(){
   const vf=[
-    `scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos`,
-    `pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black`,
+    `scale=1920:1080:flags=lanczos`,
     `setsar=1`,`setdar=16/9`,`fps=${VIDEO_FPS}`
   ].join(',');
   return `[0:v]setpts=PTS-STARTPTS,${vf}[base];[1:v]scale=160:160:flags=lanczos,format=yuva420p[qr];[base][qr]overlay=x=W-w-24:y=24:shortest=1:format=yuv420,format=yuv420p[outv]`;
@@ -1623,7 +1619,7 @@ function startPublisher(){
     // R754: the master owns the ONE continuous YouTube H264 encoder. Feeders may restart
     // for title/fade timing, but their elementary-stream boundaries are decoded here and
     // never exposed directly to RTMPS. This isolates YouTube from MP3→MP3 feeder splices.
-    '-vf',`scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1,setdar=16/9,fps=${VIDEO_FPS},format=yuv420p`,
+    '-vf',`scale=1920:1080:flags=lanczos,setsar=1,setdar=16/9,fps=${VIDEO_FPS},format=yuv420p`,
     ...h264EncoderArgsR721(),
     '-c:a','aac','-profile:a','aac_low','-b:a',AUDIO_BITRATE,'-ar',String(AUDIO_SAMPLE_RATE),'-ac','2',
     '-max_muxing_queue_size','4096','-flush_packets','1',
@@ -2539,8 +2535,8 @@ function publicStatus(){
     mode:state.mode,
     overlayMode:state.overlayMode,
     audioMode:state.audioMode,
-    engine:'R756-FRAME-LOCK-64Q + R755/R754/R753/R752/R751/R750 PRESERVED',
-    videoPipeline:'R756 FIXED 1920x1080 DAR16:9 + 64Q + R754 PERSISTENT MASTER + R753/R752 HANDOFF',
+    engine:'R759-PERMANENT-FULLSCREEN + R758/R757/R756/R754 PRESERVED',
+    videoPipeline:'R759 DIRECT 1920x1080 FULLSCREEN EVERY STAGE + 64Q + R754 PERSISTENT MASTER',
     outputTimeshiftSeconds:OUTPUT_TIMESHIFT_SECONDS,
     videoBitrate:VIDEO_BITRATE,
     audioBitrate:AUDIO_BITRATE,
@@ -2649,7 +2645,11 @@ function publicStatus(){
     equalizerStyle:state.equalizerStyle,
     equalizerEngine:state.equalizerEngine,
     publisherRunning:state.publisherRunning,
-    masterVideoMode:'R756-HARD-1920x1080-DAR16x9-64Q-NO-STALE-40S-R755-PRESERVED',
+    masterVideoMode:'R759-DIRECT-1920x1080-FULLSCREEN-NO-PAD-NO-CROP-NO-AUTO-ASPECT-64Q',
+    permanentFullscreenMode:'R759-FORCE-EVERY-SOURCE-1920x1080-SAR1-DAR16x9',
+    permanentFullscreenWidth:1920,
+    permanentFullscreenHeight:1080,
+    permanentFullscreenFitPolicy:'DIRECT-SCALE-FILL-NO-PAD-NO-CROP',
     feederBoundaryMode:'R754-GRACEFUL-SIGINT-FLUSH+AUD',
     transportRecoveryMode:'R754-FFMPEG-FIFO-FIRST-NO-EARLY-SYSTEMD-EXIT',
     transportHealthy:state.transportHealthy!==false,
@@ -2796,7 +2796,7 @@ const server=http.createServer((req,res)=>{
 });
 
 server.listen(PORT,'0.0.0.0',()=>{
-  console.log(`ANDRIK Radio R756 FRAME-LOCK 64Q + R755 FULL-FRAME + R754 STABLE MASTER listening on :${PORT}`);
+  console.log(`ANDRIK Radio R759 PERMANENT FULLSCREEN 1920x1080 + R758 FADE + R754 STABLE MASTER listening on :${PORT}`);
   radioLoop();
 });
 
