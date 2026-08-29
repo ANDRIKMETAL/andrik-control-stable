@@ -100,6 +100,7 @@ const INSERT_CACHE_WARM_LEAD_SECONDS_R752 = Math.max(2,Math.min(8,Number(process
 const CLIP_TO_TRACK_HANDOFF_GUARD_MS_R753 = Math.max(2500,Math.min(10000,Number(process.env.CLIP_TO_TRACK_HANDOFF_GUARD_MS_R753 || 5000))); // allow one clean clip→MP3 feeder handoff without watchdog racing it
 const CLIP_TO_TRACK_FADE_IN_SECONDS_R753 = Math.max(0.25,Math.min(1.5,Number(process.env.CLIP_TO_TRACK_FADE_IN_SECONDS_R753 || 0.55))); // black→picture on first MP3 frames after a clip
 const VIDEO_INSERT_FADE_IN_SECONDS_R757 = Math.max(0.25,Math.min(1.5,Number(process.env.VIDEO_INSERT_FADE_IN_SECONDS_R757 || 0.55))); // guaranteed black→video on MP3→clip/insert boundary
+const MP3_BOUNDARY_FADE_IN_SECONDS_R758 = Math.max(0.20,Math.min(1.0,Number(process.env.MP3_BOUNDARY_FADE_IN_SECONDS_R758 || 0.30))); // guaranteed black→picture on MP3→MP3 boundary; preserves viewer-approved 0.30s recovery speed
 // R721 keeps the proven 100-frame / 4-second exact-periodic QTRLE loops from R720.
 // The EQ is encoded inside the current local H264 feeder, while the YouTube RTMPS
 // publisher stays open permanently across MP3, clip and visual-period switches.
@@ -146,8 +147,8 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R757-MP3-TO-CLIP-FADE-CLIP-PREVNEXT-R756-PRESERVED',
-  mode: 'R757 MP3→VIDEO FADE + CLIP INTRO/OUTRO PREV-NEXT + R756/R755/R754/R753 PRESERVED',
+  version: 'R758-GUARANTEED-MP3-BOUNDARY-FADE-R757-PRESERVED',
+  mode: 'R758 GUARANTEED MP3→MP3 BLACK BOUNDARY + R757/R756 STABILITY PRESERVED',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
@@ -156,6 +157,7 @@ const state = {
   audioMode: 'R750 NONBLOCKING R747 EBU R128 -14 LUFS / TP -1.5 + R743 FADES + AUDIO QUEUE 8 / ONE RTMPS',
   mp3ToVideoFadeMode: 'R757-END-BLACK-HOLD-THEN-VIDEO-FADE-IN',
   clipPreviewMode: 'R757-NORMAL-CLIPS-PREVNEXT-INTRO-2-7S-PLUS-FINAL-10S',
+  mp3BoundaryFadeMode: 'R758-OLD-MP3-FADE-TO-BLACK-HOLD-NEW-MP3-FADE-IN-0.30',
   visualTimeZone: VISUAL_TIME_ZONE,
   visualPeriod: null,
   visualPath: null,
@@ -1439,7 +1441,7 @@ function compactCtaChainR748(trackDuration){
   return {pre,chain,final:base,windows:starts};
 }
 
-function normalVideoFilterComplexR721({fadeIn=false,endFadeToBlack=false,trackDuration=0,previewReload=false}={}){
+function normalVideoFilterComplexR721({fadeIn=false,fadeInSeconds=CLIP_TO_TRACK_FADE_IN_SECONDS_R753,endFadeToBlack=false,trackDuration=0,previewReload=false}={}){
   const vf=titleOverlayFiltersR721({dynamicTitle:false,showPreview:true,previewDuration:trackDuration,previewReload}); // R743: freeze CURRENT for this MP3; next feeder owns next title
   // R748: CTA is feeder-local, full-window only, with alpha fade in/out. This avoids
   // the old partial wall-clock window that looked like a blink at appearance/disappearance.
@@ -1456,7 +1458,7 @@ function normalVideoFilterComplexR721({fadeIn=false,endFadeToBlack=false,trackDu
   // start under an opaque black alpha mask and fade that mask away. This is cheap and
   // cannot leave the base video black if the transition process exits unexpectedly.
   if(fadeIn){
-    startupMaskChain=`color=c=black@1.0:s=1920x1080:r=${VIDEO_FPS},format=yuva420p,fade=t=out:st=0:d=${CLIP_TO_TRACK_FADE_IN_SECONDS_R753.toFixed(2)}:alpha=1[startmask];`;
+    startupMaskChain=`color=c=black@1.0:s=1920x1080:r=${VIDEO_FPS},format=yuva420p,fade=t=out:st=0:d=${Math.max(0.05,Number(fadeInSeconds)||CLIP_TO_TRACK_FADE_IN_SECONDS_R753).toFixed(2)}:alpha=1[startmask];`;
   }
   if(Number(trackDuration)>VIDEO_FADE_SECONDS_R726+VIDEO_BLACK_HOLD_SECONDS_R736+VIDEO_FADE_IN_SECONDS_R736+VIDEO_FADE_LEAD_SECONDS_R735+1){
     // R747: restore the viewer-proven R743 MP3 boundary clock. The track feeder is
@@ -1688,7 +1690,7 @@ async function visualLoopOffsetR735(visualPath){
   return offset;
 }
 
-function normalVideoFeederArgsR721(visualPath,eqPath,{fadeIn=false,endFadeToBlack=false,trackDuration=0,visualOffsetSeconds=0,previewReload=false}={}){
+function normalVideoFeederArgsR721(visualPath,eqPath,{fadeIn=false,fadeInSeconds=CLIP_TO_TRACK_FADE_IN_SECONDS_R753,endFadeToBlack=false,trackDuration=0,visualOffsetSeconds=0,previewReload=false}={}){
   const visualSeek=Number(visualOffsetSeconds)>0.05 ? ['-ss',Number(visualOffsetSeconds).toFixed(3)] : [];
   return [
     '-hide_banner','-loglevel','warning',
@@ -1696,7 +1698,7 @@ function normalVideoFeederArgsR721(visualPath,eqPath,{fadeIn=false,endFadeToBlac
     '-loop','1','-framerate','1','-i',QR_OVERLAY,
     '-thread_queue_size','32','-re','-stream_loop','-1','-i',eqPath,
     '-loop','1','-framerate','1','-i',CTA_OVERLAY_R722,
-    '-filter_complex',normalVideoFilterComplexR721({fadeIn,endFadeToBlack,trackDuration,previewReload}),
+    '-filter_complex',normalVideoFilterComplexR721({fadeIn,fadeInSeconds,endFadeToBlack,trackDuration,previewReload}),
     '-map','[outv]','-an','-sn','-dn',
     ...h264EncoderArgsR721(),
     '-f','h264','pipe:1'
@@ -1728,7 +1730,7 @@ async function stopNormalVideoFeederR721(){
   videoFeederPrerolledR744=false;
 }
 
-function startNormalVideoFeederR721(visualPath,{fadeIn=false,endFadeToBlack=false,trackDuration=0,visualOffsetSeconds=0,previewReload=false}={}){
+function startNormalVideoFeederR721(visualPath,{fadeIn=false,fadeInSeconds=CLIP_TO_TRACK_FADE_IN_SECONDS_R753,endFadeToBlack=false,trackDuration=0,visualOffsetSeconds=0,previewReload=false}={}){
   if(stopping || clipActive)return false;
   const videoSink=publisher?.stdio?.[4];
   if(!publisher || publisher.exitCode!==null || !videoSink || videoSink.destroyed || videoSink.writableEnded)throw new Error('R721 persistent video pipe unavailable');
@@ -1738,7 +1740,7 @@ function startNormalVideoFeederR721(visualPath,{fadeIn=false,endFadeToBlack=fals
   if(!existsSync(CTA_OVERLAY_R722) || statSync(CTA_OVERLAY_R722).size<2500)throw new Error(`R722 CTA overlay missing: ${CTA_OVERLAY_R722}`);
   if(!existsSync(eq.path) || statSync(eq.path).size<20000)throw new Error(`equalizer missing: ${eq.path}`);
 
-  const child=spawn('ffmpeg',normalVideoFeederArgsR721(visualPath,eq.path,{fadeIn,endFadeToBlack,trackDuration,visualOffsetSeconds,previewReload}),{stdio:['ignore','pipe','pipe']});
+  const child=spawn('ffmpeg',normalVideoFeederArgsR721(visualPath,eq.path,{fadeIn,fadeInSeconds,endFadeToBlack,trackDuration,visualOffsetSeconds,previewReload}),{stdio:['ignore','pipe','pipe']});
   videoFeeder=child;
   videoFeederPath=visualPath;
   videoFeederPeriod=eq.period;
@@ -1765,7 +1767,7 @@ function startNormalVideoFeederR721(visualPath,{fadeIn=false,endFadeToBlack=fals
   return true;
 }
 
-async function ensureNormalVideoFeederR721({force=false,fadeIn=false,endFadeToBlack=false,trackDuration=null,previewReload=false}={}){
+async function ensureNormalVideoFeederR721({force=false,fadeIn=false,fadeInSeconds=CLIP_TO_TRACK_FADE_IN_SECONDS_R753,endFadeToBlack=false,trackDuration=null,previewReload=false}={}){
   if(stopping || clipActive)return true;
   const visual=await ensureScheduledVisual();
   const period=activeVisualPeriodR721();
@@ -1779,7 +1781,7 @@ async function ensureNormalVideoFeederR721({force=false,fadeIn=false,endFadeToBl
     // MORNING/DAY/EVENING/NIGHT MP4 resumes at its wall-clock loop position instead of 0:00.
     // This preserves FFmpeg-frame-timed NEXT/PREVIOUS without visually restarting the background.
     const visualOffsetSeconds=await visualLoopOffsetR735(visual);
-    return startNormalVideoFeederR721(visual,{fadeIn,endFadeToBlack,trackDuration:plannedDuration,visualOffsetSeconds,previewReload});
+    return startNormalVideoFeederR721(visual,{fadeIn,fadeInSeconds,endFadeToBlack,trackDuration:plannedDuration,visualOffsetSeconds,previewReload});
   }finally{
     visualSwitching=false;
   }
@@ -2317,9 +2319,19 @@ async function playItem(previous,item,next,following,localAudioPath,nextTrackPre
   const currentVideoPrerolledR744=Boolean(
     videoFeeder && videoFeeder.exitCode===null && videoFeederTrackIdentityR744===currentIdentityR744 && videoFeederPrerolledR744
   );
-  const endFadeToBlackR757=isVideoHandoffR738(actualNextR736);
+  // R758: make MP3→MP3 fade deterministic instead of relying on the old feeder's
+  // same-process fade-out/recover window, which could disappear when the feeder was
+  // replaced at the boundary. Every real boundary now ends the old MP3 on black; when
+  // the previous item was another MP3, the new feeder starts under the same black mask
+  // and reveals the picture in the original 0.30s recovery time. Clip→MP3 keeps R753's
+  // slightly longer 0.55s reveal. Titles/PREVIOUS/NEXT clocks are unchanged.
+  const previousWasTrackR758=Boolean(previous && (previous.type||'track')==='track');
+  const mp3ToMp3BoundaryR758=previousWasTrackR758 && !clipToTrackBoundaryR753;
+  const boundaryFadeInR758=clipToTrackBoundaryR753 || mp3ToMp3BoundaryR758;
+  const boundaryFadeInSecondsR758=clipToTrackBoundaryR753 ? CLIP_TO_TRACK_FADE_IN_SECONDS_R753 : MP3_BOUNDARY_FADE_IN_SECONDS_R758;
+  const endFadeToBlackR758=Boolean(actualNextR736);
   if(!currentVideoPrerolledR744){
-    await ensureNormalVideoFeederR721({force:true,fadeIn:clipToTrackBoundaryR753,endFadeToBlack:endFadeToBlackR757,trackDuration:duration,previewReload:false});
+    await ensureNormalVideoFeederR721({force:true,fadeIn:boundaryFadeInR758,fadeInSeconds:boundaryFadeInSecondsR758,endFadeToBlack:endFadeToBlackR758,trackDuration:duration,previewReload:false});
     videoFeederTrackIdentityR744=currentIdentityR744;
     videoFeederPrerolledR744=false;
   }
@@ -2597,6 +2609,8 @@ function publicStatus(){
       clipToTrackHandoffAgeMs:clipToTrackBoundaryPendingR753?Date.now()-Number(clipToTrackBoundaryPendingR753.startedAt||0):null,
       clipToTrackHandoffGuardMs:CLIP_TO_TRACK_HANDOFF_GUARD_MS_R753,
       clipToTrackFadeInSeconds:CLIP_TO_TRACK_FADE_IN_SECONDS_R753,
+      mp3BoundaryFadeMode:state.mp3BoundaryFadeMode,
+      mp3BoundaryFadeInSeconds:MP3_BOUNDARY_FADE_IN_SECONDS_R758,
       stationNextLabel:'NEXT • ANDRIK METAL RADIO 24/7',
       videoHandoffMode:state.videoHandoffMode||'R752-CACHE-ONLY-NO-LIVE-PREROLL',
       clipUnifiedAvRunning:Boolean(clipPublisher&&clipPublisher.exitCode===null&&clipPublisher.__r752UnifiedAV===true&&clipPublisher.__r752Live===true),
