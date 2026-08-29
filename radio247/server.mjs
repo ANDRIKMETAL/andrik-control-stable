@@ -72,6 +72,8 @@ const VIDEO_BOUNDARY_FADE_SECONDS_R744 = 0.80;
 const CLIP_END_GUARD_MARGIN_MS_R745 = Math.max(8000,Number(process.env.CLIP_END_GUARD_MARGIN_MS_R745 || 15000)); // watchdog margin after measured clip duration
 const TRANSPORT_FATAL_RESTART_DELAY_MS_R746 = Math.max(1500,Math.min(15000,Number(process.env.TRANSPORT_FATAL_RESTART_DELAY_MS_R746 || 3500))); // R746: restart whole service when FFmpeg/FIFO keeps a dead RTMPS/TLS session alive
 const TRANSPORT_FATAL_REGEX_R746 = /the specified session has been invalidated|error in the pull function|io error:\s*end of file|server returned 4\d\d|connection reset by peer|broken pipe/i;
+const LOUDNESS_ANALYSIS_TIMEOUT_MS_R747 = Math.max(4000,Math.min(30000,Number(process.env.LOUDNESS_ANALYSIS_TIMEOUT_MS_R747 || 12000)));
+const LOUDNESS_CACHE_SUFFIX_R747 = '.r747-loudnorm.json';
 // R721 keeps the proven 100-frame / 4-second exact-periodic QTRLE loops from R720.
 // The EQ is encoded inside the current local H264 feeder, while the YouTube RTMPS
 // publisher stays open permanently across MP3, clip and visual-period switches.
@@ -118,14 +120,14 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R746-RTMPS-TLS-SELFHEAL-R745-PRESERVED',
-  mode: 'R746 R745 PRESERVED + RTMPS/TLS FATAL SELF-HEAL + CLIP EOF WATCHDOG + TRUE PREVIOUS + 10s VIDEO LEAD',
+  version: 'R747-RESTORE-R743-BOUNDARY-TWOPASS-LOUDNESS-R746-SELFHEAL',
+  mode: 'R747 R743 MP3 BOUNDARY RESTORED + TRUE PREVIOUS/NEXT + TWO-PASS -14 LUFS + R746 RTMPS SELF-HEAL',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
   producerRunning: false,
-  overlayMode: 'R746 PRESERVES R745 TRUE CURRENT/PREVIOUS/NEXT + R744 VIDEO-PREROLL + SAFE 0.80s BOUNDARY FADE',
-  audioMode: 'R732 R729 PCM TRANSPORT + AUDIO QUEUE 8 + R726 LOUDNORM -14 LUFS / ONE RTMPS',
+  overlayMode: 'R747 R743 FRAME-BOUND CURRENT/PREVIOUS/NEXT + 0.65s DARK / 0.30s LIGHT + VIDEO-ONLY PREROLL WHERE NEEDED',
+  audioMode: 'R747 TWO-PASS EBU R128 -14 LUFS / TP -1.5 + R743 0.55s IN / 1.25s OUT + AUDIO QUEUE 8 / ONE RTMPS',
   visualTimeZone: VISUAL_TIME_ZONE,
   visualPeriod: null,
   visualPath: null,
@@ -784,7 +786,7 @@ async function downloadTrackToCache(item){
 
 function prefetchTrack(item){
   if(!item?.url)return;
-  downloadTrackToCache(item).catch(error=>{
+  downloadTrackToCache(item).then(path=>ensureLoudnessAnalysisR747(path)).catch(error=>{
     console.error('[prefetch]',cleanText(error?.message||error));
   });
 }
@@ -978,7 +980,7 @@ function clipPreparedAudioOnlyArgsR744(readyPath,{duration=0}={}){
     '-hide_banner','-loglevel','warning','-fflags','+genpts+discardcorrupt','-err_detect','ignore_err',
     '-re','-i',readyPath,
     '-map','0:a:0','-vn','-sn','-dn',
-    '-af',`aresample=${AUDIO_SAMPLE_RATE}:async=1:first_pts=0,asetpts=PTS-STARTPTS`,
+    '-af',`loudnorm=I=${TRACK_AUDIO_TARGET_I_R726}:LRA=${TRACK_AUDIO_LRA_R726}:TP=${TRACK_AUDIO_TRUE_PEAK_R726},aresample=${AUDIO_SAMPLE_RATE}:async=1:first_pts=0,asetpts=PTS-STARTPTS`,
     '-c:a','pcm_s16le','-ar',String(AUDIO_SAMPLE_RATE),'-ac','2'
   ];
   if(duration>0)args.push('-t',String(Math.max(0.5,duration)));
@@ -1036,7 +1038,12 @@ async function startNormalVideoPrerollR744(item,duration){
     await stopNormalVideoFeederR721();
     writeOverlayFileR726(LIVE_CURRENT_FILE,currentOverlayTextR738(item));
     const visualOffsetSeconds=await visualLoopOffsetR735(visual);
-    const ok=startNormalVideoFeederR721(visual,{fadeIn:false,trackDuration:duration,visualOffsetSeconds});
+    const lead=videoLeadForDurationR744(duration);
+    // R747: this feeder starts `lead` seconds before audio only to bridge a video insert.
+    // Extend its internal duration by the same lead, so T-8s and fade absolute times
+    // still equal the real audible track T-8s/boundary. PREV/NEXT reload because their
+    // values are written at the actual audio start, after this preroll has already begun.
+    const ok=startNormalVideoFeederR721(visual,{fadeIn:false,trackDuration:Number(duration)+lead,visualOffsetSeconds,previewReload:true});
     videoFeederPath=visual;
     videoFeederPeriod=period;
     videoFeederTrackIdentityR744=identity;
@@ -1217,7 +1224,7 @@ function trackLabel(item,fallback='—'){
   return album ? `${title} (${album})` : title;
 }
 
-function titleOverlayFiltersR721({dynamicTitle=true,showPreview=false,previewDuration=0}={}){
+function titleOverlayFiltersR721({dynamicTitle=true,showPreview=false,previewDuration=0,previewReload=false}={}){
   const font=chooseFont();
   const titleFont=chooseTitleFont();
   const fontPart=font?`fontfile='${ffFilterPath(font)}':`:'';
@@ -1227,6 +1234,7 @@ function titleOverlayFiltersR721({dynamicTitle=true,showPreview=false,previewDur
   const prevPath=ffFilterPath(LIVE_PREVIOUS_FILE_R726);
   const nextPath=ffFilterPath(LIVE_NEXT_FILE_R726);
   const titleReload=dynamicTitle?`:reload=1`:'';
+  const previewReloadPart=previewReload?`:reload=${VIDEO_FPS}`:'';
   const d=Math.max(0,Number(previewDuration)||0);
   // R743: restore the proven R732/R733 frame-bound window. PREVIOUS/NEXT are
   // visible during the ACTUAL final 8 seconds of this feeder, with no guessed global offset.
@@ -1248,14 +1256,14 @@ function titleOverlayFiltersR721({dynamicTitle=true,showPreview=false,previewDur
     'drawbox=x=92:y=ih-208:w=iw-184:h=4:color=0xE00026@0.96:t=fill',
     `drawtext=${titleFontPart}textfile='${curPath}'${titleReload}:fontcolor=white@0.01:fontsize=58:x=(w-text_w)/2:y=h-188:borderw=8:bordercolor=black@0.92`,
     `drawtext=${titleFontPart}textfile='${curPath}'${titleReload}:fontcolor=0xF8F4EE:fontsize=58:x=(w-text_w)/2:y=h-188:borderw=4:bordercolor=0xD60024@1:shadowcolor=black@1:shadowx=4:shadowy=4`,
-    `drawtext=${fontPart}textfile='${prevPath}':reload=1:fontcolor=white@1:fontsize=32:x=58:y=h-305:borderw=3:bordercolor=black@1:box=1:boxcolor=black@0.64:boxborderw=13${previewEnable}`,
-    `drawtext=${fontPart}textfile='${nextPath}':reload=1:fontcolor=white@1:fontsize=32:x=w-text_w-58:y=h-305:borderw=3:bordercolor=black@1:box=1:boxcolor=black@0.64:boxborderw=13${previewEnable}`,
+    `drawtext=${fontPart}textfile='${prevPath}'${previewReloadPart}:fontcolor=white@1:fontsize=32:x=58:y=h-305:borderw=3:bordercolor=black@1:box=1:boxcolor=black@0.64:boxborderw=13${previewEnable}`,
+    `drawtext=${fontPart}textfile='${nextPath}'${previewReloadPart}:fontcolor=white@1:fontsize=32:x=w-text_w-58:y=h-305:borderw=3:bordercolor=black@1:box=1:boxcolor=black@0.64:boxborderw=13${previewEnable}`,
     `drawtext=${fontPart}textfile='${tickerPath}':reload=${VIDEO_FPS}:fontcolor=yellow:fontsize=28:x='w-mod(t*110,text_w+w)':y=h-58:borderw=3:bordercolor=black@1:shadowcolor=black@1:shadowx=2:shadowy=2`
   ].join(',');
 }
 
-function normalVideoFilterComplexR721({fadeIn=false,trackDuration=0}={}){
-  const vf=titleOverlayFiltersR721({dynamicTitle:false,showPreview:true,previewDuration:trackDuration}); // R743: freeze CURRENT for this MP3; next feeder owns next title
+function normalVideoFilterComplexR721({fadeIn=false,trackDuration=0,previewReload=false}={}){
+  const vf=titleOverlayFiltersR721({dynamicTitle:false,showPreview:true,previewDuration:trackDuration,previewReload}); // R743: freeze CURRENT for this MP3; next feeder owns next title
   // R726: CTA remains tied to wall-clock phase even though the normal feeder is restarted
   // at song boundaries to produce a real fade-to-black / fade-from-black transition.
   const ctaPhase=(Date.now()/1000)%CTA_PERIOD_SECONDS_R722;
@@ -1267,14 +1275,13 @@ function normalVideoFilterComplexR721({fadeIn=false,trackDuration=0}={}){
   // is never destructively changed and the next feeder always starts full-bright.
   let maskChain='';
   let finalChain='[ctabase]format=yuv420p[outv]';
-  if(Number(trackDuration)>VIDEO_BOUNDARY_FADE_SECONDS_R744+1){
-    // R744: the feeder itself is produced VIDEO_PIPELINE_LEAD_SECONDS_R744 ahead of audio.
-    // Therefore its own t=trackDuration lands on the audible boundary at the viewer.
-    // Fade only an alpha mask over the untouched base; if a handoff ever fails, the
-    // mask automatically recovers after the planned boundary instead of hanging black.
-    const outAt=Math.max(0,Number(trackDuration)-VIDEO_BOUNDARY_FADE_SECONDS_R744);
-    const recoverAt=Number(trackDuration)+0.05;
-    maskChain=`color=c=black@1.0:s=1920x1080:r=${VIDEO_FPS},format=yuva420p,fade=t=in:st=${outAt.toFixed(3)}:d=${VIDEO_BOUNDARY_FADE_SECONDS_R744.toFixed(2)}:alpha=1,fade=t=out:st=${recoverAt.toFixed(3)}:d=0.20:alpha=1[blackmask];`;
+  if(Number(trackDuration)>VIDEO_FADE_SECONDS_R726+VIDEO_BLACK_HOLD_SECONDS_R736+VIDEO_FADE_IN_SECONDS_R736+VIDEO_FADE_LEAD_SECONDS_R735+1){
+    // R747: restore the viewer-proven R743 MP3 boundary clock. The track feeder is
+    // rebased exactly when MP3 audio starts, so its t=duration belongs to THIS song.
+    // Fade a separate black ALPHA mask: darken 0.65s, tiny 0.05s hold, brighten 0.30s.
+    const outAt=Math.max(0,Number(trackDuration)-VIDEO_FADE_SECONDS_R726-VIDEO_BLACK_HOLD_SECONDS_R736-VIDEO_FADE_LEAD_SECONDS_R735);
+    const recoverAt=outAt+VIDEO_FADE_SECONDS_R726+VIDEO_BLACK_HOLD_SECONDS_R736;
+    maskChain=`color=c=black@1.0:s=1920x1080:r=${VIDEO_FPS},format=yuva420p,fade=t=in:st=${outAt.toFixed(3)}:d=${VIDEO_FADE_SECONDS_R726.toFixed(2)}:alpha=1,fade=t=out:st=${recoverAt.toFixed(3)}:d=${VIDEO_FADE_IN_SECONDS_R736.toFixed(2)}:alpha=1[blackmask];`;
     finalChain='[ctabase][blackmask]overlay=x=0:y=0:shortest=1:format=yuv420,format=yuv420p[outv]';
   }
   return `[0:v]setpts=PTS-STARTPTS,${vf}[base];[2:v]fps=${VIDEO_FPS},setpts=N/(${VIDEO_FPS}*TB),format=yuva420p[eqv];[base][eqv]overlay=x=(W-w)/2:y=H-h-64:shortest=0:format=yuv420,format=yuv420p[eqbase];[1:v]scale=160:160:flags=lanczos,format=yuva420p[qr];[eqbase][qr]overlay=x=W-w-24:y=24:shortest=0:format=yuv420,format=yuv420p[qrbase];[3:v]format=yuva420p[cta];[qrbase][cta]overlay=x=(W-w)/2:y=46:shortest=0:format=yuv420:enable='${ctaEnable}'[ctabase];${maskChain}${finalChain}`;
@@ -1416,7 +1423,7 @@ async function visualLoopOffsetR735(visualPath){
   return offset;
 }
 
-function normalVideoFeederArgsR721(visualPath,eqPath,{fadeIn=false,trackDuration=0,visualOffsetSeconds=0}={}){
+function normalVideoFeederArgsR721(visualPath,eqPath,{fadeIn=false,trackDuration=0,visualOffsetSeconds=0,previewReload=false}={}){
   const visualSeek=Number(visualOffsetSeconds)>0.05 ? ['-ss',Number(visualOffsetSeconds).toFixed(3)] : [];
   return [
     '-hide_banner','-loglevel','warning',
@@ -1424,7 +1431,7 @@ function normalVideoFeederArgsR721(visualPath,eqPath,{fadeIn=false,trackDuration
     '-loop','1','-framerate','1','-i',QR_OVERLAY,
     '-thread_queue_size','32','-re','-stream_loop','-1','-i',eqPath,
     '-loop','1','-framerate','1','-i',CTA_OVERLAY_R722,
-    '-filter_complex',normalVideoFilterComplexR721({fadeIn,trackDuration}),
+    '-filter_complex',normalVideoFilterComplexR721({fadeIn,trackDuration,previewReload}),
     '-map','[outv]','-an','-sn','-dn',
     ...h264EncoderArgsR721(),
     '-f','h264','pipe:1'
@@ -1448,7 +1455,7 @@ async function stopNormalVideoFeederR721(){
   videoFeederPrerolledR744=false;
 }
 
-function startNormalVideoFeederR721(visualPath,{fadeIn=false,trackDuration=0,visualOffsetSeconds=0}={}){
+function startNormalVideoFeederR721(visualPath,{fadeIn=false,trackDuration=0,visualOffsetSeconds=0,previewReload=false}={}){
   if(stopping || clipActive)return false;
   const videoSink=publisher?.stdio?.[4];
   if(!publisher || publisher.exitCode!==null || !videoSink || videoSink.destroyed || videoSink.writableEnded)throw new Error('R721 persistent video pipe unavailable');
@@ -1458,7 +1465,7 @@ function startNormalVideoFeederR721(visualPath,{fadeIn=false,trackDuration=0,vis
   if(!existsSync(CTA_OVERLAY_R722) || statSync(CTA_OVERLAY_R722).size<5000)throw new Error(`R722 CTA overlay missing: ${CTA_OVERLAY_R722}`);
   if(!existsSync(eq.path) || statSync(eq.path).size<20000)throw new Error(`equalizer missing: ${eq.path}`);
 
-  const child=spawn('ffmpeg',normalVideoFeederArgsR721(visualPath,eq.path,{fadeIn,trackDuration,visualOffsetSeconds}),{stdio:['ignore','pipe','pipe']});
+  const child=spawn('ffmpeg',normalVideoFeederArgsR721(visualPath,eq.path,{fadeIn,trackDuration,visualOffsetSeconds,previewReload}),{stdio:['ignore','pipe','pipe']});
   videoFeeder=child;
   videoFeederPath=visualPath;
   videoFeederPeriod=eq.period;
@@ -1485,7 +1492,7 @@ function startNormalVideoFeederR721(visualPath,{fadeIn=false,trackDuration=0,vis
   return true;
 }
 
-async function ensureNormalVideoFeederR721({force=false,fadeIn=false,trackDuration=null}={}){
+async function ensureNormalVideoFeederR721({force=false,fadeIn=false,trackDuration=null,previewReload=false}={}){
   if(stopping || clipActive)return true;
   const visual=await ensureScheduledVisual();
   const period=activeVisualPeriodR721();
@@ -1499,7 +1506,7 @@ async function ensureNormalVideoFeederR721({force=false,fadeIn=false,trackDurati
     // MORNING/DAY/EVENING/NIGHT MP4 resumes at its wall-clock loop position instead of 0:00.
     // This preserves FFmpeg-frame-timed NEXT/PREVIOUS without visually restarting the background.
     const visualOffsetSeconds=await visualLoopOffsetR735(visual);
-    return startNormalVideoFeederR721(visual,{fadeIn,trackDuration:plannedDuration,visualOffsetSeconds});
+    return startNormalVideoFeederR721(visual,{fadeIn,trackDuration:plannedDuration,visualOffsetSeconds,previewReload});
   }finally{
     visualSwitching=false;
   }
@@ -1734,10 +1741,68 @@ async function playVideoClipR691(previous,item,next){
   }
 }
 
-function decoderArgs(localAudioPath,duration){
+function loudnessSidecarR747(localAudioPath){
+  return `${localAudioPath}${LOUDNESS_CACHE_SUFFIX_R747}`;
+}
+function readLoudnessAnalysisR747(localAudioPath){
+  try{
+    const media=statSync(localAudioPath);
+    const row=JSON.parse(readFileSync(loudnessSidecarR747(localAudioPath),'utf8'));
+    if(Number(row?.size)!==Number(media.size))return null;
+    if(Math.abs(Number(row?.mtimeMs)-Number(media.mtimeMs))>2)return null;
+    for(const k of ['input_i','input_lra','input_tp','input_thresh','target_offset'])if(!Number.isFinite(Number(row?.[k])))return null;
+    return row;
+  }catch(_){return null;}
+}
+function runCaptureBothR747(command,args,{timeoutMs=12000}={}){
+  return new Promise((resolve,reject)=>{
+    const child=spawn(command,args,{stdio:['ignore','pipe','pipe']});
+    let out='',err='',done=false;
+    const finish=(error,value)=>{if(done)return;done=true;clearTimeout(timer);error?reject(error):resolve(value)};
+    const timer=setTimeout(()=>{try{child.kill('SIGKILL')}catch(_){ }finish(new Error(`${command} loudness timeout`));},timeoutMs);
+    child.stdout.on('data',d=>out+=String(d));
+    child.stderr.on('data',d=>err+=String(d));
+    child.once('error',e=>finish(e));
+    child.once('exit',code=>code===0?finish(null,{stdout:out,stderr:err}):finish(new Error(`${command} loudness exit ${code}: ${err.slice(-900)}`)));
+  });
+}
+async function analyzeLoudnessR747(localAudioPath){
+  const cached=readLoudnessAnalysisR747(localAudioPath);
+  if(cached)return cached;
+  const result=await runCaptureBothR747('ffmpeg',[
+    '-hide_banner','-nostats','-loglevel','info','-i',localAudioPath,
+    '-map','0:a:0','-vn','-sn','-dn',
+    '-af',`loudnorm=I=${TRACK_AUDIO_TARGET_I_R726}:LRA=${TRACK_AUDIO_LRA_R726}:TP=${TRACK_AUDIO_TRUE_PEAK_R726}:print_format=json`,
+    '-f','null','-'
+  ],{timeoutMs:LOUDNESS_ANALYSIS_TIMEOUT_MS_R747});
+  const text=String(result.stderr||'');
+  const matches=[...text.matchAll(/\{[\s\S]*?"target_offset"[\s\S]*?\}/g)];
+  if(!matches.length)throw new Error('R747 loudnorm analysis JSON missing');
+  const raw=JSON.parse(matches[matches.length-1][0]);
+  const media=statSync(localAudioPath);
+  const row={
+    size:Number(media.size),mtimeMs:Number(media.mtimeMs),
+    input_i:Number(raw.input_i),input_lra:Number(raw.input_lra),input_tp:Number(raw.input_tp),
+    input_thresh:Number(raw.input_thresh),target_offset:Number(raw.target_offset),analyzedAt:new Date().toISOString()
+  };
+  for(const k of ['input_i','input_lra','input_tp','input_thresh','target_offset'])if(!Number.isFinite(row[k]))throw new Error(`R747 loudnorm invalid ${k}`);
+  try{writeFileSync(loudnessSidecarR747(localAudioPath),JSON.stringify(row),'utf8')}catch(_){ }
+  return row;
+}
+async function ensureLoudnessAnalysisR747(localAudioPath){
+  try{return await analyzeLoudnessR747(localAudioPath)}catch(error){
+    state.lastError=`R747 loudness fallback: ${cleanText(error?.message||error)}`;
+    console.error('[loudness-r747]',cleanText(error?.message||error));
+    return null;
+  }
+}
+function decoderArgs(localAudioPath,duration,loudness=null){
   const outStart=Math.max(0,Number(duration||0)-TRACK_AUDIO_FADE_OUT_R726);
+  const loudnorm=loudness
+    ? `loudnorm=I=${TRACK_AUDIO_TARGET_I_R726}:LRA=${TRACK_AUDIO_LRA_R726}:TP=${TRACK_AUDIO_TRUE_PEAK_R726}:measured_I=${Number(loudness.input_i).toFixed(2)}:measured_LRA=${Number(loudness.input_lra).toFixed(2)}:measured_TP=${Number(loudness.input_tp).toFixed(2)}:measured_thresh=${Number(loudness.input_thresh).toFixed(2)}:offset=${Number(loudness.target_offset).toFixed(2)}:linear=true:print_format=summary`
+    : `loudnorm=I=${TRACK_AUDIO_TARGET_I_R726}:LRA=${TRACK_AUDIO_LRA_R726}:TP=${TRACK_AUDIO_TRUE_PEAK_R726}:print_format=summary`;
   const af=[
-    `loudnorm=I=${TRACK_AUDIO_TARGET_I_R726}:LRA=${TRACK_AUDIO_LRA_R726}:TP=${TRACK_AUDIO_TRUE_PEAK_R726}`,
+    loudnorm,
     `afade=t=in:st=0:d=${TRACK_AUDIO_FADE_IN_R726}`,
     `afade=t=out:st=${outStart.toFixed(3)}:d=${TRACK_AUDIO_FADE_OUT_R726}`,
     `aresample=${AUDIO_SAMPLE_RATE}`
@@ -1818,16 +1883,22 @@ async function playItem(previous,item,next,following,localAudioPath,nextTrackPre
   // It may be an MP3, normal clip, 30/60-minute special, or the 4–6-song station bumper.
   writeOverlayFileR726(LIVE_NEXT_FILE_R726,nextOverlayTextR736(actualNextR736));
 
-  // R744: if this track's video feeder was already started by the previous item,
-  // keep it. Otherwise start it now with a shortened production lifetime so its
-  // final T-8s preview/fade still reaches the viewer at this track's audible end.
+  // R747: loudness is normally already analyzed by the background prefetch. If this is
+  // the first uncached track after a service restart, finish measurement BEFORE t=0
+  // of the MP3 feeder so video boundary timing cannot drift by the analysis duration.
+  const loudnessR747=await ensureLoudnessAnalysisR747(localAudioPath);
+  state.currentLoudnessMode=loudnessR747?'R747-TWO-PASS-MEASURED-LINEAR':'R747-SINGLE-PASS-FALLBACK';
+  state.currentMeasuredInputLufs=loudnessR747?Number(loudnessR747.input_i):null;
+
+  // R747: MP3->MP3 uses the proven R743 exact feeder clock. A normal feeder may be
+  // pre-rolled only when the PREVIOUS item was a real video insert; that preroll now
+  // has trackDuration=duration+lead, so its T-8/fade absolute times still match audio.
   const currentIdentityR744=primaryIdentity(item);
   const currentVideoPrerolledR744=Boolean(
     videoFeeder && videoFeeder.exitCode===null && videoFeederTrackIdentityR744===currentIdentityR744 && videoFeederPrerolledR744
   );
   if(!currentVideoPrerolledR744){
-    const effectiveVideoDurationR744=Math.max(1,Number(duration)-videoLeadForDurationR744(duration));
-    await ensureNormalVideoFeederR721({force:true,fadeIn:false,trackDuration:effectiveVideoDurationR744});
+    await ensureNormalVideoFeederR721({force:true,fadeIn:false,trackDuration:duration,previewReload:false});
     videoFeederTrackIdentityR744=currentIdentityR744;
     videoFeederPrerolledR744=false;
   }
@@ -1839,7 +1910,7 @@ async function playItem(previous,item,next,following,localAudioPath,nextTrackPre
   state.current={type:item.type||'track',title:item.title,album:item.album||'',url:item.url,startedAt:new Date(mediaStartedAt).toISOString(),duration};
   const currentIdentity=primaryIdentity(state.current);
   setLiveTitleR724(`ANDRIK — ${shortText(item.title||'TRACK',42)}`,{delayMs:0});
-  if(actualNextR736){
+  if(actualNextR736 && isVideoHandoffR738(actualNextR736)){
     scheduleTrackVideoHandoffR744(item,actualNextR736,next,following,duration);
   }
   // R743: NEVER preload the future CURRENT into the old song. The next track/clip
@@ -1848,7 +1919,7 @@ async function playItem(previous,item,next,following,localAudioPath,nextTrackPre
   // PREVIOUS/NEXT remain FFmpeg-frame-timed in the final 8 seconds.
 
   state.producerRunning=true;
-  producer=spawn('ffmpeg',decoderArgs(localAudioPath,duration),{stdio:['ignore','pipe','pipe']});
+  producer=spawn('ffmpeg',decoderArgs(localAudioPath,duration,loudnessR747),{stdio:['ignore','pipe','pipe']});
   producer.stderr.on('data',d=>{
     const line=String(d||'').trim();
     if(line){
@@ -2027,8 +2098,8 @@ function publicStatus(){
     mode:state.mode,
     overlayMode:state.overlayMode,
     audioMode:state.audioMode,
-    engine:'R746-R745-PERSISTENT-H264-RELAY-RTMPS-TLS-SELFHEAL',
-    videoPipeline:'R746 R745 SOURCE PREROLL + CLIP EOF WATCHDOG + VIDEO SOURCE RECOVERY + RTMPS/TLS SELF-HEAL',
+    engine:'R747-R743-BOUNDARY-RESTORED-R746-RTMPS-SELFHEAL',
+    videoPipeline:'R747 MP3->MP3 R743 CLOCK + VIDEO-INSERT PREROLL WITH +LEAD TIMELINE + R746 RTMPS SELF-HEAL',
     outputTimeshiftSeconds:OUTPUT_TIMESHIFT_SECONDS,
     videoBitrate:VIDEO_BITRATE,
     audioBitrate:AUDIO_BITRATE,
@@ -2045,25 +2116,29 @@ function publicStatus(){
     overlayPixelPath:'YUV420-NO-ARGB-R732',
     trackUiClock:'ffmpeg-frame-bound-R732-audio-lead-bounded',
     nextPreviewSeconds:NEXT_PREVIEW_SECONDS_R726,
-    nextPreviewTiming:'R745-TRUE-PREVIOUS-NEXT-FINAL-8S-WITH-VIDEO-PREROLL',
-    mp3BoundaryMode:'R745-R744-VIDEO-PREROLL-BOUNDARY',
-    currentTitleHandoff:'R745-TRUE-PREVIOUS-NEXT-FEEDER-PREROLLED',
+    nextPreviewTiming:'R747-R743-EXACT-FINAL-8S-AUDIBLE-BOUNDARY',
+    mp3BoundaryMode:'R747-R743-EXACT-MP3-CLOCK-VIDEO-TO-MP3-PREROLL-TIME-EXTENDED',
+    currentTitleHandoff:'R747-FROZEN-MP3-PREVNEXT-OR-RELOAD-ONLY-FOR-VIDEO-PREROLLED-TRACK',
     nextPreviewHideBeforeEndSeconds:NEXT_PREVIEW_HIDE_BEFORE_END_R726,
     audioNormalizationTargetLufs:TRACK_AUDIO_TARGET_I_R726,
     audioTruePeakDb:TRACK_AUDIO_TRUE_PEAK_R726,
     audioFadeInSeconds:TRACK_AUDIO_FADE_IN_R726,
     audioFadeOutSeconds:TRACK_AUDIO_FADE_OUT_R726,
+    audioNormalizationMode:'R747-TWO-PASS-MEASURED-EBU-R128-WITH-SINGLE-PASS-FALLBACK',
+    currentLoudnessMode:state.currentLoudnessMode||'pending',
+    currentMeasuredInputLufs:state.currentMeasuredInputLufs??null,
+    loudnessAnalysisTimeoutMs:LOUDNESS_ANALYSIS_TIMEOUT_MS_R747,
     videoFadeSeconds:VIDEO_FADE_SECONDS_R726,
-      videoFadeStrategy:'R744-SAFE-ALPHA-LAST-0.80S-OF-PREROLLED-FEEDER',
-      videoFadeInEnabled:false,
+      videoFadeStrategy:'R747-R743-BLACK-ALPHA-0.65S-HOLD-0.05S-LIGHT-0.30S',
+      videoFadeInEnabled:true,
       videoBaseNeverFaded:true,
       videoOverlayMask:'BLACK_ALPHA_ONLY_R738',
-      videoFadeInSeconds:0,
-      videoBlackHoldSeconds:0,
-      videoFadeLeadSeconds:0,
+      videoFadeInSeconds:VIDEO_FADE_IN_SECONDS_R736,
+      videoBlackHoldSeconds:VIDEO_BLACK_HOLD_SECONDS_R736,
+      videoFadeLeadSeconds:VIDEO_FADE_LEAD_SECONDS_R735,
       titleVisualLeadSeconds:videoPipelineLeadR744,
       videoTimelineCompensationSeconds:0,
-      videoTimelineCompensationMode:'R744-SOURCE-PREROLL-NOT-FILTER-SHIFT',
+      videoTimelineCompensationMode:'R747-MP3-R743-FRAME-CLOCK-VIDEO-INSERTS-R744-PREROLL',
       clipAvSyncMode:'R744-SPLIT-VIDEO-PREROLL-AUDIO-AT-BOUNDARY',
       clipPreDrainMs:0,
       clipPostDrainMs:0,
@@ -2086,7 +2161,7 @@ function publicStatus(){
     visualTimelineAnchor:'PTS-STARTPTS-R733',
     visualContinuityMode:state.visualContinuityMode,
     visualLoopOffsetSeconds:state.visualLoopOffsetSeconds,
-    previousPreviewFallback:'R745-ACTUAL-PREVIOUS-ITEM-THEN-R733-RESTART-FALLBACK',
+    previousPreviewFallback:'R747-ACTUAL-PREVIOUS-ITEM-FROZEN-PER-MP3-FEEDER',
     antiRepeatTrackHistory:TRACK_HISTORY_LIMIT_R726,
     qrPosition:'top-right',
     visualTimeZone:state.visualTimeZone,
@@ -2234,7 +2309,7 @@ const server=http.createServer((req,res)=>{
 });
 
 server.listen(PORT,'0.0.0.0',()=>{
-  console.log(`ANDRIK Radio R746 R745-PRESERVED + RTMPS-TLS-SELFHEAL listening on :${PORT}`);
+  console.log(`ANDRIK Radio R747 R745-PRESERVED + RTMPS-TLS-SELFHEAL listening on :${PORT}`);
   radioLoop();
 });
 
