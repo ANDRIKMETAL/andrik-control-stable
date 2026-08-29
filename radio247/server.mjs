@@ -70,6 +70,8 @@ const CLIP_PREP_MIN_BYTES_R742 = 500000; // prepared 1080p H264+AAC cache sanity
 const VIDEO_PIPELINE_LEAD_SECONDS_R745 = Math.max(2,Math.min(15,Number(process.env.VIDEO_PIPELINE_LEAD_SECONDS_R745 || process.env.VIDEO_PIPELINE_LEAD_SECONDS_R744 || 10.0))); // R745: 10s default after real viewer-side test; keeps backward env compatibility
 const VIDEO_BOUNDARY_FADE_SECONDS_R744 = 0.80;
 const CLIP_END_GUARD_MARGIN_MS_R745 = Math.max(8000,Number(process.env.CLIP_END_GUARD_MARGIN_MS_R745 || 15000)); // watchdog margin after measured clip duration
+const TRANSPORT_FATAL_RESTART_DELAY_MS_R746 = Math.max(1500,Math.min(15000,Number(process.env.TRANSPORT_FATAL_RESTART_DELAY_MS_R746 || 3500))); // R746: restart whole service when FFmpeg/FIFO keeps a dead RTMPS/TLS session alive
+const TRANSPORT_FATAL_REGEX_R746 = /the specified session has been invalidated|error in the pull function|io error:\s*end of file|server returned 4\d\d|connection reset by peer|broken pipe/i;
 // R721 keeps the proven 100-frame / 4-second exact-periodic QTRLE loops from R720.
 // The EQ is encoded inside the current local H264 feeder, while the YouTube RTMPS
 // publisher stays open permanently across MP3, clip and visual-period switches.
@@ -116,13 +118,13 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R745-CLIP-END-GUARD-TRUE-PREVIOUS-TITLE-R744-PRESERVED',
-  mode: 'R745 R744 PRESERVED + CLIP EOF WATCHDOG + VIDEO SOURCE RECOVERY + TRUE PREVIOUS + MIND IS A TRAP TITLE + 10s VIDEO LEAD',
+  version: 'R746-RTMPS-TLS-SELFHEAL-R745-PRESERVED',
+  mode: 'R746 R745 PRESERVED + RTMPS/TLS FATAL SELF-HEAL + CLIP EOF WATCHDOG + TRUE PREVIOUS + 10s VIDEO LEAD',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
   producerRunning: false,
-  overlayMode: 'R745 TRUE CURRENT/PREVIOUS/NEXT + R744 VIDEO-PREROLL + SAFE 0.80s BOUNDARY FADE',
+  overlayMode: 'R746 PRESERVES R745 TRUE CURRENT/PREVIOUS/NEXT + R744 VIDEO-PREROLL + SAFE 0.80s BOUNDARY FADE',
   audioMode: 'R732 R729 PCM TRANSPORT + AUDIO QUEUE 8 + R726 LOUDNORM -14 LUFS / ONE RTMPS',
   visualTimeZone: VISUAL_TIME_ZONE,
   visualPeriod: null,
@@ -172,7 +174,12 @@ const state = {
   videoPipelineLeadSeconds: VIDEO_PIPELINE_LEAD_SECONDS_R745,
   videoHandoffMode: 'R744-PREROLL-SOURCE-SWITCH',
   clipAvSyncMode: 'R744-SPLIT-VIDEO-PREROLL-AUDIO-AT-BOUNDARY',
-  suppressedVideoInsert: ''
+  suppressedVideoInsert: '',
+  transportHealthy: false,
+  transportSelfHealPending: false,
+  transportSelfHealCount: 0,
+  lastTransportFatalAt: null,
+  lastTransportFatalReason: ''
 };
 
 let publisher = null;
@@ -223,6 +230,7 @@ let videoFeederTrackIdentityR744 = '';
 let videoFeederPrerolledR744 = false;
 let suppressedVideoIdentityR744 = '';
 let videoHandoffGenerationR744 = 0;
+let transportFatalTimerR746 = null;
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 function promiseTimeout(promise,ms,label='operation'){
@@ -1299,6 +1307,29 @@ function h264EncoderArgsR721(){
   ];
 }
 
+function scheduleTransportSelfHealR746(rawLine,thisPublisher){
+  if(stopping || publisher!==thisPublisher || thisPublisher?.exitCode!==null)return false;
+  const line=cleanText(rawLine);
+  if(!line || !TRANSPORT_FATAL_REGEX_R746.test(line))return false;
+  state.transportHealthy=false;
+  state.transportSelfHealPending=true;
+  state.transportSelfHealCount=Number(state.transportSelfHealCount||0)+1;
+  state.lastTransportFatalAt=new Date().toISOString();
+  state.lastTransportFatalReason=line.slice(-900);
+  state.lastError=`R746 RTMPS/TLS fatal: ${line.slice(-650)}`;
+  if(transportFatalTimerR746)return true;
+  console.error('[r746-transport-watchdog] fatal RTMPS/TLS detected; full service self-heal scheduled:',line);
+  transportFatalTimerR746=setTimeout(()=>{
+    transportFatalTimerR746=null;
+    if(stopping || publisher!==thisPublisher || thisPublisher?.exitCode!==null)return;
+    state.lastExit={layer:'r746-rtmps-tls-watchdog',code:75,signal:null,at:new Date().toISOString()};
+    console.error('[r746-transport-watchdog] exiting with code 75 so systemd rebuilds RTMPS/TLS session');
+    process.exit(75);
+  },TRANSPORT_FATAL_RESTART_DELAY_MS_R746);
+  transportFatalTimerR746.unref?.();
+  return true;
+}
+
 function startPublisher(){
   if(!STREAM_URL){
     state.lastError='YOUTUBE_STREAM_KEY is not configured';
@@ -1332,6 +1363,8 @@ function startPublisher(){
   const thisPublisher=spawn('ffmpeg',args,{stdio:['ignore','ignore','pipe','pipe','pipe']});
   publisher=thisPublisher;
   state.publisherRunning=true;
+  state.transportHealthy=true;
+  state.transportSelfHealPending=false;
   if(!state.streamStartedAt)state.streamStartedAt=new Date().toISOString();
   const audioSink=thisPublisher.stdio[3];
   const videoSink=thisPublisher.stdio[4];
@@ -1346,12 +1379,13 @@ function startPublisher(){
       state.lastFfmpegLine=line.slice(-1000);
       // A repeated timestamp error is a hard regression in R721 and must be visible.
       if(/error|fail|invalid|broken pipe|non-monoton|unset in a packet/i.test(line))state.lastError=line.slice(-700);
+      scheduleTransportSelfHealR746(line,thisPublisher);
       console.error('[master]',line);
     }
   });
   thisPublisher.on('exit',(code,signal)=>{
     const isCurrent=publisher===thisPublisher;
-    if(isCurrent){publisher=null;state.publisherRunning=false;}
+    if(isCurrent){publisher=null;state.publisherRunning=false;state.transportHealthy=false;state.transportSelfHealPending=false;if(transportFatalTimerR746){clearTimeout(transportFatalTimerR746);transportFatalTimerR746=null;}}
     if(isCurrent && !stopping){
       state.lastExit={layer:'persistent-master',code,signal,at:new Date().toISOString()};
       // An actual RTMPS/master failure is the only reason the service exits/restarts.
@@ -1987,14 +2021,14 @@ async function radioLoop(){
 function publicStatus(){
   const now=Date.now();
   return {
-    ok:Boolean(state.publisherRunning && (clipActive || (videoFeeder && videoFeeder.exitCode===null))),
+    ok:Boolean(state.publisherRunning && state.transportHealthy!==false && (clipActive || (videoFeeder && videoFeeder.exitCode===null))),
     service:state.service,
     version:state.version,
     mode:state.mode,
     overlayMode:state.overlayMode,
     audioMode:state.audioMode,
-    engine:'R745-R744-PERSISTENT-H264-RELAY-CLIP-END-GUARD',
-    videoPipeline:'R745 R744 SOURCE PREROLL + CLIP EOF WATCHDOG + VIDEO SOURCE RECOVERY + R732 ONE RTMPS',
+    engine:'R746-R745-PERSISTENT-H264-RELAY-RTMPS-TLS-SELFHEAL',
+    videoPipeline:'R746 R745 SOURCE PREROLL + CLIP EOF WATCHDOG + VIDEO SOURCE RECOVERY + RTMPS/TLS SELF-HEAL',
     outputTimeshiftSeconds:OUTPUT_TIMESHIFT_SECONDS,
     videoBitrate:VIDEO_BITRATE,
     audioBitrate:AUDIO_BITRATE,
@@ -2065,6 +2099,13 @@ function publicStatus(){
     equalizerStyle:state.equalizerStyle,
     equalizerEngine:state.equalizerEngine,
     publisherRunning:state.publisherRunning,
+    transportHealthy:state.transportHealthy!==false,
+    transportWatchdogMode:'R746-FATAL-RTMPS-TLS-SIGNATURE-SYSTEMD-SELFHEAL',
+    transportSelfHealDelayMs:TRANSPORT_FATAL_RESTART_DELAY_MS_R746,
+    transportSelfHealPending:Boolean(state.transportSelfHealPending),
+    transportSelfHealCount:Number(state.transportSelfHealCount||0),
+    lastTransportFatalAt:state.lastTransportFatalAt||null,
+    lastTransportFatalReason:state.lastTransportFatalReason||'',
     producerRunning:state.producerRunning,
     videoFeederRunning:Boolean(videoFeeder&&videoFeeder.exitCode===null),
     clipActive,
@@ -2193,7 +2234,7 @@ const server=http.createServer((req,res)=>{
 });
 
 server.listen(PORT,'0.0.0.0',()=>{
-  console.log(`ANDRIK Radio R745 R744-TRANSPORT + CLIP-END-GUARD + TRUE-PREVIOUS listening on :${PORT}`);
+  console.log(`ANDRIK Radio R746 R745-PRESERVED + RTMPS-TLS-SELFHEAL listening on :${PORT}`);
   radioLoop();
 });
 
@@ -2211,7 +2252,7 @@ function waitChildExit(child,timeoutMs){
 async function shutdown(){
   if(shutdownStarted)return;
   shutdownStarted=true;
-  stopping=true;
+  stopping=true;if(transportFatalTimerR746){clearTimeout(transportFatalTimerR746);transportFatalTimerR746=null;}
   if(liveTitleTimerR724){clearTimeout(liveTitleTimerR724);liveTitleTimerR724=null;}
   if(scheduleTimerR721)clearInterval(scheduleTimerR721);
   try{server.close();}catch(_){ }
