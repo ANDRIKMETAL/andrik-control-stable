@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788016624076-9eaa0295a9",
-  "release": "R759",
-  "archiveName": "R759-PERMANENT-FULLSCREEN-1920X1080-DIRECT-SCALE-R758-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "fffab0de5295492a46adccb5eda5f566316ba2fe",
-  "backupSha": "fffab0de5295492a46adccb5eda5f566316ba2fe",
+  "operationId": "publish-1788017302871-416e8ff4d4",
+  "release": "R760",
+  "archiveName": "R760-R753-NOCROP-GEOMETRY-EXACT-FADE-R759-STABILITY-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "283645d2a791fdcdeefd1ecaef1d3e17cdc9186c",
+  "backupSha": "283645d2a791fdcdeefd1ecaef1d3e17cdc9186c",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-29T15:17:04.459Z"
+  "generatedAt": "2026-08-29T15:28:23.194Z"
 }

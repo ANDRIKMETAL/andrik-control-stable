@@ -147,8 +147,8 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R759-PERMANENT-FULLSCREEN-1920X1080-DIRECT-SCALE-R758-PRESERVED',
-  mode: 'R758 GUARANTEED MP3→MP3 BLACK BOUNDARY + R757/R756 STABILITY PRESERVED',
+  version: 'R760-R753-NOCROP-GEOMETRY-FADE-R759-STABILITY-PRESERVED',
+  mode: 'R760 R753 VIEWER-PROVEN MP3 FADE + NO-CROP FIT/PAD + R759/R756/R754 STABILITY',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
@@ -157,7 +157,7 @@ const state = {
   audioMode: 'R750 NONBLOCKING R747 EBU R128 -14 LUFS / TP -1.5 + R743 FADES + AUDIO QUEUE 8 / ONE RTMPS',
   mp3ToVideoFadeMode: 'R757-END-BLACK-HOLD-THEN-VIDEO-FADE-IN',
   clipPreviewMode: 'R757-NORMAL-CLIPS-PREVNEXT-INTRO-2-7S-PLUS-FINAL-10S',
-  mp3BoundaryFadeMode: 'R758-OLD-MP3-FADE-TO-BLACK-HOLD-NEW-MP3-FADE-IN-0.30',
+  mp3BoundaryFadeMode: 'R753-EXACT-SAME-FEEDER-BLACK-ALPHA-0.65-HOLD-0.05-RECOVER-0.30',
   visualTimeZone: VISUAL_TIME_ZONE,
   visualPeriod: null,
   visualPath: null,
@@ -900,7 +900,7 @@ function prefetchClip(item){
 
 
 function preparedClipPathR742(sourcePath){
-  return String(sourcePath).replace(/\.mp4$/i,'')+'.r742-ready.mp4';
+  return String(sourcePath).replace(/\.mp4$/i,'')+'.r760-ready.mp4';
 }
 function preparedClipExpectedTitleR745(item){
   const stationInsert=item?.sourceType==='radio-bumper'||String(item?.sourceType||'').startsWith('radio-special');
@@ -933,8 +933,9 @@ function preparedClipFilterComplexR742(titleFile,tickerFile,{stationInsert=false
   const tickerPath=ffFilterPath(tickerFile);
   const base=[
     'setpts=PTS-STARTPTS',
-    'scale=1920:1080:flags=lanczos',
-    'setsar=1','setdar=16/9',`fps=${VIDEO_FPS}`,'format=yuv420p'
+    'scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos',
+    'pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black',
+    'setsar=1',`fps=${VIDEO_FPS}`,'format=yuv420p'
   ];
   if(!stationInsert){
     base.push(
@@ -1031,8 +1032,9 @@ function clipLiveVideoFilterR757({duration=0,showPreview=false}={}){
       : `between(t\,${outroStart.toFixed(3)}\,${outroEnd.toFixed(3)})`;
   }
   const vf=[
-    'scale=1920:1080:flags=lanczos',
-    'setsar=1','setdar=16/9',`fps=${VIDEO_FPS}`,'format=yuv420p',
+    'scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos',
+    'pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black',
+    'setsar=1',`fps=${VIDEO_FPS}`,'format=yuv420p',
     // R757: clip starts from real black after the MP3 has faded fully out.
     `fade=t=in:st=0:d=${VIDEO_INSERT_FADE_IN_SECONDS_R757.toFixed(2)}`
   ];
@@ -1071,7 +1073,7 @@ function clipPreparedVideoOnlyArgsR744(readyPath,{duration=0}={}){
     '-hide_banner','-loglevel','warning','-fflags','+genpts+discardcorrupt','-err_detect','ignore_err',
     '-re','-i',readyPath,
     '-map','0:v:0','-an','-sn','-dn',
-    '-vf',`scale=1920:1080:flags=lanczos,setsar=1,setdar=16/9,fps=${VIDEO_FPS},format=yuv420p`,
+    '-vf',`scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1,fps=${VIDEO_FPS},format=yuv420p`,
     ...h264EncoderArgsR721()
   ];
   if(duration>0)args.push('-t',String(Math.max(0.5,duration)));
@@ -1397,8 +1399,9 @@ function titleOverlayFiltersR721({dynamicTitle=true,showPreview=false,previewDur
   const previewEnable=`:enable='${previewExpr}'`;
   return [
     // R759: permanent fullscreen. Every video source is forced to the exact 1920x1080 canvas; no crop/pad/auto-aspect branch exists.
-    'scale=1920:1080:flags=lanczos',
-    'setsar=1','setdar=16/9',
+    'scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos',
+    'pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black',
+    'setsar=1',
     `fps=${VIDEO_FPS}`,
     'format=yuv420p',
     // R731: normal-track textfiles are loaded ONCE by this feeder. Their timing is then
@@ -1492,8 +1495,9 @@ function clipFilterComplexR721(){
 
 function bumperFilterComplexR724(){
   const vf=[
-    `scale=1920:1080:flags=lanczos`,
-    `setsar=1`,`setdar=16/9`,`fps=${VIDEO_FPS}`
+    `scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos`,
+    `pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black`,
+    `setsar=1`,`fps=${VIDEO_FPS}`
   ].join(',');
   return `[0:v]setpts=PTS-STARTPTS,${vf}[base];[1:v]scale=160:160:flags=lanczos,format=yuva420p[qr];[base][qr]overlay=x=W-w-24:y=24:shortest=1:format=yuv420,format=yuv420p[outv]`;
 }
@@ -1619,7 +1623,7 @@ function startPublisher(){
     // R754: the master owns the ONE continuous YouTube H264 encoder. Feeders may restart
     // for title/fade timing, but their elementary-stream boundaries are decoded here and
     // never exposed directly to RTMPS. This isolates YouTube from MP3→MP3 feeder splices.
-    '-vf',`scale=1920:1080:flags=lanczos,setsar=1,setdar=16/9,fps=${VIDEO_FPS},format=yuv420p`,
+    '-vf',`scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1,fps=${VIDEO_FPS},format=yuv420p`,
     ...h264EncoderArgsR721(),
     '-c:a','aac','-profile:a','aac_low','-b:a',AUDIO_BITRATE,'-ar',String(AUDIO_SAMPLE_RATE),'-ac','2',
     '-max_muxing_queue_size','4096','-flush_packets','1',
@@ -2315,19 +2319,13 @@ async function playItem(previous,item,next,following,localAudioPath,nextTrackPre
   const currentVideoPrerolledR744=Boolean(
     videoFeeder && videoFeeder.exitCode===null && videoFeederTrackIdentityR744===currentIdentityR744 && videoFeederPrerolledR744
   );
-  // R758: make MP3→MP3 fade deterministic instead of relying on the old feeder's
-  // same-process fade-out/recover window, which could disappear when the feeder was
-  // replaced at the boundary. Every real boundary now ends the old MP3 on black; when
-  // the previous item was another MP3, the new feeder starts under the same black mask
-  // and reveals the picture in the original 0.30s recovery time. Clip→MP3 keeps R753's
-  // slightly longer 0.55s reveal. Titles/PREVIOUS/NEXT clocks are unchanged.
-  const previousWasTrackR758=Boolean(previous && (previous.type||'track')==='track');
-  const mp3ToMp3BoundaryR758=previousWasTrackR758 && !clipToTrackBoundaryR753;
-  const boundaryFadeInR758=clipToTrackBoundaryR753 || mp3ToMp3BoundaryR758;
-  const boundaryFadeInSecondsR758=clipToTrackBoundaryR753 ? CLIP_TO_TRACK_FADE_IN_SECONDS_R753 : MP3_BOUNDARY_FADE_IN_SECONDS_R758;
-  const endFadeToBlackR758=Boolean(actualNextR736);
+  // R760: restore EXACT R753 MP3→MP3 fade behavior that was viewer-approved.
+  // The old MP3 feeder owns the complete alpha-mask transition: 0.65 s darken,
+  // 0.05 s black hold, 0.30 s recover. Do NOT add a second fade-in on the next MP3.
+  // Only MP3→real-video keeps R757's black hold through the boundary.
+  const endFadeToBlackR760=Boolean(actualNextR736 && isVideoHandoffR738(actualNextR736));
   if(!currentVideoPrerolledR744){
-    await ensureNormalVideoFeederR721({force:true,fadeIn:boundaryFadeInR758,fadeInSeconds:boundaryFadeInSecondsR758,endFadeToBlack:endFadeToBlackR758,trackDuration:duration,previewReload:false});
+    await ensureNormalVideoFeederR721({force:true,fadeIn:clipToTrackBoundaryR753,endFadeToBlack:endFadeToBlackR760,trackDuration:duration,previewReload:false});
     videoFeederTrackIdentityR744=currentIdentityR744;
     videoFeederPrerolledR744=false;
   }
@@ -2535,8 +2533,8 @@ function publicStatus(){
     mode:state.mode,
     overlayMode:state.overlayMode,
     audioMode:state.audioMode,
-    engine:'R759-PERMANENT-FULLSCREEN + R758/R757/R756/R754 PRESERVED',
-    videoPipeline:'R759 DIRECT 1920x1080 FULLSCREEN EVERY STAGE + 64Q + R754 PERSISTENT MASTER',
+    engine:'R760-R753-NOCROP-GEOMETRY+FADE + R759/R757/R756/R754 PRESERVED',
+    videoPipeline:'R760 R753 FIT+PAD NO-CROP EVERY STAGE + 64Q + R754 PERSISTENT MASTER',
     outputTimeshiftSeconds:OUTPUT_TIMESHIFT_SECONDS,
     videoBitrate:VIDEO_BITRATE,
     audioBitrate:AUDIO_BITRATE,
@@ -2592,12 +2590,12 @@ function publicStatus(){
       stationInsertAudioRequired:true,
       nextPreviewSource:'ACTUAL_IMMEDIATE_ITEM_R738',
       clipPlaybackMode:state.clipPlaybackMode||'R742-PREPARED-H264-COPY',
-      clipPreparationMode:state.clipPreparationMode||'R742-SERIAL-NICE12-ONE-THREAD',
+      clipPreparationMode:state.clipPreparationMode||'R760-R742-SERIAL-NICE12-ONE-THREAD-NEW-GEOMETRY-CACHE',
       preparedClipReady:state.preparedClipReady||0,
       preparedClipPending:state.preparedClipPending||0,
       preparedClipLast:state.preparedClipLast||'',
       clipLiveVideoCodec:'copy-h264-unified-boundary-child',
-      clipPreparedVideoCodec:'libx264-ultrafast-no-bframes',
+      clipPreparedVideoCodec:'libx264-ultrafast-no-bframes-r760-fit-pad',
       videoPipelineLeadSeconds:0,
       clipCacheWarmLeadSeconds:INSERT_CACHE_WARM_LEAD_SECONDS_R752,
       clipCacheWarmEntries:clipBoundaryMetaR752.size,
@@ -2606,7 +2604,7 @@ function publicStatus(){
       clipToTrackHandoffGuardMs:CLIP_TO_TRACK_HANDOFF_GUARD_MS_R753,
       clipToTrackFadeInSeconds:CLIP_TO_TRACK_FADE_IN_SECONDS_R753,
       mp3BoundaryFadeMode:state.mp3BoundaryFadeMode,
-      mp3BoundaryFadeInSeconds:MP3_BOUNDARY_FADE_IN_SECONDS_R758,
+      mp3BoundaryFadeInSeconds:VIDEO_FADE_IN_SECONDS_R736,
       stationNextLabel:'NEXT • ANDRIK METAL RADIO 24/7',
       videoHandoffMode:state.videoHandoffMode||'R752-CACHE-ONLY-NO-LIVE-PREROLL',
       clipUnifiedAvRunning:Boolean(clipPublisher&&clipPublisher.exitCode===null&&clipPublisher.__r752UnifiedAV===true&&clipPublisher.__r752Live===true),
@@ -2645,11 +2643,11 @@ function publicStatus(){
     equalizerStyle:state.equalizerStyle,
     equalizerEngine:state.equalizerEngine,
     publisherRunning:state.publisherRunning,
-    masterVideoMode:'R759-DIRECT-1920x1080-FULLSCREEN-NO-PAD-NO-CROP-NO-AUTO-ASPECT-64Q',
-    permanentFullscreenMode:'R759-FORCE-EVERY-SOURCE-1920x1080-SAR1-DAR16x9',
+    masterVideoMode:'R760-R753-FIT-PAD-1920x1080-NO-CROP-64Q',
+    permanentFullscreenMode:'R760-R753-PRESERVE-ASPECT-FIT-PAD-1920x1080-SAR1',
     permanentFullscreenWidth:1920,
     permanentFullscreenHeight:1080,
-    permanentFullscreenFitPolicy:'DIRECT-SCALE-FILL-NO-PAD-NO-CROP',
+    permanentFullscreenFitPolicy:'R753-FIT-DECREASE-PAD-NO-CROP',
     feederBoundaryMode:'R754-GRACEFUL-SIGINT-FLUSH+AUD',
     transportRecoveryMode:'R754-FFMPEG-FIFO-FIRST-NO-EARLY-SYSTEMD-EXIT',
     transportHealthy:state.transportHealthy!==false,
@@ -2796,7 +2794,7 @@ const server=http.createServer((req,res)=>{
 });
 
 server.listen(PORT,'0.0.0.0',()=>{
-  console.log(`ANDRIK Radio R759 PERMANENT FULLSCREEN 1920x1080 + R758 FADE + R754 STABLE MASTER listening on :${PORT}`);
+  console.log(`ANDRIK Radio R760 R753 NO-CROP GEOMETRY + EXACT R753 FADE + R754 STABLE MASTER listening on :${PORT}`);
   radioLoop();
 });
 
