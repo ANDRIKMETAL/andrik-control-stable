@@ -63,9 +63,9 @@ const TRACK_AUDIO_LRA_R726 = 11;
 const TRACK_AUDIO_FADE_IN_R726 = 0.55;
 const TRACK_AUDIO_FADE_OUT_R726 = 1.25; // R743: clearly audible but short old-track fade-out
 const VIDEO_FADE_SECONDS_R726 = 0.65; // R736: short cinematic fade-out on the OLD track
-const VIDEO_FADE_IN_SECONDS_R736 = 0.30; // R736: same-feeder recovery so black can never hang into the new song
+const VIDEO_FADE_IN_SECONDS_R736 = 0.80; // R763: longer viewer-visible recovery/brightening; same alpha-mask architecture
 const VIDEO_BLACK_HOLD_SECONDS_R736 = 0.05; // almost no dead-black hold
-const VIDEO_FADE_LEAD_SECONDS_R735 = 0.40; // R751: user-tuned — start darkening exactly 2.0s later than R750
+const VIDEO_FADE_LEAD_SECONDS_R735 = 1.40; // R763: start the proven R753 boundary darkening exactly 1.0s earlier than R762
 const TITLE_VISUAL_LEAD_SECONDS_R738 = 3.20; // compensate persistent video path latency; CURRENT is preloaded early but appears at the real handoff
 const CLIP_PRE_DRAIN_MS_R738 = 900; // let the bounded MP3 PCM queue drain while the normal visual keeps running
 const CLIP_POST_DRAIN_MS_R738 = 650; // let the clip PCM/video tail drain before the next MP3 feeder starts
@@ -100,7 +100,7 @@ const INSERT_CACHE_WARM_LEAD_SECONDS_R752 = Math.max(2,Math.min(8,Number(process
 const CLIP_TO_TRACK_HANDOFF_GUARD_MS_R753 = Math.max(2500,Math.min(10000,Number(process.env.CLIP_TO_TRACK_HANDOFF_GUARD_MS_R753 || 5000))); // allow one clean clip→MP3 feeder handoff without watchdog racing it
 const CLIP_TO_TRACK_FADE_IN_SECONDS_R753 = Math.max(0.25,Math.min(1.5,Number(process.env.CLIP_TO_TRACK_FADE_IN_SECONDS_R753 || 0.55))); // black→picture on first MP3 frames after a clip
 const VIDEO_INSERT_FADE_IN_SECONDS_R757 = Math.max(0.25,Math.min(1.5,Number(process.env.VIDEO_INSERT_FADE_IN_SECONDS_R757 || 0.55))); // guaranteed black→video on MP3→clip/insert boundary
-const MP3_BOUNDARY_FADE_IN_SECONDS_R758 = Math.max(0.20,Math.min(1.0,Number(process.env.MP3_BOUNDARY_FADE_IN_SECONDS_R758 || 0.30))); // guaranteed black→picture on MP3→MP3 boundary; preserves viewer-approved 0.30s recovery speed
+const MP3_BOUNDARY_FADE_IN_SECONDS_R758 = Math.max(0.20,Math.min(1.5,Number(process.env.MP3_BOUNDARY_FADE_IN_SECONDS_R758 || 0.80))); // R763 metadata/env compatibility: longer visible MP3 boundary recovery
 // R721 keeps the proven 100-frame / 4-second exact-periodic QTRLE loops from R720.
 // The EQ is encoded inside the current local H264 feeder, while the YouTube RTMPS
 // publisher stays open permanently across MP3, clip and visual-period switches.
@@ -111,8 +111,8 @@ const EQUALIZER_FILES_R721 = Object.freeze({
   night: new URL('../assets/equalizer-night-r720.mov', import.meta.url).pathname
 });
 const OUTPUT_TIMESHIFT_SECONDS = 6; // R637: network recovery cushion; packets are NEVER dropped
-const VIDEO_BITRATE = '4500k'; // R637: 1080p25 low-motion radio visual, bounded CBR
-const AUDIO_BITRATE = '128k'; // YouTube Live recommendation for stereo AAC
+const VIDEO_BITRATE = '6000k'; // R762: safe 1080p25 quality lift; CBR only, encoder architecture/preset unchanged
+const AUDIO_BITRATE = '160k'; // R762: modest stereo AAC quality lift; sample rate/queues unchanged
 const AUDIO_SAMPLE_RATE = 44100; // YouTube Live recommendation for stereo
 const VIDEO_FPS = 25;
 const VIDEO_INPUT_QUEUE_PACKETS_R732 = 64; // R756: max ~2.56s at 25fps; 1024 could hide ~41s of stale video behind a feeder change
@@ -147,8 +147,8 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R761-SINGLE-ENCODE-NODATA-STABILITY-R760-VISUALS-PRESERVED',
-  mode: 'R761 SINGLE VIDEO ENCODE + R760 R753 GEOMETRY/FADE + R754 FIFO-FIRST RTMPS',
+  version: 'R763-EARLY-FADE-LONGER-BRIGHTEN-R762-QUALITY-R761-STABILITY-PRESERVED',
+  mode: 'R763 EARLY FADE + LONGER BRIGHTEN + R762 6000K AAC160 + R761 SINGLE ENCODE + R760/R753 VISUALS',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
@@ -157,7 +157,7 @@ const state = {
   audioMode: 'R750 NONBLOCKING R747 EBU R128 -14 LUFS / TP -1.5 + R743 FADES + AUDIO QUEUE 8 / ONE RTMPS',
   mp3ToVideoFadeMode: 'R757-END-BLACK-HOLD-THEN-VIDEO-FADE-IN',
   clipPreviewMode: 'R757-NORMAL-CLIPS-PREVNEXT-INTRO-2-7S-PLUS-FINAL-10S',
-  mp3BoundaryFadeMode: 'R753-EXACT-SAME-FEEDER-BLACK-ALPHA-0.65-HOLD-0.05-RECOVER-0.30',
+  mp3BoundaryFadeMode: 'R763-R753-SAME-FEEDER-BLACK-ALPHA-0.65-HOLD-0.05-LEAD-1.40-RECOVER-0.80',
   visualTimeZone: VISUAL_TIME_ZONE,
   visualPeriod: null,
   visualPath: null,
@@ -1508,7 +1508,7 @@ function h264EncoderArgsR721(){
   return [
     '-c:v','libx264','-preset','ultrafast','-tune','zerolatency',
     '-profile:v','high','-level:v','4.1',
-    '-b:v',VIDEO_BITRATE,'-minrate',VIDEO_BITRATE,'-maxrate',VIDEO_BITRATE,'-bufsize','9000k',
+    '-b:v',VIDEO_BITRATE,'-minrate',VIDEO_BITRATE,'-maxrate',VIDEO_BITRATE,'-bufsize','12000k',
     '-x264-params',`nal-hrd=cbr:force-cfr=1:repeat-headers=1:aud=1:keyint=${VIDEO_GOP}:min-keyint=${VIDEO_GOP}:scenecut=0`,
     '-g',String(VIDEO_GOP),'-keyint_min',String(VIDEO_GOP),'-sc_threshold','0','-bf','0','-refs','1','-coder','1',
     '-r',String(VIDEO_FPS),'-pix_fmt','yuv420p'
@@ -2323,9 +2323,9 @@ async function playItem(previous,item,next,following,localAudioPath,nextTrackPre
   const currentVideoPrerolledR744=Boolean(
     videoFeeder && videoFeeder.exitCode===null && videoFeederTrackIdentityR744===currentIdentityR744 && videoFeederPrerolledR744
   );
-  // R760: restore EXACT R753 MP3→MP3 fade behavior that was viewer-approved.
-  // The old MP3 feeder owns the complete alpha-mask transition: 0.65 s darken,
-  // 0.05 s black hold, 0.30 s recover. Do NOT add a second fade-in on the next MP3.
+  // R763: keep the proven R753 alpha-mask architecture but extend the cinematic timing.
+  // The old MP3 feeder owns the transition: start 1.0 s earlier than R762, 0.65 s darken,
+  // 0.05 s black hold, then a clearly visible 0.80 s recovery. Do NOT add a second fade-in on the next MP3.
   // Only MP3→real-video keeps R757's black hold through the boundary.
   const endFadeToBlackR760=Boolean(actualNextR736 && isVideoHandoffR738(actualNextR736));
   if(!currentVideoPrerolledR744){
@@ -2537,8 +2537,8 @@ function publicStatus(){
     mode:state.mode,
     overlayMode:state.overlayMode,
     audioMode:state.audioMode,
-    engine:'R761-SINGLE-ENCODE-NODATA-STABILITY + R760/R759/R757/R756/R754 PRESERVED',
-    videoPipeline:'R761 SINGLE-X264 FEEDER → H264 COPY MASTER + R760 R753 FIT+PAD NO-CROP + 64Q',
+    engine:'R763-EARLY-FADE-LONGER-BRIGHTEN + R762 QUALITY + R761/R760/R759/R757/R756/R754 PRESERVED',
+    videoPipeline:'R763 R753 ALPHA FADE EARLIER/LONGER + R762 6000K SINGLE-X264 → H264 COPY MASTER + R760 FIT+PAD NO-CROP + 64Q',
     outputTimeshiftSeconds:OUTPUT_TIMESHIFT_SECONDS,
     videoBitrate:VIDEO_BITRATE,
     audioBitrate:AUDIO_BITRATE,
@@ -2599,7 +2599,7 @@ function publicStatus(){
       preparedClipPending:state.preparedClipPending||0,
       preparedClipLast:state.preparedClipLast||'',
       clipLiveVideoCodec:'copy-h264-unified-boundary-child',
-      clipPreparedVideoCodec:'libx264-ultrafast-no-bframes-r760-fit-pad',
+      clipPreparedVideoCodec:'libx264-ultrafast-6000k-no-bframes-r760-fit-pad',
       videoPipelineLeadSeconds:0,
       clipCacheWarmLeadSeconds:INSERT_CACHE_WARM_LEAD_SECONDS_R752,
       clipCacheWarmEntries:clipBoundaryMetaR752.size,
@@ -2647,10 +2647,13 @@ function publicStatus(){
     equalizerStyle:state.equalizerStyle,
     equalizerEngine:state.equalizerEngine,
     publisherRunning:state.publisherRunning,
-    masterVideoMode:'R761-H264-COPY-SETTS-SINGLE-ENCODE-64Q',
+    masterVideoMode:'R763-R762-R761-H264-COPY-SETTS-SINGLE-ENCODE-64Q',
     masterVideoReencode:false,
     videoEncodePasses:1,
-    videoQualityMode:'R761-NO-SECOND-X264-GENERATIONAL-LOSS',
+    videoQualityMode:'R763-R762-6000K-CBR-ULTRAFAST-SINGLE-ENCODE-NO-GENERATIONAL-LOSS',
+    videoBitrate:'6000k',
+    audioBitrate:'160k',
+    videoPreset:'ultrafast-zerolatency-UNCHANGED-FOR-STABILITY',
     permanentFullscreenMode:'R761-R760-R753-PRESERVE-ASPECT-FIT-PAD-1920x1080-SAR1',
     permanentFullscreenWidth:1920,
     permanentFullscreenHeight:1080,
@@ -2658,11 +2661,11 @@ function publicStatus(){
     feederBoundaryMode:'R754-GRACEFUL-SIGINT-FLUSH+AUD',
     transportRecoveryMode:'R754-FFMPEG-FIFO-FIRST-NO-EARLY-SYSTEMD-EXIT',
     transportHealthy:state.transportHealthy!==false,
-    transportWatchdogMode:'R761-SINGLE-ENCODE+R754-FIFO-FIRST+R751-NO-PROGRESS-30S',
+    transportWatchdogMode:'R763-R762-R761-SINGLE-ENCODE+R754-FIFO-FIRST+R751-NO-PROGRESS-30S',
     outputFifoQueuePackets:OUTPUT_FIFO_QUEUE_PACKETS_R750,
     outputDropPacketsOnOverflow:true,
     masterBackpressureWatchdogMs:MASTER_BACKPRESSURE_STUCK_MS_R750,
-    masterBackpressureDetection:'R761-LOW-CPU-COPY-MASTER+R751-BLOCKED-PLUS-ZERO-BYTE-PROGRESS',
+    masterBackpressureDetection:'R763-R762-R761-LOW-CPU-COPY-MASTER+R751-BLOCKED-PLUS-ZERO-BYTE-PROGRESS',
     publisherBackpressureSince:state.publisherBackpressureSince||null,
     publisherBackpressureRecoveries:Number(state.publisherBackpressureRecoveries||0),
     lastPublisherBackpressureAt:state.lastPublisherBackpressureAt||null,
@@ -2801,7 +2804,7 @@ const server=http.createServer((req,res)=>{
 });
 
 server.listen(PORT,'0.0.0.0',()=>{
-  console.log(`ANDRIK Radio R761 SINGLE ENCODE + R760/R753 GEOMETRY/FADE + R754 FIFO-FIRST listening on :${PORT}`);
+  console.log(`ANDRIK Radio R763 EARLY FADE + LONGER BRIGHTEN + R762 QUALITY + R761 STABILITY listening on :${PORT}`);
   radioLoop();
 });
 
