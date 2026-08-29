@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787990983497-9396c17856",
-  "release": "R748",
-  "archiveName": "R748-INTRO-OUTRO-PREVNEXT-COMPACT-CTA-R747-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "ea33cecde14bdc19898919ff7f476c9fdbe3871f",
-  "backupSha": "ea33cecde14bdc19898919ff7f476c9fdbe3871f",
+  "operationId": "publish-1787996199142-8a878fe318",
+  "release": "R749",
+  "archiveName": "R749-INSERT-IRONCLAD-R748-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "e623ceda90db3ca48d5614ab7fc91de3c001a521",
+  "backupSha": "e623ceda90db3ca48d5614ab7fc91de3c001a521",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-29T08:09:44.031Z"
+  "generatedAt": "2026-08-29T09:36:39.734Z"
 }
