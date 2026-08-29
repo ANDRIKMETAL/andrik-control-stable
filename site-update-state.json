@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788021080802-310441c006",
-  "release": "R764",
-  "archiveName": "R764-CLIP-COMMIT-GATE-BUMPER-3-4-R763-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "67e59968e4e4f9cc12b3de6f82354f319dfd697b",
-  "backupSha": "67e59968e4e4f9cc12b3de6f82354f319dfd697b",
+  "operationId": "publish-1788033705823-5a5b596223",
+  "release": "R766",
+  "archiveName": "R766-CLIP-AV-TAIL-LOCK-R765-PUSH-R764-R763-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "b79b3ed6dc07996029c45856495eb8ab04d56ba1",
+  "backupSha": "b79b3ed6dc07996029c45856495eb8ab04d56ba1",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-29T16:31:21.237Z"
+  "generatedAt": "2026-08-29T20:01:46.281Z"
 }

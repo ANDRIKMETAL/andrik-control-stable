@@ -147,8 +147,8 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R764-CLIP-COMMIT-GATE-BUMPER-3-4-R763-QUALITY-FADE-PRESERVED',
-  mode: 'R764 CLIP COMMIT GATE + BUMPERS 3-4 SONGS + R763 FADE/QUALITY + R761 SINGLE ENCODE',
+  version: 'R766-CLIP-AV-TAIL-LOCK-R765-PUSH-R764-R763-PRESERVED',
+  mode: 'R766 CLIP A/V TAIL LOCK + R765 PUSH + R764 COMMIT GATE + R763 QUALITY/FADE',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
@@ -962,7 +962,7 @@ function preparedClipValidR742(sourcePath,readyPath=preparedClipPathR742(sourceP
 }
 function preparedClipTitleFileR742(readyPath){return readyPath+'.title.txt';}
 function preparedClipTickerFileR742(readyPath){return readyPath+'.ticker.txt';}
-function preparedClipFilterComplexR742(titleFile,tickerFile,{stationInsert=false}={}){
+function preparedClipFilterComplexR742(titleFile,tickerFile,{stationInsert=false,duration=0}={}){
   const font=chooseFont();
   const titleFont=chooseTitleFont();
   const fontPart=font?`fontfile='${ffFilterPath(font)}':`:'';
@@ -975,6 +975,17 @@ function preparedClipFilterComplexR742(titleFile,tickerFile,{stationInsert=false
     'pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black',
     'setsar=1',`fps=${VIDEO_FPS}`,'format=yuv420p'
   ];
+  // R766: some station MP4s have a video stream shorter than their audio stream.
+  // Clone the final video frame to the measured container/audio boundary so a bumper
+  // can never visually return to the MP3 while its insert audio is still playing.
+  const preparedDurationR766=Math.max(0,Number(duration)||0);
+  if(preparedDurationR766>0){
+    base.push(
+      `tpad=stop_mode=clone:stop_duration=${preparedDurationR766.toFixed(3)}`,
+      `trim=duration=${preparedDurationR766.toFixed(3)}`,
+      'setpts=PTS-STARTPTS'
+    );
+  }
   if(!stationInsert){
     base.push(
       'drawbox=x=0:y=ih-204:w=iw:h=88:color=black@0.38:t=fill',
@@ -1006,7 +1017,7 @@ async function buildPreparedClipR742(item,sourcePath){
   ];
   if(!hasAudio)args.push('-f','lavfi','-i',`anullsrc=r=${AUDIO_SAMPLE_RATE}:cl=stereo`);
   args.push(
-    '-filter_complex',preparedClipFilterComplexR742(titleFile,tickerFile,{stationInsert}),
+    '-filter_complex',preparedClipFilterComplexR742(titleFile,tickerFile,{stationInsert,duration}),
     '-map','[outv]',...h264EncoderArgsR721(),'-threads','1',
     '-map',hasAudio?'0:a:0':'2:a:0','-af',`aresample=${AUDIO_SAMPLE_RATE}:async=1:first_pts=0,asetpts=PTS-STARTPTS`,
     '-c:a','aac','-profile:a','aac_low','-b:a',AUDIO_BITRATE,'-ar',String(AUDIO_SAMPLE_RATE),'-ac','2',
@@ -1082,6 +1093,16 @@ function clipLiveVideoFilterR757({duration=0,showPreview=false}={}){
     // R757: clip starts from real black after the MP3 has faded fully out.
     `fade=t=in:st=0:d=${VIDEO_INSERT_FADE_IN_SECONDS_R757.toFixed(2)}`
   ];
+  // R766 live safety: even already-cached R760 prepared files may contain a video
+  // stream that reaches EOF before the audio stream. Pad the LAST FRAME and then trim
+  // both clocks to the same measured duration. This protects old caches immediately.
+  if(d>0){
+    vf.push(
+      `tpad=stop_mode=clone:stop_duration=${d.toFixed(3)}`,
+      `trim=duration=${d.toFixed(3)}`,
+      'setpts=PTS-STARTPTS'
+    );
+  }
   if(showPreview&&previewExpr!=='0'){
     const enable=`:enable='${previewExpr}'`;
     vf.push(
@@ -1093,16 +1114,27 @@ function clipLiveVideoFilterR757({duration=0,showPreview=false}={}){
 }
 
 function clipPreparedFeederArgsR742(readyPath,{hasAudio=true,duration=0,showPreview=false}={}){
+  const d=Math.max(0,Number(duration)||0);
+  const dText=d>0?String(Math.max(0.5,d)):'';
+  const audioTailLockR766=d>0
+    ? `aresample=${AUDIO_SAMPLE_RATE}:async=1:first_pts=0,apad=pad_dur=${d.toFixed(3)},atrim=duration=${d.toFixed(3)},asetpts=PTS-STARTPTS`
+    : `aresample=${AUDIO_SAMPLE_RATE}:async=1:first_pts=0,asetpts=PTS-STARTPTS`;
   const args=[
     '-hide_banner','-loglevel','warning','-stats_period','0.5','-progress','pipe:4','-nostats',
     '-fflags','+genpts+discardcorrupt','-err_detect','ignore_err','-re','-i',readyPath,
     '-map','0:v:0','-an','-sn','-dn',
-    '-vf',clipLiveVideoFilterR757({duration,showPreview}),
-    ...h264EncoderArgsR721(),'-f','h264','pipe:1',
-    '-map',hasAudio?'0:a:0':'0:a:0','-vn','-sn','-dn',
-    '-af',`aresample=${AUDIO_SAMPLE_RATE}:async=1:first_pts=0,asetpts=PTS-STARTPTS`,'-c:a','pcm_s16le','-ar',String(AUDIO_SAMPLE_RATE),'-ac','2'
+    '-vf',clipLiveVideoFilterR757({duration:d,showPreview}),
+    ...h264EncoderArgsR721()
   ];
-  if(duration>0)args.push('-t',String(Math.max(0.5,duration)));
+  // R766: -t is an OUTPUT option. R764 placed it only before the SECOND (audio)
+  // output, so the H264 pipe could hit EOF early while PCM kept playing. Put the same
+  // explicit duration on EACH output and pad the video/audio tails to that boundary.
+  if(dText)args.push('-t',dText);
+  args.push('-f','h264','pipe:1',
+    '-map',hasAudio?'0:a:0':'0:a:0','-vn','-sn','-dn',
+    '-af',audioTailLockR766,'-c:a','pcm_s16le','-ar',String(AUDIO_SAMPLE_RATE),'-ac','2'
+  );
+  if(dText)args.push('-t',dText);
   args.push('-f','s16le','pipe:3');
   return args;
 }
@@ -2094,7 +2126,7 @@ async function playVideoClipR691(previous,item,next){
     clipPublisher=child;
     producer=child;
     state.producerRunning=true;
-    state.clipPlaybackMode='R752-ONE-FFMPEG-BOTH-READY-THEN-BOUNDARY-LOCKED-AUDIO+VIDEO';
+    state.clipPlaybackMode='R766-ONE-FFMPEG-BOTH-READY+EQUAL-DURATION-VIDEO-AUDIO-TAIL-LOCK';
     videoSource.on('error',()=>{});
     audioSource.on('error',()=>{});
     progressSource?.on('data',d=>{const line=String(d||'').trim();if(line)state.clipProgressLine=line.slice(-500);});
@@ -2599,8 +2631,8 @@ function publicStatus(){
     mode:state.mode,
     overlayMode:state.overlayMode,
     audioMode:state.audioMode,
-    engine:'R764-CLIP-COMMIT-GATE + BUMPER-3-4 + R763 FADE/QUALITY + R761/R760 PRESERVED',
-    videoPipeline:'R764 PREPARED-ONLY CLIP COMMIT + R763 R753 ALPHA FADE + R762 6000K SINGLE-X264 + R760 FIT+PAD + 64Q',
+    engine:'R766-CLIP-AV-TAIL-LOCK + R765-PUSH + R764-COMMIT-GATE + R763/R761/R760 PRESERVED',
+    videoPipeline:'R766 EQUAL-DURATION CLIP A/V TAIL LOCK + R764 PREPARED-ONLY COMMIT + R763 FADE + R762 6000K SINGLE-X264 + R760 FIT+PAD + 64Q',
     outputTimeshiftSeconds:OUTPUT_TIMESHIFT_SECONDS,
     videoBitrate:VIDEO_BITRATE,
     audioBitrate:AUDIO_BITRATE,
@@ -2626,6 +2658,7 @@ function publicStatus(){
     nextPreviewSeconds:NEXT_PREVIEW_SECONDS_R726,
     nextPreviewTiming:'R748-INTRO-2S-5S-PLUS-FINAL-10S-FRAME-BOUND',
     mp3BoundaryMode:'R753-R752-EXACT-MP3-CLOCK-SINGLE-CLIP-RETURN-HANDOFF',
+    clipAvTailLockMode:'R766-PER-OUTPUT-T+VIDEO-TPAD-TRIM+AUDIO-APAD-ATRIM',
     currentTitleHandoff:'R748-FROZEN-TRUE-PREVNEXT-INTRO+OUTRO',
     nextPreviewHideBeforeEndSeconds:NEXT_PREVIEW_HIDE_BEFORE_END_R726,
     audioNormalizationTargetLufs:TRACK_AUDIO_TARGET_I_R726,
@@ -2872,7 +2905,7 @@ const server=http.createServer((req,res)=>{
 });
 
 server.listen(PORT,'0.0.0.0',()=>{
-  console.log(`ANDRIK Radio R764 CLIP COMMIT GATE + BUMPERS 3-4 + R763 QUALITY/FADE listening on :${PORT}`);
+  console.log(`ANDRIK Radio R766 CLIP A/V TAIL LOCK + R765 PUSH + R764/R763 PRESERVED listening on :${PORT}`);
   radioLoop();
 });
 

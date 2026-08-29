@@ -2393,6 +2393,41 @@ async function fetchOneSignalMessageReport(env, messageId) {
   };
 }
 
+
+// R765: subscriber notifications are special: HTTP 200 / notification id only means
+// OneSignal accepted the request. It does NOT prove that the owner's phone received it.
+// Keep the subscriber watermark retryable until OneSignal reports at least one successful
+// or received delivery. Stable idempotency_key prevents duplicate sends while a report is pending.
+async function verifySubscriberOwnerDeliveryR765(env, result = {}) {
+  const oneSignalId = cleanPlainText(result?.oneSignalId || '', 120);
+  const createRecipients = Math.max(0, Number(result?.recipients || 0));
+  if (!oneSignalId) return { ok:false, pending:false, error:'subscriber-delivery-no-message-id-r765', recipients:createRecipients };
+  if (createRecipients > 0) return { ok:true, pending:false, source:'create-response', recipients:createRecipients, oneSignalId };
+
+  const report = await fetchOneSignalMessageReport(env, oneSignalId).catch(error => ({
+    ok:false,
+    error:cleanPlainText(error?.message || error || 'message-report-error', 300)
+  }));
+  const delivered = Math.max(0, Number(report?.successful || 0), Number(report?.received || 0));
+  if (report?.ok && delivered > 0) {
+    return { ok:true, pending:false, source:'message-report', recipients:delivered, oneSignalId, report };
+  }
+
+  // A fresh message can take a short time to appear in the report API. Treat that as
+  // pending rather than delivered. The next 2-minute subscriber poll retries with the
+  // SAME idempotency key, so OneSignal cannot create a duplicate notification.
+  const reportClearlyFinished = Boolean(report?.ok && report?.completedAt && (report?.remaining == null || Number(report.remaining) === 0));
+  const hardFailure = Boolean(reportClearlyFinished && delivered === 0);
+  return {
+    ok:false,
+    pending:!hardFailure,
+    error:hardFailure ? 'subscriber-delivery-zero-r765' : 'subscriber-delivery-pending-r765',
+    recipients:delivered,
+    oneSignalId,
+    report
+  };
+}
+
 function normalizeReleaseTitle(value) {
   return cleanPlainText(value, 180)
     .replace(/\s*[-–—|]\s*(official\s+audio|official\s+video|официальное\s+аудио|официальный\s+клип)\s*$/i, '')
@@ -2598,7 +2633,7 @@ function ownerPushPresentation(history = null, name = '') {
     threadId: topic,
     collapseId: topic,
     webPushTopic: topic,
-    ttl: type === 'daily-summary' ? 3600 : (subscriberEvent ? 900 : 300)
+    ttl: type === 'daily-summary' ? 3600 : (subscriberEvent ? 21600 : 300)
   };
 }
 
@@ -2852,6 +2887,51 @@ async function sendOneSignalPush(env, {
     recipients: Math.max(0, Number(responseData?.recipients || 0)),
     oneSignalId
   };
+
+  // R765: do not call a subscriber push "sent" merely because OneSignal accepted it.
+  // The delivery watermark must advance only after the owner device is actually matched.
+  const strictSubscriberDeliveryR765 = audience === 'owner' && ['youtube-subscriber','youtube-subscriber-count'].includes(historyType);
+  if (strictSubscriberDeliveryR765) {
+    const deliveryR765 = await verifySubscriberOwnerDeliveryR765(env, result);
+    if (!deliveryR765.ok) {
+      const deliveryStatusR765 = deliveryR765.pending ? 'pending' : 'failed';
+      if (history) {
+        await recordPushHistory(env, {
+          ...history,
+          audience,
+          status: deliveryStatusR765,
+          title,
+          message,
+          url,
+          recipients: Math.max(0, Number(deliveryR765.recipients || 0)),
+          oneSignalId: result.oneSignalId,
+          error: deliveryR765.error,
+          details: {
+            ...(history?.details && typeof history.details === 'object' ? history.details : {}),
+            warnings: responseData?.warnings || null,
+            response: responseData,
+            deliveryReportR765: deliveryR765.report || null,
+            acceptedByOneSignal: true,
+            deliveryConfirmedR765: false
+          }
+        }).catch(() => {});
+      }
+      await recordSystemLog(env, {
+        scope:'push',
+        level:deliveryR765.pending ? 'warning' : 'error',
+        event:deliveryR765.error,
+        message:deliveryR765.pending
+          ? 'Подписчик: OneSignal принял push, но доставка владельцу ещё не подтверждена — watermark не сдвинут, будет retry.'
+          : 'Подписчик: OneSignal завершил отправку без доставки владельцу — watermark не сдвинут, будет retry.',
+        details:{ oneSignalId:result.oneSignalId, report:deliveryR765.report || null, title }
+      }).catch(() => {});
+      return { ...result, ok:false, pending:Boolean(deliveryR765.pending), error:deliveryR765.error, deliveryReport:deliveryR765.report || null };
+    }
+    result.recipients = Math.max(result.recipients, Number(deliveryR765.recipients || 0));
+    result.deliveryConfirmedR765 = true;
+    result.deliveryReport = deliveryR765.report || null;
+  }
+
   if (history) {
     await recordPushHistory(env, {
       ...history,
@@ -2862,7 +2942,7 @@ async function sendOneSignalPush(env, {
       url,
       recipients: result.recipients,
       oneSignalId: result.oneSignalId,
-      details: { ...(history?.details && typeof history.details === 'object' ? history.details : {}), warnings: responseData?.warnings || null, response: responseData, acceptedByOneSignal: true }
+      details: { ...(history?.details && typeof history.details === 'object' ? history.details : {}), warnings: responseData?.warnings || null, response: responseData, acceptedByOneSignal: true, deliveryConfirmedR765: strictSubscriberDeliveryR765 ? true : null, deliveryReportR765: result.deliveryReport || null }
     }).catch(() => {});
   }
   await recordSystemLog(env, {
@@ -3998,7 +4078,7 @@ async function handleYoutubeWebSubStatusR332(request, env) {
   ];
   const states = {};
   for (const key of keys) states[key] = (await getPushState(db,key).catch(() => null))?.value || '';
-  return json({ok:true,websub:states,fastCronExpression:YOUTUBE_FAST_CRON_R332,engagementCronExpression:YOUTUBE_ENGAGEMENT_CRON_R333,releaseMode:'WebSub + 5m fallback',engagementMode:'comments+likes 2m',subscriberMode:'R756 count check <=2m + dedicated subscriber push lane'});
+  return json({ok:true,websub:states,fastCronExpression:YOUTUBE_FAST_CRON_R332,engagementCronExpression:YOUTUBE_ENGAGEMENT_CRON_R333,releaseMode:'WebSub + 5m fallback',engagementMode:'comments+likes 2m',subscriberMode:'R765 <=2m count check + delivery-confirmed retry lane'});
 }
 
 async function handleYoutubeWebSubVerifyR332(request, env, ctx) {
@@ -8450,6 +8530,48 @@ async function handleFastYoutubeEngagementR333(request,env,options={}){
 // Cron now keeps comments/likes on the proven fast R333 path and checks subscriber
 // count with one channels request. The full reconciler stays available for an explicit
 // owner/manual check, where its richer named-subscriber/history reconciliation is useful.
+
+// R765 catch-up repair: R764 and older considered OneSignal acceptance a successful
+// subscriber delivery. If the latest subscriber-count message actually finished with
+// zero device deliveries, roll the independent notified-total watermark back once so
+// the next poll re-sends the missed +1 instead of losing it forever.
+async function repairSubscriberDeliveryWatermarkR765(env, db, notifiedTotal) {
+  const currentNotified = Math.max(0, Number(notifiedTotal || 0));
+  const row = await db.prepare(`
+    SELECT id, onesignal_id AS oneSignalId, details_json AS detailsJson, created_at AS createdAt
+    FROM push_history
+    WHERE type='youtube-subscriber-count'
+      AND status='sent'
+      AND onesignal_id IS NOT NULL AND onesignal_id != ''
+      AND datetime(created_at) >= datetime('now','-24 hours')
+    ORDER BY datetime(created_at) DESC
+    LIMIT 1
+  `).first().catch(() => null);
+  if (!row?.oneSignalId) return { changed:false, notifiedTotal:currentNotified, reason:'no-recent-subscriber-message' };
+  const details = parsePushSummary(row.detailsJson) || {};
+  const sentTotal = Math.max(0, Number(details?.totalSubscribers || 0));
+  const previousTotal = Math.max(0, Number(details?.previousSubscribers ?? details?.lastNotifiedSubscribers ?? 0));
+  if (!sentTotal || sentTotal !== currentNotified || previousTotal >= sentTotal) {
+    return { changed:false, notifiedTotal:currentNotified, reason:'latest-message-not-current-watermark' };
+  }
+  const report = await fetchOneSignalMessageReport(env, row.oneSignalId).catch(() => null);
+  const delivered = Math.max(0, Number(report?.successful || 0), Number(report?.received || 0));
+  const finishedZero = Boolean(report?.ok && report?.completedAt && (report?.remaining == null || Number(report.remaining) === 0) && delivered === 0);
+  if (!finishedZero) return { changed:false, notifiedTotal:currentNotified, reason:'delivery-not-zero-or-still-pending', report };
+
+  await Promise.all([
+    setPushState(db,'youtube-subscriber-last-notified-total-r658',String(previousTotal)).catch(()=>{}),
+    db.prepare(`UPDATE push_history SET status='failed', error='subscriber-delivery-zero-recovered-r765' WHERE id=?`).bind(row.id).run().catch(()=>{}),
+    releasePushOnceClaim(db,`push-once:youtube-subscriber-r658:${previousTotal}:${sentTotal}`).catch(()=>{}),
+    recordSystemLog(env,{
+      scope:'push',level:'warning',event:'subscriber-watermark-recovered-r765',
+      message:`R765 восстановил пропущенный subscriber push: watermark ${sentTotal} → ${previousTotal}; следующий poll повторит доставку.`,
+      details:{oneSignalId:row.oneSignalId,previousTotal,sentTotal,report}
+    }).catch(()=>{})
+  ]);
+  return { changed:true, notifiedTotal:previousTotal, previousTotal, sentTotal, report };
+}
+
 async function handleFastYoutubeSubscriberCountR416(request, env, options = {}) {
   if (!adminAuthorized(request, env) && !cronAuthorized(request, env)) return { ok:false, error:'unauthorized' };
   const db = requireDb(env);
@@ -8492,6 +8614,9 @@ async function handleFastYoutubeSubscriberCountR416(request, env, options = {}) 
       notifiedTotalR658=Number.isFinite(historyTotalR658)&&historyTotalR658>=0 ? historyTotalR658 : before;
       await setPushState(db,notifiedKeyR658,String(notifiedTotalR658)).catch(()=>{});
     }
+
+    const deliveryRepairR765 = await repairSubscriberDeliveryWatermarkR765(env, db, notifiedTotalR658).catch(() => null);
+    if (deliveryRepairR765?.changed) notifiedTotalR658 = Math.max(0, Number(deliveryRepairR765.notifiedTotal || 0));
 
     if(!previous){
       await saveYoutubeEventRow(db,{key,type:'subscriber-count',resourceId:identity.channelId,title:identity.title,countValue:current,url:identity.channelUrl,payload:{...identity,seededBy:'cron-lite-r416'}});
@@ -8558,7 +8683,7 @@ async function handleFastYoutubeSubscriberCountR416(request, env, options = {}) 
       mode:'cron-lite-r469',
       updatedAt:startedAt
     })).catch(()=>{});
-    return {ok:!pushError,subscribers:current,previousSubscribers:before,lastNotifiedSubscribers:notifiedTotalR658,delta:Math.max(0,current-before),sent,error:pushError,checkedAt:startedAt,mode:'subscriber-watermark-r658'};
+    return {ok:!pushError,subscribers:current,previousSubscribers:before,lastNotifiedSubscribers:notifiedTotalR658,delta:Math.max(0,current-before),sent,error:pushError,checkedAt:startedAt,mode:'subscriber-watermark-r765-delivery-confirmed',deliveryRepairR765:deliveryRepairR765 || null};
   } catch(error) {
     return {ok:false,error:cleanPlainText(error?.message || error,400),checkedAt:startedAt};
   }
