@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788011017045-af4b9d847d",
-  "release": "R754",
-  "archiveName": "R754-MP3-BOUNDARY-STABLE-MASTER-ENCODER-FIFO-FIRST-R753-PRESERVED-SAFE-FULL-1.zip",
-  "sourceHead": "8099bf2d2edb6622b90ce69c33ff8857615e9d65",
-  "backupSha": "8099bf2d2edb6622b90ce69c33ff8857615e9d65",
+  "operationId": "publish-1788013055158-79e79fda95",
+  "release": "R755",
+  "archiveName": "R755-FULL-FRAME-FIT-NO-CROP-R754-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "da9a84a86c7fb8818c4dc3454e65c4dd7979fcd6",
+  "backupSha": "da9a84a86c7fb8818c4dc3454e65c4dd7979fcd6",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-29T13:43:37.562Z"
+  "generatedAt": "2026-08-29T14:17:35.562Z"
 }

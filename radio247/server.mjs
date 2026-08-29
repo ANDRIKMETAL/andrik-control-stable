@@ -145,7 +145,7 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R754-MP3-BOUNDARY-STABLE-MASTER-ENCODER-FIFO-FIRST-R753-PRESERVED',
+  version: 'R755-FULL-FRAME-FIT-MASTER-R754-PRESERVED',
   mode: 'R753 SINGLE CLIP→MP3 HANDOFF + STATION LABEL + START FADE + R752/R751/R750/R749/R748/R746 PRESERVED',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
@@ -1575,7 +1575,7 @@ function startPublisher(){
     // R754: the master owns the ONE continuous YouTube H264 encoder. Feeders may restart
     // for title/fade timing, but their elementary-stream boundaries are decoded here and
     // never exposed directly to RTMPS. This isolates YouTube from MP3→MP3 feeder splices.
-    '-vf',`fps=${VIDEO_FPS},format=yuv420p`,
+    '-vf',`scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1,fps=${VIDEO_FPS},format=yuv420p`,
     ...h264EncoderArgsR721(),
     '-c:a','aac','-profile:a','aac_low','-b:a',AUDIO_BITRATE,'-ar',String(AUDIO_SAMPLE_RATE),'-ac','2',
     '-max_muxing_queue_size','4096','-flush_packets','1',
@@ -2581,7 +2581,7 @@ function publicStatus(){
     equalizerStyle:state.equalizerStyle,
     equalizerEngine:state.equalizerEngine,
     publisherRunning:state.publisherRunning,
-    masterVideoMode:'R754-PERSISTENT-X264-REENCODE-ISOLATES-FEEDER-SPLICES',
+    masterVideoMode:'R755-PERSISTENT-X264-FULL-FRAME-FIT-NO-CROP-R754-PRESERVED',
     feederBoundaryMode:'R754-GRACEFUL-SIGINT-FLUSH+AUD',
     transportRecoveryMode:'R754-FFMPEG-FIFO-FIRST-NO-EARLY-SYSTEMD-EXIT',
     transportHealthy:state.transportHealthy!==false,
@@ -2728,7 +2728,7 @@ const server=http.createServer((req,res)=>{
 });
 
 server.listen(PORT,'0.0.0.0',()=>{
-  console.log(`ANDRIK Radio R754 STABLE MASTER ENCODER + FIFO-FIRST RTMPS + R753 PRESERVED listening on :${PORT}`);
+  console.log(`ANDRIK Radio R755 FULL-FRAME FIT + R754 STABLE MASTER PRESERVED listening on :${PORT}`);
   radioLoop();
 });
 
