@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787969330421-1960303aff",
-  "release": "R739",
-  "archiveName": "R739-TIMELINE-COMP-R738-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "216e2ea08f1480ccb51b82cc2565c83005e9be91",
-  "backupSha": "216e2ea08f1480ccb51b82cc2565c83005e9be91",
+  "operationId": "publish-1787969779839-a8588c2dba",
+  "release": "R740",
+  "archiveName": "R740-REMOVE-RADIO-EXPLANATION-R739-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "89febd8ffe949c7eab706cfca141b802726a68cd",
+  "backupSha": "89febd8ffe949c7eab706cfca141b802726a68cd",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-29T02:08:50.813Z"
+  "generatedAt": "2026-08-29T02:16:19.839Z"
 }
