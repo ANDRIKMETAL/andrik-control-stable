@@ -96,6 +96,7 @@ const INSERT_PREROLL_ARM_GRACE_MS_R749 = Math.max(2500,Math.min(15000,Number(pro
 const VIDEO_SOURCE_WATCHDOG_INTERVAL_MS_R749 = Math.max(500,Math.min(5000,Number(process.env.VIDEO_SOURCE_WATCHDOG_INTERVAL_MS_R749 || 1000)));
 const VIDEO_SOURCE_STUCK_MS_R749 = Math.max(1200,Math.min(10000,Number(process.env.VIDEO_SOURCE_STUCK_MS_R749 || 2500)));
 const INSERT_AUDIO_START_TIMEOUT_MS_R749 = Math.max(1000,Math.min(12000,Number(process.env.INSERT_AUDIO_START_TIMEOUT_MS_R749 || 4000))); // R751: slow AAC/MP4 startup must skip safely, never crash
+const INSERT_CACHE_WARM_LEAD_SECONDS_R752 = Math.max(2,Math.min(8,Number(process.env.INSERT_CACHE_WARM_LEAD_SECONDS_R752 || 5.0))); // metadata/cache warm only; ZERO media frames before boundary
 // R721 keeps the proven 100-frame / 4-second exact-periodic QTRLE loops from R720.
 // The EQ is encoded inside the current local H264 feeder, while the YouTube RTMPS
 // publisher stays open permanently across MP3, clip and visual-period switches.
@@ -142,8 +143,8 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R751-CRASH-PROOF-INSERT-PROGRESS-GUARD-FADE-LATE-R750-PRESERVED',
-  mode: 'R751 CRASH-PROOF INSERT + PROGRESS BACKPRESSURE GUARD + FADE +2S + R750/R749/R748/R746 PRESERVED',
+  version: 'R752-BOUNDARY-LOCKED-CLIP-AV-FADE-R751-PRESERVED',
+  mode: 'R752 BOUNDARY-LOCKED CLIP A/V + VISIBLE LATE FADE + R751/R750/R749/R748/R746 PRESERVED',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
@@ -196,9 +197,9 @@ const state = {
   preparedClipReady: 0,
   preparedClipPending: 0,
   preparedClipLast: '',
-  videoPipelineLeadSeconds: VIDEO_PIPELINE_LEAD_SECONDS_R745,
-  videoHandoffMode: 'R744-PREROLL-SOURCE-SWITCH',
-  clipAvSyncMode: 'R744-SPLIT-VIDEO-PREROLL-AUDIO-AT-BOUNDARY',
+  videoPipelineLeadSeconds: 0,
+  videoHandoffMode: 'R752-CACHE-ONLY-NO-LIVE-PREROLL',
+  clipAvSyncMode: 'R752-CACHE-WARM-THEN-UNIFIED-AV-AT-BOUNDARY',
   suppressedVideoInsert: '',
   transportHealthy: false,
   transportSelfHealPending: false,
@@ -260,6 +261,7 @@ let suppressedVideoIdentityR744 = '';
 let videoHandoffGenerationR744 = 0;
 let transportFatalTimerR746 = null;
 let clipVideoPrerollArmedR749 = null;
+const clipBoundaryMetaR752 = new Map();
 let videoSourceWatchdogTimerR749 = null;
 let videoSourceMissingSinceR749 = 0;
 let videoSourceRecoveryBusyR749 = false;
@@ -1178,33 +1180,23 @@ async function prerollItemR744(item,{duration=0}={}){
   return startPreparedVideoPrerollR744(item,ready,d);
 }
 function scheduleTrackVideoHandoffR744(currentItem,actualNext,next,following,duration){
+  // R752: ZERO next-video frames are allowed into LIVE before the real audio boundary.
+  // We only warm the local prepared-file metadata near the end of the song. This keeps
+  // the normal visual alive long enough for the R751 late fade to actually be visible.
   const generation=++videoHandoffGenerationR744;
-  const lead=videoLeadForDurationR744(duration);
-  const delayMs=Math.max(0,Math.round((Math.max(0,Number(duration)||0)-lead)*1000));
-  if(actualNext?.type!=='track')prefetchPreparedClipR742(actualNext);
-  setTimeout(async()=>{
+  if(!actualNext || actualNext.type==='track')return 0;
+  prefetchPreparedClipR742(actualNext);
+  const d=Math.max(0,Number(duration)||0);
+  const delayMs=Math.max(0,Math.round((d-INSERT_CACHE_WARM_LEAD_SECONDS_R752)*1000));
+  setTimeout(()=>{
     if(stopping||generation!==videoHandoffGenerationR744)return;
     if(primaryIdentity(state.current)!==primaryIdentity(currentItem))return;
-    try{
-      await prerollItemR744(actualNext);
-      suppressedVideoIdentityR744='';
-      state.suppressedVideoInsert='';
-    }catch(error){
-      const badId=primaryIdentity(actualNext);
-      if(actualNext && actualNext.type!=='track'){
-        suppressedVideoIdentityR744=badId;
-        state.suppressedVideoInsert=shortText(actualNext.title||'VIDEO',40);
-        const fallback=fallbackAfterVideoR744(actualNext,next,following);
-        if(fallback){
-          writeOverlayFileR726(LIVE_NEXT_FILE_R726,nextOverlayTextR736(fallback));
-          await prerollItemR744(fallback);
-        }
-      }else{
-        state.lastError=`R744 preroll: ${cleanText(error?.message||error)}`;
-      }
-    }
+    warmClipBoundaryMetaR752(actualNext).catch(error=>{
+      state.lastWarning=`R752 clip cache warm: ${cleanText(error?.message||error)}`;
+    });
   },delayMs).unref?.();
-  return lead;
+  state.videoHandoffMode='R752-CACHE-WARM-SCHEDULED-NO-LIVE-PREROLL';
+  return 0;
 }
 
 function localHourInTimeZone(timeZone=VISUAL_TIME_ZONE){
@@ -1823,7 +1815,8 @@ async function videoSourceWatchdogTickR749(){
   if(!publisher||publisher.exitCode!==null)return;
   const normalAlive=Boolean(videoFeeder&&videoFeeder.exitCode===null);
   const preparedAlive=Boolean(clipVideoPrerollR744&&clipVideoPrerollR744.exitCode===null);
-  if(normalAlive||preparedAlive){videoSourceMissingSinceR749=0;return;}
+  const unifiedClipAlive=Boolean(clipPublisher&&clipPublisher.exitCode===null&&clipPublisher.__r752UnifiedAV===true&&clipPublisher.__r752Live===true);
+  if(normalAlive||preparedAlive||unifiedClipAlive){videoSourceMissingSinceR749=0;return;}
   const now=Date.now();
   if(!videoSourceMissingSinceR749){videoSourceMissingSinceR749=now;return;}
   if(now-videoSourceMissingSinceR749<VIDEO_SOURCE_STUCK_MS_R749)return;
@@ -1844,13 +1837,69 @@ async function videoSourceWatchdogTickR749(){
   }finally{videoSourceRecoveryBusyR749=false;}
 }
 
+async function warmClipBoundaryMetaR752(item){
+  if(stopping||!item||item.type==='track')return null;
+  const identity=primaryIdentity(item);
+  const readyPath=preparedClipReadyNowR742(item);
+  if(!readyPath)return null;
+  const existing=clipBoundaryMetaR752.get(identity);
+  if(existing&&existing.readyPath===readyPath)return existing;
+  const [duration,hasAudio]=await Promise.all([
+    probeDuration(readyPath).catch(()=>0),
+    probeHasAudioR721(readyPath).catch(()=>false)
+  ]);
+  const meta={identity,readyPath,duration:Number(duration)||0,hasAudio:Boolean(hasAudio),warmedAt:Date.now()};
+  clipBoundaryMetaR752.set(identity,meta);
+  if(clipBoundaryMetaR752.size>16){
+    const oldest=[...clipBoundaryMetaR752.entries()].sort((a,b)=>(a[1]?.warmedAt||0)-(b[1]?.warmedAt||0))[0];
+    if(oldest)clipBoundaryMetaR752.delete(oldest[0]);
+  }
+  state.videoHandoffMode='R752-CACHE-META-WARM-READY-NOT-LIVE';
+  return meta;
+}
+
+function streamReadableReadyR752(stream,label,child){
+  return new Promise((resolve,reject)=>{
+    if(!stream)return reject(new Error(`R752 ${label} stream missing`));
+    if(Number(stream.readableLength||0)>0)return resolve(true);
+    let done=false;
+    const cleanup=()=>{
+      stream.off('readable',onReadable);
+      stream.off('error',onError);
+      child?.off('exit',onExit);
+    };
+    const finish=(error)=>{if(done)return;done=true;cleanup();error?reject(error):resolve(true);};
+    const onReadable=()=>finish();
+    const onError=(error)=>finish(error);
+    const onExit=(code,signal)=>finish(new Error(`R752 clip exited before ${label} ready: ${code??signal??'exit'}`));
+    stream.once('readable',onReadable);
+    stream.once('error',onError);
+    child?.once('exit',onExit);
+  });
+}
+
+function detachNormalVideoAtBoundaryR752(){
+  const active=videoFeeder;
+  if(!active)return;
+  const videoSink=publisher?.stdio?.[4];
+  try{if(active.stdout&&videoSink)active.stdout.unpipe(videoSink)}catch(_){ }
+  if(videoFeeder===active)videoFeeder=null;
+  videoFeederTrackIdentityR744='';
+  videoFeederPrerolledR744=false;
+  if(active.exitCode===null){
+    try{active.kill('SIGTERM')}catch(_){ }
+    const killer=setTimeout(()=>{if(active.exitCode===null){try{active.kill('SIGKILL')}catch(_){ }}},700);
+    killer.unref?.();
+  }
+}
+
 async function playVideoClipR691(previous,item,next){
   const itemId=primaryIdentity(item);
   if(suppressedVideoIdentityR744 && suppressedVideoIdentityR744===itemId){
     suppressedVideoIdentityR744='';
     state.suppressedVideoInsert='';
     state.lastError='';
-    console.error('[r744-video-skip] skipped unprepared insert after safe fallback:',shortText(item?.title||'VIDEO',40));
+    console.error('[r752-video-skip] skipped unprepared insert after safe fallback:',shortText(item?.title||'VIDEO',40));
     return false;
   }
 
@@ -1865,140 +1914,140 @@ async function playVideoClipR691(previous,item,next){
     return await abortInsertHandoffR749(item,next,`clip cache: ${cleanText(error?.message||error)}`);
   }
 
-  const duration=await probeDuration(readyPath).catch(()=>0);
-  const hasAudio=await probeHasAudioR721(readyPath);
+  const warmedMetaR752=clipBoundaryMetaR752.get(itemId);
+  const duration=(warmedMetaR752&&warmedMetaR752.readyPath===readyPath)?Number(warmedMetaR752.duration||0):await probeDuration(readyPath).catch(()=>0);
+  const hasAudio=(warmedMetaR752&&warmedMetaR752.readyPath===readyPath)?Boolean(warmedMetaR752.hasAudio):await probeHasAudioR721(readyPath);
   const stationInsert=item.sourceType==='radio-bumper'||String(item.sourceType||'').startsWith('radio-special');
   if(!hasAudio){
-    state.lastError=`R749 video insert skipped: audio stream missing in ${shortText(item.title||'INSERT',40)}`;
-    console.error('[r749-insert-audio]',state.lastError);
+    state.lastError=`R752 video insert skipped: audio stream missing in ${shortText(item.title||'INSERT',40)}`;
+    console.error('[r752-insert-audio]',state.lastError);
     return await abortInsertHandoffR749(item,next,'prepared insert has no decodable audio stream');
   }
 
-  // R744 safety rule: never start a clip/bumper picture at the audio boundary. Its
-  // video must already have been pre-rolled through the 1024-packet master queue.
-  // Otherwise the old failure returns: voice first, picture several seconds later.
-  if(!clipPrerollUsableR749(itemId)){
-    return await abortInsertHandoffR749(item,next,`no usable aligned preroll (identity=${clipVideoPrerollIdentityR744||'none'})`);
-  }
-  if(clipVideoPrerollArmedR749&&clipVideoPrerollArmedR749.identity===itemId){
-    clipVideoPrerollArmedR749.boundaryStartedAt=Date.now();
-  }
-
-  clearNextPreviewR726({invalidate:true});
-  state.previous=previous?{type:previous.type||'track',title:previous.title,album:previous.album||'',url:previous.url||''}:null;
-  state.current={type:String(item.sourceType||'').startsWith('radio-special')?'special':(item.sourceType==='radio-bumper'?'bumper':'clip'),title:item.title,album:item.album,url:item.url,startedAt:new Date().toISOString(),duration};
-  state.next=next?{type:next.type||'track',title:next.title,album:next.album||'',url:next.url||''}:null;
-  setLiveTitleR724(stationInsert?'ANDRIK METAL RADIO':`КЛИП • ANDRIK — ${shortText(item.title||'VIDEO',34)}`,{delayMs:0});
-
   const audioSink=publisher?.stdio?.[3];
-  if(!publisher||publisher.exitCode!==null||!audioSink||audioSink.destroyed||audioSink.writableEnded){
-    state.lastError='R749 persistent audio pipe unavailable before video insert';
-    return await abortInsertHandoffR749(item,next,'persistent audio pipe unavailable');
+  const videoSink=publisher?.stdio?.[4];
+  if(!publisher||publisher.exitCode!==null||!audioSink||audioSink.destroyed||audioSink.writableEnded||!videoSink||videoSink.destroyed||videoSink.writableEnded){
+    state.lastError='R752 persistent A/V pipe unavailable before video insert';
+    return await abortInsertHandoffR749(item,next,'persistent A/V pipe unavailable');
   }
 
-  // Start only the audio at the REAL boundary. Video t=0 was sent lead-seconds earlier,
-  // so the viewer receives video t=0 now, together with this audio t=0.
-  let audioChild=null;
-  const generation=++videoHandoffGenerationR744;
+  // R752 atomic boundary handoff:
+  // 1) start ONE local FFmpeg for BOTH prepared H264 and PCM, disconnected from LIVE;
+  // 2) wait until BOTH outputs have data buffered;
+  // 3) only then detach the old song visual and connect BOTH outputs in the same tick.
+  // Therefore clip pixels can never appear while the old song is still audible.
+  let child=null;
+  let clipExitPromise=null;
   try{
-    clipActive=true;
-    audioChild=spawn('ffmpeg',clipPreparedAudioOnlyArgsR744(readyPath,{duration}),{stdio:['ignore','pipe','pipe']});
-    clipPublisher=audioChild;
-    producer=audioChild;
+    // Spawn only AFTER the old song audio has ended. Keep the old normal visual attached
+    // while this local child produces its first H264 + PCM chunks, then switch atomically.
+    child=spawn('ffmpeg',clipPreparedFeederArgsR742(readyPath,{hasAudio:true,duration}),{stdio:['ignore','pipe','pipe','pipe','pipe']});
+    child.__r752UnifiedAV=true;
+    child.__r752Live=false;
+    const videoSource=child.stdout;
+    const audioSource=child.stdio[3];
+    const progressSource=child.stdio[4];
+    clipPublisher=child;
+    producer=child;
     state.producerRunning=true;
-    state.clipPlaybackMode='R749-ARMED-VIDEO-PREROLL+AUDIO-BOUNDARY-GUARD';
-    const firstAudioDataR749=new Promise((resolve,reject)=>{
-      audioChild.stdout.once('data',chunk=>{if(chunk&&chunk.length)resolve(true);else reject(new Error('empty first PCM chunk'));});
-      audioChild.stdout.once('error',reject);
-      audioChild.once('exit',(code,signal)=>{if(code!==null&&code!==0)reject(new Error(`audio exited before first PCM ${code||signal}`));});
+    state.clipPlaybackMode='R752-ONE-FFMPEG-BOTH-READY-THEN-BOUNDARY-LOCKED-AUDIO+VIDEO';
+    videoSource.on('error',()=>{});
+    audioSource.on('error',()=>{});
+    progressSource?.on('data',d=>{const line=String(d||'').trim();if(line)state.clipProgressLine=line.slice(-500);});
+    progressSource?.on('error',()=>{});
+    child.stderr.on('data',d=>{
+      const line=String(d||'').trim();
+      if(line){state.lastFfmpegLine=line.slice(-1000);if(/error|fail|invalid|broken pipe|non-monoton/i.test(line))state.lastError=line.slice(-700);console.error('[r752-clip-av]',line);}
     });
-    const clipExitPromise=new Promise((resolve,reject)=>{
-      audioChild.once('error',reject);
-      audioChild.once('exit',(code,signal)=>{
-        try{audioChild.stdout.unpipe(audioSink)}catch(_){ }
-        if(code===0||stopping)resolve(); else reject(new Error(`R749 clip audio exit ${code||signal}`));
+
+    clipExitPromise=new Promise((resolve,reject)=>{
+      child.once('error',reject);
+      child.once('exit',(code,signal)=>{
+        try{videoSource.unpipe(videoSink)}catch(_){ }
+        try{audioSource.unpipe(audioSink)}catch(_){ }
+        if(code===0||stopping)resolve(); else reject(new Error(`R752 clip A/V exit ${code||signal}`));
       });
     });
-    // R751: attach a rejection handler IMMEDIATELY. If first-PCM startup times out,
-    // the outer fallback kills this child before clipExitPromise is awaited. In R749/R750
-    // that late exit rejection was unhandled and Node 18 terminated the whole radio service.
     clipExitPromise.catch(()=>{});
-    audioChild.stdout.pipe(audioSink,{end:false});
-    audioChild.stdout.on('error',()=>{});
-    audioChild.stderr.on('data',d=>{
-      const line=String(d||'').trim();
-      if(line){state.lastFfmpegLine=line.slice(-1000);if(/error|fail|invalid|broken pipe|non-monoton/i.test(line))state.lastError=line.slice(-700);console.error('[r744-clip-audio]',line);}
-    });
+
     try{
-      await promiseTimeout(firstAudioDataR749,INSERT_AUDIO_START_TIMEOUT_MS_R749,`R749 insert audio start ${shortText(item.title||'VIDEO',40)}`);
+      await promiseTimeout(
+        Promise.all([
+          streamReadableReadyR752(videoSource,'video',child),
+          streamReadableReadyR752(audioSource,'audio',child)
+        ]),
+        INSERT_AUDIO_START_TIMEOUT_MS_R749,
+        `R752 insert A/V ready ${shortText(item.title||'VIDEO',40)}`
+      );
     }catch(error){
       insertAudioStartFailuresR749++;
-      throw new Error(`insert PCM did not start: ${cleanText(error?.message||error)}`);
+      throw new Error(`insert A/V did not become ready together: ${cleanText(error?.message||error)}`);
     }
 
-    // Before this clip becomes audible-finished, send the NEXT picture into the video
-    // queue. The current prepared video process naturally represents exactly this clip.
-    if(next && duration>1){
-      if(next.type!=='track')prefetchPreparedClipR742(next);
-      const lead=videoLeadForDurationR744(duration);
-      const delayMs=Math.max(0,Math.round((duration-lead)*1000));
-      setTimeout(async()=>{
+    // REAL media boundary. Up to here the CURRENT song visual was still connected,
+    // including its R751 late black fade. Nothing from this clip touched the live pipe.
+    clipActive=true;
+    child.__r752Live=true;
+    detachNormalVideoAtBoundaryR752();
+
+    clearNextPreviewR726({invalidate:true});
+    const boundaryStartedAt=Date.now();
+    state.previous=previous?{type:previous.type||'track',title:previous.title,album:previous.album||'',url:previous.url||''}:null;
+    state.current={type:String(item.sourceType||'').startsWith('radio-special')?'special':(item.sourceType==='radio-bumper'?'bumper':'clip'),title:item.title,album:item.album,url:item.url,startedAt:new Date(boundaryStartedAt).toISOString(),duration};
+    state.next=next?{type:next.type||'track',title:next.title,album:next.album||'',url:next.url||''}:null;
+    setLiveTitleR724(stationInsert?'ANDRIK METAL RADIO':`КЛИП • ANDRIK — ${shortText(item.title||'VIDEO',34)}`,{delayMs:0});
+
+    // Connect both already-ready streams back-to-back in the same event-loop turn.
+    // The single source FFmpeg gives both outputs one common t=0 clock.
+    videoSource.pipe(videoSink,{end:false});
+    audioSource.pipe(audioSink,{end:false});
+    state.videoHandoffMode='R752-BOUNDARY-LOCKED-UNIFIED-AV-LIVE';
+
+    // No next-picture LIVE preroll. Warm only file metadata/cache for a following video.
+    if(next && next.type!=='track'){
+      prefetchPreparedClipR742(next);
+      const generation=++videoHandoffGenerationR744;
+      const delayMs=Math.max(0,Math.round((Math.max(0,Number(duration)||0)-INSERT_CACHE_WARM_LEAD_SECONDS_R752)*1000));
+      setTimeout(()=>{
         if(stopping||generation!==videoHandoffGenerationR744)return;
         if(primaryIdentity(state.current)!==itemId)return;
-        try{
-          await prerollItemR744(next);
-          suppressedVideoIdentityR744='';
-          state.suppressedVideoInsert='';
-        }catch(error){
-          if(next.type!=='track'){
-            suppressedVideoIdentityR744=primaryIdentity(next);
-            state.suppressedVideoInsert=shortText(next.title||'VIDEO',40);
-          }
-          state.lastError=`R744 next-video preroll: ${cleanText(error?.message||error)}`;
-        }
+        warmClipBoundaryMetaR752(next).catch(error=>{state.lastWarning=`R752 next cache warm: ${cleanText(error?.message||error)}`;});
       },delayMs).unref?.();
     }
 
-    // R749/R745: malformed/odd MP4 EOF must never freeze the radio loop forever.
-    // Give FFmpeg the measured clip duration plus a generous margin, then kill only
-    // this clip decoder; the persistent RTMPS master remains untouched.
     const guardMs=Math.max(12000,Math.round(Math.max(1,Number(duration)||1)*1000)+CLIP_END_GUARD_MARGIN_MS_R745);
     try{
-      await promiseTimeout(clipExitPromise,guardMs,`R745 clip EOF ${shortText(item.title||'VIDEO',40)}`);
+      await promiseTimeout(clipExitPromise,guardMs,`R752 clip EOF ${shortText(item.title||'VIDEO',40)}`);
     }catch(error){
-      state.lastError=`R745 clip EOF guard: ${cleanText(error?.message||error)}`;
-      if(audioChild&&audioChild.exitCode===null){
-        try{audioChild.kill('SIGTERM')}catch(_){ }
-        if(!(await waitChildExit(audioChild,1200))&&audioChild.exitCode===null){try{audioChild.kill('SIGKILL')}catch(_){ }await waitChildExit(audioChild,250);}
+      state.lastError=`R752 clip EOF guard: ${cleanText(error?.message||error)}`;
+      if(child&&child.exitCode===null){
+        try{child.kill('SIGTERM')}catch(_){ }
+        if(!(await waitChildExit(child,1200))&&child.exitCode===null){try{child.kill('SIGKILL')}catch(_){ }await waitChildExit(child,250);}
       }
-      await ensureVideoSourceAfterClipR745(next).catch(recoveryError=>{state.lastError+=` | recovery: ${cleanText(recoveryError?.message||recoveryError)}`;});
       return false;
     }
     if(item.sourceType==='r2-video')lastClipIdentityR726=itemId;
     state.lastError='';
     return !stopping;
   }catch(error){
-    state.lastError=`R749 VIDEO/AUDIO handoff: ${cleanText(error?.message||error)}`;
-    console.error('[r749-video-clip]',error);
+    state.lastError=`R752 VIDEO/AUDIO boundary handoff: ${cleanText(error?.message||error)}`;
+    console.error('[r752-video-clip]',error);
+    if(child&&child.exitCode===null){try{child.kill('SIGTERM')}catch(_){ }}
     await abortInsertHandoffR749(item,next,cleanText(error?.message||error));
     return false;
   }finally{
-    if(audioChild){
-      try{audioChild.stdout?.unpipe(audioSink)}catch(_){ }
-      if(audioChild.exitCode===null){try{audioChild.kill('SIGTERM')}catch(_){ }}
+    if(child){
+      try{child.stdout?.unpipe(videoSink)}catch(_){ }
+      try{child.stdio?.[3]?.unpipe(audioSink)}catch(_){ }
+      if(child.exitCode===null){try{child.kill('SIGTERM')}catch(_){ }}
     }
-    if(clipPublisher===audioChild)clipPublisher=null;
-    if(producer===audioChild)producer=null;
+    if(clipPublisher===child)clipPublisher=null;
+    if(producer===child)producer=null;
     state.producerRunning=false;
-
-    // If no next source took over early, cleanly return to the normal visual. Never
-    // leave a stale prepared-video writer attached to the master pipe.
-    if(clipVideoPrerollIdentityR744===itemId){
-      await stopPreparedVideoPrerollR744();
-      clipActive=false;
-    }
+    clipActive=false;
+    await stopPreparedVideoPrerollR744().catch(()=>{});
     if(!stopping){
-      try{await ensureVideoSourceAfterClipR745(next);}catch(error){state.lastError=`R745 resume visual: ${cleanText(error?.message||error)}`;}
+      try{await ensureVideoSourceAfterClipR745(next);}catch(error){state.lastError=`R752 resume visual: ${cleanText(error?.message||error)}`;}
     }
   }
 }
@@ -2362,14 +2411,14 @@ async function radioLoop(){
 function publicStatus(){
   const now=Date.now();
   return {
-    ok:Boolean(state.publisherRunning && state.transportHealthy!==false && ((clipVideoPrerollR744&&clipVideoPrerollR744.exitCode===null)||(videoFeeder&&videoFeeder.exitCode===null))),
+    ok:Boolean(state.publisherRunning && state.transportHealthy!==false && ((clipPublisher&&clipPublisher.exitCode===null&&clipPublisher.__r752UnifiedAV===true&&clipPublisher.__r752Live===true)||(clipVideoPrerollR744&&clipVideoPrerollR744.exitCode===null)||(videoFeeder&&videoFeeder.exitCode===null))),
     service:state.service,
     version:state.version,
     mode:state.mode,
     overlayMode:state.overlayMode,
     audioMode:state.audioMode,
-    engine:'R751-CRASH-PROOF-INSERT-PROGRESS-GUARD-FADE-LATE-R750-R749-R748-R746',
-    videoPipeline:'R751 PROGRESS-AWARE FIFO GUARD + CRASH-PROOF INSERT + R750/R749/R748 PRESERVED',
+    engine:'R752-BOUNDARY-LOCKED-CLIP-AV-FADE-R751-R750-R749-R748-R746',
+    videoPipeline:'R752 NO-LIVE-PREROLL + ONE-FFMPEG CLIP A/V BOUNDARY LOCK + R751 PRESERVED',
     outputTimeshiftSeconds:OUTPUT_TIMESHIFT_SECONDS,
     videoBitrate:VIDEO_BITRATE,
     audioBitrate:AUDIO_BITRATE,
@@ -2393,7 +2442,7 @@ function publicStatus(){
     trackUiClock:'ffmpeg-frame-bound-R732-audio-lead-bounded',
     nextPreviewSeconds:NEXT_PREVIEW_SECONDS_R726,
     nextPreviewTiming:'R748-INTRO-2S-5S-PLUS-FINAL-10S-FRAME-BOUND',
-    mp3BoundaryMode:'R748-R747-R743-EXACT-MP3-CLOCK-VIDEO-TO-MP3-PREROLL-TIME-EXTENDED',
+    mp3BoundaryMode:'R752-R748-R747-R743-EXACT-MP3-CLOCK-NO-LIVE-VIDEO-PREROLL',
     currentTitleHandoff:'R748-FROZEN-TRUE-PREVNEXT-INTRO+OUTRO',
     nextPreviewHideBeforeEndSeconds:NEXT_PREVIEW_HIDE_BEFORE_END_R726,
     audioNormalizationTargetLufs:TRACK_AUDIO_TARGET_I_R726,
@@ -2415,10 +2464,10 @@ function publicStatus(){
       videoFadeInSeconds:VIDEO_FADE_IN_SECONDS_R736,
       videoBlackHoldSeconds:VIDEO_BLACK_HOLD_SECONDS_R736,
       videoFadeLeadSeconds:VIDEO_FADE_LEAD_SECONDS_R735,
-      titleVisualLeadSeconds:videoPipelineLeadR744,
+      titleVisualLeadSeconds:0,
       videoTimelineCompensationSeconds:0,
-      videoTimelineCompensationMode:'R748-R747-MP3-R743-FRAME-CLOCK-VIDEO-INSERTS-R744-PREROLL',
-      clipAvSyncMode:'R749-ARMED-PREROLL-AUDIO-BOUNDARY-WITH-SOURCE-WATCHDOG',
+      videoTimelineCompensationMode:'R752-EXACT-BOUNDARY-NO-LIVE-VIDEO-PREROLL',
+      clipAvSyncMode:'R752-CACHE-WARM-NO-MEDIA+BOTH-OUTPUTS-READY+ATOMIC-BOUNDARY',
       clipPreDrainMs:0,
       clipPostDrainMs:0,
       stationInsertAudioRequired:true,
@@ -2428,10 +2477,13 @@ function publicStatus(){
       preparedClipReady:state.preparedClipReady||0,
       preparedClipPending:state.preparedClipPending||0,
       preparedClipLast:state.preparedClipLast||'',
-      clipLiveVideoCodec:'copy-video-only-prerolled',
+      clipLiveVideoCodec:'copy-h264-unified-boundary-child',
       clipPreparedVideoCodec:'libx264-ultrafast-no-bframes',
-      videoPipelineLeadSeconds:videoPipelineLeadR744,
-      videoHandoffMode:state.videoHandoffMode||'R749-GUARDED-PREROLL-SOURCE-SWITCH',
+      videoPipelineLeadSeconds:0,
+      clipCacheWarmLeadSeconds:INSERT_CACHE_WARM_LEAD_SECONDS_R752,
+      clipCacheWarmEntries:clipBoundaryMetaR752.size,
+      videoHandoffMode:state.videoHandoffMode||'R752-CACHE-ONLY-NO-LIVE-PREROLL',
+      clipUnifiedAvRunning:Boolean(clipPublisher&&clipPublisher.exitCode===null&&clipPublisher.__r752UnifiedAV===true&&clipPublisher.__r752Live===true),
       clipVideoPrerollRunning:Boolean(clipVideoPrerollR744&&clipVideoPrerollR744.exitCode===null),
       clipVideoPrerollIdentity:clipVideoPrerollIdentityR744||'',
       clipVideoPrerollArmed:Boolean(clipVideoPrerollArmedR749&&clipVideoPrerollArmedR749.invalid!==true),
@@ -2443,7 +2495,7 @@ function publicStatus(){
       videoSourceStuckMs:VIDEO_SOURCE_STUCK_MS_R749,
       insertPrerollArmGraceMs:INSERT_PREROLL_ARM_GRACE_MS_R749,
       insertAudioStartTimeoutMs:INSERT_AUDIO_START_TIMEOUT_MS_R749,
-      insertUnhandledRejectionGuard:'R751-IMMEDIATE-CLIP-EXIT-CATCH',
+      insertUnhandledRejectionGuard:'R752-UNIFIED-AV-EXIT-CATCH+R751-GUARD',
       insertRecoveryCount:insertRecoveryCountR749,
       insertAudioStartFailures:insertAudioStartFailuresR749,
       lastInsertRecoveryAt:state.lastInsertRecoveryAt||null,
@@ -2486,7 +2538,7 @@ function publicStatus(){
     videoFeederRunning:Boolean(videoFeeder&&videoFeeder.exitCode===null),
     clipActive,
     clipBoundaryReconnect:false,
-    clipEndGuardMode:'R749-DURATION-GUARD-PLUS-H264-SOURCE-WATCHDOG',
+    clipEndGuardMode:'R752-UNIFIED-AV-DURATION-GUARD-PLUS-H264-SOURCE-WATCHDOG',
     clipEndGuardMarginMs:CLIP_END_GUARD_MARGIN_MS_R745,
     lastClipGuardRecovery:state.lastClipGuardRecovery||null,
     libraryTracks:state.libraryTracks,
@@ -2532,15 +2584,16 @@ function publicStatus(){
 function setTimelineCompensationR739(seconds){
   const value=Number(seconds);
   if(!Number.isFinite(value))throw new Error('timeline seconds must be numeric');
-  // R744 backward-compatible control: the old endpoint now tunes the REAL video
-  // pre-roll lead instead of shifting drawtext/fade filters inside the wrong clock.
-  videoPipelineLeadR744=Math.max(2,Math.min(15,value));
-  state.videoPipelineLeadSeconds=videoPipelineLeadR744;
+  // R752: live video preroll is intentionally disabled. Keep the endpoint compatible,
+  // but never allow it to move clip pixels ahead of the real audio boundary again.
+  videoPipelineLeadR744=0;
+  state.videoPipelineLeadSeconds=0;
   state.videoTimelineCompensationSeconds=0;
   return Promise.resolve({
     ok:true,
-    seconds:videoPipelineLeadR744,
-    mode:'R745-VIDEO-PREROLL-LEAD',
+    seconds:0,
+    requested:value,
+    mode:'R752-LIVE-VIDEO-PREROLL-DISABLED-BOUNDARY-LOCKED',
     publisherRestarted:false,
     audioRestarted:false
   });
@@ -2610,7 +2663,7 @@ const server=http.createServer((req,res)=>{
 });
 
 server.listen(PORT,'0.0.0.0',()=>{
-  console.log(`ANDRIK Radio R749 INSERT-IRONCLAD + R748/R747/R746 PRESERVED listening on :${PORT}`);
+  console.log(`ANDRIK Radio R752 BOUNDARY-LOCKED CLIP A/V + R751 PRESERVED listening on :${PORT}`);
   radioLoop();
 });
 
