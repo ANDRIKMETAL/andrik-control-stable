@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787976802031-1b71bc7de0",
-  "release": "R743",
-  "archiveName": "R743-RESTORE-MP3-BOUNDARY-UI-FADE-R742-PRESERVED-CLEAN-SAFE-FULL.zip",
-  "sourceHead": "bc79b0168ad6698233bb4b0212319ec8edafe891",
-  "backupSha": "bc79b0168ad6698233bb4b0212319ec8edafe891",
+  "operationId": "publish-1787978951208-e1219885c0",
+  "release": "R744",
+  "archiveName": "R744-VIDEO-PREROLL-AV-HANDOFF-R743-PRESERVED-CLEAN-SAFE-FULL.zip",
+  "sourceHead": "7ba62fbf0f6d045a504b7015dbaf5f7608a016cb",
+  "backupSha": "7ba62fbf0f6d045a504b7015dbaf5f7608a016cb",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-29T04:13:22.031Z"
+  "generatedAt": "2026-08-29T04:49:11.583Z"
 }
