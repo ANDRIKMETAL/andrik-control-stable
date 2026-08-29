@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787990118912-b5d44e5a38",
-  "release": "R747",
-  "archiveName": "R747-RESTORE-R743-BOUNDARY-TWOPASS-LOUDNESS-R746-SELFHEAL-SAFE-FULL.zip",
-  "sourceHead": "3b738171a4e9cfc08ed94309695e7c1f1612cb28",
-  "backupSha": "3b738171a4e9cfc08ed94309695e7c1f1612cb28",
+  "operationId": "publish-1787990983497-9396c17856",
+  "release": "R748",
+  "archiveName": "R748-INTRO-OUTRO-PREVNEXT-COMPACT-CTA-R747-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "ea33cecde14bdc19898919ff7f476c9fdbe3871f",
+  "backupSha": "ea33cecde14bdc19898919ff7f476c9fdbe3871f",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-29T07:55:19.292Z"
+  "generatedAt": "2026-08-29T08:09:44.031Z"
 }

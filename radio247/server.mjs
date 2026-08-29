@@ -42,13 +42,19 @@ const EMERGENCY_VISUAL = process.env.EMERGENCY_VISUAL || new URL('../assets/live
 const QR_OVERLAY = process.env.QR_OVERLAY || new URL('../assets/andrik-qr-r612.png', import.meta.url).pathname;
 const CTA_OVERLAY_R722 = process.env.CTA_OVERLAY_R722 || new URL('../assets/subscribe-like-r722.png', import.meta.url).pathname;
 const CTA_SHOW_SECONDS_R722 = 8;
-const CTA_PERIOD_SECONDS_R722 = 120; // R725: every 2 minutes during the normal radio visual
+const CTA_PERIOD_SECONDS_R722 = 120; // kept cadence; R748 schedules full local windows only (no partial flashes)
+const CTA_FIRST_SHOW_SECONDS_R748 = 20; // first compact CTA after feeder settles
+const CTA_FADE_SECONDS_R748 = 0.35; // smooth alpha in/out instead of blink
+const CTA_BOTTOM_GAP_R748 = 100; // bottom-left, safely above ticker
+const CTA_LEFT_GAP_R748 = 28;
 const TITLE_HANDOFF_DELAY_MS_R724 = 0; // R730: title changes only on the real media handoff
 const BUMPER_MIN_SONGS_R724 = 4;
 const BUMPER_MAX_SONGS_R724 = 6;
 const SPECIAL_INTERVAL_MS_R726 = Math.max(10*60*1000, Number(process.env.SPECIAL_INTERVAL_MS_R726 || 30*60*1000));
 const SPECIAL_HOURLY_INTERVAL_MS_R727 = Math.max(30*60*1000, Number(process.env.SPECIAL_HOURLY_INTERVAL_MS_R727 || 60*60*1000));
-const NEXT_PREVIEW_SECONDS_R726 = 8;
+const NEXT_PREVIEW_SECONDS_R726 = 10; // R748: PREVIOUS/NEXT for final 10 seconds
+const START_PREVIEW_DELAY_SECONDS_R748 = 2.0; // after the new track is fully bright
+const START_PREVIEW_SHOW_SECONDS_R748 = 5.0; // short intro reminder, then hide
 const NEXT_PREVIEW_HIDE_BEFORE_END_R726 = 0.30; // R731: keep PREVIOUS/NEXT visible almost to the handoff
 const TRACK_HISTORY_LIMIT_R726 = 20;
 const TRACK_AUDIO_TARGET_I_R726 = -14;
@@ -120,13 +126,13 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R747-RESTORE-R743-BOUNDARY-TWOPASS-LOUDNESS-R746-SELFHEAL',
-  mode: 'R747 R743 MP3 BOUNDARY RESTORED + TRUE PREVIOUS/NEXT + TWO-PASS -14 LUFS + R746 RTMPS SELF-HEAL',
+  version: 'R748-INTRO-OUTRO-PREVNEXT-COMPACT-CTA-R747-PRESERVED',
+  mode: 'R748 INTRO+OUTRO PREVIOUS/NEXT + COMPACT BOTTOM-LEFT CTA + R747 LOUDNESS/BOUNDARY + R746 SELF-HEAL',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
   producerRunning: false,
-  overlayMode: 'R747 R743 FRAME-BOUND CURRENT/PREVIOUS/NEXT + 0.65s DARK / 0.30s LIGHT + VIDEO-ONLY PREROLL WHERE NEEDED',
+  overlayMode: 'R748 PREV/NEXT @ INTRO 2-7s + FINAL 10s / COMPACT CTA BOTTOM-LEFT / R747 FADE PRESERVED',
   audioMode: 'R747 TWO-PASS EBU R128 -14 LUFS / TP -1.5 + R743 0.55s IN / 1.25s OUT + AUDIO QUEUE 8 / ONE RTMPS',
   visualTimeZone: VISUAL_TIME_ZONE,
   visualPeriod: null,
@@ -1236,13 +1242,21 @@ function titleOverlayFiltersR721({dynamicTitle=true,showPreview=false,previewDur
   const titleReload=dynamicTitle?`:reload=1`:'';
   const previewReloadPart=previewReload?`:reload=${VIDEO_FPS}`:'';
   const d=Math.max(0,Number(previewDuration)||0);
-  // R743: restore the proven R732/R733 frame-bound window. PREVIOUS/NEXT are
-  // visible during the ACTUAL final 8 seconds of this feeder, with no guessed global offset.
-  const previewStart=Math.max(0,d-NEXT_PREVIEW_SECONDS_R726);
-  const previewEnd=Math.max(previewStart+0.25,d-NEXT_PREVIEW_HIDE_BEFORE_END_R726);
-  const previewEnable=showPreview&&d>NEXT_PREVIEW_SECONDS_R726+0.5
-    ? `:enable='between(t\,${previewStart.toFixed(3)}\,${previewEnd.toFixed(3)})'`
-    : `:enable='0'`;
+  // R748: show TRUE PREVIOUS/NEXT twice without Node timers:
+  // 1) shortly after the new track is fully bright (2s delay, 5s visible),
+  // 2) during the actual final 10 seconds up to 0.30s before handoff.
+  const outroStart=Math.max(0,d-NEXT_PREVIEW_SECONDS_R726);
+  const outroEnd=Math.max(outroStart+0.25,d-NEXT_PREVIEW_HIDE_BEFORE_END_R726);
+  const introStart=START_PREVIEW_DELAY_SECONDS_R748;
+  const introEnd=introStart+START_PREVIEW_SHOW_SECONDS_R748;
+  let previewExpr='0';
+  if(showPreview&&d>NEXT_PREVIEW_SECONDS_R726+0.5){
+    const hasSeparatedIntro=d>(introEnd+NEXT_PREVIEW_SECONDS_R726+0.75);
+    previewExpr=hasSeparatedIntro
+      ? `between(t\,${introStart.toFixed(3)}\,${introEnd.toFixed(3)})+between(t\,${outroStart.toFixed(3)}\,${outroEnd.toFixed(3)})`
+      : `between(t\,${outroStart.toFixed(3)}\,${outroEnd.toFixed(3)})`;
+  }
+  const previewEnable=`:enable='${previewExpr}'`;
   return [
     // R721: keep every source pixel. 16:9 fills 1920x1080; any other aspect is padded.
     'scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos',
@@ -1262,19 +1276,43 @@ function titleOverlayFiltersR721({dynamicTitle=true,showPreview=false,previewDur
   ].join(',');
 }
 
+
+function compactCtaChainR748(trackDuration){
+  const d=Math.max(0,Number(trackDuration)||0);
+  const starts=[];
+  // Only schedule complete windows. Nothing may begin at feeder startup or be cut by
+  // the song boundary, which removes the old one-frame/partial-window "blink".
+  for(let st=CTA_FIRST_SHOW_SECONDS_R748; st+CTA_SHOW_SECONDS_R722<=d-2.0; st+=CTA_PERIOD_SECONDS_R722){
+    starts.push(st);
+    if(starts.length>=8)break;
+  }
+  if(!starts.length)return {pre:'',chain:'',final:'qrbase',windows:[]};
+  const splitLabels=starts.map((_,i)=>`[cta${i}]`).join('');
+  let pre=`[3:v]scale=500:-1:flags=lanczos,fps=${VIDEO_FPS},setpts=PTS-STARTPTS,format=yuva420p,split=${starts.length}${splitLabels};`;
+  let chain='';
+  let base='qrbase';
+  starts.forEach((st,i)=>{
+    const fadeOutAt=st+CTA_SHOW_SECONDS_R722-CTA_FADE_SECONDS_R748;
+    chain+=`[cta${i}]fade=t=in:st=${st.toFixed(3)}:d=${CTA_FADE_SECONDS_R748.toFixed(2)}:alpha=1,fade=t=out:st=${fadeOutAt.toFixed(3)}:d=${CTA_FADE_SECONDS_R748.toFixed(2)}:alpha=1[ctaf${i}];`;
+    const out=`ctaout${i}`;
+    chain+=`[${base}][ctaf${i}]overlay=x=${CTA_LEFT_GAP_R748}:y=H-h-${CTA_BOTTOM_GAP_R748}:shortest=0:format=yuv420[${out}];`;
+    base=out;
+  });
+  return {pre,chain,final:base,windows:starts};
+}
+
 function normalVideoFilterComplexR721({fadeIn=false,trackDuration=0,previewReload=false}={}){
   const vf=titleOverlayFiltersR721({dynamicTitle:false,showPreview:true,previewDuration:trackDuration,previewReload}); // R743: freeze CURRENT for this MP3; next feeder owns next title
-  // R726: CTA remains tied to wall-clock phase even though the normal feeder is restarted
-  // at song boundaries to produce a real fade-to-black / fade-from-black transition.
-  const ctaPhase=(Date.now()/1000)%CTA_PERIOD_SECONDS_R722;
-  const ctaEnable=`lt(mod(t+${ctaPhase.toFixed(3)}\,${CTA_PERIOD_SECONDS_R722})\,${CTA_SHOW_SECONDS_R722})`;
+  // R748: CTA is feeder-local, full-window only, with alpha fade in/out. This avoids
+  // the old partial wall-clock window that looked like a blink at appearance/disappearance.
+  const cta=compactCtaChainR748(trackDuration);
   // R738/R737: NEVER run fade filters on the real video. R738 only shifts the safe mask earlier. The R736 black-screen bug was
   // caused by fading the already-darkened base stream back "in". Instead generate a
   // separate opaque BLACK mask whose ALPHA alone rises/falls, then overlay that mask
   // over the untouched live picture. Even if the mask chain misbehaves, the base video
   // is never destructively changed and the next feeder always starts full-bright.
   let maskChain='';
-  let finalChain='[ctabase]format=yuv420p[outv]';
+  let finalChain='[ctabase]format=yuv420p[outv]'; // R748 replaces ctabase with compact CTA chain output or qrbase
   if(Number(trackDuration)>VIDEO_FADE_SECONDS_R726+VIDEO_BLACK_HOLD_SECONDS_R736+VIDEO_FADE_IN_SECONDS_R736+VIDEO_FADE_LEAD_SECONDS_R735+1){
     // R747: restore the viewer-proven R743 MP3 boundary clock. The track feeder is
     // rebased exactly when MP3 audio starts, so its t=duration belongs to THIS song.
@@ -1284,7 +1322,13 @@ function normalVideoFilterComplexR721({fadeIn=false,trackDuration=0,previewReloa
     maskChain=`color=c=black@1.0:s=1920x1080:r=${VIDEO_FPS},format=yuva420p,fade=t=in:st=${outAt.toFixed(3)}:d=${VIDEO_FADE_SECONDS_R726.toFixed(2)}:alpha=1,fade=t=out:st=${recoverAt.toFixed(3)}:d=${VIDEO_FADE_IN_SECONDS_R736.toFixed(2)}:alpha=1[blackmask];`;
     finalChain='[ctabase][blackmask]overlay=x=0:y=0:shortest=1:format=yuv420,format=yuv420p[outv]';
   }
-  return `[0:v]setpts=PTS-STARTPTS,${vf}[base];[2:v]fps=${VIDEO_FPS},setpts=N/(${VIDEO_FPS}*TB),format=yuva420p[eqv];[base][eqv]overlay=x=(W-w)/2:y=H-h-64:shortest=0:format=yuv420,format=yuv420p[eqbase];[1:v]scale=160:160:flags=lanczos,format=yuva420p[qr];[eqbase][qr]overlay=x=W-w-24:y=24:shortest=0:format=yuv420,format=yuv420p[qrbase];[3:v]format=yuva420p[cta];[qrbase][cta]overlay=x=(W-w)/2:y=46:shortest=0:format=yuv420:enable='${ctaEnable}'[ctabase];${maskChain}${finalChain}`;
+  const ctaBaseLabel=cta.final;
+  if(ctaBaseLabel!=='qrbase'){
+    finalChain=finalChain.replaceAll('[ctabase]',`[${ctaBaseLabel}]`);
+  }else{
+    finalChain=finalChain.replaceAll('[ctabase]','[qrbase]');
+  }
+  return `[0:v]setpts=PTS-STARTPTS,${vf}[base];[2:v]fps=${VIDEO_FPS},setpts=N/(${VIDEO_FPS}*TB),format=yuva420p[eqv];[base][eqv]overlay=x=(W-w)/2:y=H-h-64:shortest=0:format=yuv420,format=yuv420p[eqbase];[1:v]scale=160:160:flags=lanczos,format=yuva420p[qr];[eqbase][qr]overlay=x=W-w-24:y=24:shortest=0:format=yuv420,format=yuv420p[qrbase];${cta.pre}${cta.chain}${maskChain}${finalChain}`;
 }
 
 function clipFilterComplexR721(){
@@ -1462,7 +1506,7 @@ function startNormalVideoFeederR721(visualPath,{fadeIn=false,trackDuration=0,vis
   const eq=equalizerSpecR721();
   if(!existsSync(visualPath) || statSync(visualPath).size<300000)throw new Error(`visual missing: ${visualPath}`);
   if(!existsSync(QR_OVERLAY) || statSync(QR_OVERLAY).size<20000)throw new Error(`QR overlay missing: ${QR_OVERLAY}`);
-  if(!existsSync(CTA_OVERLAY_R722) || statSync(CTA_OVERLAY_R722).size<5000)throw new Error(`R722 CTA overlay missing: ${CTA_OVERLAY_R722}`);
+  if(!existsSync(CTA_OVERLAY_R722) || statSync(CTA_OVERLAY_R722).size<2500)throw new Error(`R722 CTA overlay missing: ${CTA_OVERLAY_R722}`);
   if(!existsSync(eq.path) || statSync(eq.path).size<20000)throw new Error(`equalizer missing: ${eq.path}`);
 
   const child=spawn('ffmpeg',normalVideoFeederArgsR721(visualPath,eq.path,{fadeIn,trackDuration,visualOffsetSeconds,previewReload}),{stdio:['ignore','pipe','pipe']});
@@ -2098,8 +2142,8 @@ function publicStatus(){
     mode:state.mode,
     overlayMode:state.overlayMode,
     audioMode:state.audioMode,
-    engine:'R747-R743-BOUNDARY-RESTORED-R746-RTMPS-SELFHEAL',
-    videoPipeline:'R747 MP3->MP3 R743 CLOCK + VIDEO-INSERT PREROLL WITH +LEAD TIMELINE + R746 RTMPS SELF-HEAL',
+    engine:'R748-INTRO-OUTRO-PREVNEXT-COMPACT-CTA-R747-R746',
+    videoPipeline:'R748 UI WINDOWS + R747 MP3->MP3 R743 CLOCK + VIDEO-INSERT PREROLL + R746 SELF-HEAL',
     outputTimeshiftSeconds:OUTPUT_TIMESHIFT_SECONDS,
     videoBitrate:VIDEO_BITRATE,
     audioBitrate:AUDIO_BITRATE,
@@ -2110,15 +2154,21 @@ function publicStatus(){
     subscribeLikeOverlay:CTA_OVERLAY_R722,
     subscribeLikeShowSeconds:CTA_SHOW_SECONDS_R722,
     subscribeLikePeriodSeconds:CTA_PERIOD_SECONDS_R722,
+    subscribeLikeFirstShowSeconds:CTA_FIRST_SHOW_SECONDS_R748,
+    subscribeLikeFadeSeconds:CTA_FADE_SECONDS_R748,
+    subscribeLikePosition:'bottom-left-above-ticker',
+    subscribeLikeSize:'500x72',
+    startPreviewDelaySeconds:START_PREVIEW_DELAY_SECONDS_R748,
+    startPreviewShowSeconds:START_PREVIEW_SHOW_SECONDS_R748,
     titleHandoffDelayMs:TITLE_HANDOFF_DELAY_MS_R724,
     videoInputQueuePackets:VIDEO_INPUT_QUEUE_PACKETS_R732,
     audioInputQueuePackets:AUDIO_INPUT_QUEUE_PACKETS_R732,
     overlayPixelPath:'YUV420-NO-ARGB-R732',
     trackUiClock:'ffmpeg-frame-bound-R732-audio-lead-bounded',
     nextPreviewSeconds:NEXT_PREVIEW_SECONDS_R726,
-    nextPreviewTiming:'R747-R743-EXACT-FINAL-8S-AUDIBLE-BOUNDARY',
-    mp3BoundaryMode:'R747-R743-EXACT-MP3-CLOCK-VIDEO-TO-MP3-PREROLL-TIME-EXTENDED',
-    currentTitleHandoff:'R747-FROZEN-MP3-PREVNEXT-OR-RELOAD-ONLY-FOR-VIDEO-PREROLLED-TRACK',
+    nextPreviewTiming:'R748-INTRO-2S-5S-PLUS-FINAL-10S-FRAME-BOUND',
+    mp3BoundaryMode:'R748-R747-R743-EXACT-MP3-CLOCK-VIDEO-TO-MP3-PREROLL-TIME-EXTENDED',
+    currentTitleHandoff:'R748-FROZEN-TRUE-PREVNEXT-INTRO+OUTRO',
     nextPreviewHideBeforeEndSeconds:NEXT_PREVIEW_HIDE_BEFORE_END_R726,
     audioNormalizationTargetLufs:TRACK_AUDIO_TARGET_I_R726,
     audioTruePeakDb:TRACK_AUDIO_TRUE_PEAK_R726,
@@ -2129,7 +2179,7 @@ function publicStatus(){
     currentMeasuredInputLufs:state.currentMeasuredInputLufs??null,
     loudnessAnalysisTimeoutMs:LOUDNESS_ANALYSIS_TIMEOUT_MS_R747,
     videoFadeSeconds:VIDEO_FADE_SECONDS_R726,
-      videoFadeStrategy:'R747-R743-BLACK-ALPHA-0.65S-HOLD-0.05S-LIGHT-0.30S',
+      videoFadeStrategy:'R748-R747-R743-BLACK-ALPHA-0.65S-HOLD-0.05S-LIGHT-0.30S',
       videoFadeInEnabled:true,
       videoBaseNeverFaded:true,
       videoOverlayMask:'BLACK_ALPHA_ONLY_R738',
@@ -2138,7 +2188,7 @@ function publicStatus(){
       videoFadeLeadSeconds:VIDEO_FADE_LEAD_SECONDS_R735,
       titleVisualLeadSeconds:videoPipelineLeadR744,
       videoTimelineCompensationSeconds:0,
-      videoTimelineCompensationMode:'R747-MP3-R743-FRAME-CLOCK-VIDEO-INSERTS-R744-PREROLL',
+      videoTimelineCompensationMode:'R748-R747-MP3-R743-FRAME-CLOCK-VIDEO-INSERTS-R744-PREROLL',
       clipAvSyncMode:'R744-SPLIT-VIDEO-PREROLL-AUDIO-AT-BOUNDARY',
       clipPreDrainMs:0,
       clipPostDrainMs:0,
@@ -2161,7 +2211,7 @@ function publicStatus(){
     visualTimelineAnchor:'PTS-STARTPTS-R733',
     visualContinuityMode:state.visualContinuityMode,
     visualLoopOffsetSeconds:state.visualLoopOffsetSeconds,
-    previousPreviewFallback:'R747-ACTUAL-PREVIOUS-ITEM-FROZEN-PER-MP3-FEEDER',
+    previousPreviewFallback:'R748-R747-ACTUAL-PREVIOUS-ITEM-FROZEN-PER-MP3-FEEDER',
     antiRepeatTrackHistory:TRACK_HISTORY_LIMIT_R726,
     qrPosition:'top-right',
     visualTimeZone:state.visualTimeZone,
@@ -2309,7 +2359,7 @@ const server=http.createServer((req,res)=>{
 });
 
 server.listen(PORT,'0.0.0.0',()=>{
-  console.log(`ANDRIK Radio R747 R745-PRESERVED + RTMPS-TLS-SELFHEAL listening on :${PORT}`);
+  console.log(`ANDRIK Radio R748 INTRO-OUTRO + COMPACT CTA + R747/R746 PRESERVED listening on :${PORT}`);
   radioLoop();
 });
 
