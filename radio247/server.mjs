@@ -77,8 +77,15 @@ const VIDEO_PIPELINE_LEAD_SECONDS_R745 = Math.max(2,Math.min(15,Number(process.e
 const VIDEO_BOUNDARY_FADE_SECONDS_R744 = 0.80;
 const CLIP_END_GUARD_MARGIN_MS_R745 = Math.max(8000,Number(process.env.CLIP_END_GUARD_MARGIN_MS_R745 || 15000)); // watchdog margin after measured clip duration
 const TRANSPORT_FATAL_RESTART_DELAY_MS_R746 = Math.max(1500,Math.min(15000,Number(process.env.TRANSPORT_FATAL_RESTART_DELAY_MS_R746 || 3500))); // R746: restart whole service when FFmpeg/FIFO keeps a dead RTMPS/TLS session alive
-const TRANSPORT_FATAL_REGEX_R746 = /the specified session has been invalidated|error in the pull function|io error:\s*end of file|server returned 4\d\d|connection reset by peer|broken pipe/i;
-const LOUDNESS_ANALYSIS_TIMEOUT_MS_R747 = Math.max(4000,Math.min(30000,Number(process.env.LOUDNESS_ANALYSIS_TIMEOUT_MS_R747 || 12000)));
+const TRANSPORT_FATAL_REGEX_R746 = /the specified session has been invalidated|error in the pull function|io error:\s*end of file|server returned 4\d\d|connection reset by peer|broken pipe|connection timed out|connection refused|network is unreachable|tls[^\n]*(?:error|fail)|error writing (?:trailer|header|packet)|av_interleaved_write_frame/i;
+const LOUDNESS_ANALYSIS_TIMEOUT_MS_R747 = Math.max(8000,Math.min(120000,Number(process.env.LOUDNESS_ANALYSIS_TIMEOUT_MS_R747 || 45000)));
+// R750: loudness analysis is background-only and serialized. It can never delay a live MP3 handoff.
+const LOUDNESS_BACKGROUND_NICE_R750 = Math.max(10,Math.min(19,Number(process.env.LOUDNESS_BACKGROUND_NICE_R750 || 15)));
+// R750: keep the 6 s FIFO timeshift, but never allow minutes of queued packets to back-pressure
+// the live A/V pipes. A bounded FIFO with overflow drop keeps YouTube receiving fresh media.
+const OUTPUT_FIFO_QUEUE_PACKETS_R750 = Math.max(768,Math.min(4096,Number(process.env.OUTPUT_FIFO_QUEUE_PACKETS_R750 || 2048)));
+const MASTER_BACKPRESSURE_STUCK_MS_R750 = Math.max(5000,Math.min(30000,Number(process.env.MASTER_BACKPRESSURE_STUCK_MS_R750 || 10000)));
+const MASTER_BACKPRESSURE_WATCHDOG_INTERVAL_MS_R750 = Math.max(500,Math.min(5000,Number(process.env.MASTER_BACKPRESSURE_WATCHDOG_INTERVAL_MS_R750 || 1000)));
 const LOUDNESS_CACHE_SUFFIX_R747 = '.r747-loudnorm.json';
 // R749: harden mandatory MP4 inserts without touching the proven ONE-RTMPS transport.
 // A prepared video may legitimately finish writing into the deep H264 queue shortly
@@ -135,14 +142,14 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R749-INSERT-IRONCLAD-R748-PRESERVED',
-  mode: 'R749 IRONCLAD INSERT A/V GUARD + R748 UI + R747 LOUDNESS + R746 SELF-HEAL',
+  version: 'R750-STREAM-HEALTH-NONBLOCKING-LOUDNESS-R749-PRESERVED',
+  mode: 'R750 STREAM HEALTH + NONBLOCKING LOUDNESS + R749 INSERT IRONCLAD + R748 UI + R746 SELF-HEAL',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
   producerRunning: false,
   overlayMode: 'R748 PREV/NEXT @ INTRO 2-7s + FINAL 10s / COMPACT CTA BOTTOM-LEFT / R747 FADE PRESERVED',
-  audioMode: 'R747 TWO-PASS EBU R128 -14 LUFS / TP -1.5 + R743 0.55s IN / 1.25s OUT + AUDIO QUEUE 8 / ONE RTMPS',
+  audioMode: 'R750 NONBLOCKING R747 EBU R128 -14 LUFS / TP -1.5 + R743 FADES + AUDIO QUEUE 8 / ONE RTMPS',
   visualTimeZone: VISUAL_TIME_ZONE,
   visualPeriod: null,
   visualPath: null,
@@ -172,6 +179,7 @@ const state = {
   lastLibraryRefresh: null,
   lastExit: null,
   lastError: '',
+  lastWarning: '',
   lastFfmpegLine: '',
   equalizerPeriod: null,
   equalizerStyle: null,
@@ -196,7 +204,10 @@ const state = {
   transportSelfHealPending: false,
   transportSelfHealCount: 0,
   lastTransportFatalAt: null,
-  lastTransportFatalReason: ''
+  lastTransportFatalReason: '',
+  publisherBackpressureSince: null,
+  publisherBackpressureRecoveries: 0,
+  lastPublisherBackpressureAt: null
 };
 
 let publisher = null;
@@ -254,6 +265,11 @@ let videoSourceMissingSinceR749 = 0;
 let videoSourceRecoveryBusyR749 = false;
 let insertRecoveryCountR749 = 0;
 let insertAudioStartFailuresR749 = 0;
+// R750 background loudness queue: exactly one analysis FFmpeg at a time.
+const loudnessPendingR750 = new Set();
+let loudnessSerialR750 = Promise.resolve();
+let masterBackpressureWatchdogTimerR750 = null;
+let masterBackpressureSinceR750 = 0;
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 function promiseTimeout(promise,ms,label='operation'){
@@ -805,9 +821,26 @@ async function downloadTrackToCache(item){
   try{return await job;}finally{prefetchJobs.delete(dest);}
 }
 
+function scheduleLoudnessAnalysisR750(localAudioPath){
+  if(!localAudioPath || readLoudnessAnalysisR747(localAudioPath) || loudnessPendingR750.has(localAudioPath))return;
+  loudnessPendingR750.add(localAudioPath);
+  loudnessSerialR750=loudnessSerialR750.then(async()=>{
+    if(stopping||readLoudnessAnalysisR747(localAudioPath))return;
+    try{
+      await analyzeLoudnessR747(localAudioPath);
+      if(state.lastWarning&&/loudness/i.test(state.lastWarning))state.lastWarning='';
+    }catch(error){
+      state.lastWarning=`R750 background loudness: ${cleanText(error?.message||error)}`;
+      console.error('[loudness-r750-background]',cleanText(error?.message||error));
+    }
+  }).catch(error=>{
+    state.lastWarning=`R750 loudness queue: ${cleanText(error?.message||error)}`;
+  }).finally(()=>{loudnessPendingR750.delete(localAudioPath);});
+}
+
 function prefetchTrack(item){
   if(!item?.url)return;
-  downloadTrackToCache(item).then(path=>ensureLoudnessAnalysisR747(path)).catch(error=>{
+  downloadTrackToCache(item).then(path=>scheduleLoudnessAnalysisR750(path)).catch(error=>{
     console.error('[prefetch]',cleanText(error?.message||error));
   });
 }
@@ -1447,6 +1480,34 @@ function scheduleTransportSelfHealR746(rawLine,thisPublisher){
   return true;
 }
 
+function masterBackpressureWatchdogTickR750(){
+  if(stopping||!publisher||publisher.exitCode!==null){masterBackpressureSinceR750=0;state.publisherBackpressureSince=null;return;}
+  const audioSink=publisher?.stdio?.[3];
+  const videoSink=publisher?.stdio?.[4];
+  const blocked=Boolean(
+    audioSink?.writableNeedDrain || videoSink?.writableNeedDrain ||
+    Number(audioSink?.writableLength||0)>Math.max(32768,Number(audioSink?.writableHighWaterMark||0)) ||
+    Number(videoSink?.writableLength||0)>Math.max(32768,Number(videoSink?.writableHighWaterMark||0))
+  );
+  if(!blocked){masterBackpressureSinceR750=0;state.publisherBackpressureSince=null;return;}
+  const now=Date.now();
+  if(!masterBackpressureSinceR750){
+    masterBackpressureSinceR750=now;
+    state.publisherBackpressureSince=new Date(now).toISOString();
+    return;
+  }
+  if(now-masterBackpressureSinceR750<MASTER_BACKPRESSURE_STUCK_MS_R750)return;
+  state.transportHealthy=false;
+  state.transportSelfHealPending=true;
+  state.publisherBackpressureRecoveries=Number(state.publisherBackpressureRecoveries||0)+1;
+  state.lastPublisherBackpressureAt=new Date().toISOString();
+  state.lastTransportFatalAt=state.lastPublisherBackpressureAt;
+  state.lastTransportFatalReason=`R750 master pipe backpressure ${now-masterBackpressureSinceR750}ms`;
+  state.lastError=`R750 STREAM STALL: ${state.lastTransportFatalReason}`;
+  console.error('[r750-stream-health]',state.lastError,'— exiting so systemd rebuilds the ONE RTMPS publisher');
+  process.exit(76);
+}
+
 function startPublisher(){
   if(!STREAM_URL){
     state.lastError='YOUTUBE_STREAM_KEY is not configured';
@@ -1470,9 +1531,9 @@ function startPublisher(){
     '-bsf:v',`setts=time_base=1/${VIDEO_FPS}:pts=N:dts=N:duration=1`,
     '-c:a','aac','-profile:a','aac_low','-b:a',AUDIO_BITRATE,'-ar',String(AUDIO_SAMPLE_RATE),'-ac','2',
     '-max_muxing_queue_size','4096','-flush_packets','1',
-    '-f','fifo','-fifo_format','flv','-queue_size','8192',
+    '-f','fifo','-fifo_format','flv','-queue_size',String(OUTPUT_FIFO_QUEUE_PACKETS_R750),
     '-timeshift',`${OUTPUT_TIMESHIFT_SECONDS}s`,
-    '-drop_pkts_on_overflow','0',
+    '-drop_pkts_on_overflow','1',
     '-attempt_recovery','1','-recover_any_error','1','-recovery_wait_time','1','-restart_with_keyframe','1',
     STREAM_URL
   ];
@@ -1934,8 +1995,9 @@ function runCaptureBothR747(command,args,{timeoutMs=12000}={}){
 async function analyzeLoudnessR747(localAudioPath){
   const cached=readLoudnessAnalysisR747(localAudioPath);
   if(cached)return cached;
-  const result=await runCaptureBothR747('ffmpeg',[
-    '-hide_banner','-nostats','-loglevel','info','-i',localAudioPath,
+  const result=await runCaptureBothR747('nice',[
+    '-n',String(LOUDNESS_BACKGROUND_NICE_R750),'ffmpeg',
+    '-hide_banner','-nostats','-loglevel','info','-threads','1','-i',localAudioPath,
     '-map','0:a:0','-vn','-sn','-dn',
     '-af',`loudnorm=I=${TRACK_AUDIO_TARGET_I_R726}:LRA=${TRACK_AUDIO_LRA_R726}:TP=${TRACK_AUDIO_TRUE_PEAK_R726}:print_format=json`,
     '-f','null','-'
@@ -1956,8 +2018,10 @@ async function analyzeLoudnessR747(localAudioPath){
 }
 async function ensureLoudnessAnalysisR747(localAudioPath){
   try{return await analyzeLoudnessR747(localAudioPath)}catch(error){
-    state.lastError=`R747 loudness fallback: ${cleanText(error?.message||error)}`;
-    console.error('[loudness-r747]',cleanText(error?.message||error));
+    // R750: analysis failure is a warning only. Live playback immediately uses the
+    // single-pass loudnorm fallback and must never be marked as an FFmpeg stream error.
+    state.lastWarning=`R750 background loudness fallback: ${cleanText(error?.message||error)}`;
+    console.error('[loudness-r750]',cleanText(error?.message||error));
     return null;
   }
 }
@@ -2048,12 +2112,13 @@ async function playItem(previous,item,next,following,localAudioPath,nextTrackPre
   // It may be an MP3, normal clip, 30/60-minute special, or the 4–6-song station bumper.
   writeOverlayFileR726(LIVE_NEXT_FILE_R726,nextOverlayTextR736(actualNextR736));
 
-  // R747: loudness is normally already analyzed by the background prefetch. If this is
-  // the first uncached track after a service restart, finish measurement BEFORE t=0
-  // of the MP3 feeder so video boundary timing cannot drift by the analysis duration.
-  const loudnessR747=await ensureLoudnessAnalysisR747(localAudioPath);
-  state.currentLoudnessMode=loudnessR747?'R747-TWO-PASS-MEASURED-LINEAR':'R747-SINGLE-PASS-FALLBACK';
+  // R750: NEVER wait for loudness analysis on the live path. Use cached two-pass
+  // measurements when available; otherwise start immediately with the safe single-pass
+  // loudnorm filter and analyze this file later at low priority for its next play.
+  const loudnessR747=readLoudnessAnalysisR747(localAudioPath);
+  state.currentLoudnessMode=loudnessR747?'R747-TWO-PASS-MEASURED-LINEAR':'R750-SINGLE-PASS-INSTANT-FALLBACK';
   state.currentMeasuredInputLufs=loudnessR747?Number(loudnessR747.input_i):null;
+  if(!loudnessR747){const t=setTimeout(()=>scheduleLoudnessAnalysisR750(localAudioPath),5000);t.unref?.();}
 
   // R747: MP3->MP3 uses the proven R743 exact feeder clock. A normal feeder may be
   // pre-rolled only when the PREVIOUS item was a real video insert; that preroll now
@@ -2129,6 +2194,8 @@ async function radioLoop(){
   scheduleTimerR721.unref?.();
   videoSourceWatchdogTimerR749=setInterval(()=>{videoSourceWatchdogTickR749().catch(error=>{state.lastError=`R749 watchdog tick: ${cleanText(error?.message||error)}`;});},VIDEO_SOURCE_WATCHDOG_INTERVAL_MS_R749);
   videoSourceWatchdogTimerR749.unref?.();
+  masterBackpressureWatchdogTimerR750=setInterval(masterBackpressureWatchdogTickR750,MASTER_BACKPRESSURE_WATCHDOG_INTERVAL_MS_R750);
+  masterBackpressureWatchdogTimerR750.unref?.();
 
   while(!stopping){
     try{
@@ -2265,8 +2332,8 @@ function publicStatus(){
     mode:state.mode,
     overlayMode:state.overlayMode,
     audioMode:state.audioMode,
-    engine:'R749-INSERT-IRONCLAD-R748-R747-R746',
-    videoPipeline:'R749 GUARDED INSERT PREROLL + R748 UI + R747 MP3 CLOCK + R746 SELF-HEAL',
+    engine:'R750-STREAM-HEALTH-NONBLOCKING-LOUDNESS-R749-R748-R746',
+    videoPipeline:'R750 LIVE FIFO GUARD + R749 GUARDED INSERT + R748 UI + R743 MP3 CLOCK + R746 SELF-HEAL',
     outputTimeshiftSeconds:OUTPUT_TIMESHIFT_SECONDS,
     videoBitrate:VIDEO_BITRATE,
     audioBitrate:AUDIO_BITRATE,
@@ -2297,10 +2364,13 @@ function publicStatus(){
     audioTruePeakDb:TRACK_AUDIO_TRUE_PEAK_R726,
     audioFadeInSeconds:TRACK_AUDIO_FADE_IN_R726,
     audioFadeOutSeconds:TRACK_AUDIO_FADE_OUT_R726,
-    audioNormalizationMode:'R747-TWO-PASS-MEASURED-EBU-R128-WITH-SINGLE-PASS-FALLBACK',
+    audioNormalizationMode:'R750-NONBLOCKING-R747-TWO-PASS-CACHE-WITH-INSTANT-SINGLE-PASS-FALLBACK',
     currentLoudnessMode:state.currentLoudnessMode||'pending',
     currentMeasuredInputLufs:state.currentMeasuredInputLufs??null,
     loudnessAnalysisTimeoutMs:LOUDNESS_ANALYSIS_TIMEOUT_MS_R747,
+    loudnessAnalysisBlockingLive:false,
+    loudnessBackgroundNice:LOUDNESS_BACKGROUND_NICE_R750,
+    loudnessBackgroundPending:loudnessPendingR750.size,
     videoFadeSeconds:VIDEO_FADE_SECONDS_R726,
       videoFadeStrategy:'R748-R747-R743-BLACK-ALPHA-0.65S-HOLD-0.05S-LIGHT-0.30S',
       videoFadeInEnabled:true,
@@ -2361,12 +2431,19 @@ function publicStatus(){
     equalizerEngine:state.equalizerEngine,
     publisherRunning:state.publisherRunning,
     transportHealthy:state.transportHealthy!==false,
-    transportWatchdogMode:'R746-FATAL-RTMPS-TLS-SIGNATURE-SYSTEMD-SELFHEAL',
+    transportWatchdogMode:'R750-BOUNDED-FIFO-BACKPRESSURE-SYSTEMD-SELFHEAL+R746-RTMPS-TLS',
+    outputFifoQueuePackets:OUTPUT_FIFO_QUEUE_PACKETS_R750,
+    outputDropPacketsOnOverflow:true,
+    masterBackpressureWatchdogMs:MASTER_BACKPRESSURE_STUCK_MS_R750,
+    publisherBackpressureSince:state.publisherBackpressureSince||null,
+    publisherBackpressureRecoveries:Number(state.publisherBackpressureRecoveries||0),
+    lastPublisherBackpressureAt:state.lastPublisherBackpressureAt||null,
     transportSelfHealDelayMs:TRANSPORT_FATAL_RESTART_DELAY_MS_R746,
     transportSelfHealPending:Boolean(state.transportSelfHealPending),
     transportSelfHealCount:Number(state.transportSelfHealCount||0),
     lastTransportFatalAt:state.lastTransportFatalAt||null,
     lastTransportFatalReason:state.lastTransportFatalReason||'',
+    lastWarning:state.lastWarning||'',
     producerRunning:state.producerRunning,
     videoFeederRunning:Boolean(videoFeeder&&videoFeeder.exitCode===null),
     clipActive,
@@ -2517,6 +2594,7 @@ async function shutdown(){
   if(liveTitleTimerR724){clearTimeout(liveTitleTimerR724);liveTitleTimerR724=null;}
   if(scheduleTimerR721)clearInterval(scheduleTimerR721);
   if(videoSourceWatchdogTimerR749){clearInterval(videoSourceWatchdogTimerR749);videoSourceWatchdogTimerR749=null;}
+  if(masterBackpressureWatchdogTimerR750){clearInterval(masterBackpressureWatchdogTimerR750);masterBackpressureWatchdogTimerR750=null;}
   try{server.close();}catch(_){ }
 
   const activeClip=clipPublisher;
