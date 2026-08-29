@@ -18057,7 +18057,10 @@ function radioSpecial60minR727(value){return String(value||'').toLowerCase()===R
 // R694: friendly display titles for already-uploaded radio clips.
 // This changes metadata returned by the API only; the 211 MB MP4 in R2 is NOT re-uploaded.
 const RADIO_CLIP_TITLE_OVERRIDES_R694 = Object.freeze({
-  'radio/clips/1000381070.mp4':'DANCE OF DEATH'
+  'radio/clips/1000381070.mp4':'DANCE OF DEATH',
+  // R745: this clip was uploaded from Android with the camera-style numeric filename.
+  // Keep the R2 object untouched; expose the real song title everywhere in radio UI/overlay.
+  'radio/clips/1000381526.mp4':'MIND IS A TRAP'
 });
 function radioClipUploadIdR691(request){
   const value=String(new URL(request.url).searchParams.get('uploadId')||'').trim();

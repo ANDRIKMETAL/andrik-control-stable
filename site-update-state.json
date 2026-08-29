@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787979239533-ac7c1e2ebc",
-  "release": "R744",
-  "archiveName": "R744-VIDEO-PREROLL-AV-HANDOFF-R743-PRESERVED-CLEAN-SAFE-FULL-FIXED-INSTALLER.zip",
-  "sourceHead": "52b356f4a4aca5b3379fc47e3d324183ed8eb38d",
-  "backupSha": "52b356f4a4aca5b3379fc47e3d324183ed8eb38d",
+  "operationId": "publish-1787984168443-b84b32710e",
+  "release": "R745",
+  "archiveName": "R745-CLIP-END-GUARD-TRUE-PREVIOUS-MIND-IS-A-TRAP-R744-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "c27e0de7855c3121628410e4a9008ee20b89ef36",
+  "backupSha": "c27e0de7855c3121628410e4a9008ee20b89ef36",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-29T04:53:59.875Z"
+  "generatedAt": "2026-08-29T06:16:08.864Z"
 }
