@@ -147,8 +147,8 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R760-R753-NOCROP-GEOMETRY-FADE-R759-STABILITY-PRESERVED',
-  mode: 'R760 R753 VIEWER-PROVEN MP3 FADE + NO-CROP FIT/PAD + R759/R756/R754 STABILITY',
+  version: 'R761-SINGLE-ENCODE-NODATA-STABILITY-R760-VISUALS-PRESERVED',
+  mode: 'R761 SINGLE VIDEO ENCODE + R760 R753 GEOMETRY/FADE + R754 FIFO-FIRST RTMPS',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
@@ -1620,11 +1620,15 @@ function startPublisher(){
     '-thread_queue_size',String(VIDEO_INPUT_QUEUE_PACKETS_R732),'-fflags','+genpts+discardcorrupt','-framerate',String(VIDEO_FPS),'-f','h264','-i','pipe:4',
     '-thread_queue_size',String(AUDIO_INPUT_QUEUE_PACKETS_R732),'-f','s16le','-ar',String(AUDIO_SAMPLE_RATE),'-ac','2','-i','pipe:3',
     '-map','0:v:0','-map','1:a:0',
-    // R754: the master owns the ONE continuous YouTube H264 encoder. Feeders may restart
-    // for title/fade timing, but their elementary-stream boundaries are decoded here and
-    // never exposed directly to RTMPS. This isolates YouTube from MP3→MP3 feeder splices.
-    '-vf',`scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1,fps=${VIDEO_FPS},format=yuv420p`,
-    ...h264EncoderArgsR721(),
+    // R761: EVERY feeder already produces the final viewer-approved 1920x1080 H264 frame
+    // (R760/R753 FIT+PAD, overlays, fades, AUD + repeated SPS/PPS). Do NOT decode+encode it
+    // a second time in the persistent master. R760's double x264 path consumed ~40% CPU in
+    // the master on top of ~55% in the feeder and could stop reading BOTH Node pipes for
+    // 30 s, triggering R751 NO-PROGRESS/status=76 and YouTube BAD/NODATA. The persistent
+    // master now only re-timestamps/copies H264 and encodes AAC. Graceful R754 feeder stop
+    // + AUD/repeat-headers make the boundary safe while setts supplies one continuous clock.
+    '-c:v','copy',
+    '-bsf:v',`setts=time_base=1/${VIDEO_FPS}:pts=N:dts=N:duration=1`,
     '-c:a','aac','-profile:a','aac_low','-b:a',AUDIO_BITRATE,'-ar',String(AUDIO_SAMPLE_RATE),'-ac','2',
     '-max_muxing_queue_size','4096','-flush_packets','1',
     '-f','fifo','-fifo_format','flv','-queue_size',String(OUTPUT_FIFO_QUEUE_PACKETS_R750),
@@ -2533,8 +2537,8 @@ function publicStatus(){
     mode:state.mode,
     overlayMode:state.overlayMode,
     audioMode:state.audioMode,
-    engine:'R760-R753-NOCROP-GEOMETRY+FADE + R759/R757/R756/R754 PRESERVED',
-    videoPipeline:'R760 R753 FIT+PAD NO-CROP EVERY STAGE + 64Q + R754 PERSISTENT MASTER',
+    engine:'R761-SINGLE-ENCODE-NODATA-STABILITY + R760/R759/R757/R756/R754 PRESERVED',
+    videoPipeline:'R761 SINGLE-X264 FEEDER → H264 COPY MASTER + R760 R753 FIT+PAD NO-CROP + 64Q',
     outputTimeshiftSeconds:OUTPUT_TIMESHIFT_SECONDS,
     videoBitrate:VIDEO_BITRATE,
     audioBitrate:AUDIO_BITRATE,
@@ -2643,19 +2647,22 @@ function publicStatus(){
     equalizerStyle:state.equalizerStyle,
     equalizerEngine:state.equalizerEngine,
     publisherRunning:state.publisherRunning,
-    masterVideoMode:'R760-R753-FIT-PAD-1920x1080-NO-CROP-64Q',
-    permanentFullscreenMode:'R760-R753-PRESERVE-ASPECT-FIT-PAD-1920x1080-SAR1',
+    masterVideoMode:'R761-H264-COPY-SETTS-SINGLE-ENCODE-64Q',
+    masterVideoReencode:false,
+    videoEncodePasses:1,
+    videoQualityMode:'R761-NO-SECOND-X264-GENERATIONAL-LOSS',
+    permanentFullscreenMode:'R761-R760-R753-PRESERVE-ASPECT-FIT-PAD-1920x1080-SAR1',
     permanentFullscreenWidth:1920,
     permanentFullscreenHeight:1080,
     permanentFullscreenFitPolicy:'R753-FIT-DECREASE-PAD-NO-CROP',
     feederBoundaryMode:'R754-GRACEFUL-SIGINT-FLUSH+AUD',
     transportRecoveryMode:'R754-FFMPEG-FIFO-FIRST-NO-EARLY-SYSTEMD-EXIT',
     transportHealthy:state.transportHealthy!==false,
-    transportWatchdogMode:'R754-FIFO-FIRST-RTMPS+R751-NO-PROGRESS-30S',
+    transportWatchdogMode:'R761-SINGLE-ENCODE+R754-FIFO-FIRST+R751-NO-PROGRESS-30S',
     outputFifoQueuePackets:OUTPUT_FIFO_QUEUE_PACKETS_R750,
     outputDropPacketsOnOverflow:true,
     masterBackpressureWatchdogMs:MASTER_BACKPRESSURE_STUCK_MS_R750,
-    masterBackpressureDetection:'R751-BLOCKED-PLUS-ZERO-BYTE-PROGRESS',
+    masterBackpressureDetection:'R761-LOW-CPU-COPY-MASTER+R751-BLOCKED-PLUS-ZERO-BYTE-PROGRESS',
     publisherBackpressureSince:state.publisherBackpressureSince||null,
     publisherBackpressureRecoveries:Number(state.publisherBackpressureRecoveries||0),
     lastPublisherBackpressureAt:state.lastPublisherBackpressureAt||null,
@@ -2794,7 +2801,7 @@ const server=http.createServer((req,res)=>{
 });
 
 server.listen(PORT,'0.0.0.0',()=>{
-  console.log(`ANDRIK Radio R760 R753 NO-CROP GEOMETRY + EXACT R753 FADE + R754 STABLE MASTER listening on :${PORT}`);
+  console.log(`ANDRIK Radio R761 SINGLE ENCODE + R760/R753 GEOMETRY/FADE + R754 FIFO-FIRST listening on :${PORT}`);
   radioLoop();
 });
 

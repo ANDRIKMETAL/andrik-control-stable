@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788017302871-416e8ff4d4",
-  "release": "R760",
-  "archiveName": "R760-R753-NOCROP-GEOMETRY-EXACT-FADE-R759-STABILITY-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "283645d2a791fdcdeefd1ecaef1d3e17cdc9186c",
-  "backupSha": "283645d2a791fdcdeefd1ecaef1d3e17cdc9186c",
+  "operationId": "publish-1788018271045-6cb6559fd9",
+  "release": "R761",
+  "archiveName": "R761-SINGLE-ENCODE-NODATA-STABILITY-R760-R753-VISUALS-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "56361ea07a7aa641f89134f908e0e72338b4d69d",
+  "backupSha": "56361ea07a7aa641f89134f908e0e72338b4d69d",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-29T15:28:23.194Z"
+  "generatedAt": "2026-08-29T15:44:31.499Z"
 }
