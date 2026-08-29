@@ -113,7 +113,7 @@ const VIDEO_BITRATE = '4500k'; // R637: 1080p25 low-motion radio visual, bounded
 const AUDIO_BITRATE = '128k'; // YouTube Live recommendation for stereo AAC
 const AUDIO_SAMPLE_RATE = 44100; // YouTube Live recommendation for stereo
 const VIDEO_FPS = 25;
-const VIDEO_INPUT_QUEUE_PACKETS_R732 = 1024; // exact R729/R721 proven H264 input cushion
+const VIDEO_INPUT_QUEUE_PACKETS_R732 = 64; // R756: max ~2.56s at 25fps; 1024 could hide ~41s of stale video behind a feeder change
 const AUDIO_INPUT_QUEUE_PACKETS_R732 = 8; // ~0.74 s FFmpeg raw-packet cushion; ~1 s incl. pipe; prevents 20–30 s title/audio drift
 const VIDEO_GOP = 50; // exactly 2 seconds at 25 fps
 const LIBRARY_REFRESH_MS = Math.max(60000, Number(process.env.LIBRARY_REFRESH_MS || 120000));
@@ -145,7 +145,7 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R755-FULL-FRAME-FIT-MASTER-R754-PRESERVED',
+  version: 'R756-FRAME-LOCK-64Q-FULL-FIT-R755-PRESERVED',
   mode: 'R753 SINGLE CLIP→MP3 HANDOFF + STATION LABEL + START FADE + R752/R751/R750/R749/R748/R746 PRESERVED',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
@@ -930,7 +930,7 @@ function preparedClipFilterComplexR742(titleFile,tickerFile,{stationInsert=false
     'setpts=PTS-STARTPTS',
     'scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos',
     'pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black',
-    'setsar=1',`fps=${VIDEO_FPS}`,'format=yuv420p'
+    'setsar=1','setdar=16/9',`fps=${VIDEO_FPS}`,'format=yuv420p'
   ];
   if(!stationInsert){
     base.push(
@@ -1013,7 +1013,9 @@ function clipPreparedFeederArgsR742(readyPath,{hasAudio=true,duration=0}={}){
   const args=[
     '-hide_banner','-loglevel','warning','-stats_period','0.5','-progress','pipe:4','-nostats',
     '-fflags','+genpts+discardcorrupt','-err_detect','ignore_err','-re','-i',readyPath,
-    '-map','0:v:0','-an','-sn','-dn','-c:v','copy','-bsf:v','h264_mp4toannexb','-f','h264','pipe:1',
+    '-map','0:v:0','-an','-sn','-dn',
+    '-vf',`scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1,setdar=16/9,fps=${VIDEO_FPS},format=yuv420p`,
+    ...h264EncoderArgsR721(),'-f','h264','pipe:1',
     '-map',hasAudio?'0:a:0':'0:a:0','-vn','-sn','-dn',
     '-af',`aresample=${AUDIO_SAMPLE_RATE}:async=1:first_pts=0,asetpts=PTS-STARTPTS`,'-c:a','pcm_s16le','-ar',String(AUDIO_SAMPLE_RATE),'-ac','2'
   ];
@@ -1031,7 +1033,9 @@ function clipPreparedVideoOnlyArgsR744(readyPath,{duration=0}={}){
   const args=[
     '-hide_banner','-loglevel','warning','-fflags','+genpts+discardcorrupt','-err_detect','ignore_err',
     '-re','-i',readyPath,
-    '-map','0:v:0','-an','-sn','-dn','-c:v','copy','-bsf:v','h264_mp4toannexb'
+    '-map','0:v:0','-an','-sn','-dn',
+    '-vf',`scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1,setdar=16/9,fps=${VIDEO_FPS},format=yuv420p`,
+    ...h264EncoderArgsR721()
   ];
   if(duration>0)args.push('-t',String(Math.max(0.5,duration)));
   args.push('-f','h264','pipe:1');
@@ -1358,7 +1362,7 @@ function titleOverlayFiltersR721({dynamicTitle=true,showPreview=false,previewDur
     // R721: keep every source pixel. 16:9 fills 1920x1080; any other aspect is padded.
     'scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos',
     'pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black',
-    'setsar=1',
+    'setsar=1','setdar=16/9',
     `fps=${VIDEO_FPS}`,
     'format=yuv420p',
     // R731: normal-track textfiles are loaded ONCE by this feeder. Their timing is then
@@ -1449,7 +1453,7 @@ function bumperFilterComplexR724(){
   const vf=[
     `scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos`,
     `pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black`,
-    `setsar=1`,`fps=${VIDEO_FPS}`
+    `setsar=1`,`setdar=16/9`,`fps=${VIDEO_FPS}`
   ].join(',');
   return `[0:v]setpts=PTS-STARTPTS,${vf}[base];[1:v]scale=160:160:flags=lanczos,format=yuva420p[qr];[base][qr]overlay=x=W-w-24:y=24:shortest=1:format=yuv420,format=yuv420p[outv]`;
 }
@@ -1575,7 +1579,7 @@ function startPublisher(){
     // R754: the master owns the ONE continuous YouTube H264 encoder. Feeders may restart
     // for title/fade timing, but their elementary-stream boundaries are decoded here and
     // never exposed directly to RTMPS. This isolates YouTube from MP3→MP3 feeder splices.
-    '-vf',`scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1,fps=${VIDEO_FPS},format=yuv420p`,
+    '-vf',`scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1,setdar=16/9,fps=${VIDEO_FPS},format=yuv420p`,
     ...h264EncoderArgsR721(),
     '-c:a','aac','-profile:a','aac_low','-b:a',AUDIO_BITRATE,'-ar',String(AUDIO_SAMPLE_RATE),'-ac','2',
     '-max_muxing_queue_size','4096','-flush_packets','1',
@@ -2474,8 +2478,8 @@ function publicStatus(){
     mode:state.mode,
     overlayMode:state.overlayMode,
     audioMode:state.audioMode,
-    engine:'R754-STABLE-MASTER-ENCODER-FIFO-FIRST-R753-R752-R751-R750-R749-R748',
-    videoPipeline:'R754 PERSISTENT MASTER X264 + R753 SINGLE CLIP→MP3 + R752 UNIFIED CLIP A/V',
+    engine:'R756-FRAME-LOCK-64Q + R755/R754/R753/R752/R751/R750 PRESERVED',
+    videoPipeline:'R756 FIXED 1920x1080 DAR16:9 + 64Q + R754 PERSISTENT MASTER + R753/R752 HANDOFF',
     outputTimeshiftSeconds:OUTPUT_TIMESHIFT_SECONDS,
     videoBitrate:VIDEO_BITRATE,
     audioBitrate:AUDIO_BITRATE,
@@ -2494,6 +2498,7 @@ function publicStatus(){
     startPreviewShowSeconds:START_PREVIEW_SHOW_SECONDS_R748,
     titleHandoffDelayMs:TITLE_HANDOFF_DELAY_MS_R724,
     videoInputQueuePackets:VIDEO_INPUT_QUEUE_PACKETS_R732,
+    videoInputQueueMaxWindowSecondsR756:Number((VIDEO_INPUT_QUEUE_PACKETS_R732/VIDEO_FPS).toFixed(2)),
     audioInputQueuePackets:AUDIO_INPUT_QUEUE_PACKETS_R732,
     overlayPixelPath:'YUV420-NO-ARGB-R732',
     trackUiClock:'ffmpeg-frame-bound-R732-audio-lead-bounded',
@@ -2581,7 +2586,7 @@ function publicStatus(){
     equalizerStyle:state.equalizerStyle,
     equalizerEngine:state.equalizerEngine,
     publisherRunning:state.publisherRunning,
-    masterVideoMode:'R755-PERSISTENT-X264-FULL-FRAME-FIT-NO-CROP-R754-PRESERVED',
+    masterVideoMode:'R756-HARD-1920x1080-DAR16x9-64Q-NO-STALE-40S-R755-PRESERVED',
     feederBoundaryMode:'R754-GRACEFUL-SIGINT-FLUSH+AUD',
     transportRecoveryMode:'R754-FFMPEG-FIFO-FIRST-NO-EARLY-SYSTEMD-EXIT',
     transportHealthy:state.transportHealthy!==false,
@@ -2728,7 +2733,7 @@ const server=http.createServer((req,res)=>{
 });
 
 server.listen(PORT,'0.0.0.0',()=>{
-  console.log(`ANDRIK Radio R755 FULL-FRAME FIT + R754 STABLE MASTER PRESERVED listening on :${PORT}`);
+  console.log(`ANDRIK Radio R756 FRAME-LOCK 64Q + R755 FULL-FRAME + R754 STABLE MASTER listening on :${PORT}`);
   radioLoop();
 });
 

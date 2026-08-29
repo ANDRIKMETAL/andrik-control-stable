@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788013055158-79e79fda95",
-  "release": "R755",
-  "archiveName": "R755-FULL-FRAME-FIT-NO-CROP-R754-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "da9a84a86c7fb8818c4dc3454e65c4dd7979fcd6",
-  "backupSha": "da9a84a86c7fb8818c4dc3454e65c4dd7979fcd6",
+  "operationId": "publish-1788014466985-cbf093535a",
+  "release": "R756",
+  "archiveName": "R756-FRAME-LOCK-64Q-SUBSCRIBER-PUSH-R755-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "376d71324464fbf47de4fbe4973d83af995a18eb",
+  "backupSha": "376d71324464fbf47de4fbe4973d83af995a18eb",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-29T14:17:35.562Z"
+  "generatedAt": "2026-08-29T14:41:07.354Z"
 }

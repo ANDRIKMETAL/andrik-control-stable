@@ -2588,15 +2588,17 @@ function pushTopicToken(value, fallback = 'andrik-event') {
 // event and an accumulated +N counter inside the notification itself.
 function ownerPushPresentation(history = null, name = '') {
   const type = cleanPlainText(history?.type || '', 80).toLowerCase();
-  // R661: owner events are real-time signals. Do not allow an old comment/like/
-  // subscriber notification to wake up hours later after Android/Chrome resumes.
-  // Daily summary may live for an hour; every other owner event expires in 5 min.
+  // R756: subscriber pushes get their own replacement lane. Previously every owner
+  // event shared `andrik-single-eye`, so a like/comment arriving immediately after +1
+  // could replace the subscriber notification before Android ever showed it.
+  const subscriberEvent = type === 'youtube-subscriber' || type === 'youtube-subscriber-count';
+  const topic = subscriberEvent ? 'andrik-subscriber-eye' : 'andrik-single-eye';
   return {
-    androidGroup: 'andrik-single-eye',
-    threadId: 'andrik-single-eye',
-    collapseId: 'andrik-single-eye',
-    webPushTopic: 'andrik-single-eye',
-    ttl: type === 'daily-summary' ? 3600 : 300
+    androidGroup: topic,
+    threadId: topic,
+    collapseId: topic,
+    webPushTopic: topic,
+    ttl: type === 'daily-summary' ? 3600 : (subscriberEvent ? 900 : 300)
   };
 }
 
@@ -3996,7 +3998,7 @@ async function handleYoutubeWebSubStatusR332(request, env) {
   ];
   const states = {};
   for (const key of keys) states[key] = (await getPushState(db,key).catch(() => null))?.value || '';
-  return json({ok:true,websub:states,fastCronExpression:YOUTUBE_FAST_CRON_R332,engagementCronExpression:YOUTUBE_ENGAGEMENT_CRON_R333,releaseMode:'WebSub + 5m fallback',engagementMode:'comments+likes 2m',subscriberMode:'R331 events <=5m'});
+  return json({ok:true,websub:states,fastCronExpression:YOUTUBE_FAST_CRON_R332,engagementCronExpression:YOUTUBE_ENGAGEMENT_CRON_R333,releaseMode:'WebSub + 5m fallback',engagementMode:'comments+likes 2m',subscriberMode:'R756 count check <=2m + dedicated subscriber push lane'});
 }
 
 async function handleYoutubeWebSubVerifyR332(request, env, ctx) {
@@ -12686,8 +12688,19 @@ async function handleExternalCronGatewayR334(request, env, ctx) {
     if(clock.due2){
       claimed=await claimCronGatewaySlotR334(db,'engagement-2m-r416',clock.slot2);
       if(claimed){
-        task='engagement';
-        value=await responseData(await handleFastYoutubeEngagementR333(request,env,{skipCheckpoint:true}));
+        // R756: subscriber count is one cheap channels.list request. Run it on the same
+        // 2-minute heartbeat as engagement so release/LIVE/summary work in the 5-minute
+        // slice can never starve +1 subscriber notifications. The R658 notified-total
+        // watermark and push-once claim still guarantee no duplicate push.
+        const engagement=await responseData(await handleFastYoutubeEngagementR333(request,env,{skipCheckpoint:true}));
+        const subscriber=await handleFastYoutubeSubscriberCountR416(request,env,{source:'gateway-2m-r756'});
+        task='engagement+subscriber';
+        value={
+          ok:engagement?.ok!==false && subscriber?.ok!==false,
+          mode:'engagement+subscriber-2m-r756',
+          engagement,subscriber,
+          subscribersSent:subscriber?.sent ? Math.max(1,Number(subscriber?.delta||1)) : 0
+        };
       }else value={ok:true,skipped:true,reason:'slot-already-claimed'};
     }else if(clock.due5){
       claimed=await claimCronGatewaySlotR334(db,'five-minute-slice-r416',clock.slot5);
