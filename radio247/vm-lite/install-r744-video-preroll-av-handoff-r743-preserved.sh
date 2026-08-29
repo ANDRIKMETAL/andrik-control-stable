@@ -32,7 +32,7 @@ grep -Fq "h264_mp4toannexb" "$TMP" || { echo 'СТОП: prepared H264 copy по�
 grep -Fq "clipBoundaryReconnect:false" "$TMP" || { echo 'СТОП: ONE RTMPS guard потерян'; exit 3; }
 
 echo '[3/8] Smoke-test prepared H264/no-B-frame + audio…'
-ffmpeg -hide_banner -loglevel error -y \
+ffmpeg -nostdin -hide_banner -loglevel error -y \
   -f lavfi -i 'testsrc2=s=320x180:r=25:d=1' \
   -f lavfi -i 'sine=frequency=660:sample_rate=44100:duration=1' \
   -map 0:v:0 -c:v libx264 -preset ultrafast -tune zerolatency -bf 0 -g 50 -keyint_min 50 -sc_threshold 0 -r 25 -pix_fmt yuv420p -threads 1 \
@@ -45,8 +45,8 @@ ACH="$(ffprobe -v error -select_streams a:0 -show_entries stream=channels -of de
 [ -n "$ACH" ] || { echo 'СТОП: test audio отсутствует'; exit 3; }
 
 echo '[4/8] Проверяю split video/audio чтение…'
-ffmpeg -hide_banner -loglevel error -re -i "$TESTDIR/ready.mp4" -map 0:v:0 -an -c:v copy -bsf:v h264_mp4toannexb -t 0.20 -f h264 "$TESTDIR/v.h264"
-ffmpeg -hide_banner -loglevel error -re -i "$TESTDIR/ready.mp4" -map 0:a:0 -vn -af 'aresample=44100:async=1:first_pts=0,asetpts=PTS-STARTPTS' -c:a pcm_s16le -ar 44100 -ac 2 -t 0.20 -f s16le "$TESTDIR/a.pcm"
+ffmpeg -nostdin -hide_banner -loglevel error -re -i "$TESTDIR/ready.mp4" -map 0:v:0 -an -c:v copy -bsf:v h264_mp4toannexb -t 0.20 -f h264 "$TESTDIR/v.h264"
+ffmpeg -nostdin -hide_banner -loglevel error -re -i "$TESTDIR/ready.mp4" -map 0:a:0 -vn -af 'aresample=44100:async=1:first_pts=0,asetpts=PTS-STARTPTS' -c:a pcm_s16le -ar 44100 -ac 2 -t 0.20 -f s16le "$TESTDIR/a.pcm"
 [ -s "$TESTDIR/v.h264" ] || { echo 'СТОП: video-only copy failed'; exit 3; }
 [ -s "$TESTDIR/a.pcm" ] || { echo 'СТОП: audio-only boundary failed'; exit 3; }
 

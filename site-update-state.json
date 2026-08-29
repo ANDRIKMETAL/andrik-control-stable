@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787978951208-e1219885c0",
+  "operationId": "publish-1787979239533-ac7c1e2ebc",
   "release": "R744",
-  "archiveName": "R744-VIDEO-PREROLL-AV-HANDOFF-R743-PRESERVED-CLEAN-SAFE-FULL.zip",
-  "sourceHead": "7ba62fbf0f6d045a504b7015dbaf5f7608a016cb",
-  "backupSha": "7ba62fbf0f6d045a504b7015dbaf5f7608a016cb",
+  "archiveName": "R744-VIDEO-PREROLL-AV-HANDOFF-R743-PRESERVED-CLEAN-SAFE-FULL-FIXED-INSTALLER.zip",
+  "sourceHead": "52b356f4a4aca5b3379fc47e3d324183ed8eb38d",
+  "backupSha": "52b356f4a4aca5b3379fc47e3d324183ed8eb38d",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-29T04:49:11.583Z"
+  "generatedAt": "2026-08-29T04:53:59.875Z"
 }
