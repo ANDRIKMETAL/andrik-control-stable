@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787951969266-56dc8179e6",
-  "release": "R738",
-  "archiveName": "R738-AV-LOCK-INSERT-AUDIO-EARLY-TITLE-FADE-R737-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "daa46a334f42a2737b513259e3020a883928d980",
-  "backupSha": "daa46a334f42a2737b513259e3020a883928d980",
+  "operationId": "publish-1787969330421-1960303aff",
+  "release": "R739",
+  "archiveName": "R739-TIMELINE-COMP-R738-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "216e2ea08f1480ccb51b82cc2565c83005e9be91",
+  "backupSha": "216e2ea08f1480ccb51b82cc2565c83005e9be91",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-28T21:19:29.686Z"
+  "generatedAt": "2026-08-29T02:08:50.813Z"
 }

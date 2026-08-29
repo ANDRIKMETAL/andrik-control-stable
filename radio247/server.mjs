@@ -63,6 +63,7 @@ const VIDEO_FADE_LEAD_SECONDS_R735 = 3.80; // R738: move the SAFE mask earlier s
 const TITLE_VISUAL_LEAD_SECONDS_R738 = 3.20; // compensate persistent video path latency; CURRENT is preloaded early but appears at the real handoff
 const CLIP_PRE_DRAIN_MS_R738 = 900; // let the bounded MP3 PCM queue drain while the normal visual keeps running
 const CLIP_POST_DRAIN_MS_R738 = 650; // let the clip PCM/video tail drain before the next MP3 feeder starts
+const VIDEO_TIMELINE_COMP_DEFAULT_R739 = Math.max(0,Math.min(20,Number(process.env.VIDEO_TIMELINE_COMP_SECONDS_R739 || 8.0))); // viewer-observed stale-video tail; runtime-adjustable without restart
 // R721 keeps the proven 100-frame / 4-second exact-periodic QTRLE loops from R720.
 // The EQ is encoded inside the current local H264 feeder, while the YouTube RTMPS
 // publisher stays open permanently across MP3, clip and visual-period switches.
@@ -109,13 +110,13 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R738-AV-LOCK-INSERT-AUDIO-EARLY-TITLE-FADE-R737-PRESERVED',
-  mode: 'R738 R737/R732 TRANSPORT PRESERVED + EARLY SAFE FADE/TITLE + CLIP A/V PTS LOCK + INSERT AUDIO HANDOFF',
+  version: 'R739-AUDIO-CLOCK-TIMELINE-COMP-R738-PRESERVED',
+  mode: 'R739 R738/R732 TRANSPORT PRESERVED + AUDIO-CLOCK VISUAL COMP + CLIP A/V LOCK + INSERT AUDIO HANDOFF',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
   producerRunning: false,
-  overlayMode: 'R738 CURRENT PRELOAD 3.20s + ACTUAL NEXT T-8s + SAFE ALPHA MASK EARLY 3.80s + CONTINUOUS BACKGROUND',
+  overlayMode: 'R739 ACTUAL NEXT + SAFE ALPHA MASK + RUNTIME VIDEO TIMELINE COMP + CONTINUOUS BACKGROUND',
   audioMode: 'R732 R729 PCM TRANSPORT + AUDIO QUEUE 8 + R726 LOUDNORM -14 LUFS / ONE RTMPS',
   visualTimeZone: VISUAL_TIME_ZONE,
   visualPeriod: null,
@@ -154,7 +155,9 @@ const state = {
   visualContinuityMode: 'R735-WALLCLOCK-SEEK-CONTINUITY',
   clipAvSyncMode: 'R738-PTS0-ASYNC-FIRSTPTS0',
   clipPreDrainMs: CLIP_PRE_DRAIN_MS_R738,
-  clipPostDrainMs: CLIP_POST_DRAIN_MS_R738
+  clipPostDrainMs: CLIP_POST_DRAIN_MS_R738,
+  videoTimelineCompensationSeconds: VIDEO_TIMELINE_COMP_DEFAULT_R739,
+  videoTimelineCompensationMode: 'R739-RUNTIME-ADJUSTABLE'
 };
 
 let publisher = null;
@@ -194,6 +197,7 @@ let trackUiGenerationR730 = 0;
 const clipPrefetchJobs = new Map();
 const prefetchJobs = new Map();
 const visualContinuityR735 = new Map();
+let videoTimelineCompR739 = VIDEO_TIMELINE_COMP_DEFAULT_R739;
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 function promiseTimeout(promise,ms,label='operation'){
@@ -928,8 +932,11 @@ function titleOverlayFiltersR721({dynamicTitle=true,showPreview=false,previewDur
   const nextPath=ffFilterPath(LIVE_NEXT_FILE_R726);
   const titleReload=dynamicTitle?`:reload=1`:'';
   const d=Math.max(0,Number(previewDuration)||0);
-  const previewStart=Math.max(0,d-NEXT_PREVIEW_SECONDS_R726);
-  const previewEnd=Math.max(previewStart+0.25,d-NEXT_PREVIEW_HIDE_BEFORE_END_R726);
+  // R739: compensate the persistent H264 video tail before it reaches the viewer.
+  // Runtime-adjustable; fine tuning does not need a service restart.
+  const comp=Math.max(0,Number(videoTimelineCompR739)||0);
+  const previewStart=Math.max(0,d-NEXT_PREVIEW_SECONDS_R726-comp);
+  const previewEnd=Math.max(previewStart+0.25,d-NEXT_PREVIEW_HIDE_BEFORE_END_R726-comp);
   const previewEnable=showPreview&&d>NEXT_PREVIEW_SECONDS_R726+0.5
     ? `:enable='between(t\,${previewStart.toFixed(3)}\,${previewEnd.toFixed(3)})'`
     : `:enable='0'`;
@@ -966,7 +973,8 @@ function normalVideoFilterComplexR721({fadeIn=false,trackDuration=0}={}){
   let maskChain='';
   let finalChain='[ctabase]format=yuv420p[outv]';
   if(Number(trackDuration)>VIDEO_FADE_SECONDS_R726+VIDEO_BLACK_HOLD_SECONDS_R736+VIDEO_FADE_IN_SECONDS_R736+VIDEO_FADE_LEAD_SECONDS_R735+1){
-    const outAt=Math.max(0,Number(trackDuration)-VIDEO_FADE_SECONDS_R726-VIDEO_BLACK_HOLD_SECONDS_R736-VIDEO_FADE_LEAD_SECONDS_R735);
+    const comp=Math.max(0,Number(videoTimelineCompR739)||0);
+    const outAt=Math.max(0,Number(trackDuration)-VIDEO_FADE_SECONDS_R726-VIDEO_BLACK_HOLD_SECONDS_R736-VIDEO_FADE_LEAD_SECONDS_R735-comp);
     const recoverAt=outAt+VIDEO_FADE_SECONDS_R726+VIDEO_BLACK_HOLD_SECONDS_R736;
     maskChain=`color=c=black@1.0:s=1920x1080:r=${VIDEO_FPS},format=yuva420p,fade=t=in:st=${outAt.toFixed(3)}:d=${VIDEO_FADE_SECONDS_R726.toFixed(2)}:alpha=1,fade=t=out:st=${recoverAt.toFixed(3)}:d=${VIDEO_FADE_IN_SECONDS_R736.toFixed(2)}:alpha=1[blackmask];`;
     finalChain='[ctabase][blackmask]overlay=x=0:y=0:shortest=1:format=yuv420,format=yuv420p[outv]';
@@ -1434,7 +1442,7 @@ async function playItem(previous,item,next,following,localAudioPath,nextTrackPre
   // their deliberate PCM-drain pause so the title still lands on the visible handoff.
   if(actualNextR736){
     const videoPauseSeconds=isVideoHandoffR738(actualNextR736)?CLIP_PRE_DRAIN_MS_R738/1000:0;
-    const preloadLead=Math.max(0.25,TITLE_VISUAL_LEAD_SECONDS_R738-videoPauseSeconds);
+    const preloadLead=Math.max(0.25,TITLE_VISUAL_LEAD_SECONDS_R738+Math.max(0,Number(videoTimelineCompR739)||0)-videoPauseSeconds);
     const preloadDelayMs=Math.max(0,Math.round((duration-preloadLead)*1000));
     setLiveTitleR724(currentOverlayTextR738(actualNextR736),{delayMs:preloadDelayMs});
   }
@@ -1653,6 +1661,8 @@ function publicStatus(){
       videoBlackHoldSeconds:VIDEO_BLACK_HOLD_SECONDS_R736,
       videoFadeLeadSeconds:VIDEO_FADE_LEAD_SECONDS_R735,
       titleVisualLeadSeconds:TITLE_VISUAL_LEAD_SECONDS_R738,
+      videoTimelineCompensationSeconds:videoTimelineCompR739,
+      videoTimelineCompensationMode:'R739-RUNTIME-ADJUSTABLE',
       clipAvSyncMode:'PTS0+ARESAMPLE_ASYNC_FIRSTPTS0_R738',
       clipPreDrainMs:CLIP_PRE_DRAIN_MS_R738,
       clipPostDrainMs:CLIP_POST_DRAIN_MS_R738,
@@ -1717,6 +1727,20 @@ function publicStatus(){
   };
 }
 
+
+function setTimelineCompensationR739(seconds){
+  const value=Number(seconds);
+  if(!Number.isFinite(value))throw new Error('timeline seconds must be numeric');
+  videoTimelineCompR739=Math.max(0,Math.min(20,value));
+  state.videoTimelineCompensationSeconds=videoTimelineCompR739;
+  return ensureNormalVideoFeederR721({force:true}).then(()=>({
+    ok:true,
+    seconds:videoTimelineCompR739,
+    publisherRestarted:false,
+    audioRestarted:false
+  }));
+}
+
 const server=http.createServer((req,res)=>{
   const url=new URL(req.url||'/',`http://${req.headers.host||'localhost'}`);
   const headers={
@@ -1740,6 +1764,7 @@ const server=http.createServer((req,res)=>{
       if(url.pathname==='/control/visual-now')result=await applyVisualModeR721({slot:url.searchParams.get('slot')||''});
       else if(url.pathname==='/control/visual-auto')result=await applyVisualModeR721({auto:true});
       else if(url.pathname==='/control/full-fit')result=await ensureNormalVideoFeederR721({force:true}).then(()=>({ok:true,noCrop:true,restartedPublisher:false}));
+      else if(url.pathname==='/control/timeline-offset')result=await setTimelineCompensationR739(url.searchParams.get('seconds'));
       else throw new Error('unknown local control');
       res.writeHead(200,headers);res.end(JSON.stringify(result));
     })().catch(error=>{res.writeHead(500,headers);res.end(JSON.stringify({ok:false,error:cleanText(error?.message||error)}));});
