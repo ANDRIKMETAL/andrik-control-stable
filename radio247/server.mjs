@@ -145,7 +145,7 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R753-CLIP-TO-MP3-SINGLE-HANDOFF-STATION-LABEL-FADE-R752-PRESERVED',
+  version: 'R754-MP3-BOUNDARY-STABLE-MASTER-ENCODER-FIFO-FIRST-R753-PRESERVED',
   mode: 'R753 SINGLE CLIP→MP3 HANDOFF + STATION LABEL + START FADE + R752/R751/R750/R749/R748/R746 PRESERVED',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
@@ -1461,7 +1461,7 @@ function h264EncoderArgsR721(){
     '-c:v','libx264','-preset','ultrafast','-tune','zerolatency',
     '-profile:v','high','-level:v','4.1',
     '-b:v',VIDEO_BITRATE,'-minrate',VIDEO_BITRATE,'-maxrate',VIDEO_BITRATE,'-bufsize','9000k',
-    '-x264-params',`nal-hrd=cbr:force-cfr=1:repeat-headers=1:keyint=${VIDEO_GOP}:min-keyint=${VIDEO_GOP}:scenecut=0`,
+    '-x264-params',`nal-hrd=cbr:force-cfr=1:repeat-headers=1:aud=1:keyint=${VIDEO_GOP}:min-keyint=${VIDEO_GOP}:scenecut=0`,
     '-g',String(VIDEO_GOP),'-keyint_min',String(VIDEO_GOP),'-sc_threshold','0','-bf','0','-refs','1','-coder','1',
     '-r',String(VIDEO_FPS),'-pix_fmt','yuv420p'
   ];
@@ -1476,16 +1476,22 @@ function scheduleTransportSelfHealR746(rawLine,thisPublisher){
   state.transportSelfHealCount=Number(state.transportSelfHealCount||0)+1;
   state.lastTransportFatalAt=new Date().toISOString();
   state.lastTransportFatalReason=line.slice(-900);
-  state.lastError=`R746 RTMPS/TLS fatal: ${line.slice(-650)}`;
-  if(transportFatalTimerR746)return true;
-  console.error('[r746-transport-watchdog] fatal RTMPS/TLS detected; full service self-heal scheduled:',line);
+  state.lastError=`R754 RTMPS/TLS transient: ${line.slice(-650)}`;
+  // R754: FFmpeg's fifo muxer already has attempt_recovery/recover_any_error enabled.
+  // R746 used to kill the whole service ~3.5 s after the first Broken pipe, which threw
+  // away the fifo muxer's own reconnect attempt and restarted the MP3/visual unnecessarily.
+  // From R754 the fifo gets first right of recovery. If the master truly cannot recover,
+  // it exits on its own and the existing publisher 'exit' handler lets systemd rebuild it.
+  if(transportFatalTimerR746)clearTimeout(transportFatalTimerR746);
+  console.error('[r754-transport-fifo-first] transient RTMPS/TLS error; keeping master alive for fifo recovery:',line);
   transportFatalTimerR746=setTimeout(()=>{
     transportFatalTimerR746=null;
     if(stopping || publisher!==thisPublisher || thisPublisher?.exitCode!==null)return;
-    state.lastExit={layer:'r746-rtmps-tls-watchdog',code:75,signal:null,at:new Date().toISOString()};
-    console.error('[r746-transport-watchdog] exiting with code 75 so systemd rebuilds RTMPS/TLS session');
-    process.exit(75);
-  },TRANSPORT_FATAL_RESTART_DELAY_MS_R746);
+    state.transportHealthy=true;
+    state.transportSelfHealPending=false;
+    state.lastWarning='R754: RTMPS/TLS error window passed; persistent fifo/master stayed alive';
+    console.error('[r754-transport-fifo-first] persistent master survived recovery window; no track restart');
+  },12000);
   transportFatalTimerR746.unref?.();
   return true;
 }
@@ -1566,8 +1572,11 @@ function startPublisher(){
     '-thread_queue_size',String(VIDEO_INPUT_QUEUE_PACKETS_R732),'-fflags','+genpts+discardcorrupt','-framerate',String(VIDEO_FPS),'-f','h264','-i','pipe:4',
     '-thread_queue_size',String(AUDIO_INPUT_QUEUE_PACKETS_R732),'-f','s16le','-ar',String(AUDIO_SAMPLE_RATE),'-ac','2','-i','pipe:3',
     '-map','0:v:0','-map','1:a:0',
-    '-c:v','copy',
-    '-bsf:v',`setts=time_base=1/${VIDEO_FPS}:pts=N:dts=N:duration=1`,
+    // R754: the master owns the ONE continuous YouTube H264 encoder. Feeders may restart
+    // for title/fade timing, but their elementary-stream boundaries are decoded here and
+    // never exposed directly to RTMPS. This isolates YouTube from MP3→MP3 feeder splices.
+    '-vf',`fps=${VIDEO_FPS},format=yuv420p`,
+    ...h264EncoderArgsR721(),
     '-c:a','aac','-profile:a','aac_low','-b:a',AUDIO_BITRATE,'-ar',String(AUDIO_SAMPLE_RATE),'-ac','2',
     '-max_muxing_queue_size','4096','-flush_packets','1',
     '-f','fifo','-fifo_format','flv','-queue_size',String(OUTPUT_FIFO_QUEUE_PACKETS_R750),
@@ -1652,10 +1661,18 @@ async function stopNormalVideoFeederR721(){
   const active=videoFeeder;
   if(!active)return;
   const videoSink=publisher?.stdio?.[4];
+  // R754: do not cut the Annex-B stream in the middle of a NAL unit at MP3 boundaries.
+  // Ask FFmpeg to stop cleanly while it is still connected, so it can flush the current
+  // encoded access unit. Only detach the pipe after the child has had a short clean-exit
+  // window. This prevents a malformed H264 splice from reaching the persistent master.
+  if(active.exitCode===null){
+    try{active.kill('SIGINT')}catch(_){ }
+    await waitChildExit(active,900);
+  }
   try{if(active.stdout&&videoSink)active.stdout.unpipe(videoSink)}catch(_){ }
   if(active.exitCode===null){
     try{active.kill('SIGTERM')}catch(_){ }
-    if(!(await waitChildExit(active,1800)) && active.exitCode===null){
+    if(!(await waitChildExit(active,900)) && active.exitCode===null){
       try{active.kill('SIGKILL')}catch(_){ }
       await waitChildExit(active,250);
     }
@@ -2457,8 +2474,8 @@ function publicStatus(){
     mode:state.mode,
     overlayMode:state.overlayMode,
     audioMode:state.audioMode,
-    engine:'R753-CLIP-TO-MP3-SINGLE-HANDOFF-R752-R751-R750-R749-R748-R746',
-    videoPipeline:'R753 SINGLE CLIP→MP3 FEEDER + R752 NO-LIVE-PREROLL UNIFIED CLIP A/V',
+    engine:'R754-STABLE-MASTER-ENCODER-FIFO-FIRST-R753-R752-R751-R750-R749-R748',
+    videoPipeline:'R754 PERSISTENT MASTER X264 + R753 SINGLE CLIP→MP3 + R752 UNIFIED CLIP A/V',
     outputTimeshiftSeconds:OUTPUT_TIMESHIFT_SECONDS,
     videoBitrate:VIDEO_BITRATE,
     audioBitrate:AUDIO_BITRATE,
@@ -2564,8 +2581,11 @@ function publicStatus(){
     equalizerStyle:state.equalizerStyle,
     equalizerEngine:state.equalizerEngine,
     publisherRunning:state.publisherRunning,
+    masterVideoMode:'R754-PERSISTENT-X264-REENCODE-ISOLATES-FEEDER-SPLICES',
+    feederBoundaryMode:'R754-GRACEFUL-SIGINT-FLUSH+AUD',
+    transportRecoveryMode:'R754-FFMPEG-FIFO-FIRST-NO-EARLY-SYSTEMD-EXIT',
     transportHealthy:state.transportHealthy!==false,
-    transportWatchdogMode:'R751-PROGRESS-AWARE-BACKPRESSURE-30S+R750-FIFO+R746-RTMPS-TLS',
+    transportWatchdogMode:'R754-FIFO-FIRST-RTMPS+R751-NO-PROGRESS-30S',
     outputFifoQueuePackets:OUTPUT_FIFO_QUEUE_PACKETS_R750,
     outputDropPacketsOnOverflow:true,
     masterBackpressureWatchdogMs:MASTER_BACKPRESSURE_STUCK_MS_R750,
@@ -2708,7 +2728,7 @@ const server=http.createServer((req,res)=>{
 });
 
 server.listen(PORT,'0.0.0.0',()=>{
-  console.log(`ANDRIK Radio R753 CLIP→MP3 SINGLE HANDOFF + R752 PRESERVED listening on :${PORT}`);
+  console.log(`ANDRIK Radio R754 STABLE MASTER ENCODER + FIFO-FIRST RTMPS + R753 PRESERVED listening on :${PORT}`);
   radioLoop();
 });
 

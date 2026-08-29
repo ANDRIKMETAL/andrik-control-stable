@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788010116903-d450a366eb",
-  "release": "R753",
-  "archiveName": "R753-CLIP-TO-MP3-SINGLE-HANDOFF-STATION-LABEL-FADE-R752-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "aad85f9f362c73c647058fa99b9a50a5f484c197",
-  "backupSha": "aad85f9f362c73c647058fa99b9a50a5f484c197",
+  "operationId": "publish-1788011017045-af4b9d847d",
+  "release": "R754",
+  "archiveName": "R754-MP3-BOUNDARY-STABLE-MASTER-ENCODER-FIFO-FIRST-R753-PRESERVED-SAFE-FULL-1.zip",
+  "sourceHead": "8099bf2d2edb6622b90ce69c33ff8857615e9d65",
+  "backupSha": "8099bf2d2edb6622b90ce69c33ff8857615e9d65",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-29T13:28:37.350Z"
+  "generatedAt": "2026-08-29T13:43:37.562Z"
 }
