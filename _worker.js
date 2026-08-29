@@ -17260,7 +17260,10 @@ async function handleMusicMp3PutR314(request, env) {
   // A successful single upload is a release action: publish one deduplicated
   // broadcast notification. Push failure never rolls back the MP3 upload.
   let releasePush=null;
-  if(folder==='singles'){
+  const radioQuickUpload=url.searchParams.get('radio')==='1';
+  // R741: quick MP3 upload from Radio Control must add the file to the radio library
+  // without sending a public "new single" push notification.
+  if(folder==='singles' && !radioQuickUpload){
     releasePush=await publishSingleReleaseR616(env,{key,title:metadata.title||name,url:`https://music.andrikmetal.com/${key}`,publishedAt}).catch(error=>({ok:false,error:cleanPlainText(error?.message||error,300)}));
   }
   return json({ok:true,key,url:`https://music.andrikmetal.com/${key}`,size:body.byteLength,metadata,releasePush});

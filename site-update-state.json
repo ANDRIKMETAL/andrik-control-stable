@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1787969779839-a8588c2dba",
-  "release": "R740",
-  "archiveName": "R740-REMOVE-RADIO-EXPLANATION-R739-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "89febd8ffe949c7eab706cfca141b802726a68cd",
-  "backupSha": "89febd8ffe949c7eab706cfca141b802726a68cd",
+  "operationId": "publish-1787971551307-3a4ccb0931",
+  "release": "R742",
+  "archiveName": "R742-PREPARED-CLIP-COPY-YOUTUBE-HEALTH-R741-R739-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "2c5a01cb46e5f9eef8f3acd7371878f03a874fcf",
+  "backupSha": "2c5a01cb46e5f9eef8f3acd7371878f03a874fcf",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-29T02:16:19.839Z"
+  "generatedAt": "2026-08-29T02:45:51.695Z"
 }

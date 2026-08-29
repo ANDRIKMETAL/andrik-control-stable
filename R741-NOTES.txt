@@ -1,0 +1,8 @@
+R741 UI COMPACT QUICK UPLOAD
+
+- Radio Control: Last command card removed.
+- New compact Upload to Radio panel: MP4 clip + MP3.
+- Quick MP3 upload suppresses public release push (radio=1).
+- Radio Visuals: explanations removed; R2 library, bumpers, 30m/60m specials, clips collapsed under spoilers.
+- False "needs R691+" warning fixed for R739+ radio versions.
+- Radio engine / OVH server.mjs is unchanged from R739. No transport restart required.

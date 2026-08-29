@@ -64,6 +64,9 @@ const TITLE_VISUAL_LEAD_SECONDS_R738 = 3.20; // compensate persistent video path
 const CLIP_PRE_DRAIN_MS_R738 = 900; // let the bounded MP3 PCM queue drain while the normal visual keeps running
 const CLIP_POST_DRAIN_MS_R738 = 650; // let the clip PCM/video tail drain before the next MP3 feeder starts
 const VIDEO_TIMELINE_COMP_DEFAULT_R739 = Math.max(0,Math.min(20,Number(process.env.VIDEO_TIMELINE_COMP_SECONDS_R739 || 8.0))); // viewer-observed stale-video tail; runtime-adjustable without restart
+const CLIP_PREP_NICE_R742 = 12; // background clip preparation yields CPU to the live stream
+const CLIP_PREP_TIMEOUT_MS_R742 = 45*60*1000;
+const CLIP_PREP_MIN_BYTES_R742 = 500000; // prepared 1080p H264+AAC cache sanity check
 // R721 keeps the proven 100-frame / 4-second exact-periodic QTRLE loops from R720.
 // The EQ is encoded inside the current local H264 feeder, while the YouTube RTMPS
 // publisher stays open permanently across MP3, clip and visual-period switches.
@@ -110,13 +113,13 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R739-AUDIO-CLOCK-TIMELINE-COMP-R738-PRESERVED',
-  mode: 'R739 R738/R732 TRANSPORT PRESERVED + AUDIO-CLOCK VISUAL COMP + CLIP A/V LOCK + INSERT AUDIO HANDOFF',
+  version: 'R742-PREPARED-CLIP-COPY-YOUTUBE-HEALTH-R739-PRESERVED',
+  mode: 'R742 R739/R738/R732 PRESERVED + PREPARED H264 CLIP CACHE + LOW-CPU LIVE COPY + A/V LOCK',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
   producerRunning: false,
-  overlayMode: 'R739 ACTUAL NEXT + SAFE ALPHA MASK + RUNTIME VIDEO TIMELINE COMP + CONTINUOUS BACKGROUND',
+  overlayMode: 'R742 R739 ACTUAL NEXT + SAFE ALPHA MASK + RUNTIME TIMELINE COMP + PREPARED CLIPS',
   audioMode: 'R732 R729 PCM TRANSPORT + AUDIO QUEUE 8 + R726 LOUDNORM -14 LUFS / ONE RTMPS',
   visualTimeZone: VISUAL_TIME_ZONE,
   visualPeriod: null,
@@ -157,7 +160,12 @@ const state = {
   clipPreDrainMs: CLIP_PRE_DRAIN_MS_R738,
   clipPostDrainMs: CLIP_POST_DRAIN_MS_R738,
   videoTimelineCompensationSeconds: VIDEO_TIMELINE_COMP_DEFAULT_R739,
-  videoTimelineCompensationMode: 'R739-RUNTIME-ADJUSTABLE'
+  videoTimelineCompensationMode: 'R739-RUNTIME-ADJUSTABLE',
+  clipPlaybackMode: 'R742-PREPARED-H264-COPY',
+  clipPreparationMode: 'R742-SERIAL-NICE12-ONE-THREAD',
+  preparedClipReady: 0,
+  preparedClipPending: 0,
+  preparedClipLast: ''
 };
 
 let publisher = null;
@@ -198,6 +206,9 @@ const clipPrefetchJobs = new Map();
 const prefetchJobs = new Map();
 const visualContinuityR735 = new Map();
 let videoTimelineCompR739 = VIDEO_TIMELINE_COMP_DEFAULT_R739;
+const preparedClipJobsR742 = new Map();
+let preparedClipSerialR742 = Promise.resolve();
+let preparedClipPendingR742 = 0;
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 function promiseTimeout(promise,ms,label='operation'){
@@ -477,10 +488,10 @@ async function loadRadioClipsR691(){
   state.librarySpecial=(specialInsertR726?1:0)+(specialHourlyInsertR727?1:0);
   state.librarySpecial30=specialInsertR726?1:0;
   state.librarySpecial60=specialHourlyInsertR727?1:0;
-  clipLibrary.forEach(prefetchClip);
-  bumperLibrary.forEach(prefetchClip);
-  if(specialInsertR726)prefetchClip(specialInsertR726);
-  if(specialHourlyInsertR727)prefetchClip(specialHourlyInsertR727);
+  clipLibrary.forEach(prefetchClip); // download only; prepare normal clips only when they approach the queue
+  bumperLibrary.forEach(prefetchPreparedClipR742); // short station inserts are cheap to prepare ahead
+  if(specialInsertR726)prefetchPreparedClipR742(specialInsertR726);
+  if(specialHourlyInsertR727)prefetchPreparedClipR742(specialHourlyInsertR727);
   return clipLibrary;
 }
 
@@ -794,6 +805,122 @@ async function downloadRadioClipR691(item){
 function prefetchClip(item){
   if(!item?.url)return;
   downloadRadioClipR691(item).catch(error=>console.error('[clip-prefetch]',cleanText(error?.message||error)));
+}
+
+
+function preparedClipPathR742(sourcePath){
+  return String(sourcePath).replace(/\.mp4$/i,'')+'.r742-ready.mp4';
+}
+function preparedClipValidR742(sourcePath,readyPath=preparedClipPathR742(sourcePath)){
+  try{
+    if(!existsSync(sourcePath)||!existsSync(readyPath))return false;
+    const src=statSync(sourcePath), out=statSync(readyPath);
+    return out.size>CLIP_PREP_MIN_BYTES_R742 && out.mtimeMs>=src.mtimeMs;
+  }catch(_){return false}
+}
+function preparedClipTitleFileR742(readyPath){return readyPath+'.title.txt';}
+function preparedClipTickerFileR742(readyPath){return readyPath+'.ticker.txt';}
+function preparedClipFilterComplexR742(titleFile,tickerFile,{stationInsert=false}={}){
+  const font=chooseFont();
+  const titleFont=chooseTitleFont();
+  const fontPart=font?`fontfile='${ffFilterPath(font)}':`:'';
+  const titleFontPart=titleFont?`fontfile='${ffFilterPath(titleFont)}':`:'';
+  const titlePath=ffFilterPath(titleFile);
+  const tickerPath=ffFilterPath(tickerFile);
+  const base=[
+    'setpts=PTS-STARTPTS',
+    'scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos',
+    'pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black',
+    'setsar=1',`fps=${VIDEO_FPS}`,'format=yuv420p'
+  ];
+  if(!stationInsert){
+    base.push(
+      'drawbox=x=0:y=ih-204:w=iw:h=88:color=black@0.38:t=fill',
+      'drawbox=x=92:y=ih-208:w=iw-184:h=4:color=0xE00026@0.96:t=fill',
+      `drawtext=${titleFontPart}textfile='${titlePath}':fontcolor=white@0.01:fontsize=58:x=(w-text_w)/2:y=h-188:borderw=8:bordercolor=black@0.92`,
+      `drawtext=${titleFontPart}textfile='${titlePath}':fontcolor=0xF8F4EE:fontsize=58:x=(w-text_w)/2:y=h-188:borderw=4:bordercolor=0xD60024@1:shadowcolor=black@1:shadowx=4:shadowy=4`,
+      `drawtext=${fontPart}textfile='${tickerPath}':fontcolor=yellow:fontsize=28:x='w-mod(t*110,text_w+w)':y=h-58:borderw=3:bordercolor=black@1:shadowcolor=black@1:shadowx=2:shadowy=2`
+    );
+  }
+  return `[0:v]${base.join(',')}[base];[1:v]scale=160:160:flags=lanczos,format=yuva420p[qr];[base][qr]overlay=x=W-w-24:y=24:shortest=1:format=yuv420,format=yuv420p[outv]`;
+}
+async function buildPreparedClipR742(item,sourcePath){
+  const readyPath=preparedClipPathR742(sourcePath);
+  if(preparedClipValidR742(sourcePath,readyPath))return readyPath;
+  const hasAudio=await probeHasAudioR721(sourcePath);
+  const stationInsert=item?.sourceType==='radio-bumper'||String(item?.sourceType||'').startsWith('radio-special');
+  if(stationInsert&&!hasAudio)throw new Error(`R742 station insert audio missing: ${shortText(item?.title||'INSERT',40)}`);
+  const duration=await probeDuration(sourcePath);
+  const titleFile=preparedClipTitleFileR742(readyPath);
+  const tickerFile=preparedClipTickerFileR742(readyPath);
+  try{writeFileSync(titleFile,stationInsert?'ANDRIK METAL RADIO':`КЛИП • ANDRIK — ${shortText(item?.title||'VIDEO',34)}`,'utf8')}catch(_){ }
+  let ticker=DEFAULT_LIVE_TICKER;
+  try{ticker=cleanText(readFileSync(LIVE_TICKER_FILE,'utf8'))||DEFAULT_LIVE_TICKER}catch(_){ }
+  try{writeFileSync(tickerFile,ticker,'utf8')}catch(_){ }
+  const tmp=readyPath+`.part-${process.pid}-${Date.now()}.mp4`;
+  const args=[
+    '-hide_banner','-loglevel','warning','-y','-filter_complex_threads','1','-fflags','+genpts+discardcorrupt','-err_detect','ignore_err','-i',sourcePath,
+    '-loop','1','-framerate','1','-i',QR_OVERLAY
+  ];
+  if(!hasAudio)args.push('-f','lavfi','-i',`anullsrc=r=${AUDIO_SAMPLE_RATE}:cl=stereo`);
+  args.push(
+    '-filter_complex',preparedClipFilterComplexR742(titleFile,tickerFile,{stationInsert}),
+    '-map','[outv]',...h264EncoderArgsR721(),'-threads','1',
+    '-map',hasAudio?'0:a:0':'2:a:0','-af',`aresample=${AUDIO_SAMPLE_RATE}:async=1:first_pts=0,asetpts=PTS-STARTPTS`,
+    '-c:a','aac','-profile:a','aac_low','-b:a',AUDIO_BITRATE,'-ar',String(AUDIO_SAMPLE_RATE),'-ac','2',
+    '-t',String(Math.max(0.5,duration)),'-movflags','+faststart','-max_muxing_queue_size','4096',tmp
+  );
+  try{
+    await runCapture('nice',['-n',String(CLIP_PREP_NICE_R742),'ffmpeg',...args],{timeoutMs:CLIP_PREP_TIMEOUT_MS_R742});
+    if(!existsSync(tmp)||statSync(tmp).size<CLIP_PREP_MIN_BYTES_R742)throw new Error('R742 prepared clip too small');
+    renameSync(tmp,readyPath);
+    state.preparedClipLast=shortText(item?.title||sourcePath.split('/').pop(),52);
+    return readyPath;
+  }finally{
+    try{if(existsSync(tmp))unlinkSync(tmp)}catch(_){ }
+  }
+}
+async function ensurePreparedClipR742(item){
+  const sourcePath=await downloadRadioClipR691(item);
+  const readyPath=preparedClipPathR742(sourcePath);
+  if(preparedClipValidR742(sourcePath,readyPath))return readyPath;
+  if(preparedClipJobsR742.has(readyPath))return preparedClipJobsR742.get(readyPath);
+  preparedClipPendingR742++;
+  state.preparedClipPending=preparedClipPendingR742;
+  const job=preparedClipSerialR742=preparedClipSerialR742.catch(()=>{}).then(()=>buildPreparedClipR742(item,sourcePath));
+  preparedClipJobsR742.set(readyPath,job);
+  try{return await job}
+  finally{
+    preparedClipJobsR742.delete(readyPath);
+    preparedClipPendingR742=Math.max(0,preparedClipPendingR742-1);
+    state.preparedClipPending=preparedClipPendingR742;
+    try{
+      state.preparedClipReady=readdirSync(CLIP_CACHE_DIR).filter(n=>n.endsWith('.r742-ready.mp4')).length;
+    }catch(_){ }
+  }
+}
+function prefetchPreparedClipR742(item){
+  if(!item?.url)return;
+  ensurePreparedClipR742(item).catch(error=>console.error('[clip-prepare-r742]',cleanText(error?.message||error)));
+}
+function preparedClipReadyNowR742(item){
+  try{
+    const sourcePath=clipCachePathR691(item);
+    const readyPath=preparedClipPathR742(sourcePath);
+    return preparedClipValidR742(sourcePath,readyPath)?readyPath:'';
+  }catch(_){return ''}
+}
+function clipPreparedFeederArgsR742(readyPath,{hasAudio=true,duration=0}={}){
+  const args=[
+    '-hide_banner','-loglevel','warning','-stats_period','0.5','-progress','pipe:4','-nostats',
+    '-fflags','+genpts+discardcorrupt','-err_detect','ignore_err','-re','-i',readyPath,
+    '-map','0:v:0','-an','-sn','-dn','-c:v','copy','-bsf:v','h264_mp4toannexb','-f','h264','pipe:1',
+    '-map',hasAudio?'0:a:0':'0:a:0','-vn','-sn','-dn',
+    '-af',`aresample=${AUDIO_SAMPLE_RATE}:async=1:first_pts=0,asetpts=PTS-STARTPTS`,'-c:a','pcm_s16le','-ar',String(AUDIO_SAMPLE_RATE),'-ac','2'
+  ];
+  if(duration>0)args.push('-t',String(Math.max(0.5,duration)));
+  args.push('-f','s16le','pipe:3');
+  return args;
 }
 
 function localHourInTimeZone(timeZone=VISUAL_TIME_ZONE){
@@ -1249,15 +1376,23 @@ async function stopClipFeederR721(child,videoSink,audioSink){
 }
 
 async function playVideoClipR691(previous,item,next){
-  let clipPath='';
-  try{clipPath=await downloadRadioClipR691(item)}
-  catch(error){
+  let clipPath='',readyPath='';
+  try{
+    clipPath=await downloadRadioClipR691(item);
+    readyPath=preparedClipReadyNowR742(item);
+    if(!readyPath){
+      prefetchPreparedClipR742(item);
+      state.lastError=`R742 clip deferred until prepared cache is ready: ${shortText(item?.title||'VIDEO',40)}`;
+      console.error('[clip-deferred-r742]',state.lastError);
+      return false;
+    }
+  }catch(error){
     state.lastError=`VIDEO clip cache: ${cleanText(error?.message||error)}`;
     console.error('[video-clip]',state.lastError);
     return false;
   }
-  const duration=await probeDuration(clipPath).catch(()=>0);
-  const hasAudio=await probeHasAudioR721(clipPath);
+  const duration=await probeDuration(readyPath).catch(()=>0);
+  const hasAudio=await probeHasAudioR721(readyPath);
   const stationInsert=item.sourceType==='radio-bumper'||String(item.sourceType||'').startsWith('radio-special');
   if(stationInsert && !hasAudio){
     state.lastError=`R738 station insert skipped: audio stream missing in ${shortText(item.title||'INSERT',40)}`;
@@ -1285,9 +1420,10 @@ async function playVideoClipR691(previous,item,next){
     state.current={type:String(item.sourceType||'').startsWith('radio-special')?'special':(item.sourceType==='radio-bumper'?'bumper':'clip'),title:item.title,album:item.album,url:item.url,startedAt:new Date().toISOString(),duration};
     state.next=next?{type:next.type||'track',title:next.title,album:next.album||'',url:next.url||''}:null;
 
-    child=spawn('ffmpeg',clipFeederArgsR721(clipPath,{hasAudio,duration,isStationInsert:stationInsert}),{stdio:['ignore','pipe','pipe','pipe','pipe']});
+    child=spawn('ffmpeg',clipPreparedFeederArgsR742(readyPath,{hasAudio,duration}),{stdio:['ignore','pipe','pipe','pipe','pipe']});
     clipPublisher=child;
     state.producerRunning=true;
+    state.clipPlaybackMode='R742-PREPARED-H264-COPY';
     child.stdout.pipe(videoSink,{end:false});
     child.stdio[3].pipe(audioSink,{end:false});
     state.current.startedAt=new Date().toISOString();
@@ -1523,7 +1659,7 @@ async function radioLoop(){
             continue;
           }
         }
-        if(following?.type==='track')prefetchTrack(following);else if(following?.type==='clip')prefetchClip(following);
+        if(following?.type==='track')prefetchTrack(following);else if(following?.type==='clip')prefetchPreparedClipR742(following);
         const clipPlayed=await playVideoClipR691(lastPlayed,item,next);
         lastPlayed=item;
         queueIndex++;
@@ -1532,8 +1668,8 @@ async function radioLoop(){
       }
 
       const localAudioPath=await downloadTrackToCache(item);
-      if(next?.type==='track')prefetchTrack(next);else if(next?.type==='clip')prefetchClip(next);
-      if(following?.type==='track')prefetchTrack(following);else if(following?.type==='clip')prefetchClip(following);
+      if(next?.type==='track')prefetchTrack(next);else if(next?.type==='clip')prefetchPreparedClipR742(next);
+      if(following?.type==='track')prefetchTrack(following);else if(following?.type==='clip')prefetchPreparedClipR742(following);
       const keep=[localAudioPath];
       if(next?.type==='track')keep.push(audioCachePath(next));
       if(following?.type==='track')keep.push(audioCachePath(following));
@@ -1628,8 +1764,8 @@ function publicStatus(){
     mode:state.mode,
     overlayMode:state.overlayMode,
     audioMode:state.audioMode,
-    engine:'R738-R732-PERSISTENT-H264-RELAY-BOUNDED-AUDIO-CLOCK-CLIP-PTS0',
-    videoPipeline:'R738 R737 SAFE ALPHA + EARLIER LEAD + DYNAMIC CURRENT / R732 TRANSPORT / ONE RTMPS',
+    engine:'R742-R739-R732-PERSISTENT-H264-RELAY-PREPARED-CLIP-COPY',
+    videoPipeline:'R742 PREPARED CLIP H264 COPY + R739 SAFE TIMELINE / R732 TRANSPORT / ONE RTMPS',
     outputTimeshiftSeconds:OUTPUT_TIMESHIFT_SECONDS,
     videoBitrate:VIDEO_BITRATE,
     audioBitrate:AUDIO_BITRATE,
@@ -1668,6 +1804,13 @@ function publicStatus(){
       clipPostDrainMs:CLIP_POST_DRAIN_MS_R738,
       stationInsertAudioRequired:true,
       nextPreviewSource:'ACTUAL_IMMEDIATE_ITEM_R738',
+      clipPlaybackMode:state.clipPlaybackMode||'R742-PREPARED-H264-COPY',
+      clipPreparationMode:state.clipPreparationMode||'R742-SERIAL-NICE12-ONE-THREAD',
+      preparedClipReady:state.preparedClipReady||0,
+      preparedClipPending:state.preparedClipPending||0,
+      preparedClipLast:state.preparedClipLast||'',
+      clipLiveVideoCodec:'copy',
+      clipPreparedVideoCodec:'libx264-ultrafast-no-bframes',
     visualTimelineAnchor:'PTS-STARTPTS-R733',
     visualContinuityMode:state.visualContinuityMode,
     visualLoopOffsetSeconds:state.visualLoopOffsetSeconds,
