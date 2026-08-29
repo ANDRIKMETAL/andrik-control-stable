@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788019767127-27dc21e9e5",
-  "release": "R763",
-  "archiveName": "R763-EARLY-FADE-LONGER-BRIGHTEN-R762-QUALITY-R761-STABILITY-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "078a93d2ed44dc09f5c76152f026e63c6ea452dd",
-  "backupSha": "078a93d2ed44dc09f5c76152f026e63c6ea452dd",
+  "operationId": "publish-1788021080802-310441c006",
+  "release": "R764",
+  "archiveName": "R764-CLIP-COMMIT-GATE-BUMPER-3-4-R763-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "67e59968e4e4f9cc12b3de6f82354f319dfd697b",
+  "backupSha": "67e59968e4e4f9cc12b3de6f82354f319dfd697b",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-29T16:09:27.630Z"
+  "generatedAt": "2026-08-29T16:31:21.237Z"
 }

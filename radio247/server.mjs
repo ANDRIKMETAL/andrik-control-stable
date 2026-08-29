@@ -48,8 +48,8 @@ const CTA_FADE_SECONDS_R748 = 0.35; // smooth alpha in/out instead of blink
 const CTA_BOTTOM_GAP_R748 = 100; // bottom-left, safely above ticker
 const CTA_LEFT_GAP_R748 = 28;
 const TITLE_HANDOFF_DELAY_MS_R724 = 0; // R730: title changes only on the real media handoff
-const BUMPER_MIN_SONGS_R724 = 4;
-const BUMPER_MAX_SONGS_R724 = 6;
+const BUMPER_MIN_SONGS_R724 = 3; // R764: station bumpers more often
+const BUMPER_MAX_SONGS_R724 = 4; // R764: every 3-4 real songs
 const SPECIAL_INTERVAL_MS_R726 = Math.max(10*60*1000, Number(process.env.SPECIAL_INTERVAL_MS_R726 || 30*60*1000));
 const SPECIAL_HOURLY_INTERVAL_MS_R727 = Math.max(30*60*1000, Number(process.env.SPECIAL_HOURLY_INTERVAL_MS_R727 || 60*60*1000));
 const NEXT_PREVIEW_SECONDS_R726 = 10; // R748: PREVIOUS/NEXT for final 10 seconds
@@ -147,8 +147,8 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R763-EARLY-FADE-LONGER-BRIGHTEN-R762-QUALITY-R761-STABILITY-PRESERVED',
-  mode: 'R763 EARLY FADE + LONGER BRIGHTEN + R762 6000K AAC160 + R761 SINGLE ENCODE + R760/R753 VISUALS',
+  version: 'R764-CLIP-COMMIT-GATE-BUMPER-3-4-R763-QUALITY-FADE-PRESERVED',
+  mode: 'R764 CLIP COMMIT GATE + BUMPERS 3-4 SONGS + R763 FADE/QUALITY + R761 SINGLE ENCODE',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
@@ -177,6 +177,10 @@ const state = {
   lastSpecialHourlyPlayedAt: null,
   songsSinceBumper: 0,
   nextBumperAfterSongs: 0,
+  bumperCadenceMode: 'R764-EVERY-3-4-SONGS',
+  normalClipAdmissionMode: 'R764-PREPARED-ONLY-COMMIT-GATE',
+  normalClipDeferredCount: 0,
+  lastNormalClipDeferred: null,
   lastBumperSlot: 0,
   cycle: 0,
   queueLength: 0,
@@ -562,7 +566,9 @@ async function loadRadioClipsR691(){
   state.librarySpecial=(specialInsertR726?1:0)+(specialHourlyInsertR727?1:0);
   state.librarySpecial30=specialInsertR726?1:0;
   state.librarySpecial60=specialHourlyInsertR727?1:0;
-  clipLibrary.forEach(prefetchClip); // download only; prepare normal clips only when they approach the queue
+  // R764: prepare normal clips in the low-priority serial worker BEFORE queue admission.
+  // NEXT can no longer promise a clip that only exists as an unfinished cache job.
+  clipLibrary.forEach(prefetchPreparedClipR742);
   bumperLibrary.forEach(prefetchPreparedClipR742); // short station inserts are cheap to prepare ahead
   if(specialInsertR726)prefetchPreparedClipR742(specialInsertR726);
   if(specialHourlyInsertR727)prefetchPreparedClipR742(specialHourlyInsertR727);
@@ -640,6 +646,35 @@ function mixTracksAndClipsR691(tracks,clips){
   return out;
 }
 
+function normalClipQueueReadyR764(item){
+  if(!item || item.type!=='clip')return true;
+  if(item.sourceType==='radio-bumper'||String(item.sourceType||'').startsWith('radio-special'))return true;
+  const ready=preparedClipReadyNowR742(item);
+  if(!ready){prefetchPreparedClipR742(item);return false;}
+  return true;
+}
+function futureQueueHasIdentityR764(item){
+  const id=primaryIdentity(item);
+  if(!id)return false;
+  return queue.some(x=>primaryIdentity(x)===id);
+}
+function insertPreparedClipLaterR764(item,{tracksAhead=2}={}){
+  if(stopping||!queue.length||!item||item.type!=='clip'||!normalClipQueueReadyR764(item)||futureQueueHasIdentityR764(item))return false;
+  if(queue.slice(Math.max(0,queueIndex)).filter(x=>x?.type==='track').length<2)return false;
+  let seenTracks=0;
+  let insertAt=queue.length;
+  for(let i=Math.max(0,queueIndex);i<queue.length;i++){
+    if(queue[i]?.type==='track')seenTracks++;
+    if(seenTracks>=Math.max(2,Number(tracksAhead)||2)){
+      insertAt=i+1;
+      break;
+    }
+  }
+  queue.splice(insertAt,0,item);
+  state.queueLength=queue.length;
+  return true;
+}
+
 function reconcileQueueWithLibrary(){
   if(!queue.length)return;
   const played=queue.slice(0,queueIndex);
@@ -648,6 +683,7 @@ function reconcileQueueWithLibrary(){
   const candidates=[];
   const seen=new Set();
   for(const item of [...library,...clipLibrary]){
+    if(item?.type==='clip'&&!normalClipQueueReadyR764(item))continue;
     if(identityAlreadySeen(playedIds,item)||identityAlreadySeen(seen,item))continue;
     candidates.push(item);
     addIdentityCandidates(seen,item);
@@ -658,7 +694,9 @@ function reconcileQueueWithLibrary(){
 }
 
 function buildQueue(){
-  const out=mixTracksAndClipsR691(library,clipLibrary);
+  // R764: only fully prepared local clips enter the mixed playback queue.
+  const readyClips=clipLibrary.filter(normalClipQueueReadyR764);
+  const out=mixTracksAndClipsR691(library,readyClips);
   state.cycle++;
   state.queueLength=out.length;
   return out;
@@ -1005,7 +1043,13 @@ async function ensurePreparedClipR742(item){
 }
 function prefetchPreparedClipR742(item){
   if(!item?.url)return;
-  ensurePreparedClipR742(item).catch(error=>console.error('[clip-prepare-r742]',cleanText(error?.message||error)));
+  ensurePreparedClipR742(item).then(()=>{
+    // R764: if a normal clip becomes ready after the current cycle was built, insert it
+    // only after at least two future songs. Never change the already-running track's NEXT.
+    if(item?.type==='clip' && item.sourceType!=='radio-bumper' && !String(item.sourceType||'').startsWith('radio-special')){
+      insertPreparedClipLaterR764(item,{tracksAhead:2});
+    }
+  }).catch(error=>console.error('[clip-prepare-r742]',cleanText(error?.message||error)));
 }
 function preparedClipReadyNowR742(item){
   try{
@@ -2434,9 +2478,27 @@ async function radioLoop(){
         }
         if(following?.type==='track')prefetchTrack(following);else if(following?.type==='clip')prefetchPreparedClipR742(following);
         const clipPlayed=await playVideoClipR691(lastPlayed,item,next);
-        lastPlayed=item;
-        queueIndex++;
-        if(clipPlayed)state.lastError='';
+        if(clipPlayed){
+          // R764: only media that actually reached LIVE may become PREVIOUS.
+          lastPlayed=item;
+          queueIndex++;
+          state.lastError='';
+        }else{
+          // R764: never lie about a skipped clip. Remove this failed occurrence, keep
+          // lastPlayed on the real previous MP3, prepare it again and retry later.
+          const failed=queue.splice(queueIndex,1)[0]||item;
+          state.queueLength=queue.length;
+          state.normalClipDeferredCount=Number(state.normalClipDeferredCount||0)+1;
+          state.lastNormalClipDeferred={at:new Date().toISOString(),title:shortText(failed?.title||'VIDEO',52),reason:shortText(state.lastError||'clip did not commit',180)};
+          if(next?.type==='track'){
+            // The old MP3 may already have faded toward the promised clip. Make the real
+            // next MP3 visibly recover from black instead of hard-cutting.
+            clipToTrackBoundaryPendingR753={identity:primaryIdentity(next),startedAt:Date.now(),reason:'R764-FAILED-CLIP-FALLBACK-FADE-IN'};
+          }
+          prefetchPreparedClipR742(failed);
+          state.lastWarning=`R764 clip deferred safely; not marked played: ${shortText(failed?.title||'VIDEO',40)}`;
+          console.error('[r764-clip-deferred]',state.lastWarning);
+        }
         continue;
       }
 
@@ -2537,8 +2599,8 @@ function publicStatus(){
     mode:state.mode,
     overlayMode:state.overlayMode,
     audioMode:state.audioMode,
-    engine:'R763-EARLY-FADE-LONGER-BRIGHTEN + R762 QUALITY + R761/R760/R759/R757/R756/R754 PRESERVED',
-    videoPipeline:'R763 R753 ALPHA FADE EARLIER/LONGER + R762 6000K SINGLE-X264 → H264 COPY MASTER + R760 FIT+PAD NO-CROP + 64Q',
+    engine:'R764-CLIP-COMMIT-GATE + BUMPER-3-4 + R763 FADE/QUALITY + R761/R760 PRESERVED',
+    videoPipeline:'R764 PREPARED-ONLY CLIP COMMIT + R763 R753 ALPHA FADE + R762 6000K SINGLE-X264 + R760 FIT+PAD + 64Q',
     outputTimeshiftSeconds:OUTPUT_TIMESHIFT_SECONDS,
     videoBitrate:VIDEO_BITRATE,
     audioBitrate:AUDIO_BITRATE,
@@ -2578,7 +2640,7 @@ function publicStatus(){
     loudnessBackgroundNice:LOUDNESS_BACKGROUND_NICE_R750,
     loudnessBackgroundPending:loudnessPendingR750.size,
     videoFadeSeconds:VIDEO_FADE_SECONDS_R726,
-      videoFadeStrategy:'R751-LATE+2S-BLACK-ALPHA-0.65S-HOLD-0.05S-LIGHT-0.30S',
+      videoFadeStrategy:'R763-R753-BLACK-ALPHA-0.65S-HOLD-0.05S-LEAD-1.40S-LIGHT-0.80S',
       videoFadeInEnabled:true,
       videoBaseNeverFaded:true,
       videoOverlayMask:'BLACK_ALPHA_ONLY_R738',
@@ -2610,6 +2672,12 @@ function publicStatus(){
       mp3BoundaryFadeMode:state.mp3BoundaryFadeMode,
       mp3BoundaryFadeInSeconds:VIDEO_FADE_IN_SECONDS_R736,
       stationNextLabel:'NEXT • ANDRIK METAL RADIO 24/7',
+      normalClipAdmissionMode:state.normalClipAdmissionMode,
+      normalClipDeferredCount:state.normalClipDeferredCount,
+      lastNormalClipDeferred:state.lastNormalClipDeferred,
+      bumperCadenceMode:state.bumperCadenceMode,
+      bumperMinSongs:BUMPER_MIN_SONGS_R724,
+      bumperMaxSongs:BUMPER_MAX_SONGS_R724,
       videoHandoffMode:state.videoHandoffMode||'R752-CACHE-ONLY-NO-LIVE-PREROLL',
       clipUnifiedAvRunning:Boolean(clipPublisher&&clipPublisher.exitCode===null&&clipPublisher.__r752UnifiedAV===true&&clipPublisher.__r752Live===true),
       clipVideoPrerollRunning:Boolean(clipVideoPrerollR744&&clipVideoPrerollR744.exitCode===null),
@@ -2804,7 +2872,7 @@ const server=http.createServer((req,res)=>{
 });
 
 server.listen(PORT,'0.0.0.0',()=>{
-  console.log(`ANDRIK Radio R763 EARLY FADE + LONGER BRIGHTEN + R762 QUALITY + R761 STABILITY listening on :${PORT}`);
+  console.log(`ANDRIK Radio R764 CLIP COMMIT GATE + BUMPERS 3-4 + R763 QUALITY/FADE listening on :${PORT}`);
   radioLoop();
 });
 
