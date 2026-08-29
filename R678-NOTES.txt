@@ -1,8 +1,0 @@
-R678 — owner push polish + YouTube cron recovery
-
-1. New YouTube subscriber pushes use green marker + small up arrow and green ANDRIK icon.
-2. Unsubscribes remain red/down.
-3. All owner push events share one universal OneSignal replacement topic/group so Android status bar keeps one ANDRIK eye instead of duplicates.
-4. A successful full YouTube reconciliation now clears an older transient 2-minute cron delivery failure in Control, instead of leaving a stale red error until the next tick.
-5. Subscriber events are green in Control activity/YouTube event feed.
-6. R676 push registration repair, R677 stream uptime and Search Console graph are preserved.

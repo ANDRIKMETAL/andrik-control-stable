@@ -1,7 +1,0 @@
-R673 — owner push recovery
-
-- Root cause fixed: old cache-reset pages unregistered the OneSignal service worker on every deploy.
-- Cache reset now preserves /push/onesignal/ worker.
-- OneSignal autoResubscribe enabled.
-- Granted Chrome permission + missing Subscription ID triggers automatic worker repair + optIn.
-- OVH/radio/FFmpeg/visuals untouched.

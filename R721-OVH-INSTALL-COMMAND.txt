@@ -1,1 +1,0 @@
-curl -fsSL https://andrikmetal.com/radio247/vm-lite/install-r721-persistent-live-nocrop-red-title.sh | sudo env ANDRIK_SITE_BASE=https://andrikmetal.com bash

@@ -1,8 +1,0 @@
-R727 — DUAL SPECIAL 30 / 60 MIN
-
-- SPECIAL 1: radio/clips/radio-special-30min.mp4 — примерно каждые 30 минут между песнями.
-- SPECIAL 2: radio/clips/radio-special-60min.mp4 — примерно каждый час между песнями.
-- Если оба срока совпали, 60-минутная вставка имеет приоритет; 30-минутная не играет следом и переносится примерно на +30 минут.
-- В radio-visuals-admin.html две отдельные карточки выбора MP4 / загрузки в R2 / назначения.
-- R726 полностью сохранён: -14 LUFS, audio/video fade, РАНЕЕ + NEXT за 8 секунд, anti-repeat 20.
-- R725/R721 persistent LIVE, CTA, 3 bumpers 4–6 songs, QR right, EQ, NO CROP сохранены.

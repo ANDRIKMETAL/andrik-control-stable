@@ -1,6 +1,0 @@
-R725 — CTA 2 MIN / BUMPERS 4–6 SONGS / R724 PRESERVED
-
-1. SUBSCRIBE + LIKE remains visible for 8 seconds, now every 120 seconds (2 minutes), instead of every 300 seconds.
-2. Radio bumpers 1/2/3 now appear after a random 4–6 completed songs, rotating available slots.
-3. R724 title handoff delay, QR top-right, Я ЕСТЬ, persistent ONE RTMPS, SETTS, NO CROP, red title and EQ are preserved.
-4. Installer bumper-slot check fixed to literal grep (-F), so [123] is not treated as a regex character class.

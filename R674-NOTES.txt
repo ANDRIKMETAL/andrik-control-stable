@@ -1,7 +1,0 @@
-R674 — Search Console chart redesign
-- KPI cards now have clear icons (clicks, impressions, CTR, average position).
-- Replaced confusing overlapping filled chart with clean dual-axis line chart.
-- Left axis = clicks, right axis = impressions.
-- Four clear date labels, subtle grid, readable points, mobile tap tooltip.
-- Preserves R673 OneSignal push worker behavior.
-- OVH/radio/FFmpeg/visuals untouched.

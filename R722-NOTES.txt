@@ -1,9 +1,0 @@
-R722 — SUBSCRIBE + LIKE PERIODIC CTA / R721 PERSISTENT LIVE PRESERVED
-
-1. Preserves the complete R721 transport: ONE persistent YouTube RTMPS session, H264 SETTS, no MP3/clip reconnect, no scheduled service restart.
-2. Adds one compact combined CTA card: SUBSCRIBE + thumbs-up LIKE.
-3. CTA appears for 8 seconds every 5 minutes on the normal radio visual.
-4. CTA is top-center, away from QR, song title, red separator, equalizer and ticker.
-5. Official R2 video clips stay clean: CTA is not burned over the clips themselves.
-6. CTA is a local transparent PNG asset; no emoji font dependency and no extra network request during the stream.
-7. R721 FULL FIT / NO CROP, red title outline/shadow, four seamless 4-second EQ loops and LIVE self-heal are preserved unchanged.

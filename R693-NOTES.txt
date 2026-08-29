@@ -1,9 +1,0 @@
-R693
-- Exact PNG diagnosis: QR overlay is valid PNG. The FFmpeg FF D8 FF E0 warning comes from JPEG album art embedded in an MP3 but declared as PNG.
-- Radio cache now strips all attached picture/video streams from downloaded MP3 files with bit-perfect audio copy (no audio re-encode).
-- Installer clears only local MP3 cache once so old malformed attached art disappears.
-- Restored proven R691 User-Agent strings (R692 changed them unnecessarily and could fail at the edge).
-- Installer waits up to 45 seconds for health instead of false rollback after 8 seconds.
-- R690 FULL FRAME FIT is guarded: scale contain + pad, crop OFF, stretch OFF for radio visuals and video clips.
-- R692 robust mobile clip upload retained: 5 MiB buffered R2 multipart parts with retry behavior.
-- JOY OF BEING and random R2 clip rotation retained.

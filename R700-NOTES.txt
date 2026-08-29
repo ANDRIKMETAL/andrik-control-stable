@@ -1,5 +1,0 @@
-R700
-- Hard cut finite clip publisher at MP4 duration; no FIFO for clip output.
-- Direct FLV/RTMPS clip publishing prevents FIFO drain/reconnect from freezing last frame.
-- FULL-FRAME FIT 1920x1080 preserved; auto-crop disabled for all clips.
-- R699 publisher identity guard, same-MP3 retry, no back-to-back clips, metal title styling, QR and ticker preserved.

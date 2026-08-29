@@ -1,3 +1,0 @@
-curl -fsSL --retry 5 --retry-all-errors \
-"https://raw.githubusercontent.com/ANDRIKMETAL/andrik-control-stable/main/radio247/vm-lite/install-r727-dual-special30-60-r726-preserved.sh" \
-| sudo env ANDRIK_SITE_BASE="https://raw.githubusercontent.com/ANDRIKMETAL/andrik-control-stable/main" bash

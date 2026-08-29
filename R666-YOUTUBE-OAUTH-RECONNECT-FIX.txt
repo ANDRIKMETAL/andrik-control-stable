@@ -1,6 +1,0 @@
-R666 — YouTube OAuth reconnect UI fix
-
-- Restored missing YouTube Studio OAuth card in Service.
-- Reconnect button opens Google OAuth at top-level (outside iframe).
-- Existing OVH radio/streaming code is otherwise unchanged.
-- Updated Service cache-busters and R666 cache reset page.

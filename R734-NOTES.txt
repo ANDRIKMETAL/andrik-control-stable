@@ -1,7 +1,0 @@
-R734 — BOUNDARY FADEOUT / NO LATE FADE-IN
-
-- Транспорт R732 сохранён без изменений: video queue 1024, audio queue 8.
-- У новой песни полностью отключён video fade-in, который мог визуально приходить после начала нового аудио.
-- Весь переход теперь выполняет старый трек: 1.25 сек плавного ухода в чёрный + 0.20 сек полного чёрного непосредственно перед handoff.
-- Новая песня появляется сразу, без повторного затемнения после старта.
-- CURRENT / PREVIOUS / NEXT, PREVIOUS fallback, PTS anchor, YUV420 path, ONE RTMPS, loudness, specials 30/60, bumpers, CTA, QR, EQ сохранены.
