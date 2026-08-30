@@ -148,8 +148,8 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R777-MASTER-GENPTS-NO-SETTS-BSF-R775-R776-PRESERVED',
-  mode: 'R777 MASTER GENPTS NO SETTS BSF + R775 FILTERCHAIN/NEXT + R776 SITE PRESERVED',
+  version: 'R778-MPEGTS-TIMESTAMP-BRIDGE-R777-PRESERVED',
+  mode: 'R778 MPEGTS TIMESTAMP BRIDGE + R777/R775 FILTERCHAIN/NEXT + R776 SITE PRESERVED',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
@@ -1199,6 +1199,14 @@ function clipLiveVideoFilterR757({duration=0,showPreview=false}={}){
   return vf.join(',');
 }
 
+function mpegTsVideoOutputArgsR778(){
+  // R778: preserve the viewer-approved single x264 encode from each feeder, but give
+  // every access unit real container PTS/DTS before it reaches the persistent master.
+  // initial_discontinuity lets concatenated feeder processes restart their local PTS at 0
+  // without exposing timestamp-less raw H264 packets to the FLV/RTMPS muxer.
+  return ['-mpegts_flags','+resend_headers+initial_discontinuity','-muxdelay','0','-muxpreload','0','-f','mpegts','pipe:1'];
+}
+
 function clipPreparedFeederArgsR742(readyPath,{hasAudio=true,duration=0,showPreview=false}={}){
   const d=Math.max(0,Number(duration)||0);
   const dText=d>0?String(Math.max(0.5,d)):'';
@@ -1219,7 +1227,7 @@ function clipPreparedFeederArgsR742(readyPath,{hasAudio=true,duration=0,showPrev
   // output, so the H264 pipe could hit EOF early while PCM kept playing. Put the same
   // explicit duration on EACH output and pad the video/audio tails to that boundary.
   if(dText)args.push('-t',dText);
-  args.push('-f','h264','pipe:1',
+  args.push(...mpegTsVideoOutputArgsR778(),
     '-map',hasAudio?'0:a:0':'0:a:0','-vn','-sn','-dn',
     '-af',audioTailLockR766,'-c:a','pcm_s16le','-ar',String(AUDIO_SAMPLE_RATE),'-ac','2'
   );
@@ -1242,7 +1250,7 @@ function clipPreparedVideoOnlyArgsR744(readyPath,{duration=0}={}){
     ...h264EncoderArgsR721()
   ];
   if(duration>0)args.push('-t',String(Math.max(0.5,duration)));
-  args.push('-f','h264','pipe:1');
+  args.push(...mpegTsVideoOutputArgsR778());
   return args;
 }
 function clipPreparedAudioOnlyArgsR744(readyPath,{duration=0}={}){
@@ -1780,12 +1788,13 @@ function startPublisher(){
 
   // R721 transport: video feeders encode the final 1920x1080 frame to Annex-B H264.
   // This ONE master never closes at MP3<->clip or MORNING/DAY/EVENING/NIGHT boundaries.
-  // R777: this VPS FFmpeg does NOT provide the `setts` H264 bitstream filter. The
-  // persistent raw-H264 demuxer stays open across feeder swaps, so +genpts + fixed 25fps
-  // synthesize one continuous packet clock without any video BSF or second encode.
+  // R778: this VPS FFmpeg does NOT provide the `setts` H264 bitstream filter. Every feeder
+  // now wraps its already-encoded H264 in a tiny MPEG-TS container before entering this
+  // persistent master. MPEG-TS supplies real packet PTS/DTS; initial_discontinuity marks each
+  // feeder boundary so the persistent demuxer can rebase a new segment without a second encode.
   const args=[
     '-hide_banner','-loglevel','warning',
-    '-thread_queue_size',String(VIDEO_INPUT_QUEUE_PACKETS_R732),'-fflags','+genpts+discardcorrupt','-framerate',String(VIDEO_FPS),'-f','h264','-i','pipe:4',
+    '-thread_queue_size',String(VIDEO_INPUT_QUEUE_PACKETS_R732),'-fflags','+genpts+discardcorrupt','-f','mpegts','-i','pipe:4',
     '-thread_queue_size',String(AUDIO_INPUT_QUEUE_PACKETS_R732),'-f','s16le','-ar',String(AUDIO_SAMPLE_RATE),'-ac','2','-i','pipe:3',
     '-map','0:v:0','-map','1:a:0',
     // R761: EVERY feeder already produces the final viewer-approved 1920x1080 H264 frame
@@ -1793,9 +1802,9 @@ function startPublisher(){
     // a second time in the persistent master. R760's double x264 path consumed ~40% CPU in
     // the master on top of ~55% in the feeder and could stop reading BOTH Node pipes for
     // 30 s, triggering R751 NO-PROGRESS/status=76 and YouTube BAD/NODATA. The persistent
-    // master now copies H264 and encodes AAC. R777 deliberately uses NO video bitstream
-    // filter: +genpts and the fixed raw-H264 framerate own the persistent packet clock.
-    // Graceful feeder stop + AUD/repeat-headers keep boundaries parseable.
+    // master now copies H264 and encodes AAC. R778 deliberately uses NO video bitstream
+    // filter: MPEG-TS packet timestamps own the clock, while +genpts repairs segment offsets.
+    // Graceful feeder stop + AUD/repeat-headers + TS initial_discontinuity keep boundaries parseable.
     '-c:v','copy',
     '-c:a','aac','-profile:a','aac_low','-b:a',AUDIO_BITRATE,'-ar',String(AUDIO_SAMPLE_RATE),'-ac','2',
     '-max_muxing_queue_size','4096','-flush_packets','1',
@@ -1873,7 +1882,7 @@ function normalVideoFeederArgsR721(visualPath,eqPath,{fadeIn=false,fadeInSeconds
     '-filter_complex',normalVideoFilterComplexR721({fadeIn,fadeInSeconds,endFadeToBlack,trackDuration,previewReload}),
     '-map','[outv]','-an','-sn','-dn',
     ...h264EncoderArgsR721(),
-    '-f','h264','pipe:1'
+    ...mpegTsVideoOutputArgsR778()
   ];
 }
 
@@ -2006,7 +2015,7 @@ function clipFeederArgsR721(clipPath,{hasAudio=true,duration=0,isStationInsert=f
     '-filter_complex',isStationInsert?bumperFilterComplexR724():clipFilterComplexR721(),
     '-map','[outv]','-an','-sn','-dn',
     ...h264EncoderArgsR721(),
-    '-f','h264','pipe:1',
+    ...mpegTsVideoOutputArgsR778(),
     '-map',hasAudio?'0:a:0':'2:a:0','-vn','-sn','-dn',
     '-af',`aresample=${AUDIO_SAMPLE_RATE}:async=1:first_pts=0,asetpts=PTS-STARTPTS`,'-c:a','pcm_s16le','-ar',String(AUDIO_SAMPLE_RATE),'-ac','2'
   );
@@ -2864,12 +2873,12 @@ function publicStatus(){
     equalizerStyle:state.equalizerStyle,
     equalizerEngine:state.equalizerEngine,
     publisherRunning:state.publisherRunning,
-    masterVideoMode:'R777-H264-COPY-GENPTS-NO-BSF-SINGLE-ENCODE-8Q',
-    masterBitstreamFilter:'none-R777-setts-bsf-removed-for-vps-compatibility',
-    masterTimestampMode:'R777-RAW-H264-FRAMERATE25-PLUS-GENPTS',
+    masterVideoMode:'R778-MPEGTS-PTS-DISCONTINUITY-BRIDGE-H264-COPY-8Q',
+    masterBitstreamFilter:'none-R778-container-pts-no-video-bsf',
     masterAudioBytesWritten:Number(publisher?.stdio?.[3]?.bytesWritten||0),
     masterVideoBytesWritten:Number(publisher?.stdio?.[4]?.bytesWritten||0),
     masterVideoReencode:false,
+    masterTimestampMode:'R778-MPEGTS-PTS-DTS-BRIDGE-NO-SETTS-NO-SECOND-ENCODE',
     videoEncodePasses:1,
     videoQualityMode:'R763-R762-6000K-CBR-ULTRAFAST-SINGLE-ENCODE-NO-GENERATIONAL-LOSS',
     videoBitrate:'6000k',
@@ -3025,7 +3034,7 @@ const server=http.createServer((req,res)=>{
 });
 
 server.listen(PORT,'0.0.0.0',()=>{
-  console.log(`ANDRIK Radio R777 MASTER GENPTS NO SETTS BSF + R775/R776 PRESERVED listening on :${PORT}`);
+  console.log(`ANDRIK Radio R778 MPEGTS TIMESTAMP BRIDGE + R775/R776 PRESERVED listening on :${PORT}`);
   radioLoop();
 });
 

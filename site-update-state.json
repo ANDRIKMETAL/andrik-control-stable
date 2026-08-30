@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788078212495-310df243de",
-  "release": "R777",
-  "archiveName": "R777-MASTER-GENPTS-NO-SETTS-BSF-R775-R776-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "98b5d693f84ae81330a38dee80ec1ddc296c763e",
-  "backupSha": "98b5d693f84ae81330a38dee80ec1ddc296c763e",
+  "operationId": "publish-1788079805206-cdb570c332",
+  "release": "R778",
+  "archiveName": "R778-MPEGTS-TIMESTAMP-PUSH-AUTOMATION-RESCUE-R777-R776-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "c100ef1df2b005cbedb7a14cddcd6cdf34441e03",
+  "backupSha": "c100ef1df2b005cbedb7a14cddcd6cdf34441e03",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-30T08:23:32.889Z"
+  "generatedAt": "2026-08-30T08:50:05.683Z"
 }

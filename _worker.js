@@ -1,6 +1,7 @@
 // R768: OWNER PUSH SELF-HEAL + CONTROL-ORIGIN REBIND; radio R767 untouched.
 const PUSH_OWNER_RECOVERY_R768 = 'R768-OWNER-PUSH-SELFHEAL';
 const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R524', number:524, version:'55.00', full:'55.00 LIVE WEB AI FINAL R524', siteUpdater:'55.00-r356' });
+const PUSH_AUTOMATION_FIX_R778 = 'R778-CRON-UA-INDEPENDENT-HEALTH-RESCUE-STRICT-OWNER-DELIVERY';
 const ANDRIK_D1_EFFICIENCY_RELEASE = 'R638-D1-FINAL';
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
@@ -2900,10 +2901,13 @@ async function sendOneSignalPush(env, {
     oneSignalId
   };
 
-  // R765: do not call a subscriber push "sent" merely because OneSignal accepted it.
-  // The delivery watermark must advance only after the owner device is actually matched.
+  // R778: owner event pushes that drive a watermark/slot are not considered delivered
+  // merely because OneSignal returned HTTP 200. Test push already proves the browser can
+  // receive; this guard makes likes/subscribers/daily summaries advance ONLY when at least
+  // one owner subscription is actually matched. Failed/pending sends stay retryable.
   const strictSubscriberDeliveryR765 = audience === 'owner' && ['youtube-subscriber','youtube-subscriber-count'].includes(historyType);
-  if (strictSubscriberDeliveryR765) {
+  const strictOwnerDeliveryR778 = audience === 'owner' && ['youtube-subscriber','youtube-subscriber-count','youtube-like','daily-summary'].includes(historyType);
+  if (strictOwnerDeliveryR778) {
     const deliveryR765 = await verifySubscriberOwnerDeliveryR765(env, result);
     if (!deliveryR765.ok) {
       const deliveryStatusR765 = deliveryR765.pending ? 'pending' : 'failed';
@@ -2928,14 +2932,15 @@ async function sendOneSignalPush(env, {
           }
         }).catch(() => {});
       }
+      const deliveryLabelR778 = strictSubscriberDeliveryR765 ? 'Подписчик' : (historyType === 'youtube-like' ? 'Лайк' : historyType === 'daily-summary' ? 'Сводка' : 'Owner push');
       await recordSystemLog(env, {
         scope:'push',
         level:deliveryR765.pending ? 'warning' : 'error',
         event:deliveryR765.error,
         message:deliveryR765.pending
-          ? 'Подписчик: OneSignal принял push, но доставка владельцу ещё не подтверждена — watermark не сдвинут, будет retry.'
-          : 'Подписчик: OneSignal завершил отправку без доставки владельцу — watermark не сдвинут, будет retry.',
-        details:{ oneSignalId:result.oneSignalId, report:deliveryR765.report || null, title }
+          ? `${deliveryLabelR778}: OneSignal принял push, но устройство владельца ещё не подтверждено — состояние не сдвинуто, будет retry.`
+          : `${deliveryLabelR778}: OneSignal завершил отправку без доставки владельцу — состояние не сдвинуто, будет retry.`,
+        details:{ oneSignalId:result.oneSignalId, report:deliveryR765.report || null, title, strictOwnerDeliveryR778:true }
       }).catch(() => {});
       return { ...result, ok:false, pending:Boolean(deliveryR765.pending), error:deliveryR765.error, deliveryReport:deliveryR765.report || null };
     }
@@ -2954,7 +2959,7 @@ async function sendOneSignalPush(env, {
       url,
       recipients: result.recipients,
       oneSignalId: result.oneSignalId,
-      details: { ...(history?.details && typeof history.details === 'object' ? history.details : {}), warnings: responseData?.warnings || null, response: responseData, acceptedByOneSignal: true, deliveryConfirmedR765: strictSubscriberDeliveryR765 ? true : null, deliveryReportR765: result.deliveryReport || null }
+      details: { ...(history?.details && typeof history.details === 'object' ? history.details : {}), warnings: responseData?.warnings || null, response: responseData, acceptedByOneSignal: true, deliveryConfirmedR765: strictSubscriberDeliveryR765 ? true : null, deliveryConfirmedR778: strictOwnerDeliveryR778 ? true : null, deliveryReportR765: result.deliveryReport || null }
     }).catch(() => {});
   }
   await recordSystemLog(env, {
@@ -4955,13 +4960,15 @@ async function handleControlSystem(request, env) {
     safeRead('latest-subscriber',db.prepare(`SELECT MAX(last_seen_at) AS lastSeenAt FROM push_subscribers WHERE status='active'`).first()),
     safeRead('search-console-snapshot',db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform='google-search-console' ORDER BY created_at DESC LIMIT 1`).first())
   ]);
-  const [centralCheck, centralStatus, centralSummary, schedulerHeartbeat, schedulerSource, schedulerStatus] = await Promise.all([
+  const [centralCheck, centralStatus, centralSummary, schedulerHeartbeat, schedulerSource, schedulerStatus, fastEngagementStateR778, subscriberPollStateR778] = await Promise.all([
     safeRead('automation-last-check-at',getPushState(db, 'automation-last-check-at')),
     safeRead('automation-last-check-status',getPushState(db, 'automation-last-check-status')),
     safeRead('automation-last-check-summary',getPushState(db, 'automation-last-check-summary')),
     safeRead('cron-scheduler-heartbeat-at-r394',getPushState(db,'cron-scheduler-heartbeat-at-r394')),
     safeRead('cron-scheduler-heartbeat-source-r394',getPushState(db,'cron-scheduler-heartbeat-source-r394')),
-    safeRead('cron-scheduler-last-status-r394',getPushState(db,'cron-scheduler-last-status-r394'))
+    safeRead('cron-scheduler-last-status-r394',getPushState(db,'cron-scheduler-last-status-r394')),
+    safeRead('youtube-fast-engagement-last-at-r333',getPushState(db,'youtube-fast-engagement-last-at-r333')),
+    safeRead('youtube-subscriber-poll-last-at-r653',getPushState(db,'youtube-subscriber-poll-last-at-r653'))
   ]);
   const [nativeMonitorLastAt, nativeMonitorLastStatus, nativeMonitorTargetCount, nativeMonitorErrorCount, nativeMonitorWarningCount] = await Promise.all([
     safeRead('native-monitor-last-sync-at',getPushState(db, 'native-monitor-last-sync-at')),
@@ -4979,6 +4986,14 @@ async function handleControlSystem(request, env) {
   const schedulerAlive = schedulerAgeMinutes !== null && schedulerAgeMinutes <= 12;
   const schedulerLate = schedulerAgeMinutes !== null && schedulerAgeMinutes <= 30;
   const fullRunFresh = fullAgeMinutes !== null && fullAgeMinutes <= 35;
+  const ageOfR778 = row => {
+    const ms=Date.parse(String(row?.value||row?.updatedAt||''));
+    return Number.isFinite(ms)?Math.max(0,Math.round((Date.now()-ms)/60000)):null;
+  };
+  const fastEngagementAgeMinutesR778=ageOfR778(fastEngagementStateR778);
+  const subscriberPollAgeMinutesR778=ageOfR778(subscriberPollStateR778);
+  const youtubeAutomationFreshR778=fastEngagementAgeMinutesR778!==null && fastEngagementAgeMinutesR778<=6 && subscriberPollAgeMinutesR778!==null && subscriberPollAgeMinutesR778<=7;
+  const schedulerWorkHealthyR778=schedulerAlive && youtubeAutomationFreshR778;
   // R394: a live scheduler heartbeat is authoritative for trigger health. A stale
   // full-run marker alone can no longer paint the whole system red.
   const automationHealth = schedulerAlive ? 'active' : schedulerLate ? 'late' : schedulerAgeMinutes === null ? (fullAgeMinutes === null ? 'never' : fullAgeMinutes <= 60 ? 'active' : fullAgeMinutes <= 180 ? 'late' : 'stale') : 'stale';
@@ -5086,7 +5101,7 @@ async function handleControlSystem(request, env) {
       youtube: { configured: Boolean(env.YOUTUBE_API_KEY), studioConfigured:youtubeAuth.configured, status: env.YOUTUBE_API_KEY && youtubeAuth.configured ? 'good' : 'warning', mode: youtubeAuth.configured ? 'YouTube Data API + Studio Worker' : (env.YOUTUBE_API_KEY ? 'YouTube Data API' : 'XML feed'), handle: cleanPlainText(env.YOUTUBE_CHANNEL_HANDLE || '@andrikmetal', 100), uploadsPlaylistId: uploadsPlaylist?.value || cleanPlainText(env.YOUTUBE_UPLOADS_PLAYLIST_ID, 100), label: youtubeAuth.configured ? `YouTube Data API + Studio автоматически · ${youtubeAuth.source}` : (env.YOUTUBE_API_KEY ? 'Data API работает · Studio ждёт серверный refresh token' : 'YouTube работает через резервный feed') },
       cron: {
         configured:Boolean(env.CRON_SECRET),
-        status:schedulerAlive ? 'good' : automationHealth === 'stale' ? 'error' : 'warning',
+        status:schedulerWorkHealthyR778 ? 'good' : (!schedulerAlive || automationHealth === 'stale') ? 'error' : 'warning',
         health:automationHealth,
         lastCheckAt:schedulerHeartbeatAt || effectiveLastCheck,
         ageMinutes,
@@ -5098,13 +5113,16 @@ async function handleControlSystem(request, env) {
         fullAgeMinutes,
         lastStatus:effectiveLastStatus,
         summary:parsePushSummary(effectiveLastSummary),
-        label:schedulerAlive
-          ? (fullRunFresh
-              ? `Cron работает · heartbeat ${schedulerAgeMinutes} мин. · полный цикл ${fullAgeMinutes} мин.`
-              : `Cron работает · heartbeat ${schedulerAgeMinutes} мин. · полный цикл самовосстановится на ближайшем 15-мин. слоте`)
-          : automationHealth === 'never'
-            ? 'Cron ещё не запускался'
-            : `Cron требует проверки · heartbeat ${ageMinutes ?? '—'} мин. назад`
+        fastEngagementAgeMinutes:fastEngagementAgeMinutesR778,
+        subscriberPollAgeMinutes:subscriberPollAgeMinutesR778,
+        youtubeAutomationFresh:youtubeAutomationFreshR778,
+        label:schedulerWorkHealthyR778
+          ? `Cron работает · heartbeat ${schedulerAgeMinutes} мин. · реакции ${fastEngagementAgeMinutesR778} мин. · подписчики ${subscriberPollAgeMinutesR778} мин.`
+          : schedulerAlive
+            ? `Cron heartbeat есть, но YouTube-автоматика отстаёт · реакции ${fastEngagementAgeMinutesR778 ?? '—'} мин. · подписчики ${subscriberPollAgeMinutesR778 ?? '—'} мин.`
+            : automationHealth === 'never'
+              ? 'Cron ещё не запускался'
+              : `Cron требует проверки · heartbeat ${ageMinutes ?? '—'} мин. назад`
       },
       dailySummary: {
         configured:dailySummaryReady,
@@ -15559,15 +15577,79 @@ async function runYoutubeEventsFromGuardHealth(env) {
   }
 }
 
+// R778: one-duty push rescue. Background delivery must not depend on a special
+// User-Agent from an external cron/guard worker. Any trusted cron call OR a health wake-up
+// can repair a stale chain, but each wake performs at most ONE meaningful duty to stay
+// inside Cloudflare Free CPU limits. D1 claims/age gates prevent duplicates.
+async function runPushAutomationRescueR778(env, source='health-r778') {
+  if (!env.COMMENTS_DB || !String(env.CRON_SECRET || '').trim()) return {ok:false,skipped:true,reason:'rescue-not-configured'};
+  const db=requireDb(env);
+  await Promise.all([ensurePushAutomationSchema(db),ensureControlV1Schema(db),ensurePlatformAnalyticsSchema(db)]);
+  const lockKey='push-automation-rescue-lock-r778';
+  await db.prepare(`DELETE FROM push_state WHERE key=? AND updated_at < datetime('now','-6 minutes')`).bind(lockKey).run().catch(()=>{});
+  if(!await claimPushOnce(db,lockKey,new Date().toISOString())) return {ok:true,skipped:true,reason:'rescue-already-running'};
+  const startedAt=new Date().toISOString();
+  try{
+    const local=getBratislavaClock();
+    const slot=local.hour>=17?'17':(local.hour>=5?'05':'');
+    if(slot){
+      const sent=await getPushState(db,`daily-owner-summary-auto-slot:${local.date}:${slot}`).catch(()=>null);
+      if(!sent?.value){
+        const value=await maybeSendDailyOwnerSummary(env);
+        const result={ok:value?.ok!==false,task:'daily-summary-rescue-r778',source,startedAt,value};
+        await Promise.all([
+          setPushState(db,'push-automation-rescue-last-at-r778',new Date().toISOString()).catch(()=>{}),
+          setPushState(db,'push-automation-rescue-last-result-r778',JSON.stringify(result).slice(0,12000)).catch(()=>{})
+        ]);
+        return result;
+      }
+    }
+
+    const [fastState,subscriberState]=await Promise.all([
+      getPushState(db,'youtube-fast-engagement-last-at-r333').catch(()=>null),
+      getPushState(db,'youtube-subscriber-poll-last-at-r653').catch(()=>null)
+    ]);
+    const age=value=>{
+      const ms=Date.parse(String(value?.value||value?.updatedAt||''));
+      return Number.isFinite(ms)?Math.max(0,(Date.now()-ms)/60000):999;
+    };
+    const fastAge=age(fastState), subscriberAge=age(subscriberState);
+    const synthetic=new Request('https://control.andrikmetal.com/api/automation/push-rescue-r778',{
+      method:'POST',headers:{'x-cron-key':String(env.CRON_SECRET||''),'user-agent':'ANDRIK-Push-Rescue/R778',accept:'application/json'}
+    });
+    let task='fresh', value={ok:true,skipped:true,reason:'youtube-polls-fresh'};
+    if(fastAge>4){
+      task='engagement-rescue-r778';
+      value=await responseData(await handleFastYoutubeEngagementR333(synthetic,env,{skipCheckpoint:true}));
+    }else if(subscriberAge>5){
+      task='subscriber-rescue-r778';
+      value=await handleFastYoutubeSubscriberCountR416(synthetic,env,{source:'rescue-r778'});
+    }
+    const result={ok:value?.ok!==false && value?.httpOk!==false,task,source,startedAt,fastAgeMinutes:Math.round(fastAge),subscriberAgeMinutes:Math.round(subscriberAge),value};
+    await Promise.all([
+      setPushState(db,'push-automation-rescue-last-at-r778',new Date().toISOString()).catch(()=>{}),
+      setPushState(db,'push-automation-rescue-last-result-r778',JSON.stringify(result).slice(0,12000)).catch(()=>{})
+    ]);
+    return result;
+  }catch(error){
+    const result={ok:false,source,startedAt,error:cleanPlainText(error?.message||error,500)};
+    await setPushState(db,'push-automation-rescue-last-result-r778',JSON.stringify(result)).catch(()=>{});
+    return result;
+  }finally{
+    await releasePushOnceClaim(db,lockKey).catch(()=>{});
+  }
+}
+
 async function handlePublicHealth(request, env, ctx) {
   // R302 fail-safe: the external ANDRIK Guard already wakes on its own Cron.
   // Its normal /api/health probe now also starts the YouTube event checker in
   // the background, so comment/like pushes no longer depend on opening Control.
-  if (isAndrikGuardHealthProbe(request) && ctx?.waitUntil && env.COMMENTS_DB) {
+  if (ctx?.waitUntil && env.COMMENTS_DB && String(env.CRON_SECRET || '').trim()) {
     const db=requireDb(env);
+    const sourceR778=isAndrikGuardHealthProbe(request)?'guard-health-r778':'health-wakeup-r778';
     ctx.waitUntil(Promise.all([
       setPushState(db,'guard-health-last-wakeup-r637',new Date().toISOString()).catch(()=>{}),
-      runYoutubeEventsFromGuardHealth(env).catch(()=>({ok:false}))
+      runPushAutomationRescueR778(env,sourceR778).catch(()=>({ok:false}))
     ]));
   }
   const health = await buildAndrikHealthSnapshot(env, { checkSite:true });
@@ -19111,7 +19193,13 @@ async function routeApi(request, env, ctx) {
     if (path === '/api/automation/cron-gateway' && (request.method === 'GET' || request.method === 'POST')) return await handleExternalCronGatewayR334(request, env, ctx);
     if (path === '/api/automation/run' && request.method === 'POST') {
       const ua=String(request.headers.get('user-agent')||'');
-      if(/ANDRIK-Central-Cron\/1\.0/i.test(ua)) return await handleLegacyExternalCronR400(request,env,ctx);
+      // R778: an external cron authenticated with CRON_SECRET is ALWAYS background automation,
+      // regardless of User-Agent. The old UA gate could accidentally route a valid cron wake
+      // into the CPU-heavy manual full run, leaving summaries/likes/subscribers stale while
+      // Service still looked connected. Manual owner runs keep the full path.
+      if((cronAuthorized(request,env) && !adminAuthorized(request,env)) || /ANDRIK-Central-Cron\/1\.0/i.test(ua)) {
+        return await handleLegacyExternalCronR400(request,env,ctx);
+      }
       return await handleAutomationRun(request, env);
     }
     if (path === '/api/control/daily-summary/archive' && request.method === 'GET') return await handleDailySummaryArchiveR440(request, env);
