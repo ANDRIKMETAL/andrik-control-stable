@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788108959337-bb952cf9fe",
-  "release": "R790",
-  "archiveName": "R790-IRONCLAD-AV-PTS-TITLE-CONTINUOUS-H264-R787-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "6561512892a2de7ba59f4f736014985e151ee7c0",
-  "backupSha": "6561512892a2de7ba59f4f736014985e151ee7c0",
+  "operationId": "publish-1788112926789-8f1a2c2a0b",
+  "release": "R792",
+  "archiveName": "R792-STATION-NOGAP-DUAL-RTMPS-R791-R790-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "8a5e921a6b78fe61865489cf7207d562799ff151",
+  "backupSha": "8a5e921a6b78fe61865489cf7207d562799ff151",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-30T16:55:59.993Z"
+  "generatedAt": "2026-08-30T18:02:07.379Z"
 }
