@@ -47,10 +47,13 @@ const CTA_FIRST_SHOW_SECONDS_R748 = 20; // first compact CTA after feeder settle
 const CTA_FADE_SECONDS_R748 = 0.35; // smooth alpha in/out instead of blink
 const CTA_BOTTOM_GAP_R748 = 72; // R767: compact CTA directly above ticker
 const CTA_RIGHT_GAP_R767 = 34; // R767: right side; old left CTA removed
-const CLIP_PREP_SUFFIX_R771 = '.r771-ready.mp4'; // R771: rebuild prepared clips once so right CTA / bumper audio normalization are baked offline
-const STATION_LEADING_SILENCE_THRESHOLD_R771 = '-55dB'; // R771: detect only near-silent station-intro audio offline; LIVE graph untouched
-const STATION_LEADING_SILENCE_MIN_R771 = 0.20; // require 200ms continuous silence so quiet intentional attacks are not clipped
+const CLIP_PREP_SUFFIX_R771 = '.r772-ready.mp4'; // R772: rebuild prepared clips once so right CTA / bumper PCM-sync normalization are baked offline
+const STATION_LEADING_SILENCE_THRESHOLD_DB_R772 = -55; // R772: PCM RMS threshold; no FFmpeg silencedetect dependency
+const STATION_LEADING_SILENCE_MIN_R771 = 0.20; // require at least 200ms leading near-silence before any trim
 const STATION_LEADING_SILENCE_MAX_TRIM_R771 = 2.0; // never trim more than 2s from a station insert
+const STATION_PCM_PROBE_SECONDS_R772 = 2.75;
+const STATION_PCM_BLOCK_MS_R772 = 20;
+const STATION_PCM_ACTIVE_BLOCKS_R772 = 3; // 60ms consecutive real audio avoids codec-dither false starts
 const TITLE_HANDOFF_DELAY_MS_R724 = 0; // R730: title changes only on the real media handoff
 const BUMPER_MIN_SONGS_R724 = 3; // R764: station bumpers more often
 const BUMPER_MAX_SONGS_R724 = 4; // R764: every 3-4 real songs
@@ -152,8 +155,8 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R771-SAFE-RECOVERY-PREBAKED-CLIP-CTA-BUMPER-AUDIO-SYNC-R769-PRESERVED',
-  mode: 'R771 SAFE RECOVERY + PREBAKED CLIP CTA + PREBAKED BUMPER AUDIO SYNC + R769/R768/R767 PRESERVED',
+  version: 'R772-SAFE-PCM-SYNC-NO-SILENCEDETECT-R771-R769-PRESERVED',
+  mode: 'R772 SAFE PCM-SAMPLE BUMPER SYNC + R771 PREBAKED CTA + R769/R768/R767 PRESERVED',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
@@ -1107,23 +1110,63 @@ function preparedClipFilterComplexR742(titleFile,tickerFile,{stationInsert=false
   graph+=';[qrbase]format=yuv420p[outv]';
   return graph;
 }
-async function probeStationLeadingSilenceR771(sourcePath){
+function runCaptureBufferR772(command,args,{timeoutMs=12000,maxBytes=2*1024*1024}={}){
+  return new Promise((resolve,reject)=>{
+    const child=spawn(command,args,{stdio:['ignore','pipe','pipe']});
+    const chunks=[]; let total=0,err='',done=false;
+    const finish=(error,value)=>{if(done)return;done=true;clearTimeout(timer);error?reject(error):resolve(value)};
+    const timer=setTimeout(()=>{try{child.kill('SIGKILL')}catch(_){ }finish(new Error(`${command} PCM probe timeout`));},timeoutMs);
+    child.stdout.on('data',d=>{
+      if(done)return;
+      total+=d.length;
+      if(total>maxBytes){try{child.kill('SIGKILL')}catch(_){ }finish(new Error(`${command} PCM probe overflow`));return;}
+      chunks.push(Buffer.from(d));
+    });
+    child.stderr.on('data',d=>err+=String(d));
+    child.once('error',e=>finish(e));
+    child.once('exit',code=>code===0?finish(null,Buffer.concat(chunks)):finish(new Error(`${command} PCM probe exit ${code}: ${err.slice(-600)}`)));
+  });
+}
+
+async function probeStationLeadingSilenceR772(sourcePath){
   try{
-    const result=await runCaptureBothR747('nice',[
-      '-n',String(CLIP_PREP_NICE_R742),'ffmpeg','-hide_banner','-nostats','-loglevel','info','-threads','1','-i',sourcePath,
-      '-map','0:a:0','-vn','-sn','-dn',
-      '-af',`silencedetect=noise=${STATION_LEADING_SILENCE_THRESHOLD_R771}:d=${STATION_LEADING_SILENCE_MIN_R771.toFixed(2)}`,
-      '-t',String(STATION_LEADING_SILENCE_MAX_TRIM_R771+0.75),'-f','null','-'
-    ],{timeoutMs:12000});
-    const text=String(result.stderr||'');
-    const started=/silence_start:\s*(-?\d+(?:\.\d+)?)/i.exec(text);
-    const ended=/silence_end:\s*(\d+(?:\.\d+)?)/i.exec(text);
-    if(!started||!ended)return 0;
-    const start=Number(started[1]), end=Number(ended[1]);
-    if(!Number.isFinite(start)||!Number.isFinite(end)||Math.abs(start)>0.03||end<STATION_LEADING_SILENCE_MIN_R771)return 0;
-    return Math.max(0,Math.min(STATION_LEADING_SILENCE_MAX_TRIM_R771,end));
+    // R772: do NOT depend on FFmpeg's optional silencedetect filter. Decode only the
+    // first 2.75s to raw stereo s16le PCM, then detect the first sustained real-audio
+    // block in Node. This is background-only preparation and never touches LIVE graph.
+    const pcm=await runCaptureBufferR772('nice',[
+      '-n',String(CLIP_PREP_NICE_R742),'ffmpeg','-hide_banner','-nostats','-loglevel','error','-threads','1','-i',sourcePath,
+      '-map','0:a:0','-vn','-sn','-dn','-t',String(STATION_PCM_PROBE_SECONDS_R772),
+      '-ac','2','-ar',String(AUDIO_SAMPLE_RATE),'-c:a','pcm_s16le','-f','s16le','pipe:1'
+    ],{timeoutMs:15000,maxBytes:1024*1024});
+    if(!pcm||pcm.length<4096)return 0;
+    const channels=2;
+    const framesPerBlock=Math.max(1,Math.round(AUDIO_SAMPLE_RATE*STATION_PCM_BLOCK_MS_R772/1000));
+    const samplesPerBlock=framesPerBlock*channels;
+    const bytesPerBlock=samplesPerBlock*2;
+    const rmsThreshold=32767*Math.pow(10,STATION_LEADING_SILENCE_THRESHOLD_DB_R772/20);
+    let consecutive=0,candidateBlock=-1,activeStart=-1;
+    const blocks=Math.floor(pcm.length/bytesPerBlock);
+    for(let b=0;b<blocks;b++){
+      const off=b*bytesPerBlock;
+      let sumSq=0,count=0;
+      for(let i=0;i<bytesPerBlock;i+=2){
+        const v=pcm.readInt16LE(off+i);
+        sumSq+=v*v; count++;
+      }
+      const rms=count?Math.sqrt(sumSq/count):0;
+      if(rms>=rmsThreshold){
+        if(consecutive===0)candidateBlock=b;
+        consecutive++;
+        if(consecutive>=STATION_PCM_ACTIVE_BLOCKS_R772){activeStart=candidateBlock*STATION_PCM_BLOCK_MS_R772/1000;break;}
+      }else{
+        consecutive=0;candidateBlock=-1;
+      }
+    }
+    if(!(activeStart>=STATION_LEADING_SILENCE_MIN_R771))return 0;
+    // Keep 20ms before the detected attack so consonants/transients are never clipped.
+    return Math.max(0,Math.min(STATION_LEADING_SILENCE_MAX_TRIM_R771,activeStart-(STATION_PCM_BLOCK_MS_R772/1000)));
   }catch(error){
-    state.lastWarning=`R771 station silence probe: ${cleanText(error?.message||error)}`;
+    state.lastWarning=`R772 station PCM probe: ${cleanText(error?.message||error)}`;
     return 0;
   }
 }
@@ -1134,7 +1177,7 @@ async function buildPreparedClipR742(item,sourcePath){
   const stationInsert=item?.sourceType==='radio-bumper'||String(item?.sourceType||'').startsWith('radio-special');
   if(stationInsert&&!hasAudio)throw new Error(`R742 station insert audio missing: ${shortText(item?.title||'INSERT',40)}`);
   const duration=await probeDuration(sourcePath);
-  const stationLeadTrimR771=stationInsert?await probeStationLeadingSilenceR771(sourcePath):0;
+  const stationLeadTrimR771=stationInsert?await probeStationLeadingSilenceR772(sourcePath):0;
   if(stationInsert)state.stationLeadingSilenceTrimSeconds=Number(stationLeadTrimR771.toFixed(3));
   const titleFile=preparedClipTitleFileR742(readyPath);
   const tickerFile=preparedClipTickerFileR742(readyPath);
@@ -2797,10 +2840,11 @@ function publicStatus(){
     mode:state.mode,
     overlayMode:state.overlayMode,
     audioMode:state.audioMode,
-    engine:'R771 SAFE PREBAKED CTA/BUMPER-SYNC + R769 FILTERCHAIN/NEXT + R768 PUSH + R767 CLIP-SYNC',
+    engine:'R772 PCM-SAMPLE BUMPER-SYNC + R771 PREBAKED CTA + R769 FILTERCHAIN/NEXT + R768 PUSH + R767 CLIP-SYNC',
     feederFilterChainGuard:'R769-SEMICOLON-ENDMASK-TO-STARTMASK',
-    stationInsertSync:'R771-OFFLINE-DETECTED-LEADING-SILENCE-TRIM-NO-LIVE-DRAIN',
+    stationInsertSync:'R772-OFFLINE-PCM-SAMPLE-SCAN-TRIM-NO-SILENCEDETECT-NO-LIVE-DRAIN',
     stationLeadingSilenceTrimSeconds:Number(state.stationLeadingSilenceTrimSeconds||0),
+    stationSilenceProbeEngine:'R772-NODE-PCM-RMS-NO-FFMPEG-SILENCEDETECT',
     clipSubscribeOverlay:'R771-PREBAKED-RIGHT-CTA-NO-LIVE-FILTER-COMPLEX',
     committedNextCheckpointFile:COMMITTED_NEXT_FILE_R769,
     committedNextTitle:state.committedNextTitle||'',
@@ -3082,7 +3126,7 @@ const server=http.createServer((req,res)=>{
 });
 
 server.listen(PORT,'0.0.0.0',()=>{
-  console.log(`ANDRIK Radio R771 SAFE PREBAKED CTA/BUMPER SYNC + R769/R768/R767 PRESERVED listening on :${PORT}`);
+  console.log(`ANDRIK Radio R772 SAFE PCM BUMPER SYNC + R771/R769/R768/R767 PRESERVED listening on :${PORT}`);
   radioLoop();
 });
 

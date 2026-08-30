@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788071663758-1bce2564eb",
-  "release": "R771",
-  "archiveName": "R771-SAFE-RECOVERY-INSTALLER-SILENCEDETECT-FIXED-SAFE-FULL.zip",
-  "sourceHead": "61c4b3519741ca63216612c3e1ec167bd52988d0",
-  "backupSha": "61c4b3519741ca63216612c3e1ec167bd52988d0",
+  "operationId": "publish-1788072338742-c0c435536e",
+  "release": "R772",
+  "archiveName": "R772-SAFE-PCM-SYNC-NO-SILENCEDETECT-R771-R769-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "43d4f7516dc144144479f87a0d60c066964fece4",
+  "backupSha": "43d4f7516dc144144479f87a0d60c066964fece4",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-30T06:34:24.140Z"
+  "generatedAt": "2026-08-30T06:45:39.121Z"
 }
