@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788079805206-cdb570c332",
-  "release": "R778",
-  "archiveName": "R778-MPEGTS-TIMESTAMP-PUSH-AUTOMATION-RESCUE-R777-R776-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "c100ef1df2b005cbedb7a14cddcd6cdf34441e03",
-  "backupSha": "c100ef1df2b005cbedb7a14cddcd6cdf34441e03",
+  "operationId": "publish-1788080232676-692191a89b",
+  "release": "R779",
+  "archiveName": "R779-INSTALLER-STDIN-SAFE-R778-R777-R776-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "69288322a50be79db54934b4512108b437eabaa1",
+  "backupSha": "69288322a50be79db54934b4512108b437eabaa1",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-30T08:50:05.683Z"
+  "generatedAt": "2026-08-30T08:57:13.061Z"
 }

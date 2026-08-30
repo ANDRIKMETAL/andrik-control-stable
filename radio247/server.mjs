@@ -148,7 +148,7 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R778-MPEGTS-TIMESTAMP-BRIDGE-R777-PRESERVED',
+  version: 'R779-MPEGTS-TIMESTAMP-BRIDGE-INSTALLER-STDIN-FIX-R778-PRESERVED',
   mode: 'R778 MPEGTS TIMESTAMP BRIDGE + R777/R775 FILTERCHAIN/NEXT + R776 SITE PRESERVED',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
