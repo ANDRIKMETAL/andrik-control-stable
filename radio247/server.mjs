@@ -155,8 +155,8 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R772-SAFE-PCM-SYNC-NO-SILENCEDETECT-R771-R769-PRESERVED',
-  mode: 'R772 SAFE PCM-SAMPLE BUMPER SYNC + R771 PREBAKED CTA + R769/R768/R767 PRESERVED',
+  version: 'R773-INSTALL-VERIFIED-PCM-SYNC-R772-ENGINE-PRESERVED',
+  mode: 'R773 INSTALL-VERIFIED + R772 PCM-SAMPLE BUMPER SYNC + R771/R769/R768/R767 PRESERVED',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
