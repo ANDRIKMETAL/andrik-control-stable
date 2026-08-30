@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788106944540-8ceb7e7ea0",
-  "release": "R789",
-  "archiveName": "R789-YOUTUBE-STEADY-STATE-GUARD-R788-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "f890f60ffd51784471cf73181eac1ac7de1cb16b",
-  "backupSha": "f890f60ffd51784471cf73181eac1ac7de1cb16b",
+  "operationId": "publish-1788108959337-bb952cf9fe",
+  "release": "R790",
+  "archiveName": "R790-IRONCLAD-AV-PTS-TITLE-CONTINUOUS-H264-R787-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "6561512892a2de7ba59f4f736014985e151ee7c0",
+  "backupSha": "6561512892a2de7ba59f4f736014985e151ee7c0",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-30T16:22:25.015Z"
+  "generatedAt": "2026-08-30T16:55:59.993Z"
 }
