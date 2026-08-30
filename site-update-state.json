@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788076824703-bd34648ae8",
-  "release": "R776",
-  "archiveName": "R776-TRIKA-PLAYER-ZIP-RESTORED-R775-RADIO-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "5a31779905b9fff4d1c29fe616417ec96547e05c",
-  "backupSha": "5a31779905b9fff4d1c29fe616417ec96547e05c",
+  "operationId": "publish-1788078212495-310df243de",
+  "release": "R777",
+  "archiveName": "R777-MASTER-GENPTS-NO-SETTS-BSF-R775-R776-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "98b5d693f84ae81330a38dee80ec1ddc296c763e",
+  "backupSha": "98b5d693f84ae81330a38dee80ec1ddc296c763e",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-30T08:00:25.102Z"
+  "generatedAt": "2026-08-30T08:23:32.889Z"
 }

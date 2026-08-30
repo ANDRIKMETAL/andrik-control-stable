@@ -148,8 +148,8 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R775-MINIMAL-STABLE-FADE-NEXT-R767-PRESERVED',
-  mode: 'R769 FILTERCHAIN GUARD + COMMITTED NEXT RECOVERY + R768 PUSH + R767 RADIO PRESERVED',
+  version: 'R777-MASTER-GENPTS-NO-SETTS-BSF-R775-R776-PRESERVED',
+  mode: 'R777 MASTER GENPTS NO SETTS BSF + R775 FILTERCHAIN/NEXT + R776 SITE PRESERVED',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
@@ -1780,11 +1780,12 @@ function startPublisher(){
 
   // R721 transport: video feeders encode the final 1920x1080 frame to Annex-B H264.
   // This ONE master never closes at MP3<->clip or MORNING/DAY/EVENING/NIGHT boundaries.
-  // The setts bitstream filter gives every incoming frame a monotonically increasing
-  // 1/25-second timestamp, independent of feeder process restarts. No video re-encode here.
+  // R777: this VPS FFmpeg does NOT provide the `setts` H264 bitstream filter. The
+  // persistent raw-H264 demuxer stays open across feeder swaps, so +genpts + fixed 25fps
+  // synthesize one continuous packet clock without any video BSF or second encode.
   const args=[
     '-hide_banner','-loglevel','warning',
-    '-thread_queue_size',String(VIDEO_INPUT_QUEUE_PACKETS_R732),'-use_wallclock_as_timestamps','1','-fflags','+genpts+discardcorrupt','-framerate',String(VIDEO_FPS),'-f','h264','-i','pipe:4',
+    '-thread_queue_size',String(VIDEO_INPUT_QUEUE_PACKETS_R732),'-fflags','+genpts+discardcorrupt','-framerate',String(VIDEO_FPS),'-f','h264','-i','pipe:4',
     '-thread_queue_size',String(AUDIO_INPUT_QUEUE_PACKETS_R732),'-f','s16le','-ar',String(AUDIO_SAMPLE_RATE),'-ac','2','-i','pipe:3',
     '-map','0:v:0','-map','1:a:0',
     // R761: EVERY feeder already produces the final viewer-approved 1920x1080 H264 frame
@@ -1792,10 +1793,10 @@ function startPublisher(){
     // a second time in the persistent master. R760's double x264 path consumed ~40% CPU in
     // the master on top of ~55% in the feeder and could stop reading BOTH Node pipes for
     // 30 s, triggering R751 NO-PROGRESS/status=76 and YouTube BAD/NODATA. The persistent
-    // master now only re-timestamps/copies H264 and encodes AAC. Graceful R754 feeder stop
-    // + AUD/repeat-headers make the boundary safe while setts supplies one continuous clock.
+    // master now copies H264 and encodes AAC. R777 deliberately uses NO video bitstream
+    // filter: +genpts and the fixed raw-H264 framerate own the persistent packet clock.
+    // Graceful feeder stop + AUD/repeat-headers keep boundaries parseable.
     '-c:v','copy',
-    '-bsf:v',`setts=time_base=1/${VIDEO_FPS}:ts=if(eq(N\,0)\,0\,max(PREV_OUTPTS+1\,round((PTS-STARTPTS)*TB*${VIDEO_FPS}))):duration=1`,
     '-c:a','aac','-profile:a','aac_low','-b:a',AUDIO_BITRATE,'-ar',String(AUDIO_SAMPLE_RATE),'-ac','2',
     '-max_muxing_queue_size','4096','-flush_packets','1',
     '-f','fifo','-fifo_format','flv','-queue_size',String(OUTPUT_FIFO_QUEUE_PACKETS_R750),
@@ -2738,7 +2739,7 @@ function publicStatus(){
     mode:state.mode,
     overlayMode:state.overlayMode,
     audioMode:state.audioMode,
-    engine:'R775 MINIMAL R769 FILTERCHAIN-GUARD + COMMITTED-NEXT + R767 TRANSPORT',
+    engine:'R777 MASTER GENPTS NO SETTS BSF + R775 FILTERCHAIN/NEXT + R767 TRANSPORT',
     feederFilterChainGuard:'R769-SEMICOLON-ENDMASK-TO-STARTMASK',
     committedNextCheckpointFile:COMMITTED_NEXT_FILE_R769,
     committedNextTitle:state.committedNextTitle||'',
@@ -2765,7 +2766,7 @@ function publicStatus(){
     videoInputQueuePackets:VIDEO_INPUT_QUEUE_PACKETS_R732,
     videoInputQueueMaxWindowSecondsR756:Number((VIDEO_INPUT_QUEUE_PACKETS_R732/VIDEO_FPS).toFixed(2)),
     audioInputQueuePackets:AUDIO_INPUT_QUEUE_PACKETS_R732,
-    masterAvClockMode:'R767-VIDEO-WALLCLOCK-GAP-AWARE+AUDIO-SAMPLE-CLOCK',
+    masterAvClockMode:'R777-RAW-H264-GENPTS-25FPS+AUDIO-SAMPLE-CLOCK',
     rightSubscribeMode:'R767-TRANSPARENT-420PX-BOTTOM-RIGHT',
     overlayPixelPath:'YUV420-NO-ARGB-R732',
     trackUiClock:'ffmpeg-frame-bound-R732-audio-lead-bounded',
@@ -2863,7 +2864,11 @@ function publicStatus(){
     equalizerStyle:state.equalizerStyle,
     equalizerEngine:state.equalizerEngine,
     publisherRunning:state.publisherRunning,
-    masterVideoMode:'R769-R767-R761-H264-COPY-SETTS-SINGLE-ENCODE-8Q',
+    masterVideoMode:'R777-H264-COPY-GENPTS-NO-BSF-SINGLE-ENCODE-8Q',
+    masterBitstreamFilter:'none-R777-setts-bsf-removed-for-vps-compatibility',
+    masterTimestampMode:'R777-RAW-H264-FRAMERATE25-PLUS-GENPTS',
+    masterAudioBytesWritten:Number(publisher?.stdio?.[3]?.bytesWritten||0),
+    masterVideoBytesWritten:Number(publisher?.stdio?.[4]?.bytesWritten||0),
     masterVideoReencode:false,
     videoEncodePasses:1,
     videoQualityMode:'R763-R762-6000K-CBR-ULTRAFAST-SINGLE-ENCODE-NO-GENERATIONAL-LOSS',
@@ -2874,7 +2879,7 @@ function publicStatus(){
     permanentFullscreenWidth:1920,
     permanentFullscreenHeight:1080,
     permanentFullscreenFitPolicy:'R753-FIT-DECREASE-PAD-NO-CROP',
-    feederBoundaryMode:'R767-GAP-AWARE-WALLCLOCK+R754-GRACEFUL-FLUSH+AUD',
+    feederBoundaryMode:'R777-PERSISTENT-GENPTS+R754-GRACEFUL-FLUSH+AUD',
     transportRecoveryMode:'R754-FFMPEG-FIFO-FIRST-NO-EARLY-SYSTEMD-EXIT',
     transportHealthy:state.transportHealthy!==false,
     transportWatchdogMode:'R763-R762-R761-SINGLE-ENCODE+R754-FIFO-FIRST+R751-NO-PROGRESS-30S',
@@ -3020,7 +3025,7 @@ const server=http.createServer((req,res)=>{
 });
 
 server.listen(PORT,'0.0.0.0',()=>{
-  console.log(`ANDRIK Radio R769 FILTERCHAIN GUARD + COMMITTED NEXT + R768/R767 PRESERVED listening on :${PORT}`);
+  console.log(`ANDRIK Radio R777 MASTER GENPTS NO SETTS BSF + R775/R776 PRESERVED listening on :${PORT}`);
   radioLoop();
 });
 
