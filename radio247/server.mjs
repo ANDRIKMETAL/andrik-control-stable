@@ -48,7 +48,7 @@ const CTA_FIRST_SHOW_SECONDS_R748 = 20; // first compact CTA after feeder settle
 const CTA_FADE_SECONDS_R748 = 0.35; // smooth alpha in/out instead of blink
 const CTA_BOTTOM_GAP_R748 = 72; // R767: compact CTA directly above ticker
 const CTA_RIGHT_GAP_R767 = 34; // R767: right side; old left CTA removed
-const CLIP_PREP_SUFFIX_R782 = '.r784-ready.mp4'; // R784: force fresh caches after station-audio hard guard; R783 alternating CTA preserved
+const CLIP_PREP_SUFFIX_R782 = '.r785-ready.mp4'; // R785: force fresh full-frame caches after no-crop guard; R784 station audio + R783 CTA preserved
 const STATION_LEADING_SILENCE_THRESHOLD_DB_R782 = -55; // PCM RMS threshold, no optional FFmpeg silencedetect dependency
 const STATION_LEADING_SILENCE_MIN_R782 = 0.20; // only compensate sustained leading near-silence >=200ms
 const STATION_LEADING_SILENCE_MAX_TRIM_R782 = 2.0; // safety clamp; never advance station audio more than 2s
@@ -162,8 +162,8 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R784-CONTINUOUS-RAWVIDEO-CLOCK-STATION-AUDIO-R783-PRESERVED',
-  mode: 'R784 CONTINUOUS 25FPS RAWVIDEO MASTER CLOCK + HARD STATION AUDIO + R783 CTA/R781 TITLE/R780 EGRESS',
+  version: 'R785-FULLFRAME-NOCROP-GUARD-R784-PRESERVED',
+  mode: 'R785 FULL-FRAME NO-CROP GUARD + R784 CONTINUOUS RAWVIDEO CLOCK/STATION AUDIO + R783 CTA/R781/R780',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
@@ -173,6 +173,8 @@ const state = {
   videoRelayPartialBytesDropped: 0,
   masterTimestampErrorCount: 0,
   stationAudioGuardMode: 'R784-BEST-AUDIO-STREAM+PREPARED-RMS-VERIFY',
+  fullFrameGuardMode: 'R785-FINAL-LIVE-FIT-PAD-1920x1080+SAR1',
+  preparedGeometryByKey: {},
   overlayMode: 'R757 PREV/NEXT ON MP3 + NORMAL CLIPS @ INTRO 2-7s + FINAL 10s / R756 PRESERVED',
   audioMode: 'R750 NONBLOCKING R747 EBU R128 -14 LUFS / TP -1.5 + R743 FADES + AUDIO QUEUE 8 / ONE RTMPS',
   mp3ToVideoFadeMode: 'R757-END-BLACK-HOLD-THEN-VIDEO-FADE-IN',
@@ -223,7 +225,7 @@ const state = {
   clipPostDrainMs: CLIP_POST_DRAIN_MS_R738,
   videoTimelineCompensationSeconds: VIDEO_TIMELINE_COMP_DEFAULT_R739,
   videoTimelineCompensationMode: 'R743-DISABLED-FOR-MP3-BOUNDARY',
-  clipPlaybackMode: 'R784-PREPARED-RAWVIDEO-FULL-FRAME-RELAY',
+  clipPlaybackMode: 'R785-PREPARED-FIT-PAD-RAWVIDEO-FULL-FRAME-RELAY',
   clipPreparationMode: 'R742-SERIAL-NICE12-ONE-THREAD',
   preparedClipReady: 0,
   preparedClipPending: 0,
@@ -876,6 +878,22 @@ async function probeDuration(url){
   return duration;
 }
 
+async function probePreparedGeometryR785(path){
+  const raw=await runCapture('ffprobe',[
+    '-v','error','-select_streams','v:0',
+    '-show_entries','stream=width,height,sample_aspect_ratio,display_aspect_ratio',
+    '-of','json',path
+  ],{timeoutMs:15000});
+  let info={};
+  try{info=JSON.parse(String(raw)||'{}')?.streams?.[0]||{}}catch(_){ }
+  const width=Number(info.width||0),height=Number(info.height||0);
+  const sar=String(info.sample_aspect_ratio||'');
+  const dar=String(info.display_aspect_ratio||'');
+  if(width!==1920||height!==1080)throw new Error(`R785 prepared geometry invalid: ${width}x${height}`);
+  if(sar && sar!=='1:1')throw new Error(`R785 prepared SAR invalid: ${sar}`);
+  return {width,height,sar:sar||'1:1',dar:dar||'16:9'};
+}
+
 function chooseFont(){
   const candidates=[
     '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
@@ -1275,7 +1293,7 @@ async function buildPreparedClipR742(item,sourcePath){
   }else{
     hasAudio=await probeHasAudioR721(sourcePath);
   }
-  if(stationInsert&&!hasAudio)throw new Error(`R784 station insert audio missing: ${shortText(item?.title||'INSERT',40)}`);
+  if(stationInsert&&!hasAudio)throw new Error(`R785 station insert audio missing: ${shortText(item?.title||'INSERT',40)}`);
   const duration=await probeDuration(sourcePath);
   const stationAudioRelativeIndexR784=stationInsert?Math.max(0,Number(stationAudioProbeR784?.relativeIndex)||0):0;
   const stationLeadTrimR782=stationInsert?await probeStationLeadingSilenceR782(sourcePath,stationAudioRelativeIndexR784):0;
@@ -1318,6 +1336,9 @@ async function buildPreparedClipR742(item,sourcePath){
   try{
     await runCapture('nice',['-n',String(CLIP_PREP_NICE_R742),'ffmpeg','-nostdin',...args],{timeoutMs:CLIP_PREP_TIMEOUT_MS_R742});
     if(!existsSync(tmp)||statSync(tmp).size<CLIP_PREP_MIN_BYTES_R742)throw new Error('R742 prepared clip too small');
+    const preparedGeometryR785=await probePreparedGeometryR785(tmp);
+    const geometryKeyR785=String(item?.key||item?.title||sourcePath.split('/').pop()||'clip');
+    state.preparedGeometryByKey={...(state.preparedGeometryByKey||{}),[geometryKeyR785]:{...preparedGeometryR785,verifiedAt:new Date().toISOString()}};
     if(stationInsert){
       const verified=await probeStationBestAudioStreamR784(tmp,{maxStreams:1});
       const key=String(item?.key||item?.title||'station');
@@ -1387,6 +1408,12 @@ function clipLiveVideoFilterR757({duration=0,showPreview=false}={}){
   // 1080p filter + live x264 could make video processing fall behind while PCM audio
   // stayed real-time. Keep one exact frame clock instead: frame N == N/25 seconds.
   const vf=[
+    // R785-LIVE-CLIP-FIT-PAD-FINAL: never trust cached/source geometry at the rawvideo boundary.
+    // Preserve the ENTIRE decoded frame, fit inside 1920x1080, add black bars only when needed,
+    // force square pixels, then establish the exact 25fps live clock. No crop/zoom is allowed.
+    'scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos',
+    'pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black',
+    'setsar=1',
     `fps=${VIDEO_FPS}`,
     `setpts=N/(${VIDEO_FPS}*TB)`,
     'format=yuv420p',
@@ -2105,6 +2132,8 @@ function startPublisher(){
     '-thread_queue_size',String(VIDEO_INPUT_QUEUE_PACKETS_R732),'-f','rawvideo','-pix_fmt','yuv420p','-s:v','1920x1080','-r',String(VIDEO_FPS),'-i','pipe:4',
     '-thread_queue_size',String(AUDIO_INPUT_QUEUE_PACKETS_R732),'-f','s16le','-ar',String(AUDIO_SAMPLE_RATE),'-ac','2','-i','pipe:3',
     '-map','0:v:0','-map','1:a:0',
+    '-vf','setsar=1',
+    // R785: raw input is always interpreted/displayed as square-pixel 1920x1080 (16:9).
     // R784: the persistent master receives one uninterrupted sequence of FULL raw frames.
     // Its rawvideo demuxer assigns frame N exactly N/25 seconds, so no feeder can reset DTS/PTS.
     // There is still only ONE x264 pass total: local feeders filter/decode only; master encodes.
@@ -2540,7 +2569,7 @@ async function playVideoClipR691(previous,item,next){
     clipPublisher=child;
     producer=child;
     state.producerRunning=true;
-    state.clipPlaybackMode='R784-ONE-FFMPEG-BOTH-READY+RAW-FULL-FRAME-RELAY+EXACT-SAMPLE-CLOCK+TAIL-LOCK';
+    state.clipPlaybackMode='R785-ONE-FFMPEG-BOTH-READY+FINAL-FIT-PAD+RAW-FULL-FRAME-RELAY+EXACT-SAMPLE-CLOCK+TAIL-LOCK';
     videoSource.on('error',()=>{});
     audioSource.on('error',()=>{});
     progressSource?.on('data',d=>{const line=String(d||'').trim();if(line)state.clipProgressLine=line.slice(-500);});
@@ -3059,13 +3088,13 @@ function publicStatus(){
     mode:state.mode,
     overlayMode:state.overlayMode,
     audioMode:state.audioMode,
-    engine:'R784 CONTINUOUS RAWVIDEO CLOCK + STATION AUDIO GUARD + R783 CTA + R781 TITLE + R780 EGRESS',
+    engine:'R785 FULLFRAME NOCROP + R784 CONTINUOUS RAWVIDEO CLOCK/STATION AUDIO + R783 CTA/R781/R780',
     feederFilterChainGuard:'R769-SEMICOLON-ENDMASK-TO-STARTMASK',
     committedNextCheckpointFile:COMMITTED_NEXT_FILE_R769,
     committedNextTitle:state.committedNextTitle||'',
     committedNextRecovered:Boolean(state.committedNextRecovered),
     committedNextCommittedAt:state.committedNextCommittedAt||null,
-    videoPipeline:'R784 FULL-FRAME YUV420P RELAY -> PERSISTENT 25FPS CLOCK -> SINGLE X264 + R767/R766 AV TAIL LOCK',
+    videoPipeline:'R785 FINAL FIT+PAD 1920x1080 SAR1 -> R784 FULL-FRAME YUV420P RELAY -> PERSISTENT 25FPS CLOCK -> SINGLE X264',
     outputTimeshiftSeconds:OUTPUT_TIMESHIFT_SECONDS,
     videoBitrate:VIDEO_BITRATE,
     audioBitrate:AUDIO_BITRATE,
@@ -3141,12 +3170,12 @@ function publicStatus(){
       clipPostDrainMs:0,
       stationInsertAudioRequired:true,
       nextPreviewSource:'ACTUAL_IMMEDIATE_ITEM_R738',
-      clipPlaybackMode:state.clipPlaybackMode||'R784-PREPARED-RAWVIDEO-FRAME-RELAY',
+      clipPlaybackMode:state.clipPlaybackMode||'R785-PREPARED-FIT-PAD-RAWVIDEO-FRAME-RELAY',
       clipPreparationMode:state.clipPreparationMode||'R760-R742-SERIAL-NICE12-ONE-THREAD-NEW-GEOMETRY-CACHE',
       preparedClipReady:state.preparedClipReady||0,
       preparedClipPending:state.preparedClipPending||0,
       preparedClipLast:state.preparedClipLast||'',
-      clipLiveVideoCodec:'rawvideo-yuv420p-frame-aligned-to-master',
+      clipLiveVideoCodec:'R785-fit-pad-1920x1080-sar1-rawvideo-frame-aligned-to-master',
       clipPreparedVideoCodec:'libx264-ultrafast-6000k-no-bframes-r760-fit-pad',
       videoPipelineLeadSeconds:0,
       clipCacheWarmLeadSeconds:INSERT_CACHE_WARM_LEAD_SECONDS_R752,
@@ -3201,7 +3230,7 @@ function publicStatus(){
     equalizerStyle:state.equalizerStyle,
     equalizerEngine:state.equalizerEngine,
     publisherRunning:state.publisherRunning,
-    masterVideoMode:'R784-PERSISTENT-RAWVIDEO-25FPS-SINGLE-X264-FLV-TAG7-EGRESS-GUARD',
+    masterVideoMode:'R785-FULLFRAME-SAR1+R784-PERSISTENT-RAWVIDEO-25FPS-SINGLE-X264-FLV-TAG7-EGRESS-GUARD',
     masterBitstreamFilter:'none-R784-rawvideo-clock-no-feeder-timestamps',
     masterAudioBytesWritten:Number(publisher?.stdio?.[3]?.bytesWritten||0),
     masterVideoBytesWritten:Number(publisher?.stdio?.[4]?.bytesWritten||0),
@@ -3217,15 +3246,17 @@ function publicStatus(){
     lastOutputFatalAt:state.lastOutputFatalAt,
     lastOutputFatalReason:state.lastOutputFatalReason,
     videoEncodePasses:1,
-    videoQualityMode:'R784-6000K-CBR-ULTRAFAST-SINGLE-MASTER-ENCODE-NO-FEEDER-REENCODE',
+    videoQualityMode:'R785-NOCROP-FITPAD+R784-6000K-CBR-ULTRAFAST-SINGLE-MASTER-ENCODE',
     videoBitrate:'6000k',
     audioBitrate:'160k',
     videoPreset:'ultrafast-zerolatency-UNCHANGED-FOR-STABILITY',
     permanentFullscreenMode:'R761-R760-R753-PRESERVE-ASPECT-FIT-PAD-1920x1080-SAR1',
     permanentFullscreenWidth:1920,
     permanentFullscreenHeight:1080,
-    permanentFullscreenFitPolicy:'R753-FIT-DECREASE-PAD-NO-CROP',
-    feederBoundaryMode:'R784-FULL-RAW-FRAMES-ONLY+PERSISTENT-N25-CLOCK',
+    permanentFullscreenFitPolicy:'R785-FINAL-LIVE-FIT-DECREASE-PAD-NO-CROP-SAR1',
+    fullFrameGuardMode:state.fullFrameGuardMode,
+    preparedGeometryByKey:state.preparedGeometryByKey||{},
+    feederBoundaryMode:'R785-FINAL-1920x1080-FITPAD-SAR1+R784-FULL-RAW-FRAMES-ONLY+PERSISTENT-N25-CLOCK',
     transportRecoveryMode:'R754-FFMPEG-FIFO-FIRST-NO-EARLY-SYSTEMD-EXIT',
     transportHealthy:state.transportHealthy!==false,
     transportWatchdogMode:'R784-CONTINUOUS-RAWVIDEO-CLOCK+R754-FIFO-FIRST+R751-NO-PROGRESS-30S',

@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788089994868-0815a92777",
-  "release": "R784",
-  "archiveName": "R784-CONTINUOUS-RAWVIDEO-CLOCK-STATION-AUDIO-R783-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "8a4c92501027911e64b3f001c5f03f78cc4896b9",
-  "backupSha": "8a4c92501027911e64b3f001c5f03f78cc4896b9",
+  "operationId": "publish-1788091018902-61c7910b05",
+  "release": "R786",
+  "archiveName": "R786-MOBILE-STABLE-DAY-VIDEO-UPLOAD-R785-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "7bea896d71dc2202f16a71863cdf01d9275476fd",
+  "backupSha": "7bea896d71dc2202f16a71863cdf01d9275476fd",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-30T11:39:55.233Z"
+  "generatedAt": "2026-08-30T11:56:59.476Z"
 }

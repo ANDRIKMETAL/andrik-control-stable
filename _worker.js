@@ -18185,7 +18185,7 @@ async function handleRadioVisualMpuStartR662(request,env){
       httpMetadata:{contentType:'video/mp4',cacheControl:'no-store'},
       customMetadata:{source:'ANDRIK R709 visual library upload',slot,sourceName,expectedSize:String(expectedSize),uploadedBy:'radio-visuals-admin-r709',uploadedAt:new Date().toISOString()}
     });
-    return json({ok:true,slot,key,sourceKey:key,sourceName,uploadId:upload.uploadId,partSize:8*1024*1024,expectedSize});
+    return json({ok:true,slot,key,sourceKey:key,sourceName,uploadId:upload.uploadId,partSize:5*1024*1024,expectedSize,uploadMode:'R786-mobile-stable-5MiB'});
   }catch(error){return json({ok:false,error:'multipart-start-failed',message:cleanPlainText(error?.message||error,420)},502);}
 }
 async function handleRadioVisualMpuPartR662(request,env){
