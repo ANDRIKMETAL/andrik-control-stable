@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788112926789-8f1a2c2a0b",
-  "release": "R792",
-  "archiveName": "R792-STATION-NOGAP-DUAL-RTMPS-R791-R790-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "8a5e921a6b78fe61865489cf7207d562799ff151",
-  "backupSha": "8a5e921a6b78fe61865489cf7207d562799ff151",
+  "operationId": "publish-1788113874315-25dff373e2",
+  "release": "R793",
+  "archiveName": "R793-PREFETCH-LOUDNESS-HARD-OFF-R792-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "e43fa292cb9f09828413f09b48fb965f75eb8188",
+  "backupSha": "e43fa292cb9f09828413f09b48fb965f75eb8188",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-30T18:02:07.379Z"
+  "generatedAt": "2026-08-30T18:17:54.943Z"
 }

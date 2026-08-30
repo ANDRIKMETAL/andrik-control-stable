@@ -176,14 +176,14 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R792-STATION-NOGAP-DUAL-RTMPS-R791-R790-PRESERVED',
-  mode: 'R792 STATION ARM-BEFORE-CUT + DUAL YOUTUBE RTMPS + R791 AUDIO ZERO-PTS + R790/R787 PRESERVED',
+  version: 'R793-PREFETCH-LOUDNESS-HARD-OFF-R792-PRESERVED',
+  mode: 'R793 PREFETCH LOUDNESS HARD-OFF + R792 STATION/DUAL-RTMPS + R791/R790/R787 PRESERVED',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
   producerRunning: false,
   overlayMode: 'R757 PREV/NEXT ON MP3 + NORMAL CLIPS @ INTRO 2-7s + FINAL 10s / R756 PRESERVED',
-  audioMode: 'R792 R791 LIVE-ONLY LOUDNESS + AUDIO QUEUE 8 / SAME MASTER A/V TO PRIMARY+BACKUP RTMPS',
+  audioMode: 'R793 NO BACKGROUND/PREFETCH LOUDNESS + LIVE FALLBACK + AUDIO QUEUE 8 / SAME MASTER A/V TO PRIMARY+BACKUP RTMPS',
   mp3ToVideoFadeMode: 'R757-END-BLACK-HOLD-THEN-VIDEO-FADE-IN',
   clipPreviewMode: 'R757-NORMAL-CLIPS-PREVNEXT-INTRO-2-7S-PLUS-FINAL-10S',
   mp3BoundaryFadeMode: 'R763-R753-SAME-FEEDER-BLACK-ALPHA-0.65-HOLD-0.05-LEAD-1.40-RECOVER-0.80',
@@ -239,7 +239,7 @@ const state = {
   preparedClipLast: '',
   videoPipelineLeadSeconds: 0,
   videoHandoffMode: 'R753-R752-CACHE-ONLY-NO-LIVE-PREROLL',
-  clipAvSyncMode: 'R792-STATION-ARM-BEFORE-CUT+BOTH-READY+DRAIN-BLACK+SAME-TICK / R791-AUDIO-PTS0',
+  clipAvSyncMode: 'R793-R792-STATION-ARM-BEFORE-CUT+BOTH-READY+DRAIN-BLACK+SAME-TICK / R791-AUDIO-PTS0',
   feederFilterChainMode: 'R769-EXPLICIT-CHAIN-SEPARATOR-BETWEEN-ENDMASK-AND-STARTMASK',
   committedNextMode: 'R769-DISK-CHECKPOINT-NORMAL-TRACK-NEXT',
   committedNextTitle: '',
@@ -1025,7 +1025,13 @@ function scheduleLoudnessAnalysisR750(localAudioPath){
 
 function prefetchTrack(item){
   if(!item?.url)return;
-  downloadTrackToCache(item).then(path=>scheduleLoudnessAnalysisR750(path)).catch(error=>{
+  // R793: prefetch is download-only while background loudness is disabled.
+  // R791 disabled the live-track analysis path, but R750's prefetch path still
+  // called scheduleLoudnessAnalysisR750() unconditionally. That is why R792's
+  // live guard legitimately saw [loudness-r750-background] and rolled back.
+  downloadTrackToCache(item).then(path=>{
+    if(BACKGROUND_LOUDNESS_ENABLED_R791) scheduleLoudnessAnalysisR750(path);
+  }).catch(error=>{
     console.error('[prefetch]',cleanText(error?.message||error));
   });
 }
@@ -3151,7 +3157,7 @@ function publicStatus(){
     mode:state.mode,
     overlayMode:state.overlayMode,
     audioMode:state.audioMode,
-    engine:'R792 STATION NO-GAP ARM + DUAL RTMPS TEE/FIFO + R791 AUDIO PTS0 + R790 CLOCK/TITLE + R787 NOCROP',
+    engine:'R793 PREFETCH LOUDNESS HARD-OFF + R792 STATION NO-GAP/DUAL RTMPS + R791 AUDIO PTS0 + R790 CLOCK/TITLE + R787 NOCROP',
     feederFilterChainGuard:'R769-SEMICOLON-ENDMASK-TO-STARTMASK',
     committedNextCheckpointFile:COMMITTED_NEXT_FILE_R769,
     committedNextTitle:state.committedNextTitle||'',
@@ -3279,6 +3285,7 @@ function publicStatus(){
       insertPrerollArmGraceMs:INSERT_PREROLL_ARM_GRACE_MS_R749,
       insertAudioStartTimeoutMs:INSERT_AUDIO_START_TIMEOUT_MS_R749,
       backgroundLoudnessEnabled:BACKGROUND_LOUDNESS_ENABLED_R791,
+      backgroundPrefetchLoudnessPolicyR793:'DOWNLOAD-ONLY-WHEN-BACKGROUND-OFF',
       stationPreparedAudioClock:'R791-PTS-STARTPTS-BEFORE-ARESAMPLE-SAMPLECOUNT-CLOCK',
       stationArmPolicyR792:'KEEP-LIVE-BLACK-UNTIL-BOTH-READY-THEN-DRAIN-Q8-AND-SAME-TICK',
       insertUnhandledRejectionGuard:'R753-R752-UNIFIED-AV-EXIT-CATCH+R751-GUARD',
