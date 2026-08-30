@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788064611597-70ea4fb838",
-  "release": "R768",
-  "archiveName": "R768-OWNER-PUSH-SELFHEAL-SIGNED-BRIDGE-PUSH-SAFE-CACHE-R767-RADIO-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "7b7306c44f0e963fd0049fc17506e9058e5bcd58",
-  "backupSha": "7b7306c44f0e963fd0049fc17506e9058e5bcd58",
+  "operationId": "publish-1788069400197-a1d562f2ff",
+  "release": "R770",
+  "archiveName": "R770-BUMPER-AV-SYNC-CLIP-RIGHT-SUBSCRIBE-R769-RECOVERY-R768-PUSH-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "8a776d3b0ad1b17dcedd31fba1615dced3e6b2a3",
+  "backupSha": "8a776d3b0ad1b17dcedd31fba1615dced3e6b2a3",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-30T04:36:52.055Z"
+  "generatedAt": "2026-08-30T05:56:40.635Z"
 }
