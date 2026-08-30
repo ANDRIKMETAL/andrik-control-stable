@@ -180,9 +180,9 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R799-FADE-ONLY-R787-RESTORE-R798-PRESERVED',
+  version: 'R800-FADE-HEADROOM-OUTRO-SHIFT-R799-PRESERVED',
   cpuHeadroomProfileR794:'R796-LIVE-FAST-SCALE-COMPACT-EQ-FINITE-FADE-PRESCALED-STATIC',
-  mode: 'R796 MAX CPU HEADROOM + TICKER36 + COMPACT EQ + R795 FADE + R792/R791/R790/R787 PRESERVED',
+  mode: 'R800 FADE HEADROOM + R799/R798/R797/R796 TRANSPORT PRESERVED',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
@@ -1397,8 +1397,13 @@ function clipLiveVideoFilterR757({duration=0,showPreview=false}={}){
   const d=Math.max(0,Number(duration)||0);
   const introStart=START_PREVIEW_DELAY_SECONDS_R748;
   const introEnd=introStart+START_PREVIEW_SHOW_SECONDS_R748;
-  const outroStart=Math.max(0,d-NEXT_PREVIEW_SECONDS_R726);
-  const outroEnd=Math.max(outroStart+0.25,d-NEXT_PREVIEW_HIDE_BEFORE_END_R726);
+  // R800 FADE-HEADROOM: keep PREVIOUS/NEXT near the end, but finish them before
+  // the expensive full-frame fade window. On the 2-vCPU VPS the old T-10..T-0.3
+  // preview overlapped the black alpha overlay and caused the exact BAD/stutter spike.
+  // T-12..T-4 remains clearly visible to the viewer and leaves ~1.9s CPU headroom
+  // before the proven R799/R787 fade starts at about T-2.1.
+  const outroStart=Math.max(0,d-12.0);
+  const outroEnd=Math.max(outroStart+0.25,d-4.0);
   let previewExpr='0';
   if(showPreview&&d>NEXT_PREVIEW_SECONDS_R726+0.5){
     const hasSeparatedIntro=d>(introEnd+NEXT_PREVIEW_SECONDS_R726+0.75);
@@ -3294,8 +3299,8 @@ function publicStatus(){
       backgroundPrefetchLoudnessPolicyR793:'DOWNLOAD-ONLY-WHEN-BACKGROUND-OFF',
       liveScalePolicyR794:'FAST-BILINEAR-LIVE-MP3-ONLY-OFFLINE-LANCZOS-PRESERVED',
       fadeEngineR795:'R787-ABSOLUTE-TIMELINE-ALPHA-MASK-065-BLACK-HOLD-RECOVER',
-      fadeRuntimePolicyR796:'R799-R787-ABSOLUTE-ALPHA-MASK-065-005-080',
-      fadeRestoreR799:'ONLY-FADE-CHANGED-YOUTUBE-TRANSPORT-PRESERVED',
+      fadeRuntimePolicyR796:'R800-R799-R787-ABSOLUTE-ALPHA-MASK-065-005-080',
+      fadeRestoreR799:'R800-FADE-HEADROOM-OUTRO-T12-TO-T4-YOUTUBE-TRANSPORT-PRESERVED',
       equalizerPolicyR796:'QTRLE-1180PX-25FPS-100FRAME-SEAMLESS-NO-LIVE-SCALE',
       tickerPolicyR796:'FONT36-Y62-SPEED105-RELOAD2S',
       staticOverlayPolicyR794:'PRE-SCALED-QR160-CTA420',

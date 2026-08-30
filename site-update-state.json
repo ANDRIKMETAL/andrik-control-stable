@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788124682148-6e1070e55f",
-  "release": "R799",
-  "archiveName": "R799-FADE-ONLY-R787-RESTORE-R798-YOUTUBE-TRANSPORT-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "8021db47682bc88fe62cd008eb49b9bee60b4ae8",
-  "backupSha": "8021db47682bc88fe62cd008eb49b9bee60b4ae8",
+  "operationId": "publish-1788127399289-ca98e64720",
+  "release": "R800",
+  "archiveName": "R800-FADE-HEADROOM-OUTRO-SHIFT-R799-YOUTUBE-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "b300450438e749699e44f24410b35862ed91c475",
+  "backupSha": "b300450438e749699e44f24410b35862ed91c475",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-30T21:18:02.534Z"
+  "generatedAt": "2026-08-30T22:03:19.839Z"
 }
