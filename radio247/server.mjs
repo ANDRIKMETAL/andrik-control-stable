@@ -50,6 +50,9 @@ const EMERGENCY_VISUAL = process.env.EMERGENCY_VISUAL || new URL('../assets/live
 const QR_OVERLAY = process.env.QR_OVERLAY || new URL('../assets/andrik-qr-r612.png', import.meta.url).pathname;
 const CTA_OVERLAY_R767 = process.env.CTA_OVERLAY_R767 || new URL('../assets/subscribe-right-r767.png', import.meta.url).pathname;
 const CTA_LIKE_OVERLAY_R783 = process.env.CTA_LIKE_OVERLAY_R783 || new URL('../assets/like-right-r783.png', import.meta.url).pathname;
+const QR_OVERLAY_LIVE_R794 = new URL('../assets/andrik-qr-r794-160.png', import.meta.url).pathname; // live MP3 only, pre-scaled offline
+const CTA_OVERLAY_LIVE_R794 = new URL('../assets/subscribe-right-r794-420.png', import.meta.url).pathname;
+const CTA_LIKE_OVERLAY_LIVE_R794 = new URL('../assets/like-right-r794-420.png', import.meta.url).pathname;
 const CTA_SHOW_SECONDS_R722 = 8;
 const CTA_PERIOD_SECONDS_R722 = 120; // kept cadence; R748 schedules full local windows only (no partial flashes)
 const CTA_FIRST_SHOW_SECONDS_R748 = 20; // first compact CTA after feeder settles
@@ -142,6 +145,7 @@ const AUDIO_BITRATE = '160k'; // R762: modest stereo AAC quality lift; sample ra
 const AUDIO_SAMPLE_RATE = 44100; // YouTube Live recommendation for stereo
 const VIDEO_FPS = 25;
 const FULL_FRAME_FILTER_R787 = 'scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1'; // immutable CONTAIN: entire source visible, never crop/zoom
+const LIVE_FULL_FRAME_FILTER_R794 = 'scale=1920:1080:force_original_aspect_ratio=decrease:flags=fast_bilinear,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1'; // R794 live MP3 only: same immutable FIT+PAD geometry, lower scaler CPU; offline prepared clips keep Lanczos
 const VIDEO_INPUT_QUEUE_PACKETS_R732 = 8; // R767: max ~0.32s at 25fps; prevents stale MP3 frames from trailing into clip audio
 const AUDIO_INPUT_QUEUE_PACKETS_R732 = 8; // ~0.74 s FFmpeg raw-packet cushion; ~1 s incl. pipe; prevents 20–30 s title/audio drift
 const VIDEO_GOP = 50; // exactly 2 seconds at 25 fps
@@ -176,8 +180,9 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R793-PREFETCH-LOUDNESS-HARD-OFF-R792-PRESERVED',
-  mode: 'R793 PREFETCH LOUDNESS HARD-OFF + R792 STATION/DUAL-RTMPS + R791/R790/R787 PRESERVED',
+  version: 'R794-CPU-HEADROOM-FADE-OPT-R793-PRESERVED',
+  cpuHeadroomProfileR794:'LIVE-FAST-SCALE-PRESCALED-STATIC-STEP-FADE',
+  mode: 'R794 CPU HEADROOM + FADE OPT + R793/R792/R791/R790/R787 PRESERVED',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
@@ -1777,7 +1782,7 @@ function trackLabel(item,fallback='—'){
 }
 
 // R790/R787 NOCROP: source geometry is immutable FIT+PAD. Raw YUV master is forbidden; raw Annex-B H264 is transport-only and never changes geometry.
-function titleOverlayFiltersR721({dynamicTitle=false,showPreview=false,previewDuration=0,previewReload=false,boundaryTitleSwitchAt=0}={}){
+function titleOverlayFiltersR721({dynamicTitle=false,showPreview=false,previewDuration=0,previewReload=false,boundaryTitleSwitchAt=0,liveCpuFastR794=false}={}){
   const font=chooseFont();
   const titleFont=chooseTitleFont();
   const fontPart=font?`fontfile='${ffFilterPath(font)}':`:'';
@@ -1813,7 +1818,7 @@ function titleOverlayFiltersR721({dynamicTitle=false,showPreview=false,previewDu
     `drawtext=${titleFontPart}textfile='${path}'${titleReload}:fontcolor=0xF8F4EE:fontsize=58:x=(w-text_w)/2:y=h-188:borderw=4:bordercolor=0xD60024@1:shadowcolor=black@1:shadowx=4:shadowy=4${enable}`
   ];
   const filters=[
-    FULL_FRAME_FILTER_R787,
+    liveCpuFastR794 ? LIVE_FULL_FRAME_FILTER_R794 : FULL_FRAME_FILTER_R787,
     `fps=${VIDEO_FPS}`,
     'format=yuv420p',
     'drawbox=x=0:y=ih-204:w=iw:h=88:color=black@0.38:t=fill',
@@ -1845,7 +1850,7 @@ function compactCtaChainR783(trackDuration){
     const subset=windows.map((w,i)=>({...w,i})).filter(w=>w.kind===kind);
     if(!subset.length)return;
     const labels=subset.map(w=>`[cta${w.i}]`).join('');
-    pre+=`[${inputIndex}:v]scale=420:-1:flags=lanczos,fps=${VIDEO_FPS},setpts=PTS-STARTPTS,format=yuva420p[${prefix}src];`;
+    pre+=`[${inputIndex}:v]fps=${VIDEO_FPS},setpts=PTS-STARTPTS,format=yuva420p[${prefix}src];`;
     if(subset.length===1)pre+=`[${prefix}src]null${labels};`;
     else pre+=`[${prefix}src]split=${subset.length}${labels};`;
   };
@@ -1864,53 +1869,65 @@ function compactCtaChainR783(trackDuration){
   return {pre,chain,final:base,windows};
 }
 
+// R794 CPU-HEADROOM FADE: reproduce the viewer-approved black transition at the
+// exact 25fps frame clock with drawbox alpha steps. This removes the always-live
+// 1920x1080 RGBA color source + full-frame overlay blend that previously ran for
+// the whole MP3. At 25fps one alpha step per frame is visually continuous while
+// only the active fade/hold frame performs a full-frame blend.
+function blackDrawboxStepR794(alpha,start,end){
+  const a=Math.max(0,Math.min(1,Number(alpha)||0));
+  const s=Math.max(0,Number(start)||0), e=Math.max(s+0.001,Number(end)||s+0.001);
+  return `drawbox=x=0:y=0:w=iw:h=ih:color=black@${a.toFixed(5)}:t=fill:enable='gte(t,${s.toFixed(3)})*lt(t,${e.toFixed(3)})'`;
+}
+function blackFadeStepsR794(start,duration,{toBlack=true}={}){
+  const d=Math.max(0.04,Number(duration)||0.04);
+  const frames=Math.max(1,Math.round(d*VIDEO_FPS));
+  const frameDur=1/VIDEO_FPS;
+  const out=[];
+  for(let k=0;k<frames;k++){
+    const s=Number(start)+k*frameDur;
+    const e=Number(start)+(k+1)*frameDur;
+    const alpha=toBlack ? (k/frames) : 1-(k/frames);
+    out.push(blackDrawboxStepR794(alpha,s,e));
+  }
+  return out;
+}
+function blackoutFiltersR794({fadeIn=false,fadeInSeconds=CLIP_TO_TRACK_FADE_IN_SECONDS_R753,endFadeToBlack=false,trackDuration=0}={}){
+  const out=[];
+  if(fadeIn){
+    out.push(...blackFadeStepsR794(0,Math.max(0.05,Number(fadeInSeconds)||CLIP_TO_TRACK_FADE_IN_SECONDS_R753),{toBlack:false}));
+  }
+  const d=Math.max(0,Number(trackDuration)||0);
+  if(d>VIDEO_FADE_SECONDS_R726+VIDEO_BLACK_HOLD_SECONDS_R736+VIDEO_FADE_IN_SECONDS_R736+VIDEO_FADE_LEAD_SECONDS_R735+1){
+    const outAt=Math.max(0,d-VIDEO_FADE_SECONDS_R726-VIDEO_BLACK_HOLD_SECONDS_R736-VIDEO_FADE_LEAD_SECONDS_R735);
+    const fadeOutEnd=outAt+VIDEO_FADE_SECONDS_R726;
+    const recoverAt=fadeOutEnd+VIDEO_BLACK_HOLD_SECONDS_R736;
+    out.push(...blackFadeStepsR794(outAt,VIDEO_FADE_SECONDS_R726,{toBlack:true}));
+    if(endFadeToBlack){
+      out.push(`drawbox=x=0:y=0:w=iw:h=ih:color=black@1:t=fill:enable='gte(t,${fadeOutEnd.toFixed(3)})'`);
+    }else{
+      if(recoverAt>fadeOutEnd+0.001)out.push(blackDrawboxStepR794(1,fadeOutEnd,recoverAt));
+      out.push(...blackFadeStepsR794(recoverAt,VIDEO_FADE_IN_SECONDS_R736,{toBlack:false}));
+    }
+  }
+  return out;
+}
+
 function normalVideoFilterComplexR721({fadeIn=false,fadeInSeconds=CLIP_TO_TRACK_FADE_IN_SECONDS_R753,endFadeToBlack=false,trackDuration=0,previewReload=false,boundaryTitleSwitchAt=0}={}){
-  const vf=titleOverlayFiltersR721({dynamicTitle:false,showPreview:true,previewDuration:trackDuration,previewReload,boundaryTitleSwitchAt}); // R790: CURRENT/NEXT title choice is FFmpeg-PTS-bound to the same feeder as the black mask
+  const vf=titleOverlayFiltersR721({dynamicTitle:false,showPreview:true,previewDuration:trackDuration,previewReload,boundaryTitleSwitchAt,liveCpuFastR794:true}); // R794: same R790 PTS-bound title/fade clock, CPU-light live-only FIT scaler
   // R748: CTA is feeder-local, full-window only, with alpha fade in/out. This avoids
   // the old partial wall-clock window that looked like a blink at appearance/disappearance.
   const cta=compactCtaChainR783(trackDuration);
-  // R738/R737: NEVER run fade filters on the real video. R738 only shifts the safe mask earlier. The R736 black-screen bug was
-  // caused by fading the already-darkened base stream back "in". Instead generate a
-  // separate opaque BLACK mask whose ALPHA alone rises/falls, then overlay that mask
-  // over the untouched live picture. Even if the mask chain misbehaves, the base video
-  // is never destructively changed and the next feeder always starts full-bright.
-  let maskChain='';
-  let finalChain='[ctabase]format=yuv420p[outv]'; // R748 replaces ctabase with compact CTA chain output or qrbase
-  let startupMaskChain='';
-  // R753: clip→MP3 gets one visible transition without touching the real visual stream:
-  // start under an opaque black alpha mask and fade that mask away. This is cheap and
-  // cannot leave the base video black if the transition process exits unexpectedly.
-  if(fadeIn){
-    startupMaskChain=`color=c=black@1.0:s=1920x1080:r=${VIDEO_FPS},format=yuva420p,fade=t=out:st=0:d=${Math.max(0.05,Number(fadeInSeconds)||CLIP_TO_TRACK_FADE_IN_SECONDS_R753).toFixed(2)}:alpha=1[startmask];`;
-  }
-  if(Number(trackDuration)>VIDEO_FADE_SECONDS_R726+VIDEO_BLACK_HOLD_SECONDS_R736+VIDEO_FADE_IN_SECONDS_R736+VIDEO_FADE_LEAD_SECONDS_R735+1){
-    // R747: restore the viewer-proven R743 MP3 boundary clock. The track feeder is
-    // rebased exactly when MP3 audio starts, so its t=duration belongs to THIS song.
-    // Fade a separate black ALPHA mask: darken 0.65s, tiny 0.05s hold, brighten 0.30s.
-    const outAt=Math.max(0,Number(trackDuration)-VIDEO_FADE_SECONDS_R726-VIDEO_BLACK_HOLD_SECONDS_R736-VIDEO_FADE_LEAD_SECONDS_R735);
-    const recoverAt=outAt+VIDEO_FADE_SECONDS_R726+VIDEO_BLACK_HOLD_SECONDS_R736;
-    // R757: when the next real item is a video clip/insert, finish the MP3 by fading
-    // fully to black and HOLD black through the boundary. MP3→MP3 keeps the exact
-    // viewer-approved R753 fade-out/recover timing unchanged.
-    maskChain=endFadeToBlack
-      ? `color=c=black@1.0:s=1920x1080:r=${VIDEO_FPS},format=yuva420p,fade=t=in:st=${outAt.toFixed(3)}:d=${VIDEO_FADE_SECONDS_R726.toFixed(2)}:alpha=1[blackmask];`
-      : `color=c=black@1.0:s=1920x1080:r=${VIDEO_FPS},format=yuva420p,fade=t=in:st=${outAt.toFixed(3)}:d=${VIDEO_FADE_SECONDS_R726.toFixed(2)}:alpha=1,fade=t=out:st=${recoverAt.toFixed(3)}:d=${VIDEO_FADE_IN_SECONDS_R736.toFixed(2)}:alpha=1[blackmask];`;
-    finalChain='[ctabase][blackmask]overlay=x=0:y=0:shortest=1:format=yuv420,format=yuv420p[outv]';
-  }
+  // R794: preserve the exact viewer-approved darken -> tiny black hold -> brighten
+  // clock, but apply it as one per-frame alpha drawbox sequence on the final picture.
+  // This eliminates two continuous 1080p alpha-mask sources and their full-frame overlays.
+  const fadeFiltersR794=blackoutFiltersR794({fadeIn,fadeInSeconds,endFadeToBlack,trackDuration});
   const ctaBaseLabel=cta.final;
-  if(ctaBaseLabel!=='qrbase'){
-    finalChain=finalChain.replaceAll('[ctabase]',`[${ctaBaseLabel}]`);
-  }else{
-    finalChain=finalChain.replaceAll('[ctabase]','[qrbase]');
-  }
-  if(fadeIn){
-    // Route the normal final picture through one alpha-only startup mask.
-    finalChain=finalChain.replace('[outv]','[prefadeout]');
-    // R769: filtergraph chains MUST be separated. Without this semicolon FFmpeg parsed
-    // [prefadeout][startmask] as a continuation of the previous overlay and exited INVALID ARGUMENT.
-    finalChain+=`;[prefadeout][startmask]overlay=x=0:y=0:shortest=1:format=yuv420,format=yuv420p[outv]`;
-  }
-  return `[0:v]setpts=PTS-STARTPTS,${vf}[base];[2:v]fps=${VIDEO_FPS},setpts=N/(${VIDEO_FPS}*TB),format=yuva420p[eqv];[base][eqv]overlay=x=(W-w)/2:y=H-h-64:shortest=0:format=yuv420,format=yuv420p[eqbase];[1:v]scale=160:160:flags=lanczos,format=yuva420p[qr];[eqbase][qr]overlay=x=W-w-24:y=24:shortest=0:format=yuv420,format=yuv420p[qrbase];${cta.pre}${cta.chain}${maskChain}${startupMaskChain}${finalChain}`;
+  const finalLabel=ctaBaseLabel!=='qrbase'?ctaBaseLabel:'qrbase';
+  const finalChain=fadeFiltersR794.length
+    ? `[${finalLabel}]${fadeFiltersR794.join(',')},format=yuv420p[outv]`
+    : `[${finalLabel}]format=yuv420p[outv]`;
+  return `[0:v]setpts=PTS-STARTPTS,${vf}[base];[2:v]fps=${VIDEO_FPS},setpts=N/(${VIDEO_FPS}*TB),format=yuva420p[eqv];[base][eqv]overlay=x=(W-w)/2:y=H-h-64:shortest=0:format=yuv420[eqbase];[1:v]format=yuva420p[qr];[eqbase][qr]overlay=x=W-w-24:y=24:shortest=0:format=yuv420[qrbase];${cta.pre}${cta.chain}${finalChain}`;
 }
 
 function clipFilterComplexR721(){
@@ -2243,13 +2260,13 @@ function normalVideoFeederArgsR721(visualPath,eqPath,{fadeIn=false,fadeInSeconds
   return [
     '-hide_banner','-loglevel','warning',
     '-thread_queue_size','64','-re','-stream_loop','-1',...visualSeek,'-i',visualPath,
-    '-loop','1','-framerate','1','-i',QR_OVERLAY,
+    '-loop','1','-framerate','1','-i',QR_OVERLAY_LIVE_R794,
     '-thread_queue_size','32','-re','-stream_loop','-1','-i',eqPath,
-    '-loop','1','-framerate','1','-i',CTA_OVERLAY_R767,
-    '-loop','1','-framerate','1','-i',CTA_LIKE_OVERLAY_R783,
+    '-loop','1','-framerate','1','-i',CTA_OVERLAY_LIVE_R794,
+    '-loop','1','-framerate','1','-i',CTA_LIKE_OVERLAY_LIVE_R794,
     '-filter_complex',normalVideoFilterComplexR721({fadeIn,fadeInSeconds,endFadeToBlack,trackDuration,previewReload,boundaryTitleSwitchAt}),
     '-map','[outv]','-an','-sn','-dn',
-    ...h264EncoderArgsR721(),
+    ...h264EncoderArgsR721(),'-threads','2',
     ...rawH264VideoOutputArgsR790()
   ];
 }
@@ -2285,9 +2302,9 @@ function startNormalVideoFeederR721(visualPath,{fadeIn=false,fadeInSeconds=CLIP_
   if(!publisher || publisher.exitCode!==null || !videoSink || videoSink.destroyed || videoSink.writableEnded)throw new Error('R721 persistent video pipe unavailable');
   const eq=equalizerSpecR721();
   if(!existsSync(visualPath) || statSync(visualPath).size<300000)throw new Error(`visual missing: ${visualPath}`);
-  if(!existsSync(QR_OVERLAY) || statSync(QR_OVERLAY).size<20000)throw new Error(`QR overlay missing: ${QR_OVERLAY}`);
-  if(!existsSync(CTA_OVERLAY_R767) || statSync(CTA_OVERLAY_R767).size<2500)throw new Error(`R767 CTA overlay missing: ${CTA_OVERLAY_R767}`);
-  if(!existsSync(CTA_LIKE_OVERLAY_R783) || statSync(CTA_LIKE_OVERLAY_R783).size<2500)throw new Error(`R783 LIKE CTA overlay missing: ${CTA_LIKE_OVERLAY_R783}`);
+  if(!existsSync(QR_OVERLAY_LIVE_R794) || statSync(QR_OVERLAY_LIVE_R794).size<5000)throw new Error(`R794 live QR overlay missing: ${QR_OVERLAY_LIVE_R794}`);
+  if(!existsSync(CTA_OVERLAY_LIVE_R794) || statSync(CTA_OVERLAY_LIVE_R794).size<2500)throw new Error(`R794 live CTA overlay missing: ${CTA_OVERLAY_LIVE_R794}`);
+  if(!existsSync(CTA_LIKE_OVERLAY_LIVE_R794) || statSync(CTA_LIKE_OVERLAY_LIVE_R794).size<2500)throw new Error(`R794 live LIKE overlay missing: ${CTA_LIKE_OVERLAY_LIVE_R794}`);
   if(!existsSync(eq.path) || statSync(eq.path).size<20000)throw new Error(`equalizer missing: ${eq.path}`);
 
   const child=spawn('ffmpeg',normalVideoFeederArgsR721(visualPath,eq.path,{fadeIn,fadeInSeconds,endFadeToBlack,trackDuration,visualOffsetSeconds,previewReload,boundaryTitleSwitchAt}),{stdio:['ignore','pipe','pipe']});
@@ -3286,6 +3303,10 @@ function publicStatus(){
       insertAudioStartTimeoutMs:INSERT_AUDIO_START_TIMEOUT_MS_R749,
       backgroundLoudnessEnabled:BACKGROUND_LOUDNESS_ENABLED_R791,
       backgroundPrefetchLoudnessPolicyR793:'DOWNLOAD-ONLY-WHEN-BACKGROUND-OFF',
+      liveScalePolicyR794:'FAST-BILINEAR-LIVE-MP3-ONLY-OFFLINE-LANCZOS-PRESERVED',
+      fadeEngineR794:'FRAME-STEPPED-DRAWBOX-NO-CONTINUOUS-1080P-ALPHA-MASK',
+      staticOverlayPolicyR794:'PRE-SCALED-QR160-CTA420',
+      liveEncoderThreadsR794:2,
       stationPreparedAudioClock:'R791-PTS-STARTPTS-BEFORE-ARESAMPLE-SAMPLECOUNT-CLOCK',
       stationArmPolicyR792:'KEEP-LIVE-BLACK-UNTIL-BOTH-READY-THEN-DRAIN-Q8-AND-SAME-TICK',
       insertUnhandledRejectionGuard:'R753-R752-UNIFIED-AV-EXIT-CATCH+R751-GUARD',

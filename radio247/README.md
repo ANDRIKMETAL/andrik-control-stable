@@ -104,3 +104,22 @@ After deploying R710, run once on OVH:
 ```bash
 curl -fsSL https://raw.githubusercontent.com/ANDRIKMETAL/andrik-control-stable/main/radio247/vm-lite/install-r710-youtube-stability-r2-delete.sh | sudo env ANDRIK_SITE_BASE=https://raw.githubusercontent.com/ANDRIKMETAL/andrik-control-stable/main bash
 ```
+
+## R794 — 2-vCPU CPU headroom + fade optimization
+
+Normal MP3 live rendering is optimized without reducing the stream target:
+
+- Output remains 1920×1080 / 25fps / H.264 6000k CBR.
+- Permanent FIT+PAD / NO-CROP geometry is preserved.
+- Live MP3 background scaling uses a CPU-light scaler; offline prepared clips still use Lanczos.
+- The exact 0.65s darken → 0.05s black → 0.80s brighten transition is preserved at 25fps,
+  but the old continuous 1920×1080 alpha-mask source/full-frame overlay is removed.
+- QR / SUBSCRIBE / LIKE use live-only pre-scaled PNGs.
+- R720 equalizer remains full 25fps and visually unchanged.
+- Normal live x264 feeder is bounded to 2 threads for the 2-vCPU OVH server.
+
+After deploying the R794 full ZIP:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/ANDRIKMETAL/andrik-control-stable/main/radio247/vm-lite/install-r794-cpu-headroom-fade-opt-r793-preserved.sh | sudo env ANDRIK_SITE_BASE=https://raw.githubusercontent.com/ANDRIKMETAL/andrik-control-stable/main bash
+```

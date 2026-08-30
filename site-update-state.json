@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788113874315-25dff373e2",
-  "release": "R793",
-  "archiveName": "R793-PREFETCH-LOUDNESS-HARD-OFF-R792-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "e43fa292cb9f09828413f09b48fb965f75eb8188",
-  "backupSha": "e43fa292cb9f09828413f09b48fb965f75eb8188",
+  "operationId": "publish-1788119489570-4b05730212",
+  "release": "R794",
+  "archiveName": "R794-CPU-HEADROOM-FADE-OPT-R793-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "004a642dd5ef6025898aa39c1811de40274deed4",
+  "backupSha": "004a642dd5ef6025898aa39c1811de40274deed4",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-30T18:17:54.943Z"
+  "generatedAt": "2026-08-30T19:51:30.671Z"
 }
