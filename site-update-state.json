@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788075093058-839e140a6f",
-  "release": "R774",
-  "archiveName": "R774-STABLE-RECOVERY-CLIP-TO-MP3-FADE-R772-R769-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "65040dcb7ab85df21ac725ccd2b62a55607b55ca",
-  "backupSha": "65040dcb7ab85df21ac725ccd2b62a55607b55ca",
+  "operationId": "publish-1788076824703-bd34648ae8",
+  "release": "R776",
+  "archiveName": "R776-TRIKA-PLAYER-ZIP-RESTORED-R775-RADIO-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "5a31779905b9fff4d1c29fe616417ec96547e05c",
+  "backupSha": "5a31779905b9fff4d1c29fe616417ec96547e05c",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-30T07:31:33.476Z"
+  "generatedAt": "2026-08-30T08:00:25.102Z"
 }
