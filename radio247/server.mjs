@@ -94,7 +94,8 @@ const OUTPUT_FATAL_REGEX_R780 = /tag\s+.*incompatible with output codec|could no
 const LOUDNESS_ANALYSIS_TIMEOUT_MS_R747 = Math.max(8000,Math.min(120000,Number(process.env.LOUDNESS_ANALYSIS_TIMEOUT_MS_R747 || 45000)));
 // R750: loudness analysis is background-only and serialized. It can never delay a live MP3 handoff.
 const LOUDNESS_BACKGROUND_NICE_R750 = Math.max(10,Math.min(19,Number(process.env.LOUDNESS_BACKGROUND_NICE_R750 || 15)));
-const LOUDNESS_BACKGROUND_ENABLED_R788 = false; // R788: reserve CPU for 24/7 live path; cached two-pass remains readable, uncached tracks use live single-pass loudnorm
+const LOUDNESS_BACKGROUND_ENABLED_R788 = false; // R788 preserved: reserve CPU for 24/7 live path; cached two-pass remains readable, uncached tracks use live single-pass loudnorm
+const MASTER_QUEUE_STARTUP_GRACE_MS_R789 = 30000; // R789: FFmpeg input queues may fill briefly while the persistent master and first A/V pair arm; only post-grace saturation is a live defect
 // R750: keep the 6 s FIFO timeshift, but never allow minutes of queued packets to back-pressure
 // the live A/V pipes. A bounded FIFO with overflow drop keeps YouTube receiving fresh media.
 const OUTPUT_FIFO_QUEUE_PACKETS_R750 = Math.max(768,Math.min(4096,Number(process.env.OUTPUT_FIFO_QUEUE_PACKETS_R750 || 2048)));
@@ -163,14 +164,14 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R788-YOUTUBE-HEADROOM-STARTUP-ARM-R787-PRESERVED',
+  version: 'R789-YOUTUBE-STEADY-STATE-GUARD-R788-PRESERVED',
   mode: 'R787 PERMANENT NOCROP + MONOTONIC MPEGTS + R784 STATION AUDIO + R786 SITE PRESERVED',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
   producerRunning: false,
   overlayMode: 'R757 PREV/NEXT ON MP3 + NORMAL CLIPS @ INTRO 2-7s + FINAL 10s / R756 PRESERVED',
-  audioMode: 'R788 LIVE-CPU-RESERVE EBU R128 -14 LUFS / TP -1.5 + CACHED TWO-PASS OR SINGLE-PASS + AUDIO QUEUE 8 / ONE RTMPS',
+  audioMode: 'R789 R788-LIVE-CPU-RESERVE EBU R128 -14 LUFS / TP -1.5 + CACHED TWO-PASS OR SINGLE-PASS + AUDIO QUEUE 8 / ONE RTMPS',
   mp3ToVideoFadeMode: 'R757-END-BLACK-HOLD-THEN-VIDEO-FADE-IN',
   clipPreviewMode: 'R757-NORMAL-CLIPS-PREVNEXT-INTRO-2-7S-PLUS-FINAL-10S',
   mp3BoundaryFadeMode: 'R763-R753-SAME-FEEDER-BLACK-ALPHA-0.65-HOLD-0.05-LEAD-1.40-RECOVER-0.80',
@@ -255,7 +256,11 @@ const state = {
   publisherBackpressureRecoveries: 0,
   lastPublisherBackpressureAt: null,
   masterInputQueueBlockCount: 0,
-  lastMasterInputQueueBlockAt: null
+  masterInputQueueStartupBlockCount: 0,
+  masterInputQueueSteadyBlockCount: 0,
+  lastMasterInputQueueBlockAt: null,
+  lastMasterInputQueueSteadyBlockAt: null,
+  publisherStartedAtR789: null
 };
 
 let publisher = null;
@@ -2089,8 +2094,10 @@ function startPublisher(){
     STREAM_URL
   ];
 
+  const publisherStartMsR789=Date.now();
   const thisPublisher=spawn('ffmpeg',args,{stdio:['ignore','ignore','pipe','pipe','pipe']});
   publisher=thisPublisher;
+  state.publisherStartedAtR789=new Date(publisherStartMsR789).toISOString();
   state.publisherRunning=true;
   state.transportHealthy=true;
   state.transportSelfHealPending=false;
@@ -2106,10 +2113,20 @@ function startPublisher(){
     const line=String(d||'').trim();
     if(line){
       state.lastFfmpegLine=line.slice(-1000);
-      // R788: count any master input-thread queue saturation explicitly. A healthy steady stream should stay at zero.
+      // R789: FFmpeg can legitimately emit one/two queue-full warnings while the persistent
+      // master and the first real A/V pair arm. Do not confuse that startup burst with the
+      // periodic queue saturation that can cause viewer buffering. Keep both counters visible.
       if(/Thread message queue blocking/i.test(line)){
+        const nowR789=Date.now();
+        const startupR789=(nowR789-publisherStartMsR789)<MASTER_QUEUE_STARTUP_GRACE_MS_R789;
         state.masterInputQueueBlockCount=Number(state.masterInputQueueBlockCount||0)+1;
-        state.lastMasterInputQueueBlockAt=new Date().toISOString();
+        state.lastMasterInputQueueBlockAt=new Date(nowR789).toISOString();
+        if(startupR789){
+          state.masterInputQueueStartupBlockCount=Number(state.masterInputQueueStartupBlockCount||0)+1;
+        }else{
+          state.masterInputQueueSteadyBlockCount=Number(state.masterInputQueueSteadyBlockCount||0)+1;
+          state.lastMasterInputQueueSteadyBlockAt=new Date(nowR789).toISOString();
+        }
       }
       // R787: any timestamp recurrence is a hard regression and is counted explicitly.
       if(/DTS .*out of order|timestamp discontinuity|non[- ]monoton/i.test(line)){
@@ -3045,13 +3062,13 @@ function publicStatus(){
     mode:state.mode,
     overlayMode:state.overlayMode,
     audioMode:state.audioMode,
-    engine:'R788 YOUTUBE HEADROOM + STARTUP A/V ARM + R787 PERMANENT NOCROP/MONOTONIC TS + R784 STATION AUDIO + R783 CTA/R781/R780',
+    engine:'R789 STEADY-STATE QUEUE GUARD + R788 YOUTUBE HEADROOM/STARTUP A/V ARM + R787 PERMANENT NOCROP/MONOTONIC TS + R784 STATION AUDIO + R783 CTA/R781/R780',
     feederFilterChainGuard:'R769-SEMICOLON-ENDMASK-TO-STARTMASK',
     committedNextCheckpointFile:COMMITTED_NEXT_FILE_R769,
     committedNextTitle:state.committedNextTitle||'',
     committedNextRecovered:Boolean(state.committedNextRecovered),
     committedNextCommittedAt:state.committedNextCommittedAt||null,
-    videoPipeline:'R788 STARTUP-A/V-ARM -> R787 IMMUTABLE CONTAIN FIT+PAD -> R783 SINGLE-X264 -> MONOTONIC MPEGTS -> H264 COPY MASTER',
+    videoPipeline:'R789 STEADY-STATE QUEUE GUARD -> R788 STARTUP-A/V-ARM -> R787 IMMUTABLE CONTAIN FIT+PAD -> R783 SINGLE-X264 -> MONOTONIC MPEGTS -> H264 COPY MASTER',
     outputTimeshiftSeconds:OUTPUT_TIMESHIFT_SECONDS,
     videoBitrate:VIDEO_BITRATE,
     audioBitrate:AUDIO_BITRATE,
@@ -3225,6 +3242,13 @@ function publicStatus(){
     publisherBackpressureSince:state.publisherBackpressureSince||null,
     publisherBackpressureRecoveries:Number(state.publisherBackpressureRecoveries||0),
     lastPublisherBackpressureAt:state.lastPublisherBackpressureAt||null,
+    masterInputQueueBlockCount:Number(state.masterInputQueueBlockCount||0),
+    masterInputQueueStartupBlockCount:Number(state.masterInputQueueStartupBlockCount||0),
+    masterInputQueueSteadyBlockCount:Number(state.masterInputQueueSteadyBlockCount||0),
+    masterInputQueueStartupGraceMs:MASTER_QUEUE_STARTUP_GRACE_MS_R789,
+    lastMasterInputQueueBlockAt:state.lastMasterInputQueueBlockAt||null,
+    lastMasterInputQueueSteadyBlockAt:state.lastMasterInputQueueSteadyBlockAt||null,
+    publisherStartedAtR789:state.publisherStartedAtR789||null,
     transportSelfHealDelayMs:TRANSPORT_FATAL_RESTART_DELAY_MS_R746,
     transportSelfHealPending:Boolean(state.transportSelfHealPending),
     transportSelfHealCount:Number(state.transportSelfHealCount||0),
