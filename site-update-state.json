@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788091018902-61c7910b05",
-  "release": "R786",
-  "archiveName": "R786-MOBILE-STABLE-DAY-VIDEO-UPLOAD-R785-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "7bea896d71dc2202f16a71863cdf01d9275476fd",
-  "backupSha": "7bea896d71dc2202f16a71863cdf01d9275476fd",
+  "operationId": "publish-1788097788690-6d3de798d6",
+  "release": "R787",
+  "archiveName": "R787-PERMANENT-NOCROP-MONOTONIC-TS-R786-R784-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "bdfab91f33589366f750162d1f07c62267478140",
+  "backupSha": "bdfab91f33589366f750162d1f07c62267478140",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-30T11:56:59.476Z"
+  "generatedAt": "2026-08-30T13:49:49.221Z"
 }

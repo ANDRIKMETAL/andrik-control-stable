@@ -48,13 +48,16 @@ const CTA_FIRST_SHOW_SECONDS_R748 = 20; // first compact CTA after feeder settle
 const CTA_FADE_SECONDS_R748 = 0.35; // smooth alpha in/out instead of blink
 const CTA_BOTTOM_GAP_R748 = 72; // R767: compact CTA directly above ticker
 const CTA_RIGHT_GAP_R767 = 34; // R767: right side; old left CTA removed
-const CLIP_PREP_SUFFIX_R782 = '.r785-ready.mp4'; // R785: force fresh full-frame caches after no-crop guard; R784 station audio + R783 CTA preserved
+const CLIP_PREP_SUFFIX_R782 = '.r787-ready.mp4'; // R787: rebuild all prepared video on the permanent no-crop geometry + verified station-audio path
 const STATION_LEADING_SILENCE_THRESHOLD_DB_R782 = -55; // PCM RMS threshold, no optional FFmpeg silencedetect dependency
 const STATION_LEADING_SILENCE_MIN_R782 = 0.20; // only compensate sustained leading near-silence >=200ms
 const STATION_LEADING_SILENCE_MAX_TRIM_R782 = 2.0; // safety clamp; never advance station audio more than 2s
 const STATION_PCM_PROBE_SECONDS_R782 = 2.75;
 const STATION_PCM_BLOCK_MS_R782 = 20;
 const STATION_PCM_ACTIVE_BLOCKS_R782 = 3; // require 60ms consecutive real audio
+const STATION_AUDIO_PROBE_SECONDS_R784 = 8.0;
+const STATION_AUDIO_MIN_RMS_R784 = 5.0; // reject truly silent/wrong audio stream
+const STATION_AUDIO_MIN_PEAK_R784 = 64;
 const TITLE_HANDOFF_DELAY_MS_R724 = 0; // R730: title changes only on the real media handoff
 const BUMPER_MIN_SONGS_R724 = 3; // R764: station bumpers more often
 const BUMPER_MAX_SONGS_R724 = 4; // R764: every 3-4 real songs
@@ -125,10 +128,7 @@ const VIDEO_BITRATE = '6000k'; // R762: safe 1080p25 quality lift; CBR only, enc
 const AUDIO_BITRATE = '160k'; // R762: modest stereo AAC quality lift; sample rate/queues unchanged
 const AUDIO_SAMPLE_RATE = 44100; // YouTube Live recommendation for stereo
 const VIDEO_FPS = 25;
-const VIDEO_FRAME_BYTES_R784 = 1920*1080*3/2; // exact YUV420P frame size; only complete frames may enter persistent master
-const STATION_AUDIO_PROBE_SECONDS_R784 = 8.0;
-const STATION_AUDIO_MIN_RMS_R784 = 5.0; // ~-76 dBFS; rejects truly silent/wrong audio streams without touching valid quiet intros
-const STATION_AUDIO_MIN_PEAK_R784 = 64;
+const FULL_FRAME_FILTER_R787 = 'scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1'; // immutable CONTAIN: entire source visible, never crop/zoom
 const VIDEO_INPUT_QUEUE_PACKETS_R732 = 8; // R767: max ~0.32s at 25fps; prevents stale MP3 frames from trailing into clip audio
 const AUDIO_INPUT_QUEUE_PACKETS_R732 = 8; // ~0.74 s FFmpeg raw-packet cushion; ~1 s incl. pipe; prevents 20–30 s title/audio drift
 const VIDEO_GOP = 50; // exactly 2 seconds at 25 fps
@@ -162,19 +162,12 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R785-FULLFRAME-NOCROP-GUARD-R784-PRESERVED',
-  mode: 'R785 FULL-FRAME NO-CROP GUARD + R784 CONTINUOUS RAWVIDEO CLOCK/STATION AUDIO + R783 CTA/R781/R780',
+  version: 'R787-PERMANENT-NOCROP-MONOTONIC-TS-R786-R784-PRESERVED',
+  mode: 'R787 PERMANENT NOCROP + MONOTONIC MPEGTS + R784 STATION AUDIO + R786 SITE PRESERVED',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
   producerRunning: false,
-  masterVideoClockMode: 'R784-PERSISTENT-RAWVIDEO-25FPS-FRAME-CLOCK',
-  videoRelayFramesWritten: 0,
-  videoRelayPartialBytesDropped: 0,
-  masterTimestampErrorCount: 0,
-  stationAudioGuardMode: 'R784-BEST-AUDIO-STREAM+PREPARED-RMS-VERIFY',
-  fullFrameGuardMode: 'R785-FINAL-LIVE-FIT-PAD-1920x1080+SAR1',
-  preparedGeometryByKey: {},
   overlayMode: 'R757 PREV/NEXT ON MP3 + NORMAL CLIPS @ INTRO 2-7s + FINAL 10s / R756 PRESERVED',
   audioMode: 'R750 NONBLOCKING R747 EBU R128 -14 LUFS / TP -1.5 + R743 FADES + AUDIO QUEUE 8 / ONE RTMPS',
   mp3ToVideoFadeMode: 'R757-END-BLACK-HOLD-THEN-VIDEO-FADE-IN',
@@ -225,7 +218,7 @@ const state = {
   clipPostDrainMs: CLIP_POST_DRAIN_MS_R738,
   videoTimelineCompensationSeconds: VIDEO_TIMELINE_COMP_DEFAULT_R739,
   videoTimelineCompensationMode: 'R743-DISABLED-FOR-MP3-BOUNDARY',
-  clipPlaybackMode: 'R785-PREPARED-FIT-PAD-RAWVIDEO-FULL-FRAME-RELAY',
+  clipPlaybackMode: 'R742-PREPARED-H264-COPY',
   clipPreparationMode: 'R742-SERIAL-NICE12-ONE-THREAD',
   preparedClipReady: 0,
   preparedClipPending: 0,
@@ -245,6 +238,11 @@ const state = {
   lastTransportFatalAt: null,
   lastTransportFatalReason: '',
   outputEgressGuardMode: 'R780-FLV-TAG7-A10+HARD-MUX-FATAL-RESTART',
+  fullFrameGuardMode: 'R787-R783-VIEWER-PROVEN-FIT-PAD-1920x1080-SAR1-NO-RAWVIDEO',
+  stationAudioGuardMode: 'R784-BEST-AUDIO-STREAM+PREPARED-RMS-VERIFY',
+  masterTimestampErrorCount: 0,
+  lastMasterTimestampErrorAt: null,
+  videoTimestampOffsetSecondsR787: 0,
   lastOutputFatalAt: null,
   lastOutputFatalReason: '',
   titleBoundarySwitchMode: 'R781-NEXT-MP3-TITLE-DURING-BLACK-BEFORE-RECOVERY',
@@ -275,6 +273,8 @@ let videoFeederPath = '';
 let videoFeederPeriod = '';
 let clipActive = false;
 let visualSwitching = false;
+let videoTimestampEpochMsR787 = Date.now();
+let videoTimestampLastOffsetR787 = 0;
 let scheduleTimerR721 = null;
 let runtimeForceVisualSlot = FORCE_VISUAL_SLOT;
 let runtimeVisualAutoSchedule = VISUAL_AUTO_SCHEDULE_R658;
@@ -878,22 +878,6 @@ async function probeDuration(url){
   return duration;
 }
 
-async function probePreparedGeometryR785(path){
-  const raw=await runCapture('ffprobe',[
-    '-v','error','-select_streams','v:0',
-    '-show_entries','stream=width,height,sample_aspect_ratio,display_aspect_ratio',
-    '-of','json',path
-  ],{timeoutMs:15000});
-  let info={};
-  try{info=JSON.parse(String(raw)||'{}')?.streams?.[0]||{}}catch(_){ }
-  const width=Number(info.width||0),height=Number(info.height||0);
-  const sar=String(info.sample_aspect_ratio||'');
-  const dar=String(info.display_aspect_ratio||'');
-  if(width!==1920||height!==1080)throw new Error(`R785 prepared geometry invalid: ${width}x${height}`);
-  if(sar && sar!=='1:1')throw new Error(`R785 prepared SAR invalid: ${sar}`);
-  return {width,height,sar:sar||'1:1',dar:dar||'16:9'};
-}
-
 function chooseFont(){
   const candidates=[
     '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
@@ -1119,6 +1103,14 @@ function preparedClipValidR742(sourcePath,readyPath=preparedClipPathR742(sourceP
     return true;
   }catch(_){return false}
 }
+async function probePreparedGeometryR787(path){
+  const raw=await runCapture('ffprobe',['-v','error','-select_streams','v:0','-show_entries','stream=width,height,sample_aspect_ratio,display_aspect_ratio','-of','json',path],{timeoutMs:15000});
+  const st=JSON.parse(raw||'{}')?.streams?.[0]||{};
+  const width=Number(st.width||0), height=Number(st.height||0), sar=String(st.sample_aspect_ratio||''), dar=String(st.display_aspect_ratio||'');
+  if(width!==1920||height!==1080)throw new Error(`R787 prepared geometry invalid: ${width}x${height}`);
+  if(sar && sar!=='1:1')throw new Error(`R787 prepared SAR invalid: ${sar}`);
+  return {width,height,sar:sar||'1:1',dar:dar||'16:9'};
+}
 function preparedClipTitleFileR742(readyPath){return readyPath+'.title.txt';}
 function preparedClipTickerFileR742(readyPath){return readyPath+'.ticker.txt';}
 function preparedClipFilterComplexR742(titleFile,tickerFile,{stationInsert=false,duration=0,ctaSubscribeInputIndex=-1,ctaLikeInputIndex=-1}={}){
@@ -1130,9 +1122,7 @@ function preparedClipFilterComplexR742(titleFile,tickerFile,{stationInsert=false
   const tickerPath=ffFilterPath(tickerFile);
   const base=[
     'setpts=PTS-STARTPTS',
-    'scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos',
-    'pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black',
-    'setsar=1',`fps=${VIDEO_FPS}`,`setpts=N/(${VIDEO_FPS}*TB)`,'format=yuv420p'
+    FULL_FRAME_FILTER_R787,`fps=${VIDEO_FPS}`,`setpts=N/(${VIDEO_FPS}*TB)`,'format=yuv420p'
   ];
   // R782/R766: hold the final frame to the measured A/V boundary. This is OFFLINE
   // preparation only, so the live R780 transport/filtergraph remains untouched.
@@ -1293,7 +1283,7 @@ async function buildPreparedClipR742(item,sourcePath){
   }else{
     hasAudio=await probeHasAudioR721(sourcePath);
   }
-  if(stationInsert&&!hasAudio)throw new Error(`R785 station insert audio missing: ${shortText(item?.title||'INSERT',40)}`);
+  if(stationInsert&&!hasAudio)throw new Error(`R787 station insert audio missing: ${shortText(item?.title||'INSERT',40)}`);
   const duration=await probeDuration(sourcePath);
   const stationAudioRelativeIndexR784=stationInsert?Math.max(0,Number(stationAudioProbeR784?.relativeIndex)||0):0;
   const stationLeadTrimR782=stationInsert?await probeStationLeadingSilenceR782(sourcePath,stationAudioRelativeIndexR784):0;
@@ -1336,9 +1326,9 @@ async function buildPreparedClipR742(item,sourcePath){
   try{
     await runCapture('nice',['-n',String(CLIP_PREP_NICE_R742),'ffmpeg','-nostdin',...args],{timeoutMs:CLIP_PREP_TIMEOUT_MS_R742});
     if(!existsSync(tmp)||statSync(tmp).size<CLIP_PREP_MIN_BYTES_R742)throw new Error('R742 prepared clip too small');
-    const preparedGeometryR785=await probePreparedGeometryR785(tmp);
-    const geometryKeyR785=String(item?.key||item?.title||sourcePath.split('/').pop()||'clip');
-    state.preparedGeometryByKey={...(state.preparedGeometryByKey||{}),[geometryKeyR785]:{...preparedGeometryR785,verifiedAt:new Date().toISOString()}};
+    const preparedGeometryR787=await probePreparedGeometryR787(tmp);
+    const geometryKeyR787=String(item?.key||item?.title||sourcePath.split('/').pop()||'clip');
+    state.preparedGeometryByKey={...(state.preparedGeometryByKey||{}),[geometryKeyR787]:{...preparedGeometryR787,verifiedAt:new Date().toISOString()}};
     if(stationInsert){
       const verified=await probeStationBestAudioStreamR784(tmp,{maxStreams:1});
       const key=String(item?.key||item?.title||'station');
@@ -1408,12 +1398,6 @@ function clipLiveVideoFilterR757({duration=0,showPreview=false}={}){
   // 1080p filter + live x264 could make video processing fall behind while PCM audio
   // stayed real-time. Keep one exact frame clock instead: frame N == N/25 seconds.
   const vf=[
-    // R785-LIVE-CLIP-FIT-PAD-FINAL: never trust cached/source geometry at the rawvideo boundary.
-    // Preserve the ENTIRE decoded frame, fit inside 1920x1080, add black bars only when needed,
-    // force square pixels, then establish the exact 25fps live clock. No crop/zoom is allowed.
-    'scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos',
-    'pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black',
-    'setsar=1',
     `fps=${VIDEO_FPS}`,
     `setpts=N/(${VIDEO_FPS}*TB)`,
     'format=yuv420p',
@@ -1440,11 +1424,17 @@ function clipLiveVideoFilterR757({duration=0,showPreview=false}={}){
   return vf.join(',');
 }
 
-function rawVideoOutputArgsR784(){
-  // R784: every local visual process outputs complete 1920x1080 YUV420P frames.
-  // The persistent master owns the ONE monotonic 25fps clock and the ONE H264 encode.
-  // Feeder restarts therefore cannot reset PTS/DTS or create MPEG-TS discontinuities.
-  return ['-c:v','rawvideo','-pix_fmt','yuv420p','-f','rawvideo','pipe:1'];
+function mpegTsVideoOutputArgsR787(){
+  // R787: keep the exact viewer-proven R783 encoded-video geometry path (no rawvideo master).
+  // Every feeder still starts its local PTS at zero, but the MPEG-TS muxer receives a
+  // process-wide monotonic output offset derived from the persistent publisher wall clock.
+  // initial_discontinuity marks the MPEG-TS continuity-counter reset, while the monotonic
+  // PTS/DTS offset prevents the huge backwards timestamp jumps that froze YouTube in R783.
+  const elapsed=Math.max(0,(Date.now()-videoTimestampEpochMsR787)/1000);
+  const offset=Math.max(elapsed,videoTimestampLastOffsetR787+0.001);
+  videoTimestampLastOffsetR787=offset;
+  state.videoTimestampOffsetSecondsR787=Number(offset.toFixed(3));
+  return ['-output_ts_offset',offset.toFixed(6),'-mpegts_flags','+resend_headers+initial_discontinuity','-muxdelay','0','-muxpreload','0','-f','mpegts','pipe:1'];
 }
 
 function clipPreparedFeederArgsR742(readyPath,{hasAudio=true,duration=0,showPreview=false}={}){
@@ -1460,12 +1450,14 @@ function clipPreparedFeederArgsR742(readyPath,{hasAudio=true,duration=0,showPrev
     '-hide_banner','-loglevel','warning','-stats_period','0.5','-progress','pipe:4','-nostats',
     '-fflags','+genpts+discardcorrupt','-err_detect','ignore_err','-re','-i',readyPath,
     '-map','0:v:0','-an','-sn','-dn',
-    '-vf',clipLiveVideoFilterR757({duration:d,showPreview})
+    '-vf',clipLiveVideoFilterR757({duration:d,showPreview}),
+    ...h264EncoderArgsR721()
   ];
-  // R784: both outputs are duration-locked before their own muxer. Video is raw full
-  // frames, audio is raw PCM; the persistent master gives them the continuous clocks.
+  // R766: -t is an OUTPUT option. R764 placed it only before the SECOND (audio)
+  // output, so the H264 pipe could hit EOF early while PCM kept playing. Put the same
+  // explicit duration on EACH output and pad the video/audio tails to that boundary.
   if(dText)args.push('-t',dText);
-  args.push(...rawVideoOutputArgsR784(),
+  args.push(...mpegTsVideoOutputArgsR787(),
     '-map',hasAudio?'0:a:0':'0:a:0','-vn','-sn','-dn',
     '-af',audioTailLockR766,'-c:a','pcm_s16le','-ar',String(AUDIO_SAMPLE_RATE),'-ac','2'
   );
@@ -1484,10 +1476,11 @@ function clipPreparedVideoOnlyArgsR744(readyPath,{duration=0}={}){
     '-hide_banner','-loglevel','warning','-fflags','+genpts+discardcorrupt','-err_detect','ignore_err',
     '-re','-i',readyPath,
     '-map','0:v:0','-an','-sn','-dn',
-    '-vf',`scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1,fps=${VIDEO_FPS},format=yuv420p`
+    '-vf',`${FULL_FRAME_FILTER_R787},fps=${VIDEO_FPS},format=yuv420p`,
+    ...h264EncoderArgsR721()
   ];
   if(duration>0)args.push('-t',String(Math.max(0.5,duration)));
-  args.push(...rawVideoOutputArgsR784());
+  args.push(...mpegTsVideoOutputArgsR787());
   return args;
 }
 function clipPreparedAudioOnlyArgsR744(readyPath,{duration=0}={}){
@@ -1523,7 +1516,7 @@ async function stopPreparedVideoPrerollR744(){
   }
   child.__r749IntentionalStop=true;
   const videoSink=publisher?.stdio?.[4];
-  try{detachVideoFrameRelayR784(child)}catch(_){ }
+  try{if(child.stdout&&videoSink)child.stdout.unpipe(videoSink)}catch(_){ }
   if(child.exitCode===null){
     try{child.kill('SIGTERM')}catch(_){ }
     if(!(await waitChildExit(child,500))&&child.exitCode===null){
@@ -1560,14 +1553,14 @@ async function startPreparedVideoPrerollR744(item,readyPath,duration){
       invalid:false,
       exitCode:null
     };
-    attachVideoFrameRelayR784(child,videoSink,'normal-visual');
+    child.stdout.pipe(videoSink,{end:false});
     child.stdout.on('error',()=>{});
     child.stderr.on('data',d=>{
       const line=String(d||'').trim();
       if(line){state.lastFfmpegLine=line.slice(-1000);if(/error|fail|invalid|broken pipe|non-monoton/i.test(line))state.lastError=line.slice(-700);console.error('[r749-video-preroll]',line);}
     });
     child.on('exit',(code,signal)=>{
-      try{detachVideoFrameRelayR784(child)}catch(_){ }
+      try{if(child.stdout&&videoSink)child.stdout.unpipe(videoSink)}catch(_){ }
       const isCurrent=clipVideoPrerollR744===child;
       if(isCurrent)clipVideoPrerollR744=null;
       const arm=clipVideoPrerollArmedR749;
@@ -1780,6 +1773,7 @@ function trackLabel(item,fallback='—'){
   return album ? `${title} (${album})` : title;
 }
 
+// R787-PERMANENT-NOCROP-GUARD: source video always uses FIT=decrease + centered PAD; rawvideo master path is forbidden.
 function titleOverlayFiltersR721({dynamicTitle=true,showPreview=false,previewDuration=0,previewReload=false}={}){
   const font=chooseFont();
   const titleFont=chooseTitleFont();
@@ -1809,9 +1803,7 @@ function titleOverlayFiltersR721({dynamicTitle=true,showPreview=false,previewDur
   const previewEnable=`:enable='${previewExpr}'`;
   return [
     // R759: permanent fullscreen. Every video source is forced to the exact 1920x1080 canvas; no crop/pad/auto-aspect branch exists.
-    'scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos',
-    'pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black',
-    'setsar=1',
+    FULL_FRAME_FILTER_R787,
     `fps=${VIDEO_FPS}`,
     'format=yuv420p',
     // R731: normal-track textfiles are loaded ONCE by this feeder. Their timing is then
@@ -1917,9 +1909,7 @@ function clipFilterComplexR721(){
 
 function bumperFilterComplexR724(){
   const vf=[
-    `scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos`,
-    `pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black`,
-    `setsar=1`,`fps=${VIDEO_FPS}`
+    FULL_FRAME_FILTER_R787,`fps=${VIDEO_FPS}`
   ].join(',');
   return `[0:v]setpts=PTS-STARTPTS,${vf}[base];[1:v]scale=160:160:flags=lanczos,format=yuva420p[qr];[base][qr]overlay=x=W-w-24:y=24:shortest=1:format=yuv420,format=yuv420p[outv]`;
 }
@@ -1935,73 +1925,6 @@ function h264EncoderArgsR721(){
     '-g',String(VIDEO_GOP),'-keyint_min',String(VIDEO_GOP),'-sc_threshold','0','-bf','0','-refs','1','-coder','1',
     '-r',String(VIDEO_FPS),'-pix_fmt','yuv420p'
   ];
-}
-
-function detachVideoFrameRelayR784(child){
-  const relay=child?.__r784VideoRelay;
-  if(!relay)return {frames:0,dropped:0};
-  relay.active=false;
-  try{relay.source.off('data',relay.onData)}catch(_){ }
-  try{relay.source.off('error',relay.onError)}catch(_){ }
-  try{if(relay.onDrain)relay.sink.off('drain',relay.onDrain)}catch(_){ }
-  let dropped=Number(relay.frameBytes||0);
-  for(const part of relay.deferred||[])dropped+=Number(part?.length||0);
-  if(dropped>0)state.videoRelayPartialBytesDropped=Number(state.videoRelayPartialBytesDropped||0)+dropped;
-  child.__r784VideoRelay=null;
-  return {frames:Number(relay.frames||0),dropped};
-}
-
-function attachVideoFrameRelayR784(child,videoSink,label='video'){
-  const source=child?.stdout;
-  if(!source||!videoSink||videoSink.destroyed||videoSink.writableEnded)throw new Error(`R784 ${label} rawvideo relay unavailable`);
-  detachVideoFrameRelayR784(child);
-  const relay={source,sink:videoSink,label,active:true,frameParts:[],frameBytes:0,deferred:[],frames:0,waitingDrain:false,onDrain:null,onData:null,onError:null};
-  const deferRemainder=(chunk,offset)=>{if(offset<chunk.length)relay.deferred.push(chunk.subarray(offset));};
-  const consume=(chunk)=>{
-    if(!relay.active||!chunk?.length)return;
-    if(relay.waitingDrain){relay.deferred.push(chunk);return;}
-    let offset=0;
-    while(offset<chunk.length && relay.active){
-      const need=VIDEO_FRAME_BYTES_R784-relay.frameBytes;
-      const take=Math.min(need,chunk.length-offset);
-      relay.frameParts.push(chunk.subarray(offset,offset+take));
-      relay.frameBytes+=take; offset+=take;
-      if(relay.frameBytes===VIDEO_FRAME_BYTES_R784){
-        const frame=relay.frameParts.length===1?relay.frameParts[0]:Buffer.concat(relay.frameParts,VIDEO_FRAME_BYTES_R784);
-        relay.frameParts=[]; relay.frameBytes=0;
-        const ok=videoSink.write(frame);
-        relay.frames++; state.videoRelayFramesWritten=Number(state.videoRelayFramesWritten||0)+1;
-        state.lastVideoFrameAtR784=new Date().toISOString();
-        if(!ok){
-          relay.waitingDrain=true;
-          deferRemainder(chunk,offset);
-          try{source.pause()}catch(_){ }
-          relay.onDrain=()=>{
-            if(!relay.active)return;
-            relay.waitingDrain=false;
-            const queued=relay.deferred.splice(0);
-            for(let i=0;i<queued.length && relay.active;i++){
-              consume(queued[i]);
-              if(relay.waitingDrain){
-                if(i+1<queued.length)relay.deferred.unshift(...queued.slice(i+1));
-                return;
-              }
-            }
-            try{source.resume()}catch(_){ }
-          };
-          videoSink.once('drain',relay.onDrain);
-          return;
-        }
-      }
-    }
-  };
-  relay.onData=chunk=>consume(chunk);
-  relay.onError=err=>{if(relay.active&&!stopping)state.lastError=`R784 ${label} rawvideo relay: ${String(err)}`;};
-  source.on('data',relay.onData);
-  source.on('error',relay.onError);
-  child.__r784VideoRelay=relay;
-  state.videoRelayMode='R784-FULL-FRAME-ONLY-YUV420P';
-  return relay;
 }
 
 function scheduleOutputFatalRestartR780(rawLine,thisPublisher){
@@ -2122,22 +2045,34 @@ function startPublisher(){
   if(!existsSync(LIVE_TICKER_FILE)) writeFileSync(LIVE_TICKER_FILE,DEFAULT_LIVE_TICKER,'utf8');
   if(!existsSync(LIVE_CURRENT_FILE)) writeFileSync(LIVE_CURRENT_FILE,'ANDRIK','utf8');
 
-  // R784 transport: this ONE master never closes at MP3<->clip or visual-period boundaries.
-  // Local visual feeders output raw YUV420P only. A frame-aligned Node relay drops incomplete
-  // tail bytes at handoff and the persistent rawvideo input owns a single monotonic 25fps clock.
-  // This removes the recurring MPEG-TS DTS resets that caused YouTube freezes while keeping
-  // exactly one H264 encode pass total.
+  // R787: reset the one monotonic MPEG-TS timeline exactly with the persistent master.
+  videoTimestampEpochMsR787=Date.now();
+  videoTimestampLastOffsetR787=0;
+  state.videoTimestampOffsetSecondsR787=0;
+
+  // R721 transport: video feeders encode the final 1920x1080 frame to Annex-B H264.
+  // This ONE master never closes at MP3<->clip or MORNING/DAY/EVENING/NIGHT boundaries.
+  // R778: this VPS FFmpeg does NOT provide the `setts` H264 bitstream filter. Every feeder
+  // now wraps its already-encoded H264 in a tiny MPEG-TS container before entering this
+  // persistent master. MPEG-TS supplies real packet PTS/DTS; initial_discontinuity marks each
+  // feeder boundary so the persistent demuxer can rebase a new segment without a second encode.
   const args=[
     '-hide_banner','-loglevel','warning',
-    '-thread_queue_size',String(VIDEO_INPUT_QUEUE_PACKETS_R732),'-f','rawvideo','-pix_fmt','yuv420p','-s:v','1920x1080','-r',String(VIDEO_FPS),'-i','pipe:4',
+    '-thread_queue_size',String(VIDEO_INPUT_QUEUE_PACKETS_R732),'-fflags','+genpts+discardcorrupt','-f','mpegts','-i','pipe:4',
     '-thread_queue_size',String(AUDIO_INPUT_QUEUE_PACKETS_R732),'-f','s16le','-ar',String(AUDIO_SAMPLE_RATE),'-ac','2','-i','pipe:3',
     '-map','0:v:0','-map','1:a:0',
-    '-vf','setsar=1',
-    // R785: raw input is always interpreted/displayed as square-pixel 1920x1080 (16:9).
-    // R784: the persistent master receives one uninterrupted sequence of FULL raw frames.
-    // Its rawvideo demuxer assigns frame N exactly N/25 seconds, so no feeder can reset DTS/PTS.
-    // There is still only ONE x264 pass total: local feeders filter/decode only; master encodes.
-    ...h264EncoderArgsR721(),
+    // R761: EVERY feeder already produces the final viewer-approved 1920x1080 H264 frame
+    // (R760/R753 FIT+PAD, overlays, fades, AUD + repeated SPS/PPS). Do NOT decode+encode it
+    // a second time in the persistent master. R760's double x264 path consumed ~40% CPU in
+    // the master on top of ~55% in the feeder and could stop reading BOTH Node pipes for
+    // 30 s, triggering R751 NO-PROGRESS/status=76 and YouTube BAD/NODATA. The persistent
+    // master now copies H264 and encodes AAC. R778 deliberately uses NO video bitstream
+    // filter: MPEG-TS packet timestamps own the clock, while +genpts repairs segment offsets.
+    // Graceful feeder stop + AUD/repeat-headers + TS initial_discontinuity keep boundaries parseable.
+    '-c:v','copy',
+    // R780: old VPS FFmpeg preserves MPEG-TS codec_tag 27 into FIFO->FLV. FLV expects
+    // tag 7 for AVC/H264 (and 10 for AAC). Without this reset the FIFO child rejects
+    // its header forever while the parent process and Node input-byte counters remain alive.
     '-tag:v','7',
     '-c:a','aac','-profile:a','aac_low','-b:a',AUDIO_BITRATE,'-ar',String(AUDIO_SAMPLE_RATE),'-ac','2','-tag:a','10',
     '-max_muxing_queue_size','4096','-flush_packets','1',
@@ -2165,8 +2100,11 @@ function startPublisher(){
     const line=String(d||'').trim();
     if(line){
       state.lastFfmpegLine=line.slice(-1000);
-      if(/DTS .*out of order|timestamp discontinuity|non[- ]monoton/i.test(line))state.masterTimestampErrorCount=Number(state.masterTimestampErrorCount||0)+1;
-      // R784 rawvideo clock should produce zero DTS/discontinuity events; keep any recurrence visible.
+      // R787: any timestamp recurrence is a hard regression and is counted explicitly.
+      if(/DTS .*out of order|timestamp discontinuity|non[- ]monoton/i.test(line)){
+        state.masterTimestampErrorCount=Number(state.masterTimestampErrorCount||0)+1;
+        state.lastMasterTimestampErrorAt=new Date().toISOString();
+      }
       if(/error|fail|invalid|broken pipe|non-monoton|unset in a packet|incompatible with output codec|DTS .*out of order|timestamp discontinuity/i.test(line))state.lastError=line.slice(-700);
       const hardOutputFatal=scheduleOutputFatalRestartR780(line,thisPublisher);
       if(!hardOutputFatal)scheduleTransportSelfHealR746(line,thisPublisher);
@@ -2217,7 +2155,8 @@ function normalVideoFeederArgsR721(visualPath,eqPath,{fadeIn=false,fadeInSeconds
     '-loop','1','-framerate','1','-i',CTA_LIKE_OVERLAY_R783,
     '-filter_complex',normalVideoFilterComplexR721({fadeIn,fadeInSeconds,endFadeToBlack,trackDuration,previewReload}),
     '-map','[outv]','-an','-sn','-dn',
-    ...rawVideoOutputArgsR784()
+    ...h264EncoderArgsR721(),
+    ...mpegTsVideoOutputArgsR787()
   ];
 }
 
@@ -2225,14 +2164,15 @@ async function stopNormalVideoFeederR721(){
   const active=videoFeeder;
   if(!active)return;
   const videoSink=publisher?.stdio?.[4];
-  // R784: let the rawvideo child stop cleanly while its frame relay is still attached.
-  // detachVideoFrameRelayR784 then discards ONLY an incomplete tail frame, so the persistent
-  // rawvideo demuxer can never lose YUV frame alignment at an MP3 boundary.
+  // R754: do not cut the Annex-B stream in the middle of a NAL unit at MP3 boundaries.
+  // Ask FFmpeg to stop cleanly while it is still connected, so it can flush the current
+  // encoded access unit. Only detach the pipe after the child has had a short clean-exit
+  // window. This prevents a malformed H264 splice from reaching the persistent master.
   if(active.exitCode===null){
     try{active.kill('SIGINT')}catch(_){ }
     await waitChildExit(active,900);
   }
-  try{detachVideoFrameRelayR784(active)}catch(_){ }
+  try{if(active.stdout&&videoSink)active.stdout.unpipe(videoSink)}catch(_){ }
   if(active.exitCode===null){
     try{active.kill('SIGTERM')}catch(_){ }
     if(!(await waitChildExit(active,900)) && active.exitCode===null){
@@ -2260,7 +2200,7 @@ function startNormalVideoFeederR721(visualPath,{fadeIn=false,fadeInSeconds=CLIP_
   videoFeeder=child;
   videoFeederPath=visualPath;
   videoFeederPeriod=eq.period;
-  attachVideoFrameRelayR784(child,videoSink,'normal-visual');
+  child.stdout.pipe(videoSink,{end:false});
   child.stdout.on('error',()=>{});
   child.stderr.on('data',d=>{
     const line=String(d||'').trim();
@@ -2272,7 +2212,7 @@ function startNormalVideoFeederR721(visualPath,{fadeIn=false,fadeInSeconds=CLIP_
   });
   child.on('exit',(code,signal)=>{
     const isCurrent=videoFeeder===child;
-    try{detachVideoFrameRelayR784(child)}catch(_){ }
+    try{if(child.stdout&&videoSink)child.stdout.unpipe(videoSink)}catch(_){ }
     if(isCurrent)videoFeeder=null;
     if(isCurrent && !stopping && !clipActive && !visualSwitching){
       state.lastError=`R721 visual feeder exit ${code??signal}; restarting without RTMPS reconnect`;
@@ -2348,10 +2288,9 @@ function clipFeederArgsR721(clipPath,{hasAudio=true,duration=0,isStationInsert=f
   if(!hasAudio)args.push('-f','lavfi','-i',`anullsrc=r=${AUDIO_SAMPLE_RATE}:cl=stereo`);
   args.push(
     '-filter_complex',isStationInsert?bumperFilterComplexR724():clipFilterComplexR721(),
-    '-map','[outv]','-an','-sn','-dn'
-  );
-  if(duration>0)args.push('-t',String(Math.max(0.5,duration)));
-  args.push(...rawVideoOutputArgsR784(),
+    '-map','[outv]','-an','-sn','-dn',
+    ...h264EncoderArgsR721(),
+    ...mpegTsVideoOutputArgsR787(),
     '-map',hasAudio?'0:a:0':'2:a:0','-vn','-sn','-dn',
     '-af',`aresample=${AUDIO_SAMPLE_RATE}:async=1:first_pts=0,asetpts=PTS-STARTPTS`,'-c:a','pcm_s16le','-ar',String(AUDIO_SAMPLE_RATE),'-ac','2'
   );
@@ -2362,7 +2301,7 @@ function clipFeederArgsR721(clipPath,{hasAudio=true,duration=0,isStationInsert=f
 
 async function stopClipFeederR721(child,videoSink,audioSink){
   if(!child)return;
-  try{detachVideoFrameRelayR784(child)}catch(_){ }
+  try{if(child.stdout&&videoSink)child.stdout.unpipe(videoSink)}catch(_){ }
   try{if(child.stdio?.[3]&&audioSink)child.stdio[3].unpipe(audioSink)}catch(_){ }
   if(child.exitCode===null){
     try{child.kill('SIGTERM')}catch(_){ }
@@ -2378,7 +2317,7 @@ async function ensureVideoSourceAfterClipR745(next=null){
   const preparedAlive=Boolean(clipVideoPrerollR744&&clipVideoPrerollR744.exitCode===null);
   const normalAlive=Boolean(videoFeeder&&videoFeeder.exitCode===null);
   if(preparedAlive||normalAlive)return true;
-  // A failed/late preroll must never leave the persistent master with no rawvideo input.
+  // A failed/late preroll used to leave the persistent master with no H264 input.
   // The master process stayed alive but YouTube eventually reported NODATA. Force a
   // normal visual immediately so the ONE RTMPS publisher never starves at clip EOF.
   clipActive=false;
@@ -2412,7 +2351,7 @@ async function videoSourceWatchdogTickR749(){
   if(!publisher||publisher.exitCode!==null)return;
   // R753: after clip EOF the next MP3 owns the ONLY normal-feeder start. Do not race
   // that boundary with the old generic recovery feeder; it caused a second stop/start
-  // a few milliseconds later and could stall the persistent rawvideo pipe.
+  // a few milliseconds later and could stall the persistent H264 pipe.
   if(clipToTrackBoundaryPendingR753){
     const age=Date.now()-Number(clipToTrackBoundaryPendingR753.startedAt||0);
     if(age<CLIP_TO_TRACK_HANDOFF_GUARD_MS_R753)return;
@@ -2430,7 +2369,7 @@ async function videoSourceWatchdogTickR749(){
   try{
     insertRecoveryCountR749++;
     state.lastInsertRecoveryAt=new Date().toISOString();
-    state.lastInsertRecoveryReason=`no live rawvideo feeder for ${now-videoSourceMissingSinceR749}ms`;
+    state.lastInsertRecoveryReason=`no live H264 feeder for ${now-videoSourceMissingSinceR749}ms`;
     state.lastError=`R749 VIDEO SOURCE WATCHDOG: ${state.lastInsertRecoveryReason}`;
     console.error('[r749-video-source-watchdog]',state.lastError);
     clipActive=false;
@@ -2488,7 +2427,7 @@ function detachNormalVideoAtBoundaryR752(){
   const active=videoFeeder;
   if(!active)return;
   const videoSink=publisher?.stdio?.[4];
-  try{detachVideoFrameRelayR784(active)}catch(_){ }
+  try{if(active.stdout&&videoSink)active.stdout.unpipe(videoSink)}catch(_){ }
   if(videoFeeder===active)videoFeeder=null;
   videoFeederTrackIdentityR744='';
   videoFeederPrerolledR744=false;
@@ -2554,7 +2493,7 @@ async function playVideoClipR691(previous,item,next){
 
     // R767: playVideoClipR691() is entered only after the previous MP3 decoder has ended.
     // Do NOT keep its feeder writing into the persistent master while the clip child arms:
-    // with no audio during that short window the rawvideo input queue could accumulate old
+    // with no audio during that short window the H264 input queue could accumulate old
     // black/MP3 frames, so new clip audio reached YouTube before new clip pictures.
     // R763 already faded the previous visual to black, so detach it here and let the tiny
     // matched 8/8 master queues drain BEFORE we connect the clip's unified A/V outputs.
@@ -2569,7 +2508,7 @@ async function playVideoClipR691(previous,item,next){
     clipPublisher=child;
     producer=child;
     state.producerRunning=true;
-    state.clipPlaybackMode='R785-ONE-FFMPEG-BOTH-READY+FINAL-FIT-PAD+RAW-FULL-FRAME-RELAY+EXACT-SAMPLE-CLOCK+TAIL-LOCK';
+    state.clipPlaybackMode='R767-ONE-FFMPEG-BOTH-READY+EXACT-FRAME-SAMPLE-CLOCK+TAIL-LOCK';
     videoSource.on('error',()=>{});
     audioSource.on('error',()=>{});
     progressSource?.on('data',d=>{const line=String(d||'').trim();if(line)state.clipProgressLine=line.slice(-500);});
@@ -2582,7 +2521,7 @@ async function playVideoClipR691(previous,item,next){
     clipExitPromise=new Promise((resolve,reject)=>{
       child.once('error',reject);
       child.once('exit',(code,signal)=>{
-        try{detachVideoFrameRelayR784(child)}catch(_){ }
+        try{videoSource.unpipe(videoSink)}catch(_){ }
         try{audioSource.unpipe(audioSink)}catch(_){ }
         if(code===0||stopping)resolve(); else reject(new Error(`R752 clip A/V exit ${code||signal}`));
       });
@@ -2617,9 +2556,9 @@ async function playVideoClipR691(previous,item,next){
 
     // Connect both already-ready streams back-to-back in the same event-loop turn.
     // The single source FFmpeg gives both outputs one common t=0 clock.
-    attachVideoFrameRelayR784(child,videoSink,stationInsert?'station-insert':'music-clip');
+    videoSource.pipe(videoSink,{end:false});
     audioSource.pipe(audioSink,{end:false});
-    state.videoHandoffMode='R784-BOUNDARY-LOCKED-UNIFIED-AV-FULL-FRAME-LIVE';
+    state.videoHandoffMode='R752-BOUNDARY-LOCKED-UNIFIED-AV-LIVE';
 
     // No next-picture LIVE preroll. Warm only file metadata/cache for a following video.
     if(next && next.type!=='track'){
@@ -2655,7 +2594,7 @@ async function playVideoClipR691(previous,item,next){
     return false;
   }finally{
     if(child){
-      try{detachVideoFrameRelayR784(child)}catch(_){ }
+      try{child.stdout?.unpipe(videoSink)}catch(_){ }
       try{child.stdio?.[3]?.unpipe(audioSink)}catch(_){ }
       if(child.exitCode===null){try{child.kill('SIGTERM')}catch(_){ }}
     }
@@ -3088,13 +3027,13 @@ function publicStatus(){
     mode:state.mode,
     overlayMode:state.overlayMode,
     audioMode:state.audioMode,
-    engine:'R785 FULLFRAME NOCROP + R784 CONTINUOUS RAWVIDEO CLOCK/STATION AUDIO + R783 CTA/R781/R780',
+    engine:'R787 PERMANENT NOCROP + MONOTONIC MPEGTS + R784 STATION AUDIO + R783 CTA/R781/R780',
     feederFilterChainGuard:'R769-SEMICOLON-ENDMASK-TO-STARTMASK',
     committedNextCheckpointFile:COMMITTED_NEXT_FILE_R769,
     committedNextTitle:state.committedNextTitle||'',
     committedNextRecovered:Boolean(state.committedNextRecovered),
     committedNextCommittedAt:state.committedNextCommittedAt||null,
-    videoPipeline:'R785 FINAL FIT+PAD 1920x1080 SAR1 -> R784 FULL-FRAME YUV420P RELAY -> PERSISTENT 25FPS CLOCK -> SINGLE X264',
+    videoPipeline:'R787 IMMUTABLE CONTAIN FIT+PAD -> VIEWER-PROVEN R783 SINGLE-X264 -> MONOTONIC MPEGTS -> H264 COPY MASTER',
     outputTimeshiftSeconds:OUTPUT_TIMESHIFT_SECONDS,
     videoBitrate:VIDEO_BITRATE,
     audioBitrate:AUDIO_BITRATE,
@@ -3117,16 +3056,13 @@ function publicStatus(){
     videoInputQueuePackets:VIDEO_INPUT_QUEUE_PACKETS_R732,
     videoInputQueueMaxWindowSecondsR756:Number((VIDEO_INPUT_QUEUE_PACKETS_R732/VIDEO_FPS).toFixed(2)),
     audioInputQueuePackets:AUDIO_INPUT_QUEUE_PACKETS_R732,
-    masterAvClockMode:'R784-PERSISTENT-RAWVIDEO-N25+AUDIO-SAMPLE-CLOCK',
+    masterAvClockMode:'R777-RAW-H264-GENPTS-25FPS+AUDIO-SAMPLE-CLOCK',
     rightSubscribeMode:'R767-TRANSPARENT-420PX-BOTTOM-RIGHT',
     rightCtaMode:'R783-SUBSCRIBE-LIKE-420PX-BOTTOM-RIGHT-SMOOTH-ALTERNATING',
     clipSubscribeOverlay:'R783-PREBAKED-ALTERNATING-SUBSCRIBE-LIKE-RIGHT-CTA',
     stationInsertSync:'R784-ALL5-BEST-AUDIO-STREAM+OFFLINE-PCM-LEAD-TRIM+PREPARED-RMS-VERIFY',
     stationLeadingSilenceTrimSeconds:Number(state.stationLeadingSilenceTrimSeconds||0),
     stationLeadingSilenceTrimByKey:state.stationLeadingSilenceTrimByKey||{},
-    stationSourceAudioByKey:state.stationSourceAudioByKey||{},
-    stationPreparedAudioByKey:state.stationPreparedAudioByKey||{},
-    stationAudioGuardMode:state.stationAudioGuardMode,
     overlayPixelPath:'YUV420-NO-ARGB-R732',
     trackUiClock:'ffmpeg-frame-bound-R732-audio-lead-bounded',
     nextPreviewSeconds:NEXT_PREVIEW_SECONDS_R726,
@@ -3141,7 +3077,7 @@ function publicStatus(){
     titleBoundarySwitchFiredAt:state.titleBoundarySwitchFiredAt||null,
     titleBoundarySwitchCount:Number(state.titleBoundarySwitchCount||0),
     rightSubscribeMp3Enabled:true,
-    rightSubscribeClipEnabled:true,
+    rightSubscribeClipEnabled:false,
     nextPreviewHideBeforeEndSeconds:NEXT_PREVIEW_HIDE_BEFORE_END_R726,
     audioNormalizationTargetLufs:TRACK_AUDIO_TARGET_I_R726,
     audioTruePeakDb:TRACK_AUDIO_TRUE_PEAK_R726,
@@ -3170,12 +3106,12 @@ function publicStatus(){
       clipPostDrainMs:0,
       stationInsertAudioRequired:true,
       nextPreviewSource:'ACTUAL_IMMEDIATE_ITEM_R738',
-      clipPlaybackMode:state.clipPlaybackMode||'R785-PREPARED-FIT-PAD-RAWVIDEO-FRAME-RELAY',
-      clipPreparationMode:state.clipPreparationMode||'R760-R742-SERIAL-NICE12-ONE-THREAD-NEW-GEOMETRY-CACHE',
+      clipPlaybackMode:state.clipPlaybackMode||'R742-PREPARED-H264-COPY',
+      clipPreparationMode:state.clipPreparationMode||'R787-R760-SERIAL-NICE12-FRESH-NOCROP-GEOMETRY-CACHE',
       preparedClipReady:state.preparedClipReady||0,
       preparedClipPending:state.preparedClipPending||0,
       preparedClipLast:state.preparedClipLast||'',
-      clipLiveVideoCodec:'R785-fit-pad-1920x1080-sar1-rawvideo-frame-aligned-to-master',
+      clipLiveVideoCodec:'copy-h264-unified-boundary-child',
       clipPreparedVideoCodec:'libx264-ultrafast-6000k-no-bframes-r760-fit-pad',
       videoPipelineLeadSeconds:0,
       clipCacheWarmLeadSeconds:INSERT_CACHE_WARM_LEAD_SECONDS_R752,
@@ -3201,7 +3137,7 @@ function publicStatus(){
       clipVideoPrerollCompletedOk:Boolean(clipVideoPrerollArmedR749?.completedOk),
       clipVideoPrerollArmIdentity:clipVideoPrerollArmedR749?.identity||'',
       clipVideoPrerollArmAgeMs:clipVideoPrerollArmedR749?Math.max(0,Date.now()-Number(clipVideoPrerollArmedR749.startedAt||Date.now())):null,
-      videoSourceWatchdogMode:'R784-NO-RAWVIDEO-WRITER-FORCED-NORMAL',
+      videoSourceWatchdogMode:'R749-NO-H264-WRITER-FORCED-NORMAL',
       videoSourceWatchdogIntervalMs:VIDEO_SOURCE_WATCHDOG_INTERVAL_MS_R749,
       videoSourceStuckMs:VIDEO_SOURCE_STUCK_MS_R749,
       insertPrerollArmGraceMs:INSERT_PREROLL_ARM_GRACE_MS_R749,
@@ -3230,40 +3166,40 @@ function publicStatus(){
     equalizerStyle:state.equalizerStyle,
     equalizerEngine:state.equalizerEngine,
     publisherRunning:state.publisherRunning,
-    masterVideoMode:'R785-FULLFRAME-SAR1+R784-PERSISTENT-RAWVIDEO-25FPS-SINGLE-X264-FLV-TAG7-EGRESS-GUARD',
-    masterBitstreamFilter:'none-R784-rawvideo-clock-no-feeder-timestamps',
+    masterVideoMode:'R787-R783-GEOMETRY-MPEGTS-H264-COPY-MONOTONIC-OFFSET-FLV-TAG7',
+    masterBitstreamFilter:'none-R787-monotonic-container-pts-no-video-bsf',
     masterAudioBytesWritten:Number(publisher?.stdio?.[3]?.bytesWritten||0),
     masterVideoBytesWritten:Number(publisher?.stdio?.[4]?.bytesWritten||0),
-    videoRelayFrameBytes:VIDEO_FRAME_BYTES_R784,
-    videoRelayFramesWritten:Number(state.videoRelayFramesWritten||0),
-    videoRelayPartialBytesDropped:Number(state.videoRelayPartialBytesDropped||0),
+    masterVideoReencode:false,
+    masterTimestampMode:'R787-MPEGTS-MONOTONIC-OFFSET-NO-BACKWARD-DTS-NO-SECOND-ENCODE',
     masterTimestampErrorCount:Number(state.masterTimestampErrorCount||0),
-    lastVideoFrameAtR784:state.lastVideoFrameAtR784||null,
-    masterVideoReencode:true, // this is the ONLY x264 encode pass in R784
-    masterTimestampMode:'R784-RAWVIDEO-FRAME-NUMBER-MONOTONIC-NO-SEGMENT-DTS',
+    lastMasterTimestampErrorAt:state.lastMasterTimestampErrorAt||null,
+    videoTimestampOffsetSecondsR787:Number(state.videoTimestampOffsetSecondsR787||0),
+    fullFrameGuardMode:state.fullFrameGuardMode,
+    stationAudioGuardMode:state.stationAudioGuardMode,
+    stationSourceAudioByKey:state.stationSourceAudioByKey||{},
+    stationPreparedAudioByKey:state.stationPreparedAudioByKey||{},
     masterFlvTagMode:'R780-VTAG7-ATAG10-OLD-FFMPEG-FIFO-COMPAT',
     outputEgressGuardMode:state.outputEgressGuardMode,
     lastOutputFatalAt:state.lastOutputFatalAt,
     lastOutputFatalReason:state.lastOutputFatalReason,
     videoEncodePasses:1,
-    videoQualityMode:'R785-NOCROP-FITPAD+R784-6000K-CBR-ULTRAFAST-SINGLE-MASTER-ENCODE',
+    videoQualityMode:'R763-R762-6000K-CBR-ULTRAFAST-SINGLE-ENCODE-NO-GENERATIONAL-LOSS',
     videoBitrate:'6000k',
     audioBitrate:'160k',
     videoPreset:'ultrafast-zerolatency-UNCHANGED-FOR-STABILITY',
-    permanentFullscreenMode:'R761-R760-R753-PRESERVE-ASPECT-FIT-PAD-1920x1080-SAR1',
+    permanentFullscreenMode:'R787-R783-VIEWER-PROVEN-FIT-PAD-1920x1080-SAR1',
     permanentFullscreenWidth:1920,
     permanentFullscreenHeight:1080,
-    permanentFullscreenFitPolicy:'R785-FINAL-LIVE-FIT-DECREASE-PAD-NO-CROP-SAR1',
-    fullFrameGuardMode:state.fullFrameGuardMode,
-    preparedGeometryByKey:state.preparedGeometryByKey||{},
-    feederBoundaryMode:'R785-FINAL-1920x1080-FITPAD-SAR1+R784-FULL-RAW-FRAMES-ONLY+PERSISTENT-N25-CLOCK',
+    permanentFullscreenFitPolicy:'R787-FIT-DECREASE-PAD-NO-CROP-IMMUTABLE',
+    feederBoundaryMode:'R787-MONOTONIC-MPEGTS-OFFSET+INITIAL-DISCONTINUITY+AUD',
     transportRecoveryMode:'R754-FFMPEG-FIFO-FIRST-NO-EARLY-SYSTEMD-EXIT',
     transportHealthy:state.transportHealthy!==false,
-    transportWatchdogMode:'R784-CONTINUOUS-RAWVIDEO-CLOCK+R754-FIFO-FIRST+R751-NO-PROGRESS-30S',
+    transportWatchdogMode:'R787-MONOTONIC-TS+R754-FIFO-FIRST+R751-NO-PROGRESS-30S',
     outputFifoQueuePackets:OUTPUT_FIFO_QUEUE_PACKETS_R750,
     outputDropPacketsOnOverflow:true,
     masterBackpressureWatchdogMs:MASTER_BACKPRESSURE_STUCK_MS_R750,
-    masterBackpressureDetection:'R784-SINGLE-X264-MASTER+FULL-FRAME-RELAY+R751-BLOCKED-PLUS-ZERO-BYTE-PROGRESS',
+    masterBackpressureDetection:'R787-LOW-CPU-COPY-MASTER+R751-BLOCKED-PLUS-ZERO-BYTE-PROGRESS',
     publisherBackpressureSince:state.publisherBackpressureSince||null,
     publisherBackpressureRecoveries:Number(state.publisherBackpressureRecoveries||0),
     lastPublisherBackpressureAt:state.lastPublisherBackpressureAt||null,
@@ -3402,7 +3338,7 @@ const server=http.createServer((req,res)=>{
 });
 
 server.listen(PORT,'0.0.0.0',()=>{
-  console.log(`ANDRIK Radio R782 STATION A/V PCM SYNC + CLIP CTA + R781/R780 PRESERVED listening on :${PORT}`);
+  console.log(`ANDRIK Radio R787 PERMANENT NOCROP + MONOTONIC TS + R784 STATION AUDIO listening on :${PORT}`);
   radioLoop();
 });
 
