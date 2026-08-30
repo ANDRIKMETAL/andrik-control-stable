@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788119489570-4b05730212",
-  "release": "R794",
-  "archiveName": "R794-CPU-HEADROOM-FADE-OPT-R793-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "004a642dd5ef6025898aa39c1811de40274deed4",
-  "backupSha": "004a642dd5ef6025898aa39c1811de40274deed4",
+  "operationId": "publish-1788123067245-1ebabcc5b8",
+  "release": "R797",
+  "archiveName": "R797-YOUTUBE-QUOTA-ECO-R796-RADIO-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "ab59422ff5534b18c79093210bc29df1de2744e5",
+  "backupSha": "ab59422ff5534b18c79093210bc29df1de2744e5",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-30T19:51:30.671Z"
+  "generatedAt": "2026-08-30T20:51:11.242Z"
 }

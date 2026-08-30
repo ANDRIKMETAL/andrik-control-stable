@@ -4187,7 +4187,7 @@ async function handleYoutubeWebSubStatusR332(request, env) {
   ];
   const states = {};
   for (const key of keys) states[key] = (await getPushState(db,key).catch(() => null))?.value || '';
-  return json({ok:true,websub:states,fastCronExpression:YOUTUBE_FAST_CRON_R332,engagementCronExpression:YOUTUBE_ENGAGEMENT_CRON_R333,releaseMode:'WebSub + 5m fallback',engagementMode:'comments+likes 2m',subscriberMode:'R765 <=2m count check + delivery-confirmed retry lane'});
+  return json({ok:true,websub:states,fastCronExpression:YOUTUBE_FAST_CRON_R332,engagementCronExpression:YOUTUBE_ENGAGEMENT_CRON_R333,releaseMode:'WebSub + ~15m quota-economy fallback',engagementMode:'R797 heartbeat 2m / YouTube sample ~6m',subscriberMode:'R797 cumulative subscriber sample ~10m + delivery-confirmed retry lane'});
 }
 
 async function handleYoutubeWebSubVerifyR332(request, env, ctx) {
@@ -4403,6 +4403,20 @@ async function handleFastYoutubeReleaseCheckR332(request, env) {
   if (!adminAuthorized(request, env) && !cronAuthorized(request, env)) return json({ok:false,error:'unauthorized'},401);
   const db = requireDb(env);
   await Promise.all([ensurePushAutomationSchema(db),ensureLyricsV2Schema(db),ensureControlV1Schema(db)]);
+  // R797: WebSub remains the immediate release path. The playlist API is only a
+  // safety fallback, so sampling it about every 15 minutes is enough and cuts the
+  // old 5-minute playlistItems burn by roughly 3x.
+  const requestUrlR797=new URL(request.url);
+  const forceQuotaPollR797=requestUrlR797.searchParams.get('fresh')==='1' || (adminAuthorized(request,env) && !cronAuthorized(request,env));
+  if(!forceQuotaPollR797){
+    const lastR797=await getPushState(db,'youtube-fast-last-check-at-r332').catch(()=>null);
+    const lastMsR797=Date.parse(String(lastR797?.value||lastR797?.updatedAt||''));
+    const ageMsR797=Number.isFinite(lastMsR797)?Math.max(0,Date.now()-lastMsR797):Infinity;
+    const minGapMsR797=14.5*60*1000;
+    if(ageMsR797<minGapMsR797){
+      return json({ok:true,skipped:true,reason:'websub-primary-quota-eco-r797',fallbackCadenceMinutes:15,ageMinutes:Math.round(ageMsR797/6000)/10,checkedAt:new Date().toISOString()},200);
+    }
+  }
   const startedAt=new Date().toISOString();
   await setPushState(db,'youtube-fast-last-check-at-r332',startedAt).catch(() => {});
   let websub={ok:true,skipped:true};
@@ -4992,7 +5006,7 @@ async function handleControlSystem(request, env) {
   };
   const fastEngagementAgeMinutesR778=ageOfR778(fastEngagementStateR778);
   const subscriberPollAgeMinutesR778=ageOfR778(subscriberPollStateR778);
-  const youtubeAutomationFreshR778=fastEngagementAgeMinutesR778!==null && fastEngagementAgeMinutesR778<=6 && subscriberPollAgeMinutesR778!==null && subscriberPollAgeMinutesR778<=7;
+  const youtubeAutomationFreshR778=fastEngagementAgeMinutesR778!==null && fastEngagementAgeMinutesR778<=10 && subscriberPollAgeMinutesR778!==null && subscriberPollAgeMinutesR778<=15;
   const schedulerWorkHealthyR778=schedulerAlive && youtubeAutomationFreshR778;
   // R394: a live scheduler heartbeat is authoritative for trigger health. A stale
   // full-run marker alone can no longer paint the whole system red.
@@ -8397,7 +8411,16 @@ async function checkYoutubeLiveChatPushR669(env,db,live={}){
 
 async function selectFastYoutubeCommentTargetsR473(db,videos=[]){
   const list=Array.isArray(videos)?videos.filter(v=>v?.videoId):[];
-  const recent=list.slice(0,3);
+  // R797 quota economy: normal passes query comments only when videos.list reports
+  // a commentCount increase. A periodic reply sweep expands to three newest videos
+  // so replies that do not move the public counter still remain observable.
+  const sweepStateR797=await getPushState(db,'youtube-comment-reply-sweep-last-at-r797').catch(()=>null);
+  const sweepMsR797=Date.parse(String(sweepStateR797?.value||sweepStateR797?.updatedAt||''));
+  const replySweepDueR797=!Number.isFinite(sweepMsR797) || Date.now()-sweepMsR797>=25*60*1000;
+  // Normal passes do zero commentThreads calls until videos.list reports a public
+  // commentCount increase. The periodic sweep is only for replies, which may not
+  // advance that public counter.
+  const recent=replySweepDueR797?list.slice(0,3):[];
   const targets=[...recent];
   const ids=list.map(v=>v.videoId);
   let baselines=new Map();
@@ -8420,7 +8443,7 @@ async function selectFastYoutubeCommentTargetsR473(db,videos=[]){
       if(!targets.some(row=>row.videoId===video.videoId) && targets.length<8)targets.push(video);
     }
   }
-  return {targets,state};
+  return {targets,state,replySweepDueR797};
 }
 
 function isBenignYoutubeCommentWarningR473(value=''){
@@ -8442,17 +8465,33 @@ async function fetchFastYoutubeCommentsDirectR473(env,db,videos=[],ownerChannelI
       }).catch(()=>{});
     }
   }
+  if(plan.replySweepDueR797){
+    await setPushState(db,'youtube-comment-reply-sweep-last-at-r797',new Date().toISOString()).catch(()=>{});
+  }
   const warnings=(direct.warnings||[]).filter(w=>!isBenignYoutubeCommentWarningR473(w));
-  return {items:uniqueYoutubeComments(direct.items||[]),warnings,targets:plan.targets.map(v=>v.videoId)};
+  return {items:uniqueYoutubeComments(direct.items||[]),warnings,targets:plan.targets.map(v=>v.videoId),replySweep:Boolean(plan.replySweepDueR797)};
 }
 
 async function handleFastYoutubeEngagementR333(request,env,options={}){
   if(!adminAuthorized(request,env) && !cronAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
   const db=requireDb(env);
   await Promise.all([ensurePushAutomationSchema(db),ensureControlV1Schema(db)]);
+  // R797: keep the reliable */2 scheduler heartbeat, but spend YouTube quota only
+  // about once per six minutes. Manual/admin checks and ?fresh=1 still run now.
+  const requestUrlR797=new URL(request.url);
+  const forceQuotaPollR797=options.force===true || requestUrlR797.searchParams.get('fresh')==='1' || (adminAuthorized(request,env) && !cronAuthorized(request,env));
+  if(!forceQuotaPollR797){
+    const lastR797=await getPushState(db,'youtube-fast-engagement-last-at-r333').catch(()=>null);
+    const lastMsR797=Date.parse(String(lastR797?.value||lastR797?.updatedAt||''));
+    const ageMsR797=Number.isFinite(lastMsR797)?Math.max(0,Date.now()-lastMsR797):Infinity;
+    const minGapMsR797=5.5*60*1000;
+    if(ageMsR797<minGapMsR797){
+      return json({ok:true,skipped:true,reason:'quota-eco-r797',cadenceMinutes:6,ageMinutes:Math.round(ageMsR797/6000)/10,nextInSeconds:Math.max(1,Math.ceil((minGapMsR797-ageMsR797)/1000)),checkedAt:new Date().toISOString()},200);
+    }
+  }
   const autoCheckpointR398=options.skipCheckpoint
     ? {ok:true,skipped:true,reason:'checkpoint-owned-by-caller-r416'}
-    : await checkpointDailySummaryAutoR398(env,'youtube-fast-2m').catch(error=>({ok:false,error:cleanPlainText(error?.message||error,300)}));
+    : await checkpointDailySummaryAutoR398(env,'youtube-fast-6m-r797').catch(error=>({ok:false,error:cleanPlainText(error?.message||error,300)}));
   const startedAt=new Date().toISOString();
   await setPushState(db,'youtube-fast-engagement-last-at-r333',startedAt).catch(()=>{});
   // R681 D1 economy: do not write a transient 'running' state every two minutes.
@@ -8633,7 +8672,7 @@ async function handleFastYoutubeEngagementR333(request,env,options={}){
       scope:'youtube-fast-engagement',
       level:failed>0?'error':'info',
       event:summary.ok?'fast-check-success':failed>0?'fast-check-failed':'fast-check-retry',
-      message:`YouTube fast 2m: отправлено ${summary.sent}, ошибок ${summary.failed}, занятых like-claim ${busyLikeClaims}, восстановлено stale ${staleLikeClaimsRecovered}.`,
+      message:`YouTube fast eco 6m: отправлено ${summary.sent}, ошибок ${summary.failed}, занятых like-claim ${busyLikeClaims}, восстановлено stale ${staleLikeClaimsRecovered}.`,
       details:summary
     }).catch(()=>{});
     return json(summary,failed>0?502:warnings.length?206:200);
@@ -8698,6 +8737,19 @@ async function handleFastYoutubeSubscriberCountR416(request, env, options = {}) 
   if (!adminAuthorized(request, env) && !cronAuthorized(request, env)) return { ok:false, error:'unauthorized' };
   const db = requireDb(env);
   await Promise.all([ensurePushAutomationSchema(db), ensureControlV1Schema(db), ensurePlatformAnalyticsSchema(db)]);
+  // R797: subscriberCount is cumulative, so a 10-minute API sample loses no
+  // statistics; it only delays the +1 owner push by at most a few minutes.
+  const requestUrlR797=new URL(request.url);
+  const forceQuotaPollR797=options.force===true || requestUrlR797.searchParams.get('fresh')==='1' || (adminAuthorized(request,env) && !cronAuthorized(request,env));
+  if(!forceQuotaPollR797){
+    const lastR797=await getPushState(db,'youtube-subscriber-poll-last-at-r653').catch(()=>null);
+    const lastMsR797=Date.parse(String(lastR797?.value||lastR797?.updatedAt||''));
+    const ageMsR797=Number.isFinite(lastMsR797)?Math.max(0,Date.now()-lastMsR797):Infinity;
+    const minGapMsR797=9.5*60*1000;
+    if(ageMsR797<minGapMsR797){
+      return {ok:true,skipped:true,reason:'quota-eco-r797',cadenceMinutes:10,ageMinutes:Math.round(ageMsR797/6000)/10,nextInSeconds:Math.max(1,Math.ceil((minGapMsR797-ageMsR797)/1000)),checkedAt:new Date().toISOString()};
+    }
+  }
   const startedAt = new Date().toISOString();
   try {
     const identity = await fetchYoutubeMonitorIdentity(env);
@@ -9511,7 +9563,7 @@ async function handleYoutubeEventsStatus(request, env) {
     && Number.isFinite(Date.parse(fastLastAtValue))
     && Date.parse(fullSuccessAtValue)>Date.parse(fastLastAtValue);
   const fastStatusValue=fastRecoveredByFull?'success':rawFastStatusValue;
-  const fastHealthy=fastAgeMinutes===null?null:(fastAgeMinutes<=6 && fastStatusValue!=='failed');
+  const fastHealthy=fastAgeMinutes===null?null:(fastAgeMinutes<=10 && fastStatusValue!=='failed');
   const today={commentsSent:0,repliesSent:0,likesSent:0,subscribersSent:0,failed:0};
   for(const row of (todayRows.results||[])){
     const n=Number(row.total||0),sent=row.status==='sent';
@@ -12541,11 +12593,11 @@ async function runLegacyExternalCronReserveR648(request, env) {
   const subscriberAge=ageMinutes(subscriberAt);
   const engagementAge=ageMinutes(engagementAt);
 
-  if(subscriberAge>7){
+  if(subscriberAge>18){
     const value=await handleFastYoutubeSubscriberCountR416(request,env,{source:'legacy-reserve-r648'});
     return {task:'subscriber-rescue',subscriberAgeMinutes:Math.round(subscriberAge),value};
   }
-  if(engagementAge>4){
+  if(engagementAge>12){
     const response=await handleFastYoutubeEngagementR333(request,env,{skipCheckpoint:true});
     const value=await responseData(response).catch(error=>({ok:false,error:cleanPlainText(error?.message||error,400)}));
     return {task:'engagement-rescue',engagementAgeMinutes:Math.round(engagementAge),value};
@@ -12633,7 +12685,7 @@ async function handleExternalSummaryCheckpointR399(request, env) {
 async function handleCronYoutubeEventsAckR416(request, env) {
   if(!adminAuthorized(request,env) && !cronAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
   // This URL is only the legacy emergency fallback of andrik-push-cron. Normal
-  // comments/likes are owned by the */2 gateway. Re-running the historical full
+  // comments/likes use a */2 heartbeat with R797 API self-throttling. Re-running the historical full
   // reconciler here was the second source of 1102 after a gateway failure.
   if(env.COMMENTS_DB){
     const db=requireDb(env);
@@ -12646,8 +12698,8 @@ async function handleCronYoutubeEventsAckR416(request, env) {
 }
 
 // R474: lightweight 5-minute watchdog for the engagement chain.
-// It never repeats the healthy 2-minute YouTube API scan.  Instead it verifies
-// that the fast path is fresh and records an independent backup heartbeat.  If
+// It never repeats the healthy R797 YouTube API sample.  Instead it verifies
+// that the quota-economy fast path is fresh and records an independent backup heartbeat.  If
 // the fast path becomes stale, the existing CPU-safe rescue below takes over.
 async function markYoutubeReserveFiveMinuteR474(env, extra = {}) {
   const db=requireDb(env);
@@ -12662,7 +12714,7 @@ async function markYoutubeReserveFiveMinuteR474(env, extra = {}) {
   const ageMinutes=Number.isFinite(fastMs)?Math.max(0,(Date.now()-fastMs)/60000):999;
   let fastResult={};try{fastResult=JSON.parse(fastResultState?.value||'{}')}catch(_){fastResult={}}
   const fastStatus=String(fastStatusState?.value||(fastResult?.ok===false?'failed':fastResult?.ok===true?'success':'never'));
-  const healthy=ageMinutes<=6 && fastStatus!=='failed';
+  const healthy=ageMinutes<=10 && fastStatus!=='failed';
   const summary={
     mode:'5m-watchdog-r474',
     healthy,
@@ -12692,6 +12744,23 @@ async function maybeSendRadioLiveStartPushR585(env) {
   await ensurePushAutomationSchema(db);
 
   if(!oneSignalConfigured(env)) return {ok:true,skipped:true,reason:'onesignal-not-configured'};
+
+  // R797: while the 6-minute engagement probe confirms the SAME 24/7 broadcast,
+  // the LIVE-start notification has nothing new to discover. Skip the redundant
+  // authenticated liveBroadcasts.list request completely. A cleared/new current id
+  // automatically falls through to the exact API check below.
+  const [knownLiveR797,lastPushedR797,fastAtR797]=await Promise.all([
+    getPushState(db,'youtube-live-current-video-r669').catch(()=>null),
+    getPushState(db,'radio-live-last-push-video-r585').catch(()=>null),
+    getPushState(db,'youtube-fast-engagement-last-at-r333').catch(()=>null)
+  ]);
+  const knownIdR797=cleanPlainText(knownLiveR797?.value||'',80);
+  const pushedIdR797=cleanPlainText(lastPushedR797?.value||'',80);
+  const fastMsR797=Date.parse(String(fastAtR797?.value||fastAtR797?.updatedAt||''));
+  const fastFreshR797=Number.isFinite(fastMsR797) && Date.now()-fastMsR797<=12*60*1000;
+  if(fastFreshR797 && knownIdR797 && knownIdR797===pushedIdR797){
+    return {ok:true,skipped:true,reason:'same-live-confirmed-by-engagement-r797',videoId:knownIdR797};
+  }
 
   let accessToken='';
   try{
@@ -12830,7 +12899,7 @@ async function runCronFiveMinuteSliceR434(request, env, clock) {
     const fastMs=Date.parse(String(fastState?.value||fastState?.updatedAt||''));
     const fastAge=Number.isFinite(fastMs)?Math.max(0,(Date.now()-fastMs)/60000):999;
     const fallbackTurn=(Math.floor(Number(local.minute||0)/5)%2)===0;
-    if(fastAge>6 && fallbackTurn){
+    if(fastAge>12 && fallbackTurn){
       const fallback=await responseData(await handleFastYoutubeEngagementR333(request,env,{skipCheckpoint:true}));
       const rescueAt=new Date().toISOString();
       await Promise.all([
@@ -12936,7 +13005,7 @@ async function handleExternalCronGatewayR334(request, env, ctx) {
       claimed=await claimCronGatewaySlotR334(db,'engagement-2m-r416',clock.slot2);
       if(claimed){
         // R756: subscriber count is one cheap channels.list request. Run it on the same
-        // 2-minute heartbeat as engagement so release/LIVE/summary work in the 5-minute
+        // 2-minute heartbeat as engagement (R797 self-throttles API calls) so release/LIVE/summary work in the 5-minute
         // slice can never starve +1 subscriber notifications. The R658 notified-total
         // watermark and push-once claim still guarantee no duplicate push.
         const engagement=await responseData(await handleFastYoutubeEngagementR333(request,env,{skipCheckpoint:true}));
@@ -15523,7 +15592,7 @@ function isAndrikGuardHealthProbe(request) {
 
 async function runYoutubeEventsFromGuardHealth(env) {
   // R637 reserve only: Guard does NOTHING while the dedicated cron paths are fresh.
-  // If */2 comments/likes or */5 subscriber polling goes stale, one bounded reserve
+  // If the R797 ~6m engagement or ~10m subscriber sampling goes stale, one bounded reserve
   // pass runs in waitUntil. This avoids both silent push loss and the old heavy 1102 loop.
   if (!env.COMMENTS_DB || !String(env.CRON_SECRET || '').trim()) return { ok:false, skipped:true, reason:'bridge-not-configured' };
   const db=requireDb(env);
@@ -15538,7 +15607,7 @@ async function runYoutubeEventsFromGuardHealth(env) {
   };
   const fastAge=ageMinutes(fastState);
   const subscriberAge=ageMinutes(subscriberState);
-  if(fastAge<=4 && subscriberAge<=7){
+  if(fastAge<=12 && subscriberAge<=18){
     return {ok:true,skipped:true,reason:'dedicated-cron-fresh',fastAgeMinutes:Math.round(fastAge),subscriberAgeMinutes:Math.round(subscriberAge)};
   }
 
@@ -15550,11 +15619,11 @@ async function runYoutubeEventsFromGuardHealth(env) {
   });
   const result={ok:true,mode:'guard-reserve-r637',fastAgeMinutes:Math.round(fastAge),subscriberAgeMinutes:Math.round(subscriberAge),engagement:null,subscriber:null,checkedAt:new Date().toISOString()};
   try{
-    if(fastAge>4){
+    if(fastAge>12){
       result.engagement=await responseData(await handleFastYoutubeEngagementR333(synthetic,env,{skipCheckpoint:true}));
       if(result.engagement?.ok===false || result.engagement?.httpOk===false)result.ok=false;
     }
-    if(subscriberAge>7){
+    if(subscriberAge>18){
       result.subscriber=await handleFastYoutubeSubscriberCountR416(synthetic,env,{source:'guard-reserve-r637'});
       if(result.subscriber?.ok===false)result.ok=false;
     }
@@ -15565,7 +15634,7 @@ async function runYoutubeEventsFromGuardHealth(env) {
     ]);
     await recordSystemLog(env,{
       scope:'youtube-events',level:result.ok?'info':'warning',event:'guard-reserve-r637',
-      message:`Guard reserve: comments/likes ${fastAge>4?'checked':'fresh'}, subscribers ${subscriberAge>7?'checked':'fresh'}.`,details:result
+      message:`Guard reserve: comments/likes ${fastAge>12?'checked':'fresh'}, subscribers ${subscriberAge>18?'checked':'fresh'}.`,details:result
     }).catch(()=>{});
     return result;
   }catch(error){
@@ -15618,10 +15687,10 @@ async function runPushAutomationRescueR778(env, source='health-r778') {
       method:'POST',headers:{'x-cron-key':String(env.CRON_SECRET||''),'user-agent':'ANDRIK-Push-Rescue/R778',accept:'application/json'}
     });
     let task='fresh', value={ok:true,skipped:true,reason:'youtube-polls-fresh'};
-    if(fastAge>4){
+    if(fastAge>12){
       task='engagement-rescue-r778';
       value=await responseData(await handleFastYoutubeEngagementR333(synthetic,env,{skipCheckpoint:true}));
-    }else if(subscriberAge>5){
+    }else if(subscriberAge>18){
       task='subscriber-rescue-r778';
       value=await handleFastYoutubeSubscriberCountR416(synthetic,env,{source:'rescue-r778'});
     }
@@ -19331,7 +19400,7 @@ async function routeApi(request, env, ctx) {
     if (path === '/api/control/ecosystem-map' && request.method === 'GET') return await handleControlEcosystemMap(request, env);
     if (path === '/api/control/audience' && request.method === 'GET') return await handleControlAudience(request, env);
     if (path === '/api/control/youtube-top-content' && request.method === 'GET') return await handleControlYoutubeTopContentR552(request, env);
-    if (path === '/api/control/youtube-live-r565' && request.method === 'GET') return await handleControlYoutubeLiveR565(request, env);
+    if (path === '/api/control/youtube-live-r565' && request.method === 'GET') return await handleControlYoutubeLiveCachedR797(request, env);
     if (path === '/api/control/youtube-live-r609/auto' && request.method === 'POST') return await handleYoutubeLiveAutoR609(request, env);
     if (path === '/api/control/youtube-live-r609/start' && request.method === 'POST') return await handleYoutubeLiveStartR609(request, env);
     if (path === '/api/control/youtube-live-r687/ensure' && request.method === 'POST') return await handleYoutubeLiveEnsureR687(request, env);
@@ -20345,30 +20414,89 @@ async function youtubePublicLiveByUploadsR623(env,{fresh=false}={}){
   return result;
 }
 
+let youtubePublicResolvedCacheR797={expiresAt:0,known:false,data:null};
+
+async function readPublicYoutubeLiveStateR797(env){
+  if(!env.COMMENTS_DB)return {hit:false,data:null};
+  try{
+    const db=requireDb(env);
+    const [current,fastAt,fastStatus]=await Promise.all([
+      getPushState(db,'youtube-live-current-video-r669').catch(()=>null),
+      getPushState(db,'youtube-fast-engagement-last-at-r333').catch(()=>null),
+      getPushState(db,'youtube-fast-engagement-last-status-r376').catch(()=>null)
+    ]);
+    const fastMs=Date.parse(String(fastAt?.value||fastAt?.updatedAt||''));
+    if(String(fastStatus?.value||'').toLowerCase()==='failed' || !Number.isFinite(fastMs) || Date.now()-fastMs>12*60*1000)return {hit:false,data:null};
+    const videoId=cleanPlainText(current?.value||'',80);
+    return {hit:true,data:videoId?{videoId,watchUrl:`https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`,lifeCycleStatus:'live',streamStatus:'active',active:true,source:'engagement-state-r797'}:null};
+  }catch(_){return {hit:false,data:null};}
+}
+
+async function readPublicYoutubeFallbackCacheR797(env){
+  const now=Date.now();
+  if(youtubePublicResolvedCacheR797.known && youtubePublicResolvedCacheR797.expiresAt>now){
+    return {hit:true,data:youtubePublicResolvedCacheR797.data};
+  }
+  if(!env.COMMENTS_DB)return {hit:false,data:null};
+  try{
+    const state=await getPushState(requireDb(env),'youtube-public-live-resolved-cache-r797').catch(()=>null);
+    if(!state?.value)return {hit:false,data:null};
+    const payload=JSON.parse(state.value);
+    const ms=Date.parse(String(payload?.cachedAt||state?.updatedAt||''));
+    if(!Number.isFinite(ms) || now-ms>5*60*1000)return {hit:false,data:null};
+    const data=payload?.active&&payload?.videoId?payload:null;
+    youtubePublicResolvedCacheR797={known:true,data,expiresAt:now+60*1000};
+    return {hit:true,data};
+  }catch(_){return {hit:false,data:null};}
+}
+
+async function writePublicYoutubeFallbackCacheR797(env,data){
+  youtubePublicResolvedCacheR797={known:true,data:data||null,expiresAt:Date.now()+5*60*1000};
+  if(!env.COMMENTS_DB)return;
+  const cachedAt=new Date().toISOString();
+  const payload=data?{...data,active:true,cachedAt}:{active:false,videoId:'',watchUrl:'',cachedAt};
+  await setPushState(requireDb(env),'youtube-public-live-resolved-cache-r797',JSON.stringify(payload).slice(0,3000)).catch(()=>{});
+}
+
 async function resolvePublicYoutubeLiveR623(env,{fresh=false}={}){
-  // Exact private Live API remains first when the existing Worker OAuth is usable.
+  if(!fresh){
+    // Zero-quota hot path: the background engagement probe already verifies/clears
+    // the live id every ~6 minutes.
+    const state=await readPublicYoutubeLiveStateR797(env);
+    if(state.hit)return state.data;
+    const cached=await readPublicYoutubeFallbackCacheR797(env);
+    if(cached.hit)return cached.data;
+  }
+
+  let result=null;
+  // Exact private Live API remains first when a fresh/fallback resolution is needed.
   try{
     const accessToken=await getYoutubeOAuthAccessToken(env);
     const {broadcast,streamStatus}=await youtubeCurrentBroadcastR609(env,accessToken);
     const videoId=cleanPlainText(broadcast?.id||'',80);
     const lifeCycleStatus=youtubeLifeKeyR609(broadcast?.status?.lifeCycleStatus);
     if(videoId&&lifeCycleStatus==='live'){
-      return {videoId,watchUrl:`https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`,lifeCycleStatus,streamStatus:cleanPlainText(streamStatus||'',80),active:true,source:'oauth-live-r623'};
+      result={videoId,watchUrl:`https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`,lifeCycleStatus,streamStatus:cleanPlainText(streamStatus||'',80),active:true,source:'oauth-live-r797'};
     }
   }catch(_){}
 
   // Cheap public probe first; it does not depend on Studio OAuth.
-  try{
-    const found=await youtubePublicLiveByUploadsR623(env,{fresh});
-    if(found)return {...found,lifeCycleStatus:'live',streamStatus:'active'};
-  }catch(_){}
+  if(!result){
+    try{
+      const found=await youtubePublicLiveByUploadsR623(env,{fresh:true});
+      if(found)result={...found,lifeCycleStatus:'live',streamStatus:'active'};
+    }catch(_){}
+  }
 
-  // Final public fallback: YouTube eventType=live search.
-  try{
-    const found=await youtubePublicLiveByApiKeyR619(env,{fresh});
-    if(found)return {...found,lifeCycleStatus:'live',streamStatus:'active'};
-  }catch(_){}
-  return null;
+  // Final public fallback: expensive eventType=live search.
+  if(!result){
+    try{
+      const found=await youtubePublicLiveByApiKeyR619(env,{fresh:true});
+      if(found)result={...found,lifeCycleStatus:'live',streamStatus:'active'};
+    }catch(_){}
+  }
+  await writePublicYoutubeFallbackCacheR797(env,result);
+  return result;
 }
 
 async function handlePublicYoutubeLiveTargetR623(request,env){
@@ -20406,6 +20534,24 @@ async function handlePublicYoutubeLiveTargetR610(request, env) {
   } catch (_) {}
 
   return json({ok:true,videoId:'',watchUrl:fallback,lifeCycleStatus:'',streamStatus:'',active:false,source:'channel-live-fallback-r619'},200,JSON_HEADERS);
+}
+
+// R797 — short shared in-isolate cache for passive Control polling. Explicit fresh=1
+// (start/status/manual actions) always reaches YouTube immediately.
+let youtubeControlLiveCacheR797={expiresAt:0,status:200,body:''};
+async function handleControlYoutubeLiveCachedR797(request,env){
+  if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
+  const u=new URL(request.url);
+  const fresh=u.searchParams.get('fresh')==='1';
+  if(!fresh && youtubeControlLiveCacheR797.body && youtubeControlLiveCacheR797.expiresAt>Date.now()){
+    return new Response(youtubeControlLiveCacheR797.body,{status:youtubeControlLiveCacheR797.status,headers:{...JSON_HEADERS,'cache-control':'no-store, max-age=0','x-andrik-youtube-cache':'r797-hit'}});
+  }
+  const response=await handleControlYoutubeLiveR565(request,env);
+  if(!fresh && response.ok){
+    const body=await response.clone().text();
+    youtubeControlLiveCacheR797={expiresAt:Date.now()+120*1000,status:response.status,body};
+  }
+  return response;
 }
 
 // R578 — YouTube Live Studio state: follow CURRENT live video with fallback detection.

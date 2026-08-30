@@ -134,10 +134,10 @@ const MP3_BOUNDARY_FADE_IN_SECONDS_R758 = Math.max(0.20,Math.min(1.5,Number(proc
 // The EQ is encoded inside the current local H264 feeder, while the YouTube RTMPS
 // publisher stays open permanently across MP3, clip and visual-period switches.
 const EQUALIZER_FILES_R721 = Object.freeze({
-  morning: new URL('../assets/equalizer-morning-r720.mov', import.meta.url).pathname,
-  day: new URL('../assets/equalizer-day-r720.mov', import.meta.url).pathname,
-  evening: new URL('../assets/equalizer-evening-r720.mov', import.meta.url).pathname,
-  night: new URL('../assets/equalizer-night-r720.mov', import.meta.url).pathname
+  morning: new URL('../assets/equalizer-morning-r796-1180.mov', import.meta.url).pathname,
+  day: new URL('../assets/equalizer-day-r796-1180.mov', import.meta.url).pathname,
+  evening: new URL('../assets/equalizer-evening-r796-1180.mov', import.meta.url).pathname,
+  night: new URL('../assets/equalizer-night-r796-1180.mov', import.meta.url).pathname
 });
 const OUTPUT_TIMESHIFT_SECONDS = 6; // R637: network recovery cushion; packets are NEVER dropped
 const VIDEO_BITRATE = '6000k'; // R762: safe 1080p25 quality lift; CBR only, encoder architecture/preset unchanged
@@ -180,9 +180,9 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R794-CPU-HEADROOM-FADE-OPT-R793-PRESERVED',
-  cpuHeadroomProfileR794:'LIVE-FAST-SCALE-PRESCALED-STATIC-STEP-FADE',
-  mode: 'R794 CPU HEADROOM + FADE OPT + R793/R792/R791/R790/R787 PRESERVED',
+  version: 'R796-MAX-CPU-HEADROOM-TICKER36-COMPACT-EQ-FADE-PRESERVED-R795',
+  cpuHeadroomProfileR794:'R796-LIVE-FAST-SCALE-COMPACT-EQ-FINITE-FADE-PRESCALED-STATIC',
+  mode: 'R796 MAX CPU HEADROOM + TICKER36 + COMPACT EQ + R795 FADE + R792/R791/R790/R787 PRESERVED',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
@@ -229,7 +229,7 @@ const state = {
   lastFfmpegLine: '',
   equalizerPeriod: null,
   equalizerStyle: null,
-  equalizerEngine: 'R721-EXACT-PERIODIC-QTRLE-FEEDER-4-SLOT',
+  equalizerEngine: 'R796-COMPACT-QTRLE-1180-25FPS-4-SLOT',
   visualLoopOffsetSeconds: 0,
   visualContinuityMode: 'R735-WALLCLOCK-SEEK-CONTINUITY',
   clipAvSyncMode: 'R738-PTS0-ASYNC-FIRSTPTS0',
@@ -1177,7 +1177,7 @@ function preparedClipFilterComplexR742(titleFile,tickerFile,{stationInsert=false
         const fadeOutAt=st+CTA_SHOW_SECONDS_R722-CTA_FADE_SECONDS_R748;
         graph+=`;[pcta${i}]fade=t=in:st=${st.toFixed(3)}:d=${CTA_FADE_SECONDS_R748.toFixed(2)}:alpha=1,fade=t=out:st=${fadeOutAt.toFixed(3)}:d=${CTA_FADE_SECONDS_R748.toFixed(2)}:alpha=1[pctaf${i}]`;
         const out=`pctaout${i}`;
-        graph+=`;[${baseLabel}][pctaf${i}]overlay=x=W-w-${CTA_RIGHT_GAP_R767}:y=H-h-${CTA_BOTTOM_GAP_R748}:shortest=0:format=yuv420[${out}]`;
+        graph+=`;[${baseLabel}][pctaf${i}]overlay=x=W-w-${CTA_RIGHT_GAP_R767}:y=H-h-${CTA_BOTTOM_GAP_R748}:shortest=0:eval=init:format=yuv420[${out}]`;
         baseLabel=out;
       });
       graph+=`;[${baseLabel}]format=yuv420p[outv]`;
@@ -1763,10 +1763,10 @@ function activeVisualPeriodR721(){
 function equalizerSpecR721(){
   const period=activeVisualPeriodR721();
   const specs={
-    morning:{name:'morning-soft-gold-seamless-r721',path:EQUALIZER_FILES_R721.morning},
-    day:{name:'day-steel-seamless-r721',path:EQUALIZER_FILES_R721.day},
-    evening:{name:'evening-amber-seamless-r721',path:EQUALIZER_FILES_R721.evening},
-    night:{name:'night-blue-seamless-r721',path:EQUALIZER_FILES_R721.night}
+    morning:{name:'morning-soft-gold-compact-r796',path:EQUALIZER_FILES_R721.morning},
+    day:{name:'day-steel-compact-r796',path:EQUALIZER_FILES_R721.day},
+    evening:{name:'evening-amber-compact-r796',path:EQUALIZER_FILES_R721.evening},
+    night:{name:'night-blue-compact-r796',path:EQUALIZER_FILES_R721.night}
   };
   const spec=specs[period]||specs.day;
   state.equalizerPeriod=period;
@@ -1829,7 +1829,7 @@ function titleOverlayFiltersR721({dynamicTitle=false,showPreview=false,previewDu
   filters.push(
     `drawtext=${fontPart}textfile='${prevPath}'${previewReloadPart}:fontcolor=white@1:fontsize=32:x=58:y=h-305:borderw=3:bordercolor=black@1:box=1:boxcolor=black@0.64:boxborderw=13${previewEnable}`,
     `drawtext=${fontPart}textfile='${nextPath}'${previewReloadPart}:fontcolor=white@1:fontsize=32:x=w-text_w-58:y=h-305:borderw=3:bordercolor=black@1:box=1:boxcolor=black@0.64:boxborderw=13${previewEnable}`,
-    `drawtext=${fontPart}textfile='${tickerPath}':reload=${VIDEO_FPS}:fontcolor=yellow:fontsize=28:x='w-mod(t*110,text_w+w)':y=h-58:borderw=3:bordercolor=black@1:shadowcolor=black@1:shadowx=2:shadowy=2`
+    `drawtext=${fontPart}textfile='${tickerPath}':reload=${VIDEO_FPS*2}:fontcolor=yellow:fontsize=36:x='w-mod(t*105,text_w+w)':y=h-62:borderw=3:bordercolor=black@1:shadowcolor=black@1:shadowx=2:shadowy=2`
   );
   return filters.join(',');
 }
@@ -1863,71 +1863,63 @@ function compactCtaChainR783(trackDuration){
     const fadeOutAt=st+CTA_SHOW_SECONDS_R722-CTA_FADE_SECONDS_R748;
     chain+=`[cta${i}]fade=t=in:st=${st.toFixed(3)}:d=${CTA_FADE_SECONDS_R748.toFixed(2)}:alpha=1,fade=t=out:st=${fadeOutAt.toFixed(3)}:d=${CTA_FADE_SECONDS_R748.toFixed(2)}:alpha=1[ctaf${i}];`;
     const out=`ctaout${i}`;
-    chain+=`[${base}][ctaf${i}]overlay=x=W-w-${CTA_RIGHT_GAP_R767}:y=H-h-${CTA_BOTTOM_GAP_R748}:shortest=0:format=yuv420[${out}];`;
+    chain+=`[${base}][ctaf${i}]overlay=x=W-w-${CTA_RIGHT_GAP_R767}:y=H-h-${CTA_BOTTOM_GAP_R748}:shortest=0:eval=init:format=yuv420[${out}];`;
     base=out;
   });
   return {pre,chain,final:base,windows};
 }
 
-// R794 CPU-HEADROOM FADE: reproduce the viewer-approved black transition at the
-// exact 25fps frame clock with drawbox alpha steps. This removes the always-live
-// 1920x1080 RGBA color source + full-frame overlay blend that previously ran for
-// the whole MP3. At 25fps one alpha step per frame is visually continuous while
-// only the active fade/hold frame performs a full-frame blend.
-function blackDrawboxStepR794(alpha,start,end){
-  const a=Math.max(0,Math.min(1,Number(alpha)||0));
-  const s=Math.max(0,Number(start)||0), e=Math.max(s+0.001,Number(end)||s+0.001);
-  return `drawbox=x=0:y=0:w=iw:h=ih:color=black@${a.toFixed(5)}:t=fill:enable='gte(t,${s.toFixed(3)})*lt(t,${e.toFixed(3)})'`;
-}
-function blackFadeStepsR794(start,duration,{toBlack=true}={}){
-  const d=Math.max(0.04,Number(duration)||0.04);
-  const frames=Math.max(1,Math.round(d*VIDEO_FPS));
-  const frameDur=1/VIDEO_FPS;
-  const out=[];
-  for(let k=0;k<frames;k++){
-    const s=Number(start)+k*frameDur;
-    const e=Number(start)+(k+1)*frameDur;
-    const alpha=toBlack ? (k/frames) : 1-(k/frames);
-    out.push(blackDrawboxStepR794(alpha,s,e));
-  }
-  return out;
-}
-function blackoutFiltersR794({fadeIn=false,fadeInSeconds=CLIP_TO_TRACK_FADE_IN_SECONDS_R753,endFadeToBlack=false,trackDuration=0}={}){
-  const out=[];
-  if(fadeIn){
-    out.push(...blackFadeStepsR794(0,Math.max(0.05,Number(fadeInSeconds)||CLIP_TO_TRACK_FADE_IN_SECONDS_R753),{toBlack:false}));
-  }
-  const d=Math.max(0,Number(trackDuration)||0);
-  if(d>VIDEO_FADE_SECONDS_R726+VIDEO_BLACK_HOLD_SECONDS_R736+VIDEO_FADE_IN_SECONDS_R736+VIDEO_FADE_LEAD_SECONDS_R735+1){
-    const outAt=Math.max(0,d-VIDEO_FADE_SECONDS_R726-VIDEO_BLACK_HOLD_SECONDS_R736-VIDEO_FADE_LEAD_SECONDS_R735);
-    const fadeOutEnd=outAt+VIDEO_FADE_SECONDS_R726;
-    const recoverAt=fadeOutEnd+VIDEO_BLACK_HOLD_SECONDS_R736;
-    out.push(...blackFadeStepsR794(outAt,VIDEO_FADE_SECONDS_R726,{toBlack:true}));
-    if(endFadeToBlack){
-      out.push(`drawbox=x=0:y=0:w=iw:h=ih:color=black@1:t=fill:enable='gte(t,${fadeOutEnd.toFixed(3)})'`);
-    }else{
-      if(recoverAt>fadeOutEnd+0.001)out.push(blackDrawboxStepR794(1,fadeOutEnd,recoverAt));
-      out.push(...blackFadeStepsR794(recoverAt,VIDEO_FADE_IN_SECONDS_R736,{toBlack:false}));
-    }
-  }
-  return out;
-}
-
+// R796 CPU-HEADROOM: keep R795 viewer-proven fade timing, but generate black alpha
+// masks ONLY for the ~1.5-2.2 second transition window. This preserves the visible
+// 0.65s darken + 0.05s black + 0.80s recovery while avoiding a 1080p alpha source
+// and full-frame overlay for the entire MP3. Compact 1180px QTRLE EQ + larger ticker.
+// R795 FADE-RESTORE: keep the R794 CPU headroom wins (fast live FIT scaler,
+// pre-scaled QR/CTA, 2 encoder threads), but restore the viewer-proven R793
+// alpha-mask fade engine exactly. The R794 drawbox-step experiment is removed
+// because the visible transition could disappear in the live yuv420 pipeline.
 function normalVideoFilterComplexR721({fadeIn=false,fadeInSeconds=CLIP_TO_TRACK_FADE_IN_SECONDS_R753,endFadeToBlack=false,trackDuration=0,previewReload=false,boundaryTitleSwitchAt=0}={}){
-  const vf=titleOverlayFiltersR721({dynamicTitle:false,showPreview:true,previewDuration:trackDuration,previewReload,boundaryTitleSwitchAt,liveCpuFastR794:true}); // R794: same R790 PTS-bound title/fade clock, CPU-light live-only FIT scaler
-  // R748: CTA is feeder-local, full-window only, with alpha fade in/out. This avoids
-  // the old partial wall-clock window that looked like a blink at appearance/disappearance.
+  const vf=titleOverlayFiltersR721({dynamicTitle:false,showPreview:true,previewDuration:trackDuration,previewReload,boundaryTitleSwitchAt,liveCpuFastR794:true});
   const cta=compactCtaChainR783(trackDuration);
-  // R794: preserve the exact viewer-approved darken -> tiny black hold -> brighten
-  // clock, but apply it as one per-frame alpha drawbox sequence on the final picture.
-  // This eliminates two continuous 1080p alpha-mask sources and their full-frame overlays.
-  const fadeFiltersR794=blackoutFiltersR794({fadeIn,fadeInSeconds,endFadeToBlack,trackDuration});
+  let maskChain='';
+  let finalChain='[ctabase]format=yuv420p[outv]';
+  let startupMaskChain='';
+
+  // R796: short-lived startup alpha mask only. After it reaches transparent, the
+  // source ends and overlay=eof_action=pass removes it from the hot path.
+  if(fadeIn){
+    const fd=Math.max(0.05,Number(fadeInSeconds)||CLIP_TO_TRACK_FADE_IN_SECONDS_R753);
+    const md=fd+0.08;
+    startupMaskChain=`color=c=black@1.0:s=1920x1080:r=${VIDEO_FPS}:d=${md.toFixed(3)},format=yuva420p,fade=t=out:st=0:d=${fd.toFixed(2)}:alpha=1,setpts=PTS-STARTPTS[startmask];`;
+  }
+
+  if(Number(trackDuration)>VIDEO_FADE_SECONDS_R726+VIDEO_BLACK_HOLD_SECONDS_R736+VIDEO_FADE_IN_SECONDS_R736+VIDEO_FADE_LEAD_SECONDS_R735+1){
+    const d=Number(trackDuration);
+    const outAt=Math.max(0,d-VIDEO_FADE_SECONDS_R726-VIDEO_BLACK_HOLD_SECONDS_R736-VIDEO_FADE_LEAD_SECONDS_R735);
+    const recoverLocal=VIDEO_FADE_SECONDS_R726+VIDEO_BLACK_HOLD_SECONDS_R736;
+    if(endFadeToBlack){
+      // MP3 -> real video: fade to black and keep black only until this feeder ends.
+      const maskDur=Math.max(VIDEO_FADE_SECONDS_R726+0.12,d-outAt+0.12);
+      maskChain=`color=c=black@1.0:s=1920x1080:r=${VIDEO_FPS}:d=${maskDur.toFixed(3)},format=yuva420p,fade=t=in:st=0:d=${VIDEO_FADE_SECONDS_R726.toFixed(2)}:alpha=1,setpts=PTS-STARTPTS+${outAt.toFixed(3)}/TB[blackmask];`;
+    }else{
+      // MP3 -> MP3: exact R795 viewer timing, but mask exists only for the transition.
+      const maskDur=VIDEO_FADE_SECONDS_R726+VIDEO_BLACK_HOLD_SECONDS_R736+VIDEO_FADE_IN_SECONDS_R736+0.08;
+      maskChain=`color=c=black@1.0:s=1920x1080:r=${VIDEO_FPS}:d=${maskDur.toFixed(3)},format=yuva420p,fade=t=in:st=0:d=${VIDEO_FADE_SECONDS_R726.toFixed(2)}:alpha=1,fade=t=out:st=${recoverLocal.toFixed(3)}:d=${VIDEO_FADE_IN_SECONDS_R736.toFixed(2)}:alpha=1,setpts=PTS-STARTPTS+${outAt.toFixed(3)}/TB[blackmask];`;
+    }
+    finalChain='[ctabase][blackmask]overlay=x=0:y=0:shortest=0:eof_action=pass:eval=init:format=yuv420[outv]';
+  }
+
   const ctaBaseLabel=cta.final;
-  const finalLabel=ctaBaseLabel!=='qrbase'?ctaBaseLabel:'qrbase';
-  const finalChain=fadeFiltersR794.length
-    ? `[${finalLabel}]${fadeFiltersR794.join(',')},format=yuv420p[outv]`
-    : `[${finalLabel}]format=yuv420p[outv]`;
-  return `[0:v]setpts=PTS-STARTPTS,${vf}[base];[2:v]fps=${VIDEO_FPS},setpts=N/(${VIDEO_FPS}*TB),format=yuva420p[eqv];[base][eqv]overlay=x=(W-w)/2:y=H-h-64:shortest=0:format=yuv420[eqbase];[1:v]format=yuva420p[qr];[eqbase][qr]overlay=x=W-w-24:y=24:shortest=0:format=yuv420[qrbase];${cta.pre}${cta.chain}${finalChain}`;
+  if(ctaBaseLabel!=='qrbase') finalChain=finalChain.replaceAll('[ctabase]',`[${ctaBaseLabel}]`);
+  else finalChain=finalChain.replaceAll('[ctabase]','[qrbase]');
+  if(fadeIn){
+    finalChain=finalChain.replace('[outv]','[prefadeout]');
+    finalChain+=`;[prefadeout][startmask]overlay=x=0:y=0:shortest=0:eof_action=pass:eval=init:format=yuv420[outv]`;
+  }
+
+  // R796: EQ is pre-scaled OFFLINE to 1180px wide (same 25fps/100-frame seamless loop).
+  // No live EQ scaling. Static overlay coordinates use eval=init and redundant format
+  // conversions between overlays are removed.
+  return `[0:v]setpts=PTS-STARTPTS,${vf}[base];[2:v]fps=${VIDEO_FPS},setpts=N/(${VIDEO_FPS}*TB),format=yuva420p[eqv];[base][eqv]overlay=x=(W-w)/2:y=H-h-76:shortest=0:eval=init:format=yuv420[eqbase];[1:v]format=yuva420p[qr];[eqbase][qr]overlay=x=W-w-24:y=24:shortest=0:eval=init:format=yuv420[qrbase];${cta.pre}${cta.chain}${maskChain}${startupMaskChain}${finalChain}`;
 }
 
 function clipFilterComplexR721(){
@@ -3304,7 +3296,10 @@ function publicStatus(){
       backgroundLoudnessEnabled:BACKGROUND_LOUDNESS_ENABLED_R791,
       backgroundPrefetchLoudnessPolicyR793:'DOWNLOAD-ONLY-WHEN-BACKGROUND-OFF',
       liveScalePolicyR794:'FAST-BILINEAR-LIVE-MP3-ONLY-OFFLINE-LANCZOS-PRESERVED',
-      fadeEngineR794:'FRAME-STEPPED-DRAWBOX-NO-CONTINUOUS-1080P-ALPHA-MASK',
+      fadeEngineR795:'R793-ALPHA-MASK-065-BLACK-HOLD-RECOVER',
+      fadeRuntimePolicyR796:'FINITE-WINDOW-ALPHA-MASK-EOF-PASS-065-005-080',
+      equalizerPolicyR796:'QTRLE-1180PX-25FPS-100FRAME-SEAMLESS-NO-LIVE-SCALE',
+      tickerPolicyR796:'FONT36-Y62-SPEED105-RELOAD2S',
       staticOverlayPolicyR794:'PRE-SCALED-QR160-CTA420',
       liveEncoderThreadsR794:2,
       stationPreparedAudioClock:'R791-PTS-STARTPTS-BEFORE-ARESAMPLE-SAMPLECOUNT-CLOCK',
