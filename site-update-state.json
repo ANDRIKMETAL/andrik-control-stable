@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788035148970-10ccf23525",
-  "release": "R767",
-  "archiveName": "R767-CLIP-FRAMECLOCK-SYNC-RIGHT-SUBSCRIBE-R766-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "75facd82ad8efbcab1d82e0de8256ffe7055b15b",
-  "backupSha": "75facd82ad8efbcab1d82e0de8256ffe7055b15b",
+  "operationId": "publish-1788064611597-70ea4fb838",
+  "release": "R768",
+  "archiveName": "R768-OWNER-PUSH-SELFHEAL-SIGNED-BRIDGE-PUSH-SAFE-CACHE-R767-RADIO-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "7b7306c44f0e963fd0049fc17506e9058e5bcd58",
+  "backupSha": "7b7306c44f0e963fd0049fc17506e9058e5bcd58",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-29T20:25:50.424Z"
+  "generatedAt": "2026-08-30T04:36:52.055Z"
 }

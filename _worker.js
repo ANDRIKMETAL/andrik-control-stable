@@ -1,3 +1,5 @@
+// R768: OWNER PUSH SELF-HEAL + CONTROL-ORIGIN REBIND; radio R767 untouched.
+const PUSH_OWNER_RECOVERY_R768 = 'R768-OWNER-PUSH-SELFHEAL';
 const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R524', number:524, version:'55.00', full:'55.00 LIVE WEB AI FINAL R524', siteUpdater:'55.00-r356' });
 const ANDRIK_D1_EFFICIENCY_RELEASE = 'R638-D1-FINAL';
 
@@ -2593,7 +2595,17 @@ async function getPushAudienceCounts(env) {
   await ensurePushAutomationSchema(db);
   const [publicRow, ownerRow, totalRow] = await Promise.all([
     db.prepare(`SELECT COUNT(*) AS total FROM push_subscribers WHERE status = 'active' AND source <> 'owner'`).first(),
-    db.prepare(`SELECT COUNT(*) AS total FROM push_admin_devices`).first(),
+    // R768: an owner device is valid if it is present in the explicit admin-device table
+    // OR is an active subscriber whose source is already owner.  R765 can prune a rotated
+    // stale OneSignal id from push_admin_devices before the replacement browser id is rebound;
+    // counting the union makes diagnostics and recovery reflect the actual owner audience.
+    db.prepare(`
+      SELECT COUNT(*) AS total FROM (
+        SELECT subscription_id FROM push_admin_devices
+        UNION
+        SELECT subscription_id FROM push_subscribers WHERE status='active' AND source='owner'
+      ) WHERE subscription_id <> ''
+    `).first(),
     db.prepare(`
       SELECT COUNT(*) AS total FROM (
         SELECT subscription_id FROM push_subscribers WHERE status = 'active'
@@ -2955,12 +2967,29 @@ async function sendOneSignalPush(env, {
 
 async function getOwnerSubscriptionIds(env) {
   if (!env.COMMENTS_DB) return [];
+  await ensurePushAutomationSchema(env.COMMENTS_DB);
+  // R768 OWNER AUDIENCE SELF-HEAL:
+  // Never depend on push_admin_devices alone.  A OneSignal/browser worker rotation can
+  // replace the subscription id, and R765 correctly deletes an invalid old admin id.
+  // The newly rebound id is also stored in push_subscribers with source='owner'.  Union
+  // both stores so morning/evening summaries, likes, comments and subscriber alerts do
+  // not all go silent just because the legacy admin-device row disappeared.
   const result = await env.COMMENTS_DB.prepare(`
-    SELECT d.subscription_id
-    FROM push_admin_devices d
-    LEFT JOIN push_subscribers s ON s.subscription_id=d.subscription_id
-    WHERE COALESCE(s.status,'active')='active'
-    ORDER BY datetime(d.updated_at) DESC
+    SELECT subscription_id FROM (
+      SELECT d.subscription_id AS subscription_id,
+             COALESCE(datetime(d.updated_at), datetime(d.created_at), datetime('1970-01-01')) AS touched
+      FROM push_admin_devices d
+      LEFT JOIN push_subscribers s ON s.subscription_id=d.subscription_id
+      WHERE COALESCE(s.status,'active')='active'
+      UNION ALL
+      SELECT s.subscription_id AS subscription_id,
+             COALESCE(datetime(s.updated_at), datetime(s.last_seen_at), datetime(s.created_at), datetime('1970-01-01')) AS touched
+      FROM push_subscribers s
+      WHERE s.status='active' AND s.source='owner'
+    )
+    WHERE subscription_id <> ''
+    GROUP BY subscription_id
+    ORDER BY MAX(touched) DESC
     LIMIT 20
   `).all();
   return [...new Set((result.results || []).map(row => row.subscription_id).filter(Boolean))];
@@ -3063,6 +3092,40 @@ async function verifyOwnerSessionToken(token, env) {
   if (!/^[a-f0-9]{20,80}$/i.test(nonce)) return false;
   const expectedSignature = await hmacSha256Hex(ownerSessionSecret(env), `${expiresRaw}.${nonce}`);
   return timingSafeTextEqual(suppliedSignature, expectedSignature);
+}
+
+// R768: OneSignal is configured for andrikmetal.com, while the Control UI lives on
+// control.andrikmetal.com. A web-push subscription is origin-bound, so the Control
+// origin cannot mint the real OneSignal subscription. Generate a short-lived signed
+// bridge on the authenticated Control origin, then redeem it on andrikmetal.com.
+function pushOwnerBindSecretR768(env) {
+  return `${ownerSessionSecret(env)}|ANDRIK-PUSH-OWNER-BIND-R768`;
+}
+
+async function createPushOwnerBindTokenR768(env) {
+  const expiresAt = Date.now() + 10 * 60 * 1000;
+  const nonce = crypto.randomUUID().replace(/-/g, '');
+  const payload = `${expiresAt}.${nonce}`;
+  const signature = await hmacSha256Hex(pushOwnerBindSecretR768(env), payload);
+  return { token:`${payload}.${signature}`, expiresAt };
+}
+
+async function verifyPushOwnerBindTokenR768(token, env) {
+  const parts = String(token || '').split('.');
+  if (parts.length !== 3 || !configuredAdminKeys(env).length) return false;
+  const [expiresRaw, nonce, suppliedSignature] = parts;
+  const expiresAt = Number(expiresRaw || 0);
+  if (!Number.isFinite(expiresAt) || expiresAt <= Date.now() || expiresAt > Date.now() + 11 * 60 * 1000) return false;
+  if (!/^[a-f0-9]{20,80}$/i.test(nonce) || !/^[a-f0-9]{64}$/i.test(suppliedSignature)) return false;
+  const expectedSignature = await hmacSha256Hex(pushOwnerBindSecretR768(env), `${expiresRaw}.${nonce}`);
+  return timingSafeTextEqual(suppliedSignature, expectedSignature);
+}
+
+async function handlePushOwnerBindTokenR768(request, env) {
+  if (!adminAuthorized(request, env)) return json({ok:false,error:'unauthorized'},401);
+  const issued = await createPushOwnerBindTokenR768(env);
+  const repairUrl = `https://andrikmetal.com/push-repair-r768.html#owner=${encodeURIComponent(issued.token)}`;
+  return json({ok:true,version:'R768',expiresAt:new Date(issued.expiresAt).toISOString(),repairUrl},200,{...JSON_HEADERS,'cache-control':'no-store'});
 }
 
 function ownerSessionCookie(name, token, maxAge = 7776000, domain = '') {
@@ -3618,7 +3681,8 @@ async function handlePushSubscriber(request, env, ctx) {
   const requestedSource = cleanPlainText(body.source, 40) || 'site';
   const label = cleanPlainText(body.label, 120);
   if (!/^[0-9a-f-]{30,80}$/i.test(subscriptionId)) return json({ ok: false, error: 'validation' }, 400);
-  const ownerAuthorized = adminAuthorized(request, env);
+  const ownerBindTokenR768 = cleanPlainText(body.ownerBindToken, 220);
+  const ownerAuthorized = adminAuthorized(request, env) || await verifyPushOwnerBindTokenR768(ownerBindTokenR768, env).catch(() => false);
   const source = ownerAuthorized ? 'owner' : requestedSource;
   const cf = request.cf || {};
   const transition = await upsertPushSubscriber(db, {
@@ -3667,7 +3731,47 @@ async function handlePushSubscriber(request, env, ctx) {
     });
     if (ctx?.waitUntil) ctx.waitUntil(ownerNotice); else await ownerNotice;
   }
-  return json({ ok: true, subscriptionId, active, counts, transition, ownerBound:ownerAuthorized && active });
+  let ownerTestR768 = null;
+  let ownerRecoveryQueuedR768 = false;
+  if (active && ownerAuthorized && ownerBindTokenR768) {
+    ownerTestR768 = await sendOwnerPush(env, {
+      title:'✅ ANDRIK Push восстановлен',
+      message:'Утренние/вечерние сводки, лайки, комментарии и новые подписчики снова подключены к этому телефону.',
+      url:'https://control.andrikmetal.com/service-admin.html',
+      name:`owner-rebind-r768-${subscriptionId}`,
+      ttl:3600,
+      history:{type:'owner-rebind-r768',source:'push-repair-r768',audience:'owner',details:{subscriptionId}}
+    }).catch(error => ({ok:false,error:cleanPlainText(error?.message||error,300)}));
+    if (ownerTestR768?.ok) {
+      const deliveryCheckR768 = await verifySubscriberOwnerDeliveryR765(env, ownerTestR768).catch(error=>({ok:false,pending:false,error:cleanPlainText(error?.message||error,300)}));
+      if (!deliveryCheckR768.ok) {
+        ownerTestR768 = {...ownerTestR768,ok:false,pending:Boolean(deliveryCheckR768.pending),error:deliveryCheckR768.error||'owner-test-delivery-unconfirmed-r768',deliveryReport:deliveryCheckR768.report||null};
+      } else {
+        ownerTestR768 = {...ownerTestR768,deliveryConfirmedR768:true,recipients:Math.max(Number(ownerTestR768.recipients||0),Number(deliveryCheckR768.recipients||0)),deliveryReport:deliveryCheckR768.report||null};
+      }
+    }
+
+    // R768: immediately replay retryable owner jobs after the phone is rebound.
+    // Failed likes never advance their high-water and failed daily summaries release
+    // their claim, so both calls are naturally deduplicated and safe.
+    if (ownerTestR768?.ok) {
+      const ownerKeyR768 = configuredAdminKeys(env)[0] || '';
+      const recoveryR768 = (async()=>{
+        const jobs = [maybeSendDailyOwnerSummary(env).catch(error=>({ok:false,error:cleanPlainText(error?.message||error,300)}))];
+        if (ownerKeyR768) {
+          const internalRequestR768 = new Request('https://control.andrikmetal.com/api/automation/youtube-engagement-fast-r768', {
+            method:'POST', headers:{'x-admin-key':ownerKeyR768}
+          });
+          jobs.push(handleFastYoutubeEngagementR333(internalRequestR768,env,{skipCheckpoint:false}).catch(error=>({ok:false,error:cleanPlainText(error?.message||error,300)})));
+        }
+        const settled = await Promise.allSettled(jobs);
+        await recordSystemLog(env,{scope:'push',level:'info',event:'owner-recovery-r768',message:'После перепривязки телефона запущен retry сводки и реакций YouTube.',details:{settled:settled.map(x=>x.status)}}).catch(()=>{});
+      })();
+      ownerRecoveryQueuedR768 = true;
+      if (ctx?.waitUntil) ctx.waitUntil(recoveryR768); else recoveryR768.catch(()=>{});
+    }
+  }
+  return json({ ok: true, subscriptionId, active, counts, transition, ownerBound:ownerAuthorized && active, ownerTestR768, ownerRecoveryQueuedR768 });
 }
 
 async function handleAdminPushDevice(request, env) {
@@ -18989,6 +19093,7 @@ async function routeApi(request, env, ctx) {
     if (path === '/api/control/monitor/check' && request.method === 'POST') return await handleControlNativeMonitorCheck(request, env);
     if (path === '/api/site/visit' && request.method === 'POST') return await handleSiteVisit(request, env);
     if (path === '/api/push/config' && request.method === 'GET') return await handlePushConfig(request, env);
+    if (path === '/api/control/push-owner-bind-token-r768' && request.method === 'POST') return await handlePushOwnerBindTokenR768(request, env);
     if (path === '/api/push/subscriber' && request.method === 'POST') return await handlePushSubscriber(request, env, ctx);
     if (path === '/api/push/admin-device' && request.method === 'POST') return await handleAdminPushDevice(request, env);
     if (path === '/api/push/send' && request.method === 'POST') return await handleAdminPushSend(request, env);
@@ -19197,6 +19302,10 @@ function controlRecoveryServiceWorkerSource() {
     "self.addEventListener('message',event=>{if(event.data?.type==='SKIP_WAITING')event.waitUntil(self.skipWaiting());if(event.data?.type==='CLEAR_ALL_CACHES')event.waitUntil(clearCaches());});",
     "// No fetch listener: Control pages always use the network directly."
   ].join('\n');
+}
+
+function publicPushSafeCacheResetPageR768() {
+  return `<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><meta http-equiv="Cache-Control" content="no-store"><title>ANDRIK R768 · безопасная очистка</title><style>body{margin:0;background:#05070a;color:#fff;font:16px/1.5 system-ui;padding:28px}.w{max-width:680px;margin:auto}.ok{color:#76f2a7}.warn{color:#ffd166}a{display:inline-block;margin-top:18px;padding:13px 18px;border-radius:14px;background:#fff;color:#071018;text-decoration:none;font-weight:800}pre{white-space:pre-wrap;opacity:.8}</style></head><body><main class="w"><h2>R768 · очистка без поломки PUSH</h2><p id="s">Очищаю кэш сайта. OneSignal и подписку телефона НЕ удаляю…</p><pre id="d"></pre><a id="b" href="/?r=768" hidden>Открыть ANDRIK</a></main><script>(async()=>{const s=document.getElementById('s'),d=document.getElementById('d'),b=document.getElementById('b'),out=[],note=x=>{out.push(x);d.textContent=out.join('\\n')};try{if('serviceWorker'in navigator){const regs=await navigator.serviceWorker.getRegistrations();let kept=0,removed=0;for(const r of regs){const scope=String(r.scope||'');if(scope.includes('/push/onesignal/')){kept++;continue}try{await r.unregister();removed++}catch(_){}}note('✅ Service Worker сайта удалён: '+removed);note('🔔 OneSignal worker сохранён: '+kept)}if('caches'in window){const ks=await caches.keys();let n=0;for(const k of ks){if(/onesignal/i.test(k))continue;try{await caches.delete(k);n++}catch(_){}}note('✅ Cache Storage очищен: '+n)}try{const rm=[];for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i)||'';if(/^andrik-(?:cache|radio-visuals-cache|version|asset-cache)/i.test(k))rm.push(k)}for(const k of rm)localStorage.removeItem(k);note('✅ Локальный кэш ANDRIK очищен: '+rm.length)}catch(_){}if(indexedDB&&indexedDB.databases){try{const dbs=await indexedDB.databases();let n=0;for(const db of dbs||[]){if(!db?.name||/onesignal/i.test(db.name))continue;if(/andrik|control|site/i.test(db.name)){try{indexedDB.deleteDatabase(db.name);n++}catch(_){}}}note('✅ IndexedDB сайта очищен: '+n);note('🔔 OneSignal IndexedDB сохранён')}catch(_){}}try{localStorage.setItem('andrik-cache-reset-r768',String(Date.now()))}catch(_){}s.innerHTML='<span class="ok">✅ Готово. PUSH-подписка сохранена.</span>';b.href='/?r=768&t='+Date.now();b.hidden=false}catch(e){s.innerHTML='<span class="warn">⚠ Очистка частичная, но OneSignal не удалялся.</span>';note(String(e));b.hidden=false}})();</script></body></html>`;
 }
 
 function controlRecoveryPage() {
@@ -20379,6 +20488,7 @@ export default {
     const normalizedPath = url.pathname.replace(/\/+$/, '') || '/';
     const hostname = url.hostname.toLowerCase();
     const isControlHost = hostname === 'control.andrikmetal.com';
+    const isMainHostR768 = hostname === 'andrikmetal.com' || hostname === 'www.andrikmetal.com';
 
     // Google returns outside /api/. Process this before Pages/static fallback.
     if (url.pathname.startsWith('/api/') || normalizedPath === '/oauth/youtube/callback' || normalizedPath === '/oauth/youtube/connect') {
@@ -20394,6 +20504,19 @@ export default {
           'cache-control': 'no-cache, no-store, must-revalidate',
           'service-worker-allowed': '/',
           'x-content-type-options': 'nosniff'
+        }
+      });
+    }
+
+    // R768: every cache-reset URL on the PUBLIC origin is now push-safe. Older
+    // reset pages used to unregister the OneSignal worker and delete its IndexedDB,
+    // silently killing all owner push after a normal cache clear.
+    if (isMainHostR768 && (normalizedPath === '/cache-reset.html' || normalizedPath.startsWith('/cache-reset-v54-') || normalizedPath.startsWith('/cache-reset-v55-'))) {
+      return new Response(publicPushSafeCacheResetPageR768(), {
+        headers: {
+          'content-type': 'text/html; charset=utf-8',
+          'cache-control': 'no-cache, no-store, must-revalidate',
+          'x-robots-tag': 'noindex, nofollow, noarchive'
         }
       });
     }

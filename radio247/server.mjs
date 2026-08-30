@@ -1701,7 +1701,7 @@ function startPublisher(){
   // 1/25-second timestamp, independent of feeder process restarts. No video re-encode here.
   const args=[
     '-hide_banner','-loglevel','warning',
-    '-thread_queue_size',String(VIDEO_INPUT_QUEUE_PACKETS_R732),'-fflags','+genpts+discardcorrupt','-framerate',String(VIDEO_FPS),'-f','h264','-i','pipe:4',
+    '-thread_queue_size',String(VIDEO_INPUT_QUEUE_PACKETS_R732),'-use_wallclock_as_timestamps','1','-fflags','+genpts+discardcorrupt','-framerate',String(VIDEO_FPS),'-f','h264','-i','pipe:4',
     '-thread_queue_size',String(AUDIO_INPUT_QUEUE_PACKETS_R732),'-f','s16le','-ar',String(AUDIO_SAMPLE_RATE),'-ac','2','-i','pipe:3',
     '-map','0:v:0','-map','1:a:0',
     // R761: EVERY feeder already produces the final viewer-approved 1920x1080 H264 frame
@@ -1712,7 +1712,7 @@ function startPublisher(){
     // master now only re-timestamps/copies H264 and encodes AAC. Graceful R754 feeder stop
     // + AUD/repeat-headers make the boundary safe while setts supplies one continuous clock.
     '-c:v','copy',
-    '-bsf:v',`setts=time_base=1/${VIDEO_FPS}:pts=N:dts=N:duration=1`,
+    '-bsf:v',`setts=time_base=1/${VIDEO_FPS}:ts=if(eq(N\,0)\,0\,max(PREV_OUTPTS+1\,round((PTS-STARTPTS)*TB*${VIDEO_FPS}))):duration=1`,
     '-c:a','aac','-profile:a','aac_low','-b:a',AUDIO_BITRATE,'-ar',String(AUDIO_SAMPLE_RATE),'-ac','2',
     '-max_muxing_queue_size','4096','-flush_packets','1',
     '-f','fifo','-fifo_format','flv','-queue_size',String(OUTPUT_FIFO_QUEUE_PACKETS_R750),
@@ -2667,6 +2667,8 @@ function publicStatus(){
     videoInputQueuePackets:VIDEO_INPUT_QUEUE_PACKETS_R732,
     videoInputQueueMaxWindowSecondsR756:Number((VIDEO_INPUT_QUEUE_PACKETS_R732/VIDEO_FPS).toFixed(2)),
     audioInputQueuePackets:AUDIO_INPUT_QUEUE_PACKETS_R732,
+    masterAvClockMode:'R767-VIDEO-WALLCLOCK-GAP-AWARE+AUDIO-SAMPLE-CLOCK',
+    rightSubscribeMode:'R767-TRANSPARENT-420PX-BOTTOM-RIGHT',
     overlayPixelPath:'YUV420-NO-ARGB-R732',
     trackUiClock:'ffmpeg-frame-bound-R732-audio-lead-bounded',
     nextPreviewSeconds:NEXT_PREVIEW_SECONDS_R726,
@@ -2774,7 +2776,7 @@ function publicStatus(){
     permanentFullscreenWidth:1920,
     permanentFullscreenHeight:1080,
     permanentFullscreenFitPolicy:'R753-FIT-DECREASE-PAD-NO-CROP',
-    feederBoundaryMode:'R754-GRACEFUL-SIGINT-FLUSH+AUD',
+    feederBoundaryMode:'R767-GAP-AWARE-WALLCLOCK+R754-GRACEFUL-FLUSH+AUD',
     transportRecoveryMode:'R754-FFMPEG-FIFO-FIRST-NO-EARLY-SYSTEMD-EXIT',
     transportHealthy:state.transportHealthy!==false,
     transportWatchdogMode:'R763-R762-R761-SINGLE-ENCODE+R754-FIFO-FIRST+R751-NO-PROGRESS-30S',

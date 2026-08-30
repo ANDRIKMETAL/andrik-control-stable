@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#05070a">
+<meta name="referrer" content="no-referrer">
+<title>ANDRIK · Push Repair R768</title>
+<style>
+body{margin:0;background:#05070a;color:#eef8ff;font-family:system-ui,-apple-system,sans-serif;min-height:100vh;display:grid;place-items:center;padding:22px;box-sizing:border-box}
+.card{width:min(600px,100%);border:1px solid rgba(116,210,255,.22);border-radius:28px;background:linear-gradient(180deg,#09131d,#050a10);padding:24px;box-sizing:border-box;box-shadow:0 24px 80px #0008}
+h1{margin:0 0 10px;font-size:1.55rem}p{color:#b9cedc;line-height:1.55}.step{margin:13px 0;padding:13px 15px;border-radius:17px;background:#ffffff08;border:1px solid #ffffff10}.ok{color:#91efbd}.bad{color:#ff9c9c}.warn{color:#ffd783}.btn{display:block;width:100%;padding:14px 16px;border-radius:999px;border:1px solid #9ddfff55;background:#d9f3ff;color:#07111a;font-weight:800;font-size:1rem;margin-top:16px}.btn[hidden]{display:none}
+</style>
+</head>
+<body>
+<main class="card">
+<h1>🔔 ANDRIK Push · R768</h1>
+<p>Восстанавливает именно телефон владельца. Радио, YouTube-стрим и файлы музыки не меняются.</p>
+<div class="step" id="s1">1/5 · Проверяю защищённый мост владельца…</div>
+<div class="step" id="s2">2/5 · Жду…</div>
+<div class="step" id="s3">3/5 · Жду…</div>
+<div class="step" id="s4">4/5 · Жду…</div>
+<div class="step" id="s5">5/5 · Жду…</div>
+<button class="btn" id="go" hidden>Разрешить и восстановить PUSH</button>
+<button class="btn" id="back" hidden>Вернуться в Служебное</button>
+</main>
+<script>
+(()=>{
+ const CONTROL='https://control.andrikmetal.com';
+ const MAIN='https://andrikmetal.com';
+ const $=id=>document.getElementById(id);
+ const set=(id,text,cls='')=>{const e=$(id);if(e){e.textContent=text;e.className='step '+cls}};
+ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+ const back=$('back'),go=$('go');
+ back.onclick=()=>location.replace(CONTROL+'/service-admin.html?push-repair=done&v=55.00-r768&t='+Date.now());
+ const fail=msg=>{set('s5','❌ '+msg,'bad');back.hidden=false;go.hidden=true};
+ const getOwnerToken=()=>{const m=String(location.hash||'').match(/(?:^#|&)owner=([^&]+)/);return m?decodeURIComponent(m[1]):''};
+
+ async function requestBridgeOnControl(){
+   set('s1','1/5 · Control-сессия найдена. Создаю безопасный 10-минутный мост…');
+   const headers={accept:'application/json'};
+   try{const k=localStorage.getItem('andrik-comments-admin-key-persistent')||sessionStorage.getItem('andrik-comments-admin-key')||'';if(k&&k!=='__ANDRIK_OWNER_SESSION__')headers.authorization='Bearer '+k}catch(_){}
+   const r=await fetch('/api/control/push-owner-bind-token-r768',{method:'POST',headers,credentials:'include',cache:'no-store'});
+   const d=await r.json().catch(()=>({}));
+   if(!r.ok||!d.repairUrl)throw new Error(r.status===401?'Сначала открой Служебное и подтверди доступ владельца.':(d.error||'Не удалось создать owner bridge'));
+   set('s1','1/5 · Защищённый мост создан ✅','ok');
+   set('s2','2/5 · Перехожу на основной домен OneSignal…');
+   await sleep(450);
+   location.replace(d.repairUrl+'&v=55.00-r768');
+ }
+
+ async function repairOnMain(){
+   const ownerToken=getOwnerToken();
+   if(!ownerToken)throw new Error('Нет защищённого owner-token. Запусти ремонт из Служебного на control.andrikmetal.com.');
+   history.replaceState(null,'',location.pathname+'?v=55.00-r768&t='+Date.now());
+   set('s1','1/5 · Защищённый owner-token получен ✅','ok');
+
+   if(!('serviceWorker'in navigator)||typeof Notification==='undefined')throw new Error('Chrome не поддерживает Web Push на этом устройстве.');
+   if(Notification.permission==='denied')throw new Error('Уведомления для andrikmetal.com заблокированы. Разреши их в настройках сайта Chrome.');
+   if(Notification.permission!=='granted'){
+     set('s2','2/5 · Нужно разрешение Chrome на уведомления.','warn');
+     go.hidden=false;
+     await new Promise((resolve,reject)=>{go.onclick=async()=>{go.disabled=true;try{const p=await Notification.requestPermission();if(p!=='granted')throw new Error('Разрешение не выдано');go.hidden=true;resolve()}catch(e){reject(e)}}});
+   }
+   set('s2','2/5 · Разрешение Chrome есть ✅','ok');
+
+   const cfgRes=await fetch('/api/push/config?v=55.00-r768&t='+Date.now(),{cache:'no-store',headers:{accept:'application/json'}});
+   const cfg=await cfgRes.json().catch(()=>({}));
+   if(!cfgRes.ok||!cfg.enabled||!cfg.appId)throw new Error('OneSignal не настроен на сервере.');
+   const desiredOrigin=new URL(cfg.siteOrigin||MAIN).origin;
+   if(location.origin!==desiredOrigin)throw new Error('OneSignal должен запускаться на '+desiredOrigin);
+   set('s3','3/5 · OneSignal config и правильный домен ✅','ok');
+
+   const scope=String(cfg.serviceWorkerScope||'/push/onesignal/');
+   const raw=String(cfg.serviceWorkerPath||'push/onesignal/OneSignalSDKWorker.js').replace(/^\/+/, '');
+   const workerUrl='/'+raw;
+   const probe=await fetch(workerUrl+'?r768='+Date.now(),{cache:'no-store'});
+   if(!probe.ok)throw new Error('OneSignal worker недоступен: HTTP '+probe.status);
+
+   let reg=await navigator.serviceWorker.getRegistration(scope).catch(()=>null);
+   if(!reg||!reg.active){
+     reg=await navigator.serviceWorker.register(workerUrl,{scope,updateViaCache:'none'});
+     for(let i=0;i<40&&!reg.active;i++){await sleep(300);reg=await navigator.serviceWorker.getRegistration(scope)||reg}
+   }
+   if(!reg?.active)throw new Error('OneSignal worker не активировался.');
+   set('s3','3/5 · OneSignal worker активен ✅','ok');
+
+   set('s4','4/5 · Получаю актуальный Subscription ID…');
+   window.OneSignalDeferred=window.OneSignalDeferred||[];
+   await new Promise((resolve,reject)=>{const sc=document.createElement('script');sc.src='https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js';sc.defer=true;sc.onload=resolve;sc.onerror=()=>reject(new Error('Не загрузился OneSignal SDK'));document.head.appendChild(sc)});
+   const subscriptionId=await new Promise((resolve,reject)=>{
+     let finished=false;const done=v=>{if(finished)return;finished=true;resolve(String(v||'').trim())};
+     const timeout=setTimeout(()=>done(''),35000);
+     window.OneSignalDeferred.push(async OneSignal=>{
+       try{
+         await OneSignal.init({appId:cfg.appId,serviceWorkerPath:raw,serviceWorkerParam:{scope},notifyButton:{enable:false},welcomeNotification:{disable:true},autoResubscribe:true});
+         try{await OneSignal.User.PushSubscription.optIn()}catch(_){}
+         const read=()=>String(OneSignal.User.PushSubscription.id||'').trim();
+         let id=read();if(id){clearTimeout(timeout);return done(id)}
+         const onChange=()=>{id=read();if(id){try{OneSignal.User.PushSubscription.removeEventListener('change',onChange)}catch(_){}clearTimeout(timeout);done(id)}};
+         try{OneSignal.User.PushSubscription.addEventListener('change',onChange)}catch(_){}
+         for(let i=0;i<75&&!finished;i++){await sleep(400);id=read();if(id){try{OneSignal.User.PushSubscription.removeEventListener('change',onChange)}catch(_){}clearTimeout(timeout);return done(id)}}
+         clearTimeout(timeout);done('');
+       }catch(e){clearTimeout(timeout);reject(e)}
+     });
+   });
+   if(!subscriptionId)throw new Error('OneSignal не выдал Subscription ID.');
+   set('s4','4/5 · Актуальная push-подписка получена ✅','ok');
+
+   set('s5','5/5 · Привязываю этот телефон как ВЛАДЕЛЬЦА и отправляю тест…');
+   const bindRes=await fetch('/api/push/subscriber',{method:'POST',headers:{'content-type':'application/json',accept:'application/json'},body:JSON.stringify({subscriptionId,active:true,source:'owner',label:'ANDRIK owner R768 · '+navigator.userAgent.slice(0,80),ownerBindToken:ownerToken}),cache:'no-store'});
+   const bind=await bindRes.json().catch(()=>({}));
+   if(!bindRes.ok||!bind.ownerBound)throw new Error(bind.error||'Телефон не привязался владельцем.');
+   const test=bind.ownerTestR768||{};
+   if(!test.ok)throw new Error('Телефон привязан, но тестовый push не доставлен: '+(test.error||'OneSignal error'));
+   set('s5','5/5 · ГОТОВО ✅ Телефон владельца восстановлен. Тестовый push отправлен.','ok');
+   back.hidden=false;
+   setTimeout(()=>location.replace(CONTROL+'/service-admin.html?push-repair=done&r768=1&v=55.00-r768&t='+Date.now()),3500);
+ }
+
+ (async()=>{
+   try{
+     if(location.hostname.toLowerCase()==='control.andrikmetal.com')return await requestBridgeOnControl();
+     if(location.hostname.toLowerCase()!=='andrikmetal.com')return location.replace(CONTROL+'/push-repair-r768.html?v=55.00-r768&t='+Date.now());
+     await repairOnMain();
+   }catch(e){fail(String(e?.message||e))}
+ })();
+})();
+</script>
+</body></html>
