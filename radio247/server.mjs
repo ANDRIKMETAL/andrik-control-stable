@@ -78,6 +78,7 @@ const VIDEO_BOUNDARY_FADE_SECONDS_R744 = 0.80;
 const CLIP_END_GUARD_MARGIN_MS_R745 = Math.max(8000,Number(process.env.CLIP_END_GUARD_MARGIN_MS_R745 || 15000)); // watchdog margin after measured clip duration
 const TRANSPORT_FATAL_RESTART_DELAY_MS_R746 = Math.max(1500,Math.min(15000,Number(process.env.TRANSPORT_FATAL_RESTART_DELAY_MS_R746 || 3500))); // R746: restart whole service when FFmpeg/FIFO keeps a dead RTMPS/TLS session alive
 const TRANSPORT_FATAL_REGEX_R746 = /the specified session has been invalidated|error in the pull function|io error:\s*end of file|server returned 4\d\d|connection reset by peer|broken pipe|connection timed out|connection refused|network is unreachable|tls[^\n]*(?:error|fail)|error writing (?:trailer|header|packet)|av_interleaved_write_frame/i;
+const OUTPUT_FATAL_REGEX_R780 = /tag\s+.*incompatible with output codec|could not write header|error opening output file|error opening output files|bitstream filter not found|invalid data found when processing input/i; // R780: FIFO child can stay alive while FLV header is permanently rejected
 const LOUDNESS_ANALYSIS_TIMEOUT_MS_R747 = Math.max(8000,Math.min(120000,Number(process.env.LOUDNESS_ANALYSIS_TIMEOUT_MS_R747 || 45000)));
 // R750: loudness analysis is background-only and serialized. It can never delay a live MP3 handoff.
 const LOUDNESS_BACKGROUND_NICE_R750 = Math.max(10,Math.min(19,Number(process.env.LOUDNESS_BACKGROUND_NICE_R750 || 15)));
@@ -148,7 +149,7 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R779-MPEGTS-TIMESTAMP-BRIDGE-INSTALLER-STDIN-FIX-R778-PRESERVED',
+  version: 'R780-FLV-TAG7-EGRESS-GUARD-R779-PRESERVED',
   mode: 'R778 MPEGTS TIMESTAMP BRIDGE + R777/R775 FILTERCHAIN/NEXT + R776 SITE PRESERVED',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
@@ -223,6 +224,9 @@ const state = {
   transportSelfHealCount: 0,
   lastTransportFatalAt: null,
   lastTransportFatalReason: '',
+  outputEgressGuardMode: 'R780-FLV-TAG7-A10+HARD-MUX-FATAL-RESTART',
+  lastOutputFatalAt: null,
+  lastOutputFatalReason: '',
   publisherBackpressureSince: null,
   publisherBackpressureRecoveries: 0,
   lastPublisherBackpressureAt: null
@@ -277,6 +281,7 @@ let videoFeederPrerolledR744 = false;
 let suppressedVideoIdentityR744 = '';
 let videoHandoffGenerationR744 = 0;
 let transportFatalTimerR746 = null;
+let outputFatalTimerR780 = null;
 let clipVideoPrerollArmedR749 = null;
 const clipBoundaryMetaR752 = new Map();
 let clipToTrackBoundaryPendingR753 = null;
@@ -1690,6 +1695,28 @@ function h264EncoderArgsR721(){
   ];
 }
 
+function scheduleOutputFatalRestartR780(rawLine,thisPublisher){
+  if(stopping || publisher!==thisPublisher || thisPublisher?.exitCode!==null)return false;
+  const line=cleanText(rawLine);
+  if(!line || !OUTPUT_FATAL_REGEX_R780.test(line))return false;
+  state.transportHealthy=false;
+  state.transportSelfHealPending=true;
+  state.lastOutputFatalAt=new Date().toISOString();
+  state.lastOutputFatalReason=line.slice(-900);
+  state.lastError=`R780 OUTPUT EGRESS FATAL: ${line.slice(-650)}`;
+  console.error('[r780-output-egress-guard] FLV/RTMPS mux cannot publish; forcing clean service rebuild:',line);
+  if(outputFatalTimerR780)return true;
+  outputFatalTimerR780=setTimeout(()=>{
+    outputFatalTimerR780=null;
+    if(stopping || publisher!==thisPublisher || thisPublisher?.exitCode!==null)return;
+    // A FIFO child can otherwise retry forever while Node still sees growing pipe bytes.
+    // Exit the service so systemd rebuilds exactly one clean publisher.
+    process.exit(78);
+  },900);
+  outputFatalTimerR780.unref?.();
+  return true;
+}
+
 function scheduleTransportSelfHealR746(rawLine,thisPublisher){
   if(stopping || publisher!==thisPublisher || thisPublisher?.exitCode!==null)return false;
   const line=cleanText(rawLine);
@@ -1806,7 +1833,11 @@ function startPublisher(){
     // filter: MPEG-TS packet timestamps own the clock, while +genpts repairs segment offsets.
     // Graceful feeder stop + AUD/repeat-headers + TS initial_discontinuity keep boundaries parseable.
     '-c:v','copy',
-    '-c:a','aac','-profile:a','aac_low','-b:a',AUDIO_BITRATE,'-ar',String(AUDIO_SAMPLE_RATE),'-ac','2',
+    // R780: old VPS FFmpeg preserves MPEG-TS codec_tag 27 into FIFO->FLV. FLV expects
+    // tag 7 for AVC/H264 (and 10 for AAC). Without this reset the FIFO child rejects
+    // its header forever while the parent process and Node input-byte counters remain alive.
+    '-tag:v','7',
+    '-c:a','aac','-profile:a','aac_low','-b:a',AUDIO_BITRATE,'-ar',String(AUDIO_SAMPLE_RATE),'-ac','2','-tag:a','10',
     '-max_muxing_queue_size','4096','-flush_packets','1',
     '-f','fifo','-fifo_format','flv','-queue_size',String(OUTPUT_FIFO_QUEUE_PACKETS_R750),
     '-timeshift',`${OUTPUT_TIMESHIFT_SECONDS}s`,
@@ -1833,14 +1864,15 @@ function startPublisher(){
     if(line){
       state.lastFfmpegLine=line.slice(-1000);
       // A repeated timestamp error is a hard regression in R721 and must be visible.
-      if(/error|fail|invalid|broken pipe|non-monoton|unset in a packet/i.test(line))state.lastError=line.slice(-700);
-      scheduleTransportSelfHealR746(line,thisPublisher);
+      if(/error|fail|invalid|broken pipe|non-monoton|unset in a packet|incompatible with output codec/i.test(line))state.lastError=line.slice(-700);
+      const hardOutputFatal=scheduleOutputFatalRestartR780(line,thisPublisher);
+      if(!hardOutputFatal)scheduleTransportSelfHealR746(line,thisPublisher);
       console.error('[master]',line);
     }
   });
   thisPublisher.on('exit',(code,signal)=>{
     const isCurrent=publisher===thisPublisher;
-    if(isCurrent){publisher=null;state.publisherRunning=false;state.transportHealthy=false;state.transportSelfHealPending=false;if(transportFatalTimerR746){clearTimeout(transportFatalTimerR746);transportFatalTimerR746=null;}}
+    if(isCurrent){publisher=null;state.publisherRunning=false;state.transportHealthy=false;state.transportSelfHealPending=false;if(transportFatalTimerR746){clearTimeout(transportFatalTimerR746);transportFatalTimerR746=null;}if(outputFatalTimerR780){clearTimeout(outputFatalTimerR780);outputFatalTimerR780=null;}}
     if(isCurrent && !stopping){
       state.lastExit={layer:'persistent-master',code,signal,at:new Date().toISOString()};
       // An actual RTMPS/master failure is the only reason the service exits/restarts.
@@ -2873,12 +2905,16 @@ function publicStatus(){
     equalizerStyle:state.equalizerStyle,
     equalizerEngine:state.equalizerEngine,
     publisherRunning:state.publisherRunning,
-    masterVideoMode:'R778-MPEGTS-PTS-DISCONTINUITY-BRIDGE-H264-COPY-8Q',
-    masterBitstreamFilter:'none-R778-container-pts-no-video-bsf',
+    masterVideoMode:'R780-MPEGTS-H264-COPY-FLV-TAG7-EGRESS-GUARD-8Q',
+    masterBitstreamFilter:'none-R780-container-pts-flv-tag-reset-no-video-bsf',
     masterAudioBytesWritten:Number(publisher?.stdio?.[3]?.bytesWritten||0),
     masterVideoBytesWritten:Number(publisher?.stdio?.[4]?.bytesWritten||0),
     masterVideoReencode:false,
     masterTimestampMode:'R778-MPEGTS-PTS-DTS-BRIDGE-NO-SETTS-NO-SECOND-ENCODE',
+    masterFlvTagMode:'R780-VTAG7-ATAG10-OLD-FFMPEG-FIFO-COMPAT',
+    outputEgressGuardMode:state.outputEgressGuardMode,
+    lastOutputFatalAt:state.lastOutputFatalAt,
+    lastOutputFatalReason:state.lastOutputFatalReason,
     videoEncodePasses:1,
     videoQualityMode:'R763-R762-6000K-CBR-ULTRAFAST-SINGLE-ENCODE-NO-GENERATIONAL-LOSS',
     videoBitrate:'6000k',
@@ -3034,7 +3070,7 @@ const server=http.createServer((req,res)=>{
 });
 
 server.listen(PORT,'0.0.0.0',()=>{
-  console.log(`ANDRIK Radio R778 MPEGTS TIMESTAMP BRIDGE + R775/R776 PRESERVED listening on :${PORT}`);
+  console.log(`ANDRIK Radio R780 FLV TAG7 EGRESS GUARD + R779/R778/R777/R776 PRESERVED listening on :${PORT}`);
   radioLoop();
 });
 
@@ -3052,7 +3088,7 @@ function waitChildExit(child,timeoutMs){
 async function shutdown(){
   if(shutdownStarted)return;
   shutdownStarted=true;
-  stopping=true;if(transportFatalTimerR746){clearTimeout(transportFatalTimerR746);transportFatalTimerR746=null;}
+  stopping=true;if(transportFatalTimerR746){clearTimeout(transportFatalTimerR746);transportFatalTimerR746=null;}if(outputFatalTimerR780){clearTimeout(outputFatalTimerR780);outputFatalTimerR780=null;}
   if(liveTitleTimerR724){clearTimeout(liveTitleTimerR724);liveTitleTimerR724=null;}
   if(scheduleTimerR721)clearInterval(scheduleTimerR721);
   if(videoSourceWatchdogTimerR749){clearInterval(videoSourceWatchdogTimerR749);videoSourceWatchdogTimerR749=null;}

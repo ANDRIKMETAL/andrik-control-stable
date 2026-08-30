@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788080232676-692191a89b",
-  "release": "R779",
-  "archiveName": "R779-INSTALLER-STDIN-SAFE-R778-R777-R776-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "69288322a50be79db54934b4512108b437eabaa1",
-  "backupSha": "69288322a50be79db54934b4512108b437eabaa1",
+  "operationId": "publish-1788081450618-6b2592a100",
+  "release": "R780",
+  "archiveName": "R780-FLV-TAG7-EGRESS-GUARD-R779-R778-R776-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "2415291454e59c077b650895df1b6ea153bea54a",
+  "backupSha": "2415291454e59c077b650895df1b6ea153bea54a",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-30T08:57:13.061Z"
+  "generatedAt": "2026-08-30T09:17:31.052Z"
 }
