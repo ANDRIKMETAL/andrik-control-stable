@@ -47,9 +47,9 @@ const DAY_VISUAL_URL = process.env.DAY_VISUAL_URL || DAY_VISUAL;
 const EVENING_VISUAL_URL = process.env.EVENING_VISUAL_URL || EVENING_VISUAL;
 const NIGHT_VISUAL_URL = process.env.NIGHT_VISUAL_URL || NIGHT_VISUAL;
 const EMERGENCY_VISUAL = process.env.EMERGENCY_VISUAL || new URL('../assets/live-eye-r223.mp4', import.meta.url).pathname;
-const QR_OVERLAY = process.env.QR_OVERLAY || new URL('../assets/andrik-qr-r612.png', import.meta.url).pathname;
-const CTA_OVERLAY_R767 = process.env.CTA_OVERLAY_R767 || new URL('../assets/subscribe-right-r767.png', import.meta.url).pathname;
-const CTA_LIKE_OVERLAY_R783 = process.env.CTA_LIKE_OVERLAY_R783 || new URL('../assets/like-right-r783.png', import.meta.url).pathname;
+const QR_OVERLAY = process.env.QR_OVERLAY || new URL('../assets/andrik-qr-r794-160.png', import.meta.url).pathname; // R798 exact pre-scaled replacement
+const CTA_OVERLAY_R767 = process.env.CTA_OVERLAY_R767 || new URL('../assets/subscribe-right-r794-420.png', import.meta.url).pathname; // R798 pixel-identical 420px replacement
+const CTA_LIKE_OVERLAY_R783 = process.env.CTA_LIKE_OVERLAY_R783 || new URL('../assets/like-right-r794-420.png', import.meta.url).pathname; // R798 pixel-identical 420px replacement
 const QR_OVERLAY_LIVE_R794 = new URL('../assets/andrik-qr-r794-160.png', import.meta.url).pathname; // live MP3 only, pre-scaled offline
 const CTA_OVERLAY_LIVE_R794 = new URL('../assets/subscribe-right-r794-420.png', import.meta.url).pathname;
 const CTA_LIKE_OVERLAY_LIVE_R794 = new URL('../assets/like-right-r794-420.png', import.meta.url).pathname;
@@ -180,7 +180,7 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R796-MAX-CPU-HEADROOM-TICKER36-COMPACT-EQ-FADE-PRESERVED-R795',
+  version: 'R799-FADE-ONLY-R787-RESTORE-R798-PRESERVED',
   cpuHeadroomProfileR794:'R796-LIVE-FAST-SCALE-COMPACT-EQ-FINITE-FADE-PRESCALED-STATIC',
   mode: 'R796 MAX CPU HEADROOM + TICKER36 + COMPACT EQ + R795 FADE + R792/R791/R790/R787 PRESERVED',
   startedAt: new Date().toISOString(),
@@ -1893,19 +1893,16 @@ function normalVideoFilterComplexR721({fadeIn=false,fadeInSeconds=CLIP_TO_TRACK_
   }
 
   if(Number(trackDuration)>VIDEO_FADE_SECONDS_R726+VIDEO_BLACK_HOLD_SECONDS_R736+VIDEO_FADE_IN_SECONDS_R736+VIDEO_FADE_LEAD_SECONDS_R735+1){
-    const d=Number(trackDuration);
-    const outAt=Math.max(0,d-VIDEO_FADE_SECONDS_R726-VIDEO_BLACK_HOLD_SECONDS_R736-VIDEO_FADE_LEAD_SECONDS_R735);
-    const recoverLocal=VIDEO_FADE_SECONDS_R726+VIDEO_BLACK_HOLD_SECONDS_R736;
-    if(endFadeToBlack){
-      // MP3 -> real video: fade to black and keep black only until this feeder ends.
-      const maskDur=Math.max(VIDEO_FADE_SECONDS_R726+0.12,d-outAt+0.12);
-      maskChain=`color=c=black@1.0:s=1920x1080:r=${VIDEO_FPS}:d=${maskDur.toFixed(3)},format=yuva420p,fade=t=in:st=0:d=${VIDEO_FADE_SECONDS_R726.toFixed(2)}:alpha=1,setpts=PTS-STARTPTS+${outAt.toFixed(3)}/TB[blackmask];`;
-    }else{
-      // MP3 -> MP3: exact R795 viewer timing, but mask exists only for the transition.
-      const maskDur=VIDEO_FADE_SECONDS_R726+VIDEO_BLACK_HOLD_SECONDS_R736+VIDEO_FADE_IN_SECONDS_R736+0.08;
-      maskChain=`color=c=black@1.0:s=1920x1080:r=${VIDEO_FPS}:d=${maskDur.toFixed(3)},format=yuva420p,fade=t=in:st=0:d=${VIDEO_FADE_SECONDS_R726.toFixed(2)}:alpha=1,fade=t=out:st=${recoverLocal.toFixed(3)}:d=${VIDEO_FADE_IN_SECONDS_R736.toFixed(2)}:alpha=1,setpts=PTS-STARTPTS+${outAt.toFixed(3)}/TB[blackmask];`;
-    }
-    finalChain='[ctabase][blackmask]overlay=x=0:y=0:shortest=0:eof_action=pass:eval=init:format=yuv420[outv]';
+    // R799 FADE-ONLY RESTORE: this is the exact viewer-proven R787/R793 absolute
+    // alpha-mask clock. Do NOT shift a short-lived mask with setpts: that optimization
+    // made the transition disappear on the live persistent-H264 path. Keep the base
+    // picture untouched and animate only BLACK mask alpha at absolute feeder PTS.
+    const outAt=Math.max(0,Number(trackDuration)-VIDEO_FADE_SECONDS_R726-VIDEO_BLACK_HOLD_SECONDS_R736-VIDEO_FADE_LEAD_SECONDS_R735);
+    const recoverAt=outAt+VIDEO_FADE_SECONDS_R726+VIDEO_BLACK_HOLD_SECONDS_R736;
+    maskChain=endFadeToBlack
+      ? `color=c=black@1.0:s=1920x1080:r=${VIDEO_FPS},format=yuva420p,fade=t=in:st=${outAt.toFixed(3)}:d=${VIDEO_FADE_SECONDS_R726.toFixed(2)}:alpha=1[blackmask];`
+      : `color=c=black@1.0:s=1920x1080:r=${VIDEO_FPS},format=yuva420p,fade=t=in:st=${outAt.toFixed(3)}:d=${VIDEO_FADE_SECONDS_R726.toFixed(2)}:alpha=1,fade=t=out:st=${recoverAt.toFixed(3)}:d=${VIDEO_FADE_IN_SECONDS_R736.toFixed(2)}:alpha=1[blackmask];`;
+    finalChain='[ctabase][blackmask]overlay=x=0:y=0:shortest=1:format=yuv420,format=yuv420p[outv]';
   }
 
   const ctaBaseLabel=cta.final;
@@ -3296,8 +3293,9 @@ function publicStatus(){
       backgroundLoudnessEnabled:BACKGROUND_LOUDNESS_ENABLED_R791,
       backgroundPrefetchLoudnessPolicyR793:'DOWNLOAD-ONLY-WHEN-BACKGROUND-OFF',
       liveScalePolicyR794:'FAST-BILINEAR-LIVE-MP3-ONLY-OFFLINE-LANCZOS-PRESERVED',
-      fadeEngineR795:'R793-ALPHA-MASK-065-BLACK-HOLD-RECOVER',
-      fadeRuntimePolicyR796:'FINITE-WINDOW-ALPHA-MASK-EOF-PASS-065-005-080',
+      fadeEngineR795:'R787-ABSOLUTE-TIMELINE-ALPHA-MASK-065-BLACK-HOLD-RECOVER',
+      fadeRuntimePolicyR796:'R799-R787-ABSOLUTE-ALPHA-MASK-065-005-080',
+      fadeRestoreR799:'ONLY-FADE-CHANGED-YOUTUBE-TRANSPORT-PRESERVED',
       equalizerPolicyR796:'QTRLE-1180PX-25FPS-100FRAME-SEAMLESS-NO-LIVE-SCALE',
       tickerPolicyR796:'FONT36-Y62-SPEED105-RELOAD2S',
       staticOverlayPolicyR794:'PRE-SCALED-QR160-CTA420',
