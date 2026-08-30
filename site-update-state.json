@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788082668273-6014c1f9af",
-  "release": "R781",
-  "archiveName": "R781-TITLE-SWITCH-AT-BLACK-R780-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "f5a32f7f73258d083fb8464061c737845c1693c8",
-  "backupSha": "f5a32f7f73258d083fb8464061c737845c1693c8",
+  "operationId": "publish-1788086209916-8c9efb0d0f",
+  "release": "R783",
+  "archiveName": "R783-ALTERNATING-SUBSCRIBE-LIKE-R782-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "be161621a6e7303f75ccfd5632e55fb35a20c0fa",
+  "backupSha": "be161621a6e7303f75ccfd5632e55fb35a20c0fa",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-30T09:37:48.743Z"
+  "generatedAt": "2026-08-30T10:36:51.311Z"
 }
