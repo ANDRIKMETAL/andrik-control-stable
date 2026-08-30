@@ -34,7 +34,7 @@ curl -fsSL --retry 5 --retry-all-errors --connect-timeout 15 --max-time 120 \
 echo '[2/8] PRE-FLIGHT до остановки эфира…'
 node --check "$TMP_SERVER" >/dev/null
 ffmpeg -hide_banner -loglevel error -i "$TMP_CTA" -frames:v 1 -f null - >/dev/null 2>&1 || { echo 'СТОП: SUBSCRIBE PNG не читается'; exit 3; }
-ffmpeg -hide_banner -filters 2>/dev/null | grep -q ' silencedetect ' || { echo 'СТОП: FFmpeg без silencedetect'; exit 3; }
+ffmpeg -hide_banner -filters 2>/dev/null | grep -F 'silencedetect' >/dev/null || { echo 'СТОП: FFmpeg без silencedetect'; exit 3; }
 for marker in \
   'R771-SAFE-RECOVERY-PREBAKED-CLIP-CTA-BUMPER-AUDIO-SYNC-R769-PRESERVED' \
   'R769: filtergraph chains MUST be separated' \

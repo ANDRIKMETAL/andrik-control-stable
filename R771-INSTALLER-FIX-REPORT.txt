@@ -1,0 +1,5 @@
+R771 installer hotfix
+- Fixes false "FFmpeg без silencedetect" preflight failure under set -o pipefail.
+- Root cause: grep -q exits on first match, FFmpeg receives SIGPIPE, pipefail treats pipeline as failed.
+- New check consumes the full ffmpeg -filters output using grep -F without -q.
+- radio247/server.mjs and all R771 runtime behavior are unchanged.
