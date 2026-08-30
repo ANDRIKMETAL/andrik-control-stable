@@ -66,6 +66,7 @@ const VIDEO_FADE_SECONDS_R726 = 0.65; // R736: short cinematic fade-out on the O
 const VIDEO_FADE_IN_SECONDS_R736 = 0.80; // R763: longer viewer-visible recovery/brightening; same alpha-mask architecture
 const VIDEO_BLACK_HOLD_SECONDS_R736 = 0.05; // almost no dead-black hold
 const VIDEO_FADE_LEAD_SECONDS_R735 = 1.40; // R763: start the proven R753 boundary darkening exactly 1.0s earlier than R762
+const TITLE_SWITCH_BEFORE_BOUNDARY_R781 = Math.max(0.50,Math.min(2.50,Number(process.env.TITLE_SWITCH_BEFORE_BOUNDARY_R781 || (VIDEO_FADE_LEAD_SECONDS_R735 + VIDEO_BLACK_HOLD_SECONDS_R736/2)))); // R781: switch CURRENT to the next MP3 while the screen is black, before recovery
 const TITLE_VISUAL_LEAD_SECONDS_R738 = 3.20; // compensate persistent video path latency; CURRENT is preloaded early but appears at the real handoff
 const CLIP_PRE_DRAIN_MS_R738 = 900; // let the bounded MP3 PCM queue drain while the normal visual keeps running
 const CLIP_POST_DRAIN_MS_R738 = 650; // let the clip PCM/video tail drain before the next MP3 feeder starts
@@ -149,8 +150,8 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R780-FLV-TAG7-EGRESS-GUARD-R779-PRESERVED',
-  mode: 'R778 MPEGTS TIMESTAMP BRIDGE + R777/R775 FILTERCHAIN/NEXT + R776 SITE PRESERVED',
+  version: 'R781-MP3-TITLE-SWITCH-AT-BLACK-R780-PRESERVED',
+  mode: 'R781 TITLE SWITCH AT BLACK + R780 FLV TAG7/EGRESS + R779/R778/R777/R776 PRESERVED',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
@@ -227,6 +228,11 @@ const state = {
   outputEgressGuardMode: 'R780-FLV-TAG7-A10+HARD-MUX-FATAL-RESTART',
   lastOutputFatalAt: null,
   lastOutputFatalReason: '',
+  titleBoundarySwitchMode: 'R781-NEXT-MP3-TITLE-DURING-BLACK-BEFORE-RECOVERY',
+  titleBoundarySwitchTarget: '',
+  titleBoundarySwitchScheduledAt: null,
+  titleBoundarySwitchFiredAt: null,
+  titleBoundarySwitchCount: 0,
   publisherBackpressureSince: null,
   publisherBackpressureRecoveries: 0,
   lastPublisherBackpressureAt: null
@@ -255,6 +261,8 @@ let runtimeForceVisualSlot = FORCE_VISUAL_SLOT;
 let runtimeVisualAutoSchedule = VISUAL_AUTO_SCHEDULE_R658;
 let liveTitleTimerR724 = null;
 let liveTitleGenerationR724 = 0;
+let titleBoundaryTimerR781 = null;
+let titleBoundaryGenerationR781 = 0;
 let songsSinceBumperR724 = 0;
 let bumperAfterSongsR724 = BUMPER_MIN_SONGS_R724 + Math.floor(Math.random()*(BUMPER_MAX_SONGS_R724-BUMPER_MIN_SONGS_R724+1));
 let lastBumperSlotR724 = 0;
@@ -324,6 +332,35 @@ function setLiveTitleR724(text,{delayMs=0}={}){
   if(delayMs>0)liveTitleTimerR724=setTimeout(()=>{liveTitleTimerR724=null;commit();},delayMs);
   else commit();
 }
+function clearBoundaryTitleSwitchR781(){
+  titleBoundaryGenerationR781++;
+  if(titleBoundaryTimerR781){clearTimeout(titleBoundaryTimerR781);titleBoundaryTimerR781=null;}
+  state.titleBoundarySwitchTarget='';
+  state.titleBoundarySwitchScheduledAt=null;
+}
+function scheduleBoundaryTitleSwitchR781(currentItem,nextItem,duration,currentIdentity){
+  clearBoundaryTitleSwitchR781();
+  if(!nextItem || nextItem.type!=='track')return false;
+  const d=Math.max(0,Number(duration)||0);
+  if(d<=TITLE_SWITCH_BEFORE_BOUNDARY_R781+0.25)return false;
+  const generation=++titleBoundaryGenerationR781;
+  const delayMs=Math.max(0,Math.round((d-TITLE_SWITCH_BEFORE_BOUNDARY_R781)*1000));
+  const nextText=currentOverlayTextR738(nextItem);
+  state.titleBoundarySwitchTarget=shortText(nextItem.title||'TRACK',52);
+  state.titleBoundarySwitchScheduledAt=new Date(Date.now()+delayMs).toISOString();
+  titleBoundaryTimerR781=setTimeout(()=>{
+    titleBoundaryTimerR781=null;
+    if(stopping || generation!==titleBoundaryGenerationR781)return;
+    if(state.current?.type!=='track' || primaryIdentity(state.current)!==currentIdentity)return;
+    writeOverlayFileR726(LIVE_CURRENT_FILE,nextText);
+    state.titleBoundarySwitchFiredAt=new Date().toISOString();
+    state.titleBoundarySwitchCount=Number(state.titleBoundarySwitchCount||0)+1;
+    console.error('[r781-title-boundary]',`CURRENT -> ${shortText(nextItem.title||'TRACK',52)} during black phase`);
+  },delayMs);
+  titleBoundaryTimerR781.unref?.();
+  return true;
+}
+
 function bumperSlotR724(item){
   const m=/^radio\/clips\/radio-bumper-([123])\.mp4$/i.exec(String(item?.key||''));
   return m?Number(m[1]):0;
@@ -1620,7 +1657,7 @@ function compactCtaChainR748(trackDuration){
 }
 
 function normalVideoFilterComplexR721({fadeIn=false,fadeInSeconds=CLIP_TO_TRACK_FADE_IN_SECONDS_R753,endFadeToBlack=false,trackDuration=0,previewReload=false}={}){
-  const vf=titleOverlayFiltersR721({dynamicTitle:false,showPreview:true,previewDuration:trackDuration,previewReload}); // R743: freeze CURRENT for this MP3; next feeder owns next title
+  const vf=titleOverlayFiltersR721({dynamicTitle:true,showPreview:true,previewDuration:trackDuration,previewReload}); // R781: CURRENT reloads so the next MP3 title can appear in the black phase before recovery
   // R748: CTA is feeder-local, full-window only, with alpha fade in/out. This avoids
   // the old partial wall-clock window that looked like a blink at appearance/disappearance.
   const cta=compactCtaChainR748(trackDuration);
@@ -2560,6 +2597,9 @@ async function playItem(previous,item,next,following,localAudioPath,nextTrackPre
   state.current={type:item.type||'track',title:item.title,album:item.album||'',url:item.url,startedAt:new Date(mediaStartedAt).toISOString(),duration};
   const currentIdentity=primaryIdentity(state.current);
   setLiveTitleR724(`ANDRIK — ${shortText(item.title||'TRACK',42)}`,{delayMs:0});
+  // R781: for MP3→MP3 only, change CURRENT while the alpha mask is fully black / just before recovery.
+  // The audio boundary and transport remain untouched; the next track writes the same title again at its real start.
+  scheduleBoundaryTitleSwitchR781(item,actualNextR736,duration,currentIdentity);
   if(actualNextR736 && isVideoHandoffR738(actualNextR736)){
     scheduleTrackVideoHandoffR744(item,actualNextR736,next,following,duration);
   }
@@ -2606,6 +2646,7 @@ async function playItem(previous,item,next,following,localAudioPath,nextTrackPre
     });
     playedOkR726=true;
   }finally{
+    clearBoundaryTitleSwitchR781();
     clearNextPreviewR726({invalidate:true});
   }
   if(playedOkR726){rememberTrackR726(item);previousTrackForPreviewR726=item;}
@@ -2780,7 +2821,7 @@ function publicStatus(){
     mode:state.mode,
     overlayMode:state.overlayMode,
     audioMode:state.audioMode,
-    engine:'R777 MASTER GENPTS NO SETTS BSF + R775 FILTERCHAIN/NEXT + R767 TRANSPORT',
+    engine:'R781 TITLE SWITCH + R780 FLV TAG/EGRESS + R777 MASTER + R775 FILTERCHAIN/NEXT',
     feederFilterChainGuard:'R769-SEMICOLON-ENDMASK-TO-STARTMASK',
     committedNextCheckpointFile:COMMITTED_NEXT_FILE_R769,
     committedNextTitle:state.committedNextTitle||'',
@@ -2816,7 +2857,14 @@ function publicStatus(){
     mp3BoundaryMode:'R753-R752-EXACT-MP3-CLOCK-SINGLE-CLIP-RETURN-HANDOFF',
     clipAvTailLockMode:'R766-PER-OUTPUT-T+VIDEO-TPAD-TRIM+AUDIO-APAD-ATRIM',
     clipAvSyncFix:'R767-VIDEO-N/25+AUDIO-N/SR+PRE-DRAIN+VIDEOQ8+AUDIOQ8+NO-LIVE-RESCALE',
-    currentTitleHandoff:'R748-FROZEN-TRUE-PREVNEXT-INTRO+OUTRO',
+    currentTitleHandoff:'R781-NEXT-MP3-DURING-BLACK-BEFORE-RECOVERY',
+    titleSwitchBeforeBoundarySeconds:TITLE_SWITCH_BEFORE_BOUNDARY_R781,
+    titleBoundarySwitchTarget:state.titleBoundarySwitchTarget||'',
+    titleBoundarySwitchScheduledAt:state.titleBoundarySwitchScheduledAt||null,
+    titleBoundarySwitchFiredAt:state.titleBoundarySwitchFiredAt||null,
+    titleBoundarySwitchCount:Number(state.titleBoundarySwitchCount||0),
+    rightSubscribeMp3Enabled:true,
+    rightSubscribeClipEnabled:false,
     nextPreviewHideBeforeEndSeconds:NEXT_PREVIEW_HIDE_BEFORE_END_R726,
     audioNormalizationTargetLufs:TRACK_AUDIO_TARGET_I_R726,
     audioTruePeakDb:TRACK_AUDIO_TRUE_PEAK_R726,
@@ -3070,7 +3118,7 @@ const server=http.createServer((req,res)=>{
 });
 
 server.listen(PORT,'0.0.0.0',()=>{
-  console.log(`ANDRIK Radio R780 FLV TAG7 EGRESS GUARD + R779/R778/R777/R776 PRESERVED listening on :${PORT}`);
+  console.log(`ANDRIK Radio R781 FLV TAG7 EGRESS GUARD + R779/R778/R777/R776 PRESERVED listening on :${PORT}`);
   radioLoop();
 });
 

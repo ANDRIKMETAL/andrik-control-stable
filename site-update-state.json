@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788081450618-6b2592a100",
-  "release": "R780",
-  "archiveName": "R780-FLV-TAG7-EGRESS-GUARD-R779-R778-R776-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "2415291454e59c077b650895df1b6ea153bea54a",
-  "backupSha": "2415291454e59c077b650895df1b6ea153bea54a",
+  "operationId": "publish-1788082668273-6014c1f9af",
+  "release": "R781",
+  "archiveName": "R781-TITLE-SWITCH-AT-BLACK-R780-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "f5a32f7f73258d083fb8464061c737845c1693c8",
+  "backupSha": "f5a32f7f73258d083fb8464061c737845c1693c8",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-30T09:17:31.052Z"
+  "generatedAt": "2026-08-30T09:37:48.743Z"
 }
