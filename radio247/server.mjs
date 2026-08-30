@@ -94,6 +94,7 @@ const OUTPUT_FATAL_REGEX_R780 = /tag\s+.*incompatible with output codec|could no
 const LOUDNESS_ANALYSIS_TIMEOUT_MS_R747 = Math.max(8000,Math.min(120000,Number(process.env.LOUDNESS_ANALYSIS_TIMEOUT_MS_R747 || 45000)));
 // R750: loudness analysis is background-only and serialized. It can never delay a live MP3 handoff.
 const LOUDNESS_BACKGROUND_NICE_R750 = Math.max(10,Math.min(19,Number(process.env.LOUDNESS_BACKGROUND_NICE_R750 || 15)));
+const LOUDNESS_BACKGROUND_ENABLED_R788 = false; // R788: reserve CPU for 24/7 live path; cached two-pass remains readable, uncached tracks use live single-pass loudnorm
 // R750: keep the 6 s FIFO timeshift, but never allow minutes of queued packets to back-pressure
 // the live A/V pipes. A bounded FIFO with overflow drop keeps YouTube receiving fresh media.
 const OUTPUT_FIFO_QUEUE_PACKETS_R750 = Math.max(768,Math.min(4096,Number(process.env.OUTPUT_FIFO_QUEUE_PACKETS_R750 || 2048)));
@@ -123,7 +124,7 @@ const EQUALIZER_FILES_R721 = Object.freeze({
   evening: new URL('../assets/equalizer-evening-r720.mov', import.meta.url).pathname,
   night: new URL('../assets/equalizer-night-r720.mov', import.meta.url).pathname
 });
-const OUTPUT_TIMESHIFT_SECONDS = 6; // R637: network recovery cushion; packets are NEVER dropped
+const OUTPUT_TIMESHIFT_SECONDS = 10; // R788: deeper egress cushion for brief YouTube/RTMPS jitter; radio latency is non-critical
 const VIDEO_BITRATE = '6000k'; // R762: safe 1080p25 quality lift; CBR only, encoder architecture/preset unchanged
 const AUDIO_BITRATE = '160k'; // R762: modest stereo AAC quality lift; sample rate/queues unchanged
 const AUDIO_SAMPLE_RATE = 44100; // YouTube Live recommendation for stereo
@@ -162,14 +163,14 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R787-PERMANENT-NOCROP-MONOTONIC-TS-R786-R784-PRESERVED',
+  version: 'R788-YOUTUBE-HEADROOM-STARTUP-ARM-R787-PRESERVED',
   mode: 'R787 PERMANENT NOCROP + MONOTONIC MPEGTS + R784 STATION AUDIO + R786 SITE PRESERVED',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
   producerRunning: false,
   overlayMode: 'R757 PREV/NEXT ON MP3 + NORMAL CLIPS @ INTRO 2-7s + FINAL 10s / R756 PRESERVED',
-  audioMode: 'R750 NONBLOCKING R747 EBU R128 -14 LUFS / TP -1.5 + R743 FADES + AUDIO QUEUE 8 / ONE RTMPS',
+  audioMode: 'R788 LIVE-CPU-RESERVE EBU R128 -14 LUFS / TP -1.5 + CACHED TWO-PASS OR SINGLE-PASS + AUDIO QUEUE 8 / ONE RTMPS',
   mp3ToVideoFadeMode: 'R757-END-BLACK-HOLD-THEN-VIDEO-FADE-IN',
   clipPreviewMode: 'R757-NORMAL-CLIPS-PREVNEXT-INTRO-2-7S-PLUS-FINAL-10S',
   mp3BoundaryFadeMode: 'R763-R753-SAME-FEEDER-BLACK-ALPHA-0.65-HOLD-0.05-LEAD-1.40-RECOVER-0.80',
@@ -252,7 +253,9 @@ const state = {
   titleBoundarySwitchCount: 0,
   publisherBackpressureSince: null,
   publisherBackpressureRecoveries: 0,
-  lastPublisherBackpressureAt: null
+  lastPublisherBackpressureAt: null,
+  masterInputQueueBlockCount: 0,
+  lastMasterInputQueueBlockAt: null
 };
 
 let publisher = null;
@@ -1016,6 +1019,9 @@ async function downloadTrackToCache(item){
 }
 
 function scheduleLoudnessAnalysisR750(localAudioPath){
+  // R788: do not launch background loudnorm FFmpeg while this VPS is dedicated to a 24/7 live stream.
+  // Existing sidecars are still used; uncached songs use the already-proven single-pass live loudnorm.
+  if(!LOUDNESS_BACKGROUND_ENABLED_R788)return;
   if(!localAudioPath || readLoudnessAnalysisR747(localAudioPath) || loudnessPendingR750.has(localAudioPath))return;
   loudnessPendingR750.add(localAudioPath);
   loudnessSerialR750=loudnessSerialR750.then(async()=>{
@@ -2100,6 +2106,11 @@ function startPublisher(){
     const line=String(d||'').trim();
     if(line){
       state.lastFfmpegLine=line.slice(-1000);
+      // R788: count any master input-thread queue saturation explicitly. A healthy steady stream should stay at zero.
+      if(/Thread message queue blocking/i.test(line)){
+        state.masterInputQueueBlockCount=Number(state.masterInputQueueBlockCount||0)+1;
+        state.lastMasterInputQueueBlockAt=new Date().toISOString();
+      }
       // R787: any timestamp recurrence is a hard regression and is counted explicitly.
       if(/DTS .*out of order|timestamp discontinuity|non[- ]monoton/i.test(line)){
         state.masterTimestampErrorCount=Number(state.masterTimestampErrorCount||0)+1;
@@ -2865,8 +2876,15 @@ async function radioLoop(){
   prepareCacheDir();
   prefetchAllVisuals();
   await ensureScheduledVisual();
+  // R788: finish the potentially slow initial R2/library refresh BEFORE opening the persistent master.
+  // R787 used to start a video-only feeder first, then spend several seconds loading the library;
+  // with the intentionally tiny 8-frame master queue that produced `Thread message queue blocking`.
+  // The first real queue item now owns the first A/V feeder, so audio and video arm together.
+  if(!library.length){
+    try{await loadLibrary();}catch(error){state.lastWarning=`R788 initial library preload: ${cleanText(error?.message||error)}`;}
+  }
+  if(!queue.length && library.length){queue=buildQueue();queueIndex=0;}
   if(!startPublisher())return;
-  await ensureNormalVideoFeederR721({force:true});
   scheduleTimerR721=setInterval(()=>{scheduleVisualTickR721().catch(error=>{state.lastError=`R721 schedule: ${cleanText(error?.message||error)}`;});},30000);
   scheduleTimerR721.unref?.();
   videoSourceWatchdogTimerR749=setInterval(()=>{videoSourceWatchdogTickR749().catch(error=>{state.lastError=`R749 watchdog tick: ${cleanText(error?.message||error)}`;});},VIDEO_SOURCE_WATCHDOG_INTERVAL_MS_R749);
@@ -3027,13 +3045,13 @@ function publicStatus(){
     mode:state.mode,
     overlayMode:state.overlayMode,
     audioMode:state.audioMode,
-    engine:'R787 PERMANENT NOCROP + MONOTONIC MPEGTS + R784 STATION AUDIO + R783 CTA/R781/R780',
+    engine:'R788 YOUTUBE HEADROOM + STARTUP A/V ARM + R787 PERMANENT NOCROP/MONOTONIC TS + R784 STATION AUDIO + R783 CTA/R781/R780',
     feederFilterChainGuard:'R769-SEMICOLON-ENDMASK-TO-STARTMASK',
     committedNextCheckpointFile:COMMITTED_NEXT_FILE_R769,
     committedNextTitle:state.committedNextTitle||'',
     committedNextRecovered:Boolean(state.committedNextRecovered),
     committedNextCommittedAt:state.committedNextCommittedAt||null,
-    videoPipeline:'R787 IMMUTABLE CONTAIN FIT+PAD -> VIEWER-PROVEN R783 SINGLE-X264 -> MONOTONIC MPEGTS -> H264 COPY MASTER',
+    videoPipeline:'R788 STARTUP-A/V-ARM -> R787 IMMUTABLE CONTAIN FIT+PAD -> R783 SINGLE-X264 -> MONOTONIC MPEGTS -> H264 COPY MASTER',
     outputTimeshiftSeconds:OUTPUT_TIMESHIFT_SECONDS,
     videoBitrate:VIDEO_BITRATE,
     audioBitrate:AUDIO_BITRATE,
@@ -3083,13 +3101,17 @@ function publicStatus(){
     audioTruePeakDb:TRACK_AUDIO_TRUE_PEAK_R726,
     audioFadeInSeconds:TRACK_AUDIO_FADE_IN_R726,
     audioFadeOutSeconds:TRACK_AUDIO_FADE_OUT_R726,
-    audioNormalizationMode:'R750-NONBLOCKING-R747-TWO-PASS-CACHE-WITH-INSTANT-SINGLE-PASS-FALLBACK',
+    audioNormalizationMode:'R788-LIVE-CPU-RESERVE-CACHED-TWO-PASS-OR-INSTANT-SINGLE-PASS-NO-BACKGROUND-FFMPEG',
     currentLoudnessMode:state.currentLoudnessMode||'pending',
     currentMeasuredInputLufs:state.currentMeasuredInputLufs??null,
     loudnessAnalysisTimeoutMs:LOUDNESS_ANALYSIS_TIMEOUT_MS_R747,
     loudnessAnalysisBlockingLive:false,
     loudnessBackgroundNice:LOUDNESS_BACKGROUND_NICE_R750,
+    loudnessBackgroundEnabled:LOUDNESS_BACKGROUND_ENABLED_R788,
     loudnessBackgroundPending:loudnessPendingR750.size,
+    startupAvArmMode:'R788-LIBRARY-FIRST-FIRST-ITEM-OWNS-FIRST-FEEDER-NO-EARLY-VIDEO-QUEUE',
+    masterInputQueueBlockCount:Number(state.masterInputQueueBlockCount||0),
+    lastMasterInputQueueBlockAt:state.lastMasterInputQueueBlockAt||null,
     videoFadeSeconds:VIDEO_FADE_SECONDS_R726,
       videoFadeStrategy:'R763-R753-BLACK-ALPHA-0.65S-HOLD-0.05S-LEAD-1.40S-LIGHT-0.80S',
       videoFadeInEnabled:true,

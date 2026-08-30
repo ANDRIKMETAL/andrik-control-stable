@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788097788690-6d3de798d6",
-  "release": "R787",
-  "archiveName": "R787-PERMANENT-NOCROP-MONOTONIC-TS-R786-R784-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "bdfab91f33589366f750162d1f07c62267478140",
-  "backupSha": "bdfab91f33589366f750162d1f07c62267478140",
+  "operationId": "publish-1788104778091-06e6bf22f7",
+  "release": "R788",
+  "archiveName": "R788-YOUTUBE-HEADROOM-STARTUP-ARM-R787-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "fa4519981d1af70b6bd6b977301f37e27042f8b6",
+  "backupSha": "fa4519981d1af70b6bd6b977301f37e27042f8b6",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-30T13:49:49.221Z"
+  "generatedAt": "2026-08-30T15:46:18.612Z"
 }
