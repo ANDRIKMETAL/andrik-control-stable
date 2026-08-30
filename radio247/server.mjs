@@ -105,7 +105,7 @@ const VIDEO_SOURCE_STUCK_MS_R749 = Math.max(1200,Math.min(10000,Number(process.e
 const INSERT_AUDIO_START_TIMEOUT_MS_R749 = Math.max(1000,Math.min(12000,Number(process.env.INSERT_AUDIO_START_TIMEOUT_MS_R749 || 4000))); // R751: slow AAC/MP4 startup must skip safely, never crash
 const INSERT_CACHE_WARM_LEAD_SECONDS_R752 = Math.max(2,Math.min(8,Number(process.env.INSERT_CACHE_WARM_LEAD_SECONDS_R752 || 5.0))); // metadata/cache warm only; ZERO media frames before boundary
 const CLIP_TO_TRACK_HANDOFF_GUARD_MS_R753 = Math.max(2500,Math.min(10000,Number(process.env.CLIP_TO_TRACK_HANDOFF_GUARD_MS_R753 || 5000))); // allow one clean clip→MP3 feeder handoff without watchdog racing it
-const CLIP_TO_TRACK_FADE_IN_SECONDS_R753 = Math.max(0.25,Math.min(1.5,Number(process.env.CLIP_TO_TRACK_FADE_IN_SECONDS_R753 || 0.55))); // black→picture on first MP3 frames after a clip
+const CLIP_TO_TRACK_FADE_IN_SECONDS_R753 = Math.max(0.25,Math.min(1.5,Number(process.env.CLIP_TO_TRACK_FADE_IN_SECONDS_R753 || 0.80))); // R774: visible 0.80s black-to-picture recovery after clip -> MP3
 const VIDEO_INSERT_FADE_IN_SECONDS_R757 = Math.max(0.25,Math.min(1.5,Number(process.env.VIDEO_INSERT_FADE_IN_SECONDS_R757 || 0.55))); // guaranteed black→video on MP3→clip/insert boundary
 const MP3_BOUNDARY_FADE_IN_SECONDS_R758 = Math.max(0.20,Math.min(1.5,Number(process.env.MP3_BOUNDARY_FADE_IN_SECONDS_R758 || 0.80))); // R763 metadata/env compatibility: longer visible MP3 boundary recovery
 // R721 keeps the proven 100-frame / 4-second exact-periodic QTRLE loops from R720.
@@ -155,8 +155,8 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R773-INSTALL-VERIFIED-PCM-SYNC-R772-ENGINE-PRESERVED',
-  mode: 'R773 INSTALL-VERIFIED + R772 PCM-SAMPLE BUMPER SYNC + R771/R769/R768/R767 PRESERVED',
+  version: 'R774-STABLE-RECOVERY-CLIP-TO-MP3-FADE-R772-R769-PRESERVED',
+  mode: 'R774 STABLE RECOVERY + CLIP-TO-MP3 VISIBLE FADE + R772/R769/R768/R767 PRESERVED',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
@@ -2840,7 +2840,7 @@ function publicStatus(){
     mode:state.mode,
     overlayMode:state.overlayMode,
     audioMode:state.audioMode,
-    engine:'R772 PCM-SAMPLE BUMPER-SYNC + R771 PREBAKED CTA + R769 FILTERCHAIN/NEXT + R768 PUSH + R767 CLIP-SYNC',
+    engine:'R774 STABLE + R772 PCM BUMPER-SYNC + R771 PREBAKED CTA + R769 FILTERCHAIN/NEXT + R768 PUSH + R767 CLIP-SYNC',
     feederFilterChainGuard:'R769-SEMICOLON-ENDMASK-TO-STARTMASK',
     stationInsertSync:'R772-OFFLINE-PCM-SAMPLE-SCAN-TRIM-NO-SILENCEDETECT-NO-LIVE-DRAIN',
     stationLeadingSilenceTrimSeconds:Number(state.stationLeadingSilenceTrimSeconds||0),
@@ -2923,6 +2923,7 @@ function publicStatus(){
       clipToTrackHandoffAgeMs:clipToTrackBoundaryPendingR753?Date.now()-Number(clipToTrackBoundaryPendingR753.startedAt||0):null,
       clipToTrackHandoffGuardMs:CLIP_TO_TRACK_HANDOFF_GUARD_MS_R753,
       clipToTrackFadeInSeconds:CLIP_TO_TRACK_FADE_IN_SECONDS_R753,
+      clipToTrackFadeMode:'R774-BLACK-ALPHA-0.80S-GUARANTEED-AFTER-CLIP',
       mp3BoundaryFadeMode:state.mp3BoundaryFadeMode,
       mp3BoundaryFadeInSeconds:VIDEO_FADE_IN_SECONDS_R736,
       stationNextLabel:'NEXT • ANDRIK METAL RADIO 24/7',
@@ -3126,7 +3127,7 @@ const server=http.createServer((req,res)=>{
 });
 
 server.listen(PORT,'0.0.0.0',()=>{
-  console.log(`ANDRIK Radio R772 SAFE PCM BUMPER SYNC + R771/R769/R768/R767 PRESERVED listening on :${PORT}`);
+  console.log(`ANDRIK Radio R774 STABLE RECOVERY + CLIP-TO-MP3 FADE + R772/R769/R768/R767 listening on :${PORT}`);
   radioLoop();
 });
 
