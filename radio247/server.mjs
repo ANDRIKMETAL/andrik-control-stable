@@ -47,8 +47,10 @@ const CTA_FIRST_SHOW_SECONDS_R748 = 20; // first compact CTA after feeder settle
 const CTA_FADE_SECONDS_R748 = 0.35; // smooth alpha in/out instead of blink
 const CTA_BOTTOM_GAP_R748 = 72; // R767: compact CTA directly above ticker
 const CTA_RIGHT_GAP_R767 = 34; // R767: right side; old left CTA removed
-const STATION_INSERT_PCM_DRAIN_MS_R770 = Math.max(500,Math.min(1600,Number(process.env.STATION_INSERT_PCM_DRAIN_MS_R770 || 900))); // R770: drain the old MP3 PCM queue before a station bumper becomes LIVE
-const STATION_INSERT_SILENCE_THRESHOLD_R770 = '-60dB'; // remove only true/near-digital leading silence from station insert audio
+const CLIP_PREP_SUFFIX_R771 = '.r771-ready.mp4'; // R771: rebuild prepared clips once so right CTA / bumper audio normalization are baked offline
+const STATION_LEADING_SILENCE_THRESHOLD_R771 = '-55dB'; // R771: detect only near-silent station-intro audio offline; LIVE graph untouched
+const STATION_LEADING_SILENCE_MIN_R771 = 0.20; // require 200ms continuous silence so quiet intentional attacks are not clipped
+const STATION_LEADING_SILENCE_MAX_TRIM_R771 = 2.0; // never trim more than 2s from a station insert
 const TITLE_HANDOFF_DELAY_MS_R724 = 0; // R730: title changes only on the real media handoff
 const BUMPER_MIN_SONGS_R724 = 3; // R764: station bumpers more often
 const BUMPER_MAX_SONGS_R724 = 4; // R764: every 3-4 real songs
@@ -150,8 +152,8 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R770-BUMPER-AV-SYNC-CLIP-CTA-R769-PRESERVED',
-  mode: 'R770 BUMPER A/V SYNC + CLIP RIGHT SUBSCRIBE + R769 FILTERCHAIN/NEXT RECOVERY PRESERVED',
+  version: 'R771-SAFE-RECOVERY-PREBAKED-CLIP-CTA-BUMPER-AUDIO-SYNC-R769-PRESERVED',
+  mode: 'R771 SAFE RECOVERY + PREBAKED CLIP CTA + PREBAKED BUMPER AUDIO SYNC + R769/R768/R767 PRESERVED',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
@@ -215,8 +217,6 @@ const state = {
   videoHandoffMode: 'R753-R752-CACHE-ONLY-NO-LIVE-PREROLL',
   clipAvSyncMode: 'R767-EXACT-25FPS-FRAMECLOCK+44100-SAMPLECLOCK+LEAN-LIVE-FILTER',
   feederFilterChainMode: 'R769-EXPLICIT-CHAIN-SEPARATOR-BETWEEN-ENDMASK-AND-STARTMASK',
-  stationInsertSyncMode: 'R770-TRUE-LEADING-SILENCE-TRIM+900MS-OLD-PCM-DRAIN',
-  clipCtaMode: 'R770-RIGHT-SUBSCRIBE-IN-NORMAL-CLIPS',
   committedNextMode: 'R769-DISK-CHECKPOINT-NORMAL-TRACK-NEXT',
   committedNextTitle: '',
   committedNextRecovered: false,
@@ -1023,7 +1023,7 @@ function prefetchClip(item){
 
 
 function preparedClipPathR742(sourcePath){
-  return String(sourcePath).replace(/\.mp4$/i,'')+'.r760-ready.mp4';
+  return String(sourcePath).replace(/\.mp4$/i,'')+CLIP_PREP_SUFFIX_R771;
 }
 function preparedClipExpectedTitleR745(item){
   const stationInsert=item?.sourceType==='radio-bumper'||String(item?.sourceType||'').startsWith('radio-special');
@@ -1047,7 +1047,7 @@ function preparedClipValidR742(sourcePath,readyPath=preparedClipPathR742(sourceP
 }
 function preparedClipTitleFileR742(readyPath){return readyPath+'.title.txt';}
 function preparedClipTickerFileR742(readyPath){return readyPath+'.ticker.txt';}
-function preparedClipFilterComplexR742(titleFile,tickerFile,{stationInsert=false,duration=0}={}){
+function preparedClipFilterComplexR742(titleFile,tickerFile,{stationInsert=false,duration=0,ctaInputIndex=-1}={}){
   const font=chooseFont();
   const titleFont=chooseTitleFont();
   const fontPart=font?`fontfile='${ffFilterPath(font)}':`:'';
@@ -1060,9 +1060,8 @@ function preparedClipFilterComplexR742(titleFile,tickerFile,{stationInsert=false
     'pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black',
     'setsar=1',`fps=${VIDEO_FPS}`,`setpts=N/(${VIDEO_FPS}*TB)`,'format=yuv420p'
   ];
-  // R766: some station MP4s have a video stream shorter than their audio stream.
-  // Clone the final video frame to the measured container/audio boundary so a bumper
-  // can never visually return to the MP3 while its insert audio is still playing.
+  // R766: some station MP4s have video shorter than audio. Hold the final frame to the
+  // measured boundary, then trim. This remains offline/background work in R771.
   const preparedDurationR766=Math.max(0,Number(duration)||0);
   if(preparedDurationR766>0){
     base.push(
@@ -1080,7 +1079,53 @@ function preparedClipFilterComplexR742(titleFile,tickerFile,{stationInsert=false
       `drawtext=${fontPart}textfile='${tickerPath}':fontcolor=yellow:fontsize=28:x='w-mod(t*110,text_w+w)':y=h-58:borderw=3:bordercolor=black@1:shadowcolor=black@1:shadowx=2:shadowy=2`
     );
   }
-  return `[0:v]${base.join(',')}[base];[1:v]scale=160:160:flags=lanczos,format=yuva420p[qr];[base][qr]overlay=x=W-w-24:y=24:shortest=1:format=yuv420,format=yuv420p[outv]`;
+  let graph=`[0:v]${base.join(',')}[base];[1:v]scale=160:160:flags=lanczos,format=yuva420p[qr];[base][qr]overlay=x=W-w-24:y=24:shortest=1:format=yuv420,format=yuv420p[qrbase]`;
+  // R771: for NORMAL music clips only, bake the right-side SUBSCRIBE into the prepared
+  // file in the background. The live clip feeder keeps its proven R767 one-input graph,
+  // so CTA can never break the LIVE filter_complex or make YouTube NODATA.
+  if(!stationInsert && Number.isInteger(ctaInputIndex) && ctaInputIndex>=0){
+    const d=Math.max(0,Number(duration)||0);
+    const starts=[];
+    for(let st=CTA_FIRST_SHOW_SECONDS_R748; st+CTA_SHOW_SECONDS_R722<=d-2.0; st+=CTA_PERIOD_SECONDS_R722){
+      starts.push(st); if(starts.length>=8)break;
+    }
+    if(starts.length){
+      const splitLabels=starts.map((_,i)=>`[pcta${i}]`).join('');
+      graph+=`;[${ctaInputIndex}:v]scale=420:-1:flags=lanczos,fps=${VIDEO_FPS},setpts=PTS-STARTPTS,format=yuva420p,split=${starts.length}${splitLabels}`;
+      let baseLabel='qrbase';
+      starts.forEach((st,i)=>{
+        const fadeOutAt=st+CTA_SHOW_SECONDS_R722-CTA_FADE_SECONDS_R748;
+        graph+=`;[pcta${i}]fade=t=in:st=${st.toFixed(3)}:d=${CTA_FADE_SECONDS_R748.toFixed(2)}:alpha=1,fade=t=out:st=${fadeOutAt.toFixed(3)}:d=${CTA_FADE_SECONDS_R748.toFixed(2)}:alpha=1[pctaf${i}]`;
+        const out=`pctaout${i}`;
+        graph+=`;[${baseLabel}][pctaf${i}]overlay=x=W-w-${CTA_RIGHT_GAP_R767}:y=H-h-${CTA_BOTTOM_GAP_R748}:shortest=0:format=yuv420[${out}]`;
+        baseLabel=out;
+      });
+      graph+=`;[${baseLabel}]format=yuv420p[outv]`;
+      return graph;
+    }
+  }
+  graph+=';[qrbase]format=yuv420p[outv]';
+  return graph;
+}
+async function probeStationLeadingSilenceR771(sourcePath){
+  try{
+    const result=await runCaptureBothR747('nice',[
+      '-n',String(CLIP_PREP_NICE_R742),'ffmpeg','-hide_banner','-nostats','-loglevel','info','-threads','1','-i',sourcePath,
+      '-map','0:a:0','-vn','-sn','-dn',
+      '-af',`silencedetect=noise=${STATION_LEADING_SILENCE_THRESHOLD_R771}:d=${STATION_LEADING_SILENCE_MIN_R771.toFixed(2)}`,
+      '-t',String(STATION_LEADING_SILENCE_MAX_TRIM_R771+0.75),'-f','null','-'
+    ],{timeoutMs:12000});
+    const text=String(result.stderr||'');
+    const started=/silence_start:\s*(-?\d+(?:\.\d+)?)/i.exec(text);
+    const ended=/silence_end:\s*(\d+(?:\.\d+)?)/i.exec(text);
+    if(!started||!ended)return 0;
+    const start=Number(started[1]), end=Number(ended[1]);
+    if(!Number.isFinite(start)||!Number.isFinite(end)||Math.abs(start)>0.03||end<STATION_LEADING_SILENCE_MIN_R771)return 0;
+    return Math.max(0,Math.min(STATION_LEADING_SILENCE_MAX_TRIM_R771,end));
+  }catch(error){
+    state.lastWarning=`R771 station silence probe: ${cleanText(error?.message||error)}`;
+    return 0;
+  }
 }
 async function buildPreparedClipR742(item,sourcePath){
   const readyPath=preparedClipPathR742(sourcePath);
@@ -1089,6 +1134,8 @@ async function buildPreparedClipR742(item,sourcePath){
   const stationInsert=item?.sourceType==='radio-bumper'||String(item?.sourceType||'').startsWith('radio-special');
   if(stationInsert&&!hasAudio)throw new Error(`R742 station insert audio missing: ${shortText(item?.title||'INSERT',40)}`);
   const duration=await probeDuration(sourcePath);
+  const stationLeadTrimR771=stationInsert?await probeStationLeadingSilenceR771(sourcePath):0;
+  if(stationInsert)state.stationLeadingSilenceTrimSeconds=Number(stationLeadTrimR771.toFixed(3));
   const titleFile=preparedClipTitleFileR742(readyPath);
   const tickerFile=preparedClipTickerFileR742(readyPath);
   try{writeFileSync(titleFile,preparedClipExpectedTitleR745(item),'utf8')}catch(_){ }
@@ -1100,11 +1147,18 @@ async function buildPreparedClipR742(item,sourcePath){
     '-hide_banner','-loglevel','warning','-y','-filter_complex_threads','1','-fflags','+genpts+discardcorrupt','-err_detect','ignore_err','-i',sourcePath,
     '-loop','1','-framerate','1','-i',QR_OVERLAY
   ];
-  if(!hasAudio)args.push('-f','lavfi','-i',`anullsrc=r=${AUDIO_SAMPLE_RATE}:cl=stereo`);
+  // R771: add the CTA only to the BACKGROUND prepared file, never to the live clip graph.
+  let ctaInputIndex=-1;
+  if(!stationInsert){ctaInputIndex=2;args.push('-loop','1','-framerate','1','-i',CTA_OVERLAY_R767);}
+  let silentAudioInputIndex=-1;
+  if(!hasAudio){silentAudioInputIndex=ctaInputIndex>=0?3:2;args.push('-f','lavfi','-i',`anullsrc=r=${AUDIO_SAMPLE_RATE}:cl=stereo`);}
+  const stationAudioPrepR771=stationInsert
+    ? `${stationLeadTrimR771>0.01?`atrim=start=${stationLeadTrimR771.toFixed(3)},asetpts=N/SR/TB,`:''}aresample=${AUDIO_SAMPLE_RATE}:async=0:first_pts=0,apad=pad_dur=${Math.max(0.5,duration).toFixed(3)},atrim=duration=${Math.max(0.5,duration).toFixed(3)},asetpts=N/SR/TB`
+    : `aresample=${AUDIO_SAMPLE_RATE}:async=0:first_pts=0,asetpts=N/SR/TB`;
   args.push(
-    '-filter_complex',preparedClipFilterComplexR742(titleFile,tickerFile,{stationInsert,duration}),
+    '-filter_complex',preparedClipFilterComplexR742(titleFile,tickerFile,{stationInsert,duration,ctaInputIndex}),
     '-map','[outv]',...h264EncoderArgsR721(),'-threads','1',
-    '-map',hasAudio?'0:a:0':'2:a:0','-af',`aresample=${AUDIO_SAMPLE_RATE}:async=0:first_pts=0,asetpts=N/SR/TB`,
+    '-map',hasAudio?'0:a:0':`${silentAudioInputIndex}:a:0`,'-af',stationAudioPrepR771,
     '-c:a','aac','-profile:a','aac_low','-b:a',AUDIO_BITRATE,'-ar',String(AUDIO_SAMPLE_RATE),'-ac','2',
     '-t',String(Math.max(0.5,duration)),'-movflags','+faststart','-max_muxing_queue_size','4096',tmp
   );
@@ -1133,7 +1187,7 @@ async function ensurePreparedClipR742(item){
     preparedClipPendingR742=Math.max(0,preparedClipPendingR742-1);
     state.preparedClipPending=preparedClipPendingR742;
     try{
-      state.preparedClipReady=readdirSync(CLIP_CACHE_DIR).filter(n=>n.endsWith('.r742-ready.mp4')).length;
+      state.preparedClipReady=readdirSync(CLIP_CACHE_DIR).filter(n=>n.endsWith(CLIP_PREP_SUFFIX_R771)).length;
     }catch(_){ }
   }
 }
@@ -1203,58 +1257,23 @@ function clipLiveVideoFilterR757({duration=0,showPreview=false}={}){
   return vf.join(',');
 }
 
-function clipLiveFilterComplexR770({duration=0,showPreview=false}={}){
-  const d=Math.max(0,Number(duration)||0);
-  const baseVf=clipLiveVideoFilterR757({duration:d,showPreview});
-  const starts=[];
-  for(let st=CTA_FIRST_SHOW_SECONDS_R748; st+CTA_SHOW_SECONDS_R722<=d-2.0; st+=CTA_PERIOD_SECONDS_R722){
-    starts.push(st);
-    if(starts.length>=8)break;
-  }
-  let graph=`[0:v]${baseVf}[clipbase];`;
-  if(!showPreview || !starts.length){
-    graph+='[clipbase]format=yuv420p[outv]';
-    return graph;
-  }
-  const splitLabels=starts.map((_,i)=>`[clipcta${i}]`).join('');
-  graph+=`[1:v]scale=420:-1:flags=lanczos,fps=${VIDEO_FPS},setpts=PTS-STARTPTS,format=yuva420p,split=${starts.length}${splitLabels};`;
-  let base='clipbase';
-  starts.forEach((st,i)=>{
-    const fadeOutAt=st+CTA_SHOW_SECONDS_R722-CTA_FADE_SECONDS_R748;
-    graph+=`[clipcta${i}]fade=t=in:st=${st.toFixed(3)}:d=${CTA_FADE_SECONDS_R748.toFixed(2)}:alpha=1,fade=t=out:st=${fadeOutAt.toFixed(3)}:d=${CTA_FADE_SECONDS_R748.toFixed(2)}:alpha=1[clipctaf${i}];`;
-    const out=`clipctaout${i}`;
-    graph+=`[${base}][clipctaf${i}]overlay=x=W-w-${CTA_RIGHT_GAP_R767}:y=H-h-${CTA_BOTTOM_GAP_R748}:shortest=0:format=yuv420[${out}];`;
-    base=out;
-  });
-  graph+=`[${base}]format=yuv420p[outv]`;
-  return graph;
-}
-
-function clipPreparedFeederArgsR742(readyPath,{hasAudio=true,duration=0,showPreview=false,isStationInsert=false}={}){
+// R771-LIVE-SAFETY: no CTA input and no station silenceremove here; both are pre-baked offline.
+function clipPreparedFeederArgsR742(readyPath,{hasAudio=true,duration=0,showPreview=false}={}){
   const d=Math.max(0,Number(duration)||0);
   const dText=d>0?String(Math.max(0.5,d)):'';
   // R767: raw PCM loses container timestamps at the master pipe. Rebuild its clock
   // from the exact sample count, just like video is rebuilt from exact frame count.
   // 44100 / 25 = 1764 samples per video frame, so the two clocks cannot drift.
-  const stationLeadTrimR770=isStationInsert
-    ? `silenceremove=start_periods=1:start_duration=0.05:start_threshold=${STATION_INSERT_SILENCE_THRESHOLD_R770},`
-    : '';
   const audioTailLockR766=d>0
-    ? `${stationLeadTrimR770}aresample=${AUDIO_SAMPLE_RATE}:async=0:first_pts=0,apad=pad_dur=${d.toFixed(3)},atrim=duration=${d.toFixed(3)},asetpts=N/SR/TB`
-    : `${stationLeadTrimR770}aresample=${AUDIO_SAMPLE_RATE}:async=0:first_pts=0,asetpts=N/SR/TB`;
+    ? `aresample=${AUDIO_SAMPLE_RATE}:async=0:first_pts=0,apad=pad_dur=${d.toFixed(3)},atrim=duration=${d.toFixed(3)},asetpts=N/SR/TB`
+    : `aresample=${AUDIO_SAMPLE_RATE}:async=0:first_pts=0,asetpts=N/SR/TB`;
   const args=[
     '-hide_banner','-loglevel','warning','-stats_period','0.5','-progress','pipe:4','-nostats',
-    '-fflags','+genpts+discardcorrupt','-err_detect','ignore_err','-re','-i',readyPath
+    '-fflags','+genpts+discardcorrupt','-err_detect','ignore_err','-re','-i',readyPath,
+    '-map','0:v:0','-an','-sn','-dn',
+    '-vf',clipLiveVideoFilterR757({duration:d,showPreview}),
+    ...h264EncoderArgsR721()
   ];
-  // R770: normal music clips get the same RIGHT-side SUBSCRIBE overlay as MP3 visuals.
-  // Station bumpers/specials stay visually clean and therefore do not load the CTA input.
-  if(!isStationInsert)args.push('-loop','1','-framerate','1','-i',CTA_OVERLAY_R767);
-  if(!isStationInsert){
-    args.push('-filter_complex',clipLiveFilterComplexR770({duration:d,showPreview:true}),'-map','[outv]','-an','-sn','-dn');
-  }else{
-    args.push('-map','0:v:0','-an','-sn','-dn','-vf',clipLiveVideoFilterR757({duration:d,showPreview:false}));
-  }
-  args.push(...h264EncoderArgsR721());
   // R766: -t is an OUTPUT option. R764 placed it only before the SECOND (audio)
   // output, so the H264 pipe could hit EOF early while PCM kept playing. Put the same
   // explicit duration on EACH output and pad the video/audio tails to that boundary.
@@ -2252,16 +2271,9 @@ async function playVideoClipR691(previous,item,next){
     // black/MP3 frames, so new clip audio reached YouTube before new clip pictures.
     // R763 already faded the previous visual to black, so detach it here and let the tiny
     // matched 8/8 master queues drain BEFORE we connect the clip's unified A/V outputs.
-    if(!stationInsert){
-      detachNormalVideoAtBoundaryR752();
-      state.videoHandoffMode='R767-BLACK-PRE-DRAIN-BEFORE-CLIP-ARM';
-    }else{
-      // R770: the MP3 feeder is already holding an opaque black end-mask. Keep that
-      // black feeder connected while we arm the station insert and drain old PCM, so
-      // the persistent master never starves its H264 input during the sync wait.
-      state.videoHandoffMode='R770-STATION-BLACK-FEEDER-HELD-WHILE-ARMING';
-    }
-    child=spawn('ffmpeg',clipPreparedFeederArgsR742(readyPath,{hasAudio:true,duration,showPreview:!stationInsert,isStationInsert:stationInsert}),{stdio:['ignore','pipe','pipe','pipe','pipe']});
+    detachNormalVideoAtBoundaryR752();
+    state.videoHandoffMode='R767-BLACK-PRE-DRAIN-BEFORE-CLIP-ARM';
+    child=spawn('ffmpeg',clipPreparedFeederArgsR742(readyPath,{hasAudio:true,duration,showPreview:!stationInsert}),{stdio:['ignore','pipe','pipe','pipe','pipe']});
     child.__r752UnifiedAV=true;
     child.__r752Live=false;
     const videoSource=child.stdout;
@@ -2304,24 +2316,11 @@ async function playVideoClipR691(previous,item,next){
       throw new Error(`insert A/V did not become ready together: ${cleanText(error?.message||error)}`);
     }
 
-    // R770: station bumpers can arrive immediately after an MP3 whose final PCM is
-    // still buffered inside the persistent master's bounded audio input. That made the
-    // bumper picture start first and its sound arrive about a second late. For station
-    // inserts only, let that old PCM drain while the new child is still DISCONNECTED.
-    // Normal music clips keep the proven R767 timing unchanged.
-    if(stationInsert && STATION_INSERT_PCM_DRAIN_MS_R770>0){
-      state.videoHandoffMode='R770-STATION-OLD-PCM-DRAIN-BEFORE-AV-COMMIT';
-      await new Promise(resolve=>setTimeout(resolve,STATION_INSERT_PCM_DRAIN_MS_R770));
-    }
-
-    // REAL media boundary. Up to here nothing from this clip touched the live pipe.
+    // REAL media boundary. Up to here the CURRENT song visual was still connected,
+    // including its R751 late black fade. Nothing from this clip touched the live pipe.
     clipActive=true;
     child.__r752Live=true;
-    if(stationInsert){
-      detachNormalVideoAtBoundaryR752();
-    }
-    // R767 normal clips were already detached before arm; R770 station inserts detach
-    // only after their old PCM queue has drained, immediately before unified A/V commit.
+    // R767: previous feeder was already detached before arm; do not create a second splice.
 
     const boundaryStartedAt=Date.now();
     state.previous=previous?{type:previous.type||'track',title:previous.title,album:previous.album||'',url:previous.url||''}:null;
@@ -2798,10 +2797,11 @@ function publicStatus(){
     mode:state.mode,
     overlayMode:state.overlayMode,
     audioMode:state.audioMode,
-    engine:'R770 BUMPER-AV-SYNC + CLIP-CTA + R769 FILTERCHAIN/NEXT + R768 PUSH + R767 CLIP-SYNC',
+    engine:'R771 SAFE PREBAKED CTA/BUMPER-SYNC + R769 FILTERCHAIN/NEXT + R768 PUSH + R767 CLIP-SYNC',
     feederFilterChainGuard:'R769-SEMICOLON-ENDMASK-TO-STARTMASK',
-    stationInsertSync:'R770-900MS-PCM-DRAIN+LEADING-SILENCE-TRIM',
-    clipSubscribeOverlay:'R770-RIGHT-CTA-20S-THEN-120S',
+    stationInsertSync:'R771-OFFLINE-DETECTED-LEADING-SILENCE-TRIM-NO-LIVE-DRAIN',
+    stationLeadingSilenceTrimSeconds:Number(state.stationLeadingSilenceTrimSeconds||0),
+    clipSubscribeOverlay:'R771-PREBAKED-RIGHT-CTA-NO-LIVE-FILTER-COMPLEX',
     committedNextCheckpointFile:COMMITTED_NEXT_FILE_R769,
     committedNextTitle:state.committedNextTitle||'',
     committedNextRecovered:Boolean(state.committedNextRecovered),
@@ -2925,7 +2925,7 @@ function publicStatus(){
     equalizerStyle:state.equalizerStyle,
     equalizerEngine:state.equalizerEngine,
     publisherRunning:state.publisherRunning,
-    masterVideoMode:'R770-R769-R767-R761-H264-COPY-SETTS-SINGLE-ENCODE-8Q',
+    masterVideoMode:'R771-R769-R767-R761-H264-COPY-SETTS-SINGLE-ENCODE-8Q',
     masterVideoReencode:false,
     videoEncodePasses:1,
     videoQualityMode:'R763-R762-6000K-CBR-ULTRAFAST-SINGLE-ENCODE-NO-GENERATIONAL-LOSS',
@@ -3082,7 +3082,7 @@ const server=http.createServer((req,res)=>{
 });
 
 server.listen(PORT,'0.0.0.0',()=>{
-  console.log(`ANDRIK Radio R770 BUMPER A/V SYNC + CLIP CTA + R769/R768/R767 PRESERVED listening on :${PORT}`);
+  console.log(`ANDRIK Radio R771 SAFE PREBAKED CTA/BUMPER SYNC + R769/R768/R767 PRESERVED listening on :${PORT}`);
   radioLoop();
 });
 
