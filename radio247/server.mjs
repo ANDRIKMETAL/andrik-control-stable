@@ -19,7 +19,7 @@ import { pipeline } from 'node:stream/promises';
 const PORT = Number(process.env.PORT || 8080);
 const R816_PERSISTENT_RAWVIDEO_SINGLE_X264 = 'R816-PERSISTENT-RAWVIDEO-SINGLE-X264';
 const R819_R784_GEOMETRY_RAWVIDEO_QUEUE24 = 'R819-R784-VIEWER-PROVEN-GEOMETRY-RAWVIDEO-QUEUE24';
-const R820_MASTER_PTS_LOCK = 'R820-DETERMINISTIC-MASTER-PTS-LOCK';
+const R820_MASTER_PTS_LOCK = 'R821-STATION-NO-DRAIN-MAKE-BEFORE-BREAK / R820-DETERMINISTIC-MASTER-PTS-LOCK';
 const PLAYLIST_URL = process.env.PLAYLIST_URL || 'https://andrikmetal.com/api/music/downloads';
 const STREAM_KEY = String(process.env.YOUTUBE_STREAM_KEY || '').trim();
 const STREAM_URL_OVERRIDE = String(process.env.STREAM_URL_OVERRIDE || '').trim();
@@ -71,9 +71,7 @@ const CTA_BOTTOM_GAP_R748 = 72; // R767: compact CTA directly above ticker
 const CTA_RIGHT_GAP_R767 = 34; // R767: right side; old left CTA removed
 const CLIP_PREP_SUFFIX_R782 = '.r787-ready.mp4'; // R787: permanent full-frame prepared cache
 const STATION_PREP_MARKER_R791 = '.station-r791-audio-zero-pts'; // R791: force one-time rebuild of station inserts with audio PTS reset BEFORE resample
-const STATION_BOUNDARY_DRAIN_MS_R792 = Math.max(280,Math.min(650,Number(process.env.STATION_BOUNDARY_DRAIN_MS_R792 || 360))); // 8 H264 packets @25fps ~=320ms; drain only AFTER station A+V are armed
-const STATION_H264_CLEAN_STOP_TIMEOUT_MS_R804 = Math.max(1400,Math.min(5000,Number(process.env.STATION_H264_CLEAN_STOP_TIMEOUT_MS_R804 || 2800))); // legacy R804 compatibility knob; R816 live video handoff no longer splices Annex-B/H264 feeders
-const STATION_PIPE_DRAIN_TIMEOUT_MS_R804 = Math.max(250,Math.min(1500,Number(process.env.STATION_PIPE_DRAIN_TIMEOUT_MS_R804 || 700))); // let Node/master stdin flush the old complete AU before the next writer is attached
+const STATION_LEGACY_DRAIN_DISABLED_R821 = true; // R821: station handoff never waits for old H264/AU/sink drain; persistent rawvideo master stays fed
 const STATION_LEADING_SILENCE_THRESHOLD_DB_R782 = -55; // PCM RMS threshold, no optional FFmpeg silencedetect dependency
 const STATION_LEADING_SILENCE_MIN_R782 = 0.20; // only compensate sustained leading near-silence >=200ms
 const STATION_LEADING_SILENCE_MAX_TRIM_R782 = 2.0; // safety clamp; never advance station audio more than 2s
@@ -197,9 +195,9 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R820-MASTER-PTS-LOCK-R819-R818-R816-R814-PRESERVED',
+  version: 'R821-STATION-NO-DRAIN-MAKE-BEFORE-BREAK-R820-PRESERVED',
   cpuHeadroomProfileR794:'R796-LIVE-FAST-SCALE-COMPACT-EQ-FINITE-FADE-PRESCALED-STATIC',
-  mode: 'R820 DETERMINISTIC MASTER PTS / ONE PERSISTENT X264 / RAWVIDEO QUEUE24 / R819 GEOMETRY + R814 FADE PRESERVED',
+  mode: 'R821 STATION NO-DRAIN MAKE-BEFORE-BREAK / R820 MASTER PTS + R819 GEOMETRY + R814 FADE PRESERVED',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
@@ -261,7 +259,7 @@ const state = {
   preparedClipLast: '',
   videoPipelineLeadSeconds: 0,
   videoHandoffMode: 'R816-RAWVIDEO-FRAME-ALIGNED',
-  clipAvSyncMode: 'R793-R792-STATION-ARM-BEFORE-CUT+BOTH-READY+DRAIN-BLACK+SAME-TICK / R791-AUDIO-PTS0',
+  clipAvSyncMode: 'R821-STATION-ARM-BEFORE-CUT+BOTH-READY+NO-DRAIN+SAME-TICK / R791-AUDIO-PTS0',
   feederFilterChainMode: 'R769-EXPLICIT-CHAIN-SEPARATOR-BETWEEN-ENDMASK-AND-STARTMASK',
   committedNextMode: 'R769-DISK-CHECKPOINT-NORMAL-TRACK-NEXT',
   committedNextTitle: '',
@@ -279,6 +277,10 @@ const state = {
   outputEgressGuardMode: 'R780-FLV-TAG7-A10+HARD-MUX-FATAL-RESTART',
   fullFrameGuardMode: 'R790-R787-VIEWER-PROVEN-FIT-PAD-1920x1080-SAR1-NO-CROP',
   stationAudioGuardMode: 'R784-BEST-AUDIO-STREAM+PREPARED-RMS-VERIFY',
+  stationHandoffModeR821: 'R821-MAKE-BEFORE-BREAK-NO-DRAIN',
+  stationLegacyDrainDisabledR821: STATION_LEGACY_DRAIN_DISABLED_R821,
+  stationNoDrainPromotionsR821: 0,
+  lastStationNoDrainPromotionR821: null,
   masterTimestampErrorCount: 0,
   masterVideoClockMode: 'R820-FRAMECOUNT-PTS-LOCK-25FPS-SINGLE-X264',
   videoRelayFramesWritten: 0,
@@ -2928,8 +2930,16 @@ async function playVideoClipR691(previous,item,next){
     }catch(error){insertAudioStartFailuresR749++;throw new Error(`insert A/V did not become ready together: ${cleanText(error?.message||error)}`);}
 
     diagRecordR802(stationInsert?'station-av-ready-r816':'clip-av-ready-r816',{title:item.title||'VIDEO',childPid:Number(child.pid||0),duration:Number(duration||0)});
+    if(stationInsert){
+      // R821: this is the commit gate. The outgoing MP3 visual is still LIVE/black here.
+      // No old-writer drain, no sink-drain wait and no retry loop is allowed before promotion.
+      state.stationHandoffModeR821='R821-CANDIDATE-A+V-READY-OLD-BLACK-STILL-LIVE';
+      diagRecordR802('r821-station-candidate-av-ready-no-drain',{title:item.title||'STATION',oldPid:Number(videoFeeder?.pid||0),candidatePid:Number(child.pid||0)});
+    }
 
-    // Frame-aligned media boundary. Old relay can drop at most an incomplete YUV frame;
+    // R821 station rule: make-before-break. Frame-aligned rawvideo cut happens only AFTER
+    // candidate A+V readiness; the persistent x264/RTMPS master never closes and we never
+    // wait for an old Annex-B/AU/sink drain. Old relay can drop only an incomplete YUV frame.
     // the persistent x264 encoder itself NEVER restarts and never receives a foreign H264 GOP.
     detachNormalVideoAtBoundaryR752();
     clipActive=true;child.__r752Live=true;
@@ -2941,7 +2951,13 @@ async function playVideoClipR691(previous,item,next){
     attachVideoFrameRelayR816(child,videoSink,stationInsert?'station-insert':'music-clip');
     audioSource.pipe(audioSink,{end:false});
     stationHandoffActiveR804=false;
-    state.videoHandoffMode=stationInsert?'R816-STATION-RAWVIDEO-LIVE':'R816-CLIP-RAWVIDEO-LIVE';
+    state.videoHandoffMode=stationInsert?'R821-STATION-RAWVIDEO-LIVE-NO-DRAIN':'R816-CLIP-RAWVIDEO-LIVE';
+    if(stationInsert){
+      state.stationHandoffModeR821='R821-STATION-LIVE-NO-DRAIN';
+      state.stationNoDrainPromotionsR821=Number(state.stationNoDrainPromotionsR821||0)+1;
+      state.lastStationNoDrainPromotionR821={at:new Date().toISOString(),title:shortText(item.title||'STATION',52),candidatePid:Number(child.pid||0)};
+      diagRecordR802('r821-station-no-drain-promoted',{title:item.title||'STATION',candidatePid:Number(child.pid||0),count:Number(state.stationNoDrainPromotionsR821||0)});
+    }
     diagRecordR802('r816-insert-live-connected',{title:item.title||'VIDEO',station:stationInsert,childPid:Number(child.pid||0)});
 
     if(next&&next.type!=='track'){
@@ -3452,7 +3468,7 @@ function publicStatus(){
     transportTransientCountR792:Number(state.transportTransientCountR792||0),
     lastTransportTransientAtR792:state.lastTransportTransientAtR792||null,
     lastTransportTransientReasonR792:state.lastTransportTransientReasonR792||'',
-    stationBoundaryDrainMsR792:STATION_BOUNDARY_DRAIN_MS_R792,
+    stationBoundaryDrainMsR792:0, // R821 compatibility field: legacy station drain disabled
     videoBitrate:VIDEO_BITRATE,
     audioBitrate:AUDIO_BITRATE,
     audioSampleRate:AUDIO_SAMPLE_RATE,
@@ -3499,7 +3515,7 @@ function publicStatus(){
     rightSubscribeMode:'R767-TRANSPARENT-420PX-BOTTOM-RIGHT',
     rightCtaMode:'R783-SUBSCRIBE-LIKE-420PX-BOTTOM-RIGHT-SMOOTH-ALTERNATING',
     clipSubscribeOverlay:'R783-PREBAKED-ALTERNATING-SUBSCRIBE-LIKE-RIGHT-CTA',
-    stationInsertSync:'R816-ARM-A+V-BEHIND-LIVE-BLACK+RAW-FRAME-CUT+SAME-TICK-AUDIO / R791-AUDIO-PTS0',
+    stationInsertSync:'R821-ARM-A+V-BEHIND-LIVE-BLACK+RAW-FRAME-CUT+NO-DRAIN+SAME-TICK-AUDIO / R791-AUDIO-PTS0',
     stationLeadingSilenceTrimSeconds:Number(state.stationLeadingSilenceTrimSeconds||0),
     stationLeadingSilenceTrimByKey:state.stationLeadingSilenceTrimByKey||{},
     overlayPixelPath:'YUV420-NO-ARGB-R732',
@@ -3594,7 +3610,7 @@ function publicStatus(){
       staticOverlayPolicyR794:'PRE-SCALED-QR160-CTA420',
       liveEncoderThreadsR794:2,
       stationPreparedAudioClock:'R791-PTS-STARTPTS-BEFORE-ARESAMPLE-SAMPLECOUNT-CLOCK',
-      stationArmPolicyR792:'R816 KEEP-LIVE-BLACK-UNTIL-BOTH-READY-THEN-RAW-FRAME-CUT-AND-ATTACH',
+      stationArmPolicyR792:'R821 KEEP-LIVE-BLACK-UNTIL-BOTH-READY-THEN-RAW-FRAME-CUT-AND-ATTACH-NO-DRAIN',
       insertUnhandledRejectionGuard:'R753-R752-UNIFIED-AV-EXIT-CATCH+R751-GUARD',
       insertRecoveryCount:insertRecoveryCountR749,
       insertAudioStartFailures:insertAudioStartFailuresR749,
@@ -3671,8 +3687,12 @@ function publicStatus(){
     videoFeederRunning:Boolean(videoFeeder&&videoFeeder.exitCode===null),
     clipActive,
     stationHandoffActiveR804,
-    stationLegacyCleanStopTimeoutMsR804:STATION_H264_CLEAN_STOP_TIMEOUT_MS_R804,
-    stationPipeDrainTimeoutMsR804:STATION_PIPE_DRAIN_TIMEOUT_MS_R804,
+    stationLegacyCleanStopTimeoutMsR804:0, // R821 compatibility field
+    stationPipeDrainTimeoutMsR804:0, // R821 compatibility field
+    stationLegacyDrainDisabledR821:STATION_LEGACY_DRAIN_DISABLED_R821,
+    stationHandoffModeR821:state.stationHandoffModeR821,
+    stationNoDrainPromotionsR821:Number(state.stationNoDrainPromotionsR821||0),
+    lastStationNoDrainPromotionR821:state.lastStationNoDrainPromotionR821||null,
     clipBoundaryReconnect:false,
     clipEndGuardMode:'R753-SINGLE-RETURN-HANDOFF+R752-UNIFIED-AV-DURATION-GUARD',
     clipEndGuardMarginMs:CLIP_END_GUARD_MARGIN_MS_R745,

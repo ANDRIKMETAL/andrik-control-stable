@@ -136,3 +136,17 @@ R803C is based on the live VPS unit topology observed on 2026-08-31. The canonic
 
 ### R803E Node 18 ESM wrapper fix
 R803E keeps `/usr/local/sbin/andrik-radio-web` as a shell wrapper and executes the diagnostic agent from `/usr/local/lib/andrik-radio-web-agent-r803.mjs`. This avoids Node 18 treating an extensionless ES-module file as CommonJS. It changes only the web/control agent topology and never restarts `andrik-radio.service`.
+
+## R821 — station no-drain make-before-break
+
+R821 removes the legacy R804 station `sink-drain` / clean-stop wait that could create a local
+video starvation window while RTMPS remained healthy. A bumper/special is now committed only
+after its rawvideo **and** PCM audio are readable; the outgoing black MP3 visual stays LIVE until
+that gate passes, then the raw-frame relay switches immediately without an H264/AU drain wait.
+R820 master PTS lock, R819 fullscreen/no-crop and R814 MP3 fade timings are preserved.
+
+After deploying R821, run once on OVH:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/ANDRIKMETAL/andrik-control-stable/main/radio247/vm-lite/install-r821-station-no-drain-make-before-break-r820-preserved.sh | sudo env ANDRIK_SITE_BASE=https://raw.githubusercontent.com/ANDRIKMETAL/andrik-control-stable/main bash
+```
