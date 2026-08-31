@@ -68,6 +68,8 @@ const CTA_RIGHT_GAP_R767 = 34; // R767: right side; old left CTA removed
 const CLIP_PREP_SUFFIX_R782 = '.r787-ready.mp4'; // R787: permanent full-frame prepared cache
 const STATION_PREP_MARKER_R791 = '.station-r791-audio-zero-pts'; // R791: force one-time rebuild of station inserts with audio PTS reset BEFORE resample
 const STATION_BOUNDARY_DRAIN_MS_R792 = Math.max(280,Math.min(650,Number(process.env.STATION_BOUNDARY_DRAIN_MS_R792 || 360))); // 8 H264 packets @25fps ~=320ms; drain only AFTER station A+V are armed
+const STATION_H264_CLEAN_STOP_TIMEOUT_MS_R804 = Math.max(1000,Math.min(3000,Number(process.env.STATION_H264_CLEAN_STOP_TIMEOUT_MS_R804 || 1800))); // finish the OLD Annex-B writer on a complete AU before station LIVE
+const STATION_PIPE_DRAIN_TIMEOUT_MS_R804 = Math.max(250,Math.min(1500,Number(process.env.STATION_PIPE_DRAIN_TIMEOUT_MS_R804 || 700))); // let Node/master stdin flush the old complete AU before the next writer is attached
 const STATION_LEADING_SILENCE_THRESHOLD_DB_R782 = -55; // PCM RMS threshold, no optional FFmpeg silencedetect dependency
 const STATION_LEADING_SILENCE_MIN_R782 = 0.20; // only compensate sustained leading near-silence >=200ms
 const STATION_LEADING_SILENCE_MAX_TRIM_R782 = 2.0; // safety clamp; never advance station audio more than 2s
@@ -186,9 +188,9 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R802-STATION-CORRUPTION-SELFHEAL-DURABLE-DIAGNOSTICS-R801-PRESERVED',
+  version: 'R804-STATION-SINGLE-WRITER-CLEAN-AU-HANDOFF-R803E-R802-R801-PRESERVED',
   cpuHeadroomProfileR794:'R796-LIVE-FAST-SCALE-COMPACT-EQ-FINITE-FADE-PRESCALED-STATIC',
-  mode: 'R802 STATION SELF-HEAL + DURABLE DIAG / R801 MP3 ATOMIC + R799 YOUTUBE PRESERVED',
+  mode: 'R804 STATION SINGLE-WRITER CLEAN-AU / R803E DIAG + R802 SELF-HEAL + R801 MP3 ATOMIC + R799 YOUTUBE PRESERVED',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
@@ -300,6 +302,7 @@ let videoFeeder = null;
 let videoFeederPath = '';
 let videoFeederPeriod = '';
 let clipActive = false;
+let stationHandoffActiveR804 = false;
 let visualSwitching = false;
 let scheduleTimerR721 = null;
 let runtimeForceVisualSlot = FORCE_VISUAL_SLOT;
@@ -2425,9 +2428,11 @@ function spawnNormalVideoFeederChildR801(visualPath,{fadeIn=false,fadeInSeconds=
   });
   child.on('exit',(code,signal)=>{
     const isCurrent=videoFeeder===child;
-    try{if(child.stdout&&videoSink)child.stdout.unpipe(videoSink)}catch(_){ }
+    // R804 intentional station cut keeps stdout piped through its final complete AU;
+    // detachNormalVideoForStationR804 owns the unpipe only after stdout 'end'.
+    if(!child.__r804StationCut){try{if(child.stdout&&videoSink)child.stdout.unpipe(videoSink)}catch(_){ }}
     if(isCurrent)videoFeeder=null;
-    if(isCurrent && !child.__r801Candidate && !stopping && !clipActive && !visualSwitching){
+    if(isCurrent && !child.__r801Candidate && !child.__r804StationCut && !stopping && !clipActive && !visualSwitching){
       state.lastError=`R801 visual feeder exit ${code??signal}; restarting without RTMPS reconnect`;
       setTimeout(()=>ensureNormalVideoFeederR721({force:true}).catch(err=>{state.lastError=`R801 visual feeder restart: ${cleanText(err?.message||err)}`;}),120).unref();
     }
@@ -2647,7 +2652,7 @@ async function abortInsertHandoffR749(item,next,reason){
 }
 
 async function videoSourceWatchdogTickR749(){
-  if(stopping||videoSourceRecoveryBusyR749)return;
+  if(stopping||videoSourceRecoveryBusyR749||stationHandoffActiveR804)return;
   if(!publisher||publisher.exitCode!==null)return;
   // R753: after clip EOF the next MP3 owns the ONLY normal-feeder start. Do not race
   // that boundary with the old generic recovery feeder; it caused a second stop/start
@@ -2721,6 +2726,78 @@ function streamReadableReadyR752(stream,label,child){
     stream.once('error',onError);
     child?.once('exit',onExit);
   });
+}
+
+function waitReadableEndR804(stream,timeoutMs=STATION_H264_CLEAN_STOP_TIMEOUT_MS_R804){
+  return new Promise(resolve=>{
+    if(!stream || stream.readableEnded || stream.destroyed)return resolve(true);
+    let done=false;
+    const finish=value=>{if(done)return;done=true;clearTimeout(timer);stream.off('end',onEnd);stream.off('close',onClose);stream.off('error',onError);resolve(value);};
+    const onEnd=()=>finish(true);
+    const onClose=()=>finish(Boolean(stream.readableEnded||stream.destroyed));
+    const onError=()=>finish(false);
+    const timer=setTimeout(()=>finish(Boolean(stream.readableEnded)),timeoutMs);
+    stream.once('end',onEnd);
+    stream.once('close',onClose);
+    stream.once('error',onError);
+  });
+}
+
+async function waitWritableEmptyR804(sink,timeoutMs=STATION_PIPE_DRAIN_TIMEOUT_MS_R804){
+  if(!sink || sink.destroyed || sink.writableEnded)return false;
+  const started=Date.now();
+  while(Date.now()-started<timeoutMs){
+    if(sink.destroyed || sink.writableEnded)return false;
+    if(Number(sink.writableLength||0)===0 && !sink.writableNeedDrain)return true;
+    await sleep(20);
+  }
+  return Number(sink.writableLength||0)===0 && !sink.writableNeedDrain;
+}
+
+async function detachNormalVideoForStationR804(videoSink,audioSink){
+  const active=videoFeeder;
+  if(!active)return true;
+  if(!videoSink || videoSink.destroyed || videoSink.writableEnded)throw new Error('R804 persistent video sink unavailable before station clean cut');
+
+  // R804 single-writer rule: NEVER unpipe/kill a live Annex-B encoder mid-NAL.
+  // Mark this as an intentional station cut so the generic R801 exit handler does not
+  // spawn a second normal feeder while the armed station child is waiting off-LIVE.
+  active.__r804StationCut=true;
+  diagRecordR802('station-r804-clean-cut-start',{oldPid:Number(active.pid||0),videoSinkBytes:Number(videoSink.writableLength||0),audioSinkBytes:Number(audioSink?.writableLength||0)});
+
+  const stdoutEnded=waitReadableEndR804(active.stdout,STATION_H264_CLEAN_STOP_TIMEOUT_MS_R804+500);
+  if(active.exitCode===null && active.signalCode===null){
+    try{active.kill('SIGINT')}catch(_){ }
+  }
+  const exited=await waitChildExit(active,STATION_H264_CLEAN_STOP_TIMEOUT_MS_R804);
+  const ended=await stdoutEnded;
+
+  if(!exited || !ended){
+    state.lastWarning=`R804 station clean cut timed out: pid=${Number(active.pid||0)} exited=${exited} stdoutEnded=${ended}; station skipped before LIVE`;
+    diagRecordR802('station-r804-clean-cut-timeout',{oldPid:Number(active.pid||0),exited,stdoutEnded:ended,signal:active.signalCode||'',exitCode:active.exitCode});
+    return false;
+  }
+
+  // stdout 'end' means every byte emitted by the old FFmpeg reached Node. Unpipe only
+  // after that point, then wait until the persistent master's stdin has flushed those
+  // complete bytes. The next station writer is still disconnected during this drain.
+  try{if(active.stdout)active.stdout.unpipe(videoSink)}catch(_){ }
+  if(videoFeeder===active)videoFeeder=null;
+  videoFeederTrackIdentityR744='';
+  videoFeederPrerolledR744=false;
+
+  const [videoDrained,audioDrained]=await Promise.all([
+    waitWritableEmptyR804(videoSink),
+    audioSink?waitWritableEmptyR804(audioSink):Promise.resolve(true)
+  ]);
+  if(!videoDrained || !audioDrained){
+    state.lastWarning=`R804 station sink drain timeout: video=${videoDrained} audio=${audioDrained}; station skipped before LIVE`;
+    diagRecordR802('station-r804-sink-drain-timeout',{oldPid:Number(active.pid||0),videoDrained,audioDrained,videoSinkBytes:Number(videoSink.writableLength||0),audioSinkBytes:Number(audioSink?.writableLength||0)});
+    return false;
+  }
+
+  diagRecordR802('station-r804-clean-cut-complete',{oldPid:Number(active.pid||0),exitCode:active.exitCode,signal:active.signalCode||'',videoSinkBytes:Number(videoSink.writableLength||0),audioSinkBytes:Number(audioSink?.writableLength||0)});
+  return true;
 }
 
 function detachNormalVideoAtBoundaryR752(){
@@ -2864,16 +2941,17 @@ async function playVideoClipR691(previous,item,next){
 
     diagRecordR802(stationInsert?'station-av-ready':'clip-av-ready',{title:item.title||'VIDEO',childPid:Number(child.pid||0),duration:Number(duration||0)});
 
-    // R792: for station inserts BOTH outputs are now armed while the old feeder is
-    // still supplying the already-black end frame. Only now cut that feeder, drain the
-    // bounded 8-frame H264/PCM tail (~320 ms), then connect station video+audio together.
-    // If arming failed above, this branch is never reached and YouTube never loses H264.
+    // R804: station A/V is armed OFF-LIVE first. Then enforce ONE Annex-B writer:
+    // cleanly stop the old normal encoder while it is STILL piped, wait for stdout EOF
+    // (complete final access unit), drain the master's stdin, and only then attach the
+    // already-ready station writer. Never SIGTERM/unpipe a live H264 writer mid-NAL.
     if(stationInsert){
-      detachNormalVideoAtBoundaryR752();
-      state.videoHandoffMode='R792-STATION-BOTH-READY-DRAINING-OLD-BLACK-QUEUE';
-      await sleep(STATION_BOUNDARY_DRAIN_MS_R792);
-      if(stopping || child.exitCode!==null)throw new Error('R792 station child exited during bounded black drain');
-      if(!publisher || publisher.exitCode!==null || videoSink.destroyed || audioSink.destroyed)throw new Error('R792 master unavailable after station black drain');
+      stationHandoffActiveR804=true;
+      state.videoHandoffMode='R804-STATION-ARMED-CLEAN-OLD-AU-SINGLE-WRITER';
+      const cleanCut=await detachNormalVideoForStationR804(videoSink,audioSink);
+      if(!cleanCut)throw new Error('R804 station clean H264 cut failed; insert kept OFF-LIVE');
+      if(stopping || child.exitCode!==null || child.signalCode!==null)throw new Error('R804 station child exited during clean writer cut');
+      if(!publisher || publisher.exitCode!==null || videoSink.destroyed || audioSink.destroyed)throw new Error('R804 master unavailable after clean writer cut');
     }
 
     // REAL media boundary. Nothing from the insert touched LIVE before this point.
@@ -2890,8 +2968,12 @@ async function playVideoClipR691(previous,item,next){
     // The single source FFmpeg gives both outputs one common t=0 clock.
     videoSource.pipe(videoSink,{end:false});
     audioSource.pipe(audioSink,{end:false});
+    if(stationInsert){
+      stationHandoffActiveR804=false;
+      diagRecordR802('station-r804-new-writer-attached',{title:item.title||'VIDEO',childPid:Number(child.pid||0),videoSinkBytes:Number(videoSink.writableLength||0),audioSinkBytes:Number(audioSink.writableLength||0)});
+    }
     diagRecordR802(stationInsert?'station-live-connected':'clip-live-connected',{title:item.title||'VIDEO',childPid:Number(child.pid||0)});
-    state.videoHandoffMode=stationInsert?'R792-STATION-SAME-TICK-UNIFIED-AV-LIVE':'R752-BOUNDARY-LOCKED-UNIFIED-AV-LIVE';
+    state.videoHandoffMode=stationInsert?'R804-STATION-SINGLE-WRITER-CLEAN-AU-LIVE':'R752-BOUNDARY-LOCKED-UNIFIED-AV-LIVE';
 
     // No next-picture LIVE preroll. Warm only file metadata/cache for a following video.
     if(next && next.type!=='track'){
@@ -2920,12 +3002,14 @@ async function playVideoClipR691(previous,item,next){
     state.lastError='';
     return !stopping;
   }catch(error){
+    if(stationInsert)stationHandoffActiveR804=false;
     state.lastError=`R752 VIDEO/AUDIO boundary handoff: ${cleanText(error?.message||error)}`;
     console.error('[r752-video-clip]',error);
     if(child&&child.exitCode===null){try{child.kill('SIGTERM')}catch(_){ }}
     await abortInsertHandoffR749(item,next,cleanText(error?.message||error));
     return false;
   }finally{
+    if(stationInsert)stationHandoffActiveR804=false;
     if(child){
       try{child.stdout?.unpipe(videoSink)}catch(_){ }
       try{child.stdio?.[3]?.unpipe(audioSink)}catch(_){ }
@@ -3415,7 +3499,7 @@ function publicStatus(){
     rightSubscribeMode:'R767-TRANSPARENT-420PX-BOTTOM-RIGHT',
     rightCtaMode:'R783-SUBSCRIBE-LIKE-420PX-BOTTOM-RIGHT-SMOOTH-ALTERNATING',
     clipSubscribeOverlay:'R783-PREBAKED-ALTERNATING-SUBSCRIBE-LIKE-RIGHT-CTA',
-    stationInsertSync:'R792-KEEP-BLACK-LIVE-WHILE-ARMING+BOTH-READY+360MS-Q8-DRAIN+SAME-TICK / R791-AUDIO-PTS0',
+    stationInsertSync:'R804-ONE-H264-WRITER+CLEAN-SIGINT+STDOUT-END+MASTER-PIPE-DRAIN+ARMED-NEW-WRITER / R791-AUDIO-PTS0',
     stationLeadingSilenceTrimSeconds:Number(state.stationLeadingSilenceTrimSeconds||0),
     stationLeadingSilenceTrimByKey:state.stationLeadingSilenceTrimByKey||{},
     overlayPixelPath:'YUV420-NO-ARGB-R732',
@@ -3502,13 +3586,13 @@ function publicStatus(){
       liveScalePolicyR794:'FAST-BILINEAR-LIVE-MP3-ONLY-OFFLINE-LANCZOS-PRESERVED',
       fadeEngineR795:'R787-ABSOLUTE-TIMELINE-ALPHA-MASK-065-BLACK-HOLD-RECOVER',
       fadeRuntimePolicyR796:'R799-R787-ABSOLUTE-ALPHA-MASK-065-005-080',
-      fadeRestoreR799:'R802-FADE-UNCHANGED-R801 + STATION-CORRUPTION-GUARD',
+      fadeRestoreR799:'R804-FADE-UNCHANGED-R803E/R802/R801 + STATION-SINGLE-WRITER-GUARD',
       equalizerPolicyR796:'QTRLE-1180PX-25FPS-100FRAME-SEAMLESS-NO-LIVE-SCALE',
       tickerPolicyR796:'FONT36-Y62-SPEED105-RELOAD2S',
       staticOverlayPolicyR794:'PRE-SCALED-QR160-CTA420',
       liveEncoderThreadsR794:2,
       stationPreparedAudioClock:'R791-PTS-STARTPTS-BEFORE-ARESAMPLE-SAMPLECOUNT-CLOCK',
-      stationArmPolicyR792:'KEEP-LIVE-BLACK-UNTIL-BOTH-READY-THEN-DRAIN-Q8-AND-SAME-TICK',
+      stationArmPolicyR792:'R804 KEEP-LIVE-BLACK-UNTIL-BOTH-READY-THEN-CLEAN-OLD-AU-AND-SINGLE-WRITER-ATTACH',
       insertUnhandledRejectionGuard:'R753-R752-UNIFIED-AV-EXIT-CATCH+R751-GUARD',
       insertRecoveryCount:insertRecoveryCountR749,
       insertAudioStartFailures:insertAudioStartFailuresR749,
@@ -3579,6 +3663,9 @@ function publicStatus(){
     producerRunning:state.producerRunning,
     videoFeederRunning:Boolean(videoFeeder&&videoFeeder.exitCode===null),
     clipActive,
+    stationHandoffActiveR804,
+    stationH264CleanStopTimeoutMsR804:STATION_H264_CLEAN_STOP_TIMEOUT_MS_R804,
+    stationPipeDrainTimeoutMsR804:STATION_PIPE_DRAIN_TIMEOUT_MS_R804,
     clipBoundaryReconnect:false,
     clipEndGuardMode:'R753-SINGLE-RETURN-HANDOFF+R752-UNIFIED-AV-DURATION-GUARD',
     clipEndGuardMarginMs:CLIP_END_GUARD_MARGIN_MS_R745,
