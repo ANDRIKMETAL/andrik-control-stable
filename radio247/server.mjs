@@ -180,9 +180,9 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R800-FADE-HEADROOM-OUTRO-SHIFT-R799-PRESERVED',
+  version: 'R801-MP3-ATOMIC-HANDOFF-FADE-HEADROOM-R799-PRESERVED',
   cpuHeadroomProfileR794:'R796-LIVE-FAST-SCALE-COMPACT-EQ-FINITE-FADE-PRESCALED-STATIC',
-  mode: 'R800 FADE HEADROOM + R799/R798/R797/R796 TRANSPORT PRESERVED',
+  mode: 'R801 MP3 READY-BEFORE-CUT + FADE HEADROOM / R799 YOUTUBE TRANSPORT PRESERVED',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
@@ -267,7 +267,7 @@ const state = {
   videoTimestampOffsetSecondsR787: 0,
   lastOutputFatalAt: null,
   lastOutputFatalReason: '',
-  titleBoundarySwitchMode: 'R790-FFMPEG-PTS-LOCKED-NEXT-TITLE-DURING-BLACK-NO-WALLCLOCK-TIMER',
+  titleBoundarySwitchMode: 'R801-R790-PTS-LOCKED + READY-BEFORE-CUT MP3 H264',
   titleBoundarySwitchTarget: '',
   titleBoundarySwitchScheduledAt: null,
   titleBoundarySwitchFiredAt: null,
@@ -1397,11 +1397,8 @@ function clipLiveVideoFilterR757({duration=0,showPreview=false}={}){
   const d=Math.max(0,Number(duration)||0);
   const introStart=START_PREVIEW_DELAY_SECONDS_R748;
   const introEnd=introStart+START_PREVIEW_SHOW_SECONDS_R748;
-  // R800 FADE-HEADROOM: keep PREVIOUS/NEXT near the end, but finish them before
-  // the expensive full-frame fade window. On the 2-vCPU VPS the old T-10..T-0.3
-  // preview overlapped the black alpha overlay and caused the exact BAD/stutter spike.
-  // T-12..T-4 remains clearly visible to the viewer and leaves ~1.9s CPU headroom
-  // before the proven R799/R787 fade starts at about T-2.1.
+  // R801: isolate the MP3 boundary. PREVIOUS/NEXT finish four seconds before EOF,
+  // leaving the fade + title switch + next-feeder handoff a clean CPU window.
   const outroStart=Math.max(0,d-12.0);
   const outroEnd=Math.max(outroStart+0.25,d-4.0);
   let previewExpr='0';
@@ -1845,7 +1842,7 @@ function compactCtaChainR783(trackDuration){
   const windows=[];
   // R783: first CTA stays at 20s. Every 120s after that alternate SUBSCRIBE -> LIKE.
   // Only complete 8s windows are scheduled, preserving the no-blink behavior from R748.
-  for(let st=CTA_FIRST_SHOW_SECONDS_R748, n=0; st+CTA_SHOW_SECONDS_R722<=d-2.0; st+=CTA_PERIOD_SECONDS_R722, n++){
+  for(let st=CTA_FIRST_SHOW_SECONDS_R748, n=0; st+CTA_SHOW_SECONDS_R722<=d-6.0; st+=CTA_PERIOD_SECONDS_R722, n++){
     windows.push({st,kind:(n%2===0?'subscribe':'like')});
     if(windows.length>=8)break;
   }
@@ -2290,10 +2287,9 @@ async function stopNormalVideoFeederR721(){
   videoFeederPrerolledR744=false;
 }
 
-function startNormalVideoFeederR721(visualPath,{fadeIn=false,fadeInSeconds=CLIP_TO_TRACK_FADE_IN_SECONDS_R753,endFadeToBlack=false,trackDuration=0,visualOffsetSeconds=0,previewReload=false,boundaryTitleSwitchAt=0}={}){
-  if(stopping || clipActive)return false;
+function spawnNormalVideoFeederChildR801(visualPath,{fadeIn=false,fadeInSeconds=CLIP_TO_TRACK_FADE_IN_SECONDS_R753,endFadeToBlack=false,trackDuration=0,visualOffsetSeconds=0,previewReload=false,boundaryTitleSwitchAt=0}={}){
   const videoSink=publisher?.stdio?.[4];
-  if(!publisher || publisher.exitCode!==null || !videoSink || videoSink.destroyed || videoSink.writableEnded)throw new Error('R721 persistent video pipe unavailable');
+  if(!publisher || publisher.exitCode!==null || !videoSink || videoSink.destroyed || videoSink.writableEnded)throw new Error('R801 persistent video pipe unavailable');
   const eq=equalizerSpecR721();
   if(!existsSync(visualPath) || statSync(visualPath).size<300000)throw new Error(`visual missing: ${visualPath}`);
   if(!existsSync(QR_OVERLAY_LIVE_R794) || statSync(QR_OVERLAY_LIVE_R794).size<5000)throw new Error(`R794 live QR overlay missing: ${QR_OVERLAY_LIVE_R794}`);
@@ -2302,10 +2298,9 @@ function startNormalVideoFeederR721(visualPath,{fadeIn=false,fadeInSeconds=CLIP_
   if(!existsSync(eq.path) || statSync(eq.path).size<20000)throw new Error(`equalizer missing: ${eq.path}`);
 
   const child=spawn('ffmpeg',normalVideoFeederArgsR721(visualPath,eq.path,{fadeIn,fadeInSeconds,endFadeToBlack,trackDuration,visualOffsetSeconds,previewReload,boundaryTitleSwitchAt}),{stdio:['ignore','pipe','pipe']});
-  videoFeeder=child;
-  videoFeederPath=visualPath;
-  videoFeederPeriod=eq.period;
-  child.stdout.pipe(videoSink,{end:false});
+  child.__r801Candidate=true;
+  child.__r801VisualPath=visualPath;
+  child.__r801VisualPeriod=eq.period;
   child.stdout.on('error',()=>{});
   child.stderr.on('data',d=>{
     const line=String(d||'').trim();
@@ -2319,12 +2314,82 @@ function startNormalVideoFeederR721(visualPath,{fadeIn=false,fadeInSeconds=CLIP_
     const isCurrent=videoFeeder===child;
     try{if(child.stdout&&videoSink)child.stdout.unpipe(videoSink)}catch(_){ }
     if(isCurrent)videoFeeder=null;
-    if(isCurrent && !stopping && !clipActive && !visualSwitching){
-      state.lastError=`R721 visual feeder exit ${code??signal}; restarting without RTMPS reconnect`;
-      setTimeout(()=>ensureNormalVideoFeederR721({force:true}).catch(err=>{state.lastError=`R721 visual feeder restart: ${cleanText(err?.message||err)}`;}),120).unref();
+    if(isCurrent && !child.__r801Candidate && !stopping && !clipActive && !visualSwitching){
+      state.lastError=`R801 visual feeder exit ${code??signal}; restarting without RTMPS reconnect`;
+      setTimeout(()=>ensureNormalVideoFeederR721({force:true}).catch(err=>{state.lastError=`R801 visual feeder restart: ${cleanText(err?.message||err)}`;}),120).unref();
     }
   });
-  child.on('error',err=>{if(videoFeeder===child)state.lastError=`R721 visual feeder: ${String(err)}`;});
+  child.on('error',err=>{
+    if(videoFeeder===child || child.__r801Candidate)state.lastError=`R801 visual feeder: ${String(err)}`;
+  });
+  return child;
+}
+
+function promoteNormalVideoFeederR801(child,videoSink){
+  child.__r801Candidate=false;
+  videoFeeder=child;
+  videoFeederPath=child.__r801VisualPath||'';
+  videoFeederPeriod=child.__r801VisualPeriod||'';
+  child.stdout.pipe(videoSink,{end:false});
+}
+
+function startNormalVideoFeederR721(visualPath,{fadeIn=false,fadeInSeconds=CLIP_TO_TRACK_FADE_IN_SECONDS_R753,endFadeToBlack=false,trackDuration=0,visualOffsetSeconds=0,previewReload=false,boundaryTitleSwitchAt=0}={}){
+  if(stopping || clipActive)return false;
+  const videoSink=publisher?.stdio?.[4];
+  const child=spawnNormalVideoFeederChildR801(visualPath,{fadeIn,fadeInSeconds,endFadeToBlack,trackDuration,visualOffsetSeconds,previewReload,boundaryTitleSwitchAt});
+  promoteNormalVideoFeederR801(child,videoSink);
+  return true;
+}
+
+async function atomicReplaceNormalVideoFeederR801(visualPath,{fadeIn=false,fadeInSeconds=CLIP_TO_TRACK_FADE_IN_SECONDS_R753,endFadeToBlack=false,trackDuration=0,visualOffsetSeconds=0,previewReload=false,boundaryTitleSwitchAt=0}={}){
+  const old=videoFeeder;
+  if(!old || old.exitCode!==null){
+    return startNormalVideoFeederR721(visualPath,{fadeIn,fadeInSeconds,endFadeToBlack,trackDuration,visualOffsetSeconds,previewReload,boundaryTitleSwitchAt});
+  }
+  const videoSink=publisher?.stdio?.[4];
+  if(!publisher || publisher.exitCode!==null || !videoSink || videoSink.destroyed || videoSink.writableEnded)throw new Error('R801 persistent video pipe unavailable during atomic swap');
+
+  // Build the NEXT final 1080p H264 feeder behind the current live feeder. It stays
+  // disconnected until its first Annex-B bytes are buffered, so YouTube cannot see a
+  // startup hole. Backpressure stops the candidate after a tiny buffer: no long-lived
+  // double-encode load on the 2-vCPU VPS.
+  const candidate=spawnNormalVideoFeederChildR801(visualPath,{fadeIn,fadeInSeconds,endFadeToBlack,trackDuration,visualOffsetSeconds,previewReload,boundaryTitleSwitchAt});
+  try{
+    await promiseTimeout(
+      streamReadableReadyR752(candidate.stdout,'R801 next MP3 H264',candidate),
+      1800,
+      'R801 next MP3 video feeder ready'
+    );
+  }catch(error){
+    try{candidate.kill('SIGTERM')}catch(_){ }
+    await waitChildExit(candidate,250).catch(()=>false);
+    if(candidate.exitCode===null){try{candidate.kill('SIGKILL')}catch(_){ }}
+    throw new Error(`R801 candidate video not ready; old feeder kept live: ${cleanText(error?.message||error)}`);
+  }
+
+  if(stopping || clipActive){
+    try{candidate.kill('SIGTERM')}catch(_){ }
+    return false;
+  }
+
+  // Finish the old encoder cleanly while it is STILL connected, then promote the
+  // already-ready candidate immediately. This preserves complete H264 access units and
+  // eliminates the old stop -> wait -> spawn gap. The persistent publisher/RTMPS process
+  // is never restarted or reconfigured by this handoff.
+  if(old.exitCode===null){
+    try{old.kill('SIGINT')}catch(_){ }
+    await waitChildExit(old,900);
+  }
+  try{if(old.stdout)old.stdout.unpipe(videoSink)}catch(_){ }
+  promoteNormalVideoFeederR801(candidate,videoSink);
+  state.videoHandoffMode='R801-MP3-ATOMIC-READY-BEFORE-CUT';
+  state.lastWarning='';
+
+  if(old.exitCode===null){
+    try{old.kill('SIGTERM')}catch(_){ }
+    const killer=setTimeout(()=>{if(old.exitCode===null){try{old.kill('SIGKILL')}catch(_){ }}},500);
+    killer.unref?.();
+  }
   return true;
 }
 
@@ -2335,17 +2400,19 @@ async function ensureNormalVideoFeederR721({force=false,fadeIn=false,fadeInSecon
   if(!force && videoFeeder && videoFeeder.exitCode===null && videoFeederPath===visual && videoFeederPeriod===period)return true;
   visualSwitching=true;
   try{
-    await stopNormalVideoFeederR721();
     if(stopping || clipActive)return true;
     const plannedDuration=trackDuration===null ? remainingTrackSecondsR726() : Math.max(0,Number(trackDuration)||0);
-    // R735: song boundaries still restart only the overlay/timing feeder, but the selected
-    // MORNING/DAY/EVENING/NIGHT MP4 resumes at its wall-clock loop position instead of 0:00.
-    // This preserves FFmpeg-frame-timed NEXT/PREVIOUS without visually restarting the background.
     const visualOffsetSeconds=await visualLoopOffsetR735(visual);
     const plannedBoundaryTitleSwitchAt=boundaryTitleSwitchAt===null
       ? ((state.next?.type==='track' && plannedDuration>TITLE_SWITCH_BEFORE_BOUNDARY_R781+0.25)
           ? Math.max(0,plannedDuration-TITLE_SWITCH_BEFORE_BOUNDARY_R781) : 0)
       : Math.max(0,Number(boundaryTitleSwitchAt)||0);
+
+    // R801: every normal MP3->MP3 feeder replacement is ready-before-cut. First startup
+    // and clip recovery still use the existing single-feeder path.
+    if(videoFeeder && videoFeeder.exitCode===null){
+      return atomicReplaceNormalVideoFeederR801(visual,{fadeIn,fadeInSeconds,endFadeToBlack,trackDuration:plannedDuration,visualOffsetSeconds,previewReload,boundaryTitleSwitchAt:plannedBoundaryTitleSwitchAt});
+    }
     return startNormalVideoFeederR721(visual,{fadeIn,fadeInSeconds,endFadeToBlack,trackDuration:plannedDuration,visualOffsetSeconds,previewReload,boundaryTitleSwitchAt:plannedBoundaryTitleSwitchAt});
   }finally{
     visualSwitching=false;
@@ -3299,8 +3366,8 @@ function publicStatus(){
       backgroundPrefetchLoudnessPolicyR793:'DOWNLOAD-ONLY-WHEN-BACKGROUND-OFF',
       liveScalePolicyR794:'FAST-BILINEAR-LIVE-MP3-ONLY-OFFLINE-LANCZOS-PRESERVED',
       fadeEngineR795:'R787-ABSOLUTE-TIMELINE-ALPHA-MASK-065-BLACK-HOLD-RECOVER',
-      fadeRuntimePolicyR796:'R800-R799-R787-ABSOLUTE-ALPHA-MASK-065-005-080',
-      fadeRestoreR799:'R800-FADE-HEADROOM-OUTRO-T12-TO-T4-YOUTUBE-TRANSPORT-PRESERVED',
+      fadeRuntimePolicyR796:'R799-R787-ABSOLUTE-ALPHA-MASK-065-005-080',
+      fadeRestoreR799:'R801-FADE-PRESERVED + MP3-BOUNDARY-HEADROOM + ATOMIC-H264-HANDOFF',
       equalizerPolicyR796:'QTRLE-1180PX-25FPS-100FRAME-SEAMLESS-NO-LIVE-SCALE',
       tickerPolicyR796:'FONT36-Y62-SPEED105-RELOAD2S',
       staticOverlayPolicyR794:'PRE-SCALED-QR160-CTA420',

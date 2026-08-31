@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788127399289-ca98e64720",
-  "release": "R800",
-  "archiveName": "R800-FADE-HEADROOM-OUTRO-SHIFT-R799-YOUTUBE-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "b300450438e749699e44f24410b35862ed91c475",
-  "backupSha": "b300450438e749699e44f24410b35862ed91c475",
+  "operationId": "publish-1788145375331-290546a172",
+  "release": "R801",
+  "archiveName": "R801-MP3-ATOMIC-HANDOFF-FADE-HEADROOM-R799-YOUTUBE-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "b93e59885ee7d5223a64793106bcc6d185d666bb",
+  "backupSha": "b93e59885ee7d5223a64793106bcc6d185d666bb",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-30T22:03:19.839Z"
+  "generatedAt": "2026-08-31T03:02:55.741Z"
 }
