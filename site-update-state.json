@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788152297884-881257ab8a",
-  "release": "R804",
-  "archiveName": "R804-STATION-SINGLE-WRITER-CLEAN-AU-R803E-R802-R801-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "065194695eadafd6567a2ed7c5c6a45b49934390",
-  "backupSha": "065194695eadafd6567a2ed7c5c6a45b49934390",
+  "operationId": "publish-1788153974584-77f8208bb1",
+  "release": "R806",
+  "archiveName": "R806-VISUAL-NAL-SANITIZE-FADE-GUARANTEE-R805-R804-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "d22fb20115328c8858b3d888a9743953c297435d",
+  "backupSha": "d22fb20115328c8858b3d888a9743953c297435d",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-31T04:58:18.323Z"
+  "generatedAt": "2026-08-31T05:26:15.158Z"
 }

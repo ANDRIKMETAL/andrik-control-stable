@@ -44,6 +44,7 @@ const VISUAL_AUTO_SCHEDULE_R658 = String(process.env.VISUAL_AUTO_SCHEDULE_R658||
 // R651: DAY / EVENING / NIGHT are owner-selected R2 videos cached locally on AWS.
 // IMPORTANT: preserve the exact working R649 hotfix behavior: direct 1920x1080 scale,
 // no crop and no pad. This intentionally fills the whole 16:9 frame every time.
+const R806_VISUAL_SANITIZER_VERSION = 'R806-VISUAL-SANITIZED-REMUX-FADE-GUARANTEE';
 const MORNING_VISUAL = process.env.MORNING_VISUAL || `${VISUAL_CACHE_DIR}/stream-morning-master-r703.mp4`;
 const DAY_VISUAL = process.env.DAY_VISUAL || `${VISUAL_CACHE_DIR}/stream-day-master-r620.mp4`;
 const EVENING_VISUAL = process.env.EVENING_VISUAL || `${VISUAL_CACHE_DIR}/stream-evening-master-r620.mp4`;
@@ -188,7 +189,7 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R804-STATION-SINGLE-WRITER-CLEAN-AU-HANDOFF-R803E-R802-R801-PRESERVED',
+  version: 'R806-VISUAL-SANITIZE-FADE-GUARANTEE-R804-R803E-R802-R801-PRESERVED',
   cpuHeadroomProfileR794:'R796-LIVE-FAST-SCALE-COMPACT-EQ-FINITE-FADE-PRESCALED-STATIC',
   mode: 'R804 STATION SINGLE-WRITER CLEAN-AU / R803E DIAG + R802 SELF-HEAL + R801 MP3 ATOMIC + R799 YOUTUBE PRESERVED',
   startedAt: new Date().toISOString(),
@@ -1817,6 +1818,106 @@ async function downloadVisualToCache(url,dest,label){
   throw lastError||new Error(`${label} visual download failed`);
 }
 
+const visualIntegrityCacheR806=new Map();
+function visualCleanPathR806(source){
+  return String(source).replace(/\.mp4$/i,'')+'.r806-clean.mp4';
+}
+function visualCleanMetaPathR806(source){return visualCleanPathR806(source)+'.meta.json'}
+async function strictVisualPacketCheckR806(path){
+  const st=statSync(path);
+  const sig=`${st.size}:${Math.trunc(st.mtimeMs)}`;
+  if(visualIntegrityCacheR806.get(path)===sig)return true;
+  // Packet/NAL framing check only: stream-copy to null is dramatically cheaper than
+  // decoding 1080p while LIVE, but still catches the exact MOV/NULL Invalid NAL / Packet corrupt
+  // failure seen by the normal visual feeder.
+  await runCapture('nice',['-n','19','ffmpeg','-nostdin','-hide_banner','-nostats','-loglevel','error','-xerror','-err_detect','explode','-i',path,'-map','0:v:0','-an','-sn','-dn','-c:v','copy','-bsf:v','h264_mp4toannexb','-f','h264','-y','/dev/null'],{timeoutMs:90000});
+  visualIntegrityCacheR806.set(path,sig);
+  return true;
+}
+async function remuxVisualCopyR806(source,tmp,limitSeconds=0){
+  const args=['-n','19','ffmpeg','-nostdin','-hide_banner','-nostats','-loglevel','error','-fflags','+genpts+discardcorrupt','-err_detect','ignore_err','-i',source];
+  if(Number(limitSeconds)>0)args.push('-t',Number(limitSeconds).toFixed(3));
+  args.push('-map','0:v:0','-an','-sn','-dn','-c:v','copy','-movflags','+faststart','-f','mp4','-y',tmp);
+  await runCapture('nice',args,{timeoutMs:120000});
+}
+async function sanitizeVisualR806(source,period='visual'){
+  const src=statSync(source);
+  const clean=visualCleanPathR806(source);
+  const meta=visualCleanMetaPathR806(source);
+  try{
+    if(existsSync(clean)&&statSync(clean).size>2*1024*1024){
+      const cst=statSync(clean);
+      let matchesSource=cst.mtimeMs>=src.mtimeMs;
+      if(existsSync(meta)){
+        const m=JSON.parse(readFileSync(meta,'utf8'));
+        matchesSource=Number(m.sourceSize)===Number(src.size)&&Math.abs(Number(m.sourceMtimeMs)-Number(src.mtimeMs))<2;
+      }
+      if(matchesSource){
+        // Clean files are created beside the live source, strict-validated before atomic rename.
+        // Trust that immutable result on startup so radio boot never scans a 200+ MB MP4 before publishing.
+        return clean;
+      }
+    }
+  }catch(_){ }
+
+  // If the source itself is already clean, keep it byte-for-byte and avoid extra disk.
+  try{
+    await strictVisualPacketCheckR806(source);
+    return source;
+  }catch(error){
+    diagRecordR802('visual-r806-integrity-fail',{period,media:diagMediaR802(source),bytes:src.size,error:cleanText(error?.message||error)});
+  }
+
+  // First try a full REMUX only (c:v copy): no re-encode and therefore zero generational
+  // quality loss. Some malformed AVCC NAL-length packets are not marked discardable by
+  // the MOV demuxer; if one survives, keep the longest clean PREFIX instead of re-encoding.
+  // The visual is a loop, so a 90/80/...% clean prefix is visually equivalent and permanently
+  // removes the corrupt tail/region from every future loop.
+  const tmp=`${clean}.part-${process.pid}-${Date.now()}.mp4`;
+  let repairMode='full-stream-copy';
+  let keptSeconds=0;
+  let lastError=null;
+  try{
+    try{
+      await remuxVisualCopyR806(source,tmp,0);
+      if(!existsSync(tmp)||statSync(tmp).size<2*1024*1024)throw new Error('full sanitized visual too small');
+      await strictVisualPacketCheckR806(tmp);
+    }catch(error){
+      lastError=error;
+      try{if(existsSync(tmp))unlinkSync(tmp)}catch(_){ }
+      const duration=await probeDuration(source).catch(()=>0);
+      let ok=false;
+      for(const ratio of [0.90,0.80,0.70,0.60,0.50,0.40]){
+        if(!(duration>20))break;
+        const keep=Math.max(15,duration*ratio);
+        try{
+          await remuxVisualCopyR806(source,tmp,keep);
+          if(!existsSync(tmp)||statSync(tmp).size<2*1024*1024)throw new Error(`trim ${keep.toFixed(1)}s too small`);
+          await strictVisualPacketCheckR806(tmp);
+          repairMode=`clean-prefix-${Math.round(ratio*100)}pct`;
+          keptSeconds=keep;
+          ok=true;
+          break;
+        }catch(e){
+          lastError=e;
+          try{if(existsSync(tmp))unlinkSync(tmp)}catch(_){ }
+        }
+      }
+      if(!ok)throw lastError||new Error('no clean stream-copy prefix found');
+    }
+
+    renameSync(tmp,clean);
+    writeFileSync(meta,JSON.stringify({version:R806_VISUAL_SANITIZER_VERSION,source,sourceSize:src.size,sourceMtimeMs:src.mtimeMs,repairMode,keptSeconds,cleanedAt:new Date().toISOString()},null,2),'utf8');
+    const cst=statSync(clean); visualIntegrityCacheR806.set(clean,`${cst.size}:${Math.trunc(cst.mtimeMs)}`);
+    diagRecordR802('visual-r806-sanitized',{period,source:diagMediaR802(source),clean:diagMediaR802(clean),sourceBytes:src.size,cleanBytes:cst.size,repairMode,keptSeconds:Number(keptSeconds.toFixed(3))});
+    return clean;
+  }catch(error){
+    try{if(existsSync(tmp))unlinkSync(tmp)}catch(_){ }
+    diagRecordR802('visual-r806-sanitize-fail',{period,media:diagMediaR802(source),error:cleanText(error?.message||error)});
+    throw new Error(`R806 ${period} visual sanitize failed: ${cleanText(error?.message||error)}`);
+  }
+}
+
 function visualSpecForPeriod(period){
   if(period==='morning')return {period,path:MORNING_VISUAL,url:MORNING_VISUAL_URL};
   if(period==='day')return {period,path:DAY_VISUAL,url:DAY_VISUAL_URL};
@@ -1826,17 +1927,26 @@ function visualSpecForPeriod(period){
 
 async function ensureVisualSpec(spec){
   try{
-    if(existsSync(spec.path) && statSync(spec.path).size>2*1024*1024)return spec.path;
-  }catch(_){}
-  if(/^https:\/\//i.test(spec.url||''))return downloadVisualToCache(spec.url,spec.path,spec.period);
-  if(existsSync(spec.url||'') && statSync(spec.url).size>500000)return spec.url;
-  throw new Error(`R622 ${spec.period} visual unavailable: ${spec.url||spec.path}`);
+    if(existsSync(spec.path) && statSync(spec.path).size>2*1024*1024)return await sanitizeVisualR806(spec.path,spec.period);
+  }catch(error){
+    state.lastWarning=`R806 ${spec.period} visual source rejected: ${cleanText(error?.message||error)}`;
+  }
+  if(/^https:\/\//i.test(spec.url||'')){
+    const downloaded=await downloadVisualToCache(spec.url,spec.path,spec.period);
+    return await sanitizeVisualR806(downloaded,spec.period);
+  }
+  if(existsSync(spec.url||'') && statSync(spec.url).size>500000)return await sanitizeVisualR806(spec.url,spec.period);
+  throw new Error(`R806 ${spec.period} visual unavailable/unsafe: ${spec.url||spec.path}`);
 }
 
 function prefetchAllVisuals(){
+  // R806: prefetch only ensures the four source files exist. Integrity/sanitizing is performed
+  // by the installer ahead of the single radio restart, or lazily only when a slot becomes active.
+  // Never launch four full-file integrity scans in parallel on the 2-vCPU LIVE VPS.
   for(const period of ['morning','day','evening','night']){
     const spec=visualSpecForPeriod(period);
-    ensureVisualSpec(spec).catch(error=>console.error('[visual-prefetch]',cleanText(error?.message||error)));
+    try{if(existsSync(spec.path)&&statSync(spec.path).size>2*1024*1024)continue}catch(_){ }
+    if(/^https:\/\//i.test(spec.url||''))downloadVisualToCache(spec.url,spec.path,spec.period).catch(error=>console.error('[visual-prefetch]',cleanText(error?.message||error)));
   }
 }
 
@@ -2433,8 +2543,13 @@ function spawnNormalVideoFeederChildR801(visualPath,{fadeIn=false,fadeInSeconds=
     if(!child.__r804StationCut){try{if(child.stdout&&videoSink)child.stdout.unpipe(videoSink)}catch(_){ }}
     if(isCurrent)videoFeeder=null;
     if(isCurrent && !child.__r801Candidate && !child.__r804StationCut && !stopping && !clipActive && !visualSwitching){
-      state.lastError=`R801 visual feeder exit ${code??signal}; restarting without RTMPS reconnect`;
-      setTimeout(()=>ensureNormalVideoFeederR721({force:true}).catch(err=>{state.lastError=`R801 visual feeder restart: ${cleanText(err?.message||err)}`;}),120).unref();
+      const remainingR806=remainingTrackSecondsR726();
+      const nextIsVideoR806=Boolean(state.next && ['clip','special','bumper'].includes(String(state.next.type||'')));
+      const boundaryAtR806=(state.next?.type==='track' && remainingR806>TITLE_SWITCH_BEFORE_BOUNDARY_R781+0.25)
+        ? Math.max(0,remainingR806-TITLE_SWITCH_BEFORE_BOUNDARY_R781) : 0;
+      state.lastError=`R806 visual feeder exit ${code??signal}; clean-source restart with boundary fade preserved`;
+      diagRecordR802('visual-r806-restart-fade-armed',{remaining:Number(remainingR806.toFixed(3)),nextType:String(state.next?.type||''),endFadeToBlack:nextIsVideoR806,boundaryTitleSwitchAt:Number(boundaryAtR806.toFixed(3))});
+      setTimeout(()=>ensureNormalVideoFeederR721({force:true,trackDuration:remainingR806,endFadeToBlack:nextIsVideoR806,boundaryTitleSwitchAt:boundaryAtR806}).catch(err=>{state.lastError=`R806 visual feeder restart: ${cleanText(err?.message||err)}`;}),120).unref();
     }
   });
   child.on('error',err=>{
@@ -3212,6 +3327,7 @@ async function playItem(previous,item,next,following,localAudioPath,nextTrackPre
   // 0.05 s black hold, then a clearly visible 0.80 s recovery. Do NOT add a second fade-in on the next MP3.
   // Only MP3→real-video keeps R757's black hold through the boundary.
   const endFadeToBlackR760=Boolean(actualNextR736 && isVideoHandoffR738(actualNextR736));
+  diagRecordR802('mp3-r806-boundary-fade-armed',{track:shortText(item.title||'TRACK',52),duration:Number(duration.toFixed(3)),nextType:String(actualNextR736?.type||actualNextR736?.sourceType||''),fadeOut:VIDEO_FADE_SECONDS_R726,blackHold:VIDEO_BLACK_HOLD_SECONDS_R736,fadeIn:endFadeToBlackR760?0:VIDEO_FADE_IN_SECONDS_R736,lead:VIDEO_FADE_LEAD_SECONDS_R735});
   if(!currentVideoPrerolledR744){
     await ensureNormalVideoFeederR721({force:true,fadeIn:clipToTrackBoundaryR753,endFadeToBlack:endFadeToBlackR760,trackDuration:duration,previewReload:false,boundaryTitleSwitchAt:boundaryTitleSwitchAtR790});
     videoFeederTrackIdentityR744=currentIdentityR744;
