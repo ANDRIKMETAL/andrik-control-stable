@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788153974584-77f8208bb1",
-  "release": "R806",
-  "archiveName": "R806-VISUAL-NAL-SANITIZE-FADE-GUARANTEE-R805-R804-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "d22fb20115328c8858b3d888a9743953c297435d",
-  "backupSha": "d22fb20115328c8858b3d888a9743953c297435d",
+  "operationId": "publish-1788171360386-4795e13471",
+  "release": "R813",
+  "archiveName": "R813-CLEAN-IDR-HANDOFF-FULL-DIAGNOSTICS-STREAM-PROFILE-R809-R808-R806-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "fb025027b6587241e5c561ea8299f2047871bd6d",
+  "backupSha": "fb025027b6587241e5c561ea8299f2047871bd6d",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-31T05:26:15.158Z"
+  "generatedAt": "2026-08-31T10:16:00.981Z"
 }

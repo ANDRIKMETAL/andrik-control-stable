@@ -189,7 +189,7 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R806-VISUAL-SANITIZE-FADE-GUARANTEE-R804-R803E-R802-R801-PRESERVED',
+  version: 'R813-CLEAN-IDR-HANDOFF-DIAG-PROFILE-R809-R808-R806-R805-R804-R803E-PRESERVED',
   cpuHeadroomProfileR794:'R796-LIVE-FAST-SCALE-COMPACT-EQ-FINITE-FADE-PRESCALED-STATIC',
   mode: 'R804 STATION SINGLE-WRITER CLEAN-AU / R803E DIAG + R802 SELF-HEAL + R801 MP3 ATOMIC + R799 YOUTUBE PRESERVED',
   startedAt: new Date().toISOString(),
@@ -2124,7 +2124,11 @@ function normalVideoFilterComplexR721({fadeIn=false,fadeInSeconds=CLIP_TO_TRACK_
     // alpha-mask clock. Do NOT shift a short-lived mask with setpts: that optimization
     // made the transition disappear on the live persistent-H264 path. Keep the base
     // picture untouched and animate only BLACK mask alpha at absolute feeder PTS.
-    const outAt=Math.max(0,Number(trackDuration)-VIDEO_FADE_SECONDS_R726-VIDEO_BLACK_HOLD_SECONDS_R736-VIDEO_FADE_LEAD_SECONDS_R735);
+    // R809 preserved by R813: MP3→MP3 old feeder fades TO BLACK close to
+    // the real boundary; the new R813 candidate starts FROM BLACK.
+    const splitMp3BoundaryR809=Boolean(endFadeToBlack && Number(boundaryTitleSwitchAt)>0);
+    const fadeLeadR809=splitMp3BoundaryR809?0.10:VIDEO_FADE_LEAD_SECONDS_R735;
+    const outAt=Math.max(0,Number(trackDuration)-VIDEO_FADE_SECONDS_R726-VIDEO_BLACK_HOLD_SECONDS_R736-fadeLeadR809);
     const recoverAt=outAt+VIDEO_FADE_SECONDS_R726+VIDEO_BLACK_HOLD_SECONDS_R736;
     maskChain=endFadeToBlack
       ? `color=c=black@1.0:s=1920x1080:r=${VIDEO_FPS},format=yuva420p,fade=t=in:st=${outAt.toFixed(3)}:d=${VIDEO_FADE_SECONDS_R726.toFixed(2)}:alpha=1[blackmask];`
@@ -2475,9 +2479,12 @@ function normalVideoFeederArgsR721(visualPath,eqPath,{fadeIn=false,fadeInSeconds
   const visualSeek=Number(visualOffsetSeconds)>0.05 ? ['-ss',Number(visualOffsetSeconds).toFixed(3)] : [];
   return [
     '-hide_banner','-loglevel','warning',
-    '-thread_queue_size','64','-re','-stream_loop','-1',...visualSeek,'-i',visualPath,
+    // R808/R813: every looped moving-video input gets its own corruption-tolerant
+    // demux guard. A bad source packet is dropped locally instead of poisoning the
+    // final Annex-B H264 stream that the persistent YouTube master copies.
+    '-thread_queue_size','64','-fflags','+genpts+discardcorrupt','-err_detect','ignore_err','-re','-stream_loop','-1',...visualSeek,'-i',visualPath,
     '-loop','1','-framerate','1','-i',QR_OVERLAY_LIVE_R794,
-    '-thread_queue_size','32','-re','-stream_loop','-1','-i',eqPath,
+    '-thread_queue_size','32','-fflags','+genpts+discardcorrupt','-err_detect','ignore_err','-re','-stream_loop','-1','-i',eqPath,
     '-loop','1','-framerate','1','-i',CTA_OVERLAY_LIVE_R794,
     '-loop','1','-framerate','1','-i',CTA_LIKE_OVERLAY_LIVE_R794,
     '-filter_complex',normalVideoFilterComplexR721({fadeIn,fadeInSeconds,endFadeToBlack,trackDuration,previewReload,boundaryTitleSwitchAt}),
@@ -2538,11 +2545,13 @@ function spawnNormalVideoFeederChildR801(visualPath,{fadeIn=false,fadeInSeconds=
   });
   child.on('exit',(code,signal)=>{
     const isCurrent=videoFeeder===child;
-    // R804 intentional station cut keeps stdout piped through its final complete AU;
-    // detachNormalVideoForStationR804 owns the unpipe only after stdout 'end'.
-    if(!child.__r804StationCut){try{if(child.stdout&&videoSink)child.stdout.unpipe(videoSink)}catch(_){ }}
-    if(isCurrent)videoFeeder=null;
-    if(isCurrent && !child.__r801Candidate && !child.__r804StationCut && !stopping && !clipActive && !visualSwitching){
+    // R804/R813 intentional clean cuts keep stdout piped through the final COMPLETE AU.
+    // The handoff owner unpipes only after stdout end/close. Never let the generic
+    // ChildProcess 'exit' event cut an Annex-B NAL while bytes are still draining.
+    const cleanHandoffOwnedR813=Boolean(child.__r804StationCut||child.__r813CleanHandoff);
+    if(!cleanHandoffOwnedR813){try{if(child.stdout&&videoSink)child.stdout.unpipe(videoSink)}catch(_){ }}
+    if(isCurrent && !child.__r813CleanHandoff)videoFeeder=null;
+    if(isCurrent && !child.__r801Candidate && !cleanHandoffOwnedR813 && !stopping && !clipActive && !visualSwitching){
       const remainingR806=remainingTrackSecondsR726();
       const nextIsVideoR806=Boolean(state.next && ['clip','special','bumper'].includes(String(state.next.type||'')));
       const boundaryAtR806=(state.next?.type==='track' && remainingR806>TITLE_SWITCH_BEFORE_BOUNDARY_R781+0.25)
@@ -2556,6 +2565,140 @@ function spawnNormalVideoFeederChildR801(visualPath,{fadeIn=false,fadeInSeconds=
     if(videoFeeder===child || child.__r801Candidate)state.lastError=`R801 visual feeder: ${String(err)}`;
   });
   return child;
+}
+
+
+// R813-CLEAN-IDR-HANDOFF
+// A candidate is not "ready" merely because stdout has one byte. It is ready only
+// after a COMPLETE decodable bootstrap exists: SPS + PPS + IDR and the following AUD.
+// We temporarily consume that bootstrap, pause the candidate, cleanly drain the old
+// writer, write the complete bootstrap first, then attach the candidate remainder.
+function annexBUnitsR813(buffer){
+  const out=[];
+  const b=Buffer.isBuffer(buffer)?buffer:Buffer.from(buffer||[]);
+  for(let i=0;i+3<b.length;i++){
+    let prefix=0;
+    if(b[i]===0&&b[i+1]===0&&b[i+2]===1)prefix=3;
+    else if(i+4<b.length&&b[i]===0&&b[i+1]===0&&b[i+2]===0&&b[i+3]===1)prefix=4;
+    if(!prefix)continue;
+    const n=i+prefix;
+    if(n>=b.length)continue;
+    out.push({start:i,nal:n,type:b[n]&31});
+    i=n;
+  }
+  return out;
+}
+
+function cleanIdrBootstrapReadyR813(buffer){
+  const units=annexBUnitsR813(buffer);
+  let sps=false,pps=false,idrIndex=-1,audAfterIdr=false;
+  const types=[];
+  for(let i=0;i<units.length;i++){
+    const type=units[i].type;
+    types.push(type);
+    if(type===7)sps=true;
+    if(type===8)pps=true;
+    if(type===5 && sps && pps && idrIndex<0)idrIndex=i;
+    if(idrIndex>=0 && i>idrIndex && type===9){audAfterIdr=true;break;}
+  }
+  return {ready:Boolean(sps&&pps&&idrIndex>=0&&audAfterIdr),types:types.slice(0,32),units:units.length};
+}
+
+function collectCleanIdrBootstrapR813(child,timeoutMs=5000,maxBytes=4*1024*1024){
+  return new Promise((resolve,reject)=>{
+    const stream=child?.stdout;
+    if(!stream)return reject(new Error('R813 candidate stdout missing'));
+    let done=false,total=0,chunks=[];
+    const cleanup=()=>{
+      clearTimeout(timer);
+      stream.off('readable',onReadable);
+      stream.off('error',onError);
+      child?.off('exit',onExit);
+    };
+    const finish=(error,value)=>{
+      if(done)return;
+      done=true;
+      cleanup();
+      if(error)reject(error);else resolve(value);
+    };
+    const inspect=()=>{
+      let chunk=null;
+      while((chunk=stream.read())!==null){
+        chunks.push(chunk);
+        total+=chunk.length;
+        if(total>maxBytes)return finish(new Error(`R813 candidate bootstrap exceeded ${maxBytes} bytes`));
+        const buffer=Buffer.concat(chunks,total);
+        const proof=cleanIdrBootstrapReadyR813(buffer);
+        if(proof.ready){
+          stream.pause();
+          return finish(null,{buffer,proof,bytes:total});
+        }
+      }
+    };
+    const onReadable=()=>inspect();
+    const onError=error=>finish(error);
+    const onExit=(code,signal)=>finish(new Error(`R813 candidate exited before clean IDR bootstrap: ${code??signal??'exit'}`));
+    const timer=setTimeout(()=>finish(new Error(`R813 clean IDR bootstrap timeout ${timeoutMs}ms`)),timeoutMs);
+    stream.on('readable',onReadable);
+    stream.once('error',onError);
+    child?.once('exit',onExit);
+    inspect();
+  });
+}
+
+function waitReadableClosedR813(stream,timeoutMs=4500){
+  return new Promise(resolve=>{
+    if(!stream||stream.readableEnded||stream.destroyed)return resolve(true);
+    let done=false;
+    const finish=value=>{
+      if(done)return;
+      done=true;
+      clearTimeout(timer);
+      stream.off('end',onEnd);
+      stream.off('close',onClose);
+      stream.off('error',onError);
+      resolve(value);
+    };
+    const onEnd=()=>finish(true);
+    const onClose=()=>finish(Boolean(stream.readableEnded||stream.destroyed));
+    const onError=()=>finish(false);
+    const timer=setTimeout(()=>finish(Boolean(stream.readableEnded)),timeoutMs);
+    stream.once('end',onEnd);
+    stream.once('close',onClose);
+    stream.once('error',onError);
+  });
+}
+
+function writeVideoBootstrapR813(videoSink,buffer,timeoutMs=1800){
+  return new Promise((resolve,reject)=>{
+    if(!videoSink||videoSink.destroyed||videoSink.writableEnded)return reject(new Error('R813 video sink unavailable'));
+    if(!buffer||!buffer.length)return resolve(true);
+    let done=false;
+    const finish=(error)=>{
+      if(done)return;
+      done=true;
+      clearTimeout(timer);
+      videoSink.off('drain',onDrain);
+      videoSink.off('error',onError);
+      error?reject(error):resolve(true);
+    };
+    const onDrain=()=>finish();
+    const onError=error=>finish(error);
+    const timer=setTimeout(()=>finish(new Error(`R813 video bootstrap drain timeout ${timeoutMs}ms`)),timeoutMs);
+    videoSink.once('error',onError);
+    const ok=videoSink.write(buffer);
+    if(ok)return finish();
+    videoSink.once('drain',onDrain);
+  });
+}
+
+async function retireOffLiveCandidateR813(child){
+  if(!child||child.exitCode!==null)return;
+  try{child.kill('SIGINT')}catch(_){ }
+  if(await waitChildExit(child,900).catch(()=>false))return;
+  // Candidate has never touched LIVE, so a TERM here cannot corrupt the broadcast.
+  try{child.kill('SIGTERM')}catch(_){ }
+  await waitChildExit(child,700).catch(()=>false);
 }
 
 function promoteNormalVideoFeederR801(child,videoSink){
@@ -2580,52 +2723,133 @@ async function atomicReplaceNormalVideoFeederR801(visualPath,{fadeIn=false,fadeI
     return startNormalVideoFeederR721(visualPath,{fadeIn,fadeInSeconds,endFadeToBlack,trackDuration,visualOffsetSeconds,previewReload,boundaryTitleSwitchAt});
   }
   const videoSink=publisher?.stdio?.[4];
-  if(!publisher || publisher.exitCode!==null || !videoSink || videoSink.destroyed || videoSink.writableEnded)throw new Error('R801 persistent video pipe unavailable during atomic swap');
-
-  // Build the NEXT final 1080p H264 feeder behind the current live feeder. It stays
-  // disconnected until its first Annex-B bytes are buffered, so YouTube cannot see a
-  // startup hole. Backpressure stops the candidate after a tiny buffer: no long-lived
-  // double-encode load on the 2-vCPU VPS.
-  const candidate=spawnNormalVideoFeederChildR801(visualPath,{fadeIn,fadeInSeconds,endFadeToBlack,trackDuration,visualOffsetSeconds,previewReload,boundaryTitleSwitchAt});
-  try{
-    await promiseTimeout(
-      streamReadableReadyR752(candidate.stdout,'R801 next MP3 H264',candidate),
-      1800,
-      'R801 next MP3 video feeder ready'
-    );
-    diagRecordR802('mp3-candidate-ready',{candidatePid:Number(candidate.pid||0),oldPid:Number(old.pid||0),duration:Number(trackDuration||0)});
-  }catch(error){
-    try{candidate.kill('SIGTERM')}catch(_){ }
-    await waitChildExit(candidate,250).catch(()=>false);
-    if(candidate.exitCode===null){try{candidate.kill('SIGKILL')}catch(_){ }}
-    throw new Error(`R801 candidate video not ready; old feeder kept live: ${cleanText(error?.message||error)}`);
+  if(!publisher || publisher.exitCode!==null || !videoSink || videoSink.destroyed || videoSink.writableEnded){
+    throw new Error('R813 persistent video pipe unavailable during clean-IDR swap');
   }
 
-  if(stopping || clipActive){
-    try{candidate.kill('SIGTERM')}catch(_){ }
+  const startedAtR813=Date.now();
+  const candidate=spawnNormalVideoFeederChildR801(
+    visualPath,
+    {fadeIn,fadeInSeconds,endFadeToBlack,trackDuration,visualOffsetSeconds,previewReload,boundaryTitleSwitchAt}
+  );
+
+  let bootstrapR813=null;
+  try{
+    bootstrapR813=await collectCleanIdrBootstrapR813(candidate,5000);
+    diagRecordR802('r813-candidate-clean-idr-ready',{
+      candidatePid:Number(candidate.pid||0),
+      oldPid:Number(old.pid||0),
+      bytes:Number(bootstrapR813.bytes||0),
+      nalTypes:(bootstrapR813.proof?.types||[]).join(','),
+      readyMs:Date.now()-startedAtR813,
+      duration:Number(trackDuration||0)
+    });
+  }catch(error){
+    await retireOffLiveCandidateR813(candidate);
+    state.lastWarning=`R813 candidate rejected; OLD feeder stayed LIVE: ${cleanText(error?.message||error)}`;
+    diagRecordR802('r813-candidate-rejected',{
+      oldPid:Number(old.pid||0),
+      candidatePid:Number(candidate.pid||0),
+      error:cleanText(error?.message||error)
+    });
+    // Most important invariant: do not touch the old writer when next H264 is not proven.
     return false;
   }
 
-  // Finish the old encoder cleanly while it is STILL connected, then promote the
-  // already-ready candidate immediately. This preserves complete H264 access units and
-  // eliminates the old stop -> wait -> spawn gap. The persistent publisher/RTMPS process
-  // is never restarted or reconfigured by this handoff.
-  if(old.exitCode===null){
-    diagRecordR802('mp3-old-feeder-stop',{oldPid:Number(old.pid||0),candidatePid:Number(candidate.pid||0)});
-    try{old.kill('SIGINT')}catch(_){ }
-    await waitChildExit(old,900);
+  if(stopping || clipActive){
+    await retireOffLiveCandidateR813(candidate);
+    return false;
   }
-  try{if(old.stdout)old.stdout.unpipe(videoSink)}catch(_){ }
-  promoteNormalVideoFeederR801(candidate,videoSink);
-  diagRecordR802('mp3-candidate-promoted',{candidatePid:Number(candidate.pid||0),oldExit:old.exitCode});
-  state.videoHandoffMode='R801-MP3-ATOMIC-READY-BEFORE-CUT';
-  state.lastWarning='';
 
-  if(old.exitCode===null){
-    try{old.kill('SIGTERM')}catch(_){ }
-    const killer=setTimeout(()=>{if(old.exitCode===null){try{old.kill('SIGKILL')}catch(_){ }}},500);
-    killer.unref?.();
+  // R813 MAKE-BEFORE-BREAK:
+  // 1) clean IDR candidate is fully buffered and PAUSED;
+  // 2) old writer remains LIVE while it finishes its final complete AU;
+  // 3) generic exit handler is forbidden to unpipe the old stdout;
+  // 4) only after stdout EOF do we detach old bytes and append the clean candidate bootstrap.
+  old.__r813CleanHandoff=true;
+  // Reuse the proven R804 handoff guard so R749 cannot race this intentional
+  // sub-second MP3 writer swap and spawn a third feeder.
+  stationHandoffActiveR804=true;
+  diagRecordR802('r813-old-clean-stop-start',{
+    oldPid:Number(old.pid||0),
+    candidatePid:Number(candidate.pid||0),
+    sinkBytes:Number(videoSink.writableLength||0)
+  });
+
+  const oldStdoutClosedPromiseR813=waitReadableClosedR813(old.stdout,5000);
+  if(old.exitCode===null && old.signalCode===null){
+    try{old.kill('SIGINT')}catch(_){ }
   }
+  const oldExitedR813=await waitChildExit(old,5000);
+  const oldStdoutClosedR813=await oldStdoutClosedPromiseR813;
+
+  if(!oldExitedR813 || !oldStdoutClosedR813){
+    // Never force-kill a LIVE raw-H264 writer. A clean service rebuild is safer than
+    // sending a truncated NAL and leaving viewers with mosaic until a later IDR.
+    await retireOffLiveCandidateR813(candidate);
+    state.lastError=`R813 clean old-H264 close failed: exited=${oldExitedR813} stdoutClosed=${oldStdoutClosedR813}`;
+    diagRecordR802('r813-old-clean-stop-failed',{
+      oldPid:Number(old.pid||0),
+      candidatePid:Number(candidate.pid||0),
+      oldExited:Boolean(oldExitedR813),
+      stdoutClosed:Boolean(oldStdoutClosedR813)
+    });
+    stationHandoffActiveR804=false;
+    setTimeout(()=>process.exit(81),120).unref();
+    return false;
+  }
+
+  try{if(old.stdout)old.stdout.unpipe(videoSink)}catch(_){ }
+  if(videoFeeder===old)videoFeeder=null;
+
+  // Do NOT wait for the master's writable queue to become empty. The old stdout has
+  // already ended on a complete AU, so append the clean candidate bootstrap immediately
+  // behind any queued old bytes. This is true make-before-break at the pipe level:
+  // there is never an intentional "empty input" window for the persistent H264 demuxer.
+  const oldDrainR813=Boolean(Number(videoSink.writableLength||0)===0 && !videoSink.writableNeedDrain);
+  diagRecordR802('r813-old-au-closed',{
+    oldPid:Number(old.pid||0),
+    candidatePid:Number(candidate.pid||0),
+    sinkAlreadyEmpty:Boolean(oldDrainR813),
+    sinkBytes:Number(videoSink.writableLength||0)
+  });
+
+  if(!publisher || publisher.exitCode!==null || videoSink.destroyed || videoSink.writableEnded){
+    await retireOffLiveCandidateR813(candidate);
+    stationHandoffActiveR804=false;
+    throw new Error('R813 publisher disappeared before candidate promotion');
+  }
+
+  try{
+    await writeVideoBootstrapR813(videoSink,bootstrapR813.buffer,2200);
+    promoteNormalVideoFeederR801(candidate,videoSink);
+    candidate.stdout.resume();
+  }catch(error){
+    stationHandoffActiveR804=false;
+    await retireOffLiveCandidateR813(candidate);
+    throw error;
+  }
+
+  stationHandoffActiveR804=false;
+  state.videoHandoffMode='R813-CLEAN-IDR-MAKE-BEFORE-BREAK';
+  state.lastWarning='';
+  state.lastError='';
+  state.r813CleanHandoffCount=Number(state.r813CleanHandoffCount||0)+1;
+  state.lastR813HandoffAt=new Date().toISOString();
+  state.lastR813Handoff={
+    oldPid:Number(old.pid||0),
+    candidatePid:Number(candidate.pid||0),
+    bootstrapBytes:Number(bootstrapR813.bytes||0),
+    readyMs:Date.now()-startedAtR813,
+    oldDrain:Boolean(oldDrainR813)
+  };
+  diagRecordR802('r813-handoff-complete',{
+    oldPid:Number(old.pid||0),
+    candidatePid:Number(candidate.pid||0),
+    bootstrapBytes:Number(bootstrapR813.bytes||0),
+    totalMs:Date.now()-startedAtR813,
+    oldDrain:Boolean(oldDrainR813)
+  });
   return true;
 }
 
@@ -3005,12 +3229,12 @@ async function playVideoClipR691(previous,item,next){
     // had no live video during that wait -> YouTube spinner/NODATA and the insert could be
     // skipped. Normal full clips keep the proven R767 early-detach path because they are
     // already stable. Station inserts arm behind the existing end-of-song BLACK frame.
-    if(!stationInsert){
-      detachNormalVideoAtBoundaryR752();
-      state.videoHandoffMode='R767-BLACK-PRE-DRAIN-BEFORE-CLIP-ARM';
-    }else{
-      state.videoHandoffMode='R792-STATION-ARM-BEHIND-LIVE-BLACK-NO-H264-GAP';
-    }
+    // R813: ALL inserts (not only station IDs) arm behind the still-live BLACK
+    // normal feeder. The old R767 normal-clip path detached first and could create
+    // the same 2–3 s zero-H264 hole that the R749 watchdog later reported.
+    state.videoHandoffMode=stationInsert
+      ? 'R813-STATION-ARM-BEHIND-LIVE-BLACK'
+      : 'R813-CLIP-ARM-BEHIND-LIVE-BLACK';
     child=spawn('ffmpeg',clipPreparedFeederArgsR742(readyPath,{hasAudio:true,duration,showPreview:!stationInsert}),{stdio:['ignore','pipe','pipe','pipe','pipe']});
     child.__r752UnifiedAV=true;
     child.__r752Live=false;
@@ -3060,14 +3284,16 @@ async function playVideoClipR691(previous,item,next){
     // cleanly stop the old normal encoder while it is STILL piped, wait for stdout EOF
     // (complete final access unit), drain the master's stdin, and only then attach the
     // already-ready station writer. Never SIGTERM/unpipe a live H264 writer mid-NAL.
-    if(stationInsert){
-      stationHandoffActiveR804=true;
-      state.videoHandoffMode='R804-STATION-ARMED-CLEAN-OLD-AU-SINGLE-WRITER';
-      const cleanCut=await detachNormalVideoForStationR804(videoSink,audioSink);
-      if(!cleanCut)throw new Error('R804 station clean H264 cut failed; insert kept OFF-LIVE');
-      if(stopping || child.exitCode!==null || child.signalCode!==null)throw new Error('R804 station child exited during clean writer cut');
-      if(!publisher || publisher.exitCode!==null || videoSink.destroyed || audioSink.destroyed)throw new Error('R804 master unavailable after clean writer cut');
-    }
+    // R813: station IDs AND normal clips use the proven R804 clean-AU single-writer
+    // cut only AFTER their unified A/V child is ready. No insert may detach H264 first.
+    stationHandoffActiveR804=true;
+    state.videoHandoffMode=stationInsert
+      ? 'R813-STATION-READY-CLEAN-OLD-AU'
+      : 'R813-CLIP-READY-CLEAN-OLD-AU';
+    const cleanCut=await detachNormalVideoForStationR804(videoSink,audioSink);
+    if(!cleanCut)throw new Error('R813 insert clean H264 cut failed; insert kept OFF-LIVE');
+    if(stopping || child.exitCode!==null || child.signalCode!==null)throw new Error('R813 insert child exited during clean writer cut');
+    if(!publisher || publisher.exitCode!==null || videoSink.destroyed || audioSink.destroyed)throw new Error('R813 master unavailable after clean writer cut');
 
     // REAL media boundary. Nothing from the insert touched LIVE before this point.
     clipActive=true;
@@ -3088,7 +3314,7 @@ async function playVideoClipR691(previous,item,next){
       diagRecordR802('station-r804-new-writer-attached',{title:item.title||'VIDEO',childPid:Number(child.pid||0),videoSinkBytes:Number(videoSink.writableLength||0),audioSinkBytes:Number(audioSink.writableLength||0)});
     }
     diagRecordR802(stationInsert?'station-live-connected':'clip-live-connected',{title:item.title||'VIDEO',childPid:Number(child.pid||0)});
-    state.videoHandoffMode=stationInsert?'R804-STATION-SINGLE-WRITER-CLEAN-AU-LIVE':'R752-BOUNDARY-LOCKED-UNIFIED-AV-LIVE';
+    state.videoHandoffMode=stationInsert?'R813-STATION-CLEAN-AU-LIVE':'R813-CLIP-CLEAN-AU-LIVE';
 
     // No next-picture LIVE preroll. Warm only file metadata/cache for a following video.
     if(next && next.type!=='track'){
@@ -3326,10 +3552,38 @@ async function playItem(previous,item,next,following,localAudioPath,nextTrackPre
   // The old MP3 feeder owns the transition: start 1.0 s earlier than R762, 0.65 s darken,
   // 0.05 s black hold, then a clearly visible 0.80 s recovery. Do NOT add a second fade-in on the next MP3.
   // Only MP3→real-video keeps R757's black hold through the boundary.
-  const endFadeToBlackR760=Boolean(actualNextR736 && isVideoHandoffR738(actualNextR736));
-  diagRecordR802('mp3-r806-boundary-fade-armed',{track:shortText(item.title||'TRACK',52),duration:Number(duration.toFixed(3)),nextType:String(actualNextR736?.type||actualNextR736?.sourceType||''),fadeOut:VIDEO_FADE_SECONDS_R726,blackHold:VIDEO_BLACK_HOLD_SECONDS_R736,fadeIn:endFadeToBlackR760?0:VIDEO_FADE_IN_SECONDS_R736,lead:VIDEO_FADE_LEAD_SECONDS_R735});
+  // R809/R813: every MP3→MP3 boundary is split across two clean encoders:
+  // OLD feeder fades TO BLACK; NEW clean-IDR feeder fades FROM BLACK.
+  const mp3ToMp3BoundaryR809=Boolean(actualNextR736 && actualNextR736.type==='track');
+  const endFadeToBlackR760=Boolean(actualNextR736 && (isVideoHandoffR738(actualNextR736)||mp3ToMp3BoundaryR809));
+  const mp3FromMp3R809=Boolean(previous && String(previous.type||'track')==='track' && !clipToTrackBoundaryR753);
+  state.mp3BoundaryFadeMode=mp3ToMp3BoundaryR809
+    ? 'R813-R809-OLD-TO-BLACK+NEW-CLEAN-IDR-FROM-BLACK'
+    : (endFadeToBlackR760?'R813-TO-VIDEO-BLACK':'R806-IN-FEEDER-FADE');
+  diagRecordR802('mp3-r813-boundary-fade-armed',{
+    track:shortText(item.title||'TRACK',52),
+    duration:Number(duration.toFixed(3)),
+    nextType:String(actualNextR736?.type||actualNextR736?.sourceType||''),
+    fadeOut:VIDEO_FADE_SECONDS_R726,
+    blackHold:VIDEO_BLACK_HOLD_SECONDS_R736,
+    nextFadeIn:(mp3ToMp3BoundaryR809||clipToTrackBoundaryR753)?VIDEO_FADE_IN_SECONDS_R736:0,
+    lead:mp3ToMp3BoundaryR809?0.10:VIDEO_FADE_LEAD_SECONDS_R735,
+    mode:state.mp3BoundaryFadeMode
+  });
   if(!currentVideoPrerolledR744){
-    await ensureNormalVideoFeederR721({force:true,fadeIn:clipToTrackBoundaryR753,endFadeToBlack:endFadeToBlackR760,trackDuration:duration,previewReload:false,boundaryTitleSwitchAt:boundaryTitleSwitchAtR790});
+    const feederChangedR813=await ensureNormalVideoFeederR721({
+      force:true,
+      fadeIn:(clipToTrackBoundaryR753||mp3FromMp3R809),
+      endFadeToBlack:endFadeToBlackR760,
+      trackDuration:duration,
+      previewReload:false,
+      boundaryTitleSwitchAt:boundaryTitleSwitchAtR790
+    });
+    if(feederChangedR813===false && videoFeeder && videoFeeder.exitCode===null){
+      // Candidate failed BEFORE old was touched. Keep the proven old black/live feeder
+      // rather than creating a zero-H264 hole. Audio may continue; watchdog stays fed.
+      state.lastWarning=state.lastWarning||'R813 candidate not promoted; previous video feeder kept LIVE';
+    }
     videoFeederTrackIdentityR744=currentIdentityR744;
     videoFeederPrerolledR744=false;
   }
@@ -3570,13 +3824,13 @@ function publicStatus(){
     mode:state.mode,
     overlayMode:state.overlayMode,
     audioMode:state.audioMode,
-    engine:'R793 PREFETCH LOUDNESS HARD-OFF + R792 STATION NO-GAP/DUAL RTMPS + R791 AUDIO PTS0 + R790 CLOCK/TITLE + R787 NOCROP',
+    engine:'R813 CLEAN-IDR MAKE-BEFORE-BREAK + R809 SPLIT FADE + R808 INPUT SHIELD + R806 SANITIZER + R804 CLEAN-AU + R792 DUAL RTMPS',
     feederFilterChainGuard:'R769-SEMICOLON-ENDMASK-TO-STARTMASK',
     committedNextCheckpointFile:COMMITTED_NEXT_FILE_R769,
     committedNextTitle:state.committedNextTitle||'',
     committedNextRecovered:Boolean(state.committedNextRecovered),
     committedNextCommittedAt:state.committedNextCommittedAt||null,
-    videoPipeline:'R790 IMMUTABLE R787 FIT+PAD -> SINGLE-X264 -> RAW H264 -> ONE PERSISTENT 25FPS GENPTS MASTER -> H264 COPY',
+    videoPipeline:'R813 CLEAN-IDR SPS/PPS+IDR BOOTSTRAP -> RAW H264 -> ONE PERSISTENT 25FPS GENPTS MASTER -> H264 COPY',
     outputTimeshiftSeconds:OUTPUT_TIMESHIFT_SECONDS,
     youtubeDualIngestEnabled:Boolean(DUAL_INGEST_ENABLED_R792),
     youtubeBackupIngestArmed:Boolean(DUAL_INGEST_ENABLED_R792 && STREAM_BACKUP_URL),
@@ -3595,6 +3849,12 @@ function publicStatus(){
     audioSampleRate:AUDIO_SAMPLE_RATE,
     videoFps:VIDEO_FPS,
     videoGop:VIDEO_GOP,
+    streamProfileR813:{
+      video:{codec:'H.264 / AVC',encoder:'libx264',profile:'High 4.1',width:1920,height:1080,fps:VIDEO_FPS,bitrate:VIDEO_BITRATE,gopFrames:VIDEO_GOP,bFrames:0,pixelFormat:'yuv420p'},
+      audio:{codec:'AAC-LC',sampleRate:AUDIO_SAMPLE_RATE,channels:2,channelLayout:'stereo',bitrate:AUDIO_BITRATE},
+      transport:{container:'FLV',protocol:'RTMPS',lanes:Number(state.rtmpsEstablishedConnectionsR792||0),expectedLanes:DUAL_INGEST_ENABLED_R792?2:1,dualIngest:Boolean(DUAL_INGEST_ENABLED_R792)},
+      handoff:{mode:state.videoHandoffMode||'R813-CLEAN-IDR-MAKE-BEFORE-BREAK',cleanCount:Number(state.r813CleanHandoffCount||0),lastAt:state.lastR813HandoffAt||null,last:state.lastR813Handoff||null}
+    },
     qrOverlay:QR_OVERLAY,
     subscribeLikeOverlay:CTA_OVERLAY_R767,
     likeOverlay:CTA_LIKE_OVERLAY_R783,
