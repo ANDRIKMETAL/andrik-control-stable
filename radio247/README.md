@@ -127,3 +127,6 @@ curl -fsSL https://raw.githubusercontent.com/ANDRIKMETAL/andrik-control-stable/m
 
 ## R803 diagnostics
 R803 updates only the OVH web/control diagnostic agent. It does not restart `andrik-radio.service`. The public sanitized diagnostic endpoint is `/api/public/radio-diagnostics-r803`; `/api/public/radio-diagnostics-r802` remains compatible.
+
+## R803B diagnostics installer fix
+Production OVH uses `andrik-radio-web-control.service` and `/usr/local/sbin/andrik-radio-web`. Use `vm-lite/install-r803b-diagnostics-web-control-no-radio-restart.sh`; it restarts only the web-control agent and proves the radio MainPID is unchanged.
