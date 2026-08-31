@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788147329613-7b171868c0",
-  "release": "R802",
-  "archiveName": "R802-STATION-CORRUPTION-SELFHEAL-DURABLE-DIAG-R801-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "9cc16de5fbf074b94037fd37cae9c5e4816bfbe7",
-  "backupSha": "9cc16de5fbf074b94037fd37cae9c5e4816bfbe7",
+  "operationId": "publish-1788149611418-1d122a8e3d",
+  "release": "R803",
+  "archiveName": "R803-DIAGNOSTICS-SINGLE-AGENT-NO-RADIO-RESTART-R802-R801-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "6cc2918951fc205a2373bc79113ebddba50bc9bb",
+  "backupSha": "6cc2918951fc205a2373bc79113ebddba50bc9bb",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-31T03:35:29.986Z"
+  "generatedAt": "2026-08-31T04:13:31.842Z"
 }

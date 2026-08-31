@@ -123,3 +123,7 @@ After deploying the R794 full ZIP:
 ```bash
 curl -fsSL https://raw.githubusercontent.com/ANDRIKMETAL/andrik-control-stable/main/radio247/vm-lite/install-r794-cpu-headroom-fade-opt-r793-preserved.sh | sudo env ANDRIK_SITE_BASE=https://raw.githubusercontent.com/ANDRIKMETAL/andrik-control-stable/main bash
 ```
+
+
+## R803 diagnostics
+R803 updates only the OVH web/control diagnostic agent. It does not restart `andrik-radio.service`. The public sanitized diagnostic endpoint is `/api/public/radio-diagnostics-r803`; `/api/public/radio-diagnostics-r802` remains compatible.

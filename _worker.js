@@ -19116,7 +19116,7 @@ async function handlePublicRadioDiagnosticsR802(request,env){
   const row=await getPushState(db,RADIO_REMOTE_R627.agentKey).catch(()=>null);
   const agent=parseStateValueR627(row)||{};
   const status=agent.status&&typeof agent.status==='object'?agent.status:{};
-  const diag=status.diagnosticsR802&&typeof status.diagnosticsR802==='object'?status.diagnosticsR802:{};
+  const diag=(status.diagnosticsR803&&typeof status.diagnosticsR803==='object')?status.diagnosticsR803:((status.diagnosticsR802&&typeof status.diagnosticsR802==='object')?status.diagnosticsR802:{});
   const lastSeenMs=Date.parse(agent.lastSeen||'')||0;
   return json({
     ok:true,
@@ -19130,8 +19130,14 @@ async function handlePublicRadioDiagnosticsR802(request,env){
     current:cleanPlainText(status.current||'',120),next:cleanPlainText(status.next||'',120),
     lastError:cleanPlainText(status.lastError||'',700),
     lastFfmpegLine:cleanPlainText(status.lastFfmpegLine||'',1000),
+    diagnosticsR803:{
+      version:cleanPlainText(diag.version||'R803',20),
+      lastEventAt:diag.lastEventAt||null,
+      latest:diag.latest||null,
+      events:Array.isArray(diag.events)?diag.events.slice(-30):[]
+    },
     diagnosticsR802:{
-      version:cleanPlainText(diag.version||'R802',20),
+      version:cleanPlainText(diag.version||'R803',20),
       lastEventAt:diag.lastEventAt||null,
       latest:diag.latest||null,
       events:Array.isArray(diag.events)?diag.events.slice(-30):[]
@@ -19186,7 +19192,11 @@ async function handleRadioAgentPollR627(request,env){
   const incomingAgentNumberR728=radioAgentVersionNumberR728(incomingVersion);
   // R728: once the persistent R721+ agent has checked in, legacy R658/R715 daemons
   // are not allowed to overwrite the displayed agent version or steal queued commands.
-  const staleLegacyAgentR728=currentAgentNumberR728>=721 && incomingAgentNumberR728>0 && incomingAgentNumberR728<721;
+  const currentAgentFreshR803=Number.isFinite(previousLastSeenMs)&&nowMs-previousLastSeenMs<90000;
+  // R803: once a fresh newer agent has checked in, any lower-version duplicate service
+  // is ignored. This prevents the historical R721 twin daemon from overwriting R803.
+  // If the newer agent goes stale for >90s, a lower agent may take over as emergency fallback.
+  const staleLegacyAgentR728=currentAgentFreshR803 && currentAgentNumberR728>=721 && incomingAgentNumberR728>0 && incomingAgentNumberR728<currentAgentNumberR728;
   if(staleLegacyAgentR728){
     const tickerRow=await getPushState(db,RADIO_REMOTE_R627.tickerKey).catch(()=>null);
     return json({ok:true,command:null,ticker:parseStateValueR627(tickerRow)||null,ignoredLegacyAgent:true,activeVersion:agent.version||null});
@@ -19307,6 +19317,7 @@ async function routeApi(request, env, ctx) {
     if (path === '/api/push/retry-latest' && request.method === 'POST') return await handleRetryLatestPush(request, env);
     if (path === '/api/push/diagnostic-log' && request.method === 'GET') return await handlePushDiagnosticLog(request, env);
     if (path === '/api/push/history' && request.method === 'GET') return await handlePushHistory(request, env);
+    if (path === '/api/public/radio-diagnostics-r803' && request.method === 'GET') return await handlePublicRadioDiagnosticsR802(request, env);
     if (path === '/api/public/radio-diagnostics-r802' && request.method === 'GET') return await handlePublicRadioDiagnosticsR802(request, env);
     if (path === '/api/public/youtube-like-glow' && request.method === 'GET') return await handlePublicYoutubeLikeGlow(request, env);
     if (path === '/api/public/youtube-latest' && request.method === 'GET') return await handlePublicYoutubeLatest(request, env);
