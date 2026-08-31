@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788183697213-76cd686cbc",
-  "release": "R817",
-  "archiveName": "R817-RAWVIDEO-SAR1-DAR16X9-FULLFRAME-R816-R814-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "3024905983156425eae44f786fff6b4586d3842a",
-  "backupSha": "3024905983156425eae44f786fff6b4586d3842a",
+  "operationId": "publish-1788185680518-f4055f1c3b",
+  "release": "R818",
+  "archiveName": "R818-RAWVIDEO-QUEUE24-STRETCH-FULLFRAME-R817-R816-R814-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "0f9c4135a4051ecab3ba51f46d9c84695580db72",
+  "backupSha": "0f9c4135a4051ecab3ba51f46d9c84695580db72",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-31T13:41:37.789Z"
+  "generatedAt": "2026-08-31T14:14:41.018Z"
 }
