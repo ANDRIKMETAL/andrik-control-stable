@@ -71,7 +71,7 @@
       card.innerHTML=`
         <div class="r813-diag-head">
           <h2>🧾 Журнал эфира</h2>
-          <span class="r813-diag-badge" id="r813DiagBadge">R813 · ждём данные</span>
+          <span class="r813-diag-badge" id="r813DiagBadge">R815 · ждём данные</span>
         </div>
         <div class="r813-diag-summary" id="r813DiagSummary">Загружаю последние ошибки и handoff-события…</div>
         <pre class="r813-diag-log" id="r813DiagLog">Загружаю…</pre>
@@ -106,7 +106,7 @@
   }
 
   function renderProfile(s){
-    const p=s?.streamProfileR813||{};
+    const p=s?.streamProfileR815||s?.streamProfileR814||s?.streamProfileR813||{};
     const v=p.video||{};
     const a=p.audio||{};
     const tr=p.transport||{};
@@ -145,13 +145,13 @@
 
   function buildText(data){
     const s=data?.agent?.status||{};
-    const diag=s.diagnosticsR813||s.diagnosticsR803||s.diagnosticsR802||{};
+    const diag=s.diagnosticsR815||s.diagnosticsR814||s.diagnosticsR813||s.diagnosticsR803||s.diagnosticsR802||{};
     const events=(Array.isArray(diag.events)?diag.events:[])
       .filter(e=>!hiddenBefore || Date.parse(e?.at||0)>=hiddenBefore)
       .slice(-30);
-    const p=s.streamProfileR813||{};
+    const p=s.streamProfileR815||s.streamProfileR814||s.streamProfileR813||{};
     const hdr=[
-      'ANDRIK RADIO R813 DIAGNOSTIC COPY',
+      'ANDRIK RADIO R815 DIAGNOSTIC COPY',
       `captured: ${new Date().toISOString()}`,
       `agent: ${txt(data?.agent?.version)||'—'} · radio: ${txt(s.version)||'—'}`,
       `service: ${txt(s.service)||'—'} · producer=${Boolean(s.producer)} · publisher=${Boolean(s.publisher)} · videoFeeder=${Boolean(s.videoFeederRunning)} · clip=${Boolean(s.clipActive)}`,
@@ -171,7 +171,7 @@
 
   function renderDiagnostics(data){
     const s=data?.agent?.status||{};
-    const diag=s.diagnosticsR813||s.diagnosticsR803||s.diagnosticsR802||{};
+    const diag=s.diagnosticsR815||s.diagnosticsR814||s.diagnosticsR813||s.diagnosticsR803||s.diagnosticsR802||{};
     const events=(Array.isArray(diag.events)?diag.events:[])
       .filter(e=>!hiddenBefore || Date.parse(e?.at||0)>=hiddenBefore)
       .slice(-30);
@@ -179,7 +179,7 @@
     const rt=n(s.rtmpsEstablishedConnectionsR792), exp=n(s.rtmpsExpectedConnectionsR792)||2;
     const badge=document.getElementById('r813DiagBadge');
     if(badge){
-      badge.textContent=`R813 · ${events.length} событий`;
+      badge.textContent=`R815 · ${events.length} событий`;
       badge.className='r813-diag-badge '+(s.transportHealthy!==false&&rt>0?'r813-ok':'r813-bad');
     }
     const summary=document.getElementById('r813DiagSummary');
@@ -215,7 +215,7 @@
   async function refresh(manual=false){
     ensureUi();
     const badge=document.getElementById('r813DiagBadge');
-    if(manual&&badge)badge.textContent='R813 · обновляю…';
+    if(manual&&badge)badge.textContent='R815 · обновляю…';
     try{
       const r=await fetch(API,{credentials:'include',cache:'no-store',headers:{accept:'application/json','cache-control':'no-cache'}});
       const d=await r.json().catch(()=>({}));
@@ -224,7 +224,7 @@
       renderProfile(s);
       renderDiagnostics(d);
     }catch(error){
-      if(badge){badge.textContent='R813 · нет данных';badge.className='r813-diag-badge r813-bad'}
+      if(badge){badge.textContent='R815 · нет данных';badge.className='r813-diag-badge r813-bad'}
       const log=document.getElementById('r813DiagLog');
       if(log)log.textContent=`Диагностика недоступна: ${error?.message||error}`;
     }

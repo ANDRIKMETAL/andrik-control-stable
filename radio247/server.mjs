@@ -98,9 +98,10 @@ const TRACK_AUDIO_FADE_OUT_R726 = 1.25; // R743: clearly audible but short old-t
 const VIDEO_FADE_SECONDS_R726 = 0.65; // R736: short cinematic fade-out on the OLD track
 const VIDEO_FADE_IN_SECONDS_R736 = 0.80; // R763: viewer-visible recovery for non-MP3 boundaries
 const VIDEO_BLACK_HOLD_SECONDS_R736 = 0.05; // non-MP3 boundary hold preserved
-const MP3_BOUNDARY_FADE_OUT_SECONDS_R814 = 1.10; // R814: MP3→MP3 only
-const MP3_BOUNDARY_BLACK_HOLD_SECONDS_R814 = 0.20; // R814: MP3→MP3 only
-const MP3_BOUNDARY_FADE_IN_SECONDS_R814 = 1.15; // R814: MP3→MP3 only
+const MP3_BOUNDARY_FADE_OUT_SECONDS_R815 = 1.35; // R815: visible cinematic MP3→MP3 darken
+const MP3_BOUNDARY_BLACK_HOLD_SECONDS_R815 = 0.25; // R815: unmistakable black boundary without long silence
+const MP3_BOUNDARY_FADE_IN_SECONDS_R815 = 1.35; // R815: smooth recovery on the new verified feeder
+const MP3_AU_GATE_TIMEOUT_MS_R815 = 1400; // at 25fps an AUD normally arrives within ~40ms; generous live guard
 const VIDEO_FADE_LEAD_SECONDS_R735 = 1.40; // R763: start the proven R753 boundary darkening exactly 1.0s earlier than R762
 const TITLE_SWITCH_BEFORE_BOUNDARY_R781 = Math.max(0.50,Math.min(2.50,Number(process.env.TITLE_SWITCH_BEFORE_BOUNDARY_R781 || (VIDEO_FADE_LEAD_SECONDS_R735 + VIDEO_BLACK_HOLD_SECONDS_R736/2)))); // R781: switch CURRENT to the next MP3 while the screen is black, before recovery
 const TITLE_VISUAL_LEAD_SECONDS_R738 = 3.20; // compensate persistent video path latency; CURRENT is preloaded early but appears at the real handoff
@@ -192,9 +193,9 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R814-QUEUED-H264-NONFATAL-HANDOFF-CLIP-LOCK-LONG-FADE-R813-PRESERVED',
+  version: 'R815-AU-GATED-H264-TITLE-PREVIEW-SYNC-R814-PRESERVED',
   cpuHeadroomProfileR794:'R796-LIVE-FAST-SCALE-COMPACT-EQ-FINITE-FADE-PRESCALED-STATIC',
-  mode: 'R814 NONFATAL QUEUED-H264 / CLIP RETRY LOCK / R813+R809+R808+R804 PRESERVED',
+  mode: 'R815 AU-GATED H264 / TITLE+PREVIEW SYNC / R814+R813+R809 PRESERVED',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
@@ -203,7 +204,7 @@ const state = {
   audioMode: 'R793 NO BACKGROUND/PREFETCH LOUDNESS + LIVE FALLBACK + AUDIO QUEUE 8 / SAME MASTER A/V TO PRIMARY+BACKUP RTMPS',
   mp3ToVideoFadeMode: 'R757-END-BLACK-HOLD-THEN-VIDEO-FADE-IN',
   clipPreviewMode: 'R757-NORMAL-CLIPS-PREVNEXT-INTRO-2-7S-PLUS-FINAL-10S',
-  mp3BoundaryFadeMode: 'R814-R809-SPLIT-BLACK-ALPHA-1.10-HOLD-0.20-RECOVER-1.15',
+  mp3BoundaryFadeMode: 'R815-R809-AU-GATED-1.35-HOLD-0.25-RECOVER-1.35',
   visualTimeZone: VISUAL_TIME_ZONE,
   visualPeriod: null,
   visualPath: null,
@@ -2134,9 +2135,9 @@ function normalVideoFilterComplexR721({fadeIn=false,fadeInSeconds=CLIP_TO_TRACK_
     // the real boundary; the new R813 candidate starts FROM BLACK.
     const splitMp3BoundaryR809=Boolean(endFadeToBlack && Number(boundaryTitleSwitchAt)>0);
     const fadeLeadR809=splitMp3BoundaryR809?0.10:VIDEO_FADE_LEAD_SECONDS_R735;
-    const fadeOutR814=splitMp3BoundaryR809?MP3_BOUNDARY_FADE_OUT_SECONDS_R814:VIDEO_FADE_SECONDS_R726;
-    const blackHoldR814=splitMp3BoundaryR809?MP3_BOUNDARY_BLACK_HOLD_SECONDS_R814:VIDEO_BLACK_HOLD_SECONDS_R736;
-    const recoverInR814=splitMp3BoundaryR809?MP3_BOUNDARY_FADE_IN_SECONDS_R814:VIDEO_FADE_IN_SECONDS_R736;
+    const fadeOutR814=splitMp3BoundaryR809?MP3_BOUNDARY_FADE_OUT_SECONDS_R815:VIDEO_FADE_SECONDS_R726;
+    const blackHoldR814=splitMp3BoundaryR809?MP3_BOUNDARY_BLACK_HOLD_SECONDS_R815:VIDEO_BLACK_HOLD_SECONDS_R736;
+    const recoverInR814=splitMp3BoundaryR809?MP3_BOUNDARY_FADE_IN_SECONDS_R815:VIDEO_FADE_IN_SECONDS_R736;
     const outAt=Math.max(0,Number(trackDuration)-fadeOutR814-blackHoldR814-fadeLeadR809);
     const recoverAt=outAt+fadeOutR814+blackHoldR814;
     maskChain=endFadeToBlack
@@ -2720,6 +2721,115 @@ function startNormalVideoFeederR721(visualPath,{fadeIn=false,fadeInSeconds=CLIP_
   return true;
 }
 
+// R815: cut the OLD Annex-B stream only at the next AUD boundary.  The old
+// feeder stays LIVE until bytes up to the end of its current access unit have been
+// forwarded.  Then the clean SPS/PPS/IDR candidate is appended.  The old child is
+// retired OFF-LIVE, so a slow/stubborn FFmpeg can never leave the previous title or
+// previous PREVIOUS/NEXT timeline on screen and can never truncate a NAL in the master.
+function findAudStartR815(buffer){
+  const b=Buffer.isBuffer(buffer)?buffer:Buffer.from(buffer||[]);
+  for(let i=0;i+4<b.length;i++){
+    if(b[i]!==0||b[i+1]!==0)continue;
+    if(b[i+2]===1){
+      const n=i+3;
+      if(n<b.length && (b[n]&31)===9)return i;
+    }else if(i+5<b.length && b[i+2]===0 && b[i+3]===1){
+      const n=i+4;
+      if(n<b.length && (b[n]&31)===9)return i;
+    }
+  }
+  return -1;
+}
+
+function writeOrderedR815(sink,buffer){
+  if(!buffer||!buffer.length)return {queued:true,backpressure:false,bytes:0};
+  if(!sink||sink.destroyed||sink.writableEnded)throw new Error('R815 video sink unavailable');
+  const accepted=sink.write(buffer);
+  return {queued:true,backpressure:!accepted,bytes:Number(buffer.length||0),sinkBytes:Number(sink.writableLength||0)};
+}
+
+function cutOldAtNextAudR815(old,videoSink,timeoutMs=MP3_AU_GATE_TIMEOUT_MS_R815){
+  return new Promise(resolve=>{
+    const stream=old?.stdout;
+    if(!stream || stream.destroyed || stream.readableEnded)return resolve({ok:true,bytes:0,reason:'already-closed'});
+    let done=false;
+    let pending=Buffer.alloc(0);
+    let total=0;
+    let timer=null;
+    const cleanup=()=>{
+      if(timer)clearTimeout(timer);
+      stream.off('data',onData);
+      stream.off('end',onEnd);
+      stream.off('close',onClose);
+      stream.off('error',onError);
+    };
+    const finish=(value)=>{
+      if(done)return;
+      done=true;
+      cleanup();
+      resolve(value);
+    };
+    const restoreOld=reason=>{
+      try{
+        if(pending.length)writeOrderedR815(videoSink,pending);
+        pending=Buffer.alloc(0);
+        if(!stream.destroyed&&!stream.readableEnded)stream.pipe(videoSink,{end:false});
+        stream.resume();
+      }catch(error){
+        return finish({ok:false,reason:`${reason}; restore=${cleanText(error?.message||error)}`,bytes:total});
+      }
+      finish({ok:false,reason,bytes:total});
+    };
+    const onData=chunk=>{
+      if(done)return;
+      const c=Buffer.isBuffer(chunk)?chunk:Buffer.from(chunk||[]);
+      if(!c.length)return;
+      pending=Buffer.concat([pending,c],pending.length+c.length);
+      total+=c.length;
+      const cut=findAudStartR815(pending);
+      if(cut>=0){
+        try{
+          const before=pending.subarray(0,cut);
+          if(before.length)writeOrderedR815(videoSink,before);
+          pending=Buffer.alloc(0);
+          stream.pause();
+          finish({ok:true,bytes:total,beforeBytes:before.length,reason:'next-AUD'});
+        }catch(error){
+          restoreOld(`write-before-AUD: ${cleanText(error?.message||error)}`);
+        }
+      }else if(pending.length>2*1024*1024){
+        restoreOld('AUD gate exceeded 2MiB without boundary');
+      }
+    };
+    const onEnd=()=>{
+      try{if(pending.length)writeOrderedR815(videoSink,pending);}catch(_){ }
+      finish({ok:true,bytes:total,reason:'stdout-end'});
+    };
+    const onClose=()=>onEnd();
+    const onError=error=>restoreOld(`old stdout error: ${cleanText(error?.message||error)}`);
+    try{stream.unpipe(videoSink);}catch(_){ }
+    stream.on('data',onData);
+    stream.once('end',onEnd);
+    stream.once('close',onClose);
+    stream.once('error',onError);
+    timer=setTimeout(()=>restoreOld(`AUD gate timeout ${timeoutMs}ms`),timeoutMs);
+    timer.unref?.();
+    stream.resume();
+  });
+}
+
+async function retireOldOffLiveR815(old){
+  if(!old||old.exitCode!==null)return;
+  try{old.kill('SIGINT')}catch(_){ }
+  if(await waitChildExit(old,700).catch(()=>false))return;
+  try{old.kill('SIGTERM')}catch(_){ }
+  if(await waitChildExit(old,700).catch(()=>false))return;
+  // It is already detached from LIVE at a complete AU boundary; hard kill cannot
+  // truncate the broadcast because stdout no longer owns videoSink.
+  try{old.kill('SIGKILL')}catch(_){ }
+  await waitChildExit(old,350).catch(()=>false);
+}
+
 async function atomicReplaceNormalVideoFeederR801(visualPath,{fadeIn=false,fadeInSeconds=CLIP_TO_TRACK_FADE_IN_SECONDS_R753,endFadeToBlack=false,trackDuration=0,visualOffsetSeconds=0,previewReload=false,boundaryTitleSwitchAt=0}={}){
   const old=videoFeeder;
   if(!old || old.exitCode!==null){
@@ -2772,64 +2882,37 @@ async function atomicReplaceNormalVideoFeederR801(visualPath,{fadeIn=false,fadeI
     return false;
   }
 
-  // R813 MAKE-BEFORE-BREAK:
-  // 1) clean IDR candidate is fully buffered and PAUSED;
-  // 2) old writer remains LIVE while it finishes its final complete AU;
-  // 3) generic exit handler is forbidden to unpipe the old stdout;
-  // 4) only after stdout EOF do we detach old bytes and append the clean candidate bootstrap.
+  // R815 AU-GATED MAKE-BEFORE-BREAK:
+  // Candidate is already buffered and PAUSED.  Do NOT ask the old FFmpeg to exit
+  // while it still owns LIVE.  Instead, detach pipe ownership and forward the tail
+  // only until the next AUD start.  This ends LIVE exactly on a complete old AU.
   old.__r813CleanHandoff=true;
-  // Reuse the proven R804 handoff guard so R749 cannot race this intentional
-  // sub-second MP3 writer swap and spawn a third feeder.
+  old.__r815AuGate=true;
   stationHandoffActiveR804=true;
-  diagRecordR802('r813-old-clean-stop-start',{
-    oldPid:Number(old.pid||0),
-    candidatePid:Number(candidate.pid||0),
-    sinkBytes:Number(videoSink.writableLength||0)
+  diagRecordR802('r815-au-gate-start',{
+    oldPid:Number(old.pid||0),candidatePid:Number(candidate.pid||0),sinkBytes:Number(videoSink.writableLength||0)
   });
 
-  const oldStdoutClosedPromiseR813=waitReadableClosedR813(old.stdout,5000);
-  if(old.exitCode===null && old.signalCode===null){
-    try{old.kill('SIGINT')}catch(_){ }
-  }
-  const oldExitedR813=await waitChildExit(old,5000);
-  const oldStdoutClosedR813=await oldStdoutClosedPromiseR813;
-
-  if(!oldExitedR813 || !oldStdoutClosedR813){
-    // R814 NONFATAL rule: an MP3 visual handoff is never allowed to restart the radio
-    // service. The candidate has not touched LIVE yet, so retire only that candidate.
-    // If the old writer is still alive, give ownership back to the generic R806 recovery;
-    // if it exits a moment later, R806 starts a fresh normal feeder without killing RTMPS.
+  const gateR815=await cutOldAtNextAudR815(old,videoSink,MP3_AU_GATE_TIMEOUT_MS_R815);
+  if(!gateR815?.ok){
     await retireOffLiveCandidateR813(candidate);
     old.__r813CleanHandoff=false;
+    old.__r815AuGate=false;
     stationHandoffActiveR804=false;
-    state.lastWarning=`R814 clean old-H264 close delayed: exited=${oldExitedR813} stdoutClosed=${oldStdoutClosedR813}; service preserved`;
-    diagRecordR802('r814-old-clean-stop-nonfatal',{
-      oldPid:Number(old.pid||0),
-      candidatePid:Number(candidate.pid||0),
-      oldExited:Boolean(oldExitedR813),
-      stdoutClosed:Boolean(oldStdoutClosedR813),
-      rtmps:Number(state.rtmpsEstablishedConnectionsR792||0)
+    state.lastWarning=`R815 AU gate deferred swap; OLD feeder kept LIVE: ${shortText(gateR815?.reason||'unknown',180)}`;
+    diagRecordR802('r815-au-gate-deferred',{
+      oldPid:Number(old.pid||0),candidatePid:Number(candidate.pid||0),reason:shortText(gateR815?.reason||'',180),bytes:Number(gateR815?.bytes||0)
     });
-    if(oldExitedR813 && videoFeeder===old){
-      videoFeeder=null;
-      setTimeout(()=>ensureNormalVideoFeederR721({force:true,fadeIn:true,fadeInSeconds:VIDEO_FADE_IN_SECONDS_R736,trackDuration:Number(trackDuration||0),endFadeToBlack:Boolean(endFadeToBlack),boundaryTitleSwitchAt:Number(boundaryTitleSwitchAt||0)}).catch(error=>{state.lastError=`R814 nonfatal visual recovery: ${cleanText(error?.message||error)}`;}),120).unref();
-    }
     return false;
   }
 
-  try{if(old.stdout)old.stdout.unpipe(videoSink)}catch(_){ }
+  // Old stdout is now paused and detached at a COMPLETE AU boundary.  It cannot write
+  // another stale-title frame.  Candidate bootstrap is appended immediately.
   if(videoFeeder===old)videoFeeder=null;
-
-  // Do NOT wait for the master's writable queue to become empty. The old stdout has
-  // already ended on a complete AU, so append the clean candidate bootstrap immediately
-  // behind any queued old bytes. This is true make-before-break at the pipe level:
-  // there is never an intentional "empty input" window for the persistent H264 demuxer.
   const oldDrainR813=Boolean(Number(videoSink.writableLength||0)===0 && !videoSink.writableNeedDrain);
-  diagRecordR802('r813-old-au-closed',{
-    oldPid:Number(old.pid||0),
-    candidatePid:Number(candidate.pid||0),
-    sinkAlreadyEmpty:Boolean(oldDrainR813),
-    sinkBytes:Number(videoSink.writableLength||0)
+  diagRecordR802('r815-old-au-gated',{
+    oldPid:Number(old.pid||0),candidatePid:Number(candidate.pid||0),reason:gateR815.reason,
+    gatedBytes:Number(gateR815.bytes||0),sinkBytes:Number(videoSink.writableLength||0),sinkAlreadyEmpty:Boolean(oldDrainR813)
   });
 
   if(!publisher || publisher.exitCode!==null || videoSink.destroyed || videoSink.writableEnded){
@@ -2843,6 +2926,7 @@ async function atomicReplaceNormalVideoFeederR801(visualPath,{fadeIn=false,fadeI
     diagRecordR802('r814-candidate-promote-after-queued-bootstrap',{candidatePid:Number(candidate.pid||0),backpressure:Boolean(queuedBootstrapR814?.backpressure),sinkBytes:Number(videoSink.writableLength||0)});
     promoteNormalVideoFeederR801(candidate,videoSink);
     candidate.stdout.resume();
+    retireOldOffLiveR815(old).catch(error=>{state.lastWarning=`R815 old off-live retire: ${cleanText(error?.message||error)}`;});
   }catch(error){
     stationHandoffActiveR804=false;
     await retireOffLiveCandidateR813(candidate);
@@ -2850,7 +2934,7 @@ async function atomicReplaceNormalVideoFeederR801(visualPath,{fadeIn=false,fadeI
   }
 
   stationHandoffActiveR804=false;
-  state.videoHandoffMode='R814-CLEAN-IDR-QUEUED-NONFATAL';
+  state.videoHandoffMode='R815-AU-GATED-CLEAN-IDR';
   state.lastWarning='';
   state.lastError='';
   state.r813CleanHandoffCount=Number(state.r813CleanHandoffCount||0)+1;
@@ -2862,7 +2946,7 @@ async function atomicReplaceNormalVideoFeederR801(visualPath,{fadeIn=false,fadeI
     readyMs:Date.now()-startedAtR813,
     oldDrain:Boolean(oldDrainR813)
   };
-  diagRecordR802('r813-handoff-complete',{
+  diagRecordR802('r815-handoff-complete',{
     oldPid:Number(old.pid||0),
     candidatePid:Number(candidate.pid||0),
     bootstrapBytes:Number(bootstrapR813.bytes||0),
@@ -3583,9 +3667,9 @@ async function playItem(previous,item,next,following,localAudioPath,nextTrackPre
     track:shortText(item.title||'TRACK',52),
     duration:Number(duration.toFixed(3)),
     nextType:String(actualNextR736?.type||actualNextR736?.sourceType||''),
-    fadeOut:mp3ToMp3BoundaryR809?MP3_BOUNDARY_FADE_OUT_SECONDS_R814:VIDEO_FADE_SECONDS_R726,
-    blackHold:mp3ToMp3BoundaryR809?MP3_BOUNDARY_BLACK_HOLD_SECONDS_R814:VIDEO_BLACK_HOLD_SECONDS_R736,
-    nextFadeIn:mp3ToMp3BoundaryR809?MP3_BOUNDARY_FADE_IN_SECONDS_R814:(clipToTrackBoundaryR753?CLIP_TO_TRACK_FADE_IN_SECONDS_R753:0),
+    fadeOut:mp3ToMp3BoundaryR809?MP3_BOUNDARY_FADE_OUT_SECONDS_R815:VIDEO_FADE_SECONDS_R726,
+    blackHold:mp3ToMp3BoundaryR809?MP3_BOUNDARY_BLACK_HOLD_SECONDS_R815:VIDEO_BLACK_HOLD_SECONDS_R736,
+    nextFadeIn:mp3ToMp3BoundaryR809?MP3_BOUNDARY_FADE_IN_SECONDS_R815:(clipToTrackBoundaryR753?CLIP_TO_TRACK_FADE_IN_SECONDS_R753:0),
     lead:mp3ToMp3BoundaryR809?0.10:VIDEO_FADE_LEAD_SECONDS_R735,
     mode:state.mp3BoundaryFadeMode
   });
@@ -3593,16 +3677,33 @@ async function playItem(previous,item,next,following,localAudioPath,nextTrackPre
     const feederChangedR813=await ensureNormalVideoFeederR721({
       force:true,
       fadeIn:(clipToTrackBoundaryR753||mp3FromMp3R809),
-      fadeInSeconds:mp3FromMp3R809?MP3_BOUNDARY_FADE_IN_SECONDS_R814:CLIP_TO_TRACK_FADE_IN_SECONDS_R753,
+      fadeInSeconds:mp3FromMp3R809?MP3_BOUNDARY_FADE_IN_SECONDS_R815:CLIP_TO_TRACK_FADE_IN_SECONDS_R753,
       endFadeToBlack:endFadeToBlackR760,
       trackDuration:duration,
       previewReload:false,
       boundaryTitleSwitchAt:boundaryTitleSwitchAtR790
     });
     if(feederChangedR813===false && videoFeeder && videoFeeder.exitCode===null){
-      // Candidate failed BEFORE old was touched. Keep the proven old black/live feeder
-      // rather than creating a zero-H264 hole. Audio may continue; watchdog stays fed.
-      state.lastWarning=state.lastWarning||'R813 candidate not promoted; previous video feeder kept LIVE';
+      // R815: never let audio advance under a stale visual/title feeder.  The old feeder
+      // is still intact, so retry the AU-gated swap twice before the new MP3 starts.
+      let syncedR815=false;
+      for(let attemptR815=1;attemptR815<=2 && !syncedR815;attemptR815++){
+        await sleep(180);
+        syncedR815=Boolean(await ensureNormalVideoFeederR721({
+          force:true,
+          fadeIn:(clipToTrackBoundaryR753||mp3FromMp3R809),
+          fadeInSeconds:mp3FromMp3R809?MP3_BOUNDARY_FADE_IN_SECONDS_R815:CLIP_TO_TRACK_FADE_IN_SECONDS_R753,
+          endFadeToBlack:endFadeToBlackR760,
+          trackDuration:duration,
+          previewReload:false,
+          boundaryTitleSwitchAt:boundaryTitleSwitchAtR790
+        }));
+        diagRecordR802('r815-mp3-visual-sync-retry',{track:shortText(item.title||'TRACK',52),attempt:attemptR815,ok:Boolean(syncedR815)});
+      }
+      if(!syncedR815){
+        state.lastError=`R815 visual/title sync not committed for ${shortText(item.title||'TRACK',52)}; holding audio transition`;
+        throw new Error(state.lastError);
+      }
     }
     videoFeederTrackIdentityR744=currentIdentityR744;
     videoFeederPrerolledR744=false;
@@ -3838,6 +3939,13 @@ async function radioLoop(){
 
       await sleep(1000);
 
+      if(/R815 visual\/title sync not committed/i.test(String(error))){
+        // The MP3 producer was never started. Keep the SAME queue item selected and
+        // retry its clean visual/title handoff instead of silently skipping a song.
+        diagRecordR802('r815-track-held-for-visual-sync',{title:shortText(item?.title||'TRACK',52),queueIndex:Number(queueIndex)});
+        await sleep(650);
+        continue;
+      }
       if(/library|HTTP|empty/i.test(String(error)))library=[];
       else queueIndex++;
     }
@@ -3853,13 +3961,13 @@ function publicStatus(){
     mode:state.mode,
     overlayMode:state.overlayMode,
     audioMode:state.audioMode,
-    engine:'R814 QUEUED-H264 NONFATAL HANDOFF + CLIP RETRY LOCK + R813 CLEAN-IDR + R809 SPLIT FADE + R808 INPUT SHIELD + R804 CLEAN-AU + R792 DUAL RTMPS',
+    engine:'R815 AU-GATED H264 TITLE/PREVIEW SYNC + R814 CLIP LOCK + R813 CLEAN-IDR + R809 SPLIT FADE + R808 INPUT SHIELD + R792 DUAL RTMPS',
     feederFilterChainGuard:'R769-SEMICOLON-ENDMASK-TO-STARTMASK',
     committedNextCheckpointFile:COMMITTED_NEXT_FILE_R769,
     committedNextTitle:state.committedNextTitle||'',
     committedNextRecovered:Boolean(state.committedNextRecovered),
     committedNextCommittedAt:state.committedNextCommittedAt||null,
-    videoPipeline:'R814 CLEAN-IDR BOOTSTRAP QUEUED IN ORDER -> RAW H264 -> ONE PERSISTENT 25FPS GENPTS MASTER -> H264 COPY',
+    videoPipeline:'R815 OLD-AU-GATE -> CLEAN SPS/PPS/IDR -> RAW H264 -> ONE PERSISTENT 25FPS GENPTS MASTER -> H264 COPY',
     outputTimeshiftSeconds:OUTPUT_TIMESHIFT_SECONDS,
     youtubeDualIngestEnabled:Boolean(DUAL_INGEST_ENABLED_R792),
     youtubeBackupIngestArmed:Boolean(DUAL_INGEST_ENABLED_R792 && STREAM_BACKUP_URL),
@@ -3882,7 +3990,7 @@ function publicStatus(){
       video:{codec:'H.264 / AVC',encoder:'libx264',profile:'High 4.1',width:1920,height:1080,fps:VIDEO_FPS,bitrate:VIDEO_BITRATE,gopFrames:VIDEO_GOP,bFrames:0,pixelFormat:'yuv420p'},
       audio:{codec:'AAC-LC',sampleRate:AUDIO_SAMPLE_RATE,channels:2,channelLayout:'stereo',bitrate:AUDIO_BITRATE},
       transport:{container:'FLV',protocol:'RTMPS',lanes:Number(state.rtmpsEstablishedConnectionsR792||0),expectedLanes:DUAL_INGEST_ENABLED_R792?2:1,dualIngest:Boolean(DUAL_INGEST_ENABLED_R792)},
-      handoff:{mode:state.videoHandoffMode||'R814-CLEAN-IDR-QUEUED-NONFATAL',cleanCount:Number(state.r813CleanHandoffCount||0),lastAt:state.lastR813HandoffAt||null,last:state.lastR813Handoff||null}
+      handoff:{mode:state.videoHandoffMode||'R815-AU-GATED-CLEAN-IDR',cleanCount:Number(state.r813CleanHandoffCount||0),lastAt:state.lastR813HandoffAt||null,last:state.lastR813Handoff||null}
     },
     qrOverlay:QR_OVERLAY,
     subscribeLikeOverlay:CTA_OVERLAY_R767,
@@ -3935,7 +4043,7 @@ function publicStatus(){
     loudnessBackgroundNice:LOUDNESS_BACKGROUND_NICE_R750,
     loudnessBackgroundPending:loudnessPendingR750.size,
     videoFadeSeconds:VIDEO_FADE_SECONDS_R726,
-      videoFadeStrategy:'R814-MP3-ONLY-1.10S-HOLD-0.20S-LIGHT-1.15S / OTHER-BOUNDARIES-PRESERVED',
+      videoFadeStrategy:'R815-MP3-ONLY-1.35S-HOLD-0.25S-LIGHT-1.35S / OTHER-BOUNDARIES-PRESERVED',
       videoFadeInEnabled:true,
       videoBaseNeverFaded:true,
       videoOverlayMask:'BLACK_ALPHA_ONLY_R738',
@@ -3965,9 +4073,9 @@ function publicStatus(){
       clipToTrackHandoffGuardMs:CLIP_TO_TRACK_HANDOFF_GUARD_MS_R753,
       clipToTrackFadeInSeconds:CLIP_TO_TRACK_FADE_IN_SECONDS_R753,
       mp3BoundaryFadeMode:state.mp3BoundaryFadeMode,
-      mp3BoundaryFadeOutSecondsR814:MP3_BOUNDARY_FADE_OUT_SECONDS_R814,
-      mp3BoundaryBlackHoldSecondsR814:MP3_BOUNDARY_BLACK_HOLD_SECONDS_R814,
-      mp3BoundaryFadeInSeconds:MP3_BOUNDARY_FADE_IN_SECONDS_R814,
+      mp3BoundaryFadeOutSecondsR815:MP3_BOUNDARY_FADE_OUT_SECONDS_R815,
+      mp3BoundaryBlackHoldSecondsR815:MP3_BOUNDARY_BLACK_HOLD_SECONDS_R815,
+      mp3BoundaryFadeInSeconds:MP3_BOUNDARY_FADE_IN_SECONDS_R815,
       stationNextLabel:'NEXT • ANDRIK METAL RADIO 24/7',
       normalClipAdmissionMode:state.normalClipAdmissionMode,
       normalClipDeferredCount:state.normalClipDeferredCount,
@@ -3991,8 +4099,8 @@ function publicStatus(){
       backgroundLoudnessEnabled:BACKGROUND_LOUDNESS_ENABLED_R791,
       backgroundPrefetchLoudnessPolicyR793:'DOWNLOAD-ONLY-WHEN-BACKGROUND-OFF',
       liveScalePolicyR794:'FAST-BILINEAR-LIVE-MP3-ONLY-OFFLINE-LANCZOS-PRESERVED',
-      fadeEngineR795:'R814-ABSOLUTE-TIMELINE-ALPHA-MASK-110-BLACK-HOLD-115-RECOVER',
-      fadeRuntimePolicyR796:'R814-R809-ABSOLUTE-ALPHA-MASK-110-020-115',
+      fadeEngineR795:'R815-AU-GATED-ALPHA-MASK-135-BLACK-HOLD-135-RECOVER',
+      fadeRuntimePolicyR796:'R815-R809-AU-GATED-ALPHA-MASK-135-025-135',
       fadeRestoreR799:'R804-FADE-UNCHANGED-R803E/R802/R801 + STATION-SINGLE-WRITER-GUARD',
       equalizerPolicyR796:'QTRLE-1180PX-25FPS-100FRAME-SEAMLESS-NO-LIVE-SCALE',
       tickerPolicyR796:'FONT36-Y62-SPEED105-RELOAD2S',
