@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788171360386-4795e13471",
-  "release": "R813",
-  "archiveName": "R813-CLEAN-IDR-HANDOFF-FULL-DIAGNOSTICS-STREAM-PROFILE-R809-R808-R806-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "fb025027b6587241e5c561ea8299f2047871bd6d",
-  "backupSha": "fb025027b6587241e5c561ea8299f2047871bd6d",
+  "operationId": "publish-1788175541681-d2c9bc89c4",
+  "release": "R814",
+  "archiveName": "R814-QUEUED-H264-NONFATAL-CLIP-LOCK-LONG-MP3-FADE-R813-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "2965c2d8b2d4672c6bade9d192f491ea323a803d",
+  "backupSha": "2965c2d8b2d4672c6bade9d192f491ea323a803d",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-31T10:16:00.981Z"
+  "generatedAt": "2026-08-31T11:25:42.160Z"
 }

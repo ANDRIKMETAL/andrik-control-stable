@@ -69,7 +69,7 @@ const CTA_RIGHT_GAP_R767 = 34; // R767: right side; old left CTA removed
 const CLIP_PREP_SUFFIX_R782 = '.r787-ready.mp4'; // R787: permanent full-frame prepared cache
 const STATION_PREP_MARKER_R791 = '.station-r791-audio-zero-pts'; // R791: force one-time rebuild of station inserts with audio PTS reset BEFORE resample
 const STATION_BOUNDARY_DRAIN_MS_R792 = Math.max(280,Math.min(650,Number(process.env.STATION_BOUNDARY_DRAIN_MS_R792 || 360))); // 8 H264 packets @25fps ~=320ms; drain only AFTER station A+V are armed
-const STATION_H264_CLEAN_STOP_TIMEOUT_MS_R804 = Math.max(1000,Math.min(3000,Number(process.env.STATION_H264_CLEAN_STOP_TIMEOUT_MS_R804 || 1800))); // finish the OLD Annex-B writer on a complete AU before station LIVE
+const STATION_H264_CLEAN_STOP_TIMEOUT_MS_R804 = Math.max(1400,Math.min(5000,Number(process.env.STATION_H264_CLEAN_STOP_TIMEOUT_MS_R804 || 2800))); // R814: give clean Annex-B EOF enough time; never skip an insert on a transient 1.8s close
 const STATION_PIPE_DRAIN_TIMEOUT_MS_R804 = Math.max(250,Math.min(1500,Number(process.env.STATION_PIPE_DRAIN_TIMEOUT_MS_R804 || 700))); // let Node/master stdin flush the old complete AU before the next writer is attached
 const STATION_LEADING_SILENCE_THRESHOLD_DB_R782 = -55; // PCM RMS threshold, no optional FFmpeg silencedetect dependency
 const STATION_LEADING_SILENCE_MIN_R782 = 0.20; // only compensate sustained leading near-silence >=200ms
@@ -96,8 +96,11 @@ const TRACK_AUDIO_LRA_R726 = 11;
 const TRACK_AUDIO_FADE_IN_R726 = 0.55;
 const TRACK_AUDIO_FADE_OUT_R726 = 1.25; // R743: clearly audible but short old-track fade-out
 const VIDEO_FADE_SECONDS_R726 = 0.65; // R736: short cinematic fade-out on the OLD track
-const VIDEO_FADE_IN_SECONDS_R736 = 0.80; // R763: longer viewer-visible recovery/brightening; same alpha-mask architecture
-const VIDEO_BLACK_HOLD_SECONDS_R736 = 0.05; // almost no dead-black hold
+const VIDEO_FADE_IN_SECONDS_R736 = 0.80; // R763: viewer-visible recovery for non-MP3 boundaries
+const VIDEO_BLACK_HOLD_SECONDS_R736 = 0.05; // non-MP3 boundary hold preserved
+const MP3_BOUNDARY_FADE_OUT_SECONDS_R814 = 1.10; // R814: MP3→MP3 only
+const MP3_BOUNDARY_BLACK_HOLD_SECONDS_R814 = 0.20; // R814: MP3→MP3 only
+const MP3_BOUNDARY_FADE_IN_SECONDS_R814 = 1.15; // R814: MP3→MP3 only
 const VIDEO_FADE_LEAD_SECONDS_R735 = 1.40; // R763: start the proven R753 boundary darkening exactly 1.0s earlier than R762
 const TITLE_SWITCH_BEFORE_BOUNDARY_R781 = Math.max(0.50,Math.min(2.50,Number(process.env.TITLE_SWITCH_BEFORE_BOUNDARY_R781 || (VIDEO_FADE_LEAD_SECONDS_R735 + VIDEO_BLACK_HOLD_SECONDS_R736/2)))); // R781: switch CURRENT to the next MP3 while the screen is black, before recovery
 const TITLE_VISUAL_LEAD_SECONDS_R738 = 3.20; // compensate persistent video path latency; CURRENT is preloaded early but appears at the real handoff
@@ -189,9 +192,9 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R813-CLEAN-IDR-HANDOFF-DIAG-PROFILE-R809-R808-R806-R805-R804-R803E-PRESERVED',
+  version: 'R814-QUEUED-H264-NONFATAL-HANDOFF-CLIP-LOCK-LONG-FADE-R813-PRESERVED',
   cpuHeadroomProfileR794:'R796-LIVE-FAST-SCALE-COMPACT-EQ-FINITE-FADE-PRESCALED-STATIC',
-  mode: 'R804 STATION SINGLE-WRITER CLEAN-AU / R803E DIAG + R802 SELF-HEAL + R801 MP3 ATOMIC + R799 YOUTUBE PRESERVED',
+  mode: 'R814 NONFATAL QUEUED-H264 / CLIP RETRY LOCK / R813+R809+R808+R804 PRESERVED',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
@@ -200,7 +203,7 @@ const state = {
   audioMode: 'R793 NO BACKGROUND/PREFETCH LOUDNESS + LIVE FALLBACK + AUDIO QUEUE 8 / SAME MASTER A/V TO PRIMARY+BACKUP RTMPS',
   mp3ToVideoFadeMode: 'R757-END-BLACK-HOLD-THEN-VIDEO-FADE-IN',
   clipPreviewMode: 'R757-NORMAL-CLIPS-PREVNEXT-INTRO-2-7S-PLUS-FINAL-10S',
-  mp3BoundaryFadeMode: 'R763-R753-SAME-FEEDER-BLACK-ALPHA-0.65-HOLD-0.05-LEAD-1.40-RECOVER-0.80',
+  mp3BoundaryFadeMode: 'R814-R809-SPLIT-BLACK-ALPHA-1.10-HOLD-0.20-RECOVER-1.15',
   visualTimeZone: VISUAL_TIME_ZONE,
   visualPeriod: null,
   visualPath: null,
@@ -304,6 +307,9 @@ let videoFeederPath = '';
 let videoFeederPeriod = '';
 let clipActive = false;
 let stationHandoffActiveR804 = false;
+const normalClipRetryR814=new Map(); // R814: selected normal clips get transient retries before any defer
+const NORMAL_CLIP_RETRY_MAX_R814=2;
+const NORMAL_CLIP_RETRY_DELAY_MS_R814=900;
 let visualSwitching = false;
 let scheduleTimerR721 = null;
 let runtimeForceVisualSlot = FORCE_VISUAL_SLOT;
@@ -2128,11 +2134,14 @@ function normalVideoFilterComplexR721({fadeIn=false,fadeInSeconds=CLIP_TO_TRACK_
     // the real boundary; the new R813 candidate starts FROM BLACK.
     const splitMp3BoundaryR809=Boolean(endFadeToBlack && Number(boundaryTitleSwitchAt)>0);
     const fadeLeadR809=splitMp3BoundaryR809?0.10:VIDEO_FADE_LEAD_SECONDS_R735;
-    const outAt=Math.max(0,Number(trackDuration)-VIDEO_FADE_SECONDS_R726-VIDEO_BLACK_HOLD_SECONDS_R736-fadeLeadR809);
-    const recoverAt=outAt+VIDEO_FADE_SECONDS_R726+VIDEO_BLACK_HOLD_SECONDS_R736;
+    const fadeOutR814=splitMp3BoundaryR809?MP3_BOUNDARY_FADE_OUT_SECONDS_R814:VIDEO_FADE_SECONDS_R726;
+    const blackHoldR814=splitMp3BoundaryR809?MP3_BOUNDARY_BLACK_HOLD_SECONDS_R814:VIDEO_BLACK_HOLD_SECONDS_R736;
+    const recoverInR814=splitMp3BoundaryR809?MP3_BOUNDARY_FADE_IN_SECONDS_R814:VIDEO_FADE_IN_SECONDS_R736;
+    const outAt=Math.max(0,Number(trackDuration)-fadeOutR814-blackHoldR814-fadeLeadR809);
+    const recoverAt=outAt+fadeOutR814+blackHoldR814;
     maskChain=endFadeToBlack
-      ? `color=c=black@1.0:s=1920x1080:r=${VIDEO_FPS},format=yuva420p,fade=t=in:st=${outAt.toFixed(3)}:d=${VIDEO_FADE_SECONDS_R726.toFixed(2)}:alpha=1[blackmask];`
-      : `color=c=black@1.0:s=1920x1080:r=${VIDEO_FPS},format=yuva420p,fade=t=in:st=${outAt.toFixed(3)}:d=${VIDEO_FADE_SECONDS_R726.toFixed(2)}:alpha=1,fade=t=out:st=${recoverAt.toFixed(3)}:d=${VIDEO_FADE_IN_SECONDS_R736.toFixed(2)}:alpha=1[blackmask];`;
+      ? `color=c=black@1.0:s=1920x1080:r=${VIDEO_FPS},format=yuva420p,fade=t=in:st=${outAt.toFixed(3)}:d=${fadeOutR814.toFixed(2)}:alpha=1[blackmask];`
+      : `color=c=black@1.0:s=1920x1080:r=${VIDEO_FPS},format=yuva420p,fade=t=in:st=${outAt.toFixed(3)}:d=${fadeOutR814.toFixed(2)}:alpha=1,fade=t=out:st=${recoverAt.toFixed(3)}:d=${recoverInR814.toFixed(2)}:alpha=1[blackmask];`;
     finalChain='[ctabase][blackmask]overlay=x=0:y=0:shortest=1:format=yuv420,format=yuv420p[outv]';
   }
 
@@ -2670,26 +2679,20 @@ function waitReadableClosedR813(stream,timeoutMs=4500){
 }
 
 function writeVideoBootstrapR813(videoSink,buffer,timeoutMs=1800){
-  return new Promise((resolve,reject)=>{
-    if(!videoSink||videoSink.destroyed||videoSink.writableEnded)return reject(new Error('R813 video sink unavailable'));
-    if(!buffer||!buffer.length)return resolve(true);
-    let done=false;
-    const finish=(error)=>{
-      if(done)return;
-      done=true;
-      clearTimeout(timer);
-      videoSink.off('drain',onDrain);
-      videoSink.off('error',onError);
-      error?reject(error):resolve(true);
-    };
-    const onDrain=()=>finish();
-    const onError=error=>finish(error);
-    const timer=setTimeout(()=>finish(new Error(`R813 video bootstrap drain timeout ${timeoutMs}ms`)),timeoutMs);
-    videoSink.once('error',onError);
-    const ok=videoSink.write(buffer);
-    if(ok)return finish();
-    videoSink.once('drain',onDrain);
-  });
+  // R814: Writable.write(false) is BACKPRESSURE, not a failed write. Node has already
+  // accepted the whole bootstrap into the ordered writable queue. Waiting for `drain`
+  // here made a healthy RTMPS stream fatal after an arbitrary 2200 ms. Queue SPS/PPS+IDR
+  // first, then pipe the candidate behind it; stream ordering is preserved by Node.
+  if(!videoSink||videoSink.destroyed||videoSink.writableEnded)return Promise.reject(new Error('R814 video sink unavailable'));
+  if(!buffer||!buffer.length)return Promise.resolve({queued:true,backpressure:false,bytes:0});
+  try{
+    const accepted=videoSink.write(buffer);
+    const rec={queued:true,backpressure:!accepted,bytes:Number(buffer.length||0),sinkBytes:Number(videoSink.writableLength||0)};
+    diagRecordR802('r814-bootstrap-queued',rec);
+    return Promise.resolve(rec);
+  }catch(error){
+    return Promise.reject(error);
+  }
 }
 
 async function retireOffLiveCandidateR813(child){
@@ -2725,6 +2728,14 @@ async function atomicReplaceNormalVideoFeederR801(visualPath,{fadeIn=false,fadeI
   const videoSink=publisher?.stdio?.[4];
   if(!publisher || publisher.exitCode!==null || !videoSink || videoSink.destroyed || videoSink.writableEnded){
     throw new Error('R813 persistent video pipe unavailable during clean-IDR swap');
+  }
+
+  // R814: during RTMPS startup/recovery, never churn a healthy H264 writer. The first
+  // feeder can run continuously until at least one ingest lane is established.
+  if(Number(state.rtmpsEstablishedConnectionsR792||0)<1){
+    state.lastWarning='R814 MP3 H264 swap deferred: RTMPS has no established lane yet';
+    diagRecordR802('r814-mp3-swap-deferred-no-rtmps',{oldPid:Number(old.pid||0),rtmps:Number(state.rtmpsEstablishedConnectionsR792||0)});
+    return false;
   }
 
   const startedAtR813=Date.now();
@@ -2784,18 +2795,25 @@ async function atomicReplaceNormalVideoFeederR801(visualPath,{fadeIn=false,fadeI
   const oldStdoutClosedR813=await oldStdoutClosedPromiseR813;
 
   if(!oldExitedR813 || !oldStdoutClosedR813){
-    // Never force-kill a LIVE raw-H264 writer. A clean service rebuild is safer than
-    // sending a truncated NAL and leaving viewers with mosaic until a later IDR.
+    // R814 NONFATAL rule: an MP3 visual handoff is never allowed to restart the radio
+    // service. The candidate has not touched LIVE yet, so retire only that candidate.
+    // If the old writer is still alive, give ownership back to the generic R806 recovery;
+    // if it exits a moment later, R806 starts a fresh normal feeder without killing RTMPS.
     await retireOffLiveCandidateR813(candidate);
-    state.lastError=`R813 clean old-H264 close failed: exited=${oldExitedR813} stdoutClosed=${oldStdoutClosedR813}`;
-    diagRecordR802('r813-old-clean-stop-failed',{
+    old.__r813CleanHandoff=false;
+    stationHandoffActiveR804=false;
+    state.lastWarning=`R814 clean old-H264 close delayed: exited=${oldExitedR813} stdoutClosed=${oldStdoutClosedR813}; service preserved`;
+    diagRecordR802('r814-old-clean-stop-nonfatal',{
       oldPid:Number(old.pid||0),
       candidatePid:Number(candidate.pid||0),
       oldExited:Boolean(oldExitedR813),
-      stdoutClosed:Boolean(oldStdoutClosedR813)
+      stdoutClosed:Boolean(oldStdoutClosedR813),
+      rtmps:Number(state.rtmpsEstablishedConnectionsR792||0)
     });
-    stationHandoffActiveR804=false;
-    setTimeout(()=>process.exit(81),120).unref();
+    if(oldExitedR813 && videoFeeder===old){
+      videoFeeder=null;
+      setTimeout(()=>ensureNormalVideoFeederR721({force:true,fadeIn:true,fadeInSeconds:VIDEO_FADE_IN_SECONDS_R736,trackDuration:Number(trackDuration||0),endFadeToBlack:Boolean(endFadeToBlack),boundaryTitleSwitchAt:Number(boundaryTitleSwitchAt||0)}).catch(error=>{state.lastError=`R814 nonfatal visual recovery: ${cleanText(error?.message||error)}`;}),120).unref();
+    }
     return false;
   }
 
@@ -2821,7 +2839,8 @@ async function atomicReplaceNormalVideoFeederR801(visualPath,{fadeIn=false,fadeI
   }
 
   try{
-    await writeVideoBootstrapR813(videoSink,bootstrapR813.buffer,2200);
+    const queuedBootstrapR814=await writeVideoBootstrapR813(videoSink,bootstrapR813.buffer,2200);
+    diagRecordR802('r814-candidate-promote-after-queued-bootstrap',{candidatePid:Number(candidate.pid||0),backpressure:Boolean(queuedBootstrapR814?.backpressure),sinkBytes:Number(videoSink.writableLength||0)});
     promoteNormalVideoFeederR801(candidate,videoSink);
     candidate.stdout.resume();
   }catch(error){
@@ -2831,7 +2850,7 @@ async function atomicReplaceNormalVideoFeederR801(visualPath,{fadeIn=false,fadeI
   }
 
   stationHandoffActiveR804=false;
-  state.videoHandoffMode='R813-CLEAN-IDR-MAKE-BEFORE-BREAK';
+  state.videoHandoffMode='R814-CLEAN-IDR-QUEUED-NONFATAL';
   state.lastWarning='';
   state.lastError='';
   state.r813CleanHandoffCount=Number(state.r813CleanHandoffCount||0)+1;
@@ -3564,9 +3583,9 @@ async function playItem(previous,item,next,following,localAudioPath,nextTrackPre
     track:shortText(item.title||'TRACK',52),
     duration:Number(duration.toFixed(3)),
     nextType:String(actualNextR736?.type||actualNextR736?.sourceType||''),
-    fadeOut:VIDEO_FADE_SECONDS_R726,
-    blackHold:VIDEO_BLACK_HOLD_SECONDS_R736,
-    nextFadeIn:(mp3ToMp3BoundaryR809||clipToTrackBoundaryR753)?VIDEO_FADE_IN_SECONDS_R736:0,
+    fadeOut:mp3ToMp3BoundaryR809?MP3_BOUNDARY_FADE_OUT_SECONDS_R814:VIDEO_FADE_SECONDS_R726,
+    blackHold:mp3ToMp3BoundaryR809?MP3_BOUNDARY_BLACK_HOLD_SECONDS_R814:VIDEO_BLACK_HOLD_SECONDS_R736,
+    nextFadeIn:mp3ToMp3BoundaryR809?MP3_BOUNDARY_FADE_IN_SECONDS_R814:(clipToTrackBoundaryR753?CLIP_TO_TRACK_FADE_IN_SECONDS_R753:0),
     lead:mp3ToMp3BoundaryR809?0.10:VIDEO_FADE_LEAD_SECONDS_R735,
     mode:state.mp3BoundaryFadeMode
   });
@@ -3574,6 +3593,7 @@ async function playItem(previous,item,next,following,localAudioPath,nextTrackPre
     const feederChangedR813=await ensureNormalVideoFeederR721({
       force:true,
       fadeIn:(clipToTrackBoundaryR753||mp3FromMp3R809),
+      fadeInSeconds:mp3FromMp3R809?MP3_BOUNDARY_FADE_IN_SECONDS_R814:CLIP_TO_TRACK_FADE_IN_SECONDS_R753,
       endFadeToBlack:endFadeToBlackR760,
       trackDuration:duration,
       previewReload:false,
@@ -3704,25 +3724,34 @@ async function radioLoop(){
         if(following?.type==='track')prefetchTrack(following);else if(following?.type==='clip')prefetchPreparedClipR742(following);
         const clipPlayed=await playVideoClipR691(lastPlayed,item,next);
         if(clipPlayed){
+          normalClipRetryR814.delete(primaryIdentity(item));
           // R764: only media that actually reached LIVE may become PREVIOUS.
           lastPlayed=item;
           queueIndex++;
           state.lastError='';
         }else{
-          // R764: never lie about a skipped clip. Remove this failed occurrence, keep
-          // lastPlayed on the real previous MP3, prepare it again and retry later.
+          // R814 CLIP LOCK: a clip that was already selected at the boundary is not
+          // silently skipped to the next MP3 on one transient handoff failure. Retry it
+          // in place twice. Only after bounded retries do we defer it safely.
+          const clipKeyR814=primaryIdentity(item);
+          const retryR814=Number(normalClipRetryR814.get(clipKeyR814)||0)+1;
+          normalClipRetryR814.set(clipKeyR814,retryR814);
+          diagRecordR802('r814-normal-clip-retry',{title:shortText(item?.title||'VIDEO',52),retry:retryR814,max:NORMAL_CLIP_RETRY_MAX_R814,reason:shortText(state.lastError||'clip did not commit',180)});
+          if(retryR814<=NORMAL_CLIP_RETRY_MAX_R814){
+            state.lastWarning=`R814 clip locked for retry ${retryR814}/${NORMAL_CLIP_RETRY_MAX_R814}: ${shortText(item?.title||'VIDEO',40)}`;
+            prefetchPreparedClipR742(item);
+            await sleep(NORMAL_CLIP_RETRY_DELAY_MS_R814);
+            continue;
+          }
+          normalClipRetryR814.delete(clipKeyR814);
           const failed=queue.splice(queueIndex,1)[0]||item;
           state.queueLength=queue.length;
           state.normalClipDeferredCount=Number(state.normalClipDeferredCount||0)+1;
           state.lastNormalClipDeferred={at:new Date().toISOString(),title:shortText(failed?.title||'VIDEO',52),reason:shortText(state.lastError||'clip did not commit',180)};
-          if(next?.type==='track'){
-            // The old MP3 may already have faded toward the promised clip. Make the real
-            // next MP3 visibly recover from black instead of hard-cutting.
-            clipToTrackBoundaryPendingR753={identity:primaryIdentity(next),startedAt:Date.now(),reason:'R764-FAILED-CLIP-FALLBACK-FADE-IN'};
-          }
+          if(next?.type==='track')clipToTrackBoundaryPendingR753={identity:primaryIdentity(next),startedAt:Date.now(),reason:'R814-FAILED-CLIP-FALLBACK-FADE-IN'};
           prefetchPreparedClipR742(failed);
-          state.lastWarning=`R764 clip deferred safely; not marked played: ${shortText(failed?.title||'VIDEO',40)}`;
-          console.error('[r764-clip-deferred]',state.lastWarning);
+          state.lastWarning=`R814 clip deferred only after bounded retries: ${shortText(failed?.title||'VIDEO',40)}`;
+          console.error('[r814-clip-deferred]',state.lastWarning);
         }
         continue;
       }
@@ -3824,13 +3853,13 @@ function publicStatus(){
     mode:state.mode,
     overlayMode:state.overlayMode,
     audioMode:state.audioMode,
-    engine:'R813 CLEAN-IDR MAKE-BEFORE-BREAK + R809 SPLIT FADE + R808 INPUT SHIELD + R806 SANITIZER + R804 CLEAN-AU + R792 DUAL RTMPS',
+    engine:'R814 QUEUED-H264 NONFATAL HANDOFF + CLIP RETRY LOCK + R813 CLEAN-IDR + R809 SPLIT FADE + R808 INPUT SHIELD + R804 CLEAN-AU + R792 DUAL RTMPS',
     feederFilterChainGuard:'R769-SEMICOLON-ENDMASK-TO-STARTMASK',
     committedNextCheckpointFile:COMMITTED_NEXT_FILE_R769,
     committedNextTitle:state.committedNextTitle||'',
     committedNextRecovered:Boolean(state.committedNextRecovered),
     committedNextCommittedAt:state.committedNextCommittedAt||null,
-    videoPipeline:'R813 CLEAN-IDR SPS/PPS+IDR BOOTSTRAP -> RAW H264 -> ONE PERSISTENT 25FPS GENPTS MASTER -> H264 COPY',
+    videoPipeline:'R814 CLEAN-IDR BOOTSTRAP QUEUED IN ORDER -> RAW H264 -> ONE PERSISTENT 25FPS GENPTS MASTER -> H264 COPY',
     outputTimeshiftSeconds:OUTPUT_TIMESHIFT_SECONDS,
     youtubeDualIngestEnabled:Boolean(DUAL_INGEST_ENABLED_R792),
     youtubeBackupIngestArmed:Boolean(DUAL_INGEST_ENABLED_R792 && STREAM_BACKUP_URL),
@@ -3853,7 +3882,7 @@ function publicStatus(){
       video:{codec:'H.264 / AVC',encoder:'libx264',profile:'High 4.1',width:1920,height:1080,fps:VIDEO_FPS,bitrate:VIDEO_BITRATE,gopFrames:VIDEO_GOP,bFrames:0,pixelFormat:'yuv420p'},
       audio:{codec:'AAC-LC',sampleRate:AUDIO_SAMPLE_RATE,channels:2,channelLayout:'stereo',bitrate:AUDIO_BITRATE},
       transport:{container:'FLV',protocol:'RTMPS',lanes:Number(state.rtmpsEstablishedConnectionsR792||0),expectedLanes:DUAL_INGEST_ENABLED_R792?2:1,dualIngest:Boolean(DUAL_INGEST_ENABLED_R792)},
-      handoff:{mode:state.videoHandoffMode||'R813-CLEAN-IDR-MAKE-BEFORE-BREAK',cleanCount:Number(state.r813CleanHandoffCount||0),lastAt:state.lastR813HandoffAt||null,last:state.lastR813Handoff||null}
+      handoff:{mode:state.videoHandoffMode||'R814-CLEAN-IDR-QUEUED-NONFATAL',cleanCount:Number(state.r813CleanHandoffCount||0),lastAt:state.lastR813HandoffAt||null,last:state.lastR813Handoff||null}
     },
     qrOverlay:QR_OVERLAY,
     subscribeLikeOverlay:CTA_OVERLAY_R767,
@@ -3906,7 +3935,7 @@ function publicStatus(){
     loudnessBackgroundNice:LOUDNESS_BACKGROUND_NICE_R750,
     loudnessBackgroundPending:loudnessPendingR750.size,
     videoFadeSeconds:VIDEO_FADE_SECONDS_R726,
-      videoFadeStrategy:'R763-R753-BLACK-ALPHA-0.65S-HOLD-0.05S-LEAD-1.40S-LIGHT-0.80S',
+      videoFadeStrategy:'R814-MP3-ONLY-1.10S-HOLD-0.20S-LIGHT-1.15S / OTHER-BOUNDARIES-PRESERVED',
       videoFadeInEnabled:true,
       videoBaseNeverFaded:true,
       videoOverlayMask:'BLACK_ALPHA_ONLY_R738',
@@ -3936,7 +3965,9 @@ function publicStatus(){
       clipToTrackHandoffGuardMs:CLIP_TO_TRACK_HANDOFF_GUARD_MS_R753,
       clipToTrackFadeInSeconds:CLIP_TO_TRACK_FADE_IN_SECONDS_R753,
       mp3BoundaryFadeMode:state.mp3BoundaryFadeMode,
-      mp3BoundaryFadeInSeconds:VIDEO_FADE_IN_SECONDS_R736,
+      mp3BoundaryFadeOutSecondsR814:MP3_BOUNDARY_FADE_OUT_SECONDS_R814,
+      mp3BoundaryBlackHoldSecondsR814:MP3_BOUNDARY_BLACK_HOLD_SECONDS_R814,
+      mp3BoundaryFadeInSeconds:MP3_BOUNDARY_FADE_IN_SECONDS_R814,
       stationNextLabel:'NEXT • ANDRIK METAL RADIO 24/7',
       normalClipAdmissionMode:state.normalClipAdmissionMode,
       normalClipDeferredCount:state.normalClipDeferredCount,
@@ -3960,8 +3991,8 @@ function publicStatus(){
       backgroundLoudnessEnabled:BACKGROUND_LOUDNESS_ENABLED_R791,
       backgroundPrefetchLoudnessPolicyR793:'DOWNLOAD-ONLY-WHEN-BACKGROUND-OFF',
       liveScalePolicyR794:'FAST-BILINEAR-LIVE-MP3-ONLY-OFFLINE-LANCZOS-PRESERVED',
-      fadeEngineR795:'R787-ABSOLUTE-TIMELINE-ALPHA-MASK-065-BLACK-HOLD-RECOVER',
-      fadeRuntimePolicyR796:'R799-R787-ABSOLUTE-ALPHA-MASK-065-005-080',
+      fadeEngineR795:'R814-ABSOLUTE-TIMELINE-ALPHA-MASK-110-BLACK-HOLD-115-RECOVER',
+      fadeRuntimePolicyR796:'R814-R809-ABSOLUTE-ALPHA-MASK-110-020-115',
       fadeRestoreR799:'R804-FADE-UNCHANGED-R803E/R802/R801 + STATION-SINGLE-WRITER-GUARD',
       equalizerPolicyR796:'QTRLE-1180PX-25FPS-100FRAME-SEAMLESS-NO-LIVE-SCALE',
       tickerPolicyR796:'FONT36-Y62-SPEED105-RELOAD2S',
