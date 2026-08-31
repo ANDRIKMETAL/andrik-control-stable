@@ -18,6 +18,7 @@ import { pipeline } from 'node:stream/promises';
 
 const PORT = Number(process.env.PORT || 8080);
 const R816_PERSISTENT_RAWVIDEO_SINGLE_X264 = 'R816-PERSISTENT-RAWVIDEO-SINGLE-X264';
+const R817_RAWVIDEO_SAR1_DAR16X9_FULLFRAME = 'R817-RAWVIDEO-SAR1-DAR16X9-FULLFRAME';
 const PLAYLIST_URL = process.env.PLAYLIST_URL || 'https://andrikmetal.com/api/music/downloads';
 const STREAM_KEY = String(process.env.YOUTUBE_STREAM_KEY || '').trim();
 const STREAM_URL_OVERRIDE = String(process.env.STREAM_URL_OVERRIDE || '').trim();
@@ -194,9 +195,9 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R816-PERSISTENT-RAWVIDEO-SINGLE-X264-R814-FEATURES-PRESERVED',
+  version: 'R817-RAWVIDEO-SAR1-DAR16X9-FULLFRAME-R816-R814-PRESERVED',
   cpuHeadroomProfileR794:'R796-LIVE-FAST-SCALE-COMPACT-EQ-FINITE-FADE-PRESCALED-STATIC',
-  mode: 'R816 ONE PERSISTENT X264 / FULL-FRAME RAWVIDEO SWITCHING / R814 UI+FADE+CLIP LOCK PRESERVED',
+  mode: 'R817 ONE PERSISTENT X264 / RAWVIDEO 1920x1080 SAR1 DAR16:9 HARD GUARD / R816+R814 PRESERVED',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
@@ -2428,10 +2429,13 @@ function startPublisher(){
   // changes cannot reset H.264 DPB/GOP/SPS/PPS state because they occur before encoding.
   const args=[
     '-hide_banner','-loglevel','warning',
-    '-thread_queue_size',String(VIDEO_INPUT_QUEUE_PACKETS_R732),'-f','rawvideo','-pix_fmt','yuv420p','-s:v','1920x1080','-r',String(VIDEO_FPS),'-i','pipe:4',
+    '-thread_queue_size',String(VIDEO_INPUT_QUEUE_PACKETS_R732),'-f','rawvideo','-pixel_format','yuv420p','-video_size','1920x1080','-framerate',String(VIDEO_FPS),'-i','pipe:4',
     '-thread_queue_size',String(AUDIO_INPUT_QUEUE_PACKETS_R732),'-f','s16le','-ar',String(AUDIO_SAMPLE_RATE),'-ac','2','-i','pipe:3',
     '-map','0:v:0','-map','1:a:0',
-    ...h264EncoderArgsR721(),'-threads','2','-tag:v','7',
+    // R817 ROOT GEOMETRY GUARD: rawvideo carries pixels but no reliable display-aspect metadata.
+    // Re-assert exact square pixels + 16:9 at the ONE persistent encoder before FLV/RTMPS.
+    '-vf','setsar=1,setdar=16/9',
+    ...h264EncoderArgsR721(),'-threads','2','-aspect','16:9','-metadata:s:v:0','rotate=0','-tag:v','7',
     '-c:a','aac','-profile:a','aac_low','-b:a',AUDIO_BITRATE,'-ar',String(AUDIO_SAMPLE_RATE),'-ac','2','-tag:a','10',
     '-max_muxing_queue_size','4096','-flush_packets','1',
     ...outputArgsR792
@@ -2447,7 +2451,7 @@ function startPublisher(){
   state.rtmpsEgressEverObservedR792=false;
   state.youtubeDualIngestEnabled=DUAL_INGEST_ENABLED_R792;
   state.youtubeBackupIngestArmed=Boolean(DUAL_INGEST_ENABLED_R792&&STREAM_BACKUP_URL);
-  state.masterVideoClockMode='R816-PERSISTENT-RAWVIDEO-25FPS-SINGLE-X264';
+  state.masterVideoClockMode='R817-PERSISTENT-RAWVIDEO-1920x1080-SAR1-DAR16X9-SINGLE-X264';
   if(!state.streamStartedAt)state.streamStartedAt=new Date().toISOString();
   const audioSink=thisPublisher.stdio[3];
   const videoSink=thisPublisher.stdio[4];
@@ -3425,13 +3429,13 @@ function publicStatus(){
     mode:state.mode,
     overlayMode:state.overlayMode,
     audioMode:state.audioMode,
-    engine:'R816 PERSISTENT RAWVIDEO CLOCK + ONE X264 + R814 CLIP LOCK/FADE + R808 INPUT SHIELD + R805/R803 DIAGNOSTICS + R792 DUAL RTMPS',
+    engine:'R817 RAWVIDEO FULLFRAME SAR1/DAR16:9 + ONE X264 + R816 HANDOFF + R814 CLIP LOCK/FADE + R803 DIAGNOSTICS + R792 DUAL RTMPS',
     feederFilterChainGuard:'R769-SEMICOLON-ENDMASK-TO-STARTMASK',
     committedNextCheckpointFile:COMMITTED_NEXT_FILE_R769,
     committedNextTitle:state.committedNextTitle||'',
     committedNextRecovered:Boolean(state.committedNextRecovered),
     committedNextCommittedAt:state.committedNextCommittedAt||null,
-    videoPipeline:'R816 FULL YUV420P FRAMES -> FRAME-ALIGNED NODE RELAY -> ONE PERSISTENT 25FPS MASTER -> SINGLE H264 ENCODE -> DUAL RTMPS',
+    videoPipeline:'R817 FULL YUV420P 1920x1080 -> FRAME RELAY -> MASTER SETSAR1/SETDAR16:9 -> ONE H264 ENCODE -> DUAL RTMPS',
     outputTimeshiftSeconds:OUTPUT_TIMESHIFT_SECONDS,
     youtubeDualIngestEnabled:Boolean(DUAL_INGEST_ENABLED_R792),
     youtubeBackupIngestArmed:Boolean(DUAL_INGEST_ENABLED_R792 && STREAM_BACKUP_URL),
@@ -3450,6 +3454,13 @@ function publicStatus(){
     audioSampleRate:AUDIO_SAMPLE_RATE,
     videoFps:VIDEO_FPS,
     videoGop:VIDEO_GOP,
+    streamProfileR817:{
+      video:{codec:'H.264 / AVC',encoder:'libx264 (persistent master only)',profile:'High 4.1',width:1920,height:1080,fps:VIDEO_FPS,bitrate:VIDEO_BITRATE,gopFrames:VIDEO_GOP,bFrames:0,pixelFormat:'yuv420p',sampleAspectRatio:'1:1',displayAspectRatio:'16:9'},
+      audio:{codec:'AAC-LC',sampleRate:AUDIO_SAMPLE_RATE,channels:2,channelLayout:'stereo',bitrate:AUDIO_BITRATE},
+      transport:{container:'FLV',protocol:'RTMPS',lanes:Number(state.rtmpsEstablishedConnectionsR792||0),expectedLanes:DUAL_INGEST_ENABLED_R792?2:1,dualIngest:Boolean(DUAL_INGEST_ENABLED_R792)},
+      handoff:{mode:state.videoHandoffMode||'R816-RAWVIDEO-FRAME-ALIGNED',frameAligned:true,feederCodec:'rawvideo',persistentEncoder:true},
+      geometry:{raster:'1920x1080',sampleAspectRatio:'1:1',displayAspectRatio:'16:9',fullFrame:true,noCrop:true,guard:'R817 master setsar=1 + setdar=16/9 + FLV aspect 16:9'}
+    },
     streamProfileR816:{
       video:{codec:'H.264 / AVC',encoder:'libx264 (persistent master only)',profile:'High 4.1',width:1920,height:1080,fps:VIDEO_FPS,bitrate:VIDEO_BITRATE,gopFrames:VIDEO_GOP,bFrames:0,pixelFormat:'yuv420p'},
       audio:{codec:'AAC-LC',sampleRate:AUDIO_SAMPLE_RATE,channels:2,channelLayout:'stereo',bitrate:AUDIO_BITRATE},
@@ -3602,7 +3613,7 @@ function publicStatus(){
     equalizerStyle:state.equalizerStyle,
     equalizerEngine:state.equalizerEngine,
     publisherRunning:state.publisherRunning,
-    masterVideoMode:'R816-PERSISTENT-RAWVIDEO-25FPS-SINGLE-X264-DUAL-RTMPS-FLV-TAG7',
+    masterVideoMode:'R817-PERSISTENT-RAWVIDEO-1920x1080-SAR1-DAR16X9-SINGLE-X264-DUAL-RTMPS',
     masterBitstreamFilter:'none-R816-rawvideo-input-before-encoding',
     masterAudioBytesWritten:Number(publisher?.stdio?.[3]?.bytesWritten||0),
     masterVideoBytesWritten:Number(publisher?.stdio?.[4]?.bytesWritten||0),
@@ -3612,7 +3623,7 @@ function publicStatus(){
     lastVideoFrameAtR816:state.lastVideoFrameAtR816||null,
     videoRelayMode:state.videoRelayMode||'R816-FULL-FRAME-ONLY-YUV420P',
     masterVideoReencode:true,
-    masterTimestampMode:'R816-PERSISTENT-RAWVIDEO-FRAMECOUNT-25FPS-SINGLE-X264',
+    masterTimestampMode:'R817-PERSISTENT-RAWVIDEO-FRAMECOUNT-25FPS-SAR1-DAR16X9-SINGLE-X264',
     masterTimestampErrorCount:Number(state.masterTimestampErrorCount||0),
     lastMasterTimestampErrorAt:state.lastMasterTimestampErrorAt||null,
     videoTimestampOffsetSecondsR787:Number(state.videoTimestampOffsetSecondsR787||0),
@@ -3629,7 +3640,7 @@ function publicStatus(){
     videoBitrate:'6000k',
     audioBitrate:'160k',
     videoPreset:'ultrafast-zerolatency-UNCHANGED-FOR-STABILITY',
-    permanentFullscreenMode:'R787-R783-VIEWER-PROVEN-FIT-PAD-1920x1080-SAR1',
+    permanentFullscreenMode:'R817-HARD-1920x1080-SAR1-DAR16X9 + R787-FIT-PAD-NO-CROP',
     permanentFullscreenWidth:1920,
     permanentFullscreenHeight:1080,
     permanentFullscreenFitPolicy:'R787-FIT-DECREASE-PAD-NO-CROP-IMMUTABLE',

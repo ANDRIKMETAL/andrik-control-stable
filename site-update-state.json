@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788180760489-938f5df373",
-  "release": "R816",
-  "archiveName": "R816-PERSISTENT-RAWVIDEO-SINGLE-X264-R814-FEATURES-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "2f98a49d42e93ea858a569e58694c40400cf91b5",
-  "backupSha": "2f98a49d42e93ea858a569e58694c40400cf91b5",
+  "operationId": "publish-1788183697213-76cd686cbc",
+  "release": "R817",
+  "archiveName": "R817-RAWVIDEO-SAR1-DAR16X9-FULLFRAME-R816-R814-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "3024905983156425eae44f786fff6b4586d3842a",
+  "backupSha": "3024905983156425eae44f786fff6b4586d3842a",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-31T12:52:41.117Z"
+  "generatedAt": "2026-08-31T13:41:37.789Z"
 }
