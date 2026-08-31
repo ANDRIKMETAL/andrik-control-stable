@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788176835249-525927479a",
-  "release": "R815",
-  "archiveName": "R815-AU-GATED-H264-TITLE-PREVNEXT-FADE-SYNC-R814-R813-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "d56364dee5cfe3455730df34c5d764a3a5ecc1b2",
-  "backupSha": "d56364dee5cfe3455730df34c5d764a3a5ecc1b2",
+  "operationId": "publish-1788180760489-938f5df373",
+  "release": "R816",
+  "archiveName": "R816-PERSISTENT-RAWVIDEO-SINGLE-X264-R814-FEATURES-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "2f98a49d42e93ea858a569e58694c40400cf91b5",
+  "backupSha": "2f98a49d42e93ea858a569e58694c40400cf91b5",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-31T11:47:15.789Z"
+  "generatedAt": "2026-08-31T12:52:41.117Z"
 }
