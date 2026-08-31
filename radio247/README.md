@@ -133,3 +133,6 @@ Production OVH uses `andrik-radio-web-control.service` and `/usr/local/sbin/andr
 
 ## R803C — confirmed single-agent topology fix
 R803C is based on the live VPS unit topology observed on 2026-08-31. The canonical control agent is `andrik-radio-web.service` (`/usr/local/sbin/andrik-radio-web daemon`); the historical `andrik-radio-web-agent.service` R650 daemon is a duplicate. R803C upgrades only the canonical agent to R803 diagnostics, stops/disables/Condition-blocks the R650 duplicate, and never restarts `andrik-radio.service`, FFmpeg or RTMPS.
+
+### R803E Node 18 ESM wrapper fix
+R803E keeps `/usr/local/sbin/andrik-radio-web` as a shell wrapper and executes the diagnostic agent from `/usr/local/lib/andrik-radio-web-agent-r803.mjs`. This avoids Node 18 treating an extensionless ES-module file as CommonJS. It changes only the web/control agent topology and never restarts `andrik-radio.service`.

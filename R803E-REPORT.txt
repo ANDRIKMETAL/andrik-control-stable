@@ -1,0 +1,28 @@
+R803E — SINGLE WEB AGENT / NODE 18 ESM WRAPPER FIX
+
+Confirmed live topology:
+- andrik-radio-web.service: canonical R721 service, ExecStart=/usr/local/sbin/andrik-radio-web daemon
+- andrik-radio-web-agent.service: historical R650 duplicate
+- andrik-radio-web-control.service: masked / not used
+- andrik-radio.service: live radio and MUST NOT be restarted
+
+Why R803C/R803D rolled back:
+Node.js 18 treats an extensionless JavaScript entry file as CommonJS. Copying the R803 ES-module source directly to /usr/local/sbin/andrik-radio-web therefore produced:
+  SyntaxError: Cannot use import statement outside a module
+
+R803E fix:
+1. Keeps the real R803 program at /usr/local/lib/andrik-radio-web-agent-r803.mjs.
+2. Keeps the historical systemd ExecStart path /usr/local/sbin/andrik-radio-web, but that file is now a tiny bash wrapper:
+   exec /usr/bin/node /usr/local/lib/andrik-radio-web-agent-r803.mjs "$@"
+3. Restarts only andrik-radio-web.service.
+4. Stops/disables/Condition-blocks the duplicate R650 service.
+5. Preserves existing pairing/token config.
+6. Does NOT restart/stop/start andrik-radio.service, FFmpeg, producer, publisher or RTMPS.
+7. Requires radio MainPID before/after to be identical or installation fails.
+8. Verifies diagnosticsR803 locally before success.
+
+Durable diagnostics:
+/var/cache/andrik-radio-r622/diagnostics/r803-agent-events.ndjson
+
+Public diagnostics:
+https://andrikmetal.com/api/public/radio-diagnostics-r803

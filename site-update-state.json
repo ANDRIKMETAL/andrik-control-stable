@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788151091446-32a60f9104",
+  "operationId": "publish-1788151387931-ff58815af2",
   "release": "R803",
-  "archiveName": "R803D-SINGLE-AGENT-NODE18-FIX-NO-RADIO-RESTART-R802-R801-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "85bd7ed12b819d17ba23b589c0799683c67fbc07",
-  "backupSha": "85bd7ed12b819d17ba23b589c0799683c67fbc07",
+  "archiveName": "R803E-SINGLE-AGENT-NODE18-ESM-WRAPPER-FIX-NO-RADIO-RESTART-R802-R801-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "0b42d99f4c995e70b7d3609045726b1d759f4219",
+  "backupSha": "0b42d99f4c995e70b7d3609045726b1d759f4219",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-31T04:38:11.831Z"
+  "generatedAt": "2026-08-31T04:43:08.416Z"
 }
