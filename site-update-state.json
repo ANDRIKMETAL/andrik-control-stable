@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788185680518-f4055f1c3b",
-  "release": "R818",
-  "archiveName": "R818-RAWVIDEO-QUEUE24-STRETCH-FULLFRAME-R817-R816-R814-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "0f9c4135a4051ecab3ba51f46d9c84695580db72",
-  "backupSha": "0f9c4135a4051ecab3ba51f46d9c84695580db72",
+  "operationId": "publish-1788186462737-7a383c50fc",
+  "release": "R819",
+  "archiveName": "R819-R784-VIEWER-PROVEN-GEOMETRY-RAWVIDEO-QUEUE24-R818-R814-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "2454c368aa8a210e1d260979da93b03da087791e",
+  "backupSha": "2454c368aa8a210e1d260979da93b03da087791e",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-31T14:14:41.018Z"
+  "generatedAt": "2026-08-31T14:27:43.264Z"
 }
