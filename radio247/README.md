@@ -130,3 +130,6 @@ R803 updates only the OVH web/control diagnostic agent. It does not restart `and
 
 ## R803B diagnostics installer fix
 Production OVH uses `andrik-radio-web-control.service` and `/usr/local/sbin/andrik-radio-web`. Use `vm-lite/install-r803b-diagnostics-web-control-no-radio-restart.sh`; it restarts only the web-control agent and proves the radio MainPID is unchanged.
+
+## R803C — confirmed single-agent topology fix
+R803C is based on the live VPS unit topology observed on 2026-08-31. The canonical control agent is `andrik-radio-web.service` (`/usr/local/sbin/andrik-radio-web daemon`); the historical `andrik-radio-web-agent.service` R650 daemon is a duplicate. R803C upgrades only the canonical agent to R803 diagnostics, stops/disables/Condition-blocks the R650 duplicate, and never restarts `andrik-radio.service`, FFmpeg or RTMPS.
