@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788186462737-7a383c50fc",
-  "release": "R819",
-  "archiveName": "R819-R784-VIEWER-PROVEN-GEOMETRY-RAWVIDEO-QUEUE24-R818-R814-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "2454c368aa8a210e1d260979da93b03da087791e",
-  "backupSha": "2454c368aa8a210e1d260979da93b03da087791e",
+  "operationId": "publish-1788190876188-a5d26e4a69",
+  "release": "R820",
+  "archiveName": "R820-MASTER-PTS-LOCK-R819-R818-R816-R814-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "2e366ab3fc9b624a410295c0074629195f4a03ca",
+  "backupSha": "2e366ab3fc9b624a410295c0074629195f4a03ca",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-31T14:27:43.264Z"
+  "generatedAt": "2026-08-31T15:41:16.624Z"
 }

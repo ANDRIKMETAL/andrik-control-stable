@@ -19,6 +19,7 @@ import { pipeline } from 'node:stream/promises';
 const PORT = Number(process.env.PORT || 8080);
 const R816_PERSISTENT_RAWVIDEO_SINGLE_X264 = 'R816-PERSISTENT-RAWVIDEO-SINGLE-X264';
 const R819_R784_GEOMETRY_RAWVIDEO_QUEUE24 = 'R819-R784-VIEWER-PROVEN-GEOMETRY-RAWVIDEO-QUEUE24';
+const R820_MASTER_PTS_LOCK = 'R820-DETERMINISTIC-MASTER-PTS-LOCK';
 const PLAYLIST_URL = process.env.PLAYLIST_URL || 'https://andrikmetal.com/api/music/downloads';
 const STREAM_KEY = String(process.env.YOUTUBE_STREAM_KEY || '').trim();
 const STREAM_URL_OVERRIDE = String(process.env.STREAM_URL_OVERRIDE || '').trim();
@@ -196,9 +197,9 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R819-R784-GEOMETRY-RAWVIDEO-QUEUE24-R818-R816-R814-PRESERVED',
+  version: 'R820-MASTER-PTS-LOCK-R819-R818-R816-R814-PRESERVED',
   cpuHeadroomProfileR794:'R796-LIVE-FAST-SCALE-COMPACT-EQ-FINITE-FADE-PRESCALED-STATIC',
-  mode: 'R819 ONE PERSISTENT X264 / RAWVIDEO QUEUE24 / EXACT R784 VIEWER-PROVEN FULLFRAME GEOMETRY / R818+R816+R814 PRESERVED',
+  mode: 'R820 DETERMINISTIC MASTER PTS / ONE PERSISTENT X264 / RAWVIDEO QUEUE24 / R819 GEOMETRY + R814 FADE PRESERVED',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
@@ -279,7 +280,7 @@ const state = {
   fullFrameGuardMode: 'R790-R787-VIEWER-PROVEN-FIT-PAD-1920x1080-SAR1-NO-CROP',
   stationAudioGuardMode: 'R784-BEST-AUDIO-STREAM+PREPARED-RMS-VERIFY',
   masterTimestampErrorCount: 0,
-  masterVideoClockMode: 'R816-PERSISTENT-RAWVIDEO-25FPS-SINGLE-X264',
+  masterVideoClockMode: 'R820-FRAMECOUNT-PTS-LOCK-25FPS-SINGLE-X264',
   videoRelayFramesWritten: 0,
   videoRelayPartialBytesDropped: 0,
   lastVideoFrameAtR816: null,
@@ -2430,13 +2431,15 @@ function startPublisher(){
   // changes cannot reset H.264 DPB/GOP/SPS/PPS state because they occur before encoding.
   const args=[
     '-hide_banner','-loglevel','warning',
-    '-thread_queue_size',String(VIDEO_INPUT_QUEUE_PACKETS_R732),'-f','rawvideo','-pix_fmt','yuv420p','-s:v','1920x1080','-r',String(VIDEO_FPS),'-i','pipe:4',
-    '-thread_queue_size',String(AUDIO_INPUT_QUEUE_PACKETS_R732),'-f','s16le','-ar',String(AUDIO_SAMPLE_RATE),'-ac','2','-i','pipe:3',
-    '-map','0:v:0','-map','1:a:0',
-    // R819: byte-for-byte R784 master geometry semantics. Feeders alone own scaling/padding;
-    // the persistent master only timestamps raw 1920x1080 frames and performs the one H.264 encode.
-    // No second geometry filter, DAR rewrite, rotate metadata or output resize is allowed here.
-    ...h264EncoderArgsR721(),'-threads','2','-tag:v','7',
+    // R820 ROOT STALL FIX: raw pipes are timestamp-less byte streams. Give BOTH inputs an
+    // explicit generated clock, then rebuild PTS from frame/sample counters before encoding.
+    // This prevents tee/fifo from ever receiving AV_NOPTS packets (the repeated R816 failure).
+    '-thread_queue_size',String(VIDEO_INPUT_QUEUE_PACKETS_R732),'-fflags','+genpts+discardcorrupt','-f','rawvideo','-pix_fmt','yuv420p','-s:v','1920x1080','-framerate',String(VIDEO_FPS),'-i','pipe:4',
+    '-thread_queue_size',String(AUDIO_INPUT_QUEUE_PACKETS_R732),'-fflags','+genpts+discardcorrupt','-f','s16le','-ar',String(AUDIO_SAMPLE_RATE),'-ac','2','-i','pipe:3',
+    '-filter_complex',`[0:v]settb=expr=1/90000,setpts=N/(${VIDEO_FPS}*TB)[r820v];[1:a]asettb=expr=1/${AUDIO_SAMPLE_RATE},asetpts=N/SR/TB[r820a]`,
+    '-map','[r820v]','-map','[r820a]',
+    // R819 geometry/fade stays upstream untouched. R820 changes timestamps only.
+    ...h264EncoderArgsR721(),'-fps_mode:v','cfr','-enc_time_base:v',`1:${VIDEO_FPS}`,'-threads','2','-tag:v','7',
     '-c:a','aac','-profile:a','aac_low','-b:a',AUDIO_BITRATE,'-ar',String(AUDIO_SAMPLE_RATE),'-ac','2','-tag:a','10',
     '-max_muxing_queue_size','4096','-flush_packets','1',
     ...outputArgsR792
@@ -2452,7 +2455,7 @@ function startPublisher(){
   state.rtmpsEgressEverObservedR792=false;
   state.youtubeDualIngestEnabled=DUAL_INGEST_ENABLED_R792;
   state.youtubeBackupIngestArmed=Boolean(DUAL_INGEST_ENABLED_R792&&STREAM_BACKUP_URL);
-  state.masterVideoClockMode='R819-R784-GEOMETRY-PERSISTENT-RAWVIDEO-QUEUE24-SINGLE-X264';
+  state.masterVideoClockMode='R820-DETERMINISTIC-PTS-FRAMECOUNT-25FPS-QUEUE24-SINGLE-X264';
   if(!state.streamStartedAt)state.streamStartedAt=new Date().toISOString();
   const audioSink=thisPublisher.stdio[3];
   const videoSink=thisPublisher.stdio[4];
@@ -3430,7 +3433,7 @@ function publicStatus(){
     mode:state.mode,
     overlayMode:state.overlayMode,
     audioMode:state.audioMode,
-    engine:'R819 R784 VIEWER-PROVEN FULLFRAME GEOMETRY + RAWVIDEO QUEUE24 + ONE X264 + R816 HANDOFF + R814 CLIP LOCK/FADE + R803 DIAGNOSTICS + R792 DUAL RTMPS',
+    engine:'R820 DETERMINISTIC MASTER PTS + R819 FULLFRAME GEOMETRY + RAWVIDEO QUEUE24 + ONE X264 + R814 FADE + R792 DUAL RTMPS',
     feederFilterChainGuard:'R769-SEMICOLON-ENDMASK-TO-STARTMASK',
     committedNextCheckpointFile:COMMITTED_NEXT_FILE_R769,
     committedNextTitle:state.committedNextTitle||'',
@@ -3626,7 +3629,7 @@ function publicStatus(){
     lastVideoFrameAtR816:state.lastVideoFrameAtR816||null,
     videoRelayMode:state.videoRelayMode||'R816-FULL-FRAME-ONLY-YUV420P',
     masterVideoReencode:true,
-    masterTimestampMode:'R819-PERSISTENT-RAWVIDEO-FRAMECOUNT-25FPS-QUEUE24-R784-GEOMETRY-SINGLE-X264',
+    masterTimestampMode:'R820-EXPLICIT-VIDEO-N25-AUDIO-NSR-PTS-LOCK',
     masterTimestampErrorCount:Number(state.masterTimestampErrorCount||0),
     lastMasterTimestampErrorAt:state.lastMasterTimestampErrorAt||null,
     videoTimestampOffsetSecondsR787:Number(state.videoTimestampOffsetSecondsR787||0),
