@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788145375331-290546a172",
-  "release": "R801",
-  "archiveName": "R801-MP3-ATOMIC-HANDOFF-FADE-HEADROOM-R799-YOUTUBE-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "b93e59885ee7d5223a64793106bcc6d185d666bb",
-  "backupSha": "b93e59885ee7d5223a64793106bcc6d185d666bb",
+  "operationId": "publish-1788147329613-7b171868c0",
+  "release": "R802",
+  "archiveName": "R802-STATION-CORRUPTION-SELFHEAL-DURABLE-DIAG-R801-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "9cc16de5fbf074b94037fd37cae9c5e4816bfbe7",
+  "backupSha": "9cc16de5fbf074b94037fd37cae9c5e4816bfbe7",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-31T03:02:55.741Z"
+  "generatedAt": "2026-08-31T03:35:29.986Z"
 }

@@ -19110,6 +19110,35 @@ async function handleRadioRemoteStatusR627(request,env){
   // missed persisted heartbeats before the UI calls the agent offline.
   return json({ok:true,paired:Boolean(agent.tokenHash),online:Boolean(lastSeenMs&&Date.now()-lastSeenMs<75000),agent:{pairedAt:agent.pairedAt||null,lastSeen:agent.lastSeen||null,version:agent.version||null,status:agent.status||null},command,result,ticker});
 }
+async function handlePublicRadioDiagnosticsR802(request,env){
+  const db=env.COMMENTS_DB;
+  if(!db)return json({ok:false,error:'database-not-configured'},503);
+  const row=await getPushState(db,RADIO_REMOTE_R627.agentKey).catch(()=>null);
+  const agent=parseStateValueR627(row)||{};
+  const status=agent.status&&typeof agent.status==='object'?agent.status:{};
+  const diag=status.diagnosticsR802&&typeof status.diagnosticsR802==='object'?status.diagnosticsR802:{};
+  const lastSeenMs=Date.parse(agent.lastSeen||'')||0;
+  return json({
+    ok:true,
+    online:Boolean(lastSeenMs&&Date.now()-lastSeenMs<75000),
+    agentVersion:agent.version||null,
+    lastSeen:agent.lastSeen||null,
+    service:cleanPlainText(status.service||'',40),
+    publisher:Boolean(status.publisher),producer:Boolean(status.producer),
+    transportHealthy:status.transportHealthy!==false,
+    rtmpsEstablishedConnectionsR792:Math.max(0,Number(status.rtmpsEstablishedConnectionsR792||0)),
+    current:cleanPlainText(status.current||'',120),next:cleanPlainText(status.next||'',120),
+    lastError:cleanPlainText(status.lastError||'',700),
+    lastFfmpegLine:cleanPlainText(status.lastFfmpegLine||'',1000),
+    diagnosticsR802:{
+      version:cleanPlainText(diag.version||'R802',20),
+      lastEventAt:diag.lastEventAt||null,
+      latest:diag.latest||null,
+      events:Array.isArray(diag.events)?diag.events.slice(-30):[]
+    }
+  },200,{'cache-control':'no-store'});
+}
+
 async function handleRadioRemoteTickerR629(request,env){
   if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
   const db=env.COMMENTS_DB;if(!db)return json({ok:false,error:'database-not-configured'},503);
@@ -19278,6 +19307,7 @@ async function routeApi(request, env, ctx) {
     if (path === '/api/push/retry-latest' && request.method === 'POST') return await handleRetryLatestPush(request, env);
     if (path === '/api/push/diagnostic-log' && request.method === 'GET') return await handlePushDiagnosticLog(request, env);
     if (path === '/api/push/history' && request.method === 'GET') return await handlePushHistory(request, env);
+    if (path === '/api/public/radio-diagnostics-r802' && request.method === 'GET') return await handlePublicRadioDiagnosticsR802(request, env);
     if (path === '/api/public/youtube-like-glow' && request.method === 'GET') return await handlePublicYoutubeLikeGlow(request, env);
     if (path === '/api/public/youtube-latest' && request.method === 'GET') return await handlePublicYoutubeLatest(request, env);
     if (path === '/api/public/youtube-live-target' && request.method === 'GET') return await handlePublicYoutubeLiveTargetR623(request, env);

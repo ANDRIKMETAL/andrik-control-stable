@@ -2,6 +2,7 @@ import http from 'node:http';
 import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import {
+  appendFileSync,
   createWriteStream,
   existsSync,
   mkdirSync,
@@ -31,6 +32,11 @@ const YOUTUBE_LIVE_URL = process.env.YOUTUBE_LIVE_URL || 'https://www.youtube.co
 const CACHE_DIR = process.env.RADIO_CACHE_DIR || '/var/cache/andrik-radio-r622';
 const AUDIO_CACHE_DIR = `${CACHE_DIR}/audio`;
 const VISUAL_CACHE_DIR = `${CACHE_DIR}/visuals`;
+const DIAG_DIR_R802 = `${CACHE_DIR}/diagnostics`;
+const DIAG_LOG_R802 = `${DIAG_DIR_R802}/r802-events.ndjson`;
+const DIAG_LATEST_R802 = `${DIAG_DIR_R802}/r802-latest.json`;
+const DIAG_MAX_BYTES_R802 = 1536*1024;
+const DIAG_RING_LIMIT_R802 = 80;
 const MAX_CACHED_TRACKS = 10;
 const VISUAL_TIME_ZONE = process.env.VISUAL_TIME_ZONE || 'Europe/Bratislava';
 const FORCE_VISUAL_SLOT = ['morning','day','evening','night'].includes(String(process.env.FORCE_VISUAL_SLOT||'').trim().toLowerCase()) ? String(process.env.FORCE_VISUAL_SLOT).trim().toLowerCase() : '';
@@ -180,9 +186,9 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R801-MP3-ATOMIC-HANDOFF-FADE-HEADROOM-R799-PRESERVED',
+  version: 'R802-STATION-CORRUPTION-SELFHEAL-DURABLE-DIAGNOSTICS-R801-PRESERVED',
   cpuHeadroomProfileR794:'R796-LIVE-FAST-SCALE-COMPACT-EQ-FINITE-FADE-PRESCALED-STATIC',
-  mode: 'R801 MP3 READY-BEFORE-CUT + FADE HEADROOM / R799 YOUTUBE TRANSPORT PRESERVED',
+  mode: 'R802 STATION SELF-HEAL + DURABLE DIAG / R801 MP3 ATOMIC + R799 YOUTUBE PRESERVED',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
@@ -374,6 +380,88 @@ function setLiveTitleR724(text,{delayMs=0}={}){
   else commit();
 }
 // R790: R781 wall-clock title timers removed. MP3 title handoff is FFmpeg-PTS-bound in titleOverlayFiltersR721().
+
+// R802: durable, sanitized black-box diagnostics. These records intentionally omit
+// stream keys, RTMPS URLs and full local paths so the latest incident can be exposed
+// through the web agent without leaking secrets.
+let diagnosticRingR802=[];
+const stationIntegrityCacheR802=new Map();
+function diagTextR802(value,max=360){
+  let text=cleanText(value??'');
+  if(STREAM_KEY)text=text.split(STREAM_KEY).join('[stream-key-redacted]');
+  text=text.replace(/rtmps:\/\/[^\s"']+/gi,'rtmps://[redacted]');
+  text=text.replace(/\/var\/cache\/andrik-radio-r622\/[^\s"']+/g,m=>`<cache>/${m.split('/').pop()}`);
+  text=text.replace(/\/opt\/andrik-radio\/[^\s"']+/g,m=>`<app>/${m.split('/').pop()}`);
+  return text.slice(0,max);
+}
+function diagMediaR802(value){return diagTextR802(String(value||'').split('/').pop()||'',120)}
+function diagLoadR802(){try{return cleanText(readFileSync('/proc/loadavg','utf8')).split(/\s+/).slice(0,3).join(' ')}catch(_){return ''}}
+function diagRecordR802(event,data={}){
+  try{
+    const safe={};
+    for(const [k,v] of Object.entries(data||{})){
+      if(v===null||v===undefined||typeof v==='boolean'||typeof v==='number')safe[k]=v;
+      else safe[k]=diagTextR802(v,420);
+    }
+    const rec={
+      at:new Date().toISOString(),event:diagTextR802(event,80),
+      current:shortText(state.current?.title||'',64),next:shortText(state.next?.title||'',64),
+      clipActive:Boolean(clipActive),publisherPid:Number(publisher?.pid||0),videoPid:Number(videoFeeder?.pid||0),
+      clipPid:Number(clipPublisher?.pid||0),rtmps:Number(state.rtmpsEstablishedConnectionsR792||0),
+      load:diagLoadR802(),...safe
+    };
+    diagnosticRingR802.push(rec);
+    if(diagnosticRingR802.length>DIAG_RING_LIMIT_R802)diagnosticRingR802=diagnosticRingR802.slice(-DIAG_RING_LIMIT_R802);
+    mkdirSync(DIAG_DIR_R802,{recursive:true});
+    try{
+      if(existsSync(DIAG_LOG_R802)&&statSync(DIAG_LOG_R802).size>DIAG_MAX_BYTES_R802){
+        try{if(existsSync(DIAG_LOG_R802+'.previous'))unlinkSync(DIAG_LOG_R802+'.previous')}catch(_){ }
+        renameSync(DIAG_LOG_R802,DIAG_LOG_R802+'.previous');
+      }
+    }catch(_){ }
+    appendFileSync(DIAG_LOG_R802,JSON.stringify(rec)+'\n','utf8');
+    writeFileSync(DIAG_LATEST_R802,JSON.stringify({version:'R802',latest:rec,events:diagnosticRingR802.slice(-30)},null,2),'utf8');
+    state.lastDiagnosticAtR802=rec.at;
+    return rec;
+  }catch(_){return null}
+}
+function loadDiagR802(){
+  try{
+    if(!existsSync(DIAG_LOG_R802))return;
+    const lines=readFileSync(DIAG_LOG_R802,'utf8').trim().split(/\n+/).slice(-DIAG_RING_LIMIT_R802);
+    diagnosticRingR802=lines.map(x=>{try{return JSON.parse(x)}catch(_){return null}}).filter(Boolean);
+  }catch(_){ }
+}
+loadDiagR802();
+function diagFfmpegR802(scope,line){
+  if(!/error|fail|invalid|broken pipe|non-monoton|corrupt|missing picture|nal unit|timestamp|dts/i.test(String(line||'')))return;
+  diagRecordR802('ffmpeg-error',{scope,line:String(line||'').slice(-900)});
+}
+function stationInsertR802(item){return item?.sourceType==='radio-bumper'||String(item?.sourceType||'').startsWith('radio-special')}
+function purgePreparedStationR802(sourcePath,{purgeSource=false}={}){
+  const ready=preparedClipPathR742(sourcePath);
+  for(const f of [ready,preparedClipTitleFileR742(ready),preparedClipTickerFileR742(ready),ready+STATION_PREP_MARKER_R791]){
+    try{if(existsSync(f))unlinkSync(f)}catch(_){ }
+    stationIntegrityCacheR802.delete(f);
+  }
+  if(purgeSource){try{if(existsSync(sourcePath))unlinkSync(sourcePath)}catch(_){ }stationIntegrityCacheR802.delete(sourcePath)}
+}
+async function assertStationIntegrityR802(path,label='station-media'){
+  const st=statSync(path);
+  const sig=`${st.size}:${Math.trunc(st.mtimeMs)}`;
+  if(stationIntegrityCacheR802.get(path)===sig)return true;
+  try{
+    // Low-priority full video decode validates every packet/NAL once while the station insert is OFFLINE.
+    // -xerror makes Packet corrupt / invalid NAL fatal here, BEFORE the file can touch LIVE.
+    await runCapture('nice',['-n','19','ffmpeg','-nostdin','-hide_banner','-nostats','-loglevel','error','-xerror','-err_detect','explode','-i',path,'-map','0:v:0','-an','-f','null','-'],{timeoutMs:45000});
+    stationIntegrityCacheR802.set(path,sig);
+    diagRecordR802('station-integrity-ok',{stage:label,media:diagMediaR802(path),bytes:st.size});
+    return true;
+  }catch(error){
+    diagRecordR802('station-integrity-fail',{stage:label,media:diagMediaR802(path),bytes:st.size,error:cleanText(error?.message||error)});
+    throw new Error(`R802 ${label} corrupt: ${diagMediaR802(path)}: ${cleanText(error?.message||error)}`);
+  }
+}
 
 function bumperSlotR724(item){
   const m=/^radio\/clips\/radio-bumper-([123])\.mp4$/i.exec(String(item?.key||''));
@@ -1053,19 +1141,33 @@ async function downloadRadioClipR691(item){
   if(!item?.url)throw new Error('radio clip URL missing');
   prepareCacheDir();
   const dest=clipCachePathR691(item);
-  try{if(existsSync(dest)&&statSync(dest).size>500000)return dest}catch(_){ }
+  const stationInsert=stationInsertR802(item);
+  try{
+    if(existsSync(dest)&&statSync(dest).size>500000){
+      if(stationInsert){
+        try{await assertStationIntegrityR802(dest,'cached-source');return dest}
+        catch(error){
+          diagRecordR802('station-cache-purge',{stage:'cached-source',media:diagMediaR802(dest),error:cleanText(error?.message||error)});
+          purgePreparedStationR802(dest,{purgeSource:true});
+        }
+      }else return dest;
+    }
+  }catch(error){if(stationInsert)diagRecordR802('station-cache-check-error',{media:diagMediaR802(dest),error:cleanText(error?.message||error)})}
   if(clipPrefetchJobs.has(dest))return clipPrefetchJobs.get(dest);
   const job=(async()=>{
     const tmp=`${dest}.part-${process.pid}-${Date.now()}`;
     const controller=new AbortController();
     const timer=setTimeout(()=>controller.abort(),240000);
     try{
-      const response=await fetch(item.url,{headers:{'user-agent':'ANDRIK-Radio-R691-Clip'},signal:controller.signal});
+      if(stationInsert)diagRecordR802('station-download-start',{media:diagMediaR802(dest)});
+      const response=await fetch(item.url,{headers:{'user-agent':'ANDRIK-Radio-R802-Clip'},signal:controller.signal});
       if(!response.ok)throw new Error(`clip HTTP ${response.status}`);
       if(!response.body)throw new Error('clip empty response');
       await pipeline(Readable.fromWeb(response.body),createWriteStream(tmp,{flags:'w'}));
       if(!existsSync(tmp)||statSync(tmp).size<500000)throw new Error('clip file too small');
+      if(stationInsert)await assertStationIntegrityR802(tmp,'fresh-download');
       renameSync(tmp,dest);
+      if(stationInsert)diagRecordR802('station-download-committed',{media:diagMediaR802(dest),bytes:statSync(dest).size});
       return dest;
     }finally{
       clearTimeout(timer);
@@ -1336,6 +1438,7 @@ async function buildPreparedClipR742(item,sourcePath){
   try{
     await runCapture('nice',['-n',String(CLIP_PREP_NICE_R742),'ffmpeg','-nostdin',...args],{timeoutMs:CLIP_PREP_TIMEOUT_MS_R742});
     if(!existsSync(tmp)||statSync(tmp).size<CLIP_PREP_MIN_BYTES_R742)throw new Error('R742 prepared clip too small');
+    if(stationInsert)await assertStationIntegrityR802(tmp,'prepared-build');
     const preparedGeometryR787=await probePreparedGeometryR787(tmp);
     const geometryKeyR787=String(item?.key||item?.title||sourcePath.split('/').pop()||'clip');
     state.preparedGeometryByKey={...(state.preparedGeometryByKey||{}),[geometryKeyR787]:{...preparedGeometryR787,verifiedAt:new Date().toISOString()}};
@@ -1345,6 +1448,7 @@ async function buildPreparedClipR742(item,sourcePath){
       state.stationPreparedAudioByKey={...(state.stationPreparedAudioByKey||{}),[key]:{rms:Number(verified.rms.toFixed(2)),peak:Number(verified.peak),verifiedAt:new Date().toISOString()}};
     }
     renameSync(tmp,readyPath);
+    if(stationInsert)diagRecordR802('station-prepared-committed',{media:diagMediaR802(readyPath),duration:Number(duration||0)});
     if(stationInsert){
       try{writeFileSync(readyPath+STATION_PREP_MARKER_R791,`R791 station audio PTS reset before resample\n${new Date().toISOString()}\n`,'utf8')}catch(_){ }
     }
@@ -1355,7 +1459,15 @@ async function buildPreparedClipR742(item,sourcePath){
 async function ensurePreparedClipR742(item){
   const sourcePath=await downloadRadioClipR691(item);
   const readyPath=preparedClipPathR742(sourcePath);
-  if(preparedClipValidR742(sourcePath,readyPath,item))return readyPath;
+  if(preparedClipValidR742(sourcePath,readyPath,item)){
+    if(stationInsertR802(item)){
+      try{await assertStationIntegrityR802(readyPath,'prepared-cache');return readyPath}
+      catch(error){
+        diagRecordR802('station-prepared-rebuild',{media:diagMediaR802(readyPath),error:cleanText(error?.message||error)});
+        purgePreparedStationR802(sourcePath,{purgeSource:false});
+      }
+    }else return readyPath;
+  }
   if(preparedClipJobsR742.has(readyPath))return preparedClipJobsR742.get(readyPath);
   preparedClipPendingR742++;
   state.preparedClipPending=preparedClipPendingR742;
@@ -2306,7 +2418,8 @@ function spawnNormalVideoFeederChildR801(visualPath,{fadeIn=false,fadeInSeconds=
     const line=String(d||'').trim();
     if(line){
       state.lastFfmpegLine=line.slice(-1000);
-      if(/error|fail|invalid|broken pipe|non-monoton/i.test(line))state.lastError=line.slice(-700);
+      if(/error|fail|invalid|broken pipe|non-monoton|corrupt|missing picture|nal unit/i.test(line))state.lastError=line.slice(-700);
+      diagFfmpegR802('video-feed',line);
       console.error('[video-feed]',line);
     }
   });
@@ -2360,6 +2473,7 @@ async function atomicReplaceNormalVideoFeederR801(visualPath,{fadeIn=false,fadeI
       1800,
       'R801 next MP3 video feeder ready'
     );
+    diagRecordR802('mp3-candidate-ready',{candidatePid:Number(candidate.pid||0),oldPid:Number(old.pid||0),duration:Number(trackDuration||0)});
   }catch(error){
     try{candidate.kill('SIGTERM')}catch(_){ }
     await waitChildExit(candidate,250).catch(()=>false);
@@ -2377,11 +2491,13 @@ async function atomicReplaceNormalVideoFeederR801(visualPath,{fadeIn=false,fadeI
   // eliminates the old stop -> wait -> spawn gap. The persistent publisher/RTMPS process
   // is never restarted or reconfigured by this handoff.
   if(old.exitCode===null){
+    diagRecordR802('mp3-old-feeder-stop',{oldPid:Number(old.pid||0),candidatePid:Number(candidate.pid||0)});
     try{old.kill('SIGINT')}catch(_){ }
     await waitChildExit(old,900);
   }
   try{if(old.stdout)old.stdout.unpipe(videoSink)}catch(_){ }
   promoteNormalVideoFeederR801(candidate,videoSink);
+  diagRecordR802('mp3-candidate-promoted',{candidatePid:Number(candidate.pid||0),oldExit:old.exitCode});
   state.videoHandoffMode='R801-MP3-ATOMIC-READY-BEFORE-CUT';
   state.lastWarning='';
 
@@ -2643,10 +2759,26 @@ async function playVideoClipR691(previous,item,next){
     return await abortInsertHandoffR749(item,next,`clip cache: ${cleanText(error?.message||error)}`);
   }
 
+  const stationInsert=item.sourceType==='radio-bumper'||String(item.sourceType||'').startsWith('radio-special');
+  if(stationInsert){
+    diagRecordR802('station-preplay',{title:item.title||'STATION',media:diagMediaR802(readyPath)});
+    try{await assertStationIntegrityR802(readyPath,'preplay-ready')}
+    catch(error){
+      const sourcePath=clipCachePathR691(item);
+      purgePreparedStationR802(sourcePath,{purgeSource:false});
+      diagRecordR802('station-preplay-rebuild',{title:item.title||'STATION',error:cleanText(error?.message||error)});
+      try{
+        readyPath=await ensurePreparedClipR742(item);
+        await assertStationIntegrityR802(readyPath,'preplay-rebuilt');
+      }catch(rebuildError){
+        diagRecordR802('station-skip-corrupt',{title:item.title||'STATION',error:cleanText(rebuildError?.message||rebuildError)});
+        return await abortInsertHandoffR749(item,next,`R802 station media corrupt: ${cleanText(rebuildError?.message||rebuildError)}`);
+      }
+    }
+  }
   const warmedMetaR752=clipBoundaryMetaR752.get(itemId);
   const duration=(warmedMetaR752&&warmedMetaR752.readyPath===readyPath)?Number(warmedMetaR752.duration||0):await probeDuration(readyPath).catch(()=>0);
   const hasAudio=(warmedMetaR752&&warmedMetaR752.readyPath===readyPath)?Boolean(warmedMetaR752.hasAudio):await probeHasAudioR721(readyPath);
-  const stationInsert=item.sourceType==='radio-bumper'||String(item.sourceType||'').startsWith('radio-special');
   if(!hasAudio){
     state.lastError=`R752 video insert skipped: audio stream missing in ${shortText(item.title||'INSERT',40)}`;
     console.error('[r752-insert-audio]',state.lastError);
@@ -2703,7 +2835,7 @@ async function playVideoClipR691(previous,item,next){
     progressSource?.on('error',()=>{});
     child.stderr.on('data',d=>{
       const line=String(d||'').trim();
-      if(line){state.lastFfmpegLine=line.slice(-1000);if(/error|fail|invalid|broken pipe|non-monoton/i.test(line))state.lastError=line.slice(-700);console.error('[r752-clip-av]',line);}
+      if(line){state.lastFfmpegLine=line.slice(-1000);if(/error|fail|invalid|broken pipe|non-monoton|corrupt|missing picture|nal unit/i.test(line))state.lastError=line.slice(-700);diagFfmpegR802(stationInsert?'station-av':'clip-av',line);console.error('[r752-clip-av]',line);}
     });
 
     clipExitPromise=new Promise((resolve,reject)=>{
@@ -2729,6 +2861,8 @@ async function playVideoClipR691(previous,item,next){
       insertAudioStartFailuresR749++;
       throw new Error(`insert A/V did not become ready together: ${cleanText(error?.message||error)}`);
     }
+
+    diagRecordR802(stationInsert?'station-av-ready':'clip-av-ready',{title:item.title||'VIDEO',childPid:Number(child.pid||0),duration:Number(duration||0)});
 
     // R792: for station inserts BOTH outputs are now armed while the old feeder is
     // still supplying the already-black end frame. Only now cut that feeder, drain the
@@ -2756,6 +2890,7 @@ async function playVideoClipR691(previous,item,next){
     // The single source FFmpeg gives both outputs one common t=0 clock.
     videoSource.pipe(videoSink,{end:false});
     audioSource.pipe(audioSink,{end:false});
+    diagRecordR802(stationInsert?'station-live-connected':'clip-live-connected',{title:item.title||'VIDEO',childPid:Number(child.pid||0)});
     state.videoHandoffMode=stationInsert?'R792-STATION-SAME-TICK-UNIFIED-AV-LIVE':'R752-BOUNDARY-LOCKED-UNIFIED-AV-LIVE';
 
     // No next-picture LIVE preroll. Warm only file metadata/cache for a following video.
@@ -3367,7 +3502,7 @@ function publicStatus(){
       liveScalePolicyR794:'FAST-BILINEAR-LIVE-MP3-ONLY-OFFLINE-LANCZOS-PRESERVED',
       fadeEngineR795:'R787-ABSOLUTE-TIMELINE-ALPHA-MASK-065-BLACK-HOLD-RECOVER',
       fadeRuntimePolicyR796:'R799-R787-ABSOLUTE-ALPHA-MASK-065-005-080',
-      fadeRestoreR799:'R801-FADE-PRESERVED + MP3-BOUNDARY-HEADROOM + ATOMIC-H264-HANDOFF',
+      fadeRestoreR799:'R802-FADE-UNCHANGED-R801 + STATION-CORRUPTION-GUARD',
       equalizerPolicyR796:'QTRLE-1180PX-25FPS-100FRAME-SEAMLESS-NO-LIVE-SCALE',
       tickerPolicyR796:'FONT36-Y62-SPEED105-RELOAD2S',
       staticOverlayPolicyR794:'PRE-SCALED-QR160-CTA420',
@@ -3483,6 +3618,12 @@ function publicStatus(){
     lastExit:state.lastExit,
     lastError:state.lastError,
     lastFfmpegLine:state.lastFfmpegLine,
+    diagnosticsR802:{
+      version:'R802',lastEventAt:state.lastDiagnosticAtR802||diagnosticRingR802.at(-1)?.at||null,
+      latest:diagnosticRingR802.at(-1)||null,
+      events:diagnosticRingR802.slice(-30),
+      logFile:'r802-events.ndjson'
+    },
     youtubeLiveUrl:YOUTUBE_LIVE_URL
   };
 }
