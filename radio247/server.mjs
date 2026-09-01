@@ -19,7 +19,7 @@ import { pipeline } from 'node:stream/promises';
 const PORT = Number(process.env.PORT || 8080);
 const R816_PERSISTENT_RAWVIDEO_SINGLE_X264 = 'R816-PERSISTENT-RAWVIDEO-SINGLE-X264';
 const R819_R784_GEOMETRY_RAWVIDEO_QUEUE24 = 'R819-R784-VIEWER-PROVEN-GEOMETRY-RAWVIDEO-QUEUE24';
-const R820_MASTER_PTS_LOCK = 'R821-STATION-NO-DRAIN-MAKE-BEFORE-BREAK / R820-DETERMINISTIC-MASTER-PTS-LOCK';
+const R820_MASTER_PTS_LOCK = 'R829-GOLDEN-NOCROP-STABILITY / R821-STATION-NO-DRAIN / R820-DETERMINISTIC-MASTER-PTS-LOCK';
 const PLAYLIST_URL = process.env.PLAYLIST_URL || 'https://andrikmetal.com/api/music/downloads';
 const STREAM_KEY = String(process.env.YOUTUBE_STREAM_KEY || '').trim();
 const STREAM_URL_OVERRIDE = String(process.env.STREAM_URL_OVERRIDE || '').trim();
@@ -116,7 +116,7 @@ const VIDEO_BOUNDARY_FADE_SECONDS_R744 = 0.80;
 const CLIP_END_GUARD_MARGIN_MS_R745 = Math.max(8000,Number(process.env.CLIP_END_GUARD_MARGIN_MS_R745 || 15000)); // watchdog margin after measured clip duration
 const TRANSPORT_FATAL_RESTART_DELAY_MS_R746 = Math.max(1500,Math.min(15000,Number(process.env.TRANSPORT_FATAL_RESTART_DELAY_MS_R746 || 3500))); // R746: restart whole service when FFmpeg/FIFO keeps a dead RTMPS/TLS session alive
 const TRANSPORT_FATAL_REGEX_R746 = /the specified session has been invalidated|error in the pull function|io error:\s*end of file|server returned 4\d\d|connection reset by peer|broken pipe|connection timed out|connection refused|network is unreachable|tls[^\n]*(?:error|fail)|error writing (?:trailer|header|packet)|av_interleaved_write_frame/i;
-const OUTPUT_FATAL_REGEX_R780 = /tag\s+.*incompatible with output codec|could not write header|error opening output file|error opening output files|bitstream filter not found|invalid data found when processing input/i; // R780: FIFO child can stay alive while FLV header is permanently rejected
+const OUTPUT_FATAL_REGEX_R780 = /tag\s+.*incompatible with output codec|could not write header|error opening output file|error opening output files|bitstream filter not found|invalid data found when processing input|a non-NULL packet sent after an EOF|failed to send packet to filter extract_extradata/i; // R780: FIFO child can stay alive while FLV header is permanently rejected
 const LOUDNESS_ANALYSIS_TIMEOUT_MS_R747 = Math.max(8000,Math.min(120000,Number(process.env.LOUDNESS_ANALYSIS_TIMEOUT_MS_R747 || 45000)));
 // R750: loudness analysis is background-only and serialized. It can never delay a live MP3 handoff.
 const LOUDNESS_BACKGROUND_NICE_R750 = Math.max(10,Math.min(19,Number(process.env.LOUDNESS_BACKGROUND_NICE_R750 || 15)));
@@ -157,9 +157,9 @@ const VIDEO_BITRATE = '6000k'; // R762: safe 1080p25 quality lift; CBR only, enc
 const AUDIO_BITRATE = '160k'; // R762: modest stereo AAC quality lift; sample rate/queues unchanged
 const AUDIO_SAMPLE_RATE = 44100; // YouTube Live recommendation for stereo
 const VIDEO_FPS = 25;
-const FULL_FRAME_FILTER_R787 = 'scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1'; // immutable CONTAIN: entire source visible, never crop/zoom
-const LIVE_FULL_FRAME_FILTER_R794 = 'scale=1920:1080:force_original_aspect_ratio=decrease:flags=fast_bilinear,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1'; // R794 live MP3 only: same immutable FIT+PAD geometry, lower scaler CPU; offline prepared clips keep Lanczos
-const LIVE_FULL_FRAME_GEOMETRY_R819 = 'scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1'; // R819: exact R784/R814 viewer-proven geometry; full 16:9 sources stay pixel-for-pixel full canvas; non-16:9 sources are contained without crop
+const FULL_FRAME_FILTER_R787 = 'scale=1920:1080:flags=lanczos,setsar=1'; // R829 HARD FULLSCREEN: direct 1920x1080, no crop, no pad, no aspect-ratio fallback
+const LIVE_FULL_FRAME_FILTER_R794 = 'scale=1920:1080:flags=lanczos,setsar=1'; // R829 HARD FULLSCREEN: direct 1920x1080, no crop, no pad, no aspect-ratio fallback
+const LIVE_FULL_FRAME_GEOMETRY_R819 = 'scale=1920:1080:flags=lanczos,setsar=1'; // R829 HARD FULLSCREEN: direct 1920x1080, no crop, no pad, no aspect-ratio fallback
 const VIDEO_INPUT_QUEUE_PACKETS_R732 = 24; // R818: ~0.96s rawvideo cushion at 25fps; absorbs transient master/RTMPS backpressure without a mid-track freeze
 const AUDIO_INPUT_QUEUE_PACKETS_R732 = 8; // ~0.74 s FFmpeg raw-packet cushion; ~1 s incl. pipe; prevents 20–30 s title/audio drift
 const VIDEO_GOP = 50; // exactly 2 seconds at 25 fps
@@ -195,9 +195,9 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R821-STATION-NO-DRAIN-MAKE-BEFORE-BREAK-R820-PRESERVED',
+  version: 'R829-GOLDEN-NOCROP-R828-R827-R826-R821-PRESERVED',
   cpuHeadroomProfileR794:'R796-LIVE-FAST-SCALE-COMPACT-EQ-FINITE-FADE-PRESCALED-STATIC',
-  mode: 'R821 STATION NO-DRAIN MAKE-BEFORE-BREAK / R820 MASTER PTS + R819 GEOMETRY + R814 FADE PRESERVED',
+  mode: 'R829 GOLDEN FULLSCREEN + R828 STATION LIGHT-CHECK + R827 COMMIT LOCK + R821 NO-DRAIN + R820 PTS + R814 FADE',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
   publisherRunning: false,
@@ -275,10 +275,14 @@ const state = {
   lastTransportFatalAt: null,
   lastTransportFatalReason: '',
   outputEgressGuardMode: 'R780-FLV-TAG7-A10+HARD-MUX-FATAL-RESTART',
-  fullFrameGuardMode: 'R790-R787-VIEWER-PROVEN-FIT-PAD-1920x1080-SAR1-NO-CROP',
+  fullFrameGuardMode: 'R829-HARD-FULL-1920x1080-SAR1-NO-CROP-NO-PAD',
   stationAudioGuardMode: 'R784-BEST-AUDIO-STREAM+PREPARED-RMS-VERIFY',
   stationHandoffModeR821: 'R821-MAKE-BEFORE-BREAK-NO-DRAIN',
   stationLegacyDrainDisabledR821: STATION_LEGACY_DRAIN_DISABLED_R821,
+  goldenNoCropLockR829: true,
+  falseFrameStallKillDisabledR829: true,
+  clipCommitLockR827: true,
+  stationIntegrityLightR828: true,
   stationNoDrainPromotionsR821: 0,
   lastStationNoDrainPromotionR821: null,
   masterTimestampErrorCount: 0,
@@ -460,28 +464,62 @@ function diagFfmpegR802(scope,line){
   diagRecordR802('ffmpeg-error',{scope,line:String(line||'').slice(-900)});
 }
 function stationInsertR802(item){return item?.sourceType==='radio-bumper'||String(item?.sourceType||'').startsWith('radio-special')}
+const STATION_INTEGRITY_MARKER_R828='.r828-integrity-ok';
+function stationIntegritySigR828(path){
+  const st=statSync(path);
+  return `${st.size}:${Math.trunc(st.mtimeMs)}`;
+}
+function stationIntegrityMarkerPathR828(path){return `${path}${STATION_INTEGRITY_MARKER_R828}`;}
+function stationIntegrityMarkR828(path,sig=stationIntegritySigR828(path)){
+  try{writeFileSync(stationIntegrityMarkerPathR828(path),`${sig}\n`,'utf8')}catch(_){ }
+  stationIntegrityCacheR802.set(path,sig);
+}
+function stationIntegrityPersistedR828(path,sig){
+  try{return cleanText(readFileSync(stationIntegrityMarkerPathR828(path),'utf8'))===sig}catch(_){return false}
+}
 function purgePreparedStationR802(sourcePath,{purgeSource=false}={}){
   const ready=preparedClipPathR742(sourcePath);
-  for(const f of [ready,preparedClipTitleFileR742(ready),preparedClipTickerFileR742(ready),ready+STATION_PREP_MARKER_R791]){
+  for(const f of [ready,preparedClipTitleFileR742(ready),preparedClipTickerFileR742(ready),ready+STATION_PREP_MARKER_R791,ready+STATION_INTEGRITY_MARKER_R828]){
     try{if(existsSync(f))unlinkSync(f)}catch(_){ }
     stationIntegrityCacheR802.delete(f);
   }
-  if(purgeSource){try{if(existsSync(sourcePath))unlinkSync(sourcePath)}catch(_){ }stationIntegrityCacheR802.delete(sourcePath)}
+  if(purgeSource){
+    try{if(existsSync(sourcePath))unlinkSync(sourcePath)}catch(_){ }
+    try{if(existsSync(sourcePath+STATION_INTEGRITY_MARKER_R828))unlinkSync(sourcePath+STATION_INTEGRITY_MARKER_R828)}catch(_){ }
+    stationIntegrityCacheR802.delete(sourcePath);
+  }
 }
+// R828-PERSISTENT-STATION-INTEGRITY: prepared station MP4s are never full-decoded on the live path.
 async function assertStationIntegrityR802(path,label='station-media'){
   const st=statSync(path);
+  if(st.size<500000)throw new Error(`R828 ${label} file too small: ${st.size}`);
   const sig=`${st.size}:${Math.trunc(st.mtimeMs)}`;
   if(stationIntegrityCacheR802.get(path)===sig)return true;
-  try{
-    // Low-priority full video decode validates every packet/NAL once while the station insert is OFFLINE.
-    // -xerror makes Packet corrupt / invalid NAL fatal here, BEFORE the file can touch LIVE.
-    await runCapture('nice',['-n','19','ffmpeg','-nostdin','-hide_banner','-nostats','-loglevel','error','-xerror','-err_detect','explode','-i',path,'-map','0:v:0','-an','-f','null','-'],{timeoutMs:45000});
+  if(stationIntegrityPersistedR828(path,sig)){
     stationIntegrityCacheR802.set(path,sig);
-    diagRecordR802('station-integrity-ok',{stage:label,media:diagMediaR802(path),bytes:st.size});
+    diagRecordR802('station-integrity-persist-hit-r828',{stage:label,media:diagMediaR802(path),bytes:st.size});
+    return true;
+  }
+  const preparedTrusted=String(path).includes(CLIP_PREP_SUFFIX_R782)&&existsSync(path+STATION_PREP_MARKER_R791);
+  if(preparedTrusted){
+    stationIntegrityMarkR828(path,sig);
+    diagRecordR802('station-integrity-trusted-r828',{stage:label,media:diagMediaR802(path),bytes:st.size});
+    return true;
+  }
+  try{
+    const raw=await runCapture('ffprobe',['-v','error','-show_entries','stream=codec_type:format=duration','-of','json',path],{timeoutMs:8000});
+    const probe=JSON.parse(String(raw||'{}'));
+    const types=new Set((probe.streams||[]).map(x=>String(x?.codec_type||'')));
+    const duration=Number(probe?.format?.duration||0);
+    if(!types.has('video'))throw new Error('video stream missing');
+    if(!types.has('audio'))throw new Error('audio stream missing');
+    if(!(duration>0.25))throw new Error(`invalid duration ${duration}`);
+    stationIntegrityMarkR828(path,sig);
+    diagRecordR802('station-integrity-quick-ok-r828',{stage:label,media:diagMediaR802(path),bytes:st.size,duration:Number(duration.toFixed(3))});
     return true;
   }catch(error){
     diagRecordR802('station-integrity-fail',{stage:label,media:diagMediaR802(path),bytes:st.size,error:cleanText(error?.message||error)});
-    throw new Error(`R802 ${label} corrupt: ${diagMediaR802(path)}: ${cleanText(error?.message||error)}`);
+    throw new Error(`R828 ${label} invalid: ${diagMediaR802(path)}: ${cleanText(error?.message||error)}`);
   }
 }
 
@@ -1989,7 +2027,7 @@ function trackLabel(item,fallback='—'){
   return album ? `${title} (${album})` : title;
 }
 
-// R816/R787 NOCROP: source geometry is immutable FIT+PAD. Live feeders output full YUV420P frames; only the persistent master encodes H.264.
+// R829 NOCROP: every feeder is forced directly to 1920x1080. No crop, no pad and no aspect-ratio branch exists on the live path.
 function titleOverlayFiltersR721({dynamicTitle=false,showPreview=false,previewDuration=0,previewReload=false,boundaryTitleSwitchAt=0,liveCpuFastR794=false}={}){
   const font=chooseFont();
   const titleFont=chooseTitleFont();
@@ -2894,6 +2932,7 @@ async function playVideoClipR691(previous,item,next){
 
   let child=null;
   let clipExitPromise=null;
+  let insertCommittedR827=false;
   try{
     clearNextPreviewR726({invalidate:true});
     writeOverlayFileR726(LIVE_PREVIOUS_FILE_R726,previousOverlayTextR745(previous));
@@ -2958,6 +2997,8 @@ async function playVideoClipR691(previous,item,next){
       state.lastStationNoDrainPromotionR821={at:new Date().toISOString(),title:shortText(item.title||'STATION',52),candidatePid:Number(child.pid||0)};
       diagRecordR802('r821-station-no-drain-promoted',{title:item.title||'STATION',candidatePid:Number(child.pid||0),count:Number(state.stationNoDrainPromotionsR821||0)});
     }
+    insertCommittedR827=true;
+    diagRecordR802('r827-insert-commit-locked',{title:item.title||'VIDEO',station:stationInsert,childPid:Number(child.pid||0)});
     diagRecordR802('r816-insert-live-connected',{title:item.title||'VIDEO',station:stationInsert,childPid:Number(child.pid||0)});
 
     if(next&&next.type!=='track'){
@@ -2969,16 +3010,36 @@ async function playVideoClipR691(previous,item,next){
 
     const guardMs=Math.max(12000,Math.round(Math.max(1,Number(duration)||1)*1000)+CLIP_END_GUARD_MARGIN_MS_R745);
     try{await promiseTimeout(clipExitPromise,guardMs,`R816 clip EOF ${shortText(item.title||'VIDEO',40)}`);}
-    catch(error){state.lastError=`R816 clip EOF guard: ${cleanText(error?.message||error)}`;if(child&&child.exitCode===null){try{child.kill('SIGTERM')}catch(_){ }if(!(await waitChildExit(child,1200))&&child.exitCode===null){try{child.kill('SIGKILL')}catch(_){ }await waitChildExit(child,250);}}return false;}
+    catch(error){
+      const reasonR827=cleanText(error?.message||error);
+      if(child&&child.exitCode===null){try{child.kill('SIGTERM')}catch(_){ }if(!(await waitChildExit(child,1200))&&child.exitCode===null){try{child.kill('SIGKILL')}catch(_){ }await waitChildExit(child,250);}}
+      if(insertCommittedR827){
+        if(item.sourceType==='r2-video')lastClipIdentityR726=itemId;
+        state.lastWarning=`R827 committed insert EOF recovery: ${shortText(item.title||'VIDEO',40)}: ${reasonR827}`;
+        diagRecordR802('r827-committed-insert-eof-no-retry',{title:item.title||'VIDEO',station:stationInsert,reason:shortText(reasonR827,180)});
+        state.lastError='';
+        return true;
+      }
+      state.lastError=`R816 clip EOF guard: ${reasonR827}`;
+      return false;
+    }
     if(item.sourceType==='r2-video')lastClipIdentityR726=itemId;
     state.lastError='';
-    return !stopping;
+    return true;
   }catch(error){
     stationHandoffActiveR804=false;
-    state.lastError=`R816 VIDEO/AUDIO boundary handoff: ${cleanText(error?.message||error)}`;
+    const reasonR827=cleanText(error?.message||error);
     console.error('[r816-video-clip]',error);
     if(child&&child.exitCode===null){try{child.kill('SIGTERM')}catch(_){ }}
-    await abortInsertHandoffR749(item,next,cleanText(error?.message||error));
+    if(insertCommittedR827){
+      if(item.sourceType==='r2-video')lastClipIdentityR726=itemId;
+      state.lastWarning=`R827 committed insert post-live recovery: ${shortText(item.title||'VIDEO',40)}: ${reasonR827}`;
+      diagRecordR802('r827-committed-insert-error-no-retry',{title:item.title||'VIDEO',station:stationInsert,reason:shortText(reasonR827,180)});
+      state.lastError='';
+      return true;
+    }
+    state.lastError=`R816 VIDEO/AUDIO boundary handoff: ${reasonR827}`;
+    await abortInsertHandoffR749(item,next,reasonR827);
     return false;
   }finally{
     stationHandoffActiveR804=false;
@@ -3326,6 +3387,8 @@ async function radioLoop(){
           queueIndex++;
           state.lastError='';
         }else{
+          // R827-SHUTDOWN-NO-CLIP-RETRY
+          if(stopping){normalClipRetryR814.delete(primaryIdentity(item));break;}
           // R814 CLIP LOCK: a clip that was already selected at the boundary is not
           // silently skipped to the next MP3 on one transient handoff failure. Retry it
           // in place twice. Only after bounded retries do we defer it safely.
@@ -3455,7 +3518,7 @@ function publicStatus(){
     committedNextTitle:state.committedNextTitle||'',
     committedNextRecovered:Boolean(state.committedNextRecovered),
     committedNextCommittedAt:state.committedNextCommittedAt||null,
-    videoPipeline:'R819 R784 FIT+PAD 1920x1080 -> RAW YUV420P -> QUEUE24 FRAME RELAY -> ONE H264 ENCODE -> DUAL RTMPS',
+    videoPipeline:'R829 HARD FULL 1920x1080 -> RAW YUV420P -> QUEUE24 FRAME RELAY -> ONE H264 ENCODE -> DUAL RTMPS',
     outputTimeshiftSeconds:OUTPUT_TIMESHIFT_SECONDS,
     youtubeDualIngestEnabled:Boolean(DUAL_INGEST_ENABLED_R792),
     youtubeBackupIngestArmed:Boolean(DUAL_INGEST_ENABLED_R792 && STREAM_BACKUP_URL),
@@ -3479,7 +3542,7 @@ function publicStatus(){
       audio:{codec:'AAC-LC',sampleRate:AUDIO_SAMPLE_RATE,channels:2,channelLayout:'stereo',bitrate:AUDIO_BITRATE},
       transport:{container:'FLV',protocol:'RTMPS',lanes:Number(state.rtmpsEstablishedConnectionsR792||0),expectedLanes:DUAL_INGEST_ENABLED_R792?2:1,dualIngest:Boolean(DUAL_INGEST_ENABLED_R792)},
       handoff:{mode:state.videoHandoffMode||'R816-RAWVIDEO-FRAME-ALIGNED',frameAligned:true,feederCodec:'rawvideo',persistentEncoder:true},
-      geometry:{raster:'1920x1080',sampleAspectRatio:'1:1',displayAspectRatio:'16:9',fullFrame:true,noCrop:true,guard:'R819 exact R784/R814 viewer-proven scale=decrease + pad 1920x1080 + setsar=1 at feeder; master has NO geometry filter'}
+      geometry:{raster:'1920x1080',sampleAspectRatio:'1:1',displayAspectRatio:'16:9',fullFrame:true,noCrop:true,guard:'R829 direct scale=1920:1080 + setsar=1 at every feeder; crop/pad/aspect-ratio branches forbidden; master has NO geometry filter'}
     },
     streamProfileR816:{
       video:{codec:'H.264 / AVC',encoder:'libx264 (persistent master only)',profile:'High 4.1',width:1920,height:1080,fps:VIDEO_FPS,bitrate:VIDEO_BITRATE,gopFrames:VIDEO_GOP,bFrames:0,pixelFormat:'yuv420p'},
@@ -3508,7 +3571,7 @@ function publicStatus(){
     titleHandoffDelayMs:TITLE_HANDOFF_DELAY_MS_R724,
     videoInputQueuePackets:VIDEO_INPUT_QUEUE_PACKETS_R732,
     rawVideoQueueGuardR819:'24 frames / 0.96s at 25fps',
-    liveGeometryModeR819:'R784-VIEWER-PROVEN-FIT-PAD-1920x1080-NO-CROP',
+    liveGeometryModeR819:'R829-HARD-FULL-1920x1080-NO-CROP-NO-PAD',
     videoInputQueueMaxWindowSecondsR756:Number((VIDEO_INPUT_QUEUE_PACKETS_R732/VIDEO_FPS).toFixed(2)),
     audioInputQueuePackets:AUDIO_INPUT_QUEUE_PACKETS_R732,
     masterAvClockMode:'R816-PERSISTENT-RAWVIDEO-N25+AUDIO-SAMPLE-CLOCK',
@@ -3567,7 +3630,7 @@ function publicStatus(){
       preparedClipPending:state.preparedClipPending||0,
       preparedClipLast:state.preparedClipLast||'',
       clipLiveVideoCodec:'rawvideo-yuv420p-frame-relay',
-      clipPreparedVideoCodec:'libx264-ultrafast-6000k-no-bframes-r760-fit-pad',
+      clipPreparedVideoCodec:'libx264-ultrafast-6000k-no-bframes-r829-hard-full',
       videoPipelineLeadSeconds:0,
       clipCacheWarmLeadSeconds:INSERT_CACHE_WARM_LEAD_SECONDS_R752,
       clipCacheWarmEntries:clipBoundaryMetaR752.size,
@@ -3662,10 +3725,10 @@ function publicStatus(){
     videoBitrate:'6000k',
     audioBitrate:'160k',
     videoPreset:'ultrafast-zerolatency-UNCHANGED-FOR-STABILITY',
-    permanentFullscreenMode:'R819-EXACT-R784-R814-VIEWER-PROVEN-FIT-PAD-1920x1080-SAR1',
+    permanentFullscreenMode:'R829-GOLDEN-HARD-FULL-1920x1080-SAR1',
     permanentFullscreenWidth:1920,
     permanentFullscreenHeight:1080,
-    permanentFullscreenFitPolicy:'R787-FIT-DECREASE-PAD-NO-CROP-IMMUTABLE',
+    permanentFullscreenFitPolicy:'R829-DIRECT-SCALE-NO-CROP-NO-PAD-IMMUTABLE',
     feederBoundaryMode:'R816-FULL-YUV-FRAMES-NO-FEEDER-CODEC-STATE',
     transportRecoveryMode:'R754-FFMPEG-FIFO-FIRST-NO-EARLY-SYSTEMD-EXIT',
     transportHealthy:state.transportHealthy!==false,
@@ -3690,6 +3753,10 @@ function publicStatus(){
     stationLegacyCleanStopTimeoutMsR804:0, // R821 compatibility field
     stationPipeDrainTimeoutMsR804:0, // R821 compatibility field
     stationLegacyDrainDisabledR821:STATION_LEGACY_DRAIN_DISABLED_R821,
+    goldenNoCropLockR829:true,
+    falseFrameStallKillDisabledR829:true,
+    clipCommitLockR827:true,
+    stationIntegrityLightR828:true,
     stationHandoffModeR821:state.stationHandoffModeR821,
     stationNoDrainPromotionsR821:Number(state.stationNoDrainPromotionsR821||0),
     lastStationNoDrainPromotionR821:state.lastStationNoDrainPromotionR821||null,
@@ -3783,7 +3850,7 @@ const server=http.createServer((req,res)=>{
       let result;
       if(url.pathname==='/control/visual-now')result=await applyVisualModeR721({slot:url.searchParams.get('slot')||''});
       else if(url.pathname==='/control/visual-auto')result=await applyVisualModeR721({auto:true});
-      else if(url.pathname==='/control/full-fit')result=await ensureNormalVideoFeederR721({force:true}).then(()=>({ok:true,noCrop:true,restartedPublisher:false}));
+      else if(url.pathname==='/control/full-fit')result={ok:true,noCrop:true,locked:true,r829:true,restartedPublisher:false,restartedVideoFeeder:false};
       else if(url.pathname==='/control/timeline-offset')result=await setTimelineCompensationR739(url.searchParams.get('seconds'));
       else throw new Error('unknown local control');
       res.writeHead(200,headers);res.end(JSON.stringify(result));
@@ -3825,7 +3892,7 @@ const server=http.createServer((req,res)=>{
 });
 
 server.listen(PORT,'0.0.0.0',()=>{
-  console.log(`ANDRIK Radio R787 PERMANENT NOCROP + MONOTONIC TS + R784 STATION AUDIO listening on :${PORT}`);
+  console.log(`ANDRIK Radio R829 GOLDEN HARD-FULL + R828 + R827 + R821 listening on :${PORT}`);
   radioLoop();
 });
 

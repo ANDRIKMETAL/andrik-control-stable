@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788202226561-f54b52617b",
-  "release": "R821",
-  "archiveName": "R821-STATION-NO-DRAIN-MAKE-BEFORE-BREAK-R820-R819-R816-R814-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "54266ce9d28076eee2aef537ca43f5326dcda8a5",
-  "backupSha": "54266ce9d28076eee2aef537ca43f5326dcda8a5",
+  "operationId": "publish-1788238580894-dc6ae81000",
+  "release": "R829",
+  "archiveName": "R829-GOLDEN-NOCROP-R828-R827-R826-R821-R820-R816-R814-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "ffd1c90220ee4f052cecbb5b5ad530cc60b2dd37",
+  "backupSha": "ffd1c90220ee4f052cecbb5b5ad530cc60b2dd37",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-08-31T18:50:27.083Z"
+  "generatedAt": "2026-09-01T04:56:21.868Z"
 }
