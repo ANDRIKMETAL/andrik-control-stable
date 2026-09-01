@@ -69,7 +69,7 @@ const CTA_FIRST_SHOW_SECONDS_R748 = 20; // first compact CTA after feeder settle
 const CTA_FADE_SECONDS_R748 = 0.35; // smooth alpha in/out instead of blink
 const CTA_BOTTOM_GAP_R748 = 72; // R767: compact CTA directly above ticker
 const CTA_RIGHT_GAP_R767 = 34; // R767: right side; old left CTA removed
-const CLIP_PREP_SUFFIX_R782 = '.r834-fullfill-ready.mp4'; // R834 fresh cache so no contain/pad geometry is baked in
+const CLIP_PREP_SUFFIX_R782 = '.r835-fullfill-ready.mp4'; // R835 fresh FULL-FILL cache; invalidates older prepared geometry
 const STATION_PREP_MARKER_R791 = '.station-r791-audio-zero-pts'; // R791: force one-time rebuild of station inserts with audio PTS reset BEFORE resample
 const STATION_LEGACY_DRAIN_DISABLED_R821 = true; // R821: station handoff never waits for old H264/AU/sink drain; persistent rawvideo master stays fed
 const STATION_LEADING_SILENCE_THRESHOLD_DB_R782 = -55; // PCM RMS threshold, no optional FFmpeg silencedetect dependency
@@ -140,8 +140,8 @@ const VIDEO_SOURCE_STUCK_MS_R749 = Math.max(1200,Math.min(10000,Number(process.e
 const INSERT_AUDIO_START_TIMEOUT_MS_R749 = Math.max(1000,Math.min(12000,Number(process.env.INSERT_AUDIO_START_TIMEOUT_MS_R749 || 4000))); // R751: slow AAC/MP4 startup must skip safely, never crash
 const INSERT_CACHE_WARM_LEAD_SECONDS_R752 = Math.max(2,Math.min(8,Number(process.env.INSERT_CACHE_WARM_LEAD_SECONDS_R752 || 8.0))); // metadata/cache warm only; ZERO media frames before boundary
 const CLIP_TO_TRACK_HANDOFF_GUARD_MS_R753 = Math.max(2500,Math.min(10000,Number(process.env.CLIP_TO_TRACK_HANDOFF_GUARD_MS_R753 || 5000))); // allow one clean clip→MP3 feeder handoff without watchdog racing it
-const CLIP_TO_TRACK_FADE_IN_SECONDS_R753 = Math.max(0.25,Math.min(1.5,Number(process.env.CLIP_TO_TRACK_FADE_IN_SECONDS_R753 || 1.40))); // R833 clip→MP3 cinematic reveal
-const CLIP_TO_TRACK_BLACK_HOLD_SECONDS_R833 = Math.max(0.20,Math.min(0.80,Number(process.env.CLIP_TO_TRACK_BLACK_HOLD_SECONDS_R833 || 0.40))); // R833 full-black hold before MP3 reveal
+const CLIP_TO_TRACK_FADE_IN_SECONDS_R753 = Math.max(0.25,Math.min(2.40,Number(process.env.CLIP_TO_TRACK_FADE_IN_SECONDS_R753 || 1.80))); // R835 clip→MP3 slower cinematic reveal
+const CLIP_TO_TRACK_BLACK_HOLD_SECONDS_R833 = Math.max(0.20,Math.min(1.20,Number(process.env.CLIP_TO_TRACK_BLACK_HOLD_SECONDS_R833 || 0.70))); // R835 clip→MP3 longer full-black hold
 const VIDEO_INSERT_FADE_IN_SECONDS_R757 = Math.max(0.25,Math.min(1.5,Number(process.env.VIDEO_INSERT_FADE_IN_SECONDS_R757 || 1.10))); // guaranteed black→video on MP3→clip/insert boundary
 const MP3_BOUNDARY_FADE_IN_SECONDS_R758 = Math.max(0.20,Math.min(1.5,Number(process.env.MP3_BOUNDARY_FADE_IN_SECONDS_R758 || 0.80))); // R763 metadata/env compatibility: longer visible MP3 boundary recovery
 // R721 keeps the proven 100-frame / 4-second exact-periodic QTRLE loops from R720.
@@ -161,9 +161,9 @@ const AUDIO_GAP_BRIDGE_INTERVAL_MS_R824 = 20; // R824: fill only inter-item audi
 const AUDIO_GAP_BRIDGE_SAMPLES_R824 = Math.max(1,Math.round(AUDIO_SAMPLE_RATE*AUDIO_GAP_BRIDGE_INTERVAL_MS_R824/1000));
 const AUDIO_GAP_BRIDGE_CHUNK_R824 = Buffer.alloc(AUDIO_GAP_BRIDGE_SAMPLES_R824*2*2); // s16le stereo silence, 20 ms
 const VIDEO_FPS = 25;
-const FULL_FRAME_FILTER_R787 = 'scale=1920:1080:flags=lanczos,setsar=1'; // R834 FULL-FILL: always fill 1920x1080, no crop/pad shrink
-const LIVE_FULL_FRAME_FILTER_R794 = 'scale=1920:1080:flags=fast_bilinear,setsar=1'; // R834 FULL-FILL LIVE
-const LIVE_FULL_FRAME_GEOMETRY_R819 = 'scale=1920:1080:flags=fast_bilinear,setsar=1'; // R834 FULL-FILL viewer geometry
+const FULL_FRAME_FILTER_R787 = 'scale=1920:1080:flags=lanczos,setsar=1'; // R835 FULL-FILL 1920x1080; no pad/contain shrink
+const LIVE_FULL_FRAME_FILTER_R794 = 'scale=1920:1080:flags=fast_bilinear,setsar=1'; // R835 FULL-FILL LIVE
+const LIVE_FULL_FRAME_GEOMETRY_R819 = 'scale=1920:1080:flags=fast_bilinear,setsar=1'; // R835 FULL-FILL viewer geometry
 const VIDEO_INPUT_QUEUE_PACKETS_R732 = 24; // R831 MICRO-LAG FIX: proven ~0.96s rawvideo cushion
 const AUDIO_INPUT_QUEUE_PACKETS_R732 = 8; // R831 MICRO-LAG FIX: proven bounded audio queue
 const VIDEO_GOP = 50; // exactly 2 seconds at 25 fps

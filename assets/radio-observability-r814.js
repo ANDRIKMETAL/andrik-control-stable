@@ -39,7 +39,7 @@
 
     const radio=document.getElementById('youtubeRadioR565');
     if(radio&&!document.getElementById('r813Profile')){
-      const firstStats=radio.querySelector('.youtube-radio-stats-r565');
+      const firstStats=document.getElementById('radioInventoryR835')||radio.querySelector('.youtube-radio-stats-r565:not(.youtube-radio-youtube-stats-r565)');
       if(firstStats){
         const title=document.createElement('div');
         title.className='r813-profile-title';
@@ -64,7 +64,7 @@
     }
 
     if(!document.getElementById('r813Diagnostics')){
-      const firstCard=document.querySelector('main.wrap > section.card');
+      const main=document.querySelector('main.wrap');
       const card=document.createElement('section');
       card.id='r813Diagnostics';
       card.className='card r813-diag-card';
@@ -82,8 +82,7 @@
         </div>
         <p class="small" style="margin:9px 2px 0">Очистить вид не удаляет журнал на OVH. Stream key и RTMPS-адреса в диагностике скрываются агентом.</p>
       `;
-      if(firstCard)firstCard.insertAdjacentElement('afterend',card);
-      else document.querySelector('main.wrap')?.prepend(card);
+      if(main)main.appendChild(card);
 
       document.getElementById('r813CopyLog')?.addEventListener('click',copyAll);
       document.getElementById('r813RefreshLog')?.addEventListener('click',()=>refresh(true));

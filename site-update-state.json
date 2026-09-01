@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788288494120-a409f7c681",
-  "release": "R834",
-  "archiveName": "R834-FULLFILL-YOUTUBE-TOP-COMPACT-MICROLAG-CLIPFADE-SAFE-FULL.zip",
-  "sourceHead": "f4974e7a96e346a58df8c7351c4495ae464d08f7",
-  "backupSha": "f4974e7a96e346a58df8c7351c4495ae464d08f7",
+  "operationId": "publish-1788289072084-72b0fbb182",
+  "release": "R835",
+  "archiveName": "R835-CONTROL-COMPLETE-FULLFILL-LONG-CLIPFADE-MICROLAG-SAFE-FULL.zip",
+  "sourceHead": "dd895ddd5db6477d2eec666ad965c85cb4ba7d69",
+  "backupSha": "dd895ddd5db6477d2eec666ad965c85cb4ba7d69",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-01T18:48:14.120Z"
+  "generatedAt": "2026-09-01T18:57:52.084Z"
 }

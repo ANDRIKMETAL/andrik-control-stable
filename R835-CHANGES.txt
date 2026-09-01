@@ -1,0 +1,14 @@
+ANDRIK R835
+
+CONTROL PANEL
+- YouTube LIVE status remains at the top.
+- Restored exact live inventory: songs in rotation, clips, album tracks, singles, bumpers/special.
+- Restored stream profile: video/audio codec, 1920x1080, FPS, video/audio bitrate, GOP/B-frames, RTMPS.
+- Journal/diagnostics is appended at the very end of the Radio page.
+- Mobile layout uses responsive grids; no horizontal clipping.
+
+RADIO
+- Preserves microlag fix: VIDEO queue 24, AUDIO queue 8, normal feeder priority.
+- Preserves R834 FULL-FILL 1920x1080 geometry and fresh prepared cache.
+- CLIP -> MP3 only: full black hold 0.70 s, MP3 fade-in 1.80 s.
+- MP3 -> MP3 transition unchanged.
