@@ -160,11 +160,11 @@ const AUDIO_GAP_BRIDGE_INTERVAL_MS_R824 = 20; // R824: fill only inter-item audi
 const AUDIO_GAP_BRIDGE_SAMPLES_R824 = Math.max(1,Math.round(AUDIO_SAMPLE_RATE*AUDIO_GAP_BRIDGE_INTERVAL_MS_R824/1000));
 const AUDIO_GAP_BRIDGE_CHUNK_R824 = Buffer.alloc(AUDIO_GAP_BRIDGE_SAMPLES_R824*2*2); // s16le stereo silence, 20 ms
 const VIDEO_FPS = 25;
-const FULL_FRAME_FILTER_R787 = 'scale=1920:1080:flags=lanczos,setsar=1'; // R836 exact R829 GOLDEN hard fullscreen
-const LIVE_FULL_FRAME_FILTER_R794 = 'scale=1920:1080:flags=lanczos,setsar=1'; // R836 exact R829 GOLDEN hard fullscreen
-const LIVE_FULL_FRAME_GEOMETRY_R819 = 'scale=1920:1080:flags=lanczos,setsar=1'; // R836 exact R829 GOLDEN hard fullscreen
-const VIDEO_INPUT_QUEUE_PACKETS_R732 = 24; // R831 MICRO-LAG FIX: proven ~0.96s rawvideo cushion
-const AUDIO_INPUT_QUEUE_PACKETS_R732 = 8; // R831 MICRO-LAG FIX: proven bounded audio queue
+const FULL_FRAME_FILTER_R787 = 'scale=1920:1080:flags=lanczos,setsar=1'; // R837 GOLD: exact R829 permanent fullscreen
+const LIVE_FULL_FRAME_FILTER_R794 = 'scale=1920:1080:flags=lanczos,setsar=1'; // R837 GOLD: exact R829 permanent fullscreen
+const LIVE_FULL_FRAME_GEOMETRY_R819 = 'scale=1920:1080:flags=lanczos,setsar=1'; // R837 GOLD: exact R829 permanent fullscreen
+const VIDEO_INPUT_QUEUE_PACKETS_R732 = 24; // R837 GOLD: proven 0.96s @25fps
+const AUDIO_INPUT_QUEUE_PACKETS_R732 = 8; // R837 GOLD: proven bounded audio queue
 const VIDEO_GOP = 50; // exactly 2 seconds at 25 fps
 const VIDEO_FRAME_BYTES_R816 = 1920*1080*3/2; // R816 exact YUV420P frame; incomplete feeder tails are never forwarded
 const LIBRARY_REFRESH_MS = Math.max(60000, Number(process.env.LIBRARY_REFRESH_MS || 120000));
@@ -2774,7 +2774,7 @@ function startPublisher(){
     // This prevents tee/fifo from ever receiving AV_NOPTS packets (the repeated R816 failure).
     '-thread_queue_size',String(VIDEO_INPUT_QUEUE_PACKETS_R732),'-fflags','+genpts+discardcorrupt','-f','rawvideo','-pix_fmt','yuv420p','-s:v','1920x1080','-framerate',String(VIDEO_FPS),'-i','pipe:4',
     '-thread_queue_size',String(AUDIO_INPUT_QUEUE_PACKETS_R732),'-fflags','+genpts+discardcorrupt','-f','s16le','-ar',String(AUDIO_SAMPLE_RATE),'-ac','2','-i','pipe:3',
-    '-filter_complex',`[0:v]settb=expr=1/90000,setpts=N/(${VIDEO_FPS}*TB),setsar=1/1,setdar=16/9[r820v];[1:a]asettb=expr=1/${AUDIO_SAMPLE_RATE},asetpts=N/SR/TB[r820a]`,
+    '-filter_complex',`[0:v]settb=expr=1/90000,setpts=N/(${VIDEO_FPS}*TB)[r820v];[1:a]asettb=expr=1/${AUDIO_SAMPLE_RATE},asetpts=N/SR/TB[r820a]`,
     '-map','[r820v]','-map','[r820a]',
     // R819 geometry/fade stays upstream untouched. R820 changes timestamps only.
     ...h264EncoderArgsR721(),'-fps_mode:v','cfr','-enc_time_base:v',`1:${VIDEO_FPS}`,'-threads','2','-tag:v','7',
@@ -3236,8 +3236,7 @@ async function ensureNormalVideoFeederR721({force=false,fadeIn=false,fadeInSecon
       ? ((state.next?.type==='track'&&plannedDuration>TITLE_SWITCH_BEFORE_BOUNDARY_R781+0.25)?Math.max(0,plannedDuration-TITLE_SWITCH_BEFORE_BOUNDARY_R781):0)
       : Math.max(0,Number(boundaryTitleSwitchAt)||0);
     const opts={fadeIn,fadeInSeconds,endFadeToBlack,trackDuration:plannedDuration,visualOffsetSeconds,previewReload,boundaryTitleSwitchAt:plannedBoundaryTitleSwitchAt};
-    // R836: exact R829 feeder behavior from the first frame onward.
-    // Do not start with one path and replace it a few seconds later with another.
+    // R837 GOLD / R829: one permanent video path from the first frame.
     if(videoFeeder&&videoFeeder.exitCode===null)return atomicReplaceNormalVideoFeederR816(visual,opts);
     return startNormalVideoFeederR721(visual,opts);
   }finally{visualSwitching=false;}

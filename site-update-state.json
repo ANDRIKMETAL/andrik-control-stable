@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788290501427-6ebe559db2",
-  "release": "R836",
-  "archiveName": "R836-R829-GEOMETRY-LOCK-CONTROL-COMPACT-MICROLAG-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "01838b394205ea6317c8ed45a29ae4f85218f8e6",
-  "backupSha": "01838b394205ea6317c8ed45a29ae4f85218f8e6",
+  "operationId": "publish-1788294120551-eaf254f7bc",
+  "release": "R837",
+  "archiveName": "R837-GOLD-R829-VIDEO-24x8-CONTROL-COMPACT-SAFE-FULL.zip",
+  "sourceHead": "85b569b5dd3e1676131881203445ff62ce25591d",
+  "backupSha": "85b569b5dd3e1676131881203445ff62ce25591d",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-01T19:21:41.427Z"
+  "generatedAt": "2026-09-01T20:22:01.005Z"
 }
