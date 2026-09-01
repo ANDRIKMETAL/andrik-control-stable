@@ -69,7 +69,7 @@ const CTA_FIRST_SHOW_SECONDS_R748 = 20; // first compact CTA after feeder settle
 const CTA_FADE_SECONDS_R748 = 0.35; // smooth alpha in/out instead of blink
 const CTA_BOTTOM_GAP_R748 = 72; // R767: compact CTA directly above ticker
 const CTA_RIGHT_GAP_R767 = 34; // R767: right side; old left CTA removed
-const CLIP_PREP_SUFFIX_R782 = '.r787-ready.mp4'; // R787: permanent full-frame prepared cache
+const CLIP_PREP_SUFFIX_R782 = '.r834-fullfill-ready.mp4'; // R834 fresh cache so no contain/pad geometry is baked in
 const STATION_PREP_MARKER_R791 = '.station-r791-audio-zero-pts'; // R791: force one-time rebuild of station inserts with audio PTS reset BEFORE resample
 const STATION_LEGACY_DRAIN_DISABLED_R821 = true; // R821: station handoff never waits for old H264/AU/sink drain; persistent rawvideo master stays fed
 const STATION_LEADING_SILENCE_THRESHOLD_DB_R782 = -55; // PCM RMS threshold, no optional FFmpeg silencedetect dependency
@@ -140,7 +140,8 @@ const VIDEO_SOURCE_STUCK_MS_R749 = Math.max(1200,Math.min(10000,Number(process.e
 const INSERT_AUDIO_START_TIMEOUT_MS_R749 = Math.max(1000,Math.min(12000,Number(process.env.INSERT_AUDIO_START_TIMEOUT_MS_R749 || 4000))); // R751: slow AAC/MP4 startup must skip safely, never crash
 const INSERT_CACHE_WARM_LEAD_SECONDS_R752 = Math.max(2,Math.min(8,Number(process.env.INSERT_CACHE_WARM_LEAD_SECONDS_R752 || 8.0))); // metadata/cache warm only; ZERO media frames before boundary
 const CLIP_TO_TRACK_HANDOFF_GUARD_MS_R753 = Math.max(2500,Math.min(10000,Number(process.env.CLIP_TO_TRACK_HANDOFF_GUARD_MS_R753 || 5000))); // allow one clean clip→MP3 feeder handoff without watchdog racing it
-const CLIP_TO_TRACK_FADE_IN_SECONDS_R753 = Math.max(0.25,Math.min(1.5,Number(process.env.CLIP_TO_TRACK_FADE_IN_SECONDS_R753 || 1.10))); // black→picture on first MP3 frames after a clip
+const CLIP_TO_TRACK_FADE_IN_SECONDS_R753 = Math.max(0.25,Math.min(1.5,Number(process.env.CLIP_TO_TRACK_FADE_IN_SECONDS_R753 || 1.40))); // R833 clip→MP3 cinematic reveal
+const CLIP_TO_TRACK_BLACK_HOLD_SECONDS_R833 = Math.max(0.20,Math.min(0.80,Number(process.env.CLIP_TO_TRACK_BLACK_HOLD_SECONDS_R833 || 0.40))); // R833 full-black hold before MP3 reveal
 const VIDEO_INSERT_FADE_IN_SECONDS_R757 = Math.max(0.25,Math.min(1.5,Number(process.env.VIDEO_INSERT_FADE_IN_SECONDS_R757 || 1.10))); // guaranteed black→video on MP3→clip/insert boundary
 const MP3_BOUNDARY_FADE_IN_SECONDS_R758 = Math.max(0.20,Math.min(1.5,Number(process.env.MP3_BOUNDARY_FADE_IN_SECONDS_R758 || 0.80))); // R763 metadata/env compatibility: longer visible MP3 boundary recovery
 // R721 keeps the proven 100-frame / 4-second exact-periodic QTRLE loops from R720.
@@ -160,9 +161,9 @@ const AUDIO_GAP_BRIDGE_INTERVAL_MS_R824 = 20; // R824: fill only inter-item audi
 const AUDIO_GAP_BRIDGE_SAMPLES_R824 = Math.max(1,Math.round(AUDIO_SAMPLE_RATE*AUDIO_GAP_BRIDGE_INTERVAL_MS_R824/1000));
 const AUDIO_GAP_BRIDGE_CHUNK_R824 = Buffer.alloc(AUDIO_GAP_BRIDGE_SAMPLES_R824*2*2); // s16le stereo silence, 20 ms
 const VIDEO_FPS = 25;
-const FULL_FRAME_FILTER_R787 = 'scale=1920:1080:flags=lanczos,setsar=1'; // R830D HARD FULL DIRECT SCALE — NO PAD
-const LIVE_FULL_FRAME_FILTER_R794 = 'scale=1920:1080:flags=fast_bilinear,setsar=1';
-const LIVE_FULL_FRAME_GEOMETRY_R819 = 'scale=1920:1080:flags=fast_bilinear,setsar=1';
+const FULL_FRAME_FILTER_R787 = 'scale=1920:1080:flags=lanczos,setsar=1'; // R834 FULL-FILL: always fill 1920x1080, no crop/pad shrink
+const LIVE_FULL_FRAME_FILTER_R794 = 'scale=1920:1080:flags=fast_bilinear,setsar=1'; // R834 FULL-FILL LIVE
+const LIVE_FULL_FRAME_GEOMETRY_R819 = 'scale=1920:1080:flags=fast_bilinear,setsar=1'; // R834 FULL-FILL viewer geometry
 const VIDEO_INPUT_QUEUE_PACKETS_R732 = 24; // R831 MICRO-LAG FIX: proven ~0.96s rawvideo cushion
 const AUDIO_INPUT_QUEUE_PACKETS_R732 = 8; // R831 MICRO-LAG FIX: proven bounded audio queue
 const VIDEO_GOP = 50; // exactly 2 seconds at 25 fps
@@ -2300,7 +2301,7 @@ function compactCtaChainR783(trackDuration){
 // pre-scaled QR/CTA, 2 encoder threads), but restore the viewer-proven R793
 // alpha-mask fade engine exactly. The R794 drawbox-step experiment is removed
 // because the visible transition could disappear in the live yuv420 pipeline.
-function normalVideoFilterComplexR721({fadeIn=false,fadeInSeconds=CLIP_TO_TRACK_FADE_IN_SECONDS_R753,endFadeToBlack=false,trackDuration=0,previewReload=false,boundaryTitleSwitchAt=0}={}){
+function normalVideoFilterComplexR721({fadeIn=false,fadeInSeconds=CLIP_TO_TRACK_FADE_IN_SECONDS_R753,fadeInHoldSeconds=0,endFadeToBlack=false,trackDuration=0,previewReload=false,boundaryTitleSwitchAt=0}={}){
   const vf=titleOverlayFiltersR721({dynamicTitle:false,showPreview:true,previewDuration:trackDuration,previewReload,boundaryTitleSwitchAt,liveCpuFastR794:true});
   const cta=compactCtaChainR783(trackDuration);
   let maskChain='';
@@ -2311,8 +2312,9 @@ function normalVideoFilterComplexR721({fadeIn=false,fadeInSeconds=CLIP_TO_TRACK_
   // source ends and overlay=eof_action=pass removes it from the hot path.
   if(fadeIn){
     const fd=Math.max(0.05,Number(fadeInSeconds)||CLIP_TO_TRACK_FADE_IN_SECONDS_R753);
-    const md=fd+0.08;
-    startupMaskChain=`color=c=black@1.0:s=1920x1080:r=${VIDEO_FPS}:d=${md.toFixed(3)},format=yuva420p,fade=t=out:st=0:d=${fd.toFixed(2)}:alpha=1,setpts=PTS-STARTPTS[startmask];`;
+    const hold=Math.max(0,Number(fadeInHoldSeconds)||0);
+    const md=hold+fd+0.08;
+    startupMaskChain=`color=c=black@1.0:s=1920x1080:r=${VIDEO_FPS}:d=${md.toFixed(3)},format=yuva420p,fade=t=out:st=${hold.toFixed(2)}:d=${fd.toFixed(2)}:alpha=1,setpts=PTS-STARTPTS[startmask];`;
   }
 
   if(Number(trackDuration)>VIDEO_FADE_SECONDS_R726+VIDEO_BLACK_HOLD_SECONDS_R736+VIDEO_FADE_IN_SECONDS_R736+VIDEO_FADE_LEAD_SECONDS_R735+1){
@@ -2853,7 +2855,7 @@ async function visualLoopOffsetR735(visualPath){
   return offset;
 }
 
-function normalVideoFeederArgsR721(visualPath,eqPath,{fadeIn=false,fadeInSeconds=CLIP_TO_TRACK_FADE_IN_SECONDS_R753,endFadeToBlack=false,trackDuration=0,visualOffsetSeconds=0,previewReload=false,boundaryTitleSwitchAt=0}={}){
+function normalVideoFeederArgsR721(visualPath,eqPath,{fadeIn=false,fadeInSeconds=CLIP_TO_TRACK_FADE_IN_SECONDS_R753,fadeInHoldSeconds=0,endFadeToBlack=false,trackDuration=0,visualOffsetSeconds=0,previewReload=false,boundaryTitleSwitchAt=0}={}){
   const visualSeek=Number(visualOffsetSeconds)>0.05?['-ss',Number(visualOffsetSeconds).toFixed(3)]:[];
   return [
     '-hide_banner','-loglevel','warning',
@@ -2862,20 +2864,20 @@ function normalVideoFeederArgsR721(visualPath,eqPath,{fadeIn=false,fadeInSeconds
     '-thread_queue_size','32','-fflags','+genpts+discardcorrupt','-err_detect','ignore_err','-re','-stream_loop','-1','-i',eqPath,
     '-loop','1','-framerate','1','-i',CTA_OVERLAY_LIVE_R794,
     '-loop','1','-framerate','1','-i',CTA_LIKE_OVERLAY_LIVE_R794,
-    '-filter_complex',normalVideoFilterComplexR721({fadeIn,fadeInSeconds,endFadeToBlack,trackDuration,previewReload,boundaryTitleSwitchAt}),
+    '-filter_complex',normalVideoFilterComplexR721({fadeIn,fadeInSeconds,fadeInHoldSeconds,endFadeToBlack,trackDuration,previewReload,boundaryTitleSwitchAt}),
     '-map','[outv]','-an','-sn','-dn',
     ...rawVideoOutputArgsR816()
   ];
 }
 
-function spawnRawNormalVideoChildR816(visualPath,{fadeIn=false,fadeInSeconds=CLIP_TO_TRACK_FADE_IN_SECONDS_R753,endFadeToBlack=false,trackDuration=0,visualOffsetSeconds=0,previewReload=false,boundaryTitleSwitchAt=0}={}){
+function spawnRawNormalVideoChildR816(visualPath,{fadeIn=false,fadeInSeconds=CLIP_TO_TRACK_FADE_IN_SECONDS_R753,fadeInHoldSeconds=0,endFadeToBlack=false,trackDuration=0,visualOffsetSeconds=0,previewReload=false,boundaryTitleSwitchAt=0}={}){
   const eq=equalizerSpecR721();
   if(!existsSync(visualPath)||statSync(visualPath).size<300000)throw new Error(`visual missing: ${visualPath}`);
   if(!existsSync(QR_OVERLAY_LIVE_R794)||statSync(QR_OVERLAY_LIVE_R794).size<20000)throw new Error(`QR overlay missing: ${QR_OVERLAY_LIVE_R794}`);
   if(!existsSync(CTA_OVERLAY_LIVE_R794)||statSync(CTA_OVERLAY_LIVE_R794).size<2500)throw new Error(`R767 CTA overlay missing: ${CTA_OVERLAY_LIVE_R794}`);
   if(!existsSync(CTA_LIKE_OVERLAY_LIVE_R794)||statSync(CTA_LIKE_OVERLAY_LIVE_R794).size<2500)throw new Error(`R783 LIKE CTA overlay missing: ${CTA_LIKE_OVERLAY_LIVE_R794}`);
   if(!existsSync(eq.path)||statSync(eq.path).size<20000)throw new Error(`equalizer missing: ${eq.path}`);
-  const child=spawn('ffmpeg',normalVideoFeederArgsR721(visualPath,eq.path,{fadeIn,fadeInSeconds,endFadeToBlack,trackDuration,visualOffsetSeconds,previewReload,boundaryTitleSwitchAt}),{stdio:['ignore','pipe','pipe']}); // R831 MICRO-LAG FIX: normal priority restored
+  const child=spawn('ffmpeg',normalVideoFeederArgsR721(visualPath,eq.path,{fadeIn,fadeInSeconds,fadeInHoldSeconds,endFadeToBlack,trackDuration,visualOffsetSeconds,previewReload,boundaryTitleSwitchAt}),{stdio:['ignore','pipe','pipe']}); // R831 MICRO-LAG FIX: normal priority restored
   child.__r816EqPeriod=eq.period;
   child.__r816VisualPath=visualPath;
   child.__r816IntentionalStop=false;
@@ -2964,11 +2966,11 @@ async function stopNormalVideoFeederR721(){
   if(Number(cut?.dropped||0)>0)diagRecordR802('r816-old-rawvideo-partial-dropped',{pid:Number(active.pid||0),bytes:Number(cut.dropped||0)});
 }
 
-function startNormalVideoFeederR721(visualPath,{fadeIn=false,fadeInSeconds=CLIP_TO_TRACK_FADE_IN_SECONDS_R753,endFadeToBlack=false,trackDuration=0,visualOffsetSeconds=0,previewReload=false,boundaryTitleSwitchAt=0}={}){
+function startNormalVideoFeederR721(visualPath,{fadeIn=false,fadeInSeconds=CLIP_TO_TRACK_FADE_IN_SECONDS_R753,fadeInHoldSeconds=0,endFadeToBlack=false,trackDuration=0,visualOffsetSeconds=0,previewReload=false,boundaryTitleSwitchAt=0}={}){
   if(stopping||clipActive)return false;
   const videoSink=publisher?.stdio?.[4];
   if(!publisher||publisher.exitCode!==null||!videoSink||videoSink.destroyed||videoSink.writableEnded)throw new Error('R816 persistent rawvideo pipe unavailable');
-  const child=spawnRawNormalVideoChildR816(visualPath,{fadeIn,fadeInSeconds,endFadeToBlack,trackDuration,visualOffsetSeconds,previewReload,boundaryTitleSwitchAt});
+  const child=spawnRawNormalVideoChildR816(visualPath,{fadeIn,fadeInSeconds,fadeInHoldSeconds,endFadeToBlack,trackDuration,visualOffsetSeconds,previewReload,boundaryTitleSwitchAt});
   promoteRawNormalVideoR816(child,videoSink);
   state.videoHandoffMode='R816-RAWVIDEO-FIRST-FEEDER-LIVE';
   return true;
@@ -3222,7 +3224,7 @@ async function startFirstNormalVideoFeederR828(
 }
 
 
-async function ensureNormalVideoFeederR721({force=false,fadeIn=false,fadeInSeconds=CLIP_TO_TRACK_FADE_IN_SECONDS_R753,endFadeToBlack=false,trackDuration=null,previewReload=false,boundaryTitleSwitchAt=null}={}){
+async function ensureNormalVideoFeederR721({force=false,fadeIn=false,fadeInSeconds=CLIP_TO_TRACK_FADE_IN_SECONDS_R753,fadeInHoldSeconds=0,endFadeToBlack=false,trackDuration=null,previewReload=false,boundaryTitleSwitchAt=null}={}){
   if(stopping||clipActive)return true;
   const visual=await ensureScheduledVisual();
   const period=activeVisualPeriodR721();
@@ -3235,7 +3237,7 @@ async function ensureNormalVideoFeederR721({force=false,fadeIn=false,fadeInSecon
     const plannedBoundaryTitleSwitchAt=boundaryTitleSwitchAt===null
       ? ((state.next?.type==='track'&&plannedDuration>TITLE_SWITCH_BEFORE_BOUNDARY_R781+0.25)?Math.max(0,plannedDuration-TITLE_SWITCH_BEFORE_BOUNDARY_R781):0)
       : Math.max(0,Number(boundaryTitleSwitchAt)||0);
-    const opts={fadeIn,fadeInSeconds,endFadeToBlack,trackDuration:plannedDuration,visualOffsetSeconds,previewReload,boundaryTitleSwitchAt:plannedBoundaryTitleSwitchAt};
+    const opts={fadeIn,fadeInSeconds,fadeInHoldSeconds,endFadeToBlack,trackDuration:plannedDuration,visualOffsetSeconds,previewReload,boundaryTitleSwitchAt:plannedBoundaryTitleSwitchAt};
     if(videoFeeder&&videoFeeder.exitCode===null)
       return atomicReplaceNormalVideoFeederR816(visual,opts);
 
@@ -3314,6 +3316,12 @@ async function ensureVideoSourceAfterClipR745(next=null){
   const preparedAlive=Boolean(clipVideoPrerollR744&&clipVideoPrerollR744.exitCode===null);
   const normalAlive=Boolean(videoFeeder&&videoFeeder.exitCode===null);
   if(preparedAlive||normalAlive)return true;
+  const pendingClipToTrackR833=Boolean(next?.type==='track'&&clipToTrackBoundaryPendingR753&&clipToTrackBoundaryPendingR753.identity===primaryIdentity(next));
+  if(pendingClipToTrackR833){
+    state.videoHandoffMode='R833-CLIP-END-BLACK-WAIT-NEXT-MP3';
+    diagRecordR802('r833-clip-to-mp3-black-hold',{next:shortText(next?.title||'TRACK',52),blackHold:CLIP_TO_TRACK_BLACK_HOLD_SECONDS_R833,fadeIn:CLIP_TO_TRACK_FADE_IN_SECONDS_R753});
+    return true;
+  }
   // A failed/late preroll used to leave the persistent master with no H264 input.
   // The master process stayed alive but YouTube eventually reported NODATA. Force a
   // normal visual immediately so the ONE RTMPS publisher never starves at clip EOF.
@@ -3578,6 +3586,10 @@ async function playVideoClipR691(previous,item,next){
     const guardMs=Math.max(12000,Math.round(Math.max(1,Number(duration)||1)*1000)+CLIP_END_GUARD_MARGIN_MS_R745);
     try{await promiseTimeout(clipExitPromise,guardMs,`R816 clip EOF ${shortText(item.title||'VIDEO',40)}`);}
     catch(error){state.lastError=`R816 clip EOF guard: ${cleanText(error?.message||error)}`;if(child&&child.exitCode===null){try{child.kill('SIGTERM')}catch(_){ }if(!(await waitChildExit(child,1200))&&child.exitCode===null){try{child.kill('SIGKILL')}catch(_){ }await waitChildExit(child,250);}}return false;}
+    if(next?.type==='track'){
+      clipToTrackBoundaryPendingR753={identity:primaryIdentity(next),startedAt:Date.now(),reason:'R833-CLIP-TO-MP3-CINEMATIC'};
+      diagRecordR802('r833-clip-to-mp3-armed',{current:shortText(item?.title||'VIDEO',52),next:shortText(next?.title||'TRACK',52),blackHold:CLIP_TO_TRACK_BLACK_HOLD_SECONDS_R833,fadeIn:CLIP_TO_TRACK_FADE_IN_SECONDS_R753});
+    }
     if(item.sourceType==='r2-video')lastClipIdentityR726=itemId;
     state.lastError='';
     return !stopping;
@@ -3793,7 +3805,7 @@ async function playItem(previous,item,next,following,localAudioPath,nextTrackPre
     duration:Number(duration.toFixed(3)),
     nextType:String(actualNextR736?.type||actualNextR736?.sourceType||''),
     fadeOut:mp3ToMp3BoundaryR809?MP3_BOUNDARY_FADE_OUT_SECONDS_R814:VIDEO_FADE_SECONDS_R726,
-    blackHold:mp3ToMp3BoundaryR809?MP3_BOUNDARY_BLACK_HOLD_SECONDS_R814:VIDEO_BLACK_HOLD_SECONDS_R736,
+    blackHold:mp3ToMp3BoundaryR809?MP3_BOUNDARY_BLACK_HOLD_SECONDS_R814:(clipToTrackBoundaryR753?CLIP_TO_TRACK_BLACK_HOLD_SECONDS_R833:VIDEO_BLACK_HOLD_SECONDS_R736),
     nextFadeIn:mp3ToMp3BoundaryR809?MP3_BOUNDARY_FADE_IN_SECONDS_R814:(clipToTrackBoundaryR753?CLIP_TO_TRACK_FADE_IN_SECONDS_R753:0),
     lead:mp3ToMp3BoundaryR809?0.10:VIDEO_FADE_LEAD_SECONDS_R735,
     mode:state.mp3BoundaryFadeMode
@@ -3803,6 +3815,7 @@ async function playItem(previous,item,next,following,localAudioPath,nextTrackPre
       force:true,
       fadeIn:(clipToTrackBoundaryR753||mp3FromMp3R809),
       fadeInSeconds:mp3FromMp3R809?MP3_BOUNDARY_FADE_IN_SECONDS_R814:CLIP_TO_TRACK_FADE_IN_SECONDS_R753,
+      fadeInHoldSeconds:clipToTrackBoundaryR753?CLIP_TO_TRACK_BLACK_HOLD_SECONDS_R833:0,
       endFadeToBlack:endFadeToBlackR760,
       trackDuration:duration,
       previewReload:false,

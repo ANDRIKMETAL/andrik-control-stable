@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788286968098-aa682bdc2c",
-  "release": "R831",
-  "archiveName": "R831-CONTROL-LIVE-DATA-FALLBACK-MICROLAG-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "3d173085a840fed1ff107583c9252a4035dc079b",
-  "backupSha": "3d173085a840fed1ff107583c9252a4035dc079b",
+  "operationId": "publish-1788288494120-a409f7c681",
+  "release": "R834",
+  "archiveName": "R834-FULLFILL-YOUTUBE-TOP-COMPACT-MICROLAG-CLIPFADE-SAFE-FULL.zip",
+  "sourceHead": "f4974e7a96e346a58df8c7351c4495ae464d08f7",
+  "backupSha": "f4974e7a96e346a58df8c7351c4495ae464d08f7",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-01T18:22:48.098Z"
+  "generatedAt": "2026-09-01T18:48:14.120Z"
 }
