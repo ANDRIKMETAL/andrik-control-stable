@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788285426310-722a1e3e3e",
+  "operationId": "publish-1788285875109-924e7e6e16",
   "release": "R831",
-  "archiveName": "R831-CURRENT-STABLE-MICROLAG-FIX-SITE-SAFE-FULL.zip",
-  "sourceHead": "f06922a94f996a2c3fc5d6c5c3cff0d7c12c3da1",
-  "backupSha": "f06922a94f996a2c3fc5d6c5c3cff0d7c12c3da1",
+  "archiveName": "R831-CONTROL-YOUTUBE-R803-COMPAT-PATCH-SAFE-FULL.zip",
+  "sourceHead": "801074ef6d88da72b28345ebd1d4a167ea5e9d85",
+  "backupSha": "801074ef6d88da72b28345ebd1d4a167ea5e9d85",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-01T17:57:07.458Z"
+  "generatedAt": "2026-09-01T18:04:35.109Z"
 }

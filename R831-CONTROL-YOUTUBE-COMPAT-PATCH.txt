@@ -1,0 +1,9 @@
+R831 CONTROL/YOUTUBE COMPATIBILITY PATCH
+
+Radio pipeline is preserved from current R831 microlag-fixed build.
+Site/control files are preserved from the current full build.
+Fix: _worker.js now accepts both:
+  /api/radio-agent-r715/youtube-ensure
+  /api/radio-agent-r721/youtube-ensure
+The installed R803 radio agent calls the R721 path.
+No radio/FFmpeg/handoff/fade/geometry changes are made by this site patch.

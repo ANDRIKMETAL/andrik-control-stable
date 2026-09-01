@@ -19348,7 +19348,7 @@ async function routeApi(request, env, ctx) {
     if (path === '/api/control/radio-remote-r627/ticker' && request.method === 'POST') return await handleRadioRemoteTickerR629(request, env);
     if (path === '/api/radio-agent-r627/pair/consume' && request.method === 'POST') return await handleRadioAgentPairConsumeR627(request, env);
     if (path === '/api/radio-agent-r627/poll' && request.method === 'POST') return await handleRadioAgentPollR627(request, env);
-    if (path === '/api/radio-agent-r715/youtube-ensure' && request.method === 'POST') return await handleRadioAgentYoutubeEnsureR715(request, env);
+    if ((path === '/api/radio-agent-r715/youtube-ensure' || path === '/api/radio-agent-r721/youtube-ensure') && request.method === 'POST') return await handleRadioAgentYoutubeEnsureR715(request, env); // R831 control compat: R803 agent calls R721 alias
     if (path === '/api/radio-agent-r627/result' && request.method === 'POST') return await handleRadioAgentResultR627(request, env);
     if (path === '/api/radio-agent-r650/visual' && (request.method === 'GET' || request.method === 'HEAD')) return await handleRadioAgentVisualR650(request, env);
 
