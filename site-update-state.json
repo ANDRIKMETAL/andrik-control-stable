@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788285875109-924e7e6e16",
+  "operationId": "publish-1788286968098-aa682bdc2c",
   "release": "R831",
-  "archiveName": "R831-CONTROL-YOUTUBE-R803-COMPAT-PATCH-SAFE-FULL.zip",
-  "sourceHead": "801074ef6d88da72b28345ebd1d4a167ea5e9d85",
-  "backupSha": "801074ef6d88da72b28345ebd1d4a167ea5e9d85",
+  "archiveName": "R831-CONTROL-LIVE-DATA-FALLBACK-MICROLAG-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "3d173085a840fed1ff107583c9252a4035dc079b",
+  "backupSha": "3d173085a840fed1ff107583c9252a4035dc079b",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-01T18:04:35.109Z"
+  "generatedAt": "2026-09-01T18:22:48.098Z"
 }
