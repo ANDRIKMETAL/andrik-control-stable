@@ -160,11 +160,11 @@ const AUDIO_GAP_BRIDGE_INTERVAL_MS_R824 = 20; // R824: fill only inter-item audi
 const AUDIO_GAP_BRIDGE_SAMPLES_R824 = Math.max(1,Math.round(AUDIO_SAMPLE_RATE*AUDIO_GAP_BRIDGE_INTERVAL_MS_R824/1000));
 const AUDIO_GAP_BRIDGE_CHUNK_R824 = Buffer.alloc(AUDIO_GAP_BRIDGE_SAMPLES_R824*2*2); // s16le stereo silence, 20 ms
 const VIDEO_FPS = 25;
-const FULL_FRAME_FILTER_R787 = 'scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1'; // immutable CONTAIN: entire source visible, never crop/zoom
-const LIVE_FULL_FRAME_FILTER_R794 = 'scale=1920:1080:force_original_aspect_ratio=decrease:flags=fast_bilinear,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1'; // R794 live MP3 only: same immutable FIT+PAD geometry, lower scaler CPU; offline prepared clips keep Lanczos
-const LIVE_FULL_FRAME_GEOMETRY_R819 = 'scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1'; // R819: exact R784/R814 viewer-proven geometry; full 16:9 sources stay pixel-for-pixel full canvas; non-16:9 sources are contained without crop
-const VIDEO_INPUT_QUEUE_PACKETS_R732 = 24; // R818: ~0.96s rawvideo cushion at 25fps; absorbs transient master/RTMPS backpressure without a mid-track freeze
-const AUDIO_INPUT_QUEUE_PACKETS_R732 = 8; // ~0.74 s FFmpeg raw-packet cushion; ~1 s incl. pipe; prevents 20–30 s title/audio drift
+const FULL_FRAME_FILTER_R787 = 'scale=1920:1080:flags=lanczos,setsar=1'; // R830D HARD FULL DIRECT SCALE — NO PAD
+const LIVE_FULL_FRAME_FILTER_R794 = 'scale=1920:1080:flags=fast_bilinear,setsar=1';
+const LIVE_FULL_FRAME_GEOMETRY_R819 = 'scale=1920:1080:flags=fast_bilinear,setsar=1';
+const VIDEO_INPUT_QUEUE_PACKETS_R732 = 24; // R831 MICRO-LAG FIX: proven ~0.96s rawvideo cushion
+const AUDIO_INPUT_QUEUE_PACKETS_R732 = 8; // R831 MICRO-LAG FIX: proven bounded audio queue
 const VIDEO_GOP = 50; // exactly 2 seconds at 25 fps
 const VIDEO_FRAME_BYTES_R816 = 1920*1080*3/2; // R816 exact YUV420P frame; incomplete feeder tails are never forwarded
 const LIBRARY_REFRESH_MS = Math.max(60000, Number(process.env.LIBRARY_REFRESH_MS || 120000));
@@ -477,18 +477,226 @@ function purgePreparedStationR802(sourcePath,{purgeSource=false}={}){
 }
 async function assertStationIntegrityR802(path,label='station-media'){
   const st=statSync(path);
+
+  if(st.size<500000){
+    throw new Error(
+      `R825B ${label} file too small: `+
+      `${diagMediaR802(path)}: ${st.size}`
+    );
+  }
+
   const sig=`${st.size}:${Math.trunc(st.mtimeMs)}`;
-  if(stationIntegrityCacheR802.get(path)===sig)return true;
-  try{
-    // Low-priority full video decode validates every packet/NAL once while the station insert is OFFLINE.
-    // -xerror makes Packet corrupt / invalid NAL fatal here, BEFORE the file can touch LIVE.
-    await runCapture('nice',['-n','19','ffmpeg','-nostdin','-hide_banner','-nostats','-loglevel','error','-xerror','-err_detect','explode','-i',path,'-map','0:v:0','-an','-f','null','-'],{timeoutMs:45000});
-    stationIntegrityCacheR802.set(path,sig);
-    diagRecordR802('station-integrity-ok',{stage:label,media:diagMediaR802(path),bytes:st.size});
+
+  if(stationIntegrityCacheR802.get(path)===sig){
+    diagRecordR802(
+      'r825b-station-integrity-cache-hit',
+      {
+        stage:label,
+        media:diagMediaR802(path),
+        bytes:st.size
+      }
+    );
+
     return true;
+  }
+
+  try{
+    const {spawn}=await import('node:child_process');
+
+    const probe=await new Promise(
+      (resolve,reject)=>{
+
+        const child=spawn(
+          'ffprobe',
+          [
+            '-v','error',
+
+            '-show_entries',
+            'format=duration,size:'+
+            'stream=index,codec_type,codec_name,'+
+            'width,height,sample_rate,channels',
+
+            '-of','json',
+
+            path
+          ],
+          {
+            stdio:[
+              'ignore',
+              'pipe',
+              'pipe'
+            ]
+          }
+        );
+
+        let stdout='';
+        let stderr='';
+        let done=false;
+
+        const finish=(fn,value)=>{
+          if(done)return;
+          done=true;
+          clearTimeout(timer);
+          fn(value);
+        };
+
+        child.stdout.on(
+          'data',
+          chunk=>{
+            if(stdout.length<262144){
+              stdout+=chunk.toString();
+            }
+          }
+        );
+
+        child.stderr.on(
+          'data',
+          chunk=>{
+            if(stderr.length<65536){
+              stderr+=chunk.toString();
+            }
+          }
+        );
+
+        child.on(
+          'error',
+          error=>{
+            finish(
+              reject,
+              error
+            );
+          }
+        );
+
+        child.on(
+          'close',
+          code=>{
+            if(code===0){
+              finish(
+                resolve,
+                stdout
+              );
+            }else{
+              finish(
+                reject,
+                new Error(
+                  `ffprobe exit ${code}: `+
+                  `${cleanText(stderr||'unknown error')}`
+                )
+              );
+            }
+          }
+        );
+
+        const timer=setTimeout(
+          ()=>{
+            try{
+              child.kill('SIGKILL');
+            }catch(_){}
+
+            finish(
+              reject,
+              new Error(
+                'ffprobe metadata timeout 4000ms'
+              )
+            );
+          },
+          4000
+        );
+      }
+    );
+
+    const info=JSON.parse(
+      String(probe||'{}')
+    );
+
+    const streams=Array.isArray(info.streams)
+      ? info.streams
+      : [];
+
+    const video=streams.find(
+      x=>x?.codec_type==='video'
+    );
+
+    const audio=streams.find(
+      x=>x?.codec_type==='audio'
+    );
+
+    const duration=Number(
+      info?.format?.duration||0
+    );
+
+    if(!video){
+      throw new Error(
+        'video stream missing'
+      );
+    }
+
+    if(!audio){
+      throw new Error(
+        'audio stream missing'
+      );
+    }
+
+    if(
+      Number(video.width)<=0 ||
+      Number(video.height)<=0
+    ){
+      throw new Error(
+        'invalid video dimensions'
+      );
+    }
+
+    if(duration<=0.20){
+      throw new Error(
+        `invalid duration ${duration}`
+      );
+    }
+
+    stationIntegrityCacheR802.set(
+      path,
+      sig
+    );
+
+    diagRecordR802(
+      'r825b-station-integrity-light-ok',
+      {
+        stage:label,
+        media:diagMediaR802(path),
+        bytes:st.size,
+        duration:
+          Number(duration.toFixed(3)),
+        video:
+          `${video.codec_name||'?'} `+
+          `${video.width}x${video.height}`,
+        audio:
+          `${audio.codec_name||'?'} `+
+          `${audio.sample_rate||'?'}Hz `+
+          `${audio.channels||'?'}ch`
+      }
+    );
+
+    return true;
+
   }catch(error){
-    diagRecordR802('station-integrity-fail',{stage:label,media:diagMediaR802(path),bytes:st.size,error:cleanText(error?.message||error)});
-    throw new Error(`R802 ${label} corrupt: ${diagMediaR802(path)}: ${cleanText(error?.message||error)}`);
+
+    diagRecordR802(
+      'r825b-station-integrity-light-fail',
+      {
+        stage:label,
+        media:diagMediaR802(path),
+        bytes:st.size,
+        error:cleanText(
+          error?.message||error
+        )
+      }
+    );
+
+    throw new Error(
+      `R825B ${label} invalid: `+
+      `${diagMediaR802(path)}: `+
+      `${cleanText(error?.message||error)}`
+    );
   }
 }
 
@@ -2033,7 +2241,7 @@ function titleOverlayFiltersR721({dynamicTitle=false,showPreview=false,previewDu
     `drawtext=${titleFontPart}textfile='${path}'${titleReload}:fontcolor=0xF8F4EE:fontsize=58:x=(w-text_w)/2:y=h-188:borderw=4:bordercolor=0xD60024@1:shadowcolor=black@1:shadowx=4:shadowy=4${enable}`
   ];
   const filters=[
-    liveCpuFastR794 ? LIVE_FULL_FRAME_GEOMETRY_R819 : FULL_FRAME_FILTER_R787,
+    FULL_FRAME_FILTER_R787,
     `fps=${VIDEO_FPS}`,
     'format=yuv420p',
     'drawbox=x=0:y=ih-204:w=iw:h=88:color=black@0.38:t=fill',
@@ -2412,7 +2620,41 @@ function masterBackpressureWatchdogTickR750(){
   state.lastTransportFatalReason=`R751 master pipe NO-PROGRESS ${noProgressMs}ms`;
   state.lastError=`R751 STREAM STALL: ${state.lastTransportFatalReason}`;
   console.error('[r751-stream-health]',state.lastError,'— systemd rebuilds the ONE RTMPS publisher');
-  process.exit(76);
+diagRecordR802(
+    'r826c-r751-whole-service-kill-suppressed',
+    {
+      reason:
+        state.lastTransportFatalReason ||
+        state.lastError ||
+        'master-no-progress',
+
+      audioBytes:
+        masterBackpressureAudioBytesR751,
+
+      videoBytes:
+        masterBackpressureVideoBytesR751,
+
+      videoQueue:
+        VIDEO_INPUT_QUEUE_PACKETS_R732
+    }
+  );
+
+  console.error(
+    '[r826c-r751-protect]',
+    'R751 transient NO-PROGRESS — whole radio restart blocked'
+  );
+
+  // Keep Node, playlist and current MP3 alive.
+  // Real transport/FFmpeg fatal recovery remains untouched.
+  masterBackpressureSinceR750=Date.now();
+  masterBackpressureLastProgressAtR751=Date.now();
+
+  state.transportSelfHealPending=false;
+
+  state.lastWarning=
+    'R826C R751 transient NO-PROGRESS suppressed';
+
+  return;
 }
 
 function countEstablishedRtmpsR792(){
@@ -2438,6 +2680,9 @@ async function rtmpsEgressWatchdogTickR792(){
     state.rtmpsEstablishedConnectionsR792=count;
     state.rtmpsExpectedConnectionsR792=DUAL_INGEST_ENABLED_R792?2:1;
     if(count>0){
+      // R830D RTMPS RECOVERY HEALTH
+      state.transportHealthy=true;
+      state.transportSelfHealPending=false;
       rtmpsEgressEverObservedR792=true;
       state.rtmpsEgressEverObservedR792=true;
       rtmpsEgressZeroSinceR792=0;
@@ -2466,7 +2711,37 @@ async function rtmpsEgressWatchdogTickR792(){
     state.lastTransportFatalReason=`R792 zero RTMPS ESTAB for ${age}ms`;
     state.lastError=`R792 RTMPS EGRESS LOST: ${state.lastTransportFatalReason}`;
     console.error('[r792-egress-watchdog]',state.lastError,'— rebuilding persistent master/service');
-    process.exit(79);
+    diagRecordR802(
+      'r830d-r792-whole-service-kill-suppressed',
+      {
+        age,
+        rtmps:count
+      }
+    );
+
+    console.error(
+      '[r830d-r792-protect]',
+      state.lastError,
+      '— whole radio restart BLOCKED; FIFO recovery continues'
+    );
+
+    // Do NOT reset Node, MP3 queue, video feeder or titles.
+    // FFmpeg tee/fifo recovery remains active.
+    state.transportSelfHealPending=true;
+
+    state.lastWarning=
+      `R830D RTMPS ${count}/${state.rtmpsExpectedConnectionsR792||2}; `+
+      `FIFO recovery continues without radio restart`;
+
+    // Start another observation window instead of killing the service.
+    rtmpsEgressZeroSinceR792=Date.now();
+
+    state.rtmpsZeroSinceR792=
+      new Date(
+        rtmpsEgressZeroSinceR792
+      ).toISOString();
+
+    return;
   }finally{rtmpsEgressWatchBusyR792=false;}
 }
 
@@ -2600,7 +2875,7 @@ function spawnRawNormalVideoChildR816(visualPath,{fadeIn=false,fadeInSeconds=CLI
   if(!existsSync(CTA_OVERLAY_LIVE_R794)||statSync(CTA_OVERLAY_LIVE_R794).size<2500)throw new Error(`R767 CTA overlay missing: ${CTA_OVERLAY_LIVE_R794}`);
   if(!existsSync(CTA_LIKE_OVERLAY_LIVE_R794)||statSync(CTA_LIKE_OVERLAY_LIVE_R794).size<2500)throw new Error(`R783 LIKE CTA overlay missing: ${CTA_LIKE_OVERLAY_LIVE_R794}`);
   if(!existsSync(eq.path)||statSync(eq.path).size<20000)throw new Error(`equalizer missing: ${eq.path}`);
-  const child=spawn('ffmpeg',normalVideoFeederArgsR721(visualPath,eq.path,{fadeIn,fadeInSeconds,endFadeToBlack,trackDuration,visualOffsetSeconds,previewReload,boundaryTitleSwitchAt}),{stdio:['ignore','pipe','pipe']});
+  const child=spawn('ffmpeg',normalVideoFeederArgsR721(visualPath,eq.path,{fadeIn,fadeInSeconds,endFadeToBlack,trackDuration,visualOffsetSeconds,previewReload,boundaryTitleSwitchAt}),{stdio:['ignore','pipe','pipe']}); // R831 MICRO-LAG FIX: normal priority restored
   child.__r816EqPeriod=eq.period;
   child.__r816VisualPath=visualPath;
   child.__r816IntentionalStop=false;
@@ -2699,6 +2974,254 @@ function startNormalVideoFeederR721(visualPath,{fadeIn=false,fadeInSeconds=CLIP_
   return true;
 }
 
+
+function collectFirstFullRawFrameR828(child,timeoutMs=6000){
+  return new Promise((resolve,reject)=>{
+    const stream=child?.stdout;
+
+    if(!stream){
+      reject(
+        new Error(
+          'R828 startup candidate stdout missing'
+        )
+      );
+      return;
+    }
+
+    let done=false;
+    let total=0;
+    const chunks=[];
+
+    const cleanup=()=>{
+      clearTimeout(timer);
+      stream.off('readable',onReadable);
+      stream.off('error',onError);
+      child?.off('exit',onExit);
+    };
+
+    const finish=(error,value)=>{
+      if(done)return;
+      done=true;
+      cleanup();
+
+      if(error)reject(error);
+      else resolve(value);
+    };
+
+    const pump=()=>{
+      try{
+        while(
+          !done &&
+          total<VIDEO_FRAME_BYTES_R816
+        ){
+          const available=
+            Number(stream.readableLength||0);
+
+          if(available<=0)break;
+
+          const need=
+            VIDEO_FRAME_BYTES_R816-total;
+
+          const take=
+            Math.min(need,available);
+
+          const chunk=stream.read(take);
+
+          if(!chunk)break;
+
+          chunks.push(chunk);
+          total+=chunk.length;
+        }
+
+        if(
+          !done &&
+          total===VIDEO_FRAME_BYTES_R816
+        ){
+          try{stream.pause()}catch(_){}
+
+          finish(
+            null,
+            chunks.length===1
+              ? chunks[0]
+              : Buffer.concat(
+                  chunks,
+                  VIDEO_FRAME_BYTES_R816
+                )
+          );
+        }
+
+      }catch(error){
+        finish(error);
+      }
+    };
+
+    const onReadable=()=>pump();
+
+    const onError=error=>{
+      finish(error);
+    };
+
+    const onExit=(code,signal)=>{
+      finish(
+        new Error(
+          `R828 startup feeder exited before full frame: `+
+          `${code??signal??'exit'}`
+        )
+      );
+    };
+
+    const timer=setTimeout(
+      ()=>{
+        finish(
+          new Error(
+            `R828 startup full-frame timeout; `+
+            `bytes=${total}/${VIDEO_FRAME_BYTES_R816}`
+          )
+        );
+      },
+      timeoutMs
+    );
+
+    stream.on('readable',onReadable);
+    stream.once('error',onError);
+    child?.once('exit',onExit);
+
+    pump();
+  });
+}
+
+async function startFirstNormalVideoFeederR828(
+  visualPath,
+  opts={}
+){
+  if(stopping||clipActive)return false;
+
+  const videoSink=publisher?.stdio?.[4];
+
+  if(
+    !publisher ||
+    publisher.exitCode!==null ||
+    !videoSink ||
+    videoSink.destroyed ||
+    videoSink.writableEnded
+  ){
+    throw new Error(
+      'R828 persistent rawvideo pipe unavailable'
+    );
+  }
+
+  // Candidate starts OFF-LIVE.
+  const child=
+    spawnRawNormalVideoChildR816(
+      visualPath,
+      opts
+    );
+
+  const startedAt=Date.now();
+
+  let firstFrame=null;
+
+  try{
+    firstFrame=
+      await collectFirstFullRawFrameR828(
+        child,
+        6000
+      );
+
+  }catch(error){
+
+    child.__r816IntentionalStop=true;
+
+    if(child.exitCode===null){
+      try{child.kill('SIGTERM')}catch(_){}
+    }
+
+    diagRecordR802(
+      'r828-startup-full-frame-rejected',
+      {
+        candidatePid:Number(child.pid||0),
+        error:cleanText(
+          error?.message||error
+        )
+      }
+    );
+
+    throw error;
+  }
+
+  if(stopping||clipActive){
+
+    child.__r816IntentionalStop=true;
+
+    if(child.exitCode===null){
+      try{child.kill('SIGTERM')}catch(_){}
+    }
+
+    return false;
+  }
+
+  // The FIRST bytes master receives are exactly one
+  // complete 1920x1080 YUV420P frame.
+  const accepted=videoSink.write(firstFrame);
+
+  state.videoRelayFramesWritten=
+    Number(state.videoRelayFramesWritten||0)+1;
+
+  state.lastVideoFrameAtR816=
+    new Date().toISOString();
+
+  // Writable.write(false) means queued/backpressure,
+  // NOT failed write. Wait briefly for master to consume
+  // the complete first frame before attaching the rest.
+  if(!accepted){
+
+    await new Promise(resolve=>{
+
+      let finished=false;
+
+      const done=()=>{
+        if(finished)return;
+        finished=true;
+        clearTimeout(timer);
+        try{videoSink.off('drain',done)}catch(_){}
+        resolve();
+      };
+
+      const timer=setTimeout(
+        done,
+        4000
+      );
+
+      videoSink.once('drain',done);
+    });
+  }
+
+  // Now attach the normal frame-aligned R816 relay.
+  promoteRawNormalVideoR816(
+    child,
+    videoSink
+  );
+
+  state.videoHandoffMode=
+    'R828-FIRST-FEEDER-FULL-FRAME-PRIMED';
+
+  diagRecordR802(
+    'r828-startup-full-frame-primed',
+    {
+      candidatePid:Number(child.pid||0),
+      bytes:Number(firstFrame.length||0),
+      expectedBytes:
+        Number(VIDEO_FRAME_BYTES_R816),
+      readyMs:Date.now()-startedAt
+    }
+  );
+
+  state.lastWarning='';
+
+  return true;
+}
+
+
 async function ensureNormalVideoFeederR721({force=false,fadeIn=false,fadeInSeconds=CLIP_TO_TRACK_FADE_IN_SECONDS_R753,endFadeToBlack=false,trackDuration=null,previewReload=false,boundaryTitleSwitchAt=null}={}){
   if(stopping||clipActive)return true;
   const visual=await ensureScheduledVisual();
@@ -2713,8 +3236,15 @@ async function ensureNormalVideoFeederR721({force=false,fadeIn=false,fadeInSecon
       ? ((state.next?.type==='track'&&plannedDuration>TITLE_SWITCH_BEFORE_BOUNDARY_R781+0.25)?Math.max(0,plannedDuration-TITLE_SWITCH_BEFORE_BOUNDARY_R781):0)
       : Math.max(0,Number(boundaryTitleSwitchAt)||0);
     const opts={fadeIn,fadeInSeconds,endFadeToBlack,trackDuration:plannedDuration,visualOffsetSeconds,previewReload,boundaryTitleSwitchAt:plannedBoundaryTitleSwitchAt};
-    if(videoFeeder&&videoFeeder.exitCode===null)return atomicReplaceNormalVideoFeederR816(visual,opts);
-    return startNormalVideoFeederR721(visual,opts);
+    if(videoFeeder&&videoFeeder.exitCode===null)
+      return atomicReplaceNormalVideoFeederR816(visual,opts);
+
+    // R828: the first feeder must never touch LIVE until
+    // one exact full 1920x1080 YUV420P frame is ready.
+    return await startFirstNormalVideoFeederR828(
+      visual,
+      opts
+    );
   }finally{visualSwitching=false;}
 }
 
@@ -3216,9 +3746,13 @@ async function playItem(previous,item,next,following,localAudioPath,nextTrackPre
   // R790: preload the exact next CURRENT title into a separate immutable textfile.
   // FFmpeg itself selects this file by feeder PTS during the black phase; Node never
   // changes LIVE_CURRENT_FILE early anymore.
-  const boundaryTitleSwitchAtR790=(actualNextR736?.type==='track' && duration>TITLE_SWITCH_BEFORE_BOUNDARY_R781+0.25)
-    ? Math.max(0,duration-TITLE_SWITCH_BEFORE_BOUNDARY_R781) : 0;
-  writeOverlayFileR726(LIVE_BOUNDARY_TITLE_FILE_R790,boundaryTitleSwitchAtR790>0?`ANDRIK — ${shortText(actualNextR736.title||'TRACK',42)}`:'');
+  // R826 TITLE BLACK LOCK:
+  // NEVER reveal NEXT as the large CURRENT title on the outgoing MP3.
+  // The outgoing feeder keeps its own CURRENT all the way into full black.
+  // The incoming feeder owns the new CURRENT and reveals it from black.
+  // Small PREVIOUS/NEXT preview remains untouched.
+  const boundaryTitleSwitchAtR790=0;
+  writeOverlayFileR726(LIVE_BOUNDARY_TITLE_FILE_R790,'');
   state.titleBoundarySwitchTarget=boundaryTitleSwitchAtR790>0?shortText(actualNextR736.title||'TRACK',52):'';
   state.titleBoundarySwitchScheduledAt=boundaryTitleSwitchAtR790>0?`PTS=${boundaryTitleSwitchAtR790.toFixed(3)}s`:null;
   state.titleBoundarySwitchFiredAt=null;
