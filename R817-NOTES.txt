@@ -1,0 +1,17 @@
+ANDRIK RADIO R817
+
+ROOT FIX
+- Keeps R816 persistent rawvideo -> ONE persistent libx264 architecture.
+- Hardens master rawvideo geometry with demuxer-specific input options:
+  pixel_format=yuv420p, video_size=1920x1080, framerate=25.
+- Reasserts setsar=1,setdar=16/9 before the persistent x264 encoder.
+- Writes output aspect 16:9 to prevent whole-composition letterboxing/inset display.
+
+PRESERVED
+- R816 frame-aligned rawvideo handoff (no encoded-H264 feeder splicing).
+- R814 MP3 fade 1.10s out + 0.20s black + 1.15s in.
+- Clip retry lock, counters, dual RTMPS, R803 diagnostics.
+- R787 FIT+PAD no-crop source geometry.
+
+INSTALLER
+radio247/vm-lite/install-r817-rawvideo-sar1-dar16x9-fullframe-r816-preserved.sh

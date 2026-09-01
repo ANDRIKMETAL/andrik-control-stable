@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788240185778-251901d340",
-  "release": "R831",
-  "archiveName": "R831-R814-GOLDEN-HYBRID-R828-R827-R826-SMOOTH-FADE-SAFE-FULL.zip",
-  "sourceHead": "daf63f210eedd5a1a187cc5402b029ee62bec7b1",
-  "backupSha": "daf63f210eedd5a1a187cc5402b029ee62bec7b1",
+  "operationId": "publish-1788243889927-f55306b5b2",
+  "release": "R821",
+  "archiveName": "R821-FINAL-STABLE-R822-AUDIO-GAP-BRIDGE-R814-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "d689ab4c86916598dcc1c18c849a0db28f3cd55e",
+  "backupSha": "d689ab4c86916598dcc1c18c849a0db28f3cd55e",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-01T05:23:06.539Z"
+  "generatedAt": "2026-09-01T06:24:51.718Z"
 }
