@@ -39,7 +39,7 @@
 
     const radio=document.getElementById('youtubeRadioR565');
     if(radio&&!document.getElementById('r813Profile')){
-      const firstStats=document.getElementById('radioInventoryR835')||radio.querySelector('.youtube-radio-stats-r565:not(.youtube-radio-youtube-stats-r565)');
+      const firstStats=radio.querySelector('.youtube-radio-stats-r565');
       if(firstStats){
         const title=document.createElement('div');
         title.className='r813-profile-title';
@@ -82,6 +82,7 @@
         </div>
         <p class="small" style="margin:9px 2px 0">Очистить вид не удаляет журнал на OVH. Stream key и RTMPS-адреса в диагностике скрываются агентом.</p>
       `;
+      // R836: journal is always the final block on the page.
       if(main)main.appendChild(card);
 
       document.getElementById('r813CopyLog')?.addEventListener('click',copyAll);

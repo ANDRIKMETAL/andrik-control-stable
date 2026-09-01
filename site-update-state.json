@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788289072084-72b0fbb182",
-  "release": "R835",
-  "archiveName": "R835-CONTROL-COMPLETE-FULLFILL-LONG-CLIPFADE-MICROLAG-SAFE-FULL.zip",
-  "sourceHead": "dd895ddd5db6477d2eec666ad965c85cb4ba7d69",
-  "backupSha": "dd895ddd5db6477d2eec666ad965c85cb4ba7d69",
+  "operationId": "publish-1788290501427-6ebe559db2",
+  "release": "R836",
+  "archiveName": "R836-R829-GEOMETRY-LOCK-CONTROL-COMPACT-MICROLAG-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "01838b394205ea6317c8ed45a29ae4f85218f8e6",
+  "backupSha": "01838b394205ea6317c8ed45a29ae4f85218f8e6",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-01T18:57:52.084Z"
+  "generatedAt": "2026-09-01T19:21:41.427Z"
 }
