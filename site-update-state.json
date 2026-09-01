@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788238580894-dc6ae81000",
-  "release": "R829",
-  "archiveName": "R829-GOLDEN-NOCROP-R828-R827-R826-R821-R820-R816-R814-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "ffd1c90220ee4f052cecbb5b5ad530cc60b2dd37",
-  "backupSha": "ffd1c90220ee4f052cecbb5b5ad530cc60b2dd37",
+  "operationId": "publish-1788239447072-af6fe2c466",
+  "release": "R830",
+  "archiveName": "R830-TRUE-NOCROP-CONTAIN-SMOOTH-FADE-R829-R828-R827-R826-R821-R820-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "157c13abc5769b250950d9938481fdeed80907ff",
+  "backupSha": "157c13abc5769b250950d9938481fdeed80907ff",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-01T04:56:21.868Z"
+  "generatedAt": "2026-09-01T05:10:48.040Z"
 }

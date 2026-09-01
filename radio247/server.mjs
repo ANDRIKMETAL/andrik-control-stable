@@ -19,7 +19,7 @@ import { pipeline } from 'node:stream/promises';
 const PORT = Number(process.env.PORT || 8080);
 const R816_PERSISTENT_RAWVIDEO_SINGLE_X264 = 'R816-PERSISTENT-RAWVIDEO-SINGLE-X264';
 const R819_R784_GEOMETRY_RAWVIDEO_QUEUE24 = 'R819-R784-VIEWER-PROVEN-GEOMETRY-RAWVIDEO-QUEUE24';
-const R820_MASTER_PTS_LOCK = 'R829-GOLDEN-NOCROP-STABILITY / R821-STATION-NO-DRAIN / R820-DETERMINISTIC-MASTER-PTS-LOCK';
+const R820_MASTER_PTS_LOCK = 'R830-TRUE-NOCROP-CONTAIN-SMOOTH-FADE / R829-R828-R827-R826 / R821-STATION-NO-DRAIN / R820-DETERMINISTIC-MASTER-PTS-LOCK';
 const PLAYLIST_URL = process.env.PLAYLIST_URL || 'https://andrikmetal.com/api/music/downloads';
 const STREAM_KEY = String(process.env.YOUTUBE_STREAM_KEY || '').trim();
 const STREAM_URL_OVERRIDE = String(process.env.STREAM_URL_OVERRIDE || '').trim();
@@ -69,7 +69,7 @@ const CTA_FIRST_SHOW_SECONDS_R748 = 20; // first compact CTA after feeder settle
 const CTA_FADE_SECONDS_R748 = 0.35; // smooth alpha in/out instead of blink
 const CTA_BOTTOM_GAP_R748 = 72; // R767: compact CTA directly above ticker
 const CTA_RIGHT_GAP_R767 = 34; // R767: right side; old left CTA removed
-const CLIP_PREP_SUFFIX_R782 = '.r787-ready.mp4'; // R787: permanent full-frame prepared cache
+const CLIP_PREP_SUFFIX_R782 = '.r830-ready.mp4'; // R787: permanent full-frame prepared cache
 const STATION_PREP_MARKER_R791 = '.station-r791-audio-zero-pts'; // R791: force one-time rebuild of station inserts with audio PTS reset BEFORE resample
 const STATION_LEGACY_DRAIN_DISABLED_R821 = true; // R821: station handoff never waits for old H264/AU/sink drain; persistent rawvideo master stays fed
 const STATION_LEADING_SILENCE_THRESHOLD_DB_R782 = -55; // PCM RMS threshold, no optional FFmpeg silencedetect dependency
@@ -96,12 +96,12 @@ const TRACK_AUDIO_TRUE_PEAK_R726 = -1.5;
 const TRACK_AUDIO_LRA_R726 = 11;
 const TRACK_AUDIO_FADE_IN_R726 = 0.55;
 const TRACK_AUDIO_FADE_OUT_R726 = 1.25; // R743: clearly audible but short old-track fade-out
-const VIDEO_FADE_SECONDS_R726 = 0.65; // R736: short cinematic fade-out on the OLD track
-const VIDEO_FADE_IN_SECONDS_R736 = 0.80; // R763: viewer-visible recovery for non-MP3 boundaries
+const VIDEO_FADE_SECONDS_R726 = 2.65; // R736: short cinematic fade-out on the OLD track
+const VIDEO_FADE_IN_SECONDS_R736 = 1.20; // R763: viewer-visible recovery for non-MP3 boundaries
 const VIDEO_BLACK_HOLD_SECONDS_R736 = 0.05; // non-MP3 boundary hold preserved
-const MP3_BOUNDARY_FADE_OUT_SECONDS_R814 = 1.10; // R814: MP3→MP3 only
+const MP3_BOUNDARY_FADE_OUT_SECONDS_R814 = 3.10; // R814: MP3→MP3 only
 const MP3_BOUNDARY_BLACK_HOLD_SECONDS_R814 = 0.20; // R814: MP3→MP3 only
-const MP3_BOUNDARY_FADE_IN_SECONDS_R814 = 1.15; // R814: MP3→MP3 only
+const MP3_BOUNDARY_FADE_IN_SECONDS_R814 = 1.50; // R814: MP3→MP3 only
 const VIDEO_FADE_LEAD_SECONDS_R735 = 1.40; // R763: start the proven R753 boundary darkening exactly 1.0s earlier than R762
 const TITLE_SWITCH_BEFORE_BOUNDARY_R781 = Math.max(0.50,Math.min(2.50,Number(process.env.TITLE_SWITCH_BEFORE_BOUNDARY_R781 || (VIDEO_FADE_LEAD_SECONDS_R735 + VIDEO_BLACK_HOLD_SECONDS_R736/2)))); // R781: switch CURRENT to the next MP3 while the screen is black, before recovery
 const TITLE_VISUAL_LEAD_SECONDS_R738 = 3.20; // compensate persistent video path latency; CURRENT is preloaded early but appears at the real handoff
@@ -140,8 +140,8 @@ const VIDEO_SOURCE_STUCK_MS_R749 = Math.max(1200,Math.min(10000,Number(process.e
 const INSERT_AUDIO_START_TIMEOUT_MS_R749 = Math.max(1000,Math.min(12000,Number(process.env.INSERT_AUDIO_START_TIMEOUT_MS_R749 || 4000))); // R751: slow AAC/MP4 startup must skip safely, never crash
 const INSERT_CACHE_WARM_LEAD_SECONDS_R752 = Math.max(2,Math.min(8,Number(process.env.INSERT_CACHE_WARM_LEAD_SECONDS_R752 || 5.0))); // metadata/cache warm only; ZERO media frames before boundary
 const CLIP_TO_TRACK_HANDOFF_GUARD_MS_R753 = Math.max(2500,Math.min(10000,Number(process.env.CLIP_TO_TRACK_HANDOFF_GUARD_MS_R753 || 5000))); // allow one clean clip→MP3 feeder handoff without watchdog racing it
-const CLIP_TO_TRACK_FADE_IN_SECONDS_R753 = Math.max(0.25,Math.min(1.5,Number(process.env.CLIP_TO_TRACK_FADE_IN_SECONDS_R753 || 0.55))); // black→picture on first MP3 frames after a clip
-const VIDEO_INSERT_FADE_IN_SECONDS_R757 = Math.max(0.25,Math.min(1.5,Number(process.env.VIDEO_INSERT_FADE_IN_SECONDS_R757 || 0.55))); // guaranteed black→video on MP3→clip/insert boundary
+const CLIP_TO_TRACK_FADE_IN_SECONDS_R753 = Math.max(0.25,Math.min(1.5,Number(process.env.CLIP_TO_TRACK_FADE_IN_SECONDS_R753 || 1.10))); // R830 softer clip/station -> MP3 reveal // black→picture on first MP3 frames after a clip
+const VIDEO_INSERT_FADE_IN_SECONDS_R757 = Math.max(0.25,Math.min(1.5,Number(process.env.VIDEO_INSERT_FADE_IN_SECONDS_R757 || 1.10))); // R830 softer MP3 -> clip/station reveal // guaranteed black→video on MP3→clip/insert boundary
 const MP3_BOUNDARY_FADE_IN_SECONDS_R758 = Math.max(0.20,Math.min(1.5,Number(process.env.MP3_BOUNDARY_FADE_IN_SECONDS_R758 || 0.80))); // R763 metadata/env compatibility: longer visible MP3 boundary recovery
 // R721 keeps the proven 100-frame / 4-second exact-periodic QTRLE loops from R720.
 // The EQ is composited inside the current local rawvideo feeder. R816 keeps the
@@ -157,9 +157,9 @@ const VIDEO_BITRATE = '6000k'; // R762: safe 1080p25 quality lift; CBR only, enc
 const AUDIO_BITRATE = '160k'; // R762: modest stereo AAC quality lift; sample rate/queues unchanged
 const AUDIO_SAMPLE_RATE = 44100; // YouTube Live recommendation for stereo
 const VIDEO_FPS = 25;
-const FULL_FRAME_FILTER_R787 = 'scale=1920:1080:flags=lanczos,setsar=1'; // R829 HARD FULLSCREEN: direct 1920x1080, no crop, no pad, no aspect-ratio fallback
-const LIVE_FULL_FRAME_FILTER_R794 = 'scale=1920:1080:flags=lanczos,setsar=1'; // R829 HARD FULLSCREEN: direct 1920x1080, no crop, no pad, no aspect-ratio fallback
-const LIVE_FULL_FRAME_GEOMETRY_R819 = 'scale=1920:1080:flags=lanczos,setsar=1'; // R829 HARD FULLSCREEN: direct 1920x1080, no crop, no pad, no aspect-ratio fallback
+const FULL_FRAME_FILTER_R787 = 'scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1'; // R830 TRUE NO-CROP: contain entire source; black bars only when source is not 16:9
+const LIVE_FULL_FRAME_FILTER_R794 = 'scale=1920:1080:force_original_aspect_ratio=decrease:flags=fast_bilinear,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1'; // R830 TRUE NO-CROP live path: preserve all source pixels
+const LIVE_FULL_FRAME_GEOMETRY_R819 = 'scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1'; // R830 restores viewer-proven R819/R814 CONTAIN geometry
 const VIDEO_INPUT_QUEUE_PACKETS_R732 = 24; // R818: ~0.96s rawvideo cushion at 25fps; absorbs transient master/RTMPS backpressure without a mid-track freeze
 const AUDIO_INPUT_QUEUE_PACKETS_R732 = 8; // ~0.74 s FFmpeg raw-packet cushion; ~1 s incl. pipe; prevents 20–30 s title/audio drift
 const VIDEO_GOP = 50; // exactly 2 seconds at 25 fps
@@ -195,7 +195,7 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R829-GOLDEN-NOCROP-R828-R827-R826-R821-PRESERVED',
+  version: 'R830-TRUE-NOCROP-CONTAIN-SMOOTH-FADE-R829-R828-R827-R826-R821-PRESERVED',
   cpuHeadroomProfileR794:'R796-LIVE-FAST-SCALE-COMPACT-EQ-FINITE-FADE-PRESCALED-STATIC',
   mode: 'R829 GOLDEN FULLSCREEN + R828 STATION LIGHT-CHECK + R827 COMMIT LOCK + R821 NO-DRAIN + R820 PTS + R814 FADE',
   startedAt: new Date().toISOString(),
@@ -206,7 +206,7 @@ const state = {
   audioMode: 'R793 NO BACKGROUND/PREFETCH LOUDNESS + LIVE FALLBACK + AUDIO QUEUE 8 / SAME MASTER A/V TO PRIMARY+BACKUP RTMPS',
   mp3ToVideoFadeMode: 'R757-END-BLACK-HOLD-THEN-VIDEO-FADE-IN',
   clipPreviewMode: 'R757-NORMAL-CLIPS-PREVNEXT-INTRO-2-7S-PLUS-FINAL-10S',
-  mp3BoundaryFadeMode: 'R816-RAWVIDEO-BLACK-1.10-HOLD-0.20-RECOVER-1.15',
+  mp3BoundaryFadeMode: 'R830-RAWVIDEO-BLACK-3.10-HOLD-0.20-RECOVER-1.50',
   visualTimeZone: VISUAL_TIME_ZONE,
   visualPeriod: null,
   visualPath: null,
@@ -280,6 +280,8 @@ const state = {
   stationHandoffModeR821: 'R821-MAKE-BEFORE-BREAK-NO-DRAIN',
   stationLegacyDrainDisabledR821: STATION_LEGACY_DRAIN_DISABLED_R821,
   goldenNoCropLockR829: true,
+  trueNoCropContainR830: true,
+  smoothFadeEarlierR830: true,
   falseFrameStallKillDisabledR829: true,
   clipCommitLockR827: true,
   stationIntegrityLightR828: true,
@@ -3542,7 +3544,7 @@ function publicStatus(){
       audio:{codec:'AAC-LC',sampleRate:AUDIO_SAMPLE_RATE,channels:2,channelLayout:'stereo',bitrate:AUDIO_BITRATE},
       transport:{container:'FLV',protocol:'RTMPS',lanes:Number(state.rtmpsEstablishedConnectionsR792||0),expectedLanes:DUAL_INGEST_ENABLED_R792?2:1,dualIngest:Boolean(DUAL_INGEST_ENABLED_R792)},
       handoff:{mode:state.videoHandoffMode||'R816-RAWVIDEO-FRAME-ALIGNED',frameAligned:true,feederCodec:'rawvideo',persistentEncoder:true},
-      geometry:{raster:'1920x1080',sampleAspectRatio:'1:1',displayAspectRatio:'16:9',fullFrame:true,noCrop:true,guard:'R829 direct scale=1920:1080 + setsar=1 at every feeder; crop/pad/aspect-ratio branches forbidden; master has NO geometry filter'}
+      geometry:{raster:'1920x1080',sampleAspectRatio:'1:1',displayAspectRatio:'16:9',fullFrame:true,noCrop:true,contain:true,guard:'R830 CONTAIN: scale decrease + centered pad; crop/increase forbidden; full 16:9 stays full canvas'}
     },
     streamProfileR816:{
       video:{codec:'H.264 / AVC',encoder:'libx264 (persistent master only)',profile:'High 4.1',width:1920,height:1080,fps:VIDEO_FPS,bitrate:VIDEO_BITRATE,gopFrames:VIDEO_GOP,bFrames:0,pixelFormat:'yuv420p'},
@@ -3725,7 +3727,7 @@ function publicStatus(){
     videoBitrate:'6000k',
     audioBitrate:'160k',
     videoPreset:'ultrafast-zerolatency-UNCHANGED-FOR-STABILITY',
-    permanentFullscreenMode:'R829-GOLDEN-HARD-FULL-1920x1080-SAR1',
+    permanentFullscreenMode:'R830-GOLDEN-TRUE-NOCROP-CONTAIN-1920x1080-SAR1',
     permanentFullscreenWidth:1920,
     permanentFullscreenHeight:1080,
     permanentFullscreenFitPolicy:'R829-DIRECT-SCALE-NO-CROP-NO-PAD-IMMUTABLE',
@@ -3754,6 +3756,8 @@ function publicStatus(){
     stationPipeDrainTimeoutMsR804:0, // R821 compatibility field
     stationLegacyDrainDisabledR821:STATION_LEGACY_DRAIN_DISABLED_R821,
     goldenNoCropLockR829:true,
+    trueNoCropContainR830:true,
+    smoothFadeEarlierR830:true,
     falseFrameStallKillDisabledR829:true,
     clipCommitLockR827:true,
     stationIntegrityLightR828:true,
@@ -3850,7 +3854,7 @@ const server=http.createServer((req,res)=>{
       let result;
       if(url.pathname==='/control/visual-now')result=await applyVisualModeR721({slot:url.searchParams.get('slot')||''});
       else if(url.pathname==='/control/visual-auto')result=await applyVisualModeR721({auto:true});
-      else if(url.pathname==='/control/full-fit')result={ok:true,noCrop:true,locked:true,r829:true,restartedPublisher:false,restartedVideoFeeder:false};
+      else if(url.pathname==='/control/full-fit')result={ok:true,noCrop:true,contain:true,locked:true,r830:true,restartedPublisher:false,restartedVideoFeeder:false};
       else if(url.pathname==='/control/timeline-offset')result=await setTimelineCompensationR739(url.searchParams.get('seconds'));
       else throw new Error('unknown local control');
       res.writeHead(200,headers);res.end(JSON.stringify(result));
