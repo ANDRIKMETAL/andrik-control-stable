@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788358718470-73acca9cf1",
-  "release": "R854",
-  "archiveName": "ANDRIK-R854-R837-RAWVIDEO-R850-TITLE-FADE-SAFE-FULL.zip",
-  "sourceHead": "58f98e4917841e78c8340d5d5745fbf7b994e50f",
-  "backupSha": "58f98e4917841e78c8340d5d5745fbf7b994e50f",
+  "operationId": "publish-1788375045327-13c9cfa73f",
+  "release": "R855",
+  "archiveName": "ANDRIK-R855-HOMEPAGE-NEW-LIVE-LINK-R854-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "480989f454df1c85735b94fa5339e072e32f862a",
+  "backupSha": "480989f454df1c85735b94fa5339e072e32f862a",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-02T14:18:40.491Z"
+  "generatedAt": "2026-09-02T18:50:45.327Z"
 }
