@@ -20734,47 +20734,6 @@ async function handleControlYoutubeLiveR565(request, env) {
       updatedAt:new Date().toISOString()
     });
   } catch(error) {
-    // R831C: Control must not go blind just because the private Live API call
-    // temporarily fails while the public Data API and the actual stream are healthy.
-    // Resolve the current LIVE video through the already-proven public resolver and
-    // return public statistics. This is read-only and never starts/stops/rebinds LIVE.
-    try {
-      const found=await resolvePublicYoutubeLiveR623(env,{fresh:false});
-      const videoId=cleanPlainText(found?.videoId||'',80);
-      if(videoId){
-        let video=null;
-        try{
-          const {data}=await youtubeApiJson(env,'videos',{
-            part:'snippet,status,statistics,liveStreamingDetails',
-            id:videoId,
-            maxResults:1
-          },{oauth:false,timeoutMs:7000});
-          video=Array.isArray(data?.items)?data.items[0]||null:null;
-        }catch(_){ }
-        const details=video?.liveStreamingDetails||{};
-        const statistics=video?.statistics||{};
-        return json({
-          ok:true,active:true,signalActive:true,broadcastLive:true,videoId,
-          title:cleanPlainText(video?.snippet?.title||'ANDRIK Metal Radio 24/7',220),
-          lifeCycleStatus:'live',
-          privacyStatus:cleanPlainText(video?.status?.privacyStatus||'public',80),
-          recordingStatus:'',streamStatus:'active',healthStatus:'',healthIssues:[],
-          concurrentViewers:Math.max(0,Number(details?.concurrentViewers||0)),
-          actualStartTime:cleanPlainText(details?.actualStartTime||'',80),
-          scheduledStartTime:cleanPlainText(details?.scheduledStartTime||'',80),
-          views:Math.max(0,Number(statistics?.viewCount||0)),
-          likes:Math.max(0,Number(statistics?.likeCount||0)),
-          comments:Math.max(0,Number(statistics?.commentCount||0)),
-          boundStreamId:'',
-          studioUrl:`https://studio.youtube.com/video/${encodeURIComponent(videoId)}/livestreaming`,
-          analyticsUrl:`https://studio.youtube.com/video/${encodeURIComponent(videoId)}/analytics/tab-overview/period-default`,
-          watchUrl:`https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`,
-          source:'public-live-fallback-r831c',
-          privateLiveApiError:cleanPlainText(error?.message||error,300),
-          updatedAt:new Date().toISOString()
-        });
-      }
-    } catch (_) {}
     return json({ok:false,error:cleanPlainText(error?.message||error,500)},503);
   }
 }

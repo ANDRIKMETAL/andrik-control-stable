@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788294120551-eaf254f7bc",
-  "release": "R837",
-  "archiveName": "R837-GOLD-R829-VIDEO-24x8-CONTROL-COMPACT-SAFE-FULL.zip",
-  "sourceHead": "85b569b5dd3e1676131881203445ff62ce25591d",
-  "backupSha": "85b569b5dd3e1676131881203445ff62ce25591d",
+  "operationId": "publish-1788330185170-c70ae47646",
+  "release": "R831",
+  "archiveName": "ANDRIK-R831-CONTROL-YOUTUBE-R803-COMPAT-PATCH-SAFE-FULL-RESTORE.zip",
+  "sourceHead": "7c98dd689eb0329e6bbf4e73af0e70880ac127e9",
+  "backupSha": "7c98dd689eb0329e6bbf4e73af0e70880ac127e9",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-01T20:22:01.005Z"
+  "generatedAt": "2026-09-02T06:23:05.564Z"
 }
