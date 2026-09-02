@@ -17,6 +17,7 @@ import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 
 const PORT = Number(process.env.PORT || 8080);
+const R854_R837_RAWVIDEO_R850_TITLE_FADE = 'R854-R837-RAWVIDEO-R850-TITLE-MP3-FADE';
 const R816_PERSISTENT_RAWVIDEO_SINGLE_X264 = 'R816-PERSISTENT-RAWVIDEO-SINGLE-X264';
 const R819_R784_GEOMETRY_RAWVIDEO_QUEUE24 = 'R819-R784-VIEWER-PROVEN-GEOMETRY-RAWVIDEO-QUEUE24';
 const R820_MASTER_PTS_LOCK = 'R821-STATION-NO-DRAIN-MAKE-BEFORE-BREAK / R820-DETERMINISTIC-MASTER-PTS-LOCK';
@@ -160,11 +161,11 @@ const AUDIO_GAP_BRIDGE_INTERVAL_MS_R824 = 20; // R824: fill only inter-item audi
 const AUDIO_GAP_BRIDGE_SAMPLES_R824 = Math.max(1,Math.round(AUDIO_SAMPLE_RATE*AUDIO_GAP_BRIDGE_INTERVAL_MS_R824/1000));
 const AUDIO_GAP_BRIDGE_CHUNK_R824 = Buffer.alloc(AUDIO_GAP_BRIDGE_SAMPLES_R824*2*2); // s16le stereo silence, 20 ms
 const VIDEO_FPS = 25;
-const FULL_FRAME_FILTER_R787 = 'scale=1920:1080:flags=lanczos,setsar=1'; // R830D HARD FULL DIRECT SCALE — NO PAD
-const LIVE_FULL_FRAME_FILTER_R794 = 'scale=1920:1080:flags=fast_bilinear,setsar=1';
-const LIVE_FULL_FRAME_GEOMETRY_R819 = 'scale=1920:1080:flags=fast_bilinear,setsar=1';
-const VIDEO_INPUT_QUEUE_PACKETS_R732 = 24; // R831 MICRO-LAG FIX: proven ~0.96s rawvideo cushion
-const AUDIO_INPUT_QUEUE_PACKETS_R732 = 8; // R831 MICRO-LAG FIX: proven bounded audio queue
+const FULL_FRAME_FILTER_R787 = 'scale=1920:1080:flags=lanczos,setsar=1'; // R837 GOLD: exact R829 permanent fullscreen
+const LIVE_FULL_FRAME_FILTER_R794 = 'scale=1920:1080:flags=lanczos,setsar=1'; // R837 GOLD: exact R829 permanent fullscreen
+const LIVE_FULL_FRAME_GEOMETRY_R819 = 'scale=1920:1080:flags=lanczos,setsar=1'; // R837 GOLD: exact R829 permanent fullscreen
+const VIDEO_INPUT_QUEUE_PACKETS_R732 = 24; // R837 GOLD: proven 0.96s @25fps
+const AUDIO_INPUT_QUEUE_PACKETS_R732 = 8; // R837 GOLD: proven bounded audio queue
 const VIDEO_GOP = 50; // exactly 2 seconds at 25 fps
 const VIDEO_FRAME_BYTES_R816 = 1920*1080*3/2; // R816 exact YUV420P frame; incomplete feeder tails are never forwarded
 const LIBRARY_REFRESH_MS = Math.max(60000, Number(process.env.LIBRARY_REFRESH_MS || 120000));
@@ -209,7 +210,7 @@ const state = {
   audioMode: 'R793 NO BACKGROUND/PREFETCH LOUDNESS + LIVE FALLBACK + AUDIO QUEUE 8 / SAME MASTER A/V TO PRIMARY+BACKUP RTMPS',
   mp3ToVideoFadeMode: 'R757-END-BLACK-HOLD-THEN-VIDEO-FADE-IN',
   clipPreviewMode: 'R757-NORMAL-CLIPS-PREVNEXT-INTRO-2-7S-PLUS-FINAL-10S',
-  mp3BoundaryFadeMode: 'R816-RAWVIDEO-BLACK-1.10-HOLD-0.20-RECOVER-1.15',
+  mp3BoundaryFadeMode: 'R854-R837-RAWVIDEO-FADE-3.10-HOLD-0.20-RECOVER-1.50',
   visualTimeZone: VISUAL_TIME_ZONE,
   visualPeriod: null,
   visualPath: null,
@@ -2215,7 +2216,7 @@ function titleOverlayFiltersR721({dynamicTitle=false,showPreview=false,previewDu
   const tickerPath=ffFilterPath(LIVE_TICKER_FILE);
   const prevPath=ffFilterPath(LIVE_PREVIOUS_FILE_R726);
   const nextPath=ffFilterPath(LIVE_NEXT_FILE_R726);
-  const titleReload=dynamicTitle?`:reload=1`:'';
+  const titleReload=`:reload=1`; // R854/R850: every active rawvideo feeder follows shared CURRENT title
   const previewReloadPart=previewReload?`:reload=${VIDEO_FPS}`:'';
   const d=Math.max(0,Number(previewDuration)||0);
   const sw=Math.max(0,Number(boundaryTitleSwitchAt)||0);
@@ -3236,15 +3237,9 @@ async function ensureNormalVideoFeederR721({force=false,fadeIn=false,fadeInSecon
       ? ((state.next?.type==='track'&&plannedDuration>TITLE_SWITCH_BEFORE_BOUNDARY_R781+0.25)?Math.max(0,plannedDuration-TITLE_SWITCH_BEFORE_BOUNDARY_R781):0)
       : Math.max(0,Number(boundaryTitleSwitchAt)||0);
     const opts={fadeIn,fadeInSeconds,endFadeToBlack,trackDuration:plannedDuration,visualOffsetSeconds,previewReload,boundaryTitleSwitchAt:plannedBoundaryTitleSwitchAt};
-    if(videoFeeder&&videoFeeder.exitCode===null)
-      return atomicReplaceNormalVideoFeederR816(visual,opts);
-
-    // R828: the first feeder must never touch LIVE until
-    // one exact full 1920x1080 YUV420P frame is ready.
-    return await startFirstNormalVideoFeederR828(
-      visual,
-      opts
-    );
+    // R837 GOLD / R829: one permanent video path from the first frame.
+    if(videoFeeder&&videoFeeder.exitCode===null)return atomicReplaceNormalVideoFeederR816(visual,opts);
+    return startNormalVideoFeederR721(visual,opts);
   }finally{visualSwitching=false;}
 }
 

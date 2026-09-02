@@ -1,0 +1,12 @@
+R831 CONTROL LIVE FALLBACK FIX
+
+Preserved:
+- R831 radio247/server.mjs micro-lag fix (VIDEO queue 24, AUDIO queue 8, normal feeder priority)
+- current site and control panel
+- R803/R721 youtube-ensure compatibility
+
+Fixed:
+1. /api/control/youtube-live-r565 now falls back to the public YouTube Data API/current LIVE resolver when the private YouTube Live API status request fails. Control no longer goes blank while the stream itself is healthy.
+2. cache-reset-v55-00-final-r831.html is selective and does NOT wipe owner authorization or OneSignal state.
+
+No radio/FFmpeg/handoff/fade/geometry code was changed in this control fix.

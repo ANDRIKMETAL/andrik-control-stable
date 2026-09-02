@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788330185170-c70ae47646",
-  "release": "R831",
-  "archiveName": "ANDRIK-R831-CONTROL-YOUTUBE-R803-COMPAT-PATCH-SAFE-FULL-RESTORE.zip",
-  "sourceHead": "7c98dd689eb0329e6bbf4e73af0e70880ac127e9",
-  "backupSha": "7c98dd689eb0329e6bbf4e73af0e70880ac127e9",
+  "operationId": "publish-1788358718470-73acca9cf1",
+  "release": "R854",
+  "archiveName": "ANDRIK-R854-R837-RAWVIDEO-R850-TITLE-FADE-SAFE-FULL.zip",
+  "sourceHead": "58f98e4917841e78c8340d5d5745fbf7b994e50f",
+  "backupSha": "58f98e4917841e78c8340d5d5745fbf7b994e50f",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-02T06:23:05.564Z"
+  "generatedAt": "2026-09-02T14:18:40.491Z"
 }
