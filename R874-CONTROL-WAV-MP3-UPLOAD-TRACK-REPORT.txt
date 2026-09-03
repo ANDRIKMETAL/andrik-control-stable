@@ -1,0 +1,8 @@
+ANDRIK R874 FULL SITE
+
+Changes:
+- Radio Control: NEW TRACK accepts WAV + MP3.
+- WAV is converted in browser to MP3 320 kbps using existing R324 converter.
+- Upload button renamed to UPLOAD TRACK.
+- R870 journal/map/RTMPS 1/1 control fixes preserved.
+- Radio core is not modified by this site archive.

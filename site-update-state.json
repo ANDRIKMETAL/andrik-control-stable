@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788446660135-73fdd4c17e",
-  "release": "R870",
-  "archiveName": "ANDRIK-R870-CONTROL-PANEL-JOURNAL-MAP-RTMPS1x1-R868-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "f3cadc06ad46ac7ab98fe99580c6b81da199a3c1",
-  "backupSha": "f3cadc06ad46ac7ab98fe99580c6b81da199a3c1",
+  "operationId": "publish-1788451303879-9b326f5fca",
+  "release": "R874",
+  "archiveName": "ANDRIK-R874-WAV-MP3-TRACK-R870-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "4284a90e7003b8a8d539e91713567a3c36bc52ab",
+  "backupSha": "4284a90e7003b8a8d539e91713567a3c36bc52ab",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-03T14:44:20.860Z"
+  "generatedAt": "2026-09-03T16:01:43.879Z"
 }
