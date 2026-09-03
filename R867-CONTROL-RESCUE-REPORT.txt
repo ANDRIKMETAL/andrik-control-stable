@@ -1,0 +1,21 @@
+ANDRIK R867 CONTROL RESCUE — R857 RADIO CORE PRESERVED
+
+Scope: Control/UI + web-control agent only.
+Radio server.mjs in this archive is byte-identical to R857 source and is NOT modified by R867.
+
+Changes:
+1. Radio Control: removed TRIKA official-release card.
+2. Fixed START flow: no forced stop+start; idempotent encoder-start then YouTube ensure.
+3. Cloudflare command queue now accepts encoder-start / encoder-stop.
+4. Added one-click FULLSCREEN GOLD restore button. It restores /opt/andrik-radio/backups/R857-FULLSCREEN-GOLD-LATEST.tar.gz (server.mjs + /etc/andrik-radio.env), removes only known failed station experiment derivatives, restarts radio once and calls full-fit.
+5. Added SOFT RESTART button.
+6. Added SAFE STATION CACHE CLEAN button; MP3 and visual masters are never deleted.
+7. Journal UI now shows only fresh events from the last 2 hours on screen; archived events remain in COPY ALL LOG. Stale Sep-02 entries no longer masquerade as current.
+8. RTMPS 1/2 is shown as warning: primary lane alive, backup lane not ESTAB. Transport is not modified.
+9. New OVH Agent R867 installer restarts only the control agent, NOT andrik-radio.service.
+
+One-time OVH installer after deploying this ZIP:
+  curl -fsSL https://andrikmetal.com/radio247/vm-lite/install-r867-control-rescue-no-radio-restart.sh | sudo bash
+
+Cache reset page:
+  https://andrikmetal.com/cache-reset-v55-00-final-r867.html

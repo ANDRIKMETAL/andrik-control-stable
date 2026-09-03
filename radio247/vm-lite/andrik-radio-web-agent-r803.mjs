@@ -6,7 +6,7 @@ import {Readable} from 'node:stream';
 import {pipeline} from 'node:stream/promises';
 
 const CONFIG='/etc/andrik-radio-web-r627.json';
-const AGENT_VERSION_R803='R803';
+const AGENT_VERSION_R803='R867';
 const DIAG_DIR_R803='/var/cache/andrik-radio-r622/diagnostics';
 const DIAG_AGENT_LOG_R803=DIAG_DIR_R803+'/r803-agent-events.ndjson';
 const DIAG_AGENT_MAX_BYTES_R803=1024*1024;
@@ -19,6 +19,8 @@ function visualsProtected(){return VISUAL_PROTECT_FILES.some(path=>fs.existsSync
 const RADIO_ENV='/etc/andrik-radio.env';
 const VISUAL_MANUAL_MARKER='/var/cache/andrik-radio-r622/visuals/.manual-visual-r658';
 const VISUAL_AUTO_R658='/usr/local/sbin/andrik-visual-auto-r703';
+const GOLD_RESTORE_R867='/usr/local/sbin/andrik-radio-fullscreen-gold-restore-r867';
+const SAFE_CACHE_CLEAN_R867='/usr/local/sbin/andrik-radio-safe-cache-clean-r867';
 const VISUAL_FILES=Object.freeze({morning:'stream-morning-master-r703.mp4',day:'stream-day-master-r620.mp4',evening:'stream-evening-master-r620.mp4',night:'stream-night-master-r620.mp4'});
 const DEFAULT_TICKER='ANDRIK METAL RADIO 24/7   •   ANDRIKMETAL.COM   •   НОВЫЕ СИНГЛЫ И АЛЬБОМЫ ANDRIK   •   ПОДПИСЫВАЙТЕСЬ • СТАВЬТЕ ЛАЙКИ • КОММЕНТИРУЙТЕ   •   ';
 const BASE=process.env.ANDRIK_CONTROL_BASE||'https://andrikmetal.com';
@@ -245,6 +247,26 @@ async function execute(action,command={},headers={}){
     const r=await runAsync('systemctl',['start','andrik-radio.service'],90000);
     return {ok:r.ok,output:`OVH ENCODER START ${r.ok?'✅':'❌'}\n${r.output}`};
   }
+  if(action==='gold-restore'){
+    if(!fs.existsSync(GOLD_RESTORE_R867))return {ok:false,output:`FULLSCREEN GOLD RESTORE ❌\nMissing ${GOLD_RESTORE_R867}`};
+    const r=await runAsync(GOLD_RESTORE_R867,[],210000);
+    return {ok:r.ok,output:`FULLSCREEN GOLD RESTORE ${r.ok?'✅':'❌'}\n${r.output}`};
+  }
+  if(action==='cache-clean'){
+    if(!fs.existsSync(SAFE_CACHE_CLEAN_R867))return {ok:false,output:`SAFE CACHE CLEAN ❌\nMissing ${SAFE_CACHE_CLEAN_R867}`};
+    const r=await runAsync(SAFE_CACHE_CLEAN_R867,[],90000);
+    return {ok:r.ok,output:`SAFE CACHE CLEAN ${r.ok?'✅':'❌'}\n${r.output}`};
+  }
+  if(action==='soft-restart'){
+    const before=run('systemctl',['show','andrik-radio.service','-p','MainPID','--value'],10000).output.trim();
+    const r=await runAsync('systemctl',['restart','andrik-radio.service'],90000);
+    if(!r.ok)return {ok:false,output:`SOFT RESTART ❌\n${r.output}`};
+    await sleep(9000);
+    let fit='';
+    try{fit=JSON.stringify(await localControlR721('/control/full-fit'))}catch(e){fit=`full-fit warning: ${e.message||e}`}
+    const after=run('systemctl',['show','andrik-radio.service','-p','MainPID','--value'],10000).output.trim();
+    return {ok:true,output:`SOFT RESTART ✅\nPID ${before||'—'} -> ${after||'—'}\n${fit}`};
+  }
   if(action==='recover'||action==='restart'||action==='auto-safe'){
     const r=await runAsync('systemctl',['restart','andrik-radio.service'],90000);
     return {ok:r.ok,output:`OVH ENCODER RESTART ${r.ok?'✅':'❌'}\n${r.output}`};
@@ -339,6 +361,6 @@ async function main(){
     console.log(result.output);if(!result.ok)process.exitCode=4;return;
   }
   if(cmd==='status'){const cfg=readConfig();console.log(cfg.token?'PAIRED ✅':'NOT PAIRED ❌');console.log(await localStatus());return}
-  console.log('ANDRIK Radio Web Agent R803 · commands: daemon | status | bootstrap-visuals | visual-sync | visual-now <morning|day|evening|night> | visual-auto');
+  console.log('ANDRIK Radio Web Agent R867 · commands: daemon | status | bootstrap-visuals | visual-sync | visual-now <morning|day|evening|night> | visual-auto');
 }
 main().catch(e=>{console.error('ОШИБКА:',e.message||e);process.exitCode=1});

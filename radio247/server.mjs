@@ -17,7 +17,7 @@ import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 
 const PORT = Number(process.env.PORT || 8080);
-const R854_R837_RAWVIDEO_R850_TITLE_FADE = 'R862-R861-REAL-EOF-R860-ALIGN-R859-R857-QUOTA-SHIELD-R854-PRESERVED';
+const R854_R837_RAWVIDEO_R850_TITLE_FADE = 'R854-R837-RAWVIDEO-R850-TITLE-MP3-FADE';
 const R816_PERSISTENT_RAWVIDEO_SINGLE_X264 = 'R816-PERSISTENT-RAWVIDEO-SINGLE-X264';
 const R819_R784_GEOMETRY_RAWVIDEO_QUEUE24 = 'R819-R784-VIEWER-PROVEN-GEOMETRY-RAWVIDEO-QUEUE24';
 const R820_MASTER_PTS_LOCK = 'R821-STATION-NO-DRAIN-MAKE-BEFORE-BREAK / R820-DETERMINISTIC-MASTER-PTS-LOCK';
@@ -71,7 +71,7 @@ const CTA_FADE_SECONDS_R748 = 0.35; // smooth alpha in/out instead of blink
 const CTA_BOTTOM_GAP_R748 = 72; // R767: compact CTA directly above ticker
 const CTA_RIGHT_GAP_R767 = 34; // R767: right side; old left CTA removed
 const CLIP_PREP_SUFFIX_R782 = '.r787-ready.mp4'; // R787: permanent full-frame prepared cache
-const STATION_PREP_MARKER_R791 = '.station-r861-real-eof-shortest-av'; // R861: rebuild station inserts with real A/V EOF, zero-PTS audio and no padded freeze/silence tail
+const STATION_PREP_MARKER_R791 = '.station-r791-audio-zero-pts'; // R791: force one-time rebuild of station inserts with audio PTS reset BEFORE resample
 const STATION_LEGACY_DRAIN_DISABLED_R821 = true; // R821: station handoff never waits for old H264/AU/sink drain; persistent rawvideo master stays fed
 const STATION_LEADING_SILENCE_THRESHOLD_DB_R782 = -55; // PCM RMS threshold, no optional FFmpeg silencedetect dependency
 const STATION_LEADING_SILENCE_MIN_R782 = 0.20; // only compensate sustained leading near-silence >=200ms
@@ -106,7 +106,7 @@ const MP3_BOUNDARY_FADE_IN_SECONDS_R814 = 1.50; // R814: MP3→MP3 only
 const VIDEO_FADE_LEAD_SECONDS_R735 = 1.40; // R763: start the proven R753 boundary darkening exactly 1.0s earlier than R762
 const TITLE_SWITCH_BEFORE_BOUNDARY_R781 = Math.max(0.50,Math.min(2.50,Number(process.env.TITLE_SWITCH_BEFORE_BOUNDARY_R781 || (VIDEO_FADE_LEAD_SECONDS_R735 + VIDEO_BLACK_HOLD_SECONDS_R736/2)))); // R781: switch CURRENT to the next MP3 while the screen is black, before recovery
 const TITLE_VISUAL_LEAD_SECONDS_R738 = 3.20; // compensate persistent video path latency; CURRENT is preloaded early but appears at the real handoff
-const CLIP_PRE_DRAIN_MS_R738 = 700; // R860: viewer-tested A/V align hold before MP3 -> insert boundary
+const CLIP_PRE_DRAIN_MS_R738 = 900; // let the bounded MP3 PCM queue drain while the normal visual keeps running
 const CLIP_POST_DRAIN_MS_R738 = 650; // let the clip PCM/video tail drain before the next MP3 feeder starts
 const VIDEO_TIMELINE_COMP_DEFAULT_R739 = 0.0; // R743: disable R739 global compensation; it hid/late-shifted proven R732 boundary UI
 const CLIP_PREP_NICE_R742 = 12; // background clip preparation yields CPU to the live stream
@@ -164,8 +164,8 @@ const VIDEO_FPS = 25;
 const FULL_FRAME_FILTER_R787 = 'scale=1920:1080:flags=lanczos,setsar=1'; // R837 GOLD: exact R829 permanent fullscreen
 const LIVE_FULL_FRAME_FILTER_R794 = 'scale=1920:1080:flags=lanczos,setsar=1'; // R837 GOLD: exact R829 permanent fullscreen
 const LIVE_FULL_FRAME_GEOMETRY_R819 = 'scale=1920:1080:flags=lanczos,setsar=1'; // R837 GOLD: exact R829 permanent fullscreen
-const VIDEO_INPUT_QUEUE_PACKETS_R732 = 96; // R858/R862: bounded RAWVIDEO transition cushion; DO NOT use 64
-const AUDIO_INPUT_QUEUE_PACKETS_R732 = 16; // R859/R862: bounded audio queue; DO NOT use 64
+const VIDEO_INPUT_QUEUE_PACKETS_R732 = 24; // R837 GOLD: proven 0.96s @25fps
+const AUDIO_INPUT_QUEUE_PACKETS_R732 = 8; // R837 GOLD: proven bounded audio queue
 const VIDEO_GOP = 50; // exactly 2 seconds at 25 fps
 const VIDEO_FRAME_BYTES_R816 = 1920*1080*3/2; // R816 exact YUV420P frame; incomplete feeder tails are never forwarded
 const LIBRARY_REFRESH_MS = Math.max(60000, Number(process.env.LIBRARY_REFRESH_MS || 120000));
@@ -199,7 +199,7 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R862-R861-REAL-EOF-R860-ALIGN-R859-R857-QUOTA-SHIELD',
+  version: 'R821-FINAL-STABLE-R822-AUDIO-GAP-BRIDGE-R820-PRESERVED',
   cpuHeadroomProfileR794:'R796-LIVE-FAST-SCALE-COMPACT-EQ-FINITE-FADE-PRESCALED-STATIC',
   mode: 'R821 STATION NO-DRAIN MAKE-BEFORE-BREAK / R820 MASTER PTS + R819 GEOMETRY + R814 FADE PRESERVED',
   startedAt: new Date().toISOString(),
@@ -207,7 +207,7 @@ const state = {
   publisherRunning: false,
   producerRunning: false,
   overlayMode: 'R757 PREV/NEXT ON MP3 + NORMAL CLIPS @ INTRO 2-7s + FINAL 10s / R756 PRESERVED',
-  audioMode: 'R862 R859 BOUNDED AUDIO QUEUE 16 / R860 ALIGN 700MS / R861 REAL STATION EOF / SAME MASTER A/V TO PRIMARY+BACKUP RTMPS',
+  audioMode: 'R793 NO BACKGROUND/PREFETCH LOUDNESS + LIVE FALLBACK + AUDIO QUEUE 8 / SAME MASTER A/V TO PRIMARY+BACKUP RTMPS',
   mp3ToVideoFadeMode: 'R757-END-BLACK-HOLD-THEN-VIDEO-FADE-IN',
   clipPreviewMode: 'R757-NORMAL-CLIPS-PREVNEXT-INTRO-2-7S-PLUS-FINAL-10S',
   mp3BoundaryFadeMode: 'R854-R837-RAWVIDEO-FADE-3.10-HOLD-0.20-RECOVER-1.50',
@@ -1473,7 +1473,7 @@ function preparedClipFilterComplexR742(titleFile,tickerFile,{stationInsert=false
   // R782/R766: hold the final frame to the measured A/V boundary. This is OFFLINE
   // preparation only, so the live R780 transport/filtergraph remains untouched.
   const preparedDurationR766=Math.max(0,Number(duration)||0);
-  if(preparedDurationR766>0 && !stationInsert){
+  if(preparedDurationR766>0){
     base.push(
       `tpad=stop_mode=clone:stop_duration=${preparedDurationR766.toFixed(3)}`,
       `trim=duration=${preparedDurationR766.toFixed(3)}`,
@@ -1664,14 +1664,13 @@ async function buildPreparedClipR742(item,sourcePath){
     // If aresample(first_pts=0) sees that positive source PTS first, it inserts matching
     // silence and the picture visibly starts before the ident sound. Reset timestamps
     // BEFORE aresample, then build the final clock only from decoded sample count.
-    ? `${stationLeadTrimR782>0.01?`atrim=start=${stationLeadTrimR782.toFixed(3)},`:''}asetpts=PTS-STARTPTS,aresample=${AUDIO_SAMPLE_RATE}:async=0:first_pts=0,asetpts=N/SR/TB`
+    ? `${stationLeadTrimR782>0.01?`atrim=start=${stationLeadTrimR782.toFixed(3)},`:''}asetpts=PTS-STARTPTS,aresample=${AUDIO_SAMPLE_RATE}:async=0:first_pts=0,apad=pad_dur=${Math.max(0.5,duration).toFixed(3)},atrim=duration=${Math.max(0.5,duration).toFixed(3)},asetpts=N/SR/TB`
     : `aresample=${AUDIO_SAMPLE_RATE}:async=0:first_pts=0,asetpts=N/SR/TB`;
   args.push(
     '-filter_complex',preparedClipFilterComplexR742(titleFile,tickerFile,{stationInsert,duration,ctaSubscribeInputIndex,ctaLikeInputIndex}),
     '-map','[outv]',...h264EncoderArgsR721(),'-threads','1',
     '-map',stationInsert?`0:a:${stationAudioRelativeIndexR784}`:(hasAudio?'0:a:0':`${silentAudioInputIndex}:a:0`),'-af',stationAudioPrepR782,
     '-c:a','aac','-profile:a','aac_low','-b:a',AUDIO_BITRATE,'-ar',String(AUDIO_SAMPLE_RATE),'-ac','2',
-    ...(stationInsert?['-shortest']:[]),
     '-t',String(Math.max(0.5,duration)),'-movflags','+faststart','-max_muxing_queue_size','4096',tmp
   );
   try{
@@ -1689,7 +1688,7 @@ async function buildPreparedClipR742(item,sourcePath){
     renameSync(tmp,readyPath);
     if(stationInsert)diagRecordR802('station-prepared-committed',{media:diagMediaR802(readyPath),duration:Number(duration||0)});
     if(stationInsert){
-      try{writeFileSync(readyPath+STATION_PREP_MARKER_R791,`R861 station real EOF shortest A/V + audio zero PTS\n${new Date().toISOString()}\n`,'utf8')}catch(_){ }
+      try{writeFileSync(readyPath+STATION_PREP_MARKER_R791,`R791 station audio PTS reset before resample\n${new Date().toISOString()}\n`,'utf8')}catch(_){ }
     }
     state.preparedClipLast=shortText(item?.title||sourcePath.split('/').pop(),52);
     return readyPath;
@@ -2859,7 +2858,7 @@ function normalVideoFeederArgsR721(visualPath,eqPath,{fadeIn=false,fadeInSeconds
   const visualSeek=Number(visualOffsetSeconds)>0.05?['-ss',Number(visualOffsetSeconds).toFixed(3)]:[];
   return [
     '-hide_banner','-loglevel','warning',
-    '-thread_queue_size','32','-fflags','+genpts+discardcorrupt','-err_detect','ignore_err','-re','-stream_loop','-1',...visualSeek,'-i',visualPath, // R862: never use queue 64 in live visual feeder
+    '-thread_queue_size','64','-fflags','+genpts+discardcorrupt','-err_detect','ignore_err','-re','-stream_loop','-1',...visualSeek,'-i',visualPath,
     '-loop','1','-framerate','1','-i',QR_OVERLAY_LIVE_R794,
     '-thread_queue_size','32','-fflags','+genpts+discardcorrupt','-err_detect','ignore_err','-re','-stream_loop','-1','-i',eqPath,
     '-loop','1','-framerate','1','-i',CTA_OVERLAY_LIVE_R794,
@@ -3544,14 +3543,6 @@ async function playVideoClipR691(previous,item,next){
     // candidate A+V readiness; the persistent x264/RTMPS master never closes and we never
     // wait for an old Annex-B/AU/sink drain. Old relay can drop only an incomplete YUV frame.
     // the persistent x264 encoder itself NEVER restarts and never receives a foreign H264 GOP.
-    // R860: candidate A+V is ready. Keep the outgoing MP3 visual LIVE for a short,
-    // viewer-tested hold so the persistent master consumes the old PCM tail before the cut.
-    diagRecordR802('r860-av-align-hold-start',{title:item.title||'VIDEO',station:stationInsert,holdMs:CLIP_PRE_DRAIN_MS_R738});
-    if(CLIP_PRE_DRAIN_MS_R738>0){
-      await new Promise(resolve=>setTimeout(resolve,CLIP_PRE_DRAIN_MS_R738));
-    }
-    diagRecordR802('r860-av-align-hold-complete',{title:item.title||'VIDEO',station:stationInsert,holdMs:CLIP_PRE_DRAIN_MS_R738});
-
     detachNormalVideoAtBoundaryR752();
     clipActive=true;child.__r752Live=true;
     const boundaryStartedAt=Date.now();

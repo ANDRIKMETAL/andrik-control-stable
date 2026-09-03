@@ -1,15 +1,16 @@
 (() => {
   'use strict';
 
-  // R862: quota-safe CURRENT-LIVE routing.
-  // Public pages do not poll YouTube in the background. A real Radio tap resolves
-  // the current LIVE id with fresh=1, then opens YouTube/ReVanced app-first.
-  // If JavaScript/app handoff fails, /radio-live performs the same fresh server-side resolve.
+  // R663: Android YouTube APP-FIRST with safe offline-LIVE fallback. Never let a generic https intent be the
+  // first route, because Android 12+ may resolve that straight to the browser.
+  // Proven path: vnd.youtube:VIDEO_ID. For channel/live links we first resolve
+  // the current live id; if unavailable, use vnd.youtube: with the YouTube URL.
   const isAndroid = /Android/i.test(navigator.userAgent || '');
   const selector = 'a[data-force-app="youtube"][data-web-url]';
   const LIVE_TARGET_API = '/api/public/youtube-live-target';
-  const LIVE_GATE = '/radio-live?from=home';
-  let lastFreshLive = null;
+  const CHANNEL_LIVE_RE = /^https:\/\/(?:www\.|m\.)?youtube\.com\/@andrikmetal\/live(?:[/?#]|$)/i;
+  let cachedLive = null;
+  let liveFetch = null;
 
   function youtubeVideoId(rawUrl) {
     try {
@@ -29,7 +30,8 @@
   function navigationWatch() {
     let left = false;
     const mark = () => { left = true; };
-    document.addEventListener('visibilitychange', () => { if (document.hidden) mark(); }, {once:true});
+    const onVis = () => { if (document.hidden) mark(); };
+    document.addEventListener('visibilitychange', onVis, {once:true});
     window.addEventListener('pagehide', mark, {once:true});
     window.addEventListener('blur', mark, {once:true});
     return () => left || document.hidden;
@@ -38,6 +40,10 @@
   function androidYoutubeTarget(webUrl, explicitId = '') {
     const id = explicitId || youtubeVideoId(webUrl);
     if (id) return `vnd.youtube:${id}`;
+    // R663: NEVER feed a full https URL to vnd.youtube. Some YouTube clients
+    // interpret vnd.youtube:https://... as a path and produce youtube.com/http....
+    // For channel/profile pages use a normal Android https intent so YouTube,
+    // ReVanced/RVX or another registered client can claim it, with web fallback.
     try {
       const u = new URL(webUrl, location.href);
       if (!/^(https?):$/.test(u.protocol)) return webUrl;
@@ -52,83 +58,116 @@
   function launchAppFirst(webUrl, id = '') {
     const didLeave = navigationWatch();
     try { window.location.href = androidYoutubeTarget(webUrl, id); } catch (_) {}
+    // Browser is only a last fallback when no compatible app handled the app route.
     setTimeout(() => {
       if (!didLeave()) window.location.href = webUrl;
-    }, 1400);
+    }, 1800);
   }
 
-  async function fetchFreshLiveTarget({timeout=2600} = {}) {
-    // Short same-tap cache only; never trust an old page/preload id.
-    if (lastFreshLive?.id && Date.now() - lastFreshLive.at < 10000) return lastFreshLive;
-    const controller = typeof AbortController === 'function' ? new AbortController() : null;
-    const timer = controller ? setTimeout(() => controller.abort(), timeout) : null;
-    try {
-      const res = await fetch(`${LIVE_TARGET_API}?fresh=1&ts=${Date.now()}`, {
-        cache:'no-store',
-        headers:{accept:'application/json'},
-        signal:controller?.signal
-      });
-      const data = await res.json().catch(() => ({}));
-      const direct = String(data?.watchUrl || '');
-      const id = String(data?.videoId || '') || youtubeVideoId(direct);
-      if (res.ok && id && data?.active !== false) {
-        lastFreshLive = {id, url:direct || `https://www.youtube.com/watch?v=${encodeURIComponent(id)}`, at:Date.now()};
-        return lastFreshLive;
+  async function fetchLiveTarget({fresh=false, timeout=1400} = {}) {
+    if (!fresh && cachedLive?.id) return cachedLive;
+    if (!fresh && liveFetch) return liveFetch;
+    const job = (async () => {
+      const controller = typeof AbortController === 'function' ? new AbortController() : null;
+      const timer = controller ? setTimeout(() => controller.abort(), timeout) : null;
+      try {
+        const url = `${LIVE_TARGET_API}?${fresh ? 'fresh=1&' : ''}ts=${Date.now()}`;
+        const res = await fetch(url, {
+          cache:'no-store',
+          headers:{accept:'application/json'},
+          signal:controller?.signal
+        });
+        const data = await res.json().catch(() => ({}));
+        const direct = String(data?.watchUrl || '');
+        const id = String(data?.videoId || '') || youtubeVideoId(direct);
+        if (res.ok && id) {
+          cachedLive = {id, url: direct || `https://www.youtube.com/watch?v=${encodeURIComponent(id)}`, at:Date.now()};
+          return cachedLive;
+        }
+      } catch (_) {
+      } finally {
+        if (timer) clearTimeout(timer);
       }
-    } catch (_) {
-    } finally {
-      if (timer) clearTimeout(timer);
-    }
-    return null;
+      return null;
+    })();
+    if (!fresh) liveFetch = job.finally(() => { liveFetch = null; });
+    return job;
   }
 
   function prepare(root = document) {
     root.querySelectorAll(selector).forEach(link => {
-      const isLive = link.dataset.youtubeLiveAuto === '1';
-      if (isLive) {
-        // A plain browser click/copy still goes through the server-side CURRENT-LIVE gate.
-        link.setAttribute('href', LIVE_GATE);
-        link.setAttribute('data-web-url', LIVE_GATE);
-      } else {
-        const webUrl = link.getAttribute('data-web-url') || link.getAttribute('href');
-        if (webUrl) link.setAttribute('href', webUrl);
-      }
+      const webUrl = link.getAttribute('data-web-url') || link.getAttribute('href');
+      if (!webUrl) return;
+      link.setAttribute('href', webUrl);
       link.setAttribute('rel', 'noopener noreferrer external');
       if (isAndroid) link.removeAttribute('target');
     });
   }
 
+  async function preloadCurrentLiveTarget() {
+    const links = [...document.querySelectorAll(selector)].filter(link => {
+      const url = link.getAttribute('data-web-url') || link.href || '';
+      return CHANNEL_LIVE_RE.test(url);
+    });
+    if (!links.length) return;
+    const live = await fetchLiveTarget({fresh:false, timeout:2200});
+    if (!live?.id) return;
+    for (const link of links) {
+      if (!link.getAttribute('data-web-fallback')) {
+        link.setAttribute('data-web-fallback', link.getAttribute('data-web-url') || link.href || '');
+      }
+      link.setAttribute('data-youtube-live-id', live.id);
+      link.setAttribute('data-web-url', live.url);
+      link.setAttribute('href', live.url);
+    }
+  }
+
   async function openYoutubeFromRealTap(event, link) {
-    const isLive = link.dataset.youtubeLiveAuto === '1';
-
-    // For non-Android LIVE links, route through /radio-live, which resolves fresh server-side.
     if (!isAndroid) return;
-
     event.preventDefault();
     event.stopPropagation();
 
-    if (isLive) {
-      const live = await fetchFreshLiveTarget({timeout:2600});
-      if (live?.id) {
-        link.setAttribute('data-youtube-live-id', live.id);
-        launchAppFirst(live.url, live.id);
-        return;
-      }
-      window.location.href = `${LIVE_GATE}&ts=${Date.now()}`;
+    const webUrl = link.getAttribute('data-web-url') || link.href || 'https://www.youtube.com/@andrikmetal/live';
+    const knownId = link.getAttribute('data-youtube-live-id') || youtubeVideoId(webUrl) || cachedLive?.id || '';
+    if (knownId) {
+      launchAppFirst(webUrl, knownId);
       return;
     }
 
-    const webUrl = link.getAttribute('data-web-url') || link.href || 'https://www.youtube.com/@andrikmetal';
+    const originalFallback = link.getAttribute('data-web-fallback') || webUrl;
+    const isLiveChannel = CHANNEL_LIVE_RE.test(originalFallback) || CHANNEL_LIVE_RE.test(webUrl);
+    if (isLiveChannel) {
+      // A real tap may happen before page preload finishes. Resolve fresh right now;
+      // wait only briefly, then still launch vnd.youtube rather than generic https.
+      const live = await fetchLiveTarget({fresh:true, timeout:1200});
+      if (live?.id) {
+        link.setAttribute('data-youtube-live-id', live.id);
+        link.setAttribute('data-web-url', live.url);
+        link.setAttribute('href', live.url);
+        launchAppFirst(live.url, live.id);
+      } else {
+        // R663: the stream itself is currently offline or unresolved. Do not
+        // create vnd.youtube:https://...; let the Worker resolve a valid LIVE
+        // video or redirect cleanly to the channel Streams page.
+        window.location.href = '/radio-live?from=home&ts=' + Date.now();
+      }
+      return;
+    }
+
     launchAppFirst(webUrl);
   }
 
-  const boot = () => prepare(); // R862: zero background LIVE polling = quota-safe.
+  const boot = () => {
+    prepare();
+    preloadCurrentLiveTarget();
+    setInterval(preloadCurrentLiveTarget, 45000);
+  };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, {once:true});
   else boot();
 
   document.addEventListener('click', event => {
     const link = event.target.closest?.(selector);
     if (!link) return;
-    void openYoutubeFromRealTap(event, link);
+    openYoutubeFromRealTap(event, link);
   }, true);
 })();
