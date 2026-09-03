@@ -235,7 +235,7 @@
     if(timer)clearInterval(timer);
     timer=null;
     if(document.hidden)return;
-    timer=setInterval(()=>refresh(false),5000);
+    timer=setInterval(()=>refresh(false),15000);
   }
 
   const boot=()=>{ensureUi();refresh(false);arm()};

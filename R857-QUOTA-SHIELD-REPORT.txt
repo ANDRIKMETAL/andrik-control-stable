@@ -1,0 +1,34 @@
+ANDRIK R857 — CLOUDFLARE QUOTA SHIELD
+BASE: ANDRIK R854 full archive
+PURPOSE: reduce Workers / Pages Functions request consumption without changing radio audio/video pipeline.
+
+ROOT CAUSES FOUND IN R854
+- _routes.json used include ["/*"], so ordinary HTML and other non-excluded static paths entered the Worker.
+- OVH radio web-agent polled Cloudflare every 4 seconds = up to 21,600 requests/day from one agent.
+- While radio-control-admin stayed visible, two scripts separately polled radio status every 5 seconds = up to 34,560 requests/day together.
+- Every open Control page health-eye polled /api/control/system every 60 seconds.
+- The radio agent also checked YouTube LIVE every 60 seconds while publishing.
+
+R857 CHANGES
+- Worker routing narrowed to API/OAuth/recovery + explicit Control pages that need Worker host/header logic.
+- R803/R802/R721 agent loop: 4s -> 10s (one agent max base poll: 21,600 -> 8,640/day).
+- YouTube self-heal check: 60s -> 120s (1,440 -> 720/day while publishing).
+- Radio remote status: 5s -> 15s.
+- Radio observability status: 5s -> 15s.
+  If the radio page stays visible 24h, these two together: 34,560 -> 11,520/day.
+- Control status eye: 60s -> 300s (1,440 -> 288/day per continuously visible page).
+- Added no-radio-restart VPS installer that updates the web-agent and disables a duplicate historical web-agent unit.
+
+PRESERVED
+- radio247/server.mjs is byte-for-byte unchanged from R854.
+- FFmpeg, rawvideo, crop/full-frame, audio, fades, titles and RTMPS pipeline unchanged.
+- Admin auth, YouTube OAuth, OneSignal, R2, comments, analytics APIs, backups and site updater preserved.
+- Manual refreshes remain immediate.
+
+EXPECTED BASE REQUEST LOAD (one agent + radio control left visible 24h)
+Before: about 57,600/day before other API/cron/site traffic.
+After : about 21,168/day before other API/cron/site traffic.
+Plus static Worker invocations are greatly reduced by _routes.json.
+
+IMPORTANT
+A quota already exhausted today still waits for Cloudflare's reset. This patch is preventive for subsequent days.

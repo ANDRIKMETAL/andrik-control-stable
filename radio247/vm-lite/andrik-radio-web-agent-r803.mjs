@@ -115,9 +115,9 @@ let lastYoutubeEnsureAtR721=0;
 async function maybeEnsureYoutubeLiveR721(headers,status){
   if(!status || status.service!=='active' || !status.publisher)return null;
   const now=Date.now();
-  // R720: check YouTube LIVE every ~60 s while the encoder is publishing, so the public LIVE badge
+  // R720: check YouTube LIVE every ~120 s while the encoder is publishing, so the public LIVE badge
   // is recovered quickly after a transient YouTube/API state drop.
-  if(now-lastYoutubeEnsureAtR721<60000)return null;
+  if(now-lastYoutubeEnsureAtR721<120000)return null;
   lastYoutubeEnsureAtR721=now;
   try{
     const d=await jsonFetch(BASE+'/api/radio-agent-r721/youtube-ensure',{method:'POST',headers,body:'{}'});
@@ -312,7 +312,7 @@ async function daemon(){
         }).catch(e=>{console.error(new Date().toISOString(),'command:',e.message||e);busy=null;});
       }
     }catch(e){console.error(new Date().toISOString(),'agent:',e.message||e)}
-    await sleep(4000);
+    await sleep(10000);
   }
 }
 async function bootstrapVisuals(){

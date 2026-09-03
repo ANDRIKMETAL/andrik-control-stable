@@ -131,7 +131,7 @@
   };
 
   checkStatus();
-  window.setInterval(() => { if (!document.hidden) checkStatus(); }, 60000);
+  window.setInterval(() => { if (!document.hidden) checkStatus(); }, 300000);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) checkStatus(); });
   window.addEventListener('pageshow', () => checkStatus(), { passive: true });
   window.addEventListener('andrik-control-system-refresh', () => checkStatus());
