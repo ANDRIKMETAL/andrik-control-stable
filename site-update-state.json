@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788451303879-9b326f5fca",
-  "release": "R874",
-  "archiveName": "ANDRIK-R874-WAV-MP3-TRACK-R870-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "4284a90e7003b8a8d539e91713567a3c36bc52ab",
-  "backupSha": "4284a90e7003b8a8d539e91713567a3c36bc52ab",
+  "operationId": "publish-1788458598727-c0c393b591",
+  "release": "R877",
+  "archiveName": "ANDRIK-R877-SEO-TITLE-OFFICIAL-SITE-R874-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "ba56638d08d3642bef6ea6b3f294812ef0ba3f13",
+  "backupSha": "ba56638d08d3642bef6ea6b3f294812ef0ba3f13",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-03T16:01:43.879Z"
+  "generatedAt": "2026-09-03T18:03:18.727Z"
 }
