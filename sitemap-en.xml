@@ -4,13 +4,13 @@
         xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
   <url>
     <loc>https://andrikmetal.com/en/</loc>
-    <lastmod>2026-07-25</lastmod><changefreq>weekly</changefreq><priority>0.9</priority>
+    <lastmod>2026-09-03</lastmod><changefreq>weekly</changefreq><priority>0.9</priority>
     <xhtml:link rel="alternate" hreflang="ru" href="https://andrikmetal.com/"/>
     <xhtml:link rel="alternate" hreflang="uk" href="https://andrikmetal.com/uk/"/>
     <xhtml:link rel="alternate" hreflang="sk" href="https://andrikmetal.com/sk/"/>
     <xhtml:link rel="alternate" hreflang="en" href="https://andrikmetal.com/en/"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://andrikmetal.com/"/>
-    <image:image><image:loc>https://andrikmetal.com/assets/andrik-ocean-poster-v50.webp</image:loc><image:title>ANDRIK OCEAN official poster</image:title></image:image>
+    <image:image><image:loc>https://andrikmetal.com/assets/andrik-stream-cover-r566.webp</image:loc><image:title>ANDRIK METAL RADIO 24/7 — live heavy metal stream</image:title></image:image>
     <image:image><image:loc>https://andrikmetal.com/assets/prosnis-scene-1-v51.webp</image:loc><image:title>ANDRIK AWAKEN visual short</image:title></image:image>
     <image:image><image:loc>https://andrikmetal.com/assets/illusion-of-life-top-v50.webp</image:loc><image:title>ANDRIK Illusion of Life album artwork</image:title></image:image>
   </url>

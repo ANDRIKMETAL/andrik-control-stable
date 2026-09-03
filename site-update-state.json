@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788432005342-cbcd4de480",
-  "release": "R867",
-  "archiveName": "ANDRIK-R867-CONTROL-RESCUE-R857-RADIO-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "52834f90648a4d4d9ea044992761571222efc4c2",
-  "backupSha": "52834f90648a4d4d9ea044992761571222efc4c2",
+  "operationId": "publish-1788433240124-5e597c7cff",
+  "release": "R868",
+  "archiveName": "ANDRIK-R868-HOMEPAGE-SEO-RADIO-LIVE-R867-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "6c682248931dd780400abe5a660bb1a79396646c",
+  "backupSha": "6c682248931dd780400abe5a660bb1a79396646c",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-03T10:40:06.170Z"
+  "generatedAt": "2026-09-03T11:00:40.124Z"
 }
