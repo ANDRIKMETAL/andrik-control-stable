@@ -6,6 +6,7 @@
     "/service-worker.js",
     "/control-service-worker.js",
     "/cache-reset*",
+    "/radio-live",
     "/",
     "/index.html",
     "/admin",
