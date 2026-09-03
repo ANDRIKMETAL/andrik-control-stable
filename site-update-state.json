@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788433240124-5e597c7cff",
-  "release": "R868",
-  "archiveName": "ANDRIK-R868-HOMEPAGE-SEO-RADIO-LIVE-R867-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "6c682248931dd780400abe5a660bb1a79396646c",
-  "backupSha": "6c682248931dd780400abe5a660bb1a79396646c",
+  "operationId": "publish-1788446660135-73fdd4c17e",
+  "release": "R870",
+  "archiveName": "ANDRIK-R870-CONTROL-PANEL-JOURNAL-MAP-RTMPS1x1-R868-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "f3cadc06ad46ac7ab98fe99580c6b81da199a3c1",
+  "backupSha": "f3cadc06ad46ac7ab98fe99580c6b81da199a3c1",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-03T11:00:40.124Z"
+  "generatedAt": "2026-09-03T14:44:20.860Z"
 }

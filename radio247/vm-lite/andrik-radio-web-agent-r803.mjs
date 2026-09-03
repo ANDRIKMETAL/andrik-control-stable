@@ -6,7 +6,7 @@ import {Readable} from 'node:stream';
 import {pipeline} from 'node:stream/promises';
 
 const CONFIG='/etc/andrik-radio-web-r627.json';
-const AGENT_VERSION_R803='R867';
+const AGENT_VERSION_R803='R870';
 const DIAG_DIR_R803='/var/cache/andrik-radio-r622/diagnostics';
 const DIAG_AGENT_LOG_R803=DIAG_DIR_R803+'/r803-agent-events.ndjson';
 const DIAG_AGENT_MAX_BYTES_R803=1024*1024;
@@ -324,7 +324,8 @@ async function daemon(){
       // Heartbeat always continues, even while start/recover is running.
       const d=await jsonFetch(BASE+'/api/radio-agent-r627/poll',{method:'POST',headers,body:JSON.stringify({version:AGENT_VERSION_R803,status})});
       if(d.ticker && typeof d.ticker.text==='string' && clean(d.ticker.text)!==clean(status.ticker))writeTicker(d.ticker.text);
-      await maybeEnsureYoutubeLiveR721(headers,status);
+      // R870-NO-AUTO-YOUTUBE: background create/rebind disabled.
+      // await maybeEnsureYoutubeLiveR721(headers,status);
       if(d.command && !busy){
         const {id,action}=d.command;
         busy={id,action,since:new Date().toISOString()};

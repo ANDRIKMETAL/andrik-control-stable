@@ -1,0 +1,28 @@
+ANDRIK R870 — CONTROL PANEL STABILITY / SAFE 1x1
+
+Purpose: fix the control panel without changing the live radio engine.
+
+FIXED
+- Journal crash: `allEvents is not defined` removed.
+- On-screen journal shows fresh events for 2 hours and always shows current LIVE status.
+- “Copy all log” copies up to 30 available history events, including older entries.
+- RTMPS fallback is 1/1, not a hard-coded 1/2.
+- Map labels explain that YouTube countries and site/radio cities use different sources and periods.
+- GOLD button is explicitly marked as an emergency restart action.
+- GOLD recovery is intercepted by R870 and DOES NOT run automatic YouTube create/rebind after restore.
+- Manual START remains an explicit owner action.
+
+VPS SAFETY HELPERS INCLUDED
+- refresh-r870-gold-1x1.sh: captures the current proven FULLSCREEN + RTMPS 1/1 state into the emergency GOLD, updates restore SHA, preserves previous GOLD, zero radio restart.
+- patch-r870-control-agent-no-auto-youtube.sh: idempotent local agent guard against background YouTube broadcast creation/rebind; restarts only the control agent and verifies radio PID is unchanged.
+
+NOT CHANGED
+- radio247/server.mjs in the repository is NOT part of this panel patch.
+- Audio/station timing is NOT changed.
+- FFmpeg queues/bitrate/GOP are NOT changed.
+- Live radio is NOT restarted by deploying the website panel patch.
+
+CURRENT RECOMMENDED LIVE PROFILE
+- 1920x1080 / 25 fps / H.264 / 6000 kb/s / GOP 50 / B=0
+- AAC-LC 44.1 kHz stereo / 160 kb/s
+- RTMPS 1/1 on the current 2-core VPS
