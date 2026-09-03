@@ -1,0 +1,14 @@
+ANDRIK R881 FULL SITE BUILD
+
+Base: ANDRIK R877 full site archive.
+Preserved: all R877/R874 site files, assets, languages, workers, radio247 folder and control tools.
+
+R881 UI change:
+- radio-control-admin.html compacted for phone;
+- user-selected 16:9 radio thumbnail centered and full-width in the radio card;
+- LIVE badge and title centered;
+- KPI/inventory layout made denser;
+- no radio/VPS runtime logic changed by this website build;
+- added cache-reset-v55-00-final-r881.html.
+
+Thumbnail asset: /assets/andrik-radio-thumb-r881.jpg

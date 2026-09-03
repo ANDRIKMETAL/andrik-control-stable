@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788458598727-c0c393b591",
-  "release": "R877",
-  "archiveName": "ANDRIK-R877-SEO-TITLE-OFFICIAL-SITE-R874-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "ba56638d08d3642bef6ea6b3f294812ef0ba3f13",
-  "backupSha": "ba56638d08d3642bef6ea6b3f294812ef0ba3f13",
+  "operationId": "publish-1788462657378-2c38901bf4",
+  "release": "R881",
+  "archiveName": "ANDRIK-R881-RADIO-COMPACT-CENTER-THUMB-R877-PRESERVED-SAFE-FULL-10MB.zip",
+  "sourceHead": "879bdc117e52449cb3f8da5cee995625a89b5751",
+  "backupSha": "879bdc117e52449cb3f8da5cee995625a89b5751",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-03T18:03:18.727Z"
+  "generatedAt": "2026-09-03T19:10:58.732Z"
 }
