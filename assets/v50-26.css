@@ -143,7 +143,7 @@ button{font:inherit}
 .album-info{display:flex;flex-direction:column;justify-content:center;padding:30px}.album-year{color:#b9e5ff;text-transform:uppercase;letter-spacing:.16em;font-size:.68rem;font-weight:800}.album-name{margin:8px 0 7px;font-family:Georgia,"Times New Roman",serif;font-size:clamp(2rem,4vw,3.3rem);line-height:.96}.album-desc{margin:0 0 22px;color:var(--muted);font-size:.92rem}.album-tags{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:22px}.tag{padding:6px 10px;border:1px solid var(--line);border-radius:999px;color:#d5dee7;font-size:.69rem;letter-spacing:.04em}.text-link{display:inline-flex;align-items:center;gap:8px;width:max-content;font-weight:800;color:#e9f8ff}.text-link::after{content:"→";color:var(--blue);transition:transform .2s ease}.text-link:hover::after{transform:translateX(4px)}
 
 .philosophy{padding:108px 0 118px}
-.philosophy-panel{position:relative;overflow:hidden;min-height:440px;display:grid;place-items:center;text-align:center;padding:70px 36px;border:1px solid var(--line);border-radius:34px;background:linear-gradient(180deg,rgba(4,10,16,.08),rgba(3,8,13,.72)),url("andrik-cosmic-eye-official-website.webp") center/cover no-repeat;backdrop-filter:blur(16px) saturate(122%);-webkit-backdrop-filter:blur(16px) saturate(122%);box-shadow:0 34px 100px rgba(0,0,0,.5)}
+.philosophy-panel{position:relative;overflow:hidden;min-height:440px;display:grid;place-items:center;text-align:center;padding:70px 36px;border:1px solid var(--line);border-radius:34px;background:linear-gradient(180deg,rgba(4,10,16,.08),rgba(3,8,13,.72)),url("andrik-eye-v22-512.png") center/cover no-repeat;backdrop-filter:blur(16px) saturate(122%);-webkit-backdrop-filter:blur(16px) saturate(122%);box-shadow:0 34px 100px rgba(0,0,0,.5)}
 .philosophy-panel::before{content:"";position:absolute;inset:0;background:radial-gradient(circle at center,rgba(79,177,232,.11),transparent 48%),linear-gradient(90deg,rgba(2,5,8,.55),transparent 28% 72%,rgba(2,5,8,.55))}
 .philosophy-copy{position:relative;z-index:2;max-width:940px}.philosophy blockquote{margin:0;font-family:Georgia,"Times New Roman",serif;font-size:clamp(2rem,5vw,4.6rem);line-height:1.08;text-wrap:balance;text-shadow:0 8px 30px #000}.philosophy p{max-width:690px;margin:24px auto 0;color:#c2ced9}
 
@@ -1099,7 +1099,7 @@ img.always-breathe.breath-4{--breath-delay:-5.25s}
   z-index:-1;
   height:560px;
   opacity:.12;
-  background:url("andrik-cosmic-eye-official-website.webp") center 43%/min(1120px,94vw) auto no-repeat;
+  background:url("andrik-eye-v22-512.png") center 43%/min(1120px,94vw) auto no-repeat;
   filter:saturate(.72) contrast(1.12);
   -webkit-mask-image:linear-gradient(to bottom,transparent,#000 17%,#000 66%,transparent);
   mask-image:linear-gradient(to bottom,transparent,#000 17%,#000 66%,transparent);

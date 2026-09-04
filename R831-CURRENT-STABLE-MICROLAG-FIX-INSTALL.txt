@@ -1,9 +1,0 @@
-ANDRIK RADIO R831 CURRENT STABLE + MICRO-LAG FIX
-
-Site bundle contains the complete website plus the patched radio247/server.mjs.
-
-After deploying this ZIP to the site/repository, install the radio build on VPS with:
-
-curl -fsSL https://raw.githubusercontent.com/ANDRIKMETAL/andrik-control-stable/main/radio247/vm-lite/install-r831-current-stable-microlag-fix.sh | sudo env ANDRIK_SITE_BASE=https://raw.githubusercontent.com/ANDRIKMETAL/andrik-control-stable/main bash
-
-server.mjs SHA256: 3be770a005910f28be26e8deb4e91200b43d6e0a186a84c162474496d8659a67

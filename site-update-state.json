@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788503576183-e9fe28c2c8",
+  "operationId": "publish-1788514565962-9e429e0671",
   "release": "R881",
-  "archiveName": "ANDRIK-R881B-PANEL-POLISH-R881-PRESERVED-SAFE-FULL-10MB.zip",
-  "sourceHead": "29c1e760e8beb6c36ce886cc48af0d5062774b4f",
-  "backupSha": "29c1e760e8beb6c36ce886cc48af0d5062774b4f",
+  "archiveName": "ANDRIK-R881B-GENERAL-CLEAN-SAFE-FULL-2026-09-04.zip",
+  "sourceHead": "b42b1b6e60a841185011a15ef46f02eab298b28e",
+  "backupSha": "b42b1b6e60a841185011a15ef46f02eab298b28e",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-04T06:32:56.183Z"
+  "generatedAt": "2026-09-04T09:36:05.962Z"
 }
