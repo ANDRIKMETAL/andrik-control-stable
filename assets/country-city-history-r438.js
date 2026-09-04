@@ -8,6 +8,18 @@
   const runtime=window.__andrikWorldMapRuntime||{};
   const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
   const fmt=n=>new Intl.NumberFormat('ru-RU').format(Math.max(0,Number(n||0)));
+  const CITY_RU_R881B=new Map(Object.entries({
+    'Moscow':'Москва','Kemerovo':'Кемерово','Saint Petersburg':'Санкт-Петербург','St Petersburg':'Санкт-Петербург','St.-Petersburg':'Санкт-Петербург','Krasnoyarsk':'Красноярск',
+    'Lüchow':'Люхов','Luchow':'Люхов','Aachen':'Ахен','Frankfurt am Main':'Франкфурт-на-Майне','Falkenstein':'Фалькенштайн',
+    'Bratislava':'Братислава','Kosice':'Кошице','Košice':'Кошице','Prague':'Прага','Vienna':'Вена','Berlin':'Берлин','Hamburg':'Гамбург','Munich':'Мюнхен','München':'Мюнхен','Cologne':'Кёльн','Köln':'Кёльн',
+    'Kyiv':'Киев','Kiev':'Киев','Odesa':'Одесса','Odessa':'Одесса','Donetsk':'Донецк','Warsaw':'Варшава','London':'Лондон','Paris':'Париж','Rome':'Рим','Milan':'Милан','Madrid':'Мадрид','Barcelona':'Барселона','New York':'Нью-Йорк','Los Angeles':'Лос-Анджелес'
+  }));
+  const REGION_RU_R881B=new Map(Object.entries({
+    'Kuzbass':'Кузбасс','Krasnoyarsk Krai':'Красноярский край','St.-Petersburg':'Санкт-Петербург','St. Petersburg':'Санкт-Петербург',
+    'Lower Saxony':'Нижняя Саксония','North Rhine-Westphalia':'Северный Рейн — Вестфалия','Hesse':'Гессен','Saxony':'Саксония'
+  }));
+  const localizeCityR881B=v=>CITY_RU_R881B.get(String(v||'').trim())||String(v||'').trim();
+  const localizeRegionR881B=v=>REGION_RU_R881B.get(String(v||'').trim())||String(v||'').trim();
   const key=()=>{try{return localStorage.getItem('andrik-comments-admin-key-persistent')||sessionStorage.getItem('andrik-comments-admin-key')||''}catch(_){return''}};
   const selectedButton=()=>list.querySelector('.world-country-button.is-selected,.world-country-selected-card.is-selected,[aria-pressed="true"]');
   const selectedName=()=>String(runtime.getSelection?.()||map.dataset.focusCountry||'').trim();
@@ -126,7 +138,7 @@
     $('countryCityHistoryDateR418').textContent=pretty(date);
     $('countryCityHistoryNextR418').disabled=date>=localDate();
     $('countryCityHistorySummaryR418').textContent=rows.length?`${fmt(total)} включений · ${fmt(rows.length)} городов / регионов`:(mode==='all'?'Пока нет сохранённых городов для этой страны':'За эту дату городов не зафиксировано');
-    $('countryCityHistoryListR418').innerHTML=rows.length?rows.map((r,i)=>{const place=String(r.city||r.region||'Город / регион'),region=String(r.region||'').trim(),sub=region&&region.toLowerCase()!==place.toLowerCase()?`<small>${esc(region)}</small>`:'';const days=mode==='all'&&Number(r.days||0)>1?`<small>Дней активности: ${fmt(r.days)}</small>`:'';return `<div class="country-city-history-row-r418 country-city-source-trigger-r438" role="button" tabindex="0" aria-label="Показать источник перехода: ${esc(place)}" data-city="${esc(String(r.city||''))}" data-region="${esc(region)}" data-opens="${Math.max(0,Number(r.opens||0))}"><b>${i+1}</b><div><strong>${esc(place)}</strong>${sub||days}</div><em>${fmt(r.opens)}<small class="country-city-source-tap-r438">↗</small></em></div>`}).join(''):'<div class="admin-empty">Нет активности с доступной географией.</div>';
+    $('countryCityHistoryListR418').innerHTML=rows.length?rows.map((r,i)=>{const rawPlace=String(r.city||r.region||'Город / регион'),rawRegion=String(r.region||'').trim(),place=r.city?localizeCityR881B(rawPlace):localizeRegionR881B(rawPlace),region=localizeRegionR881B(rawRegion),sub=region&&region.toLowerCase()!==place.toLowerCase()?`<small>${esc(region)}</small>`:'';const days=mode==='all'&&Number(r.days||0)>1?`<small>Дней активности: ${fmt(r.days)}</small>`:'';return `<div class="country-city-history-row-r418 country-city-source-trigger-r438" role="button" tabindex="0" aria-label="Показать источник перехода: ${esc(place)}" data-city="${esc(String(r.city||''))}" data-region="${esc(rawRegion)}" data-opens="${Math.max(0,Number(r.opens||0))}"><b>${i+1}</b><div><strong>${esc(place)}</strong>${sub||days}</div><em>${fmt(r.opens)}<small class="country-city-source-tap-r438">↗</small></em></div>`}).join(''):'<div class="admin-empty">Нет активности с доступной географией.</div>';
   };
   const load=async()=>{
     if(loading||!country)return;loading=true;controller?.abort?.();controller=new AbortController();const timer=setTimeout(()=>controller?.abort?.(),12000);

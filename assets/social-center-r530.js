@@ -128,7 +128,7 @@
           href='/tiktok-admin.html?source=social-center&v=55.00-r530';
           cardValue=present(summary.totalVideoViews)?summary.totalVideoViews:(present(total)?total:null);
           const sample=Number(summary.fetchedVideos||0);
-          detail=present(summary.totalVideoViews)?`просмотры видео · текущий срез`:(meta.trendConnected?'дневной прирост · история':`текущий срез · ${sample||'—'} роликов`);
+          detail=present(summary.totalVideoViews)?`текущий срез · не за 28 дней`:(meta.trendConnected?'дневной прирост · история':`текущий срез · ${sample||'—'} роликов`);
         }else if(meta.configured){
           detail='Sandbox готов · подключи аккаунт';
           action='<button type="button" class="social-center-r503-connect" data-tiktok-connect-r503>Подключить TikTok</button>';

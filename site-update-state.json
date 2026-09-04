@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788462657378-2c38901bf4",
+  "operationId": "publish-1788503576183-e9fe28c2c8",
   "release": "R881",
-  "archiveName": "ANDRIK-R881-RADIO-COMPACT-CENTER-THUMB-R877-PRESERVED-SAFE-FULL-10MB.zip",
-  "sourceHead": "879bdc117e52449cb3f8da5cee995625a89b5751",
-  "backupSha": "879bdc117e52449cb3f8da5cee995625a89b5751",
+  "archiveName": "ANDRIK-R881B-PANEL-POLISH-R881-PRESERVED-SAFE-FULL-10MB.zip",
+  "sourceHead": "29c1e760e8beb6c36ce886cc48af0d5062774b4f",
+  "backupSha": "29c1e760e8beb6c36ce886cc48af0d5062774b4f",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-03T19:10:58.732Z"
+  "generatedAt": "2026-09-04T06:32:56.183Z"
 }

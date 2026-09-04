@@ -1,0 +1,24 @@
+ANDRIK R881B PANEL POLISH — SAFE FULL
+
+BASE: ANDRIK-R881-RADIO-COMPACT-CENTER-THUMB-R877-PRESERVED-SAFE-FULL-10MB.zip
+DATE: 2026-09-04
+
+CHANGED ONLY UI/ANALYTICS FILES:
+- assets/social-center-r530.js: TikTok card explicitly says current slice is not a 28-day metric.
+- assets/country-city-history-r438.js: Russian display localization for common city/region names; raw API city/region values remain untouched.
+- assets/social-center-r513.css: green UI glow reduced ~10–15%.
+- assets/ecosystem-map-r507.css: green map glows reduced ~10–15%.
+- assets/map-focus-layout-v55-00-r71.css: map frame glow reduced ~15%; geometry untouched.
+- social-center-admin.html / analytics-admin.html: cache-bust modified assets.
+- cache-reset-v55-00-final-r881b.html: safe cache reset.
+
+PRESERVED:
+- Radio backend/core and FFmpeg logic
+- RTMPS settings
+- Radio playlists/albums
+- Fullscreen/video geometry logic
+- Original equalizer assets
+- YouTube broadcast/control logic
+- Owner session and OneSignal behavior
+
+CITY LOCALIZATION IS DISPLAY-ONLY. API query values are intentionally left original.

@@ -132,3 +132,10 @@
 /* R498 compact eight-layer switcher */
 #worldMap[data-ecosystem-layer="instagram"] .world-map-city-dot.is-live-event i{box-shadow:0 0 0 4px rgba(255,213,74,.15),0 0 22px rgba(255,213,74,1)!important}
 #worldMap[data-ecosystem-layer="tiktok"] .world-map-city-dot.is-live-event i{box-shadow:0 0 0 4px rgba(255,79,163,.15),0 0 22px rgba(255,79,163,1)!important}
+
+
+/* R881B PANEL POLISH — soften green glow without changing dots, map geometry or data. */
+#worldMap[data-ecosystem-layer="site"] .ecosystem-layer-switcher button.is-active{box-shadow:0 0 0 3px rgba(85,227,157,.09),0 0 15px rgba(85,227,157,.53)!important}
+#worldMap[data-ecosystem-layer="site"] .world-map-dot i{box-shadow:0 0 0 5px rgba(85,227,157,.09),0 0 19px rgba(85,227,157,.81)!important}
+#worldMap[data-ecosystem-layer="site"] .world-map-city-dot i{box-shadow:0 0 0 2px rgba(255,255,255,.13),0 0 10px rgba(85,227,157,.81)!important}
+#worldMap[data-ecosystem-layer="site"] .world-map-city-dot.is-live-event i{box-shadow:0 0 0 4px rgba(94,239,171,.13),0 0 19px rgba(94,239,171,.86)!important}

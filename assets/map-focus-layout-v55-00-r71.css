@@ -1065,3 +1065,7 @@ body.analytics-admin-page.analytics-v54-46-page .analytics-map-pane #worldMap{
     padding-bottom:8px!important;
   }
 }
+
+
+/* R881B PANEL POLISH — green frame glow softened, borders/positions untouched. */
+#landscapeMapFrameR69Final{box-shadow:0 0 0 1px rgba(104,244,169,.11),0 0 10px rgba(57,235,139,.27),inset 0 0 8px rgba(70,229,145,.07)!important}

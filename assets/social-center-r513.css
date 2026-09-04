@@ -127,3 +127,10 @@ a.social-center-r488-platform:active{transform:scale(.985)}
 .social-center-r511-swipe-hint b{color:#ccefff}
 .social-center-r488-main{padding-bottom:calc(48px + env(safe-area-inset-bottom))}
 @media(max-width:520px){.social-center-r488-hero p{font-size:.82rem;line-height:1.34}.social-center-r511-swipe-hint{font-size:.62rem}}
+
+
+/* R881B PANEL POLISH — 10–15% softer green glow, geometry untouched. */
+.social-center-r488-status::before{box-shadow:0 0 10px currentColor}
+.social-center-r488-platform.is-site{border-color:rgba(85,227,157,.16)}
+.social-center-r488-toggle.is-site.is-active{border-color:rgba(79,231,157,.32)}
+.social-center-r503-mode.is-ready::after{box-shadow:0 0 7px rgba(102,239,188,.60)}
