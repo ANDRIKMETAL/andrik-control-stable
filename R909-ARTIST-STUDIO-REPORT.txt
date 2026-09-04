@@ -1,0 +1,20 @@
+ANDRIK Control — R909 ARTIST STUDIO
+Date: 2026-09-04
+Base: ANDRIK R908 FULLSCREEN RESTORE BUTTON — fully preserved
+
+ADDED (official YouTube Analytics API only)
+- YouTube Music vs core YouTube views/watch time, 28 days (youtubeProduct).
+- Content format split: Shorts / VOD / Live, with engagedViews for Shorts-compatible reporting (creatorContentType).
+- Traffic-source split (insightTrafficSourceType).
+- Subscriber vs non-subscriber view split (subscribedStatus).
+- Dedicated Artist Studio card in youtube-admin.html.
+- Native YouTube Studio launch panel for artist-only reports that are not safely reproducible through the public channel Analytics API: Total Reach, Song Rollup, Fastest Moving Songs in Shorts, Fan/Top fan, realtime.
+
+PRESERVED
+- Existing YouTube OAuth / server refresh token.
+- Existing channel KPIs, 28-day trend, countries, age, gender, sharing, top Shorts/videos, monitoring.
+- Radio/FFmpeg/RTMPS/VPS streaming code untouched by this patch.
+
+SAFETY
+- No Studio scraping, cookies, SESSION_TOKEN, or unofficial endpoints.
+- Artist-only native reports are opened in YouTube Studio instead of presenting guessed values.

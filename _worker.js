@@ -9953,7 +9953,13 @@ async function fetchYouTubeStudioAnalytics(env) {
     youtubeAnalyticsQuery(env, accessToken,{...base,dimensions:'ageGroup,gender',metrics:'viewerPercentage'}),
     youtubeAnalyticsQuery(env, accessToken,{...base,dimensions:'sharingService',metrics:'shares',sort:'-shares',maxResults:8}),
     youtubeAnalyticsQuery(env, accessToken,{...base,dimensions:'video,creatorContentType',metrics:'views,estimatedMinutesWatched,likes,comments,shares,subscribersGained',sort:'-views',maxResults:200}),
-    youtubeAnalyticsQuery(env, accessToken,{...base,dimensions:'video',metrics:'views,estimatedMinutesWatched,likes,comments,shares,subscribersGained',sort:'-likes',maxResults:10})
+    youtubeAnalyticsQuery(env, accessToken,{...base,dimensions:'video',metrics:'views,estimatedMinutesWatched,likes,comments,shares,subscribersGained',sort:'-likes',maxResults:10}),
+    // R909 Artist Studio: only public, documented YouTube Analytics dimensions.
+    // These reports do not scrape Studio and continue using the existing server-side OAuth token.
+    youtubeAnalyticsQuery(env, accessToken,{...base,dimensions:'youtubeProduct',metrics:'views,estimatedMinutesWatched',sort:'-views',maxResults:10}),
+    youtubeAnalyticsQuery(env, accessToken,{...base,dimensions:'creatorContentType',metrics:'views,engagedViews,estimatedMinutesWatched',sort:'-views',maxResults:10}),
+    youtubeAnalyticsQuery(env, accessToken,{...base,dimensions:'insightTrafficSourceType',metrics:'views,estimatedMinutesWatched',sort:'-views',maxResults:20}),
+    youtubeAnalyticsQuery(env, accessToken,{...base,dimensions:'subscribedStatus',metrics:'views,estimatedMinutesWatched',sort:'-views',maxResults:5})
   ]);
   const val=i=>results[i].status==='fulfilled'?results[i].value:[];
   const resultError=i=>results[i].status==='rejected'?cleanPlainText(results[i].reason?.message||results[i].reason,260):'';
@@ -9981,6 +9987,12 @@ async function fetchYouTubeStudioAnalytics(env) {
     age:Object.entries(ageMap).map(([ageGroup,viewerPercentage])=>({ageGroup,viewerPercentage})).sort((a,b)=>b.viewerPercentage-a.viewerPercentage),
     gender:Object.entries(genderMap).map(([gender,viewerPercentage])=>({gender,viewerPercentage})).sort((a,b)=>b.viewerPercentage-a.viewerPercentage),
     sharing:val(5).map(r=>({sharingService:String(r.sharingService||''),shares:Number(r.shares||0)})),
+    // R909 Artist Studio API-safe breakdowns.
+    products28:val(8).map(r=>({youtubeProduct:cleanPlainText(r.youtubeProduct||'',40).toUpperCase(),views:Number(r.views||0),estimatedMinutesWatched:Number(r.estimatedMinutesWatched||0)})).filter(r=>r.youtubeProduct),
+    contentTypes28:val(9).map(r=>({creatorContentType:cleanPlainText(r.creatorContentType||'',40).toUpperCase(),views:Number(r.views||0),engagedViews:Number(r.engagedViews||0),estimatedMinutesWatched:Number(r.estimatedMinutesWatched||0)})).filter(r=>r.creatorContentType),
+    trafficSources28:val(10).map(r=>({insightTrafficSourceType:cleanPlainText(r.insightTrafficSourceType||'',60).toUpperCase(),views:Number(r.views||0),estimatedMinutesWatched:Number(r.estimatedMinutesWatched||0)})).filter(r=>r.insightTrafficSourceType),
+    subscriptionStatus28:val(11).map(r=>({subscribedStatus:cleanPlainText(r.subscribedStatus||'',40).toUpperCase(),views:Number(r.views||0),estimatedMinutesWatched:Number(r.estimatedMinutesWatched||0)})).filter(r=>r.subscribedStatus),
+    artistAnalytics:{officialArtistChannel:true,apiSafe:true,periodDays:28},
     summaryError:resultError(0),
     trendError:resultError(1),
     partialErrors:results.map((r,i)=>r.status==='rejected'?cleanPlainText(r.reason?.message||r.reason,260):'').filter(Boolean),
@@ -10869,6 +10881,10 @@ async function refreshControlSnapshots(env, { force = false } = {}) {
     && Array.isArray(latestYoutubeMetrics?.studio?.age)
     && Array.isArray(latestYoutubeMetrics?.studio?.gender)
     && Array.isArray(latestYoutubeMetrics?.studio?.sharing)
+    && Array.isArray(latestYoutubeMetrics?.studio?.products28)
+    && Array.isArray(latestYoutubeMetrics?.studio?.contentTypes28)
+    && Array.isArray(latestYoutubeMetrics?.studio?.trafficSources28)
+    && Array.isArray(latestYoutubeMetrics?.studio?.subscriptionStatus28)
     && Array.isArray(latestYoutubeMetrics?.studio?.topShorts28)
     && Array.isArray(latestYoutubeMetrics?.studio?.topRegularVideos28);
   const instagramConfigured = instagramConfigR487(env).configured;
@@ -10931,6 +10947,11 @@ async function refreshControlSnapshots(env, { force = false } = {}) {
         age:yt.studio.age || [],
         gender:yt.studio.gender || [],
         sharing:yt.studio.sharing || [],
+        products28:Array.isArray(yt.studio.products28) ? yt.studio.products28 : [],
+        contentTypes28:Array.isArray(yt.studio.contentTypes28) ? yt.studio.contentTypes28 : [],
+        trafficSources28:Array.isArray(yt.studio.trafficSources28) ? yt.studio.trafficSources28 : [],
+        subscriptionStatus28:Array.isArray(yt.studio.subscriptionStatus28) ? yt.studio.subscriptionStatus28 : [],
+        artistAnalytics:yt.studio.artistAnalytics || { officialArtistChannel:true, apiSafe:true, periodDays:28 },
         topVideos28:Array.isArray(yt.studio.topVideos28) ? yt.studio.topVideos28 : [],
         topShorts28:Array.isArray(yt.studio.topShorts28) ? yt.studio.topShorts28 : [],
         topRegularVideos28:Array.isArray(yt.studio.topRegularVideos28) ? yt.studio.topRegularVideos28 : [],

@@ -101,6 +101,17 @@
 .youtube-event-row.is-subscriber strong{color:#78f0ad!important}
 .youtube-event-row.is-subscriber p{color:#aee8c6!important}
 </style>
+
+<style id="youtube-artist-studio-r909">
+.youtube-artist-card{margin-top:16px;border:1px solid rgba(255,82,82,.18);background:linear-gradient(145deg,rgba(13,20,27,.94),rgba(10,15,22,.97));overflow:hidden}
+.youtube-artist-title{align-items:flex-start;gap:12px}.youtube-artist-title h2{margin:3px 0 0;font-size:1.28rem}.youtube-artist-badges{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}
+.youtube-artist-badge{display:inline-flex;align-items:center;min-height:28px;padding:5px 9px;border-radius:999px;border:1px solid rgba(255,80,80,.26);background:rgba(255,50,50,.08);color:#ff9c9c;font-size:.72rem;font-weight:800;letter-spacing:.02em}
+.youtube-artist-intro{margin:7px 0 14px;color:#91a7b8;line-height:1.45;font-size:.88rem}.youtube-artist-kpis{margin-bottom:15px}
+.youtube-artist-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.youtube-artist-mini{border:1px solid rgba(110,150,175,.14);background:rgba(7,14,20,.58);border-radius:15px;padding:13px;min-width:0}.youtube-artist-mini h3{font-size:.95rem;margin:0 0 10px;color:#eaf7ff}.youtube-artist-mini .analytics-list-row{grid-template-columns:28px minmax(0,1fr) auto;gap:8px}.artist-list-row small{display:block;color:#6f8798;font-size:.69rem;margin-top:3px}.artist-list-row em small{display:block;text-align:right;color:#7290a3;font-size:.66rem}
+.youtube-artist-native{margin-top:13px;padding:13px;border:1px dashed rgba(255,95,95,.24);border-radius:15px;background:rgba(27,9,13,.24)}.youtube-artist-native strong{display:block;margin-bottom:6px;color:#fff}.youtube-artist-native p{margin:0 0 11px;color:#a9b7c2;line-height:1.45;font-size:.83rem}.youtube-artist-native-tags{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 12px}.youtube-artist-native-tags span{padding:5px 8px;border-radius:999px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);font-size:.7rem;color:#c7d4dc}.youtube-artist-open{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:9px 13px;border-radius:12px;background:#ff3434;color:white!important;text-decoration:none!important;font-weight:900;font-size:.83rem}
+.youtube-artist-note{margin:10px 0 0;color:#718696;font-size:.72rem;line-height:1.4}
+@media(max-width:720px){.youtube-artist-title{display:block}.youtube-artist-badges{justify-content:flex-start;margin-top:9px}.youtube-artist-grid{grid-template-columns:1fr}.youtube-artist-card{margin-top:12px}.youtube-artist-mini{padding:11px}.youtube-artist-open{width:100%}}
+</style>
 </head>
 <body class="trika-standalone-page comments-admin-page control-page analytics-admin-page youtube-admin-page youtube-v54-02-page">
 <nav class="topbar control-topbar control-detail-topbar youtube-topbar-clean"><div class="wrap nav-shell analytics-topbar-minimal"><a class="control-center-logo" id="controlCenterLogo" href="https://andrikmetal.com/" aria-label="Открыть главный сайт ANDRIK"><img class="logo-ok" src="/assets/control-topbar-eye-triangle.jpg?v=55.00-r129" alt=""/><img class="logo-error" src="/assets/andrik-control-red-triangle-192.png" alt=""/></a></div></nav>
@@ -122,6 +133,28 @@
   </div>
 </section>
 
+<section class="admin-control-card youtube-artist-card" id="youtubeArtistSection" hidden>
+  <div class="admin-card-title-row youtube-artist-title">
+    <div><span class="eyeline">🎵 ARTIST STUDIO</span><h2>Аналитика артиста</h2></div>
+    <div class="youtube-artist-badges"><span class="youtube-artist-badge">Official Artist Channel</span><span class="youtube-artist-badge">API · 28 дней</span></div>
+  </div>
+  <p class="youtube-artist-intro">Отдельно показываем YouTube Music, Shorts, обычные видео и Live — плюс источники трафика и долю просмотров от подписчиков. Данные идут через уже подключённый официальный YouTube Analytics OAuth.</p>
+  <div class="analytics-youtube-studio-kpis youtube-artist-kpis" id="youtubeArtistKpis"></div>
+  <div class="youtube-artist-grid">
+    <article class="youtube-artist-mini"><h3>🎧 Где слушают</h3><div class="analytics-list" id="youtubeArtistProducts"></div></article>
+    <article class="youtube-artist-mini"><h3>📺 Форматы контента</h3><div class="analytics-list" id="youtubeArtistFormats"></div></article>
+    <article class="youtube-artist-mini"><h3>🧭 Источники трафика</h3><div class="analytics-list" id="youtubeArtistTraffic"></div></article>
+    <article class="youtube-artist-mini"><h3>👥 Подписчики / не подписаны</h3><div class="analytics-list" id="youtubeArtistSubscriptions"></div></article>
+  </div>
+  <div class="youtube-artist-native">
+    <strong>Дополнительные возможности именно артиста — в родном YouTube Studio</strong>
+    <p>YouTube объединяет там музыку шире твоего канала: официальные загрузки, Art Tracks, коллаборации и подходящие фан-видео. Эти artist-only отчёты не подменяем приблизительными цифрами в Control.</p>
+    <div class="youtube-artist-native-tags"><span>Total Reach</span><span>Song Rollup</span><span>Fastest Moving Songs in Shorts</span><span>Fan / Top fan*</span><span>60 мин / 48 ч*</span></div>
+    <a class="youtube-artist-open" id="youtubeArtistStudioLink" href="https://studio.youtube.com/" target="_blank" rel="noopener">Открыть Analytics for Artists ↗</a>
+    <p class="youtube-artist-note">* Fan / Top fan сейчас доступен не всем артистам; realtime 60 минут / 48 часов YouTube указывает как функцию приложения Studio.</p>
+  </div>
+</section>
+
 <section class="youtube-content-nav-grid youtube-content-nav-under-chart" aria-label="Топ контента YouTube">
   <a class="youtube-content-nav-card" href="/youtube-top-shorts.html?v=55.00-r606"><span class="youtube-content-launcher-icon">🔥</span><span><small>TOP-6 SHORTS · СЕЙЧАС</small><strong>Лучшие Shorts</strong><em>Открыть отдельный раздел →</em></span></a>
   <a class="youtube-content-nav-card" href="/youtube-top-videos.html?v=55.00-r606"><span class="youtube-content-launcher-icon">🎬</span><span><small>TOP-6 ВИДЕО · СЕЙЧАС</small><strong>Лучшие видео</strong><em>Открыть отдельный раздел →</em></span></a>
@@ -139,9 +172,9 @@
   <div class="andrik-spoiler-body"><div class="analytics-list" id="youtubeStudioSharing"></div></div>
 </details>
 
-<footer class="control-version-footer"><strong>Live Web AI · профиль ANDRIK · R579 AUTO LIVE</strong><span>YouTube Studio · аналитика · реакции · аудитория</span></footer>
+<footer class="control-version-footer"><strong>Live Web AI · профиль ANDRIK · R579 AUTO LIVE</strong><span>YouTube Studio · Artist Analytics · музыка · Shorts · аудитория</span></footer>
 </div></main>
-<script defer src="/assets/youtube-admin-v55-00k.js?v=55.00-r679"></script><script defer src="/assets/control-status-eye-v55-00-r88.js?v=55.00-r857q"></script><script defer src="/assets/control-version-v55-00-final-r1.js?v=55.00-final-r1"></script><script defer src="/assets/control-version-v55-00-final-r2.js?v=55.00-final-r2"></script><script defer src="/assets/control-version-v55-00-final-r21.js?v=55.00-final-r21"></script><script defer src="/assets/control-live-eye-v55-00-r265.js?v=55.00-r265"></script><script defer src="/assets/control-version-v55-00-r115.js?v=55.00-r115"></script><script defer src="/assets/unified-glow-r139.js?v=55.00-r142"></script>
+<script defer src="/assets/youtube-admin-v55-00k.js?v=55.00-r909"></script><script defer src="/assets/control-status-eye-v55-00-r88.js?v=55.00-r857q"></script><script defer src="/assets/control-version-v55-00-final-r1.js?v=55.00-final-r1"></script><script defer src="/assets/control-version-v55-00-final-r2.js?v=55.00-final-r2"></script><script defer src="/assets/control-version-v55-00-final-r21.js?v=55.00-final-r21"></script><script defer src="/assets/control-live-eye-v55-00-r265.js?v=55.00-r265"></script><script defer src="/assets/control-version-v55-00-r115.js?v=55.00-r115"></script><script defer src="/assets/unified-glow-r139.js?v=55.00-r142"></script>
 <script defer src="/assets/control-mini-player-r141.js?v=55.00-r144"></script>
 <script defer src="/assets/control-version-sync-r558.js?v=55.00-r558"></script>
 <script defer src="/assets/social-platform-swipe-r524.js?v=55.00-r524"></script>

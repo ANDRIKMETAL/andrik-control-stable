@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788544989640-3069c00664",
-  "release": "R908",
-  "archiveName": "ANDRIK-R908-FULLSCREEN-RESTORE-BUTTON-R907-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "99b089f60fd19da72b6be3e55fe86792b2c891da",
-  "backupSha": "99b089f60fd19da72b6be3e55fe86792b2c891da",
+  "operationId": "publish-1788551195222-25580e0a29",
+  "release": "R909",
+  "archiveName": "ANDRIK-R909-ARTIST-STUDIO-YOUTUBE-MUSIC-SHORTS-R908-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "f1d4d869295315f084730fbef03569ebde7d1cf5",
+  "backupSha": "f1d4d869295315f084730fbef03569ebde7d1cf5",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-04T18:03:10.140Z"
+  "generatedAt": "2026-09-04T19:46:35.222Z"
 }
