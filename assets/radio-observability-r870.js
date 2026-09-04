@@ -53,7 +53,7 @@
 
   function tunePanelR870(){
     const ey=document.querySelector('.head .ey');
-    if(ey)ey.textContent='ANDRIK RADIO CONTROL · R870 SAFE · RTMPS 1/1';
+    if(ey)ey.textContent='ANDRIK RADIO CONTROL · R870 SAFE · RTMPS 2/2';
 
     const gold=document.querySelector('[data-radio-action="gold-restore"]');
     if(gold){
@@ -67,7 +67,7 @@
     if(controlCard&&!document.getElementById('r870SafetyNote')){
       const note=document.createElement('div');
       note.id='r870SafetyNote';note.className='r870-safe-note';
-      note.innerHTML='<b>R870 SAFE:</b> рабочий режим VPS — RTMPS 1/1. GOLD делает restart, но панель после него только проверяет статус: автоматическое создание/перепривязка YouTube broadcast отключено.';
+      note.innerHTML='<b>R870 SAFE:</b> рабочий режим VPS — RTMPS 2/2. GOLD делает restart, но панель после него только проверяет статус: автоматическое создание/перепривязка YouTube broadcast отключено.';
       controlCard.appendChild(note);
     }
 

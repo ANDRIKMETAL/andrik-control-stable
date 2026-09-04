@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788555665680-d8c5e0eebf",
-  "release": "R915",
-  "archiveName": "ANDRIK-R915-YOUTUBE-COMPACT-ARTIST-ANIMATED-LAYOUT-R914-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "1f9a04ed9cd63a5408d39b3db3ab17361a1aa39b",
-  "backupSha": "1f9a04ed9cd63a5408d39b3db3ab17361a1aa39b",
+  "operationId": "publish-1788556714490-1bbc3e5a00",
+  "release": "R916",
+  "archiveName": "ANDRIK-R916-RADIO-RTMPS2-UPLOAD-ABOVE-STATE-CLEAN-LAYOUT-R915-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "9603beb19ed1054a85814aba72ec9d7ad60cb1d4",
+  "backupSha": "9603beb19ed1054a85814aba72ec9d7ad60cb1d4",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-04T21:01:06.140Z"
+  "generatedAt": "2026-09-04T21:18:34.490Z"
 }
