@@ -1,8 +1,8 @@
 (() => {
   const KEY_SESSION='andrik-comments-admin-key';
   const KEY_LOCAL='andrik-comments-admin-key-persistent';
-  const CACHE_KEY='andrik-control-youtube-pane-r912-artist';
-  const MONITOR_CACHE_KEY='andrik-control-youtube-monitor-r912-artist';
+  const CACHE_KEY='andrik-control-youtube-pane-r913-artist';
+  const MONITOR_CACHE_KEY='andrik-control-youtube-monitor-r913-artist';
   const INTEGRATED=document.body.classList.contains('analytics-swipe-page');
   const $=id=>document.getElementById(id);
   const escapeHtml=value=>String(value??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
@@ -14,6 +14,7 @@
   const COUNTRY_MAP={US:'США',SK:'Словакия',CN:'Китай',CA:'Канада',FR:'Франция',NL:'Нидерланды',GB:'Великобритания',DE:'Германия',UA:'Украина',RU:'Россия',CZ:'Чехия',PL:'Польша',AT:'Австрия',ES:'Испания',IT:'Италия',BR:'Бразилия',AU:'Австралия',JP:'Япония',IN:'Индия',KZ:'Казахстан',BY:'Беларусь',UZ:'Узбекистан',BG:'Болгария',KG:'Кыргызстан',AE:'ОАЭ',IR:'Иран',LT:'Литва',LV:'Латвия',PR:'Пуэрто-Рико'};
   const SHARING_MAP={WHATS_APP:'WhatsApp',FACEBOOK:'Facebook',COPY_TO_CLIPBOARD:'Копирование ссылки',COPY_PASTE:'Копирование ссылки',OTHER:'Другое',TEXT_MESSAGE:'SMS',SMS:'SMS',EMAIL:'Gmail',GMAIL:'Gmail',MESSENGER:'Messenger',FACEBOOK_MESSENGER:'Facebook Messenger',TELEGRAM:'Telegram',X:'X / Twitter',VKONTAKTE:'ВКонтакте',ODNOKLASSNIKI:'Одноклассники',DIRECT_SYSTEM_ACTIVITY_DIALOG:'Системное меню Android',ANDROID_SYSTEM_SHARE_DIALOG:'Системное меню Android',DIRECT_SYSTEM:'Системное меню Android',UNKNOWN:'Другое'};
   const YOUTUBE_PRODUCT_MAP={CORE:'YouTube',MUSIC:'YouTube Music',KIDS:'YouTube Kids',GAMING:'YouTube Gaming',UNKNOWN:'Другое'};
+  const DEVICE_TYPE_MAP={DESKTOP:'Компьютер',GAME_CONSOLE:'Игровая консоль',GAMECONSOLE:'Игровая консоль',MOBILE:'Телефон',TABLET:'Планшет',TV:'Телевизор',AUTOMOTIVE:'Автомобиль',WEARABLE:'Носимое устройство',UNKNOWN_PLATFORM:'Другое устройство',UNKNOWNPLATFORM:'Другое устройство'};
   const CONTENT_TYPE_MAP={SHORTS:'Shorts',VIDEO_ON_DEMAND:'Обычные видео',VIDEOONDEMAND:'Обычные видео',LIVE_STREAM:'Прямые трансляции',LIVESTREAM:'Прямые трансляции',STORY:'Истории',UNSPECIFIED:'Другое'};
   const SUB_STATUS_MAP={SUBSCRIBED:'Подписчики',UNSUBSCRIBED:'Не подписаны'};
   const TRAFFIC_MAP={ADVERTISING:'Реклама',ANNOTATION:'Аннотации',END_SCREEN:'Конечные заставки',EXT_URL:'Внешние сайты / Google',HASHTAGS:'Хэштеги',LIVE_REDIRECT:'Перенаправления из эфиров',NO_LINK_EMBEDDED:'Встроенные плееры',NO_LINK_OTHER:'Прямые переходы / приложения',NOTIFICATION:'Уведомления',PLAYLIST:'Плейлисты',PRODUCT_PAGE:'Страница товара',PROMOTED:'Продвижение YouTube',RELATED_VIDEO:'Похожие видео',SHORTS:'Лента Shorts',SOUND_PAGE:'Страница звука',SUBSCRIBER:'Лента подписок',YT_CHANNEL:'Страницы каналов',YT_OTHER_PAGE:'Другие страницы YouTube',YT_SEARCH:'Поиск YouTube',VIDEO_REMIXES:'Ремиксы Shorts',WATCH_WITH:'Совместный просмотр',IMMERSIVE_LIVE:'Лента вертикальных трансляций',IMMERSIVELIVE:'Лента вертикальных трансляций',SHORTS_CONTENT_LINKS:'Ссылки в Shorts',SHORTSCONTENTLINKS:'Ссылки в Shorts',BROWSE:'Главная / рекомендации',CHANNEL:'Страницы каналов',SEARCH:'Поиск YouTube'};
@@ -56,7 +57,7 @@
   function artistHasMissingBreakdownsR910(studio={}){
     const views=Number(studio?.summary?.views||0);
     if(views<=0)return false;
-    return !Array.isArray(studio.products28)||!studio.products28.length||!Array.isArray(studio.contentTypes28)||!studio.contentTypes28.length||!Array.isArray(studio.trafficSources28)||!studio.trafficSources28.length||!Array.isArray(studio.subscriptionStatus28)||!studio.subscriptionStatus28.length;
+    return !Array.isArray(studio.products28)||!studio.products28.length||!Array.isArray(studio.contentTypes28)||!studio.contentTypes28.length||!Array.isArray(studio.trafficSources28)||!studio.trafficSources28.length||!Array.isArray(studio.subscriptionStatus28)||!studio.subscriptionStatus28.length||!Array.isArray(studio.devices28)||!studio.devices28.length;
   }
   async function forceArtistRefreshR910(reason='manual'){
     if(!getKey())return;
@@ -66,7 +67,7 @@
       if(button){button.disabled=true;button.textContent='Обновляем…'}
       try{
         await api('/api/control/snapshots/refresh',{method:'POST'});
-        try{sessionStorage.setItem('andrik-r912-artist-refresh-ok',String(Date.now()))}catch(_){ }
+        try{sessionStorage.setItem('andrik-r913-artist-refresh-ok',String(Date.now()))}catch(_){ }
         if(INTEGRATED&&typeof window.andrikRefreshAudience==='function')await window.andrikRefreshAudience();else await load();
       }catch(error){
         const status=$('youtubeArtistRefreshStatus');if(status)status.textContent=`Не удалось обновить: ${error.message}`;
@@ -79,10 +80,10 @@
   }
   function maybeAutoRefreshArtistR910(studio={}){
     const version=String(studio?.artistAnalytics?.version||'');
-    if(version==='r912'&&!artistHasMissingBreakdownsR910(studio))return;
-    let last=0;try{last=Number(sessionStorage.getItem('andrik-r912-artist-auto-refresh')||0)}catch(_){ }
+    if(version==='r913'&&!artistHasMissingBreakdownsR910(studio))return;
+    let last=0;try{last=Number(sessionStorage.getItem('andrik-r913-artist-auto-refresh')||0)}catch(_){ }
     if(Date.now()-last<10*60*1000)return;
-    try{sessionStorage.setItem('andrik-r912-artist-auto-refresh',String(Date.now()))}catch(_){ }
+    try{sessionStorage.setItem('andrik-r913-artist-auto-refresh',String(Date.now()))}catch(_){ }
     setTimeout(()=>void forceArtistRefreshR910('auto'),350);
   }
   function renderArtistTracksR910(data={}){
@@ -90,10 +91,12 @@
     const rows=Array.isArray(data.tracks)?data.tracks:[];
     if(!rows.length){
       const href=escapeHtml(data.channelUrl||'https://www.youtube.com/@andrikmetal');
-      box.innerHTML=`<div class="admin-empty">YouTube не отдал публичную полку автоматически. <a href="${href}" target="_blank" rel="noopener">Открыть канал ↗</a></div>`;
+      box.innerHTML=`<div class="admin-empty">YouTube пока не вернул список треков. <a href="${href}" target="_blank" rel="noopener">Открыть канал ↗</a></div>`;
       return;
     }
-    box.innerHTML=rows.slice(0,6).map((row,index)=>`<a class="youtube-artist-track-row" href="${escapeHtml(row.url||data.channelUrl||'#')}" target="_blank" rel="noopener"><img src="${escapeHtml(row.thumbnail||'')}" alt=""><span><small>#${index+1} · OAC</small><strong>${escapeHtml(row.title||'Трек')}</strong></span><em>↗</em></a>`).join('');
+    const fallback=Boolean(data.fallback||String(data.source||'').includes('bootstrap'));
+    const note=fallback?`<div class="youtube-artist-source-note">Последний подтверждённый список OAC из приложения YouTube · ${escapeHtml(data.confirmedAt||'04.09.2026')}. Автоматическая полка заменит его сразу, когда YouTube отдаст её веб-интерфейсу.</div>`:'';
+    box.innerHTML=note+rows.slice(0,6).map((row,index)=>{const cover=row.thumbnail?`<img src="${escapeHtml(row.thumbnail)}" alt="">`:`<span class="youtube-artist-track-cover">🎵</span>`;return `<a class="youtube-artist-track-row" href="${escapeHtml(row.url||data.channelUrl||'#')}" target="_blank" rel="noopener">${cover}<span><small>#${index+1} · ${fallback?'OAC · подтверждено':'OAC'}</small><strong>${escapeHtml(row.title||'Трек')}</strong></span><em>↗</em></a>`}).join('');
   }
   function renderArtistShortsInlineR910(data={}){
     const box=$('youtubeArtistTopShortsInline');if(!box)return;
@@ -108,8 +111,8 @@
     artistExtrasR910Promise=(async()=>{
       try{
         const [shelf,top]=await Promise.all([
-          api('/api/control/youtube-oac-shelf?v=55.00-r912').catch(error=>({available:false,error:error.message,tracks:[],channelUrl:'https://www.youtube.com/@andrikmetal'})),
-          api('/api/control/youtube-top-content?type=shorts&refresh=1&v=55.00-r912').catch(error=>({available:false,error:error.message,shorts:[]}))
+          api('/api/control/youtube-oac-shelf?v=55.00-r913').catch(error=>({available:false,error:error.message,tracks:[],channelUrl:'https://www.youtube.com/@andrikmetal'})),
+          api('/api/control/youtube-top-content?type=shorts&refresh=1&v=55.00-r913').catch(error=>({available:false,error:error.message,shorts:[]}))
         ]);
         renderArtistTracksR910(shelf||{});renderArtistShortsInlineR910(top||{});artistExtrasLoadedR910=Date.now();
       }finally{artistExtrasR910Promise=null}
@@ -132,6 +135,7 @@
     renderArtistBreakdown('youtubeArtistFormats',types,'creatorContentType',CONTENT_TYPE_MAP);
     renderArtistBreakdown('youtubeArtistTraffic',studio.trafficSources28||[],'insightTrafficSourceType',TRAFFIC_MAP);
     renderArtistBreakdown('youtubeArtistSubscriptions',studio.subscriptionStatus28||[],'subscribedStatus',SUB_STATUS_MAP);
+    renderArtistBreakdown('youtubeArtistDevices',studio.devices28||[],'deviceType',DEVICE_TYPE_MAP);
     const status=$('youtubeArtistRefreshStatus');
     if(status){const errors=Array.isArray(studio.partialErrors)?studio.partialErrors:[];status.textContent=errors.length?`Часть artist-запросов: ${errors[0]}`:`Снимок: ${studio.updatedAt?dateTime(studio.updatedAt):'обновляется'}`;}
     maybeAutoRefreshArtistR910(studio);
@@ -238,8 +242,10 @@
   function renderYoutube(yt={}){
     updateProfileLink(yt);
     const ready=yt.configured&&!yt.error;
-    $('analyticsYoutube').innerHTML=ready?[kpi('▶️',number(yt.views),'Просмотры канала',yt.title||'ANDRIK','youtube'),kpi('👥',yt.hiddenSubscribers?'—':number(yt.subscribers),yt.hiddenSubscribers?'Подписчики скрыты':'Подписчиков',yt.handle||'@andrikmetal','youtube'),kpi('🎬',number(yt.videos),'Видео на канале','YouTube Data API','youtube')].join(''):`<div class="admin-empty">YouTube: ${escapeHtml(yt.error||'API не подключён')}</div>`;
-    const studio=yt.studio||{},gate=$('youtubeStudioGate'),section=$('youtubeStudioSection'),audience=$('youtubeAudienceSection'),trendCard=$('youtubeStudioTrendCard');
+    const studio=yt.studio||{};
+    const lost28=Math.max(0,Number(studio?.summary?.subscribersLost||0));
+    $('analyticsYoutube').innerHTML=ready?[kpi('▶️',number(yt.views),'Просмотры канала',yt.title||'ANDRIK','youtube'),kpi('👥',yt.hiddenSubscribers?'—':number(yt.subscribers),yt.hiddenSubscribers?'Подписчики скрыты':'Подписчиков',yt.handle||'@andrikmetal','youtube'),kpi('🎬',number(yt.videos),'Видео на канале','YouTube Data API','youtube'),kpi('🔻',studio.connected?number(lost28):'—','Отписались · 28 дней',studio.connected?'YouTube Studio':'Studio не подключён','youtube')].join(''):`<div class="admin-empty">YouTube: ${escapeHtml(yt.error||'API не подключён')}</div>`;
+    const gate=$('youtubeStudioGate'),section=$('youtubeStudioSection'),audience=$('youtubeAudienceSection'),trendCard=$('youtubeStudioTrendCard');
     const topVideos=(Array.isArray(yt.topVideos)&&yt.topVideos.length?yt.topVideos:(Array.isArray(yt.recentVideos)?yt.recentVideos:[])).slice().sort((a,b)=>Number(b.views||0)-Number(a.views||0)||String(b.publishedAt||'').localeCompare(String(a.publishedAt||'')));
     renderVideoList(topVideos,'youtubeTopVideosSection','youtubeTopVideos','all');
     if(!studio.connected){
@@ -250,7 +256,7 @@
     if(trendCard)trendCard.hidden=false;
     section.hidden=false;audience.hidden=false;
     const x=studio.summary||{};
-    $('youtubeStudioKpis').innerHTML=[kpi('👀',number(x.views),'Просмотры за 28 дней',`${number(x.estimatedMinutesWatched)} минут просмотра`,'youtube'),kpi('👍',number(x.likes),'Лайки',`${number(x.comments)} комментариев`,'youtube'),kpi('↗️',number(x.shares),'Поделились',`${number(x.subscribersGained)} новых подписчиков`,'youtube'),kpi('⏱️',formatDuration(x.averageViewDuration),'Средний просмотр',`${number(x.subscribersLost)} отписок`,'youtube')].join('');
+    $('youtubeStudioKpis').innerHTML=[kpi('👀',number(x.views),'Просмотры за 28 дней',`${number(x.estimatedMinutesWatched)} минут просмотра`,'youtube'),kpi('👍',number(x.likes),'Лайки',`${number(x.comments)} комментариев`,'youtube'),kpi('↗️',number(x.shares),'Поделились',`${number(x.subscribersGained)} новых подписчиков`,'youtube'),kpi('⏱️',formatDuration(x.averageViewDuration),'Средний просмотр','за 28 дней','youtube')].join('');
     renderYoutubeTrend(studio.trend||[]);
     renderArtistStudio(yt,studio);
     renderVideoList(studio.topVideos28||[],'youtubeTop28Section','youtubeTop28','28d');

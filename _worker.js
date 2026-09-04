@@ -9976,7 +9976,8 @@ async function fetchYouTubeStudioAnalytics(env) {
     youtubeArtistAnalyticsQueryR910(env, accessToken, owner.channelId,{startDate,endDate,dimensions:'youtubeProduct',metrics:'views,estimatedMinutesWatched',sort:'-views',maxResults:10}),
     youtubeArtistAnalyticsQueryR910(env, accessToken, owner.channelId,{startDate,endDate,dimensions:'creatorContentType',metrics:'views,engagedViews,estimatedMinutesWatched',sort:'-views',maxResults:10}),
     youtubeArtistAnalyticsQueryR910(env, accessToken, owner.channelId,{startDate,endDate,dimensions:'insightTrafficSourceType',metrics:'views,estimatedMinutesWatched',sort:'-views',maxResults:20}),
-    youtubeArtistAnalyticsQueryR910(env, accessToken, owner.channelId,{startDate,endDate,dimensions:'subscribedStatus',metrics:'views,estimatedMinutesWatched',sort:'-views',maxResults:5})
+    youtubeArtistAnalyticsQueryR910(env, accessToken, owner.channelId,{startDate,endDate,dimensions:'subscribedStatus',metrics:'views,estimatedMinutesWatched',sort:'-views',maxResults:5}),
+    youtubeArtistAnalyticsQueryR910(env, accessToken, owner.channelId,{startDate,endDate,dimensions:'deviceType',metrics:'views,estimatedMinutesWatched',sort:'-views',maxResults:12})
   ]);
   const val=i=>results[i].status==='fulfilled'?results[i].value:[];
   const resultError=i=>results[i].status==='rejected'?cleanPlainText(results[i].reason?.message||results[i].reason,260):'';
@@ -10009,7 +10010,8 @@ async function fetchYouTubeStudioAnalytics(env) {
     contentTypes28:val(9).map(r=>({creatorContentType:canonicalYoutubeCreatorTypeR912(r.creatorContentType||''),views:Number(r.views||0),engagedViews:Number(r.engagedViews||0),estimatedMinutesWatched:Number(r.estimatedMinutesWatched||0)})).filter(r=>r.creatorContentType),
     trafficSources28:val(10).map(r=>({insightTrafficSourceType:cleanPlainText(r.insightTrafficSourceType||'',60).toUpperCase(),views:Number(r.views||0),estimatedMinutesWatched:Number(r.estimatedMinutesWatched||0)})).filter(r=>r.insightTrafficSourceType),
     subscriptionStatus28:val(11).map(r=>({subscribedStatus:cleanPlainText(r.subscribedStatus||'',40).toUpperCase(),views:Number(r.views||0),estimatedMinutesWatched:Number(r.estimatedMinutesWatched||0)})).filter(r=>r.subscribedStatus),
-    artistAnalytics:{officialArtistChannel:true,apiSafe:true,periodDays:28,version:'r912'},
+    devices28:val(12).map(r=>({deviceType:cleanPlainText(r.deviceType||'',60).toUpperCase(),views:Number(r.views||0),estimatedMinutesWatched:Number(r.estimatedMinutesWatched||0)})).filter(r=>r.deviceType),
+    artistAnalytics:{officialArtistChannel:true,apiSafe:true,periodDays:28,version:'r913'},
     summaryError:resultError(0),
     trendError:resultError(1),
     partialErrors:results.map((r,i)=>r.status==='rejected'?cleanPlainText(r.reason?.message||r.reason,260):'').filter(Boolean),
@@ -10902,6 +10904,7 @@ async function refreshControlSnapshots(env, { force = false } = {}) {
     && Array.isArray(latestYoutubeMetrics?.studio?.contentTypes28)
     && Array.isArray(latestYoutubeMetrics?.studio?.trafficSources28)
     && Array.isArray(latestYoutubeMetrics?.studio?.subscriptionStatus28)
+    && Array.isArray(latestYoutubeMetrics?.studio?.devices28)
     && Array.isArray(latestYoutubeMetrics?.studio?.topShorts28)
     && Array.isArray(latestYoutubeMetrics?.studio?.topRegularVideos28);
   const instagramConfigured = instagramConfigR487(env).configured;
@@ -10968,7 +10971,8 @@ async function refreshControlSnapshots(env, { force = false } = {}) {
         contentTypes28:Array.isArray(yt.studio.contentTypes28) ? yt.studio.contentTypes28 : [],
         trafficSources28:Array.isArray(yt.studio.trafficSources28) ? yt.studio.trafficSources28 : [],
         subscriptionStatus28:Array.isArray(yt.studio.subscriptionStatus28) ? yt.studio.subscriptionStatus28 : [],
-        artistAnalytics:yt.studio.artistAnalytics || { officialArtistChannel:true, apiSafe:true, periodDays:28, version:'r912' },
+        devices28:Array.isArray(yt.studio.devices28) ? yt.studio.devices28 : [],
+        artistAnalytics:yt.studio.artistAnalytics || { officialArtistChannel:true, apiSafe:true, periodDays:28, version:'r913' },
         topVideos28:Array.isArray(yt.studio.topVideos28) ? yt.studio.topVideos28 : [],
         topShorts28:Array.isArray(yt.studio.topShorts28) ? yt.studio.topShorts28 : [],
         topRegularVideos28:Array.isArray(yt.studio.topRegularVideos28) ? yt.studio.topRegularVideos28 : [],
@@ -14517,6 +14521,24 @@ function youtubeOacFindPopularTracksR910(data){
   visit(data);
   return found||[];
 }
+
+function youtubeOacConfirmedBootstrapR913(){
+  const rows=[
+    '16.I Am',
+    'Священный Разрушитель',
+    'Река',
+    '1.Персонаж'
+  ];
+  return rows.map(title=>({
+    title,
+    thumbnail:'',
+    videoId:'',
+    browseId:'',
+    url:`https://www.youtube.com/results?search_query=${encodeURIComponent(`ANDRIK ${title}`)}`,
+    confirmed:true
+  }));
+}
+
 async function handleControlYoutubeOacShelfR910(request, env){
   if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
   const handle=cleanPlainText(env.YOUTUBE_CHANNEL_HANDLE||'@andrikmetal',100);
@@ -14530,10 +14552,10 @@ async function handleControlYoutubeOacShelfR910(request, env){
       const html=await response.text();
       const data=youtubeOacExtractInitialDataR910(html);
       const tracks=data?youtubeOacFindPopularTracksR910(data):[];
-      if(tracks.length)return json({ok:true,available:true,source:'public-oac-shelf-r912',tracks,channelUrl,updatedAt:new Date().toISOString()});
+      if(tracks.length)return json({ok:true,available:true,source:'public-oac-shelf-r913',tracks,channelUrl,updatedAt:new Date().toISOString()});
     }catch(error){lastError=cleanPlainText(error?.message||error,220);}
   }
-  return json({ok:true,available:false,source:'public-oac-shelf-r912',tracks:[],error:lastError||'public-oac-shelf-not-exposed',channelUrl,updatedAt:new Date().toISOString()});
+  return json({ok:true,available:true,source:'oac-confirmed-bootstrap-r913',fallback:true,confirmedAt:'04.09.2026',tracks:youtubeOacConfirmedBootstrapR913(),error:lastError||'public-oac-shelf-not-exposed',channelUrl,updatedAt:new Date().toISOString()});
 }
 
 async function handleControlSnapshotsRefresh(request, env) {

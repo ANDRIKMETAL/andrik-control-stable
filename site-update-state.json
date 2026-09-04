@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788553837171-e16a86750e",
-  "release": "R912",
-  "archiveName": "ANDRIK-R912-YOUTUBE-ARTIST-RU-SPOILERS-ZERO-FIX-R911-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "61a4982663879c1f1d0d3d436661384d968c4295",
-  "backupSha": "61a4982663879c1f1d0d3d436661384d968c4295",
+  "operationId": "publish-1788554489205-85922ddf35",
+  "release": "R913",
+  "archiveName": "ANDRIK-R913-YOUTUBE-DEVICES-OAC-UNSUBSCRIBE-LAYOUT-R912-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "ccc006a65145909e0bc353089ec5b7b2ddc65659",
+  "backupSha": "ccc006a65145909e0bc353089ec5b7b2ddc65659",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-04T20:30:37.171Z"
+  "generatedAt": "2026-09-04T20:41:29.205Z"
 }

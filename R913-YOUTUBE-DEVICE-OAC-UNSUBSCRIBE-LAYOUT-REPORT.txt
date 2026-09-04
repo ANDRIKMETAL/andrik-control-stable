@@ -1,0 +1,17 @@
+ANDRIK Control — R913
+Base: R912
+
+CHANGES
+1. Main YouTube channel KPI grid is now 2x2: channel views / subscribers / videos / unsubscribed (28 days).
+2. Video count card is left-aligned and same size as all other channel cards.
+3. Added real subscribersLost 28-day card from existing YouTube Analytics Studio summary.
+4. Added Device Type report through official YouTube Analytics API: phone, computer, TV, tablet, game console, automotive, wearable, unknown.
+5. Added Russian device labels in both YouTube screens.
+6. Popular Tracks from Shorts OAC: live public shelf remains first priority; when YouTube hides the shelf from the web server, Control shows the last list confirmed in the user's YouTube app on 04.09.2026 (16.I Am, Священный Разрушитель, Река, 1.Персонаж), clearly marked as a confirmed fallback.
+7. Popular Shorts live Data API block from R912 is preserved.
+
+PRESERVED
+- R912 Russian traffic labels and traffic spoiler.
+- R911 Official Artist Channel badge/header.
+- R910 artist analytics/OAuth.
+- Radio/FFmpeg/RTMPS/VPS untouched.
