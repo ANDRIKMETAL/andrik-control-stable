@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788554489205-85922ddf35",
-  "release": "R913",
-  "archiveName": "ANDRIK-R913-YOUTUBE-DEVICES-OAC-UNSUBSCRIBE-LAYOUT-R912-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "ccc006a65145909e0bc353089ec5b7b2ddc65659",
-  "backupSha": "ccc006a65145909e0bc353089ec5b7b2ddc65659",
+  "operationId": "publish-1788555665680-d8c5e0eebf",
+  "release": "R915",
+  "archiveName": "ANDRIK-R915-YOUTUBE-COMPACT-ARTIST-ANIMATED-LAYOUT-R914-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "1f9a04ed9cd63a5408d39b3db3ab17361a1aa39b",
+  "backupSha": "1f9a04ed9cd63a5408d39b3db3ab17361a1aa39b",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-04T20:41:29.205Z"
+  "generatedAt": "2026-09-04T21:01:06.140Z"
 }

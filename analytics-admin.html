@@ -1172,7 +1172,7 @@ body.analytics-admin-page.is-country-returning #worldMap .world-map-dot.is-selec
           <section class="admin-control-card youtube-artist-card" id="youtubeArtistSection" hidden>
             <div class="admin-card-title-row youtube-artist-title"><div><span class="eyeline">🎵 ARTIST STUDIO</span><h2>Аналитика артиста</h2></div><div class="youtube-artist-badges"><span class="youtube-artist-badge">Official Artist Channel</span><span class="youtube-artist-badge">API · 28 дней</span></div></div>
             <p class="youtube-artist-intro">YouTube Music, Shorts, обычные видео и Live — отдельно, плюс источники трафика и просмотры подписчиков.</p>
-            <div class="youtube-artist-refresh-row"><button class="youtube-artist-refresh" id="youtubeArtistRefresh" type="button">↻ Обновить данные артиста</button><span class="youtube-artist-refresh-status" id="youtubeArtistRefreshStatus">Проверяем свежий снимок…</span></div>
+            <div class="youtube-artist-refresh-row"><button class="youtube-artist-refresh" id="youtubeArtistRefresh" type="button">↻ Обновить</button><span class="youtube-artist-refresh-status" id="youtubeArtistRefreshStatus">Проверяем свежий снимок…</span></div>
             <div class="analytics-youtube-studio-kpis youtube-artist-kpis" id="youtubeArtistKpis"></div>
             <div class="youtube-artist-grid">
               <article class="youtube-artist-mini"><h3>🎧 Где слушают</h3><div class="analytics-list" id="youtubeArtistProducts"></div></article>
@@ -4824,10 +4824,44 @@ body .country-scroll-overlay-r258::before{margin:0 0 10px!important;}
   }
 }
 </style>
+<style id="youtube-r915-compact-layout-fixes">
+.youtube-admin-page .youtube-kpi-unified #analyticsYoutube>.analytics-kpi:last-child,
+.youtube-kpi-unified #analyticsYoutube>.analytics-kpi:last-child{grid-column:auto!important;max-width:none!important;justify-self:stretch!important;width:100%!important}
+.youtube-admin-page #analyticsYoutube>.analytics-kpi,
+.youtube-admin-page #youtubeStudioKpis>.analytics-kpi,
+.youtube-admin-page .analytics-youtube-grid .analytics-kpi{display:grid!important;grid-template-columns:40px minmax(0,1fr)!important;align-items:center!important;justify-content:stretch!important;gap:12px!important;text-align:left!important}
+.youtube-admin-page #analyticsYoutube>.analytics-kpi>.analytics-kpi-copy,
+.youtube-admin-page #youtubeStudioKpis>.analytics-kpi>.analytics-kpi-copy{width:100%!important;text-align:left!important;justify-items:start!important;align-items:start!important}
+.youtube-admin-page #analyticsYoutube>.analytics-kpi small,.youtube-admin-page #analyticsYoutube>.analytics-kpi strong,.youtube-admin-page #analyticsYoutube>.analytics-kpi em,
+.youtube-admin-page #youtubeStudioKpis>.analytics-kpi small,.youtube-admin-page #youtubeStudioKpis>.analytics-kpi strong,.youtube-admin-page #youtubeStudioKpis>.analytics-kpi em{text-align:left!important;width:100%!important}
+@media (max-width:540px){.youtube-admin-page .youtube-kpi-unified #analyticsYoutube>.analytics-kpi:last-child{width:100%!important;max-width:none!important}}
+.youtube-artist-card{margin-top:12px;border-color:rgba(255,82,82,.14)!important}
+.youtube-artist-title{gap:10px!important}.youtube-artist-title h2{margin:1px 0 0!important;font-size:1.14rem!important;line-height:1.15}
+.youtube-artist-badges{gap:6px!important}.youtube-artist-badge{min-height:24px!important;padding:4px 8px!important;font-size:.66rem!important}
+.youtube-artist-intro{display:none!important}
+.youtube-artist-kpis{margin-bottom:10px!important}
+.youtube-artist-grid{gap:10px!important}
+.youtube-artist-mini{padding:11px!important;border-radius:14px!important}.youtube-artist-mini h3{font-size:.9rem!important;margin:0 0 8px!important}
+.youtube-artist-refresh-row{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:8px!important;flex-wrap:nowrap!important;margin:0 0 10px!important}
+.youtube-artist-refresh{min-height:34px!important;padding:7px 10px!important;border-radius:10px!important;font-size:.74rem!important;white-space:nowrap}
+.youtube-artist-refresh-status{font-size:.68rem!important;line-height:1.25!important;text-align:right!important;flex:1;min-width:0}
+.youtube-artist-native{margin-top:10px!important;padding:10px 11px!important;border-radius:14px!important}.youtube-artist-native strong{margin-bottom:8px!important;font-size:.98rem!important}.youtube-artist-native p,.youtube-artist-note{display:none!important}
+.youtube-artist-native-tags{margin:0 0 8px!important;gap:5px!important}.youtube-artist-native-tags span{padding:4px 7px!important;font-size:.66rem!important}.youtube-artist-open{min-height:36px!important;padding:8px 12px!important;border-radius:10px!important;font-size:.76rem!important}
+.youtube-admin-page .analytics-youtube-trend-card .analytics-bars{position:relative;overflow:hidden;isolation:isolate}
+.youtube-admin-page .analytics-youtube-trend-card .analytics-bars::after{content:'';position:absolute;inset:10px 8px 26px;pointer-events:none;border-radius:20px;background:radial-gradient(circle at 50% 100%,rgba(255,109,125,.12),transparent 58%);opacity:.55;animation:r915ChartGlow 3.6s ease-in-out infinite}
+.youtube-admin-page .youtube-bars .analytics-day-bars i{box-shadow:0 0 10px rgba(255,109,125,.14);transform-origin:center bottom;animation:r915BarPulse 3.2s ease-in-out infinite}
+.youtube-admin-page .youtube-bars .analytics-day:nth-child(2n) .analytics-day-bars i{animation-delay:.35s}
+.youtube-admin-page .youtube-bars .analytics-day:nth-child(3n) .analytics-day-bars i{animation-delay:.7s}
+.youtube-admin-page .youtube-bars .analytics-day:nth-child(4n) .analytics-day-bars i{animation-delay:1.05s}
+@keyframes r915ChartGlow{0%,100%{opacity:.35;filter:brightness(1)}50%{opacity:.8;filter:brightness(1.16)}}
+@keyframes r915BarPulse{0%,100%{transform:scaleY(1);filter:brightness(1);box-shadow:0 0 8px rgba(255,109,125,.10)}50%{transform:scaleY(1.035);filter:brightness(1.15);box-shadow:0 0 18px rgba(255,109,125,.22)}}
+@media (prefers-reduced-motion:reduce){.youtube-admin-page .analytics-youtube-trend-card .analytics-bars::after,.youtube-admin-page .youtube-bars .analytics-day-bars i{animation:none!important}}
+</style>
+
 <link rel="stylesheet" href="/assets/landscape-world-scroll-r428.css?v=55.00-r428">
 <link rel="stylesheet" href="/assets/map-controls-compact-r499.css?v=55.00-r499">
 <script defer src="/assets/planet-map-transition-r450.js?v=55.00-r450"></script>
-<script defer src="/assets/youtube-admin-v55-00j.js?v=55.00-r913"></script>
+<script defer src="/assets/youtube-admin-v55-00m.js?v=55.00-r915"></script>
 <script defer src="/assets/control-version-sync-r558.js?v=55.00-r558"></script>
 <script defer src="/assets/social-platform-swipe-r524.js?v=55.00-r524"></script>
 </body></html>
