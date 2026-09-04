@@ -1,0 +1,18 @@
+ANDRIK R868 HOMEPAGE SEO RADIO LIVE — R867 CONTROL + R857 RADIO PRESERVED
+
+Scope: SEO/indexing metadata only. Radio engine and R867 control agent are not changed.
+
+Changes:
+1. Root RU title/description changed from OCEAN to ANDRIK METAL RADIO 24/7.
+2. EN/SK/UA homepage metadata updated consistently.
+3. Open Graph/Twitter preview changed from OCEAN poster to /assets/andrik-stream-cover-r566.webp.
+4. Homepage JSON-LD no longer promotes OCEAN as the primary homepage entity; adds ANDRIK METAL alternate name and live BroadcastEvent.
+5. robots=max-image-preview:large added to language homepages.
+6. Homepage sitemap lastmod updated to 2026-09-03 and primary sitemap image changed to the live radio cover.
+7. image-sitemap primary website image changed from OCEAN poster to live radio cover.
+8. OCEAN album pages/content are NOT deleted; only homepage/search/share emphasis changes.
+9. radio247/server.mjs is unchanged from R867 package.
+
+After deploy:
+- Open https://andrikmetal.com/cache-reset-v55-00-final-r868.html
+- In Google Search Console inspect https://andrikmetal.com/ and request indexing.

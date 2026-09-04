@@ -1,0 +1,19 @@
+ANDRIK RADIO R837 GOLD
+
+Frozen: 2026-09-01
+
+CONFIRMED LIVE STATE:
+- Exact R829 permanent video path from first frame
+- FULL 1920x1080 direct scale, Lanczos, SAR=1
+- No startup R828 feeder switch in normal LIVE path
+- VIDEO queue = 24
+- AUDIO queue = 8
+- Normal video feeder priority
+- R836 master setdar removed
+- Fade/title/ticker logic preserved
+- YouTube/control compact layout preserved
+- Journal remains at end of control page
+- Safe cache reset preserves owner auth + OneSignal
+
+radio247/server.mjs SHA256:
+fdba5038f3a35831ce84809572f123a6141d3a9a14915ab1246f1701b8f7f6ec

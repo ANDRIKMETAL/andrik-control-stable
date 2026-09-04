@@ -1,0 +1,78 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+GOLD="/opt/andrik-radio/backups/R857-FULLSCREEN-GOLD-LATEST.tar.gz"
+EXPECTED="43ee048cf44abb222c56ffbe1de5609fed4e96dc698efb55cb6d283b51dc5fc8"
+LIVE="/opt/andrik-radio/radio247/server.mjs"
+ENV="/etc/andrik-radio.env"
+STAMP="$(date +%Y%m%d-%H%M%S)"
+SAVE="/opt/andrik-radio/backups/BEFORE-R867-GOLD-RESTORE-${STAMP}"
+TMP="$(mktemp -d /tmp/andrik-r867-gold.XXXXXX)"
+trap 'rm -rf "$TMP"' EXIT
+
+echo '=== R867 FULLSCREEN GOLD RESTORE ==='
+test -s "$GOLD" || { echo "ERROR: GOLD TAR missing: $GOLD"; exit 1; }
+test -s "$LIVE" || { echo "ERROR: live server missing: $LIVE"; exit 1; }
+test -s "$ENV" || { echo "ERROR: env missing: $ENV"; exit 1; }
+mkdir -p "$SAVE"
+cp -a "$LIVE" "$SAVE/server.mjs"
+cp -a "$ENV" "$SAVE/andrik-radio.env"
+
+SERVER_ENTRY="$(tar -tzf "$GOLD" | grep -E '(^|/)server\.mjs$' | head -1 || true)"
+ENV_ENTRY="$(tar -tzf "$GOLD" | grep -E '(^|/)andrik-radio\.env$' | head -1 || true)"
+[[ -n "$SERVER_ENTRY" ]] || { echo 'ERROR: server.mjs missing inside GOLD'; exit 1; }
+[[ -n "$ENV_ENTRY" ]] || { echo 'ERROR: andrik-radio.env missing inside GOLD'; exit 1; }
+
+tar -xOf "$GOLD" "$SERVER_ENTRY" > "$TMP/server.mjs"
+tar -xOf "$GOLD" "$ENV_ENTRY" > "$TMP/andrik-radio.env"
+node --check "$TMP/server.mjs"
+SHA="$(sha256sum "$TMP/server.mjs" | awk '{print $1}')"
+echo "GOLD SHA: $SHA"
+[[ "$SHA" == "$EXPECTED" ]] || { echo "ERROR: GOLD SHA mismatch, expected $EXPECTED"; exit 1; }
+
+cp -af "$TMP/server.mjs" "$LIVE"
+cp -af "$TMP/andrik-radio.env" "$ENV"
+rm -f /etc/systemd/system/andrik-radio.service.d/90-visual-auto.conf 2>/dev/null || true
+
+# Remove ONLY derivatives/markers created by the failed station-end experiments.
+find /var/cache/andrik-radio-r622 -type f \
+  \( -name '*.station-r861-real-eof-shortest-av' \
+     -o -name '*.station-r864-real-end-only' \
+     -o -name '*.station-r865-video-real-eof' \
+     -o -name '*.station-r866b-video-eof-only' \) -print0 2>/dev/null |
+while IFS= read -r -d '' MARKER; do
+  BASE="$MARKER"
+  BASE="${BASE%.station-r861-real-eof-shortest-av}"
+  BASE="${BASE%.station-r864-real-end-only}"
+  BASE="${BASE%.station-r865-video-real-eof}"
+  BASE="${BASE%.station-r866b-video-eof-only}"
+  rm -f "$BASE" "$BASE.station-r861-real-eof-shortest-av" "$BASE.station-r864-real-end-only" "$BASE.station-r865-video-real-eof" "$BASE.station-r866b-video-eof-only" 2>/dev/null || true
+done
+
+systemctl daemon-reload
+if ! systemctl restart andrik-radio.service; then
+  echo 'ERROR: radio restart failed; rolling back previous files'
+  cp -af "$SAVE/server.mjs" "$LIVE"
+  cp -af "$SAVE/andrik-radio.env" "$ENV"
+  systemctl daemon-reload
+  systemctl restart andrik-radio.service || true
+  exit 1
+fi
+sleep 12
+if [[ "$(systemctl is-active andrik-radio.service || true)" != active ]]; then
+  echo 'ERROR: radio not active; rolling back previous files'
+  cp -af "$SAVE/server.mjs" "$LIVE"
+  cp -af "$SAVE/andrik-radio.env" "$ENV"
+  systemctl daemon-reload
+  systemctl restart andrik-radio.service || true
+  exit 1
+fi
+
+curl -fsS -X POST http://127.0.0.1:8080/control/full-fit >/dev/null 2>&1 || true
+sleep 5
+
+echo 'FULLSCREEN GOLD RESTORED ✅'
+echo "MainPID: $(systemctl show -p MainPID --value andrik-radio.service)"
+echo "Backup of previous state: $SAVE"
+echo "server SHA: $(sha256sum "$LIVE" | awk '{print $1}')"
+curl -fsS --max-time 5 http://127.0.0.1:8080/status 2>/dev/null | python3 -c 'import sys,json; d=json.load(sys.stdin); print("fullFrame=",d.get("fullFrame")," visual=",d.get("visualPeriod")," RTMPS=",d.get("rtmpsEstablishedConnectionsR792"),"/",d.get("rtmpsExpectedConnectionsR792"))' || true

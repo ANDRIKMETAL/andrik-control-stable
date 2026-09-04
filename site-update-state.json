@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788514565962-9e429e0671",
-  "release": "R881",
-  "archiveName": "ANDRIK-R881B-GENERAL-CLEAN-SAFE-FULL-2026-09-04.zip",
-  "sourceHead": "b42b1b6e60a841185011a15ef46f02eab298b28e",
-  "backupSha": "b42b1b6e60a841185011a15ef46f02eab298b28e",
+  "operationId": "publish-1788529843897-a6c3f3746e",
+  "release": "R907",
+  "archiveName": "ANDRIK-R907-CONTROL-SPOILERS-RU-CITIES-SMALL-LIKE-SAFE-FULL.zip",
+  "sourceHead": "1a8ad16bd3310bd1d7cb005ad8e2a6799b1e3439",
+  "backupSha": "1a8ad16bd3310bd1d7cb005ad8e2a6799b1e3439",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-04T09:36:05.962Z"
+  "generatedAt": "2026-09-04T13:50:54.860Z"
 }

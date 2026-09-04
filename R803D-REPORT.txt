@@ -1,0 +1,18 @@
+R803D — SINGLE WEB AGENT / NODE 18 SAFE FIX
+
+Purpose:
+- Keep exactly one web/control agent: andrik-radio-web.service.
+- Upgrade the canonical agent from R721 to R803 diagnostics.
+- Stop/disable the duplicate R650 andrik-radio-web-agent.service.
+- DO NOT restart or modify andrik-radio.service, FFmpeg, producer, publisher, RTMPS, fade, or media handoff.
+
+Fix versus R803C:
+- R803C successfully validated the downloaded .mjs, then performed a second `node --check` on /usr/local/sbin/andrik-radio-web.
+- Node.js 18 treated that extensionless executable as CommonJS and rejected ESM `import` syntax.
+- R803D validates only the actual temporary .mjs source. The installed target is byte-identical to that validated file.
+- This removes the false SyntaxError while preserving rollback and all non-interference checks.
+
+Expected topology after install:
+- andrik-radio-web.service: active, R803
+- andrik-radio-web-agent.service: inactive/disabled/Condition-blocked
+- andrik-radio.service: active with the same MainPID as before installation

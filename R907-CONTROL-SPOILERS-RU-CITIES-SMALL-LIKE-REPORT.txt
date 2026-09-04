@@ -1,0 +1,32 @@
+ANDRIK R907 — CONTROL SPOILERS + RU CITIES + SMALL TRANSPARENT LIKE
+2026-09-04
+
+CONTROL PANEL
+- Журнал эфира: сам лог скрыт в закрытом спойлере по умолчанию.
+- Кнопка «СКОПИРОВАТЬ ВЕСЬ ЛОГ» остаётся доступной без открытия журнала.
+- Обновить / Очистить вид находятся внутри спойлера.
+- Города эфира и аудитории: список скрыт в отдельном спойлере.
+- Названия городов выводятся по-русски; добавлены точные названия для Košice, Moscow,
+  Bratislava, Frankfurt am Main, San Jose, Flower Mound, Istanbul, Aktau, Ashburn
+  и ряда частых городов; для остальных используется безопасная русская транслитерация.
+- Регионы из примера тоже русифицированы (Кошицкий край, Братиславский край,
+  Гессен, Калифорния, Техас, Мангистауская область, Виргиния и др.).
+
+LIVE RADIO LIKE
+- Новый asset: /assets/like-small-r907-96.png
+- 96x96, прозрачный фон вокруг красной кнопки.
+- Период появления НЕ меняется: остаётся прежнее чередование SUBSCRIBE -> LIKE каждые 120 сек.
+- SUBSCRIBE не изменён.
+- LIKE расположен отдельно: справа на колонке/усилителе, в отмеченной владельцем зоне.
+- Работает и на обычном MP3 visual, и в подготовленных обычных клипах.
+- Тикер, fullscreen geometry, MP3 gap, station sync и clip rotation патч не затрагивает.
+
+ПОСЛЕ ДЕПЛОЯ САЙТА
+1) Очистка кэша панели:
+https://andrikmetal.com/cache-reset-v55-00-final-r907.html
+
+2) Установка LIKE на текущий LIVE VPS (одна команда):
+curl -fsSL https://andrikmetal.com/radio247/vm-lite/install-r907-small-like-overlay.sh | sudo env ANDRIK_SITE_BASE=https://andrikmetal.com bash
+
+ОТКАТ LIKE:
+curl -fsSL https://andrikmetal.com/radio247/vm-lite/rollback-r907-small-like-overlay.sh | sudo bash
