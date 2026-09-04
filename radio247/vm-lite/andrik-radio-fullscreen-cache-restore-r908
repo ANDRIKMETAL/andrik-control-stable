@@ -1,118 +1,161 @@
 #!/usr/bin/env bash
 set -u
 
-CACHE="/var/cache/andrik-radio-r622/visuals"
 STAMP="$(date +%Y%m%d-%H%M%S)"
-SAVE="/opt/andrik-radio/backups/BEFORE-R908-FULLSCREEN-RESTORE-${STAMP}"
+STATUS_URL="http://127.0.0.1:8080/status"
+BACKROOT="/opt/andrik-radio/backups"
 
-BACK="$(
-  find /opt/andrik-radio/backups \
-    -maxdepth 1 \
-    -type d \
-    -name 'FULLSCREEN-CACHE-BEFORE-*' \
-    -printf '%T@ %p\n' 2>/dev/null \
-  | sort -nr \
-  | head -1 \
-  | cut -d' ' -f2-
+printf '%s\n' "======================================================"
+printf '%s\n' " ANDRIK R921 · РУБИЛЬНИК ВЕСЬ ЭКРАН"
+printf '%s\n' " ACTIVE VISUAL <- R906 FULLSCREEN GOLD"
+printf '%s\n' "======================================================"
+
+ACTIVE="$(
+  curl -fsS --max-time 5 "$STATUS_URL" 2>/dev/null |
+  python3 -c '
+import sys,json
+try:
+    d=json.load(sys.stdin)
+    print(d.get("visualPath") or "")
+except Exception:
+    print("")
+'
 )"
 
-echo "================================================"
-echo " ANDRIK R908 · ВОССТАНОВИТЬ ВЕСЬ ЭКРАН"
-echo " FULLSCREEN VISUAL CACHE RESTORE"
-echo "================================================"
-echo "SOURCE=$BACK"
-echo "SAVE=$SAVE"
+echo "ACTIVE=$ACTIVE"
 
-if [ -z "$BACK" ] || [ ! -d "$BACK" ]; then
-  echo "❌ ORIGINAL VISUAL CACHE BACKUP NOT FOUND"
+if [ -z "$ACTIVE" ]; then
+  echo "❌ ACTIVE visualPath не определён"
   exit 20
 fi
-
-mkdir -p "$CACHE" "$SAVE"
-
-COUNT="$(find "$BACK" -maxdepth 1 -type f -name 'stream-*-master-r620.mp4' | wc -l)"
-if [ "$COUNT" -lt 1 ]; then
-  echo "❌ NO ORIGINAL MASTER VISUALS IN BACKUP"
+if [ ! -f "$ACTIVE" ]; then
+  echo "❌ ACTIVE visual file not found: $ACTIVE"
   exit 21
 fi
 
-echo
-echo "=== BACKUP CURRENT VISUAL MASTERS ==="
-find "$CACHE" -maxdepth 1 -type f -name 'stream-*-master-*.mp4' -exec cp -a {} "$SAVE/" \; 2>/dev/null || true
-find "$SAVE" -maxdepth 1 -type f -printf 'SAVED %f\n' 2>/dev/null || true
+NAME="$(basename "$ACTIVE")"
+echo "NAME=$NAME"
+
+GOLD="$(
+  find "$BACKROOT" \
+    -maxdepth 1 \
+    -type d \
+    -name 'GOLD-R906-R905-FULLSCREEN-CLIPS-SHUFFLE-*' \
+    -printf '%T@ %p\n' 2>/dev/null |
+  sort -nr |
+  head -1 |
+  cut -d' ' -f2-
+)"
+
+echo "GOLD=$GOLD"
+if [ -z "$GOLD" ] || [ ! -d "$GOLD" ]; then
+  echo "❌ R906 FULLSCREEN GOLD directory not found"
+  exit 22
+fi
+
+SRC="$GOLD/visuals/$NAME"
+if [ ! -f "$SRC" ]; then
+  echo "❌ В R906 GOLD нет активного visual: $NAME"
+  echo
+  echo "=== AVAILABLE GOLD VISUALS ==="
+  find "$GOLD/visuals" -maxdepth 1 -type f -printf '%f\n' 2>/dev/null || true
+  exit 23
+fi
+
+SAVE="$BACKROOT/PRE-ACTIVE-VISUAL-RESTORE-$STAMP"
+mkdir -p "$SAVE"
+BACKUP="$SAVE/$NAME"
+cp -a "$ACTIVE" "$BACKUP"
+echo "✅ CURRENT BACKUP=$BACKUP"
 
 echo
-echo "=== FILES TO RESTORE ==="
-find "$BACK" -maxdepth 1 -type f -name 'stream-*-master-r620.mp4' -printf '%f\n'
+echo "=== CURRENT ==="
+ls -lh "$ACTIVE" || true
+sha256sum "$ACTIVE" || true
 
 echo
-echo "=== STOP RADIO ==="
-systemctl stop andrik-radio.service
+echo "=== R906 GOLD CANDIDATE ==="
+ls -lh "$SRC" || true
+sha256sum "$SRC" || true
 
 echo
-echo "=== RESTORE PROVEN FULLSCREEN VISUAL CACHE ==="
-for SRC in "$BACK"/stream-*-master-r620.mp4; do
-  [ -f "$SRC" ] || continue
-  NAME="$(basename "$SRC")"
-  cp -af "$SRC" "$CACHE/$NAME"
-  chmod 644 "$CACHE/$NAME"
-  echo "✅ RESTORED $NAME"
-done
+echo "=== GEOMETRY ==="
+echo "--- CURRENT ---"
+ffprobe -v error -select_streams v:0 \
+  -show_entries stream=width,height,sample_aspect_ratio,display_aspect_ratio \
+  -of default=nw=1 "$ACTIVE" 2>/dev/null || true
+
+echo "--- GOLD ---"
+ffprobe -v error -select_streams v:0 \
+  -show_entries stream=width,height,sample_aspect_ratio,display_aspect_ratio \
+  -of default=nw=1 "$SRC" 2>/dev/null || true
 
 echo
-echo "=== START RADIO ==="
-systemctl daemon-reload
-if ! systemctl start andrik-radio.service; then
-  echo "❌ RADIO START FAILED — ROLLING BACK VISUAL CACHE"
-  for SRC in "$SAVE"/stream-*-master-*.mp4; do
-    [ -f "$SRC" ] || continue
-    cp -af "$SRC" "$CACHE/$(basename "$SRC")"
-  done
-  systemctl daemon-reload
-  systemctl start andrik-radio.service || true
+echo "=== RESTORE ACTIVE VISUAL FROM R906 GOLD ==="
+cp -af "$SRC" "$ACTIVE"
+chmod 644 "$ACTIVE"
+
+GOLD_SHA="$(sha256sum "$SRC" | awk '{print $1}')"
+LIVE_SHA="$(sha256sum "$ACTIVE" | awk '{print $1}')"
+echo "GOLD=$GOLD_SHA"
+echo "LIVE=$LIVE_SHA"
+
+if [ -z "$GOLD_SHA" ] || [ "$GOLD_SHA" != "$LIVE_SHA" ]; then
+  echo "❌ HASH MISMATCH — возвращаю предыдущий visual"
+  cp -af "$BACKUP" "$ACTIVE"
+  chmod 644 "$ACTIVE" || true
   exit 30
 fi
 
-sleep 15
+echo "✅ EXACT R906 GOLD COPY"
 
-if [ "$(systemctl is-active andrik-radio.service 2>/dev/null || true)" != "active" ]; then
-  echo "❌ RADIO NOT ACTIVE — ROLLING BACK VISUAL CACHE"
-  systemctl stop andrik-radio.service 2>/dev/null || true
-  for SRC in "$SAVE"/stream-*-master-*.mp4; do
-    [ -f "$SRC" ] || continue
-    cp -af "$SRC" "$CACHE/$(basename "$SRC")"
-  done
-  systemctl start andrik-radio.service || true
+echo
+echo "=== ONE RADIO RESTART ==="
+if ! systemctl restart andrik-radio.service; then
+  echo "❌ RADIO RESTART FAILED — возвращаю предыдущий visual"
+  cp -af "$BACKUP" "$ACTIVE"
+  chmod 644 "$ACTIVE" || true
+  systemctl restart andrik-radio.service || true
   exit 31
 fi
 
-# Re-arm the already-correct 1920x1080 feeder geometry without touching server/env.
-curl -fsS -X POST --max-time 8 http://127.0.0.1:8080/control/full-fit >/dev/null 2>&1 || true
-sleep 3
+sleep 15
+if [ "$(systemctl is-active andrik-radio.service 2>/dev/null || true)" != "active" ]; then
+  echo "❌ RADIO NOT ACTIVE — возвращаю предыдущий visual"
+  cp -af "$BACKUP" "$ACTIVE"
+  chmod 644 "$ACTIVE" || true
+  systemctl restart andrik-radio.service || true
+  exit 32
+fi
 
 echo
 echo "=== HEALTH ==="
-echo "service: $(systemctl is-active andrik-radio.service 2>/dev/null || true)"
-echo "MainPID: $(systemctl show -p MainPID --value andrik-radio.service 2>/dev/null || true)"
-
-curl -fsS --max-time 5 http://127.0.0.1:8080/status 2>/dev/null | python3 -c '
+curl -fsS --max-time 5 "$STATUS_URL" 2>/dev/null | python3 -c '
 import sys,json
-d=json.load(sys.stdin)
+try:
+    d=json.load(sys.stdin)
+except Exception:
+    d={}
 print("publisher :",d.get("publisherRunning"))
 print("producer  :",d.get("producerRunning"))
 print("video     :",d.get("videoFeederRunning"))
 print("transport :",d.get("transportHealthy"))
 print("period    :",d.get("visualPeriod"))
+print("force     :",d.get("forceVisualSlot"))
 print("visual    :",d.get("visualPath"))
 print("error     :",d.get("lastError",""))
-' 2>/dev/null || true
+' || true
 
 echo
-echo "================================================"
-echo "✅ ВЕСЬ ЭКРАН ВОССТАНОВЛЕН"
-echo "✅ VISUAL CACHE RESTORED"
+echo "======================================================"
+echo "✅ РУБИЛЬНИК ВЕСЬ ЭКРАН ВЫПОЛНЕН"
+echo "✅ ACTIVE VISUAL RESTORED FROM R906 GOLD"
+echo "✅ SHA256 EXACT COPY VERIFIED"
 echo "✅ server.mjs UNTOUCHED"
 echo "✅ /etc/andrik-radio.env UNTOUCHED"
-echo "✅ R905 / R906 UNTOUCHED"
+echo "✅ R905 / R906 / R917B / R918 UNTOUCHED"
 echo "✅ YOUTUBE BROADCAST NOT CREATED / NOT REBOUND"
-echo "================================================"
+echo "======================================================"
+echo
+echo "ROLLBACK CURRENT VISUAL:"
+echo "cp -af '$BACKUP' '$ACTIVE' && systemctl restart andrik-radio.service"

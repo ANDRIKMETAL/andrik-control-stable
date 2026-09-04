@@ -271,16 +271,16 @@
 
   async function fullscreenRestore(){
     if(busy)return;
-    if(!confirm('🖥 ВОССТАНОВИТЬ ВЕСЬ ЭКРАН? Будут возвращены только проверенные visual master из последнего FULLSCREEN-CACHE-BEFORE-* и один раз перезапущено радио. server.mjs / env / R905 / R906 не откатываются.'))return;
+    if(!confirm('🖥 РУБИЛЬНИК ВЕСЬ ЭКРАН? Будет взят ТЕКУЩИЙ активный visualPath и заменён точной копией одноимённого visual master из последнего GOLD-R906-R905-FULLSCREEN-CLIPS-SHUFFLE-*. Перед заменой текущий файл сохраняется, SHA256 проверяется, затем выполняется один restart радио. server.mjs / env / R905 / R906 / R917B / R918 не откатываются.'))return;
     busy=true;render(lastRemote||{});
     try{
-      setMsg('🖥 Восстанавливаю проверенный fullscreen visual cache…','work');
+      setMsg('🖥 Рубильник: возвращаю активный visual из R906 GOLD…','work');
       const d=await agentAction('fullscreen-restore');
-      setResult(String(d?.result?.output||'FULLSCREEN VISUAL CACHE RESTORE ✅'));
-      setMsg('Весь экран восстановлен ✅ · проверяю эфир…','ok');
+      setResult(String(d?.result?.output||'R906 GOLD ACTIVE VISUAL RESTORE ✅'));
+      setMsg('Рубильник ВЕСЬ ЭКРАН выполнен ✅ · проверяю эфир…','ok');
       await sleep(5000);
       await refresh();
-    }catch(e){setMsg(`Восстановление экрана: ${e.message||e}`,'bad');setResult(`FULLSCREEN RESTORE ERROR\n${e.message||e}`)}
+    }catch(e){setMsg(`Рубильник экрана: ${e.message||e}`,'bad');setResult(`FULLSCREEN SWITCH ERROR\n${e.message||e}`)}
     finally{busy=false;await refresh()}
   }
 

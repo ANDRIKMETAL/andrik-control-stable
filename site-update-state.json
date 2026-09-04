@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788556714490-1bbc3e5a00",
-  "release": "R916",
-  "archiveName": "ANDRIK-R916-RADIO-RTMPS2-UPLOAD-ABOVE-STATE-CLEAN-LAYOUT-R915-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "9603beb19ed1054a85814aba72ec9d7ad60cb1d4",
-  "backupSha": "9603beb19ed1054a85814aba72ec9d7ad60cb1d4",
+  "operationId": "publish-1788563700443-fe52fd8a5a",
+  "release": "R921",
+  "archiveName": "ANDRIK-R921-FULLSCREEN-SWITCH-R906-GOLD-R916-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "7426dcf2bc63fb3b375465c0a29c69f4d740096c",
+  "backupSha": "7426dcf2bc63fb3b375465c0a29c69f4d740096c",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-04T21:18:34.490Z"
+  "generatedAt": "2026-09-04T23:15:01.162Z"
 }

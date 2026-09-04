@@ -249,9 +249,9 @@ async function execute(action,command={},headers={}){
     return {ok:r.ok,output:`OVH ENCODER START ${r.ok?'✅':'❌'}\n${r.output}`};
   }
   if(action==='fullscreen-restore'){
-    if(!fs.existsSync(FULLSCREEN_CACHE_RESTORE_R908))return {ok:false,output:`FULLSCREEN VISUAL CACHE RESTORE ❌\nMissing ${FULLSCREEN_CACHE_RESTORE_R908}`};
+    if(!fs.existsSync(FULLSCREEN_CACHE_RESTORE_R908))return {ok:false,output:`РУБИЛЬНИК ВЕСЬ ЭКРАН ❌\nMissing ${FULLSCREEN_CACHE_RESTORE_R908}`};
     const r=await runAsync(FULLSCREEN_CACHE_RESTORE_R908,[],150000);
-    return {ok:r.ok,output:`FULLSCREEN VISUAL CACHE RESTORE ${r.ok?'✅':'❌'}\n${r.output}`};
+    return {ok:r.ok,output:`РУБИЛЬНИК ВЕСЬ ЭКРАН ${r.ok?'✅':'❌'}\n${r.output}`};
   }
   if(action==='gold-restore'){
     if(!fs.existsSync(GOLD_RESTORE_R867))return {ok:false,output:`FULLSCREEN GOLD RESTORE ❌\nMissing ${GOLD_RESTORE_R867}`};
