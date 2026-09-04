@@ -1,0 +1,118 @@
+#!/usr/bin/env bash
+set -u
+
+CACHE="/var/cache/andrik-radio-r622/visuals"
+STAMP="$(date +%Y%m%d-%H%M%S)"
+SAVE="/opt/andrik-radio/backups/BEFORE-R908-FULLSCREEN-RESTORE-${STAMP}"
+
+BACK="$(
+  find /opt/andrik-radio/backups \
+    -maxdepth 1 \
+    -type d \
+    -name 'FULLSCREEN-CACHE-BEFORE-*' \
+    -printf '%T@ %p\n' 2>/dev/null \
+  | sort -nr \
+  | head -1 \
+  | cut -d' ' -f2-
+)"
+
+echo "================================================"
+echo " ANDRIK R908 · ВОССТАНОВИТЬ ВЕСЬ ЭКРАН"
+echo " FULLSCREEN VISUAL CACHE RESTORE"
+echo "================================================"
+echo "SOURCE=$BACK"
+echo "SAVE=$SAVE"
+
+if [ -z "$BACK" ] || [ ! -d "$BACK" ]; then
+  echo "❌ ORIGINAL VISUAL CACHE BACKUP NOT FOUND"
+  exit 20
+fi
+
+mkdir -p "$CACHE" "$SAVE"
+
+COUNT="$(find "$BACK" -maxdepth 1 -type f -name 'stream-*-master-r620.mp4' | wc -l)"
+if [ "$COUNT" -lt 1 ]; then
+  echo "❌ NO ORIGINAL MASTER VISUALS IN BACKUP"
+  exit 21
+fi
+
+echo
+echo "=== BACKUP CURRENT VISUAL MASTERS ==="
+find "$CACHE" -maxdepth 1 -type f -name 'stream-*-master-*.mp4' -exec cp -a {} "$SAVE/" \; 2>/dev/null || true
+find "$SAVE" -maxdepth 1 -type f -printf 'SAVED %f\n' 2>/dev/null || true
+
+echo
+echo "=== FILES TO RESTORE ==="
+find "$BACK" -maxdepth 1 -type f -name 'stream-*-master-r620.mp4' -printf '%f\n'
+
+echo
+echo "=== STOP RADIO ==="
+systemctl stop andrik-radio.service
+
+echo
+echo "=== RESTORE PROVEN FULLSCREEN VISUAL CACHE ==="
+for SRC in "$BACK"/stream-*-master-r620.mp4; do
+  [ -f "$SRC" ] || continue
+  NAME="$(basename "$SRC")"
+  cp -af "$SRC" "$CACHE/$NAME"
+  chmod 644 "$CACHE/$NAME"
+  echo "✅ RESTORED $NAME"
+done
+
+echo
+echo "=== START RADIO ==="
+systemctl daemon-reload
+if ! systemctl start andrik-radio.service; then
+  echo "❌ RADIO START FAILED — ROLLING BACK VISUAL CACHE"
+  for SRC in "$SAVE"/stream-*-master-*.mp4; do
+    [ -f "$SRC" ] || continue
+    cp -af "$SRC" "$CACHE/$(basename "$SRC")"
+  done
+  systemctl daemon-reload
+  systemctl start andrik-radio.service || true
+  exit 30
+fi
+
+sleep 15
+
+if [ "$(systemctl is-active andrik-radio.service 2>/dev/null || true)" != "active" ]; then
+  echo "❌ RADIO NOT ACTIVE — ROLLING BACK VISUAL CACHE"
+  systemctl stop andrik-radio.service 2>/dev/null || true
+  for SRC in "$SAVE"/stream-*-master-*.mp4; do
+    [ -f "$SRC" ] || continue
+    cp -af "$SRC" "$CACHE/$(basename "$SRC")"
+  done
+  systemctl start andrik-radio.service || true
+  exit 31
+fi
+
+# Re-arm the already-correct 1920x1080 feeder geometry without touching server/env.
+curl -fsS -X POST --max-time 8 http://127.0.0.1:8080/control/full-fit >/dev/null 2>&1 || true
+sleep 3
+
+echo
+echo "=== HEALTH ==="
+echo "service: $(systemctl is-active andrik-radio.service 2>/dev/null || true)"
+echo "MainPID: $(systemctl show -p MainPID --value andrik-radio.service 2>/dev/null || true)"
+
+curl -fsS --max-time 5 http://127.0.0.1:8080/status 2>/dev/null | python3 -c '
+import sys,json
+d=json.load(sys.stdin)
+print("publisher :",d.get("publisherRunning"))
+print("producer  :",d.get("producerRunning"))
+print("video     :",d.get("videoFeederRunning"))
+print("transport :",d.get("transportHealthy"))
+print("period    :",d.get("visualPeriod"))
+print("visual    :",d.get("visualPath"))
+print("error     :",d.get("lastError",""))
+' 2>/dev/null || true
+
+echo
+echo "================================================"
+echo "✅ ВЕСЬ ЭКРАН ВОССТАНОВЛЕН"
+echo "✅ VISUAL CACHE RESTORED"
+echo "✅ server.mjs UNTOUCHED"
+echo "✅ /etc/andrik-radio.env UNTOUCHED"
+echo "✅ R905 / R906 UNTOUCHED"
+echo "✅ YOUTUBE BROADCAST NOT CREATED / NOT REBOUND"
+echo "================================================"

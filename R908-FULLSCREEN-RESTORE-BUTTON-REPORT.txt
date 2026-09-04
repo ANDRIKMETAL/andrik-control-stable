@@ -1,0 +1,37 @@
+ANDRIK R908 — FULLSCREEN RESTORE BUTTON
+Date: 2026-09-04
+Base: ANDRIK R907 CONTROL SPOILERS / RU CITIES / SMALL LIKE
+
+Added:
+- Main Radio Control emergency button: "🖥 ВОССТАНОВИТЬ ВЕСЬ ЭКРАН".
+- New remote action: fullscreen-restore.
+- Cloudflare worker allowlist support for fullscreen-restore.
+- OVH web-agent R867-compatible handler for fullscreen-restore.
+- Proven visual-cache recovery script:
+  radio247/vm-lite/andrik-radio-fullscreen-cache-restore-r908
+- No server.mjs or /etc/andrik-radio.env rollback during fullscreen recovery.
+- R905 clip rotation and R906 MP3 shuffle are not touched by the fullscreen recovery script.
+- YouTube broadcast is not created or rebound by the fullscreen recovery action.
+- Current visual masters are backed up before replacement; automatic rollback is attempted if radio restart fails.
+- R908 cache reset page created; owner auth and OneSignal are preserved.
+
+ONE-TIME VPS ARMING AFTER SITE DEPLOY:
+curl -fsSL https://andrikmetal.com/radio247/vm-lite/install-r908-fullscreen-cache-rescue-no-radio-restart.sh | sudo env ANDRIK_SITE_BASE=https://andrikmetal.com bash
+
+The installer restarts only the web-agent service. It does NOT restart andrik-radio.service.
+
+Emergency button behavior:
+1. Find newest directory /opt/andrik-radio/backups/FULLSCREEN-CACHE-BEFORE-* using find -type d.
+2. Back up current visual masters.
+3. Stop andrik-radio.service.
+4. Restore proven stream-*-master-r620.mp4 files into /var/cache/andrik-radio-r622/visuals.
+5. Start radio once and re-arm /control/full-fit.
+6. Verify service/status.
+
+Build checks:
+- node --check: _worker.js OK
+- node --check: radio-remote-control-r870.js OK
+- node --check: radio-observability-r908.js OK
+- node --check: andrik-radio-web-agent-r803.mjs OK
+- bash -n: fullscreen restore script OK
+- bash -n: R908 installer OK

@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788529843897-a6c3f3746e",
-  "release": "R907",
-  "archiveName": "ANDRIK-R907-CONTROL-SPOILERS-RU-CITIES-SMALL-LIKE-SAFE-FULL.zip",
-  "sourceHead": "1a8ad16bd3310bd1d7cb005ad8e2a6799b1e3439",
-  "backupSha": "1a8ad16bd3310bd1d7cb005ad8e2a6799b1e3439",
+  "operationId": "publish-1788544989640-3069c00664",
+  "release": "R908",
+  "archiveName": "ANDRIK-R908-FULLSCREEN-RESTORE-BUTTON-R907-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "99b089f60fd19da72b6be3e55fe86792b2c891da",
+  "backupSha": "99b089f60fd19da72b6be3e55fe86792b2c891da",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-04T13:50:54.860Z"
+  "generatedAt": "2026-09-04T18:03:10.140Z"
 }

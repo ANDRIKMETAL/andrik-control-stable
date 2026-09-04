@@ -20,6 +20,7 @@ const RADIO_ENV='/etc/andrik-radio.env';
 const VISUAL_MANUAL_MARKER='/var/cache/andrik-radio-r622/visuals/.manual-visual-r658';
 const VISUAL_AUTO_R658='/usr/local/sbin/andrik-visual-auto-r703';
 const GOLD_RESTORE_R867='/usr/local/sbin/andrik-radio-fullscreen-gold-restore-r867';
+const FULLSCREEN_CACHE_RESTORE_R908='/usr/local/sbin/andrik-radio-fullscreen-cache-restore-r908';
 const SAFE_CACHE_CLEAN_R867='/usr/local/sbin/andrik-radio-safe-cache-clean-r867';
 const VISUAL_FILES=Object.freeze({morning:'stream-morning-master-r703.mp4',day:'stream-day-master-r620.mp4',evening:'stream-evening-master-r620.mp4',night:'stream-night-master-r620.mp4'});
 const DEFAULT_TICKER='ANDRIK METAL RADIO 24/7   •   ANDRIKMETAL.COM   •   НОВЫЕ СИНГЛЫ И АЛЬБОМЫ ANDRIK   •   ПОДПИСЫВАЙТЕСЬ • СТАВЬТЕ ЛАЙКИ • КОММЕНТИРУЙТЕ   •   ';
@@ -246,6 +247,11 @@ async function execute(action,command={},headers={}){
   if(action==='encoder-start'||action==='start'){
     const r=await runAsync('systemctl',['start','andrik-radio.service'],90000);
     return {ok:r.ok,output:`OVH ENCODER START ${r.ok?'✅':'❌'}\n${r.output}`};
+  }
+  if(action==='fullscreen-restore'){
+    if(!fs.existsSync(FULLSCREEN_CACHE_RESTORE_R908))return {ok:false,output:`FULLSCREEN VISUAL CACHE RESTORE ❌\nMissing ${FULLSCREEN_CACHE_RESTORE_R908}`};
+    const r=await runAsync(FULLSCREEN_CACHE_RESTORE_R908,[],150000);
+    return {ok:r.ok,output:`FULLSCREEN VISUAL CACHE RESTORE ${r.ok?'✅':'❌'}\n${r.output}`};
   }
   if(action==='gold-restore'){
     if(!fs.existsSync(GOLD_RESTORE_R867))return {ok:false,output:`FULLSCREEN GOLD RESTORE ❌\nMissing ${GOLD_RESTORE_R867}`};

@@ -54,7 +54,7 @@
     const activeRaw=!legacyFullFit&&['queued','running'].includes(commandState);
     const active=activeRaw&&commandAge<185000;
     const stale=activeRaw&&commandAge>=185000;
-    const r867Only=new Set(['gold-restore','cache-clean','soft-restart']);
+    const r867Only=new Set(['gold-restore','fullscreen-restore','cache-clean','soft-restart']);
     document.querySelectorAll('[data-radio-action]').forEach(b=>{
       const action=String(b.dataset.radioAction||'');
       const needsR867=r867Only.has(action);
@@ -269,6 +269,21 @@
     finally{busy=false;await refresh()}
   }
 
+  async function fullscreenRestore(){
+    if(busy)return;
+    if(!confirm('🖥 ВОССТАНОВИТЬ ВЕСЬ ЭКРАН? Будут возвращены только проверенные visual master из последнего FULLSCREEN-CACHE-BEFORE-* и один раз перезапущено радио. server.mjs / env / R905 / R906 не откатываются.'))return;
+    busy=true;render(lastRemote||{});
+    try{
+      setMsg('🖥 Восстанавливаю проверенный fullscreen visual cache…','work');
+      const d=await agentAction('fullscreen-restore');
+      setResult(String(d?.result?.output||'FULLSCREEN VISUAL CACHE RESTORE ✅'));
+      setMsg('Весь экран восстановлен ✅ · проверяю эфир…','ok');
+      await sleep(5000);
+      await refresh();
+    }catch(e){setMsg(`Восстановление экрана: ${e.message||e}`,'bad');setResult(`FULLSCREEN RESTORE ERROR\n${e.message||e}`)}
+    finally{busy=false;await refresh()}
+  }
+
   async function goldRestore(){
     if(busy)return;if(!confirm('🚑 ВОССТАНОВИТЬ сохранённый FULLSCREEN GOLD? Это вернёт server.mjs + /etc/andrik-radio.env и один раз перезапустит радио.'))return;
     busy=true;render(lastRemote||{});
@@ -318,7 +333,7 @@
   document.addEventListener('click',e=>{
     const oauth=e.target.closest('[data-radio-youtube-oauth-connect]');if(oauth){e.preventDefault();reconnectYoutube();return}
     const b=e.target.closest('[data-radio-action]');
-    if(b){e.preventDefault();const a=b.dataset.radioAction;if(a==='start')startSequence();else if(a==='gold-restore')goldRestore();else if(a==='cache-clean')cacheClean();else if(a==='soft-restart')softRestart();else if(a==='stop')stopSequence();else if(a==='status')statusSequence();else if(a==='auto-safe')autoSequence();return}
+    if(b){e.preventDefault();const a=b.dataset.radioAction;if(a==='start')startSequence();else if(a==='gold-restore')goldRestore();else if(a==='fullscreen-restore')fullscreenRestore();else if(a==='cache-clean')cacheClean();else if(a==='soft-restart')softRestart();else if(a==='stop')stopSequence();else if(a==='status')statusSequence();else if(a==='auto-safe')autoSequence();return}
     const t=e.target.closest('[data-radio-ticker-apply]');if(t){e.preventDefault();const input=document.querySelector('[data-radio-ticker-input]');if(input)saveTicker(input.value)}
   });
   document.addEventListener('input',e=>{
@@ -327,7 +342,7 @@
     clearTimeout(tickerTimer);tickerTimer=setTimeout(()=>saveTicker(input.value),850);
   });
 
-  window.AndrikRadioRemoteR870={refresh,start:()=>startSequence(),goldRestore,cacheClean,softRestart,stop:stopSequence,status:statusSequence,saveTicker};window.AndrikRadioRemoteR867=window.AndrikRadioRemoteR870;window.AndrikRadioRemoteR687=window.AndrikRadioRemoteR870;window.AndrikRadioRemoteR665=window.AndrikRadioRemoteR870;
+  window.AndrikRadioRemoteR870={refresh,start:()=>startSequence(),goldRestore,fullscreenRestore,cacheClean,softRestart,stop:stopSequence,status:statusSequence,saveTicker};window.AndrikRadioRemoteR867=window.AndrikRadioRemoteR870;window.AndrikRadioRemoteR687=window.AndrikRadioRemoteR870;window.AndrikRadioRemoteR665=window.AndrikRadioRemoteR870;
   const arm=()=>{if(timer)clearInterval(timer);timer=null;if(document.hidden)return;timer=setInterval(refresh,15000)};
   const boot=()=>{if(!document.hidden)refresh();arm()};
   if(window.AndrikOwnerSession?.ready)window.AndrikOwnerSession.ready().finally(boot);else boot();
