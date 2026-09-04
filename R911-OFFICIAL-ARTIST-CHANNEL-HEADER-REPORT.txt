@@ -1,0 +1,14 @@
+ANDRIK Control — R911
+Date: 2026-09-04
+Base: R910 ARTIST DATA REFRESH OAC SHORTS
+
+CHANGE
+- YouTube top header now says: OFFICIAL ARTIST CHANNEL.
+- Added a crisp white Official Artist Channel music-note badge directly beside the YouTube title.
+- Badge is inline SVG, responsive and sharp at any screen density.
+
+PRESERVED
+- All R910 Artist Analytics fixes and forced refresh logic.
+- YouTube Music / Shorts / Video / Live breakdowns.
+- Traffic sources, subscribed-status breakdown and OAC Shorts shelf.
+- Radio, FFmpeg, RTMPS, VPS and stream pipeline untouched.

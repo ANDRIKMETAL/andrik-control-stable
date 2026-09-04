@@ -1163,15 +1163,22 @@ body.analytics-admin-page.is-country-returning #worldMap .world-map-dot.is-selec
             </div>
           </section>
 
+
+<style id="youtube-artist-r910-extra">
+.youtube-artist-refresh-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 14px}.youtube-artist-refresh{appearance:none;border:1px solid rgba(94,206,255,.28);background:rgba(58,167,222,.09);color:#cceeff;border-radius:12px;padding:9px 12px;font-weight:850;font-size:.78rem}.youtube-artist-refresh:disabled{opacity:.55}.youtube-artist-refresh-status{color:#708a9b;font-size:.72rem;line-height:1.35;min-width:0;word-break:break-word}.youtube-artist-track-row{display:grid;grid-template-columns:52px minmax(0,1fr) 22px;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.06);text-decoration:none!important;color:inherit!important}.youtube-artist-track-row:last-child{border-bottom:0}.youtube-artist-track-row img{width:52px;height:52px;border-radius:9px;object-fit:cover;background:#101820}.youtube-artist-track-row span{min-width:0}.youtube-artist-track-row small{display:block;color:#71899a;font-size:.67rem;margin-bottom:3px}.youtube-artist-track-row strong{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#edf8ff;font-size:.85rem}.youtube-artist-track-row em{font-style:normal;color:#72cfff;font-weight:900}
+</style>
           <section class="admin-control-card youtube-artist-card" id="youtubeArtistSection" hidden>
             <div class="admin-card-title-row youtube-artist-title"><div><span class="eyeline">🎵 ARTIST STUDIO</span><h2>Аналитика артиста</h2></div><div class="youtube-artist-badges"><span class="youtube-artist-badge">Official Artist Channel</span><span class="youtube-artist-badge">API · 28 дней</span></div></div>
             <p class="youtube-artist-intro">YouTube Music, Shorts, обычные видео и Live — отдельно, плюс источники трафика и просмотры подписчиков.</p>
+            <div class="youtube-artist-refresh-row"><button class="youtube-artist-refresh" id="youtubeArtistRefresh" type="button">↻ Обновить данные артиста</button><span class="youtube-artist-refresh-status" id="youtubeArtistRefreshStatus">Проверяем свежий снимок…</span></div>
             <div class="analytics-youtube-studio-kpis youtube-artist-kpis" id="youtubeArtistKpis"></div>
             <div class="youtube-artist-grid">
               <article class="youtube-artist-mini"><h3>🎧 Где слушают</h3><div class="analytics-list" id="youtubeArtistProducts"></div></article>
               <article class="youtube-artist-mini"><h3>📺 Форматы контента</h3><div class="analytics-list" id="youtubeArtistFormats"></div></article>
               <article class="youtube-artist-mini"><h3>🧭 Источники трафика</h3><div class="analytics-list" id="youtubeArtistTraffic"></div></article>
               <article class="youtube-artist-mini"><h3>👥 Подписчики / не подписаны</h3><div class="analytics-list" id="youtubeArtistSubscriptions"></div></article>
+              <article class="youtube-artist-mini"><h3>🔥 Популярные треки из Shorts · OAC</h3><div id="youtubeArtistPopularTracks"><div class="admin-empty">Загружаем публичную полку канала…</div></div></article>
+              <article class="youtube-artist-mini"><h3>⚡ Популярные Shorts · 28 дней</h3><div id="youtubeArtistTopShortsInline"><div class="admin-empty">Загружаем топ Shorts…</div></div></article>
             </div>
             <div class="youtube-artist-native"><strong>Artist-only отчёты в YouTube Studio</strong><p>Total Reach и Song Rollup учитывают музыку шире собственного канала, поэтому Control не подменяет их приблизительными цифрами.</p><div class="youtube-artist-native-tags"><span>Total Reach</span><span>Song Rollup</span><span>Fastest Moving Songs in Shorts</span><span>Fan / Top fan*</span><span>60 мин / 48 ч*</span></div><a class="youtube-artist-open" id="youtubeArtistStudioLink" href="https://studio.youtube.com/" target="_blank" rel="noopener">Открыть Analytics for Artists ↗</a><p class="youtube-artist-note">* Доступность зависит от аккаунта и интерфейса Studio.</p></div>
           </section>
@@ -4817,7 +4824,7 @@ body .country-scroll-overlay-r258::before{margin:0 0 10px!important;}
 <link rel="stylesheet" href="/assets/landscape-world-scroll-r428.css?v=55.00-r428">
 <link rel="stylesheet" href="/assets/map-controls-compact-r499.css?v=55.00-r499">
 <script defer src="/assets/planet-map-transition-r450.js?v=55.00-r450"></script>
-<script defer src="/assets/youtube-admin-v55-00j.js?v=55.00-r909"></script>
+<script defer src="/assets/youtube-admin-v55-00j.js?v=55.00-r910"></script>
 <script defer src="/assets/control-version-sync-r558.js?v=55.00-r558"></script>
 <script defer src="/assets/social-platform-swipe-r524.js?v=55.00-r524"></script>
 </body></html>

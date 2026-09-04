@@ -102,6 +102,50 @@
 .youtube-event-row.is-subscriber p{color:#aee8c6!important}
 </style>
 
+<style id="youtube-official-artist-header-r911">
+.youtube-admin-page .youtube-official-artist-eyeline{
+  color:#c8edff!important;
+  font-weight:900!important;
+  letter-spacing:.26em!important;
+  text-transform:uppercase!important;
+  text-shadow:0 0 18px rgba(92,205,255,.20)!important;
+}
+.youtube-admin-page .youtube-title-official-artist{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  flex-wrap:nowrap!important;
+  gap:13px!important;
+  width:100%!important;
+}
+.youtube-admin-page .youtube-title-official-artist h1{
+  flex:0 1 auto!important;
+  min-width:0!important;
+  text-align:center!important;
+}
+.youtube-admin-page .youtube-official-artist-mark{
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  flex:0 0 48px!important;
+  width:48px!important;
+  height:48px!important;
+  margin-top:3px!important;
+  filter:drop-shadow(0 0 10px rgba(255,255,255,.13))!important;
+}
+.youtube-admin-page .youtube-official-artist-mark svg{display:block!important;width:100%!important;height:100%!important;overflow:visible!important}
+@media(max-width:540px){
+  .youtube-admin-page .youtube-official-artist-eyeline{font-size:.70rem!important;letter-spacing:.21em!important}
+  .youtube-admin-page .youtube-title-official-artist{gap:10px!important}
+  .youtube-admin-page .youtube-official-artist-mark{flex-basis:39px!important;width:39px!important;height:39px!important;margin-top:2px!important}
+}
+@media(max-width:360px){
+  .youtube-admin-page .youtube-official-artist-eyeline{font-size:.62rem!important;letter-spacing:.16em!important}
+  .youtube-admin-page .youtube-title-official-artist{gap:8px!important}
+  .youtube-admin-page .youtube-official-artist-mark{flex-basis:34px!important;width:34px!important;height:34px!important}
+}
+</style>
+
 <style id="youtube-artist-studio-r909">
 .youtube-artist-card{margin-top:16px;border:1px solid rgba(255,82,82,.18);background:linear-gradient(145deg,rgba(13,20,27,.94),rgba(10,15,22,.97));overflow:hidden}
 .youtube-artist-title{align-items:flex-start;gap:12px}.youtube-artist-title h2{margin:3px 0 0;font-size:1.28rem}.youtube-artist-badges{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}
@@ -110,6 +154,9 @@
 .youtube-artist-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.youtube-artist-mini{border:1px solid rgba(110,150,175,.14);background:rgba(7,14,20,.58);border-radius:15px;padding:13px;min-width:0}.youtube-artist-mini h3{font-size:.95rem;margin:0 0 10px;color:#eaf7ff}.youtube-artist-mini .analytics-list-row{grid-template-columns:28px minmax(0,1fr) auto;gap:8px}.artist-list-row small{display:block;color:#6f8798;font-size:.69rem;margin-top:3px}.artist-list-row em small{display:block;text-align:right;color:#7290a3;font-size:.66rem}
 .youtube-artist-native{margin-top:13px;padding:13px;border:1px dashed rgba(255,95,95,.24);border-radius:15px;background:rgba(27,9,13,.24)}.youtube-artist-native strong{display:block;margin-bottom:6px;color:#fff}.youtube-artist-native p{margin:0 0 11px;color:#a9b7c2;line-height:1.45;font-size:.83rem}.youtube-artist-native-tags{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 12px}.youtube-artist-native-tags span{padding:5px 8px;border-radius:999px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);font-size:.7rem;color:#c7d4dc}.youtube-artist-open{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:9px 13px;border-radius:12px;background:#ff3434;color:white!important;text-decoration:none!important;font-weight:900;font-size:.83rem}
 .youtube-artist-note{margin:10px 0 0;color:#718696;font-size:.72rem;line-height:1.4}
+
+.youtube-artist-refresh-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 14px}.youtube-artist-refresh{appearance:none;border:1px solid rgba(94,206,255,.28);background:rgba(58,167,222,.09);color:#cceeff;border-radius:12px;padding:9px 12px;font-weight:850;font-size:.78rem}.youtube-artist-refresh:disabled{opacity:.55}.youtube-artist-refresh-status{color:#708a9b;font-size:.72rem;line-height:1.35;min-width:0;word-break:break-word}
+.youtube-artist-wide{grid-column:1/-1}.youtube-artist-track-row{display:grid;grid-template-columns:52px minmax(0,1fr) 22px;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.06);text-decoration:none!important;color:inherit!important}.youtube-artist-track-row:last-child{border-bottom:0}.youtube-artist-track-row img{width:52px;height:52px;border-radius:9px;object-fit:cover;background:#101820}.youtube-artist-track-row span{min-width:0}.youtube-artist-track-row small{display:block;color:#71899a;font-size:.67rem;margin-bottom:3px}.youtube-artist-track-row strong{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#edf8ff;font-size:.85rem}.youtube-artist-track-row em{font-style:normal;color:#72cfff;font-weight:900}
 @media(max-width:720px){.youtube-artist-title{display:block}.youtube-artist-badges{justify-content:flex-start;margin-top:9px}.youtube-artist-grid{grid-template-columns:1fr}.youtube-artist-card{margin-top:12px}.youtube-artist-mini{padding:11px}.youtube-artist-open{width:100%}}
 </style>
 </head>
@@ -117,8 +164,22 @@
 <nav class="topbar control-topbar control-detail-topbar youtube-topbar-clean"><div class="wrap nav-shell analytics-topbar-minimal"><a class="control-center-logo" id="controlCenterLogo" href="https://andrikmetal.com/" aria-label="Открыть главный сайт ANDRIK"><img class="logo-ok" src="/assets/control-topbar-eye-triangle.jpg?v=55.00-r129" alt=""/><img class="logo-error" src="/assets/andrik-control-red-triangle-192.png" alt=""/></a></div></nav>
 <main class="admin-main"><div class="wrap">
 <header class="youtube-compact-header">
-  <span class="eyeline">Официальный канал ANDRIK</span>
-  <div class="youtube-title-status-row youtube-title-only"><h1>YouTube</h1></div>
+  <span class="eyeline youtube-official-artist-eyeline">OFFICIAL ARTIST CHANNEL</span>
+  <div class="youtube-title-status-row youtube-title-only youtube-title-official-artist">
+    <h1>YouTube</h1>
+    <span class="youtube-official-artist-mark" role="img" aria-label="Official Artist Channel" title="Official Artist Channel">
+      <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+        <g fill="#fff">
+          <circle cx="32" cy="12" r="10"/><circle cx="46" cy="18" r="10"/>
+          <circle cx="52" cy="32" r="10"/><circle cx="46" cy="46" r="10"/>
+          <circle cx="32" cy="52" r="10"/><circle cx="18" cy="46" r="10"/>
+          <circle cx="12" cy="32" r="10"/><circle cx="18" cy="18" r="10"/>
+          <circle cx="32" cy="32" r="17"/>
+        </g>
+        <path fill="#090b0e" d="M36 17v22.2a8.2 8.2 0 1 0 4.4 7.3V27.1l11-2.4V17H36z"/>
+      </svg>
+    </span>
+  </div>
   <div class="youtube-header-links youtube-profile-under-title"><a class="youtube-profile-link" id="youtubeProfileLink" href="https://www.youtube.com/@andrikmetal" target="_blank" rel="noopener">↗ Открыть профиль</a></div>
   <div class="youtube-studio-gate youtube-studio-gate-inline youtube-studio-gate-below-profile" id="youtubeStudioGate"><div class="admin-empty">Проверяем данные Worker…</div></div>
   <p>Канал · Studio · реакции · аудитория</p>
@@ -139,12 +200,15 @@
     <div class="youtube-artist-badges"><span class="youtube-artist-badge">Official Artist Channel</span><span class="youtube-artist-badge">API · 28 дней</span></div>
   </div>
   <p class="youtube-artist-intro">Отдельно показываем YouTube Music, Shorts, обычные видео и Live — плюс источники трафика и долю просмотров от подписчиков. Данные идут через уже подключённый официальный YouTube Analytics OAuth.</p>
+  <div class="youtube-artist-refresh-row"><button class="youtube-artist-refresh" id="youtubeArtistRefresh" type="button">↻ Обновить данные артиста</button><span class="youtube-artist-refresh-status" id="youtubeArtistRefreshStatus">Проверяем свежий снимок…</span></div>
   <div class="analytics-youtube-studio-kpis youtube-artist-kpis" id="youtubeArtistKpis"></div>
   <div class="youtube-artist-grid">
     <article class="youtube-artist-mini"><h3>🎧 Где слушают</h3><div class="analytics-list" id="youtubeArtistProducts"></div></article>
     <article class="youtube-artist-mini"><h3>📺 Форматы контента</h3><div class="analytics-list" id="youtubeArtistFormats"></div></article>
     <article class="youtube-artist-mini"><h3>🧭 Источники трафика</h3><div class="analytics-list" id="youtubeArtistTraffic"></div></article>
     <article class="youtube-artist-mini"><h3>👥 Подписчики / не подписаны</h3><div class="analytics-list" id="youtubeArtistSubscriptions"></div></article>
+    <article class="youtube-artist-mini"><h3>🔥 Популярные треки из Shorts · OAC</h3><div id="youtubeArtistPopularTracks"><div class="admin-empty">Загружаем публичную полку канала…</div></div></article>
+    <article class="youtube-artist-mini"><h3>⚡ Популярные Shorts · 28 дней</h3><div id="youtubeArtistTopShortsInline"><div class="admin-empty">Загружаем топ Shorts…</div></div></article>
   </div>
   <div class="youtube-artist-native">
     <strong>Дополнительные возможности именно артиста — в родном YouTube Studio</strong>
@@ -172,9 +236,9 @@
   <div class="andrik-spoiler-body"><div class="analytics-list" id="youtubeStudioSharing"></div></div>
 </details>
 
-<footer class="control-version-footer"><strong>Live Web AI · профиль ANDRIK · R579 AUTO LIVE</strong><span>YouTube Studio · Artist Analytics · музыка · Shorts · аудитория</span></footer>
+<footer class="control-version-footer"><strong>Live Web AI · профиль ANDRIK · R579 AUTO LIVE</strong><span>YouTube Studio · Official Artist Channel · R911 · музыка · Shorts · OAC · аудитория</span></footer>
 </div></main>
-<script defer src="/assets/youtube-admin-v55-00k.js?v=55.00-r909"></script><script defer src="/assets/control-status-eye-v55-00-r88.js?v=55.00-r857q"></script><script defer src="/assets/control-version-v55-00-final-r1.js?v=55.00-final-r1"></script><script defer src="/assets/control-version-v55-00-final-r2.js?v=55.00-final-r2"></script><script defer src="/assets/control-version-v55-00-final-r21.js?v=55.00-final-r21"></script><script defer src="/assets/control-live-eye-v55-00-r265.js?v=55.00-r265"></script><script defer src="/assets/control-version-v55-00-r115.js?v=55.00-r115"></script><script defer src="/assets/unified-glow-r139.js?v=55.00-r142"></script>
+<script defer src="/assets/youtube-admin-v55-00k.js?v=55.00-r910"></script><script defer src="/assets/control-status-eye-v55-00-r88.js?v=55.00-r857q"></script><script defer src="/assets/control-version-v55-00-final-r1.js?v=55.00-final-r1"></script><script defer src="/assets/control-version-v55-00-final-r2.js?v=55.00-final-r2"></script><script defer src="/assets/control-version-v55-00-final-r21.js?v=55.00-final-r21"></script><script defer src="/assets/control-live-eye-v55-00-r265.js?v=55.00-r265"></script><script defer src="/assets/control-version-v55-00-r115.js?v=55.00-r115"></script><script defer src="/assets/unified-glow-r139.js?v=55.00-r142"></script>
 <script defer src="/assets/control-mini-player-r141.js?v=55.00-r144"></script>
 <script defer src="/assets/control-version-sync-r558.js?v=55.00-r558"></script>
 <script defer src="/assets/social-platform-swipe-r524.js?v=55.00-r524"></script>

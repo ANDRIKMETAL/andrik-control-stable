@@ -1,8 +1,8 @@
 (() => {
   const KEY_SESSION='andrik-comments-admin-key';
   const KEY_LOCAL='andrik-comments-admin-key-persistent';
-  const CACHE_KEY='andrik-control-youtube-pane-r909-artist';
-  const MONITOR_CACHE_KEY='andrik-control-youtube-monitor-r909-artist';
+  const CACHE_KEY='andrik-control-youtube-pane-r910-artist';
+  const MONITOR_CACHE_KEY='andrik-control-youtube-monitor-r910-artist';
   const INTEGRATED=document.body.classList.contains('analytics-swipe-page');
   const $=id=>document.getElementById(id);
   const escapeHtml=value=>String(value??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
@@ -42,11 +42,75 @@
   const percent=(value,total)=>total>0?`${(100*Number(value||0)/Number(total)).toLocaleString('ru-RU',{maximumFractionDigits:1})}%`:'—';
   function renderArtistBreakdown(id,items=[],dimensionKey,labelMap={}){
     const box=$(id);if(!box)return;
-    const rows=(Array.isArray(items)?items:[]).filter(row=>Number(row?.views||0)>0);
+    const rows=(Array.isArray(items)?items:[]).filter(row=>Number(row?.views||0)>0).slice().sort((a,b)=>Number(b.views||0)-Number(a.views||0));
     if(!rows.length){box.innerHTML='<div class="admin-empty">YouTube пока не вернул данные за 28 дней.</div>';return}
     const max=Math.max(1,...rows.map(row=>Number(row.views||0)));
     const total=rows.reduce((sum,row)=>sum+Number(row.views||0),0);
     box.innerHTML=rows.slice(0,12).map((row,index)=>`<article class="analytics-list-row artist-list-row"><span class="analytics-list-index">${index+1}</span><div><strong>${escapeHtml(labelMap[row[dimensionKey]]||row[dimensionKey]||'Другое')}</strong><i><b style="width:${Math.max(3,Number(row.views||0)/max*100)}%"></b></i><small>${number(row.estimatedMinutesWatched||0)} мин просмотра</small></div><em>${number(row.views)} <small>${percent(row.views,total)}</small></em></article>`).join('');
+  }
+  let artistRefreshR910Promise=null,artistExtrasR910Promise=null,artistExtrasLoadedR910=0;
+  function artistHasMissingBreakdownsR910(studio={}){
+    const views=Number(studio?.summary?.views||0);
+    if(views<=0)return false;
+    return !Array.isArray(studio.products28)||!studio.products28.length||!Array.isArray(studio.contentTypes28)||!studio.contentTypes28.length||!Array.isArray(studio.trafficSources28)||!studio.trafficSources28.length||!Array.isArray(studio.subscriptionStatus28)||!studio.subscriptionStatus28.length;
+  }
+  async function forceArtistRefreshR910(reason='manual'){
+    if(!getKey())return;
+    if(artistRefreshR910Promise)return artistRefreshR910Promise;
+    artistRefreshR910Promise=(async()=>{
+      const button=$('youtubeArtistRefresh');
+      if(button){button.disabled=true;button.textContent='Обновляем…'}
+      try{
+        await api('/api/control/snapshots/refresh',{method:'POST'});
+        try{sessionStorage.setItem('andrik-r910-artist-refresh-ok',String(Date.now()))}catch(_){ }
+        if(INTEGRATED&&typeof window.andrikRefreshAudience==='function')await window.andrikRefreshAudience();else await load();
+      }catch(error){
+        const status=$('youtubeArtistRefreshStatus');if(status)status.textContent=`Не удалось обновить: ${error.message}`;
+      }finally{
+        if(button){button.disabled=false;button.textContent='↻ Обновить данные артиста'}
+        artistRefreshR910Promise=null;
+      }
+    })();
+    return artistRefreshR910Promise;
+  }
+  function maybeAutoRefreshArtistR910(studio={}){
+    const version=String(studio?.artistAnalytics?.version||'');
+    if(version==='r910'&&!artistHasMissingBreakdownsR910(studio))return;
+    let last=0;try{last=Number(sessionStorage.getItem('andrik-r910-artist-auto-refresh')||0)}catch(_){ }
+    if(Date.now()-last<10*60*1000)return;
+    try{sessionStorage.setItem('andrik-r910-artist-auto-refresh',String(Date.now()))}catch(_){ }
+    setTimeout(()=>void forceArtistRefreshR910('auto'),350);
+  }
+  function renderArtistTracksR910(data={}){
+    const box=$('youtubeArtistPopularTracks');if(!box)return;
+    const rows=Array.isArray(data.tracks)?data.tracks:[];
+    if(!rows.length){
+      const href=escapeHtml(data.channelUrl||'https://www.youtube.com/@andrikmetal');
+      box.innerHTML=`<div class="admin-empty">YouTube не отдал публичную полку автоматически. <a href="${href}" target="_blank" rel="noopener">Открыть канал ↗</a></div>`;
+      return;
+    }
+    box.innerHTML=rows.slice(0,6).map((row,index)=>`<a class="youtube-artist-track-row" href="${escapeHtml(row.url||data.channelUrl||'#')}" target="_blank" rel="noopener"><img src="${escapeHtml(row.thumbnail||'')}" alt=""><span><small>#${index+1} · OAC</small><strong>${escapeHtml(row.title||'Трек')}</strong></span><em>↗</em></a>`).join('');
+  }
+  function renderArtistShortsInlineR910(data={}){
+    const box=$('youtubeArtistTopShortsInline');if(!box)return;
+    const rows=Array.isArray(data.shorts)?data.shorts:[];
+    if(!rows.length){box.innerHTML='<div class="admin-empty">YouTube пока не вернул топ Shorts.</div>';return}
+    box.innerHTML=rows.slice(0,4).map((row,index)=>`<a class="youtube-artist-track-row" href="${escapeHtml(row.url||('#'))}" target="_blank" rel="noopener"><img src="${escapeHtml(row.thumbnail||'')}" alt=""><span><small>#${index+1} · ${number(row.views||0)} просмотров</small><strong>${escapeHtml(row.title||'Shorts')}</strong></span><em>↗</em></a>`).join('');
+  }
+  async function loadArtistExtrasR910(force=false){
+    if(!getKey())return;
+    if(!force&&Date.now()-artistExtrasLoadedR910<5*60*1000)return;
+    if(artistExtrasR910Promise)return artistExtrasR910Promise;
+    artistExtrasR910Promise=(async()=>{
+      try{
+        const [shelf,top]=await Promise.all([
+          api('/api/control/youtube-oac-shelf?v=55.00-r910').catch(error=>({available:false,error:error.message,tracks:[],channelUrl:'https://www.youtube.com/@andrikmetal'})),
+          api('/api/control/youtube-top-content?v=55.00-r910').catch(error=>({available:false,error:error.message,shorts:[]}))
+        ]);
+        renderArtistTracksR910(shelf||{});renderArtistShortsInlineR910(top||{});artistExtrasLoadedR910=Date.now();
+      }finally{artistExtrasR910Promise=null}
+    })();
+    return artistExtrasR910Promise;
   }
   function renderArtistStudio(yt={},studio={}){
     const section=$('youtubeArtistSection');if(!section)return;
@@ -64,6 +128,10 @@
     renderArtistBreakdown('youtubeArtistFormats',types,'creatorContentType',CONTENT_TYPE_MAP);
     renderArtistBreakdown('youtubeArtistTraffic',studio.trafficSources28||[],'insightTrafficSourceType',TRAFFIC_MAP);
     renderArtistBreakdown('youtubeArtistSubscriptions',studio.subscriptionStatus28||[],'subscribedStatus',SUB_STATUS_MAP);
+    const status=$('youtubeArtistRefreshStatus');
+    if(status){const errors=Array.isArray(studio.partialErrors)?studio.partialErrors:[];status.textContent=errors.length?`Часть artist-запросов: ${errors[0]}`:`Снимок: ${studio.updatedAt?dateTime(studio.updatedAt):'обновляется'}`;}
+    maybeAutoRefreshArtistR910(studio);
+    void loadArtistExtrasR910(false);
     const link=$('youtubeArtistStudioLink');if(link){const channelId=String(yt.channelId||studio.channelId||'').trim();link.href=channelId?`https://studio.youtube.com/channel/${encodeURIComponent(channelId)}/analytics/tab-overview/period-default`:'https://studio.youtube.com/';}
   }
   const youtubeTrendState={field:'views',rows:[]};
@@ -297,7 +365,7 @@
     catch(error){authState(error.message!=='unauthorized',error.message==='unauthorized'?'Ключ не принят':`Ошибка: ${error.message}`)}
   }
   $('youtubeEventsRun')?.addEventListener('click',runYoutubeEvents);
-  document.addEventListener('click',event=>{if(event.target.closest?.('#youtubeStudioConnect'))connectYoutubeStudio()});
+  document.addEventListener('click',event=>{if(event.target.closest?.('#youtubeStudioConnect'))connectYoutubeStudio();if(event.target.closest?.('#youtubeArtistRefresh'))void forceArtistRefreshR910('manual');});
   const oauthState=new URLSearchParams(location.search).get('youtube');
   if(oauthState==='connected'){
     void finishYoutubeOAuth();

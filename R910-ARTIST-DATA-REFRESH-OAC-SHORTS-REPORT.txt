@@ -1,0 +1,33 @@
+ANDRIK Control — R910 ARTIST DATA REFRESH + OAC SHORTS
+Date: 2026-09-04
+Base: R909 ARTIST STUDIO — fully preserved
+
+FIXED
+- Artist cards no longer sit on the pre-R909 snapshot after install: when the old snapshot lacks the new artist breakdowns, Control performs one guarded full snapshot refresh automatically.
+- Added manual button: “Обновить данные артиста”.
+- Artist API queries now retry with a minimal supported YouTube Analytics request and channel==MINE fallback if a strict report shape is rejected.
+- Artist lists are sorted locally after fallback queries.
+- Partial YouTube Analytics errors are surfaced in the Artist card instead of silently looking like zero real traffic.
+
+ADDED
+- Inline “Популярные Shorts · 28 дней” using the existing authenticated top-content endpoint.
+- Read-only “Популярные треки из Shorts · OAC” mirror from the PUBLIC Official Artist Channel home shelf when YouTube includes it in ytInitialData.
+- If YouTube does not expose that public shelf to the Worker, the card fails safely and links directly to the public OAC channel. No guessed rankings are shown.
+
+IMPORTANT DATA MODEL
+- YouTube Music / content format / traffic source / subscribed status = official YouTube Analytics API.
+- Popular tracks from Shorts shelf = public OAC channel shelf, because YouTube does not expose the artist-wide song ranking through the normal public channel Analytics API.
+- Artist-only private reports such as Total Reach / Song Rollup / Fastest Moving Songs in Shorts remain linked to native YouTube Studio.
+
+PRESERVED
+- R909 OAuth.
+- R908 radio/FFmpeg/RTMPS/VPS streaming code.
+- Existing YouTube channel KPIs, country, age/gender, top content, monitoring and push logic.
+
+FILES CHANGED FROM R909
+- _worker.js
+- youtube-admin.html
+- analytics-admin.html
+- assets/youtube-admin-v55-00j.js
+- assets/youtube-admin-v55-00k.js
+- this report file only
