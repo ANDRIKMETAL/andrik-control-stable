@@ -1,8 +1,8 @@
 (() => {
   const KEY_SESSION='andrik-comments-admin-key';
   const KEY_LOCAL='andrik-comments-admin-key-persistent';
-  const CACHE_KEY='andrik-control-youtube-pane-r910-artist';
-  const MONITOR_CACHE_KEY='andrik-control-youtube-monitor-r910-artist';
+  const CACHE_KEY='andrik-control-youtube-pane-r912-artist';
+  const MONITOR_CACHE_KEY='andrik-control-youtube-monitor-r912-artist';
   const INTEGRATED=document.body.classList.contains('analytics-swipe-page');
   const $=id=>document.getElementById(id);
   const escapeHtml=value=>String(value??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
@@ -14,12 +14,16 @@
   const COUNTRY_MAP={US:'США',SK:'Словакия',CN:'Китай',CA:'Канада',FR:'Франция',NL:'Нидерланды',GB:'Великобритания',DE:'Германия',UA:'Украина',RU:'Россия',CZ:'Чехия',PL:'Польша',AT:'Австрия',ES:'Испания',IT:'Италия',BR:'Бразилия',AU:'Австралия',JP:'Япония',IN:'Индия',KZ:'Казахстан',BY:'Беларусь',UZ:'Узбекистан',BG:'Болгария',KG:'Кыргызстан',AE:'ОАЭ',IR:'Иран',LT:'Литва',LV:'Латвия',PR:'Пуэрто-Рико'};
   const SHARING_MAP={WHATS_APP:'WhatsApp',FACEBOOK:'Facebook',COPY_TO_CLIPBOARD:'Копирование ссылки',COPY_PASTE:'Копирование ссылки',OTHER:'Другое',TEXT_MESSAGE:'SMS',SMS:'SMS',EMAIL:'Gmail',GMAIL:'Gmail',MESSENGER:'Messenger',FACEBOOK_MESSENGER:'Facebook Messenger',TELEGRAM:'Telegram',X:'X / Twitter',VKONTAKTE:'ВКонтакте',ODNOKLASSNIKI:'Одноклассники',DIRECT_SYSTEM_ACTIVITY_DIALOG:'Системное меню Android',ANDROID_SYSTEM_SHARE_DIALOG:'Системное меню Android',DIRECT_SYSTEM:'Системное меню Android',UNKNOWN:'Другое'};
   const YOUTUBE_PRODUCT_MAP={CORE:'YouTube',MUSIC:'YouTube Music',KIDS:'YouTube Kids',GAMING:'YouTube Gaming',UNKNOWN:'Другое'};
-  const CONTENT_TYPE_MAP={SHORTS:'Shorts',VIDEO_ON_DEMAND:'Обычные видео',LIVE_STREAM:'Live',STORY:'Истории',UNSPECIFIED:'Другое'};
+  const CONTENT_TYPE_MAP={SHORTS:'Shorts',VIDEO_ON_DEMAND:'Обычные видео',VIDEOONDEMAND:'Обычные видео',LIVE_STREAM:'Прямые трансляции',LIVESTREAM:'Прямые трансляции',STORY:'Истории',UNSPECIFIED:'Другое'};
   const SUB_STATUS_MAP={SUBSCRIBED:'Подписчики',UNSUBSCRIBED:'Не подписаны'};
-  const TRAFFIC_MAP={ADVERTISING:'Реклама',ANNOTATION:'Аннотации',END_SCREEN:'Конечные заставки',EXT_URL:'Внешние сайты / Google',HASHTAGS:'Хэштеги',LIVE_REDIRECT:'Live Redirect',NO_LINK_EMBEDDED:'Встроенные плееры',NO_LINK_OTHER:'Прямые / приложения',NOTIFICATION:'Уведомления',PLAYLIST:'Плейлисты',PRODUCT_PAGE:'Страница товара',PROMOTED:'Продвижение YouTube',RELATED_VIDEO:'Похожие видео',SHORTS:'Лента Shorts',SOUND_PAGE:'Страница звука',SUBSCRIBER:'Лента подписок',YT_CHANNEL:'Страницы каналов',YT_OTHER_PAGE:'Другие страницы YouTube',YT_SEARCH:'Поиск YouTube',VIDEO_REMIXES:'Ремиксы Shorts',WATCH_WITH:'Watch With'};
+  const TRAFFIC_MAP={ADVERTISING:'Реклама',ANNOTATION:'Аннотации',END_SCREEN:'Конечные заставки',EXT_URL:'Внешние сайты / Google',HASHTAGS:'Хэштеги',LIVE_REDIRECT:'Перенаправления из эфиров',NO_LINK_EMBEDDED:'Встроенные плееры',NO_LINK_OTHER:'Прямые переходы / приложения',NOTIFICATION:'Уведомления',PLAYLIST:'Плейлисты',PRODUCT_PAGE:'Страница товара',PROMOTED:'Продвижение YouTube',RELATED_VIDEO:'Похожие видео',SHORTS:'Лента Shorts',SOUND_PAGE:'Страница звука',SUBSCRIBER:'Лента подписок',YT_CHANNEL:'Страницы каналов',YT_OTHER_PAGE:'Другие страницы YouTube',YT_SEARCH:'Поиск YouTube',VIDEO_REMIXES:'Ремиксы Shorts',WATCH_WITH:'Совместный просмотр',IMMERSIVE_LIVE:'Лента вертикальных трансляций',IMMERSIVELIVE:'Лента вертикальных трансляций',SHORTS_CONTENT_LINKS:'Ссылки в Shorts',SHORTSCONTENTLINKS:'Ссылки в Shorts',BROWSE:'Главная / рекомендации',CHANNEL:'Страницы каналов',SEARCH:'Поиск YouTube'};
   const EVENT_ICONS={'youtube-comment':'💬','youtube-like':'👍','youtube-subscriber':'👥','youtube-subscriber-count':'👥','site-subscriber':'👥','comment-live':'💬','comment-pending':'💬'};
   const ageLabels={'age13-17':'13–17','age18-24':'18–24','age25-34':'25–34','age35-44':'35–44','age45-54':'45–54','age55-64':'55–64','age65-':'65+'};
   const genderLabels={male:'Мужчины',female:'Женщины',user_specified:'Другое'};
+  const enumKey=value=>String(value||'').trim().toUpperCase();
+  const compactEnumKey=value=>enumKey(value).replace(/[^A-Z0-9]/g,'');
+  const artistLabel=(map,value,fallback='Другое')=>{const raw=enumKey(value),compact=compactEnumKey(value);return map[raw]||map[compact]||String(value||'').trim()||fallback};
+  const findContentType=(rows,type)=>{const wanted=compactEnumKey(type);return (Array.isArray(rows)?rows:[]).find(row=>compactEnumKey(row?.creatorContentType)===wanted)||{}};
   const translateCountry=value=>{const raw=String(value||'').trim(),code=raw.toUpperCase();if(COUNTRY_MAP[code])return COUNTRY_MAP[code];if(/^[A-Z]{2}$/.test(code)){try{return new Intl.DisplayNames(['ru'],{type:'region'}).of(code)||raw}catch(_){}}return raw||'—'};
   const translateSharing=value=>{const raw=String(value||'').trim();return SHARING_MAP[raw]||SHARING_MAP[raw.toUpperCase()]||raw||'—'};
   async function api(path,options={}){const response=await fetch(path,{...options,headers:{accept:'application/json',authorization:`Bearer ${getKey()}`,...(options.headers||{})},cache:'no-store'});const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.details||data.error||`HTTP ${response.status}`);return data}
@@ -46,7 +50,7 @@
     if(!rows.length){box.innerHTML='<div class="admin-empty">YouTube пока не вернул данные за 28 дней.</div>';return}
     const max=Math.max(1,...rows.map(row=>Number(row.views||0)));
     const total=rows.reduce((sum,row)=>sum+Number(row.views||0),0);
-    box.innerHTML=rows.slice(0,12).map((row,index)=>`<article class="analytics-list-row artist-list-row"><span class="analytics-list-index">${index+1}</span><div><strong>${escapeHtml(labelMap[row[dimensionKey]]||row[dimensionKey]||'Другое')}</strong><i><b style="width:${Math.max(3,Number(row.views||0)/max*100)}%"></b></i><small>${number(row.estimatedMinutesWatched||0)} мин просмотра</small></div><em>${number(row.views)} <small>${percent(row.views,total)}</small></em></article>`).join('');
+    box.innerHTML=rows.slice(0,12).map((row,index)=>`<article class="analytics-list-row artist-list-row"><span class="analytics-list-index">${index+1}</span><div><strong>${escapeHtml(artistLabel(labelMap,row[dimensionKey]))}</strong><i><b style="width:${Math.max(3,Number(row.views||0)/max*100)}%"></b></i><small>${number(row.estimatedMinutesWatched||0)} мин просмотра</small></div><em>${number(row.views)} <small>${percent(row.views,total)}</small></em></article>`).join('');
   }
   let artistRefreshR910Promise=null,artistExtrasR910Promise=null,artistExtrasLoadedR910=0;
   function artistHasMissingBreakdownsR910(studio={}){
@@ -62,7 +66,7 @@
       if(button){button.disabled=true;button.textContent='Обновляем…'}
       try{
         await api('/api/control/snapshots/refresh',{method:'POST'});
-        try{sessionStorage.setItem('andrik-r910-artist-refresh-ok',String(Date.now()))}catch(_){ }
+        try{sessionStorage.setItem('andrik-r912-artist-refresh-ok',String(Date.now()))}catch(_){ }
         if(INTEGRATED&&typeof window.andrikRefreshAudience==='function')await window.andrikRefreshAudience();else await load();
       }catch(error){
         const status=$('youtubeArtistRefreshStatus');if(status)status.textContent=`Не удалось обновить: ${error.message}`;
@@ -75,10 +79,10 @@
   }
   function maybeAutoRefreshArtistR910(studio={}){
     const version=String(studio?.artistAnalytics?.version||'');
-    if(version==='r910'&&!artistHasMissingBreakdownsR910(studio))return;
-    let last=0;try{last=Number(sessionStorage.getItem('andrik-r910-artist-auto-refresh')||0)}catch(_){ }
+    if(version==='r912'&&!artistHasMissingBreakdownsR910(studio))return;
+    let last=0;try{last=Number(sessionStorage.getItem('andrik-r912-artist-auto-refresh')||0)}catch(_){ }
     if(Date.now()-last<10*60*1000)return;
-    try{sessionStorage.setItem('andrik-r910-artist-auto-refresh',String(Date.now()))}catch(_){ }
+    try{sessionStorage.setItem('andrik-r912-artist-auto-refresh',String(Date.now()))}catch(_){ }
     setTimeout(()=>void forceArtistRefreshR910('auto'),350);
   }
   function renderArtistTracksR910(data={}){
@@ -104,8 +108,8 @@
     artistExtrasR910Promise=(async()=>{
       try{
         const [shelf,top]=await Promise.all([
-          api('/api/control/youtube-oac-shelf?v=55.00-r910').catch(error=>({available:false,error:error.message,tracks:[],channelUrl:'https://www.youtube.com/@andrikmetal'})),
-          api('/api/control/youtube-top-content?v=55.00-r910').catch(error=>({available:false,error:error.message,shorts:[]}))
+          api('/api/control/youtube-oac-shelf?v=55.00-r912').catch(error=>({available:false,error:error.message,tracks:[],channelUrl:'https://www.youtube.com/@andrikmetal'})),
+          api('/api/control/youtube-top-content?type=shorts&refresh=1&v=55.00-r912').catch(error=>({available:false,error:error.message,shorts:[]}))
         ]);
         renderArtistTracksR910(shelf||{});renderArtistShortsInlineR910(top||{});artistExtrasLoadedR910=Date.now();
       }finally{artistExtrasR910Promise=null}
@@ -119,11 +123,11 @@
     const products=Array.isArray(studio.products28)?studio.products28:[];
     const types=Array.isArray(studio.contentTypes28)?studio.contentTypes28:[];
     const music=products.find(row=>String(row.youtubeProduct||'').toUpperCase()==='MUSIC')||{};
-    const shorts=types.find(row=>String(row.creatorContentType||'').toUpperCase()==='SHORTS')||{};
-    const vod=types.find(row=>String(row.creatorContentType||'').toUpperCase()==='VIDEO_ON_DEMAND')||{};
-    const live=types.find(row=>String(row.creatorContentType||'').toUpperCase()==='LIVE_STREAM')||{};
+    const shorts=findContentType(types,'SHORTS');
+    const vod=findContentType(types,'VIDEOONDEMAND');
+    const live=findContentType(types,'LIVESTREAM');
     const kpis=$('youtubeArtistKpis');
-    if(kpis)kpis.innerHTML=[kpi('🎵',number(music.views),'YouTube Music · 28 дней',`${number(music.estimatedMinutesWatched)} минут просмотра`,'youtube'),kpi('⚡',number(shorts.views),'Shorts · 28 дней',`${number(shorts.engagedViews)} вовлечённых просмотров`,'youtube'),kpi('🎬',number(vod.views),'Видео · 28 дней',`${number(vod.estimatedMinutesWatched)} минут просмотра`,'youtube'),kpi('🔴',number(live.views),'Live · 28 дней',`${number(live.estimatedMinutesWatched)} минут просмотра`,'youtube')].join('');
+    if(kpis)kpis.innerHTML=[kpi('🎵',number(music.views),'YouTube Music · 28 дней',`${number(music.estimatedMinutesWatched)} минут просмотра`,'youtube'),kpi('⚡',number(shorts.views),'Shorts · 28 дней',`${number(shorts.engagedViews)} вовлечённых просмотров`,'youtube'),kpi('🎬',number(vod.views),'Видео · 28 дней',`${number(vod.estimatedMinutesWatched)} минут просмотра`,'youtube'),kpi('🔴',number(live.views),'Прямые эфиры · 28 дней',`${number(live.estimatedMinutesWatched)} минут просмотра`,'youtube')].join('');
     renderArtistBreakdown('youtubeArtistProducts',products,'youtubeProduct',YOUTUBE_PRODUCT_MAP);
     renderArtistBreakdown('youtubeArtistFormats',types,'creatorContentType',CONTENT_TYPE_MAP);
     renderArtistBreakdown('youtubeArtistTraffic',studio.trafficSources28||[],'insightTrafficSourceType',TRAFFIC_MAP);

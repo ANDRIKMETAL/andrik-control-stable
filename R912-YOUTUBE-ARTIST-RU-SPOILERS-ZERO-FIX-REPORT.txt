@@ -1,0 +1,17 @@
+ANDRIK Control — R912
+Base: R911 (R910 Artist Analytics + Official Artist Channel badge)
+
+FIXES
+1. Traffic sources are now collapsed into a spoiler by default.
+2. Fixed creatorContentType aliases returned by YouTube without underscores:
+   VIDEOONDEMAND -> Обычные видео; LIVESTREAM -> Прямые трансляции.
+   This also fixes the zero KPI cards for Video and Live when real data exists.
+3. Russian labels added for raw traffic enums including IMMERSIVE_LIVE and SHORTS_CONTENT_LINKS.
+4. Inline Popular Shorts now forces the public current Data API path (type=shorts&refresh=1), so it no longer depends on a completed-day Analytics snapshot.
+5. OAC Popular Tracks shelf parser broadened and checks Home / Featured / Shorts public channel pages.
+6. Worker canonicalizes creator content type for future snapshots and top-content filtering.
+
+PRESERVED
+- R911 Official Artist Channel header and badge.
+- R910 artist analytics, OAuth, YouTube Music, Shorts, traffic, subscriptions.
+- Radio/FFmpeg/RTMPS/VPS logic unchanged.

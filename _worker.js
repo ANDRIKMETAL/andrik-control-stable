@@ -10006,10 +10006,10 @@ async function fetchYouTubeStudioAnalytics(env) {
     sharing:val(5).map(r=>({sharingService:String(r.sharingService||''),shares:Number(r.shares||0)})),
     // R909 Artist Studio API-safe breakdowns.
     products28:val(8).map(r=>({youtubeProduct:cleanPlainText(r.youtubeProduct||'',40).toUpperCase(),views:Number(r.views||0),estimatedMinutesWatched:Number(r.estimatedMinutesWatched||0)})).filter(r=>r.youtubeProduct),
-    contentTypes28:val(9).map(r=>({creatorContentType:cleanPlainText(r.creatorContentType||'',40).toUpperCase(),views:Number(r.views||0),engagedViews:Number(r.engagedViews||0),estimatedMinutesWatched:Number(r.estimatedMinutesWatched||0)})).filter(r=>r.creatorContentType),
+    contentTypes28:val(9).map(r=>({creatorContentType:canonicalYoutubeCreatorTypeR912(r.creatorContentType||''),views:Number(r.views||0),engagedViews:Number(r.engagedViews||0),estimatedMinutesWatched:Number(r.estimatedMinutesWatched||0)})).filter(r=>r.creatorContentType),
     trafficSources28:val(10).map(r=>({insightTrafficSourceType:cleanPlainText(r.insightTrafficSourceType||'',60).toUpperCase(),views:Number(r.views||0),estimatedMinutesWatched:Number(r.estimatedMinutesWatched||0)})).filter(r=>r.insightTrafficSourceType),
     subscriptionStatus28:val(11).map(r=>({subscribedStatus:cleanPlainText(r.subscribedStatus||'',40).toUpperCase(),views:Number(r.views||0),estimatedMinutesWatched:Number(r.estimatedMinutesWatched||0)})).filter(r=>r.subscribedStatus),
-    artistAnalytics:{officialArtistChannel:true,apiSafe:true,periodDays:28,version:'r910'},
+    artistAnalytics:{officialArtistChannel:true,apiSafe:true,periodDays:28,version:'r912'},
     summaryError:resultError(0),
     trendError:resultError(1),
     partialErrors:results.map((r,i)=>r.status==='rejected'?cleanPlainText(r.reason?.message||r.reason,260):'').filter(Boolean),
@@ -10968,7 +10968,7 @@ async function refreshControlSnapshots(env, { force = false } = {}) {
         contentTypes28:Array.isArray(yt.studio.contentTypes28) ? yt.studio.contentTypes28 : [],
         trafficSources28:Array.isArray(yt.studio.trafficSources28) ? yt.studio.trafficSources28 : [],
         subscriptionStatus28:Array.isArray(yt.studio.subscriptionStatus28) ? yt.studio.subscriptionStatus28 : [],
-        artistAnalytics:yt.studio.artistAnalytics || { officialArtistChannel:true, apiSafe:true, periodDays:28, version:'r910' },
+        artistAnalytics:yt.studio.artistAnalytics || { officialArtistChannel:true, apiSafe:true, periodDays:28, version:'r912' },
         topVideos28:Array.isArray(yt.studio.topVideos28) ? yt.studio.topVideos28 : [],
         topShorts28:Array.isArray(yt.studio.topShorts28) ? yt.studio.topShorts28 : [],
         topRegularVideos28:Array.isArray(yt.studio.topRegularVideos28) ? yt.studio.topRegularVideos28 : [],
@@ -14499,9 +14499,13 @@ function youtubeOacFindPopularTracksR910(data){
     for(const [key,value] of Object.entries(node)){
       if(found)break;
       if(value&&typeof value==='object'){
-        if(/shelfRenderer|richSectionRenderer|carousel/i.test(key)){
+        if(/shelfRenderer|richSectionRenderer|carousel|sectionListRenderer|richGridRenderer/i.test(key)){
           const title=youtubeOacTextR910(value.title||value.header?.richListHeaderRenderer?.title||value.header?.shelfHeaderRenderer?.title);
-          if(/popular tracks from shorts|популярные треки из shorts/i.test(title)){
+          let containsLabel=/popular tracks from shorts|популярные треки из shorts/i.test(title);
+          if(!containsLabel){
+            try{containsLabel=/popular tracks from shorts|популярные треки из shorts/i.test(JSON.stringify(value).slice(0,600000));}catch(_){}
+          }
+          if(containsLabel){
             const rows=youtubeOacCollectTrackRowsR910(value,[]).filter(x=>!/popular tracks from shorts|популярные треки из shorts/i.test(x.title));
             if(rows.length)found=rows.slice(0,10);
           }
@@ -14516,17 +14520,20 @@ function youtubeOacFindPopularTracksR910(data){
 async function handleControlYoutubeOacShelfR910(request, env){
   if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
   const handle=cleanPlainText(env.YOUTUBE_CHANNEL_HANDLE||'@andrikmetal',100);
-  const target=`https://www.youtube.com/${handle.startsWith('@')?handle:'@'+handle}?hl=ru&gl=SK`;
-  try{
-    const response=await fetchWithAbortTimeoutR409(target,{headers:{accept:'text/html,application/xhtml+xml','accept-language':'ru-RU,ru;q=0.9,en;q=0.7','user-agent':'Mozilla/5.0 (Linux; Android 15) AppleWebKit/537.36 Chrome/140 Mobile Safari/537.36'}},9000,'youtube-oac-shelf-timeout');
-    if(!response.ok)throw new Error(`youtube-oac-shelf-${response.status}`);
-    const html=await response.text();
-    const data=youtubeOacExtractInitialDataR910(html);
-    const tracks=data?youtubeOacFindPopularTracksR910(data):[];
-    return json({ok:true,available:tracks.length>0,source:'public-oac-shelf',tracks,channelUrl:`https://www.youtube.com/${handle.startsWith('@')?handle:'@'+handle}`,updatedAt:new Date().toISOString()});
-  }catch(error){
-    return json({ok:true,available:false,source:'public-oac-shelf',tracks:[],error:cleanPlainText(error?.message||error,220),channelUrl:`https://www.youtube.com/${handle.startsWith('@')?handle:'@'+handle}`,updatedAt:new Date().toISOString()});
+  const channelUrl=`https://www.youtube.com/${handle.startsWith('@')?handle:'@'+handle}`;
+  const targets=[`${channelUrl}?hl=ru&gl=SK`,`${channelUrl}/featured?hl=ru&gl=SK`,`${channelUrl}/shorts?hl=ru&gl=SK`];
+  let lastError='';
+  for(const target of targets){
+    try{
+      const response=await fetchWithAbortTimeoutR409(target,{headers:{accept:'text/html,application/xhtml+xml','accept-language':'ru-RU,ru;q=0.9,en;q=0.7','user-agent':'Mozilla/5.0 (Linux; Android 15) AppleWebKit/537.36 Chrome/140 Mobile Safari/537.36'}},9000,'youtube-oac-shelf-timeout');
+      if(!response.ok)throw new Error(`youtube-oac-shelf-${response.status}`);
+      const html=await response.text();
+      const data=youtubeOacExtractInitialDataR910(html);
+      const tracks=data?youtubeOacFindPopularTracksR910(data):[];
+      if(tracks.length)return json({ok:true,available:true,source:'public-oac-shelf-r912',tracks,channelUrl,updatedAt:new Date().toISOString()});
+    }catch(error){lastError=cleanPlainText(error?.message||error,220);}
   }
+  return json({ok:true,available:false,source:'public-oac-shelf-r912',tracks:[],error:lastError||'public-oac-shelf-not-exposed',channelUrl,updatedAt:new Date().toISOString()});
 }
 
 async function handleControlSnapshotsRefresh(request, env) {
@@ -14620,6 +14627,16 @@ async function handleControlGoogleDevicesR544(request, env) {
   }
 }
 
+// R912 — YouTube currently returns creatorContentType both with and without underscores.
+function canonicalYoutubeCreatorTypeR912(value=''){
+  const raw=cleanPlainText(value,60).toUpperCase().replace(/[^A-Z0-9]/g,'');
+  if(raw==='VIDEOONDEMAND')return 'VIDEO_ON_DEMAND';
+  if(raw==='LIVESTREAM')return 'LIVE_STREAM';
+  if(raw==='SHORTS')return 'SHORTS';
+  if(raw==='STORY')return 'STORY';
+  return cleanPlainText(value,60).toUpperCase();
+}
+
 // R552 — focused YouTube top content.
  // One official Top videos report returns video + creatorContentType + the counters we need.
  // The main YouTube dashboard stays independent: this endpoint is used only by the two top pages.
@@ -14627,7 +14644,7 @@ function normalizeYoutubeTopContentR552(row = {}, type = '') {
   const videoId=cleanPlainText(row?.videoId||row?.video||'',80);
   return {
     videoId,
-    creatorContentType:cleanPlainText(row?.creatorContentType||type||'',40).toUpperCase(),
+    creatorContentType:canonicalYoutubeCreatorTypeR912(row?.creatorContentType||type||''),
     views:Math.max(0,Number(row?.views||0)),
     likes:Math.max(0,Number(row?.likes||0)),
     comments:Math.max(0,Number(row?.comments||0)),

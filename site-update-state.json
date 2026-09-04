@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788552854828-1424687030",
-  "release": "R911",
-  "archiveName": "ANDRIK-R911-OFFICIAL-ARTIST-CHANNEL-BADGE-R910-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "6c30282204347617025a598aa1861abff5ffd9ab",
-  "backupSha": "6c30282204347617025a598aa1861abff5ffd9ab",
+  "operationId": "publish-1788553837171-e16a86750e",
+  "release": "R912",
+  "archiveName": "ANDRIK-R912-YOUTUBE-ARTIST-RU-SPOILERS-ZERO-FIX-R911-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "61a4982663879c1f1d0d3d436661384d968c4295",
+  "backupSha": "61a4982663879c1f1d0d3d436661384d968c4295",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-04T20:14:14.828Z"
+  "generatedAt": "2026-09-04T20:30:37.171Z"
 }
