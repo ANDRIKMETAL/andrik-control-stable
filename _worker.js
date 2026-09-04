@@ -18175,6 +18175,109 @@ async function handleMusicFileR317(request, env){
   const h=new Headers(); h.set('content-type','audio/mpeg'); h.set('cache-control','no-store'); h.set('content-disposition',`attachment; filename="${key.split('/').pop()}"`); if(object.size)h.set('content-length',String(object.size));
   return new Response(object.body,{status:200,headers:h});
 }
+// === R922: compact owner R2 media storage manager ===
+const R2_STORAGE_MANAGER_R922 = 'R922-R2-STORAGE-MANAGER';
+const R2_AUDIO_EXT_R922 = new Set(['mp3','wav','flac','m4a','aac','ogg']);
+const R2_VIDEO_EXT_R922 = new Set(['mp4','m4v','mov','webm']);
+function r2StorageKindR922(key){
+  const m=String(key||'').toLowerCase().match(/\.([a-z0-9]+)$/);
+  const ext=m?m[1]:'';
+  if(R2_AUDIO_EXT_R922.has(ext))return 'audio';
+  if(R2_VIDEO_EXT_R922.has(ext))return 'video';
+  return '';
+}
+function r2StorageSafeKeyR922(value){
+  const key=cleanPlainText(value,500).replace(/^\/+/, '');
+  if(!key||key.includes('..')||key.includes('\\')||key.startsWith('.'))return '';
+  return r2StorageKindR922(key)?key:'';
+}
+function r2StorageFixedReasonR922(key){
+  const fixedVisuals=new Set(Object.values(RADIO_VISUAL_KEYS_R620||{}));
+  if(fixedVisuals.has(key))return 'Активная системная копия визуала эфира';
+  if(/^radio\/clips\/radio-bumper-[123]\.mp4$/i.test(key))return 'Фиксированный слот заставки радио';
+  if(/^radio\/clips\/radio-special-(?:30|60)min\.mp4$/i.test(key))return 'Фиксированная периодическая вставка радио';
+  return '';
+}
+function r2StorageBasenameR922(key){return String(key||'').split('/').pop()||''}
+function r2StorageDirR922(key){const s=String(key||'');const i=s.lastIndexOf('/');return i>=0?s.slice(0,i+1):''}
+async function r2StorageListR922(bucket){
+  const objects=[];let cursor=undefined,rounds=0;
+  do{
+    const page=await bucket.list({limit:1000,...(cursor?{cursor}:{}),include:['customMetadata']});
+    for(const o of (page.objects||[])){
+      const kind=r2StorageKindR922(o.key);
+      if(!kind)continue;
+      const reason=r2StorageFixedReasonR922(o.key);
+      objects.push({
+        key:o.key,
+        name:r2StorageBasenameR922(o.key),
+        size:Number(o.size||0),
+        uploaded:o.uploaded||null,
+        etag:String(o.etag||''),
+        kind,
+        title:cleanPlainText(o.customMetadata?.title||'',180),
+        protected:Boolean(reason),
+        protectedReason:reason
+      });
+    }
+    cursor=page.truncated?page.cursor:undefined;
+    rounds++;
+  }while(cursor&&rounds<8&&objects.length<7000);
+  objects.sort((a,b)=>a.kind.localeCompare(b.kind)||a.key.localeCompare(b.key,undefined,{numeric:true,sensitivity:'base'}));
+  return objects;
+}
+async function handleR2StorageR922(request,env){
+  if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
+  const bucket=getMusicBucketR314(env);
+  if(!bucket)return json({ok:false,error:'music-bucket-not-configured'},503);
+  try{
+    if(request.method==='GET'){
+      const files=await r2StorageListR922(bucket);
+      return json({ok:true,version:R2_STORAGE_MANAGER_R922,count:files.length,totalBytes:files.reduce((s,x)=>s+x.size,0),files});
+    }
+    const url=new URL(request.url);
+    const key=r2StorageSafeKeyR922(url.searchParams.get('key')||'');
+    if(!key)return json({ok:false,error:'invalid-key'},400);
+    const protectedReason=r2StorageFixedReasonR922(key);
+    if(protectedReason)return json({ok:false,error:'protected-key',message:protectedReason},409);
+    const head=await bucket.head(key).catch(()=>null);
+    if(!head)return json({ok:false,error:'not-found',message:'Файл уже отсутствует в R2.'},404);
+    if(request.method==='DELETE'){
+      await bucket.delete(key);
+      return json({ok:true,deleted:true,key,size:Number(head.size||0),message:'Файл удалён из R2.'});
+    }
+    if(request.method==='PATCH'){
+      const body=await request.json().catch(()=>null);
+      const newName=cleanPlainText(body?.newName||'',220).trim();
+      if(!newName||newName==='.'||newName==='..'||/[\\/]/.test(newName)||newName.startsWith('.'))return json({ok:false,error:'invalid-name',message:'Укажи только новое имя файла, без папки.'},400);
+      const oldName=r2StorageBasenameR922(key);
+      const oldExt=(oldName.match(/\.([^.]+)$/)||[])[1]?.toLowerCase()||'';
+      const newExt=(newName.match(/\.([^.]+)$/)||[])[1]?.toLowerCase()||'';
+      if(!oldExt||newExt!==oldExt)return json({ok:false,error:'extension-change-blocked',message:`Расширение .${oldExt} менять нельзя.`},400);
+      const newKey=r2StorageSafeKeyR922(r2StorageDirR922(key)+newName);
+      if(!newKey)return json({ok:false,error:'invalid-new-key'},400);
+      if(r2StorageFixedReasonR922(newKey))return json({ok:false,error:'protected-new-key'},409);
+      if(newKey===key)return json({ok:true,renamed:false,oldKey:key,key:newKey,message:'Имя не изменилось.'});
+      const collision=await bucket.head(newKey).catch(()=>null);
+      if(collision)return json({ok:false,error:'target-exists',message:'Файл с таким именем уже существует в этой папке.'},409);
+      const object=await bucket.get(key);
+      if(!object)return json({ok:false,error:'not-found'},404);
+      await bucket.put(newKey,object.body,{httpMetadata:object.httpMetadata||{},customMetadata:object.customMetadata||{}});
+      const verify=await bucket.head(newKey).catch(()=>null);
+      if(!verify||Number(verify.size||0)!==Number(head.size||0)){
+        await bucket.delete(newKey).catch(()=>{});
+        return json({ok:false,error:'rename-verify-failed',message:'Новая копия не прошла проверку размера. Старый файл сохранён.'},500);
+      }
+      await bucket.delete(key);
+      return json({ok:true,renamed:true,oldKey:key,key:newKey,size:Number(verify.size||0),message:'Файл переименован в R2.'});
+    }
+    return json({ok:false,error:'method-not-allowed'},405);
+  }catch(error){
+    return json({ok:false,error:'r2-manager-failed',message:cleanPlainText(error?.message||error,500)},500);
+  }
+}
+// === End R922 R2 storage manager ===
+
 async function handleMusicMp3DeleteR314(request, env) {
   if (!adminAuthorized(request, env)) return json({ok:false,error:'unauthorized'},401);
   const bucket=getMusicBucketR314(env); if(!bucket) return json({ok:false,error:'music-bucket-not-configured',message:'Добавьте R2 binding MUSIC_BUCKET → andrik-music'},503);
@@ -19564,6 +19667,7 @@ async function routeApi(request, env, ctx) {
     if (path === '/api/music/singles' && request.method === 'GET') return await handleMusicSinglesListR316(request, env);
     if (path === '/api/music/downloads' && request.method === 'GET') return await handleMusicDownloadsR322(request, env);
     if (path === '/api/music/download' && request.method === 'GET') return await handleMusicDownloadR327(request, env);
+    if (path === '/api/control/r2-storage-r922' && ['GET','PATCH','DELETE'].includes(request.method)) return await handleR2StorageR922(request, env);
     if (path === '/api/control/music/library' && request.method === 'GET') return await handleMusicLibraryR317(request, env);
     if (path === '/api/control/music/file' && request.method === 'GET') return await handleMusicFileR317(request, env);
     if (path === '/api/control/music/mp3' && request.method === 'PUT') return await handleMusicMp3PutR314(request, env);

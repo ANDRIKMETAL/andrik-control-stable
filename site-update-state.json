@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788563700443-fe52fd8a5a",
-  "release": "R921",
-  "archiveName": "ANDRIK-R921-FULLSCREEN-SWITCH-R906-GOLD-R916-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "7426dcf2bc63fb3b375465c0a29c69f4d740096c",
-  "backupSha": "7426dcf2bc63fb3b375465c0a29c69f4d740096c",
+  "operationId": "publish-1788566152982-d48d08d26b",
+  "release": "R922",
+  "archiveName": "ANDRIK-R922-R2-STORAGE-FULLSCREEN-WATCHDOG-R921-PRESERVED-SAFE-FULL-1.zip",
+  "sourceHead": "8d3e5fe4c195fa97ad55e19360b7884688d220fc",
+  "backupSha": "8d3e5fe4c195fa97ad55e19360b7884688d220fc",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-04T23:15:01.162Z"
+  "generatedAt": "2026-09-04T23:55:53.370Z"
 }

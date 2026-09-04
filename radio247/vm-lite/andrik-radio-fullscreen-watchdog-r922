@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# ANDRIK R922 · FULLSCREEN SELF-HEAL WATCHDOG
+set -u
+RADIO_UNIT="andrik-radio.service"
+RESTORE="/usr/local/sbin/andrik-radio-fullscreen-cache-restore-r908"
+LOCK="/run/andrik-radio-fullscreen-watchdog-r922.lock"
+INTERVAL="${ANDRIK_FULLSCREEN_WATCH_INTERVAL:-1}"
+SETTLE="${ANDRIK_FULLSCREEN_SETTLE_SECONDS:-1}"
+COOLDOWN="${ANDRIK_FULLSCREEN_COOLDOWN_SECONDS:-90}"
+TAG="andrik-fullscreen-watchdog"
+exec 9>"$LOCK"
+flock -n 9 || exit 0
+radio_pid(){ systemctl show -p MainPID --value "$RADIO_UNIT" 2>/dev/null || true; }
+radio_active(){ systemctl is-active --quiet "$RADIO_UNIT" 2>/dev/null; }
+LAST_PID=""; COOLDOWN_UNTIL=0
+logger -t "$TAG" "R922 armed; current live stream untouched"
+while true; do
+  sleep "$INTERVAL"
+  # Keep LAST_PID across a short stop/start window so a real systemctl restart
+  # is still detected after the service comes back.
+  if ! radio_active; then continue; fi
+  PID="$(radio_pid)"; [ -n "$PID" ] && [ "$PID" != 0 ] || continue
+  if [ -z "$LAST_PID" ]; then LAST_PID="$PID"; logger -t "$TAG" "baseline PID=$PID"; continue; fi
+  [ "$PID" != "$LAST_PID" ] || continue
+  OLD="$LAST_PID"; LAST_PID="$PID"; NOW="$(date +%s)"
+  if [ "$NOW" -lt "$COOLDOWN_UNTIL" ]; then logger -t "$TAG" "PID $OLD->$PID ignored inside self-heal cooldown"; continue; fi
+  logger -t "$TAG" "external radio restart PID $OLD->$PID; fullscreen recovery in ${SETTLE}s"
+  sleep "$SETTLE"
+  radio_active || { logger -t "$TAG" "radio still inactive after settle; waiting for it to return"; continue; }
+  STABLE="$(radio_pid)"; [ -n "$STABLE" ] && [ "$STABLE" != 0 ] || { LAST_PID=""; continue; }
+  if [ "$STABLE" != "$PID" ]; then LAST_PID="$STABLE"; logger -t "$TAG" "radio still bouncing $PID->$STABLE; defer"; continue; fi
+  if [ ! -x "$RESTORE" ]; then logger -t "$TAG" "restore helper missing: $RESTORE"; continue; fi
+  COOLDOWN_UNTIL=$((NOW+COOLDOWN))
+  logger -t "$TAG" "invoking proven R921 fullscreen switch once"
+  OUT="$("$RESTORE" 2>&1)"; RC=$?
+  printf '%s\n' "$OUT" | systemd-cat -t andrik-fullscreen-r921 -p info 2>/dev/null || true
+  AFTER="$(radio_pid)"; if [ -n "$AFTER" ] && [ "$AFTER" != 0 ]; then LAST_PID="$AFTER"; else LAST_PID=""; fi
+  NOW="$(date +%s)"; COOLDOWN_UNTIL=$((NOW+COOLDOWN))
+  if [ "$RC" -eq 0 ]; then logger -t "$TAG" "fullscreen recovery OK; PID=${AFTER:-none}"; else logger -t "$TAG" "fullscreen recovery FAILED rc=$RC"; fi
+done

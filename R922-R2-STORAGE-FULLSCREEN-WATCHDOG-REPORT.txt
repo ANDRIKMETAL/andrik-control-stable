@@ -1,0 +1,29 @@
+ANDRIK R922 — R2 STORAGE MANAGER + FULLSCREEN SELF-HEAL WATCHDOG
+
+Base: R921 FULLSCREEN SWITCH / R916 site-control preserved.
+
+SITE / CONTROL
+- New Control menu card: ☁️ Хранилище.
+- New /r2-storage-admin.html.
+- Compact combined R2 media list: 🎵 audio / 🎬 video, exact object key, compact size.
+- Search + All/Music/Video filters.
+- ✏️ Rename in-place inside the same R2 folder; file extension cannot change.
+- 🗑 Exact single-object delete with confirmation.
+- System-critical current radio slot masters / fixed bumpers / 30/60-min inserts are protected.
+- Rename copies object with metadata, verifies exact byte size, then deletes old key; collision is blocked.
+- Owner session / ADMIN_KEY authorization preserved.
+
+RADIO / VPS
+- New systemd watchdog installer: radio247/vm-lite/install-r922-fullscreen-watchdog.sh
+- Installer DOES NOT restart the current radio stream.
+- Watchdog learns the current radio PID and waits.
+- On a FUTURE external andrik-radio.service PID change, waits ~1 second and invokes the proven R921 fullscreen restore once.
+- R921's own deliberate restart is absorbed; 90-second cooldown prevents restart loops.
+- YouTube broadcast binding is untouched.
+
+IMPORTANT
+- The watchdog intentionally does not hash-compare visuals continuously: doing so would mistake a legitimately selected new R2 video for a fault and revert it.
+- Trigger is tied to external radio restarts, which is the failure case this guard is designed to catch.
+
+Cache reset:
+https://control.andrikmetal.com/cache-reset-v55-00-final-r922.html?clean=r922-r2-watchdog
