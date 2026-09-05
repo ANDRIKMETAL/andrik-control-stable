@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788566570111-7ffed877b1",
-  "release": "R923",
-  "archiveName": "ANDRIK-R923-CRON-SELF-HEAL-R922-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "416d099465b2550366420fe22a39fd76cba642dd",
-  "backupSha": "416d099465b2550366420fe22a39fd76cba642dd",
+  "operationId": "publish-1788631703855-be704ce43b",
+  "release": "R925",
+  "archiveName": "ANDRIK-R925-AIR-RESTORE-R2-3D-R924-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "9774131e873a9da8f1a5ade74ee4c01919ededfa",
+  "backupSha": "9774131e873a9da8f1a5ade74ee4c01919ededfa",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-05T00:02:50.111Z"
+  "generatedAt": "2026-09-05T18:08:24.376Z"
 }

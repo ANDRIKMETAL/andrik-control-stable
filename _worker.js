@@ -5104,7 +5104,7 @@ async function handleControlSystem(request, env) {
         ? 'Сводки 05:00 / 17:00 ожидают стабильный Cron'
         : dailySummaryAt?.value
           ? `Каждый день в 05:00 и 17:00 · последняя ${formatSystemDateLabel(dailySummaryAt.value)}`
-          : 'Каждый день в 05:00 и 17:00 · ожидает первой сводки';
+          : 'Готово · следующая сводка по расписанию 05:00 / 17:00';
   return json({
     ok: true,
     version: ANDRIK_CONTROL_RELEASE.full,
@@ -9589,7 +9589,7 @@ async function handleYoutubeEventsStatus(request, env, ctx) {
   // If the external 2-minute scheduler went stale, repair it in waitUntil without
   // blocking the status response. Existing D1 locks prevent duplicate delivery.
   if(fastAgeMinutes!==null && fastAgeMinutes>12 && ctx?.waitUntil){
-    ctx.waitUntil(runPushAutomationRescueR778(env,'youtube-status-r923').catch(()=>({ok:false})));
+    ctx.waitUntil(runPushAutomationRescueWithHeartbeatR924(env,'youtube-status-r924').catch(()=>({ok:false})));
   }
   const today={commentsSent:0,repliesSent:0,likesSent:0,subscribersSent:0,failed:0};
   for(const row of (todayRows.results||[])){
@@ -13217,6 +13217,16 @@ async function handleAutomationRun(request, env, options = {}) {
   const successful = Object.values(tasks).filter(item => item?.ok || item?.httpOk || item?.skipped).length;
   const status = errors.length ? (successful ? 'partial' : 'failed') : 'ok';
   const summary = { startedAt, finishedAt, status, successful, total:Object.keys(tasks).length, errors, tasks };
+  // R924: a clean 9/9 owner run is a real successful automation execution.  Use it as
+  // an immediate recovery heartbeat so the service dashboard turns green at once; the
+  // next ANDRIK Guard health wake-up keeps the fallback heartbeat alive automatically.
+  if(status==='ok'){
+    const healedAt=await touchCronSchedulerHeartbeatR394(db,'manual-central-r924').catch(()=>finishedAt);
+    await Promise.all([
+      setPushState(db,'cron-scheduler-last-status-r394','ok').catch(()=>{}),
+      setPushState(db,'cron-manual-heal-last-at-r924',healedAt).catch(()=>{})
+    ]);
+  }
   await setPushState(db, 'automation-last-check-at', finishedAt);
   await setPushState(db, 'automation-last-check-status', status);
   await setPushState(db, 'automation-last-check-summary', JSON.stringify(summary));
@@ -15897,6 +15907,25 @@ async function runPushAutomationRescueR778(env, source='health-r778') {
   }
 }
 
+
+// R924: a successful bounded rescue is an authoritative fallback scheduler heartbeat.
+// ANDRIK Guard already wakes /api/health independently, so this heals the dashboard and
+// scheduled push chain without requiring the owner to keep Control open.  We only write
+// the heartbeat AFTER the real rescue returns ok; failures never paint the system green.
+async function runPushAutomationRescueWithHeartbeatR924(env, source='health-r924') {
+  const result=await runPushAutomationRescueR778(env,source);
+  if(result?.ok && env.COMMENTS_DB){
+    const db=requireDb(env);
+    const at=await touchCronSchedulerHeartbeatR394(db,`fallback-r924:${source}`).catch(()=>new Date().toISOString());
+    await Promise.all([
+      setPushState(db,'cron-scheduler-last-status-r394','ok').catch(()=>{}),
+      setPushState(db,'cron-fallback-heartbeat-last-at-r924',at).catch(()=>{}),
+      setPushState(db,'cron-fallback-heartbeat-source-r924',cleanPlainText(source,120)).catch(()=>{})
+    ]);
+  }
+  return result;
+}
+
 async function handlePublicHealth(request, env, ctx) {
   // R302 fail-safe: the external ANDRIK Guard already wakes on its own Cron.
   // Its normal /api/health probe now also starts the YouTube event checker in
@@ -15906,7 +15935,7 @@ async function handlePublicHealth(request, env, ctx) {
     const sourceR778=isAndrikGuardHealthProbe(request)?'guard-health-r778':'health-wakeup-r778';
     ctx.waitUntil(Promise.all([
       setPushState(db,'guard-health-last-wakeup-r637',new Date().toISOString()).catch(()=>{}),
-      runPushAutomationRescueR778(env,sourceR778).catch(()=>({ok:false}))
+      runPushAutomationRescueWithHeartbeatR924(env,sourceR778).catch(()=>({ok:false}))
     ]));
   }
   const health = await buildAndrikHealthSnapshot(env, { checkSite:true });
@@ -18203,7 +18232,7 @@ async function handleMusicFileR317(request, env){
   return new Response(object.body,{status:200,headers:h});
 }
 // === R922: compact owner R2 media storage manager ===
-const R2_STORAGE_MANAGER_R922 = 'R922-R2-STORAGE-MANAGER';
+const R2_STORAGE_MANAGER_R922 = 'R925-R2-STORAGE-MANAGER-3D-BARREL';
 const R2_AUDIO_EXT_R922 = new Set(['mp3','wav','flac','m4a','aac','ogg']);
 const R2_VIDEO_EXT_R922 = new Set(['mp4','m4v','mov','webm']);
 function r2StorageKindR922(key){
@@ -18228,10 +18257,12 @@ function r2StorageFixedReasonR922(key){
 function r2StorageBasenameR922(key){return String(key||'').split('/').pop()||''}
 function r2StorageDirR922(key){const s=String(key||'');const i=s.lastIndexOf('/');return i>=0?s.slice(0,i+1):''}
 async function r2StorageListR922(bucket){
-  const objects=[];let cursor=undefined,rounds=0;
+  const objects=[];let cursor=undefined,rounds=0,bucketTotalBytes=0,bucketObjectCount=0;
   do{
     const page=await bucket.list({limit:1000,...(cursor?{cursor}:{}),include:['customMetadata']});
     for(const o of (page.objects||[])){
+      bucketObjectCount++;
+      bucketTotalBytes+=Number(o.size||0);
       const kind=r2StorageKindR922(o.key);
       if(!kind)continue;
       const reason=r2StorageFixedReasonR922(o.key);
@@ -18251,7 +18282,7 @@ async function r2StorageListR922(bucket){
     rounds++;
   }while(cursor&&rounds<8&&objects.length<7000);
   objects.sort((a,b)=>a.kind.localeCompare(b.kind)||a.key.localeCompare(b.key,undefined,{numeric:true,sensitivity:'base'}));
-  return objects;
+  return {files:objects,bucketTotalBytes,bucketObjectCount};
 }
 async function handleR2StorageR922(request,env){
   if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
@@ -18259,8 +18290,9 @@ async function handleR2StorageR922(request,env){
   if(!bucket)return json({ok:false,error:'music-bucket-not-configured'},503);
   try{
     if(request.method==='GET'){
-      const files=await r2StorageListR922(bucket);
-      return json({ok:true,version:R2_STORAGE_MANAGER_R922,count:files.length,totalBytes:files.reduce((s,x)=>s+x.size,0),files});
+      const storage=await r2StorageListR922(bucket);
+      const files=storage.files||[];
+      return json({ok:true,version:R2_STORAGE_MANAGER_R922,count:files.length,totalBytes:files.reduce((s,x)=>s+x.size,0),bucketTotalBytes:Number(storage.bucketTotalBytes||0),bucketObjectCount:Number(storage.bucketObjectCount||0),displayScaleBytes:10*1024*1024*1024,files});
     }
     const url=new URL(request.url);
     const key=r2StorageSafeKeyR922(url.searchParams.get('key')||'');
@@ -19451,7 +19483,7 @@ async function handleRadioRemoteCommandR627(request,env){
   const db=env.COMMENTS_DB;if(!db)return json({ok:false,error:'database-not-configured'},503);
   const body=await request.json().catch(()=>({}));
   const action=String(body.action||'').trim().toLowerCase();
-  const allowed=new Set(['start','recover','stop','restart','encoder-start','encoder-stop','soft-restart','gold-restore','fullscreen-restore','cache-clean','status','auto-safe','full-fit','visual-sync','visual-now','visual-auto']);
+  const allowed=new Set(['start','recover','stop','restart','encoder-start','encoder-stop','soft-restart','gold-restore','cache-clean','status','auto-safe','full-fit','visual-sync','visual-now','visual-auto']);
   if(!allowed.has(action))return json({ok:false,error:'invalid-action'},400);
   const slot=String(body.slot||'').trim().toLowerCase();
   if(action==='visual-now' && !Object.prototype.hasOwnProperty.call(RADIO_VISUAL_KEYS_R620,slot))

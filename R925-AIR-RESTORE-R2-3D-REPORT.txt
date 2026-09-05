@@ -1,0 +1,33 @@
+ANDRIK R925 — AIR RESTORE + R2 3D STORAGE
+
+Base: R924 preserved in full.
+
+RADIO CONTROL
+- Removed the visible "РУБИЛЬНИК ВЕСЬ ЭКРАН" button completely from current Radio Control.
+- Removed fullscreen-restore from the current Worker command allow-list and current bundled web-agent action path.
+- Renamed the emergency recovery control to: ♻️ ВОССТАНОВИТЬ ЭФИР.
+- The button deliberately reuses the established gold-restore transport so the existing paired OVH agent remains compatible.
+- New R925 VPS helper restores only the verified working GOLD server.mjs, keeps a backup of the current server, performs one radio restart and verifies publisher/producer/video/transport health.
+- It does NOT restore old R857 env, does NOT replace active visuals, and does NOT touch swap.
+- New installer snapshots the exact verified PRE-R937C working server SHA 9492dd0e5021daa57a6b2d1f0325379323520a45b64a6737786c70cdbd3d81a9 as GOLD-R925-AIR-RESTORE-* and arms the existing agent action without restarting radio.
+
+R2 STORAGE
+- Existing separate Control menu item "Хранилище" preserved.
+- Added 3D barrel/cylinder storage visualization.
+- Liquid height follows actual total bytes listed in the R2 bucket.
+- Exact used size and percentage are shown.
+- Visual scale is 10 GiB and is explicitly labelled as a visualization scale, not a hard R2 bucket limit.
+- Worker now returns bucketTotalBytes and bucketObjectCount while preserving the existing media list, rename/delete safety and protected system objects.
+
+PRESERVED
+- R924 cron guard / heartbeat recovery.
+- R923 monitor self-heal.
+- R922 R2 rename/delete protection.
+- Radio server.mjs in the website package itself.
+- YouTube binding and all unrelated Control features.
+
+VPS ARM COMMAND AFTER SITE DEPLOY:
+curl -fsSL https://andrikmetal.com/radio247/vm-lite/install-r925-air-restore-r924-preserved.sh | sudo env ANDRIK_SITE_BASE=https://andrikmetal.com bash
+
+CACHE RESET:
+https://control.andrikmetal.com/cache-reset-v55-00-final-r925.html?clean=r925-air-r2-3d

@@ -1,0 +1,27 @@
+ANDRIK R924 — CRON GUARD HEARTBEAT / GREEN SELF-HEAL
+
+Base: R923 preserved in full.
+
+Diagnosis from 05.09.2026 screenshots:
+- the manual Central Cron can complete all 9/9 tasks successfully;
+- ANDRIK Monitor independently reaches Control again (HTTP 200 push received);
+- nevertheless the service dashboard can stay yellow/red because the dedicated
+  cron-scheduler-heartbeat-r394 is not refreshed by the R778 fallback rescue;
+- therefore Daily Summary also says it is waiting for a stable Cron even though
+  the actual rescue/push path is already working.
+
+R924 fixes the real state convergence:
+1) Successful ANDRIK Guard /api/health R778 rescue now writes the scheduler heartbeat.
+   It writes green ONLY after the real rescue returns ok. A failed rescue never does.
+2) Successful manual Central Cron 9/9 immediately writes a recovery scheduler heartbeat.
+3) Opening YouTube reactions with a stale fast path uses the same R924 rescue+heartbeat.
+4) The first daily summary, before its scheduled 05:00/17:00 slot, is labelled READY
+   instead of looking like a fault once automation is healthy.
+
+Preserved unchanged:
+- R923 native-monitor retry and YouTube full-check recovery;
+- R922 R2 storage manager;
+- R922 fullscreen watchdog;
+- R921 fullscreen switch;
+- radio/VPS/RTMPS and YouTube stream binding;
+- music, clips and all unrelated Control UI.

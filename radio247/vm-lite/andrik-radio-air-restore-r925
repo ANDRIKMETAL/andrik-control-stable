@@ -1,0 +1,105 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+SERVER="/opt/andrik-radio/radio247/server.mjs"
+BACKUPS="/opt/andrik-radio/backups"
+STAMP="$(date +%Y%m%d-%H%M%S)"
+SAVE="$BACKUPS/BEFORE-R925-AIR-RESTORE-$STAMP-server.mjs"
+EXPECTED_FALLBACK="9492dd0e5021daa57a6b2d1f0325379323520a45b64a6737786c70cdbd3d81a9"
+
+echo "======================================================"
+echo " ANDRIK R925 · ВОССТАНОВИТЬ ЭФИР"
+echo " EXACT VERIFIED GOLD SERVER RESTORE"
+echo "======================================================"
+
+[ -s "$SERVER" ] || { echo "❌ LIVE server.mjs not found"; exit 20; }
+
+GOLD="$(find "$BACKUPS" -maxdepth 1 -type d -name 'GOLD-R925-AIR-RESTORE-*' -printf '%T@ %p\n' 2>/dev/null | sort -nr | head -1 | cut -d' ' -f2-)"
+if [ -z "$GOLD" ] || [ ! -s "$GOLD/server.mjs" ]; then
+  GOLD="$(find "$BACKUPS" -maxdepth 1 -type d -name 'GOLD-PRE-R937C-FULLSCREEN-RESTORED-*' -printf '%T@ %p\n' 2>/dev/null | sort -nr | head -1 | cut -d' ' -f2-)"
+fi
+
+[ -n "$GOLD" ] && [ -s "$GOLD/server.mjs" ] || { echo "❌ VERIFIED GOLD not found"; exit 21; }
+
+EXPECTED="$EXPECTED_FALLBACK"
+if [ -s "$GOLD/server.sha256" ]; then
+  READ_SHA="$(awk 'NR==1{print $1}' "$GOLD/server.sha256")"
+  [ -n "$READ_SHA" ] && EXPECTED="$READ_SHA"
+fi
+
+GOLD_SHA="$(sha256sum "$GOLD/server.mjs" | awk '{print $1}')"
+echo "GOLD=$GOLD"
+echo "EXPECTED=$EXPECTED"
+echo "GOLD_SHA=$GOLD_SHA"
+
+[ "$GOLD_SHA" = "$EXPECTED" ] || { echo "❌ GOLD SHA mismatch — nothing changed"; exit 22; }
+node --check "$GOLD/server.mjs" >/dev/null
+
+cp -a "$SERVER" "$SAVE"
+echo "✅ CURRENT BACKUP=$SAVE"
+cp -af "$GOLD/server.mjs" "$SERVER"
+
+if ! node --check "$SERVER" >/dev/null; then
+  echo "❌ restored server failed node check — rollback"
+  cp -af "$SAVE" "$SERVER"
+  exit 23
+fi
+
+LIVE_SHA="$(sha256sum "$SERVER" | awk '{print $1}')"
+[ "$LIVE_SHA" = "$EXPECTED" ] || { cp -af "$SAVE" "$SERVER"; echo "❌ copied SHA mismatch — rollback"; exit 24; }
+
+echo "✅ EXACT GOLD server.mjs restored"
+echo "=== ONE RADIO RESTART ==="
+
+if ! systemctl restart andrik-radio.service; then
+  cp -af "$SAVE" "$SERVER"
+  systemctl restart andrik-radio.service || true
+  echo "❌ restart failed — previous server restored"
+  exit 30
+fi
+
+READY=0
+for I in $(seq 1 60); do
+  sleep 2
+  if curl -fsS --max-time 3 http://127.0.0.1:8080/status >/tmp/r925-air-status.json 2>/dev/null; then
+    if python3 - <<'PY'
+import json,sys
+try:d=json.load(open('/tmp/r925-air-status.json'))
+except Exception:sys.exit(1)
+ok=all(d.get(k) is True for k in ('publisherRunning','producerRunning','videoFeederRunning','transportHealthy'))
+sys.exit(0 if ok else 1)
+PY
+    then READY=1; echo "✅ FULL RADIO READY after $((I*2))s"; break; fi
+  fi
+done
+
+if [ "$READY" -ne 1 ]; then
+  echo "❌ radio health failed — restoring previous server"
+  cp -af "$SAVE" "$SERVER"
+  node --check "$SERVER" >/dev/null || true
+  systemctl restart andrik-radio.service || true
+  exit 31
+fi
+
+echo
+echo "=== HEALTH ==="
+curl -fsS --max-time 5 http://127.0.0.1:8080/status | python3 -c '
+import sys,json
+d=json.load(sys.stdin)
+print("publisher :",d.get("publisherRunning"))
+print("producer  :",d.get("producerRunning"))
+print("video     :",d.get("videoFeederRunning"))
+print("transport :",d.get("transportHealthy"))
+print("current   :",((d.get("current") or {}).get("title","")))
+print("next      :",((d.get("next") or {}).get("title","")))
+print("visual    :",d.get("visualPath"))
+print("error     :",d.get("lastError",""))
+'
+
+echo
+echo "======================================================"
+echo "✅ ЭФИР ВОССТАНОВЛЕН ИЗ ПРОВЕРЕННОГО GOLD"
+echo "✅ server.mjs exact SHA: $LIVE_SHA"
+echo "✅ previous state saved: $SAVE"
+echo "📺 никаких отдельных fullscreen-рубильников не используется"
+echo "======================================================"
