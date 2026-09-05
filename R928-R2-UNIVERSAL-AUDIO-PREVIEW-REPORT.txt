@@ -1,0 +1,19 @@
+ANDRIK R928 — R2 UNIVERSAL AUDIO PREVIEW
+Date: 2026-09-05
+Base: R927 R2 AUDIO PREVIEW + R926 SCREEN RESTORE/R2 LIQUID
+
+Added:
+- Tap any audio OR video row in R2 Storage to open the same compact audio mini-player.
+- Audio files play normally.
+- Video/clip files are opened by the HTML audio media element so their embedded audio track plays without opening a full video player.
+- Direct public media URL remains https://music.andrikmetal.com/<key>.
+- Selected row highlight works for both audio and video.
+- Rename/delete buttons remain isolated from playback.
+- Radio stream, VPS server, fullscreen, R937G, station cache, R2 objects and Worker API are untouched.
+- R927 audio preview, R926 screen-restore button and R2 liquid barrel are preserved.
+
+NOTE:
+- Playback depends on the browser supporting the media container/audio codec. Current MP4/AAC clips are expected to play as audio in Chromium-based mobile browsers.
+
+CACHE RESET:
+https://control.andrikmetal.com/cache-reset-v55-00-final-r928.html?clean=r928-r2-universal-audio

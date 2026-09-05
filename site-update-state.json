@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788637262810-254126ba3a",
-  "release": "R927",
-  "archiveName": "ANDRIK-R927-R2-AUDIO-PREVIEW-R926-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "d5b19ea65e7e8288354df07314b4de1a683abde8",
-  "backupSha": "d5b19ea65e7e8288354df07314b4de1a683abde8",
+  "operationId": "publish-1788637482545-ddc3cd7ba9",
+  "release": "R928",
+  "archiveName": "ANDRIK-R928-R2-UNIVERSAL-AUDIO-PREVIEW-R927-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "7193c5b3387984fba897df3a783cda6419518408",
+  "backupSha": "7193c5b3387984fba897df3a783cda6419518408",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-05T19:41:02.810Z"
+  "generatedAt": "2026-09-05T19:44:42.545Z"
 }
