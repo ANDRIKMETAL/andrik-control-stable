@@ -1,0 +1,12 @@
+ANDRIK R931 — JULY ALL MONTHLY ARCHIVE RESTORE
+
+Base: R928 preserved in full.
+
+Changed only monthly archive behavior + cache-bust/reset page:
+- ALL July 2026 restored as verified historical maximum: 16 564.
+- ALL August 2026 pinned as preserved completed-month maximum: 47 553.
+- Current/future values still use max(existing, live, known floor), so history can never be lowered.
+- Known ALL historical floors are injected even if browser localStorage was lost.
+- Existing localStorage archive is preserved; R931 cache reset does NOT delete monthly archive.
+- Graph still supports up to 48 stored months and renders latest 12.
+- R928 R2 universal audio preview and all other site modules preserved.

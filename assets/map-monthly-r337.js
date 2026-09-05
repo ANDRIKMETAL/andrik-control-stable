@@ -18,6 +18,10 @@
   const LEGACY_YOUTUBE_KEY='andrik-control-map-monthly-archive-v1';
   const LAYERS=['all','site','youtube','music','push'];
   const KNOWN_YOUTUBE_MAXIMUMS=Object.freeze({'2026-07':16564});
+  // R931 — restore and permanently pin the verified historical ALL maxima.
+  // These floors survive localStorage/cache loss and cannot lower newer saved values.
+  const KNOWN_ALL_MAXIMUMS=Object.freeze({'2026-07':16564,'2026-08':47553});
+  const knownMaximumsForLayer=layer=>layer==='youtube'?KNOWN_YOUTUBE_MAXIMUMS:layer==='all'?KNOWN_ALL_MAXIMUMS:{};
   const numberFormat=new Intl.NumberFormat('ru-RU',{maximumFractionDigits:0});
   const monthFormat=new Intl.DateTimeFormat('ru-RU',{month:'long',year:'numeric'});
   const shortMonthFormat=new Intl.DateTimeFormat('ru-RU',{month:'short'});
@@ -37,7 +41,7 @@
   const niceCeiling=value=>{if(value<=0)return 100;const power=Math.pow(10,Math.max(0,Math.floor(Math.log10(value))-1));return Math.ceil(value/power)*power};
 
   function normalizeArchive(items,layer){
-    const known=layer==='youtube'?KNOWN_YOUTUBE_MAXIMUMS:{};
+    const known=knownMaximumsForLayer(layer);
     const normalized=(Array.isArray(items)?items:[]).map(item=>{
       const key=String(item?.key||'');
       const legacy=Math.max(0,Number(item?.maxValue??item?.value)||0);
@@ -66,7 +70,7 @@
     if(!LAYERS.includes(layer))layer='youtube';
     const liveValue=Math.max(0,Number(total)||0);if(!liveValue)return;
     const now=new Date(),nowIso=now.toISOString(),key=monthKey(now),lastDay=new Date(now.getFullYear(),now.getMonth()+1,0).getDate();
-    const knownFloor=layer==='youtube'?Math.max(0,Number(KNOWN_YOUTUBE_MAXIMUMS[key])||0):0;
+    const knownFloor=Math.max(0,Number(knownMaximumsForLayer(layer)[key])||0);
     const candidate=Math.max(liveValue,knownFloor);
     const archive=archives[layer]||(archives[layer]=[]);
     const existing=archive.find(item=>item.key===key);
