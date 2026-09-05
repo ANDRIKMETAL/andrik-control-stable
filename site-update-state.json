@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788636105733-bfd547a281",
-  "release": "R926",
-  "archiveName": "ANDRIK-R926-SCREEN-RESTORE-R2-LIQUID-R925-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "818b33454549dddfc09ef03d654967d5315689be",
-  "backupSha": "818b33454549dddfc09ef03d654967d5315689be",
+  "operationId": "publish-1788637262810-254126ba3a",
+  "release": "R927",
+  "archiveName": "ANDRIK-R927-R2-AUDIO-PREVIEW-R926-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "d5b19ea65e7e8288354df07314b4de1a683abde8",
+  "backupSha": "d5b19ea65e7e8288354df07314b4de1a683abde8",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-05T19:21:46.144Z"
+  "generatedAt": "2026-09-05T19:41:02.810Z"
 }

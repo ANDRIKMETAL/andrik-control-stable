@@ -1,0 +1,16 @@
+ANDRIK R927 — R2 AUDIO PREVIEW MINI-PLAYER
+Date: 2026-09-05
+Base: R926 SCREEN RESTORE + R2 LIQUID
+
+Added:
+- Tap any audio row in R2 Storage to open a compact audio mini-player.
+- Selected R2 MP3/WAV/FLAC/M4A/AAC/OGG streams directly from https://music.andrikmetal.com/<key>.
+- Native audio controls: play/pause/seek/volume where supported by browser.
+- Current playing row gets a subtle highlight.
+- Close button pauses preview and closes mini-player.
+- Rename/delete buttons keep their existing behavior and do not trigger playback.
+- Radio stream, VPS radio server, fullscreen, R937G, station cache, R2 objects and Worker API are untouched.
+- R926 screen-restore button and R2 liquid barrel are preserved.
+
+CACHE RESET:
+https://control.andrikmetal.com/cache-reset-v55-00-final-r927.html?clean=r927-r2-audio-preview
