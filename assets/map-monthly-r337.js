@@ -16,7 +16,7 @@
 
   const STORAGE_KEY='andrik-control-map-monthly-archive-r337';
   const LEGACY_YOUTUBE_KEY='andrik-control-map-monthly-archive-v1';
-  const LAYERS=['all','site','youtube','music','push'];
+  const LAYERS=['all','site','technical','youtube','music','push'];
   const KNOWN_YOUTUBE_MAXIMUMS=Object.freeze({'2026-07':16564});
   // R931 — restore and permanently pin the verified historical ALL maxima.
   // These floors survive localStorage/cache loss and cannot lower newer saved values.

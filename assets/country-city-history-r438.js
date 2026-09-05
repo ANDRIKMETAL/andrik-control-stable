@@ -23,6 +23,7 @@
   const key=()=>{try{return localStorage.getItem('andrik-comments-admin-key-persistent')||sessionStorage.getItem('andrik-comments-admin-key')||''}catch(_){return''}};
   const selectedButton=()=>list.querySelector('.world-country-button.is-selected,.world-country-selected-card.is-selected,[aria-pressed="true"]');
   const selectedName=()=>String(runtime.getSelection?.()||map.dataset.focusCountry||'').trim();
+  const trafficModeR932=()=>String(window.__andrikEcosystemActiveLayer||'all')==='technical'?'technical':String(window.__andrikEcosystemActiveLayer||'all')==='site'?'people':'all';
   const selectedCode=()=>{
     const button=String(selectedButton()?.dataset?.code||'').trim();
     const direct=String(runtime.resolveCountryCode?.(button)||button).trim().toUpperCase();if(/^[A-Z]{2}$/.test(direct))return direct;
@@ -87,7 +88,7 @@
     const cached=sourceCache.get(cacheKey);if(cached){box.innerHTML=renderSourceDetail(cached,place);return;}
     try{
       const headers={accept:'application/json'};const token=key();if(token)headers.authorization=`Bearer ${token}`;
-      const qs=new URLSearchParams({country,city,region,mode,expected:String(expected),v:'55.00-r438'});if(mode==='daily')qs.set('date',date);
+      const qs=new URLSearchParams({country,city,region,mode,traffic:trafficModeR932(),expected:String(expected),v:'55.00-r932'});if(mode==='daily')qs.set('date',date);
       const r=await fetch(`/api/control/city-traffic-source?${qs.toString()}`,{cache:'no-store',credentials:'include',headers});const data=await r.json().catch(()=>({}));
       if(!r.ok||data.ok===false)throw new Error(data.error||`HTTP ${r.status}`);sourceCache.set(cacheKey,data);if(openedSourceKey===cacheKey)box.innerHTML=renderSourceDetail(data,place);
     }catch(e){if(openedSourceKey===cacheKey)box.innerHTML=`<div class="country-city-source-empty-r438"><strong>Не удалось получить источник</strong><small>${esc(e?.message||'Ошибка')}</small></div>`}
@@ -134,7 +135,8 @@
     openedSourceKey='';
     const rows=Array.isArray(payload?.rows)?payload.rows:[];
     const total=Math.max(0,Number(payload?.total||0));
-    $('countryCityHistoryTitleR418').textContent=`🏙 ${name||country}`;
+    const trafficLabel=trafficModeR932()==='technical'?' · ⚙ тех.':trafficModeR932()==='people'?' · 👤 люди':'';
+    $('countryCityHistoryTitleR418').textContent=`🏙 ${name||country}${trafficLabel}`;
     $('countryCityHistoryDateR418').textContent=pretty(date);
     $('countryCityHistoryNextR418').disabled=date>=localDate();
     $('countryCityHistorySummaryR418').textContent=rows.length?`${fmt(total)} включений · ${fmt(rows.length)} городов / регионов`:(mode==='all'?'Пока нет сохранённых городов для этой страны':'За эту дату городов не зафиксировано');
@@ -145,7 +147,7 @@
     $('countryCityHistorySummaryR418').textContent='Загружаем историю…';$('countryCityHistoryListR418').innerHTML='<div class="admin-empty">Загрузка…</div>';
     try{
       const headers={accept:'application/json'};const token=key();if(token)headers.authorization=`Bearer ${token}`;
-      const qs=new URLSearchParams({country,mode,v:'55.00-r438'});if(mode==='daily')qs.set('date',date);
+      const qs=new URLSearchParams({country,mode,traffic:trafficModeR932(),v:'55.00-r932'});if(mode==='daily')qs.set('date',date);
       const r=await fetch(`/api/control/country-city-history?${qs.toString()}`,{cache:'no-store',credentials:'include',headers,signal:controller.signal});
       const data=await r.json().catch(()=>({}));if(!r.ok||data.ok===false)throw new Error(data.error||`HTTP ${r.status}`);render(data);
     }catch(e){

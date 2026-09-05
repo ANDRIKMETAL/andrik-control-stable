@@ -39,7 +39,7 @@
     const list=document.getElementById('observabilityIssues');
     if(!list)return;
     const rows=data.recentIssues||[];
-    list.innerHTML=rows.length?rows.map(item=>`<article class="observability-issue is-${escapeHtml(item.level||'warning')}"><div><strong>${item.level==='error'?'Ошибка':'Предупреждение'} · ${escapeHtml(item.scope||'system')}</strong><small>${escapeHtml(item.message||item.event||'Без описания')}</small></div><time>${escapeHtml(formatDate(item.createdAt))}</time></article>`).join(''):'<div class="observability-empty-good">✅ Ошибок и предупреждений в журнале нет.</div>';
+    list.innerHTML=rows.length?rows.map(item=>{const repeats=Math.max(1,Number(item.repeats||1));return `<article class="observability-issue is-${escapeHtml(item.level||'warning')}"><div><strong>${item.level==='error'?'Ошибка':'Предупреждение'} · ${escapeHtml(item.scope||'system')}${repeats>1?` · ×${fmt(repeats)}`:''}</strong><small>${escapeHtml(item.message||item.event||'Без описания')}</small></div><time>${escapeHtml(formatDate(item.createdAt))}</time></article>`}).join(''):'<div class="observability-empty-good">✅ Активных ошибок и предупреждений за последние 2 часа нет.</div>';
   }
 
   function renderQuota(quota={}){

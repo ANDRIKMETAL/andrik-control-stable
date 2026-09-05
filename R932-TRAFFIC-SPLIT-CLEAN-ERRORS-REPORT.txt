@@ -1,0 +1,21 @@
+ANDRIK R932
+
+1. Site traffic split
+- 🌐 Site = human audience only.
+- ⚙ Technical = verified/obvious automation and cloud/monitor traffic.
+- New events are classified at ingestion without storing raw IP.
+- Legacy unclassified rows use a one-time infrastructure-city fallback; new explicitly human visits always override it.
+- ALL ecosystem excludes technical live/site traffic.
+- Country city history follows the active people/technical layer.
+
+2. Error journal cleanup
+- Active panel shows unique errors/warnings from last 2 hours.
+- Repeats are merged and shown as ×N.
+- system_logs older than 24 hours are physically trimmed when observability opens.
+- Known noisy YouTube retry warnings remain filtered.
+
+3. Preserved
+- R931 July ALL archive restore.
+- R928 R2 universal audio preview.
+- R926 screen restore/R2 barrel UI.
+- No VPS radio server changes.

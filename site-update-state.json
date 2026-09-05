@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788640201915-2c5e0c113a",
-  "release": "R931",
-  "archiveName": "ANDRIK-R931-JULY-ALL-ARCHIVE-RESTORE-R928-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "c848a1b7c8d78d630101400429baa743fc136ab2",
-  "backupSha": "c848a1b7c8d78d630101400429baa743fc136ab2",
+  "operationId": "publish-1788641005829-5623a924dd",
+  "release": "R932",
+  "archiveName": "ANDRIK-R932-TRAFFIC-SPLIT-CLEAN-ERRORS-R931-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "f991ccbb9907f8e967cb93e61ba6311aaa1e1f80",
+  "backupSha": "f991ccbb9907f8e967cb93e61ba6311aaa1e1f80",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-05T20:30:01.915Z"
+  "generatedAt": "2026-09-05T20:43:25.829Z"
 }

@@ -1468,6 +1468,8 @@ async function ensureSiteMetricsSchema(db) {
         acquisition_medium TEXT NOT NULL DEFAULT '',
         referrer_host TEXT NOT NULL DEFAULT '',
         device_category TEXT NOT NULL DEFAULT '',
+        traffic_class TEXT NOT NULL DEFAULT '',
+        traffic_reason TEXT NOT NULL DEFAULT '',
         local_date TEXT NOT NULL,
         created_at TEXT NOT NULL DEFAULT (datetime('now'))
       )
@@ -1483,7 +1485,9 @@ async function ensureSiteMetricsSchema(db) {
       `ALTER TABLE site_visit_events ADD COLUMN acquisition_source TEXT NOT NULL DEFAULT ''`,
       `ALTER TABLE site_visit_events ADD COLUMN acquisition_medium TEXT NOT NULL DEFAULT ''`,
       `ALTER TABLE site_visit_events ADD COLUMN referrer_host TEXT NOT NULL DEFAULT ''`,
-      `ALTER TABLE site_visit_events ADD COLUMN device_category TEXT NOT NULL DEFAULT ''`
+      `ALTER TABLE site_visit_events ADD COLUMN device_category TEXT NOT NULL DEFAULT ''`,
+      `ALTER TABLE site_visit_events ADD COLUMN traffic_class TEXT NOT NULL DEFAULT ''`,
+      `ALTER TABLE site_visit_events ADD COLUMN traffic_reason TEXT NOT NULL DEFAULT ''`
     ];
     for (const sql of siteGeoAlterations) {
       await db.prepare(sql).run().catch(error => {
@@ -1494,6 +1498,7 @@ async function ensureSiteMetricsSchema(db) {
     await db.prepare(`CREATE INDEX IF NOT EXISTS idx_site_visit_visitor_date ON site_visit_events(visitor_hash, local_date)`).run();
     await db.prepare(`CREATE INDEX IF NOT EXISTS idx_site_visit_geo ON site_visit_events(event_type, country, region, city, created_at DESC)`).run().catch(() => {});
     await db.prepare(`CREATE INDEX IF NOT EXISTS idx_site_visit_source_r438 ON site_visit_events(event_type, country, city, acquisition_source, local_date)`).run().catch(() => {});
+    await db.prepare(`CREATE INDEX IF NOT EXISTS idx_site_visit_traffic_r932 ON site_visit_events(event_type, traffic_class, country, local_date)`).run().catch(() => {});
     // R638 D1: the first-party dashboard uses these exact filter shapes. The old
     // indexes started with the wrong columns and the realtime query had no usable
     // datetime(created_at) index, so a tiny LIVE counter could scan 62 days.
@@ -1590,12 +1595,41 @@ async function handleControlCountryCityHistoryR418(request, env) {
   let date=parseHistoryDateR418(url.searchParams.get('date'),today) || today;
   if (date>today) date=today;
   const mode=String(url.searchParams.get('mode') || 'all').toLowerCase()==='daily' ? 'daily' : 'all';
+  const trafficRaw=String(url.searchParams.get('traffic')||'all').toLowerCase();
+  const traffic=trafficRaw==='people'||trafficRaw==='technical'?trafficRaw:'all';
   // R638 D1: country_city_daily_history is already updated incrementally on every
   // first-party event. The old UI rebuilt it from raw site_visit_events on every
   // country click. Keep only the one-time migration/backfill marker.
   await ensureCountryCityHistoryBackfillR418(db).catch(() => {});
-  let rowsResult;
-  if (mode==='daily') {
+  let rowsResult,datesResult;
+  if(traffic==='people'||traffic==='technical'){
+    const wantTechnical=traffic==='technical'?1:0;
+    if(mode==='daily'){
+      rowsResult=await db.prepare(`
+        SELECT city,region,COUNT(*) AS opens,MAX(created_at) AS lastAt,1 AS days
+        FROM site_visit_events
+        WHERE country=?1 AND local_date=?2 AND event_type='visit' AND (${TECHNICAL_SQL_R932})=?3
+          AND (city<>'' OR region<>'')
+        GROUP BY city,region
+        ORDER BY opens DESC, datetime(lastAt) DESC, city ASC, region ASC LIMIT 240
+      `).bind(country,date,wantTechnical).all();
+    }else{
+      rowsResult=await db.prepare(`
+        SELECT city,region,COUNT(*) AS opens,MAX(created_at) AS lastAt,COUNT(DISTINCT local_date) AS days
+        FROM site_visit_events
+        WHERE country=?1 AND event_type='visit' AND (${TECHNICAL_SQL_R932})=?2
+          AND (city<>'' OR region<>'')
+        GROUP BY city,region
+        ORDER BY opens DESC, datetime(lastAt) DESC, city ASC, region ASC LIMIT 240
+      `).bind(country,wantTechnical).all();
+    }
+    datesResult=await db.prepare(`
+      SELECT local_date AS date, COUNT(*) AS opens
+      FROM site_visit_events
+      WHERE country=?1 AND event_type='visit' AND (${TECHNICAL_SQL_R932})=?2 AND (city<>'' OR region<>'')
+      GROUP BY local_date ORDER BY local_date DESC LIMIT 180
+    `).bind(country,wantTechnical).all();
+  }else if (mode==='daily') {
     rowsResult=await db.prepare(`
       SELECT city,region,opens,last_at AS lastAt,1 AS days
       FROM country_city_daily_history
@@ -1603,6 +1637,10 @@ async function handleControlCountryCityHistoryR418(request, env) {
       ORDER BY opens DESC, datetime(last_at) DESC, city ASC, region ASC
       LIMIT 240
     `).bind(country,date).all();
+    datesResult=await db.prepare(`
+      SELECT local_date AS date, SUM(opens) AS opens FROM country_city_daily_history
+      WHERE country=?1 AND opens>0 GROUP BY local_date ORDER BY local_date DESC LIMIT 180
+    `).bind(country).all();
   } else {
     rowsResult=await db.prepare(`
       SELECT city,region,SUM(opens) AS opens,MAX(last_at) AS lastAt,COUNT(DISTINCT local_date) AS days
@@ -1612,15 +1650,11 @@ async function handleControlCountryCityHistoryR418(request, env) {
       ORDER BY opens DESC, datetime(MAX(last_at)) DESC, city ASC, region ASC
       LIMIT 240
     `).bind(country).all();
+    datesResult=await db.prepare(`
+      SELECT local_date AS date, SUM(opens) AS opens FROM country_city_daily_history
+      WHERE country=?1 AND opens>0 GROUP BY local_date ORDER BY local_date DESC LIMIT 180
+    `).bind(country).all();
   }
-  const datesResult=await db.prepare(`
-    SELECT local_date AS date, SUM(opens) AS opens
-    FROM country_city_daily_history
-    WHERE country=?1 AND opens>0
-    GROUP BY local_date
-    ORDER BY local_date DESC
-    LIMIT 180
-  `).bind(country).all();
   const rows=(rowsResult?.results||[]).map(row=>({
     city:cleanPlainText(row.city||'',120),
     region:cleanPlainText(row.region||'',120),
@@ -1630,7 +1664,7 @@ async function handleControlCountryCityHistoryR418(request, env) {
   })).filter(row=>row.city||row.region);
   const total=rows.reduce((sum,row)=>sum+row.opens,0);
   return json({
-    ok:true,country,date,today,mode,total,cities:rows.length,rows,
+    ok:true,country,date,today,mode,traffic,total,cities:rows.length,rows,
     availableDates:(datesResult?.results||[]).map(row=>({date:cleanPlainText(row.date||'',20),opens:Math.max(0,Number(row.opens||0))})),
     retention:'persistent-daily-rollup',source:'first-party ecosystem events',timezone:'Europe/Bratislava'
   });
@@ -1649,6 +1683,39 @@ function detectDeviceCategoryR536(request) {
   if (mobileHint==='?1' || /iphone|ipod|android.*mobile|windows phone|mobile/.test(ua)) return 'mobile';
   if (mobileHint==='?0' || /windows|macintosh|cros|x11|linux/.test(ua)) return 'desktop';
   return 'other';
+}
+
+// R932 — separate likely human audience from automation / infrastructure traffic.
+// New events use request metadata. Older rows use a deliberately conservative
+// fallback only for old unclassified rows whose coarse Cloudflare city is one
+// of the infrastructure-heavy hubs that dominated the legacy map. New human
+// browser visits are stored explicitly as human and always override this fallback.
+const TECHNICAL_UA_R932=/(?:bot|crawler|spider|slurp|headless|lighthouse|pagespeed|pingdom|uptime|monitor|healthcheck|curl|wget|python-requests|aiohttp|httpclient|go-http-client|node-fetch|axios|postman|insomnia|facebookexternalhit|telegrambot|discordbot|whatsapp|twitterbot|linkedinbot|slackbot|google-inspectiontool|googleother|bingpreview|yandex|semrush|ahrefs|mj12bot|petalbot|bytespider|gptbot|chatgpt-user|oai-searchbot|claudebot)/i;
+const TECHNICAL_ORG_R932=/(?:amazon|aws|microsoft|azure|google cloud|cloudflare|digitalocean|hetzner|ovh|oracle cloud|linode|akamai|fastly|github|netlify|vercel|render|fly\.io)/i;
+const LEGACY_TECHNICAL_CITIES_R932=new Set(['ashburn','boydton','moses lake','kent','san jose','boardman','quincy','the dalles']);
+const TECHNICAL_SQL_R932=`(CASE
+  WHEN LOWER(COALESCE(traffic_class,''))='technical' THEN 1
+  WHEN LOWER(COALESCE(traffic_class,''))='human' THEN 0
+  WHEN COALESCE(traffic_class,'')='' AND LOWER(COALESCE(city,'')) IN ('ashburn','boydton','moses lake','kent','san jose','boardman','quincy','the dalles') THEN 1
+  ELSE 0 END)`;
+function classifySiteTrafficR932(request){
+  const ua=cleanPlainText(request?.headers?.get?.('user-agent')||'',500);
+  const cf=request?.cf||{};
+  const device=detectDeviceCategoryR536(request);
+  const org=cleanPlainText(cf.asOrganization||'',220);
+  const verified=Boolean(cf?.botManagement?.verifiedBot);
+  const score=Number(cf?.botManagement?.score);
+  if(verified)return {trafficClass:'technical',trafficReason:'verified-bot'};
+  if(Number.isFinite(score)&&score>0&&score<=10)return {trafficClass:'technical',trafficReason:'bot-score'};
+  if(TECHNICAL_UA_R932.test(ua))return {trafficClass:'technical',trafficReason:'automation-user-agent'};
+  if(device==='other'&&TECHNICAL_ORG_R932.test(org))return {trafficClass:'technical',trafficReason:'cloud-network'};
+  return {trafficClass:'human',trafficReason:''};
+}
+function isTechnicalRecentR932(row={}){
+  const cls=String(row?.trafficClass||row?.traffic_class||'').toLowerCase();
+  if(cls==='technical')return true;
+  if(cls==='human')return false;
+  return !cls && LEGACY_TECHNICAL_CITIES_R932.has(String(row?.city||'').trim().toLowerCase());
 }
 
 async function handleSiteVisit(request, env) {
@@ -1674,6 +1741,7 @@ async function handleSiteVisit(request, env) {
   const acquisitionMedium = cleanPlainText(body.acquisitionMedium || '', 80).toLowerCase();
   const referrerHost = cleanPlainText(body.referrerHost || '', 180).toLowerCase().replace(/[^a-z0-9._:-]/g, '');
   const deviceCategory = detectDeviceCategoryR536(request);
+  const trafficR932 = classifySiteTrafficR932(request);
   const cf = request.cf || {};
   const country = cleanPlainText(cf.country || '', 8).toUpperCase();
   const region = cleanPlainText(cf.region || cf.regionCode || '', 120);
@@ -1685,11 +1753,12 @@ async function handleSiteVisit(request, env) {
   const longitude = Number.isFinite(lonRaw) ? Math.round(lonRaw * 10) / 10 : null;
   await db.prepare(`
     INSERT INTO site_visit_events(
-      id, visitor_hash, path, event_type, target, country, region, city, latitude, longitude, acquisition_source, acquisition_medium, referrer_host, device_category, local_date, created_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+      id, visitor_hash, path, event_type, target, country, region, city, latitude, longitude, acquisition_source, acquisition_medium, referrer_host, device_category, traffic_class, traffic_reason, local_date, created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
   `).bind(
     crypto.randomUUID(), visitorHash, normalizeSitePath(body.path), eventType, target,
-    country, region, city, latitude, longitude, acquisitionSource, acquisitionMedium, referrerHost, deviceCategory, localDate
+    country, region, city, latitude, longitude, acquisitionSource, acquisitionMedium, referrerHost, deviceCategory,
+    trafficR932.trafficClass, trafficR932.trafficReason, localDate
   ).run();
   // Keep this lightweight first-party counter small; long-term analytics remains in GA4.
   await recordCountryCityHistoryR418(db,{localDate,country,region,city,eventType}).catch(() => {});
@@ -3292,29 +3361,30 @@ async function latestPlatformMetricsR498(db, platform) {
   } catch (_) { return { metrics:{}, createdAt:'' }; }
 }
 async function getEcosystemSiteAggregatesR638(db,{force=false}={}){
-  const cacheKey='d1-cache:ecosystem-site-aggregates-r638';
+  const cacheKey='d1-cache:ecosystem-site-aggregates-r932';
   if(!force){
     const cached=await readD1JsonCacheR638(db,cacheKey,D1_ECOSYSTEM_AGG_CACHE_MS_R638);
-    if(cached?.value?.version==='r638')return {...cached.value,d1Cache:{hit:true,updatedAt:cached.updatedAt}};
+    if(cached?.value?.version==='r932')return {...cached.value,d1Cache:{hit:true,updatedAt:cached.updatedAt}};
   }
   const age='-30 days';
   const safe=task=>Promise.resolve().then(task).catch(()=>({results:[]}));
   const [siteCountries,sitePoints,musicCountries,musicPoints,linkRows,siteWeekly,sitePrevious,musicWeekly,musicPrevious,historySite] = await Promise.all([
     safe(()=>db.prepare(`
-      SELECT country, COUNT(DISTINCT visitor_hash) AS value, COUNT(*) AS events
+      SELECT country, ${TECHNICAL_SQL_R932} AS technical, COUNT(DISTINCT visitor_hash) AS value, COUNT(*) AS events
       FROM site_visit_events
       WHERE event_type='visit' AND country<>'' AND datetime(created_at)>=datetime('now', ?)
-      GROUP BY country ORDER BY value DESC, events DESC LIMIT 120
+      GROUP BY country, ${TECHNICAL_SQL_R932} ORDER BY value DESC, events DESC LIMIT 240
     `).bind(age).all()),
     safe(()=>db.prepare(`
       SELECT country, MAX(region) AS region, MAX(city) AS city,
              ROUND(AVG(latitude),1) AS latitude, ROUND(AVG(longitude),1) AS longitude,
+             ${TECHNICAL_SQL_R932} AS technical,
              COUNT(DISTINCT visitor_hash) AS value, COUNT(*) AS events, MAX(created_at) AS lastAt
       FROM site_visit_events
       WHERE event_type='visit' AND country<>'' AND latitude IS NOT NULL AND longitude IS NOT NULL
         AND datetime(created_at)>=datetime('now', ?)
-      GROUP BY country, region, city, ROUND(latitude,1), ROUND(longitude,1)
-      ORDER BY value DESC, events DESC LIMIT 180
+      GROUP BY country, region, city, ROUND(latitude,1), ROUND(longitude,1), ${TECHNICAL_SQL_R932}
+      ORDER BY value DESC, events DESC LIMIT 300
     `).bind(age).all()),
     safe(()=>db.prepare(`
       SELECT country, COUNT(*) AS value,
@@ -3345,17 +3415,17 @@ async function getEcosystemSiteAggregatesR638(db,{force=false}={}){
       GROUP BY event_type ORDER BY value DESC
     `).bind(age).all()),
     safe(()=>db.prepare(`
-      SELECT country, COUNT(DISTINCT visitor_hash) AS value
+      SELECT country, ${TECHNICAL_SQL_R932} AS technical, COUNT(DISTINCT visitor_hash) AS value
       FROM site_visit_events
       WHERE event_type='visit' AND country<>'' AND datetime(created_at)>=datetime('now','-7 days')
-      GROUP BY country ORDER BY value DESC LIMIT 120
+      GROUP BY country, ${TECHNICAL_SQL_R932} ORDER BY value DESC LIMIT 240
     `).all()),
     safe(()=>db.prepare(`
-      SELECT country, COUNT(DISTINCT visitor_hash) AS value
+      SELECT country, ${TECHNICAL_SQL_R932} AS technical, COUNT(DISTINCT visitor_hash) AS value
       FROM site_visit_events
       WHERE event_type='visit' AND country<>''
         AND datetime(created_at)>=datetime('now','-14 days') AND datetime(created_at)<datetime('now','-7 days')
-      GROUP BY country ORDER BY value DESC LIMIT 120
+      GROUP BY country, ${TECHNICAL_SQL_R932} ORDER BY value DESC LIMIT 240
     `).all()),
     safe(()=>db.prepare(`
       SELECT country, COUNT(*) AS value
@@ -3379,7 +3449,7 @@ async function getEcosystemSiteAggregatesR638(db,{force=false}={}){
     `).all())
   ]);
   const payload={
-    version:'r638',generatedAt:new Date().toISOString(),
+    version:'r932',generatedAt:new Date().toISOString(),
     siteCountries:siteCountries.results||[],sitePoints:sitePoints.results||[],
     musicCountries:musicCountries.results||[],musicPoints:musicPoints.results||[],
     linkRows:linkRows.results||[],siteWeekly:siteWeekly.results||[],sitePrevious:sitePrevious.results||[],
@@ -3440,7 +3510,9 @@ async function handleControlEcosystemMap(request, env) {
       ORDER BY value DESC LIMIT 180
     `).all()),
     safeQueryR439(() => db.prepare(`
-      SELECT event_type AS type, country, region, city, latitude, longitude, target, created_at AS createdAt
+      SELECT event_type AS type, country, region, city, latitude, longitude, target,
+             traffic_class AS trafficClass, traffic_reason AS trafficReason, device_category AS deviceCategory,
+             created_at AS createdAt
       FROM site_visit_events
       WHERE datetime(created_at)>=datetime('now','-60 minutes')
       ORDER BY datetime(created_at) DESC LIMIT 40
@@ -3493,7 +3565,8 @@ async function handleControlEcosystemMap(request, env) {
   ]);
   const normalizeWeekly = rows => (rows?.results || []).map(row => ({
     country: cleanPlainText(row.country || '', 8).toUpperCase(),
-    value: Number(row.value || 0)
+    value: Number(row.value || 0),
+    technical:Boolean(Number(row.technical || 0))
   })).filter(row => row.country && row.value >= 0);
 
   const normalizeCountries = rows => (rows?.results || []).map(row => ({
@@ -3501,7 +3574,8 @@ async function handleControlEcosystemMap(request, env) {
     value: Number(row.value || 0),
     events: Number(row.events || 0),
     downloads: Number(row.downloads || 0),
-    listens: Number(row.listens || 0)
+    listens: Number(row.listens || 0),
+    technical:Boolean(Number(row.technical || 0))
   })).filter(row => row.country && row.value > 0);
   const normalizePoints = rows => (rows?.results || []).map(row => ({
     country: cleanPlainText(row.country || '', 8).toUpperCase(),
@@ -3513,6 +3587,7 @@ async function handleControlEcosystemMap(request, env) {
     events: Number(row.events || 0),
     downloads: Number(row.downloads || 0),
     listens: Number(row.listens || 0),
+    technical:Boolean(Number(row.technical || 0)),
     lastAt: cleanPlainText(row.lastAt || '', 60)
   })).filter(row => row.country && Number.isFinite(row.latitude) && Number.isFinite(row.longitude));
   const links = {};
@@ -3600,6 +3675,19 @@ async function handleControlEcosystemMap(request, env) {
     if (key && !historyCountryMapR452.has(key)) historyCountryMapR452.set(key,{country:row.country,value:1,source:'social-history-r498'});
   }
   const pushCounts = await getPushAudienceCounts(env).catch(() => ({}));
+  const siteCountriesR932=normalizeCountries(siteCountriesRaw);
+  const sitePointsR932=normalizePoints(sitePointsRaw);
+  const siteWeeklyR932=normalizeWeekly(siteWeeklyRaw);
+  const sitePreviousR932=normalizeWeekly(sitePreviousWeeklyRaw);
+  const sitePeopleCountriesR932=siteCountriesR932.filter(row=>!row.technical);
+  const siteTechnicalCountriesR932=siteCountriesR932.filter(row=>row.technical);
+  const sitePeoplePointsR932=sitePointsR932.filter(row=>!row.technical);
+  const siteTechnicalPointsR932=sitePointsR932.filter(row=>row.technical);
+  const sitePeopleWeeklyR932=siteWeeklyR932.filter(row=>!row.technical);
+  const siteTechnicalWeeklyR932=siteWeeklyR932.filter(row=>row.technical);
+  const sitePeoplePreviousR932=sitePreviousR932.filter(row=>!row.technical);
+  const siteTechnicalPreviousR932=sitePreviousR932.filter(row=>row.technical);
+  const sumValuesR932=rows=>(rows||[]).reduce((sum,row)=>sum+Math.max(0,Number(row.value||0)),0);
   return json({
     ok:true,
     updatedAt:new Date().toISOString(),
@@ -3620,9 +3708,15 @@ async function handleControlEcosystemMap(request, env) {
       recent24h:normalizePoints(radioRecent24Raw)
     },
     site:{
-      countries:normalizeCountries(siteCountriesRaw), points:normalizePoints(sitePointsRaw),
+      countries:sitePeopleCountriesR932, points:sitePeoplePointsR932,
+      technicalCountries:siteTechnicalCountriesR932, technicalPoints:siteTechnicalPointsR932,
       recent24hPoints:normalizePoints(siteRecent24Raw),
-      weeklyCountries:normalizeWeekly(siteWeeklyRaw), previousWeekCountries:normalizeWeekly(sitePreviousWeeklyRaw)
+      weeklyCountries:sitePeopleWeeklyR932, previousWeekCountries:sitePeoplePreviousR932,
+      technicalWeeklyCountries:siteTechnicalWeeklyR932, technicalPreviousWeekCountries:siteTechnicalPreviousR932,
+      trafficSplit:{
+        people:sumValuesR932(sitePeopleCountriesR932), technical:sumValuesR932(siteTechnicalCountriesR932),
+        mode:'R932 conservative classification', legacyFallback:'other-device + infrastructure-city'
+      }
     },
     instagram:{
       connected:Boolean(igLatestR498.metrics?.connected), configured:instagramConfigR487(env).configured,
@@ -3648,7 +3742,9 @@ async function handleControlEcosystemMap(request, env) {
       region:cleanPlainText(row.region || '',120), city:cleanPlainText(row.city || '',120),
       latitude:row.latitude === null || row.latitude === undefined || row.latitude === '' ? null : Number(row.latitude),
       longitude:row.longitude === null || row.longitude === undefined || row.longitude === '' ? null : Number(row.longitude),
-      target:cleanPlainText(row.target || '',300), createdAt:cleanPlainText(row.createdAt || '',60)
+      target:cleanPlainText(row.target || '',300), createdAt:cleanPlainText(row.createdAt || '',60),
+      trafficClass:isTechnicalRecentR932(row)?'technical':'human',
+      trafficReason:cleanPlainText(row.trafficReason || '',120), deviceCategory:cleanPlainText(row.deviceCategory || '',40)
     }))
   });
 }
@@ -6520,7 +6616,7 @@ function trafficSourceDateRangeR438(mode, requestedDate = '') {
   return { startDate:shiftIsoCalendarDate(today, -61), endDate:today, label:'последние 62 дня', mode:'all' };
 }
 
-async function firstPartyCitySourcesR438(db, { country='', city='', region='', range } = {}) {
+async function firstPartyCitySourcesR438(db, { country='', city='', region='', range, traffic='all' } = {}) {
   await ensureSiteMetricsSchema(db);
   const code = cleanPlainText(country || '', 8).toUpperCase();
   const safeCity = cleanPlainText(city || '', 120);
@@ -6528,6 +6624,8 @@ async function firstPartyCitySourcesR438(db, { country='', city='', region='', r
   if (!/^[A-Z]{2}$/.test(code) || (!safeCity && !safeRegion)) return { configured:true, rows:[], total:0, users:0 };
   const placeSql = safeCity ? `LOWER(city)=LOWER(?4)` : `LOWER(region)=LOWER(?4)`;
   const placeValue = safeCity || safeRegion;
+  const trafficMode=traffic==='people'||traffic==='technical'?traffic:'all';
+  const trafficWhere=trafficMode==='all'?'':` AND (${TECHNICAL_SQL_R932})=${trafficMode==='technical'?1:0}`;
   const result = await db.prepare(`
     SELECT
       CASE WHEN acquisition_source<>'' THEN acquisition_source WHEN referrer_host<>'' THEN referrer_host ELSE '(unknown)' END AS source,
@@ -6540,6 +6638,7 @@ async function firstPartyCitySourcesR438(db, { country='', city='', region='', r
       AND local_date>=?2 AND local_date<=?3
       AND ${placeSql}
       AND event_type IN ('visit','music-download','music-listen','telegram-open','youtube-open','spotify-open','apple-music-open','soundcloud-open','amazon-music-open')
+      ${trafficWhere}
     GROUP BY source,medium
     ORDER BY events DESC, users DESC, source ASC
     LIMIT 16
@@ -6607,6 +6706,8 @@ async function handleControlCityTrafficSourceR438(request, env) {
   const country = cleanPlainText(url.searchParams.get('country') || '', 8).toUpperCase();
   const city = cleanPlainText(url.searchParams.get('city') || '', 120);
   const region = cleanPlainText(url.searchParams.get('region') || '', 120);
+  const trafficRaw=String(url.searchParams.get('traffic')||'all').toLowerCase();
+  const traffic=trafficRaw==='people'||trafficRaw==='technical'?trafficRaw:'all';
   const expectedRaw = Number(url.searchParams.get('expected') || 0);
   const expectedOpens = Number.isFinite(expectedRaw) ? Math.max(0, Math.min(1000000000, Math.round(expectedRaw))) : 0;
   if (!/^[A-Z]{2}$/.test(country) || (!city && !region)) return json({ ok:false, error:'validation' }, 400);
@@ -6615,7 +6716,7 @@ async function handleControlCityTrafficSourceR438(request, env) {
   // R439: source drilldown owns its schema preparation; the ecosystem map no longer
   // depends on this migration succeeding.
   await ensureSiteMetricsSchema(db).catch(() => {});
-  const firstParty = await firstPartyCitySourcesR438(db,{country,city,region,range}).catch(error => ({ configured:false, rows:[], total:0, users:0, error:cleanPlainText(error?.message || error,240) }));
+  const firstParty = await firstPartyCitySourcesR438(db,{country,city,region,range,traffic}).catch(error => ({ configured:false, rows:[], total:0, users:0, error:cleanPlainText(error?.message || error,240) }));
   // R438: the number shown on the city card is authoritative. Reconcile the source
   // breakdown to that SAME first-party ecosystem-event metric. Raw source fields are
   // retained for 62 days; older / pre-R437 events are represented honestly as unknown.
@@ -6641,7 +6742,7 @@ async function handleControlCityTrafficSourceR438(request, env) {
   catch (error) { ga4 = { configured:Boolean(String(env.GOOGLE_ANALYTICS_CREDENTIALS || '').trim()), rows:[], totalSessions:0, totalUsers:0, error:analyticsErrorMessage(error) }; }
   return json({
     ok:true,
-    country, city, region, expectedOpens,
+    country, city, region, traffic, expectedOpens,
     range:{...range, timezone:'Europe/Bratislava'},
     ga4,
     firstParty,
@@ -15950,28 +16051,34 @@ async function handleControlObservability(request, env) {
   if (!adminAuthorized(request, env)) return json({ ok:false, error:'unauthorized' }, 401);
   const db = requireDb(env);
   await Promise.all([ensurePushAutomationSchema(db), ensureObservabilitySchema(db), ensureNativeMonitorSchema(db)]);
+  // R932: old journal noise is not an active incident. Keep one day for audit,
+  // physically trim older rows, and show a de-duplicated 2-hour active window.
+  await db.prepare(`DELETE FROM system_logs WHERE datetime(created_at)<datetime('now','-24 hours')`).run().catch(()=>{});
   const dateKey = getBratislavaClock().date;
   const [health, counts, recent, usageRows, firstUsage] = await Promise.all([
     buildAndrikHealthSnapshot(env, { checkSite:true }),
     db.prepare(`
       SELECT
-        SUM(CASE WHEN level='error' THEN 1 ELSE 0 END) AS errors,
-        SUM(CASE WHEN level='warning' THEN 1 ELSE 0 END) AS warnings,
-        COUNT(*) AS total
+        COUNT(DISTINCT CASE WHEN level='error' THEN scope||'|'||event||'|'||message END) AS errors,
+        COUNT(DISTINCT CASE WHEN level='warning' THEN scope||'|'||event||'|'||message END) AS warnings,
+        COUNT(DISTINCT scope||'|'||level||'|'||event||'|'||message) AS total
       FROM system_logs
-      WHERE datetime(created_at) >= datetime('now','-24 hours')
+      WHERE datetime(created_at) >= datetime('now','-2 hours')
+        AND level IN ('error','warning')
         AND NOT (scope='youtube-fast-engagement' AND event IN ('fast-check-warning','fast-check-retry'))
         AND NOT (scope='youtube-events' AND event IN ('seeded','cron-lite-r416-degraded','cron-lite-r416-retry'))
         AND NOT (scope='youtube' AND event='playlist-seeded')
     `).first(),
     db.prepare(`
-      SELECT scope, level, event, message, details_json AS detailsJson, created_at AS createdAt
+      SELECT scope, level, event, message, MAX(created_at) AS createdAt, COUNT(*) AS repeats
       FROM system_logs
       WHERE level IN ('error','warning')
+        AND datetime(created_at) >= datetime('now','-2 hours')
         AND NOT (scope='youtube-fast-engagement' AND event IN ('fast-check-warning','fast-check-retry'))
         AND NOT (scope='youtube-events' AND event IN ('seeded','cron-lite-r416-degraded','cron-lite-r416-retry'))
         AND NOT (scope='youtube' AND event='playlist-seeded')
-      ORDER BY datetime(created_at) DESC
+      GROUP BY scope, level, event, message
+      ORDER BY datetime(MAX(created_at)) DESC
       LIMIT 20
     `).all(),
     db.prepare(`
@@ -15993,9 +16100,9 @@ async function handleControlObservability(request, env) {
     ok:true,
     updatedAt:new Date().toISOString(),
     health,
-    errors24h:{ errors:Number(counts?.errors || 0), warnings:Number(counts?.warnings || 0), total:Number(counts?.total || 0) },
+    errors24h:{ errors:Number(counts?.errors || 0), warnings:Number(counts?.warnings || 0), total:Number(counts?.total || 0), windowHours:2, retentionHours:24 },
     recentIssues:(recent.results || []).map(item => ({
-      scope:item.scope || 'system', level:item.level || 'warning', event:item.event || '', message:item.message || '', createdAt:item.createdAt || ''
+      scope:item.scope || 'system', level:item.level || 'warning', event:item.event || '', message:item.message || '', createdAt:item.createdAt || '', repeats:Math.max(1,Number(item.repeats||1))
     })),
     youtubeQuota:{
       dateKey,

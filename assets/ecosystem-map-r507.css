@@ -139,3 +139,10 @@
 #worldMap[data-ecosystem-layer="site"] .world-map-dot i{box-shadow:0 0 0 5px rgba(85,227,157,.09),0 0 19px rgba(85,227,157,.81)!important}
 #worldMap[data-ecosystem-layer="site"] .world-map-city-dot i{box-shadow:0 0 0 2px rgba(255,255,255,.13),0 0 10px rgba(85,227,157,.81)!important}
 #worldMap[data-ecosystem-layer="site"] .world-map-city-dot.is-live-event i{box-shadow:0 0 0 4px rgba(94,239,171,.13),0 0 19px rgba(94,239,171,.86)!important}
+
+
+/* R932 — technical traffic is visually separate from human site audience. */
+#worldMap[data-ecosystem-layer="technical"] .ecosystem-layer-switcher button.is-active{box-shadow:0 0 0 3px rgba(255,173,77,.10),0 0 17px rgba(255,173,77,.66)!important}
+#worldMap[data-ecosystem-layer="technical"] .world-map-dot i{background:#ffad4d!important;box-shadow:0 0 0 5px rgba(255,173,77,.10),0 0 21px rgba(255,173,77,.88)!important}
+#worldMap[data-ecosystem-layer="technical"] .world-map-city-dot i{background:#ffd29a!important;box-shadow:0 0 0 2px rgba(255,255,255,.12),0 0 12px rgba(255,173,77,.90)!important}
+#worldMap[data-ecosystem-layer="technical"] .world-map-city-dot.is-live-event i{box-shadow:0 0 0 4px rgba(255,173,77,.13),0 0 21px rgba(255,173,77,.96)!important}

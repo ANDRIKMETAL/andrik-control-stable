@@ -13,7 +13,8 @@
 
   const state = {
     youtube:{rows:[],points:[],weekly:[],previous:[]},
-    site:{rows:[],points:[],weekly:[],previous:[]},
+    site:{rows:[],points:[],weekly:[],previous:[],classified:false},
+    technical:{rows:[],points:[],weekly:[],previous:[]},
     instagram:{rows:[],points:[],weekly:[],previous:[]},
     music:{rows:[],points:[],weekly:[],previous:[]},
     push:{rows:[],points:[],weekly:[],previous:[]},
@@ -27,7 +28,7 @@
     historyRows:[]
   };
   const LAYER_STORAGE_KEY_R382 = 'andrik-ecosystem-last-layer-r382';
-  const VALID_LAYERS_R382 = ['all','site','youtube','instagram','music','push'];
+  const VALID_LAYERS_R382 = ['all','site','technical','youtube','instagram','music','push'];
   const readSavedLayerR382 = () => {
     try {
       const saved = String(localStorage.getItem(LAYER_STORAGE_KEY_R382) || '').trim().toLowerCase();
@@ -172,10 +173,16 @@
         growthButtonTitle:'Активность стран экосистемы за 7 дней',calendarTitle:'График общей активности по месяцам'
       },
       site:{
-        periodText:'Сайт ANDRIK · карта · 30 дней + LIVE 60 мин.',metricLabel:'польз.',totalTitle:'Пользователи сайта за 30 дней',
-        growthEyeline:'САЙТ · ПОСЛЕДНИЕ 7 ДНЕЙ',growthTitle:'Топ стран по посещениям сайта',growthSubtitle:'Уникальные посетители по странам · сравнение 7 + 7 дней',
-        monthlyEyeline:'АРХИВ · САЙТ',monthlyTitle:'Динамика посещений сайта',monthlyDescription:'Сохраняется максимальное число пользователей карты сайта, достигнутое в каждом месяце.',monthlyMetric:'пользователей',
-        growthButtonTitle:'Активность стран сайта за 7 дней',calendarTitle:'График посещений сайта по месяцам'
+        periodText:'Сайт ANDRIK · ЛЮДИ · 30 дней + LIVE 60 мин.',metricLabel:'людей',totalTitle:'Люди на сайте за 30 дней',
+        growthEyeline:'САЙТ · ЛЮДИ · 7 ДНЕЙ',growthTitle:'Топ стран реальной аудитории сайта',growthSubtitle:'Технический трафик вынесен в отдельный слой ⚙',
+        monthlyEyeline:'АРХИВ · САЙТ · ЛЮДИ',monthlyTitle:'Динамика аудитории сайта',monthlyDescription:'Сохраняется максимум человеческой аудитории сайта; технический трафик не смешивается.',monthlyMetric:'людей',
+        growthButtonTitle:'Аудитория сайта за 7 дней',calendarTitle:'График аудитории сайта по месяцам'
+      },
+      technical:{
+        periodText:'Сайт ANDRIK · ⚙ ТЕХНИЧЕСКИЙ ТРАФИК · 30 дней.',metricLabel:'тех.',totalTitle:'Технические запросы/клиенты за 30 дней',
+        growthEyeline:'ТЕХНИЧЕСКИЙ ТРАФИК · 7 ДНЕЙ',growthTitle:'Инфраструктура и автоматические клиенты',growthSubtitle:'Боты, мониторы и консервативно распознанные дата-центры',
+        monthlyEyeline:'АРХИВ · ТЕХНИЧЕСКИЙ ТРАФИК',monthlyTitle:'Динамика технического трафика',monthlyDescription:'Отдельный служебный слой; не считается живой аудиторией.',monthlyMetric:'тех. клиентов',
+        growthButtonTitle:'Технический трафик за 7 дней',calendarTitle:'График технического трафика'
       },
       youtube:{
         periodText:'YouTube ANDRIK · карта · 28 дней.',metricLabel:'просм.',totalTitle:'Просмотры YouTube за 28 дней',
@@ -254,9 +261,11 @@
 
   const livePointsForLayer = layer => state.recent.filter(item => {
     const type=String(item?.type||'');
-    if(layer==='site') return type==='visit';
-    if(layer==='music') return type==='music-download'||type==='music-listen';
-    if(layer==='all') return true;
+    const technical=String(item?.trafficClass||'').toLowerCase()==='technical';
+    if(layer==='site') return type==='visit'&&!technical;
+    if(layer==='technical') return type==='visit'&&technical;
+    if(layer==='music') return (type==='music-download'||type==='music-listen')&&!technical;
+    if(layer==='all') return !technical;
     return false;
   }).map(item=>({
     country:item.country||'',region:item.region||'',city:item.city||'',
@@ -345,7 +354,8 @@
     if (active === 'youtube' || active === 'all') applyLayer();
   };
   const ingestGoogle = ga => {
-    if (Array.isArray(ga?.countries) && ga.countries.length) state.site.rows = cleanRows(ga.countries,'activeUsers');
+    // GA remains a fallback until the first-party R932 classified payload arrives.
+    if (!state.site.classified && Array.isArray(ga?.countries) && ga.countries.length) state.site.rows = cleanRows(ga.countries,'activeUsers');
     rememberHistoryR452(state.site.rows);
     rebuildAll();
     if (active === 'site' || active === 'all') applyLayer();
@@ -363,10 +373,15 @@
       state.links = data?.links || {};
       state.recent = Array.isArray(data?.recent) ? data.recent : [];
       const siteGeo = cleanRows(data?.site?.countries || []);
-      if (!state.site.rows.length && siteGeo.length) state.site.rows = siteGeo;
+      state.site.rows = siteGeo;
       state.site.points = Array.isArray(data?.site?.points)?data.site.points:[];
       state.site.weekly = cleanWeekly(data?.site?.weeklyCountries || []);
       state.site.previous = cleanWeekly(data?.site?.previousWeekCountries || []);
+      state.site.classified = true;
+      state.technical.rows = cleanRows(data?.site?.technicalCountries || []);
+      state.technical.points = Array.isArray(data?.site?.technicalPoints)?data.site.technicalPoints:[];
+      state.technical.weekly = cleanWeekly(data?.site?.technicalWeeklyCountries || []);
+      state.technical.previous = cleanWeekly(data?.site?.technicalPreviousWeekCountries || []);
       state.instagram.rows = cleanRows(data?.instagram?.countries || []);
       state.instagram.points = Array.isArray(data?.instagram?.points)?data.instagram.points:[];
       state.instagram.weekly = cleanWeekly(data?.instagram?.weeklyCountries || []);
@@ -380,7 +395,7 @@
       state.push.weekly = cleanWeekly(data?.push?.weeklyCountries || []);
       state.push.previous = cleanWeekly(data?.push?.previousWeekCountries || []);
       const serverHistory = cleanRows(data?.historyCountries || []);
-      rememberHistoryR452([...serverHistory,...state.site.rows,...state.instagram.rows,...state.music.rows,...state.push.rows,...state.youtube.rows]);
+      rememberHistoryR452([...serverHistory,...state.site.rows,...state.technical.rows,...state.instagram.rows,...state.music.rows,...state.push.rows,...state.youtube.rows]);
       rebuildAll();
       syncOptionalLayerButtonsR506();
       if (active !== 'youtube' || force) applyLayer(true);
