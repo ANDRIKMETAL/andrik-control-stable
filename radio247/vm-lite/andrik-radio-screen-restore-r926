@@ -1,0 +1,122 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+SERVER="/opt/andrik-radio/radio247/server.mjs"
+BACKUPS="/opt/andrik-radio/backups"
+STATUS_URL="http://127.0.0.1:8080/status"
+STAMP="$(date +%Y%m%d-%H%M%S)"
+SAVE="$BACKUPS/BEFORE-R926-SCREEN-RESTORE-$STAMP-server.mjs"
+FALLBACK_SHA="9492dd0e5021daa57a6b2d1f0325379323520a45b64a6737786c70cdbd3d81a9"
+
+printf '%s\n' '======================================================'
+printf '%s\n' ' ANDRIK R926 · ВОССТАНОВИТЬ ЭКРАН'
+printf '%s\n' ' PROVEN PRE-R937G / PRE-R937F VIDEO PATH'
+printf '%s\n' ' SERVER ONLY · R2/CACHE/VISUAL/ENV UNTOUCHED'
+printf '%s\n' '======================================================'
+
+[ -s "$SERVER" ] || { echo "❌ live server.mjs missing"; exit 20; }
+mkdir -p "$BACKUPS"
+
+SOURCE="$({
+  find "$BACKUPS" -maxdepth 1 -type f -name 'PRE-R937G-AV-ONLY-*-server.mjs' -printf '%T@ %p\n' 2>/dev/null || true
+} | sort -nr | head -1 | cut -d' ' -f2-)"
+
+if [ -z "$SOURCE" ] || [ ! -s "$SOURCE" ]; then
+  SOURCE="$({
+    find "$BACKUPS" -maxdepth 1 -type f -name 'PRE-R937F-FIX-*-server.mjs' -printf '%T@ %p\n' 2>/dev/null || true
+  } | sort -nr | head -1 | cut -d' ' -f2-)"
+fi
+
+if [ -z "$SOURCE" ] || [ ! -s "$SOURCE" ]; then
+  SOURCE="$({
+    find "$BACKUPS" -maxdepth 2 -type f -path '*/GOLD-PRE-R937C-FULLSCREEN-RESTORED-*/server.mjs' -printf '%T@ %p\n' 2>/dev/null || true
+  } | sort -nr | head -1 | cut -d' ' -f2-)"
+  [ -n "$SOURCE" ] && [ -s "$SOURCE" ] || { echo '❌ stable fullscreen source not found'; exit 21; }
+  SHA="$(sha256sum "$SOURCE" | awk '{print $1}')"
+  [ "$SHA" = "$FALLBACK_SHA" ] || { echo "❌ fallback GOLD SHA mismatch: $SHA"; exit 22; }
+fi
+
+node --check "$SOURCE" >/dev/null
+SOURCE_SHA="$(sha256sum "$SOURCE" | awk '{print $1}')"
+LIVE_BEFORE_SHA="$(sha256sum "$SERVER" | awk '{print $1}')"
+
+echo "SOURCE=$SOURCE"
+echo "SOURCE_SHA=$SOURCE_SHA"
+echo "LIVE_BEFORE_SHA=$LIVE_BEFORE_SHA"
+
+cp -a "$SERVER" "$SAVE"
+echo "✅ current server backup=$SAVE"
+cp -af "$SOURCE" "$SERVER"
+
+if ! node --check "$SERVER" >/dev/null; then
+  cp -af "$SAVE" "$SERVER"
+  echo '❌ node check failed — previous server restored'
+  exit 23
+fi
+
+COPIED_SHA="$(sha256sum "$SERVER" | awk '{print $1}')"
+[ "$COPIED_SHA" = "$SOURCE_SHA" ] || { cp -af "$SAVE" "$SERVER"; echo '❌ copy SHA mismatch — previous server restored'; exit 24; }
+
+echo '✅ stable server video path restored'
+echo '✅ /etc/andrik-radio.env untouched'
+echo '✅ station cache untouched'
+echo '✅ visual files untouched'
+echo '✅ MP3/R2 files untouched'
+
+if ! systemctl restart andrik-radio.service; then
+  cp -af "$SAVE" "$SERVER"
+  systemctl restart andrik-radio.service || true
+  echo '❌ radio restart failed — previous server restored'
+  exit 30
+fi
+
+READY=0
+for I in $(seq 1 60); do
+  sleep 2
+  if curl -fsS --max-time 3 "$STATUS_URL" >/tmp/r926-screen-status.json 2>/dev/null; then
+    if python3 - <<'PY_STATUS_R926'
+import json,sys
+try:
+    d=json.load(open('/tmp/r926-screen-status.json'))
+except Exception:
+    sys.exit(1)
+ok=all(d.get(k) is True for k in ('publisherRunning','producerRunning','videoFeederRunning','transportHealthy'))
+sys.exit(0 if ok else 1)
+PY_STATUS_R926
+    then READY=1; break; fi
+  fi
+done
+
+if [ "$READY" -ne 1 ]; then
+  echo '❌ health failed — returning previous server'
+  cp -af "$SAVE" "$SERVER"
+  node --check "$SERVER" >/dev/null || true
+  systemctl restart andrik-radio.service || true
+  exit 31
+fi
+
+curl -fsS -X POST --max-time 8 http://127.0.0.1:8080/control/full-fit >/tmp/r926-full-fit.json 2>/dev/null || true
+sleep 3
+
+echo
+echo '=== HEALTH ==='
+curl -fsS --max-time 5 "$STATUS_URL" | python3 -c '
+import sys,json
+d=json.load(sys.stdin)
+print("publisher :",d.get("publisherRunning"))
+print("producer  :",d.get("producerRunning"))
+print("video     :",d.get("videoFeederRunning"))
+print("transport :",d.get("transportHealthy"))
+print("clip      :",d.get("clipActive"))
+print("current   :",((d.get("current") or {}).get("title","")))
+print("visual    :",d.get("visualPath"))
+print("error     :",d.get("lastError",""))
+'
+
+echo
+echo '======================================================'
+echo '✅ ЭКРАН ВОССТАНОВЛЕН ИЗ ДОКАЗАННО СТАБИЛЬНОГО СОСТОЯНИЯ'
+echo "✅ SERVER SHA=$COPIED_SHA"
+echo "↩ UNDO FILE=$SAVE"
+echo '✅ R2 / MP3 / station cache / visual / env НЕ ТРОНУТЫ'
+echo '======================================================'

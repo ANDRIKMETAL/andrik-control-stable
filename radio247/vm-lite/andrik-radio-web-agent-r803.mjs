@@ -6,7 +6,7 @@ import {Readable} from 'node:stream';
 import {pipeline} from 'node:stream/promises';
 
 const CONFIG='/etc/andrik-radio-web-r627.json';
-const AGENT_VERSION_R803='R925';
+const AGENT_VERSION_R803='R926';
 const DIAG_DIR_R803='/var/cache/andrik-radio-r622/diagnostics';
 const DIAG_AGENT_LOG_R803=DIAG_DIR_R803+'/r803-agent-events.ndjson';
 const DIAG_AGENT_MAX_BYTES_R803=1024*1024;
@@ -20,6 +20,7 @@ const RADIO_ENV='/etc/andrik-radio.env';
 const VISUAL_MANUAL_MARKER='/var/cache/andrik-radio-r622/visuals/.manual-visual-r658';
 const VISUAL_AUTO_R658='/usr/local/sbin/andrik-visual-auto-r703';
 const AIR_RESTORE_R925='/usr/local/sbin/andrik-radio-air-restore-r925';
+const SCREEN_RESTORE_R926='/usr/local/sbin/andrik-radio-screen-restore-r926';
 const SAFE_CACHE_CLEAN_R867='/usr/local/sbin/andrik-radio-safe-cache-clean-r867';
 const VISUAL_FILES=Object.freeze({morning:'stream-morning-master-r703.mp4',day:'stream-day-master-r620.mp4',evening:'stream-evening-master-r620.mp4',night:'stream-night-master-r620.mp4'});
 const DEFAULT_TICKER='ANDRIK METAL RADIO 24/7   •   ANDRIKMETAL.COM   •   НОВЫЕ СИНГЛЫ И АЛЬБОМЫ ANDRIK   •   ПОДПИСЫВАЙТЕСЬ • СТАВЬТЕ ЛАЙКИ • КОММЕНТИРУЙТЕ   •   ';
@@ -252,6 +253,11 @@ async function execute(action,command={},headers={}){
     const r=await runAsync(AIR_RESTORE_R925,[],210000);
     return {ok:r.ok,output:`ВОССТАНОВИТЬ ЭФИР ${r.ok?'✅':'❌'}\n${r.output}`};
   }
+  if(action==='screen-restore'){
+    if(!fs.existsSync(SCREEN_RESTORE_R926))return {ok:false,output:`ВОССТАНОВИТЬ ЭКРАН ❌\nMissing ${SCREEN_RESTORE_R926}`};
+    const r=await runAsync(SCREEN_RESTORE_R926,[],210000);
+    return {ok:r.ok,output:`ВОССТАНОВИТЬ ЭКРАН ${r.ok?'✅':'❌'}\n${r.output}`};
+  }
   if(action==='cache-clean'){
     if(!fs.existsSync(SAFE_CACHE_CLEAN_R867))return {ok:false,output:`SAFE CACHE CLEAN ❌\nMissing ${SAFE_CACHE_CLEAN_R867}`};
     const r=await runAsync(SAFE_CACHE_CLEAN_R867,[],90000);
@@ -362,6 +368,6 @@ async function main(){
     console.log(result.output);if(!result.ok)process.exitCode=4;return;
   }
   if(cmd==='status'){const cfg=readConfig();console.log(cfg.token?'PAIRED ✅':'NOT PAIRED ❌');console.log(await localStatus());return}
-  console.log('ANDRIK Radio Web Agent R925 · commands: daemon | status | bootstrap-visuals | visual-sync | visual-now <morning|day|evening|night> | visual-auto');
+  console.log('ANDRIK Radio Web Agent R926 · commands: daemon | status | bootstrap-visuals | visual-sync | visual-now <morning|day|evening|night> | visual-auto');
 }
 main().catch(e=>{console.error('ОШИБКА:',e.message||e);process.exitCode=1});

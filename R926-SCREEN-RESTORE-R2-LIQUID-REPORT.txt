@@ -1,0 +1,19 @@
+ANDRIK R926 — SCREEN RESTORE + R2 LIQUID
+Date: 2026-09-05
+Base: R925 AIR RESTORE / R2 3D
+
+Added:
+- Main Radio Control button: 🖥 ВОССТАНОВИТЬ ЭКРАН.
+- New remote action: screen-restore.
+- R926 agent handler + Cloudflare Worker allowlist.
+- VPS helper restores only server.mjs from the newest proven PRE-R937G-AV-ONLY or PRE-R937F-FIX backup; fallback is verified GOLD-PRE-R937C.
+- Before restore, current server.mjs is saved.
+- One radio restart + health check + /control/full-fit re-arm.
+- R2, MP3 files, visual files, station cache and /etc/andrik-radio.env are untouched by the screen restore helper.
+- R2 barrel liquid is directly driven by percentage in JS, with explicit liquid height, bright surface, glow and percentage label inside the barrel.
+
+ONE-TIME VPS ARMING AFTER SITE DEPLOY:
+curl -fsSL https://andrikmetal.com/radio247/vm-lite/install-r926-screen-restore-r2-liquid-r925-preserved.sh | sudo env ANDRIK_SITE_BASE=https://andrikmetal.com bash
+
+CACHE RESET:
+https://control.andrikmetal.com/cache-reset-v55-00-final-r926.html?clean=r926-screen-r2-liquid
