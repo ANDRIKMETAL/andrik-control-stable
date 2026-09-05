@@ -1,0 +1,23 @@
+ANDRIK R934 · TECHNICAL MAP HARD-OPEN FIX
+
+Problem fixed
+- R932 added the ⚙ technical-traffic button but reused the exact old ecosystem JS/CSS URLs.
+- A browser/PWA could therefore keep the pre-R932 ecosystem controller in memory/cache.
+- The button existed in HTML, while the stale controller did not know the "technical" layer.
+
+R934 fix
+- New physical asset: /assets/ecosystem-map-r508.js?v=55.00-r934
+- New physical stylesheet: /assets/ecosystem-map-r508.css?v=55.00-r934
+- New physical city-history controller: /assets/country-city-history-r439.js?v=55.00-r934
+- New R934 runtime guard, independent from the old R506 guard.
+- Unique R934 button binding marker.
+- Capture-phase hard-open for the ⚙ button: it sets technical immediately and forces a fresh /api/control/ecosystem-map payload.
+- Explicit window.andrikEcosystemMap.openTechnical() diagnostic helper.
+
+Preserved
+- R932 people/technical split and worker classification.
+- R932 active-error cleanup.
+- R931 July ALL archive restore.
+- R928 R2 universal audio preview.
+- R926 screen restore and R2 barrel.
+- No VPS radio changes.
