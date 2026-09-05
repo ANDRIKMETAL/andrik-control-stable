@@ -1318,7 +1318,16 @@ async function runNativeMonitor(env, options={}) {
   const checkedAt = new Date().toISOString();
   const source = cleanPlainText(options.source || 'manual', 30) || 'manual';
   const targets = getNativeMonitorTargets(env);
-  const results = await Promise.all(targets.map(target => probeNativeMonitorTarget(target, env)));
+  // R923: deployment/edge blips must not poison the whole Central Cron.
+  // Retry only hard monitor errors once; healthy/slow results are never duplicated.
+  const firstResults = await Promise.all(targets.map(target => probeNativeMonitorTarget(target, env)));
+  const results = await Promise.all(firstResults.map(async (first,index) => {
+    if(first.status !== 'error') return first;
+    await new Promise(resolve => setTimeout(resolve, 450));
+    const retry = await probeNativeMonitorTarget(targets[index], env);
+    if(retry.status === 'error') return retry;
+    return { ...retry, recoveredByRetry:true, detail:`${retry.detail} · повтор R923 восстановил` };
+  }));
   const transitions = [];
 
   for (const result of results) {
@@ -9492,6 +9501,18 @@ async function handleCheckYoutubeEvents(request, env) {
       warnings
     };
     const failedEventDelivery = notifications.some(item => !item.ok);
+    const fullHealthyR923 = !warnings.length && !failedEventDelivery && !summary.commentsQueued && !summary.subscribersQueued && !summary.likesQueued;
+    // R923: a successful owner/full reconciliation is strictly richer than the 2-minute
+    // engagement sample.  Treat it as a valid fast heartbeat so the red stale badge and
+    // 5-minute watchdog recover immediately when the owner presses "Проверить сейчас".
+    // This only advances the heartbeat on a completely clean full reconciliation.
+    if(fullHealthyR923){
+      await Promise.all([
+        setPushState(db,'youtube-fast-engagement-last-at-r333',startedAt),
+        setPushState(db,'youtube-fast-engagement-last-success-at-r376',startedAt),
+        setPushState(db,'youtube-fast-engagement-last-status-r376','success')
+      ]).catch(()=>{});
+    }
     // R653: full/manual reconciliation has completed real subscriber comparison too.
     await setPushState(db,'youtube-subscriber-poll-last-at-r653',startedAt).catch(()=>{});
     await setPushState(db, 'youtube-events-last-check-status', (warnings.length || failedEventDelivery || summary.commentsQueued || summary.subscribersQueued || summary.likesQueued) ? 'warning' : 'success');
@@ -9509,7 +9530,7 @@ async function handleCheckYoutubeEvents(request, env) {
 }
 
 
-async function handleYoutubeEventsStatus(request, env) {
+async function handleYoutubeEventsStatus(request, env, ctx) {
   if (!adminAuthorized(request, env)) return json({ ok:false, error:'unauthorized' }, 401);
   const db = requireDb(env);
   await Promise.all([ensurePushAutomationSchema(db), ensureControlV1Schema(db), ensurePlatformAnalyticsSchema(db)]);
@@ -9564,6 +9585,12 @@ async function handleYoutubeEventsStatus(request, env) {
     && Date.parse(fullSuccessAtValue)>Date.parse(fastLastAtValue);
   const fastStatusValue=fastRecoveredByFull?'success':rawFastStatusValue;
   const fastHealthy=fastAgeMinutes===null?null:(fastAgeMinutes<=10 && fastStatusValue!=='failed');
+  // R923: opening the YouTube reactions card itself becomes a bounded rescue wake-up.
+  // If the external 2-minute scheduler went stale, repair it in waitUntil without
+  // blocking the status response. Existing D1 locks prevent duplicate delivery.
+  if(fastAgeMinutes!==null && fastAgeMinutes>12 && ctx?.waitUntil){
+    ctx.waitUntil(runPushAutomationRescueR778(env,'youtube-status-r923').catch(()=>({ok:false})));
+  }
   const today={commentsSent:0,repliesSent:0,likesSent:0,subscribersSent:0,failed:0};
   for(const row of (todayRows.results||[])){
     const n=Number(row.total||0),sent=row.status==='sent';
@@ -19719,7 +19746,7 @@ async function routeApi(request, env, ctx) {
     if (path === '/api/control/country-growth' && request.method === 'GET') return await handleControlCountryGrowth(request, env);
     if (path === '/api/control/country-city-history' && request.method === 'GET') return await handleControlCountryCityHistoryR418(request, env);
     if (path === '/api/control/city-traffic-source' && request.method === 'GET') return await handleControlCityTrafficSourceR438(request, env);
-    if (path === '/api/control/youtube-events/status' && request.method === 'GET') return await handleYoutubeEventsStatus(request, env);
+    if (path === '/api/control/youtube-events/status' && request.method === 'GET') return await handleYoutubeEventsStatus(request, env, ctx);
     if (path === '/api/control/youtube-oauth/status' && request.method === 'GET') return await handleYoutubeOAuthStatus(request, env);
     if (path === '/api/control/youtube-oauth/start' && request.method === 'GET') return await handleYoutubeOAuthStart(request, env);
     if (path === '/oauth/youtube/connect' && request.method === 'GET') return await handleYoutubeOAuthBridgeR619(request, env);

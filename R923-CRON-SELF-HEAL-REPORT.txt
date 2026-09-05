@@ -1,0 +1,26 @@
+ANDRIK R923 — CRON SELF-HEAL / FALSE RED FIX
+
+Base: R922 preserved in full.
+
+What was diagnosed from the 05.09.2026 screenshots:
+- fast YouTube cron last success was 01:24, while the screen was opened at 01:50 (25 minutes stale);
+- last fast result itself was SUCCESS and error counters were 0;
+- Central Cron completed 8/9 only because nativeMonitor reported 2 temporarily unavailable points;
+- at 01:52 ANDRIK Monitor pushed that Control had recovered with HTTP 200 / 8 ms;
+- the R922 GitHub deployment happened later, at ~01:55 local, so R922 did not cause the original outage.
+
+R923 fixes:
+1) A completely successful full/manual YouTube reconciliation now also advances the fast engagement heartbeat.
+   Therefore "Проверить сейчас" really clears a stale false-red YouTube state.
+2) Opening /api/control/youtube-events/status while the fast path is >12 minutes stale queues the existing R778 one-duty rescue in waitUntil.
+   D1 locks remain responsible for duplicate prevention.
+3) Native Monitor retries only hard ERROR probes once after 450 ms before making Central Cron partial.
+   Healthy and warning probes are not duplicated.
+
+Preserved unchanged:
+- R922 R2 storage manager UI/API;
+- R922 fullscreen watchdog files;
+- R921 fullscreen switch;
+- radio/VPS code except already-present R922/R921 files;
+- YouTube binding/stream key;
+- music, release, analytics and all unrelated Control UI.

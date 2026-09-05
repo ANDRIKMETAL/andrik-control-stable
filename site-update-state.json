@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788566152982-d48d08d26b",
-  "release": "R922",
-  "archiveName": "ANDRIK-R922-R2-STORAGE-FULLSCREEN-WATCHDOG-R921-PRESERVED-SAFE-FULL-1.zip",
-  "sourceHead": "8d3e5fe4c195fa97ad55e19360b7884688d220fc",
-  "backupSha": "8d3e5fe4c195fa97ad55e19360b7884688d220fc",
+  "operationId": "publish-1788566570111-7ffed877b1",
+  "release": "R923",
+  "archiveName": "ANDRIK-R923-CRON-SELF-HEAL-R922-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "416d099465b2550366420fe22a39fd76cba642dd",
+  "backupSha": "416d099465b2550366420fe22a39fd76cba642dd",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-04T23:55:53.370Z"
+  "generatedAt": "2026-09-05T00:02:50.111Z"
 }
