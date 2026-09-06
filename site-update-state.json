@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788680735768-ea148be7de",
-  "release": "R946",
-  "archiveName": "ANDRIK-R946-RESTORE-YOUTUBE-VISIBLE-VIEWS-R945-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "bcdef17571fd23570199853714fe2a6e2d92f7c3",
-  "backupSha": "bcdef17571fd23570199853714fe2a6e2d92f7c3",
+  "operationId": "publish-1788683340095-799527b292",
+  "release": "R947",
+  "archiveName": "ANDRIK-R947-RADIO-TWO-VIEWS-SHUFFLE-R946-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "e54a2c6cefdd3b51152f3254b414a4e641dbf2c1",
+  "backupSha": "e54a2c6cefdd3b51152f3254b414a4e641dbf2c1",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-06T07:45:35.768Z"
+  "generatedAt": "2026-09-06T08:29:00.095Z"
 }

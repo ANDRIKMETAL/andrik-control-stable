@@ -21210,38 +21210,40 @@ function parseYoutubeVisibleViewsTextR946(value){
 
 function extractYoutubeVisibleViewsR946(html,videoId=''){
   const body=String(html||'');
-  if(!body)return null;
-  const chunks=[];
   const id=String(videoId||'');
-  if(id){
-    let from=0,seen=0;
-    while(seen<8){
-      const at=body.indexOf(id,from);
-      if(at<0)break;
-      chunks.push(body.slice(Math.max(0,at-5000),Math.min(body.length,at+9000)));
-      from=at+id.length;seen++;
-    }
-  }
-  chunks.push(body.slice(0,Math.min(body.length,900000)));
+  if(!body||!id)return null;
+  const marker=`"videoId":"${id}"`;
   const patterns=[
-    /"videoViewCountRenderer"\s*:\s*\{[\s\S]{0,1800}?"viewCount"\s*:\s*\{[\s\S]{0,500}?"simpleText"\s*:\s*"([^"]+)"/gi,
-    /"viewCountText"\s*:\s*\{[\s\S]{0,600}?"simpleText"\s*:\s*"([^"]+)"/gi,
-    /"shortViewCountText"\s*:\s*\{[\s\S]{0,600}?"simpleText"\s*:\s*"([^"]+)"/gi,
-    /"viewCount"\s*:\s*\{[\s\S]{0,450}?"simpleText"\s*:\s*"([^"]*views?[^"]*)"/gi
+    /"viewCountText"\s*:\s*\{[\s\S]{0,900}?"simpleText"\s*:\s*"([^"]+)"/gi,
+    /"viewCountText"\s*:\s*\{[\s\S]{0,900}?"runs"\s*:\s*\[[\s\S]{0,500}?"text"\s*:\s*"([^"]+)"/gi,
+    /"shortViewCountText"\s*:\s*\{[\s\S]{0,900}?"simpleText"\s*:\s*"([^"]+)"/gi,
+    /"shortViewCountText"\s*:\s*\{[\s\S]{0,900}?"runs"\s*:\s*\[[\s\S]{0,500}?"text"\s*:\s*"([^"]+)"/gi,
+    /"videoViewCountRenderer"\s*:\s*\{[\s\S]{0,1800}?"viewCount"\s*:\s*\{[\s\S]{0,700}?"simpleText"\s*:\s*"([^"]+)"/gi,
+    /"accessibilityText"\s*:\s*"([0-9][^"\\]{0,50}(?:views?|просмотр[^"\\]*))"/gi
   ];
-  for(const chunk of chunks){
+  let from=0;
+  const candidates=[];
+  while(true){
+    const at=body.indexOf(marker,from);
+    if(at<0)break;
+    const next=body.indexOf('"videoId":"',at+marker.length);
+    const end=Math.min(body.length,next>at?next:at+12000,at+12000);
+    const chunk=body.slice(at,end);
     for(const re of patterns){
       re.lastIndex=0;
-      let match;
-      while((match=re.exec(chunk))){
-        const value=parseYoutubeVisibleViewsTextR946(match[1]);
-        if(Number.isFinite(value))return {value,text:String(match[1]||'')};
+      let m;
+      while((m=re.exec(chunk))){
+        const value=parseYoutubeVisibleViewsTextR946(m[1]);
+        if(Number.isFinite(value))candidates.push({value,text:String(m[1]||'')});
       }
     }
+    from=at+marker.length;
+    if(candidates.length)break;
   }
-  return null;
+  if(!candidates.length)return null;
+  const positive=candidates.filter(x=>x.value>0);
+  return positive[0]||candidates[0];
 }
-
 async function readYoutubeVisibleViewsCacheR946(env,videoId){
   if(!env.COMMENTS_DB||!videoId)return null;
   try{
@@ -21257,11 +21259,12 @@ async function readYoutubeVisibleViewsCacheR946(env,videoId){
 async function writeYoutubeVisibleViewsCacheR946(env,videoId,value,source){
   if(!env.COMMENTS_DB||!videoId||!Number.isFinite(Number(value)))return;
   try{
-    const payload={value:Math.max(0,Number(value)),source:cleanPlainText(source||'youtube-public-r946',120),updatedAt:new Date().toISOString()};
+    const previous=await readYoutubeVisibleViewsCacheR946(env,videoId);
+    const safeValue=Math.max(0,Number(value),Number(previous?.value||0));
+    const payload={value:safeValue,source:cleanPlainText(source||'youtube-public-r947',120),updatedAt:new Date().toISOString()};
     await setPushState(requireDb(env),`youtube-live-visible-views-r946:${videoId}`,JSON.stringify(payload)).catch(()=>{});
   }catch(_){ }
 }
-
 async function fetchYoutubeVisibleViewsR946(env,videoId,publicStarts=null){
   const id=cleanPlainText(videoId||'',80);
   if(!id)return {value:null,source:'none-r946'};
@@ -21285,9 +21288,11 @@ async function fetchYoutubeVisibleViewsR946(env,videoId,publicStarts=null){
       const hit=extractYoutubeVisibleViewsR946(html,id);
       if(!hit)continue;
       const value=Math.max(0,Number(hit.value)||0);
-      // A visible validated count should never exceed the new playback-start counter.
+      // R947: static YouTube HTML can contain a temporary 0-view placeholder.
+      // Never let that erase a real LIVE count when playback starts are already non-zero.
+      if(Number.isFinite(starts)&&starts>0&&value===0)continue;
       if(Number.isFinite(starts)&&starts>0&&value>starts)continue;
-      const source=url.includes('/streams')?'youtube-streams-ui-r946':'youtube-watch-ui-r946';
+      const source=url.includes('/streams')?'youtube-streams-ui-r947':'youtube-watch-ui-r947';
       await writeYoutubeVisibleViewsCacheR946(env,id,value,source);
       return {value,source,updatedAt:new Date().toISOString(),text:cleanPlainText(hit.text,100),cached:false};
     }catch(error){lastError=cleanPlainText(error?.message||error,220)}
@@ -21520,7 +21525,7 @@ async function handleControlYoutubeLiveR565(request, env) {
     const publicStartsR946=Math.max(0,Number(statistics?.viewCount||0));
     const studioViewsR942=await fetchYoutubeStudioViewsR942(env,videoId,details?.actualStartTime||broadcast?.snippet?.actualStartTime||'',publicStartsR946);
     const visibleViewsR946=await fetchYoutubeVisibleViewsR946(env,videoId,publicStartsR946);
-    const displayViewsR946=Number.isFinite(Number(visibleViewsR946?.value))?Math.max(0,Number(visibleViewsR946.value)):(Number.isFinite(Number(studioViewsR942?.studioViews))?Math.max(0,Number(studioViewsR942.studioViews)):publicStartsR946);
+    const displayViewsR946=(Number(visibleViewsR946?.value)>0)?Math.max(0,Number(visibleViewsR946.value)):((Number(studioViewsR942?.studioViews)>0)?Math.max(0,Number(studioViewsR942.studioViews)):null);
     const engagedViewsR938=studioViewsR942.engagedViews;
     return json({
       ok:true,active,signalActive,broadcastLive,videoId,
@@ -21567,7 +21572,7 @@ async function handleControlYoutubeLiveR565(request, env) {
         const publicStartsR946=Math.max(0,Number(statistics?.viewCount||0));
         const studioViewsR942=await fetchYoutubeStudioViewsR942(env,videoId,details?.actualStartTime||'',publicStartsR946);
         const visibleViewsR946=await fetchYoutubeVisibleViewsR946(env,videoId,publicStartsR946);
-        const displayViewsR946=Number.isFinite(Number(visibleViewsR946?.value))?Math.max(0,Number(visibleViewsR946.value)):(Number.isFinite(Number(studioViewsR942?.studioViews))?Math.max(0,Number(studioViewsR942.studioViews)):publicStartsR946);
+        const displayViewsR946=(Number(visibleViewsR946?.value)>0)?Math.max(0,Number(visibleViewsR946.value)):((Number(studioViewsR942?.studioViews)>0)?Math.max(0,Number(studioViewsR942.studioViews)):null);
         const engagedViewsR938=studioViewsR942.engagedViews;
         return json({
           ok:true,active:true,signalActive:true,broadcastLive:true,videoId,
