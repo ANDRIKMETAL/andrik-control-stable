@@ -21152,40 +21152,114 @@ async function handleControlYoutubeLiveCachedR797(request,env){
 // videos.statistics.viewCount now counts playback from the first frame. The owner
 // Analytics API keeps engagedViews for playbacks that continue past the first frame
 // (or are explicitly clicked/tapped). Failure is non-fatal: the radio panel still works.
+function youtubePacificDateR944(value=Date.now()){
+  const d=value instanceof Date?value:new Date(value);
+  if(!Number.isFinite(d.getTime()))return '';
+  const parts=new Intl.DateTimeFormat('en-US',{timeZone:'America/Los_Angeles',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(d);
+  const get=t=>parts.find(p=>p.type===t)?.value||'';
+  return `${get('year')}-${get('month')}-${get('day')}`;
+}
+
+async function readYoutubeStudioViewsCacheR944(env,videoId){
+  if(!env.COMMENTS_DB)return null;
+  try{
+    const row=await getPushState(requireDb(env),`youtube-live-studio-views-r944:${videoId}`).catch(()=>null);
+    if(!row?.value)return null;
+    const parsed=JSON.parse(String(row.value||'{}'));
+    const value=Number(parsed?.value);
+    if(!Number.isFinite(value)||value<0)return null;
+    return {value:Math.max(0,value),source:cleanPlainText(parsed?.source||'cache-r944',180),updatedAt:cleanPlainText(parsed?.updatedAt||row?.updatedAt||'',80)};
+  }catch(_){return null;}
+}
+
+async function writeYoutubeStudioViewsCacheR944(env,videoId,value,source){
+  if(!env.COMMENTS_DB||!videoId||!Number.isFinite(Number(value)))return;
+  try{
+    const previous=await readYoutubeStudioViewsCacheR944(env,videoId);
+    const safeValue=Math.max(0,Number(value),Number(previous?.value||0));
+    const payload={value:safeValue,source:cleanPlainText(source||'youtube-analytics-r944',180),updatedAt:new Date().toISOString()};
+    await setPushState(requireDb(env),`youtube-live-studio-views-r944:${videoId}`,JSON.stringify(payload)).catch(()=>{});
+  }catch(_){ }
+}
+
+// R944 — exact Studio/engaged view reader for the CURRENT live video.
+// R937's old "Просмотры" card was videos.statistics.viewCount, not Studio Analytics.
+// Since 24 Aug 2026 that public number counts playback starts. R944 asks the
+// documented YouTube Analytics engagedViews metric with several valid report shapes,
+// uses YouTube's Pacific reporting date, and keeps the last confirmed value in D1 so
+// a temporary Analytics processing gap never turns a known number back into a dash.
 async function fetchYoutubeStudioViewsR942(env,videoId,actualStartTime=''){
-  const id=cleanPlainText(videoId||'',80); if(!id)return {views:null,engagedViews:null,studioViews:null,source:'none'};
+  const id=cleanPlainText(videoId||'',80);
+  if(!id)return {views:null,engagedViews:null,studioViews:null,source:'none-r944'};
+  const cached=await readYoutubeStudioViewsCacheR944(env,id);
   try{
     const accessToken=await getYoutubeOAuthAccessToken(env);
-    // R943: resolve the concrete owned channel. channel==MINE can point at the
-    // wrong/default Brand Account and was the reason the radio card often showed “—”.
     const owner=await resolveYoutubeAnalyticsOwnerR495(env,accessToken);
-    const ids=`channel==${owner.channelId}`;
+    const now=Date.now();
+    const todayPt=youtubePacificDateR944(now);
+    const yesterdayPt=youtubePacificDateR944(now-86400000);
     const parsed=Date.parse(actualStartTime||'');
-    const startDate=Number.isFinite(parsed)?new Date(Math.max(parsed,Date.now()-90*86400000)).toISOString().slice(0,10):isoDateDaysAgo(28);
-    const today=new Date().toISOString().slice(0,10);
-    const yesterday=isoDateDaysAgo(1);
-    const attempts=[
-      {endDate:today,metrics:'views,engagedViews',tag:'engaged-today'},
-      {endDate:yesterday,metrics:'views,engagedViews',tag:'engaged-yesterday'},
-      {endDate:today,metrics:'views',tag:'views-today'},
-      {endDate:yesterday,metrics:'views',tag:'views-yesterday'}
-    ];
+    const rawStart=Number.isFinite(parsed)?parsed:now-28*86400000;
+    const cappedStart=Math.max(rawStart,now-90*86400000);
+    const startDate=youtubePacificDateR944(cappedStart)||isoDateDaysAgo(28);
+    const scopes=[`channel==${owner.channelId}`,'channel==MINE'];
+    const endDates=[todayPt,yesterdayPt].filter((v,i,a)=>v&&v>=startDate&&a.indexOf(v)===i);
     let lastError='';
-    for(const attempt of attempts){
-      if(String(attempt.endDate)<String(startDate))continue;
+
+    const parseRows=(rows,mode)=>{
+      const list=Array.isArray(rows)?rows:[];
+      if(!list.length)return null;
+      let relevant=list;
+      if(mode==='video-list')relevant=list.filter(r=>cleanPlainText(r?.video||'',80)===id);
+      if(!relevant.length)return null;
+      let engaged=0,views=0,engagedSeen=false,viewsSeen=false;
+      for(const row of relevant){
+        const e=Number(row?.engagedViews),v=Number(row?.views);
+        if(Number.isFinite(e)){engaged+=Math.max(0,e);engagedSeen=true}
+        if(Number.isFinite(v)){views+=Math.max(0,v);viewsSeen=true}
+      }
+      if(!engagedSeen&&!viewsSeen)return null;
+      return {engagedViews:engagedSeen?engaged:null,views:viewsSeen?views:null};
+    };
+
+    const run=async(params,mode,tag)=>{
       try{
-        const rows=await youtubeAnalyticsQuery(env,accessToken,{ids,startDate,endDate:attempt.endDate,filters:`video==${id}`,metrics:attempt.metrics});
-        const row=rows?.[0]; if(!row)continue;
-        const views=Number(row.views), engaged=Number(row.engagedViews);
-        const viewsOk=Number.isFinite(views), engagedOk=Number.isFinite(engaged);
-        // After 24 Aug 2026 Studio's meaningful view number is engagedViews. If that
-        // metric is not yet populated for this report, fall back to the owner Analytics views.
-        const studio=engagedOk&&engaged>0?engaged:(viewsOk?views:(engagedOk?engaged:null));
-        if(studio!==null)return {views:viewsOk?Math.max(0,views):null,engagedViews:engagedOk?Math.max(0,engaged):null,studioViews:Math.max(0,studio),source:`youtube-analytics-${attempt.tag}-r943`,channelId:owner.channelId};
-      }catch(error){lastError=cleanPlainText(error?.message||error,260)}
+        const rows=await youtubeAnalyticsQuery(env,accessToken,params);
+        const parsedRows=parseRows(rows,mode);
+        if(!parsedRows)return null;
+        const studio=Number.isFinite(parsedRows.engagedViews)?parsedRows.engagedViews:parsedRows.views;
+        if(!Number.isFinite(studio))return null;
+        const value=Math.max(Number(cached?.value||0),Math.max(0,studio));
+        const source=`youtube-analytics-${tag}-r944`;
+        await writeYoutubeStudioViewsCacheR944(env,id,value,source);
+        return {views:parsedRows.views,engagedViews:parsedRows.engagedViews,studioViews:value,source,channelId:owner.channelId,updatedAt:new Date().toISOString(),cached:false};
+      }catch(error){lastError=cleanPlainText(error?.message||error,260);return null}
+    };
+
+    // Fastest/most exact path first: one current video, no dimension.
+    for(const ids of scopes){
+      for(const endDate of endDates){
+        let out=await run({ids,startDate,endDate,filters:`video==${id}`,metrics:'engagedViews,views'},'summary',`${ids.endsWith('MINE')?'mine':'owner'}-video-${endDate}`);
+        if(out)return out;
+
+        // Some live reports populate the day breakdown before the aggregate row.
+        out=await run({ids,startDate,endDate,filters:`video==${id}`,dimensions:'day',metrics:'engagedViews,views',sort:'day'},'summary',`${ids.endsWith('MINE')?'mine':'owner'}-video-day-${endDate}`);
+        if(out)return out;
+
+        // Alternate documented report shape: top LIVE videos, then select this video ID.
+        out=await run({ids,startDate,endDate,dimensions:'video',filters:'liveOrOnDemand==LIVE',metrics:'engagedViews,views',sort:'-views',maxResults:200},'video-list',`${ids.endsWith('MINE')?'mine':'owner'}-live-list-${endDate}`);
+        if(out)return out;
+      }
     }
-    return {views:null,engagedViews:null,studioViews:null,source:'empty-r943',channelId:owner.channelId,error:lastError};
-  }catch(error){return {views:null,engagedViews:null,studioViews:null,source:'error-r943',error:cleanPlainText(error?.message||error,260)};}
+
+    if(cached){
+      return {views:null,engagedViews:cached.value,studioViews:cached.value,source:`cached-${cached.source||'r944'}`,channelId:owner.channelId,updatedAt:cached.updatedAt||'',cached:true,error:lastError};
+    }
+    return {views:null,engagedViews:null,studioViews:null,source:'processing-r944',channelId:owner.channelId,error:lastError,processing:true};
+  }catch(error){
+    if(cached)return {views:null,engagedViews:cached.value,studioViews:cached.value,source:`cached-${cached.source||'r944'}`,updatedAt:cached.updatedAt||'',cached:true,error:cleanPlainText(error?.message||error,260)};
+    return {views:null,engagedViews:null,studioViews:null,source:'error-r944',error:cleanPlainText(error?.message||error,260)};
+  }
 }
 async function fetchYoutubeEngagedViewsR938(env,videoId,actualStartTime=''){const d=await fetchYoutubeStudioViewsR942(env,videoId,actualStartTime);return d.engagedViews;}
 
@@ -21321,7 +21395,7 @@ async function handleControlYoutubeLiveR565(request, env) {
       concurrentViewers:Math.max(0,Number(details?.concurrentViewers||0)),
       actualStartTime:cleanPlainText(details?.actualStartTime||broadcast?.snippet?.actualStartTime||'',80),
       scheduledStartTime:cleanPlainText(details?.scheduledStartTime||broadcast?.snippet?.scheduledStartTime||'',80),
-      views:Math.max(0,Number(statistics?.viewCount||0)),engagedViews:engagedViewsR938,studioViews:studioViewsR942.studioViews,studioViewsSource:studioViewsR942.source,likes:Math.max(0,Number(statistics?.likeCount||0)),
+      views:Math.max(0,Number(statistics?.viewCount||0)),engagedViews:engagedViewsR938,studioViews:studioViewsR942.studioViews,studioViewsSource:studioViewsR942.source,studioViewsUpdatedAt:studioViewsR942.updatedAt||'',studioViewsProcessing:Boolean(studioViewsR942.processing),studioViewsError:studioViewsR942.error||'',likes:Math.max(0,Number(statistics?.likeCount||0)),
       comments:Math.max(0,Number(statistics?.commentCount||0)),boundStreamId,
       studioUrl:`https://studio.youtube.com/video/${encodeURIComponent(videoId)}/livestreaming`,
       analyticsUrl:`https://studio.youtube.com/video/${encodeURIComponent(videoId)}/analytics/tab-overview/period-default`,
@@ -21361,7 +21435,7 @@ async function handleControlYoutubeLiveR565(request, env) {
           scheduledStartTime:cleanPlainText(details?.scheduledStartTime||'',80),
           views:Math.max(0,Number(statistics?.viewCount||0)),
           engagedViews:engagedViewsR938,
-          studioViews:studioViewsR942.studioViews,studioViewsSource:studioViewsR942.source,
+          studioViews:studioViewsR942.studioViews,studioViewsSource:studioViewsR942.source,studioViewsUpdatedAt:studioViewsR942.updatedAt||'',studioViewsProcessing:Boolean(studioViewsR942.processing),studioViewsError:studioViewsR942.error||'',
           likes:Math.max(0,Number(statistics?.likeCount||0)),
           comments:Math.max(0,Number(statistics?.commentCount||0)),
           boundStreamId:'',

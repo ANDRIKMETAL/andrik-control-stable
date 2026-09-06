@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788677649606-8451c3920b",
-  "release": "R943",
-  "archiveName": "ANDRIK-R943-RADIO-SAFE-QUEUE-STATS-YOUTUBE-APP-R942-PRESERVED-FULL.zip",
-  "sourceHead": "8378ed8bf3cac80f09e1d31fa6adf7b80edbe510",
-  "backupSha": "8378ed8bf3cac80f09e1d31fa6adf7b80edbe510",
+  "operationId": "publish-1788678493708-1f4318b879",
+  "release": "R944",
+  "archiveName": "ANDRIK-R944-STUDIO-VIEWS-LIVE-FIX-R943-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "dee0948b73c98a8f1f9d809ae322e4155544c557",
+  "backupSha": "dee0948b73c98a8f1f9d809ae322e4155544c557",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-06T06:54:10.373Z"
+  "generatedAt": "2026-09-06T07:08:13.708Z"
 }

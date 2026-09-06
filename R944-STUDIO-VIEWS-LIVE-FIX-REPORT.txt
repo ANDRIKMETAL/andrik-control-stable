@@ -1,0 +1,24 @@
+ANDRIK R944 — LIVE STUDIO VIEWS FIX
+
+Base: R943 site/control. Attached R937 inspected as historical reference.
+
+ROOT CAUSE:
+- R937 did NOT have a separate Studio views counter. Its card named “Просмотры” rendered videos.statistics.viewCount directly.
+- Since YouTube changed public view counting on 24 Aug 2026, that Data API value is now the wider playback-start count (“Запуски YouTube”).
+- R943 correctly separated public starts from Studio engaged views, but its single per-video Analytics query can return no row while a long-running LIVE report is still processing, so the new Studio card showed “—”.
+
+R944 FIX:
+- Uses documented YouTube Analytics engagedViews.
+- Uses America/Los_Angeles reporting date instead of UTC date boundaries.
+- Tries exact current-video aggregate report.
+- Tries exact current-video day breakdown.
+- Tries LIVE top-video report and selects the current video ID.
+- Retries with concrete OAuth-owned channel and channel==MINE.
+- Persists the last confirmed value in D1 per live video; a temporary Analytics gap no longer erases a known Studio value.
+- Card shows ОБРАБОТКА/ЖДЁТ only when YouTube has never returned a confirmed engaged value for this still-active LIVE.
+- Tooltip exposes source/update/error for diagnosis without adding clutter.
+
+RADIO SAFETY:
+- No change to radio247/server.mjs.
+- No change to R943 surgical queue installer/patch.
+- No A/V, fullscreen, fade, hold or FFmpeg logic changed.
