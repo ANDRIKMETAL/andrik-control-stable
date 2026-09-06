@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788679501113-3d75b042c2",
-  "release": "R945",
-  "archiveName": "ANDRIK-R945-STUDIO-VIEWS-COMPACT-RADIO-R944-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "98f31ee86e28cc422a16109a9b2abb1f98cda4dc",
-  "backupSha": "98f31ee86e28cc422a16109a9b2abb1f98cda4dc",
+  "operationId": "publish-1788680735768-ea148be7de",
+  "release": "R946",
+  "archiveName": "ANDRIK-R946-RESTORE-YOUTUBE-VISIBLE-VIEWS-R945-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "bcdef17571fd23570199853714fe2a6e2d92f7c3",
+  "backupSha": "bcdef17571fd23570199853714fe2a6e2d92f7c3",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-06T07:25:01.113Z"
+  "generatedAt": "2026-09-06T07:45:35.768Z"
 }

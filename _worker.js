@@ -21182,6 +21182,120 @@ async function writeYoutubeStudioViewsCacheR944(env,videoId,value,source){
   }catch(_){ }
 }
 
+// R946 — restore the number users actually see on the YouTube stream card.
+// After the Aug-27 view-count change, videos.statistics.viewCount is playback starts
+// and can be much larger than the visible/validated number shown in the YouTube app.
+// For the radio card we read the public YouTube page renderer for THIS live video,
+// cache the last good value, and fall back to owner Analytics / Data API only if needed.
+function parseYoutubeVisibleViewsTextR946(value){
+  let text=String(value||'').replace(/\\u00a0/gi,' ').replace(/\\u202f/gi,' ').replace(/\\u0026/gi,'&').replace(/\\"/g,'"').trim();
+  if(!text)return null;
+  const low=text.toLowerCase();
+  if(low.includes('watching')||low.includes('watching now')||low.includes('смотр')||low.includes('зрител'))return null;
+  if(!low.includes('view')&&!low.includes('просмотр'))return null;
+  const compact=text.match(/([0-9]+(?:[.,][0-9]+)?)\s*([kmb])/i);
+  if(compact){
+    const n=Number(compact[1].replace(',','.'));
+    const unit=compact[2].toLowerCase();
+    const mul=unit==='k'?1e3:unit==='m'?1e6:1e9;
+    return Number.isFinite(n)?Math.round(n*mul):null;
+  }
+  const m=text.match(/[0-9][0-9\s.,\u00a0\u202f]*/);
+  if(!m)return null;
+  const digits=m[0].replace(/[^0-9]/g,'');
+  if(!digits)return null;
+  const n=Number(digits);
+  return Number.isFinite(n)?Math.max(0,n):null;
+}
+
+function extractYoutubeVisibleViewsR946(html,videoId=''){
+  const body=String(html||'');
+  if(!body)return null;
+  const chunks=[];
+  const id=String(videoId||'');
+  if(id){
+    let from=0,seen=0;
+    while(seen<8){
+      const at=body.indexOf(id,from);
+      if(at<0)break;
+      chunks.push(body.slice(Math.max(0,at-5000),Math.min(body.length,at+9000)));
+      from=at+id.length;seen++;
+    }
+  }
+  chunks.push(body.slice(0,Math.min(body.length,900000)));
+  const patterns=[
+    /"videoViewCountRenderer"\s*:\s*\{[\s\S]{0,1800}?"viewCount"\s*:\s*\{[\s\S]{0,500}?"simpleText"\s*:\s*"([^"]+)"/gi,
+    /"viewCountText"\s*:\s*\{[\s\S]{0,600}?"simpleText"\s*:\s*"([^"]+)"/gi,
+    /"shortViewCountText"\s*:\s*\{[\s\S]{0,600}?"simpleText"\s*:\s*"([^"]+)"/gi,
+    /"viewCount"\s*:\s*\{[\s\S]{0,450}?"simpleText"\s*:\s*"([^"]*views?[^"]*)"/gi
+  ];
+  for(const chunk of chunks){
+    for(const re of patterns){
+      re.lastIndex=0;
+      let match;
+      while((match=re.exec(chunk))){
+        const value=parseYoutubeVisibleViewsTextR946(match[1]);
+        if(Number.isFinite(value))return {value,text:String(match[1]||'')};
+      }
+    }
+  }
+  return null;
+}
+
+async function readYoutubeVisibleViewsCacheR946(env,videoId){
+  if(!env.COMMENTS_DB||!videoId)return null;
+  try{
+    const row=await getPushState(requireDb(env),`youtube-live-visible-views-r946:${videoId}`).catch(()=>null);
+    if(!row?.value)return null;
+    const parsed=JSON.parse(String(row.value||'{}'));
+    const value=Number(parsed?.value);
+    if(!Number.isFinite(value)||value<0)return null;
+    return {value:Math.max(0,value),source:cleanPlainText(parsed?.source||'cache-r946',120),updatedAt:cleanPlainText(parsed?.updatedAt||row?.updatedAt||'',80)};
+  }catch(_){return null}
+}
+
+async function writeYoutubeVisibleViewsCacheR946(env,videoId,value,source){
+  if(!env.COMMENTS_DB||!videoId||!Number.isFinite(Number(value)))return;
+  try{
+    const payload={value:Math.max(0,Number(value)),source:cleanPlainText(source||'youtube-public-r946',120),updatedAt:new Date().toISOString()};
+    await setPushState(requireDb(env),`youtube-live-visible-views-r946:${videoId}`,JSON.stringify(payload)).catch(()=>{});
+  }catch(_){ }
+}
+
+async function fetchYoutubeVisibleViewsR946(env,videoId,publicStarts=null){
+  const id=cleanPlainText(videoId||'',80);
+  if(!id)return {value:null,source:'none-r946'};
+  const cached=await readYoutubeVisibleViewsCacheR946(env,id);
+  const starts=Number(publicStarts);
+  const urls=[
+    `https://www.youtube.com/watch?v=${encodeURIComponent(id)}&hl=en&gl=US`,
+    `https://www.youtube.com/live/${encodeURIComponent(id)}?hl=en&gl=US`,
+    `https://www.youtube.com/@andrikmetal/streams?hl=en&gl=US`
+  ];
+  let lastError='';
+  for(const url of urls){
+    try{
+      const response=await fetchWithAbortTimeoutR409(url,{headers:{
+        accept:'text/html,application/xhtml+xml',
+        'accept-language':'en-US,en;q=0.9',
+        'user-agent':'Mozilla/5.0 (Linux; Android 15) AppleWebKit/537.36 Chrome/138 Mobile Safari/537.36'
+      },redirect:'follow'},6500,'youtube-visible-views-r946');
+      if(!response.ok){lastError=`HTTP ${response.status}`;continue}
+      const html=await response.text();
+      const hit=extractYoutubeVisibleViewsR946(html,id);
+      if(!hit)continue;
+      const value=Math.max(0,Number(hit.value)||0);
+      // A visible validated count should never exceed the new playback-start counter.
+      if(Number.isFinite(starts)&&starts>0&&value>starts)continue;
+      const source=url.includes('/streams')?'youtube-streams-ui-r946':'youtube-watch-ui-r946';
+      await writeYoutubeVisibleViewsCacheR946(env,id,value,source);
+      return {value,source,updatedAt:new Date().toISOString(),text:cleanPlainText(hit.text,100),cached:false};
+    }catch(error){lastError=cleanPlainText(error?.message||error,220)}
+  }
+  if(cached)return {...cached,cached:true,error:lastError};
+  return {value:null,source:'unavailable-r946',error:lastError};
+}
+
 // R945 — exact Studio/engaged view reader for the CURRENT live video.
 // R937's old "Просмотры" card was videos.statistics.viewCount, not Studio Analytics.
 // Since 24 Aug 2026 that public number counts playback starts. R944 asks the
@@ -21403,7 +21517,10 @@ async function handleControlYoutubeLiveR565(request, env) {
     const broadcastLive=lifeCycleStatus.toLowerCase()==='live' || Boolean(details?.actualStartTime && !details?.actualEndTime);
     const signalActive=streamStatus.toLowerCase()==='active';
     const active=broadcastLive;
-    const studioViewsR942=await fetchYoutubeStudioViewsR942(env,videoId,details?.actualStartTime||broadcast?.snippet?.actualStartTime||'',Number(statistics?.viewCount||0));
+    const publicStartsR946=Math.max(0,Number(statistics?.viewCount||0));
+    const studioViewsR942=await fetchYoutubeStudioViewsR942(env,videoId,details?.actualStartTime||broadcast?.snippet?.actualStartTime||'',publicStartsR946);
+    const visibleViewsR946=await fetchYoutubeVisibleViewsR946(env,videoId,publicStartsR946);
+    const displayViewsR946=Number.isFinite(Number(visibleViewsR946?.value))?Math.max(0,Number(visibleViewsR946.value)):(Number.isFinite(Number(studioViewsR942?.studioViews))?Math.max(0,Number(studioViewsR942.studioViews)):publicStartsR946);
     const engagedViewsR938=studioViewsR942.engagedViews;
     return json({
       ok:true,active,signalActive,broadcastLive,videoId,
@@ -21420,7 +21537,7 @@ async function handleControlYoutubeLiveR565(request, env) {
       concurrentViewers:Math.max(0,Number(details?.concurrentViewers||0)),
       actualStartTime:cleanPlainText(details?.actualStartTime||broadcast?.snippet?.actualStartTime||'',80),
       scheduledStartTime:cleanPlainText(details?.scheduledStartTime||broadcast?.snippet?.scheduledStartTime||'',80),
-      views:Math.max(0,Number(statistics?.viewCount||0)),engagedViews:engagedViewsR938,studioViews:studioViewsR942.studioViews,studioViewsSource:studioViewsR942.source,studioViewsUpdatedAt:studioViewsR942.updatedAt||'',studioViewsProcessing:Boolean(studioViewsR942.processing),studioViewsError:studioViewsR942.error||'',likes:Math.max(0,Number(statistics?.likeCount||0)),
+      views:publicStartsR946,displayViews:displayViewsR946,visibleViews:visibleViewsR946?.value,visibleViewsSource:visibleViewsR946?.source||'',visibleViewsUpdatedAt:visibleViewsR946?.updatedAt||'',visibleViewsError:visibleViewsR946?.error||'',engagedViews:engagedViewsR938,studioViews:studioViewsR942.studioViews,studioViewsSource:studioViewsR942.source,studioViewsUpdatedAt:studioViewsR942.updatedAt||'',studioViewsProcessing:Boolean(studioViewsR942.processing),studioViewsError:studioViewsR942.error||'',likes:Math.max(0,Number(statistics?.likeCount||0)),
       comments:Math.max(0,Number(statistics?.commentCount||0)),boundStreamId,
       studioUrl:`https://studio.youtube.com/video/${encodeURIComponent(videoId)}/livestreaming`,
       analyticsUrl:`https://studio.youtube.com/video/${encodeURIComponent(videoId)}/analytics/tab-overview/period-default`,
@@ -21447,7 +21564,10 @@ async function handleControlYoutubeLiveR565(request, env) {
         }catch(_){ }
         const details=video?.liveStreamingDetails||{};
         const statistics=video?.statistics||{};
-        const studioViewsR942=await fetchYoutubeStudioViewsR942(env,videoId,details?.actualStartTime||'',Number(statistics?.viewCount||0));
+        const publicStartsR946=Math.max(0,Number(statistics?.viewCount||0));
+        const studioViewsR942=await fetchYoutubeStudioViewsR942(env,videoId,details?.actualStartTime||'',publicStartsR946);
+        const visibleViewsR946=await fetchYoutubeVisibleViewsR946(env,videoId,publicStartsR946);
+        const displayViewsR946=Number.isFinite(Number(visibleViewsR946?.value))?Math.max(0,Number(visibleViewsR946.value)):(Number.isFinite(Number(studioViewsR942?.studioViews))?Math.max(0,Number(studioViewsR942.studioViews)):publicStartsR946);
         const engagedViewsR938=studioViewsR942.engagedViews;
         return json({
           ok:true,active:true,signalActive:true,broadcastLive:true,videoId,
@@ -21458,7 +21578,8 @@ async function handleControlYoutubeLiveR565(request, env) {
           concurrentViewers:Math.max(0,Number(details?.concurrentViewers||0)),
           actualStartTime:cleanPlainText(details?.actualStartTime||'',80),
           scheduledStartTime:cleanPlainText(details?.scheduledStartTime||'',80),
-          views:Math.max(0,Number(statistics?.viewCount||0)),
+          views:publicStartsR946,
+          displayViews:displayViewsR946,visibleViews:visibleViewsR946?.value,visibleViewsSource:visibleViewsR946?.source||'',visibleViewsUpdatedAt:visibleViewsR946?.updatedAt||'',visibleViewsError:visibleViewsR946?.error||'',
           engagedViews:engagedViewsR938,
           studioViews:studioViewsR942.studioViews,studioViewsSource:studioViewsR942.source,studioViewsUpdatedAt:studioViewsR942.updatedAt||'',studioViewsProcessing:Boolean(studioViewsR942.processing),studioViewsError:studioViewsR942.error||'',
           likes:Math.max(0,Number(statistics?.likeCount||0)),
