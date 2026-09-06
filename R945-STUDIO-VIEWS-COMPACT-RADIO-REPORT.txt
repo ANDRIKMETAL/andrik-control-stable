@@ -1,0 +1,10 @@
+ANDRIK R945
+
+BASE: R944
+
+CHANGES:
+1. Radio page duplicate H1 "Radio" and explanatory subtitle removed; live card moved upward close to yellow ANDRIK RADIO CONTROL line.
+2. Studio view query no longer requests engagedViews and views in one Analytics report. engagedViews is queried alone using exact video, day, per-video list and LIVE-list fallbacks.
+3. If engagedViews is temporarily unavailable, a YouTube Analytics views row may be used only when it is lower than the public Data API playback-start counter, so "Studio" never simply duplicates "YouTube starts".
+4. Last confirmed Studio value remains cached in D1.
+5. radio247/ is preserved byte-for-byte from R944; no VPS/radio A/V code changed.

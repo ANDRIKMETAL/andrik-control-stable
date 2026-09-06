@@ -21182,15 +21182,15 @@ async function writeYoutubeStudioViewsCacheR944(env,videoId,value,source){
   }catch(_){ }
 }
 
-// R944 — exact Studio/engaged view reader for the CURRENT live video.
+// R945 — exact Studio/engaged view reader for the CURRENT live video.
 // R937's old "Просмотры" card was videos.statistics.viewCount, not Studio Analytics.
 // Since 24 Aug 2026 that public number counts playback starts. R944 asks the
 // documented YouTube Analytics engagedViews metric with several valid report shapes,
 // uses YouTube's Pacific reporting date, and keeps the last confirmed value in D1 so
 // a temporary Analytics processing gap never turns a known number back into a dash.
-async function fetchYoutubeStudioViewsR942(env,videoId,actualStartTime=''){
+async function fetchYoutubeStudioViewsR942(env,videoId,actualStartTime='',publicStarts=null){
   const id=cleanPlainText(videoId||'',80);
-  if(!id)return {views:null,engagedViews:null,studioViews:null,source:'none-r944'};
+  if(!id)return {views:null,engagedViews:null,studioViews:null,source:'none-r945'};
   const cached=await readYoutubeStudioViewsCacheR944(env,id);
   try{
     const accessToken=await getYoutubeOAuthAccessToken(env);
@@ -21206,59 +21206,84 @@ async function fetchYoutubeStudioViewsR942(env,videoId,actualStartTime=''){
     const endDates=[todayPt,yesterdayPt].filter((v,i,a)=>v&&v>=startDate&&a.indexOf(v)===i);
     let lastError='';
 
-    const parseRows=(rows,mode)=>{
+    const sumRows=(rows,metric,mode)=>{
       const list=Array.isArray(rows)?rows:[];
       if(!list.length)return null;
       let relevant=list;
       if(mode==='video-list')relevant=list.filter(r=>cleanPlainText(r?.video||'',80)===id);
       if(!relevant.length)return null;
-      let engaged=0,views=0,engagedSeen=false,viewsSeen=false;
+      let total=0,seen=false;
       for(const row of relevant){
-        const e=Number(row?.engagedViews),v=Number(row?.views);
-        if(Number.isFinite(e)){engaged+=Math.max(0,e);engagedSeen=true}
-        if(Number.isFinite(v)){views+=Math.max(0,v);viewsSeen=true}
+        const n=Number(row?.[metric]);
+        if(Number.isFinite(n)){total+=Math.max(0,n);seen=true}
       }
-      if(!engagedSeen&&!viewsSeen)return null;
-      return {engagedViews:engagedSeen?engaged:null,views:viewsSeen?views:null};
+      return seen?Math.max(0,total):null;
     };
 
-    const run=async(params,mode,tag)=>{
+    const runMetric=async(params,metric,mode,tag)=>{
       try{
-        const rows=await youtubeAnalyticsQuery(env,accessToken,params);
-        const parsedRows=parseRows(rows,mode);
-        if(!parsedRows)return null;
-        const studio=Number.isFinite(parsedRows.engagedViews)?parsedRows.engagedViews:parsedRows.views;
-        if(!Number.isFinite(studio))return null;
-        const value=Math.max(Number(cached?.value||0),Math.max(0,studio));
-        const source=`youtube-analytics-${tag}-r944`;
-        await writeYoutubeStudioViewsCacheR944(env,id,value,source);
-        return {views:parsedRows.views,engagedViews:parsedRows.engagedViews,studioViews:value,source,channelId:owner.channelId,updatedAt:new Date().toISOString(),cached:false};
+        const rows=await youtubeAnalyticsQuery(env,accessToken,{...params,metrics:metric});
+        const value=sumRows(rows,metric,mode);
+        if(!Number.isFinite(value))return null;
+        const source=`youtube-analytics-${metric}-${tag}-r945`;
+        if(metric==='engagedViews'){
+          const safeValue=Math.max(Number(cached?.value||0),Math.max(0,value));
+          await writeYoutubeStudioViewsCacheR944(env,id,safeValue,source);
+          return {views:null,engagedViews:safeValue,studioViews:safeValue,source,channelId:owner.channelId,updatedAt:new Date().toISOString(),cached:false};
+        }
+        return {views:Math.max(0,value),engagedViews:null,studioViews:Math.max(0,value),source,channelId:owner.channelId,updatedAt:new Date().toISOString(),cached:false};
       }catch(error){lastError=cleanPlainText(error?.message||error,260);return null}
     };
 
-    // Fastest/most exact path first: one current video, no dimension.
+    // R945: query engagedViews ALONE. The previous R944 requested
+    // engagedViews,views together. Google can reject/withhold that report shape
+    // for an in-progress LIVE even while the single engagedViews metric is ready.
     for(const ids of scopes){
+      const scopeTag=ids.endsWith('MINE')?'mine':'owner';
       for(const endDate of endDates){
-        let out=await run({ids,startDate,endDate,filters:`video==${id}`,metrics:'engagedViews,views'},'summary',`${ids.endsWith('MINE')?'mine':'owner'}-video-${endDate}`);
+        let out=await runMetric({ids,startDate,endDate,filters:`video==${id}`},'engagedViews','summary',`${scopeTag}-video-${endDate}`);
         if(out)return out;
+        out=await runMetric({ids,startDate,endDate,filters:`video==${id}`,dimensions:'day',sort:'day'},'engagedViews','summary',`${scopeTag}-video-day-${endDate}`);
+        if(out)return out;
+        // Generic per-video report is more compatible than liveOrOnDemand on some LIVE reports.
+        out=await runMetric({ids,startDate,endDate,dimensions:'video',sort:'-engagedViews',maxResults:200},'engagedViews','video-list',`${scopeTag}-video-list-${endDate}`);
+        if(out)return out;
+        out=await runMetric({ids,startDate,endDate,dimensions:'video',filters:'liveOrOnDemand==LIVE',sort:'-engagedViews',maxResults:200},'engagedViews','video-list',`${scopeTag}-live-list-${endDate}`);
+        if(out)return out;
+      }
+    }
 
-        // Some live reports populate the day breakdown before the aggregate row.
-        out=await run({ids,startDate,endDate,filters:`video==${id}`,dimensions:'day',metrics:'engagedViews,views',sort:'day'},'summary',`${ids.endsWith('MINE')?'mine':'owner'}-video-day-${endDate}`);
-        if(out)return out;
-
-        // Alternate documented report shape: top LIVE videos, then select this video ID.
-        out=await run({ids,startDate,endDate,dimensions:'video',filters:'liveOrOnDemand==LIVE',metrics:'engagedViews,views',sort:'-views',maxResults:200},'video-list',`${ids.endsWith('MINE')?'mine':'owner'}-live-list-${endDate}`);
-        if(out)return out;
+    // Some Studio LIVE pages expose an Analytics "views" row before engagedViews.
+    // Use it only when it is strictly below the new public playback-start count;
+    // otherwise it would merely duplicate "Запуски YouTube" and is not useful.
+    const publicN=Number(publicStarts);
+    for(const ids of scopes){
+      const scopeTag=ids.endsWith('MINE')?'mine':'owner';
+      for(const endDate of endDates){
+        const candidates=[
+          [{ids,startDate,endDate,filters:`video==${id}`},'summary',`${scopeTag}-views-video-${endDate}`],
+          [{ids,startDate,endDate,filters:`video==${id}`,dimensions:'day',sort:'day'},'summary',`${scopeTag}-views-day-${endDate}`],
+          [{ids,startDate,endDate,dimensions:'video',sort:'-views',maxResults:200},'video-list',`${scopeTag}-views-list-${endDate}`]
+        ];
+        for(const [params,mode,tag] of candidates){
+          const out=await runMetric(params,'views',mode,tag);
+          if(out && Number.isFinite(out.studioViews) && (!Number.isFinite(publicN) || out.studioViews<publicN)){
+            const safeValue=Math.max(Number(cached?.value||0),Math.max(0,Number(out.studioViews)));
+            const source=out.source+'-studio-fallback';
+            await writeYoutubeStudioViewsCacheR944(env,id,safeValue,source);
+            return {...out,studioViews:safeValue,source,updatedAt:new Date().toISOString()};
+          }
+        }
       }
     }
 
     if(cached){
-      return {views:null,engagedViews:cached.value,studioViews:cached.value,source:`cached-${cached.source||'r944'}`,channelId:owner.channelId,updatedAt:cached.updatedAt||'',cached:true,error:lastError};
+      return {views:null,engagedViews:cached.value,studioViews:cached.value,source:`cached-${cached.source||'r945'}`,channelId:owner.channelId,updatedAt:cached.updatedAt||'',cached:true,error:lastError};
     }
-    return {views:null,engagedViews:null,studioViews:null,source:'processing-r944',channelId:owner.channelId,error:lastError,processing:true};
+    return {views:null,engagedViews:null,studioViews:null,source:'waiting-youtube-r945',channelId:owner.channelId,error:lastError,processing:true};
   }catch(error){
-    if(cached)return {views:null,engagedViews:cached.value,studioViews:cached.value,source:`cached-${cached.source||'r944'}`,updatedAt:cached.updatedAt||'',cached:true,error:cleanPlainText(error?.message||error,260)};
-    return {views:null,engagedViews:null,studioViews:null,source:'error-r944',error:cleanPlainText(error?.message||error,260)};
+    if(cached)return {views:null,engagedViews:cached.value,studioViews:cached.value,source:`cached-${cached.source||'r945'}`,updatedAt:cached.updatedAt||'',cached:true,error:cleanPlainText(error?.message||error,260)};
+    return {views:null,engagedViews:null,studioViews:null,source:'error-r945',error:cleanPlainText(error?.message||error,260)};
   }
 }
 async function fetchYoutubeEngagedViewsR938(env,videoId,actualStartTime=''){const d=await fetchYoutubeStudioViewsR942(env,videoId,actualStartTime);return d.engagedViews;}
@@ -21378,7 +21403,7 @@ async function handleControlYoutubeLiveR565(request, env) {
     const broadcastLive=lifeCycleStatus.toLowerCase()==='live' || Boolean(details?.actualStartTime && !details?.actualEndTime);
     const signalActive=streamStatus.toLowerCase()==='active';
     const active=broadcastLive;
-    const studioViewsR942=await fetchYoutubeStudioViewsR942(env,videoId,details?.actualStartTime||broadcast?.snippet?.actualStartTime||'');
+    const studioViewsR942=await fetchYoutubeStudioViewsR942(env,videoId,details?.actualStartTime||broadcast?.snippet?.actualStartTime||'',Number(statistics?.viewCount||0));
     const engagedViewsR938=studioViewsR942.engagedViews;
     return json({
       ok:true,active,signalActive,broadcastLive,videoId,
@@ -21422,7 +21447,7 @@ async function handleControlYoutubeLiveR565(request, env) {
         }catch(_){ }
         const details=video?.liveStreamingDetails||{};
         const statistics=video?.statistics||{};
-        const studioViewsR942=await fetchYoutubeStudioViewsR942(env,videoId,details?.actualStartTime||'');
+        const studioViewsR942=await fetchYoutubeStudioViewsR942(env,videoId,details?.actualStartTime||'',Number(statistics?.viewCount||0));
         const engagedViewsR938=studioViewsR942.engagedViews;
         return json({
           ok:true,active:true,signalActive:true,broadcastLive:true,videoId,
