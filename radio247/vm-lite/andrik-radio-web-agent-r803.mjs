@@ -6,7 +6,7 @@ import {Readable} from 'node:stream';
 import {pipeline} from 'node:stream/promises';
 
 const CONFIG='/etc/andrik-radio-web-r627.json';
-const AGENT_VERSION_R803='R943';
+const AGENT_VERSION_R803='R949';
 const DIAG_DIR_R803='/var/cache/andrik-radio-r622/diagnostics';
 const DIAG_AGENT_LOG_R803=DIAG_DIR_R803+'/r803-agent-events.ndjson';
 const DIAG_AGENT_MAX_BYTES_R803=1024*1024;
@@ -22,6 +22,8 @@ const VISUAL_AUTO_R658='/usr/local/sbin/andrik-visual-auto-r703';
 const AIR_RESTORE_R925='/usr/local/sbin/andrik-radio-air-restore-r925';
 const SCREEN_RESTORE_R926='/usr/local/sbin/andrik-radio-screen-restore-r926';
 const SAFE_CACHE_CLEAN_R867='/usr/local/sbin/andrik-radio-safe-cache-clean-r867';
+const AUDIO_SYNC_R949='/usr/local/sbin/andrik-audio-sync-r949';
+const AUDIO_SYNC_STATE_R949='/var/lib/andrik-radio/audio-sync-r949.json';
 const VISUAL_FILES=Object.freeze({morning:'stream-morning-master-r703.mp4',day:'stream-day-master-r620.mp4',evening:'stream-evening-master-r620.mp4',night:'stream-night-master-r620.mp4'});
 const DEFAULT_TICKER='ANDRIK METAL RADIO 24/7   •   ANDRIKMETAL.COM   •   НОВЫЕ СИНГЛЫ И АЛЬБОМЫ ANDRIK   •   ПОДПИСЫВАЙТЕСЬ • СТАВЬТЕ ЛАЙКИ • КОММЕНТИРУЙТЕ   •   ';
 const BASE=process.env.ANDRIK_CONTROL_BASE||'https://andrikmetal.com';
@@ -160,6 +162,13 @@ function runAsync(cmd,args=[],timeout=240000){
     child.once('exit',(code,signal)=>finish(code===0,code??signal??1));
   });
 }
+function audioSyncStateR949(){
+  try{
+    const d=JSON.parse(fs.readFileSync(AUDIO_SYNC_STATE_R949,'utf8'));
+    const ms=Number(d?.targetMs);
+    return {targetMs:Number.isFinite(ms)?Math.max(0,Math.min(900,ms)):0,updatedAt:d?.updatedAt||null,files:Number(d?.files||0),source:d?.source||'r949'};
+  }catch(_){return {targetMs:0,updatedAt:null,files:0,source:'r949-default'};}
+}
 function currentTicker(){try{return clean(fs.readFileSync(TICKER_FILE,'utf8'))}catch(_){return DEFAULT_TICKER}}
 function writeTicker(text){const value=clean(text).replace(/[\r\n\t]+/g,' ').replace(/\s+/g,' ').slice(0,240).trim();fs.mkdirSync('/var/cache/andrik-radio-r622',{recursive:true});const tmp=TICKER_FILE+'.tmp';fs.writeFileSync(tmp,value,'utf8');fs.renameSync(tmp,TICKER_FILE);return value;}
 async function localStatus(){
@@ -176,10 +185,10 @@ async function localStatus(){
       },
       videoHandoffMode:d.videoHandoffMode||'',
       lastR813Handoff:d.lastR813Handoff||null,
-      r813CleanHandoffCount:Number(d.r813CleanHandoffCount||d.streamProfileR813?.handoff?.cleanCount||0),streamStartedAt:d.streamStartedAt||'',libraryTracks:Number(d.libraryTracks||0),libraryAlbumTracks:Number(d.libraryAlbumTracks||0),librarySingleTracks:Number(d.librarySingleTracks||0),duplicateSinglesSkipped:Number(d.duplicateSinglesSkipped||0),libraryVideos:Number(d.libraryVideos||0),libraryBumpers:Number(d.libraryBumpers||0),librarySpecial:Number(d.librarySpecial||0),librarySpecial30:Number(d.librarySpecial30||0),librarySpecial60:Number(d.librarySpecial60||0),lastLibraryRefresh:d.lastLibraryRefresh||'',inventoryTelemetry:'R805-LIVE-LIBRARY-COUNTERS',ticker:currentTicker(),busy:busy?{id:busy.id,action:busy.action,since:busy.since}:null};
+      r813CleanHandoffCount:Number(d.r813CleanHandoffCount||d.streamProfileR813?.handoff?.cleanCount||0),streamStartedAt:d.streamStartedAt||'',libraryTracks:Number(d.libraryTracks||0),libraryAlbumTracks:Number(d.libraryAlbumTracks||0),librarySingleTracks:Number(d.librarySingleTracks||0),duplicateSinglesSkipped:Number(d.duplicateSinglesSkipped||0),libraryVideos:Number(d.libraryVideos||0),libraryBumpers:Number(d.libraryBumpers||0),librarySpecial:Number(d.librarySpecial||0),librarySpecial30:Number(d.librarySpecial30||0),librarySpecial60:Number(d.librarySpecial60||0),lastLibraryRefresh:d.lastLibraryRefresh||'',inventoryTelemetry:'R805-LIVE-LIBRARY-COUNTERS',ticker:currentTicker(),audioDelayMsR949:audioSyncStateR949().targetMs,audioDelayUpdatedAtR949:audioSyncStateR949().updatedAt,audioDelayFilesR949:audioSyncStateR949().files,busy:busy?{id:busy.id,action:busy.action,since:busy.since}:null};
     return observeStatusR803(status);
   }catch(error){
-    const status={service:run('systemctl',['is-active','andrik-radio.service'],8000).output.trim(),producer:false,publisher:false,videoFeederRunning:false,clipActive:false,current:'',next:'',libraryTracks:0,libraryAlbumTracks:0,librarySingleTracks:0,duplicateSinglesSkipped:0,libraryVideos:0,libraryBumpers:0,librarySpecial:0,librarySpecial30:0,librarySpecial60:0,lastLibraryRefresh:'',inventoryTelemetry:'R805-LIVE-LIBRARY-COUNTERS',ticker:currentTicker(),busy:busy?{id:busy.id,action:busy.action,since:busy.since}:null,error:'local-status-unavailable',lastError:clean(error?.message||error),lastFfmpegLine:'',diagnosticsR802:null,diagnosticsR813:null,diagnosticsR814:null,rtmpsEstablishedConnectionsR792:0,rtmpsExpectedConnectionsR792:2,transportHealthy:false,
+    const status={service:run('systemctl',['is-active','andrik-radio.service'],8000).output.trim(),producer:false,publisher:false,videoFeederRunning:false,clipActive:false,current:'',next:'',libraryTracks:0,libraryAlbumTracks:0,librarySingleTracks:0,duplicateSinglesSkipped:0,libraryVideos:0,libraryBumpers:0,librarySpecial:0,librarySpecial30:0,librarySpecial60:0,lastLibraryRefresh:'',inventoryTelemetry:'R805-LIVE-LIBRARY-COUNTERS',ticker:currentTicker(),audioDelayMsR949:audioSyncStateR949().targetMs,audioDelayUpdatedAtR949:audioSyncStateR949().updatedAt,audioDelayFilesR949:audioSyncStateR949().files,busy:busy?{id:busy.id,action:busy.action,since:busy.since}:null,error:'local-status-unavailable',lastError:clean(error?.message||error),lastFfmpegLine:'',diagnosticsR802:null,diagnosticsR813:null,diagnosticsR814:null,rtmpsEstablishedConnectionsR792:0,rtmpsExpectedConnectionsR792:2,transportHealthy:false,
       streamProfileR814:null,streamProfileR813:{video:{codec:'H.264 / AVC',encoder:'libx264',profile:'High 4.1',width:1920,height:1080,fps:25,bitrate:'6000k',gopFrames:50,bFrames:0,pixelFormat:'yuv420p'},audio:{codec:'AAC-LC',sampleRate:44100,channels:2,channelLayout:'stereo',bitrate:'160k'},transport:{container:'FLV',protocol:'RTMPS',lanes:0,expectedLanes:2,dualIngest:true}},
       videoHandoffMode:'',lastR813Handoff:null,r813CleanHandoffCount:0};
     return observeStatusR803(status);
@@ -282,6 +291,13 @@ async function execute(action,command={},headers={}){
       const d=await localControlR721('/control/full-fit');
       return {ok:true,output:`FULL FRAME FIT / NO CROP ✅\nR721 feeder reloaded · RTMPS publisher NOT restarted\n${JSON.stringify(d)}`};
     }catch(e){return {ok:false,output:`FULL FRAME FIT ❌\n${e.message||e}`};}
+  }
+  if(action==='audio-delay'){
+    const delayMs=Number(command.delayMs);
+    if(!Number.isFinite(delayMs)||delayMs<0||delayMs>900||delayMs%50!==0)return {ok:false,output:'AUDIO DELAY ❌ invalid value'};
+    if(!fs.existsSync(AUDIO_SYNC_R949))return {ok:false,output:`AUDIO DELAY ❌\nMissing ${AUDIO_SYNC_R949}`};
+    const r=await runAsync(AUDIO_SYNC_R949,[String(delayMs)],300000);
+    return {ok:r.ok,output:`AUDIO DELAY +${delayMs} ms ${r.ok?'✅':'❌'}\nRADIO NOT RESTARTED\n${r.output}`};
   }
   if(action==='queue-move'){
     const offset=Math.max(0,Math.min(5,Number(command.offset)||0));

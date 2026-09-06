@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788694736318-34215d0e83",
-  "release": "R948",
-  "archiveName": "ANDRIK-R948-LIVE-VISIBLE-VIEWS-HARD-FIX-R947-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "732216bff108417dc48c1d3b02e5e22e1aff7a2b",
-  "backupSha": "732216bff108417dc48c1d3b02e5e22e1aff7a2b",
+  "operationId": "publish-1788708230643-f8028550ca",
+  "release": "R949",
+  "archiveName": "ANDRIK-R949-AUDIO-SYNC-LADDER-R948-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "edebb74f873783e6661fefc1bd610ead9579b020",
+  "backupSha": "edebb74f873783e6661fefc1bd610ead9579b020",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-06T11:38:56.318Z"
+  "generatedAt": "2026-09-06T15:23:51.107Z"
 }

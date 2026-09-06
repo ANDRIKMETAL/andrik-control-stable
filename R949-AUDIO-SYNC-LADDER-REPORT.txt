@@ -1,0 +1,10 @@
+ANDRIK R949 · AUDIO SYNC CALIBRATION LADDER
+Base: R948 preserved.
+Temporary Control card: 0..900 ms, step 50 ms.
++ value = audio later relative to picture.
+No andrik-radio.service restart when selecting a value.
+server.mjs / R943C queue / fullscreen / A-V handoff are not modified.
+R930 disabled during calibration.
+0 ms baseline captured from current prepared MP4 state at install time.
+Every chosen value derives from that baseline, never cumulatively.
+Video and AAC are stream-copied; only audio timestamps are shifted.
