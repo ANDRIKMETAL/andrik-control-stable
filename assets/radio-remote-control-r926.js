@@ -38,7 +38,7 @@
     });
     document.querySelectorAll('[data-radio-remote-detail]').forEach(el=>{
       const err=String(s.lastError||'').trim();
-      el.innerHTML=`<b>${online?'🟢':'⚪'} OVH:</b> ${online?'на связи':'нет свежего heartbeat'} · ${esc(fmt(agent.lastSeen))}${version?` · <b>Agent:</b> ${esc(version)}`:''}<br><b>Radio:</b> ${esc(s.service||'—')} · producer ${s.producer?'✅':'—'} · publisher ${s.publisher?'✅':'—'}<br><b>Сейчас:</b> ${esc(s.current||'—')}<br><b>Дальше:</b> ${esc(s.next||'—')}${err?`<br><b style="color:#ff8080">FFmpeg:</b> ${esc(err)}`:''}`;
+      el.innerHTML=`<b>${online?'🟢':'⚪'} OVH:</b> ${online?'на связи':'нет свежего heartbeat'} · ${esc(fmt(agent.lastSeen))}${version?` · <b>Agent:</b> ${esc(version)}`:''}<br><b>Radio:</b> ${esc(s.service||'—')} · producer ${s.producer?'✅':'—'} · publisher ${s.publisher?'✅':'—'}${err?`<br><b style="color:#ff8080">FFmpeg:</b> ${esc(err)}`:''}`;
     });
     // R805: exact LIVE library counters come from the running radio itself via the single R803 agent.
     // This avoids guessing from R2 and reflects duplicate-single suppression + disabled albums exactly.

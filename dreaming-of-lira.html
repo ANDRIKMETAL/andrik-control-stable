@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
   <meta name="theme-color" content="#080b12" />
-  <title>Dreaming of Líra — ANDRIK Game · R005</title>
+  <title>Dreaming of Líra — ANDRIK Game · R006</title>
   <style>
     :root {
       --ink: #f4f1e8;
@@ -283,8 +283,8 @@
   "use strict";
 
   // ================================================================
-  // DREAMING OF LÍRA R005 — browser beat 'em up game
-  // Original implementation for ANDRIK / andrikmetal.com · R941 site integration
+  // DREAMING OF LÍRA R006 — browser beat 'em up game
+  // Original implementation for ANDRIK / andrikmetal.com · R942 site integration
   // No ROM code, sprites, audio, maps or other assets are copied here.
   // ================================================================
 
@@ -364,9 +364,9 @@
 
   let cinematic = null;
 
-  // R005 / R941 startup splash shown after entering landscape.
+  // R006 / R942 startup splash shown after entering landscape.
   const bootSplash = new Image();
-  bootSplash.src = "assets/dreaming-lira-r941-splash.webp";
+  bootSplash.src = "assets/dreaming-lira-r942-splash.png";
   let bootSplashUntil = performance.now() + 1150;
   let lastLandscape = innerWidth >= innerHeight;
 
@@ -2143,7 +2143,7 @@
       const save = readSave();
       if (save) {
         const label = save.currentLevel === 2 ? "LEVEL 2 — OCEAN" : "LEVEL 1 — CITY OF SLEEP";
-        overlayPanel("DREAMING OF LÍRA · R005", [
+        overlayPanel("DREAMING OF LÍRA · R006", [
           `SAVE FOUND · ${label}`,
           "",
           `${titleChoice === 0 ? ">" : " "} ДАЛЕЕ / CONTINUE`,
@@ -2153,7 +2153,7 @@
           "SUPER · GUITAR RIFF"
         ]);
       } else {
-        overlayPanel("DREAMING OF LÍRA · R005", [
+        overlayPanel("DREAMING OF LÍRA · R006", [
           "LEVEL 1 — CITY OF SLEEP",
           "",
           "ANDROID: LANDSCAPE MODE",
@@ -3068,6 +3068,175 @@
   handleStartPause=function(){if(performance.now()<bootSplashUntil)return;return __handleStartPause();};
   const __confirmTitleChoice=confirmTitleChoice;
   confirmTitleChoice=function(){if(performance.now()<bootSplashUntil)return;return __confirmTitleChoice();};
+
+
+  // ============================================================
+  // R006 / R942 — OCEAN arsenal, explosive barrels, living waves,
+  // and the three-phase SACRED DESTROYER boss.
+  // ============================================================
+  const __r941DrawR942 = draw;
+  const __r941UpdateR942 = update;
+  const __r941StartLevelR942 = startLevel;
+  const __r941BuildSaveDataR942 = buildSaveData;
+  const __r941RestoreSaveR942 = restoreSave;
+  const __baseStartPlayerAttackR942 = startPlayerAttack;
+  const __baseResolvePlayerHitsR942 = resolvePlayerHits;
+  const __baseDrawLiraR942 = drawLira;
+  const __baseDrawOceanEnemyR942 = drawOceanEnemy;
+  const __baseDrawBackgroundLevel2R942 = drawBackgroundLevel2;
+  const __baseStartWaveR942 = startWave;
+  const __baseDrawHUDR942 = drawHUD;
+
+  const oceanBossArtR942 = new Image();
+  oceanBossArtR942.src = 'assets/ocean-boss-sacred-destroyer-r942.png';
+  let oceanBossIntroUntilR942 = 0;
+  let oceanWeaponR942 = '';
+  let oceanPickupsR942 = [];
+  let oceanBarrelsR942 = [];
+  let oceanExplosionsR942 = [];
+
+  ATTACKS.knifeSlashR942 = {duration:.30,activeStart:.07,activeEnd:.19,damage:24,range:47,depth:20,knock:38};
+  ATTACKS.batSmashR942 = {duration:.42,activeStart:.12,activeEnd:.27,damage:34,range:55,depth:23,knock:66};
+
+  function resetOceanPropsR942(){
+    oceanWeaponR942='';
+    oceanPickupsR942=[
+      {id:'knife-a',type:'knife',x:720,y:226,picked:false},
+      {id:'bat-a',type:'bat',x:1510,y:197,picked:false},
+      {id:'knife-b',type:'knife',x:2380,y:228,picked:false}
+    ];
+    oceanBarrelsR942=[
+      {id:'barrel-a',x:900,y:216,hp:24,exploded:false,hitByAttack:-1},
+      {id:'barrel-b',x:1735,y:190,hp:24,exploded:false,hitByAttack:-1},
+      {id:'barrel-c',x:2580,y:224,hp:24,exploded:false,hitByAttack:-1}
+    ];
+    oceanExplosionsR942=[];
+  }
+  resetOceanPropsR942();
+
+  function nearestOceanPickupR942(){
+    if(currentLevel!==2)return null;
+    let best=null,dist=999;
+    for(const p of oceanPickupsR942){if(p.picked)continue;const dx=Math.abs(p.x-player.x),dy=Math.abs(p.y-player.y);const d=dx+dy*.8;if(dx<34&&dy<22&&d<dist){best=p;dist=d;}}
+    return best;
+  }
+
+  startPlayerAttack = function(){
+    if(currentLevel===2&&player.z<3){
+      const pickup=nearestOceanPickupR942();
+      if(pickup){pickup.picked=true;oceanWeaponR942=pickup.type;player.attack=null;player.comboStep=0;showMessage(pickup.type==='knife'?'KNIFE TAKEN':'BAT TAKEN',.8);tone(pickup.type==='knife'?520:150,.07,'square',.018,pickup.type==='knife'?360:100);return;}
+      if(oceanWeaponR942){
+        const kind=oceanWeaponR942==='knife'?'knifeSlashR942':'batSmashR942',def=ATTACKS[kind];
+        player.attack={id:++attackSerial,kind,t:0,duration:def.duration};player.lastAttackTime=elapsed;player.comboStep=0;
+        tone(oceanWeaponR942==='knife'?410:105,oceanWeaponR942==='knife'?.05:.08,oceanWeaponR942==='knife'?'square':'sawtooth',.022,oceanWeaponR942==='knife'?230:72);return;
+      }
+    }
+    return __baseStartPlayerAttackR942();
+  };
+
+  function explodeOceanBarrelR942(b){
+    if(b.exploded)return;b.exploded=true;b.hp=0;hitShake(9);flash=Math.max(flash,.13);tone(48,.22,'sawtooth',.045,28);
+    oceanExplosionsR942.push({x:b.x,y:b.y,t:0,duration:.72});
+    for(const e of enemies){if(!e.alive)continue;const dx=e.x-b.x,dy=(e.y-b.y)*1.2;if(Math.hypot(dx,dy)<92)damageEnemy(e,e.type==='boss'?38:78,(Math.sign(dx)||1)*90);}
+    superMeter=clamp(superMeter+14,0,SUPER_MAX);score+=120;
+  }
+
+  resolvePlayerHits = function(){
+    __baseResolvePlayerHitsR942();
+    if(currentLevel!==2)return;
+    const hb=playerAttackHitbox();if(!hb)return;
+    for(const b of oceanBarrelsR942){if(b.exploded||b.hitByAttack===hb.id)continue;const box={x:b.x-10,y:b.y-18,w:20,h:22};if(rectsOverlap(hb,box)){b.hitByAttack=hb.id;b.hp-=hb.def.damage;if(b.hp<=0)explodeOceanBarrelR942(b);else{hitShake(2);tone(130,.035,'square',.012,90);}}}
+  };
+
+  function drawOceanPropsR942(){
+    if(currentLevel!==2)return;
+    ctx.save();
+    for(const p of oceanPickupsR942){if(p.picked)continue;const x=p.x-cameraX;if(x<-40||x>W+40)continue;shadow(x,p.y+2,10,3,.28);ctx.save();ctx.translate(x,p.y-5);ctx.rotate(p.type==='knife'?-0.18:0.12);if(p.type==='knife'){ctx.fillStyle='#dbe9f0';ctx.fillRect(-12,-1,18,3);ctx.fillStyle='#252933';ctx.fillRect(6,-2,8,5);ctx.fillStyle='#82d8ee';ctx.fillRect(-12,0,12,1);}else{ctx.fillStyle='#7d4b32';ctx.fillRect(-15,-2,26,5);ctx.fillStyle='#b78b5e';ctx.fillRect(7,-3,8,7);for(let i=-7;i<9;i+=5){ctx.fillStyle='#d6dbe1';ctx.fillRect(i,-4,2,2);}}ctx.restore();ctx.fillStyle='#d8ecf2';ctx.font='bold 5px monospace';ctx.fillText(p.type==='knife'?'KNIFE · A':'BAT · A',x-15,p.y-19);}
+    for(const b of oceanBarrelsR942){if(b.exploded)continue;const x=b.x-cameraX;if(x<-30||x>W+30)continue;shadow(x,b.y+2,10,3,.3);ctx.fillStyle='#6f171e';ctx.fillRect(x-9,b.y-24,18,24);ctx.fillStyle='#bd2b31';ctx.fillRect(x-8,b.y-21,16,4);ctx.fillStyle='#321014';ctx.fillRect(x-8,b.y-9,16,4);ctx.fillStyle='#f0b54c';ctx.font='bold 7px monospace';ctx.fillText('⚠',x-4,b.y-17);ctx.fillStyle='#ffcf6b';ctx.globalAlpha=.28+.18*Math.sin(elapsed*6+b.x);ctx.fillRect(x-10,b.y-26,20,28);ctx.globalAlpha=1;}
+    ctx.restore();
+  }
+
+  function drawOceanExplosionsR942(){
+    if(!oceanExplosionsR942.length)return;ctx.save();
+    for(const fx of oceanExplosionsR942){const p=clamp(fx.t/fx.duration,0,1),x=fx.x-cameraX,y=fx.y-15;ctx.globalAlpha=(1-p)*.9;const r=12+p*46;const g=ctx.createRadialGradient(x,y,2,x,y,r);g.addColorStop(0,'#fff5b6');g.addColorStop(.24,'#ffb12d');g.addColorStop(.58,'#e13b22');g.addColorStop(1,'rgba(40,5,10,0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();for(let i=0;i<10;i++){const a=i*.63+p;ctx.fillStyle=i%2?'#ffcf56':'#ff5b31';ctx.fillRect(x+Math.cos(a)*(12+p*35),y+Math.sin(a)*(8+p*28),2,2);}}
+    ctx.restore();
+  }
+
+  drawLira = function(p){
+    __baseDrawLiraR942(p);
+    if(currentLevel!==2||!oceanWeaponR942||p.dead)return;
+    const x=p.x-cameraX,y=p.y-p.z;ctx.save();ctx.translate(Math.round(x),Math.round(y));ctx.scale(p.face,1);let swing=0;if(p.attack&&(p.attack.kind==='knifeSlashR942'||p.attack.kind==='batSmashR942'))swing=Math.sin(Math.min(1,p.attack.t/p.attack.duration)*Math.PI)*1.2;
+    ctx.rotate(-.22+swing*.5);if(oceanWeaponR942==='knife'){ctx.fillStyle='#e5f1f5';ctx.fillRect(13,-31,23,3);ctx.fillStyle='#1c2229';ctx.fillRect(7,-33,8,6);ctx.fillStyle='#67d7ee';ctx.fillRect(22,-30,13,1);}else{ctx.fillStyle='#805039';ctx.fillRect(10,-31,31,5);ctx.fillStyle='#c69b69';ctx.fillRect(34,-33,8,9);for(let i=20;i<38;i+=6){ctx.fillStyle='#e0e5e8';ctx.fillRect(i,-34,2,2);}}ctx.restore();
+  };
+
+  function drawSacredDestroyerR942(e){
+    const sx=e.x-cameraX,sy=e.y;if(sx<-150||sx>W+150||(!e.alive&&e.deathTimer<=0))return;const phase=e.bossPhase||1;shadow(sx,sy+4,42,9,.48);ctx.save();ctx.translate(Math.round(sx),Math.round(sy));if(!e.alive){ctx.globalAlpha=clamp(e.deathTimer/.35,0,1);ctx.rotate((1-e.deathTimer/.7)*.22);}const pulse=.5+.5*Math.sin(elapsed*3.6);
+    // Tentacles behind the shrine body.
+    for(let i=0;i<5;i++){const side=i<3?-1:1,yy=-46+i*9,reach=48+i*8;ctx.strokeStyle=phase>=3?'#b94772':'#6d2a52';ctx.lineWidth=7-i*.4;ctx.beginPath();ctx.moveTo(side*24,yy);ctx.bezierCurveTo(side*(48+10*pulse),yy-22,side*(70+reach*.35),yy+28,side*(66+reach),yy+2);ctx.stroke();ctx.strokeStyle='#d1668d';ctx.lineWidth=2;ctx.stroke();for(let k=0;k<4;k++){const tx=side*(45+k*13),ty=yy+Math.sin(k+i)*8;ctx.fillStyle='#d77b9b';ctx.beginPath();ctx.arc(tx,ty,2.2,0,Math.PI*2);ctx.fill();}}
+    // Giant chained shrine / face.
+    ctx.fillStyle='#111921';ctx.fillRect(-32,-90,64,74);ctx.fillStyle='#28333c';ctx.fillRect(-27,-83,54,61);ctx.fillStyle='#0b1016';ctx.fillRect(-19,-66,38,42);ctx.strokeStyle='#745446';ctx.lineWidth=3;ctx.strokeRect(-32,-90,64,74);
+    // crown beams
+    for(let i=-2;i<=2;i++){ctx.save();ctx.translate(i*12,-86);ctx.rotate(i*.13);ctx.fillStyle='#3a3029';ctx.fillRect(-3,-21,6,25);ctx.restore();}
+    // red eyes and central third eye
+    const glow=phase===1?'#ff374e':phase===2?'#ff1f3d':'#ff002c';ctx.shadowColor=glow;ctx.shadowBlur=10+phase*3;ctx.fillStyle=glow;ctx.beginPath();ctx.ellipse(-11,-57,6,3,0,0,Math.PI*2);ctx.ellipse(11,-57,6,3,0,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.ellipse(0,-79,8,4,0,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;ctx.fillStyle='#0b080a';ctx.fillRect(-4,-44,8,23);ctx.fillStyle='#6d4e3e';ctx.fillRect(-2,-43,4,21);
+    // chains
+    ctx.strokeStyle='#6b5748';ctx.lineWidth=3;for(const side of [-1,1]){ctx.beginPath();ctx.moveTo(side*31,-75);ctx.lineTo(side*50,-40);ctx.lineTo(side*37,-10);ctx.stroke();}
+    // phase aura
+    ctx.globalAlpha=.18+phase*.06;ctx.strokeStyle=glow;ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(0,-50,42+phase*5,50+phase*4,0,0,Math.PI*2);ctx.stroke();ctx.globalAlpha=1;
+    ctx.restore();
+  }
+
+  drawOceanEnemy = function(e){
+    if(e.type==='boss'){drawSacredDestroyerR942(e);return;}
+    __baseDrawOceanEnemyR942(e);
+    if(!e.alive)return;const x=e.x-cameraX,y=e.y;ctx.save();ctx.translate(Math.round(x),Math.round(y));ctx.scale(e.face,1);if(e.variant==='tide-guard'){ctx.strokeStyle='#8ea6ac';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(12,-30);ctx.lineTo(29,-11);ctx.moveTo(29,-11);ctx.lineTo(23,-15);ctx.moveTo(29,-11);ctx.lineTo(23,-7);ctx.stroke();}else{ctx.fillStyle='#d6e2e5';ctx.save();ctx.translate(13,-25);ctx.rotate(.45);ctx.fillRect(0,0,18,2);ctx.fillStyle='#3a3030';ctx.fillRect(-5,-1,7,4);ctx.restore();}ctx.restore();
+  };
+
+  drawBackgroundLevel2 = function(){
+    __baseDrawBackgroundLevel2R942();
+    // Living wave crests in the far ocean: subtle enough not to obscure combat.
+    ctx.save();ctx.globalAlpha=.42;for(let band=0;band<3;band++){ctx.strokeStyle=band===0?'#93d8ec':band===1?'#4d93b3':'#2f6b8d';ctx.lineWidth=band===0?1.6:1;ctx.beginPath();const base=137+band*10;for(let x=0;x<=W;x+=4){const y=base+Math.sin(x*.045+elapsed*(1.0+band*.25)+cameraX*.002)*(5-band)+Math.sin(x*.09-elapsed*.7)*2;if(x===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);}ctx.stroke();}
+    // Hanging chains in foreground ruins.
+    ctx.globalAlpha=.28;ctx.strokeStyle='#8d765f';ctx.lineWidth=2;for(let i=0;i<5;i++){const x=((i*151-cameraX*.45)%(W+90)+W+90)%(W+90)-30;ctx.beginPath();ctx.moveTo(x,0);for(let y=0;y<92;y+=7)ctx.lineTo(x+Math.sin(y*.23+i)*2,y);ctx.stroke();}ctx.restore();
+  };
+
+  // Make the boss a genuinely large, slow three-phase encounter.
+  const __r942MakeEnemyPrev = makeEnemy;
+  makeEnemy = function(type,x,y){const e=__r942MakeEnemyPrev(type,x,y);if(currentLevel===2&&type==='boss'){e.hp=e.maxHp=780;e.damage=22;e.speed=26;e.width=72;e.depth=42;e.height=110;e.variant='sacred-destroyer-r942';e.specialCooldown=1.7;}return e;};
+
+  startWave = function(w){
+    __baseStartWaveR942(w);
+    if(currentLevel===2&&w?.spawns?.[0]?.[0]==='boss'){oceanBossIntroUntilR942=performance.now()+1250;showMessage('SACRED DESTROYER',1.4);}
+  };
+
+  startLevel = function(level,keepScore=false){__r941StartLevelR942(level,keepScore);if(level===2)resetOceanPropsR942();};
+
+  buildSaveData = function(){const d=__r941BuildSaveDataR942();d.version=SAVE_VERSION;d.r942='R006-R942';d.oceanR942={weapon:oceanWeaponR942,pickups:oceanPickupsR942.map(x=>({id:x.id,picked:x.picked})),barrels:oceanBarrelsR942.map(x=>({id:x.id,hp:x.hp,exploded:x.exploded}))};return d;};
+  restoreSave = function(data){const ok=__r941RestoreSaveR942(data);if(!ok)return false;resetOceanPropsR942();if(currentLevel===2&&data?.oceanR942){oceanWeaponR942=String(data.oceanR942.weapon||'');for(const x of data.oceanR942.pickups||[]){const p=oceanPickupsR942.find(v=>v.id===x.id);if(p)p.picked=!!x.picked;}for(const x of data.oceanR942.barrels||[]){const b=oceanBarrelsR942.find(v=>v.id===x.id);if(b){b.hp=Number(x.hp)||0;b.exploded=!!x.exploded;}}}return true;};
+
+  drawHUD = function(){
+    __baseDrawHUDR942();
+    if(started&&currentLevel===2&&!gameOver&&!victory){ctx.save();ctx.fillStyle='#d9edf4';ctx.font='bold 6px monospace';ctx.fillText(oceanWeaponR942?`WEAPON: ${oceanWeaponR942.toUpperCase()}`:'WEAPON: —',12,43);const boss=enemies.find(e=>e.type==='boss'&&e.alive);if(boss){ctx.textAlign='right';ctx.fillStyle='#ff5364';ctx.font='bold 7px monospace';ctx.fillText(`SACRED DESTROYER · PHASE ${boss.bossPhase||1}/3`,W-10,14);ctx.textAlign='left';}ctx.restore();}
+  };
+
+  function drawOceanBossIntroR942(){
+    if(performance.now()>=oceanBossIntroUntilR942||!oceanBossArtR942.complete||!oceanBossArtR942.naturalWidth)return;
+    ctx.save();ctx.fillStyle='#02050a';ctx.fillRect(0,0,W,H);const iw=oceanBossArtR942.naturalWidth,ih=oceanBossArtR942.naturalHeight,scale=Math.min(W/iw,H/ih),dw=iw*scale,dh=ih*scale;ctx.drawImage(oceanBossArtR942,(W-dw)/2,(H-dh)/2,dw,dh);ctx.restore();
+  }
+
+  // Exact poster splash, shown contained after the device enters landscape.
+  drawBootSplash = function(){if(performance.now()>=bootSplashUntil)return;if(!bootSplash.complete||!bootSplash.naturalWidth){ctx.fillStyle='#02040a';ctx.fillRect(0,0,W,H);return;}ctx.save();ctx.fillStyle='#02040a';ctx.fillRect(0,0,W,H);const sc=Math.min(W/bootSplash.naturalWidth,H/bootSplash.naturalHeight),dw=bootSplash.naturalWidth*sc,dh=bootSplash.naturalHeight*sc;ctx.drawImage(bootSplash,(W-dw)/2,(H-dh)/2,dw,dh);ctx.restore();};
+
+  draw = function(){
+    if(bikeMode){__r941DrawR942();return;}
+    const sx=shake>0?(Math.random()-.5)*shake:0,sy=shake>0?(Math.random()-.5)*shake*.45:0;ctx.save();ctx.translate(Math.round(sx),Math.round(sy));drawBackground();drawWorldMarkers();if(currentLevel===2)drawOceanPropsR942();const actors=[...enemies.filter(e=>e.alive||e.deathTimer>0).map(e=>({y:e.y,draw:()=>drawEnemy(e)})),{y:player.y,draw:()=>drawLira(player)}].sort((a,b)=>a.y-b.y);for(const a of actors)a.draw();drawEffects();drawOceanExplosionsR942();ctx.restore();drawHUD();drawCinematic();drawOceanBossIntroR942();if(flash>0){ctx.fillStyle=`rgba(255,255,255,${Math.min(.18,flash*2.6)})`;ctx.fillRect(0,0,W,H);}drawBootSplash();
+  };
+
+  update = function(dt){
+    __r941UpdateR942(dt);
+    if(!started||paused||gameOver||victory)return;
+    if(currentLevel===2){for(const fx of oceanExplosionsR942)fx.t+=dt;oceanExplosionsR942=oceanExplosionsR942.filter(f=>f.t<f.duration);}
+  };
 
   titleChoice = hasSave() ? 0 : 1;
   buildWaves();

@@ -19710,7 +19710,7 @@ async function handleRadioRemoteCommandR627(request,env){
   const db=env.COMMENTS_DB;if(!db)return json({ok:false,error:'database-not-configured'},503);
   const body=await request.json().catch(()=>({}));
   const action=String(body.action||'').trim().toLowerCase();
-  const allowed=new Set(['start','recover','stop','restart','encoder-start','encoder-stop','soft-restart','gold-restore','screen-restore','cache-clean','status','auto-safe','full-fit','visual-sync','visual-now','visual-auto']);
+  const allowed=new Set(['start','recover','stop','restart','encoder-start','encoder-stop','soft-restart','gold-restore','screen-restore','cache-clean','status','auto-safe','full-fit','visual-sync','visual-now','visual-auto','queue-move']);
   if(!allowed.has(action))return json({ok:false,error:'invalid-action'},400);
   const slot=String(body.slot||'').trim().toLowerCase();
   if(action==='visual-now' && !Object.prototype.hasOwnProperty.call(RADIO_VISUAL_KEYS_R620,slot))
@@ -19723,7 +19723,7 @@ async function handleRadioRemoteCommandR627(request,env){
     if(age<180000)return json({ok:false,error:'command-busy',command:existing},409);
   }
   const id=crypto.randomUUID();
-  const command={id,action,state:'queued',createdAt:new Date().toISOString(),requestedBy:'owner-control-r650',...(action==='visual-now'?{slot}:{})};
+  const command={id,action,state:'queued',createdAt:new Date().toISOString(),requestedBy:'owner-control-r942',...(action==='visual-now'?{slot}:{}),...(action==='queue-move'?{offset:Math.max(0,Math.min(5,Number(body.offset)||0)),direction:['up','down'].includes(String(body.direction||'').toLowerCase())?String(body.direction).toLowerCase():'up'}:{})};
   await setPushState(db,RADIO_REMOTE_R627.commandKey,JSON.stringify(command));
   return json({ok:true,command});
 }
@@ -21152,25 +21152,18 @@ async function handleControlYoutubeLiveCachedR797(request,env){
 // videos.statistics.viewCount now counts playback from the first frame. The owner
 // Analytics API keeps engagedViews for playbacks that continue past the first frame
 // (or are explicitly clicked/tapped). Failure is non-fatal: the radio panel still works.
-async function fetchYoutubeEngagedViewsR938(env,videoId,actualStartTime=''){
-  const id=cleanPlainText(videoId||'',80);
-  if(!id)return null;
+async function fetchYoutubeStudioViewsR942(env,videoId,actualStartTime=''){
+  const id=cleanPlainText(videoId||'',80); if(!id)return {views:null,engagedViews:null,source:'none'};
   try{
-    const accessToken=await getYoutubeOAuthAccessToken(env);
-    const parsed=Date.parse(actualStartTime||'');
-    const startDate=Number.isFinite(parsed)
-      ? new Date(Math.max(parsed,Date.now()-90*86400000)).toISOString().slice(0,10)
-      : isoDateDaysAgo(28);
-    const endDate=new Date().toISOString().slice(0,10);
-    const rows=await youtubeAnalyticsQuery(env,accessToken,{
-      ids:'channel==MINE',startDate,endDate,filters:`video==${id}`,metrics:'engagedViews'
-    });
-    const value=Number(rows?.[0]?.engagedViews);
-    return Number.isFinite(value)?Math.max(0,value):null;
-  }catch(_){
-    return null;
-  }
+    const accessToken=await getYoutubeOAuthAccessToken(env); const parsed=Date.parse(actualStartTime||'');
+    const startDate=Number.isFinite(parsed)?new Date(Math.max(parsed,Date.now()-90*86400000)).toISOString().slice(0,10):isoDateDaysAgo(28);
+    const endDate=new Date().toISOString().slice(0,10); let rows=[];
+    try{rows=await youtubeAnalyticsQuery(env,accessToken,{ids:'channel==MINE',startDate,endDate,filters:`video==${id}`,metrics:'views,engagedViews'});}catch(_){rows=await youtubeAnalyticsQuery(env,accessToken,{ids:'channel==MINE',startDate,endDate,filters:`video==${id}`,metrics:'views'});}
+    const row=rows?.[0]||{}, views=Number(row.views), engaged=Number(row.engagedViews);
+    return {views:Number.isFinite(views)?Math.max(0,views):null,engagedViews:Number.isFinite(engaged)?Math.max(0,engaged):null,source:Number.isFinite(engaged)?'youtube-analytics-engagedViews-r942':(Number.isFinite(views)?'youtube-analytics-views-r942':'empty')};
+  }catch(_){return {views:null,engagedViews:null,source:'error'};}
 }
+async function fetchYoutubeEngagedViewsR938(env,videoId,actualStartTime=''){const d=await fetchYoutubeStudioViewsR942(env,videoId,actualStartTime);return d.engagedViews;}
 
 async function handleControlYoutubeLiveR565(request, env) {
   if (!adminAuthorized(request, env)) return json({ok:false,error:'unauthorized'},401);
@@ -21287,7 +21280,8 @@ async function handleControlYoutubeLiveR565(request, env) {
     const broadcastLive=lifeCycleStatus.toLowerCase()==='live' || Boolean(details?.actualStartTime && !details?.actualEndTime);
     const signalActive=streamStatus.toLowerCase()==='active';
     const active=broadcastLive;
-    const engagedViewsR938=await fetchYoutubeEngagedViewsR938(env,videoId,details?.actualStartTime||broadcast?.snippet?.actualStartTime||'');
+    const studioViewsR942=await fetchYoutubeStudioViewsR942(env,videoId,details?.actualStartTime||broadcast?.snippet?.actualStartTime||'');
+    const engagedViewsR938=studioViewsR942.engagedViews;
     return json({
       ok:true,active,signalActive,broadcastLive,videoId,
       title:cleanPlainText(video?.snippet?.title||broadcast?.snippet?.title||'ANDRIK Metal Radio 24/7',220),
@@ -21303,7 +21297,7 @@ async function handleControlYoutubeLiveR565(request, env) {
       concurrentViewers:Math.max(0,Number(details?.concurrentViewers||0)),
       actualStartTime:cleanPlainText(details?.actualStartTime||broadcast?.snippet?.actualStartTime||'',80),
       scheduledStartTime:cleanPlainText(details?.scheduledStartTime||broadcast?.snippet?.scheduledStartTime||'',80),
-      views:Math.max(0,Number(statistics?.viewCount||0)),engagedViews:engagedViewsR938,likes:Math.max(0,Number(statistics?.likeCount||0)),
+      views:Math.max(0,Number(statistics?.viewCount||0)),engagedViews:engagedViewsR938,studioViews:studioViewsR942.engagedViews??studioViewsR942.views,studioViewsSource:studioViewsR942.source,likes:Math.max(0,Number(statistics?.likeCount||0)),
       comments:Math.max(0,Number(statistics?.commentCount||0)),boundStreamId,
       studioUrl:`https://studio.youtube.com/video/${encodeURIComponent(videoId)}/livestreaming`,
       analyticsUrl:`https://studio.youtube.com/video/${encodeURIComponent(videoId)}/analytics/tab-overview/period-default`,
@@ -21330,7 +21324,8 @@ async function handleControlYoutubeLiveR565(request, env) {
         }catch(_){ }
         const details=video?.liveStreamingDetails||{};
         const statistics=video?.statistics||{};
-        const engagedViewsR938=await fetchYoutubeEngagedViewsR938(env,videoId,details?.actualStartTime||'');
+        const studioViewsR942=await fetchYoutubeStudioViewsR942(env,videoId,details?.actualStartTime||'');
+        const engagedViewsR938=studioViewsR942.engagedViews;
         return json({
           ok:true,active:true,signalActive:true,broadcastLive:true,videoId,
           title:cleanPlainText(video?.snippet?.title||'ANDRIK Metal Radio 24/7',220),
@@ -21342,6 +21337,7 @@ async function handleControlYoutubeLiveR565(request, env) {
           scheduledStartTime:cleanPlainText(details?.scheduledStartTime||'',80),
           views:Math.max(0,Number(statistics?.viewCount||0)),
           engagedViews:engagedViewsR938,
+          studioViews:studioViewsR942.engagedViews??studioViewsR942.views,studioViewsSource:studioViewsR942.source,
           likes:Math.max(0,Number(statistics?.likeCount||0)),
           comments:Math.max(0,Number(statistics?.commentCount||0)),
           boundStreamId:'',

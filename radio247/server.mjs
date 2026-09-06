@@ -3935,6 +3935,9 @@ async function radioLoop(){
           // R764: only media that actually reached LIVE may become PREVIOUS.
           lastPlayed=item;
           queueIndex++;
+          if(item?.sourceType==='radio-bumper'&&item?.__manualPlannedR942){
+            songsSinceBumperR724=0;bumperAfterSongsR724=randomBumperGapR724();state.songsSinceBumper=0;state.nextBumperAfterSongs=bumperAfterSongsR724;
+          }
           state.lastError='';
         }else{
           // R814 CLIP LOCK: a clip that was already selected at the boundary is not
@@ -4014,7 +4017,7 @@ async function radioLoop(){
         }
       }
 
-      if(!specialHourlyPlayedR727 && !specialPlayedR726 && !stopping && bumperLibrary.length && songsSinceBumperR724>=bumperAfterSongsR724){
+      if(!specialHourlyPlayedR727 && !specialPlayedR726 && !stopping && bumperLibrary.length && songsSinceBumperR724>=bumperAfterSongsR724 && queue[queueIndex]?.sourceType!=='radio-bumper'){
         // Keep a station bumper between SONGS, never bumper -> normal clip back-to-back.
         moveUpcomingClipAfterTrackR724();
         const bumper=nextBumperR724();
@@ -4049,6 +4052,45 @@ async function radioLoop(){
       else queueIndex++;
     }
   }
+}
+
+// R942: expose the next six real queue items to Control and allow surgical manual reordering.
+function queueItemPublicR942(item,index){
+  if(!item)return null;
+  return {index:Number(index||0),id:primaryIdentity(item)||`${item.type||'media'}:${shortText(item.title||'',80)}`,type:String(item.sourceType||'').startsWith('radio-special')?'special':(item.sourceType==='radio-bumper'?'bumper':(item.type||'track')),title:shortText(item.title||'UNTITLED',120),album:shortText(item.album||'',80),sourceType:shortText(item.sourceType||'',50),duration:Number(item.duration||0)||null};
+}
+function planBumperIntoQueueR942(){
+  if(!queue.length||!bumperLibrary.length)return;
+  if(queue.slice(queueIndex+1,queueIndex+12).some(x=>x?.sourceType==='radio-bumper'))return;
+  const remaining=Math.max(0,Number(bumperAfterSongsR724||0)-Number(songsSinceBumperR724||0));
+  if(remaining<1||remaining>6)return;
+  let tracks=0,insertAt=queue.length;
+  for(let i=queueIndex+1;i<queue.length;i++){
+    if(queue[i]?.type==='track')tracks++;
+    if(tracks>=Math.max(0,remaining-1)){insertAt=i+1;break;}
+  }
+  if(remaining===1)insertAt=queueIndex+1;
+  const bumper=nextBumperR724();
+  if(!bumper)return;
+  bumper.__manualPlannedR942=true;
+  queue.splice(Math.max(queueIndex+1,insertAt),0,bumper);
+  state.queueLength=queue.length;
+}
+function upcomingQueueR942(limit=6){
+  if(!queue.length)return []; planBumperIntoQueueR942(); const out=[];
+  for(let i=queueIndex+1;i<queue.length&&out.length<limit;i++){const row=queueItemPublicR942(queue[i],i-(queueIndex+1));if(row)out.push(row);}
+  if(out.length<limit){for(let i=0;i<queue.length&&out.length<limit;i++){if(i===queueIndex)continue;const row=queueItemPublicR942(queue[i],out.length);if(row&&!out.some(x=>x.id===row.id))out.push(row);}}
+  return out.slice(0,limit);
+}
+function moveUpcomingQueueR942(offset,direction){
+  const dir=String(direction||'').toLowerCase(); const off=Math.max(0,Math.min(5,Number(offset)||0));
+  if(!['up','down'].includes(dir))return {ok:false,error:'invalid-direction'};
+  const absolute=queueIndex+1+off, target=dir==='up'?absolute-1:absolute+1, firstFuture=queueIndex+1;
+  if(absolute<firstFuture||absolute>=queue.length)return {ok:false,error:'queue-item-not-found',upcoming:upcomingQueueR942(6)};
+  if(target<firstFuture||target>=queue.length)return {ok:false,error:'queue-edge',upcoming:upcomingQueueR942(6)};
+  [queue[absolute],queue[target]]=[queue[target],queue[absolute]]; state.queueLength=queue.length;
+  state.lastManualQueueMoveR942={at:new Date().toISOString(),direction:dir,title:shortText(queue[target]?.title||'',80),from:off,to:off+(dir==='up'?-1:1)};
+  return {ok:true,move:state.lastManualQueueMoveR942,upcoming:upcomingQueueR942(6)};
 }
 
 function publicStatus(){
@@ -4339,6 +4381,8 @@ function publicStatus(){
     previous:state.previous,
     current:state.current,
     next:state.next,
+    upcomingR942:upcomingQueueR942(6),
+    lastManualQueueMoveR942:state.lastManualQueueMoveR942||null,
     startedAt:state.startedAt,
     streamStartedAt:state.streamStartedAt,
     uptimeSeconds:Math.max(0,Math.round((now-Date.parse(state.startedAt))/1000)),
@@ -4399,6 +4443,7 @@ const server=http.createServer((req,res)=>{
       else if(url.pathname==='/control/visual-auto')result=await applyVisualModeR721({auto:true});
       else if(url.pathname==='/control/full-fit')result=await ensureNormalVideoFeederR721({force:true}).then(()=>({ok:true,noCrop:true,restartedPublisher:false}));
       else if(url.pathname==='/control/timeline-offset')result=await setTimelineCompensationR739(url.searchParams.get('seconds'));
+      else if(url.pathname==='/control/queue-move')result=moveUpcomingQueueR942(url.searchParams.get('offset'),url.searchParams.get('direction'));
       else throw new Error('unknown local control');
       res.writeHead(200,headers);res.end(JSON.stringify(result));
     })().catch(error=>{res.writeHead(500,headers);res.end(JSON.stringify({ok:false,error:cleanText(error?.message||error)}));});

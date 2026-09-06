@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788673870051-1232693f3f",
-  "release": "R941",
-  "archiveName": "ANDRIK-R941-DREAMING-OF-LIRA-R005-CITY-BIKE-SUPER-R940-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "c95bc5a3a3e1bcb89624cd30c003953d084af63e",
-  "backupSha": "c95bc5a3a3e1bcb89624cd30c003953d084af63e",
+  "operationId": "publish-1788675381789-574326b5c1",
+  "release": "R942",
+  "archiveName": "ANDRIK-R942-RADIO-QUEUE6-DREAMING-LIRA-R006-OCEAN-BOSS-FULL-2.zip",
+  "sourceHead": "41f42a2e548edcda30dc6c01ab11ca86a5f7090c",
+  "backupSha": "41f42a2e548edcda30dc6c01ab11ca86a5f7090c",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-06T05:51:11.364Z"
+  "generatedAt": "2026-09-06T06:16:23.778Z"
 }
