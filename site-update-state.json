@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788718280823-48fcd865ba",
-  "release": "R954",
-  "archiveName": "ANDRIK-R954-GENERAL-CLEANUP-COMPACT-R953-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "32c68bb6f8c3f002a89bde3eb40b0ef278089f11",
-  "backupSha": "32c68bb6f8c3f002a89bde3eb40b0ef278089f11",
+  "operationId": "publish-1788726552365-ade55ea2d3",
+  "release": "R956",
+  "archiveName": "ANDRIK-R956-SITE-POLISH-R955-GAME-R953-PUSH-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "83c0b508a0a1e7d23fc6718fa87143e742172151",
+  "backupSha": "83c0b508a0a1e7d23fc6718fa87143e742172151",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-06T18:11:23.657Z"
+  "generatedAt": "2026-09-06T20:29:13.297Z"
 }

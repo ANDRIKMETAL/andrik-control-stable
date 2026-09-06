@@ -1,0 +1,16 @@
+ANDRIK R956 SITE POLISH
+
+1. City names in Control activity modal localized to Russian.
+2. Site Update: install process moved above ZIP selector; ZIP selector made smaller.
+3. R2 Storage: newest uploaded media sorted first.
+4. MP3/WAV editor intro duplicate removed and card compacted.
+5. Public home: transparent top header/no stripe; YouTube hero shortcut replaced with Albums.
+6. Social Center: Site card opens Google Analytics pane directly.
+7. Service page: redundant integrations description removed and compacted.
+8. Eye fullscreen video: admin carousel dots hidden while video is open.
+9. Old TRIKA released push card removed.
+10. Album ZIP admin: released albums hidden; future albums only; overflow/scroll graphic bug reduced.
+11. Radio next-6 queue: early API prefetch + last queue cache for instant paint.
+
+Preserved: R953 comment push logic, R955 game R009, radio247/R943C/fullscreen, R949 audio sync ladder.
+Cleanup: obsolete TRIKA release-push JS removed after its UI card was deleted.

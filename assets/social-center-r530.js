@@ -108,7 +108,7 @@
       let detail=live?def.label:(meta.configured?'ждём данные':'готово к подключению');
       let sub='';let href='';let action='';let cardValue=total;
       if(key==='site'){
-        href='/analytics-admin.html?page=google&source=direct-ga-r539&v=55.00-r539&source=direct-ga-r539&v=55.00-r539';
+        href='/analytics-admin.html?page=google&source=social-center-r956&v=55.00-r956';
         detail=live?'28 дней · визиты':'данные сайта';
       }else if(key==='instagram'){
         sub=`<span class="social-center-r488-account">@${esc(meta.username||'andrikmetal')}</span>`;

@@ -271,6 +271,15 @@ body.site-update-page #siteUpdateSetupCard:not([hidden]){
 </style>
 <script defer src="/assets/control-cache-reset-r306.js?v=55.00-r306"></script>
 <link rel="stylesheet" href="/assets/site-update-stage-visibility-r311.css?v=55.00-r311">
+
+<style id="r956-site-update-compact">
+body.site-update-page .update-live-console-r184{margin-top:10px!important;margin-bottom:10px!important}
+body.site-update-page .update-file-picker.update-file-picker-r263{min-height:68px!important;padding:9px 14px!important;margin-top:8px!important;animation:none!important;box-shadow:0 0 16px rgba(31,255,125,.28)!important}
+body.site-update-page .update-file-picker.update-file-picker-r263 strong{gap:10px!important;font-size:.94rem!important}
+body.site-update-page .update-file-picker.update-file-picker-r263>#siteUpdateFileName{font-size:.75rem!important}
+body.site-update-page .winrar-books-r263{transform:scale(.76)!important;transform-origin:left center!important;margin-right:-8px!important}
+@media(max-width:420px){body.site-update-page .update-file-picker.update-file-picker-r263{min-height:64px!important;flex-direction:row!important;align-items:center!important}}
+</style>
 </head>
 <body class="control-page site-update-page r136-standard-header-page r137-eye-motion-page">
 <nav class="topbar control-topbar control-detail-topbar"><div class="wrap nav-shell"><a class="control-center-logo" id="controlCenterLogo" href="https://andrikmetal.com/" aria-label="Открыть главный сайт ANDRIK"><img class="logo-ok" src="/assets/control-topbar-eye-triangle.jpg?v=55.00-r136" alt=""><img class="logo-error" src="/assets/andrik-control-red-triangle-192.png?v=55.00-r136" alt=""></a><div class="nav-links control-nav-links control-detail-nav"><a href="/admin-sections.html?section=service&v=55.00-r412">← Служебное</a></div></div></nav>
@@ -298,11 +307,6 @@ body.site-update-page #siteUpdateSetupCard:not([hidden]){
 </div>
 <article class="admin-control-card admin-control-card-wide update-upload-card">
 <div class="admin-card-title-row compact-title"><div><span class="eyeline">Новая версия</span><h2>Полный ZIP сайта</h2></div><span class="service-access-state" id="siteUpdateFileState">Не выбран</span></div>
-<label class="update-file-picker update-file-picker-r263" for="siteUpdateArchive"><strong><span class="update-file-picker-icon winrar-books-r263" aria-hidden="true"><i class="winrar-book-r263 is-purple"></i><i class="winrar-book-r263 is-blue"></i><i class="winrar-book-r263 is-green"></i><i class="winrar-belt-r263"></i></span><span>Выбрать ZIP</span></strong><span id="siteUpdateFileName">до 25 МБ</span></label><input id="siteUpdateArchive" type="file" accept=".zip,application/zip" hidden>
-<button class="btn btn-primary update-main-button" id="siteUpdatePublish" type="button" disabled>ОБНОВИТЬ САЙТ</button>
-<div class="update-stagebar" id="siteUpdateStages" aria-label="Этапы установки">
-<div data-stage="check"><b>1</b><span>ZIP</span></div><div data-stage="backup"><b>2</b><span>Backup</span></div><div data-stage="commit"><b>3</b><span>Commit</span></div><div data-stage="release"><b>4</b><span>Release</span></div><div data-stage="deploy"><b>5</b><span>Сайт</span></div><div data-stage="protect"><b>6</b><span>Защита</span></div>
-</div>
 <div class="update-live-console-r184" id="siteUpdateConsoleR195" aria-live="polite">
   <div class="update-console-head-r184">
     <span class="eyeline">Процесс установки</span>
@@ -320,6 +324,13 @@ body.site-update-page #siteUpdateSetupCard:not([hidden]){
   </div>
 </div>
 <div class="update-auto-note" id="siteUpdateUploadMessage">После выбора ZIP проверка запустится автоматически.</div>
+<label class="update-file-picker update-file-picker-r263" for="siteUpdateArchive"><strong><span class="update-file-picker-icon winrar-books-r263" aria-hidden="true"><i class="winrar-book-r263 is-purple"></i><i class="winrar-book-r263 is-blue"></i><i class="winrar-book-r263 is-green"></i><i class="winrar-belt-r263"></i></span><span>Выбрать ZIP</span></strong><span id="siteUpdateFileName">до 25 МБ</span></label><input id="siteUpdateArchive" type="file" accept=".zip,application/zip" hidden>
+
+<button class="btn btn-primary update-main-button" id="siteUpdatePublish" type="button" disabled>ОБНОВИТЬ САЙТ</button>
+<div class="update-stagebar" id="siteUpdateStages" aria-label="Этапы установки">
+<div data-stage="check"><b>1</b><span>ZIP</span></div><div data-stage="backup"><b>2</b><span>Backup</span></div><div data-stage="commit"><b>3</b><span>Commit</span></div><div data-stage="release"><b>4</b><span>Release</span></div><div data-stage="deploy"><b>5</b><span>Сайт</span></div><div data-stage="protect"><b>6</b><span>Защита</span></div>
+</div>
+
 <button class="btn" id="siteUpdatePreview" type="button" hidden disabled>Проверить ZIP</button>
 <div class="update-form-row update-hidden-fields" hidden><label>Версия<input id="siteUpdateRelease" type="text" maxlength="80" value="R342"></label><label>Коммит<input id="siteUpdateMessage" type="text" maxlength="240" value="ANDRIK Control — update website R342"></label></div>
 <input id="siteUpdateMakeBackup" type="checkbox" checked hidden>
@@ -373,7 +384,7 @@ GITHUB_RELEASE_REPO=andrik-control-stable</pre><p>Отдельный GITHUB_RELE
 </section>
 <footer class="control-version-footer"><strong>Live Web AI · ANDRIK · v55.00 LIVE WEB AI FINAL R418</strong><span>Полный ZIP · переносимый ZIP-бэкап · стабильная установка · обложка ТРИКА · живой глаз</span></footer>
 </div></main>
-<script defer src="/assets/control-version-v55-00-r115.js?v=55.00-r115"></script><script defer src="/assets/control-status-eye-v55-00-r88.js?v=55.00-r857q"></script><script defer src="/assets/control-live-eye-v55-00-r265.js?v=55.00-r265"></script><script defer src="/assets/site-update-header-state-r265.js?v=55.00-r265"></script><script defer src="/assets/unified-glow-r139.js?v=55.00-r142"></script>
+<script defer src="/assets/control-version-v55-00-r115.js?v=55.00-r115"></script><script defer src="/assets/control-status-eye-v55-00-r88.js?v=55.00-r857q"></script><script defer src="/assets/control-live-eye-v55-00-r265.js?v=55.00-r956"></script><script defer src="/assets/site-update-header-state-r265.js?v=55.00-r265"></script><script defer src="/assets/unified-glow-r139.js?v=55.00-r142"></script>
 <script defer src="/assets/control-mini-player-r141.js?v=55.00-r144"></script>
 <script id="r167-triad-swipe">
 (()=>{

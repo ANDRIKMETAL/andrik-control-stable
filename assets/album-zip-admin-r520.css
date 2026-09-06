@@ -25,10 +25,4 @@
 .album-zip-card-r446 .album-zip-stats-r446{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;width:100%;max-width:100%}
 .album-zip-card-r446 .album-zip-pill-r446{display:flex;align-items:center;justify-content:center;width:100%;max-width:100%;min-width:0;box-sizing:border-box;white-space:nowrap;text-align:center;overflow:hidden;text-overflow:ellipsis}
 .album-zip-card-r446 .album-zip-track-r446 span:last-child{flex:0 0 auto;white-space:nowrap}
-.trika-release-push-r520{margin-top:16px;border-color:rgba(117,238,176,.30)!important;background:linear-gradient(145deg,rgba(16,84,63,.20),rgba(255,255,255,.025))!important}
-.trika-release-push-r520 .trika-release-push-copy-r520{display:grid;gap:5px}
-.trika-release-push-r520 .trika-release-push-copy-r520 strong{font-size:1.25rem}
-.trika-release-push-r520 .trika-release-push-copy-r520 p{margin:0;color:var(--muted,#aeb6bd);line-height:1.45}
-.trika-release-push-r520 .trika-release-push-actions-r520{display:grid;grid-template-columns:1fr;gap:10px;margin-top:12px}
-.trika-release-push-r520 .trika-release-push-actions-r520 .btn{width:100%;min-height:54px;font-weight:800}
 @media(max-width:420px){.album-zip-card-r446 .album-zip-pill-r446{font-size:.72rem;padding:6px 5px}.album-zip-card-r446 .album-zip-item-r446{padding-left:12px;padding-right:12px}}

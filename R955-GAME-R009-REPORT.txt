@@ -1,0 +1,23 @@
+ANDRIK R955 · DREAMING OF LÍRA R009
+===================================
+Base: R954 CLEAN + R953 reliable YouTube comment PUSH + R949 A/V ladder + R943C radio queue.
+
+GAME CHANGES
+- 3 starting lives + random 1UP drops; lives persist in saves and are spent before GAME OVER.
+- 1UP can drop from ground crates and tower crates and flies through SPACE.
+- SPACE Líra now rides in a large round helmet / spacesuit cockpit.
+- LEVEL 1 expanded to 4820 world units with more enemies.
+- Street dogs emerge from holes in fences during quiet sections.
+- NO CHOICE BAR micro-stage: drunk leather/mohawk enemies, knives, bottles, throwing/smashing weapons, window-exit cinematic.
+- Bike chase: more rival bikes, road posts including center-line obstacles, C kick knocks riders off bikes.
+- NIGHT ENFORCER: 2 lives; life 2 uses rifle fire. Two dogs + two police cars + barbed-wire roadblock before boss.
+- SACRED DESTROYER: 2 lives; life 2 smokes and uses chain-whip attacks.
+- User-provided 16:9 boss splash images compressed to WebP and used full-screen.
+- Enemy density increased in CITY, OCEAN, SPACE and TOWER.
+- Existing stars / score / BEST system retained.
+
+PRESERVED
+- R953 comment PUSH worker logic
+- R949 audio/video calibration ladder
+- radio247 / R943C / fullscreen
+- Levels 3/4/5 and R952 scoring/high-score system

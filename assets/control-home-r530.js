@@ -385,6 +385,21 @@
     try{localStorage.setItem(key,JSON.stringify(rows.slice(0,50)))}catch(_){}
   }
 
+  const CITY_RU_R956=new Map(Object.entries({
+    'moscow':'Москва','saint petersburg':'Санкт-Петербург','st petersburg':'Санкт-Петербург',
+    'košice':'Кошице','kosice':'Кошице','bratislava':'Братислава','pinsk':'Пинск',
+    'gdańsk':'Гданьск','gdansk':'Гданьск','helsinki':'Хельсинки','montréal':'Монреаль','montreal':'Монреаль',
+    'warsaw':'Варшава','wrocław':'Вроцлав','wroclaw':'Вроцлав','kraków':'Краков','krakow':'Краков',
+    'prague':'Прага','vienna':'Вена','berlin':'Берлин','hamburg':'Гамбург','munich':'Мюнхен',
+    'brest':'Брест','pomerania':'Поморское воеводство','uusimaa':'Уусимаа','quebec':'Квебек',
+    'košice region':'Кошицкий край','kosice region':'Кошицкий край','bratislava region':'Братиславский край'
+  }));
+  function cityRuR956(value){
+    const raw=String(value||'').trim();
+    if(!raw)return raw;
+    return CITY_RU_R956.get(raw.toLocaleLowerCase('ru'))||raw;
+  }
+
   function renderCityModalR375(){
     const box=$('controlCityModalListR375');
     if(!box)return;
@@ -397,8 +412,8 @@
       return;
     }
     box.innerHTML=rows.map((item,index)=>{
-      const place=String(item?.city||item?.label||item?.region||'Город / регион');
-      const region=String(item?.region||'').trim();
+      const place=cityRuR956(item?.city||item?.label||item?.region||'Город / регион');
+      const region=cityRuR956(item?.region||'').trim();
       const regionLine=region&&region.toLocaleLowerCase('ru')!==place.toLocaleLowerCase('ru')?`<small>${escapeHtml(region)}</small>`:'';
       const traffic=(Array.isArray(item?.trafficSources)?item.trafficSources:[]).filter(src=>Number(src?.events||0)>0).slice(0,3);
       const sourceText=traffic.length

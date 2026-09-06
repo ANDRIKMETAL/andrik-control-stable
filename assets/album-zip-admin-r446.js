@@ -9,6 +9,8 @@
   const auth=()=>{const h={};const k=document.getElementById('lyricsAdminKey')?.value?.trim();if(k)h['x-admin-key']=k;return h};
   const setStatus=(t,kind='')=>{status.textContent=t;status.dataset.kind=kind};
   const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+  const RELEASED_ALBUMS_R956=new Set(['illusion-of-life','ocean','trika','beyond']);
+  const futureAlbumsR956=albums=>(Array.isArray(albums)?albums:[]).filter(a=>!RELEASED_ALBUMS_R956.has(String(a?.slug||'').toLowerCase()));
 
   function renderAlbum(a){
     const zip=a.zip||{},tracks=a.tracks||[],sourceCount=Number(a.sourceTrackCount||a.trackCount||0),archiveCount=Number(a.trackCount||0),dupes=Number(a.duplicateCount||0);
@@ -39,15 +41,16 @@
   }
 
   async function load(album=''){
-    setStatus(album?'Проверяем альбом в R2…':'Проверяем три альбома в R2…');
+    setStatus(album?'Проверяем будущий альбом в R2…':'Проверяем будущие альбомы в R2…');
     try{
       const d=await requestJson('/api/control/music/albums'+(album?'?album='+encodeURIComponent(album):''));
-      (d.albums||[]).forEach(a=>cache.set(a.slug,a));
-      if(album){const current=grid.querySelector(`[data-album="${CSS.escape(album)}"]`),a=d.albums?.[0];if(current&&a)current.outerHTML=renderAlbum(a)}
-      else grid.innerHTML=(d.albums||[]).map(renderAlbum).join('')||'<div class="admin-empty">Альбомы не найдены.</div>';
-      const src=(d.albums||[]).reduce((s,a)=>s+Number(a.sourceTrackCount||a.trackCount||0),0),arc=(d.albums||[]).reduce((s,a)=>s+Number(a.trackCount||0),0);
-      setStatus(`R2 доступен ✅ MP3 найдено: ${src}. В архивы попадёт: ${arc}.`,'ok');
-      return d.albums||[];
+      const future=futureAlbumsR956(d.albums||[]);
+      future.forEach(a=>cache.set(a.slug,a));
+      if(album){const current=grid.querySelector(`[data-album="${CSS.escape(album)}"]`),a=future.find(x=>String(x.slug)===String(album));if(current&&a)current.outerHTML=renderAlbum(a);else if(current)current.remove()}
+      else grid.innerHTML=future.map(renderAlbum).join('')||'<div class="admin-empty">Текущие выпущенные альбомы скрыты. Новый будущий альбом появится здесь после добавления его в каталог и загрузки MP3 в R2.</div>';
+      const src=future.reduce((sum,a)=>sum+Number(a.sourceTrackCount||a.trackCount||0),0),arc=future.reduce((sum,a)=>sum+Number(a.trackCount||0),0);
+      setStatus(future.length?`Будущих альбомов: ${future.length} · MP3: ${src} · в ZIP: ${arc}.`:'Готово ✅ Выпущенные альбомы убраны из списка. Раздел ждёт будущий альбом.','ok');
+      return future;
     }catch(e){setStatus('Ошибка проверки R2: '+e.message,'error');if(!album)grid.innerHTML='<div class="admin-empty">Не удалось прочитать R2.</div>';throw e}
   }
 

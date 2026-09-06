@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
   <meta name="theme-color" content="#080b12" />
-  <title>Dreaming of Líra — ANDRIK Game · R008</title>
+  <title>Dreaming of Líra — ANDRIK Game · R009</title>
   <style>
     :root {
       --ink: #f4f1e8;
@@ -294,7 +294,7 @@
   "use strict";
 
   // ================================================================
-  // DREAMING OF LÍRA R008 — CITY / OCEAN / SPACE / TOWER / TETRIS arcade game
+  // DREAMING OF LÍRA R009 — CITY / BAR / BIKE / OCEAN / SPACE / TOWER / TETRIS arcade game
   // Original implementation for ANDRIK / andrikmetal.com · R942 site integration
   // No ROM code, sprites, audio, maps or other assets are copied here.
   // ================================================================
@@ -2157,7 +2157,7 @@
       const save = readSave();
       if (save) {
         const label = save.currentLevel === 2 ? "LEVEL 2 — OCEAN" : "LEVEL 1 — CITY OF SLEEP";
-        overlayPanel("DREAMING OF LÍRA · R007", [
+        overlayPanel("DREAMING OF LÍRA · R009", [
           `SAVE FOUND · ${label}`,
           "",
           `${titleChoice === 0 ? ">" : " "} ДАЛЕЕ / CONTINUE`,
@@ -2167,19 +2167,19 @@
           "SUPER · GUITAR RIFF"
         ]);
       } else {
-        overlayPanel("DREAMING OF LÍRA · R007", [
+        overlayPanel("DREAMING OF LÍRA · R009", [
           "LEVEL 1 — CITY OF SLEEP",
           "",
           "ANDROID: LANDSCAPE MODE",
-          "D-PAD · A PUNCH · B JUMP · C KICK",
-          "A + C · SWORD",
+          "D-PAD · A PUNCH · B JUMP · C SWEEP",
+          "A + B · SWORD",
           "SUPER · GUITAR RIFF",
           "",
           "START — ENTER DREAM"
         ]);
       }
     } else if (paused) {
-      overlayPanel("PAUSED", ["START / P — CONTINUE", "SELECT — LEVELS / SAVE", "A+C — SWORD", "SUPER — GUITAR RIFF"]);
+      overlayPanel("PAUSED", ["START / P — CONTINUE", "SELECT — LEVELS / SAVE", "A+B — SWORD", "SUPER — GUITAR RIFF"]);
     } else if (gameOver) {
       overlayPanel("THE DREAM COLLAPSES", ["R — TRY AGAIN"]);
     } else if (victory) {
@@ -3105,7 +3105,7 @@
   const __baseDrawHUDR942 = drawHUD;
 
   const oceanBossArtR942 = new Image();
-  oceanBossArtR942.src = 'assets/ocean-boss-sacred-destroyer-r942.webp';
+  oceanBossArtR942.src = 'assets/sacred-destroyer-r955.webp';
   let oceanBossIntroUntilR942 = 0;
   let oceanWeaponR942 = '';
   let oceanPickupsR942 = [];
@@ -3988,6 +3988,502 @@
 
   // Recover unlocks from prior completed saves without downgrading anything.
   try{const s=readSave();if(s){let u=Number(s.unlockedLevel)||Number(s.currentLevel)||1;if(s.completed&&Number(s.currentLevel)===3)u=Math.max(u,4);unlockedLevel=Math.max(unlockedLevel,Math.min(5,u));}}catch(_){}
+
+  // =====================================================================
+  // R009 / R955 — EXTRA LIVES + CITY BAR + TWO-LIFE BOSSES + BIKE POSTS
+  // User-requested expansion layered over R952. Radio / PUSH / R949 remain outside this file.
+  // =====================================================================
+  const GAME_R955 = 'R009-R955';
+  LEVEL_WORLD_W[1] = 4820;
+
+  const cityBossArtR955 = new Image();
+  cityBossArtR955.src = 'assets/night-enforcer-r955.webp';
+  oceanBossArtR942.src = 'assets/sacred-destroyer-r955.webp';
+  let cityBossIntroUntilR955 = 0;
+
+  // ------------------------------
+  // Lives / 1UP
+  // ------------------------------
+  const MAX_LIVES_R955 = 9;
+  let livesR955 = 3;
+  let groundLifeUpsR955 = [];
+  let towerLifeUpsR955 = [];
+  let spaceLifeUpsR955 = [];
+  let tetrisLifeConsumedR955 = false;
+
+  function grantLifeR955(x=player.x,y=player.y){
+    livesR955 = Math.min(MAX_LIVES_R955, livesR955 + 1);
+    score += 500;
+    showMessage(`1UP! · LIVES ${livesR955}`, .9);
+    effects.push({kind:'r955-1up',x,y,t:0,duration:.8});
+    tone(660,.08,'square',.02,880);
+  }
+  function spendLifeR955(label, respawn){
+    if(livesR955 <= 1){ livesR955 = 0; return false; }
+    livesR955--;
+    gameOver = false;
+    victory = false;
+    player.dead = false;
+    player.hp = player.maxHp;
+    player.stun = 0;
+    player.invuln = Math.max(player.invuln||0, 1.65);
+    if(typeof respawn === 'function') respawn();
+    showMessage(`${label} · 1UP ×${livesR955}`, 1.15);
+    tone(220,.12,'triangle',.025,440);
+    return true;
+  }
+  function drawLivesR955(x=12,y=50){
+    ctx.save();ctx.fillStyle='rgba(3,6,12,.76)';ctx.fillRect(x-4,y-9,62,13);ctx.fillStyle='#ffd85e';ctx.font='bold 7px monospace';ctx.fillText(`1UP ×${livesR955}`,x,y);ctx.restore();
+  }
+  function drawLifeUpIconR955(x,y,scale=1){
+    ctx.save();ctx.translate(Math.round(x),Math.round(y));ctx.scale(scale,scale);ctx.fillStyle='rgba(255,216,83,.18)';ctx.beginPath();ctx.arc(0,0,12,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#ffd853';ctx.lineWidth=2;ctx.stroke();ctx.fillStyle='#fff0a2';ctx.font='bold 7px monospace';ctx.textAlign='center';ctx.fillText('1UP',0,2);ctx.textAlign='left';ctx.restore();
+  }
+  function updateGroundLifeUpsR955(dt){
+    if(currentLevel>2||bikeMode||barModeR955)return;
+    for(const p of groundLifeUpsR955){if(p.taken||p.level!==currentLevel)continue;p.t+=dt;if(Math.abs(player.x-p.x)<20&&Math.abs(player.y-p.y)<22){p.taken=true;grantLifeR955(p.x,p.y);}}
+  }
+  function drawGroundLifeUpsR955(){
+    if(currentLevel>2||bikeMode||barModeR955)return;
+    for(const p of groundLifeUpsR955){if(p.taken||p.level!==currentLevel)continue;const x=p.x-cameraX,y=p.y-14+Math.sin(elapsed*5+p.x)*3;if(x<-25||x>W+25)continue;drawLifeUpIconR955(x,y,.82);}
+  }
+
+  const __r952BreakCrateR955 = breakCrateR950;
+  breakCrateR950 = function(c){
+    if(c.broken)return;
+    if(Math.random()<.20){
+      c.broken=true;c.hp=0;score+=100;hitShake(3);tone(118,.08,'square',.018,65);
+      groundLifeUpsR955.push({id:`1UP-${c.id}`,level:currentLevel,x:c.x,y:c.y,t:0,taken:false});
+      effects.push({kind:'crateDustR950',x:c.x,y:c.y,t:0,duration:.45});
+      showMessage('1UP FOUND!',.65);
+      return;
+    }
+    __r952BreakCrateR955(c);
+  };
+
+  const __r952DamagePlayerR955 = damagePlayer;
+  damagePlayer = function(amount,fromX){
+    const wasAlive=!gameOver&&!player.dead&&player.hp>0;
+    __r952DamagePlayerR955(amount,fromX);
+    if(wasAlive&&gameOver&&player.hp<=0){
+      spendLifeR955('CONTINUE',()=>{player.x=Math.max(25,player.x-44);player.y=clamp(player.y,FLOOR_TOP+20,FLOOR_BOTTOM);player.z=0;player.vz=0;});
+    }
+  };
+
+  const __r952HurtSpaceR955 = hurtSpaceR950;
+  hurtSpaceR950 = function(amount){
+    const wasAlive=!gameOver&&player.hp>0;
+    __r952HurtSpaceR955(amount);
+    if(wasAlive&&gameOver&&player.hp<=0){
+      spendLifeR955('SPACE CONTINUE',()=>{spaceX_R950=72;spaceY_R950=H/2;spaceInvulnR950=2;spaceEnemyShotsR950=[];});
+    }
+  };
+
+  const __r952DamageTowerR955 = damageTowerR952;
+  damageTowerR952 = function(amount){
+    const wasAlive=!gameOver&&player.hp>0;
+    __r952DamageTowerR955(amount);
+    if(wasAlive&&gameOver&&player.hp<=0){
+      spendLifeR955('TOWER CONTINUE',()=>{towerY_R952=Math.max(0,towerLastSafeR952);towerVy_R952=0;towerGroundedR952=true;towerInvulnR952=1.8;});
+    }
+  };
+
+  // ------------------------------
+  // LEVEL 1 extension: bar micro-stage, dogs, longer city.
+  // ------------------------------
+  let barModeR955=false,barDoneR955=false,barExitT_R955=0,barClearClockR955=0;
+  let barEnemiesR955=[],barItemsR955=[],barProjectilesR955=[],barWeaponR955='';
+  let barStreetReturnR955={x:1710,y:211,camera:1500};
+  let streetDogZonesR955=[];
+  let cityBossBulletsR955=[];
+  let oceanChainsR955=[];
+
+  function resetStreetDogsR955(){
+    streetDogZonesR955=[
+      {x:965,y:221,spawned:false},{x:3295,y:201,spawned:false},{x:3990,y:229,spawned:false}
+    ];
+  }
+  function makeDogR955(x,y,bossDog=false){
+    const e=__r955MakeEnemyBase('gang',x,y);
+    e.type='dog';e.variant=bossDog?'boss-dog':'street-dog';e.hp=e.maxHp=bossDog?58:38;e.damage=bossDog?12:9;e.speed=bossDog?116:94;e.width=27;e.depth=16;e.height=22;e.emergeT=bossDog?0:.75;e.leapCd=.35+Math.random()*.7;e.bossDog=!!bossDog;e.attack=null;e.alive=true;return e;
+  }
+
+  function enterBarR955(resume=false){
+    if(barModeR955||barDoneR955)return;
+    barModeR955=true;paused=false;gameOver=false;barExitT_R955=0;barClearClockR955=0;barWeaponR955='';
+    barStreetReturnR955={x:1710,y:211,camera:1500};
+    player.x=68;player.y=214;player.z=0;player.vz=0;player.vx=0;player.vy=0;player.attack=null;cameraX=0;
+    barEnemiesR955=[
+      {id:'B1',x:198,y:198,hp:58,maxHp:58,dir:-1,atk:0,alive:true,mohawk:'#d24d58',knife:true},
+      {id:'B2',x:278,y:228,hp:52,maxHp:52,dir:1,atk:.35,alive:true,mohawk:'#5aa6cf',knife:false},
+      {id:'B3',x:356,y:184,hp:62,maxHp:62,dir:-1,atk:.6,alive:true,mohawk:'#d59a43',knife:true},
+      {id:'B4',x:426,y:226,hp:68,maxHp:68,dir:-1,atk:.9,alive:true,mohawk:'#9d56be',knife:true},
+      {id:'B5',x:244,y:173,hp:54,maxHp:54,dir:1,atk:1.1,alive:true,mohawk:'#d55252',knife:false},
+      {id:'B6',x:386,y:207,hp:56,maxHp:56,dir:1,atk:1.35,alive:true,mohawk:'#3da990',knife:false}
+    ];
+    barItemsR955=[
+      {id:'bot1',kind:'bottle',x:126,y:222,taken:false},{id:'bot2',kind:'bottle',x:312,y:170,taken:false},
+      {id:'knife1',kind:'knife',x:174,y:186,taken:false},{id:'bot3',kind:'bottle',x:444,y:214,taken:false}
+    ];
+    barProjectilesR955=[];
+    showMessage(resume?'BAR RESTORED':'NO CHOICE BAR',1.35);tone(91,.16,'sawtooth',.022,148);
+  }
+  function exitBarR955(){
+    barModeR955=false;barDoneR955=true;barExitT_R955=0;player.attack=null;player.x=barStreetReturnR955.x;player.y=barStreetReturnR955.y;player.z=0;player.vz=0;cameraX=barStreetReturnR955.camera;showMessage('BACK TO THE STREET',1.2);saveProgress(false);
+  }
+  function hurtBarR955(amount,fromX){
+    if(player.invuln>0)return;player.hp=Math.max(0,player.hp-amount);player.invuln=.75;player.stun=.2;hitShake(4);tone(92,.08,'sawtooth',.025,55);
+    if(player.hp<=0){gameOver=true;player.dead=true;if(spendLifeR955('BAR CONTINUE',()=>{player.x=72;player.y=214;player.invuln=1.8;})){player.dead=false;}}
+  }
+  function barDamageEnemyR955(e,amount,knock=0){
+    if(!e.alive)return;e.hp-=amount;e.x=clamp(e.x+knock,18,W-18);score+=18;hitShake(2);tone(118,.04,'square',.014,70);
+    if(e.hp<=0){e.alive=false;score+=220;if(e.knife&&Math.random()<.58)barItemsR955.push({id:'drop-'+e.id,kind:'knife',x:e.x,y:e.y,taken:false});if(Math.random()<.10)groundLifeUpsR955.push({id:'bar-1up-'+e.id,level:1,x:barStreetReturnR955.x+Math.random()*80,y:211,t:0,taken:false});}
+  }
+  function updateBarR955(dt){
+    if(!started||paused||gameOver||victory)return;
+    elapsed+=dt;messageTimer=Math.max(0,messageTimer-dt);shake=Math.max(0,shake-dt*24);flash=Math.max(0,flash-dt);player.invuln=Math.max(0,player.invuln-dt);player.stun=Math.max(0,player.stun-dt);
+    if(barExitT_R955>0){barExitT_R955+=dt;if(barExitT_R955>1.65)exitBarR955();return;}
+    let mx=(input.right?1:0)-(input.left?1:0),my=(input.down?1:0)-(input.up?1:0);if(mx||my){const m=Math.hypot(mx,my)||1;mx/=m;my/=m;if(mx)player.face=mx>0?1:-1;}player.x=clamp(player.x+mx*108*dt,20,W-20);player.y=clamp(player.y+my*72*dt,164,235);
+    if(pressed.jump&&player.z<=.01){player.vz=250;player.z=.01;}if(player.z>0||player.vz>0){player.z+=player.vz*dt;player.vz-=620*dt;if(player.z<=0){player.z=0;player.vz=0;}}
+    if(player.attack){player.attack.t+=dt;if(player.attack.t>=player.attack.duration)player.attack=null;}
+    if(input.attack&&input.jump){if(!player.attack)startSwordR950();pressed.attack=false;pressed.jump=false;}
+    else if(pressed.kick&&!player.attack){startKickR950();}
+    else if(pressed.attack&&!player.attack){
+      if(barWeaponR955==='knife'){
+        barProjectilesR955.push({kind:'knife',x:player.x+player.face*15,y:player.y-20,vx:player.face*250,t:0});barWeaponR955='';showMessage('KNIFE THROW',.45);tone(320,.04,'square',.015,180);
+      }else if(barWeaponR955==='bottle'){
+        player.attack={id:++attackSerial,kind:'punch',t:0,duration:.30,r955Bottle:true};showMessage('BOTTLE SMASH',.45);tone(180,.06,'square',.018,80);
+      }else startPlayerAttack();
+    }
+    const active=player.attack&&player.attack.t>0.07&&player.attack.t<Math.min(.27,player.attack.duration*.72);
+    if(active){
+      const range=player.attack.kind==='swordSlashR950'?64:player.attack.kind==='kickR950'?46:38;
+      for(const e of barEnemiesR955){if(!e.alive||e.hit===player.attack.id)continue;if(Math.abs(e.y-player.y)<25&&((player.face>0&&e.x>=player.x&&e.x-player.x<range)||(player.face<0&&e.x<=player.x&&player.x-e.x<range))){e.hit=player.attack.id;const dmg=player.attack.kind==='swordSlashR950'?45:player.attack.kind==='kickR950'?24:player.attack.r955Bottle?38:18;barDamageEnemyR955(e,dmg,player.face*18);if(player.attack.r955Bottle){barWeaponR955='';effects.push({kind:'r955-glass',x:e.x,y:e.y-22,t:0,duration:.45});}}}
+    }
+    for(const p of barProjectilesR955){p.t+=dt;p.x+=p.vx*dt;for(const e of barEnemiesR955){if(!e.alive||p.dead)continue;if(Math.abs(e.x-p.x)<14&&Math.abs(e.y-(p.y+20))<22){p.dead=true;barDamageEnemyR955(e,52,Math.sign(p.vx)*28);}}}
+    barProjectilesR955=barProjectilesR955.filter(p=>!p.dead&&p.x>-20&&p.x<W+20&&p.t<2.2);
+    for(const it of barItemsR955){if(it.taken)continue;if(Math.abs(it.x-player.x)<18&&Math.abs(it.y-player.y)<24){it.taken=true;barWeaponR955=it.kind;showMessage(it.kind==='knife'?'KNIFE READY':'BOTTLE READY',.55);tone(510,.05,'triangle',.015,690);}}
+    for(const e of barEnemiesR955){if(!e.alive)continue;e.atk=Math.max(0,e.atk-dt);const dx=player.x-e.x,dy=player.y-e.y,dist=Math.hypot(dx,dy);if(dist>25){e.x+=Math.sign(dx)*(e.knife?44:50)*dt;e.y+=Math.sign(dy)*25*dt;}else if(e.atk<=0){e.atk=.8+Math.random()*.55;hurtBarR955(e.knife?13:9,e.x);}}
+    if(barEnemiesR955.every(e=>!e.alive)){barClearClockR955+=dt;if(barClearClockR955>.65&&barExitT_R955<=0){barExitT_R955=.01;showMessage('THROUGH THE WINDOW!',1.0);tone(78,.18,'sawtooth',.026,42);}}
+    autoSaveClock+=dt;if(autoSaveClock>=2.5){autoSaveClock=0;saveProgress(false);}
+  }
+  function drawBarEnemyR955(e){
+    if(!e.alive)return;ctx.save();ctx.translate(Math.round(e.x),Math.round(e.y));shadow(0,2,11,4,.35);ctx.fillStyle='#0a0b0e';ctx.fillRect(-8,-31,16,19);ctx.fillStyle='#c98f72';ctx.fillRect(-5,-40,10,9);ctx.fillStyle=e.mohawk;ctx.fillRect(-3,-47,6,8);ctx.fillRect(-6,-44,12,3);ctx.fillStyle='#202229';ctx.fillRect(-10,-29,5,15);ctx.fillRect(5,-29,5,15);ctx.fillStyle='#08090b';ctx.fillRect(-8,-12,6,13);ctx.fillRect(2,-12,6,13);ctx.fillStyle='#7d202a';ctx.fillRect(-6,-27,12,3);if(e.knife){ctx.fillStyle='#d8e0e3';ctx.fillRect(10,-22,13,2);ctx.fillStyle='#6d4d34';ctx.fillRect(7,-24,4,6);}ctx.fillStyle='#c84c58';ctx.fillRect(-8,-46,16*(e.hp/e.maxHp),2);ctx.restore();
+  }
+  function drawBarR955(){
+    const sx=shake>0?(Math.random()-.5)*shake:0,sy=shake>0?(Math.random()-.5)*shake*.45:0;ctx.save();ctx.translate(sx,sy);
+    const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,'#100811');g.addColorStop(.55,'#211019');g.addColorStop(1,'#080609');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+    ctx.fillStyle='#2b1518';ctx.fillRect(0,140,W,75);ctx.fillStyle='#130c0d';ctx.fillRect(0,215,W,55);ctx.fillStyle='#4c2721';ctx.fillRect(15,72,450,12);ctx.fillStyle='#211014';ctx.fillRect(26,86,428,44);
+    ctx.fillStyle='#e94655';ctx.shadowColor='#e94655';ctx.shadowBlur=10;ctx.font='bold 15px monospace';ctx.fillText('NO CHOICE BAR',154,60);ctx.shadowBlur=0;
+    // Bar counter, bottles, stools, window.
+    ctx.fillStyle='#3b2119';ctx.fillRect(28,150,135,40);ctx.fillStyle='#85513a';ctx.fillRect(24,145,143,8);for(let i=0;i<8;i++){ctx.fillStyle=['#6fa1c0','#b34b58','#d3a550'][i%3];ctx.fillRect(38+i*14,132-(i%2)*5,5,13);}for(let x=60;x<150;x+=35){ctx.fillStyle='#171113';ctx.fillRect(x,190,4,27);ctx.beginPath();ctx.arc(x+2,188,8,0,Math.PI*2);ctx.fill();}
+    ctx.fillStyle='#09101a';ctx.fillRect(360,88,95,59);ctx.strokeStyle='#6cabc8';ctx.lineWidth=2;ctx.strokeRect(360,88,95,59);ctx.strokeStyle='rgba(126,199,226,.45)';for(let x=370;x<450;x+=18){ctx.beginPath();ctx.moveTo(x,90);ctx.lineTo(x-12,145);ctx.stroke();}
+    ctx.fillStyle='#271d30';ctx.fillRect(204,101,55,70);ctx.fillStyle='#b74a59';ctx.fillRect(212,109,39,18);ctx.fillStyle='#e6c264';ctx.font='bold 7px monospace';ctx.fillText('ANDRIK',216,121);
+    for(const it of barItemsR955){if(it.taken)continue;ctx.save();ctx.translate(it.x,it.y-15);if(it.kind==='knife'){ctx.fillStyle='#d7e1e5';ctx.fillRect(-8,-1,14,2);ctx.fillStyle='#704b33';ctx.fillRect(6,-3,5,6);}else{ctx.fillStyle='#6ca7a3';ctx.fillRect(-3,-9,6,11);ctx.fillStyle='#a9d5cd';ctx.fillRect(-2,-8,4,3);}ctx.restore();}
+    for(const e of barEnemiesR955)drawBarEnemyR955(e);for(const p of barProjectilesR955){ctx.fillStyle='#dce8eb';ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.t*16);ctx.fillRect(-7,-1,14,2);ctx.restore();}
+    drawLira(player);
+    if(barExitT_R955>0){const q=clamp(barExitT_R955/1.65,0,1);ctx.fillStyle=`rgba(255,255,255,${Math.max(0,.12-Math.abs(q-.5)*.2)})`;ctx.fillRect(0,0,W,H);const ex=220+q*185,ey=188-q*30;ctx.save();ctx.translate(ex,ey);ctx.rotate(q*2.2);ctx.fillStyle='#0a0b0e';ctx.fillRect(-8,-28,16,28);ctx.fillStyle='#c98f72';ctx.fillRect(-5,-37,10,9);ctx.restore();ctx.strokeStyle='#bde6f5';ctx.globalAlpha=.6;for(let i=0;i<9;i++){ctx.beginPath();ctx.moveTo(408,115);ctx.lineTo(362+(i*17)%95,90+(i*23)%58);ctx.stroke();}ctx.globalAlpha=1;ctx.fillStyle='#eef8ff';ctx.font='bold 10px monospace';ctx.textAlign='center';ctx.fillText('LÍRA THROWS HIM THROUGH THE WINDOW',W/2,32);ctx.textAlign='left';}
+    ctx.restore();
+    // HUD
+    ctx.fillStyle='rgba(3,5,9,.88)';ctx.fillRect(8,8,176,39);ctx.fillStyle='#353039';ctx.fillRect(12,12,118,6);ctx.fillStyle='#c34d5b';ctx.fillRect(12,12,118*(player.hp/player.maxHp),6);ctx.fillStyle='#eef7fa';ctx.font='bold 8px monospace';ctx.fillText('LÍRA · BAR',12,27);ctx.fillStyle='#d6b35c';ctx.font='6px monospace';ctx.fillText(`WEAPON ${barWeaponR955?barWeaponR955.toUpperCase():'—'}`,12,38);drawLivesR955(121,39);ctx.textAlign='right';ctx.fillStyle='#e8dce5';ctx.font='bold 7px monospace';ctx.fillText('LEVEL 1 · NO CHOICE BAR',W-10,14);ctx.fillStyle='#a78b95';ctx.fillText('BREAK THE CROWD · FIND THE EXIT',W-10,25);ctx.textAlign='left';if(messageTimer>0){ctx.fillStyle='#fff';ctx.font='bold 9px monospace';ctx.textAlign='center';ctx.fillText(message,W/2,48);ctx.textAlign='left';}
+  }
+
+  // ------------------------------
+  // Final makeEnemy / waves.
+  // ------------------------------
+  const __r955MakeEnemyBase = makeEnemy;
+  makeEnemy = function(type,x,y){
+    if(type==='dog')return makeDogR955(x,y,false);
+    if(type==='bossdog')return makeDogR955(x,y,true);
+    const e=__r955MakeEnemyBase(type,x,y);
+    if(currentLevel===1&&type==='boss'){
+      e.r955Boss='night-enforcer';e.r955Life=1;e.hp=e.maxHp=520;e.damage=20;e.speed=44;e.width=36;e.depth=30;e.height=63;e.rifleCd=.8;e.variant='night-enforcer-r955';
+    }
+    if(currentLevel===2&&type==='boss'){
+      e.r955Boss='sacred-destroyer';e.r955Life=1;e.hp=e.maxHp=640;e.damage=22;e.speed=24;e.width=76;e.depth=44;e.height=114;e.bossPhase=1;e.specialCooldown=1.55;e.variant='sacred-destroyer-r955';
+    }
+    return e;
+  };
+
+  const __r952BuildWavesR955 = buildWaves;
+  buildWaves = function(){
+    if(currentLevel===1){
+      waves=[
+        {name:'ALLEY OF LIES',trigger:300,gate:900,started:false,cleared:false,ids:[],spawns:[['gang',505,196],['police',575,229],['gang',650,214],['gang',735,188],['riot',805,222]]},
+        {name:'RIOT MILE',trigger:1760,gate:2470,started:false,cleared:false,ids:[],spawns:[['police',1920,190],['gang',2000,232],['riot',2090,210],['gang',2175,186],['police',2270,226],['riot',2370,200]]},
+        {name:'CURFEW BREAKERS',trigger:3440,gate:4075,started:false,cleared:false,ids:[],spawns:[['gang',3590,188],['police',3660,228],['riot',3740,205],['gang',3830,234],['police',3910,194],['riot',3990,219]]},
+        {name:'BOSS — NIGHT ENFORCER',trigger:4230,gate:4760,started:false,cleared:false,ids:[],spawns:[['boss',4540,211],['bossdog',4450,228],['bossdog',4635,187]]}
+      ];
+      return;
+    }
+    __r952BuildWavesR955();
+    if(currentLevel===2&&waves.length>=4){
+      const extra=[[[ 'grunt',835,224],['grunt',875,188]],[[ 'grunt',1295,214],['brute',1715,192]],[[ 'grunt',2160,229],['grunt',2630,188]]];
+      for(let i=0;i<3;i++)waves[i].spawns.push(...extra[i]);
+    }
+  };
+
+  // ------------------------------
+  // Boss life transitions and AI.
+  // ------------------------------
+  const __r952DamageEnemyR955 = damageEnemy;
+  damageEnemy = function(e,amount,knockX){
+    if(e?.r955Boss){
+      if(!e.alive)return;e.hp-=amount;e.stun=.11;e.hitFlash=.12;e.vx=knockX*.28;e.attack=null;score+=55;superMeter=clamp(superMeter+Math.max(2,amount*.45),0,SUPER_MAX);hitShake(5);tone(82,.055,'square',.025,55);
+      if(e.hp<=0){
+        if(e.r955Life===1){
+          e.r955Life=2;e.hp=e.maxHp;e.bossPhase=2;e.stun=.85;e.specialCooldown=.55;e.rifleCd=.45;e.damage+=4;e.speed*=1.12;flash=Math.max(flash,.18);hitShake(10);
+          showMessage(e.r955Boss==='night-enforcer'?'LIFE 2 · RIFLE MODE':'LIFE 2 · CHAINS AWAKEN',1.35);tone(48,.3,'sawtooth',.04,28);return;
+        }
+        e.hp=0;e.alive=false;e.deathTimer=.95;score+=3500;hitShake(12);flash=Math.max(flash,.2);tone(45,.38,'sawtooth',.04,24);
+      }
+      return;
+    }
+    __r952DamageEnemyR955(e,amount,knockX);
+  };
+
+  function updateDogR955(e,dt){
+    if(!e.alive){e.deathTimer=Math.max(0,e.deathTimer-dt);return;}e.hitFlash=Math.max(0,e.hitFlash-dt);e.stun=Math.max(0,e.stun-dt);e.emergeT=Math.max(0,(e.emergeT||0)-dt);e.leapCd=Math.max(0,(e.leapCd||0)-dt);
+    if(e.stun>0)return;const dx=player.x-e.x,dy=player.y-e.y,d=Math.hypot(dx,dy)||1;e.face=dx>=0?1:-1;if(e.emergeT>0)return;
+    if(d>29){e.x+=dx/d*e.speed*dt;e.y+=dy/d*e.speed*.54*dt;e.walkPhase+=dt*13;}else if(e.leapCd<=0){e.leapCd=.75+Math.random()*.55;e.attack={t:0,duration:.34,hit:false};}
+    if(e.attack){e.attack.t+=dt;if(!e.attack.hit&&e.attack.t>.12&&e.attack.t<.25&&d<38&&player.z<18){e.attack.hit=true;damagePlayer(e.damage,e.x);}if(e.attack.t>=e.attack.duration)e.attack=null;}
+  }
+  function updateNightBossR955(e,dt){
+    if(!e.alive){e.deathTimer=Math.max(0,e.deathTimer-dt);return;}e.hitFlash=Math.max(0,e.hitFlash-dt);e.stun=Math.max(0,e.stun-dt);if(e.stun>0)return;e.rifleCd=Math.max(0,e.rifleCd-dt);e.attackCooldown=Math.max(0,e.attackCooldown-dt);const dx=player.x-e.x,dy=player.y-e.y,d=Math.hypot(dx,dy)||1;e.face=dx>=0?1:-1;
+    if(e.r955Life===1){if(d>48){e.x+=dx/d*e.speed*dt;e.y+=dy/d*e.speed*.55*dt;}else if(e.attackCooldown<=0){e.attackCooldown=.72;e.attack={t:0,duration:.46,hit:false};}if(e.attack){e.attack.t+=dt;if(!e.attack.hit&&e.attack.t>.16&&e.attack.t<.30&&d<56){e.attack.hit=true;damagePlayer(20,e.x);}if(e.attack.t>=e.attack.duration)e.attack=null;}}
+    else{
+      const desired=155;if(d<desired-30){e.x-=dx/d*e.speed*.65*dt;e.y-=dy/d*e.speed*.25*dt;}else if(d>desired+35){e.x+=dx/d*e.speed*.55*dt;e.y+=dy/d*e.speed*.25*dt;}
+      if(e.rifleCd<=0){e.rifleCd=.72+Math.random()*.25;const mag=Math.hypot(dx,dy)||1;cityBossBulletsR955.push({x:e.x+e.face*20,y:e.y-28,vx:dx/mag*230,vy:dy/mag*135,t:0});e.attack={t:0,duration:.20,hit:true};tone(130,.045,'square',.022,60);}
+      if(e.attack){e.attack.t+=dt;if(e.attack.t>=e.attack.duration)e.attack=null;}
+    }
+  }
+  function updateSacredBossR955(e,dt){
+    if(!e.alive){e.deathTimer=Math.max(0,e.deathTimer-dt);return;}e.hitFlash=Math.max(0,e.hitFlash-dt);e.stun=Math.max(0,e.stun-dt);if(e.stun>0)return;e.specialCooldown=Math.max(0,e.specialCooldown-dt);e.attackCooldown=Math.max(0,e.attackCooldown-dt);e.bossPhase=e.r955Life;const dx=player.x-e.x,dy=player.y-e.y,d=Math.hypot(dx,dy)||1;e.face=dx>=0?1:-1;
+    if(d>70){e.x+=dx/d*e.speed*dt;e.y+=dy/d*e.speed*.42*dt;}else if(e.attackCooldown<=0){e.attackCooldown=e.r955Life===1?.82:.62;e.attack={t:0,duration:.50,hit:false};}
+    if(e.attack){e.attack.t+=dt;if(!e.attack.hit&&e.attack.t>.18&&e.attack.t<.34&&d<82){e.attack.hit=true;damagePlayer(e.r955Life===1?20:24,e.x);}if(e.attack.t>=e.attack.duration)e.attack=null;}
+    if(e.specialCooldown<=0){
+      if(e.r955Life===1){e.specialCooldown=1.7;effects.push({kind:'voidPulse',x:e.x,y:e.y,t:0,duration:.72,hit:false,phase:1});}
+      else{e.specialCooldown=1.08+Math.random()*.35;oceanChainsR955.push({x:e.x,y:e.y-40,tx:player.x,ty:player.y-10,t:0,duration:.66,hit:false});showMessage('CHAIN WHIP',.42);}
+    }
+  }
+  const __r952UpdateEnemyR955 = updateEnemy;
+  updateEnemy = function(e,dt){
+    if(e?.type==='dog'){updateDogR955(e,dt);return;}
+    if(e?.r955Boss==='night-enforcer'){updateNightBossR955(e,dt);return;}
+    if(e?.r955Boss==='sacred-destroyer'){updateSacredBossR955(e,dt);return;}
+    __r952UpdateEnemyR955(e,dt);
+  };
+
+  function updateBossProjectilesR955(dt){
+    for(const b of cityBossBulletsR955){b.t+=dt;b.x+=b.vx*dt;b.y+=b.vy*dt;if(!b.dead&&Math.abs(player.x-b.x)<11&&Math.abs((player.y-player.z)-b.y)<18){b.dead=true;damagePlayer(15,b.x);}}
+    cityBossBulletsR955=cityBossBulletsR955.filter(b=>!b.dead&&b.t<3&&b.x>cameraX-80&&b.x<cameraX+W+80);
+    for(const c of oceanChainsR955){c.t+=dt;const active=c.t>.32&&c.t<.52;if(active&&!c.hit){const vx=c.tx-c.x,vy=c.ty-c.y,len=Math.hypot(vx,vy)||1;const px=player.x-c.x,py=(player.y-player.z)-c.y;const proj=clamp((px*vx+py*vy)/(len*len),0,1),cx=c.x+vx*proj,cy=c.y+vy*proj;if(Math.hypot(player.x-cx,(player.y-player.z)-cy)<18){c.hit=true;damagePlayer(18,c.x);}}}
+    oceanChainsR955=oceanChainsR955.filter(c=>c.t<c.duration);
+  }
+
+  // ------------------------------
+  // Street dogs, fence holes, roadblock.
+  // ------------------------------
+  function updateStreetDogsR955(){
+    if(currentLevel!==1||bikeMode||barModeR955)return;const active=getActiveWave();if(active)return;
+    const livingNonDogs=enemies.some(e=>e.alive&&e.type!=='dog');if(livingNonDogs)return;
+    for(const z of streetDogZonesR955){if(z.spawned)continue;if(Math.abs(player.x-z.x)<135){z.spawned=true;const d1=makeDogR955(z.x,z.y,false),d2=makeDogR955(z.x+32,z.y-20,false);enemies.push(d1,d2);showMessage('STRAY DOGS!',.65);break;}}
+  }
+  function drawDogR955(e){
+    const sx=e.x-cameraX,sy=e.y-e.emergeT*18;if(sx<-60||sx>W+60)return;ctx.save();ctx.translate(Math.round(sx),Math.round(sy));ctx.scale(e.face,1);shadow(0,3,13,4,.35);const leap=e.attack?Math.sin(clamp(e.attack.t/e.attack.duration,0,1)*Math.PI)*8:0;ctx.translate(0,-leap);ctx.fillStyle=e.bossDog?'#171016':'#181516';ctx.fillRect(-12,-12,24,11);ctx.fillRect(6,-18,12,10);ctx.fillStyle='#a64a43';ctx.fillRect(13,-15,3,2);ctx.fillStyle='#09090a';ctx.fillRect(-10,-2,5,9);ctx.fillRect(5,-2,5,9);ctx.fillStyle='#6a3832';ctx.beginPath();ctx.moveTo(8,-18);ctx.lineTo(11,-25);ctx.lineTo(14,-18);ctx.fill();ctx.beginPath();ctx.moveTo(15,-18);ctx.lineTo(18,-24);ctx.lineTo(19,-17);ctx.fill();ctx.fillStyle='#eee';ctx.fillRect(18,-12,4,1);ctx.restore();
+  }
+  function drawFenceHolesR955(){
+    if(currentLevel!==1)return;for(const z of streetDogZonesR955){const x=z.x-cameraX;if(x<-80||x>W+80)continue;ctx.save();ctx.strokeStyle='rgba(125,143,155,.55)';ctx.lineWidth=1;for(let i=-44;i<=44;i+=8){ctx.beginPath();ctx.moveTo(x+i,157);ctx.lineTo(x+i+35,225);ctx.stroke();ctx.beginPath();ctx.moveTo(x+i,225);ctx.lineTo(x+i+35,157);ctx.stroke();}ctx.fillStyle='#05070a';ctx.beginPath();ctx.ellipse(x,218,18,12,0,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#555f68';ctx.stroke();ctx.restore();}
+  }
+  function drawPoliceCarR955(wx,wy,flip=1){
+    const x=wx-cameraX;if(x<-100||x>W+100)return;ctx.save();ctx.translate(Math.round(x),wy);ctx.scale(flip,1);ctx.fillStyle='#11151b';ctx.fillRect(-34,-16,68,17);ctx.fillStyle='#d7dde0';ctx.fillRect(-26,-27,43,12);ctx.fillStyle='#182536';ctx.fillRect(-20,-25,14,9);ctx.fillRect(-3,-25,14,9);ctx.fillStyle='#0a0b0d';ctx.beginPath();ctx.arc(-22,2,8,0,Math.PI*2);ctx.arc(23,2,8,0,Math.PI*2);ctx.fill();ctx.fillStyle='#e84956';ctx.fillRect(-7,-31,9,3);ctx.fillStyle='#4aa5ff';ctx.fillRect(3,-31,9,3);ctx.fillStyle='#111';ctx.font='bold 6px monospace';ctx.fillText('POLICE',-18,-7);ctx.restore();
+  }
+  function drawBossRoadblockR955(){
+    if(currentLevel!==1)return;drawPoliceCarR955(4375,232,1);drawPoliceCarR955(4690,232,-1);const bx=4520-cameraX;if(bx>-120&&bx<W+120){ctx.save();ctx.strokeStyle='#9ca4aa';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(bx-115,207);ctx.lineTo(bx+115,207);ctx.stroke();for(let i=-110;i<=110;i+=12){ctx.beginPath();ctx.arc(bx+i,207+(i%24?4:-4),7,0,Math.PI*2);ctx.stroke();}ctx.fillStyle='#7b2f31';for(let i=-92;i<92;i+=46)ctx.fillRect(bx+i,216,30,7);ctx.restore();}}
+
+  const __r952DrawBackgroundLevel1R955 = drawBackgroundLevel1;
+  drawBackgroundLevel1 = function(){__r952DrawBackgroundLevel1R955();drawFenceHolesR955();drawBossRoadblockR955();};
+
+  const __r952DrawEnemyR955 = drawEnemy;
+  drawEnemy = function(e){
+    if(e?.type==='dog'){drawDogR955(e);return;}
+    __r952DrawEnemyR955(e);
+    if(!e?.alive)return;const sx=e.x-cameraX;
+    if(e?.r955Boss==='night-enforcer'&&e.r955Life===2){ctx.save();ctx.translate(Math.round(sx),Math.round(e.y));ctx.scale(e.face,1);ctx.fillStyle='#171a20';ctx.fillRect(14,-35,33,6);ctx.fillStyle='#4c535b';ctx.fillRect(42,-37,7,10);ctx.fillStyle='#d4a65a';ctx.fillRect(8,-33,8,3);if(e.attack){ctx.fillStyle='#ffd85e';ctx.fillRect(49,-35,8,2);}ctx.restore();}
+    if(e?.r955Boss==='sacred-destroyer'&&e.r955Life===2){ctx.save();ctx.globalAlpha=.42;for(let i=0;i<5;i++){ctx.fillStyle='#aab3b8';ctx.beginPath();ctx.arc(sx-25+i*13,e.y-80-(i%2)*9,9+i*2,0,Math.PI*2);ctx.fill();}ctx.restore();}
+  };
+  function drawBossProjectilesR955(){
+    ctx.save();for(const b of cityBossBulletsR955){const x=b.x-cameraX;ctx.fillStyle='#ffd066';ctx.fillRect(x,b.y,8,2);ctx.fillStyle='rgba(255,90,60,.4)';ctx.fillRect(x-3,b.y-1,5,4);}for(const c of oceanChainsR955){const p=clamp(c.t/c.duration,0,1),alpha=clamp(Math.min(p*5,(1-p)*5),0,1);ctx.globalAlpha=alpha;ctx.strokeStyle=c.t>.32?'#d7dfe3':'#8b7e74';ctx.lineWidth=c.t>.32?4:2;ctx.beginPath();ctx.moveTo(c.x-cameraX,c.y);const tx=c.tx-cameraX,ty=c.ty;for(let i=1;i<=12;i++){const q=i/12;ctx.lineTo((c.x-cameraX)+(tx-(c.x-cameraX))*q, c.y+(ty-c.y)*q+Math.sin(q*30+c.t*18)*4);}ctx.stroke();}ctx.globalAlpha=1;ctx.restore();
+  }
+
+  // ------------------------------
+  // Bike: center posts + C kick to knock rivals off bikes.
+  // ------------------------------
+  const bikePostsR955=[{d:620,y:184},{d:1020,y:206},{d:1490,y:228},{d:1950,y:206},{d:2460,y:184},{d:3100,y:228},{d:3740,y:206},{d:4380,y:184},{d:5050,y:228}];
+  function updateBikePostsR955(){
+    if(!bikeMode||bikeInvuln>0||bikeZ>=19)return;for(const p of bikePostsR955){if(p.hit)continue;if(Math.abs(bikeDistance-p.d)<40&&Math.abs(bikeY-p.y)<20){p.hit=true;bikeInvuln=.85;bikeCrashT=.5;bikeSpeed=Math.max(230,bikeSpeed-58);damagePlayer(14,player.x+25);showMessage('ROAD POST!',.55);break;}}
+  }
+  function drawBikePostsR955(){
+    for(const p of bikePostsR955){const x=118+(p.d-bikeDistance)*.35;if(x<-30||x>W+30)continue;ctx.save();ctx.translate(x,p.y+5);ctx.fillStyle='#232832';ctx.fillRect(-5,-23,10,28);ctx.fillStyle='#e7b852';ctx.fillRect(-5,-18,10,5);ctx.fillStyle='#d74c51';ctx.fillRect(-5,-9,10,5);ctx.fillStyle='rgba(120,180,220,.22)';ctx.beginPath();ctx.ellipse(0,7,13,4,0,0,Math.PI*2);ctx.fill();ctx.restore();}
+  }
+  const __r952UpdateBikeR955 = updateBike;
+  updateBike = function(dt){
+    if(pressed.kick){
+      // C is a dedicated side kick on the bike. Prime only a rider currently passing Líra
+      // so the base collision resolves as a clean knock-off, while A keeps the normal hit.
+      for(const r of bikeRivals){
+        if(!r.alive)continue;
+        const rx=118+(r.d-bikeDistance)*.31,ry=bikeLaneY(r.lane);
+        if(rx>120&&rx<204&&Math.abs(ry-bikeY)<30){r.hp=Math.min(r.hp,28);break;}
+      }
+      pressed.attack=true;showMessage('BIKE KICK!',.32);
+    }
+    __r952UpdateBikeR955(dt);updateBikePostsR955();
+  };
+  const __r952DrawBikeSceneR955 = drawBikeScene;
+  drawBikeScene = function(){__r952DrawBikeSceneR955();drawBikePostsR955();};
+  const __r952DrawBikeRiderR955 = drawBikeRider;
+  drawBikeRider = function(x,y,z,kind='lira',attack=false){__r952DrawBikeRiderR955(x,y,z,kind,attack);if(kind==='lira'&&attack){ctx.save();ctx.translate(Math.round(x),Math.round(y-z));ctx.strokeStyle='#d0a080';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(1,-17);ctx.lineTo(29,-11);ctx.stroke();ctx.strokeStyle='#08090c';ctx.lineWidth=6;ctx.beginPath();ctx.moveTo(26,-11);ctx.lineTo(39,-10);ctx.stroke();ctx.restore();}};
+
+  function ensureExtraBikeRivalsR955(){
+    const extras=[[760,1,'gang'],[1260,0,'police'],[1780,1,'gang'],[2320,0,'gang'],[2880,1,'police'],[3520,0,'gang'],[4210,1,'police'],[4890,0,'gang']];
+    for(let i=0;i<extras.length;i++){const id=100+i;if(bikeRivals.some(r=>r.id===id))continue;const r=extras[i];bikeRivals.push({id,d:r[0],lane:r[1],kind:r[2],hp:42,maxHp:42,alive:true,hit:false});}
+  }
+
+  // Gate/entry moved because Level 1 is now longer and contains the bar.
+  const __r952GetGateR955=getCurrentGateX;
+  getCurrentGateX=function(){if(currentLevel===1&&!bikeDone&&!bikeMode&&waves[1]?.cleared)return 2555;return __r952GetGateR955();};
+  const __r952EnterBikeR955=enterBikeMode;
+  enterBikeMode=function(){if(currentLevel===1&&(!barDoneR955||!waves[1]?.cleared||player.x<2485))return;__r952EnterBikeR955();ensureExtraBikeRivalsR955();};
+  const __r952LeaveBikeR955=leaveBikeMode;
+  leaveBikeMode=function(){__r952LeaveBikeR955();if(currentLevel===1){player.x=3380;player.y=211;cameraX=3200;showMessage('BACK TO THE STREET',1.0);}};
+
+  // ------------------------------
+  // Boss intros, two-life HUD.
+  // ------------------------------
+  const __r952StartWaveR955=startWave;
+  startWave=function(w){
+    __r952StartWaveR955(w);
+    if(w?.spawns?.[0]?.[0]==='boss'&&currentLevel===1){cityBossIntroUntilR955=performance.now()+1900;showMessage('NIGHT ENFORCER',1.5);}
+    if(w?.spawns?.[0]?.[0]==='boss'&&currentLevel===2){oceanBossIntroUntilR942=performance.now()+1900;showMessage('SACRED DESTROYER',1.5);}
+  };
+  function drawCityBossIntroR955(){
+    if(performance.now()>=cityBossIntroUntilR955||!cityBossArtR955.complete||!cityBossArtR955.naturalWidth)return;ctx.save();ctx.fillStyle='#02040a';ctx.fillRect(0,0,W,H);ctx.drawImage(cityBossArtR955,0,0,W,H);ctx.restore();
+  }
+  const __r952DrawHUDR955=drawHUD;
+  drawHUD=function(){
+    __r952DrawHUDR955();if(!started||gameOver)return;drawLivesR955(12,55);
+    const boss=enemies.find(e=>e.alive&&e.r955Boss);if(boss){ctx.save();ctx.fillStyle='rgba(4,6,10,.92)';ctx.fillRect(W-174,4,170,31);ctx.textAlign='right';ctx.fillStyle='#ff5967';ctx.font='bold 7px monospace';ctx.fillText(boss.r955Boss==='sacred-destroyer'?'SACRED DESTROYER':'NIGHT ENFORCER',W-9,13);ctx.fillStyle='#f5e7e9';ctx.fillText(`LIFE ${boss.r955Life}/2`,W-9,23);ctx.fillStyle='#2a2630';ctx.fillRect(W-158,27,149,5);ctx.fillStyle='#ca4555';ctx.fillRect(W-158,27,149*(boss.hp/boss.maxHp),5);ctx.textAlign='left';ctx.restore();}
+  };
+
+  // ------------------------------
+  // Space suit + flying 1UPs + denser enemy field.
+  // ------------------------------
+  const __r952DrawEyeRiderR955=drawEyeRiderR950;
+  drawEyeRiderR950=function(){
+    const x=spaceX_R950,y=spaceY_R950;ctx.save();ctx.translate(Math.round(x),Math.round(y));if(spaceRollR950>0)ctx.rotate(Math.sin(spaceRollR950*28)*.25);if(spaceInvulnR950>0&&Math.floor(spaceInvulnR950*24)%2===0)ctx.globalAlpha=.45;
+    // EYE-RIDER hull.
+    ctx.shadowColor='#57d9ff';ctx.shadowBlur=10;ctx.fillStyle='#10151c';ctx.beginPath();ctx.moveTo(-30,11);ctx.lineTo(17,-4);ctx.lineTo(32,4);ctx.lineTo(16,14);ctx.lineTo(-26,16);ctx.closePath();ctx.fill();ctx.shadowBlur=0;ctx.strokeStyle='#607985';ctx.stroke();ctx.fillStyle='#d34455';ctx.fillRect(-24,13,38,2);
+    // Large round space helmet around Líra — no loose hair in vacuum.
+    ctx.fillStyle='#e4edf1';ctx.fillRect(-12,-17,21,20);ctx.fillStyle='#b9c9cf';ctx.fillRect(-15,-15,4,18);ctx.fillRect(9,-15,4,18);ctx.fillStyle='#f5f7f7';ctx.beginPath();ctx.arc(-2,-29,17,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#8ba2ad';ctx.lineWidth=3;ctx.stroke();ctx.fillStyle='rgba(90,194,224,.35)';ctx.beginPath();ctx.arc(-2,-29,13,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#77dff4';ctx.lineWidth=1;ctx.stroke();ctx.fillStyle='#d2a080';ctx.beginPath();ctx.arc(-2,-28,7,0,Math.PI*2);ctx.fill();ctx.fillStyle='#19131a';ctx.fillRect(-7,-34,10,4);ctx.fillStyle='#17212a';ctx.fillRect(-5,-29,2,1);ctx.fillRect(1,-29,2,1);ctx.fillStyle='#dceff5';ctx.fillRect(4,-25,2,1);ctx.fillStyle='#0a1117';ctx.beginPath();ctx.arc(-2,-2,4,0,Math.PI*2);ctx.fill();ctx.fillStyle='#76e6ff';ctx.beginPath();ctx.arc(-2,-2,2,0,Math.PI*2);ctx.fill();ctx.restore();
+  };
+  function resetSpaceLifeUpsR955(){spaceLifeUpsR955=[{d:1650,y:70,taken:false},{d:4180,y:196,taken:false},{d:6820,y:112,taken:false}];}
+  function updateSpaceLifeUpsR955(dt){
+    if(currentLevel!==3)return;for(const p of spaceLifeUpsR955){if(p.taken)continue;const x=W+35-(spaceDistanceR950-p.d)*1.0;if(spaceDistanceR950>p.d-450&&spaceDistanceR950<p.d+650){p.x=x;if(circleHitR950(spaceX_R950,spaceY_R950,14,x,p.y,11)){p.taken=true;grantLifeR955(spaceX_R950,spaceY_R950);}}}
+  }
+  function drawSpaceLifeUpsR955(){if(currentLevel!==3)return;for(const p of spaceLifeUpsR955){if(p.taken||!Number.isFinite(p.x)||p.x<-25||p.x>W+25)continue;drawLifeUpIconR955(p.x,p.y+Math.sin(elapsed*5+p.d)*3,.82);}}
+  const __r952UpdateSpaceR955=updateSpaceR950;
+  updateSpaceR950=function(dt){
+    __r952UpdateSpaceR955(dt);if(!started||paused||gameOver||victory)return;updateSpaceLifeUpsR955(dt);
+    if(!spaceBossStartedR950&&spaceEnemiesR950.length<8&&Math.random()<dt*.80)spawnSpaceEnemyR950(Math.random()<.42?'interceptor':null);
+  };
+  const __r952DrawSpaceR955=drawSpaceR950;
+  drawSpaceR950=function(){__r952DrawSpaceR955();drawSpaceLifeUpsR955();drawLivesR955(12,52);};
+
+  // ------------------------------
+  // Tower: denser enemies + random 1UP from broken crates.
+  // ------------------------------
+  const __r952ResetTowerR955=resetTowerR952;
+  resetTowerR952=function(){
+    __r952ResetTowerR955();towerLifeUpsR955=[];
+    for(let i=5;i<towerPlatformsR952.length-2;i+=5){const p=towerPlatformsR952[i];if(!p)continue;if(!towerEnemiesR952.some(e=>e.platform===i))towerEnemiesR952.push({id:'R955TE'+i,x:p.x+p.w*.25,y:p.y,dir:i%2?-1:1,alive:true,platform:i});}
+  };
+  const __r952UpdateTowerR955=updateTowerR952;
+  updateTowerR952=function(dt){
+    __r952UpdateTowerR955(dt);if(!started||paused||gameOver||victory)return;
+    for(const c of towerCratesR952){if(c.broken&&!c.r955DropChecked){c.r955DropChecked=true;if(Math.random()<.17)towerLifeUpsR955.push({x:c.x,y:c.y+24,taken:false});}}
+    for(const p of towerLifeUpsR955){if(!p.taken&&Math.abs(p.x-towerX_R952)<16&&Math.abs(p.y-towerY_R952)<25){p.taken=true;grantLifeR955(p.x,p.y);}}
+  };
+  const __r952DrawTowerR955=drawTowerR952;
+  drawTowerR952=function(){__r952DrawTowerR955();for(const p of towerLifeUpsR955){if(p.taken)continue;const y=towerScreenYR952(p.y);if(y>-20&&y<H+20)drawLifeUpIconR955(p.x,y,.72);}drawLivesR955(12,54);};
+
+  // Tetris consumes a life and clears the danger zone instead of ending immediately.
+  const __r952UpdateTetrisR955=updateTetrisR952;
+  updateTetrisR952=function(dt){
+    __r952UpdateTetrisR955(dt);
+    if(gameOver&&!tetrisLifeConsumedR955&&livesR955>1){tetrisLifeConsumedR955=true;if(spendLifeR955('BLOCK CONTINUE',()=>{for(let i=0;i<4;i++)tetGridR952.shift(),tetGridR952.unshift(emptyTetRowR952());gameOver=false;newTetPieceR952();})){} }
+    if(!gameOver)tetrisLifeConsumedR955=false;
+  };
+  const __r952DrawTetrisR955=drawTetrisR952;
+  drawTetrisR952=function(){__r952DrawTetrisR955();drawLivesR955(12,53);};
+
+  // ------------------------------
+  // Final start/update/draw hooks.
+  // ------------------------------
+  function resetR955ForLevel(level){
+    groundLifeUpsR955=[];cityBossBulletsR955=[];oceanChainsR955=[];tetrisLifeConsumedR955=false;
+    if(level===1){barModeR955=false;barDoneR955=false;barExitT_R955=0;resetStreetDogsR955();for(const p of bikePostsR955)p.hit=false;}
+    if(level===3)resetSpaceLifeUpsR955();
+    if(level===4)towerLifeUpsR955=[];
+  }
+  const __r952StartLevelR955=startLevel;
+  startLevel=function(level,keepScore=false){
+    if(Number(level)===1)LEVEL_WORLD_W[1]=4820;
+    __r952StartLevelR955(level,keepScore);resetR955ForLevel(currentLevel);if(currentLevel===1){WORLD_W=LEVEL_WORLD_W[1];buildWaves();ensureExtraBikeRivalsR955();}
+  };
+  const __r952StartNewGameR955=startNewGame;
+  startNewGame=function(){livesR955=3;barDoneR955=false;return __r952StartNewGameR955();};
+
+  const __r952UpdatePlayerR955=updatePlayer;
+  updatePlayer=function(dt){
+    __r952UpdatePlayerR955(dt);
+    if(currentLevel===1&&!barDoneR955&&!barModeR955&&waves[0]?.cleared&&player.x>=1045){enterBarR955(false);return;}
+    if(currentLevel===1&&!bikeDone&&!bikeMode&&barDoneR955&&waves[1]?.cleared&&player.x>=2485)enterBikeMode();
+  };
+
+  const __r952UpdateFinalR955=update;
+  update=function(dt){
+    if(barModeR955){updateBarR955(dt);return;}
+    __r952UpdateFinalR955(dt);
+    if(!started||paused||gameOver||victory)return;
+    updateGroundLifeUpsR955(dt);updateStreetDogsR955();updateBossProjectilesR955(dt);
+  };
+  const __r952DrawFinalR955=draw;
+  draw=function(){
+    if(barModeR955){drawBarR955();return;}
+    __r952DrawFinalR955();drawGroundLifeUpsR955();drawBossProjectilesR955();if(currentLevel===1)drawCityBossIntroR955();
+  };
+
+  // ------------------------------
+  // Save/restore R955 state, including lives and bar progression.
+  // ------------------------------
+  const __r952ReadSaveR955=readSave;
+  readSave=function(){
+    try{const raw=localStorage.getItem(SAVE_KEY);if(!raw)return null;const d=JSON.parse(raw);if(!d||![3,4,5].includes(Number(d.version)))return null;if(Number(d.currentLevel)<1||Number(d.currentLevel)>5)return null;return d;}catch(_){return null;}
+  };
+  const __r952BuildSaveR955=buildSaveData;
+  buildSaveData=function(){
+    const d=__r952BuildSaveR955();d.r955={tag:GAME_R955,lives:livesR955,barDone:barDoneR955,barMode:barModeR955,streetDogZones:streetDogZonesR955.map(z=>({x:z.x,spawned:z.spawned})),groundLifeUps:groundLifeUpsR955.map(p=>({id:p.id,level:p.level,x:p.x,y:p.y,taken:p.taken})),bossLife:enemies.find(e=>e.r955Boss)?.r955Life||0,spaceLifeUps:spaceLifeUpsR955.map(p=>({d:p.d,y:p.y,taken:p.taken}))};return d;
+  };
+  const __r952RestoreR955=restoreSave;
+  restoreSave=function(data){
+    const ok=__r952RestoreR955(data);if(!ok)return false;const z=data?.r955;livesR955=clamp(Number(z?.lives)||3,0,MAX_LIVES_R955);barDoneR955=!!z?.barDone;
+    if(currentLevel===1){WORLD_W=LEVEL_WORLD_W[1];resetStreetDogsR955();for(const s of z?.streetDogZones||[]){const q=streetDogZonesR955.find(v=>Math.abs(v.x-Number(s.x))<2);if(q)q.spawned=!!s.spawned;}if(z?.barMode&&!barDoneR955)enterBarR955(true);ensureExtraBikeRivalsR955();}
+    groundLifeUpsR955=(z?.groundLifeUps||[]).map(p=>({id:p.id,level:Number(p.level)||currentLevel,x:Number(p.x)||0,y:Number(p.y)||211,t:0,taken:!!p.taken}));
+    if(currentLevel===3){resetSpaceLifeUpsR955();for(const s of z?.spaceLifeUps||[]){const p=spaceLifeUpsR955.find(v=>v.d===Number(s.d));if(p)p.taken=!!s.taken;}}
+    const boss=enemies.find(e=>e.r955Boss);if(boss&&Number(z?.bossLife)===2){boss.r955Life=2;boss.bossPhase=2;}
+    return true;
+  };
+
 
 
   titleChoice = hasSave() ? 0 : 1;

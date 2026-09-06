@@ -167,8 +167,9 @@
     document.body.appendChild(overlay);
   }
   const video=overlay.querySelector('video');
-  const close=()=>{try{video.pause();video.currentTime=0}catch(_){}overlay.classList.remove('is-open');overlay.setAttribute('aria-hidden','true');};
-  const open=e=>{e?.preventDefault?.();e?.stopPropagation?.();e?.stopImmediatePropagation?.();overlay.classList.add('is-open');overlay.setAttribute('aria-hidden','false');try{video.currentTime=0;video.play().catch(()=>{})}catch(_){}};
+  const signalOverlayR956=open=>{try{if(parent&&parent!==window)parent.postMessage({channel:'andrik-live-eye-overlay-r956',open:Boolean(open)},location.origin)}catch(_){}};
+  const close=()=>{try{video.pause();video.currentTime=0}catch(_){}overlay.classList.remove('is-open');overlay.setAttribute('aria-hidden','true');signalOverlayR956(false);};
+  const open=e=>{e?.preventDefault?.();e?.stopPropagation?.();e?.stopImmediatePropagation?.();overlay.classList.add('is-open');overlay.setAttribute('aria-hidden','false');signalOverlayR956(true);try{video.currentTime=0;video.play().catch(()=>{})}catch(_){}};
   let openedAt=0;
   const openSafe=e=>{openedAt=Date.now();open(e);};
   logo.addEventListener('click',openSafe,true);
