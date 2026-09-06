@@ -1,75 +1,2566 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
-<meta name="theme-color" content="#05070b">
-<meta name="robots" content="index,follow">
-<title>Dreaming of Líra — ANDRIK Game</title>
-<meta name="description" content="Dreaming of Líra — небольшая браузерная pixel adventure игра во вселенной ANDRIK.">
-<link rel="icon" href="/assets/andrik-eye-v22-192.png">
-<link rel="stylesheet" href="/assets/dreaming-of-lira-r939.css?v=55.00-r939">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+  <meta name="theme-color" content="#080b12" />
+  <title>Dreaming of Líra — ANDRIK Game · R004</title>
+  <style>
+    :root {
+      --ink: #f4f1e8;
+      --panel: rgba(8, 11, 18, 0.86);
+      --line: rgba(255,255,255,.16);
+      --control: rgba(230, 241, 247, .10);
+      --control-line: rgba(230, 241, 247, .26);
+      --control-active: rgba(120, 207, 230, .32);
+    }
+
+    * { box-sizing: border-box; }
+    html, body {
+      width: 100%;
+      height: 100%;
+      min-height: 100%;
+      margin: 0;
+      overflow: hidden;
+      overscroll-behavior: none;
+      background: #03060b;
+    }
+
+    body {
+      color: var(--ink);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      display: grid;
+      place-items: center;
+      touch-action: none;
+      -webkit-touch-callout: none;
+    }
+
+    #gameShell {
+      position: relative;
+      width: min(100vw, calc(100dvh * 16 / 9), 1280px);
+      height: min(100dvh, calc(100vw * 9 / 16), 720px);
+      aspect-ratio: 16 / 9;
+      background: #000;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      box-shadow: 0 24px 80px rgba(0,0,0,.65);
+      contain: layout paint size;
+    }
+
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      background: #10131c;
+      touch-action: none;
+    }
+
+    #mobileControls {
+      position: absolute;
+      inset: 0;
+      z-index: 12;
+      display: none;
+      pointer-events: none;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: none;
+    }
+
+    /* Console-like transparent D-pad */
+    .pad {
+      position: absolute;
+      left: max(12px, env(safe-area-inset-left));
+      bottom: max(18px, calc(env(safe-area-inset-bottom) + 8px));
+      width: clamp(116px, 19vw, 166px);
+      aspect-ratio: 1 / 1;
+      pointer-events: auto;
+    }
+
+    .dpadCross {
+      position: absolute;
+      inset: 11%;
+      opacity: .86;
+      filter: drop-shadow(0 2px 5px rgba(0,0,0,.55));
+      pointer-events: none;
+    }
+    .dpadCross::before,
+    .dpadCross::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      border: 1px solid var(--control-line);
+      background: var(--control);
+      box-shadow: inset 0 0 18px rgba(255,255,255,.025);
+    }
+    .dpadCross::before { width: 100%; height: 34%; border-radius: 12px; }
+    .dpadCross::after  { width: 34%; height: 100%; border-radius: 12px; }
+    .dpadHub {
+      position: absolute;
+      left: 50%; top: 50%;
+      width: 27%; height: 27%;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      border: 1px solid rgba(255,255,255,.11);
+      background: rgba(0,0,0,.13);
+      pointer-events: none;
+    }
+
+    .touchBtn {
+      position: absolute;
+      border: 0;
+      color: rgba(255,255,255,.72);
+      display: grid;
+      place-items: center;
+      font-family: inherit;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: none;
+      outline: none;
+    }
+
+    .dirBtn {
+      background: transparent;
+      width: 37%;
+      height: 37%;
+      font-size: clamp(12px, 2.2vw, 19px);
+      text-shadow: 0 1px 3px rgba(0,0,0,.9);
+    }
+    .dirBtn.active { color: #dff9ff; }
+    .dirBtn.active::after {
+      content: "";
+      position: absolute;
+      inset: 14%;
+      border-radius: 10px;
+      background: var(--control-active);
+      box-shadow: 0 0 14px rgba(93,191,219,.18);
+      z-index: -1;
+    }
+
+    [data-action="up"]    { left: 31.5%; top: 0; }
+    [data-action="left"]  { left: 0; top: 31.5%; }
+    [data-action="down"]  { left: 31.5%; top: 63%; }
+    [data-action="right"] { left: 63%; top: 31.5%; }
+
+    .actions {
+      position: absolute;
+      right: max(14px, env(safe-area-inset-right));
+      bottom: max(20px, calc(env(safe-area-inset-bottom) + 8px));
+      width: clamp(142px, 23vw, 204px);
+      height: clamp(112px, 18vw, 164px);
+      pointer-events: auto;
+    }
+
+    .actionBtn {
+      width: clamp(58px, 8.8vw, 78px);
+      height: clamp(58px, 8.8vw, 78px);
+      border-radius: 50%;
+      border: 1px solid rgba(255,255,255,.25);
+      background: rgba(9, 16, 24, .20);
+      backdrop-filter: blur(2px);
+      box-shadow: inset 0 0 0 2px rgba(0,0,0,.18), 0 3px 10px rgba(0,0,0,.32);
+      color: rgba(239,248,252,.87);
+    }
+    .actionBtn > span { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .actionBtn .letter { display: block; font: 900 clamp(18px, 3.4vw, 30px)/1 inherit; }
+    .actionBtn .label { display: block; font: 700 clamp(7px, 1.1vw, 10px)/1 inherit; opacity: .78; margin-top: 3px; letter-spacing: .08em; }
+    .actionBtn.active {
+      transform: scale(.93);
+      background: rgba(73, 162, 190, .28);
+      border-color: rgba(184,239,255,.55);
+      box-shadow: 0 0 20px rgba(74,176,207,.20);
+    }
+    [data-action="attack"] { right: 0; bottom: 0; }
+    [data-action="jump"]   { left: 0; top: 0; }
+
+    .systemButtons {
+      position: absolute;
+      left: 50%;
+      bottom: max(7px, env(safe-area-inset-bottom));
+      transform: translateX(-50%);
+      display: flex;
+      gap: clamp(12px, 2.8vw, 24px);
+      align-items: center;
+      pointer-events: auto;
+    }
+    .systemBtn {
+      appearance: none;
+      border: 1px solid rgba(255,255,255,.20);
+      background: rgba(7, 11, 17, .28);
+      color: rgba(236,244,247,.78);
+      border-radius: 999px;
+      padding: clamp(5px, .8vw, 8px) clamp(11px, 2vw, 18px);
+      font: 800 clamp(7px, 1vw, 10px)/1 ui-monospace, monospace;
+      letter-spacing: .11em;
+      backdrop-filter: blur(2px);
+      box-shadow: 0 2px 7px rgba(0,0,0,.32);
+      -webkit-tap-highlight-color: transparent;
+      touch-action: none;
+      white-space: nowrap;
+    }
+    .systemBtn.active,
+    .systemBtn:active {
+      transform: scale(.96);
+      background: rgba(104, 191, 214, .24);
+      color: #effcff;
+    }
+
+    #orientationHint {
+      display: none;
+      position: absolute;
+      inset: 0;
+      z-index: 30;
+      background: #05080d;
+      color: white;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 30px;
+      font-size: 17px;
+      line-height: 1.45;
+    }
+    #orientationHint .phone { font-size: 34px; display: block; margin-bottom: 12px; transform: rotate(90deg); }
+
+    @media (pointer: coarse), (max-width: 900px) {
+      #mobileControls { display: block; }
+      #gameShell { border: 0; box-shadow: none; }
+    }
+
+    @media (orientation: portrait) and (pointer: coarse),
+           (orientation: portrait) and (max-width: 900px) {
+      #orientationHint { display: flex; }
+    }
+  </style>
 </head>
 <body>
-<main class="dol-shell" id="dolShell">
-  <header class="dol-topbar">
-    <a class="dol-back" href="/" aria-label="На главную">← ANDRIK</a>
-    <div class="dol-mini-logo" aria-label="Dreaming of Líra"><i></i><b>DREAMING OF LÍRA</b></div>
-    <button class="dol-icon-btn" id="dolSound" type="button" aria-label="Звук">♪</button>
-  </header>
+  <div id="gameShell">
+    <canvas id="game" width="480" height="270" aria-label="Dreaming of Líra game"></canvas>
 
-  <section class="dol-game-card">
-    <div class="dol-game-head">
-      <div class="dol-logo" aria-label="Dreaming of Líra">
-        <span class="dol-logo-eye"><i></i></span>
-        <div><small>ANDRIK · PIXEL ADVENTURE</small><h1>DREAMING OF <em>LÍRA</em></h1><p>LEVEL I · THE ILLUSION</p></div>
+    <div id="mobileControls" aria-label="Игровое управление">
+      <div class="pad" aria-label="Крестовина">
+        <div class="dpadCross"></div>
+        <div class="dpadHub"></div>
+        <button class="touchBtn dirBtn" data-action="up" aria-label="Вверх">▲</button>
+        <button class="touchBtn dirBtn" data-action="left" aria-label="Влево">◀</button>
+        <button class="touchBtn dirBtn" data-action="down" aria-label="Вниз">▼</button>
+        <button class="touchBtn dirBtn" data-action="right" aria-label="Вправо">▶</button>
       </div>
-      <button class="dol-pause" id="dolPause" type="button">II</button>
+      <div class="actions" aria-label="Кнопки боя">
+        <button class="touchBtn actionBtn" data-action="jump" aria-label="Прыжок"><span><span class="letter">B</span><span class="label">JUMP</span></span></button>
+        <button class="touchBtn actionBtn" data-action="attack" aria-label="Удар"><span><span class="letter">A</span><span class="label">HIT · AA HOLD</span></span></button>
+      </div>
+      <div class="systemButtons">
+        <button class="systemBtn" data-system="select" aria-label="Select">SELECT</button>
+        <button class="systemBtn" data-system="start" aria-label="Start или пауза">START / PAUSE</button>
+      </div>
     </div>
 
-    <div class="dol-stage" id="dolStage">
-      <canvas id="dolCanvas" width="960" height="540" aria-label="Dreaming of Líra — игровой экран"></canvas>
-      <div class="dol-scanlines" aria-hidden="true"></div>
+    <div id="orientationHint"><div><span class="phone">📱</span>Поверни телефон горизонтально<br><small>Dreaming of Líra создана для landscape-режима</small></div></div>
+  </div>
 
-      <div class="dol-overlay is-visible" id="dolStart">
-        <div class="dol-dialog">
-          <span class="dol-kicker">WHO IS LOOKING THROUGH YOUR EYES?</span>
-          <h2>Проснись внутри сна.</h2>
-          <p>Собери 7 осколков глаза, найди гитару Лиры и открой портал за пределы иллюзии.</p>
-          <div class="dol-controls-help"><span>ПК: ← → / A D</span><span>Прыжок: SPACE / ↑</span><span>Телефон: кнопки снизу</span></div>
-          <button id="dolStartBtn" type="button">▶ ИГРАТЬ</button>
-        </div>
-      </div>
+<script>
+(() => {
+  "use strict";
 
-      <div class="dol-overlay" id="dolEnd">
-        <div class="dol-dialog">
-          <span class="dol-kicker">LEVEL COMPLETE</span>
-          <h2>Ты увидела первый слой.</h2>
-          <p id="dolEndText">Портал открыт.</p>
-          <div class="dol-final-stats" id="dolFinalStats"></div>
-          <button id="dolRestart" type="button">↻ СЫГРАТЬ ЕЩЁ</button>
-          <a href="/" class="dol-home-link">На главную ANDRIK</a>
-        </div>
-      </div>
+  // ================================================================
+  // DREAMING OF LÍRA R004 — browser beat 'em up game
+  // Original implementation for ANDRIK / andrikmetal.com · R940 site integration
+  // No ROM code, sprites, audio, maps or other assets are copied here.
+  // ================================================================
 
-      <div class="dol-toast" id="dolToast" aria-live="polite"></div>
-    </div>
+  const canvas = document.getElementById("game");
+  const ctx = canvas.getContext("2d", { alpha: false });
+  ctx.imageSmoothingEnabled = false;
 
-    <div class="dol-hud" aria-live="polite">
-      <div><small>ОСКОЛКИ</small><strong id="dolEyes">0 / 7</strong></div>
-      <div><small>КВЕСТ</small><strong id="dolQuest">Найди первый знак</strong></div>
-      <div><small>ВРЕМЯ</small><strong id="dolTime">00:00</strong></div>
-      <div><small>ЖИЗНИ</small><strong id="dolLives">♥ ♥ ♥</strong></div>
-    </div>
-  </section>
+  const W = canvas.width;
+  const H = canvas.height;
+  const touchLayout = typeof matchMedia === "function" && matchMedia("(pointer: coarse)").matches;
+  let WORLD_W = 3320;
+  const LEVEL_WORLD_W = { 1: 3320, 2: 3640 };
+  let currentLevel = 1;
+  const FLOOR_TOP = 164;
+  const FLOOR_BOTTOM = 244;
+  const GRAVITY = 650;
 
-  <section class="dol-mobile-controls" aria-label="Управление">
-    <div class="dol-dpad"><button id="dolLeft" type="button" aria-label="Влево">◀</button><button id="dolRight" type="button" aria-label="Вправо">▶</button></div>
-    <button class="dol-jump" id="dolJump" type="button">JUMP</button>
-  </section>
+  let started = false;
+  let paused = false;
+  let gameOver = false;
+  let victory = false;
+  let elapsed = 0;
+  let cameraX = 0;
+  let score = 0;
+  let shake = 0;
+  let flash = 0;
+  let message = "";
+  let messageTimer = 0;
+  let attackSerial = 0;
 
-  <footer class="dol-footer">DREAMING OF LÍRA · prototype 01 · R939 · ANDRIK universe</footer>
-</main>
-<script src="/assets/dreaming-of-lira-r939.js?v=55.00-r939" defer></script>
+  // Líra guitar special: tap A twice, then press A a third time and hold.
+  let attackPressStarted = -99;
+  let attackTapCount = 0;
+  let attackTapDeadline = 0;
+  let specialCharging = false;
+  let specialHoldStart = -99;
+  let guitarSpecialCooldown = 0;
+
+  // Persistent browser save. Kept deliberately small and JSON-only so it works on the website
+  // without a backend. Autosave is also written on pause / tab hide / page close.
+  const SAVE_KEY = "dreaming-of-lira-save";
+  const SAVE_VERSION = 3;
+  let unlockedLevel = 1;
+  let titleChoice = 0; // 0 = CONTINUE, 1 = NEW GAME
+  let autoSaveClock = 0;
+  let effects = [];
+
+  const input = {
+    left: false,
+    right: false,
+    up: false,
+    down: false,
+    attack: false,
+    jump: false
+  };
+
+  const pressed = {
+    attack: false,
+    jump: false
+  };
+
+  // Level 2 uses the four approved Líra artworks as arcade-style story cut-ins.
+  const liraArtSources = {
+    fight: "assets/lira-fight.webp",
+    jump: "assets/lira-jump.webp",
+    guitar: "assets/lira-guitar.webp",
+    chain: "assets/lira-chain.webp"
+  };
+  const liraArts = {};
+  for (const [key, src] of Object.entries(liraArtSources)) {
+    const img = new Image();
+    img.src = src;
+    liraArts[key] = img;
+  }
+
+  let cinematic = null;
+
+  function startCinematic(artKey, title, subtitle = "", seconds = 1.45) {
+    cinematic = { artKey, title, subtitle, t: seconds, duration: seconds };
+  }
+
+  const keyMap = {
+    ArrowLeft: "left",
+    KeyA: "left",
+    ArrowRight: "right",
+    KeyD: "right",
+    ArrowUp: "up",
+    KeyW: "up",
+    ArrowDown: "down",
+    KeyS: "down",
+    KeyZ: "attack",
+    KeyJ: "attack",
+    Space: "attack",
+    KeyX: "jump",
+    KeyK: "jump"
+  };
+
+  // ------------------------------
+  // Tiny generated sound effects
+  // ------------------------------
+  let audioCtx = null;
+
+  function unlockAudio() {
+    if (!audioCtx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) audioCtx = new AC();
+    }
+    if (audioCtx && audioCtx.state === "suspended") audioCtx.resume();
+  }
+
+  function tone(freq, duration = 0.05, type = "square", gain = 0.025, slideTo = null) {
+    if (!audioCtx || audioCtx.state !== "running") return;
+    const osc = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+    if (slideTo != null) {
+      osc.frequency.exponentialRampToValueAtTime(Math.max(20, slideTo), audioCtx.currentTime + duration);
+    }
+    g.gain.setValueAtTime(gain, audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+    osc.connect(g);
+    g.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + duration);
+  }
+
+  // ------------------------------
+  // Utilities
+  // ------------------------------
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const approach = (v, target, amount) => v < target ? Math.min(v + amount, target) : Math.max(v - amount, target);
+
+  function rectsOverlap(a, b) {
+    return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+  }
+
+  function showMessage(text, seconds = 1.2) {
+    message = text;
+    messageTimer = seconds;
+  }
+
+  function hitShake(amount = 4) {
+    shake = Math.max(shake, amount);
+    flash = Math.max(flash, 0.04);
+  }
+
+  // ------------------------------
+  // Player
+  // ------------------------------
+  function createPlayer() {
+    return {
+      name: "LÍRA",
+      x: 78,
+      y: 213,
+      z: 0,
+      vz: 0,
+      vx: 0,
+      vy: 0,
+      width: 18,
+      height: 37,
+      speed: 94,
+      face: 1,
+      hp: 100,
+      maxHp: 100,
+      invuln: 0,
+      stun: 0,
+      walkPhase: 0,
+      attack: null,
+      comboStep: 0,
+      comboWindow: 0,
+      lastAttackTime: -99,
+      dead: false
+    };
+  }
+
+  let player = createPlayer();
+
+  const ATTACKS = {
+    punch1: { duration: 0.24, activeStart: 0.07, activeEnd: 0.14, damage: 10, range: 31, depth: 16, knock: 20 },
+    punch2: { duration: 0.26, activeStart: 0.08, activeEnd: 0.16, damage: 12, range: 33, depth: 17, knock: 23 },
+    finisher: { duration: 0.36, activeStart: 0.11, activeEnd: 0.22, damage: 20, range: 39, depth: 20, knock: 48 },
+    airKick: { duration: 0.30, activeStart: 0.05, activeEnd: 0.22, damage: 17, range: 37, depth: 18, knock: 35 },
+    guitarSmash: { duration: 0.88, activeStart: 0.45, activeEnd: 0.62, damage: 58, range: 72, depth: 30, knock: 96 }
+  };
+
+  function registerAttackDown() {
+    attackPressStarted = elapsed;
+
+    // After two quick taps, the next A press is consumed as the HOLD phase.
+    if (attackTapCount === 2 && elapsed <= attackTapDeadline && guitarSpecialCooldown <= 0 && !player.dead && player.stun <= 0) {
+      specialCharging = true;
+      specialHoldStart = elapsed;
+      player.attack = null;
+      player.comboStep = 0;
+      showMessage("HOLD A · GUITAR READY", 0.75);
+      tone(164, 0.06, "triangle", 0.014, 220);
+      return true;
+    }
+    return false;
+  }
+
+  function registerAttackUp() {
+    if (specialCharging) {
+      const held = elapsed - specialHoldStart;
+      if (held < 0.42) {
+        specialCharging = false;
+        specialHoldStart = -99;
+        attackTapCount = 0;
+        attackTapDeadline = 0;
+        showMessage("HOLD A LONGER", 0.55);
+      }
+      return;
+    }
+
+    const held = elapsed - attackPressStarted;
+    if (held <= 0.30) {
+      if (elapsed <= attackTapDeadline) attackTapCount += 1;
+      else attackTapCount = 1;
+
+      if (attackTapCount >= 2) {
+        attackTapCount = 2;
+        attackTapDeadline = elapsed + 0.82;
+        showMessage("A · A · HOLD A", 0.55);
+      } else {
+        attackTapDeadline = elapsed + 0.46;
+      }
+    } else {
+      attackTapCount = 0;
+      attackTapDeadline = 0;
+    }
+  }
+
+  function startGuitarSpecial() {
+    if (guitarSpecialCooldown > 0 || player.dead || player.stun > 0) return;
+    specialCharging = false;
+    specialHoldStart = -99;
+    attackTapCount = 0;
+    attackTapDeadline = 0;
+    guitarSpecialCooldown = 2.15;
+    player.comboStep = 0;
+    player.attack = {
+      id: ++attackSerial,
+      kind: "guitarSmash",
+      t: 0,
+      duration: ATTACKS.guitarSmash.duration,
+      fx: false
+    };
+    showMessage("LÍRA · RIFF BREAKER!", 0.95);
+    tone(82, 0.12, "sawtooth", 0.026, 124);
+    setTimeout(() => tone(164, 0.11, "square", 0.020, 110), 70);
+    setTimeout(() => tone(246, 0.10, "square", 0.018, 92), 135);
+  }
+
+  function startPlayerAttack() {
+    if (player.stun > 0 || player.dead) return;
+
+    let kind;
+    if (player.z > 3) {
+      kind = "airKick";
+      player.comboStep = 0;
+    } else {
+      const quickEnough = elapsed - player.lastAttackTime < 0.48;
+      player.comboStep = quickEnough ? (player.comboStep % 3) + 1 : 1;
+      kind = player.comboStep === 1 ? "punch1" : player.comboStep === 2 ? "punch2" : "finisher";
+    }
+
+    const def = ATTACKS[kind];
+    player.attack = {
+      id: ++attackSerial,
+      kind,
+      t: 0,
+      duration: def.duration
+    };
+    player.lastAttackTime = elapsed;
+    player.comboWindow = 0.5;
+
+    if (kind === "finisher") tone(145, 0.08, "sawtooth", 0.025, 90);
+    else if (kind === "airKick") tone(210, 0.07, "square", 0.02, 120);
+    else tone(310, 0.035, "square", 0.016, 190);
+  }
+
+  function updatePlayer(dt) {
+    if (player.dead) return;
+
+    player.invuln = Math.max(0, player.invuln - dt);
+    player.stun = Math.max(0, player.stun - dt);
+    player.comboWindow = Math.max(0, player.comboWindow - dt);
+    guitarSpecialCooldown = Math.max(0, guitarSpecialCooldown - dt);
+    if (!specialCharging && attackTapCount > 0 && elapsed > attackTapDeadline) {
+      attackTapCount = 0;
+      attackTapDeadline = 0;
+    }
+
+    if (specialCharging) {
+      if (!input.attack || player.stun > 0) {
+        specialCharging = false;
+        specialHoldStart = -99;
+        attackTapCount = 0;
+      } else if (elapsed - specialHoldStart >= 0.42) {
+        startGuitarSpecial();
+      }
+    }
+
+    if (pressed.jump && player.z <= 0.01 && player.stun <= 0 && !specialCharging) {
+      player.vz = 255;
+      player.z = 0.01;
+      tone(220, 0.07, "square", 0.018, 330);
+    }
+
+    if (pressed.attack && !specialCharging && (!player.attack || player.attack.t > player.attack.duration * 0.72)) {
+      startPlayerAttack();
+    }
+
+    if (player.attack) {
+      player.attack.t += dt;
+      if (player.attack.kind === "guitarSmash" && !player.attack.fx && player.attack.t >= ATTACKS.guitarSmash.activeStart) {
+        player.attack.fx = true;
+        effects.push({ kind: "guitarBurst", x: player.x + player.face * 38, y: player.y - 2, face: player.face, t: 0, duration: 0.55 });
+        hitShake(8);
+        flash = Math.max(flash, 0.10);
+        tone(58, 0.15, "sawtooth", 0.036, 34);
+      }
+      if (player.attack.t >= player.attack.duration) player.attack = null;
+    }
+
+    const attackingOnGround = player.attack && player.z < 2;
+    const movementScale = player.stun > 0 ? 0 : specialCharging ? 0.08 : attackingOnGround ? (player.attack.kind === "guitarSmash" ? 0.06 : 0.28) : 1;
+
+    let mx = 0;
+    let my = 0;
+    if (input.left) mx -= 1;
+    if (input.right) mx += 1;
+    if (input.up) my -= 1;
+    if (input.down) my += 1;
+
+    if (mx !== 0 || my !== 0) {
+      const len = Math.hypot(mx, my) || 1;
+      mx /= len;
+      my /= len;
+      if (mx !== 0) player.face = mx > 0 ? 1 : -1;
+      player.walkPhase += dt * 10 * movementScale;
+    }
+
+    player.vx = approach(player.vx, mx * player.speed * movementScale, dt * 720);
+    player.vy = approach(player.vy, my * player.speed * 0.68 * movementScale, dt * 720);
+
+    player.x += player.vx * dt;
+    player.y += player.vy * dt;
+
+    const gateX = getCurrentGateX();
+    player.x = clamp(player.x, Math.max(18, cameraX - 35), gateX);
+    player.y = clamp(player.y, FLOOR_TOP + 17, FLOOR_BOTTOM);
+
+    if (player.z > 0 || player.vz > 0) {
+      player.z += player.vz * dt;
+      player.vz -= GRAVITY * dt;
+      if (player.z <= 0) {
+        player.z = 0;
+        player.vz = 0;
+        tone(78, 0.045, "triangle", 0.012, 55);
+      }
+    }
+
+    resolvePlayerHits();
+  }
+
+  function playerAttackHitbox() {
+    if (!player.attack) return null;
+    const def = ATTACKS[player.attack.kind];
+    if (player.attack.t < def.activeStart || player.attack.t > def.activeEnd) return null;
+
+    const x = player.face === 1 ? player.x + 8 : player.x - def.range;
+    return {
+      x,
+      y: player.y - def.depth,
+      w: def.range,
+      h: def.depth * 2,
+      def,
+      id: player.attack.id
+    };
+  }
+
+  function resolvePlayerHits() {
+    const hb = playerAttackHitbox();
+    if (!hb) return;
+
+    for (const e of enemies) {
+      if (!e.alive || e.hitByAttack === hb.id) continue;
+      if (player.attack.kind === "airKick" && player.z < 8) continue;
+
+      const enemyBox = { x: e.x - e.width / 2, y: e.y - e.depth / 2, w: e.width, h: e.depth };
+      if (!rectsOverlap(hb, enemyBox)) continue;
+
+      e.hitByAttack = hb.id;
+      damageEnemy(e, hb.def.damage, hb.def.knock * player.face);
+    }
+  }
+
+  function damagePlayer(amount, fromX) {
+    if (player.invuln > 0 || player.dead) return;
+    player.hp = Math.max(0, player.hp - amount);
+    player.invuln = 0.68;
+    player.stun = 0.26;
+    player.vx = fromX < player.x ? 100 : -100;
+    hitShake(5);
+    tone(95, 0.12, "sawtooth", 0.034, 55);
+
+    if (player.hp <= 0) {
+      player.dead = true;
+      gameOver = true;
+      showMessage("THE DREAM COLLAPSES", 4);
+    }
+  }
+
+  // ------------------------------
+  // Save / Continue
+  // ------------------------------
+  function readSave() {
+    try {
+      const raw = localStorage.getItem(SAVE_KEY);
+      if (!raw) return null;
+      const data = JSON.parse(raw);
+      if (!data || data.version !== SAVE_VERSION) return null;
+      if (![1, 2].includes(data.currentLevel)) return null;
+      return data;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function hasSave() {
+    return !!readSave();
+  }
+
+  function waveIndexForEnemy(enemy) {
+    return waves.findIndex(w => w.ids.includes(enemy.id));
+  }
+
+  function buildSaveData() {
+    return {
+      version: SAVE_VERSION,
+      savedAt: Date.now(),
+      currentLevel,
+      unlockedLevel: Math.max(unlockedLevel, currentLevel),
+      score,
+      elapsed,
+      cameraX,
+      fresh: false,
+      completed: !!(victory && currentLevel === 2),
+      player: {
+        x: player.x, y: player.y, z: player.z, vz: player.vz,
+        hp: player.hp, face: player.face
+      },
+      waves: waves.map(w => ({ started: !!w.started, cleared: !!w.cleared })),
+      enemies: enemies.filter(e => e.alive).map(e => ({
+        waveIndex: waveIndexForEnemy(e),
+        type: e.type,
+        x: e.x, y: e.y,
+        hp: e.hp, maxHp: e.maxHp,
+        face: e.face,
+        attackCooldown: e.attackCooldown,
+        bossPhase: e.bossPhase || 0,
+        specialCooldown: e.specialCooldown || 0,
+        specialToggle: e.specialToggle || 0
+      }))
+    };
+  }
+
+  function writeSave(data) {
+    try {
+      localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function saveProgress(showNotice = false) {
+    if (!started || gameOver) return false;
+    // Clearing Level 1 always points Continue at the beginning of OCEAN.
+    // This prevents a page-close event from overwriting the already unlocked next level.
+    if (victory && currentLevel === 1) return saveFreshLevel(2, score);
+    const ok = writeSave(buildSaveData());
+    if (showNotice && ok && !victory) showMessage("GAME SAVED", 1.15);
+    return ok;
+  }
+
+  function saveFreshLevel(level, carryScore = score) {
+    unlockedLevel = Math.max(unlockedLevel, level);
+    return writeSave({
+      version: SAVE_VERSION,
+      savedAt: Date.now(),
+      currentLevel: level,
+      unlockedLevel,
+      score: carryScore,
+      elapsed: 0,
+      cameraX: 0,
+      fresh: true,
+      completed: false,
+      player: null,
+      waves: [],
+      enemies: []
+    });
+  }
+
+  function deleteSave() {
+    try { localStorage.removeItem(SAVE_KEY); } catch (_) {}
+  }
+
+  function restoreSave(data) {
+    if (!data) return false;
+    // Until Level 3 exists, a completed OCEAN save continues by replaying OCEAN.
+    if (data.completed && data.currentLevel === 2) data = { ...data, fresh: true, completed: false };
+    currentLevel = data.currentLevel;
+    WORLD_W = LEVEL_WORLD_W[currentLevel] || LEVEL_WORLD_W[1];
+    unlockedLevel = Math.max(1, data.unlockedLevel || currentLevel);
+    player = createPlayer();
+    enemies = [];
+    effects = [];
+    buildWaves();
+
+    if (data.fresh || !data.player) {
+      score = Number.isFinite(data.score) ? data.score : 0;
+      elapsed = 0;
+      cameraX = 0;
+    } else {
+      const sp = data.player;
+      player.x = clamp(Number(sp.x) || 50, 25, WORLD_W - 75);
+      player.y = clamp(Number(sp.y) || 205, FLOOR_TOP + 12, FLOOR_BOTTOM);
+      player.z = Math.max(0, Number(sp.z) || 0);
+      player.vz = Number(sp.vz) || 0;
+      player.hp = clamp(Number(sp.hp) || player.maxHp, 1, player.maxHp);
+      player.face = sp.face === -1 ? -1 : 1;
+      score = Number.isFinite(data.score) ? data.score : 0;
+      elapsed = Math.max(0, Number(data.elapsed) || 0);
+      cameraX = clamp(Number(data.cameraX) || Math.max(0, player.x - 132), 0, WORLD_W - W);
+
+      if (Array.isArray(data.waves)) {
+        data.waves.forEach((sw, i) => {
+          if (!waves[i]) return;
+          waves[i].started = !!sw.started;
+          waves[i].cleared = !!sw.cleared;
+          waves[i].ids = [];
+        });
+      }
+
+      if (Array.isArray(data.enemies)) {
+        for (const se of data.enemies) {
+          const wi = Number.isInteger(se.waveIndex) ? se.waveIndex : -1;
+          if (wi < 0 || !waves[wi] || waves[wi].cleared) continue;
+          const e = makeEnemy(se.type, Number(se.x) || waves[wi].trigger + 100, Number(se.y) || 205);
+          e.hp = clamp(Number(se.hp) || e.maxHp, 1, e.maxHp);
+          e.maxHp = Number(se.maxHp) || e.maxHp;
+          e.face = se.face === 1 ? 1 : -1;
+          e.attackCooldown = Math.max(0, Number(se.attackCooldown) || 0);
+          e.bossPhase = Number(se.bossPhase) || e.bossPhase;
+          e.specialCooldown = Math.max(0, Number(se.specialCooldown) || 0);
+          e.specialToggle = Number(se.specialToggle) || 0;
+          enemies.push(e);
+          waves[wi].started = true;
+          waves[wi].ids.push(e.id);
+        }
+      }
+
+      // Defensive recovery: if a started wave had no saved enemies, treat it as cleared.
+      waves.forEach(w => {
+        if (w.started && !w.cleared && w.ids.length === 0) w.cleared = true;
+      });
+    }
+
+    shake = 0;
+    flash = 0;
+    message = "";
+    messageTimer = 0;
+    gameOver = false;
+    victory = false;
+    paused = false;
+    cinematic = null;
+    autoSaveClock = 0;
+    attackPressStarted = -99;
+    attackTapCount = 0;
+    attackTapDeadline = 0;
+    specialCharging = false;
+    specialHoldStart = -99;
+    guitarSpecialCooldown = 0;
+    for (const k of Object.keys(input)) input[k] = false;
+    pressed.attack = false;
+    pressed.jump = false;
+    started = true;
+    showMessage(data.fresh ? (currentLevel === 2 ? "LEVEL 2 — OCEAN" : "ENTER THE DREAM") : "DREAM RESTORED", 1.5);
+    if (currentLevel === 2 && data.fresh) startCinematic("fight", "OCEAN", "THE SECOND DREAM", 2.1);
+    return true;
+  }
+
+  function continueFromSave() {
+    const data = readSave();
+    if (!data) return false;
+    const ok = restoreSave(data);
+    if (ok) {
+      unlockAudio();
+      tryLandscapeLock();
+    }
+    return ok;
+  }
+
+  function tryLandscapeLock() {
+    const doLock = () => {
+      try {
+        if (screen.orientation && screen.orientation.lock) {
+          screen.orientation.lock("landscape").catch(() => {});
+        }
+      } catch (_) {}
+    };
+
+    try {
+      const coarse = matchMedia && matchMedia("(pointer: coarse)").matches;
+      const shell = document.getElementById("gameShell");
+      if (coarse && !document.fullscreenElement && shell && shell.requestFullscreen) {
+        const result = shell.requestFullscreen({ navigationUI: "hide" });
+        if (result && result.then) result.then(doLock).catch(doLock);
+        else doLock();
+      } else {
+        doLock();
+      }
+    } catch (_) {
+      doLock();
+    }
+  }
+
+  // ------------------------------
+  // Enemies / waves / boss
+  // ------------------------------
+  let enemies = [];
+  let waves = [];
+
+  function makeEnemy(type, x, y) {
+    const boss = type === "boss";
+    return {
+      id: Math.random().toString(36).slice(2),
+      type,
+      x,
+      y,
+      z: 0,
+      vx: 0,
+      vy: 0,
+      width: boss ? 30 : 19,
+      depth: boss ? 28 : 18,
+      height: boss ? 53 : 36,
+      speed: boss ? 55 : type === "brute" ? 46 : 60,
+      hp: boss ? (currentLevel === 2 ? 420 : 260) : type === "brute" ? (currentLevel === 2 ? 82 : 74) : (currentLevel === 2 ? 52 : 46),
+      maxHp: boss ? (currentLevel === 2 ? 420 : 260) : type === "brute" ? (currentLevel === 2 ? 82 : 74) : (currentLevel === 2 ? 52 : 46),
+      damage: boss ? (currentLevel === 2 ? 19 : 17) : type === "brute" ? 12 : 8,
+      face: -1,
+      attack: null,
+      attackCooldown: 0.4 + Math.random() * 0.7,
+      stun: 0,
+      hitFlash: 0,
+      hitByAttack: -1,
+      alive: true,
+      deathTimer: 0,
+      walkPhase: Math.random() * 10,
+      bossPhase: currentLevel === 2 && boss ? 1 : 0,
+      specialCooldown: currentLevel === 2 && boss ? 2.2 : 0,
+      special: null,
+      specialToggle: 0,
+      variant: currentLevel === 2 ? (boss ? "sacred-destroyer" : type === "brute" ? "tide-guard" : "drowned") : "street",
+      aggro: false
+    };
+  }
+
+  function buildWaves() {
+    if (currentLevel === 1) {
+      // LEVEL 1 is intentionally preserved from R001.
+      waves = [
+        {
+          name: "WAKE THE STREET",
+          trigger: 360,
+          gate: 880,
+          started: false,
+          cleared: false,
+          ids: [],
+          spawns: [
+            ["grunt", 560, 197],
+            ["grunt", 635, 231],
+            ["brute", 710, 211]
+          ]
+        },
+        {
+          name: "FALSE FACES",
+          trigger: 1110,
+          gate: 1710,
+          started: false,
+          cleared: false,
+          ids: [],
+          spawns: [
+            ["grunt", 1320, 188],
+            ["grunt", 1410, 236],
+            ["grunt", 1510, 214],
+            ["brute", 1580, 197]
+          ]
+        },
+        {
+          name: "THE EMPTY CHOIR",
+          trigger: 1940,
+          gate: 2510,
+          started: false,
+          cleared: false,
+          ids: [],
+          spawns: [
+            ["brute", 2140, 189],
+            ["grunt", 2225, 230],
+            ["brute", 2330, 219],
+            ["grunt", 2400, 197]
+          ]
+        },
+        {
+          name: "BOSS — THE HOLLOW",
+          trigger: 2700,
+          gate: 3240,
+          started: false,
+          cleared: false,
+          ids: [],
+          spawns: [
+            ["boss", 3005, 212]
+          ]
+        }
+      ];
+      return;
+    }
+
+    // LEVEL 2 — OCEAN. Encounter names borrow motifs/titles from the album era.
+    waves = [
+      {
+        name: "ИСТОК",
+        trigger: 370,
+        gate: 920,
+        started: false,
+        cleared: false,
+        ids: [],
+        artKey: "fight",
+        artSubtitle: "THE OCEAN REMEMBERS",
+        spawns: [
+          ["grunt", 570, 192],
+          ["grunt", 650, 232],
+          ["brute", 770, 210]
+        ]
+      },
+      {
+        name: "ПРОБУЖДЕНИЕ",
+        trigger: 1180,
+        gate: 1780,
+        started: false,
+        cleared: false,
+        ids: [],
+        artKey: "jump",
+        artSubtitle: "BREAK THE SURFACE",
+        spawns: [
+          ["grunt", 1370, 187],
+          ["grunt", 1460, 234],
+          ["brute", 1560, 208],
+          ["grunt", 1640, 221]
+        ]
+      },
+      {
+        name: "HOLY VOID",
+        trigger: 2020,
+        gate: 2680,
+        started: false,
+        cleared: false,
+        ids: [],
+        artKey: "chain",
+        artSubtitle: "DEEPER THAN FEAR",
+        spawns: [
+          ["brute", 2240, 190],
+          ["grunt", 2335, 232],
+          ["brute", 2440, 217],
+          ["grunt", 2540, 198]
+        ]
+      },
+      {
+        name: "BOSS — СВЯЩЕННЫЙ РАЗРУШИТЕЛЬ",
+        trigger: 2870,
+        gate: 3540,
+        started: false,
+        cleared: false,
+        ids: [],
+        artKey: "guitar",
+        artSubtitle: "LET THE OLD YOU SINK",
+        spawns: [
+          ["boss", 3290, 211]
+        ]
+      }
+    ];
+  }
+
+  function startWave(w) {
+    w.started = true;
+    w.ids.length = 0;
+    for (const [type, x, y] of w.spawns) {
+      const e = makeEnemy(type, x, y);
+      enemies.push(e);
+      w.ids.push(e.id);
+    }
+    showMessage(w.name, w.spawns[0][0] === "boss" ? 2.2 : 1.4);
+    if (currentLevel === 2 && w.artKey) {
+      startCinematic(w.artKey, w.name, w.artSubtitle || "", w.spawns[0][0] === "boss" ? 1.8 : 1.25);
+    }
+    tone(w.spawns[0][0] === "boss" ? 72 : 120, 0.20, "sawtooth", 0.025, 48);
+  }
+
+  function updateWaves() {
+    for (const w of waves) {
+      if (!w.started && player.x >= w.trigger) startWave(w);
+      if (w.started && !w.cleared) {
+        const alive = enemies.some(e => w.ids.includes(e.id) && e.alive);
+        if (!alive) {
+          w.cleared = true;
+          score += 250;
+          showMessage(w === waves[waves.length - 1] ? "LEVEL CLEAR" : "GO →", 1.7);
+          tone(392, 0.08, "square", 0.018, 523);
+          setTimeoutSafeTone();
+          if (w === waves[waves.length - 1]) {
+            victory = true;
+            if (currentLevel === 1) saveFreshLevel(2, score);
+            else saveProgress(false);
+          } else {
+            saveProgress(false);
+          }
+        }
+      }
+    }
+  }
+
+  function setTimeoutSafeTone() {
+    // Keeps all game logic in the animation loop; this only layers a tiny second note.
+    if (!audioCtx || audioCtx.state !== "running") return;
+    const now = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    osc.type = "square";
+    osc.frequency.setValueAtTime(523, now + 0.09);
+    g.gain.setValueAtTime(0.0001, now);
+    g.gain.setValueAtTime(0.016, now + 0.09);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + 0.19);
+    osc.connect(g);
+    g.connect(audioCtx.destination);
+    osc.start(now + 0.09);
+    osc.stop(now + 0.20);
+  }
+
+  function getActiveWave() {
+    return waves.find(w => w.started && !w.cleared) || null;
+  }
+
+  function getCurrentGateX() {
+    const active = getActiveWave();
+    return active ? active.gate : WORLD_W - 35;
+  }
+
+  function damageEnemy(e, amount, knockX) {
+    if (!e.alive) return;
+    e.hp -= amount;
+    e.stun = e.type === "boss" ? 0.12 : 0.26;
+    e.hitFlash = 0.11;
+    e.vx = knockX * (e.type === "boss" ? 0.42 : 1);
+    e.attack = null;
+    score += e.type === "boss" ? 50 : 20;
+    hitShake(e.type === "boss" ? 5 : 3);
+    tone(e.type === "boss" ? 82 : 120, 0.06, "square", 0.025, 55);
+
+    if (e.hp <= 0) {
+      e.hp = 0;
+      e.alive = false;
+      e.deathTimer = 0.7;
+      score += e.type === "boss" ? 2500 : 150;
+      tone(e.type === "boss" ? 55 : 74, e.type === "boss" ? 0.32 : 0.16, "sawtooth", 0.035, 32);
+    }
+  }
+
+  function setOceanBossPhase(e, phase) {
+    if (e.bossPhase === phase) return;
+    e.bossPhase = phase;
+    e.specialCooldown = 0.55;
+    hitShake(8);
+    flash = Math.max(flash, 0.12);
+    const title = phase === 2 ? "DESTROYER — TIDE BREAK" : "DESTROYER — HOLY VOID";
+    showMessage(title, 1.55);
+    tone(phase === 2 ? 70 : 48, 0.28, "sawtooth", 0.032, phase === 2 ? 105 : 36);
+  }
+
+  function updateOceanBossSpecial(e, dt, dx, dy, absX, absY) {
+    if (currentLevel !== 2 || e.type !== "boss") return false;
+
+    const ratio = e.hp / e.maxHp;
+    const wantedPhase = ratio > 0.66 ? 1 : ratio > 0.33 ? 2 : 3;
+    setOceanBossPhase(e, wantedPhase);
+    e.specialCooldown = Math.max(0, e.specialCooldown - dt);
+
+    if (e.special) {
+      e.special.t += dt;
+      if (e.special.kind === "dash") {
+        const dir = e.special.dir;
+        const speed = e.bossPhase >= 3 ? 300 : 250;
+        if (e.special.t < 0.46) {
+          e.x += dir * speed * dt;
+          e.walkPhase += dt * 18;
+          if (!e.special.hit && Math.abs(player.x - e.x) < 34 && Math.abs(player.y - e.y) < 18 && player.z < 25) {
+            e.special.hit = true;
+            damagePlayer(e.damage + (e.bossPhase >= 3 ? 5 : 2), e.x);
+          }
+        }
+        if (e.special.t >= 0.62) {
+          e.special = null;
+          e.specialCooldown = e.bossPhase >= 3 ? 1.25 : 1.85;
+        }
+        return true;
+      }
+
+      if (e.special.kind === "pulse") {
+        if (!e.special.spawned && e.special.t >= 0.28) {
+          e.special.spawned = true;
+          effects.push({ kind: "voidPulse", x: e.x, y: e.y, t: 0, duration: 0.72, hit: false, phase: e.bossPhase });
+          hitShake(7);
+          tone(42, 0.34, "sine", 0.038, 88);
+        }
+        if (e.special.t >= 0.78) {
+          e.special = null;
+          e.specialCooldown = 1.45;
+        }
+        return true;
+      }
+    }
+
+    if (e.specialCooldown <= 0 && e.stun <= 0) {
+      if (e.bossPhase === 3 && (e.specialToggle++ % 2 === 0 || absX < 75)) {
+        e.special = { kind: "pulse", t: 0, spawned: false };
+        e.attack = null;
+        showMessage("VOID PULSE", 0.8);
+        return true;
+      }
+      if (e.bossPhase >= 2 && absX > 55 && absX < 270 && absY < 48) {
+        e.special = { kind: "dash", t: 0, dir: Math.sign(dx) || e.face, hit: false };
+        e.attack = null;
+        showMessage(e.bossPhase === 3 ? "BLACK TIDE" : "TIDEBREAK", 0.7);
+        return true;
+      }
+      e.specialCooldown = 0.75;
+    }
+    return false;
+  }
+
+  function updateEffects(dt) {
+    for (const fx of effects) {
+      fx.t += dt;
+      if (fx.kind !== "voidPulse") continue;
+      const p = clamp(fx.t / fx.duration, 0, 1);
+      const radius = 18 + p * 112;
+      const dist = Math.hypot(player.x - fx.x, (player.y - fx.y) * 1.25);
+      if (!fx.hit && Math.abs(dist - radius) < 14 && player.z < 22) {
+        fx.hit = true;
+        damagePlayer(16 + (fx.phase >= 3 ? 4 : 0), fx.x);
+      }
+    }
+    effects = effects.filter(fx => fx.t < fx.duration);
+  }
+
+  function updateEnemy(e, dt) {
+    if (!e.alive) {
+      e.deathTimer = Math.max(0, e.deathTimer - dt);
+      e.x += e.vx * dt;
+      e.vx *= Math.pow(0.02, dt);
+      return;
+    }
+
+    e.hitFlash = Math.max(0, e.hitFlash - dt);
+    e.stun = Math.max(0, e.stun - dt);
+    e.attackCooldown = Math.max(0, e.attackCooldown - dt);
+
+    e.x += e.vx * dt;
+    e.y += e.vy * dt;
+    e.vx = approach(e.vx, 0, dt * 280);
+    e.vy = approach(e.vy, 0, dt * 280);
+
+    if (e.stun > 0 || player.dead) return;
+
+    const dx = player.x - e.x;
+    const dy = player.y - e.y;
+    const absX = Math.abs(dx);
+    const absY = Math.abs(dy);
+    e.face = dx >= 0 ? 1 : -1;
+    if (absX < 360) e.aggro = true;
+    if (!e.aggro) return;
+
+    if (updateOceanBossSpecial(e, dt, dx, dy, absX, absY)) {
+      e.x = clamp(e.x, cameraX - 20, cameraX + W + 40);
+      e.y = clamp(e.y, FLOOR_TOP + 17, FLOOR_BOTTOM);
+      return;
+    }
+
+    if (e.attack) {
+      e.attack.t += dt;
+      const activeStart = e.type === "boss" ? 0.20 : 0.16;
+      const activeEnd = e.type === "boss" ? 0.34 : 0.25;
+      if (!e.attack.hit && e.attack.t >= activeStart && e.attack.t <= activeEnd) {
+        if (Math.abs(player.x - e.x) < (e.type === "boss" ? 46 : 31) && Math.abs(player.y - e.y) < 17 && player.z < 23) {
+          e.attack.hit = true;
+          damagePlayer(e.damage, e.x);
+        }
+      }
+      if (e.attack.t >= e.attack.duration) {
+        e.attack = null;
+        e.attackCooldown = e.type === "boss" ? 0.58 : 0.85 + Math.random() * 0.45;
+      }
+      return;
+    }
+
+    const attackRange = e.type === "boss" ? 42 : 28;
+    if (absX < attackRange && absY < 14 && e.attackCooldown <= 0) {
+      e.attack = { t: 0, duration: e.type === "boss" ? 0.52 : 0.40, hit: false };
+      tone(e.type === "boss" ? 88 : 150, 0.05, "square", 0.014, 90);
+      return;
+    }
+
+    let mx = 0;
+    let my = 0;
+    if (absX > attackRange - 4) mx = Math.sign(dx);
+    if (absY > 7) my = Math.sign(dy);
+
+    // Level 1 keeps the original rage behavior. OCEAN boss uses explicit 3 phases above.
+    const rage = e.type === "boss"
+      ? (currentLevel === 2 ? (e.bossPhase === 3 ? 1.38 : e.bossPhase === 2 ? 1.18 : 1) : (e.hp < e.maxHp * 0.5 ? 1.32 : 1))
+      : 1;
+    const len = Math.hypot(mx, my) || 1;
+    e.vx = (mx / len) * e.speed * rage;
+    e.vy = (my / len) * e.speed * 0.62 * rage;
+    e.walkPhase += dt * 8 * rage;
+
+    e.x = clamp(e.x, cameraX - 20, cameraX + W + 40);
+    e.y = clamp(e.y, FLOOR_TOP + 17, FLOOR_BOTTOM);
+  }
+
+  // ------------------------------
+  // Camera
+  // ------------------------------
+  function updateCamera(dt) {
+    const target = clamp(player.x - 132, 0, WORLD_W - W);
+    const stiffness = 1 - Math.pow(0.0008, dt);
+    cameraX += (target - cameraX) * stiffness;
+    cameraX = clamp(cameraX, 0, WORLD_W - W);
+  }
+
+  // ------------------------------
+  // Rendering helpers
+  // ------------------------------
+  function pxRect(x, y, w, h, color) {
+    ctx.fillStyle = color;
+    ctx.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h));
+  }
+
+  function shadow(x, y, rx, ry, alpha = 0.35) {
+    ctx.fillStyle = `rgba(0,0,0,${alpha})`;
+    ctx.beginPath();
+    ctx.ellipse(Math.round(x), Math.round(y), rx, ry, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  const buildings = Array.from({ length: 30 }, (_, i) => ({
+    x: i * 132 + (i % 3) * 21,
+    w: 66 + (i * 17) % 52,
+    h: 52 + (i * 29) % 72
+  }));
+
+  function drawBackgroundLevel1() {
+    // sky bands
+    pxRect(0, 0, W, 68, "#0a0d18");
+    pxRect(0, 68, W, 58, "#111727");
+    pxRect(0, 126, W, 38, "#1b2130");
+
+    // moon, fixed in far parallax
+    const moonX = 390 - ((cameraX * 0.08) % 620);
+    ctx.fillStyle = "#d8d1be";
+    ctx.beginPath();
+    ctx.arc(moonX, 48, 22, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#111727";
+    ctx.beginPath();
+    ctx.arc(moonX + 8, 43, 19, 0, Math.PI * 2);
+    ctx.fill();
+
+    // tiny stars
+    for (let i = 0; i < 28; i++) {
+      const sx = ((i * 83 - cameraX * 0.03) % (W + 50) + W + 50) % (W + 50) - 25;
+      const sy = 15 + (i * 37) % 91;
+      pxRect(sx, sy, i % 5 === 0 ? 2 : 1, 1, i % 4 === 0 ? "#b9c2d2" : "#6d7688");
+    }
+
+    // far skyline
+    for (const b of buildings) {
+      const x = b.x - cameraX * 0.34;
+      if (x > W + 30 || x + b.w < -30) continue;
+      pxRect(x, FLOOR_TOP - b.h, b.w, b.h, "#171b25");
+      for (let wy = FLOOR_TOP - b.h + 10; wy < FLOOR_TOP - 8; wy += 15) {
+        for (let wx = x + 9; wx < x + b.w - 5; wx += 17) {
+          if ((((wx | 0) + wy) / 7 | 0) % 4 === 0) pxRect(wx, wy, 3, 4, "#7a715c");
+        }
+      }
+    }
+
+    // back wall / pavement lip
+    pxRect(0, FLOOR_TOP - 6, W, 7, "#323847");
+    pxRect(0, FLOOR_TOP + 1, W, FLOOR_BOTTOM - FLOOR_TOP + 28, "#4a4b50");
+
+    // road depth bands
+    pxRect(0, 190, W, 2, "#53545a");
+    pxRect(0, 226, W, 2, "#414248");
+
+    // world-space road cracks and markings
+    for (let x = 80; x < WORLD_W; x += 170) {
+      const sx = x - cameraX;
+      if (sx < -40 || sx > W + 40) continue;
+      pxRect(sx, 236 + ((x / 170) % 2) * 3, 32, 2, "#5f5e61");
+      pxRect(sx + 9, 238 + ((x / 170) % 2) * 3, 2, 6, "#3b3c42");
+    }
+
+    // lamps and signs
+    for (let x = 280; x < WORLD_W; x += 520) {
+      const sx = x - cameraX;
+      if (sx < -30 || sx > W + 30) continue;
+      pxRect(sx, 102, 4, 64, "#272b34");
+      pxRect(sx - 10, 102, 23, 4, "#272b34");
+      pxRect(sx - 8, 106, 18, 5, "#978b67");
+    }
+
+    const signs = [
+      [440, "WAKE"],
+      [1040, "ANDRIK"],
+      [1790, "LÍRA"],
+      [2640, "DREAM?"],
+      [3070, "VOID"]
+    ];
+    ctx.font = "8px monospace";
+    ctx.textBaseline = "top";
+    for (const [wx, text] of signs) {
+      const sx = wx - cameraX;
+      if (sx < -70 || sx > W + 70) continue;
+      pxRect(sx, 125, 48, 16, "#17191f");
+      ctx.fillStyle = "#c4b596";
+      ctx.fillText(text, sx + 5, 130);
+    }
+
+    // arena gate indicator
+    const active = getActiveWave();
+    if (active) {
+      const sx = active.gate - cameraX;
+      if (sx > -10 && sx < W + 10) {
+        for (let y = FLOOR_TOP + 4; y < FLOOR_BOTTOM + 5; y += 8) {
+          pxRect(sx, y, 2, 4, "#c1ad7f");
+        }
+      }
+    }
+  }
+
+  function drawBackgroundLevel2() {
+    // OCEAN: dark blue-black, cosmic water, ruins and the eye.
+    pxRect(0, 0, W, 66, "#030913");
+    pxRect(0, 66, W, 58, "#071524");
+    pxRect(0, 124, W, 40, "#0b2230");
+
+    // star / spray particles in far parallax
+    for (let i = 0; i < 36; i++) {
+      const sx = ((i * 71 - cameraX * 0.025) % (W + 60) + W + 60) % (W + 60) - 30;
+      const sy = 10 + (i * 43) % 114;
+      const pulse = 0.35 + 0.45 * (0.5 + 0.5 * Math.sin(elapsed * 1.4 + i));
+      ctx.globalAlpha = pulse;
+      pxRect(sx, sy, i % 7 === 0 ? 2 : 1, 1, i % 4 === 0 ? "#aee8ff" : "#5f8fa8");
+    }
+    ctx.globalAlpha = 1;
+
+    // Giant album-era eye on the horizon.
+    const eyeX = 344 - ((cameraX * 0.055) % 760);
+    const eyeY = 60;
+    ctx.save();
+    ctx.globalAlpha = 0.72;
+    ctx.strokeStyle = "#78cbe8";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.ellipse(eyeX, eyeY, 58, 25, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.fillStyle = "#07111c";
+    ctx.beginPath();
+    ctx.ellipse(eyeX, eyeY, 51, 20, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#63b9da";
+    ctx.beginPath();
+    ctx.arc(eyeX, eyeY, 14, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#02050a";
+    ctx.beginPath();
+    ctx.arc(eyeX, eyeY, 7, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#e7fbff";
+    ctx.beginPath();
+    ctx.arc(eyeX - 4, eyeY - 5, 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    // Moon reflection / portal.
+    const moonX = 95 - ((cameraX * 0.08) % 610);
+    ctx.fillStyle = "#b9dce8";
+    ctx.beginPath();
+    ctx.arc(moonX, 42, 16, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#071524";
+    ctx.beginPath();
+    ctx.arc(moonX + 5, 39, 13, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Far ruined monoliths.
+    for (let i = 0; i < 34; i++) {
+      const wx = i * 118 + (i % 4) * 29;
+      const x = wx - cameraX * 0.31;
+      const h = 40 + (i * 31) % 88;
+      const w = 16 + (i * 13) % 22;
+      if (x > W + 35 || x + w < -35) continue;
+      pxRect(x, FLOOR_TOP - h, w, h, i % 3 === 0 ? "#111f29" : "#0d1923");
+      if (i % 5 === 0) {
+        pxRect(x + 4, FLOOR_TOP - h + 10, Math.max(4, w - 8), 2, "#315465");
+        pxRect(x + w / 2, FLOOR_TOP - h + 4, 2, 9, "#4b798b");
+      }
+    }
+
+    // Waterline / flooded walkway.
+    pxRect(0, FLOOR_TOP - 7, W, 8, "#163542");
+    pxRect(0, FLOOR_TOP + 1, W, FLOOR_BOTTOM - FLOOR_TOP + 30, "#15323b");
+    pxRect(0, 189, W, 2, "#2c5a66");
+    pxRect(0, 226, W, 2, "#10262f");
+
+    // Animated water reflections.
+    for (let i = 0; i < 22; i++) {
+      const wx = i * 177 + 35;
+      const sx = wx - cameraX;
+      if (sx < -60 || sx > W + 60) continue;
+      const drift = Math.sin(elapsed * 1.8 + i * 1.7) * 6;
+      const yy = 198 + (i * 17) % 47;
+      pxRect(sx + drift, yy, 20 + (i % 4) * 8, 1, i % 3 === 0 ? "#6aa0ad" : "#315b66");
+    }
+
+    // Broken arches / lamp pylons in world space.
+    for (let x = 260; x < WORLD_W; x += 540) {
+      const sx = x - cameraX;
+      if (sx < -45 || sx > W + 45) continue;
+      pxRect(sx, 112, 6, 54, "#172831");
+      pxRect(sx - 8, 110, 22, 4, "#1d313b");
+      pxRect(sx - 5, 116, 16, 5, "#5d8d9b");
+      ctx.globalAlpha = 0.28 + 0.12 * Math.sin(elapsed * 3 + x);
+      pxRect(sx - 12, 121, 30, 16, "#4db3d5");
+      ctx.globalAlpha = 1;
+    }
+
+    // Waterfalls at several landmarks.
+    for (const wx of [730, 1520, 2380, 3150]) {
+      const sx = wx - cameraX;
+      if (sx < -50 || sx > W + 50) continue;
+      ctx.globalAlpha = 0.48;
+      pxRect(sx, 92, 14, 74, "#6da9b8");
+      pxRect(sx + 4, 94, 3, 70, "#b4dce3");
+      ctx.globalAlpha = 1;
+      for (let i = 0; i < 8; i++) {
+        const yy = 162 + ((elapsed * 34 + i * 9) % 16);
+        pxRect(sx - 8 + (i * 5) % 30, yy, 2, 1, "#8fc9d5");
+      }
+    }
+
+    // OCEAN signs / track-era motifs.
+    const signs = [
+      [470, "OCEAN"],
+      [1130, "ИСТОК"],
+      [1860, "AWAKE"],
+      [2740, "VOID"],
+      [3290, "LIGHT"]
+    ];
+    ctx.font = "8px monospace";
+    ctx.textBaseline = "top";
+    for (const [wx, text] of signs) {
+      const sx = wx - cameraX;
+      if (sx < -70 || sx > W + 70) continue;
+      pxRect(sx, 128, 52, 15, "#07131b");
+      ctx.fillStyle = "#96d1df";
+      ctx.fillText(text, sx + 5, 132);
+    }
+
+    // Occasional lightning flash in the far sky.
+    const lightning = Math.sin(elapsed * 0.63) > 0.985;
+    if (lightning) {
+      ctx.globalAlpha = 0.48;
+      ctx.strokeStyle = "#d9f5ff";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(422, 0);
+      ctx.lineTo(408, 33);
+      ctx.lineTo(420, 31);
+      ctx.lineTo(401, 73);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+
+    const active = getActiveWave();
+    if (active) {
+      const sx = active.gate - cameraX;
+      if (sx > -10 && sx < W + 10) {
+        for (let y = FLOOR_TOP + 4; y < FLOOR_BOTTOM + 5; y += 8) {
+          pxRect(sx, y, 2, 4, "#79c5d7");
+        }
+      }
+    }
+  }
+
+  function drawBackground() {
+    if (currentLevel === 2) drawBackgroundLevel2();
+    else drawBackgroundLevel1();
+  }
+
+  function drawLira(p) {
+    const sx = p.x - cameraX;
+    const sy = p.y - p.z;
+    const blink = p.invuln > 0 && Math.floor(p.invuln * 24) % 2 === 0;
+    if (blink) return;
+
+    shadow(sx, p.y + 1, 13, 4.5, 0.36);
+
+    ctx.save();
+    ctx.translate(Math.round(sx), Math.round(sy));
+    ctx.scale(p.face, 1);
+
+    const walking = Math.abs(p.vx) + Math.abs(p.vy) > 12 && p.z < 2;
+    const step = walking ? Math.sin(p.walkPhase) : 0;
+    const bob = walking ? Math.abs(Math.sin(p.walkPhase)) * 1.2 : Math.sin(elapsed * 2.8) * 0.35;
+    const atk = p.attack ? p.attack.kind : null;
+    const at = p.attack ? clamp(p.attack.t / p.attack.duration, 0, 1) : 0;
+    const charge = specialCharging ? clamp((elapsed - specialHoldStart) / 0.42, 0, 1) : 0;
+    const hairWave = Math.sin(elapsed * 4.1 + p.walkPhase * .22) * 1.2;
+
+    const poly = (pts, color) => {
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.moveTo(pts[0][0], pts[0][1]);
+      for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+      ctx.closePath();
+      ctx.fill();
+    };
+
+    function drawGuitar(x, y, angle, scale = 1, glow = 0) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(angle);
+      ctx.scale(scale, scale);
+      if (glow > 0) {
+        ctx.shadowColor = "#e54452";
+        ctx.shadowBlur = 8 * glow;
+      }
+      // V-shaped black metal guitar, matching Líra's official visual identity.
+      poly([[-4,-3],[-13,-11],[-8,-1],[-16,8],[-3,4],[1,13],[5,4],[15,8],[8,-1],[13,-11],[4,-3]], "#080a0d");
+      ctx.strokeStyle = glow > 0 ? "#f06a73" : "#9ba2a8";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      pxRect(-2, -24, 4, 22, "#171a1f");
+      pxRect(-3, -29, 6, 6, "#0b0d10");
+      pxRect(-1, -28, 1, 24, "#b3b7b8");
+      pxRect(1, -28, 1, 24, "#555a60");
+      pxRect(-5, -1, 10, 2, "#565d62");
+      pxRect(-1, 1, 2, 3, "#c5b678");
+      ctx.restore();
+    }
+
+    // Hair behind body: long, black, wild, recognizable silhouette.
+    poly([[-9,-53+bob],[-2,-58+bob],[7,-55+bob],[12,-46+bob],[11+hairWave,-30+bob],[8+hairWave,-20+bob],[3,-28+bob],[-1,-22+bob],[-7-hairWave,-27+bob],[-12-hairWave,-39+bob]], "#07080b");
+    poly([[-11,-48+bob],[-14-hairWave,-28+bob],[-9-hairWave,-18+bob],[-6,-31+bob]], "#0b0c10");
+    poly([[8,-49+bob],[13+hairWave,-33+bob],[11+hairWave,-20+bob],[6,-30+bob]], "#0c0d11");
+
+    // Back guitar during charge — visibly materializes before the special strike.
+    if (specialCharging) {
+      ctx.globalAlpha = 0.30 + charge * 0.70;
+      drawGuitar(-8 + charge * 4, -34 - charge * 4, -0.48 + charge * 0.14, 0.78 + charge * 0.14, charge);
+      ctx.globalAlpha = 1;
+    }
+
+    // Legs: ripped black jeans + heavy boots.
+    const lStep = step * 2.2;
+    poly([[-8,-25+bob],[-2,-25+bob],[-2,-9+bob+lStep],[-4,-2+bob+lStep],[-9,-2+bob+lStep],[-7,-12+bob+lStep]], "#111318");
+    poly([[2,-25+bob],[8,-24+bob],[7,-11+bob-lStep],[9,-2+bob-lStep],[2,-2+bob-lStep],[1,-12+bob-lStep]], "#171a1f");
+    // rips / skin at thighs and knees
+    pxRect(-7, -19 + bob, 5, 2, "#a97865");
+    pxRect(-8, -13 + bob + lStep, 6, 2, "#c29478");
+    pxRect(2, -17 + bob, 5, 2, "#9f705f");
+    pxRect(2, -10 + bob - lStep, 6, 2, "#c29478");
+    // boots
+    pxRect(-9, -5 + bob + lStep, 8, 5, "#050609");
+    pxRect(-10, -1 + bob + lStep, 10, 2, "#020305");
+    pxRect(1, -5 + bob - lStep, 8, 5, "#06070a");
+    pxRect(1, -1 + bob - lStep, 10, 2, "#020305");
+    pxRect(-7, -5 + bob + lStep, 1, 4, "#64686b");
+    pxRect(5, -5 + bob - lStep, 1, 4, "#64686b");
+
+    // Hips / belt / chains.
+    pxRect(-9, -29 + bob, 18, 6, "#15171b");
+    pxRect(-8, -28 + bob, 16, 2, "#090b0e");
+    pxRect(-1, -29 + bob, 3, 3, "#a6a19a");
+    ctx.strokeStyle = "#73777c";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(5, -26 + bob); ctx.lineTo(10, -20 + bob); ctx.lineTo(7, -15 + bob);
+    ctx.stroke();
+
+    // Torso: torn black crop top / leather details.
+    poly([[-8,-43+bob],[8,-43+bob],[10,-29+bob],[-8,-29+bob],[-10,-35+bob]], "#121419");
+    pxRect(-6, -40 + bob, 12, 8, "#171a20");
+    pxRect(-4, -37 + bob, 3, 1, "#b88770");
+    pxRect(2, -35 + bob, 4, 1, "#a87664");
+    pxRect(-8, -42 + bob, 2, 10, "#2b2d32");
+    pxRect(6, -42 + bob, 2, 9, "#282a2f");
+
+    // Eye pendant — her defining emblem.
+    ctx.fillStyle = "#c7c1ae";
+    ctx.beginPath(); ctx.ellipse(0, -32 + bob, 4.2, 2.3, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#0a1117";
+    ctx.beginPath(); ctx.arc(0, -32 + bob, 1.2, 0, Math.PI * 2); ctx.fill();
+    pxRect(0, -30 + bob, 1, 3, "#8a8579");
+
+    // Neck / face.
+    pxRect(-3, -46 + bob, 6, 5, "#b77f68");
+    poly([[-6,-55+bob],[5,-55+bob],[7,-48+bob],[4,-44+bob],[-4,-44+bob],[-7,-49+bob]], "#d2a080");
+    pxRect(-5, -50 + bob, 11, 1, "#b47c6c");
+    // fierce eyes + black makeup
+    pxRect(-5, -52 + bob, 4, 2, "#242125");
+    pxRect(1, -52 + bob, 4, 2, "#242125");
+    pxRect(-3, -51 + bob, 1, 1, "#d9e8ea");
+    pxRect(3, -51 + bob, 1, 1, "#d9e8ea");
+    pxRect(-2, -46 + bob, 5, 1, "#3a1b22");
+
+    // Choker.
+    pxRect(-4, -44 + bob, 8, 2, "#08090c");
+    pxRect(-2, -44 + bob, 1, 1, "#8f9293");
+    pxRect(2, -44 + bob, 1, 1, "#8f9293");
+
+    // Arms and attacks. Gloves are always black/studded.
+    if (atk === "guitarSmash") {
+      const lift = clamp(at / 0.42, 0, 1);
+      const swing = clamp((at - 0.36) / 0.34, 0, 1);
+      // Arms reaching for / controlling the guitar.
+      poly([[-8,-41+bob],[-13,-37+bob],[-10,-31+bob],[-5,-35+bob]], "#c99678");
+      poly([[8,-41+bob],[13,-37+bob],[10,-31+bob],[5,-35+bob]], "#c99678");
+      pxRect(-13, -35 + bob, 4, 4, "#090a0d");
+      pxRect(9, -35 + bob, 4, 4, "#090a0d");
+
+      let angle, gx, gy, gs;
+      if (at < 0.36) {
+        angle = -0.55 - lift * 0.75;
+        gx = 1 + lift * 2; gy = -36 - lift * 12; gs = 0.92;
+      } else {
+        angle = -1.30 + swing * 2.20;
+        gx = 2 + swing * 16; gy = -48 + swing * 18; gs = 1.02;
+      }
+      drawGuitar(gx, gy, angle, gs, at > 0.30 && at < 0.72 ? 1 : .35);
+
+      if (at > 0.38 && at < 0.70) {
+        ctx.save();
+        ctx.globalAlpha = 0.65 * Math.sin((at - 0.38) / 0.32 * Math.PI);
+        ctx.strokeStyle = "#e84d58";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(2, -38, 39, -1.45, 0.72);
+        ctx.stroke();
+        ctx.strokeStyle = "#9cecff";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(2, -38, 34, -1.35, 0.58);
+        ctx.stroke();
+        ctx.restore();
+      }
+    } else if (atk === "punch1" || atk === "punch2") {
+      const ext = Math.sin(at * Math.PI);
+      if (atk === "punch1") {
+        pxRect(6, -40 + bob, 7 + ext * 14, 4, "#ca9577");
+        pxRect(11 + ext * 13, -41 + bob, 5, 5, "#08090c");
+        pxRect(-12, -39 + bob, 5, 10, "#c99578");
+        pxRect(-12, -32 + bob, 5, 4, "#090a0d");
+      } else {
+        pxRect(-11, -41 + bob, 8 + ext * 13, 4, "#c99578");
+        pxRect(-16 - ext * 9, -42 + bob, 5, 5, "#08090c");
+        pxRect(7, -39 + bob, 5, 10, "#c99578");
+        pxRect(7, -32 + bob, 5, 4, "#090a0d");
+      }
+    } else if (atk === "finisher") {
+      const ext = Math.sin(at * Math.PI);
+      poly([[5,-40+bob],[10,-39+bob],[18+ext*16,-33+bob],[16+ext*17,-28+bob],[8,-33+bob]], "#ca9577");
+      pxRect(15 + ext * 16, -33 + bob, 8, 7, "#08090c");
+      pxRect(-12, -39 + bob, 5, 11, "#c99578");
+      pxRect(-12, -31 + bob, 5, 4, "#090a0d");
+    } else if (atk === "airKick") {
+      poly([[-8,-25],[-2,-25],[-1,-12],[-11,-8],[-14,-11],[-7,-17]], "#121419");
+      poly([[2,-25],[8,-23],[27,-19],[28,-14],[6,-15]], "#171a1f");
+      pxRect(25, -20, 9, 7, "#030407");
+      pxRect(-11, -40, 5, 11, "#c99578");
+      pxRect(7, -40, 5, 11, "#c99578");
+      pxRect(-11, -32, 5, 4, "#090a0d");
+      pxRect(7, -32, 5, 4, "#090a0d");
+    } else {
+      const armSwing = walking ? step * 2 : Math.sin(elapsed * 2.2) * .4;
+      pxRect(-12, -40 + bob - armSwing, 5, 12, "#c99578");
+      pxRect(7, -40 + bob + armSwing, 5, 12, "#c99578");
+      // Tattoos and fingerless gloves.
+      pxRect(-12, -39 + bob - armSwing, 2, 4, "#3a3030");
+      pxRect(10, -38 + bob + armSwing, 2, 4, "#3a3030");
+      pxRect(-12, -31 + bob - armSwing, 5, 5, "#08090c");
+      pxRect(7, -31 + bob + armSwing, 5, 5, "#08090c");
+      pxRect(-11, -30 + bob - armSwing, 1, 1, "#868889");
+      pxRect(10, -30 + bob + armSwing, 1, 1, "#868889");
+    }
+
+    // Front hair strands over face/shoulders.
+    pxRect(-7, -56 + bob, 13, 4, "#050609");
+    poly([[-7,-54+bob],[-4,-54+bob],[-5+hairWave*.3,-40+bob],[-8,-34+bob]], "#07080b");
+    poly([[4,-54+bob],[7,-52+bob],[8+hairWave*.35,-36+bob],[5,-32+bob]], "#090a0d");
+    pxRect(-1, -55 + bob, 2, 9, "#0a0b0e");
+
+    // Small cyan/red rim highlights so she reads clearly against both levels.
+    ctx.globalAlpha = .45;
+    pxRect(-9, -42 + bob, 1, 10, currentLevel === 2 ? "#75c8d8" : "#8d3038");
+    pxRect(8, -27 + bob, 1, 10, currentLevel === 2 ? "#75c8d8" : "#8d3038");
+    ctx.globalAlpha = 1;
+
+    ctx.restore();
+  }
+
+  function enemyPalette(e) {
+    if (currentLevel === 2) {
+      if (e.type === "boss") return { body: "#102d38", accent: "#57b6ca", skin: "#9bb5b9", hair: "#031015" };
+      if (e.type === "brute") return { body: "#153640", accent: "#3a8091", skin: "#95aeb1", hair: "#07151a" };
+      return { body: "#102a34", accent: "#2f7183", skin: "#9fb5b8", hair: "#051117" };
+    }
+    if (e.type === "boss") return { body: "#2a292f", accent: "#9d3236", skin: "#b18b75", hair: "#08090b" };
+    if (e.type === "brute") return { body: "#353a3e", accent: "#73624c", skin: "#b88e72", hair: "#191b1e" };
+    return { body: "#29323a", accent: "#6b3540", skin: "#c29a7c", hair: "#121418" };
+  }
+
+  function drawOceanEnemy(e) {
+    const sx = e.x - cameraX;
+    const sy = e.y;
+    if (sx < -80 || sx > W + 80 || (e.deathTimer <= 0 && !e.alive)) return;
+
+    const boss = e.type === "boss";
+    const brute = e.type === "brute";
+    shadow(sx, e.y + 1, boss ? 18 : brute ? 13 : 11, boss ? 6 : 4, 0.38);
+
+    ctx.save();
+    ctx.translate(Math.round(sx), Math.round(sy));
+    ctx.scale(e.face, 1);
+
+    if (!e.alive) {
+      ctx.rotate((1 - e.deathTimer / 0.7) * 1.25 * e.face);
+      ctx.globalAlpha = clamp(e.deathTimer / 0.35, 0, 1);
+    }
+
+    const s = boss ? 1.42 : brute ? 1.10 : 1;
+    ctx.scale(s, s);
+    const bob = Math.abs(Math.sin(e.walkPhase)) * 0.85;
+    const hit = e.hitFlash > 0;
+    const body = hit ? "#e2f6f7" : boss ? "#071a22" : brute ? "#102a33" : "#0b2029";
+    const cloth = boss ? "#0a2935" : brute ? "#163946" : "#12313b";
+    const glow = boss ? (e.bossPhase >= 3 ? "#d5f8ff" : e.bossPhase === 2 ? "#68d8ee" : "#4399ad") : "#438da0";
+    const skin = boss ? "#8eabb0" : "#91a9ad";
+
+    // Ocean enemies are drowned cultists / tide guards: ragged robes, masks, eye sigil.
+    pxRect(-7, -16 + bob, 5, 15, "#10161a");
+    pxRect(2, -16 + bob, 5, 15, "#141b20");
+    pxRect(-8, -3 + bob, 7, 4, "#06090b");
+    pxRect(1, -3 + bob, 8, 4, "#06090b");
+
+    // ragged lower coat
+    pxRect(-10, -23 + bob, 20, 9, cloth);
+    pxRect(-10, -16 + bob, 5, 5, cloth);
+    pxRect(-2, -16 + bob, 4, 7, cloth);
+    pxRect(5, -16 + bob, 5, 4, cloth);
+
+    // torso / armor
+    pxRect(-10, -33 + bob, 20, 15, body);
+    if (brute || boss) {
+      pxRect(-13, -32 + bob, 5, 8, "#274551");
+      pxRect(8, -32 + bob, 5, 8, "#274551");
+    }
+    pxRect(-4, -29 + bob, 8, 7, "#091219");
+    pxRect(-3, -27 + bob, 6, 1, glow);
+    pxRect(-1, -29 + bob, 2, 5, glow); // eye/sigil cross
+
+    // hood + pale mask
+    pxRect(-8, -44 + bob, 16, 7, "#061016");
+    pxRect(-10, -41 + bob, 20, 8, "#081820");
+    pxRect(-6, -40 + bob, 12, 9, skin);
+    pxRect(-5, -39 + bob, 10, 6, boss ? "#cadfe2" : "#b3c5c7");
+    pxRect(-3, -37 + bob, 2, 1, "#041014");
+    pxRect(2, -37 + bob, 2, 1, "#041014");
+    pxRect(-1, -35 + bob, 2, 1, glow);
+
+    // Arms / attack. Brutes use a heavy anchor-like forearm, boss a long void blade.
+    if (e.attack) {
+      const a = Math.sin(Math.min(1, e.attack.t / e.attack.duration) * Math.PI);
+      pxRect(7, -30 + bob, 10 + a * (boss ? 18 : brute ? 13 : 9), boss ? 6 : 5, skin);
+      if (boss) pxRect(18 + a * 13, -30 + bob, 17, 2, glow);
+      if (brute) pxRect(15 + a * 9, -32 + bob, 8, 8, "#273c43");
+    } else {
+      pxRect(-13, -30 + bob, 5, 12, skin);
+      pxRect(8, -30 + bob, 5, 12, skin);
+      if (!boss && !brute) {
+        pxRect(10, -20 + bob, 2, 9, "#5e8c98");
+        pxRect(9, -12 + bob, 4, 2, "#85bdc9");
+      }
+    }
+
+    if (boss) {
+      // Sacred Destroyer silhouette + phase aura.
+      ctx.globalAlpha *= 0.18 + 0.08 * e.bossPhase;
+      ctx.strokeStyle = glow;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.ellipse(0, -25, 18 + e.bossPhase * 2, 28 + e.bossPhase * 2, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.globalAlpha = e.alive ? 1 : clamp(e.deathTimer / 0.35, 0, 1);
+      pxRect(-11, -48 + bob, 22, 3, glow);
+      pxRect(-14, -36 + bob, 4, 17, "#183945");
+      pxRect(10, -36 + bob, 4, 17, "#183945");
+      // phase crown / horns
+      if (e.bossPhase >= 2) {
+        pxRect(-10, -52 + bob, 2, 8, glow);
+        pxRect(8, -52 + bob, 2, 8, glow);
+      }
+      if (e.bossPhase >= 3) {
+        pxRect(-2, -55 + bob, 4, 9, "#d8f8ff");
+      }
+    }
+
+    ctx.restore();
+  }
+
+  function drawEnemy(e) {
+    if (currentLevel === 2) {
+      drawOceanEnemy(e);
+      return;
+    }
+    const sx = e.x - cameraX;
+    const sy = e.y;
+    if (sx < -70 || sx > W + 70 || e.deathTimer <= 0 && !e.alive) return;
+
+    shadow(sx, e.y + 1, e.type === "boss" ? 16 : 11, e.type === "boss" ? 5 : 4, 0.34);
+
+    ctx.save();
+    ctx.translate(Math.round(sx), Math.round(sy));
+    ctx.scale(e.face, 1);
+
+    if (!e.alive) {
+      ctx.rotate((1 - e.deathTimer / 0.7) * 1.25 * e.face);
+      ctx.globalAlpha = clamp(e.deathTimer / 0.35, 0, 1);
+    }
+
+    const p = enemyPalette(e);
+    const boss = e.type === "boss";
+    const s = boss ? 1.34 : 1;
+    ctx.scale(s, s);
+
+    const bob = Math.abs(Math.sin(e.walkPhase)) * 0.8;
+    const attacking = !!e.attack;
+    const hit = e.hitFlash > 0;
+
+    pxRect(-7, -16 + bob, 5, 15, "#191c20");
+    pxRect(2, -16 + bob, 5, 15, "#202429");
+    pxRect(-8, -2 + bob, 7, 3, "#0c0e10");
+    pxRect(1, -2 + bob, 8, 3, "#0c0e10");
+
+    pxRect(-9, -31 + bob, 18, 15, hit ? "#d8d3c7" : p.body);
+    pxRect(-4, -29 + bob, 8, 10, p.accent);
+
+    if (attacking) {
+      const a = Math.sin(Math.min(1, e.attack.t / e.attack.duration) * Math.PI);
+      pxRect(6, -29 + bob, 9 + a * (boss ? 15 : 9), boss ? 6 : 4, p.skin);
+    } else {
+      pxRect(-12, -29 + bob, 5, 12, p.skin);
+      pxRect(7, -29 + bob, 5, 12, p.skin);
+    }
+
+    pxRect(-6, -40 + bob, 12, 9, p.skin);
+    pxRect(-7, -44 + bob, 14, 5, p.hair);
+    pxRect(3, -37 + bob, 2, 1, "#111216");
+
+    if (boss) {
+      pxRect(-10, -47 + bob, 20, 3, "#13151a");
+      pxRect(-13, -34 + bob, 5, 13, "#9d3236");
+      pxRect(8, -34 + bob, 5, 13, "#9d3236");
+    }
+
+    ctx.restore();
+  }
+
+  function drawWorldMarkers() {
+    if (currentLevel === 2) {
+      const sx = 112 - cameraX;
+      if (sx > -130 && sx < W + 130) {
+        ctx.save();
+        ctx.globalAlpha = 0.34;
+        ctx.fillStyle = "#a6e2ee";
+        ctx.font = "bold 15px monospace";
+        ctx.fillText("OCEAN", sx, 250);
+        ctx.font = "6px monospace";
+        ctx.fillText("LEVEL 2", sx + 1, 258);
+        ctx.restore();
+      }
+      return;
+    }
+
+    // Start label painted into the street.
+    const sx = 112 - cameraX;
+    if (sx > -100 && sx < W + 100) {
+      ctx.save();
+      ctx.globalAlpha = 0.25;
+      ctx.fillStyle = "#d8d1be";
+      ctx.font = "bold 12px monospace";
+      ctx.fillText("CITY OF SLEEP", sx, 250);
+      ctx.restore();
+    }
+  }
+
+  function drawEffects() {
+    if (!effects.length) return;
+    ctx.save();
+    for (const fx of effects) {
+      const p = clamp(fx.t / fx.duration, 0, 1);
+      const sx = fx.x - cameraX;
+      if (fx.kind === "guitarBurst") {
+        ctx.globalAlpha = (1 - p) * 0.88;
+        ctx.strokeStyle = p < .45 ? "#ef5964" : "#8fe8f5";
+        ctx.lineWidth = p < .45 ? 3 : 2;
+        ctx.beginPath();
+        ctx.ellipse(sx, fx.y, 10 + p * 58, 3 + p * 17, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        for (let i = 0; i < 8; i++) {
+          const a = -1.15 + i * .31;
+          const r = 8 + p * (28 + i * 2);
+          pxRect(sx + Math.cos(a) * r, fx.y - 8 + Math.sin(a) * r * .45, 2, 2, i % 2 ? "#dffbff" : "#f05a64");
+        }
+        continue;
+      }
+      if (fx.kind !== "voidPulse") continue;
+      const radius = 18 + p * 112;
+      ctx.globalAlpha = (1 - p) * 0.72;
+      ctx.strokeStyle = fx.phase >= 3 ? "#d7f8ff" : "#65cfe5";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.ellipse(sx, fx.y, radius, radius * 0.27, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.globalAlpha = (1 - p) * 0.24;
+      ctx.beginPath();
+      ctx.ellipse(sx, fx.y, Math.max(4, radius - 8), Math.max(2, (radius - 8) * 0.27), 0, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function drawHUD() {
+    // LÍRA health
+    pxRect(10, 10, 126, 19, "rgba(7,9,14,.78)");
+    pxRect(12, 12, 122, 6, "#2b2c31");
+    pxRect(12, 12, 122 * (player.hp / player.maxHp), 6, player.hp > 30 ? "#b7494d" : "#d1a24f");
+    ctx.fillStyle = "#f2eee3";
+    ctx.font = "bold 8px monospace";
+    ctx.textBaseline = "top";
+    ctx.fillText("LÍRA", 12, 20);
+
+    ctx.textAlign = "right";
+    ctx.fillStyle = "#d9d2c2";
+    ctx.fillText(String(score).padStart(6, "0"), W - 10, 11);
+    ctx.textAlign = "left";
+
+    if (currentLevel === 2 && started) {
+      ctx.fillStyle = "#93cfdd";
+      ctx.font = "bold 7px monospace";
+      ctx.fillText("LEVEL 2 · OCEAN", W - 94, 23);
+    }
+
+    // Boss HP
+    const boss = enemies.find(e => e.type === "boss" && e.alive);
+    if (boss) {
+      const bw = 190;
+      const bx = (W - bw) / 2;
+      pxRect(bx - 2, 10, bw + 4, 17, "rgba(7,9,14,.82)");
+      pxRect(bx, 12, bw, 6, "#292a2f");
+      pxRect(bx, 12, bw * (boss.hp / boss.maxHp), 6, "#8d3034");
+      ctx.fillStyle = "#efe8d7";
+      ctx.font = "7px monospace";
+      ctx.textAlign = "center";
+      ctx.fillText(currentLevel === 2 ? "СВЯЩЕННЫЙ РАЗРУШИТЕЛЬ" : "THE HOLLOW", W / 2, 20);
+      ctx.textAlign = "left";
+    }
+
+    const active = getActiveWave();
+    if (active && active.spawns[0][0] !== "boss") {
+      const remaining = enemies.filter(e => active.ids.includes(e.id) && e.alive).length;
+      ctx.fillStyle = "#d7d0c0";
+      ctx.font = "7px monospace";
+      ctx.fillText(`ENEMIES ${remaining}`, 12, 33);
+    }
+
+    if (!started) {
+      const save = readSave();
+      if (save) {
+        const label = save.currentLevel === 2 ? "LEVEL 2 — OCEAN" : "LEVEL 1 — CITY OF SLEEP";
+        overlayPanel("DREAMING OF LÍRA · R004", [
+          `SAVE FOUND · ${label}`,
+          "",
+          `${titleChoice === 0 ? ">" : " "} ДАЛЕЕ / CONTINUE`,
+          `${titleChoice === 1 ? ">" : " "} НОВАЯ ИГРА / NEW GAME`,
+          "",
+          "SELECT — CHOOSE   START — OK",
+          "SPECIAL · A A + HOLD A"
+        ]);
+      } else {
+        overlayPanel("DREAMING OF LÍRA · R004", [
+          "LEVEL 1 — CITY OF SLEEP",
+          "",
+          "ANDROID: LANDSCAPE MODE",
+          "D-PAD · A HIT · B JUMP",
+          "SPECIAL · A A + HOLD A",
+          "",
+          "START — ENTER DREAM"
+        ]);
+      }
+    } else if (paused) {
+      overlayPanel("PAUSED", ["START / P — CONTINUE", "SELECT — SAVE", "SPECIAL — A A + HOLD A"]);
+    } else if (gameOver) {
+      overlayPanel("THE DREAM COLLAPSES", ["R — TRY AGAIN"]);
+    } else if (victory) {
+      if (currentLevel === 1) {
+        overlayPanel("LEVEL CLEAR", [
+          `SCORE ${String(score).padStart(6, "0")}`,
+          "",
+          "LÍRA WAKES…",
+          "",
+          "START — LEVEL 2: OCEAN"
+        ]);
+      } else {
+        overlayPanel("OCEAN — CLEAR", [
+          `SCORE ${String(score).padStart(6, "0")}`,
+          "",
+          "THE OCEAN REMEMBERS YOU",
+          "",
+          "START — PLAY OCEAN AGAIN"
+        ]);
+      }
+    }
+
+    if (messageTimer > 0 && started && !gameOver && !victory) {
+      ctx.textAlign = "center";
+      ctx.font = "bold 10px monospace";
+      ctx.fillStyle = "rgba(0,0,0,.55)";
+      ctx.fillText(message, W / 2 + 1, 51);
+      ctx.fillStyle = "#e8e0cf";
+      ctx.fillText(message, W / 2, 50);
+      ctx.textAlign = "left";
+    }
+
+    if (started && !paused && !gameOver && !victory) {
+      if (specialCharging) {
+        const q = clamp((elapsed - specialHoldStart) / 0.42, 0, 1);
+        pxRect(W / 2 - 42, H - 17, 84, 8, "rgba(4,8,12,.72)");
+        pxRect(W / 2 - 40, H - 15, 80 * q, 4, "#d64a55");
+        ctx.textAlign = "center";
+        ctx.fillStyle = "#edf9fb";
+        ctx.font = "6px monospace";
+        ctx.fillText("GUITAR", W / 2, H - 25);
+        ctx.textAlign = "left";
+      } else if (attackTapCount === 2 && elapsed <= attackTapDeadline && guitarSpecialCooldown <= 0) {
+        ctx.textAlign = "center";
+        ctx.fillStyle = "#e9c77a";
+        ctx.font = "bold 6px monospace";
+        ctx.fillText("HOLD A — GUITAR", W / 2, H - 12);
+        ctx.textAlign = "left";
+      }
+    }
+
+    if (started && !paused && !gameOver && !victory && !touchLayout) {
+      ctx.globalAlpha = 0.58;
+      ctx.fillStyle = "#eee7d8";
+      ctx.font = "6px monospace";
+      ctx.fillText("P PAUSE   R RESTART", 10, H - 10);
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  function overlayPanel(title, lines) {
+    const pw = 286;
+    const ph = 56 + lines.length * 12;
+    const x = (W - pw) / 2;
+    const y = (H - ph) / 2;
+    pxRect(x, y, pw, ph, "rgba(7,9,14,.91)");
+    pxRect(x, y, pw, 2, "#b8a77d");
+    pxRect(x, y + ph - 2, pw, 2, "#403b31");
+
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#efe8d8";
+    ctx.font = "bold 15px monospace";
+    ctx.fillText(title, W / 2, y + 13);
+    ctx.font = "8px monospace";
+    lines.forEach((line, i) => {
+      const selected = typeof line === "string" && line.trimStart().startsWith(">");
+      ctx.fillStyle = selected ? "#8fe4f2" : (i === lines.length - 1 ? "#cbb887" : "#bfc0c4");
+      ctx.fillText(line, W / 2, y + 38 + i * 12);
+    });
+    ctx.textAlign = "left";
+  }
+
+  function drawCoverImage(img, x, y, w, h, focusX = 0.5, focusY = 0.45) {
+    if (!img || !img.complete || !img.naturalWidth) return;
+    const ir = img.naturalWidth / img.naturalHeight;
+    const rr = w / h;
+    let sw, sh, sx, sy;
+    if (ir > rr) {
+      sh = img.naturalHeight;
+      sw = sh * rr;
+      sx = (img.naturalWidth - sw) * focusX;
+      sy = 0;
+    } else {
+      sw = img.naturalWidth;
+      sh = sw / rr;
+      sx = 0;
+      sy = (img.naturalHeight - sh) * focusY;
+    }
+    ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
+  }
+
+  function drawCinematic() {
+    if (!cinematic || currentLevel !== 2) return;
+    const p = 1 - cinematic.t / cinematic.duration;
+    const edge = Math.min(1, Math.min(p * 5, (1 - p) * 5));
+    const alpha = clamp(edge, 0, 1);
+    const img = liraArts[cinematic.artKey];
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    pxRect(0, 0, W, H, "rgba(2,7,12,.82)");
+    const panelW = 173;
+    drawCoverImage(img, 0, 0, panelW, H, 0.5, cinematic.artKey === "jump" ? 0.5 : 0.34);
+    const grad = ctx.createLinearGradient(panelW - 45, 0, W, 0);
+    grad.addColorStop(0, "rgba(2,7,12,0)");
+    grad.addColorStop(0.2, "rgba(2,7,12,.94)");
+    grad.addColorStop(1, "rgba(2,7,12,.98)");
+    ctx.fillStyle = grad;
+    ctx.fillRect(panelW - 45, 0, W - panelW + 45, H);
+
+    ctx.fillStyle = "#88d2e3";
+    ctx.font = "bold 8px monospace";
+    ctx.fillText("LEVEL 2 — OCEAN", 196, 96);
+    ctx.fillStyle = "#eef9fb";
+    ctx.font = cinematic.title.length > 23 ? "bold 13px monospace" : "bold 17px monospace";
+    ctx.fillText(cinematic.title, 196, 116);
+    ctx.fillStyle = "#82aebb";
+    ctx.font = "7px monospace";
+    ctx.fillText(cinematic.subtitle, 196, 140);
+    pxRect(196, 151, 190, 1, "#315e6b");
+    ctx.fillStyle = "#5f8f9d";
+    ctx.font = "6px monospace";
+    ctx.fillText("DREAMING OF LÍRA", 196, 163);
+    ctx.restore();
+  }
+
+  function draw() {
+    const sx = shake > 0 ? (Math.random() - 0.5) * shake : 0;
+    const sy = shake > 0 ? (Math.random() - 0.5) * shake * 0.45 : 0;
+
+    ctx.save();
+    ctx.translate(Math.round(sx), Math.round(sy));
+
+    drawBackground();
+    drawWorldMarkers();
+
+    const actors = [
+      ...enemies.filter(e => e.alive || e.deathTimer > 0).map(e => ({ y: e.y, draw: () => drawEnemy(e) })),
+      { y: player.y, draw: () => drawLira(player) }
+    ].sort((a, b) => a.y - b.y);
+
+    for (const a of actors) a.draw();
+    drawEffects();
+    ctx.restore();
+
+    drawHUD();
+    drawCinematic();
+
+    if (flash > 0) {
+      ctx.fillStyle = `rgba(255,255,255,${Math.min(0.18, flash * 2.6)})`;
+      ctx.fillRect(0, 0, W, H);
+    }
+  }
+
+  // ------------------------------
+  // Main loop
+  // ------------------------------
+  let lastTime = performance.now();
+
+  function update(dt) {
+    if (!started || paused || gameOver || victory) return;
+
+    elapsed += dt;
+    shake = Math.max(0, shake - dt * 24);
+    flash = Math.max(0, flash - dt);
+    messageTimer = Math.max(0, messageTimer - dt);
+    if (cinematic) {
+      cinematic.t -= dt;
+      if (cinematic.t <= 0) cinematic = null;
+    }
+
+    updateWaves();
+    updatePlayer(dt);
+    for (const e of enemies) updateEnemy(e, dt);
+    updateEffects(dt);
+    updateWaves();
+    updateCamera(dt);
+
+    autoSaveClock += dt;
+    if (autoSaveClock >= 2.5) {
+      autoSaveClock = 0;
+      saveProgress(false);
+    }
+
+    // Auto-start the last encounter if the player reaches the dream gate.
+    if (player.x > WORLD_W - 90 && !victory) player.x = WORLD_W - 90;
+  }
+
+  function frame(now) {
+    const dt = Math.min(1 / 30, (now - lastTime) / 1000 || 0);
+    lastTime = now;
+
+    update(dt);
+    draw();
+
+    pressed.attack = false;
+    pressed.jump = false;
+    requestAnimationFrame(frame);
+  }
+
+  // ------------------------------
+  // Input
+  // ------------------------------
+  function begin() {
+    if (!started) {
+      started = true;
+      showMessage("ENTER THE DREAM", 1.2);
+    }
+    unlockAudio();
+    tryLandscapeLock();
+  }
+
+  function startNewGame() {
+    deleteSave();
+    unlockedLevel = 1;
+    score = 0;
+    startLevel(1, false);
+    begin();
+    saveProgress(false);
+  }
+
+  function confirmTitleChoice() {
+    if (hasSave() && titleChoice === 0) {
+      if (!continueFromSave()) startNewGame();
+    } else {
+      startNewGame();
+    }
+  }
+
+  function goToNextLevel() {
+    if (victory && currentLevel === 1) {
+      startLevel(2, true);
+      begin();
+      saveProgress(false);
+      return true;
+    }
+    return false;
+  }
+
+  function handleStartPause() {
+    unlockAudio();
+    tryLandscapeLock();
+    if (!started) {
+      confirmTitleChoice();
+      return;
+    }
+    if (goToNextLevel()) return;
+    if (victory && currentLevel === 2) {
+      startLevel(2, false);
+      begin();
+      saveProgress(false);
+      return;
+    }
+    if (gameOver) {
+      resetGame();
+      begin();
+      saveProgress(false);
+      return;
+    }
+    paused = !paused;
+    if (paused) saveProgress(false);
+  }
+
+  function handleSelect() {
+    unlockAudio();
+    if (!started) {
+      if (hasSave()) titleChoice = titleChoice === 0 ? 1 : 0;
+      return;
+    }
+    if (!gameOver) saveProgress(true);
+  }
+
+  window.addEventListener("keydown", (e) => {
+    if (e.code in keyMap || ["KeyP","KeyR","Enter","Escape","Digit2","Tab"].includes(e.code)) e.preventDefault();
+
+    // Hidden review shortcut: from the title screen press 2 to inspect OCEAN immediately.
+    if (!started && e.code === "Digit2") {
+      startLevel(2, false);
+      begin();
+      return;
+    }
+
+    if (!started) {
+      if (e.code === "Tab" || e.code === "ArrowUp" || e.code === "ArrowDown") {
+        if (hasSave()) titleChoice = titleChoice === 0 ? 1 : 0;
+        return;
+      }
+      if (e.code === "Enter" || e.code === "Space" || e.code === "KeyP") {
+        confirmTitleChoice();
+        return;
+      }
+      // If no save exists, classic behavior: any gameplay key starts a new game.
+      if (!hasSave() && (e.code in keyMap)) {
+        startNewGame();
+      } else {
+        return;
+      }
+    }
+
+    if (victory && currentLevel === 1 && e.code !== "KeyR") {
+      if (e.code === "Enter" || e.code === "KeyP" || e.code in keyMap) goToNextLevel();
+      return;
+    }
+
+    if (e.code === "KeyR") {
+      resetGame();
+      begin();
+      saveProgress(false);
+      return;
+    }
+
+    if ((e.code === "KeyP" || e.code === "Escape") && started && !gameOver && !victory) {
+      handleStartPause();
+      return;
+    }
+
+    const action = keyMap[e.code];
+    if (!action) return;
+
+    begin();
+    if (!input[action]) {
+      let consumed = false;
+      if (action === "attack") consumed = registerAttackDown();
+      if ((action === "attack" && !consumed) || action === "jump") pressed[action] = true;
+    }
+    input[action] = true;
+  }, { passive: false });
+
+  window.addEventListener("keyup", (e) => {
+    const action = keyMap[e.code];
+    if (action === "attack" && input.attack) registerAttackUp();
+    if (action) input[action] = false;
+  });
+
+  document.querySelectorAll(".touchBtn").forEach(btn => {
+    const action = btn.dataset.action;
+
+    const down = (e) => {
+      e.preventDefault();
+      if (!started) return; // START confirms Continue/New Game on mobile.
+      if (victory && currentLevel === 1) return;
+      if (paused || gameOver || victory) return;
+      begin();
+      btn.classList.add("active");
+      if (!input[action]) {
+        let consumed = false;
+        if (action === "attack") consumed = registerAttackDown();
+        if ((action === "attack" && !consumed) || action === "jump") pressed[action] = true;
+      }
+      input[action] = true;
+      try { btn.setPointerCapture(e.pointerId); } catch (_) {}
+    };
+
+    const up = (e) => {
+      e.preventDefault();
+      btn.classList.remove("active");
+      if (action === "attack" && input.attack) registerAttackUp();
+      input[action] = false;
+    };
+
+    btn.addEventListener("pointerdown", down, { passive: false });
+    btn.addEventListener("pointerup", up, { passive: false });
+    btn.addEventListener("pointercancel", up, { passive: false });
+    btn.addEventListener("lostpointercapture", up, { passive: false });
+  });
+
+  document.querySelectorAll(".systemBtn").forEach(btn => {
+    const kind = btn.dataset.system;
+    const down = (e) => {
+      e.preventDefault();
+      btn.classList.add("active");
+      try { btn.setPointerCapture(e.pointerId); } catch (_) {}
+      if (kind === "start") handleStartPause();
+      else if (kind === "select") handleSelect();
+    };
+    const up = (e) => {
+      e.preventDefault();
+      btn.classList.remove("active");
+    };
+    btn.addEventListener("pointerdown", down, { passive: false });
+    btn.addEventListener("pointerup", up, { passive: false });
+    btn.addEventListener("pointercancel", up, { passive: false });
+    btn.addEventListener("lostpointercapture", up, { passive: false });
+  });
+
+  canvas.addEventListener("pointerdown", (e) => {
+    e.preventDefault();
+    if (!started) confirmTitleChoice();
+  }, { passive: false });
+
+  // Save before Android/browser suspends the tab. Also pause hidden gameplay so returning is safe.
+  window.addEventListener("pagehide", () => saveProgress(false));
+  window.addEventListener("beforeunload", () => saveProgress(false));
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden && started && !gameOver) {
+      saveProgress(false);
+      if (!victory) paused = true;
+    }
+  });
+
+  // ------------------------------
+  // Reset
+  // ------------------------------
+  function startLevel(level, keepScore = false) {
+    const oldScore = score;
+    currentLevel = level;
+    WORLD_W = LEVEL_WORLD_W[level] || LEVEL_WORLD_W[1];
+    player = createPlayer();
+    enemies = [];
+    effects = [];
+    elapsed = 0;
+    cameraX = 0;
+    score = keepScore ? oldScore : 0;
+    shake = 0;
+    flash = 0;
+    message = "";
+    messageTimer = 0;
+    gameOver = false;
+    victory = false;
+    paused = false;
+    cinematic = null;
+    autoSaveClock = 0;
+    attackPressStarted = -99;
+    attackTapCount = 0;
+    attackTapDeadline = 0;
+    specialCharging = false;
+    specialHoldStart = -99;
+    guitarSpecialCooldown = 0;
+    unlockedLevel = Math.max(unlockedLevel, level);
+    for (const k of Object.keys(input)) input[k] = false;
+    pressed.attack = false;
+    pressed.jump = false;
+    buildWaves();
+
+    if (level === 2) {
+      startCinematic("fight", "OCEAN", "THE SECOND DREAM", 2.1);
+      showMessage("LEVEL 2 — OCEAN", 2.0);
+    }
+  }
+
+  function resetGame() {
+    startLevel(currentLevel, false);
+  }
+
+  titleChoice = hasSave() ? 0 : 1;
+  buildWaves();
+  requestAnimationFrame(frame);
+})();
+</script>
 </body>
 </html>

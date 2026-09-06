@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788670795629-975f2b2aec",
-  "release": "R939",
-  "archiveName": "ANDRIK-R939-DREAMING-OF-LIRA-MOBILE-START-FIX-R938-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "bf7ecc9dd645f25fd142bda0442bd1a7f801adbf",
-  "backupSha": "bf7ecc9dd645f25fd142bda0442bd1a7f801adbf",
+  "operationId": "publish-1788671883692-4fed49380d",
+  "release": "R940",
+  "archiveName": "ANDRIK-R940-DREAMING-OF-LIRA-R004-GUITAR-SPECIAL-R939-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "8c2a5ebd087ec923ca2fe43b5c209ae485b1bd55",
+  "backupSha": "8c2a5ebd087ec923ca2fe43b5c209ae485b1bd55",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-06T04:59:55.629Z"
+  "generatedAt": "2026-09-06T05:18:05.489Z"
 }
