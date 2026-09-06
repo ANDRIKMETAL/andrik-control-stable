@@ -1,7 +1,0 @@
-/* R938 — distinguish public first-frame starts from engaged Studio views. */
-.youtube-radio-youtube-stats-r565{grid-template-columns:repeat(5,minmax(0,1fr));}
-.youtube-radio-youtube-stats-r565 .youtube-radio-stat-r565:nth-child(3){
-  border-color:rgba(104,225,190,.20);
-  background:rgba(21,95,78,.13);
-}
-@media(max-width:760px){.youtube-radio-youtube-stats-r565{grid-template-columns:repeat(2,minmax(0,1fr));}}

@@ -1,0 +1,26 @@
+ANDRIK R954 CLEANUP
+
+Purpose: conservative general cleanup of R953/R952 site package.
+
+PRESERVED UNCHANGED:
+- _worker.js (R953 YouTube comment push logic)
+- entire radio247/ directory (R943C queue/fullscreen/A-V and R949 calibration files)
+- Dreaming of Lira gameplay logic, except asset URL extensions for two converted WebP images
+
+REMOVED:
+- historical R*-REPORT / R*-INSTALL notes from package root
+- old versioned cache-reset pages (one current R954 page + canonical cache-reset.html remain)
+- obsolete push-repair-r676.html
+- old Dreaming of Lira splash art r941/r942 and unused Ocean gameplay concept
+- unused legacy versioned JS/CSS/image assets with zero runtime references
+
+COMPRESSED:
+- assets/lyra-hero-r593.mp4: H.264 1080x1920/30fps preserved, re-encoded CRF 28
+- current Dreaming of Lira splash PNG -> WebP quality 80
+- current Ocean boss PNG -> WebP quality 80
+
+SERVICE WORKER:
+- cache version advanced to 55.00-r954-clean
+- old R942 game cache entries replaced with current R952 game assets
+
+No radio service/runtime code was altered by this cleanup package.

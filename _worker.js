@@ -2,6 +2,7 @@
 const PUSH_OWNER_RECOVERY_R768 = 'R768-OWNER-PUSH-SELFHEAL';
 const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R524', number:524, version:'55.00', full:'55.00 LIVE WEB AI FINAL R524', siteUpdater:'55.00-r356' });
 const PUSH_AUTOMATION_FIX_R778 = 'R778-CRON-UA-INDEPENDENT-HEALTH-RESCUE-STRICT-OWNER-DELIVERY';
+const YOUTUBE_COMMENT_PUSH_RELIABLE_R953 = 'R953-LIVE-2M-RECENT6-5M-OLDER1-SEPARATE-COMMENT-LANE';
 const ANDRIK_D1_EFFICIENCY_RELEASE = 'R638-D1-FINAL';
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
@@ -2718,7 +2719,11 @@ function ownerPushPresentation(history = null, name = '') {
   // event shared `andrik-single-eye`, so a like/comment arriving immediately after +1
   // could replace the subscriber notification before Android ever showed it.
   const subscriberEvent = type === 'youtube-subscriber' || type === 'youtube-subscriber-count';
-  const topic = subscriberEvent ? 'andrik-subscriber-eye' : 'andrik-single-eye';
+  // R953: YouTube comments and LIVE chat have their own replacement lane. Likes keep
+  // using andrik-single-eye, so a like can no longer replace a freshly delivered
+  // comment before Android shows it. Subscriber lane remains independent as before.
+  const commentEvent = type === 'youtube-comment' || type === 'youtube-comment-count' || type === 'youtube-live-chat';
+  const topic = subscriberEvent ? 'andrik-subscriber-eye' : (commentEvent ? 'andrik-comment-eye' : 'andrik-single-eye');
   return {
     androidGroup: topic,
     threadId: topic,
@@ -8222,6 +8227,151 @@ async function fetchFastYoutubeLikesR333(env,db){
 }
 
 
+
+// R953: dedicated */5 comment sweep for the six newest non-LIVE uploads/Shorts plus
+// one older rotating video. This path is deliberately independent from commentCount:
+// YouTube can update the public counter late, while commentThreads already exposes the
+// actual comment. The active LIVE remains on the separate every-2-minute R938 path.
+async function fetchYoutubeCommentSweepTargetsR953(env,db){
+  const allIds=await loadFastYoutubeVideoIdsR333(db,200);
+  if(!allIds.length)return {targets:[],recentIds:[],olderId:'',nextOffset:0};
+
+  // Read a couple extra recent IDs so an active LIVE among the newest entries does not
+  // reduce the requested six normal videos/Shorts.
+  const recentCandidates=allIds.slice(0,Math.min(9,allIds.length));
+  const olderPool=allIds.slice(Math.min(9,allIds.length));
+  const offsetState=await getPushState(db,'youtube-comment-older-offset-r953').catch(()=>null);
+  const rawOffset=Math.max(0,Number(offsetState?.value||0));
+  const offset=olderPool.length?rawOffset%olderPool.length:0;
+  const olderId=olderPool.length?olderPool[offset]:'';
+  const ids=[...new Set([...recentCandidates,...(olderId?[olderId]:[])])];
+  if(!ids.length)return {targets:[],recentIds:[],olderId:'',nextOffset:0};
+
+  const {data}=await youtubeApiJson(env,'videos',{
+    part:'snippet,statistics',id:ids.join(','),maxResults:ids.length
+  });
+  const byId=new Map((data.items||[]).map(video=>[
+    cleanPlainText(video.id||'',40),{
+      videoId:cleanPlainText(video.id||'',40),
+      title:cleanPlainText(video?.snippet?.title||'Видео ANDRIK',180),
+      publishedAt:cleanPlainText(video?.snippet?.publishedAt||'',50),
+      thumbnail:video?.snippet?.thumbnails?.high?.url||video?.snippet?.thumbnails?.medium?.url||'',
+      likes:Number(video?.statistics?.likeCount||0),
+      comments:Number(video?.statistics?.commentCount||0),
+      isLive:String(video?.snippet?.liveBroadcastContent||'').toLowerCase()==='live',
+      url:`https://www.youtube.com/watch?v=${encodeURIComponent(video.id||'')}`
+    }
+  ]));
+
+  const recent=[];
+  for(const id of recentCandidates){
+    const row=byId.get(id);
+    if(row&&!row.isLive&&recent.length<6)recent.push(row);
+  }
+  const older=olderId?byId.get(olderId):null;
+  const targets=[...recent];
+  if(older&&!older.isLive&&!targets.some(row=>row.videoId===older.videoId))targets.push(older);
+
+  const nextOffset=olderPool.length?(offset+1)%olderPool.length:0;
+  await setPushState(db,'youtube-comment-older-offset-r953',String(nextOffset)).catch(()=>{});
+  return {targets,recentIds:recent.map(row=>row.videoId),olderId:older?.videoId||'',nextOffset};
+}
+
+async function sendYoutubeCommentItemsR953(env,db,items=[],identity={},startedAt=new Date().toISOString(),mode='recent6-5m-r953'){
+  const external=uniqueYoutubeComments(items||[]).filter(item=>!isYoutubeOwnerComment(item,identity));
+  const notifications=[];
+  const cutoff=Date.now()-24*60*60*1000;
+
+  // Oldest first preserves conversational order when several comments arrived between
+  // two polls. Limit prevents a first deployment/catch-up from flooding the owner phone.
+  for(const item of external.slice().reverse().slice(-20)){
+    const key=`comment:${item.id}`;
+    if(await getYoutubeEventRow(db,key))continue;
+    const published=Date.parse(item.publishedAt||'');
+    if(Number.isFinite(published)&&published<cutoff){
+      await saveYoutubeEventRow(db,{
+        key,type:'comment',resourceId:item.id,videoId:item.videoId,author:item.author,
+        title:item.text,url:item.url,payload:{...item,seededSilently:true,mode}
+      }).catch(()=>{});
+      continue;
+    }
+
+    const onceKey=`push-once:youtube-comment:${item.id}`;
+    let claimed=await claimPushOnce(db,onceKey,startedAt);
+    if(!claimed){
+      const delivered=await db.prepare(`
+        SELECT 1 AS found FROM push_history
+        WHERE type='youtube-comment' AND status='sent' AND details_json LIKE ?
+        ORDER BY created_at DESC LIMIT 1
+      `).bind(`%${item.id}%`).first().catch(()=>null);
+      if(delivered?.found){
+        await saveYoutubeEventRow(db,{key,type:'comment',resourceId:item.id,videoId:item.videoId,author:item.author,title:item.text,url:item.url,payload:item}).catch(()=>{});
+        continue;
+      }
+      await db.prepare(`DELETE FROM push_state WHERE key=? AND updated_at < datetime('now','-8 minutes')`).bind(onceKey).run().catch(()=>{});
+      claimed=await claimPushOnce(db,onceKey,startedAt);
+    }
+    if(!claimed)continue;
+
+    const result=await sendOwnerPush(env,{
+      title:`💬 ${compactYoutubePushTitle(item.videoTitle||'Новый комментарий','YouTube')}`,
+      message:`${item.author}: ${String(item.text||'').slice(0,160)}`,
+      url:item.url,image:item.thumbnail||'',name:`youtube-comment-${item.id}`,ttl:86400,
+      data:{commentId:item.id,parentId:item.parentId||item.id,videoId:item.videoId||''},
+      webButtons:[
+        {id:'reply-comment',text:'↩️ Ответить',url:`https://control.andrikmetal.com/youtube-comment-reply.html?commentId=${encodeURIComponent(item.id)}&videoId=${encodeURIComponent(item.videoId||'')}`},
+        {id:'open-youtube',text:'▶️ YouTube',url:item.url}
+      ],
+      history:{
+        type:'youtube-comment',source:'YouTube',videoId:item.videoId,
+        videoTitle:item.videoTitle||item.text,
+        details:{commentId:item.id,parentId:item.parentId||item.id,author:item.author,publishedAt:item.publishedAt,deliveryMode:mode}
+      }
+    });
+    if(result.ok){
+      await saveYoutubeEventRow(db,{key,type:'comment',resourceId:item.id,videoId:item.videoId,author:item.author,title:item.text,url:item.url,payload:item}).catch(()=>{});
+    }else if(!result.pending){
+      await releasePushOnceClaim(db,onceKey).catch(()=>{});
+    }
+    notifications.push({type:'comment',id:item.id,ok:Boolean(result.ok),pending:Boolean(result.pending),error:result.error||''});
+  }
+  return {seen:external.length,notifications};
+}
+
+async function checkYoutubeRecentCommentsEvery5mR953(env,db,channelId,startedAt=new Date().toISOString()){
+  const plan=await fetchYoutubeCommentSweepTargetsR953(env,db);
+  if(!plan.targets.length){
+    return {ok:true,mode:'recent6-plus-old1-5m-r953',targets:0,recentTargets:0,olderTarget:'',seen:0,sent:0,failed:0,pending:0,warnings:[],checkedAt:startedAt};
+  }
+  const direct=await fetchYoutubeCommentsForVideos(env,plan.targets,channelId).catch(error=>({items:[],warnings:[cleanPlainText(error?.message||error,260)]}));
+  const warnings=(direct.warnings||[]).filter(w=>!isBenignYoutubeCommentWarningR473(w));
+  const videoMap=new Map(plan.targets.map(row=>[row.videoId,row]));
+  const enriched=(direct.items||[]).map(item=>{
+    const video=videoMap.get(item.videoId)||{};
+    return {...item,videoTitle:item.videoTitle||video.title||'Новое событие YouTube',thumbnail:item.thumbnail||video.thumbnail||''};
+  });
+  const identity={channelId,handle:cleanPlainText(env.YOUTUBE_CHANNEL_HANDLE||'@andrikmetal',100)};
+  const delivery=await sendYoutubeCommentItemsR953(env,db,enriched,identity,startedAt,'recent6-plus-old1-5m-r953');
+  const notifications=delivery.notifications||[];
+  const hardFailed=notifications.filter(item=>!item.ok&&!item.pending).length;
+  const pending=notifications.filter(item=>!item.ok&&item.pending).length;
+  const result={
+    ok:warnings.length===0&&hardFailed===0,
+    mode:'recent6-plus-old1-5m-r953',
+    targets:plan.targets.length,
+    recentTargets:plan.recentIds.length,
+    olderTarget:plan.olderId||'',
+    seen:delivery.seen||0,
+    sent:notifications.filter(item=>item.ok).length,
+    failed:hardFailed,pending,warnings,checkedAt:startedAt
+  };
+  await Promise.all([
+    setPushState(db,'youtube-comment-recent-sweep-last-at-r953',startedAt).catch(()=>{}),
+    setPushState(db,'youtube-comment-recent-sweep-last-result-r953',JSON.stringify(result).slice(0,12000)).catch(()=>{})
+  ]);
+  return result;
+}
+
 // R669: keep the currently active radio broadcast pinned in the 2-minute
 // engagement scan and poll its LIVE CHAT. This path intentionally uses the
 // public YouTube Data API key when available, so owner push monitoring keeps
@@ -13311,8 +13461,21 @@ async function handleExternalCronGatewayR334(request, env, ctx) {
     }else if(clock.due5){
       claimed=await claimCronGatewaySlotR334(db,'five-minute-slice-r416',clock.slot5);
       if(claimed){
+        // R953: comments are an independent 5-minute duty inside the dedicated */5
+        // invocation. It does not depend on commentCount and it runs even when the
+        // release/subscriber branch below has nothing new to report.
+        let commentSweepR953={ok:true,skipped:true,reason:'channel-id-unavailable'};
+        try{
+          let channelIdR953=(await getPushState(db,'youtube-websub-channel-id-r332').catch(()=>null))?.value||'';
+          if(!channelIdR953)channelIdR953=await resolveYoutubeWebSubChannelIdR332(env,db);
+          if(channelIdR953)commentSweepR953=await checkYoutubeRecentCommentsEvery5mR953(env,db,channelIdR953,new Date().toISOString());
+        }catch(error){
+          commentSweepR953={ok:false,error:cleanPlainText(error?.message||error,300),mode:'recent6-plus-old1-5m-r953'};
+        }
         const slice=await runCronFiveMinuteSliceR434(request,env,clock);
-        task=slice.task; value=slice.value;
+        task=slice.task;
+        const baseValue=slice?.value&&typeof slice.value==='object'?slice.value:{value:slice?.value};
+        value={...baseValue,commentSweepR953};
       }else value={ok:true,skipped:true,reason:'slot-already-claimed'};
     }else if(clock.due15){
       claimed=await claimCronGatewaySlotR334(db,'checkpoint-15m-r416',clock.slot15);

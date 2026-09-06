@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788714399249-676cb24259",
-  "release": "R950",
-  "archiveName": "ANDRIK-R950-GAME-R007-SPACE-COMBAT-R949-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "12b916525057867519073436a8c63705ea5b3b1d",
-  "backupSha": "12b916525057867519073436a8c63705ea5b3b1d",
+  "operationId": "publish-1788718280823-48fcd865ba",
+  "release": "R954",
+  "archiveName": "ANDRIK-R954-GENERAL-CLEANUP-COMPACT-R953-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "32c68bb6f8c3f002a89bde3eb40b0ef278089f11",
+  "backupSha": "32c68bb6f8c3f002a89bde3eb40b0ef278089f11",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-06T17:06:39.249Z"
+  "generatedAt": "2026-09-06T18:11:23.657Z"
 }

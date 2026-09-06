@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
   <meta name="theme-color" content="#080b12" />
-  <title>Dreaming of Líra — ANDRIK Game · R007</title>
+  <title>Dreaming of Líra — ANDRIK Game · R008</title>
   <style>
     :root {
       --ink: #f4f1e8;
@@ -176,6 +176,14 @@
     [data-action="jump"]   { right: 0; top: 0; }
     [data-action="kick"]   { left: 0; bottom: 0; }
     [data-action="super"]  { left: 0; top: 0; }
+    [data-action="sword"] { left: 50%; top: 50%; transform: translate(-50%,-50%); z-index: 4; }
+    [data-action="sword"].active { transform: translate(-50%,-50%) scale(.93); }
+    .swordBtn {
+      width: clamp(52px, 7.6vw, 68px); height: clamp(52px, 7.6vw, 68px);
+      border-color: rgba(172,222,238,.62); color:#dff8ff;
+      background: rgba(19,36,48,.42); box-shadow:0 0 16px rgba(104,215,244,.13), inset 0 0 0 2px rgba(0,0,0,.20);
+    }
+    .swordBtn .letter { font-size: clamp(13px, 2.1vw, 18px); }
     .superBtn {
       width: clamp(58px, 8.2vw, 74px);
       height: clamp(58px, 8.2vw, 74px);
@@ -268,7 +276,8 @@
       <div class="actions" aria-label="Кнопки боя">
         <button class="touchBtn actionBtn" data-action="jump" aria-label="Прыжок"><span><span class="letter">B</span><span class="label">JUMP</span></span></button>
         <button class="touchBtn actionBtn superBtn" data-action="super" aria-label="Супер удар гитарой"><span><span class="guitarIcon">⚡🎸</span><span class="label">SUPER</span></span></button>
-        <button class="touchBtn actionBtn" data-action="kick" aria-label="Удар ногой"><span><span class="letter">C</span><span class="label">KICK</span></span></button>
+        <button class="touchBtn actionBtn swordBtn" data-action="sword" aria-label="A плюс B — удар мечом"><span><span class="letter">A+B</span><span class="label">SWORD</span></span></button>
+        <button class="touchBtn actionBtn" data-action="kick" aria-label="Подсечка ногой"><span><span class="letter">C</span><span class="label">SWEEP</span></span></button>
         <button class="touchBtn actionBtn" data-action="attack" aria-label="Удар рукой"><span><span class="letter">A</span><span class="label">PUNCH</span></span></button>
       </div>
       <div class="systemButtons">
@@ -285,7 +294,7 @@
   "use strict";
 
   // ================================================================
-  // DREAMING OF LÍRA R007 — CITY / OCEAN / SPACE arcade game
+  // DREAMING OF LÍRA R008 — CITY / OCEAN / SPACE / TOWER / TETRIS arcade game
   // Original implementation for ANDRIK / andrikmetal.com · R942 site integration
   // No ROM code, sprites, audio, maps or other assets are copied here.
   // ================================================================
@@ -368,8 +377,8 @@
 
   // R006 / R942 startup splash shown after entering landscape.
   const bootSplash = new Image();
-  bootSplash.src = "assets/dreaming-lira-r942-splash.png";
-  let bootSplashUntil = performance.now() + 1150;
+  bootSplash.src = "assets/dreaming-lira-r952-splash.webp";
+  let bootSplashUntil = performance.now() + 2200;
   let lastLandscape = innerWidth >= innerHeight;
 
   // Separate SUPER meter replaces the old A-A-HOLD input.
@@ -3096,7 +3105,7 @@
   const __baseDrawHUDR942 = drawHUD;
 
   const oceanBossArtR942 = new Image();
-  oceanBossArtR942.src = 'assets/ocean-boss-sacred-destroyer-r942.png';
+  oceanBossArtR942.src = 'assets/ocean-boss-sacred-destroyer-r942.webp';
   let oceanBossIntroUntilR942 = 0;
   let oceanWeaponR942 = '';
   let oceanPickupsR942 = [];
@@ -3250,7 +3259,7 @@
 
   // =====================================================================
   // R007 / R950 — COMBAT + RECOVERY CRATES + LEVEL SELECT + LEVEL 3 SPACE
-  // Adds C kick, A+C sword, hearts/crates and a long 90s-style space shooter.
+  // Adds C crouch-sweep, A+B sword, hearts/crates and a long 90s-style space shooter.
   // Existing CITY / OCEAN systems are preserved underneath this layer.
   // =====================================================================
   LEVEL_WORLD_W[3] = W;
@@ -3276,7 +3285,7 @@
     player.comboStep=0;
     player.attack={id:++attackSerial,kind:'swordSlashR950',t:0,duration:ATTACKS.swordSlashR950.duration};
     player.lastAttackTime=elapsed;
-    showMessage('A + C · SWORD',.52);
+    showMessage('A + B · SWORD',.52);
     tone(420,.07,'sawtooth',.020,155);
   }
 
@@ -3576,6 +3585,410 @@
 
   // Ensure old saves that already cleared OCEAN expose SPACE in SELECT immediately.
   try{const _s=readSave();if(_s){unlockedLevel=Math.max(unlockedLevel,Math.min(3,_s.unlockedLevel||(_s.completed&&_s.currentLevel===2?3:_s.currentLevel||1)));}}catch(_){}
+
+
+  // =====================================================================
+  // R008 / R952 — CROUCH SWEEP + A+B SWORD + STARS/HIGHSCORES + LEVELS 4/5
+  // LEVEL 4 TOWER: vertical platform climb. LEVEL 5 TETRIS: five block stages.
+  // Radio / R943C / fullscreen / R949 A-V calibration are outside this file.
+  // =====================================================================
+
+  LEVEL_WORLD_W[4] = W;
+  LEVEL_WORLD_W[5] = W;
+  LEVEL_NAMES_R950[4] = 'TOWER';
+  LEVEL_NAMES_R950[5] = 'TETRIS';
+
+  const HIGH_SCORE_KEY_R952 = 'dreaming-of-lira-highscores-r952';
+  let highScoresR952 = (()=>{try{return JSON.parse(localStorage.getItem(HIGH_SCORE_KEY_R952)||'{}')||{};}catch(_){return {};}})();
+  let levelScoreStartR952 = 0;
+  let levelStarsR952 = 0;
+  let groundStarsR952 = [];
+  let swordButtonPulseR952 = false;
+
+  function saveHighScoresR952(){
+    try{localStorage.setItem(HIGH_SCORE_KEY_R952,JSON.stringify(highScoresR952));}catch(_){}
+  }
+  function levelRunScoreR952(){return Math.max(0,Math.round(score-levelScoreStartR952));}
+  function bestForLevelR952(level=currentLevel){return Math.max(0,Number(highScoresR952[level]||0));}
+  function commitHighScoreR952(level=currentLevel){
+    const run=levelRunScoreR952();
+    if(run>bestForLevelR952(level)){highScoresR952[level]=run;saveHighScoresR952();showMessage('NEW BEST · '+String(run).padStart(6,'0'),1.8);}
+  }
+  function collectStarR952(x,y){levelStarsR952++;score+=250;superMeter=clamp(superMeter+8,0,SUPER_MAX);tone(784,.08,'triangle',.022,1046);effects.push({kind:'starBurstR952',x,y,t:0,duration:.45});}
+  function resetGroundStarsR952(level=currentLevel){
+    const src=level===1?
+      [[320,208],[690,193],[1210,207],[1740,188],[2280,207],[2890,190]]:
+      level===2?[[280,208],[830,188],[1390,208],[2010,188],[2580,208],[3260,188]]:[];
+    groundStarsR952=src.map((v,i)=>({id:`S${level}-${i}`,x:v[0],y:v[1],taken:false,t:i*.7}));
+  }
+  function updateGroundStarsR952(dt){
+    if(currentLevel>2||bikeMode)return;
+    for(const s of groundStarsR952){
+      if(s.taken)continue;s.t+=dt;
+      if(Math.abs(player.x-s.x)<19&&Math.abs(player.y-s.y)<22){s.taken=true;collectStarR952(s.x,s.y);showMessage('★ STAR +250',.7);}
+    }
+  }
+  function drawStarR952(x,y,r=6){
+    ctx.save();ctx.translate(Math.round(x),Math.round(y));ctx.fillStyle='#ffd45b';ctx.strokeStyle='#fff0a8';ctx.lineWidth=1;ctx.beginPath();
+    for(let i=0;i<10;i++){const a=-Math.PI/2+i*Math.PI/5,rr=i%2===0?r:r*.44;const px=Math.cos(a)*rr,py=Math.sin(a)*rr;if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);}ctx.closePath();ctx.fill();ctx.stroke();ctx.restore();
+  }
+  function drawGroundStarsR952(){
+    if(currentLevel>2||bikeMode)return;
+    for(const s of groundStarsR952){if(s.taken)continue;const x=s.x-cameraX;if(x<-20||x>W+20)continue;drawStarR952(x,s.y-18+Math.sin(elapsed*4+s.t)*3,6);}
+  }
+
+  const __r950UpdateRecoveryR952=updateRecoveryR950;
+  updateRecoveryR950=function(dt){__r950UpdateRecoveryR952(dt);updateGroundStarsR952(dt);};
+  const __r950DrawRecoveryR952=drawRecoveryR950;
+  drawRecoveryR950=function(){__r950DrawRecoveryR952();drawGroundStarsR952();};
+
+  // C is now a true crouching sweep. Only two legs are drawn during the move.
+  const __r950DrawLiraR952 = drawLira;
+  function drawCrouchSweepLiraR952(p){
+    const sx=p.x-cameraX,sy=p.y-p.z;
+    if(p.invuln>0&&Math.floor(p.invuln*24)%2===0)return;
+    const q=Math.sin(clamp((p.attack?.t||0)/(p.attack?.duration||1),0,1)*Math.PI);
+    shadow(sx,p.y+1,14,4,.34);
+    ctx.save();ctx.translate(Math.round(sx),Math.round(sy+7));ctx.scale(p.face*1.23,1.23);
+    // Hair and head lowered into the crouch.
+    ctx.fillStyle='#06070a';ctx.fillRect(-11,-49,21,22);ctx.fillRect(-13,-43,7,23);ctx.fillRect(7,-44,7,22);
+    ctx.fillStyle='#d2a080';ctx.fillRect(-6,-48,12,10);ctx.fillStyle='#21171a';ctx.fillRect(-5,-45,4,2);ctx.fillRect(2,-45,4,2);ctx.fillStyle='#3a1b22';ctx.fillRect(-2,-40,5,1);
+    // Nose bridge stays separate from the fringe.
+    ctx.fillStyle='#e7b493';ctx.fillRect(0,-44,2,3);ctx.fillStyle='#6f4440';ctx.fillRect(1,-42,1,1);
+    // Torso crouches forward.
+    ctx.fillStyle='#15171c';ctx.fillRect(-10,-37,20,15);ctx.fillStyle='#24272c';ctx.fillRect(-7,-35,14,7);
+    ctx.fillStyle='#c7c1ae';ctx.beginPath();ctx.ellipse(0,-27,4,2,0,0,Math.PI*2);ctx.fill();ctx.fillStyle='#071016';ctx.beginPath();ctx.arc(0,-27,1.1,0,Math.PI*2);ctx.fill();
+    // Arms brace the body.
+    ctx.fillStyle='#c99578';ctx.fillRect(-13,-35,5,12);ctx.fillRect(8,-35,5,10);ctx.fillStyle='#08090c';ctx.fillRect(-13,-26,5,5);ctx.fillRect(8,-28,5,5);
+    // LEG 1: supporting leg, visibly bent under her. No standing legs remain.
+    ctx.fillStyle='#111318';ctx.fillRect(-8,-22,8,9);ctx.fillRect(-13,-14,10,6);ctx.fillStyle='#c29478';ctx.fillRect(-7,-17,5,2);ctx.fillStyle='#030407';ctx.fillRect(-16,-10,14,7);
+    // LEG 2: low sweeping leg travels sideways at ankle height.
+    const ext=10+q*27;
+    ctx.fillStyle='#171a1f';ctx.fillRect(1,-21,8,8);ctx.fillRect(7,-16,ext,6);ctx.fillStyle='#bd8c72';ctx.fillRect(12,-15,5,2);ctx.fillStyle='#030407';ctx.fillRect(4+ext,-17,12,8);
+    // Speed line emphasizes a horizontal sweep, not a third limb.
+    ctx.globalAlpha=.35*q;ctx.strokeStyle='#8fe5f5';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(7,-9);ctx.lineTo(42,-9);ctx.stroke();ctx.globalAlpha=1;
+    ctx.restore();
+  }
+  drawLira=function(p){
+    if(p.attack?.kind==='kickR950'){drawCrouchSweepLiraR952(p);return;}
+    if(p.attack?.kind==='swordSlashR950'){
+      const real=p.attack.kind;p.attack.kind='swordGhostR952';__r950DrawLiraR952(p);p.attack.kind=real;
+      const sx=p.x-cameraX,sy=p.y-p.z,q=clamp(p.attack.t/p.attack.duration,0,1),bob=Math.sin(elapsed*2.8)*.25;
+      ctx.save();ctx.translate(Math.round(sx),Math.round(sy));ctx.scale(p.face*1.23,1.23);
+      // Side-to-side sword: the blade stays almost horizontal and travels LEFT -> RIGHT.
+      const swing=Math.sin(q*Math.PI),hx=-24+q*42,hy=-31+bob+Math.sin(q*Math.PI)*2,a=-.16+q*.28;
+      ctx.save();ctx.translate(hx,hy);ctx.rotate(a);
+      ctx.fillStyle='#c99678';ctx.fillRect(-7,-2,11,4);ctx.fillStyle='#08090c';ctx.fillRect(1,-3,8,6);ctx.fillStyle='#b6945e';ctx.fillRect(8,-5,3,10);
+      ctx.fillStyle='#eef5f7';ctx.fillRect(10,-2,42,4);ctx.fillStyle='#8fe9ff';ctx.fillRect(14,-1,36,1);ctx.fillStyle='#424951';ctx.fillRect(50,-1,5,2);ctx.restore();
+      ctx.globalAlpha=.48*swing;ctx.strokeStyle='#9cecff';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-31,-30+bob);ctx.quadraticCurveTo(4,-22+bob,42,-29+bob);ctx.stroke();ctx.globalAlpha=1;ctx.restore();
+      return;
+    }
+    __r950DrawLiraR952(p);
+  };
+
+  // Sword combo changes from A+C to A+B. The dedicated center button triggers the same move.
+  const __r950UpdatePlayerR952=updatePlayer;
+  updatePlayer=function(dt){
+    if(currentLevel===3||currentLevel>=4)return __r950UpdatePlayerR952(dt);
+    if(input.attack&&input.jump){
+      if(!swordComboLatchR950&&(!player.attack||player.attack.t>player.attack.duration*.66))startSwordR950();
+      swordComboLatchR950=true;pressed.attack=false;pressed.jump=false;
+      const holdJump=input.jump;input.jump=false;__r950UpdatePlayerR952(dt);input.jump=holdJump;return;
+    }
+    // Explicitly prevent the old A+C combo while preserving C sweep.
+    if(input.attack&&input.kick){
+      const holdAttack=input.attack;input.attack=false;__r950UpdatePlayerR952(dt);input.attack=holdAttack;return;
+    }
+    return __r950UpdatePlayerR952(dt);
+  };
+
+  // LEVEL 3 stars fly through the lane independently of weapon pickups.
+  let spaceCollectStarsR952=[];
+  let spaceNextStarAtR952=620;
+  function resetSpaceCollectStarsR952(){spaceCollectStarsR952=[];spaceNextStarAtR952=620;}
+  function updateSpaceCollectStarsR952(dt){
+    if(currentLevel!==3||paused||gameOver||victory)return;
+    while(spaceDistanceR950>=spaceNextStarAtR952&&spaceNextStarAtR952<SPACE_BOSS_AT_R950){
+      const n=Math.floor(spaceNextStarAtR952/620);spaceCollectStarsR952.push({x:W+22,y:52+(n*43)%(H-94),taken:false});spaceNextStarAtR952+=620;
+    }
+    for(const s of spaceCollectStarsR952){s.x-=58*dt;if(!s.taken&&circleHitR950(spaceX_R950,spaceY_R950,13,s.x,s.y,9)){s.taken=true;collectStarR952(spaceX_R950,spaceY_R950);showMessage('★ STAR +250',.65);}}
+    spaceCollectStarsR952=spaceCollectStarsR952.filter(s=>!s.taken&&s.x>-25);
+  }
+  function drawSpaceCollectStarsR952(){if(currentLevel!==3)return;for(const s of spaceCollectStarsR952)drawStarR952(s.x,s.y+Math.sin(elapsed*5+s.x)*2,6);}
+
+  // ---------------------------------------------------------------------
+  // LEVEL 4 — TOWER / PERSONA. Vertical Mario-like climb.
+  // ---------------------------------------------------------------------
+  const TOWER_TOP_R952=2280;
+  let towerX_R952=74,towerY_R952=0,towerVy_R952=0,towerCameraR952=0,towerGroundedR952=true,towerInvulnR952=0,towerSwordT_R952=0,towerComboLatchR952=false;
+  let towerPlatformsR952=[],towerEnemiesR952=[],towerCratesR952=[],towerHeartsR952=[],towerStarsR952=[],towerFallingR952=[];
+  let towerHazardClockR952=1.8,towerLastSafeR952=0;
+
+  function towerPlatformPatternR952(i){
+    const lanes=[28,132,248,330,218,92,300,168,42,236,344,116];
+    return {x:lanes[i%lanes.length],w:86+(i%3)*12,y:i===0?0:i*67};
+  }
+  function resetTowerR952(){
+    towerX_R952=74;towerY_R952=0;towerVy_R952=0;towerCameraR952=0;towerGroundedR952=true;towerInvulnR952=0;towerSwordT_R952=0;towerComboLatchR952=false;towerHazardClockR952=2;towerLastSafeR952=0;player.hp=player.maxHp;
+    towerPlatformsR952=Array.from({length:36},(_,i)=>towerPlatformPatternR952(i));towerPlatformsR952[0]={x:0,w:W,y:0};towerPlatformsR952.push({x:150,w:180,y:TOWER_TOP_R952});
+    towerEnemiesR952=[];towerCratesR952=[];towerHeartsR952=[];towerStarsR952=[];towerFallingR952=[];
+    towerPlatformsR952.forEach((p,i)=>{
+      if(i>2&&i%4===0)towerEnemiesR952.push({id:'TE'+i,x:p.x+p.w*.55,y:p.y,dir:i%8===0?-1:1,alive:true,platform:i});
+      if(i>1&&i%6===0)towerCratesR952.push({id:'TC'+i,x:p.x+p.w*.35,y:p.y,broken:false,platform:i});
+      if(i>0&&i%3===0)towerStarsR952.push({id:'TS'+i,x:p.x+p.w*.72,y:p.y+25,taken:false});
+    });
+  }
+  function towerScreenYR952(worldY){return H-34-(worldY-towerCameraR952);}
+  function damageTowerR952(amount){
+    if(towerInvulnR952>0)return;player.hp=Math.max(0,player.hp-amount);towerInvulnR952=.8;hitShake(4);tone(90,.10,'sawtooth',.025,48);if(player.hp<=0){gameOver=true;commitHighScoreR952(4);showMessage('THE TOWER WINS',2);}
+  }
+  function towerMeleeR952(range=34){
+    let hit=false;
+    for(const e of towerEnemiesR952){if(!e.alive)continue;if(Math.abs(e.x-towerX_R952)<range&&Math.abs(e.y-towerY_R952)<28){e.alive=false;score+=180;superMeter=clamp(superMeter+7,0,SUPER_MAX);hit=true;}}
+    for(const c of towerCratesR952){if(c.broken)continue;if(Math.abs(c.x-towerX_R952)<range&&Math.abs(c.y-towerY_R952)<30){c.broken=true;score+=100;towerHeartsR952.push({x:c.x,y:c.y+22,taken:false});hit=true;}}
+    if(hit){tone(150,.055,'square',.016,74);hitShake(2);}
+  }
+  function updateTowerR952(dt){
+    if(!started||paused||gameOver||victory)return;
+    elapsed+=dt;messageTimer=Math.max(0,messageTimer-dt);flash=Math.max(0,flash-dt);shake=Math.max(0,shake-dt*24);towerInvulnR952=Math.max(0,towerInvulnR952-dt);towerSwordT_R952=Math.max(0,towerSwordT_R952-dt);superMeter=clamp(superMeter+dt*.55,0,SUPER_MAX);
+    const move=((input.right?1:0)-(input.left?1:0));towerX_R952=clamp(towerX_R952+move*112*dt,14,W-14);
+    // A+B = sword. It consumes the jump press so no accidental third action occurs.
+    if(input.attack&&input.jump){if(!towerComboLatchR952){towerSwordT_R952=.48;towerMeleeR952(60);tone(420,.07,'sawtooth',.020,155);}towerComboLatchR952=true;pressed.attack=false;pressed.jump=false;}else towerComboLatchR952=false;
+    if(pressed.jump&&towerGroundedR952){towerVy_R952=390;towerGroundedR952=false;tone(230,.05,'square',.012,330);}
+    if(pressed.attack&&!input.jump)towerMeleeR952(32);
+    if(pressed.kick)towerMeleeR952(42);
+    if(pressed.super&&superMeter>=SUPER_COST){superMeter-=SUPER_COST;for(const e of towerEnemiesR952){if(e.alive&&Math.abs(e.y-towerY_R952)<170){e.alive=false;score+=150;}}towerFallingR952=[];showMessage('SUPER · TOWER RIFF',.8);tone(58,.22,'sawtooth',.035,180);}
+    const prevY=towerY_R952;towerVy_R952-=680*dt;towerY_R952+=towerVy_R952*dt;towerGroundedR952=false;
+    // Land only while descending, from above, on the highest crossed platform.
+    if(towerVy_R952<=0){let land=null;for(const p of towerPlatformsR952){if(towerX_R952>=p.x-6&&towerX_R952<=p.x+p.w+6&&prevY>=p.y&&towerY_R952<=p.y){if(!land||p.y>land.y)land=p;}}if(land){towerY_R952=land.y;towerVy_R952=0;towerGroundedR952=true;towerLastSafeR952=Math.max(towerLastSafeR952,land.y);}}
+    // Enemies patrol their islands; stomping them works like a classic platformer.
+    for(const e of towerEnemiesR952){if(!e.alive)continue;const p=towerPlatformsR952[e.platform];e.x+=e.dir*(28+e.platform%3*5)*dt;if(e.x<p.x+9){e.x=p.x+9;e.dir=1;}if(e.x>p.x+p.w-9){e.x=p.x+p.w-9;e.dir=-1;}if(Math.abs(e.x-towerX_R952)<12&&Math.abs((e.y+12)-towerY_R952)<17){if(towerVy_R952<0&&prevY>e.y+8){e.alive=false;towerVy_R952=260;score+=220;showMessage('STOMP +220',.55);tone(180,.06,'square',.018,270);}else damageTowerR952(14);}}
+    // Crate touch from below / melee; hearts and stars are collectibles.
+    for(const c of towerCratesR952){if(c.broken)continue;if(Math.abs(c.x-towerX_R952)<14&&towerVy_R952>0&&towerY_R952<c.y&&towerY_R952+28>c.y){c.broken=true;towerHeartsR952.push({x:c.x,y:c.y+22,taken:false});score+=100;towerVy_R952=-80;}}
+    for(const h of towerHeartsR952){if(!h.taken&&Math.abs(h.x-towerX_R952)<15&&Math.abs(h.y-towerY_R952)<22){h.taken=true;const b=player.hp;player.hp=Math.min(player.maxHp,player.hp+25);score+=60;showMessage('♥ LIFE +'+(player.hp-b),.65);tone(523,.08,'triangle',.022,784);}}
+    for(const s of towerStarsR952){if(!s.taken&&Math.abs(s.x-towerX_R952)<16&&Math.abs(s.y-towerY_R952)<26){s.taken=true;collectStarR952(s.x,s.y);showMessage('★ STAR +250',.65);}}
+    // Hazards fall from the top of the current camera view.
+    towerHazardClockR952-=dt;if(towerHazardClockR952<=0){towerHazardClockR952=1.5+Math.random()*1.8;towerFallingR952.push({x:25+Math.random()*(W-50),y:towerCameraR952+310,vy:92+Math.random()*55,r:5+Math.random()*4});}
+    for(const h of towerFallingR952){h.y-=h.vy*dt;if(Math.abs(h.x-towerX_R952)<12&&Math.abs(h.y-towerY_R952)<17){h.dead=true;damageTowerR952(12);}}
+    towerFallingR952=towerFallingR952.filter(h=>!h.dead&&h.y>towerCameraR952-50);
+    // Falling off an island costs life but respawns at the last safe height.
+    if(towerY_R952<towerCameraR952-85){damageTowerR952(18);towerY_R952=Math.max(0,towerLastSafeR952);towerVy_R952=0;towerGroundedR952=true;}
+    towerCameraR952=approach(towerCameraR952,Math.max(0,towerY_R952-105),dt*175);
+    if(towerY_R952>=TOWER_TOP_R952-3){victory=true;unlockedLevel=Math.max(unlockedLevel,5);score+=3000;commitHighScoreR952(4);saveFreshLevel(5,score);showMessage('TOWER — CLEAR',2);tone(330,.3,'triangle',.03,880);}
+    autoSaveClock+=dt;if(autoSaveClock>=2.5){autoSaveClock=0;saveProgress(false);}
+  }
+  function drawMiniLiraR952(x,y,scale=.72,mode='idle'){
+    ctx.save();ctx.translate(Math.round(x),Math.round(y));ctx.scale(scale,scale);
+    const bob=mode==='jump'?-2:Math.sin(elapsed*4)*.4;
+    ctx.fillStyle='#050609';ctx.fillRect(-9,-43+bob,18,18);ctx.fillRect(-12,-37+bob,6,20);ctx.fillRect(7,-37+bob,6,18);
+    ctx.fillStyle='#d3a080';ctx.fillRect(-5,-40+bob,10,8);ctx.fillStyle='#202127';ctx.fillRect(-4,-37+bob,3,1);ctx.fillRect(2,-37+bob,3,1);ctx.fillStyle='#e7b493';ctx.fillRect(0,-36+bob,2,2);
+    ctx.fillStyle='#15171c';ctx.fillRect(-8,-31+bob,16,15);ctx.fillStyle='#c7c1ae';ctx.beginPath();ctx.ellipse(0,-22+bob,3.5,2,0,0,Math.PI*2);ctx.fill();ctx.fillStyle='#081016';ctx.beginPath();ctx.arc(0,-22+bob,1,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#c99578';ctx.fillRect(-11,-29+bob,4,11);ctx.fillRect(7,-29+bob,4,11);ctx.fillStyle='#090a0d';ctx.fillRect(-11,-21+bob,4,4);ctx.fillRect(7,-21+bob,4,4);
+    if(mode==='kick'){
+      ctx.fillStyle='#111318';ctx.fillRect(-7,-17,7,8);ctx.fillRect(-11,-10,9,5);ctx.fillStyle='#030407';ctx.fillRect(-13,-6,12,5);ctx.fillStyle='#171a1f';ctx.fillRect(1,-17,7,7);ctx.fillRect(6,-13,22,5);ctx.fillStyle='#030407';ctx.fillRect(25,-15,10,7);
+    }else{
+      ctx.fillStyle='#111318';ctx.fillRect(-7,-17+bob,6,14);ctx.fillStyle='#171a1f';ctx.fillRect(2,-17+bob,6,14);ctx.fillStyle='#030407';ctx.fillRect(-9,-5+bob,9,5);ctx.fillRect(1,-5+bob,10,5);
+    }
+    if(mode==='sword'){
+      const q=1-towerSwordT_R952/.48,a=2.75-clamp(q,0,1)*2.55;ctx.save();ctx.translate(3,-28);ctx.rotate(a);ctx.fillStyle='#08090c';ctx.fillRect(0,-3,8,6);ctx.fillStyle='#b6945e';ctx.fillRect(7,-5,3,10);ctx.fillStyle='#eef5f7';ctx.fillRect(10,-2,42,4);ctx.fillStyle='#8fe9ff';ctx.fillRect(14,-1,35,1);ctx.restore();
+    }
+    ctx.restore();
+  }
+  function drawTowerR952(){
+    const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,'#070617');g.addColorStop(.55,'#0b1624');g.addColorStop(1,'#15101b');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+    // Tower ribs and distant floating ruins.
+    ctx.fillStyle='rgba(78,96,126,.12)';for(let i=0;i<7;i++){const x=(i*83+(towerCameraR952*.12))%(W+100)-50;ctx.fillRect(x,20,24,H);}ctx.strokeStyle='rgba(104,194,220,.16)';ctx.beginPath();for(let x=0;x<=W;x+=12){const y=170+Math.sin((x+towerCameraR952*.4)*.035)*12;ctx.lineTo(x,y);}ctx.stroke();
+    for(const p of towerPlatformsR952){const y=towerScreenYR952(p.y);if(y<-20||y>H+20)continue;ctx.fillStyle='#141c27';ctx.fillRect(p.x,y,p.w,8);ctx.fillStyle='#355163';ctx.fillRect(p.x,y,p.w,2);ctx.fillStyle='#0c1118';ctx.fillRect(p.x+7,y+8,Math.max(6,p.w-14),4);}
+    for(const c of towerCratesR952){if(c.broken)continue;const y=towerScreenYR952(c.y);if(y<-20||y>H+20)continue;ctx.fillStyle='#60432c';ctx.fillRect(c.x-8,y-15,16,15);ctx.strokeStyle='#ba8d58';ctx.strokeRect(c.x-7,y-14,14,13);ctx.beginPath();ctx.moveTo(c.x-7,y-14);ctx.lineTo(c.x+7,y-1);ctx.moveTo(c.x+7,y-14);ctx.lineTo(c.x-7,y-1);ctx.stroke();}
+    for(const h of towerHeartsR952){if(h.taken)continue;const y=towerScreenYR952(h.y);if(y<-15||y>H+15)continue;ctx.fillStyle='#ff5369';ctx.font='bold 14px monospace';ctx.fillText('♥',h.x-6,y-8);}
+    for(const s of towerStarsR952){if(s.taken)continue;const y=towerScreenYR952(s.y);if(y<-15||y>H+15)continue;drawStarR952(s.x,y+Math.sin(elapsed*5+s.x)*2,5.5);}
+    for(const e of towerEnemiesR952){if(!e.alive)continue;const y=towerScreenYR952(e.y);if(y<-20||y>H+20)continue;ctx.save();ctx.translate(e.x,y-5);ctx.fillStyle='#263642';ctx.fillRect(-7,-10,14,10);ctx.fillStyle='#ff5768';ctx.fillRect(-4,-8,3,2);ctx.fillRect(2,-8,3,2);ctx.fillStyle='#080b10';ctx.fillRect(-8,0,6,4);ctx.fillRect(2,0,6,4);ctx.restore();}
+    for(const h of towerFallingR952){const y=towerScreenYR952(h.y);ctx.fillStyle='#775665';ctx.beginPath();ctx.arc(h.x,y,h.r,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#d35b6c';ctx.stroke();}
+    const py=towerScreenYR952(towerY_R952);drawMiniLiraR952(towerX_R952,py,towerY_R952>30?.72:.78,towerSwordT_R952>0?'sword':(pressed.kick?'kick':(!towerGroundedR952?'jump':'idle')));
+    // HUD
+    ctx.fillStyle='rgba(4,7,14,.86)';ctx.fillRect(8,8,178,39);ctx.fillStyle='#30333b';ctx.fillRect(12,12,118,6);ctx.fillStyle=player.hp>30?'#c04c5c':'#e1a44f';ctx.fillRect(12,12,118*(player.hp/player.maxHp),6);ctx.fillStyle='#e9f4fa';ctx.font='bold 8px monospace';ctx.fillText('LÍRA · TOWER',12,27);ctx.fillStyle='#9ccfe0';ctx.font='6px monospace';ctx.fillText(`HEIGHT ${Math.floor(towerY_R952)} / ${TOWER_TOP_R952}`,12,38);
+    ctx.textAlign='right';ctx.fillStyle='#dce9f2';ctx.font='bold 7px monospace';ctx.fillText('LEVEL 4 · TOWER',W-10,14);ctx.fillStyle='#9fb1c9';ctx.fillText('PERSONA · CLIMB ABOVE',W-10,25);ctx.fillStyle='#ffd45b';ctx.fillText(`★ ${levelStarsR952}   SCORE ${String(levelRunScoreR952()).padStart(6,'0')}`,W-10,37);ctx.fillStyle='#7fa1b8';ctx.fillText(`BEST ${String(bestForLevelR952(4)).padStart(6,'0')}`,W-10,47);ctx.textAlign='left';
+    if(messageTimer>0&&!victory&&!gameOver){ctx.fillStyle='#eff7ff';ctx.font='bold 9px monospace';ctx.textAlign='center';ctx.fillText(message,W/2,61);ctx.textAlign='left';}
+    if(levelSelectOpenR950)drawLevelSelectR950();
+    if(gameOver)overlayPanel('TOWER — FALLEN',[`SCORE ${String(levelRunScoreR952()).padStart(6,'0')}`,'R — TRY AGAIN','SELECT — LEVELS']);
+    if(victory)overlayPanel('TOWER — CLEAR',[`SCORE ${String(levelRunScoreR952()).padStart(6,'0')} · BEST ${String(bestForLevelR952(4)).padStart(6,'0')}`,`★ ${levelStarsR952}`,'','THE MIND IS ABOVE YOU','','START — LEVEL 5: TETRIS']);
+    drawBootSplash();
+  }
+
+  // ---------------------------------------------------------------------
+  // LEVEL 5 — TETRIS / MIND IS A TRAP. Five stages, then Líra wakes up.
+  // ---------------------------------------------------------------------
+  const TET_COLS_R952=10,TET_ROWS_R952=12,TET_CELL_R952=16,TET_X_R952=160,TET_Y_R952=55;
+  const TET_STAGE_TARGETS_R952=[2,2,3,3,4];
+  const TET_SHAPES_R952=[
+    [[0,0],[1,0],[0,1],[1,1]],
+    [[0,0],[1,0],[2,0],[3,0]],
+    [[0,0],[1,0],[2,0],[1,1]],
+    [[0,0],[0,1],[1,1],[2,1]],
+    [[2,0],[0,1],[1,1],[2,1]],
+    [[1,0],[2,0],[0,1],[1,1]],
+    [[0,0],[1,0],[1,1],[2,1]]
+  ];
+  let tetGridR952=[],tetPieceR952=null,tetStageR952=1,tetLinesStageR952=0,tetTotalLinesR952=0,tetFallR952=0,tetMoveR952=0,tetFinishedR952=false,tetWakeAtR952=0;
+  function emptyTetRowR952(){return Array(TET_COLS_R952).fill(null);}
+  function resetTetrisR952(){tetGridR952=Array.from({length:TET_ROWS_R952},emptyTetRowR952);tetStageR952=1;tetLinesStageR952=0;tetTotalLinesR952=0;tetFallR952=0;tetMoveR952=0;tetFinishedR952=false;tetWakeAtR952=0;player.hp=player.maxHp;newTetPieceR952();}
+  function rotPointR952(pt,r){let [x,y]=pt;for(let i=0;i<r%4;i++)[x,y]=[-y,x];return [x,y];}
+  function tetCellsR952(piece=tetPieceR952,dx=0,dy=0,rot=piece?.rot||0){if(!piece)return[];return TET_SHAPES_R952[piece.kind].map((p,i)=>{const [rx,ry]=rotPointR952(p,rot);return{x:piece.x+rx+dx,y:piece.y+ry+dy,star:i===piece.starIndex};});}
+  function canTetR952(piece,dx=0,dy=0,rot=piece.rot){for(const c of tetCellsR952(piece,dx,dy,rot)){if(c.x<0||c.x>=TET_COLS_R952||c.y>=TET_ROWS_R952)return false;if(c.y>=0&&tetGridR952[c.y][c.x])return false;}return true;}
+  function newTetPieceR952(){
+    tetPieceR952={kind:Math.floor(Math.random()*TET_SHAPES_R952.length),x:4,y:-1,rot:0,starIndex:Math.random()<.38?Math.floor(Math.random()*4):-1};
+    if(!canTetR952(tetPieceR952)){gameOver=true;commitHighScoreR952(5);showMessage('MIND STACK OVERFLOW',2);}
+  }
+  function clearTetLinesR952(){
+    let cleared=0,stars=0;
+    for(let y=TET_ROWS_R952-1;y>=0;y--){if(tetGridR952[y].every(Boolean)){stars+=tetGridR952[y].filter(c=>c.star).length;tetGridR952.splice(y,1);tetGridR952.unshift(emptyTetRowR952());cleared++;y++;}}
+    if(!cleared)return;
+    tetLinesStageR952+=cleared;tetTotalLinesR952+=cleared;score+=cleared*600+Math.max(0,cleared-1)*350;
+    for(let i=0;i<stars;i++){levelStarsR952++;score+=250;}if(stars)showMessage(`★ ${stars} STAR${stars>1?'S':''} +${stars*250}`,.75);
+    tone(420,.09,'square',.022,760);
+    const target=TET_STAGE_TARGETS_R952[tetStageR952-1];
+    if(tetLinesStageR952>=target){
+      if(tetStageR952<5){tetStageR952++;tetLinesStageR952=0;score+=1000;showMessage(`BLOCK STAGE ${tetStageR952} / 5`,1.2);tone(196,.18,'triangle',.03,620);
+        // Each new stage raises a sparse floor with one safe gap.
+        if(tetStageR952>=3){const hole=Math.floor(Math.random()*TET_COLS_R952);tetGridR952.shift();tetGridR952.push(Array.from({length:TET_COLS_R952},(_,x)=>x===hole?null:{color:'#283848',star:false}));}
+      }else{tetFinishedR952=true;tetWakeAtR952=performance.now();victory=true;score+=5000;unlockedLevel=Math.max(unlockedLevel,5);commitHighScoreR952(5);writeSave({...buildSaveData(),completed:true,unlockedLevel:5});tone(330,.42,'triangle',.035,990);}
+    }
+  }
+  function lockTetPieceR952(){
+    const colors=['#70d6e8','#cc5368','#e1a94d','#8a79db','#62b78c','#d96a4c','#7ab2e6'];
+    for(const c of tetCellsR952()){if(c.y<0){gameOver=true;commitHighScoreR952(5);return;}tetGridR952[c.y][c.x]={color:colors[tetPieceR952.kind%colors.length],star:c.star};}
+    clearTetLinesR952();if(!victory)newTetPieceR952();
+  }
+  function hardDropTetR952(){if(!tetPieceR952)return;while(canTetR952(tetPieceR952,0,1))tetPieceR952.y++;score+=20;lockTetPieceR952();}
+  function updateTetrisR952(dt){
+    if(!started||paused||gameOver||victory)return;elapsed+=dt;messageTimer=Math.max(0,messageTimer-dt);shake=Math.max(0,shake-dt*24);tetMoveR952=Math.max(0,tetMoveR952-dt);superMeter=clamp(superMeter+dt*.3,0,SUPER_MAX);
+    const dir=(input.right?1:0)-(input.left?1:0);if(dir&&tetMoveR952<=0&&canTetR952(tetPieceR952,dir,0)){tetPieceR952.x+=dir;tetMoveR952=.105;}
+    if(pressed.jump){const nr=(tetPieceR952.rot+1)%4;if(canTetR952(tetPieceR952,0,0,nr))tetPieceR952.rot=nr;}
+    if(pressed.attack)hardDropTetR952();
+    const interval=Math.max(.16,.72-(tetStageR952-1)*.105);tetFallR952+=dt*(input.kick?5:1);if(tetFallR952>=interval){tetFallR952=0;if(canTetR952(tetPieceR952,0,1))tetPieceR952.y++;else lockTetPieceR952();}
+    if(pressed.super&&superMeter>=SUPER_COST){superMeter-=SUPER_COST;for(let y=TET_ROWS_R952-1;y>=0;y--){if(tetGridR952[y].some(Boolean)){const stars=tetGridR952[y].filter(c=>c?.star).length;tetGridR952.splice(y,1);tetGridR952.unshift(emptyTetRowR952());score+=350;levelStarsR952+=stars;break;}}showMessage('SUPER · BREAK THE MIND',.8);tone(62,.22,'sawtooth',.03,300);}
+    autoSaveClock+=dt;if(autoSaveClock>=2.5){autoSaveClock=0;saveProgress(false);}
+  }
+  function drawTetrisR952(){
+    const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,'#050611');g.addColorStop(.55,'#101124');g.addColorStop(1,'#1b0d1a');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+    // Dream-grid background.
+    ctx.strokeStyle='rgba(103,177,205,.08)';for(let x=0;x<W;x+=24){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}for(let y=0;y<H;y+=24){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+    ctx.fillStyle='rgba(3,5,10,.86)';ctx.fillRect(TET_X_R952-7,TET_Y_R952-7,TET_COLS_R952*TET_CELL_R952+14,TET_ROWS_R952*TET_CELL_R952+14);ctx.strokeStyle='#516b84';ctx.strokeRect(TET_X_R952-6,TET_Y_R952-6,TET_COLS_R952*TET_CELL_R952+12,TET_ROWS_R952*TET_CELL_R952+12);
+    for(let y=0;y<TET_ROWS_R952;y++)for(let x=0;x<TET_COLS_R952;x++){const c=tetGridR952[y][x];if(!c)continue;ctx.fillStyle=c.color;ctx.fillRect(TET_X_R952+x*TET_CELL_R952+1,TET_Y_R952+y*TET_CELL_R952+1,TET_CELL_R952-2,TET_CELL_R952-2);ctx.fillStyle='rgba(255,255,255,.14)';ctx.fillRect(TET_X_R952+x*TET_CELL_R952+2,TET_Y_R952+y*TET_CELL_R952+2,TET_CELL_R952-4,2);if(c.star)drawStarR952(TET_X_R952+x*TET_CELL_R952+8,TET_Y_R952+y*TET_CELL_R952+8,4.2);}
+    if(tetPieceR952&&!victory){const colors=['#70d6e8','#cc5368','#e1a94d','#8a79db','#62b78c','#d96a4c','#7ab2e6'];for(const c of tetCellsR952()){if(c.y<0)continue;ctx.fillStyle=colors[tetPieceR952.kind%colors.length];ctx.fillRect(TET_X_R952+c.x*TET_CELL_R952+1,TET_Y_R952+c.y*TET_CELL_R952+1,TET_CELL_R952-2,TET_CELL_R952-2);if(c.star)drawStarR952(TET_X_R952+c.x*TET_CELL_R952+8,TET_Y_R952+c.y*TET_CELL_R952+8,4.2);}}
+    const liraX=TET_X_R952+(tetPieceR952?.x??4)*TET_CELL_R952+16;drawMiniLiraR952(liraX,TET_Y_R952-11,.62,'idle');
+    ctx.fillStyle='#e9f4fa';ctx.font='bold 8px monospace';ctx.fillText('LEVEL 5 · TETRIS',12,18);ctx.fillStyle='#ad9cc4';ctx.font='6px monospace';ctx.fillText('MIND IS A TRAP · DROP THE BLOCKS',12,29);ctx.fillStyle='#ffd45b';ctx.fillText(`★ ${levelStarsR952}`,12,43);ctx.fillStyle='#d9e8ef';ctx.fillText(`STAGE ${tetStageR952} / 5`,350,18);ctx.fillText(`LINES ${tetLinesStageR952} / ${TET_STAGE_TARGETS_R952[tetStageR952-1]}`,350,29);ctx.fillText(`SCORE ${String(levelRunScoreR952()).padStart(6,'0')}`,350,40);ctx.fillStyle='#7998ac';ctx.fillText(`BEST ${String(bestForLevelR952(5)).padStart(6,'0')}`,350,51);
+    ctx.fillStyle='#8397a8';ctx.font='6px monospace';ctx.fillText('A DROP · B ROTATE · C FAST',12,H-13);
+    if(messageTimer>0&&!victory&&!gameOver){ctx.fillStyle='#eff7ff';ctx.font='bold 9px monospace';ctx.textAlign='center';ctx.fillText(message,W/2,48);ctx.textAlign='left';}
+    if(levelSelectOpenR950)drawLevelSelectR950();
+    if(gameOver)overlayPanel('TETRIS — MIND LOCK',[`SCORE ${String(levelRunScoreR952()).padStart(6,'0')}`,'R — TRY AGAIN','SELECT — LEVELS']);
+    if(victory)drawWakeUpFinalR952();
+    drawBootSplash();
+  }
+  function drawWakeUpFinalR952(){
+    const t=Math.max(0,(performance.now()-tetWakeAtR952)/1000),p=clamp(t/4.8,0,1);ctx.save();
+    const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,`rgba(20,28,55,${1-p*.7})`);g.addColorStop(1,`rgba(245,164,91,${.22+p*.65})`);ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+    // Eyelids open into morning light.
+    const lid=(1-p)*H*.48;ctx.fillStyle='#020308';ctx.fillRect(0,0,W,lid);ctx.fillRect(0,H-lid,W,lid);ctx.globalAlpha=clamp((p-.18)*1.6,0,1);ctx.fillStyle='#ffe4b3';ctx.beginPath();ctx.arc(W*.72,H*.28,28+p*14,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;
+    drawMiniLiraR952(W*.43,H*.78,.86,'idle');ctx.textAlign='center';ctx.fillStyle='#ffffff';ctx.font='bold 20px monospace';ctx.fillText('WAKE UP',W/2,93);ctx.fillStyle='#bfe9f4';ctx.font='bold 9px monospace';ctx.fillText('DREAM COMPLETE',W/2,112);ctx.fillStyle='#f4d8b2';ctx.font='7px monospace';ctx.fillText(`FINAL SCORE ${String(score).padStart(6,'0')}  ·  ★ ${levelStarsR952}`,W/2,132);ctx.fillStyle='#9eb2c3';ctx.fillText('DREAMING OF LÍRA · ANDRIK',W/2,151);ctx.fillStyle='#d9e9ef';ctx.fillText('SELECT — REPLAY ANY UNLOCKED LEVEL',W/2,178);ctx.textAlign='left';ctx.restore();
+  }
+
+  // ---------------------------------------------------------------
+  // Universal level select, save, start/update/draw wrappers.
+  // ---------------------------------------------------------------
+  drawLevelSelectR950=function(){
+    const lines=[];for(let l=1;l<=5;l++){const unlocked=l<=unlockedLevel;lines.push(`${l===levelSelectChoiceR950?'>':' '} LEVEL ${l} — ${LEVEL_NAMES_R950[l]} ${unlocked?'':'🔒'}`);}lines.push('');lines.push('SELECT — NEXT   START — PLAY');overlayPanel('LEVEL SELECT',lines);
+  };
+  openLevelSelectR950=function(){const save=readSave();if(save)unlockedLevel=Math.max(unlockedLevel,save.unlockedLevel||save.currentLevel||1);levelSelectOpenR950=true;levelSelectChoiceR950=Math.min(Math.max(1,currentLevel),Math.min(5,unlockedLevel));paused=true;};
+  cycleLevelSelectR950=function(){const max=Math.max(1,Math.min(5,unlockedLevel));levelSelectChoiceR950=levelSelectChoiceR950>=max?1:levelSelectChoiceR950+1;};
+  confirmLevelSelectR950=function(){if(!levelSelectOpenR950)return false;const pick=Math.min(levelSelectChoiceR950,Math.max(1,Math.min(5,unlockedLevel)));levelSelectOpenR950=false;paused=false;startLevel(pick,false);begin();saveProgress(false);return true;};
+
+  const __r950HandleSelectR952=handleSelect;
+  handleSelect=function(){
+    unlockAudio();if(!started)return __r950HandleSelectR952();if(levelSelectOpenR950){cycleLevelSelectR950();return;}
+    const save=readSave(),max=Math.max(unlockedLevel,save?.unlockedLevel||1);if(max>1&&!gameOver){unlockedLevel=Math.min(5,max);openLevelSelectR950();return;}return __r950HandleSelectR952();
+  };
+
+  function updateActionLabelsR952(level=currentLevel){
+    updateActionLabelsR950(Math.min(level,3));
+    const a=document.querySelector('[data-action="attack"] .label'),b=document.querySelector('[data-action="jump"] .label'),c=document.querySelector('[data-action="kick"] .label'),sw=document.querySelector('[data-action="sword"]');
+    if(level===1||level===2||level===4){if(a)a.textContent='PUNCH';if(b)b.textContent='JUMP';if(c)c.textContent='SWEEP';}
+    if(level===5){if(a)a.textContent='DROP';if(b)b.textContent='ROTATE';if(c)c.textContent='FAST';}
+    if(sw){sw.style.opacity=level===3||level===5?'.45':'1';sw.setAttribute('aria-disabled',level===3||level===5?'true':'false');}
+  }
+
+  const __r950StartLevelR952=startLevel;
+  startLevel=function(level,keepScore=false){
+    level=Math.max(1,Math.min(5,Number(level)||1));
+    if(level<=3){__r950StartLevelR952(level,keepScore);levelScoreStartR952=score;levelStarsR952=0;resetGroundStarsR952(level);if(level===3)resetSpaceCollectStarsR952();unlockedLevel=Math.max(unlockedLevel,level);updateActionLabelsR952(level);return;}
+    const oldScore=score;currentLevel=level;WORLD_W=W;player=createPlayer();enemies=[];effects=[];waves=[];elapsed=0;cameraX=0;score=keepScore?oldScore:0;levelScoreStartR952=score;levelStarsR952=0;shake=0;flash=0;message='';messageTimer=0;gameOver=false;victory=false;paused=false;cinematic=null;autoSaveClock=0;attackPressStarted=-99;attackTapCount=0;attackTapDeadline=0;specialCharging=false;specialHoldStart=-99;guitarSpecialCooldown=0;unlockedLevel=Math.max(unlockedLevel,level);for(const k of Object.keys(input))input[k]=false;pressed.attack=false;pressed.jump=false;pressed.kick=false;pressed.super=false;
+    if(level===4){resetTowerR952();showMessage('LEVEL 4 — TOWER',1.8);}
+    if(level===5){resetTetrisR952();showMessage('LEVEL 5 — TETRIS',1.8);}
+    updateActionLabelsR952(level);
+  };
+
+  const __r950HandleStartR952=handleStartPause;
+  handleStartPause=function(){
+    if(levelSelectOpenR950){confirmLevelSelectR950();return;}
+    if(victory&&currentLevel===3){commitHighScoreR952(3);unlockedLevel=Math.max(unlockedLevel,4);saveFreshLevel(4,score);startLevel(4,true);begin();saveProgress(false);return;}
+    if(victory&&currentLevel===4){startLevel(5,true);begin();saveProgress(false);return;}
+    if(victory&&currentLevel===5){openLevelSelectR950();return;}
+    return __r950HandleStartR952();
+  };
+
+  const __r950BuildSaveR952=buildSaveData;
+  buildSaveData=function(){
+    const d=__r950BuildSaveR952();d.unlockedLevel=Math.max(unlockedLevel,currentLevel);d.r952={levelScoreStart:levelScoreStartR952,levelStars:levelStarsR952};
+    if(currentLevel===4)d.towerR952={x:towerX_R952,y:towerY_R952,hp:player.hp,lastSafe:towerLastSafeR952,stars:towerStarsR952.map(s=>({id:s.id,taken:s.taken})),crates:towerCratesR952.map(c=>({id:c.id,broken:c.broken})),enemies:towerEnemiesR952.map(e=>({id:e.id,alive:e.alive}))};
+    if(currentLevel===5)d.tetrisR952={stage:tetStageR952,linesStage:tetLinesStageR952,totalLines:tetTotalLinesR952,grid:tetGridR952,piece:tetPieceR952};
+    return d;
+  };
+
+  const __r950RestoreR952=restoreSave;
+  restoreSave=function(data){
+    if(!data)return false;
+    if(Number(data.currentLevel)>=4){startLevel(Math.min(5,Number(data.currentLevel)||4),false);score=Number.isFinite(data.score)?data.score:0;levelScoreStartR952=Number(data?.r952?.levelScoreStart)||score;levelStarsR952=Number(data?.r952?.levelStars)||0;unlockedLevel=Math.max(currentLevel,Math.min(5,Number(data.unlockedLevel)||currentLevel));
+      if(currentLevel===4&&data.towerR952){const z=data.towerR952;towerX_R952=clamp(Number(z.x)||74,14,W-14);towerY_R952=Math.max(0,Number(z.y)||0);towerLastSafeR952=Math.max(0,Number(z.lastSafe)||0);player.hp=clamp(Number(z.hp)||100,1,100);for(const s of z.stars||[]){const t=towerStarsR952.find(x=>x.id===s.id);if(t)t.taken=!!s.taken;}for(const c of z.crates||[]){const t=towerCratesR952.find(x=>x.id===c.id);if(t)t.broken=!!c.broken;}for(const e of z.enemies||[]){const t=towerEnemiesR952.find(x=>x.id===e.id);if(t)t.alive=!!e.alive;}towerCameraR952=Math.max(0,towerY_R952-105);}
+      if(currentLevel===5&&data.tetrisR952){const z=data.tetrisR952;tetStageR952=clamp(Number(z.stage)||1,1,5);tetLinesStageR952=Math.max(0,Number(z.linesStage)||0);tetTotalLinesR952=Math.max(0,Number(z.totalLines)||0);if(Array.isArray(z.grid)&&z.grid.length===TET_ROWS_R952)tetGridR952=z.grid;if(z.piece)tetPieceR952=z.piece;}
+      started=true;paused=false;gameOver=false;victory=false;updateActionLabelsR952(currentLevel);showMessage('DREAM RESTORED',1.4);return true;
+    }
+    const ok=__r950RestoreR952(data);if(ok){unlockedLevel=Math.max(unlockedLevel,Math.min(5,Number(data.unlockedLevel)||currentLevel));levelScoreStartR952=Number(data?.r952?.levelScoreStart)||score;levelStarsR952=Number(data?.r952?.levelStars)||0;resetGroundStarsR952(currentLevel);if(currentLevel===3)resetSpaceCollectStarsR952();updateActionLabelsR952(currentLevel);}return ok;
+  };
+
+  const __r950UpdateFinalR952=update;
+  update=function(dt){
+    if(currentLevel===4){updateTowerR952(dt);return;}if(currentLevel===5){updateTetrisR952(dt);return;}
+    const before=victory;__r950UpdateFinalR952(dt);if(currentLevel===3)updateSpaceCollectStarsR952(dt);
+    if(!before&&victory){commitHighScoreR952(currentLevel);if(currentLevel===3){unlockedLevel=Math.max(unlockedLevel,4);saveFreshLevel(4,score);}}
+  };
+
+  const __r950DrawFinalR952=draw;
+  draw=function(){
+    if(currentLevel===4){drawTowerR952();return;}if(currentLevel===5){drawTetrisR952();return;}
+    __r950DrawFinalR952();if(currentLevel===3){drawSpaceCollectStarsR952();if(victory)overlayPanel('SPACE — CLEAR',[`SCORE ${String(levelRunScoreR952()).padStart(6,'0')} · BEST ${String(bestForLevelR952(3)).padStart(6,'0')}`,`★ ${levelStarsR952}`,'','TOWER IS OPEN','','START — LEVEL 4: TOWER']);}
+    if(started&&currentLevel<=2&&!gameOver&&!levelSelectOpenR950){ctx.save();ctx.textAlign='right';ctx.fillStyle='#ffd45b';ctx.font='bold 6px monospace';ctx.fillText(`★ ${levelStarsR952} · BEST ${String(bestForLevelR952(currentLevel)).padStart(6,'0')}`,W-10,49);ctx.restore();}
+  };
+
+  // Direct fifth touch button. It is the same move as pressing A+B together.
+  const swordBtnR952=document.querySelector('[data-action="sword"]');
+  function triggerSwordR952(){
+    if(paused||gameOver||victory)return;if(currentLevel<=2){startSwordR950();return;}if(currentLevel===4){towerSwordT_R952=.48;towerMeleeR952(60);tone(420,.07,'sawtooth',.020,155);}
+  }
+  if(swordBtnR952){
+    const down=e=>{e.preventDefault();e.stopImmediatePropagation();if(!started)return;if(currentLevel===3||currentLevel===5)return;begin();swordBtnR952.classList.add('active');swordButtonPulseR952=true;triggerSwordR952();try{swordBtnR952.setPointerCapture(e.pointerId);}catch(_){}};
+    const up=e=>{e.preventDefault();e.stopImmediatePropagation();swordBtnR952.classList.remove('active');swordButtonPulseR952=false;};
+    swordBtnR952.addEventListener('pointerdown',down,{capture:true,passive:false});swordBtnR952.addEventListener('pointerup',up,{capture:true,passive:false});swordBtnR952.addEventListener('pointercancel',up,{capture:true,passive:false});
+  }
+
+  // Full-screen 16:9 user-approved splash. No contain-bars: source and canvas are both 16:9.
+  drawBootSplash=function(){if(performance.now()>=bootSplashUntil)return;if(!bootSplash.complete||!bootSplash.naturalWidth){ctx.fillStyle='#02040a';ctx.fillRect(0,0,W,H);return;}ctx.save();ctx.drawImage(bootSplash,0,0,W,H);ctx.restore();};
+
+  // Desktop review shortcuts for the two new levels.
+  window.addEventListener('keydown',(e)=>{if(!started&&e.code==='Digit4'){e.preventDefault();unlockedLevel=Math.max(unlockedLevel,4);startLevel(4,false);begin();}if(!started&&e.code==='Digit5'){e.preventDefault();unlockedLevel=5;startLevel(5,false);begin();}}, {passive:false});
+
+  // Recover unlocks from prior completed saves without downgrading anything.
+  try{const s=readSave();if(s){let u=Number(s.unlockedLevel)||Number(s.currentLevel)||1;if(s.completed&&Number(s.currentLevel)===3)u=Math.max(u,4);unlockedLevel=Math.max(unlockedLevel,Math.min(5,u));}}catch(_){}
+
 
   titleChoice = hasSave() ? 0 : 1;
   buildWaves();
