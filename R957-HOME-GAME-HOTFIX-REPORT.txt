@@ -1,0 +1,11 @@
+R957 — HOME + GAME HOTFIX
+
+Changes:
+1. Home page hero: removed the top "Открыть альбомы" button.
+2. Home page header: strengthened transparent header override so the dark strip is removed and Lyra hair stays visible behind the top bar.
+3. Dreaming of Líra level 1 boss: added vertical clamp for NIGHT ENFORCER in phase 2 so he cannot sink below the reachable combat lane and soft-lock the fight.
+
+Files changed:
+- index.html
+- dreaming-of-lira.html
+- R957-HOME-GAME-HOTFIX-REPORT.txt

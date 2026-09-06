@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788726552365-ade55ea2d3",
-  "release": "R956",
-  "archiveName": "ANDRIK-R956-SITE-POLISH-R955-GAME-R953-PUSH-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "83c0b508a0a1e7d23fc6718fa87143e742172151",
-  "backupSha": "83c0b508a0a1e7d23fc6718fa87143e742172151",
+  "operationId": "publish-1788730855736-a9c97fc962",
+  "release": "R957",
+  "archiveName": "ANDRIK-R957-HOME-GAME-HOTFIX-R956-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "6bc0716355d5bed1d87aae6f1ac7d91669f557ba",
+  "backupSha": "6bc0716355d5bed1d87aae6f1ac7d91669f557ba",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-06T20:29:13.297Z"
+  "generatedAt": "2026-09-06T21:40:55.736Z"
 }

@@ -95,9 +95,25 @@ main,.topbar,.site-footer,section,header,footer,.wrap{max-width:100%;}
 
 <link href="/assets/albums-r447.css?v=55.00-r447" rel="stylesheet"/><link href="/assets/albums-r479.css?v=55.00-r479" rel="stylesheet"/><link href="/assets/home-clips-hub-r484.css?v=55.00-r484" rel="stylesheet"/><link href="/assets/home-trika-live-r520.css?v=55.00-r520" rel="stylesheet"/><link href="/assets/home-lyra-hero-r598.css?v=55.00-r685" rel="stylesheet"/><link href="/assets/home-radio-r564.css?v=55.00-r564" rel="stylesheet"/>
 <link href="/assets/home-albums-four-r601.css?v=55.00-r601" rel="stylesheet"/><link href="/assets/home-game-r938.css?v=55.00-r939" rel="stylesheet"/>
-<style id="r956-home-transparent-header">
-body.home-fast-r213 .topbar,body.home-fast-r213 .topbar.scrolled{background:transparent!important;border-color:transparent!important;border-bottom:0!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
-body.home-fast-r213 .topbar::before,body.home-fast-r213 .topbar::after{content:none!important;display:none!important}
+<style id="r957-home-transparent-header">
+body.home-fast-r213 .topbar,
+body.home-fast-r213 .topbar.scrolled,
+body.home-fast-r213 .topbar::before,
+body.home-fast-r213 .topbar::after,
+body.home-fast-r213 .topbar .nav-shell{
+  background:transparent!important;
+  background-image:none!important;
+  border-color:transparent!important;
+  border-bottom:0!important;
+  box-shadow:none!important;
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important;
+}
+body.home-fast-r213 .topbar::before,
+body.home-fast-r213 .topbar::after{
+  content:none!important;
+  display:none!important;
+}
 </style>
 </head>
 <body class="home-fast-r213">
@@ -142,7 +158,7 @@ body.home-fast-r213 .topbar::before,body.home-fast-r213 .topbar::after{content:n
   <div class="wrap lyra-hero-r562__inner">
     <div class="lyra-hero-r562__panel">
       <div class="lyra-hero-r562__primary">
-        <a class="lyra-hero-r562__btn" href="/albums.html">Открыть альбомы</a><a class="lyra-hero-r562__btn lyra-game-r938" href="/dreaming-of-lira.html"><span class="lyra-game-r938__eye" aria-hidden="true"></span><span><small>НОВАЯ ИГРА</small>Играть · Dreaming of Líra</span></a>
+        <a class="lyra-hero-r562__btn lyra-game-r938" href="/dreaming-of-lira.html"><span class="lyra-game-r938__eye" aria-hidden="true"></span><span><small>НОВАЯ ИГРА</small>Играть · Dreaming of Líra</span></a>
       </div>
       <a class="lyra-hero-r564__radio" data-force-app="youtube" data-youtube-live-auto="1" data-web-url="https://www.youtube.com/@andrikmetal/live" href="https://www.youtube.com/@andrikmetal/live" rel="noopener external"><span class="lyra-hero-r564__radio-dot" aria-hidden="true"></span><span>ANDRIK METAL RADIO 24/7</span><small>LIVE</small></a>
       <nav class="lyra-hero-r562__nav" aria-label="Быстрая навигация по ANDRIK">

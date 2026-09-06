@@ -4252,9 +4252,11 @@
     if(e.r955Life===1){if(d>48){e.x+=dx/d*e.speed*dt;e.y+=dy/d*e.speed*.55*dt;}else if(e.attackCooldown<=0){e.attackCooldown=.72;e.attack={t:0,duration:.46,hit:false};}if(e.attack){e.attack.t+=dt;if(!e.attack.hit&&e.attack.t>.16&&e.attack.t<.30&&d<56){e.attack.hit=true;damagePlayer(20,e.x);}if(e.attack.t>=e.attack.duration)e.attack=null;}}
     else{
       const desired=155;if(d<desired-30){e.x-=dx/d*e.speed*.65*dt;e.y-=dy/d*e.speed*.25*dt;}else if(d>desired+35){e.x+=dx/d*e.speed*.55*dt;e.y+=dy/d*e.speed*.25*dt;}
+      e.y=clamp(e.y,FLOOR_TOP+12,FLOOR_BOTTOM-8);
       if(e.rifleCd<=0){e.rifleCd=.72+Math.random()*.25;const mag=Math.hypot(dx,dy)||1;cityBossBulletsR955.push({x:e.x+e.face*20,y:e.y-28,vx:dx/mag*230,vy:dy/mag*135,t:0});e.attack={t:0,duration:.20,hit:true};tone(130,.045,'square',.022,60);}
       if(e.attack){e.attack.t+=dt;if(e.attack.t>=e.attack.duration)e.attack=null;}
     }
+    e.y=clamp(e.y,FLOOR_TOP+12,FLOOR_BOTTOM-8);
   }
   function updateSacredBossR955(e,dt){
     if(!e.alive){e.deathTimer=Math.max(0,e.deathTimer-dt);return;}e.hitFlash=Math.max(0,e.hitFlash-dt);e.stun=Math.max(0,e.stun-dt);if(e.stun>0)return;e.specialCooldown=Math.max(0,e.specialCooldown-dt);e.attackCooldown=Math.max(0,e.attackCooldown-dt);e.bossPhase=e.r955Life;const dx=player.x-e.x,dy=player.y-e.y,d=Math.hypot(dx,dy)||1;e.face=dx>=0?1:-1;
