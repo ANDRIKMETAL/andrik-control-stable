@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
   <meta name="theme-color" content="#080b12" />
-  <title>Dreaming of Líra — ANDRIK Game · R004</title>
+  <title>Dreaming of Líra — ANDRIK Game · R005</title>
   <style>
     :root {
       --ink: #f4f1e8;
@@ -146,10 +146,10 @@
 
     .actions {
       position: absolute;
-      right: max(14px, env(safe-area-inset-right));
-      bottom: max(20px, calc(env(safe-area-inset-bottom) + 8px));
-      width: clamp(142px, 23vw, 204px);
-      height: clamp(112px, 18vw, 164px);
+      right: max(12px, env(safe-area-inset-right));
+      bottom: max(18px, calc(env(safe-area-inset-bottom) + 8px));
+      width: clamp(184px, 29vw, 250px);
+      height: clamp(122px, 19vw, 170px);
       pointer-events: auto;
     }
 
@@ -173,7 +173,24 @@
       box-shadow: 0 0 20px rgba(74,176,207,.20);
     }
     [data-action="attack"] { right: 0; bottom: 0; }
-    [data-action="jump"]   { left: 0; top: 0; }
+    [data-action="jump"]   { right: 0; top: 0; }
+    [data-action="super"]  { left: 0; bottom: 4px; }
+    .superBtn {
+      width: clamp(58px, 8.2vw, 74px);
+      height: clamp(58px, 8.2vw, 74px);
+      border-color: rgba(255,170,53,.65);
+      color: #ffd96b;
+      background: rgba(91,42,3,.30);
+      box-shadow: inset 0 0 0 2px rgba(0,0,0,.22), 0 0 16px rgba(255,123,22,.12);
+    }
+    .superBtn.ready {
+      border-color: rgba(255,211,70,.95);
+      color: #fff0a0;
+      background: rgba(141,58,0,.50);
+      box-shadow: 0 0 18px rgba(255,136,30,.52), inset 0 0 12px rgba(255,220,90,.16);
+    }
+    .superBtn .guitarIcon { font-size: clamp(17px, 2.8vw, 25px); line-height: 1; }
+    .superBtn .label { color: inherit; }
 
     .systemButtons {
       position: absolute;
@@ -249,7 +266,8 @@
       </div>
       <div class="actions" aria-label="Кнопки боя">
         <button class="touchBtn actionBtn" data-action="jump" aria-label="Прыжок"><span><span class="letter">B</span><span class="label">JUMP</span></span></button>
-        <button class="touchBtn actionBtn" data-action="attack" aria-label="Удар"><span><span class="letter">A</span><span class="label">HIT · AA HOLD</span></span></button>
+        <button class="touchBtn actionBtn superBtn" data-action="super" aria-label="Супер удар гитарой"><span><span class="guitarIcon">⚡🎸</span><span class="label">SUPER</span></span></button>
+        <button class="touchBtn actionBtn" data-action="attack" aria-label="Удар"><span><span class="letter">A</span><span class="label">HIT</span></span></button>
       </div>
       <div class="systemButtons">
         <button class="systemBtn" data-system="select" aria-label="Select">SELECT</button>
@@ -265,8 +283,8 @@
   "use strict";
 
   // ================================================================
-  // DREAMING OF LÍRA R004 — browser beat 'em up game
-  // Original implementation for ANDRIK / andrikmetal.com · R940 site integration
+  // DREAMING OF LÍRA R005 — browser beat 'em up game
+  // Original implementation for ANDRIK / andrikmetal.com · R941 site integration
   // No ROM code, sprites, audio, maps or other assets are copied here.
   // ================================================================
 
@@ -308,7 +326,7 @@
   // Persistent browser save. Kept deliberately small and JSON-only so it works on the website
   // without a backend. Autosave is also written on pause / tab hide / page close.
   const SAVE_KEY = "dreaming-of-lira-save";
-  const SAVE_VERSION = 3;
+  const SAVE_VERSION = 4;
   let unlockedLevel = 1;
   let titleChoice = 0; // 0 = CONTINUE, 1 = NEW GAME
   let autoSaveClock = 0;
@@ -320,12 +338,14 @@
     up: false,
     down: false,
     attack: false,
-    jump: false
+    jump: false,
+    super: false
   };
 
   const pressed = {
     attack: false,
-    jump: false
+    jump: false,
+    super: false
   };
 
   // Level 2 uses the four approved Líra artworks as arcade-style story cut-ins.
@@ -344,6 +364,45 @@
 
   let cinematic = null;
 
+  // R005 / R941 startup splash shown after entering landscape.
+  const bootSplash = new Image();
+  bootSplash.src = "assets/dreaming-lira-r941-splash.webp";
+  let bootSplashUntil = performance.now() + 1150;
+  let lastLandscape = innerWidth >= innerHeight;
+
+  // Separate SUPER meter replaces the old A-A-HOLD input.
+  let superMeter = 28;
+  const SUPER_MAX = 100;
+  const SUPER_COST = 50;
+
+  // LEVEL 1 bike chase state.
+  let bikeMode = false;
+  let bikeDone = false;
+  let bikeDistance = 0;
+  let bikeSpeed = 255;
+  let bikeY = 210;
+  let bikeZ = 0;
+  let bikeVz = 0;
+  let bikeInvuln = 0;
+  let bikeAttackT = 0;
+  let bikeSuperT = 0;
+  let bikeCrashT = 0;
+  const BIKE_END = 5750;
+  const bikePits = [
+    { d: 760, lane: 0, w: 100 }, { d: 1180, lane: 1, w: 110 },
+    { d: 1560, lane: 0, w: 118 }, { d: 1980, lane: 1, w: 128 },
+    { d: 2400, lane: 0, w: 105 }, { d: 2760, lane: 1, w: 135 },
+    { d: 3220, lane: 0, w: 120 }, { d: 3600, lane: 1, w: 112 },
+    { d: 4050, lane: 0, w: 138 }, { d: 4470, lane: 1, w: 120 },
+    { d: 4920, lane: 0, w: 150 }, { d: 5280, lane: 1, w: 135 }
+  ];
+  const bikeRivalTemplate = [
+    [520,0,"gang"],[920,1,"police"],[1320,0,"gang"],[1700,1,"police"],
+    [2140,0,"police"],[2520,1,"gang"],[2960,0,"gang"],[3380,1,"police"],
+    [3820,0,"police"],[4240,1,"gang"],[4700,0,"police"],[5160,1,"gang"],[5480,0,"police"]
+  ];
+  let bikeRivals = [];
+
   function startCinematic(artKey, title, subtitle = "", seconds = 1.45) {
     cinematic = { artKey, title, subtitle, t: seconds, duration: seconds };
   }
@@ -361,7 +420,9 @@
     KeyJ: "attack",
     Space: "attack",
     KeyX: "jump",
-    KeyK: "jump"
+    KeyK: "jump",
+    KeyC: "super",
+    KeyL: "super"
   };
 
   // ------------------------------
@@ -690,7 +751,7 @@
       const raw = localStorage.getItem(SAVE_KEY);
       if (!raw) return null;
       const data = JSON.parse(raw);
-      if (!data || data.version !== SAVE_VERSION) return null;
+      if (!data || ![3, 4].includes(data.version)) return null;
       if (![1, 2].includes(data.currentLevel)) return null;
       return data;
     } catch (_) {
@@ -856,6 +917,7 @@
     for (const k of Object.keys(input)) input[k] = false;
     pressed.attack = false;
     pressed.jump = false;
+    pressed.super = false;
     started = true;
     showMessage(data.fresh ? (currentLevel === 2 ? "LEVEL 2 — OCEAN" : "ENTER THE DREAM") : "DREAM RESTORED", 1.5);
     if (currentLevel === 2 && data.fresh) startCinematic("fight", "OCEAN", "THE SECOND DREAM", 2.1);
@@ -1600,7 +1662,7 @@
 
     ctx.save();
     ctx.translate(Math.round(sx), Math.round(sy));
-    ctx.scale(p.face, 1);
+    ctx.scale(p.face * 1.23, 1.23);
 
     const walking = Math.abs(p.vx) + Math.abs(p.vy) > 12 && p.z < 2;
     const step = walking ? Math.sin(p.walkPhase) : 0;
@@ -2081,28 +2143,28 @@
       const save = readSave();
       if (save) {
         const label = save.currentLevel === 2 ? "LEVEL 2 — OCEAN" : "LEVEL 1 — CITY OF SLEEP";
-        overlayPanel("DREAMING OF LÍRA · R004", [
+        overlayPanel("DREAMING OF LÍRA · R005", [
           `SAVE FOUND · ${label}`,
           "",
           `${titleChoice === 0 ? ">" : " "} ДАЛЕЕ / CONTINUE`,
           `${titleChoice === 1 ? ">" : " "} НОВАЯ ИГРА / NEW GAME`,
           "",
           "SELECT — CHOOSE   START — OK",
-          "SPECIAL · A A + HOLD A"
+          "SUPER · GUITAR RIFF"
         ]);
       } else {
-        overlayPanel("DREAMING OF LÍRA · R004", [
+        overlayPanel("DREAMING OF LÍRA · R005", [
           "LEVEL 1 — CITY OF SLEEP",
           "",
           "ANDROID: LANDSCAPE MODE",
           "D-PAD · A HIT · B JUMP",
-          "SPECIAL · A A + HOLD A",
+          "SUPER · GUITAR RIFF",
           "",
           "START — ENTER DREAM"
         ]);
       }
     } else if (paused) {
-      overlayPanel("PAUSED", ["START / P — CONTINUE", "SELECT — SAVE", "SPECIAL — A A + HOLD A"]);
+      overlayPanel("PAUSED", ["START / P — CONTINUE", "SELECT — SAVE", "SUPER — GUITAR RIFF"]);
     } else if (gameOver) {
       overlayPanel("THE DREAM COLLAPSES", ["R — TRY AGAIN"]);
     } else if (victory) {
@@ -2310,6 +2372,7 @@
 
     pressed.attack = false;
     pressed.jump = false;
+    pressed.super = false;
     requestAnimationFrame(frame);
   }
 
@@ -2436,7 +2499,7 @@
     if (!input[action]) {
       let consumed = false;
       if (action === "attack") consumed = registerAttackDown();
-      if ((action === "attack" && !consumed) || action === "jump") pressed[action] = true;
+      if ((action === "attack" && !consumed) || action === "jump" || action === "super") pressed[action] = true;
     }
     input[action] = true;
   }, { passive: false });
@@ -2460,7 +2523,7 @@
       if (!input[action]) {
         let consumed = false;
         if (action === "attack") consumed = registerAttackDown();
-        if ((action === "attack" && !consumed) || action === "jump") pressed[action] = true;
+        if ((action === "attack" && !consumed) || action === "jump" || action === "super") pressed[action] = true;
       }
       input[action] = true;
       try { btn.setPointerCapture(e.pointerId); } catch (_) {}
@@ -2545,6 +2608,7 @@
     for (const k of Object.keys(input)) input[k] = false;
     pressed.attack = false;
     pressed.jump = false;
+    pressed.super = false;
     buildWaves();
 
     if (level === 2) {
@@ -2556,6 +2620,454 @@
   function resetGame() {
     startLevel(currentLevel, false);
   }
+
+
+  // =====================================================================
+  // R005 FIRST-LEVEL REBUILD — CITY OF SLEEP + BIKE CHASE + SUPER BUTTON
+  // =====================================================================
+  const __baseBuildWaves = buildWaves;
+  const __baseMakeEnemy = makeEnemy;
+  const __baseDrawEnemy = drawEnemy;
+  const __baseDrawBackgroundLevel1 = drawBackgroundLevel1;
+  const __baseUpdatePlayer = updatePlayer;
+  const __baseDamageEnemy = damageEnemy;
+  const __baseDamagePlayer = damagePlayer;
+  const __baseGetCurrentGateX = getCurrentGateX;
+  const __baseDrawHUD = drawHUD;
+  const __baseDraw = draw;
+  const __baseUpdate = update;
+  const __baseBuildSaveData = buildSaveData;
+  const __baseRestoreSave = restoreSave;
+  const __baseStartLevel = startLevel;
+  const __baseStartGuitarSpecial = startGuitarSpecial;
+
+  // The old A-A-HOLD recognizer is intentionally disabled in R005.
+  registerAttackDown = function() { attackPressStarted = elapsed; return false; };
+  registerAttackUp = function() {};
+
+  function resetBikeState() {
+    bikeMode = false;
+    bikeDone = false;
+    bikeDistance = 0;
+    bikeSpeed = 255;
+    bikeY = 210;
+    bikeZ = 0;
+    bikeVz = 0;
+    bikeInvuln = 0;
+    bikeAttackT = 0;
+    bikeSuperT = 0;
+    bikeCrashT = 0;
+    bikeRivals = bikeRivalTemplate.map((r, i) => ({ id:i, d:r[0], lane:r[1], kind:r[2], hp:36, maxHp:36, alive:true, hit:false }));
+  }
+  resetBikeState();
+
+  makeEnemy = function(type, x, y) {
+    if (currentLevel === 2) return __baseMakeEnemy(type, x, y);
+    if (type === "grunt") type = "gang";
+    if (type === "brute") type = "riot";
+    if (type === "boss") {
+      const e = __baseMakeEnemy("boss", x, y);
+      e.variant = "hollow-captain";
+      e.hp = e.maxHp = 330;
+      e.damage = 18;
+      e.speed = 54;
+      return e;
+    }
+    const e = __baseMakeEnemy("grunt", x, y);
+    e.type = type;
+    if (type === "police") {
+      e.variant = "police"; e.hp = e.maxHp = 56; e.damage = 10; e.speed = 61; e.width=21; e.height=42;
+    } else if (type === "riot") {
+      e.variant = "riot"; e.hp = e.maxHp = 92; e.damage = 13; e.speed = 45; e.width=24; e.height=46;
+    } else {
+      e.variant = "gang"; e.hp = e.maxHp = 48; e.damage = 9; e.speed = 68; e.width=21; e.height=42;
+    }
+    return e;
+  };
+
+  buildWaves = function() {
+    if (currentLevel === 2) return __baseBuildWaves();
+    waves = [
+      {
+        name:"ALLEY OF LIES", trigger:330, gate:875, started:false, cleared:false, ids:[],
+        spawns:[["gang",535,198],["police",625,231],["gang",735,213]]
+      },
+      {
+        name:"NO ESCAPE", trigger:1120, gate:1735, started:false, cleared:false, ids:[],
+        spawns:[["police",1320,190],["gang",1410,236],["riot",1515,211],["gang",1625,198]]
+      },
+      {
+        name:"BOSS — THE HOLLOW", trigger:2780, gate:3290, started:false, cleared:false, ids:[],
+        spawns:[["boss",3050,212]]
+      }
+    ];
+  };
+
+  getCurrentGateX = function() {
+    if (currentLevel === 1 && !bikeDone && !bikeMode && waves[1] && waves[1].cleared) return 1892;
+    return __baseGetCurrentGateX();
+  };
+
+  function triggerSuper() {
+    if (!started || paused || gameOver || victory) return false;
+    if (superMeter < SUPER_COST) { showMessage("SUPER NOT READY", .65); tone(92,.05,"square",.012,70); return false; }
+    superMeter = Math.max(0, superMeter - SUPER_COST);
+    if (bikeMode) {
+      bikeSuperT = .72;
+      let hits = 0;
+      for (const r of bikeRivals) {
+        if (!r.alive) continue;
+        const rx = 118 + (r.d - bikeDistance) * .31;
+        if (rx > 80 && rx < 390 && Math.abs((r.lane ? 228 : 184) - bikeY) < 60) {
+          r.alive = false; hits++; score += 280;
+        }
+      }
+      showMessage(hits ? `ELECTRIC RIFF ×${hits}` : "ELECTRIC RIFF", .85);
+      hitShake(9); flash = Math.max(flash,.14);
+      tone(62,.20,"sawtooth",.04,135);
+      return true;
+    }
+    if (player.dead || player.stun > 0) return false;
+    guitarSpecialCooldown = 0;
+    __baseStartGuitarSpecial();
+    showMessage("SUPER · ELECTRIC RIFF!", .95);
+    return true;
+  }
+
+  damageEnemy = function(e, amount, knockX) {
+    const before = e.hp;
+    __baseDamageEnemy(e, amount, knockX);
+    if (before > e.hp) superMeter = clamp(superMeter + Math.max(2, amount * .52), 0, SUPER_MAX);
+  };
+
+  damagePlayer = function(amount, fromX) {
+    const before = player.hp;
+    __baseDamagePlayer(amount, fromX);
+    if (before > player.hp) superMeter = clamp(superMeter + Math.max(4, amount * .9), 0, SUPER_MAX);
+  };
+
+  updatePlayer = function(dt) {
+    specialCharging = false; attackTapCount = 0; attackTapDeadline = 0;
+    if (pressed.super) triggerSuper();
+    superMeter = clamp(superMeter + dt * .65, 0, SUPER_MAX);
+    __baseUpdatePlayer(dt);
+    if (currentLevel === 1 && !bikeDone && !bikeMode && waves[1] && waves[1].cleared && player.x >= 1876) enterBikeMode();
+  };
+
+  function enterBikeMode() {
+    if (bikeMode || bikeDone) return;
+    bikeMode = true;
+    bikeDistance = Math.max(0, bikeDistance);
+    bikeY = 210; bikeZ = 0; bikeVz = 0; bikeSpeed = Math.max(255,bikeSpeed);
+    player.attack = null; player.vx=0; player.vy=0; player.z=0; player.vz=0;
+    enemies = enemies.filter(e => !e.alive);
+    showMessage("BIKE CHASE — RIDE THE DREAM", 1.6);
+    tone(72,.14,"sawtooth",.028,118);
+    saveProgress(false);
+  }
+
+  function leaveBikeMode() {
+    bikeMode = false;
+    bikeDone = true;
+    player.x = 2790; player.y = 211; player.z=0; player.vz=0; player.vx=0; player.vy=0;
+    cameraX = 2510;
+    showMessage("BOSS — THE HOLLOW", 1.8);
+    saveProgress(false);
+  }
+
+  function bikeLaneY(lane) { return lane ? 228 : 184; }
+
+  function updateBike(dt) {
+    elapsed += dt;
+    shake = Math.max(0, shake - dt*24);
+    flash = Math.max(0, flash - dt);
+    messageTimer = Math.max(0, messageTimer-dt);
+    superMeter = clamp(superMeter + dt * .85, 0, SUPER_MAX);
+    bikeInvuln = Math.max(0,bikeInvuln-dt);
+    bikeAttackT = Math.max(0,bikeAttackT-dt);
+    bikeSuperT = Math.max(0,bikeSuperT-dt);
+    bikeCrashT = Math.max(0,bikeCrashT-dt);
+
+    bikeSpeed = Math.min(430, bikeSpeed + dt * 7.2);
+    bikeDistance += bikeSpeed * dt;
+
+    let my = 0;
+    if (input.up) my -= 1;
+    if (input.down) my += 1;
+    bikeY = clamp(bikeY + my * dt * 92, 176, 236);
+
+    if (pressed.jump && bikeZ <= .01) {
+      bikeVz = 235; bikeZ=.01; tone(140,.08,"square",.018,250);
+    }
+    if (bikeZ > 0 || bikeVz > 0) {
+      bikeZ += bikeVz*dt; bikeVz -= 610*dt;
+      if (bikeZ <= 0) { bikeZ=0; bikeVz=0; tone(72,.05,"triangle",.012,48); }
+    }
+    if (pressed.attack && bikeAttackT <= 0) { bikeAttackT=.26; tone(220,.045,"square",.016,130); }
+    if (pressed.super) triggerSuper();
+
+    // Pit collision: d is the exact world-distance where the pit reaches Líra.
+    if (bikeInvuln <= 0 && bikeZ < 17) {
+      for (const pit of bikePits) {
+        const laneY = bikeLaneY(pit.lane);
+        const reach = pit.w / .70;
+        if (Math.abs(bikeDistance - pit.d) < reach*.45 && Math.abs(bikeY-laneY) < 24) {
+          bikeInvuln=.9; bikeCrashT=.55; bikeSpeed=Math.max(235,bikeSpeed-65);
+          damagePlayer(17, player.x+30); showMessage("JUMP THE PIT!", .72); break;
+        }
+      }
+    }
+
+    // Rival bikes.
+    for (const r of bikeRivals) {
+      if (!r.alive) continue;
+      const rx = 118 + (r.d - bikeDistance)*.31;
+      const ry = bikeLaneY(r.lane);
+      if (bikeAttackT > .09 && bikeAttackT < .22 && rx > 120 && rx < 198 && Math.abs(ry-bikeY)<28) {
+        r.hp -= 28; r.d += 70; hitShake(3); tone(105,.06,"square",.024,60);
+        if (r.hp <= 0) { r.alive=false; score += r.kind === "police" ? 360 : 280; superMeter=clamp(superMeter+12,0,100); }
+      }
+      if (bikeInvuln<=0 && rx > 95 && rx < 142 && Math.abs(ry-bikeY)<24 && bikeZ<12) {
+        bikeInvuln=.75; r.d += 150; bikeCrashT=.35; damagePlayer(r.kind==="police"?12:9, player.x+20);
+      }
+    }
+
+    if (bikeDistance >= BIKE_END) leaveBikeMode();
+
+    autoSaveClock += dt;
+    if (autoSaveClock >= 2.5) { autoSaveClock=0; saveProgress(false); }
+  }
+
+  function drawDetailedCity() {
+    // Rich neon-noir City of Sleep, inspired by the approved R941 concept.
+    const sky = ctx.createLinearGradient(0,0,0,164);
+    sky.addColorStop(0,"#061126"); sky.addColorStop(.48,"#101b35"); sky.addColorStop(1,"#241426");
+    ctx.fillStyle=sky; ctx.fillRect(0,0,W,164);
+
+    // Stars + full moon.
+    for(let i=0;i<44;i++){
+      const x=((i*97-cameraX*.025)%(W+70)+W+70)%(W+70)-30;
+      const y=8+(i*41)%112; ctx.globalAlpha=.28+(i%5)*.12; pxRect(x,y,i%9===0?2:1,1,i%7===0?"#8fc9ff":"#ccd8ef");
+    }
+    ctx.globalAlpha=1;
+    const mx=385-((cameraX*.055)%730);
+    ctx.fillStyle="#dce5ed"; ctx.beginPath();ctx.arc(mx,43,25,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle="rgba(111,145,187,.18)";ctx.beginPath();ctx.arc(mx,43,31,0,Math.PI*2);ctx.fill();
+
+    // Distant skyline with lit windows.
+    for(let i=0;i<34;i++){
+      const wx=i*116+(i%4)*19; const x=wx-cameraX*.29; const bw=30+(i*17)%40; const bh=45+(i*31)%92;
+      if(x>W+40||x+bw<-40) continue;
+      ctx.fillStyle=i%3===0?"#0c1527":"#111b2c";ctx.fillRect(x,164-bh,bw,bh);
+      if(i%7===0){ctx.fillStyle="#1c2841";ctx.fillRect(x+bw*.45,164-bh-18,3,18);}
+      for(let yy=164-bh+10;yy<156;yy+=13) for(let xx=x+7;xx<x+bw-4;xx+=12){
+        if((((xx+yy+i*3)|0)%5)===0){ctx.fillStyle=(i+yy)%3?"#c68945":"#5b8fb4";ctx.globalAlpha=.45;ctx.fillRect(xx,yy,3,5);ctx.globalAlpha=1;}
+      }
+    }
+
+    // Back alley facades / brick walls.
+    ctx.fillStyle="#171826";ctx.fillRect(0,91,W,74);
+    for(let i=0;i<18;i++){
+      const wx=i*245; const x=wx-cameraX*.72; if(x>W+260||x+220<-40) continue;
+      const tone=i%2?"#211923":"#18202a";ctx.fillStyle=tone;ctx.fillRect(x,88,220,77);
+      ctx.strokeStyle="rgba(138,90,76,.18)";ctx.lineWidth=.5;
+      for(let y=94;y<161;y+=7){ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+220,y);ctx.stroke();}
+      for(let y=94,row=0;y<161;y+=7,row++) for(let xx=x+(row%2?11:0);xx<x+220;xx+=22){ctx.beginPath();ctx.moveTo(xx,y);ctx.lineTo(xx,y+7);ctx.stroke();}
+      // Windows / doors.
+      for(let d=0;d<3;d++){const dx=x+18+d*64;ctx.fillStyle="#071018";ctx.fillRect(dx,103,32,39);ctx.strokeStyle="#353545";ctx.strokeRect(dx,103,32,39);if((i+d)%3===0){ctx.fillStyle="rgba(237,161,73,.22)";ctx.fillRect(dx+3,106,26,33);}}
+    }
+
+    // Graffiti signs / neon.
+    const signs=[[510,"WAKE UP","#cf3348"],[870,"BAR","#ff3e42"],[1280,"DREAMS OBEY","#6a5ca8"],[1810,"NO ESCAPE","#d5c4a8"],[2460,"ANDRIK","#9d3c4b"],[3000,"THE HOLLOW","#aab7c8"]];
+    ctx.font="bold 8px monospace";
+    for(const [wx,t,c] of signs){const x=wx-cameraX*.92;if(x<-100||x>W+100)continue;ctx.fillStyle="rgba(6,8,13,.72)";ctx.fillRect(x,111,Math.max(42,t.length*6),20);ctx.strokeStyle=c;ctx.strokeRect(x,111,Math.max(42,t.length*6),20);ctx.fillStyle=c;ctx.fillText(t,x+5,117);}
+    // Eye graffiti.
+    for(const wx of [690,1550,2690]){const x=wx-cameraX*.82;if(x<-60||x>W+60)continue;ctx.strokeStyle="rgba(174,65,93,.48)";ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(x,136,18,8,0,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.arc(x,136,4,0,Math.PI*2);ctx.stroke();}
+
+    // Chain-link fence strip.
+    ctx.strokeStyle="rgba(116,124,139,.35)";ctx.lineWidth=.6;
+    for(let x=((-(cameraX*.9)%32)-32);x<W+32;x+=32){for(let y=139;y<166;y+=12){ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+16,y+12);ctx.moveTo(x+16,y);ctx.lineTo(x,y+12);ctx.stroke();}}
+    ctx.fillStyle="#33343c";ctx.fillRect(0,162,W,5);
+
+    // Wet street.
+    const road=ctx.createLinearGradient(0,164,0,H);road.addColorStop(0,"#343540");road.addColorStop(.42,"#242630");road.addColorStop(1,"#11151d");ctx.fillStyle=road;ctx.fillRect(0,164,W,H-164);
+    ctx.fillStyle="rgba(220,165,92,.08)"; for(let i=0;i<12;i++){const x=((i*83-cameraX*.95)%(W+100)+W+100)%(W+100)-30;ctx.fillRect(x,184+(i%4)*18,28+(i%3)*16,2);}
+    // puddles/reflections
+    for(let i=0;i<10;i++){const x=((i*121-cameraX*1.03)%(W+130)+W+130)%(W+130)-40;const y=194+(i*19)%55;ctx.fillStyle="rgba(76,115,150,.16)";ctx.beginPath();ctx.ellipse(x,y,24+(i%3)*10,3+(i%2)*2,0,0,Math.PI*2);ctx.fill();}
+    // Lane seams/cracks
+    ctx.strokeStyle="rgba(149,151,161,.16)";ctx.lineWidth=1;
+    for(let wx=70;wx<WORLD_W;wx+=160){const x=wx-cameraX;if(x<-40||x>W+40)continue;ctx.beginPath();ctx.moveTo(x,232);ctx.lineTo(x+17,229);ctx.lineTo(x+29,235);ctx.lineTo(x+44,232);ctx.stroke();}
+
+    // Lamp posts with warm glow.
+    for(let wx=280;wx<WORLD_W;wx+=470){const x=wx-cameraX;if(x<-30||x>W+30)continue;ctx.fillStyle="#161a22";ctx.fillRect(x,112,4,55);ctx.fillRect(x-7,112,18,3);const g=ctx.createRadialGradient(x+2,117,2,x+2,117,26);g.addColorStop(0,"rgba(255,205,117,.35)");g.addColorStop(1,"rgba(255,205,117,0)");ctx.fillStyle=g;ctx.fillRect(x-25,91,54,54);ctx.fillStyle="#f4c469";ctx.fillRect(x-4,116,12,5);}
+
+    // Props: dumpsters, fire barrels, police car.
+    for(const wx of [390,980,1680,2380]){const x=wx-cameraX;if(x<-50||x>W+50)continue;ctx.fillStyle="#243737";ctx.fillRect(x,151,34,14);ctx.fillStyle="#334c49";ctx.fillRect(x-2,148,38,4);pxRect(x+4,165,5,2,"#0b0d10");pxRect(x+25,165,5,2,"#0b0d10");}
+    for(const wx of [760,1450,2210]){const x=wx-cameraX;if(x<-40||x>W+40)continue;ctx.fillStyle="#3a2b24";ctx.fillRect(x,150,16,16);ctx.fillStyle="#d06b22";ctx.beginPath();ctx.moveTo(x+3,150);ctx.lineTo(x+8,139-Math.sin(elapsed*8)*3);ctx.lineTo(x+13,150);ctx.fill();}
+    const pcx=2050-cameraX;if(pcx>-90&&pcx<W+90){ctx.fillStyle="#0d1119";ctx.fillRect(pcx,145,70,18);ctx.fillStyle="#1b2738";ctx.fillRect(pcx+12,136,38,12);ctx.fillStyle="#dfe5ec";ctx.fillRect(pcx+50,148,18,10);ctx.fillStyle="#10131a";ctx.beginPath();ctx.arc(pcx+15,164,7,0,Math.PI*2);ctx.arc(pcx+55,164,7,0,Math.PI*2);ctx.fill();ctx.fillStyle="#db334a";ctx.fillRect(pcx+29,133,7,3);ctx.fillStyle="#4088d9";ctx.fillRect(pcx+36,133,7,3);}
+
+    const active=getActiveWave(); if(active){const gx=active.gate-cameraX;if(gx>-8&&gx<W+8){ctx.strokeStyle="#ffbf62";ctx.setLineDash([4,5]);ctx.beginPath();ctx.moveTo(gx,166);ctx.lineTo(gx,250);ctx.stroke();ctx.setLineDash([]);}}
+  }
+  drawBackgroundLevel1 = drawDetailedCity;
+
+  function drawStreetEnemyR005(e) {
+    if (currentLevel === 2) return __baseDrawEnemy(e);
+    const sx=e.x-cameraX, sy=e.y;
+    if(sx<-80||sx>W+80||(e.deathTimer<=0&&!e.alive))return;
+    const boss=e.type==="boss", riot=e.type==="riot", police=e.type==="police", gang=e.type==="gang";
+    shadow(sx,e.y+2,boss?18:riot?14:12,boss?6:5,.42);
+    ctx.save();ctx.translate(Math.round(sx),Math.round(sy));ctx.scale(e.face*(boss?1.45:1.22),boss?1.45:1.22);
+    if(!e.alive){ctx.rotate((1-e.deathTimer/.7)*1.2*e.face);ctx.globalAlpha=clamp(e.deathTimer/.35,0,1);}
+    const bob=Math.abs(Math.sin(e.walkPhase))*1.0, hit=e.hitFlash>0, atk=!!e.attack;
+    const skin=hit?"#ffe7d4":"#c58d6e";
+    // legs + boots
+    pxRect(-7,-16+bob,5,15,gang?"#1c2028":"#111827");pxRect(2,-16+bob,5,15,gang?"#24252a":"#14213a");
+    pxRect(-8,-3+bob,7,4,"#07090d");pxRect(1,-3+bob,8,4,"#07090d");
+    if(gang){
+      // street gang: ripped jeans, sleeveless vest, bandana/mohawk, chain/bat
+      pxRect(-9,-31+bob,18,15,hit?"#eee":"#17191e");pxRect(-6,-29+bob,12,12,"#29222a");pxRect(-11,-29+bob,4,11,skin);pxRect(7,-29+bob,4,11,skin);
+      pxRect(-6,-41+bob,12,10,skin);pxRect(-7,-43+bob,14,4,"#b22539");
+      if((e.id.charCodeAt(0)||0)%2){pxRect(-1,-49+bob,3,7,"#b02c3b");pxRect(2,-47+bob,2,6,"#7e2330");}
+      pxRect(-4,-37+bob,3,2,"#171014");pxRect(2,-37+bob,3,2,"#171014");
+      ctx.strokeStyle="#8a8d93";ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(5,-25+bob);ctx.lineTo(11,-18+bob);ctx.lineTo(7,-13+bob);ctx.stroke();
+      if(atk){const a=Math.sin(Math.min(1,e.attack.t/e.attack.duration)*Math.PI);pxRect(8,-28+bob,13+a*12,3,skin);pxRect(19+a*9,-29+bob,3,16,"#8a8d92");}
+      else pxRect(10,-23+bob,3,14,"#777b80");
+    } else {
+      // police / riot / boss: clearly human silhouette, helmet, visor, baton/shield.
+      const body=boss?"#0b0f16":riot?"#111a2a":"#14284a";
+      pxRect(-10,-33+bob,20,17,hit?"#e9eef3":body);pxRect(-11,-31+bob,4,11,riot||boss?"#263447":"#1d3862");pxRect(7,-31+bob,4,11,riot||boss?"#263447":"#1d3862");
+      pxRect(-5,-42+bob,10,10,skin);pxRect(-8,-46+bob,16,7,boss?"#080b10":"#172233");pxRect(-7,-42+bob,14,3,boss?"#9b2538":"#2e425d");
+      pxRect(-5,-39+bob,10,3,boss?"#171116":"#5e7187");pxRect(2,-38+bob,2,1,boss?"#f14b5b":"#b9d6e6");
+      pxRect(-6,-29+bob,12,6,riot||boss?"#202c3c":"#1d3557");
+      ctx.fillStyle=police?"#dbe6f0":"#99a9b9";ctx.font="bold 4px monospace";ctx.fillText(boss?"VOID":"POL",-6,-25+bob);
+      if(riot||boss){ctx.fillStyle=boss?"rgba(44,10,16,.88)":"rgba(35,49,66,.92)";ctx.fillRect(-17,-32+bob,8,22);ctx.strokeStyle=boss?"#aa3144":"#6e8194";ctx.strokeRect(-17,-32+bob,8,22);}
+      if(atk){const a=Math.sin(Math.min(1,e.attack.t/e.attack.duration)*Math.PI);pxRect(8,-29+bob,10+a*10,4,skin);ctx.save();ctx.translate(18+a*8,-28+bob);ctx.rotate(-.35+a*.9);pxRect(0,0,3,18,boss?"#c33d50":"#171b20");ctx.restore();}
+      else {pxRect(8,-29+bob,4,11,skin);pxRect(10,-20+bob,3,15,boss?"#a52d3d":"#171b20");}
+    }
+    ctx.restore();
+  }
+  drawEnemy = drawStreetEnemyR005;
+
+  function drawBikePit(pit) {
+    const x=118+(pit.d-bikeDistance)*.35, y=bikeLaneY(pit.lane)+7;
+    if(x<-120||x>W+120)return;
+    const w=pit.w*.58;
+    ctx.fillStyle="#05070a";ctx.beginPath();ctx.ellipse(x,y,w*.55,13,0,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle="#5b4b42";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x-w*.58,y-3);ctx.lineTo(x-w*.3,y-11);ctx.lineTo(x,y-8);ctx.lineTo(x+w*.28,y-13);ctx.lineTo(x+w*.57,y-2);ctx.stroke();
+    ctx.fillStyle="rgba(0,0,0,.5)";ctx.fillRect(x-w*.45,y,w*.9,9);
+  }
+
+  function drawBikeRider(x,y,z,kind="lira",attack=false) {
+    ctx.save();ctx.translate(x,y-z);const wheelie=kind==="lira"?clamp(z/45,0,.28):0;ctx.rotate(-wheelie);
+    const police=kind==="police";const gang=kind==="gang";
+    // wheels
+    ctx.fillStyle="#050609";ctx.beginPath();ctx.arc(-18,0,10,0,Math.PI*2);ctx.arc(20,0,10,0,Math.PI*2);ctx.fill();ctx.strokeStyle="#89929a";ctx.lineWidth=2;ctx.beginPath();ctx.arc(-18,0,6,0,Math.PI*2);ctx.arc(20,0,6,0,Math.PI*2);ctx.stroke();
+    // bike frame
+    ctx.strokeStyle=kind==="lira"?"#aeb5bb":police?"#476fa9":"#a33b45";ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(-17,-2);ctx.lineTo(-3,-12);ctx.lineTo(13,-4);ctx.lineTo(20,-1);ctx.moveTo(-3,-12);ctx.lineTo(4,-1);ctx.stroke();
+    ctx.fillStyle="#0b0d11";ctx.fillRect(-8,-15,18,6);ctx.fillStyle="#e8d07e";ctx.fillRect(20,-9,4,3);
+    // rider torso/head
+    const skin="#c59073";
+    ctx.fillStyle=police?"#17335b":kind==="lira"?"#111319":"#252027";ctx.fillRect(-6,-34,13,18);
+    ctx.fillStyle="#c59073";ctx.fillRect(-4,-42,9,9);
+    if(police){ctx.fillStyle="#142238";ctx.fillRect(-6,-46,13,6);ctx.fillStyle="#83a4c1";ctx.fillRect(-4,-42,10,2);} else if(gang){ctx.fillStyle="#a5293a";ctx.fillRect(-6,-44,12,3);} else {ctx.fillStyle="#050609";ctx.beginPath();ctx.moveTo(-7,-43);ctx.lineTo(-15,-36);ctx.lineTo(-6,-34);ctx.lineTo(4,-46);ctx.fill();ctx.fillStyle="#d4ccc0";ctx.beginPath();ctx.ellipse(0,-24,4,2,0,0,Math.PI*2);ctx.fill();ctx.fillStyle="#080a0d";ctx.beginPath();ctx.arc(0,-24,1.2,0,Math.PI*2);ctx.fill();}
+    // arms / attack kick
+    ctx.strokeStyle="#c59073";ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(4,-32);ctx.lineTo(16,-21);ctx.moveTo(-4,-31);ctx.lineTo(-10,-18);ctx.stroke();
+    if(attack&&kind==="lira"){ctx.strokeStyle="#d0a080";ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(4,-19);ctx.lineTo(24,-29);ctx.stroke();}
+    ctx.restore();
+  }
+
+  function drawBikeScene() {
+    // Moonlit elevated highway, dense skyline, wet asphalt and fast parallax.
+    const sky=ctx.createLinearGradient(0,0,0,H);sky.addColorStop(0,"#06142d");sky.addColorStop(.55,"#15233c");sky.addColorStop(1,"#0b0d14");ctx.fillStyle=sky;ctx.fillRect(0,0,W,H);
+    for(let i=0;i<35;i++){const x=((i*101-bikeDistance*.04)%(W+50)+W+50)%(W+50)-20;const y=8+(i*37)%95;pxRect(x,y,i%8===0?2:1,1,"#a9c9ec");}
+    ctx.fillStyle="#dce7f0";ctx.beginPath();ctx.arc(330,48,31,0,Math.PI*2);ctx.fill();ctx.fillStyle="rgba(95,125,169,.12)";ctx.beginPath();ctx.arc(330,48,38,0,Math.PI*2);ctx.fill();
+    // skyline
+    for(let i=0;i<28;i++){const x=((i*73-bikeDistance*.11)%(W+100)+W+100)%(W+100)-30;const bw=24+(i*11)%34,bh=35+(i*23)%85;ctx.fillStyle=i%3?"#0d1728":"#111d31";ctx.fillRect(x,150-bh,bw,bh);for(let yy=150-bh+8;yy<145;yy+=12){for(let xx=x+6;xx<x+bw-3;xx+=10){if(((xx+yy+i)|0)%4===0){ctx.fillStyle="#b5753f";ctx.globalAlpha=.45;ctx.fillRect(xx,yy,2,4);ctx.globalAlpha=1;}}}}
+    // overpass / train
+    ctx.fillStyle="#171d27";ctx.fillRect(0,132,W,7);for(let x=((-(bikeDistance*.24)%64)-64);x<W+64;x+=64){ctx.fillStyle="#273242";ctx.fillRect(x,114,54,15);ctx.fillStyle="#60819a";for(let wx=x+6;wx<x+50;wx+=12)ctx.fillRect(wx,118,7,4);}
+    // road + speed lines
+    const road=ctx.createLinearGradient(0,160,0,H);road.addColorStop(0,"#2c303a");road.addColorStop(1,"#0b0d12");ctx.fillStyle=road;ctx.fillRect(0,160,W,110);ctx.fillStyle="#6c5a47";ctx.fillRect(0,164,W,3);
+    const scroll=(bikeDistance*.9)%88;for(let x=-scroll;x<W+90;x+=88){ctx.fillStyle="rgba(225,201,143,.40)";ctx.fillRect(x,207,42,2);ctx.fillStyle="rgba(70,105,138,.14)";ctx.fillRect(x+18,242,54,2);}
+    for(let i=0;i<10;i++){const x=((i*117-bikeDistance*1.2)%(W+150)+W+150)%(W+150)-70;ctx.fillStyle="rgba(89,132,171,.15)";ctx.beginPath();ctx.ellipse(x,250-(i%3)*18,28,3,0,0,Math.PI*2);ctx.fill();}
+    // barriers, lamps, signs
+    for(let x=((-(bikeDistance*.55)%180)-180);x<W+180;x+=180){ctx.fillStyle="#242a33";ctx.fillRect(x,150,4,21);ctx.fillRect(x-8,150,20,3);ctx.fillStyle="#e5b55f";ctx.fillRect(x-6,153,16,4);}
+    ctx.fillStyle="#19384e";ctx.fillRect(405,92,68,30);ctx.strokeStyle="#82a9be";ctx.strokeRect(405,92,68,30);ctx.fillStyle="#b9d8e7";ctx.font="bold 7px monospace";ctx.fillText("SLEEP",416,100);ctx.fillText("NEVER ENDS",410,111);
+
+    for(const pit of bikePits) drawBikePit(pit);
+    // rival bikes sorted by lane
+    for(const r of bikeRivals){if(!r.alive)continue;const x=118+(r.d-bikeDistance)*.31;if(x<-80||x>W+80)continue;drawBikeRider(x,bikeLaneY(r.lane),0,r.kind,false);}
+    drawBikeRider(118,bikeY,bikeZ,"lira",bikeAttackT>0);
+
+    if(bikeSuperT>0){const p=1-bikeSuperT/.72;ctx.save();ctx.globalAlpha=clamp(bikeSuperT/.35,0,1);ctx.strokeStyle=p<.5?"#ff4b5f":"#ffd148";ctx.lineWidth=6;ctx.beginPath();ctx.arc(150,bikeY-bikeZ-25,44+p*85,-1.1,.8);ctx.stroke();ctx.strokeStyle="#9eeaff";ctx.lineWidth=2;ctx.beginPath();ctx.arc(150,bikeY-bikeZ-25,52+p*92,-1.1,.8);ctx.stroke();ctx.restore();}
+    if(bikeCrashT>0){ctx.fillStyle=`rgba(255,65,50,${bikeCrashT*.16})`;ctx.fillRect(0,0,W,H);}
+  }
+
+  buildSaveData = function() {
+    const d=__baseBuildSaveData();
+    d.version=SAVE_VERSION;
+    d.superMeter=superMeter;
+    d.level1State={bikeMode,bikeDone,bikeDistance,bikeSpeed,bikeY,bikeZ,bikeVz,bikeRivals:bikeRivals.map(r=>({id:r.id,hp:r.hp,alive:r.alive}))};
+    return d;
+  };
+
+  restoreSave = function(data) {
+    const ok=__baseRestoreSave(data); if(!ok)return false;
+    superMeter=clamp(Number(data.superMeter)||28,0,SUPER_MAX);
+    resetBikeState();
+    if(currentLevel===1&&data.level1State){
+      const b=data.level1State; bikeMode=!!b.bikeMode; bikeDone=!!b.bikeDone; bikeDistance=Math.max(0,Number(b.bikeDistance)||0);bikeSpeed=clamp(Number(b.bikeSpeed)||255,230,440);bikeY=clamp(Number(b.bikeY)||210,176,236);bikeZ=Math.max(0,Number(b.bikeZ)||0);bikeVz=Number(b.bikeVz)||0;
+      if(Array.isArray(b.bikeRivals)){for(const sr of b.bikeRivals){const r=bikeRivals.find(x=>x.id===sr.id);if(r){r.hp=Number(sr.hp)||r.hp;r.alive=sr.alive!==false;}}}
+      if(bikeMode){if(waves[0]){waves[0].started=true;waves[0].cleared=true;waves[0].ids=[];}if(waves[1]){waves[1].started=true;waves[1].cleared=true;waves[1].ids=[];}enemies=[];showMessage("BIKE CHASE RESTORED",1.0);}
+    }
+    return true;
+  };
+
+  startLevel = function(level, keepScore=false) {
+    __baseStartLevel(level,keepScore);
+    superMeter=level===1?28:35;
+    resetBikeState();
+  };
+
+  drawHUD = function() {
+    __baseDrawHUD();
+    if(started&&!gameOver&&!victory){
+      // SUPER gauge below health, like the approved concept.
+      pxRect(12,30,86,5,"rgba(3,6,10,.75)");pxRect(13,31,84,3,"#182332");
+      const q=clamp(superMeter/SUPER_MAX,0,1);const grad=ctx.createLinearGradient(13,31,97,31);grad.addColorStop(0,"#28b9e8");grad.addColorStop(.65,"#5ddcff");grad.addColorStop(1,"#ffd34a");ctx.fillStyle=grad;ctx.fillRect(13,31,84*q,3);
+      ctx.fillStyle="#8be6ff";ctx.font="bold 5px monospace";ctx.fillText("SUPER",101,30);
+      if(bikeMode){ctx.fillStyle="#dbeaff";ctx.font="bold 7px monospace";ctx.fillText("BIKE CHASE",12,41);ctx.textAlign="right";ctx.fillStyle="#ffd87b";ctx.fillText(`${Math.round(bikeSpeed)} km/h`,W-10,28);ctx.fillStyle="#9fb5ca";ctx.fillText(`${Math.min(100,Math.floor(bikeDistance/BIKE_END*100))}%`,W-10,38);ctx.textAlign="left";}
+      const sb=document.querySelector('[data-action="super"]');if(sb)sb.classList.toggle('ready',superMeter>=SUPER_COST);
+    }
+  };
+
+  function drawBootSplash() {
+    if(performance.now()>=bootSplashUntil)return;
+    if(bootSplash.complete&&bootSplash.naturalWidth){drawCoverImage(bootSplash,0,0,W,H,.5,.5);} else {ctx.fillStyle="#060917";ctx.fillRect(0,0,W,H);}
+  }
+
+  draw = function() {
+    if(bikeMode){
+      const sx=shake>0?(Math.random()-.5)*shake:0,sy=shake>0?(Math.random()-.5)*shake*.45:0;ctx.save();ctx.translate(Math.round(sx),Math.round(sy));drawBikeScene();ctx.restore();drawHUD();if(flash>0){ctx.fillStyle=`rgba(255,255,255,${Math.min(.18,flash*2.6)})`;ctx.fillRect(0,0,W,H);}drawBootSplash();return;
+    }
+    __baseDraw();drawBootSplash();
+  };
+
+  update = function(dt) {
+    if(!started||paused||gameOver||victory)return;
+    if(bikeMode){updateBike(dt);return;}
+    __baseUpdate(dt);
+  };
+
+  // Show the approved splash again when the phone actually rotates into landscape.
+  function armLandscapeSplash(){const land=innerWidth>=innerHeight;if(land&&!lastLandscape)bootSplashUntil=performance.now()+1150;lastLandscape=land;}
+  addEventListener('resize',armLandscapeSplash,{passive:true});
+  addEventListener('orientationchange',()=>{setTimeout(armLandscapeSplash,80);},{passive:true});
+
+  // Ignore START/touch during the one-second boot splash so it behaves like a console splash.
+  const __handleStartPause=handleStartPause;
+  handleStartPause=function(){if(performance.now()<bootSplashUntil)return;return __handleStartPause();};
+  const __confirmTitleChoice=confirmTitleChoice;
+  confirmTitleChoice=function(){if(performance.now()<bootSplashUntil)return;return __confirmTitleChoice();};
 
   titleChoice = hasSave() ? 0 : 1;
   buildWaves();

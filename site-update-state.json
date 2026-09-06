@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788671883692-4fed49380d",
-  "release": "R940",
-  "archiveName": "ANDRIK-R940-DREAMING-OF-LIRA-R004-GUITAR-SPECIAL-R939-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "8c2a5ebd087ec923ca2fe43b5c209ae485b1bd55",
-  "backupSha": "8c2a5ebd087ec923ca2fe43b5c209ae485b1bd55",
+  "operationId": "publish-1788673870051-1232693f3f",
+  "release": "R941",
+  "archiveName": "ANDRIK-R941-DREAMING-OF-LIRA-R005-CITY-BIKE-SUPER-R940-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "c95bc5a3a3e1bcb89624cd30c003953d084af63e",
+  "backupSha": "c95bc5a3a3e1bcb89624cd30c003953d084af63e",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-06T05:18:05.489Z"
+  "generatedAt": "2026-09-06T05:51:11.364Z"
 }
