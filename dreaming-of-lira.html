@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
   <meta name="theme-color" content="#080b12" />
-  <title>Dreaming of Líra — ANDRIK Game · R006</title>
+  <title>Dreaming of Líra — ANDRIK Game · R007</title>
   <style>
     :root {
       --ink: #f4f1e8;
@@ -148,8 +148,8 @@
       position: absolute;
       right: max(12px, env(safe-area-inset-right));
       bottom: max(18px, calc(env(safe-area-inset-bottom) + 8px));
-      width: clamp(184px, 29vw, 250px);
-      height: clamp(122px, 19vw, 170px);
+      width: clamp(176px, 27vw, 236px);
+      height: clamp(126px, 19vw, 172px);
       pointer-events: auto;
     }
 
@@ -174,7 +174,8 @@
     }
     [data-action="attack"] { right: 0; bottom: 0; }
     [data-action="jump"]   { right: 0; top: 0; }
-    [data-action="super"]  { left: 0; bottom: 4px; }
+    [data-action="kick"]   { left: 0; bottom: 0; }
+    [data-action="super"]  { left: 0; top: 0; }
     .superBtn {
       width: clamp(58px, 8.2vw, 74px);
       height: clamp(58px, 8.2vw, 74px);
@@ -267,7 +268,8 @@
       <div class="actions" aria-label="Кнопки боя">
         <button class="touchBtn actionBtn" data-action="jump" aria-label="Прыжок"><span><span class="letter">B</span><span class="label">JUMP</span></span></button>
         <button class="touchBtn actionBtn superBtn" data-action="super" aria-label="Супер удар гитарой"><span><span class="guitarIcon">⚡🎸</span><span class="label">SUPER</span></span></button>
-        <button class="touchBtn actionBtn" data-action="attack" aria-label="Удар"><span><span class="letter">A</span><span class="label">HIT</span></span></button>
+        <button class="touchBtn actionBtn" data-action="kick" aria-label="Удар ногой"><span><span class="letter">C</span><span class="label">KICK</span></span></button>
+        <button class="touchBtn actionBtn" data-action="attack" aria-label="Удар рукой"><span><span class="letter">A</span><span class="label">PUNCH</span></span></button>
       </div>
       <div class="systemButtons">
         <button class="systemBtn" data-system="select" aria-label="Select">SELECT</button>
@@ -283,7 +285,7 @@
   "use strict";
 
   // ================================================================
-  // DREAMING OF LÍRA R006 — browser beat 'em up game
+  // DREAMING OF LÍRA R007 — CITY / OCEAN / SPACE arcade game
   // Original implementation for ANDRIK / andrikmetal.com · R942 site integration
   // No ROM code, sprites, audio, maps or other assets are copied here.
   // ================================================================
@@ -326,7 +328,7 @@
   // Persistent browser save. Kept deliberately small and JSON-only so it works on the website
   // without a backend. Autosave is also written on pause / tab hide / page close.
   const SAVE_KEY = "dreaming-of-lira-save";
-  const SAVE_VERSION = 4;
+  const SAVE_VERSION = 5;
   let unlockedLevel = 1;
   let titleChoice = 0; // 0 = CONTINUE, 1 = NEW GAME
   let autoSaveClock = 0;
@@ -421,8 +423,9 @@
     Space: "attack",
     KeyX: "jump",
     KeyK: "jump",
-    KeyC: "super",
-    KeyL: "super"
+    KeyC: "kick",
+    KeyL: "super",
+    ShiftRight: "super"
   };
 
   // ------------------------------
@@ -751,8 +754,8 @@
       const raw = localStorage.getItem(SAVE_KEY);
       if (!raw) return null;
       const data = JSON.parse(raw);
-      if (!data || ![3, 4].includes(data.version)) return null;
-      if (![1, 2].includes(data.currentLevel)) return null;
+      if (!data || ![3, 4, 5].includes(data.version)) return null;
+      if (![1, 2, 3].includes(data.currentLevel)) return null;
       return data;
     } catch (_) {
       return null;
@@ -841,7 +844,8 @@
   function restoreSave(data) {
     if (!data) return false;
     // Until Level 3 exists, a completed OCEAN save continues by replaying OCEAN.
-    if (data.completed && data.currentLevel === 2) data = { ...data, fresh: true, completed: false };
+    if (data.completed && data.currentLevel === 2) data = { ...data, currentLevel: 3, unlockedLevel: Math.max(3, data.unlockedLevel || 3), fresh: true, completed: false };
+    if (data.completed && data.currentLevel === 3) data = { ...data, fresh: true, completed: false };
     currentLevel = data.currentLevel;
     WORLD_W = LEVEL_WORLD_W[currentLevel] || LEVEL_WORLD_W[1];
     unlockedLevel = Math.max(1, data.unlockedLevel || currentLevel);
@@ -917,6 +921,7 @@
     for (const k of Object.keys(input)) input[k] = false;
     pressed.attack = false;
     pressed.jump = false;
+    pressed.kick = false;
     pressed.super = false;
     started = true;
     showMessage(data.fresh ? (currentLevel === 2 ? "LEVEL 2 — OCEAN" : "ENTER THE DREAM") : "DREAM RESTORED", 1.5);
@@ -2143,7 +2148,7 @@
       const save = readSave();
       if (save) {
         const label = save.currentLevel === 2 ? "LEVEL 2 — OCEAN" : "LEVEL 1 — CITY OF SLEEP";
-        overlayPanel("DREAMING OF LÍRA · R006", [
+        overlayPanel("DREAMING OF LÍRA · R007", [
           `SAVE FOUND · ${label}`,
           "",
           `${titleChoice === 0 ? ">" : " "} ДАЛЕЕ / CONTINUE`,
@@ -2153,18 +2158,19 @@
           "SUPER · GUITAR RIFF"
         ]);
       } else {
-        overlayPanel("DREAMING OF LÍRA · R006", [
+        overlayPanel("DREAMING OF LÍRA · R007", [
           "LEVEL 1 — CITY OF SLEEP",
           "",
           "ANDROID: LANDSCAPE MODE",
-          "D-PAD · A HIT · B JUMP",
+          "D-PAD · A PUNCH · B JUMP · C KICK",
+          "A + C · SWORD",
           "SUPER · GUITAR RIFF",
           "",
           "START — ENTER DREAM"
         ]);
       }
     } else if (paused) {
-      overlayPanel("PAUSED", ["START / P — CONTINUE", "SELECT — SAVE", "SUPER — GUITAR RIFF"]);
+      overlayPanel("PAUSED", ["START / P — CONTINUE", "SELECT — LEVELS / SAVE", "A+C — SWORD", "SUPER — GUITAR RIFF"]);
     } else if (gameOver) {
       overlayPanel("THE DREAM COLLAPSES", ["R — TRY AGAIN"]);
     } else if (victory) {
@@ -2372,6 +2378,7 @@
 
     pressed.attack = false;
     pressed.jump = false;
+    pressed.kick = false;
     pressed.super = false;
     requestAnimationFrame(frame);
   }
@@ -2499,7 +2506,7 @@
     if (!input[action]) {
       let consumed = false;
       if (action === "attack") consumed = registerAttackDown();
-      if ((action === "attack" && !consumed) || action === "jump" || action === "super") pressed[action] = true;
+      if ((action === "attack" && !consumed) || action === "jump" || action === "kick" || action === "super") pressed[action] = true;
     }
     input[action] = true;
   }, { passive: false });
@@ -2523,7 +2530,7 @@
       if (!input[action]) {
         let consumed = false;
         if (action === "attack") consumed = registerAttackDown();
-        if ((action === "attack" && !consumed) || action === "jump" || action === "super") pressed[action] = true;
+        if ((action === "attack" && !consumed) || action === "jump" || action === "kick" || action === "super") pressed[action] = true;
       }
       input[action] = true;
       try { btn.setPointerCapture(e.pointerId); } catch (_) {}
@@ -2608,6 +2615,7 @@
     for (const k of Object.keys(input)) input[k] = false;
     pressed.attack = false;
     pressed.jump = false;
+    pressed.kick = false;
     pressed.super = false;
     buildWaves();
 
@@ -3229,7 +3237,7 @@
 
   draw = function(){
     if(bikeMode){__r941DrawR942();return;}
-    const sx=shake>0?(Math.random()-.5)*shake:0,sy=shake>0?(Math.random()-.5)*shake*.45:0;ctx.save();ctx.translate(Math.round(sx),Math.round(sy));drawBackground();drawWorldMarkers();if(currentLevel===2)drawOceanPropsR942();const actors=[...enemies.filter(e=>e.alive||e.deathTimer>0).map(e=>({y:e.y,draw:()=>drawEnemy(e)})),{y:player.y,draw:()=>drawLira(player)}].sort((a,b)=>a.y-b.y);for(const a of actors)a.draw();drawEffects();drawOceanExplosionsR942();ctx.restore();drawHUD();drawCinematic();drawOceanBossIntroR942();if(flash>0){ctx.fillStyle=`rgba(255,255,255,${Math.min(.18,flash*2.6)})`;ctx.fillRect(0,0,W,H);}drawBootSplash();
+    const sx=shake>0?(Math.random()-.5)*shake:0,sy=shake>0?(Math.random()-.5)*shake*.45:0;ctx.save();ctx.translate(Math.round(sx),Math.round(sy));drawBackground();drawWorldMarkers();if(currentLevel===2)drawOceanPropsR942();drawRecoveryR950();const actors=[...enemies.filter(e=>e.alive||e.deathTimer>0).map(e=>({y:e.y,draw:()=>drawEnemy(e)})),{y:player.y,draw:()=>drawLira(player)}].sort((a,b)=>a.y-b.y);for(const a of actors)a.draw();drawEffects();drawOceanExplosionsR942();ctx.restore();drawHUD();drawCinematic();drawOceanBossIntroR942();if(flash>0){ctx.fillStyle=`rgba(255,255,255,${Math.min(.18,flash*2.6)})`;ctx.fillRect(0,0,W,H);}drawBootSplash();
   };
 
   update = function(dt){
@@ -3237,6 +3245,337 @@
     if(!started||paused||gameOver||victory)return;
     if(currentLevel===2){for(const fx of oceanExplosionsR942)fx.t+=dt;oceanExplosionsR942=oceanExplosionsR942.filter(f=>f.t<f.duration);}
   };
+
+
+
+  // =====================================================================
+  // R007 / R950 — COMBAT + RECOVERY CRATES + LEVEL SELECT + LEVEL 3 SPACE
+  // Adds C kick, A+C sword, hearts/crates and a long 90s-style space shooter.
+  // Existing CITY / OCEAN systems are preserved underneath this layer.
+  // =====================================================================
+  LEVEL_WORLD_W[3] = W;
+  input.kick = false;
+  pressed.kick = false;
+  keyMap.KeyC = "kick";
+  keyMap.KeyL = "super";
+  keyMap.ShiftRight = "super";
+
+  ATTACKS.kickR950 = { duration: .34, activeStart: .09, activeEnd: .23, damage: 18, range: 43, depth: 20, knock: 48 };
+  ATTACKS.swordSlashR950 = { duration: .52, activeStart: .16, activeEnd: .34, damage: 42, range: 68, depth: 28, knock: 82 };
+
+  let swordComboLatchR950 = false;
+  function startKickR950(){
+    if(player.dead||player.stun>0||player.z>4)return;
+    player.comboStep=0;
+    player.attack={id:++attackSerial,kind:'kickR950',t:0,duration:ATTACKS.kickR950.duration};
+    player.lastAttackTime=elapsed;
+    tone(178,.06,'square',.018,94);
+  }
+  function startSwordR950(){
+    if(player.dead||player.stun>0||player.z>5)return;
+    player.comboStep=0;
+    player.attack={id:++attackSerial,kind:'swordSlashR950',t:0,duration:ATTACKS.swordSlashR950.duration};
+    player.lastAttackTime=elapsed;
+    showMessage('A + C · SWORD',.52);
+    tone(420,.07,'sawtooth',.020,155);
+  }
+
+  const __r949UpdatePlayerR950 = updatePlayer;
+  updatePlayer = function(dt){
+    if(currentLevel===3)return;
+    if(input.attack&&input.kick){
+      if(!swordComboLatchR950&&(!player.attack||player.attack.t>player.attack.duration*.66)) startSwordR950();
+      swordComboLatchR950=true;
+      pressed.attack=false; pressed.kick=false;
+    }else{
+      swordComboLatchR950=false;
+      if(pressed.kick&&(!player.attack||player.attack.t>player.attack.duration*.70)) startKickR950();
+      pressed.kick=false;
+    }
+    __r949UpdatePlayerR950(dt);
+  };
+
+  // Face clarification + C kick / A+C sword visual overlay.
+  const __r949DrawLiraR950 = drawLira;
+  drawLira = function(p){
+    __r949DrawLiraR950(p);
+    if(p.dead)return;
+    const sx=p.x-cameraX, sy=p.y-p.z;
+    if(p.invuln>0&&Math.floor(p.invuln*24)%2===0)return;
+    const bob=(Math.abs(p.vx)+Math.abs(p.vy)>12&&p.z<2)?Math.abs(Math.sin(p.walkPhase))*1.2:Math.sin(elapsed*2.8)*.35;
+    ctx.save();ctx.translate(Math.round(sx),Math.round(sy));ctx.scale(p.face*1.23,1.23);
+    // Explicit nose/bridge pixels keep Líra feminine and stop the fringe merging into the face.
+    pxRect(-1,-50+bob,2,2,'#d8a486');
+    pxRect(0,-49+bob,2,1,'#edbea0');
+    pxRect(1,-48+bob,1,1,'#7c4e46');
+    pxRect(-1,-55+bob,1,5,'#171317');
+    if(p.attack?.kind==='kickR950'){
+      const q=Math.sin(clamp(p.attack.t/p.attack.duration,0,1)*Math.PI);
+      ctx.fillStyle='#171a1f';ctx.fillRect(2,-23+bob,9+q*20,7);
+      ctx.fillStyle='#050609';ctx.fillRect(8+q*20,-22+bob,10,7);
+      ctx.fillStyle='#c29478';ctx.fillRect(5+q*9,-19+bob,5,2);
+    }
+    if(p.attack?.kind==='swordSlashR950'){
+      const q=clamp(p.attack.t/p.attack.duration,0,1);
+      const a=-1.1+q*2.0;
+      ctx.save();ctx.translate(8,-36+bob);ctx.rotate(a);
+      ctx.fillStyle='#c99678';ctx.fillRect(-7,-2,11,4);
+      ctx.fillStyle='#090a0d';ctx.fillRect(1,-3,7,6);
+      ctx.fillStyle='#a78b62';ctx.fillRect(7,-5,3,10);
+      ctx.fillStyle='#e8eef2';ctx.fillRect(9,-2,39,4);
+      ctx.fillStyle='#9cecff';ctx.fillRect(12,-1,34,1);
+      ctx.fillStyle='#3b4148';ctx.fillRect(46,-1,5,2);
+      ctx.restore();
+      ctx.globalAlpha=.55*Math.sin(q*Math.PI);ctx.strokeStyle='#9cecff';ctx.lineWidth=2;ctx.beginPath();ctx.arc(8,-35+bob,45,-1.25,.85);ctx.stroke();ctx.globalAlpha=1;
+    }
+    ctx.restore();
+  };
+
+  // ---------------------------------------------------------------------
+  // Breakable crates + healing hearts on Levels 1 and 2.
+  // ---------------------------------------------------------------------
+  let recoveryCratesR950=[];
+  let recoveryHeartsR950=[];
+  function resetRecoveryR950(level=currentLevel){
+    const src=level===1?
+      [[470,226],[1010,192],[2465,228],[3160,194]]:
+      level===2?[[520,226],[1050,190],[1890,229],[2750,196],[3420,226]]:[];
+    recoveryCratesR950=src.map((v,i)=>({id:`L${level}C${i}`,x:v[0],y:v[1],hp:28,broken:false,hitByAttack:-1}));
+    recoveryHeartsR950=[];
+  }
+  resetRecoveryR950(1);
+  function breakCrateR950(c){
+    if(c.broken)return;c.broken=true;c.hp=0;score+=80;hitShake(3);tone(118,.08,'square',.018,65);
+    recoveryHeartsR950.push({id:`H-${c.id}`,x:c.x,y:c.y-14,t:0,taken:false});
+    effects.push({kind:'crateDustR950',x:c.x,y:c.y,t:0,duration:.45});
+  }
+  function updateRecoveryR950(dt){
+    if(currentLevel>2||bikeMode)return;
+    for(const h of recoveryHeartsR950){
+      if(h.taken)continue;h.t+=dt;
+      if(Math.abs(player.x-h.x)<20&&Math.abs(player.y-h.y)<20){
+        h.taken=true;const before=player.hp;player.hp=Math.min(player.maxHp,player.hp+25);score+=60;
+        showMessage(`♥ LIFE +${player.hp-before}`, .65);tone(523,.08,'triangle',.022,784);
+      }
+    }
+  }
+  function drawRecoveryR950(){
+    if(currentLevel>2||bikeMode)return;ctx.save();
+    for(const c of recoveryCratesR950){if(c.broken)continue;const x=c.x-cameraX;if(x<-30||x>W+30)continue;shadow(x,c.y+2,12,4,.3);ctx.fillStyle='#4b3427';ctx.fillRect(x-11,c.y-22,22,22);ctx.fillStyle='#78533a';ctx.fillRect(x-9,c.y-20,18,18);ctx.strokeStyle='#a57d56';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x-9,c.y-20);ctx.lineTo(x+9,c.y-2);ctx.moveTo(x+9,c.y-20);ctx.lineTo(x-9,c.y-2);ctx.stroke();ctx.fillStyle='#d6b36d';ctx.font='bold 7px monospace';ctx.fillText('♥',x-3,c.y-15);}
+    for(const h of recoveryHeartsR950){if(h.taken)continue;const x=h.x-cameraX,y=h.y+Math.sin(elapsed*5+h.x)*3;if(x<-20||x>W+20)continue;ctx.fillStyle='rgba(255,70,92,.22)';ctx.beginPath();ctx.arc(x,y,10,0,Math.PI*2);ctx.fill();ctx.fillStyle='#ff5369';ctx.font='bold 15px monospace';ctx.fillText('♥',x-7,y-9);}
+    ctx.restore();
+  }
+  const __r949ResolveHitsR950=resolvePlayerHits;
+  resolvePlayerHits=function(){
+    __r949ResolveHitsR950();
+    if(currentLevel>2)return;const hb=playerAttackHitbox();if(!hb)return;
+    for(const c of recoveryCratesR950){if(c.broken||c.hitByAttack===hb.id)continue;const box={x:c.x-12,y:c.y-23,w:24,h:24};if(rectsOverlap(hb,box)){c.hitByAttack=hb.id;c.hp-=hb.def.damage;if(c.hp<=0)breakCrateR950(c);else tone(150,.03,'square',.010,100);}}
+  };
+
+  // ---------------------------------------------------------------------
+  // Level Select — once a level is unlocked SELECT opens/cycles it.
+  // ---------------------------------------------------------------------
+  let levelSelectOpenR950=false;
+  let levelSelectChoiceR950=1;
+  const LEVEL_NAMES_R950={1:'CITY OF SLEEP',2:'OCEAN',3:'SPACE'};
+  function saveUnlockedR950(){
+    const d=readSave();if(d){d.version=SAVE_VERSION;d.unlockedLevel=Math.max(d.unlockedLevel||1,unlockedLevel);writeSave(d);}
+  }
+  function openLevelSelectR950(){
+    const save=readSave();if(save)unlockedLevel=Math.max(unlockedLevel,save.unlockedLevel||save.currentLevel||1);
+    levelSelectOpenR950=true;levelSelectChoiceR950=Math.min(Math.max(1,currentLevel),Math.min(3,unlockedLevel));paused=true;
+  }
+  function cycleLevelSelectR950(){
+    const max=Math.max(1,Math.min(3,unlockedLevel));levelSelectChoiceR950=levelSelectChoiceR950>=max?1:levelSelectChoiceR950+1;
+  }
+  function confirmLevelSelectR950(){
+    if(!levelSelectOpenR950)return false;const pick=Math.min(levelSelectChoiceR950,Math.max(1,Math.min(3,unlockedLevel)));levelSelectOpenR950=false;paused=false;startLevel(pick,false);begin();saveProgress(false);return true;
+  }
+  const __r949HandleSelectR950=handleSelect;
+  handleSelect=function(){
+    unlockAudio();
+    if(!started)return __r949HandleSelectR950();
+    if(levelSelectOpenR950){cycleLevelSelectR950();return;}
+    const save=readSave();const max=Math.max(unlockedLevel,save?.unlockedLevel||1);
+    if(max>1&&!gameOver){unlockedLevel=Math.min(3,max);openLevelSelectR950();return;}
+    return __r949HandleSelectR950();
+  };
+  const __r949HandleStartR950=handleStartPause;
+  handleStartPause=function(){
+    if(levelSelectOpenR950){confirmLevelSelectR950();return;}
+    if(victory&&currentLevel===2){startLevel(3,true);begin();saveProgress(false);return;}
+    if(victory&&currentLevel===3){startLevel(3,false);begin();saveProgress(false);return;}
+    return __r949HandleStartR950();
+  };
+
+  // Completing OCEAN permanently unlocks SPACE.
+  const __r949UpdateWavesR950=updateWaves;
+  updateWaves=function(){
+    const wasVictory=victory;__r949UpdateWavesR950();
+    if(!wasVictory&&victory&&currentLevel===2){unlockedLevel=Math.max(unlockedLevel,3);saveFreshLevel(3,score);}
+  };
+
+  // ---------------------------------------------------------------------
+  // LEVEL 3 — SPACE. 80s/90s horizontal arcade shooter on EYE-RIDER.
+  // Three story inserts use the existing approved Líra art set.
+  // ---------------------------------------------------------------------
+  const SPACE_BOSS_AT_R950=7800;
+  let spaceDistanceR950=0,spaceSpeedR950=84,spaceX_R950=88,spaceY_R950=136;
+  let spaceWeaponR950='TWIN',spaceFireR950=0,spaceKickR950=0,spaceInvulnR950=0,spaceRollR950=0;
+  let spaceSpawnR950=.6,spaceEnemiesR950=[],spaceShotsR950=[],spaceEnemyShotsR950=[],spacePickupsR950=[];
+  let spaceBossR950=null,spaceBossStartedR950=false,spaceInsertR950=null,spaceInsertFlagsR950=[false,false,false];
+  let spaceStarsR950=[];
+
+  function resetSpaceR950(){
+    spaceDistanceR950=0;spaceSpeedR950=84;spaceX_R950=88;spaceY_R950=136;spaceWeaponR950='TWIN';spaceFireR950=0;spaceKickR950=0;spaceInvulnR950=0;spaceRollR950=0;spaceSpawnR950=.65;spaceEnemiesR950=[];spaceShotsR950=[];spaceEnemyShotsR950=[];spacePickupsR950=[];spaceBossR950=null;spaceBossStartedR950=false;spaceInsertR950=null;spaceInsertFlagsR950=[false,false,false];player.hp=player.maxHp;superMeter=35;
+    spaceStarsR950=Array.from({length:74},(_,i)=>({x:(i*83)%W,y:9+(i*47)%(H-18),z:1+(i%3)}));
+  }
+  function startSpaceInsertR950(index){
+    const cards=[
+      {art:'fight',title:'WAKE UP',sub:'STAR GATE · THE THIRD DREAM'},
+      {art:'chain',title:'FLASH OF RECOGNITION',sub:'VOID RUN · NOTHING IS FAR'},
+      {art:'guitar',title:'JOY OF BEING',sub:'LAST ORBIT · FACE WHAT REMAINS'}
+    ];
+    const c=cards[index];spaceInsertFlagsR950[index]=true;spaceInsertR950={...c,t:1.7,duration:1.7};tone(98+index*34,.16,'sawtooth',.024,160+index*60);
+  }
+  function spawnSpaceEnemyR950(kind=null){
+    const types=['drone','interceptor','eye','asteroid'];kind=kind||types[Math.floor(Math.random()*types.length)];
+    const y=45+Math.random()*185;const hp=kind==='asteroid'?48:kind==='eye'?36:kind==='interceptor'?30:24;
+    spaceEnemiesR950.push({id:Math.random().toString(36).slice(2),kind,x:W+28+Math.random()*65,y,baseY:y,vx:kind==='interceptor'?-116:kind==='asteroid'?-66:-88-Math.random()*25,hp,maxHp:hp,t:Math.random()*4,shoot:.7+Math.random()*1.4,alive:true});
+  }
+  function fireSpaceShotR950(){
+    const x=spaceX_R950+24,y=spaceY_R950;
+    if(spaceWeaponR950==='SPREAD')[-.22,0,.22].forEach(a=>spaceShotsR950.push({x,y,vx:310,vy:Math.sin(a)*125,damage:14,r:2,kind:'spread'}));
+    else if(spaceWeaponR950==='LASER')spaceShotsR950.push({x,y,vx:440,vy:0,damage:26,r:2,kind:'laser'});
+    else if(spaceWeaponR950==='PLASMA')spaceShotsR950.push({x,y,vx:245,vy:0,damage:38,r:5,kind:'plasma'});
+    else {spaceShotsR950.push({x,y:y-5,vx:330,vy:0,damage:13,r:2,kind:'twin'});spaceShotsR950.push({x,y:y+5,vx:330,vy:0,damage:13,r:2,kind:'twin'});}
+    tone(spaceWeaponR950==='PLASMA'?105:spaceWeaponR950==='LASER'?620:330,.028,spaceWeaponR950==='PLASMA'?'sawtooth':'square',.010,190);
+  }
+  function fireSpaceMissileR950(){spaceShotsR950.push({x:spaceX_R950+20,y:spaceY_R950+9,vx:210,vy:0,damage:62,r:4,kind:'missile'});tone(82,.07,'sawtooth',.018,52);}
+  function spaceSuperR950(){
+    if(superMeter<SUPER_COST)return;superMeter-=SUPER_COST;flash=Math.max(flash,.18);hitShake(9);tone(52,.28,'sawtooth',.045,180);
+    for(const e of spaceEnemiesR950)e.hp-=120;if(spaceBossR950)spaceBossR950.hp-=165;spaceEnemyShotsR950=[];showMessage('SUPER · COSMIC RIFF',.9);
+  }
+  function dropSpacePickupR950(x,y,forced=''){
+    const roll=Math.random();let kind=forced||(roll<.30?'heart':roll<.53?'SPREAD':roll<.76?'LASER':'PLASMA');spacePickupsR950.push({x,y,kind,t:0});
+  }
+  function hurtSpaceR950(amount){
+    if(spaceInvulnR950>0)return;player.hp=Math.max(0,player.hp-amount);spaceInvulnR950=.75;hitShake(5);tone(92,.11,'sawtooth',.03,48);if(player.hp<=0){gameOver=true;showMessage('LOST IN SPACE',3);}
+  }
+  function circleHitR950(ax,ay,ar,bx,by,br){const dx=ax-bx,dy=ay-by;return dx*dx+dy*dy<(ar+br)*(ar+br);}
+  function startSpaceBossR950(){
+    if(spaceBossStartedR950)return;spaceBossStartedR950=true;spaceEnemiesR950=[];spaceEnemyShotsR950=[];spaceBossR950={x:W+100,y:H/2,hp:1600,maxHp:1600,t:0,shoot:.8,phase:1};showMessage('BOSS — BEYOND MAN',2.0);tone(46,.36,'sawtooth',.04,28);
+  }
+  function updateSpaceBossR950(dt){
+    const b=spaceBossR950;if(!b)return;b.t+=dt;b.phase=b.hp>b.maxHp*.66?1:b.hp>b.maxHp*.33?2:3;b.x=approach(b.x,390,dt*48);b.y=135+Math.sin(b.t*(.75+b.phase*.16))*55;b.shoot-=dt;
+    if(b.shoot<=0){b.shoot=b.phase===1?.85:b.phase===2?.58:.38;const dx=spaceX_R950-b.x,dy=spaceY_R950-b.y,mag=Math.hypot(dx,dy)||1;const base=Math.atan2(dy,dx);const count=b.phase===1?3:b.phase===2?5:7;for(let i=0;i<count;i++){const a=base+(i-(count-1)/2)*(.09+b.phase*.018);spaceEnemyShotsR950.push({x:b.x-62,y:b.y,vx:Math.cos(a)*(120+b.phase*18),vy:Math.sin(a)*(120+b.phase*18),r:b.phase===3?4:3});}}
+    if(circleHitR950(spaceX_R950,spaceY_R950,13,b.x-45,b.y,52))hurtSpaceR950(24);
+    if(b.hp<=0){score+=6000;spaceBossR950=null;victory=true;unlockedLevel=Math.max(unlockedLevel,3);writeSave({...buildSaveData(),completed:true,unlockedLevel:3});showMessage('BEYOND MAN — DEFEATED',2.5);tone(196,.38,'sawtooth',.04,55);}
+  }
+  function updateSpaceR950(dt){
+    if(!started||paused||gameOver||victory)return;
+    elapsed+=dt;shake=Math.max(0,shake-dt*24);flash=Math.max(0,flash-dt);messageTimer=Math.max(0,messageTimer-dt);spaceInvulnR950=Math.max(0,spaceInvulnR950-dt);spaceRollR950=Math.max(0,spaceRollR950-dt);spaceFireR950=Math.max(0,spaceFireR950-dt);spaceKickR950=Math.max(0,spaceKickR950-dt);superMeter=clamp(superMeter+dt*.65,0,SUPER_MAX);
+    if(spaceInsertR950){spaceInsertR950.t-=dt;if(spaceInsertR950.t<=0)spaceInsertR950=null;return;}
+    if(!spaceInsertFlagsR950[0])startSpaceInsertR950(0);else if(spaceDistanceR950>2750&&!spaceInsertFlagsR950[1])startSpaceInsertR950(1);else if(spaceDistanceR950>5550&&!spaceInsertFlagsR950[2])startSpaceInsertR950(2);
+    let mx=(input.right?1:0)-(input.left?1:0),my=(input.down?1:0)-(input.up?1:0);if(mx||my){const m=Math.hypot(mx,my)||1;mx/=m;my/=m;}spaceX_R950=clamp(spaceX_R950+mx*120*dt,38,225);spaceY_R950=clamp(spaceY_R950+my*120*dt,40,H-35);
+    if(pressed.jump&&spaceRollR950<=0){spaceRollR950=.52;spaceInvulnR950=Math.max(spaceInvulnR950,.62);tone(260,.08,'triangle',.016,520);}
+    if(pressed.super)spaceSuperR950();
+    if(input.attack&&input.kick){if(spaceFireR950<=0){spaceFireR950=.30;spaceShotsR950.push({x:spaceX_R950+28,y:spaceY_R950,vx:410,vy:0,damage:52,r:3,kind:'rift'});tone(720,.05,'sawtooth',.016,210);}}
+    else{if(input.attack&&spaceFireR950<=0){spaceFireR950=spaceWeaponR950==='LASER'?.12:.15;fireSpaceShotR950();}if((pressed.kick||input.kick)&&spaceKickR950<=0){spaceKickR950=.48;fireSpaceMissileR950();}}
+    if(!spaceBossStartedR950){spaceDistanceR950+=spaceSpeedR950*dt;spaceSpawnR950-=dt;if(spaceSpawnR950<=0){spaceSpawnR950=clamp(.95-spaceDistanceR950/16000,.36,.95);spawnSpaceEnemyR950();if(spaceDistanceR950>3300&&Math.random()<.22)spawnSpaceEnemyR950('interceptor');if(spaceDistanceR950>SPACE_BOSS_AT_R950)startSpaceBossR950();}}
+    for(const sh of spaceShotsR950){sh.x+=sh.vx*dt;sh.y+=sh.vy*dt;}
+    for(const e of spaceEnemiesR950){e.t+=dt;e.x+=e.vx*dt;if(e.kind==='drone'||e.kind==='eye')e.y=e.baseY+Math.sin(e.t*(e.kind==='eye'?2.6:1.8))*22;e.shoot-=dt;if(e.kind!=='asteroid'&&e.shoot<=0&&e.x<W-40){e.shoot=.9+Math.random()*1.3;const dx=spaceX_R950-e.x,dy=spaceY_R950-e.y,m=Math.hypot(dx,dy)||1;spaceEnemyShotsR950.push({x:e.x-12,y:e.y,vx:dx/m*118,vy:dy/m*118,r:3});}if(circleHitR950(spaceX_R950,spaceY_R950,12,e.x,e.y,e.kind==='asteroid'?16:11)){e.hp=0;hurtSpaceR950(e.kind==='asteroid'?20:13);}}
+    for(const sh of spaceShotsR950){if(sh.dead)continue;for(const e of spaceEnemiesR950){if(e.hp<=0)continue;if(circleHitR950(sh.x,sh.y,sh.r,e.x,e.y,e.kind==='asteroid'?16:12)){e.hp-=sh.damage;sh.dead=true;score+=10;break;}}if(spaceBossR950&&!sh.dead&&circleHitR950(sh.x,sh.y,sh.r,spaceBossR950.x-40,spaceBossR950.y,54)){spaceBossR950.hp-=sh.damage;sh.dead=true;score+=12;}}
+    for(const e of spaceEnemiesR950){if(e.hp<=0&&e.alive){e.alive=false;score+=e.kind==='asteroid'?70:140;superMeter=clamp(superMeter+5,0,SUPER_MAX);if(e.kind==='eye'&&Math.random()<.30)dropSpacePickupR950(e.x,e.y);else if(Math.random()<.10)dropSpacePickupR950(e.x,e.y,'heart');tone(115,.045,'square',.013,60);}}
+    for(const b of spaceEnemyShotsR950){b.x+=b.vx*dt;b.y+=b.vy*dt;if(circleHitR950(spaceX_R950,spaceY_R950,11,b.x,b.y,b.r)){b.dead=true;hurtSpaceR950(10);}}
+    for(const p of spacePickupsR950){p.t+=dt;p.x-=58*dt;if(circleHitR950(spaceX_R950,spaceY_R950,13,p.x,p.y,10)){p.dead=true;if(p.kind==='heart'){const before=player.hp;player.hp=Math.min(player.maxHp,player.hp+25);showMessage(`♥ LIFE +${player.hp-before}`,.7);}else{spaceWeaponR950=p.kind;showMessage(`WEAPON · ${p.kind}`,.75);}tone(590,.08,'triangle',.02,880);}}
+    spaceShotsR950=spaceShotsR950.filter(x=>!x.dead&&x.x<W+60&&x.y>-30&&x.y<H+30);spaceEnemiesR950=spaceEnemiesR950.filter(e=>e.alive&&e.x>-55);spaceEnemyShotsR950=spaceEnemyShotsR950.filter(x=>!x.dead&&x.x>-30&&x.x<W+30&&x.y>-30&&x.y<H+30);spacePickupsR950=spacePickupsR950.filter(x=>!x.dead&&x.x>-30);
+    updateSpaceBossR950(dt);
+    autoSaveClock+=dt;if(autoSaveClock>=2.5){autoSaveClock=0;saveProgress(false);}
+  }
+
+  function drawEyeRiderR950(){
+    const x=spaceX_R950,y=spaceY_R950;ctx.save();ctx.translate(Math.round(x),Math.round(y));if(spaceRollR950>0)ctx.rotate(Math.sin(spaceRollR950*28)*.25);if(spaceInvulnR950>0&&Math.floor(spaceInvulnR950*24)%2===0)ctx.globalAlpha=.45;
+    ctx.shadowColor='#57d9ff';ctx.shadowBlur=10;ctx.fillStyle='#10151c';ctx.beginPath();ctx.moveTo(-25,7);ctx.lineTo(17,-6);ctx.lineTo(30,2);ctx.lineTo(14,10);ctx.lineTo(-20,13);ctx.closePath();ctx.fill();ctx.shadowBlur=0;ctx.strokeStyle='#61727d';ctx.stroke();ctx.fillStyle='#cf3b4e';ctx.fillRect(-21,10,34,2);ctx.fillStyle='#74e6ff';ctx.beginPath();ctx.ellipse(2,4,7,4,0,0,Math.PI*2);ctx.fill();ctx.fillStyle='#071016';ctx.beginPath();ctx.arc(2,4,2,0,Math.PI*2);ctx.fill();
+    // Líra riding it — black hair separated from her face.
+    ctx.fillStyle='#090a0d';ctx.fillRect(-7,-25,13,12);ctx.fillStyle='#d3a080';ctx.fillRect(-4,-21,7,7);ctx.fillStyle='#21171a';ctx.fillRect(-1,-18,2,1);ctx.fillStyle='#111318';ctx.fillRect(-6,-14,11,16);ctx.fillStyle='#c99578';ctx.fillRect(4,-12,8,3);ctx.fillStyle='#08090c';ctx.fillRect(10,-13,4,5);ctx.fillStyle='#d7eef4';ctx.fillRect(3,-19,1,1);ctx.restore();
+  }
+  function drawSpaceEnemyR950(e){
+    ctx.save();ctx.translate(Math.round(e.x),Math.round(e.y));if(e.kind==='asteroid'){ctx.fillStyle='#4c4650';ctx.beginPath();ctx.arc(0,0,16,0,Math.PI*2);ctx.fill();ctx.fillStyle='#292834';ctx.beginPath();ctx.arc(-5,-4,5,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(6,5,3,0,Math.PI*2);ctx.fill();}
+    else if(e.kind==='eye'){ctx.strokeStyle='#c45870';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(0,0,14,7,0,0,Math.PI*2);ctx.stroke();ctx.fillStyle='#ff405e';ctx.beginPath();ctx.arc(0,0,4,0,Math.PI*2);ctx.fill();}
+    else{ctx.fillStyle=e.kind==='interceptor'?'#79343d':'#283843';ctx.beginPath();ctx.moveTo(-14,0);ctx.lineTo(9,-8);ctx.lineTo(15,0);ctx.lineTo(9,8);ctx.closePath();ctx.fill();ctx.fillStyle='#8fe7ff';ctx.fillRect(-2,-2,8,4);}ctx.restore();
+  }
+  function drawSpaceBossR950(){
+    const b=spaceBossR950;if(!b)return;ctx.save();ctx.translate(Math.round(b.x),Math.round(b.y));const pulse=.5+.5*Math.sin(b.t*3);ctx.strokeStyle=b.phase===3?'#ff3155':'#7dcfe5';ctx.lineWidth=3;for(let r=0;r<3;r++){ctx.globalAlpha=.28+r*.18;ctx.beginPath();ctx.ellipse(-35,0,70+r*15,48+r*10,b.t*(.08+r*.04),0,Math.PI*2);ctx.stroke();}ctx.globalAlpha=1;ctx.fillStyle='#11141b';ctx.beginPath();ctx.moveTo(-94,-52);ctx.lineTo(-10,-74);ctx.lineTo(42,-48);ctx.lineTo(54,0);ctx.lineTo(40,51);ctx.lineTo(-10,75);ctx.lineTo(-94,52);ctx.closePath();ctx.fill();ctx.strokeStyle='#6b7781';ctx.stroke();ctx.shadowColor='#ff3155';ctx.shadowBlur=18;ctx.fillStyle='#f33b57';ctx.beginPath();ctx.ellipse(-28,0,31,15,0,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;ctx.fillStyle='#06090e';ctx.beginPath();ctx.arc(-28,0,8+pulse*2,0,Math.PI*2);ctx.fill();ctx.fillStyle='#c8edf5';ctx.fillRect(-31,-2,6,3);ctx.restore();
+  }
+  function drawSpaceInsertR950(){
+    const c=spaceInsertR950;if(!c)return;const p=1-c.t/c.duration,edge=clamp(Math.min(p*6,(1-p)*6),0,1),img=liraArts[c.art];ctx.save();ctx.globalAlpha=edge;ctx.fillStyle='rgba(2,3,12,.96)';ctx.fillRect(0,0,W,H);drawCoverImage(img,0,0,170,H,.5,.38);const g=ctx.createLinearGradient(135,0,W,0);g.addColorStop(0,'rgba(2,3,12,0)');g.addColorStop(.18,'rgba(2,3,12,.94)');g.addColorStop(1,'rgba(3,4,18,.99)');ctx.fillStyle=g;ctx.fillRect(130,0,W-130,H);ctx.fillStyle='#8adff4';ctx.font='bold 8px monospace';ctx.fillText('LEVEL 3 — SPACE',193,92);ctx.fillStyle='#f2f5fb';ctx.font=c.title.length>22?'bold 12px monospace':'bold 16px monospace';ctx.fillText(c.title,193,113);ctx.fillStyle='#9aaed0';ctx.font='7px monospace';ctx.fillText(c.sub,193,138);ctx.strokeStyle='#3b5778';ctx.beginPath();ctx.moveTo(193,150);ctx.lineTo(395,150);ctx.stroke();ctx.fillStyle='#60789c';ctx.font='6px monospace';ctx.fillText('DREAMING OF LÍRA · ANDRIK',193,163);ctx.restore();
+  }
+  function drawSpaceR950(){
+    const bg=ctx.createLinearGradient(0,0,0,H);bg.addColorStop(0,'#02040e');bg.addColorStop(.55,'#071025');bg.addColorStop(1,'#130817');ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
+    // Parallax stars / nebula.
+    for(const st of spaceStarsR950){const x=((st.x-spaceDistanceR950*(.35*st.z))%(W+30)+W+30)%(W+30)-15;ctx.globalAlpha=.35+st.z*.18;ctx.fillStyle=st.z===3?'#9beaff':'#d8deff';ctx.fillRect(x,st.y,st.z===3?2:1,1);}ctx.globalAlpha=1;
+    ctx.fillStyle='rgba(92,44,128,.10)';ctx.beginPath();ctx.ellipse(345,78,135,52,.15,0,Math.PI*2);ctx.fill();ctx.fillStyle='rgba(32,128,166,.08)';ctx.beginPath();ctx.ellipse(250,205,170,46,-.1,0,Math.PI*2);ctx.fill();
+    for(const e of spaceEnemiesR950)drawSpaceEnemyR950(e);drawSpaceBossR950();
+    for(const sh of spaceShotsR950){ctx.fillStyle=sh.kind==='missile'?'#ffb744':sh.kind==='rift'?'#e9fbff':sh.kind==='plasma'?'#ff5a78':'#82e8ff';if(sh.kind==='laser'||sh.kind==='rift')ctx.fillRect(sh.x,sh.y-1,sh.kind==='rift'?26:16,3);else{ctx.beginPath();ctx.arc(sh.x,sh.y,sh.r,0,Math.PI*2);ctx.fill();}}
+    for(const b of spaceEnemyShotsR950){ctx.fillStyle='#ff4966';ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,Math.PI*2);ctx.fill();}
+    for(const p of spacePickupsR950){const y=p.y+Math.sin(p.t*5)*3;ctx.strokeStyle='#8beaff';ctx.strokeRect(p.x-9,y-9,18,18);ctx.fillStyle=p.kind==='heart'?'#ff5369':'#d7f7ff';ctx.font='bold 9px monospace';ctx.fillText(p.kind==='heart'?'♥':p.kind[0],p.x-4,y-6);}
+    drawEyeRiderR950();
+    // HUD
+    ctx.fillStyle='rgba(4,7,14,.82)';ctx.fillRect(8,8,132,35);ctx.fillStyle='#32343d';ctx.fillRect(12,12,120,6);ctx.fillStyle=player.hp>30?'#c04c5c':'#e1a44f';ctx.fillRect(12,12,120*(player.hp/player.maxHp),6);ctx.fillStyle='#e9f4fa';ctx.font='bold 8px monospace';ctx.fillText('LÍRA · EYE-RIDER',12,22);ctx.fillStyle='#80dff5';ctx.font='6px monospace';ctx.fillText(`WEAPON ${spaceWeaponR950} · C MISSILE`,12,33);
+    ctx.textAlign='right';ctx.fillStyle='#dbe8f4';ctx.font='bold 7px monospace';ctx.fillText('LEVEL 3 · SPACE',W-10,12);ctx.fillStyle='#9fb1c9';ctx.fillText(spaceBossStartedR950?'BOSS — BEYOND MAN':`${Math.min(99,Math.floor(spaceDistanceR950/SPACE_BOSS_AT_R950*100))}%`,W-10,22);ctx.fillStyle='#d8dce7';ctx.fillText(String(score).padStart(6,'0'),W-10,32);ctx.textAlign='left';
+    if(spaceBossR950){ctx.fillStyle='#2c2932';ctx.fillRect(145,10,190,6);ctx.fillStyle='#c63d59';ctx.fillRect(145,10,190*(spaceBossR950.hp/spaceBossR950.maxHp),6);ctx.fillStyle='#f0dfe4';ctx.font='bold 6px monospace';ctx.textAlign='center';ctx.fillText(`BEYOND MAN · PHASE ${spaceBossR950.phase}/3`,240,19);ctx.textAlign='left';}
+    if(messageTimer>0&&!victory&&!gameOver){ctx.fillStyle='#eff7ff';ctx.font='bold 9px monospace';ctx.textAlign='center';ctx.fillText(message,W/2,49);ctx.textAlign='left';}
+    if(levelSelectOpenR950)drawLevelSelectR950();
+    if(gameOver)overlayPanel('LOST IN SPACE',['R — TRY AGAIN','SELECT — LEVELS']);
+    if(victory)overlayPanel('SPACE — CLEAR',[`SCORE ${String(score).padStart(6,'0')}`,'','BEYOND MAN FALLS SILENT','','START — FLY AGAIN','SELECT — LEVELS']);
+    drawSpaceInsertR950();drawBootSplash();
+  }
+
+  function drawLevelSelectR950(){
+    const lines=[];for(let l=1;l<=3;l++){const unlocked=l<=unlockedLevel;lines.push(`${l===levelSelectChoiceR950?'>':' '} LEVEL ${l} — ${LEVEL_NAMES_R950[l]} ${unlocked?'':'🔒'}`);}lines.push('');lines.push('SELECT — NEXT   START — PLAY');overlayPanel('LEVEL SELECT',lines);
+  }
+
+  // Save/restore R007 state.
+  const __r949BuildSaveR950=buildSaveData;
+  buildSaveData=function(){const d=__r949BuildSaveR950();d.version=SAVE_VERSION;d.unlockedLevel=Math.max(unlockedLevel,currentLevel);d.completed=!!(victory&&currentLevel===3);d.recoveryR950={crates:recoveryCratesR950.map(c=>({id:c.id,hp:c.hp,broken:c.broken})),hearts:recoveryHeartsR950.map(h=>({id:h.id,x:h.x,y:h.y,taken:h.taken}))};if(currentLevel===3)d.spaceR950={distance:spaceDistanceR950,x:spaceX_R950,y:spaceY_R950,weapon:spaceWeaponR950,hp:player.hp,bossStarted:spaceBossStartedR950,bossHp:spaceBossR950?.hp||0,inserts:spaceInsertFlagsR950};return d;};
+  const __r949RestoreR950=restoreSave;
+  restoreSave=function(data){const ok=__r949RestoreR950(data);if(!ok)return false;unlockedLevel=Math.max(unlockedLevel,Math.min(3,data?.unlockedLevel||currentLevel));updateActionLabelsR950(currentLevel);resetRecoveryR950(currentLevel);if(data?.recoveryR950){for(const sc of data.recoveryR950.crates||[]){const c=recoveryCratesR950.find(x=>x.id===sc.id);if(c){c.hp=Number(sc.hp)||0;c.broken=!!sc.broken;}}for(const sh of data.recoveryR950.hearts||[]){recoveryHeartsR950.push({id:sh.id,x:Number(sh.x)||0,y:Number(sh.y)||0,t:0,taken:!!sh.taken});}}if(currentLevel===3){resetSpaceR950();const z=data?.spaceR950;if(z){spaceDistanceR950=Math.max(0,Number(z.distance)||0);spaceX_R950=clamp(Number(z.x)||88,38,225);spaceY_R950=clamp(Number(z.y)||136,40,H-35);spaceWeaponR950=String(z.weapon||'TWIN');player.hp=clamp(Number(z.hp)||100,1,100);spaceInsertFlagsR950=Array.isArray(z.inserts)?z.inserts.slice(0,3).map(Boolean):[false,false,false];if(z.bossStarted){startSpaceBossR950();if(spaceBossR950&&Number(z.bossHp)>0)spaceBossR950.hp=Number(z.bossHp);}}showMessage('LEVEL 3 — SPACE',1.5);}return true;};
+
+  // Build waves is empty in SPACE; CITY/OCEAN remain untouched.
+  const __r949BuildWavesFinalR950=buildWaves;
+  buildWaves=function(){if(currentLevel===3){waves=[];return;}return __r949BuildWavesFinalR950();};
+
+  function updateActionLabelsR950(level=currentLevel){
+    const a=document.querySelector('[data-action="attack"] .label');
+    const b=document.querySelector('[data-action="jump"] .label');
+    const c=document.querySelector('[data-action="kick"] .label');
+    if(a)a.textContent=level===3?'FIRE':'PUNCH';
+    if(b)b.textContent=level===3?'ROLL':'JUMP';
+    if(c)c.textContent=level===3?'MISSILE':'KICK';
+  }
+  const __r949StartLevelR950=startLevel;
+  startLevel=function(level,keepScore=false){level=Math.max(1,Math.min(3,Number(level)||1));__r949StartLevelR950(level,keepScore);levelSelectOpenR950=false;swordComboLatchR950=false;resetRecoveryR950(level);if(level===3){buildWaves();resetSpaceR950();showMessage('LEVEL 3 — SPACE',1.8);startSpaceInsertR950(0);}unlockedLevel=Math.max(unlockedLevel,level);updateActionLabelsR950(level);};
+
+  // Draw recovery props in the final CITY/OCEAN actor pass without touching their backgrounds.
+  const __r949DrawFinalR950=draw;
+  draw=function(){
+    if(currentLevel===3){drawSpaceR950();return;}
+    __r949DrawFinalR950();
+    if(levelSelectOpenR950)drawLevelSelectR950();
+  };
+  const __r949UpdateFinalR950=update;
+  update=function(dt){if(currentLevel===3){updateSpaceR950(dt);return;}__r949UpdateFinalR950(dt);if(started&&!paused&&!gameOver&&!victory)updateRecoveryR950(dt);};
+
+  // Override victory panels after existing HUD has rendered.
+  const __r949DrawHUDFinalR950=drawHUD;
+  drawHUD=function(){__r949DrawHUDFinalR950();if(victory&&currentLevel===2)overlayPanel('OCEAN — CLEAR',[`SCORE ${String(score).padStart(6,'0')}`,'','SPACE IS OPEN','','START — LEVEL 3: SPACE','SELECT — LEVELS']);};
+
+  // Useful desktop review shortcut; mobile still unlocks levels normally.
+  window.addEventListener('keydown',(e)=>{if(!started&&e.code==='Digit3'){e.preventDefault();unlockedLevel=3;startLevel(3,false);begin();}}, {passive:false});
+
+  // Ensure old saves that already cleared OCEAN expose SPACE in SELECT immediately.
+  try{const _s=readSave();if(_s){unlockedLevel=Math.max(unlockedLevel,Math.min(3,_s.unlockedLevel||(_s.completed&&_s.currentLevel===2?3:_s.currentLevel||1)));}}catch(_){}
 
   titleChoice = hasSave() ? 0 : 1;
   buildWaves();

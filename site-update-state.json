@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788708230643-f8028550ca",
-  "release": "R949",
-  "archiveName": "ANDRIK-R949-AUDIO-SYNC-LADDER-R948-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "edebb74f873783e6661fefc1bd610ead9579b020",
-  "backupSha": "edebb74f873783e6661fefc1bd610ead9579b020",
+  "operationId": "publish-1788714399249-676cb24259",
+  "release": "R950",
+  "archiveName": "ANDRIK-R950-GAME-R007-SPACE-COMBAT-R949-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "12b916525057867519073436a8c63705ea5b3b1d",
+  "backupSha": "12b916525057867519073436a8c63705ea5b3b1d",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-06T15:23:51.107Z"
+  "generatedAt": "2026-09-06T17:06:39.249Z"
 }
