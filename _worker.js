@@ -19723,7 +19723,7 @@ async function handleRadioRemoteCommandR627(request,env){
     if(age<180000)return json({ok:false,error:'command-busy',command:existing},409);
   }
   const id=crypto.randomUUID();
-  const command={id,action,state:'queued',createdAt:new Date().toISOString(),requestedBy:'owner-control-r942',...(action==='visual-now'?{slot}:{}),...(action==='queue-move'?{offset:Math.max(0,Math.min(5,Number(body.offset)||0)),direction:['up','down'].includes(String(body.direction||'').toLowerCase())?String(body.direction).toLowerCase():'up'}:{})};
+  const command={id,action,state:'queued',createdAt:new Date().toISOString(),requestedBy:'owner-control-r943',...(action==='visual-now'?{slot}:{}),...(action==='queue-move'?{offset:Math.max(0,Math.min(5,Number(body.offset)||0)),direction:['up','down'].includes(String(body.direction||'').toLowerCase())?String(body.direction).toLowerCase():'up',itemId:cleanPlainText(body.itemId||'',220)}:{})};
   await setPushState(db,RADIO_REMOTE_R627.commandKey,JSON.stringify(command));
   return json({ok:true,command});
 }
@@ -21153,15 +21153,39 @@ async function handleControlYoutubeLiveCachedR797(request,env){
 // Analytics API keeps engagedViews for playbacks that continue past the first frame
 // (or are explicitly clicked/tapped). Failure is non-fatal: the radio panel still works.
 async function fetchYoutubeStudioViewsR942(env,videoId,actualStartTime=''){
-  const id=cleanPlainText(videoId||'',80); if(!id)return {views:null,engagedViews:null,source:'none'};
+  const id=cleanPlainText(videoId||'',80); if(!id)return {views:null,engagedViews:null,studioViews:null,source:'none'};
   try{
-    const accessToken=await getYoutubeOAuthAccessToken(env); const parsed=Date.parse(actualStartTime||'');
+    const accessToken=await getYoutubeOAuthAccessToken(env);
+    // R943: resolve the concrete owned channel. channel==MINE can point at the
+    // wrong/default Brand Account and was the reason the radio card often showed “—”.
+    const owner=await resolveYoutubeAnalyticsOwnerR495(env,accessToken);
+    const ids=`channel==${owner.channelId}`;
+    const parsed=Date.parse(actualStartTime||'');
     const startDate=Number.isFinite(parsed)?new Date(Math.max(parsed,Date.now()-90*86400000)).toISOString().slice(0,10):isoDateDaysAgo(28);
-    const endDate=new Date().toISOString().slice(0,10); let rows=[];
-    try{rows=await youtubeAnalyticsQuery(env,accessToken,{ids:'channel==MINE',startDate,endDate,filters:`video==${id}`,metrics:'views,engagedViews'});}catch(_){rows=await youtubeAnalyticsQuery(env,accessToken,{ids:'channel==MINE',startDate,endDate,filters:`video==${id}`,metrics:'views'});}
-    const row=rows?.[0]||{}, views=Number(row.views), engaged=Number(row.engagedViews);
-    return {views:Number.isFinite(views)?Math.max(0,views):null,engagedViews:Number.isFinite(engaged)?Math.max(0,engaged):null,source:Number.isFinite(engaged)?'youtube-analytics-engagedViews-r942':(Number.isFinite(views)?'youtube-analytics-views-r942':'empty')};
-  }catch(_){return {views:null,engagedViews:null,source:'error'};}
+    const today=new Date().toISOString().slice(0,10);
+    const yesterday=isoDateDaysAgo(1);
+    const attempts=[
+      {endDate:today,metrics:'views,engagedViews',tag:'engaged-today'},
+      {endDate:yesterday,metrics:'views,engagedViews',tag:'engaged-yesterday'},
+      {endDate:today,metrics:'views',tag:'views-today'},
+      {endDate:yesterday,metrics:'views',tag:'views-yesterday'}
+    ];
+    let lastError='';
+    for(const attempt of attempts){
+      if(String(attempt.endDate)<String(startDate))continue;
+      try{
+        const rows=await youtubeAnalyticsQuery(env,accessToken,{ids,startDate,endDate:attempt.endDate,filters:`video==${id}`,metrics:attempt.metrics});
+        const row=rows?.[0]; if(!row)continue;
+        const views=Number(row.views), engaged=Number(row.engagedViews);
+        const viewsOk=Number.isFinite(views), engagedOk=Number.isFinite(engaged);
+        // After 24 Aug 2026 Studio's meaningful view number is engagedViews. If that
+        // metric is not yet populated for this report, fall back to the owner Analytics views.
+        const studio=engagedOk&&engaged>0?engaged:(viewsOk?views:(engagedOk?engaged:null));
+        if(studio!==null)return {views:viewsOk?Math.max(0,views):null,engagedViews:engagedOk?Math.max(0,engaged):null,studioViews:Math.max(0,studio),source:`youtube-analytics-${attempt.tag}-r943`,channelId:owner.channelId};
+      }catch(error){lastError=cleanPlainText(error?.message||error,260)}
+    }
+    return {views:null,engagedViews:null,studioViews:null,source:'empty-r943',channelId:owner.channelId,error:lastError};
+  }catch(error){return {views:null,engagedViews:null,studioViews:null,source:'error-r943',error:cleanPlainText(error?.message||error,260)};}
 }
 async function fetchYoutubeEngagedViewsR938(env,videoId,actualStartTime=''){const d=await fetchYoutubeStudioViewsR942(env,videoId,actualStartTime);return d.engagedViews;}
 
@@ -21297,7 +21321,7 @@ async function handleControlYoutubeLiveR565(request, env) {
       concurrentViewers:Math.max(0,Number(details?.concurrentViewers||0)),
       actualStartTime:cleanPlainText(details?.actualStartTime||broadcast?.snippet?.actualStartTime||'',80),
       scheduledStartTime:cleanPlainText(details?.scheduledStartTime||broadcast?.snippet?.scheduledStartTime||'',80),
-      views:Math.max(0,Number(statistics?.viewCount||0)),engagedViews:engagedViewsR938,studioViews:studioViewsR942.engagedViews??studioViewsR942.views,studioViewsSource:studioViewsR942.source,likes:Math.max(0,Number(statistics?.likeCount||0)),
+      views:Math.max(0,Number(statistics?.viewCount||0)),engagedViews:engagedViewsR938,studioViews:studioViewsR942.studioViews,studioViewsSource:studioViewsR942.source,likes:Math.max(0,Number(statistics?.likeCount||0)),
       comments:Math.max(0,Number(statistics?.commentCount||0)),boundStreamId,
       studioUrl:`https://studio.youtube.com/video/${encodeURIComponent(videoId)}/livestreaming`,
       analyticsUrl:`https://studio.youtube.com/video/${encodeURIComponent(videoId)}/analytics/tab-overview/period-default`,
@@ -21337,7 +21361,7 @@ async function handleControlYoutubeLiveR565(request, env) {
           scheduledStartTime:cleanPlainText(details?.scheduledStartTime||'',80),
           views:Math.max(0,Number(statistics?.viewCount||0)),
           engagedViews:engagedViewsR938,
-          studioViews:studioViewsR942.engagedViews??studioViewsR942.views,studioViewsSource:studioViewsR942.source,
+          studioViews:studioViewsR942.studioViews,studioViewsSource:studioViewsR942.source,
           likes:Math.max(0,Number(statistics?.likeCount||0)),
           comments:Math.max(0,Number(statistics?.commentCount||0)),
           boundStreamId:'',

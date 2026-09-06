@@ -1,0 +1,4 @@
+/* R943 — public YouTube starts + owner Studio/engaged views, separate cards. */
+.youtube-radio-youtube-stats-r565{grid-template-columns:repeat(5,minmax(0,1fr));}
+.youtube-radio-youtube-stats-r565 .r943-studio-stat{border-color:rgba(104,225,190,.22);background:rgba(21,95,78,.13)}
+@media(max-width:760px){.youtube-radio-youtube-stats-r565{grid-template-columns:repeat(2,minmax(0,1fr));}}

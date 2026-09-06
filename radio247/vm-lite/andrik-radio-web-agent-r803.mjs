@@ -6,7 +6,7 @@ import {Readable} from 'node:stream';
 import {pipeline} from 'node:stream/promises';
 
 const CONFIG='/etc/andrik-radio-web-r627.json';
-const AGENT_VERSION_R803='R942';
+const AGENT_VERSION_R803='R943';
 const DIAG_DIR_R803='/var/cache/andrik-radio-r622/diagnostics';
 const DIAG_AGENT_LOG_R803=DIAG_DIR_R803+'/r803-agent-events.ndjson';
 const DIAG_AGENT_MAX_BYTES_R803=1024*1024;
@@ -165,7 +165,7 @@ function writeTicker(text){const value=clean(text).replace(/[\r\n\t]+/g,' ').rep
 async function localStatus(){
   try{
     const r=await fetch('http://127.0.0.1:8080/status',{signal:AbortSignal.timeout(2500)});const d=await r.json();const c=d.current||{},n=d.next||{};
-    const status={service:run('systemctl',['is-active','andrik-radio.service'],8000).output.trim(),producer:Boolean(d.producerRunning),publisher:Boolean(d.publisherRunning),videoFeederRunning:Boolean(d.videoFeederRunning),clipActive:Boolean(d.clipActive),current:c.title||'',next:n.title||'',upcomingR942:Array.isArray(d.upcomingR942)?d.upcomingR942.slice(0,6):[],audio:d.audioMode||'',version:d.version||'',visualPeriod:d.visualPeriod||'',visualPath:d.visualPath||'',forceVisualSlot:d.forceVisualSlot||'',visualAutoSchedule:Boolean(d.visualAutoSchedule),visualProtected:visualsProtected(),lastError:clean(d.lastError||''),lastFfmpegLine:clean(d.lastFfmpegLine||''),lastExit:d.lastExit||null,diagnosticsR802:d.diagnosticsR802||null,diagnosticsR813:d.diagnosticsR802||null,diagnosticsR814:d.diagnosticsR802||null,
+    const status={service:run('systemctl',['is-active','andrik-radio.service'],8000).output.trim(),producer:Boolean(d.producerRunning),publisher:Boolean(d.publisherRunning),videoFeederRunning:Boolean(d.videoFeederRunning),clipActive:Boolean(d.clipActive),current:c.title||'',next:n.title||'',upcomingR943:Array.isArray(d.upcomingR943)?d.upcomingR943.slice(0,6):(Array.isArray(d.upcomingR942)?d.upcomingR942.slice(0,6):[]),upcomingR942:Array.isArray(d.upcomingR943)?d.upcomingR943.slice(0,6):(Array.isArray(d.upcomingR942)?d.upcomingR942.slice(0,6):[]),audio:d.audioMode||'',version:d.version||'',visualPeriod:d.visualPeriod||'',visualPath:d.visualPath||'',forceVisualSlot:d.forceVisualSlot||'',visualAutoSchedule:Boolean(d.visualAutoSchedule),visualProtected:visualsProtected(),lastError:clean(d.lastError||''),lastFfmpegLine:clean(d.lastFfmpegLine||''),lastExit:d.lastExit||null,diagnosticsR802:d.diagnosticsR802||null,diagnosticsR813:d.diagnosticsR802||null,diagnosticsR814:d.diagnosticsR802||null,
       rtmpsEstablishedConnectionsR792:Number(d.rtmpsEstablishedConnectionsR792||0),
       rtmpsExpectedConnectionsR792:Number(d.rtmpsExpectedConnectionsR792||0),
       transportHealthy:d.transportHealthy!==false,
@@ -286,8 +286,9 @@ async function execute(action,command={},headers={}){
   if(action==='queue-move'){
     const offset=Math.max(0,Math.min(5,Number(command.offset)||0));
     const direction=clean(command.direction).toLowerCase();
+    const itemId=clean(command.itemId||'');
     if(!['up','down'].includes(direction))return {ok:false,output:'QUEUE MOVE ❌ invalid direction'};
-    try{const d=await localControlR721(`/control/queue-move?offset=${encodeURIComponent(offset)}&direction=${encodeURIComponent(direction)}`);return {ok:Boolean(d?.ok),output:`QUEUE MOVE ${direction.toUpperCase()} ${d?.ok?'✅':'❌'}
+    try{const d=await localControlR721(`/control/queue-move?offset=${encodeURIComponent(offset)}&direction=${encodeURIComponent(direction)}&itemId=${encodeURIComponent(itemId)}`);return {ok:Boolean(d?.ok),output:`QUEUE MOVE ${direction.toUpperCase()} ${d?.ok?'✅':'❌'}
 ${JSON.stringify(d)}`};}
     catch(e){return {ok:false,output:`QUEUE MOVE ❌
 ${e.message||e}`};}

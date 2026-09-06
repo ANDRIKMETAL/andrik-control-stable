@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788675381789-574326b5c1",
-  "release": "R942",
-  "archiveName": "ANDRIK-R942-RADIO-QUEUE6-DREAMING-LIRA-R006-OCEAN-BOSS-FULL-2.zip",
-  "sourceHead": "41f42a2e548edcda30dc6c01ab11ca86a5f7090c",
-  "backupSha": "41f42a2e548edcda30dc6c01ab11ca86a5f7090c",
+  "operationId": "publish-1788677649606-8451c3920b",
+  "release": "R943",
+  "archiveName": "ANDRIK-R943-RADIO-SAFE-QUEUE-STATS-YOUTUBE-APP-R942-PRESERVED-FULL.zip",
+  "sourceHead": "8378ed8bf3cac80f09e1d31fa6adf7b80edbe510",
+  "backupSha": "8378ed8bf3cac80f09e1d31fa6adf7b80edbe510",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-06T06:16:23.778Z"
+  "generatedAt": "2026-09-06T06:54:10.373Z"
 }
