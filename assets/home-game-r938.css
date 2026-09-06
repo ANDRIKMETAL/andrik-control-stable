@@ -1,0 +1,8 @@
+/* R938 — Dreaming of Líra entry on the home hero. */
+.lyra-game-r938{gap:12px!important;border-color:rgba(229,196,111,.42)!important;background:linear-gradient(135deg,rgba(18,30,39,.88),rgba(72,55,20,.56))!important;box-shadow:0 10px 30px rgba(0,0,0,.25),0 0 24px rgba(229,196,111,.08)!important;}
+.lyra-game-r938>span:last-child{display:grid;gap:1px;line-height:1.05;text-align:left;}
+.lyra-game-r938 small{font-size:.56rem;letter-spacing:.15em;color:#e8cf83;}
+.lyra-game-r938__eye{position:relative;width:26px;height:26px;flex:0 0 26px;border:2px solid #e3c36f;transform:rotate(45deg);box-shadow:0 0 14px rgba(227,195,111,.2);}
+.lyra-game-r938__eye::before{content:"";position:absolute;inset:6px;border:3px solid #7bdfff;border-radius:50%;background:#020507;}
+.lyra-game-r938__eye::after{content:"";position:absolute;left:11px;top:7px;width:3px;height:9px;background:#eafcff;}
+@media(max-width:560px){.lyra-game-r938{font-size:.78rem!important}.lyra-game-r938__eye{width:24px;height:24px;flex-basis:24px}.lyra-game-r938 small{font-size:.5rem}}

@@ -8530,8 +8530,14 @@ async function selectFastYoutubeCommentTargetsR473(db,videos=[]){
   // Normal passes do zero commentThreads calls until videos.list reports a public
   // commentCount increase. The periodic sweep is only for replies, which may not
   // advance that public counter.
+  // R938: the active LIVE video is ALWAYS checked directly for ordinary YouTube
+  // comments. This no longer depends on the lagging public commentCount.
+  const liveNowR938=list.filter(v=>v?.isLive).slice(0,1);
   const recent=replySweepDueR797?list.slice(0,3):[];
-  const targets=[...recent];
+  const targets=[];
+  for(const row of [...liveNowR938,...recent]){
+    if(row?.videoId&&!targets.some(x=>x.videoId===row.videoId))targets.push(row);
+  }
   const ids=list.map(v=>v.videoId);
   let baselines=new Map();
   if(ids.length){
@@ -8582,28 +8588,139 @@ async function fetchFastYoutubeCommentsDirectR473(env,db,videos=[],ownerChannelI
   return {items:uniqueYoutubeComments(direct.items||[]),warnings,targets:plan.targets.map(v=>v.videoId),replySweep:Boolean(plan.replySweepDueR797)};
 }
 
+// R938 — lightweight EVERY-2-MINUTE LIVE comment path.
+// It checks ordinary comments on the pinned/current LIVE video directly, independently
+// from commentCount, and keeps LIVE chat as a separate source. Likes/subscribers remain
+// on their quota-economy cadence.
+async function checkYoutubeLiveCommentsEvery2mR938(env,db,channelId,startedAt){
+  const liveProbe=await fetchYoutubeActiveLiveEngagementR669(env,db).catch(error=>({
+    video:null,liveChatId:'',warning:cleanPlainText(error?.message||error,260),source:'live-probe-error-r938'
+  }));
+  const notifications=[];
+  const warnings=[];
+  if(liveProbe?.warning)warnings.push(`LIVE: ${cleanPlainText(liveProbe.warning,240)}`);
+
+  let direct={items:[],warnings:[]};
+  if(liveProbe?.video){
+    direct=await fetchYoutubeCommentsForVideos(env,[liveProbe.video],channelId).catch(error=>({items:[],warnings:[cleanPlainText(error?.message||error,260)]}));
+    for(const warning of direct.warnings||[]){
+      if(!isBenignYoutubeCommentWarningR473(warning))warnings.push(cleanPlainText(warning,240));
+    }
+  }
+
+  const identity={channelId,handle:cleanPlainText(env.YOUTUBE_CHANNEL_HANDLE||'@andrikmetal',100)};
+  const video=liveProbe?.video||{};
+  const comments=uniqueYoutubeComments(direct.items||[])
+    .map(item=>({...item,videoTitle:item.videoTitle||video.title||'ANDRIK Metal Radio 24/7',thumbnail:item.thumbnail||video.thumbnail||''}))
+    .filter(item=>!isYoutubeOwnerComment(item,identity));
+  const cutoff=Date.now()-24*60*60*1000;
+
+  for(const item of comments.slice().reverse().slice(-30)){
+    const key=`comment:${item.id}`;
+    if(await getYoutubeEventRow(db,key))continue;
+    const published=Date.parse(item.publishedAt||'');
+    if(Number.isFinite(published)&&published<cutoff){
+      await saveYoutubeEventRow(db,{key,type:'comment',resourceId:item.id,videoId:item.videoId,author:item.author,title:item.text,url:item.url,payload:{...item,seededSilently:true,mode:'direct-live-2m-r938'}}).catch(()=>{});
+      continue;
+    }
+    const onceKey=`push-once:youtube-comment:${item.id}`;
+    let claimed=await claimPushOnce(db,onceKey,startedAt);
+    if(!claimed){
+      const delivered=await db.prepare(`SELECT 1 AS found FROM push_history WHERE type='youtube-comment' AND status='sent' AND details_json LIKE ? ORDER BY created_at DESC LIMIT 1`).bind(`%${item.id}%`).first().catch(()=>null);
+      if(delivered?.found){
+        await saveYoutubeEventRow(db,{key,type:'comment',resourceId:item.id,videoId:item.videoId,author:item.author,title:item.text,url:item.url,payload:item}).catch(()=>{});
+        continue;
+      }
+      await db.prepare(`DELETE FROM push_state WHERE key=? AND updated_at < datetime('now','-8 minutes')`).bind(onceKey).run().catch(()=>{});
+      claimed=await claimPushOnce(db,onceKey,startedAt);
+    }
+    if(!claimed)continue;
+    const result=await sendOwnerPush(env,{
+      title:`💬 ${compactYoutubePushTitle(item.videoTitle||'Новый комментарий','YouTube')}`,
+      message:`${item.author}: ${String(item.text||'').slice(0,160)}`,
+      url:item.url,image:item.thumbnail||'',name:`youtube-comment-${item.id}`,ttl:86400,
+      data:{commentId:item.id,parentId:item.parentId||item.id,videoId:item.videoId||''},
+      webButtons:[
+        {id:'reply-comment',text:'↩️ Ответить',url:`https://control.andrikmetal.com/youtube-comment-reply.html?commentId=${encodeURIComponent(item.id)}&videoId=${encodeURIComponent(item.videoId||'')}`},
+        {id:'open-youtube',text:'▶️ YouTube',url:item.url}
+      ],
+      history:{type:'youtube-comment',source:'YouTube',videoId:item.videoId,videoTitle:item.videoTitle||item.text,details:{commentId:item.id,parentId:item.parentId||item.id,author:item.author,publishedAt:item.publishedAt,deliveryMode:'direct-live-2m-r938'}}
+    });
+    if(result.ok)await saveYoutubeEventRow(db,{key,type:'comment',resourceId:item.id,videoId:item.videoId,author:item.author,title:item.text,url:item.url,payload:item}).catch(()=>{});
+    else await releasePushOnceClaim(db,onceKey).catch(()=>{});
+    notifications.push({type:'comment',id:item.id,ok:Boolean(result.ok),pending:Boolean(result.pending),error:result.error||''});
+  }
+
+  const liveChat=await checkYoutubeLiveChatPushR669(env,db,liveProbe).catch(error=>({
+    ok:false,active:Boolean(liveProbe?.video),seen:0,sent:0,failed:1,seeded:false,
+    warning:cleanPlainText(error?.message||error,260),videoId:video.videoId||'',liveChatId:liveProbe?.liveChatId||'',notifications:[]
+  }));
+  if(liveChat?.warning)warnings.push(`LIVE chat: ${cleanPlainText(liveChat.warning,240)}`);
+  if(Array.isArray(liveChat.notifications))notifications.push(...liveChat.notifications);
+  const hardFailed=notifications.filter(item=>!item.ok&&!item.pending).length;
+  const pending=notifications.filter(item=>!item.ok&&item.pending).length;
+  return {
+    ok:warnings.length===0&&hardFailed===0,
+    commentMode:'direct-live-2m-r938',
+    commentTargets:liveProbe?.video?1:0,
+    liveVideoId:cleanPlainText(video.videoId||'',80),
+    liveVideoPinned:Boolean(liveProbe?.video),
+    commentsSeen:comments.length,
+    commentsSent:notifications.filter(item=>item.type==='comment'&&item.ok).length,
+    liveChatActive:Boolean(liveProbe?.liveChatId),
+    liveChatSeen:Math.max(0,Number(liveChat?.seen||0)),
+    liveChatSent:Math.max(0,Number(liveChat?.sent||0)),
+    sent:notifications.filter(item=>item.ok).length,
+    failed:hardFailed,
+    pending,
+    warnings,
+    checkedAt:startedAt
+  };
+}
+
 async function handleFastYoutubeEngagementR333(request,env,options={}){
   if(!adminAuthorized(request,env) && !cronAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
   const db=requireDb(env);
   await Promise.all([ensurePushAutomationSchema(db),ensureControlV1Schema(db)]);
-  // R797: keep the reliable */2 scheduler heartbeat, but spend YouTube quota only
-  // about once per six minutes. Manual/admin checks and ?fresh=1 still run now.
+  // R938: the scheduler still wakes every 2 minutes. Expensive likes/catalogue work
+  // remains ~6-minute economy, but the current LIVE video's ordinary comments and LIVE
+  // chat are checked on EVERY wake-up. The quota timestamp is separate from heartbeat.
   const requestUrlR797=new URL(request.url);
   const forceQuotaPollR797=options.force===true || requestUrlR797.searchParams.get('fresh')==='1' || (adminAuthorized(request,env) && !cronAuthorized(request,env));
-  if(!forceQuotaPollR797){
-    const lastR797=await getPushState(db,'youtube-fast-engagement-last-at-r333').catch(()=>null);
-    const lastMsR797=Date.parse(String(lastR797?.value||lastR797?.updatedAt||''));
-    const ageMsR797=Number.isFinite(lastMsR797)?Math.max(0,Date.now()-lastMsR797):Infinity;
-    const minGapMsR797=5.5*60*1000;
-    if(ageMsR797<minGapMsR797){
-      return json({ok:true,skipped:true,reason:'quota-eco-r797',cadenceMinutes:6,ageMinutes:Math.round(ageMsR797/6000)/10,nextInSeconds:Math.max(1,Math.ceil((minGapMsR797-ageMsR797)/1000)),checkedAt:new Date().toISOString()},200);
+  const invokedAtR938=new Date().toISOString();
+  const quotaStateR938=await getPushState(db,'youtube-fast-quota-last-at-r938').catch(()=>null);
+  const quotaMsR938=Date.parse(String(quotaStateR938?.value||quotaStateR938?.updatedAt||''));
+  const quotaAgeMsR938=Number.isFinite(quotaMsR938)?Math.max(0,Date.now()-quotaMsR938):Infinity;
+  const minGapMsR797=5.5*60*1000;
+  await setPushState(db,'youtube-fast-engagement-last-at-r333',invokedAtR938).catch(()=>{});
+  if(!forceQuotaPollR797 && quotaAgeMsR938<minGapMsR797){
+    try{
+      let channelId=(await getPushState(db,'youtube-websub-channel-id-r332').catch(()=>null))?.value||'';
+      if(!channelId)channelId=await resolveYoutubeWebSubChannelIdR332(env,db);
+      if(!channelId)throw new Error('youtube-channel-id-unavailable');
+      const live2m=await checkYoutubeLiveCommentsEvery2mR938(env,db,channelId,invokedAtR938);
+      const summary={...live2m,skippedQuota:true,quotaCadenceMinutes:6,likesSent:0,videosChecked:live2m.liveVideoPinned?1:0};
+      const fastStatus=summary.failed>0?'failed':(summary.warnings.length||summary.pending>0)?'warning':'success';
+      await setPushState(db,'youtube-fast-engagement-last-result-r333',JSON.stringify(summary)).catch(()=>{});
+      await setPushState(db,'youtube-fast-engagement-last-status-r376',fastStatus).catch(()=>{});
+      if(summary.ok)await setPushState(db,'youtube-fast-engagement-last-success-at-r376',invokedAtR938).catch(()=>{});
+      return json({...summary,reason:'quota-eco-live-comments-r938',cadenceMinutes:2,nextQuotaInSeconds:Math.max(1,Math.ceil((minGapMsR797-quotaAgeMsR938)/1000))},summary.failed>0?502:summary.warnings.length?206:200);
+    }catch(error){
+      const msg=cleanPlainText(error?.message||error,300);
+      const summary={ok:false,commentMode:'direct-live-2m-r938',commentTargets:0,commentsSent:0,liveChatSent:0,sent:0,failed:1,pending:0,warnings:[msg],checkedAt:invokedAtR938,skippedQuota:true};
+      await setPushState(db,'youtube-fast-engagement-last-result-r333',JSON.stringify(summary)).catch(()=>{});
+      await setPushState(db,'youtube-fast-engagement-last-status-r376','failed').catch(()=>{});
+      return json(summary,502);
     }
   }
   const autoCheckpointR398=options.skipCheckpoint
     ? {ok:true,skipped:true,reason:'checkpoint-owned-by-caller-r416'}
     : await checkpointDailySummaryAutoR398(env,'youtube-fast-6m-r797').catch(error=>({ok:false,error:cleanPlainText(error?.message||error,300)}));
   const startedAt=new Date().toISOString();
-  await setPushState(db,'youtube-fast-engagement-last-at-r333',startedAt).catch(()=>{});
+  await Promise.all([
+    setPushState(db,'youtube-fast-engagement-last-at-r333',startedAt),
+    setPushState(db,'youtube-fast-quota-last-at-r938',startedAt)
+  ]).catch(()=>{});
   // R681 D1 economy: do not write a transient 'running' state every two minutes.
   // The previous result remains visible until the current check atomically publishes
   // its final success/warning/failure status below.
@@ -8736,7 +8853,7 @@ async function handleFastYoutubeEngagementR333(request,env,options={}){
         if(burst.previousState)await setPushState(db,burstKey,JSON.stringify(burst.previousState)).catch(()=>{});
         else await db.prepare(`DELETE FROM push_state WHERE key=?`).bind(burstKey).run().catch(()=>{});
       }
-      notifications.push({type:'like',videoId:item.videoId,ok:Boolean(result.ok),delta,total:item.likes,error:result.error || ''});
+      notifications.push({type:'like',videoId:item.videoId,ok:Boolean(result.ok),pending:Boolean(result.pending),delta,total:item.likes,error:result.error || ''});
     }
 
     // R669: LIVE chat is a different YouTube surface from ordinary comments.
@@ -8753,7 +8870,8 @@ async function handleFastYoutubeEngagementR333(request,env,options={}){
       ...(liveProbe?.warning?[`LIVE: ${cleanPlainText(liveProbe.warning,240)}`]:[]),
       ...(liveChat?.warning?[`LIVE chat: ${cleanPlainText(liveChat.warning,240)}`]:[])
     ];
-    const failed=notifications.filter(x=>!x.ok).length;
+    const failed=notifications.filter(x=>!x.ok&&!x.pending).length;
+    const pending=notifications.filter(x=>!x.ok&&x.pending).length;
     const summary={
       ok:warnings.length===0 && failed===0,
       commentsSeen:comments.length+Math.max(0,Number(liveChat?.seen||0)),
@@ -8769,12 +8887,13 @@ async function handleFastYoutubeEngagementR333(request,env,options={}){
       likesSent:notifications.filter(x=>x.type==='like'&&x.ok).length,
       sent:notifications.filter(x=>x.ok).length,
       failed,
+      pending,
       busyLikeClaims,
       staleLikeClaimsRecovered,
       warnings,
       checkedAt:new Date().toISOString()
     };
-    const fastStatus=failed>0?'failed':warnings.length?'warning':'success';
+    const fastStatus=failed>0?'failed':(warnings.length||pending>0)?'warning':'success';
     await setPushState(db,'youtube-fast-engagement-last-result-r333',JSON.stringify(summary)).catch(()=>{});
     await setPushState(db,'youtube-fast-engagement-last-status-r376',fastStatus).catch(()=>{});
     if(summary.ok)await setPushState(db,'youtube-fast-engagement-last-success-at-r376',startedAt).catch(()=>{});
@@ -9392,7 +9511,7 @@ async function handleCheckYoutubeEvents(request, env) {
       });
       if (!result.ok) await releasePushOnceClaim(db, onceKey);
       subscriberDelivery.set(item.id, result);
-      notifications.push({ type:'subscriber', id:item.id, ok:Boolean(result.ok), url:item.url, error:result.error || '' });
+      notifications.push({ type:'subscriber', id:item.id, ok:Boolean(result.ok), pending:Boolean(result.pending), url:item.url, error:result.error || '' });
     }
     /* R309 subscriber baseline logic.
        - Store the latest REAL YouTube total, including decreases.
@@ -9469,6 +9588,7 @@ async function handleCheckYoutubeEvents(request, env) {
           type:'subscriber-count',
           delta:unnamedSubscriberDelta,
           ok:Boolean(result.ok),
+          pending:Boolean(result.pending),
           url:identity.channelUrl,
           previous:previousSubscriberCount,
           total:identity.subscribers
@@ -9544,7 +9664,7 @@ async function handleCheckYoutubeEvents(request, env) {
         else await db.prepare(`DELETE FROM push_state WHERE key=?`).bind(burstKey).run().catch(()=>{});
         likeDeferredVideoIds.add(item.videoId);
       }
-      notifications.push({ type:'like', videoId:item.videoId, delta:item.delta, cumulativeDelta, glowLevel:glowTheme.level, ok:Boolean(result.ok), url:videoAppUrl, error:result.error || '' });
+      notifications.push({ type:'like', videoId:item.videoId, delta:item.delta, cumulativeDelta, glowLevel:glowTheme.level, ok:Boolean(result.ok), pending:Boolean(result.pending), url:videoAppUrl, error:result.error || '' });
     }
 
     for (const item of newComments) {
@@ -9572,12 +9692,12 @@ async function handleCheckYoutubeEvents(request, env) {
       newComments:newComments.length,
       commentsAttempted:commentBatch.length,
       commentsSent:notifications.filter(item=>item.type==='comment'&&item.ok).length,
-      commentsFailed:notifications.filter(item=>item.type==='comment'&&!item.ok).length,
+      commentsFailed:notifications.filter(item=>item.type==='comment'&&!item.ok&&!item.pending).length,
       commentsQueued:Math.max(0,newComments.length-[...commentDelivery.values()].filter(result=>result?.ok).length),
       newVisibleSubscribers:newVisibleSubscribers.length,
       subscribersAttempted:visibleSubscriberBatch.length + (unnamedSubscriberDelta > 0 ? 1 : 0),
       subscribersSent:notifications.filter(item=>['subscriber','subscriber-count'].includes(item.type)&&item.ok).length,
-      subscribersFailed:notifications.filter(item=>['subscriber','subscriber-count'].includes(item.type)&&!item.ok).length,
+      subscribersFailed:notifications.filter(item=>['subscriber','subscriber-count'].includes(item.type)&&!item.ok&&!item.pending).length,
       subscribersQueued:Math.max(0,newVisibleSubscribers.length-[...subscriberDelivery.values()].filter(result=>result?.ok).length) + (subscriberCountDeferred?1:0),
       subscriberDelta,
       subscriberPreviousCount:previousSubscriberCount,
@@ -9590,7 +9710,7 @@ async function handleCheckYoutubeEvents(request, env) {
       likeChanges:likeChanges.reduce((sum,item)=>sum+item.delta,0),
       likesAttempted:likeBatch.length,
       likesSent:notifications.filter(item=>item.type==='like'&&item.ok).length,
-      likesFailed:notifications.filter(item=>item.type==='like'&&!item.ok).length,
+      likesFailed:notifications.filter(item=>item.type==='like'&&!item.ok&&!item.pending).length,
       likesQueued:likeDeferredVideoIds.size,
       likeClaimsBusy:likeClaimBusyVideoIds.size,
       staleLikeClaimsRecovered:staleFullLikeClaimsRecovered,
@@ -9601,7 +9721,7 @@ async function handleCheckYoutubeEvents(request, env) {
       notifications:notifications.length,
       warnings
     };
-    const failedEventDelivery = notifications.some(item => !item.ok);
+    const failedEventDelivery = notifications.some(item => !item.ok && !item.pending);
     const fullHealthyR923 = !warnings.length && !failedEventDelivery && !summary.commentsQueued && !summary.subscribersQueued && !summary.likesQueued;
     // R923: a successful owner/full reconciliation is strictly richer than the 2-minute
     // engagement sample.  Treat it as a valid fast heartbeat so the red stale badge and
@@ -21028,6 +21148,30 @@ async function handleControlYoutubeLiveCachedR797(request,env){
 }
 
 // R578 — YouTube Live Studio state: follow CURRENT live video with fallback detection.
+// R938 — post-Aug-24-2026 view split: public starts vs engaged views.
+// videos.statistics.viewCount now counts playback from the first frame. The owner
+// Analytics API keeps engagedViews for playbacks that continue past the first frame
+// (or are explicitly clicked/tapped). Failure is non-fatal: the radio panel still works.
+async function fetchYoutubeEngagedViewsR938(env,videoId,actualStartTime=''){
+  const id=cleanPlainText(videoId||'',80);
+  if(!id)return null;
+  try{
+    const accessToken=await getYoutubeOAuthAccessToken(env);
+    const parsed=Date.parse(actualStartTime||'');
+    const startDate=Number.isFinite(parsed)
+      ? new Date(Math.max(parsed,Date.now()-90*86400000)).toISOString().slice(0,10)
+      : isoDateDaysAgo(28);
+    const endDate=new Date().toISOString().slice(0,10);
+    const rows=await youtubeAnalyticsQuery(env,accessToken,{
+      ids:'channel==MINE',startDate,endDate,filters:`video==${id}`,metrics:'engagedViews'
+    });
+    const value=Number(rows?.[0]?.engagedViews);
+    return Number.isFinite(value)?Math.max(0,value):null;
+  }catch(_){
+    return null;
+  }
+}
+
 async function handleControlYoutubeLiveR565(request, env) {
   if (!adminAuthorized(request, env)) return json({ok:false,error:'unauthorized'},401);
   const requestUrl=new URL(request.url);
@@ -21104,7 +21248,7 @@ async function handleControlYoutubeLiveR565(request, env) {
       return json({
         ok:true,active:false,videoId:'',title:'ANDRIK Metal Radio 24/7',
         lifeCycleStatus:'',privacyStatus:'',recordingStatus:'',streamStatus:'',healthStatus:'',healthIssues:[],
-        concurrentViewers:0,views:0,likes:0,comments:0,boundStreamId:'',
+        concurrentViewers:0,views:0,engagedViews:null,likes:0,comments:0,boundStreamId:'',
         studioUrl:'https://studio.youtube.com/channel/UC/livestreaming',
         analyticsUrl:'https://studio.youtube.com/',
         watchUrl:'https://www.youtube.com/@andrikmetal/live',
@@ -21143,6 +21287,7 @@ async function handleControlYoutubeLiveR565(request, env) {
     const broadcastLive=lifeCycleStatus.toLowerCase()==='live' || Boolean(details?.actualStartTime && !details?.actualEndTime);
     const signalActive=streamStatus.toLowerCase()==='active';
     const active=broadcastLive;
+    const engagedViewsR938=await fetchYoutubeEngagedViewsR938(env,videoId,details?.actualStartTime||broadcast?.snippet?.actualStartTime||'');
     return json({
       ok:true,active,signalActive,broadcastLive,videoId,
       title:cleanPlainText(video?.snippet?.title||broadcast?.snippet?.title||'ANDRIK Metal Radio 24/7',220),
@@ -21158,7 +21303,7 @@ async function handleControlYoutubeLiveR565(request, env) {
       concurrentViewers:Math.max(0,Number(details?.concurrentViewers||0)),
       actualStartTime:cleanPlainText(details?.actualStartTime||broadcast?.snippet?.actualStartTime||'',80),
       scheduledStartTime:cleanPlainText(details?.scheduledStartTime||broadcast?.snippet?.scheduledStartTime||'',80),
-      views:Math.max(0,Number(statistics?.viewCount||0)),likes:Math.max(0,Number(statistics?.likeCount||0)),
+      views:Math.max(0,Number(statistics?.viewCount||0)),engagedViews:engagedViewsR938,likes:Math.max(0,Number(statistics?.likeCount||0)),
       comments:Math.max(0,Number(statistics?.commentCount||0)),boundStreamId,
       studioUrl:`https://studio.youtube.com/video/${encodeURIComponent(videoId)}/livestreaming`,
       analyticsUrl:`https://studio.youtube.com/video/${encodeURIComponent(videoId)}/analytics/tab-overview/period-default`,
@@ -21185,6 +21330,7 @@ async function handleControlYoutubeLiveR565(request, env) {
         }catch(_){ }
         const details=video?.liveStreamingDetails||{};
         const statistics=video?.statistics||{};
+        const engagedViewsR938=await fetchYoutubeEngagedViewsR938(env,videoId,details?.actualStartTime||'');
         return json({
           ok:true,active:true,signalActive:true,broadcastLive:true,videoId,
           title:cleanPlainText(video?.snippet?.title||'ANDRIK Metal Radio 24/7',220),
@@ -21195,6 +21341,7 @@ async function handleControlYoutubeLiveR565(request, env) {
           actualStartTime:cleanPlainText(details?.actualStartTime||'',80),
           scheduledStartTime:cleanPlainText(details?.scheduledStartTime||'',80),
           views:Math.max(0,Number(statistics?.viewCount||0)),
+          engagedViews:engagedViewsR938,
           likes:Math.max(0,Number(statistics?.likeCount||0)),
           comments:Math.max(0,Number(statistics?.commentCount||0)),
           boundStreamId:'',

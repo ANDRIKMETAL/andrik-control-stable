@@ -1,0 +1,39 @@
+ANDRIK R938 — PUSH + YOUTUBE VIEW SPLIT + DREAMING OF LÍRA
+Date: 2026-09-06
+Base: R937 — SCREEN RESTORE -> R936F FULLSCREEN GOLD · R934 site preserved
+
+1. PUSH / YOUTUBE COMMENTS
+- Current LIVE video is always a direct ordinary-comment target.
+- Ordinary comments on the current LIVE video are checked on every 2-minute scheduler wake-up.
+- Detection no longer depends on public commentCount increasing first.
+- LIVE chat remains a separate source and is also checked on the 2-minute live path.
+- Likes/catalogue work remains on the ~6-minute quota-economy cadence.
+- Manual «Проверить сейчас» also forces the current LIVE video into direct comment control.
+
+2. ONESIGNAL PENDING UI
+- subscriber-delivery-pending-r765 remains retryable and does NOT advance delivery watermarks.
+- Pending delivery is counted as queue/waiting, not as a hard red error.
+- Only actual failed/errored delivery is counted in the red Errors KPI.
+
+3. RADIO YOUTUBE VIEWS
+- «Запуски YouTube» = videos.statistics.viewCount.
+- «Просмотры Studio» = YouTube Analytics engagedViews for the current broadcast.
+- If Analytics is temporarily unavailable/lagging, Studio value shows — without breaking radio status.
+
+4. DREAMING OF LÍRA
+- New browser game: /dreaming-of-lira.html
+- Original ANDRIK pixel-platformer prototype; no Nintendo/Mario assets.
+- Líra runs/jumps, collects 7 eye fragments, finds her guitar, avoids shadow enemies and opens the portal.
+- Keyboard + Android touch controls.
+- Local best-time save.
+- Homepage hero now has «Играть · Dreaming of Líra».
+- Small game mark: original CSS pixel-eye logo, no extra image dependency.
+
+5. PRESERVED FROM R937
+- R937 pinned R936F FULLSCREEN GOLD screen-restore path.
+- R934 technical-map hard-open fix.
+- R932 traffic split and observability cleanup.
+- R931 July archive restore.
+- R928 R2 universal audio preview.
+- R926 screen restore / R2 liquid UI.
+- radio247 subtree is byte-for-byte preserved from the supplied R937 base.

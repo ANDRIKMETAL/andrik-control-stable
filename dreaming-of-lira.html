@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#05070b">
+<meta name="robots" content="index,follow">
+<title>Dreaming of Líra — ANDRIK Game</title>
+<meta name="description" content="Dreaming of Líra — небольшая браузерная pixel adventure игра во вселенной ANDRIK.">
+<link rel="icon" href="/assets/andrik-eye-v22-192.png">
+<link rel="stylesheet" href="/assets/dreaming-of-lira-r938.css?v=55.00-r938">
+</head>
+<body>
+<main class="dol-shell" id="dolShell">
+  <header class="dol-topbar">
+    <a class="dol-back" href="/" aria-label="На главную">← ANDRIK</a>
+    <div class="dol-mini-logo" aria-label="Dreaming of Líra"><i></i><b>DREAMING OF LÍRA</b></div>
+    <button class="dol-icon-btn" id="dolSound" type="button" aria-label="Звук">♪</button>
+  </header>
+
+  <section class="dol-game-card">
+    <div class="dol-game-head">
+      <div class="dol-logo" aria-label="Dreaming of Líra">
+        <span class="dol-logo-eye"><i></i></span>
+        <div><small>ANDRIK · PIXEL ADVENTURE</small><h1>DREAMING OF <em>LÍRA</em></h1><p>LEVEL I · THE ILLUSION</p></div>
+      </div>
+      <button class="dol-pause" id="dolPause" type="button">II</button>
+    </div>
+
+    <div class="dol-stage" id="dolStage">
+      <canvas id="dolCanvas" width="960" height="540" aria-label="Dreaming of Líra — игровой экран"></canvas>
+      <div class="dol-scanlines" aria-hidden="true"></div>
+
+      <div class="dol-overlay is-visible" id="dolStart">
+        <div class="dol-dialog">
+          <span class="dol-kicker">WHO IS LOOKING THROUGH YOUR EYES?</span>
+          <h2>Проснись внутри сна.</h2>
+          <p>Собери 7 осколков глаза, найди гитару Лиры и открой портал за пределы иллюзии.</p>
+          <div class="dol-controls-help"><span>ПК: ← → / A D</span><span>Прыжок: SPACE / ↑</span><span>Телефон: кнопки снизу</span></div>
+          <button id="dolStartBtn" type="button">▶ ИГРАТЬ</button>
+        </div>
+      </div>
+
+      <div class="dol-overlay" id="dolEnd">
+        <div class="dol-dialog">
+          <span class="dol-kicker">LEVEL COMPLETE</span>
+          <h2>Ты увидела первый слой.</h2>
+          <p id="dolEndText">Портал открыт.</p>
+          <div class="dol-final-stats" id="dolFinalStats"></div>
+          <button id="dolRestart" type="button">↻ СЫГРАТЬ ЕЩЁ</button>
+          <a href="/" class="dol-home-link">На главную ANDRIK</a>
+        </div>
+      </div>
+
+      <div class="dol-toast" id="dolToast" aria-live="polite"></div>
+    </div>
+
+    <div class="dol-hud" aria-live="polite">
+      <div><small>ОСКОЛКИ</small><strong id="dolEyes">0 / 7</strong></div>
+      <div><small>КВЕСТ</small><strong id="dolQuest">Найди первый знак</strong></div>
+      <div><small>ВРЕМЯ</small><strong id="dolTime">00:00</strong></div>
+      <div><small>ЖИЗНИ</small><strong id="dolLives">♥ ♥ ♥</strong></div>
+    </div>
+  </section>
+
+  <section class="dol-mobile-controls" aria-label="Управление">
+    <div class="dol-dpad"><button id="dolLeft" type="button" aria-label="Влево">◀</button><button id="dolRight" type="button" aria-label="Вправо">▶</button></div>
+    <button class="dol-jump" id="dolJump" type="button">JUMP</button>
+  </section>
+
+  <footer class="dol-footer">DREAMING OF LÍRA · prototype 01 · ANDRIK universe</footer>
+</main>
+<script src="/assets/dreaming-of-lira-r938.js?v=55.00-r938" defer></script>
+</body>
+</html>
