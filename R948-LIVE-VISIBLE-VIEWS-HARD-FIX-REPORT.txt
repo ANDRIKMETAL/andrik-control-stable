@@ -1,0 +1,13 @@
+ANDRIK R948 — LIVE VISIBLE VIEWS HARD FIX
+
+Base: R947 preserved.
+
+1. Keeps two separate radio counters:
+   - Запуски YouTube = videos.statistics.viewCount (post-Aug playback starts).
+   - Просмотры = lower cumulative public count shown on the current LIVE card/list.
+2. Fixes a real R947 parser bug: generic Russian substring «смотр» also matched «просмотров», so valid Russian view labels could be rejected. R948 rejects only concurrent labels such as «сейчас смотрят» / «watching now».
+3. Public-view reader now scans primary renderers and both sides of the exact current videoId.
+4. Adds YouTube search-by-video-id, channel streams, watch RU/EN, mobile watch and internal youtubei search fallback.
+5. Confirmed visible value is monotonic-cached in D1 and additionally kept in browser localStorage to prevent temporary dashes.
+6. R943C next-6 queue and standard shuffle icon are preserved.
+7. radio247/ is byte-identical to R947: no VPS server, FFmpeg, fullscreen or A/V changes in this site build.

@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788683340095-799527b292",
-  "release": "R947",
-  "archiveName": "ANDRIK-R947-RADIO-TWO-VIEWS-SHUFFLE-R946-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "e54a2c6cefdd3b51152f3254b414a4e641dbf2c1",
-  "backupSha": "e54a2c6cefdd3b51152f3254b414a4e641dbf2c1",
+  "operationId": "publish-1788694736318-34215d0e83",
+  "release": "R948",
+  "archiveName": "ANDRIK-R948-LIVE-VISIBLE-VIEWS-HARD-FIX-R947-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "732216bff108417dc48c1d3b02e5e22e1aff7a2b",
+  "backupSha": "732216bff108417dc48c1d3b02e5e22e1aff7a2b",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-06T08:29:00.095Z"
+  "generatedAt": "2026-09-06T11:38:56.318Z"
 }
