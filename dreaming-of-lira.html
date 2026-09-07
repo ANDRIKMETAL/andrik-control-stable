@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
   <meta name="theme-color" content="#080b12" />
-  <title>Dreaming of Líra — ANDRIK Game · R009</title>
+  <title>Dreaming of Líra — ANDRIK Game · R010</title>
   <style>
     :root {
       --ink: #f4f1e8;
@@ -4488,6 +4488,722 @@
 
 
 
+
+
+  // =====================================================================
+  // R010 / R963 — LEVEL 6 RUINS OF EPOCHS + TOWER DOUBLE JUMP + LEVEL POSTERS
+  // Adds: level 6 beat-'em-up ruins stage, boss statue with Brahman head,
+  // four poster intros (levels 3-6), safer save schema v6, more feminine
+  // mini-sprite face, tower double jump, and air hand/sword combat support.
+  // =====================================================================
+  const GAME_R010 = 'R010-R963';
+  LEVEL_WORLD_W[6] = 3920;
+  LEVEL_NAMES_R950[6] = 'RUINS OF EPOCHS';
+  const SAVE_VERSION_R010 = 6;
+
+  // Approved posters for levels 3-6.
+  const levelPosterSourcesR010 = {
+    3: 'assets/level3-star-runner.png',
+    4: 'assets/level4-the-tower.png',
+    5: 'assets/level5-block-labyrinth.png',
+    6: 'assets/level6-fallen-empire.png'
+  };
+  const levelPosterArtsR010 = {};
+  for (const [k, src] of Object.entries(levelPosterSourcesR010)) {
+    const img = new Image();
+    img.src = src;
+    levelPosterArtsR010[Number(k)] = img;
+  }
+  let levelPosterR010 = null;
+  function startLevelPosterR010(level, seconds = 2.1) {
+    const img = levelPosterArtsR010[level];
+    if (!img) return;
+    levelPosterR010 = { level, img, t: seconds, duration: seconds };
+  }
+  function updateLevelPosterR010(dt) {
+    if (!levelPosterR010) return;
+    levelPosterR010.t -= dt;
+    if (levelPosterR010.t <= 0) levelPosterR010 = null;
+  }
+  function drawLevelPosterR010() {
+    const p = levelPosterR010;
+    if (!p) return;
+    const k = clamp(Math.min((p.duration - p.t) / 0.30, p.t / 0.45), 0, 1);
+    ctx.save();
+    ctx.globalAlpha = k;
+    ctx.fillStyle = 'rgba(2,3,8,.95)';
+    ctx.fillRect(0, 0, W, H);
+    if (p.img.complete && p.img.naturalWidth) {
+      ctx.drawImage(p.img, 0, 0, W, H);
+    }
+    ctx.fillStyle = 'rgba(0,0,0,.18)';
+    ctx.fillRect(0, H - 26, W, 26);
+    ctx.fillStyle = '#e7eef9';
+    ctx.font = 'bold 7px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('DREAMING OF LÍRA · ANDRIK', W / 2, H - 10);
+    ctx.textAlign = 'left';
+    ctx.restore();
+  }
+
+  // New air attacks for Level 6; A in the air uses hands, sword button keeps the blade attack.
+  ATTACKS.airPunchR010 = { duration: 0.30, activeStart: 0.05, activeEnd: 0.20, damage: 16, range: 34, depth: 18, knock: 26 };
+  ATTACKS.airSwordR010 = { duration: 0.48, activeStart: 0.12, activeEnd: 0.30, damage: 38, range: 64, depth: 24, knock: 72 };
+
+  function startAirPunchR010() {
+    if (player.stun > 0 || player.dead) return;
+    player.comboStep = 0;
+    player.attack = { id: ++attackSerial, kind: 'airPunchR010', t: 0, duration: ATTACKS.airPunchR010.duration };
+    player.lastAttackTime = elapsed;
+    tone(244, 0.06, 'square', 0.018, 180);
+  }
+  function startAirSwordR010() {
+    if (player.stun > 0 || player.dead) return;
+    player.comboStep = 0;
+    player.attack = { id: ++attackSerial, kind: 'airSwordR010', t: 0, duration: ATTACKS.airSwordR010.duration };
+    tone(388, 0.08, 'sawtooth', 0.020, 160);
+  }
+
+  // More feminine face / clearer nose for the compact heroine sprite used in 4/5/6 HUD scenes.
+  drawMiniLiraR952 = function(x, y, scale = .72, mode = 'idle') {
+    ctx.save();
+    ctx.translate(Math.round(x), Math.round(y));
+    ctx.scale(scale, scale);
+    const bob = mode === 'jump' ? -2.2 : Math.sin(elapsed * 4.2) * .45;
+
+    // Hair silhouette, separate from the face so the nose no longer melts into the hair line.
+    ctx.fillStyle = '#090a0d';
+    ctx.beginPath();
+    ctx.ellipse(0, -36 + bob, 11, 10, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillRect(-11, -36 + bob, 22, 8);
+    ctx.fillRect(-13, -31 + bob, 5, 11);
+    ctx.fillRect(8, -31 + bob, 5, 10);
+
+    // Face.
+    ctx.fillStyle = '#e2b091';
+    ctx.beginPath();
+    ctx.ellipse(0, -36 + bob, 6, 7.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#2c1b19';
+    ctx.fillRect(-3, -38 + bob, 2, 1);
+    ctx.fillRect(1, -38 + bob, 2, 1);
+    ctx.fillStyle = '#d38974';
+    ctx.fillRect(0, -36 + bob, 1, 3); // nose
+    ctx.fillStyle = '#b15d65';
+    ctx.fillRect(-1, -33 + bob, 3, 1); // lips
+
+    // Neck / torso / eye pendant.
+    ctx.fillStyle = '#181a20';
+    ctx.fillRect(-8, -30 + bob, 16, 16);
+    ctx.fillStyle = '#e1d7bd';
+    ctx.beginPath(); ctx.ellipse(0, -22 + bob, 3.5, 2, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#081016';
+    ctx.beginPath(); ctx.arc(0, -22 + bob, 1, 0, Math.PI * 2); ctx.fill();
+
+    // Arms.
+    ctx.fillStyle = '#cf9a7e';
+    ctx.fillRect(-11, -28 + bob, 4, 12);
+    ctx.fillRect(7, -28 + bob, 4, 10);
+    ctx.fillStyle = '#0c0d10';
+    ctx.fillRect(-11, -19 + bob, 4, 4);
+    ctx.fillRect(7, -21 + bob, 4, 4);
+
+    if (mode === 'kick') {
+      ctx.fillStyle = '#111318';
+      ctx.fillRect(-7, -17, 7, 8);
+      ctx.fillRect(-11, -10, 9, 5);
+      ctx.fillStyle = '#030407';
+      ctx.fillRect(-13, -6, 12, 5);
+      ctx.fillStyle = '#171a1f';
+      ctx.fillRect(1, -17, 7, 7);
+      ctx.fillRect(6, -13, 22, 5);
+      ctx.fillStyle = '#030407';
+      ctx.fillRect(25, -15, 10, 7);
+    } else {
+      ctx.fillStyle = '#111318';
+      ctx.fillRect(-7, -17 + bob, 6, 14);
+      ctx.fillStyle = '#171a1f';
+      ctx.fillRect(2, -17 + bob, 6, 14);
+      ctx.fillStyle = '#030407';
+      ctx.fillRect(-9, -5 + bob, 9, 5);
+      ctx.fillRect(1, -5 + bob, 10, 5);
+    }
+
+    if (mode === 'sword') {
+      const q = 1 - towerSwordT_R952 / .48, a = 2.75 - clamp(q, 0, 1) * 2.55;
+      ctx.save();
+      ctx.translate(3, -28);
+      ctx.rotate(a);
+      ctx.fillStyle = '#08090c';
+      ctx.fillRect(0, -3, 8, 6);
+      ctx.fillStyle = '#b6945e';
+      ctx.fillRect(7, -5, 3, 10);
+      ctx.fillStyle = '#eef5f7';
+      ctx.fillRect(10, -2, 42, 4);
+      ctx.fillStyle = '#8fe9ff';
+      ctx.fillRect(14, -1, 35, 1);
+      ctx.restore();
+    }
+    ctx.restore();
+  };
+
+  // ---------------------------------------------------------------------
+  // LEVEL 4 upgrade — double jump.
+  // ---------------------------------------------------------------------
+  let towerJumpsLeftR010 = 2;
+  const __r010ResetTowerBase = resetTowerR952;
+  resetTowerR952 = function() {
+    __r010ResetTowerBase();
+    towerJumpsLeftR010 = 2;
+  };
+  const __r010UpdateTowerBase = updateTowerR952;
+  updateTowerR952 = function(dt) {
+    if (!started || paused || gameOver || victory) return;
+    elapsed += dt; messageTimer = Math.max(0, messageTimer - dt); flash = Math.max(0, flash - dt); shake = Math.max(0, shake - dt * 24);
+    towerInvulnR952 = Math.max(0, towerInvulnR952 - dt); towerSwordT_R952 = Math.max(0, towerSwordT_R952 - dt); superMeter = clamp(superMeter + dt * .55, 0, SUPER_MAX);
+    updateLevelPosterR010(dt);
+    const move = ((input.right ? 1 : 0) - (input.left ? 1 : 0));
+    towerX_R952 = clamp(towerX_R952 + move * 112 * dt, 14, W - 14);
+    if (input.attack && input.jump) {
+      if (!towerComboLatchR952) { towerSwordT_R952 = .48; towerMeleeR952(60); tone(420, .07, 'sawtooth', .020, 155); }
+      towerComboLatchR952 = true; pressed.attack = false; pressed.jump = false;
+    } else towerComboLatchR952 = false;
+    if (pressed.jump && towerJumpsLeftR010 > 0) {
+      towerVy_R952 = towerGroundedR952 ? 390 : 352;
+      towerGroundedR952 = false;
+      towerJumpsLeftR010--;
+      showMessage(towerJumpsLeftR010 === 0 ? 'DOUBLE JUMP' : 'JUMP', .38);
+      tone(towerJumpsLeftR010 === 0 ? 275 : 230, .05, 'square', .012, 330);
+    }
+    if (pressed.attack && !input.jump) towerMeleeR952(32);
+    if (pressed.kick) towerMeleeR952(42);
+    if (pressed.super && superMeter >= SUPER_COST) {
+      superMeter -= SUPER_COST;
+      for (const e of towerEnemiesR952) { if (e.alive && Math.abs(e.y - towerY_R952) < 170) { e.alive = false; score += 150; } }
+      towerFallingR952 = []; showMessage('SUPER · TOWER RIFF', .8); tone(58, .22, 'sawtooth', .035, 180);
+    }
+    const prevY = towerY_R952;
+    towerVy_R952 -= 680 * dt;
+    towerY_R952 += towerVy_R952 * dt;
+    towerGroundedR952 = false;
+    if (towerVy_R952 <= 0) {
+      let land = null;
+      for (const p of towerPlatformsR952) {
+        if (towerX_R952 >= p.x - 6 && towerX_R952 <= p.x + p.w + 6 && prevY >= p.y && towerY_R952 <= p.y) {
+          if (!land || p.y > land.y) land = p;
+        }
+      }
+      if (land) {
+        towerY_R952 = land.y; towerVy_R952 = 0; towerGroundedR952 = true; towerLastSafeR952 = Math.max(towerLastSafeR952, land.y); towerJumpsLeftR010 = 2;
+      }
+    }
+    for (const e of towerEnemiesR952) {
+      if (!e.alive) continue;
+      const p = towerPlatformsR952[e.platform]; e.x += e.dir * (28 + e.platform % 3 * 5) * dt;
+      if (e.x < p.x + 9) { e.x = p.x + 9; e.dir = 1; }
+      if (e.x > p.x + p.w - 9) { e.x = p.x + p.w - 9; e.dir = -1; }
+      if (Math.abs(e.x - towerX_R952) < 12 && Math.abs((e.y + 12) - towerY_R952) < 17) {
+        if (towerVy_R952 < 0 && prevY > e.y + 8) { e.alive = false; towerVy_R952 = 260; score += 220; showMessage('STOMP +220', .55); tone(180, .06, 'square', .018, 270); }
+        else damageTowerR952(14);
+      }
+    }
+    for (const c of towerCratesR952) { if (!c.broken && Math.abs(c.x - towerX_R952) < 14 && towerVy_R952 > 0 && towerY_R952 < c.y && towerY_R952 + 28 > c.y) { c.broken = true; towerHeartsR952.push({ x: c.x, y: c.y + 22, taken: false }); score += 100; towerVy_R952 = -80; } }
+    for (const h of towerHeartsR952) { if (!h.taken && Math.abs(h.x - towerX_R952) < 15 && Math.abs(h.y - towerY_R952) < 22) { h.taken = true; const b = player.hp; player.hp = Math.min(player.maxHp, player.hp + 25); score += 60; showMessage('♥ LIFE +' + (player.hp - b), .65); tone(523, .08, 'triangle', .022, 784); } }
+    for (const s of towerStarsR952) { if (!s.taken && Math.abs(s.x - towerX_R952) < 16 && Math.abs(s.y - towerY_R952) < 26) { s.taken = true; collectStarR952(s.x, s.y); showMessage('★ STAR +250', .65); } }
+    towerHazardClockR952 -= dt;
+    if (towerHazardClockR952 <= 0) { towerHazardClockR952 = 1.5 + Math.random() * 1.8; towerFallingR952.push({ x: 25 + Math.random() * (W - 50), y: towerCameraR952 + 310, vy: 92 + Math.random() * 55, r: 5 + Math.random() * 4 }); }
+    for (const h of towerFallingR952) { h.y -= h.vy * dt; if (Math.abs(h.x - towerX_R952) < 12 && Math.abs(h.y - towerY_R952) < 17) { h.dead = true; damageTowerR952(12); } }
+    towerFallingR952 = towerFallingR952.filter(h => !h.dead && h.y > towerCameraR952 - 50);
+    if (towerY_R952 < towerCameraR952 - 85) { damageTowerR952(18); towerY_R952 = Math.max(0, towerLastSafeR952); towerVy_R952 = 0; towerGroundedR952 = true; towerJumpsLeftR010 = 2; }
+    towerCameraR952 = approach(towerCameraR952, Math.max(0, towerY_R952 - 105), dt * 175);
+    if (towerY_R952 >= TOWER_TOP_R952 - 3) { victory = true; unlockedLevel = Math.max(unlockedLevel, 5); score += 3000; commitHighScoreR952(4); saveFreshLevel(5, score); showMessage('TOWER — CLEAR', 2); tone(330, .3, 'triangle', .03, 880); }
+    autoSaveClock += dt; if (autoSaveClock >= 2.5) { autoSaveClock = 0; saveProgress(false); }
+  };
+
+  // ---------------------------------------------------------------------
+  // LEVEL 6 — RUINS OF EPOCHS.
+  // ---------------------------------------------------------------------
+  const RUINS_END_R010 = 3920;
+  let ruinsEnemiesR010 = [], ruinsCrowsR010 = [], ruinsObstaclesR010 = [], ruinsDecoR010 = [], ruinsBossR010 = null;
+  let ruinsCheckpointXR010 = 72, ruinsEyeBlinkR010 = 0, ruinsEyeOpenR010 = 1, ruinsBossStartedR010 = false;
+  let ruinsPosterShownR010 = false, ruinsSummonClockR010 = 3.2;
+
+  function romanFrontGuardR010(e) {
+    return e.shield && ((e.face < 0 && player.x < e.x) || (e.face > 0 && player.x > e.x));
+  }
+  function makeRomanR010(id, x, y, shield = true) {
+    return {
+      id, type: 'roman', x, y, z: 0, vz: 0, face: -1,
+      width: shield ? 24 : 20, depth: 18, hp: shield ? 90 : 62, maxHp: shield ? 90 : 62,
+      damage: shield ? 13 : 11, speed: shield ? 46 : 58, alive: true,
+      shield, attack: 0, guard: .6 + Math.random() * .7, hitByAttack: -1, deathTimer: 0
+    };
+  }
+  function makeCrowR010(id, x, y, phase = 0) {
+    return { id, x, y, baseY: y, phase, vx: -95 - Math.random() * 35, alive: true, dive: 1.1 + Math.random() * 1.6, hit: false };
+  }
+  function makeBossR010() {
+    return {
+      id: 'RBOSS', type: 'boss', x: 3600, y: 208, face: -1,
+      width: 64, depth: 36, hp: 520, maxHp: 520, alive: true, cooldown: 1.2,
+      stomp: 0, swing: 0, summon: 2.8, phase: 1, hitByAttack: -1
+    };
+  }
+  function resetRuinsR010() {
+    WORLD_W = RUINS_END_R010;
+    player = createPlayer();
+    player.x = 72; player.y = 214; player.hp = player.maxHp; player.face = 1; player.z = 0; player.vz = 0;
+    ruinsCheckpointXR010 = 72; ruinsBossStartedR010 = false; ruinsPosterShownR010 = false; ruinsSummonClockR010 = 3.2;
+    ruinsEyeBlinkR010 = 1.8; ruinsEyeOpenR010 = 1;
+    ruinsEnemiesR010 = [
+      makeRomanR010('R1', 520, 204, true), makeRomanR010('R2', 660, 224, false),
+      makeRomanR010('R3', 940, 195, true), makeRomanR010('R4', 1185, 225, true),
+      makeRomanR010('R5', 1460, 208, false), makeRomanR010('R6', 1670, 225, true),
+      makeRomanR010('R7', 1980, 194, true), makeRomanR010('R8', 2140, 222, false),
+      makeRomanR010('R9', 2480, 206, true), makeRomanR010('R10', 2750, 225, true),
+      makeRomanR010('R11', 3010, 204, false), makeRomanR010('R12', 3240, 221, true)
+    ];
+    ruinsCrowsR010 = [
+      makeCrowR010('C1', 420, 95, 0), makeCrowR010('C2', 980, 74, 1.7), makeCrowR010('C3', 1720, 84, 2.8),
+      makeCrowR010('C4', 2360, 67, 3.6), makeCrowR010('C5', 3110, 91, 5.2)
+    ];
+    ruinsObstaclesR010 = [
+      { id: 'O1', x: 780, y: 208, w: 50, h: 24, type: 'column', mode: 'jump', active: true },
+      { id: 'O2', x: 1320, y: 208, w: 68, h: 34, type: 'shieldwall', mode: 'avoid', active: true },
+      { id: 'O3', x: 1830, y: 208, w: 42, h: 20, type: 'fire', mode: 'jump', active: true },
+      { id: 'O4', x: 2290, y: 208, w: 74, h: 34, type: 'rubble', mode: 'avoid', active: true },
+      { id: 'O5', x: 2860, y: 208, w: 46, h: 22, type: 'fire', mode: 'jump', active: true },
+      { id: 'O6', x: 3370, y: 208, w: 86, h: 38, type: 'altar', mode: 'avoid', active: true }
+    ];
+    ruinsDecoR010 = [
+      { x: 600, h: 66, kind: 'head' }, { x: 1100, h: 82, kind: 'column' }, { x: 1700, h: 110, kind: 'statue' },
+      { x: 2420, h: 78, kind: 'head' }, { x: 2970, h: 98, kind: 'statue' }, { x: 3470, h: 130, kind: 'head' }
+    ];
+    ruinsBossR010 = makeBossR010();
+    cameraX = 0;
+  }
+  function damageRuinsPlayerR010(amount, fromX = player.x) {
+    if (player.invuln > 0 || player.dead) return;
+    player.hp = Math.max(0, player.hp - amount); player.invuln = .72; player.stun = .28;
+    player.vx = fromX < player.x ? 118 : -118;
+    hitShake(5); tone(95, .10, 'sawtooth', .03, 55);
+    if (player.hp <= 0) {
+      gameOver = true; player.dead = true;
+      if (typeof spendLifeR955 === 'function' && spendLifeR955('RUINS CONTINUE', () => { player.x = ruinsCheckpointXR010; player.y = 214; player.z = 0; player.vz = 0; player.invuln = 1.85; player.stun = 0; cameraX = clamp(player.x - W * .42, 0, RUINS_END_R010 - W); })) {
+        player.dead = false; gameOver = false; victory = false;
+      }
+    }
+  }
+  function damageRomanR010(e, amount, knock = 0) {
+    if (!e.alive) return;
+    e.hp -= amount; e.x += knock; e.x = clamp(e.x, 18, RUINS_END_R010 - 18);
+    hitShake(e.type === 'boss' ? 5 : 2);
+    tone(e.type === 'boss' ? 84 : 150, e.type === 'boss' ? .07 : .045, 'square', .016, 70);
+    if (e.hp <= 0) {
+      e.alive = false; score += e.type === 'boss' ? 6500 : 240; superMeter = clamp(superMeter + (e.type === 'boss' ? 24 : 9), 0, SUPER_MAX);
+      if (e.type === 'boss') {
+        showMessage('THE EYE LOOKS AWAY', 2.1);
+        victory = true; unlockedLevel = Math.max(unlockedLevel, 6); commitHighScoreR952(6); writeSave({ ...buildSaveData(), version: SAVE_VERSION_R010, completed: true, unlockedLevel: 6, currentLevel: 6 });
+      }
+    }
+  }
+  function resolveRuinsPlayerHitsR010() {
+    const hb = playerAttackHitbox();
+    if (!hb) return;
+    const targets = ruinsEnemiesR010.filter(e => e.alive).concat(ruinsBossR010 && ruinsBossR010.alive ? [ruinsBossR010] : []);
+    for (const e of targets) {
+      if (e.hitByAttack === hb.id) continue;
+      const ew = e.width || 24, ed = e.depth || 18;
+      const enemyBox = { x: e.x - ew / 2, y: e.y - ed / 2, w: ew, h: ed };
+      if (!rectsOverlap(hb, enemyBox)) continue;
+      e.hitByAttack = hb.id;
+      let dmg = hb.def.damage, knock = hb.def.knock * player.face;
+      const airborne = player.z > 8;
+      const frontal = e.type !== 'boss' && romanFrontGuardR010(e) && Math.abs(player.y - e.y) < 18;
+      if (frontal && !airborne) {
+        if (player.attack.kind === 'swordSlashR950' || player.attack.kind === 'airSwordR010') {
+          dmg = Math.round(dmg * .45); knock *= .35; showMessage('SHIELD CUT', .35);
+        } else {
+          dmg = 0; knock = 0; showMessage('BLOCK', .25); tone(980, .03, 'square', .006, 1100);
+          effects.push({ kind: 'r010-spark', x: e.x - player.face * 9, y: e.y - 20, t: 0, duration: .22 });
+        }
+      }
+      if (dmg > 0) damageRomanR010(e, dmg, knock);
+    }
+  }
+  function updateRuinsPlayerR010(dt) {
+    player.invuln = Math.max(0, player.invuln - dt);
+    player.stun = Math.max(0, player.stun - dt);
+    player.comboWindow = Math.max(0, player.comboWindow - dt);
+    guitarSpecialCooldown = Math.max(0, guitarSpecialCooldown - dt);
+    if (!specialCharging && attackTapCount > 0 && elapsed > attackTapDeadline) { attackTapCount = 0; attackTapDeadline = 0; }
+    if (specialCharging) {
+      if (!input.attack || player.stun > 0) { specialCharging = false; specialHoldStart = -99; attackTapCount = 0; }
+      else if (elapsed - specialHoldStart >= .42) startGuitarSpecial();
+    }
+    if (pressed.jump && player.z <= .01 && player.stun <= 0 && !specialCharging) { player.vz = 255; player.z = .01; tone(220, .07, 'square', .018, 330); }
+    if (input.attack && input.jump) {
+      if (!swordComboLatchR950 && (!player.attack || player.attack.t > player.attack.duration * .66)) {
+        if (player.z > 3) startAirSwordR010(); else startSwordR950();
+      }
+      swordComboLatchR950 = true; pressed.attack = false; pressed.jump = false;
+    } else swordComboLatchR950 = false;
+    if (pressed.kick && (!player.attack || player.attack.t > player.attack.duration * .70)) startKickR950();
+    if (pressed.attack && !specialCharging && (!player.attack || player.attack.t > player.attack.duration * .72)) {
+      if (player.z > 3) startAirPunchR010(); else startPlayerAttack();
+    }
+    if (player.attack) {
+      player.attack.t += dt;
+      if (player.attack.kind === 'guitarSmash' && !player.attack.fx && player.attack.t >= ATTACKS.guitarSmash.activeStart) {
+        player.attack.fx = true;
+        effects.push({ kind: 'guitarBurst', x: player.x + player.face * 38, y: player.y - 2, face: player.face, t: 0, duration: .55 });
+        hitShake(8); flash = Math.max(flash, .10); tone(58, .15, 'sawtooth', .036, 34);
+      }
+      if (player.attack.t >= player.attack.duration) player.attack = null;
+    }
+    const attackingOnGround = player.attack && player.z < 2;
+    const movementScale = player.stun > 0 ? 0 : specialCharging ? .08 : attackingOnGround ? (player.attack.kind === 'guitarSmash' ? .06 : .42) : 1;
+    let mx = 0, my = 0;
+    if (input.left) mx -= 1; if (input.right) mx += 1; if (input.up) my -= 1; if (input.down) my += 1;
+    if (mx !== 0 || my !== 0) {
+      const len = Math.hypot(mx, my) || 1; mx /= len; my /= len;
+      if (mx !== 0) player.face = mx > 0 ? 1 : -1;
+      player.walkPhase += dt * 10 * movementScale;
+    }
+    player.vx = approach(player.vx, mx * player.speed * movementScale, dt * 720);
+    player.vy = approach(player.vy, my * player.speed * .76 * movementScale, dt * 720);
+    player.x += player.vx * dt; player.y += player.vy * dt;
+    player.x = clamp(player.x, 18, RUINS_END_R010 - 18); player.y = clamp(player.y, 180, 232);
+    if (player.z > 0 || player.vz > 0) { player.z += player.vz * dt; player.vz -= GRAVITY * dt; if (player.z <= 0) { player.z = 0; player.vz = 0; tone(78, .045, 'triangle', .012, 55); } }
+    resolveRuinsPlayerHitsR010();
+  }
+  function updateRuinsEnemiesR010(dt) {
+    for (const e of ruinsEnemiesR010) {
+      if (!e.alive) continue;
+      e.attack = Math.max(0, e.attack - dt); e.guard = Math.max(0, e.guard - dt);
+      const dx = player.x - e.x, dy = player.y - e.y, dist = Math.hypot(dx, dy);
+      e.face = dx >= 0 ? 1 : -1;
+      if (Math.abs(dx) < 170 && Math.abs(dy) < 54) {
+        if (Math.abs(dx) > (e.shield ? 30 : 26) || Math.abs(dy) > 12) {
+          const m = Math.sign(dx); e.x += m * e.speed * dt; e.y += Math.sign(dy) * 18 * dt;
+        } else if (e.attack <= 0) {
+          e.attack = e.shield ? 1.05 : .78;
+          if (Math.abs(dx) < 32 && Math.abs(dy) < 18 && player.z < 16) damageRuinsPlayerR010(e.damage, e.x);
+        }
+        if (e.shield && dist < 86 && e.guard <= 0 && Math.random() < .015) e.guard = .65;
+      }
+      if (player.attack && player.attack.kind === 'guitarSmash' && Math.abs(player.x - e.x) < 88 && Math.abs(player.y - e.y) < 30) { damageRomanR010(e, 58, player.face * 78); }
+    }
+    if (!ruinsBossR010 || !ruinsBossR010.alive) return;
+    const e = ruinsBossR010;
+    if (!ruinsBossStartedR010 && player.x > 3330) { ruinsBossStartedR010 = true; showMessage('BRAHMAN STATUE AWAKES', 1.7); startLevelPosterR010(6, 1.4); }
+    if (!ruinsBossStartedR010) return;
+    e.cooldown = Math.max(0, e.cooldown - dt); e.stomp = Math.max(0, e.stomp - dt); e.swing = Math.max(0, e.swing - dt); e.summon = Math.max(0, e.summon - dt);
+    e.phase = e.hp < e.maxHp * .40 ? 3 : e.hp < e.maxHp * .72 ? 2 : 1;
+    e.face = player.x >= e.x ? 1 : -1;
+    if (Math.abs(player.x - e.x) < 78 && Math.abs(player.y - e.y) < 22 && player.z < 18 && e.swing <= 0) {
+      e.swing = e.phase === 3 ? .72 : .95; damageRuinsPlayerR010(18 + e.phase * 2, e.x); showMessage('STONE ARM', .45);
+    }
+    if (e.cooldown <= 0 && player.x > 3250) {
+      e.cooldown = 1.5 - e.phase * .15;
+      e.stomp = .6;
+      effects.push({ kind: 'r010-boss-pulse', x: e.x - 16, y: e.y + 4, t: 0, duration: .65, phase: e.phase, hit: false });
+      showMessage(e.phase === 3 ? 'EYE OF FIRE' : 'STONE PULSE', .58);
+    }
+    if (e.summon <= 0) {
+      e.summon = e.phase === 3 ? 2.8 : 4.4;
+      ruinsCrowsR010.push(makeCrowR010('SC' + Math.floor(Math.random() * 999999), e.x + 44, 58 + Math.random() * 30, Math.random() * Math.PI * 2));
+      if (e.phase >= 2) ruinsCrowsR010.push(makeCrowR010('SCB' + Math.floor(Math.random() * 999999), e.x + 56, 64 + Math.random() * 34, Math.random() * Math.PI * 2));
+    }
+  }
+  function updateRuinsCrowsR010(dt) {
+    for (const c of ruinsCrowsR010) {
+      if (!c.alive) continue;
+      c.phase += dt * 5.2; c.x += c.vx * dt; c.y = c.baseY + Math.sin(c.phase) * 9;
+      c.dive -= dt;
+      if (c.dive <= 0 && c.x > player.x - 45 && c.x < player.x + 140) { c.y += 65 * dt; if (Math.abs(c.x - player.x) < 15 && Math.abs((c.y + 6) - (player.y - player.z)) < 18) { damageRuinsPlayerR010(8, c.x); c.dive = 1.4; } }
+      if (player.attack && Math.abs(c.x - player.x) < 30 && Math.abs((c.y + 8) - (player.y - player.z - 10)) < 24) { c.alive = false; score += 80; }
+    }
+    ruinsCrowsR010 = ruinsCrowsR010.filter(c => c.alive && c.x > cameraX - 80 && c.x < cameraX + W + 240);
+    ruinsSummonClockR010 -= dt;
+    if (ruinsSummonClockR010 <= 0 && ruinsCrowsR010.length < 6) { ruinsSummonClockR010 = 5.5 + Math.random() * 2.5; ruinsCrowsR010.push(makeCrowR010('C' + Math.floor(Math.random() * 999999), cameraX + W + 40, 76 + Math.random() * 30, Math.random() * Math.PI * 2)); }
+  }
+  function updateRuinsEffectsR010(dt) {
+    for (const fx of effects) {
+      if (fx.kind === 'r010-boss-pulse') {
+        fx.t += dt;
+        if (!fx.hit && fx.t > .18) {
+          const wave = 62 + fx.phase * 18;
+          if (Math.abs(player.x - fx.x) < wave && Math.abs(player.y - fx.y) < 26 && player.z < 20) {
+            damageRuinsPlayerR010(10 + fx.phase * 2, fx.x);
+            fx.hit = true;
+          }
+        }
+      } else if (fx.kind === 'r010-spark') {
+        fx.t += dt;
+      }
+    }
+    effects = effects.filter(fx => !((fx.kind === 'r010-boss-pulse' || fx.kind === 'r010-spark') && fx.t >= fx.duration));
+  }
+  function updateRuinsObstaclesR010() {
+    for (const o of ruinsObstaclesR010) {
+      if (!o.active) continue;
+      const insideX = player.x > o.x - o.w * .5 - 8 && player.x < o.x + o.w * .5 + 8;
+      const nearY = Math.abs(player.y - o.y) < 16;
+      if (!insideX) continue;
+      if (o.mode === 'jump' && nearY && player.z < 18) {
+        damageRuinsPlayerR010(o.type === 'fire' ? 14 : 9, o.x);
+        player.x += player.x < o.x ? -8 : 8;
+      }
+      if (o.mode === 'avoid' && nearY && player.z < 18) {
+        player.x += player.x < o.x ? -4 : 4;
+      }
+    }
+  }
+  function updateRuinsR010(dt) {
+    if (!started || paused || gameOver || victory) { updateLevelPosterR010(dt); return; }
+    elapsed += dt; messageTimer = Math.max(0, messageTimer - dt); flash = Math.max(0, flash - dt); shake = Math.max(0, shake - dt * 24);
+    superMeter = clamp(superMeter + dt * .48, 0, SUPER_MAX);
+    updateLevelPosterR010(dt);
+    updateRuinsPlayerR010(dt);
+    updateRuinsEnemiesR010(dt);
+    updateRuinsCrowsR010(dt);
+    updateRuinsEffectsR010(dt);
+    updateRuinsObstaclesR010();
+    cameraX = clamp(player.x - W * .42, 0, RUINS_END_R010 - W);
+    if (player.x > 915) ruinsCheckpointXR010 = Math.max(ruinsCheckpointXR010, 900);
+    if (player.x > 1850) ruinsCheckpointXR010 = Math.max(ruinsCheckpointXR010, 1810);
+    if (player.x > 2760) ruinsCheckpointXR010 = Math.max(ruinsCheckpointXR010, 2720);
+    if (pressed.super && superMeter >= SUPER_COST) {
+      superMeter -= SUPER_COST; showMessage('SUPER · ASH RIFF', .8); tone(62, .22, 'sawtooth', .03, 300);
+      for (const e of ruinsEnemiesR010) if (e.alive && Math.abs(e.x - player.x) < 150 && Math.abs(e.y - player.y) < 50) damageRomanR010(e, 54, player.face * 80);
+      if (ruinsBossR010 && ruinsBossR010.alive && Math.abs(ruinsBossR010.x - player.x) < 185) damageRomanR010(ruinsBossR010, 42, player.face * 25);
+    }
+    ruinsEyeBlinkR010 -= dt;
+    if (ruinsEyeBlinkR010 <= 0) { ruinsEyeBlinkR010 = 1.8 + Math.random() * 2.8; ruinsEyeOpenR010 = ruinsEyeOpenR010 ? 0 : 1; }
+    autoSaveClock += dt; if (autoSaveClock >= 2.5) { autoSaveClock = 0; saveProgress(false); }
+  }
+  function drawRomanR010(e) {
+    const sx = e.x - cameraX, sy = e.y - e.z;
+    shadow(sx, e.y + 2, e.type === 'boss' ? 28 : 13, e.type === 'boss' ? 8 : 4, .34);
+    ctx.save(); ctx.translate(Math.round(sx), Math.round(sy)); ctx.scale(e.face * (e.type === 'boss' ? 1.9 : 1.15), e.type === 'boss' ? 1.9 : 1.15);
+    if (e.type === 'boss') {
+      ctx.fillStyle = '#3a302a'; ctx.fillRect(-18, -44, 36, 30); ctx.fillRect(-12, -14, 24, 24);
+      ctx.fillStyle = '#73624f'; ctx.beginPath(); ctx.ellipse(0, -47, 15, 12, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#4e4034'; ctx.fillRect(-16, -55, 32, 8);
+      ctx.fillStyle = '#d2b086'; ctx.fillRect(-5, -50, 2, 2); ctx.fillRect(3, -50, 2, 2); ctx.fillRect(-1, -44, 2, 4);
+      ctx.fillStyle = '#593723'; ctx.fillRect(-4, -41, 8, 2);
+      ctx.fillStyle = '#2c2622'; ctx.fillRect(-24, -20, 12, 24); ctx.fillRect(12, -20, 12, 24);
+      ctx.fillStyle = '#664132'; ctx.fillRect(-26, -16, 12, 3); ctx.fillRect(14, -16, 12, 3);
+      if (e.swing > 0) { ctx.fillStyle = '#5a4d46'; ctx.fillRect(18, -30, 24, 10); }
+      return void ctx.restore();
+    }
+    ctx.fillStyle = '#8d9ca8'; ctx.fillRect(-6, -38, 12, 8); ctx.fillStyle = '#b89272'; ctx.fillRect(-5, -34, 10, 9);
+    ctx.fillStyle = '#351814'; ctx.fillRect(-4, -31, 3, 1); ctx.fillRect(1, -31, 3, 1); ctx.fillStyle = '#cb8c72'; ctx.fillRect(0, -29, 1, 2);
+    ctx.fillStyle = '#7c2124'; ctx.fillRect(-9, -26, 18, 15); ctx.fillStyle = '#55383c'; ctx.fillRect(-9, -11, 18, 6);
+    ctx.fillStyle = '#5f4932'; ctx.fillRect(-10, -26, 4, 11); ctx.fillRect(6, -26, 4, 11);
+    ctx.fillStyle = '#3e2f21'; ctx.fillRect(-8, -5, 6, 11); ctx.fillRect(2, -5, 6, 11); ctx.fillStyle = '#1b1310'; ctx.fillRect(-9, 4, 8, 4); ctx.fillRect(1, 4, 8, 4);
+    ctx.fillStyle = '#8a6a46'; ctx.fillRect(8, -24, 3, 18); ctx.fillStyle = '#c7d0d7'; ctx.fillRect(11, -24, 10, 2);
+    if (e.shield) {
+      ctx.fillStyle = e.guard > 0 ? '#42545f' : '#546877'; ctx.fillRect(-18, -26, 10, 22); ctx.strokeStyle = '#b9c6ce'; ctx.strokeRect(-18, -26, 10, 22);
+      ctx.fillStyle = '#7d1f22'; ctx.fillRect(-14, -18, 2, 10);
+    }
+    ctx.restore();
+  }
+  function drawCrowR010(c) {
+    ctx.save(); ctx.translate(Math.round(c.x - cameraX), Math.round(c.y)); ctx.fillStyle = '#08090b';
+    const w = 8 + Math.sin(c.phase) * 2;
+    ctx.beginPath(); ctx.moveTo(-w, 0); ctx.lineTo(0, -4); ctx.lineTo(w, 0); ctx.lineTo(0, 2); ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+  function drawRuinsEffectsR010() {
+    for (const fx of effects) {
+      if (fx.kind === 'r010-boss-pulse') {
+        const p = clamp(fx.t / fx.duration, 0, 1), r = 18 + p * (56 + fx.phase * 14);
+        ctx.save(); ctx.globalAlpha = .28 * (1 - p); ctx.strokeStyle = fx.phase === 3 ? '#ff6d57' : '#d5d8e8'; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(fx.x - cameraX, fx.y, r, 12 + p * 7, 0, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
+      } else if (fx.kind === 'r010-spark') {
+        const p = clamp(fx.t / fx.duration, 0, 1);
+        ctx.save(); ctx.globalAlpha = 1 - p; ctx.strokeStyle = '#eef9ff'; ctx.beginPath(); ctx.moveTo(fx.x - cameraX - 6, fx.y - 3); ctx.lineTo(fx.x - cameraX + 6, fx.y + 3); ctx.moveTo(fx.x - cameraX + 4, fx.y - 5); ctx.lineTo(fx.x - cameraX - 4, fx.y + 5); ctx.stroke(); ctx.restore();
+      }
+    }
+  }
+  function drawRuinsR010() {
+    // Sky / volcano / eye.
+    const sky = ctx.createLinearGradient(0, 0, 0, H); sky.addColorStop(0, '#15080c'); sky.addColorStop(.45, '#49181b'); sky.addColorStop(1, '#150b0d'); ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#cb3d2c'; ctx.beginPath(); ctx.arc(W * .80, 62, 28, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = 'rgba(255,136,98,.12)'; ctx.beginPath(); ctx.arc(W * .80, 62, 46, 0, Math.PI * 2); ctx.fill();
+    const eyeX = W * .57, eyeY = 42, eyeW = 74, eyeH = ruinsEyeOpenR010 ? 18 : 4;
+    ctx.strokeStyle = '#c4454d'; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(eyeX, eyeY, eyeW, eyeH, 0, 0, Math.PI * 2); ctx.stroke(); ctx.fillStyle = '#13090a'; ctx.beginPath(); ctx.ellipse(eyeX, eyeY, 16, eyeH * .72, 0, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#f15a51'; ctx.beginPath(); ctx.arc(eyeX, eyeY, 6, 0, Math.PI * 2); ctx.fill();
+    // Distant volcano.
+    const volcX = W * .86, base = H - 84; ctx.fillStyle = '#251617'; ctx.beginPath(); ctx.moveTo(volcX - 48, base); ctx.lineTo(volcX, base - 64); ctx.lineTo(volcX + 48, base); ctx.closePath(); ctx.fill(); ctx.fillStyle = '#f06034'; ctx.beginPath(); ctx.moveTo(volcX - 7, base - 58); ctx.lineTo(volcX, base - 90); ctx.lineTo(volcX + 7, base - 58); ctx.closePath(); ctx.fill();
+    // Background ruins.
+    for (let i = 0; i < 10; i++) {
+      const rx = ((i * 110 - cameraX * .22) % (W + 140)) - 40;
+      ctx.fillStyle = i % 2 ? 'rgba(41,15,18,.45)' : 'rgba(20,10,12,.55)';
+      ctx.fillRect(rx, 74, 18 + (i % 3) * 8, 108 + (i % 4) * 18);
+      ctx.fillRect(rx + 5, 58, 7, 20);
+    }
+    // Ground plane.
+    ctx.fillStyle = '#201315'; ctx.fillRect(0, 178, W, H - 178);
+    ctx.fillStyle = '#351a1d'; for (let x = -40; x < W + 40; x += 18) ctx.fillRect((x - (cameraX % 18)), 205 + Math.sin((x + cameraX) * .08) * 2, 10, 30);
+    for (const d of ruinsDecoR010) {
+      const sx = d.x - cameraX; if (sx < -60 || sx > W + 60) continue;
+      ctx.fillStyle = 'rgba(92,74,61,.72)';
+      if (d.kind === 'head') { ctx.beginPath(); ctx.ellipse(sx, 146, 20, 24, 0, 0, Math.PI * 2); ctx.fill(); ctx.fillRect(sx - 12, 170, 24, 26); }
+      else if (d.kind === 'statue') { ctx.fillRect(sx - 12, 104, 24, 82); ctx.beginPath(); ctx.ellipse(sx, 92, 14, 16, 0, 0, Math.PI * 2); ctx.fill(); }
+      else { ctx.fillRect(sx - 8, 118, 16, 68); }
+    }
+    // Obstacles.
+    for (const o of ruinsObstaclesR010) {
+      const sx = o.x - cameraX; if (sx < -60 || sx > W + 60) continue;
+      if (o.type === 'fire') {
+        ctx.fillStyle = '#291416'; ctx.fillRect(sx - o.w / 2, 206, o.w, 16);
+        ctx.fillStyle = '#f26835'; for (let i = 0; i < 4; i++) ctx.fillRect(sx - o.w / 2 + 4 + i * 10, 196 - (i % 2) * 6, 6, 10 + (i % 2) * 5);
+      } else {
+        ctx.fillStyle = o.type === 'altar' ? '#473536' : '#5c4546';
+        ctx.fillRect(sx - o.w / 2, 188, o.w, o.h);
+        ctx.fillStyle = '#2a1b1c'; ctx.fillRect(sx - o.w / 2 + 6, 194, o.w - 12, o.h - 10);
+      }
+    }
+    // Actors sorted by y so passing around enemies still feels like a beat-'em-up.
+    const actors = [];
+    for (const e of ruinsEnemiesR010) if (e.alive) actors.push({ y: e.y, draw: () => drawRomanR010(e) });
+    if (ruinsBossStartedR010 && ruinsBossR010 && ruinsBossR010.alive) actors.push({ y: ruinsBossR010.y + 12, draw: () => drawRomanR010(ruinsBossR010) });
+    actors.push({ y: player.y, draw: () => drawLira(player) });
+    actors.sort((a, b) => a.y - b.y);
+    for (const a of actors) a.draw();
+    for (const c of ruinsCrowsR010) drawCrowR010(c);
+    drawRuinsEffectsR010();
+    drawLivesR955(12, 53);
+    ctx.fillStyle = '#f0f2f9'; ctx.font = 'bold 8px monospace'; ctx.fillText('LEVEL 6 · RUINS OF EPOCHS', 12, 18);
+    ctx.fillStyle = '#d9a78a'; ctx.font = '6px monospace'; ctx.fillText('ROMANS · CROWS · VOLCANO · BRAHMAN STATUE', 12, 29);
+    ctx.fillStyle = '#ffd45b'; ctx.fillText(`★ ${levelStarsR952}`, 12, 42);
+    ctx.fillStyle = '#d9e8ef'; ctx.fillText(`SCORE ${String(levelRunScoreR952()).padStart(6, '0')}`, 12, 53);
+    ctx.fillStyle = '#94a2b0'; ctx.fillText(`BEST ${String(bestForLevelR952(6)).padStart(6, '0')}`, 12, 64);
+    if (ruinsBossStartedR010 && ruinsBossR010 && ruinsBossR010.alive) {
+      ctx.fillStyle = 'rgba(3,6,12,.76)'; ctx.fillRect(W - 124, 10, 112, 16); ctx.fillStyle = '#f0ecea'; ctx.font = 'bold 7px monospace'; ctx.fillText('BRAHMAN STATUE', W - 118, 20); ctx.fillStyle = '#4d1d1e'; ctx.fillRect(W - 118, 24, 100, 5); ctx.fillStyle = '#d34e54'; ctx.fillRect(W - 118, 24, 100 * (ruinsBossR010.hp / ruinsBossR010.maxHp), 5);
+    }
+    if (messageTimer > 0 && !victory && !gameOver) { ctx.fillStyle = '#eff7ff'; ctx.font = 'bold 9px monospace'; ctx.textAlign = 'center'; ctx.fillText(message, W / 2, 48); ctx.textAlign = 'left'; }
+    if (gameOver) overlayPanel('RUINS COLLAPSE', [`SCORE ${String(levelRunScoreR952()).padStart(6, '0')}`, 'R — TRY AGAIN', 'SELECT — LEVELS']);
+    if (victory) overlayPanel('RUINS — CLEAR', [`SCORE ${String(levelRunScoreR952()).padStart(6, '0')} · BEST ${String(bestForLevelR952(6)).padStart(6, '0')}`, '', 'THE BRAHMAN STATUE FALLS', 'THE EYE STOPS WATCHING', '', 'START — LEVEL SELECT']);
+    drawBootSplash();
+  }
+
+  // Level select / action labels / starting / save-restore now extend to Level 6.
+  drawLevelSelectR950 = function() {
+    const lines = [];
+    for (let l = 1; l <= 6; l++) { const unlocked = l <= unlockedLevel; lines.push(`${l === levelSelectChoiceR950 ? '>' : ' '} LEVEL ${l} — ${LEVEL_NAMES_R950[l]} ${unlocked ? '' : '🔒'}`); }
+    lines.push(''); lines.push('SELECT — NEXT   START — PLAY'); overlayPanel('LEVEL SELECT', lines);
+  };
+  openLevelSelectR950 = function() { const save = readSave(); if (save) unlockedLevel = Math.max(unlockedLevel, save.unlockedLevel || save.currentLevel || 1); levelSelectOpenR950 = true; levelSelectChoiceR950 = Math.min(Math.max(1, currentLevel), Math.min(6, unlockedLevel)); paused = true; };
+  cycleLevelSelectR950 = function() { const max = Math.max(1, Math.min(6, unlockedLevel)); levelSelectChoiceR950 = levelSelectChoiceR950 >= max ? 1 : levelSelectChoiceR950 + 1; };
+  confirmLevelSelectR950 = function() { if (!levelSelectOpenR950) return false; const pick = Math.min(levelSelectChoiceR950, Math.max(1, Math.min(6, unlockedLevel))); levelSelectOpenR950 = false; paused = false; startLevel(pick, false); begin(); saveProgress(false); return true; };
+
+  updateActionLabelsR952 = function(level = currentLevel) {
+    updateActionLabelsR950(Math.min(level, 3));
+    const a = document.querySelector('[data-action="attack"] .label'), b = document.querySelector('[data-action="jump"] .label'), c = document.querySelector('[data-action="kick"] .label'), sw = document.querySelector('[data-action="sword"]');
+    if ([1, 2, 4, 6].includes(level)) { if (a) a.textContent = 'PUNCH'; if (b) b.textContent = 'JUMP'; if (c) c.textContent = level === 6 ? 'KICK' : 'SWEEP'; }
+    if (level === 3) { if (a) a.textContent = 'FIRE'; if (b) b.textContent = 'ROLL'; if (c) c.textContent = 'MISSILE'; }
+    if (level === 5) { if (a) a.textContent = 'DROP'; if (b) b.textContent = 'ROTATE'; if (c) c.textContent = 'FAST'; }
+    if (sw) { sw.style.opacity = level === 3 || level === 5 ? '.45' : '1'; sw.setAttribute('aria-disabled', level === 3 || level === 5 ? 'true' : 'false'); }
+  };
+
+  const __r010StartLevelBase = startLevel;
+  startLevel = function(level, keepScore = false) {
+    level = Math.max(1, Math.min(6, Number(level) || 1));
+    if (level <= 5) {
+      __r010StartLevelBase(level, keepScore);
+      if (level >= 3) startLevelPosterR010(level, 2.15);
+      if (level === 4) showMessage('LEVEL 4 — TOWER · DOUBLE JUMP', 1.8);
+      if (level === 5) showMessage('LEVEL 5 — TETRIS', 1.8);
+      return;
+    }
+    const oldScore = score;
+    currentLevel = 6; WORLD_W = RUINS_END_R010; enemies = []; waves = []; effects = [];
+    elapsed = 0; cameraX = 0; score = keepScore ? oldScore : 0; levelScoreStartR952 = score; levelStarsR952 = 0; shake = 0; flash = 0; message = ''; messageTimer = 0; gameOver = false; victory = false; paused = false; cinematic = null; autoSaveClock = 0; attackPressStarted = -99; attackTapCount = 0; attackTapDeadline = 0; specialCharging = false; specialHoldStart = -99; guitarSpecialCooldown = 0; unlockedLevel = Math.max(unlockedLevel, 6); for (const k of Object.keys(input)) input[k] = false; pressed.attack = false; pressed.jump = false; pressed.kick = false; pressed.super = false;
+    resetRuinsR010(); updateActionLabelsR952(6); startLevelPosterR010(6, 2.2); showMessage('LEVEL 6 — RUINS OF EPOCHS', 1.9);
+  };
+
+  handleStartPause = (function(prev){ return function(){
+    if (levelSelectOpenR950) { confirmLevelSelectR950(); return; }
+    if (victory && currentLevel === 3) { commitHighScoreR952(3); unlockedLevel = Math.max(unlockedLevel, 4); saveFreshLevel(4, score); startLevel(4, true); begin(); saveProgress(false); return; }
+    if (victory && currentLevel === 4) { unlockedLevel = Math.max(unlockedLevel, 5); saveFreshLevel(5, score); startLevel(5, true); begin(); saveProgress(false); return; }
+    if (victory && currentLevel === 5) { unlockedLevel = Math.max(unlockedLevel, 6); saveFreshLevel(6, score); startLevel(6, true); begin(); saveProgress(false); return; }
+    if (victory && currentLevel === 6) { openLevelSelectR950(); return; }
+    return prev();
+  }; })(handleStartPause);
+
+  buildSaveData = (function(prev){ return function(){
+    const d = prev();
+    d.version = SAVE_VERSION_R010;
+    d.unlockedLevel = Math.max(unlockedLevel, currentLevel);
+    if (currentLevel === 6) {
+      d.ruinsR010 = {
+        checkpointX: ruinsCheckpointXR010,
+        enemies: ruinsEnemiesR010.map(e => ({ id: e.id, alive: e.alive, hp: e.hp, x: e.x, y: e.y })),
+        boss: ruinsBossR010 ? { hp: ruinsBossR010.hp, alive: ruinsBossR010.alive, phase: ruinsBossR010.phase, started: ruinsBossStartedR010 } : null,
+        crows: ruinsCrowsR010.map(c => ({ id: c.id, x: c.x, y: c.y, baseY: c.baseY, phase: c.phase, vx: c.vx, alive: c.alive })),
+        posterShown: ruinsPosterShownR010
+      };
+    }
+    return d;
+  }; })(buildSaveData);
+
+  readSave = function(){
+    try {
+      const raw = localStorage.getItem(SAVE_KEY); if (!raw) return null;
+      const d = JSON.parse(raw); if (!d || ![3,4,5,6].includes(Number(d.version))) return null;
+      if (Number(d.currentLevel) < 1 || Number(d.currentLevel) > 6) return null;
+      return d;
+    } catch(_) { return null; }
+  };
+
+  restoreSave = (function(prev){ return function(data){
+    if (!data) return false;
+    if (Number(data.currentLevel) === 6) {
+      startLevel(6, false);
+      score = Number.isFinite(data.score) ? data.score : 0; levelScoreStartR952 = Number(data?.r952?.levelScoreStart) || score; levelStarsR952 = Number(data?.r952?.levelStars) || 0; unlockedLevel = Math.max(currentLevel, Math.min(6, Number(data.unlockedLevel) || currentLevel));
+      player.x = Number(data?.player?.x) || player.x; player.y = Number(data?.player?.y) || player.y; player.z = Number(data?.player?.z) || 0; player.vz = Number(data?.player?.vz) || 0; player.hp = clamp(Number(data?.player?.hp) || 100, 1, 100); player.face = Number(data?.player?.face) || 1;
+      const z = data?.ruinsR010;
+      if (z) {
+        ruinsCheckpointXR010 = Number(z.checkpointX) || ruinsCheckpointXR010;
+        for (const s of z.enemies || []) { const e = ruinsEnemiesR010.find(v => v.id === s.id); if (e) { e.alive = !!s.alive; e.hp = Number(s.hp) || e.hp; e.x = Number(s.x) || e.x; e.y = Number(s.y) || e.y; } }
+        if (z.boss && ruinsBossR010) { ruinsBossR010.hp = Number(z.boss.hp) || ruinsBossR010.hp; ruinsBossR010.alive = z.boss.alive !== false; ruinsBossR010.phase = Number(z.boss.phase) || ruinsBossR010.phase; ruinsBossStartedR010 = !!z.boss.started; }
+        ruinsCrowsR010 = (z.crows || []).map(c => ({ id: c.id, x: Number(c.x) || 0, y: Number(c.y) || 0, baseY: Number(c.baseY) || 0, phase: Number(c.phase) || 0, vx: Number(c.vx) || -100, alive: c.alive !== false, dive: 1.2 + Math.random() * 1.3, hit: false }));
+      }
+      started = true; paused = false; gameOver = false; victory = false; cameraX = clamp(player.x - W * .42, 0, RUINS_END_R010 - W); updateActionLabelsR952(6); showMessage('DREAM RESTORED', 1.4); return true;
+    }
+    const ok = prev(data);
+    if (ok) { unlockedLevel = Math.max(unlockedLevel, Math.min(6, Number(data.unlockedLevel) || currentLevel)); if (currentLevel >= 3) startLevelPosterR010(currentLevel, 1.8); }
+    return ok;
+  }; })(restoreSave);
+
+  update = (function(prev){ return function(dt){
+    if (currentLevel === 6) { updateRuinsR010(dt); return; }
+    prev(dt); updateLevelPosterR010(dt);
+    if (currentLevel === 5 && victory && unlockedLevel < 6) { unlockedLevel = 6; saveFreshLevel(6, score); }
+  }; })(update);
+
+  draw = (function(prev){ return function(){
+    if (currentLevel === 6) { drawRuinsR010(); drawLevelPosterR010(); if (flash > 0) { ctx.fillStyle = `rgba(255,255,255,${Math.min(.18, flash * 2.6)})`; ctx.fillRect(0,0,W,H); } return; }
+    prev(); drawLevelPosterR010();
+    if (currentLevel === 4 && victory) overlayPanel('TOWER — CLEAR', [`SCORE ${String(levelRunScoreR952()).padStart(6,'0')} · BEST ${String(bestForLevelR952(4)).padStart(6,'0')}`, `★ ${levelStarsR952}`, '', 'TETRIS IS OPEN', '', 'START — LEVEL 5: TETRIS']);
+    if (currentLevel === 5 && victory) overlayPanel('BLOCK LABYRINTH — CLEAR', [`SCORE ${String(levelRunScoreR952()).padStart(6,'0')} · BEST ${String(bestForLevelR952(5)).padStart(6,'0')}`, `★ ${levelStarsR952}`, '', 'RUINS OF EPOCHS ARE OPEN', '', 'START — LEVEL 6: RUINS']);
+  }; })(draw);
+
+  triggerSwordR952 = function(){
+    if (paused || gameOver || victory) return;
+    if (currentLevel <= 2) { startSwordR950(); return; }
+    if (currentLevel === 4) { towerSwordT_R952 = .48; towerMeleeR952(60); tone(420, .07, 'sawtooth', .020, 155); return; }
+    if (currentLevel === 6) { if (player.z > 3) startAirSwordR010(); else startSwordR950(); return; }
+  };
+
+  window.addEventListener('keydown', (e) => {
+    if (!started && e.code === 'Digit6') { e.preventDefault(); unlockedLevel = Math.max(unlockedLevel, 6); startLevel(6, false); begin(); }
+  }, { passive: false });
+
+  try { const s = readSave(); if (s) { let u = Number(s.unlockedLevel) || Number(s.currentLevel) || 1; if (s.completed && Number(s.currentLevel) >= 3) u = Math.max(u, Math.min(6, Number(s.currentLevel))); unlockedLevel = Math.max(unlockedLevel, Math.min(6, u)); } } catch(_) {}
   titleChoice = hasSave() ? 0 : 1;
   buildWaves();
   requestAnimationFrame(frame);

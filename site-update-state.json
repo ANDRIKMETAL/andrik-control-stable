@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788760966841-6f2825bf70",
-  "release": "R958",
-  "archiveName": "ANDRIK-R958-AUDIO-SYNC-BIDIRECTIONAL-500-R957-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "7de6d05c712893202f4f38f4dec2d569fdfad862",
-  "backupSha": "7de6d05c712893202f4f38f4dec2d569fdfad862",
+  "operationId": "publish-1788814571812-5815565232",
+  "release": "R963",
+  "archiveName": "ANDRIK-R963-DREAMING-OF-LIRA-LEVEL6-R958-FULL-PRESERVED.zip",
+  "sourceHead": "b0ad7f6cc98f6962dea7be07ba596c19e760a8c7",
+  "backupSha": "b0ad7f6cc98f6962dea7be07ba596c19e760a8c7",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-07T06:02:47.257Z"
+  "generatedAt": "2026-09-07T20:56:13.842Z"
 }

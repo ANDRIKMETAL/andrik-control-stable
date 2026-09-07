@@ -1,0 +1,23 @@
+ANDRIK R963 · DREAMING OF LÍRA R010
+BASE: exact full R958 user-provided build preserved
+
+CHANGES IN GAME ONLY:
+- Level 3 intro poster: STAR RUNNER
+- Level 4 intro poster: THE TOWER
+- Level 4: double jump
+- Level 5 intro poster: BLOCK LABYRINTH
+- Level 6: RUINS OF EPOCHS after Tetris
+- Level 6: destroyed empire / statues / ruins / volcano scenery
+- Roman enemies with swords and front-facing shield block
+- Flying attacking crows
+- Traversal obstacles: jump / avoid
+- Boss: Brahman stone statue, large living blinking eye in sky
+- Air combat: punch, kick and sword while airborne in Level 6
+- More feminine compact Líra face; nose separated from hair silhouette
+- Save / Continue extended to Level 6
+
+UNCHANGED FROM R958 BASE:
+- radio / audio-sync R958
+- admin / analytics / control files
+- workers / headers / redirects
+- all existing assets and site files
