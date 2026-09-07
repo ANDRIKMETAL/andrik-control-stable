@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788730855736-a9c97fc962",
-  "release": "R957",
-  "archiveName": "ANDRIK-R957-HOME-GAME-HOTFIX-R956-PRESERVED-SAFE-FULL.zip",
-  "sourceHead": "6bc0716355d5bed1d87aae6f1ac7d91669f557ba",
-  "backupSha": "6bc0716355d5bed1d87aae6f1ac7d91669f557ba",
+  "operationId": "publish-1788760966841-6f2825bf70",
+  "release": "R958",
+  "archiveName": "ANDRIK-R958-AUDIO-SYNC-BIDIRECTIONAL-500-R957-PRESERVED-SAFE-FULL.zip",
+  "sourceHead": "7de6d05c712893202f4f38f4dec2d569fdfad862",
+  "backupSha": "7de6d05c712893202f4f38f4dec2d569fdfad862",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-06T21:40:55.736Z"
+  "generatedAt": "2026-09-07T06:02:47.257Z"
 }

@@ -6,60 +6,125 @@ STATE="$STATE_DIR/audio-sync-r949.json"
 LOCK="/run/andrik-audio-sync-r949.lock"
 TARGET="${1:-}"
 exec 9>"$LOCK"
-flock -n 9 || { echo "AUDIO SYNC R949 busy"; exit 73; }
-[[ "$TARGET" =~ ^[0-9]+$ ]] || { echo "invalid target"; exit 20; }
-(( TARGET >= 0 && TARGET <= 900 && TARGET % 50 == 0 )) || { echo "target must be 0..900 step 50"; exit 21; }
+flock -n 9 || { echo "AUDIO SYNC R958 busy"; exit 73; }
+[[ "$TARGET" =~ ^-?[0-9]+$ ]] || { echo "invalid target"; exit 20; }
+(( TARGET >= -500 && TARGET <= 500 && TARGET % 50 == 0 )) || { echo "target must be -500..500 step 50"; exit 21; }
 command -v ffmpeg >/dev/null
 command -v ffprobe >/dev/null
 mkdir -p "$STATE_DIR"
+
+# Legacy automatic audio rewriter must remain off during manual calibration.
 systemctl stop andrik-mp4-audio-delay-r930.service 2>/dev/null || true
+
 mapfile -d '' FILES < <(find "$ROOT" -type f -name '*.r787-ready.mp4' -print0 2>/dev/null | sort -z)
-echo "ANDRIK AUDIO SYNC R949"
-echo "target: +${TARGET} ms audio delay"
+
+fmt_target(){
+  if (( TARGET > 0 )); then printf '+%s' "$TARGET";
+  else printf '%s' "$TARGET";
+  fi
+}
+
+SIGNED="$(fmt_target)"
+echo "ANDRIK AUDIO SYNC R958 · BIDIRECTIONAL"
+echo "target: ${SIGNED} ms relative to saved R949 zero baseline"
+echo "negative = audio earlier · positive = audio later"
 echo "prepared files: ${#FILES[@]}"
+
 changed=0; skipped=0; failed=0
 for FILE in "${FILES[@]}"; do
   [ -s "$FILE" ] || { skipped=$((skipped+1)); continue; }
+
+  # R949 already captured a non-cumulative zero baseline. Keep using it so
+  # every click is absolute and reversible, not additive.
   BASELINE="${FILE}.r949-zero.mp4"
-  TMP="${FILE}.r949-${TARGET}-$$.tmp.mp4"
+  TMP="${FILE}.r958-${TARGET}-$$.tmp.mp4"
+
   if [ ! -s "$BASELINE" ]; then
     ln "$FILE" "$BASELINE" 2>/dev/null || cp --reflink=auto -a "$FILE" "$BASELINE"
   fi
+
   HAS_AUDIO="$(ffprobe -v error -select_streams a:0 -show_entries stream=index -of csv=p=0 "$BASELINE" 2>/dev/null || true)"
-  if [ -z "$HAS_AUDIO" ]; then skipped=$((skipped+1)); continue; fi
+  if [ -z "$HAS_AUDIO" ]; then
+    skipped=$((skipped+1));
+    continue
+  fi
+
   CURRENT_MARKER="$(find "$(dirname "$FILE")" -maxdepth 1 -type f -name "$(basename "$FILE").r949-audio-*ms" -print -quit 2>/dev/null || true)"
   CURRENT=""
-  [ -n "$CURRENT_MARKER" ] && CURRENT="$(basename "$CURRENT_MARKER" | sed -nE 's/.*\.r949-audio-([0-9]+)ms$/\1/p')"
-  if [ "$CURRENT" = "$TARGET" ]; then echo "= $(basename "$FILE") already +${TARGET}ms"; continue; fi
+  [ -n "$CURRENT_MARKER" ] && CURRENT="$(basename "$CURRENT_MARKER" | sed -nE 's/.*\.r949-audio-(-?[0-9]+)ms$/\1/p')"
+
+  if [ "$CURRENT" = "$TARGET" ]; then
+    echo "= $(basename "$FILE") already ${SIGNED}ms"
+    continue
+  fi
+
   rm -f "$TMP"
+
+  DUR="$(ffprobe -v error -show_entries format=duration -of default=nw=1:nk=1 "$BASELINE" 2>/dev/null || true)"
+  [ -n "$DUR" ] || { echo "! ffprobe failed: $FILE"; failed=$((failed+1)); continue; }
+
   if [ "$TARGET" -eq 0 ]; then
     cp --reflink=auto -a "$BASELINE" "$TMP"
-  else
-    DUR="$(ffprobe -v error -show_entries format=duration -of default=nw=1:nk=1 "$BASELINE" 2>/dev/null || true)"
-    [ -n "$DUR" ] || { echo "! ffprobe failed: $FILE"; failed=$((failed+1)); continue; }
+
+  elif [ "$TARGET" -gt 0 ]; then
+    # Positive target: audio later relative to picture. Stream-copy both tracks.
     SEC="$(awk -v ms="$TARGET" 'BEGIN{printf "%.3f",ms/1000}')"
-    if ! ffmpeg -nostdin -hide_banner -loglevel error -y -i "$BASELINE" -itsoffset "$SEC" -i "$BASELINE" -map 0:v:0 -map 1:a:0 -c copy -t "$DUR" -movflags +faststart "$TMP"; then
-      echo "! ffmpeg failed: $FILE"; rm -f "$TMP"; failed=$((failed+1)); continue
+    if ! ffmpeg -nostdin -hide_banner -loglevel error -y \
+      -i "$BASELINE" -itsoffset "$SEC" -i "$BASELINE" \
+      -map 0:v:0 -map 1:a:0 \
+      -c copy -t "$DUR" -movflags +faststart "$TMP"; then
+      echo "! ffmpeg positive shift failed: $FILE"; rm -f "$TMP"; failed=$((failed+1)); continue
+    fi
+
+  else
+    # Negative target: audio earlier relative to picture.
+    # Trim the requested amount from the START of baseline audio and pad the tail.
+    ABS=$(( -TARGET ))
+    SEC="$(awk -v ms="$ABS" 'BEGIN{printf "%.3f",ms/1000}')"
+    if ! ffmpeg -nostdin -hide_banner -loglevel error -y \
+      -i "$BASELINE" \
+      -map 0:v:0 -map 0:a:0 \
+      -c:v copy \
+      -c:a aac -b:a 160k -ar 44100 -ac 2 \
+      -af "atrim=start=${SEC},asetpts=PTS-STARTPTS,apad" \
+      -t "$DUR" -movflags +faststart "$TMP"; then
+      echo "! ffmpeg negative shift failed: $FILE"; rm -f "$TMP"; failed=$((failed+1)); continue
     fi
   fi
-  if ! ffprobe -v error "$TMP" >/dev/null 2>&1; then echo "! invalid output: $FILE"; rm -f "$TMP"; failed=$((failed+1)); continue; fi
+
+  if ! ffprobe -v error "$TMP" >/dev/null 2>&1; then
+    echo "! invalid output: $FILE"; rm -f "$TMP"; failed=$((failed+1)); continue
+  fi
+
   chmod --reference="$FILE" "$TMP" 2>/dev/null || true
   chown --reference="$FILE" "$TMP" 2>/dev/null || true
   mv -f "$TMP" "$FILE"
+
   rm -f "${FILE}.r949-audio-"*ms 2>/dev/null || true
   printf 'targetMs=%s\nappliedAt=%s\n' "$TARGET" "$(date -Is)" > "${FILE}.r949-audio-${TARGET}ms"
   changed=$((changed+1))
-  echo "+ $(basename "$FILE") => ${TARGET}ms"
+  echo "+ $(basename "$FILE") => ${SIGNED}ms"
 done
+
 python3 - "$STATE" "$TARGET" "${#FILES[@]}" "$changed" "$skipped" "$failed" <<'PYJSON'
 import json,sys,datetime,os
 path,target,total,changed,skipped,failed=sys.argv[1:]
-data={"targetMs":int(target),"updatedAt":datetime.datetime.now(datetime.timezone.utc).isoformat(),"files":int(total),"changed":int(changed),"skipped":int(skipped),"failed":int(failed),"source":"r949-file-timestamp-calibration"}
+data={
+  "targetMs":int(target),
+  "updatedAt":datetime.datetime.now(datetime.timezone.utc).isoformat(),
+  "files":int(total),
+  "changed":int(changed),
+  "skipped":int(skipped),
+  "failed":int(failed),
+  "source":"r958-bidirectional-r949-zero-baseline"
+}
 tmp=path+'.tmp'
-with open(tmp,'w',encoding='utf-8') as f: json.dump(data,f,ensure_ascii=False,indent=2); f.write('\n')
+with open(tmp,'w',encoding='utf-8') as f:
+  json.dump(data,f,ensure_ascii=False,indent=2); f.write('\n')
 os.replace(tmp,path); os.chmod(path,0o644)
 PYJSON
+
 echo "RESULT changed=$changed skipped=$skipped failed=$failed"
-echo "TARGET +${TARGET} ms"
+echo "TARGET ${SIGNED} ms"
 echo "RADIO RESTART: NO"
 [ "$failed" -eq 0 ]

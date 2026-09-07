@@ -1,0 +1,19 @@
+R958 — BIDIRECTIONAL AUDIO SYNC
+
+Panel range: -500..+500 ms, step 50 ms.
+Negative = audio earlier than picture.
+Positive = audio later than picture.
+0 ms = saved R949 zero baseline.
+No radio restart is required when applying a value; the next prepared clip/bumper reflects the new setting.
+
+VPS changes are limited to:
+- /usr/local/lib/andrik-radio-web-agent-r803.mjs -> Agent R958
+- /usr/local/sbin/andrik-audio-sync-r949 -> bidirectional R958 helper
+
+Preserved:
+- andrik-radio.service is NOT restarted by installer
+- server.mjs untouched
+- R943C queue untouched
+- R906 fullscreen untouched
+- R922 watchdog state untouched
+- existing R949 zero baseline and current target preserved

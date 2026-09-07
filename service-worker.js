@@ -1,6 +1,6 @@
 'use strict';
 
-const VERSION = '55.00-r956-site-polish';
+const VERSION = '55.00-r958-audio-bidirectional';
 const IS_CONTROL_HOST = self.location.hostname.toLowerCase() === 'control.andrikmetal.com';
 
 async function deleteControlCaches(){
