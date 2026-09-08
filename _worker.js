@@ -18782,17 +18782,18 @@ async function handleR2StorageR922(request,env){
 
 
 // === R965: public full R2 video library for homepage + clips page ===
-const PUBLIC_CLIPS_R965 = 'R965-PUBLIC-FULL-R2-CLIPS';
+const PUBLIC_CLIPS_R965 = 'R970-PUBLIC-FULL-R2-CLIPS';
 function publicClipAllowedR965(item){
-  const key=String(item?.key||'');
+  const key=String(item?.key||''), low=key.toLowerCase();
   if(!key||String(item?.kind||'')!=='video'||Number(item?.size||0)<500000)return false;
-  if(/^clips\//i.test(key))return true;
-  if(/^promo\//i.test(key))return true;
-  if(/^radio\/clips\//i.test(key)){
-    if(/^radio\/clips\/radio-bumper-[123]\.mp4$/i.test(key))return false;
-    if(/^radio\/clips\/radio-special-(?:30|60)min\.mp4$/i.test(key))return false;
-    return true;
-  }
+  // System/background videos are never part of the public clip library.
+  if(item?.protected)return false;
+  if(/^radio\/visuals?\//i.test(key)||/(^|\/)visuals?\//i.test(key))return false;
+  if(/stream-(morning|day|evening|night)|equalizer|radio-bumper-[123]|radio-special-(30|60)min/i.test(low))return false;
+  // Everything explicitly stored as a clip/video/promo is public in the CLIPS section.
+  if(/^clips\//i.test(key)||/^promo\//i.test(key)||/^radio\/clips\//i.test(key))return true;
+  if(/(^|\/)(clips?|videos?|promo)(\/|$)/i.test(key))return true;
+  if(/(?:clip|official[-_ ]?video|music[-_ ]?video|promo)/i.test(low))return true;
   return false;
 }
 function publicClipTitleR965(item){

@@ -1,0 +1,8 @@
+ANDRIK R970
+
+- Separate red "УДАЛИТЬ ИЗ ЭФИРА" button directly below upload card.
+- Track search/removal panel is no longer hidden inside "Новый трек".
+- Homepage: one CLIPS hub card restored; no clip list is rendered on homepage.
+- /clips.html (RU/UA/SK/EN): full public R2 clip library only.
+- Public clip scan includes clips/, promo/, radio/clips/ and other explicit clip/video/promo paths; system visuals and station IDs are excluded.
+- R969/R968/R966/R965/R964 features preserved.
