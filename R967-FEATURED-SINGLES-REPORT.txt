@@ -1,0 +1,11 @@
+ANDRIK R967 — FEATURED SINGLES HOME
+
+Base: R966 full build preserved.
+
+CHANGES
+1. Homepage shows exactly 2 featured singles: «Ты уже то» and «Всё есть Брахман».
+2. «Все синглы» opens the separate full singles catalog.
+3. Worker recovers those two legacy MP3s from anywhere in R2 if they predate radio→Singles auto-publish.
+4. Full Singles page still shows the complete public catalog.
+5. R966 remove-from-air, R965 media auto-publish, R964 single visual 24/7 and R963 game are preserved.
+6. Cache bumped to 55.00-r967-featured-singles.

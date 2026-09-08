@@ -7,7 +7,7 @@ const I={
  sk:{loading:'Načítavame single…',empty:'Single sa čoskoro objavia.',play:'▶ Počúvať',pause:'❚❚ Pauza',download:'↓ Stiahnuť MP3',share:'🔗 Zdieľať odkaz',copied:'✓ Odkaz skopírovaný',copyPrompt:'Skopírujte odkaz pre prehliadač',error:'Zoznam singlov sa nepodarilo načítať.'},
  en:{loading:'Loading singles…',empty:'Singles are coming soon.',play:'▶ Listen',pause:'❚❚ Pause',download:'↓ Download MP3',share:'🔗 Share link',copied:'✓ Link copied',copyPrompt:'Copy this link for your browser',error:'Could not load the singles list.'}
 };
-const t=I[lang]||I.ru,limit=Math.max(0,Number(root.dataset.limit||0));
+const t=I[lang]||I.ru,limit=Math.max(0,Number(root.dataset.limit||0)),featured=String(root.dataset.featured||'').split('|').map(s=>s.trim()).filter(Boolean);
 let fingerprint='',loading=false;
 const pretty=s=>{try{return decodeURIComponent(String(s||''))}catch(_){return String(s||'')}};
 const cleanTitle=s=>pretty(s).replace(/(?:\.(?:mp3|wav))+$/ig,'').trim();
@@ -15,7 +15,18 @@ const esc=s=>String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const fallback=s=>String(s||'').replace(/\b\w/g,c=>c.toUpperCase());
 const copyLink=async(url,btn)=>{try{await navigator.clipboard.writeText(url);const old=btn.textContent;btn.textContent=t.copied;setTimeout(()=>btn.textContent=old,1600)}catch(_){window.prompt(t.copyPrompt,url)}};
 function render(tracks){
- let a=Array.isArray(tracks)?tracks:[];if(limit)a=a.slice(0,limit);
+ let a=Array.isArray(tracks)?tracks:[];
+ const norm=s=>cleanTitle(s).toLowerCase().replace(/ё/g,'е').replace(/[«»“”„'’`]/g,'').replace(/[^a-zа-я0-9]+/gi,' ').trim();
+ if(featured.length){
+   const used=new Set(),picked=[];
+   for(const wanted of featured){
+     const wn=norm(wanted);
+     const hit=a.find((x,i)=>!used.has(i)&&[x.title,x.name,(x.key||'').split('/').pop()].some(v=>{const n=norm(v);return n===wn||n.endsWith(' '+wn)||wn.endsWith(' '+n)}));
+     if(hit){const i=a.indexOf(hit);used.add(i);picked.push(hit)}
+   }
+   a=picked;
+ }
+ if(limit)a=a.slice(0,limit);
  if(!a.length){root.innerHTML=`<div class="andrik-singles-empty">${t.empty}</div>`;return}
  root.innerHTML=a.map((x,i)=>{const title=cleanTitle(x.title).trim()||fallback(cleanTitle(x.name));return `<article class="andrik-track" data-key="${esc(x.key||'')}"><div class="andrik-track-title">${esc(title)}</div><div class="andrik-track-actions"><button type="button" data-play="${i}">${t.play}</button><a href="${esc(x.url)}" download>${t.download}</a></div><button class="andrik-track-share" type="button" data-share="${esc(x.url)}">${t.share}</button><audio class="andrik-audio" data-audio="${i}" controls preload="none" hidden src="${esc(x.url)}"></audio></article>`}).join('');
 }

@@ -18557,20 +18557,49 @@ async function handleMusicSinglePublishR616(request,env){
 
 async function handleMusicSinglesListR316(request, env) {
   const bucket=getMusicBucketR314(env); if(!bucket) return json({ok:false,error:'music-bucket-not-configured'},503);
-  const listed=await bucket.list({prefix:'singles/',limit:1000,include:['customMetadata']});
-  const legacyTitles={'singles/ty_uze_dostoin.mp3':'Ты уже достоин','singles/tisina.mp3':'Тишина','singles/track_1786265187225.mp3':'Свобода'};
-  const tracks=(listed.objects||[]).filter(o=>/\.mp3$/i.test(o.key)).map(o=>{
+  // R967: public Singles is still the singles/ catalog, but two older radio releases
+  // ("Ты уже то" and "Всё есть Брахман") are also recovered from anywhere in R2.
+  // This fixes legacy uploads that entered the radio before radio→Singles auto-publish existed.
+  const listed=await bucket.list({limit:1000,include:['customMetadata']});
+  const legacyTitles={
+    'singles/ty_uze_dostoin.mp3':'Ты уже достоин',
+    'singles/tisina.mp3':'Тишина',
+    'singles/track_1786265187225.mp3':'Свобода',
+    'singles/ty_uzhe_to.mp3':'Ты уже то',
+    'singles/ty_uze_to.mp3':'Ты уже то',
+    'singles/vse_est_brahman.mp3':'Всё есть Брахман',
+    'singles/vsyo_est_brahman.mp3':'Всё есть Брахман'
+  };
+  const normR967=value=>String(value||'').toLowerCase().replace(/ё/g,'е').replace(/[«»“”„'’`]/g,'').replace(/[^a-zа-я0-9]+/gi,' ').trim();
+  const featuredR967=new Set(['ты уже то','все есть брахман']);
+  const keyFeaturedR967=key=>{
+    const n=String(key||'').toLowerCase().replace(/\.mp3$/i,'').replace(/[^a-z0-9а-я]+/gi,' ');
+    return /(?:^| )ty (?:uzhe|uze) to(?: |$)/.test(n)||/(?:^| )v(?:se|syo) est brahman(?: |$)/.test(n);
+  };
+  const tracks=(listed.objects||[]).filter(o=>{
+    if(!/\.mp3$/i.test(o.key))return false;
+    if(/^singles\//i.test(o.key))return true;
     const m=o.customMetadata||{};
-    const fallback=o.key.replace(/^singles\//,'').replace(/(?:\.mp3)+$/ig,'').replace(/[_-]+/g,' ');
-    const title=musicSingleTitleR616(m.title||legacyTitles[o.key]||fallback)||fallback;
+    const fallback=o.key.split('/').pop().replace(/(?:\.mp3)+$/ig,'').replace(/[_-]+/g,' ');
+    const probe=normR967(m.title||legacyTitles[o.key]||fallback);
+    return featuredR967.has(probe)||keyFeaturedR967(o.key);
+  }).map(o=>{
+    const m=o.customMetadata||{};
+    const fallback=o.key.split('/').pop().replace(/(?:\.mp3)+$/ig,'').replace(/[_-]+/g,' ');
+    let title=musicSingleTitleR616(m.title||legacyTitles[o.key]||fallback)||fallback;
+    const probe=normR967(title);
+    if(probe==='ты уже то'||keyFeaturedR967(o.key)&&/ty (?:uzhe|uze) to/.test(String(o.key).toLowerCase().replace(/[^a-z0-9]+/g,' ')))title='Ты уже то';
+    if(probe==='все есть брахман'||keyFeaturedR967(o.key)&&/v(?:se|syo) est brahman/.test(String(o.key).toLowerCase().replace(/[^a-z0-9]+/g,' ')))title='Всё есть Брахман';
     const publishedAt=cleanPlainText(m.publishedAt||'',80)||o.uploaded||null;
-    return {key:o.key,name:fallback,title,url:'https://music.andrikmetal.com/'+o.key,uploaded:o.uploaded||null,publishedAt,size:o.size||0};
-  }).sort((a,b)=>{
+    return {key:o.key,name:fallback,title,url:'https://music.andrikmetal.com/'+o.key,uploaded:o.uploaded||null,publishedAt,size:o.size||0,featuredR967:featuredR967.has(normR967(title))};
+  }).filter((x,i,a)=>a.findIndex(y=>normR967(y.title)===normR967(x.title)&&normR967(x.title)&&featuredR967.has(normR967(x.title))?true:y.key===x.key)===i).sort((a,b)=>{
+    const ap=a.featuredR967?1:0,bp=b.featuredR967?1:0;
+    if(bp!==ap)return bp-ap;
     const at=Date.parse(a.publishedAt||a.uploaded||0)||0, bt=Date.parse(b.publishedAt||b.uploaded||0)||0;
     if(bt!==at)return bt-at;
     return String(b.key||'').localeCompare(String(a.key||''),'ru',{numeric:true,sensitivity:'base'});
   });
-  return json({ok:true,generatedAt:new Date().toISOString(),latestKey:tracks[0]?.key||'',tracks});
+  return json({ok:true,version:'R967-FEATURED-SINGLES',generatedAt:new Date().toISOString(),latestKey:tracks[0]?.key||'',featured:['Ты уже то','Всё есть Брахман'],tracks});
 }
 
 async function handleMusicDownloadsR322(request, env){

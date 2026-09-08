@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788856707738-682965b143",
-  "release": "R966",
-  "archiveName": "ANDRIK-R966-REMOVE-TRACK-FROM-AIR-R965-PRESERVED-FULL.zip",
-  "sourceHead": "dbb8a4940c11b4fab278b740eb0c061c06369706",
-  "backupSha": "dbb8a4940c11b4fab278b740eb0c061c06369706",
+  "operationId": "publish-1788857814132-3b719245b5",
+  "release": "R967",
+  "archiveName": "ANDRIK-R967-FEATURED-TY-UZHE-TO-BRAHMAN-R966-PRESERVED-FULL.zip",
+  "sourceHead": "53a9f86b71f72fbc23ef461acc945daf00e5fe16",
+  "backupSha": "53a9f86b71f72fbc23ef461acc945daf00e5fe16",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-08T08:38:27.738Z"
+  "generatedAt": "2026-09-08T08:56:54.132Z"
 }
