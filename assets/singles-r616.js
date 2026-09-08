@@ -21,7 +21,7 @@ function render(tracks){
    const used=new Set(),picked=[];
    for(const wanted of featured){
      const wn=norm(wanted);
-     const hit=a.find((x,i)=>!used.has(i)&&[x.title,x.name,(x.key||'').split('/').pop()].some(v=>{const n=norm(v);return n===wn||n.endsWith(' '+wn)||wn.endsWith(' '+n)}));
+     const hit=a.find((x,i)=>!used.has(i)&&[x.title,x.name,(x.key||'').split('/').pop()].some(v=>{const n=norm(v);return n===wn||n.endsWith(' '+wn)||n.startsWith(wn+' ')||wn.endsWith(' '+n)}));
      if(hit){const i=a.indexOf(hit);used.add(i);picked.push(hit)}
    }
    a=picked;

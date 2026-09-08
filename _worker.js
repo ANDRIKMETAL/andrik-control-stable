@@ -18557,10 +18557,19 @@ async function handleMusicSinglePublishR616(request,env){
 
 async function handleMusicSinglesListR316(request, env) {
   const bucket=getMusicBucketR314(env); if(!bucket) return json({ok:false,error:'music-bucket-not-configured'},503);
-  // R967: public Singles is still the singles/ catalog, but two older radio releases
-  // ("Ты уже то" and "Всё есть Брахман") are also recovered from anywhere in R2.
-  // This fixes legacy uploads that entered the radio before radio→Singles auto-publish existed.
-  const listed=await bucket.list({limit:1000,include:['customMetadata']});
+
+  // R968 — complete R2 scan + canonical featured singles.
+  // R967 only inspected the first 1000 R2 objects and required an almost exact title.
+  // Old radio uploads can live later in the bucket and can have titles like
+  // "ANDRIK — Ты уже то". Scan every R2 page and normalize those two releases.
+  const objects=[]; let cursor=undefined, rounds=0;
+  do{
+    const page=await bucket.list({limit:1000,...(cursor?{cursor}:{}),include:['customMetadata']});
+    objects.push(...(page.objects||[]));
+    cursor=page.truncated?page.cursor:undefined;
+    rounds++;
+  }while(cursor&&rounds<12&&objects.length<12000);
+
   const legacyTitles={
     'singles/ty_uze_dostoin.mp3':'Ты уже достоин',
     'singles/tisina.mp3':'Тишина',
@@ -18570,36 +18579,50 @@ async function handleMusicSinglesListR316(request, env) {
     'singles/vse_est_brahman.mp3':'Всё есть Брахман',
     'singles/vsyo_est_brahman.mp3':'Всё есть Брахман'
   };
-  const normR967=value=>String(value||'').toLowerCase().replace(/ё/g,'е').replace(/[«»“”„'’`]/g,'').replace(/[^a-zа-я0-9]+/gi,' ').trim();
-  const featuredR967=new Set(['ты уже то','все есть брахман']);
-  const keyFeaturedR967=key=>{
-    const n=String(key||'').toLowerCase().replace(/\.mp3$/i,'').replace(/[^a-z0-9а-я]+/gi,' ');
-    return /(?:^| )ty (?:uzhe|uze) to(?: |$)/.test(n)||/(?:^| )v(?:se|syo) est brahman(?: |$)/.test(n);
+  const norm=value=>String(value||'').toLowerCase().replace(/ё/g,'е').replace(/[«»“”„'’`]/g,'').replace(/[^a-zа-я0-9]+/gi,' ').trim();
+  const ascii=value=>String(value||'').toLowerCase().replace(/\.mp3$/i,'').replace(/[^a-z0-9]+/g,' ').trim();
+  const featuredWanted=['ты уже то','все есть брахман'];
+  const featuredKind=value=>{
+    const n=norm(value);
+    if(n==='ты уже то'||n.endsWith(' ты уже то'))return 'ty';
+    if(n==='все есть брахман'||n.endsWith(' все есть брахман'))return 'brahman';
+    return '';
   };
-  const tracks=(listed.objects||[]).filter(o=>{
+  const featuredKey=key=>{
+    const n=ascii(key);
+    if(/(?:^| )ty (?:uzhe|uze) to(?: |$)/.test(n))return 'ty';
+    if(/(?:^| )v(?:se|syo|syo) est brahman(?: |$)/.test(n))return 'brahman';
+    return '';
+  };
+  const canonicalTitle=(kind,title)=>kind==='ty'?'Ты уже то':kind==='brahman'?'Всё есть Брахман':title;
+
+  const tracks=objects.filter(o=>{
     if(!/\.mp3$/i.test(o.key))return false;
     if(/^singles\//i.test(o.key))return true;
     const m=o.customMetadata||{};
     const fallback=o.key.split('/').pop().replace(/(?:\.mp3)+$/ig,'').replace(/[_-]+/g,' ');
-    const probe=normR967(m.title||legacyTitles[o.key]||fallback);
-    return featuredR967.has(probe)||keyFeaturedR967(o.key);
+    return Boolean(featuredKind(m.title||legacyTitles[o.key]||fallback)||featuredKey(o.key));
   }).map(o=>{
     const m=o.customMetadata||{};
     const fallback=o.key.split('/').pop().replace(/(?:\.mp3)+$/ig,'').replace(/[_-]+/g,' ');
     let title=musicSingleTitleR616(m.title||legacyTitles[o.key]||fallback)||fallback;
-    const probe=normR967(title);
-    if(probe==='ты уже то'||keyFeaturedR967(o.key)&&/ty (?:uzhe|uze) to/.test(String(o.key).toLowerCase().replace(/[^a-z0-9]+/g,' ')))title='Ты уже то';
-    if(probe==='все есть брахман'||keyFeaturedR967(o.key)&&/v(?:se|syo) est brahman/.test(String(o.key).toLowerCase().replace(/[^a-z0-9]+/g,' ')))title='Всё есть Брахман';
+    const kind=featuredKind(title)||featuredKey(o.key);
+    title=canonicalTitle(kind,title);
     const publishedAt=cleanPlainText(m.publishedAt||'',80)||o.uploaded||null;
-    return {key:o.key,name:fallback,title,url:'https://music.andrikmetal.com/'+o.key,uploaded:o.uploaded||null,publishedAt,size:o.size||0,featuredR967:featuredR967.has(normR967(title))};
-  }).filter((x,i,a)=>a.findIndex(y=>normR967(y.title)===normR967(x.title)&&normR967(x.title)&&featuredR967.has(normR967(x.title))?true:y.key===x.key)===i).sort((a,b)=>{
-    const ap=a.featuredR967?1:0,bp=b.featuredR967?1:0;
+    return {key:o.key,name:fallback,title,url:'https://music.andrikmetal.com/'+o.key,uploaded:o.uploaded||null,publishedAt,size:o.size||0,featuredR968:Boolean(kind),featuredKindR968:kind};
+  }).filter((x,i,a)=>{
+    if(x.featuredKindR968)return a.findIndex(y=>y.featuredKindR968===x.featuredKindR968)===i;
+    return a.findIndex(y=>y.key===x.key)===i;
+  }).sort((a,b)=>{
+    // Featured first in fixed order: Ты уже то, Всё есть Брахман.
+    const order={ty:2,brahman:1};
+    const ap=order[a.featuredKindR968]||0,bp=order[b.featuredKindR968]||0;
     if(bp!==ap)return bp-ap;
     const at=Date.parse(a.publishedAt||a.uploaded||0)||0, bt=Date.parse(b.publishedAt||b.uploaded||0)||0;
     if(bt!==at)return bt-at;
     return String(b.key||'').localeCompare(String(a.key||''),'ru',{numeric:true,sensitivity:'base'});
   });
-  return json({ok:true,version:'R967-FEATURED-SINGLES',generatedAt:new Date().toISOString(),latestKey:tracks[0]?.key||'',featured:['Ты уже то','Всё есть Брахман'],tracks});
+  return json({ok:true,version:'R968-FEATURED-SINGLES-PAGINATED',generatedAt:new Date().toISOString(),scannedObjects:objects.length,scanPages:rounds,latestKey:tracks[0]?.key||'',featured:['Ты уже то','Всё есть Брахман'],tracks});
 }
 
 async function handleMusicDownloadsR322(request, env){
