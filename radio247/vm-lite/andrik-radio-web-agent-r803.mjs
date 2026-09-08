@@ -299,6 +299,15 @@ async function execute(action,command={},headers={}){
     const r=await runAsync(AUDIO_SYNC_R949,[String(delayMs)],300000);
     const signed=delayMs>0?`+${delayMs}`:String(delayMs);return {ok:r.ok,output:`AUDIO OFFSET ${signed} ms ${r.ok?'✅':'❌'}\nRADIO NOT RESTARTED\n${r.output}`};
   }
+  if(action==='track-remove'){
+    const key=clean(command.key||'').replace(/^\/+/, '');
+    const title=clean(command.title||'');
+    if(!/^(?:singles|albums\/[^/]+)\/[^/]+\.mp3$/i.test(key)||key.includes('..')||key.includes('\\'))return {ok:false,output:'TRACK REMOVE ❌ invalid track key'};
+    try{
+      const d=await localControlR721(`/control/track-remove?key=${encodeURIComponent(key)}&title=${encodeURIComponent(title)}`);
+      return {ok:Boolean(d?.ok),output:`TRACK REMOVE ${d?.ok?'✅':'❌'}\n${title||key}\nR2 + WEBSITE PRESERVED\n${JSON.stringify(d)}`};
+    }catch(e){return {ok:false,output:`TRACK REMOVE ❌\n${e.message||e}`};}
+  }
   if(action==='queue-move'){
     const offset=Math.max(0,Math.min(5,Number(command.offset)||0));
     const direction=clean(command.direction).toLowerCase();

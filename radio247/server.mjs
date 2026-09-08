@@ -175,6 +175,7 @@ const LIVE_PREVIOUS_FILE_R726 = process.env.LIVE_PREVIOUS_FILE_R726 || `${CACHE_
 const LIVE_NEXT_FILE_R726 = process.env.LIVE_NEXT_FILE_R726 || `${CACHE_DIR}/next-live-r726.txt`;
 const LIVE_BOUNDARY_TITLE_FILE_R790 = process.env.LIVE_BOUNDARY_TITLE_FILE_R790 || `${CACHE_DIR}/boundary-title-r790.txt`;
 const COMMITTED_NEXT_FILE_R769 = process.env.COMMITTED_NEXT_FILE_R769 || `${CACHE_DIR}/committed-next-r769.json`;
+const RADIO_EXCLUDE_FILE_R966 = process.env.RADIO_EXCLUDE_FILE_R966 || `${CACHE_DIR}/radio-excluded-tracks-r966.json`;
 const CLIP_CACHE_DIR = `${CACHE_DIR}/clips`;
 const RADIO_CLIPS_URL_R691 = process.env.RADIO_CLIPS_URL_R691 || 'https://andrikmetal.com/api/music/radio-clips-r691';
 const RADIO_SPECIAL_KEY_R726 = 'radio/clips/radio-special-30min.mp4';
@@ -219,6 +220,7 @@ const state = {
   libraryAlbumTracks: 0,
   librarySingleTracks: 0,
   duplicateSinglesSkipped: 0,
+  radioExcludedTracksR966: 0,
   libraryVideos: JOY_OF_BEING_CLIP_ENABLED ? 2 : 1,
   libraryBumpers: 0,
   librarySpecial: 0,
@@ -1036,6 +1038,66 @@ async function loadRadioClipsR691(){
   return clipLibrary;
 }
 
+// R966: persistent per-track radio exclusion. The MP3 stays in R2 and on the public site;
+// only the live-radio library ignores it. Re-uploading the same key later automatically
+// re-enables it because the new R2 uploaded timestamp is newer than the exclusion stamp.
+function normalizeRadioTrackKeyR966(value){
+  const key=String(value||'').trim().replace(/^\/+/, '');
+  if(!/^(?:singles|albums\/[^/]+)\/[^/]+\.mp3$/i.test(key))return '';
+  if(key.includes('..')||key.includes('\\'))return '';
+  return key;
+}
+function readRadioExclusionsR966(){
+  try{
+    const parsed=JSON.parse(readFileSync(RADIO_EXCLUDE_FILE_R966,'utf8'));
+    return parsed&&typeof parsed==='object'&&!Array.isArray(parsed)?parsed:{};
+  }catch(_){return {};}
+}
+function writeRadioExclusionsR966(map){
+  mkdirSync(CACHE_DIR,{recursive:true});
+  const tmp=RADIO_EXCLUDE_FILE_R966+'.tmp';
+  writeFileSync(tmp,JSON.stringify(map,null,2)+'\n',{mode:0o600});
+  renameSync(tmp,RADIO_EXCLUDE_FILE_R966);
+}
+function radioTrackExcludedR966(item,map){
+  const key=normalizeRadioTrackKeyR966(item?.key);if(!key)return false;
+  const row=map?.[key];if(!row)return false;
+  const excludedAt=Date.parse(String(row.excludedAt||''))||0;
+  const uploadedAt=Date.parse(String(item?.uploaded||''))||0;
+  // If a new object was uploaded after exclusion, it is a new deliberate add-to-air action.
+  return !(uploadedAt>0&&excludedAt>0&&uploadedAt>excludedAt);
+}
+function pruneStaleRadioExclusionsR966(source,map){
+  let changed=false;
+  for(const item of source||[]){
+    const key=normalizeRadioTrackKeyR966(item?.key);if(!key||!map[key])continue;
+    const excludedAt=Date.parse(String(map[key]?.excludedAt||''))||0;
+    const uploadedAt=Date.parse(String(item?.uploaded||''))||0;
+    if(uploadedAt>0&&excludedAt>0&&uploadedAt>excludedAt){delete map[key];changed=true;}
+  }
+  if(changed)try{writeRadioExclusionsR966(map)}catch(_){}
+}
+function removeTrackFromFutureQueueR966(key){
+  const wanted=normalizeRadioTrackKeyR966(key);if(!wanted||!queue.length)return 0;
+  const keepThrough=Math.min(queue.length,Math.max(0,queueIndex+1));
+  const head=queue.slice(0,keepThrough);
+  const tail=queue.slice(keepThrough);
+  const filtered=tail.filter(item=>normalizeRadioTrackKeyR966(item?.key)!==wanted);
+  const removed=tail.length-filtered.length;
+  if(removed){queue=[...head,...filtered];state.queueLength=queue.length;}
+  return removed;
+}
+async function excludeTrackFromRadioR966(key,title=''){
+  const wanted=normalizeRadioTrackKeyR966(key);if(!wanted)return {ok:false,error:'invalid-track-key'};
+  const exclusions=readRadioExclusionsR966();
+  const item=[...library].find(x=>normalizeRadioTrackKeyR966(x?.key)===wanted)||null;
+  exclusions[wanted]={excludedAt:new Date().toISOString(),title:shortText(title||item?.title||wanted,160),uploadedAt:item?.uploaded||null};
+  writeRadioExclusionsR966(exclusions);
+  const removedFromQueue=removeTrackFromFutureQueueR966(wanted);
+  await loadLibrary();
+  return {ok:true,key:wanted,title:exclusions[wanted].title,removedFromQueue,radioExcludedTracksR966:state.radioExcludedTracksR966,message:'Убран только из эфира. R2 и сайт не изменены.'};
+}
+
 async function loadLibrary(){
   const previousSignature=librarySignature([...library,...clipLibrary,...bumperLibrary,...(specialInsertR726?[specialInsertR726]:[]),...(specialHourlyInsertR727?[specialHourlyInsertR727]:[])]);
   const url=`${PLAYLIST_URL}${PLAYLIST_URL.includes('?')?'&':'?'}ts=${Date.now()}`;
@@ -1044,6 +1106,8 @@ async function loadLibrary(){
 
   const data=await response.json();
   const source=Array.isArray(data.tracks)?data.tracks:[];
+  const exclusionsR966=readRadioExclusionsR966();
+  pruneStaleRadioExclusionsR966(source,exclusionsR966);
   const validMp3=item=>{
     const url=String(item?.url||'');
     return /^https:\/\//i.test(url) && /\.mp3(?:$|\?)/i.test(url);
@@ -1051,6 +1115,7 @@ async function loadLibrary(){
 
   const albums=uniqueByUrl(source.filter(item=>{
     const key=String(item?.key||'');
+    if(radioTrackExcludedR966(item,exclusionsR966))return false;
     const keyLower=key.toLowerCase();
     const disabled=DISABLED_ALBUM_PREFIXES.some(prefix=>keyLower.startsWith(prefix));
     return /^albums\//i.test(key) && !disabled && validMp3(item);
@@ -1058,6 +1123,7 @@ async function loadLibrary(){
 
   const singles=uniqueByUrl(source.filter(item=>{
     const key=String(item?.key||'');
+    if(radioTrackExcludedR966(item,exclusionsR966))return false;
     return /^singles\/[^/]+\.mp3$/i.test(key) && validMp3(item);
   }).map(item=>prepareTrack(item,'single')));
 
@@ -1070,6 +1136,7 @@ async function loadLibrary(){
   state.libraryAlbumTracks=albums.length;
   state.librarySingleTracks=merged.singles.length;
   state.duplicateSinglesSkipped=merged.skipped;
+  state.radioExcludedTracksR966=Object.keys(exclusionsR966).length;
   state.libraryVideos=clipLibrary.length;
   state.libraryBumpers=bumperLibrary.length;
   state.lastLibraryRefresh=new Date().toISOString();
@@ -4357,6 +4424,7 @@ function publicStatus(){
     libraryAlbumTracks:state.libraryAlbumTracks,
     librarySingleTracks:state.librarySingleTracks,
     duplicateSinglesSkipped:state.duplicateSinglesSkipped,
+    radioExcludedTracksR966:state.radioExcludedTracksR966,
     libraryRefreshSeconds:Math.round(LIBRARY_REFRESH_MS/1000),
     libraryVideos:state.libraryVideos,
     libraryBumpers:state.libraryBumpers,
@@ -4444,6 +4512,7 @@ const server=http.createServer((req,res)=>{
       else if(url.pathname==='/control/full-fit')result=await ensureNormalVideoFeederR721({force:true}).then(()=>({ok:true,noCrop:true,restartedPublisher:false}));
       else if(url.pathname==='/control/timeline-offset')result=await setTimelineCompensationR739(url.searchParams.get('seconds'));
       else if(url.pathname==='/control/queue-move')result=moveUpcomingQueueR942(url.searchParams.get('offset'),url.searchParams.get('direction'));
+      else if(url.pathname==='/control/track-remove')result=await excludeTrackFromRadioR966(url.searchParams.get('key')||'',url.searchParams.get('title')||'');
       else throw new Error('unknown local control');
       res.writeHead(200,headers);res.end(JSON.stringify(result));
     })().catch(error=>{res.writeHead(500,headers);res.end(JSON.stringify({ok:false,error:cleanText(error?.message||error)}));});

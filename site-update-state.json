@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788840530230-60709870b9",
-  "release": "R964",
-  "archiveName": "ANDRIK-R964-SINGLE-VISUAL-24X7-R963-PRESERVED-FULL.zip",
-  "sourceHead": "772334b036414ae6b1e8c22fd4e912e9244efffb",
-  "backupSha": "772334b036414ae6b1e8c22fd4e912e9244efffb",
+  "operationId": "publish-1788856707738-682965b143",
+  "release": "R966",
+  "archiveName": "ANDRIK-R966-REMOVE-TRACK-FROM-AIR-R965-PRESERVED-FULL.zip",
+  "sourceHead": "dbb8a4940c11b4fab278b740eb0c061c06369706",
+  "backupSha": "dbb8a4940c11b4fab278b740eb0c061c06369706",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-08T04:08:50.230Z"
+  "generatedAt": "2026-09-08T08:38:27.738Z"
 }

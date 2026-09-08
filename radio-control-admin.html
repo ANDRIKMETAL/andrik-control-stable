@@ -3,6 +3,7 @@
 @media(max-width:520px){.grid{grid-template-columns:1fr}.head h1{font-size:26px}}
 
 .quick-upload-card{padding:14px}.quick-upload-toggle{width:100%;margin:0}.quick-upload-panel{margin-top:12px}.quick-upload-switch{display:grid;grid-template-columns:1fr 1fr;gap:8px}.quick-upload-switch button{min-height:50px}.quick-upload-pane{margin-top:10px;padding:12px;border:1px solid #2d394b;border-radius:16px;background:#090d13}.quick-input,.quick-file{width:100%;min-height:48px;margin:0 0 9px;border:1px solid #344052;border-radius:13px;background:#080b10;color:#fff;padding:11px 12px;font:15px system-ui}.quick-file{padding:9px}.quick-progress{height:6px;margin-top:9px;border-radius:999px;overflow:hidden;background:#1a2430}.quick-progress i{display:block;width:0;height:100%;background:var(--gold);transition:width .15s}.quick-upload-pane .msg{margin-top:9px}.quick-upload-pane button{width:100%}
+.quick-remove-r966{margin-top:16px;padding-top:14px;border-top:1px solid #263246}.quick-remove-r966 h3{margin:0 0 5px;font-size:16px}.quick-remove-r966 .small{margin:0 0 10px}.quick-remove-search-r966{display:grid;grid-template-columns:minmax(0,1fr) 116px;gap:8px}.quick-remove-search-r966 .quick-input{margin:0}.quick-remove-search-r966 button{min-height:48px}.quick-remove-results-r966{display:grid;gap:8px;margin-top:10px}.quick-remove-row-r966{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px;border:1px solid #334156;border-radius:13px;background:#0c1119}.quick-remove-row-r966 b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.quick-remove-row-r966 small{display:block;margin-top:3px;color:#8fa0b5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.quick-remove-row-r966 button{width:auto!important;min-width:120px!important;min-height:40px!important;padding:8px 11px!important;background:#5f1823!important;border-color:#a74756!important;color:#fff!important}.quick-remove-empty-r966{padding:10px;border:1px dashed #344157;border-radius:12px;color:#9aa9bc;text-align:center}.quick-remove-msg-r966{margin-top:9px}.quick-remove-msg-r966[data-kind="ok"]{color:#8df0bd}.quick-remove-msg-r966[data-kind="error"]{color:#ff9eaa}.quick-remove-msg-r966[data-kind="busy"]{color:#ffd86b}@media(max-width:560px){.quick-remove-search-r966{grid-template-columns:1fr}.quick-remove-row-r966{grid-template-columns:1fr}.quick-remove-row-r966 button{width:100%!important}}
 @media(max-width:520px){.quick-upload-switch{grid-template-columns:1fr}}
 
 /* R942 compact radio overview + manual six-item queue */
@@ -135,6 +136,16 @@ window.__ANDRIK_QUEUE_PREFETCH_R956__=fetch('/api/control/radio-remote-r627/stat
     <button class="recover" id="quickMp3UploadR741" type="button">⬆ ЗАГРУЗИТЬ ТРЕК</button>
     <div class="quick-progress"><i id="quickMp3BarR741"></i></div>
     <div class="msg" id="quickMp3MsgR741">Выбери WAV или MP3. WAV автоматически конвертируется в MP3 320 kbps.</div>
+    <div class="quick-remove-r966" id="quickRemoveTrackR966">
+      <h3>🗑 УБРАТЬ ИЗ ЭФИРА</h3>
+      <p class="small">Введи название песни. Трек останется в R2 и в разделе «Синглы»/«Альбомы», но больше не попадёт в радио-ротацию. Если играет сейчас — доиграет.</p>
+      <div class="quick-remove-search-r966">
+        <input class="quick-input" id="quickRemoveTrackQueryR966" maxlength="160" placeholder="Название трека">
+        <button class="secondary" id="quickRemoveTrackFindR966" type="button">🔎 НАЙТИ</button>
+      </div>
+      <div class="quick-remove-results-r966" id="quickRemoveTrackResultsR966"><div class="quick-remove-empty-r966">Введите название трека.</div></div>
+      <div class="msg quick-remove-msg-r966" id="quickRemoveTrackMsgR966">Удаляется только из эфира — файл и скачивание на сайте сохраняются.</div>
+    </div>
   </div>
 </div>
 </section>
@@ -152,6 +163,7 @@ const toggle=$('quickUploadToggleR741'),panel=$('quickUploadPanelR741');
 const clipTab=$('quickClipTabR741'),mp3Tab=$('quickMp3TabR741'),clipPane=$('quickClipPaneR741'),mp3Pane=$('quickMp3PaneR741');
 const clipFile=$('quickClipFileR741'),clipTitle=$('quickClipTitleR741'),clipBtn=$('quickClipUploadR741'),clipMsg=$('quickClipMsgR741'),clipBar=$('quickClipBarR741');
 const mp3File=$('quickMp3FileR741'),mp3Title=$('quickMp3TitleR741'),mp3Btn=$('quickMp3UploadR741'),mp3Msg=$('quickMp3MsgR741'),mp3Bar=$('quickMp3BarR741');
+const removeQuery=$('quickRemoveTrackQueryR966'),removeFind=$('quickRemoveTrackFindR966'),removeResults=$('quickRemoveTrackResultsR966'),removeMsg=$('quickRemoveTrackMsgR966');
 if(!toggle)return;
 let busy=false;
 const cleanTitle=v=>String(v||'').replace(/\.[^.]+$/,'').replace(/[_-]+/g,' ').replace(/\s+/g,' ').trim();
@@ -171,6 +183,52 @@ async function uploadPart(url,blob){
  const r=await fetch(url,{method:'PUT',credentials:'include',body:blob,headers:{'content-type':'application/octet-stream'}});
  const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.message||d.error||('HTTP '+r.status));return d;
 }
+const normTrackR966=v=>String(v||'').toLowerCase().replace(/ё/g,'е').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[_–—-]+/g,' ').replace(/[^a-zа-я0-9]+/gi,' ').replace(/\s+/g,' ').trim();
+let removeMatchesR966=[];
+function trackSourceLabelR966(track){const key=String(track?.key||'');if(/^singles\//i.test(key))return 'Сингл';const m=key.match(/^albums\/([^/]+)\//i);return m?'Альбом · '+m[1].replace(/[-_]+/g,' '):'Трек'}
+function escR966(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function renderRemoveMatchesR966(rows){
+ removeMatchesR966=rows;
+ if(!removeResults)return;
+ if(!rows.length){removeResults.innerHTML='<div class="quick-remove-empty-r966">Ничего не найдено.</div>';return;}
+ removeResults.innerHTML=rows.map((t,i)=>`<div class="quick-remove-row-r966"><div><b>${escR966(t.title||t.name||t.key)}</b><small>${escR966(trackSourceLabelR966(t))} · ${escR966(t.key||'')}</small></div><button type="button" data-remove-track-r966="${i}">УБРАТЬ ИЗ ЭФИРА</button></div>`).join('');
+}
+async function findRemoveTrackR966(){
+ const q=normTrackR966(removeQuery?.value||'');
+ if(!q){removeMsg.textContent='Введите название трека.';removeMsg.dataset.kind='error';return;}
+ removeFind.disabled=true;removeMsg.textContent='Ищу трек в R2…';removeMsg.dataset.kind='busy';
+ try{
+  const d=await api('/api/control/music/library?ts='+Date.now());
+  const all=Array.isArray(d?.tracks)?d.tracks:[];
+  const ranked=all.map(t=>{const title=normTrackR966(t.title||t.name||''),key=normTrackR966(String(t.key||'').split('/').pop()||'');let score=0;if(title===q)score=100;else if(title.startsWith(q))score=80;else if(title.includes(q))score=60;else if(key.includes(q))score=40;return {t,score}}).filter(x=>x.score>0).sort((a,b)=>b.score-a.score||String(a.t.title||'').localeCompare(String(b.t.title||''),'ru')).slice(0,6).map(x=>x.t);
+  renderRemoveMatchesR966(ranked);removeMsg.textContent=ranked.length?`Найдено: ${ranked.length}. Нажми «УБРАТЬ ИЗ ЭФИРА» у нужного трека.`:'Совпадений нет.';removeMsg.dataset.kind=ranked.length?'ok':'error';
+ }catch(e){renderRemoveMatchesR966([]);removeMsg.textContent='❌ '+e.message;removeMsg.dataset.kind='error'}finally{removeFind.disabled=false}
+}
+async function waitRemoveResultR966(id){
+ for(let i=0;i<12;i++){
+  await new Promise(r=>setTimeout(r,1800));
+  const d=await api('/api/control/radio-remote-r627/status?ts='+Date.now()).catch(()=>null);
+  const res=d?.result;
+  if(res?.id===id)return res;
+ }
+ return null;
+}
+async function removeTrackFromAirR966(track,button){
+ if(!track?.key||busy)return;
+ busy=true;button.disabled=true;removeFind.disabled=true;removeMsg.textContent=`Убираю «${track.title||track.key}» из радио-ротации…`;removeMsg.dataset.kind='busy';
+ try{
+  const d=await api('/api/control/radio-remote-r627/command',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action:'track-remove',key:track.key,title:track.title||track.name||''})});
+  const id=d?.command?.id||'';
+  const res=id?await waitRemoveResultR966(id):null;
+  if(res&&res.ok===false)throw new Error(res.output||'OVH не выполнил команду');
+  removeMsg.textContent=res?`✅ ${track.title||track.key} убран из эфира. На сайте и в R2 файл сохранён.`:`✅ Команда отправлена на OVH. Трек исчезнет из будущей ротации через несколько секунд.`;removeMsg.dataset.kind='ok';
+  button.textContent='УБРАНО ✓';button.disabled=true;
+  setTimeout(()=>{window.__ANDRIK_QUEUE_PREFETCH_R956__=null;document.dispatchEvent(new CustomEvent('andrik-radio-refresh-r966'))},2500);
+ }catch(e){removeMsg.textContent='❌ '+e.message;removeMsg.dataset.kind='error';button.disabled=false}finally{busy=false;removeFind.disabled=false}
+}
+removeFind?.addEventListener('click',findRemoveTrackR966);
+removeQuery?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();findRemoveTrackR966()}});
+removeResults?.addEventListener('click',e=>{const b=e.target.closest('[data-remove-track-r966]');if(!b)return;const t=removeMatchesR966[Number(b.dataset.removeTrackR966)||0];if(t)removeTrackFromAirR966(t,b)});
 clipBtn.onclick=async()=>{
  const file=clipFile.files?.[0];if(!file)return clipMsg.textContent='Выбери MP4.';
  if(!/\.mp4$/i.test(file.name)&&file.type!=='video/mp4')return clipMsg.textContent='Нужен MP4.';
@@ -221,12 +279,13 @@ mp3Btn.onclick=async()=>{
   if(!uploadFile||!/\.mp3$/i.test(uploadFile.name))throw new Error('Не удалось подготовить MP3.');
   if(uploadFile.size>40*1024*1024)throw new Error('Готовый MP3 больше 40 MB — используй основной загрузчик.');
   mp3Msg.textContent='Трек → R2…';mp3Bar.style.width='88%';
-  await api('/api/control/music/mp3?name='+encodeURIComponent(safeName(title))+'&folder=singles&radio=1',{method:'PUT',headers:{
+  const done=await api('/api/control/music/mp3?name='+encodeURIComponent(safeName(title))+'&folder=singles&radio=1',{method:'PUT',headers:{
    'content-type':'audio/mpeg','x-andrik-track-title':encodeURIComponent(title),'x-andrik-track-artist':encodeURIComponent('ANDRIK'),
-   'x-andrik-track-album':encodeURIComponent('ANDRIK RADIO'),'x-andrik-track-year':encodeURIComponent(String(new Date().getFullYear())),
+   'x-andrik-track-album':encodeURIComponent('Синглы ANDRIK'),'x-andrik-track-year':encodeURIComponent(String(new Date().getFullYear())),
    'x-andrik-track-genre':encodeURIComponent('Heavy Metal')
   },body:uploadFile});
-  mp3Bar.style.width='100%';mp3Msg.textContent=`✅ ${title} загружен в радио.`;
+  const pushOk=Boolean(done?.releasePush?.ok||done?.releasePush?.alreadyPublished);
+  mp3Bar.style.width='100%';mp3Msg.textContent=pushOk?`✅ ${title}: эфир + Синглы + PUSH.`:`✅ ${title}: эфир + Синглы. PUSH: ${done?.releasePush?.error||'ожидает'}.`;
   mp3File.value='';
  }catch(e){mp3Bar.style.width='0%';mp3Msg.textContent='❌ '+e.message}
  finally{busy=false;mp3Btn.disabled=false}

@@ -18261,9 +18261,10 @@ async function handleMusicMp3PutR314(request, env) {
   // broadcast notification. Push failure never rolls back the MP3 upload.
   let releasePush=null;
   const radioQuickUpload=url.searchParams.get('radio')==='1';
-  // R741: quick MP3 upload from Radio Control must add the file to the radio library
-  // without sending a public "new single" push notification.
-  if(folder==='singles' && !radioQuickUpload){
+  // R965: one action = radio + public Singles + site PUSH.
+  // Radio Control already stores quick MP3 uploads under singles/, so every new
+  // track is immediately public on the homepage and gets one deduplicated PUSH.
+  if(folder==='singles'){
     releasePush=await publishSingleReleaseR616(env,{key,title:metadata.title||name,url:`https://music.andrikmetal.com/${key}`,publishedAt}).catch(error=>({ok:false,error:cleanPlainText(error?.message||error,300)}));
   }
   return json({ok:true,key,url:`https://music.andrikmetal.com/${key}`,size:body.byteLength,metadata,releasePush});
@@ -18726,6 +18727,87 @@ async function handleR2StorageR922(request,env){
   }
 }
 // === End R922 R2 storage manager ===
+
+
+// === R965: public full R2 video library for homepage + clips page ===
+const PUBLIC_CLIPS_R965 = 'R965-PUBLIC-FULL-R2-CLIPS';
+function publicClipAllowedR965(item){
+  const key=String(item?.key||'');
+  if(!key||String(item?.kind||'')!=='video'||Number(item?.size||0)<500000)return false;
+  if(/^clips\//i.test(key))return true;
+  if(/^promo\//i.test(key))return true;
+  if(/^radio\/clips\//i.test(key)){
+    if(/^radio\/clips\/radio-bumper-[123]\.mp4$/i.test(key))return false;
+    if(/^radio\/clips\/radio-special-(?:30|60)min\.mp4$/i.test(key))return false;
+    return true;
+  }
+  return false;
+}
+function publicClipTitleR965(item){
+  const key=String(item?.key||'');
+  if(typeof RADIO_CLIP_TITLE_OVERRIDES_R694==='object' && RADIO_CLIP_TITLE_OVERRIDES_R694[key])return RADIO_CLIP_TITLE_OVERRIDES_R694[key];
+  const known={
+    'clips/joy-of-being-official-2026.mp4':'JOY OF BEING',
+    'clips/ya-est-official-2026.mp4':'Я ЕСТЬ',
+    'clips/prosnis-fragment-2026.mp4':'ПРОСНИСЬ',
+    'promo/lyra-trika-2026.mp4':'Лира — голос и лицо ANDRIK'
+  };
+  if(known[key])return known[key];
+  const meta=cleanPlainText(item?.title||'',180).trim();
+  if(meta)return meta;
+  let base=String(item?.name||key.split('/').pop()||'ANDRIK VIDEO').replace(/\.(mp4|m4v|mov|webm)$/i,'');
+  base=base.replace(/[-_]+/g,' ').replace(/\s+/g,' ').trim();
+  base=base.replace(/\b(official|music|video|clip|2026)\b/ig,' ').replace(/\s+/g,' ').trim();
+  return cleanPlainText(base||'ANDRIK VIDEO',180);
+}
+async function handlePublicClipsR965(request,env){
+  const bucket=getMusicBucketR314(env);
+  if(!bucket)return json({ok:false,error:'music-bucket-not-configured'},503);
+  try{
+    const storage=await r2StorageListR922(bucket);
+    const clips=(storage.files||[]).filter(publicClipAllowedR965).map(item=>{
+      const key=String(item.key||'');
+      const uploaded=item.uploaded||null;
+      const stamp=Date.parse(uploaded||0)||0;
+      const url=`https://music.andrikmetal.com/${key}${stamp?`?v=${stamp}`:''}`;
+      return {
+        key,
+        name:item.name||key.split('/').pop()||'',
+        title:publicClipTitleR965(item),
+        size:Number(item.size||0),
+        uploaded,
+        folder:key.split('/').slice(0,-1).join('/'),
+        url,
+        downloadUrl:`/api/music/video-download-r965?key=${encodeURIComponent(key)}`
+      };
+    }).sort((a,b)=>(Date.parse(b.uploaded||0)||0)-(Date.parse(a.uploaded||0)||0)||a.title.localeCompare(b.title,'ru',{sensitivity:'base'}));
+    return json({ok:true,version:PUBLIC_CLIPS_R965,count:clips.length,clips,updatedAt:new Date().toISOString()});
+  }catch(error){
+    return json({ok:false,error:'public-clips-list-failed',message:cleanPlainText(error?.message||error,420)},502);
+  }
+}
+async function handlePublicVideoDownloadR965(request,env){
+  const bucket=getMusicBucketR314(env);
+  if(!bucket)return json({ok:false,error:'music-bucket-not-configured'},503);
+  const key=r2StorageSafeKeyR922(new URL(request.url).searchParams.get('key')||'');
+  if(!key)return json({ok:false,error:'invalid-key'},400);
+  const kind=r2StorageKindR922(key);
+  if(kind!=='video')return json({ok:false,error:'not-video'},400);
+  const probe={key,kind:'video',size:1e6,name:r2StorageBasenameR922(key),title:''};
+  if(!publicClipAllowedR965(probe))return json({ok:false,error:'not-public-clip'},403);
+  const object=await bucket.get(key);
+  if(!object)return json({ok:false,error:'not-found'},404);
+  const rawName=r2StorageBasenameR922(key)||'ANDRIK-video.mp4';
+  const asciiName=rawName.replace(/[^a-zA-Z0-9._-]/g,'_')||'ANDRIK-video.mp4';
+  const h=new Headers();
+  h.set('content-type',object.httpMetadata?.contentType||'video/mp4');
+  h.set('content-disposition',`attachment; filename="${asciiName}"; filename*=UTF-8''${encodeURIComponent(rawName)}`);
+  h.set('cache-control','private, max-age=0, no-store');
+  h.set('x-content-type-options','nosniff');
+  if(object.size)h.set('content-length',String(object.size));
+  return new Response(object.body,{status:200,headers:h});
+}
+// === End R965 public video library ===
 
 async function handleMusicMp3DeleteR314(request, env) {
   if (!adminAuthorized(request, env)) return json({ok:false,error:'unauthorized'},401);
@@ -19873,7 +19955,7 @@ async function handleRadioRemoteCommandR627(request,env){
   const db=env.COMMENTS_DB;if(!db)return json({ok:false,error:'database-not-configured'},503);
   const body=await request.json().catch(()=>({}));
   const action=String(body.action||'').trim().toLowerCase();
-  const allowed=new Set(['start','recover','stop','restart','encoder-start','encoder-stop','soft-restart','gold-restore','screen-restore','cache-clean','status','auto-safe','full-fit','visual-sync','visual-now','visual-auto','queue-move','audio-delay']);
+  const allowed=new Set(['start','recover','stop','restart','encoder-start','encoder-stop','soft-restart','gold-restore','screen-restore','cache-clean','status','auto-safe','full-fit','visual-sync','visual-now','visual-auto','queue-move','audio-delay','track-remove']);
   if(!allowed.has(action))return json({ok:false,error:'invalid-action'},400);
   const slot=String(body.slot||'').trim().toLowerCase();
   const audioDelayMsR949=Number(body.delayMs);
@@ -19881,6 +19963,8 @@ async function handleRadioRemoteCommandR627(request,env){
     return json({ok:false,error:'invalid-audio-delay',allowed:{min:-500,max:500,step:50}},400);
   if(action==='visual-now' && !Object.prototype.hasOwnProperty.call(RADIO_VISUAL_KEYS_R620,slot))
     return json({ok:false,error:'invalid-slot',allowed:['morning','day','evening','night']},400);
+  const trackKeyR966=action==='track-remove'?musicObjectKeyR317(body.key||''):'';
+  if(action==='track-remove'&&!trackKeyR966)return json({ok:false,error:'invalid-track-key'},400);
   const agent=parseStateValueR627(await getPushState(db,RADIO_REMOTE_R627.agentKey).catch(()=>null))||{};
   if(!agent.tokenHash)return json({ok:false,error:'aws-agent-not-paired'},409);
   const existing=parseStateValueR627(await getPushState(db,RADIO_REMOTE_R627.commandKey).catch(()=>null));
@@ -19889,7 +19973,7 @@ async function handleRadioRemoteCommandR627(request,env){
     if(age<180000)return json({ok:false,error:'command-busy',command:existing},409);
   }
   const id=crypto.randomUUID();
-  const command={id,action,state:'queued',createdAt:new Date().toISOString(),requestedBy:'owner-control-r949',...(action==='visual-now'?{slot}:{}),...(action==='queue-move'?{offset:Math.max(0,Math.min(5,Number(body.offset)||0)),direction:['up','down'].includes(String(body.direction||'').toLowerCase())?String(body.direction).toLowerCase():'up',itemId:cleanPlainText(body.itemId||'',220)}:{}),...(action==='audio-delay'?{delayMs:audioDelayMsR949}:{})};
+  const command={id,action,state:'queued',createdAt:new Date().toISOString(),requestedBy:'owner-control-r966',...(action==='visual-now'?{slot}:{}),...(action==='queue-move'?{offset:Math.max(0,Math.min(5,Number(body.offset)||0)),direction:['up','down'].includes(String(body.direction||'').toLowerCase())?String(body.direction).toLowerCase():'up',itemId:cleanPlainText(body.itemId||'',220)}:{}),...(action==='track-remove'?{key:trackKeyR966,title:cleanPlainText(body.title||'',180)}:{}),...(action==='audio-delay'?{delayMs:audioDelayMsR949}:{})};
   await setPushState(db,RADIO_REMOTE_R627.commandKey,JSON.stringify(command));
   return json({ok:true,command});
 }
@@ -20086,6 +20170,8 @@ async function routeApi(request, env, ctx) {
     if (path === '/api/control/radio-clips-r691/mpu/abort' && request.method === 'DELETE') return await handleRadioClipMpuAbortR691(request, env);
     if (path === '/api/control/radio-special-r729/upload' && request.method === 'PUT') return await handleRadioSpecialDirectUploadR729(request, env);
     if (path === '/api/music/radio-clips-r691' && request.method === 'GET') return await handleRadioClipsListR691(request, env, false);
+    if (path === '/api/music/clips-r965' && request.method === 'GET') return await handlePublicClipsR965(request, env);
+    if (path === '/api/music/video-download-r965' && request.method === 'GET') return await handlePublicVideoDownloadR965(request, env);
     if (path === '/api/media/radio-visual-r621' && (request.method === 'GET' || request.method === 'HEAD')) return await handleRadioVisualPublicR621(request, env);
     if (path === '/api/control/media/ya-est-r478/mpu/start' && request.method === 'POST') return await handleYaEstVideoMpuStartR478(request, env);
     if (path === '/api/control/media/ya-est-r478/mpu/part' && request.method === 'PUT') return await handleYaEstVideoMpuPartR478(request, env);

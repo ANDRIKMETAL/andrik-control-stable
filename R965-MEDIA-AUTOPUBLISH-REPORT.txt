@@ -1,0 +1,14 @@
+ANDRIK R965 — R2 MEDIA + RADIO→SINGLE AUTO-PUBLISH
+
+Base: R964 SINGLE VISUAL 24/7 + R963 game preserved.
+
+CHANGES
+1. Homepage Singles now renders the complete R2 singles/ catalog, not only one track.
+2. Radio Control quick MP3 upload still writes to singles/ and now also sends the normal deduplicated public “New single ANDRIK” PUSH.
+3. Radio Control confirms: radio + Singles + PUSH.
+4. Homepage Clips now lists every public clip found in R2 clips/, promo/, and normal radio/clips/.
+5. Station bumpers and 30/60-minute technical intermissions are excluded from the public clip library.
+6. Every public clip has lazy quick playback and a full MP4 download endpoint.
+7. /clips.html and RU/UA/SK/EN versions use the same dynamic R2 library.
+8. Service worker cache bumped to 55.00-r965-media-autopublish.
+9. R964 single-visual-24x7 radio changes and R963 Dreaming of Lira Level 6 are preserved.
