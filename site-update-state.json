@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788814571812-5815565232",
-  "release": "R963",
-  "archiveName": "ANDRIK-R963-DREAMING-OF-LIRA-LEVEL6-R958-FULL-PRESERVED.zip",
-  "sourceHead": "b0ad7f6cc98f6962dea7be07ba596c19e760a8c7",
-  "backupSha": "b0ad7f6cc98f6962dea7be07ba596c19e760a8c7",
+  "operationId": "publish-1788840530230-60709870b9",
+  "release": "R964",
+  "archiveName": "ANDRIK-R964-SINGLE-VISUAL-24X7-R963-PRESERVED-FULL.zip",
+  "sourceHead": "772334b036414ae6b1e8c22fd4e912e9244efffb",
+  "backupSha": "772334b036414ae6b1e8c22fd4e912e9244efffb",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-07T20:56:13.842Z"
+  "generatedAt": "2026-09-08T04:08:50.230Z"
 }
