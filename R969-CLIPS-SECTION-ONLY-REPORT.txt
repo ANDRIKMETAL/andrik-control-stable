@@ -1,0 +1,11 @@
+ANDRIK R969 — CLIPS SECTION ONLY
+
+Base: R968 preserved.
+Changes:
+- Removed the full dynamic R2 clip grid from all four home pages (RU/UA/SK/EN).
+- Kept only navigation/hero links that open the dedicated Clips section.
+- Dedicated /clips.html and localized clips pages still render every full R2 clip with preview and MP4 download.
+- Bumped service worker cache to R969.
+- Added cache-reset-v55-00-final-r969.html.
+
+No radio/stream/game/singles logic removed.

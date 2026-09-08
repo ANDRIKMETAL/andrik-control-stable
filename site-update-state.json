@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788859914055-f4f53a4ab9",
-  "release": "R968",
-  "archiveName": "ANDRIK-R968-FEATURED-SINGLES-INSTALLER-SAFE-FLAT-ROOT.zip",
-  "sourceHead": "d61b42a4aa87b98b83811da73cea4110de8a7dcc",
-  "backupSha": "d61b42a4aa87b98b83811da73cea4110de8a7dcc",
+  "operationId": "publish-1788860718040-195e7ef704",
+  "release": "R969",
+  "archiveName": "ANDRIK-R969-CLIPS-ONLY-IN-CLIPS-SECTION-R968-PRESERVED-FULL.zip",
+  "sourceHead": "0b8f19a50a7839c159f36513219fa790940bdbe6",
+  "backupSha": "0b8f19a50a7839c159f36513219fa790940bdbe6",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-08T09:31:54.055Z"
+  "generatedAt": "2026-09-08T09:45:18.040Z"
 }
