@@ -20008,7 +20008,7 @@ async function handleRadioRemoteCommandR627(request,env){
   const db=env.COMMENTS_DB;if(!db)return json({ok:false,error:'database-not-configured'},503);
   const body=await request.json().catch(()=>({}));
   const action=String(body.action||'').trim().toLowerCase();
-  const allowed=new Set(['start','recover','stop','restart','encoder-start','encoder-stop','soft-restart','gold-restore','screen-restore','cache-clean','status','auto-safe','full-fit','visual-sync','visual-now','visual-auto','queue-move','audio-delay','track-remove']);
+  const allowed=new Set(['start','recover','stop','restart','encoder-start','encoder-stop','soft-restart','gold-restore','screen-restore','cache-clean','status','auto-safe','full-fit','visual-sync','visual-now','visual-auto','queue-move','audio-delay','track-remove','load-r988','queue-pick-r989']);
   if(!allowed.has(action))return json({ok:false,error:'invalid-action'},400);
   const slot=String(body.slot||'').trim().toLowerCase();
   const audioDelayMsR949=Number(body.delayMs);
@@ -20018,6 +20018,10 @@ async function handleRadioRemoteCommandR627(request,env){
     return json({ok:false,error:'invalid-slot',allowed:['morning','day','evening','night']},400);
   const trackKeyR966=action==='track-remove'?musicObjectKeyR317(body.key||''):'';
   if(action==='track-remove'&&!trackKeyR966)return json({ok:false,error:'invalid-track-key'},400);
+  const mediaTypeR989=action==='queue-pick-r989'?String(body.mediaType||'').trim().toLowerCase():'';
+  const mediaKeyR989=action==='queue-pick-r989'?cleanPlainText(body.key||'',500).replace(/^\/+/, ''):'';
+  if(action==='queue-pick-r989' && !['track','clip'].includes(mediaTypeR989))return json({ok:false,error:'invalid-media-type'},400);
+  if(action==='queue-pick-r989' && (!mediaKeyR989||mediaKeyR989.includes('..')||mediaKeyR989.includes('\\')||!/(?:\.mp3|\.mp4)$/i.test(mediaKeyR989)))return json({ok:false,error:'invalid-media-key'},400);
   const agent=parseStateValueR627(await getPushState(db,RADIO_REMOTE_R627.agentKey).catch(()=>null))||{};
   if(!agent.tokenHash)return json({ok:false,error:'aws-agent-not-paired'},409);
   const existing=parseStateValueR627(await getPushState(db,RADIO_REMOTE_R627.commandKey).catch(()=>null));
@@ -20026,7 +20030,7 @@ async function handleRadioRemoteCommandR627(request,env){
     if(age<180000)return json({ok:false,error:'command-busy',command:existing},409);
   }
   const id=crypto.randomUUID();
-  const command={id,action,state:'queued',createdAt:new Date().toISOString(),requestedBy:'owner-control-r966',...(action==='visual-now'?{slot}:{}),...(action==='queue-move'?{offset:Math.max(0,Math.min(5,Number(body.offset)||0)),direction:['up','down'].includes(String(body.direction||'').toLowerCase())?String(body.direction).toLowerCase():'up',itemId:cleanPlainText(body.itemId||'',220)}:{}),...(action==='track-remove'?{key:trackKeyR966,title:cleanPlainText(body.title||'',180)}:{}),...(action==='audio-delay'?{delayMs:audioDelayMsR949}:{})};
+  const command={id,action,state:'queued',createdAt:new Date().toISOString(),requestedBy:'owner-control-r989',...(action==='visual-now'?{slot}:{}),...(action==='queue-move'?{offset:Math.max(0,Math.min(5,Number(body.offset)||0)),direction:['up','down'].includes(String(body.direction||'').toLowerCase())?String(body.direction).toLowerCase():'up',itemId:cleanPlainText(body.itemId||'',220)}:{}),...(action==='track-remove'?{key:trackKeyR966,title:cleanPlainText(body.title||'',180)}:{}),...(action==='queue-pick-r989'?{mediaType:mediaTypeR989,key:mediaKeyR989,title:cleanPlainText(body.title||'',180)}:{}),...(action==='audio-delay'?{delayMs:audioDelayMsR949}:{})};
   await setPushState(db,RADIO_REMOTE_R627.commandKey,JSON.stringify(command));
   return json({ok:true,command});
 }

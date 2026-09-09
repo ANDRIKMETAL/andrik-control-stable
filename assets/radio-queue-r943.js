@@ -36,4 +36,5 @@ async function move(index,direction){
 list.addEventListener('click',e=>{const more=e.target.closest('[data-qmore]');if(more){const row=more.closest('.radio-queue-row-r942');document.querySelectorAll('.radio-queue-row-r942.open').forEach(x=>{if(x!==row)x.classList.remove('open')});row?.classList.toggle('open');return;}const b=e.target.closest('[data-qmove]');if(b&&!b.disabled){const row=b.closest('.radio-queue-row-r942');row?.classList.remove('open');move(Number(b.dataset.qindex)||0,b.dataset.qmove);}});
 document.addEventListener('click',e=>{if(!e.target.closest('.radio-queue-row-r942'))document.querySelectorAll('.radio-queue-row-r942.open').forEach(x=>x.classList.remove('open'))});
 loadCacheR956();refresh(true);setInterval(()=>{if(!document.hidden)refresh()},7000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh()});
+window.addEventListener('andrik:radio-queue-refresh-r989',()=>{setTimeout(refresh,500);setTimeout(refresh,3500)});
 })();

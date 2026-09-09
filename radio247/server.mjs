@@ -4170,6 +4170,54 @@ function moveUpcomingQueueR942(offset,direction){
   return {ok:true,move:state.lastManualQueueMoveR942,upcoming:upcomingQueueR942(6)};
 }
 
+// R989: safe arbitrary next-media selection from Control.
+// Never rewrites the already-armed boundary of the media that is currently LIVE.
+// If a boundary is already active, the chosen item is placed immediately AFTER the
+// committed NEXT. This keeps R814/R816/R984B transition timing untouched.
+function queuePickSafeR989(type,key,title=''){
+  const mediaType=String(type||'').trim().toLowerCase();
+  const wanted=String(key||'').trim().replace(/^\/+/, '');
+  const wantedTitle=cleanText(title||'');
+  if(!['track','clip'].includes(mediaType))return {ok:false,error:'invalid-media-type'};
+  if(!wanted||wanted.includes('..')||wanted.includes('\\'))return {ok:false,error:'invalid-media-key'};
+  const source=mediaType==='clip'?clipLibrary:library;
+  const item=source.find(x=>String(x?.key||'')===wanted) || (wantedTitle?source.find(x=>cleanText(x?.title||'')===wantedTitle):null);
+  if(!item)return {ok:false,error:'media-not-found',type:mediaType,key:wanted,title:wantedTitle};
+  if(!queue.length)return {ok:false,error:'queue-not-ready'};
+
+  const selectedId=primaryIdentity(item);
+  const firstFuture=Math.min(queue.length,queueIndex+1);
+  const immediate=queue[firstFuture]||null;
+  if(immediate && primaryIdentity(immediate)===selectedId){
+    const out={ok:true,alreadyNext:true,safe:true,position:1,type:mediaType,key:wanted,title:shortText(item.title||wantedTitle||'ANDRIK',120),upcoming:upcomingQueueR942(6)};
+    state.lastManualQueuePickR989={...out,at:new Date().toISOString()};
+    return out;
+  }
+
+  // playItem()/playVideoClipR691 capture their NEXT when the current media starts.
+  // Do not change that already committed first future slot while media is LIVE.
+  const armedBoundary=Boolean(state.producerRunning||clipActive||stationHandoffActiveR804);
+  let insertAt=Math.min(queue.length,firstFuture+(armedBoundary?1:0));
+
+  // Remove a future duplicate first, preserving the currently playing item.
+  for(let i=queue.length-1;i>=firstFuture;i--){
+    if(primaryIdentity(queue[i])!==selectedId)continue;
+    queue.splice(i,1);
+    if(i<insertAt)insertAt--;
+  }
+  insertAt=Math.max(firstFuture,Math.min(queue.length,insertAt));
+  queue.splice(insertAt,0,item);
+  state.queueLength=queue.length;
+
+  if(mediaType==='track')prefetchTrack(item);
+  else prefetchPreparedClipR742(item);
+
+  const position=Math.max(1,insertAt-firstFuture+1);
+  const out={ok:true,alreadyNext:false,safe:true,position,afterCommittedNext:Boolean(armedBoundary),type:mediaType,key:wanted,title:shortText(item.title||wantedTitle||'ANDRIK',120),upcoming:upcomingQueueR942(6)};
+  state.lastManualQueuePickR989={...out,at:new Date().toISOString()};
+  return out;
+}
+
 function publicStatus(){
   const now=Date.now();
   return {
@@ -4461,6 +4509,7 @@ function publicStatus(){
     next:state.next,
     upcomingR942:upcomingQueueR942(6),
     lastManualQueueMoveR942:state.lastManualQueueMoveR942||null,
+    lastManualQueuePickR989:state.lastManualQueuePickR989||null,
     startedAt:state.startedAt,
     streamStartedAt:state.streamStartedAt,
     uptimeSeconds:Math.max(0,Math.round((now-Date.parse(state.startedAt))/1000)),
@@ -4522,6 +4571,7 @@ const server=http.createServer((req,res)=>{
       else if(url.pathname==='/control/full-fit')result=await ensureNormalVideoFeederR721({force:true}).then(()=>({ok:true,noCrop:true,restartedPublisher:false}));
       else if(url.pathname==='/control/timeline-offset')result=await setTimelineCompensationR739(url.searchParams.get('seconds'));
       else if(url.pathname==='/control/queue-move')result=moveUpcomingQueueR942(url.searchParams.get('offset'),url.searchParams.get('direction'));
+      else if(url.pathname==='/control/queue-pick-r989')result=queuePickSafeR989(url.searchParams.get('type'),url.searchParams.get('key'),url.searchParams.get('title')||'');
       else if(url.pathname==='/control/track-remove')result=await excludeTrackFromRadioR966(url.searchParams.get('key')||'',url.searchParams.get('title')||'');
       else throw new Error('unknown local control');
       res.writeHead(200,headers);res.end(JSON.stringify(result));

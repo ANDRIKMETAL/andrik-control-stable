@@ -318,6 +318,22 @@ ${JSON.stringify(d)}`};}
     catch(e){return {ok:false,output:`QUEUE MOVE ❌
 ${e.message||e}`};}
   }
+  // R989-LOAD-AND-SAFE-NEXT
+  if(action==='load-r988'){
+    const r=await runAsync('/usr/local/sbin/andrik-radio-load-r988',[],8000);
+    return {ok:r.ok,output:r.ok?`R988_LOAD ${r.output}`:`R988_LOAD_ERROR\n${r.output}`};
+  }
+  if(action==='queue-pick-r989'){
+    const mediaType=clean(command.mediaType||'').toLowerCase();
+    const key=clean(command.key||'').replace(/^\/+/, '');
+    const title=clean(command.title||'');
+    if(!['track','clip'].includes(mediaType))return {ok:false,output:'R989 QUEUE PICK ❌ invalid media type'};
+    if(!key||key.includes('..')||key.includes('\\'))return {ok:false,output:'R989 QUEUE PICK ❌ invalid key'};
+    try{
+      const d=await localControlR721(`/control/queue-pick-r989?type=${encodeURIComponent(mediaType)}&key=${encodeURIComponent(key)}&title=${encodeURIComponent(title)}`);
+      return {ok:Boolean(d?.ok),output:`R989_QUEUE ${JSON.stringify(d)}`};
+    }catch(e){return {ok:false,output:`R989 QUEUE PICK ❌\n${e.message||e}`};}
+  }
   if(action==='status'){
     const svc=run('systemctl',['is-active','andrik-radio.service'],10000);
     let local='';

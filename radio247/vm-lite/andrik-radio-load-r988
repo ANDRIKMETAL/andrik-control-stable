@@ -1,0 +1,42 @@
+#!/usr/bin/env python3
+import os,re,json,time,subprocess
+
+def snap():
+    with open('/proc/stat') as f: v=[int(x) for x in f.readline().split()[1:]]
+    idle=v[3]+(v[4] if len(v)>4 else 0)
+    return idle,sum(v)
+a=snap();time.sleep(.35);b=snap();dt=max(1,b[1]-a[1]);di=max(0,b[0]-a[0]);cpu=max(0.0,min(100.0,(1.0-di/dt)*100.0))
+mem={}
+with open('/proc/meminfo') as f:
+    for line in f:
+        m=re.match(r'^([^:]+):\s+(\d+)',line)
+        if m: mem[m.group(1)]=int(m.group(2))
+rt=mem.get('MemTotal',0);ra=mem.get('MemAvailable',0);ru=max(0,rt-ra);st=mem.get('SwapTotal',0);sf=mem.get('SwapFree',0);su=max(0,st-sf)
+model='CPU'
+try:
+    with open('/proc/cpuinfo') as f:
+        for line in f:
+            if line.lower().startswith('model name'):
+                model=line.split(':',1)[1].strip();break
+except: pass
+cores=os.cpu_count() or 1;l1,l5,l15=os.getloadavg();p={'visual':0.0,'publisher':0.0,'radioNode':0.0,'mp3Decoder':0.0,'otherFfmpeg':0.0}
+try:
+    out=subprocess.run(['ps','-eo','pcpu=,args='],capture_output=True,text=True,timeout=4).stdout
+    for line in out.splitlines():
+        parts=line.strip().split(None,1)
+        if len(parts)<2: continue
+        try: pc=float(parts[0])
+        except: continue
+        args=parts[1];low=args.lower()
+        if 'radio247/server.mjs' in args: p['radioNode']+=pc
+        if 'ffmpeg' in low:
+            if 'rtmps://' in low or 'youtube.com/live' in low: p['publisher']+=pc
+            elif re.search(r'\.mp3(?:\s|$)',args,re.I): p['mp3Decoder']+=pc
+            elif re.search(r'stream-morning-master-r703|live-ticker|andrik-qr|subscribe-right|like-right',args,re.I): p['visual']+=pc
+            else: p['otherFfmpeg']+=pc
+except: pass
+rp=(ru/rt*100.0) if rt else 0.0;norm=l1/cores
+if cpu>=92 or rp>=95 or norm>=1.50: level,label='critical','КРИТИЧЕСКАЯ'
+elif cpu>=75 or rp>=80 or norm>=1.00: level,label='high','ВЫСОКАЯ'
+else: level,label='normal','НОРМА'
+print(json.dumps({'version':'R988','state':{'level':level,'label':label},'cpu':{'model':model,'cores':cores,'totalPct':round(cpu,1)},'processes':{k:round(v,1) for k,v in p.items()},'memory':{'ramUsedMB':round(ru/1024),'ramTotalMB':round(rt/1024),'ramPct':round(rp,1),'swapUsedMB':round(su/1024),'swapTotalMB':round(st/1024)},'load':{'one':round(l1,2),'five':round(l5,2),'fifteen':round(l15,2)}},ensure_ascii=False,separators=(',',':')))
