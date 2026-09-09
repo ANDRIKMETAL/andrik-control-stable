@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788928388616-d9bb2a7c02",
-  "release": "R971",
-  "archiveName": "ANDRIK-R971-INSTAGRAM-MONTHLY-GRAPH-R970-PRESERVED-FULL.zip",
-  "sourceHead": "94b9f50568eb701441698c39ee8165bca6304ff2",
-  "backupSha": "94b9f50568eb701441698c39ee8165bca6304ff2",
+  "operationId": "publish-1788931618328-6649891f84",
+  "release": "R972",
+  "archiveName": "ANDRIK-R972-MP3-VIDEO-TAIL-AUDIO-2S-R971-PRESERVED-FULL.zip",
+  "sourceHead": "af15b506971449be0efff5cee61afae533be2d55",
+  "backupSha": "af15b506971449be0efff5cee61afae533be2d55",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-09T04:33:08.616Z"
+  "generatedAt": "2026-09-09T05:26:58.780Z"
 }

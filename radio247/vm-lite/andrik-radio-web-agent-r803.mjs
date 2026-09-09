@@ -6,7 +6,7 @@ import {Readable} from 'node:stream';
 import {pipeline} from 'node:stream/promises';
 
 const CONFIG='/etc/andrik-radio-web-r627.json';
-const AGENT_VERSION_R803='R958';
+const AGENT_VERSION_R803='R972';
 const DIAG_DIR_R803='/var/cache/andrik-radio-r622/diagnostics';
 const DIAG_AGENT_LOG_R803=DIAG_DIR_R803+'/r803-agent-events.ndjson';
 const DIAG_AGENT_MAX_BYTES_R803=1024*1024;
@@ -294,7 +294,7 @@ async function execute(action,command={},headers={}){
   }
   if(action==='audio-delay'){
     const delayMs=Number(command.delayMs);
-    if(!Number.isFinite(delayMs)||delayMs<-500||delayMs>500||delayMs%50!==0)return {ok:false,output:'AUDIO OFFSET ❌ invalid value (-500..+500 step 50)'};
+    if(!Number.isFinite(delayMs)||delayMs<-2000||delayMs>2000||delayMs%50!==0)return {ok:false,output:'AUDIO OFFSET ❌ invalid value (-2000..+2000 ms step 50)'};
     if(!fs.existsSync(AUDIO_SYNC_R949))return {ok:false,output:`AUDIO DELAY ❌\nMissing ${AUDIO_SYNC_R949}`};
     const r=await runAsync(AUDIO_SYNC_R949,[String(delayMs)],300000);
     const signed=delayMs>0?`+${delayMs}`:String(delayMs);return {ok:r.ok,output:`AUDIO OFFSET ${signed} ms ${r.ok?'✅':'❌'}\nRADIO NOT RESTARTED\n${r.output}`};

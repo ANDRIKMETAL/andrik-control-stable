@@ -20012,8 +20012,8 @@ async function handleRadioRemoteCommandR627(request,env){
   if(!allowed.has(action))return json({ok:false,error:'invalid-action'},400);
   const slot=String(body.slot||'').trim().toLowerCase();
   const audioDelayMsR949=Number(body.delayMs);
-  if(action==='audio-delay' && (!Number.isFinite(audioDelayMsR949) || audioDelayMsR949<-500 || audioDelayMsR949>500 || audioDelayMsR949%50!==0))
-    return json({ok:false,error:'invalid-audio-delay',allowed:{min:-500,max:500,step:50}},400);
+  if(action==='audio-delay' && (!Number.isFinite(audioDelayMsR949) || audioDelayMsR949<-2000 || audioDelayMsR949>2000 || audioDelayMsR949%50!==0))
+    return json({ok:false,error:'invalid-audio-delay',allowed:{min:-2000,max:2000,step:50}},400);
   if(action==='visual-now' && !Object.prototype.hasOwnProperty.call(RADIO_VISUAL_KEYS_R620,slot))
     return json({ok:false,error:'invalid-slot',allowed:['morning','day','evening','night']},400);
   const trackKeyR966=action==='track-remove'?musicObjectKeyR317(body.key||''):'';

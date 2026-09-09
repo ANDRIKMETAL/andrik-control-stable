@@ -160,6 +160,7 @@ const AUDIO_SAMPLE_RATE = 44100; // YouTube Live recommendation for stereo
 const AUDIO_GAP_BRIDGE_INTERVAL_MS_R824 = 20; // R824: fill only inter-item audio gaps; prevents persistent master starvation
 const AUDIO_GAP_BRIDGE_SAMPLES_R824 = Math.max(1,Math.round(AUDIO_SAMPLE_RATE*AUDIO_GAP_BRIDGE_INTERVAL_MS_R824/1000));
 const AUDIO_GAP_BRIDGE_CHUNK_R824 = Buffer.alloc(AUDIO_GAP_BRIDGE_SAMPLES_R824*2*2); // s16le stereo silence, 20 ms
+const MP3_TO_VIDEO_TAIL_GUARD_MS_R972 = Math.max(0,Math.min(4000,Number(process.env.ANDRIK_MP3_VIDEO_TAIL_GUARD_MS||2000))); // R972: keep outgoing MP3 visual until buffered audio tail is heard before a clip/bumper
 const VIDEO_FPS = 25;
 const FULL_FRAME_FILTER_R787 = 'scale=1920:1080:flags=lanczos,setsar=1'; // R837 GOLD: exact R829 permanent fullscreen
 const LIVE_FULL_FRAME_FILTER_R794 = 'scale=1920:1080:flags=lanczos,setsar=1'; // R837 GOLD: exact R829 permanent fullscreen
@@ -3866,7 +3867,7 @@ async function playItem(previous,item,next,following,localAudioPath,nextTrackPre
       fadeIn:(clipToTrackBoundaryR753||mp3FromMp3R809),
       fadeInSeconds:mp3FromMp3R809?MP3_BOUNDARY_FADE_IN_SECONDS_R814:CLIP_TO_TRACK_FADE_IN_SECONDS_R753,
       endFadeToBlack:endFadeToBlackR760,
-      trackDuration:duration,
+      trackDuration:duration+(isVideoHandoffR738(actualNextR736)?MP3_TO_VIDEO_TAIL_GUARD_MS_R972/1000:0),
       previewReload:false,
       boundaryTitleSwitchAt:boundaryTitleSwitchAtR790
     });
@@ -3932,11 +3933,20 @@ async function playItem(previous,item,next,following,localAudioPath,nextTrackPre
       producer.once('error',reject);
       producer.once('exit',(code,signal)=>{
         try{source.unpipe(audioSink);}catch(_){}
-        if(!stopping)startMasterAudioGapBridgeR824('mp3-ended');
+        const exitOkR972=(code===0||stopping);
+        const videoNextR972=Boolean(actualNextR736&&isVideoHandoffR738(actualNextR736));
+        if(!stopping)startMasterAudioGapBridgeR824(videoNextR972?'mp3-ended-video-tail-guard-r972':'mp3-ended');
         state.producerRunning=false;
         producer=null;
-        if(code===0 || stopping) resolve();
-        else reject(new Error(`decoder exit ${code||signal}`));
+        if(!exitOkR972){reject(new Error(`decoder exit ${code||signal}`));return;}
+        if(!stopping&&videoNextR972&&MP3_TO_VIDEO_TAIL_GUARD_MS_R972>0){
+          state.mp3VideoTailGuardActiveR972=true;
+          state.mp3VideoTailGuardMsR972=MP3_TO_VIDEO_TAIL_GUARD_MS_R972;
+          state.lastMp3VideoTailGuardAtR972=new Date().toISOString();
+          setTimeout(()=>{state.mp3VideoTailGuardActiveR972=false;resolve();},MP3_TO_VIDEO_TAIL_GUARD_MS_R972);
+          return;
+        }
+        resolve();
       });
     });
     playedOkR726=true;

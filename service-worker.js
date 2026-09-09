@@ -1,6 +1,6 @@
 'use strict';
 
-const VERSION = '55.00-r971-instagram-monthly-r970-preserved';
+const VERSION = '55.00-r972-mp3-video-tail-audio-2s-r971-preserved';
 const IS_CONTROL_HOST = self.location.hostname.toLowerCase() === 'control.andrikmetal.com';
 
 async function deleteControlCaches(){

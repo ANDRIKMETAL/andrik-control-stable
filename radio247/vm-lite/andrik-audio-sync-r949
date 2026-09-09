@@ -8,7 +8,7 @@ TARGET="${1:-}"
 exec 9>"$LOCK"
 flock -n 9 || { echo "AUDIO SYNC R958 busy"; exit 73; }
 [[ "$TARGET" =~ ^-?[0-9]+$ ]] || { echo "invalid target"; exit 20; }
-(( TARGET >= -500 && TARGET <= 500 && TARGET % 50 == 0 )) || { echo "target must be -500..500 step 50"; exit 21; }
+(( TARGET >= -2000 && TARGET <= 2000 && TARGET % 50 == 0 )) || { echo "target must be -2000..2000 step 50"; exit 21; }
 command -v ffmpeg >/dev/null
 command -v ffprobe >/dev/null
 mkdir -p "$STATE_DIR"
@@ -25,7 +25,7 @@ fmt_target(){
 }
 
 SIGNED="$(fmt_target)"
-echo "ANDRIK AUDIO SYNC R958 · BIDIRECTIONAL"
+echo "ANDRIK AUDIO SYNC R972 · BIDIRECTIONAL ±2S"
 echo "target: ${SIGNED} ms relative to saved R949 zero baseline"
 echo "negative = audio earlier · positive = audio later"
 echo "prepared files: ${#FILES[@]}"
@@ -116,7 +116,7 @@ data={
   "changed":int(changed),
   "skipped":int(skipped),
   "failed":int(failed),
-  "source":"r958-bidirectional-r949-zero-baseline"
+  "source":"r972-bidirectional-2s-r949-zero-baseline"
 }
 tmp=path+'.tmp'
 with open(tmp,'w',encoding='utf-8') as f:

@@ -1,0 +1,23 @@
+ANDRIK R972 — MP3 → VIDEO BOUNDARY + A/V ±2s
+
+Base: R971 (R970 preserved + Instagram monthly graph fix).
+
+Control panel:
+- audio/video calibration range expanded from -500..+500 ms to -2000..+2000 ms
+- exact slider step 50 ms
+- quick values + fine ±50 ms buttons
+
+Cloudflare Worker:
+- audio-delay validation expanded to ±2000 ms, step 50 ms
+
+VPS helper/agent:
+- Agent version R972
+- helper accepts ±2000 ms, absolute relative to saved R949 zero baseline
+
+Radio server R972 boundary guard:
+- ONLY MP3 -> clip/bumper/special receives a 2000 ms tail guard
+- outgoing normal visual clock is extended by the same guard
+- MP3 decoder still plays the full file; no truncation
+- audio gap bridge keeps persistent master fed during the guard
+- MP3 -> MP3 boundaries are unchanged
+- configurable: ANDRIK_MP3_VIDEO_TAIL_GUARD_MS=0..4000 (default 2000)
