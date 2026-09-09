@@ -1,0 +1,11 @@
+ANDRIK R989B — R988 LOAD LEVEL FIX
+2026-09-09
+
+Changed only the R988 lazy monitor severity thresholds:
+- CRITICAL: CPU >= 90% OR RAM >= 95% OR normalized load >= 2.00
+  (on 2 vCPU this is Load 1 >= 4.0)
+- HIGH: CPU >= 75% OR RAM >= 80% OR normalized load >= 1.25
+  (on 2 vCPU this is Load 1 >= 2.5)
+- NORMAL: below HIGH thresholds
+
+Streaming engine, MP3 fades, station handoff, fullscreen logic and R989 media picker are unchanged in this ZIP.

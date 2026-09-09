@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788972672114-e38a82a81b",
+  "operationId": "publish-1788982709522-2d5b4acea9",
   "release": "R989",
-  "archiveName": "ANDRIK-R989-LAZY-MONITOR-SAFE-NEXT-R973-PRESERVED-FULL.zip",
-  "sourceHead": "85cf98806ff8f97e4a0826d7e7d4974e69cb8555",
-  "backupSha": "85cf98806ff8f97e4a0826d7e7d4974e69cb8555",
+  "archiveName": "ANDRIK-R989B-LAZY-MONITOR-LEVELS-FIX-R989-PRESERVED-FULL.zip",
+  "sourceHead": "39cc9331744fd7b1dde40d7b8c1534b4339475b9",
+  "backupSha": "39cc9331744fd7b1dde40d7b8c1534b4339475b9",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-09T16:51:12.998Z"
+  "generatedAt": "2026-09-09T19:38:30.371Z"
 }
