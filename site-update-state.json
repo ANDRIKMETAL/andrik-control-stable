@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788861823467-d911cce8a9",
-  "release": "R970",
-  "archiveName": "ANDRIK-R970-RED-REMOVE-AIR-CLIPS-HUB-R969-PRESERVED-FULL.zip",
-  "sourceHead": "157f5f7094a0c57df4e23c858721f2f700c22be6",
-  "backupSha": "157f5f7094a0c57df4e23c858721f2f700c22be6",
+  "operationId": "publish-1788928388616-d9bb2a7c02",
+  "release": "R971",
+  "archiveName": "ANDRIK-R971-INSTAGRAM-MONTHLY-GRAPH-R970-PRESERVED-FULL.zip",
+  "sourceHead": "94b9f50568eb701441698c39ee8165bca6304ff2",
+  "backupSha": "94b9f50568eb701441698c39ee8165bca6304ff2",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-08T10:03:43.467Z"
+  "generatedAt": "2026-09-09T04:33:08.616Z"
 }
