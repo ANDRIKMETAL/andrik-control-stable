@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788931618328-6649891f84",
-  "release": "R972",
-  "archiveName": "ANDRIK-R972-MP3-VIDEO-TAIL-AUDIO-2S-R971-PRESERVED-FULL.zip",
-  "sourceHead": "af15b506971449be0efff5cee61afae533be2d55",
-  "backupSha": "af15b506971449be0efff5cee61afae533be2d55",
+  "operationId": "publish-1788939020627-e647914fbf",
+  "release": "R973",
+  "archiveName": "ANDRIK-R973-AUDIO-SYNC-FETCH-RECOVERY-R972-PRESERVED-FULL.zip",
+  "sourceHead": "2f276c6b9f2d38e2b2ca86d8b20277ba51852dda",
+  "backupSha": "2f276c6b9f2d38e2b2ca86d8b20277ba51852dda",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-09T05:26:58.780Z"
+  "generatedAt": "2026-09-09T07:30:20.627Z"
 }

@@ -1,0 +1,16 @@
+ANDRIK R973 — AUDIO SYNC FETCH RECOVERY
+Base: R972 preserved
+
+FIXED
+- radio-control audio sync no longer fails immediately on one transient fetch/status error.
+- lost POST response is recovered by checking D1/VPS current command and saved audioDelayMsR949.
+- command-busy with the same audio-delay target is treated as the already-running requested operation.
+- status polling tolerates transient mobile/Cloudflare network interruptions for up to 5 minutes.
+- success/error message remains visible instead of being instantly overwritten by heartbeat status.
+- embedded VPS agent state reader range fixed from clamp ±500 to ±2000 for future installs.
+
+PRESERVED
+- R972 ±2000 ms / 50 ms control.
+- R972 MP3 -> video tail guard.
+- radio, queue, remove-from-air, clips hub, Instagram monthly graph and all prior site files.
+- no radio restart is required for this UI fix.

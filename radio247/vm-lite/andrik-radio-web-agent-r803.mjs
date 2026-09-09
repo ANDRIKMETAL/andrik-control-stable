@@ -6,7 +6,7 @@ import {Readable} from 'node:stream';
 import {pipeline} from 'node:stream/promises';
 
 const CONFIG='/etc/andrik-radio-web-r627.json';
-const AGENT_VERSION_R803='R972';
+const AGENT_VERSION_R803='R973';
 const DIAG_DIR_R803='/var/cache/andrik-radio-r622/diagnostics';
 const DIAG_AGENT_LOG_R803=DIAG_DIR_R803+'/r803-agent-events.ndjson';
 const DIAG_AGENT_MAX_BYTES_R803=1024*1024;
@@ -166,7 +166,7 @@ function audioSyncStateR949(){
   try{
     const d=JSON.parse(fs.readFileSync(AUDIO_SYNC_STATE_R949,'utf8'));
     const ms=Number(d?.targetMs);
-    return {targetMs:Number.isFinite(ms)?Math.max(-500,Math.min(500,ms)):0,updatedAt:d?.updatedAt||null,files:Number(d?.files||0),source:d?.source||'r958-bidirectional'};
+    return {targetMs:Number.isFinite(ms)?Math.max(-2000,Math.min(2000,ms)):0,updatedAt:d?.updatedAt||null,files:Number(d?.files||0),source:d?.source||'r973-bidirectional-2s'};
   }catch(_){return {targetMs:0,updatedAt:null,files:0,source:'r958-default'};}
 }
 function currentTicker(){try{return clean(fs.readFileSync(TICKER_FILE,'utf8'))}catch(_){return DEFAULT_TICKER}}
