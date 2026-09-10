@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1789020470800-604c661d56",
+  "operationId": "publish-1789069009666-e9832b0c98",
   "release": "R990",
-  "archiveName": "ANDRIK-R990S-FULLSCREEN-BUTTON-PROVEN-R906-COMMAND-SAFE-FULL.zip",
-  "sourceHead": "2df0dada4bd477ce61c13ea2161479c8c813808e",
-  "backupSha": "2df0dada4bd477ce61c13ea2161479c8c813808e",
+  "archiveName": "ANDRIK-R990T-NO-AUDIO-SYNC-PANEL-SAFE-FULL.zip",
+  "sourceHead": "a197e2e44c0b8f7b1965240999b39584efd41878",
+  "backupSha": "a197e2e44c0b8f7b1965240999b39584efd41878",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-10T06:07:51.357Z"
+  "generatedAt": "2026-09-10T19:36:49.666Z"
 }
