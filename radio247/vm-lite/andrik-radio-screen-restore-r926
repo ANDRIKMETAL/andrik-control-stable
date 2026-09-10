@@ -1,38 +1,36 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-MASTER="/opt/andrik-radio/recovery/r906-fullscreen-master.mp4"
-DST="/var/cache/andrik-radio-r622/visuals/stream-morning-master-r703.mp4"
+G="/opt/andrik-radio/backups/GOLD-R906-R905-FULLSCREEN-CLIPS-SHUFFLE-20260904-174845"
+V="/var/cache/andrik-radio-r622/visuals"
+CUR="$V/stream-morning-master-r703.mp4"
 
-echo "======================================================"
-echo " ANDRIK R990R · ВОССТАНОВИТЬ ЭКРАН"
-echo " PERMANENT R906 FULLSCREEN MASTER"
-echo "======================================================"
+SRC="$(find "$G" -type f -name 'stream-morning-master-r703.mp4' | head -1)"
 
-[ -s "$MASTER" ] || {
-  echo "❌ Permanent R906 fullscreen master missing:"
-  echo "$MASTER"
-  exit 20
-}
+if [ -z "$SRC" ]; then
+  echo "❌ FULLSCREEN R906 source not found"
+  exit 1
+fi
 
+echo "=== STOP ==="
 systemctl stop andrik-radio.service
 sleep 3
 
+echo "=== KILL OLD VISUAL FEEDER ==="
 pkill -9 -f 'ffmpeg.*stream-morning-master-r703.mp4' 2>/dev/null || true
 sleep 2
 
-install -m 0644 "$MASTER" "$DST"
+echo "=== RESTORE TRUE FULLSCREEN VISUAL ==="
+install -m 0644 "$SRC" "$CUR"
 
+echo "=== START ==="
 systemctl start andrik-radio.service
 sleep 15
 
-STATE="$(systemctl is-active andrik-radio.service || true)"
-echo "service=$STATE"
-[ "$STATE" = active ] || exit 21
+echo "=== STATUS ==="
+systemctl is-active andrik-radio.service
 
 echo "=== ACTIVE FEEDER ==="
 pgrep -af 'ffmpeg.*stream-morning-master-r703.mp4' | head -2 || true
 
-echo "======================================================"
-echo "✅ R906 FULLSCREEN VISUAL RESTORED"
-echo "======================================================"
+echo "✅ FULLSCREEN VISUAL RESTORED"

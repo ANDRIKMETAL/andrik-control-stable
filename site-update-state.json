@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1789018160563-bb2c055c84",
+  "operationId": "publish-1789020470800-604c661d56",
   "release": "R990",
-  "archiveName": "ANDRIK-R990R-RECOVERY-BUTTONS-R990-GOLD-R906-FULLSCREEN-SAFE-FULL.zip",
-  "sourceHead": "2648c6a87c701aa5342dc6f41927e0870bfed161",
-  "backupSha": "2648c6a87c701aa5342dc6f41927e0870bfed161",
+  "archiveName": "ANDRIK-R990S-FULLSCREEN-BUTTON-PROVEN-R906-COMMAND-SAFE-FULL.zip",
+  "sourceHead": "2df0dada4bd477ce61c13ea2161479c8c813808e",
+  "backupSha": "2df0dada4bd477ce61c13ea2161479c8c813808e",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-10T05:29:21.349Z"
+  "generatedAt": "2026-09-10T06:07:51.357Z"
 }

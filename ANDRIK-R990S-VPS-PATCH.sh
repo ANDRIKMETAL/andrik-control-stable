@@ -177,7 +177,7 @@ echo "   Activate later with: sudo systemctl restart andrik-radio.service"
 echo "======================================================"
 
 
-# R990R — refresh recovery buttons to current proven targets.
+# R990S — refresh recovery buttons to current proven targets.
 # gold-restore -> latest GOLD-R990-FULLSCREEN-CLEAN-TITLES-*
 # screen-restore -> /opt/andrik-radio/recovery/r906-fullscreen-master.mp4
 SELF_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -197,3 +197,16 @@ else
   echo "⚠ bundled SCREEN helper not found"
 fi
 
+
+
+# R990S FINAL — install proven fullscreen recovery helper
+SELF_DIR="$(cd "$(dirname "$0")" && pwd)"
+SCREEN_HELPER="$SELF_DIR/radio247/vm-lite/andrik-radio-screen-restore-r926"
+
+if [ -s "$SCREEN_HELPER" ]; then
+  install -m 0755 "$SCREEN_HELPER" /usr/local/sbin/andrik-radio-screen-restore-r926
+  echo "✅ FULLSCREEN button helper installed: proven R906 GOLD command"
+else
+  echo "❌ Bundled fullscreen helper missing"
+  exit 41
+fi

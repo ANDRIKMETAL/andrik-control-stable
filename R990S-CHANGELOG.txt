@@ -1,0 +1,17 @@
+ANDRIK R990S — FULLSCREEN BUTTON = PROVEN R906 COMMAND
+
+Changed only the fullscreen recovery action:
+- Control "restore/fullscreen" button still calls /usr/local/sbin/andrik-radio-screen-restore-r926.
+- That helper now contains the exact command sequence that was confirmed working:
+  GOLD source:
+  /opt/andrik-radio/backups/GOLD-R906-R905-FULLSCREEN-CLIPS-SHUFFLE-20260904-174845
+  source file:
+  stream-morning-master-r703.mp4
+  sequence:
+  stop service -> kill old visual feeder -> install proven visual -> start service -> status
+
+Preserved:
+- R990Q CPU thresholds
+- safe queue picker
+- R990R emergency GOLD button
+- RTMPS/fades/audio logic

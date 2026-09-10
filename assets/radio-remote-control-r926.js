@@ -298,7 +298,7 @@
       setMsg('Экран восстановлен ✅ · проверяю сигнал…','ok');
       await sleep(5000);
       await refresh();
-    }catch(e){setMsg(`R906 fullscreen: ${e.message||e}`,'bad');setResult(`SCREEN RESTORE ERROR\n${e.message||e}`)}
+    }catch(e){setMsg(`Проверенный R906 fullscreen: ${e.message||e}`,'bad');setResult(`SCREEN RESTORE ERROR\n${e.message||e}`)}
     finally{busy=false;await refresh()}
   }
 
