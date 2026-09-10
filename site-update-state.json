@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1789018051413-98a2d984f8",
+  "operationId": "publish-1789018160563-bb2c055c84",
   "release": "R990",
-  "archiveName": "ANDRIK-R990Q-CPU-YELLOW-QUEUE-NEXT-CLEAN-SAFE-FULL.zip",
-  "sourceHead": "d53e9642026111cd02cbe99edeb8e31534a74bd3",
-  "backupSha": "d53e9642026111cd02cbe99edeb8e31534a74bd3",
+  "archiveName": "ANDRIK-R990R-RECOVERY-BUTTONS-R990-GOLD-R906-FULLSCREEN-SAFE-FULL.zip",
+  "sourceHead": "2648c6a87c701aa5342dc6f41927e0870bfed161",
+  "backupSha": "2648c6a87c701aa5342dc6f41927e0870bfed161",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-10T05:27:32.151Z"
+  "generatedAt": "2026-09-10T05:29:21.349Z"
 }

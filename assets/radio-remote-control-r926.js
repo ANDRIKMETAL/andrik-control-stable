@@ -273,10 +273,10 @@
   }
 
   async function airRestore(){
-    if(busy)return;if(!confirm('♻️ ВОССТАНОВИТЬ ЭФИР из сохранённого проверенного GOLD? Текущий server.mjs будет сохранён, затем вернётся эталон и радио один раз перезапустится.'))return;
+    if(busy)return;if(!confirm('♻️ ВОССТАНОВИТЬ ЭФИР из последнего GOLD R990? Текущий server.mjs будет сохранён, затем вернётся эталон и радио один раз перезапустится.'))return;
     busy=true;render(lastRemote||{});
     try{
-      setMsg('♻️ Восстанавливаю эфир из проверенного GOLD…','work');
+      setMsg('♻️ Восстанавливаю эфир из последнего GOLD R990…','work');
       const d=await agentAction('gold-restore');
       setResult(String(d?.result?.output||'ЭФИР ВОССТАНОВЛЕН ✅'));
       setMsg('Эфир восстановлен ✅ · жду стабильный сигнал…','ok');
@@ -298,7 +298,7 @@
       setMsg('Экран восстановлен ✅ · проверяю сигнал…','ok');
       await sleep(5000);
       await refresh();
-    }catch(e){setMsg(`Восстановление экрана: ${e.message||e}`,'bad');setResult(`SCREEN RESTORE ERROR\n${e.message||e}`)}
+    }catch(e){setMsg(`R906 fullscreen: ${e.message||e}`,'bad');setResult(`SCREEN RESTORE ERROR\n${e.message||e}`)}
     finally{busy=false;await refresh()}
   }
 

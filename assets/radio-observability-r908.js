@@ -66,8 +66,8 @@
 
     const gold=document.querySelector('[data-radio-action="gold-restore"]');
     if(gold){
-      gold.textContent='🚑 АВАРИЙНЫЙ GOLD + РЕСТАРТ';
-      gold.title='Восстанавливает локальный GOLD и один раз перезапускает radio service. R870 не создаёт YouTube broadcast автоматически.';
+      gold.textContent='🚑 АВАРИЙНЫЙ GOLD R990';
+      gold.title='Восстанавливает последний GOLD R990 FULLSCREEN + CLEAN TITLES и один раз перезапускает radio service.';
     }
     const start=document.querySelector('[data-radio-action="start"]');
     if(start)start.title='Ручной запуск. Использовать только когда эфир действительно остановлен.';
@@ -213,7 +213,7 @@
     safeGoldBusy=true;const b=document.querySelector('[data-radio-action="gold-restore"]');const old=b?.textContent||'';if(b){b.disabled=true;b.textContent='🚑 ВОССТАНАВЛИВАЮ…'};setRemoteMessage('🚑 Восстанавливаю GOLD. YouTube broadcast автоматически не создаю…','work');
     try{const d=await runAgentActionR870('gold-restore');setRemoteResult(`${String(d.result?.output||'FULLSCREEN GOLD RESTORE ✅')}\n\nR870 SAFE: YouTube auto-create/rebind после GOLD НЕ запускался.`);setRemoteMessage('GOLD восстановлен ✅ · проверяю только статус, без YouTube auto-create','ok');await sleep(3500);await window.AndrikRadioRemoteR867?.refresh?.().catch?.(()=>{});await refresh(false)}
     catch(e){setRemoteResult(`GOLD RESTORE ERROR\n${e.message||e}`);setRemoteMessage(`GOLD restore: ${e.message||e}`,'bad')}
-    finally{safeGoldBusy=false;if(b){b.disabled=false;b.textContent=old||'🚑 АВАРИЙНЫЙ GOLD + РЕСТАРТ'}}
+    finally{safeGoldBusy=false;if(b){b.disabled=false;b.textContent=old||'🚑 АВАРИЙНЫЙ GOLD R990'}}
   }
 
   function installSafetyCapture(){

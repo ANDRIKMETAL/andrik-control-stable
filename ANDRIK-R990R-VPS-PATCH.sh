@@ -175,3 +175,25 @@ echo "✅ radio stream was NOT restarted"
 echo "⚠ queue picker server code activates on next radio restart"
 echo "   Activate later with: sudo systemctl restart andrik-radio.service"
 echo "======================================================"
+
+
+# R990R — refresh recovery buttons to current proven targets.
+# gold-restore -> latest GOLD-R990-FULLSCREEN-CLEAN-TITLES-*
+# screen-restore -> /opt/andrik-radio/recovery/r906-fullscreen-master.mp4
+SELF_DIR="$(cd "$(dirname "$0")" && pwd)"
+SITE_VM="$SELF_DIR/radio247/vm-lite"
+
+if [ -s "$SITE_VM/andrik-radio-air-restore-r925" ]; then
+  install -m 0755 "$SITE_VM/andrik-radio-air-restore-r925" /usr/local/sbin/andrik-radio-air-restore-r925
+  echo "✅ GOLD recovery button -> latest R990 GOLD"
+else
+  echo "⚠ bundled GOLD helper not found"
+fi
+
+if [ -s "$SITE_VM/andrik-radio-screen-restore-r926" ]; then
+  install -m 0755 "$SITE_VM/andrik-radio-screen-restore-r926" /usr/local/sbin/andrik-radio-screen-restore-r926
+  echo "✅ SCREEN recovery button -> permanent R906 fullscreen master"
+else
+  echo "⚠ bundled SCREEN helper not found"
+fi
+

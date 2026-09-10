@@ -1,0 +1,22 @@
+ANDRIK R990R — RECOVERY BUTTONS UPDATE
+
+RECOVERY BUTTONS
+- "Аварийный GOLD" now runs /usr/local/sbin/andrik-radio-air-restore-r925.
+- That helper dynamically selects the newest:
+  /opt/andrik-radio/backups/GOLD-R990-FULLSCREEN-CLEAN-TITLES-*
+- "Восстановить экран" now runs /usr/local/sbin/andrik-radio-screen-restore-r926.
+- That helper restores:
+  /opt/andrik-radio/recovery/r906-fullscreen-master.mp4
+  to:
+  /var/cache/andrik-radio-r622/visuals/stream-morning-master-r703.mp4
+  using the same stop/kill/install/start sequence that proved successful.
+
+PRESERVED
+- R990Q CPU thresholds.
+- Safe queue picker.
+- Queue move up/down.
+- RTMPS / fades / audio sync / other radio logic.
+
+IMPORTANT
+- After installing the site ZIP, apply ANDRIK-R990R-VPS-PATCH.sh on the VPS
+  so the recovery buttons point to these new helpers.
