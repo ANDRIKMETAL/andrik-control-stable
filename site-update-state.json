@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1788982709522-2d5b4acea9",
-  "release": "R989",
-  "archiveName": "ANDRIK-R989B-LAZY-MONITOR-LEVELS-FIX-R989-PRESERVED-FULL.zip",
-  "sourceHead": "39cc9331744fd7b1dde40d7b8c1534b4339475b9",
-  "backupSha": "39cc9331744fd7b1dde40d7b8c1534b4339475b9",
+  "operationId": "publish-1789018051413-98a2d984f8",
+  "release": "R990",
+  "archiveName": "ANDRIK-R990Q-CPU-YELLOW-QUEUE-NEXT-CLEAN-SAFE-FULL.zip",
+  "sourceHead": "d53e9642026111cd02cbe99edeb8e31534a74bd3",
+  "backupSha": "d53e9642026111cd02cbe99edeb8e31534a74bd3",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-09T19:38:30.371Z"
+  "generatedAt": "2026-09-10T05:27:32.151Z"
 }

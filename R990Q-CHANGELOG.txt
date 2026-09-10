@@ -1,0 +1,8 @@
+ANDRIK R990Q
+- CPU badge: green <70%, yellow 70–89.9%, red CRITICAL >=90%.
+- RAM/Load remain visible but no longer force CRITICAL.
+- Queue card now has a track search/list selector.
+- Selection uses the existing safe R989 queue mechanism; no stream/service restart.
+- Existing move up/down, RTMPS, fades, fullscreen and audio-sync preserved.
+- Removed obsolete release reports/readmes and old versioned cache-reset pages.
+- Current cache reset: cache-reset-v55-00-final-r990q.html

@@ -36,7 +36,7 @@ try:
             else: p['otherFfmpeg']+=pc
 except: pass
 rp=(ru/rt*100.0) if rt else 0.0;norm=l1/cores
-if cpu>=90 or rp>=95 or norm>=2.00: level,label='critical','КРИТИЧЕСКАЯ'
-elif cpu>=75 or rp>=80 or norm>=1.25: level,label='high','ВЫСОКАЯ'
+if cpu>=90: level,label='critical','КРИТИЧЕСКАЯ'
+elif cpu>=70: level,label='high','ВЫСОКАЯ'
 else: level,label='normal','НОРМА'
 print(json.dumps({'version':'R988','state':{'level':level,'label':label},'cpu':{'model':model,'cores':cores,'totalPct':round(cpu,1)},'processes':{k:round(v,1) for k,v in p.items()},'memory':{'ramUsedMB':round(ru/1024),'ramTotalMB':round(rt/1024),'ramPct':round(rp,1),'swapUsedMB':round(su/1024),'swapTotalMB':round(st/1024)},'load':{'one':round(l1,2),'five':round(l5,2),'fifteen':round(l15,2)}},ensure_ascii=False,separators=(',',':')))
