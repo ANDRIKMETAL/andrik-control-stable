@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1789147427855-fcea8529bb",
+  "operationId": "publish-1789147856031-6bc1f107a8",
   "release": "R1015",
-  "archiveName": "ANDRIK-R1015B-403-HOTFIX-SELF-CONTAINED-FULL.zip",
-  "sourceHead": "f9ee394599136488001365b72571b1ea60e201cc",
-  "backupSha": "f9ee394599136488001365b72571b1ea60e201cc",
+  "archiveName": "ANDRIK-R1015C-AGENT-VERSION-FIX-FULL.zip",
+  "sourceHead": "ec7aea6623c73ffbba5ae1fe9917d1647952d864",
+  "backupSha": "ec7aea6623c73ffbba5ae1fe9917d1647952d864",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-11T17:23:47.855Z"
+  "generatedAt": "2026-09-11T17:30:56.031Z"
 }

@@ -20034,7 +20034,7 @@ async function handleRadioRemoteCommandR627(request,env){
   await setPushState(db,RADIO_REMOTE_R627.commandKey,JSON.stringify(command));
   return json({ok:true,command});
 }
-function radioAgentVersionNumberR728(value){const m=String(value||'').match(/R(\d{3})/i);return m?Number(m[1]):0;}
+function radioAgentVersionNumberR728(value){const m=String(value||'').match(/R(\d{3,})/i);return m?Number(m[1]):0;}
 async function handleRadioAgentPollR627(request,env){
   if(!await radioAgentAuthorizedR627(request,env))return json({ok:false,error:'unauthorized-agent'},401);
   const db=env.COMMENTS_DB;if(!db)return json({ok:false,error:'database-not-configured'},503);

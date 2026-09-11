@@ -1,0 +1,15 @@
+ANDRIK R1015C · AGENT VERSION PARSER FIX
+
+Problem fixed:
+Cloudflare Worker parsed R1015 as R101 because radioAgentVersionNumberR728 used /R(\d{3})/.
+A fresh R1015 agent was therefore treated as older than the previously stored R972 agent and its heartbeat/status was ignored.
+
+Fix:
+/R(\d{3})/ -> /R(\d{3,})/
+
+Result:
+- R1015 agent heartbeat/status is accepted.
+- VPS disk telemetry reaches the control panel.
+- screen/GOLD readiness reaches the control panel.
+- R988 load commands are claimed by the active agent again.
+- no radio service restart is required.
