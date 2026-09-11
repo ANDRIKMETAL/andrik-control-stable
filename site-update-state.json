@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1789147096620-4c97538a10",
+  "operationId": "publish-1789147427855-fcea8529bb",
   "release": "R1015",
-  "archiveName": "ANDRIK-R1015-DISK-SAFE-RECOVERY-GOLD-FULL-1.zip",
-  "sourceHead": "e35d00f2bda50236d2bf44ffc13f166247d8e30c",
-  "backupSha": "e35d00f2bda50236d2bf44ffc13f166247d8e30c",
+  "archiveName": "ANDRIK-R1015B-403-HOTFIX-SELF-CONTAINED-FULL.zip",
+  "sourceHead": "f9ee394599136488001365b72571b1ea60e201cc",
+  "backupSha": "f9ee394599136488001365b72571b1ea60e201cc",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-11T17:18:18.571Z"
+  "generatedAt": "2026-09-11T17:23:47.855Z"
 }

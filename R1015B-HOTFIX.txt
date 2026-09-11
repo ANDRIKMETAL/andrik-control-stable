@@ -1,0 +1,8 @@
+ANDRIK R1015B HOTFIX
+
+Fix: VPS curl to /radio247/vm-lite/*.sh could receive HTTP 403.
+New installer is a static self-contained text asset excluded from Worker routing:
+/assets/r1015-control-disk-recovery.txt
+
+It embeds and verifies the R1015 web agent, screen restore, latest GOLD restore, and safe R974.
+It restarts only the web-agent service and does NOT restart andrik-radio.service.
