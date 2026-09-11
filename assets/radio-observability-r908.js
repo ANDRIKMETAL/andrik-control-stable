@@ -6,6 +6,7 @@
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]||c));
   const txt=v=>String(v??'').trim();
   const n=v=>Number.isFinite(Number(v))?Number(v):0;
+  const humanBytesR1015=v=>{const x=Math.max(0,n(v)),g=1024**3,m=1024**2;return x>=g?`${Math.round(x/g)}G`:x>=m?`${Math.round(x/m)}M`:`${Math.round(x/1024)}K`};
   const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   const FRESH_EVENT_WINDOW_MS_R870=2*60*60*1000;
   const eventMs=e=>Date.parse(e?.at||'')||0;
@@ -66,8 +67,8 @@
 
     const gold=document.querySelector('[data-radio-action="gold-restore"]');
     if(gold){
-      gold.textContent='🚑 АВАРИЙНЫЙ GOLD R990';
-      gold.title='Восстанавливает последний GOLD R990 FULLSCREEN + CLEAN TITLES и один раз перезапускает radio service.';
+      gold.textContent='🚑 АВАРИЙНЫЙ GOLD LATEST';
+      gold.title='Восстанавливает проверенный GOLD-FULL-LATEST с VPS и один раз перезапускает radio service. /control/full-fit не используется.';
     }
     const start=document.querySelector('[data-radio-action="start"]');
     if(start)start.title='Ручной запуск. Использовать только когда эфир действительно остановлен.';
@@ -76,7 +77,7 @@
     if(controlCard&&!document.getElementById('r870SafetyNote')){
       const note=document.createElement('div');
       note.id='r870SafetyNote';note.className='r870-safe-note';
-      note.innerHTML='<b>R870 SAFE:</b> рабочий режим VPS — RTMPS 2/2. GOLD делает restart, но панель после него только проверяет статус: автоматическое создание/перепривязка YouTube broadcast отключено.';
+      note.innerHTML='<b>R1015 SAFE:</b> «Восстановить экран» использует активный R1001 + один restart без /control/full-fit. «Аварийный GOLD» берёт проверенный GOLD-FULL-LATEST и имеет автоматический rollback.';
       controlCard.appendChild(note);
     }
 
@@ -175,6 +176,8 @@
       `handoff: ${txt(s.videoHandoffMode)||txt(p?.handoff?.mode)||'—'} · cleanCount=${n(s.r813CleanHandoffCount)||n(p?.handoff?.cleanCount)}`,
       `video: ${txt(p?.video?.codec)||'H.264 / AVC'} · ${n(p?.video?.width)||1920}x${n(p?.video?.height)||1080} · ${n(p?.video?.fps)||25}fps · ${txt(p?.video?.bitrate)||'6000k'} · GOP ${n(p?.video?.gopFrames)||50} · B=${Number.isFinite(Number(p?.video?.bFrames))?Number(p.video.bFrames):0}`,
       `audio: ${txt(p?.audio?.codec)||'AAC-LC'} · ${n(p?.audio?.sampleRate)||44100}Hz · ${txt(p?.audio?.channelLayout)||'stereo'} · ${txt(p?.audio?.bitrate)||'160k'}`,
+      `disk: ${txt(s?.diskRootR1015?.filesystem)||'—'} · total ${humanBytesR1015(s?.diskRootR1015?.totalBytes)} · used ${humanBytesR1015(s?.diskRootR1015?.usedBytes)} · free ${humanBytesR1015(s?.diskRootR1015?.availableBytes)} · usage ${n(s?.diskRootR1015?.usedPercent)}%`,
+      `recovery: screen=${Boolean(s?.recoveryR1015?.screenReady)} · safeR974=${Boolean(s?.recoveryR1015?.safeR974)} · gold=${Boolean(s?.recoveryR1015?.goldReady)} · latest=${txt(s?.recoveryR1015?.latestGold)||'—'}`,
       `lastError: ${txt(s.lastError)||'—'}`,`lastFfmpegLine: ${txt(s.lastFfmpegLine)||'—'}`,'',`EVENT HISTORY (${allEvents.length}/30 · fresh2h=${fresh.length})`];
     return hdr.concat(allEvents.map((e,i)=>eventText(e,i))).join('\n\n');
   }
@@ -209,11 +212,11 @@
 
   async function safeGoldRestoreR870(){
     if(safeGoldBusy)return;
-    if(!confirm('🚑 АВАРИЙНЫЙ GOLD: восстановить сохранённый server + env и ОДИН раз перезапустить radio service?\n\nR870 НЕ будет автоматически создавать или перепривязывать YouTube broadcast после восстановления.'))return;
-    safeGoldBusy=true;const b=document.querySelector('[data-radio-action="gold-restore"]');const old=b?.textContent||'';if(b){b.disabled=true;b.textContent='🚑 ВОССТАНАВЛИВАЮ…'};setRemoteMessage('🚑 Восстанавливаю GOLD. YouTube broadcast автоматически не создаю…','work');
-    try{const d=await runAgentActionR870('gold-restore');setRemoteResult(`${String(d.result?.output||'FULLSCREEN GOLD RESTORE ✅')}\n\nR870 SAFE: YouTube auto-create/rebind после GOLD НЕ запускался.`);setRemoteMessage('GOLD восстановлен ✅ · проверяю только статус, без YouTube auto-create','ok');await sleep(3500);await window.AndrikRadioRemoteR867?.refresh?.().catch?.(()=>{});await refresh(false)}
+    if(!confirm('🚑 АВАРИЙНЫЙ GOLD: восстановить проверенный GOLD-FULL-LATEST и ОДИН раз перезапустить radio service?\n\nБудут возвращены server.mjs, рабочий R1001, systemd/drop-ins и safe R974. /control/full-fit не используется.'))return;
+    safeGoldBusy=true;const b=document.querySelector('[data-radio-action="gold-restore"]');const old=b?.textContent||'';if(b){b.disabled=true;b.textContent='🚑 ВОССТАНАВЛИВАЮ…'};setRemoteMessage('🚑 Восстанавливаю проверенный GOLD-FULL-LATEST с VPS…','work');
+    try{const d=await runAgentActionR870('gold-restore');setRemoteResult(`${String(d.result?.output||'LATEST GOLD RESTORE ✅')}\n\nR1015 SAFE: /control/full-fit не использовался; при ошибке helper делает rollback.`);setRemoteMessage('GOLD восстановлен ✅ · проверяю статус OVH','ok');await sleep(3500);await window.AndrikRadioRemoteR867?.refresh?.().catch?.(()=>{});await refresh(false)}
     catch(e){setRemoteResult(`GOLD RESTORE ERROR\n${e.message||e}`);setRemoteMessage(`GOLD restore: ${e.message||e}`,'bad')}
-    finally{safeGoldBusy=false;if(b){b.disabled=false;b.textContent=old||'🚑 АВАРИЙНЫЙ GOLD R990'}}
+    finally{safeGoldBusy=false;if(b){b.disabled=false;b.textContent=old||'🚑 АВАРИЙНЫЙ GOLD LATEST'}}
   }
 
   function installSafetyCapture(){

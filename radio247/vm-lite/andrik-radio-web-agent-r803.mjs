@@ -6,7 +6,7 @@ import {Readable} from 'node:stream';
 import {pipeline} from 'node:stream/promises';
 
 const CONFIG='/etc/andrik-radio-web-r627.json';
-const AGENT_VERSION_R803='R973';
+const AGENT_VERSION_R803='R1015';
 const DIAG_DIR_R803='/var/cache/andrik-radio-r622/diagnostics';
 const DIAG_AGENT_LOG_R803=DIAG_DIR_R803+'/r803-agent-events.ndjson';
 const DIAG_AGENT_MAX_BYTES_R803=1024*1024;
@@ -170,6 +170,31 @@ function audioSyncStateR949(){
   }catch(_){return {targetMs:0,updatedAt:null,files:0,source:'r958-default'};}
 }
 function currentTicker(){try{return clean(fs.readFileSync(TICKER_FILE,'utf8'))}catch(_){return DEFAULT_TICKER}}
+function diskRootR1015(){
+  try{
+    const r=run('df',['-B1','-P','/'],8000);
+    if(!r.ok)return {ok:false,error:clean(r.output)};
+    const lines=String(r.output||'').trim().split(/\r?\n/).filter(Boolean);
+    const row=lines.at(-1)||'';
+    const m=row.match(/^(\S+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)%\s+(.+)$/);
+    if(!m)return {ok:false,error:'df-parse-failed',raw:row};
+    return {ok:true,filesystem:m[1],totalBytes:Number(m[2]),usedBytes:Number(m[3]),availableBytes:Number(m[4]),usedPercent:Number(m[5]),mount:clean(m[6])||'/'};
+  }catch(error){return {ok:false,error:clean(error?.message||error)};}
+}
+function recoveryStateR1015(){
+  const latestLink='/opt/andrik-radio/backups/GOLD-FULL-LATEST.tar.gz';
+  const latestText='/opt/andrik-radio/backups/GOLD-FULL-LATEST.txt';
+  let latestGold='';
+  try{if(fs.existsSync(latestLink))latestGold=fs.realpathSync(latestLink)}catch(_){}
+  if(!latestGold){try{const x=clean(fs.readFileSync(latestText,'utf8'));if(x)latestGold=x}catch(_){}}
+  return {
+    screenReady:fs.existsSync(SCREEN_RESTORE_R926),
+    goldReady:fs.existsSync(AIR_RESTORE_R925),
+    safeR974:fs.existsSync('/usr/local/sbin/andrik-fullscreen-visual-r974'),
+    latestGold:latestGold?latestGold.split('/').pop():'',
+    latestGoldPath:latestGold
+  };
+}
 function writeTicker(text){const value=clean(text).replace(/[\r\n\t]+/g,' ').replace(/\s+/g,' ').slice(0,240).trim();fs.mkdirSync('/var/cache/andrik-radio-r622',{recursive:true});const tmp=TICKER_FILE+'.tmp';fs.writeFileSync(tmp,value,'utf8');fs.renameSync(tmp,TICKER_FILE);return value;}
 async function localStatus(){
   try{
@@ -185,10 +210,10 @@ async function localStatus(){
       },
       videoHandoffMode:d.videoHandoffMode||'',
       lastR813Handoff:d.lastR813Handoff||null,
-      r813CleanHandoffCount:Number(d.r813CleanHandoffCount||d.streamProfileR813?.handoff?.cleanCount||0),streamStartedAt:d.streamStartedAt||'',libraryTracks:Number(d.libraryTracks||0),libraryAlbumTracks:Number(d.libraryAlbumTracks||0),librarySingleTracks:Number(d.librarySingleTracks||0),duplicateSinglesSkipped:Number(d.duplicateSinglesSkipped||0),libraryVideos:Number(d.libraryVideos||0),libraryBumpers:Number(d.libraryBumpers||0),librarySpecial:Number(d.librarySpecial||0),librarySpecial30:Number(d.librarySpecial30||0),librarySpecial60:Number(d.librarySpecial60||0),lastLibraryRefresh:d.lastLibraryRefresh||'',inventoryTelemetry:'R805-LIVE-LIBRARY-COUNTERS',ticker:currentTicker(),audioDelayMsR949:audioSyncStateR949().targetMs,audioDelayUpdatedAtR949:audioSyncStateR949().updatedAt,audioDelayFilesR949:audioSyncStateR949().files,busy:busy?{id:busy.id,action:busy.action,since:busy.since}:null};
+      r813CleanHandoffCount:Number(d.r813CleanHandoffCount||d.streamProfileR813?.handoff?.cleanCount||0),streamStartedAt:d.streamStartedAt||'',libraryTracks:Number(d.libraryTracks||0),libraryAlbumTracks:Number(d.libraryAlbumTracks||0),librarySingleTracks:Number(d.librarySingleTracks||0),duplicateSinglesSkipped:Number(d.duplicateSinglesSkipped||0),libraryVideos:Number(d.libraryVideos||0),libraryBumpers:Number(d.libraryBumpers||0),librarySpecial:Number(d.librarySpecial||0),librarySpecial30:Number(d.librarySpecial30||0),librarySpecial60:Number(d.librarySpecial60||0),lastLibraryRefresh:d.lastLibraryRefresh||'',inventoryTelemetry:'R805-LIVE-LIBRARY-COUNTERS',ticker:currentTicker(),audioDelayMsR949:audioSyncStateR949().targetMs,audioDelayUpdatedAtR949:audioSyncStateR949().updatedAt,audioDelayFilesR949:audioSyncStateR949().files,diskRootR1015:diskRootR1015(),recoveryR1015:recoveryStateR1015(),busy:busy?{id:busy.id,action:busy.action,since:busy.since}:null};
     return observeStatusR803(status);
   }catch(error){
-    const status={service:run('systemctl',['is-active','andrik-radio.service'],8000).output.trim(),producer:false,publisher:false,videoFeederRunning:false,clipActive:false,current:'',next:'',libraryTracks:0,libraryAlbumTracks:0,librarySingleTracks:0,duplicateSinglesSkipped:0,libraryVideos:0,libraryBumpers:0,librarySpecial:0,librarySpecial30:0,librarySpecial60:0,lastLibraryRefresh:'',inventoryTelemetry:'R805-LIVE-LIBRARY-COUNTERS',ticker:currentTicker(),audioDelayMsR949:audioSyncStateR949().targetMs,audioDelayUpdatedAtR949:audioSyncStateR949().updatedAt,audioDelayFilesR949:audioSyncStateR949().files,busy:busy?{id:busy.id,action:busy.action,since:busy.since}:null,error:'local-status-unavailable',lastError:clean(error?.message||error),lastFfmpegLine:'',diagnosticsR802:null,diagnosticsR813:null,diagnosticsR814:null,rtmpsEstablishedConnectionsR792:0,rtmpsExpectedConnectionsR792:2,transportHealthy:false,
+    const status={service:run('systemctl',['is-active','andrik-radio.service'],8000).output.trim(),producer:false,publisher:false,videoFeederRunning:false,clipActive:false,current:'',next:'',libraryTracks:0,libraryAlbumTracks:0,librarySingleTracks:0,duplicateSinglesSkipped:0,libraryVideos:0,libraryBumpers:0,librarySpecial:0,librarySpecial30:0,librarySpecial60:0,lastLibraryRefresh:'',inventoryTelemetry:'R805-LIVE-LIBRARY-COUNTERS',ticker:currentTicker(),audioDelayMsR949:audioSyncStateR949().targetMs,audioDelayUpdatedAtR949:audioSyncStateR949().updatedAt,audioDelayFilesR949:audioSyncStateR949().files,diskRootR1015:diskRootR1015(),recoveryR1015:recoveryStateR1015(),busy:busy?{id:busy.id,action:busy.action,since:busy.since}:null,error:'local-status-unavailable',lastError:clean(error?.message||error),lastFfmpegLine:'',diagnosticsR802:null,diagnosticsR813:null,diagnosticsR814:null,rtmpsEstablishedConnectionsR792:0,rtmpsExpectedConnectionsR792:2,transportHealthy:false,
       streamProfileR814:null,streamProfileR813:{video:{codec:'H.264 / AVC',encoder:'libx264',profile:'High 4.1',width:1920,height:1080,fps:25,bitrate:'6000k',gopFrames:50,bFrames:0,pixelFormat:'yuv420p'},audio:{codec:'AAC-LC',sampleRate:44100,channels:2,channelLayout:'stereo',bitrate:'160k'},transport:{container:'FLV',protocol:'RTMPS',lanes:0,expectedLanes:2,dualIngest:true}},
       videoHandoffMode:'',lastR813Handoff:null,r813CleanHandoffCount:0};
     return observeStatusR803(status);

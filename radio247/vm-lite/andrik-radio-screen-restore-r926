@@ -1,36 +1,45 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
+SERVICE="andrik-radio.service"
+SERVER="/opt/andrik-radio/radio247/server.mjs"
+MASTER="/opt/andrik-radio/assets/ANDRIK-FULLSCREEN-R1001.mp4"
+SAFE_R974="/usr/local/sbin/andrik-fullscreen-visual-r974"
 
-G="/opt/andrik-radio/backups/GOLD-R906-R905-FULLSCREEN-CLIPS-SHUFFLE-20260904-174845"
-V="/var/cache/andrik-radio-r622/visuals"
-CUR="$V/stream-morning-master-r703.mp4"
-
-SRC="$(find "$G" -type f -name 'stream-morning-master-r703.mp4' | head -1)"
-
-if [ -z "$SRC" ]; then
-  echo "❌ FULLSCREEN R906 source not found"
-  exit 1
+echo "======================================================"
+echo " ANDRIK R1015 · ВОССТАНОВИТЬ ЭКРАН"
+echo " ACTIVE R1001 + ONE RADIO RESTART · NO /control/full-fit"
+echo "======================================================"
+[ -s "$SERVER" ] || { echo "❌ server.mjs missing"; exit 20; }
+[ -s "$MASTER" ] || { echo "❌ active R1001 missing"; exit 21; }
+node --check "$SERVER"
+ffprobe -v error -select_streams v:0 -show_entries stream=codec_name,width,height,pix_fmt,r_frame_rate:format=duration -of default=noprint_wrappers=1 "$MASTER"
+W="$(ffprobe -v error -select_streams v:0 -show_entries stream=width -of csv=p=0 "$MASTER")"
+H="$(ffprobe -v error -select_streams v:0 -show_entries stream=height -of csv=p=0 "$MASTER")"
+FPS="$(ffprobe -v error -select_streams v:0 -show_entries stream=r_frame_rate -of csv=p=0 "$MASTER")"
+[ "$W" = 1920 ] && [ "$H" = 1080 ] && [ "$FPS" = 25/1 ] || { echo "❌ R1001 invalid: ${W}x${H} ${FPS}"; exit 22; }
+if [ -x "$SAFE_R974" ]; then
+  if grep -Eq '/opt/andrik-radio/backups/GOLD-|stream-morning-master-r703\.mp4' "$SAFE_R974"; then
+    echo "⚠️ old R974 dependency detected · SKIPPED"
+  else
+    "$SAFE_R974"
+  fi
 fi
-
-echo "=== STOP ==="
-systemctl stop andrik-radio.service
-sleep 3
-
-echo "=== KILL OLD VISUAL FEEDER ==="
-pkill -9 -f 'ffmpeg.*stream-morning-master-r703.mp4' 2>/dev/null || true
-sleep 2
-
-echo "=== RESTORE TRUE FULLSCREEN VISUAL ==="
-install -m 0644 "$SRC" "$CUR"
-
-echo "=== START ==="
-systemctl start andrik-radio.service
-sleep 15
-
-echo "=== STATUS ==="
-systemctl is-active andrik-radio.service
-
-echo "=== ACTIVE FEEDER ==="
-pgrep -af 'ffmpeg.*stream-morning-master-r703.mp4' | head -2 || true
-
-echo "✅ FULLSCREEN VISUAL RESTORED"
+echo "=== RESTART RADIO ==="
+systemctl restart "$SERVICE"
+sleep 8
+[ "$(systemctl is-active "$SERVICE" 2>/dev/null || true)" = active ] || { echo "❌ radio not active"; systemctl --no-pager --full status "$SERVICE" | head -n 45 || true; exit 30; }
+FOUND=0
+while read -r PID; do
+  CMD="$(tr '\0' ' ' < "/proc/$PID/cmdline" 2>/dev/null || true)"
+  if printf '%s' "$CMD" | grep -Fq "$MASTER"; then
+    FOUND=1
+    echo "✅ video feeder PID=$PID uses R1001"
+    if printf '%s' "$CMD" | grep -Fq 'scale=1920:1080:flags=lanczos,setsar=1'; then echo "✅ R1012 HARD FULLFRAME ACTIVE"; else echo "⚠️ hard-fullframe marker not found in feeder command"; fi
+    break
+  fi
+done < <(pgrep -x ffmpeg 2>/dev/null || true)
+[ "$FOUND" = 1 ] || { echo "❌ active R1001 feeder not found"; exit 31; }
+echo "======================================================"
+echo "✅ ЭКРАН ВОССТАНОВЛЕН · R1001 · 1920x1080"
+echo "✅ /control/full-fit НЕ ИСПОЛЬЗОВАН"
+echo "======================================================"

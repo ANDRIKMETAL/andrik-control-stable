@@ -1,0 +1,16 @@
+ANDRIK R1015 · CONTROL DISK + SAFE RECOVERY
+
+1. Radio Control: VPS disk card
+   - filesystem, total, used, free, usage percent + progress bar
+   - recovery readiness: screen + latest GOLD
+2. VPS Agent R1015: diskRootR1015 + recoveryR1015 status telemetry
+3. Screen restore rewritten for current R1001/R1012
+   - safe R974 validation + one service restart
+   - NO /control/full-fit
+   - NO dependency on deleted R906 GOLD/cache
+4. GOLD restore rewritten to GOLD-FULL-LATEST.tar.gz
+   - gzip + SHA256 manifest verification
+   - restores server, R1001, systemd/drop-ins, safe R974
+   - automatic rollback on failed start
+5. Included safe /usr/local/sbin/andrik-fullscreen-visual-r974 source.
+6. New installer: radio247/vm-lite/install-r1015-control-disk-recovery.sh

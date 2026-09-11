@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1789069009666-e9832b0c98",
-  "release": "R990",
-  "archiveName": "ANDRIK-R990T-NO-AUDIO-SYNC-PANEL-SAFE-FULL.zip",
-  "sourceHead": "a197e2e44c0b8f7b1965240999b39584efd41878",
-  "backupSha": "a197e2e44c0b8f7b1965240999b39584efd41878",
+  "operationId": "publish-1789147096620-4c97538a10",
+  "release": "R1015",
+  "archiveName": "ANDRIK-R1015-DISK-SAFE-RECOVERY-GOLD-FULL-1.zip",
+  "sourceHead": "e35d00f2bda50236d2bf44ffc13f166247d8e30c",
+  "backupSha": "e35d00f2bda50236d2bf44ffc13f166247d8e30c",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-10T19:36:49.666Z"
+  "generatedAt": "2026-09-11T17:18:18.571Z"
 }

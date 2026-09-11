@@ -21,14 +21,24 @@
   function ytLife(data){return String(data?.lifeCycleStatus||'').toLowerCase().replace(/[^a-z]/g,'')}
   function ytStream(data){return String(data?.streamStatus||'').toLowerCase()}
   function agentVersion(data=lastRemote){return String(data?.agent?.version||'').trim()}
-  function agentNumber(data=lastRemote){const m=agentVersion(data).match(/R(\d{3})/i);return m?Number(m[1]):0}
+  function agentNumber(data=lastRemote){const m=agentVersion(data).match(/R(\d{3,})/i);return m?Number(m[1]):0}
   function hasR665Agent(data=lastRemote){return agentNumber(data)>=665}
   function hasR867Agent(data=lastRemote){return agentNumber(data)>=867}
   function hasR926Agent(data=lastRemote){return agentNumber(data)>=926}
+  function humanBytesR1015(v){const n=Math.max(0,Number(v)||0),g=1024**3,m=1024**2;if(n>=g)return `${Math.round(n/g)}G`;if(n>=m)return `${Math.round(n/m)}M`;return `${Math.round(n/1024)}K`}
+  function renderDiskR1015(s){
+    const d=s?.diskRootR1015||{};const rec=s?.recoveryR1015||{};const ok=Boolean(d.ok);const pct=Math.max(0,Math.min(100,Number(d.usedPercent)||0));
+    setText('vpsDiskFsR1015',ok?String(d.filesystem||'—'):'—');setText('vpsDiskTotalR1015',ok?humanBytesR1015(d.totalBytes):'—');setText('vpsDiskUsedR1015',ok?humanBytesR1015(d.usedBytes):'—');setText('vpsDiskFreeR1015',ok?humanBytesR1015(d.availableBytes):'—');setText('vpsDiskPercentR1015',ok?`${pct}%`:'—');
+    const bar=document.getElementById('vpsDiskBarR1015');if(bar){bar.style.width=`${pct}%`;bar.dataset.level=pct>=90?'bad':pct>=80?'warn':'ok'}
+    document.querySelectorAll('[data-vps-disk-state]').forEach(el=>{el.textContent=ok?`${pct}% занято`:'нет данных';el.className='state '+(ok?(pct>=90?'is-error':'is-ready'):'is-error')});
+    const gold=String(rec.latestGold||'').replace(/\.tar\.gz$/i,'');const screen=rec.screenReady&&rec.safeR974?'экран ✅':rec.screenReady?'экран ⚠':'экран ❌';const g=rec.goldReady&&gold?`GOLD ✅ ${gold}`:rec.goldReady?'GOLD ⚠ без latest':'GOLD ❌';
+    const note=document.getElementById('vpsRecoveryNoteR1015');if(note)note.textContent=`${screen} · ${g}`;
+  }
 
   function render(data){
     lastRemote=data||null;
     const online=Boolean(data?.online),paired=Boolean(data?.paired),agent=data?.agent||{},s=agent.status||{},cmd=data?.command||{},rawRes=data?.result||{};
+    renderDiskR1015(s);
     const legacyFullFit=String(cmd?.action||rawRes?.action||'').toLowerCase()==='full-fit'||/full-fit/i.test(String(rawRes?.output||''));
     const res=legacyFullFit?{}:rawRes;
     const version=String(agent.version||'').trim();

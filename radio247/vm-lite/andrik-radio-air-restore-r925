@@ -1,84 +1,26 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
-
-BASE="/opt/andrik-radio"
-BACKUPS="$BASE/backups"
-SERVER="$BASE/radio247/server.mjs"
-VISUAL_DIR="/var/cache/andrik-radio-r622/visuals"
-STAMP="$(date +%Y%m%d-%H%M%S)"
-SAVE="$BACKUPS/BEFORE-R990R-GOLD-RESTORE-$STAMP"
-
-echo "======================================================"
-echo " ANDRIK R990R · АВАРИЙНЫЙ GOLD"
-echo " LATEST R990 FULLSCREEN + CLEAN TITLES"
-echo "======================================================"
-
-[ -s "$SERVER" ] || { echo "❌ LIVE server.mjs missing"; exit 20; }
-
-GOLD="$(find "$BACKUPS" -maxdepth 1 -type d \
-  -name 'GOLD-R990-FULLSCREEN-CLEAN-TITLES-*' \
-  -printf '%T@ %p\n' 2>/dev/null | sort -nr | head -1 | cut -d' ' -f2-)"
-
-[ -n "$GOLD" ] || { echo "❌ GOLD R990 not found"; exit 21; }
-[ -s "$GOLD/server.mjs" ] || { echo "❌ GOLD server.mjs missing: $GOLD"; exit 22; }
-
-echo "GOLD=$GOLD"
-node --check "$GOLD/server.mjs"
-
-mkdir -p "$SAVE"
-cp -a "$SERVER" "$SAVE/server.mjs"
-[ -f /etc/systemd/system/andrik-radio.service ] && \
-  cp -a /etc/systemd/system/andrik-radio.service "$SAVE/andrik-radio.service" || true
-
-for f in \
-  stream-morning-master-r703.mp4 \
-  stream-day-master-r620.mp4 \
-  stream-evening-master-r620.mp4 \
-  stream-night-master-r620.mp4
-do
-  [ -f "$VISUAL_DIR/$f" ] && cp -a "$VISUAL_DIR/$f" "$SAVE/$f" || true
-done
-
-echo "✅ Current state saved: $SAVE"
-
-systemctl stop andrik-radio.service
-sleep 3
-
-pkill -9 -f 'ffmpeg.*stream-morning-master-r703.mp4' 2>/dev/null || true
-sleep 1
-
-install -m 0644 "$GOLD/server.mjs" "$SERVER"
-
-if [ -s "$GOLD/andrik-radio.service" ]; then
-  install -m 0644 "$GOLD/andrik-radio.service" /etc/systemd/system/andrik-radio.service
-  systemctl daemon-reload
-fi
-
-for f in \
-  stream-morning-master-r703.mp4 \
-  stream-day-master-r620.mp4 \
-  stream-evening-master-r620.mp4 \
-  stream-night-master-r620.mp4
-do
-  [ -s "$GOLD/$f" ] && install -m 0644 "$GOLD/$f" "$VISUAL_DIR/$f" || true
-done
-
-node --check "$SERVER"
-
-if ! systemctl start andrik-radio.service; then
-  echo "❌ GOLD start failed — restoring previous server"
-  install -m 0644 "$SAVE/server.mjs" "$SERVER"
-  systemctl start andrik-radio.service || true
-  exit 30
-fi
-
-sleep 15
-STATE="$(systemctl is-active andrik-radio.service || true)"
-echo "service=$STATE"
-[ "$STATE" = active ] || exit 31
-
-echo "======================================================"
-echo "✅ LATEST R990 GOLD RESTORED"
-echo "✅ GOLD=$GOLD"
-echo "✅ Previous state=$SAVE"
-echo "======================================================"
+BASE="/opt/andrik-radio"; BACKUPS="$BASE/backups"; SERVER="$BASE/radio247/server.mjs"; MASTER="$BASE/assets/ANDRIK-FULLSCREEN-R1001.mp4"; SERVICE="andrik-radio.service"; R974="/usr/local/sbin/andrik-fullscreen-visual-r974"
+STAMP="$(date +%Y%m%d-%H%M%S)"; SAVE="$BACKUPS/BEFORE-R1015-GOLD-RESTORE-$STAMP"; TMP="$(mktemp -d /tmp/andrik-r1015-gold.XXXXXX)"; trap 'rm -rf "$TMP"' EXIT
+LATEST_LINK="$BACKUPS/GOLD-FULL-LATEST.tar.gz"; LATEST_TXT="$BACKUPS/GOLD-FULL-LATEST.txt"
+echo "======================================================"; echo " ANDRIK R1015 · ВОССТАНОВИТЬ ЭФИР ИЗ LATEST GOLD"; echo " EXACT GOLD · ONE RESTART · NO /control/full-fit"; echo "======================================================"
+ARCHIVE=""
+if [ -e "$LATEST_LINK" ]; then ARCHIVE="$(readlink -f "$LATEST_LINK" 2>/dev/null || true)"; fi
+if [ -z "$ARCHIVE" ] && [ -s "$LATEST_TXT" ]; then ARCHIVE="$(head -n1 "$LATEST_TXT" | tr -d '\r\n')"; fi
+if [ -z "$ARCHIVE" ] || [ ! -s "$ARCHIVE" ]; then ARCHIVE="$(find "$BACKUPS" -maxdepth 1 -type f -name 'GOLD-R*.tar.gz' -printf '%T@ %p\n' 2>/dev/null | sort -nr | head -1 | cut -d' ' -f2-)"; fi
+[ -n "$ARCHIVE" ] && [ -s "$ARCHIVE" ] || { echo "❌ latest GOLD archive not found"; exit 20; }
+echo "GOLD=$ARCHIVE"; gzip -t "$ARCHIVE"; tar -xzf "$ARCHIVE" -C "$TMP"
+MANIFEST="$(find "$TMP" -type f -name SHA256SUMS.txt | head -1)"; [ -n "$MANIFEST" ] || { echo "❌ SHA256SUMS.txt missing"; exit 21; }
+ROOT="$(dirname "$MANIFEST")"; (cd "$ROOT" && sha256sum -c SHA256SUMS.txt >/dev/null); echo "✅ GOLD SHA256 verified"
+GSERVER="$ROOT/radio247/server.mjs"; GMASTER="$ROOT/assets/ANDRIK-FULLSCREEN-R1001.mp4"; GUNIT="$ROOT/systemd/andrik-radio.service"; GDROP="$ROOT/systemd/andrik-radio.service.d"; GR974="$ROOT/usr-local-sbin/andrik-fullscreen-visual-r974"
+[ -s "$GSERVER" ] || { echo "❌ GOLD server missing"; exit 22; }; [ -s "$GMASTER" ] || { echo "❌ GOLD R1001 missing"; exit 23; }; node --check "$GSERVER"
+W="$(ffprobe -v error -select_streams v:0 -show_entries stream=width -of csv=p=0 "$GMASTER")"; H="$(ffprobe -v error -select_streams v:0 -show_entries stream=height -of csv=p=0 "$GMASTER")"; [ "$W" = 1920 ] && [ "$H" = 1080 ] || { echo "❌ GOLD master geometry ${W}x${H}"; exit 24; }
+mkdir -p "$SAVE"; cp -a "$SERVER" "$SAVE/server.mjs"; [ -s "$MASTER" ] && cp -a "$MASTER" "$SAVE/ANDRIK-FULLSCREEN-R1001.mp4" || true; [ -f /etc/systemd/system/andrik-radio.service ] && cp -a /etc/systemd/system/andrik-radio.service "$SAVE/andrik-radio.service" || true; [ -d /etc/systemd/system/andrik-radio.service.d ] && cp -a /etc/systemd/system/andrik-radio.service.d "$SAVE/" || true; [ -f "$R974" ] && cp -a "$R974" "$SAVE/andrik-fullscreen-visual-r974" || true
+echo "✅ current state saved: $SAVE"
+rollback(){ echo "↩️ ROLLBACK"; [ -s "$SAVE/server.mjs" ] && install -m0644 "$SAVE/server.mjs" "$SERVER"; [ -s "$SAVE/ANDRIK-FULLSCREEN-R1001.mp4" ] && install -m0644 "$SAVE/ANDRIK-FULLSCREEN-R1001.mp4" "$MASTER"; [ -s "$SAVE/andrik-radio.service" ] && install -m0644 "$SAVE/andrik-radio.service" /etc/systemd/system/andrik-radio.service; if [ -d "$SAVE/andrik-radio.service.d" ]; then rm -rf /etc/systemd/system/andrik-radio.service.d; cp -a "$SAVE/andrik-radio.service.d" /etc/systemd/system/; fi; [ -s "$SAVE/andrik-fullscreen-visual-r974" ] && install -m0755 "$SAVE/andrik-fullscreen-visual-r974" "$R974"; systemctl daemon-reload; systemctl restart "$SERVICE" || true; }
+install -m0644 "$GSERVER" "$SERVER"; install -m0644 "$GMASTER" "$MASTER"; [ -s "$GUNIT" ] && install -m0644 "$GUNIT" /etc/systemd/system/andrik-radio.service
+if [ -d "$GDROP" ]; then rm -rf /etc/systemd/system/andrik-radio.service.d; cp -a "$GDROP" /etc/systemd/system/; fi
+[ -s "$GR974" ] && install -m0755 "$GR974" "$R974"; node --check "$SERVER"; systemctl daemon-reload
+if ! systemctl restart "$SERVICE"; then rollback; exit 30; fi
+sleep 9; [ "$(systemctl is-active "$SERVICE" 2>/dev/null || true)" = active ] || { rollback; exit 31; }
+echo "======================================================"; echo "✅ LATEST GOLD RESTORED"; echo "✅ GOLD=$ARCHIVE"; echo "✅ previous=$SAVE"; echo "✅ /control/full-fit НЕ ИСПОЛЬЗОВАН"; echo "======================================================"

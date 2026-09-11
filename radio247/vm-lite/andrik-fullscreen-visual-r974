@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+MASTER="/opt/andrik-radio/assets/ANDRIK-FULLSCREEN-R1001.mp4"
+[ -s "$MASTER" ] || { echo "[R1015-SAFE] active fullscreen master missing: $MASTER" >&2; exit 1; }
+W="$(ffprobe -v error -select_streams v:0 -show_entries stream=width -of csv=p=0 "$MASTER")"
+H="$(ffprobe -v error -select_streams v:0 -show_entries stream=height -of csv=p=0 "$MASTER")"
+[ "$W" = 1920 ] && [ "$H" = 1080 ] || { echo "[R1015-SAFE] master geometry invalid: ${W}x${H}" >&2; exit 2; }
+echo "[R1015-SAFE] active R1001 fullscreen master present · ${W}x${H}"
