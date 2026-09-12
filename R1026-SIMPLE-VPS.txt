@@ -1,0 +1,5 @@
+ANDRIK R1026 SIMPLE VPS INSTALL
+After this site ZIP is deployed, run on VPS:
+curl -fsSL "https://andrikmetal.com/vps-r1026-install.txt?t=$(date +%s)" | sudo bash
+The installer contains the R1026 web-agent and safe cleanup payload internally.
+It does not restart andrik-radio.service.

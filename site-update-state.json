@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1789186573039-63aff77510",
+  "operationId": "publish-1789187495021-25b1190001",
   "release": "R1026",
-  "archiveName": "ANDRIK-R1026-QUOTA-STUDIO-VPS-CLEANUP-FULL.zip",
-  "sourceHead": "76d53916b38bc325ecee18a8e7dedc3a531617e7",
-  "backupSha": "76d53916b38bc325ecee18a8e7dedc3a531617e7",
+  "archiveName": "ANDRIK-R1026-SIMPLE-SITE-PLUS-VPS-FULL.zip",
+  "sourceHead": "1a4272dbac92949c570ec90c6bfcdf9cb4cfaff1",
+  "backupSha": "1a4272dbac92949c570ec90c6bfcdf9cb4cfaff1",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-12T04:16:13.784Z"
+  "generatedAt": "2026-09-12T04:31:35.021Z"
 }
