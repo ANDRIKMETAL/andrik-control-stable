@@ -1,3 +1,11 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+DST="/usr/local/sbin/andrik-radio-load-r988"
+STAMP="$(date +%Y%m%d-%H%M%S)"
+BEFORE="$(systemctl show -p MainPID --value andrik-radio.service 2>/dev/null || true)"
+TMP="$(mktemp /tmp/andrik-radio-load-r1027.XXXXXX)"
+trap 'rm -f "$TMP"' EXIT
+cat > "$TMP" <<'PY_R1027'
 #!/usr/bin/env python3
 import json
 import os
@@ -159,3 +167,17 @@ payload = {
     'load': {'one': round(l1, 2), 'five': round(l5, 2), 'fifteen': round(l15, 2)},
 }
 print(json.dumps(payload, ensure_ascii=False, separators=(',', ':')))
+PY_R1027
+python3 -m py_compile "$TMP"
+if [ -f "$DST" ]; then cp -a "$DST" "$DST.before-R1027-$STAMP"; fi
+install -m 0755 "$TMP" "$DST"
+echo "=== R1027 MONITOR TEST ==="
+OUT="$($DST)"
+printf '%s\n' "$OUT"
+printf '%s\n' "$OUT" | grep -q '"version":"R1027"'
+AFTER="$(systemctl show -p MainPID --value andrik-radio.service 2>/dev/null || true)"
+echo "RADIO PID BEFORE: $BEFORE"
+echo "RADIO PID AFTER : $AFTER"
+if [ "$BEFORE" = "$AFTER" ]; then echo "✅ RADIO PID UNCHANGED"; else echo "⚠️ RADIO PID CHANGED OUTSIDE THIS INSTALLER"; fi
+echo "✅ R1027 ACCURATE CPU MONITOR INSTALLED"
+echo "✅ andrik-radio.service was NOT restarted or signalled"

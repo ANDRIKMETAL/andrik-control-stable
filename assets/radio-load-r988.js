@@ -1,19 +1,30 @@
 (()=>{'use strict';
 const card=document.getElementById('radioLoadCardR988');if(!card)return;
 const toggle=document.getElementById('radioLoadToggleR988'),panel=document.getElementById('radioLoadPanelR988');
-const state=document.getElementById('radioLoadStateR988'),cpuName=document.getElementById('radioLoadCpuNameR988'),msg=document.getElementById('radioLoadMsgR988'),cleanupBtn=document.getElementById('radioLoadCleanupR1026');
+const state=document.getElementById('radioLoadStateR988'),cpuName=document.getElementById('radioLoadCpuNameR988'),msg=document.getElementById('radioLoadMsgR988');
 let timer=null,busy=false,open=false;
 const $=id=>document.getElementById(id);const txt=(id,v)=>{const e=$(id);if(e)e.textContent=v};
 async function api(path,opts={}){const r=await fetch(path,{credentials:'include',cache:'no-store',headers:{accept:'application/json',...(opts.headers||{})},...opts});const d=await r.json().catch(()=>({}));if(!r.ok)throw Object.assign(new Error(d.message||d.error||`HTTP ${r.status}`),{status:r.status,data:d});return d}
-async function send(action='load-r988'){return api('/api/control/radio-remote-r627/command',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action})})}
+async function send(){return api('/api/control/radio-remote-r627/command',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action:'load-r988'})})}
 async function wait(id,timeoutMs=30000){const until=Date.now()+timeoutMs;while(Date.now()<until){await new Promise(r=>setTimeout(r,1800));const d=await api('/api/control/radio-remote-r627/status?ts='+Date.now());if(d?.result?.id===id&&d.result.finishedAt)return d.result;}throw new Error('VPS не успел вернуть результат')}
-function render(d){const cpuPct=Number(d?.cpu?.totalPct||0);const level=cpuPct>=90?'critical':cpuPct>=70?'high':'normal';const label=level==='critical'?'КРИТИЧЕСКАЯ':level==='high'?'ВЫСОКАЯ':'НОРМА';state.dataset.level=level;state.textContent=(level==='normal'?'🟢 ':level==='high'?'🟡 ':'🔴 ')+label;cpuName.textContent=`${d?.cpu?.model||'CPU'} · ${Number(d?.cpu?.cores||0)} vCPU`;
- txt('radioLoadCpuR988',`${Number(d?.cpu?.totalPct||0).toFixed(1)}%`);txt('radioLoadRamR988',`${Number(d?.memory?.ramUsedMB||0)} / ${Number(d?.memory?.ramTotalMB||0)} MB · ${Number(d?.memory?.ramPct||0).toFixed(1)}%`);txt('radioLoadSwapR988',`${Number(d?.memory?.swapUsedMB||0)} / ${Number(d?.memory?.swapTotalMB||0)} MB`);txt('radioLoadAvgR988',`${d?.load?.one??0} · ${d?.load?.five??0} · ${d?.load?.fifteen??0}`);
- const p=d?.processes||{};txt('radioLoadVisualR988',`${Number(p.visual||0).toFixed(1)}%`);txt('radioLoadPublisherR988',`${Number(p.publisher||0).toFixed(1)}%`);txt('radioLoadNodeR988',`${Number(p.radioNode||0).toFixed(1)}%`);txt('radioLoadMp3R988',`${Number(p.mp3Decoder||0).toFixed(1)}%`);txt('radioLoadOtherR988',`${Number(p.otherFfmpeg||0).toFixed(1)}%`);msg.textContent='Обновляется только пока это окно открыто.';msg.dataset.kind='ok'}
-async function sample(){if(!open||busy||document.hidden)return;busy=true;msg.textContent='Получаю нагрузку с VPS…';msg.dataset.kind='';try{const s=await send('load-r988');const r=await wait(s?.command?.id||'');const m=String(r.output||'').match(/R988_LOAD\s+(\{[\s\S]*\})/);if(!r.ok||!m)throw new Error(String(r.output||'R988 load failed'));render(JSON.parse(m[1]));}catch(e){msg.textContent=e?.data?.error==='command-busy'?'VPS выполняет другую команду · попробую позже.':`❌ ${e.message||e}`;msg.dataset.kind='bad'}finally{busy=false}}
-async function cleanup(){if(busy)return;const ok=window.confirm('Удалить только старые осиротевшие процессы ANDRIK вне активного эфира?\n\nРадио НЕ перезапускается. Активные PID andrik-radio.service защищены.');if(!ok)return;busy=true;if(cleanupBtn)cleanupBtn.disabled=true;msg.textContent='🧹 Проверяю старые процессы. Активный эфир защищён…';msg.dataset.kind='busy';try{const s=await send('cleanup-r1026');const r=await wait(s?.command?.id||'',45000);const m=String(r.output||'').match(/R1026_CLEANUP\s+(\{[\s\S]*\})/);if(!r.ok||!m)throw new Error(String(r.output||'R1026 cleanup failed'));const d=JSON.parse(m[1]);const removed=Number(d.terminated||0)+Number(d.killed||0);const reclaimed=Number(d.reclaimedApproxMB||0);msg.textContent=removed>0?`✅ Убрано процессов: ${removed} · доступно RAM стало больше примерно на ${reclaimed} MB · эфир не перезапускался`:'✅ Старых процессов не найдено · эфир не тронут';msg.dataset.kind='ok';await new Promise(r=>setTimeout(r,700));}catch(e){msg.textContent=e?.data?.error==='command-busy'?'VPS выполняет другую команду · очистку не запускал.':`❌ Очистка отменена/не выполнена: ${e.message||e}`;msg.dataset.kind='bad'}finally{busy=false;if(cleanupBtn)cleanupBtn.disabled=false;void sample()}}
+function render(d){
+  const cpuPct=Number(d?.cpu?.totalPct||0);const level=cpuPct>=90?'critical':cpuPct>=70?'high':'normal';const label=level==='critical'?'КРИТИЧЕСКАЯ':level==='high'?'ВЫСОКАЯ':'НОРМА';
+  state.dataset.level=level;state.textContent=(level==='normal'?'🟢 ':level==='high'?'🟡 ':'🔴 ')+label;
+  cpuName.textContent=`${d?.cpu?.model||'CPU'} · ${Number(d?.cpu?.cores||0)} vCPU · замер ${Number(d?.cpu?.sampleMs||0)} мс`;
+  txt('radioLoadCpuR988',`${cpuPct.toFixed(1)}%`);
+  txt('radioLoadRamR988',`${Number(d?.memory?.ramUsedMB||0)} / ${Number(d?.memory?.ramTotalMB||0)} MB · ${Number(d?.memory?.ramPct||0).toFixed(1)}%`);
+  txt('radioLoadSwapR988',`${Number(d?.memory?.swapUsedMB||0)} / ${Number(d?.memory?.swapTotalMB||0)} MB`);
+  txt('radioLoadAvgR988',`${d?.load?.one??0} · ${d?.load?.five??0} · ${d?.load?.fifteen??0}`);
+  const p=d?.processes||{};
+  txt('radioLoadVisualR988',`${Number(p.visual||0).toFixed(1)}%`);
+  txt('radioLoadPublisherR988',`${Number(p.publisher||0).toFixed(1)}%`);
+  txt('radioLoadNodeR988',`${Number(p.radioNode||0).toFixed(1)}%`);
+  txt('radioLoadMp3R988',`${Number(p.mp3Decoder||0).toFixed(1)}%`);
+  txt('radioLoadOtherR988',`${Number(p.otherFfmpeg||0).toFixed(1)}%`);
+  msg.textContent='Моментальный замер: общий CPU и процессы посчитаны за один интервал и в одной шкале 0–100% от всего VPS.';msg.dataset.kind='ok';
+}
+async function sample(){if(!open||busy||document.hidden)return;busy=true;msg.textContent='Измеряю CPU и процессы за один интервал…';msg.dataset.kind='';try{const s=await send();const r=await wait(s?.command?.id||'');const m=String(r.output||'').match(/R988_LOAD\s+(\{[\s\S]*\})/);if(!r.ok||!m)throw new Error(String(r.output||'R988 load failed'));render(JSON.parse(m[1]));}catch(e){msg.textContent=e?.data?.error==='command-busy'?'VPS выполняет другую команду · попробую позже.':`❌ ${e.message||e}`;msg.dataset.kind='bad'}finally{busy=false}}
 function start(){if(timer)clearInterval(timer);sample();timer=setInterval(sample,15000)}function stop(){if(timer){clearInterval(timer);timer=null}}
 toggle.addEventListener('click',()=>{open=!open;panel.hidden=!open;toggle.setAttribute('aria-expanded',String(open));if(open)start();else stop()});
-cleanupBtn?.addEventListener('click',()=>void cleanup());
 document.addEventListener('visibilitychange',()=>{if(open){if(document.hidden)stop();else start()}});window.addEventListener('pagehide',stop);
 })();
