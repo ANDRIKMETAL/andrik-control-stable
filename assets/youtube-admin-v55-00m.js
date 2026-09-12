@@ -1,8 +1,8 @@
 (() => {
   const KEY_SESSION='andrik-comments-admin-key';
   const KEY_LOCAL='andrik-comments-admin-key-persistent';
-  const CACHE_KEY='andrik-control-youtube-pane-r915-artist';
-  const MONITOR_CACHE_KEY='andrik-control-youtube-monitor-r915-artist';
+  const CACHE_KEY='andrik-control-youtube-pane-r1026-studio-safe';
+  const MONITOR_CACHE_KEY='andrik-control-youtube-monitor-r1026-studio-safe';
   const INTEGRATED=document.body.classList.contains('analytics-swipe-page');
   const $=id=>document.getElementById(id);
   const escapeHtml=value=>String(value??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
@@ -55,8 +55,12 @@
   }
   let artistRefreshR910Promise=null,artistExtrasR910Promise=null,artistExtrasLoadedR910=0;
   function artistHasMissingBreakdownsR910(studio={}){
-    const views=Number(studio?.summary?.views||0);
-    if(views<=0)return false;
+    if(studio?.recoveryR1026?.active)return false;
+    const summary=studio?.summary||{};
+    const hasSummary=['views','estimatedMinutesWatched','likes','comments','shares','subscribersGained','subscribersLost'].some(key=>Number(summary?.[key]||0)>0);
+    const groups=['trend','products28','contentTypes28','trafficSources28','subscriptionStatus28','devices28'];
+    const hasAnyBreakdown=groups.some(key=>Array.isArray(studio?.[key])&&studio[key].length>0);
+    if(!hasSummary&&!hasAnyBreakdown)return true;
     return !Array.isArray(studio.products28)||!studio.products28.length||!Array.isArray(studio.contentTypes28)||!studio.contentTypes28.length||!Array.isArray(studio.trafficSources28)||!studio.trafficSources28.length||!Array.isArray(studio.subscriptionStatus28)||!studio.subscriptionStatus28.length||!Array.isArray(studio.devices28)||!studio.devices28.length;
   }
   async function forceArtistRefreshR910(reason='manual'){
@@ -111,8 +115,8 @@
     artistExtrasR910Promise=(async()=>{
       try{
         const [shelf,top]=await Promise.all([
-          api('/api/control/youtube-oac-shelf?v=55.00-r915').catch(error=>({available:false,error:error.message,tracks:[],channelUrl:'https://www.youtube.com/@andrikmetal'})),
-          api('/api/control/youtube-top-content?type=shorts&refresh=1&v=55.00-r915').catch(error=>({available:false,error:error.message,shorts:[]}))
+          api('/api/control/youtube-oac-shelf?v=55.00-r1026').catch(error=>({available:false,error:error.message,tracks:[],channelUrl:'https://www.youtube.com/@andrikmetal'})),
+          api('/api/control/youtube-top-content?type=shorts&refresh=1&v=55.00-r1026').catch(error=>({available:false,error:error.message,shorts:[]}))
         ]);
         const shelfData=shelf&&typeof shelf==='object'?{...shelf}:{tracks:[]};
         const topData=top&&typeof top==='object'?top:{shorts:[]};
@@ -158,9 +162,12 @@
     if(status){
       const errors=Array.isArray(studio.partialErrors)?studio.partialErrors:[];
       const updated=studio.updatedAt?dateTime(studio.updatedAt):'';
-      status.textContent=errors.length
-        ? `Часть artist-метрик пока недоступна · остальное работает${updated?` · ${updated}`:''}`
-        : `${updated?`Обновлено: ${updated}`:'Снимок обновляется…'}`;
+      const recovered=Boolean(studio?.recoveryR1026?.active);
+      status.textContent=recovered
+        ? `Восстановлен последний подтверждённый снимок · новые данные обновятся автоматически${updated?` · ${updated}`:''}`
+        : errors.length
+          ? `Часть artist-метрик пока недоступна · сохранены последние корректные данные${updated?` · ${updated}`:''}`
+          : `${updated?`Обновлено: ${updated}`:'Снимок обновляется…'}`;
     }
     maybeAutoRefreshArtistR910(studio);
     void loadArtistExtrasR910(false);

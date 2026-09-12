@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1789147856031-6bc1f107a8",
-  "release": "R1015",
-  "archiveName": "ANDRIK-R1015C-AGENT-VERSION-FIX-FULL.zip",
-  "sourceHead": "ec7aea6623c73ffbba5ae1fe9917d1647952d864",
-  "backupSha": "ec7aea6623c73ffbba5ae1fe9917d1647952d864",
+  "operationId": "publish-1789186573039-63aff77510",
+  "release": "R1026",
+  "archiveName": "ANDRIK-R1026-QUOTA-STUDIO-VPS-CLEANUP-FULL.zip",
+  "sourceHead": "76d53916b38bc325ecee18a8e7dedc3a531617e7",
+  "backupSha": "76d53916b38bc325ecee18a8e7dedc3a531617e7",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-11T17:30:56.031Z"
+  "generatedAt": "2026-09-12T04:16:13.784Z"
 }

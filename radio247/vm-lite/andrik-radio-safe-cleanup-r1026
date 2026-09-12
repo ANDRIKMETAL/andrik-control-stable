@@ -1,0 +1,258 @@
+#!/usr/bin/env python3
+import argparse
+import json
+import os
+import signal
+import subprocess
+import time
+from pathlib import Path
+
+VERSION = 'R1026'
+SERVICE = 'andrik-radio.service'
+MIN_AGE_SECONDS = 300
+RADIO_MARKERS = (
+    '/opt/andrik-radio/',
+    '/var/cache/andrik-radio-r622/',
+    'rtmps://',
+    'stream-morning-master',
+    'stream-day-master',
+    'stream-evening-master',
+    'stream-night-master',
+    'youtube.com/live',
+)
+NODE_SERVER = '/opt/andrik-radio/radio247/server.mjs'
+
+
+def run(cmd, timeout=8):
+    try:
+        p = subprocess.run(cmd, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=timeout, check=False)
+        return p.returncode == 0, p.stdout.strip()
+    except Exception as exc:
+        return False, str(exc)
+
+
+def mem_available_mb():
+    try:
+        vals = {}
+        for line in Path('/proc/meminfo').read_text().splitlines():
+            if ':' not in line:
+                continue
+            key, rest = line.split(':', 1)
+            vals[key] = int(rest.strip().split()[0])
+        return round(vals.get('MemAvailable', 0) / 1024, 1)
+    except Exception:
+        return 0.0
+
+
+def boot_seconds():
+    try:
+        return float(Path('/proc/uptime').read_text().split()[0])
+    except Exception:
+        return 0.0
+
+
+def read_stat(pid):
+    try:
+        raw = Path(f'/proc/{pid}/stat').read_text()
+        rparen = raw.rfind(')')
+        tail = raw[rparen + 2:].split()
+        # tail[0] state, tail[1] ppid, tail[19] starttime (field 22 overall)
+        return {'ppid': int(tail[1]), 'start_ticks': int(tail[19])}
+    except Exception:
+        return None
+
+
+def cmdline(pid):
+    try:
+        data = Path(f'/proc/{pid}/cmdline').read_bytes().replace(b'\x00', b' ').decode('utf-8', 'replace').strip()
+        return data
+    except Exception:
+        return ''
+
+
+def comm(pid):
+    try:
+        return Path(f'/proc/{pid}/comm').read_text().strip()
+    except Exception:
+        return ''
+
+
+def rss_mb(pid):
+    try:
+        for line in Path(f'/proc/{pid}/status').read_text().splitlines():
+            if line.startswith('VmRSS:'):
+                return round(int(line.split()[1]) / 1024, 1)
+    except Exception:
+        pass
+    return 0.0
+
+
+def pid_age_seconds(pid, uptime):
+    st = read_stat(pid)
+    if not st:
+        return 0.0
+    try:
+        hz = os.sysconf(os.sysconf_names['SC_CLK_TCK'])
+        return max(0.0, uptime - st['start_ticks'] / hz)
+    except Exception:
+        return 0.0
+
+
+def cgroup_pids():
+    ok, control_group = run(['systemctl', 'show', SERVICE, '-p', 'ControlGroup', '--value'])
+    control_group = control_group.strip()
+    if not ok or not control_group or control_group == '/':
+        return None, control_group
+    root = Path('/sys/fs/cgroup') / control_group.lstrip('/')
+    if not root.exists():
+        return None, control_group
+    found = set()
+    for procs in [root / 'cgroup.procs', *root.rglob('cgroup.procs')]:
+        try:
+            for text in procs.read_text().split():
+                found.add(int(text))
+        except Exception:
+            continue
+    return found, control_group
+
+
+def parent_chain(pid):
+    out = set()
+    cur = pid
+    for _ in range(20):
+        if cur <= 1 or cur in out:
+            break
+        out.add(cur)
+        st = read_stat(cur)
+        if not st:
+            break
+        cur = st['ppid']
+    out.add(os.getpid())
+    out.add(os.getppid())
+    return out
+
+
+def process_snapshot():
+    uptime = boot_seconds()
+    rows = []
+    for p in Path('/proc').iterdir():
+        if not p.name.isdigit():
+            continue
+        pid = int(p.name)
+        st = read_stat(pid)
+        if not st:
+            continue
+        rows.append({
+            'pid': pid,
+            'ppid': st['ppid'],
+            'comm': comm(pid),
+            'cmd': cmdline(pid),
+            'age': pid_age_seconds(pid, uptime),
+            'rssMB': rss_mb(pid),
+        })
+    return rows
+
+
+def candidate(row, protected):
+    pid = row['pid']
+    if pid in protected or row['age'] < MIN_AGE_SECONDS:
+        return False
+    # Maximum safety: only true orphans (adopted by PID 1). Active radio children are
+    # additionally protected by the service cgroup even if their PPID changes briefly.
+    if row['ppid'] != 1:
+        return False
+    c = row['comm'].lower()
+    cmd = row['cmd']
+    if NODE_SERVER in cmd and c in ('node', 'nodejs'):
+        return True
+    if c in ('ffmpeg', 'ffprobe') and any(marker in cmd for marker in RADIO_MARKERS):
+        return True
+    return False
+
+
+def alive(pid):
+    return Path(f'/proc/{pid}').exists()
+
+
+def terminate(rows, dry_run=False):
+    if dry_run:
+        return [], [], rows
+    term = []
+    kill = []
+    for row in rows:
+        try:
+            os.kill(row['pid'], signal.SIGTERM)
+            term.append(row['pid'])
+        except ProcessLookupError:
+            pass
+        except Exception:
+            pass
+    deadline = time.time() + 2.0
+    while time.time() < deadline and any(alive(pid) for pid in term):
+        time.sleep(0.15)
+    for pid in term:
+        if alive(pid):
+            try:
+                os.kill(pid, signal.SIGKILL)
+                kill.append(pid)
+            except Exception:
+                pass
+    return term, kill, rows
+
+
+def main():
+    parser = argparse.ArgumentParser(description='ANDRIK safe stale radio process cleanup R1026')
+    parser.add_argument('--dry-run', action='store_true')
+    args = parser.parse_args()
+
+    before = mem_available_mb()
+    service_ok, active = run(['systemctl', 'is-active', SERVICE])
+    protected_service, control_group = cgroup_pids()
+
+    # Refuse destructive work if we cannot positively identify and protect the live service.
+    if not service_ok or active.strip() != 'active' or protected_service is None or not protected_service:
+        print(json.dumps({
+            'version': VERSION, 'ok': False, 'safeAbort': True, 'dryRun': args.dry_run,
+            'reason': 'active-radio-cgroup-not-confirmed', 'serviceState': active.strip() or 'unknown',
+            'controlGroup': control_group or '', 'candidates': 0, 'terminated': 0, 'killed': 0,
+            'ramAvailableBeforeMB': before, 'ramAvailableAfterMB': mem_available_mb(),
+            'reclaimedApproxMB': 0.0, 'protectedRadioPids': len(protected_service or []), 'details': []
+        }, ensure_ascii=False, separators=(',', ':')))
+        return 3
+
+    protected = set(protected_service) | parent_chain(os.getpid())
+    first = [row for row in process_snapshot() if candidate(row, protected)]
+    term1, kill1, _ = terminate(first, args.dry_run)
+
+    # A stale duplicate Node process can leave radio FFmpeg children adopted by PID 1 only
+    # after Node exits. One second pass catches only those newly orphaned ANDRIK FFmpeg jobs.
+    if not args.dry_run and first:
+        time.sleep(0.5)
+    second = [] if args.dry_run else [row for row in process_snapshot() if candidate(row, protected) and row['pid'] not in {x['pid'] for x in first}]
+    term2, kill2, _ = terminate(second, args.dry_run)
+
+    all_rows = first + second
+    unique = {}
+    for row in all_rows:
+        unique[row['pid']] = row
+    after = mem_available_mb()
+    details = [{
+        'pid': row['pid'], 'kind': row['comm'], 'ageSeconds': int(row['age']), 'rssMB': row['rssMB'],
+        'cmd': row['cmd'][:220]
+    } for row in unique.values()]
+    result = {
+        'version': VERSION, 'ok': True, 'safeAbort': False, 'dryRun': args.dry_run,
+        'serviceState': active.strip(), 'controlGroup': control_group,
+        'candidates': len(unique),
+        'terminated': len(set(term1 + term2) - set(kill1 + kill2)),
+        'killed': len(set(kill1 + kill2)),
+        'ramAvailableBeforeMB': before, 'ramAvailableAfterMB': after,
+        'reclaimedApproxMB': round(max(0.0, after - before), 1),
+        'protectedRadioPids': len(protected_service), 'details': details
+    }
+    print(json.dumps(result, ensure_ascii=False, separators=(',', ':')))
+    return 0
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())

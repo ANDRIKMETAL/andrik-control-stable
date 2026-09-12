@@ -6,7 +6,7 @@ import {Readable} from 'node:stream';
 import {pipeline} from 'node:stream/promises';
 
 const CONFIG='/etc/andrik-radio-web-r627.json';
-const AGENT_VERSION_R803='R1015';
+const AGENT_VERSION_R803='R1026';
 const DIAG_DIR_R803='/var/cache/andrik-radio-r622/diagnostics';
 const DIAG_AGENT_LOG_R803=DIAG_DIR_R803+'/r803-agent-events.ndjson';
 const DIAG_AGENT_MAX_BYTES_R803=1024*1024;
@@ -22,6 +22,7 @@ const VISUAL_AUTO_R658='/usr/local/sbin/andrik-visual-auto-r703';
 const AIR_RESTORE_R925='/usr/local/sbin/andrik-radio-air-restore-r925';
 const SCREEN_RESTORE_R926='/usr/local/sbin/andrik-radio-screen-restore-r926';
 const SAFE_CACHE_CLEAN_R867='/usr/local/sbin/andrik-radio-safe-cache-clean-r867';
+const SAFE_PROCESS_CLEAN_R1026='/usr/local/sbin/andrik-radio-safe-cleanup-r1026';
 const AUDIO_SYNC_R949='/usr/local/sbin/andrik-audio-sync-r949';
 const AUDIO_SYNC_STATE_R949='/var/lib/andrik-radio/audio-sync-r949.json';
 const VISUAL_FILES=Object.freeze({morning:'stream-morning-master-r703.mp4',day:'stream-day-master-r620.mp4',evening:'stream-evening-master-r620.mp4',night:'stream-night-master-r620.mp4'});
@@ -347,6 +348,11 @@ ${e.message||e}`};}
   if(action==='load-r988'){
     const r=await runAsync('/usr/local/sbin/andrik-radio-load-r988',[],8000);
     return {ok:r.ok,output:r.ok?`R988_LOAD ${r.output}`:`R988_LOAD_ERROR\n${r.output}`};
+  }
+  if(action==='cleanup-r1026'){
+    if(!fs.existsSync(SAFE_PROCESS_CLEAN_R1026))return {ok:false,output:`R1026 CLEANUP ❌\nMissing ${SAFE_PROCESS_CLEAN_R1026}`};
+    const r=await runAsync(SAFE_PROCESS_CLEAN_R1026,[],30000);
+    return {ok:r.ok,output:r.ok?`R1026_CLEANUP ${r.output}`:`R1026_CLEANUP_ERROR\n${r.output}`};
   }
   if(action==='queue-pick-r989'){
     const mediaType=clean(command.mediaType||'').toLowerCase();

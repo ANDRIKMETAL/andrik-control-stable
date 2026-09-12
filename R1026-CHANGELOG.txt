@@ -1,0 +1,36 @@
+ANDRIK R1026 · YOUTUBE QUOTA + STUDIO RECOVERY + VPS SAFE CLEANUP
+12.09.2026
+
+1) YouTube quota accounting
+- Main 10,000-unit YouTube Data API counter now rolls over at 00:00 America/Los_Angeles (Pacific Time), matching YouTube quota reset.
+- search.list is tracked in its own post-June-2026 granular bucket; it no longer falsely adds 100 units to the main 10k counter.
+- Fresh R1026 counter keys prevent old Bratislava-midnight rows from contaminating the first Pacific quota day.
+- 50% push says "основной квоты" and shows 00:00 PT reset.
+
+2) Reduced background YouTube polling without touching the important LIVE 2-minute lane
+- Non-LIVE video/Shorts comment sweep: ~5 min -> ~10 min.
+- Full engagement/catalogue/likes API sample: ~6 min -> ~10 min.
+- Cumulative subscriber-count API sample: ~10 min -> ~15 min.
+- Upload playlist safety fallback: ~15 min -> ~30 min (WebSub stays primary/immediate).
+- Active LIVE ordinary comments + live chat: remains every ~2 minutes.
+
+3) YouTube Studio control-panel recovery
+- A transient empty/partial YouTube Analytics response can no longer overwrite the last meaningful 28-day Studio snapshot with zeros.
+- Partial failures preserve the last good arrays/summary where applicable.
+- Audience endpoint searches up to 72 recent YouTube snapshots for the latest meaningful Studio payload.
+- Identity-only refresh also preserves/reconstructs last-good Studio data before saving.
+- Browser cache key bumped to R1026 so an already-poisoned local zero cache is discarded.
+- UI explicitly marks when the last confirmed snapshot was restored.
+
+4) VPS load panel: safe stale-process cleanup
+- Added button: "🧹 УБРАТЬ СТАРЫЕ ПРОЦЕССЫ".
+- Cleanup only targets old (>5 min) orphaned ANDRIK Node/FFmpeg jobs outside the active andrik-radio.service cgroup.
+- Active radio cgroup PIDs are protected.
+- If the active radio cgroup cannot be positively identified, cleanup aborts without killing anything.
+- No andrik-radio.service restart, no drop_caches, no swapoff, no broad pkill ffmpeg.
+- UI refreshes load/RAM after cleanup and reports what was removed.
+
+VPS INSTALLER AFTER SITE DEPLOY:
+sudo bash -c 'curl -fsSL "https://andrikmetal.com/radio247/vm-lite/install-r1026-quota-studio-vps-cleanup.sh?t=$(date +%s)" | bash'
+
+Installer updates/restarts only the web-agent and verifies the radio MainPID before/after.

@@ -1039,7 +1039,14 @@ async function trackObservabilityUsage(env, service, units = 0, requests = 1, de
   if (!env.COMMENTS_DB) return;
   const db = env.COMMENTS_DB;
   await ensureObservabilitySchema(db);
-  const dateKey = getBratislavaClock().date;
+  const rawService=cleanPlainText(service || 'unknown',80);
+  // R1026: YouTube daily quota resets at 00:00 Pacific Time, not at Bratislava midnight.
+  // Store the new counter under a fresh service key so the first R1026 Pacific day is not
+  // contaminated by the old Europe/Bratislava accounting rows already present in D1.
+  const isYoutubeCore=rawService==='youtube-data-api';
+  const isYoutubeSearch=rawService==='youtube-search-api';
+  const dateKey=(isYoutubeCore||isYoutubeSearch)?youtubePacificDateR944():getBratislavaClock().date;
+  const storedService=isYoutubeCore?'youtube-data-api-r1026':(isYoutubeSearch?'youtube-search-api-r1026':rawService);
   let detailsJson = '{}';
   try { detailsJson = JSON.stringify(details || {}); } catch (_) {}
   await db.prepare(`
@@ -1052,12 +1059,12 @@ async function trackObservabilityUsage(env, service, units = 0, requests = 1, de
       updated_at = datetime('now')
   `).bind(
     dateKey,
-    cleanPlainText(service || 'unknown', 80),
+    storedService,
     Math.max(0, Number(units || 0)),
     Math.max(0, Number(requests || 0)),
     detailsJson
   ).run();
-  if (cleanPlainText(service || '', 80) === 'youtube-data-api') {
+  if (isYoutubeCore) {
     await maybeSendYoutubeQuota50AlertR333(env, db, dateKey).catch(()=>{});
   }
 }
@@ -1070,16 +1077,16 @@ function observabilityQuotaCost(endpoint, method = 'GET') {
   }
   if (key === 'captions-list') return 50;
   if (key === 'captions-download') return 200;
-  if (key === 'search') return 100;
+  if (key === 'search') return 1;
   return 1;
 }
 
 async function maybeSendYoutubeQuota50AlertR333(env, db, dateKey='') {
   try {
-    const keyDate=cleanPlainText(dateKey || getBratislavaClock().date,20);
+    const keyDate=cleanPlainText(dateKey || youtubePacificDateR944(),20);
     const row=await db.prepare(`
       SELECT units,requests FROM observability_usage
-      WHERE date_key=? AND service='youtube-data-api' LIMIT 1
+      WHERE date_key=? AND service='youtube-data-api-r1026' LIMIT 1
     `).bind(keyDate).first();
     const units=Math.max(0,Number(row?.units || 0));
     const requests=Math.max(0,Number(row?.requests || 0));
@@ -1094,12 +1101,12 @@ async function maybeSendYoutubeQuota50AlertR333(env, db, dateKey='') {
     const percent=Math.min(100,Math.round((units/limit)*1000)/10);
     const remaining=Math.max(0,limit-units);
     const result=await sendOwnerPush(env,{
-      title:'⚠️ YouTube API — 50% квоты',
-      message:`Использовано ${units.toLocaleString('ru-RU')} из ${limit.toLocaleString('ru-RU')} units · ${percent}% · осталось ${remaining.toLocaleString('ru-RU')}`,
+      title:'⚠️ YouTube API — 50% основной квоты',
+      message:`Использовано ${units.toLocaleString('ru-RU')} из ${limit.toLocaleString('ru-RU')} units · ${percent}% · осталось ${remaining.toLocaleString('ru-RU')} · сброс 00:00 PT`,
       url:'https://control.andrikmetal.com/youtube-admin.html',
       name:`youtube-quota-50-${keyDate}`,
       ttl:43200,
-      history:{type:'youtube-quota-50',source:'YouTube Data API',details:{dateKey:keyDate,units,requests,limit,percent,remaining,threshold:50,mode:'approximate-observability-r333'}}
+      history:{type:'youtube-quota-50',source:'YouTube Data API',details:{dateKey:keyDate,units,requests,limit,percent,remaining,threshold:50,mode:'pacific-core-observability-r1026'}}
     });
     if(!result.ok){
       await releasePushOnceClaim(db,onceKey);
@@ -4522,9 +4529,9 @@ async function handleFastYoutubeReleaseCheckR332(request, env) {
     const lastR797=await getPushState(db,'youtube-fast-last-check-at-r332').catch(()=>null);
     const lastMsR797=Date.parse(String(lastR797?.value||lastR797?.updatedAt||''));
     const ageMsR797=Number.isFinite(lastMsR797)?Math.max(0,Date.now()-lastMsR797):Infinity;
-    const minGapMsR797=14.5*60*1000;
+    const minGapMsR797=29.5*60*1000;
     if(ageMsR797<minGapMsR797){
-      return json({ok:true,skipped:true,reason:'websub-primary-quota-eco-r797',fallbackCadenceMinutes:15,ageMinutes:Math.round(ageMsR797/6000)/10,checkedAt:new Date().toISOString()},200);
+      return json({ok:true,skipped:true,reason:'websub-primary-quota-eco-r797',fallbackCadenceMinutes:30,ageMinutes:Math.round(ageMsR797/6000)/10,checkedAt:new Date().toISOString()},200);
     }
   }
   const startedAt=new Date().toISOString();
@@ -7711,7 +7718,11 @@ async function youtubeApiJson(env, endpoint, params = {}, options = {}) {
     headers.authorization = `Bearer ${accessToken}`;
     mode = 'oauth';
   }
-  await trackObservabilityUsage(env, 'youtube-data-api', observabilityQuotaCost(endpoint), 1, { endpoint:cleanPlainText(endpoint,80), mode }).catch(() => {});
+  const endpointKeyR1026=cleanPlainText(endpoint,80).toLowerCase();
+  // R1026 / post-Jun-2026 granular quota: search.list has its own daily bucket.
+  // Do not make the main 10k counter look 100x larger because of a search fallback.
+  const quotaServiceR1026=endpointKeyR1026==='search'?'youtube-search-api':'youtube-data-api';
+  await trackObservabilityUsage(env, quotaServiceR1026, observabilityQuotaCost(endpoint), 1, { endpoint:cleanPlainText(endpoint,80), mode }).catch(() => {});
   const response = await fetchWithAbortTimeoutR409(url.toString(), { headers }, Number(options.timeoutMs || 8000), `youtube-${endpoint}-timeout`);
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(data?.error?.message || `youtube-${endpoint}-${response.status}`);
@@ -8339,9 +8350,21 @@ async function sendYoutubeCommentItemsR953(env,db,items=[],identity={},startedAt
 }
 
 async function checkYoutubeRecentCommentsEvery5mR953(env,db,channelId,startedAt=new Date().toISOString()){
+  // R1026 quota trim: the scheduler may still enter this lane every 5 minutes, but
+  // normal video/Shorts comments are sampled at most every ~10 minutes. The active
+  // LIVE keeps its separate 2-minute comment/chat path unchanged.
+  const gateKeyR1026='youtube-comment-sweep-quota-last-at-r1026';
+  const gateStateR1026=await getPushState(db,gateKeyR1026).catch(()=>null);
+  const gateMsR1026=Date.parse(String(gateStateR1026?.value||gateStateR1026?.updatedAt||''));
+  const gateAgeR1026=Number.isFinite(gateMsR1026)?Math.max(0,Date.now()-gateMsR1026):Infinity;
+  const gateGapR1026=9.5*60*1000;
+  if(gateAgeR1026<gateGapR1026){
+    return {ok:true,skipped:true,reason:'quota-eco-10m-r1026',mode:'recent6-plus-old1-10m-r1026',targets:0,recentTargets:0,olderTarget:'',seen:0,sent:0,failed:0,pending:0,warnings:[],checkedAt:startedAt,nextInSeconds:Math.max(1,Math.ceil((gateGapR1026-gateAgeR1026)/1000))};
+  }
+  await setPushState(db,gateKeyR1026,startedAt).catch(()=>{});
   const plan=await fetchYoutubeCommentSweepTargetsR953(env,db);
   if(!plan.targets.length){
-    return {ok:true,mode:'recent6-plus-old1-5m-r953',targets:0,recentTargets:0,olderTarget:'',seen:0,sent:0,failed:0,pending:0,warnings:[],checkedAt:startedAt};
+    return {ok:true,mode:'recent6-plus-old1-10m-r1026',targets:0,recentTargets:0,olderTarget:'',seen:0,sent:0,failed:0,pending:0,warnings:[],checkedAt:startedAt};
   }
   const direct=await fetchYoutubeCommentsForVideos(env,plan.targets,channelId).catch(error=>({items:[],warnings:[cleanPlainText(error?.message||error,260)]}));
   const warnings=(direct.warnings||[]).filter(w=>!isBenignYoutubeCommentWarningR473(w));
@@ -8351,13 +8374,13 @@ async function checkYoutubeRecentCommentsEvery5mR953(env,db,channelId,startedAt=
     return {...item,videoTitle:item.videoTitle||video.title||'Новое событие YouTube',thumbnail:item.thumbnail||video.thumbnail||''};
   });
   const identity={channelId,handle:cleanPlainText(env.YOUTUBE_CHANNEL_HANDLE||'@andrikmetal',100)};
-  const delivery=await sendYoutubeCommentItemsR953(env,db,enriched,identity,startedAt,'recent6-plus-old1-5m-r953');
+  const delivery=await sendYoutubeCommentItemsR953(env,db,enriched,identity,startedAt,'recent6-plus-old1-10m-r1026');
   const notifications=delivery.notifications||[];
   const hardFailed=notifications.filter(item=>!item.ok&&!item.pending).length;
   const pending=notifications.filter(item=>!item.ok&&item.pending).length;
   const result={
     ok:warnings.length===0&&hardFailed===0,
-    mode:'recent6-plus-old1-5m-r953',
+    mode:'recent6-plus-old1-10m-r1026',
     targets:plan.targets.length,
     recentTargets:plan.recentIds.length,
     olderTarget:plan.olderId||'',
@@ -8833,7 +8856,7 @@ async function handleFastYoutubeEngagementR333(request,env,options={}){
   const db=requireDb(env);
   await Promise.all([ensurePushAutomationSchema(db),ensureControlV1Schema(db)]);
   // R938: the scheduler still wakes every 2 minutes. Expensive likes/catalogue work
-  // remains ~6-minute economy, but the current LIVE video's ordinary comments and LIVE
+  // remains ~10-minute economy, but the current LIVE video's ordinary comments and LIVE
   // chat are checked on EVERY wake-up. The quota timestamp is separate from heartbeat.
   const requestUrlR797=new URL(request.url);
   const forceQuotaPollR797=options.force===true || requestUrlR797.searchParams.get('fresh')==='1' || (adminAuthorized(request,env) && !cronAuthorized(request,env));
@@ -8841,7 +8864,7 @@ async function handleFastYoutubeEngagementR333(request,env,options={}){
   const quotaStateR938=await getPushState(db,'youtube-fast-quota-last-at-r938').catch(()=>null);
   const quotaMsR938=Date.parse(String(quotaStateR938?.value||quotaStateR938?.updatedAt||''));
   const quotaAgeMsR938=Number.isFinite(quotaMsR938)?Math.max(0,Date.now()-quotaMsR938):Infinity;
-  const minGapMsR797=5.5*60*1000;
+  const minGapMsR797=9.5*60*1000;
   await setPushState(db,'youtube-fast-engagement-last-at-r333',invokedAtR938).catch(()=>{});
   if(!forceQuotaPollR797 && quotaAgeMsR938<minGapMsR797){
     try{
@@ -8849,7 +8872,7 @@ async function handleFastYoutubeEngagementR333(request,env,options={}){
       if(!channelId)channelId=await resolveYoutubeWebSubChannelIdR332(env,db);
       if(!channelId)throw new Error('youtube-channel-id-unavailable');
       const live2m=await checkYoutubeLiveCommentsEvery2mR938(env,db,channelId,invokedAtR938);
-      const summary={...live2m,skippedQuota:true,quotaCadenceMinutes:6,likesSent:0,videosChecked:live2m.liveVideoPinned?1:0};
+      const summary={...live2m,skippedQuota:true,quotaCadenceMinutes:10,likesSent:0,videosChecked:live2m.liveVideoPinned?1:0};
       const fastStatus=summary.failed>0?'failed':(summary.warnings.length||summary.pending>0)?'warning':'success';
       await setPushState(db,'youtube-fast-engagement-last-result-r333',JSON.stringify(summary)).catch(()=>{});
       await setPushState(db,'youtube-fast-engagement-last-status-r376',fastStatus).catch(()=>{});
@@ -8865,7 +8888,7 @@ async function handleFastYoutubeEngagementR333(request,env,options={}){
   }
   const autoCheckpointR398=options.skipCheckpoint
     ? {ok:true,skipped:true,reason:'checkpoint-owned-by-caller-r416'}
-    : await checkpointDailySummaryAutoR398(env,'youtube-fast-6m-r797').catch(error=>({ok:false,error:cleanPlainText(error?.message||error,300)}));
+    : await checkpointDailySummaryAutoR398(env,'youtube-fast-10m-r1026').catch(error=>({ok:false,error:cleanPlainText(error?.message||error,300)}));
   const startedAt=new Date().toISOString();
   await Promise.all([
     setPushState(db,'youtube-fast-engagement-last-at-r333',startedAt),
@@ -9116,7 +9139,7 @@ async function handleFastYoutubeSubscriberCountR416(request, env, options = {}) 
   if (!adminAuthorized(request, env) && !cronAuthorized(request, env)) return { ok:false, error:'unauthorized' };
   const db = requireDb(env);
   await Promise.all([ensurePushAutomationSchema(db), ensureControlV1Schema(db), ensurePlatformAnalyticsSchema(db)]);
-  // R797: subscriberCount is cumulative, so a 10-minute API sample loses no
+  // R797: subscriberCount is cumulative, so a 15-minute API sample loses no
   // statistics; it only delays the +1 owner push by at most a few minutes.
   const requestUrlR797=new URL(request.url);
   const forceQuotaPollR797=options.force===true || requestUrlR797.searchParams.get('fresh')==='1' || (adminAuthorized(request,env) && !cronAuthorized(request,env));
@@ -9124,9 +9147,9 @@ async function handleFastYoutubeSubscriberCountR416(request, env, options = {}) 
     const lastR797=await getPushState(db,'youtube-subscriber-poll-last-at-r653').catch(()=>null);
     const lastMsR797=Date.parse(String(lastR797?.value||lastR797?.updatedAt||''));
     const ageMsR797=Number.isFinite(lastMsR797)?Math.max(0,Date.now()-lastMsR797):Infinity;
-    const minGapMsR797=9.5*60*1000;
+    const minGapMsR797=14.5*60*1000;
     if(ageMsR797<minGapMsR797){
-      return {ok:true,skipped:true,reason:'quota-eco-r797',cadenceMinutes:10,ageMinutes:Math.round(ageMsR797/6000)/10,nextInSeconds:Math.max(1,Math.ceil((minGapMsR797-ageMsR797)/1000)),checkedAt:new Date().toISOString()};
+      return {ok:true,skipped:true,reason:'quota-eco-r797',cadenceMinutes:15,ageMinutes:Math.round(ageMsR797/6000)/10,nextInSeconds:Math.max(1,Math.ceil((minGapMsR797-ageMsR797)/1000)),checkedAt:new Date().toISOString()};
     }
   }
   const startedAt = new Date().toISOString();
@@ -11256,6 +11279,16 @@ async function mergeYoutubeIdentityIntoLatestSnapshot(db, identity = {}, source 
   await ensurePlatformAnalyticsSchema(db);
   const row = await db.prepare(`SELECT metrics_json FROM platform_snapshots WHERE platform='youtube' ORDER BY datetime(created_at) DESC LIMIT 1`).first();
   const previous = parseSnapshotMetrics(row);
+  let safeStudioR1026=previous.studio||{};
+  if(!youtubeStudioMeaningfulR1026(safeStudioR1026)){
+    const historyR1026=await db.prepare(`SELECT metrics_json,created_at FROM platform_snapshots WHERE platform='youtube' ORDER BY datetime(created_at) DESC LIMIT 72`).all().catch(()=>({results:[]}));
+    for(const item of (historyR1026?.results||[])){
+      const candidate=parseSnapshotMetrics(item)?.studio||{};
+      if(!youtubeStudioMeaningfulR1026(candidate))continue;
+      safeStudioR1026={...candidate,recoveryR1026:{active:true,reason:'identity-merge-last-good',lastGoodSnapshotAt:item.created_at||candidate.updatedAt||''}};
+      break;
+    }
+  }
   const merged = {
     ...previous,
     configured:true,
@@ -11270,11 +11303,51 @@ async function mergeYoutubeIdentityIntoLatestSnapshot(db, identity = {}, source 
     commentsTotal:Math.max(0, Number(identity.commentsTotal ?? previous.commentsTotal ?? 0)),
     trackedVideos:Math.max(0, Number(identity.trackedVideos ?? previous.trackedVideos ?? 0)),
     channelUrl:cleanPlainText(identity.channelUrl || previous.channelUrl || '', 700),
-    studio:previous.studio || {},
+    studio:safeStudioR1026,
     updatedAt:new Date().toISOString()
   };
   await savePlatformSnapshot(db, 'youtube', merged, source);
   return merged;
+}
+
+
+// R1026: never let a transient Analytics/quota/processing gap overwrite the last
+// meaningful YouTube Studio snapshot with a wall of zeros. Channel identity may stay
+// live while Studio falls back to the most recent good 28-day payload.
+function youtubeStudioMeaningfulR1026(studio={}){
+  if(!studio||typeof studio!=='object')return false;
+  const summary=studio.summary||{};
+  const summarySignal=['views','estimatedMinutesWatched','averageViewDuration','likes','comments','shares','subscribersGained','subscribersLost']
+    .some(key=>Number(summary[key]||0)>0);
+  const arraySignal=['trend','countries','products28','contentTypes28','trafficSources28','subscriptionStatus28','devices28','topVideos28','topShorts28','topRegularVideos28']
+    .some(key=>Array.isArray(studio[key])&&studio[key].some(row=>Number(row?.views||row?.estimatedMinutesWatched||row?.viewerPercentage||row?.shares||0)>0));
+  return Boolean(summarySignal||arraySignal);
+}
+
+function mergeYoutubeStudioSafeR1026(current={},previous={}){
+  const now=current&&typeof current==='object'?current:{};
+  const old=previous&&typeof previous==='object'?previous:{};
+  if(!now.connected)return now;
+  const oldGood=youtubeStudioMeaningfulR1026(old);
+  const nowGood=youtubeStudioMeaningfulR1026(now);
+  const errors=[...(Array.isArray(now.partialErrors)?now.partialErrors:[]),now.summaryError||'',now.trendError||''].filter(Boolean);
+  if(!nowGood&&oldGood){
+    return {
+      ...old,
+      configured:true,connected:true,workerManaged:true,
+      partialErrors:errors,
+      recoveryR1026:{active:true,reason:'latest-studio-empty-or-failed',failedUpdatedAt:now.updatedAt||'',lastGoodUpdatedAt:old.updatedAt||''},
+      updatedAt:old.updatedAt||now.updatedAt||new Date().toISOString()
+    };
+  }
+  if(!oldGood||!errors.length)return {...now,recoveryR1026:{active:false}};
+  const out={...now,recoveryR1026:{active:false,partialFallback:true,lastGoodUpdatedAt:old.updatedAt||''}};
+  if(now.summaryError&&old.summary)out.summary=old.summary;
+  if(now.trendError&&Array.isArray(old.trend)&&old.trend.length)out.trend=old.trend;
+  for(const key of ['countries','dailyCountries','weeklyCountries','previousWeekCountries','age','gender','sharing','products28','contentTypes28','trafficSources28','subscriptionStatus28','devices28','topVideos28','topShorts28','topRegularVideos28','engagementVideos28']){
+    if((!Array.isArray(now[key])||!now[key].length)&&Array.isArray(old[key])&&old[key].length)out[key]=old[key];
+  }
+  return out;
 }
 
 async function refreshControlSnapshots(env, { force = false } = {}) {
@@ -11290,6 +11363,7 @@ async function refreshControlSnapshots(env, { force = false } = {}) {
   const latestYoutubeMetrics = parseSnapshotMetrics(latestYoutubeSnapshot);
   const latestInstagramMetrics = parseSnapshotMetrics(latestInstagramSnapshot);
   const hasCompleteYoutubeSnapshot = Boolean(latestYoutubeMetrics?.configured)
+    && (!latestYoutubeMetrics?.studio?.connected || youtubeStudioMeaningfulR1026(latestYoutubeMetrics?.studio))
     && Array.isArray(latestYoutubeMetrics?.studio?.countries)
     && Array.isArray(latestYoutubeMetrics?.studio?.dailyCountries)
     && Array.isArray(latestYoutubeMetrics?.studio?.weeklyCountries)
@@ -11340,6 +11414,9 @@ async function refreshControlSnapshots(env, { force = false } = {}) {
 
   if (results[1].status === 'fulfilled' && results[1].value?.configured) {
     const yt = results[1].value;
+    const studioSafeR1026=yt.studio?.connected
+      ? mergeYoutubeStudioSafeR1026(yt.studio,latestYoutubeMetrics?.studio||{})
+      : yt.studio;
     await savePlatformSnapshot(db, 'youtube', {
       configured:true,
       channelId:yt.channelId || '',
@@ -11352,45 +11429,48 @@ async function refreshControlSnapshots(env, { force = false } = {}) {
       likesTotal:Math.max(0, Number(latestYoutubeMetrics?.likesTotal || 0)),
       commentsTotal:Math.max(0, Number(latestYoutubeMetrics?.commentsTotal || 0)),
       trackedVideos:Math.max(0, Number(latestYoutubeMetrics?.trackedVideos || 0)),
-      studio:yt.studio?.connected ? {
+      studio:studioSafeR1026?.connected ? {
         configured:true,
         connected:true,
         workerManaged:true,
-        summary:yt.studio.summary || {},
-        trend:yt.studio.trend || [],
-        countries:yt.studio.countries || [],
-        dailyCountries:yt.studio.dailyCountries || [],
-        weeklyCountries:yt.studio.weeklyCountries || [],
-        previousWeekCountries:yt.studio.previousWeekCountries || [],
-        age:yt.studio.age || [],
-        gender:yt.studio.gender || [],
-        sharing:yt.studio.sharing || [],
-        products28:Array.isArray(yt.studio.products28) ? yt.studio.products28 : [],
-        contentTypes28:Array.isArray(yt.studio.contentTypes28) ? yt.studio.contentTypes28 : [],
-        trafficSources28:Array.isArray(yt.studio.trafficSources28) ? yt.studio.trafficSources28 : [],
-        subscriptionStatus28:Array.isArray(yt.studio.subscriptionStatus28) ? yt.studio.subscriptionStatus28 : [],
-        devices28:Array.isArray(yt.studio.devices28) ? yt.studio.devices28 : [],
-        artistAnalytics:yt.studio.artistAnalytics || { officialArtistChannel:true, apiSafe:true, periodDays:28, version:'r913' },
-        topVideos28:Array.isArray(yt.studio.topVideos28) ? yt.studio.topVideos28 : [],
-        topShorts28:Array.isArray(yt.studio.topShorts28) ? yt.studio.topShorts28 : [],
-        topRegularVideos28:Array.isArray(yt.studio.topRegularVideos28) ? yt.studio.topRegularVideos28 : [],
-        engagementVideos28:Array.isArray(yt.studio.engagementVideos28) ? yt.studio.engagementVideos28 : [],
-        topContentUpdatedAt:yt.studio.topContentUpdatedAt || yt.studio.updatedAt || startedAt,
-        partialErrors:yt.studio.partialErrors || [],
-        countryCount:Number(yt.studio.countryCount || 0),
-        startDate:yt.studio.startDate || '',
-        endDate:yt.studio.endDate || '',
-        dailyDate:yt.studio.dailyDate || '',
-        weekStartDate:yt.studio.weekStartDate || '',
-        weekEndDate:yt.studio.weekEndDate || '',
-        previousWeekStartDate:yt.studio.previousWeekStartDate || '',
-        previousWeekEndDate:yt.studio.previousWeekEndDate || '',
-        updatedAt:yt.studio.updatedAt || startedAt
+        summary:studioSafeR1026.summary || {},
+        trend:studioSafeR1026.trend || [],
+        countries:studioSafeR1026.countries || [],
+        dailyCountries:studioSafeR1026.dailyCountries || [],
+        weeklyCountries:studioSafeR1026.weeklyCountries || [],
+        previousWeekCountries:studioSafeR1026.previousWeekCountries || [],
+        age:studioSafeR1026.age || [],
+        gender:studioSafeR1026.gender || [],
+        sharing:studioSafeR1026.sharing || [],
+        products28:Array.isArray(studioSafeR1026.products28) ? studioSafeR1026.products28 : [],
+        contentTypes28:Array.isArray(studioSafeR1026.contentTypes28) ? studioSafeR1026.contentTypes28 : [],
+        trafficSources28:Array.isArray(studioSafeR1026.trafficSources28) ? studioSafeR1026.trafficSources28 : [],
+        subscriptionStatus28:Array.isArray(studioSafeR1026.subscriptionStatus28) ? studioSafeR1026.subscriptionStatus28 : [],
+        devices28:Array.isArray(studioSafeR1026.devices28) ? studioSafeR1026.devices28 : [],
+        artistAnalytics:studioSafeR1026.artistAnalytics || { officialArtistChannel:true, apiSafe:true, periodDays:28, version:'r913' },
+        topVideos28:Array.isArray(studioSafeR1026.topVideos28) ? studioSafeR1026.topVideos28 : [],
+        topShorts28:Array.isArray(studioSafeR1026.topShorts28) ? studioSafeR1026.topShorts28 : [],
+        topRegularVideos28:Array.isArray(studioSafeR1026.topRegularVideos28) ? studioSafeR1026.topRegularVideos28 : [],
+        engagementVideos28:Array.isArray(studioSafeR1026.engagementVideos28) ? studioSafeR1026.engagementVideos28 : [],
+        topContentUpdatedAt:studioSafeR1026.topContentUpdatedAt || studioSafeR1026.updatedAt || startedAt,
+        partialErrors:studioSafeR1026.partialErrors || [],
+        summaryError:studioSafeR1026.summaryError || '',
+        trendError:studioSafeR1026.trendError || '',
+        recoveryR1026:studioSafeR1026.recoveryR1026 || {active:false},
+        countryCount:Number(studioSafeR1026.countryCount || 0),
+        startDate:studioSafeR1026.startDate || '',
+        endDate:studioSafeR1026.endDate || '',
+        dailyDate:studioSafeR1026.dailyDate || '',
+        weekStartDate:studioSafeR1026.weekStartDate || '',
+        weekEndDate:studioSafeR1026.weekEndDate || '',
+        previousWeekStartDate:studioSafeR1026.previousWeekStartDate || '',
+        previousWeekEndDate:studioSafeR1026.previousWeekEndDate || '',
+        updatedAt:studioSafeR1026.updatedAt || startedAt
       } : {
-        configured:Boolean(yt.studio?.configured),
+        configured:Boolean(studioSafeR1026?.configured),
         connected:false,
         workerManaged:true,
-        error:yt.studio?.error || 'youtube-worker-refresh-token-missing'
+        error:studioSafeR1026?.error || 'youtube-worker-refresh-token-missing'
       },
       updatedAt:yt.updatedAt || startedAt
     }, 'YouTube Data API + server refresh token');
@@ -15529,9 +15609,10 @@ async function handleControlAudience(request, env) {
   if (!adminAuthorized(request, env)) return json({ ok:false, error:'unauthorized' }, 401);
   const db = requireDb(env);
   await Promise.all([ensurePlatformAnalyticsSchema(db), ensureSiteMetricsSchema(db)]);
-  const [gaRow, ytRow, scRow, igRow, siteLive] = await Promise.all([
+  const [gaRow, ytRow, ytHistoryR1026, scRow, igRow, siteLive] = await Promise.all([
     db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform='google-analytics' ORDER BY created_at DESC LIMIT 1`).first(),
     db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform='youtube' ORDER BY created_at DESC LIMIT 1`).first(),
+    db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform='youtube' ORDER BY datetime(created_at) DESC LIMIT 72`).all(),
     db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform='google-search-console' ORDER BY created_at DESC LIMIT 1`).first(),
     db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform='instagram' ORDER BY created_at DESC LIMIT 1`).first(),
     getSiteLiveMetrics(db)
@@ -15540,6 +15621,23 @@ async function handleControlAudience(request, env) {
   const googleSnapshot = parseSnapshotMetrics(gaRow);
   let youtubeSnapshot = parseSnapshotMetrics(ytRow);
   let youtubeSnapshotAt = ytRow?.created_at || youtubeSnapshot.updatedAt || '';
+  if(!youtubeStudioMeaningfulR1026(youtubeSnapshot?.studio||{})){
+    for(const row of (ytHistoryR1026?.results||[])){
+      const candidate=parseSnapshotMetrics(row);
+      if(!youtubeStudioMeaningfulR1026(candidate?.studio||{}))continue;
+      youtubeSnapshot={
+        ...youtubeSnapshot,
+        studio:{
+          ...candidate.studio,
+          configured:true,
+          connected:true,
+          workerManaged:true,
+          recoveryR1026:{active:true,reason:'historical-last-good',latestSnapshotAt:youtubeSnapshotAt||'',lastGoodSnapshotAt:row.created_at||candidate?.studio?.updatedAt||''}
+        }
+      };
+      break;
+    }
+  }
   const searchSnapshot = parseSnapshotMetrics(scRow);
   const instagramSnapshot = parseSnapshotMetrics(igRow);
   const refreshYoutube = new URL(request.url).searchParams.get('refresh') === '1';
@@ -16338,6 +16436,7 @@ async function handleControlObservability(request, env) {
   // physically trim older rows, and show a de-duplicated 2-hour active window.
   await db.prepare(`DELETE FROM system_logs WHERE datetime(created_at)<datetime('now','-24 hours')`).run().catch(()=>{});
   const dateKey = getBratislavaClock().date;
+  const youtubeDateKeyR1026=youtubePacificDateR944();
   const [health, counts, recent, usageRows, firstUsage] = await Promise.all([
     buildAndrikHealthSnapshot(env, { checkSite:true }),
     db.prepare(`
@@ -16367,17 +16466,19 @@ async function handleControlObservability(request, env) {
     db.prepare(`
       SELECT service, units, requests, details_json AS detailsJson, updated_at AS updatedAt
       FROM observability_usage
-      WHERE date_key=?
+      WHERE (service IN ('youtube-data-api-r1026','youtube-search-api-r1026') AND date_key=?)
+         OR (service NOT IN ('youtube-data-api-r1026','youtube-search-api-r1026') AND date_key=?)
       ORDER BY service
-    `).bind(dateKey).all(),
+    `).bind(youtubeDateKeyR1026,dateKey).all(),
     db.prepare(`SELECT MIN(updated_at) AS trackedSince FROM observability_usage`).first()
   ]);
   const usage = Object.fromEntries((usageRows.results || []).map(row => [row.service, {
     units:Number(row.units || 0), requests:Number(row.requests || 0), updatedAt:row.updatedAt || ''
   }]));
-  const dataUnits = Number(usage['youtube-data-api']?.units || 0);
+  const dataUnits = Number(usage['youtube-data-api-r1026']?.units || 0);
   const dataLimit = Math.max(100, Number(env.YOUTUBE_DAILY_QUOTA_LIMIT || 10000));
   const analyticsRequests = Number(usage['youtube-analytics-api']?.requests || 0);
+  const searchRequestsR1026=Number(usage['youtube-search-api-r1026']?.requests || 0);
   const healthUrl = new URL('/api/health', request.url).toString();
   return json({
     ok:true,
@@ -16388,8 +16489,10 @@ async function handleControlObservability(request, env) {
       scope:item.scope || 'system', level:item.level || 'warning', event:item.event || '', message:item.message || '', createdAt:item.createdAt || '', repeats:Math.max(1,Number(item.repeats||1))
     })),
     youtubeQuota:{
-      dateKey,
-      dataApi:{ units:dataUnits, limit:dataLimit, remaining:Math.max(0,dataLimit-dataUnits), percent:Math.min(100,Math.round((dataUnits/dataLimit)*1000)/10), requests:Number(usage['youtube-data-api']?.requests || 0) },
+      dateKey:youtubeDateKeyR1026,
+      resetTimeZone:'America/Los_Angeles',
+      dataApi:{ units:dataUnits, limit:dataLimit, remaining:Math.max(0,dataLimit-dataUnits), percent:Math.min(100,Math.round((dataUnits/dataLimit)*1000)/10), requests:Number(usage['youtube-data-api-r1026']?.requests || 0) },
+      searchApi:{ requests:searchRequestsR1026, bucket:'granular-search-list' },
       analyticsApi:{ requests:analyticsRequests },
       trackedSince:firstUsage?.trackedSince || '',
       approximate:true
@@ -20008,7 +20111,7 @@ async function handleRadioRemoteCommandR627(request,env){
   const db=env.COMMENTS_DB;if(!db)return json({ok:false,error:'database-not-configured'},503);
   const body=await request.json().catch(()=>({}));
   const action=String(body.action||'').trim().toLowerCase();
-  const allowed=new Set(['start','recover','stop','restart','encoder-start','encoder-stop','soft-restart','gold-restore','screen-restore','cache-clean','status','auto-safe','full-fit','visual-sync','visual-now','visual-auto','queue-move','audio-delay','track-remove','load-r988','queue-pick-r989']);
+  const allowed=new Set(['start','recover','stop','restart','encoder-start','encoder-stop','soft-restart','gold-restore','screen-restore','cache-clean','status','auto-safe','full-fit','visual-sync','visual-now','visual-auto','queue-move','audio-delay','track-remove','load-r988','queue-pick-r989','cleanup-r1026']);
   if(!allowed.has(action))return json({ok:false,error:'invalid-action'},400);
   const slot=String(body.slot||'').trim().toLowerCase();
   const audioDelayMsR949=Number(body.delayMs);
