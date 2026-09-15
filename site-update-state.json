@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1789188498697-fecbdcd700",
-  "release": "R1027",
-  "archiveName": "ANDRIK-R1027-ACCURATE-MONITOR-FULL.zip",
-  "sourceHead": "e627e1c10c2eb062d4269193d18fcb0bddfdc347",
-  "backupSha": "e627e1c10c2eb062d4269193d18fcb0bddfdc347",
+  "operationId": "publish-1789504297386-845b7ed034",
+  "release": "R1028",
+  "archiveName": "ANDRIK-R1028-LATEST-SINGLES-RELEASE-CHAIN.zip",
+  "sourceHead": "381f54df904d726604ed8406507a9a76586f1b31",
+  "backupSha": "381f54df904d726604ed8406507a9a76586f1b31",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-12T04:48:19.257Z"
+  "generatedAt": "2026-09-15T20:31:37.386Z"
 }

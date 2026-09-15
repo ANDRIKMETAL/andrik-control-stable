@@ -4,7 +4,7 @@ const selector='.andrik-singles-more';
 function go(e){
   const a=e.target?.closest?.(selector);if(!a)return;
   e.preventDefault();e.stopPropagation();
-  const target='/singles.html?v=55.00-r330';
+  const target='/singles.html?v=55.00-r1028';
   try{
     if(window.top && window.top!==window) window.top.location.assign(target);
     else window.location.assign(target);

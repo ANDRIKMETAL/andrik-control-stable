@@ -18360,17 +18360,16 @@ async function handleMusicMp3PutR314(request, env) {
   };
   await bucket.put(key,body,{httpMetadata:{contentType:'audio/mpeg',contentDisposition:`attachment; filename="${name}"`},customMetadata:metadata});
 
-  // A successful single upload is a release action: publish one deduplicated
-  // broadcast notification. Push failure never rolls back the MP3 upload.
-  let releasePush=null;
+  // R1028: every upload to singles/ is a complete release transaction:
+  // cleanup older same-title copies in R2 -> newest on site -> one PUSH.
+  // The same backend is used by Releases and by Radio Control quick upload.
+  let releasePush=null,singleCleanup=null;
   const radioQuickUpload=url.searchParams.get('radio')==='1';
-  // R965: one action = radio + public Singles + site PUSH.
-  // Radio Control already stores quick MP3 uploads under singles/, so every new
-  // track is immediately public on the homepage and gets one deduplicated PUSH.
   if(folder==='singles'){
+    singleCleanup=await musicCleanupSingleTitleDuplicatesR1028(bucket).catch(error=>({deleted:0,error:cleanPlainText(error?.message||error,300)}));
     releasePush=await publishSingleReleaseR616(env,{key,title:metadata.title||name,url:`https://music.andrikmetal.com/${key}`,publishedAt}).catch(error=>({ok:false,error:cleanPlainText(error?.message||error,300)}));
   }
-  return json({ok:true,key,url:`https://music.andrikmetal.com/${key}`,size:body.byteLength,metadata,releasePush});
+  return json({ok:true,key,url:`https://music.andrikmetal.com/${key}`,size:body.byteLength,metadata,releasePush,singleCleanup,radioQuickUpload});
 }
 
 
@@ -18640,40 +18639,32 @@ async function publishSingleReleaseR616(env,{key,title,url='',publishedAt=''}={}
 async function handleMusicSinglePublishR616(request,env){
   if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
   const bucket=getMusicBucketR314(env);if(!bucket)return json({ok:false,error:'music-bucket-not-configured'},503);
-  // R617: publish-latest must always use the newest public single from R2.
-  // This prevents a stale admin tab from sending a PUSH for an older track.
-  const listed=await bucket.list({prefix:'singles/',limit:1000,include:['customMetadata']});
-  const items=(listed.objects||[]).filter(o=>/\.mp3$/i.test(o.key)).sort((a,b)=>{
-    const am=a.customMetadata||{},bm=b.customMetadata||{};
-    const at=Date.parse(am.publishedAt||a.uploaded||0)||0,bt=Date.parse(bm.publishedAt||b.uploaded||0)||0;
-    if(bt!==at)return bt-at;
+  // R1028: cleanup old same-title copies first, then publish the true newest single.
+  await musicCleanupSingleTitleDuplicatesR1028(bucket).catch(()=>null);
+  const listed=await musicListSingleObjectsR1028(bucket);
+  const items=listed.objects.map(musicSingleTrackR1028).sort((a,b)=>{
+    const dt=musicSingleTimeR1028(b)-musicSingleTimeR1028(a);
+    if(dt)return dt;
     return String(b.key||'').localeCompare(String(a.key||''),'ru',{numeric:true,sensitivity:'base'});
   });
   const object=items[0]||null,key=object?.key||'';
   if(!object||!key)return json({ok:false,error:'single-not-found'},404);
-  const m=object.customMetadata||{};
   const fallback=key.split('/').pop().replace(/(?:\.mp3)+$/ig,'').replace(/[_-]+/g,' ');
-  const result=await publishSingleReleaseR616(env,{key,title:m.title||fallback,url:`https://music.andrikmetal.com/${key}`,publishedAt:m.publishedAt||object.uploaded||''});
+  const result=await publishSingleReleaseR616(env,{key,title:object.title||fallback,url:object.url||`https://music.andrikmetal.com/${key}`,publishedAt:object.publishedAt||object.uploaded||''});
   return json(result,result.ok?200:503);
 }
 // === End R616 ===
 
-async function handleMusicSinglesListR316(request, env) {
-  const bucket=getMusicBucketR314(env); if(!bucket) return json({ok:false,error:'music-bucket-not-configured'},503);
-
-  // R968 — complete R2 scan + canonical featured singles.
-  // R967 only inspected the first 1000 R2 objects and required an almost exact title.
-  // Old radio uploads can live later in the bucket and can have titles like
-  // "ANDRIK — Ты уже то". Scan every R2 page and normalize those two releases.
-  const objects=[]; let cursor=undefined, rounds=0;
-  do{
-    const page=await bucket.list({limit:1000,...(cursor?{cursor}:{}),include:['customMetadata']});
-    objects.push(...(page.objects||[]));
-    cursor=page.truncated?page.cursor:undefined;
-    rounds++;
-  }while(cursor&&rounds<12&&objects.length<12000);
-
-  const legacyTitles={
+// === R1028: latest-first public singles + duplicate-title cleanup ===
+function musicSingleNormalizeR1028(value){
+  let s=String(value||'').toLowerCase().replace(/ё/g,'е').replace(/(?:\.(?:mp3|wav))+$/ig,'');
+  try{s=s.normalize('NFKD').replace(/[\u0300-\u036f]/g,'')}catch(_){}
+  s=s.replace(/[«»“”„'’`]/g,'').replace(/[^\p{L}\p{N}]+/gu,' ').trim();
+  if(s.startsWith('andrik '))s=s.slice(7).trim();
+  return s;
+}
+function musicSingleLegacyTitleR1028(key){
+  const legacy={
     'singles/ty_uze_dostoin.mp3':'Ты уже достоин',
     'singles/tisina.mp3':'Тишина',
     'singles/track_1786265187225.mp3':'Свобода',
@@ -18682,51 +18673,102 @@ async function handleMusicSinglesListR316(request, env) {
     'singles/vse_est_brahman.mp3':'Всё есть Брахман',
     'singles/vsyo_est_brahman.mp3':'Всё есть Брахман'
   };
-  const norm=value=>String(value||'').toLowerCase().replace(/ё/g,'е').replace(/[«»“”„'’`]/g,'').replace(/[^a-zа-я0-9]+/gi,' ').trim();
-  const ascii=value=>String(value||'').toLowerCase().replace(/\.mp3$/i,'').replace(/[^a-z0-9]+/g,' ').trim();
-  const featuredWanted=['ты уже то','все есть брахман'];
-  const featuredKind=value=>{
-    const n=norm(value);
-    if(n==='ты уже то'||n.endsWith(' ты уже то'))return 'ty';
-    if(n==='все есть брахман'||n.endsWith(' все есть брахман'))return 'brahman';
-    return '';
+  return legacy[String(key||'')]||'';
+}
+function musicSingleTrackR1028(object){
+  const key=String(object?.key||'');
+  const m=object?.customMetadata||{};
+  const fallback=key.split('/').pop().replace(/(?:\.mp3)+$/ig,'').replace(/[_-]+/g,' ');
+  const title=musicSingleTitleR616(m.title||musicSingleLegacyTitleR1028(key)||fallback)||fallback;
+  const publishedAt=cleanPlainText(m.publishedAt||'',80)||object?.uploaded||null;
+  return {
+    key,
+    name:fallback,
+    title,
+    url:'https://music.andrikmetal.com/'+key,
+    uploaded:object?.uploaded||null,
+    publishedAt,
+    size:object?.size||0,
+    normalizedTitleR1028:musicSingleNormalizeR1028(title)
   };
-  const featuredKey=key=>{
-    const n=ascii(key);
-    if(/(?:^| )ty (?:uzhe|uze) to(?: |$)/.test(n))return 'ty';
-    if(/(?:^| )v(?:se|syo|syo) est brahman(?: |$)/.test(n))return 'brahman';
-    return '';
-  };
-  const canonicalTitle=(kind,title)=>kind==='ty'?'Ты уже то':kind==='brahman'?'Всё есть Брахман':title;
-
-  const tracks=objects.filter(o=>{
-    if(!/\.mp3$/i.test(o.key))return false;
-    if(/^singles\//i.test(o.key))return true;
-    const m=o.customMetadata||{};
-    const fallback=o.key.split('/').pop().replace(/(?:\.mp3)+$/ig,'').replace(/[_-]+/g,' ');
-    return Boolean(featuredKind(m.title||legacyTitles[o.key]||fallback)||featuredKey(o.key));
-  }).map(o=>{
-    const m=o.customMetadata||{};
-    const fallback=o.key.split('/').pop().replace(/(?:\.mp3)+$/ig,'').replace(/[_-]+/g,' ');
-    let title=musicSingleTitleR616(m.title||legacyTitles[o.key]||fallback)||fallback;
-    const kind=featuredKind(title)||featuredKey(o.key);
-    title=canonicalTitle(kind,title);
-    const publishedAt=cleanPlainText(m.publishedAt||'',80)||o.uploaded||null;
-    return {key:o.key,name:fallback,title,url:'https://music.andrikmetal.com/'+o.key,uploaded:o.uploaded||null,publishedAt,size:o.size||0,featuredR968:Boolean(kind),featuredKindR968:kind};
-  }).filter((x,i,a)=>{
-    if(x.featuredKindR968)return a.findIndex(y=>y.featuredKindR968===x.featuredKindR968)===i;
-    return a.findIndex(y=>y.key===x.key)===i;
-  }).sort((a,b)=>{
-    // Featured first in fixed order: Ты уже то, Всё есть Брахман.
-    const order={ty:2,brahman:1};
-    const ap=order[a.featuredKindR968]||0,bp=order[b.featuredKindR968]||0;
-    if(bp!==ap)return bp-ap;
-    const at=Date.parse(a.publishedAt||a.uploaded||0)||0, bt=Date.parse(b.publishedAt||b.uploaded||0)||0;
-    if(bt!==at)return bt-at;
+}
+function musicSingleTimeR1028(track){
+  return Date.parse(track?.publishedAt||track?.uploaded||0)||0;
+}
+async function musicListSingleObjectsR1028(bucket){
+  const objects=[];let cursor=undefined,rounds=0;
+  do{
+    const page=await bucket.list({prefix:'singles/',limit:1000,...(cursor?{cursor}:{}),include:['customMetadata']});
+    objects.push(...(page.objects||[]).filter(o=>/\.mp3$/i.test(String(o.key||''))));
+    cursor=page.truncated?page.cursor:undefined;
+    rounds++;
+  }while(cursor&&rounds<20&&objects.length<20000);
+  return {objects,rounds};
+}
+function musicSingleCanonicalScoreR1028(track){
+  const expected=musicTitleFileNameR335(track?.title||'');
+  const base=String(track?.key||'').split('/').pop();
+  let score=0;
+  if(expected&&base===expected)score+=20;
+  if(!/^track_\d+\.mp3$/i.test(base))score+=5;
+  if(track?.title)score+=3;
+  return score;
+}
+function musicDedupeSingleTracksR1028(tracks){
+  const sorted=[...(tracks||[])].sort((a,b)=>{
+    const dt=musicSingleTimeR1028(b)-musicSingleTimeR1028(a);
+    if(dt)return dt;
+    const ds=musicSingleCanonicalScoreR1028(b)-musicSingleCanonicalScoreR1028(a);
+    if(ds)return ds;
     return String(b.key||'').localeCompare(String(a.key||''),'ru',{numeric:true,sensitivity:'base'});
   });
-  return json({ok:true,version:'R968-FEATURED-SINGLES-PAGINATED',generatedAt:new Date().toISOString(),scannedObjects:objects.length,scanPages:rounds,latestKey:tracks[0]?.key||'',featured:['Ты уже то','Всё есть Брахман'],tracks});
+  const seen=new Set(),kept=[],duplicates=[];
+  for(const track of sorted){
+    const norm=track.normalizedTitleR1028||musicSingleNormalizeR1028(track.title)||String(track.key||'').toLowerCase();
+    if(!seen.has(norm)){seen.add(norm);kept.push(track)}
+    else duplicates.push(track);
+  }
+  return {kept,duplicates};
 }
+async function musicCleanupSingleTitleDuplicatesR1028(bucket){
+  const listed=await musicListSingleObjectsR1028(bucket);
+  const tracks=listed.objects.map(musicSingleTrackR1028);
+  const {kept,duplicates}=musicDedupeSingleTracksR1028(tracks);
+  const deleteKeys=duplicates.map(x=>x.key).filter(Boolean);
+  if(deleteKeys.length)await bucket.delete(deleteKeys);
+  return {scanned:tracks.length,deleted:deleteKeys.length,deletedKeys:deleteKeys,keptKeys:kept.map(x=>x.key),rounds:listed.rounds};
+}
+async function handleMusicSingleTitleDedupeR1028(request,env){
+  if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
+  const bucket=getMusicBucketR314(env);if(!bucket)return json({ok:false,error:'music-bucket-not-configured'},503);
+  const listed=await musicListSingleObjectsR1028(bucket);
+  const tracks=listed.objects.map(musicSingleTrackR1028);
+  const {kept,duplicates}=musicDedupeSingleTracksR1028(tracks);
+  if(request.method==='GET')return json({ok:true,dryRun:true,scanned:tracks.length,duplicateCount:duplicates.length,duplicates:duplicates.map(x=>({key:x.key,title:x.title,publishedAt:x.publishedAt})),kept:kept.map(x=>({key:x.key,title:x.title,publishedAt:x.publishedAt}))});
+  const body=await request.json().catch(()=>null);
+  if(body?.confirm!=='DELETE_DUPLICATE_SINGLE_TITLES')return json({ok:false,error:'confirmation-required'},400);
+  const deleteKeys=duplicates.map(x=>x.key).filter(Boolean);
+  if(deleteKeys.length)await bucket.delete(deleteKeys);
+  return json({ok:true,deleted:deleteKeys.length,deletedKeys:deleteKeys,kept:kept.map(x=>x.key)});
+}
+async function handleMusicSinglesListR316(request, env) {
+  const bucket=getMusicBucketR314(env); if(!bucket) return json({ok:false,error:'music-bucket-not-configured'},503);
+  const listed=await musicListSingleObjectsR1028(bucket);
+  const tracks0=listed.objects.map(musicSingleTrackR1028);
+  const {kept,duplicates}=musicDedupeSingleTracksR1028(tracks0);
+  const tracks=kept.map(({normalizedTitleR1028,...track})=>track);
+  return json({
+    ok:true,
+    version:'R1028-LATEST-TWO-NO-DUPLICATES',
+    generatedAt:new Date().toISOString(),
+    scannedObjects:tracks0.length,
+    scanPages:listed.rounds,
+    duplicateTitlesHidden:duplicates.length,
+    latestKey:tracks[0]?.key||'',
+    tracks
+  });
+}
+// === End R1028 ===
 
 async function handleMusicDownloadsR322(request, env){
   const bucket=getMusicBucketR314(env); if(!bucket) return json({ok:false,error:'music-bucket-not-configured'},503);
@@ -20362,6 +20404,7 @@ async function routeApi(request, env, ctx) {
     if (path === '/api/music/albums/status' && request.method === 'GET') return await handleMusicAlbumsPublicStatusR446(request, env);
     if (path === '/api/music/album-download' && (request.method === 'GET' || request.method === 'HEAD')) return await handleMusicAlbumDownloadR446(request, env);
     if (path === '/api/control/music/single/publish-latest' && request.method === 'POST') return await handleMusicSinglePublishR616(request, env);
+    if (path === '/api/control/music/singles/dedupe-titles' && ['GET','POST'].includes(request.method)) return await handleMusicSingleTitleDedupeR1028(request, env);
     if (path === '/api/music/singles' && request.method === 'GET') return await handleMusicSinglesListR316(request, env);
     if (path === '/api/music/downloads' && request.method === 'GET') return await handleMusicDownloadsR322(request, env);
     if (path === '/api/music/download' && request.method === 'GET') return await handleMusicDownloadR327(request, env);
