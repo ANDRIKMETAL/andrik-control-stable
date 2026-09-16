@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1789504297386-845b7ed034",
-  "release": "R1028",
-  "archiveName": "ANDRIK-R1028-LATEST-SINGLES-RELEASE-CHAIN.zip",
-  "sourceHead": "381f54df904d726604ed8406507a9a76586f1b31",
-  "backupSha": "381f54df904d726604ed8406507a9a76586f1b31",
+  "operationId": "publish-1789516978365-cdb5de6d3f",
+  "release": "R1029",
+  "archiveName": "ANDRIK-R1029-MEDIA-REMOVE-VIDEO-PREVIEW.zip",
+  "sourceHead": "40b2ff60a4380f7f6e228f7e296aa42e3c3a32cb",
+  "backupSha": "40b2ff60a4380f7f6e228f7e296aa42e3c3a32cb",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-15T20:31:37.386Z"
+  "generatedAt": "2026-09-16T00:02:58.365Z"
 }

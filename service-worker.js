@@ -1,6 +1,6 @@
 'use strict';
 
-const VERSION = '55.00-r1028-latest-singles-release-chain';
+const VERSION = '55.00-r1029-media-remove-video-preview';
 const IS_CONTROL_HOST = self.location.hostname.toLowerCase() === 'control.andrikmetal.com';
 
 async function deleteControlCaches(){

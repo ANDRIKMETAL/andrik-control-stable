@@ -18770,11 +18770,61 @@ async function handleMusicSinglesListR316(request, env) {
 }
 // === End R1028 ===
 
+// === R1029: Cloudflare-side radio exclusion, no VPS local-control dependency ===
+const RADIO_EXCLUSIONS_KEY_R1029='system/radio-exclusions-r1029.json';
+function radioRemovableMediaKeyR1029(value){
+  const key=cleanPlainText(value,500).replace(/^\/+/, '');
+  if(!key||key.includes('..')||key.includes('\\'))return '';
+  if(/^(?:singles|albums\/[^/]+)\/[^/]+\.mp3$/i.test(key))return key;
+  if(/^(?:radio\/clips|clips)\/[^/]+\.mp4$/i.test(key))return key;
+  return '';
+}
+function radioProtectedInsertR1029(key){
+  return /^radio\/clips\/radio-bumper-[123]\.mp4$/i.test(key)||/^radio\/clips\/radio-special-(?:30|60)min\.mp4$/i.test(key);
+}
+async function radioExclusionMapR1029(bucket){
+  try{
+    const obj=await bucket.get(RADIO_EXCLUSIONS_KEY_R1029);
+    if(!obj)return {};
+    const parsed=JSON.parse(await obj.text());
+    return parsed&&typeof parsed==='object'&&!Array.isArray(parsed)?parsed:{};
+  }catch(_){return {};}
+}
+async function radioWriteExclusionMapR1029(bucket,map){
+  await bucket.put(RADIO_EXCLUSIONS_KEY_R1029,JSON.stringify(map,null,2),{httpMetadata:{contentType:'application/json',cacheControl:'no-store'},customMetadata:{source:'ANDRIK R1029 radio exclude'}});
+}
+function radioObjectExcludedR1029(key,uploaded,map){
+  const clean=radioRemovableMediaKeyR1029(key);if(!clean||!map?.[clean])return false;
+  const excludedAt=Date.parse(String(map[clean]?.excludedAt||''))||0;
+  const uploadedAt=Date.parse(String(uploaded||''))||0;
+  return !(uploadedAt>0&&excludedAt>0&&uploadedAt>excludedAt);
+}
+async function handleRadioExcludeR1029(request,env){
+  if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
+  const bucket=getMusicBucketR314(env);if(!bucket)return json({ok:false,error:'music-bucket-not-configured'},503);
+  if(request.method==='GET'){
+    const map=await radioExclusionMapR1029(bucket);
+    return json({ok:true,version:'R1029',excluded:Object.entries(map).map(([key,v])=>({key,...v}))});
+  }
+  const body=await request.json().catch(()=>({}));
+  const key=radioRemovableMediaKeyR1029(body?.key||'');
+  if(!key)return json({ok:false,error:'invalid-media-key',message:'Можно убрать из эфира только MP3-трек или обычный MP4-клип.'},400);
+  if(radioProtectedInsertR1029(key))return json({ok:false,error:'protected-station-insert',message:'Эта служебная заставка защищена. Меняй её через раздел видео/заставок.'},409);
+  const head=await bucket.head(key).catch(()=>null);
+  if(!head)return json({ok:false,error:'not-found',message:'Файл не найден в R2.'},404);
+  const map=await radioExclusionMapR1029(bucket);
+  map[key]={excludedAt:new Date().toISOString(),title:cleanPlainText(body?.title||head?.customMetadata?.title||key,180),uploadedAt:head?.uploaded||null};
+  await radioWriteExclusionMapR1029(bucket,map);
+  return json({ok:true,key,title:map[key].title,message:'Убран только из эфира. Файл в R2 и на сайте сохранён.',refreshSeconds:120});
+}
+// === End R1029 ===
+
 async function handleMusicDownloadsR322(request, env){
   const bucket=getMusicBucketR314(env); if(!bucket) return json({ok:false,error:'music-bucket-not-configured'},503);
   const listed=await bucket.list({limit:1000,include:['customMetadata']});
   const legacyTitles={'singles/ty_uze_dostoin.mp3':'Ты уже достоин','singles/tisina.mp3':'Тишина','singles/track_1786265187225.mp3':'Свобода'};
-  const tracks=(listed.objects||[]).filter(o=>musicObjectKeyR317(o.key)).map(o=>{
+  const exclusionsR1029=await radioExclusionMapR1029(bucket);
+  const tracks=(listed.objects||[]).filter(o=>musicObjectKeyR317(o.key)&&!radioObjectExcludedR1029(o.key,o.uploaded,exclusionsR1029)).map(o=>{
     const m=o.customMetadata||{},folder=o.key.split('/').slice(0,-1).join('/'),base=o.key.split('/').pop().replace(/\.mp3$/i,'').replace(/[_-]+/g,' ');
     const trikaNo=trikaTrackNumberR517(o),trikaTitle=trikaTrackTitleR517(o);
     return {key:o.key,title:/^singles\//i.test(o.key)?musicSingleTitleR616(m.title||legacyTitles[o.key]||base):(trikaTitle||m.title||legacyTitles[o.key]||base),album:m.album||'',track:trikaNo?String(trikaNo):(m.track||''),folder,url:'https://music.andrikmetal.com/'+o.key,uploaded:o.uploaded||null};
@@ -19473,8 +19523,9 @@ function radioClipDirectUrlR691(object){
 }
 async function listRadioClipsR691(bucket){
   const listed=await bucket.list({prefix:RADIO_CLIP_PREFIX_R691,limit:1000,include:['customMetadata']});
+  const exclusionsR1029=await radioExclusionMapR1029(bucket);
   return (listed.objects||[])
-    .filter(o=>radioClipKeyR691(o.key)&&Number(o.size||0)>500000)
+    .filter(o=>radioClipKeyR691(o.key)&&Number(o.size||0)>500000&&!radioObjectExcludedR1029(o.key,o.uploaded,exclusionsR1029))
     .map(o=>{
       const meta=o.customMetadata||{},base=String(o.key||'').split('/').pop().replace(/\.mp4$/i,'').replace(/[-_]+/g,' ');
       const overrideTitle=RADIO_CLIP_TITLE_OVERRIDES_R694[o.key]||'';
@@ -19495,10 +19546,11 @@ async function handleRadioClipsListR691(request,env,admin=false){
     const yaObject=await bucket.head(yaKey).catch(()=>null);
     const yaStamp=Date.parse(yaObject?.uploaded||0)||0;
     const yaUrl=`https://music.andrikmetal.com/${yaKey}${yaStamp?`?v=${yaStamp}`:''}`;
+    const exclusionsR1029=await radioExclusionMapR1029(bucket);
     const builtIn=[
       {title:'JOY OF BEING',key:joyKey,size:Number(joyObject?.size||0),uploaded:joyObject?.uploaded||null,url:joyUrl},
       {title:'Я ЕСТЬ',key:yaKey,size:Number(yaObject?.size||0),uploaded:yaObject?.uploaded||null,url:yaUrl}
-    ];
+    ].filter(x=>x.size>0&&!radioObjectExcludedR1029(x.key,x.uploaded,exclusionsR1029));
     return json({ok:true,count:clips.length,clips,refreshSeconds:120,builtIn,bumperSlots:clips.filter(x=>x.bumperSlot).map(x=>x.bumperSlot),special30min:clips.find(x=>x.special30min)||null,special60min:clips.find(x=>x.special60min)||null});
   }catch(error){return json({ok:false,error:'radio-clips-list-failed',message:cleanPlainText(error?.message||error,420)},502);}
 }
@@ -20408,6 +20460,7 @@ async function routeApi(request, env, ctx) {
     if (path === '/api/music/singles' && request.method === 'GET') return await handleMusicSinglesListR316(request, env);
     if (path === '/api/music/downloads' && request.method === 'GET') return await handleMusicDownloadsR322(request, env);
     if (path === '/api/music/download' && request.method === 'GET') return await handleMusicDownloadR327(request, env);
+    if (path === '/api/control/radio-exclude-r1029' && ['GET','POST'].includes(request.method)) return await handleRadioExcludeR1029(request, env);
     if (path === '/api/control/r2-storage-r922' && ['GET','PATCH','DELETE'].includes(request.method)) return await handleR2StorageR922(request, env);
     if (path === '/api/control/music/library' && request.method === 'GET') return await handleMusicLibraryR317(request, env);
     if (path === '/api/control/music/file' && request.method === 'GET') return await handleMusicFileR317(request, env);
