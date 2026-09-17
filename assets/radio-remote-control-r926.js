@@ -8,7 +8,9 @@
   let busy=false,timer=null,tickerTimer=null,tickerSaving=false,lastServerTicker='',lastRemote=null;
 
   async function api(path,opts={}){
-    const r=await fetch(path,{...opts,credentials:'include',cache:'no-store',headers:{accept:'application/json','cache-control':'no-cache',...(opts.headers||{})}});
+    let key='';try{key=localStorage.getItem('andrik-comments-admin-key-persistent')||sessionStorage.getItem('andrik-comments-admin-key')||localStorage.getItem('andrikAdminKey')||''}catch(_){}
+    const auth=key?{authorization:`Bearer ${key}`,'x-admin-key':key}:{};
+    const r=await fetch(path,{...opts,credentials:'include',cache:'no-store',headers:{accept:'application/json','cache-control':'no-cache',...auth,...(opts.headers||{})}});
     const d=await r.json().catch(()=>({}));
     if(!r.ok){const e=new Error(d.message||d.error||`HTTP ${r.status}`);e.data=d;e.status=r.status;throw e}
     return d;

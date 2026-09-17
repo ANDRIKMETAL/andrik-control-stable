@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1789649075402-9014bd3862",
-  "release": "R1035",
-  "archiveName": "ANDRIK-R1035-HOME-GLOBE-FIX.zip",
-  "sourceHead": "42158a6b56dc84f1d2982d475afef21c45b63c22",
-  "backupSha": "42158a6b56dc84f1d2982d475afef21c45b63c22",
+  "operationId": "publish-1789649682930-58ff35088f",
+  "release": "R1036",
+  "archiveName": "ANDRIK-R1036-SITE-LIVE-CONTROL-FIX.zip",
+  "sourceHead": "ed6ea51569f10e126cd7660279b595e2f60a0b06",
+  "backupSha": "ed6ea51569f10e126cd7660279b595e2f60a0b06",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-17T12:44:35.402Z"
+  "generatedAt": "2026-09-17T12:54:42.930Z"
 }
