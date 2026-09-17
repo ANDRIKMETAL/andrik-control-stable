@@ -1,0 +1,10 @@
+ANDRIK CONTROL R1038 — LIVE DATA/AUTH PATCH
+
+- Current track: live event fallback instead of stale top-level current.
+- Queue: upcomingR943 -> R942 -> R934 fallback.
+- Radio control API calls send the existing admin key when available, with owner cookie retained.
+- YouTube Live stats use the same authenticated request path.
+- VPS Disaster Recovery check uses authenticated request path.
+- Top radio card opens the exact current YouTube Live watch URL.
+- Cache-busted R1038 assets.
+- Radio/VPS backend is not modified by this site archive.

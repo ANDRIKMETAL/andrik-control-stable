@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1789650169680-0fcf86bec0",
-  "release": "R1037",
-  "archiveName": "ANDRIK-R1037-SITE-CONTROL-AUTH-STATS-DR.zip",
-  "sourceHead": "0679045bdc04d6713b950cb6efb65a1f87b93324",
-  "backupSha": "0679045bdc04d6713b950cb6efb65a1f87b93324",
+  "operationId": "publish-1789651179310-5c86732157",
+  "release": "R1038",
+  "archiveName": "ANDRIK-R1038-LIVE-DATA-AUTH-FIX.zip",
+  "sourceHead": "858fdd3201805589aa5d8af65365f2bb1be6800f",
+  "backupSha": "858fdd3201805589aa5d8af65365f2bb1be6800f",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-17T13:02:49.680Z"
+  "generatedAt": "2026-09-17T13:19:39.310Z"
 }
