@@ -20216,7 +20216,7 @@ async function handleRadioRemoteStatusR627(request,env){
   // R681 D1 economy: the OVH agent still polls every 4s for near-instant commands,
   // but its persisted heartbeat is intentionally throttled to ~30s. Allow two
   // missed persisted heartbeats before the UI calls the agent offline.
-  return json({ok:true,paired:Boolean(agent.tokenHash),online:Boolean(lastSeenMs&&Date.now()-lastSeenMs<75000),agent:{pairedAt:agent.pairedAt||null,lastSeen:agent.lastSeen||null,version:agent.version||null,status:agent.status||null},command,result,ticker});
+  return json({ok:true,paired:Boolean(agent.tokenHash),online:Boolean(lastSeenMs&&Date.now()-lastSeenMs<75000),serverNow:new Date().toISOString(),agent:{pairedAt:agent.pairedAt||null,lastSeen:agent.lastSeen||null,version:agent.version||null,status:agent.status||null},command,result,ticker},200,{'cache-control':'no-store, no-cache, must-revalidate','pragma':'no-cache','expires':'0'});
 }
 async function handlePublicRadioDiagnosticsR802(request,env){
   const db=env.COMMENTS_DB;

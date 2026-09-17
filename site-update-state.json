@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1789653263562-dd5fd7f159",
-  "release": "R1041",
-  "archiveName": "ANDRIK-R1041-CONTROL-RESTORE.zip",
-  "sourceHead": "10c86ce7451a58b3480596daa181e2f530e4bcad",
-  "backupSha": "10c86ce7451a58b3480596daa181e2f530e4bcad",
+  "operationId": "publish-1789654765543-ca03d79357",
+  "release": "R1044",
+  "archiveName": "ANDRIK-R1044-CONTROL-HEARTBEAT-FIX.zip",
+  "sourceHead": "9617a7ec22ccf85e80bf9f35c8253731770289fb",
+  "backupSha": "9617a7ec22ccf85e80bf9f35c8253731770289fb",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-17T13:54:23.562Z"
+  "generatedAt": "2026-09-17T14:19:25.543Z"
 }

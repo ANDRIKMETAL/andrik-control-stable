@@ -9,8 +9,8 @@ const icon=t=>t==='clip'?'🎬':t==='bumper'?'📻':t==='special'?'⚡':'♪';
 const fmtDur=v=>{v=Number(v)||0;if(v<=0)return'';const m=Math.floor(v/60),s=Math.floor(v%60);return `${m}:${String(s).padStart(2,'0')}`};
 const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=new Intl.NumberFormat('ru-RU').format(Math.max(0,Number(v)||0))};
 let rows=[],busy=false;
-const CACHE_KEY_R956='andrik-radio-queue-next6-r1041';
-const CURRENT_KEY_R1041='andrik-radio-current-r1041';
+const CACHE_KEY_R956='andrik-radio-queue-next6-r1044';
+const CURRENT_KEY_R1041='andrik-radio-current-r1044';
 let lastFirstKeyR1041='',lastServerCurrentR1041='',inferredCurrentR1041='';
 try{inferredCurrentR1041=localStorage.getItem(CURRENT_KEY_R1041)||''}catch(_){}
 const adminKeyR1038=()=>{try{return localStorage.getItem('andrik-comments-admin-key-persistent')||sessionStorage.getItem('andrik-comments-admin-key')||''}catch(_){return''}};
@@ -25,7 +25,11 @@ function currentFromRemoteR1041(data){
 }
 function applyCurrentAndLiveR1041(data,nextRows){
  const s=data?.agent?.status||{};
- const server=currentFromRemoteR1041(data);
+ const lastSeenMs=Date.parse(data?.agent?.lastSeen||'')||0;
+ const heartbeatFresh=Boolean(lastSeenMs&&Date.now()-lastSeenMs<90000);
+ // R1044: a stale R1026 snapshot must NEVER overwrite a newer queue-derived NOW.
+ // The queue can keep moving even when agent.lastSeen/current is frozen in D1.
+ const server=heartbeatFresh?currentFromRemoteR1041(data):'';
  const first=nextRows?.[0]||null;
  const firstKey=first?String(first.id||first.key||`${first.type||''}:${first.title||''}`):'';
  // Queue is the most frequently refreshed source. When NEXT #1 changes, the old
@@ -40,8 +44,9 @@ function applyCurrentAndLiveR1041(data,nextRows){
  }
  if(firstKey)lastFirstKeyR1041=firstKey;
  if(cur)cur.textContent=inferredCurrentR1041||server||'Радио готово';
- const live=Boolean(s.publisher&&s.producer&&['active','running'].includes(String(s.service||'').toLowerCase()));
+ const live=Boolean(heartbeatFresh&&s.publisher&&s.producer&&['active','running'].includes(String(s.service||'').toLowerCase()));
  const up=document.getElementById('youtubeRadioUptimeR565');
+ if(up&&!heartbeatFresh){up.textContent='—';}
  if(up&&live){
    const start=Date.parse(s.streamStartedAt||s.publisherStartedAt||s.startedAt||'')||0;
    if(start){const sec=Math.max(0,Math.floor((Date.now()-start)/1000)),d=Math.floor(sec/86400),h=Math.floor(sec%86400/3600),m=Math.floor(sec%3600/60);up.textContent=d?`${d} д ${h} ч`:h?`${h} ч ${m} мин`:`${m} мин`;}
