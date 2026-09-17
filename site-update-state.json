@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1789655581851-92f7f1dbf7",
-  "release": "R1045",
-  "archiveName": "ANDRIK-R1045-YOUTUBE-LIVE-TELEMETRY-1.zip",
-  "sourceHead": "94facf131c8453ee9d4533ac0306814037bab1cc",
-  "backupSha": "94facf131c8453ee9d4533ac0306814037bab1cc",
+  "operationId": "publish-1789667591649-29f59bbf44",
+  "release": "R1046",
+  "archiveName": "ANDRIK-R1046-VPS-PAIR-BUTTON.zip",
+  "sourceHead": "acc594afe397ad2354fde7eb93aac229bf0e46d8",
+  "backupSha": "acc594afe397ad2354fde7eb93aac229bf0e46d8",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-17T14:33:01.851Z"
+  "generatedAt": "2026-09-17T17:53:11.649Z"
 }
