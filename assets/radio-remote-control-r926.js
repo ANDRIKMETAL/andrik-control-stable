@@ -8,9 +8,7 @@
   let busy=false,timer=null,tickerTimer=null,tickerSaving=false,lastServerTicker='',lastRemote=null;
 
   async function api(path,opts={}){
-    let key='';try{key=localStorage.getItem('andrik-comments-admin-key-persistent')||sessionStorage.getItem('andrik-comments-admin-key')||localStorage.getItem('andrikAdminKey')||''}catch(_){}
-    const auth=key?{authorization:`Bearer ${key}`,'x-admin-key':key}:{};
-    const r=await fetch(path,{...opts,credentials:'include',cache:'no-store',headers:{accept:'application/json','cache-control':'no-cache',...auth,...(opts.headers||{})}});
+    const r=await fetch(path,{...opts,credentials:'include',cache:'no-store',headers:{accept:'application/json','cache-control':'no-cache',...(opts.headers||{})}});
     const d=await r.json().catch(()=>({}));
     if(!r.ok){const e=new Error(d.message||d.error||`HTTP ${r.status}`);e.data=d;e.status=r.status;throw e}
     return d;
@@ -39,7 +37,7 @@
 
   function render(data){
     lastRemote=data||null;
-    const online=Boolean(data?.online),paired=Boolean(data?.paired),agent=data?.agent||{},s=agent.status||{},cmd=data?.command||{},rawRes=data?.result||{};
+    const paired=Boolean(data?.paired),agent=data?.agent||{},s=agent.status||{},cmd=data?.command||{},rawRes=data?.result||{};const serviceLive=['active','running'].includes(String(s?.service||'').toLowerCase());const online=Boolean(data?.online)||Boolean(paired&&serviceLive);
     renderDiskR1015(s);
     const legacyFullFit=String(cmd?.action||rawRes?.action||'').toLowerCase()==='full-fit'||/full-fit/i.test(String(rawRes?.output||''));
     const res=legacyFullFit?{}:rawRes;

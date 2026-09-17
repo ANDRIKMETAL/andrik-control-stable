@@ -20042,10 +20042,14 @@ const VPS_DR_KEYS_R1033 = [
 ];
 async function handleVpsBackupSetR1033(request,env){
   if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
-  const bucket=getMusicBucketR314(env);if(!bucket)return json({ok:false,error:'music-bucket-not-configured'},503);
+  const musicBucket=getMusicBucketR314(env);
+  const backupBucket=env.BACKUP_BUCKET||env.BACKUPS||env.ANDRIK_BACKUPS||null;
+  if(!musicBucket&&!backupBucket)return json({ok:false,error:'backup-bucket-not-configured'},503);
   const files=[];
   for(const item of VPS_DR_KEYS_R1033){
-    const head=await bucket.head(item.key).catch(()=>null);
+    const preferred=item.kind==='transfer'?musicBucket:(backupBucket||musicBucket);
+    let head=preferred?await preferred.head(item.key).catch(()=>null):null;
+    if(!head&&musicBucket&&preferred!==musicBucket)head=await musicBucket.head(item.key).catch(()=>null);
     files.push({...item,exists:Boolean(head),size:Number(head?.size||0),uploaded:head?.uploaded||null,restorable:item.kind==='final'||item.kind==='transfer',support:item.kind==='sha256'||item.kind==='restore'||item.kind==='bootstrap'});
   }
   const final=files.find(x=>x.kind==='final'),sha=files.find(x=>x.kind==='sha256'),restore=files.find(x=>x.kind==='restore'),bootstrap=files.find(x=>x.kind==='bootstrap');

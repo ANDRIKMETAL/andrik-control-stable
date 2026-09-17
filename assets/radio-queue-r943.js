@@ -12,7 +12,7 @@ let rows=[],busy=false;
 const CACHE_KEY_R956='andrik-radio-queue-next6-r956';
 function saveCacheR956(){try{localStorage.setItem(CACHE_KEY_R956,JSON.stringify({at:Date.now(),rows:rows.slice(0,6)}))}catch(_){}}
 function loadCacheR956(){try{const d=JSON.parse(localStorage.getItem(CACHE_KEY_R956)||'null');if(d&&Array.isArray(d.rows)&&d.rows.length&&Date.now()-Number(d.at||0)<45000){rows=d.rows.slice(0,6);render();if(msg)msg.textContent='Показываю последнюю очередь · обновляю с OVH…';return true}}catch(_){}return false}
-async function api(path,opts={}){let key='';try{key=localStorage.getItem('andrik-comments-admin-key-persistent')||sessionStorage.getItem('andrik-comments-admin-key')||localStorage.getItem('andrikAdminKey')||''}catch(_){}const auth=key?{authorization:`Bearer ${key}`,'x-admin-key':key}:{};const r=await fetch(path,{credentials:'include',cache:'no-store',headers:{accept:'application/json',...auth,...(opts.headers||{})},...opts});const d=await r.json().catch(()=>({}));if(!r.ok)throw Object.assign(new Error(d.message||d.error||`HTTP ${r.status}`),{status:r.status,data:d});return d;}
+async function api(path,opts={}){const r=await fetch(path,{credentials:'include',cache:'no-store',headers:{accept:'application/json',...(opts.headers||{})},...opts});const d=await r.json().catch(()=>({}));if(!r.ok)throw Object.assign(new Error(d.message||d.error||`HTTP ${r.status}`),{status:r.status,data:d});return d;}
 function applyInventory(s){
  const ready=String(s?.inventoryTelemetry||'').startsWith('R805-')||Number(s?.libraryTracks||0)>0;
  if(!ready)return;
@@ -25,7 +25,7 @@ function render(){
 }
 async function refresh(usePrefetch=false){
  try{let d=null;if(usePrefetch&&window.__ANDRIK_QUEUE_PREFETCH_R956__){const pref=await window.__ANDRIK_QUEUE_PREFETCH_R956__;if(pref?.ok)d=pref.data}if(!d)d=await api('/api/control/radio-remote-r627/status?ts='+Date.now());const s=d?.agent?.status||{};if(cur)cur.textContent=String(s.current||'Радио готово');applyInventory(s);rows=Array.isArray(s.upcomingR943)?s.upcomingR943.slice(0,6):(Array.isArray(s.upcomingR942)?s.upcomingR942.slice(0,6):[]);render();if(rows.length)saveCacheR956();}
- catch(e){if(msg)msg.textContent='Очередь: '+e.message;try{const r=await fetch('/api/public/radio-diagnostics-r803?ts='+Date.now(),{cache:'no-store'});const d=await r.json();if(cur&&d?.current)cur.textContent=String(d.current)}catch(_){}}
+ catch(e){if(msg)msg.textContent='Очередь: '+e.message;}
 }
 async function move(index,direction){
  if(busy)return;const row=rows[index];if(!row)return;busy=true;if(msg)msg.textContent='Перемещаю…';
