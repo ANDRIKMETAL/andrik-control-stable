@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1789652699053-528f587369",
-  "release": "R1040",
-  "archiveName": "ANDRIK-R1040-RADIO-LIVE-REAL-FIX.zip",
-  "sourceHead": "e4088d5393c485a283cfdb42967692ef9526d92f",
-  "backupSha": "e4088d5393c485a283cfdb42967692ef9526d92f",
+  "operationId": "publish-1789653263562-dd5fd7f159",
+  "release": "R1041",
+  "archiveName": "ANDRIK-R1041-CONTROL-RESTORE.zip",
+  "sourceHead": "10c86ce7451a58b3480596daa181e2f530e4bcad",
+  "backupSha": "10c86ce7451a58b3480596daa181e2f530e4bcad",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-17T13:44:59.053Z"
+  "generatedAt": "2026-09-17T13:54:23.562Z"
 }

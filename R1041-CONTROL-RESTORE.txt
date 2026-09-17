@@ -1,0 +1,2 @@
+ANDRIK R1041 CONTROL RESTORE
+Frontend-only radio control recovery. No radio engine/systemd/ffmpeg changes.
