@@ -20031,6 +20031,28 @@ async function handleVpsBackupStatusR1030(request,env){
 }
 // === End R1030 ===
 
+
+// === R1033: current VPS disaster-recovery set in private R2 ===
+const VPS_DR_KEYS_R1033 = [
+  {key:'DR/ANDRIK-DR-FINAL-2026-09-17_12-17-09.tar.gz',kind:'final',label:'FINAL DR'},
+  {key:'DR/ANDRIK-DR-FINAL-2026-09-17_12-17-09.tar.gz.sha256',kind:'sha256',label:'SHA256'},
+  {key:'DR/ANDRIK-RESTORE-FINAL.sh',kind:'restore',label:'RESTORE.sh'},
+  {key:'DR/ANDRIK-BOOTSTRAP-FINAL.sh',kind:'bootstrap',label:'BOOTSTRAP · CLEAN UBUNTU'},
+  {key:'vps-backups/ANDRIK-TRANSFER-2026-09-17.tar.gz',kind:'transfer',label:'TRANSFER'}
+];
+async function handleVpsBackupSetR1033(request,env){
+  if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
+  const bucket=getMusicBucketR314(env);if(!bucket)return json({ok:false,error:'music-bucket-not-configured'},503);
+  const files=[];
+  for(const item of VPS_DR_KEYS_R1033){
+    const head=await bucket.head(item.key).catch(()=>null);
+    files.push({...item,exists:Boolean(head),size:Number(head?.size||0),uploaded:head?.uploaded||null,restorable:item.kind==='final'||item.kind==='transfer',support:item.kind==='sha256'||item.kind==='restore'||item.kind==='bootstrap'});
+  }
+  const final=files.find(x=>x.kind==='final'),sha=files.find(x=>x.kind==='sha256'),restore=files.find(x=>x.kind==='restore'),bootstrap=files.find(x=>x.kind==='bootstrap');
+  return json({ok:true,ready:Boolean(final?.exists&&sha?.exists&&restore?.exists),migrationReady:Boolean(final?.exists&&sha?.exists&&restore?.exists&&bootstrap?.exists),files});
+}
+// === End R1033 ===
+
 // === R481: native visual fragment "ПРОСНИСЬ" in R2 ===
 const PROSNIS_VIDEO_KEY_R481 = 'clips/prosnis-fragment-2026.mp4';
 
@@ -20448,6 +20470,7 @@ async function routeApi(request, env, ctx) {
     if (path === '/api/control/vps-backup-r1030/mpu/complete' && request.method === 'POST') return await handleVpsBackupCompleteR1030(request, env);
     if (path === '/api/control/vps-backup-r1030/mpu/abort' && request.method === 'DELETE') return await handleVpsBackupAbortR1030(request, env);
     if (path === '/api/control/vps-backup-r1030/status' && request.method === 'GET') return await handleVpsBackupStatusR1030(request, env);
+    if ((path === '/api/control/vps-backup-r1033/set' || path === '/api/control/vps-backup-r1034/set') && request.method === 'GET') return await handleVpsBackupSetR1033(request, env);
 
     if (path === '/api/control/radio-visuals-r620' && request.method === 'PUT') return await handleRadioVisualPutR620(request, env);
     if (path === '/api/control/radio-visuals-r662/mpu/start' && request.method === 'POST') return await handleRadioVisualMpuStartR662(request, env);

@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1789638434058-feb1bbf924",
-  "release": "R1032",
-  "archiveName": "ANDRIK-R1032-RESCUE-R2-TXT-FIX.zip",
-  "sourceHead": "8519f018e67cc98ad256558d01cbca96e6aef40f",
-  "backupSha": "8519f018e67cc98ad256558d01cbca96e6aef40f",
+  "operationId": "publish-1789649075402-9014bd3862",
+  "release": "R1035",
+  "archiveName": "ANDRIK-R1035-HOME-GLOBE-FIX.zip",
+  "sourceHead": "42158a6b56dc84f1d2982d475afef21c45b63c22",
+  "backupSha": "42158a6b56dc84f1d2982d475afef21c45b63c22",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-17T09:47:14.058Z"
+  "generatedAt": "2026-09-17T12:44:35.402Z"
 }
