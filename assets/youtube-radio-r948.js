@@ -1,6 +1,7 @@
 (()=>{
 'use strict';
 const root=document.getElementById('youtubeRadioR565');
+// R1040: owner-cookie + admin-key LIVE refresh; app link handled by proven R663 vnd.youtube path.
 if(!root)return;
 const libraryUrl='/api/music/downloads';
 const disabledAlbums=['albums/illusion-of-life/','albums/ocean/'];
@@ -71,7 +72,7 @@ function renderYoutube(data){
    note.textContent=issues.length?`YouTube: ${parts.join(' • ')} · ${issues.slice(0,2).map(x=>[safe(x?.type),safe(x?.reason),safe(x?.description)].filter(Boolean).join(' — ')).join(' · ')||'есть предупреждение'}`:`R948 · ${live?'LIVE':signal?'СИГНАЛ ПРИНЯТ, ЭФИР ЕЩЁ НЕ НАЧАТ':'ЖДЁТ СИГНАЛ'} · YouTube: ${parts.join(' • ')||'—'} · ${new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}`;
  }
 }
-async function loadYoutube(){try{const k=getKey();const res=await fetch(`/api/control/youtube-live-r565?active=1&ts=${Date.now()}`,{credentials:'include',headers:{accept:'application/json',...(k?{'x-admin-key':k,'authorization':`Bearer ${k}`}:{})},cache:'no-store'});const data=await res.json().catch(()=>({}));if(!res.ok)throw new Error(data.error||'HTTP '+res.status);renderYoutube(data)}catch(error){setLive(false,'НЕТ ДАННЫХ YOUTUBE');text('youtubeRadioHealthR565','НЕТ ДАННЫХ');text('youtubeRadioNowTitleR565','Не удалось получить статус эфира');text('youtubeRadioNowMetaR565',safe(error?.message)||'YouTube API недоступен')}}
+async function loadYoutube(){try{const k=getKey();const res=await fetch(`/api/control/youtube-live-r565?active=1&fresh=1&ts=${Date.now()}`,{credentials:'include',headers:{accept:'application/json',...(k?{'x-admin-key':k,'authorization':`Bearer ${k}`}:{})},cache:'no-store'});const data=await res.json().catch(()=>({}));if(!res.ok)throw new Error(data.error||'HTTP '+res.status);renderYoutube(data)}catch(error){setLive(false,'НЕТ ДАННЫХ YOUTUBE');text('youtubeRadioHealthR565','НЕТ ДАННЫХ');text('youtubeRadioNowTitleR565','Не удалось получить статус эфира');text('youtubeRadioNowMetaR565',safe(error?.message)||'YouTube API недоступен')}}
 let youtubeTimer=null,libraryTimer=null;
 function armNetworkTimers(){
   if(youtubeTimer)clearInterval(youtubeTimer);if(libraryTimer)clearInterval(libraryTimer);

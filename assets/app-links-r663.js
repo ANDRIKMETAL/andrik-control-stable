@@ -1,6 +1,8 @@
 (() => {
   'use strict';
 
+  // R1040: preserve proven Android APP-FIRST vnd.youtube launcher from R1032.
+
   // R663: Android YouTube APP-FIRST with safe offline-LIVE fallback. Never let a generic https intent be the
   // first route, because Android 12+ may resolve that straight to the browser.
   // Proven path: vnd.youtube:VIDEO_ID. For channel/live links we first resolve
