@@ -1,0 +1,8 @@
+ANDRIK R1039 · RADIO PANEL SURGICAL FIX
+
+- CURRENT: prefers newest current value from radio diagnostic/event telemetry, then falls back to status.current.
+- Queue: unchanged; upcomingR943/R942/R934 behavior preserved.
+- YouTube stats: owner key is sent as both x-admin-key and Authorization Bearer; cookie credentials preserved.
+- LIVE: admin radio links use canonical YouTube watch URL for Android app-link handling.
+- Control buttons/actions: unchanged.
+- Radio engine/server/systemd/FFmpeg: untouched.

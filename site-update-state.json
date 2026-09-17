@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1789651179310-5c86732157",
-  "release": "R1038",
-  "archiveName": "ANDRIK-R1038-LIVE-DATA-AUTH-FIX.zip",
-  "sourceHead": "858fdd3201805589aa5d8af65365f2bb1be6800f",
-  "backupSha": "858fdd3201805589aa5d8af65365f2bb1be6800f",
+  "operationId": "publish-1789651900388-dff29f8fcc",
+  "release": "R1039",
+  "archiveName": "ANDRIK-R1039-RADIO-PANEL-SURGICAL-FIX.zip",
+  "sourceHead": "7d75bdaeb8d3841f3be92676893f5026b4f73e55",
+  "backupSha": "7d75bdaeb8d3841f3be92676893f5026b4f73e55",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-17T13:19:39.310Z"
+  "generatedAt": "2026-09-17T13:31:40.388Z"
 }

@@ -127,7 +127,7 @@
     event.preventDefault();
     event.stopPropagation();
 
-    const webUrl = link.getAttribute('data-web-url') || link.href || 'https://www.youtube.com/@andrikmetal/live';
+    const webUrl = link.getAttribute('data-web-url') || link.href || 'https://www.youtube.com/watch?v=llul4kXpwsc';
     const knownId = link.getAttribute('data-youtube-live-id') || youtubeVideoId(webUrl) || cachedLive?.id || '';
     if (knownId) {
       launchAppFirst(webUrl, knownId);
