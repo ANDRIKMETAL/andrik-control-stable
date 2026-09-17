@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1789516978365-cdb5de6d3f",
-  "release": "R1029",
-  "archiveName": "ANDRIK-R1029-MEDIA-REMOVE-VIDEO-PREVIEW.zip",
-  "sourceHead": "40b2ff60a4380f7f6e228f7e296aa42e3c3a32cb",
-  "backupSha": "40b2ff60a4380f7f6e228f7e296aa42e3c3a32cb",
+  "operationId": "publish-1789637053791-5df3170266",
+  "release": "R1030",
+  "archiveName": "ANDRIK-R1030-VPS-BACKUP-R2.zip",
+  "sourceHead": "cb6ecb3c6d25f2135b226c37bb6bdefd92110aec",
+  "backupSha": "cb6ecb3c6d25f2135b226c37bb6bdefd92110aec",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-16T00:02:58.365Z"
+  "generatedAt": "2026-09-17T09:24:14.341Z"
 }

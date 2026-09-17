@@ -19994,6 +19994,43 @@ async function handleJoyOfBeingVideoPublicR557(request,env,forceDownload=false){
 // === End R557 JOY OF BEING official clip ===
 
 
+
+// === R1030: VPS disaster-recovery backup in private R2 ===
+const VPS_BACKUP_KEY_R1030 = 'vps-backups/ANDRIK-TRANSFER-2026-09-17.tar.gz';
+function vpsBackupUploadIdR1030(request){return String(new URL(request.url).searchParams.get('uploadId')||'').trim();}
+async function handleVpsBackupStartR1030(request,env){
+  if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
+  const bucket=getMusicBucketR314(env);if(!bucket)return json({ok:false,error:'music-bucket-not-configured'},503);
+  try{const upload=await bucket.createMultipartUpload(VPS_BACKUP_KEY_R1030,{httpMetadata:{contentType:'application/gzip',cacheControl:'private, no-store'},customMetadata:{source:'ANDRIK VPS Rescue R1030',purpose:'disaster-recovery',created:'2026-09-17'}});return json({ok:true,key:upload.key,uploadId:upload.uploadId,partSize:8*1024*1024});}
+  catch(error){return json({ok:false,error:'multipart-start-failed',message:cleanPlainText(error?.message||error,420)},502);}
+}
+async function handleVpsBackupPartR1030(request,env){
+  if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
+  const bucket=getMusicBucketR314(env);if(!bucket)return json({ok:false,error:'music-bucket-not-configured'},503);
+  const u=new URL(request.url),uploadId=vpsBackupUploadIdR1030(request),partNumber=parseInt(u.searchParams.get('partNumber')||'',10);
+  if(!uploadId||!Number.isFinite(partNumber)||partNumber<1||partNumber>10000||!request.body)return json({ok:false,error:'invalid-multipart-request'},400);
+  try{const part=await bucket.resumeMultipartUpload(VPS_BACKUP_KEY_R1030,uploadId).uploadPart(partNumber,request.body);return json({ok:true,partNumber:part.partNumber,etag:part.etag});}
+  catch(error){return json({ok:false,error:'multipart-part-failed',message:cleanPlainText(error?.message||error,420)},502);}
+}
+async function handleVpsBackupCompleteR1030(request,env){
+  if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
+  const bucket=getMusicBucketR314(env);if(!bucket)return json({ok:false,error:'music-bucket-not-configured'},503);
+  const uploadId=vpsBackupUploadIdR1030(request);if(!uploadId)return json({ok:false,error:'invalid-multipart-request'},400);
+  const body=await request.json().catch(()=>null),parts=Array.isArray(body?.parts)?body.parts:[];
+  const normalized=parts.map(p=>({partNumber:parseInt(p?.partNumber,10),etag:String(p?.etag||'')})).filter(p=>Number.isFinite(p.partNumber)&&p.partNumber>0&&p.etag).sort((a,b)=>a.partNumber-b.partNumber);
+  if(!normalized.length||normalized.length!==parts.length)return json({ok:false,error:'invalid-multipart-parts'},400);
+  try{await bucket.resumeMultipartUpload(VPS_BACKUP_KEY_R1030,uploadId).complete(normalized);const head=await bucket.head(VPS_BACKUP_KEY_R1030);return json({ok:true,key:VPS_BACKUP_KEY_R1030,size:Number(head?.size||0),uploaded:head?.uploaded||null});}
+  catch(error){return json({ok:false,error:'multipart-complete-failed',message:cleanPlainText(error?.message||error,420)},502);}
+}
+async function handleVpsBackupAbortR1030(request,env){
+  if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);const bucket=getMusicBucketR314(env);if(!bucket)return json({ok:false,error:'music-bucket-not-configured'},503);const uploadId=vpsBackupUploadIdR1030(request);if(!uploadId)return json({ok:false,error:'invalid-multipart-request'},400);
+  try{await bucket.resumeMultipartUpload(VPS_BACKUP_KEY_R1030,uploadId).abort();return json({ok:true});}catch(error){return json({ok:false,error:'multipart-abort-failed',message:cleanPlainText(error?.message||error,300)},400);}
+}
+async function handleVpsBackupStatusR1030(request,env){
+  if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);const bucket=getMusicBucketR314(env);if(!bucket)return json({ok:false,error:'music-bucket-not-configured'},503);const head=await bucket.head(VPS_BACKUP_KEY_R1030).catch(()=>null);return json({ok:true,exists:Boolean(head),key:VPS_BACKUP_KEY_R1030,size:Number(head?.size||0),uploaded:head?.uploaded||null});
+}
+// === End R1030 ===
+
 // === R481: native visual fragment "ПРОСНИСЬ" in R2 ===
 const PROSNIS_VIDEO_KEY_R481 = 'clips/prosnis-fragment-2026.mp4';
 
@@ -20405,6 +20442,12 @@ async function routeApi(request, env, ctx) {
     if ((path === '/api/radio-agent-r715/youtube-ensure' || path === '/api/radio-agent-r721/youtube-ensure') && request.method === 'POST') return await handleRadioAgentYoutubeEnsureR715(request, env); // R831 control compat: R803 agent calls R721 alias
     if (path === '/api/radio-agent-r627/result' && request.method === 'POST') return await handleRadioAgentResultR627(request, env);
     if (path === '/api/radio-agent-r650/visual' && (request.method === 'GET' || request.method === 'HEAD')) return await handleRadioAgentVisualR650(request, env);
+
+    if (path === '/api/control/vps-backup-r1030/mpu/start' && request.method === 'POST') return await handleVpsBackupStartR1030(request, env);
+    if (path === '/api/control/vps-backup-r1030/mpu/part' && request.method === 'PUT') return await handleVpsBackupPartR1030(request, env);
+    if (path === '/api/control/vps-backup-r1030/mpu/complete' && request.method === 'POST') return await handleVpsBackupCompleteR1030(request, env);
+    if (path === '/api/control/vps-backup-r1030/mpu/abort' && request.method === 'DELETE') return await handleVpsBackupAbortR1030(request, env);
+    if (path === '/api/control/vps-backup-r1030/status' && request.method === 'GET') return await handleVpsBackupStatusR1030(request, env);
 
     if (path === '/api/control/radio-visuals-r620' && request.method === 'PUT') return await handleRadioVisualPutR620(request, env);
     if (path === '/api/control/radio-visuals-r662/mpu/start' && request.method === 'POST') return await handleRadioVisualMpuStartR662(request, env);
