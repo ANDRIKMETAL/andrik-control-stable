@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1789654765543-ca03d79357",
-  "release": "R1044",
-  "archiveName": "ANDRIK-R1044-CONTROL-HEARTBEAT-FIX.zip",
-  "sourceHead": "9617a7ec22ccf85e80bf9f35c8253731770289fb",
-  "backupSha": "9617a7ec22ccf85e80bf9f35c8253731770289fb",
+  "operationId": "publish-1789655581851-92f7f1dbf7",
+  "release": "R1045",
+  "archiveName": "ANDRIK-R1045-YOUTUBE-LIVE-TELEMETRY-1.zip",
+  "sourceHead": "94facf131c8453ee9d4533ac0306814037bab1cc",
+  "backupSha": "94facf131c8453ee9d4533ac0306814037bab1cc",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-17T14:19:25.543Z"
+  "generatedAt": "2026-09-17T14:33:01.851Z"
 }

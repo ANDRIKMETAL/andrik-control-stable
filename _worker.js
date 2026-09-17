@@ -21670,11 +21670,47 @@ async function resolvePublicYoutubeLiveR623(env,{fresh=false}={}){
   return result;
 }
 
+// R1045: public Control LIVE telemetry fallback. This endpoint never starts/stops
+// a broadcast. When owner OAuth is unavailable in the browser, enrich the verified
+// public LIVE target with videos.list statistics/liveStreamingDetails so Control can
+// still show the real YouTube LIVE state, viewers, starts and likes instead of dashes.
 async function handlePublicYoutubeLiveTargetR623(request,env){
   const fresh=new URL(request.url).searchParams.get('fresh')==='1';
   const found=await resolvePublicYoutubeLiveR623(env,{fresh});
-  if(found)return json({ok:true,...found},200,JSON_HEADERS);
-  return json({ok:true,videoId:'',watchUrl:'',lifeCycleStatus:'',streamStatus:'',active:false,source:'no-verified-live-r623',fallbackUrl:'/radio-live'},200,JSON_HEADERS);
+  if(found?.videoId){
+    const videoId=cleanPlainText(found.videoId||'',80);
+    let video=null;
+    try{
+      const {data}=await youtubeApiJson(env,'videos',{
+        part:'snippet,status,statistics,liveStreamingDetails',id:videoId,maxResults:1
+      },{oauth:false,timeoutMs:7000});
+      video=Array.isArray(data?.items)?data.items[0]||null:null;
+    }catch(_){}
+    const details=video?.liveStreamingDetails||{};
+    const statistics=video?.statistics||{};
+    const actualStartTime=cleanPlainText(details?.actualStartTime||'',80);
+    const actualEndTime=cleanPlainText(details?.actualEndTime||'',80);
+    const active=Boolean(found?.active)||(Boolean(actualStartTime)&&!actualEndTime);
+    return json({
+      ok:true,...found,active,broadcastLive:active,signalActive:Boolean(found?.streamStatus==='active'||active),
+      lifeCycleStatus:active?'live':cleanPlainText(found?.lifeCycleStatus||'',80),
+      streamStatus:cleanPlainText(found?.streamStatus||(active?'active':''),80),
+      title:cleanPlainText(video?.snippet?.title||found?.title||'ANDRIK Metal Radio 24/7',220),
+      privacyStatus:cleanPlainText(video?.status?.privacyStatus||'',80),
+      concurrentViewers:details?.concurrentViewers==null?null:Math.max(0,Number(details.concurrentViewers)||0),
+      actualStartTime,scheduledStartTime:cleanPlainText(details?.scheduledStartTime||'',80),
+      views:statistics?.viewCount==null?null:Math.max(0,Number(statistics.viewCount)||0),
+      likes:statistics?.likeCount==null?null:Math.max(0,Number(statistics.likeCount)||0),
+      comments:statistics?.commentCount==null?null:Math.max(0,Number(statistics.commentCount)||0),
+      healthStatus:active?'LIVE':'',healthIssues:[],
+      studioUrl:`https://studio.youtube.com/video/${encodeURIComponent(videoId)}/livestreaming`,
+      analyticsUrl:`https://studio.youtube.com/video/${encodeURIComponent(videoId)}/analytics/tab-overview/period-default`,
+      watchUrl:`https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`,
+      source:`${cleanPlainText(found?.source||'public-live',100)}+public-video-r1045`,
+      updatedAt:new Date().toISOString()
+    },200,{...JSON_HEADERS,'cache-control':'no-store, max-age=0'});
+  }
+  return json({ok:true,videoId:'',watchUrl:'',lifeCycleStatus:'',streamStatus:'',active:false,source:'no-verified-live-r1045',fallbackUrl:'/radio-live',updatedAt:new Date().toISOString()},200,{...JSON_HEADERS,'cache-control':'no-store, max-age=0'});
 }
 
 async function handlePublicYoutubeRadioGoR623(request,env){
