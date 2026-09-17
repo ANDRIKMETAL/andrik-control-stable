@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1789637869558-9f7a54c273",
-  "release": "R1031",
-  "archiveName": "ANDRIK-R1031-RESCUE-VPS-BACKUP-R2.zip",
-  "sourceHead": "2ccaf19e8dc9e7cf378a227e2479e5c9eae55dd0",
-  "backupSha": "2ccaf19e8dc9e7cf378a227e2479e5c9eae55dd0",
+  "operationId": "publish-1789638434058-feb1bbf924",
+  "release": "R1032",
+  "archiveName": "ANDRIK-R1032-RESCUE-R2-TXT-FIX.zip",
+  "sourceHead": "8519f018e67cc98ad256558d01cbca96e6aef40f",
+  "backupSha": "8519f018e67cc98ad256558d01cbca96e6aef40f",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-17T09:37:49.938Z"
+  "generatedAt": "2026-09-17T09:47:14.058Z"
 }
