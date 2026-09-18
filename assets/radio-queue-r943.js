@@ -38,12 +38,17 @@ function applyCurrentAndLiveR1041(data,nextRows){
    inferredCurrentR1041=String(rows[0].title||'').trim();
    try{localStorage.setItem(CURRENT_KEY_R1041,inferredCurrentR1041)}catch(_){}
  }
- if(server&&server!==lastServerCurrentR1041){
-   lastServerCurrentR1041=server; inferredCurrentR1041=server;
-   try{localStorage.setItem(CURRENT_KEY_R1041,inferredCurrentR1041)}catch(_){}
+ // R1050 CURRENT TRUTH: the VPS current/status label can be feeder-ahead or stale.
+ // Never let it overwrite queue-derived NOW. The queue transition is the listener-timed source:
+ // when NEXT #1 changes, the old NEXT #1 is the item that has actually entered NOW.
+ // Server CURRENT is only a cold-start hint when we have no queue-derived value yet.
+ const serverLooksUsableR1050=Boolean(server && !/^(тишина|радио|radio|—)$/i.test(server.trim()));
+ if(!inferredCurrentR1041 && serverLooksUsableR1050){
+   lastServerCurrentR1041=server;
+   inferredCurrentR1041=server;
  }
  if(firstKey)lastFirstKeyR1041=firstKey;
- if(cur)cur.textContent=inferredCurrentR1041||server||'Радио готово';
+ if(cur)cur.textContent=inferredCurrentR1041||'LIVE · синхронизация названия…';
  const live=Boolean(heartbeatFresh&&s.publisher&&s.producer&&['active','running'].includes(String(s.service||'').toLowerCase()));
  const up=document.getElementById('youtubeRadioUptimeR565');
  if(up&&!heartbeatFresh){up.textContent='—';}

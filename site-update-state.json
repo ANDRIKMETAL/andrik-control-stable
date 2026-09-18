@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1789724607301-f2e1e99dc0",
-  "release": "R1049",
-  "archiveName": "ANDRIK-R1049-TRANSFER-R2-FIX.zip",
-  "sourceHead": "6feb9adb8644f404a4c8d77686b8f2c3e099dce2",
-  "backupSha": "6feb9adb8644f404a4c8d77686b8f2c3e099dce2",
+  "operationId": "publish-1789741706392-98dc6bbfa4",
+  "release": "R1050",
+  "archiveName": "ANDRIK-R1050-CURRENT-TITLE-QUEUE-TRUTH.zip",
+  "sourceHead": "3dec049b2cd476b852088ad638f6c4023fef3df8",
+  "backupSha": "3dec049b2cd476b852088ad638f6c4023fef3df8",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-18T09:43:27.301Z"
+  "generatedAt": "2026-09-18T14:28:26.392Z"
 }
