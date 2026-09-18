@@ -20047,9 +20047,18 @@ async function handleVpsBackupSetR1033(request,env){
   if(!musicBucket&&!backupBucket)return json({ok:false,error:'backup-bucket-not-configured'},503);
   const files=[];
   for(const item of VPS_DR_KEYS_R1033){
-    const preferred=item.kind==='transfer'?musicBucket:(backupBucket||musicBucket);
-    let head=preferred?await preferred.head(item.key).catch(()=>null):null;
-    if(!head&&musicBucket&&preferred!==musicBucket)head=await musicBucket.head(item.key).catch(()=>null);
+    // R1049 TRANSFER R2 FIX: search both private backup and music R2 bindings.
+    // TRANSFER may live in BACKUP_BUCKET after migration/upload, while older builds
+    // expected it only in MUSIC_BUCKET. Do not report ABSENT until both are checked.
+    const candidates=item.kind==='transfer'
+      ? [backupBucket,musicBucket]
+      : [backupBucket||musicBucket,musicBucket];
+    let head=null;
+    for(const bucket of candidates){
+      if(!bucket)continue;
+      head=await bucket.head(item.key).catch(()=>null);
+      if(head)break;
+    }
     files.push({...item,exists:Boolean(head),size:Number(head?.size||0),uploaded:head?.uploaded||null,restorable:item.kind==='final'||item.kind==='transfer',support:item.kind==='sha256'||item.kind==='restore'||item.kind==='bootstrap'});
   }
   const final=files.find(x=>x.kind==='final'),sha=files.find(x=>x.kind==='sha256'),restore=files.find(x=>x.kind==='restore'),bootstrap=files.find(x=>x.kind==='bootstrap');
