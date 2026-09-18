@@ -1,5 +1,0 @@
-ANDRIK R1040 RADIO PANEL FIX
-- CURRENT reads newest event across top-level, agent and status telemetry, then falls back to direct current.
-- YouTube LIVE refresh forces fresh=1 and keeps owner cookie/admin-key auth.
-- Android YouTube APP-FIRST vnd.youtube launcher from R1032 is preserved.
-- Radio engine / FFmpeg / systemd are not part of this site patch.

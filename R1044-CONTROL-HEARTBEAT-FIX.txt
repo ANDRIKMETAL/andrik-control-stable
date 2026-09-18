@@ -1,5 +1,0 @@
-ANDRIK R1044 CONTROL HEARTBEAT FIX
-- stale R1026 snapshots cannot overwrite queue-derived CURRENT
-- radio status endpoint forced no-store/no-cache
-- stale heartbeat is displayed as unknown, never fabricated live state
-- radio engine/FFmpeg/systemd untouched

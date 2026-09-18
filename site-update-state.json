@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1789668868790-2c6c8b5a48",
+  "operationId": "publish-1789722331861-6b51e1016c",
   "release": "R1048",
-  "archiveName": "ANDRIK-R1048-YOUTUBE-APP-FIRST-CURRENT-LIVE.zip",
-  "sourceHead": "58240c9c41f6186442b322d5cdf21a50237c2d95",
-  "backupSha": "58240c9c41f6186442b322d5cdf21a50237c2d95",
+  "archiveName": "ANDRIK-R1048-CLEAN-NO-EQUALIZER-1.zip",
+  "sourceHead": "3fa7a6ddffd98909efdca2d78cae9f4a91829418",
+  "backupSha": "3fa7a6ddffd98909efdca2d78cae9f4a91829418",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-17T18:14:28.790Z"
+  "generatedAt": "2026-09-18T09:05:31.861Z"
 }

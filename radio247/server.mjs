@@ -147,12 +147,8 @@ const MP3_BOUNDARY_FADE_IN_SECONDS_R758 = Math.max(0.20,Math.min(1.5,Number(proc
 // R721 keeps the proven 100-frame / 4-second exact-periodic QTRLE loops from R720.
 // The EQ is composited inside the current local rawvideo feeder. R816 keeps the
 // YouTube RTMPS publisher + its single H.264 encoder open permanently across switches.
-const EQUALIZER_FILES_R721 = Object.freeze({
-  morning: new URL('../assets/equalizer-morning-r796-1180.mov', import.meta.url).pathname,
-  day: new URL('../assets/equalizer-day-r796-1180.mov', import.meta.url).pathname,
-  evening: new URL('../assets/equalizer-evening-r796-1180.mov', import.meta.url).pathname,
-  night: new URL('../assets/equalizer-night-r796-1180.mov', import.meta.url).pathname
-});
+// R1048-CLEAN-EQ: legacy MOV equalizer assets removed; MP3 visual uses the static/fullscreen visual only.
+
 const OUTPUT_TIMESHIFT_SECONDS = 6; // R637: network recovery cushion; packets are NEVER dropped
 const VIDEO_BITRATE = '6000k'; // R762: safe 1080p25 quality lift; CBR only, encoder architecture/preset unchanged
 const AUDIO_BITRATE = '160k'; // R762: modest stereo AAC quality lift; sample rate/queues unchanged
@@ -251,7 +247,7 @@ const state = {
   lastFfmpegLine: '',
   equalizerPeriod: null,
   equalizerStyle: null,
-  equalizerEngine: 'R796-COMPACT-QTRLE-1180-25FPS-4-SLOT',
+  equalizerEngine: 'DISABLED-R1048-CLEAN',
   visualLoopOffsetSeconds: 0,
   visualContinuityMode: 'R735-WALLCLOCK-SEEK-CONTINUITY',
   clipAvSyncMode: 'R738-PTS0-ASYNC-FIRSTPTS0',
@@ -2252,19 +2248,7 @@ function activeVisualPeriodR721(){
   return runtimeForceVisualSlot || visualPeriodForHour(localHourInTimeZone());
 }
 
-function equalizerSpecR721(){
-  const period=activeVisualPeriodR721();
-  const specs={
-    morning:{name:'morning-soft-gold-compact-r796',path:EQUALIZER_FILES_R721.morning},
-    day:{name:'day-steel-compact-r796',path:EQUALIZER_FILES_R721.day},
-    evening:{name:'evening-amber-compact-r796',path:EQUALIZER_FILES_R721.evening},
-    night:{name:'night-blue-compact-r796',path:EQUALIZER_FILES_R721.night}
-  };
-  const spec=specs[period]||specs.day;
-  state.equalizerPeriod=period;
-  state.equalizerStyle=spec.name;
-  return {period,...spec};
-}
+// R1048-CLEAN-EQ: equalizerSpecR721 removed.
 
 function trackLabel(item,fallback='—'){
   if(!item)return fallback;
@@ -2346,8 +2330,8 @@ function compactCtaChainR783(trackDuration){
     if(subset.length===1)pre+=`[${prefix}src]null${labels};`;
     else pre+=`[${prefix}src]split=${subset.length}${labels};`;
   };
-  addSource(3,'subscribe','ctasub');
-  addSource(4,'like','ctalike');
+  addSource(2,'subscribe','ctasub');
+  addSource(3,'like','ctalike');
   let chain='';
   let base='qrbase';
   windows.forEach((w,i)=>{
@@ -2414,7 +2398,7 @@ function normalVideoFilterComplexR721({fadeIn=false,fadeInSeconds=CLIP_TO_TRACK_
   // R796: EQ is pre-scaled OFFLINE to 1180px wide (same 25fps/100-frame seamless loop).
   // No live EQ scaling. Static overlay coordinates use eval=init and redundant format
   // conversions between overlays are removed.
-  return `[0:v]setpts=PTS-STARTPTS,${vf}[base];[2:v]fps=${VIDEO_FPS},setpts=N/(${VIDEO_FPS}*TB),format=yuva420p[eqv];[base][eqv]overlay=x=(W-w)/2:y=H-h-76:shortest=0:eval=init:format=yuv420[eqbase];[1:v]format=yuva420p[qr];[eqbase][qr]overlay=x=W-w-24:y=24:shortest=0:eval=init:format=yuv420[qrbase];${cta.pre}${cta.chain}${maskChain}${startupMaskChain}${finalChain}`;
+  return `[0:v]setpts=PTS-STARTPTS,${vf}[base];[1:v]format=yuva420p[qr];[base][qr]overlay=x=W-w-24:y=24:shortest=0:eval=init:format=yuv420[qrbase];${cta.pre}${cta.chain}${maskChain}${startupMaskChain}${finalChain}`;
 }
 
 function clipFilterComplexR721(){
@@ -2922,13 +2906,12 @@ async function visualLoopOffsetR735(visualPath){
   return offset;
 }
 
-function normalVideoFeederArgsR721(visualPath,eqPath,{fadeIn=false,fadeInSeconds=CLIP_TO_TRACK_FADE_IN_SECONDS_R753,endFadeToBlack=false,trackDuration=0,visualOffsetSeconds=0,previewReload=false,boundaryTitleSwitchAt=0}={}){
+function normalVideoFeederArgsR721(visualPath,{fadeIn=false,fadeInSeconds=CLIP_TO_TRACK_FADE_IN_SECONDS_R753,endFadeToBlack=false,trackDuration=0,visualOffsetSeconds=0,previewReload=false,boundaryTitleSwitchAt=0}={}){
   const visualSeek=Number(visualOffsetSeconds)>0.05?['-ss',Number(visualOffsetSeconds).toFixed(3)]:[];
   return [
     '-hide_banner','-loglevel','warning',
     '-thread_queue_size','64','-fflags','+genpts+discardcorrupt','-err_detect','ignore_err','-re','-stream_loop','-1',...visualSeek,'-i',visualPath,
     '-loop','1','-framerate','1','-i',QR_OVERLAY_LIVE_R794,
-    '-thread_queue_size','32','-fflags','+genpts+discardcorrupt','-err_detect','ignore_err','-re','-stream_loop','-1','-i',eqPath,
     '-loop','1','-framerate','1','-i',CTA_OVERLAY_LIVE_R794,
     '-loop','1','-framerate','1','-i',CTA_LIKE_OVERLAY_LIVE_R794,
     '-filter_complex',normalVideoFilterComplexR721({fadeIn,fadeInSeconds,endFadeToBlack,trackDuration,previewReload,boundaryTitleSwitchAt}),
@@ -2938,14 +2921,12 @@ function normalVideoFeederArgsR721(visualPath,eqPath,{fadeIn=false,fadeInSeconds
 }
 
 function spawnRawNormalVideoChildR816(visualPath,{fadeIn=false,fadeInSeconds=CLIP_TO_TRACK_FADE_IN_SECONDS_R753,endFadeToBlack=false,trackDuration=0,visualOffsetSeconds=0,previewReload=false,boundaryTitleSwitchAt=0}={}){
-  const eq=equalizerSpecR721();
   if(!existsSync(visualPath)||statSync(visualPath).size<300000)throw new Error(`visual missing: ${visualPath}`);
   if(!existsSync(QR_OVERLAY_LIVE_R794)||statSync(QR_OVERLAY_LIVE_R794).size<20000)throw new Error(`QR overlay missing: ${QR_OVERLAY_LIVE_R794}`);
   if(!existsSync(CTA_OVERLAY_LIVE_R794)||statSync(CTA_OVERLAY_LIVE_R794).size<2500)throw new Error(`R767 CTA overlay missing: ${CTA_OVERLAY_LIVE_R794}`);
   if(!existsSync(CTA_LIKE_OVERLAY_LIVE_R794)||statSync(CTA_LIKE_OVERLAY_LIVE_R794).size<2500)throw new Error(`R783 LIKE CTA overlay missing: ${CTA_LIKE_OVERLAY_LIVE_R794}`);
-  if(!existsSync(eq.path)||statSync(eq.path).size<20000)throw new Error(`equalizer missing: ${eq.path}`);
-  const child=spawn('ffmpeg',normalVideoFeederArgsR721(visualPath,eq.path,{fadeIn,fadeInSeconds,endFadeToBlack,trackDuration,visualOffsetSeconds,previewReload,boundaryTitleSwitchAt}),{stdio:['ignore','pipe','pipe']}); // R831 MICRO-LAG FIX: normal priority restored
-  child.__r816EqPeriod=eq.period;
+  const child=spawn('ffmpeg',normalVideoFeederArgsR721(visualPath,{fadeIn,fadeInSeconds,endFadeToBlack,trackDuration,visualOffsetSeconds,previewReload,boundaryTitleSwitchAt}),{stdio:['ignore','pipe','pipe']}); // R831 MICRO-LAG FIX: normal priority restored
+  child.__r816EqPeriod=activeVisualPeriodR721();
   child.__r816VisualPath=visualPath;
   child.__r816IntentionalStop=false;
   child.stdout.on('error',()=>{});

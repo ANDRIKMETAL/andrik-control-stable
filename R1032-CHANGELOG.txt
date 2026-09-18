@@ -1,4 +1,0 @@
-ANDRIK R1032
-- Fix Rescue uploader delivery: public script is served as .txt instead of .sh.
-- Backup archive format and R2 destination unchanged.
-- No radio runtime changes.
