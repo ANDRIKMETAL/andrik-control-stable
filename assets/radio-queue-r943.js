@@ -10,48 +10,23 @@ const fmtDur=v=>{v=Number(v)||0;if(v<=0)return'';const m=Math.floor(v/60),s=Math
 const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=new Intl.NumberFormat('ru-RU').format(Math.max(0,Number(v)||0))};
 let rows=[],busy=false;
 const CACHE_KEY_R956='andrik-radio-queue-next6-r1044';
-const CURRENT_KEY_R1041='andrik-radio-current-r1044';
-let lastFirstKeyR1041='',lastServerCurrentR1041='',inferredCurrentR1041='';
-try{inferredCurrentR1041=localStorage.getItem(CURRENT_KEY_R1041)||''}catch(_){}
+// R1073 CURRENT + NEXT TRUTH: one VPS status snapshot is the only source.
+// No localStorage CURRENT inference and no event-history guessing.
 const adminKeyR1038=()=>{try{return localStorage.getItem('andrik-comments-admin-key-persistent')||sessionStorage.getItem('andrik-comments-admin-key')||''}catch(_){return''}};
-function currentFromRemoteR1041(data){
- const s=data?.agent?.status||{};
- const diag=[s?.diagnosticsR803,s?.diagnosticsR802,s?.diagnosticsR813,s?.diagnosticsR814].filter(Boolean);
- const pools=[data?.recentEvents,data?.events,data?.agent?.recentEvents,data?.agent?.events,s?.recentEvents,s?.events,...diag.map(x=>x?.events)];
- const ev=pools.flatMap(x=>Array.isArray(x)?x:[]).filter(Boolean).sort((a,b)=>(Date.parse(a?.at||a?.time||a?.ts||a?.createdAt||a?.date||'')||0)-(Date.parse(b?.at||b?.time||b?.ts||b?.createdAt||b?.date||'')||0));
- const titleOf=e=>String(e?.current??e?.title??e?.track??e?.now??e?.latest?.current??e?.status?.current??e?.snapshot?.current??e?.data?.current??e?.data?.title??'').trim();
- for(let i=ev.length-1;i>=0;i--){const v=titleOf(ev[i]);if(v)return v}
- return [data?.current,data?.nowPlaying?.title,data?.agent?.current,data?.agent?.nowPlaying?.title,s?.nowPlaying?.title,s?.current].map(v=>String(v??'').trim()).find(Boolean)||'';
+function currentTitleR1073(s){
+ const v=s?.current;
+ if(v&&typeof v==='object')return String(v.title||v.name||'').trim();
+ return String(v??'').trim();
 }
-function applyCurrentAndLiveR1041(data,nextRows){
+function applyCurrentAndLiveR1073(data){
  const s=data?.agent?.status||{};
  const lastSeenMs=Date.parse(data?.agent?.lastSeen||'')||0;
  const heartbeatFresh=Boolean(lastSeenMs&&Date.now()-lastSeenMs<90000);
- // R1044: a stale R1026 snapshot must NEVER overwrite a newer queue-derived NOW.
- // The queue can keep moving even when agent.lastSeen/current is frozen in D1.
- const server=heartbeatFresh?currentFromRemoteR1041(data):'';
- const first=nextRows?.[0]||null;
- const firstKey=first?String(first.id||first.key||`${first.type||''}:${first.title||''}`):'';
- // Queue is the most frequently refreshed source. When NEXT #1 changes, the old
- // NEXT #1 has just become NOW PLAYING. This survives a frozen status.current.
- if(lastFirstKeyR1041&&firstKey&&firstKey!==lastFirstKeyR1041&&rows?.[0]?.title){
-   inferredCurrentR1041=String(rows[0].title||'').trim();
-   try{localStorage.setItem(CURRENT_KEY_R1041,inferredCurrentR1041)}catch(_){}
- }
- // R1050 CURRENT TRUTH: the VPS current/status label can be feeder-ahead or stale.
- // Never let it overwrite queue-derived NOW. The queue transition is the listener-timed source:
- // when NEXT #1 changes, the old NEXT #1 is the item that has actually entered NOW.
- // Server CURRENT is only a cold-start hint when we have no queue-derived value yet.
- const serverLooksUsableR1050=Boolean(server && !/^(тишина|радио|radio|—)$/i.test(server.trim()));
- if(!inferredCurrentR1041 && serverLooksUsableR1050){
-   lastServerCurrentR1041=server;
-   inferredCurrentR1041=server;
- }
- if(firstKey)lastFirstKeyR1041=firstKey;
- if(cur)cur.textContent=inferredCurrentR1041||'LIVE · синхронизация названия…';
+ const serverCurrent=currentTitleR1073(s);
+ if(cur)cur.textContent=serverCurrent||'LIVE · синхронизация названия…';
  const live=Boolean(heartbeatFresh&&s.publisher&&s.producer&&['active','running'].includes(String(s.service||'').toLowerCase()));
  const up=document.getElementById('youtubeRadioUptimeR565');
- if(up&&!heartbeatFresh){up.textContent='—';}
+ if(up&&!heartbeatFresh)up.textContent='—';
  if(up&&live){
    const start=Date.parse(s.streamStartedAt||s.publisherStartedAt||s.startedAt||'')||0;
    if(start){const sec=Math.max(0,Math.floor((Date.now()-start)/1000)),d=Math.floor(sec/86400),h=Math.floor(sec%86400/3600),m=Math.floor(sec%3600/60);up.textContent=d?`${d} д ${h} ч`:h?`${h} ч ${m} мин`:`${m} мин`;}
@@ -72,7 +47,7 @@ function render(){
  list.innerHTML=rows.slice(0,6).map((r,i)=>`<div class="radio-queue-row-r942" data-qrow="${i}"><div class="radio-queue-num-r942">${i+1}</div><div class="radio-queue-icon-r942 radio-queue-type-${esc(r.type)}">${icon(r.type)}</div><div class="radio-queue-copy-r942"><b>${esc(r.title||'Без названия')}</b><small>${esc(r.type==='track'?'ANDRIK':r.type==='clip'?'КЛИП':r.type==='bumper'?'ЗАСТАВКА':'СПЕЦ')}</small></div><div class="radio-queue-dur-r942">${fmtDur(r.duration)}</div><button type="button" class="radio-queue-more-r942" data-qmore="${i}" aria-label="Действия">⋯</button><div class="radio-queue-menu-r942"><button type="button" data-qmove="up" data-qindex="${i}" ${i===0?'disabled':''}>↑ Переместить выше</button><button type="button" data-qmove="down" data-qindex="${i}" ${i>=rows.length-1?'disabled':''}>↓ Переместить ниже</button></div></div>`).join('');
 }
 async function refresh(usePrefetch=false){
- try{let d=null;if(usePrefetch&&window.__ANDRIK_QUEUE_PREFETCH_R956__){const pref=await window.__ANDRIK_QUEUE_PREFETCH_R956__;if(pref?.ok)d=pref.data}if(!d)d=await api('/api/control/radio-remote-r627/status?ts='+Date.now());const s=d?.agent?.status||{};applyInventory(s);const nextRows=Array.isArray(s.upcomingR943)&&s.upcomingR943.length?s.upcomingR943.slice(0,6):Array.isArray(s.upcomingR942)&&s.upcomingR942.length?s.upcomingR942.slice(0,6):Array.isArray(s.upcomingR934)?s.upcomingR934.slice(0,6):[];applyCurrentAndLiveR1041(d,nextRows);rows=nextRows;render();if(rows.length)saveCacheR956();}
+ try{let d=null;if(usePrefetch&&window.__ANDRIK_QUEUE_PREFETCH_R956__){const pref=await window.__ANDRIK_QUEUE_PREFETCH_R956__;if(pref?.ok)d=pref.data}if(!d)d=await api('/api/control/radio-remote-r627/status?ts='+Date.now());const s=d?.agent?.status||{};applyInventory(s);const nextRows=Array.isArray(s.upcomingR943)&&s.upcomingR943.length?s.upcomingR943.slice(0,6):Array.isArray(s.upcomingR942)&&s.upcomingR942.length?s.upcomingR942.slice(0,6):Array.isArray(s.upcomingR934)?s.upcomingR934.slice(0,6):[];applyCurrentAndLiveR1073(d);rows=nextRows;render();if(rows.length)saveCacheR956();}
  catch(e){if(msg)msg.textContent='Очередь: '+e.message;}
 }
 async function move(index,direction){
