@@ -1,0 +1,7 @@
+/* ANDRIK R602 — BEYOND official streaming release buttons */
+#album-beyond .beyond-release-actions-r602{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important;width:100%!important}
+#album-beyond .beyond-release-actions-r602 .album-platform-link{pointer-events:auto!important;opacity:1!important;filter:none!important;min-width:0!important;width:100%!important}
+#album-beyond .beyond-release-actions-r602 .youtube-music-btn-r602{border-color:rgba(255,74,74,.42)!important;background:linear-gradient(145deg,rgba(82,16,20,.88),rgba(35,8,12,.94))!important}
+#album-beyond .beyond-release-actions-r602 .beyond-player-r602{grid-column:1/-1!important;width:100%!important;max-width:none!important;justify-self:stretch!important}
+#album-beyond .beyond-release-actions-r602 .album-download-r446{grid-column:1/-1!important;width:100%!important}
+@media(max-width:560px){#album-beyond .beyond-release-actions-r602{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:7px!important}#album-beyond .beyond-release-actions-r602 .album-platform-link{padding-left:6px!important;padding-right:6px!important}#album-beyond .beyond-release-actions-r602 .album-platform-label{font-size:.72rem!important;line-height:1.08!important;text-align:center!important}#album-beyond .beyond-release-actions-r602 .beyond-player-r602{font-size:.78rem!important}}

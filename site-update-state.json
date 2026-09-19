@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1789811581750-2201da5a55",
-  "release": "R1073",
-  "archiveName": "ANDRIK-R1073-CURRENT-QUEUE-VPS-TRUTH.zip",
-  "sourceHead": "d093bc1a76afc9e4a9c4529a147e9961f26b5ade",
-  "backupSha": "d093bc1a76afc9e4a9c4529a147e9961f26b5ade",
+  "operationId": "publish-1789860561724-c9d237b392",
+  "release": "R1074",
+  "archiveName": "ANDRIK-R1074-BEYOND-RELEASE-LINKS.zip",
+  "sourceHead": "ee6633becf1aa4941ff7b8aec235db5ac7928fa1",
+  "backupSha": "ee6633becf1aa4941ff7b8aec235db5ac7928fa1",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-19T09:53:01.750Z"
+  "generatedAt": "2026-09-19T23:29:21.724Z"
 }
