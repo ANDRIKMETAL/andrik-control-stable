@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+UNIT='andrik-loudness-r1098.service'
+DIR='/var/cache/andrik-radio-r622/audio'
+LOG='/var/log/andrik-loudness-r1098.log'
+
+if systemctl is-active --quiet "$UNIT" 2>/dev/null; then
+  echo 'ALREADY RUNNING ✅'
+  echo "UNIT=$UNIT"
+  tail -n 8 "$LOG" 2>/dev/null || true
+  exit 0
+fi
+
+read -r TOTAL MISSING < <(python3 - "$DIR" <<'PY'
+import json,math,sys
+from pathlib import Path
+D=Path(sys.argv[1]); files=sorted(D.glob('*.mp3')) if D.is_dir() else []
+def valid(p):
+ s=Path(str(p)+'.r747-loudnorm.json')
+ try:
+  st=p.stat();r=json.loads(s.read_text())
+  if int(r.get('size',-1))!=st.st_size:return False
+  if abs(float(r.get('mtimeMs',-1))-(st.st_mtime_ns/1_000_000))>2:return False
+  return all(math.isfinite(float(r[k])) for k in ('input_i','input_lra','input_tp','input_thresh','target_offset'))
+ except Exception:return False
+print(len(files),sum(1 for p in files if not valid(p)))
+PY
+)
+
+echo "TOTAL=$TOTAL"
+echo "MISSING=$MISSING"
+if [ "$MISSING" -eq 0 ]; then
+  echo 'Все MP3 уже имеют R747-анализ ✅'
+  exit 0
+fi
+
+systemctl reset-failed "$UNIT" >/dev/null 2>&1 || true
+systemctl start "$UNIT"
+sleep 1
+
+echo 'STARTED ✅'
+echo 'TARGET=-14 LUFS · TP=-1.5 dBTP · LRA=11'
+echo 'LOW PRIORITY · RADIO NOT RESTARTED'
+echo "LOG=$LOG"

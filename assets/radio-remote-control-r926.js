@@ -26,6 +26,7 @@
   function hasR665Agent(data=lastRemote){return agentNumber(data)>=665}
   function hasR867Agent(data=lastRemote){return agentNumber(data)>=867}
   function hasR926Agent(data=lastRemote){return agentNumber(data)>=926}
+  function hasR1098Agent(data=lastRemote){return agentNumber(data)>=1098}
   function humanBytesR1015(v){const n=Math.max(0,Number(v)||0),g=1024**3,m=1024**2;if(n>=g)return `${Math.round(n/g)}G`;if(n>=m)return `${Math.round(n/m)}M`;return `${Math.round(n/1024)}K`}
   function renderDiskR1015(s){
     const d=s?.diskRootR1015||{};const rec=s?.recoveryR1015||{};const ok=Boolean(d.ok);const pct=Math.max(0,Math.min(100,Number(d.usedPercent)||0));
@@ -69,11 +70,12 @@
     const stale=activeRaw&&commandAge>=185000;
     const r867Only=new Set(['gold-restore','cache-clean','soft-restart']);
     const r926Only=new Set(['screen-restore']);
+    const r1098Only=new Set(['loudness-new-r1098']);
     document.querySelectorAll('[data-radio-action]').forEach(b=>{
       const action=String(b.dataset.radioAction||'');
-      const needsR867=r867Only.has(action),needsR926=r926Only.has(action);
-      b.disabled=busy||active||!online||(needsR867&&!hasR867Agent(data))||(needsR926&&!hasR926Agent(data));
-      b.title=!online?'OVH Agent offline':needsR926&&!hasR926Agent(data)?'Нужен OVH Agent R926':needsR867&&!hasR867Agent(data)?'Нужен OVH Agent R867':' ';
+      const needsR867=r867Only.has(action),needsR926=r926Only.has(action),needsR1098=r1098Only.has(action);
+      b.disabled=busy||active||!online||(needsR867&&!hasR867Agent(data))||(needsR926&&!hasR926Agent(data))||(needsR1098&&!hasR1098Agent(data));
+      b.title=!online?'OVH Agent offline':needsR1098&&!hasR1098Agent(data)?'Нужен OVH Agent R1098':needsR926&&!hasR926Agent(data)?'Нужен OVH Agent R926':needsR867&&!hasR867Agent(data)?'Нужен OVH Agent R867':' ';
     });
     document.querySelectorAll('[data-radio-command-state]').forEach(el=>{
       el.textContent=stale?`⚠ ${cmd.action||'команда'} зависла — управление разблокировано`:active?`OVH: ${cmd.action} · ${cmd.state==='queued'?'в очереди':'выполняется…'}`:res?.finishedAt?`${res.ok?'✅':'❌'} ${res.action||''} · ${fmt(res.finishedAt)}`:'Готов к команде';
@@ -313,6 +315,23 @@
     finally{busy=false;await refresh()}
   }
 
+  async function loudnessNewR1098(){
+    if(busy)return;
+    busy=true;render(lastRemote||{});
+    try{
+      setMsg('🔊 Проверяю новые MP3 и запускаю низкоприоритетный R747-анализ…','work');
+      const d=await agentAction('loudness-new-r1098');
+      const out=String(d?.result?.output||'R1098 LOUDNESS SCAN STARTED ✅');
+      setResult(out);
+      if(/MISSING\s*=\s*0|нет новых|nothing to do/i.test(out))setMsg('✅ Все MP3 уже имеют точный R747-анализ.','ok');
+      else if(/ALREADY RUNNING/i.test(out))setMsg('🔊 Анализ новых треков уже выполняется в фоне.','ok');
+      else setMsg('🔊 Анализ новых треков запущен в фоне · эфир не перезапускается.','ok');
+    }catch(e){
+      setMsg(`Нормализация новых треков: ${e.message||e}`,'bad');
+      setResult(`R1098 LOUDNESS ERROR\n${e.message||e}`);
+    }finally{busy=false;await refresh()}
+  }
+
   async function saveTicker(text){
     if(tickerSaving)return;
     text=String(text??'').replace(/[\r\n\t]+/g,' ').replace(/\s+/g,' ').trim().slice(0,240);
@@ -346,7 +365,7 @@
   document.addEventListener('click',e=>{
     const oauth=e.target.closest('[data-radio-youtube-oauth-connect]');if(oauth){e.preventDefault();reconnectYoutube();return}
     const b=e.target.closest('[data-radio-action]');
-    if(b){e.preventDefault();const a=b.dataset.radioAction;if(a==='start')startSequence();else if(a==='gold-restore')airRestore();else if(a==='screen-restore')screenRestore();else if(a==='cache-clean')cacheClean();else if(a==='soft-restart')softRestart();else if(a==='stop')stopSequence();else if(a==='status')statusSequence();else if(a==='auto-safe')autoSequence();return}
+    if(b){e.preventDefault();const a=b.dataset.radioAction;if(a==='start')startSequence();else if(a==='gold-restore')airRestore();else if(a==='screen-restore')screenRestore();else if(a==='cache-clean')cacheClean();else if(a==='soft-restart')softRestart();else if(a==='stop')stopSequence();else if(a==='status')statusSequence();else if(a==='auto-safe')autoSequence();else if(a==='loudness-new-r1098')loudnessNewR1098();return}
     const t=e.target.closest('[data-radio-ticker-apply]');if(t){e.preventDefault();const input=document.querySelector('[data-radio-ticker-input]');if(input)saveTicker(input.value)}
   });
   document.addEventListener('input',e=>{
@@ -355,7 +374,7 @@
     clearTimeout(tickerTimer);tickerTimer=setTimeout(()=>saveTicker(input.value),850);
   });
 
-  window.AndrikRadioRemoteR926={refresh,start:()=>startSequence(),airRestore,goldRestore:airRestore,screenRestore,cacheClean,softRestart,stop:stopSequence,status:statusSequence,saveTicker};window.AndrikRadioRemoteR925=window.AndrikRadioRemoteR926;window.AndrikRadioRemoteR870=window.AndrikRadioRemoteR926;window.AndrikRadioRemoteR867=window.AndrikRadioRemoteR926;window.AndrikRadioRemoteR687=window.AndrikRadioRemoteR926;window.AndrikRadioRemoteR665=window.AndrikRadioRemoteR926;
+  window.AndrikRadioRemoteR926={refresh,start:()=>startSequence(),airRestore,goldRestore:airRestore,screenRestore,cacheClean,softRestart,stop:stopSequence,status:statusSequence,loudnessNewR1098,saveTicker};window.AndrikRadioRemoteR925=window.AndrikRadioRemoteR926;window.AndrikRadioRemoteR870=window.AndrikRadioRemoteR926;window.AndrikRadioRemoteR867=window.AndrikRadioRemoteR926;window.AndrikRadioRemoteR687=window.AndrikRadioRemoteR926;window.AndrikRadioRemoteR665=window.AndrikRadioRemoteR926;
   const arm=()=>{if(timer)clearInterval(timer);timer=null;if(document.hidden)return;timer=setInterval(refresh,15000)};
   const boot=()=>{if(!document.hidden)refresh();arm()};
   if(window.AndrikOwnerSession?.ready)window.AndrikOwnerSession.ready().finally(boot);else boot();

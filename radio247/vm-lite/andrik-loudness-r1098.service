@@ -1,0 +1,17 @@
+[Unit]
+Description=ANDRIK R1098 loudness analysis for new MP3 tracks
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /usr/local/lib/andrik-radio-loudness-scan-r1098.py
+Nice=19
+IOSchedulingClass=idle
+IOSchedulingPriority=7
+CPUQuota=25%
+MemoryMax=384M
+StandardOutput=append:/var/log/andrik-loudness-r1098.log
+StandardError=append:/var/log/andrik-loudness-r1098.log
+
+[Install]
+WantedBy=multi-user.target
