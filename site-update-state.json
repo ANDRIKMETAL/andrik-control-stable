@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1789892092779-581ebb9e5d",
-  "release": "R1098",
-  "archiveName": "ANDRIK-R1098-LOUDNESS-NEW-TRACKS-BUTTON.zip",
-  "sourceHead": "437bbd5e22c31a2a05374bb09a9cd3c988493cbf",
-  "backupSha": "437bbd5e22c31a2a05374bb09a9cd3c988493cbf",
+  "operationId": "publish-1789936530377-a0142784f6",
+  "release": "R1099",
+  "archiveName": "ANDRIK-R1099-RADIO-CONTROLS-SPOILER.zip",
+  "sourceHead": "73ae361f0a741e0bdaa3d68a07b24e3ec769d367",
+  "backupSha": "73ae361f0a741e0bdaa3d68a07b24e3ec769d367",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-20T08:14:53.698Z"
+  "generatedAt": "2026-09-20T20:35:30.377Z"
 }
