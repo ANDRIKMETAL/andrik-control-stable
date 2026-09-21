@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1790020690198-b53ec1dd60",
-  "release": "R1126",
-  "archiveName": "ANDRIK-R1126-CPU-MONITOR-R1125-AWARE.zip",
-  "sourceHead": "987bab4818a4dfee53902f16a6dea6e7dc4b40e5",
-  "backupSha": "987bab4818a4dfee53902f16a6dea6e7dc4b40e5",
+  "operationId": "publish-1790021408293-7e1c980817",
+  "release": "R1127",
+  "archiveName": "ANDRIK-R1127-RADIO-UI-FULL-1.zip",
+  "sourceHead": "d319e04f1f528e680c5e5362aa53fbd5830ee3e8",
+  "backupSha": "d319e04f1f528e680c5e5362aa53fbd5830ee3e8",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-21T19:58:11.048Z"
+  "generatedAt": "2026-09-21T20:10:08.293Z"
 }
