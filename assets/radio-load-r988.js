@@ -18,10 +18,13 @@ function render(d){
   const p=d?.processes||{};
   txt('radioLoadVisualR988',`${Number(p.visual||0).toFixed(1)}%`);
   txt('radioLoadPublisherR988',`${Number(p.publisher||0).toFixed(1)}%`);
-  txt('radioLoadNodeR988',`${Number(p.radioNode||0).toFixed(1)}%`);
+  txt('radioLoadPrimaryRelayR1126',`${Number(p.primaryRelay||0).toFixed(1)}%`);
+  txt('radioLoadBackupRelayR1126',`${Number(p.backupRelay||0).toFixed(1)}%`);
+  txt('radioLoadNodeR988' ,`${Number(p.radioNode||0).toFixed(1)}%`);
   txt('radioLoadMp3R988',`${Number(p.mp3Decoder||0).toFixed(1)}%`);
   txt('radioLoadOtherR988',`${Number(p.otherFfmpeg||0).toFixed(1)}%`);
-  msg.textContent='Моментальный замер: общий CPU и процессы посчитаны за один интервал и в одной шкале 0–100% от всего VPS.';msg.dataset.kind='ok';
+  const ver=$('radioLoadVersionR988');if(ver)ver.textContent=String(d?.version||'R1126');
+  msg.textContent='R1126: Master Publisher и два R1125 RTMPS relay измеряются отдельно. Все значения — доля от 100% мощности VPS.';msg.dataset.kind='ok';
 }
 async function sample(){if(!open||busy||document.hidden)return;busy=true;msg.textContent='Измеряю CPU и процессы за один интервал…';msg.dataset.kind='';try{const s=await send();const r=await wait(s?.command?.id||'');const m=String(r.output||'').match(/R988_LOAD\s+(\{[\s\S]*\})/);if(!r.ok||!m)throw new Error(String(r.output||'R988 load failed'));render(JSON.parse(m[1]));}catch(e){msg.textContent=e?.data?.error==='command-busy'?'VPS выполняет другую команду · попробую позже.':`❌ ${e.message||e}`;msg.dataset.kind='bad'}finally{busy=false}}
 function start(){if(timer)clearInterval(timer);sample();timer=setInterval(sample,15000)}function stop(){if(timer){clearInterval(timer);timer=null}}

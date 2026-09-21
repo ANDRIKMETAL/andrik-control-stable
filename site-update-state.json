@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1789936530377-a0142784f6",
-  "release": "R1099",
-  "archiveName": "ANDRIK-R1099-RADIO-CONTROLS-SPOILER.zip",
-  "sourceHead": "73ae361f0a741e0bdaa3d68a07b24e3ec769d367",
-  "backupSha": "73ae361f0a741e0bdaa3d68a07b24e3ec769d367",
+  "operationId": "publish-1790020690198-b53ec1dd60",
+  "release": "R1126",
+  "archiveName": "ANDRIK-R1126-CPU-MONITOR-R1125-AWARE.zip",
+  "sourceHead": "987bab4818a4dfee53902f16a6dea6e7dc4b40e5",
+  "backupSha": "987bab4818a4dfee53902f16a6dea6e7dc4b40e5",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-20T20:35:30.377Z"
+  "generatedAt": "2026-09-21T19:58:11.048Z"
 }

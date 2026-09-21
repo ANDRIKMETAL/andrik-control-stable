@@ -1,3 +1,13 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+DST="/usr/local/sbin/andrik-radio-load-r988"
+STAMP="$(date +%Y%m%d-%H%M%S)"
+BEFORE="$(systemctl show -p MainPID --value andrik-radio.service 2>/dev/null || true)"
+TMP="$(mktemp /tmp/andrik-radio-load-r1126.XXXXXX)"
+trap 'rm -f "$TMP"' EXIT
+
+cat > "$TMP" <<'PY_R1126'
 #!/usr/bin/env python3
 import json
 import os
@@ -35,10 +45,10 @@ def read_proc_ticks(pid):
         end = raw.rfind(')')
         if end < 0:
             return None
-        tail = raw[end + 2:].split()  # field 3 starts at tail[0]
-        utime = int(tail[11])         # field 14
-        stime = int(tail[12])         # field 15
-        starttime = int(tail[19])     # field 22; protects against PID reuse
+        tail = raw[end + 2:].split()
+        utime = int(tail[11])
+        stime = int(tail[12])
+        starttime = int(tail[19])
         return utime + stime, starttime
     except Exception:
         return None
@@ -51,10 +61,7 @@ def classify(cmd):
     if 'ffmpeg' not in low:
         return None
 
-    # R1126 / R1125 transport-aware classification.
-    # The persistent x264/AAC master no longer owns RTMPS sockets after
-    # Transport Isolation; it reads RAWVIDEO on pipe:4 + PCM on pipe:3
-    # and writes local MPEG-TS/UDP. Detect it BEFORE the relay workers.
+    # R1125 master: rawvideo pipe:4 + PCM pipe:3 -> local MPEG-TS/UDP.
     is_master = (
         'pipe:4' in low and
         'pipe:3' in low and
@@ -64,8 +71,8 @@ def classify(cmd):
     if is_master:
         return 'publisher'
 
-    # R1125 copy-only network workers. The master also mentions these UDP
-    # ports as outputs, therefore require RTMPS + UDP input to identify relays.
+    # R1125 copy-only RTMPS workers. Require RTMPS + UDP *input* so that
+    # the master's UDP outputs are never mistaken for a relay.
     is_rtmps = ('rtmps://' in low or 'youtube.com/live' in low)
     if is_rtmps and re.search(r'-i\s+udp://127\.0\.0\.1:32125(?:[?\s]|$)', low):
         return 'primaryRelay'
@@ -77,7 +84,7 @@ def classify(cmd):
     if re.search(r'stream-morning-master-r703|live-ticker|andrik-qr|subscribe-right|like-right', cmd, re.I):
         return 'visual'
 
-    # Backward compatibility for pre-R1125 architecture.
+    # Pre-R1125 fallback.
     if is_rtmps:
         return 'publisher'
     return 'otherFfmpeg'
@@ -149,7 +156,15 @@ total_delta = max(1, sys_b[1] - sys_a[1])
 idle_delta = max(0, sys_b[0] - sys_a[0])
 cpu = max(0.0, min(100.0, (1.0 - idle_delta / total_delta) * 100.0))
 
-p = {'visual': 0.0, 'publisher': 0.0, 'primaryRelay': 0.0, 'backupRelay': 0.0, 'radioNode': 0.0, 'mp3Decoder': 0.0, 'otherFfmpeg': 0.0}
+p = {
+    'visual': 0.0,
+    'publisher': 0.0,
+    'primaryRelay': 0.0,
+    'backupRelay': 0.0,
+    'radioNode': 0.0,
+    'mp3Decoder': 0.0,
+    'otherFfmpeg': 0.0,
+}
 for pid, (ticks_b, start_b, cat_b) in proc_b.items():
     prev = proc_a.get(pid)
     if not prev:
@@ -183,3 +198,30 @@ payload = {
     'load': {'one': round(l1, 2), 'five': round(l5, 2), 'fifteen': round(l15, 2)},
 }
 print(json.dumps(payload, ensure_ascii=False, separators=(',', ':')))
+PY_R1126
+
+python3 -m py_compile "$TMP"
+if [ -f "$DST" ]; then
+  cp -a "$DST" "$DST.before-R1126-$STAMP"
+fi
+install -m 0755 "$TMP" "$DST"
+
+echo "=== R1126 CPU MONITOR TEST ==="
+OUT="$($DST)"
+printf '%s\n' "$OUT"
+printf '%s\n' "$OUT" | grep -q '"version":"R1126"'
+printf '%s\n' "$OUT" | grep -q '"primaryRelay"'
+printf '%s\n' "$OUT" | grep -q '"backupRelay"'
+
+AFTER="$(systemctl show -p MainPID --value andrik-radio.service 2>/dev/null || true)"
+echo "RADIO PID BEFORE: $BEFORE"
+echo "RADIO PID AFTER : $AFTER"
+if [ "$BEFORE" = "$AFTER" ]; then
+  echo "✅ RADIO PID UNCHANGED"
+else
+  echo "⚠️ RADIO PID CHANGED OUTSIDE THIS INSTALLER"
+fi
+
+echo "✅ R1126 TRANSPORT-AWARE CPU MONITOR INSTALLED"
+echo "✅ Master Publisher / Primary relay / Backup relay are now separate"
+echo "✅ andrik-radio.service was NOT restarted or signalled"

@@ -135,7 +135,7 @@ window.__ANDRIK_QUEUE_PREFETCH_R956__=(()=>{let k='';try{k=localStorage.getItem(
 <section class="card r988-load-card" id="radioLoadCardR988">
 <button class="r988-load-toggle" id="radioLoadToggleR988" type="button" aria-expanded="false"><span>📊 Нагрузка VPS / эфира</span><span>ON-DEMAND</span></button>
 <div class="r988-load-panel" id="radioLoadPanelR988" hidden>
-  <div class="r988-load-head"><strong class="r988-load-state" id="radioLoadStateR988" data-level="normal">⚪ ОЖИДАНИЕ</strong><span class="state">R1027</span></div>
+  <div class="r988-load-head"><strong class="r988-load-state" id="radioLoadStateR988" data-level="normal">⚪ ОЖИДАНИЕ</strong><span class="state" id="radioLoadVersionR988">R1126</span></div>
   <div class="r988-load-cpu-name" id="radioLoadCpuNameR988">Открой панель — тогда начнётся измерение.</div>
   <div class="r988-load-grid">
     <div class="r988-load-kpi"><small>CPU общий · сейчас</small><strong id="radioLoadCpuR988">—</strong></div>
@@ -145,12 +145,14 @@ window.__ANDRIK_QUEUE_PREFETCH_R956__=(()=>{let k='';try{k=localStorage.getItem(
   </div>
   <div class="r988-load-procs">
     <div class="r988-load-proc"><span>Visual FFmpeg</span><b id="radioLoadVisualR988">—</b></div>
-    <div class="r988-load-proc"><span>Publisher FFmpeg</span><b id="radioLoadPublisherR988">—</b></div>
+    <div class="r988-load-proc"><span>Master Publisher · x264/AAC</span><b id="radioLoadPublisherR988">—</b></div>
+    <div class="r988-load-proc"><span>Primary RTMPS relay · R1125</span><b id="radioLoadPrimaryRelayR1126">—</b></div>
+    <div class="r988-load-proc"><span>Backup RTMPS relay · R1125</span><b id="radioLoadBackupRelayR1126">—</b></div>
     <div class="r988-load-proc"><span>Radio Node</span><b id="radioLoadNodeR988">—</b></div>
     <div class="r988-load-proc"><span>MP3 decoder</span><b id="radioLoadMp3R988">—</b></div>
     <div class="r988-load-proc"><span>Другие FFmpeg</span><b id="radioLoadOtherR988">—</b></div>
   </div>
-  <div class="r988-load-foot">CPU общий и строки процессов измеряются за один и тот же короткий интервал. Процессы показывают долю от всей мощности VPS, поэтому значения теперь можно сравнивать напрямую.</div>
+  <div class="r988-load-foot">R1126 понимает R1125 Transport Isolation: Master Publisher, Primary relay и Backup relay считаются отдельно. CPU общий и процессы измеряются за один интервал и в одной шкале 0–100% от всей мощности VPS.</div>
   <div class="r988-load-foot">Монитор не работает в фоне. Закрыл панель или свернул страницу — опрос остановлен.</div>
   <div class="r988-load-msg" id="radioLoadMsgR988">Монитор выключен.</div>
 </div>
@@ -351,4 +353,4 @@ async function refresh(){try{
  if(cr.ok){const c=await cr.json();const clips=Array.isArray(c?.clips)?c.clips:[];const special=x=>Number(x?.bumperSlot||0)>0||Boolean(x?.special30min)||Boolean(x?.special60min);set('youtubeRadioVideosR805',clips.filter(x=>!special(x)).length);set('youtubeRadioStationR805',clips.filter(special).length)}
 }catch(_){}}
 const boot=()=>{refresh();setInterval(()=>{if(!document.hidden)refresh()},60000)};if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
-})();</script><script defer src="/assets/radio-load-r988.js?v=55.00-r1027"></script><script defer src="/assets/radio-media-picker-r989.js?v=55.00-r990q"></script><script defer src="/assets/radio-queue-r943.js?v=55.00-r1073"></script><script defer src="/assets/radio-audio-sync-r973.js?v=55.00-r973"></script></body></html>
+})();</script><script defer src="/assets/radio-load-r988.js?v=55.00-r1126"></script><script defer src="/assets/radio-media-picker-r989.js?v=55.00-r990q"></script><script defer src="/assets/radio-queue-r943.js?v=55.00-r1073"></script><script defer src="/assets/radio-audio-sync-r973.js?v=55.00-r973"></script></body></html>
