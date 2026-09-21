@@ -1,0 +1,18 @@
+ANDRIK R1130 · VISUAL NEXT TRACK
+Base: user R1128 full site + current R1129 CPU HEADROOM server
+
+Changes:
+1. Video admin adds: "⏭ Применить со следующего трека".
+2. "Включить 24/7" is renamed to clearer "▶ Применить сейчас".
+3. Save only saves R2 assignment; it no longer claims that the protected OVH slot was synchronized.
+4. New Cloudflare remote action: visual-next.
+5. R1098 agent force-downloads the selected master atomically to OVH, but does not touch current feeder.
+6. R1129 radio server arms the change and consumes it only when the next normal MP3 playItem starts.
+7. Current feeder and RTMPS are untouched while armed.
+8. Status exposes pending/applied R1130 fields.
+9. R1129 CPU HEADROOM changes are preserved.
+
+Deployment order:
+A. Upload the full R1130 website build.
+B. Run install-r1130-visual-next-track.sh on VPS (one radio restart required).
+C. Open Video эфира, select R2 MP4, click "Применить со следующего трека".

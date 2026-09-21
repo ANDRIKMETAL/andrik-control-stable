@@ -392,6 +392,19 @@ ${e.message||e}`};}
       return {ok:true,output:`VISUAL NOW ${slot.toUpperCase()} ✅ · MANUAL MODE\n${(x.size/1024/1024).toFixed(1)} MB\n${x.probe}\n\nRTMPS НЕ ПЕРЕЗАПУСКАЛСЯ · ${JSON.stringify(d)}`};
     }catch(e){return {ok:false,output:`VISUAL NOW ${slot.toUpperCase()} ❌\n${e.message||e}`};}
   }
+  if(action==='visual-next'){
+    const slot=normalizeSlot(command.slot);if(!slot)return {ok:false,output:'Неверный visual slot'};
+    // R1130: force-download the selected R2 source atomically now, but do NOT
+    // replace the currently running feeder. The radio consumes it at next MP3 start.
+    const x=await downloadVisualR650(slot,headers,{force:true});
+    try{fs.mkdirSync(VISUAL_DIR,{recursive:true});fs.writeFileSync(VISUAL_MANUAL_MARKER,slot+'\n',{mode:0o600})}catch(_){}
+    updateVisualAutoScheduleR658(false);
+    updateForceVisualSlot(slot);
+    try{
+      const d=await localControlR721(`/control/visual-next?slot=${encodeURIComponent(slot)}`);
+      return {ok:Boolean(d?.ok),output:`VISUAL NEXT TRACK ${slot.toUpperCase()} ✅\n${(x.size/1024/1024).toFixed(1)} MB\n${x.probe}\nARMED FOR NEXT NORMAL MP3 · CURRENT FEEDER UNTOUCHED · RTMPS UNTOUCHED\n${JSON.stringify(d)}`};
+    }catch(e){return {ok:false,output:`VISUAL NEXT TRACK ${slot.toUpperCase()} ❌\n${e.message||e}`};}
+  }
   if(action==='visual-auto'){
     try{fs.unlinkSync(VISUAL_MANUAL_MARKER)}catch(_){}
     updateVisualAutoScheduleR658(true);
@@ -449,13 +462,13 @@ async function main(){
   if(cmd==='pair')return pair(process.argv[3]);
   if(cmd==='daemon')return daemon();
   if(cmd==='bootstrap-visuals')return bootstrapVisuals();
-  if(cmd==='visual-now' || cmd==='visual-auto' || cmd==='visual-sync'){
+  if(cmd==='visual-now' || cmd==='visual-next' || cmd==='visual-auto' || cmd==='visual-sync'){
     const cfg=readConfig();if(!cfg.token)throw new Error('OVH agent token not found — pairing is required');
     const headers={'content-type':'application/json','authorization':'Bearer '+cfg.token,'user-agent':'ANDRIK-Radio-Web-Agent-R803'};
     const result=await execute(cmd,{slot:process.argv[3]||''},headers);
     console.log(result.output);if(!result.ok)process.exitCode=4;return;
   }
   if(cmd==='status'){const cfg=readConfig();console.log(cfg.token?'PAIRED ✅':'NOT PAIRED ❌');console.log(await localStatus());return}
-  console.log('ANDRIK Radio Web Agent R926 · commands: daemon | status | bootstrap-visuals | visual-sync | visual-now <morning|day|evening|night> | visual-auto');
+  console.log('ANDRIK Radio Web Agent R926 · commands: daemon | status | bootstrap-visuals | visual-sync | visual-now <slot> | visual-next <slot> | visual-auto');
 }
 main().catch(e=>{console.error('ОШИБКА:',e.message||e);process.exitCode=1});
