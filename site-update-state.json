@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1790021408293-7e1c980817",
-  "release": "R1127",
-  "archiveName": "ANDRIK-R1127-RADIO-UI-FULL-1.zip",
-  "sourceHead": "d319e04f1f528e680c5e5362aa53fbd5830ee3e8",
-  "backupSha": "d319e04f1f528e680c5e5362aa53fbd5830ee3e8",
+  "operationId": "publish-1790024308112-da1bc7de97",
+  "release": "R1128",
+  "archiveName": "ANDRIK-R1128-RADIO-ORDER-FULL.zip",
+  "sourceHead": "0d7c098b0ebfdf42fb4938ce877cf729fc211e72",
+  "backupSha": "0d7c098b0ebfdf42fb4938ce877cf729fc211e72",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-21T20:10:08.293Z"
+  "generatedAt": "2026-09-21T20:58:28.112Z"
 }
