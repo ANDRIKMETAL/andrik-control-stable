@@ -57,14 +57,19 @@ const VISUAL_AUTO_SCHEDULE_R658 = false; // R1010 HARD LOCK: no morning/day/even
 // IMPORTANT: preserve the exact working R649 hotfix behavior: direct 1920x1080 scale,
 // no crop and no pad. This intentionally fills the whole 16:9 frame every time.
 const R806_VISUAL_SANITIZER_VERSION = 'R806-VISUAL-SANITIZED-REMUX-FADE-GUARANTEE';
-const MORNING_VISUAL = '/opt/andrik-radio/assets/ANDRIK-FULLSCREEN-R1001.mp4'; // R1010 same 24/7 master
-const DAY_VISUAL = '/opt/andrik-radio/assets/ANDRIK-FULLSCREEN-R1001.mp4'; // R1010 same 24/7 master
-const EVENING_VISUAL = '/opt/andrik-radio/assets/ANDRIK-FULLSCREEN-R1001.mp4'; // R1010 same 24/7 master
-const NIGHT_VISUAL = '/opt/andrik-radio/assets/ANDRIK-FULLSCREEN-R1001.mp4'; // R1010 same 24/7 master
-const MORNING_VISUAL_URL = '/opt/andrik-radio/assets/ANDRIK-FULLSCREEN-R1001.mp4'; // R1010 same 24/7 master
-const DAY_VISUAL_URL = '/opt/andrik-radio/assets/ANDRIK-FULLSCREEN-R1001.mp4'; // R1010 same 24/7 master
-const EVENING_VISUAL_URL = '/opt/andrik-radio/assets/ANDRIK-FULLSCREEN-R1001.mp4'; // R1010 same 24/7 master
-const NIGHT_VISUAL_URL = '/opt/andrik-radio/assets/ANDRIK-FULLSCREEN-R1001.mp4'; // R1010 same 24/7 master
+// R1130B VISUAL PATH FIX: radio and web-agent now use the SAME slot files.
+// Previously R1010 hard-wired every slot to /opt/.../ANDRIK-FULLSCREEN-R1001.mp4,
+// while the control agent atomically replaced /var/cache/.../visuals/stream-*.mp4.
+// That made VISUAL NOW / VISUAL NEXT report success while the feeder reopened the old file.
+const MORNING_VISUAL = `${VISUAL_CACHE_DIR}/stream-morning-master-r703.mp4`;
+const DAY_VISUAL = `${VISUAL_CACHE_DIR}/stream-day-master-r620.mp4`;
+const EVENING_VISUAL = `${VISUAL_CACHE_DIR}/stream-evening-master-r620.mp4`;
+const NIGHT_VISUAL = `${VISUAL_CACHE_DIR}/stream-night-master-r620.mp4`;
+const MORNING_VISUAL_URL = MORNING_VISUAL;
+const DAY_VISUAL_URL = DAY_VISUAL;
+const EVENING_VISUAL_URL = EVENING_VISUAL;
+const NIGHT_VISUAL_URL = NIGHT_VISUAL;
+const R1130B_VISUAL_PATH_FIX = 'R1130B-AGENT-RADIO-SAME-VISUAL-SLOT-FILES';
 const EMERGENCY_VISUAL = process.env.EMERGENCY_VISUAL || new URL('../assets/live-eye-r223.mp4', import.meta.url).pathname;
 const QR_OVERLAY = process.env.QR_OVERLAY || new URL('../assets/andrik-qr-r794-160.png', import.meta.url).pathname; // R798 exact pre-scaled replacement
 const CTA_OVERLAY_R767 = process.env.CTA_OVERLAY_R767 || new URL('../assets/subscribe-right-r794-420.png', import.meta.url).pathname; // R798 pixel-identical 420px replacement
@@ -234,6 +239,7 @@ const state = {
   version: 'R821-FINAL-STABLE-R822-AUDIO-GAP-BRIDGE-R820-PRESERVED',
   cpuHeadroomProfileR794:'R796-LIVE-FAST-SCALE-COMPACT-EQ-FINITE-FADE-PRESCALED-STATIC',
   cpuHeadroomProfileR1129:CPU_HEADROOM_PROFILE_R1129,
+  visualPathFixR1130B:R1130B_VISUAL_PATH_FIX,
   mode: 'R821 STATION NO-DRAIN MAKE-BEFORE-BREAK / R820 MASTER PTS + R819 GEOMETRY + R814 FADE PRESERVED',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,

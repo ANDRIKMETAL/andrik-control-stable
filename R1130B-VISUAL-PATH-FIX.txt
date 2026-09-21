@@ -1,0 +1,3 @@
+R1130B: radio visual slot paths now match web-agent files in /var/cache/andrik-radio-r622/visuals.
+Morning/day/evening/night map to the same files the control agent downloads.
+Installer also detects andrik-radio-web-control.service.

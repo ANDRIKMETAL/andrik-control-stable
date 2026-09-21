@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1790026493493-cbf0edbf0c",
+  "operationId": "publish-1790028849606-26f09abbba",
   "release": "R1130",
-  "archiveName": "ANDRIK-R1130-RADIO-VISUAL-NEXT-FULL.zip",
-  "sourceHead": "27c2755bcc444b391ebd98694c2678a43892d296",
-  "backupSha": "27c2755bcc444b391ebd98694c2678a43892d296",
+  "archiveName": "ANDRIK-R1130B-RADIO-VISUAL-PATH-FIX-FULL.zip",
+  "sourceHead": "68531efd4fd42f8b6cc41e5fcd7e91479aef0a7e",
+  "backupSha": "68531efd4fd42f8b6cc41e5fcd7e91479aef0a7e",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-21T21:34:53.987Z"
+  "generatedAt": "2026-09-21T22:14:10.074Z"
 }
