@@ -63,12 +63,12 @@
 
   function tunePanelR870(){
     const ey=document.querySelector('.head .ey');
-    if(ey)ey.textContent='ANDRIK RADIO CONTROL · R870 SAFE · RTMPS 2/2';
+    if(ey)ey.textContent='ANDRIK RADIO CONTROL · R1138 SAFE OPS · RTMPS 2/2';
 
     const gold=document.querySelector('[data-radio-action="gold-restore"]');
     if(gold){
-      gold.textContent='🚑 АВАРИЙНЫЙ GOLD LATEST';
-      gold.title='Восстанавливает проверенный GOLD-FULL-LATEST с VPS и один раз перезапускает radio service. /control/full-fit не используется.';
+      gold.textContent='🚑 GOLD CORE · ВОССТАНОВИТЬ';
+      gold.title='Восстанавливает только radio server.mjs из /opt/andrik-radio/GOLD/GOLD-CURRENT. Текущий server.mjs сохраняется, radio service перезапускается один раз.';
     }
     const start=document.querySelector('[data-radio-action="start"]');
     if(start)start.title='Ручной запуск. Использовать только когда эфир действительно остановлен.';
@@ -77,7 +77,7 @@
     if(controlCard&&!document.getElementById('r870SafetyNote')){
       const note=document.createElement('div');
       note.id='r870SafetyNote';note.className='r870-safe-note';
-      note.innerHTML='<b>R1015 SAFE:</b> «Восстановить экран» использует активный R1001 + один restart без /control/full-fit. «Аварийный GOLD» берёт проверенный GOLD-FULL-LATEST и имеет автоматический rollback.';
+      note.innerHTML='<b>R1138 SAFE OPS:</b> «Переподнять видео» только переоткрывает текущий visual feeder без рестарта radio service. «GOLD CORE» возвращает server.mjs из GOLD-CURRENT с автоматическим rollback и не откатывает Control/Agent/Loudness.';
       controlCard.appendChild(note);
     }
 
@@ -212,11 +212,11 @@
 
   async function safeGoldRestoreR870(){
     if(safeGoldBusy)return;
-    if(!confirm('🚑 АВАРИЙНЫЙ GOLD: восстановить проверенный GOLD-FULL-LATEST и ОДИН раз перезапустить radio service?\n\nБудут возвращены server.mjs, рабочий R1001, systemd/drop-ins и safe R974. /control/full-fit не используется.'))return;
-    safeGoldBusy=true;const b=document.querySelector('[data-radio-action="gold-restore"]');const old=b?.textContent||'';if(b){b.disabled=true;b.textContent='🚑 ВОССТАНАВЛИВАЮ…'};setRemoteMessage('🚑 Восстанавливаю проверенный GOLD-FULL-LATEST с VPS…','work');
-    try{const d=await runAgentActionR870('gold-restore');setRemoteResult(`${String(d.result?.output||'LATEST GOLD RESTORE ✅')}\n\nR1015 SAFE: /control/full-fit не использовался; при ошибке helper делает rollback.`);setRemoteMessage('GOLD восстановлен ✅ · проверяю статус OVH','ok');await sleep(3500);await window.AndrikRadioRemoteR867?.refresh?.().catch?.(()=>{});await refresh(false)}
+    if(!confirm('🚑 GOLD CORE: восстановить server.mjs из /opt/andrik-radio/GOLD/GOLD-CURRENT?\n\nТекущий server.mjs будет сохранён. Control/Agent/Loudness не откатываются. Radio service перезапустится один раз.'))return;
+    safeGoldBusy=true;const b=document.querySelector('[data-radio-action="gold-restore"]');const old=b?.textContent||'';if(b){b.disabled=true;b.textContent='🚑 ВОССТАНАВЛИВАЮ…'};setRemoteMessage('🚑 Восстанавливаю radio core из GOLD-CURRENT…','work');
+    try{const d=await runAgentActionR870('gold-restore');setRemoteResult(`${String(d.result?.output||'GOLD CORE RESTORE ✅')}\n\nR1138 SAFE OPS: control-agent и loudness не откатываются; при ошибке helper возвращает предыдущий server.mjs.`);setRemoteMessage('GOLD восстановлен ✅ · проверяю статус OVH','ok');await sleep(3500);await window.AndrikRadioRemoteR867?.refresh?.().catch?.(()=>{});await refresh(false)}
     catch(e){setRemoteResult(`GOLD RESTORE ERROR\n${e.message||e}`);setRemoteMessage(`GOLD restore: ${e.message||e}`,'bad')}
-    finally{safeGoldBusy=false;if(b){b.disabled=false;b.textContent=old||'🚑 АВАРИЙНЫЙ GOLD LATEST'}}
+    finally{safeGoldBusy=false;if(b){b.disabled=false;b.textContent=old||'🚑 GOLD CORE · ВОССТАНОВИТЬ'}}
   }
 
   function installSafetyCapture(){

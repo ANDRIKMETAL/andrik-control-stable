@@ -1,3 +1,0 @@
-#!/usr/bin/env bash
-set -Eeuo pipefail
-exec /usr/local/sbin/andrik-radio-screen-restore-r926 "$@"

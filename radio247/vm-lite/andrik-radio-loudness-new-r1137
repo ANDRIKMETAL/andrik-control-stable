@@ -1,0 +1,80 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+UNIT='andrik-loudness-r1098.service'
+DIR='/var/cache/andrik-radio-r622/audio'
+LOG='/var/log/andrik-loudness-r1098.log'
+
+count_state(){
+python3 - "$DIR" <<'PY'
+import json, math, sys
+from pathlib import Path
+D=Path(sys.argv[1]); files=sorted(D.glob('*.mp3')) if D.is_dir() else []
+def valid(p):
+ s=Path(str(p)+'.r747-loudnorm.json')
+ try:
+  st=p.stat(); r=json.loads(s.read_text(encoding='utf-8'))
+  if int(r.get('size',-1))!=st.st_size:return False
+  if abs(float(r.get('mtimeMs',-1))-(st.st_mtime_ns/1_000_000))>2:return False
+  return all(math.isfinite(float(r[k])) for k in ('input_i','input_lra','input_tp','input_thresh','target_offset'))
+ except Exception:return False
+v=sum(1 for p in files if valid(p))
+print(len(files),v,len(files)-v)
+PY
+}
+
+read -r TOTAL VALID MISSING < <(count_state)
+echo "TOTAL=$TOTAL"
+echo "VALID=$VALID"
+echo "MISSING=$MISSING"
+echo 'PROFILE=R1137 SAFE · READ-ONLY MP3 · SIDECAR ANALYSIS ONLY'
+echo 'TARGET=-14 LUFS · TP=-1.5 dBTP · LRA=11'
+
+if systemctl is-active --quiet "$UNIT" 2>/dev/null; then
+  echo 'ALREADY RUNNING ✅'
+  echo "UNIT=$UNIT"
+  tail -n 12 "$LOG" 2>/dev/null || true
+  exit 0
+fi
+
+if [ "$MISSING" -eq 0 ]; then
+  echo 'Все MP3 уже имеют точный R747/R1137 анализ ✅'
+  exit 0
+fi
+
+if ! systemctl is-active --quiet andrik-radio.service; then
+  echo 'НЕ ЗАПУЩЕНО ⚠️ radio service inactive'
+  exit 2
+fi
+
+# Safety-first: local radio health must already be 2/2 before scanner starts.
+if ! python3 - <<'PY'
+import json, urllib.request, sys
+try:
+ r=urllib.request.urlopen(urllib.request.Request('http://127.0.0.1:8080/status',headers={'User-Agent':'ANDRIK-R1137'}),timeout=3)
+ j=json.loads(r.read(524288).decode('utf-8','replace')); s=j.get('status',j) if isinstance(j,dict) else {}
+ est=int(s.get('rtmpsEstablishedConnectionsR792',s.get('rtmps',0)) or 0)
+ exp=int(s.get('rtmpsExpectedConnectionsR792',2) or 2)
+ healthy=s.get('transportHealthy',est>=exp)
+ err=str(s.get('lastError','') or '').strip()
+ print(f'HEALTH transport={est}/{exp} healthy={healthy} lastError={err[:120]}')
+ sys.exit(0 if healthy and est>=exp and not err else 1)
+except Exception as e:
+ print('HEALTH status unavailable:',e)
+ sys.exit(1)
+PY
+then
+  echo 'НЕ ЗАПУЩЕНО ⚠️ эфир сейчас не полностью здоров. Повтори кнопку позже.'
+  exit 3
+fi
+
+systemctl reset-failed "$UNIT" >/dev/null 2>&1 || true
+systemctl start "$UNIT"
+sleep 1
+
+echo 'STARTED ✅'
+echo 'CPU HARD CAP=8% одного CPU (~4% всего 2-vCPU VPS)'
+echo 'Nice=19 · IO=idle · 45s пауза между треками'
+echo 'При RTMPS<2/2 / transport unhealthy / CPU>=90% анализ текущего трека прекращается.'
+echo 'RADIO НЕ ПЕРЕЗАПУСКАЕТСЯ · MP3 НЕ ПЕРЕЗАПИСЫВАЮТСЯ'
+echo "LOG=$LOG"

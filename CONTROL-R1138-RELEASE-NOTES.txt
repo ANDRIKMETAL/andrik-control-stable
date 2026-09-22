@@ -1,0 +1,23 @@
+ANDRIK CONTROL R1138 SAFE OPS
+2026-09-22
+
+UPDATED
+- Radio Control visible version and cache-busters -> R1138
+- R1137 SAFE LOUDNESS card: RUNNING / PAUSED / READY / COMPLETE, ready/missing/total, progress and current track
+- Agent heartbeat -> R1138 and reports loudness telemetry every ~15 s
+- Loudness labels updated; internal action loudness-new-r1098 intentionally preserved for API compatibility
+- GOLD button -> safe GOLD CORE restore from /opt/andrik-radio/GOLD/GOLD-CURRENT; does not roll back Control/Agent/Loudness
+- Screen button -> current visual feeder recovery via /control/visual-now; no radio restart
+- Old R990/R906/R937/R1001/R1098 user-facing recovery labels removed from current Control UI
+- control-service-worker version bumped to 55.00-r1138
+
+CLEANUP
+- Removed legacy radio patch installers from website bundle
+- Removed old root install notes/scripts that could cause accidental downgrade
+- radio247/server.mjs refreshed to R1136 snapshot
+- radio247/vm-lite now contains only current operational helpers
+
+IMPORTANT
+Cloudflare site deployment updates the web UI. To get live R1137 progress telemetry and new safe recovery behavior on the VPS, run:
+  sudo bash /home/ubuntu/install-r1138-control-ops-no-radio-restart.sh
+This installer restarts only the web-control agent and verifies the radio PID did not change.

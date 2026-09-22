@@ -6,7 +6,7 @@ import {Readable} from 'node:stream';
 import {pipeline} from 'node:stream/promises';
 
 const CONFIG='/etc/andrik-radio-web-r627.json';
-const AGENT_VERSION_R803='R1098';
+const AGENT_VERSION_R803='R1138';
 const DIAG_DIR_R803='/var/cache/andrik-radio-r622/diagnostics';
 const DIAG_AGENT_LOG_R803=DIAG_DIR_R803+'/r803-agent-events.ndjson';
 const DIAG_AGENT_MAX_BYTES_R803=1024*1024;
@@ -24,6 +24,12 @@ const SCREEN_RESTORE_R926='/usr/local/sbin/andrik-radio-screen-restore-r926';
 const SAFE_CACHE_CLEAN_R867='/usr/local/sbin/andrik-radio-safe-cache-clean-r867';
 const SAFE_PROCESS_CLEAN_R1026='/usr/local/sbin/andrik-radio-safe-cleanup-r1026';
 const LOUDNESS_NEW_R1098='/usr/local/sbin/andrik-radio-loudness-new-r1098';
+const LOUDNESS_UNIT_R1137='andrik-loudness-r1098.service';
+const LOUDNESS_DIR_R1137='/var/cache/andrik-radio-r622/audio';
+const LOUDNESS_LOG_R1137='/var/log/andrik-loudness-r1098.log';
+const LOUDNESS_UNIT_FILE_R1137='/etc/systemd/system/andrik-loudness-r1098.service';
+const LOUDNESS_SCANNER_R1137='/usr/local/lib/andrik-radio-loudness-scan-r1098.py';
+let loudnessStatusCacheR1137={at:0,value:null};
 const AUDIO_SYNC_R949='/usr/local/sbin/andrik-audio-sync-r949';
 const AUDIO_SYNC_STATE_R949='/var/lib/andrik-radio/audio-sync-r949.json';
 const VISUAL_FILES=Object.freeze({morning:'stream-morning-master-r703.mp4',day:'stream-day-master-r620.mp4',evening:'stream-evening-master-r620.mp4',night:'stream-night-master-r620.mp4'});
@@ -198,6 +204,51 @@ function recoveryStateR1015(){
   };
 }
 function writeTicker(text){const value=clean(text).replace(/[\r\n\t]+/g,' ').replace(/\s+/g,' ').slice(0,240).trim();fs.mkdirSync('/var/cache/andrik-radio-r622',{recursive:true});const tmp=TICKER_FILE+'.tmp';fs.writeFileSync(tmp,value,'utf8');fs.renameSync(tmp,TICKER_FILE);return value;}
+function loudnessTailR1137(maxBytes=65536){
+  try{
+    if(!fs.existsSync(LOUDNESS_LOG_R1137))return '';
+    const st=fs.statSync(LOUDNESS_LOG_R1137);const len=Math.min(Number(st.size||0),maxBytes);if(len<=0)return '';
+    const fd=fs.openSync(LOUDNESS_LOG_R1137,'r');const buf=Buffer.alloc(len);
+    try{fs.readSync(fd,buf,0,len,Math.max(0,Number(st.size||0)-len));}finally{fs.closeSync(fd)}
+    return buf.toString('utf8');
+  }catch(_){return ''}
+}
+function loudnessStatusR1137(){
+  const now=Date.now();
+  if(loudnessStatusCacheR1137.value && now-Number(loudnessStatusCacheR1137.at||0)<15000)return loudnessStatusCacheR1137.value;
+  try{
+    const installed=fs.existsSync(LOUDNESS_NEW_R1098)&&fs.existsSync(LOUDNESS_SCANNER_R1137)&&fs.existsSync(LOUDNESS_UNIT_FILE_R1137);
+    const unitText=fs.existsSync(LOUDNESS_UNIT_FILE_R1137)?fs.readFileSync(LOUDNESS_UNIT_FILE_R1137,'utf8'):'';
+    const safeProfile=/CPUQuota=8%/.test(unitText)&&/Nice=19/.test(unitText)&&/IOSchedulingClass=idle/.test(unitText);
+    const names=fs.existsSync(LOUDNESS_DIR_R1137)?fs.readdirSync(LOUDNESS_DIR_R1137).filter(x=>/\.mp3$/i.test(x)):[];
+    let valid=0;
+    for(const name of names){
+      try{
+        const mp3=`${LOUDNESS_DIR_R1137}/${name}`;const side=mp3+'.r747-loudnorm.json';
+        const st=fs.statSync(mp3);const row=JSON.parse(fs.readFileSync(side,'utf8'));
+        const ok=Number(row?.size)===Number(st.size)&&Math.abs(Number(row?.mtimeMs)-Number(st.mtimeMs))<=2&&['input_i','input_lra','input_tp','input_thresh','target_offset'].every(k=>Number.isFinite(Number(row?.[k])));
+        if(ok)valid++;
+      }catch(_){ }
+    }
+    const total=names.length,missing=Math.max(0,total-valid);
+    const active=run('systemctl',['is-active',LOUDNESS_UNIT_R1137],3000).output.trim()==='active';
+    const tail=loudnessTailR1137();const lines=tail.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+    const lastLine=lines.at(-1)||'';
+    let currentTrack='';
+    for(let i=lines.length-1;i>=0;i--){const m=lines[i].match(/\] ANALYZE (.+)$/);if(m){currentTrack=m[1];break}}
+    const recent=lines.slice(-8).join('\n');
+    let state='READY';
+    if(!installed)state='NOT_INSTALLED';
+    else if(missing===0)state='COMPLETE';
+    else if(active&&/PAUSE health guard/i.test(recent))state='PAUSED';
+    else if(active)state='RUNNING';
+    const value={profile:'R1137-SAFE-LOUDNESS',installed,safeProfile,state,total,valid,missing,currentTrack,lastLine,updatedAt:new Date().toISOString()};
+    loudnessStatusCacheR1137={at:now,value};return value;
+  }catch(error){
+    const value={profile:'R1137-SAFE-LOUDNESS',installed:false,safeProfile:false,state:'ERROR',total:0,valid:0,missing:0,currentTrack:'',lastLine:clean(error?.message||error),updatedAt:new Date().toISOString()};
+    loudnessStatusCacheR1137={at:now,value};return value;
+  }
+}
 async function localStatus(){
   try{
     const r=await fetch('http://127.0.0.1:8080/status',{signal:AbortSignal.timeout(2500)});const d=await r.json();const c=d.current||{},n=d.next||{};
@@ -212,10 +263,10 @@ async function localStatus(){
       },
       videoHandoffMode:d.videoHandoffMode||'',
       lastR813Handoff:d.lastR813Handoff||null,
-      r813CleanHandoffCount:Number(d.r813CleanHandoffCount||d.streamProfileR813?.handoff?.cleanCount||0),streamStartedAt:d.streamStartedAt||'',libraryTracks:Number(d.libraryTracks||0),libraryAlbumTracks:Number(d.libraryAlbumTracks||0),librarySingleTracks:Number(d.librarySingleTracks||0),duplicateSinglesSkipped:Number(d.duplicateSinglesSkipped||0),libraryVideos:Number(d.libraryVideos||0),libraryBumpers:Number(d.libraryBumpers||0),librarySpecial:Number(d.librarySpecial||0),librarySpecial30:Number(d.librarySpecial30||0),librarySpecial60:Number(d.librarySpecial60||0),lastLibraryRefresh:d.lastLibraryRefresh||'',inventoryTelemetry:'R805-LIVE-LIBRARY-COUNTERS',ticker:currentTicker(),audioDelayMsR949:audioSyncStateR949().targetMs,audioDelayUpdatedAtR949:audioSyncStateR949().updatedAt,audioDelayFilesR949:audioSyncStateR949().files,diskRootR1015:diskRootR1015(),recoveryR1015:recoveryStateR1015(),busy:busy?{id:busy.id,action:busy.action,since:busy.since}:null};
+      r813CleanHandoffCount:Number(d.r813CleanHandoffCount||d.streamProfileR813?.handoff?.cleanCount||0),streamStartedAt:d.streamStartedAt||'',libraryTracks:Number(d.libraryTracks||0),libraryAlbumTracks:Number(d.libraryAlbumTracks||0),librarySingleTracks:Number(d.librarySingleTracks||0),duplicateSinglesSkipped:Number(d.duplicateSinglesSkipped||0),libraryVideos:Number(d.libraryVideos||0),libraryBumpers:Number(d.libraryBumpers||0),librarySpecial:Number(d.librarySpecial||0),librarySpecial30:Number(d.librarySpecial30||0),librarySpecial60:Number(d.librarySpecial60||0),lastLibraryRefresh:d.lastLibraryRefresh||'',inventoryTelemetry:'R805-LIVE-LIBRARY-COUNTERS',ticker:currentTicker(),audioDelayMsR949:audioSyncStateR949().targetMs,audioDelayUpdatedAtR949:audioSyncStateR949().updatedAt,audioDelayFilesR949:audioSyncStateR949().files,diskRootR1015:diskRootR1015(),recoveryR1015:recoveryStateR1015(),loudnessR1137:loudnessStatusR1137(),busy:busy?{id:busy.id,action:busy.action,since:busy.since}:null};
     return observeStatusR803(status);
   }catch(error){
-    const status={service:run('systemctl',['is-active','andrik-radio.service'],8000).output.trim(),producer:false,publisher:false,videoFeederRunning:false,clipActive:false,current:'',next:'',libraryTracks:0,libraryAlbumTracks:0,librarySingleTracks:0,duplicateSinglesSkipped:0,libraryVideos:0,libraryBumpers:0,librarySpecial:0,librarySpecial30:0,librarySpecial60:0,lastLibraryRefresh:'',inventoryTelemetry:'R805-LIVE-LIBRARY-COUNTERS',ticker:currentTicker(),audioDelayMsR949:audioSyncStateR949().targetMs,audioDelayUpdatedAtR949:audioSyncStateR949().updatedAt,audioDelayFilesR949:audioSyncStateR949().files,diskRootR1015:diskRootR1015(),recoveryR1015:recoveryStateR1015(),busy:busy?{id:busy.id,action:busy.action,since:busy.since}:null,error:'local-status-unavailable',lastError:clean(error?.message||error),lastFfmpegLine:'',diagnosticsR802:null,diagnosticsR813:null,diagnosticsR814:null,rtmpsEstablishedConnectionsR792:0,rtmpsExpectedConnectionsR792:2,transportHealthy:false,
+    const status={service:run('systemctl',['is-active','andrik-radio.service'],8000).output.trim(),producer:false,publisher:false,videoFeederRunning:false,clipActive:false,current:'',next:'',libraryTracks:0,libraryAlbumTracks:0,librarySingleTracks:0,duplicateSinglesSkipped:0,libraryVideos:0,libraryBumpers:0,librarySpecial:0,librarySpecial30:0,librarySpecial60:0,lastLibraryRefresh:'',inventoryTelemetry:'R805-LIVE-LIBRARY-COUNTERS',ticker:currentTicker(),audioDelayMsR949:audioSyncStateR949().targetMs,audioDelayUpdatedAtR949:audioSyncStateR949().updatedAt,audioDelayFilesR949:audioSyncStateR949().files,diskRootR1015:diskRootR1015(),recoveryR1015:recoveryStateR1015(),loudnessR1137:loudnessStatusR1137(),busy:busy?{id:busy.id,action:busy.action,since:busy.since}:null,error:'local-status-unavailable',lastError:clean(error?.message||error),lastFfmpegLine:'',diagnosticsR802:null,diagnosticsR813:null,diagnosticsR814:null,rtmpsEstablishedConnectionsR792:0,rtmpsExpectedConnectionsR792:2,transportHealthy:false,
       streamProfileR814:null,streamProfileR813:{video:{codec:'H.264 / AVC',encoder:'libx264',profile:'High 4.1',width:1920,height:1080,fps:25,bitrate:'6000k',gopFrames:50,bFrames:0,pixelFormat:'yuv420p'},audio:{codec:'AAC-LC',sampleRate:44100,channels:2,channelLayout:'stereo',bitrate:'160k'},transport:{container:'FLV',protocol:'RTMPS',lanes:0,expectedLanes:2,dualIngest:true}},
       videoHandoffMode:'',lastR813Handoff:null,r813CleanHandoffCount:0};
     return observeStatusR803(status);
@@ -356,9 +407,9 @@ ${e.message||e}`};}
     return {ok:r.ok,output:r.ok?`R1026_CLEANUP ${r.output}`:`R1026_CLEANUP_ERROR\n${r.output}`};
   }
   if(action==='loudness-new-r1098'){
-    if(!fs.existsSync(LOUDNESS_NEW_R1098))return {ok:false,output:`R1098 LOUDNESS ❌\nMissing ${LOUDNESS_NEW_R1098}`};
+    if(!fs.existsSync(LOUDNESS_NEW_R1098))return {ok:false,output:`R1137 SAFE LOUDNESS ❌\nMissing ${LOUDNESS_NEW_R1098}`};
     const r=await runAsync(LOUDNESS_NEW_R1098,[],30000);
-    return {ok:r.ok,output:r.ok?`R1098_LOUDNESS ${r.output}`:`R1098_LOUDNESS_ERROR\n${r.output}`};
+    loudnessStatusCacheR1137={at:0,value:null}; return {ok:r.ok,output:r.ok?`R1137_SAFE_LOUDNESS ${r.output}`:`R1137_SAFE_LOUDNESS_ERROR\n${r.output}`};
   }
   if(action==='queue-pick-r989'){
     const mediaType=clean(command.mediaType||'').toLowerCase();

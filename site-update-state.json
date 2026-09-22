@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1790028849606-26f09abbba",
-  "release": "R1130",
-  "archiveName": "ANDRIK-R1130B-RADIO-VISUAL-PATH-FIX-FULL.zip",
-  "sourceHead": "68531efd4fd42f8b6cc41e5fcd7e91479aef0a7e",
-  "backupSha": "68531efd4fd42f8b6cc41e5fcd7e91479aef0a7e",
+  "operationId": "publish-1790070559510-6a491a060f",
+  "release": "R1138",
+  "archiveName": "ANDRIK-SITE-CONTROL-R1138-READY.zip",
+  "sourceHead": "81ac525b44ad36da81604bb15f54312edc16aa1e",
+  "backupSha": "81ac525b44ad36da81604bb15f54312edc16aa1e",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-21T22:14:10.074Z"
+  "generatedAt": "2026-09-22T09:49:20.993Z"
 }

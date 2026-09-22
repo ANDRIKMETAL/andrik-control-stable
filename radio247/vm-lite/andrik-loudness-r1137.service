@@ -1,6 +1,6 @@
 [Unit]
-Description=ANDRIK R1098 loudness analysis for new MP3 tracks
-After=network.target
+Description=ANDRIK R1137 safe background loudness analysis
+After=andrik-radio.service network.target
 
 [Service]
 Type=oneshot
@@ -8,8 +8,11 @@ ExecStart=/usr/bin/python3 /usr/local/lib/andrik-radio-loudness-scan-r1098.py
 Nice=19
 IOSchedulingClass=idle
 IOSchedulingPriority=7
-CPUQuota=25%
-MemoryMax=384M
+CPUQuota=8%
+MemoryMax=256M
+OOMScoreAdjust=500
+TasksMax=32
+TimeoutStartSec=infinity
 StandardOutput=append:/var/log/andrik-loudness-r1098.log
 StandardError=append:/var/log/andrik-loudness-r1098.log
 

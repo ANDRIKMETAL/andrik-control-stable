@@ -1,26 +1,34 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
-BASE="/opt/andrik-radio"; BACKUPS="$BASE/backups"; SERVER="$BASE/radio247/server.mjs"; MASTER="$BASE/assets/ANDRIK-FULLSCREEN-R1001.mp4"; SERVICE="andrik-radio.service"; R974="/usr/local/sbin/andrik-fullscreen-visual-r974"
-STAMP="$(date +%Y%m%d-%H%M%S)"; SAVE="$BACKUPS/BEFORE-R1015-GOLD-RESTORE-$STAMP"; TMP="$(mktemp -d /tmp/andrik-r1015-gold.XXXXXX)"; trap 'rm -rf "$TMP"' EXIT
-LATEST_LINK="$BACKUPS/GOLD-FULL-LATEST.tar.gz"; LATEST_TXT="$BACKUPS/GOLD-FULL-LATEST.txt"
-echo "======================================================"; echo " ANDRIK R1015 · ВОССТАНОВИТЬ ЭФИР ИЗ LATEST GOLD"; echo " EXACT GOLD · ONE RESTART · NO /control/full-fit"; echo "======================================================"
-ARCHIVE=""
-if [ -e "$LATEST_LINK" ]; then ARCHIVE="$(readlink -f "$LATEST_LINK" 2>/dev/null || true)"; fi
-if [ -z "$ARCHIVE" ] && [ -s "$LATEST_TXT" ]; then ARCHIVE="$(head -n1 "$LATEST_TXT" | tr -d '\r\n')"; fi
-if [ -z "$ARCHIVE" ] || [ ! -s "$ARCHIVE" ]; then ARCHIVE="$(find "$BACKUPS" -maxdepth 1 -type f -name 'GOLD-R*.tar.gz' -printf '%T@ %p\n' 2>/dev/null | sort -nr | head -1 | cut -d' ' -f2-)"; fi
-[ -n "$ARCHIVE" ] && [ -s "$ARCHIVE" ] || { echo "❌ latest GOLD archive not found"; exit 20; }
-echo "GOLD=$ARCHIVE"; gzip -t "$ARCHIVE"; tar -xzf "$ARCHIVE" -C "$TMP"
-MANIFEST="$(find "$TMP" -type f -name SHA256SUMS.txt | head -1)"; [ -n "$MANIFEST" ] || { echo "❌ SHA256SUMS.txt missing"; exit 21; }
-ROOT="$(dirname "$MANIFEST")"; (cd "$ROOT" && sha256sum -c SHA256SUMS.txt >/dev/null); echo "✅ GOLD SHA256 verified"
-GSERVER="$ROOT/radio247/server.mjs"; GMASTER="$ROOT/assets/ANDRIK-FULLSCREEN-R1001.mp4"; GUNIT="$ROOT/systemd/andrik-radio.service"; GDROP="$ROOT/systemd/andrik-radio.service.d"; GR974="$ROOT/usr-local-sbin/andrik-fullscreen-visual-r974"
-[ -s "$GSERVER" ] || { echo "❌ GOLD server missing"; exit 22; }; [ -s "$GMASTER" ] || { echo "❌ GOLD R1001 missing"; exit 23; }; node --check "$GSERVER"
-W="$(ffprobe -v error -select_streams v:0 -show_entries stream=width -of csv=p=0 "$GMASTER")"; H="$(ffprobe -v error -select_streams v:0 -show_entries stream=height -of csv=p=0 "$GMASTER")"; [ "$W" = 1920 ] && [ "$H" = 1080 ] || { echo "❌ GOLD master geometry ${W}x${H}"; exit 24; }
-mkdir -p "$SAVE"; cp -a "$SERVER" "$SAVE/server.mjs"; [ -s "$MASTER" ] && cp -a "$MASTER" "$SAVE/ANDRIK-FULLSCREEN-R1001.mp4" || true; [ -f /etc/systemd/system/andrik-radio.service ] && cp -a /etc/systemd/system/andrik-radio.service "$SAVE/andrik-radio.service" || true; [ -d /etc/systemd/system/andrik-radio.service.d ] && cp -a /etc/systemd/system/andrik-radio.service.d "$SAVE/" || true; [ -f "$R974" ] && cp -a "$R974" "$SAVE/andrik-fullscreen-visual-r974" || true
-echo "✅ current state saved: $SAVE"
-rollback(){ echo "↩️ ROLLBACK"; [ -s "$SAVE/server.mjs" ] && install -m0644 "$SAVE/server.mjs" "$SERVER"; [ -s "$SAVE/ANDRIK-FULLSCREEN-R1001.mp4" ] && install -m0644 "$SAVE/ANDRIK-FULLSCREEN-R1001.mp4" "$MASTER"; [ -s "$SAVE/andrik-radio.service" ] && install -m0644 "$SAVE/andrik-radio.service" /etc/systemd/system/andrik-radio.service; if [ -d "$SAVE/andrik-radio.service.d" ]; then rm -rf /etc/systemd/system/andrik-radio.service.d; cp -a "$SAVE/andrik-radio.service.d" /etc/systemd/system/; fi; [ -s "$SAVE/andrik-fullscreen-visual-r974" ] && install -m0755 "$SAVE/andrik-fullscreen-visual-r974" "$R974"; systemctl daemon-reload; systemctl restart "$SERVICE" || true; }
-install -m0644 "$GSERVER" "$SERVER"; install -m0644 "$GMASTER" "$MASTER"; [ -s "$GUNIT" ] && install -m0644 "$GUNIT" /etc/systemd/system/andrik-radio.service
-if [ -d "$GDROP" ]; then rm -rf /etc/systemd/system/andrik-radio.service.d; cp -a "$GDROP" /etc/systemd/system/; fi
-[ -s "$GR974" ] && install -m0755 "$GR974" "$R974"; node --check "$SERVER"; systemctl daemon-reload
+BASE='/opt/andrik-radio'
+LIVE="$BASE/radio247/server.mjs"
+GOLD_LINK="$BASE/GOLD/GOLD-CURRENT"
+SERVICE='andrik-radio.service'
+SAFE='/root/ANDRIK-SAFE'
+STAMP="$(date +%Y%m%d-%H%M%S)"
+SAVE="$SAFE/BEFORE-R1138-GOLD-CORE-$STAMP.server.mjs"
+
+echo '=========================================================='
+echo ' ANDRIK R1138 · GOLD CORE RESTORE'
+echo ' GOLD-CURRENT server.mjs only · CONTROL/LOUDNESS PRESERVED'
+echo '=========================================================='
+[ -s "$LIVE" ] || { echo '❌ live server missing'; exit 20; }
+[ -e "$GOLD_LINK" ] || { echo "❌ GOLD-CURRENT missing: $GOLD_LINK"; exit 21; }
+ROOT="$(readlink -f "$GOLD_LINK" 2>/dev/null || true)"
+[ -n "$ROOT" ] && [ -d "$ROOT" ] || { echo '❌ GOLD-CURRENT symlink invalid'; exit 22; }
+GSERVER="$ROOT/radio247/server.mjs"
+[ -s "$GSERVER" ] || { echo "❌ GOLD server missing: $GSERVER"; exit 23; }
+node --check "$GSERVER"
+grep -Fq 'R1125-TRANSPORT-ISOLATION' "$GSERVER" || { echo '❌ GOLD lacks R1125 transport isolation'; exit 24; }
+grep -Fq 'R1132-NATIVE-1080P25-DIRECT-NO-UNUSED-PNG' "$GSERVER" || { echo '❌ GOLD is older than R1132 visual CPU baseline'; exit 25; }
+mkdir -p "$SAFE"
+cp -a "$LIVE" "$SAVE"
+echo "✅ current server saved: $SAVE"
+rollback(){ echo '↩️ rollback previous server'; install -o root -g root -m0644 "$SAVE" "$LIVE"; node --check "$LIVE"; systemctl restart "$SERVICE" || true; }
+install -o root -g root -m0644 "$GSERVER" "$LIVE"
+node --check "$LIVE"
 if ! systemctl restart "$SERVICE"; then rollback; exit 30; fi
-sleep 9; [ "$(systemctl is-active "$SERVICE" 2>/dev/null || true)" = active ] || { rollback; exit 31; }
-echo "======================================================"; echo "✅ LATEST GOLD RESTORED"; echo "✅ GOLD=$ARCHIVE"; echo "✅ previous=$SAVE"; echo "✅ /control/full-fit НЕ ИСПОЛЬЗОВАН"; echo "======================================================"
+sleep 10
+if [ "$(systemctl is-active "$SERVICE" 2>/dev/null || true)" != active ]; then rollback; exit 31; fi
+echo "✅ GOLD CORE RESTORED: $ROOT"
+echo '✅ control-agent/loudness/visual files untouched'
