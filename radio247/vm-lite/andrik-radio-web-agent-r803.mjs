@@ -6,7 +6,7 @@ import {Readable} from 'node:stream';
 import {pipeline} from 'node:stream/promises';
 
 const CONFIG='/etc/andrik-radio-web-r627.json';
-const AGENT_VERSION_R803='R1138';
+const AGENT_VERSION_R803='R1155';
 const DIAG_DIR_R803='/var/cache/andrik-radio-r622/diagnostics';
 const DIAG_AGENT_LOG_R803=DIAG_DIR_R803+'/r803-agent-events.ndjson';
 const DIAG_AGENT_MAX_BYTES_R803=1024*1024;
@@ -390,7 +390,7 @@ async function execute(action,command={},headers={}){
     const offset=Math.max(0,Math.min(5,Number(command.offset)||0));
     const direction=clean(command.direction).toLowerCase();
     const itemId=clean(command.itemId||'');
-    if(!['up','down'].includes(direction))return {ok:false,output:'QUEUE MOVE ❌ invalid direction'};
+    if(!['up','down','next'].includes(direction))return {ok:false,output:'QUEUE MOVE ❌ invalid direction'};
     try{const d=await localControlR721(`/control/queue-move?offset=${encodeURIComponent(offset)}&direction=${encodeURIComponent(direction)}&itemId=${encodeURIComponent(itemId)}`);return {ok:Boolean(d?.ok),output:`QUEUE MOVE ${direction.toUpperCase()} ${d?.ok?'✅':'❌'}
 ${JSON.stringify(d)}`};}
     catch(e){return {ok:false,output:`QUEUE MOVE ❌

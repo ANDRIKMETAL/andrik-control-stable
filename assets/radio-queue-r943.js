@@ -61,12 +61,11 @@ async function move(index,direction){
 async function makeNext(index){
  if(busy)return;const row=rows[index];if(!row||index<=0)return;busy=true;if(msg)msg.textContent='Ставлю следующей…';
  try{
-   for(let step=index;step>0;step--){
-     await sendMove(step,'up',row.id);
-     if(step>1)await new Promise(r=>setTimeout(r,180));
-   }
+   // R1155: one atomic server command. The old loop sent several remote commands
+   // faster than the agent could finish them, so command #2 hit command-busy.
+   await sendMove(index,'next',row.id);
    if(msg)msg.textContent='✅ Элемент поставлен следующим.';
-   setTimeout(refresh,1200);setTimeout(refresh,3200);setTimeout(refresh,6500);
+   setTimeout(refresh,500);setTimeout(refresh,1800);setTimeout(refresh,4200);
  }catch(e){
    if(msg)msg.textContent='❌ '+(e.status===409?'OVH выполняет другую команду. Повтори через несколько секунд.':e.message);
  }finally{busy=false;}

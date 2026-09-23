@@ -111,7 +111,7 @@ const VIDEO_FADE_SECONDS_R726 = 0.65; // R736: short cinematic fade-out on the O
 const VIDEO_FADE_IN_SECONDS_R736 = 1.10; // R763: viewer-visible recovery for non-MP3 boundaries
 const VIDEO_BLACK_HOLD_SECONDS_R736 = 0.05; // non-MP3 boundary hold preserved
 const MP3_BOUNDARY_FADE_OUT_SECONDS_R814 = 1.60; // R1135B MP3→MP3: shorter darken; R1085/feeder clocks untouched
-const MP3_BOUNDARY_BLACK_HOLD_SECONDS_R814 = 0.40; // R1135B MP3→MP3: short real-black pause
+const MP3_BOUNDARY_BLACK_HOLD_SECONDS_R814 = 0.60; // R1150: slightly longer real-black/silent MP3→MP3 pause (+0.20s)
 const MP3_BOUNDARY_FADE_IN_SECONDS_R814 = 2.40; // R1135B MP3→MP3: long smooth reveal from black
 const VIDEO_FADE_LEAD_SECONDS_R735 = 0.00; // R763: start the proven R753 boundary darkening exactly 1.0s earlier than R762
 const TITLE_SWITCH_BEFORE_BOUNDARY_R781 = Math.max(0.50,Math.min(2.50,Number(process.env.TITLE_SWITCH_BEFORE_BOUNDARY_R781 || (VIDEO_FADE_LEAD_SECONDS_R735 + VIDEO_BLACK_HOLD_SECONDS_R736/2)))); // R781: switch CURRENT to the next MP3 while the screen is black, before recovery
@@ -175,11 +175,40 @@ const CLIP_TO_TRACK_HANDOFF_GUARD_MS_R753 = Math.max(2500,Math.min(10000,Number(
 const CLIP_TO_TRACK_FADE_IN_SECONDS_R753 = 1.30; // R1135 clip→MP3: slower black→picture reveal; transport/clock untouched
 const CLIP_TO_TRACK_BLACK_HOLD_SECONDS_R917B = Math.max(0.30,Math.min(2.00,Number(process.env.CLIP_TO_TRACK_BLACK_HOLD_SECONDS_R917B || 0.80))); // R1135 clip→MP3 real black hold
 const MUSIC_CLIP_AUDIO_PRIME_MS_R1135 = 1050; // 1050 ms PCM prime + 950 ms real-video prebuffer ~= R1085 2000 ms target lead
-const MUSIC_CLIP_R1123_MIN_FRAME_MS_R1135 = 38; // normal clips: no 24 ms burst-catchup; keep first frames visually smooth while allowing tiny phase correction
+const MUSIC_CLIP_R1123_MIN_FRAME_MS_R1135 = 38; // R1141: smooth nominal music-clip pacing; adaptive debt catch-up drops to 24ms only when truly behind
+const MUSIC_CLIP_R1123_DEBT_CATCHUP_MS_R1141 = 24;
+const MUSIC_CLIP_R1123_DEBT_THRESHOLD_MS_R1141 = 250;
 const R1135_CLIP_MP3_CINEMATIC = 'R1135-CLIP-ZEROPTS+PHASE-START+HIDE-STATION-PREVNEXT+CLIP-MP3-FADE+MP3-MASK-ONLY';
 const R1135B_MP3_SHORT_DARK_LONG_REVEAL = 'R1135B-MP3-1.60-0.40-2.40-R1085-UNTOUCHED';
 const R1136_VIDEO_TO_VIDEO_BLACK_SMOOTH = 'R1136-VIDEO-TO-VIDEO-BLACK-BRIDGE+NEXT-VIDEO-PREARM+MUSIC-CLIP-1.50S-REVEAL';
 const MUSIC_CLIP_FADE_IN_SECONDS_R1136 = 1.50; // video insert -> normal music clip: black -> slow reveal, station IDs keep R757 timing
+const R1140B_CLIP_PACER_RUNTIME_FIX = 'R1140B-AUDIOQ128+R1123-24MS+TDZ-SAFE+R1135-R1136-R1139-PRESERVED';
+const R1141_CLIP_IO_BACKPRESSURE_FIX = 'R1141-AUDIOQ512+ADAPTIVE38-24+VIDEO-NODROP-PAUSE-RESUME+EOF15S';
+const STATION_TAIL_FRAME_MS_R1142 = 40; // exact 25fps drain after station decoder EOF; never phase-catch-up the visible ending
+const STATION_TAIL_WAIT_MS_R1142 = 8000; // allow complete short station tail to drain at exact 25fps before detach
+const R1142_STATION_TO_CLIP_TAIL_LOCK = 'R1142-STATION-TAIL-40MS+STALE-NEXT-PREARM-REARM+R1136-REVEAL-PRESERVED';
+const STATION_START_LOCK_FRAMES_R1143 = 25; // first ~1.0s of a station insert can never phase-catch-up faster than 25fps
+const STATION_MID_MIN_FRAME_MS_R1143 = 38; // after the clean first second, allow only gentle station phase recovery
+const R1143_STATION_START_FRAME_LOCK = 'R1143-STATION-FIRST25-40MS+MID38MS+R1142-TAIL40MS';
+const R1145_STATION_MP3_ATOMIC_BLACK = 'R1145-STATION-TAIL->PREARMED-FULL-BLACK->FULLFRAME-MP3-REVEAL';
+const R1147_STATION_BLACK_MASTER_LOCK = 'R1147-STATION-TAIL->R1085-EXACT-BLACK-LOCK->FIRST-MP3-FRAME';
+const R1146_HARD_STALL_SELF_HEAL = 'R1146-R751-TRUE-NOPROGRESS->R884-PUBLISHER-RECYCLE+MEDIA-PRESERVED';
+const R1148_MP3_CINEMATIC_MASTER_LOCK = 'R1148-MP3-FADEOUT+BLACK+FADEIN-R1085-EXACT-FRAME-LOCK';
+const R1148B_PUBLIC_STATUS_HEALTH_FIX = 'R1148B-PUBLIC-STATUS-MARKER+ROBUST-INSTALL-HEALTH';
+const R1148C_MASTER_FRAME_RELEASE_FIX = 'R1148C-MP3-RELEASE-BY-PERSISTENT-MASTER-FRAME-TARGET';
+const R1148D_INCOMING_FEEDER_RELEASE_FIX = 'R1148D-MP3-RELEASE-FROM-INCOMING-FEEDER-METADATA+FIRST-FULL-FRAME-FALLBACK';
+const R1148E_LOCK_OWNED_RELEASE_FIX = 'R1148E-MP3-LOCK-OWNED-PERSISTENT-MASTER-RELEASE-NO-METADATA-DEPENDENCY';
+const R1150_MP3_EDGE_FRAME_SHIELD = 'R1150-MP3-FIRST7+LAST10-EXACT-FRAMES+FIRST-FULLFRAME-WARM+R1148E-BOUNDARY-PRESERVED';
+const R1151_MP3_TO_VIDEO_PHASE_PRESERVE = 'R1151-MP3-TO-VIDEO-TAIL-R1085-PHASE-PRESERVE';
+const R1154_ACTUAL_NEXT_OWNER = 'R1154-ACTUAL-NEXT-OWNER->R1085-TAIL+R1069-PREARM+NO-FALSE-MP3-WAIT';
+const R1154_PREARM_BEFORE_END_MS = 4000; // mirror proven R1069 T-4s video prearm when next owner changes during the song
+const R1155_QUEUE_CONTROL = 'R1155-ATOMIC-NEXT+MEDIA-PICK-TRACK-CLIP-STATION';
+const MP3_EDGE_START_EXACT_SECONDS_R1150 = 7.0; // preserve every real frame while intro PREVIOUS/NEXT is visible
+const MP3_EDGE_TAIL_EXACT_SECONDS_R1150 = 10.0; // preserve every real frame while outro PREVIOUS/NEXT is visible
+const MP3_CINEMATIC_LOCK_TIMEOUT_MS_R1148 = 15000; // watchdog only: frame-locked release normally happens after the next MP3 is fully bright
+const MP3_CINEMATIC_FADE_RELEASE_PAD_SECONDS_R1148 = 0.12; // 3 frames beyond the 2.40s alpha fade so the short-lived mask has fully left the graph
+const STATION_BLACK_PREARM_TIMEOUT_MS_R1145 = 1800; // black candidate is built while the station tail is still draining
+const BLACK_TO_MP3_FULLFRAME_TIMEOUT_MS_R1145 = 5000; // keep black LIVE until one complete incoming MP3 YUV frame is ready
 const INSERT_AUDIO_PRIME_MS_R917B = 450; // R998 tuned clip/station audio prime // R997 tuned clip/station audio prime // R996 clip/station audio prime // R995B common clip/station A/V sync // R926: outgoing MP3 audio-tail boundary lock // R917B audio first by one 25fps frame
 const VIDEO_INSERT_FADE_IN_SECONDS_R757 = Math.max(0.25,Math.min(1.5,Number(process.env.VIDEO_INSERT_FADE_IN_SECONDS_R757 || 1.10))); // guaranteed black→video on MP3→clip/insert boundary
 const MP3_BOUNDARY_FADE_IN_SECONDS_R758 = Math.max(0.20,Math.min(1.5,Number(process.env.MP3_BOUNDARY_FADE_IN_SECONDS_R758 || 0.80))); // R763 metadata/env compatibility: longer visible MP3 boundary recovery
@@ -205,7 +234,7 @@ const FULL_FRAME_FILTER_R787 = 'scale=1920:1080:force_original_aspect_ratio=decr
 const LIVE_FULL_FRAME_FILTER_R794 = 'scale=1920:1080:force_original_aspect_ratio=decrease:flags=fast_bilinear,pad=1920:1080:(ow-iw)/2:(oh-ih)/2,setsar=1'; // R1110 CPU-LIGHT: MP3 live feeder only; clips/station stay Lanczos
 const LIVE_FULL_FRAME_GEOMETRY_R819 = 'scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos,pad=1920:1080:(ow-iw)/2:(oh-ih)/2,setsar=1'; // R1012 HARD FULL FRAME
 const VIDEO_INPUT_QUEUE_PACKETS_R732 = 96; // R974B transition spike cushion // R887 absorb short rawvideo scheduling spikes // R858: bounded RAWVIDEO transition cushion
-const AUDIO_INPUT_QUEUE_PACKETS_R732 = 96; // R974B PCM transition queue cushion // R887 absorb short PCM scheduling spikes // R837 GOLD: proven bounded audio queue
+const AUDIO_INPUT_QUEUE_PACKETS_R732 = 512; // R1141: FFmpeg input cushion for intentional ~2s PCM lead + transient encoder jitter; video queue remains 96
 const VIDEO_GOP = 50; // exactly 2 seconds at 25 fps
 const LIVE_MP3_CPU_LIGHT_R1110 = true; // R1110: lighter MP3 visual path only; no A/V timing, queue or publisher changes
 const R1132_VISUAL_CPU_LOW = 'R1132-NATIVE-1080P25-DIRECT-NO-UNUSED-PNG';
@@ -281,6 +310,23 @@ const state = {
   clipMp3CinematicProfileR1135:R1135_CLIP_MP3_CINEMATIC,
   mp3CinematicTimingR1135B:R1135B_MP3_SHORT_DARK_LONG_REVEAL,
   videoToVideoBlackProfileR1136:R1136_VIDEO_TO_VIDEO_BLACK_SMOOTH,
+  clipPacerRuntimeFixR1140B:R1140B_CLIP_PACER_RUNTIME_FIX,
+  clipIoBackpressureFixR1141:R1141_CLIP_IO_BACKPRESSURE_FIX,
+  stationToClipTailLockR1142:R1142_STATION_TO_CLIP_TAIL_LOCK,
+  stationStartFrameLockR1143:R1143_STATION_START_FRAME_LOCK,
+  stationMp3AtomicBlackR1145:R1145_STATION_MP3_ATOMIC_BLACK,
+  stationBlackMasterLockR1147:R1147_STATION_BLACK_MASTER_LOCK,
+  hardStallSelfHealR1146:R1146_HARD_STALL_SELF_HEAL,
+  mp3CinematicMasterLockR1148:R1148_MP3_CINEMATIC_MASTER_LOCK,
+  installHealthFixR1148B:R1148B_PUBLIC_STATUS_HEALTH_FIX,
+  mp3MasterFrameReleaseFixR1148C:R1148C_MASTER_FRAME_RELEASE_FIX,
+  mp3IncomingFeederReleaseFixR1148D:R1148D_INCOMING_FEEDER_RELEASE_FIX,
+  mp3LockOwnedReleaseFixR1148E:R1148E_LOCK_OWNED_RELEASE_FIX,
+  mp3EdgeFrameShieldR1150:R1150_MP3_EDGE_FRAME_SHIELD,
+  mp3ToVideoPhasePreserveR1151:R1151_MP3_TO_VIDEO_PHASE_PRESERVE,
+  actualNextOwnerFixR1154:R1154_ACTUAL_NEXT_OWNER,
+  queueControlR1155:R1155_QUEUE_CONTROL,
+  lastManualQueuePickR1155:null,
   mode: 'R821 STATION NO-DRAIN MAKE-BEFORE-BREAK / R820 MASTER PTS + R819 GEOMETRY + R814 FADE PRESERVED',
   startedAt: new Date().toISOString(),
   streamStartedAt: null,
@@ -421,6 +467,8 @@ let stationHandoffActiveR804 = false;
 const normalClipRetryR814=new Map(); // R814: selected normal clips get transient retries before any defer
 const NORMAL_CLIP_RETRY_MAX_R814=2;
 const NORMAL_CLIP_RETRY_DELAY_MS_R814=900;
+const NORMAL_CLIP_EOF_MARGIN_MS_R1139=15000; // R1141: allow paced/no-drop video tail to drain and reach built-in fade before emergency soft-cut
+const R1139_CLIP_STALL_GUARD='R1139-AUDIOQ160+POSTCOMMIT-SOFT-EOF-5S+NO-WHOLE-CLIP-REPLAY';
 let visualSwitching = false;
 let scheduleTimerR721 = null;
 let runtimeForceVisualSlot = FORCE_VISUAL_SLOT;
@@ -473,6 +521,7 @@ let masterBackpressureSinceR750 = 0;
 let masterBackpressureAudioBytesR751 = 0;
 let masterBackpressureVideoBytesR751 = 0;
 let masterBackpressureLastProgressAtR751 = 0;
+let masterHardRecoveryBusyR1146 = false;
 let rtmpsEgressWatchdogTimerR792 = null;
 let rtmpsEgressWatchBusyR792 = false;
 let rtmpsEgressZeroSinceR792 = 0;
@@ -2996,6 +3045,129 @@ function bumperFilterComplexR724(){
   return `[0:v]setpts=PTS-STARTPTS,${vf}[base];[1:v]scale=160:160:flags=lanczos,format=yuva420p[qr];[base][qr]overlay=x=36:y=36:shortest=1:format=yuv420,format=yuv420p[outv]`;
 }
 
+// R1148 MP3 CINEMATIC MASTER LOCK
+// Arm/release from raw frame counts, not Date.now(), so the protected interval is
+// tied to the exact feeder PTS that generates the alpha fade. This changes only
+// R1085's DROP/DUP policy during the short cinematic window; audio, playlist,
+// decoder, x264, MPEG-TS and RTMPS transport are untouched.
+function armMp3CinematicMasterLockR1148(child,relay){
+  const master=publisher?.__r1085AudioMaster;
+  if(!master)return false;
+  const publisherPid=Number(publisher?.pid||0);
+  if(!publisherPid)return false;
+  if(child.__r1148Mp3LockPublisherPid===publisherPid && master.transitionPassThroughR1148)return true;
+
+  const leadMs=Math.round((Number(master.audioBytes||0)/(AUDIO_SAMPLE_RATE*4)-Number(master.videoFrames||0)/VIDEO_FPS)*1000);
+  master.transitionPassThroughR1148=true;
+  master.transitionPassThroughUntilR1148=Date.now()+MP3_CINEMATIC_LOCK_TIMEOUT_MS_R1148;
+  master.transitionPassFramesR1148=0;
+  master.transitionPassArmLeadMsR1148=leadMs;
+  master.transitionReleaseVideoFrameR1148=0;
+  master.transitionReleaseChildPidR1148=0;
+  child.__r1148Mp3LockPublisherPid=publisherPid;
+  child.__r1148Mp3FadeOutLockArmed=true;
+
+  state.mp3CinematicMasterLockActiveR1148=true;
+  state.mp3CinematicMasterLockArmedAtR1148=new Date().toISOString();
+  state.mp3CinematicMasterLockStartLeadMsR1148=leadMs;
+  diagRecordR802('r1148-mp3-cinematic-master-lock-armed',{
+    childPid:Number(child?.pid||0),
+    frame:Number(relay?.frames||0),
+    fadeStartFrame:Number(child?.__r1148Mp3FadeOutStartFrame||0),
+    leadMs
+  });
+  return true;
+}
+
+function releaseMp3CinematicMasterLockR1148(child,relay,reason='fade-in-complete'){
+  const master=publisher?.__r1085AudioMaster;
+  if(!master?.transitionPassThroughR1148)return false;
+
+  const frames=Number(master.transitionPassFramesR1148||0);
+  const startLeadMs=Number(master.transitionPassArmLeadMsR1148||0);
+  const releaseChildPid=Number(master.transitionReleaseChildPidR1148||child?.pid||0);
+  const releaseTargetFrame=Number(master.transitionReleaseVideoFrameR1148||0);
+  const leadMs=Math.round((Number(master.audioBytes||0)/(AUDIO_SAMPLE_RATE*4)-Number(master.videoFrames||0)/VIDEO_FPS)*1000);
+
+  master.transitionPassThroughR1148=false;
+  master.transitionPassThroughUntilR1148=0;
+  master.transitionPassArmLeadMsR1148=0;
+  master.transitionReleaseVideoFrameR1148=0;
+  master.transitionReleaseChildPidR1148=0;
+
+  state.mp3CinematicMasterLockActiveR1148=false;
+  state.lastMp3CinematicMasterLockR1148={
+    at:new Date().toISOString(),
+    reason,
+    frames,
+    startLeadMs,
+    endLeadMs:leadMs,
+    childPid:releaseChildPid,
+    releaseTargetFrame
+  };
+  diagRecordR802('r1148-mp3-cinematic-master-lock-released',{
+    childPid:releaseChildPid,
+    frame:Number(relay?.frames||0),
+    releaseTargetFrame,
+    frames,
+    startLeadMs,
+    leadMs,
+    reason
+  });
+  return true;
+}
+
+// R1148D: arm the release target from the ACTUAL incoming feeder metadata.
+// R1148C depended on the caller's opts object. In production that hook could be
+// skipped even though the candidate was a real 2.40 s MP3 reveal, leaving the
+// lock alive until the 15 s watchdog. The child metadata is created by the same
+// FFmpeg spawn that owns the fade, so it is the authoritative release length.
+function armMp3CinematicReleaseTargetR1148D(child,reason='incoming-feeder-live'){
+  const master=publisher?.__r1085AudioMaster;
+  if(!master?.transitionPassThroughR1148)return false;
+
+  // R1148E: once R1148 is active, the OUTGOING feeder has already proved this
+  // boundary is MP3->MP3. Do not depend on incoming child metadata to release
+  // the persistent-master lock: that metadata can be absent even though the
+  // real 2.40 s startup mask is live. Use metadata when present, otherwise the
+  // canonical cinematic reveal length. This makes watchdog timeout a true
+  // emergency fallback instead of the normal release path.
+  const metadataFrames=Math.max(0,Number(child?.__r1148Mp3FadeInReleaseFrame)||0);
+  const canonicalFrames=Math.max(
+    1,
+    Math.ceil(
+      (MP3_BOUNDARY_FADE_IN_SECONDS_R814+
+       MP3_CINEMATIC_FADE_RELEASE_PAD_SECONDS_R1148)*VIDEO_FPS
+    )
+  );
+  const releaseFrames=metadataFrames>0?metadataFrames:canonicalFrames;
+
+  const childPid=Number(child?.pid||0);
+  const currentVideoFrame=Number(master.videoFrames||0);
+  const existingTarget=Number(master.transitionReleaseVideoFrameR1148||0);
+  const existingPid=Number(master.transitionReleaseChildPidR1148||0);
+
+  // Idempotent: candidate-promoted and first-full-frame may both call this.
+  if(existingTarget>currentVideoFrame && existingPid===childPid)return true;
+
+  master.transitionReleaseVideoFrameR1148=currentVideoFrame+releaseFrames;
+  master.transitionReleaseChildPidR1148=childPid;
+  state.mp3MasterFrameReleaseTargetR1148C=Number(master.transitionReleaseVideoFrameR1148||0);
+  state.mp3MasterFrameReleaseTargetR1148D=Number(master.transitionReleaseVideoFrameR1148||0);
+  state.mp3MasterFrameReleaseTargetR1148E=Number(master.transitionReleaseVideoFrameR1148||0);
+
+  diagRecordR802('r1148e-mp3-master-frame-release-target-armed',{
+    candidatePid:childPid,
+    releaseFrames,
+    metadataFrames,
+    canonicalFrames,
+    targetVideoFrame:Number(master.transitionReleaseVideoFrameR1148||0),
+    currentVideoFrame,
+    reason
+  });
+  return true;
+}
+
 function detachVideoFrameRelayR816(child){
   const relay=child?.__r816VideoRelay;
   if(!relay)return {frames:0,dropped:0};
@@ -3037,10 +3209,181 @@ function attachVideoFrameRelayR816(child,videoSink,label='video'){
         const frame=relay.frameParts.length===1?relay.frameParts[0]:Buffer.concat(relay.frameParts,VIDEO_FRAME_BYTES_R816);
         relay.frameParts=[];
         relay.frameBytes=0;
-        const ok=videoSink.write(frame);
+
+        // R1150 frame-window metadata is needed BEFORE R1148 decides whether
+        // this really is still MP3->MP3.
+        const masterR1150=publisher?.__r1085AudioMaster;
+        const totalFramesR1150=Math.max(0,Number(child?.__r1150TrackDurationFrames)||0);
+        const startFramesR1150=Math.max(1,Number(child?.__r1150EdgeStartFrames)||0);
+        const tailFramesR1150=Math.max(1,Number(child?.__r1150EdgeTailFrames)||0);
+        const inStartR1150=Boolean(totalFramesR1150>0 && relay.frames<startFramesR1150);
+        const inTailR1150=Boolean(totalFramesR1150>0 && relay.frames>=Math.max(0,totalFramesR1150-tailFramesR1150));
+
+        // A feeder created as MP3->MP3 carries an extra R978B 0.20s guard + 0.60s
+        // black hold beyond the audible MP3. Remove that synthetic tail when
+        // estimating the REAL audio boundary for scheduler re-checks.
+        const syntheticMp3TailFramesR1154=child?.__r1150Mp3Boundary===true
+          ? Math.max(
+              0,
+              Math.round(
+                (
+                  MP3_TO_VIDEO_TAIL_GUARD_MS_R972/1000+
+                  MP3_BOUNDARY_BLACK_HOLD_SECONDS_R814
+                )*VIDEO_FPS
+              )
+            )
+          : 0;
+        const audibleEndFrameR1154=Math.max(
+          0,
+          totalFramesR1150-syntheticMp3TailFramesR1154
+        );
+        const remainingMsR1154=Math.max(
+          0,
+          Math.round((audibleEndFrameR1154-relay.frames)*1000/VIDEO_FPS)
+        );
+
+        // R1154: if the frozen start-of-song boundary said MP3->MP3, re-read the
+        // ACTUAL owner during the final 10 seconds. This includes a queue-immediate
+        // R943 bumper/clip and the real timed/automatic station scheduler.
+        if(
+          label==='normal-visual' &&
+          inTailR1150 &&
+          child?.__r1150Mp3Boundary===true &&
+          child?.__r1154RuntimeVideoHandoff!==true
+        ){
+          const ownerR1154=actualNextVideoOwnerR1154(remainingMsR1154);
+          if(ownerR1154?.item){
+            child.__r1154RuntimeVideoHandoff=true;
+            child.__r1154SuppressR1148=true;
+            child.__r1154ActualNextKind=ownerR1154.kind||'video';
+            child.__r1154ActualNextSource=ownerR1154.source||'runtime';
+            child.__r1154ActualNextItem=ownerR1154.item;
+            child.__r1154ActualNextAfterItem=ownerR1154.afterItem||null;
+
+            const leadMsR1154=masterR1150
+              ? Math.round(
+                  (
+                    Number(masterR1150.audioBytes||0)/(AUDIO_SAMPLE_RATE*4)-
+                    Number(masterR1150.videoFrames||0)/VIDEO_FPS
+                  )*1000
+                )
+              : 0;
+
+            diagRecordR802('r1154-actual-next-owner-video-r1085-restored',{
+              childPid:Number(child?.pid||0),
+              frame:Number(relay.frames||0),
+              totalFrames:totalFramesR1150,
+              audibleEndFrame:audibleEndFrameR1154,
+              remainingMs:remainingMsR1154,
+              kind:ownerR1154.kind||'video',
+              source:ownerR1154.source||'runtime',
+              title:shortText(ownerR1154.item?.title||'VIDEO',52),
+              leadMs:leadMsR1154,
+              drops:Number(masterR1150?.dropped||0),
+              duplicates:Number(masterR1150?.duplicated||0)
+            });
+
+            // Recreate the proven static MP3->video behavior as closely as possible:
+            // cache/warm now and have the unified A/V candidate stopped and ready
+            // at about T-4s, so station-preplay can claim it immediately.
+            scheduleActualNextPrearmR1154(
+              child,
+              ownerR1154,
+              remainingMsR1154
+            );
+
+            // A video owner has no incoming MP3 to release R1148E. If a false
+            // MP3 lock was already armed, cancel it now; otherwise suppress arming.
+            if(masterR1150?.transitionPassThroughR1148){
+              releaseMp3CinematicMasterLockR1148(
+                child,
+                relay,
+                'r1154-actual-next-owner-video'
+              );
+            }
+          }
+        }
+
+        // R1148 is MP3->MP3 only. R1154 suppresses it as soon as the real next
+        // owner becomes a station/clip.
+        const fadeStartFrameR1148=Number(child?.__r1148Mp3FadeOutStartFrame);
+        if(!child?.__r1154SuppressR1148 &&
+           Number.isFinite(fadeStartFrameR1148) &&
+           fadeStartFrameR1148>=0 &&
+           relay.frames>=fadeStartFrameR1148){
+          const activePublisherPidR1148=Number(publisher?.pid||0);
+          if(!child.__r1148Mp3FadeOutLockArmed ||
+             Number(child.__r1148Mp3LockPublisherPid||0)!==activePublisherPidR1148){
+            armMp3CinematicMasterLockR1148(child,relay);
+          }
+        }
+
+        // R1148D fallback: the first complete frame from the promoted incoming
+        // MP3 feeder is the last possible safe place to arm the persistent-master
+        // release target. It remains untouched for genuine MP3->MP3 transitions.
+        if(relay.frames===0){
+          armMp3CinematicReleaseTargetR1148D(child,'incoming-first-full-frame');
+        }
+
+        // R1151/R1154:
+        // - first 7s remain exact for every normal MP3;
+        // - final 10s remain exact only for a GENUINE MP3->MP3 owner;
+        // - when R1154 detects a real video owner, normal R1085 DROP/DUP is restored.
+        const tailShieldAllowedR1151=Boolean(
+          child?.__r1150Mp3Boundary===true &&
+          child?.__r1154RuntimeVideoHandoff!==true
+        );
+        const exactTailR1151=Boolean(inTailR1150 && tailShieldAllowedR1151);
+        const exactEdgeR1150=Boolean(label==='normal-visual' && (inStartR1150||exactTailR1151));
+
+        if(label==='normal-visual' && inTailR1150 && !tailShieldAllowedR1151 && !relay.__r1151VideoHandoffTailDiag){
+          relay.__r1151VideoHandoffTailDiag=true;
+          diagRecordR802('r1151-mp3-to-video-tail-r1085-phase-preserved',{
+            childPid:Number(child?.pid||0),
+            frame:Number(relay.frames||0),
+            totalFrames:totalFramesR1150,
+            exactTailDisabled:true
+          });
+        }
+
+        if(exactEdgeR1150 && !relay.__r1150EdgeDiagStart && inStartR1150){
+          relay.__r1150EdgeDiagStart=true;
+          diagRecordR802('r1150-mp3-edge-exact-start',{
+            childPid:Number(child?.pid||0),
+            frame:Number(relay.frames||0),
+            exactSeconds:MP3_EDGE_START_EXACT_SECONDS_R1150
+          });
+        }
+        if(exactEdgeR1150 && !relay.__r1150EdgeDiagTail && inTailR1150){
+          relay.__r1150EdgeDiagTail=true;
+          diagRecordR802('r1150-mp3-edge-exact-tail',{
+            childPid:Number(child?.pid||0),
+            frame:Number(relay.frames||0),
+            totalFrames:totalFramesR1150,
+            exactSeconds:MP3_EDGE_TAIL_EXACT_SECONDS_R1150
+          });
+        }
+
+        let ok=false;
+        if(masterR1150 && exactEdgeR1150)masterR1150.normalMp3EdgePassThroughR1150=true;
+        try{
+          ok=videoSink.write(frame);
+        }finally{
+          if(masterR1150)masterR1150.normalMp3EdgePassThroughR1150=false;
+        }
         relay.frames++;
         state.videoRelayFramesWritten=Number(state.videoRelayFramesWritten||0)+1;
         state.lastVideoFrameAtR816=new Date().toISOString();
+
+        const fadeReleaseFrameR1148=Number(child?.__r1148Mp3FadeInReleaseFrame);
+        if(Number.isFinite(fadeReleaseFrameR1148) &&
+           fadeReleaseFrameR1148>0 &&
+           !child.__r1148Mp3FadeInReleased &&
+           relay.frames>=fadeReleaseFrameR1148){
+          child.__r1148Mp3FadeInReleased=true;
+          releaseMp3CinematicMasterLockR1148(child,relay,'fade-in-complete');
+        }
+
         if(!ok){
           relay.waitingDrain=true;
           deferRemainder(chunk,offset);
@@ -4023,40 +4366,96 @@ function masterBackpressureWatchdogTickR750(){
   state.lastTransportFatalAt=state.lastPublisherBackpressureAt;
   state.lastTransportFatalReason=`R751 master pipe NO-PROGRESS ${noProgressMs}ms`;
   state.lastError=`R751 STREAM STALL: ${state.lastTransportFatalReason}`;
-  console.error('[r751-stream-health]',state.lastError,'— systemd rebuilds the ONE RTMPS publisher');
-diagRecordR802(
-    'r826c-r751-whole-service-kill-suppressed',
+  console.error('[r751-stream-health]',state.lastError,'— R1146 requests R884 publisher-only recovery');
+
+  // R1146: R751 already proved a REAL master-pipe stall: the pipe is blocked
+  // AND neither raw PCM nor rawvideo has advanced for the full 30-second guard.
+  // R826C used to suppress this forever. That preserved the playlist but could
+  // leave a dead persistent publisher running indefinitely (RTMPS 0/2, frozen
+  // viewer, later media appearing to overlap). Escalate ONLY this proven hard
+  // stall to the existing R884 publisher-only recovery. R884 preserves Node,
+  // queue and the currently-live decoder/clip and reconnects those SAME sources
+  // to a fresh persistent H264/AAC master. Whole-service exit remains R884's
+  // last-resort fallback only if local publisher recovery itself fails.
+  diagRecordR802(
+    'r1146-master-hard-stall-detected',
     {
-      reason:
-        state.lastTransportFatalReason ||
-        state.lastError ||
-        'master-no-progress',
-
-      audioBytes:
-        masterBackpressureAudioBytesR751,
-
-      videoBytes:
-        masterBackpressureVideoBytesR751,
-
-      videoQueue:
-        VIDEO_INPUT_QUEUE_PACKETS_R732
+      reason:state.lastTransportFatalReason||state.lastError||'master-no-progress',
+      publisherPid:Number(publisher?.pid||0),
+      audioBytes:masterBackpressureAudioBytesR751,
+      videoBytes:masterBackpressureVideoBytesR751,
+      audioWritableLength:Number(publisher?.stdio?.[3]?.writableLength||0),
+      videoWritableLength:Number(publisher?.stdio?.[4]?.writableLength||0),
+      clipActive:Boolean(clipActive),
+      current:state.current?.title||'',
+      next:state.next?.title||''
     }
   );
 
-  console.error(
-    '[r826c-r751-protect]',
-    'R751 transient NO-PROGRESS — whole radio restart blocked'
-  );
+  // Arm a fresh 30-second evidence window immediately. This prevents the 1 Hz
+  // watchdog from dispatching duplicate recoveries while R884 is rebuilding.
+  masterBackpressureSinceR750=now;
+  masterBackpressureLastProgressAtR751=now;
 
-  // Keep Node, playlist and current MP3 alive.
-  // Real transport/FFmpeg fatal recovery remains untouched.
-  masterBackpressureSinceR750=Date.now();
-  masterBackpressureLastProgressAtR751=Date.now();
+  if(masterHardRecoveryBusyR1146 || publisherRecoveryBusyR884){
+    state.lastWarning='R1146 hard stall confirmed; publisher recovery already in progress';
+    return;
+  }
 
-  state.transportSelfHealPending=false;
+  masterHardRecoveryBusyR1146=true;
+  const oldPublisherR1146=publisher;
+  const reasonR1146=state.lastTransportFatalReason;
+  state.lastWarning='R1146 hard master stall confirmed; recycling publisher only';
 
-  state.lastWarning=
-    'R826C R751 transient NO-PROGRESS suppressed';
+  diagRecordR802('r1146-publisher-recycle-request',{
+    publisherPid:Number(oldPublisherR1146?.pid||0),
+    reason:reasonR1146,
+    clipActive:Boolean(clipActive),
+    stationHandoffActive:Boolean(stationHandoffActiveR804)
+  });
+
+  Promise.resolve().then(async()=>{
+    try{
+      const ok=await recyclePublisherR884(
+        reasonR1146,
+        oldPublisherR1146,
+        false
+      );
+
+      if(ok){
+        state.lastError='';
+        state.transportHealthy=true;
+        state.transportSelfHealPending=false;
+        diagRecordR802('r1146-publisher-recycle-ok',{
+          oldPublisherPid:Number(oldPublisherR1146?.pid||0),
+          newPublisherPid:Number(publisher?.pid||0),
+          clipActive:Boolean(clipActive),
+          current:state.current?.title||''
+        });
+      }else if(publisherRecoveryDeferredR1084){
+        diagRecordR802('r1146-publisher-recycle-deferred',{
+          reason:reasonR1146,
+          current:state.current?.title||''
+        });
+      }else{
+        // A concurrent R884 may have won the race. Do NOT kill the service here;
+        // the next R751 evidence window will retry only if the fresh publisher
+        // is still truly blocked for another full guard period.
+        state.lastWarning='R1146 recycle not started; waiting for fresh stall evidence';
+        diagRecordR802('r1146-publisher-recycle-not-started',{
+          publisherPid:Number(publisher?.pid||0),
+          recoveryBusy:Boolean(publisherRecoveryBusyR884)
+        });
+      }
+    }catch(error){
+      state.lastError=`R1146 recovery dispatch failed: ${cleanText(error?.message||error)}`;
+      diagRecordR802('r1146-publisher-recycle-error',{
+        error:cleanText(error?.message||error)
+      });
+    }finally{
+      masterHardRecoveryBusyR1146=false;
+    }
+  });
 
   return;
 }
@@ -4442,6 +4841,16 @@ function startPublisher(){
     duplicated:0,
     externalPacedVideoR1123:false,
     externalPacedFramesR1123:0,
+    normalMp3EdgePassThroughR1150:false,
+    transitionPassThroughR1147:false,
+    transitionPassThroughUntilR1147:0,
+    transitionPassFramesR1147:0,
+    transitionPassThroughR1148:false,
+    transitionPassThroughUntilR1148:0,
+    transitionPassFramesR1148:0,
+    transitionPassArmLeadMsR1148:0,
+    transitionReleaseVideoFrameR1148:0,
+    transitionReleaseChildPidR1148:0,
     originalAudioWrite:audioSink.write.bind(audioSink),
     originalVideoWrite:videoSink.write.bind(videoSink)
   };
@@ -4486,14 +4895,74 @@ function startPublisher(){
     // source frames from these exact counters, so suppress R1085's synthetic
     // DROP/DUP for those insert frames only. Normal MP3 video keeps the proven
     // R1085 DROP/DUP behavior unchanged.
-    if(r1085.externalPacedVideoR1123){
+    // R1147: station tail -> BLACK -> first MP3 frame is an ownership-critical
+    // boundary. R1145 made the rawvideo handoff atomic, but R1085 sits BELOW that
+    // handoff and could still DROP the first black frame or DUP the previous station
+    // frame according to phase. During this short boundary lock, pass every complete
+    // frame exactly once. The normal R1085 DROP/DUP controller resumes only after the
+    // first complete MP3 reveal frame has replaced BLACK.
+    if(r1085.transitionPassThroughR1147 &&
+       Date.now()>Number(r1085.transitionPassThroughUntilR1147||0)){
+      r1085.transitionPassThroughR1147=false;
+      r1085.transitionPassThroughUntilR1147=0;
+      state.stationBlackMasterLockActiveR1147=false;
+      diagRecordR802('r1147-station-black-master-lock-timeout',{
+        leadMs:Math.round((r1085.audioBytes/(AUDIO_SAMPLE_RATE*4)-r1085.videoFrames/VIDEO_FPS)*1000)
+      });
+    }
+
+    // R1148: MP3->MP3 cinematic frames must not be altered below the feeder.
+    // The OLD feeder arms this lock on the exact first fade-out frame; the NEW
+    // feeder releases it only after its 2.40s fade-in mask is fully transparent.
+    // Therefore R1085 cannot DROP fade frames, DUP a stale picture, or eat the
+    // intentional BLACK hold. Audio remains the master and is never modified.
+    if(r1085.transitionPassThroughR1148 &&
+       Date.now()>Number(r1085.transitionPassThroughUntilR1148||0)){
+      const timeoutFramesR1148=Number(r1085.transitionPassFramesR1148||0);
+      const timeoutTargetR1148=Number(r1085.transitionReleaseVideoFrameR1148||0);
+      const timeoutChildPidR1148=Number(r1085.transitionReleaseChildPidR1148||0);
+      r1085.transitionPassThroughR1148=false;
+      r1085.transitionPassThroughUntilR1148=0;
+      r1085.transitionPassArmLeadMsR1148=0;
+      r1085.transitionReleaseVideoFrameR1148=0;
+      r1085.transitionReleaseChildPidR1148=0;
+      state.mp3CinematicMasterLockActiveR1148=false;
+      diagRecordR802('r1148-mp3-cinematic-master-lock-timeout',{
+        frames:timeoutFramesR1148,
+        targetVideoFrame:timeoutTargetR1148,
+        candidatePid:timeoutChildPidR1148,
+        leadMs:Math.round((r1085.audioBytes/(AUDIO_SAMPLE_RATE*4)-r1085.videoFrames/VIDEO_FPS)*1000)
+      });
+    }
+
+    if(r1085.externalPacedVideoR1123 || r1085.normalMp3EdgePassThroughR1150 || r1085.transitionPassThroughR1147 || r1085.transitionPassThroughR1148){
       const curOk=r1085.originalVideoWrite(chunk,...args);
       r1085.videoFrames++;
       r1085.lastFrame=Buffer.from(chunk);
-      r1085.externalPacedFramesR1123++;
-      state.audioMasterExternalPacedFramesR1123=r1085.externalPacedFramesR1123;
+      if(r1085.externalPacedVideoR1123){
+        r1085.externalPacedFramesR1123++;
+        state.audioMasterExternalPacedFramesR1123=r1085.externalPacedFramesR1123;
+      }
+      if(r1085.transitionPassThroughR1147){
+        r1085.transitionPassFramesR1147++;
+        state.stationBlackMasterLockFramesR1147=r1085.transitionPassFramesR1147;
+      }
+      if(r1085.transitionPassThroughR1148){
+        r1085.transitionPassFramesR1148++;
+        state.mp3CinematicMasterLockFramesR1148=r1085.transitionPassFramesR1148;
+      }
       state.audioMasterVideoSecondsR1085=Number((r1085.videoFrames/VIDEO_FPS).toFixed(3));
       state.audioMasterLeadMsR1085=Math.round((r1085.audioBytes/(AUDIO_SAMPLE_RATE*4)-r1085.videoFrames/VIDEO_FPS)*1000);
+
+      // R1148C: release is owned by the persistent R1085 master frame counter,
+      // not by a feeder-local relay counter. The target is armed atomically when
+      // the incoming MP3 feeder is promoted, so feeder replacement cannot lose
+      // the release condition. Audio remains untouched.
+      if(r1085.transitionPassThroughR1148 &&
+         Number(r1085.transitionReleaseVideoFrameR1148||0)>0 &&
+         r1085.videoFrames>=Number(r1085.transitionReleaseVideoFrameR1148||0)){
+        releaseMp3CinematicMasterLockR1148(null,{frames:Number(r1085.transitionPassFramesR1148||0)},'master-frame-target-r1148c');
+      }
       return curOk;
     }
 
@@ -4641,6 +5110,54 @@ function spawnRawNormalVideoChildR816(visualPath,{fadeIn=false,fadeInSeconds=CLI
   child.__r816EqPeriod=eq.period;
   child.__r816VisualPath=visualPath;
   child.__r816IntentionalStop=false;
+  // R1150: feeder-local frame windows. R1085 remains the long-term audio master,
+  // but it is forbidden to DROP/DUP the first 7s and final 10s of a normal MP3.
+  // This preserves smooth real motion where PREVIOUS/NEXT is visible without
+  // changing the proven R1148E fade/black/fade boundary ownership.
+  child.__r1150TrackDurationFrames=Math.max(0,Math.round(Number(trackDuration||0)*VIDEO_FPS));
+  child.__r1150EdgeStartFrames=Math.max(1,Math.round(MP3_EDGE_START_EXACT_SECONDS_R1150*VIDEO_FPS));
+  child.__r1150EdgeTailFrames=Math.max(1,Math.round(MP3_EDGE_TAIL_EXACT_SECONDS_R1150*VIDEO_FPS));
+  child.__r1150Mp3Boundary=Boolean(mp3Boundary); // R1151: tail shield only for MP3->MP3
+  child.__r1154RuntimeVideoHandoff=false;
+  child.__r1154SuppressR1148=false;
+  child.__r1154ActualNextKind='';
+  child.__r1154ActualNextSource='';
+  child.__r1154ActualNextItem=null;
+  child.__r1154ActualNextAfterItem=null;
+  child.__r1154PrearmScheduled=false;
+  child.__r1154PrearmTimer=null;
+
+  // R1148: mark exact feeder-frame boundaries for MP3->MP3 cinematic lock.
+  // For an outgoing MP3, normalVideoFilterComplexR721 begins black-mask fade at:
+  //   trackDuration - fadeOut - blackHold
+  // (trackDuration already includes R972 tail guard + the deliberate black hold).
+  // Arm one frame early so the first visible fade frame itself can never be dropped.
+  if(Boolean(mp3Boundary&&endFadeToBlack)){
+    const fadeStartSecR1148=Math.max(
+      0,
+      Number(trackDuration||0)-
+      MP3_BOUNDARY_FADE_OUT_SECONDS_R814-
+      MP3_BOUNDARY_BLACK_HOLD_SECONDS_R814
+    );
+    child.__r1148Mp3FadeOutStartFrame=Math.max(0,Math.floor(fadeStartSecR1148*VIDEO_FPS)-1);
+    child.__r1148Mp3FadeOutLockArmed=false;
+    child.__r1148Mp3LockPublisherPid=0;
+  }
+
+  // A 2.40s startup mask identifies the incoming side of an MP3->MP3 split.
+  // Keep the lock through the whole reveal plus three frames of mask tail.
+  if(Boolean(fadeIn) &&
+     Math.abs(Number(fadeInSeconds||0)-MP3_BOUNDARY_FADE_IN_SECONDS_R814)<0.001){
+    child.__r1148Mp3FadeInReleaseFrame=Math.max(
+      1,
+      Math.ceil(
+        (MP3_BOUNDARY_FADE_IN_SECONDS_R814+
+         MP3_CINEMATIC_FADE_RELEASE_PAD_SECONDS_R1148)*VIDEO_FPS
+      )
+    );
+    child.__r1148Mp3FadeInReleased=false;
+  }
+
   child.stdout.on('error',()=>{});
   child.stderr.on('data',d=>{
     const line=String(d||'').trim();
@@ -4680,9 +5197,39 @@ async function atomicReplaceNormalVideoFeederR816(visualPath,opts={}){
   if(!publisher||publisher.exitCode!==null||!videoSink||videoSink.destroyed||videoSink.writableEnded)throw new Error('R816 persistent rawvideo pipe unavailable');
   const candidate=spawnRawNormalVideoChildR816(visualPath,opts);
   const started=Date.now();
+  const oldBlackBridgeR1145=/BLACK-BRIDGE/i.test(String(old.__r816VisualPath||''));
+  const fullFrameRevealR1145=Boolean(oldBlackBridgeR1145 && opts?.fadeIn);
+  const incomingMp3R1150=Boolean(
+    !fullFrameRevealR1145 &&
+    opts?.fadeIn &&
+    Math.abs(Number(opts?.fadeInSeconds||0)-MP3_BOUNDARY_FADE_IN_SECONDS_R814)<0.001
+  );
+  let firstFrameR1145=null;
+  let firstFrameR1150=null;
   try{
-    await promiseTimeout(streamReadableReadyR752(candidate.stdout,'rawvideo',candidate),5000,'R816 rawvideo candidate ready');
-    diagRecordR802('r816-rawvideo-candidate-ready',{oldPid:Number(old.pid||0),candidatePid:Number(candidate.pid||0),readyMs:Date.now()-started});
+    if(fullFrameRevealR1145){
+      firstFrameR1145=await collectFirstFullRawFrameR828(candidate,BLACK_TO_MP3_FULLFRAME_TIMEOUT_MS_R1145);
+      if(!Buffer.isBuffer(firstFrameR1145)||firstFrameR1145.length!==VIDEO_FRAME_BYTES_R816){
+        throw new Error(`R1145 incoming MP3 first frame invalid ${firstFrameR1145?.length||0}/${VIDEO_FRAME_BYTES_R816}`);
+      }
+      diagRecordR802('r1145-black-to-mp3-fullframe-ready',{oldPid:Number(old.pid||0),candidatePid:Number(candidate.pid||0),bytes:Number(firstFrameR1145.length||0),readyMs:Date.now()-started});
+    }else if(incomingMp3R1150){
+      // R1150: warm one COMPLETE 1080p YUV frame OFF-LIVE. Unlike R1149, this
+      // does NOT promote, pace, or replace the old feeder early. The old MP3 keeps
+      // full ownership of its ending and R1148 fade-to-black.
+      firstFrameR1150=await collectFirstFullRawFrameR828(candidate,5000);
+      if(!Buffer.isBuffer(firstFrameR1150)||firstFrameR1150.length!==VIDEO_FRAME_BYTES_R816){
+        throw new Error(`R1150 incoming MP3 first frame invalid ${firstFrameR1150?.length||0}/${VIDEO_FRAME_BYTES_R816}`);
+      }
+      diagRecordR802('r1150-normal-mp3-first-fullframe-warm-ready',{
+        oldPid:Number(old.pid||0),candidatePid:Number(candidate.pid||0),
+        bytes:Number(firstFrameR1150.length||0),readyMs:Date.now()-started
+      });
+      diagRecordR802('r816-rawvideo-candidate-ready',{oldPid:Number(old.pid||0),candidatePid:Number(candidate.pid||0),readyMs:Date.now()-started});
+    }else{
+      await promiseTimeout(streamReadableReadyR752(candidate.stdout,'rawvideo',candidate),5000,'R816 rawvideo candidate ready');
+      diagRecordR802('r816-rawvideo-candidate-ready',{oldPid:Number(old.pid||0),candidatePid:Number(candidate.pid||0),readyMs:Date.now()-started});
+    }
   }catch(error){
     candidate.__r816IntentionalStop=true;
     if(candidate.exitCode===null){try{candidate.kill('SIGTERM')}catch(_){ }}
@@ -4691,16 +5238,156 @@ async function atomicReplaceNormalVideoFeederR816(visualPath,opts={}){
     return false;
   }
 
+  // R1150 WARM-BUT-DON'T-COMMIT:
+  // A ready NEXT candidate is NOT permission to replace the current MP3. The old
+  // feeder keeps ownership until its own local frame clock has completed the
+  // 1.60s fade-out AND the full black hold. This is the key safeguard that R1149
+  // lacked: candidate readiness can never cut off the audible/visible tail early.
+  if(incomingMp3R1150){
+    const oldRelayR1150=old?.__r816VideoRelay;
+    const fadeStartR1150=Number(old?.__r1148Mp3FadeOutStartFrame);
+    const hasBoundaryClockR1150=Boolean(
+      oldRelayR1150 &&
+      Number.isFinite(fadeStartR1150) &&
+      fadeStartR1150>=0
+    );
+
+    if(hasBoundaryClockR1150){
+      const commitTargetR1150=Math.max(
+        0,
+        fadeStartR1150+
+        Math.ceil((MP3_BOUNDARY_FADE_OUT_SECONDS_R814+MP3_BOUNDARY_BLACK_HOLD_SECONDS_R814)*VIDEO_FPS)
+      );
+      const gateStartedR1150=Date.now();
+      const gateTimeoutMsR1150=7000;
+
+      diagRecordR802('r1150-mp3-boundary-commit-gate-armed',{
+        oldPid:Number(old?.pid||0),
+        candidatePid:Number(candidate?.pid||0),
+        currentFrame:Number(oldRelayR1150?.frames||0),
+        targetFrame:commitTargetR1150,
+        fadeStartFrame:fadeStartR1150,
+        blackHoldMs:Math.round(MP3_BOUNDARY_BLACK_HOLD_SECONDS_R814*1000)
+      });
+
+      while(!stopping &&
+            old.exitCode===null &&
+            Number(oldRelayR1150?.frames||0)<commitTargetR1150 &&
+            Date.now()-gateStartedR1150<gateTimeoutMsR1150){
+        await sleep(20);
+      }
+
+      const reachedR1150=Number(oldRelayR1150?.frames||0)>=commitTargetR1150;
+      if(reachedR1150){
+        diagRecordR802('r1150-mp3-boundary-old-black-ready',{
+          oldPid:Number(old?.pid||0),
+          candidatePid:Number(candidate?.pid||0),
+          frame:Number(oldRelayR1150?.frames||0),
+          targetFrame:commitTargetR1150,
+          waitMs:Date.now()-gateStartedR1150
+        });
+      }else{
+        // Emergency-only fallback. Never leave the publisher without video, but
+        // record the exact failure loudly so it cannot look like a clean boundary.
+        state.lastWarning=`R1150 MP3 boundary gate timeout old=${Number(old?.pid||0)} frame=${Number(oldRelayR1150?.frames||0)}/${commitTargetR1150}`;
+        diagRecordR802('r1150-mp3-boundary-commit-gate-timeout',{
+          oldPid:Number(old?.pid||0),
+          candidatePid:Number(candidate?.pid||0),
+          frame:Number(oldRelayR1150?.frames||0),
+          targetFrame:commitTargetR1150,
+          waitMs:Date.now()-gateStartedR1150
+        });
+      }
+    }else{
+      state.lastWarning='R1150 MP3 boundary gate metadata unavailable; preserving R1148E atomic fallback';
+      diagRecordR802('r1150-mp3-boundary-gate-metadata-missing',{
+        oldPid:Number(old?.pid||0),candidatePid:Number(candidate?.pid||0)
+      });
+    }
+  }
+
   old.__r816IntentionalStop=true;
   const cut=detachVideoFrameRelayR816(old); // only a partial YUV frame can be dropped
   if(videoFeeder===old)videoFeeder=null;
+
+  // R1150: the MP3 candidate was warmed OFF-LIVE but never promoted early.
+  // Commit its first COMPLETE (black-under-start-mask) frame only now, after the
+  // old feeder has relinquished ownership at the proven boundary.
+  if(incomingMp3R1150 && firstFrameR1150){
+    const masterR1150=publisher?.__r1085AudioMaster;
+    if(masterR1150)masterR1150.normalMp3EdgePassThroughR1150=true;
+    let acceptedR1150=false;
+    try{
+      acceptedR1150=videoSink.write(firstFrameR1150);
+    }finally{
+      if(masterR1150)masterR1150.normalMp3EdgePassThroughR1150=false;
+    }
+    state.videoRelayFramesWritten=Number(state.videoRelayFramesWritten||0)+1;
+    state.lastVideoFrameAtR816=new Date().toISOString();
+    if(!acceptedR1150){
+      await new Promise(resolve=>{
+        let done=false;
+        const finish=()=>{if(done)return;done=true;clearTimeout(timer);try{videoSink.off('drain',finish)}catch(_){};resolve();};
+        const timer=setTimeout(finish,1000);timer.unref?.();
+        videoSink.once('drain',finish);
+      });
+    }
+  }
+
+  // R1145: when the old owner is a BLACK bridge, the first incoming MP3 frame
+  // is already complete and (because fadeIn starts at t=0) black. Commit that
+  // whole frame before attaching the rest; a partial raw frame can never flash.
+  if(fullFrameRevealR1145 && firstFrameR1145){
+    const acceptedR1145=videoSink.write(firstFrameR1145);
+    state.videoRelayFramesWritten=Number(state.videoRelayFramesWritten||0)+1;
+    state.lastVideoFrameAtR816=new Date().toISOString();
+    if(!acceptedR1145){
+      await new Promise(resolve=>{
+        let done=false;
+        const finish=()=>{if(done)return;done=true;clearTimeout(timer);try{videoSink.off('drain',finish)}catch(_){};resolve();};
+        const timer=setTimeout(finish,1000);timer.unref?.();
+        videoSink.once('drain',finish);
+      });
+    }
+  }
   promoteRawNormalVideoR816(candidate,videoSink);
+
+  // R1148D: arm from the actual candidate's fade metadata, not caller opts.
+  // The first-full-frame hook in attachVideoFrameRelayR816 repeats this idempotently
+  // as a fallback, so a successful MP3 promotion cannot be left watchdog-only.
+  armMp3CinematicReleaseTargetR1148D(candidate,'candidate-promoted');
+
+  // R1147: the first complete MP3 frame has now been committed while the exact
+  // pass-through lock was active. lastFrame is therefore BLACK/the first reveal
+  // frame, never a stale station frame. Resume normal R1085 correction from here.
+  if(fullFrameRevealR1145){
+    const masterUnlockR1147=publisher?.__r1085AudioMaster;
+    if(masterUnlockR1147?.transitionPassThroughR1147){
+      const framesR1147=Number(masterUnlockR1147.transitionPassFramesR1147||0);
+      masterUnlockR1147.transitionPassThroughR1147=false;
+      masterUnlockR1147.transitionPassThroughUntilR1147=0;
+      state.stationBlackMasterLockActiveR1147=false;
+      state.lastStationBlackMasterLockR1147={
+        at:new Date().toISOString(),
+        frames:framesR1147,
+        next:shortText(state.current?.title||'',52)
+      };
+      diagRecordR802('r1147-station-black-master-lock-released',{
+        frames:framesR1147,
+        candidatePid:Number(candidate.pid||0),
+        leadMs:Math.round((Number(masterUnlockR1147.audioBytes||0)/(AUDIO_SAMPLE_RATE*4)-Number(masterUnlockR1147.videoFrames||0)/VIDEO_FPS)*1000)
+      });
+    }
+  }
+
   if(old.exitCode===null){
     try{old.kill('SIGTERM')}catch(_){ }
     setTimeout(()=>{if(old.exitCode===null){try{old.kill('SIGKILL')}catch(_){ }}},900).unref?.();
   }
-  state.videoHandoffMode='R816-RAWVIDEO-MAKE-BEFORE-BREAK-FRAME-ALIGNED';
-  diagRecordR802('r816-rawvideo-promoted',{oldPid:Number(old.pid||0),candidatePid:Number(candidate.pid||0),droppedPartialBytes:Number(cut?.dropped||0),totalMs:Date.now()-started});
+  state.videoHandoffMode=fullFrameRevealR1145
+    ? 'R1145-BLACK-TO-MP3-FULLFRAME-REVEAL'
+    : 'R816-RAWVIDEO-MAKE-BEFORE-BREAK-FRAME-ALIGNED';
+  diagRecordR802(fullFrameRevealR1145?'r1145-black-to-mp3-fullframe-promoted':'r816-rawvideo-promoted',{oldPid:Number(old.pid||0),candidatePid:Number(candidate.pid||0),droppedPartialBytes:Number(cut?.dropped||0),firstFrameBytes:Number(firstFrameR1145?.length||0),totalMs:Date.now()-started});
   return true;
 }
 
@@ -5110,6 +5797,165 @@ async function stopClipFeederR721(child,videoSink,audioSink){
   }
 }
 
+
+// R1145 STATION -> MP3 ATOMIC BLACK OWNERSHIP
+// Build the black rawvideo source while the final station frames are still draining.
+// The first COMPLETE 1920x1080 YUV420P black frame is kept in memory and the child is
+// SIGSTOP'ed OFF-LIVE. At the exact station-tail completion we write that complete black
+// frame first, attach the remaining black stream, and only then let the MP3 path continue.
+// This removes the 100-200ms no-owner window where a stale/next visual frame could leak.
+let stationBlackPrearmR1145=null;
+
+async function clearStationBlackPrearmR1145(reason='clear'){
+  const arm=stationBlackPrearmR1145;
+  stationBlackPrearmR1145=null;
+  if(!arm)return;
+  const child=arm.child;
+  if(child && child.exitCode===null){
+    try{if(arm.stopped)child.kill('SIGCONT')}catch(_){}
+    try{child.kill('SIGTERM')}catch(_){}
+    if(!(await waitChildExit(child,400)) && child.exitCode===null){
+      try{child.kill('SIGKILL')}catch(_){}
+      await waitChildExit(child,150);
+    }
+  }
+  diagRecordR802('r1145-station-black-prearm-clear',{reason,next:shortText(arm.next?.title||'',52)});
+}
+
+async function buildStationBlackPrearmR1145(next){
+  if(stopping || !next || next.type!=='track')return false;
+  const identity=primaryIdentity(next);
+  if(stationBlackPrearmR1145 && stationBlackPrearmR1145.identity===identity && stationBlackPrearmR1145.ready && stationBlackPrearmR1145.child?.exitCode===null){
+    return true;
+  }
+  await clearStationBlackPrearmR1145('replace');
+
+  const child=spawn('ffmpeg',[
+    '-hide_banner','-loglevel','error','-re',
+    '-f','lavfi','-i','color=c=black:s=1920x1080:r=25',
+    '-an','-sn','-dn','-threads','1',...rawVideoOutputArgsR816()
+  ],{stdio:['ignore','pipe','pipe']});
+
+  child.__r816VisualPath='R1145-BLACK-BRIDGE';
+  child.__r816EqPeriod='r1145-black';
+  child.__r816IntentionalStop=false;
+  child.stdout.on('error',()=>{});
+  child.stderr.on('data',d=>{
+    const line=String(d||'').trim();
+    if(line){
+      state.lastFfmpegLine=line.slice(-1000);
+      if(/error|fail|invalid|broken pipe/i.test(line))state.lastWarning=`R1145 black prearm: ${line.slice(-500)}`;
+    }
+  });
+
+  const arm={identity,next,child,firstFrame:null,ready:false,stopped:false,startedAt:Date.now()};
+  stationBlackPrearmR1145=arm;
+  child.once('exit',(code,signal)=>{
+    if(stationBlackPrearmR1145===arm && !arm.claimed){
+      stationBlackPrearmR1145=null;
+      diagRecordR802('r1145-station-black-prearm-exit',{code,signal,next:shortText(next?.title||'',52)});
+    }
+  });
+
+  try{
+    arm.firstFrame=await collectFirstFullRawFrameR828(child,STATION_BLACK_PREARM_TIMEOUT_MS_R1145);
+    if(!Buffer.isBuffer(arm.firstFrame)||arm.firstFrame.length!==VIDEO_FRAME_BYTES_R816){
+      throw new Error(`R1145 black prearm full frame invalid ${arm.firstFrame?.length||0}/${VIDEO_FRAME_BYTES_R816}`);
+    }
+    if(child.exitCode!==null)throw new Error('R1145 black prearm exited before stop');
+    try{child.kill('SIGSTOP');arm.stopped=true}catch(error){throw error}
+    arm.ready=true;
+    diagRecordR802('r1145-station-black-prearm-ready',{
+      next:shortText(next?.title||'',52),
+      childPid:Number(child.pid||0),
+      bytes:Number(arm.firstFrame.length||0),
+      readyMs:Date.now()-arm.startedAt
+    });
+    return true;
+  }catch(error){
+    if(stationBlackPrearmR1145===arm)stationBlackPrearmR1145=null;
+    child.__r816IntentionalStop=true;
+    try{if(arm.stopped&&child.exitCode===null)child.kill('SIGCONT')}catch(_){}
+    if(child.exitCode===null){try{child.kill('SIGTERM')}catch(_){}}
+    state.lastWarning=`R1145 black prearm fallback: ${cleanText(error?.message||error)}`;
+    diagRecordR802('r1145-station-black-prearm-failed',{next:shortText(next?.title||'',52),error:cleanText(error?.message||error)});
+    return false;
+  }
+}
+
+async function claimStationBlackPrearmR1145(next){
+  const arm=stationBlackPrearmR1145;
+  if(!arm)return false;
+  if(!arm.ready || arm.identity!==primaryIdentity(next) || !arm.child || arm.child.exitCode!==null || !Buffer.isBuffer(arm.firstFrame)){
+    await clearStationBlackPrearmR1145('claim-invalid');
+    return false;
+  }
+
+  const videoSink=publisher?.stdio?.[4];
+  if(!publisher||publisher.exitCode!==null||!videoSink||videoSink.destroyed||videoSink.writableEnded){
+    await clearStationBlackPrearmR1145('publisher-unavailable');
+    return false;
+  }
+
+  // R1147: lock the FINAL master boundary before committing BLACK. This is below
+  // R1123/R1145 ownership, so R1085 cannot drop the black frame or synthesize a
+  // stale station frame between the station tail and the black bridge.
+  const masterLockR1147=publisher?.__r1085AudioMaster;
+  if(masterLockR1147){
+    masterLockR1147.transitionPassThroughR1147=true;
+    masterLockR1147.transitionPassThroughUntilR1147=Date.now()+12000;
+    masterLockR1147.transitionPassFramesR1147=0;
+    state.stationBlackMasterLockActiveR1147=true;
+    state.stationBlackMasterLockArmedAtR1147=new Date().toISOString();
+    diagRecordR802('r1147-station-black-master-lock-armed',{
+      next:shortText(next?.title||'',52),
+      leadMs:Math.round((Number(masterLockR1147.audioBytes||0)/(AUDIO_SAMPLE_RATE*4)-Number(masterLockR1147.videoFrames||0)/VIDEO_FPS)*1000)
+    });
+  }
+
+  stationBlackPrearmR1145=null;
+  arm.claimed=true;
+  const child=arm.child;
+
+  // There must be exactly one visual owner at this point. If anything survived,
+  // remove it before the complete black frame is committed.
+  if(videoFeeder && videoFeeder.exitCode===null){
+    const old=videoFeeder;
+    old.__r816IntentionalStop=true;
+    detachVideoFrameRelayR816(old);
+    if(videoFeeder===old)videoFeeder=null;
+    if(old.exitCode===null){try{old.kill('SIGTERM')}catch(_){}}
+  }
+
+  const accepted=videoSink.write(arm.firstFrame);
+  state.videoRelayFramesWritten=Number(state.videoRelayFramesWritten||0)+1;
+  state.lastVideoFrameAtR816=new Date().toISOString();
+  if(!accepted){
+    await new Promise(resolve=>{
+      let done=false;
+      const finish=()=>{if(done)return;done=true;clearTimeout(timer);try{videoSink.off('drain',finish)}catch(_){};resolve();};
+      const timer=setTimeout(finish,1000);timer.unref?.();
+      videoSink.once('drain',finish);
+    });
+  }
+
+  promoteRawNormalVideoR816(child,videoSink);
+  if(arm.stopped){try{child.kill('SIGCONT')}catch(_){};arm.stopped=false;}
+
+  videoFeederTrackIdentityR744='';
+  videoFeederPrerolledR744=false;
+  clipToTrackBoundaryPendingR753={
+    identity:primaryIdentity(next),
+    startedAt:Date.now(),
+    reason:'R1145-STATION-TO-MP3-ATOMIC-BLACK'
+  };
+  state.videoHandoffMode='R1145-STATION-TO-MP3-ATOMIC-BLACK-LIVE';
+  state.lastStationMp3AtomicBlackR1145={at:new Date().toISOString(),next:shortText(next?.title||'',52),childPid:Number(child.pid||0)};
+  diagRecordR802('r1145-station-to-mp3-black-atomic',{
+    next:shortText(next?.title||'',52),childPid:Number(child.pid||0),bytes:Number(arm.firstFrame.length||0)
+  });
+  return true;
+}
 
 // R885-STATION-TO-MP3-BLACK-BRIDGE
 // After a station bumper ends, never start a full heavy visual feeder
@@ -5735,12 +6581,13 @@ function attachAudioMasterPacedVideoRelayR1123(child,videoSink,label='video'){
 
   const targetLeadSec=Number(master.targetAudioLeadSec||2.000);
   const smoothMusicClipR1135=String(label||'')==='music-clip';
+  const stationInsertRelayR1142=String(label||'')==='station-insert';
   const minCatchupMs=smoothMusicClipR1135?MUSIC_CLIP_R1123_MIN_FRAME_MS_R1135:24;
   const minCatchupNs=BigInt(minCatchupMs)*1000000n;
 
   const relay={
     r1123:true,
-    mode:'R1123-R1085-PCM-PHASE-PACER',
+    mode:'R1123-R1085-PCM-PHASE-PACER-R1141-NODROP',
     source,sink:videoSink,label,active:true,
     master,targetLeadSec,minCatchupMs,minCatchupNs,
     queue:initialFrames,
@@ -5749,6 +6596,8 @@ function attachAudioMasterPacedVideoRelayR1123(child,videoSink,label='video'){
     waitingDrain:false,onDrain:null,onData:null,onError:null,onEnd:null,
     paceTimer:null,sourceEnded:false,tailResolve:null,tailTimer:null,
     underflows:0,overflowDrops:0,firstFrame:true,lastWriteNs:0n,
+    sourcePausedForQueueR1141:false,queuePausesR1141:0,queueResumesR1141:0,
+    stationStartFramesR1143:0,stationStartLockDoneR1143:false,
     maxLeadMs:0,minLeadMs:999999
   };
 
@@ -5787,6 +6636,18 @@ function attachAudioMasterPacedVideoRelayR1123(child,videoSink,label='video'){
       minLeadMs:Number(relay.minLeadMs===999999?0:relay.minLeadMs),
       maxLeadMs:Number(relay.maxLeadMs||0)
     });
+    if(stationInsertRelayR1142){
+      state.r1142StationTailExact={
+        ...(state.r1142StationTailExact||{}),
+        active:false,
+        queuedFrames:0,
+        drainedAt:new Date().toISOString()
+      };
+      diagRecordR802('r1142-station-tail-exact-drained',{
+        childPid:Number(child.pid||0),
+        sentFrames:Number(relay.frames||0)
+      });
+    }
 
     done(true);
   };
@@ -5811,14 +6672,24 @@ function attachAudioMasterPacedVideoRelayR1123(child,videoSink,label='video'){
 
         relay.frameParts=[];
         relay.frameBytes=0;
+        relay.queue.push(frame);
 
+        // R1141: never discard real clip frames. If the paced relay falls behind,
+        // pause the rawvideo source at the frame boundary and resume after one second
+        // of queue headroom is available. This preserves content order and prevents
+        // the visible jump-to-middle failure seen with overflow frame dropping.
         if(relay.queue.length>=relay.maxQueueFrames){
-          // Unified A/V child must never be blocked by video. Drop only the
-          // newest VIDEO frame if a severe CPU stall fills the bounded queue.
-          relay.overflowDrops++;
-          state.r1123VideoOverflowDrops=Number(state.r1123VideoOverflowDrops||0)+1;
-        }else{
-          relay.queue.push(frame);
+          const remainder=offset<chunk.length?chunk.subarray(offset):null;
+          try{source.pause()}catch(_){ }
+          relay.sourcePausedForQueueR1141=true;
+          relay.queuePausesR1141++;
+          state.r1123VideoQueuePausesR1141=Number(state.r1123VideoQueuePausesR1141||0)+1;
+          if(remainder&&remainder.length){
+            try{source.unshift(remainder)}catch(error){
+              state.lastWarning=`R1141 rawvideo remainder preserve: ${cleanText(error?.message||error)}`;
+            }
+          }
+          return;
         }
       }
     }
@@ -5832,6 +6703,20 @@ function attachAudioMasterPacedVideoRelayR1123(child,videoSink,label='video'){
 
   relay.onEnd=()=>{
     relay.sourceEnded=true;
+    if(stationInsertRelayR1142){
+      state.r1142StationTailExact={
+        active:true,
+        queuedFrames:Number(relay.queue.length||0),
+        frameMs:STATION_TAIL_FRAME_MS_R1142,
+        childPid:Number(child.pid||0),
+        armedAt:new Date().toISOString()
+      };
+      diagRecordR802('r1142-station-tail-exact-armed',{
+        childPid:Number(child.pid||0),
+        queuedFrames:Number(relay.queue.length||0),
+        frameMs:STATION_TAIL_FRAME_MS_R1142
+      });
+    }
     if(relay.frameBytes>0){
       state.videoRelayPartialBytesDropped=
         Number(state.videoRelayPartialBytesDropped||0)+Number(relay.frameBytes||0);
@@ -5884,27 +6769,107 @@ function attachAudioMasterPacedVideoRelayR1123(child,videoSink,label='video'){
     // Preserve the exact R1121B first-picture promotion point that already
     // tested correctly at the viewer. From frame 2 onward PCM phase rules.
     if(!relay.firstFrame){
-      const deficitMs=(relay.targetLeadSec-leadSec)*1000;
-      if(deficitMs>1){
-        scheduleIn(deficitMs);
-        return;
+      // R1142 STATION TAIL LOCK:
+      // Once the short station FFmpeg reaches EOF, the remaining REAL buffered
+      // frames are the viewer-visible ending. Do not let PCM phase catch-up run
+      // those frames at 24ms and visually rush/skip the end. Drain them at the
+      // exact 25fps cadence (40ms/frame). The audio-gap bridge may keep the master
+      // alive, but it is no longer allowed to accelerate the station picture tail.
+      const exactStationTailR1142=Boolean(stationInsertRelayR1142 && relay.sourceEnded);
+
+      if(!exactStationTailR1142){
+        const deficitMs=(relay.targetLeadSec-leadSec)*1000;
+        if(deficitMs>1){
+          scheduleIn(deficitMs);
+          return;
+        }
       }
 
-      // If Node woke late and audio got ahead, never fire a multi-frame burst.
-      // This cap allows a brief smooth catch-up while keeping real frames real.
+      // R1141 adaptive pacing remains unchanged for normal music clips.
+      // R1143 STATION START FRAME LOCK:
+      // a small PCM phase surplus at promotion used to let the short station
+      // insert fire early frames at 24ms. That looked like a tiny jump/restart
+      // at the beginning. Preserve normal R1085 deficit waiting, but never run
+      // the first 25 station frames faster than exact 25fps. After that, any
+      // station phase recovery is gentle (38ms). R1142 still owns EOF tail 40ms.
+      const debtMsR1141=Math.max(0,(leadSec-relay.targetLeadSec)*1000);
+      const stationStartLockedR1143=Boolean(
+        stationInsertRelayR1142 &&
+        !relay.sourceEnded &&
+        Number(relay.stationStartFramesR1143||0)<STATION_START_LOCK_FRAMES_R1143
+      );
+      const effectiveMinMsR1141=exactStationTailR1142
+        ? STATION_TAIL_FRAME_MS_R1142
+        : (stationStartLockedR1143
+            ? STATION_TAIL_FRAME_MS_R1142
+            : (stationInsertRelayR1142
+                ? STATION_MID_MIN_FRAME_MS_R1143
+                : ((smoothMusicClipR1135 && debtMsR1141>MUSIC_CLIP_R1123_DEBT_THRESHOLD_MS_R1141)
+                    ? MUSIC_CLIP_R1123_DEBT_CATCHUP_MS_R1141
+                    : relay.minCatchupMs)));
+      const effectiveMinNsR1141=BigInt(Math.max(1,Math.round(effectiveMinMsR1141)))*1000000n;
+      state.r1123EffectiveMinFrameMsR1141=Number(effectiveMinMsR1141);
+      state.r1123PhaseDebtMsR1141=Math.round(debtMsR1141);
+      if(stationStartLockedR1143){
+        state.r1143StationStartFrameLock={
+          active:true,
+          frames:Number(relay.stationStartFramesR1143||0),
+          lockFrames:STATION_START_LOCK_FRAMES_R1143,
+          frameMs:STATION_TAIL_FRAME_MS_R1142,
+          leadMs:Math.round(leadSec*1000),
+          childPid:Number(child.pid||0)
+        };
+      }
+      if(exactStationTailR1142){
+        state.r1142StationTailExact={
+          ...(state.r1142StationTailExact||{}),
+          active:true,
+          queuedFrames:Number(relay.queue.length||0),
+          frameMs:STATION_TAIL_FRAME_MS_R1142,
+          childPid:Number(child.pid||0)
+        };
+      }
       if(relay.lastWriteNs>0n){
         const sinceNs=now-relay.lastWriteNs;
-        if(sinceNs<relay.minCatchupNs){
-          scheduleIn(Number(relay.minCatchupNs-sinceNs)/1_000_000);
+        if(sinceNs<effectiveMinNsR1141){
+          scheduleIn(Number(effectiveMinNsR1141-sinceNs)/1_000_000);
           return;
         }
       }
     }
 
     const frame=relay.queue.shift();
+
+    if(relay.sourcePausedForQueueR1141 &&
+       relay.queue.length<=Math.max(1,relay.maxQueueFrames-VIDEO_FPS)){
+      relay.sourcePausedForQueueR1141=false;
+      relay.queueResumesR1141++;
+      state.r1123VideoQueueResumesR1141=Number(state.r1123VideoQueueResumesR1141||0)+1;
+      try{source.resume()}catch(_){ }
+    }
+
     const ok=videoSink.write(frame);
 
     relay.frames++;
+    if(stationInsertRelayR1142 && !relay.sourceEnded){
+      relay.stationStartFramesR1143=Number(relay.stationStartFramesR1143||0)+1;
+      if(!relay.stationStartLockDoneR1143 && relay.stationStartFramesR1143>=STATION_START_LOCK_FRAMES_R1143){
+        relay.stationStartLockDoneR1143=true;
+        state.r1143StationStartFrameLock={
+          active:false,
+          frames:Number(relay.stationStartFramesR1143||0),
+          lockFrames:STATION_START_LOCK_FRAMES_R1143,
+          frameMs:STATION_TAIL_FRAME_MS_R1142,
+          completedAt:new Date().toISOString(),
+          childPid:Number(child.pid||0)
+        };
+        diagRecordR802('r1143-station-start-frame-lock-complete',{
+          childPid:Number(child.pid||0),
+          frames:Number(relay.stationStartFramesR1143||0),
+          frameMs:STATION_TAIL_FRAME_MS_R1142
+        });
+      }
+    }
     relay.firstFrame=false;
     relay.lastWriteNs=process.hrtime.bigint();
 
@@ -5918,6 +6883,9 @@ function attachAudioMasterPacedVideoRelayR1123(child,videoSink,label='video'){
       sentFrames:Number(relay.frames||0),
       underflows:Number(relay.underflows||0),
       overflowDrops:Number(relay.overflowDrops||0),
+      queuePausesR1141:Number(relay.queuePausesR1141||0),
+      queueResumesR1141:Number(relay.queueResumesR1141||0),
+      sourcePausedForQueueR1141:Boolean(relay.sourcePausedForQueueR1141),
       leadMs:afterLeadMs,
       targetLeadMs:Math.round(relay.targetLeadSec*1000),
       sourceEnded:Boolean(relay.sourceEnded),
@@ -5947,7 +6915,9 @@ function attachAudioMasterPacedVideoRelayR1123(child,videoSink,label='video'){
     bufferedFrames:Number(relay.queue.length||0),
     targetLeadMs:Math.round(relay.targetLeadSec*1000),
     catchupMinMs:minCatchupMs,
-    startLeadMs:Math.round(masterLeadSec()*1000)
+    startLeadMs:Math.round(masterLeadSec()*1000),
+    stationStartLockFramesR1143:stationInsertRelayR1142?STATION_START_LOCK_FRAMES_R1143:0,
+    stationStartFrameMsR1143:stationInsertRelayR1142?STATION_TAIL_FRAME_MS_R1142:0
   });
 
   try{source.resume()}catch(_){ }
@@ -6066,6 +7036,7 @@ async function playVideoClipR691(previous,item,next,nextListenerPreviewR1135=nul
 
   let child=null;
   let clipExitPromise=null;
+  let stationBlackPrearmPromiseR1145=null;
   try{
     clearNextPreviewR726({invalidate:true});
     // R1135: PREVIOUS/NEXT inside a NORMAL music clip must describe listener media,
@@ -6091,6 +7062,26 @@ async function playVideoClipR691(previous,item,next,nextListenerPreviewR1135=nul
     // Only after BOTH rawvideo and PCM outputs are readable do we cut the old frame relay.
     state.videoHandoffMode=stationInsert?'R816-STATION-ARM-BEHIND-LIVE-BLACK':'R816-CLIP-ARM-BEHIND-LIVE-BLACK';
     stationHandoffActiveR804=true;
+
+    // R1142: if the outgoing MP3 prearmed a music clip and a station insert is
+    // injected in between, do NOT carry that frozen clip child across the whole
+    // station. Clear it now; R1136 will prearm the same next clip freshly from
+    // the station timeline. This guarantees a clean t=0 fade/reveal after black.
+    if(stationInsert && next && isVideoHandoffR738(next) &&
+       insertPrearmR1069 && insertPrearmR1069.identity===primaryIdentity(next)){
+      const staleAgeMsR1142=Date.now()-Number(insertPrearmR1069.startedAt||Date.now());
+      await clearInsertPrearmR1069('r1142-station-next-video-fresh-rearm');
+      state.lastStationNextVideoPrearmResetR1142={
+        at:new Date().toISOString(),
+        next:shortText(next?.title||'VIDEO',52),
+        staleAgeMs:Math.max(0,staleAgeMsR1142)
+      };
+      diagRecordR802('r1142-station-next-video-prearm-reset',{
+        next:shortText(next?.title||'VIDEO',52),
+        staleAgeMs:Math.max(0,staleAgeMsR1142)
+      });
+    }
+
     const prearmR1069=takeInsertPrearmR1069(item);
 
     if(prearmR1069){
@@ -6114,13 +7105,22 @@ async function playVideoClipR691(previous,item,next,nextListenerPreviewR1135=nul
     clipExitPromise=new Promise((resolve,reject)=>{
       child.once('error',reject);
       child.once('exit',async(code,signal)=>{
+        if(stationInsert && next?.type==='track' && code===0 && !stopping){
+          stationBlackPrearmPromiseR1145=buildStationBlackPrearmR1145(next).catch(error=>{
+            state.lastWarning=`R1145 station black prearm: ${cleanText(error?.message||error)}`;
+            return false;
+          });
+        }
         if(child?.__r816VideoRelay?.r1123===true && code===0 && !stopping){
         try{startMasterAudioGapBridgeR824('r1123-pcm-paced-video-tail-drain')}catch(_){ }
         diagRecordR802('r1123-pcm-paced-video-tail-drain-start',{
           childPid:Number(child.pid||0),
           queuedFrames:Number(child?.__r816VideoRelay?.queue?.length||0)
         });
-        await waitAudioMasterPacedVideoTailR1123(child,4000);
+        await waitAudioMasterPacedVideoTailR1123(child,stationInsert?STATION_TAIL_WAIT_MS_R1142:4000);
+      }
+      if(stationBlackPrearmPromiseR1145){
+        try{await stationBlackPrearmPromiseR1145}catch(_){ }
       }
       try{detachVideoFrameRelayR816(child)}catch(_){ }
         try{audioSource.unpipe(audioSink)}catch(_){ }
@@ -6252,9 +7252,65 @@ async function playVideoClipR691(previous,item,next,nextListenerPreviewR1135=nul
       },nextVideoPrearmDelayMsR1136).unref?.();
     }
 
-    const guardMs=Math.max(12000,Math.round(Math.max(1,Number(duration)||1)*1000)+CLIP_END_GUARD_MARGIN_MS_R745);
-    try{await promiseTimeout(clipExitPromise,guardMs,`R816 clip EOF ${shortText(item.title||'VIDEO',40)}`);}
-    catch(error){state.lastError=`R816 clip EOF guard: ${cleanText(error?.message||error)}`;if(child&&child.exitCode===null){try{child.kill('SIGTERM')}catch(_){ }if(!(await waitChildExit(child,1200))&&child.exitCode===null){try{child.kill('SIGKILL')}catch(_){ }await waitChildExit(child,250);}}return false;}
+    // R1139 CLIP STALL GUARD:
+    // The persistent master intentionally keeps ~2000ms PCM lead. A 96-packet raw PCM
+    // demux queue was almost the same size as that lead, so short encoder/CPU jitter could
+    // fill input #1, back-pressure the unified clip child and prevent a clean EOF.
+    // AUDIO_INPUT_QUEUE_PACKETS_R732 is now 160; the R1085 target itself is UNCHANGED.
+    //
+    // Once a NORMAL music clip has already been promoted LIVE, an EOF timeout is no longer
+    // treated as a reason to replay the entire 6-7 minute clip. We terminate the stuck child,
+    // preserve the normal black/fade recovery in finally{}, record the incident, and advance.
+    // Pre-commit failures still return false and retain the existing bounded R814 retry logic.
+    const eofMarginMsR1139=stationInsert
+      ? CLIP_END_GUARD_MARGIN_MS_R745
+      : NORMAL_CLIP_EOF_MARGIN_MS_R1139;
+    const guardMs=Math.max(12000,Math.round(Math.max(1,Number(duration)||1)*1000)+eofMarginMsR1139);
+    try{
+      await promiseTimeout(clipExitPromise,guardMs,`R816 clip EOF ${shortText(item.title||'VIDEO',40)}`);
+    }catch(error){
+      const eofReasonR1139=cleanText(error?.message||error);
+      const postCommitNormalR1139=Boolean(!stationInsert && child?.__r752Live===true);
+
+      if(child&&child.exitCode===null){
+        try{child.kill('SIGTERM')}catch(_){ }
+        if(!(await waitChildExit(child,1200))&&child.exitCode===null){
+          try{child.kill('SIGKILL')}catch(_){ }
+          await waitChildExit(child,250);
+        }
+      }
+
+      if(postCommitNormalR1139){
+        state.normalClipSoftEofCutsR1139=Number(state.normalClipSoftEofCutsR1139||0)+1;
+        state.lastNormalClipSoftEofR1139={
+          at:new Date().toISOString(),
+          title:shortText(item.title||'VIDEO',52),
+          duration:Number(duration||0),
+          guardMs:Number(guardMs||0),
+          reason:eofReasonR1139
+        };
+        state.lastWarning=`R1139 clip soft EOF cut (no replay): ${shortText(item.title||'VIDEO',40)}`;
+        state.lastError='';
+        diagRecordR802('r1139-normal-clip-soft-eof-cut',{
+          title:shortText(item.title||'VIDEO',52),
+          duration:Number(duration||0),
+          guardMs:Number(guardMs||0),
+          reason:eofReasonR1139,
+          rtmps:Number(state.rtmpsEgressCount||0)
+        });
+        if(next?.type==='track'){
+          clipToTrackBoundaryPendingR753={
+            identity:primaryIdentity(next),
+            startedAt:Date.now(),
+            reason:'R1139-SOFT-EOF-TO-MP3'
+          };
+        }
+        return !stopping;
+      }
+
+      state.lastError=`R816 clip EOF guard: ${eofReasonR1139}`;
+      return false;
+    }
     if(item.sourceType==='r2-video')lastClipIdentityR726=itemId;
 
     // R917B-SUCCESS-VIDEO-TO-MP3
@@ -6297,8 +7353,10 @@ async function playVideoClipR691(previous,item,next,nextListenerPreviewR1135=nul
     await stopPreparedVideoPrerollR744().catch(()=>{});
     if(stationInsert && next?.type==='track'){
       try{
-        const bridgedR885=
-          await startStationToTrackBlackBridgeR885(next);
+        const atomicBlackR1145=await claimStationBlackPrearmR1145(next);
+        const bridgedR885=atomicBlackR1145
+          ? true
+          : await startStationToTrackBlackBridgeR885(next);
 
         if(!bridgedR885){
           await ensureVideoSourceAfterClipR745(next);
@@ -6460,6 +7518,123 @@ function currentOverlayTextR738(item){
 }
 function isVideoHandoffR738(item){
   return Boolean(item && (item.type==='clip'||item.sourceType==='radio-bumper'||String(item.sourceType||'').startsWith('radio-special')));
+}
+
+// R1154 ACTUAL NEXT OWNER.
+//
+// R736 is intentionally a start-of-song prediction. The real queue/timed-insert
+// owner can still change while a long MP3 is playing. R1154 re-reads the SAME
+// live scheduler inputs at the tail, instead of trusting the frozen mp3Boundary.
+//
+// Priority mirrors the real post-song scheduler:
+//   60m special -> 30m special -> automatic bumper -> immediate queue video.
+//
+// For an immediate queue video (including a manually planned R943 bumper), the
+// queue itself is authoritative. For the automatic bumper path we preserve the
+// scheduler's !hasPlannedBumperAheadR943() gate exactly.
+function actualNextVideoOwnerR1154(remainingMs=0){
+  const rem=Math.max(0,Number(remainingMs)||0);
+  const atBoundary=Date.now()+rem;
+
+  const immediate=queue[queueIndex+1]||null;
+  const afterImmediate=queue[queueIndex+2]||null;
+
+  if(
+    specialHourlyInsertR727 &&
+    atBoundary-Number(lastSpecialHourlyPlayedAtR727||0)>=SPECIAL_HOURLY_INTERVAL_MS_R727
+  ){
+    return {
+      item:specialHourlyInsertR727,
+      afterItem:immediate,
+      kind:'radio-special-60',
+      source:'timed-special-60'
+    };
+  }
+
+  if(
+    specialInsertR726 &&
+    atBoundary-Number(lastSpecialPlayedAtR726||0)>=SPECIAL_INTERVAL_MS_R726
+  ){
+    return {
+      item:specialInsertR726,
+      afterItem:immediate,
+      kind:'radio-special-30',
+      source:'timed-special-30'
+    };
+  }
+
+  if(
+    bumperLibrary.length &&
+    Number(songsSinceBumperR724||0)+1>=Number(bumperAfterSongsR724||0) &&
+    !hasPlannedBumperAheadR943()
+  ){
+    const bumper=peekNextBumperR736();
+    if(bumper){
+      return {
+        item:bumper,
+        afterItem:immediate,
+        kind:'radio-bumper',
+        source:'automatic-bumper'
+      };
+    }
+  }
+
+  if(immediate && isVideoHandoffR738(immediate)){
+    return {
+      item:immediate,
+      afterItem:afterImmediate,
+      kind:String(immediate.sourceType||immediate.type||'video'),
+      source:immediate.__manualPlannedR943===true
+        ? 'queue-immediate-r943'
+        : 'queue-immediate'
+    };
+  }
+
+  return null;
+}
+
+function scheduleActualNextPrearmR1154(child,owner,remainingMs){
+  if(!child || !owner?.item || child.__r1154PrearmScheduled)return;
+  if(!isVideoHandoffR738(owner.item))return;
+
+  child.__r1154PrearmScheduled=true;
+  child.__r1154ActualNextItem=owner.item;
+  child.__r1154ActualNextAfterItem=owner.afterItem||null;
+
+  // Metadata/cache warm can begin now. It never sends candidate frames LIVE.
+  try{prefetchPreparedClipR742(owner.item)}catch(_){}
+  warmClipBoundaryMetaR752(owner.item).catch(error=>{
+    state.lastWarning=`R1154 late warm fallback: ${cleanText(error?.message||error)}`;
+  });
+
+  const delayMs=Math.max(
+    0,
+    Math.round(Math.max(0,Number(remainingMs)||0)-R1154_PREARM_BEFORE_END_MS)
+  );
+
+  const fire=()=>{
+    if(stopping || child.exitCode!==null || child.killed)return;
+    buildInsertPrearmR1069(owner.item,owner.afterItem||null).catch(error=>{
+      state.lastWarning=`R1154 late prearm fallback: ${cleanText(error?.message||error)}`;
+      clearInsertPrearmR1069('r1154-prearm-error').catch(()=>{});
+    });
+  };
+
+  if(delayMs>0){
+    child.__r1154PrearmTimer=setTimeout(fire,delayMs);
+    child.__r1154PrearmTimer.unref?.();
+  }else{
+    fire();
+  }
+
+  diagRecordR802('r1154-actual-next-prearm-scheduled',{
+    childPid:Number(child.pid||0),
+    title:shortText(owner.item?.title||'VIDEO',52),
+    kind:owner.kind||'video',
+    source:owner.source||'runtime',
+    remainingMs:Math.round(Math.max(0,Number(remainingMs)||0)),
+    prearmDelayMs:delayMs
+  });
 }
 
 async function playItem(previous,item,next,following,localAudioPath,nextTrackPreview=null){
@@ -6774,18 +7949,59 @@ async function playItem(previous,item,next,following,localAudioPath,nextTrackPre
 
         const exitOkR972=(code===0||stopping);
 
-        const videoNextR972=Boolean(
-          actualNextR736 &&
-          isVideoHandoffR738(actualNextR736)
+        // R1154 FINAL BOUNDARY OWNER CHECK:
+        // The start-of-song actualNextR736 can be stale. Re-read the real scheduler
+        // at decoder EOF so a late station/clip NEVER falls into R978B's false
+        // MP3->MP3 wait while the gap bridge writes silence.
+        const runtimeOwnerAtEndR1154=
+          actualNextVideoOwnerR1154(0) ||
+          (
+            videoFeeder?.__r1154RuntimeVideoHandoff===true &&
+            videoFeeder?.__r1154ActualNextItem
+              ? {
+                  item:videoFeeder.__r1154ActualNextItem,
+                  afterItem:videoFeeder.__r1154ActualNextAfterItem||null,
+                  kind:videoFeeder.__r1154ActualNextKind||'video',
+                  source:videoFeeder.__r1154ActualNextSource||'tail-latched'
+                }
+              : null
+          );
+
+        const runtimeVideoNextR1154=Boolean(
+          runtimeOwnerAtEndR1154?.item &&
+          isVideoHandoffR738(runtimeOwnerAtEndR1154.item)
         );
 
+        const videoNextR972=Boolean(
+          runtimeVideoNextR1154 ||
+          (
+            actualNextR736 &&
+            isVideoHandoffR738(actualNextR736)
+          )
+        );
+
+        const stationItemAtEndR1154=
+          runtimeVideoNextR1154
+            ? runtimeOwnerAtEndR1154.item
+            : actualNextR736;
+
         const stationNextR978C=Boolean(
-          actualNextR736 && (
-            actualNextR736.sourceType==='radio-bumper' ||
-            String(actualNextR736.sourceType||'')
+          stationItemAtEndR1154 && (
+            stationItemAtEndR1154.sourceType==='radio-bumper' ||
+            String(stationItemAtEndR1154.sourceType||'')
               .startsWith('radio-special')
           )
         );
+
+        if(runtimeVideoNextR1154){
+          diagRecordR802('r1154-mp3-eof-video-owner-no-false-mp3-wait',{
+            title:shortText(runtimeOwnerAtEndR1154.item?.title||'VIDEO',52),
+            kind:runtimeOwnerAtEndR1154.kind||'video',
+            source:runtimeOwnerAtEndR1154.source||'runtime',
+            staticNextType:String(actualNextR736?.type||actualNextR736?.sourceType||''),
+            staticMp3Boundary:Boolean(mp3ToMp3BoundaryR809)
+          });
+        }
 
         const videoTailGuardMsR978C=
           stationNextR978C
@@ -6832,7 +8048,7 @@ async function playItem(previous,item,next,following,localAudioPath,nextTrackPre
           return;
         }
 
-        if(!stopping && mp3ToMp3BoundaryR809){
+        if(!stopping && mp3ToMp3BoundaryR809 && !runtimeVideoNextR1154){
           const waitMsR978B=
             MP3_TO_VIDEO_TAIL_GUARD_MS_R972+
             Math.round(MP3_BOUNDARY_BLACK_HOLD_SECONDS_R814*1000);
@@ -7045,11 +8261,21 @@ async function radioLoop(){
           // R764: only media that actually reached LIVE may become PREVIOUS.
           lastPlayed=item;
           queueIndex++;
-          if(item?.sourceType==='radio-bumper' && item?.__manualPlannedR943===true){
+          if(item?.sourceType==='radio-bumper' && (item?.__manualPlannedR943===true||item?.__manualSelectedR1155===true)){
             songsSinceBumperR724=0;
             bumperAfterSongsR724=randomBumperGapR724();
             state.songsSinceBumper=0;
             state.nextBumperAfterSongs=bumperAfterSongsR724;
+          }
+          if(item?.__manualSelectedR1155===true && item?.sourceType==='radio-special-30'){
+            lastSpecialPlayedAtR726=Date.now();
+            state.lastSpecialPlayedAt=new Date(lastSpecialPlayedAtR726).toISOString();
+          }
+          if(item?.__manualSelectedR1155===true && item?.sourceType==='radio-special-60'){
+            lastSpecialHourlyPlayedAtR727=Date.now();
+            state.lastSpecialHourlyPlayedAt=new Date(lastSpecialHourlyPlayedAtR727).toISOString();
+            lastSpecialPlayedAtR726=lastSpecialHourlyPlayedAtR727;
+            state.lastSpecialPlayedAt=new Date(lastSpecialPlayedAtR726).toISOString();
           }
           state.lastError='';
         }else{
@@ -7094,10 +8320,21 @@ async function radioLoop(){
       state.songsSinceBumper=songsSinceBumperR724;
       state.nextBumperAfterSongs=bumperAfterSongsR724;
 
+      // R1155: an owner action "put next" is authoritative for ONE boundary.
+      // Do not let an automatically-due 30m/60m/bumper jump in front of it.
+      const manualPriorityNextR1155=Boolean(queue[queueIndex]?.__manualPriorityNextR1155===true);
+      if(manualPriorityNextR1155){
+        diagRecordR802('r1155-manual-next-auto-inserts-suppressed',{
+          title:shortText(queue[queueIndex]?.title||'',52),
+          sourceType:String(queue[queueIndex]?.sourceType||''),
+          queueIndex:Number(queueIndex||0)
+        });
+      }
+
       let specialPlayedR726=false;
       let specialHourlyPlayedR727=false;
       const nowSpecialR727=Date.now();
-      if(!stopping && specialHourlyInsertR727 && nowSpecialR727-lastSpecialHourlyPlayedAtR727>=SPECIAL_HOURLY_INTERVAL_MS_R727){
+      if(!manualPriorityNextR1155 && !stopping && specialHourlyInsertR727 && nowSpecialR727-lastSpecialHourlyPlayedAtR727>=SPECIAL_HOURLY_INTERVAL_MS_R727){
         // R727: hourly station ID has priority at the hour mark so 30min + 60min never play back-to-back.
         moveUpcomingClipAfterTrackR724();
         const afterSpecial=queue[queueIndex]||null;
@@ -7114,7 +8351,7 @@ async function radioLoop(){
           state.lastError='';
         }
       }
-      if(!specialHourlyPlayedR727 && !stopping && specialInsertR726 && Date.now()-lastSpecialPlayedAtR726>=SPECIAL_INTERVAL_MS_R726){
+      if(!manualPriorityNextR1155 && !specialHourlyPlayedR727 && !stopping && specialInsertR726 && Date.now()-lastSpecialPlayedAtR726>=SPECIAL_INTERVAL_MS_R726){
         // R726/R727: 30-minute station ID is inserted only BETWEEN songs, never interrupts music.
         moveUpcomingClipAfterTrackR724();
         const afterSpecial=queue[queueIndex]||null;
@@ -7130,7 +8367,7 @@ async function radioLoop(){
         }
       }
 
-      if(!specialHourlyPlayedR727 && !specialPlayedR726 && !stopping && bumperLibrary.length && songsSinceBumperR724>=bumperAfterSongsR724 && !hasPlannedBumperAheadR943()){
+      if(!manualPriorityNextR1155 && !specialHourlyPlayedR727 && !specialPlayedR726 && !stopping && bumperLibrary.length && songsSinceBumperR724>=bumperAfterSongsR724 && !hasPlannedBumperAheadR943()){
         // Keep a station bumper between SONGS, never bumper -> normal clip back-to-back.
         moveUpcomingClipAfterTrackR724();
         const bumper=nextBumperR724();
@@ -7266,20 +8503,45 @@ function planBumperIntoQueueR943(){
   return true;
 }
 
+function firstFutureQueueIndexR1155(){
+  if(!queue.length)return 0;
+
+  const q=Math.max(0,Math.min(queue.length-1,Number(queueIndex)||0));
+  const queuedNow=queue[q]||null;
+  const liveNow=state.current||null;
+
+  // Normal queue-owned media (track, normal clip, manually planned bumper):
+  // queueIndex still points at the item that is LIVE, so NEXT is +1.
+  const sameQueueOwner=Boolean(
+    queuedNow && liveNow && (
+      primaryIdentity(queuedNow)===primaryIdentity(liveNow) ||
+      (queuedNow?.url && liveNow?.url && String(queuedNow.url)===String(liveNow.url)) ||
+      (cleanText(queuedNow?.title||'') && cleanText(queuedNow?.title||'')===cleanText(liveNow?.title||''))
+    )
+  );
+  if(sameQueueOwner)
+    return Math.min(queue.length,q+1);
+
+  // Timed 30/60 station inserts are played BETWEEN queue items after queueIndex
+  // was already incremented. During such an insert queue[queueIndex] itself is NEXT.
+  return Math.max(0,Math.min(queue.length,Number(queueIndex)||0));
+}
+
 function upcomingQueueR943(limit=6){
   if(!queue.length)
     return [];
 
   const out=[];
+  const firstFuture=firstFutureQueueIndexR1155();
 
   for(
-    let i=queueIndex+1;
+    let i=firstFuture;
     i<queue.length && out.length<limit;
     i++
   ){
     const row=queueItemPublicR943(
       queue[i],
-      i-(queueIndex+1)
+      i-firstFuture
     );
 
     if(row)
@@ -7294,14 +8556,14 @@ function moveUpcomingQueueR943(offset,direction,itemId=''){
   const off=Math.max(0,Math.min(5,Number(offset)||0));
   const expected=String(itemId||'');
 
-  if(!['up','down'].includes(dir))
+  if(!['up','down','next'].includes(dir))
     return {
       ok:false,
       error:'invalid-direction',
       upcoming:upcomingQueueR943(6)
     };
 
-  const firstFuture=queueIndex+1;
+  const firstFuture=firstFutureQueueIndexR1155();
   let absolute=firstFuture+off;
 
   if(expected){
@@ -7343,6 +8605,49 @@ function moveUpcomingQueueR943(offset,direction,itemId=''){
       upcoming:upcomingQueueR943(6)
     };
 
+  if(dir==='next'){
+    if(absolute===firstFuture){
+      queue[absolute].__manualPriorityNextR1155=true;
+      return {
+        ok:true,
+        alreadyNext:true,
+        move:{
+          at:new Date().toISOString(),
+          direction:'next',
+          id:actualId,
+          title:shortText(queue[absolute]?.title||'',80),
+          from:0,
+          to:0
+        },
+        upcoming:upcomingQueueR943(6)
+      };
+    }
+    const [picked]=queue.splice(absolute,1);
+    picked.__manualPriorityNextR1155=true;
+    queue.splice(firstFuture,0,picked);
+    state.queueLength=queue.length;
+    state.lastManualQueueMoveR943={
+      at:new Date().toISOString(),
+      direction:'next',
+      id:actualId,
+      title:shortText(picked?.title||'',80),
+      from:absolute-firstFuture,
+      to:0
+    };
+    diagRecordR802('r1155-queue-item-made-next',{
+      id:actualId,
+      title:shortText(picked?.title||'',52),
+      from:absolute-firstFuture,
+      firstFuture
+    });
+    return {
+      ok:true,
+      alreadyNext:false,
+      move:state.lastManualQueueMoveR943,
+      upcoming:upcomingQueueR943(6)
+    };
+  }
+
   const target=
     dir==='up'
       ? absolute-1
@@ -7379,6 +8684,117 @@ function moveUpcomingQueueR943(offset,direction,itemId=''){
   return {
     ok:true,
     move:state.lastManualQueueMoveR943,
+    upcoming:upcomingQueueR943(6)
+  };
+}
+
+function queuePickCandidateR1155(mediaType,key){
+  const type=String(mediaType||'').trim().toLowerCase();
+  const wanted=String(key||'').trim().replace(/^\/+/, '');
+  if(!wanted)return null;
+
+  if(type==='track'){
+    return library.find(x=>String(x?.key||'').replace(/^\/+/, '')===wanted)||null;
+  }
+
+  if(type==='clip'){
+    const videos=[
+      ...clipLibrary,
+      ...bumperLibrary,
+      ...(specialInsertR726?[specialInsertR726]:[]),
+      ...(specialHourlyInsertR727?[specialHourlyInsertR727]:[])
+    ];
+    return videos.find(x=>String(x?.key||'').replace(/^\/+/, '')===wanted)||null;
+  }
+
+  return null;
+}
+
+function queuePickNextR1155(mediaType,key,title=''){
+  const type=String(mediaType||'').trim().toLowerCase();
+  if(!['track','clip'].includes(type))
+    return {ok:false,error:'invalid-media-type',upcoming:upcomingQueueR943(6)};
+
+  const found=queuePickCandidateR1155(type,key);
+  if(!found)
+    return {ok:false,error:'media-not-found',key:String(key||''),upcoming:upcomingQueueR943(6)};
+
+  const item={...found};
+  const firstFuture=firstFutureQueueIndexR1155();
+  const id=primaryIdentity(item);
+
+  // Station items selected manually must behave like intentional station queue
+  // entries, so the normal cadence is reset after they really reach LIVE.
+  if(item.sourceType==='radio-bumper'||String(item.sourceType||'').startsWith('radio-special')){
+    item.__manualSelectedR1155=true;
+    item.__manualPlannedR943=true;
+    item.__manualPlannedIdR943=`manual:${id}:${Date.now()}`;
+  }
+
+  // If the same media is already in the future queue, MOVE that exact object.
+  // This preserves any prepared/manual metadata and prevents duplicates.
+  let existing=-1;
+  for(let i=firstFuture;i<queue.length;i++){
+    if(primaryIdentity(queue[i])===id){existing=i;break;}
+  }
+
+  if(existing===firstFuture){
+    const current=queue[firstFuture];
+    current.__manualPriorityNextR1155=true;
+    if(item.__manualSelectedR1155){
+      current.__manualSelectedR1155=true;
+      current.__manualPlannedR943=true;
+      current.__manualPlannedIdR943=current.__manualPlannedIdR943||item.__manualPlannedIdR943;
+    }
+    if(type==='track')prefetchTrack(current);
+    else prefetchPreparedClipR742(current);
+    state.lastManualQueuePickR1155={
+      at:new Date().toISOString(),type,key:String(current?.key||key),title:shortText(current?.title||title||'',100),position:1,alreadyNext:true
+    };
+    return {ok:true,alreadyNext:true,position:1,pick:state.lastManualQueuePickR1155,upcoming:upcomingQueueR943(6)};
+  }
+
+  let picked=item;
+  if(existing>firstFuture){
+    [picked]=queue.splice(existing,1);
+    if(item.__manualSelectedR1155){
+      picked.__manualSelectedR1155=true;
+      picked.__manualPlannedR943=true;
+      picked.__manualPlannedIdR943=picked.__manualPlannedIdR943||item.__manualPlannedIdR943;
+    }
+  }
+
+  picked.__manualPriorityNextR1155=true;
+  queue.splice(firstFuture,0,picked);
+  state.queueLength=queue.length;
+
+  if(type==='track')prefetchTrack(picked);
+  else prefetchPreparedClipR742(picked);
+
+  state.lastManualQueuePickR1155={
+    at:new Date().toISOString(),
+    type,
+    key:String(picked?.key||key),
+    title:shortText(picked?.title||title||'',100),
+    sourceType:String(picked?.sourceType||''),
+    position:1,
+    alreadyNext:false,
+    firstFuture
+  };
+
+  diagRecordR802('r1155-media-picked-next',{
+    type,
+    key:shortText(String(picked?.key||key),120),
+    title:shortText(picked?.title||title||'',52),
+    sourceType:String(picked?.sourceType||''),
+    firstFuture
+  });
+
+  return {
+    ok:true,
+    alreadyNext:false,
+    position:1,
+    pick:state.lastManualQueuePickR1155,
     upcoming:upcomingQueueR943(6)
   };
 }
@@ -7456,6 +8872,10 @@ function publicStatus(){
     liveGeometryModeR819:'R784-VIEWER-PROVEN-FIT-PAD-1920x1080-NO-CROP',
     videoInputQueueMaxWindowSecondsR756:Number((VIDEO_INPUT_QUEUE_PACKETS_R732/VIDEO_FPS).toFixed(2)),
     audioInputQueuePackets:AUDIO_INPUT_QUEUE_PACKETS_R732,
+    clipStallGuardR1139:R1139_CLIP_STALL_GUARD,
+    normalClipEofMarginMsR1139:NORMAL_CLIP_EOF_MARGIN_MS_R1139,
+    normalClipSoftEofCutsR1139:Number(state.normalClipSoftEofCutsR1139||0),
+    lastNormalClipSoftEofR1139:state.lastNormalClipSoftEofR1139||null,
     masterAvClockMode:'R816-PERSISTENT-RAWVIDEO-N25+AUDIO-SAMPLE-CLOCK',
     rightSubscribeMode:'R767-TRANSPARENT-420PX-BOTTOM-RIGHT',
     rightCtaMode:'R783-SUBSCRIBE-LIKE-420PX-BOTTOM-RIGHT-SMOOTH-ALTERNATING',
@@ -7523,6 +8943,49 @@ function publicStatus(){
       clipToTrackBlackHoldSecondsR1135:CLIP_TO_TRACK_BLACK_HOLD_SECONDS_R917B,
       musicClipAudioPrimeMsR1135:MUSIC_CLIP_AUDIO_PRIME_MS_R1135,
       videoToVideoBlackProfileR1136:R1136_VIDEO_TO_VIDEO_BLACK_SMOOTH,
+      clipPacerRuntimeFixR1140B:R1140B_CLIP_PACER_RUNTIME_FIX,
+      clipIoBackpressureFixR1141:R1141_CLIP_IO_BACKPRESSURE_FIX,
+      stationToClipTailLockR1142:R1142_STATION_TO_CLIP_TAIL_LOCK,
+      stationTailFrameMsR1142:STATION_TAIL_FRAME_MS_R1142,
+      stationTailWaitMsR1142:STATION_TAIL_WAIT_MS_R1142,
+      stationTailExactR1142:state.r1142StationTailExact||null,
+      stationStartFrameLockR1143:R1143_STATION_START_FRAME_LOCK,
+      stationStartLockFramesR1143:STATION_START_LOCK_FRAMES_R1143,
+      stationMidMinFrameMsR1143:STATION_MID_MIN_FRAME_MS_R1143,
+      stationStartLockStateR1143:state.r1143StationStartFrameLock||null,
+      stationMp3AtomicBlackR1145:R1145_STATION_MP3_ATOMIC_BLACK,
+      stationBlackMasterLockR1147:R1147_STATION_BLACK_MASTER_LOCK,
+      stationBlackMasterLockActiveR1147:Boolean(publisher?.__r1085AudioMaster?.transitionPassThroughR1147),
+      stationBlackMasterLockFramesR1147:Number(publisher?.__r1085AudioMaster?.transitionPassFramesR1147||0),
+      lastStationBlackMasterLockR1147:state.lastStationBlackMasterLockR1147||null,
+      mp3CinematicMasterLockR1148:R1148_MP3_CINEMATIC_MASTER_LOCK,
+      mp3CinematicMasterLockActiveR1148:Boolean(publisher?.__r1085AudioMaster?.transitionPassThroughR1148),
+      mp3CinematicMasterLockFramesR1148:Number(publisher?.__r1085AudioMaster?.transitionPassFramesR1148||0),
+      mp3MasterFrameReleaseTargetR1148C:Number(publisher?.__r1085AudioMaster?.transitionReleaseVideoFrameR1148||0),
+      lastMp3CinematicMasterLockR1148:state.lastMp3CinematicMasterLockR1148||null,
+      installHealthFixR1148B:R1148B_PUBLIC_STATUS_HEALTH_FIX,
+      mp3MasterFrameReleaseFixR1148C:R1148C_MASTER_FRAME_RELEASE_FIX,
+      mp3IncomingFeederReleaseFixR1148D:R1148D_INCOMING_FEEDER_RELEASE_FIX,
+      mp3LockOwnedReleaseFixR1148E:R1148E_LOCK_OWNED_RELEASE_FIX,
+      mp3EdgeFrameShieldR1150:R1150_MP3_EDGE_FRAME_SHIELD,
+      mp3ToVideoPhasePreserveR1151:R1151_MP3_TO_VIDEO_PHASE_PRESERVE,
+      actualNextOwnerFixR1154:R1154_ACTUAL_NEXT_OWNER,
+      actualNextPrearmBeforeEndMsR1154:R1154_PREARM_BEFORE_END_MS,
+      queueControlR1155:R1155_QUEUE_CONTROL,
+      lastManualQueuePickR1155:state.lastManualQueuePickR1155||null,
+      mp3EdgeStartExactSecondsR1150:MP3_EDGE_START_EXACT_SECONDS_R1150,
+      mp3EdgeTailExactSecondsR1150:MP3_EDGE_TAIL_EXACT_SECONDS_R1150,
+      mp3EdgePassActiveR1150:Boolean(publisher?.__r1085AudioMaster?.normalMp3EdgePassThroughR1150),
+      mp3MasterFrameReleaseTargetR1148D:Number(publisher?.__r1085AudioMaster?.transitionReleaseVideoFrameR1148||0),
+      mp3MasterFrameReleaseTargetR1148E:Number(publisher?.__r1085AudioMaster?.transitionReleaseVideoFrameR1148||0),
+      hardStallSelfHealR1146:R1146_HARD_STALL_SELF_HEAL,
+      hardStallRecoveryBusyR1146:Boolean(masterHardRecoveryBusyR1146),
+      lastStationMp3AtomicBlackR1145:state.lastStationMp3AtomicBlackR1145||null,
+      stationBlackPrearmReadyR1145:Boolean(stationBlackPrearmR1145?.ready),
+      lastStationNextVideoPrearmResetR1142:state.lastStationNextVideoPrearmResetR1142||null,
+      audioInputQueuePacketsR732:AUDIO_INPUT_QUEUE_PACKETS_R732,
+      musicClipDebtCatchupMsR1141:MUSIC_CLIP_R1123_DEBT_CATCHUP_MS_R1141,
+      musicClipDebtThresholdMsR1141:MUSIC_CLIP_R1123_DEBT_THRESHOLD_MS_R1141,
       musicClipFadeInSecondsR1136:MUSIC_CLIP_FADE_IN_SECONDS_R1136,
       musicClipR1123MinFrameMsR1135:MUSIC_CLIP_R1123_MIN_FRAME_MS_R1135,
       clipMp3CinematicProfileR1135:R1135_CLIP_MP3_CINEMATIC,
@@ -7750,6 +9213,11 @@ const server=http.createServer((req,res)=>{
         url.searchParams.get('offset'),
         url.searchParams.get('direction'),
         url.searchParams.get('itemId')
+      );
+      else if(url.pathname==='/control/queue-pick-r989')result=queuePickNextR1155(
+        url.searchParams.get('type'),
+        url.searchParams.get('key'),
+        url.searchParams.get('title')
       );
       else throw new Error('unknown local control');
       res.writeHead(200,headers);res.end(JSON.stringify(result));
