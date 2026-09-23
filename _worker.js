@@ -1,7 +1,8 @@
 // ANDRIK CONTROL R1138 SAFE OPS · radio actions preserved
 // R768: OWNER PUSH SELF-HEAL + CONTROL-ORIGIN REBIND; radio R767 untouched.
 const PUSH_OWNER_RECOVERY_R768 = 'R768-OWNER-PUSH-SELFHEAL';
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R524', number:524, version:'55.00', full:'55.00 LIVE WEB AI FINAL R524', siteUpdater:'55.00-r356' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R525', number:525, version:'55.00', full:'55.00 LIVE WEB AI FINAL R525 · SUBPUSH R1150', siteUpdater:'55.00-r356' });
+const YOUTUBE_SUBSCRIBER_PUSH_R1150 = 'R1150-YOUTUBE-SUBSCRIBER-GAIN+LOSS-5M-OWNER-DELIVERY';
 const PUSH_AUTOMATION_FIX_R778 = 'R778-CRON-UA-INDEPENDENT-HEALTH-RESCUE-STRICT-OWNER-DELIVERY';
 const YOUTUBE_COMMENT_PUSH_RELIABLE_R953 = 'R953-LIVE-2M-RECENT6-5M-OLDER1-SEPARATE-COMMENT-LANE';
 const ANDRIK_D1_EFFICIENCY_RELEASE = 'R638-D1-FINAL';
@@ -2996,8 +2997,8 @@ async function sendOneSignalPush(env, {
   // merely because OneSignal returned HTTP 200. Test push already proves the browser can
   // receive; this guard makes likes/subscribers/daily summaries advance ONLY when at least
   // one owner subscription is actually matched. Failed/pending sends stay retryable.
-  const strictSubscriberDeliveryR765 = audience === 'owner' && ['youtube-subscriber','youtube-subscriber-count'].includes(historyType);
-  const strictOwnerDeliveryR778 = audience === 'owner' && ['youtube-subscriber','youtube-subscriber-count','youtube-like','daily-summary'].includes(historyType);
+  const strictSubscriberDeliveryR765 = audience === 'owner' && ['youtube-subscriber','youtube-subscriber-count','youtube-unsubscriber'].includes(historyType);
+  const strictOwnerDeliveryR778 = audience === 'owner' && ['youtube-subscriber','youtube-subscriber-count','youtube-unsubscriber','youtube-like','daily-summary'].includes(historyType);
   if (strictOwnerDeliveryR778) {
     const deliveryR765 = await verifySubscriberOwnerDeliveryR765(env, result);
     if (!deliveryR765.ok) {
@@ -9148,9 +9149,13 @@ async function handleFastYoutubeSubscriberCountR416(request, env, options = {}) 
     const lastR797=await getPushState(db,'youtube-subscriber-poll-last-at-r653').catch(()=>null);
     const lastMsR797=Date.parse(String(lastR797?.value||lastR797?.updatedAt||''));
     const ageMsR797=Number.isFinite(lastMsR797)?Math.max(0,Date.now()-lastMsR797):Infinity;
-    const minGapMsR797=14.5*60*1000;
+    // R1150: owner asked for practical subscriber/unsubscriber pushes. The external
+    // gateway wakes every 2 minutes; keep the YouTube channels.list call quota-safe but
+    // sample at ~5 minute cadence instead of ~15 minutes. This is still only one cheap
+    // channel statistics request per sample and makes count changes visible promptly.
+    const minGapMsR797=4.5*60*1000;
     if(ageMsR797<minGapMsR797){
-      return {ok:true,skipped:true,reason:'quota-eco-r797',cadenceMinutes:15,ageMinutes:Math.round(ageMsR797/6000)/10,nextInSeconds:Math.max(1,Math.ceil((minGapMsR797-ageMsR797)/1000)),checkedAt:new Date().toISOString()};
+      return {ok:true,skipped:true,reason:'quota-eco-r1150',cadenceMinutes:5,ageMinutes:Math.round(ageMsR797/6000)/10,nextInSeconds:Math.max(1,Math.ceil((minGapMsR797-ageMsR797)/1000)),checkedAt:new Date().toISOString()};
     }
   }
   const startedAt = new Date().toISOString();
@@ -9233,14 +9238,45 @@ async function handleFastYoutubeSubscriberCountR416(request, env, options = {}) 
           await releasePushOnceClaim(db,onceKey).catch(()=>{});
         }
       }
+    }else if(!identity.hiddenSubscribers && current<notifiedTotalR658){
+      // R1150: decreases are real owner events too. R658 previously reset both the
+      // event baseline and delivery watermark silently, so an unsubscribe could never
+      // reach the phone and the richer/manual reconciler lost its chance to report it.
+      // Compare against the LAST SUCCESSFULLY DELIVERED total, not just the analytics
+      // baseline, and move both checkpoints only after confirmed owner delivery.
+      const deliveryBaseR1150=Math.max(0,Number(notifiedTotalR658||0));
+      const lossR1150=Math.max(1,deliveryBaseR1150-current);
+      const onceKey=`push-once:youtube-unsubscriber-r1150:${deliveryBaseR1150}:${current}`;
+      const claimed=await claimPushOnce(db,onceKey,startedAt);
+      if(claimed){
+        const channelAppUrl=youtubeAppLauncherUrl(identity.channelUrl);
+        const result=await sendOwnerPush(env,{
+          title:lossR1150===1?'🔻 −1 подписчик YouTube':`🔻 −${lossR1150} подписчика YouTube`,
+          message:`На канале теперь ${current} подписчиков`,
+          icon:'https://andrikmetal.com/assets/andrik-control-red-triangle-192.png',
+          url:channelAppUrl,
+          name:`youtube-unsubscriber-r1150-${deliveryBaseR1150}-to-${current}`,
+          ttl:86400,
+          webButtons:[{id:'open-youtube',text:'▶️ Открыть YouTube',url:channelAppUrl}],
+          history:{type:'youtube-unsubscriber',source:'YouTube',videoTitle:identity.title,details:{previousSubscribers:deliveryBaseR1150,baselineSubscribers:before,lastNotifiedSubscribers:notifiedTotalR658,totalSubscribers:current,delta:-lossR1150,deliveryMode:'cron-lite-r1150'}}
+        });
+        sent=Boolean(result.ok);
+        pushError=cleanPlainText(result.error || '',300);
+        if(sent){
+          await Promise.all([
+            saveYoutubeEventRow(db,{key,type:'subscriber-count',resourceId:identity.channelId,title:identity.title,countValue:current,url:identity.channelUrl,payload:{...identity,deliveryMode:'cron-lite-r1150-unsubscriber'}}),
+            setPushState(db,notifiedKeyR658,String(current))
+          ]);
+          notifiedTotalR658=current;
+        }else{
+          // Do not consume the event. The next 5-minute sample retries it.
+          await releasePushOnceClaim(db,onceKey).catch(()=>{});
+        }
+      }
     }else if(current!==before){
-      // A decrease is a new baseline, never a notification. Reset the delivery
-      // watermark too so a later genuine rise to the same absolute total can notify.
-      await Promise.all([
-        saveYoutubeEventRow(db,{key,type:'subscriber-count',resourceId:identity.channelId,title:identity.title,countValue:current,url:identity.channelUrl,payload:{...identity,baselineReset:true,deliveryMode:'cron-lite-r658'}}),
-        setPushState(db,notifiedKeyR658,String(current))
-      ]);
-      notifiedTotalR658=current;
+      // R1150: analytics baseline may move independently, but NEVER move the owner
+      // delivery watermark without a delivered push. This preserves catch-up/retry.
+      await saveYoutubeEventRow(db,{key,type:'subscriber-count',resourceId:identity.channelId,title:identity.title,countValue:current,url:identity.channelUrl,payload:{...identity,baselineSync:true,deliveryMode:'cron-lite-r1150'}});
     }
 
     // R469: subscriber polling must NEVER erase the likes/comments checkpoint written
@@ -9260,7 +9296,7 @@ async function handleFastYoutubeSubscriberCountR416(request, env, options = {}) 
       mode:'cron-lite-r469',
       updatedAt:startedAt
     })).catch(()=>{});
-    return {ok:!pushError,subscribers:current,previousSubscribers:before,lastNotifiedSubscribers:notifiedTotalR658,delta:Math.max(0,current-before),sent,error:pushError,checkedAt:startedAt,mode:'subscriber-watermark-r765-delivery-confirmed',deliveryRepairR765:deliveryRepairR765 || null};
+    return {ok:!pushError,subscribers:current,previousSubscribers:before,lastNotifiedSubscribers:notifiedTotalR658,delta:Math.max(0,current-before),loss:Math.max(0,before-current),signedDelta:current-before,direction:current>before?'up':current<before?'down':'same',sent,error:pushError,checkedAt:startedAt,mode:'subscriber-watermark-r1150-gain-loss-delivery-confirmed',subscriberPushR1150:YOUTUBE_SUBSCRIBER_PUSH_R1150,deliveryRepairR765:deliveryRepairR765 || null};
   } catch(error) {
     return {ok:false,error:cleanPlainText(error?.message || error,400),checkedAt:startedAt};
   }
@@ -9286,7 +9322,8 @@ async function handleCronYoutubeEventsLiteR416(request, env, options = {}) {
     mode:'cron-lite-r416',
     commentsSent:Number(engagement?.commentsSent || 0),
     likesSent:Number(engagement?.likesSent || 0),
-    subscribersSent:subscriber?.sent ? Math.max(1,Number(subscriber?.delta || 1)) : 0,
+    subscribersSent:subscriber?.sent && subscriber?.direction!=='down' ? Math.max(1,Number(subscriber?.delta || 1)) : 0,
+    unsubscribersSent:subscriber?.sent && subscriber?.direction==='down' ? Math.max(1,Number(subscriber?.loss || 1)) : 0,
     subscribers:Number(subscriber?.subscribers || 0),
     engagement,
     subscriber,
@@ -9852,12 +9889,19 @@ async function handleCheckYoutubeEvents(request, env) {
       if (!likeDeferredVideoIds.has(item.videoId)) await saveYoutubeEventRow(db, { key:`like-count:${item.videoId}`, type:'like-count', resourceId:item.videoId, videoId:item.videoId, title:item.title, countValue:item.likes, url:item.url, payload:item });
       await saveYoutubeEventRow(db, { key:`comment-count:${item.videoId}`, type:'comment-count', resourceId:item.videoId, videoId:item.videoId, title:item.title, countValue:item.comments, url:item.url, payload:item });
     }
-    if (!subscriberCountDeferred) await saveYoutubeEventRow(db, { key:'channel-subscriber-count', type:'subscriber-count', resourceId:identity.channelId, title:identity.title, countValue:identity.subscribers, url:identity.channelUrl, payload:identity });
-    // R658: successful full/manual subscriber delivery also advances the independent
-    // delivery watermark. Decreases reset it. This prevents the fast cron from either
-    // missing a +1 or duplicating a named subscriber notification.
+    // R1150: loss delivery must be as retry-safe as gain delivery. Count how much of
+    // the detected loss actually reached the owner (named -1 counts as one; generic
+    // count push carries its explicit negative delta). Do not consume the baseline or
+    // delivery watermark on a failed/pending unsubscribe push.
+    const unsubscriberCoveredLossR1150=notifications
+      .filter(item=>item.type==='unsubscriber'&&item.ok)
+      .reduce((sum,item)=>sum+(Number(item.delta)<0?Math.abs(Number(item.delta)):1),0);
+    const subscriberLossDeliveredR1150=!subscriberDropped || unsubscriberCoveredLossR1150>=subscriberLossDeltaR677;
+    if (!subscriberCountDeferred && subscriberLossDeliveredR1150) await saveYoutubeEventRow(db, { key:'channel-subscriber-count', type:'subscriber-count', resourceId:identity.channelId, title:identity.title, countValue:identity.subscribers, url:identity.channelUrl, payload:identity });
+    // Successful full/manual delivery advances the independent owner watermark in
+    // either direction. An undelivered loss remains retryable for the fast R1150 poll.
     const subscriberDeliveredR658=notifications.some(item=>['subscriber','subscriber-count'].includes(item.type)&&item.ok);
-    if(subscriberDropped || (subscriberDelta>0 && subscriberDeliveredR658)){
+    if((subscriberDropped && subscriberLossDeliveredR1150) || (subscriberDelta>0 && subscriberDeliveredR658)){
       await setPushState(db,'youtube-subscriber-last-notified-total-r658',String(identity.subscribers)).catch(()=>{});
     }
 
@@ -9873,6 +9917,10 @@ async function handleCheckYoutubeEvents(request, env) {
       subscribersSent:notifications.filter(item=>['subscriber','subscriber-count'].includes(item.type)&&item.ok).length,
       subscribersFailed:notifications.filter(item=>['subscriber','subscriber-count'].includes(item.type)&&!item.ok&&!item.pending).length,
       subscribersQueued:Math.max(0,newVisibleSubscribers.length-[...subscriberDelivery.values()].filter(result=>result?.ok).length) + (subscriberCountDeferred?1:0),
+      unsubscribersAttempted:notifications.filter(item=>item.type==='unsubscriber').length,
+      unsubscribersSent:notifications.filter(item=>item.type==='unsubscriber'&&item.ok).length,
+      unsubscribersFailed:notifications.filter(item=>item.type==='unsubscriber'&&!item.ok&&!item.pending).length,
+      subscriberLossCovered:unsubscriberCoveredLossR1150,
       subscriberDelta,
       subscriberPreviousCount:previousSubscriberCount,
       subscriberCurrentCount:identity.subscribers,
@@ -9947,14 +9995,14 @@ async function handleYoutubeEventsStatus(request, env, ctx) {
     db.prepare(`
       SELECT type,status,COUNT(*) AS total
       FROM push_history
-      WHERE type IN ('youtube-comment','youtube-like','youtube-subscriber','youtube-subscriber-count')
+      WHERE type IN ('youtube-comment','youtube-like','youtube-subscriber','youtube-subscriber-count','youtube-unsubscriber')
         AND datetime(created_at)>=datetime('now','-24 hours')
       GROUP BY type,status
     `).all(),
     db.prepare(`
       SELECT type,title,message,error,created_at AS createdAt
       FROM push_history
-      WHERE type IN ('youtube-comment','youtube-like','youtube-subscriber','youtube-subscriber-count')
+      WHERE type IN ('youtube-comment','youtube-like','youtube-subscriber','youtube-subscriber-count','youtube-unsubscriber')
         AND status='failed'
       ORDER BY datetime(created_at) DESC LIMIT 1
     `).first(),
@@ -9986,13 +10034,14 @@ async function handleYoutubeEventsStatus(request, env, ctx) {
   if(fastAgeMinutes!==null && fastAgeMinutes>12 && ctx?.waitUntil){
     ctx.waitUntil(runPushAutomationRescueWithHeartbeatR924(env,'youtube-status-r924').catch(()=>({ok:false})));
   }
-  const today={commentsSent:0,repliesSent:0,likesSent:0,subscribersSent:0,failed:0};
+  const today={commentsSent:0,repliesSent:0,likesSent:0,subscribersSent:0,unsubscribersSent:0,failed:0};
   for(const row of (todayRows.results||[])){
     const n=Number(row.total||0),sent=row.status==='sent';
     if(!sent){today.failed+=n;continue}
     if(row.type==='youtube-comment'||row.type==='youtube-live-chat')today.commentsSent+=n;
     if(row.type==='youtube-like')today.likesSent+=n;
     if(row.type==='youtube-subscriber'||row.type==='youtube-subscriber-count')today.subscribersSent+=n;
+    if(row.type==='youtube-unsubscriber')today.unsubscribersSent+=n;
   }
   const replyRow=await db.prepare(`
     SELECT COUNT(*) AS total FROM push_history
@@ -13536,7 +13585,8 @@ async function handleExternalCronGatewayR334(request, env, ctx) {
           ok:engagement?.ok!==false && subscriber?.ok!==false,
           mode:'engagement+subscriber-2m-r756',
           engagement,subscriber,
-          subscribersSent:subscriber?.sent ? Math.max(1,Number(subscriber?.delta||1)) : 0
+          subscribersSent:subscriber?.sent && subscriber?.direction!=='down' ? Math.max(1,Number(subscriber?.delta||1)) : 0,
+          unsubscribersSent:subscriber?.sent && subscriber?.direction==='down' ? Math.max(1,Number(subscriber?.loss||1)) : 0
         };
       }else value={ok:true,skipped:true,reason:'slot-already-claimed'};
     }else if(clock.due5){

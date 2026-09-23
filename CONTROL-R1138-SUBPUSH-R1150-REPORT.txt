@@ -1,0 +1,33 @@
+ANDRIK CONTROL · SUBSCRIBER PUSH R1150
+Base: user-provided ANDRIK-SITE-CONTROL-R1138-READY.zip
+
+ROOT CAUSE FOUND
+1) Fast automatic subscriber poll explicitly treated a subscriber-count decrease as
+   "never a notification" and silently reset both the baseline and delivery watermark.
+   Result: automatic unsubscribe pushes were impossible and the later full reconciler
+   could lose the evidence of the decrease.
+2) Subscriber count polling was called on the 2-minute gateway but self-throttled to
+   about 15 minutes. This made new-subscriber push feel missing/late.
+3) youtube-unsubscriber was not included in strict owner-delivery confirmation, so a
+   loss push did not get the same confirmed-delivery/retry protection as subscriber pushes.
+
+R1150 FIX
+- Automatic count sampling: ~5 minutes (gateway remains 2-minute heartbeat).
+- Gain: green owner push, existing delivery watermark preserved.
+- Loss: red owner push (−1 / −N), only advances checkpoints after confirmed delivery.
+- Failed/pending loss push remains retryable; no silent watermark reset.
+- Full/manual reconciler no longer consumes a subscriber loss unless delivered pushes
+  cover the detected loss.
+- Strict owner delivery verification now includes youtube-unsubscriber.
+- Service page shows a separate "Отписки" KPI and subscriber/unsubscriber poll wording.
+
+UNCHANGED
+- Radio/VPS runtime logic
+- YouTube LIVE stream key / RTMPS
+- Music files
+- OneSignal app configuration
+- Existing comment/like/LIVE-chat logic
+
+LIMITATION
+YouTube only exposes names for public subscriptions. Private/unknown changes are reported
+as a generic +1/+N or −1/−N count push.

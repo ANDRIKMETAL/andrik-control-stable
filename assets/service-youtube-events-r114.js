@@ -27,12 +27,13 @@
     paintKpi('youtubeEventsReplies',today.repliesSent||0);
     paintKpi('youtubeEventsLikes',today.likesSent||summary.likesSent||0);
     paintKpi('youtubeEventsSubscribers',today.subscribersSent||summary.subscribersSent||0);
+    paintKpi('youtubeEventsUnsubscribers',today.unsubscribersSent||summary.unsubscribersSent||0);
     const queue=Number(summary.commentsQueued||0)+Number(summary.subscribersQueued||0)+Number(summary.likesQueued||0);
     const errors=Number(summary.commentsFailed||0)+Number(summary.subscribersFailed||0)+Number(summary.likesFailed||0);
     paintKpi('youtubeEventsQueue',queue,queue?'warning':'');
     paintKpi('youtubeEventsErrors',errors,errors?'error':'');
     const fastAge=Number.isFinite(Number(fast.ageMinutes))?` · ${Number(fast.ageMinutes)} мин. назад`:'';
-    set('youtubeEventsFastCheck',`Быстрый cron 2 мин: ${fmt(fast.lastCheckAt)}${fastAge} · подписчики: ${subscriberPoll.lastCheckAt?fmt(subscriberPoll.lastCheckAt):'ожидает'} · последний доставленный total ${Number(subscriberPoll.lastNotifiedTotal||0)}`);
+    set('youtubeEventsFastCheck',`Быстрый cron 2 мин: ${fmt(fast.lastCheckAt)}${fastAge} · подписки/отписки ~5 мин: ${subscriberPoll.lastCheckAt?fmt(subscriberPoll.lastCheckAt):'ожидает'} · последний доставленный total ${Number(subscriberPoll.lastNotifiedTotal||0)}`);
     const commentDirect=['direct-video-r473','direct-video-r474','direct-video+livechat-r669','direct-live-2m-r938'].includes(fast.summary?.commentMode);
     const commentNote=commentDirect?` · комментарии: прямой контроль ${Number(fast.summary?.commentTargets||0)} видео`:'';
     set('youtubeEventsFastResult',`Быстрый результат: ${fast.recoveredByFull?'восстановлен полным контролем':fastStatus==='success'?'успех':fastStatus==='warning'?'предупреждение':fastStatus==='failed'?'ОШИБКА':'ожидает'} · отправлено ${Number(fast.summary?.sent||0)} · LIVE-чат ${Number(fast.summary?.liveChatSent||0)} · LIVE лайки ${fast.summary?.liveVideoPinned?'в контроле':'—'} · ошибок ${Number(fast.summary?.failed||0)}${commentNote} · восстановлено stale ${Number(fast.staleLikeClaims||0)}`);
@@ -58,7 +59,7 @@
     set('youtubeEventsMessage',retry?'Повторяем очередь и прошлые ошибки…':'Проверяем реальные события YouTube…');
     try{
       const data=await api('/api/push/check-youtube-events',{method:'POST'});
-      set('youtubeEventsMessage',`Готово: комментарии ${Number(data.commentsSent||0)}/${Number(data.commentsAttempted||0)}, лайки ${Number(data.likesSent||0)}, подписчики ${Number(data.subscribersSent||0)}, очередь ${Number(data.commentsQueued||0)+Number(data.likesQueued||0)+Number(data.subscribersQueued||0)}.`);
+      set('youtubeEventsMessage',`Готово: комментарии ${Number(data.commentsSent||0)}/${Number(data.commentsAttempted||0)}, лайки ${Number(data.likesSent||0)}, подписчики ${Number(data.subscribersSent||0)}, отписки ${Number(data.unsubscribersSent||0)}, очередь ${Number(data.commentsQueued||0)+Number(data.likesQueued||0)+Number(data.subscribersQueued||0)}.`);
       await load();
       byId('adminDiagnosticLogRefresh')?.click();
     }catch(error){set('youtubeEventsMessage',`Ошибка: ${error.message}`);await load()}
