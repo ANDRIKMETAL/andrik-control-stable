@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1790176603518-9dc968dce7",
-  "release": "R1155",
-  "archiveName": "ANDRIK-SITE-CONTROL-R1155-QUEUE-NEXT-READY.zip",
-  "sourceHead": "647dac46c281232646b141820262c96673f5bd2e",
-  "backupSha": "647dac46c281232646b141820262c96673f5bd2e",
+  "operationId": "publish-1790217865001-8728e9315f",
+  "release": "R526",
+  "archiveName": "ANDRIK-SITE-CONTROL-R526-PUSH-DELIVERY-FIX.zip",
+  "sourceHead": "b6591e5ed2f7edb5994fc97e7cebba3c2b774355",
+  "backupSha": "b6591e5ed2f7edb5994fc97e7cebba3c2b774355",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-23T15:16:43.953Z"
+  "generatedAt": "2026-09-24T02:44:25.001Z"
 }

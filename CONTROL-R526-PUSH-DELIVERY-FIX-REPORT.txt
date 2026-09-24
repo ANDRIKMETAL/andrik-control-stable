@@ -1,0 +1,42 @@
+ANDRIK CONTROL · R526 · PUSH DELIVERY CORRECTNESS
+
+Base:
+ANDRIK-SITE-CONTROL-R1155-QUEUE-NEXT-READY.zip
+
+Changed files:
+- _worker.js
+- service-admin.html
+- assets/service-youtube-events-r114.js
+
+Fixes:
+1) OneSignal delivery correctness
+   - delivery now accepts top-level successful/received OR platform_delivery_stats
+     successful/received (important for chrome_web_push reports).
+   - subscriber watermark repair uses the same corrected delivery calculation.
+   - diagnostic log now prints platformSuccessful/platformReceived.
+
+2) Subscriber false-positive fix
+   - channel subscriber TOTAL is authoritative.
+   - if total does not rise, newly visible/public subscriber profiles are silently
+     learned and DO NOT generate "New subscriber" pushes or queue entries.
+   - on a real +N rise, at most N named public subscribers may be notified;
+     remaining delta is covered by one generic +N push.
+   - old speculative visible-subscriber credit is cleared so a future real +1
+     cannot be swallowed.
+   - extra public profiles beyond the actual count delta are silently seeded.
+   - current public-subscriber snapshot is persisted for future unsubscribe naming.
+
+3) Cadence/UI correctness
+   - LIVE comments/chat remain every 2 minutes.
+   - likes now sample about every 5 minutes (was ~10 minutes).
+   - subscribers/unsubscribers remain about every 5 minutes.
+   - Service UI now states the real cadence instead of implying likes are every 2 minutes.
+
+Expected first check after deploy:
+- if subscriber total is unchanged, old visible-profile backlog is silently seeded.
+- queue should return to 0 (assuming no real undelivered event remains).
+- no fake subscriber pushes should be emitted from that backlog.
+
+Radio:
+- no radio core changes
+- no VPS radio restart required

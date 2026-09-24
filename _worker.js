@@ -1,7 +1,8 @@
 // ANDRIK CONTROL R1138 SAFE OPS · radio actions preserved
 // R768: OWNER PUSH SELF-HEAL + CONTROL-ORIGIN REBIND; radio R767 untouched.
 const PUSH_OWNER_RECOVERY_R768 = 'R768-OWNER-PUSH-SELFHEAL';
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R525', number:525, version:'55.00', full:'55.00 LIVE WEB AI FINAL R525 · SUBPUSH R1150', siteUpdater:'55.00-r356' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R526', number:526, version:'55.00', full:'55.00 LIVE WEB AI FINAL R526 · PUSH DELIVERY CORRECTNESS', siteUpdater:'55.00-r356' });
+const PUSH_DELIVERY_CORRECTNESS_R526 = 'R526-ONESIGNAL-PLATFORM-DELIVERY+SUBSCRIBER-COUNT-GATE+HONEST-CADENCE';
 const YOUTUBE_SUBSCRIBER_PUSH_R1150 = 'R1150-YOUTUBE-SUBSCRIBER-GAIN+LOSS-5M-OWNER-DELIVERY';
 const PUSH_AUTOMATION_FIX_R778 = 'R778-CRON-UA-INDEPENDENT-HEALTH-RESCUE-STRICT-OWNER-DELIVERY';
 const YOUTUBE_COMMENT_PUSH_RELIABLE_R953 = 'R953-LIVE-2M-RECENT6-5M-OLDER1-SEPARATE-COMMENT-LANE';
@@ -2460,6 +2461,22 @@ async function cacheLatestYoutubeItem(db, item, meta = {}) {
   }));
 }
 
+function oneSignalPlatformDeliveryR526(stats = {}) {
+  let successful = 0;
+  let received = 0;
+  let failed = 0;
+  let errored = 0;
+  const rows = stats && typeof stats === 'object' ? Object.values(stats) : [];
+  for (const row of rows) {
+    if (!row || typeof row !== 'object') continue;
+    successful += Math.max(0, Number(row.successful || 0));
+    received += Math.max(0, Number(row.received || 0));
+    failed += Math.max(0, Number(row.failed || 0));
+    errored += Math.max(0, Number(row.errored || 0));
+  }
+  return { successful, received, failed, errored };
+}
+
 async function fetchOneSignalMessageReport(env, messageId) {
   const id = cleanPlainText(messageId, 120);
   if (!oneSignalConfigured(env) || !id) return { ok: false, error: 'message-report-unavailable' };
@@ -2470,6 +2487,8 @@ async function fetchOneSignalMessageReport(env, messageId) {
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) return { ok: false, status: response.status, error: data?.errors || data?.error || 'message-report-error' };
+  const platformDeliveryStats = data?.platform_delivery_stats || {};
+  const platformR526 = oneSignalPlatformDeliveryR526(platformDeliveryStats);
   return {
     ok: true,
     id,
@@ -2477,9 +2496,13 @@ async function fetchOneSignalMessageReport(env, messageId) {
     received: Math.max(0, Number(data?.received || 0)),
     failed: Math.max(0, Number(data?.failed || 0)),
     errored: Math.max(0, Number(data?.errored || 0)),
+    platformSuccessfulR526: platformR526.successful,
+    platformReceivedR526: platformR526.received,
+    platformFailedR526: platformR526.failed,
+    platformErroredR526: platformR526.errored,
     remaining: data?.remaining == null ? null : Math.max(0, Number(data.remaining || 0)),
     completedAt: data?.completed_at || null,
-    platformDeliveryStats: data?.platform_delivery_stats || {},
+    platformDeliveryStats,
     includedSegments: data?.included_segments || []
   };
 }
@@ -2499,7 +2522,7 @@ async function verifySubscriberOwnerDeliveryR765(env, result = {}) {
     ok:false,
     error:cleanPlainText(error?.message || error || 'message-report-error', 300)
   }));
-  const delivered = Math.max(0, Number(report?.successful || 0), Number(report?.received || 0));
+  const delivered = Math.max(0, Number(report?.successful || 0), Number(report?.received || 0), Number(report?.platformSuccessfulR526 || 0), Number(report?.platformReceivedR526 || 0));
   if (report?.ok && delivered > 0) {
     return { ok:true, pending:false, source:'message-report', recipients:delivered, oneSignalId, report };
   }
@@ -5017,7 +5040,7 @@ async function handlePushDiagnosticLog(request, env) {
     latest?.videoId ? `${latest.title} | ${latest.publishedAt || '—'} | ${latest.url}` : 'No cached video',
     '',
     '[ONESIGNAL MESSAGE REPORTS]',
-    ...(reports.length ? reports.map(item => `${item.createdAt || '—'} | ${item.oneSignalId} | ok=${item.ok} successful=${item.successful ?? '—'} received=${item.received ?? '—'} failed=${item.failed ?? '—'} errored=${item.errored ?? '—'} error=${typeof item.error === 'string' ? item.error : JSON.stringify(item.error || '')}`) : ['No messages with OneSignal id']),
+    ...(reports.length ? reports.map(item => `${item.createdAt || '—'} | ${item.oneSignalId} | ok=${item.ok} successful=${item.successful ?? '—'} received=${item.received ?? '—'} platformSuccessful=${item.platformSuccessfulR526 ?? '—'} platformReceived=${item.platformReceivedR526 ?? '—'} failed=${item.failed ?? '—'} errored=${item.errored ?? '—'} error=${typeof item.error === 'string' ? item.error : JSON.stringify(item.error || '')}`) : ['No messages with OneSignal id']),
     '',
     '[PUSH HISTORY]',
     ...history.map(item => `${item.createdAt || '—'} | ${item.status} | ${item.type} | ${item.audience} | video=${item.videoId || '—'} | onesignal=${item.oneSignalId || 'EMPTY'} | recipients=${item.recipients} | error=${item.error || '—'} | ${item.title || item.message || '—'}`),
@@ -8857,16 +8880,16 @@ async function handleFastYoutubeEngagementR333(request,env,options={}){
   if(!adminAuthorized(request,env) && !cronAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
   const db=requireDb(env);
   await Promise.all([ensurePushAutomationSchema(db),ensureControlV1Schema(db)]);
-  // R938: the scheduler still wakes every 2 minutes. Expensive likes/catalogue work
-  // remains ~10-minute economy, but the current LIVE video's ordinary comments and LIVE
-  // chat are checked on EVERY wake-up. The quota timestamp is separate from heartbeat.
+  // R526: the scheduler still wakes every 2 minutes. LIVE comments/chat stay every 2m,
+  // while the catalogue/like sample is now ~5m: one cheap videos.list request per sample
+  // keeps owner like notifications prompt without returning to every-2m quota burn.
   const requestUrlR797=new URL(request.url);
   const forceQuotaPollR797=options.force===true || requestUrlR797.searchParams.get('fresh')==='1' || (adminAuthorized(request,env) && !cronAuthorized(request,env));
   const invokedAtR938=new Date().toISOString();
   const quotaStateR938=await getPushState(db,'youtube-fast-quota-last-at-r938').catch(()=>null);
   const quotaMsR938=Date.parse(String(quotaStateR938?.value||quotaStateR938?.updatedAt||''));
   const quotaAgeMsR938=Number.isFinite(quotaMsR938)?Math.max(0,Date.now()-quotaMsR938):Infinity;
-  const minGapMsR797=9.5*60*1000;
+  const minGapMsR797=4.5*60*1000;
   await setPushState(db,'youtube-fast-engagement-last-at-r333',invokedAtR938).catch(()=>{});
   if(!forceQuotaPollR797 && quotaAgeMsR938<minGapMsR797){
     try{
@@ -8874,7 +8897,7 @@ async function handleFastYoutubeEngagementR333(request,env,options={}){
       if(!channelId)channelId=await resolveYoutubeWebSubChannelIdR332(env,db);
       if(!channelId)throw new Error('youtube-channel-id-unavailable');
       const live2m=await checkYoutubeLiveCommentsEvery2mR938(env,db,channelId,invokedAtR938);
-      const summary={...live2m,skippedQuota:true,quotaCadenceMinutes:10,likesSent:0,videosChecked:live2m.liveVideoPinned?1:0};
+      const summary={...live2m,skippedQuota:true,quotaCadenceMinutes:5,likesSent:0,videosChecked:live2m.liveVideoPinned?1:0};
       const fastStatus=summary.failed>0?'failed':(summary.warnings.length||summary.pending>0)?'warning':'success';
       await setPushState(db,'youtube-fast-engagement-last-result-r333',JSON.stringify(summary)).catch(()=>{});
       await setPushState(db,'youtube-fast-engagement-last-status-r376',fastStatus).catch(()=>{});
@@ -8890,7 +8913,7 @@ async function handleFastYoutubeEngagementR333(request,env,options={}){
   }
   const autoCheckpointR398=options.skipCheckpoint
     ? {ok:true,skipped:true,reason:'checkpoint-owned-by-caller-r416'}
-    : await checkpointDailySummaryAutoR398(env,'youtube-fast-10m-r1026').catch(error=>({ok:false,error:cleanPlainText(error?.message||error,300)}));
+    : await checkpointDailySummaryAutoR398(env,'youtube-fast-5m-r526').catch(error=>({ok:false,error:cleanPlainText(error?.message||error,300)}));
   const startedAt=new Date().toISOString();
   await Promise.all([
     setPushState(db,'youtube-fast-engagement-last-at-r333',startedAt),
@@ -9120,7 +9143,7 @@ async function repairSubscriberDeliveryWatermarkR765(env, db, notifiedTotal) {
     return { changed:false, notifiedTotal:currentNotified, reason:'latest-message-not-current-watermark' };
   }
   const report = await fetchOneSignalMessageReport(env, row.oneSignalId).catch(() => null);
-  const delivered = Math.max(0, Number(report?.successful || 0), Number(report?.received || 0));
+  const delivered = Math.max(0, Number(report?.successful || 0), Number(report?.received || 0), Number(report?.platformSuccessfulR526 || 0), Number(report?.platformReceivedR526 || 0));
   const finishedZero = Boolean(report?.ok && report?.completedAt && (report?.remaining == null || Number(report.remaining) === 0) && delivered === 0);
   if (!finishedZero) return { changed:false, notifiedTotal:currentNotified, reason:'delivery-not-zero-or-still-pending', report };
 
@@ -9520,11 +9543,12 @@ async function handleCheckYoutubeEvents(request, env) {
         payload:{ ...item, seededSilently:true, seededAt:startedAt }
       });
     }
-    const newVisibleSubscribers = [];
+    let newVisibleSubscribers = [];
     for (const item of subscribersResult.items) {
       const key = `subscriber:${item.id}`;
       if (!await getYoutubeEventRow(db, key)) newVisibleSubscribers.push(item);
     }
+    const visibleSubscribersObservedR526 = newVisibleSubscribers.length;
     const likeClaimBusyVideoIds = new Set();
     let staleFullLikeClaimsRecovered = 0;
     const likeChanges = [];
@@ -9585,10 +9609,34 @@ async function handleCheckYoutubeEvents(request, env) {
     const visibleUnsubscribersR677 = subscriberLossDeltaR677 > 0
       ? previousVisibleSubscribersR677.filter(item => item?.id && !currentVisibleIdsR677.has(item.id)).slice(0, subscriberLossDeltaR677)
       : [];
-    const visibleCreditStateR331 = subscriberDropped
-      ? { count:0, updatedAt:'' }
-      : await getYoutubeSubscriberVisibleCreditR331(db);
-    let pendingVisibleCreditR331 = Math.max(0, Number(visibleCreditStateR331.count || 0));
+    // R526: the CHANNEL TOTAL is authoritative for owner notifications.
+    // YouTube may expose an older/public subscriber profile that was not in our local
+    // visible list even when the channel total did not move. That is NOT a new subscription.
+    // Silently learn such profiles and never create a fake +1 / retry queue from them.
+    const silentVisibleSubscribersR526 = subscriberDelta > 0
+      ? []
+      : newVisibleSubscribers.slice();
+    if (silentVisibleSubscribersR526.length) {
+      for (const item of silentVisibleSubscribersR526) {
+        await saveYoutubeEventRow(db, {
+          key:`subscriber:${item.id}`, type:'subscriber', resourceId:item.id,
+          author:item.title, title:item.title, url:item.url,
+          payload:{...item, seededSilently:true, seededAt:startedAt, reason:'channel-total-unchanged-r526'}
+        }).catch(()=>{});
+      }
+      newVisibleSubscribers = [];
+      await recordSystemLog(env,{
+        scope:'youtube-events',level:'info',event:'visible-subscribers-silent-seed-r526',
+        message:`R526: ${silentVisibleSubscribersR526.length} публичных профилей запомнены без push — total канала не вырос.`,
+        details:{previousSubscriberCount,currentSubscriberCount:identity.subscribers,subscriberDelta,seeded:silentVisibleSubscribersR526.length}
+      }).catch(()=>{});
+    }
+
+    // R526 removes the old "visible subscriber credit before count rise" behavior.
+    // A named push is allowed only inside a confirmed positive subscriberDelta.
+    // Clear any stale R331 credit left by older builds so the next real +1 cannot be swallowed.
+    let pendingVisibleCreditR331 = 0;
+    await setYoutubeSubscriberVisibleCreditR331(db,0).catch(()=>{});
 
     const notifications = [];
     const commentDelivery = new Map();
@@ -9677,7 +9725,19 @@ async function handleCheckYoutubeEvents(request, env) {
         }
       }
     }
-    const visibleSubscriberBatch = newVisibleSubscribers.slice().reverse().slice(0, 6);
+    const visibleSubscriberBatch = subscriberDelta > 0
+      ? newVisibleSubscribers.slice().reverse().slice(0, Math.min(6, subscriberDelta))
+      : [];
+    const visibleSubscriberBatchIdsR526 = new Set(visibleSubscriberBatch.map(item=>item.id));
+    const extraVisibleSubscribersR526 = subscriberDelta > 0
+      ? newVisibleSubscribers.filter(item=>!visibleSubscriberBatchIdsR526.has(item.id))
+      : [];
+    for (const item of extraVisibleSubscribersR526) {
+      await saveYoutubeEventRow(db,{
+        key:`subscriber:${item.id}`,type:'subscriber',resourceId:item.id,author:item.title,title:item.title,url:item.url,
+        payload:{...item,seededSilently:true,seededAt:startedAt,reason:'more-visible-profiles-than-count-delta-r526'}
+      }).catch(()=>{});
+    }
     for (const item of visibleSubscriberBatch) {
       const onceKey = `push-once:youtube-subscriber:${item.id}`;
       let claimed = await claimPushOnce(db, onceKey, startedAt);
@@ -9734,9 +9794,8 @@ async function handleCheckYoutubeEvents(request, env) {
        actually delivered (or recovered from sent push_history). R330 subtracted
        every detected visible subscriber before checking delivery, so one failed/
        stale individual claim could suppress the generic +1 fallback. */
-    const visibleDeliveredNowR331 = newVisibleSubscribers.filter(item => subscriberDelivery.get(item.id)?.ok).length;
-    const availableVisibleCreditR331 = Math.max(0, pendingVisibleCreditR331 + visibleDeliveredNowR331);
-    const visibleSubscriberCredit = Math.min(subscriberDelta, availableVisibleCreditR331);
+    const visibleDeliveredNowR331 = visibleSubscriberBatch.filter(item => subscriberDelivery.get(item.id)?.ok).length;
+    const visibleSubscriberCredit = Math.min(subscriberDelta, visibleDeliveredNowR331);
     const unnamedSubscriberDelta = Math.max(0, subscriberDelta - visibleSubscriberCredit);
     let subscriberCountPushOkR331 = false;
 
@@ -9807,14 +9866,10 @@ async function handleCheckYoutubeEvents(request, env) {
       }
     }
 
-    // If the named subscriber appears before the channel total catches up, retain
-    // a short-lived credit. When the total rises later, it consumes that credit
-    // instead of sending the same subscriber twice.
+    // R526: no speculative visible-subscriber credit survives a run.
+    // Every future notification must be backed by a real channel-total delta.
     if (!subscriberCountDeferred) {
-      const remainingVisibleCreditR331 = subscriberDropped
-        ? 0
-        : Math.max(0, availableVisibleCreditR331 - visibleSubscriberCredit);
-      pendingVisibleCreditR331 = await setYoutubeSubscriberVisibleCreditR331(db, remainingVisibleCreditR331);
+      pendingVisibleCreditR331 = await setYoutubeSubscriberVisibleCreditR331(db, 0);
     }
     const likeBatch = likeChanges.slice(0, 12);
     for (const item of likeChanges.slice(12)) {
@@ -9898,6 +9953,13 @@ async function handleCheckYoutubeEvents(request, env) {
       .reduce((sum,item)=>sum+(Number(item.delta)<0?Math.abs(Number(item.delta)):1),0);
     const subscriberLossDeliveredR1150=!subscriberDropped || unsubscriberCoveredLossR1150>=subscriberLossDeltaR677;
     if (!subscriberCountDeferred && subscriberLossDeliveredR1150) await saveYoutubeEventRow(db, { key:'channel-subscriber-count', type:'subscriber-count', resourceId:identity.channelId, title:identity.title, countValue:identity.subscribers, url:identity.channelUrl, payload:identity });
+    // R526: keep the public-subscriber snapshot current for future named unsubscribe
+    // detection. Do not consume a loss snapshot until its owner notification was delivered.
+    if (!subscriberDropped || subscriberLossDeliveredR1150) {
+      await setPushState(db,'youtube-visible-subscriber-snapshot-r677',JSON.stringify({
+        at:startedAt,count:identity.subscribers,items:currentVisibleSubscribersR677
+      })).catch(()=>{});
+    }
     // Successful full/manual delivery advances the independent owner watermark in
     // either direction. An undelivered loss remains retryable for the fast R1150 poll.
     const subscriberDeliveredR658=notifications.some(item=>['subscriber','subscriber-count'].includes(item.type)&&item.ok);
@@ -9912,11 +9974,13 @@ async function handleCheckYoutubeEvents(request, env) {
       commentsSent:notifications.filter(item=>item.type==='comment'&&item.ok).length,
       commentsFailed:notifications.filter(item=>item.type==='comment'&&!item.ok&&!item.pending).length,
       commentsQueued:Math.max(0,newComments.length-[...commentDelivery.values()].filter(result=>result?.ok).length),
-      newVisibleSubscribers:newVisibleSubscribers.length,
+      newVisibleSubscribers:visibleSubscriberBatch.length,
+      visibleSubscribersObservedR526,
+      visibleSubscribersSilentlySeededR526:silentVisibleSubscribersR526.length + extraVisibleSubscribersR526.length,
       subscribersAttempted:visibleSubscriberBatch.length + (unnamedSubscriberDelta > 0 ? 1 : 0),
       subscribersSent:notifications.filter(item=>['subscriber','subscriber-count'].includes(item.type)&&item.ok).length,
       subscribersFailed:notifications.filter(item=>['subscriber','subscriber-count'].includes(item.type)&&!item.ok&&!item.pending).length,
-      subscribersQueued:Math.max(0,newVisibleSubscribers.length-[...subscriberDelivery.values()].filter(result=>result?.ok).length) + (subscriberCountDeferred?1:0),
+      subscribersQueued:Math.max(0,visibleSubscriberBatch.length-[...subscriberDelivery.values()].filter(result=>result?.ok).length) + (subscriberCountDeferred?1:0),
       unsubscribersAttempted:notifications.filter(item=>item.type==='unsubscriber').length,
       unsubscribersSent:notifications.filter(item=>item.type==='unsubscriber'&&item.ok).length,
       unsubscribersFailed:notifications.filter(item=>item.type==='unsubscriber'&&!item.ok&&!item.pending).length,
@@ -10054,7 +10118,7 @@ async function handleYoutubeEventsStatus(request, env, ctx) {
   const successCandidates=[lastSuccess?.value||lastSuccess?.updatedAt||'',fastLastSuccess?.value||fastLastSuccess?.updatedAt||''].filter(Boolean);
   const effectiveSuccessAt=successCandidates.sort((a,b)=>(Date.parse(b)||0)-(Date.parse(a)||0))[0]||'';
   return json({
-    ok:true,version:ANDRIK_CONTROL_RELEASE.full,
+    ok:true,version:ANDRIK_CONTROL_RELEASE.full,pushDeliveryCorrectnessR526:PUSH_DELIVERY_CORRECTNESS_R526,
     status:lastStatus?.value||'never',lastCheckAt:lastCheck?.value||lastCheck?.updatedAt||'',lastSuccessAt:lastSuccess?.value||lastSuccess?.updatedAt||'',effectiveSuccessAt,
     reserve:{
       lastCheckAt:reserveLastAt?.value||reserveLastAt?.updatedAt||'',
