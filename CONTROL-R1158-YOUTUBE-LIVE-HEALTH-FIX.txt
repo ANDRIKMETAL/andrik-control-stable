@@ -1,0 +1,27 @@
+ANDRIK CONTROL R1158 — YOUTUBE LIVE HEALTH FIX
+Date: 2026-09-25
+
+Symptom
+- Radio Control showed YouTube = ACTIVE instead of ОТЛИЧНО.
+- Starts/views/likes still worked.
+
+Exact cause
+- The owner LIVE telemetry handler has a public-data fallback (R831C).
+- When that fallback was used, it intentionally returned streamStatus=active but healthStatus was empty.
+- The UI health label therefore fell through from healthStatus to streamStatus and rendered ACTIVE.
+- R1157 audience/date changes did not change youtube-radio-r1047.js or the health label logic.
+
+R1158 fix
+- Adds a small exact health probe for the current videoId.
+- Resolves the current broadcast by id, reads boundStreamId, then reads liveStreams.status.healthStatus.
+- The probe is independent of the broader telemetry request, so a failure in another YouTube telemetry branch no longer throws away ingest health.
+- Normal healthy path also stores a very short last-good health sample.
+- Last-good bridge is limited to 4 minutes and is only used for transient API misses; it is not a long-lived fake health state.
+- Existing UI behavior remains: healthStatus good/ok => ОТЛИЧНО.
+- If YouTube truly does not return health data and no fresh last-good sample exists, the UI may still show ACTIVE rather than falsely claiming excellent health.
+
+Unchanged
+- Radio engine / VPS / FFmpeg / RTMPS
+- R1157 audience graph and Bratislava date fix
+- YouTube starts/views/likes logic
+- Existing queue and media controls

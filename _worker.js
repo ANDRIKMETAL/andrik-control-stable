@@ -8,6 +8,7 @@ const PUSH_AUTOMATION_FIX_R778 = 'R778-CRON-UA-INDEPENDENT-HEALTH-RESCUE-STRICT-
 const YOUTUBE_COMMENT_PUSH_RELIABLE_R953 = 'R953-LIVE-2M-RECENT6-5M-OLDER1-SEPARATE-COMMENT-LANE';
 const RADIO_AUDIENCE_GRAPH_R1156 = 'R1156-RADIO-AUDIENCE-DAY-GRAPH+D1-2M-SAMPLING';
 const RADIO_AUDIENCE_GRAPH_R1157 = 'R1157-SERVER-DATE+TODAY-LIVE-SELF-HEAL';
+const YOUTUBE_LIVE_HEALTH_R1158 = 'R1158-EXACT-HEALTH-PROBE+SHORT-LAST-GOOD';
 const ANDRIK_D1_EFFICIENCY_RELEASE = 'R638-D1-FINAL';
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
@@ -22473,6 +22474,102 @@ async function fetchYoutubeStudioViewsR942(env,videoId,actualStartTime='',public
 }
 async function fetchYoutubeEngagedViewsR938(env,videoId,actualStartTime=''){const d=await fetchYoutubeStudioViewsR942(env,videoId,actualStartTime);return d.engagedViews;}
 
+// R1158 — keep the YouTube ingest-health card independent from the broader
+// telemetry path. If the large owner LIVE request falls back to public video data,
+// probe the CURRENT broadcast/stream directly by id so healthStatus does not degrade
+// to the generic streamStatus "active". A very short last-good cache bridges only
+// transient API misses; it is never used as a long-lived substitute for measurement.
+async function readYoutubeLiveHealthCacheR1158(env,videoId,maxAgeMs=4*60*1000){
+  const id=cleanPlainText(videoId||'',80);
+  if(!env.COMMENTS_DB||!id)return null;
+  try{
+    const row=await getPushState(requireDb(env),`youtube-live-health-r1158:${id}`).catch(()=>null);
+    if(!row?.value)return null;
+    const payload=JSON.parse(String(row.value||'{}'));
+    const updatedAt=cleanPlainText(payload?.updatedAt||row?.updatedAt||'',80);
+    const ms=Date.parse(updatedAt||'');
+    if(!Number.isFinite(ms)||Date.now()-ms>maxAgeMs)return null;
+    const healthStatus=cleanPlainText(payload?.healthStatus||'',80);
+    const streamStatus=cleanPlainText(payload?.streamStatus||'',80);
+    if(!healthStatus&&!streamStatus)return null;
+    return {
+      healthStatus,streamStatus,updatedAt,
+      healthIssues:Array.isArray(payload?.healthIssues)?payload.healthIssues.slice(0,8):[],
+      boundStreamId:cleanPlainText(payload?.boundStreamId||'',120),
+      cached:true,source:'last-good-health-r1158'
+    };
+  }catch(_){return null;}
+}
+
+async function writeYoutubeLiveHealthCacheR1158(env,videoId,data){
+  const id=cleanPlainText(videoId||'',80);
+  const healthStatus=cleanPlainText(data?.healthStatus||'',80);
+  const streamStatus=cleanPlainText(data?.streamStatus||'',80);
+  if(!env.COMMENTS_DB||!id||(!healthStatus&&!streamStatus))return;
+  try{
+    const db=requireDb(env);
+    const key=`youtube-live-health-r1158:${id}`;
+    const previous=await getPushState(db,key).catch(()=>null);
+    let prev={};
+    try{prev=previous?.value?JSON.parse(String(previous.value||'{}')):{}}catch(_){prev={}}
+    const prevMs=Date.parse(String(prev?.updatedAt||previous?.updatedAt||''));
+    const same=cleanPlainText(prev?.healthStatus||'',80)===healthStatus && cleanPlainText(prev?.streamStatus||'',80)===streamStatus;
+    if(same&&Number.isFinite(prevMs)&&Date.now()-prevMs<2*60*1000)return;
+    const payload={
+      healthStatus,streamStatus,
+      healthIssues:Array.isArray(data?.healthIssues)?data.healthIssues.slice(0,8):[],
+      boundStreamId:cleanPlainText(data?.boundStreamId||'',120),
+      updatedAt:new Date().toISOString()
+    };
+    await setPushState(db,key,JSON.stringify(payload).slice(0,5000)).catch(()=>{});
+  }catch(_){ }
+}
+
+async function probeYoutubeLiveHealthR1158(env,videoId){
+  const id=cleanPlainText(videoId||'',80);
+  if(!id)return {healthStatus:'',streamStatus:'',healthIssues:[],boundStreamId:'',source:'no-video-r1158'};
+  try{
+    const accessToken=await getYoutubeOAuthAccessToken(env);
+    const headers={authorization:`Bearer ${accessToken}`,accept:'application/json'};
+    const read=async(url,label)=>{
+      const response=await fetchWithAbortTimeoutR409(url,{headers},6500,`youtube-health-r1158-${label}-timeout`);
+      const data=await response.json().catch(()=>({}));
+      if(!response.ok)throw new Error(youtubeGoogleErrorTextR495(data,response.status,label));
+      return data;
+    };
+    const broadcastUrl=new URL('https://www.googleapis.com/youtube/v3/liveBroadcasts');
+    broadcastUrl.searchParams.set('part','id,status,contentDetails');
+    broadcastUrl.searchParams.set('id',id);
+    broadcastUrl.searchParams.set('maxResults','1');
+    const broadcastData=await read(broadcastUrl.toString(),'broadcast');
+    const broadcast=Array.isArray(broadcastData?.items)?broadcastData.items[0]||null:null;
+    const boundStreamId=cleanPlainText(broadcast?.contentDetails?.boundStreamId||'',120);
+    if(!boundStreamId)throw new Error('bound-stream-not-found');
+    const streamUrl=new URL('https://www.googleapis.com/youtube/v3/liveStreams');
+    streamUrl.searchParams.set('part','id,status');
+    streamUrl.searchParams.set('id',boundStreamId);
+    streamUrl.searchParams.set('maxResults','1');
+    const streamData=await read(streamUrl.toString(),'stream');
+    const stream=Array.isArray(streamData?.items)?streamData.items[0]||null:null;
+    const health=stream?.status?.healthStatus||{};
+    const result={
+      healthStatus:cleanPlainText(health?.status||'',80),
+      streamStatus:cleanPlainText(stream?.status?.streamStatus||'',80),
+      healthIssues:Array.isArray(health?.configurationIssues)?health.configurationIssues.slice(0,8).map(item=>({
+        type:cleanPlainText(item?.type||'',100),severity:cleanPlainText(item?.severity||'',80),
+        reason:cleanPlainText(item?.reason||'',240),description:cleanPlainText(item?.description||'',360)
+      })):[],
+      boundStreamId,updatedAt:new Date().toISOString(),cached:false,source:'oauth-exact-health-r1158'
+    };
+    if(result.healthStatus||result.streamStatus)await writeYoutubeLiveHealthCacheR1158(env,id,result);
+    return result;
+  }catch(error){
+    const cached=await readYoutubeLiveHealthCacheR1158(env,id);
+    if(cached)return {...cached,error:cleanPlainText(error?.message||error,260)};
+    return {healthStatus:'',streamStatus:'',healthIssues:[],boundStreamId:'',updatedAt:'',cached:false,source:'health-unavailable-r1158',error:cleanPlainText(error?.message||error,260)};
+  }
+}
+
 async function handleControlYoutubeLiveR565(request, env) {
   if (!adminAuthorized(request, env)) return json({ok:false,error:'unauthorized'},401);
   const requestUrl=new URL(request.url);
@@ -22593,6 +22690,13 @@ async function handleControlYoutubeLiveR565(request, env) {
     const visibleViewsR946=await fetchYoutubeVisibleViewsR946(env,videoId,publicStartsR946);
     const displayViewsR946=(Number(visibleViewsR946?.value)>0)?Math.max(0,Number(visibleViewsR946.value)):((Number(studioViewsR942?.studioViews)>0)?Math.max(0,Number(studioViewsR942.studioViews)):null);
     const engagedViewsR938=studioViewsR942.engagedViews;
+    await writeYoutubeLiveHealthCacheR1158(env,videoId,{
+      healthStatus:cleanPlainText(health?.status||'',80),streamStatus,
+      healthIssues:Array.isArray(health?.configurationIssues)?health.configurationIssues.slice(0,8).map(item=>({
+        type:cleanPlainText(item?.type||'',100),severity:cleanPlainText(item?.severity||'',80),
+        reason:cleanPlainText(item?.reason||'',240),description:cleanPlainText(item?.description||'',360)
+      })):[],boundStreamId
+    }).catch(()=>{});
     return json({
       ok:true,active,signalActive,broadcastLive,videoId,
       title:cleanPlainText(video?.snippet?.title||broadcast?.snippet?.title||'ANDRIK Metal Radio 24/7',220),
@@ -22601,6 +22705,7 @@ async function handleControlYoutubeLiveR565(request, env) {
       recordingStatus:cleanPlainText(broadcast?.status?.recordingStatus||'',80),
       streamStatus,
       healthStatus:cleanPlainText(health?.status||'',80),
+      healthSource:'oauth-live-stream-r1158',healthUpdatedAt:new Date().toISOString(),
       healthIssues:Array.isArray(health?.configurationIssues)?health.configurationIssues.slice(0,8).map(item=>({
         type:cleanPlainText(item?.type||'',100),severity:cleanPlainText(item?.severity||'',80),
         reason:cleanPlainText(item?.reason||'',240),description:cleanPlainText(item?.description||'',360)
@@ -22640,12 +22745,19 @@ async function handleControlYoutubeLiveR565(request, env) {
         const visibleViewsR946=await fetchYoutubeVisibleViewsR946(env,videoId,publicStartsR946);
         const displayViewsR946=(Number(visibleViewsR946?.value)>0)?Math.max(0,Number(visibleViewsR946.value)):((Number(studioViewsR942?.studioViews)>0)?Math.max(0,Number(studioViewsR942.studioViews)):null);
         const engagedViewsR938=studioViewsR942.engagedViews;
+        const liveHealthR1158=await probeYoutubeLiveHealthR1158(env,videoId);
         return json({
           ok:true,active:true,signalActive:true,broadcastLive:true,videoId,
           title:cleanPlainText(video?.snippet?.title||'ANDRIK Metal Radio 24/7',220),
           lifeCycleStatus:'live',
           privacyStatus:cleanPlainText(video?.status?.privacyStatus||'public',80),
-          recordingStatus:'',streamStatus:'active',healthStatus:'',healthIssues:[],
+          recordingStatus:'',
+          streamStatus:cleanPlainText(liveHealthR1158?.streamStatus||'active',80),
+          healthStatus:cleanPlainText(liveHealthR1158?.healthStatus||'',80),
+          healthIssues:Array.isArray(liveHealthR1158?.healthIssues)?liveHealthR1158.healthIssues:[],
+          healthSource:cleanPlainText(liveHealthR1158?.source||'health-unavailable-r1158',120),
+          healthUpdatedAt:cleanPlainText(liveHealthR1158?.updatedAt||'',80),
+          healthCached:Boolean(liveHealthR1158?.cached),healthProbeError:cleanPlainText(liveHealthR1158?.error||'',260),
           concurrentViewers:Math.max(0,Number(details?.concurrentViewers||0)),
           actualStartTime:cleanPlainText(details?.actualStartTime||'',80),
           scheduledStartTime:cleanPlainText(details?.scheduledStartTime||'',80),
