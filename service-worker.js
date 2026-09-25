@@ -1,6 +1,6 @@
 'use strict';
 
-const VERSION = '55.00-r1159d-album-single-dedupe';
+const VERSION = '55.00-r1159e-silent-home-card';
 const IS_CONTROL_HOST = self.location.hostname.toLowerCase() === 'control.andrikmetal.com';
 
 async function deleteControlCaches(){
