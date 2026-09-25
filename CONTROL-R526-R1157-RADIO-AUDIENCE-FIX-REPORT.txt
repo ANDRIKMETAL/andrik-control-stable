@@ -1,0 +1,31 @@
+ANDRIK SITE CONTROL · R526 + R1157 RADIO AUDIENCE FIX
+Date: 2026-09-25
+
+PROBLEM FOUND
+- Android/WebView client calculated "today" as 2026-09-24 while the Worker already
+  correctly reported 2026-09-25 for Europe/Bratislava.
+- Therefore the card opened yesterday as ARCHIVE and naturally showed 0 samples.
+
+FIX
+- The first audience request no longer sends a browser-calculated date.
+- The Worker is now the source of truth for today's Europe/Bratislava date.
+- The date picker is synchronized from API fields date/today after every load.
+- Previous/next/today buttons use the server-confirmed date.
+- Added /api/control/radio-audience-r1157 while keeping the old R1156 endpoint compatible.
+
+SELF-HEAL
+- When TODAY is opened and the last D1 audience sample is older than 3 minutes
+  (or does not exist), Control performs one fresh R669 LIVE probe and records it.
+- The age gate prevents Control from becoming a second permanent YouTube polling loop.
+- Background 2-minute cron collection remains unchanged.
+
+FILES CHANGED / ADDED
+- _worker.js
+- radio-control-admin.html
+- assets/radio-audience-r1157.js (new)
+- assets/radio-audience-r1157.css (new)
+
+COMPATIBILITY
+- Existing D1 table radio_audience_samples is reused; no migration/data loss.
+- Existing R1156 API route still works.
+- Radio/FFmpeg/RTMPS/VPS pipeline is untouched.

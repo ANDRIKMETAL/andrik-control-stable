@@ -7,6 +7,7 @@ const YOUTUBE_SUBSCRIBER_PUSH_R1150 = 'R1150-YOUTUBE-SUBSCRIBER-GAIN+LOSS-5M-OWN
 const PUSH_AUTOMATION_FIX_R778 = 'R778-CRON-UA-INDEPENDENT-HEALTH-RESCUE-STRICT-OWNER-DELIVERY';
 const YOUTUBE_COMMENT_PUSH_RELIABLE_R953 = 'R953-LIVE-2M-RECENT6-5M-OLDER1-SEPARATE-COMMENT-LANE';
 const RADIO_AUDIENCE_GRAPH_R1156 = 'R1156-RADIO-AUDIENCE-DAY-GRAPH+D1-2M-SAMPLING';
+const RADIO_AUDIENCE_GRAPH_R1157 = 'R1157-SERVER-DATE+TODAY-LIVE-SELF-HEAL';
 const ANDRIK_D1_EFFICIENCY_RELEASE = 'R638-D1-FINAL';
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
@@ -8519,6 +8520,35 @@ async function handleControlRadioAudienceR1156(request,env){
   const today=getBratislavaClock().date;
   const requested=cleanPlainText(url.searchParams.get('date')||today,20);
   const date=/^\d{4}-\d{2}-\d{2}$/.test(requested)?requested:today;
+
+  // R1157: the Worker, not the browser/WebView, is the source of truth for
+  // Europe/Bratislava's current date. Also self-heal TODAY when the background
+  // 2-minute sampler has not written a fresh point yet (for example immediately
+  // after a deploy or after a missed cron wake). This is intentionally gated by
+  // sample age so opening Control does not create a second polling loop.
+  let collector={selfHealAttempted:false,selfHealOk:false,warning:'',source:'background-r669',liveVideoId:'',latestSampleAt:''};
+  if(date===today){
+    const latestBefore=await db.prepare(`
+      SELECT sampled_at AS sampledAt FROM radio_audience_samples
+      ORDER BY datetime(sampled_at) DESC LIMIT 1
+    `).first().catch(()=>null);
+    collector.latestSampleAt=cleanPlainText(latestBefore?.sampledAt||'',80);
+    const latestMs=Date.parse(collector.latestSampleAt||'');
+    const stale=!Number.isFinite(latestMs) || Date.now()-latestMs>3*60*1000;
+    if(stale){
+      collector.selfHealAttempted=true;
+      try{
+        const probe=await fetchYoutubeActiveLiveEngagementR669(env,db);
+        collector.selfHealOk=Boolean(probe?.video);
+        collector.source=cleanPlainText(probe?.source||'control-self-heal-r1157',120);
+        collector.liveVideoId=cleanPlainText(probe?.video?.videoId||'',80);
+        collector.warning=cleanPlainText(probe?.warning||(!probe?.video?'active-live-not-found':''),260);
+      }catch(error){
+        collector.warning=cleanPlainText(error?.message||error,260);
+      }
+    }
+  }
+
   const rowsResult=await db.prepare(`
     SELECT video_id AS videoId,sampled_at AS sampledAt,local_minute AS localMinute,
            views,concurrent_viewers AS concurrentViewers
@@ -8573,11 +8603,11 @@ async function handleControlRadioAudienceR1156(request,env){
     country:cleanPlainText(row?.country||'',8).toUpperCase(),region:cleanPlainText(row?.region||'',120),city:cleanPlainText(row?.city||'',120)
   }));
   return json({
-    ok:true,version:'R1156',date,today,timezone:'Europe/Bratislava',
+    ok:true,version:'R1157',date,today,timezone:'Europe/Bratislava',
     collectionStarted:series[0]?.sampledAt||'',samples:series.length,series,
     summary:{launches:totals.launches,peakConcurrent:totals.peak,currentConcurrent:totals.current,lastCumulativeViews:totals.lastViews,
       siteOpens:Math.max(0,Number(siteSummary?.opens)||0),siteVisitors:Math.max(0,Number(siteSummary?.visitors)||0)},
-    exactOpens,updatedAt:new Date().toISOString(),
+    exactOpens,collector:{...collector,latestSampleAt:series[series.length-1]?.sampledAt||collector.latestSampleAt||''},updatedAt:new Date().toISOString(),
     note:'YouTube arrivals are reconstructed from cumulative playback-start deltas between two-minute samples; first-party radio clicks have exact timestamps.'
   });
 }
@@ -20862,7 +20892,7 @@ async function routeApi(request, env, ctx) {
     if (path === '/api/control/google-devices' && request.method === 'GET') return await handleControlGoogleDevicesR544(request, env);
     if (path === '/api/control/social-overview' && request.method === 'GET') return await handleControlSocialOverviewR487(request, env);
     if (path === '/api/control/ecosystem-map' && request.method === 'GET') return await handleControlEcosystemMap(request, env);
-    if (path === '/api/control/radio-audience-r1156' && request.method === 'GET') return await handleControlRadioAudienceR1156(request, env);
+    if ((path === '/api/control/radio-audience-r1157' || path === '/api/control/radio-audience-r1156') && request.method === 'GET') return await handleControlRadioAudienceR1156(request, env);
     if (path === '/api/control/audience' && request.method === 'GET') return await handleControlAudience(request, env);
     if (path === '/api/control/youtube-top-content' && request.method === 'GET') return await handleControlYoutubeTopContentR552(request, env);
     if (path === '/api/control/youtube-oac-shelf' && request.method === 'GET') return await handleControlYoutubeOacShelfR910(request, env);

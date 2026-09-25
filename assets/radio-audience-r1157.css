@@ -1,0 +1,32 @@
+/* ANDRIK RADIO · R1157 audience day graph · server-date + live self-heal */
+.radio-audience-r1156{overflow:hidden}
+.radio-audience-r1156 .top{align-items:flex-start}
+.r1156-sub{margin:4px 0 0;color:var(--muted);font-size:13px}
+.r1156-datebar{display:grid;grid-template-columns:auto minmax(150px,1fr) auto auto;gap:8px;align-items:center;margin-top:14px}
+.r1156-datebar button,.r1156-datebar input{min-height:42px;border:1px solid #34445a;border-radius:12px;background:#0a1018;color:#eef6ff;font:800 13px/1 system-ui;padding:0 12px}
+.r1156-datebar button{cursor:pointer}
+.r1156-datebar button:disabled{opacity:.35;cursor:not-allowed}
+.r1156-datebar input{width:100%;color-scheme:dark}
+.r1156-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}
+.r1156-kpi{padding:11px 9px;border:1px solid #2d394b;border-radius:14px;background:#090d13;text-align:center;min-width:0}
+.r1156-kpi strong{display:block;font-size:24px;line-height:1.05;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.r1156-kpi span{display:block;margin-top:4px;font-size:10px;line-height:1.25;color:var(--muted)}
+.r1156-chart-shell{position:relative;margin-top:12px;padding:8px 8px 3px;border:1px solid #2d394b;border-radius:16px;background:linear-gradient(180deg,#09111a,#070b11);overflow:hidden}
+.r1156-chart{display:block;width:100%;height:auto;min-height:220px}
+.r1156-chart .grid{stroke:#263448;stroke-width:1}
+.r1156-chart .axis{fill:#8191a5;font:700 10px system-ui}
+.r1156-chart .bar{fill:#f5c84b;opacity:.82}
+.r1156-chart .line{fill:none;stroke:#ff5f75;stroke-width:3;stroke-linejoin:round;stroke-linecap:round}
+.r1156-chart .point{fill:#ff5f75}
+.r1156-chart .area{fill:#ff5f75;opacity:.08}
+.r1156-chart .baseline{stroke:#4a5b70;stroke-width:1}
+.r1156-chart-empty{display:grid;place-items:center;min-height:220px;padding:24px;text-align:center;color:#9ba8ba;font-size:13px;line-height:1.5}
+.r1156-legend{display:flex;flex-wrap:wrap;gap:12px;margin:8px 2px 2px;color:#9ba8ba;font-size:11px}
+.r1156-legend span{display:inline-flex;align-items:center;gap:6px}.r1156-legend i{display:inline-block;width:12px;height:5px;border-radius:99px}.r1156-legend .launches{background:#f5c84b}.r1156-legend .online{background:#ff5f75}
+.r1156-note{margin:10px 0 0;color:#8fa0b5;font-size:11px;line-height:1.45}
+.r1156-events{margin-top:12px;border:1px solid #2a3647;border-radius:15px;background:#090d13;overflow:hidden}
+.r1156-events>summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:13px 14px;cursor:pointer;font-weight:900}
+.r1156-events>summary::-webkit-details-marker{display:none}.r1156-events>summary::after{content:'▾';color:#8fa0b5;transition:transform .18s}.r1156-events[open]>summary::after{transform:rotate(180deg)}
+.r1156-event-list{display:grid;gap:7px;padding:0 10px 10px}.r1156-event{display:grid;grid-template-columns:64px minmax(0,1fr) auto;gap:9px;align-items:center;padding:9px 10px;border:1px solid #263446;border-radius:12px;background:#070c12}.r1156-event time{font:900 13px ui-monospace,monospace;color:#cfe7ff}.r1156-event div{min-width:0}.r1156-event strong{display:block;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.r1156-event small{display:block;margin-top:2px;color:#8493a6;font-size:10px}.r1156-event b{font-size:15px;color:#f5c84b;white-space:nowrap}.r1156-event.is-site b{color:#6fdfff}.r1156-event-empty{padding:12px;text-align:center;color:#8999ad;font-size:12px}
+.r1156-status[data-kind="ok"]{color:var(--ok);border-color:#285d3b}.r1156-status[data-kind="error"]{color:var(--bad);border-color:#67343c}.r1156-status[data-kind="loading"]{color:#f5c84b;border-color:#6e5b21}
+@media(max-width:620px){.r1156-kpis{grid-template-columns:1fr 1fr}.r1156-datebar{grid-template-columns:44px 1fr 44px}.r1156-datebar .r1156-today{grid-column:1/-1;min-height:40px}.r1156-chart{min-height:190px}.r1156-event{grid-template-columns:56px minmax(0,1fr) auto}}
