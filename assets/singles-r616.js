@@ -9,7 +9,7 @@ const I={
  en:{loading:'Loading singles…',empty:'Singles are coming soon.',play:'▶ Listen',pause:'❚❚ Pause',download:'↓ Download MP3',share:'🔗 Share link',copied:'✓ Link copied',copyPrompt:'Copy this link for your browser',error:'Could not load the singles list.',covers:'COVERS',coversSub:'A separate ANDRIK covers collection'}
 };
 const t=I[lang]||I.ru,limit=Math.max(0,Number(root.dataset.limit||0));let fingerprint='',loading=false;
-const SILENT=['Dance of Death','Mind Is A Trap','Выбора нет','Жизнь идёт сама','Monument to the Great Void','I Run Away','Что есть истина','No Choice','Стирай','Верни меня','Дверь освобождения','Ты проснулся живой','Сила знает путь','You Are Already That','Всё есть Брахман','Ты уже то','You Are The Light','Вне времени'];
+const SILENT=['Dance of Deth', 'Mind Is A Trap', 'Выбора нет', 'Жизнь идёт сама', 'Monument to the Great Void', 'I Run Away', 'Вспышка Узнавания', 'Что есть Истина', 'No choice', 'Стирай', 'Верни меня', 'Дверь освобождения', 'Ты проснулся живой', 'Сила знает путь', 'You Are Already That', 'Всё есть Брахман', 'Ты уже то', 'You Are The Light', 'Вне времени', 'Заветная звезда'];
 const pretty=s=>{try{return decodeURIComponent(String(s||''))}catch(_){return String(s||'')}};const cleanTitle=s=>pretty(s).replace(/(?:\.(?:mp3|wav))+$/ig,'').trim();
 const norm=s=>cleanTitle(s).toLowerCase().replace(/ё/g,'е').replace(/[«»“”„'’`]/g,'').replace(/\b(?:ai\s*)?cover\b/gi,'').replace(/кавер/giu,'').replace(/[^\p{L}\p{N}]+/gu,' ').trim().replace(/^andrik\s+/,'');
 const SILENT_SET=new Set(SILENT.map(norm));

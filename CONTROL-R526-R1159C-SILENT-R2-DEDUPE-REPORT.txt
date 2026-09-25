@@ -1,0 +1,10 @@
+ANDRIK SITE / CONTROL R1159C — SILENT SINGLES + R2 DEDUPE
+
+- SILENT remains 20 tracks in official order.
+- Public singles API now excludes official SILENT album tracks.
+- New protected endpoint: /api/control/music/silent/cleanup-singles
+  GET = dry run; POST with explicit confirmation = permanent delete from R2 singles/.
+- Safety: deletion is blocked unless all 20 canonical SILENT tracks are present in albums/silent/.
+- Covers are not matched/deleted unless their title is exactly an official SILENT title.
+- Silent upload now automatically removes matching singles from R2 after all 20 album MP3 uploads succeed.
+- Manual cleanup button is available in Control > Lyrics/MP3 under the SILENT block.

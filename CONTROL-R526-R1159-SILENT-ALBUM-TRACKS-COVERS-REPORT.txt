@@ -4,10 +4,34 @@ ANDRIK SITE / CONTROL R526 -> R1159
 - Added supplied cover with breathing/zoom animation.
 - Added native <audio> spoiler for every album, one MP3 download button per track.
 - Public album API now returns track lists + direct R2 URLs/download URLs.
-- Added SILENT album definition and fixed official 18-track canonical order.
-- Added Control ZIP importer: one archive -> original ZIP in R2 + 18 MP3 under albums/silent/ in official order.
+- Added SILENT album definition and fixed official 20-track canonical order.
+- Added Control ZIP importer: one archive -> original ZIP in R2 + 20 MP3 under albums/silent/ in official order.
 - Added manual Silent destination to MP3 tag editor.
 - Singles catalog hides titles that belong to SILENT.
 - Tracks marked Cover/Кавер/AI Cover are moved to separate Covers section on full singles page.
 - Homepage discography strip now shows five covers with Silent first.
 - Service worker cache version bumped and new assets precached.
+
+R1159A correction: SILENT has 20 tracks (not 18). Upload validation and R2 album metadata now expect 20. Tracks 19–20 are accepted by numbered filenames and retain their filename-derived titles.
+
+R1159B official SILENT order correction from TooLost screenshot:
+01. Dance of Deth
+02. Mind Is A Trap
+03. Выбора нет
+04. Жизнь идёт сама
+05. Monument to the Great Void
+06. I Run Away
+07. Вспышка Узнавания
+08. Что есть Истина
+09. No choice
+10. Стирай
+11. Верни меня
+12. Дверь освобождения
+13. Ты проснулся живой
+14. Сила знает путь
+15. You Are Already That
+16. Всё есть Брахман
+17. Ты уже то
+18. You Are The Light
+19. Вне времени
+20. Заветная звезда

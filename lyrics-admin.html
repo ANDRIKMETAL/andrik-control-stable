@@ -87,10 +87,10 @@ if (location.hostname.toLowerCase() === 'control.andrikmetal.com') {
 <div class="admin-status" id="mp3R2Status">WAV или MP3 + обложка → MP3 320 kbps с тегами → R2.</div>
 </section>
 <section class="admin-control-card admin-control-card-wide silent-upload-r1159" id="silentAlbumUploadR1159">
-<div class="admin-card-title-row"><div><span class="eyeline">5-Й АЛЬБОМ · SILENT · R2</span><h2>Silent (Тишина) — загрузить одним ZIP</h2><p>Выбираешь один ZIP. Control сохраняет исходный архив в R2, распаковывает MP3 и раскладывает 18 треков в <code>albums/silent/</code> строго по официальной очередности.</p></div><span class="mp3-r2-badge">18 треков</span></div>
-<div class="silent-upload-actions-r1159"><button class="btn btn-primary" id="silentPickR1159" type="button">📦 Выбрать ZIP SILENT</button><button class="btn btn-primary" id="silentGoR1159" type="button" disabled>⬆ ZIP + 18 MP3 → R2</button></div><input accept=".zip,application/zip" hidden id="silentZipR1159" type="file"/>
-<div class="silent-progress-r1159"><span id="silentProgressBarR1159"></span></div><div class="admin-status" id="silentStatusR1159">Выбери ZIP с 18 MP3. Номера 01–18 или названия треков будут сопоставлены автоматически.</div>
-<details class="silent-official-r1159" open><summary>Официальная очередность SILENT · 18 треков</summary><div class="silent-track-preview-r1159" id="silentTrackPreviewR1159"></div></details>
+<div class="admin-card-title-row"><div><span class="eyeline">5-Й АЛЬБОМ · SILENT · R2</span><h2>Silent (Тишина) — загрузить одним ZIP</h2><p>Выбираешь один ZIP. Control сохраняет исходный архив в R2, распаковывает MP3 и раскладывает 20 треков в <code>albums/silent/</code> строго по официальной очередности.</p></div><span class="mp3-r2-badge">20 треков</span></div>
+<div class="silent-upload-actions-r1159"><button class="btn btn-primary" id="silentPickR1159" type="button">📦 Выбрать ZIP SILENT</button><button class="btn btn-primary" id="silentGoR1159" type="button" disabled>⬆ ZIP + 20 MP3 → R2</button><button class="btn admin-danger silent-cleanup-r1159c" id="silentCleanupSinglesR1159C" type="button">🧹 Удалить дубли SILENT из Синглов + R2</button></div><input accept=".zip,application/zip" hidden id="silentZipR1159" type="file"/>
+<div class="silent-progress-r1159"><span id="silentProgressBarR1159"></span></div><div class="admin-status" id="silentStatusR1159">Выбери ZIP с 20 MP3. Номера 01–20 или названия треков будут сопоставлены автоматически.</div>
+<details class="silent-official-r1159" open><summary>Официальная очередность SILENT · 20 треков</summary><div class="silent-track-preview-r1159" id="silentTrackPreviewR1159"></div></details>
 </section><section class="admin-control-card admin-control-card-wide beyond-upload-r566" id="beyondUploadR566">
 <div class="admin-card-title-row"><div><span class="eyeline">4-Й АЛЬБОМ · R2 · ОПУБЛИКОВАН НА САЙТЕ</span><h2>BEYOND — загрузить весь альбом в R2</h2><p>Загрузит WAV/MP3 в <code>albums/beyond/</code>. Альбом уже показывается первым в публичной дискографии. Эти MP3 также автоматически участвуют в радио.</p></div><span class="mp3-r2-badge">16 треков</span></div>
 <div class="beyond-upload-actions-r566"><button class="btn btn-primary" id="beyondPickR566" type="button">＋ Выбрать 16 WAV / MP3</button><button class="btn" id="beyondCoverR566" type="button">🖼 Обложка альбома</button><button class="btn btn-primary" id="beyondUploadR566Btn" type="button" disabled>⬆ Загрузить BEYOND в R2</button></div>
@@ -175,4 +175,4 @@ if (location.hostname.toLowerCase() === 'control.andrikmetal.com') {
 
 <script defer="" src="/assets/control-version-sync-r482.js?v=55.00-r482"></script>
 <script defer src="/assets/beyond-upload-r566.js?v=55.00-r566"></script>
-<script defer src="/assets/silent-admin-r1159.js?v=55.00-r1159"></script></body></html>
+<script defer src="/assets/silent-admin-r1159.js?v=55.00-r1159c"></script></body></html>

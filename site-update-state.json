@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1790362021213-fc76022792",
+  "operationId": "publish-1790363424600-241f6763f4",
   "release": "R526",
-  "archiveName": "ANDRIK-SITE-CONTROL-R526-R1159-SILENT-ALBUM-COVERS.zip",
-  "sourceHead": "32fb9cb454aeda43cadb7b52d35747ad93705d80",
-  "backupSha": "32fb9cb454aeda43cadb7b52d35747ad93705d80",
+  "archiveName": "ANDRIK-SITE-CONTROL-R526-R1159C-SILENT-R2-DEDUPE-1.zip",
+  "sourceHead": "a7823b96d01c6fe50b7a410d93db7eeea2cb9f19",
+  "backupSha": "a7823b96d01c6fe50b7a410d93db7eeea2cb9f19",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-25T18:47:02.101Z"
+  "generatedAt": "2026-09-25T19:10:24.600Z"
 }

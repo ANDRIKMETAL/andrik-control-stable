@@ -18694,7 +18694,7 @@ const MUSIC_ALBUMS_R446 = Object.freeze({
   'silent': Object.freeze({
     slug:'silent', label:'Silent (Тишина)', prefix:'albums/silent/',
     zipKey:'albums/silent/ANDRIK-SILENT-MP3-320kbps.zip',
-    zipName:'ANDRIK-SILENT-MP3-320kbps.zip', expectedTracks:18
+    zipName:'ANDRIK-SILENT-MP3-320kbps.zip', expectedTracks:20
   }),
   'beyond': Object.freeze({
     slug:'beyond', label:'BEYOND', prefix:'albums/beyond/',
@@ -18717,13 +18717,11 @@ const MUSIC_ALBUMS_R446 = Object.freeze({
     zipName:'ANDRIK-TRIKA-MP3-320kbps.zip', expectedTracks:17
   })
 });
-const SILENT_TRACKS_R1159 = Object.freeze([null,
-  'Dance of Death','Mind Is A Trap','Выбора нет','Жизнь идёт сама','Monument to the Great Void','I Run Away','Что есть истина','No Choice','Стирай','Верни меня','Дверь освобождения','Ты проснулся живой','Сила знает путь','You Are Already That','Всё есть Брахман','Ты уже то','You Are The Light','Вне времени'
-]);
+const SILENT_TRACKS_R1159 = Object.freeze([null,'Dance of Deth','Mind Is A Trap','Выбора нет','Жизнь идёт сама','Monument to the Great Void','I Run Away','Вспышка Узнавания','Что есть Истина','No choice','Стирай','Верни меня','Дверь освобождения','Ты проснулся живой','Сила знает путь','You Are Already That','Всё есть Брахман','Ты уже то','You Are The Light','Вне времени','Заветная звезда']);
 function silentNormalizeR1159(value){return String(value||'').toLowerCase().replace(/ё/g,'е').replace(/[«»“”„'’`]/g,'').replace(/[^a-zа-я0-9]+/gi,' ').trim()}
-function silentCanonicalNumberR1159(value){const probe=silentNormalizeR1159(value).replace(/^\d{1,2}\s+/,'').trim();if(!probe)return 0;for(let i=1;i<SILENT_TRACKS_R1159.length;i++){const target=silentNormalizeR1159(SILENT_TRACKS_R1159[i]);if(probe===target||probe.endsWith(' '+target))return i}return 0}
-function silentTrackNumberR1159(object){const key=String(object?.key||''),m=object?.customMetadata||{};if(!/^albums\/silent\//i.test(key))return 0;const base=key.split('/').pop()?.replace(/\.mp3$/i,'')||'';const byTitle=silentCanonicalNumberR1159(m.title);if(byTitle)return byTitle;const byFile=silentCanonicalNumberR1159(base.replace(/[_-]+/g,' '));if(byFile)return byFile;const lead=base.match(/^\s*(\d{1,2})(?:\D|$)/);if(lead){const n=parseInt(lead[1],10);if(n>=1&&n<=18)return n}const direct=parseInt(m.track||'',10);if(Number.isFinite(direct)&&direct>=1&&direct<=18)return direct;return 0}
-function silentTrackTitleR1159(object){const n=silentTrackNumberR1159(object);return n?SILENT_TRACKS_R1159[n]:''}
+function silentCanonicalNumberR1159(value){const probe=silentNormalizeR1159(value).replace(/^\d{1,2}\s+/,'').trim();if(!probe)return 0;if(probe==='dance of death'||probe.endsWith(' dance of death'))return 1;for(let i=1;i<SILENT_TRACKS_R1159.length;i++){const target=silentNormalizeR1159(SILENT_TRACKS_R1159[i]);if(probe===target||probe.endsWith(' '+target))return i}return 0}
+function silentTrackNumberR1159(object){const key=String(object?.key||''),m=object?.customMetadata||{};if(!/^albums\/silent\//i.test(key))return 0;const base=key.split('/').pop()?.replace(/\.mp3$/i,'')||'';const byTitle=silentCanonicalNumberR1159(m.title);if(byTitle)return byTitle;const byFile=silentCanonicalNumberR1159(base.replace(/[_-]+/g,' '));if(byFile)return byFile;const lead=base.match(/^\s*(\d{1,2})(?:\D|$)/);if(lead){const n=parseInt(lead[1],10);if(n>=1&&n<=20)return n}const direct=parseInt(m.track||'',10);if(Number.isFinite(direct)&&direct>=1&&direct<=20)return direct;return 0}
+function silentTrackTitleR1159(object){const n=silentTrackNumberR1159(object),m=object?.customMetadata||{};return n?(SILENT_TRACKS_R1159[n]||m.title||''):''}
 
 const BEYOND_TRACKS_R601 = Object.freeze([null,
   'Просто живи','Вне сценария','Свобода','Тишина','Ты уже достоин','Внутренний Гуру','Дуккха','Мираж остаётся',
@@ -19083,18 +19081,63 @@ async function handleMusicSinglesListR316(request, env) {
   const listed=await musicListSingleObjectsR1028(bucket);
   const tracks0=listed.objects.map(musicSingleTrackR1028);
   const {kept,duplicates}=musicDedupeSingleTracksR1028(tracks0);
-  const tracks=kept.map(({normalizedTitleR1028,...track})=>track);
+  // R1159C: once a song belongs to the official SILENT album it is no longer a public single.
+  // Covers remain separate because their title contains Cover/Кавер and therefore does not
+  // canonical-match the official album title.
+  const silentAlbumDuplicates=kept.filter(track=>silentCanonicalNumberR1159(track?.title||track?.name)>0);
+  const publicSingles=kept.filter(track=>silentCanonicalNumberR1159(track?.title||track?.name)===0);
+  const tracks=publicSingles.map(({normalizedTitleR1028,...track})=>track);
   return json({
     ok:true,
-    version:'R1028-LATEST-TWO-NO-DUPLICATES',
+    version:'R1159C-SINGLES-NO-SILENT-DUPLICATES',
     generatedAt:new Date().toISOString(),
     scannedObjects:tracks0.length,
     scanPages:listed.rounds,
     duplicateTitlesHidden:duplicates.length,
+    silentAlbumDuplicatesHidden:silentAlbumDuplicates.length,
     latestKey:tracks[0]?.key||'',
     tracks
   });
 }
+
+// === R1159C: permanently remove SILENT songs duplicated under singles/ ===
+async function musicSilentSinglesCleanupPlanR1159C(bucket){
+  const def=MUSIC_ALBUMS_R446.silent;
+  const albumObjects=await musicAlbumObjectsR446(bucket,def);
+  const albumTrackNumbers=[...new Set(albumObjects.map(silentTrackNumberR1159).filter(n=>n>=1&&n<=20))].sort((a,b)=>a-b);
+  const missing=[];for(let n=1;n<=20;n++)if(!albumTrackNumbers.includes(n))missing.push(n);
+
+  const listed=await musicListSingleObjectsR1028(bucket);
+  const singles=listed.objects.map(musicSingleTrackR1028);
+  const duplicates=singles.map(track=>{
+    const no=silentCanonicalNumberR1159(track?.title||track?.name);
+    return no?{key:track.key,title:track.title,silentTrack:no,officialTitle:SILENT_TRACKS_R1159[no]||track.title,size:Number(track.size||0),uploaded:track.uploaded||null}:null;
+  }).filter(Boolean).sort((a,b)=>a.silentTrack-b.silentTrack||String(a.key).localeCompare(String(b.key),'ru',{numeric:true,sensitivity:'base'}));
+
+  return {
+    ready:missing.length===0,
+    albumTrackCount:albumTrackNumbers.length,
+    albumTrackNumbers,
+    missingAlbumTracks:missing,
+    scannedSingles:singles.length,
+    duplicateCount:duplicates.length,
+    duplicates,
+    scanPages:listed.rounds
+  };
+}
+async function handleMusicSilentSinglesCleanupR1159C(request,env){
+  if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
+  const bucket=getMusicBucketR314(env);if(!bucket)return json({ok:false,error:'music-bucket-not-configured'},503);
+  const plan=await musicSilentSinglesCleanupPlanR1159C(bucket);
+  if(request.method==='GET')return json({ok:true,dryRun:true,...plan});
+  const body=await request.json().catch(()=>null);
+  if(body?.confirm!=='DELETE_SILENT_DUPLICATES_FROM_SINGLES')return json({ok:false,error:'confirmation-required'},400);
+  if(!plan.ready)return json({ok:false,error:'silent-album-incomplete',message:`SILENT в R2 неполный: ${plan.albumTrackCount}/20. Синглы не удалены.`,...plan},409);
+  const deleteKeys=plan.duplicates.map(x=>x.key).filter(Boolean);
+  if(deleteKeys.length)await bucket.delete(deleteKeys);
+  return json({ok:true,deleted:deleteKeys.length,deletedKeys:deleteKeys,deletedTracks:plan.duplicates,albumTrackCount:plan.albumTrackCount,message:deleteKeys.length?`Удалено ${deleteKeys.length} дублей SILENT из singles/ и R2.`:'Дублей SILENT в singles/ уже нет.'});
+}
+// === End R1159C ===
 // === End R1028 ===
 
 // === R1029: Cloudflare-side radio exclusion, no VPS local-control dependency ===
@@ -20863,6 +20906,7 @@ async function routeApi(request, env, ctx) {
     if (path === '/api/music/album-download' && (request.method === 'GET' || request.method === 'HEAD')) return await handleMusicAlbumDownloadR446(request, env);
     if (path === '/api/control/music/single/publish-latest' && request.method === 'POST') return await handleMusicSinglePublishR616(request, env);
     if (path === '/api/control/music/singles/dedupe-titles' && ['GET','POST'].includes(request.method)) return await handleMusicSingleTitleDedupeR1028(request, env);
+    if (path === '/api/control/music/silent/cleanup-singles' && ['GET','POST'].includes(request.method)) return await handleMusicSilentSinglesCleanupR1159C(request, env);
     if (path === '/api/music/singles' && request.method === 'GET') return await handleMusicSinglesListR316(request, env);
     if (path === '/api/music/downloads' && request.method === 'GET') return await handleMusicDownloadsR322(request, env);
     if (path === '/api/music/download' && request.method === 'GET') return await handleMusicDownloadR327(request, env);
