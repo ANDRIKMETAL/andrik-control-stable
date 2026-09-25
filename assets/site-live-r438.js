@@ -106,7 +106,10 @@
     if (host.includes('music.apple.com')) return ['apple-music-open', url.href];
     if (host.includes('soundcloud.com')) return ['soundcloud-open', url.href];
     if (host.includes('music.amazon.')) return ['amazon-music-open', url.href];
-    if (host.includes('youtube.com') || host.includes('youtu.be') || host.includes('music.youtube.com')) return ['youtube-open', url.href];
+    if (host.includes('youtube.com') || host.includes('youtu.be') || host.includes('music.youtube.com')) {
+      const radioLive=anchor.hasAttribute('data-youtube-live-auto') || /\/live(?:\/|$)/i.test(path) || /@andrikmetal\/live/i.test(path);
+      return [radioLive?'radio-open':'youtube-open', url.href];
+    }
 
     const looksMp3 = /\.mp3(?:$|[?#])/i.test(url.href) || anchor.hasAttribute('download') || /скачать\s*mp3|download\s*mp3/i.test(label);
     const musicHost = host === 'music.andrikmetal.com' || host.endsWith('.music.andrikmetal.com');

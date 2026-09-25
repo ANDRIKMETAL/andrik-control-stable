@@ -1,0 +1,61 @@
+ANDRIK SITE CONTROL · R526 + R1156 RADIO AUDIENCE GRAPH
+Date: 2026-09-25
+
+WHAT WAS ADDED
+- New "Посещения эфира · день" card inside Radio Control.
+- Date navigation: previous day / next day / today.
+- Daily KPIs:
+  * new YouTube playback starts detected during the day;
+  * peak concurrent viewers;
+  * concurrent viewers at the latest sample;
+  * unique first-party visitors who clicked into LIVE from andrikmetal.com.
+- 24-hour SVG chart:
+  * yellow bars = increases in YouTube cumulative viewCount between samples;
+  * red line = YouTube concurrentViewers.
+- Detailed arrival list with ~2 minute resolution.
+- Separate exact-timestamp list for LIVE clicks originating on andrikmetal.com.
+
+DATA COLLECTION
+- No extra YouTube polling loop was added.
+- R1156 reuses the existing R669 LIVE probe, which already requests
+  statistics + liveStreamingDetails approximately every 2 minutes.
+- Each sample is persisted in D1 table radio_audience_samples.
+- History retention: 35 days.
+- YouTube viewer identities/IPs are not collected.
+- Exact YouTube individual join timestamps are not exposed by the Data API;
+  the displayed YouTube arrivals are reconstructed from cumulative viewCount
+  deltas between samples.
+
+FIRST-PARTY LIVE CLICKS
+- site-live-r438.js now classifies YouTube LIVE links as event_type=radio-open.
+- Existing ordinary YouTube links remain event_type=youtube-open.
+- Historical /live/ youtube-open rows remain compatible in the R1156 API.
+
+BACKUP / RESTORE
+- radio_audience_samples is included in normal D1 backup and restore.
+- The table is optional for older backups, so old backups remain compatible.
+
+FILES CHANGED / ADDED
+- _worker.js
+- radio-control-admin.html
+- control-home.html
+- radio-visuals-admin.html
+- assets/site-live-r438.js
+- assets/radio-audience-r1156.js (new)
+- assets/radio-audience-r1156.css (new)
+- index.html
+- player.html
+- singles.html
+- comments.html
+- trika.html
+
+CHECKS
+- node --check _worker.js: PASS
+- node --check assets/radio-audience-r1156.js: PASS
+- node --check assets/site-live-r438.js: PASS
+- radio-control-admin.html duplicate id check: PASS (0 duplicates)
+
+DEPLOYMENT NOTE
+- This is a full-site ZIP. Deploy it the same way as the supplied R526 package.
+- The graph starts accumulating YouTube time-series samples after deployment;
+  YouTube's past minute-by-minute history cannot be reconstructed retroactively.

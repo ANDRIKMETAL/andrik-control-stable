@@ -6,6 +6,7 @@ const PUSH_DELIVERY_CORRECTNESS_R526 = 'R526-ONESIGNAL-PLATFORM-DELIVERY+SUBSCRI
 const YOUTUBE_SUBSCRIBER_PUSH_R1150 = 'R1150-YOUTUBE-SUBSCRIBER-GAIN+LOSS-5M-OWNER-DELIVERY';
 const PUSH_AUTOMATION_FIX_R778 = 'R778-CRON-UA-INDEPENDENT-HEALTH-RESCUE-STRICT-OWNER-DELIVERY';
 const YOUTUBE_COMMENT_PUSH_RELIABLE_R953 = 'R953-LIVE-2M-RECENT6-5M-OLDER1-SEPARATE-COMMENT-LANE';
+const RADIO_AUDIENCE_GRAPH_R1156 = 'R1156-RADIO-AUDIENCE-DAY-GRAPH+D1-2M-SAMPLING';
 const ANDRIK_D1_EFFICIENCY_RELEASE = 'R638-D1-FINAL';
 
 const OWNER_SESSION_COOKIE = 'andrik_owner_session_v197';
@@ -1549,7 +1550,7 @@ async function ensureCountryCityHistorySchemaR418(db) {
 }
 
 const CITY_HISTORY_EVENT_TYPES_R418 = new Set([
-  'visit','music-download','music-listen','telegram-open','youtube-open',
+  'visit','music-download','music-listen','telegram-open','youtube-open','radio-open',
   'spotify-open','apple-music-open','soundcloud-open','amazon-music-open'
 ]);
 
@@ -1741,7 +1742,7 @@ async function handleSiteVisit(request, env) {
   const visitorHash = await sha256Hex(`andrik-site:${visitorId}`);
   const localDate = getBratislavaClock().date;
   const allowedEventTypes = new Set([
-    'visit','music-download','music-listen','telegram-open','youtube-open',
+    'visit','music-download','music-listen','telegram-open','youtube-open','radio-open',
     'spotify-open','apple-music-open','soundcloud-open','amazon-music-open','external-open'
   ]);
   const requestedType = cleanPlainText(body.eventType || 'visit', 40).toLowerCase();
@@ -5077,7 +5078,8 @@ async function handleControlSystem(request, env) {
     ensureControlV1Schema(db),
     ensurePlatformAnalyticsSchema(db),
     ensureSecuritySchema(db),
-    ensureSiteMetricsSchema(db)
+    ensureSiteMetricsSchema(db),
+    ensureRadioAudienceSchemaR1156(db)
   ]);
   const [lastCheck, lastStatus, lastSummary, seeded, uploadsPlaylist, ownerDevices, latestBackup, lastSeen, recentEvents, latestPush, dailySummaryAt, dailySummaryAttemptAt, dailySummaryAttemptStatus, dailySummaryAttemptError, latestSubscriberSeen, searchConsoleRow] = await Promise.all([
     safeRead('playlist-last-check-at',getPushState(db, 'playlist-last-check-at')),
@@ -8420,6 +8422,166 @@ async function checkYoutubeRecentCommentsEvery5mR953(env,db,channelId,startedAt=
   return result;
 }
 
+// R1156: persistent radio audience history. The existing R669 two-minute LIVE
+// probe already asks videos.list for statistics + liveStreamingDetails. Reuse that
+// exact response instead of adding another YouTube API call. D1 therefore gets a
+// truthful timeline even while Control is closed: cumulative playback starts and
+// concurrent viewers at each sample. Individual YouTube identities are never stored.
+let radioAudienceSchemaPromiseR1156=null;
+async function ensureRadioAudienceSchemaR1156(db){
+  if(radioAudienceSchemaPromiseR1156)return radioAudienceSchemaPromiseR1156;
+  radioAudienceSchemaPromiseR1156=(async()=>{
+    await db.prepare(`
+      CREATE TABLE IF NOT EXISTS radio_audience_samples (
+        id TEXT PRIMARY KEY,
+        video_id TEXT NOT NULL DEFAULT '',
+        sampled_at TEXT NOT NULL,
+        local_date TEXT NOT NULL,
+        local_minute TEXT NOT NULL,
+        views INTEGER,
+        concurrent_viewers INTEGER,
+        source TEXT NOT NULL DEFAULT 'youtube-r669'
+      )
+    `).run();
+    await db.prepare(`CREATE INDEX IF NOT EXISTS idx_radio_audience_date_time_r1156 ON radio_audience_samples(local_date, sampled_at ASC)`).run().catch(()=>{});
+    await db.prepare(`CREATE INDEX IF NOT EXISTS idx_radio_audience_video_time_r1156 ON radio_audience_samples(video_id, sampled_at DESC)`).run().catch(()=>{});
+  })();
+  try{await radioAudienceSchemaPromiseR1156;}
+  catch(error){radioAudienceSchemaPromiseR1156=null;throw error;}
+}
+
+async function recordRadioAudienceSampleR1156(db,video={},source='youtube-r669'){
+  const videoId=cleanPlainText(video?.videoId||'',80);
+  if(!videoId)return {ok:false,skipped:true,reason:'video-id-missing'};
+  const viewsRaw=video?.views;
+  const concurrentRaw=video?.concurrentViewers;
+  const views=viewsRaw==null?null:Math.max(0,Math.trunc(Number(viewsRaw)||0));
+  const concurrent=concurrentRaw==null?null:Math.max(0,Math.trunc(Number(concurrentRaw)||0));
+  if(views==null&&concurrent==null)return {ok:false,skipped:true,reason:'audience-values-missing'};
+  await ensureRadioAudienceSchemaR1156(db);
+  const now=new Date();
+  const sampledAt=now.toISOString();
+  const clock=getBratislavaClock(now);
+  const minute=`${String(clock.hour).padStart(2,'0')}:${String(clock.minute).padStart(2,'0')}`;
+  const minuteKey=sampledAt.slice(0,16);
+  const id=`${videoId}:${minuteKey}`;
+  await db.prepare(`
+    INSERT INTO radio_audience_samples(id,video_id,sampled_at,local_date,local_minute,views,concurrent_viewers,source)
+    VALUES(?,?,?,?,?,?,?,?)
+    ON CONFLICT(id) DO UPDATE SET
+      sampled_at=excluded.sampled_at,
+      local_date=excluded.local_date,
+      local_minute=excluded.local_minute,
+      views=CASE
+        WHEN excluded.views IS NULL THEN radio_audience_samples.views
+        WHEN radio_audience_samples.views IS NULL THEN excluded.views
+        ELSE MAX(radio_audience_samples.views,excluded.views)
+      END,
+      concurrent_viewers=COALESCE(excluded.concurrent_viewers,radio_audience_samples.concurrent_viewers),
+      source=excluded.source
+  `).bind(id,videoId,sampledAt,clock.date,minute,views,concurrent,cleanPlainText(source||'youtube-r669',120)).run();
+  // Retain enough history for month comparison without turning a 24/7 sampler into
+  // unbounded storage. Cleanup only twice an hour to keep the hot write path cheap.
+  if(clock.minute===0||clock.minute===30){
+    await db.prepare(`DELETE FROM radio_audience_samples WHERE datetime(sampled_at)<datetime('now','-35 days')`).run().catch(()=>{});
+  }
+  return {ok:true,videoId,sampledAt,localDate:clock.date,localMinute:minute,views,concurrentViewers:concurrent};
+}
+
+function radioAudienceBuildSeriesR1156(rows=[],previousByVideo={}){
+  const prev=new Map(Object.entries(previousByVideo||{}).map(([id,value])=>[String(id),Number(value)]));
+  const out=[];
+  for(const row of Array.isArray(rows)?rows:[]){
+    const videoId=cleanPlainText(row?.videoId||'',80);
+    const views=row?.views==null?null:Number(row.views);
+    const concurrent=row?.concurrentViewers==null?null:Math.max(0,Number(row.concurrentViewers)||0);
+    const previous=prev.get(videoId);
+    let launches=0;
+    if(Number.isFinite(views)&&Number.isFinite(previous))launches=Math.max(0,Math.trunc(views-previous));
+    if(Number.isFinite(views))prev.set(videoId,views);
+    out.push({
+      sampledAt:cleanPlainText(row?.sampledAt||'',80),
+      minute:cleanPlainText(row?.localMinute||'',8),
+      videoId,
+      views:Number.isFinite(views)?Math.max(0,Math.trunc(views)):null,
+      launches,
+      concurrentViewers:concurrent==null?null:Math.trunc(concurrent)
+    });
+  }
+  return out;
+}
+
+async function handleControlRadioAudienceR1156(request,env){
+  if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
+  const db=requireDb(env);
+  await Promise.all([ensureRadioAudienceSchemaR1156(db),ensureSiteMetricsSchema(db)]);
+  const url=new URL(request.url);
+  const today=getBratislavaClock().date;
+  const requested=cleanPlainText(url.searchParams.get('date')||today,20);
+  const date=/^\d{4}-\d{2}-\d{2}$/.test(requested)?requested:today;
+  const rowsResult=await db.prepare(`
+    SELECT video_id AS videoId,sampled_at AS sampledAt,local_minute AS localMinute,
+           views,concurrent_viewers AS concurrentViewers
+    FROM radio_audience_samples
+    WHERE local_date=?
+    ORDER BY datetime(sampled_at) ASC
+    LIMIT 900
+  `).bind(date).all();
+  const rows=Array.isArray(rowsResult?.results)?rowsResult.results:[];
+  const videoIds=[...new Set(rows.map(row=>cleanPlainText(row?.videoId||'',80)).filter(Boolean))];
+  const previousByVideo={};
+  for(const videoId of videoIds){
+    const before=await db.prepare(`
+      SELECT views
+      FROM radio_audience_samples
+      WHERE video_id=? AND local_date<? AND views IS NOT NULL
+      ORDER BY datetime(sampled_at) DESC LIMIT 1
+    `).bind(videoId,date).first().catch(()=>null);
+    const n=Number(before?.views);
+    if(Number.isFinite(n))previousByVideo[videoId]=Math.max(0,Math.trunc(n));
+  }
+  const series=radioAudienceBuildSeriesR1156(rows,previousByVideo);
+  const totals=series.reduce((acc,row)=>{
+    acc.launches+=Math.max(0,Number(row.launches)||0);
+    const online=Number(row.concurrentViewers);
+    if(Number.isFinite(online)){
+      acc.peak=Math.max(acc.peak,online);
+      acc.current=online;
+    }
+    if(Number.isFinite(Number(row.views)))acc.lastViews=Math.max(acc.lastViews,Number(row.views));
+    return acc;
+  },{launches:0,peak:0,current:0,lastViews:0});
+
+  // Exact first-party clicks into the radio are separate from YouTube's audience.
+  // R1156 starts emitting radio-open explicitly. For older rows, /live/ links are a
+  // safe compatibility fallback and avoid counting ordinary YouTube music clicks.
+  const siteWhere=`local_date=? AND traffic_class<>'technical' AND (
+    event_type='radio-open' OR
+    (event_type='youtube-open' AND (target LIKE '%youtube.com/live/%' OR target LIKE '%youtube.com/@andrikmetal/live%'))
+  )`;
+  const [siteSummary,siteRows]=await Promise.all([
+    db.prepare(`SELECT COUNT(*) AS opens,COUNT(DISTINCT visitor_hash) AS visitors FROM site_visit_events WHERE ${siteWhere}`).bind(date).first().catch(()=>({opens:0,visitors:0})),
+    db.prepare(`
+      SELECT created_at AS createdAt,event_type AS type,country,region,city,target
+      FROM site_visit_events
+      WHERE ${siteWhere}
+      ORDER BY datetime(created_at) ASC LIMIT 300
+    `).bind(date).all().catch(()=>({results:[]}))
+  ]);
+  const exactOpens=(siteRows?.results||[]).map(row=>({
+    createdAt:cleanPlainText(row?.createdAt||'',80),type:cleanPlainText(row?.type||'',40),
+    country:cleanPlainText(row?.country||'',8).toUpperCase(),region:cleanPlainText(row?.region||'',120),city:cleanPlainText(row?.city||'',120)
+  }));
+  return json({
+    ok:true,version:'R1156',date,today,timezone:'Europe/Bratislava',
+    collectionStarted:series[0]?.sampledAt||'',samples:series.length,series,
+    summary:{launches:totals.launches,peakConcurrent:totals.peak,currentConcurrent:totals.current,lastCumulativeViews:totals.lastViews,
+      siteOpens:Math.max(0,Number(siteSummary?.opens)||0),siteVisitors:Math.max(0,Number(siteSummary?.visitors)||0)},
+    exactOpens,updatedAt:new Date().toISOString(),
+    note:'YouTube arrivals are reconstructed from cumulative playback-start deltas between two-minute samples; first-party radio clicks have exact timestamps.'
+  });
+}
+
 // R669: keep the currently active radio broadcast pinned in the 2-minute
 // engagement scan and poll its LIVE CHAT. This path intentionally uses the
 // public YouTube Data API key when available, so owner push monitoring keeps
@@ -8459,6 +8621,8 @@ async function fetchYoutubeActiveLiveEngagementR669(env,db){
       thumbnail:snippet?.thumbnails?.high?.url||snippet?.thumbnails?.medium?.url||'',
       likes:Math.max(0,Number(stats.likeCount||0)),
       comments:Math.max(0,Number(stats.commentCount||0)),
+      views:stats.viewCount==null?null:Math.max(0,Number(stats.viewCount)||0),
+      concurrentViewers:details.concurrentViewers==null?null:Math.max(0,Number(details.concurrentViewers)||0),
       url:`https://www.youtube.com/watch?v=${encodeURIComponent(item.id||'')}`,
       isLive:true
     };
@@ -8470,6 +8634,7 @@ async function fetchYoutubeActiveLiveEngagementR669(env,db){
     const known=await probeVideo(candidateIds);
     if(known?.video){
       if(cleanPlainText(currentState?.value||'',80)!==known.video.videoId)await setPushState(db,currentKey,known.video.videoId).catch(()=>{});
+      await recordRadioAudienceSampleR1156(db,known.video,'pinned-live-r669').catch(()=>{});
       return {...known,source:'pinned-live-r669'};
     }
 
@@ -8498,6 +8663,7 @@ async function fetchYoutubeActiveLiveEngagementR669(env,db){
     const discovered=await probeVideo([discoveredId]);
     if(discovered?.video){
       if(cleanPlainText(currentState?.value||'',80)!==discovered.video.videoId)await setPushState(db,currentKey,discovered.video.videoId).catch(()=>{});
+      await recordRadioAudienceSampleR1156(db,discovered.video,cleanPlainText(found?.source||'discovered-live-r669',100)).catch(()=>{});
       return {...discovered,source:cleanPlainText(found?.source||'discovered-live-r669',100)};
     }
     return {video:null,liveChatId:'',warning:'',source:'discovery-not-live-r669'};
@@ -15942,7 +16108,7 @@ const BACKUP_TABLES = [
   'comments', 'comment_likes', 'comment_reports', 'lyrics',
   'push_admin_devices', 'push_subscribers', 'push_playlist_seen', 'push_state', 'push_history', 'system_logs', 'observability_usage', 'control_monitor_samples', 'control_monitor_incidents',
   'release_history', 'youtube_event_seen', 'platform_accounts', 'platform_snapshots',
-  'security_events', 'security_rate_buckets', 'site_visit_events'
+  'security_events', 'security_rate_buckets', 'site_visit_events', 'radio_audience_samples'
 ];
 
 async function buildDatabaseBackup(db) {
@@ -15955,7 +16121,8 @@ async function buildDatabaseBackup(db) {
     ensureControlV1Schema(db),
     ensurePlatformAnalyticsSchema(db),
     ensureSecuritySchema(db),
-    ensureSiteMetricsSchema(db)
+    ensureSiteMetricsSchema(db),
+    ensureRadioAudienceSchemaR1156(db)
   ]);
   await backfillReleaseHistory(db);
   const tables = {};
@@ -16161,10 +16328,13 @@ async function getTableColumnNames(db, table) {
 }
 
 async function inspectBackupCompatibility(db, payload) {
+  // R1156 is optional in older backups, but if a newer backup contains it the
+  // destination schema must exist before PRAGMA/restore compatibility checks.
+  await ensureRadioAudienceSchemaR1156(db);
   const missingTables = [];
   const unknownColumns = {};
   const counts = {};
-  const optionalTables = new Set(['system_logs', 'push_subscribers', 'youtube_event_seen', 'platform_accounts', 'platform_snapshots', 'observability_usage', 'control_monitor_samples', 'control_monitor_incidents', 'security_events', 'security_rate_buckets', 'site_visit_events']);
+  const optionalTables = new Set(['system_logs', 'push_subscribers', 'youtube_event_seen', 'platform_accounts', 'platform_snapshots', 'observability_usage', 'control_monitor_samples', 'control_monitor_incidents', 'security_events', 'security_rate_buckets', 'site_visit_events', 'radio_audience_samples']);
   let rowCount = 0;
   for (const table of BACKUP_TABLES) {
     const rows = payload.tables?.[table];
@@ -16200,8 +16370,8 @@ function chunkRows(rows, columnCount) {
 }
 
 async function restoreBackupTables(db, payload) {
-  const deleteOrder = ['comment_likes', 'comment_reports', 'comments', 'lyrics', 'push_admin_devices', 'push_subscribers', 'push_playlist_seen', 'push_state', 'push_history', 'system_logs', 'observability_usage', 'control_monitor_incidents', 'control_monitor_samples', 'release_history', 'youtube_event_seen', 'platform_snapshots', 'platform_accounts', 'security_events', 'security_rate_buckets', 'site_visit_events'];
-  const insertOrder = ['comments', 'comment_likes', 'comment_reports', 'lyrics', 'push_admin_devices', 'push_subscribers', 'push_playlist_seen', 'push_state', 'push_history', 'system_logs', 'observability_usage', 'control_monitor_incidents', 'control_monitor_samples', 'release_history', 'youtube_event_seen', 'platform_accounts', 'platform_snapshots', 'security_events', 'security_rate_buckets', 'site_visit_events'];
+  const deleteOrder = ['comment_likes', 'comment_reports', 'comments', 'lyrics', 'push_admin_devices', 'push_subscribers', 'push_playlist_seen', 'push_state', 'push_history', 'system_logs', 'observability_usage', 'control_monitor_incidents', 'control_monitor_samples', 'release_history', 'youtube_event_seen', 'platform_snapshots', 'platform_accounts', 'security_events', 'security_rate_buckets', 'site_visit_events', 'radio_audience_samples'];
+  const insertOrder = ['comments', 'comment_likes', 'comment_reports', 'lyrics', 'push_admin_devices', 'push_subscribers', 'push_playlist_seen', 'push_state', 'push_history', 'system_logs', 'observability_usage', 'control_monitor_incidents', 'control_monitor_samples', 'release_history', 'youtube_event_seen', 'platform_accounts', 'platform_snapshots', 'security_events', 'security_rate_buckets', 'site_visit_events', 'radio_audience_samples'];
   const statements = deleteOrder
     .filter(table => Array.isArray(payload.tables?.[table]))
     .map(table => db.prepare(`DELETE FROM "${table}"`));
@@ -20692,6 +20862,7 @@ async function routeApi(request, env, ctx) {
     if (path === '/api/control/google-devices' && request.method === 'GET') return await handleControlGoogleDevicesR544(request, env);
     if (path === '/api/control/social-overview' && request.method === 'GET') return await handleControlSocialOverviewR487(request, env);
     if (path === '/api/control/ecosystem-map' && request.method === 'GET') return await handleControlEcosystemMap(request, env);
+    if (path === '/api/control/radio-audience-r1156' && request.method === 'GET') return await handleControlRadioAudienceR1156(request, env);
     if (path === '/api/control/audience' && request.method === 'GET') return await handleControlAudience(request, env);
     if (path === '/api/control/youtube-top-content' && request.method === 'GET') return await handleControlYoutubeTopContentR552(request, env);
     if (path === '/api/control/youtube-oac-shelf' && request.method === 'GET') return await handleControlYoutubeOacShelfR910(request, env);

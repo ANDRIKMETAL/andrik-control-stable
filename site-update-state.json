@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1790217865001-8728e9315f",
+  "operationId": "publish-1790314432970-9873c13434",
   "release": "R526",
-  "archiveName": "ANDRIK-SITE-CONTROL-R526-PUSH-DELIVERY-FIX.zip",
-  "sourceHead": "b6591e5ed2f7edb5994fc97e7cebba3c2b774355",
-  "backupSha": "b6591e5ed2f7edb5994fc97e7cebba3c2b774355",
+  "archiveName": "ANDRIK-SITE-CONTROL-R526-R1156-RADIO-AUDIENCE.zip",
+  "sourceHead": "f3edb10c3f7c9ac5d916b51eafe691fa1ba49dc3",
+  "backupSha": "f3edb10c3f7c9ac5d916b51eafe691fa1ba49dc3",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-24T02:44:25.001Z"
+  "generatedAt": "2026-09-25T05:33:52.970Z"
 }
