@@ -18691,6 +18691,11 @@ async function handleMusicMp3PutR314(request, env) {
 
 // === R446: album ZIP inspector + browser multipart builder for ANDRIK R2 ===
 const MUSIC_ALBUMS_R446 = Object.freeze({
+  'silent': Object.freeze({
+    slug:'silent', label:'Silent (Тишина)', prefix:'albums/silent/',
+    zipKey:'albums/silent/ANDRIK-SILENT-MP3-320kbps.zip',
+    zipName:'ANDRIK-SILENT-MP3-320kbps.zip', expectedTracks:18
+  }),
   'beyond': Object.freeze({
     slug:'beyond', label:'BEYOND', prefix:'albums/beyond/',
     zipKey:'albums/beyond/ANDRIK-BEYOND-MP3-320kbps.zip',
@@ -18712,6 +18717,14 @@ const MUSIC_ALBUMS_R446 = Object.freeze({
     zipName:'ANDRIK-TRIKA-MP3-320kbps.zip', expectedTracks:17
   })
 });
+const SILENT_TRACKS_R1159 = Object.freeze([null,
+  'Dance of Death','Mind Is A Trap','Выбора нет','Жизнь идёт сама','Monument to the Great Void','I Run Away','Что есть истина','No Choice','Стирай','Верни меня','Дверь освобождения','Ты проснулся живой','Сила знает путь','You Are Already That','Всё есть Брахман','Ты уже то','You Are The Light','Вне времени'
+]);
+function silentNormalizeR1159(value){return String(value||'').toLowerCase().replace(/ё/g,'е').replace(/[«»“”„'’`]/g,'').replace(/[^a-zа-я0-9]+/gi,' ').trim()}
+function silentCanonicalNumberR1159(value){const probe=silentNormalizeR1159(value).replace(/^\d{1,2}\s+/,'').trim();if(!probe)return 0;for(let i=1;i<SILENT_TRACKS_R1159.length;i++){const target=silentNormalizeR1159(SILENT_TRACKS_R1159[i]);if(probe===target||probe.endsWith(' '+target))return i}return 0}
+function silentTrackNumberR1159(object){const key=String(object?.key||''),m=object?.customMetadata||{};if(!/^albums\/silent\//i.test(key))return 0;const base=key.split('/').pop()?.replace(/\.mp3$/i,'')||'';const byTitle=silentCanonicalNumberR1159(m.title);if(byTitle)return byTitle;const byFile=silentCanonicalNumberR1159(base.replace(/[_-]+/g,' '));if(byFile)return byFile;const lead=base.match(/^\s*(\d{1,2})(?:\D|$)/);if(lead){const n=parseInt(lead[1],10);if(n>=1&&n<=18)return n}const direct=parseInt(m.track||'',10);if(Number.isFinite(direct)&&direct>=1&&direct<=18)return direct;return 0}
+function silentTrackTitleR1159(object){const n=silentTrackNumberR1159(object);return n?SILENT_TRACKS_R1159[n]:''}
+
 const BEYOND_TRACKS_R601 = Object.freeze([null,
   'Просто живи','Вне сценария','Свобода','Тишина','Ты уже достоин','Внутренний Гуру','Дуккха','Мираж остаётся',
   'WE ARE ONE','WAKE UP','JOY OF BEING','DARK NIGHT OF THE SOUL','PERSONA','BEYOND MAN','LIQUID LIKE MERCURY','YOU’RE ALREADY WORTHY'
@@ -18769,7 +18782,7 @@ function musicAlbumDefR446(value){
   return MUSIC_ALBUMS_R446[slug]||null;
 }
 function musicAlbumTrackSortR446(a,b){
-  const ta=beyondTrackNumberR601(a)||trikaTrackNumberR517(a)||parseInt(a?.customMetadata?.track||'',10), tb=beyondTrackNumberR601(b)||trikaTrackNumberR517(b)||parseInt(b?.customMetadata?.track||'',10);
+  const ta=silentTrackNumberR1159(a)||beyondTrackNumberR601(a)||trikaTrackNumberR517(a)||parseInt(a?.customMetadata?.track||'',10), tb=silentTrackNumberR1159(b)||beyondTrackNumberR601(b)||trikaTrackNumberR517(b)||parseInt(b?.customMetadata?.track||'',10);
   if(Number.isFinite(ta)&&Number.isFinite(tb)&&ta!==tb)return ta-tb;
   if(Number.isFinite(ta)&&!Number.isFinite(tb))return -1;
   if(!Number.isFinite(ta)&&Number.isFinite(tb))return 1;
@@ -18781,9 +18794,9 @@ function musicZipSafeNameR446(value){
 function musicZipEntryNameR446(object,index){
   const m=object?.customMetadata||{};
   const rawBase=String(object?.key||'').split('/').pop()?.replace(/\.mp3$/i,'')||`track-${index+1}`;
-  const canonical=beyondTrackTitleR601(object)||trikaTrackTitleR517(object);
+  const canonical=silentTrackTitleR1159(object)||beyondTrackTitleR601(object)||trikaTrackTitleR517(object);
   const title=musicZipSafeNameR446(canonical||m.title||rawBase.replace(/[_-]+/g,' '))||`Track ${index+1}`;
-  const n=beyondTrackNumberR601(object)||trikaTrackNumberR517(object)||parseInt(m.track||'',10);
+  const n=silentTrackNumberR1159(object)||beyondTrackNumberR601(object)||trikaTrackNumberR517(object)||parseInt(m.track||'',10);
   const prefix=Number.isFinite(n)&&n>0?String(n).padStart(2,'0')+' - ':String(index+1).padStart(2,'0')+' - ';
   return `${prefix}${title}.mp3`;
 }
@@ -18804,7 +18817,7 @@ async function musicAlbumObjectsR446(bucket,def){
 function musicAlbumArchiveSelectionR446(objects){
   const selected=[], loose=[], groups=new Map(), duplicates=[];
   for(const object of objects){
-    const n=beyondTrackNumberR601(object)||trikaTrackNumberR517(object)||parseInt(object?.customMetadata?.track||'',10);
+    const n=silentTrackNumberR1159(object)||beyondTrackNumberR601(object)||trikaTrackNumberR517(object)||parseInt(object?.customMetadata?.track||'',10);
     if(Number.isFinite(n)&&n>0){
       const arr=groups.get(n)||[];arr.push(object);groups.set(n,arr);
     }else loose.push(object);
@@ -18829,9 +18842,9 @@ async function musicAlbumStatusOneR446(bucket,def,includeTracks=true){
     duplicateCount:archive.duplicates.length,duplicates:archive.duplicates,
     tracks:includeTracks?tracks.map((o,i)=>({
       key:o.key,
-      title:beyondTrackTitleR601(o)||trikaTrackTitleR517(o)||o.customMetadata?.title||musicZipEntryNameR446(o,i).replace(/^\d+\s*-\s*|\.mp3$/gi,''),
+      title:silentTrackTitleR1159(o)||beyondTrackTitleR601(o)||trikaTrackTitleR517(o)||o.customMetadata?.title||musicZipEntryNameR446(o,i).replace(/^\d+\s*-\s*|\.mp3$/gi,''),
       entryName:musicZipEntryNameR446(o,i),
-      track:String(beyondTrackNumberR601(o)||trikaTrackNumberR517(o)||parseInt(o.customMetadata?.track||'',10)||i+1),size:Number(o.size||0),uploaded:o.uploaded||null
+      track:String(silentTrackNumberR1159(o)||beyondTrackNumberR601(o)||trikaTrackNumberR517(o)||parseInt(o.customMetadata?.track||'',10)||i+1),size:Number(o.size||0),uploaded:o.uploaded||null,url:`https://music.andrikmetal.com/${o.key}`,downloadUrl:`/api/music/download?key=${encodeURIComponent(o.key)}`
     })):undefined,
     zip:{exists:Boolean(zip),key:def.zipKey,name:def.zipName,size:Number(zip?.size||0),uploaded:zip?.uploaded||null,
       downloadUrl:`/api/music/album-download?album=${encodeURIComponent(def.slug)}`}
@@ -18849,11 +18862,8 @@ async function handleMusicAlbumsStatusR446(request,env){
 async function handleMusicAlbumsPublicStatusR446(request,env){
   const bucket=getMusicBucketR314(env); if(!bucket)return json({ok:false,error:'music-bucket-not-configured'},503);
   const albums=[];
-  for(const def of Object.values(MUSIC_ALBUMS_R446)){
-    const zip=await bucket.head(def.zipKey).catch(()=>null);
-    albums.push({slug:def.slug,label:def.label,zip:{exists:Boolean(zip),size:Number(zip?.size||0),uploaded:zip?.uploaded||null,downloadUrl:`/api/music/album-download?album=${encodeURIComponent(def.slug)}`}});
-  }
-  return json({ok:true,albums,checkedAt:new Date().toISOString()},200,JSON_HEADERS);
+  for(const def of Object.values(MUSIC_ALBUMS_R446))albums.push(await musicAlbumStatusOneR446(bucket,def,true));
+  return json({ok:true,albums,checkedAt:new Date().toISOString(),version:'R1159-PUBLIC-TRACKS'},200,JSON_HEADERS);
 }
 function musicAlbumUploadIdR446(request){
   const value=String(new URL(request.url).searchParams.get('uploadId')||'').trim();
@@ -18864,10 +18874,11 @@ async function handleMusicAlbumMultipartStartR446(request,env){
   const bucket=getMusicBucketR314(env); if(!bucket)return json({ok:false,error:'music-bucket-not-configured'},503);
   const def=musicAlbumDefR446(new URL(request.url).searchParams.get('album')); if(!def)return json({ok:false,error:'invalid-album'},400);
   const status=await musicAlbumStatusOneR446(bucket,def,true);
-  if(!status.trackCount)return json({ok:false,error:'album-empty',message:`В R2 не найдено MP3 для ${def.label}.`},409);
+  const directArchive=new URL(request.url).searchParams.get('direct')==='1';
+  if(!status.trackCount&&!directArchive)return json({ok:false,error:'album-empty',message:`В R2 не найдено MP3 для ${def.label}.`},409);
   const upload=await bucket.createMultipartUpload(def.zipKey,{
     httpMetadata:{contentType:'application/zip',contentDisposition:`attachment; filename=\"${def.zipName}\"`},
-    customMetadata:{source:'ANDRIK Control R446 browser multipart',album:def.label,trackCount:String(status.trackCount),sourceBytes:String(status.totalBytes),builtAt:new Date().toISOString()}
+    customMetadata:{source:directArchive?'ANDRIK Control R1159 direct album ZIP':'ANDRIK Control R446 browser multipart',album:def.label,trackCount:String(status.trackCount),sourceBytes:String(status.totalBytes),builtAt:new Date().toISOString()}
   });
   return json({ok:true,album:status,uploadId:upload.uploadId,key:upload.key,zipName:def.zipName,partSize:8*1024*1024});
 }
@@ -19142,8 +19153,8 @@ async function handleMusicDownloadsR322(request, env){
   const exclusionsR1029=await radioExclusionMapR1029(bucket);
   const tracks=(listed.objects||[]).filter(o=>musicObjectKeyR317(o.key)&&!radioObjectExcludedR1029(o.key,o.uploaded,exclusionsR1029)).map(o=>{
     const m=o.customMetadata||{},folder=o.key.split('/').slice(0,-1).join('/'),base=o.key.split('/').pop().replace(/\.mp3$/i,'').replace(/[_-]+/g,' ');
-    const trikaNo=trikaTrackNumberR517(o),trikaTitle=trikaTrackTitleR517(o);
-    return {key:o.key,title:/^singles\//i.test(o.key)?musicSingleTitleR616(m.title||legacyTitles[o.key]||base):(trikaTitle||m.title||legacyTitles[o.key]||base),album:m.album||'',track:trikaNo?String(trikaNo):(m.track||''),folder,url:'https://music.andrikmetal.com/'+o.key,uploaded:o.uploaded||null};
+    const silentNo=silentTrackNumberR1159(o),silentTitle=silentTrackTitleR1159(o),trikaNo=trikaTrackNumberR517(o),trikaTitle=trikaTrackTitleR517(o);
+    return {key:o.key,title:/^singles\//i.test(o.key)?musicSingleTitleR616(m.title||legacyTitles[o.key]||base):(silentTitle||trikaTitle||m.title||legacyTitles[o.key]||base),album:m.album||'',track:silentNo?String(silentNo):(trikaNo?String(trikaNo):(m.track||'')),folder,url:'https://music.andrikmetal.com/'+o.key,uploaded:o.uploaded||null};
   });
   return json({ok:true,tracks});
 }
@@ -19172,8 +19183,8 @@ async function handleMusicLibraryR317(request, env){
   const legacyTitles={'singles/ty_uze_dostoin.mp3':'Ты уже достоин','singles/tisina.mp3':'Тишина','singles/track_1786265187225.mp3':'Свобода'};
   const tracks=(listed.objects||[]).filter(o=>musicObjectKeyR317(o.key)).map(o=>{
     const m=o.customMetadata||{},base=o.key.split('/').pop().replace(/\.mp3$/i,'').replace(/[_-]+/g,' ');
-    const trikaNo=trikaTrackNumberR517(o),trikaTitle=trikaTrackTitleR517(o);
-    return {key:o.key,name:base,title:/^singles\//i.test(o.key)?musicSingleTitleR616(m.title||legacyTitles[o.key]||base):(trikaTitle||m.title||legacyTitles[o.key]||base),artist:m.artist||'',album:m.album||'',track:trikaNo?String(trikaNo):(m.track||''),year:m.year||'',genre:m.genre||'',size:o.size||0,uploaded:o.uploaded||null,url:'https://music.andrikmetal.com/'+o.key};
+    const silentNo=silentTrackNumberR1159(o),silentTitle=silentTrackTitleR1159(o),trikaNo=trikaTrackNumberR517(o),trikaTitle=trikaTrackTitleR517(o);
+    return {key:o.key,name:base,title:/^singles\//i.test(o.key)?musicSingleTitleR616(m.title||legacyTitles[o.key]||base):(silentTitle||trikaTitle||m.title||legacyTitles[o.key]||base),artist:m.artist||'',album:m.album||'',track:silentNo?String(silentNo):(trikaNo?String(trikaNo):(m.track||'')),year:m.year||'',genre:m.genre||'',size:o.size||0,uploaded:o.uploaded||null,url:'https://music.andrikmetal.com/'+o.key};
   }).sort((a,b)=>String(b.uploaded||'').localeCompare(String(a.uploaded||'')));
   return json({ok:true,tracks});
 }

@@ -1,6 +1,6 @@
 'use strict';
 
-const VERSION = '55.00-r1029-media-remove-video-preview';
+const VERSION = '55.00-r1159-silent-album-tracks-covers';
 const IS_CONTROL_HOST = self.location.hostname.toLowerCase() === 'control.andrikmetal.com';
 
 async function deleteControlCaches(){
@@ -40,12 +40,12 @@ if(IS_CONTROL_HOST){
     '/manifest.webmanifest?v=55.00-r87', '/assets/v50.js?v=54.42', '/assets/v50-26.css?v=52.03',
     '/assets/pwa-install.css', '/assets/pwa-install.js', '/assets/push-v54-08.js?v=54.08-r675',
     '/assets/app-links-r663.js?v=55.00-r663',
-    '/beyond-player.html?v=55.00-r601', '/assets/beyond-cover-r601.webp', '/assets/beyond-player-r601.css?v=55.00-r601', '/assets/beyond-player-r601.js?v=55.00-r601', '/assets/albums-beyond-r601.css?v=55.00-r601', '/assets/albums-fast-library-r601.js?v=55.00-r601', '/assets/home-albums-four-r601.css?v=55.00-r601',
+    '/beyond-player.html?v=55.00-r601', '/assets/beyond-cover-r601.webp', '/assets/beyond-player-r601.css?v=55.00-r601', '/assets/beyond-player-r601.js?v=55.00-r601', '/assets/albums-beyond-r601.css?v=55.00-r601', '/assets/albums-fast-library-r601.js?v=55.00-r601', '/assets/home-albums-four-r601.css?v=55.00-r601', '/assets/home-albums-five-r1159.css?v=55.00-r1159', '/assets/silent-cover-r1159.webp', '/assets/albums-tracks-r1159.css?v=55.00-r1159', '/assets/albums-tracks-r1159.js?v=55.00-r1159',
     '/assets/home-fast-r213.css?v=55.00-r213',
     '/assets/home-fast-r213.js?v=55.00-r213',
     '/assets/andrik-qr-r794-160.png',
     '/dreaming-of-lira.html?v=55.00-r955', '/assets/dreaming-lira-r952-splash.webp', '/assets/sacred-destroyer-r955.webp', '/assets/night-enforcer-r955.webp', '/assets/lira-fight.webp', '/assets/lira-jump.webp', '/assets/lira-guitar.webp', '/assets/lira-chain.webp',
-    '/singles.html?v=55.00-r1028', '/albums.html?v=55.00-r519', '/uk/albums.html?v=55.00-r519', '/sk/albums.html?v=55.00-r519', '/en/albums.html?v=55.00-r519', '/assets/albums-r446.css?v=55.00-r446', '/assets/albums-r446.js?v=55.00-r446', '/assets/albums-fast-library-r477.js?v=55.00-r519', '/assets/albums-trika-release-r519.css?v=55.00-r519', '/assets/singles-r560.css?v=55.00-r560', '/assets/singles-r616.js?v=55.00-r1028',
+    '/singles.html?v=55.00-r1028', '/albums.html?v=55.00-r519', '/uk/albums.html?v=55.00-r519', '/sk/albums.html?v=55.00-r519', '/en/albums.html?v=55.00-r519', '/assets/albums-r446.css?v=55.00-r446', '/assets/albums-r446.js?v=55.00-r446', '/assets/albums-fast-library-r477.js?v=55.00-r519', '/assets/albums-trika-release-r519.css?v=55.00-r519', '/assets/singles-r560.css?v=55.00-r1159', '/assets/singles-r616.js?v=55.00-r1159',
     '/assets/home-singles-nav-r330.css?v=55.00-r330', '/assets/home-singles-nav-r330.js?v=55.00-r330',
     '/assets/home-trika-live-r520.css?v=55.00-r520',
     '/assets/albums-fast-library-r477.css?v=55.00-r477', '/assets/albums-fast-library-r477.js?v=55.00-r477',

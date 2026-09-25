@@ -66,7 +66,7 @@ if (location.hostname.toLowerCase() === 'control.andrikmetal.com') {
 .album-zip-card-r446 .album-zip-actions-r446{grid-template-columns:1fr 1fr!important}
 .album-zip-card-r446 .album-zip-actions-r446 .btn,.album-zip-card-r446 .album-zip-actions-r446 a{min-width:0!important;width:100%!important;white-space:normal!important}
 </style>
-</head>
+<link href="/assets/silent-admin-r1159.css?v=55.00-r1159" rel="stylesheet"/></head>
 <body class="trika-standalone-page comments-admin-page control-page lyrics-admin-page" data-control-section="releases"><nav class="topbar control-topbar control-detail-topbar"><div class="wrap nav-shell"><a aria-label="Открыть главный сайт ANDRIK" class="control-center-logo" href="https://andrikmetal.com/" id="controlCenterLogo"><img alt="" class="logo-ok" src="/assets/control-topbar-eye-triangle.jpg?v=55.00-r129"/><img alt="" class="logo-error" src="/assets/andrik-control-red-triangle-192.png"/></a><div class="nav-links control-nav-links control-detail-nav"><a href="/admin/">⌂ Главная</a></div></div></nav>
 <main class="admin-main"><div class="wrap"><header class="admin-header control-header"><span class="eyeline">ANDRIK Lyrics Engine</span><h1>Синхронизация текстов</h1><p>Вставьте текст, отметьте начало каждой строки, затем автоматически распределите слова. Плеер будет подсвечивать строку и текущее слово.</p></header>
 <section class="admin-auth-strip" id="lyricsAuthStrip"><span class="admin-auth-dot"></span><strong id="lyricsAuthText">Проверяем доступ…</strong><a href="/service-admin.html">Служебное</a></section>
@@ -86,7 +86,12 @@ if (location.hostname.toLowerCase() === 'control.andrikmetal.com') {
 <div class="single-r2-mini-actions-r560"><button class="btn" disabled id="singleR2RenameR560" type="button">✎ Название</button><button class="btn" disabled id="mp3R2Copy" type="button">🔗 Ссылка</button><button class="btn admin-danger" disabled id="mp3R2Delete" type="button">Удалить</button></div>
 <div class="admin-status" id="mp3R2Status">WAV или MP3 + обложка → MP3 320 kbps с тегами → R2.</div>
 </section>
-<section class="admin-control-card admin-control-card-wide beyond-upload-r566" id="beyondUploadR566">
+<section class="admin-control-card admin-control-card-wide silent-upload-r1159" id="silentAlbumUploadR1159">
+<div class="admin-card-title-row"><div><span class="eyeline">5-Й АЛЬБОМ · SILENT · R2</span><h2>Silent (Тишина) — загрузить одним ZIP</h2><p>Выбираешь один ZIP. Control сохраняет исходный архив в R2, распаковывает MP3 и раскладывает 18 треков в <code>albums/silent/</code> строго по официальной очередности.</p></div><span class="mp3-r2-badge">18 треков</span></div>
+<div class="silent-upload-actions-r1159"><button class="btn btn-primary" id="silentPickR1159" type="button">📦 Выбрать ZIP SILENT</button><button class="btn btn-primary" id="silentGoR1159" type="button" disabled>⬆ ZIP + 18 MP3 → R2</button></div><input accept=".zip,application/zip" hidden id="silentZipR1159" type="file"/>
+<div class="silent-progress-r1159"><span id="silentProgressBarR1159"></span></div><div class="admin-status" id="silentStatusR1159">Выбери ZIP с 18 MP3. Номера 01–18 или названия треков будут сопоставлены автоматически.</div>
+<details class="silent-official-r1159" open><summary>Официальная очередность SILENT · 18 треков</summary><div class="silent-track-preview-r1159" id="silentTrackPreviewR1159"></div></details>
+</section><section class="admin-control-card admin-control-card-wide beyond-upload-r566" id="beyondUploadR566">
 <div class="admin-card-title-row"><div><span class="eyeline">4-Й АЛЬБОМ · R2 · ОПУБЛИКОВАН НА САЙТЕ</span><h2>BEYOND — загрузить весь альбом в R2</h2><p>Загрузит WAV/MP3 в <code>albums/beyond/</code>. Альбом уже показывается первым в публичной дискографии. Эти MP3 также автоматически участвуют в радио.</p></div><span class="mp3-r2-badge">16 треков</span></div>
 <div class="beyond-upload-actions-r566"><button class="btn btn-primary" id="beyondPickR566" type="button">＋ Выбрать 16 WAV / MP3</button><button class="btn" id="beyondCoverR566" type="button">🖼 Обложка альбома</button><button class="btn btn-primary" id="beyondUploadR566Btn" type="button" disabled>⬆ Загрузить BEYOND в R2</button></div>
 <div class="admin-status" id="beyondStatusR566">Готово к загрузке BEYOND. После загрузки можно собрать ZIP ниже.</div>
@@ -96,7 +101,7 @@ if (location.hostname.toLowerCase() === 'control.andrikmetal.com') {
 <summary><span>🏷 Редактор MP3 / WAV</span><small>Первый раздел · один трек или целый альбом</small></summary>
 <div class="mp3-tag-editor-body">
 <div class="mp3-tag-settings">
-<label>Раздел<select id="tagFolder"><option value="singles">Синглы</option><option value="albums/beyond">BEYOND · 4-й альбом</option><optgroup label="Предыдущие альбомы · уже в R2"><option value="albums/illusion-of-life">Illusion of Life</option><option value="albums/ocean">OCEAN</option><option value="albums/trika">ТРИКА</option></optgroup></select></label>
+<label>Раздел<select id="tagFolder"><option value="singles">Синглы</option><option value="albums/silent">Silent (Тишина) · 5-й альбом</option><option value="albums/beyond">BEYOND · 4-й альбом</option><optgroup label="Предыдущие альбомы · уже в R2"><option value="albums/illusion-of-life">Illusion of Life</option><option value="albums/ocean">OCEAN</option><option value="albums/trika">ТРИКА</option></optgroup></select></label>
 <label>Альбом<input id="tagAlbum" value="Синглы ANDRIK"/></label>
 <label>Исполнитель<input id="tagArtist" value="ANDRIK"/></label>
 <label>Год<input id="tagYear" inputmode="numeric" maxlength="4" value="2026"/></label>
@@ -170,4 +175,4 @@ if (location.hostname.toLowerCase() === 'control.andrikmetal.com') {
 
 <script defer="" src="/assets/control-version-sync-r482.js?v=55.00-r482"></script>
 <script defer src="/assets/beyond-upload-r566.js?v=55.00-r566"></script>
-</body></html>
+<script defer src="/assets/silent-admin-r1159.js?v=55.00-r1159"></script></body></html>

@@ -1,0 +1,13 @@
+ANDRIK SITE / CONTROL R526 -> R1159
+
+- Added fifth album Silent (Тишина) first in album pages (RU/UA/SK/EN).
+- Added supplied cover with breathing/zoom animation.
+- Added native <audio> spoiler for every album, one MP3 download button per track.
+- Public album API now returns track lists + direct R2 URLs/download URLs.
+- Added SILENT album definition and fixed official 18-track canonical order.
+- Added Control ZIP importer: one archive -> original ZIP in R2 + 18 MP3 under albums/silent/ in official order.
+- Added manual Silent destination to MP3 tag editor.
+- Singles catalog hides titles that belong to SILENT.
+- Tracks marked Cover/Кавер/AI Cover are moved to separate Covers section on full singles page.
+- Homepage discography strip now shows five covers with Silent first.
+- Service worker cache version bumped and new assets precached.
