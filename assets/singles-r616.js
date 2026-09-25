@@ -1,4 +1,4 @@
-/* ANDRIK R1159D — singles cleaned from official albums + separate covers section */
+/* ANDRIK R1159F — singles cleaned + explicit cover routing + compact Control */
 (()=>{'use strict';
 const root=document.getElementById('andrikSinglesList');if(!root)return;
 const lang=String(document.documentElement.lang||'ru').toLowerCase().split('-')[0];
@@ -15,7 +15,12 @@ const norm=s=>cleanTitle(s).toLowerCase().replace(/ё/g,'е').replace(/[«»“�
 const SILENT_SET=new Set(SILENT.map(norm));
 const HIDE_ALBUM_SINGLES_R1159D=['Свобода','Тишина','Ты уже достоин'];
 const HIDE_ALBUM_SINGLE_SET_R1159D=new Set(HIDE_ALBUM_SINGLES_R1159D.map(norm));
-const isCover=x=>/(?:^|[\s(\[—–-])(?:ai\s*)?cover(?:$|[\s)\]—–-])|кавер/iu.test(cleanTitle(x?.title||x?.name||(x?.key||'').split('/').pop()));
+const SPECIAL_COVERS_R1159F=new Set(['а я скажу нет'].map(norm));
+const isCover=x=>{
+  const raw=cleanTitle(x?.title||x?.name||(x?.key||'').split('/').pop());
+  return SPECIAL_COVERS_R1159F.has(norm(raw)) ||
+    /(?:^|[\s(\[—–-])(?:ai\s*)?cover(?:$|[\s)\]—–-])|кавер/iu.test(raw);
+};
 const esc=s=>String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));const fallback=s=>String(s||'').replace(/\b\w/g,c=>c.toUpperCase());
 const copyLink=async(url,btn)=>{try{await navigator.clipboard.writeText(url);const old=btn.textContent;btn.textContent=t.copied;setTimeout(()=>btn.textContent=old,1600)}catch(_){window.prompt(t.copyPrompt,url)}};
 function cards(a,offset=0){return a.map((x,i)=>{const title=cleanTitle(x.title).trim()||fallback(cleanTitle(x.name)),idx=i+offset;return `<article class="andrik-track" data-key="${esc(x.key||'')}"><div class="andrik-track-title">${esc(title)}</div><div class="andrik-track-actions"><button type="button" data-play="${idx}">${t.play}</button><a href="/api/music/download?key=${encodeURIComponent(x.key||'')}" download>${t.download}</a></div><button class="andrik-track-share" type="button" data-share="${esc(x.url)}">${t.share}</button><audio class="andrik-audio" data-audio="${idx}" controls preload="none" hidden src="${esc(x.url)}"></audio></article>`}).join('')}

@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1790364788117-f9bf4b5039",
-  "release": "R526",
-  "archiveName": "ANDRIK-SITE-CONTROL-R526-R1159E-SILENT-HOME-CARD.zip",
-  "sourceHead": "552e66f9cd5c42c59e67856cb3546651e7e625c5",
-  "backupSha": "552e66f9cd5c42c59e67856cb3546651e7e625c5",
+  "operationId": "publish-1790365862968-420f2d716a",
+  "release": "R1159",
+  "archiveName": "R1159F-CLEAN-CONTROL-COVERS.zip",
+  "sourceHead": "60cdf43b12156850e03b2e3e694e63e3b48b0ef8",
+  "backupSha": "60cdf43b12156850e03b2e3e694e63e3b48b0ef8",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-25T19:33:08.117Z"
+  "generatedAt": "2026-09-25T19:51:02.968Z"
 }

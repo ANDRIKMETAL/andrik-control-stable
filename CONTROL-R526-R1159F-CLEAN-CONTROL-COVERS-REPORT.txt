@@ -1,0 +1,14 @@
+ANDRIK SITE / CONTROL R1159F
+
+PUBLIC:
+- 'А я скажу нет' is routed to the COVERS section.
+- It is no longer shown as a normal single.
+
+CONTROL / RELEASES:
+- Removed SILENT ZIP upload card (archive already uploaded).
+- Removed BEYOND full-album upload card.
+- Removed future-album ZIP builder / album archives block entirely.
+- Existing single uploader, MP3/WAV editor, lyrics tools and other Control sections remain.
+
+CACHE:
+- Service worker bumped to r1159f.

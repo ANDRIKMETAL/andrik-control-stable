@@ -86,16 +86,7 @@ if (location.hostname.toLowerCase() === 'control.andrikmetal.com') {
 <div class="single-r2-mini-actions-r560"><button class="btn" disabled id="singleR2RenameR560" type="button">✎ Название</button><button class="btn" disabled id="mp3R2Copy" type="button">🔗 Ссылка</button><button class="btn admin-danger" disabled id="mp3R2Delete" type="button">Удалить</button></div>
 <div class="admin-status" id="mp3R2Status">WAV или MP3 + обложка → MP3 320 kbps с тегами → R2.</div>
 </section>
-<section class="admin-control-card admin-control-card-wide silent-upload-r1159" id="silentAlbumUploadR1159">
-<div class="admin-card-title-row"><div><span class="eyeline">5-Й АЛЬБОМ · SILENT · R2</span><h2>Silent (Тишина) — загрузить одним ZIP</h2><p>Выбираешь один ZIP. Control сохраняет исходный архив в R2, распаковывает MP3 и раскладывает 20 треков в <code>albums/silent/</code> строго по официальной очередности.</p></div><span class="mp3-r2-badge">20 треков</span></div>
-<div class="silent-upload-actions-r1159"><button class="btn btn-primary" id="silentPickR1159" type="button">📦 Выбрать ZIP SILENT</button><button class="btn btn-primary" id="silentGoR1159" type="button" disabled>⬆ ZIP + 20 MP3 → R2</button><button class="btn admin-danger silent-cleanup-r1159c" id="silentCleanupSinglesR1159C" type="button">🧹 Удалить альбомные дубли из Синглов + R2</button></div><input accept=".zip,application/zip" hidden id="silentZipR1159" type="file"/>
-<div class="silent-progress-r1159"><span id="silentProgressBarR1159"></span></div><div class="admin-status" id="silentStatusR1159">Выбери ZIP с 20 MP3. Номера 01–20 или названия треков будут сопоставлены автоматически.</div>
-<details class="silent-official-r1159" open><summary>Официальная очередность SILENT · 20 треков</summary><div class="silent-track-preview-r1159" id="silentTrackPreviewR1159"></div></details>
-</section><section class="admin-control-card admin-control-card-wide beyond-upload-r566" id="beyondUploadR566">
-<div class="admin-card-title-row"><div><span class="eyeline">4-Й АЛЬБОМ · R2 · ОПУБЛИКОВАН НА САЙТЕ</span><h2>BEYOND — загрузить весь альбом в R2</h2><p>Загрузит WAV/MP3 в <code>albums/beyond/</code>. Альбом уже показывается первым в публичной дискографии. Эти MP3 также автоматически участвуют в радио.</p></div><span class="mp3-r2-badge">16 треков</span></div>
-<div class="beyond-upload-actions-r566"><button class="btn btn-primary" id="beyondPickR566" type="button">＋ Выбрать 16 WAV / MP3</button><button class="btn" id="beyondCoverR566" type="button">🖼 Обложка альбома</button><button class="btn btn-primary" id="beyondUploadR566Btn" type="button" disabled>⬆ Загрузить BEYOND в R2</button></div>
-<div class="admin-status" id="beyondStatusR566">Готово к загрузке BEYOND. После загрузки можно собрать ZIP ниже.</div>
-</section>
+
 <section class="admin-control-card admin-control-card-wide mp3-tag-editor-card" id="mp3TagEditorCard">
 <details id="mp3TagEditorDetails" open="">
 <summary><span>🏷 Редактор MP3 / WAV</span><small>Первый раздел · один трек или целый альбом</small></summary>
@@ -117,11 +108,7 @@ if (location.hostname.toLowerCase() === 'control.andrikmetal.com') {
 </div>
 </details>
 </section>
-<details class="legacy-albums-r566" open><summary>💿 ZIP будущих альбомов · собрать / скачать</summary><div class="legacy-albums-r566__body"><section class="admin-control-card admin-control-card-wide album-zip-card-r446" id="albumZipCardR446">
-<div class="admin-card-title-row album-zip-head-r446"><div><span class="eyeline">ANDRIK Music · R2 · R520</span><h2>💿 Архивы альбомов</h2><p>Проверяет MP3 прямо в облаке <strong>andrik-music</strong>. Кнопка «Собрать ZIP» потоково читает MP3 через браузер, собирает ZIP без перекодирования и загружает его частями обратно в R2. Это обходит лимиты памяти и CPU Worker. Исходные MP3 не изменяются.</p></div><button class="btn" id="albumZipRefreshR446" type="button">Проверить R2</button></div>
-<div class="album-zip-grid-r446" id="albumZipGridR446"><div class="admin-empty">Проверяем будущие альбомы…</div></div>
-<div class="admin-status album-zip-status-r446" id="albumZipStatusR446">Подключаемся к R2…</div>
-</section></div></details>
+
 <section aria-labelledby="bulkLyricsTitle" class="bulk-lyrics-card" id="bulkLyricsImport">
 <div class="admin-card-title-row bulk-lyrics-head"><div><span class="eyeline">Массовый импорт</span><h2 id="bulkLyricsTitle">TXT, LRC и ZIP</h2><p>Загрузите сразу несколько текстов или один ZIP. Названия автоматически сопоставятся с 34 песнями из официальных YouTube-плейлистов. Импорт ничего не рассылает.</p></div><span class="bulk-lyrics-summary" id="bulkLyricsSummary">Каталог загружается…</span></div>
 <label class="bulk-lyrics-drop" for="bulkLyricsFiles" id="bulkLyricsDrop"><span>📦</span><strong>Выбрать TXT, LRC или ZIP</strong><small>Один файл = одна песня. Можно выбрать много файлов сразу.</small></label>
@@ -171,8 +158,5 @@ if (location.hostname.toLowerCase() === 'control.andrikmetal.com') {
 <script defer="" src="/assets/wav-to-mp3-r324.js?v=55.00-r324"></script>
 <script defer="" src="/assets/mp3-tag-editor-r317.js?v=55.00-r324"></script>
 <script defer src="/assets/r2-dedupe-r572.js?v=55.00-r572"></script>
-<script defer="" src="/assets/album-zip-admin-r446.js?v=55.00-r956"></script>
 
-<script defer="" src="/assets/control-version-sync-r482.js?v=55.00-r482"></script>
-<script defer src="/assets/beyond-upload-r566.js?v=55.00-r566"></script>
-<script defer src="/assets/silent-admin-r1159.js?v=55.00-r1159c"></script></body></html>
+<script defer="" src="/assets/control-version-sync-r482.js?v=55.00-r482"></script></body></html>
