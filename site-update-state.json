@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1790363424600-241f6763f4",
+  "operationId": "publish-1790364379391-f67c970b62",
   "release": "R526",
-  "archiveName": "ANDRIK-SITE-CONTROL-R526-R1159C-SILENT-R2-DEDUPE-1.zip",
-  "sourceHead": "a7823b96d01c6fe50b7a410d93db7eeea2cb9f19",
-  "backupSha": "a7823b96d01c6fe50b7a410d93db7eeea2cb9f19",
+  "archiveName": "ANDRIK-SITE-CONTROL-R526-R1159D-REMOVE-3-SINGLES-R2.zip",
+  "sourceHead": "824f16168bb0c082a5494e30ea1313c51a040865",
+  "backupSha": "824f16168bb0c082a5494e30ea1313c51a040865",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-25T19:10:24.600Z"
+  "generatedAt": "2026-09-25T19:26:19.391Z"
 }

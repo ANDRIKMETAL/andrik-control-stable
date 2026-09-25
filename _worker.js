@@ -18748,6 +18748,8 @@ function beyondTrackNumberR601(object){
   return 0;
 }
 function beyondTrackTitleR601(object){const n=beyondTrackNumberR601(object);return n&&BEYOND_TRACKS_R601[n]?BEYOND_TRACKS_R601[n]:''}
+const BEYOND_SINGLE_REMOVE_R1159D = Object.freeze([3,4,5]);
+function beyondSingleRemovalNumberR1159D(value){const n=beyondCanonicalNumberR601(value);return BEYOND_SINGLE_REMOVE_R1159D.includes(n)?n:0}
 const TRIKA_TRACKS_R517 = Object.freeze([null,
   'Персонаж','Плен иллюзий','Другой путь','Вечный покой','Тёмная ночь души','Мир затих','Бессмертный крик','Жидкий, как ртуть','Начало пути','Белый холст','Проснись','Радость бытия','Свет проектора','Сними 3D-очки','Битва теней','I Am','Наблюдатель'
 ]);
@@ -19081,20 +19083,26 @@ async function handleMusicSinglesListR316(request, env) {
   const listed=await musicListSingleObjectsR1028(bucket);
   const tracks0=listed.objects.map(musicSingleTrackR1028);
   const {kept,duplicates}=musicDedupeSingleTracksR1028(tracks0);
-  // R1159C: once a song belongs to the official SILENT album it is no longer a public single.
-  // Covers remain separate because their title contains Cover/Кавер and therefore does not
-  // canonical-match the official album title.
+  // R1159D: official album songs are not shown again as public singles.
+  // SILENT is filtered by its 20-track canonical list. The three BEYOND tracks explicitly
+  // removed from Singles are Свобода, Тишина and Ты уже достоин (tracks 3, 4, 5).
+  // Covers remain separate because their titles do not canonical-match these album titles.
   const silentAlbumDuplicates=kept.filter(track=>silentCanonicalNumberR1159(track?.title||track?.name)>0);
-  const publicSingles=kept.filter(track=>silentCanonicalNumberR1159(track?.title||track?.name)===0);
+  const beyondAlbumDuplicates=kept.filter(track=>beyondSingleRemovalNumberR1159D(track?.title||track?.name)>0);
+  const publicSingles=kept.filter(track=>
+    silentCanonicalNumberR1159(track?.title||track?.name)===0 &&
+    beyondSingleRemovalNumberR1159D(track?.title||track?.name)===0
+  );
   const tracks=publicSingles.map(({normalizedTitleR1028,...track})=>track);
   return json({
     ok:true,
-    version:'R1159C-SINGLES-NO-SILENT-DUPLICATES',
+    version:'R1159D-SINGLES-NO-ALBUM-DUPLICATES',
     generatedAt:new Date().toISOString(),
     scannedObjects:tracks0.length,
     scanPages:listed.rounds,
     duplicateTitlesHidden:duplicates.length,
     silentAlbumDuplicatesHidden:silentAlbumDuplicates.length,
+    beyondAlbumDuplicatesHidden:beyondAlbumDuplicates.length,
     latestKey:tracks[0]?.key||'',
     tracks
   });
@@ -19138,6 +19146,73 @@ async function handleMusicSilentSinglesCleanupR1159C(request,env){
   return json({ok:true,deleted:deleteKeys.length,deletedKeys:deleteKeys,deletedTracks:plan.duplicates,albumTrackCount:plan.albumTrackCount,message:deleteKeys.length?`Удалено ${deleteKeys.length} дублей SILENT из singles/ и R2.`:'Дублей SILENT в singles/ уже нет.'});
 }
 // === End R1159C ===
+
+// === R1159D: permanently remove verified album copies duplicated under singles/ ===
+async function musicAlbumSinglesCleanupPlanR1159D(bucket){
+  const silentDef=MUSIC_ALBUMS_R446.silent;
+  const silentObjects=await musicAlbumObjectsR446(bucket,silentDef);
+  const silentNumbers=[...new Set(silentObjects.map(silentTrackNumberR1159).filter(n=>n>=1&&n<=20))].sort((a,b)=>a-b);
+  const silentMissing=[];for(let n=1;n<=20;n++)if(!silentNumbers.includes(n))silentMissing.push(n);
+  const silentReady=silentMissing.length===0;
+
+  const beyondDef=MUSIC_ALBUMS_R446.beyond;
+  const beyondObjects=await musicAlbumObjectsR446(bucket,beyondDef);
+  const beyondNumbers=[...new Set(beyondObjects.map(beyondTrackNumberR601).filter(n=>n>0))].sort((a,b)=>a-b);
+  const beyondRequired=[...BEYOND_SINGLE_REMOVE_R1159D];
+  const beyondMissing=beyondRequired.filter(n=>!beyondNumbers.includes(n));
+  const beyondReady=beyondMissing.length===0;
+
+  const listed=await musicListSingleObjectsR1028(bucket);
+  const singles=listed.objects.map(musicSingleTrackR1028);
+  const duplicates=[];
+  for(const track of singles){
+    const title=track?.title||track?.name||'';
+    const silentNo=silentCanonicalNumberR1159(title);
+    if(silentNo && silentReady){
+      duplicates.push({
+        key:track.key,title:track.title,album:'Silent (Тишина)',albumTrack:silentNo,
+        officialTitle:SILENT_TRACKS_R1159[silentNo]||track.title,size:Number(track.size||0),uploaded:track.uploaded||null
+      });
+      continue;
+    }
+    const beyondNo=beyondSingleRemovalNumberR1159D(title);
+    if(beyondNo && beyondReady){
+      duplicates.push({
+        key:track.key,title:track.title,album:'BEYOND',albumTrack:beyondNo,
+        officialTitle:BEYOND_TRACKS_R601[beyondNo]||track.title,size:Number(track.size||0),uploaded:track.uploaded||null
+      });
+    }
+  }
+  duplicates.sort((a,b)=>String(a.album).localeCompare(String(b.album),'ru')||a.albumTrack-b.albumTrack||String(a.key).localeCompare(String(b.key),'ru',{numeric:true,sensitivity:'base'}));
+  return {
+    ready:Boolean(silentReady||beyondReady),
+    silentReady,silentAlbumTrackCount:silentNumbers.length,silentMissingAlbumTracks:silentMissing,
+    beyondReady,beyondRequiredTracks:beyondRequired,beyondMissingAlbumTracks:beyondMissing,
+    scannedSingles:singles.length,
+    duplicateCount:duplicates.length,
+    silentDuplicateCount:duplicates.filter(x=>x.album==='Silent (Тишина)').length,
+    beyondDuplicateCount:duplicates.filter(x=>x.album==='BEYOND').length,
+    duplicates,
+    scanPages:listed.rounds
+  };
+}
+async function handleMusicAlbumSinglesCleanupR1159D(request,env){
+  if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
+  const bucket=getMusicBucketR314(env);if(!bucket)return json({ok:false,error:'music-bucket-not-configured'},503);
+  const plan=await musicAlbumSinglesCleanupPlanR1159D(bucket);
+  if(request.method==='GET')return json({ok:true,dryRun:true,...plan});
+  const body=await request.json().catch(()=>null);
+  if(body?.confirm!=='DELETE_ALBUM_DUPLICATES_FROM_SINGLES')return json({ok:false,error:'confirmation-required'},400);
+  if(!plan.ready)return json({ok:false,error:'album-copies-not-verified',message:'Нет подтверждённых альбомных копий для безопасного удаления синглов.',...plan},409);
+  const deleteKeys=[...new Set(plan.duplicates.map(x=>x.key).filter(Boolean))];
+  if(deleteKeys.length)await bucket.delete(deleteKeys);
+  return json({
+    ok:true,deleted:deleteKeys.length,deletedKeys:deleteKeys,deletedTracks:plan.duplicates,
+    silentDeleted:plan.silentDuplicateCount,beyondDeleted:plan.beyondDuplicateCount,
+    message:deleteKeys.length?`Удалено ${deleteKeys.length} альбомных дублей из singles/ и R2.`:'Альбомных дублей в singles/ уже нет.'
+  });
+}
+// === End R1159D ===
 // === End R1028 ===
 
 // === R1029: Cloudflare-side radio exclusion, no VPS local-control dependency ===
@@ -20907,6 +20982,7 @@ async function routeApi(request, env, ctx) {
     if (path === '/api/control/music/single/publish-latest' && request.method === 'POST') return await handleMusicSinglePublishR616(request, env);
     if (path === '/api/control/music/singles/dedupe-titles' && ['GET','POST'].includes(request.method)) return await handleMusicSingleTitleDedupeR1028(request, env);
     if (path === '/api/control/music/silent/cleanup-singles' && ['GET','POST'].includes(request.method)) return await handleMusicSilentSinglesCleanupR1159C(request, env);
+    if (path === '/api/control/music/albums/cleanup-single-copies' && ['GET','POST'].includes(request.method)) return await handleMusicAlbumSinglesCleanupR1159D(request, env);
     if (path === '/api/music/singles' && request.method === 'GET') return await handleMusicSinglesListR316(request, env);
     if (path === '/api/music/downloads' && request.method === 'GET') return await handleMusicDownloadsR322(request, env);
     if (path === '/api/music/download' && request.method === 'GET') return await handleMusicDownloadR327(request, env);
