@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1790388524576-fccc981a0a",
-  "release": "R1161",
-  "archiveName": "R1161-QUEUE-NATIVE-PLAYERS.zip",
-  "sourceHead": "68fec6b98bee274750336b9a66da41d5d85d74cb",
-  "backupSha": "68fec6b98bee274750336b9a66da41d5d85d74cb",
+  "operationId": "publish-1790391681298-c5103aa35b",
+  "release": "R1162",
+  "archiveName": "R1162-PLAYER-COVERS-RELEASE-SORT.zip",
+  "sourceHead": "ebc064bebb7422eac846f59dde31a4f76de5320b",
+  "backupSha": "ebc064bebb7422eac846f59dde31a4f76de5320b",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-26T02:08:45.865Z"
+  "generatedAt": "2026-09-26T03:01:21.298Z"
 }

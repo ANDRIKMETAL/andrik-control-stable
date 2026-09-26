@@ -1,4 +1,4 @@
-/* ANDRIK R1161 — native R2 players + per-track MP3 downloads; TRIKA/OCEAN/Illusion buttons open these lists */
+/* ANDRIK R1162 — native R2 track spoilers + per-track MP3 downloads; blue buttons open the common ANDRIK player */
 (()=>{'use strict';
 const LANG=String(document.documentElement.lang||'ru').toLowerCase().split('-')[0];
 const C={
@@ -12,23 +12,9 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const articles=[...document.querySelectorAll('#discography article.album-card[id^="album-"]')];if(!articles.length)return;
 const nodes=new Map();
 for(const article of articles){const slug=slugFor(article.id),info=article.querySelector('.album-info');if(!slug||!info)continue;const d=document.createElement('details');d.className='album-track-spoiler-r1159';d.dataset.albumTracks=slug;d.id=`album-native-tracks-${slug}`;d.innerHTML=`<summary>${C.summary}</summary><div class="album-track-list-r1159"><div class="album-track-empty-r1159">${C.loading}</div></div>`;info.appendChild(d);nodes.set(slug,d)}
-// R1161: keep the existing album cards, but the three legacy blue "built-in player"
-// links now reveal the fast native MP3 list on this page instead of opening the old
-// YouTube/custom player. BEYOND keeps its dedicated player page unchanged.
-const nativeButtonSlugsR1161=new Set(['trika','ocean','illusion-of-life']);
-for(const article of articles){
- const slug=slugFor(article.id); if(!nativeButtonSlugsR1161.has(slug))continue;
- const button=article.querySelector('.album-player-link'); const details=nodes.get(slug);
- if(!button||!details)continue;
- button.setAttribute('role','button'); button.setAttribute('aria-controls',details.id); button.setAttribute('aria-expanded','false');
- button.addEventListener('click',e=>{
-   e.preventDefault();
-   details.open=true;
-   button.setAttribute('aria-expanded','true');
-   requestAnimationFrame(()=>details.scrollIntoView({behavior:'smooth',block:'start'}));
- });
- details.addEventListener('toggle',()=>button.setAttribute('aria-expanded',details.open?'true':'false'));
-}
+// R1162: track spoilers are independent from the blue "Встроенный плеер" button.
+ // The button follows its normal href into the common player; the spoiler remains
+ // available below for native R2 listening and direct MP3 downloads.
 const stopOthers=audio=>document.querySelectorAll('.album-track-spoiler-r1159 audio').forEach(a=>{if(a!==audio&&!a.paused)a.pause()});
 document.addEventListener('play',e=>{if(e.target instanceof HTMLAudioElement&&e.target.closest('.album-track-spoiler-r1159'))stopOthers(e.target)},true);
 fetch('/api/music/albums/status?r1159='+Date.now(),{cache:'no-store'}).then(async r=>{const d=await r.json().catch(()=>({}));if(!r.ok||!d.ok)throw new Error(d.error||`HTTP ${r.status}`);return d}).then(data=>{

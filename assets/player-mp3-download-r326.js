@@ -12,6 +12,7 @@ function folderAlbumScore(t,currentAlbum){
  const a=norm(t.album),f=String(t.folder||'').toLowerCase(),c=norm(currentAlbum);
  if(!c)return 0;
  if(a&&a===c)return 5;
+ if(c.includes('beyond')&&(a.includes('beyond')||f==='albums/beyond'))return 4;
  if(c.includes('ocean')&&(a.includes('ocean')||f==='albums/ocean'))return 4;
  if(c.includes('illusion')&&(a.includes('illusion')||f==='albums/illusion-of-life'))return 4;
  if(c.includes('трика')&&(a.includes('трика')||f==='albums/trika'))return 4;

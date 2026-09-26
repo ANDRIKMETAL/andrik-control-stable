@@ -1,5 +1,15 @@
 const tr = key => (window.andrikPlayerT ? window.andrikPlayerT(key) : key);
 const COLLECTIONS = {
+  beyond: {
+    type: 'playlist',
+    id: 'OLAK5uy_lhSLqnftrXxdsLohdu9AQ7W9300_dvU9Y',
+    label: 'BEYOND · ОФИЦИАЛЬНЫЙ АЛЬБОМ',
+    name: 'BEYOND',
+    note: '16 треков · 2026',
+    placeholder: '/assets/beyond-cover-r601.webp',
+    url: 'https://www.youtube.com/playlist?list=OLAK5uy_lhSLqnftrXxdsLohdu9AQ7W9300_dvU9Y',
+    positionLabel: 'ALBUM'
+  },
   trika: {
     type: 'playlist',
     id: 'OLAK5uy_kwBXo5kmbLBvDgSO7Cnd-9BJBezQkV2bo',
@@ -353,8 +363,8 @@ const standaloneMode = playerParams.get('standalone') === '1';
 const requestedReturnTarget = playerParams.get('return');
 const requestedReturnPathRaw = playerParams.get('returnPath') || '';
 const requestedReturnHashRaw = playerParams.has('returnHash') ? (playerParams.get('returnHash') || '') : '';
-const RETURN_TARGETS = new Set(['video','prosnis','album-trika','album-ocean','album-illusion','discography']);
-const DEFAULT_RETURN_TARGETS = { videos:'video', prosnis:'prosnis', trika:'album-trika', ocean:'album-ocean', illusion:'album-illusion' };
+const RETURN_TARGETS = new Set(['video','prosnis','album-beyond','album-trika','album-ocean','album-illusion','discography']);
+const DEFAULT_RETURN_TARGETS = { videos:'video', prosnis:'prosnis', beyond:'album-beyond', trika:'album-trika', ocean:'album-ocean', illusion:'album-illusion' };
 const returnTarget = RETURN_TARGETS.has(requestedReturnTarget) ? requestedReturnTarget : (DEFAULT_RETURN_TARGETS[requestedCollection] || 'discography');
 const requestedReturnScroll = Number.parseInt(playerParams.get('scroll') || '', 10);
 const returnScroll = Number.isFinite(requestedReturnScroll) && requestedReturnScroll >= 0 ? requestedReturnScroll : null;

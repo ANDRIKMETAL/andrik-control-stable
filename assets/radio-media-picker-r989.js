@@ -4,9 +4,9 @@ const title=document.getElementById('radioPickerTitleR989'),body=document.getEle
 let mode='all',view='all',tracks=[],clips=[],groups=[],activeGroup=null,busy=false;
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 async function api(path,opts={}){const r=await fetch(path,{credentials:'include',cache:'no-store',headers:{accept:'application/json',...(opts.headers||{})},...opts});const d=await r.json().catch(()=>({}));if(!r.ok)throw Object.assign(new Error(d.message||d.error||`HTTP ${r.status}`),{status:r.status,data:d});return d}
-// R1161: owner-requested library order for manual NEXT selection.
-// Singles and covers are both stored under singles/ in R2, so the picker separates
-// them by title without moving or duplicating the source files.
+// R1162: owner-requested library order for manual NEXT selection.
+// Covers now have their own covers/ catalog in R2. Legacy title detection remains
+// only as a compatibility fallback for older cover files still under singles/.
 const coverMap={
  singles:'/assets/singles-picker-cover-r1161.webp',
  covers:'/assets/lira-guitar.webp',
@@ -32,6 +32,7 @@ function groupTracks(){
    let slug='singles';
    const a=key.match(/^albums\/([^/]+)\//i);
    if(a)slug=a[1].toLowerCase();
+   else if(/^covers\//i.test(key))slug='covers';
    else if(/^singles\//i.test(key)&&isCoverTrackR1161(t))slug='covers';
    const g=ensure(slug);
    // Official album names may arrive in metadata with different casing; keep the

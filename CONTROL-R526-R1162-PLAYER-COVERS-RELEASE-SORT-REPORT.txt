@@ -1,0 +1,27 @@
+ANDRIK SITE / CONTROL R1162
+
+ALBUM PAGE
+- All blue "Встроенный плеер" buttons use the same compact OCEAN width.
+- BEYOND, TRIKA, OCEAN, Illusion of Life open the common ANDRIK player.
+- Silent remains without the common player button for now.
+- Native R2 track spoilers and per-track MP3 downloads remain below the album cards.
+- BEYOND YouTube Music/playlist URL set to:
+  https://www.youtube.com/playlist?list=OLAK5uy_lhSLqnftrXxdsLohdu9AQ7W9300_dvU9Y
+
+COMMON PLAYER
+- Visible collections: BEYOND, TRIKA, OCEAN, Illusion of Life, Official Audio.
+- "Я ЕСТЬ · клип" and "Проснись · Short" removed from the visible collection selector.
+- Removed the old TRIKA forced redirect to YouTube Music.
+- MP3 current-track button now understands BEYOND.
+
+CONTROL / RELEASES
+- Added explicit release type before upload: Сингл / Кавер.
+- Single -> R2 singles/
+- Cover -> R2 covers/
+- ID3 album tag follows the selected type.
+- Public site API returns both singles/ and covers/.
+- Radio/download library endpoints now accept covers/.
+- Radio manual NEXT picker puts covers/ into the separate Каверы card.
+- Legacy title-based cover detection remains as fallback for old cover files still in singles/.
+
+All modified JS/worker files pass node --check.

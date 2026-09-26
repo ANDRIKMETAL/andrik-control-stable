@@ -18,7 +18,10 @@ const HIDE_ALBUM_SINGLE_SET_R1159D=new Set(HIDE_ALBUM_SINGLES_R1159D.map(norm));
 const SPECIAL_COVERS_R1159F=new Set(['а я скажу нет'].map(norm));
 const isCover=x=>{
   const raw=cleanTitle(x?.title||x?.name||(x?.key||'').split('/').pop());
-  return SPECIAL_COVERS_R1159F.has(norm(raw)) ||
+  const key=String(x?.key||'');
+  return x?.releaseType==='cover' ||
+    /^covers\//i.test(key) ||
+    SPECIAL_COVERS_R1159F.has(norm(raw)) ||
     /(?:^|[\s(\[—–-])(?:ai\s*)?cover(?:$|[\s)\]—–-])|кавер/iu.test(raw);
 };
 const esc=s=>String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));const fallback=s=>String(s||'').replace(/\b\w/g,c=>c.toUpperCase());

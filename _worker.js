@@ -18581,13 +18581,13 @@ function musicFileNameR314(value) {
 }
 function musicFolderR317(value){
   const folder=String(value||'singles').trim().toLowerCase().replace(/^\/+|\/+$/g,'');
-  if(folder==='singles')return 'singles';
+  if(folder==='singles'||folder==='covers')return folder;
   if(/^albums\/[a-z0-9][a-z0-9_-]{0,63}$/.test(folder))return folder;
   return '';
 }
 function musicObjectKeyR317(value){
   const key=String(value||'').trim().replace(/^\/+/, '');
-  if(!/^(?:singles|albums\/[a-z0-9][a-z0-9_-]{0,63})\/[a-z0-9._-]+\.mp3$/i.test(key))return '';
+  if(!/^(?:singles|covers|albums\/[a-z0-9][a-z0-9_-]{0,63})\/[a-z0-9._-]+\.mp3$/i.test(key))return '';
   return key;
 }
 function musicHeaderR317(request,name,max=220){
@@ -18621,7 +18621,7 @@ async function handleMusicMp3PatchR335(request, env){
   const oldKey=musicObjectKeyR317(url.searchParams.get('key'));
   if(!oldKey)return json({ok:false,error:'invalid-key'},400);
   const titleRaw=musicHeaderR317(request,'x-andrik-track-title');
-  const title=/^singles\//i.test(oldKey)?musicSingleTitleR616(titleRaw):titleRaw;
+  const title=/^(?:singles|covers)\//i.test(oldKey)?musicSingleTitleR616(titleRaw):titleRaw;
   if(!title)return json({ok:false,error:'title-required'},400);
 
   const object=await bucket.get(oldKey);
@@ -18676,16 +18676,18 @@ async function handleMusicMp3PutR314(request, env) {
   };
   await bucket.put(key,body,{httpMetadata:{contentType:'audio/mpeg',contentDisposition:`attachment; filename="${name}"`},customMetadata:metadata});
 
-  // R1028: every upload to singles/ is a complete release transaction:
-  // cleanup older same-title copies in R2 -> newest on site -> one PUSH.
-  // The same backend is used by Releases and by Radio Control quick upload.
-  let releasePush=null,singleCleanup=null;
+  // R1162: release type is authoritative from the target R2 folder.
+  // singles/ -> Singles, covers/ -> Covers.
+  let releasePush=null,singleCleanup=null,coverCleanup=null;
   const radioQuickUpload=url.searchParams.get('radio')==='1';
   if(folder==='singles'){
     singleCleanup=await musicCleanupSingleTitleDuplicatesR1028(bucket).catch(error=>({deleted:0,error:cleanPlainText(error?.message||error,300)}));
     releasePush=await publishSingleReleaseR616(env,{key,title:metadata.title||name,url:`https://music.andrikmetal.com/${key}`,publishedAt}).catch(error=>({ok:false,error:cleanPlainText(error?.message||error,300)}));
+  }else if(folder==='covers'){
+    coverCleanup=await musicCleanupCoverTitleDuplicatesR1162(bucket).catch(error=>({deleted:0,error:cleanPlainText(error?.message||error,300)}));
+    releasePush=await publishCoverReleaseR1162(env,{key,title:metadata.title||name,url:`https://music.andrikmetal.com/${key}`,publishedAt}).catch(error=>({ok:false,error:cleanPlainText(error?.message||error,300)}));
   }
-  return json({ok:true,key,url:`https://music.andrikmetal.com/${key}`,size:body.byteLength,metadata,releasePush,singleCleanup,radioQuickUpload});
+  return json({ok:true,key,url:`https://music.andrikmetal.com/${key}`,size:body.byteLength,metadata,releaseType:folder==='covers'?'cover':folder==='singles'?'single':'album',releasePush,singleCleanup,coverCleanup,radioQuickUpload});
 }
 
 
@@ -18966,7 +18968,20 @@ async function publishSingleReleaseR616(env,{key,title,url='',publishedAt=''}={}
 async function handleMusicSinglePublishR616(request,env){
   if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
   const bucket=getMusicBucketR314(env);if(!bucket)return json({ok:false,error:'music-bucket-not-configured'},503);
-  // R1028: cleanup old same-title copies first, then publish the true newest single.
+  const body=await request.json().catch(()=>({}));
+  const requestedKey=musicObjectKeyR317(body?.key||'');
+  if(requestedKey&&/^(?:singles|covers)\//i.test(requestedKey)){
+    const object=await bucket.head(requestedKey).catch(()=>null);
+    if(!object)return json({ok:false,error:'release-not-found'},404);
+    const track=musicSingleTrackR1028(object);
+    const title=track.title||requestedKey.split('/').pop().replace(/\.mp3$/i,'');
+    const result=/^covers\//i.test(requestedKey)
+      ? await publishCoverReleaseR1162(env,{key:requestedKey,title,url:track.url,publishedAt:track.publishedAt||track.uploaded||''})
+      : await publishSingleReleaseR616(env,{key:requestedKey,title,url:track.url,publishedAt:track.publishedAt||track.uploaded||''});
+    return json(result,result.ok?200:503);
+  }
+
+  // Backward-compatible fallback: publish the newest real single.
   await musicCleanupSingleTitleDuplicatesR1028(bucket).catch(()=>null);
   const listed=await musicListSingleObjectsR1028(bucket);
   const items=listed.objects.map(musicSingleTrackR1028).sort((a,b)=>{
@@ -18980,6 +18995,52 @@ async function handleMusicSinglePublishR616(request,env){
   const result=await publishSingleReleaseR616(env,{key,title:object.title||fallback,url:object.url||`https://music.andrikmetal.com/${key}`,publishedAt:object.publishedAt||object.uploaded||''});
   return json(result,result.ok?200:503);
 }
+
+async function publishCoverReleaseR1162(env,{key,title,url='',publishedAt=''}={}){
+  const safeKey=musicObjectKeyR317(key);
+  if(!safeKey||!/^covers\//i.test(safeKey))return {ok:false,error:'invalid-cover-key'};
+  const fallback=safeKey.split('/').pop().replace(/(?:\.mp3)+$/ig,'').replace(/[_-]+/g,' ');
+  const safeTitle=musicSingleTitleR616(title||fallback)||fallback;
+  const siteUrl='https://andrikmetal.com/#singles';
+  const db=env.COMMENTS_DB||null;
+  const onceKey=`push-once:cover-release:${safeKey}`;
+  let claimed=false;
+  if(db){
+    try{
+      claimed=await claimPushOnce(db,onceKey,safeTitle);
+      if(!claimed)return {ok:true,alreadyPublished:true,key:safeKey,title:safeTitle,url:siteUrl,releaseType:'cover'};
+    }catch(_){claimed=false}
+  }
+  const result=await sendOneSignalPush(env,{
+    title:'🎵 Новый кавер ANDRIK',
+    message:`«${safeTitle}» — новый кавер ANDRIK. Уже на сайте: слушать и скачать MP3.`,
+    url:siteUrl,
+    audience:'all',
+    name:`cover-release-${safeKey}`,
+    history:{type:'cover-release',source:safeKey,details:{key:safeKey,publishedAt:cleanPlainText(publishedAt,80),audioUrl:cleanPlainText(url,700)}}
+  });
+  if(!result.ok&&db&&claimed)await releasePushOnceClaim(db,onceKey).catch(()=>{});
+  return {...result,key:safeKey,title:safeTitle,url:siteUrl,releaseType:'cover'};
+}
+async function musicListCoverObjectsR1162(bucket){
+  const objects=[];let cursor=undefined,rounds=0;
+  do{
+    const page=await bucket.list({prefix:'covers/',limit:1000,...(cursor?{cursor}:{}),include:['customMetadata']});
+    objects.push(...(page.objects||[]).filter(o=>/\.mp3$/i.test(String(o.key||''))));
+    cursor=page.truncated?page.cursor:undefined;
+    rounds++;
+  }while(cursor&&rounds<20&&objects.length<20000);
+  return {objects,rounds};
+}
+async function musicCleanupCoverTitleDuplicatesR1162(bucket){
+  const listed=await musicListCoverObjectsR1162(bucket);
+  const tracks=listed.objects.map(musicSingleTrackR1028);
+  const {kept,duplicates}=musicDedupeSingleTracksR1028(tracks);
+  const deleteKeys=duplicates.map(x=>x.key).filter(Boolean);
+  if(deleteKeys.length)await bucket.delete(deleteKeys);
+  return {scanned:tracks.length,deleted:deleteKeys.length,deletedKeys:deleteKeys,keptKeys:kept.map(x=>x.key),rounds:listed.rounds};
+}
+
 // === End R616 ===
 
 // === R1028: latest-first public singles + duplicate-title cleanup ===
@@ -19012,6 +19073,7 @@ function musicSingleTrackR1028(object){
     key,
     name:fallback,
     title,
+    releaseType:/^covers\//i.test(key)?'cover':'single',
     url:'https://music.andrikmetal.com/'+key,
     uploaded:object?.uploaded||null,
     publishedAt,
@@ -19035,7 +19097,7 @@ async function musicListSingleObjectsR1028(bucket){
 function musicSingleCanonicalScoreR1028(track){
   const expected=musicTitleFileNameR335(track?.title||'');
   const base=String(track?.key||'').split('/').pop();
-  let score=0;
+  let score=/^covers\//i.test(String(track?.key||''))?40:0;
   if(expected&&base===expected)score+=20;
   if(!/^track_\d+\.mp3$/i.test(base))score+=5;
   if(track?.title)score+=3;
@@ -19078,25 +19140,32 @@ async function handleMusicSingleTitleDedupeR1028(request,env){
   if(deleteKeys.length)await bucket.delete(deleteKeys);
   return json({ok:true,deleted:deleteKeys.length,deletedKeys:deleteKeys,kept:kept.map(x=>x.key)});
 }
+async function musicListPublicReleaseObjectsR1162(bucket){
+  const [singles,covers]=await Promise.all([
+    musicListSingleObjectsR1028(bucket),
+    musicListCoverObjectsR1162(bucket)
+  ]);
+  return {objects:[...singles.objects,...covers.objects],rounds:Number(singles.rounds||0)+Number(covers.rounds||0)};
+}
 async function handleMusicSinglesListR316(request, env) {
   const bucket=getMusicBucketR314(env); if(!bucket) return json({ok:false,error:'music-bucket-not-configured'},503);
-  const listed=await musicListSingleObjectsR1028(bucket);
+  const listed=await musicListPublicReleaseObjectsR1162(bucket);
   const tracks0=listed.objects.map(musicSingleTrackR1028);
   const {kept,duplicates}=musicDedupeSingleTracksR1028(tracks0);
-  // R1159D: official album songs are not shown again as public singles.
-  // SILENT is filtered by its 20-track canonical list. The three BEYOND tracks explicitly
-  // removed from Singles are Свобода, Тишина and Ты уже достоин (tracks 3, 4, 5).
-  // Covers remain separate because their titles do not canonical-match these album titles.
-  const silentAlbumDuplicates=kept.filter(track=>silentCanonicalNumberR1159(track?.title||track?.name)>0);
-  const beyondAlbumDuplicates=kept.filter(track=>beyondSingleRemovalNumberR1159D(track?.title||track?.name)>0);
-  const publicSingles=kept.filter(track=>
-    silentCanonicalNumberR1159(track?.title||track?.name)===0 &&
-    beyondSingleRemovalNumberR1159D(track?.title||track?.name)===0
+  // Album duplicate cleanup applies only to actual singles. Dedicated covers/ are
+  // independent releases and stay visible in the Covers section.
+  const silentAlbumDuplicates=kept.filter(track=>track.releaseType!=='cover'&&silentCanonicalNumberR1159(track?.title||track?.name)>0);
+  const beyondAlbumDuplicates=kept.filter(track=>track.releaseType!=='cover'&&beyondSingleRemovalNumberR1159D(track?.title||track?.name)>0);
+  const publicReleases=kept.filter(track=>
+    track.releaseType==='cover' || (
+      silentCanonicalNumberR1159(track?.title||track?.name)===0 &&
+      beyondSingleRemovalNumberR1159D(track?.title||track?.name)===0
+    )
   );
-  const tracks=publicSingles.map(({normalizedTitleR1028,...track})=>track);
+  const tracks=publicReleases.map(({normalizedTitleR1028,...track})=>track);
   return json({
     ok:true,
-    version:'R1159D-SINGLES-NO-ALBUM-DUPLICATES',
+    version:'R1162-SINGLES+COVERS-SEPARATE-R2',
     generatedAt:new Date().toISOString(),
     scannedObjects:tracks0.length,
     scanPages:listed.rounds,
@@ -19220,7 +19289,7 @@ const RADIO_EXCLUSIONS_KEY_R1029='system/radio-exclusions-r1029.json';
 function radioRemovableMediaKeyR1029(value){
   const key=cleanPlainText(value,500).replace(/^\/+/, '');
   if(!key||key.includes('..')||key.includes('\\'))return '';
-  if(/^(?:singles|albums\/[^/]+)\/[^/]+\.mp3$/i.test(key))return key;
+  if(/^(?:singles|covers|albums\/[^/]+)\/[^/]+\.mp3$/i.test(key))return key;
   if(/^(?:radio\/clips|clips)\/[^/]+\.mp4$/i.test(key))return key;
   return '';
 }
@@ -19272,7 +19341,7 @@ async function handleMusicDownloadsR322(request, env){
   const tracks=(listed.objects||[]).filter(o=>musicObjectKeyR317(o.key)&&!radioObjectExcludedR1029(o.key,o.uploaded,exclusionsR1029)).map(o=>{
     const m=o.customMetadata||{},folder=o.key.split('/').slice(0,-1).join('/'),base=o.key.split('/').pop().replace(/\.mp3$/i,'').replace(/[_-]+/g,' ');
     const silentNo=silentTrackNumberR1159(o),silentTitle=silentTrackTitleR1159(o),trikaNo=trikaTrackNumberR517(o),trikaTitle=trikaTrackTitleR517(o);
-    return {key:o.key,title:/^singles\//i.test(o.key)?musicSingleTitleR616(m.title||legacyTitles[o.key]||base):(silentTitle||trikaTitle||m.title||legacyTitles[o.key]||base),album:m.album||'',track:silentNo?String(silentNo):(trikaNo?String(trikaNo):(m.track||'')),folder,url:'https://music.andrikmetal.com/'+o.key,uploaded:o.uploaded||null};
+    return {key:o.key,title:/^(?:singles|covers)\//i.test(o.key)?musicSingleTitleR616(m.title||legacyTitles[o.key]||base):(silentTitle||trikaTitle||m.title||legacyTitles[o.key]||base),album:m.album||'',track:silentNo?String(silentNo):(trikaNo?String(trikaNo):(m.track||'')),folder,url:'https://music.andrikmetal.com/'+o.key,uploaded:o.uploaded||null};
   });
   return json({ok:true,tracks});
 }
@@ -19302,7 +19371,7 @@ async function handleMusicLibraryR317(request, env){
   const tracks=(listed.objects||[]).filter(o=>musicObjectKeyR317(o.key)).map(o=>{
     const m=o.customMetadata||{},base=o.key.split('/').pop().replace(/\.mp3$/i,'').replace(/[_-]+/g,' ');
     const silentNo=silentTrackNumberR1159(o),silentTitle=silentTrackTitleR1159(o),trikaNo=trikaTrackNumberR517(o),trikaTitle=trikaTrackTitleR517(o);
-    return {key:o.key,name:base,title:/^singles\//i.test(o.key)?musicSingleTitleR616(m.title||legacyTitles[o.key]||base):(silentTitle||trikaTitle||m.title||legacyTitles[o.key]||base),artist:m.artist||'',album:m.album||'',track:silentNo?String(silentNo):(trikaNo?String(trikaNo):(m.track||'')),year:m.year||'',genre:m.genre||'',size:o.size||0,uploaded:o.uploaded||null,url:'https://music.andrikmetal.com/'+o.key};
+    return {key:o.key,name:base,title:/^(?:singles|covers)\//i.test(o.key)?musicSingleTitleR616(m.title||legacyTitles[o.key]||base):(silentTitle||trikaTitle||m.title||legacyTitles[o.key]||base),artist:m.artist||'',album:m.album||'',track:silentNo?String(silentNo):(trikaNo?String(trikaNo):(m.track||'')),year:m.year||'',genre:m.genre||'',size:o.size||0,uploaded:o.uploaded||null,url:'https://music.andrikmetal.com/'+o.key};
   }).sort((a,b)=>String(b.uploaded||'').localeCompare(String(a.uploaded||'')));
   return json({ok:true,tracks});
 }

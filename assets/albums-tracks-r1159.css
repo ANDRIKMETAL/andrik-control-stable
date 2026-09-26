@@ -12,6 +12,27 @@
 .album-track-row-r1159 audio{grid-column:1/-1;width:100%;height:38px;display:block;filter:saturate(.85);color-scheme:dark}.album-track-empty-r1159{padding:12px;color:#9eb0bc;font-size:.82rem;line-height:1.45}
 @media(max-width:520px){.album-track-row-r1159{grid-template-columns:1fr}.album-track-download-r1159{justify-self:start}.album-track-spoiler-r1159>summary{padding:13px}.album-track-list-r1159{padding-left:9px;padding-right:9px}}
 
-/* R1161: every blue built-in-player control occupies the same full row width. */
-.album-card .album-player-link{width:100%!important;max-width:none!important;box-sizing:border-box!important;grid-column:1/-1!important;justify-content:center!important;text-align:center!important}
+/* R1162: every blue built-in-player button uses the original compact OCEAN width. */
+#discography #album-beyond .album-player-link,
+#discography #album-trika .album-player-link,
+#discography #album-ocean .album-player-link,
+#discography #album-illusion .album-player-link{
+  grid-column:1/-1!important;
+  width:min(100%,245px)!important;
+  max-width:245px!important;
+  justify-self:center!important;
+  margin:2px auto 0!important;
+  box-sizing:border-box!important;
+  justify-content:center!important;
+  text-align:center!important;
+}
+@media(max-width:560px){
+  #discography #album-beyond .album-player-link,
+  #discography #album-trika .album-player-link,
+  #discography #album-ocean .album-player-link,
+  #discography #album-illusion .album-player-link{
+    width:min(100%,220px)!important;
+    max-width:220px!important;
+  }
+}
 .album-track-spoiler-r1159{scroll-margin-top:92px}
