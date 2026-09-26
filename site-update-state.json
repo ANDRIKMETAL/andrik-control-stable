@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1790420729775-cbac298841",
-  "release": "R1173",
-  "archiveName": "R1173-COVERS-HOME-ECHO-PAST-HOT-ASPHALT.zip",
-  "sourceHead": "08b96f851ee989bfbe3aeb4cfdb7187ecd41d5c6",
-  "backupSha": "08b96f851ee989bfbe3aeb4cfdb7187ecd41d5c6",
+  "operationId": "publish-1790422021440-49f3809486",
+  "release": "R1175",
+  "archiveName": "R1175-SINGLES-BREATHING-HERO.zip",
+  "sourceHead": "0ca2823ea9c2a519a8a390252bb261446c8d4d0f",
+  "backupSha": "0ca2823ea9c2a519a8a390252bb261446c8d4d0f",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-26T11:05:30.895Z"
+  "generatedAt": "2026-09-26T11:27:02.480Z"
 }

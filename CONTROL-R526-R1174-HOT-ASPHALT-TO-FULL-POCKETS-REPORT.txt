@@ -1,0 +1,8 @@
+ANDRIK R1174
+
+- “Горячий Асфальт” is no longer shown as a single.
+- Its existing MP3 object is routed to Covers and displayed as “Полные карманы”.
+- Covers dedupe treats “Горячий Асфальт” and “Полные карманы” as the same logical track to prevent duplicates.
+- Singles remains for true single releases (currently “Падший ангел”).
+- Covers hub / breathing disc / native player / MP3 download preserved.
+- Radio / FFmpeg / RTMPS untouched.
