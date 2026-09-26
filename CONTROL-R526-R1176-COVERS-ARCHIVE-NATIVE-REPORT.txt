@@ -1,0 +1,13 @@
+ANDRIK SITE R1176 — COVERS ARCHIVE NATIVE PLAYER
+
+- Replaced the inside Covers artwork with the corrected 15-track disc.
+- Disc keeps the breathing animation.
+- Added the requested first-person story directly below the artwork.
+- Covers page no longer lists old individual cover objects (so the deleted duplicate “А я скажу нет” does not reappear).
+- The page reads the 15 numbered MP3 entries directly from covers/ANDRIK-COVERS-MP3.zip in R2.
+- Every song has a native browser audio player and its own MP3 download button.
+- After a started track ends, the next track starts automatically.
+- Removed the “Загрузить готовый ZIP альбома / каверов” card from the control panel, removed its JS include, and removed the unused direct-uploader asset.
+- Added Worker endpoints /api/music/covers-archive and /api/music/covers-archive-track with Range support for stored ZIP entries and deflate fallback.
+- Radio pipeline / VPS / RTMPS files were not changed.
+- Public service-worker cache version bumped to R1176 and the new Covers page/assets are precached.

@@ -18948,6 +18948,122 @@ async function handleMusicAlbumDownloadR446(request,env){
   if(request.method==='HEAD')return new Response(null,{status:200,headers:h});
   return new Response(object.body,{status:200,headers:h});
 }
+
+
+// === R1176: COVERS native players backed directly by the existing R2 ZIP ===
+const COVERS_ARCHIVE_R1176 = Object.freeze({
+  key:'covers/ANDRIK-COVERS-MP3.zip',
+  titles:Object.freeze([null,
+    'Непокорный',
+    'Таким как мы, здесь места нет',
+    'Подвальный грохот',
+    'Луна',
+    'Участь твоя решена',
+    'Кто ты?',
+    'Твои бездонные глаза',
+    'Корабли',
+    'На краю вершин',
+    'Найди свой мир',
+    'Розы',
+    'Весь мир прахом',
+    'Полные карманы',
+    'А я скажу — НЕТ!',
+    'Я посижу с дождём'
+  ])
+});
+let coversArchiveCacheR1176={etag:'',expiresAt:0,index:null};
+function zipU16R1176(bytes,offset){return (bytes[offset]|(bytes[offset+1]<<8))>>>0}
+function zipU32R1176(bytes,offset){return (bytes[offset]|(bytes[offset+1]<<8)|(bytes[offset+2]<<16)|(bytes[offset+3]<<24))>>>0}
+async function r2BytesR1176(bucket,key,offset,length){
+  const object=await bucket.get(key,{range:{offset:Math.max(0,Number(offset)||0),length:Math.max(0,Number(length)||0)}}).catch(()=>null);
+  if(!object)throw new Error('archive-range-not-found');
+  return new Uint8Array(await object.arrayBuffer());
+}
+function zipDecodeNameR1176(bytes,flags){
+  try{return new TextDecoder((flags&0x0800)?'utf-8':'utf-8',{fatal:false}).decode(bytes)}catch(_){return new TextDecoder().decode(bytes)}
+}
+function coverTrackNoR1176(name){
+  const base=String(name||'').split('/').pop()||'';
+  const m=base.match(/^\s*(\d{1,2})(?:\s*[-_.]\s*|\s+)/);
+  const n=m?parseInt(m[1],10):0;
+  return n>=1&&n<=15?n:0;
+}
+async function coversArchiveIndexR1176(bucket){
+  const head=await bucket.head(COVERS_ARCHIVE_R1176.key).catch(()=>null);
+  if(!head)throw new Error('covers-zip-not-found');
+  const etag=String(head.httpEtag||head.etag||head.uploaded||head.size||'');
+  if(coversArchiveCacheR1176.index&&coversArchiveCacheR1176.etag===etag&&Date.now()<coversArchiveCacheR1176.expiresAt)return coversArchiveCacheR1176.index;
+  const size=Number(head.size||0);if(size<22)throw new Error('covers-zip-too-small');
+  const tailLength=Math.min(size,131072),tailOffset=size-tailLength,tail=await r2BytesR1176(bucket,COVERS_ARCHIVE_R1176.key,tailOffset,tailLength);
+  let eocd=-1;for(let i=tail.length-22;i>=0;i--){if(zipU32R1176(tail,i)===0x06054b50){eocd=i;break}}
+  if(eocd<0)throw new Error('covers-zip-eocd-not-found');
+  const totalEntries=zipU16R1176(tail,eocd+10),centralSize=zipU32R1176(tail,eocd+12),centralOffset=zipU32R1176(tail,eocd+16);
+  if(totalEntries===0xffff||centralSize===0xffffffff||centralOffset===0xffffffff)throw new Error('covers-zip64-not-supported');
+  if(centralOffset+centralSize>size||centralSize>8*1024*1024)throw new Error('covers-zip-central-invalid');
+  const central=await r2BytesR1176(bucket,COVERS_ARCHIVE_R1176.key,centralOffset,centralSize),entries=[];let p=0;
+  while(p+46<=central.length&&entries.length<Math.max(64,totalEntries+4)){
+    if(zipU32R1176(central,p)!==0x02014b50)break;
+    const flags=zipU16R1176(central,p+8),method=zipU16R1176(central,p+10),compressedSize=zipU32R1176(central,p+20),uncompressedSize=zipU32R1176(central,p+24),nameLen=zipU16R1176(central,p+28),extraLen=zipU16R1176(central,p+30),commentLen=zipU16R1176(central,p+32),localOffset=zipU32R1176(central,p+42);
+    const end=p+46+nameLen+extraLen+commentLen;if(end>central.length)break;
+    const name=zipDecodeNameR1176(central.subarray(p+46,p+46+nameLen),flags).replace(/\\/g,'/');
+    if(/\.mp3$/i.test(name)&&!(flags&1)&&compressedSize>0&&uncompressedSize>0&&localOffset<size){entries.push({name,flags,method,compressedSize,uncompressedSize,localOffset})}
+    p=end;
+  }
+  for(const entry of entries){
+    const local=await r2BytesR1176(bucket,COVERS_ARCHIVE_R1176.key,entry.localOffset,30);if(zipU32R1176(local,0)!==0x04034b50)continue;
+    const localNameLen=zipU16R1176(local,26),localExtraLen=zipU16R1176(local,28);entry.dataOffset=entry.localOffset+30+localNameLen+localExtraLen;entry.track=coverTrackNoR1176(entry.name);
+  }
+  const numbered=entries.filter(e=>e.track>=1&&e.track<=15&&Number.isFinite(e.dataOffset));
+  const byTrack=new Map();for(const e of numbered)if(!byTrack.has(e.track))byTrack.set(e.track,e);
+  let tracks=[...byTrack.values()].sort((a,b)=>a.track-b.track);
+  if(tracks.length<15){
+    const remaining=entries.filter(e=>Number.isFinite(e.dataOffset)&&!tracks.includes(e)).sort((a,b)=>String(a.name).localeCompare(String(b.name),'ru',{numeric:true,sensitivity:'base'}));
+    const used=new Set(tracks.map(e=>e.track));for(const e of remaining){let n=1;while(n<=15&&used.has(n))n++;if(n>15)break;e.track=n;used.add(n);tracks.push(e)}tracks.sort((a,b)=>a.track-b.track);
+  }
+  tracks=tracks.filter(e=>e.track>=1&&e.track<=15).slice(0,15).map(e=>({...e,title:COVERS_ARCHIVE_R1176.titles[e.track]||String(e.name).split('/').pop().replace(/^\s*\d{1,2}\s*[-_.]?\s*/,'').replace(/\.mp3$/i,'')}));
+  const index={etag,size,uploaded:head.uploaded||null,tracks};coversArchiveCacheR1176={etag,expiresAt:Date.now()+10*60*1000,index};return index;
+}
+async function handleCoversArchiveListR1176(request,env){
+  const bucket=getMusicBucketR314(env);if(!bucket)return json({ok:false,error:'music-bucket-not-configured'},503);
+  try{const index=await coversArchiveIndexR1176(bucket);return json({ok:true,version:'R1176-COVERS-ZIP-NATIVE',trackCount:index.tracks.length,archiveSize:index.size,tracks:index.tracks.map(e=>({track:e.track,title:e.title,size:e.uncompressedSize,streamUrl:`/api/music/covers-archive-track?track=${e.track}`,downloadUrl:`/api/music/covers-archive-track?track=${e.track}&download=1`}))},200,PUBLIC_CACHE_HEADERS)}
+  catch(error){const code=String(error?.message||error);return json({ok:false,error:code,message:code==='covers-zip-not-found'?'Архив каверов ещё не найден в R2.':'Не удалось прочитать ZIP-архив каверов.'},404)}
+}
+async function inflateZipEntryR1176(bytes,method){
+  if(method===0)return bytes;
+  if(method!==8)throw new Error('zip-compression-not-supported');
+  if(typeof DecompressionStream!=='function')throw new Error('deflate-unavailable');
+  let ds;try{ds=new DecompressionStream('deflate-raw')}catch(_){throw new Error('deflate-unavailable')}
+  const stream=new Blob([bytes]).stream().pipeThrough(ds);return new Uint8Array(await new Response(stream).arrayBuffer());
+}
+function coversAudioHeadersR1176(entry,download=false){
+  const h=new Headers();h.set('content-type','audio/mpeg');h.set('accept-ranges','bytes');h.set('cache-control','public, max-age=3600');h.set('x-content-type-options','nosniff');
+  const raw=`${String(entry.track).padStart(2,'0')} - ${entry.title}.mp3`,ascii=raw.replace(/[^a-zA-Z0-9._-]/g,'_');
+  h.set('content-disposition',`${download?'attachment':'inline'}; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(raw)}`);return h;
+}
+async function handleCoversArchiveTrackR1176(request,env){
+  const bucket=getMusicBucketR314(env);if(!bucket)return new Response('R2 unavailable',{status:503});
+  const url=new URL(request.url),trackNo=parseInt(url.searchParams.get('track')||'',10),download=url.searchParams.get('download')==='1';
+  if(!(trackNo>=1&&trackNo<=15))return new Response('Invalid track',{status:400});
+  let index;try{index=await coversArchiveIndexR1176(bucket)}catch(_){return new Response('Archive not found',{status:404})}
+  const entry=index.tracks.find(e=>e.track===trackNo);if(!entry)return new Response('Track not found',{status:404});
+  const total=Number(entry.uncompressedSize||0),headers=coversAudioHeadersR1176(entry,download);if(request.method==='HEAD'){headers.set('content-length',String(total));return new Response(null,{status:200,headers})}
+  const rangeHeader=download?'':request.headers.get('range');const parsed=rangeHeader?parseVideoRangeR559(rangeHeader,total):null;
+  if(parsed?.invalid){headers.set('content-range',`bytes */${total}`);return new Response(null,{status:416,headers})}
+  if(entry.method===0){
+    const offset=entry.dataOffset+(parsed?parsed.offset:0),length=parsed?parsed.length:entry.compressedSize;
+    const object=await bucket.get(COVERS_ARCHIVE_R1176.key,{range:{offset,length}}).catch(()=>null);if(!object)return new Response('Track data unavailable',{status:404});
+    if(parsed){headers.set('content-range',`bytes ${parsed.offset}-${parsed.end}/${total}`);headers.set('content-length',String(parsed.length));return new Response(object.body,{status:206,headers})}
+    headers.set('content-length',String(total));return new Response(object.body,{status:200,headers});
+  }
+  if(entry.compressedSize>64*1024*1024)return new Response('Track is too large to decode',{status:413});
+  const compressed=await r2BytesR1176(bucket,COVERS_ARCHIVE_R1176.key,entry.dataOffset,entry.compressedSize);let decoded;
+  try{decoded=await inflateZipEntryR1176(compressed,entry.method)}catch(error){return new Response(String(error?.message||error),{status:501})}
+  const bytes=parsed?decoded.subarray(parsed.offset,parsed.offset+parsed.length):decoded;
+  if(parsed){headers.set('content-range',`bytes ${parsed.offset}-${parsed.end}/${total}`);headers.set('content-length',String(bytes.byteLength));return new Response(bytes,{status:206,headers})}
+  headers.set('content-length',String(bytes.byteLength));return new Response(bytes,{status:200,headers});
+}
+// === End R1176 COVERS ZIP native playback ===
+
 // === End R446 album ZIP inspector / multipart builder ===
 
 // === R616: single release publish + one-push-per-single guard ===
@@ -21066,6 +21182,8 @@ async function routeApi(request, env, ctx) {
     if (path === '/api/control/media/promo-r471/status' && request.method === 'GET') return await handlePromoVideoStatusR471(request, env);
     if (path === '/api/media/promo/lyra-trika.mp4' && (request.method === 'GET' || request.method === 'HEAD')) return await handlePromoVideoPublicR471(request, env);
     if (path === '/download/ANDRIK-Lyra-TRIKA-Promo-2026.mp4' && (request.method === 'GET' || request.method === 'HEAD')) return await handlePromoVideoPublicR471(request, env, true);
+    if (path === '/api/music/covers-archive' && request.method === 'GET') return await handleCoversArchiveListR1176(request, env);
+    if (path === '/api/music/covers-archive-track' && (request.method === 'GET' || request.method === 'HEAD')) return await handleCoversArchiveTrackR1176(request, env);
     if (path === '/api/music/albums/status' && request.method === 'GET') return await handleMusicAlbumsPublicStatusR446(request, env);
     if (path === '/api/music/album-download' && (request.method === 'GET' || request.method === 'HEAD')) return await handleMusicAlbumDownloadR446(request, env);
     if (path === '/api/control/music/single/publish-latest' && request.method === 'POST') return await handleMusicSinglePublishR616(request, env);

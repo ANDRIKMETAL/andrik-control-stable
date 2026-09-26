@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1790422021440-49f3809486",
-  "release": "R1175",
-  "archiveName": "R1175-SINGLES-BREATHING-HERO.zip",
-  "sourceHead": "0ca2823ea9c2a519a8a390252bb261446c8d4d0f",
-  "backupSha": "0ca2823ea9c2a519a8a390252bb261446c8d4d0f",
+  "operationId": "publish-1790440082157-03ddd3f8e8",
+  "release": "R1176",
+  "archiveName": "R1176-COVERS-ARCHIVE-NATIVE.zip",
+  "sourceHead": "0d54af233cd91495dd43d7bc9033bcaccbdbf0b9",
+  "backupSha": "0d54af233cd91495dd43d7bc9033bcaccbdbf0b9",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-26T11:27:02.480Z"
+  "generatedAt": "2026-09-26T16:28:03.156Z"
 }
