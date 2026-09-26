@@ -1,0 +1,11 @@
+ANDRIK R1167 — STRICT COVERS WINDOW
+
+- /covers.html is a dedicated Covers page.
+- Covers are selected ONLY by explicit title allowlist:
+  1. Горячий Асфальт
+  2. Ах эти розы
+  3. А я скажу нет
+- Падший ангел is never classified as a cover.
+- Home Covers panel uses the same strict list and links to /covers.html.
+- Singles remain separate.
+- Radio / FFmpeg / RTMPS untouched.

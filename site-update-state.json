@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1790417359684-38ba23bbc7",
-  "release": "R1166",
-  "archiveName": "R1166-COVERS-DIRECT-PAGE-FIX.zip",
-  "sourceHead": "4702319666fb6e989f18882e8a0a2de8d7f8c0a3",
-  "backupSha": "4702319666fb6e989f18882e8a0a2de8d7f8c0a3",
+  "operationId": "publish-1790417621993-96758f7c35",
+  "release": "R1167",
+  "archiveName": "R1167-STRICT-3-COVERS-SEPARATE-WINDOW.zip",
+  "sourceHead": "118d090248efd2176bddc46550627f3fd44c7860",
+  "backupSha": "118d090248efd2176bddc46550627f3fd44c7860",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-26T10:09:19.684Z"
+  "generatedAt": "2026-09-26T10:13:41.993Z"
 }
