@@ -1,6 +1,6 @@
 'use strict';
 
-const VERSION = '55.00-r1176-covers-archive-native';
+const VERSION = '55.00-r1177-covers-breath-share-gap';
 const IS_CONTROL_HOST = self.location.hostname.toLowerCase() === 'control.andrikmetal.com';
 
 async function deleteControlCaches(){
@@ -45,7 +45,7 @@ if(IS_CONTROL_HOST){
     '/assets/home-fast-r213.js?v=55.00-r213',
     '/assets/andrik-qr-r794-160.png',
     '/dreaming-of-lira.html?v=55.00-r955', '/assets/dreaming-lira-r952-splash.webp', '/assets/sacred-destroyer-r955.webp', '/assets/night-enforcer-r955.webp', '/assets/lira-fight.webp', '/assets/lira-jump.webp', '/assets/lira-guitar.webp', '/assets/lira-chain.webp',
-    '/singles.html?v=55.00-r1173', '/covers.html?v=55.00-r1176', '/albums.html?v=55.00-r519', '/uk/albums.html?v=55.00-r519', '/sk/albums.html?v=55.00-r519', '/en/albums.html?v=55.00-r519', '/assets/albums-r446.css?v=55.00-r446', '/assets/albums-r446.js?v=55.00-r446', '/assets/albums-fast-library-r477.js?v=55.00-r519', '/assets/albums-trika-release-r519.css?v=55.00-r519', '/assets/singles-r560.css?v=55.00-r1159', '/assets/singles-r619.js?v=55.00-r1173', '/assets/covers-archive-r1176.js?v=55.00-r1176', '/assets/covers-disc-r1176.jpg?v=55.00-r1176', '/assets/home-covers-hub-r1173.css?v=55.00-r1173', '/assets/covers-echo-past-r1173.png?v=55.00-r1173',
+    '/singles.html?v=55.00-r1173', '/covers.html?v=55.00-r1177', '/albums.html?v=55.00-r519', '/uk/albums.html?v=55.00-r519', '/sk/albums.html?v=55.00-r519', '/en/albums.html?v=55.00-r519', '/assets/albums-r446.css?v=55.00-r446', '/assets/albums-r446.js?v=55.00-r446', '/assets/albums-fast-library-r477.js?v=55.00-r519', '/assets/albums-trika-release-r519.css?v=55.00-r519', '/assets/singles-r560.css?v=55.00-r1159', '/assets/singles-r619.js?v=55.00-r1173', '/assets/covers-archive-r1177.js?v=55.00-r1177', '/assets/covers-disc-r1176.jpg?v=55.00-r1177', '/assets/home-covers-hub-r1173.css?v=55.00-r1177', '/assets/covers-echo-past-r1173.png?v=55.00-r1177',
     '/assets/home-singles-nav-r330.css?v=55.00-r330',
     '/assets/home-trika-live-r520.css?v=55.00-r520',
     '/assets/albums-fast-library-r477.css?v=55.00-r477', '/assets/albums-fast-library-r477.js?v=55.00-r477',

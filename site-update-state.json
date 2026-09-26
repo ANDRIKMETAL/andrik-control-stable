@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1790440082157-03ddd3f8e8",
-  "release": "R1176",
-  "archiveName": "R1176-COVERS-ARCHIVE-NATIVE.zip",
-  "sourceHead": "0d54af233cd91495dd43d7bc9033bcaccbdbf0b9",
-  "backupSha": "0d54af233cd91495dd43d7bc9033bcaccbdbf0b9",
+  "operationId": "publish-1790441447063-91622b8b6b",
+  "release": "R1177",
+  "archiveName": "R1177-COVERS-BREATH-SHARE-GAP.zip",
+  "sourceHead": "fa150739b058b962125f3d64ad736a93db4146e1",
+  "backupSha": "fa150739b058b962125f3d64ad736a93db4146e1",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-26T16:28:03.156Z"
+  "generatedAt": "2026-09-26T16:50:47.063Z"
 }

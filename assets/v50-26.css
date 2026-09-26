@@ -677,8 +677,8 @@ body::after{display:none!important}
 
 
 /* v50.21 — hover cover breathing restored, compact 4-icon socials */
-#links.section{padding-bottom:56px}
-#discography.section{padding-top:60px}
+#links.section{padding-bottom:20px}
+#discography.section{padding-top:24px}
 
 /* Compact 4 social buttons in one row */
 .platform-mini-grid{
@@ -728,8 +728,8 @@ body::after{display:none!important}
 }
 
 @media(max-width:560px){
-  #links.section{padding-bottom:40px}
-  #discography.section{padding-top:46px}
+  #links.section{padding-bottom:16px}
+  #discography.section{padding-top:20px}
   .platform-mini-grid{
     width:min(312px,100%);
     gap:8px;

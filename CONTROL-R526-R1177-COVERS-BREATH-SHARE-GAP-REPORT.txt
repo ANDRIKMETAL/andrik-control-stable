@@ -1,0 +1,10 @@
+ANDRIK SITE · R1177
+
+Done:
+- restored visible breathing animation for the cover disc on /covers.html (mobile-friendly, smooth pulse);
+- removed yellow "Скачать MP3" buttons under each cover track;
+- added dark "Поделиться ссылкой" button under each track (Web Share API / clipboard fallback);
+- native audio player remains, with browser download still available from the player menu;
+- preserved automatic sequential playback track-to-track;
+- tightened spacing between social links → albums and albums → covers on the home page;
+- bumped cache/service-worker version to 55.00-r1177-covers-breath-share-gap.

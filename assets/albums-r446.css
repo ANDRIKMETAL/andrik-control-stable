@@ -1,5 +1,5 @@
 /* ANDRIK R446 — public Albums hub + dedicated discography page */
-.albums-hub-section-r446{padding-top:48px!important;padding-bottom:52px!important}
+.albums-hub-section-r446{padding-top:20px!important;padding-bottom:14px!important}
 .albums-hub-card-r446{display:grid;grid-template-columns:minmax(180px,330px) 1fr;gap:28px;align-items:center;padding:24px;border:1px solid rgba(173,225,255,.18);border-radius:32px;background:radial-gradient(circle at 16% 18%,rgba(54,152,214,.14),transparent 37%),linear-gradient(145deg,rgba(10,22,32,.94),rgba(3,8,13,.98));box-shadow:0 24px 64px rgba(0,0,0,.32);text-decoration:none;color:inherit;overflow:hidden;position:relative}
 .albums-hub-card-r446:after{content:'';position:absolute;inset:auto -80px -100px auto;width:260px;height:260px;border-radius:50%;background:radial-gradient(circle,rgba(76,211,255,.15),transparent 68%);pointer-events:none}
 .albums-hub-covers-r446{display:grid;grid-template-columns:1fr 1fr;gap:10px;perspective:800px}
