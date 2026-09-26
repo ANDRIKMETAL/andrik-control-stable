@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1790418555125-7452691a53",
-  "release": "R1168",
-  "archiveName": "R1168-ALBUM-COVERS-ZIP-UPLOAD.zip",
-  "sourceHead": "7669816dccdc601cd7b371505496c932f4038b5d",
-  "backupSha": "7669816dccdc601cd7b371505496c932f4038b5d",
+  "operationId": "publish-1790419157177-a417317c32",
+  "release": "R1169",
+  "archiveName": "R1169-COVERS-HUB-BREATHING-DISC.zip",
+  "sourceHead": "689b4ae67a134777f7c1452b8a120ef3a75ac779",
+  "backupSha": "689b4ae67a134777f7c1452b8a120ef3a75ac779",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-26T10:29:15.125Z"
+  "generatedAt": "2026-09-26T10:39:18.478Z"
 }

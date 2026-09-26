@@ -1,0 +1,13 @@
+ANDRIK SITE R1169 — COVERS HUB / SINGLES RESTORE
+
+- Homepage Singles card restored as a true singles feed. Legacy cover titles cannot leak into Singles.
+- Current single: Падший ангел; future releases uploaded as singles can replace it as newest on homepage and remain in the full Singles list.
+- Homepage Covers is now a dedicated section button, not a latest-release card.
+- /covers.html is a separate Covers collection page.
+- Covers page has breathing disc artwork at the top.
+- Seed covers shown: Полные карманы, Ах эти розы, А я скажу нет.
+- Горячий Асфальт is excluded from Singles and from the visible Covers collection.
+- Future releases uploaded into covers/ through Releases automatically appear in Covers.
+- Each cover keeps native audio playback, MP3 download, and share-link controls.
+- R1168 ZIP archive upload controls for Covers and albums are preserved.
+- Radio / FFmpeg / RTMPS untouched.
