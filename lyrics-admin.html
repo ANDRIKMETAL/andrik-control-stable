@@ -91,6 +91,15 @@ if (location.hostname.toLowerCase() === 'control.andrikmetal.com') {
 <div class="admin-status" id="mp3R2Status">WAV или MP3 + обложка → MP3 320 kbps с тегами → R2.</div>
 </section>
 
+<section class="admin-control-card admin-control-card-wide" id="archiveUploadR1168">
+<div class="admin-card-title-row"><div><span class="eyeline">ANDRIK · MP3 ARCHIVE</span><h2>📦 Загрузить готовый ZIP альбома / каверов</h2><p>Выбери готовый ZIP с MP3. Архив сохраняется напрямую в R2 без распаковки и без изменения треков.</p></div><span class="mp3-r2-badge" id="archiveUploadBadgeR1168">ZIP</span></div>
+<div class="mp3-tag-settings"><label>Раздел<select id="archiveAlbumR1168"><option value="covers">Каверы</option><option value="silent">Silent (Тишина)</option><option value="beyond">BEYOND</option><option value="trika">ТРИКА</option><option value="ocean">OCEAN</option><option value="illusion-of-life">Illusion of Life</option></select></label></div>
+<input id="archiveFileR1168" type="file" accept="application/zip,.zip" hidden>
+<div class="admin-actions"><button class="btn" id="archiveChooseR1168" type="button">📁 Выбрать ZIP</button><button class="btn btn-primary" id="archiveUploadBtnR1168" type="button" disabled>⬆ Загрузить архив в R2</button></div>
+<div class="single-r2-progress-r560" aria-hidden="true"><span id="archiveProgressR1168"></span></div>
+<div class="admin-status" id="archiveStatusR1168">Файл не выбран.</div>
+</section>
+
 <section class="admin-control-card admin-control-card-wide mp3-tag-editor-card" id="mp3TagEditorCard">
 <details id="mp3TagEditorDetails" open="">
 <summary><span>🏷 Редактор MP3 / WAV</span><small>Первый раздел · один трек или целый альбом</small></summary>
@@ -163,4 +172,4 @@ if (location.hostname.toLowerCase() === 'control.andrikmetal.com') {
 <script defer="" src="/assets/mp3-tag-editor-r317.js?v=55.00-r324"></script>
 <script defer src="/assets/r2-dedupe-r572.js?v=55.00-r572"></script>
 
-<script defer="" src="/assets/control-version-sync-r482.js?v=55.00-r482"></script></body></html>
+<script defer="" src="/assets/control-version-sync-r482.js?v=55.00-r482"></script><script defer src="/assets/archive-upload-r1168.js?v=55.00-r1168"></script></body></html>

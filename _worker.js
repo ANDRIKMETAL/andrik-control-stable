@@ -18717,6 +18717,11 @@ const MUSIC_ALBUMS_R446 = Object.freeze({
     slug:'trika', label:'ТРИКА', prefix:'albums/trika/',
     zipKey:'albums/trika/ANDRIK-TRIKA-MP3-320kbps.zip',
     zipName:'ANDRIK-TRIKA-MP3-320kbps.zip', expectedTracks:17
+  }),
+  'covers': Object.freeze({
+    slug:'covers', label:'Каверы', prefix:'covers/',
+    zipKey:'covers/ANDRIK-COVERS-MP3.zip',
+    zipName:'ANDRIK-COVERS-MP3.zip'
   })
 });
 const SILENT_TRACKS_R1159 = Object.freeze([null,'Dance of Deth','Mind Is A Trap','Выбора нет','Жизнь идёт сама','Падший ангел','I Run Away','Вспышка Узнавания','Что есть Истина','No choice','Стирай','Верни меня','Дверь освобождения','Ты проснулся живой','Сила знает путь','You Are Already That','Всё есть Брахман','Ты уже то','You Are The Light','Вне времени','Заветная звезда']);

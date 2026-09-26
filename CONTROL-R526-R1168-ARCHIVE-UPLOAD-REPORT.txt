@@ -1,0 +1,6 @@
+ANDRIK CONTROL R1168
+- Added direct ZIP archive uploader in Control > Releases.
+- Targets: Covers, Silent, BEYOND, TRIKA, OCEAN, Illusion of Life.
+- Upload is multipart direct to R2; ZIP is not unpacked and existing MP3 tracks are untouched.
+- Added Covers archive target: covers/ANDRIK-COVERS-MP3.zip.
+- Radio / FFmpeg / RTMPS untouched.

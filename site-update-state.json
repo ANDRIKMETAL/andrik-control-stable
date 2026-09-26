@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1790417621993-96758f7c35",
-  "release": "R1167",
-  "archiveName": "R1167-STRICT-3-COVERS-SEPARATE-WINDOW.zip",
-  "sourceHead": "118d090248efd2176bddc46550627f3fd44c7860",
-  "backupSha": "118d090248efd2176bddc46550627f3fd44c7860",
+  "operationId": "publish-1790418555125-7452691a53",
+  "release": "R1168",
+  "archiveName": "R1168-ALBUM-COVERS-ZIP-UPLOAD.zip",
+  "sourceHead": "7669816dccdc601cd7b371505496c932f4038b5d",
+  "backupSha": "7669816dccdc601cd7b371505496c932f4038b5d",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-26T10:13:41.993Z"
+  "generatedAt": "2026-09-26T10:29:15.125Z"
 }
