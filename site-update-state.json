@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1790408854020-3e479fa4ad",
-  "release": "R1162",
-  "archiveName": "R1162D-SILENT-19-TRACKS.zip",
-  "sourceHead": "316b2edc2f8d1cb95265121b0cfe745a2202bdac",
-  "backupSha": "316b2edc2f8d1cb95265121b0cfe745a2202bdac",
+  "operationId": "publish-1790413888695-f1fe8bfaf5",
+  "release": "R526",
+  "archiveName": "ANDRIK-SITE-CONTROL-R526-R1162E-SILENT19-ROTATIONCOUNT.zip",
+  "sourceHead": "942d9ea33ef3831533cba0879897e68859202b9b",
+  "backupSha": "942d9ea33ef3831533cba0879897e68859202b9b",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-26T07:47:34.020Z"
+  "generatedAt": "2026-09-26T09:11:28.695Z"
 }

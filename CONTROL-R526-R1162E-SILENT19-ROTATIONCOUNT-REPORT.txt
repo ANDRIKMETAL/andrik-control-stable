@@ -1,0 +1,12 @@
+ANDRIK SITE / CONTROL R1162E
+
+SILENT:
+- Public album count is 19 in RU / EN / SK / UA.
+- Only Monument to the Great Void is hidden from the public Silent track list.
+- I Run Away remains in Silent.
+- Silent public numbering is rebuilt continuously 01–19 after filtering.
+- Full Silent ZIP/archive download remains removed.
+
+RADIO CONTROL:
+- Main Songs/Tracks KPI now represents active radio rotation, excluding Covers.
+- Compatible with R1160D libraryRotationTracks and older libraryTracks/libraryCoverTracks telemetry.

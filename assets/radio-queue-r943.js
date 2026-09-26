@@ -38,7 +38,7 @@ async function api(path,opts={}){const k=adminKeyR1038();const r=await fetch(pat
 function applyInventory(s){
  const ready=String(s?.inventoryTelemetry||'').startsWith('R805-')||Number(s?.libraryTracks||0)>0;
  if(!ready)return;
- set('youtubeRadioSongsR805',s.libraryTracks);set('youtubeRadioTracksR565',s.libraryAlbumTracks);set('youtubeRadioSinglesR805',s.librarySingleTracks);set('youtubeRadioVideosR805',s.libraryVideos);set('youtubeRadioStationR805',Number(s.libraryBumpers||0)+Number(s.librarySpecial||0));
+ set('youtubeRadioSongsR805',Math.max(0,Number(s.libraryRotationTracks??s.libraryTracks??0)-(s.libraryRotationTracks==null?Number(s.libraryCoverTracks||0):0)));set('youtubeRadioTracksR565',s.libraryAlbumTracks);set('youtubeRadioSinglesR805',s.librarySingleTracks);set('youtubeRadioVideosR805',s.libraryVideos);set('youtubeRadioStationR805',Number(s.libraryBumpers||0)+Number(s.librarySpecial||0));
  document.documentElement.dataset.radioLiveInventoryR943=String(Date.now());
 }
 function render(){
