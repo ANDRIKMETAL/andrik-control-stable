@@ -92,12 +92,26 @@ if (location.hostname.toLowerCase() === 'control.andrikmetal.com') {
 </section>
 
 
+<style id="extended-version-r1179-style">
+.extended-version-r1179{margin:18px 0;padding:20px;border:1px solid rgba(245,200,75,.38);border-radius:24px;background:linear-gradient(145deg,rgba(28,20,7,.96),rgba(6,16,25,.98));box-shadow:0 14px 42px rgba(0,0,0,.24)}
+.extended-version-r1179 .ev-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.extended-version-r1179 .ev-eye{font-size:.76rem;letter-spacing:.18em;color:#efc96f;font-weight:900}.extended-version-r1179 h2{margin:5px 0 5px;font-size:1.5rem}.extended-version-r1179 p{margin:0 0 14px;color:#aebdca;line-height:1.5}.extended-version-r1179 .ev-state{padding:7px 10px;border:1px solid rgba(245,200,75,.3);border-radius:999px;color:#f2d687;font-weight:800;font-size:.72rem;white-space:nowrap}.extended-version-r1179 .ev-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}.extended-version-r1179 .ev-pick,.extended-version-r1179 .ev-go{min-height:58px;border-radius:18px;font-weight:900;font-size:1rem}.extended-version-r1179 .ev-pick{border:1px solid #6a7f91;background:#101923;color:#f3f8fb}.extended-version-r1179 .ev-go{border:1px solid #79d9ff;background:linear-gradient(135deg,#b9ecff,#79d9ff);color:#07121a}.extended-version-r1179 .ev-go:disabled{opacity:.45}.extended-version-r1179 .quick-progress{height:9px;margin-top:12px;border-radius:99px;background:#070a0f;overflow:hidden;border:1px solid #263246}.extended-version-r1179 .quick-progress i{display:block;height:100%;width:0;background:linear-gradient(90deg,#f5c84b,#6fe6ff);transition:width .2s}.extended-version-r1179 .msg{margin-top:10px;color:#b9d5e5}.extended-preview-r1178{display:grid;gap:7px;margin-top:10px}.extended-preview-r1178>div{display:grid;gap:2px;padding:9px 10px;border:1px solid #2d394b;border-radius:12px;background:#090d13}.extended-preview-r1178 span{font-weight:800}.extended-preview-r1178 b{font-size:11px;color:#8fa0ae;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}@media(max-width:560px){.extended-version-r1179 .ev-actions{grid-template-columns:1fr}.extended-version-r1179{padding:16px}.extended-version-r1179 .ev-head{display:block}.extended-version-r1179 .ev-state{display:inline-block;margin-top:8px}}
+</style>
+<section class="admin-control-card admin-control-card-wide extended-version-r1179" id="extendedVersionUploadR1178">
+  <div class="ev-head"><div><div class="ev-eye">R2 · RADIO · ОТДЕЛЬНЫЙ РАЗДЕЛ</div><h2>⚡ Extended Version</h2></div><span class="ev-state">ZIP → MP3 → R2</span></div>
+  <p>Загрузи один ZIP с альтернативными версиями. MP3 попадут в отдельный раздел <b>Extended Version</b> и будут подписаны в эфире как <b>(Ex. Version)</b>.</p>
+  <input id="extendedZipR1178" type="file" accept="application/zip,.zip" hidden>
+  <div class="ev-actions"><button class="ev-pick" id="extendedPickR1178" type="button">📦 ВЫБРАТЬ ZIP С MP3</button><button class="ev-go" id="extendedGoR1178" type="button" disabled>⬆ ЗАГРУЗИТЬ EXTENDED В R2</button></div>
+  <div class="quick-progress"><i id="extendedBarR1178"></i></div>
+  <div class="msg" id="extendedStatusR1178">Выбери ZIP с Extended Version MP3.</div>
+  <div class="extended-preview-r1178" id="extendedPreviewR1178"></div>
+</section>
+
 <section class="admin-control-card admin-control-card-wide mp3-tag-editor-card" id="mp3TagEditorCard">
 <details id="mp3TagEditorDetails" open="">
 <summary><span>🏷 Редактор MP3 / WAV</span><small>Первый раздел · один трек или целый альбом</small></summary>
 <div class="mp3-tag-editor-body">
 <div class="mp3-tag-settings">
-<label>Раздел<select id="tagFolder"><option value="singles">Синглы</option><option value="covers">Каверы</option><option value="albums/silent">Silent (Тишина) · 5-й альбом</option><option value="albums/beyond">BEYOND · 4-й альбом</option><optgroup label="Предыдущие альбомы · уже в R2"><option value="albums/illusion-of-life">Illusion of Life</option><option value="albums/ocean">OCEAN</option><option value="albums/trika">ТРИКА</option></optgroup></select></label>
+<label>Раздел<select id="tagFolder"><option value="singles">Синглы</option><option value="covers">Каверы</option><option value="albums/extended">Extended Version (Ex. Version)</option><option value="albums/silent">Silent (Тишина) · 5-й альбом</option><option value="albums/beyond">BEYOND · 4-й альбом</option><optgroup label="Предыдущие альбомы · уже в R2"><option value="albums/illusion-of-life">Illusion of Life</option><option value="albums/ocean">OCEAN</option><option value="albums/trika">ТРИКА</option></optgroup></select></label>
 <label>Альбом<input id="tagAlbum" value="Синглы ANDRIK"/></label>
 <label>Исполнитель<input id="tagArtist" value="ANDRIK"/></label>
 <label>Год<input id="tagYear" inputmode="numeric" maxlength="4" value="2026"/></label>
@@ -162,6 +176,7 @@ if (location.hostname.toLowerCase() === 'control.andrikmetal.com') {
 <script defer="" src="/assets/lyrics-single-r2-r617.js?v=55.00-r1162"></script>
 <script defer="" src="/assets/wav-to-mp3-r324.js?v=55.00-r324"></script>
 <script defer="" src="/assets/mp3-tag-editor-r317.js?v=55.00-r324"></script>
+<script defer src="/assets/extended-version-admin-r1178.js?v=55.00-r1179"></script>
 <script defer src="/assets/r2-dedupe-r572.js?v=55.00-r572"></script>
 
 <script defer="" src="/assets/control-version-sync-r482.js?v=55.00-r482"></script></body></html>

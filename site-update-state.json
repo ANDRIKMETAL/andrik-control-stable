@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1790449345460-14febfc180",
-  "release": "R1178",
-  "archiveName": "R1178-EXTENDED-VERSION-RADIO-ZIP-UPLOAD.zip",
-  "sourceHead": "51493c57434bc26ef008e73fcc219ee4a01a45fb",
-  "backupSha": "51493c57434bc26ef008e73fcc219ee4a01a45fb",
+  "operationId": "publish-1790450049637-9bd7aef05a",
+  "release": "R1179",
+  "archiveName": "R1179-EXTENDED-ZIP-VISIBLE-RELEASES.zip",
+  "sourceHead": "64005ef5946add7add00decad6822a049291110b",
+  "backupSha": "64005ef5946add7add00decad6822a049291110b",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-26T19:02:25.460Z"
+  "generatedAt": "2026-09-26T19:14:09.637Z"
 }

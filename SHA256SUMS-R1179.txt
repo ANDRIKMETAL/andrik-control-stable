@@ -330,7 +330,7 @@ e36c2b1db8c01b82b557060294866becf8b7f66d279dcbbdb48912fc14640b5c  ./assets/map-t
 ffef8d5c2f82913f128a5f0390d525c27cf8c844bd882f0b01f1e7021c5da13c  ./assets/map-ui-lock-v55-00-r73.js
 a26ffc77b11a63e985c09b5d0a59d8b00bc9e6943ca4fbbd6aabb931d9246d9a  ./assets/map-visual-r354.css
 1ba40e8e810f1b20079e17e1b41462dadada51aeb092c2bf34cb9f31e4a301d9  ./assets/mp3-tag-editor-r317.css
-6a49f62a904fc760d5028b3366df0e8ee802739eae8a94ccd0f9e48215790959  ./assets/mp3-tag-editor-r317.js
+17a4484e1d6633e84bbad6ce621d0029a06f17ae9c4afceedcbde8c5c716b8e4  ./assets/mp3-tag-editor-r317.js
 795d80b08b146a292fff9b85e1c6403be239aa5e3367f7b15a650d1338127faf  ./assets/network-globe-map-r415.png
 fc13048d651f21ec450c03c1a35ee816e3af580687d7125a16ab8fcade8f2ce1  ./assets/network-globe-r415.css
 87ac6b6c27679e1bfc26f69f769a7242f211e0b753db46fb690f311585376a29  ./assets/network-globe-r415.js
@@ -383,7 +383,7 @@ ce48f187cb8021b046e3b8a32b52b875b05f7b9157da916879eb26c7695546ad  ./assets/radio
 b27e1e2aecdae491a7c1fd60e32468ea11e8622889184d1d316f099c82780d41  ./assets/radio-control-r989.css
 a4be007f5dcdd177b95872d92a6f5095f116e422be06e1775e2dbf3bd20c16e6  ./assets/radio-live-countries-r907.js
 0ba9a9745d587d0cf5959d56d4810cfc27de01e106811e669fadb2ce1f45ee34  ./assets/radio-load-r988.js
-7ef97fc33f528ef5ca21b12b5db301e85c9023cfb00c690124fe455990886b8f  ./assets/radio-media-picker-r989.js
+4df3503858410570eb0aa4551a230d6b3c79f5f985e070e074d0608181665b90  ./assets/radio-media-picker-r989.js
 131fd253d33f49a5c827c873b11a38a8203ac6fe83cdf036377ce8daa5cc4532  ./assets/radio-observability-r908.js
 a38f7ee32aa439d140bb41d3559ab02a4f3e5d7d16df52c840918468a9c80802  ./assets/radio-queue-r943.js
 b5997a876b51a395dc5a552d9b04b8b06f520505c682333dc4219e9ce3885034  ./assets/radio-remote-control-r926.js
@@ -472,7 +472,7 @@ d77bc9f94da4fa193d292da490cb2f28135e63734f8cdffe1965389d15380c6c  ./en/clips.htm
 f858bdcda5659a4c99f21bc3c4bd7ab7c978941cf2c072e7016232eca1053ce4  ./image-sitemap.xml
 8bb0a60f9838b38cb6185bb5dfddf1b8b8f7ef38c6e2a708ad6313bbcff2fa40  ./index.html
 bf5cbb52a2582e4712d84f3a44ef749da48616ca91cd4b9cfa4210b73d5a6bed  ./instagram-admin.html
-5355f13c17e52fee55b01c8f34de1df7e55ed4143afea192cffe5a2a6a111e0f  ./lyrics-admin.html
+3c20e53bdbf9ecd4a412b549a400f946dd2b3a7ab3d4a3f500253c1196891e2c  ./lyrics-admin.html
 e92f80b641726f8bf253ef14b662bcf24b4d24ee4aa20decf9bc07e985f9ebea  ./manifest-en.webmanifest
 d4184ecb2335f6b95f555374c821acd3b8c6a492a8d85dffd2ed84618c5abaf7  ./manifest-sk.webmanifest
 416e0f31abe29a6f293f4943d3117e7f8a64799966670ec41e3a293d58be6cd1  ./manifest-uk.webmanifest
@@ -487,7 +487,7 @@ ac32c0564a8058199307a185bfa4333e505b00dc986a1472a0729c0c86b9e87d  ./promo-video-
 1e0a8617d493be5b2afe4c2a5a0f2893e264425d22359ddde75bfd39595c3b54  ./push-repair-r768.html
 d9f8812c373aa4928c63724e0004108a493244e65d53e36af222e7a597719155  ./push/onesignal/OneSignalSDKWorker.js
 37d754f1d9b73e56d75112de85c3f19cb50986e5116378b7868e6cce5196b42c  ./r2-storage-admin.html
-4bbf3b6ff8252bb23aa7c2c117a7df2e4ea2ea066ad5624763c126a28ad3ff64  ./radio-control-admin.html
+97c47a8f8ff5911951b67a4c8bf2dc62f59c3f0daccf0d5cbd740cde3b05d8ab  ./radio-control-admin.html
 d225c160e41df733af1ebc3a57e4d298635e85e5032c68203873f4ab57c517ea  ./radio-pair-r1046.js
 92bb6268e51213d8ec90289ea4703d8c9ecd038fc2a757220a9aa2d796421d8f  ./radio-visuals-admin.html
 2046cac06a64966c0edbbe585e687a0165dc7f60e46dd3e29ac2d588f448bbe4  ./radio247/README.md

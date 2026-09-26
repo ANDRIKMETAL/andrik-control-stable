@@ -10,6 +10,7 @@ async function api(path,opts={}){const r=await fetch(path,{credentials:'include'
 const coverMap={
  singles:'/assets/singles-picker-cover-r1161.webp',
  covers:'/assets/lira-guitar.webp',
+ extended:'/assets/singles-picker-cover-r1161.webp',
  silent:'/assets/silent-picker-cover-r1161.webp',
  beyond:'/assets/beyond-cover-r601.webp',
  trika:'/assets/trika-third-album-cover-r479.webp',
@@ -41,7 +42,7 @@ function groupTracks(){
    g.tracks.push(t);
  }
  groups=[...m.values()].filter(g=>g.tracks.length);
- const order=['singles','covers','silent','beyond','trika','ocean','illusion-of-life'];
+ const order=['singles','extended','silent','beyond','trika','ocean','illusion-of-life'];
  groups.sort((a,b)=>{const ai=order.indexOf(a.slug),bi=order.indexOf(b.slug);return (ai<0?99:ai)-(bi<0?99:bi)||a.label.localeCompare(b.label,'ru')});
  for(const g of groups)g.tracks.sort((a,b)=>(Number(a.track)||999)-(Number(b.track)||999)||String(a.title||'').localeCompare(String(b.title||''),'ru'));
 }
