@@ -1,0 +1,10 @@
+ANDRIK SITE R1164
+- Silent remains 20 tracks; #5 remains Падший ангел from R1163.
+- Removed Silent whole-album ZIP download button/note (individual MP3 remains).
+- Removed ZIP wording from Silent home promo.
+- Home: Singles and Covers are two separate compact panels.
+- Each panel automatically shows its newest matching release from /api/music/singles.
+- /singles.html now contains singles only.
+- Added /covers.html containing covers only.
+- Covers remain excluded from radio next-track picker by R1163 logic.
+- Service worker cache bumped to R1164.

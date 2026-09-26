@@ -6,3 +6,11 @@
 
 /* R1159 separate covers catalog */
 .andrik-covers-r1159{padding:0 0 46px}.andrik-covers-card-r1159{border-color:rgba(187,72,88,.22)!important;background:linear-gradient(145deg,rgba(21,7,10,.94),rgba(5,8,12,.97))!important}.andrik-covers-list-r1159{display:grid;gap:10px}.andrik-covers-card-r1159 .andrik-singles-head h2{margin:.25em 0 .15em}
+/* R1164 home: Singles and Covers are separate compact panels */
+.andrik-music-split-r1164{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.andrik-music-split-r1164 .andrik-singles-card{height:100%;padding:18px}
+.andrik-music-split-r1164 .andrik-singles-head h2{font-size:clamp(1.15rem,3vw,1.55rem);margin-bottom:5px}
+.andrik-music-split-r1164 .andrik-singles-head p{font-size:.88rem}
+.andrik-music-split-r1164 .andrik-track{margin-top:12px}
+.andrik-music-split-r1164 .andrik-singles-more{margin-top:12px}
+@media(max-width:640px){.andrik-music-split-r1164{grid-template-columns:1fr 1fr;gap:8px}.andrik-music-split-r1164 .andrik-singles-card{padding:12px}.andrik-music-split-r1164 .andrik-track-actions{display:grid;grid-template-columns:1fr}.andrik-music-split-r1164 .andrik-track-actions a,.andrik-music-split-r1164 .andrik-track-actions button{width:100%;font-size:.72rem;padding:8px 5px}.andrik-music-split-r1164 .andrik-track-share{font-size:.7rem}.andrik-music-split-r1164 .andrik-singles-head p{font-size:.75rem}}
