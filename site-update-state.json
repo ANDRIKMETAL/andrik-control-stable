@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1790416707320-cd30f82593",
-  "release": "R1164",
-  "archiveName": "R1164-SINGLES-COVERS-SPLIT-NO-SILENT-ZIP.zip",
-  "sourceHead": "86a048831648ac48443f24ae6cff6311694e86b7",
-  "backupSha": "86a048831648ac48443f24ae6cff6311694e86b7",
+  "operationId": "publish-1790417000554-74781889dd",
+  "release": "R1165",
+  "archiveName": "R1165-COVERS-LINK-FIX.zip",
+  "sourceHead": "10d50c374727fdaa14f254f912264dd4202187cd",
+  "backupSha": "10d50c374727fdaa14f254f912264dd4202187cd",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-26T09:58:27.320Z"
+  "generatedAt": "2026-09-26T10:03:20.554Z"
 }
