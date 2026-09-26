@@ -98,11 +98,12 @@ if (location.hostname.toLowerCase() === 'control.andrikmetal.com') {
 </style>
 <section class="admin-control-card admin-control-card-wide extended-version-r1179" id="extendedVersionUploadR1178">
   <div class="ev-head"><div><div class="ev-eye">R2 · RADIO · ОТДЕЛЬНЫЙ РАЗДЕЛ</div><h2>⚡ Extended Version</h2></div><span class="ev-state">ZIP → MP3 → R2</span></div>
-  <p>Загрузи один ZIP с альтернативными версиями. MP3 попадут в отдельный раздел <b>Extended Version</b> и будут подписаны в эфире как <b>(Ex. Version)</b>.</p>
+  <p>Загружай Extended Version как <b>ZIP</b> или отдельными <b>MP3</b>. Песни попадут в отдельный раздел и будут подписаны в эфире как <b>(Ex. Version)</b>.</p>
   <input id="extendedZipR1178" type="file" accept="application/zip,.zip" hidden>
-  <div class="ev-actions"><button class="ev-pick" id="extendedPickR1178" type="button">📦 ВЫБРАТЬ ZIP С MP3</button><button class="ev-go" id="extendedGoR1178" type="button" disabled>⬆ ЗАГРУЗИТЬ EXTENDED В R2</button></div>
+  <input id="extendedMp3R1180" type="file" accept="audio/mpeg,.mp3" multiple hidden>
+  <div class="ev-actions"><button class="ev-pick" id="extendedPickR1178" type="button">📦 ВЫБРАТЬ ZIP</button><button class="ev-pick" id="extendedPickMp3R1180" type="button">🎵 ВЫБРАТЬ MP3</button><button class="ev-go" id="extendedGoR1178" type="button" disabled>⬆ ЗАГРУЗИТЬ В R2</button></div>
   <div class="quick-progress"><i id="extendedBarR1178"></i></div>
-  <div class="msg" id="extendedStatusR1178">Выбери ZIP с Extended Version MP3.</div>
+  <div class="msg" id="extendedStatusR1178">Выбери ZIP или отдельные MP3 для Extended Version.</div>
   <div class="extended-preview-r1178" id="extendedPreviewR1178"></div>
 </section>
 
@@ -176,7 +177,7 @@ if (location.hostname.toLowerCase() === 'control.andrikmetal.com') {
 <script defer="" src="/assets/lyrics-single-r2-r617.js?v=55.00-r1162"></script>
 <script defer="" src="/assets/wav-to-mp3-r324.js?v=55.00-r324"></script>
 <script defer="" src="/assets/mp3-tag-editor-r317.js?v=55.00-r324"></script>
-<script defer src="/assets/extended-version-admin-r1178.js?v=55.00-r1179"></script>
+<script defer src="/assets/extended-version-admin-r1178.js?v=55.00-r1180"></script>
 <script defer src="/assets/r2-dedupe-r572.js?v=55.00-r572"></script>
 
 <script defer="" src="/assets/control-version-sync-r482.js?v=55.00-r482"></script></body></html>

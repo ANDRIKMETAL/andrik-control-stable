@@ -169,11 +169,12 @@ window.__ANDRIK_QUEUE_PREFETCH_R956__=(()=>{let k='';try{k=localStorage.getItem(
 </section>
 <section class="card extended-version-r1178" id="extendedVersionUploadR1178">
   <div class="top"><div><div class="ey">R2 · RADIO</div><h2>Extended Version</h2></div><span class="state">ZIP → MP3</span></div>
-  <p class="small">Альтернативные версии песен из официальных альбомов. Загрузи один ZIP с MP3 — архив сохранится в R2, песни распакуются в <b>albums/extended/</b> и попадут в радио. В эфире название автоматически: <b>(Ex. Version)</b>.</p>
+  <p class="small">Альтернативные версии песен из официальных альбомов. Можно загрузить ZIP или отдельные MP3. Всё попадёт в <b>albums/extended/</b> и в радио. В эфире название автоматически: <b>(Ex. Version)</b>.</p>
   <input id="extendedZipR1178" type="file" accept="application/zip,.zip" hidden>
-  <div class="grid"><button class="secondary" id="extendedPickR1178" type="button">📦 ВЫБРАТЬ ZIP</button><button class="recover" id="extendedGoR1178" type="button" disabled>⬆ ЗАГРУЗИТЬ В R2</button></div>
+  <input id="extendedMp3R1180" type="file" accept="audio/mpeg,.mp3" multiple hidden>
+  <div class="grid"><button class="secondary" id="extendedPickR1178" type="button">📦 ВЫБРАТЬ ZIP</button><button class="secondary" id="extendedPickMp3R1180" type="button">🎵 ВЫБРАТЬ MP3</button><button class="recover" id="extendedGoR1178" type="button" disabled>⬆ ЗАГРУЗИТЬ В R2</button></div>
   <div class="quick-progress" style="margin-top:12px"><i id="extendedBarR1178"></i></div>
-  <div class="msg" id="extendedStatusR1178">Выбери ZIP с Extended Version MP3.</div>
+  <div class="msg" id="extendedStatusR1178">Выбери ZIP или отдельные MP3 для Extended Version.</div>
   <div class="extended-preview-r1178" id="extendedPreviewR1178"></div>
 </section>
 <section class="card quick-remove-card-r970" id="quickRemoveCardR970">
@@ -364,7 +365,7 @@ mp3Btn.onclick=async()=>{
 };
 })();
 </script>
-<script defer src="/assets/extended-version-admin-r1178.js?v=55.00-r1179"></script>
+<script defer src="/assets/extended-version-admin-r1178.js?v=55.00-r1180"></script>
 <script id="r836-inventory-fallback">
 (()=>{'use strict';
 const set=(id,v)=>{const e=document.getElementById(id);if(e&&v!==undefined&&v!==null)e.textContent=String(v)};

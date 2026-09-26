@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1790450049637-9bd7aef05a",
-  "release": "R1179",
-  "archiveName": "R1179-EXTENDED-ZIP-VISIBLE-RELEASES.zip",
-  "sourceHead": "64005ef5946add7add00decad6822a049291110b",
-  "backupSha": "64005ef5946add7add00decad6822a049291110b",
+  "operationId": "publish-1790453266551-085a4d8e6f",
+  "release": "R1180",
+  "archiveName": "R1180-EXTENDED-ZIP-OR-MP3-UPLOAD-1.zip",
+  "sourceHead": "2e378e0cc8cfe2fd7996670d46f7a2cf83af9a65",
+  "backupSha": "2e378e0cc8cfe2fd7996670d46f7a2cf83af9a65",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-26T19:14:09.637Z"
+  "generatedAt": "2026-09-26T20:07:46.551Z"
 }
