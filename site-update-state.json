@@ -1,14 +1,14 @@
 {
   "schema": 1,
   "updaterVersion": "55.00-r356",
-  "operation": "publish",
-  "reinstall": false,
-  "operationId": "publish-1790415924265-53f4c4f073",
+  "operation": "reinstall",
+  "reinstall": true,
+  "operationId": "reinstall-1790416221862-376eada97a",
   "release": "R1163",
-  "archiveName": "R1163-SILENT-ANGEL-NO-COVERS-PICKER.zip",
-  "sourceHead": "810ad27f7b4943f5fa047dfc08d8b10d56f23aec",
-  "backupSha": "810ad27f7b4943f5fa047dfc08d8b10d56f23aec",
+  "archiveName": "R1163-SILENT-ANGEL-NO-COVERS-PICKER-1.zip",
+  "sourceHead": "7680eb0198022570b98a25d92be1826268d705f0",
+  "backupSha": "7680eb0198022570b98a25d92be1826268d705f0",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-26T09:45:24.265Z"
+  "generatedAt": "2026-09-26T09:50:21.862Z"
 }
