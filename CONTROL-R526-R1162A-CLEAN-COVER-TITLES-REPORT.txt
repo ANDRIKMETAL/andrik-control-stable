@@ -1,0 +1,6 @@
+ANDRIK SITE R1162A
+Display-only cleanup for Covers section.
+Examples:
+  Ах эти розы (кавер) -> Ах эти розы
+  Горячий Асфальт (Cover Ленинград) -> Горячий Асфальт
+R2 key/releaseType classification remains unchanged: these tracks are still Covers.

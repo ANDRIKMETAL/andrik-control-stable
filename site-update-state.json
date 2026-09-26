@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1790391681298-c5103aa35b",
+  "operationId": "publish-1790392270320-3a2f52c098",
   "release": "R1162",
-  "archiveName": "R1162-PLAYER-COVERS-RELEASE-SORT.zip",
-  "sourceHead": "ebc064bebb7422eac846f59dde31a4f76de5320b",
-  "backupSha": "ebc064bebb7422eac846f59dde31a4f76de5320b",
+  "archiveName": "R1162A-CLEAN-COVER-TITLES.zip",
+  "sourceHead": "bf1cb918f2d610d90599dbb5c76f34b817876576",
+  "backupSha": "bf1cb918f2d610d90599dbb5c76f34b817876576",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-26T03:01:21.298Z"
+  "generatedAt": "2026-09-26T03:11:10.320Z"
 }
