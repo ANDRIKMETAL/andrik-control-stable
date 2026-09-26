@@ -1,0 +1,5 @@
+ANDRIK SITE R1166
+FIX: All Covers now links directly to /covers.html.
+/covers.html is a real standalone Covers catalog (no redirect, no query-param mode switch).
+It renders only API releases classified as covers (covers/ R2 folder / releaseType cover).
+Singles remains separate. Radio/FFmpeg/RTMPS untouched.

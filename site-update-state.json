@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1790417000554-74781889dd",
-  "release": "R1165",
-  "archiveName": "R1165-COVERS-LINK-FIX.zip",
-  "sourceHead": "10d50c374727fdaa14f254f912264dd4202187cd",
-  "backupSha": "10d50c374727fdaa14f254f912264dd4202187cd",
+  "operationId": "publish-1790417359684-38ba23bbc7",
+  "release": "R1166",
+  "archiveName": "R1166-COVERS-DIRECT-PAGE-FIX.zip",
+  "sourceHead": "4702319666fb6e989f18882e8a0a2de8d7f8c0a3",
+  "backupSha": "4702319666fb6e989f18882e8a0a2de8d7f8c0a3",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-26T10:03:20.554Z"
+  "generatedAt": "2026-09-26T10:09:19.684Z"
 }
