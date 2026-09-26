@@ -18719,10 +18719,10 @@ const MUSIC_ALBUMS_R446 = Object.freeze({
     zipName:'ANDRIK-TRIKA-MP3-320kbps.zip', expectedTracks:17
   })
 });
-const SILENT_TRACKS_R1159 = Object.freeze([null,'Dance of Deth','Mind Is A Trap','Выбора нет','Жизнь идёт сама','Monument to the Great Void','I Run Away','Вспышка Узнавания','Что есть Истина','No choice','Стирай','Верни меня','Дверь освобождения','Ты проснулся живой','Сила знает путь','You Are Already That','Всё есть Брахман','Ты уже то','You Are The Light','Вне времени','Заветная звезда']);
+const SILENT_TRACKS_R1159 = Object.freeze([null,'Dance of Deth','Mind Is A Trap','Выбора нет','Жизнь идёт сама','Падший ангел','I Run Away','Вспышка Узнавания','Что есть Истина','No choice','Стирай','Верни меня','Дверь освобождения','Ты проснулся живой','Сила знает путь','You Are Already That','Всё есть Брахман','Ты уже то','You Are The Light','Вне времени','Заветная звезда']);
 function silentNormalizeR1159(value){return String(value||'').toLowerCase().replace(/ё/g,'е').replace(/[«»“”„'’`]/g,'').replace(/[^a-zа-я0-9]+/gi,' ').trim()}
 function silentCanonicalNumberR1159(value){const probe=silentNormalizeR1159(value).replace(/^\d{1,2}\s+/,'').trim();if(!probe)return 0;if(probe==='dance of death'||probe.endsWith(' dance of death'))return 1;for(let i=1;i<SILENT_TRACKS_R1159.length;i++){const target=silentNormalizeR1159(SILENT_TRACKS_R1159[i]);if(probe===target||probe.endsWith(' '+target))return i}return 0}
-function silentTrackNumberR1159(object){const key=String(object?.key||''),m=object?.customMetadata||{};if(!/^albums\/silent\//i.test(key))return 0;const base=key.split('/').pop()?.replace(/\.mp3$/i,'')||'';const byTitle=silentCanonicalNumberR1159(m.title);if(byTitle)return byTitle;const byFile=silentCanonicalNumberR1159(base.replace(/[_-]+/g,' '));if(byFile)return byFile;const lead=base.match(/^\s*(\d{1,2})(?:\D|$)/);if(lead){const n=parseInt(lead[1],10);if(n>=1&&n<=20)return n}const direct=parseInt(m.track||'',10);if(Number.isFinite(direct)&&direct>=1&&direct<=20)return direct;return 0}
+function silentTrackNumberR1159(object){const virtualNo=Number(object?.__silentTrackR1163||0);if(virtualNo>=1&&virtualNo<=20)return virtualNo;const key=String(object?.key||''),m=object?.customMetadata||{};if(!/^albums\/silent\//i.test(key))return 0;const base=key.split('/').pop()?.replace(/\.mp3$/i,'')||'';const byTitle=silentCanonicalNumberR1159(m.title);if(byTitle)return byTitle;const byFile=silentCanonicalNumberR1159(base.replace(/[_-]+/g,' '));if(byFile)return byFile;const lead=base.match(/^\s*(\d{1,2})(?:\D|$)/);if(lead){const n=parseInt(lead[1],10);if(n>=1&&n<=20)return n}const direct=parseInt(m.track||'',10);if(Number.isFinite(direct)&&direct>=1&&direct<=20)return direct;return 0}
 function silentTrackTitleR1159(object){const n=silentTrackNumberR1159(object),m=object?.customMetadata||{};return n?(SILENT_TRACKS_R1159[n]||m.title||''):''}
 
 const BEYOND_TRACKS_R601 = Object.freeze([null,
@@ -18814,7 +18814,16 @@ function musicAlbumDuplicateScoreR446(object){
 }
 async function musicAlbumObjectsR446(bucket,def){
   const listed=await bucket.list({prefix:def.prefix,limit:1000,include:['customMetadata']});
-  return (listed.objects||[]).filter(o=>/\.mp3$/i.test(o.key)).sort(musicAlbumTrackSortR446);
+  let objects=(listed.objects||[]).filter(o=>/\.mp3$/i.test(o.key));
+  // R1163: Silent track #5 is Падший ангел, reusing the existing singles/ MP3.
+  // The old album #5 (Monument...) is excluded from the public album without deleting it here.
+  if(def.slug==='silent'){
+    objects=objects.filter(o=>silentTrackNumberR1159(o)!==5);
+    const singlesListed=await musicListSingleObjectsR1028(bucket);
+    const angel=(singlesListed.objects||[]).find(o=>silentNormalizeR1159(o?.customMetadata?.title||o?.key?.split('/').pop()?.replace(/\.mp3$/i,'')||'')===silentNormalizeR1159('Падший ангел'));
+    if(angel)objects.push({...angel,__silentTrackR1163:5,customMetadata:{...(angel.customMetadata||{}),title:'Падший ангел',track:'5',album:'Silent (Тишина)'}});
+  }
+  return objects.sort(musicAlbumTrackSortR446);
 }
 function musicAlbumArchiveSelectionR446(objects){
   const selected=[], loose=[], groups=new Map(), duplicates=[];
@@ -19158,7 +19167,7 @@ async function handleMusicSinglesListR316(request, env) {
   const beyondAlbumDuplicates=kept.filter(track=>track.releaseType!=='cover'&&beyondSingleRemovalNumberR1159D(track?.title||track?.name)>0);
   const publicReleases=kept.filter(track=>
     track.releaseType==='cover' || (
-      silentCanonicalNumberR1159(track?.title||track?.name)===0 &&
+      (silentCanonicalNumberR1159(track?.title||track?.name)===0 || silentNormalizeR1159(track?.title||track?.name)===silentNormalizeR1159('Падший ангел')) &&
       beyondSingleRemovalNumberR1159D(track?.title||track?.name)===0
     )
   );
@@ -19188,6 +19197,7 @@ async function musicSilentSinglesCleanupPlanR1159C(bucket){
   const singles=listed.objects.map(musicSingleTrackR1028);
   const duplicates=singles.map(track=>{
     const no=silentCanonicalNumberR1159(track?.title||track?.name);
+    if(silentNormalizeR1159(track?.title||track?.name)===silentNormalizeR1159('Падший ангел'))return null;
     return no?{key:track.key,title:track.title,silentTrack:no,officialTitle:SILENT_TRACKS_R1159[no]||track.title,size:Number(track.size||0),uploaded:track.uploaded||null}:null;
   }).filter(Boolean).sort((a,b)=>a.silentTrack-b.silentTrack||String(a.key).localeCompare(String(b.key),'ru',{numeric:true,sensitivity:'base'}));
 
@@ -19237,7 +19247,7 @@ async function musicAlbumSinglesCleanupPlanR1159D(bucket){
   for(const track of singles){
     const title=track?.title||track?.name||'';
     const silentNo=silentCanonicalNumberR1159(title);
-    if(silentNo && silentReady){
+    if(silentNo && silentReady && silentNormalizeR1159(title)!==silentNormalizeR1159('Падший ангел')){
       duplicates.push({
         key:track.key,title:track.title,album:'Silent (Тишина)',albumTrack:silentNo,
         officialTitle:SILENT_TRACKS_R1159[silentNo]||track.title,size:Number(track.size||0),uploaded:track.uploaded||null
@@ -19338,11 +19348,16 @@ async function handleMusicDownloadsR322(request, env){
   const listed=await bucket.list({limit:1000,include:['customMetadata']});
   const legacyTitles={'singles/ty_uze_dostoin.mp3':'Ты уже достоин','singles/tisina.mp3':'Тишина','singles/track_1786265187225.mp3':'Свобода'};
   const exclusionsR1029=await radioExclusionMapR1029(bucket);
-  const tracks=(listed.objects||[]).filter(o=>musicObjectKeyR317(o.key)&&!radioObjectExcludedR1029(o.key,o.uploaded,exclusionsR1029)).map(o=>{
+  const source=(listed.objects||[]).filter(o=>musicObjectKeyR317(o.key)&&!radioObjectExcludedR1029(o.key,o.uploaded,exclusionsR1029));
+  const tracks=source.filter(o=>!( /^albums\/silent\//i.test(String(o.key||'')) && silentTrackNumberR1159(o)===5 )).map(o=>{
     const m=o.customMetadata||{},folder=o.key.split('/').slice(0,-1).join('/'),base=o.key.split('/').pop().replace(/\.mp3$/i,'').replace(/[_-]+/g,' ');
     const silentNo=silentTrackNumberR1159(o),silentTitle=silentTrackTitleR1159(o),trikaNo=trikaTrackNumberR517(o),trikaTitle=trikaTrackTitleR517(o);
     return {key:o.key,title:/^(?:singles|covers)\//i.test(o.key)?musicSingleTitleR616(m.title||legacyTitles[o.key]||base):(silentTitle||trikaTitle||m.title||legacyTitles[o.key]||base),album:m.album||'',track:silentNo?String(silentNo):(trikaNo?String(trikaNo):(m.track||'')),folder,url:'https://music.andrikmetal.com/'+o.key,uploaded:o.uploaded||null};
   });
+  // R1163: expose the existing Падший ангел single a second time as Silent #5
+  // for the manual NEXT picker, while preserving its normal Singles entry.
+  const angel=tracks.find(t=>/^singles\//i.test(String(t.key||''))&&silentNormalizeR1159(t.title)===silentNormalizeR1159('Падший ангел'));
+  if(angel)tracks.push({...angel,title:'Падший ангел',album:'Silent (Тишина)',track:'5',pickerAlbum:'silent'});
   return json({ok:true,tracks});
 }
 async function handleMusicDownloadR327(request, env){

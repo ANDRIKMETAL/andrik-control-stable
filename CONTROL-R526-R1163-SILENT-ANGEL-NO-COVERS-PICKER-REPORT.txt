@@ -1,0 +1,8 @@
+ANDRIK R1163
+
+- Silent remains 20 tracks.
+- Track #5 changed from Monument to the Great Void to Падший ангел.
+- Silent #5 reuses the existing Падший ангел MP3 from singles/; the single remains visible and is protected from album-single cleanup.
+- Old Monument album #5 is excluded from Silent album output.
+- Covers are excluded from the manual radio NEXT track picker, including global track search.
+- No radio engine / FFmpeg / RTMPS timing changes.

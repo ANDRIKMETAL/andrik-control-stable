@@ -72,7 +72,7 @@
     // This avoids guessing from R2 and reflects duplicate-single suppression + disabled albums exactly.
     const inventoryReady=String(s.inventoryTelemetry||'').startsWith('R805-') || Number(s.libraryTracks||0)>0;
     if(inventoryReady){
-      setText('youtubeRadioSongsR805',num(Math.max(0,Number(s.libraryRotationTracks??s.libraryTracks??0)-(s.libraryRotationTracks==null?Number(s.libraryCoverTracks||0):0))));
+      setText('youtubeRadioSongsR805',num(s.libraryTracks));
       setText('youtubeRadioTracksR565',num(s.libraryAlbumTracks));
       setText('youtubeRadioSinglesR805',num(s.librarySingleTracks));
       setText('youtubeRadioVideosR805',num(s.libraryVideos));
