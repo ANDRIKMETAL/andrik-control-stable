@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1790420049278-77ef9c8e21",
-  "release": "R1171",
-  "archiveName": "R1171-COVERS-FULL-HUB-FIX.zip",
-  "sourceHead": "9e86add3f277b60f967d6903fbbd236330f279c9",
-  "backupSha": "9e86add3f277b60f967d6903fbbd236330f279c9",
+  "operationId": "publish-1790420729775-cbac298841",
+  "release": "R1173",
+  "archiveName": "R1173-COVERS-HOME-ECHO-PAST-HOT-ASPHALT.zip",
+  "sourceHead": "08b96f851ee989bfbe3aeb4cfdb7187ecd41d5c6",
+  "backupSha": "08b96f851ee989bfbe3aeb4cfdb7187ecd41d5c6",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-26T10:54:09.278Z"
+  "generatedAt": "2026-09-26T11:05:30.895Z"
 }
