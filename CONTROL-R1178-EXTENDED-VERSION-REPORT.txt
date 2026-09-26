@@ -1,0 +1,13 @@
+ANDRIK CONTROL R1178 — EXTENDED VERSION
+
+Base: R1177-COVERS-BREATH-SHARE-GAP
+
+Changes:
+- Added dedicated Extended Version ZIP uploader to radio control.
+- ZIP is preserved in R2 as albums/extended/ANDRIK-EXTENDED-VERSION-MP3.zip.
+- MP3 files are unpacked client-side and uploaded to albums/extended/.
+- Every displayed/stored radio title gets suffix: (Ex. Version).
+- Extended Version appears as a separate album/category in the manual NEXT picker.
+- Existing radio engine already treats albums/* MP3 as rotation tracks, so Extended files join rotation after its normal library refresh.
+- Radio counters remain live/dynamic: they are not hardcoded to 74. Before Extended uploads they reflect the current live inventory; each new albums/extended MP3 increases the live rotation/album count after refresh.
+- No FFmpeg, RTMPS, handoff, audio sync, or stream timing changes.

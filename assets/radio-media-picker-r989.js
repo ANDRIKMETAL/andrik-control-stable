@@ -16,7 +16,7 @@ const coverMap={
  ocean:'/assets/ocean-cover-v51-crop.webp',
  'illusion-of-life':'/assets/illusion-of-life-static-v52.jpg'
 };
-const labelMap={singles:'Синглы',covers:'Каверы',silent:'Silent',beyond:'BEYOND',trika:'ТРИКА',ocean:'OCEAN','illusion-of-life':'Illusion of Life'};
+const labelMap={singles:'Синглы',covers:'Каверы',silent:'Silent',beyond:'BEYOND',trika:'ТРИКА',ocean:'OCEAN','illusion-of-life':'Illusion of Life',extended:'Extended Version'};
 const normalizeTitleR1161=v=>String(v||'').replace(/\.[a-z0-9]{2,5}$/i,'').replace(/[_-]+/g,' ').replace(/\s+/g,' ').trim().toLocaleLowerCase('ru-RU');
 function isCoverTrackR1161(t){
  const raw=String(t?.title||t?.name||(t?.key||'').split('/').pop()||'');
