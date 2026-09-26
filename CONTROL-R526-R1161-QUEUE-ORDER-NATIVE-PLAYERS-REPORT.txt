@@ -1,0 +1,18 @@
+ANDRIK SITE / CONTROL R1161
+
+CONTROL · MANUAL NEXT
+- Preserves atomic queue-pick-r989 command: chosen media is inserted/moved to firstFuture (#1 after current media).
+- Picker card order: Singles, Covers, Silent, BEYOND, TRIKA, OCEAN, Illusion of Life.
+- Singles uses owner-supplied SINGLE artwork.
+- Covers uses the existing Lira-with-guitar artwork.
+- Silent uses owner-supplied Silent artwork.
+- Covers are separated from singles by title; 'А я скажу нет' is explicitly a cover.
+
+PUBLIC ALBUMS
+- TRIKA / OCEAN / Illusion of Life blue Built-in Player buttons open the native R2 track list inline.
+- Every row has native HTML audio (preload=none) and an MP3 download button.
+- BEYOND dedicated player remains unchanged.
+- Blue Built-in Player buttons now have the same full width.
+
+RADIO CORE
+- No radio/audio/FFmpeg/queue-server code is changed by this site package.
