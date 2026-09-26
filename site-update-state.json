@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1790419600987-ec88a3e201",
-  "release": "R1170",
-  "archiveName": "R1170-HOMEPAGE-SINGLES-COVERS-FINAL-SPLIT.zip",
-  "sourceHead": "92f36d5f4ce6b240e081018f8a9d21109de840c6",
-  "backupSha": "92f36d5f4ce6b240e081018f8a9d21109de840c6",
+  "operationId": "publish-1790420049278-77ef9c8e21",
+  "release": "R1171",
+  "archiveName": "R1171-COVERS-FULL-HUB-FIX.zip",
+  "sourceHead": "9e86add3f277b60f967d6903fbbd236330f279c9",
+  "backupSha": "9e86add3f277b60f967d6903fbbd236330f279c9",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-26T10:46:40.987Z"
+  "generatedAt": "2026-09-26T10:54:09.278Z"
 }
