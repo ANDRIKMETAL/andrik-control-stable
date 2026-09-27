@@ -1,0 +1,24 @@
+ANDRIK · DREAMING OF LIRA · R1184
+3D COMBAT CACHE/DIRECTION FIX
+
+WHY R1183 LOOKED UNCHANGED
+- /assets/* is served with Cache-Control: public, max-age=31536000, immutable.
+- R1183 changed code inside the old immutable filenames lira-3d-r1182.js and lira-models-r1182.js.
+- A browser/CDN could therefore continue using the original R1182 3D modules, which explains why the visible punch/kick/sword animations remained unchanged.
+
+R1184 FIX
+- New renderer URL: /assets/lira-3d-r1184.js
+- New model URL:    /assets/lira-models-r1184.js
+- dreaming-of-lira.html now loads the R1184 renderer.
+- The R1184 renderer imports the R1184 model module.
+- Service worker cache version bumped to 55.00-r1184-lira-3d-cachefix.
+- New cache reset page: /cache-reset-r1184.html
+- Visible footer marker: 3D EDITION · SIX WORLDS · R1184
+
+COMBAT CODE PRESERVED FROM THE CORRECTED R1183 MODEL
+- punch: limb travels toward player.face
+- C sweep: striking leg travels toward player.face
+- sword: independent body-level sword is placed and swung toward player.face
+- SUPER: three-stage guitar pull/front/strum animation plus rings/sparks/flash
+
+This release intentionally changes the immutable asset filenames rather than flipping the corrected animation signs again.

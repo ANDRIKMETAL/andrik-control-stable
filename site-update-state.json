@@ -1,14 +1,14 @@
 {
   "schema": 1,
   "updaterVersion": "55.00-r356",
-  "operation": "reinstall",
-  "reinstall": true,
-  "operationId": "reinstall-1790518267436-5365ccfb32",
-  "release": "R1183",
-  "archiveName": "ANDRIK-R1183-DREAMING-OF-LIRA-3D-COMBAT-FIX.zip",
-  "sourceHead": "abda3dbf79b83290be37465085d5835c136fe541",
-  "backupSha": "abda3dbf79b83290be37465085d5835c136fe541",
+  "operation": "publish",
+  "reinstall": false,
+  "operationId": "publish-1790518611927-8d43091ea7",
+  "release": "R1184",
+  "archiveName": "ANDRIK-R1184-DREAMING-OF-LIRA-3D-CACHE-DIRECTION-FIX.zip",
+  "sourceHead": "7559c1cdbf0c47fafe2094f87143337ab6cf6db3",
+  "backupSha": "7559c1cdbf0c47fafe2094f87143337ab6cf6db3",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-27T14:11:07.436Z"
+  "generatedAt": "2026-09-27T14:16:51.927Z"
 }
