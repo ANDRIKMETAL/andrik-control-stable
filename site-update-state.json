@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1790486109570-a2994a64ab",
-  "release": "R1181",
-  "archiveName": "R1181-OFFICIAL-74-EXTENDED-COVER-1.zip",
-  "sourceHead": "2a205126564b47899b37b43a2b9a8e640c62daf1",
-  "backupSha": "2a205126564b47899b37b43a2b9a8e640c62daf1",
+  "operationId": "publish-1790515180061-c4093a368c",
+  "release": "R1182",
+  "archiveName": "R1182-DREAMING-OF-LIRA-3D-1.zip",
+  "sourceHead": "e390c4a72224e6b3dc97aa908754ee74ab7f8d42",
+  "backupSha": "e390c4a72224e6b3dc97aa908754ee74ab7f8d42",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-27T05:15:10.560Z"
+  "generatedAt": "2026-09-27T13:19:40.061Z"
 }

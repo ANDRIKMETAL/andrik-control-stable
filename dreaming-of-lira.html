@@ -4,7 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
   <meta name="theme-color" content="#080b12" />
-  <title>Dreaming of Líra — ANDRIK Game · R010</title>
+  <title>Dreaming of Líra 3D — ANDRIK</title>
+  <meta name="description" content="Dreaming of Líra: браузерная 3D-аркада ANDRIK. Шесть миров, битвы, мотоцикл и космос. Играй на телефоне или компьютере." />
+  <link rel="stylesheet" href="/assets/lira-3d-r1182.css" />
   <style>
     :root {
       --ink: #f4f1e8;
@@ -441,8 +443,10 @@
   // Tiny generated sound effects
   // ------------------------------
   let audioCtx = null;
+  let mutedR1182 = false;
 
   function unlockAudio() {
+    if (mutedR1182) return;
     if (!audioCtx) {
       const AC = window.AudioContext || window.webkitAudioContext;
       if (AC) audioCtx = new AC();
@@ -5163,6 +5167,7 @@
     if (!data) return false;
     if (Number(data.currentLevel) === 6) {
       startLevel(6, false);
+      livesR955=clamp(Number(data?.r955?.lives)||3,1,MAX_LIVES_R955);superMeter=clamp(Number(data.superMeter)||28,0,SUPER_MAX);
       score = Number.isFinite(data.score) ? data.score : 0; levelScoreStartR952 = Number(data?.r952?.levelScoreStart) || score; levelStarsR952 = Number(data?.r952?.levelStars) || 0; unlockedLevel = Math.max(currentLevel, Math.min(6, Number(data.unlockedLevel) || currentLevel));
       player.x = Number(data?.player?.x) || player.x; player.y = Number(data?.player?.y) || player.y; player.z = Number(data?.player?.z) || 0; player.vz = Number(data?.player?.vz) || 0; player.hp = clamp(Number(data?.player?.hp) || 100, 1, 100); player.face = Number(data?.player?.face) || 1;
       const z = data?.ruinsR010;
@@ -5204,10 +5209,47 @@
   }, { passive: false });
 
   try { const s = readSave(); if (s) { let u = Number(s.unlockedLevel) || Number(s.currentLevel) || 1; if (s.completed && Number(s.currentLevel) >= 3) u = Math.max(u, Math.min(6, Number(s.currentLevel))); unlockedLevel = Math.max(unlockedLevel, Math.min(6, u)); } } catch(_) {}
+
+  // R1182: rendering adapter. All combat, collisions, levels and save keys remain in the original engine.
+  const drawClassicR1182 = draw;
+  let rendererR1182 = null;
+  window.LiraGame = {
+    attachRenderer(fn) { rendererR1182 = fn; if(fn)bootSplashUntil=0; },
+    snapshot() {
+      return {started, paused, gameOver, victory, elapsed, cameraX, score, shake, flash,
+        level: currentLevel, worldWidth: WORLD_W, player, enemies, effects, lives:livesR955,
+        superMeter, message:messageTimer > 0 ? message : '', unlocked:unlockedLevel,
+        stars:levelStarsR952, saved:hasSave(), levelSelect:levelSelectOpenR950, levelChoice:levelSelectChoiceR950,
+        gate:getActiveWave()?.gate, wave:getActiveWave()?.name,
+        cinematic, poster:levelPosterR010,
+        crates:recoveryCratesR950, hearts:recoveryHeartsR950, groundStars:groundStarsR952, lifeUps:groundLifeUpsR955,
+        ocean:{barrels:oceanBarrelsR942,pickups:oceanPickupsR942,chains:oceanChainsR955,explosions:oceanExplosionsR942},
+        projectiles:cityBossBulletsR955,
+        bar:{active:barModeR955,enemies:barEnemiesR955,items:barItemsR955,shots:barProjectilesR955},
+        bike:{active:bikeMode,distance:bikeDistance,y:bikeY,z:bikeZ,speed:bikeSpeed,attack:bikeAttackT,super:bikeSuperT,rivals:bikeRivals,pits:bikePits,posts:bikePostsR955},
+        space:{x:spaceX_R950,y:spaceY_R950,distance:spaceDistanceR950,roll:spaceRollR950,enemies:spaceEnemiesR950,shots:spaceShotsR950,enemyShots:spaceEnemyShotsR950,pickups:spacePickupsR950,boss:spaceBossR950,stars:spaceCollectStarsR952,lifeUps:spaceLifeUpsR955,insert:spaceInsertR950},
+        tower:{x:towerX_R952,y:towerY_R952,camera:towerCameraR952,grounded:towerGroundedR952,sword:towerSwordT_R952,platforms:towerPlatformsR952,enemies:towerEnemiesR952,crates:towerCratesR952,hearts:towerHeartsR952,stars:towerStarsR952,hazards:towerFallingR952,lifeUps:towerLifeUpsR955},
+        tetris:{grid:tetGridR952,cells:tetPieceR952?tetCellsR952():[],piece:tetPieceR952,stage:tetStageR952,lines:tetTotalLinesR952},
+        ruins:{enemies:ruinsEnemiesR010,crows:ruinsCrowsR010,obstacles:ruinsObstaclesR010,boss:ruinsBossStartedR010?ruinsBossR010:null}
+      };
+    },
+    start(fresh=false) { if(fresh) startNewGame(); else if(!started) {titleChoice=hasSave()?0:1;confirmTitleChoice();} else {levelSelectOpenR950=false;handleStartPause();} },
+    pause() { if(started&&!paused&&!gameOver&&!victory){paused=true;saveProgress(false);} },
+    levels() { if(started){paused=true;levelSelectOpenR950=true;} },
+    level(n) { const max=Math.max(unlockedLevel,Number(readSave()?.unlockedLevel)||1); if(Number.isInteger(n)&&n>=1&&n<=Math.min(6,max)){unlockedLevel=Math.min(6,max);levelSelectOpenR950=false;startLevel(n,false);begin();saveProgress(false);} },
+    input(action,down) { if(action==='sword'){if(down){unlockAudio();triggerSwordR952();}return;} if(!(action in input)&&action!=='kick')return; if(down&&!input[action]){pressed[action]=true;unlockAudio();}input[action]=down; },
+    clearInput() {for(const k of Object.keys(input))input[k]=false;for(const k of Object.keys(pressed))pressed[k]=false;},
+    sound(enabled) {mutedR1182=!enabled;if(enabled){unlockAudio();audioCtx?.resume();}else audioCtx?.suspend();},
+    save() {saveProgress(false);}
+  };
+  draw = function(){if(rendererR1182){try{rendererR1182(window.LiraGame.snapshot());return;}catch(e){rendererR1182=null;document.body.classList.remove('lira3d');document.getElementById('lira3dRoot')?.remove();console.error('Lira 3D fallback',e);}}drawClassicR1182();};
+  window.addEventListener('blur',()=>{window.LiraGame.clearInput();window.LiraGame.pause();});
+
   titleChoice = hasSave() ? 0 : 1;
   buildWaves();
   requestAnimationFrame(frame);
 })();
 </script>
+<script type="module" src="/assets/lira-3d-r1182.js"></script>
 </body>
 </html>
