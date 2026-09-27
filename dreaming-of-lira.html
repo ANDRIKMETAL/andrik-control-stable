@@ -165,9 +165,7 @@
       box-shadow: inset 0 0 0 2px rgba(0,0,0,.18), 0 3px 10px rgba(0,0,0,.32);
       color: rgba(239,248,252,.87);
     }
-    .actionBtn > span { display: flex; flex-direction: column; align-items: center; justify-content: center; }
-    .actionBtn .letter { display: block; font: 900 clamp(18px, 3.4vw, 30px)/1 inherit; }
-    .actionBtn .label { display: block; font: 700 clamp(7px, 1.1vw, 10px)/1 inherit; opacity: .78; margin-top: 3px; letter-spacing: .08em; }
+    .actionBtn .letter { display: block; font: 900 clamp(22px, 3.8vw, 32px)/1 inherit; letter-spacing: 0; text-shadow: 0 1px 4px rgba(0,0,0,.65); }
     .actionBtn.active {
       transform: scale(.93);
       background: rgba(73, 162, 190, .28);
@@ -178,14 +176,6 @@
     [data-action="jump"]   { right: 0; top: 0; }
     [data-action="kick"]   { left: 0; bottom: 0; }
     [data-action="super"]  { left: 0; top: 0; }
-    [data-action="sword"] { left: 50%; top: 50%; transform: translate(-50%,-50%); z-index: 4; }
-    [data-action="sword"].active { transform: translate(-50%,-50%) scale(.93); }
-    .swordBtn {
-      width: clamp(52px, 7.6vw, 68px); height: clamp(52px, 7.6vw, 68px);
-      border-color: rgba(172,222,238,.62); color:#dff8ff;
-      background: rgba(19,36,48,.42); box-shadow:0 0 16px rgba(104,215,244,.13), inset 0 0 0 2px rgba(0,0,0,.20);
-    }
-    .swordBtn .letter { font-size: clamp(13px, 2.1vw, 18px); }
     .superBtn {
       width: clamp(58px, 8.2vw, 74px);
       height: clamp(58px, 8.2vw, 74px);
@@ -200,8 +190,6 @@
       background: rgba(141,58,0,.50);
       box-shadow: 0 0 18px rgba(255,136,30,.52), inset 0 0 12px rgba(255,220,90,.16);
     }
-    .superBtn .guitarIcon { font-size: clamp(17px, 2.8vw, 25px); line-height: 1; }
-    .superBtn .label { color: inherit; }
 
     .systemButtons {
       position: absolute;
@@ -276,11 +264,10 @@
         <button class="touchBtn dirBtn" data-action="right" aria-label="Вправо">▶</button>
       </div>
       <div class="actions" aria-label="Кнопки боя">
-        <button class="touchBtn actionBtn" data-action="jump" aria-label="Прыжок"><span><span class="letter">B</span><span class="label">JUMP</span></span></button>
-        <button class="touchBtn actionBtn superBtn" data-action="super" aria-label="Супер удар гитарой"><span><span class="guitarIcon">⚡🎸</span><span class="label">SUPER</span></span></button>
-        <button class="touchBtn actionBtn swordBtn" data-action="sword" aria-label="A плюс B — удар мечом"><span><span class="letter">A+B</span><span class="label">SWORD</span></span></button>
-        <button class="touchBtn actionBtn" data-action="kick" aria-label="Подсечка ногой"><span><span class="letter">C</span><span class="label">SWEEP</span></span></button>
-        <button class="touchBtn actionBtn" data-action="attack" aria-label="Удар рукой"><span><span class="letter">A</span><span class="label">PUNCH</span></span></button>
+        <button class="touchBtn actionBtn" data-action="jump" aria-label="Прыжок"><span class="letter">B</span></button>
+        <button class="touchBtn actionBtn superBtn" data-action="super" aria-label="Суперудар"><span class="letter">S</span></button>
+        <button class="touchBtn actionBtn" data-action="kick" aria-label="Удар ногой"><span class="letter">C</span></button>
+        <button class="touchBtn actionBtn" data-action="attack" aria-label="Удар рукой"><span class="letter">A</span></button>
       </div>
       <div class="systemButtons">
         <button class="systemBtn" data-system="select" aria-label="Select">SELECT</button>
@@ -1003,6 +990,8 @@
       face: -1,
       attack: null,
       attackCooldown: 0.4 + Math.random() * 0.7,
+      retreatT: 0,
+      retreatDir: 0,
       stun: 0,
       hitFlash: 0,
       hitByAttack: -1,
@@ -1341,6 +1330,19 @@
     if (absX < 360) e.aggro = true;
     if (!e.aggro) return;
 
+    // R1185: melee enemies strike toward Líra, then visibly backstep before re-engaging.
+    if ((e.retreatT || 0) > 0) {
+      e.retreatT = Math.max(0, e.retreatT - dt);
+      const back = e.retreatDir || -e.face || -1;
+      const retreatSpeed = (e.type === "boss" ? 72 : e.type === "brute" || e.type === "riot" ? 92 : 112);
+      e.vx = back * retreatSpeed;
+      e.vy = approach(e.vy, 0, dt * 360);
+      e.walkPhase += dt * 13;
+      e.x = clamp(e.x, cameraX - 20, cameraX + W + 40);
+      e.y = clamp(e.y, FLOOR_TOP + 17, FLOOR_BOTTOM);
+      return;
+    }
+
     if (updateOceanBossSpecial(e, dt, dx, dy, absX, absY)) {
       e.x = clamp(e.x, cameraX - 20, cameraX + W + 40);
       e.y = clamp(e.y, FLOOR_TOP + 17, FLOOR_BOTTOM);
@@ -1358,15 +1360,20 @@
         }
       }
       if (e.attack.t >= e.attack.duration) {
+        const away = (e.x - player.x) >= 0 ? 1 : -1;
         e.attack = null;
-        e.attackCooldown = e.type === "boss" ? 0.58 : 0.85 + Math.random() * 0.45;
+        e.retreatDir = away;
+        e.retreatT = e.type === "boss" ? 0.24 : 0.34 + Math.random() * 0.10;
+        e.attackCooldown = e.type === "boss" ? 0.48 : 0.48 + Math.random() * 0.28;
       }
       return;
     }
 
     const attackRange = e.type === "boss" ? 42 : 28;
     if (absX < attackRange && absY < 14 && e.attackCooldown <= 0) {
-      e.attack = { t: 0, duration: e.type === "boss" ? 0.52 : 0.40, hit: false };
+      e.attack = { kind: "punch", t: 0, duration: e.type === "boss" ? 0.52 : 0.40, hit: false };
+      // Tiny forward commitment makes the hit readable before the backstep.
+      e.vx = e.face * (e.type === "boss" ? 34 : 48);
       tone(e.type === "boss" ? 88 : 150, 0.05, "square", 0.014, 90);
       return;
     }
@@ -3438,9 +3445,11 @@
   let spaceSpawnR950=.6,spaceEnemiesR950=[],spaceShotsR950=[],spaceEnemyShotsR950=[],spacePickupsR950=[];
   let spaceBossR950=null,spaceBossStartedR950=false,spaceInsertR950=null,spaceInsertFlagsR950=[false,false,false];
   let spaceStarsR950=[];
+  // R1185 cinematic ship SUPER: charge -> flash/detonation -> enemies vanish.
+  let spaceSuperR1185=null;
 
   function resetSpaceR950(){
-    spaceDistanceR950=0;spaceSpeedR950=84;spaceX_R950=88;spaceY_R950=136;spaceWeaponR950='TWIN';spaceFireR950=0;spaceKickR950=0;spaceInvulnR950=0;spaceRollR950=0;spaceSpawnR950=.65;spaceEnemiesR950=[];spaceShotsR950=[];spaceEnemyShotsR950=[];spacePickupsR950=[];spaceBossR950=null;spaceBossStartedR950=false;spaceInsertR950=null;spaceInsertFlagsR950=[false,false,false];player.hp=player.maxHp;superMeter=35;
+    spaceDistanceR950=0;spaceSpeedR950=84;spaceX_R950=88;spaceY_R950=136;spaceWeaponR950='TWIN';spaceFireR950=0;spaceKickR950=0;spaceInvulnR950=0;spaceRollR950=0;spaceSpawnR950=.65;spaceEnemiesR950=[];spaceShotsR950=[];spaceEnemyShotsR950=[];spacePickupsR950=[];spaceBossR950=null;spaceBossStartedR950=false;spaceInsertR950=null;spaceInsertFlagsR950=[false,false,false];spaceSuperR1185=null;player.hp=player.maxHp;superMeter=35;
     spaceStarsR950=Array.from({length:74},(_,i)=>({x:(i*83)%W,y:9+(i*47)%(H-18),z:1+(i%3)}));
   }
   function startSpaceInsertR950(index){
@@ -3466,8 +3475,27 @@
   }
   function fireSpaceMissileR950(){spaceShotsR950.push({x:spaceX_R950+20,y:spaceY_R950+9,vx:210,vy:0,damage:62,r:4,kind:'missile'});tone(82,.07,'sawtooth',.018,52);}
   function spaceSuperR950(){
-    if(superMeter<SUPER_COST)return;superMeter-=SUPER_COST;flash=Math.max(flash,.18);hitShake(9);tone(52,.28,'sawtooth',.045,180);
-    for(const e of spaceEnemiesR950)e.hp-=120;if(spaceBossR950)spaceBossR950.hp-=165;spaceEnemyShotsR950=[];showMessage('SUPER · COSMIC RIFF',.9);
+    if(spaceSuperR1185||superMeter<SUPER_COST)return;
+    superMeter-=SUPER_COST;
+    spaceSuperR1185={t:0,duration:1.12,detonated:false};
+    spaceInvulnR950=Math.max(spaceInvulnR950,1.15);
+    showMessage('SUPER · COSMIC RIFF',1.15);
+    hitShake(4);
+    tone(82,.16,'sawtooth',.026,180);
+  }
+  function updateSpaceSuperR1185(dt){
+    const sp=spaceSuperR1185;if(!sp)return;sp.t+=dt;
+    // Charge grows for half a second. At the white flash every ordinary enemy is erased.
+    if(!sp.detonated&&sp.t>=.46){
+      sp.detonated=true;
+      for(const e of spaceEnemiesR950){ if(e.alive!==false) e.hp=0; }
+      if(spaceBossR950)spaceBossR950.hp-=190;
+      spaceEnemyShotsR950=[];
+      flash=Math.max(flash,.42);hitShake(15);
+      tone(46,.34,'sawtooth',.055,260);
+      tone(186,.20,'triangle',.026,620);
+    }
+    if(sp.t>=sp.duration)spaceSuperR1185=null;
   }
   function dropSpacePickupR950(x,y,forced=''){
     const roll=Math.random();let kind=forced||(roll<.30?'heart':roll<.53?'SPREAD':roll<.76?'LASER':'PLASMA');spacePickupsR950.push({x,y,kind,t:0});
@@ -3488,6 +3516,7 @@
   function updateSpaceR950(dt){
     if(!started||paused||gameOver||victory)return;
     elapsed+=dt;shake=Math.max(0,shake-dt*24);flash=Math.max(0,flash-dt);messageTimer=Math.max(0,messageTimer-dt);spaceInvulnR950=Math.max(0,spaceInvulnR950-dt);spaceRollR950=Math.max(0,spaceRollR950-dt);spaceFireR950=Math.max(0,spaceFireR950-dt);spaceKickR950=Math.max(0,spaceKickR950-dt);superMeter=clamp(superMeter+dt*.65,0,SUPER_MAX);
+    updateSpaceSuperR1185(dt);
     if(spaceInsertR950){spaceInsertR950.t-=dt;if(spaceInsertR950.t<=0)spaceInsertR950=null;return;}
     if(!spaceInsertFlagsR950[0])startSpaceInsertR950(0);else if(spaceDistanceR950>2750&&!spaceInsertFlagsR950[1])startSpaceInsertR950(1);else if(spaceDistanceR950>5550&&!spaceInsertFlagsR950[2])startSpaceInsertR950(2);
     let mx=(input.right?1:0)-(input.left?1:0),my=(input.down?1:0)-(input.up?1:0);if(mx||my){const m=Math.hypot(mx,my)||1;mx/=m;my/=m;}spaceX_R950=clamp(spaceX_R950+mx*120*dt,38,225);spaceY_R950=clamp(spaceY_R950+my*120*dt,40,H-35);
@@ -3533,6 +3562,7 @@
     for(const sh of spaceShotsR950){ctx.fillStyle=sh.kind==='missile'?'#ffb744':sh.kind==='rift'?'#e9fbff':sh.kind==='plasma'?'#ff5a78':'#82e8ff';if(sh.kind==='laser'||sh.kind==='rift')ctx.fillRect(sh.x,sh.y-1,sh.kind==='rift'?26:16,3);else{ctx.beginPath();ctx.arc(sh.x,sh.y,sh.r,0,Math.PI*2);ctx.fill();}}
     for(const b of spaceEnemyShotsR950){ctx.fillStyle='#ff4966';ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,Math.PI*2);ctx.fill();}
     for(const p of spacePickupsR950){const y=p.y+Math.sin(p.t*5)*3;ctx.strokeStyle='#8beaff';ctx.strokeRect(p.x-9,y-9,18,18);ctx.fillStyle=p.kind==='heart'?'#ff5369':'#d7f7ff';ctx.font='bold 9px monospace';ctx.fillText(p.kind==='heart'?'♥':p.kind[0],p.x-4,y-6);}
+    if(spaceSuperR1185){const t=clamp(spaceSuperR1185.t/spaceSuperR1185.duration,0,1),blast=clamp((t-.34)/.42,0,1);ctx.save();ctx.globalCompositeOperation='lighter';ctx.strokeStyle=`rgba(142,232,255,${.85*(1-t)})`;ctx.lineWidth=3;for(let i=0;i<4;i++){ctx.beginPath();ctx.arc(spaceX_R950,spaceY_R950,14+i*8+t*(45+i*25),0,Math.PI*2);ctx.stroke();}ctx.fillStyle=`rgba(255,247,205,${Math.max(0,.55-Math.abs(t-.42)*2.2)})`;ctx.beginPath();ctx.arc(spaceX_R950,spaceY_R950,8+blast*46,0,Math.PI*2);ctx.fill();ctx.restore();}
     drawEyeRiderR950();
     // HUD
     ctx.fillStyle='rgba(4,7,14,.82)';ctx.fillRect(8,8,132,35);ctx.fillStyle='#32343d';ctx.fillRect(12,12,120,6);ctx.fillStyle=player.hp>30?'#c04c5c':'#e1a44f';ctx.fillRect(12,12,120*(player.hp/player.maxHp),6);ctx.fillStyle='#e9f4fa';ctx.font='bold 8px monospace';ctx.fillText('LÍRA · EYE-RIDER',12,22);ctx.fillStyle='#80dff5';ctx.font='6px monospace';ctx.fillText(`WEAPON ${spaceWeaponR950} · C MISSILE`,12,33);
@@ -4166,7 +4196,23 @@
     for(const p of barProjectilesR955){p.t+=dt;p.x+=p.vx*dt;for(const e of barEnemiesR955){if(!e.alive||p.dead)continue;if(Math.abs(e.x-p.x)<14&&Math.abs(e.y-(p.y+20))<22){p.dead=true;barDamageEnemyR955(e,52,Math.sign(p.vx)*28);}}}
     barProjectilesR955=barProjectilesR955.filter(p=>!p.dead&&p.x>-20&&p.x<W+20&&p.t<2.2);
     for(const it of barItemsR955){if(it.taken)continue;if(Math.abs(it.x-player.x)<18&&Math.abs(it.y-player.y)<24){it.taken=true;barWeaponR955=it.kind;showMessage(it.kind==='knife'?'KNIFE READY':'BOTTLE READY',.55);tone(510,.05,'triangle',.015,690);}}
-    for(const e of barEnemiesR955){if(!e.alive)continue;e.atk=Math.max(0,e.atk-dt);const dx=player.x-e.x,dy=player.y-e.y,dist=Math.hypot(dx,dy);if(dist>25){e.x+=Math.sign(dx)*(e.knife?44:50)*dt;e.y+=Math.sign(dy)*25*dt;}else if(e.atk<=0){e.atk=.8+Math.random()*.55;hurtBarR955(e.knife?13:9,e.x);}}
+    for(const e of barEnemiesR955){
+      if(!e.alive)continue;
+      e.atk=Math.max(0,e.atk-dt);e.retreatT=Math.max(0,(e.retreatT||0)-dt);
+      const dx=player.x-e.x,dy=player.y-e.y,dist=Math.hypot(dx,dy)||1;e.face=dx>=0?1:-1;
+      if(e.attack){
+        e.attack.t+=dt;
+        if(!e.attack.hit&&e.attack.t>=.14&&e.attack.t<=.25&&dist<34){e.attack.hit=true;hurtBarR955(e.knife?13:9,e.x);}
+        if(e.attack.t>=e.attack.duration){e.attack=null;e.retreatDir=(e.x-player.x)>=0?1:-1;e.retreatT=.30+Math.random()*.10;}
+      }else if(e.retreatT>0){
+        e.x=clamp(e.x+(e.retreatDir||-e.face)*(e.knife?76:84)*dt,18,W-18);
+        e.y=clamp(e.y+Math.sign(e.y-player.y)*10*dt,164,235);
+      }else if(dist>29){
+        e.x+=dx/dist*(e.knife?44:50)*dt;e.y+=dy/dist*25*dt;
+      }else if(e.atk<=0){
+        e.atk=.62+Math.random()*.35;e.attack={kind:'punch',t:0,duration:.38,hit:false};
+      }
+    }
     if(barEnemiesR955.every(e=>!e.alive)){barClearClockR955+=dt;if(barClearClockR955>.65&&barExitT_R955<=0){barExitT_R955=.01;showMessage('THROUGH THE WINDOW!',1.0);tone(78,.18,'sawtooth',.026,42);}}
     autoSaveClock+=dt;if(autoSaveClock>=2.5){autoSaveClock=0;saveProgress(false);}
   }
@@ -4889,15 +4935,22 @@
   function updateRuinsEnemiesR010(dt) {
     for (const e of ruinsEnemiesR010) {
       if (!e.alive) { e.deathTimer = Math.max(0, (e.deathTimer || 0) - dt); continue; }
-      e.attack = Math.max(0, e.attack - dt); e.guard = Math.max(0, e.guard - dt);
+      e.attack = Math.max(0, e.attack - dt); e.guard = Math.max(0, e.guard - dt); e.retreatT = Math.max(0, (e.retreatT || 0) - dt);
       const dx = player.x - e.x, dy = player.y - e.y, dist = Math.hypot(dx, dy);
       e.face = dx >= 0 ? 1 : -1;
-      if (Math.abs(dx) < 170 && Math.abs(dy) < 54) {
+      if (e.attackAnimR1185) {
+        const a=e.attackAnimR1185;a.t+=dt;
+        if(!a.hit&&a.t>=.16&&a.t<=.29&&Math.abs(dx)<36&&Math.abs(dy)<18&&player.z<16){a.hit=true;damageRuinsPlayerR010(e.damage,e.x);}
+        if(a.t>=a.duration){e.attackAnimR1185=null;e.retreatDir=(e.x-player.x)>=0?1:-1;e.retreatT=e.shield?.26:.34;}
+      } else if (e.retreatT > 0) {
+        e.x += (e.retreatDir || -e.face) * (e.shield ? 54 : 72) * dt;
+        e.walkPhase = (e.walkPhase || 0) + dt * 12;
+      } else if (Math.abs(dx) < 170 && Math.abs(dy) < 54) {
         if (Math.abs(dx) > (e.shield ? 30 : 26) || Math.abs(dy) > 12) {
           const m = Math.sign(dx); e.x += m * e.speed * dt; e.y += Math.sign(dy) * 18 * dt;
         } else if (e.attack <= 0) {
           e.attack = e.shield ? 1.05 : .78;
-          if (Math.abs(dx) < 32 && Math.abs(dy) < 18 && player.z < 16) damageRuinsPlayerR010(e.damage, e.x);
+          e.attackAnimR1185={kind:'punch',t:0,duration:e.shield?.46:.40,hit:false};
         }
         if (e.shield && dist < 86 && e.guard <= 0 && Math.random() < .015) e.guard = .65;
       }
@@ -5244,7 +5297,7 @@
         projectiles:cityBossBulletsR955,
         bar:{active:barModeR955,enemies:barEnemiesR955,items:barItemsR955,shots:barProjectilesR955},
         bike:{active:bikeMode,distance:bikeDistance,y:bikeY,z:bikeZ,speed:bikeSpeed,attack:bikeAttackT,super:bikeSuperT,rivals:bikeRivals,pits:bikePits,posts:bikePostsR955},
-        space:{x:spaceX_R950,y:spaceY_R950,distance:spaceDistanceR950,roll:spaceRollR950,enemies:spaceEnemiesR950,shots:spaceShotsR950,enemyShots:spaceEnemyShotsR950,pickups:spacePickupsR950,boss:spaceBossR950,stars:spaceCollectStarsR952,lifeUps:spaceLifeUpsR955,insert:spaceInsertR950},
+        space:{x:spaceX_R950,y:spaceY_R950,distance:spaceDistanceR950,roll:spaceRollR950,enemies:spaceEnemiesR950,shots:spaceShotsR950,enemyShots:spaceEnemyShotsR950,pickups:spacePickupsR950,boss:spaceBossR950,stars:spaceCollectStarsR952,lifeUps:spaceLifeUpsR955,insert:spaceInsertR950,super:spaceSuperR1185},
         tower:{x:towerX_R952,y:towerY_R952,camera:towerCameraR952,grounded:towerGroundedR952,sword:towerSwordT_R952,platforms:towerPlatformsR952,enemies:towerEnemiesR952,crates:towerCratesR952,hearts:towerHeartsR952,stars:towerStarsR952,hazards:towerFallingR952,lifeUps:towerLifeUpsR955},
         tetris:{grid:tetGridR952,cells:tetPieceR952?tetCellsR952():[],piece:tetPieceR952,stage:tetStageR952,lines:tetTotalLinesR952},
         ruins:{enemies:ruinsEnemiesR010,crows:ruinsCrowsR010,obstacles:ruinsObstaclesR010,boss:ruinsBossStartedR010?ruinsBossR010:null}
@@ -5267,6 +5320,6 @@
   requestAnimationFrame(frame);
 })();
 </script>
-<script type="module" src="/assets/lira-3d-r1184.js"></script>
+<script type="module" src="/assets/lira-3d-r1186.js"></script>
 </body>
 </html>

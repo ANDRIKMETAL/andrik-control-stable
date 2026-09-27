@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1790518611927-8d43091ea7",
-  "release": "R1184",
-  "archiveName": "ANDRIK-R1184-DREAMING-OF-LIRA-3D-CACHE-DIRECTION-FIX.zip",
-  "sourceHead": "7559c1cdbf0c47fafe2094f87143337ab6cf6db3",
-  "backupSha": "7559c1cdbf0c47fafe2094f87143337ab6cf6db3",
+  "operationId": "publish-1790519761116-ac97292b7e",
+  "release": "R1186",
+  "archiveName": "ANDRIK-R1186-DREAMING-OF-LIRA-ENEMY-AI-SPACE-SUPER-CLEAN-CONTROLS.zip",
+  "sourceHead": "f8c50919c55e52b7cd6bd0d3dc7912498962192a",
+  "backupSha": "f8c50919c55e52b7cd6bd0d3dc7912498962192a",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-27T14:16:51.927Z"
+  "generatedAt": "2026-09-27T14:36:01.116Z"
 }

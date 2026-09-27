@@ -1,0 +1,11 @@
+ANDRIK R1185 — DREAMING OF LÍRA 3D
+
+CHANGES
+- Ground enemies now approach Líra, perform a visible melee punch toward her, then backstep before attacking again.
+- Enemy attack animation is wired to the real attack state (fixes old e.atk renderer typo).
+- NO CHOICE BAR enemies use the same strike -> retreat rhythm.
+- RUINS roman enemies now telegraph the strike, hit during the animation, then retreat.
+- LEVEL 3 SPACE SUPER is now cinematic: charge rings and sparks around EYE-RIDER, large white/blue detonation flash, shockwave, camera shake; ordinary enemies are removed at the detonation moment and enemy bullets are cleared.
+- SPACE boss takes heavy SUPER damage instead of being deleted.
+- New immutable modules: lira-3d-r1185.js / lira-models-r1185.js.
+- Cache reset page: /cache-reset-r1185.html
