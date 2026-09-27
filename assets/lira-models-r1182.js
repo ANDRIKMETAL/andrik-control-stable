@@ -61,7 +61,7 @@ export function character(kind='lira'){
  // Eye medallion and chain, part of Líra's established design.
  if(lira){const necklace=ring(body,0,46,4.8,3.3,.22,silver);necklace.scale.y=1.2;const med=ring(body,0,40,5.5,2.1,.5,silver);med.scale.y=.62;sphere(body,0,40,5.7,.8,.8,.45,material('#c0ac76',.3,.75));}
  if(roman||kind==='riot'){const shield=new T.Group();shield.position.set(-13,38,5);box(shield,0,0,0,11,22,3,suit);box(shield,0,0,1.6,1.4,20,.6,silver);sphere(shield,0,0,2.1,2.5,2.5,1.3,silver);body.add(shield);}
- const sword=new T.Group();limbs[1].fore.add(sword);sword.position.set(0,-11,0);sword.rotation.z=-Math.PI/2;
+ const sword=new T.Group();body.add(sword);sword.position.set(10,39,4.5);sword.rotation.z=Math.PI/2;
  box(sword,0,-4,0,2.1,8,2,boots);box(sword,0,-8,0,9,1.2,2,material('#b59b68',.3,.65));box(sword,0,-26,0,3,34,.75,silver);box(sword,.9,-26,.5,.8,32,.25,material('#b8e7ed',.15,.4,.4));cone(sword,0,-45,0,1.5,5,silver).rotation.z=Math.PI;sword.visible=false;
  const guitar=new T.Group();guitar.position.set(0,0,-1);guitar.rotation.z=-.44;body.add(guitar);
  sphere(guitar,-4,34,-6,6.5,9,2.4,material('#2b1c24',.28,.5));sphere(guitar,1,39,-6,5,6,2.2,leather);box(guitar,0,51,-6,2.8,27,1.8,material('#70584b'));box(guitar,0,66,-6,4,6,2,boots);
@@ -73,21 +73,104 @@ export function character(kind='lira'){
  return root;
 }
 export function animateCharacter(root,p,time,opts={}){
- const d=root.userData,walking=opts.walking??(Math.abs(p.vx||0)+Math.abs(p.vy||0)>8),phase=p.walkPhase||time*9;
- const stride=walking?Math.sin(phase)*.53:0;const air=(p.z||0)>2||opts.air;
- root.rotation.y=(p.face??p.dir??1)*.55;
- d.body.position.y=walking?Math.abs(Math.sin(phase))*.9:Math.sin(time*2)*.4;
- d.body.rotation.z=0;d.head.rotation.y=Math.sin(time*.7)*.035;
- d.limbs.forEach((a,i)=>{a.arm.rotation.set(i?stride:-stride,0,(i?-.1:.1));a.fore.rotation.x=-.18;a.leg.rotation.x=i?-stride:stride;a.leg.rotation.z=0;a.shin.rotation.x=air?.55:Math.max(0,(i?stride:-stride)*.7);if(air)a.leg.rotation.x=i?-.75:.45;});
- const atk=p.attack,kind=atk?.kind||opts.attack;
- d.sword.visible=!!kind&&/sword/i.test(kind);d.guitar.rotation.z=-.44;
- if(kind){const t=atk?Math.min(1,atk.t/atk.duration):.45,q=Math.sin(t*Math.PI),right=(p.face||1)>0?1:0,arm=d.limbs[right];
-  if(/kick|sweep/i.test(kind)){d.limbs[right].leg.rotation.z=-(p.face||1)*q*1.25;d.limbs[right].shin.rotation.x=.1;d.body.rotation.z=(p.face||1)*q*.14;}
-  else if(/guitar|super/i.test(kind)){d.limbs.forEach(a=>{a.arm.rotation.z=q*1.3;a.arm.rotation.x=-q*1.5;});d.guitar.rotation.z=-.44+q*2.2;}
-  else{arm.arm.rotation.z=-(p.face||1)*q*1.5;arm.arm.rotation.x=-q*.5;arm.fore.rotation.x=-.1;d.body.rotation.z=-(p.face||1)*q*.08;}
+ const d=root.userData,face=(p.face??p.dir??1)>=0?1:-1,walking=opts.walking??(Math.abs(p.vx||0)+Math.abs(p.vy||0)>8),phase=p.walkPhase||time*9;
+ const clamp01=v=>Math.max(0,Math.min(1,v)),smooth=v=>{v=clamp01(v);return v*v*(3-2*v);};
+ const stride=walking?Math.sin(phase)*.53:0,air=(p.z||0)>2||opts.air;
+ root.rotation.y=face*.42;
+ d.body.position.set(0,walking?Math.abs(Math.sin(phase))*.9:Math.sin(time*2)*.4,0);
+ d.body.rotation.set(0,0,0);
+ d.head.rotation.set(0,Math.sin(time*.7)*.035,0);
+ d.limbs.forEach((a,i)=>{
+  a.arm.rotation.set(i?stride:-stride,0,(i?-.1:.1));
+  a.fore.rotation.set(-.18,0,0);
+  a.leg.rotation.set(i?-stride:stride,0,0);
+  a.shin.rotation.set(air?.55:Math.max(0,(i?stride:-stride)*.7),0,0);
+  if(air)a.leg.rotation.x=i?-.75:.45;
+ });
+ d.sword.visible=false;
+ d.sword.position.set(face*10,39,4.5);
+ d.sword.rotation.set(0,0,face*Math.PI/2);
+ d.guitar.visible=d.kind==='lira';
+ d.guitar.position.set(-face*1.5,0,-1);
+ d.guitar.rotation.set(0,0,-face*.44);
+
+ if(p.alive===false||p.dead){
+  const dur=Math.max(.25,Number(p.deathDuration)||.95);
+  const fall=Number.isFinite(Number(p.deathTimer))?clamp01(1-Number(p.deathTimer)/dur):1;
+  const eased=smooth(fall),dir=(p.deathDir??p.face??1)>=0?1:-1;
+  d.body.position.x=dir*eased*12;
+  d.body.position.y-=eased*16;
+  d.body.rotation.z=-dir*eased*1.46;
+  d.body.rotation.x=-eased*.24;
+  d.head.rotation.z=dir*eased*.22;
+  d.limbs.forEach((a,i)=>{
+   a.arm.rotation.z+=dir*(i?.16:-.12)*eased;
+   a.leg.rotation.z+=dir*(i?.12:-.08)*eased;
+  });
+  root.visible=true;
+  return;
  }
- if(opts.ride){d.limbs.forEach(a=>{a.leg.rotation.x=-1.3;a.shin.rotation.x=1.4;a.arm.rotation.x=-.9;});d.body.rotation.x=.15;}else d.body.rotation.x=0;
- if(p.alive===false||p.dead){d.body.rotation.z=(p.face||1)*-1.4;d.body.position.y=-13;}
+
+ const atk=p.attack,kind=atk?.kind||opts.attack;
+ if(kind){
+  const t=atk?clamp01(atk.t/Math.max(.001,atk.duration)):.45;
+  const q=Math.sin(t*Math.PI),lead=face>0?1:0,trail=1-lead,arm=d.limbs[lead],other=d.limbs[trail];
+
+  if(/guitar|super/i.test(kind)){
+   // Three-stage super: reach behind -> pull the guitar to the front -> rapid power-chord strum.
+   const grab=smooth(t/.24);
+   const returnBack=t>.88?smooth((1-t)/.12):1;
+   const front=grab*returnBack;
+   const performance=clamp01((t-.20)/.62)*(1-clamp01((t-.86)/.12));
+   const strum=Math.sin(t*Math.PI*12)*performance;
+   d.guitar.position.set(face*(1.5+front*4),-front*2,-1+front*18);
+   d.guitar.rotation.z=-face*(.44+front*.23)+strum*.055;
+   d.guitar.rotation.x=front*.08;
+   d.body.rotation.z=-face*Math.sin(t*Math.PI)*.10;
+   d.body.rotation.x=-performance*.08;
+
+   // Fret hand reaches the neck; the other hand visibly strums across the strings.
+   arm.arm.rotation.z=face*(.28+front*.62);
+   arm.arm.rotation.x=-front*.82;
+   arm.fore.rotation.x=-.65-front*.35;
+   other.arm.rotation.z=-face*(.12+front*.34)+face*strum*.20;
+   other.arm.rotation.x=-front*1.02;
+   other.fore.rotation.x=-.40+strum*.16;
+   d.head.rotation.z=-face*performance*.055;
+  }else if(/sword/i.test(kind)){
+   // Sword is now a body-level prop so the blade always travels into the facing direction.
+   d.sword.visible=true;
+   const swing=smooth(t),arc=Math.sin(t*Math.PI);
+   d.sword.position.set(face*(9+arc*8),39+arc*5,5.5);
+   d.sword.rotation.z=face*(Math.PI/2 + .46 - swing*.92);
+   d.sword.rotation.y=-face*.08*arc;
+   arm.arm.rotation.z=face*(.32+arc*1.08);
+   arm.arm.rotation.x=-.25-arc*.42;
+   arm.fore.rotation.x=-.20;
+   other.arm.rotation.z=-face*.18*arc;
+   d.body.rotation.z=face*arc*.08;
+  }else if(/kick|sweep/i.test(kind)){
+   // Positive local Z-rotation moves the striking leg toward +screen-X when facing right.
+   d.limbs[lead].leg.rotation.z=face*q*1.42;
+   d.limbs[lead].leg.rotation.x=-q*.14;
+   d.limbs[lead].shin.rotation.x=.08-q*.12;
+   d.limbs[trail].leg.rotation.z=-face*q*.14;
+   d.body.rotation.z=-face*q*.12;
+   d.body.position.x=face*q*2.5;
+  }else{
+   // Punches and finishers extend toward the opponent, never behind Líra.
+   arm.arm.rotation.z=face*q*1.48;
+   arm.arm.rotation.x=-q*.54;
+   arm.fore.rotation.x=-.10-q*.12;
+   other.arm.rotation.z=-face*q*.16;
+   d.body.rotation.z=-face*q*.07;
+   d.body.position.x=face*q*2.2;
+  }
+ }
+ if(opts.ride){
+  d.limbs.forEach(a=>{a.leg.rotation.x=-1.3;a.shin.rotation.x=1.4;a.arm.rotation.x=-.9;});
+  d.body.rotation.x=.15;
+ }
  root.visible=!((p.invuln||0)>0&&Math.floor(time*15)%3===0);
 }
 export function dog(){const g=new T.Group();sphere(g,0,16,0,15,8,6,material('#30313a'));sphere(g,14,22,0,7,7,5,material('#252630'));sphere(g,20,20,2,6,3,4,material('#44424a'));for(const x of [-9,9])for(const z of [-4,4])cylinder(g,x,7,z,2,14,'#202530');cone(g,12,31,-3,2.5,8,'#151921');cone(g,16,31,3,2.5,8,'#151921');sphere(g,18,24,4,1,.8,.5,material('#dfae6c',.3,0,1));const tail=cylinder(g,-19,18,0,1.5,16,'#202530');tail.rotation.z=-.8;return g;}

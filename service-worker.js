@@ -1,6 +1,6 @@
 'use strict';
 
-const VERSION = '55.00-r1182-lira-3d';
+const VERSION = '55.00-r1183-lira-combat';
 const IS_CONTROL_HOST = self.location.hostname.toLowerCase() === 'control.andrikmetal.com';
 
 async function deleteControlCaches(){

@@ -37,9 +37,35 @@ async function boot(){
  function orb(key,x,y,z,size,color){const o=object(key,()=>sphere(new T.Group(),0,0,0,1,1,1,material(color,.35,.35,.7)));o.position.set(x,y,z);o.scale.setScalar(size);return o;}
  function floorZ(y=205){return (y-205)*1.65;}
  function setMode(next){if(mode===next)return;mode=next;if(world)scene.remove(world.group);if(!worldCache.has(mode))worldCache.set(mode,buildWorld(mode));world=worldCache.get(mode);scene.add(world.group);scene.background.set(mode==='ruins'?'#292027':mode==='bar'?'#100d17':'#111e2d');scene.fog.color.copy(scene.background);hemi.intensity=mode==='bar'?1.7:2.3;rim.color.set(mode==='ruins'?'#d59466':mode==='ocean'?'#8ac4d8':'#ceab78');}
+ function renderSuperFxR1183(s,p){
+  const atk=p?.attack,kind=atk?.kind||'';
+  if(!/guitar|super/i.test(kind))return;
+  const t=Math.max(0,Math.min(1,atk.t/Math.max(.001,atk.duration))),face=(p.face||1)>=0?1:-1;
+  const rise=Math.sin(Math.min(1,t/.82)*Math.PI),impact=Math.exp(-Math.pow((t-.48)/.14,2));
+  const baseX=p.x+face*(10+t*18),baseY=(p.z||0)+39,baseZ=floorZ(p.y);
+
+  for(let i=0;i<3;i++){
+   const delay=i*.12,u=Math.max(0,Math.min(1,(t-delay)/Math.max(.001,.72-delay)));
+   if(u<=0)continue;
+   const r=located('r1183-super-ring-v-'+i,()=>ring(new T.Group(),0,0,0,1,.024,material(i===1?'#e9b85d':'#c8e9f2',.18,.72,1.25)),baseX+face*i*5,baseY+i*3,baseZ+3);
+   r.rotation.set(0,0,face*(i-1)*.08);r.scale.setScalar(10+u*(62+i*12));
+  }
+  const ground=located('r1183-super-ring-ground',()=>ring(new T.Group(),0,0,0,1,.026,material('#f2c66d',.2,.68,1.2)),p.x,1.2,baseZ);
+  ground.rotation.set(Math.PI/2,0,0);ground.scale.setScalar(15+t*105);
+
+  for(let i=0;i<7;i++){
+   const a=i*Math.PI*2/7+t*11,rad=13+rise*(20+(i%3)*5),sy=baseY-10+(i%3)*9+Math.sin(t*18+i)*5;
+   const sp=orb('r1183-super-spark-'+i,baseX+Math.cos(a)*rad,sy,baseZ+5+Math.sin(a)*10,1.4+impact*2.2,i%2?'#f5c66a':'#d9f3ff');
+   sp.rotation.set(t*8+i,t*6,0);
+  }
+  const core=orb('r1183-super-core',baseX,baseY-1,baseZ+8,3.5+impact*8,'#fff0b3');
+  const light=object('r1183-super-light',()=>new T.PointLight('#ffd17b',0,210,2));
+  light.position.set(baseX,baseY+8,baseZ+24);light.intensity=1200+impact*7200+rise*1700;
+ }
  function renderGround(s,cam){
   const p=s.player;
   actor('lira',p,p.x,p.z||0,floorZ(p.y),'lira',{walking:s.bar.active?(Math.abs(p.x-(renderGround.lastX??p.x))>.01):undefined});renderGround.lastX=p.x;
+  renderSuperFxR1183(s,p);
   const enemies=s.bar.active?s.bar.enemies:s.level===6?[...s.ruins.enemies,...(s.ruins.boss?[s.ruins.boss]:[])]:s.enemies;
   for(const e of enemies){if(e.x<cam-90||e.x>cam+620||e.alive===false&&(e.deathTimer||0)<=0)continue;
    const kind=e.type==='dog'||e.r955Dog?'dog':e.type==='boss'||e===s.ruins.boss?'boss':s.level===6?'roman':e.type==='police'||e.type==='riot'?e.type:'gang';
@@ -140,6 +166,10 @@ async function boot(){
   // Bound dynamic actors to the active view so defeated/spawned entities do not accumulate.
   if(frameCount%180===0)for(const [key,o]of pool)if(!used.has(key)){dynamic.remove(o);release(o);pool.delete(key);}
   if(now-lastUI>80||!frameCount){updateUI(s);lastUI=now;}
+  const flashBoost=Math.max(0,Math.min(.55,(s.flash||0)*2.25));
+  renderer.toneMappingExposure=1.22+flashBoost;
+  rim.intensity=1.3+flashBoost*4.2;
+  spot.intensity=2800+flashBoost*7000;
   renderer.render(scene,camera);
   canvas.dataset.scene=mode;canvas.dataset.quality=renderer.shadowMap.enabled?'high':'low';canvas.dataset.objects=String(renderer.info.render.calls);
  }

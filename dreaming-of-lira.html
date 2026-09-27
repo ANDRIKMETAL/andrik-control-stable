@@ -527,7 +527,7 @@
     punch2: { duration: 0.26, activeStart: 0.08, activeEnd: 0.16, damage: 12, range: 33, depth: 17, knock: 23 },
     finisher: { duration: 0.36, activeStart: 0.11, activeEnd: 0.22, damage: 20, range: 39, depth: 20, knock: 48 },
     airKick: { duration: 0.30, activeStart: 0.05, activeEnd: 0.22, damage: 17, range: 37, depth: 18, knock: 35 },
-    guitarSmash: { duration: 0.88, activeStart: 0.45, activeEnd: 0.62, damage: 58, range: 72, depth: 30, knock: 96 }
+    guitarSmash: { duration: 1.12, activeStart: 0.36, activeEnd: 0.78, damage: 58, range: 72, depth: 30, knock: 96 }
   };
 
   function registerAttackDown() {
@@ -4805,7 +4805,11 @@
     hitShake(e.type === 'boss' ? 5 : 2);
     tone(e.type === 'boss' ? 84 : 150, e.type === 'boss' ? .07 : .045, 'square', .016, 70);
     if (e.hp <= 0) {
-      e.alive = false; score += e.type === 'boss' ? 6500 : 240; superMeter = clamp(superMeter + (e.type === 'boss' ? 24 : 9), 0, SUPER_MAX);
+      e.alive = false;
+      e.deathDuration = e.type === 'boss' ? 1.20 : 1.02;
+      e.deathTimer = e.deathDuration;
+      e.deathDir = knock !== 0 ? Math.sign(knock) : (player.face || 1);
+      score += e.type === 'boss' ? 6500 : 240; superMeter = clamp(superMeter + (e.type === 'boss' ? 24 : 9), 0, SUPER_MAX);
       if (e.type === 'boss') {
         showMessage('THE EYE LOOKS AWAY', 2.1);
         victory = true; unlockedLevel = Math.max(unlockedLevel, 6); commitHighScoreR952(6); writeSave({ ...buildSaveData(), version: SAVE_VERSION_R010, completed: true, unlockedLevel: 6, currentLevel: 6 });
@@ -4884,7 +4888,7 @@
   }
   function updateRuinsEnemiesR010(dt) {
     for (const e of ruinsEnemiesR010) {
-      if (!e.alive) continue;
+      if (!e.alive) { e.deathTimer = Math.max(0, (e.deathTimer || 0) - dt); continue; }
       e.attack = Math.max(0, e.attack - dt); e.guard = Math.max(0, e.guard - dt);
       const dx = player.x - e.x, dy = player.y - e.y, dist = Math.hypot(dx, dy);
       e.face = dx >= 0 ? 1 : -1;
@@ -4897,7 +4901,9 @@
         }
         if (e.shield && dist < 86 && e.guard <= 0 && Math.random() < .015) e.guard = .65;
       }
-      if (player.attack && player.attack.kind === 'guitarSmash' && Math.abs(player.x - e.x) < 88 && Math.abs(player.y - e.y) < 30) { damageRomanR010(e, 58, player.face * 78); }
+      if (player.attack && player.attack.kind === 'guitarSmash' && Math.abs(player.x - e.x) < 96 && Math.abs(player.y - e.y) < 34 && e.hitByAttack !== player.attack.id) {
+        e.hitByAttack = player.attack.id; damageRomanR010(e, 58, player.face * 78);
+      }
     }
     if (!ruinsBossR010 || !ruinsBossR010.alive) return;
     const e = ruinsBossR010;
@@ -4944,11 +4950,11 @@
             fx.hit = true;
           }
         }
-      } else if (fx.kind === 'r010-spark') {
+      } else if (fx.kind === 'r010-spark' || /^r1183-super-/.test(fx.kind || '')) {
         fx.t += dt;
       }
     }
-    effects = effects.filter(fx => !((fx.kind === 'r010-boss-pulse' || fx.kind === 'r010-spark') && fx.t >= fx.duration));
+    effects = effects.filter(fx => !(((fx.kind === 'r010-boss-pulse' || fx.kind === 'r010-spark' || /^r1183-super-/.test(fx.kind || ''))) && fx.t >= fx.duration));
   }
   function updateRuinsObstaclesR010() {
     for (const o of ruinsObstaclesR010) {
@@ -4980,9 +4986,20 @@
     if (player.x > 1850) ruinsCheckpointXR010 = Math.max(ruinsCheckpointXR010, 1810);
     if (player.x > 2760) ruinsCheckpointXR010 = Math.max(ruinsCheckpointXR010, 2720);
     if (pressed.super && superMeter >= SUPER_COST) {
-      superMeter -= SUPER_COST; showMessage('SUPER · ASH RIFF', .8); tone(62, .22, 'sawtooth', .03, 300);
-      for (const e of ruinsEnemiesR010) if (e.alive && Math.abs(e.x - player.x) < 150 && Math.abs(e.y - player.y) < 50) damageRomanR010(e, 54, player.face * 80);
-      if (ruinsBossR010 && ruinsBossR010.alive && Math.abs(ruinsBossR010.x - player.x) < 185) damageRomanR010(ruinsBossR010, 42, player.face * 25);
+      superMeter -= SUPER_COST;
+      guitarSpecialCooldown = 0;
+      startGuitarSpecial();
+      flash = Math.max(flash, .28); hitShake(11);
+      showMessage('SUPER · ASH RIFF', 1.12); tone(62, .26, 'sawtooth', .038, 300);
+      effects.push({ kind: 'r1183-super-ring-a', x: player.x + player.face * 10, y: player.y, t: 0, duration: .52 });
+      effects.push({ kind: 'r1183-super-ring-b', x: player.x + player.face * 22, y: player.y, t: 0, duration: .78 });
+      effects.push({ kind: 'r1183-super-flash', x: player.x + player.face * 34, y: player.y - 5, t: 0, duration: .36 });
+      for (const e of ruinsEnemiesR010) {
+        if (e.alive && Math.abs(e.x - player.x) < 178 && Math.abs(e.y - player.y) < 58) {
+          damageRomanR010(e, Math.max(120, e.hp + 1), player.face * 92);
+        }
+      }
+      if (ruinsBossR010 && ruinsBossR010.alive && Math.abs(ruinsBossR010.x - player.x) < 205) damageRomanR010(ruinsBossR010, 86, player.face * 30);
     }
     ruinsEyeBlinkR010 -= dt;
     if (ruinsEyeBlinkR010 <= 0) { ruinsEyeBlinkR010 = 1.8 + Math.random() * 2.8; ruinsEyeOpenR010 = ruinsEyeOpenR010 ? 0 : 1; }
