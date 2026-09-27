@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1790520559925-79789b30e8",
-  "release": "R1187",
-  "archiveName": "ANDRIK-R1187-DREAMING-OF-LIRA-SWORD-D-ANIMATION.zip",
-  "sourceHead": "5229973ff350ef176d982b286a0f98ee7b76ada3",
-  "backupSha": "5229973ff350ef176d982b286a0f98ee7b76ada3",
+  "operationId": "publish-1790521714567-f419061378",
+  "release": "R1188",
+  "archiveName": "ANDRIK-R1188-DREAMING-OF-LIRA-MOTORCYCLE-STAGE-REWORK.zip",
+  "sourceHead": "2c3bd96f8b2e8d13ae4892c01ec79856a7b93891",
+  "backupSha": "2c3bd96f8b2e8d13ae4892c01ec79856a7b93891",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-27T14:49:19.925Z"
+  "generatedAt": "2026-09-27T15:08:34.567Z"
 }

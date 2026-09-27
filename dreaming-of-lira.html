@@ -410,19 +410,28 @@
   let bikeAttackT = 0;
   let bikeSuperT = 0;
   let bikeCrashT = 0;
-  const BIKE_END = 5750;
+  // R1188 motorcycle-stage intro: Líra walks to the parked bike and mounts before the chase starts.
+  let bikeIntroT = 0;
+  let bikeIntroDone = false;
+  const BIKE_INTRO_DURATION = 3.45;
+  // R1188: longer ride with deliberate encounter spacing instead of a short chaotic traffic burst.
+  const BIKE_END = 9800;
   const bikePits = [
-    { d: 760, lane: 0, w: 100 }, { d: 1180, lane: 1, w: 110 },
-    { d: 1560, lane: 0, w: 118 }, { d: 1980, lane: 1, w: 128 },
-    { d: 2400, lane: 0, w: 105 }, { d: 2760, lane: 1, w: 135 },
-    { d: 3220, lane: 0, w: 120 }, { d: 3600, lane: 1, w: 112 },
-    { d: 4050, lane: 0, w: 138 }, { d: 4470, lane: 1, w: 120 },
-    { d: 4920, lane: 0, w: 150 }, { d: 5280, lane: 1, w: 135 }
+    { d: 1080, lane: 0, w: 84, type: "barrier" },
+    { d: 1880, lane: 1, w: 88, type: "barrier" },
+    { d: 2860, lane: 0, w: 92, type: "barrier" },
+    { d: 3790, lane: 1, w: 86, type: "barrier" },
+    { d: 4720, lane: 0, w: 94, type: "barrier" },
+    { d: 5740, lane: 1, w: 88, type: "barrier" },
+    { d: 6680, lane: 0, w: 96, type: "barrier" },
+    { d: 7580, lane: 1, w: 90, type: "barrier" },
+    { d: 8540, lane: 0, w: 98, type: "barrier" },
+    { d: 9360, lane: 1, w: 90, type: "barrier" }
   ];
   const bikeRivalTemplate = [
-    [520,0,"gang"],[920,1,"police"],[1320,0,"gang"],[1700,1,"police"],
-    [2140,0,"police"],[2520,1,"gang"],[2960,0,"gang"],[3380,1,"police"],
-    [3820,0,"police"],[4240,1,"gang"],[4700,0,"police"],[5160,1,"gang"],[5480,0,"police"]
+    [650,0,"gang"],[1390,1,"police"],[2210,1,"gang"],[3020,0,"police"],
+    [3890,0,"gang"],[4700,1,"police"],[5540,1,"gang"],[6400,0,"police"],
+    [7240,0,"gang"],[8070,1,"police"],[8840,0,"gang"],[9480,1,"police"]
   ];
   let bikeRivals = [];
 
@@ -2708,7 +2717,12 @@
     bikeAttackT = 0;
     bikeSuperT = 0;
     bikeCrashT = 0;
-    bikeRivals = bikeRivalTemplate.map((r, i) => ({ id:i, d:r[0], lane:r[1], kind:r[2], hp:36, maxHp:36, alive:true, hit:false }));
+    bikeIntroT = 0;
+    bikeIntroDone = false;
+    bikeRivals = bikeRivalTemplate.map((r, i) => ({
+      id:i, d:r[0], lane:r[1], kind:r[2], hp:42, maxHp:42, alive:true, hit:false,
+      engaged:false, duelDone:false, duelT:0, attackT:0, attackHit:false, attackCooldown:.75 + (i%3)*.18
+    }));
   }
   resetBikeState();
 
@@ -2808,12 +2822,14 @@
   function enterBikeMode() {
     if (bikeMode || bikeDone) return;
     bikeMode = true;
-    bikeDistance = Math.max(0, bikeDistance);
-    bikeY = 210; bikeZ = 0; bikeVz = 0; bikeSpeed = Math.max(255,bikeSpeed);
+    bikeDistance = 0;
+    bikeIntroT = 0;
+    bikeIntroDone = false;
+    bikeY = 210; bikeZ = 0; bikeVz = 0; bikeSpeed = 0;
     player.attack = null; player.vx=0; player.vy=0; player.z=0; player.vz=0;
     enemies = enemies.filter(e => !e.alive);
-    showMessage("BIKE CHASE — RIDE THE DREAM", 1.6);
-    tone(72,.14,"sawtooth",.028,118);
+    showMessage("LÍRA — TAKE THE BIKE", 1.9);
+    tone(86,.12,"triangle",.020,132);
     saveProgress(false);
   }
 
@@ -2839,7 +2855,7 @@
     bikeSuperT = Math.max(0,bikeSuperT-dt);
     bikeCrashT = Math.max(0,bikeCrashT-dt);
 
-    bikeSpeed = Math.min(430, bikeSpeed + dt * 7.2);
+    bikeSpeed = Math.min(355, bikeSpeed + dt * 4.6);
     bikeDistance += bikeSpeed * dt;
 
     let my = 0;
@@ -2864,7 +2880,7 @@
         const reach = pit.w / .70;
         if (Math.abs(bikeDistance - pit.d) < reach*.45 && Math.abs(bikeY-laneY) < 24) {
           bikeInvuln=.9; bikeCrashT=.55; bikeSpeed=Math.max(235,bikeSpeed-65);
-          damagePlayer(17, player.x+30); showMessage("JUMP THE PIT!", .72); break;
+          damagePlayer(17, player.x+30); showMessage("JUMP THE BARRIER!", .72); break;
         }
       }
     }
@@ -3003,6 +3019,14 @@
     const x=118+(pit.d-bikeDistance)*.35, y=bikeLaneY(pit.lane)+7;
     if(x<-120||x>W+120)return;
     const w=pit.w*.58;
+    if(pit.type === "barrier") {
+      ctx.save();ctx.translate(x,y-8);
+      ctx.fillStyle="rgba(255,166,64,.20)";ctx.beginPath();ctx.ellipse(0,16,w*.78,8,0,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle="#a94232";ctx.fillRect(-w*.48,-10,w*.96,20);
+      ctx.fillStyle="#f1bd65";ctx.fillRect(-w*.48,-5,w*.96,5);ctx.fillRect(-w*.48,5,w*.96,4);
+      ctx.fillStyle="#f7e0a2";ctx.fillRect(-w*.52,-14,7,5);ctx.fillRect(w*.42,-14,7,5);
+      ctx.restore();return;
+    }
     ctx.fillStyle="#05070a";ctx.beginPath();ctx.ellipse(x,y,w*.55,13,0,0,Math.PI*2);ctx.fill();
     ctx.strokeStyle="#5b4b42";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x-w*.58,y-3);ctx.lineTo(x-w*.3,y-11);ctx.lineTo(x,y-8);ctx.lineTo(x+w*.28,y-13);ctx.lineTo(x+w*.57,y-2);ctx.stroke();
     ctx.fillStyle="rgba(0,0,0,.5)";ctx.fillRect(x-w*.45,y,w*.9,9);
@@ -3057,7 +3081,7 @@
     const d=__baseBuildSaveData();
     d.version=SAVE_VERSION;
     d.superMeter=superMeter;
-    d.level1State={bikeMode,bikeDone,bikeDistance,bikeSpeed,bikeY,bikeZ,bikeVz,bikeRivals:bikeRivals.map(r=>({id:r.id,hp:r.hp,alive:r.alive}))};
+    d.level1State={bikeMode,bikeDone,bikeDistance,bikeSpeed,bikeY,bikeZ,bikeVz,bikeIntroT,bikeIntroDone,bikeRivals:bikeRivals.map(r=>({id:r.id,hp:r.hp,alive:r.alive}))};
     return d;
   };
 
@@ -3066,7 +3090,7 @@
     superMeter=clamp(Number(data.superMeter)||28,0,SUPER_MAX);
     resetBikeState();
     if(currentLevel===1&&data.level1State){
-      const b=data.level1State; bikeMode=!!b.bikeMode; bikeDone=!!b.bikeDone; bikeDistance=Math.max(0,Number(b.bikeDistance)||0);bikeSpeed=clamp(Number(b.bikeSpeed)||255,230,440);bikeY=clamp(Number(b.bikeY)||210,176,236);bikeZ=Math.max(0,Number(b.bikeZ)||0);bikeVz=Number(b.bikeVz)||0;
+      const b=data.level1State; bikeMode=!!b.bikeMode; bikeDone=!!b.bikeDone; bikeDistance=Math.max(0,Number(b.bikeDistance)||0);bikeSpeed=clamp(Number(b.bikeSpeed)||245,0,355);bikeY=clamp(Number(b.bikeY)||210,176,236);bikeZ=Math.max(0,Number(b.bikeZ)||0);bikeVz=Number(b.bikeVz)||0;bikeIntroT=Math.max(0,Number(b.bikeIntroT)||0);bikeIntroDone=!!b.bikeIntroDone||bikeDistance>8;
       if(Array.isArray(b.bikeRivals)){for(const sr of b.bikeRivals){const r=bikeRivals.find(x=>x.id===sr.id);if(r){r.hp=Number(sr.hp)||r.hp;r.alive=sr.alive!==false;}}}
       if(bikeMode){if(waves[0]){waves[0].started=true;waves[0].cleared=true;waves[0].ids=[];}if(waves[1]){waves[1].started=true;waves[1].cleared=true;waves[1].ids=[];}enemies=[];showMessage("BIKE CHASE RESTORED",1.0);}
     }
@@ -4393,7 +4417,7 @@
   // ------------------------------
   // Bike: center posts + C kick to knock rivals off bikes.
   // ------------------------------
-  const bikePostsR955=[{d:620,y:184},{d:1020,y:206},{d:1490,y:228},{d:1950,y:206},{d:2460,y:184},{d:3100,y:228},{d:3740,y:206},{d:4380,y:184},{d:5050,y:228}];
+  const bikePostsR955=[{d:1560,y:206},{d:3340,y:184},{d:5150,y:228},{d:6950,y:206},{d:8360,y:184},{d:9620,y:228}];
   function updateBikePostsR955(){
     if(!bikeMode||bikeInvuln>0||bikeZ>=19)return;for(const p of bikePostsR955){if(p.hit)continue;if(Math.abs(bikeDistance-p.d)<40&&Math.abs(bikeY-p.y)<20){p.hit=true;bikeInvuln=.85;bikeCrashT=.5;bikeSpeed=Math.max(230,bikeSpeed-58);damagePlayer(14,player.x+25);showMessage('ROAD POST!',.55);break;}}
   }
@@ -4420,7 +4444,7 @@
   drawBikeRider = function(x,y,z,kind='lira',attack=false){__r952DrawBikeRiderR955(x,y,z,kind,attack);if(kind==='lira'&&attack){ctx.save();ctx.translate(Math.round(x),Math.round(y-z));ctx.strokeStyle='#d0a080';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(1,-17);ctx.lineTo(29,-11);ctx.stroke();ctx.strokeStyle='#08090c';ctx.lineWidth=6;ctx.beginPath();ctx.moveTo(26,-11);ctx.lineTo(39,-10);ctx.stroke();ctx.restore();}};
 
   function ensureExtraBikeRivalsR955(){
-    const extras=[[760,1,'gang'],[1260,0,'police'],[1780,1,'gang'],[2320,0,'gang'],[2880,1,'police'],[3520,0,'gang'],[4210,1,'police'],[4890,0,'gang']];
+    const extras=[];
     for(let i=0;i<extras.length;i++){const id=100+i;if(bikeRivals.some(r=>r.id===id))continue;const r=extras[i];bikeRivals.push({id,d:r[0],lane:r[1],kind:r[2],hp:42,maxHp:42,alive:true,hit:false});}
   }
 
@@ -5303,6 +5327,54 @@
 
   try { const s = readSave(); if (s) { let u = Number(s.unlockedLevel) || Number(s.currentLevel) || 1; if (s.completed && Number(s.currentLevel) >= 3) u = Math.max(u, Math.min(6, Number(s.currentLevel))); unlockedLevel = Math.max(unlockedLevel, Math.min(6, u)); } } catch(_) {}
 
+  // R1188: motorcycle-stage pacing and duel logic.
+  // The intro freezes the road while Líra walks to the motorcycle and mounts it.
+  const __r1187UpdateBikeR1188 = updateBike;
+  updateBike = function(dt){
+    if(!bikeIntroDone){
+      elapsed += dt;
+      shake = Math.max(0, shake - dt*24);
+      flash = Math.max(0, flash - dt);
+      messageTimer = Math.max(0, messageTimer-dt);
+      superMeter = clamp(superMeter + dt*.35, 0, SUPER_MAX);
+      bikeIntroT = Math.min(BIKE_INTRO_DURATION, bikeIntroT + dt);
+      bikeSpeed = 0; bikeDistance = 0; bikeY = 210; bikeZ = 0; bikeVz = 0;
+      pressed.attack=false;pressed.kick=false;pressed.jump=false;pressed.super=false;
+      if(bikeIntroT >= BIKE_INTRO_DURATION){
+        bikeIntroDone = true; bikeSpeed = 245;
+        showMessage('RIDE THE DREAM',1.05);
+        tone(76,.14,'sawtooth',.026,148);
+        flash=Math.max(flash,.05);
+      }
+      autoSaveClock += dt; if(autoSaveClock>=2.5){autoSaveClock=0;saveProgress(false);}
+      return;
+    }
+
+    // Rivals arrive one at a time, match Líra's speed for a short duel, strike, then fall away.
+    for(const r of bikeRivals){
+      if(!r.alive)continue;
+      r.attackT=Math.max(0,Number(r.attackT||0)-dt);
+      r.attackCooldown=Math.max(0,Number(r.attackCooldown||0)-dt);
+      const rx=118+(r.d-bikeDistance)*.31;
+      if(!r.engaged && !r.duelDone && rx<275 && rx>158){r.engaged=true;r.duelT=2.35+(r.id%3)*.28;r.attackCooldown=.55+(r.id%2)*.18;}
+      if(r.engaged){
+        r.duelT=Math.max(0,r.duelT-dt);
+        const targetX=188+(r.id%2)*18;
+        const targetD=bikeDistance+(targetX-118)/.31;
+        r.d += (targetD-r.d)*Math.min(1,dt*3.15);
+        if(r.attackCooldown<=0 && r.attackT<=0 && Math.abs(bikeLaneY(r.lane)-bikeY)<31 && bikeZ<16){
+          r.attackT=.42;r.attackHit=false;r.attackCooldown=1.18+(r.id%3)*.16;
+        }
+        if(r.attackT>0 && !r.attackHit){
+          const ap=1-r.attackT/.42;
+          if(ap>.46){r.attackHit=true;if(Math.abs(bikeLaneY(r.lane)-bikeY)<30&&bikeInvuln<=0&&bikeZ<16){bikeInvuln=.48;bikeCrashT=.18;damagePlayer(r.kind==='police'?9:7,player.x+24);hitShake(2.4);tone(118,.045,'square',.015,72);}}
+        }
+        if(r.duelT<=0){r.engaged=false;r.duelDone=true;r.d+=120;}
+      }
+    }
+    __r1187UpdateBikeR1188(dt);
+  };
+
   // R1182: rendering adapter. All combat, collisions, levels and save keys remain in the original engine.
   const drawClassicR1182 = draw;
   let rendererR1182 = null;
@@ -5319,7 +5391,7 @@
         ocean:{barrels:oceanBarrelsR942,pickups:oceanPickupsR942,chains:oceanChainsR955,explosions:oceanExplosionsR942},
         projectiles:cityBossBulletsR955,
         bar:{active:barModeR955,enemies:barEnemiesR955,items:barItemsR955,shots:barProjectilesR955},
-        bike:{active:bikeMode,distance:bikeDistance,y:bikeY,z:bikeZ,speed:bikeSpeed,attack:bikeAttackT,super:bikeSuperT,rivals:bikeRivals,pits:bikePits,posts:bikePostsR955},
+        bike:{active:bikeMode,distance:bikeDistance,y:bikeY,z:bikeZ,speed:bikeSpeed,attack:bikeAttackT,super:bikeSuperT,rivals:bikeRivals,pits:bikePits,posts:bikePostsR955,intro:{active:bikeMode&&!bikeIntroDone,t:bikeIntroT,duration:BIKE_INTRO_DURATION}},
         space:{x:spaceX_R950,y:spaceY_R950,distance:spaceDistanceR950,roll:spaceRollR950,enemies:spaceEnemiesR950,shots:spaceShotsR950,enemyShots:spaceEnemyShotsR950,pickups:spacePickupsR950,boss:spaceBossR950,stars:spaceCollectStarsR952,lifeUps:spaceLifeUpsR955,insert:spaceInsertR950,super:spaceSuperR1185},
         tower:{x:towerX_R952,y:towerY_R952,camera:towerCameraR952,grounded:towerGroundedR952,sword:towerSwordT_R952,platforms:towerPlatformsR952,enemies:towerEnemiesR952,crates:towerCratesR952,hearts:towerHeartsR952,stars:towerStarsR952,hazards:towerFallingR952,lifeUps:towerLifeUpsR955},
         tetris:{grid:tetGridR952,cells:tetPieceR952?tetCellsR952():[],piece:tetPieceR952,stage:tetStageR952,lines:tetTotalLinesR952},
@@ -5343,6 +5415,6 @@
   requestAnimationFrame(frame);
 })();
 </script>
-<script type="module" src="/assets/lira-3d-r1187.js"></script>
+<script type="module" src="/assets/lira-3d-r1188.js"></script>
 </body>
 </html>
