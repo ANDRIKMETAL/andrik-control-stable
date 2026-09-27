@@ -232,7 +232,7 @@ window.__ANDRIK_QUEUE_PREFETCH_R956__=(()=>{let k='';try{k=localStorage.getItem(
     <div id="radioPickerBodyR989"></div>
   </div>
 </div>
-<script defer src="/assets/radio-remote-control-r926.js?v=55.00-r1155"></script><script defer src="/assets/radio-observability-r908.js?v=55.00-r1155"></script><script defer src="/assets/radio-audience-r1157.js?v=55.00-r1157"></script><script defer src="/assets/radio-live-countries-r907.js?v=55.00-r1044"></script><script defer src="/assets/app-links-r1048.js?v=55.00-r1048"></script><script defer src="/assets/youtube-radio-r1047.js?v=55.00-r1047"></script>
+<script defer src="/assets/radio-remote-control-r926.js?v=55.00-r1181"></script><script defer src="/assets/radio-observability-r908.js?v=55.00-r1155"></script><script defer src="/assets/radio-audience-r1157.js?v=55.00-r1157"></script><script defer src="/assets/radio-live-countries-r907.js?v=55.00-r1044"></script><script defer src="/assets/app-links-r1048.js?v=55.00-r1048"></script><script defer src="/assets/youtube-radio-r1047.js?v=55.00-r1047"></script>
 <script defer src="/assets/wav-to-mp3-r324.js?v=55.00-r324"></script>
 <script id="quick-upload-r874">
 (()=>{'use strict';
@@ -370,11 +370,12 @@ mp3Btn.onclick=async()=>{
 (()=>{'use strict';
 const set=(id,v)=>{const e=document.getElementById(id);if(e&&v!==undefined&&v!==null)e.textContent=String(v)};
 const isMp3=x=>/\.mp3(?:$|\?)/i.test(String(x?.url||x?.key||''));
+const officialSlugsR1181=new Set(['silent','beyond','trika','ocean','illusion-of-life']);
+const slugR1181=x=>{const pa=String(x?.pickerAlbum||'').toLowerCase();if(pa)return pa;const m=String(x?.key||'').toLowerCase().match(/^albums\/([^/]+)\//);return m?m[1]:''};
 async function refresh(){try{
- const liveTs=Number(document.documentElement.dataset.radioLiveInventoryR943||0);if(liveTs&&Date.now()-liveTs<20000)return;
  const [mr,cr]=await Promise.all([fetch('/api/music/downloads?ts='+Date.now(),{cache:'no-store'}),fetch('/api/music/radio-clips-r691?ts='+Date.now(),{cache:'no-store'})]);
- if(mr.ok){const m=await mr.json();const all=(Array.isArray(m?.tracks)?m.tracks:[]).filter(isMp3);const albums=all.filter(x=>/^albums\//i.test(String(x?.key||'')));const singles=all.filter(x=>/^singles\//i.test(String(x?.key||'')));set('youtubeRadioSongsR805',albums.length+singles.length);set('youtubeRadioTracksR565',albums.length);set('youtubeRadioSinglesR805',singles.length)}
+ if(mr.ok){const m=await mr.json();const all=(Array.isArray(m?.tracks)?m.tracks:[]).filter(isMp3);const official=all.filter(x=>officialSlugsR1181.has(slugR1181(x)));const extended=all.filter(x=>slugR1181(x)==='extended');const singles=all.filter(x=>/^singles\//i.test(String(x?.key||''))&&!officialSlugsR1181.has(slugR1181(x)));set('youtubeRadioSongsR805',official.length+extended.length);set('youtubeRadioTracksR565',official.length);set('youtubeRadioSinglesR805',singles.length)}
  if(cr.ok){const c=await cr.json();const clips=Array.isArray(c?.clips)?c.clips:[];const special=x=>Number(x?.bumperSlot||0)>0||Boolean(x?.special30min)||Boolean(x?.special60min);set('youtubeRadioVideosR805',clips.filter(x=>!special(x)).length);set('youtubeRadioStationR805',clips.filter(special).length)}
 }catch(_){}}
 const boot=()=>{refresh();setInterval(()=>{if(!document.hidden)refresh()},60000)};if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
-})();</script><script defer src="/assets/radio-load-r988.js?v=55.00-r1126"></script><script defer src="/assets/radio-media-picker-r989.js?v=55.00-r1179"></script><script defer src="/assets/radio-queue-r943.js?v=55.00-r1155"></script><script defer src="/assets/radio-audio-sync-r973.js?v=55.00-r973"></script></body></html>
+})();</script><script defer src="/assets/radio-load-r988.js?v=55.00-r1126"></script><script defer src="/assets/radio-media-picker-r989.js?v=55.00-r1181"></script><script defer src="/assets/radio-queue-r943.js?v=55.00-r1155"></script><script defer src="/assets/radio-audio-sync-r973.js?v=55.00-r973"></script></body></html>

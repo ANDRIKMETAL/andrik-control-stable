@@ -72,8 +72,8 @@
     // This avoids guessing from R2 and reflects duplicate-single suppression + disabled albums exactly.
     const inventoryReady=String(s.inventoryTelemetry||'').startsWith('R805-') || Number(s.libraryTracks||0)>0;
     if(inventoryReady){
-      setText('youtubeRadioSongsR805',num(s.libraryTracks));
-      setText('youtubeRadioTracksR565',num(s.libraryAlbumTracks));
+      // R1181: song/album counters are derived from the public catalog below,
+      // so Extended versions never inflate the official album count.
       setText('youtubeRadioSinglesR805',num(s.librarySingleTracks));
       setText('youtubeRadioVideosR805',num(s.libraryVideos));
       setText('youtubeRadioStationR805',num(Number(s.libraryBumpers||0)+Number(s.librarySpecial||0)));

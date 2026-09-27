@@ -10,7 +10,7 @@ async function api(path,opts={}){const r=await fetch(path,{credentials:'include'
 const coverMap={
  singles:'/assets/singles-picker-cover-r1161.webp',
  covers:'/assets/lira-guitar.webp',
- extended:'/assets/singles-picker-cover-r1161.webp',
+ extended:'/assets/extended-picker-cover-r1181.png',
  silent:'/assets/silent-picker-cover-r1161.webp',
  beyond:'/assets/beyond-cover-r601.webp',
  trika:'/assets/trika-third-album-cover-r479.webp',
