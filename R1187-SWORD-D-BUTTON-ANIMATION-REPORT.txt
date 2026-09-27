@@ -1,0 +1,16 @@
+ANDRIK · DREAMING OF LÍRA · R1187
+
+CHANGES
+- Added compact D sword button centered between S / B / C / A.
+- D directly triggers the existing dedicated sword move on supported combat levels.
+- Reworked 3D sword animation: wind-up -> forward cut -> follow-through.
+- Sword direction remains mirrored by player.face so the blade cuts toward the opponent.
+- Added bright 3D slash trail, sparks and a short sword-impact light.
+- Tower sword now receives real animation progress instead of a frozen mid-swing pose.
+- New immutable assets: lira-3d-r1187.js and lira-models-r1187.js.
+- New cache version and cache-reset-r1187.html.
+
+UNCHANGED
+- R1186 enemy AI and retreat logic.
+- Space SUPER behavior.
+- Save data and existing progression.

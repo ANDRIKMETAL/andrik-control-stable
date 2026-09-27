@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1790519761116-ac97292b7e",
-  "release": "R1186",
-  "archiveName": "ANDRIK-R1186-DREAMING-OF-LIRA-ENEMY-AI-SPACE-SUPER-CLEAN-CONTROLS.zip",
-  "sourceHead": "f8c50919c55e52b7cd6bd0d3dc7912498962192a",
-  "backupSha": "f8c50919c55e52b7cd6bd0d3dc7912498962192a",
+  "operationId": "publish-1790520559925-79789b30e8",
+  "release": "R1187",
+  "archiveName": "ANDRIK-R1187-DREAMING-OF-LIRA-SWORD-D-ANIMATION.zip",
+  "sourceHead": "5229973ff350ef176d982b286a0f98ee7b76ada3",
+  "backupSha": "5229973ff350ef176d982b286a0f98ee7b76ada3",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-27T14:36:01.116Z"
+  "generatedAt": "2026-09-27T14:49:19.925Z"
 }

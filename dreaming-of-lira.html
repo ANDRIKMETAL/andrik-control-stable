@@ -190,6 +190,28 @@
       background: rgba(141,58,0,.50);
       box-shadow: 0 0 18px rgba(255,136,30,.52), inset 0 0 12px rgba(255,220,90,.16);
     }
+    /* R1187: compact dedicated sword button centered between S / B / C / A. */
+    .swordBtn {
+      left: 50%;
+      top: 50%;
+      right: auto;
+      bottom: auto;
+      width: clamp(40px, 5.8vw, 50px);
+      height: clamp(40px, 5.8vw, 50px);
+      transform: translate(-50%, -50%);
+      z-index: 3;
+      border-color: rgba(188, 224, 236, .48);
+      background: rgba(18, 31, 42, .42);
+      color: rgba(244, 251, 255, .94);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.06), 0 0 12px rgba(127,207,231,.12), 0 3px 9px rgba(0,0,0,.36);
+    }
+    .swordBtn .letter { font-size: clamp(17px, 2.7vw, 23px); }
+    .swordBtn.active {
+      transform: translate(-50%, -50%) scale(.90);
+      border-color: rgba(224, 249, 255, .86);
+      background: rgba(65, 139, 163, .42);
+      box-shadow: 0 0 18px rgba(147,224,247,.32), inset 0 0 10px rgba(255,255,255,.10);
+    }
 
     .systemButtons {
       position: absolute;
@@ -268,6 +290,7 @@
         <button class="touchBtn actionBtn superBtn" data-action="super" aria-label="Суперудар"><span class="letter">S</span></button>
         <button class="touchBtn actionBtn" data-action="kick" aria-label="Удар ногой"><span class="letter">C</span></button>
         <button class="touchBtn actionBtn" data-action="attack" aria-label="Удар рукой"><span class="letter">A</span></button>
+        <button class="touchBtn actionBtn swordBtn" data-action="sword" aria-label="Удар мечом"><span class="letter">D</span></button>
       </div>
       <div class="systemButtons">
         <button class="systemBtn" data-system="select" aria-label="Select">SELECT</button>
@@ -5320,6 +5343,6 @@
   requestAnimationFrame(frame);
 })();
 </script>
-<script type="module" src="/assets/lira-3d-r1186.js"></script>
+<script type="module" src="/assets/lira-3d-r1187.js"></script>
 </body>
 </html>
