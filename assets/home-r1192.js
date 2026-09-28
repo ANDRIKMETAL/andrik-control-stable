@@ -10,18 +10,21 @@ sk:{play:'▶ Počúvať',pause:'Ⅱ Pozastaviť',error:'Skladbu sa nepodarilo s
 const t=T||{play:'▶ Listen',pause:'Ⅱ Pause',error:'Could not play.',radio:'ANDRIK METAL RADIO',unknown:'Live status unavailable',pending:'Checking current song',next:'Next: ',offline:'Stream unavailable',open:'Open on YouTube'};
 const reduced=matchMedia('(prefers-reduced-motion: reduce)'),connection=navigator.connection;
 const hero=document.querySelector('.h-hero'),video=document.getElementById('homeHeroVideo'),toggle=document.getElementById('heroMotionToggle');
-let heroVisible=false,manualPause=false,manualPlay=false,radioVisible=false,radioTimer=0,radioBusy=false,radioController=null,heroRetryTimer=0;
+let heroVisible=true,manualPause=false,manualPlay=false,radioVisible=false,radioTimer=0,radioBusy=false,radioController=null,heroRetryTimer=0,heroWatchTimer=0;
 function primeHeroVideo(){
  if(!video)return;
- const src='/assets/lyra-hero-r1204.mp4';
- if(video.getAttribute('src')!==src){video.removeAttribute('src');while(video.firstChild)video.removeChild(video.firstChild);video.src=src;}
- video.preload='auto';
- video.muted=true;video.defaultMuted=true;video.playsInline=true;
+ const src=video.dataset.src||'/assets/lyra-hero-r1192.mp4';
+ if(!video.getAttribute('src'))video.src=src;
+ video.preload='metadata';
+ video.muted=true;video.defaultMuted=true;video.volume=0;
  video.setAttribute('muted','');video.setAttribute('playsinline','');video.setAttribute('webkit-playsinline','');video.setAttribute('autoplay','');video.setAttribute('loop','');
 }
-function retryHeroVideo(delay=240){
- clearTimeout(heroRetryTimer);
- heroRetryTimer=setTimeout(()=>{if(heroVisible&&!document.hidden&&motionAllowed())syncHero()},delay);
+function markHeroNeedsTap(flag){document.body.classList.toggle('hero-video-needs-tap',!!flag);if(toggle)toggle.hidden=!flag;}
+function retryHeroVideo(delay=240){clearTimeout(heroRetryTimer);heroRetryTimer=setTimeout(()=>{if(heroVisible&&!document.hidden&&!manualPause)syncHero()},delay);}
+function watchHeroProgress(){
+ clearTimeout(heroWatchTimer);if(!video||video.paused||document.hidden)return;
+ const before=video.currentTime;
+ heroWatchTimer=setTimeout(()=>{if(!video||document.hidden||manualPause)return;const moved=Math.abs(video.currentTime-before)>.08;if(!moved){markHeroNeedsTap(true);try{video.pause();video.load()}catch(_){}retryHeroVideo(120);}else{markHeroNeedsTap(false);watchHeroProgress();}},1400);
 }
 function motionAllowed(){return !manualPause}
 function syncHero(){
@@ -29,24 +32,26 @@ function syncHero(){
  const shouldPlay=heroVisible&&!document.hidden&&motionAllowed();
  if(!shouldPlay){try{video.pause()}catch(_){};return}
  primeHeroVideo();
- const attempt=video.play();
- if(attempt?.catch)attempt.catch(()=>retryHeroVideo(500));
+ let attempt;try{attempt=video.play()}catch(_){markHeroNeedsTap(true);return}
+ if(attempt?.then)attempt.then(()=>{markHeroNeedsTap(false);watchHeroProgress()}).catch(()=>{markHeroNeedsTap(true);retryHeroVideo(700)});
 }
 if(toggle){
- toggle.hidden=false;
- toggle.addEventListener('click',()=>{if(video.paused){manualPause=false;manualPlay=true}else{manualPause=true;manualPlay=false}syncHero()});
+ toggle.hidden=true;
+ toggle.addEventListener('click',()=>{manualPause=!video.paused;manualPlay=video.paused;if(video.paused){manualPause=false;manualPlay=true;primeHeroVideo();video.play().then(()=>{markHeroNeedsTap(false);watchHeroProgress()}).catch(()=>markHeroNeedsTap(true));}else{manualPause=true;manualPlay=false;video.pause();toggle.hidden=false;document.body.classList.add('hero-video-needs-tap');}});
 }
 if(video){
  primeHeroVideo();
- video.addEventListener('loadeddata',()=>{video.dataset.firstFrame='1';video.classList.add('is-ready');if(heroVisible&&!document.hidden&&motionAllowed())syncHero()});
- video.addEventListener('canplay',()=>{video.classList.add('is-ready');if(heroVisible&&!document.hidden&&motionAllowed())syncHero()});
- video.addEventListener('playing',()=>{if(!heroVisible||document.hidden||!motionAllowed()){video.pause();return}video.classList.add('is-ready')});
- video.addEventListener('pause',()=>{if(heroVisible&&!document.hidden&&motionAllowed()&&!manualPause)retryHeroVideo(180)});
- video.addEventListener('error',()=>{video.classList.remove('is-ready');setTimeout(()=>{try{video.src='/assets/lyra-hero-r1204.mp4';video.load();retryHeroVideo(160)}catch(_){}},120)});
+ video.addEventListener('loadeddata',()=>{if(heroVisible&&!document.hidden&&!manualPause)syncHero()});
+ video.addEventListener('canplay',()=>{if(heroVisible&&!document.hidden&&!manualPause)syncHero()});
+ video.addEventListener('playing',()=>{video.classList.add('is-ready');video.dataset.firstFrame='1';markHeroNeedsTap(false);watchHeroProgress();});
+ video.addEventListener('timeupdate',()=>{if(video.currentTime>.05){video.classList.add('is-ready');video.dataset.firstFrame='1';}});
+ video.addEventListener('pause',()=>{clearTimeout(heroWatchTimer);if(heroVisible&&!document.hidden&&!manualPause)retryHeroVideo(220)});
+ video.addEventListener('error',()=>{video.classList.remove('is-ready');markHeroNeedsTap(true);const src=video.dataset.src||'/assets/lyra-hero-r1192.mp4';setTimeout(()=>{try{video.removeAttribute('src');video.load();setTimeout(()=>{video.src=src;video.load();retryHeroVideo(180)},90)}catch(_){}},160)});
 }
-document.addEventListener('pointerdown',()=>{if(manualPause)return;manualPlay=true;syncHero()},{once:true,passive:true});
-reduced.addEventListener?.('change',()=>{manualPlay=false;syncHero()});
-connection?.addEventListener?.('change',()=>{manualPlay=false;syncHero()});
+// Android/WebView fallback: any normal interaction retries the same known-working MP4.
+for(const ev of ['pointerdown','touchstart','click'])document.addEventListener(ev,()=>{if(!manualPause){manualPlay=true;syncHero()}},{once:true,passive:true});
+addEventListener('scroll',()=>{if(!manualPause&&video?.paused)syncHero()},{once:true,passive:true});
+reduced.addEventListener?.('change',()=>syncHero());connection?.addEventListener?.('change',()=>syncHero());
 const coverByAlbum={'silent':'silent-cover-r1159.webp','beyond':'beyond-cover-r601.webp','trika':'trika-third-album-cover-r479.webp','ocean':'ocean-cover-v5148-clean.webp','illusion-of-life':'illusion-of-life-static-v52.jpg'};
 const norm=s=>String(s||'').toLowerCase().replace(/ё/g,'е').replace(/\.(mp3|wav)$/i,'').replace(/[^\p{L}\p{N}]+/gu,' ').trim();
 const artByTitle=new Map();

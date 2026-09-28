@@ -1,6 +1,6 @@
 'use strict';
 
-const VERSION = '55.00-r1204-hero-bike-bar';
+const VERSION = '55.00-r1205-hero-bar-bike-level';
 const IS_CONTROL_HOST = self.location.hostname.toLowerCase() === 'control.andrikmetal.com';
 
 async function deleteControlCaches(){
@@ -47,8 +47,8 @@ if(IS_CONTROL_HOST){
     "/assets/home-r1194.css",
     "/assets/home-r1192.js",
     "/assets/andrik-radio-mini-r1199.webp",
-    "/assets/lyra-hero-r1204.mp4",
-    "/assets/lyra-hero-r1204.webp",
+    "/assets/lyra-hero-r1192.mp4",
+    "/assets/lyra-hero-r1192.webp",
     "/assets/player-shell-bridge-r136.js",
     "/assets/home-app-links-r1190.js",
     "/assets/andrik-site-illusion-r87-192.png",

@@ -1,0 +1,4 @@
+ANDRIK SITE R1204 CLEAN REVISION
+Removed only unreferenced duplicate/legacy media and stale assets.
+Kept the current R1204 hero MP4, current game level posters, current boss/splash assets,
+and all active HTML/JS/CSS/routes.

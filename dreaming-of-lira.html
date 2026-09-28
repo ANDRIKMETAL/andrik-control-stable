@@ -733,7 +733,7 @@
 
     const gateX = getCurrentGateX();
     player.x = clamp(player.x, Math.max(18, cameraX - 35), gateX);
-    player.y = clamp(player.y, FLOOR_TOP + 17, FLOOR_BOTTOM);
+    player.y = clamp(player.y, FLOOR_TOP + 14, currentLevel===1?258:FLOOR_BOTTOM);
 
     if (player.z > 0 || player.vz > 0) {
       player.z += player.vz * dt;
@@ -4270,8 +4270,20 @@
   function updateBarR955(dt){
     if(!started||paused||gameOver||victory)return;
     elapsed+=dt;messageTimer=Math.max(0,messageTimer-dt);shake=Math.max(0,shake-dt*24);flash=Math.max(0,flash-dt);player.invuln=Math.max(0,player.invuln-dt);player.stun=Math.max(0,player.stun-dt);
+    if(pressed.super){
+      pressed.super=false;
+      if(superMeter>=SUPER_COST&&!player.attack){
+        superMeter=Math.max(0,superMeter-SUPER_COST);cueGuitarR1183();
+        player.attack={id:++attackSerial,kind:'guitarSmash',t:0,duration:ATTACKS.guitarSmash.duration,r1205BarSuper:true};
+        flash=Math.max(flash,.22);hitShake(10);tone(58,.18,'sawtooth',.04,30);
+        effects.push({kind:'bar-guitar-super-r1205',x:player.x,y:player.y,t:0,duration:.72});
+        for(const e of barEnemiesR955){if(e.alive&&Math.hypot(e.x-player.x,e.y-player.y)<185)barDamageEnemyR955(e,72,player.face*54);}
+        showMessage('GUITAR SHOCK!',.72);
+      }else if(superMeter<SUPER_COST)showMessage('SUPER NOT READY',.48);
+    }
+
     if(barExitT_R955>0){barExitT_R955+=dt;player.face=1;player.x=approach(player.x,468,dt*82);player.y=approach(player.y,205,dt*46);player.walkPhase+=dt*11;if(barExitT_R955>1.65)exitBarR955();return;}
-    let mx=(input.right?1:0)-(input.left?1:0),my=(input.down?1:0)-(input.up?1:0);if(mx||my){const m=Math.hypot(mx,my)||1;mx/=m;my/=m;if(mx)player.face=mx>0?1:-1;}player.x=clamp(player.x+mx*108*dt,20,W-20);player.y=clamp(player.y+my*72*dt,164,235);
+    let mx=(input.right?1:0)-(input.left?1:0),my=(input.down?1:0)-(input.up?1:0);if(mx||my){const m=Math.hypot(mx,my)||1;mx/=m;my/=m;if(mx)player.face=mx>0?1:-1;}player.x=clamp(player.x+mx*108*dt,20,W-20);player.y=clamp(player.y+my*72*dt,160,254);
     if(pressed.jump&&player.z<=.01){player.vz=250;player.z=.01;}if(player.z>0||player.vz>0){player.z+=player.vz*dt;player.vz-=620*dt;if(player.z<=0){player.z=0;player.vz=0;}}
     if(player.attack){player.attack.t+=dt;if(player.attack.t>=player.attack.duration)player.attack=null;}
     if(input.attack&&input.jump){if(!player.attack)startSwordR950();pressed.attack=false;pressed.jump=false;}
@@ -4301,7 +4313,7 @@
         if(e.attack.t>=e.attack.duration){e.attack=null;e.retreatDir=(e.x-player.x)>=0?1:-1;e.retreatT=.30+Math.random()*.10;}
       }else if(e.retreatT>0){
         e.x=clamp(e.x+(e.retreatDir||-e.face)*(e.knife?76:84)*dt,18,W-18);
-        e.y=clamp(e.y+Math.sign(e.y-player.y)*10*dt,164,235);
+        e.y=clamp(e.y+Math.sign(e.y-player.y)*10*dt,160,252);
       }else if(dist>29){
         e.x+=dx/dist*(e.knife?44:50)*dt;e.y+=dy/dist*25*dt;
       }else if(e.atk<=0){
@@ -4321,6 +4333,9 @@
     ctx.fillStyle='#e94655';ctx.shadowColor='#e94655';ctx.shadowBlur=10;ctx.font='bold 15px monospace';ctx.fillText('NO CHOICE BAR',154,60);ctx.shadowBlur=0;
     // Bar counter, bottles, stools, window.
     ctx.fillStyle='#3b2119';ctx.fillRect(28,150,135,40);ctx.fillStyle='#85513a';ctx.fillRect(24,145,143,8);for(let i=0;i<8;i++){ctx.fillStyle=['#6fa1c0','#b34b58','#d3a550'][i%3];ctx.fillRect(38+i*14,132-(i%2)*5,5,13);}for(let x=60;x<150;x+=35){ctx.fillStyle='#171113';ctx.fillRect(x,190,4,27);ctx.beginPath();ctx.arc(x+2,188,8,0,Math.PI*2);ctx.fill();}
+    // R1205 bartender: always working behind the counter, wiping a bottle.
+    {const wipe=Math.sin(elapsed*5.4);ctx.save();ctx.translate(96,140);ctx.fillStyle='#161b22';ctx.fillRect(-8,-30,16,24);ctx.fillStyle='#bd8a70';ctx.beginPath();ctx.arc(0,-37,7,0,Math.PI*2);ctx.fill();ctx.fillStyle='#0b0d12';ctx.fillRect(-8,-44,16,5);ctx.strokeStyle='#bd8a70';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(-6,-25);ctx.lineTo(-13+wipe*2,-12);ctx.moveTo(6,-25);ctx.lineTo(10-wipe*4,-10);ctx.stroke();ctx.fillStyle='#6fa79c';ctx.fillRect(7-wipe*3,-18,5,15);ctx.fillStyle='#d9e3df';ctx.fillRect(6-wipe*3,-20,7,3);ctx.fillStyle='#d7d1c5';ctx.fillRect(-16+wipe*2,-14,7,5);ctx.restore();}
+
     ctx.fillStyle='#09101a';ctx.fillRect(360,88,95,59);ctx.strokeStyle='#6cabc8';ctx.lineWidth=2;ctx.strokeRect(360,88,95,59);ctx.strokeStyle='rgba(126,199,226,.45)';for(let x=370;x<450;x+=18){ctx.beginPath();ctx.moveTo(x,90);ctx.lineTo(x-12,145);ctx.stroke();}
     ctx.fillStyle='#271d30';ctx.fillRect(204,101,55,70);ctx.fillStyle='#b74a59';ctx.fillRect(212,109,39,18);ctx.fillStyle='#e6c264';ctx.font='bold 7px monospace';ctx.fillText('ANDRIK',216,121);
     for(const it of barItemsR955){if(it.taken)continue;ctx.save();ctx.translate(it.x,it.y-15);if(it.kind==='knife'){ctx.fillStyle='#d7e1e5';ctx.fillRect(-8,-1,14,2);ctx.fillStyle='#704b33';ctx.fillRect(6,-3,5,6);}else{ctx.fillStyle='#6ca7a3';ctx.fillRect(-3,-9,6,11);ctx.fillStyle='#a9d5cd';ctx.fillRect(-2,-8,4,3);}ctx.restore();}
@@ -5742,6 +5757,19 @@
     if(bikeMode)for(const r of bikeRivals)r.superKO_R1204=Math.max(0,(r.superKO_R1204||0)-dt);
   };
 
+  // ------------------------------------------------------------
+  // R1205 — progression has a real combat effect.
+  // Each 20-ruby level makes Líra hit harder, so ordinary enemies fall faster.
+  // ------------------------------------------------------------
+  function liraPowerR1205(){return [1,1.18,1.40,1.68][clamp((Number(skillLevelR1203)||1)-1,0,3)]||1;}
+  const __r1205DamageEnemyPrev=damageEnemy;
+  damageEnemy=function(e,amount,knockX){
+    const mult=currentLevel===1?liraPowerR1205():1;
+    return __r1205DamageEnemyPrev(e,amount*mult,knockX*(1+(mult-1)*.32));
+  };
+  const __r1205BarDamagePrev=barDamageEnemyR955;
+  barDamageEnemyR955=function(e,amount,knock=0){return __r1205BarDamagePrev(e,amount*liraPowerR1205(),knock*(1+(liraPowerR1205()-1)*.28));};
+
   // R1182: rendering adapter. All combat, collisions, levels and save keys remain in the original engine.
   const drawClassicR1182 = draw;
   let rendererR1182 = null;
@@ -5785,7 +5813,7 @@
   requestAnimationFrame(frame);
 })();
 </script>
-<script type="module" src="/assets/lira-3d-r1190.js?v=55.00-r1204"></script>
+<script type="module" src="/assets/lira-3d-r1190.js?v=55.00-r1205"></script>
 </body>
 </html>
 
