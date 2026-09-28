@@ -1,6 +1,6 @@
 'use strict';
 
-const VERSION = '55.00-r1202-hero-dogs-bike';
+const VERSION = '55.00-r1203-subscriber-city-rpg';
 const IS_CONTROL_HOST = self.location.hostname.toLowerCase() === 'control.andrikmetal.com';
 
 async function deleteControlCaches(){

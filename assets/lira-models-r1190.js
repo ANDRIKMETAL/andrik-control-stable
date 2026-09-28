@@ -64,6 +64,7 @@ export function character(kind='lira'){
  if(roman||kind==='riot'){const shield=new T.Group();shield.position.set(-13,38,5);box(shield,0,0,0,11,22,3,suit);box(shield,0,0,1.6,1.4,20,.6,silver);sphere(shield,0,0,2.1,2.5,2.5,1.3,silver);body.add(shield);}
  const sword=new T.Group();limbs[1].fore.add(sword);sword.position.set(0,-11,0);sword.rotation.z=-Math.PI/2;
  box(sword,0,-4,0,2.1,8,2,boots);box(sword,0,-8,0,9,1.2,2,material('#b59b68',.3,.65));box(sword,0,-26,0,3,34,.75,silver);box(sword,.9,-26,.5,.8,32,.25,material('#b8e7ed',.15,.4,.4));cone(sword,0,-45,0,1.5,5,silver).rotation.z=Math.PI;sword.visible=false;
+ const stick=new T.Group();limbs[1].fore.add(stick);stick.position.set(0,-11,0);stick.rotation.z=-Math.PI/2;cylinder(stick,0,-25,0,2.2,48,material('#6f472d',.72,.05));cylinder(stick,0,-46,0,2.8,5,material('#38261c',.75,.02));stick.visible=false;
  const guitar=new T.Group();guitar.position.set(0,36,-8);guitar.rotation.z=-.45;body.add(guitar);
  const red=material('#642e3f',.27,.55);
  sphere(guitar,-3,-2,0,5.6,8,2.1,red);sphere(guitar,3,-2,0,5.6,8,2.1,red);sphere(guitar,0,4,0,5.3,5.8,2,red);
@@ -79,7 +80,7 @@ export function character(kind='lira'){
  const wave=ring(guitarFx,0,36,11,1,.028,flashMaterial);wave.castShadow=false;
  const rays=[];for(let i=0;i<8;i++){const r=box(guitarFx,0,36,11,.7,1,.7,flashMaterial);r.castShadow=false;rays.push(r);}
  guitarFx.traverse(o=>{if(o.isMesh)o.userData.keep=true;});
- root.userData={body,head,limbs,sword,guitar,kind,guitarFx,flash,wave,rays,flashMaterial};
+ root.userData={body,head,limbs,sword,stick,guitar,kind,guitarFx,flash,wave,rays,flashMaterial};
  if(boss)root.scale.setScalar(1.55);
  batch(root);
  return root;
@@ -126,7 +127,7 @@ export function animateCharacter(root,p,time,opts={}){
  if(opts.look)d.head.rotation.x=-opts.look*.24;
  const cue=opts.guitarCue,atk=cue||p.attack,kind=cue?'guitarSuper':(atk?.kind||opts.attack);
  const t=atk?T.MathUtils.clamp(atk.t/(atk.duration||1),0,1):.45,q=Math.sin(t*Math.PI),arm=d.limbs[1];
- d.sword.visible=!!kind&&/sword/i.test(kind);d.guitar.position.set(0,36,-8);d.guitar.rotation.set(0,0,-.45);d.guitarFx.visible=false;d.flashMaterial.opacity=0;
+ d.sword.visible=!!kind&&/sword/i.test(kind);d.stick.visible=!!kind&&/stick/i.test(kind);d.guitar.position.set(0,36,-8);d.guitar.rotation.set(0,0,-.45);d.guitarFx.visible=false;d.flashMaterial.opacity=0;
  if(kind){
   if(/kick|sweep/i.test(kind)){
    arm.leg.rotation.set(-q*1.53,0,0);arm.shin.rotation.x=.12*q;d.body.rotation.x=-q*.12;
@@ -148,6 +149,22 @@ export function animateCharacter(root,p,time,opts={}){
    d.guitarFx.visible=glow>0;d.flashMaterial.opacity=glow*(opts.reduced?.25:.68);
    d.flash.scale.setScalar((opts.reduced?3:8)*glow);d.wave.scale.setScalar(6+burst*(opts.reduced?13:44));
    d.rays.forEach((r,i)=>{const a=i*Math.PI/4;r.position.set(Math.cos(a)*(8+burst*25),36+Math.sin(a)*(8+burst*25),11);r.rotation.z=a-Math.PI/2;r.scale.y=2+glow*7;});
+  }else if(/swordSideR1203/i.test(kind)){
+   // R1203 second sword animation: a readable horizontal side cut.
+   const wind=smooth(t/.16),cut=smooth((t-.16)/.34),follow=smooth((t-.68)/.32);
+   arm.arm.rotation.set(-1.05-.18*wind,0,-1.05+2.20*cut-.55*follow);arm.fore.rotation.set(-.28,0,.30-.55*cut);
+   d.limbs[0].arm.rotation.set(-.72,0,.35);d.limbs[0].fore.rotation.x=-.55;
+   attackDir.set(T.MathUtils.lerp(-.90,.92,cut),-.10,T.MathUtils.lerp(.25,.75,cut)).normalize();
+   jointQ.copy(arm.arm.quaternion).multiply(arm.fore.quaternion).invert();attackDir.applyQuaternion(jointQ);
+   d.sword.quaternion.setFromUnitVectors(down,attackDir);d.body.rotation.y=face*(-.20+.40*cut);d.body.rotation.z=face*(-.08+.16*cut);
+  }else if(/swordSpinR1203/i.test(kind)){
+   // R1203 progression move: full-body spin cut unlocked with 20 rubies.
+   const cut=smooth(t/.78);root.rotation.y=face*(Math.PI*2*cut);arm.arm.rotation.set(-1.36,0,.64);arm.fore.rotation.set(-.18,0,0);
+   attackDir.set(.76,-.12,.64).normalize();jointQ.copy(arm.arm.quaternion).multiply(arm.fore.quaternion).invert();attackDir.applyQuaternion(jointQ);d.sword.quaternion.setFromUnitVectors(down,attackDir);d.body.rotation.z=-face*.08*Math.sin(cut*Math.PI*2);
+  }else if(/stick/i.test(kind)){
+   // Picked-up street weapon: broad two-handed club swing.
+   const cut=smooth((t-.08)/.62);arm.arm.rotation.set(-1.18,0,-.95+1.90*cut);arm.fore.rotation.set(-.24,0,0);d.limbs[0].arm.rotation.set(-.92,0,.55-.8*cut);d.limbs[0].fore.rotation.x=-.5;
+   attackDir.set(T.MathUtils.lerp(-.75,.90,cut),-.05,.72).normalize();jointQ.copy(arm.arm.quaternion).multiply(arm.fore.quaternion).invert();attackDir.applyQuaternion(jointQ);d.stick.quaternion.setFromUnitVectors(down,attackDir);d.body.rotation.y=face*(-.16+.32*cut);
   }else if(/sword/i.test(kind)){
    // R1187 wind-up / forward cut / follow-through in the R1183 rig's local +Z.
    // The hilt stays attached to the right hand; only the root chooses screen direction.
@@ -169,7 +186,7 @@ export function animateCharacter(root,p,time,opts={}){
   const fall=Number.isFinite(p.deathTimer)?smooth(1-p.deathTimer/duration):1;
   const direction=(p.deathDir??p.face??1)<0?-1:1;
   d.body.rotation.x=-direction*face*fall*1.42;d.body.position.y=-fall*14;
-  d.guitarFx.visible=false;d.sword.visible=false;
+  d.guitarFx.visible=false;d.sword.visible=false;d.stick.visible=false;
  }
  root.visible=!((p.invuln||0)>0&&Math.floor(time*15)%3===0);
 }
@@ -183,7 +200,8 @@ export function ship(kind='lira'){const g=new T.Group(),friendly=kind==='lira',s
  for(const z of [-1,1]){const wing=box(g,-5,-2,z*14,24,2,17,shell);wing.rotation.y=z*.35;box(g,-16,0,z*13,12,5,4,material('#273442',.3,.8));sphere(g,-23,0,z*13,6,2.5,2.5,material(friendly?'#98dae0':'#e69b67',.2,0,3));}
  sphere(g,18,0,0,7,3,4,shell);return g;}
 export function collectible(kind='star'){const g=new T.Group();let geom;
- if(kind==='star'){const s=new T.Shape();for(let i=0;i<10;i++){const a=Math.PI/2+i*Math.PI/5,r=i%2?2.8:6.4;const x=Math.cos(a)*r,y=Math.sin(a)*r;i?s.lineTo(x,y):s.moveTo(x,y);}s.closePath();geom=new T.ExtrudeGeometry(s,{depth:2,bevelEnabled:true,bevelSize:.7,bevelThickness:.6,bevelSegments:1,steps:1});mesh(g,geom,material('#dbb76d',.25,.75,.28));}
+ if(kind==='ruby'){geom=new T.OctahedronGeometry(6,0);mesh(g,geom,material('#d31643',.18,.72,1.15));const halo=ring(g,0,0,0,8,.35,material('#ff355d',.2,.55,.75));halo.rotation.x=Math.PI/2;}
+ else if(kind==='star'){const s=new T.Shape();for(let i=0;i<10;i++){const a=Math.PI/2+i*Math.PI/5,r=i%2?2.8:6.4;const x=Math.cos(a)*r,y=Math.sin(a)*r;i?s.lineTo(x,y):s.moveTo(x,y);}s.closePath();geom=new T.ExtrudeGeometry(s,{depth:2,bevelEnabled:true,bevelSize:.7,bevelThickness:.6,bevelSegments:1,steps:1});mesh(g,geom,material('#dbb76d',.25,.75,.28));}
  else if(kind==='heart'||kind==='life'){const c=kind==='life'?'#b9d5b9':'#c95970';sphere(g,-2.8,2,0,4.2,4.2,2.8,material(c,.3,.2,.25));sphere(g,2.8,2,0,4.2,4.2,2.8,material(c,.3,.2,.25));const b=box(g,0,-2,0,7,7,4,material(c,.3,.2,.25));b.rotation.z=Math.PI/4;}
  else{mesh(g,new T.OctahedronGeometry(6),material('#7ebcc9',.25,.55,.4));}
  return g;}

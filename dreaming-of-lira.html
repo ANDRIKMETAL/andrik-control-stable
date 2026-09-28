@@ -282,7 +282,7 @@
 <style id="r1202-game-controls">
 /* R1202 — compact A/B/S cluster: A jump, B sword, S super. */
 .actionsR1201{width:clamp(126px,19vw,168px)!important;height:clamp(112px,17vw,150px)!important}
-.actionsR1201 [data-action="super"]{left:auto!important;right:clamp(61px,9.1vw,80px)!important;top:50%!important;transform:translateY(-50%)!important}
+.actionsR1201 [data-action="super"]{left:auto!important;right:clamp(48px,7.2vw,63px)!important;top:50%!important;transform:translateY(-50%)!important}
 .actionsR1201 [data-action="super"].active{transform:translateY(-50%) scale(.93)!important}
 </style>
 </head>
@@ -4118,7 +4118,7 @@
   // User-requested expansion layered over R952. Radio / PUSH / R949 remain outside this file.
   // =====================================================================
   const GAME_R955 = 'R009-R955';
-  LEVEL_WORLD_W[1] = 4820;
+  LEVEL_WORLD_W[1] = 5900;
 
   const cityBossArtR955 = new Image();
   cityBossArtR955.src = 'assets/night-enforcer-r1194.webp';
@@ -4372,7 +4372,7 @@
       if(e.hp<=0){
         if(e.r955Life===1){
           e.r955Life=2;e.hp=e.maxHp;e.bossPhase=2;e.stun=.85;e.specialCooldown=.55;e.rifleCd=.45;e.damage+=4;e.speed*=1.12;flash=Math.max(flash,.18);hitShake(10);
-          showMessage(e.r955Boss==='night-enforcer'?'LIFE 2 · RIFLE MODE':'LIFE 2 · CHAINS AWAKEN',1.35);tone(48,.3,'sawtooth',.04,28);return;
+          showMessage(e.r955Boss==='night-enforcer'?'LIFE 2 · CLUB RAGE':'LIFE 2 · CHAINS AWAKEN',1.35);tone(48,.3,'sawtooth',.04,28);return;
         }
         e.hp=0;e.alive=false;e.deathTimer=.95;score+=3500;hitShake(12);flash=Math.max(flash,.2);tone(45,.38,'sawtooth',.04,24);
       }
@@ -4473,7 +4473,7 @@
     if(e?.type==='dog'){drawDogR955(e);return;}
     __r952DrawEnemyR955(e);
     if(!e?.alive)return;const sx=e.x-cameraX;
-    if(e?.r955Boss==='night-enforcer'&&e.r955Life===2){ctx.save();ctx.translate(Math.round(sx),Math.round(e.y));ctx.scale(e.face,1);ctx.fillStyle='#171a20';ctx.fillRect(14,-35,33,6);ctx.fillStyle='#4c535b';ctx.fillRect(42,-37,7,10);ctx.fillStyle='#d4a65a';ctx.fillRect(8,-33,8,3);if(e.attack){ctx.fillStyle='#ffd85e';ctx.fillRect(49,-35,8,2);}ctx.restore();}
+    if(false&&e?.r955Boss==='night-enforcer'&&e.r955Life===2){}
     if(e?.r955Boss==='sacred-destroyer'&&e.r955Life===2){ctx.save();ctx.globalAlpha=.42;for(let i=0;i<5;i++){ctx.fillStyle='#aab3b8';ctx.beginPath();ctx.arc(sx-25+i*13,e.y-80-(i%2)*9,9+i*2,0,Math.PI*2);ctx.fill();}ctx.restore();}
   };
   function drawBossProjectilesR955(){
@@ -4602,7 +4602,7 @@
   }
   const __r952StartLevelR955=startLevel;
   startLevel=function(level,keepScore=false){
-    if(Number(level)===1)LEVEL_WORLD_W[1]=4820;
+    if(Number(level)===1)LEVEL_WORLD_W[1]=5900;
     __r952StartLevelR955(level,keepScore);resetR955ForLevel(currentLevel);if(currentLevel===1){WORLD_W=LEVEL_WORLD_W[1];buildWaves();ensureExtraBikeRivalsR955();}
   };
   const __r952StartNewGameR955=startNewGame;
@@ -5475,6 +5475,167 @@
   const drawTowerBaseR1190=drawTowerR952;
   drawTowerR952=function(){drawTowerBaseR1190();ctx.save();for(const b of towerBatsR1190){const y=towerScreenYR952(b.y),wing=5+Math.sin(elapsed*18+b.id)*5;ctx.fillStyle=b.warning>0?'#e2b178':'#9f7196';ctx.beginPath();ctx.moveTo(b.x,y-3);ctx.lineTo(b.x-18,y-wing);ctx.lineTo(b.x-12,y+6);ctx.lineTo(b.x,y+3);ctx.lineTo(b.x+12,y+6);ctx.lineTo(b.x+18,y-wing);ctx.closePath();ctx.fill();ctx.fillStyle='#f4c27a';ctx.fillRect(b.x-3,y-1,2,2);ctx.fillRect(b.x+2,y-1,2,2);}ctx.restore();};
 
+  // =====================================================================
+  // R1203 — CITY WAVES + RUBY SKILL TREE + STREET ITEMS + CLUB BOSS
+  // =====================================================================
+  const GAME_R1203='R1203';
+  LEVEL_WORLD_W[1]=5900;
+  ATTACKS.swordSideR1203={duration:.48,activeStart:.12,activeEnd:.30,damage:17,range:72,depth:30,knock:64};
+  ATTACKS.swordSpinR1203={duration:.62,activeStart:.18,activeEnd:.42,damage:19,range:78,depth:36,knock:72};
+  ATTACKS.stickSwingR1203={duration:.50,activeStart:.13,activeEnd:.32,damage:21,range:70,depth:30,knock:76};
+  ATTACKS.bottleThrowR1203={duration:.34,activeStart:.99,activeEnd:1,damage:0,range:1,depth:1,knock:0};
+
+  let rubiesR1203=0,skillLevelR1203=1,swordCycleR1203=0;
+  let streetWeaponR1203='',streetWeaponChargesR1203=0;
+  let streetLootR1203=[],streetBarrelsR1203=[],streetThrowsR1203=[];
+  let lootSerialR1203=0,barrelSerialR1203=0,throwSerialR1203=0;
+
+  function setSkillFromRubiesR1203(notify=false){
+    const next=clamp(1+Math.floor(Math.max(0,rubiesR1203)/20),1,4);
+    if(next>skillLevelR1203&&notify){showMessage(`LÍRA LEVEL ${next} · NEW MOVE`,1.35);tone(660,.10,'square',.025,880);effects.push({kind:'r1203-level',x:player.x,y:player.y,t:0,duration:.9});}
+    skillLevelR1203=next;
+  }
+  function addRubyR1203(count=1,x=player.x,y=player.y){
+    rubiesR1203=Math.max(0,rubiesR1203+Math.max(0,Number(count)||0));score+=25*Math.max(1,Number(count)||1);setSkillFromRubiesR1203(true);effects.push({kind:'r1203-ruby',x,y,t:0,duration:.45});tone(740,.045,'triangle',.013,920);
+  }
+  function addLootR1203(kind,x,y,extra={}){streetLootR1203.push({id:`R1203L${++lootSerialR1203}`,kind,x,y,taken:false,...extra});}
+  function addBarrelR1203(x,y){streetBarrelsR1203.push({id:`R1203B${++barrelSerialR1203}`,x,y,exploded:false,hitByAttack:-1});}
+  function resetStreetR1203(preserve=false){
+    if(!preserve){rubiesR1203=0;skillLevelR1203=1;swordCycleR1203=0;streetWeaponR1203='';streetWeaponChargesR1203=0;}
+    streetLootR1203=[];streetBarrelsR1203=[];streetThrowsR1203=[];
+    // Quiet reward stretches between crowd waves.
+    for(const [x,y] of [[925,196],[962,224],[998,205],[2390,188],[2426,226],[2460,207],[3400,194],[3436,228],[3470,207],[4230,190],[4265,226],[4300,207],[5170,192],[5205,226],[5240,205]])addLootR1203('ruby',x,y);
+    addLootR1203('bottle',4325,214);addLootR1203('stick',5225,188);
+    addBarrelR1203(3890,220);addBarrelR1203(4765,192);addBarrelR1203(5480,222);
+  }
+  function equipStreetR1203(kind){
+    if(kind==='bottle'){streetWeaponR1203='bottle';streetWeaponChargesR1203=1;showMessage('BOTTLE · B TO THROW',.75);}
+    if(kind==='stick'){streetWeaponR1203='stick';streetWeaponChargesR1203=8;showMessage('STICK · 8 HITS',.75);}
+  }
+  function spawnBottleR1203(){
+    streetThrowsR1203.push({id:`R1203T${++throwSerialR1203}`,kind:'bottle',x:player.x+player.face*22,y:player.y-10,vx:player.face*285,vy:-8,t:0,dead:false});
+    streetWeaponChargesR1203=0;streetWeaponR1203='';
+  }
+  function explodeBarrelR1203(b){
+    if(!b||b.exploded)return;b.exploded=true;hitShake(9);flash=Math.max(flash,.16);tone(52,.22,'sawtooth',.04,28);effects.push({kind:'barrelBlastR1203',x:b.x,y:b.y,t:0,duration:.72});
+    for(const e of enemies){if(!e.alive)continue;const d=Math.hypot(e.x-b.x,(e.y-b.y)*1.15);if(d<125)damageEnemy(e,e.r955Boss?38:95,(e.x>=b.x?1:-1)*105);}
+    for(const q of streetBarrelsR1203){if(q!==b&&!q.exploded&&Math.hypot(q.x-b.x,q.y-b.y)<118)explodeBarrelR1203(q);}
+    if(Math.hypot(player.x-b.x,player.y-b.y)<76)damagePlayer(12,b.x);
+  }
+  function updateStreetObjectsR1203(dt){
+    if(currentLevel!==1||bikeMode||barModeR955)return;
+    for(const it of streetLootR1203){if(it.taken)continue;if(Math.abs(player.x-it.x)<22&&Math.abs(player.y-it.y)<25){it.taken=true;if(it.kind==='ruby')addRubyR1203(1,it.x,it.y);else equipStreetR1203(it.kind);}}
+    for(const p of streetThrowsR1203){if(p.dead)continue;p.t+=dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=18*dt;
+      for(const b of streetBarrelsR1203){if(!b.exploded&&Math.hypot(p.x-b.x,p.y-b.y)<25){p.dead=true;explodeBarrelR1203(b);break;}}
+      if(p.dead)continue;
+      for(const e of enemies){if(!e.alive||e.type==='dog'&&e.emergeT>0)continue;if(Math.hypot(p.x-e.x,p.y-e.y)<25){p.dead=true;damageEnemy(e,34,p.vx*.22);effects.push({kind:'r1203-glass',x:p.x,y:p.y,t:0,duration:.45});break;}}
+      if(p.t>2.1||p.x<cameraX-90||p.x>cameraX+W+120)p.dead=true;
+    }
+    streetThrowsR1203=streetThrowsR1203.filter(p=>!p.dead);
+    const hb=playerAttackHitbox();
+    if(hb){for(const b of streetBarrelsR1203){if(b.exploded||b.hitByAttack===hb.id)continue;const bb={x:b.x-12,y:b.y-18,w:24,h:36};if(rectsOverlap(hb,bb)){b.hitByAttack=hb.id;explodeBarrelR1203(b);}}}
+  }
+
+  // Alternating sword: vertical cut -> side cut. Level 2 (20 rubies) adds a third spin cut.
+  const __r1203StartSwordPrev=startSwordR950;
+  startSwordR950=function(){
+    if(player.dead||player.stun>0)return;if(player.z>3){startAirSwordR010();return;}
+    if(currentLevel===1&&!barModeR955&&!bikeMode){
+      if(streetWeaponR1203==='bottle'&&streetWeaponChargesR1203>0){player.comboStep=0;player.attack={id:++attackSerial,kind:'bottleThrowR1203',t:0,duration:ATTACKS.bottleThrowR1203.duration};player.lastAttackTime=elapsed;spawnBottleR1203();tone(270,.05,'square',.016,120);return;}
+      if(streetWeaponR1203==='stick'&&streetWeaponChargesR1203>0){player.comboStep=0;player.attack={id:++attackSerial,kind:'stickSwingR1203',t:0,duration:ATTACKS.stickSwingR1203.duration};player.lastAttackTime=elapsed;streetWeaponChargesR1203--;if(streetWeaponChargesR1203<=0)streetWeaponR1203='';tone(205,.055,'square',.018,112);return;}
+    }
+    swordCycleR1203++;
+    let kind=swordCycleR1203%2===1?'swordSlashR950':'swordSideR1203';
+    if(skillLevelR1203>=2&&swordCycleR1203%6===0)kind='swordSpinR1203';
+    const def=ATTACKS[kind];player.comboStep=0;player.attack={id:++attackSerial,kind,t:0,duration:def.duration};player.lastAttackTime=elapsed;tone(kind==='swordSideR1203'?370:kind==='swordSpinR1203'?310:420,.07,'sawtooth',.020,155);
+  };
+
+  // Longer CITY with distinct crowd waves and reward breathing spaces.
+  const __r1203BuildWavesPrev=buildWaves;
+  buildWaves=function(){
+    if(currentLevel===1){
+      waves=[
+        {name:'ALLEY OF LIES',trigger:300,gate:900,started:false,cleared:false,ids:[],spawns:[['gang',500,196],['police',555,228],['gang',615,210],['riot',680,188],['gang',742,232],['police',815,204]]},
+        {name:'RIOT MILE',trigger:1760,gate:2470,started:false,cleared:false,ids:[],spawns:[['police',1905,188],['gang',1965,232],['riot',2030,208],['gang',2095,186],['police',2165,230],['riot',2240,201],['gang',2330,220]]},
+        {name:'CURFEW SWARM',trigger:3520,gate:4180,started:false,cleared:false,ids:[],spawns:[['gang',3610,186],['police',3665,230],['riot',3720,203],['gang',3780,222],['police',3840,192],['riot',3960,228],['gang',4040,206],['police',4110,186]]},
+        {name:'CHECKPOINT COLLAPSE',trigger:4470,gate:5120,started:false,cleared:false,ids:[],spawns:[['riot',4550,190],['gang',4605,229],['police',4660,207],['gang',4710,184],['riot',4800,232],['police',4870,196],['gang',4940,218],['riot',5010,188],['police',5070,226]]},
+        {name:'BOSS — NIGHT ENFORCER',trigger:5380,gate:5840,started:false,cleared:false,ids:[],spawns:[['boss',5610,210]]}
+      ];return;
+    }
+    __r1203BuildWavesPrev();
+  };
+
+  resetStreetDogsR955=function(){streetDogZonesR955=[{x:965,y:221,spawned:false},{x:3330,y:201,spawned:false},{x:4320,y:229,spawned:false}];};
+
+  const __r1203MakeEnemyPrev=makeEnemy;
+  makeEnemy=function(type,x,y){const e=__r1203MakeEnemyPrev(type,x,y);if(e?.r955Boss==='night-enforcer'){e.hp=e.maxHp=590;e.damage=23;e.speed=84;e.width=42;e.depth=34;e.height=70;e.rifleCd=999;e.variant='night-enforcer-club-r1203';}if(e?.type==='dog'&&e.bossDog){e.speed=172;e.hp=e.maxHp=64;e.damage=13;}return e;};
+
+  updateNightBossR955=function(e,dt){
+    if(!e.alive){e.deathTimer=Math.max(0,e.deathTimer-dt);return;}e.hitFlash=Math.max(0,e.hitFlash-dt);e.stun=Math.max(0,e.stun-dt);e.attackCooldown=Math.max(0,e.attackCooldown-dt);if(e.stun>0)return;
+    const dx=player.x-e.x,dy=player.y-e.y,d=Math.hypot(dx,dy)||1;e.face=dx>=0?1:-1;const rage=e.r955Life===2?1.22:1;
+    if(e.attack){e.attack.t+=dt;const q=e.attack.t/e.attack.duration;if(q<.62){e.x+=e.face*e.speed*.42*rage*dt;e.y+=Math.sign(dy)*e.speed*.16*dt;}if(!e.attack.hit&&e.attack.t>.22&&e.attack.t<.43&&Math.hypot(player.x-e.x,player.y-e.y)<86&&player.z<24){e.attack.hit=true;damagePlayer(e.r955Life===2?30:24,e.x);hitShake(7);}if(e.attack.t>=e.attack.duration){e.attack=null;e.attackCooldown=e.r955Life===2?.36:.50;}return;}
+    if(d>70){e.x+=dx/d*e.speed*rage*dt;e.y+=dy/d*e.speed*.62*rage*dt;e.walkPhase+=dt*12*rage;}else if(e.attackCooldown<=0){e.attack={kind:'clubSmashR1203',t:0,duration:e.r955Life===2?.54:.62,hit:false};tone(76,.08,'square',.024,46);}
+    e.x=clamp(e.x,cameraX-20,cameraX+W+45);e.y=clamp(e.y,FLOOR_TOP+12,FLOOR_BOTTOM-8);
+  };
+
+  // Boss arrives head-on with a huge club; two dogs enter from behind Líra on separate lanes.
+  const __r1203StartWavePrev=startWave;
+  startWave=function(w){
+    __r1203StartWavePrev(w);
+    if(currentLevel===1&&w?.spawns?.[0]?.[0]==='boss'){
+      const y0=clamp(player.y,FLOOR_TOP+26,FLOOR_BOTTOM-22);
+      const d1=makeDogR955(clamp(player.x-105,24,WORLD_W-24),clamp(y0-25,FLOOR_TOP+10,FLOOR_BOTTOM-6),true);
+      const d2=makeDogR955(clamp(player.x-178,24,WORLD_W-24),clamp(y0+27,FLOOR_TOP+10,FLOOR_BOTTOM-6),true);
+      d1.dogSlot=-1;d2.dogSlot=1;d1.leapCd=.18;d2.leapCd=.52;d1.emergeT=0;d2.emergeT=0;enemies.push(d1,d2);w.ids.push(d1.id,d2.id);
+      showMessage('NIGHT ENFORCER · CLUB + HOUNDS',1.35);
+    }
+  };
+
+  // Enemy deaths feed the progression. Public pickups in the empty stretches guarantee
+  // that a careful player can reach 20 rubies before the final boss.
+  const __r1203DamageEnemyPrev=damageEnemy;
+  damageEnemy=function(e,amount,knockX){
+    const aliveBefore=!!e?.alive;__r1203DamageEnemyPrev(e,amount,knockX);
+    if(currentLevel===1&&aliveBefore&&e&&!e.alive&&!e.r1203DropDone){e.r1203DropDone=true;const count=e.r955Boss?6:(Math.random()<.72?1:0);for(let i=0;i<count;i++)addLootR1203('ruby',e.x+(i-(count-1)/2)*12,e.y+(i%2?8:-7));}
+  };
+
+  const __r1203StartLevelPrev=startLevel;
+  startLevel=function(level,keepScore=false){
+    if(Number(level)===1)LEVEL_WORLD_W[1]=5900;
+    const out=__r1203StartLevelPrev(level,keepScore);
+    if(currentLevel===1){LEVEL_WORLD_W[1]=5900;WORLD_W=5900;buildWaves();resetStreetDogsR955();resetStreetR1203(false);}
+    return out;
+  };
+  const __r1203StartNewPrev=startNewGame;
+  startNewGame=function(){rubiesR1203=0;skillLevelR1203=1;swordCycleR1203=0;streetWeaponR1203='';streetWeaponChargesR1203=0;const out=__r1203StartNewPrev();if(currentLevel===1)resetStreetR1203(false);return out;};
+
+  const __r1203UpdatePrev=update;
+  update=function(dt){__r1203UpdatePrev(dt);if(!started||paused||gameOver||victory)return;updateStreetObjectsR1203(dt);};
+
+  const __r1203DrawHUDPrev=drawHUD;
+  drawHUD=function(){__r1203DrawHUDPrev();if(!started||currentLevel!==1||gameOver)return;ctx.save();ctx.fillStyle='rgba(3,7,12,.78)';ctx.fillRect(9,69,114,14);ctx.fillStyle='#e35762';ctx.font='bold 7px monospace';ctx.fillText(`♦ ${rubiesR1203%20}/20 · LV ${skillLevelR1203}`,14,79);ctx.fillStyle='#d8bf86';ctx.textAlign='right';ctx.fillText(streetWeaponR1203?`${streetWeaponR1203.toUpperCase()} ${streetWeaponChargesR1203}`:'',119,79);ctx.textAlign='left';ctx.restore();};
+
+  // Save the new progression without changing older save compatibility.
+  const __r1203BuildSavePrev=buildSaveData;
+  buildSaveData=function(){const d=__r1203BuildSavePrev();d.r1203={tag:GAME_R1203,rubies:rubiesR1203,skill:skillLevelR1203,swordCycle:swordCycleR1203,weapon:streetWeaponR1203,charges:streetWeaponChargesR1203,loot:streetLootR1203.map(x=>({...x})),barrels:streetBarrelsR1203.map(x=>({...x}))};return d;};
+  const __r1203RestorePrev=restoreSave;
+  restoreSave=function(data){const ok=__r1203RestorePrev(data);if(!ok)return false;const z=data?.r1203;if(currentLevel===1){WORLD_W=LEVEL_WORLD_W[1]=5900;buildWaves();resetStreetDogsR955();resetStreetR1203(true);if(z){rubiesR1203=Math.max(0,Number(z.rubies)||0);skillLevelR1203=clamp(Number(z.skill)||1,1,4);swordCycleR1203=Math.max(0,Number(z.swordCycle)||0);streetWeaponR1203=String(z.weapon||'');streetWeaponChargesR1203=Math.max(0,Number(z.charges)||0);if(Array.isArray(z.loot))streetLootR1203=z.loot.map(x=>({...x}));if(Array.isArray(z.barrels))streetBarrelsR1203=z.barrels.map(x=>({...x}));setSkillFromRubiesR1203(false);}}return true;};
+
+  // R1203 classic fallback visuals for the same mechanics.
+  const __r1203DrawEnemyPrev=drawEnemy;
+  drawEnemy=function(e){
+    __r1203DrawEnemyPrev(e);if(!e?.alive||e?.r955Boss!=='night-enforcer')return;const sx=e.x-cameraX,sy=e.y,face=e.face||1,at=e.attack?.kind==='clubSmashR1203'?clamp(e.attack.t/e.attack.duration,0,1):0,swing=e.attack?Math.sin(at*Math.PI):0;
+    ctx.save();ctx.translate(Math.round(sx),Math.round(sy));ctx.scale(face,1);ctx.translate(16+12*swing,-43+10*swing);ctx.rotate(-.65+1.45*swing);ctx.fillStyle='#51331f';ctx.fillRect(-3,-5,6,52);ctx.fillStyle='#272b30';ctx.fillRect(-9,-13,18,18);ctx.fillStyle='#aab0b4';for(let i=-6;i<=6;i+=6)ctx.fillRect(i,-18-(i%12?3:0),2,8);ctx.restore();
+  };
+  const __r1203DrawPrev=draw;
+  draw=function(){
+    __r1203DrawPrev();if(!started||currentLevel!==1||bikeMode||barModeR955||gameOver)return;ctx.save();
+    for(const it of streetLootR1203){if(it.taken)continue;const x=it.x-cameraX;if(x<-25||x>W+25)continue;if(it.kind==='ruby'){ctx.translate(0,0);ctx.fillStyle='#e51f4b';ctx.save();ctx.translate(x,it.y-18);ctx.rotate(Math.PI/4);ctx.fillRect(-5,-5,10,10);ctx.restore();}else if(it.kind==='bottle'){ctx.fillStyle='#65a59b';ctx.fillRect(x-3,it.y-22,6,15);ctx.fillStyle='#b9dfd7';ctx.fillRect(x-2,it.y-24,4,4);}else if(it.kind==='stick'){ctx.strokeStyle='#8a5a36';ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(x-10,it.y-28);ctx.lineTo(x+10,it.y-4);ctx.stroke();}}
+    for(const b of streetBarrelsR1203){if(b.exploded)continue;const x=b.x-cameraX;if(x<-30||x>W+30)continue;ctx.fillStyle='#5b4439';ctx.fillRect(x-10,b.y-30,20,28);ctx.fillStyle='#9ba0a4';ctx.fillRect(x-11,b.y-28,22,3);ctx.fillRect(x-11,b.y-16,22,3);ctx.fillRect(x-11,b.y-4,22,3);}
+    for(const q of streetThrowsR1203){const x=q.x-cameraX;if(x<-20||x>W+20)continue;ctx.fillStyle='#7fc2b6';ctx.save();ctx.translate(x,q.y-17);ctx.rotate(q.t*12);ctx.fillRect(-2,-7,4,14);ctx.restore();}
+    ctx.restore();
+  };
+
   // R1182: rendering adapter. All combat, collisions, levels and save keys remain in the original engine.
   const drawClassicR1182 = draw;
   let rendererR1182 = null;
@@ -5494,6 +5655,7 @@
         projectiles:cityBossBulletsR955,
         bar:{active:barModeR955,enemies:barEnemiesR955,items:barItemsR955,shots:barProjectilesR955},
         bike:{active:bikeMode,distance:bikeDistance,y:bikeY,z:bikeZ,speed:bikeSpeed,attack:bikeAttackT,super:bikeSuperT,rivals:bikeRivals,pits:bikePits,posts:bikePostsR955,intro:{active:bikeMode&&!bikeIntroDone,t:bikeIntroT,duration:BIKE_INTRO_DURATION}},
+        r1203:{rubies:rubiesR1203,skill:skillLevelR1203,weapon:streetWeaponR1203,charges:streetWeaponChargesR1203,loot:streetLootR1203,barrels:streetBarrelsR1203,throws:streetThrowsR1203},
         space:{x:spaceX_R950,y:spaceY_R950,distance:spaceDistanceR950,roll:spaceRollR950,enemies:spaceEnemiesR950,shots:spaceShotsR950,enemyShots:spaceEnemyShotsR950,pickups:spacePickupsR950,boss:spaceBossR950,stars:spaceCollectStarsR952,lifeUps:spaceLifeUpsR955,insert:spaceInsertR950,super:spaceSuperR1185},
         tower:{invuln:towerInvulnR952,face:player.face,move:(input.right?1:0)-(input.left?1:0),look:(input.up?1:0)-(input.down?1:0),bats:towerBatsR1190,x:towerX_R952,y:towerY_R952,camera:towerCameraR952,grounded:towerGroundedR952,sword:towerSwordT_R952,platforms:towerPlatformsR952,enemies:towerEnemiesR952,crates:towerCratesR952,hearts:towerHeartsR952,stars:towerStarsR952,hazards:towerFallingR952,lifeUps:towerLifeUpsR955},
         tetris:{grid:tetGridR952,cells:tetPieceR952?tetCellsR952():[],piece:tetPieceR952,stage:tetStageR952,lines:tetTotalLinesR952},
@@ -5517,7 +5679,7 @@
   requestAnimationFrame(frame);
 })();
 </script>
-<script type="module" src="/assets/lira-3d-r1190.js?v=55.00-r1202"></script>
+<script type="module" src="/assets/lira-3d-r1190.js?v=55.00-r1203"></script>
 </body>
 </html>
 

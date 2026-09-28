@@ -1,13 +1,14 @@
 {
   "schema": 1,
   "updaterVersion": "55.00-r357-deploy-retrigger",
-  "operation": "retrigger",
-  "reinstall": true,
-  "operationId": "retrigger-1790630375783-64d7e164da",
-  "release": "R1202",
-  "sourceHead": "07ed1bd2c52ddc35b5370dd4798ad00ef4cd7520",
-  "previousOperationId": "publish-1790630264142-fa6b96d77e",
-  "reason": "auto-watch-15",
+  "operation": "publish",
+  "reinstall": false,
+  "operationId": "publish-1790633271483-b8406cd2af",
+  "release": "R1203",
+  "archiveName": "ANDRIK-SITE-R1203-SUBSCRIBERS-CITY-RPG.zip",
+  "sourceHead": "4caade0feecea8a29288c495d69b3b1d6771a705",
+  "backupSha": "4caade0feecea8a29288c495d69b3b1d6771a705",
+  "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-28T21:19:35.783Z"
+  "generatedAt": "2026-09-28T22:07:51.483Z"
 }

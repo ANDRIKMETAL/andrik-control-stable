@@ -9086,7 +9086,7 @@ async function handleFastYoutubeEngagementR333(request,env,options={}){
   const quotaStateR938=await getPushState(db,'youtube-fast-quota-last-at-r938').catch(()=>null);
   const quotaMsR938=Date.parse(String(quotaStateR938?.value||quotaStateR938?.updatedAt||''));
   const quotaAgeMsR938=Number.isFinite(quotaMsR938)?Math.max(0,Date.now()-quotaMsR938):Infinity;
-  const minGapMsR797=4.5*60*1000;
+  const minGapMsR797=1.55*60*1000;
   await setPushState(db,'youtube-fast-engagement-last-at-r333',invokedAtR938).catch(()=>{});
   if(!forceQuotaPollR797 && quotaAgeMsR938<minGapMsR797){
     try{
@@ -9357,12 +9357,92 @@ async function repairSubscriberDeliveryWatermarkR765(env, db, notifiedTotal) {
   return { changed:true, notifiedTotal:previousTotal, previousTotal, sentTotal, report };
 }
 
+
+// R1203: fast visible-subscriber reconciliation.
+// The old background path sampled only the cumulative channel total. That detects a net
+// +1, but it cannot attach a public subscriber name and it can miss a quick +1/-1 pair
+// between samples. We still treat the channel total as authoritative, but on a confirmed
+// rise we also query myRecentSubscribers and use only previously unseen, recent PUBLIC
+// subscriptions as named coverage. Private subscriptions remain count-only by design.
+async function fetchFastVisibleSubscriberCandidatesR1203(env, db, delta, startedAt) {
+  // Poll the public recent-subscriber feed on every 2-minute sample after the first seed.
+  // This catches a public +1 even if an unsubscribe happens before the next count sample
+  // and the cumulative channel total ends up unchanged.
+  const numericDelta=Math.max(0,Number(delta||0));
+  const wanted=Math.max(1,Math.min(6,numericDelta>0?numericDelta:6));
+  const result=await fetchYoutubeRecentSubscribers(env);
+  if(!result.available)return {ok:false,available:false,error:result.error||'recent-subscribers-unavailable',candidates:[],observed:0};
+  const items=(result.items||[]).slice(0,50);
+  const seedKey='youtube-fast-visible-subscribers-seeded-r1203';
+  const seededState=await getPushState(db,seedKey).catch(()=>null);
+  if(!seededState?.value){
+    for(const item of items){
+      await saveYoutubeEventRow(db,{key:`subscriber:${item.id}`,type:'subscriber',resourceId:item.id,author:item.title,title:item.title,url:item.url,payload:{...item,seededSilently:true,seededAt:startedAt,reason:'fast-visible-first-seed-r1203'}}).catch(()=>{});
+    }
+    await setPushState(db,seedKey,startedAt).catch(()=>{});
+    return {ok:true,available:true,seeded:true,candidates:[],observed:items.length};
+  }
+  const cutoff=Date.now()-36*60*60*1000;
+  const candidates=[];
+  for(const item of items){
+    if(candidates.length>=wanted)break;
+    const published=Date.parse(item.publishedAt||'');
+    if(Number.isFinite(published)&&published<cutoff)continue;
+    const seen=await getYoutubeEventRow(db,`subscriber:${item.id}`).catch(()=>null);
+    if(!seen)candidates.push(item);
+  }
+  candidates.sort((a,b)=>String(a.publishedAt||'').localeCompare(String(b.publishedAt||'')));
+  return {ok:true,available:true,seeded:false,candidates:candidates.slice(0,wanted),observed:items.length};
+}
+
+async function deliverFastVisibleSubscribersR1203(env, db, identity, candidates=[], startedAt=new Date().toISOString()) {
+  const delivered=[]; const pending=[]; const failed=[];
+  for(const item of candidates){
+    const onceKey=`push-once:youtube-subscriber-visible-r1203:${item.id}`;
+    let claimed=await claimPushOnce(db,onceKey,startedAt);
+    if(!claimed){
+      const historical=await db.prepare(`
+        SELECT 1 AS found FROM push_history
+        WHERE type='youtube-subscriber' AND status='sent' AND details_json LIKE ?
+        ORDER BY datetime(created_at) DESC LIMIT 1
+      `).bind(`%${item.id}%`).first().catch(()=>null);
+      if(historical?.found){
+        await saveYoutubeEventRow(db,{key:`subscriber:${item.id}`,type:'subscriber',resourceId:item.id,author:item.title,title:item.title,url:item.url,payload:{...item,recoveredFromHistory:true}}).catch(()=>{});
+        delivered.push(item);continue;
+      }
+      await db.prepare(`DELETE FROM push_state WHERE key=? AND updated_at < datetime('now','-8 minutes')`).bind(onceKey).run().catch(()=>{});
+      claimed=await claimPushOnce(db,onceKey,startedAt);
+    }
+    if(!claimed)continue;
+    const target=item.url||identity.channelUrl;
+    const appUrl=youtubeAppLauncherUrl(target);
+    const push=await sendOwnerPush(env,{
+      title:'🟢 ↑ Новый подписчик YouTube',
+      message:`${item.title||'Публичный подписчик'} подписался на ANDRIK`,
+      icon:'https://andrikmetal.com/assets/live-web-ai-green-eye-r97-192.png',
+      url:appUrl,
+      name:`youtube-subscriber-visible-r1203-${item.id}`,
+      ttl:21600,
+      webButtons:[{id:'open-youtube',text:'▶️ Открыть в YouTube',url:appUrl}],
+      history:{type:'youtube-subscriber',source:'YouTube',videoTitle:item.title||identity.title,details:{subscriberId:item.id,totalSubscribers:identity.subscribers,targetUrl:target,deliveryMode:'fast-visible-r1203'}}
+    });
+    if(push.ok){
+      await saveYoutubeEventRow(db,{key:`subscriber:${item.id}`,type:'subscriber',resourceId:item.id,author:item.title,title:item.title,url:item.url,payload:{...item,deliveredAt:startedAt,deliveryMode:'fast-visible-r1203'}}).catch(()=>{});
+      delivered.push(item);
+    }else{
+      await releasePushOnceClaim(db,onceKey).catch(()=>{});
+      (push.pending?pending:failed).push({item,error:push.error||''});
+    }
+  }
+  return {ok:failed.length===0,delivered,pending,failed,sent:delivered.length};
+}
+
 async function handleFastYoutubeSubscriberCountR416(request, env, options = {}) {
   if (!adminAuthorized(request, env) && !cronAuthorized(request, env)) return { ok:false, error:'unauthorized' };
   const db = requireDb(env);
   await Promise.all([ensurePushAutomationSchema(db), ensureControlV1Schema(db), ensurePlatformAnalyticsSchema(db)]);
-  // R797: subscriberCount is cumulative, so a 15-minute API sample loses no
-  // statistics; it only delays the +1 owner push by at most a few minutes.
+  // R1203: subscriberCount is cumulative. The gateway wakes about every 2 minutes,
+  // so this lightweight counter path now follows that cadence closely.
   const requestUrlR797=new URL(request.url);
   const forceQuotaPollR797=options.force===true || requestUrlR797.searchParams.get('fresh')==='1' || (adminAuthorized(request,env) && !cronAuthorized(request,env));
   if(!forceQuotaPollR797){
@@ -9371,11 +9451,11 @@ async function handleFastYoutubeSubscriberCountR416(request, env, options = {}) 
     const ageMsR797=Number.isFinite(lastMsR797)?Math.max(0,Date.now()-lastMsR797):Infinity;
     // R1150: owner asked for practical subscriber/unsubscriber pushes. The external
     // gateway wakes every 2 minutes; keep the YouTube channels.list call quota-safe but
-    // sample at ~5 minute cadence instead of ~15 minutes. This is still only one cheap
-    // channel statistics request per sample and makes count changes visible promptly.
-    const minGapMsR797=4.5*60*1000;
+    // sample at roughly 2-minute cadence. This is still only one cheap channel statistics
+    // request per sample and makes count changes visible promptly.
+    const minGapMsR797=1.55*60*1000;
     if(ageMsR797<minGapMsR797){
-      return {ok:true,skipped:true,reason:'quota-eco-r1150',cadenceMinutes:5,ageMinutes:Math.round(ageMsR797/6000)/10,nextInSeconds:Math.max(1,Math.ceil((minGapMsR797-ageMsR797)/1000)),checkedAt:new Date().toISOString()};
+      return {ok:true,skipped:true,reason:'quota-eco-r1203',cadenceMinutes:2,ageMinutes:Math.round(ageMsR797/6000)/10,nextInSeconds:Math.max(1,Math.ceil((minGapMsR797-ageMsR797)/1000)),checkedAt:new Date().toISOString()};
     }
   }
   const startedAt = new Date().toISOString();
@@ -9394,6 +9474,30 @@ async function handleFastYoutubeSubscriberCountR416(request, env, options = {}) 
     const current=Math.max(0,Number(identity.subscribers || 0));
     let sent=false;
     let pushError='';
+    let fastVisibleR1203={ok:true,available:true,seeded:false,candidates:[],observed:0};
+    let fastVisibleDeliveryR1203={ok:true,delivered:[],pending:[],failed:[],sent:0};
+    const visibleCreditKeyR1203='youtube-subscriber-visible-credit-r1203';
+    let visibleCreditR1203=0;
+    try{
+      const creditState=await getPushState(db,visibleCreditKeyR1203);
+      const credit=JSON.parse(String(creditState?.value||'{}'));
+      const age=Date.now()-Date.parse(String(credit.updatedAt||''));
+      if(Number.isFinite(age)&&age>=0&&age<6*60*60*1000)visibleCreditR1203=Math.max(0,Number(credit.count)||0);
+    }catch(_){visibleCreditR1203=0;}
+    // R1203: after an initial silent seed, reconcile YouTube's PUBLIC recent-subscriber
+    // feed every lightweight poll. This no longer depends on a net subscriberCount rise,
+    // so a public +1 followed by a -1 between samples can still reach the owner phone.
+    if(previous){
+      fastVisibleR1203=await fetchFastVisibleSubscriberCandidatesR1203(env,db,current-before,startedAt).catch(error=>({ok:false,available:false,error:cleanPlainText(error?.message||error,260),candidates:[],observed:0}));
+      if(fastVisibleR1203.candidates?.length){
+        fastVisibleDeliveryR1203=await deliverFastVisibleSubscribersR1203(env,db,identity,fastVisibleR1203.candidates,startedAt).catch(error=>({ok:false,delivered:[],pending:[],failed:[{error:cleanPlainText(error?.message||error,260)}],sent:0}));
+      }
+    }
+    // If YouTube exposes the public subscriber before subscriberCount moves, remember a
+    // short-lived credit. When the cumulative count catches up, this prevents a second
+    // generic +1 notification for the same person. Any count decrease clears the credit.
+    if(current<before&&visibleCreditR1203>0){visibleCreditR1203=0;await setPushState(db,visibleCreditKeyR1203,JSON.stringify({count:0,updatedAt:startedAt})).catch(()=>{});}
+    if(current<=before&&Number(fastVisibleDeliveryR1203.sent||0)>0){visibleCreditR1203+=Number(fastVisibleDeliveryR1203.sent||0);await setPushState(db,visibleCreditKeyR1203,JSON.stringify({count:visibleCreditR1203,updatedAt:startedAt})).catch(()=>{});}
 
     // R658: notification delivery has its OWN subscriber total, independent from the
     // analytics/event baseline. A full/manual reconciler may legitimately advance
@@ -9426,36 +9530,51 @@ async function handleFastYoutubeSubscriberCountR416(request, env, options = {}) 
       if(!notifiedStateR658) await setPushState(db,notifiedKeyR658,String(current)).catch(()=>{});
       notifiedTotalR658=current;
     }else if(!identity.hiddenSubscribers && current>Math.min(before,notifiedTotalR658)){
-      // If the event baseline was advanced without a successful owner push, the
-      // dedicated notified total intentionally remains behind and this becomes a catch-up.
+      // R1203: a public named subscriber delivered in THIS same count-rise sample covers
+      // exactly one unit of the rise. Any remainder (private/hidden or catch-up delta)
+      // is sent as a generic +N push. This prevents duplicate named + generic alerts.
       const deliveryBaseR658=Math.min(before,notifiedTotalR658);
-      const delta=current-deliveryBaseR658;
-      const deliveryModeR658=current>before?'cron-lite-r658':'catchup-r658';
-      const onceKey=`push-once:youtube-subscriber-r658:${deliveryBaseR658}:${current}`;
-      const claimed=await claimPushOnce(db,onceKey,startedAt);
-      if(claimed){
-        const channelAppUrl=youtubeAppLauncherUrl(identity.channelUrl);
-        const result=await sendOwnerPush(env,{
-          title:delta===1?'🟢 ↑ Новый подписчик YouTube':`🟢 ↑ +${delta} подписчика YouTube`,
-          message:`На канале теперь ${current} подписчиков`,
-          icon:'https://andrikmetal.com/assets/live-web-ai-green-eye-r97-192.png',
-          url:channelAppUrl,
-          name:`youtube-subscriber-r658-${deliveryBaseR658}-to-${current}`,
-          webButtons:[{id:'open-youtube',text:'▶️ Открыть YouTube',url:channelAppUrl}],
-          history:{type:'youtube-subscriber-count',source:'YouTube',videoTitle:identity.title,details:{previousSubscribers:deliveryBaseR658,baselineSubscribers:before,lastNotifiedSubscribers:notifiedTotalR658,totalSubscribers:current,delta,deliveryMode:deliveryModeR658}}
-        });
-        sent=Boolean(result.ok);
-        pushError=cleanPlainText(result.error || '',300);
-        if(sent){
-          await Promise.all([
-            saveYoutubeEventRow(db,{key,type:'subscriber-count',resourceId:identity.channelId,title:identity.title,countValue:current,url:identity.channelUrl,payload:{...identity,deliveryMode:deliveryModeR658}}),
-            setPushState(db,notifiedKeyR658,String(current))
-          ]);
-          notifiedTotalR658=current;
-        }else{
-          // Keep the dedicated notified total behind so the next poll retries even
-          // if another analytics path already moved youtube_event_seen to current.
-          await releasePushOnceClaim(db,onceKey).catch(()=>{});
+      const fullDeltaR1203=current-deliveryBaseR658;
+      const newSampleDeltaR1203=Math.max(0,current-before);
+      const visibleNowR1203=Math.max(0,Number(fastVisibleDeliveryR1203.sent||0));
+      const visibleCoverageR1203=Math.min(fullDeltaR1203,visibleNowR1203+visibleCreditR1203);
+      const creditUsedR1203=Math.min(visibleCreditR1203,Math.max(0,visibleCoverageR1203-visibleNowR1203));
+      if(creditUsedR1203>0){visibleCreditR1203=Math.max(0,visibleCreditR1203-creditUsedR1203);await setPushState(db,visibleCreditKeyR1203,JSON.stringify({count:visibleCreditR1203,updatedAt:startedAt})).catch(()=>{});}
+      const delta=Math.max(0,fullDeltaR1203-visibleCoverageR1203);
+      const deliveryModeR658=current>before?'cron-lite-r1203':'catchup-r1203';
+      if(delta<=0 && visibleCoverageR1203>0){
+        sent=true;
+        await Promise.all([
+          saveYoutubeEventRow(db,{key,type:'subscriber-count',resourceId:identity.channelId,title:identity.title,countValue:current,url:identity.channelUrl,payload:{...identity,deliveryMode:'fast-visible-covered-r1203',visibleCoverageR1203}}),
+          setPushState(db,notifiedKeyR658,String(current))
+        ]);
+        notifiedTotalR658=current;
+      }else if(delta>0){
+        const effectiveBaseR1203=current-delta;
+        const onceKey=`push-once:youtube-subscriber-r1203:${effectiveBaseR1203}:${current}`;
+        const claimed=await claimPushOnce(db,onceKey,startedAt);
+        if(claimed){
+          const channelAppUrl=youtubeAppLauncherUrl(identity.channelUrl);
+          const result=await sendOwnerPush(env,{
+            title:delta===1?'🟢 ↑ Новый подписчик YouTube':`🟢 ↑ +${delta} подписчика YouTube`,
+            message:`На канале теперь ${current} подписчиков`,
+            icon:'https://andrikmetal.com/assets/live-web-ai-green-eye-r97-192.png',
+            url:channelAppUrl,
+            name:`youtube-subscriber-r1203-${effectiveBaseR1203}-to-${current}`,
+            webButtons:[{id:'open-youtube',text:'▶️ Открыть YouTube',url:channelAppUrl}],
+            history:{type:'youtube-subscriber-count',source:'YouTube',videoTitle:identity.title,details:{previousSubscribers:effectiveBaseR1203,baselineSubscribers:before,lastNotifiedSubscribers:notifiedTotalR658,totalSubscribers:current,delta,fullDelta:fullDeltaR1203,visibleCoverage:visibleCoverageR1203,deliveryMode:deliveryModeR658}}
+          });
+          sent=Boolean(result.ok)||visibleCoverageR1203>0;
+          pushError=cleanPlainText(result.error || '',300);
+          if(result.ok){
+            await Promise.all([
+              saveYoutubeEventRow(db,{key,type:'subscriber-count',resourceId:identity.channelId,title:identity.title,countValue:current,url:identity.channelUrl,payload:{...identity,deliveryMode:deliveryModeR658,visibleCoverageR1203}}),
+              setPushState(db,notifiedKeyR658,String(current))
+            ]);
+            notifiedTotalR658=current;
+          }else{
+            await releasePushOnceClaim(db,onceKey).catch(()=>{});
+          }
         }
       }
     }else if(!identity.hiddenSubscribers && current<notifiedTotalR658){
@@ -9516,7 +9635,7 @@ async function handleFastYoutubeSubscriberCountR416(request, env, options = {}) 
       mode:'cron-lite-r469',
       updatedAt:startedAt
     })).catch(()=>{});
-    return {ok:!pushError,subscribers:current,previousSubscribers:before,lastNotifiedSubscribers:notifiedTotalR658,delta:Math.max(0,current-before),loss:Math.max(0,before-current),signedDelta:current-before,direction:current>before?'up':current<before?'down':'same',sent,error:pushError,checkedAt:startedAt,mode:'subscriber-watermark-r1150-gain-loss-delivery-confirmed',subscriberPushR1150:YOUTUBE_SUBSCRIBER_PUSH_R1150,deliveryRepairR765:deliveryRepairR765 || null};
+    return {ok:!pushError,subscribers:current,previousSubscribers:before,lastNotifiedSubscribers:notifiedTotalR658,delta:Math.max(0,current-before),loss:Math.max(0,before-current),signedDelta:current-before,direction:current>before?'up':current<before?'down':'same',sent,error:pushError,checkedAt:startedAt,mode:'subscriber-r1203-2m-visible+count',subscriberPushR1150:YOUTUBE_SUBSCRIBER_PUSH_R1150,fastVisibleR1203:{ok:fastVisibleR1203.ok,available:fastVisibleR1203.available,seeded:fastVisibleR1203.seeded,observed:fastVisibleR1203.observed,candidates:fastVisibleR1203.candidates?.length||0,sent:fastVisibleDeliveryR1203.sent||0,pending:fastVisibleDeliveryR1203.pending?.length||0,failed:fastVisibleDeliveryR1203.failed?.length||0,error:fastVisibleR1203.error||'',credit:visibleCreditR1203},deliveryRepairR765:deliveryRepairR765 || null};
   } catch(error) {
     return {ok:false,error:cleanPlainText(error?.message || error,400),checkedAt:startedAt};
   }
