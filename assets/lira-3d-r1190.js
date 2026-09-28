@@ -1,5 +1,5 @@
 import * as T from './vendor/three-r170.module.min.js';
-import {material,box,sphere,cylinder,cone,ring,mesh,character,animateCharacter,dog,motorcycle,ship,collectible,crate,barrel,release,bat,animateBat} from './lira-models-r1190.js?v=55.00-r1203';
+import {material,box,sphere,cylinder,cone,ring,mesh,character,animateCharacter,dog,motorcycle,ship,collectible,crate,barrel,release,bat,animateBat} from './lira-models-r1190.js?v=55.00-r1204';
 import {buildWorld,moveWorld} from './lira-world-r1190.js';
 const game=window.LiraGame,classic=new URLSearchParams(location.search).get('graphics')==='classic';
 if(game&&!classic)boot().catch(error=>{console.error('Dreaming of Líra 3D unavailable:',error);document.body.classList.remove('lira3d','menu-open');document.getElementById('lira3dRoot')?.remove();game.attachRenderer(null);});
@@ -9,7 +9,7 @@ async function boot(){
  <div class="lira3d-top"><div class="lira3d-status"><header>LÍRA <span id="liraLives">♥ 3</span></header><div class="lira3d-bar" role="meter" aria-label="Здоровье" aria-valuemin="0" aria-valuemax="100" id="liraHealth"><i></i></div><div class="lira3d-bar super" role="meter" aria-label="Суперудар" aria-valuemin="0" aria-valuemax="100" id="liraSuper"><i></i></div><div class="lira3d-meta"><span id="liraScore">000000</span><span id="liraStars">★ 0</span></div></div><div class="lira3d-level"><small id="liraChapter"></small><strong id="liraLevel"></strong><span id="liraProgress"></span></div><div class="lira3d-tools"><select class="lira3d-tool" id="liraQuality" aria-label="Качество графики"><option value="auto">Авто</option><option value="high">Высокое</option><option value="low">Экономное</option></select><button class="lira3d-tool" id="liraSound" aria-label="Выключить звук" title="Звук" aria-pressed="true">♪</button><button class="lira3d-tool" id="liraFullscreen" aria-label="Полный экран" title="Полный экран">⛶</button><button class="lira3d-tool" id="liraPause" aria-label="Пауза" title="Пауза">Ⅱ</button></div></div>
  <div class="lira3d-bottom"><span><b>WASD / ↑↓←→</b> движение &nbsp; <b>A</b> прыжок &nbsp; <b>B</b> меч / предмет &nbsp; <b>S</b> супер</span><span><b>20 ♦</b> новый уровень Лиры &nbsp; <b>Enter</b> пауза</span></div>
  <div class="lira3d-message" id="liraMessage" role="status"></div><div class="lira3d-boss" id="liraBoss" hidden><span></span><i></i></div>
- <section class="lira3d-menu" id="liraMenu" aria-label="Меню игры"><a class="lira3d-home" href="/">← ANDRIK METAL</a><div class="lira3d-menu-content"><div class="lira3d-brand">ANDRIK · THE SIX DREAMS</div><h1 id="liraMenuTitle">Dreaming of<em>Líra</em></h1><p id="liraMenuText">Шесть миров одного сна.<br>Пройди сквозь иллюзии. Найди пробуждение.</p><div id="liraLevelList" class="lira3d-level-list" hidden></div><div class="lira3d-menu-actions"><button class="lira3d-button primary" id="liraStart">Войти в сон <span>→</span></button><button class="lira3d-button" id="liraLevels">Миры</button><button class="lira3d-button" id="liraNew">Новая игра</button><a class="lira3d-button" href="?graphics=classic">Классика 2D</a></div><div class="lira3d-help" id="liraHelp"><kbd>WASD / стрелки</kbd> — движение · <kbd>A</kbd> — прыжок<br><kbd>B</kbd> — меч / предмет · <kbd>S</kbd> — суперудар · <kbd>20 ♦</kbd> — новый уровень<br>Прогресс сохраняется автоматически в этом браузере.</div></div><div class="lira3d-edition">3D EDITION · SIX WORLDS · R1203</div></section><div class="lira3d-rotate">Для удобной игры поверни телефон горизонтально.</div>`;
+ <section class="lira3d-menu" id="liraMenu" aria-label="Меню игры"><a class="lira3d-home" href="/">← ANDRIK METAL</a><div class="lira3d-menu-content"><div class="lira3d-brand">ANDRIK · THE SIX DREAMS</div><h1 id="liraMenuTitle">Dreaming of<em>Líra</em></h1><p id="liraMenuText">Шесть миров одного сна.<br>Пройди сквозь иллюзии. Найди пробуждение.</p><div id="liraLevelList" class="lira3d-level-list" hidden></div><div class="lira3d-menu-actions"><button class="lira3d-button primary" id="liraStart">Войти в сон <span>→</span></button><button class="lira3d-button" id="liraLevels">Миры</button><button class="lira3d-button" id="liraNew">Новая игра</button><a class="lira3d-button" href="?graphics=classic">Классика 2D</a></div><div class="lira3d-help" id="liraHelp"><kbd>WASD / стрелки</kbd> — движение · <kbd>A</kbd> — прыжок<br><kbd>B</kbd> — меч / предмет · <kbd>S</kbd> — суперудар · <kbd>20 ♦</kbd> — новый уровень<br>Прогресс сохраняется автоматически в этом браузере.</div></div><div class="lira3d-edition">3D EDITION · SIX WORLDS · R1204</div></section><div class="lira3d-rotate">Для удобной игры поверни телефон горизонтально.</div>`;
  document.getElementById('gameShell').append(root);
  const canvas=root.querySelector('canvas'),renderer=new T.WebGLRenderer({canvas,antialias:true,alpha:false,powerPreference:'high-performance'});
  renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.38;renderer.shadowMap.type=T.PCFSoftShadowMap;
@@ -112,6 +112,16 @@ async function boot(){
   actor('lira',p,p.x,p.z||0,floorZ(p.y),'lira',{walking:s.bar.active?(Math.abs(p.x-(renderGround.lastX??p.x))>.01):undefined});renderGround.lastX=p.x;
   renderSwordFxR1187(s,p);
   renderSuperFxR1183(s,p);
+  // R1204 story doors: street entrance to the bar and the right-side bar exit.
+  if(s.level===1&&!s.bike.active){
+   if(!s.bar.active){
+    if((s.bar?.ready||s.bar?.entry?.active)&&near(1106,cam)){const door=solid('r1204-city-door',1106,42,floorZ(204),28,84,5,'#173448');const halo=object('r1204-city-door-light',()=>new T.PointLight('#67d8ff',0,180,2));halo.position.set(1106,43,floorZ(204)+8);halo.intensity=(s.bar?.entry?.active?6200:3300)+Math.sin(s.elapsed*8)*650;const rr=located('r1204-city-door-ring',()=>ring(new T.Group(),0,0,0,1,.035,material('#9cecff',.15,.4,1.7)),1106,42,floorZ(204)+7);rr.rotation.y=Math.PI/2;rr.scale.setScalar(18+Math.sin(s.elapsed*6)*3);}
+    if(s.bar?.done&&near(1725,cam)){solid('r1204-city-return-door',1725,41,floorZ(211),27,82,5,'#172a36');}
+   }else{
+    const allGone=(s.bar.enemies||[]).every(e=>!e.alive),allLoot=(s.bar.items||[]).every(it=>it.taken);
+    if(allGone&&allLoot){const door=solid('r1204-bar-exit-door',468,42,floorZ(205),30,84,5,'#25405b');const halo=object('r1204-bar-exit-light',()=>new T.PointLight('#82e7ff',0,180,2));halo.position.set(468,44,floorZ(205)+8);halo.intensity=5000+Math.sin(s.elapsed*9)*850;}
+   }
+  }
   const enemies=s.bar.active?s.bar.enemies:s.level===6?[...s.ruins.enemies,...(s.ruins.boss?[s.ruins.boss]:[])]:s.enemies;
   for(const e of enemies){if(e.x<cam-90||e.x>cam+620||e.alive===false&&(e.deathTimer||0)<=0)continue;
    const kind=e.type==='dog'||e.r955Dog?'dog':e.type==='boss'||e===s.ruins.boss?'boss':s.level===6?'roman':e.type==='police'||e.type==='riot'?e.type:'gang';
@@ -173,20 +183,30 @@ async function boot(){
   const bikeAtk=b.attack>0?{kind:'swordSlashR950',t:Math.max(0,.26-b.attack),duration:.26}:null;
   const rider=actor('rider',{...s.player,face:1,attack:bikeAtk},104,b.z+8,floorZ(b.y),'lira',{ride:true,attack:bikeAtk?'swordSlashR950':b.super>0?'guitarSmash':null,scale:.68});
   rider.rotation.z=wheelie*.72;
+  // Three readable traffic lanes.
+  for(const zY of [192,220]){const zz=floorZ(zY);for(let i=0;i<8;i++){const x=20+i*78-((b.distance*.31)%78);solid('r1204-lane-'+zY+'-'+i,x,.12,zz,36,.3,2,'#d7d7c7');}}
+  // Guitar super: white/red flash and expanding shock rings; nearby riders visibly fall before disappearing.
+  if(b.super>0){const u=Math.max(0,Math.min(1,1-b.super/.72));for(let i=0;i<3;i++){const rg=located('r1204-bike-super-ring-'+i,()=>ring(new T.Group(),0,0,0,1,.04,material(i%2?'#ffffff':'#ff6a6a',.12,.4,2.1)),118,34,floorZ(b.y));rg.rotation.x=-Math.PI/2;rg.scale.setScalar(18+u*(52+i*26));}const ll=object('r1204-bike-super-light',()=>new T.PointLight('#fff4e0',0,360,2));ll.position.set(118,48,floorZ(b.y)+5);ll.intensity=(1-u)*9000;}
+  // Final unavoidable log and fall-off-bike beat.
+  if(Number.isFinite(b.logD)){const lx=118+(b.logD-b.distance)*.35;if(near(lx,0)){const log=located('r1204-final-log',()=>{const g=new T.Group();cylinder(g,0,9,0,8,112,material('#5f3b24',.72,.08));return g;},lx,0,floorZ(206));log.rotation.x=Math.PI/2;log.rotation.z=.08;}}
+  if(b.fall>0){const q=Math.max(0,Math.min(1,(b.fall-.01)/1.47));bike.rotation.z=.25+q*1.15;bike.position.y-=q*14;rider.rotation.z=.35+q*1.35;rider.position.x+=q*28;rider.position.y+=Math.sin(q*Math.PI)*18-q*20;}
 
   // One readable rider duel at a time. Enemy punch pose follows the AI attack timer.
   for(const r of b.rivals){
-   const x=118+(r.d-b.distance)*.31;if(!r.alive||!near(x,0))continue;
-   const ry=floorZ(r.lane?228:184),rear=!!(r.engaged&&r.attackT>0),face=rear?-1:1;
-   located('bike-rival-'+r.id,()=>motorcycle(r.kind==='police'),x,0,ry);
+   const x=118+(r.d-b.distance)*.31;if((!r.alive&&!(r.superKO_R1204>0))||!near(x,0))continue;
+   const laneY=([178,206,234][Math.max(0,Math.min(2,Number(r.lane)||0))]??206),ry=floorZ(laneY),rear=!!(r.engaged&&r.attackT>0),face=rear?-1:1;
+   const rb=located('bike-rival-'+r.id,()=>motorcycle(r.kind==='police'),x,0,ry);
+   const ko=Math.max(0,Number(r.superKO_R1204)||0),koP=ko?1-ko/.72:0;
+   if(ko){rb.rotation.z=-Math.min(1,koP)*1.15;rb.position.y=-koP*12;}
    const atk=rear?{kind:'punch',t:.42-r.attackT,duration:.42}:null;
-   actor('bike-rider-'+r.id,{face,attack:atk},x-14,8,ry,r.kind==='police'?'police':'gang',{ride:true,scale:.68,retreat:!r.engaged&&x<150});
-   if(rear){const club=located('bike-rival-club-'+r.id,()=>{const g=new T.Group();box(g,0,0,0,34,2.6,2.6,r.kind==='police'?'#383b40':'#765033');return g;},x-34,32,ry+2);club.rotation.z=-.18;}
+   const rr=actor('bike-rider-'+r.id,{face,attack:atk,invuln:0},x-14,8-koP*10,ry,r.kind==='police'?'police':'gang',{ride:true,scale:.68,retreat:!r.engaged&&x<150});
+   if(ko)rr.rotation.z=-koP*1.25;
+   if(rear&&!ko){const club=located('bike-rival-club-'+r.id,()=>{const g=new T.Group();box(g,0,0,0,34,2.6,2.6,r.kind==='police'?'#383b40':'#765033');return g;},x-34,32,ry+2);club.rotation.z=-.18;}
   }
 
   // Obstacles are intentionally bright and high-contrast so they can be read before reaching Líra.
   for(let i=0;i<b.pits.length;i++){
-   const p=b.pits[i],x=118+(p.d-b.distance)*.35;if(!near(x,0))continue;const z=floorZ(p.lane?228:184);
+   const p=b.pits[i],x=118+(p.d-b.distance)*.35;if(!near(x,0))continue;const z=floorZ(([178,206,234][Math.max(0,Math.min(2,Number(p.lane)||0))]??206));
    if(p.type==='barrier'){
     solid('barrier-body-'+i,x,9,z,34,18,44,'#a74732');
     solid('barrier-stripe-a-'+i,x,12,z,35,4,45,'#efb75c');

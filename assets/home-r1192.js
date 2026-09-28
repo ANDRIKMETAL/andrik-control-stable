@@ -8,35 +8,45 @@ uk:{play:'▶ Слухати',pause:'Ⅱ Пауза',error:'Не вдалося 
 sk:{play:'▶ Počúvať',pause:'Ⅱ Pozastaviť',error:'Skladbu sa nepodarilo spustiť. Otvor album alebo skús znova.',live:'Práve hrá',radio:'ANDRIK METAL RADIO',offline:'Vysielanie je teraz nedostupné',unknown:'Stav vysielania je dočasne nedostupný',pending:'Overujeme názov skladby',next:'Ďalej: ',open:'Otvoriť vysielanie na YouTube'}
 }[lang]||null;
 const t=T||{play:'▶ Listen',pause:'Ⅱ Pause',error:'Could not play.',radio:'ANDRIK METAL RADIO',unknown:'Live status unavailable',pending:'Checking current song',next:'Next: ',offline:'Stream unavailable',open:'Open on YouTube'};
+const reduced=matchMedia('(prefers-reduced-motion: reduce)'),connection=navigator.connection;
 const hero=document.querySelector('.h-hero'),video=document.getElementById('homeHeroVideo'),toggle=document.getElementById('heroMotionToggle');
-let heroVisible=true,manualPause=false,radioVisible=false,radioTimer=0,radioBusy=false,radioController=null;
+let heroVisible=false,manualPause=false,manualPlay=false,radioVisible=false,radioTimer=0,radioBusy=false,radioController=null,heroRetryTimer=0;
 function primeHeroVideo(){
  if(!video)return;
+ const src='/assets/lyra-hero-r1204.mp4';
+ if(video.getAttribute('src')!==src){video.removeAttribute('src');while(video.firstChild)video.removeChild(video.firstChild);video.src=src;}
+ video.preload='auto';
  video.muted=true;video.defaultMuted=true;video.playsInline=true;
  video.setAttribute('muted','');video.setAttribute('playsinline','');video.setAttribute('webkit-playsinline','');video.setAttribute('autoplay','');video.setAttribute('loop','');
- if(!video.querySelector('source')){const src=document.createElement('source');src.src='/assets/lyra-hero-r593.mp4';src.type='video/mp4';video.appendChild(src)}
 }
+function retryHeroVideo(delay=240){
+ clearTimeout(heroRetryTimer);
+ heroRetryTimer=setTimeout(()=>{if(heroVisible&&!document.hidden&&motionAllowed())syncHero()},delay);
+}
+function motionAllowed(){return !manualPause}
 function syncHero(){
  if(!video)return;
+ const shouldPlay=heroVisible&&!document.hidden&&motionAllowed();
+ if(!shouldPlay){try{video.pause()}catch(_){};return}
  primeHeroVideo();
- if(document.hidden||manualPause){try{video.pause()}catch(_){};return}
- try{
-   const p=video.play();
-   if(p&&typeof p.then==='function')p.then(()=>video.classList.add('is-ready')).catch(()=>{});
- }catch(_){ }
+ const attempt=video.play();
+ if(attempt?.catch)attempt.catch(()=>retryHeroVideo(500));
 }
-if(toggle){toggle.hidden=true;toggle.addEventListener('click',()=>{manualPause=!video.paused;syncHero()})}
+if(toggle){
+ toggle.hidden=false;
+ toggle.addEventListener('click',()=>{if(video.paused){manualPause=false;manualPlay=true}else{manualPause=true;manualPlay=false}syncHero()});
+}
 if(video){
  primeHeroVideo();
- const mark=()=>video.classList.add('is-ready');
- video.addEventListener('playing',mark,{passive:true});
- video.addEventListener('canplay',syncHero,{passive:true});
- video.addEventListener('loadeddata',syncHero,{passive:true});
- video.addEventListener('error',()=>video.classList.remove('is-ready'),{passive:true});
- document.addEventListener('visibilitychange',()=>{if(!document.hidden)syncHero()},{passive:true});
- ['pointerdown','touchstart','click'].forEach(type=>document.addEventListener(type,syncHero,{once:true,passive:true}));
- if(video.readyState>=2)syncHero(); else {try{video.load()}catch(_){} setTimeout(syncHero,120);setTimeout(syncHero,900)}
+ video.addEventListener('loadeddata',()=>{video.dataset.firstFrame='1';video.classList.add('is-ready');if(heroVisible&&!document.hidden&&motionAllowed())syncHero()});
+ video.addEventListener('canplay',()=>{video.classList.add('is-ready');if(heroVisible&&!document.hidden&&motionAllowed())syncHero()});
+ video.addEventListener('playing',()=>{if(!heroVisible||document.hidden||!motionAllowed()){video.pause();return}video.classList.add('is-ready')});
+ video.addEventListener('pause',()=>{if(heroVisible&&!document.hidden&&motionAllowed()&&!manualPause)retryHeroVideo(180)});
+ video.addEventListener('error',()=>{video.classList.remove('is-ready');setTimeout(()=>{try{video.src='/assets/lyra-hero-r1204.mp4';video.load();retryHeroVideo(160)}catch(_){}},120)});
 }
+document.addEventListener('pointerdown',()=>{if(manualPause)return;manualPlay=true;syncHero()},{once:true,passive:true});
+reduced.addEventListener?.('change',()=>{manualPlay=false;syncHero()});
+connection?.addEventListener?.('change',()=>{manualPlay=false;syncHero()});
 const coverByAlbum={'silent':'silent-cover-r1159.webp','beyond':'beyond-cover-r601.webp','trika':'trika-third-album-cover-r479.webp','ocean':'ocean-cover-v5148-clean.webp','illusion-of-life':'illusion-of-life-static-v52.jpg'};
 const norm=s=>String(s||'').toLowerCase().replace(/ё/g,'е').replace(/\.(mp3|wav)$/i,'').replace(/[^\p{L}\p{N}]+/gu,' ').trim();
 const artByTitle=new Map();

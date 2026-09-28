@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r357-deploy-retrigger",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1790633271483-b8406cd2af",
-  "release": "R1203",
-  "archiveName": "ANDRIK-SITE-R1203-SUBSCRIBERS-CITY-RPG.zip",
-  "sourceHead": "4caade0feecea8a29288c495d69b3b1d6771a705",
-  "backupSha": "4caade0feecea8a29288c495d69b3b1d6771a705",
+  "operationId": "publish-1790633621101-666875e09e",
+  "release": "R1204",
+  "archiveName": "ANDRIK-SITE-R1204-HERO-BAR-BIKE-PARKOUR.zip",
+  "sourceHead": "e957eececd6ea194d8c0d7c81620ad13c417df88",
+  "backupSha": "e957eececd6ea194d8c0d7c81620ad13c417df88",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-28T22:07:51.483Z"
+  "generatedAt": "2026-09-28T22:13:42.767Z"
 }

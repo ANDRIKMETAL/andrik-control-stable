@@ -417,7 +417,7 @@
   let bikeDone = false;
   let bikeDistance = 0;
   let bikeSpeed = 255;
-  let bikeY = 210;
+  let bikeY = 206;
   let bikeZ = 0;
   let bikeVz = 0;
   let bikeInvuln = 0;
@@ -431,21 +431,25 @@
   // R1188: longer ride with deliberate encounter spacing instead of a short chaotic traffic burst.
   const BIKE_END = 9800;
   const bikePits = [
-    { d: 1080, lane: 0, w: 84, type: "barrier" },
-    { d: 1880, lane: 1, w: 88, type: "barrier" },
-    { d: 2860, lane: 0, w: 92, type: "barrier" },
-    { d: 3790, lane: 1, w: 86, type: "barrier" },
-    { d: 4720, lane: 0, w: 94, type: "barrier" },
-    { d: 5740, lane: 1, w: 88, type: "barrier" },
-    { d: 6680, lane: 0, w: 96, type: "barrier" },
-    { d: 7580, lane: 1, w: 90, type: "barrier" },
-    { d: 8540, lane: 0, w: 98, type: "barrier" },
-    { d: 9360, lane: 1, w: 90, type: "barrier" }
+    { d: 980, lane: 0, w: 78, type: "barrier" },
+    { d: 1510, lane: 2, w: 84, type: "barrier" },
+    { d: 2110, lane: 1, w: 82, type: "barrier" },
+    { d: 2760, lane: 0, w: 88, type: "barrier" },
+    { d: 3420, lane: 2, w: 84, type: "barrier" },
+    { d: 4090, lane: 1, w: 88, type: "barrier" },
+    { d: 4800, lane: 0, w: 92, type: "barrier" },
+    { d: 5480, lane: 2, w: 88, type: "barrier" },
+    { d: 6180, lane: 1, w: 94, type: "barrier" },
+    { d: 6870, lane: 0, w: 90, type: "barrier" },
+    { d: 7560, lane: 2, w: 92, type: "barrier" },
+    { d: 8210, lane: 1, w: 94, type: "barrier" },
+    { d: 8740, lane: 0, w: 88, type: "barrier" }
   ];
   const bikeRivalTemplate = [
-    [650,0,"gang"],[1390,1,"police"],[2210,1,"gang"],[3020,0,"police"],
-    [3890,0,"gang"],[4700,1,"police"],[5540,1,"gang"],[6400,0,"police"],
-    [7240,0,"gang"],[8070,1,"police"],[8840,0,"gang"],[9480,1,"police"]
+    [580,0,"gang"],[1040,2,"police"],[1580,1,"gang"],[2130,2,"gang"],
+    [2660,0,"police"],[3210,1,"gang"],[3740,2,"police"],[4280,0,"gang"],
+    [4870,1,"police"],[5430,2,"gang"],[5990,0,"gang"],[6550,1,"police"],
+    [7110,2,"gang"],[7670,0,"police"],[8240,1,"gang"],[8730,2,"police"]
   ];
   let bikeRivals = [];
 
@@ -2809,7 +2813,7 @@
       for (const r of bikeRivals) {
         if (!r.alive) continue;
         const rx = 118 + (r.d - bikeDistance) * .31;
-        if (rx > 80 && rx < 390 && Math.abs((r.lane ? 228 : 184) - bikeY) < 60) {
+        if (rx > 80 && rx < 390 && Math.abs(bikeLaneY(r.lane) - bikeY) < 68) {
           r.alive = false; hits++; score += 280;
         }
       }
@@ -2851,8 +2855,8 @@
     bikeDistance = 0;
     bikeIntroT = 0;
     bikeIntroDone = false;
-    bikeY = 210; bikeZ = 0; bikeVz = 0; bikeSpeed = 0;
-    player.attack = null; player.vx=0; player.vy=0; player.z=0; player.vz=0;
+    bikeY = 206; bikeZ = 0; bikeVz = 0; bikeSpeed = 0;
+    player.attack = null; player.vx=0; player.vy=0; player.z=0; player.vz=0; player.invuln=0; player.stun=0;
     enemies = enemies.filter(e => !e.alive);
     showMessage("LÍRA — TAKE THE BIKE", 1.9);
     tone(86,.12,"triangle",.020,132);
@@ -2868,7 +2872,7 @@
     saveProgress(false);
   }
 
-  function bikeLaneY(lane) { return lane ? 228 : 184; }
+  function bikeLaneY(lane) { return [178,206,234][clamp(Math.round(Number(lane)||0),0,2)]; }
 
   function updateBike(dt) {
     elapsed += dt;
@@ -2877,6 +2881,7 @@
     messageTimer = Math.max(0, messageTimer-dt);
     superMeter = clamp(superMeter + dt * .85, 0, SUPER_MAX);
     bikeInvuln = Math.max(0,bikeInvuln-dt);
+    player.invuln = Math.max(0,player.invuln-dt); player.stun = Math.max(0,player.stun-dt);
     bikeAttackT = Math.max(0,bikeAttackT-dt);
     bikeSuperT = Math.max(0,bikeSuperT-dt);
     bikeCrashT = Math.max(0,bikeCrashT-dt);
@@ -2887,7 +2892,7 @@
     let my = 0;
     if (input.up) my -= 1;
     if (input.down) my += 1;
-    bikeY = clamp(bikeY + my * dt * 92, 176, 236);
+    bikeY = clamp(bikeY + my * dt * 104, 174, 238);
 
     if (pressed.jump && bikeZ <= .01) {
       bikeVz = 235; bikeZ=.01; tone(140,.08,"square",.018,250);
@@ -4265,7 +4270,7 @@
   function updateBarR955(dt){
     if(!started||paused||gameOver||victory)return;
     elapsed+=dt;messageTimer=Math.max(0,messageTimer-dt);shake=Math.max(0,shake-dt*24);flash=Math.max(0,flash-dt);player.invuln=Math.max(0,player.invuln-dt);player.stun=Math.max(0,player.stun-dt);
-    if(barExitT_R955>0){barExitT_R955+=dt;if(barExitT_R955>1.65)exitBarR955();return;}
+    if(barExitT_R955>0){barExitT_R955+=dt;player.face=1;player.x=approach(player.x,468,dt*82);player.y=approach(player.y,205,dt*46);player.walkPhase+=dt*11;if(barExitT_R955>1.65)exitBarR955();return;}
     let mx=(input.right?1:0)-(input.left?1:0),my=(input.down?1:0)-(input.up?1:0);if(mx||my){const m=Math.hypot(mx,my)||1;mx/=m;my/=m;if(mx)player.face=mx>0?1:-1;}player.x=clamp(player.x+mx*108*dt,20,W-20);player.y=clamp(player.y+my*72*dt,164,235);
     if(pressed.jump&&player.z<=.01){player.vz=250;player.z=.01;}if(player.z>0||player.vz>0){player.z+=player.vz*dt;player.vz-=620*dt;if(player.z<=0){player.z=0;player.vz=0;}}
     if(player.attack){player.attack.t+=dt;if(player.attack.t>=player.attack.duration)player.attack=null;}
@@ -4303,7 +4308,7 @@
         e.atk=.62+Math.random()*.35;e.attack={kind:'punch',t:0,duration:.38,hit:false};
       }
     }
-    if(barEnemiesR955.every(e=>!e.alive)){barClearClockR955+=dt;if(barClearClockR955>.65&&barExitT_R955<=0){barExitT_R955=.01;showMessage('THROUGH THE WINDOW!',1.0);tone(78,.18,'sawtooth',.026,42);}}
+    if(barEnemiesR955.every(e=>!e.alive)){barClearClockR955+=dt;const allLoot=barItemsR955.every(it=>it.taken);if(barClearClockR955>.65&&!allLoot&&messageTimer<=0)showMessage('COLLECT THE LOOT · EXIT RIGHT',.8);if(allLoot&&player.x>430&&barExitT_R955<=0){barExitT_R955=.01;showMessage('EXIT DOOR · BACK TO THE STREET',1.0);tone(78,.18,'sawtooth',.026,42);}}
     autoSaveClock+=dt;if(autoSaveClock>=2.5){autoSaveClock=0;saveProgress(false);}
   }
   function drawBarEnemyR955(e){
@@ -4321,7 +4326,7 @@
     for(const it of barItemsR955){if(it.taken)continue;ctx.save();ctx.translate(it.x,it.y-15);if(it.kind==='knife'){ctx.fillStyle='#d7e1e5';ctx.fillRect(-8,-1,14,2);ctx.fillStyle='#704b33';ctx.fillRect(6,-3,5,6);}else{ctx.fillStyle='#6ca7a3';ctx.fillRect(-3,-9,6,11);ctx.fillStyle='#a9d5cd';ctx.fillRect(-2,-8,4,3);}ctx.restore();}
     for(const e of barEnemiesR955)drawBarEnemyR955(e);for(const p of barProjectilesR955){ctx.fillStyle='#dce8eb';ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.t*16);ctx.fillRect(-7,-1,14,2);ctx.restore();}
     drawLira(player);
-    if(barExitT_R955>0){const q=clamp(barExitT_R955/1.65,0,1);ctx.fillStyle=`rgba(255,255,255,${Math.max(0,.12-Math.abs(q-.5)*.2)})`;ctx.fillRect(0,0,W,H);const ex=220+q*185,ey=188-q*30;ctx.save();ctx.translate(ex,ey);ctx.rotate(q*2.2);ctx.fillStyle='#0a0b0e';ctx.fillRect(-8,-28,16,28);ctx.fillStyle='#c98f72';ctx.fillRect(-5,-37,10,9);ctx.restore();ctx.strokeStyle='#bde6f5';ctx.globalAlpha=.6;for(let i=0;i<9;i++){ctx.beginPath();ctx.moveTo(408,115);ctx.lineTo(362+(i*17)%95,90+(i*23)%58);ctx.stroke();}ctx.globalAlpha=1;ctx.fillStyle='#eef8ff';ctx.font='bold 10px monospace';ctx.textAlign='center';ctx.fillText('LÍRA THROWS HIM THROUGH THE WINDOW',W/2,32);ctx.textAlign='left';}
+    if(barExitT_R955>0){const q=clamp(barExitT_R955/1.65,0,1);ctx.fillStyle=`rgba(255,255,255,${Math.max(0,.12-Math.abs(q-.5)*.2)})`;ctx.fillRect(0,0,W,H);const ex=220+q*185,ey=188-q*30;ctx.save();ctx.translate(ex,ey);ctx.rotate(q*2.2);ctx.fillStyle='#0a0b0e';ctx.fillRect(-8,-28,16,28);ctx.fillStyle='#c98f72';ctx.fillRect(-5,-37,10,9);ctx.restore();ctx.strokeStyle='#bde6f5';ctx.globalAlpha=.6;for(let i=0;i<9;i++){ctx.beginPath();ctx.moveTo(408,115);ctx.lineTo(362+(i*17)%95,90+(i*23)%58);ctx.stroke();}ctx.globalAlpha=1;ctx.fillStyle='#eef8ff';ctx.font='bold 10px monospace';ctx.textAlign='center';ctx.fillText('LÍRA LEAVES THROUGH THE RIGHT DOOR',W/2,32);ctx.textAlign='left';}
     ctx.restore();
     // HUD
     ctx.fillStyle='rgba(3,5,9,.88)';ctx.fillRect(8,8,176,39);ctx.fillStyle='#353039';ctx.fillRect(12,12,118,6);ctx.fillStyle='#c34d5b';ctx.fillRect(12,12,118*(player.hp/player.maxHp),6);ctx.fillStyle='#eef7fa';ctx.font='bold 8px monospace';ctx.fillText('LÍRA · BAR',12,27);ctx.fillStyle='#d6b35c';ctx.font='6px monospace';ctx.fillText(`WEAPON ${barWeaponR955?barWeaponR955.toUpperCase():'—'}`,12,38);drawLivesR955(121,39);ctx.textAlign='right';ctx.fillStyle='#e8dce5';ctx.font='bold 7px monospace';ctx.fillText('LEVEL 1 · NO CHOICE BAR',W-10,14);ctx.fillStyle='#a78b95';ctx.fillText('BREAK THE CROWD · FIND THE EXIT',W-10,25);ctx.textAlign='left';if(messageTimer>0){ctx.fillStyle='#fff';ctx.font='bold 9px monospace';ctx.textAlign='center';ctx.fillText(message,W/2,48);ctx.textAlign='left';}
@@ -4611,7 +4616,7 @@
   const __r952UpdatePlayerR955=updatePlayer;
   updatePlayer=function(dt){
     __r952UpdatePlayerR955(dt);
-    if(currentLevel===1&&!barDoneR955&&!barModeR955&&waves[0]?.cleared&&player.x>=1045){enterBarR955(false);return;}
+    if(currentLevel===1&&!barDoneR955&&!barModeR955&&waves[0]?.cleared&&player.x>=1045){beginBarDoorEntryR1204();return;}
     if(currentLevel===1&&!bikeDone&&!bikeMode&&barDoneR955&&waves[1]?.cleared&&player.x>=2485)enterBikeMode();
   };
 
@@ -5636,6 +5641,107 @@
     ctx.restore();
   };
 
+
+  // =====================================================================
+  // R1204 — BAR DOORS · PARKOUR/RUN · 3-LANE BIKE · LOG CRASH
+  // =====================================================================
+  let barDoorEntryT_R1204=0,barDoorEntryActiveR1204=false;
+  let runTapDirR1204=0,runTapTimeR1204=-99,runRightHeldR1204=false,runLeftHeldR1204=false,runBoostT_R1204=0;
+  let propStandR1204=null;
+  let bikeFallT_R1204=0,bikeFallDoneR1204=false;
+  const BIKE_LOG_D_R1204=9200;
+  ATTACKS.flyingKickR1204={duration:.56,activeStart:.10,activeEnd:.40,damage:34,range:68,depth:27,knock:92};
+
+  function beginBarDoorEntryR1204(){
+    if(barDoorEntryActiveR1204||barModeR955||barDoneR955)return;
+    barDoorEntryActiveR1204=true;barDoorEntryT_R1204=.01;
+    player.attack=null;player.vx=0;player.vy=0;showMessage('THE DOOR IS CALLING',1.0);tone(180,.12,'triangle',.018,300);
+  }
+  function updateBarDoorEntryR1204(dt){
+    if(!barDoorEntryActiveR1204)return false;
+    barDoorEntryT_R1204+=dt;const q=clamp(barDoorEntryT_R1204/1.32,0,1);
+    const targetX=1106,targetY=204;
+    player.face=1;player.x=approach(player.x,targetX,dt*92);player.y=approach(player.y,targetY,dt*58);player.walkPhase+=dt*12;
+    player.vx=0;player.vy=0;cameraX=clamp(player.x-W*.34,0,Math.max(0,WORLD_W-W));
+    if(q>.74){flash=Math.max(flash,.025+Math.sin(q*Math.PI)*.04);}
+    if(q>=1){barDoorEntryActiveR1204=false;barDoorEntryT_R1204=0;enterBarR955(false);}
+    return true;
+  }
+
+  function streetPropR1204(){
+    if(currentLevel!==1||barModeR955||bikeMode)return null;
+    const props=[{x:390,y:211,h:25,w:24},{x:980,y:211,h:25,w:24},{x:1680,y:211,h:25,w:24},{x:2380,y:211,h:25,w:24}];
+    for(const b of streetBarrelsR1203||[])if(!b.exploded)props.push({x:b.x,y:b.y,h:31,w:16});
+    for(const c of recoveryCratesR950||[])if(!c.broken)props.push({x:c.x,y:c.y,h:23,w:16});
+    let best=null,dist=999;for(const pr of props){const dx=Math.abs(player.x-pr.x),dy=Math.abs(player.y-pr.y);if(dx<pr.w&&dy<24&&dx<dist){best=pr;dist=dx;}}
+    return best;
+  }
+  function updateRunAndParkourR1204(dt){
+    if(currentLevel!==1||barModeR955||bikeMode)return;
+    const dir=input.right?1:input.left?-1:0;
+    if(input.right&&!runRightHeldR1204){if(runTapDirR1204===1&&elapsed-runTapTimeR1204<.34)runBoostT_R1204=1.25;runTapDirR1204=1;runTapTimeR1204=elapsed;}runRightHeldR1204=!!input.right;
+    if(input.left&&!runLeftHeldR1204){if(runTapDirR1204===-1&&elapsed-runTapTimeR1204<.34)runBoostT_R1204=1.25;runTapDirR1204=-1;runTapTimeR1204=elapsed;}runLeftHeldR1204=!!input.left;
+    runBoostT_R1204=Math.max(0,runBoostT_R1204-dt);player.runningR1204=runBoostT_R1204>0&&dir!==0;
+    if(player.runningR1204)player.walkPhase+=dt*7;
+    const pr=streetPropR1204();
+    if(propStandR1204&&pressed.jump){player.vz=Math.max(player.vz,272);player.z=propStandR1204.h+.5;propStandR1204=null;tone(250,.05,'square',.014,360);}
+    if(pr&&player.vz<=0&&(player.z>9||propStandR1204)&&player.z<=pr.h+8){player.z=pr.h;player.vz=0;propStandR1204=pr;}
+    else if(!pr&&propStandR1204){propStandR1204=null;}
+  }
+
+  const __r1204StartSwordPrev=startSwordR950;
+  startSwordR950=function(){
+    if(currentLevel===1&&!barModeR955&&!bikeMode&&player.runningR1204&&player.z<3){
+      const def=ATTACKS.flyingKickR1204;player.attack={id:++attackSerial,kind:'flyingKickR1204',t:0,duration:def.duration};player.lastAttackTime=elapsed;player.vx=player.face*245;player.z=12;player.vz=54;runBoostT_R1204=Math.max(runBoostT_R1204,.38);tone(250,.07,'square',.022,120);return;
+    }
+    return __r1204StartSwordPrev();
+  };
+
+  const __r1204UpdatePlayerPrev=updatePlayer;
+  updatePlayer=function(dt){
+    if(barDoorEntryActiveR1204){updateBarDoorEntryR1204(dt);return;}
+    const oldSpeed=player.speed;if(currentLevel===1&&!barModeR955&&!bikeMode&&runBoostT_R1204>0)player.speed=oldSpeed*1.72;
+    __r1204UpdatePlayerPrev(dt);player.speed=oldSpeed;updateRunAndParkourR1204(dt);
+    if(player.attack?.kind==='flyingKickR1204'){const q=clamp(player.attack.t/player.attack.duration,0,1);player.x+=player.face*150*dt;player.z=Math.max(player.z,8+Math.sin(q*Math.PI)*23);}
+  };
+
+  const __r1204EnterBarPrev=enterBarR955;
+  enterBarR955=function(resume=false){barDoorEntryActiveR1204=false;barDoorEntryT_R1204=0;__r1204EnterBarPrev(resume);};
+  const __r1204ExitBarPrev=exitBarR955;
+  exitBarR955=function(){__r1204ExitBarPrev();player.x=1725;player.y=211;cameraX=1515;showMessage('RIGHT DOOR · BACK TO THE STREET',1.0);};
+
+  const __r1204ResetBikePrev=resetBikeState;
+  resetBikeState=function(){__r1204ResetBikePrev();bikeY=206;bikeFallT_R1204=0;bikeFallDoneR1204=false;player.invuln=0;};
+  const __r1204UpdateBikePrev=updateBike;
+  updateBike=function(dt){
+    if(bikeFallT_R1204>0){
+      elapsed+=dt;messageTimer=Math.max(0,messageTimer-dt);shake=Math.max(0,shake-dt*18);flash=Math.max(0,flash-dt);player.invuln=Math.max(0,player.invuln-dt);bikeFallT_R1204+=dt;bikeCrashT=Math.max(bikeCrashT,1.15);
+      if(bikeFallT_R1204>1.48){bikeFallT_R1204=0;leaveBikeMode();showMessage('GET UP · KEEP MOVING',1.1);}return;
+    }
+    __r1204UpdateBikePrev(dt);
+    if(bikeMode&&!bikeFallDoneR1204&&bikeDistance>=BIKE_LOG_D_R1204){bikeFallDoneR1204=true;bikeFallT_R1204=.01;bikeSpeed=0;bikeAttackT=0;bikeZ=0;bikeVz=0;hitShake(8);flash=Math.max(flash,.12);showMessage('LOG! · LÍRA GOES DOWN',1.15);tone(64,.18,'sawtooth',.035,34);}
+  };
+
+  const __r1204TriggerSuperPrev=triggerSuper;
+  triggerSuper=function(){
+    const before=bikeMode?superMeter:-1;const ok=__r1204TriggerSuperPrev();
+    if(ok&&bikeMode&&before>=SUPER_COST){for(const r of bikeRivals){const rx=118+(r.d-bikeDistance)*.31;if(rx>55&&rx<420&&Math.abs(bikeLaneY(r.lane)-bikeY)<88){r.superKO_R1204=.72;r.alive=false;}}flash=Math.max(flash,.24);effects.push({kind:'guitarShockR1204',x:player.x,y:player.y,t:0,duration:.72});}
+    return ok;
+  };
+
+  // Fresh 3-lane rival layout is applied on every bike reset.
+  const __r1204ResetBikeStateFinal=resetBikeState;
+  resetBikeState=function(){
+    __r1204ResetBikeStateFinal();bikeY=206;bikeFallT_R1204=0;bikeFallDoneR1204=false;
+    bikeRivals=bikeRivalTemplate.map((r,i)=>({id:`BR${i}`,d:r[0],lane:r[1],kind:r[2],hp:r[2]==='police'?34:26,alive:true,attackT:0,attackHit:false,engaged:false,duelT:0,duelDone:false,superKO_R1204:0}));
+  };
+
+  const __r1204UpdatePrev=update;
+  update=function(dt){
+    __r1204UpdatePrev(dt);
+    if(bikeMode)for(const r of bikeRivals)r.superKO_R1204=Math.max(0,(r.superKO_R1204||0)-dt);
+  };
+
   // R1182: rendering adapter. All combat, collisions, levels and save keys remain in the original engine.
   const drawClassicR1182 = draw;
   let rendererR1182 = null;
@@ -5653,9 +5759,9 @@
         crates:recoveryCratesR950, hearts:recoveryHeartsR950, groundStars:groundStarsR952, lifeUps:groundLifeUpsR955,
         ocean:{barrels:oceanBarrelsR942,pickups:oceanPickupsR942,chains:oceanChainsR955,explosions:oceanExplosionsR942},
         projectiles:cityBossBulletsR955,
-        bar:{active:barModeR955,enemies:barEnemiesR955,items:barItemsR955,shots:barProjectilesR955},
-        bike:{active:bikeMode,distance:bikeDistance,y:bikeY,z:bikeZ,speed:bikeSpeed,attack:bikeAttackT,super:bikeSuperT,rivals:bikeRivals,pits:bikePits,posts:bikePostsR955,intro:{active:bikeMode&&!bikeIntroDone,t:bikeIntroT,duration:BIKE_INTRO_DURATION}},
-        r1203:{rubies:rubiesR1203,skill:skillLevelR1203,weapon:streetWeaponR1203,charges:streetWeaponChargesR1203,loot:streetLootR1203,barrels:streetBarrelsR1203,throws:streetThrowsR1203},
+        bar:{active:barModeR955,done:barDoneR955,ready:currentLevel===1&&!barDoneR955&&!barModeR955&&!!waves[0]?.cleared,enemies:barEnemiesR955,items:barItemsR955,shots:barProjectilesR955,entry:{active:barDoorEntryActiveR1204,t:barDoorEntryT_R1204},exitT:barExitT_R955},
+        bike:{active:bikeMode,distance:bikeDistance,y:bikeY,z:bikeZ,speed:bikeSpeed,attack:bikeAttackT,super:bikeSuperT,crash:bikeCrashT,fall:bikeFallT_R1204,logD:BIKE_LOG_D_R1204,rivals:bikeRivals,pits:bikePits,posts:bikePostsR955,intro:{active:bikeMode&&!bikeIntroDone,t:bikeIntroT,duration:BIKE_INTRO_DURATION}},
+        r1203:{rubies:rubiesR1203,skill:skillLevelR1203,weapon:streetWeaponR1203,charges:streetWeaponChargesR1203,loot:streetLootR1203,barrels:streetBarrelsR1203,throws:streetThrowsR1203,run:runBoostT_R1204,barDoorEntry:barDoorEntryActiveR1204},
         space:{x:spaceX_R950,y:spaceY_R950,distance:spaceDistanceR950,roll:spaceRollR950,enemies:spaceEnemiesR950,shots:spaceShotsR950,enemyShots:spaceEnemyShotsR950,pickups:spacePickupsR950,boss:spaceBossR950,stars:spaceCollectStarsR952,lifeUps:spaceLifeUpsR955,insert:spaceInsertR950,super:spaceSuperR1185},
         tower:{invuln:towerInvulnR952,face:player.face,move:(input.right?1:0)-(input.left?1:0),look:(input.up?1:0)-(input.down?1:0),bats:towerBatsR1190,x:towerX_R952,y:towerY_R952,camera:towerCameraR952,grounded:towerGroundedR952,sword:towerSwordT_R952,platforms:towerPlatformsR952,enemies:towerEnemiesR952,crates:towerCratesR952,hearts:towerHeartsR952,stars:towerStarsR952,hazards:towerFallingR952,lifeUps:towerLifeUpsR955},
         tetris:{grid:tetGridR952,cells:tetPieceR952?tetCellsR952():[],piece:tetPieceR952,stage:tetStageR952,lines:tetTotalLinesR952},
@@ -5679,7 +5785,7 @@
   requestAnimationFrame(frame);
 })();
 </script>
-<script type="module" src="/assets/lira-3d-r1190.js?v=55.00-r1203"></script>
+<script type="module" src="/assets/lira-3d-r1190.js?v=55.00-r1204"></script>
 </body>
 </html>
 

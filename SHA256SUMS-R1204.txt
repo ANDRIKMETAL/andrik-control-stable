@@ -1,0 +1,4 @@
+ANDRIK R1204
+- Hero: exact working R1193 MP4 copied to a fresh cache-safe filename; R1193 autoplay/retry logic restored.
+- Level 1: glowing bar entrance/exit door flow, loot-gated bar exit, run/flying kick, parkour landing on street props.
+- Bike: three lanes, denser rivals/obstacles, handlebar grip pose, smaller tank, guitar super flash/KO, final log crash, no permanent blinking.

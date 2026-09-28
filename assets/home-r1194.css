@@ -489,3 +489,6 @@ body.home-r1190 .h-hero-media video{visibility:visible!important}
 body.home-r1190 .h-hero-media img{z-index:0!important}
 body.home-r1190 .h-hero-media video{z-index:1!important;opacity:0!important;visibility:visible!important;transition:opacity .20s ease!important}
 body.home-r1190 .h-hero-media video.is-ready{opacity:1!important}
+
+/* R1204 hero video toggle hidden; autoplay remains active. */
+body.home-r1190 #heroMotionToggle{display:none!important}

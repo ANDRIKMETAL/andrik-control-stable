@@ -131,3 +131,6 @@ body.home-r1190.is-page-hidden *{animation-play-state:paused!important}
 @media(prefers-reduced-motion:reduce){body.home-r1190 *,body.home-r1190 *::before,body.home-r1190 *::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}body.home-r1190 .h-breathe.is-inview,body.home-r1190 .is-revealed,body.home-r1190 .h-radio.is-live.is-inview .h-live-dot{animation:none!important}body.home-r1190 .h-button:active{transform:none}}
 
 body.home-r1190::before,body.home-r1190::after{display:none!important;animation:none!important}
+
+/* R1204 hero video toggle hidden; autoplay logic remains active. */
+body.home-r1190 #heroMotionToggle{display:none!important}
