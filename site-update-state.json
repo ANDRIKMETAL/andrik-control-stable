@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r357-deploy-retrigger",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1790628957954-ee64dac6fa",
-  "release": "R1201",
-  "archiveName": "ANDRIK-SITE-R1201-GAME-CONTROLS-COMBAT-SPLASH.zip",
-  "sourceHead": "b85aad9fa045cc1ee4a24157aac1aa6b621eb9c8",
-  "backupSha": "b85aad9fa045cc1ee4a24157aac1aa6b621eb9c8",
+  "operationId": "publish-1790630264142-fa6b96d77e",
+  "release": "R1202",
+  "archiveName": "ANDRIK-SITE-R1202-HERO-DOGS-BIKE-FIX-1.zip",
+  "sourceHead": "9b1f2d6b1f3ac737a20195877ec0157024e54911",
+  "backupSha": "9b1f2d6b1f3ac737a20195877ec0157024e54911",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-28T20:55:59.369Z"
+  "generatedAt": "2026-09-28T21:17:45.624Z"
 }

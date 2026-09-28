@@ -279,6 +279,12 @@
       #orientationHint { display: flex; }
     }
   </style>
+<style id="r1202-game-controls">
+/* R1202 — compact A/B/S cluster: A jump, B sword, S super. */
+.actionsR1201{width:clamp(126px,19vw,168px)!important;height:clamp(112px,17vw,150px)!important}
+.actionsR1201 [data-action="super"]{left:auto!important;right:clamp(61px,9.1vw,80px)!important;top:50%!important;transform:translateY(-50%)!important}
+.actionsR1201 [data-action="super"].active{transform:translateY(-50%) scale(.93)!important}
+</style>
 </head>
 <body>
   <div id="gameShell">
@@ -2739,7 +2745,7 @@
     bikeIntroDone = false;
     bikeRivals = bikeRivalTemplate.map((r, i) => ({
       id:i, d:r[0], lane:r[1], kind:r[2], hp:42, maxHp:42, alive:true, hit:false,
-      engaged:false, duelDone:false, duelT:0, attackT:0, attackHit:false, attackCooldown:.75 + (i%3)*.18
+      engaged:false, duelDone:false, duelT:0, attackT:0, attackHit:false, rearAttack:(i%3!==1), attackCooldown:.75 + (i%3)*.18
     }));
   }
   resetBikeState();
@@ -3053,7 +3059,7 @@
   }
 
   function drawBikeRider(x,y,z,kind="lira",attack=false) {
-    ctx.save();ctx.translate(x,y-z);const wheelie=kind==="lira"?clamp(z/45,0,.28):0;ctx.rotate(-wheelie);
+    ctx.save();ctx.translate(x,y-z);const wheelie=kind==="lira"?clamp(z/36,0,.52):0;if(wheelie){ctx.translate(-18,0);ctx.rotate(-wheelie);ctx.translate(18,0);}
     const police=kind==="police";const gang=kind==="gang";
     // wheels
     ctx.fillStyle="#050609";ctx.beginPath();ctx.arc(-18,0,10,0,Math.PI*2);ctx.arc(20,0,10,0,Math.PI*2);ctx.fill();ctx.strokeStyle="#89929a";ctx.lineWidth=2;ctx.beginPath();ctx.arc(-18,0,6,0,Math.PI*2);ctx.arc(20,0,6,0,Math.PI*2);ctx.stroke();
@@ -3067,7 +3073,7 @@
     if(police){ctx.fillStyle="#142238";ctx.fillRect(-6,-46,13,6);ctx.fillStyle="#83a4c1";ctx.fillRect(-4,-42,10,2);} else if(gang){ctx.fillStyle="#a5293a";ctx.fillRect(-6,-44,12,3);} else {ctx.fillStyle="#050609";ctx.beginPath();ctx.moveTo(-7,-43);ctx.lineTo(-15,-36);ctx.lineTo(-6,-34);ctx.lineTo(4,-46);ctx.fill();ctx.fillStyle="#d4ccc0";ctx.beginPath();ctx.ellipse(0,-24,4,2,0,0,Math.PI*2);ctx.fill();ctx.fillStyle="#080a0d";ctx.beginPath();ctx.arc(0,-24,1.2,0,Math.PI*2);ctx.fill();}
     // arms / attack kick
     ctx.strokeStyle="#c59073";ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(4,-32);ctx.lineTo(16,-21);ctx.moveTo(-4,-31);ctx.lineTo(-10,-18);ctx.stroke();
-    if(attack&&kind==="lira"){ctx.strokeStyle="#d0a080";ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(4,-19);ctx.lineTo(24,-29);ctx.stroke();}
+    if(attack&&kind==="lira"){ctx.strokeStyle="#d0a080";ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(4,-19);ctx.lineTo(22,-27);ctx.stroke();ctx.strokeStyle="#eef8ff";ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(20,-28);ctx.lineTo(58,-34);ctx.stroke();ctx.strokeStyle="#bd9a55";ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(18,-25);ctx.lineTo(22,-31);ctx.stroke();}else if(attack&&kind!=="lira"){ctx.strokeStyle=kind==="police"?"#30343a":"#6f4b31";ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(-2,-24);ctx.lineTo(-38,-19);ctx.stroke();}
     ctx.restore();
   }
 
@@ -3090,7 +3096,7 @@
 
     for(const pit of bikePits) drawBikePit(pit);
     // rival bikes sorted by lane
-    for(const r of bikeRivals){if(!r.alive)continue;const x=118+(r.d-bikeDistance)*.31;if(x<-80||x>W+80)continue;drawBikeRider(x,bikeLaneY(r.lane),0,r.kind,false);}
+    for(const r of bikeRivals){if(!r.alive)continue;const x=118+(r.d-bikeDistance)*.31;if(x<-80||x>W+80)continue;drawBikeRider(x,bikeLaneY(r.lane),0,r.kind,r.attackT>0);}
     drawBikeRider(118,bikeY,bikeZ,"lira",bikeAttackT>0);
 
     if(bikeSuperT>0){const p=1-bikeSuperT/.72;ctx.save();ctx.globalAlpha=clamp(bikeSuperT/.35,0,1);ctx.strokeStyle=p<.5?"#ff4b5f":"#ffd148";ctx.lineWidth=6;ctx.beginPath();ctx.arc(150,bikeY-bikeZ-25,44+p*85,-1.1,.8);ctx.stroke();ctx.strokeStyle="#9eeaff";ctx.lineWidth=2;ctx.beginPath();ctx.arc(150,bikeY-bikeZ-25,52+p*92,-1.1,.8);ctx.stroke();ctx.restore();}
@@ -4222,7 +4228,7 @@
   }
   function makeDogR955(x,y,bossDog=false){
     const e=__r955MakeEnemyBase('gang',x,y);
-    e.type='dog';e.variant=bossDog?'boss-dog':'street-dog';e.hp=e.maxHp=bossDog?58:38;e.damage=bossDog?12:9;e.speed=bossDog?116:94;e.width=27;e.depth=16;e.height=22;e.emergeT=bossDog?0:.75;e.leapCd=.35+Math.random()*.7;e.bossDog=!!bossDog;e.attack=null;e.alive=true;return e;
+    e.type='dog';e.variant=bossDog?'boss-dog':'street-dog';e.hp=e.maxHp=bossDog?58:38;e.damage=bossDog?12:9;e.speed=bossDog?148:132;e.width=27;e.depth=16;e.height=22;e.emergeT=bossDog?0:.75;e.leapCd=.35+Math.random()*.7;e.retreatT=0;e.dogSlot=0;e.bossDog=!!bossDog;e.attack=null;e.alive=true;return e;
   }
 
   function enterBarR955(resume=false){
@@ -4376,10 +4382,33 @@
   };
 
   function updateDogR955(e,dt){
-    if(!e.alive){e.deathTimer=Math.max(0,e.deathTimer-dt);return;}e.hitFlash=Math.max(0,e.hitFlash-dt);e.stun=Math.max(0,e.stun-dt);e.emergeT=Math.max(0,(e.emergeT||0)-dt);e.leapCd=Math.max(0,(e.leapCd||0)-dt);
-    if(e.stun>0)return;const dx=player.x-e.x,dy=player.y-e.y,d=Math.hypot(dx,dy)||1;e.face=dx>=0?1:-1;if(e.emergeT>0)return;
-    if(d>29){e.x+=dx/d*e.speed*dt;e.y+=dy/d*e.speed*.54*dt;e.walkPhase+=dt*13;}else if(e.leapCd<=0){e.leapCd=.75+Math.random()*.55;e.attack={t:0,duration:.34,hit:false};}
-    if(e.attack){e.attack.t+=dt;if(!e.attack.hit&&e.attack.t>.12&&e.attack.t<.25&&d<38&&player.z<18){e.attack.hit=true;damagePlayer(e.damage,e.x);}if(e.attack.t>=e.attack.duration)e.attack=null;}
+    if(!e.alive){e.deathTimer=Math.max(0,e.deathTimer-dt);return;}
+    e.hitFlash=Math.max(0,e.hitFlash-dt);e.stun=Math.max(0,e.stun-dt);e.emergeT=Math.max(0,(e.emergeT||0)-dt);e.leapCd=Math.max(0,(e.leapCd||0)-dt);e.retreatT=Math.max(0,(e.retreatT||0)-dt);
+    const dx=player.x-e.x,dy=player.y-e.y,d=Math.hypot(dx,dy)||1;
+    // Head always points at Líra, including during retreat.
+    e.face=dx>=0?1:-1;
+    if(e.emergeT>0||e.stun>0)return;
+    // Keep dogs from collapsing into one model. Most of the separation is across the lane,
+    // so both animals stay clearly visible while still attacking the same target.
+    let repelX=0,repelY=0;
+    for(const other of enemies){if(other===e||!other.alive||other.type!=='dog')continue;const ox=e.x-other.x,oy=e.y-other.y,od=Math.hypot(ox,oy)||1;if(od<48){const k=(48-od)/48;repelX+=ox/od*k*34;repelY+=oy/od*k*56;}}
+    if(e.retreatT>0){
+      const away=dx>=0?-1:1;
+      e.x+=away*e.speed*1.18*dt+repelX*dt;e.y+=Math.sign((player.y+(e.dogSlot||0)*22)-e.y)*e.speed*.22*dt+repelY*dt;e.walkPhase+=dt*17;return;
+    }
+    if(e.attack){
+      e.attack.t+=dt;
+      // Short fast lunge, then immediately back away before circling in again.
+      const q=clamp(e.attack.t/e.attack.duration,0,1);if(q<.62){e.x+=e.face*e.speed*1.45*dt;e.y+=Math.sign(player.y-e.y)*e.speed*.28*dt;}
+      if(!e.attack.hit&&e.attack.t>.10&&e.attack.t<.24&&Math.hypot(player.x-e.x,player.y-e.y)<42&&player.z<18){e.attack.hit=true;damagePlayer(e.damage,e.x);}
+      if(e.attack.t>=e.attack.duration){e.attack=null;e.retreatT=.42+Math.random()*.16;e.leapCd=.62+Math.random()*.45;}
+      return;
+    }
+    const laneTarget=player.y+(e.dogSlot||0)*22;
+    const adx=player.x-e.x,ady=laneTarget-e.y,ad=Math.hypot(adx,ady)||1;
+    if(Math.abs(player.x-e.x)>34||Math.abs(laneTarget-e.y)>12){e.x+=adx/ad*e.speed*dt+repelX*dt;e.y+=ady/ad*e.speed*.72*dt+repelY*dt;e.walkPhase+=dt*17;}
+    else if(e.leapCd<=0){e.attack={t:0,duration:.32,hit:false};}
+    e.y=clamp(e.y,FLOOR_TOP+10,FLOOR_BOTTOM-6);
   }
   function updateNightBossR955(e,dt){
     if(!e.alive){e.deathTimer=Math.max(0,e.deathTimer-dt);return;}e.hitFlash=Math.max(0,e.hitFlash-dt);e.stun=Math.max(0,e.stun-dt);if(e.stun>0)return;e.rifleCd=Math.max(0,e.rifleCd-dt);e.attackCooldown=Math.max(0,e.attackCooldown-dt);const dx=player.x-e.x,dy=player.y-e.y,d=Math.hypot(dx,dy)||1;e.face=dx>=0?1:-1;
@@ -4422,7 +4451,7 @@
   function updateStreetDogsR955(){
     if(currentLevel!==1||bikeMode||barModeR955)return;const active=getActiveWave();if(active)return;
     const livingNonDogs=enemies.some(e=>e.alive&&e.type!=='dog');if(livingNonDogs)return;
-    for(const z of streetDogZonesR955){if(z.spawned)continue;if(Math.abs(player.x-z.x)<135){z.spawned=true;const d1=makeDogR955(z.x,z.y,false),d2=makeDogR955(z.x+32,z.y-20,false);enemies.push(d1,d2);showMessage('STRAY DOGS!',.65);break;}}
+    for(const z of streetDogZonesR955){if(z.spawned)continue;if(Math.abs(player.x-z.x)<135){z.spawned=true;const d1=makeDogR955(z.x-42,z.y+18,false),d2=makeDogR955(z.x+46,z.y-22,false);d1.dogSlot=1;d2.dogSlot=-1;d1.leapCd=.26;d2.leapCd=.58;enemies.push(d1,d2);showMessage('STRAY DOGS!',.65);break;}}
   }
   function drawDogR955(e){
     const sx=e.x-cameraX,sy=e.y-e.emergeT*18;if(sx<-60||sx>W+60)return;ctx.save();ctx.translate(Math.round(sx),Math.round(sy));ctx.scale(e.face,1);shadow(0,3,13,4,.35);const leap=e.attack?Math.sin(clamp(e.attack.t/e.attack.duration,0,1)*Math.PI)*8:0;ctx.translate(0,-leap);ctx.fillStyle=e.bossDog?'#171016':'#181516';ctx.fillRect(-12,-12,24,11);ctx.fillRect(6,-18,12,10);ctx.fillStyle='#a64a43';ctx.fillRect(13,-15,3,2);ctx.fillStyle='#09090a';ctx.fillRect(-10,-2,5,9);ctx.fillRect(5,-2,5,9);ctx.fillStyle='#6a3832';ctx.beginPath();ctx.moveTo(8,-18);ctx.lineTo(11,-25);ctx.lineTo(14,-18);ctx.fill();ctx.beginPath();ctx.moveTo(15,-18);ctx.lineTo(18,-24);ctx.lineTo(19,-17);ctx.fill();ctx.fillStyle='#eee';ctx.fillRect(18,-12,4,1);ctx.restore();
@@ -5430,7 +5459,7 @@
         const targetX=188+(r.id%2)*18;
         const targetD=bikeDistance+(targetX-118)/.31;
         r.d += (targetD-r.d)*Math.min(1,dt*3.15);
-        if(r.attackCooldown<=0 && r.attackT<=0 && Math.abs(bikeLaneY(r.lane)-bikeY)<31 && bikeZ<16){
+        if(r.rearAttack!==false && r.attackCooldown<=0 && r.attackT<=0 && Math.abs(bikeLaneY(r.lane)-bikeY)<31 && bikeZ<16){
           r.attackT=.42;r.attackHit=false;r.attackCooldown=1.18+(r.id%3)*.16;
         }
         if(r.attackT>0 && !r.attackHit){
@@ -5488,6 +5517,7 @@
   requestAnimationFrame(frame);
 })();
 </script>
-<script type="module" src="/assets/lira-3d-r1190.js?v=55.00-r1201"></script>
+<script type="module" src="/assets/lira-3d-r1190.js?v=55.00-r1202"></script>
 </body>
 </html>
+

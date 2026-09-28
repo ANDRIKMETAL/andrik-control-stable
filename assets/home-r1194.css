@@ -483,3 +483,9 @@ body.home-r1190 .h-hero-media video{visibility:visible!important}
   body.home-r1190 .h-radio-copy{flex-basis:calc(100% - 86px)!important}
 }
 @media(max-width:380px){body.home-r1190 .h-hero-copy{transform:translateY(-86px)!important}}
+
+
+/* R1202 — R1189-quality real MP4 hero. Static poster is loading fallback only. */
+body.home-r1190 .h-hero-media img{z-index:0!important}
+body.home-r1190 .h-hero-media video{z-index:1!important;opacity:0!important;visibility:visible!important;transition:opacity .20s ease!important}
+body.home-r1190 .h-hero-media video.is-ready{opacity:1!important}

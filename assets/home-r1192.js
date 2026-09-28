@@ -1,4 +1,4 @@
-/* ANDRIK R1199 — hard muted hero autoplay + clean radio titles + compact default radio art. */
+/* ANDRIK R1202 — R1189 hero video playback + live radio metadata. */
 (()=>{'use strict';
 if(!document.body.classList.contains('home-r1190'))return;
 const lang=(document.documentElement.lang||'ru').split('-')[0],T={
@@ -8,67 +8,40 @@ uk:{play:'▶ Слухати',pause:'Ⅱ Пауза',error:'Не вдалося 
 sk:{play:'▶ Počúvať',pause:'Ⅱ Pozastaviť',error:'Skladbu sa nepodarilo spustiť. Otvor album alebo skús znova.',live:'Práve hrá',radio:'ANDRIK METAL RADIO',offline:'Vysielanie je teraz nedostupné',unknown:'Stav vysielania je dočasne nedostupný',pending:'Overujeme názov skladby',next:'Ďalej: ',open:'Otvoriť vysielanie na YouTube'}
 }[lang]||null;
 const t=T||{play:'▶ Listen',pause:'Ⅱ Pause',error:'Could not play.',radio:'ANDRIK METAL RADIO',unknown:'Live status unavailable',pending:'Checking current song',next:'Next: ',offline:'Stream unavailable',open:'Open on YouTube'};
-const reduced=matchMedia('(prefers-reduced-motion: reduce)'),connection=navigator.connection;
 const hero=document.querySelector('.h-hero'),video=document.getElementById('homeHeroVideo'),toggle=document.getElementById('heroMotionToggle');
-let heroVisible=true,manualPause=false,manualPlay=false,radioVisible=false,radioTimer=0,radioBusy=false,radioController=null,heroRetryTimer=0,heroLastTime=-1,heroStallCount=0;
+let heroVisible=true,manualPause=false,radioVisible=false,radioTimer=0,radioBusy=false,radioController=null;
 function primeHeroVideo(){
  if(!video)return;
- const src='/assets/lyra-hero-r1192.mp4';
- if(src&&!video.getAttribute('src'))video.src=src;
- video.preload='auto';
- video.muted=true;video.defaultMuted=true;
- video.setAttribute('muted','');
- video.setAttribute('playsinline','');
- video.setAttribute('autoplay','');
+ video.muted=true;video.defaultMuted=true;video.playsInline=true;
+ video.setAttribute('muted','');video.setAttribute('playsinline','');video.setAttribute('webkit-playsinline','');video.setAttribute('autoplay','');video.setAttribute('loop','');
+ if(!video.querySelector('source')){const src=document.createElement('source');src.src='/assets/lyra-hero-r593.mp4';src.type='video/mp4';video.appendChild(src)}
 }
-function retryHeroVideo(delay=240){
- clearTimeout(heroRetryTimer);
- heroRetryTimer=setTimeout(()=>{if(heroVisible&&!document.hidden&&motionAllowed())syncHero()},delay);
+function syncHero(){
+ if(!video)return;
+ primeHeroVideo();
+ if(document.hidden||manualPause){try{video.pause()}catch(_){};return}
+ try{
+   const p=video.play();
+   if(p&&typeof p.then==='function')p.then(()=>video.classList.add('is-ready')).catch(()=>{});
+ }catch(_){ }
+}
+if(toggle){toggle.hidden=true;toggle.addEventListener('click',()=>{manualPause=!video.paused;syncHero()})}
+if(video){
+ primeHeroVideo();
+ const mark=()=>video.classList.add('is-ready');
+ video.addEventListener('playing',mark,{passive:true});
+ video.addEventListener('canplay',syncHero,{passive:true});
+ video.addEventListener('loadeddata',syncHero,{passive:true});
+ video.addEventListener('error',()=>video.classList.remove('is-ready'),{passive:true});
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden)syncHero()},{passive:true});
+ ['pointerdown','touchstart','click'].forEach(type=>document.addEventListener(type,syncHero,{once:true,passive:true}));
+ if(video.readyState>=2)syncHero(); else {try{video.load()}catch(_){} setTimeout(syncHero,120);setTimeout(syncHero,900)}
 }
 const coverByAlbum={'silent':'silent-cover-r1159.webp','beyond':'beyond-cover-r601.webp','trika':'trika-third-album-cover-r479.webp','ocean':'ocean-cover-v5148-clean.webp','illusion-of-life':'illusion-of-life-static-v52.jpg'};
 const norm=s=>String(s||'').toLowerCase().replace(/ё/g,'е').replace(/\.(mp3|wav)$/i,'').replace(/[^\p{L}\p{N}]+/gu,' ').trim();
 const artByTitle=new Map();
 const safeURL=(raw,hosts)=>{try{const u=new URL(raw,location.href);return (u.protocol==='https:'||u.origin===location.origin)&&hosts.includes(u.hostname)?u.href:''}catch{return ''}};
 async function getJSON(url,signal){const c=signal?null:new AbortController(),timer=c?setTimeout(()=>c.abort(),8000):0;try{const r=await fetch(url,{cache:'no-store',headers:{accept:'application/json'},signal:signal||c.signal});if(!r.ok)throw Error('HTTP '+r.status);const d=await r.json();if(d.ok===false)throw Error('unavailable');return d}finally{clearTimeout(timer)}}
-function motionAllowed(){return !manualPause}
-function syncHero(){
- if(!video)return;
- const shouldPlay=!document.hidden&&motionAllowed();
- if(!shouldPlay){video.pause();if(toggle){toggle.textContent='▶';toggle.setAttribute('aria-label',toggle.dataset.playLabel)}return}
- primeHeroVideo();
- video.muted=true;video.defaultMuted=true;video.playsInline=true;
- const attempt=video.play();
- if(attempt?.catch)attempt.catch(()=>{if(toggle){toggle.textContent='▶';toggle.setAttribute('aria-label',toggle.dataset.playLabel)}retryHeroVideo(350)});
-}
-if(toggle){
- toggle.hidden=false;
- toggle.addEventListener('click',()=>{if(video.paused){manualPause=false;manualPlay=true}else{manualPause=true;manualPlay=false}syncHero()});
-}
-if(video){
- primeHeroVideo();
- video.addEventListener('loadeddata',()=>{if(!document.hidden&&motionAllowed())syncHero()});
- video.addEventListener('canplay',()=>{if(heroVisible&&!document.hidden&&motionAllowed())syncHero()});
- video.addEventListener('playing',()=>{if(!heroVisible||document.hidden||!motionAllowed()){video.pause();return}video.classList.add('is-ready');if(toggle){toggle.textContent='Ⅱ';toggle.setAttribute('aria-label',toggle.dataset.pauseLabel)}});
- video.addEventListener('pause',()=>{video.classList.remove('is-ready');if(!document.hidden&&motionAllowed()&&!manualPause)retryHeroVideo(180)});
- video.addEventListener('error',()=>{video.classList.remove('is-ready');const src='/assets/lyra-hero-r1192.mp4';setTimeout(()=>{try{video.src=src;video.load();retryHeroVideo(120)}catch(_){/* noop */}},160)});
-}
-document.addEventListener('pointerdown',()=>{if(manualPause)return;manualPlay=true;syncHero()},{once:true,passive:true});
-// R1200 immediate muted autoplay: do not wait for IntersectionObserver.
-requestAnimationFrame(()=>syncHero());setTimeout(()=>syncHero(),120);setTimeout(()=>syncHero(),700);
-const heroWatchdogR1200=setInterval(()=>{
- if(!video||document.hidden||!motionAllowed())return;
- const now=Number(video.currentTime||0);
- const stalled=video.readyState>=2&&heroLastTime>=0&&Math.abs(now-heroLastTime)<0.03;
- heroLastTime=now;
- if(video.paused||video.readyState<2||stalled){
-   video.classList.remove('is-ready');
-   heroStallCount++;
-   if(heroStallCount>=2){try{video.muted=true;video.defaultMuted=true;video.load()}catch(_){}}
-   syncHero();
- }else heroStallCount=0;
-},1200);
-reduced.addEventListener?.('change',()=>{manualPlay=false;syncHero()});
-connection?.addEventListener?.('change',()=>{manualPlay=false;syncHero()});
 let lastMeaningfulRadioTitle='',lastMeaningfulNextTitle='';
 const isInsertTitle=value=>/^(?:заставка|вставка|спецвставка|идент|джингл|station\b|bumper\b)|(?:\b(?:30|60)\s*мин\b)/i.test(String(value||'').trim());
 const meaningfulTitle=value=>{const v=String(value||'').trim();return v&&!isInsertTitle(v)?v:''};
@@ -124,7 +97,7 @@ if('IntersectionObserver'in window){
  document.querySelectorAll('.h-hero,[data-home-observe],.h-breathe,[data-home-reveal]').forEach(n=>visibility.observe(n));
 }else{heroVisible=true;radioVisible=true;syncHero();pollRadio();loadAlbums()}
 document.addEventListener('visibilitychange',()=>{document.body.classList.toggle('is-page-hidden',document.hidden);syncHero();if(document.hidden){clearTimeout(radioTimer);radioController?.abort()}else{pollRadio()}});
-window.addEventListener('pagehide',()=>{video?.pause();clearInterval(heroWatchdogR1200);clearTimeout(heroRetryTimer);clearTimeout(radioTimer);radioController?.abort()});
+window.addEventListener('pagehide',()=>{video?.pause();clearTimeout(radioTimer);radioController?.abort()});
 window.addEventListener('pageshow',()=>{syncHero();pollRadio()});
-document.body.classList.toggle('is-page-hidden',document.hidden);heroVisible=true;primeHeroVideo();requestAnimationFrame(()=>{syncHero();setTimeout(syncHero,180);setTimeout(syncHero,650);setTimeout(syncHero,1800)});loadNews();
+document.body.classList.toggle('is-page-hidden',document.hidden);heroVisible=true;primeHeroVideo();requestAnimationFrame(syncHero);setTimeout(syncHero,180);setTimeout(syncHero,900);loadNews();
 })();

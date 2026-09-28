@@ -46,7 +46,7 @@ async function boot(){
  el('liraQuality').value=quality;el('liraQuality').onchange=e=>{quality=e.target.value;try{localStorage.setItem('lira-3d-quality',quality);}catch{}qualityApply();};qualityApply();new ResizeObserver(fit).observe(root);
  function object(key,create){used.add(key);let obj=pool.get(key);if(!obj){obj=create();pool.set(key,obj);dynamic.add(obj);}obj.visible=true;return obj;}
  function located(key,create,x,y,z=0,scale=1){const o=object(key,create);o.position.set(x,y,z);o.scale.setScalar(scale);return o;}
- function actor(key,p,x,y,z=0,kind='lira',opts={}){const o=located(key,()=>kind==='dog'?dog():character(kind),x,y,z,kind==='boss'?1.5:opts.scale||1);if(kind!=='dog')animateCharacter(o,p,lastSnapshot.elapsed,{...opts,reduced,guitarCue:kind==='lira'?lastSnapshot.guitarCue:null});else{o.rotation.y=(p.face||1)*.4;o.position.y+=Math.abs(Math.sin(lastSnapshot.elapsed*12))*1.4;}return o;}
+ function actor(key,p,x,y,z=0,kind='lira',opts={}){const o=located(key,()=>kind==='dog'?dog():character(kind),x,y,z,kind==='boss'?1.5:opts.scale||1);if(kind!=='dog')animateCharacter(o,p,lastSnapshot.elapsed,{...opts,reduced,guitarCue:kind==='lira'?lastSnapshot.guitarCue:null});else{o.rotation.y=(p.face||1)<0?Math.PI:0;o.position.y+=Math.abs(Math.sin(lastSnapshot.elapsed*15))*1.4;}return o;}
  function pickup(key,p,x,y,z,kind){if(p.taken||p.picked||p.dead)return;const o=located(key,()=>collectible(kind),x,y+Math.sin(lastSnapshot.elapsed*3+x)*2,z);o.rotation.y=lastSnapshot.elapsed*1.3;}
  function solid(key,x,y,z,w,h,d,color){const o=object(key,()=>box(new T.Group(),0,0,0,1,1,1,material(color,.55,.3)));o.position.set(x,y,z);o.scale.set(w,h,d);o.material=material(color,.55,.3);return o;}
  function orb(key,x,y,z,size,color){const o=object(key,()=>sphere(new T.Group(),0,0,0,1,1,1,material(color,.35,.35,.7)));o.position.set(x,y,z);o.scale.setScalar(size);return o;}
@@ -157,16 +157,20 @@ async function boot(){
    return;
   }
 
-  located('bike',()=>motorcycle(),118,b.z,floorZ(b.y));
-  actor('rider',{...s.player,face:1,attack:b.attack>0?{kind:'punch',t:.26-b.attack,duration:.26}:null},104,b.z+8,floorZ(b.y),'lira',{ride:true,attack:b.attack>0?'punch':b.super>0?'guitarSmash':null,scale:.68});
+  const bike=located('bike',()=>motorcycle(),118,b.z,floorZ(b.y));
+  const wheelie=Math.min(.50,Math.max(0,b.z)/38);bike.rotation.z=wheelie;
+  const bikeAtk=b.attack>0?{kind:'swordSlashR950',t:Math.max(0,.26-b.attack),duration:.26}:null;
+  const rider=actor('rider',{...s.player,face:1,attack:bikeAtk},104,b.z+8,floorZ(b.y),'lira',{ride:true,attack:bikeAtk?'swordSlashR950':b.super>0?'guitarSmash':null,scale:.68});
+  rider.rotation.z=wheelie*.72;
 
   // One readable rider duel at a time. Enemy punch pose follows the AI attack timer.
   for(const r of b.rivals){
    const x=118+(r.d-b.distance)*.31;if(!r.alive||!near(x,0))continue;
-   const ry=floorZ(r.lane?228:184),face=x>=118?-1:1;
+   const ry=floorZ(r.lane?228:184),rear=!!(r.engaged&&r.attackT>0),face=rear?-1:1;
    located('bike-rival-'+r.id,()=>motorcycle(r.kind==='police'),x,0,ry);
-   const atk=r.attackT>0?{kind:'punch',t:.42-r.attackT,duration:.42}:null;
+   const atk=rear?{kind:'punch',t:.42-r.attackT,duration:.42}:null;
    actor('bike-rider-'+r.id,{face,attack:atk},x-14,8,ry,r.kind==='police'?'police':'gang',{ride:true,scale:.68,retreat:!r.engaged&&x<150});
+   if(rear){const club=located('bike-rival-club-'+r.id,()=>{const g=new T.Group();box(g,0,0,0,34,2.6,2.6,r.kind==='police'?'#383b40':'#765033');return g;},x-34,32,ry+2);club.rotation.z=-.18;}
   }
 
   // Obstacles are intentionally bright and high-contrast so they can be read before reaching Líra.

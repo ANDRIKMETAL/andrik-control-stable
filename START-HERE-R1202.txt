@@ -1,0 +1,8 @@
+ANDRIK R1202 — HERO VIDEO + GAME AI / BIKE COMBAT
+Base: R1201/R1200 current site.
+- Home hero returns to the proven R1189 1080x1920 H.264 MP4 autoplay logic; low-resolution animated WebP removed.
+- Dogs always face Líra, approach faster, keep separation, lunge, then retreat before attacking again.
+- Mobile S button moved closer to A/B.
+- Motorcycle B attack visibly uses the sword forward.
+- Motorcycle jump now raises the front wheel (wheelie).
+- Some rival riders turn back during duels and swing clubs/batons at Líra.

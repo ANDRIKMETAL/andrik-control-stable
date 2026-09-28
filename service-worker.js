@@ -1,6 +1,6 @@
 'use strict';
 
-const VERSION = '55.00-r1201-game-controls';
+const VERSION = '55.00-r1202-hero-dogs-bike';
 const IS_CONTROL_HOST = self.location.hostname.toLowerCase() === 'control.andrikmetal.com';
 
 async function deleteControlCaches(){
@@ -47,7 +47,8 @@ if(IS_CONTROL_HOST){
     "/assets/home-r1194.css",
     "/assets/home-r1192.js",
     "/assets/andrik-radio-mini-r1199.webp",
-    "/assets/lyra-hero-r1192.mp4",
+    "/assets/lyra-hero-r593.mp4",
+    "/assets/lyra-hero-r593.webp",
     "/assets/player-shell-bridge-r136.js",
     "/assets/home-app-links-r1190.js",
     "/assets/andrik-site-illusion-r87-192.png",
