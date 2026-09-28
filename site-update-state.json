@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r357-deploy-retrigger",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1790637276093-ef1bd2d69f",
-  "release": "R1206",
-  "archiveName": "ANDRIK-SITE-R1206-BARTENDER-OCTOPUS-BIKE.zip",
-  "sourceHead": "7f5d9de978765bae60ab49dd3db83f8a94178a5e",
-  "backupSha": "7f5d9de978765bae60ab49dd3db83f8a94178a5e",
+  "operationId": "publish-1790638488686-18fd65ebf0",
+  "release": "R1207",
+  "archiveName": "ANDRIK-SITE-R1207-COUNTS-MONUMENT-FIX.zip",
+  "sourceHead": "f029f68ca50415db02c83d2300e4bff6f52f1105",
+  "backupSha": "f029f68ca50415db02c83d2300e4bff6f52f1105",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-28T23:14:36.093Z"
+  "generatedAt": "2026-09-28T23:34:48.686Z"
 }

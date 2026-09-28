@@ -73,7 +73,8 @@
     if(inventoryReady){
       // R1181: song/album counters are derived from the public catalog below,
       // so Extended versions never inflate the official album count.
-      setText('youtubeRadioSinglesR805',num(s.librarySingleTracks));
+      // Singles / Ex. Version counter comes from the public catalog view so
+      // title-based album remaps (for example Monument → Silent) stay correct.
       setText('youtubeRadioVideosR805',num(s.libraryVideos));
       setText('youtubeRadioStationR805',num(Number(s.libraryBumpers||0)+Number(s.librarySpecial||0)));
     }
