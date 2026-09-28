@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1790521714567-f419061378",
-  "release": "R1188",
-  "archiveName": "ANDRIK-R1188-DREAMING-OF-LIRA-MOTORCYCLE-STAGE-REWORK.zip",
-  "sourceHead": "2c3bd96f8b2e8d13ae4892c01ec79856a7b93891",
-  "backupSha": "2c3bd96f8b2e8d13ae4892c01ec79856a7b93891",
+  "operationId": "publish-1790572471361-8539ee916c",
+  "release": "R1189",
+  "archiveName": "ANDRIK-R1189-SITE-CLEAN.zip",
+  "sourceHead": "42e19ff21791872efe2b0df7f154b527039affca",
+  "backupSha": "42e19ff21791872efe2b0df7f154b527039affca",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-27T15:08:34.567Z"
+  "generatedAt": "2026-09-28T05:14:32.232Z"
 }

@@ -1,0 +1,392 @@
+{
+  "build": "R1189",
+  "base": "attached ANDRIK-R1183-SITE.zip",
+  "game_source": "attached R1188 motorcycle stage rework",
+  "removed": [
+    {
+      "path": "assets/album-zip-admin-r446.js",
+      "bytes": 12115,
+      "sha256": "f5efa11f5b8f05e23cb0324417f1a2b5c243b81864be0417a084dc27292d5089",
+      "reason": "No reference from active entry pages, scripts, styles, manifests or worker"
+    },
+    {
+      "path": "assets/beyond-player-r603.js",
+      "bytes": 7511,
+      "sha256": "39f844f38e19aa8164b93a7eb488cc1575139ac35a0bede010c1d551608e1c3e",
+      "reason": "No reference from active entry pages, scripts, styles, manifests or worker"
+    },
+    {
+      "path": "assets/beyond-upload-r566.js",
+      "bytes": 1536,
+      "sha256": "f561cd585461a379b04b3f2677d3716428b758084329c2e37050d22f9c14b1f1",
+      "reason": "No reference from active entry pages, scripts, styles, manifests or worker"
+    },
+    {
+      "path": "assets/covers-archive-r1176.js",
+      "bytes": 2094,
+      "sha256": "10b7e50bebff09431f59a7717315154edfddadf0a9733a8a9e7b171aca91dba3",
+      "reason": "No reference from active entry pages, scripts, styles, manifests or worker"
+    },
+    {
+      "path": "assets/covers-disc-r1169.png",
+      "bytes": 559626,
+      "sha256": "d90c8f5153dc2fe41dd72b4c2c5e237be052c3a6aeee01f0edce1c0404fcacf6",
+      "reason": "No reference from active entry pages, scripts, styles, manifests or worker"
+    },
+    {
+      "path": "assets/home-covers-hub-r1171.css",
+      "bytes": 1417,
+      "sha256": "95fb051ffaf0b07c97b243cafcefaba8085386adff77a4ad59e7d8f5dea80813",
+      "reason": "No reference from active entry pages, scripts, styles, manifests or worker"
+    },
+    {
+      "path": "assets/like-small-r907-96.png",
+      "bytes": 11280,
+      "sha256": "e66bf7275700c2e98d7e281bc7ee81e68307a12fa1aef236c66a8a89d33105ea",
+      "reason": "No reference from active entry pages, scripts, styles, manifests or worker"
+    },
+    {
+      "path": "assets/lira-3d-r1182.css",
+      "bytes": 8041,
+      "sha256": "b88cf38da6a3088a436d1b322b5c4b19f53a685a65644483676e5026e2c78eff",
+      "reason": "No reference from active entry pages, scripts, styles, manifests or worker"
+    },
+    {
+      "path": "assets/lira-3d-r1182.js",
+      "bytes": 24464,
+      "sha256": "5b5273cb8e010a9839e2ef9442600164ff656a789926c500aa1c46f3bd3f56dc",
+      "reason": "No reference from active entry pages, scripts, styles, manifests or worker"
+    },
+    {
+      "path": "assets/lira-3d-r1183.js",
+      "bytes": 24859,
+      "sha256": "55bb1f33b7abc63c4014e49e7e9bd9ad35979e87eeca8dcb5f3e2349db7dab8e",
+      "reason": "No reference from active entry pages, scripts, styles, manifests or worker"
+    },
+    {
+      "path": "assets/lira-models-r1183.js",
+      "bytes": 16552,
+      "sha256": "bdb11b8a26fddac25de90db164f397029f3e6aa3439bace9ad7319a3deafe1d3",
+      "reason": "No reference from active entry pages, scripts, styles, manifests or worker"
+    },
+    {
+      "path": "assets/r1015-control-disk-recovery.txt",
+      "bytes": 58068,
+      "sha256": "193fccb2f9936383f669fae971943f1a8e7468878ec6095bcbfdd98839324e56",
+      "reason": "No reference from active entry pages, scripts, styles, manifests or worker"
+    },
+    {
+      "path": "assets/radio-audience-r1156.css",
+      "bytes": 3933,
+      "sha256": "5dc0966315d7297d4dae21932ad28d6ee053107bb11fb6cca1ce1b1d41c6fd31",
+      "reason": "No reference from active entry pages, scripts, styles, manifests or worker"
+    },
+    {
+      "path": "assets/radio-audience-r1156.js",
+      "bytes": 10258,
+      "sha256": "cdd68df5f8be91174d13b90e94d41645a640a201e407ed12e7c1fb2c565ab91b",
+      "reason": "No reference from active entry pages, scripts, styles, manifests or worker"
+    },
+    {
+      "path": "assets/radio-observability-r908.js",
+      "bytes": 22604,
+      "sha256": "131fd253d33f49a5c827c873b11a38a8203ac6fe83cdf036377ce8daa5cc4532",
+      "reason": "No reference from active entry pages, scripts, styles, manifests or worker"
+    },
+    {
+      "path": "assets/silent-admin-r1159.js",
+      "bytes": 11606,
+      "sha256": "fe03d4c29e8f615f4310008a613af8c67ea85f542ba9f55f30ffc9b898844be8",
+      "reason": "No reference from active entry pages, scripts, styles, manifests or worker"
+    },
+    {
+      "path": "assets/singles-r616.js",
+      "bytes": 8123,
+      "sha256": "06acd30122054f53f6c9280fd6b19dfc40697f98202d1570babc77f22b34516a",
+      "reason": "No reference from active entry pages, scripts, styles, manifests or worker"
+    },
+    {
+      "path": "assets/singles-r618.js",
+      "bytes": 7840,
+      "sha256": "f29d11aa6c965598dca9b6effc349a1553f16c0c0f360100ce5b6b4905565edd",
+      "reason": "No reference from active entry pages, scripts, styles, manifests or worker"
+    },
+    {
+      "path": "assets/test",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "reason": "No reference from active entry pages, scripts, styles, manifests or worker"
+    },
+    {
+      "path": "assets/lira-world-r1182.js",
+      "bytes": 7618,
+      "sha256": "e01a57a67baa507775efff26ae94ca833b7971bc77a4ede4786bd2c08b97875a",
+      "reason": "Replaced by the R1189 world/model module shared by the game"
+    },
+    {
+      "path": "assets/lira-models-r1182.js",
+      "bytes": 12418,
+      "sha256": "9bcc56bb9349173a2fb7190e25db8f89d33eb50159f19d0995dae092b08adc19",
+      "reason": "Replaced by the R1189 world/model module shared by the game"
+    },
+    {
+      "path": "SHA256SUMS-R1181.txt",
+      "bytes": 54426,
+      "sha256": "b6b0412d5bf16bfdf7d39d4fa259f84223d2aea174724c7373489c48fc88a773",
+      "reason": "Superseded release notes, audit or checksum manifest"
+    },
+    {
+      "path": "CONTROL-R526-R1162-PLAYER-COVERS-RELEASE-SORT-REPORT.txt",
+      "bytes": 1287,
+      "sha256": "8773c21b3fa77ed1c9f0e4094954af1f2387b81a9289381cf79d067c67d5a7c0",
+      "reason": "Superseded release notes, audit or checksum manifest"
+    },
+    {
+      "path": "CONTROL-R526-R1166-COVERS-DIRECT-PAGE-FIX-REPORT.txt",
+      "bytes": 309,
+      "sha256": "b0cd07e7ca3dc045ab5e61e51636cc49b136053f11f30d0a8bcf75fc9534470a",
+      "reason": "Superseded release notes, audit or checksum manifest"
+    },
+    {
+      "path": "CONTROL-R1155-QUEUE-NEXT-REPORT.txt",
+      "bytes": 1754,
+      "sha256": "ec7e2d2770d46d524ddeb9be9ae8d5c3581079887c3db78471b78b0fca76fa2f",
+      "reason": "Superseded release notes, audit or checksum manifest"
+    },
+    {
+      "path": "CONTROL-R526-R1167-STRICT-COVERS-REPORT.txt",
+      "bytes": 422,
+      "sha256": "528223bbb44bc74e20b10cb7211143b2cb6ed28aff1588383bea019a562950e8",
+      "reason": "Superseded release notes, audit or checksum manifest"
+    },
+    {
+      "path": "R1182-README.txt",
+      "bytes": 128,
+      "sha256": "f4b8fe51ed837c01d7823936a854bff5c1696c59f8c9ab45496831eb11f86c6b",
+      "reason": "Superseded release notes, audit or checksum manifest"
+    },
+    {
+      "path": "CONTROL-R1138-SUBPUSH-R1150-REPORT.txt",
+      "bytes": 1644,
+      "sha256": "ca9f5fd524bdd50f315e48c95252f2fcb4706d68ae44fa1d2fe2b814526feb9d",
+      "reason": "Superseded release notes, audit or checksum manifest"
+    },
+    {
+      "path": "CONTROL-R1155-RELEASE-NOTES.txt",
+      "bytes": 747,
+      "sha256": "6af6a39980f6fae0a19f6dcb39ca38a9c75ffe6d06050920f0679900cc9f673b",
+      "reason": "Superseded release notes, audit or checksum manifest"
+    },
+    {
+      "path": "CONTROL-R526-R1161-QUEUE-ORDER-NATIVE-PLAYERS-REPORT.txt",
+      "bytes": 880,
+      "sha256": "30dda8bb6821a69c699bb4b085ea9a903e8d08dad81221e12c043a0322b196ff",
+      "reason": "Superseded release notes, audit or checksum manifest"
+    },
+    {
+      "path": "CONTROL-R526-R1156-RADIO-AUDIENCE-GRAPH-REPORT.txt",
+      "bytes": 2387,
+      "sha256": "aee4625731f451dfb13962cad02cb372fc320084550fc5d0a3cb2c16977aa5b1",
+      "reason": "Superseded release notes, audit or checksum manifest"
+    },
+    {
+      "path": "CONTROL-R526-R1168-ARCHIVE-UPLOAD-REPORT.txt",
+      "bytes": 339,
+      "sha256": "9bdb47f8efc0df6ab39ee3dc38e9d431dc540bf462cf36c0b875777510f0bd78",
+      "reason": "Superseded release notes, audit or checksum manifest"
+    },
+    {
+      "path": "CONTROL-R526-R1157-RADIO-AUDIENCE-FIX-REPORT.txt",
+      "bytes": 1329,
+      "sha256": "56d5bb6492751e9f607e18bcc864d8c9a7d338bafa7714423c2dfac138a7196a",
+      "reason": "Superseded release notes, audit or checksum manifest"
+    },
+    {
+      "path": "R1181-OFFICIAL-74-EXTENDED-COVER-REPORT.txt",
+      "bytes": 478,
+      "sha256": "f485b700b1f8b465baa0fc53791b07ed0984158706653613315097db490d0404",
+      "reason": "Superseded release notes, audit or checksum manifest"
+    },
+    {
+      "path": "CONTROL-R526-R1176-COVERS-ARCHIVE-NATIVE-REPORT.txt",
+      "bytes": 1102,
+      "sha256": "ade55fda668a994f5cb515d3c77a893f857f4a4112a4d7c27a41a93abd33f9e7",
+      "reason": "Superseded release notes, audit or checksum manifest"
+    },
+    {
+      "path": "CONTROL-R526-R1159F-CLEAN-CONTROL-COVERS-REPORT.txt",
+      "bytes": 469,
+      "sha256": "a18f9fb65a1bddce5479070489097f45a2de0332f215787c7fd0902ba32a96ce",
+      "reason": "Superseded release notes, audit or checksum manifest"
+    },
+    {
+      "path": "CONTROL-R1158-YOUTUBE-LIVE-HEALTH-FIX.txt",
+      "bytes": 1483,
+      "sha256": "46ebddf91f874db33b3b008eea414f6eb2345440650db0e2c71f681993678899",
+      "reason": "Superseded release notes, audit or checksum manifest"
+    },
+    {
+      "path": "START-HERE-R1183.txt",
+      "bytes": 4791,
+      "sha256": "05b530463146a848e5a67071abf9a43c5a223663dea7480d76186569710b74ea",
+      "reason": "Superseded release notes, audit or checksum manifest"
+    },
+    {
+      "path": "CONTROL-R526-R1177-COVERS-BREATH-SHARE-GAP-REPORT.txt",
+      "bytes": 637,
+      "sha256": "96d2b33df34c23ddea87f079d9bbee5c88b0d8ffd77940be01af93494db6f1e1",
+      "reason": "Superseded release notes, audit or checksum manifest"
+    },
+    {
+      "path": "CONTROL-R526-PUSH-DELIVERY-FIX-REPORT.txt",
+      "bytes": 1784,
+      "sha256": "7c1cbb5cb3359c5f8e2bceea2259d51adb687f33a2eb7e8cdd58521e61784517",
+      "reason": "Superseded release notes, audit or checksum manifest"
+    },
+    {
+      "path": "CONTROL-R526-R1163-SILENT-ANGEL-NO-COVERS-PICKER-REPORT.txt",
+      "bytes": 474,
+      "sha256": "588031ad23accb0b4f88411fddac810272a96707d5786a5127f6fed22faf2cb0",
+      "reason": "Superseded release notes, audit or checksum manifest"
+    },
+    {
+      "path": "CONTROL-R526-R1159-SILENT-ALBUM-TRACKS-COVERS-REPORT.txt",
+      "bytes": 1664,
+      "sha256": "b5f0aaf647511e8edb7b3e888b8f3e7e1f3b9910e271b3e1032e528e59b6a244",
+      "reason": "Superseded release notes, audit or checksum manifest"
+    },
+    {
+      "path": "CONTROL-R526-R1174-HOT-ASPHALT-TO-FULL-POCKETS-REPORT.txt",
+      "bytes": 522,
+      "sha256": "6492a20700309d3232965f4d8ef1fd9f72a109f537853f08633b2947d210bf7f",
+      "reason": "Superseded release notes, audit or checksum manifest"
+    },
+    {
+      "path": "R1182-AUDIT-CHANGED-PAGES.json",
+      "bytes": 18,
+      "sha256": "3d770de0127af35d45dc2548605c92bfdfd11ba565693f3b34407a69999598a2",
+      "reason": "Superseded release notes, audit or checksum manifest"
+    },
+    {
+      "path": "R1182-CHANGES.json",
+      "bytes": 803,
+      "sha256": "7c9c154044ffdf1e9f58e278bb4f00e8399159a456d9a2291e074611f6ac9e90",
+      "reason": "Superseded release notes, audit or checksum manifest"
+    },
+    {
+      "path": "CONTROL-R526-R1159D-REMOVE-BEYOND-SINGLES-REPORT.txt",
+      "bytes": 366,
+      "sha256": "f71194201b50c1d5842cb7e14a6ffe81a5fd5d19e1e7130252f28fd077896842",
+      "reason": "Superseded release notes, audit or checksum manifest"
+    },
+    {
+      "path": "CONTROL-R526-R1164-SINGLES-COVERS-SPLIT-REPORT.txt",
+      "bytes": 563,
+      "sha256": "7a3f273b15c7991fe3a30bc2807e1b9335a8dce704e3bbe3fc82ab0860797edf",
+      "reason": "Superseded release notes, audit or checksum manifest"
+    },
+    {
+      "path": "R1170-REPORT.txt",
+      "bytes": 235,
+      "sha256": "9ff57f23752fdbbdd44f2cb5e60a4f21c11b02d09a5d6436ef9e1f57306812ed",
+      "reason": "Superseded release notes, audit or checksum manifest"
+    },
+    {
+      "path": "CONTROL-R526-R1169-COVERS-HUB-REPORT.txt",
+      "bytes": 967,
+      "sha256": "38652dd61e4bfd02894c2c16fed87f75b836d5c0173854251ed3771dc8b5ddf6",
+      "reason": "Superseded release notes, audit or checksum manifest"
+    },
+    {
+      "path": "CONTROL-R526-R1162A-CLEAN-COVER-TITLES-REPORT.txt",
+      "bytes": 306,
+      "sha256": "32b92be28cd3a7dac66e4ea04d6b3475e0e1d7efd4276c229219a3b43a1e4e9b",
+      "reason": "Superseded release notes, audit or checksum manifest"
+    },
+    {
+      "path": "SHA256SUMS-R1179.txt",
+      "bytes": 54207,
+      "sha256": "ef5735a482b8213bfa49f6472794efae1bd261785b6ebb96d8fd48e46fb3b62f",
+      "reason": "Superseded release notes, audit or checksum manifest"
+    },
+    {
+      "path": "CONTROL-R526-R1159E-SILENT-HOME-CARD-REPORT.txt",
+      "bytes": 282,
+      "sha256": "7b421fcb21d1324b08f68302df3ddb342c1af477a5fe8fa5a0d58e8495485548",
+      "reason": "Superseded release notes, audit or checksum manifest"
+    },
+    {
+      "path": "R1130-VISUAL-NEXT-TRACK-REPORT.txt",
+      "bytes": 1023,
+      "sha256": "b3a46449fe860476c225f999ebf4564e7d3ffd206bf17c26b71ac4bc9449e786",
+      "reason": "Superseded release notes, audit or checksum manifest"
+    },
+    {
+      "path": "SHA256SUMS-R1182.txt",
+      "bytes": 54534,
+      "sha256": "efdd5f233eaadfd934e5ae9e02f2aa2d6951d6c8fbc1b1ecfd619bb1b9a24265",
+      "reason": "Superseded release notes, audit or checksum manifest"
+    },
+    {
+      "path": "CONTROL-R1178-EXTENDED-VERSION-REPORT.txt",
+      "bytes": 873,
+      "sha256": "9bca28291c6779a5f7de0a5b01d3ede9074f27fb76012dc8d2c6672bcf06fd40",
+      "reason": "Superseded release notes, audit or checksum manifest"
+    },
+    {
+      "path": "CONTROL-R526-R1159C-SILENT-R2-DEDUPE-REPORT.txt",
+      "bytes": 705,
+      "sha256": "db6a3039c528927957b08803038c92755cd0dee82233d6763faa65c141ba321e",
+      "reason": "Superseded release notes, audit or checksum manifest"
+    },
+    {
+      "path": "CONTROL-R1138-RELEASE-NOTES.txt",
+      "bytes": 1335,
+      "sha256": "a8aebaa71647ad6e29192df97c9dad123f360617734c12f256c5e94bca64c0f5",
+      "reason": "Superseded release notes, audit or checksum manifest"
+    }
+  ],
+  "removed_files": 57,
+  "removed_uncompressed_bytes": 1007236,
+  "radio_and_control_preserved": {
+    "_worker.js": "7b16ebe4e368d6247deffae13ef74b2cfe43eddba1818b80790b8904e923fe1c",
+    "radio-control-admin.html": "7b137c30986096fe8c92cc8411ae71edf9b3402d96369805bc13931df3304ffe",
+    "control-home.html": "6a6dfbf582e244e0a99859e98025a7686fc2e43d4a17b6b132487af1f0e59fc7",
+    "control-service-worker.js": "52380339b3a02cab5a38caedc5c2121dc563869f0fe2f742020e628216fbaa73",
+    "assets/radio-observability-r1183.js": "5bb148f8cbfc8f71878845dbf3d87054c2c3a557d1ededf4323b2275fc3c648d",
+    "radio247/README-R1160L.txt": "2005bb6754ce7f90ffed9f28f3852b74c041f5b3f96cd000980965b4b1d713c6",
+    "radio247/INSTALL-R1160L.sh": "25fbacdf3c8b87a08f86d96f0eafb5c72c09663f8df5a09dd3d38a050066953e",
+    "radio247/README.md": "2046cac06a64966c0edbbe585e687a0165dc7f60e46dd3e29ac2d588f448bbe4",
+    "radio247/CHECK-ANDRIK-R1160L.py": "893d75f5dff0e990ec3cd136e3d3c436e69d6cf84b6c8acc9c4e14067f783dce",
+    "radio247/server.mjs": "ef9f68088c051fcc054e3d5cec78b61776ab2a874f8f42b3d88906da0493d907",
+    "radio247/vm-lite/andrik-audio-sync-r949": "d934a7404f95e688be7cb2b017f335f59eec87e3cac237b16fc16af109a3b5b5",
+    "radio247/vm-lite/README-CURRENT-R1183.txt": "9f3abc903ff5a3920633f8dc91efa0e599f4c4f616c2a9d4de9952e24e5af658",
+    "radio247/vm-lite/ANDRIK-R1137-SAFE-LOUDNESS-INSTALL.sh": "9818393a413939f986b4294c0d8bc4153a95080c80ae001a700c521da7f7267a",
+    "radio247/vm-lite/install-r1138-control-ops-no-radio-restart.sh": "b85be4f0c8c02ffdff271931c8e77d39ebf7d23e71ddc49db38ea694f1801971",
+    "radio247/vm-lite/install-r1155-control-queue-agent-no-radio-restart.sh": "8bc2cb10ff55e0f9e937dcd56c2db7f937d2efaefa73e6ca36740adc16b37e48",
+    "radio247/vm-lite/andrik-radio-load-r988": "59a7ef61e4e46dcc1fe7cf3aca9ff800fa43378678daf6dcfc4629be4f43c9b8",
+    "radio247/vm-lite/andrik-radio-screen-restore-r926": "3970a9239bc46cbee6f6051f383b7d0b61696149760211304772382615a04ada",
+    "radio247/vm-lite/andrik-radio-loudness-new-r1137": "31ff449a2fd5da9554f2a4f67514ffd752d84db2503bd70a203873a6b4ee4460",
+    "radio247/vm-lite/README-CURRENT-R1155.txt": "e5692a9e34da5acb255fd3c2219cc4f200ca85d0ca2b0d33843a5866d736ba42",
+    "radio247/vm-lite/andrik-radio-air-restore-r925": "8252d8c887242c40c1b11bc0c2775a6c9fd455735e039ddef1585b22cd83fc3a",
+    "radio247/vm-lite/install-r1126-cpu-monitor-r1125-aware.sh": "b52b9947511397d9c17077a0f67be1af3998656abb87b157e026227e7a50d742",
+    "radio247/vm-lite/andrik-radio-web-agent-r803.mjs": "bce050b2e9f12c123e76d59ca4816f102b0d68af5ea2a3078037656fea8dfbe3",
+    "radio247/vm-lite/andrik-radio-safe-cache-clean-r867": "78ea8e82212e615748115cb307ac0f7b62a88fdee65dc697649dba15e3600f75",
+    "radio247/vm-lite/andrik-radio-safe-cleanup-r1026": "81f82b01e4265969e980ef53b3e7864c69a8c5871502bb1f7135e581355bd6fc",
+    "radio247/vm-lite/andrik-loudness-r1137.service": "ab018e0e5d0945075f033f5211b1b1f4a7d057cf2004dab8dcac091f8a0b83e8",
+    "radio247/vm-lite/README-CURRENT-R1138.txt": "e474c2b4b76b9938dc1618649d4751d2ba018f8b57c010717b8f4c9e8a39c15d",
+    "radio247/vm-lite/INSTALL-AGENT-R1183.sh": "8b981de5bab55114b8da56693130c61cd27999fa9b655520a885dc725b53dc9e",
+    "radio247/vm-lite/andrik-radio-loudness-scan-r1137.py": "e3e84a72ddda6da29d8d17a536578e108f1b2ce35b2eaa7e5067f4b43c080539"
+  },
+  "graphics_reencoded": false,
+  "verification": {
+    "six_game_levels": true,
+    "direction_checks": 30,
+    "guitar_cue_and_flash": true,
+    "bike_intro_pause_input_lock": true,
+    "bike_duel_punch_retreat": true,
+    "old_save_restore": true,
+    "space_super_and_boss": true,
+    "actual_browser_webgl_fps_measured": false
+  }
+}

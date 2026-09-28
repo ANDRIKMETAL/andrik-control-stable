@@ -1,6 +1,0 @@
-R1181
-- Official album counter now excludes albums/extended and counts canonical official album groups (Silent, BEYOND, TRIKA, OCEAN, Illusion of Life).
-- Rotation counter = official album tracks + Extended Version tracks; singles remain separate.
-- With current catalog target: official albums 74; Extended 4; rotation 78; singles 1.
-- Extended Version picker card now uses the supplied "РАСШИРЕННЫЕ ВЕРСИИ" artwork.
-- Radio engine / FFmpeg / RTMPS untouched.

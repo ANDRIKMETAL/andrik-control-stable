@@ -1,10 +1,11 @@
+// R1160L: MP3 real-frame cadence, monotonic frame/sample counters, incident telemetry.
 // R1026B-CLIP-MP3-SINGLE-FADE
 // R1025-FULLFRAME-BUMPER3-AV-SINGLE-PIPE
 // R1012-HARD-FULLFRAME-1920X1080
 // R1011B-PERMANENT-ZERO-VISUAL-SEEK
 // R1010-R906-FULLSCREEN-SINGLE-SLOT-LOCK
 import http from 'node:http';
-import { spawn, spawnSync } from 'node:child_process';
+import { spawn, execFile } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import {
   appendFileSync,
@@ -111,8 +112,8 @@ const VIDEO_FADE_SECONDS_R726 = 0.65; // R736: short cinematic fade-out on the O
 const VIDEO_FADE_IN_SECONDS_R736 = 1.10; // R763: viewer-visible recovery for non-MP3 boundaries
 const VIDEO_BLACK_HOLD_SECONDS_R736 = 0.05; // non-MP3 boundary hold preserved
 const MP3_BOUNDARY_FADE_OUT_SECONDS_R814 = 1.60; // R1135B MP3→MP3: shorter darken; R1085/feeder clocks untouched
-const MP3_BOUNDARY_BLACK_HOLD_SECONDS_R814 = 0.60; // R1150: slightly longer real-black/silent MP3→MP3 pause (+0.20s)
-const MP3_BOUNDARY_FADE_IN_SECONDS_R814 = 2.40; // R1135B MP3→MP3: long smooth reveal from black
+const MP3_BOUNDARY_BLACK_HOLD_SECONDS_R814 = 0.20; // R1156: compact MP3→MP3 real-black pause; audio/master unchanged
+const MP3_BOUNDARY_FADE_IN_SECONDS_R814 = 1.60; // R1156: shorter smooth MP3→MP3 reveal; frame ownership unchanged
 const VIDEO_FADE_LEAD_SECONDS_R735 = 0.00; // R763: start the proven R753 boundary darkening exactly 1.0s earlier than R762
 const TITLE_SWITCH_BEFORE_BOUNDARY_R781 = Math.max(0.50,Math.min(2.50,Number(process.env.TITLE_SWITCH_BEFORE_BOUNDARY_R781 || (VIDEO_FADE_LEAD_SECONDS_R735 + VIDEO_BLACK_HOLD_SECONDS_R736/2)))); // R781: switch CURRENT to the next MP3 while the screen is black, before recovery
 const TITLE_VISUAL_LEAD_SECONDS_R738 = 3.20; // compensate persistent video path latency; CURRENT is preloaded early but appears at the real handoff
@@ -172,14 +173,14 @@ const VIDEO_SOURCE_STUCK_MS_R749 = Math.max(1200,Math.min(10000,Number(process.e
 const INSERT_AUDIO_START_TIMEOUT_MS_R749 = Math.max(1000,Math.min(12000,Number(process.env.INSERT_AUDIO_START_TIMEOUT_MS_R749 || 4000))); // R751: slow AAC/MP4 startup must skip safely, never crash
 const INSERT_CACHE_WARM_LEAD_SECONDS_R752 = Math.max(2,Math.min(8,Number(process.env.INSERT_CACHE_WARM_LEAD_SECONDS_R752 || 8.0))); // metadata/cache warm only; ZERO media frames before boundary
 const CLIP_TO_TRACK_HANDOFF_GUARD_MS_R753 = Math.max(2500,Math.min(10000,Number(process.env.CLIP_TO_TRACK_HANDOFF_GUARD_MS_R753 || 5000))); // allow one clean clip→MP3 feeder handoff without watchdog racing it
-const CLIP_TO_TRACK_FADE_IN_SECONDS_R753 = 1.30; // R1135 clip→MP3: slower black→picture reveal; transport/clock untouched
-const CLIP_TO_TRACK_BLACK_HOLD_SECONDS_R917B = Math.max(0.30,Math.min(2.00,Number(process.env.CLIP_TO_TRACK_BLACK_HOLD_SECONDS_R917B || 0.80))); // R1135 clip→MP3 real black hold
+const CLIP_TO_TRACK_FADE_IN_SECONDS_R753 = 0.95; // R1156: compact black→picture reveal; transport/clock untouched
+const CLIP_TO_TRACK_BLACK_HOLD_SECONDS_R917B = Math.max(0.20,Math.min(2.00,Number(process.env.CLIP_TO_TRACK_BLACK_HOLD_SECONDS_R917B || 0.30))); // R1156: compact video→MP3 real-black hold
 const MUSIC_CLIP_AUDIO_PRIME_MS_R1135 = 1050; // 1050 ms PCM prime + 950 ms real-video prebuffer ~= R1085 2000 ms target lead
 const MUSIC_CLIP_R1123_MIN_FRAME_MS_R1135 = 38; // R1141: smooth nominal music-clip pacing; adaptive debt catch-up drops to 24ms only when truly behind
 const MUSIC_CLIP_R1123_DEBT_CATCHUP_MS_R1141 = 24;
 const MUSIC_CLIP_R1123_DEBT_THRESHOLD_MS_R1141 = 250;
 const R1135_CLIP_MP3_CINEMATIC = 'R1135-CLIP-ZEROPTS+PHASE-START+HIDE-STATION-PREVNEXT+CLIP-MP3-FADE+MP3-MASK-ONLY';
-const R1135B_MP3_SHORT_DARK_LONG_REVEAL = 'R1135B-MP3-1.60-0.40-2.40-R1085-UNTOUCHED';
+const R1135B_MP3_SHORT_DARK_LONG_REVEAL = 'R1156-MP3-1.60-0.20-1.60-R1085-UNTOUCHED';
 const R1136_VIDEO_TO_VIDEO_BLACK_SMOOTH = 'R1136-VIDEO-TO-VIDEO-BLACK-BRIDGE+NEXT-VIDEO-PREARM+MUSIC-CLIP-1.50S-REVEAL';
 const MUSIC_CLIP_FADE_IN_SECONDS_R1136 = 1.50; // video insert -> normal music clip: black -> slow reveal, station IDs keep R757 timing
 const R1140B_CLIP_PACER_RUNTIME_FIX = 'R1140B-AUDIOQ128+R1123-24MS+TDZ-SAFE+R1135-R1136-R1139-PRESERVED';
@@ -203,6 +204,8 @@ const R1151_MP3_TO_VIDEO_PHASE_PRESERVE = 'R1151-MP3-TO-VIDEO-TAIL-R1085-PHASE-P
 const R1154_ACTUAL_NEXT_OWNER = 'R1154-ACTUAL-NEXT-OWNER->R1085-TAIL+R1069-PREARM+NO-FALSE-MP3-WAIT';
 const R1154_PREARM_BEFORE_END_MS = 4000; // mirror proven R1069 T-4s video prearm when next owner changes during the song
 const R1155_QUEUE_CONTROL = 'R1155-ATOMIC-NEXT+MEDIA-PICK-TRACK-CLIP-STATION';
+const R1156_NEXT_MP3_PCM_PREARM = 'R1156-VIDEO->NEXT-MP3-PCM-PREARM+FIRST-CHUNK-PARK+BOUNDARY-CLAIM';
+const NEXT_MP3_PCM_PREARM_TIMEOUT_MS_R1156 = 9000;
 const MP3_EDGE_START_EXACT_SECONDS_R1150 = 7.0; // preserve every real frame while intro PREVIOUS/NEXT is visible
 const MP3_EDGE_TAIL_EXACT_SECONDS_R1150 = 10.0; // preserve every real frame while outro PREVIOUS/NEXT is visible
 const MP3_CINEMATIC_LOCK_TIMEOUT_MS_R1148 = 15000; // watchdog only: frame-locked release normally happens after the next MP3 is fully bright
@@ -234,39 +237,69 @@ const FULL_FRAME_FILTER_R787 = 'scale=1920:1080:force_original_aspect_ratio=decr
 const LIVE_FULL_FRAME_FILTER_R794 = 'scale=1920:1080:force_original_aspect_ratio=decrease:flags=fast_bilinear,pad=1920:1080:(ow-iw)/2:(oh-ih)/2,setsar=1'; // R1110 CPU-LIGHT: MP3 live feeder only; clips/station stay Lanczos
 const LIVE_FULL_FRAME_GEOMETRY_R819 = 'scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos,pad=1920:1080:(ow-iw)/2:(oh-ih)/2,setsar=1'; // R1012 HARD FULL FRAME
 const VIDEO_INPUT_QUEUE_PACKETS_R732 = 96; // R974B transition spike cushion // R887 absorb short rawvideo scheduling spikes // R858: bounded RAWVIDEO transition cushion
-const AUDIO_INPUT_QUEUE_PACKETS_R732 = 512; // R1141: FFmpeg input cushion for intentional ~2s PCM lead + transient encoder jitter; video queue remains 96
+const AUDIO_INPUT_QUEUE_PACKETS_R732 = 96; // R1160J value retained. Audio packets and video frames do NOT have equal durations.
 const VIDEO_GOP = 50; // exactly 2 seconds at 25 fps
 const LIVE_MP3_CPU_LIGHT_R1110 = true; // R1110: lighter MP3 visual path only; no A/V timing, queue or publisher changes
 const R1132_VISUAL_CPU_LOW = 'R1132-NATIVE-1080P25-DIRECT-NO-UNUSED-PNG';
+// R1160K: probe asynchronously BEFORE spawning a new normal feeder. Existing
+// audio/video handlers keep running while ffprobe inspects changed local media.
 const visualProbeCacheR1132 = new Map();
+const visualProbePendingR1160K = new Map();
+const emptyVisualProfileR1160K=()=>({geometryExact:false,fpsExact:false,pix420:false});
+function visualSignatureR1160K(path){
+  const st=statSync(path);
+  return `${st.size}:${Math.trunc(st.mtimeMs)}`;
+}
 function visualFastProfileR1132(path){
   try{
-    const st=statSync(path);
-    const sig=`${st.size}:${Math.trunc(st.mtimeMs)}`;
     const cached=visualProbeCacheR1132.get(path);
-    if(cached&&cached.sig===sig)return cached.profile;
-    const r=spawnSync('ffprobe',[
+    if(cached&&cached.sig===visualSignatureR1160K(path))return cached.profile;
+  }catch(_){ }
+  // Conservative geometry/fps filters remain correct on an unprobed file.
+  return emptyVisualProfileR1160K();
+}
+async function primeVisualProfileR1160K(path){
+  let sig;
+  try{sig=visualSignatureR1160K(path)}catch(_){return emptyVisualProfileR1160K()}
+  const cached=visualProbeCacheR1132.get(path);
+  if(cached&&cached.sig===sig&&(!cached.retryAt||Date.now()<cached.retryAt))return cached.profile;
+  const pending=visualProbePendingR1160K.get(path);
+  if(pending){
+    await pending;
+    return primeVisualProfileR1160K(path);
+  }
+  const job=new Promise(resolve=>{
+    execFile('ffprobe',[
       '-v','error','-select_streams','v:0',
       '-show_entries','stream=width,height,pix_fmt,r_frame_rate,avg_frame_rate',
       '-of','json',path
-    ],{encoding:'utf8',timeout:12000,maxBuffer:256*1024});
-    const profile={geometryExact:false,fpsExact:false,pix420:false};
-    if(r.status===0){
-      const j=JSON.parse(String(r.stdout||'{}'));
-      const v=Array.isArray(j.streams)?j.streams[0]:null;
-      const rate=x=>{
-        const [a,b]=String(x||'0/1').split('/').map(Number);
-        return Number.isFinite(a)&&Number.isFinite(b)&&b?a/b:0;
-      };
-      const rfps=rate(v?.r_frame_rate);
-      const afps=rate(v?.avg_frame_rate);
-      profile.geometryExact=Number(v?.width)===1920&&Number(v?.height)===1080;
-      profile.fpsExact=Math.abs(rfps-VIDEO_FPS)<0.02&&Math.abs(afps-VIDEO_FPS)<0.02;
-      profile.pix420=String(v?.pix_fmt||'')==='yuv420p';
-    }
-    visualProbeCacheR1132.set(path,{sig,profile});
-    return profile;
-  }catch(_){return {geometryExact:false,fpsExact:false,pix420:false}}
+    ],{encoding:'utf8',timeout:12000,killSignal:'SIGKILL',maxBuffer:256*1024},(error,stdout)=>{
+      const profile=emptyVisualProfileR1160K();
+      let valid=false;
+      if(!error){
+        try{
+          const j=JSON.parse(String(stdout||'{}'));
+          const v=Array.isArray(j.streams)?j.streams[0]:null;
+          const rate=x=>{
+            const [a,b]=String(x||'0/1').split('/').map(Number);
+            return Number.isFinite(a)&&Number.isFinite(b)&&b?a/b:0;
+          };
+          profile.geometryExact=Number(v?.width)===1920&&Number(v?.height)===1080;
+          profile.fpsExact=Math.abs(rate(v?.r_frame_rate)-VIDEO_FPS)<0.02&&Math.abs(rate(v?.avg_frame_rate)-VIDEO_FPS)<0.02;
+          profile.pix420=String(v?.pix_fmt||'')==='yuv420p';
+          valid=Boolean(v);
+        }catch(_){ }
+      }
+      // Only retain the bounded set of recent visual profiles, including failures.
+      visualProbeCacheR1132.delete(path);
+      visualProbeCacheR1132.set(path,{sig,profile,retryAt:valid?0:Date.now()+60000});
+      while(visualProbeCacheR1132.size>16)visualProbeCacheR1132.delete(visualProbeCacheR1132.keys().next().value);
+      resolve(profile);
+    });
+  });
+  visualProbePendingR1160K.set(path,job);
+  try{return await job}
+  finally{if(visualProbePendingR1160K.get(path)===job)visualProbePendingR1160K.delete(path)}
 }
 
 const VIDEO_FRAME_BYTES_R816 = 1920*1080*3/2; // R816 exact YUV420P frame; incomplete feeder tails are never forwarded
@@ -326,6 +359,7 @@ const state = {
   mp3ToVideoPhasePreserveR1151:R1151_MP3_TO_VIDEO_PHASE_PRESERVE,
   actualNextOwnerFixR1154:R1154_ACTUAL_NEXT_OWNER,
   queueControlR1155:R1155_QUEUE_CONTROL,
+  nextMp3PcmPrearmR1156:R1156_NEXT_MP3_PCM_PREARM,
   lastManualQueuePickR1155:null,
   mode: 'R821 STATION NO-DRAIN MAKE-BEFORE-BREAK / R820 MASTER PTS + R819 GEOMETRY + R814 FADE PRESERVED',
   startedAt: new Date().toISOString(),
@@ -333,7 +367,7 @@ const state = {
   publisherRunning: false,
   producerRunning: false,
   overlayMode: 'R757 PREV/NEXT ON MP3 + NORMAL CLIPS @ INTRO 2-7s + FINAL 10s / R756 PRESERVED',
-  audioMode: 'R793 NO BACKGROUND/PREFETCH LOUDNESS + LIVE FALLBACK + AUDIO QUEUE 8 / SAME MASTER A/V TO PRIMARY+BACKUP RTMPS',
+  audioMode: `R793 NO BACKGROUND/PREFETCH LOUDNESS + LIVE FALLBACK + AUDIO QUEUE ${AUDIO_INPUT_QUEUE_PACKETS_R732} / SAME MASTER A/V TO PRIMARY+BACKUP RTMPS`,
   mp3ToVideoFadeMode: 'R757-END-BLACK-HOLD-THEN-VIDEO-FADE-IN',
   clipPreviewMode: 'R757-NORMAL-CLIPS-PREVNEXT-INTRO-2-7S-PLUS-FINAL-10S',
   mp3BoundaryFadeMode: 'R854-R837-RAWVIDEO-FADE-3.10-HOLD-0.20-RECOVER-1.50',
@@ -344,6 +378,7 @@ const state = {
   libraryTracks: 0,
   libraryAlbumTracks: 0,
   librarySingleTracks: 0,
+  libraryCoverTracks: 0,
   duplicateSinglesSkipped: 0,
   libraryVideos: JOY_OF_BEING_CLIP_ENABLED ? 2 : 1,
   libraryBumpers: 0,
@@ -383,7 +418,7 @@ const state = {
   videoTimelineCompensationSeconds: VIDEO_TIMELINE_COMP_DEFAULT_R739,
   videoTimelineCompensationMode: 'R743-DISABLED-FOR-MP3-BOUNDARY',
   clipPlaybackMode: 'R816-PREPARED-RAWVIDEO-FULL-FRAME-RELAY',
-  clipPreparationMode: 'R742-SERIAL-NICE12-ONE-THREAD',
+  clipPreparationMode: 'R742-SERIAL-NICE19-ONE-THREAD',
   preparedClipReady: 0,
   preparedClipPending: 0,
   preparedClipLast: '',
@@ -508,6 +543,7 @@ let outputFatalTimerR780 = null;
 let clipVideoPrerollArmedR749 = null;
 const clipBoundaryMetaR752 = new Map();
 let clipToTrackBoundaryPendingR753 = null;
+let nextMp3AudioPrearmR1156 = null;
 let videoSourceWatchdogTimerR749 = null;
 let videoSourceMissingSinceR749 = 0;
 let videoSourceRecoveryBusyR749 = false;
@@ -566,6 +602,7 @@ function setLiveTitleR724(text,{delayMs=0}={}){
 // stream keys, RTMPS URLs and full local paths so the latest incident can be exposed
 // through the web agent without leaking secrets.
 let diagnosticRingR802=[];
+const ffmpegLogCountersR1160K=new Map();
 const stationIntegrityCacheR802=new Map();
 function diagTextR802(value,max=360){
   let text=cleanText(value??'');
@@ -589,7 +626,19 @@ function diagRecordR802(event,data={}){
       current:shortText(state.current?.title||'',64),next:shortText(state.next?.title||'',64),
       clipActive:Boolean(clipActive),publisherPid:Number(publisher?.pid||0),videoPid:Number(videoFeeder?.pid||0),
       clipPid:Number(clipPublisher?.pid||0),rtmps:Number(state.rtmpsEstablishedConnectionsR792||0),
-      load:diagLoadR802(),...safe
+      load:diagLoadR802(),
+      audioInputQueuePackets:AUDIO_INPUT_QUEUE_PACKETS_R732,
+      videoInputQueuePackets:VIDEO_INPUT_QUEUE_PACKETS_R732,
+      audioPipeQueuedBytes:Number(publisher?.stdio?.[3]?.writableLength||0),
+      videoPipeQueuedBytes:Number(publisher?.stdio?.[4]?.writableLength||0),
+      audioNeedsDrain:Boolean(publisher?.stdio?.[3]?.writableNeedDrain),
+      videoNeedsDrain:Boolean(publisher?.stdio?.[4]?.writableNeedDrain),
+      audioSubmittedSeconds:Number(state.audioMasterAudioSecondsR1085||0),
+      videoSubmittedSeconds:Number(state.audioMasterVideoSecondsR1085||0),
+      phaseLeadMs:Number(state.audioMasterLeadMsR1085||0),
+      drops:Number(state.audioMasterVideoDropsR1085||0),
+      duplicates:Number(state.audioMasterVideoDuplicatesR1085||0),
+      ...safe
     };
     diagnosticRingR802.push(rec);
     if(diagnosticRingR802.length>DIAG_RING_LIMIT_R802)diagnosticRingR802=diagnosticRingR802.slice(-DIAG_RING_LIMIT_R802);
@@ -615,9 +664,34 @@ function loadDiagR802(){
 }
 loadDiagR802();
 function diagFfmpegR802(scope,line){
-  if(!/error|fail|invalid|broken pipe|non-monoton|corrupt|missing picture|nal unit|timestamp|dts|thread message queue blocking|queue blocking/i.test(String(line||'')))return;
-  diagRecordR802('ffmpeg-error',{scope,line:String(line||'').slice(-900)});
+  if(!/error|fail|invalid|broken pipe|non-monoton|corrupt|missing picture|nal unit|timestamp|dts|thread message queue blocking|queue blocking/i.test(String(line||'')))return true;
+  // R1160K: a reconnect can emit dozens of H.264 parse messages per second.
+  // Count every matching stderr CHUNK, but persist at most one per scope/second.
+  // Preserve the newest sample and totals in /status so the recovery cause is not
+  // pushed out of the short diagnostic ring by a single codec-error burst.
+  const key=String(scope||'unknown').slice(0,80);
+  let counter=ffmpegLogCountersR1160K.get(key);
+  if(!counter){
+    counter={chunks:0,suppressedChunks:0,pendingChunks:0,lastRecordedMs:null,lastAt:null,lastLine:''};
+    ffmpegLogCountersR1160K.set(key,counter);
+    while(ffmpegLogCountersR1160K.size>16)ffmpegLogCountersR1160K.delete(ffmpegLogCountersR1160K.keys().next().value);
+  }
+  const now=Date.now();
+  counter.chunks++;
+  counter.lastAt=new Date(now).toISOString();
+  counter.lastLine=diagTextR802(line,420);
+  if(counter.lastRecordedMs!==null&&now-counter.lastRecordedMs<1000){
+    counter.suppressedChunks++;
+    counter.pendingChunks++;
+    return false;
+  }
+  const suppressedSincePrevious=counter.pendingChunks;
+  counter.pendingChunks=0;
+  counter.lastRecordedMs=now;
+  diagRecordR802('ffmpeg-error',{scope:key,line:counter.lastLine,chunks:counter.chunks,suppressedSincePrevious});
+  return true;
 }
+
 function stationInsertR802(item){return item?.sourceType==='radio-bumper'||String(item?.sourceType||'').startsWith('radio-special')}
 function purgePreparedStationR802(sourcePath,{purgeSource=false}={}){
   const ready=preparedClipPathR742(sourcePath);
@@ -1067,16 +1141,57 @@ function uniqueByUrl(items){
   });
 }
 
+// R1160B: the Covers catalog is a real, separate R2 music section.
+// These three owner-confirmed songs are covers even if an old manifest still exposes
+// a legacy singles/ key during migration.
+const R1160B_EXPLICIT_COVERS = Object.freeze([
+  'Горячий асфальт',
+  'А я скажу нет',
+  'Ах эти розы'
+]);
+
+function coverTitleCoreR1160B(value){
+  return cleanText(value||'')
+    .replace(/\.(?:mp3|wav)$/iu,'')
+    .replace(/^andrik\s*[-–—:|]\s*/iu,'')
+    .replace(/\s*[\[(]\s*(?:ai\s*)?cover\b[^\])]*[\])]\s*$/iu,'')
+    .replace(/\s*[\[(]\s*кавер\b[^\])]*[\])]\s*$/iu,'')
+    .replace(/\s+/g,' ')
+    .trim()
+    .toLocaleLowerCase('ru-RU');
+}
+
+const R1160B_EXPLICIT_COVER_SET = new Set(
+  R1160B_EXPLICIT_COVERS.map(coverTitleCoreR1160B)
+);
+
+function isCoverTrackR1160B(item){
+  const key=String(item?.key||'');
+  const sourceType=String(item?.sourceType||'').toLowerCase();
+  const rawTitle=cleanText(item?.title||item?.name||'');
+  return (
+    sourceType==='cover' ||
+    /^(?:covers?|cover-tracks?)\//i.test(key) ||
+    /(?:^|[\s([{-])(?:ai\s*)?cover(?:[\s)\]}-]|$)|(?:^|[\s([{-])кавер(?:[\s)\]}-]|$)/iu.test(rawTitle) ||
+    R1160B_EXPLICIT_COVER_SET.has(coverTitleCoreR1160B(rawTitle))
+  );
+}
+
 function albumName(item){
   const title=cleanText(item?.title||item?.name||'').trim();
+  const key=String(item?.key||'');
+
+  // Dedicated R2 catalogs are authoritative even if old object metadata contains
+  // a stale album label.
+  if(/^(?:covers?|cover-tracks?)\//i.test(key))return 'Каверы ANDRIK';
+  if(/^singles\//i.test(key))return 'Синглы ANDRIK';
 
   // ANDRIK: permanent album assignment for this track
   if(/^Ты уже достоин$/iu.test(title))return 'BEYOND';
 
   const album=cleanText(item.album||'');
   if(album)return album;
-  const key=String(item.key||'');
-  if(/^singles\//i.test(key))return 'СИНГЛ';
+
   const m=/^albums\/([^/]+)\//i.exec(key);
   return m ? m[1].replace(/[_-]+/g,' ') : 'ANDRIK';
 }
@@ -1160,15 +1275,19 @@ function prepareClip(item){
   return clip;
 }
 
-function mergeAlbumsAndSingles(albums,singles){
-  // R918: all owner-published singles remain in rotation.
-  // loadLibrary already applies uniqueByUrl() before this function,
-  // therefore exact duplicate URLs are already removed.
-  const keptSingles=Array.isArray(singles)?singles.slice():[];
+function mergeAlbumsAndSingles(albums,singles,covers=[]){
+  // R1160B: official albums + true Singles + dedicated R2 Covers all participate
+  // in radio rotation. If a legacy singles object has the same cover title as a
+  // dedicated covers/ object, the dedicated cover wins so it is never duplicated.
+  const keptCovers=Array.isArray(covers)?covers.slice():[];
+  const coverTitles=new Set(keptCovers.map(x=>coverTitleCoreR1160B(x?.title||'')));
+  const keptSingles=(Array.isArray(singles)?singles:[])
+    .filter(x=>!coverTitles.has(coverTitleCoreR1160B(x?.title||'')));
   return {
-    tracks:[...albums,...keptSingles],
+    tracks:[...albums,...keptSingles,...keptCovers],
     singles:keptSingles,
-    skipped:0
+    covers:keptCovers,
+    skipped:Math.max(0,(Array.isArray(singles)?singles.length:0)-keptSingles.length)
   };
 }
 
@@ -1387,12 +1506,33 @@ async function loadLibrary(){
     return /^albums\//i.test(key) && !disabled && validMp3(item);
   }).map(item=>prepareTrack(item,'album')));
 
+  const dedicatedCovers=uniqueByUrl(source.filter(item=>{
+    const key=String(item?.key||'');
+    return /^(?:covers?|cover-tracks?)\/[^/]+\.mp3$/i.test(key) && validMp3(item);
+  }).map(item=>prepareTrack(item,'cover')));
+
+  // Legacy compatibility: while R2/object listings settle, any known cover that is
+  // still exposed under singles/ is reclassified as a cover. A dedicated covers/
+  // copy wins by title when both exist.
+  const legacyCoverSingles=uniqueByUrl(source.filter(item=>{
+    const key=String(item?.key||'');
+    return /^singles\/[^/]+\.mp3$/i.test(key) && validMp3(item) && isCoverTrackR1160B(item);
+  }).map(item=>prepareTrack(item,'cover')));
+
+  const coversByTitle=new Map();
+  for(const item of [...dedicatedCovers,...legacyCoverSingles]){
+    const id=coverTitleCoreR1160B(item?.title||item?.key||'');
+    if(id && !coversByTitle.has(id))coversByTitle.set(id,item);
+  }
+  // R1160E: covers stay in R2/site but are temporarily excluded from radio rotation.
+  const covers=[];
+
   const singles=uniqueByUrl(source.filter(item=>{
     const key=String(item?.key||'');
-    return /^singles\/[^/]+\.mp3$/i.test(key) && validMp3(item);
+    return /^singles\/[^/]+\.mp3$/i.test(key) && validMp3(item) && !isCoverTrackR1160B(item);
   }).map(item=>prepareTrack(item,'single')));
 
-  const merged=mergeAlbumsAndSingles(albums,singles);
+  const merged=mergeAlbumsAndSingles(albums,singles,covers);
   if(!merged.tracks.length)throw new Error('R2 active MP3 library is empty');
 
   library=merged.tracks;
@@ -1400,6 +1540,7 @@ async function loadLibrary(){
   state.libraryTracks=library.length;
   state.libraryAlbumTracks=albums.length;
   state.librarySingleTracks=merged.singles.length;
+  state.libraryCoverTracks=merged.covers.length;
   state.duplicateSinglesSkipped=merged.skipped;
   state.libraryVideos=clipLibrary.length;
   state.libraryBumpers=bumperLibrary.length;
@@ -1606,6 +1747,132 @@ async function ensureNextTrackReadyR712(item){
   const ready=cachedAudioPathR712(item);
   if(ready)return ready;
   return promiseTimeout(downloadTrackToCache(item),5000,'next MP3 preload');
+}
+
+
+// R1156 NEXT-MP3 PCM PREARM
+// Dynamic loudnorm can legitimately take several seconds before the first PCM bytes.
+// Starting that decoder only after a video insert has already gone black creates a long
+// silent black gap. Prearm the *next* MP3 decoder while the video is still playing,
+// park it immediately after its first real PCM chunk, and claim the same decoder at
+// the real boundary. Nothing is written to the persistent audio master before claim.
+async function clearNextMp3AudioPrearmR1156(reason='clear'){
+  const arm=nextMp3AudioPrearmR1156;
+  nextMp3AudioPrearmR1156=null;
+  if(!arm)return false;
+  try{if(arm.timeout)clearTimeout(arm.timeout)}catch(_){ }
+  const child=arm.child;
+  if(child){
+    child.__r1156IntentionalStop=true;
+    try{child.stdout?.pause()}catch(_){ }
+    if(child.exitCode===null){try{child.kill('SIGTERM')}catch(_){ }}
+  }
+  diagRecordR802('r1156-next-mp3-pcm-prearm-clear',{
+    title:shortText(arm.title||'',52),
+    childPid:Number(child?.pid||0),
+    ready:Boolean(arm.ready),
+    reason:shortText(reason,120)
+  });
+  return true;
+}
+
+async function buildNextMp3AudioPrearmR1156(item){
+  if(stopping||item?.type!=='track')return false;
+  const identity=primaryIdentity(item);
+  if(!identity)return false;
+
+  const existing=nextMp3AudioPrearmR1156;
+  if(existing && existing.identity===identity && existing.ready && existing.child?.exitCode===null){
+    return true;
+  }
+  if(existing)await clearNextMp3AudioPrearmR1156('replace');
+
+  const localAudioPath=await ensureNextTrackReadyR712(item);
+  if(stopping)return false;
+  const duration=await probeDuration(localAudioPath);
+  const loudness=readLoudnessAnalysisR747(localAudioPath);
+  const child=spawn('ffmpeg',decoderArgs(localAudioPath,duration,loudness,0),{stdio:['ignore','pipe','pipe']});
+  const arm={
+    identity,title:item.title||'TRACK',localAudioPath,duration,loudness,child,
+    firstChunk:null,ready:false,startedAt:Date.now(),readyAt:0,timeout:null
+  };
+  nextMp3AudioPrearmR1156=arm;
+  child.__r1156AudioPrearm=true;
+
+  child.stderr.on('data',d=>{
+    const line=String(d||'').trim();
+    if(!line)return;
+    if(/error|fail|invalid|corrupt/i.test(line)){
+      state.lastWarning=`R1156 MP3 prearm: ${line.slice(-500)}`;
+      diagFfmpegR802('r1156-next-mp3-prearm',line);
+    }
+  });
+  child.on('error',error=>{
+    if(nextMp3AudioPrearmR1156===arm){
+      state.lastWarning=`R1156 MP3 prearm error: ${cleanText(error?.message||error)}`;
+      nextMp3AudioPrearmR1156=null;
+    }
+  });
+  child.on('exit',(code,signal)=>{
+    if(nextMp3AudioPrearmR1156===arm && !child.__r1156Claimed){
+      nextMp3AudioPrearmR1156=null;
+      if(!child.__r1156IntentionalStop){
+        state.lastWarning=`R1156 MP3 prearm exited ${code??signal}`;
+        diagRecordR802('r1156-next-mp3-pcm-prearm-exit',{
+          title:shortText(arm.title||'',52),childPid:Number(child.pid||0),code:Number(code||0),signal:String(signal||'')
+        });
+      }
+    }
+  });
+
+  return await new Promise(resolve=>{
+    let settled=false;
+    const finish=value=>{if(settled)return;settled=true;try{if(arm.timeout)clearTimeout(arm.timeout)}catch(_){ }resolve(value);};
+    arm.timeout=setTimeout(()=>{
+      if(nextMp3AudioPrearmR1156===arm)nextMp3AudioPrearmR1156=null;
+      child.__r1156IntentionalStop=true;
+      if(child.exitCode===null){try{child.kill('SIGTERM')}catch(_){ }}
+      state.lastWarning=`R1156 MP3 PCM prearm timeout: ${shortText(arm.title,52)}`;
+      diagRecordR802('r1156-next-mp3-pcm-prearm-timeout',{
+        title:shortText(arm.title||'',52),childPid:Number(child.pid||0),waitMs:Date.now()-arm.startedAt
+      });
+      finish(false);
+    },NEXT_MP3_PCM_PREARM_TIMEOUT_MS_R1156);
+    arm.timeout.unref?.();
+
+    child.stdout.once('data',chunk=>{
+      if(nextMp3AudioPrearmR1156!==arm || child.exitCode!==null){finish(false);return;}
+      try{child.stdout.pause()}catch(_){ }
+      arm.firstChunk=Buffer.from(chunk);
+      arm.ready=true;
+      arm.readyAt=Date.now();
+      diagRecordR802('r1156-next-mp3-pcm-prearm-ready',{
+        title:shortText(arm.title||'',52),childPid:Number(child.pid||0),
+        bytes:Number(arm.firstChunk.length||0),readyMs:arm.readyAt-arm.startedAt,
+        loudnessMode:arm.loudness?'measured-linear':'single-pass-fallback'
+      });
+      finish(true);
+    });
+  });
+}
+
+function claimNextMp3AudioPrearmR1156(item,localAudioPath=''){
+  const arm=nextMp3AudioPrearmR1156;
+  if(!arm)return null;
+  const identity=primaryIdentity(item);
+  const pathOk=!localAudioPath || arm.localAudioPath===localAudioPath;
+  if(arm.identity!==identity || !pathOk || !arm.ready || !arm.firstChunk || arm.child?.exitCode!==null){
+    clearNextMp3AudioPrearmR1156('claim-mismatch').catch(()=>{});
+    return null;
+  }
+  nextMp3AudioPrearmR1156=null;
+  try{if(arm.timeout)clearTimeout(arm.timeout)}catch(_){ }
+  arm.child.__r1156Claimed=true;
+  diagRecordR802('r1156-next-mp3-pcm-prearm-claimed',{
+    title:shortText(arm.title||'',52),childPid:Number(arm.child?.pid||0),
+    parkedMs:Math.max(0,Date.now()-Number(arm.readyAt||Date.now()))
+  });
+  return arm;
 }
 
 function pruneAudioCache(keepPaths=[]){
@@ -2752,6 +3019,7 @@ async function ensureScheduledVisual(){
   const spec=visualSpecForPeriod(period);
   try{
     const path=await ensureVisualSpec(spec);
+    await primeVisualProfileR1160K(path);
     state.visualPeriod=runtimeVisualAutoSchedule?`auto-${period}`:(runtimeForceVisualSlot?`manual-${period}`:period);
     state.visualPath=path;
     state.visualInsetCrop='';
@@ -2760,6 +3028,7 @@ async function ensureScheduledVisual(){
     if(period==='morning'){
       try{
         const fallback=await ensureVisualSpec(visualSpecForPeriod('day'));
+        await primeVisualProfileR1160K(fallback);
         state.lastError=`R721 morning not assigned yet — temporary DAY fallback: ${cleanText(error?.message||error)}`;
         state.visualPeriod=runtimeVisualAutoSchedule?'auto-morning-fallback-day':'morning-fallback-day';
         state.visualPath=fallback;
@@ -2772,6 +3041,7 @@ async function ensureScheduledVisual(){
       state.visualPeriod=`${period}-emergency`;
       state.visualPath=EMERGENCY_VISUAL;
       state.visualInsetCrop='';
+      await primeVisualProfileR1160K(EMERGENCY_VISUAL);
       return EMERGENCY_VISUAL;
     }
     throw error;
@@ -2819,24 +3089,67 @@ function cleanTitleCoreR989(value,fallback='TRACK'){
   return t.trim() || fallback;
 }
 
+
+// R1160 RADIO TITLE LABELS — DISPLAY ONLY.
+// Does not touch queue order, audio, R1085, FFmpeg timing, transitions or media ownership.
+// New album tracks: "Title (Silent)"
+// Covers: "Title (кавер)"
+function radioDisplayTitleR1160(item,fallback='TRACK',maxTitle=48){
+  if(!item)return fallback;
+
+  const rawTitle=cleanTitleCoreR989(item.title,fallback);
+  const album=cleanText(item.album||'').trim();
+  const key=String(item.key||'');
+  const sourceType=String(item.sourceType||'').toLowerCase();
+
+  const isCover=isCoverTrackR1160B({...item,title:rawTitle});
+  const isSingle=
+    sourceType==='single' ||
+    /^singles\//i.test(key) ||
+    /^(?:сингл|синглы|single|singles)(?:\s+andrik)?$/iu.test(album);
+
+  // CURRENT should show one clean owner label, not the old title annotation.
+  let title=rawTitle
+    .replace(/\s*[\[(]\s*(?:ai\s*)?cover\b[^\])]*[\])]\s*$/iu,'')
+    .replace(/\s*[\[(]\s*кавер\b[^\])]*[\])]\s*$/iu,'')
+    .trim();
+
+  const isSilent=
+    /^(?:silent|silent\s*\(\s*тишина\s*\)|тишина)$/iu.test(album) ||
+    /^albums\/silent\//i.test(key);
+
+  title=shortText(title||fallback,maxTitle);
+
+  if(isCover)return `${title} (Cover)`;
+  if(isSingle)return `${title} (Single)`;
+
+  // R1160I: Extended tracks already carry "(Ex. Version)" in the title.
+  // Do NOT append a second owner suffix such as («Extended Version»).
+  const isExtendedOwnerR1160I=
+    /^(?:extended(?:\s+version)?|ex\.?\s*version|расширенн(?:ая|ые)\s+верси(?:я|и))$/iu.test(album) ||
+    /^(?:extended|ex(?:tended)?)[\/_-]/i.test(key);
+
+  if(isExtendedOwnerR1160I)return title;
+
+  // R1160C: CURRENT album tracks show only the album name in guillemets.
+  // No word "Альбом". Singles/Covers keep their plain owner labels.
+  const albumShort=shortText(isSilent?'Silent':album,24);
+  return albumShort
+    ? `${title} («${albumShort}»)`
+    : `${title} (Single)`;
+}
+
 function currentDisplayTitleR989(item,fallback='TRACK'){
   if(!item)return fallback;
 
-  const title=shortText(cleanTitleCoreR989(item.title,fallback),48);
-
-  let album=cleanText(item.album||'').trim();
-
+  // Preserve the old suppression for internal/video album labels.
+  let normalizedItem=item;
+  const album=cleanText(item.album||'').trim();
   if(/^(ANDRIK RADIO|RADIO|OFFICIAL MUSIC VIDEO|OFFICIAL VIDEO|VIDEO)$/i.test(album)){
-    album='';
+    normalizedItem={...item,album:''};
   }
 
-  album=shortText(album,24);
-
-  return /^(?:Синглы|Singles)(?:\s+ANDRIK)?$/iu.test(album)
-    ? `${title} (Singles)`
-    : album
-      ? `${title} (Альбом «${album}»)`
-      : `${title} (Singles)`;
+  return radioDisplayTitleR1160(normalizedItem,fallback,48);
 }
 
 function previewDisplayTitleR989(value){
@@ -2850,13 +3163,7 @@ function previewDisplayTitleR989(value){
 
 function trackLabel(item,fallback='—'){
   if(!item)return fallback;
-  const title=shortText(item.title||'ANDRIK',48);
-  const album=shortText(item.album||'',24);
-  return /^(?:Синглы|Singles)(?:\s+ANDRIK)?$/iu.test(album)
-    ? `${title} (Singles)`
-    : album
-      ? `${title} (Альбом «${album}»)`
-      : `${title} (Singles)`;
+  return radioDisplayTitleR1160(item,fallback,48);
 }
 
 // R816/R787 NOCROP: source geometry is immutable FIT+PAD. Live feeders output full YUV420P frames; only the persistent master encodes H.264.
@@ -3172,6 +3479,7 @@ function detachVideoFrameRelayR816(child){
   const relay=child?.__r816VideoRelay;
   if(!relay)return {frames:0,dropped:0};
   relay.active=false;
+  if(relay.stallWatchdogR1066){clearInterval(relay.stallWatchdogR1066);relay.stallWatchdogR1066=null;}
   try{if(relay.paceTimer)clearTimeout(relay.paceTimer)}catch(_){ }
   try{if(relay.tailTimer)clearTimeout(relay.tailTimer)}catch(_){ }
   if(relay.tailResolve){const done=relay.tailResolve;relay.tailResolve=null;try{done(false)}catch(_){ }}
@@ -3209,6 +3517,31 @@ function attachVideoFrameRelayR816(child,videoSink,label='video'){
         const frame=relay.frameParts.length===1?relay.frameParts[0]:Buffer.concat(relay.frameParts,VIDEO_FRAME_BYTES_R816);
         relay.frameParts=[];
         relay.frameBytes=0;
+
+        // R1160E: an old/racing normal feeder is never allowed to write even one
+        // complete frame after a newer normal feeder has been promoted. This is a
+        // frame-level last line of defence against the long-run MP3 flicker.
+        if(label==='normal-visual' &&
+           Number(child?.__r1160ENormalVideoOwnerGeneration||0)!==Number(normalVideoOwnerGenerationR1160E||0)){
+          if(!relay.__r1160EStaleOwnerSuppressed){
+            relay.__r1160EStaleOwnerSuppressed=true;
+            child.__r816IntentionalStop=true;
+            state.normalVideoStaleOwnersSuppressedR1160E=Number(state.normalVideoStaleOwnersSuppressedR1160E||0)+1;
+            diagRecordR802('r1160e-stale-normal-video-owner-suppressed',{
+              stalePid:Number(child?.pid||0),
+              staleGeneration:Number(child?.__r1160ENormalVideoOwnerGeneration||0),
+              ownerPid:Number(videoFeeder?.pid||0),
+              ownerGeneration:Number(normalVideoOwnerGenerationR1160E||0),
+              current:shortText(state.current?.title||'',52)
+            });
+            const staleKill=setTimeout(()=>{
+              try{detachVideoFrameRelayR816(child)}catch(_){}
+              try{if(child.exitCode===null)child.kill('SIGTERM')}catch(_){}
+            },0);
+            staleKill.unref?.();
+          }
+          return;
+        }
 
         // R1150 frame-window metadata is needed BEFORE R1148 decides whether
         // this really is still MP3->MP3.
@@ -3366,10 +3699,19 @@ function attachVideoFrameRelayR816(child,videoSink,label='video'){
 
         let ok=false;
         if(masterR1150 && exactEdgeR1150)masterR1150.normalMp3EdgePassThroughR1150=true;
+        // R1160L: the MP3 background already runs at native 25fps via -re.
+        // Always forward each REAL background frame once and honour pipe drain.
+        // DROP on a submitted-PCM deficit can starve FFmpeg while PCM is blocked;
+        // DUP stretches the background's motion. Neither belongs on this path.
+        if(masterR1150)masterR1150.normalVisualPassThroughR1160L=label==='normal-visual';
+        if(label==='normal-visual'&&!relay.__r1160LExactLogged){
+          relay.__r1160LExactLogged=true;
+          diagRecordR802('r1160l-normal-video-exact-cadence',{childPid:Number(child.pid||0),mode:'ALL-REAL-FRAMES-NO-DROP-DUP',fps:VIDEO_FPS});
+        }
         try{
           ok=videoSink.write(frame);
         }finally{
-          if(masterR1150)masterR1150.normalMp3EdgePassThroughR1150=false;
+          if(masterR1150){masterR1150.normalMp3EdgePassThroughR1150=false;masterR1150.normalVisualPassThroughR1160L=false;}
         }
         relay.frames++;
         state.videoRelayFramesWritten=Number(state.videoRelayFramesWritten||0)+1;
@@ -3428,7 +3770,7 @@ function attachVideoFrameRelayR816(child,videoSink,label='video'){
         return;
       }
 
-      if(!child||child.exitCode!==null||child.killed){
+      if(!child||child.exitCode!==null||child.signalCode!==null){
         clearInterval(relay.stallWatchdogR1066);
         relay.stallWatchdogR1066=null;
         return;
@@ -3470,7 +3812,7 @@ function attachVideoFrameRelayR816(child,videoSink,label='video'){
 
         const hardKillR1066=setTimeout(()=>{
           try{
-            if(child.exitCode===null&&!child.killed){
+            if(child.exitCode===null&&child.signalCode===null){
               child.kill('SIGKILL');
             }
           }catch(_){}
@@ -3572,6 +3914,80 @@ function startMasterAudioGapBridgeR824(reason='inter-item-gap'){
   tick();
   audioGapBridgeTimerR824=setInterval(tick,AUDIO_GAP_BRIDGE_INTERVAL_MS_R824);
   audioGapBridgeTimerR824.unref?.();
+  return true;
+}
+
+
+// ============================================================
+// R1160H MASTER-AUDIO SINGLE OWNER
+//
+// Every real PCM source (MP3 / clip / station / R884 recovery) reaches the
+// persistent master through this one connector. Calling Readable.pipe() twice
+// to the same destination duplicates every PCM chunk, which is heard as two
+// simultaneous songs/transition audio. Long-run R884 publisher recovery was
+// the remaining path that could race a normal media pipe and create exactly
+// that condition.
+//
+// This helper makes the audio source -> master sink relationship exclusive.
+// Silence bridge is stopped before real PCM becomes owner.
+// ============================================================
+let masterAudioOwnerSourceR1160H=null;
+let masterAudioOwnerSinkR1160H=null;
+let masterAudioOwnerGenerationR1160H=0;
+
+function disconnectMasterAudioOwnerR1160H(reason=''){
+  const source=masterAudioOwnerSourceR1160H;
+  const sink=masterAudioOwnerSinkR1160H;
+  if(source&&sink){
+    try{source.unpipe(sink)}catch(_){}
+  }
+  masterAudioOwnerSourceR1160H=null;
+  masterAudioOwnerSinkR1160H=null;
+  if(reason){
+    state.lastMasterAudioOwnerDisconnectR1160H={
+      at:new Date().toISOString(),
+      reason:cleanText(reason).slice(-240)
+    };
+  }
+}
+
+function connectMasterAudioOwnerR1160H(source,sink,label='media'){
+  if(!source||!sink||sink.destroyed||sink.writableEnded)return false;
+
+  stopMasterAudioGapBridgeR824(`r1160h-real-audio-owner:${label}`);
+
+  // Remove the previous owner's pipe first.
+  if(masterAudioOwnerSourceR1160H&&masterAudioOwnerSinkR1160H){
+    try{masterAudioOwnerSourceR1160H.unpipe(masterAudioOwnerSinkR1160H)}catch(_){}
+  }
+
+  // Critical: make this exact source/sink pair single-owner even if another
+  // recovery/media path already piped it milliseconds earlier.
+  try{source.unpipe(sink)}catch(_){}
+  try{
+    source.pipe(sink,{end:false});
+  }catch(error){
+    state.lastError=`R1160H audio owner pipe failed: ${cleanText(error?.message||error)}`;
+    return false;
+  }
+
+  masterAudioOwnerGenerationR1160H++;
+  masterAudioOwnerSourceR1160H=source;
+  masterAudioOwnerSinkR1160H=sink;
+
+  state.masterAudioOwnerGenerationR1160H=masterAudioOwnerGenerationR1160H;
+  state.masterAudioOwnerLabelR1160H=String(label||'media');
+  state.masterAudioOwnerPublisherPidR1160H=Number(publisher?.pid||0);
+
+  try{
+    diagRecordR802('r1160h-master-audio-owner-connected',{
+      label:String(label||'media'),
+      generation:masterAudioOwnerGenerationR1160H,
+      publisherPid:Number(publisher?.pid||0),
+      current:shortText(state.current?.title||'',52)
+    });
+  }catch(_){}
+
   return true;
 }
 
@@ -3723,8 +4139,7 @@ function spawnTransportRelayR1125(lane){
     if(/error|fail|broken pipe|connection|tls|invalid|eof/i.test(line)){
       state.lastWarning=`R1125 ${lane} relay: ${line.slice(-500)}`;
     }
-    diagFfmpegR802(`r1125-${lane}-rtmps`,line);
-    console.error(`[r1125-${lane}-rtmps]`,line);
+    if(diagFfmpegR802(`r1125-${lane}-rtmps`,line)!==false)console.error(`[r1125-${lane}-rtmps]`,line);
   });
 
   child.on('exit',(code,signal)=>{
@@ -4036,7 +4451,7 @@ async function recyclePublisherR884(
       try{candidate.kill('SIGTERM')}catch(_){}
       const hard=setTimeout(()=>{
         try{
-          if(candidate.exitCode===null&&!candidate.killed)candidate.kill('SIGKILL');
+          if(candidate.exitCode===null&&candidate.signalCode===null)candidate.kill('SIGKILL');
         }catch(_){}
       },1200);
       hard.unref?.();
@@ -4052,6 +4467,7 @@ async function recyclePublisherR884(
   const audioSource=sources.audioSource;
   const clipLive=sources.clipLive;
   const oldAudioSink=old?.stdio?.[3];
+  let audioFrozenR1160H=false;
 
   try{
     state.transportHealthy=false;
@@ -4074,7 +4490,24 @@ async function recyclePublisherR884(
       try{detachVideoFrameRelayR816(videoChild)}catch(_){}
     }
 
-    if(audioSource && oldAudioSink){
+    // R1160H: freeze PCM before touching the publisher. Remove EVERY pipe from
+    // this readable, not only the captured old sink. This closes the long-run
+    // race where a recovery and a normal transition could both own PCM.
+    stopMasterAudioGapBridgeR824('r1160h-r884-freeze');
+    disconnectMasterAudioOwnerR1160H('r1160h-r884-freeze');
+
+    if(audioSource && !audioSource.destroyed && !audioSource.readableEnded){
+      try{audioSource.pause();audioFrozenR1160H=true}catch(_){}
+      try{audioSource.unpipe()}catch(_){}
+      state.r884AudioFrozenR1160H=true;
+      try{
+        diagRecordR802('r1160h-r884-audio-frozen',{
+          oldPublisherPid:Number(old?.pid||0),
+          current:shortText(state.current?.title||'',52),
+          clipLive:Boolean(clipLive)
+        });
+      }catch(_){}
+    }else if(audioSource && oldAudioSink){
       try{audioSource.unpipe(oldAudioSink)}catch(_){}
     }
 
@@ -4147,7 +4580,7 @@ async function recyclePublisherR884(
         newVideoSink,
         clipLive
           ? 'r884-clip-resume'
-          : 'r884-normal-resume'
+          : 'normal-visual' // R1160L: restore single-owner and full-track cadence guards
       );
     }else{
       // Only if no usable video source survived.
@@ -4157,20 +4590,46 @@ async function recyclePublisherR884(
       });
     }
 
-    // Reconnect the SAME live audio decoder/clip.
-    if(
-      audioSource &&
-      !audioSource.destroyed &&
-      !audioSource.readableEnded
-    ){
-      stopMasterAudioGapBridgeR824(
-        'r884-real-audio-resume'
-      );
+    // R1160H: re-resolve audio AFTER the new publisher exists. A media boundary
+    // may have happened while R884 was rebuilding, so reconnecting the captured
+    // pre-recovery source can create two simultaneous PCM owners.
+    const freshSourcesR1160H=activeTransportSourcesR884();
+    const resumeAudioSourceR1160H=
+      freshSourcesR1160H.audioSource &&
+      !freshSourcesR1160H.audioSource.destroyed &&
+      !freshSourcesR1160H.audioSource.readableEnded
+        ? freshSourcesR1160H.audioSource
+        : (
+            audioSource &&
+            !audioSource.destroyed &&
+            !audioSource.readableEnded
+              ? audioSource
+              : null
+          );
 
-      audioSource.pipe(
+    if(resumeAudioSourceR1160H){
+      // Ensure there is no hidden second destination left by an older closure.
+      try{resumeAudioSourceR1160H.unpipe()}catch(_){}
+
+      if(!connectMasterAudioOwnerR1160H(
+        resumeAudioSourceR1160H,
         newAudioSink,
-        {end:false}
-      );
+        'r884-recovery'
+      )){
+        throw new Error('R1160H failed to connect recovered PCM owner');
+      }
+
+      try{resumeAudioSourceR1160H.resume()}catch(_){}
+      audioFrozenR1160H=false;
+      state.r884AudioFrozenR1160H=false;
+
+      try{
+        diagRecordR802('r1160h-r884-audio-resumed-single-owner',{
+          newPublisherPid:Number(publisher?.pid||0),
+          sourceChanged:Boolean(resumeAudioSourceR1160H!==audioSource),
+          current:shortText(state.current?.title||'',52)
+        });
+      }catch(_){}
     }else{
       // Never leave the new publisher without an audio clock.
       startMasterAudioGapBridgeR824(
@@ -4210,6 +4669,12 @@ async function recyclePublisherR884(
     return true;
 
   }catch(error){
+
+    if(audioFrozenR1160H && audioSource){
+      try{audioSource.resume()}catch(_){}
+      audioFrozenR1160H=false;
+      state.r884AudioFrozenR1160H=false;
+    }
 
     state.lastError=
       `R884 publisher-only recovery failed: ${
@@ -4816,7 +5281,7 @@ function startPublisher(){
   state.youtubeDualIngestEnabled=DUAL_INGEST_ENABLED_R792;
   state.youtubeBackupIngestArmed=Boolean(DUAL_INGEST_ENABLED_R792&&STREAM_BACKUP_URL);
   state.transportArchitectureR1125='R1125-LOCAL-UDP-MPEGTS-INDEPENDENT-RTMPS-RELAYS';
-  state.masterVideoClockMode='R820-DETERMINISTIC-PTS-FRAMECOUNT-25FPS-QUEUE24-SINGLE-X264';
+  state.masterVideoClockMode=`R820-DETERMINISTIC-PTS-FRAMECOUNT-${VIDEO_FPS}FPS-QUEUE${VIDEO_INPUT_QUEUE_PACKETS_R732}-SINGLE-X264`;
   if(!state.streamStartedAt)state.streamStartedAt=new Date().toISOString();
   const audioSink=thisPublisher.stdio[3];
   const videoSink=thisPublisher.stdio[4];
@@ -4833,6 +5298,7 @@ function startPublisher(){
   const r1085={
     audioBytes:0,
     videoFrames:0,
+    actualVideoFramesR1160K:0, // diagnostic only: never rebased by R1160G
     targetAudioLeadSec:2.000,
     deadbandSec:0.080,
     armed:false,
@@ -4842,6 +5308,8 @@ function startPublisher(){
     externalPacedVideoR1123:false,
     externalPacedFramesR1123:0,
     normalMp3EdgePassThroughR1150:false,
+    normalVisualPassThroughR1160L:false,
+    normalVisualFramesR1160L:0,
     transitionPassThroughR1147:false,
     transitionPassThroughUntilR1147:0,
     transitionPassFramesR1147:0,
@@ -4855,9 +5323,10 @@ function startPublisher(){
     originalVideoWrite:videoSink.write.bind(videoSink)
   };
   thisPublisher.__r1085AudioMaster=r1085;
-  state.audioMasterMode='R1085-AUDIO-MASTER-2.0-PCM-CLOCK-VIDEO-FOLLOWER';
+  state.audioMasterMode='R1160L-REAL-COUNTERS-MP3-EXACT-25FPS+R1123-CLIP-PCM-PACER';
   state.audioMasterTargetLeadMsR1085=2000;
   state.audioMasterDeadbandMsR1085=80;
+  state.audioInputQueuePacketsR1160J=AUDIO_INPUT_QUEUE_PACKETS_R732;
 
   audioSink.write=function r1085AudioMasterWrite(chunk,...args){
     const bytes=Buffer.isBuffer(chunk)||ArrayBuffer.isView(chunk)
@@ -4879,8 +5348,8 @@ function startPublisher(){
     if(!isFrame || !r1085.armed){
       const ok=r1085.originalVideoWrite(chunk,...args);
       if(isFrame){
-        r1085.videoFrames++;
-        r1085.lastFrame=Buffer.from(chunk);
+        r1085.videoFrames++; r1085.actualVideoFramesR1160K++;
+        r1085.lastFrame=chunk; // R1160K: retain immutable full frame; no extra 3.11 MB copy
       }
       return ok;
     }
@@ -4935,10 +5404,11 @@ function startPublisher(){
       });
     }
 
-    if(r1085.externalPacedVideoR1123 || r1085.normalMp3EdgePassThroughR1150 || r1085.transitionPassThroughR1147 || r1085.transitionPassThroughR1148){
+    if(r1085.normalVisualPassThroughR1160L || r1085.externalPacedVideoR1123 || r1085.normalMp3EdgePassThroughR1150 || r1085.transitionPassThroughR1147 || r1085.transitionPassThroughR1148){
       const curOk=r1085.originalVideoWrite(chunk,...args);
-      r1085.videoFrames++;
-      r1085.lastFrame=Buffer.from(chunk);
+      r1085.videoFrames++; r1085.actualVideoFramesR1160K++;
+      r1085.lastFrame=chunk; // R1160K: retain immutable full frame; no extra 3.11 MB copy
+      if(r1085.normalVisualPassThroughR1160L){r1085.normalVisualFramesR1160L++;state.normalVisualFramesR1160L=r1085.normalVisualFramesR1160L;}
       if(r1085.externalPacedVideoR1123){
         r1085.externalPacedFramesR1123++;
         state.audioMasterExternalPacedFramesR1123=r1085.externalPacedFramesR1123;
@@ -4983,15 +5453,15 @@ function startPublisher(){
        r1085.lastFrame && !videoSink.writableNeedDrain &&
        Number(videoSink.writableLength||0) < Number(videoSink.writableHighWaterMark||0)){
       const dupOk=r1085.originalVideoWrite(r1085.lastFrame);
-      r1085.videoFrames++;
+      r1085.videoFrames++; r1085.actualVideoFramesR1160K++;
       r1085.duplicated++;
       state.audioMasterVideoDuplicatesR1085=r1085.duplicated;
       ok=dupOk;
     }
 
     const curOk=r1085.originalVideoWrite(chunk,...args);
-    r1085.videoFrames++;
-    r1085.lastFrame=Buffer.from(chunk);
+    r1085.videoFrames++; r1085.actualVideoFramesR1160K++;
+    r1085.lastFrame=chunk; // R1160K: retain immutable full frame; no extra 3.11 MB copy
     state.audioMasterVideoSecondsR1085=Number((r1085.videoFrames/VIDEO_FPS).toFixed(3));
     state.audioMasterLeadMsR1085=Math.round((r1085.audioBytes/(AUDIO_SAMPLE_RATE*4)-r1085.videoFrames/VIDEO_FPS)*1000);
     return Boolean(ok&&curOk);
@@ -5014,7 +5484,7 @@ function startPublisher(){
       if(!dualLaneTransportTransientR792&&/error|fail|invalid|broken pipe|non-monoton|unset in a packet|incompatible with output codec|DTS .*out of order|timestamp discontinuity/i.test(line))state.lastError=line.slice(-700);
       const hardOutputFatal=scheduleOutputFatalRestartR780(line,thisPublisher);
       if(!hardOutputFatal)scheduleTransportSelfHealR746(line,thisPublisher);
-      console.error('[master-r816]',line);
+      if(diagFfmpegR802('master-r816',line)!==false)console.error('[master-r816]',line);
     }
   });
   thisPublisher.on('exit',(code,signal)=>{
@@ -5173,6 +5643,12 @@ function spawnRawNormalVideoChildR816(visualPath,{fadeIn=false,fadeInSeconds=CLI
 
 function promoteRawNormalVideoR816(child,videoSink){
   if(!child||child.exitCode!==null||child.signalCode!==null)throw new Error('R816 rawvideo candidate unavailable at promotion');
+
+  // R1160E: exactly one normal visual child owns the persistent rawvideo pipe.
+  normalVideoOwnerGenerationR1160E++;
+  child.__r1160ENormalVideoOwnerGeneration=normalVideoOwnerGenerationR1160E;
+  state.normalVideoOwnerGenerationR1160E=normalVideoOwnerGenerationR1160E;
+
   videoFeeder=child;
   videoFeederPath=child.__r816VisualPath||'';
   videoFeederPeriod=child.__r816EqPeriod||'';
@@ -5377,6 +5853,16 @@ async function atomicReplaceNormalVideoFeederR816(visualPath,opts={}){
         candidatePid:Number(candidate.pid||0),
         leadMs:Math.round((Number(masterUnlockR1147.audioBytes||0)/(AUDIO_SAMPLE_RATE*4)-Number(masterUnlockR1147.videoFrames||0)/VIDEO_FPS)*1000)
       });
+    }
+
+    // R1160L: videoFrames counts real submitted frames for the publisher lifetime.
+    // Reassigning it without changing media made R1085/R1123 compare unrelated
+    // timelines. Keep actual sample/frame counts; observe the boundary only.
+    const masterR1160L=publisher?.__r1085AudioMaster;
+    if(masterR1160L){
+      const leadMs=Math.round((masterR1160L.audioBytes/(AUDIO_SAMPLE_RATE*4)-masterR1160L.videoFrames/VIDEO_FPS)*1000);
+      state.lastPostVideoPhaseR1160L={at:new Date().toISOString(),candidatePid:Number(candidate.pid||0),videoFrames:masterR1160L.videoFrames,audioBytes:masterR1160L.audioBytes,leadMs};
+      diagRecordR802('r1160l-post-video-phase-observed',state.lastPostVideoPhaseR1160L);
     }
   }
 
@@ -5671,24 +6157,60 @@ async function startFirstNormalVideoFeederR828(
 }
 
 
+// R1160E NORMAL-VIDEO SINGLE-OWNER
+// After many hours two concurrent normal-MP3 feeder starts could overlap. Both relays
+// then wrote complete YUV frames into the same persistent publisher pipe, which appears
+// to the viewer as rapid MP3-picture flicker. Coalesce concurrent starts and give every
+// promoted normal feeder one immutable ownership generation.
+let normalVideoEnsurePromiseR1160E=null;
+let normalVideoOwnerGenerationR1160E=0;
+
 async function ensureNormalVideoFeederR721({force=false,fadeIn=false,fadeInSeconds=CLIP_TO_TRACK_FADE_IN_SECONDS_R753,endFadeToBlack=false,trackDuration=null,previewReload=false,boundaryTitleSwitchAt=null,mp3Boundary=false}={}){
   if(stopping||clipActive)return true;
-  const visual=await ensureScheduledVisual();
-  const period=activeVisualPeriodR721();
-  if(!force&&videoFeeder&&videoFeeder.exitCode===null&&videoFeederPath===visual&&videoFeederPeriod===period)return true;
-  visualSwitching=true;
+
+  // R1160E: if a station/clip tail, first-PCM gate and watchdog all ask for the
+  // normal MP3 feeder at nearly the same moment, only ONE replacement is allowed.
+  if(normalVideoEnsurePromiseR1160E){
+    state.normalVideoEnsureCoalescedR1160E=Number(state.normalVideoEnsureCoalescedR1160E||0)+1;
+    diagRecordR802('r1160e-normal-video-ensure-coalesced',{
+      current:shortText(state.current?.title||'',52),
+      next:shortText(state.next?.title||'',52)
+    });
+    return await normalVideoEnsurePromiseR1160E;
+  }
+
+  const job=(async()=>{
+    const visual=await ensureScheduledVisual();
+    const period=activeVisualPeriodR721();
+
+    if(!force&&videoFeeder&&videoFeeder.exitCode===null&&videoFeederPath===visual&&videoFeederPeriod===period){
+      return true;
+    }
+
+    visualSwitching=true;
+    try{
+      if(stopping||clipActive)return true;
+      const plannedDuration=trackDuration===null?remainingTrackSecondsR726():Math.max(0,Number(trackDuration)||0);
+      const visualOffsetSeconds=await visualLoopOffsetR735(visual);
+      const plannedBoundaryTitleSwitchAt=boundaryTitleSwitchAt===null
+        ? ((state.next?.type==='track'&&plannedDuration>TITLE_SWITCH_BEFORE_BOUNDARY_R781+0.25)?Math.max(0,plannedDuration-TITLE_SWITCH_BEFORE_BOUNDARY_R781):0)
+        : Math.max(0,Number(boundaryTitleSwitchAt)||0);
+      const opts={fadeIn,fadeInSeconds,endFadeToBlack,trackDuration:plannedDuration,visualOffsetSeconds,previewReload,boundaryTitleSwitchAt:plannedBoundaryTitleSwitchAt,mp3Boundary};
+
+      // R837 GOLD / R829 path stays unchanged. R1160E changes ownership only.
+      if(videoFeeder&&videoFeeder.exitCode===null)return await atomicReplaceNormalVideoFeederR816(visual,opts);
+      return await startNormalVideoFeederR721(visual,opts);
+    }finally{
+      visualSwitching=false;
+    }
+  })();
+
+  normalVideoEnsurePromiseR1160E=job;
   try{
-    if(stopping||clipActive)return true;
-    const plannedDuration=trackDuration===null?remainingTrackSecondsR726():Math.max(0,Number(trackDuration)||0);
-    const visualOffsetSeconds=await visualLoopOffsetR735(visual);
-    const plannedBoundaryTitleSwitchAt=boundaryTitleSwitchAt===null
-      ? ((state.next?.type==='track'&&plannedDuration>TITLE_SWITCH_BEFORE_BOUNDARY_R781+0.25)?Math.max(0,plannedDuration-TITLE_SWITCH_BEFORE_BOUNDARY_R781):0)
-      : Math.max(0,Number(boundaryTitleSwitchAt)||0);
-    const opts={fadeIn,fadeInSeconds,endFadeToBlack,trackDuration:plannedDuration,visualOffsetSeconds,previewReload,boundaryTitleSwitchAt:plannedBoundaryTitleSwitchAt,mp3Boundary};
-    // R837 GOLD / R829: one permanent video path from the first frame.
-    if(videoFeeder&&videoFeeder.exitCode===null)return atomicReplaceNormalVideoFeederR816(visual,opts);
-    return startNormalVideoFeederR721(visual,opts);
-  }finally{visualSwitching=false;}
+    return await job;
+  }finally{
+    if(normalVideoEnsurePromiseR1160E===job)normalVideoEnsurePromiseR1160E=null;
+  }
 }
 
 async function scheduleVisualTickR721(){
@@ -7027,6 +7549,16 @@ async function playVideoClipR691(previous,item,next,nextListenerPreviewR1135=nul
   const hasAudio=(warmedMetaR752&&warmedMetaR752.readyPath===readyPath)?Boolean(warmedMetaR752.hasAudio):await probeHasAudioR721(readyPath);
   if(!hasAudio){state.lastError=`R752 video insert skipped: audio stream missing in ${shortText(item.title||'INSERT',40)}`;return await abortInsertHandoffR749(item,next,'prepared insert has no decodable audio stream');}
 
+
+  // R1156: next MP3 audio becomes PCM-ready BEHIND the live video. The first
+  // chunk is parked locally; it is never written to the master until playItem()
+  // claims this exact track after the insert has completely finished.
+  if(next?.type==='track'){
+    buildNextMp3AudioPrearmR1156(next).catch(error=>{
+      state.lastWarning=`R1156 next MP3 prearm fallback: ${cleanText(error?.message||error)}`;
+    });
+  }
+
   const audioSink=publisher?.stdio?.[3];
   const videoSink=publisher?.stdio?.[4];
   if(!publisher||publisher.exitCode!==null||!audioSink||audioSink.destroyed||audioSink.writableEnded||!videoSink||videoSink.destroyed||videoSink.writableEnded){
@@ -7124,6 +7656,10 @@ async function playVideoClipR691(previous,item,next,nextListenerPreviewR1135=nul
       }
       try{detachVideoFrameRelayR816(child)}catch(_){ }
         try{audioSource.unpipe(audioSink)}catch(_){ }
+        if(masterAudioOwnerSourceR1160H===audioSource){
+          masterAudioOwnerSourceR1160H=null;
+          masterAudioOwnerSinkR1160H=null;
+        }
         if(code===0||stopping)resolve();else reject(new Error(`R816 clip A/V exit ${code||signal}`));
       });
     });
@@ -7181,7 +7717,11 @@ async function playVideoClipR691(previous,item,next,nextListenerPreviewR1135=nul
     // one unified clip/station child may connect PCM to master once only.
     if(!child.__r1025AudioPiped){
       child.__r1025AudioPiped=true;
-      audioSource.pipe(audioSink,{end:false});
+      connectMasterAudioOwnerR1160H(
+        audioSource,
+        audioSink,
+        stationInsert?'station-insert-r1025':'music-clip-r1025'
+      );
       diagRecordR802(
         stationInsert
           ? 'r1025-station-audio-pipe-once'
@@ -7272,12 +7812,59 @@ async function playVideoClipR691(previous,item,next,nextListenerPreviewR1135=nul
       const eofReasonR1139=cleanText(error?.message||error);
       const postCommitNormalR1139=Boolean(!stationInsert && child?.__r752Live===true);
 
+      // R1156S:
+      // If a STATION already reached LIVE, a late EOF timeout is NOT
+      // a failed handoff and must never be sent to the generic R814 retry.
+      // Replaying an already-shown station caused VIDEO-on-VIDEO + loop.
+      // Pre-commit failures remain unchanged.
+      const postCommitStationR1156S=Boolean(
+        stationInsert &&
+        child?.__r752Live===true
+      );
+
       if(child&&child.exitCode===null){
         try{child.kill('SIGTERM')}catch(_){ }
         if(!(await waitChildExit(child,1200))&&child.exitCode===null){
           try{child.kill('SIGKILL')}catch(_){ }
           await waitChildExit(child,250);
         }
+      }
+
+      if(postCommitStationR1156S){
+
+        state.stationSoftEofCutsR1156S=
+          Number(state.stationSoftEofCutsR1156S||0)+1;
+
+        state.lastStationSoftEofR1156S={
+          at:new Date().toISOString(),
+          title:shortText(item.title||'STATION',52),
+          duration:Number(duration||0),
+          guardMs:Number(guardMs||0),
+          reason:eofReasonR1139
+        };
+
+        state.lastWarning=
+          `R1156S station soft EOF cut (no replay): ${
+            shortText(item.title||'STATION',40)
+          }`;
+
+        state.lastError='';
+
+        diagRecordR802(
+          'r1156s-station-soft-eof-cut',
+          {
+            title:shortText(item.title||'STATION',52),
+            duration:Number(duration||0),
+            guardMs:Number(guardMs||0),
+            reason:eofReasonR1139,
+            next:shortText(next?.title||'',52),
+            rtmps:Number(state.rtmpsEgressCount||0)
+          }
+        );
+
+        // Station was already shown successfully.
+        // Do NOT return it to the R814 retry loop.
+        return !stopping;
       }
 
       if(postCommitNormalR1139){
@@ -7490,7 +8077,11 @@ function predictedImmediateNextR736(next,durationSeconds=0){
 }
 function nextOverlayTextR736(item){
   if(!item)return '';
-  const title=shortText(item.title||'ANDRIK',32);
+  // R1160A: PREVIOUS/NEXT are always title-only.
+  // Album / Silent / cover suffixes belong ONLY to CURRENT.
+  const title=item?.type==='track'
+    ? previewDisplayTitleR989(item.title||'TRACK')
+    : shortText(item.title||'ANDRIK',32);
   // R753: never expose internal scheduler names such as SPECIAL 30/60 or radio-bumper.
   // To the viewer every station insert is simply the ANDRIK radio ident.
   if(item.sourceType==='radio-special-30')return 'NEXT • СПЕЦВСТАВКА • 30 МИН';
@@ -7501,7 +8092,11 @@ function nextOverlayTextR736(item){
 }
 function previousOverlayTextR745(item){
   if(!item)return '';
-  const title=shortText(item.title||'ANDRIK',32);
+  // R1160A: PREVIOUS/NEXT are always title-only.
+  // Album / Silent / cover suffixes belong ONLY to CURRENT.
+  const title=item?.type==='track'
+    ? previewDisplayTitleR989(item.title||'TRACK')
+    : shortText(item.title||'ANDRIK',32);
   if(item.sourceType==='radio-special-30')return 'PREVIOUS • СПЕЦВСТАВКА • 30 МИН';
   if(item.sourceType==='radio-special-60')return 'PREVIOUS • СПЕЦВСТАВКА • 60 МИН';
   if(item.sourceType==='radio-bumper'||item.type==='bumper')return 'PREVIOUS • ЗАСТАВКА';
@@ -7747,6 +8342,10 @@ async function playItem(previous,item,next,following,localAudioPath,nextTrackPre
     ).toLowerCase().includes('black')
   );
 
+  const nextMp3AudioClaimR1156=clipToMp3PcmGateR975B
+    ? claimNextMp3AudioPrearmR1156(item,localAudioPath)
+    : null;
+
   // R763: keep the proven R753 alpha-mask architecture but extend the cinematic timing.
   // The old MP3 feeder owns the transition: start 1.0 s earlier than R762, 0.65 s darken,
   // 0.05 s black hold, then a clearly visible 0.80 s recovery. Do NOT add a second fade-in on the next MP3.
@@ -7826,7 +8425,19 @@ async function playItem(previous,item,next,following,localAudioPath,nextTrackPre
   // PREVIOUS/NEXT remain FFmpeg-frame-timed in the final 8 seconds.
 
   state.producerRunning=true;
-  producer=spawn('ffmpeg',decoderArgs(localAudioPath,duration,loudnessR747,mp3StartDelaySecondsR872),{stdio:['ignore','pipe','pipe']});
+  producer=nextMp3AudioClaimR1156?.child || spawn('ffmpeg',decoderArgs(localAudioPath,duration,loudnessR747,mp3StartDelaySecondsR872),{stdio:['ignore','pipe','pipe']});
+  if(nextMp3AudioClaimR1156?.firstChunk){
+    // Put the already-proven first PCM bytes back at the head of the SAME stream.
+    // The existing first-PCM gate below therefore fires immediately and audio order
+    // stays byte-exact; no sample is played early or discarded.
+    try{
+      producer.stdout.unshift(nextMp3AudioClaimR1156.firstChunk);
+      nextMp3AudioClaimR1156.firstChunk=null;
+      state.videoHandoffMode='R1156-NEXT-MP3-PCM-PREARM-CLAIMED';
+    }catch(error){
+      state.lastWarning=`R1156 PCM unshift fallback: ${cleanText(error?.message||error)}`;
+    }
+  }
   producer.stderr.on('data',d=>{
     const line=String(d||'').trim();
     if(line){
@@ -7942,10 +8553,18 @@ async function playItem(previous,item,next,following,localAudioPath,nextTrackPre
 
       // Decoder/pipe begins immediately.
       // The callback above commits at the first real PCM chunk.
-      source.pipe(audioSink,{end:false});
+      connectMasterAudioOwnerR1160H(
+        source,
+        audioSink,
+        'normal-mp3'
+      );
       producer.once('error',reject);
       producer.once('exit',(code,signal)=>{
         try{source.unpipe(audioSink);}catch(_){}
+        if(masterAudioOwnerSourceR1160H===source){
+          masterAudioOwnerSourceR1160H=null;
+          masterAudioOwnerSinkR1160H=null;
+        }
 
         const exitOkR972=(code===0||stopping);
 
@@ -8803,20 +9422,49 @@ function queuePickNextR1155(mediaType,key,title=''){
 
 function publicStatus(){
   const now=Date.now();
+  const masterR1160K=publisher?.__r1085AudioMaster;
+  const memoryR1160K=process.memoryUsage();
   return {
     ok:Boolean(state.publisherRunning && state.transportHealthy!==false && ((clipPublisher&&clipPublisher.exitCode===null&&clipPublisher.__r752UnifiedAV===true&&clipPublisher.__r752Live===true)||(clipVideoPrerollR744&&clipVideoPrerollR744.exitCode===null)||(videoFeeder&&videoFeeder.exitCode===null))),
     service:state.service,
+    auditRevisionR1160K:'R1160L-MP3-CADENCE-REAL-COUNTERS',
+    auditRevisionR1160L:'R1160L-MP3-CADENCE-REAL-COUNTERS',
+    normalVisualFramesR1160L:Number(state.normalVisualFramesR1160L||0),
+    audioMasterVideoDropsR1085:Number(masterR1160K?.dropped||0),
+    audioMasterVideoDuplicatesR1085:Number(masterR1160K?.duplicated||0),
+    lastPostVideoPhaseR1160L:state.lastPostVideoPhaseR1160L||null,
+    ffmpegLogCountersR1160K:Object.fromEntries(ffmpegLogCountersR1160K),
+    runtimeMetricsR1160K:{
+      nodePid:process.pid,
+      nodeUptimeSeconds:Math.round(process.uptime()),
+      publisherPid:Number(publisher?.pid||0),
+      videoPid:Number(videoFeeder?.pid||0),
+      producerPid:Number(producer?.pid||0),
+      memoryBytes:memoryR1160K,
+      audioPipeQueuedBytes:Number(publisher?.stdio?.[3]?.writableLength||0),
+      videoPipeQueuedBytes:Number(publisher?.stdio?.[4]?.writableLength||0),
+      audioPipeNeedsDrain:Boolean(publisher?.stdio?.[3]?.writableNeedDrain),
+      videoPipeNeedsDrain:Boolean(publisher?.stdio?.[4]?.writableNeedDrain),
+      audioBytesSubmitted:Number(masterR1160K?.audioBytes||0),
+      actualVideoFramesSubmitted:Number(masterR1160K?.actualVideoFramesR1160K||0),
+      phaseVideoFrames:Number(masterR1160K?.videoFrames||0),
+      phaseOffsetFrames:Number(masterR1160K?.videoFrames||0)-Number(masterR1160K?.actualVideoFramesR1160K||0),
+      // Submitted data includes pipe/demux queues; this is NOT viewer A/V latency.
+      submittedLeadMs:masterR1160K?Math.round((masterR1160K.audioBytes/(AUDIO_SAMPLE_RATE*4)-masterR1160K.actualVideoFramesR1160K/VIDEO_FPS)*1000):null,
+      visualProbePending:visualProbePendingR1160K.size,
+      visualProbeCached:visualProbeCacheR1132.size
+    },
     version:state.version,
     mode:state.mode,
     overlayMode:state.overlayMode,
     audioMode:state.audioMode,
-    engine:'R820 DETERMINISTIC MASTER PTS + R819 FULLFRAME GEOMETRY + RAWVIDEO QUEUE24 + ONE X264 + R814 FADE + R792 DUAL RTMPS',
+    engine:`R820 DETERMINISTIC MASTER PTS + R819 FULLFRAME GEOMETRY + RAWVIDEO QUEUE${VIDEO_INPUT_QUEUE_PACKETS_R732} + ONE X264 + R814 FADE + R792 DUAL RTMPS`,
     feederFilterChainGuard:'R769-SEMICOLON-ENDMASK-TO-STARTMASK',
     committedNextCheckpointFile:COMMITTED_NEXT_FILE_R769,
     committedNextTitle:state.committedNextTitle||'',
     committedNextRecovered:Boolean(state.committedNextRecovered),
     committedNextCommittedAt:state.committedNextCommittedAt||null,
-    videoPipeline:'R819 R784 FIT+PAD 1920x1080 -> RAW YUV420P -> QUEUE24 FRAME RELAY -> ONE H264 ENCODE -> DUAL RTMPS',
+    videoPipeline:`R819 R784 FIT+PAD 1920x1080 -> RAW YUV420P -> QUEUE${VIDEO_INPUT_QUEUE_PACKETS_R732} FRAME RELAY -> ONE H264 ENCODE -> DUAL RTMPS`,
     outputTimeshiftSeconds:OUTPUT_TIMESHIFT_SECONDS,
     youtubeDualIngestEnabled:Boolean(DUAL_INGEST_ENABLED_R792),
     youtubeBackupIngestArmed:Boolean(DUAL_INGEST_ENABLED_R792 && STREAM_BACKUP_URL),
@@ -8833,6 +9481,7 @@ function publicStatus(){
     videoBitrate:VIDEO_BITRATE,
     audioBitrate:AUDIO_BITRATE,
     audioSampleRate:AUDIO_SAMPLE_RATE,
+      radioTitleLabelsR1160:'R1160L-MP3-CADENCE-REAL-COUNTERS+R1160K+R1160J+R1160H',
     videoFps:VIDEO_FPS,
     videoGop:VIDEO_GOP,
     streamProfileR819:{
@@ -8868,7 +9517,7 @@ function publicStatus(){
     startPreviewShowSeconds:START_PREVIEW_SHOW_SECONDS_R748,
     titleHandoffDelayMs:TITLE_HANDOFF_DELAY_MS_R724,
     videoInputQueuePackets:VIDEO_INPUT_QUEUE_PACKETS_R732,
-    rawVideoQueueGuardR819:'24 frames / 0.96s at 25fps',
+    rawVideoQueueGuardR819:`${VIDEO_INPUT_QUEUE_PACKETS_R732} frames / ${(VIDEO_INPUT_QUEUE_PACKETS_R732/VIDEO_FPS).toFixed(2)}s at ${VIDEO_FPS}fps`,
     liveGeometryModeR819:'R784-VIEWER-PROVEN-FIT-PAD-1920x1080-NO-CROP',
     videoInputQueueMaxWindowSecondsR756:Number((VIDEO_INPUT_QUEUE_PACKETS_R732/VIDEO_FPS).toFixed(2)),
     audioInputQueuePackets:AUDIO_INPUT_QUEUE_PACKETS_R732,
@@ -8941,6 +9590,9 @@ function publicStatus(){
       clipToTrackHandoffGuardMs:CLIP_TO_TRACK_HANDOFF_GUARD_MS_R753,
       clipToTrackFadeInSeconds:CLIP_TO_TRACK_FADE_IN_SECONDS_R753,
       clipToTrackBlackHoldSecondsR1135:CLIP_TO_TRACK_BLACK_HOLD_SECONDS_R917B,
+      nextMp3PcmPrearmR1156:R1156_NEXT_MP3_PCM_PREARM,
+      nextMp3PcmPrearmReadyR1156:Boolean(nextMp3AudioPrearmR1156?.ready),
+      nextMp3PcmPrearmTitleR1156:shortText(nextMp3AudioPrearmR1156?.title||'',52),
       musicClipAudioPrimeMsR1135:MUSIC_CLIP_AUDIO_PRIME_MS_R1135,
       videoToVideoBlackProfileR1136:R1136_VIDEO_TO_VIDEO_BLACK_SMOOTH,
       clipPacerRuntimeFixR1140B:R1140B_CLIP_PACER_RUNTIME_FIX,
@@ -9052,7 +9704,7 @@ function publicStatus(){
     equalizerStyle:state.equalizerStyle,
     equalizerEngine:state.equalizerEngine,
     publisherRunning:state.publisherRunning,
-    masterVideoMode:'R819-R784-GEOMETRY-PERSISTENT-RAWVIDEO-QUEUE24-SINGLE-X264-DUAL-RTMPS',
+    masterVideoMode:`R819-R784-GEOMETRY-PERSISTENT-RAWVIDEO-QUEUE${VIDEO_INPUT_QUEUE_PACKETS_R732}-SINGLE-X264-DUAL-RTMPS`,
     masterBitstreamFilter:'none-R816-rawvideo-input-before-encoding',
     masterAudioBytesWritten:Number(publisher?.stdio?.[3]?.bytesWritten||0),
     masterVideoBytesWritten:Number(publisher?.stdio?.[4]?.bytesWritten||0),
@@ -9120,6 +9772,7 @@ function publicStatus(){
     libraryTracks:state.libraryTracks,
     libraryAlbumTracks:state.libraryAlbumTracks,
     librarySingleTracks:state.librarySingleTracks,
+    libraryCoverTracks:state.libraryCoverTracks,
     duplicateSinglesSkipped:state.duplicateSinglesSkipped,
     libraryRefreshSeconds:Math.round(LIBRARY_REFRESH_MS/1000),
     libraryVideos:state.libraryVideos,
@@ -9158,7 +9811,7 @@ function publicStatus(){
     diagnosticsR802:{
       version:'R802',lastEventAt:state.lastDiagnosticAtR802||diagnosticRingR802.at(-1)?.at||null,
       latest:diagnosticRingR802.at(-1)||null,
-      events:diagnosticRingR802.slice(-30),
+      events:diagnosticRingR802.slice(-80),
       logFile:'r802-events.ndjson'
     },
     youtubeLiveUrl:YOUTUBE_LIVE_URL
@@ -9232,6 +9885,7 @@ const server=http.createServer((req,res)=>{
       tracks:state.libraryTracks,
       albumTracks:state.libraryAlbumTracks,
       singleTracks:state.librarySingleTracks,
+      coverTracks:state.libraryCoverTracks,
       duplicateSinglesSkipped:state.duplicateSinglesSkipped,
       libraryRefreshSeconds:Math.round(LIBRARY_REFRESH_MS/1000),
       videos:state.libraryVideos,

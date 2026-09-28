@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#080b12" />
   <title>Dreaming of Líra 3D — ANDRIK</title>
   <meta name="description" content="Dreaming of Líra: браузерная 3D-аркада ANDRIK. Шесть миров, битвы, мотоцикл и космос. Играй на телефоне или компьютере." />
-  <link rel="stylesheet" href="/assets/lira-3d-r1182.css" />
+  <link rel="stylesheet" href="/assets/lira-3d-r1189.css" />
   <style>
     :root {
       --ink: #f4f1e8;
@@ -397,6 +397,8 @@
   let superMeter = 28;
   const SUPER_MAX = 100;
   const SUPER_COST = 50;
+  let guitarCueR1183 = null;
+  function cueGuitarR1183(){guitarCueR1183={start:elapsed,level:currentLevel,duration:1.15};}
 
   // LEVEL 1 bike chase state.
   let bikeMode = false;
@@ -2776,7 +2778,9 @@
   function triggerSuper() {
     if (!started || paused || gameOver || victory) return false;
     if (superMeter < SUPER_COST) { showMessage("SUPER NOT READY", .65); tone(92,.05,"square",.012,70); return false; }
-    superMeter = Math.max(0, superMeter - SUPER_COST);
+    if (!bikeMode && (player.dead || player.stun > 0)) return false;
+    if (bikeMode && !bikeIntroDone) return false;
+    superMeter = Math.max(0, superMeter - SUPER_COST);cueGuitarR1183();
     if (bikeMode) {
       bikeSuperT = .72;
       let hits = 0;
@@ -3838,7 +3842,7 @@
     if(pressed.jump&&towerGroundedR952){towerVy_R952=390;towerGroundedR952=false;tone(230,.05,'square',.012,330);}
     if(pressed.attack&&!input.jump)towerMeleeR952(32);
     if(pressed.kick)towerMeleeR952(42);
-    if(pressed.super&&superMeter>=SUPER_COST){superMeter-=SUPER_COST;for(const e of towerEnemiesR952){if(e.alive&&Math.abs(e.y-towerY_R952)<170){e.alive=false;score+=150;}}towerFallingR952=[];showMessage('SUPER · TOWER RIFF',.8);tone(58,.22,'sawtooth',.035,180);}
+    if(pressed.super&&superMeter>=SUPER_COST){superMeter-=SUPER_COST;cueGuitarR1183();for(const e of towerEnemiesR952){if(e.alive&&Math.abs(e.y-towerY_R952)<170){e.alive=false;score+=150;}}towerFallingR952=[];showMessage('SUPER · TOWER RIFF',.8);tone(58,.22,'sawtooth',.035,180);}
     const prevY=towerY_R952;towerVy_R952-=680*dt;towerY_R952+=towerVy_R952*dt;towerGroundedR952=false;
     // Land only while descending, from above, on the highest crossed platform.
     if(towerVy_R952<=0){let land=null;for(const p of towerPlatformsR952){if(towerX_R952>=p.x-6&&towerX_R952<=p.x+p.w+6&&prevY>=p.y&&towerY_R952<=p.y){if(!land||p.y>land.y)land=p;}}if(land){towerY_R952=land.y;towerVy_R952=0;towerGroundedR952=true;towerLastSafeR952=Math.max(towerLastSafeR952,land.y);}}
@@ -3947,7 +3951,7 @@
     if(pressed.jump){const nr=(tetPieceR952.rot+1)%4;if(canTetR952(tetPieceR952,0,0,nr))tetPieceR952.rot=nr;}
     if(pressed.attack)hardDropTetR952();
     const interval=Math.max(.16,.72-(tetStageR952-1)*.105);tetFallR952+=dt*(input.kick?5:1);if(tetFallR952>=interval){tetFallR952=0;if(canTetR952(tetPieceR952,0,1))tetPieceR952.y++;else lockTetPieceR952();}
-    if(pressed.super&&superMeter>=SUPER_COST){superMeter-=SUPER_COST;for(let y=TET_ROWS_R952-1;y>=0;y--){if(tetGridR952[y].some(Boolean)){const stars=tetGridR952[y].filter(c=>c?.star).length;tetGridR952.splice(y,1);tetGridR952.unshift(emptyTetRowR952());score+=350;levelStarsR952+=stars;break;}}showMessage('SUPER · BREAK THE MIND',.8);tone(62,.22,'sawtooth',.03,300);}
+    if(pressed.super&&superMeter>=SUPER_COST){superMeter-=SUPER_COST;cueGuitarR1183();for(let y=TET_ROWS_R952-1;y>=0;y--){if(tetGridR952[y].some(Boolean)){const stars=tetGridR952[y].filter(c=>c?.star).length;tetGridR952.splice(y,1);tetGridR952.unshift(emptyTetRowR952());score+=350;levelStarsR952+=stars;break;}}showMessage('SUPER · BREAK THE MIND',.8);tone(62,.22,'sawtooth',.03,300);}
     autoSaveClock+=dt;if(autoSaveClock>=2.5){autoSaveClock=0;saveProgress(false);}
   }
   function drawTetrisR952(){
@@ -4776,7 +4780,7 @@
     if (pressed.attack && !input.jump) towerMeleeR952(32);
     if (pressed.kick) towerMeleeR952(42);
     if (pressed.super && superMeter >= SUPER_COST) {
-      superMeter -= SUPER_COST;
+      superMeter -= SUPER_COST;cueGuitarR1183();
       for (const e of towerEnemiesR952) { if (e.alive && Math.abs(e.y - towerY_R952) < 170) { e.alive = false; score += 150; } }
       towerFallingR952 = []; showMessage('SUPER · TOWER RIFF', .8); tone(58, .22, 'sawtooth', .035, 180);
     }
@@ -5085,8 +5089,8 @@
     if (player.x > 915) ruinsCheckpointXR010 = Math.max(ruinsCheckpointXR010, 900);
     if (player.x > 1850) ruinsCheckpointXR010 = Math.max(ruinsCheckpointXR010, 1810);
     if (player.x > 2760) ruinsCheckpointXR010 = Math.max(ruinsCheckpointXR010, 2720);
-    if (pressed.super && superMeter >= SUPER_COST) {
-      superMeter -= SUPER_COST;
+    if (pressed.super && superMeter >= SUPER_COST && !player.dead && player.stun <= 0) {
+      superMeter -= SUPER_COST;cueGuitarR1183();
       guitarSpecialCooldown = 0;
       startGuitarSpecial();
       flash = Math.max(flash, .28); hitShake(11);
@@ -5315,7 +5319,7 @@
   }; })(draw);
 
   triggerSwordR952 = function(){
-    if (paused || gameOver || victory) return;
+    if (!started || paused || gameOver || victory || bikeMode) return;
     if (currentLevel <= 2) { startSwordR950(); return; }
     if (currentLevel === 4) { towerSwordT_R952 = .48; towerMeleeR952(60); tone(420, .07, 'sawtooth', .020, 155); return; }
     if (currentLevel === 6) { if (player.z > 3) startAirSwordR010(); else startSwordR950(); return; }
@@ -5383,7 +5387,9 @@
     snapshot() {
       return {started, paused, gameOver, victory, elapsed, cameraX, score, shake, flash,
         level: currentLevel, worldWidth: WORLD_W, player, enemies, effects, lives:livesR955,
-        superMeter, message:messageTimer > 0 ? message : '', unlocked:unlockedLevel,
+        superMeter, superCost:SUPER_COST,
+        guitarCue:guitarCueR1183&&guitarCueR1183.level===currentLevel&&elapsed>=guitarCueR1183.start&&elapsed-guitarCueR1183.start<guitarCueR1183.duration?{t:elapsed-guitarCueR1183.start,duration:guitarCueR1183.duration}:null,
+        message:messageTimer > 0 ? message : '', unlocked:unlockedLevel,
         stars:levelStarsR952, saved:hasSave(), levelSelect:levelSelectOpenR950, levelChoice:levelSelectChoiceR950,
         gate:getActiveWave()?.gate, wave:getActiveWave()?.name,
         cinematic, poster:levelPosterR010,
@@ -5415,6 +5421,6 @@
   requestAnimationFrame(frame);
 })();
 </script>
-<script type="module" src="/assets/lira-3d-r1188.js"></script>
+<script type="module" src="/assets/lira-3d-r1189.js"></script>
 </body>
 </html>

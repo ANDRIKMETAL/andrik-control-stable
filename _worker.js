@@ -20984,7 +20984,15 @@ async function handleRadioAgentPollR627(request,env){
   }
   let statusChanged=false;
   if(incomingStatus){
-    try{statusChanged=JSON.stringify(incomingStatus)!==JSON.stringify(agent.status||null)}catch(_){statusChanged=true}
+    // R1183: changing telemetry is sent on the existing 30-second heartbeat.
+    // Process changes and incident events still trigger an immediate write.
+    const comparableR1183=value=>{
+      if(!value||incomingAgentNumberR728<1183)return value;
+      const {metricsR1183,metricsHistoryR1183,runtimeMetricsR1160K,ffmpegLogCountersR1160K,audioMasterVideoDropsR1085,audioMasterVideoDuplicatesR1085,...stable}=value;
+      const r=runtimeMetricsR1160K||{};
+      return {...stable,runtimePidsR1183:{node:r.nodePid,publisher:r.publisherPid,producer:r.producerPid,video:r.videoPid}};
+    };
+    try{statusChanged=JSON.stringify(comparableR1183(incomingStatus))!==JSON.stringify(comparableR1183(agent.status||null))}catch(_){statusChanged=true}
   }
   const heartbeatDue=!Number.isFinite(previousLastSeenMs)||nowMs-previousLastSeenMs>=30000;
   const versionChanged=incomingVersion!==String(agent.version||'');
