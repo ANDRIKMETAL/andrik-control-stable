@@ -1,6 +1,6 @@
 import * as T from './vendor/three-r170.module.min.js';
-import {material,box,sphere,cylinder,cone,ring,sign,mesh,batch} from './lira-models-r1189.js';
-const stone=material('#45515c',.88,.08),road=material('#202b36',.38,.35),iron=material('#27343e',.47,.65),warm=material('#d5aa6a',.45,.1,.5);
+import {material,box,sphere,cylinder,cone,ring,sign,mesh,batch} from './lira-models-r1190.js';
+const stone=material('#607e92',.88,.08),road=material('#2b4155',.38,.35),iron=material('#27343e',.47,.65),warm=material('#d5aa6a',.45,.1,.5);
 export function buildWorld(mode){
  const group=new T.Group(),tiles=[],animated=[];
  const ground=['city','bar','bike','ocean','ruins'].includes(mode);
@@ -27,7 +27,7 @@ export function buildWorld(mode){
    }
    for(let i=0;i<20;i++){const slab=box(group,i*89,-.3,0,86,.5,225,material(mode==='ruins'?'#5b514a':'#607580',.86));slab.userData.groundLoop=true;}
    if(mode==='ocean'){
-    const sea=new T.Mesh(new T.PlaneGeometry(4000,1500,60,24),new T.MeshStandardMaterial({color:'#244356',metalness:.6,roughness:.28}));sea.rotation.x=-Math.PI/2;sea.position.set(240,-11,-900);group.add(sea);animated.push(sea);sea.userData.water=true;
+    const sea=new T.Mesh(new T.PlaneGeometry(4000,1500,60,24),new T.MeshStandardMaterial({color:'#276987',metalness:.6,roughness:.28}));sea.rotation.x=-Math.PI/2;sea.position.set(240,-11,-900);group.add(sea);animated.push(sea);sea.userData.water=true;
     const eye=ring(group,380,245,-540,52,1.8,material('#9fb8c4',.4,.2,.6));eye.scale.y=.46;sphere(group,380,245,-540,12,20,8,material('#abcbd0',.3,.2,.7));
    }else{
     const volcano=cone(group,530,80,-650,210,340,material('#2c262c',.95));volcano.scale.z=.7;
@@ -62,9 +62,9 @@ export function buildWorld(mode){
 }
 function column(p,x,y,z,ruins){box(p,x,y+5,z,36,10,34,stone);cylinder(p,x,y+58,z,10,102,stone);for(let i=0;i<8;i++){const a=i*Math.PI/4;cylinder(p,x+Math.cos(a)*9,y+59,z+Math.sin(a)*9,1.4,95,material('#637077',.86));}box(p,x,y+112,z,30,10,28,stone);if(ruins)box(p,x+3,y+122,z,34,11,29,stone).rotation.z=.08;}
 function cityTile(i,mode){
- const g=new T.Group(),h=112+(i*31)%66,c=material(['#343c48','#34363f','#37424a','#444047'][i%4],.85,.12);
+ const g=new T.Group(),h=112+(i*31)%66,c=material(['#465971','#4f506b','#456775','#61516a'][i%4],.85,.12);
  box(g,0,h/2,-151,131,h,64,c);box(g,0,h+3,-150,140,6,69,iron);box(g,0,5,-116,135,11,13,stone);
- for(let row=0;row<3;row++)for(let col=0;col<3;col++){const x=-41+col*40,y=39+row*41;if(y>h-13)continue;box(g,x,y,-117,22,29,2,iron);box(g,x,y,-115,17,24,1,material(i%3===row?'#9b8059':'#3d515f',.33,.55,i%3===row?.26:.02));box(g,x,y,-113.9,1.5,26,.8,iron);}
+ for(let row=0;row<3;row++)for(let col=0;col<3;col++){const x=-41+col*40,y=39+row*41;if(y>h-13)continue;box(g,x,y,-117,22,29,2,iron);box(g,x,y,-115,17,24,1,material(i%3===row?'#d5a35a':'#507c97',.33,.55,i%3===row?.26:.02));box(g,x,y,-113.9,1.5,26,.8,iron);}
  box(g,48,30,-115,24,56,4,iron);box(g,48,49,-112,18,9,1,material('#655849',.5,.3,.08));
  if(i%2===0){cylinder(g,-52,62,-93,1.6,124,iron);box(g,-43,123,-93,22,2.5,3,iron);box(g,-35,121,-93,16,3,10,warm);const pool=sphere(g,-35,.14,-64,32,.12,24,material('#88795e',.25,.55));pool.castShadow=false;}
  if(i%3===0){sign(g,['ANDRIK','NO CHOICE','WAKE UP'][Math.floor(i/3)%3],0,96,-113,102,'#d9bc83',19);box(g,-34,19,-86,30,30,23,'#334842');box(g,-34,35,-86,33,3,25,iron);}

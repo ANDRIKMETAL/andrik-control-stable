@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#080b12" />
   <title>Dreaming of Líra 3D — ANDRIK</title>
   <meta name="description" content="Dreaming of Líra: браузерная 3D-аркада ANDRIK. Шесть миров, битвы, мотоцикл и космос. Играй на телефоне или компьютере." />
-  <link rel="stylesheet" href="/assets/lira-3d-r1189.css" />
+  <link rel="stylesheet" href="/assets/lira-3d-r1190.css" />
   <style>
     :root {
       --ink: #f4f1e8;
@@ -3343,7 +3343,8 @@
     tone(178,.06,'square',.018,94);
   }
   function startSwordR950(){
-    if(player.dead||player.stun>0||player.z>5)return;
+    if(player.dead||player.stun>0)return;
+    if(player.z>3){startAirSwordR010();return;}
     player.comboStep=0;
     player.attack={id:++attackSerial,kind:'swordSlashR950',t:0,duration:ATTACKS.swordSlashR950.duration};
     player.lastAttackTime=elapsed;
@@ -3808,6 +3809,7 @@
   let towerX_R952=74,towerY_R952=0,towerVy_R952=0,towerCameraR952=0,towerGroundedR952=true,towerInvulnR952=0,towerSwordT_R952=0,towerComboLatchR952=false;
   let towerPlatformsR952=[],towerEnemiesR952=[],towerCratesR952=[],towerHeartsR952=[],towerStarsR952=[],towerFallingR952=[];
   let towerHazardClockR952=1.8,towerLastSafeR952=0;
+  let towerBatsR1190=[],towerBatClockR1190=5,towerBatSerialR1190=0;
 
   function towerPlatformPatternR952(i){
     const lanes=[28,132,248,330,218,92,300,168,42,236,344,116];
@@ -3829,8 +3831,9 @@
   }
   function towerMeleeR952(range=34){
     let hit=false;
-    for(const e of towerEnemiesR952){if(!e.alive)continue;if(Math.abs(e.x-towerX_R952)<range&&Math.abs(e.y-towerY_R952)<28){e.alive=false;score+=180;superMeter=clamp(superMeter+7,0,SUPER_MAX);hit=true;}}
-    for(const c of towerCratesR952){if(c.broken)continue;if(Math.abs(c.x-towerX_R952)<range&&Math.abs(c.y-towerY_R952)<30){c.broken=true;score+=100;towerHeartsR952.push({x:c.x,y:c.y+22,taken:false});hit=true;}}
+    for(const e of towerEnemiesR952){if(!e.alive)continue;if((e.x-towerX_R952)*player.face>=-6&&(e.x-towerX_R952)*player.face<range&&Math.abs(e.y-towerY_R952)<28){e.alive=false;score+=180;superMeter=clamp(superMeter+7,0,SUPER_MAX);hit=true;}}
+    for(const c of towerCratesR952){if(c.broken)continue;if((c.x-towerX_R952)*player.face>=-6&&(c.x-towerX_R952)*player.face<range&&Math.abs(c.y-towerY_R952)<30){c.broken=true;score+=100;towerHeartsR952.push({x:c.x,y:c.y+22,taken:false});hit=true;}}
+    for(const b of towerBatsR1190){if(!b.dead&&!b.warning&&(b.x-towerX_R952)*player.face>=-8&&(b.x-towerX_R952)*player.face<range&&Math.abs(b.y-(towerY_R952+24))<34){b.dead=true;b.deathT=.32;score+=160;superMeter=clamp(superMeter+6,0,SUPER_MAX);hit=true;}}
     if(hit){tone(150,.055,'square',.016,74);hitShake(2);}
   }
   function updateTowerR952(dt){
@@ -4669,7 +4672,7 @@
   drawMiniLiraR952 = function(x, y, scale = .72, mode = 'idle') {
     ctx.save();
     ctx.translate(Math.round(x), Math.round(y));
-    ctx.scale(scale, scale);
+    ctx.scale(scale*(currentLevel===4&&player.face<0?-1:1), scale);
     const bob = mode === 'jump' ? -2.2 : Math.sin(elapsed * 4.2) * .45;
 
     // Hair silhouette, separate from the face so the nose no longer melts into the hair line.
@@ -4756,7 +4759,7 @@
   const __r010ResetTowerBase = resetTowerR952;
   resetTowerR952 = function() {
     __r010ResetTowerBase();
-    towerJumpsLeftR010 = 2;
+    towerJumpsLeftR010 = 2; towerBatsR1190=[]; towerBatClockR1190=5; towerBatSerialR1190=0;
   };
   const __r010UpdateTowerBase = updateTowerR952;
   updateTowerR952 = function(dt) {
@@ -4765,9 +4768,10 @@
     towerInvulnR952 = Math.max(0, towerInvulnR952 - dt); towerSwordT_R952 = Math.max(0, towerSwordT_R952 - dt); superMeter = clamp(superMeter + dt * .55, 0, SUPER_MAX);
     updateLevelPosterR010(dt);
     const move = ((input.right ? 1 : 0) - (input.left ? 1 : 0));
+    if(move)player.face=move;
     towerX_R952 = clamp(towerX_R952 + move * 112 * dt, 14, W - 14);
     if (input.attack && input.jump) {
-      if (!towerComboLatchR952) { towerSwordT_R952 = .48; towerMeleeR952(60); tone(420, .07, 'sawtooth', .020, 155); }
+      if (!towerComboLatchR952 && towerSwordT_R952<=.08) { towerSwordT_R952 = .48; tone(420, .07, 'sawtooth', .020, 155); }
       towerComboLatchR952 = true; pressed.attack = false; pressed.jump = false;
     } else towerComboLatchR952 = false;
     if (pressed.jump && towerJumpsLeftR010 > 0) {
@@ -4782,6 +4786,7 @@
     if (pressed.super && superMeter >= SUPER_COST) {
       superMeter -= SUPER_COST;cueGuitarR1183();
       for (const e of towerEnemiesR952) { if (e.alive && Math.abs(e.y - towerY_R952) < 170) { e.alive = false; score += 150; } }
+      for(const b of towerBatsR1190){if(!b.dead){b.dead=true;b.deathT=.32;score+=160;}}
       towerFallingR952 = []; showMessage('SUPER · TOWER RIFF', .8); tone(58, .22, 'sawtooth', .035, 180);
     }
     const prevY = towerY_R952;
@@ -4817,6 +4822,30 @@
     for (const h of towerFallingR952) { h.y -= h.vy * dt; if (Math.abs(h.x - towerX_R952) < 12 && Math.abs(h.y - towerY_R952) < 17) { h.dead = true; damageTowerR952(12); } }
     towerFallingR952 = towerFallingR952.filter(h => !h.dead && h.y > towerCameraR952 - 50);
     if (towerY_R952 < towerCameraR952 - 85) { damageTowerR952(18); towerY_R952 = Math.max(0, towerLastSafeR952); towerVy_R952 = 0; towerGroundedR952 = true; towerJumpsLeftR010 = 2; }
+    // R1190: a brief visible warning, then smooth homing. At most three live bats.
+    towerBatClockR1190-=dt;
+    if(towerBatClockR1190<=0){
+      towerBatClockR1190=7+Math.random()*3;
+      if(towerBatsR1190.filter(b=>!b.dead).length<3){
+        const side=towerX_R952<W/2?1:-1;
+        towerBatsR1190.push({id:++towerBatSerialR1190,x:side>0?W+18:-18,y:towerY_R952+75+Math.random()*42,vx:-side*36,vy:0,t:0,warning:.75,dead:false,deathT:0});
+        showMessage('ЛЕТУЧАЯ МЫШЬ · D — МЕЧ',1.1);
+      }
+    }
+    for(const b of towerBatsR1190){
+      b.t+=dt;
+      if(b.dead){b.deathT-=dt;b.y-=70*dt;continue;}
+      if(b.warning>0){b.warning=Math.max(0,b.warning-dt);continue;}
+      const dx=towerX_R952-b.x,dy=towerY_R952+24-b.y,d=Math.hypot(dx,dy)||1;
+      const speed=64+Math.min(18,b.t*1.4),turn=Math.min(1,dt*1.7);
+      b.vx+=(dx/d*speed-b.vx)*turn;b.vy+=(dy/d*speed-b.vy)*turn;
+      b.x+=b.vx*dt;b.y+=b.vy*dt;
+    }
+    // Active sword frames also hit airborne targets after a separate B, then D press.
+    const swordPhase=.48-towerSwordT_R952;
+    if(towerSwordT_R952>0&&swordPhase>=.12&&swordPhase<=.33)towerMeleeR952(62);
+    for(const b of towerBatsR1190){if(!b.dead&&b.warning<=0&&Math.hypot(b.x-towerX_R952,b.y-(towerY_R952+24))<16){b.dead=true;b.deathT=.24;damageTowerR952(10);}}
+    towerBatsR1190=towerBatsR1190.filter(b=>b.t<13&&(!b.dead||b.deathT>0)&&b.y>towerCameraR952-110&&b.y<towerCameraR952+430);
     towerCameraR952 = approach(towerCameraR952, Math.max(0, towerY_R952 - 105), dt * 175);
     if (towerY_R952 >= TOWER_TOP_R952 - 3) { victory = true; unlockedLevel = Math.max(unlockedLevel, 5); score += 3000; commitHighScoreR952(4); saveFreshLevel(5, score); showMessage('TOWER — CLEAR', 2); tone(330, .3, 'triangle', .03, 880); }
     autoSaveClock += dt; if (autoSaveClock >= 2.5) { autoSaveClock = 0; saveProgress(false); }
@@ -5321,7 +5350,7 @@
   triggerSwordR952 = function(){
     if (!started || paused || gameOver || victory || bikeMode) return;
     if (currentLevel <= 2) { startSwordR950(); return; }
-    if (currentLevel === 4) { towerSwordT_R952 = .48; towerMeleeR952(60); tone(420, .07, 'sawtooth', .020, 155); return; }
+    if (currentLevel === 4) { if(towerSwordT_R952>.08)return; towerSwordT_R952 = .48; tone(420, .07, 'sawtooth', .020, 155); return; }
     if (currentLevel === 6) { if (player.z > 3) startAirSwordR010(); else startSwordR950(); return; }
   };
 
@@ -5379,6 +5408,9 @@
     __r1187UpdateBikeR1188(dt);
   };
 
+  const drawTowerBaseR1190=drawTowerR952;
+  drawTowerR952=function(){drawTowerBaseR1190();ctx.save();for(const b of towerBatsR1190){const y=towerScreenYR952(b.y),wing=5+Math.sin(elapsed*18+b.id)*5;ctx.fillStyle=b.warning>0?'#e2b178':'#9f7196';ctx.beginPath();ctx.moveTo(b.x,y-3);ctx.lineTo(b.x-18,y-wing);ctx.lineTo(b.x-12,y+6);ctx.lineTo(b.x,y+3);ctx.lineTo(b.x+12,y+6);ctx.lineTo(b.x+18,y-wing);ctx.closePath();ctx.fill();ctx.fillStyle='#f4c27a';ctx.fillRect(b.x-3,y-1,2,2);ctx.fillRect(b.x+2,y-1,2,2);}ctx.restore();};
+
   // R1182: rendering adapter. All combat, collisions, levels and save keys remain in the original engine.
   const drawClassicR1182 = draw;
   let rendererR1182 = null;
@@ -5399,7 +5431,7 @@
         bar:{active:barModeR955,enemies:barEnemiesR955,items:barItemsR955,shots:barProjectilesR955},
         bike:{active:bikeMode,distance:bikeDistance,y:bikeY,z:bikeZ,speed:bikeSpeed,attack:bikeAttackT,super:bikeSuperT,rivals:bikeRivals,pits:bikePits,posts:bikePostsR955,intro:{active:bikeMode&&!bikeIntroDone,t:bikeIntroT,duration:BIKE_INTRO_DURATION}},
         space:{x:spaceX_R950,y:spaceY_R950,distance:spaceDistanceR950,roll:spaceRollR950,enemies:spaceEnemiesR950,shots:spaceShotsR950,enemyShots:spaceEnemyShotsR950,pickups:spacePickupsR950,boss:spaceBossR950,stars:spaceCollectStarsR952,lifeUps:spaceLifeUpsR955,insert:spaceInsertR950,super:spaceSuperR1185},
-        tower:{x:towerX_R952,y:towerY_R952,camera:towerCameraR952,grounded:towerGroundedR952,sword:towerSwordT_R952,platforms:towerPlatformsR952,enemies:towerEnemiesR952,crates:towerCratesR952,hearts:towerHeartsR952,stars:towerStarsR952,hazards:towerFallingR952,lifeUps:towerLifeUpsR955},
+        tower:{invuln:towerInvulnR952,face:player.face,move:(input.right?1:0)-(input.left?1:0),look:(input.up?1:0)-(input.down?1:0),bats:towerBatsR1190,x:towerX_R952,y:towerY_R952,camera:towerCameraR952,grounded:towerGroundedR952,sword:towerSwordT_R952,platforms:towerPlatformsR952,enemies:towerEnemiesR952,crates:towerCratesR952,hearts:towerHeartsR952,stars:towerStarsR952,hazards:towerFallingR952,lifeUps:towerLifeUpsR955},
         tetris:{grid:tetGridR952,cells:tetPieceR952?tetCellsR952():[],piece:tetPieceR952,stage:tetStageR952,lines:tetTotalLinesR952},
         ruins:{enemies:ruinsEnemiesR010,crows:ruinsCrowsR010,obstacles:ruinsObstaclesR010,boss:ruinsBossStartedR010?ruinsBossR010:null}
       };
@@ -5421,6 +5453,6 @@
   requestAnimationFrame(frame);
 })();
 </script>
-<script type="module" src="/assets/lira-3d-r1189.js"></script>
+<script type="module" src="/assets/lira-3d-r1190.js"></script>
 </body>
 </html>

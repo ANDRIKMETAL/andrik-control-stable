@@ -4,7 +4,7 @@ body.lira3d{font-family:Arial,Helvetica,sans-serif;background:#06090e}
 .lira3d #game{display:none}.lira3d #orientationHint{display:none!important}
 #lira3dRoot{position:absolute;inset:0;z-index:2;color:#f5f2e9;font-family:Arial,Helvetica,sans-serif}
 #lira3dRoot canvas{width:100%;height:100%;image-rendering:auto;background:transparent;position:absolute;inset:0}
-.lira3d-vignette{position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(3,7,13,.34),transparent 30%,transparent 75%,rgba(3,7,13,.28));box-shadow:inset 0 0 100px #03060a55}
+.lira3d-vignette{position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(3,7,13,.18),transparent 30%,transparent 75%,rgba(3,7,13,.14));box-shadow:inset 0 0 80px #03060a22}
 .lira3d-top{position:absolute;inset:20px 24px auto;display:flex;justify-content:space-between;align-items:flex-start;gap:18px;pointer-events:none}
 .lira3d-status{width:220px;background:linear-gradient(90deg,#060a10e8,#0a10168f);padding:14px 16px;border-left:2px solid #cfb070;box-shadow:0 4px 24px #0004}
 .lira3d-status header{display:flex;justify-content:space-between;font-size:14px;letter-spacing:.13em;font-weight:700;margin-bottom:9px}

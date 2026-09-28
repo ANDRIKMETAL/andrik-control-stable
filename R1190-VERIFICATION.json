@@ -1,0 +1,38 @@
+{
+  "version": "R1190",
+  "html_pages_checked": 62,
+  "missing_dependencies": [],
+  "radio_and_control_files_identical": 28,
+  "homepage_languages": [
+    "ru",
+    "uk",
+    "sk",
+    "en"
+  ],
+  "home_stylesheets": 3,
+  "game_tests": [
+    "six_levels",
+    "tower_left_right_facing",
+    "jump_then_D_sword_levels_1_2_4_6",
+    "bat_spawn_homing_limit_expiry_pause",
+    "bat_sword_and_super_hits",
+    "bat_contact_damage",
+    "tetris_dance_and_wave",
+    "bike_intro_and_duel",
+    "space_super_boss_damage",
+    "save_restore_v6",
+    "blur_pause",
+    "guitar_cue"
+  ],
+  "homepage_tests": [
+    "hero_visibility",
+    "hero_reduced_motion",
+    "radio_live_stale_offline_recovery",
+    "hidden_tab_polling",
+    "native_track_players",
+    "safe_public_metadata",
+    "localized_links"
+  ],
+  "actual_phone_FPS_measured": false,
+  "live_site_deployed": false
+}

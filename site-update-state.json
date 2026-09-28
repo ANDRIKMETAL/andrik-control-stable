@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1790572471361-8539ee916c",
-  "release": "R1189",
-  "archiveName": "ANDRIK-R1189-SITE-CLEAN.zip",
-  "sourceHead": "42e19ff21791872efe2b0df7f154b527039affca",
-  "backupSha": "42e19ff21791872efe2b0df7f154b527039affca",
+  "operationId": "publish-1790591852084-806159fe99",
+  "release": "R1190",
+  "archiveName": "ANDRIK-R1190-SITE.zip",
+  "sourceHead": "f145c91988311759d2e19ad8e38ff9dddc9f5ccb",
+  "backupSha": "f145c91988311759d2e19ad8e38ff9dddc9f5ccb",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-28T05:14:32.232Z"
+  "generatedAt": "2026-09-28T10:37:33.068Z"
 }
