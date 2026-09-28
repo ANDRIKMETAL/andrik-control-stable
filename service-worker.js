@@ -1,6 +1,6 @@
 'use strict';
 
-const VERSION = '55.00-r1199-hero-silent-radio';
+const VERSION = '55.00-r1201-game-controls';
 const IS_CONTROL_HOST = self.location.hostname.toLowerCase() === 'control.andrikmetal.com';
 
 async function deleteControlCaches(){

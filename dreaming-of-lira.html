@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#080b12" />
   <title>Dreaming of Líra 3D — ANDRIK</title>
   <meta name="description" content="Dreaming of Líra: браузерная 3D-аркада ANDRIK. Шесть миров, битвы, мотоцикл и космос. Играй на телефоне или компьютере." />
-  <link rel="stylesheet" href="/assets/lira-3d-r1190.css" />
+  <link rel="stylesheet" href="/assets/lira-3d-r1190.css?v=55.00-r1201" />
   <style>
     :root {
       --ink: #f4f1e8;
@@ -213,6 +213,14 @@
       box-shadow: 0 0 18px rgba(147,224,247,.32), inset 0 0 10px rgba(255,255,255,.10);
     }
 
+    /* R1201 — simplified universal mobile controls: A jump, B sword/action, S super. */
+    .actionsR1201{width:clamp(150px,23vw,205px);height:clamp(116px,18vw,158px)}
+    .actionsR1201 [data-action="jump"]{right:0;bottom:0;left:auto;top:auto}
+    .actionsR1201 [data-action="sword"]{right:0;top:0;left:auto;bottom:auto;width:clamp(58px,8.8vw,78px);height:clamp(58px,8.8vw,78px);transform:none}
+    .actionsR1201 [data-action="sword"].active{transform:scale(.93)}
+    .actionsR1201 [data-action="super"]{left:0;top:50%;right:auto;bottom:auto;transform:translateY(-50%);width:clamp(48px,7vw,62px);height:clamp(48px,7vw,62px)}
+    .actionsR1201 [data-action="super"].active{transform:translateY(-50%) scale(.93)}
+
     .systemButtons {
       position: absolute;
       left: 50%;
@@ -285,12 +293,10 @@
         <button class="touchBtn dirBtn" data-action="down" aria-label="Вниз">▼</button>
         <button class="touchBtn dirBtn" data-action="right" aria-label="Вправо">▶</button>
       </div>
-      <div class="actions" aria-label="Кнопки боя">
-        <button class="touchBtn actionBtn" data-action="jump" aria-label="Прыжок"><span class="letter">B</span></button>
-        <button class="touchBtn actionBtn superBtn" data-action="super" aria-label="Суперудар"><span class="letter">S</span></button>
-        <button class="touchBtn actionBtn" data-action="kick" aria-label="Удар ногой"><span class="letter">C</span></button>
-        <button class="touchBtn actionBtn" data-action="attack" aria-label="Удар рукой"><span class="letter">A</span></button>
-        <button class="touchBtn actionBtn swordBtn" data-action="sword" aria-label="Удар мечом"><span class="letter">D</span></button>
+      <div class="actions actionsR1201" aria-label="Кнопки боя">
+        <button class="touchBtn actionBtn jumpBtnR1201" data-action="jump" aria-label="A — прыжок"><span class="letter">A</span></button>
+        <button class="touchBtn actionBtn swordBtn swordBtnR1201" data-action="sword" aria-label="B — удар мечом"><span class="letter">B</span></button>
+        <button class="touchBtn actionBtn superBtn superBtnR1201" data-action="super" aria-label="S — суперудар"><span class="letter">S</span></button>
       </div>
       <div class="systemButtons">
         <button class="systemBtn" data-system="select" aria-label="Select">SELECT</button>
@@ -1169,10 +1175,19 @@
   function startWave(w) {
     w.started = true;
     w.ids.length = 0;
+    const bossWave = w.spawns?.[0]?.[0] === "boss";
+    let spawnIndexR1201 = 0;
     for (const [type, x, y] of w.spawns) {
-      const e = makeEnemy(type, x, y);
+      let sx = x;
+      // R1201: street/ocean encounters surround Líra instead of forming one queue from the right.
+      // Every second ordinary enemy in a non-boss wave enters from behind, inside the active camera area.
+      if (!bossWave && currentLevel <= 2 && spawnIndexR1201 % 2 === 1) {
+        sx = clamp(player.x - 72 - (spawnIndexR1201 % 3) * 34, 24, WORLD_W - 24);
+      }
+      const e = makeEnemy(type, sx, y);
       enemies.push(e);
       w.ids.push(e.id);
+      spawnIndexR1201++;
     }
     showMessage(w.name, w.spawns[0][0] === "boss" ? 2.2 : 1.4);
     if (currentLevel === 2 && w.artKey) {
@@ -2216,15 +2231,14 @@
           "LEVEL 1 — CITY OF SLEEP",
           "",
           "ANDROID: LANDSCAPE MODE",
-          "D-PAD · A PUNCH · B JUMP · C SWEEP",
-          "A + B · SWORD",
-          "SUPER · GUITAR RIFF",
+          "D-PAD · A JUMP · B SWORD",
+          "S · SUPER GUITAR RIFF",
           "",
           "START — ENTER DREAM"
         ]);
       }
     } else if (paused) {
-      overlayPanel("PAUSED", ["START / P — CONTINUE", "SELECT — LEVELS / SAVE", "A+B — SWORD", "SUPER — GUITAR RIFF"]);
+      overlayPanel("PAUSED", ["START / P — CONTINUE", "SELECT — LEVELS / SAVE", "A — JUMP · B — SWORD", "S — SUPER"]);
     } else if (gameOver) {
       overlayPanel("THE DREAM COLLAPSES", ["R — TRY AGAIN"]);
     } else if (victory) {
@@ -2581,6 +2595,8 @@
       if (paused || gameOver || victory) return;
       begin();
       btn.classList.add("active");
+      if (action === "left") player.face = -1;
+      if (action === "right") player.face = 1;
       if (!input[action]) {
         let consumed = false;
         if (action === "attack") consumed = registerAttackDown();
@@ -2895,7 +2911,7 @@
       const rx = 118 + (r.d - bikeDistance)*.31;
       const ry = bikeLaneY(r.lane);
       if (bikeAttackT > .09 && bikeAttackT < .22 && rx > 120 && rx < 198 && Math.abs(ry-bikeY)<28) {
-        r.hp -= 28; r.d += 70; hitShake(3); tone(105,.06,"square",.024,60);
+        r.hp -= 16; r.d += 55; hitShake(3); tone(105,.06,"square",.024,60);
         if (r.hp <= 0) { r.alive=false; score += r.kind === "police" ? 360 : 280; superMeter=clamp(superMeter+12,0,100); }
       }
       if (bikeInvuln<=0 && rx > 95 && rx < 142 && Math.abs(ry-bikeY)<24 && bikeZ<12) {
@@ -3332,7 +3348,7 @@
   keyMap.ShiftRight = "super";
 
   ATTACKS.kickR950 = { duration: .34, activeStart: .09, activeEnd: .23, damage: 18, range: 43, depth: 20, knock: 48 };
-  ATTACKS.swordSlashR950 = { duration: .52, activeStart: .16, activeEnd: .34, damage: 42, range: 68, depth: 28, knock: 82 };
+  ATTACKS.swordSlashR950 = { duration: .52, activeStart: .16, activeEnd: .34, damage: 16, range: 68, depth: 28, knock: 70 };
 
   let swordComboLatchR950 = false;
   function startKickR950(){
@@ -3348,7 +3364,6 @@
     player.comboStep=0;
     player.attack={id:++attackSerial,kind:'swordSlashR950',t:0,duration:ATTACKS.swordSlashR950.duration};
     player.lastAttackTime=elapsed;
-    showMessage('A + B · SWORD',.52);
     tone(420,.07,'sawtooth',.020,155);
   }
 
@@ -3831,9 +3846,17 @@
   }
   function towerMeleeR952(range=34){
     let hit=false;
-    for(const e of towerEnemiesR952){if(!e.alive)continue;if((e.x-towerX_R952)*player.face>=-6&&(e.x-towerX_R952)*player.face<range&&Math.abs(e.y-towerY_R952)<28){e.alive=false;score+=180;superMeter=clamp(superMeter+7,0,SUPER_MAX);hit=true;}}
+    const dmg=range>=55?16:range>=40?13:11;
+    for(const e of towerEnemiesR952){
+      if(!e.alive)continue;
+      if((e.x-towerX_R952)*player.face>=-6&&(e.x-towerX_R952)*player.face<range&&Math.abs(e.y-towerY_R952)<28){
+        if(!Number.isFinite(e.maxHp))e.maxHp=48;if(!Number.isFinite(e.hp))e.hp=e.maxHp;
+        e.hp=Math.max(0,e.hp-dmg);e.hitFlash=.12;e.x+=player.face*5;hit=true;superMeter=clamp(superMeter+2,0,SUPER_MAX);
+        if(e.hp<=0){e.alive=false;score+=180;superMeter=clamp(superMeter+5,0,SUPER_MAX);}
+      }
+    }
     for(const c of towerCratesR952){if(c.broken)continue;if((c.x-towerX_R952)*player.face>=-6&&(c.x-towerX_R952)*player.face<range&&Math.abs(c.y-towerY_R952)<30){c.broken=true;score+=100;towerHeartsR952.push({x:c.x,y:c.y+22,taken:false});hit=true;}}
-    for(const b of towerBatsR1190){if(!b.dead&&!b.warning&&(b.x-towerX_R952)*player.face>=-8&&(b.x-towerX_R952)*player.face<range&&Math.abs(b.y-(towerY_R952+24))<34){b.dead=true;b.deathT=.32;score+=160;superMeter=clamp(superMeter+6,0,SUPER_MAX);hit=true;}}
+    for(const b of towerBatsR1190){if(!b.dead&&!b.warning&&(b.x-towerX_R952)*player.face>=-8&&(b.x-towerX_R952)*player.face<range&&Math.abs(b.y-(towerY_R952+24))<34){b.hp=Number.isFinite(b.hp)?b.hp:32;b.hp-=dmg;hit=true;if(b.hp<=0){b.dead=true;b.deathT=.32;score+=160;superMeter=clamp(superMeter+6,0,SUPER_MAX);}}}
     if(hit){tone(150,.055,'square',.016,74);hitShake(2);}
   }
   function updateTowerR952(dt){
@@ -3966,7 +3989,7 @@
     if(tetPieceR952&&!victory){const colors=['#70d6e8','#cc5368','#e1a94d','#8a79db','#62b78c','#d96a4c','#7ab2e6'];for(const c of tetCellsR952()){if(c.y<0)continue;ctx.fillStyle=colors[tetPieceR952.kind%colors.length];ctx.fillRect(TET_X_R952+c.x*TET_CELL_R952+1,TET_Y_R952+c.y*TET_CELL_R952+1,TET_CELL_R952-2,TET_CELL_R952-2);if(c.star)drawStarR952(TET_X_R952+c.x*TET_CELL_R952+8,TET_Y_R952+c.y*TET_CELL_R952+8,4.2);}}
     const liraX=TET_X_R952+(tetPieceR952?.x??4)*TET_CELL_R952+16;drawMiniLiraR952(liraX,TET_Y_R952-11,.62,'idle');
     ctx.fillStyle='#e9f4fa';ctx.font='bold 8px monospace';ctx.fillText('LEVEL 5 · TETRIS',12,18);ctx.fillStyle='#ad9cc4';ctx.font='6px monospace';ctx.fillText('MIND IS A TRAP · DROP THE BLOCKS',12,29);ctx.fillStyle='#ffd45b';ctx.fillText(`★ ${levelStarsR952}`,12,43);ctx.fillStyle='#d9e8ef';ctx.fillText(`STAGE ${tetStageR952} / 5`,350,18);ctx.fillText(`LINES ${tetLinesStageR952} / ${TET_STAGE_TARGETS_R952[tetStageR952-1]}`,350,29);ctx.fillText(`SCORE ${String(levelRunScoreR952()).padStart(6,'0')}`,350,40);ctx.fillStyle='#7998ac';ctx.fillText(`BEST ${String(bestForLevelR952(5)).padStart(6,'0')}`,350,51);
-    ctx.fillStyle='#8397a8';ctx.font='6px monospace';ctx.fillText('A DROP · B ROTATE · C FAST',12,H-13);
+    ctx.fillStyle='#8397a8';ctx.font='6px monospace';ctx.fillText('A ROTATE · B DROP · S SUPER',12,H-13);
     if(messageTimer>0&&!victory&&!gameOver){ctx.fillStyle='#eff7ff';ctx.font='bold 9px monospace';ctx.textAlign='center';ctx.fillText(message,W/2,48);ctx.textAlign='left';}
     if(levelSelectOpenR950)drawLevelSelectR950();
     if(gameOver)overlayPanel('TETRIS — MIND LOCK',[`SCORE ${String(levelRunScoreR952()).padStart(6,'0')}`,'R — TRY AGAIN','SELECT — LEVELS']);
@@ -4002,7 +4025,7 @@
     const a=document.querySelector('[data-action="attack"] .label'),b=document.querySelector('[data-action="jump"] .label'),c=document.querySelector('[data-action="kick"] .label'),sw=document.querySelector('[data-action="sword"]');
     if(level===1||level===2||level===4){if(a)a.textContent='PUNCH';if(b)b.textContent='JUMP';if(c)c.textContent='SWEEP';}
     if(level===5){if(a)a.textContent='DROP';if(b)b.textContent='ROTATE';if(c)c.textContent='FAST';}
-    if(sw){sw.style.opacity=level===3||level===5?'.45':'1';sw.setAttribute('aria-disabled',level===3||level===5?'true':'false');}
+    if(sw){sw.style.opacity='1';sw.setAttribute('aria-disabled','false');}
   }
 
   const __r950StartLevelR952=startLevel;
@@ -4063,9 +4086,16 @@
     if(paused||gameOver||victory)return;if(currentLevel<=2){startSwordR950();return;}if(currentLevel===4){towerSwordT_R952=.48;towerMeleeR952(60);tone(420,.07,'sawtooth',.020,155);}
   }
   if(swordBtnR952){
-    const down=e=>{e.preventDefault();e.stopImmediatePropagation();if(!started)return;if(currentLevel===3||currentLevel===5)return;begin();swordBtnR952.classList.add('active');swordButtonPulseR952=true;triggerSwordR952();try{swordBtnR952.setPointerCapture(e.pointerId);}catch(_){}};
-    const up=e=>{e.preventDefault();e.stopImmediatePropagation();swordBtnR952.classList.remove('active');swordButtonPulseR952=false;};
-    swordBtnR952.addEventListener('pointerdown',down,{capture:true,passive:false});swordBtnR952.addEventListener('pointerup',up,{capture:true,passive:false});swordBtnR952.addEventListener('pointercancel',up,{capture:true,passive:false});
+    const down=e=>{
+      e.preventDefault();e.stopImmediatePropagation();if(!started||paused||gameOver||victory)return;
+      begin();swordBtnR952.classList.add('active');swordButtonPulseR952=true;
+      // R1201: B is sword on combat worlds. On the bike / SPACE / TETRIS it becomes
+      // the corresponding main action so the same three-button layout works everywhere.
+      if(bikeMode||currentLevel===3||currentLevel===5){input.attack=true;pressed.attack=true;}else triggerSwordR952();
+      try{swordBtnR952.setPointerCapture(e.pointerId);}catch(_){}
+    };
+    const up=e=>{e.preventDefault();e.stopImmediatePropagation();swordBtnR952.classList.remove('active');swordButtonPulseR952=false;if(bikeMode||currentLevel===3||currentLevel===5)input.attack=false;};
+    swordBtnR952.addEventListener('pointerdown',down,{capture:true,passive:false});swordBtnR952.addEventListener('pointerup',up,{capture:true,passive:false});swordBtnR952.addEventListener('pointercancel',up,{capture:true,passive:false});swordBtnR952.addEventListener('lostpointercapture',up,{capture:true,passive:false});
   }
 
   // Full-screen 16:9 user-approved splash. No contain-bars: source and canvas are both 16:9.
@@ -4245,7 +4275,7 @@
     const active=player.attack&&player.attack.t>0.07&&player.attack.t<Math.min(.27,player.attack.duration*.72);
     if(active){
       const range=player.attack.kind==='swordSlashR950'?64:player.attack.kind==='kickR950'?46:38;
-      for(const e of barEnemiesR955){if(!e.alive||e.hit===player.attack.id)continue;if(Math.abs(e.y-player.y)<25&&((player.face>0&&e.x>=player.x&&e.x-player.x<range)||(player.face<0&&e.x<=player.x&&player.x-e.x<range))){e.hit=player.attack.id;const dmg=player.attack.kind==='swordSlashR950'?45:player.attack.kind==='kickR950'?24:player.attack.r955Bottle?38:18;barDamageEnemyR955(e,dmg,player.face*18);if(player.attack.r955Bottle){barWeaponR955='';effects.push({kind:'r955-glass',x:e.x,y:e.y-22,t:0,duration:.45});}}}
+      for(const e of barEnemiesR955){if(!e.alive||e.hit===player.attack.id)continue;if(Math.abs(e.y-player.y)<25&&((player.face>0&&e.x>=player.x&&e.x-player.x<range)||(player.face<0&&e.x<=player.x&&player.x-e.x<range))){e.hit=player.attack.id;const dmg=player.attack.kind==='swordSlashR950'?16:player.attack.kind==='kickR950'?24:player.attack.r955Bottle?38:18;barDamageEnemyR955(e,dmg,player.face*18);if(player.attack.r955Bottle){barWeaponR955='';effects.push({kind:'r955-glass',x:e.x,y:e.y-22,t:0,duration:.45});}}}
     }
     for(const p of barProjectilesR955){p.t+=dt;p.x+=p.vx*dt;for(const e of barEnemiesR955){if(!e.alive||p.dead)continue;if(Math.abs(e.x-p.x)<14&&Math.abs(e.y-(p.y+20))<22){p.dead=true;barDamageEnemyR955(e,52,Math.sign(p.vx)*28);}}}
     barProjectilesR955=barProjectilesR955.filter(p=>!p.dead&&p.x>-20&&p.x<W+20&&p.t<2.2);
@@ -4652,7 +4682,7 @@
 
   // New air attacks for Level 6; A in the air uses hands, sword button keeps the blade attack.
   ATTACKS.airPunchR010 = { duration: 0.30, activeStart: 0.05, activeEnd: 0.20, damage: 16, range: 34, depth: 18, knock: 26 };
-  ATTACKS.airSwordR010 = { duration: 0.48, activeStart: 0.12, activeEnd: 0.30, damage: 38, range: 64, depth: 24, knock: 72 };
+  ATTACKS.airSwordR010 = { duration: 0.48, activeStart: 0.12, activeEnd: 0.30, damage: 16, range: 64, depth: 24, knock: 62 };
 
   function startAirPunchR010() {
     if (player.stun > 0 || player.dead) return;
@@ -4829,7 +4859,7 @@
       if(towerBatsR1190.filter(b=>!b.dead).length<3){
         const side=towerX_R952<W/2?1:-1;
         towerBatsR1190.push({id:++towerBatSerialR1190,x:side>0?W+18:-18,y:towerY_R952+75+Math.random()*42,vx:-side*36,vy:0,t:0,warning:.75,dead:false,deathT:0});
-        showMessage('ЛЕТУЧАЯ МЫШЬ · D — МЕЧ',1.1);
+        showMessage('ЛЕТУЧАЯ МЫШЬ · B — МЕЧ',1.1);
       }
     }
     for(const b of towerBatsR1190){
@@ -5260,7 +5290,12 @@
     if ([1, 2, 4, 6].includes(level)) { if (a) a.textContent = 'PUNCH'; if (b) b.textContent = 'JUMP'; if (c) c.textContent = level === 6 ? 'KICK' : 'SWEEP'; }
     if (level === 3) { if (a) a.textContent = 'FIRE'; if (b) b.textContent = 'ROLL'; if (c) c.textContent = 'MISSILE'; }
     if (level === 5) { if (a) a.textContent = 'DROP'; if (b) b.textContent = 'ROTATE'; if (c) c.textContent = 'FAST'; }
-    if (sw) { sw.style.opacity = level === 3 || level === 5 ? '.45' : '1'; sw.setAttribute('aria-disabled', level === 3 || level === 5 ? 'true' : 'false'); }
+    if (sw) {
+      sw.style.opacity = '1'; sw.setAttribute('aria-disabled', 'false');
+      sw.setAttribute('aria-label', level===3?'B — огонь':level===5?'B — сброс':'B — удар мечом');
+    }
+    const jumpTouch=document.querySelector('[data-action="jump"]');
+    if(jumpTouch)jumpTouch.setAttribute('aria-label',level===3?'A — манёвр':level===5?'A — вращение':'A — прыжок');
   };
 
   const __r010StartLevelBase = startLevel;
@@ -5350,7 +5385,7 @@
   triggerSwordR952 = function(){
     if (!started || paused || gameOver || victory || bikeMode) return;
     if (currentLevel <= 2) { startSwordR950(); return; }
-    if (currentLevel === 4) { if(towerSwordT_R952>.08)return; towerSwordT_R952 = .48; tone(420, .07, 'sawtooth', .020, 155); return; }
+    if (currentLevel === 4) { if(towerSwordT_R952>.08)return; towerSwordT_R952 = .48; towerMeleeR952(60); tone(420, .07, 'sawtooth', .020, 155); return; }
     if (currentLevel === 6) { if (player.z > 3) startAirSwordR010(); else startSwordR950(); return; }
   };
 
@@ -5453,6 +5488,6 @@
   requestAnimationFrame(frame);
 })();
 </script>
-<script type="module" src="/assets/lira-3d-r1190.js"></script>
+<script type="module" src="/assets/lira-3d-r1190.js?v=55.00-r1201"></script>
 </body>
 </html>

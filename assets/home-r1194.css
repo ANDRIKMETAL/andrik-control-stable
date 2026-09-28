@@ -179,8 +179,7 @@ body.home-r1190 .h-hero-media video{
   opacity:0;
   transition:opacity .18s ease;
 }
-body.home-r1190 .h-hero-media video.is-ready,
-body.home-r1190 .h-hero-media video[data-first-frame="1"]{
+body.home-r1190 .h-hero-media video.is-ready{
   opacity:1;
 }
 
@@ -475,7 +474,7 @@ body.home-r1190 .h-motion{
 }
 
 /* ANDRIK R1199 — mobile hero controls visible in first viewport + hard video layer. */
-body.home-r1190 .h-hero-media video{opacity:1!important;visibility:visible!important}
+body.home-r1190 .h-hero-media video{visibility:visible!important}
 @media(max-width:640px){
   body.home-r1190 .h-hero-copy{transform:translateY(-104px)!important}
   body.home-r1190 .h-hero-inner{padding-bottom:0!important}

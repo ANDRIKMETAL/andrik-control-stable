@@ -10,7 +10,7 @@ sk:{play:'▶ Počúvať',pause:'Ⅱ Pozastaviť',error:'Skladbu sa nepodarilo s
 const t=T||{play:'▶ Listen',pause:'Ⅱ Pause',error:'Could not play.',radio:'ANDRIK METAL RADIO',unknown:'Live status unavailable',pending:'Checking current song',next:'Next: ',offline:'Stream unavailable',open:'Open on YouTube'};
 const reduced=matchMedia('(prefers-reduced-motion: reduce)'),connection=navigator.connection;
 const hero=document.querySelector('.h-hero'),video=document.getElementById('homeHeroVideo'),toggle=document.getElementById('heroMotionToggle');
-let heroVisible=false,manualPause=false,manualPlay=false,radioVisible=false,radioTimer=0,radioBusy=false,radioController=null,heroRetryTimer=0;
+let heroVisible=true,manualPause=false,manualPlay=false,radioVisible=false,radioTimer=0,radioBusy=false,radioController=null,heroRetryTimer=0,heroLastTime=-1,heroStallCount=0;
 function primeHeroVideo(){
  if(!video)return;
  const src='/assets/lyra-hero-r1192.mp4';
@@ -33,7 +33,7 @@ async function getJSON(url,signal){const c=signal?null:new AbortController(),tim
 function motionAllowed(){return !manualPause}
 function syncHero(){
  if(!video)return;
- const shouldPlay=heroVisible&&!document.hidden&&motionAllowed();
+ const shouldPlay=!document.hidden&&motionAllowed();
  if(!shouldPlay){video.pause();if(toggle){toggle.textContent='▶';toggle.setAttribute('aria-label',toggle.dataset.playLabel)}return}
  primeHeroVideo();
  video.muted=true;video.defaultMuted=true;video.playsInline=true;
@@ -46,17 +46,30 @@ if(toggle){
 }
 if(video){
  primeHeroVideo();
- video.addEventListener('loadeddata',()=>{video.dataset.firstFrame='1';if(heroVisible&&!document.hidden&&motionAllowed())syncHero()});
+ video.addEventListener('loadeddata',()=>{if(!document.hidden&&motionAllowed())syncHero()});
  video.addEventListener('canplay',()=>{if(heroVisible&&!document.hidden&&motionAllowed())syncHero()});
  video.addEventListener('playing',()=>{if(!heroVisible||document.hidden||!motionAllowed()){video.pause();return}video.classList.add('is-ready');if(toggle){toggle.textContent='Ⅱ';toggle.setAttribute('aria-label',toggle.dataset.pauseLabel)}});
- video.addEventListener('pause',()=>{if(heroVisible&&!document.hidden&&motionAllowed()&&!manualPause)retryHeroVideo(180)});
+ video.addEventListener('pause',()=>{video.classList.remove('is-ready');if(!document.hidden&&motionAllowed()&&!manualPause)retryHeroVideo(180)});
  video.addEventListener('error',()=>{video.classList.remove('is-ready');const src='/assets/lyra-hero-r1192.mp4';setTimeout(()=>{try{video.src=src;video.load();retryHeroVideo(120)}catch(_){/* noop */}},160)});
 }
 document.addEventListener('pointerdown',()=>{if(manualPause)return;manualPlay=true;syncHero()},{once:true,passive:true});
-const heroWatchdogR1199=setInterval(()=>{if(video&&heroVisible&&!document.hidden&&motionAllowed()&&(video.paused||video.readyState<2))syncHero()},1200);
+// R1200 immediate muted autoplay: do not wait for IntersectionObserver.
+requestAnimationFrame(()=>syncHero());setTimeout(()=>syncHero(),120);setTimeout(()=>syncHero(),700);
+const heroWatchdogR1200=setInterval(()=>{
+ if(!video||document.hidden||!motionAllowed())return;
+ const now=Number(video.currentTime||0);
+ const stalled=video.readyState>=2&&heroLastTime>=0&&Math.abs(now-heroLastTime)<0.03;
+ heroLastTime=now;
+ if(video.paused||video.readyState<2||stalled){
+   video.classList.remove('is-ready');
+   heroStallCount++;
+   if(heroStallCount>=2){try{video.muted=true;video.defaultMuted=true;video.load()}catch(_){}}
+   syncHero();
+ }else heroStallCount=0;
+},1200);
 reduced.addEventListener?.('change',()=>{manualPlay=false;syncHero()});
 connection?.addEventListener?.('change',()=>{manualPlay=false;syncHero()});
-let lastMeaningfulRadioTitle='';
+let lastMeaningfulRadioTitle='',lastMeaningfulNextTitle='';
 const isInsertTitle=value=>/^(?:заставка|вставка|спецвставка|идент|джингл|station\b|bumper\b)|(?:\b(?:30|60)\s*мин\b)/i.test(String(value||'').trim());
 const meaningfulTitle=value=>{const v=String(value||'').trim();return v&&!isInsertTitle(v)?v:''};
 function showRadio(d){
@@ -66,12 +79,17 @@ function showRadio(d){
  const live=fresh&&d.service==='active'&&d.publisher===true&&d.producer===true&&d.transportHealthy!==false&&Number(d.rtmpsEstablishedConnectionsR792)>0;
  card.classList.toggle('is-live',live);
  const current=live?meaningfulTitle(d.current):'';
- const next=live?meaningfulTitle(d.next):'';
+ const upcoming=Array.isArray(d?.upcoming)?d.upcoming:[];
+ const queued=upcoming.find(x=>['track','clip'].includes(String(x?.type||'').toLowerCase())&&meaningfulTitle(x?.title||x?.name));
+ const next=live?(meaningfulTitle(queued?.title||queued?.name)||meaningfulTitle(d.next)):'';
  if(current)lastMeaningfulRadioTitle=current;
+ if(next&&norm(next)!==norm(current))lastMeaningfulNextTitle=next;
+ if(current&&norm(lastMeaningfulNextTitle)===norm(current))lastMeaningfulNextTitle='';
  const shown=current||lastMeaningfulRadioTitle||t.radio;
  title.textContent=live?shown:t.radio;
- note.textContent=live?(next?t.next+next:''):(!fresh?t.unknown:t.offline);
- note.hidden=Boolean(live&&!next);
+ const nextShown=next||lastMeaningfulNextTitle;
+ note.textContent=live?(nextShown?t.next+nextShown:t.next+t.pending):(!fresh?t.unknown:t.offline);
+ note.hidden=false;
  const cover=live?artByTitle.get(norm(shown)):null;
  const src='/assets/'+(cover||'andrik-radio-mini-r1199.webp');if(img.getAttribute('src')!==src)img.src=src;
 }
@@ -102,11 +120,11 @@ async function loadNews(){
  ]);
 }
 if('IntersectionObserver'in window){
- const visibility=new IntersectionObserver(entries=>{for(const e of entries){const n=e.target;n.classList.toggle('is-inview',e.isIntersecting);if(n===hero){heroVisible=e.isIntersecting;syncHero()}if(n.id==='radio'){radioVisible=e.isIntersecting;if(radioVisible){loadAlbums();pollRadio()}else{clearTimeout(radioTimer);radioController?.abort()}}if(n.hasAttribute('data-home-reveal')&&e.isIntersecting){n.classList.add('is-revealed');if(n.id==='start')loadAlbums()}}},{threshold:.01});
+ const visibility=new IntersectionObserver(entries=>{for(const e of entries){const n=e.target;n.classList.toggle('is-inview',e.isIntersecting);if(n===hero){heroVisible=e.isIntersecting;if(e.isIntersecting)syncHero()}if(n.id==='radio'){radioVisible=e.isIntersecting;if(radioVisible){loadAlbums();pollRadio()}else{clearTimeout(radioTimer);radioController?.abort()}}if(n.hasAttribute('data-home-reveal')&&e.isIntersecting){n.classList.add('is-revealed');if(n.id==='start')loadAlbums()}}},{threshold:.01});
  document.querySelectorAll('.h-hero,[data-home-observe],.h-breathe,[data-home-reveal]').forEach(n=>visibility.observe(n));
 }else{heroVisible=true;radioVisible=true;syncHero();pollRadio();loadAlbums()}
 document.addEventListener('visibilitychange',()=>{document.body.classList.toggle('is-page-hidden',document.hidden);syncHero();if(document.hidden){clearTimeout(radioTimer);radioController?.abort()}else{pollRadio()}});
-window.addEventListener('pagehide',()=>{video?.pause();clearInterval(heroWatchdogR1199);clearTimeout(heroRetryTimer);clearTimeout(radioTimer);radioController?.abort()});
+window.addEventListener('pagehide',()=>{video?.pause();clearInterval(heroWatchdogR1200);clearTimeout(heroRetryTimer);clearTimeout(radioTimer);radioController?.abort()});
 window.addEventListener('pageshow',()=>{syncHero();pollRadio()});
 document.body.classList.toggle('is-page-hidden',document.hidden);heroVisible=true;primeHeroVideo();requestAnimationFrame(()=>{syncHero();setTimeout(syncHero,180);setTimeout(syncHero,650);setTimeout(syncHero,1800)});loadNews();
 })();

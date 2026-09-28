@@ -5,11 +5,11 @@ const game=window.LiraGame,classic=new URLSearchParams(location.search).get('gra
 if(game&&!classic)boot().catch(error=>{console.error('Dreaming of Líra 3D unavailable:',error);document.body.classList.remove('lira3d','menu-open');document.getElementById('lira3dRoot')?.remove();game.attachRenderer(null);});
 async function boot(){
  const root=document.createElement('div');root.id='lira3dRoot';
- root.innerHTML=`<canvas id="lira3dCanvas" aria-label="Трёхмерный мир Dreaming of Líra" tabindex="0"></canvas><div class="lira3d-vignette"></div><div id="liraSpaceFlash" aria-hidden="true" style="position:absolute;inset:0;z-index:6;pointer-events:none;opacity:0;background:radial-gradient(circle at 48% 50%,rgba(255,255,255,1) 0%,rgba(223,250,255,.98) 18%,rgba(115,221,255,.72) 45%,rgba(25,104,184,.22) 72%,rgba(0,0,0,0) 100%);mix-blend-mode:screen"></div>
+ root.innerHTML=`<canvas id="lira3dCanvas" aria-label="Трёхмерный мир Dreaming of Líra" tabindex="0"></canvas><div class="lira3d-vignette"></div><div id="liraSpaceFlash" aria-hidden="true" style="position:absolute;inset:0;z-index:6;pointer-events:none;opacity:0;background:radial-gradient(circle at 48% 50%,rgba(255,255,255,1) 0%,rgba(223,250,255,.98) 18%,rgba(115,221,255,.72) 45%,rgba(25,104,184,.22) 72%,rgba(0,0,0,0) 100%);mix-blend-mode:screen"></div><div class="lira3d-boot-splash" id="liraBootSplash3d" aria-hidden="true"><img src="/assets/dreaming-lira-r1194-splash.webp" alt="Dreaming of Líra"></div>
  <div class="lira3d-top"><div class="lira3d-status"><header>LÍRA <span id="liraLives">♥ 3</span></header><div class="lira3d-bar" role="meter" aria-label="Здоровье" aria-valuemin="0" aria-valuemax="100" id="liraHealth"><i></i></div><div class="lira3d-bar super" role="meter" aria-label="Суперудар" aria-valuemin="0" aria-valuemax="100" id="liraSuper"><i></i></div><div class="lira3d-meta"><span id="liraScore">000000</span><span id="liraStars">★ 0</span></div></div><div class="lira3d-level"><small id="liraChapter"></small><strong id="liraLevel"></strong><span id="liraProgress"></span></div><div class="lira3d-tools"><select class="lira3d-tool" id="liraQuality" aria-label="Качество графики"><option value="auto">Авто</option><option value="high">Высокое</option><option value="low">Экономное</option></select><button class="lira3d-tool" id="liraSound" aria-label="Выключить звук" title="Звук" aria-pressed="true">♪</button><button class="lira3d-tool" id="liraFullscreen" aria-label="Полный экран" title="Полный экран">⛶</button><button class="lira3d-tool" id="liraPause" aria-label="Пауза" title="Пауза">Ⅱ</button></div></div>
  <div class="lira3d-bottom"><span><b>WASD / ↑↓←→</b> движение &nbsp; <b>J</b> удар &nbsp; <b>K</b> прыжок &nbsp; <b>C</b> подсечка &nbsp; <b>L</b> супер</span><span><b>J + K</b> меч &nbsp; <b>Enter</b> пауза</span></div>
  <div class="lira3d-message" id="liraMessage" role="status"></div><div class="lira3d-boss" id="liraBoss" hidden><span></span><i></i></div>
- <section class="lira3d-menu" id="liraMenu" aria-label="Меню игры"><a class="lira3d-home" href="/">← ANDRIK METAL</a><div class="lira3d-menu-content"><div class="lira3d-brand">ANDRIK · THE SIX DREAMS</div><h1 id="liraMenuTitle">Dreaming of<em>Líra</em></h1><p id="liraMenuText">Шесть миров одного сна.<br>Пройди сквозь иллюзии. Найди пробуждение.</p><div id="liraLevelList" class="lira3d-level-list" hidden></div><div class="lira3d-menu-actions"><button class="lira3d-button primary" id="liraStart">Войти в сон <span>→</span></button><button class="lira3d-button" id="liraLevels">Миры</button><button class="lira3d-button" id="liraNew">Новая игра</button><a class="lira3d-button" href="?graphics=classic">Классика 2D</a></div><div class="lira3d-help" id="liraHelp"><kbd>WASD / стрелки</kbd> — движение · <kbd>J</kbd> — удар<br><kbd>K</kbd> — прыжок · <kbd>J + K</kbd> — меч · <kbd>L</kbd> — суперудар<br>Прогресс сохраняется автоматически в этом браузере.</div></div><div class="lira3d-edition">3D EDITION · SIX WORLDS · R1190</div></section><div class="lira3d-rotate">Для удобной игры поверни телефон горизонтально.</div>`;
+ <section class="lira3d-menu" id="liraMenu" aria-label="Меню игры"><a class="lira3d-home" href="/">← ANDRIK METAL</a><div class="lira3d-menu-content"><div class="lira3d-brand">ANDRIK · THE SIX DREAMS</div><h1 id="liraMenuTitle">Dreaming of<em>Líra</em></h1><p id="liraMenuText">Шесть миров одного сна.<br>Пройди сквозь иллюзии. Найди пробуждение.</p><div id="liraLevelList" class="lira3d-level-list" hidden></div><div class="lira3d-menu-actions"><button class="lira3d-button primary" id="liraStart">Войти в сон <span>→</span></button><button class="lira3d-button" id="liraLevels">Миры</button><button class="lira3d-button" id="liraNew">Новая игра</button><a class="lira3d-button" href="?graphics=classic">Классика 2D</a></div><div class="lira3d-help" id="liraHelp"><kbd>WASD / стрелки</kbd> — движение · <kbd>J</kbd> — удар<br><kbd>K</kbd> — прыжок · <kbd>J + K</kbd> — меч · <kbd>L</kbd> — суперудар<br>Прогресс сохраняется автоматически в этом браузере.</div></div><div class="lira3d-edition">3D EDITION · SIX WORLDS · R1201</div></section><div class="lira3d-rotate">Для удобной игры поверни телефон горизонтально.</div>`;
  document.getElementById('gameShell').append(root);
  const canvas=root.querySelector('canvas'),renderer=new T.WebGLRenderer({canvas,antialias:true,alpha:false,powerPreference:'high-performance'});
  renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.38;renderer.shadowMap.type=T.PCFSoftShadowMap;
@@ -23,8 +23,23 @@ async function boot(){
  const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches,coarse=matchMedia('(pointer: coarse)').matches;
  const pool=new Map(),used=new Set();
  const names={1:'CITY OF SLEEP',2:'OCEAN',3:'STAR RUNNER',4:'THE TOWER',5:'BLOCK LABYRINTH',6:'RUINS OF EPOCHS'};
- const descriptions={1:'Ночной город · освободи дорогу',2:'Океан · пройди сквозь шторм',3:'Космос · удерживай J для огня',4:'Башня · двойной прыжок K',5:'Лабиринт · J повернуть, K сбросить',6:'Руины эпох · остерегайся щитов'};
+ const descriptions={1:'Ночной город · A прыжок · B меч',2:'Океан · A прыжок · B меч',3:'Космос · A манёвр · B огонь',4:'Башня · A прыжок · B меч',5:'Лабиринт · A вращать · B сброс',6:'Руины эпох · A прыжок · B меч'};
  const el=id=>document.getElementById(id);
+ // R1201: the classic canvas splash is bypassed by the 3D renderer, so show the approved
+ // full-screen splash in the 3D layer itself. The timer starts only after landscape is active.
+ const splash3d=el('liraBootSplash3d'),splashImg3d=splash3d?.querySelector('img');
+ let splash3dStarted=false;
+ function beginSplash3d(){
+  if(!splash3d||splash3dStarted)return;
+  if(coarse&&innerWidth<innerHeight)return;
+  if(splashImg3d&&!splashImg3d.complete)return;
+  splash3dStarted=true;splash3d.classList.add('active');
+  setTimeout(()=>splash3d.classList.add('leaving'),2350);
+  setTimeout(()=>splash3d.remove(),2850);
+ }
+ if(splashImg3d){if(splashImg3d.complete)requestAnimationFrame(beginSplash3d);else splashImg3d.addEventListener('load',beginSplash3d,{once:true});}
+ addEventListener('resize',beginSplash3d,{passive:true});
+ addEventListener('orientationchange',()=>setTimeout(beginSplash3d,120),{passive:true});
  const fit=()=>{const w=root.clientWidth,h=root.clientHeight;if(!w||!h)return;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();};
  function qualityApply(){const low=quality==='low'||quality==='auto'&&(coarse||autoLow);renderer.setPixelRatio(Math.min(devicePixelRatio||1,low?1:1.5));renderer.shadowMap.enabled=!low;fit();}
  try{quality=localStorage.getItem('lira-3d-quality')||'auto';if(!['auto','high','low'].includes(quality))quality='auto';}catch{}
@@ -237,7 +252,7 @@ async function boot(){
    el('liraStart').innerHTML=(next==='title'?(s.saved?'Продолжить сон':'Войти в сон'):next==='levels'?'Назад':next==='confirm'?'Начать заново':next==='win'?(s.level<6?'Следующий мир':'Открыть миры'):next==='over'?'Попробовать снова':'Продолжить')+' <span>→</span>';
    el('liraLevels').textContent=next==='confirm'?'Отмена':next==='levels'?'Миры':'Выбрать мир';
    if(next==='levels'){el('liraLevelList').replaceChildren();for(let n=1;n<=6;n++){const b=document.createElement('button');b.className='lira3d-button';b.disabled=n>s.unlocked;b.innerHTML='<small>СОН 0'+n+(b.disabled?' · ЗАКРЫТ':'')+'</small>'+names[n];b.onclick=()=>{confirmNew=false;game.level(n);};el('liraLevelList').append(b);}}
-   if(shown&&coarse)el('liraHelp').innerHTML='Крестовина — движение · A — удар · B — прыжок<br>D — меч · C — подсечка · S — суперудар<br>Прогресс сохраняется автоматически.';
+   if(shown&&coarse)el('liraHelp').innerHTML='Крестовина — движение и поворот · A — прыжок · B — меч<br>S — суперудар<br>В SPACE/TETRIS A и B выполняют действия уровня.';
   }
  }
  el('liraStart').onclick=()=>{if(menuMode==='confirm'){confirmNew=false;game.start(true);}else if(menuMode==='levels'){game.start();}else game.start();};

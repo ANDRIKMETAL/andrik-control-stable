@@ -21017,6 +21017,12 @@ async function handlePublicRadioDiagnosticsR802(request,env){
   const status=agent.status&&typeof agent.status==='object'?agent.status:{};
   const diag=(status.diagnosticsR803&&typeof status.diagnosticsR803==='object')?status.diagnosticsR803:((status.diagnosticsR802&&typeof status.diagnosticsR802==='object')?status.diagnosticsR802:{});
   const lastSeenMs=Date.parse(agent.lastSeen||'')||0;
+  const upcomingRaw=Array.isArray(status.upcomingR943)?status.upcomingR943:(Array.isArray(status.upcomingR942)?status.upcomingR942:(Array.isArray(status.upcomingR934)?status.upcomingR934:[]));
+  const upcoming=upcomingRaw.slice(0,8).map(item=>{
+    const rawType=String(item?.type||'').toLowerCase();
+    const type=['track','clip','bumper','special'].includes(rawType)?rawType:'';
+    return {type,title:cleanPlainText(item?.title||item?.name||'',120)};
+  }).filter(item=>item.title);
   return json({
     ok:true,
     online:Boolean(lastSeenMs&&Date.now()-lastSeenMs<75000),
@@ -21026,7 +21032,7 @@ async function handlePublicRadioDiagnosticsR802(request,env){
     publisher:Boolean(status.publisher),producer:Boolean(status.producer),
     transportHealthy:status.transportHealthy!==false,
     rtmpsEstablishedConnectionsR792:Math.max(0,Number(status.rtmpsEstablishedConnectionsR792||0)),
-    current:cleanPlainText(status.current||'',120),next:cleanPlainText(status.next||'',120),
+    current:cleanPlainText(status.current||'',120),next:cleanPlainText(status.next||'',120),upcoming,
     lastError:cleanPlainText(status.lastError||'',700),
     lastFfmpegLine:cleanPlainText(status.lastFfmpegLine||'',1000),
     diagnosticsR803:{
