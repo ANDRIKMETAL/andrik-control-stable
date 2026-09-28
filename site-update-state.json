@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r357-deploy-retrigger",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1790635037186-c7fa921277",
+  "operationId": "publish-1790635926692-827deff5aa",
   "release": "R1205",
-  "archiveName": "ANDRIK-SITE-R1205-HERO-BAR-BIKE-LEVEL-FIX.zip",
-  "sourceHead": "b394b47b8204881744c8f7279b4c6886a8eb70c6",
-  "backupSha": "b394b47b8204881744c8f7279b4c6886a8eb70c6",
+  "archiveName": "ANDRIK-SITE-R1205V-VIDEO-LOGIC-ONLY.zip",
+  "sourceHead": "0cdca0162a257b15d6c6fc490d9632a2ceaaf4b7",
+  "backupSha": "0cdca0162a257b15d6c6fc490d9632a2ceaaf4b7",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-28T22:37:18.777Z"
+  "generatedAt": "2026-09-28T22:52:06.692Z"
 }

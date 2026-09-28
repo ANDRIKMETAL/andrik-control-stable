@@ -8,50 +8,50 @@ uk:{play:'▶ Слухати',pause:'Ⅱ Пауза',error:'Не вдалося 
 sk:{play:'▶ Počúvať',pause:'Ⅱ Pozastaviť',error:'Skladbu sa nepodarilo spustiť. Otvor album alebo skús znova.',live:'Práve hrá',radio:'ANDRIK METAL RADIO',offline:'Vysielanie je teraz nedostupné',unknown:'Stav vysielania je dočasne nedostupný',pending:'Overujeme názov skladby',next:'Ďalej: ',open:'Otvoriť vysielanie na YouTube'}
 }[lang]||null;
 const t=T||{play:'▶ Listen',pause:'Ⅱ Pause',error:'Could not play.',radio:'ANDRIK METAL RADIO',unknown:'Live status unavailable',pending:'Checking current song',next:'Next: ',offline:'Stream unavailable',open:'Open on YouTube'};
-const reduced=matchMedia('(prefers-reduced-motion: reduce)'),connection=navigator.connection;
 const hero=document.querySelector('.h-hero'),video=document.getElementById('homeHeroVideo'),toggle=document.getElementById('heroMotionToggle');
-let heroVisible=true,manualPause=false,manualPlay=false,radioVisible=false,radioTimer=0,radioBusy=false,radioController=null,heroRetryTimer=0,heroWatchTimer=0;
+let heroVisible=true,radioVisible=false,radioTimer=0,radioBusy=false,radioController=null;
+
+// R1205V — restore the proven R1167/R567 playback logic verbatim in behaviour.
+// No watchdog, no forced reload loop, no IntersectionObserver pause: the browser owns playback.
 function primeHeroVideo(){
  if(!video)return;
- const src=video.dataset.src||'/assets/lyra-hero-r1192.mp4';
- if(!video.getAttribute('src'))video.src=src;
- video.preload='metadata';
- video.muted=true;video.defaultMuted=true;video.volume=0;
- video.setAttribute('muted','');video.setAttribute('playsinline','');video.setAttribute('webkit-playsinline','');video.setAttribute('autoplay','');video.setAttribute('loop','');
+ video.muted=true;
+ video.defaultMuted=true;
+ video.playsInline=true;
+ video.setAttribute('muted','');
+ video.setAttribute('playsinline','');
+ video.setAttribute('webkit-playsinline','');
+ video.setAttribute('autoplay','');
+ video.setAttribute('loop','');
 }
-function markHeroNeedsTap(flag){document.body.classList.toggle('hero-video-needs-tap',!!flag);if(toggle)toggle.hidden=!flag;}
-function retryHeroVideo(delay=240){clearTimeout(heroRetryTimer);heroRetryTimer=setTimeout(()=>{if(heroVisible&&!document.hidden&&!manualPause)syncHero()},delay);}
-function watchHeroProgress(){
- clearTimeout(heroWatchTimer);if(!video||video.paused||document.hidden)return;
- const before=video.currentTime;
- heroWatchTimer=setTimeout(()=>{if(!video||document.hidden||manualPause)return;const moved=Math.abs(video.currentTime-before)>.08;if(!moved){markHeroNeedsTap(true);try{video.pause();video.load()}catch(_){}retryHeroVideo(120);}else{markHeroNeedsTap(false);watchHeroProgress();}},1400);
-}
-function motionAllowed(){return !manualPause}
-function syncHero(){
+const markHeroPlaying=()=>{
  if(!video)return;
- const shouldPlay=heroVisible&&!document.hidden&&motionAllowed();
- if(!shouldPlay){try{video.pause()}catch(_){};return}
+ video.classList.add('is-ready');
+ video.dataset.firstFrame='1';
+};
+function syncHero(){
+ if(!video||document.hidden)return;
  primeHeroVideo();
- let attempt;try{attempt=video.play()}catch(_){markHeroNeedsTap(true);return}
- if(attempt?.then)attempt.then(()=>{markHeroNeedsTap(false);watchHeroProgress()}).catch(()=>{markHeroNeedsTap(true);retryHeroVideo(700)});
+ try{
+  const p=video.play();
+  if(p&&typeof p.then==='function')p.then(markHeroPlaying).catch(()=>{});
+ }catch(_){}
 }
-if(toggle){
- toggle.hidden=true;
- toggle.addEventListener('click',()=>{manualPause=!video.paused;manualPlay=video.paused;if(video.paused){manualPause=false;manualPlay=true;primeHeroVideo();video.play().then(()=>{markHeroNeedsTap(false);watchHeroProgress()}).catch(()=>markHeroNeedsTap(true));}else{manualPause=true;manualPlay=false;video.pause();toggle.hidden=false;document.body.classList.add('hero-video-needs-tap');}});
-}
+if(toggle)toggle.hidden=true;
 if(video){
  primeHeroVideo();
- video.addEventListener('loadeddata',()=>{if(heroVisible&&!document.hidden&&!manualPause)syncHero()});
- video.addEventListener('canplay',()=>{if(heroVisible&&!document.hidden&&!manualPause)syncHero()});
- video.addEventListener('playing',()=>{video.classList.add('is-ready');video.dataset.firstFrame='1';markHeroNeedsTap(false);watchHeroProgress();});
- video.addEventListener('timeupdate',()=>{if(video.currentTime>.05){video.classList.add('is-ready');video.dataset.firstFrame='1';}});
- video.addEventListener('pause',()=>{clearTimeout(heroWatchTimer);if(heroVisible&&!document.hidden&&!manualPause)retryHeroVideo(220)});
- video.addEventListener('error',()=>{video.classList.remove('is-ready');markHeroNeedsTap(true);const src=video.dataset.src||'/assets/lyra-hero-r1192.mp4';setTimeout(()=>{try{video.removeAttribute('src');video.load();setTimeout(()=>{video.src=src;video.load();retryHeroVideo(180)},90)}catch(_){}},160)});
+ video.addEventListener('playing',markHeroPlaying,{passive:true});
+ video.addEventListener('canplay',syncHero,{passive:true});
+ video.addEventListener('loadeddata',syncHero,{passive:true});
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden)syncHero();},{passive:true});
+ ['pointerdown','touchstart','click'].forEach(type=>document.addEventListener(type,syncHero,{once:true,passive:true}));
+ if(video.readyState>=2)syncHero();
+ else{
+  try{video.load()}catch(_){}
+  setTimeout(syncHero,120);
+  setTimeout(syncHero,900);
+ }
 }
-// Android/WebView fallback: any normal interaction retries the same known-working MP4.
-for(const ev of ['pointerdown','touchstart','click'])document.addEventListener(ev,()=>{if(!manualPause){manualPlay=true;syncHero()}},{once:true,passive:true});
-addEventListener('scroll',()=>{if(!manualPause&&video?.paused)syncHero()},{once:true,passive:true});
-reduced.addEventListener?.('change',()=>syncHero());connection?.addEventListener?.('change',()=>syncHero());
 const coverByAlbum={'silent':'silent-cover-r1159.webp','beyond':'beyond-cover-r601.webp','trika':'trika-third-album-cover-r479.webp','ocean':'ocean-cover-v5148-clean.webp','illusion-of-life':'illusion-of-life-static-v52.jpg'};
 const norm=s=>String(s||'').toLowerCase().replace(/ё/g,'е').replace(/\.(mp3|wav)$/i,'').replace(/[^\p{L}\p{N}]+/gu,' ').trim();
 const artByTitle=new Map();
