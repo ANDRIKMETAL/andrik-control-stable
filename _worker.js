@@ -18901,7 +18901,17 @@ function musicAlbumArchiveSelectionR446(objects){
 async function musicAlbumStatusOneR446(bucket,def,includeTracks=true){
   const source=await musicAlbumObjectsR446(bucket,def);
   const archive=musicAlbumArchiveSelectionR446(source);
-  const tracks=archive.selected;
+  let tracks=archive.selected.slice();
+  // R1199: Silent #5 exists inside the already uploaded album ZIP even when the
+  // standalone MP3 object is missing. Surface it directly from the ZIP so the
+  // native player remains a complete 01–20 album without re-uploading R2.
+  if(def.slug==='silent'&&!tracks.some(o=>silentTrackNumberR1159(o)===5)){
+    try{
+      const e=await silentArchiveTrackEntryR1199(bucket,5);
+      if(e)tracks.push({key:'albums/silent/__archive__/05-monument-to-the-great-void.mp3',size:Number(e.uncompressedSize||0),uploaded:e.uploaded||null,__silentTrackR1163:5,__silentArchiveR1199:true,customMetadata:{title:'Monument to the Great Void',track:'5',album:'Silent (Тишина)'}});
+    }catch(_){/* archive fallback is best-effort */}
+  }
+  tracks.sort(musicAlbumTrackSortR446);
   const zip=await bucket.head(def.zipKey).catch(()=>null);
   const totalBytes=tracks.reduce((sum,o)=>sum+Number(o.size||0),0);
   return {
@@ -18912,7 +18922,9 @@ async function musicAlbumStatusOneR446(bucket,def,includeTracks=true){
       key:o.key,
       title:silentTrackTitleR1159(o)||beyondTrackTitleR601(o)||trikaTrackTitleR517(o)||o.customMetadata?.title||musicZipEntryNameR446(o,i).replace(/^\d+\s*-\s*|\.mp3$/gi,''),
       entryName:musicZipEntryNameR446(o,i),
-      track:String(silentTrackNumberR1159(o)||beyondTrackNumberR601(o)||trikaTrackNumberR517(o)||parseInt(o.customMetadata?.track||'',10)||i+1),size:Number(o.size||0),uploaded:o.uploaded||null,url:`https://music.andrikmetal.com/${o.key}`,downloadUrl:`/api/music/download?key=${encodeURIComponent(o.key)}`
+      track:String(silentTrackNumberR1159(o)||beyondTrackNumberR601(o)||trikaTrackNumberR517(o)||parseInt(o.customMetadata?.track||'',10)||i+1),size:Number(o.size||0),uploaded:o.uploaded||null,
+      url:o.__silentArchiveR1199?'/api/music/silent-archive-track?track=5':`https://music.andrikmetal.com/${o.key}`,
+      downloadUrl:o.__silentArchiveR1199?'/api/music/silent-archive-track?track=5&download=1':`/api/music/download?key=${encodeURIComponent(o.key)}`
     })):undefined,
     zip:{exists:Boolean(zip),key:def.zipKey,name:def.zipName,size:Number(zip?.size||0),uploaded:zip?.uploaded||null,
       downloadUrl:`/api/music/album-download?album=${encodeURIComponent(def.slug)}`}
@@ -19001,6 +19013,78 @@ async function handleMusicAlbumDownloadR446(request,env){
   return new Response(object.body,{status:200,headers:h});
 }
 
+
+// === R1199: Silent track #5 native playback directly from the existing R2 ZIP ===
+let silentArchiveCacheR1199={etag:'',expiresAt:0,index:null};
+function silentArchiveTrackNoR1199(name){
+  const base=String(name||'').split('/').pop()||'';
+  const m=base.match(/^\s*(\d{1,2})(?:\s*[-_.]\s*|\s+)/),n=m?parseInt(m[1],10):0;
+  if(n>=1&&n<=20)return n;
+  const probe=silentNormalizeR1159(base.replace(/\.mp3$/i,''));
+  return probe.includes(silentNormalizeR1159('Monument to the Great Void'))?5:0;
+}
+async function silentArchiveIndexR1199(bucket){
+  const key=MUSIC_ALBUMS_R446.silent.zipKey,head=await bucket.head(key).catch(()=>null);
+  if(!head)throw new Error('silent-zip-not-found');
+  const etag=String(head.httpEtag||head.etag||head.uploaded||head.size||'');
+  if(silentArchiveCacheR1199.index&&silentArchiveCacheR1199.etag===etag&&Date.now()<silentArchiveCacheR1199.expiresAt)return silentArchiveCacheR1199.index;
+  const size=Number(head.size||0);if(size<22)throw new Error('silent-zip-too-small');
+  const tailLength=Math.min(size,131072),tailOffset=size-tailLength,tail=await r2BytesR1176(bucket,key,tailOffset,tailLength);
+  let eocd=-1;for(let i=tail.length-22;i>=0;i--){if(zipU32R1176(tail,i)===0x06054b50){eocd=i;break}}
+  if(eocd<0)throw new Error('silent-zip-eocd-not-found');
+  const totalEntries=zipU16R1176(tail,eocd+10),centralSize=zipU32R1176(tail,eocd+12),centralOffset=zipU32R1176(tail,eocd+16);
+  if(totalEntries===0xffff||centralSize===0xffffffff||centralOffset===0xffffffff)throw new Error('silent-zip64-not-supported');
+  if(centralOffset+centralSize>size||centralSize>8*1024*1024)throw new Error('silent-zip-central-invalid');
+  const central=await r2BytesR1176(bucket,key,centralOffset,centralSize),entries=[];let p=0;
+  while(p+46<=central.length&&entries.length<Math.max(96,totalEntries+4)){
+    if(zipU32R1176(central,p)!==0x02014b50)break;
+    const flags=zipU16R1176(central,p+8),method=zipU16R1176(central,p+10),compressedSize=zipU32R1176(central,p+20),uncompressedSize=zipU32R1176(central,p+24),nameLen=zipU16R1176(central,p+28),extraLen=zipU16R1176(central,p+30),commentLen=zipU16R1176(central,p+32),localOffset=zipU32R1176(central,p+42);
+    const end=p+46+nameLen+extraLen+commentLen;if(end>central.length)break;
+    const name=zipDecodeNameR1176(central.subarray(p+46,p+46+nameLen),flags).replace(/\\/g,'/');
+    if(/\.mp3$/i.test(name)&&!(flags&1)&&compressedSize>0&&uncompressedSize>0&&localOffset<size)entries.push({name,flags,method,compressedSize,uncompressedSize,localOffset,track:silentArchiveTrackNoR1199(name)});
+    p=end;
+  }
+  for(const entry of entries){
+    const local=await r2BytesR1176(bucket,key,entry.localOffset,30);if(zipU32R1176(local,0)!==0x04034b50)continue;
+    const localNameLen=zipU16R1176(local,26),localExtraLen=zipU16R1176(local,28);entry.dataOffset=entry.localOffset+30+localNameLen+localExtraLen;
+  }
+  const index={etag,size,uploaded:head.uploaded||null,key,tracks:entries.filter(e=>Number.isFinite(e.dataOffset))};
+  silentArchiveCacheR1199={etag,expiresAt:Date.now()+10*60*1000,index};return index;
+}
+async function silentArchiveTrackEntryR1199(bucket,trackNo=5){
+  const index=await silentArchiveIndexR1199(bucket);
+  let entry=index.tracks.find(e=>e.track===trackNo);
+  if(!entry&&trackNo===5)entry=index.tracks.find(e=>silentNormalizeR1159(e.name).includes(silentNormalizeR1159('Monument to the Great Void')));
+  return entry?{...entry,uploaded:index.uploaded,key:index.key}:null;
+}
+function silentArchiveHeadersR1199(entry,download=false){
+  const h=new Headers();h.set('content-type','audio/mpeg');h.set('accept-ranges','bytes');h.set('cache-control','public, max-age=3600');h.set('x-content-type-options','nosniff');
+  const raw='05 - Monument to the Great Void.mp3',ascii='05-Monument-to-the-Great-Void.mp3';
+  h.set('content-disposition',`${download?'attachment':'inline'}; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(raw)}`);return h;
+}
+async function handleSilentArchiveTrackR1199(request,env){
+  const bucket=getMusicBucketR314(env);if(!bucket)return new Response('R2 unavailable',{status:503});
+  const url=new URL(request.url),trackNo=parseInt(url.searchParams.get('track')||'5',10),download=url.searchParams.get('download')==='1';
+  if(trackNo!==5)return new Response('Only Silent track 5 is exposed from the archive',{status:400});
+  let entry;try{entry=await silentArchiveTrackEntryR1199(bucket,5)}catch(_){return new Response('Silent archive not found',{status:404})}
+  if(!entry)return new Response('Monument to the Great Void not found in Silent archive',{status:404});
+  const total=Number(entry.uncompressedSize||0),headers=silentArchiveHeadersR1199(entry,download);if(request.method==='HEAD'){headers.set('content-length',String(total));return new Response(null,{status:200,headers})}
+  const rangeHeader=download?'':request.headers.get('range'),parsed=rangeHeader?parseVideoRangeR559(rangeHeader,total):null;
+  if(parsed?.invalid){headers.set('content-range',`bytes */${total}`);return new Response(null,{status:416,headers})}
+  if(entry.method===0){
+    const offset=entry.dataOffset+(parsed?parsed.offset:0),length=parsed?parsed.length:entry.compressedSize;
+    const object=await bucket.get(entry.key,{range:{offset,length}}).catch(()=>null);if(!object)return new Response('Track data unavailable',{status:404});
+    if(parsed){headers.set('content-range',`bytes ${parsed.offset}-${parsed.end}/${total}`);headers.set('content-length',String(parsed.length));return new Response(object.body,{status:206,headers})}
+    headers.set('content-length',String(total));return new Response(object.body,{status:200,headers});
+  }
+  if(entry.compressedSize>64*1024*1024)return new Response('Track is too large to decode',{status:413});
+  const compressed=await r2BytesR1176(bucket,entry.key,entry.dataOffset,entry.compressedSize);let decoded;
+  try{decoded=await inflateZipEntryR1176(compressed,entry.method)}catch(error){return new Response(String(error?.message||error),{status:501})}
+  const bytes=parsed?decoded.subarray(parsed.offset,parsed.offset+parsed.length):decoded;
+  if(parsed){headers.set('content-range',`bytes ${parsed.offset}-${parsed.end}/${total}`);headers.set('content-length',String(bytes.byteLength));return new Response(bytes,{status:206,headers})}
+  headers.set('content-length',String(bytes.byteLength));return new Response(bytes,{status:200,headers});
+}
+// === End R1199 Silent ZIP fallback ===
 
 // === R1176: COVERS native players backed directly by the existing R2 ZIP ===
 const COVERS_ARCHIVE_R1176 = Object.freeze({
@@ -21242,6 +21326,7 @@ async function routeApi(request, env, ctx) {
     if (path === '/api/music/covers-archive-track' && (request.method === 'GET' || request.method === 'HEAD')) return await handleCoversArchiveTrackR1176(request, env);
     if (path === '/api/music/albums/status' && request.method === 'GET') return await handleMusicAlbumsPublicStatusR446(request, env);
     if (path === '/api/music/album-download' && (request.method === 'GET' || request.method === 'HEAD')) return await handleMusicAlbumDownloadR446(request, env);
+    if (path === '/api/music/silent-archive-track' && (request.method === 'GET' || request.method === 'HEAD')) return await handleSilentArchiveTrackR1199(request, env);
     if (path === '/api/control/music/single/publish-latest' && request.method === 'POST') return await handleMusicSinglePublishR616(request, env);
     if (path === '/api/control/music/singles/dedupe-titles' && ['GET','POST'].includes(request.method)) return await handleMusicSingleTitleDedupeR1028(request, env);
     if (path === '/api/control/music/silent/cleanup-singles' && ['GET','POST'].includes(request.method)) return await handleMusicSilentSinglesCleanupR1159C(request, env);

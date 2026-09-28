@@ -473,3 +473,14 @@ body.home-r1190 .h-motion{
     min-height:48px;
   }
 }
+
+/* ANDRIK R1199 — mobile hero controls visible in first viewport + hard video layer. */
+body.home-r1190 .h-hero-media video{opacity:1!important;visibility:visible!important}
+@media(max-width:640px){
+  body.home-r1190 .h-hero-copy{transform:translateY(-104px)!important}
+  body.home-r1190 .h-hero-inner{padding-bottom:0!important}
+  body.home-r1190 .h-actions{margin-top:4px!important}
+  body.home-r1190 .h-radio-cover{width:72px!important;height:50px!important;aspect-ratio:16/9!important;object-fit:cover!important;border-radius:8px!important}
+  body.home-r1190 .h-radio-copy{flex-basis:calc(100% - 86px)!important}
+}
+@media(max-width:380px){body.home-r1190 .h-hero-copy{transform:translateY(-86px)!important}}

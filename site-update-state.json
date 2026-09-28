@@ -1,14 +1,14 @@
 {
   "schema": 1,
-  "updaterVersion": "55.00-r356",
+  "updaterVersion": "55.00-r357-deploy-retrigger",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1790626518037-9443ff8c6c",
-  "release": "R1198",
-  "archiveName": "ANDRIK-SITE-R1198-CLOUDFLARE-RETRIGGER-FIX.zip",
-  "sourceHead": "9bc34e01517d06b9263c3ee1eb62d0fb3a46aabe",
-  "backupSha": "9bc34e01517d06b9263c3ee1eb62d0fb3a46aabe",
+  "operationId": "publish-1790627559343-92c50ef01d",
+  "release": "R1199",
+  "archiveName": "ANDRIK-SITE-R1199-HERO-SILENT-RADIO-FIX.zip",
+  "sourceHead": "f9b37a1b7dfc99fbbac9ec020d6b66f7b667dc6b",
+  "backupSha": "f9b37a1b7dfc99fbbac9ec020d6b66f7b667dc6b",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-28T20:15:18.037Z"
+  "generatedAt": "2026-09-28T20:32:39.972Z"
 }

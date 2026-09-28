@@ -1,6 +1,6 @@
 'use strict';
 
-const VERSION = '55.00-r1198-deploy-retrigger';
+const VERSION = '55.00-r1199-hero-silent-radio';
 const IS_CONTROL_HOST = self.location.hostname.toLowerCase() === 'control.andrikmetal.com';
 
 async function deleteControlCaches(){
@@ -46,6 +46,8 @@ if(IS_CONTROL_HOST){
     "/assets/pwa-install.js",
     "/assets/home-r1194.css",
     "/assets/home-r1192.js",
+    "/assets/andrik-radio-mini-r1199.webp",
+    "/assets/lyra-hero-r1192.mp4",
     "/assets/player-shell-bridge-r136.js",
     "/assets/home-app-links-r1190.js",
     "/assets/andrik-site-illusion-r87-192.png",
