@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r357-deploy-retrigger",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1790635926692-827deff5aa",
+  "operationId": "publish-1790636451802-1c7b3a8867",
   "release": "R1205",
-  "archiveName": "ANDRIK-SITE-R1205V-VIDEO-LOGIC-ONLY.zip",
-  "sourceHead": "0cdca0162a257b15d6c6fc490d9632a2ceaaf4b7",
-  "backupSha": "0cdca0162a257b15d6c6fc490d9632a2ceaaf4b7",
+  "archiveName": "ANDRIK-SITE-R1205V2-VIDEO-CSS-FIX-ONLY.zip",
+  "sourceHead": "766b877cf9277b0a8df7069a49ac02541ae54aa3",
+  "backupSha": "766b877cf9277b0a8df7069a49ac02541ae54aa3",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-28T22:52:06.692Z"
+  "generatedAt": "2026-09-28T23:00:51.802Z"
 }

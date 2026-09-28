@@ -418,7 +418,8 @@ body.home-r1190 .h-hero-media::after{
   z-index:2;
 }
 body.home-r1190 .h-hero-media > :is(img,video){
-  position:relative;
+  position:absolute;
+  inset:0;
   z-index:1;
 }
 body.home-r1190 .h-hero-inner{
@@ -491,3 +492,11 @@ body.home-r1190 .h-hero-media video.is-ready,body.home-r1190 .h-hero-media video
 /* R1205: exact R1193 MP4 path; show a small play fallback only when Android blocks autoplay. */
 body.home-r1190 #heroMotionToggle{display:none!important}
 body.hero-video-needs-tap.home-r1190 #heroMotionToggle{display:grid!important;right:18px!important;bottom:112px!important;width:38px!important;height:38px!important;z-index:7!important;background:rgba(7,16,24,.88)!important;border-color:rgba(141,211,245,.58)!important;box-shadow:0 0 20px rgba(89,180,234,.26)!important}
+
+/* R1205V2 — VIDEO ONLY: poster and MP4 must occupy the same hero layer.
+   R1167 worked with absolute overlay; position:relative here placed the MP4
+   below the full-height poster and overflow:hidden clipped it completely. */
+body.home-r1190 .h-hero-media > img,
+body.home-r1190 .h-hero-media > video{position:absolute!important;inset:0!important;width:100%!important;height:100%!important}
+body.home-r1190 .h-hero-media > img{z-index:0!important}
+body.home-r1190 .h-hero-media > video{z-index:1!important}
