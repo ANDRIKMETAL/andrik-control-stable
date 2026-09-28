@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1790625670457-7461c22a6d",
-  "release": "R1197",
-  "archiveName": "ANDRIK-SITE-R1197-GRAPH-STATUS-CLEAN.zip",
-  "sourceHead": "730643e891b613fdf9347a47a8048902603bd789",
-  "backupSha": "730643e891b613fdf9347a47a8048902603bd789",
+  "operationId": "publish-1790626518037-9443ff8c6c",
+  "release": "R1198",
+  "archiveName": "ANDRIK-SITE-R1198-CLOUDFLARE-RETRIGGER-FIX.zip",
+  "sourceHead": "9bc34e01517d06b9263c3ee1eb62d0fb3a46aabe",
+  "backupSha": "9bc34e01517d06b9263c3ee1eb62d0fb3a46aabe",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-28T20:01:14.129Z"
+  "generatedAt": "2026-09-28T20:15:18.037Z"
 }

@@ -1,6 +1,6 @@
 'use strict';
 
-const VERSION = '55.00-r1194b-clean';
+const VERSION = '55.00-r1198-deploy-retrigger';
 const IS_CONTROL_HOST = self.location.hostname.toLowerCase() === 'control.andrikmetal.com';
 
 async function deleteControlCaches(){

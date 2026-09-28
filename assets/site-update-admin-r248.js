@@ -1,14 +1,18 @@
 (() => {
   'use strict';
-  const SITE_UPDATE_UI_VERSION='55.00-r648-step3';
+  const SITE_UPDATE_UI_VERSION='55.00-r1198-deploy-retrigger';
   const KEY_SESSION='andrik-comments-admin-key',KEY_LOCAL='andrik-comments-admin-key-persistent',AUTO_RECOVERY_KEY='andrik-site-update-auto-recovery',CACHE_REFRESH_PREFIX='andrik-site-update-cache-refresh:',PENDING_DEPLOY_KEY='andrik-site-update-pending-deploy-r247';
   const byId=id=>document.getElementById(id),keyInput=byId('siteUpdateAdminKey'),archiveInput=byId('siteUpdateArchive'),previewButton=byId('siteUpdatePreview'),publishButton=byId('siteUpdatePublish'),confirmInput=byId('siteUpdateConfirm'),autoRecoveryInput=byId('siteUpdateAutoRecovery');
   let previewData=null,lastRelease='',lastPublish=null,lastOperationId='',operation=false;
   let siteBackupZipFile=null,siteBackupZipUrl='',zipBackupBusy=false;
   let runtimeAdminKey='',pendingResumeBusy=false,pendingResumeTimer=0;
-  function savePendingDeploy(operationId='',release='',mode='publish'){
+  function savePendingDeploy(operationId='',release='',mode='publish',extra={}){
     if(!operationId)return;
-    try{localStorage.setItem(PENDING_DEPLOY_KEY,JSON.stringify({operationId,release,mode,createdAt:Date.now()}));}catch(_){}
+    try{
+      const prev=readPendingDeploy()||{};
+      const sameRoot=extra.rootCreatedAt||prev.rootCreatedAt||prev.createdAt||Date.now();
+      localStorage.setItem(PENDING_DEPLOY_KEY,JSON.stringify({operationId,release,mode,createdAt:Date.now(),rootCreatedAt:sameRoot,retriggerCount:Number(extra.retriggerCount??prev.retriggerCount??0)||0,lastRetriggerAt:Number(extra.lastRetriggerAt??prev.lastRetriggerAt??0)||0}));
+    }catch(_){}
   }
   function readPendingDeploy(){
     try{const value=JSON.parse(localStorage.getItem(PENDING_DEPLOY_KEY)||'null');return value&&value.operationId?value:null}catch(_){return null}
@@ -553,24 +557,57 @@
       setText('siteUpdateHealthMessage',`Проверка: ${error.message}`);
     }finally{setBusy(false)}
   }
+  async function retriggerDeploymentR1198(operationId='',release='',mode='publish',reason='cloudflare-timeout'){
+    if(!operationId)return null;
+    const pending=readPendingDeploy()||{};
+    const count=Number(pending.retriggerCount||0);
+    if(count>=2)return null;
+    setResultState('warn','Повтор Deploy');
+    setText('siteUpdateDeployMessage',`Cloudflare не подхватил Commit. Отправляем безопасный Deploy-kick ${count+1}/2…`);
+    try{
+      const data=await api('/api/control/site-update/retrigger',{
+        method:'POST',headers:{'content-type':'application/json'},timeoutMs:90000,
+        body:JSON.stringify({release,previousOperationId:operationId,reason})
+      });
+      if(!data?.operationId)throw new Error('Deploy-kick не вернул operationId');
+      lastOperationId=data.operationId; lastRelease=release;
+      savePendingDeploy(data.operationId,release,mode,{retriggerCount:count+1,lastRetriggerAt:Date.now(),rootCreatedAt:pending.rootCreatedAt||pending.createdAt||Date.now()});
+      setText('siteUpdateResultText',`${release||'Версия'} · Deploy-kick ${data.commitShort||''} отправлен после зависшего Cloudflare.`);
+      setText('siteUpdateDeployMessage',data.message||'Повторный Commit отправлен. Проверяем Cloudflare…');
+      return data;
+    }catch(error){
+      setResultState('warn','Deploy ждёт');
+      setText('siteUpdateDeployMessage',`Не удалось автоматически повторить Deploy: ${error.message}. Нажми «Проверить Deploy» ещё раз.`);
+      return null;
+    }
+  }
   async function watchDeployment(operationId='',release='',mode='publish'){
     if(operationId)savePendingDeploy(operationId,release,mode);
+    let activeOperationId=operationId;
     stage('deploy','running');
-    setText('siteUpdateDeployMessage',operationId?'Автопроверка точного Cloudflare Deploy запущена…':`Ищем ${release} на Control…`);
-    for(let i=0;i<36;i++){
-      const data=await checkDeployment(operationId,release,true);
+    setText('siteUpdateDeployMessage',activeOperationId?'Автопроверка точного Cloudflare Deploy запущена…':`Ищем ${release} на Control…`);
+    for(let i=0;i<42;i++){
+      const data=await checkDeployment(activeOperationId,release,true);
       if(data?.deployed){
-        await finalizeDeployment(operationId,release,mode);
+        await finalizeDeployment(activeOperationId,release,mode);
         return data
       }
+      const pending=readPendingDeploy()||{};
+      const count=Number(pending.retriggerCount||0);
+      // R1198: one missed Cloudflare/GitHub webhook no longer leaves step 5 hanging forever.
+      // After ~70 s, create a marker-only commit (no site files rewritten) to retrigger Pages.
+      if(mode==='publish' && (i===14 || i===29) && count<2){
+        const kick=await retriggerDeploymentR1198(activeOperationId,release,mode,`auto-watch-${i+1}`);
+        if(kick?.operationId){activeOperationId=kick.operationId; i=Math.max(i,14); await sleep(3500); continue;}
+      }
       setResultState('warn','Ждёт Cloudflare');
-      setText('siteUpdateDeployMessage',`Cloudflare ещё разворачивает сайт. Автопроверка ${i+1}/36 — страницу можно свернуть.`);
+      setText('siteUpdateDeployMessage',`Cloudflare ещё разворачивает сайт. Автопроверка ${i+1}/42${count?` · Deploy-kick ${count}/2`:''}.`);
       await sleep(document.hidden?15000:(i<4?2500:i<12?5000:8000));
     }
     stage('deploy','warn');
     stage('protect','skipped');
     setResultState('warn','Ждёт Cloudflare');
-    setText('siteUpdateDeployMessage','Cloudflare ещё не подтвердил Deploy. Автопроверка продолжится после возврата или повторного открытия Control.');
+    setText('siteUpdateDeployMessage','Cloudflare не подтвердил Deploy после двух безопасных повторов. Commit сохранён; нажми «Проверить Deploy», чтобы продолжить без повторной загрузки ZIP.');
     schedulePendingResume(12000);
     return null
   }
@@ -579,7 +616,7 @@
     pendingResumeTimer=setTimeout(()=>resumePendingDeploy(),Math.max(500,delay));
   }
   async function resumePendingDeploy(force=false){
-    const pending=readPendingDeploy();
+    let pending=readPendingDeploy();
     if(!pending||pendingResumeBusy||operation||!hasOwnerAccess())return null;
     pendingResumeBusy=true;
     lastOperationId=pending.operationId;lastRelease=pending.release||'';
@@ -590,11 +627,16 @@
     setText('siteUpdateResultTitle',`${pending.release||'Версия'} — продолжаем установку`);
     setText('siteUpdateDeployMessage','Возобновлена автоматическая проверка Cloudflare…');
     try{
-      const data=await checkDeployment(pending.operationId,pending.release||'',true);
+      let data=await checkDeployment(pending.operationId,pending.release||'',true);
       if(data?.deployed){await finalizeDeployment(pending.operationId,pending.release||'',pending.mode||'publish');return data;}
+      const age=Date.now()-Number(pending.createdAt||0);
+      if((force||age>90000) && (pending.mode||'publish')==='publish' && Number(pending.retriggerCount||0)<2){
+        const kick=await retriggerDeploymentR1198(pending.operationId,pending.release||'',pending.mode||'publish',force?'manual-check':'resume-timeout');
+        if(kick?.operationId){pending=readPendingDeploy()||pending;data=await checkDeployment(kick.operationId,pending.release||'',true);if(data?.deployed){await finalizeDeployment(kick.operationId,pending.release||'',pending.mode||'publish');return data;}}
+      }
       setResultState('warn','Ждёт Cloudflare');
-      setText('siteUpdateDeployMessage','Cloudflare продолжает Deploy. Следующая проверка выполнится автоматически.');
-      schedulePendingResume(document.hidden?20000:6000);
+      setText('siteUpdateDeployMessage',`Cloudflare продолжает Deploy${Number((readPendingDeploy()||{}).retriggerCount||0)?` · повтор ${Number((readPendingDeploy()||{}).retriggerCount||0)}/2`:''}. Следующая проверка выполнится автоматически.`);
+      schedulePendingResume(document.hidden?20000:7000);
       return null;
     }catch(error){
       setResultState('warn','Повторная проверка');
@@ -604,14 +646,20 @@
     }finally{pendingResumeBusy=false;}
   }
   async function checkDeployNow(){
-    const pending=readPendingDeploy();
-    const operationId=pending?.operationId||lastOperationId;
+    let pending=readPendingDeploy();
+    let operationId=pending?.operationId||lastOperationId;
     const release=pending?.release||lastRelease||byId('siteUpdateRelease').value.trim().toUpperCase();
     if(!operationId&&!release)return null;
     stage('deploy','running');setResultState('','Проверяем Deploy');
-    const data=await checkDeployment(operationId,release,false);
-    if(data?.deployed)await finalizeDeployment(operationId,release,pending?.mode||'publish');
-    else schedulePendingResume(5000);
+    let data=await checkDeployment(operationId,release,false);
+    if(data?.deployed){await finalizeDeployment(operationId,release,pending?.mode||'publish');return data;}
+    pending=readPendingDeploy()||pending||{};
+    const age=Date.now()-Number(pending.createdAt||0);
+    if(operationId && age>45000 && (pending.mode||'publish')==='publish' && Number(pending.retriggerCount||0)<2){
+      const kick=await retriggerDeploymentR1198(operationId,release,pending.mode||'publish','manual-check');
+      if(kick?.operationId){operationId=kick.operationId;data=await checkDeployment(operationId,release,true);}
+    }
+    schedulePendingResume(5000);
     return data;
   }
   async function publishCommitWithRetry(buildForm,maxAttempts=1){

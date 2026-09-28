@@ -1,7 +1,7 @@
 // ANDRIK CONTROL R1138 SAFE OPS · radio actions preserved
 // R768: OWNER PUSH SELF-HEAL + CONTROL-ORIGIN REBIND; radio R767 untouched.
 const PUSH_OWNER_RECOVERY_R768 = 'R768-OWNER-PUSH-SELFHEAL';
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R526', number:526, version:'55.00', full:'55.00 LIVE WEB AI FINAL R526 · PUSH DELIVERY CORRECTNESS', siteUpdater:'55.00-r356' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R526', number:526, version:'55.00', full:'55.00 LIVE WEB AI FINAL R526 · PUSH DELIVERY CORRECTNESS', siteUpdater:'55.00-r357-deploy-retrigger' });
 const PUSH_DELIVERY_CORRECTNESS_R526 = 'R526-ONESIGNAL-PLATFORM-DELIVERY+SUBSCRIBER-COUNT-GATE+HONEST-CADENCE';
 const YOUTUBE_SUBSCRIBER_PUSH_R1150 = 'R1150-YOUTUBE-SUBSCRIBER-GAIN+LOSS-5M-OWNER-DELIVERY';
 const PUSH_AUTOMATION_FIX_R778 = 'R778-CRON-UA-INDEPENDENT-HEALTH-RESCUE-STRICT-OWNER-DELIVERY';
@@ -18181,6 +18181,61 @@ async function handleSiteUpdateRelease(request, env) {
   }
 }
 
+
+async function handleSiteUpdateRetriggerR1198(request, env) {
+  if (!adminAuthorized(request, env)) return json({ ok:false, error:'unauthorized' }, 401);
+  if (!isSameOrigin(request)) return json({ ok:false, error:'origin' }, 403);
+  try {
+    const config = siteUpdateConfig(env);
+    if (!config.token || !siteUpdateConfigValid(config)) throw new Error('github-token-missing');
+    const body = await readJsonBody(request, 12000).catch(() => ({}));
+    const release = cleanPlainText(body.release || '', 80).toUpperCase();
+    const previousOperationId = cleanPlainText(body.previousOperationId || '', 120);
+    const reason = cleanPlainText(body.reason || 'cloudflare-timeout', 120);
+    const snapshot = await siteUpdateGithubSnapshot(config);
+    const operationId = siteUpdateNewOperationId('retrigger');
+    const owner = encodeURIComponent(config.owner), repo = encodeURIComponent(config.repo);
+    const marker = await siteUpdateCreateStateBlob(config, {
+      operation:'retrigger',
+      reinstall:true,
+      operationId,
+      release,
+      sourceHead:snapshot.headSha,
+      previousOperationId,
+      reason,
+      autoRecovery:true
+    });
+    const tree = await siteUpdateGithubRequest(config, `/repos/${owner}/${repo}/git/trees`, {
+      method:'POST', timeoutMs:60000,
+      body:{ base_tree:snapshot.treeSha, tree:[{ path:'site-update-state.json', mode:'100644', type:'blob', sha:marker.sha }] }
+    });
+    if (!tree?.sha) throw new Error('github-tree-missing');
+    const message = `Cloudflare deploy retrigger${release ? ` ${release}` : ''}\n\nPrevious operation: ${previousOperationId || 'unknown'}`;
+    const commit = await siteUpdateGithubRequest(config, `/repos/${owner}/${repo}/git/commits`, {
+      method:'POST', body:{ message, tree:tree.sha, parents:[snapshot.headSha],
+        author:{ name:'ANDRIK Control', email:'andrik-control@users.noreply.github.com' } }
+    });
+    const branchRef = config.branch.split('/').map(encodeURIComponent).join('/');
+    await siteUpdateGithubRequest(config, `/repos/${owner}/${repo}/git/refs/heads/${branchRef}`, {
+      method:'PATCH', body:{ sha:commit.sha, force:false }
+    });
+    await recordSystemLog(env, { scope:'site-update', level:'warning', event:'cloudflare-retrigger-r1198',
+      message:`Cloudflare Deploy повторно запущен: ${commit.sha.slice(0,7)}`,
+      details:{ release, operationId, previousOperationId, reason, commitSha:commit.sha, sourceHead:snapshot.headSha }
+    }).catch(() => {});
+    siteUpdateHistoryCache = null;
+    return json({ ok:true, operationId, previousOperationId, release, commitSha:commit.sha, commitShort:commit.sha.slice(0,7),
+      commitUrl:`https://github.com/${config.owner}/${config.repo}/commit/${commit.sha}`,
+      message:`Отправлен отдельный Deploy-kick ${commit.sha.slice(0,7)}. Ждём Cloudflare.` });
+  } catch (error) {
+    await recordSystemLog(env, { scope:'site-update', level:'error', event:'cloudflare-retrigger-failed-r1198',
+      message:siteUpdateFriendlyError(error), details:{ raw:cleanPlainText(error?.message || error, 500) }
+    }).catch(() => {});
+    const transient = [429,500,502,503,504].includes(Number(error?.status || 0)) || String(error?.message || '') === 'github-timeout';
+    return json({ ok:false, error:'retrigger-failed', retryable:transient, message:siteUpdateFriendlyError(error) }, transient ? 503 : 400);
+  }
+}
+
 async function handleSiteUpdateDeployment(request, env) {
   if (!adminAuthorized(request, env)) return json({ ok:false, error:'unauthorized' }, 401);
   const url = new URL(request.url);
@@ -21216,6 +21271,7 @@ async function routeApi(request, env, ctx) {
     if (path === '/api/control/site-update/backup-zip' && request.method === 'GET') return await handleSiteUpdateBackupZip(request, env);
     if (path === '/api/control/site-update/publish' && request.method === 'POST') return await handleSiteUpdatePublish(request, env);
     if (path === '/api/control/site-update/release' && request.method === 'POST') return await handleSiteUpdateRelease(request, env);
+    if (path === '/api/control/site-update/retrigger' && request.method === 'POST') return await handleSiteUpdateRetriggerR1198(request, env);
     if (path === '/api/control/site-update/deployment' && request.method === 'GET') return await handleSiteUpdateDeployment(request, env);
     if (path === '/api/control/site-update/finalize' && request.method === 'POST') return await handleSiteUpdateFinalize(request, env);
     if (path === '/api/control/site-update/log' && request.method === 'GET') return await handleSiteUpdateLog(request, env);
