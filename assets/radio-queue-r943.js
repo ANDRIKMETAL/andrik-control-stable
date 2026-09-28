@@ -38,7 +38,11 @@ async function api(path,opts={}){const k=adminKeyR1038();const r=await fetch(pat
 function applyInventory(s){
  const ready=String(s?.inventoryTelemetry||'').startsWith('R805-')||Number(s?.libraryTracks||0)>0;
  if(!ready)return;
- set('youtubeRadioSongsR805',s.libraryTracks);set('youtubeRadioTracksR565',s.libraryAlbumTracks);set('youtubeRadioSinglesR805',s.librarySingleTracks);set('youtubeRadioVideosR805',s.libraryVideos);set('youtubeRadioStationR805',Number(s.libraryBumpers||0)+Number(s.librarySpecial||0));
+ // R1196: song totals on the page come from the public catalog so that
+ // 74 album tracks + Extended + Singles always match what the user sees in R2.
+ // The live agent still provides clips and station insert counters.
+ set('youtubeRadioVideosR805',s.libraryVideos);
+ set('youtubeRadioStationR805',Number(s.libraryBumpers||0)+Number(s.librarySpecial||0));
  document.documentElement.dataset.radioLiveInventoryR943=String(Date.now());
 }
 function render(){

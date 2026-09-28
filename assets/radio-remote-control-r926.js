@@ -14,7 +14,7 @@
     if(!r.ok){const e=new Error(d.message||d.error||`HTTP ${r.status}`);e.data=d;e.status=r.status;throw e}
     return d;
   }
-  function setMsg(text,kind=''){document.querySelectorAll('[data-radio-remote-message]').forEach(el=>{el.textContent=text;el.dataset.kind=kind})}
+  function setMsg(text,kind=''){document.querySelectorAll('[data-radio-remote-message]').forEach(el=>{const value=String(text||'').trim();el.textContent=value;el.dataset.kind=kind;el.hidden=!value||value==='Готов.'})}
   function setTickerMsg(text,kind=''){document.querySelectorAll('[data-radio-ticker-message]').forEach(el=>{el.textContent=text;el.dataset.kind=kind})}
   function setResult(text){document.querySelectorAll('[data-radio-result]').forEach(el=>el.textContent=String(text||'').trim()||'Последний результат появится здесь.')}
   function setWatch(url=''){document.querySelectorAll('[data-radio-watch]').forEach(a=>{a.hidden=!url;if(url)a.href=url})}
@@ -65,8 +65,7 @@
       el.className='service-access-state '+(online?'is-ready':paired?'':'is-error');
     });
     document.querySelectorAll('[data-radio-remote-detail]').forEach(el=>{
-      const err=String(s.lastError||'').trim();
-      el.innerHTML=`<b>${online?'🟢':'⚪'} OVH:</b> ${online?'на связи':'нет свежего heartbeat'} · ${esc(fmt(agent.lastSeen))}${version?` · <b>Agent:</b> ${esc(version)}`:''}<br><b>Radio:</b> ${esc(s.service||'—')} · producer ${s.producer?'✅':'—'} · publisher ${s.publisher?'✅':'—'}${err?`<br><b style="color:#ff8080">FFmpeg:</b> ${esc(err)}`:''}`;
+      el.innerHTML=`<b>${online?'🟢':'⚪'} OVH:</b> ${online?'ONLINE':'OFFLINE'}${version?` · ${esc(version)}`:''}`;
     });
     // R805: exact LIVE library counters come from the running radio itself via the single R803 agent.
     // This avoids guessing from R2 and reflects duplicate-single suppression + disabled albums exactly.

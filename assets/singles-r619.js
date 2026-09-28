@@ -8,7 +8,7 @@ const I={
  sk:{loading:'Načítavame…',emptySingles:'Single sa čoskoro objavia.',emptyCovers:'Covery sa čoskoro objavia.',play:'▶ Počúvať',pause:'❚❚ Pauza',download:'↓ Stiahnuť MP3',share:'🔗 Zdieľať odkaz',copied:'✓ Odkaz skopírovaný',copyPrompt:'Skopírujte odkaz pre prehliadač',error:'Hudbu sa nepodarilo načítať.'},
  en:{loading:'Loading…',emptySingles:'Singles are coming soon.',emptyCovers:'Covers are coming soon.',play:'▶ Listen',pause:'❚❚ Pause',download:'↓ Download MP3',share:'🔗 Share link',copied:'✓ Link copied',copyPrompt:'Copy this link for your browser',error:'Could not load music.'}
 };const t=I[lang]||I.ru;
-const SILENT=['Dance of Deth','Mind Is A Trap','Выбора нет','Жизнь идёт сама','Падший ангел','I Run Away','Вспышка Узнавания','Что есть Истина','No choice','Стирай','Верни меня','Дверь освобождения','Ты проснулся живой','Сила знает путь','You Are Already That','Всё есть Брахман','Ты уже то','You Are The Light','Вне времени','Заветная звезда'];
+const SILENT=['Dance of Deth','Mind Is A Trap','Выбора нет','Жизнь идёт сама','Monument to the Great Void','I Run Away','Вспышка Узнавания','Что есть Истина','No choice','Стирай','Верни меня','Дверь освобождения','Ты проснулся живой','Сила знает путь','You Are Already That','Всё есть Брахман','Ты уже то','You Are The Light','Вне времени','Заветная звезда'];
 const pretty=s=>{try{return decodeURIComponent(String(s||''))}catch(_){return String(s||'')}};
 const cleanTitle=s=>pretty(s).replace(/(?:\.(?:mp3|wav))+$/ig,'').trim();
 const displayTitle=s=>cleanTitle(s).replace(/\s*[\[(]\s*(?:ai\s*)?cover\b[^\])]*[\])]\s*$/iu,'').replace(/\s*[\[(]\s*кавер\b[^\])]*[\])]\s*$/iu,'').trim();

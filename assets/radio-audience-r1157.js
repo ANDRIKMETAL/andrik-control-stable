@@ -29,27 +29,32 @@
   function updateDateButtons(){const today=effectiveToday();if(nextBtn)nextBtn.disabled=!dateInput?.value||dateInput.value>=today;if(todayBtn)todayBtn.disabled=dateInput?.value===today}
 
   function buildSvg(series){
-    if(!Array.isArray(series)||!series.length)return '<div class="r1156-chart-empty">История YouTube за выбранный день ещё не накоплена.<br>Для сегодняшнего дня R1157 сам запрашивает свежий LIVE-замер, если фоновая история устарела.</div>';
-    const W=720,H=245,L=42,R=12,T=14,B=30,plotW=W-L-R,plotH=H-T-B;
+    if(!Array.isArray(series)||!series.length)return '<div class="r1156-chart-empty">История YouTube за выбранный день ещё не накоплена.<br>Для сегодняшнего дня контролька сама запрашивает свежий LIVE-замер, если фоновая история устарела.</div>';
+    const W=720,H=218,L=50,R=12,T=16,B=28,plotW=W-L-R,plotH=H-T-B;
     const points=series.map((r,i)=>{
       const m=String(r.minute||'').match(/^(\d{2}):(\d{2})$/);const minute=m?(+m[1]*60 + +m[2]):Math.round(i*1440/Math.max(1,series.length-1));
       return {...r,minuteOfDay:Math.max(0,Math.min(1439,minute)),launches:Math.max(0,Number(r.launches)||0),online:r.concurrentViewers==null?null:Math.max(0,Number(r.concurrentViewers)||0)};
     });
     const actualMaxLaunch=Math.max(0,...points.map(p=>p.launches));
     const actualMaxOnline=Math.max(0,...points.map(p=>p.online==null?0:p.online));
+    // R1197: keep a useful 0–20 viewer scale even on quiet days. If the stream
+    // grows beyond 20, expand automatically in clean 5-viewer steps.
+    const onlineCeiling=Math.max(20,Math.ceil(actualMaxOnline/5)*5);
     const maxLaunch=Math.max(1,actualMaxLaunch);
-    const maxOnline=Math.max(1,actualMaxOnline);
     const x=m=>L+(m/1440)*plotW;
-    const yOnline=v=>T+plotH-(Math.max(0,v)/maxOnline)*plotH;
-    const yLaunch=v=>T+plotH-(Math.max(0,v)/maxLaunch)*(plotH*.45);
-    const ticks=[0,240,480,720,960,1200,1440];
-    const grid=ticks.map((m,i)=>`<line class="grid" x1="${x(m).toFixed(1)}" y1="${T}" x2="${x(m).toFixed(1)}" y2="${T+plotH}"/><text class="axis" x="${x(m).toFixed(1)}" y="${H-9}" text-anchor="${i===0?'start':i===ticks.length-1?'end':'middle'}">${String(Math.floor(m/60)%24).padStart(2,'0')}:00</text>`).join('');
-    const bars=points.filter(p=>p.launches>0).map(p=>{const bx=x(p.minuteOfDay),by=yLaunch(p.launches),bh=T+plotH-by;return `<rect class="bar" x="${(bx-1.8).toFixed(1)}" y="${by.toFixed(1)}" width="3.6" height="${Math.max(2,bh).toFixed(1)}" rx="1.5"><title>${esc(p.minute)} · +${p.launches} запусков</title></rect>`}).join('');
+    const yOnline=v=>T+plotH-(Math.max(0,v)/onlineCeiling)*plotH;
+    const yLaunch=v=>T+plotH-(Math.max(0,v)/maxLaunch)*(plotH*.38);
+    const xTicks=[0,240,480,720,960,1200,1440];
+    const yStep=onlineCeiling<=20?5:Math.max(5,Math.ceil((onlineCeiling/4)/5)*5);
+    const yTicks=[];for(let v=0;v<=onlineCeiling;v+=yStep)yTicks.push(v);if(yTicks[yTicks.length-1]!==onlineCeiling)yTicks.push(onlineCeiling);
+    const vGrid=xTicks.map((m,i)=>`<line class="grid grid-v" x1="${x(m).toFixed(1)}" y1="${T}" x2="${x(m).toFixed(1)}" y2="${T+plotH}"/><text class="axis axis-x" x="${x(m).toFixed(1)}" y="${H-8}" text-anchor="${i===0?'start':i===xTicks.length-1?'end':'middle'}">${String(Math.floor(m/60)%24).padStart(2,'0')}:00</text>`).join('');
+    const hGrid=yTicks.map(v=>{const yy=yOnline(v);return `<line class="grid grid-h" x1="${L}" y1="${yy.toFixed(1)}" x2="${W-R}" y2="${yy.toFixed(1)}"/><text class="axis axis-y" x="${L-7}" y="${(yy+3.5).toFixed(1)}" text-anchor="end">${fmt(v)}</text>`}).join('');
+    const bars=points.filter(p=>p.launches>0).map(p=>{const bx=x(p.minuteOfDay),by=yLaunch(p.launches),bh=T+plotH-by;return `<rect class="bar" x="${(bx-2.1).toFixed(1)}" y="${by.toFixed(1)}" width="4.2" height="${Math.max(2,bh).toFixed(1)}" rx="2"><title>${esc(p.minute)} · +${p.launches} запусков</title></rect>`}).join('');
     const online=points.filter(p=>p.online!=null);
     const line=online.length?online.map((p,i)=>`${i?'L':'M'} ${x(p.minuteOfDay).toFixed(1)} ${yOnline(p.online).toFixed(1)}`).join(' '):'';
     const area=online.length?`${line} L ${x(online[online.length-1].minuteOfDay).toFixed(1)} ${T+plotH} L ${x(online[0].minuteOfDay).toFixed(1)} ${T+plotH} Z`:'';
     const last=online[online.length-1];
-    return `<svg class="r1156-chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="График запусков YouTube и зрителей онлайн за сутки">${grid}<line class="baseline" x1="${L}" y1="${T+plotH}" x2="${W-R}" y2="${T+plotH}"/>${bars}${area?`<path class="area" d="${area}"/>`:''}${line?`<path class="line" d="${line}"/>`:''}${last?`<circle class="point" cx="${x(last.minuteOfDay).toFixed(1)}" cy="${yOnline(last.online).toFixed(1)}" r="4"><title>${esc(last.minute)} · ${last.online} смотрят</title></circle>`:''}<text class="axis" x="${L+3}" y="${T+11}">пик онлайн ${fmt(actualMaxOnline)}</text><text class="axis" x="${W-R-3}" y="${T+11}" text-anchor="end">макс. +${fmt(actualMaxLaunch)} / ~2 мин</text></svg>`;
+    return `<svg class="r1156-chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="График запусков YouTube и зрителей онлайн за сутки"><defs><linearGradient id="r1197OnlineArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ff5f75" stop-opacity=".28"/><stop offset="100%" stop-color="#ff5f75" stop-opacity=".015"/></linearGradient><linearGradient id="r1197LaunchBar" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ffe27a"/><stop offset="100%" stop-color="#d7a51f"/></linearGradient></defs>${vGrid}${hGrid}<line class="baseline" x1="${L}" y1="${T+plotH}" x2="${W-R}" y2="${T+plotH}"/>${bars}${area?`<path class="area" d="${area}"/>`:''}${line?`<path class="line" d="${line}"/>`:''}${last?`<circle class="point point-ring" cx="${x(last.minuteOfDay).toFixed(1)}" cy="${yOnline(last.online).toFixed(1)}" r="6"/><circle class="point" cx="${x(last.minuteOfDay).toFixed(1)}" cy="${yOnline(last.online).toFixed(1)}" r="3.2"><title>${esc(last.minute)} · ${last.online} смотрят</title></circle>`:''}<text class="chart-label" x="${L+3}" y="${T+11}">зрители · шкала до ${fmt(onlineCeiling)}</text><text class="chart-label" x="${W-R-3}" y="${T+11}" text-anchor="end">пик ${fmt(actualMaxOnline)} · запуски макс. +${fmt(actualMaxLaunch)}</text></svg>`;
   }
 
   function renderArrivalList(series=[]){

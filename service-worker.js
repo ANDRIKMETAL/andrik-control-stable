@@ -1,6 +1,6 @@
 'use strict';
 
-const VERSION = '55.00-r1193-rich-home';
+const VERSION = '55.00-r1194b-clean';
 const IS_CONTROL_HOST = self.location.hostname.toLowerCase() === 'control.andrikmetal.com';
 
 async function deleteControlCaches(){
@@ -44,7 +44,7 @@ if(IS_CONTROL_HOST){
     "/assets/v50-26.css?v=52.03",
     "/assets/pwa-install.css",
     "/assets/pwa-install.js",
-    "/assets/home-r1193.css",
+    "/assets/home-r1194.css",
     "/assets/home-r1192.js",
     "/assets/player-shell-bridge-r136.js",
     "/assets/home-app-links-r1190.js",

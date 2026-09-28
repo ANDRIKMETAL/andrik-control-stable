@@ -398,3 +398,78 @@ body.home-r1190 #inspiration.h-card{
   body.home-r1190 .h-community-card-r1193 h2{margin-right:52px!important;font-size:31px!important}
 }
 @media(prefers-reduced-motion:reduce){body.home-r1190::after{animation:none!important;display:none!important}}
+
+/* ========================================================================
+   ANDRIK R1194 — compact mobile hero, no extra hero buttons, vignette.
+   ======================================================================== */
+body.home-r1190 .h-hero{
+  min-height:100svh;
+}
+body.home-r1190 .h-hero-media{
+  overflow:hidden;
+}
+body.home-r1190 .h-hero-media::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(4,8,14,0) 38%, rgba(4,8,14,.18) 62%, rgba(3,6,11,.42) 82%, rgba(2,4,8,.68) 100%),
+    linear-gradient(180deg, rgba(2,5,9,.28) 0%, rgba(2,5,9,.12) 24%, rgba(2,5,9,.20) 100%);
+  z-index:2;
+}
+body.home-r1190 .h-hero-media > :is(img,video){
+  position:relative;
+  z-index:1;
+}
+body.home-r1190 .h-hero-inner{
+  min-height:100%;
+  justify-content:flex-end!important;
+  gap:14px;
+  padding-top:96px!important;
+  padding-bottom:max(22px, env(safe-area-inset-bottom) + 14px)!important;
+}
+body.home-r1190 .h-hero-copy{
+  margin-top:auto;
+}
+body.home-r1190 .h-hero-more,
+body.home-r1190 .h-motion{
+  display:none!important;
+}
+@media(max-width:640px){
+  body.home-r1190 .h-hero{
+    height:100svh!important;
+    min-height:100svh!important;
+    max-height:none!important;
+  }
+  body.home-r1190 .h-hero-media :is(img,video){
+    object-position:50% 24%!important;
+  }
+  body.home-r1190 .h-hero::after{
+    background:linear-gradient(0deg,#070b10 2%,rgba(7,11,16,.95) 13%,rgba(7,11,16,.72) 30%,rgba(7,11,16,.12) 58%,rgba(7,11,16,.28) 100%)!important;
+  }
+  body.home-r1190 .h-hero-inner{
+    padding-top:74px!important;
+    padding-bottom:max(18px, env(safe-area-inset-bottom) + 12px)!important;
+    gap:10px!important;
+  }
+  body.home-r1190 .h-hero-tag{
+    top:12px!important;
+  }
+  body.home-r1190 .h-hero h1{
+    font-size:clamp(32px,9vw,49px)!important;
+    line-height:1.02!important;
+    margin:8px 0 10px!important;
+  }
+  body.home-r1190 .h-hero-copy p{
+    max-width:340px!important;
+    margin:10px 0 16px!important;
+    font-size:13.5px!important;
+  }
+  body.home-r1190 .h-actions{
+    gap:8px!important;
+  }
+  body.home-r1190 .h-actions .h-button{
+    min-height:48px;
+  }
+}

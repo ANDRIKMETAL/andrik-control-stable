@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1790601640615-cbdbb67d1c",
-  "release": "R1193",
-  "archiveName": "ANDRIK-R1193-RICH-HOME-COMMUNITY-PLAYER.zip",
-  "sourceHead": "31b323ec2662a1f6f2e8f8e9502278acbdd2a504",
-  "backupSha": "31b323ec2662a1f6f2e8f8e9502278acbdd2a504",
+  "operationId": "publish-1790625670457-7461c22a6d",
+  "release": "R1197",
+  "archiveName": "ANDRIK-SITE-R1197-GRAPH-STATUS-CLEAN.zip",
+  "sourceHead": "730643e891b613fdf9347a47a8048902603bd789",
+  "backupSha": "730643e891b613fdf9347a47a8048902603bd789",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-28T13:20:40.615Z"
+  "generatedAt": "2026-09-28T20:01:14.129Z"
 }
