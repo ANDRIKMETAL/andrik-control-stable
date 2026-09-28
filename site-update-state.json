@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1790593882459-dbd953a904",
-  "release": "R1191",
-  "archiveName": "ANDRIK-R1191-HERO-VIDEO-FIX.zip",
-  "sourceHead": "a6f9f042681a10774486270e3ee4c4ec5af4b8a0",
-  "backupSha": "a6f9f042681a10774486270e3ee4c4ec5af4b8a0",
+  "operationId": "publish-1790595559665-22cff78735",
+  "release": "R1192",
+  "archiveName": "ANDRIK-R1192-HERO-TOP-AUTOPLAY-FIX.zip",
+  "sourceHead": "7ca1db010850e22b4599c2827a7feca9e1092aa2",
+  "backupSha": "7ca1db010850e22b4599c2827a7feca9e1092aa2",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-28T11:11:22.459Z"
+  "generatedAt": "2026-09-28T11:39:21.279Z"
 }

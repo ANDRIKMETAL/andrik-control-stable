@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#080d14">
+<title>ANDRIK — очистка R1192</title>
+<style>
+*{box-sizing:border-box}body{margin:0;min-height:100dvh;display:grid;place-items:center;background:#080d14;color:#f0eee8;font-family:system-ui,sans-serif;padding:24px}
+.card{width:min(560px,100%);padding:28px;border-radius:16px;border:1px solid #334451;background:#0d1620}
+small{color:#d6bb82;letter-spacing:.16em}h1{font-size:28px;margin:14px 0}p{color:#b9c5cf;line-height:1.55}
+a{display:inline-flex;margin-top:18px;padding:13px 18px;border-radius:10px;background:#ddc183;color:#101318;text-decoration:none;font-weight:800}
+.ok{color:#9fe0b2}
+</style>
+</head>
+<body><main class="card"><small>ANDRIK · R1192</small><h1>Очистка кэша</h1><p id="s">Удаляю старые файлы сайта…</p><a id="open" href="/?v=55.00-r1192" hidden>Открыть новую главную</a></main>
+<script>
+(async()=>{
+ const s=document.getElementById('s'),open=document.getElementById('open');
+ try{
+  if('caches' in window){
+   const keys=await caches.keys();
+   await Promise.all(keys.filter(k=>/^andrik-(?:site|control)-/.test(k)).map(k=>caches.delete(k)));
+  }
+  if('serviceWorker' in navigator){
+   const regs=await navigator.serviceWorker.getRegistrations();
+   await Promise.allSettled(regs.map(async r=>{
+    try{await r.update()}catch(_){}
+    try{r.waiting?.postMessage({type:'SKIP_WAITING'})}catch(_){}
+   }));
+  }
+  s.className='ok'; s.textContent='Готово. Открой главную R1192 — видео Лиры должно двигаться.';
+ }catch(e){
+  s.textContent='Очистка частично ограничена браузером. Всё равно открой новую главную.';
+ }
+ open.hidden=false;
+})();
+</script></body></html>
