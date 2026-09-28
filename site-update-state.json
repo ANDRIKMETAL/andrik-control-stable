@@ -1,14 +1,13 @@
 {
   "schema": 1,
   "updaterVersion": "55.00-r357-deploy-retrigger",
-  "operation": "publish",
-  "reinstall": false,
-  "operationId": "publish-1790630264142-fa6b96d77e",
+  "operation": "retrigger",
+  "reinstall": true,
+  "operationId": "retrigger-1790630375783-64d7e164da",
   "release": "R1202",
-  "archiveName": "ANDRIK-SITE-R1202-HERO-DOGS-BIKE-FIX-1.zip",
-  "sourceHead": "9b1f2d6b1f3ac737a20195877ec0157024e54911",
-  "backupSha": "9b1f2d6b1f3ac737a20195877ec0157024e54911",
-  "backupTag": "",
+  "sourceHead": "07ed1bd2c52ddc35b5370dd4798ad00ef4cd7520",
+  "previousOperationId": "publish-1790630264142-fa6b96d77e",
+  "reason": "auto-watch-15",
   "autoRecovery": true,
-  "generatedAt": "2026-09-28T21:17:45.624Z"
+  "generatedAt": "2026-09-28T21:19:35.783Z"
 }
