@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r356",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1790595559665-22cff78735",
-  "release": "R1192",
-  "archiveName": "ANDRIK-R1192-HERO-TOP-AUTOPLAY-FIX.zip",
-  "sourceHead": "7ca1db010850e22b4599c2827a7feca9e1092aa2",
-  "backupSha": "7ca1db010850e22b4599c2827a7feca9e1092aa2",
+  "operationId": "publish-1790601640615-cbdbb67d1c",
+  "release": "R1193",
+  "archiveName": "ANDRIK-R1193-RICH-HOME-COMMUNITY-PLAYER.zip",
+  "sourceHead": "31b323ec2662a1f6f2e8f8e9502278acbdd2a504",
+  "backupSha": "31b323ec2662a1f6f2e8f8e9502278acbdd2a504",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-28T11:39:21.279Z"
+  "generatedAt": "2026-09-28T13:20:40.615Z"
 }
