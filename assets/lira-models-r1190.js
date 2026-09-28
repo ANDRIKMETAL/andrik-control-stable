@@ -110,7 +110,7 @@ export function animateCharacter(root,p,time,opts={}){
  d.limbs.forEach((a,i)=>{a.arm.rotation.set(i?stride:-stride,0,i?-.1:.1);a.fore.rotation.set(-.18,0,0);a.leg.rotation.set(i?-stride:stride,0,0);a.shin.rotation.set(air?.55:Math.max(0,(i?stride:-stride)*.7),0,0);if(air)a.leg.rotation.x=i?-.75:.45;});
  // Mounting blends into the same seated pose used during the chase.
  const mount=opts.ride?1:T.MathUtils.clamp(Number(opts.mount)||0,0,1);
- if(mount>0){d.limbs.forEach(a=>{a.leg.rotation.x=T.MathUtils.lerp(a.leg.rotation.x,-1.3,mount);a.shin.rotation.x=T.MathUtils.lerp(a.shin.rotation.x,1.4,mount);a.arm.rotation.x=T.MathUtils.lerp(a.arm.rotation.x,-1.04,mount);a.fore.rotation.x=-.28-.58*mount;});d.body.rotation.x=.18*mount;if(mount>.72){const q=smooth((mount-.72)/.28);const lh=new T.Vector3(-8.2,31.5,19.5),rh=new T.Vector3(8.2,31.5,19.5);handAt(d.limbs[0],lh,-1);handAt(d.limbs[1],rh,1);d.body.rotation.x=.20*q;}}
+ if(mount>0){d.limbs.forEach(a=>{a.leg.rotation.x=T.MathUtils.lerp(a.leg.rotation.x,-1.3,mount);a.shin.rotation.x=T.MathUtils.lerp(a.shin.rotation.x,1.4,mount);a.arm.rotation.x=T.MathUtils.lerp(a.arm.rotation.x,-1.08,mount);a.fore.rotation.x=-.36-.60*mount;});d.body.rotation.x=.18*mount;if(mount>.72){const q=smooth((mount-.72)/.28);const lh=new T.Vector3(-8.4,33.4,18.2),rh=new T.Vector3(8.4,33.4,18.2);handAt(d.limbs[0],lh,-1);handAt(d.limbs[1],rh,1);d.body.rotation.x=.22*q;}}
  if(opts.retreat&&!p.attack){
   const bounce=.5+.5*Math.sin(time*18);d.body.position.z=-2.5-bounce*1.2;d.body.rotation.x=-.10;
   d.limbs.forEach((a,i)=>{a.leg.rotation.x=(i?1:-1)*(.18+bounce*.22);a.shin.rotation.x=.22+bounce*.16;a.arm.rotation.x=-.45;a.fore.rotation.x=-.65;});

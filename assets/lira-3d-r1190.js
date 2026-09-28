@@ -8,7 +8,7 @@ async function boot(){
  root.innerHTML=`<canvas id="lira3dCanvas" aria-label="Трёхмерный мир Dreaming of Líra" tabindex="0"></canvas><div class="lira3d-vignette"></div><div id="liraSpaceFlash" aria-hidden="true" style="position:absolute;inset:0;z-index:6;pointer-events:none;opacity:0;background:radial-gradient(circle at 48% 50%,rgba(255,255,255,1) 0%,rgba(223,250,255,.98) 18%,rgba(115,221,255,.72) 45%,rgba(25,104,184,.22) 72%,rgba(0,0,0,0) 100%);mix-blend-mode:screen"></div><div class="lira3d-boot-splash" id="liraBootSplash3d" aria-hidden="true"><img src="/assets/dreaming-lira-r1194-splash.webp" alt="Dreaming of Líra"></div>
  <div class="lira3d-top"><div class="lira3d-status"><header>LÍRA <span id="liraLives">♥ 3</span></header><div class="lira3d-bar" role="meter" aria-label="Здоровье" aria-valuemin="0" aria-valuemax="100" id="liraHealth"><i></i></div><div class="lira3d-bar super" role="meter" aria-label="Суперудар" aria-valuemin="0" aria-valuemax="100" id="liraSuper"><i></i></div><div class="lira3d-meta"><span id="liraScore">000000</span><span id="liraStars">★ 0</span></div></div><div class="lira3d-level"><small id="liraChapter"></small><strong id="liraLevel"></strong><span id="liraProgress"></span></div><div class="lira3d-tools"><select class="lira3d-tool" id="liraQuality" aria-label="Качество графики"><option value="auto">Авто</option><option value="high">Высокое</option><option value="low">Экономное</option></select><button class="lira3d-tool" id="liraSound" aria-label="Выключить звук" title="Звук" aria-pressed="true">♪</button><button class="lira3d-tool" id="liraFullscreen" aria-label="Полный экран" title="Полный экран">⛶</button><button class="lira3d-tool" id="liraPause" aria-label="Пауза" title="Пауза">Ⅱ</button></div></div>
  <div class="lira3d-bottom"><span><b>WASD / ↑↓←→</b> движение &nbsp; <b>A</b> прыжок &nbsp; <b>B</b> меч / предмет &nbsp; <b>S</b> супер</span><span><b>20 ♦</b> новый уровень Лиры &nbsp; <b>Enter</b> пауза</span></div>
- <div class="lira3d-message" id="liraMessage" role="status"></div><div class="lira3d-boss" id="liraBoss" hidden><span></span><i></i></div>
+ <div class="lira3d-message" id="liraMessage" role="status"></div><div id="liraCinematic" aria-hidden="true" style="position:absolute;inset:0;z-index:7;pointer-events:none;display:none;align-items:center;justify-content:center;background:linear-gradient(90deg,rgba(5,8,14,.94) 0%,rgba(8,12,18,.88) 40%,rgba(10,15,22,.54) 100%)"><div style="width:min(92vw,1100px);display:grid;grid-template-columns:minmax(260px,42vw) 1fr;gap:min(3vw,34px);align-items:center;padding:min(4vw,34px)"><div style="height:min(52vw,62vh);max-height:72vh;border:2px solid rgba(171,207,232,.5);box-shadow:0 28px 80px rgba(0,0,0,.5);background:#0a1018;overflow:hidden;border-radius:18px"><img id="liraCinematicImg" alt="Dream splash" style="width:100%;height:100%;object-fit:cover;display:block"></div><div><div id="liraCinematicSmall" style="font:600 clamp(13px,1.7vw,18px)/1.2 Arial,sans-serif;letter-spacing:.26em;text-transform:uppercase;color:#9acfe5;margin-bottom:12px">LEVEL SPLASH</div><div id="liraCinematicTitle" style="font:700 clamp(28px,4.7vw,62px)/1.02 Arial,sans-serif;letter-spacing:.05em;text-transform:uppercase;color:#f2f7fb;text-shadow:0 8px 30px rgba(0,0,0,.38)"></div><div id="liraCinematicSub" style="margin-top:16px;font:500 clamp(16px,2.3vw,26px)/1.35 Arial,sans-serif;color:#d3dde7;max-width:28ch"></div></div></div></div><div class="lira3d-boss" id="liraBoss" hidden><span></span><i></i></div>
  <section class="lira3d-menu" id="liraMenu" aria-label="Меню игры"><a class="lira3d-home" href="/">← ANDRIK METAL</a><div class="lira3d-menu-content"><div class="lira3d-brand">ANDRIK · THE SIX DREAMS</div><h1 id="liraMenuTitle">Dreaming of<em>Líra</em></h1><p id="liraMenuText">Шесть миров одного сна.<br>Пройди сквозь иллюзии. Найди пробуждение.</p><div id="liraLevelList" class="lira3d-level-list" hidden></div><div class="lira3d-menu-actions"><button class="lira3d-button primary" id="liraStart">Войти в сон <span>→</span></button><button class="lira3d-button" id="liraLevels">Миры</button><button class="lira3d-button" id="liraNew">Новая игра</button><a class="lira3d-button" href="?graphics=classic">Классика 2D</a></div><div class="lira3d-help" id="liraHelp"><kbd>WASD / стрелки</kbd> — движение · <kbd>A</kbd> — прыжок<br><kbd>B</kbd> — меч / предмет · <kbd>S</kbd> — суперудар · <kbd>20 ♦</kbd> — новый уровень<br>Прогресс сохраняется автоматически в этом браузере.</div></div><div class="lira3d-edition">3D EDITION · SIX WORLDS · R1205</div></section><div class="lira3d-rotate">Для удобной игры поверни телефон горизонтально.</div>`;
  document.getElementById('gameShell').append(root);
  const canvas=root.querySelector('canvas'),renderer=new T.WebGLRenderer({canvas,antialias:true,alpha:false,powerPreference:'high-performance'});
@@ -24,6 +24,7 @@ async function boot(){
  const pool=new Map(),used=new Set();
  const names={1:'CITY OF SLEEP',2:'OCEAN',3:'STAR RUNNER',4:'THE TOWER',5:'BLOCK LABYRINTH',6:'RUINS OF EPOCHS'};
  const descriptions={1:'Ночной город · A прыжок · B меч',2:'Океан · A прыжок · B меч',3:'Космос · A манёвр · B огонь',4:'Башня · A прыжок · B меч',5:'Лабиринт · A вращать · B сброс',6:'Руины эпох · A прыжок · B меч'};
+ const cinematicArt={fight:'/assets/lira-fight.webp',jump:'/assets/lira-jump.webp',guitar:'/assets/lira-guitar.webp',chain:'/assets/lira-chain.webp'};
  const el=id=>document.getElementById(id);
  // R1201: the classic canvas splash is bypassed by the 3D renderer, so show the approved
  // full-screen splash in the 3D layer itself. The timer starts only after landscape is active.
@@ -107,6 +108,26 @@ async function boot(){
   const light=object('r1187-sword-light',()=>new T.PointLight('#bdeeff',0,145,2));
   light.position.set(tipX,tipY+5,z+12);light.intensity=glow*3600;
  }
+ function renderOceanCreatureR1206(key,e,s){
+  const boss=e.type==='boss',brute=e.type==='brute',alive=e.alive!==false;
+  const g=located(key,()=>{const r=new T.Group();
+    const body=sphere(r,0,34,0,boss?16:brute?12.5:10,boss?18:brute?14:12,boss?16:brute?12.5:10,material(boss?'#355f73':brute?'#2f5565':'#2d5060',.42,.16,.25));
+    const mantle=sphere(r,0,24,0,boss?11.5:brute?9:7.5,boss?9.5:brute?7.5:6.3,boss?11.5:brute?9:7.5,material('#122430',.58,.22,.08));
+    const eyes=[];for(const side of [-1,1]){const eye=sphere(r,side*(boss?5:4),39,10,boss?2.7:2.1,boss?2.7:2.1,boss?2.2:1.8,material('#e9f5f7',.2,.15,.45));const pupil=sphere(r,side*(boss?5:4),39.2,11.6,boss?1.05:.82,boss?1.05:.82,.95,material('#0a1016',.3,.2));eyes.push(eye,pupil);} 
+    const suckers=[];for(let i=-1;i<=1;i++)suckers.push(sphere(r,i*(boss?5.2:4.1),22,10,boss?1.9:1.4,boss?1.9:1.4,1.2,material('#c9d6d2',.3,.05,.08)));
+    const tentacles=[];for(let i=0;i<8;i++){const side=(i-3.5)/(boss?3.2:3.7);const t=new T.Group();t.position.set(side*(boss?7.4:5.7),18,-4+i%2*2);r.add(t);const upper=cylinder(t,0,-8,0,boss?1.65:1.35,18,material(boss?'#77d8ea':'#67bed3',.38,.06,.18));const lower=cylinder(t,0,-21,0,boss?1.15:.92,17,material(boss?'#8ae6f7':'#7ad0e2',.36,.04,.14));tentacles.push({root:t,upper,lower});}
+    const arms=[];for(const side of [-1,1]){const a=new T.Group();a.position.set(side*(boss?13:10),31,0);r.add(a);const seg1=cylinder(a,0,-6,0,boss?1.95:1.45,17,material('#8ce6fa',.34,.08,.16));const seg2=cylinder(a,0,-17,0,boss?1.35:1.0,15,material('#a6f1ff',.32,.06,.12));arms.push({root:a,seg1,seg2,side});}
+    const ringFx=ring(r,0,28,0,boss?22:16,.4,material('#8cd8f0',.16,.18,1.15));ringFx.rotation.x=Math.PI/2;ringFx.visible=boss;
+    r.userData={tentacles,arms,ringFx,body,mantle};return r;},e.x,(e.z||0),floorZ(e.y));
+  const u=g.userData,face=(e.face||1)>=0?1:-1,pulse=Math.sin(s.elapsed*5.6+(e.x||0)*.02),fight=e.attack?Math.sin(Math.max(0,Math.min(1,e.attack.t/Math.max(.001,e.attack.duration||.42)))*Math.PI):0;
+  g.rotation.y=face>0?1.04:-1.04;g.position.y=(e.z||0)+(boss?1.5:0)+Math.abs(Math.sin(s.elapsed*3.4+(e.x||0)*.01))*(boss?1.8:1.2);g.scale.setScalar(alive?1:Math.max(.1,(e.deathTimer||0)/.35));
+  if(!alive)g.rotation.z=(1-(e.deathTimer||0)/.7)*face*.55;
+  if(u.tentacles)u.tentacles.forEach((t,i)=>{t.root.rotation.z=Math.sin(s.elapsed*6+i*.55+pulse*.6)*.32+(fight?face*.16:0);t.root.rotation.x=.12+Math.cos(s.elapsed*5+i*.6)*.08;});
+  if(u.arms)u.arms.forEach((a,i)=>{a.root.rotation.set(-.2+.14*Math.sin(s.elapsed*4+i),0,a.side*(boss?.45:.28)+(fight?a.side*face*.35:0));});
+  if(u.ringFx)u.ringFx.scale.setScalar(1+.05*Math.sin(s.elapsed*6));
+  if(alive&&e.hp<e.maxHp){solid(key+'-hpbg',e.x,boss?108:78,floorZ(e.y),29,2,1,'#272e36');solid(key+'-hp',e.x-14.5+(e.hp/e.maxHp)*14.5,boss?108:78,floorZ(e.y)+.2,29*Math.max(0,e.hp/e.maxHp),2,1,'#b45660');}
+ }
+
  function renderGround(s,cam){
   const p=s.player;
   actor('lira',p,p.x,p.z||0,floorZ(p.y),'lira',{walking:s.bar.active?(Math.abs(p.x-(renderGround.lastX??p.x))>.01):undefined});renderGround.lastX=p.x;
@@ -128,7 +149,8 @@ async function boot(){
    const enemyAttack=(e.attack&&typeof e.attack==='object')?e.attack:(e.attackAnimR1185||null);
    const forcedFace=kind==='dog'?(p.x>=e.x?1:-1):(e.face||1);
    const enemyPose=enemyAttack?{...e,face:forcedFace,attack:enemyAttack}:{...e,face:forcedFace};
-   actor('enemy-'+e.id,enemyPose,e.x,e.z||0,floorZ(e.y),kind,{walking:!enemyAttack,attack:enemyAttack?(e.r955Boss==='night-enforcer'?'clubSmashR1203':'punch'):undefined,retreat:(e.retreatT||0)>0});
+   if(s.level===2 && kind!=='dog') renderOceanCreatureR1206('enemy-'+e.id, enemyPose, s);
+   else actor('enemy-'+e.id,enemyPose,e.x,e.z||0,floorZ(e.y),kind,{walking:!enemyAttack,attack:enemyAttack?(e.r955Boss==='night-enforcer'?'clubSmashR1203':'punch'):undefined,retreat:(e.retreatT||0)>0});
    if(e.r955Boss==='night-enforcer'&&e.alive!==false){
     const club=object('r1203-boss-club-'+e.id,()=>{const g=new T.Group();cylinder(g,0,0,0,3.8,70,material('#4e301f',.74,.08));sphere(g,0,35,0,8,10,8,material('#252a2f',.43,.58));for(let i=0;i<6;i++)cone(g,(i%2?1:-1)*5,36+(i%3)*5,(i%3-1)*4,1.5,7,material('#8b9297',.28,.75));return g;});
     const face=forcedFace,atk=e.attack&&e.attack.kind==='clubSmashR1203'?Math.max(0,Math.min(1,e.attack.t/Math.max(.001,e.attack.duration))):0;
@@ -144,11 +166,11 @@ async function boot(){
   }
   if(s.bar.active){
    // R1205 bartender: alive background detail, wiping a bottle behind the counter.
-   const tender=actor('bar-bartender-r1205',{face:1,vx:0,vy:0,walkPhase:0},238,0,-96,'gang',{walking:false,scale:.78,presentationYaw:.08});
+   const tender=actor('bar-bartender-r1205',{face:1,vx:0,vy:0,walkPhase:0},240,0,-74,'gang',{walking:false,scale:.95,presentationYaw:.08});
    const td=tender.userData,sw=Math.sin(s.elapsed*5.1),cw=Math.cos(s.elapsed*5.1);
    if(td?.limbs?.length>=2){td.limbs[0].arm.rotation.set(-1.02,0,.32);td.limbs[0].fore.rotation.set(-.72,0,-.16);td.limbs[1].arm.rotation.set(-.92+.08*sw,0,-.30);td.limbs[1].fore.rotation.set(-.82+.18*cw,0,.18*sw);td.head.rotation.y=.08*sw;}
    const bottle=located('bar-bartender-bottle-r1205',()=>{const g=new T.Group();cylinder(g,0,7,0,2.4,13,material('#4f8c80',.28,.2,.2));cylinder(g,0,15,0,1.2,4,material('#9bc9bd',.24,.12,.18));return g;},246,41+sw*1.1,-82);bottle.rotation.z=.16*sw;
-   const cloth=solid('bar-bartender-cloth-r1205',230+sw*4,37+cw*1.5,-80,7,1.5,6,'#d7d1c6');cloth.rotation.z=.25*sw;
+   const cloth=solid('bar-bartender-cloth-r1205',232+sw*4,39+cw*1.5,-58,8,1.8,7,'#d7d1c6');cloth.rotation.z=.25*sw;const halo=object('bar-bartender-light-r1206',()=>new T.PointLight('#ffd39a',0,120,2));halo.position.set(240,78,-60);halo.intensity=2800+Math.sin(s.elapsed*7)*320;
    for(const it of s.bar.items)pickup('bar-item-'+it.id,it,it.x,13,floorZ(it.y),'item');for(let i=0;i<s.bar.shots.length;i++){const p=s.bar.shots[i];solid('barshot-'+i,p.x,22,floorZ(p.y+20),15,1.5,2,'#c4d9e1');}
   }
   if(s.level===2){for(const b of s.ocean.barrels)if(!b.exploded&&near(b.x,cam))located('barrel-'+b.id,barrel,b.x,0,floorZ(b.y));for(const a of s.ocean.pickups)if(near(a.x,cam))pickup('ocean-item-'+a.id,a,a.x,18,floorZ(a.y),'item');for(let i=0;i<s.ocean.chains.length;i++){const c=s.ocean.chains[i];if(c.dead||!near(c.x,cam))continue;orb('chain-'+i,c.x,25,floorZ(c.y),5,'#c19f7b');}}
@@ -207,7 +229,7 @@ async function boot(){
    const ko=Math.max(0,Number(r.superKO_R1204)||0),koP=ko?1-ko/.72:0;
    if(ko){rb.rotation.z=-Math.min(1,koP)*1.15;rb.position.y=-koP*12;}
    const atk=rear?{kind:'punch',t:.42-r.attackT,duration:.42}:null;
-   const rr=actor('bike-rider-'+r.id,{face,attack:atk,invuln:0},x-14,8-koP*10,ry,r.kind==='police'?'police':'gang',{ride:true,scale:.68,retreat:!r.engaged&&x<150});
+   const rr=actor('bike-rider-'+r.id,{face,attack:atk,invuln:0},x-14,8-koP*10,ry,r.kind==='police'?'police':'gang',{ride:true,scale:.68});
    if(ko)rr.rotation.z=-koP*1.25;
    if(rear&&!ko){const club=located('bike-rival-club-'+r.id,()=>{const g=new T.Group();box(g,0,0,0,34,2.6,2.6,r.kind==='police'?'#383b40':'#765033');return g;},x-34,32,ry+2);club.rotation.z=-.18;}
   }
@@ -215,12 +237,9 @@ async function boot(){
   // Obstacles are intentionally bright and high-contrast so they can be read before reaching Líra.
   for(let i=0;i<b.pits.length;i++){
    const p=b.pits[i],x=118+(p.d-b.distance)*.35;if(!near(x,0))continue;const z=floorZ(([178,206,234][Math.max(0,Math.min(2,Number(p.lane)||0))]??206));
-   if(p.type==='barrier'){
-    solid('barrier-body-'+i,x,9,z,34,18,44,'#a74732');
-    solid('barrier-stripe-a-'+i,x,12,z,35,4,45,'#efb75c');
-    solid('barrier-stripe-b-'+i,x,5,z,35,3,45,'#e7d8a1');
-    const l=object('barrier-light-'+i,()=>new T.PointLight('#ff9f55',0,76,2));l.position.set(x,22,z);l.intensity=700+Math.sin(s.elapsed*9+i)*180;
-    orb('barrier-warn-a-'+i,x-14,21,z+13,2.5,'#ffd480');orb('barrier-warn-b-'+i,x+14,21,z-13,2.5,'#ffd480');
+   if(p.type==='ramp'){
+    const ramp=located('ramp-'+i,()=>{const g=new T.Group();const base=new T.Shape();base.moveTo(-18,0);base.lineTo(-10,18);base.lineTo(18,0);base.lineTo(-18,0);const geo=new T.ExtrudeGeometry(base,{depth:38,bevelEnabled:false});geo.center();const m=material('#8a562d',.72,.06);const mesh1=new T.Mesh(geo,m);mesh1.castShadow=true;mesh1.receiveShadow=true;g.add(mesh1);for(let n=-10;n<=10;n+=10){const stripe=new T.Mesh(new T.BoxGeometry(3,20,40),material('#d7b36d',.45,.08));stripe.position.set(n,5,0);stripe.rotation.z=.62;stripe.castShadow=true;g.add(stripe);}return g;},x,0,z);ramp.rotation.y=Math.PI/2;
+    const glow=object('ramp-light-'+i,()=>new T.PointLight('#ffd27f',0,86,2));glow.position.set(x,20,z);glow.intensity=560+Math.sin(s.elapsed*8+i)*120;
    }else solid('pit-'+i,x,.05,z,p.w*.58,.3,42,'#02050a');
   }
   for(let i=0;i<b.posts.length;i++){
@@ -286,8 +305,10 @@ async function boot(){
   el('liraProgress').textContent=s.bike.active?(s.bike.intro?.active?'Подойди к мотоциклу · садись':'Погоня · '+Math.min(100,Math.floor(s.bike.distance/9800*100))+'%'):s.level===4?'Высота '+Math.max(0,Math.floor(s.tower.y))+' / 2280':s.level===5?'Этап '+s.tetris.stage+' / 5 · Линий '+s.tetris.lines:descriptions[s.level];
   let notice=s.message;if(s.cinematic?.t>0)notice=s.cinematic.title+' · '+(s.cinematic.subtitle||'');if(s.space.insert?.t>0&&s.level===3)notice=s.space.insert.title+' · '+s.space.insert.sub;
   el('liraMessage').textContent=notice;el('liraMessage').classList.toggle('visible',!!notice&&s.started&&!s.paused);
+  const cineBox=el('liraCinematic'),cineImg=el('liraCinematicImg');
+  if(cineBox&&cineImg&&s.cinematic?.t>0&&cinematicArt[s.cinematic.artKey]){cineImg.src=cinematicArt[s.cinematic.artKey];el('liraCinematicTitle').textContent=s.cinematic.title||'';el('liraCinematicSub').textContent=s.cinematic.subtitle||'';el('liraCinematicSmall').textContent=(s.cinematic.title||'').includes('BOSS')?'BOSS SPLASH':'LEVEL SPLASH';cineBox.style.display='flex';cineBox.style.opacity=String(Math.max(.001,Math.min(1,s.cinematic.t/Math.max(.001,s.cinematic.duration))));} else if(cineBox) cineBox.style.display='none';
   const boss=s.level===3?s.space.boss:s.level===6?s.ruins.boss:s.enemies.find(e=>e.type==='boss'&&e.alive);
-  el('liraBoss').hidden=!boss||boss.hp<=0||!s.started; if(boss){el('liraBoss').querySelector('i').style.width=Math.max(0,boss.hp/(boss.maxHp||780)*100)+'%';el('liraBoss').querySelector('span').textContent=s.level===2?'SACRED DESTROYER':s.level===6?'KEEPER OF EPOCHS':s.level===3?'THE VOID':'NIGHT ENFORCER';}
+  el('liraBoss').hidden=!boss||boss.hp<=0||!s.started; if(boss){el('liraBoss').querySelector('i').style.width=Math.max(0,boss.hp/(boss.maxHp||780)*100)+'%';el('liraBoss').querySelector('span').textContent=s.level===2?'ABYSSAL OCTOPUS':s.level===6?'KEEPER OF EPOCHS':s.level===3?'THE VOID':'NIGHT ENFORCER';}
   const next=confirmNew?'confirm':s.levelSelect?'levels':!s.started?'title':s.gameOver?'over':s.victory?'win':s.paused?'pause':'none';
   if(next!==menuMode){menuMode=next;const shown=next!=='none';el('liraMenu').hidden=!shown;document.body.classList.toggle('menu-open',shown);el('liraLevelList').hidden=next!=='levels';el('liraNew').hidden=next==='confirm'||next==='levels'||(!s.started&&!s.saved);el('liraLevels').hidden=false;
    el('liraMenuTitle').innerHTML=next==='title'?'Dreaming of<em>Líra</em>':next==='pause'?'Сон<em>на паузе</em>':next==='levels'?'Шесть<em>миров</em>':next==='win'?'Сон<em>пройден</em>':next==='confirm'?'Новый<em>сон?</em>':'Попробуй<em>снова</em>';

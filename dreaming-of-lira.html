@@ -431,19 +431,20 @@
   // R1188: longer ride with deliberate encounter spacing instead of a short chaotic traffic burst.
   const BIKE_END = 9800;
   const bikePits = [
-    { d: 980, lane: 0, w: 78, type: "barrier" },
-    { d: 1510, lane: 2, w: 84, type: "barrier" },
-    { d: 2110, lane: 1, w: 82, type: "barrier" },
-    { d: 2760, lane: 0, w: 88, type: "barrier" },
-    { d: 3420, lane: 2, w: 84, type: "barrier" },
-    { d: 4090, lane: 1, w: 88, type: "barrier" },
-    { d: 4800, lane: 0, w: 92, type: "barrier" },
-    { d: 5480, lane: 2, w: 88, type: "barrier" },
-    { d: 6180, lane: 1, w: 94, type: "barrier" },
-    { d: 6870, lane: 0, w: 90, type: "barrier" },
-    { d: 7560, lane: 2, w: 92, type: "barrier" },
-    { d: 8210, lane: 1, w: 94, type: "barrier" },
-    { d: 8740, lane: 0, w: 88, type: "barrier" }
+    { d: 980, lane: 0, w: 84, type: "pit" },
+    { d: 1290, lane: 1, w: 66, type: "ramp" },
+    { d: 1710, lane: 2, w: 88, type: "pit" },
+    { d: 2140, lane: 0, w: 68, type: "ramp" },
+    { d: 2680, lane: 1, w: 92, type: "pit" },
+    { d: 3270, lane: 2, w: 70, type: "ramp" },
+    { d: 3910, lane: 0, w: 96, type: "pit" },
+    { d: 4520, lane: 1, w: 70, type: "ramp" },
+    { d: 5210, lane: 2, w: 94, type: "pit" },
+    { d: 5930, lane: 0, w: 72, type: "ramp" },
+    { d: 6690, lane: 1, w: 98, type: "pit" },
+    { d: 7440, lane: 2, w: 70, type: "ramp" },
+    { d: 8220, lane: 0, w: 96, type: "pit" },
+    { d: 8920, lane: 1, w: 72, type: "ramp" }
   ];
   const bikeRivalTemplate = [
     [580,0,"gang"],[1040,2,"police"],[1580,1,"gang"],[2130,2,"gang"],
@@ -1167,14 +1168,14 @@
         ]
       },
       {
-        name: "BOSS — СВЯЩЕННЫЙ РАЗРУШИТЕЛЬ",
+        name: "BOSS — ГИГАНТСКИЙ ОСЬМИНОГ",
         trigger: 2870,
         gate: 3540,
         started: false,
         cleared: false,
         ids: [],
         artKey: "guitar",
-        artSubtitle: "LET THE OLD YOU SINK",
+        artSubtitle: "THE ABYSS OPENS ITS EYES",
         spawns: [
           ["boss", 3290, 211]
         ]
@@ -1200,7 +1201,7 @@
       spawnIndexR1201++;
     }
     showMessage(w.name, w.spawns[0][0] === "boss" ? 2.2 : 1.4);
-    if (currentLevel === 2 && w.artKey) {
+    if (w.artKey) {
       startCinematic(w.artKey, w.name, w.artSubtitle || "", w.spawns[0][0] === "boss" ? 1.8 : 1.25);
     }
     tone(w.spawns[0][0] === "boss" ? 72 : 120, 0.20, "sawtooth", 0.025, 48);
@@ -2904,15 +2905,27 @@
     if (pressed.attack && bikeAttackT <= 0) { bikeAttackT=.26; tone(220,.045,"square",.016,130); }
     if (pressed.super) triggerSuper();
 
-    // Pit collision: d is the exact world-distance where the pit reaches Líra.
-    if (bikeInvuln <= 0 && bikeZ < 17) {
-      for (const pit of bikePits) {
-        const laneY = bikeLaneY(pit.lane);
-        const reach = pit.w / .70;
-        if (Math.abs(bikeDistance - pit.d) < reach*.45 && Math.abs(bikeY-laneY) < 24) {
-          bikeInvuln=.9; bikeCrashT=.55; bikeSpeed=Math.max(235,bikeSpeed-65);
-          damagePlayer(17, player.x+30); showMessage("JUMP THE BARRIER!", .72); break;
+    // Road pits hurt; ramps kick the motorcycle into the air for a short glide.
+    for (const pit of bikePits) {
+      const laneY = bikeLaneY(pit.lane);
+      const reach = pit.w / .70;
+      const aligned = Math.abs(bikeY-laneY) < (pit.type === "ramp" ? 26 : 24);
+      if (!aligned) continue;
+      const delta = bikeDistance - pit.d;
+      if (pit.type === "ramp") {
+        if (Math.abs(delta) < reach*.20 && bikeZ < 10 && (!pit.lastBoost || Math.abs(bikeDistance-pit.lastBoost) > 80)) {
+          pit.lastBoost = bikeDistance;
+          bikeZ = Math.max(.01, bikeZ);
+          bikeVz = Math.max(bikeVz, 275);
+          bikeSpeed = Math.min(355, bikeSpeed + 10);
+          showMessage("RAMP! · HOLD THE LINE", .55);
+          tone(168,.08,"triangle",.018,240);
         }
+        continue;
+      }
+      if (bikeInvuln <= 0 && bikeZ < 18 && Math.abs(delta) < reach*.45) {
+        bikeInvuln=.9; bikeCrashT=.55; bikeSpeed=Math.max(235,bikeSpeed-65);
+        damagePlayer(17, player.x+30); showMessage("JUMP THE PIT!", .72); break;
       }
     }
 
@@ -3008,8 +3021,32 @@
   }
   drawBackgroundLevel1 = drawDetailedCity;
 
+  function drawOceanCreatureR1206(e) {
+    const sx=e.x-cameraX, sy=e.y;
+    if(sx<-95||sx>W+95||(e.deathTimer<=0&&!e.alive))return;
+    const boss=e.type==="boss", brute=e.type==="brute";
+    shadow(sx,e.y+3,boss?24:brute?16:12,boss?8:5,.42);
+    ctx.save();ctx.translate(Math.round(sx),Math.round(sy));ctx.scale(boss?1.62:brute?1.22:1, boss?1.62:brute?1.22:1);
+    if(!e.alive){ctx.rotate((1-e.deathTimer/.7)*.85*(e.face||1));ctx.globalAlpha=clamp(e.deathTimer/.35,0,1);}
+    const bob=Math.sin(elapsed*6+(e.x||0)*.02)*1.8, hit=e.hitFlash>0;
+    const skin=hit?"#dffcff":boss?"#356f82":brute?"#2f5967":"#2a5260";
+    const suck=hit?"#eaf7f5":"#c2d3ce";
+    const eye=boss?"#ffcf7d":"#f6f0d8";
+    ctx.fillStyle=skin;ctx.beginPath();ctx.ellipse(0,-26+bob,boss?18:brute?14:11,boss?20:brute?16:13,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle=boss?"#10303a":"#163744";ctx.beginPath();ctx.ellipse(0,-16+bob,boss?13:brute?10:8,boss?11:brute?9:7,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle=suck;for(let i=-1;i<=1;i++){ctx.beginPath();ctx.arc(i*(boss?5.5:4.2),-16+bob,boss?2.1:1.7,0,Math.PI*2);ctx.fill();}
+    ctx.fillStyle=eye;ctx.beginPath();ctx.arc(-5,-31+bob,boss?2.2:1.6,0,Math.PI*2);ctx.arc(5,-31+bob,boss?2.2:1.6,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle="#081118";ctx.beginPath();ctx.arc(-5,-31+bob,boss?1.0:.8,0,Math.PI*2);ctx.arc(5,-31+bob,boss?1.0:.8,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle=boss?"#7ed9ea":"#63c4d7";ctx.lineWidth=boss?3:2;
+    for(let i=0;i<8;i++){const side=i-3.5;ctx.beginPath();ctx.moveTo(side*(boss?3.2:2.4),-10+bob);ctx.quadraticCurveTo(side*(boss?5.8:4.4),2+Math.sin(elapsed*7+i)*5,side*(boss?7.4:5.8),18+Math.cos(elapsed*6+i)*6);ctx.stroke();}
+    if(brute||boss){ctx.strokeStyle=boss?"#8fe6ff":"#80d8e8";ctx.lineWidth=boss?4:3;for(let i=0;i<2;i++){const dir=i?1:-1;ctx.beginPath();ctx.moveTo(dir*(boss?9:7),-26+bob);ctx.quadraticCurveTo(dir*(boss?18:14),-18+bob,dir*(boss?27:21),-7+bob);ctx.stroke();ctx.beginPath();ctx.arc(dir*(boss?28:22),-7+bob,boss?3.4:2.4,0,Math.PI*2);ctx.fillStyle=boss?"#9be9ff":"#84dbf0";ctx.fill();}}
+    if(boss){ctx.strokeStyle='rgba(112,233,255,.6)';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(0,-25+bob,29,36,0,0,Math.PI*2);ctx.stroke();}
+    if(e.alive!==false&&e.hp<e.maxHp){ctx.fillStyle='rgba(10,18,24,.78)';ctx.fillRect(-18,-49+bob,36,4);ctx.fillStyle='#cc4d60';ctx.fillRect(-18,-49+bob,36*Math.max(0,e.hp/e.maxHp),4);}
+    ctx.restore();
+  }
+
   function drawStreetEnemyR005(e) {
-    if (currentLevel === 2) return __baseDrawEnemy(e);
+    if (currentLevel === 2) return drawOceanCreatureR1206(e);
     const sx=e.x-cameraX, sy=e.y;
     if(sx<-80||sx>W+80||(e.deathTimer<=0&&!e.alive))return;
     const boss=e.type==="boss", riot=e.type==="riot", police=e.type==="police", gang=e.type==="gang";
@@ -3050,17 +3087,17 @@
     const x=118+(pit.d-bikeDistance)*.35, y=bikeLaneY(pit.lane)+7;
     if(x<-120||x>W+120)return;
     const w=pit.w*.58;
-    if(pit.type === "barrier") {
-      ctx.save();ctx.translate(x,y-8);
-      ctx.fillStyle="rgba(255,166,64,.20)";ctx.beginPath();ctx.ellipse(0,16,w*.78,8,0,0,Math.PI*2);ctx.fill();
-      ctx.fillStyle="#a94232";ctx.fillRect(-w*.48,-10,w*.96,20);
-      ctx.fillStyle="#f1bd65";ctx.fillRect(-w*.48,-5,w*.96,5);ctx.fillRect(-w*.48,5,w*.96,4);
-      ctx.fillStyle="#f7e0a2";ctx.fillRect(-w*.52,-14,7,5);ctx.fillRect(w*.42,-14,7,5);
+    if(pit.type === "ramp") {
+      ctx.save();ctx.translate(x,y-4);
+      ctx.fillStyle="rgba(244,204,98,.18)";ctx.beginPath();ctx.ellipse(2,16,w*.68,6,0,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle="#7d4d28";ctx.beginPath();ctx.moveTo(-w*.52,12);ctx.lineTo(-w*.36,-10);ctx.lineTo(w*.52,12);ctx.closePath();ctx.fill();
+      ctx.fillStyle="#d5a95d";ctx.beginPath();ctx.moveTo(-w*.36,-10);ctx.lineTo(-w*.16,-15);ctx.lineTo(w*.52,12);ctx.lineTo(0,12);ctx.closePath();ctx.fill();
+      ctx.strokeStyle="#f3d286";ctx.lineWidth=2;for(let t=-.18;t<.46;t+=.18){ctx.beginPath();ctx.moveTo(-w*.24+t*w, -6+t*9);ctx.lineTo(w*.02+t*w, 7+t*6);ctx.stroke();}
       ctx.restore();return;
     }
-    ctx.fillStyle="#05070a";ctx.beginPath();ctx.ellipse(x,y,w*.55,13,0,0,Math.PI*2);ctx.fill();
-    ctx.strokeStyle="#5b4b42";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x-w*.58,y-3);ctx.lineTo(x-w*.3,y-11);ctx.lineTo(x,y-8);ctx.lineTo(x+w*.28,y-13);ctx.lineTo(x+w*.57,y-2);ctx.stroke();
-    ctx.fillStyle="rgba(0,0,0,.5)";ctx.fillRect(x-w*.45,y,w*.9,9);
+    ctx.fillStyle="#04070b";ctx.beginPath();ctx.ellipse(x,y,w*.58,14,0,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle="#58493f";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x-w*.60,y-3);ctx.lineTo(x-w*.34,y-12);ctx.lineTo(x-w*.05,y-9);ctx.lineTo(x+w*.22,y-14);ctx.lineTo(x+w*.60,y-2);ctx.stroke();
+    ctx.fillStyle="rgba(0,0,0,.58)";ctx.fillRect(x-w*.48,y,w*.96,10);
   }
 
   function drawBikeRider(x,y,z,kind="lira",attack=false) {
@@ -3076,8 +3113,8 @@
     ctx.fillStyle=police?"#17335b":kind==="lira"?"#111319":"#252027";ctx.fillRect(-6,-34,13,18);
     ctx.fillStyle="#c59073";ctx.fillRect(-4,-42,9,9);
     if(police){ctx.fillStyle="#142238";ctx.fillRect(-6,-46,13,6);ctx.fillStyle="#83a4c1";ctx.fillRect(-4,-42,10,2);} else if(gang){ctx.fillStyle="#a5293a";ctx.fillRect(-6,-44,12,3);} else {ctx.fillStyle="#050609";ctx.beginPath();ctx.moveTo(-7,-43);ctx.lineTo(-15,-36);ctx.lineTo(-6,-34);ctx.lineTo(4,-46);ctx.fill();ctx.fillStyle="#d4ccc0";ctx.beginPath();ctx.ellipse(0,-24,4,2,0,0,Math.PI*2);ctx.fill();ctx.fillStyle="#080a0d";ctx.beginPath();ctx.arc(0,-24,1.2,0,Math.PI*2);ctx.fill();}
-    // arms / attack kick
-    ctx.strokeStyle="#c59073";ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(4,-32);ctx.lineTo(16,-21);ctx.moveTo(-4,-31);ctx.lineTo(-10,-18);ctx.stroke();
+    // arms / default ride pose: both hands forward on the handlebars.
+    ctx.strokeStyle="#c59073";ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(4,-32);ctx.lineTo(16,-21);ctx.moveTo(-4,-31);ctx.lineTo(14,-20);ctx.stroke();
     if(attack&&kind==="lira"){ctx.strokeStyle="#d0a080";ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(4,-19);ctx.lineTo(22,-27);ctx.stroke();ctx.strokeStyle="#eef8ff";ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(20,-28);ctx.lineTo(58,-34);ctx.stroke();ctx.strokeStyle="#bd9a55";ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(18,-25);ctx.lineTo(22,-31);ctx.stroke();}else if(attack&&kind!=="lira"){ctx.strokeStyle=kind==="police"?"#30343a":"#6f4b31";ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(-2,-24);ctx.lineTo(-38,-19);ctx.stroke();}
     ctx.restore();
   }
@@ -3312,7 +3349,7 @@
 
   startWave = function(w){
     __baseStartWaveR942(w);
-    if(currentLevel===2&&w?.spawns?.[0]?.[0]==='boss'){oceanBossIntroUntilR942=performance.now()+1250;showMessage('SACRED DESTROYER',1.4);}
+    if(currentLevel===2&&w?.spawns?.[0]?.[0]==='boss'){oceanBossIntroUntilR942=performance.now()+1250;showMessage('GIANT OCTOPUS',1.4);}
   };
 
   startLevel = function(level,keepScore=false){__r941StartLevelR942(level,keepScore);if(level===2)resetOceanPropsR942();};
@@ -3322,7 +3359,7 @@
 
   drawHUD = function(){
     __baseDrawHUDR942();
-    if(started&&currentLevel===2&&!gameOver&&!victory){ctx.save();ctx.fillStyle='#d9edf4';ctx.font='bold 6px monospace';ctx.fillText(oceanWeaponR942?`WEAPON: ${oceanWeaponR942.toUpperCase()}`:'WEAPON: —',12,43);const boss=enemies.find(e=>e.type==='boss'&&e.alive);if(boss){ctx.textAlign='right';ctx.fillStyle='#ff5364';ctx.font='bold 7px monospace';ctx.fillText(`SACRED DESTROYER · PHASE ${boss.bossPhase||1}/3`,W-10,14);ctx.textAlign='left';}ctx.restore();}
+    if(started&&currentLevel===2&&!gameOver&&!victory){ctx.save();ctx.fillStyle='#d9edf4';ctx.font='bold 6px monospace';ctx.fillText(oceanWeaponR942?`WEAPON: ${oceanWeaponR942.toUpperCase()}`:'WEAPON: —',12,43);const boss=enemies.find(e=>e.type==='boss'&&e.alive);if(boss){ctx.textAlign='right';ctx.fillStyle='#ff5364';ctx.font='bold 7px monospace';ctx.fillText(`GIANT OCTOPUS · PHASE ${boss.bossPhase||1}/3`,W-10,14);ctx.textAlign='left';}ctx.restore();}
   };
 
   function drawOceanBossIntroR942(){
@@ -4334,9 +4371,9 @@
     // Bar counter, bottles, stools, window.
     ctx.fillStyle='#3b2119';ctx.fillRect(28,150,135,40);ctx.fillStyle='#85513a';ctx.fillRect(24,145,143,8);for(let i=0;i<8;i++){ctx.fillStyle=['#6fa1c0','#b34b58','#d3a550'][i%3];ctx.fillRect(38+i*14,132-(i%2)*5,5,13);}for(let x=60;x<150;x+=35){ctx.fillStyle='#171113';ctx.fillRect(x,190,4,27);ctx.beginPath();ctx.arc(x+2,188,8,0,Math.PI*2);ctx.fill();}
     // R1205 bartender: always working behind the counter, wiping a bottle.
-    {const wipe=Math.sin(elapsed*5.4);ctx.save();ctx.translate(96,140);ctx.fillStyle='#161b22';ctx.fillRect(-8,-30,16,24);ctx.fillStyle='#bd8a70';ctx.beginPath();ctx.arc(0,-37,7,0,Math.PI*2);ctx.fill();ctx.fillStyle='#0b0d12';ctx.fillRect(-8,-44,16,5);ctx.strokeStyle='#bd8a70';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(-6,-25);ctx.lineTo(-13+wipe*2,-12);ctx.moveTo(6,-25);ctx.lineTo(10-wipe*4,-10);ctx.stroke();ctx.fillStyle='#6fa79c';ctx.fillRect(7-wipe*3,-18,5,15);ctx.fillStyle='#d9e3df';ctx.fillRect(6-wipe*3,-20,7,3);ctx.fillStyle='#d7d1c5';ctx.fillRect(-16+wipe*2,-14,7,5);ctx.restore();}
+    {const wipe=Math.sin(elapsed*5.4);ctx.save();ctx.translate(102,138);ctx.scale(1.22,1.22);ctx.fillStyle='#161b22';ctx.fillRect(-8,-30,16,24);ctx.fillStyle='#bd8a70';ctx.beginPath();ctx.arc(0,-37,7,0,Math.PI*2);ctx.fill();ctx.fillStyle='#0b0d12';ctx.fillRect(-8,-44,16,5);ctx.strokeStyle='#bd8a70';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(-6,-25);ctx.lineTo(-13+wipe*2,-12);ctx.moveTo(6,-25);ctx.lineTo(10-wipe*4,-10);ctx.stroke();ctx.fillStyle='#6fa79c';ctx.fillRect(7-wipe*3,-18,5,15);ctx.fillStyle='#d9e3df';ctx.fillRect(6-wipe*3,-20,7,3);ctx.fillStyle='#d7d1c5';ctx.fillRect(-16+wipe*2,-14,7,5);ctx.restore();}
 
-    ctx.fillStyle='#09101a';ctx.fillRect(360,88,95,59);ctx.strokeStyle='#6cabc8';ctx.lineWidth=2;ctx.strokeRect(360,88,95,59);ctx.strokeStyle='rgba(126,199,226,.45)';for(let x=370;x<450;x+=18){ctx.beginPath();ctx.moveTo(x,90);ctx.lineTo(x-12,145);ctx.stroke();}
+    ctx.fillStyle='rgba(255,210,140,.10)';ctx.fillRect(68,96,68,48);ctx.fillStyle='#09101a';ctx.fillRect(360,88,95,59);ctx.strokeStyle='#6cabc8';ctx.lineWidth=2;ctx.strokeRect(360,88,95,59);ctx.strokeStyle='rgba(126,199,226,.45)';for(let x=370;x<450;x+=18){ctx.beginPath();ctx.moveTo(x,90);ctx.lineTo(x-12,145);ctx.stroke();}
     ctx.fillStyle='#271d30';ctx.fillRect(204,101,55,70);ctx.fillStyle='#b74a59';ctx.fillRect(212,109,39,18);ctx.fillStyle='#e6c264';ctx.font='bold 7px monospace';ctx.fillText('ANDRIK',216,121);
     for(const it of barItemsR955){if(it.taken)continue;ctx.save();ctx.translate(it.x,it.y-15);if(it.kind==='knife'){ctx.fillStyle='#d7e1e5';ctx.fillRect(-8,-1,14,2);ctx.fillStyle='#704b33';ctx.fillRect(6,-3,5,6);}else{ctx.fillStyle='#6ca7a3';ctx.fillRect(-3,-9,6,11);ctx.fillStyle='#a9d5cd';ctx.fillRect(-2,-8,4,3);}ctx.restore();}
     for(const e of barEnemiesR955)drawBarEnemyR955(e);for(const p of barProjectilesR955){ctx.fillStyle='#dce8eb';ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.t*16);ctx.fillRect(-7,-1,14,2);ctx.restore();}
@@ -4549,7 +4586,7 @@
   startWave=function(w){
     __r952StartWaveR955(w);
     if(w?.spawns?.[0]?.[0]==='boss'&&currentLevel===1){cityBossIntroUntilR955=performance.now()+1900;showMessage('NIGHT ENFORCER',1.5);}
-    if(w?.spawns?.[0]?.[0]==='boss'&&currentLevel===2){oceanBossIntroUntilR942=performance.now()+1900;showMessage('SACRED DESTROYER',1.5);}
+    if(w?.spawns?.[0]?.[0]==='boss'&&currentLevel===2){oceanBossIntroUntilR942=performance.now()+1900;showMessage('GIANT OCTOPUS',1.5);}
   };
   function drawCityBossIntroR955(){
     if(performance.now()>=cityBossIntroUntilR955||!cityBossArtR955.complete||!cityBossArtR955.naturalWidth)return;ctx.save();ctx.fillStyle='#02040a';ctx.fillRect(0,0,W,H);ctx.drawImage(cityBossArtR955,0,0,W,H);ctx.restore();
@@ -4557,7 +4594,7 @@
   const __r952DrawHUDR955=drawHUD;
   drawHUD=function(){
     __r952DrawHUDR955();if(!started||gameOver)return;drawLivesR955(12,55);
-    const boss=enemies.find(e=>e.alive&&e.r955Boss);if(boss){ctx.save();ctx.fillStyle='rgba(4,6,10,.92)';ctx.fillRect(W-174,4,170,31);ctx.textAlign='right';ctx.fillStyle='#ff5967';ctx.font='bold 7px monospace';ctx.fillText(boss.r955Boss==='sacred-destroyer'?'SACRED DESTROYER':'NIGHT ENFORCER',W-9,13);ctx.fillStyle='#f5e7e9';ctx.fillText(`LIFE ${boss.r955Life}/2`,W-9,23);ctx.fillStyle='#2a2630';ctx.fillRect(W-158,27,149,5);ctx.fillStyle='#ca4555';ctx.fillRect(W-158,27,149*(boss.hp/boss.maxHp),5);ctx.textAlign='left';ctx.restore();}
+    const boss=enemies.find(e=>e.alive&&e.r955Boss);if(boss){ctx.save();ctx.fillStyle='rgba(4,6,10,.92)';ctx.fillRect(W-174,4,170,31);ctx.textAlign='right';ctx.fillStyle='#ff5967';ctx.font='bold 7px monospace';ctx.fillText(boss.r955Boss==='sacred-destroyer'?'GIANT OCTOPUS':'NIGHT ENFORCER',W-9,13);ctx.fillStyle='#f5e7e9';ctx.fillText(`LIFE ${boss.r955Life}/2`,W-9,23);ctx.fillStyle='#2a2630';ctx.fillRect(W-158,27,149,5);ctx.fillStyle='#ca4555';ctx.fillRect(W-158,27,149*(boss.hp/boss.maxHp),5);ctx.textAlign='left';ctx.restore();}
   };
 
   // ------------------------------
