@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r357-deploy-retrigger",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1790638488686-18fd65ebf0",
-  "release": "R1207",
-  "archiveName": "ANDRIK-SITE-R1207-COUNTS-MONUMENT-FIX.zip",
-  "sourceHead": "f029f68ca50415db02c83d2300e4bff6f52f1105",
-  "backupSha": "f029f68ca50415db02c83d2300e4bff6f52f1105",
+  "operationId": "publish-1790699031425-681a7129ce",
+  "release": "R1208",
+  "archiveName": "ANDRIK-SITE-R1208-TRIKA-ZIP-DOWNLOAD-FIX.zip",
+  "sourceHead": "81a042657903f3750449b102f4c55f8104eb9246",
+  "backupSha": "81a042657903f3750449b102f4c55f8104eb9246",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-28T23:34:48.686Z"
+  "generatedAt": "2026-09-29T16:23:51.425Z"
 }
