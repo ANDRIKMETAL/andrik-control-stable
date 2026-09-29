@@ -19133,6 +19133,30 @@ async function handleMusicAlbumMultipartAbortR446(request,env){
   try{await bucket.resumeMultipartUpload(def.zipKey,uploadId).abort();return json({ok:true});}
   catch(error){return json({ok:false,error:'multipart-abort-failed',message:cleanPlainText(error?.message||error,300)},400);}
 }
+// === R1209: public full COVERS ZIP download from existing R2 eho.zip ===
+async function handleCoversFullZipR1209(request,env){
+  const bucket=getMusicBucketR314(env);if(!bucket)return json({ok:false,error:'music-bucket-not-configured'},503);
+  // User's existing full cover-album archive lives in R2 as eho.zip.
+  // Keep the R1176 playback archive untouched; this endpoint is download-only.
+  const keys=['eho.zip','covers/eho.zip'];
+  let object=null,key='';
+  for(const candidate of keys){
+    object=await bucket.get(candidate).catch(()=>null);
+    if(object){key=candidate;break}
+  }
+  if(!object)return json({ok:false,error:'covers-zip-not-found',message:'Архив eho.zip не найден в R2.'},404);
+  const h=new Headers();
+  h.set('content-type','application/zip');
+  h.set('content-disposition','attachment; filename="eho.zip"');
+  h.set('cache-control','public, max-age=3600');
+  h.set('x-content-type-options','nosniff');
+  h.set('x-andrik-r2-key',key);
+  if(object.size)h.set('content-length',String(object.size));
+  if(request.method==='HEAD')return new Response(null,{status:200,headers:h});
+  return new Response(object.body,{status:200,headers:h});
+}
+// === End R1209 COVERS full ZIP download ===
+
 async function handleMusicAlbumDownloadR446(request,env){
   const bucket=getMusicBucketR314(env); if(!bucket)return json({ok:false,error:'music-bucket-not-configured'},503);
   const def=musicAlbumDefR446(new URL(request.url).searchParams.get('album')); if(!def)return json({ok:false,error:'invalid-album'},400);
@@ -21472,6 +21496,7 @@ async function routeApi(request, env, ctx) {
     if (path === '/download/ANDRIK-Lyra-TRIKA-Promo-2026.mp4' && (request.method === 'GET' || request.method === 'HEAD')) return await handlePromoVideoPublicR471(request, env, true);
     if (path === '/api/music/covers-archive' && request.method === 'GET') return await handleCoversArchiveListR1176(request, env);
     if (path === '/api/music/covers-archive-track' && (request.method === 'GET' || request.method === 'HEAD')) return await handleCoversArchiveTrackR1176(request, env);
+    if (path === '/api/music/covers-full-zip' && (request.method === 'GET' || request.method === 'HEAD')) return await handleCoversFullZipR1209(request, env);
     if (path === '/api/music/albums/status' && request.method === 'GET') return await handleMusicAlbumsPublicStatusR446(request, env);
     if (path === '/api/music/album-download' && (request.method === 'GET' || request.method === 'HEAD')) return await handleMusicAlbumDownloadR446(request, env);
     if (path === '/api/music/silent-archive-track' && (request.method === 'GET' || request.method === 'HEAD')) return await handleSilentArchiveTrackR1199(request, env);

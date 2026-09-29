@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r357-deploy-retrigger",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1790699031425-681a7129ce",
-  "release": "R1208",
-  "archiveName": "ANDRIK-SITE-R1208-TRIKA-ZIP-DOWNLOAD-FIX.zip",
-  "sourceHead": "81a042657903f3750449b102f4c55f8104eb9246",
-  "backupSha": "81a042657903f3750449b102f4c55f8104eb9246",
+  "operationId": "publish-1790701540013-ecdfa31d80",
+  "release": "R1209",
+  "archiveName": "ANDRIK-SITE-R1209-COVERS-EHO-ZIP-DOWNLOAD.zip",
+  "sourceHead": "f706b3945f790901da37a3f091d47f55dafdedb9",
+  "backupSha": "f706b3945f790901da37a3f091d47f55dafdedb9",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-29T16:23:51.425Z"
+  "generatedAt": "2026-09-29T17:05:40.013Z"
 }
