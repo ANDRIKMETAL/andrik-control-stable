@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r357-deploy-retrigger",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1790701540013-ecdfa31d80",
-  "release": "R1209",
-  "archiveName": "ANDRIK-SITE-R1209-COVERS-EHO-ZIP-DOWNLOAD.zip",
-  "sourceHead": "f706b3945f790901da37a3f091d47f55dafdedb9",
-  "backupSha": "f706b3945f790901da37a3f091d47f55dafdedb9",
+  "operationId": "publish-1790737566346-62dddf0ab5",
+  "release": "R1210",
+  "archiveName": "R1210-SILENT-ZIP-PLAYER-FIX.zip",
+  "sourceHead": "608a8e8b6387e148420ba25801ec1617a2f5a3f0",
+  "backupSha": "608a8e8b6387e148420ba25801ec1617a2f5a3f0",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-09-29T17:05:40.013Z"
+  "generatedAt": "2026-09-30T03:06:06.346Z"
 }
