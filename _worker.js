@@ -1786,6 +1786,13 @@ const D1_SITE_REPORT_CACHE_MS_R638 = 6 * 60 * 60 * 1000;
 const D1_CITY_DAY_CACHE_MS_R638 = 10 * 60 * 1000;
 const D1_CITY_30D_CACHE_MS_R638 = 6 * 60 * 60 * 1000;
 const D1_ECOSYSTEM_AGG_CACHE_MS_R638 = 6 * 60 * 60 * 1000;
+// R1212 D1 LIMIT GUARD — keep the Free-plan rows_read budget for real traffic.
+// Dashboard polling now reads one tiny push_state cache row instead of rescanning
+// site_visit_events on every refresh. Raw scans are still performed periodically.
+const D1_LIVE_METRICS_CACHE_MS_R1212 = 5 * 60 * 1000;
+const D1_WINDOW_METRICS_CACHE_MS_R1212 = 10 * 60 * 1000;
+const D1_COMPLETED_WINDOW_CACHE_MS_R1212 = 6 * 60 * 60 * 1000;
+const D1_ECOSYSTEM_FORCE_MIN_MS_R1212 = 15 * 60 * 1000;
 
 function d1UtcTimestampMsR638(value='') {
   const raw=String(value||'').trim();
@@ -1806,19 +1813,30 @@ async function writeD1JsonCacheR638(db,key,value){
 }
 
 async function maybeTrimSiteVisitEventsR638(db){
+  // R1212: 30-day dashboards only need a small safety margin beyond 30 days.
+  // The persistent country/city rollup keeps long-term geography separately.
+  // Keep the existing maintenance timestamp so deploying at 90% rows_read does NOT
+  // trigger a large cleanup scan immediately; the shorter retention applies on the next normal daily trim.
   const key='d1-maintenance:site-visit-retention-r638';
   const state=await getPushState(db,key).catch(()=>null);
   const last=d1UtcTimestampMsR638(state?.updatedAt||'');
   if(Number.isFinite(last)&&Date.now()-last<23*60*60*1000)return {ok:true,skipped:true};
   // Claim first so a slow cleanup is not duplicated by concurrent page views.
   await setPushState(db,key,new Date().toISOString()).catch(()=>{});
-  const result=await db.prepare(`DELETE FROM site_visit_events WHERE local_date < date('now','-62 days')`).run().catch(()=>null);
-  return {ok:true,changes:Number(result?.meta?.changes||0)};
+  const result=await db.prepare(`DELETE FROM site_visit_events WHERE local_date < date('now','-35 days')`).run().catch(()=>null);
+  return {ok:true,changes:Number(result?.meta?.changes||0),retentionDays:35};
 }
 
-async function getSiteLiveMetrics(db) {
+async function getSiteLiveMetrics(db, options={}) {
   await ensureSiteMetricsSchema(db);
   const localDate = getBratislavaClock().date;
+  const cacheKey='d1-cache:site-live-r1212';
+  if(!options?.force){
+    const cached=await readD1JsonCacheR638(db,cacheKey,D1_LIVE_METRICS_CACHE_MS_R1212);
+    if(cached?.value?.configured&&cached.value.localDate===localDate){
+      return {...cached.value,d1Cache:{hit:true,updatedAt:cached.updatedAt,ttlMinutes:5}};
+    }
+  }
   const [today, realtime] = await Promise.all([
     db.prepare(`
       SELECT COUNT(*) AS views, COUNT(DISTINCT visitor_hash) AS users
@@ -1829,13 +1847,15 @@ async function getSiteLiveMetrics(db) {
       FROM site_visit_events WHERE datetime(created_at) >= datetime('now','-30 minutes') AND event_type = 'visit'
     `).first()
   ]);
-  return {
+  const result={
     configured:true,
     localDate,
     today:{ views:Number(today?.views || 0), users:Number(today?.users || 0) },
     realtime:{ views:Number(realtime?.views || 0), users:Number(realtime?.users || 0) },
     updatedAt:new Date().toISOString()
   };
+  await writeD1JsonCacheR638(db,cacheKey,result);
+  return {...result,d1Cache:{hit:false,updatedAt:result.updatedAt,ttlMinutes:5}};
 }
 
 
@@ -2007,10 +2027,21 @@ async function refreshYoutubeIdentityIfStaleR530(env,db,maxAgeMs=10*60*1000) {
   return {refreshed:true,updatedAt:now,views:Number(identity.views||0),subscribers:Number(identity.subscribers||0)};
 }
 
-async function getSiteWindowMetrics(db, startAt, endAt = '') {
+async function getSiteWindowMetrics(db, startAt, endAt = '', options={}) {
   await ensureSiteMetricsSchema(db);
   const safeStart = cleanPlainText(startAt || '', 80);
   const safeEnd = cleanPlainText(endAt || '', 80);
+  const token=(`${safeStart}|${safeEnd||'open'}`).replace(/[^0-9A-Za-z]+/g,'-').replace(/^-+|-+$/g,'').slice(0,120);
+  const cacheKey=`d1-cache:site-window-r1212:${token||'default'}`;
+  const endMs=Date.parse(safeEnd||'');
+  const completed=Boolean(safeEnd)&&Number.isFinite(endMs)&&endMs<=Date.now();
+  const ttl=completed?D1_COMPLETED_WINDOW_CACHE_MS_R1212:D1_WINDOW_METRICS_CACHE_MS_R1212;
+  if(!options?.force){
+    const cached=await readD1JsonCacheR638(db,cacheKey,ttl);
+    if(cached?.value?.startAt===safeStart&&cached.value.endAt===safeEnd){
+      return {...cached.value,d1Cache:{hit:true,updatedAt:cached.updatedAt,ttlMinutes:Math.round(ttl/60000)}};
+    }
+  }
   const row = safeEnd
     ? await db.prepare(`
         SELECT COUNT(*) AS views, COUNT(DISTINCT visitor_hash) AS users
@@ -2025,13 +2056,15 @@ async function getSiteWindowMetrics(db, startAt, endAt = '') {
         WHERE event_type = 'visit'
           AND datetime(created_at) >= datetime(?1)
       `).bind(safeStart).first();
-  return {
+  const result={
     views:Number(row?.views || 0),
     users:Number(row?.users || 0),
     startAt:safeStart,
     endAt:safeEnd,
     updatedAt:new Date().toISOString()
   };
+  await writeD1JsonCacheR638(db,cacheKey,result);
+  return {...result,d1Cache:{hit:false,updatedAt:result.updatedAt,ttlMinutes:Math.round(ttl/60000)}};
 }
 
 function mergeGoogleWithSiteLive(google = {}, live = {}) {
@@ -3402,9 +3435,11 @@ async function latestPlatformMetricsR498(db, platform) {
 }
 async function getEcosystemSiteAggregatesR638(db,{force=false}={}){
   const cacheKey='d1-cache:ecosystem-site-aggregates-r932';
-  if(!force){
-    const cached=await readD1JsonCacheR638(db,cacheKey,D1_ECOSYSTEM_AGG_CACHE_MS_R638);
-    if(cached?.value?.version==='r932')return {...cached.value,d1Cache:{hit:true,updatedAt:cached.updatedAt}};
+  // R1212: the technical-layer button previously bypassed the 6h cache every tap,
+  // causing ten 30-day GROUP BY scans. A force refresh is now rate-limited to 15 min.
+  const cached=await readD1JsonCacheR638(db,cacheKey,D1_ECOSYSTEM_AGG_CACHE_MS_R638);
+  if(cached?.value?.version==='r932'&&(!force||cached.ageMs<D1_ECOSYSTEM_FORCE_MIN_MS_R1212)){
+    return {...cached.value,d1Cache:{hit:true,updatedAt:cached.updatedAt,forceDeferred:Boolean(force),ageMs:cached.ageMs}};
   }
   const age='-30 days';
   const safe=task=>Promise.resolve().then(task).catch(()=>({results:[]}));
@@ -15168,7 +15203,7 @@ async function handleControlHome(request, env) {
       ORDER BY datetime(created_at) DESC
       LIMIT 1
     `).first(),
-    collectDailyCityActivityR370(db, window, new Date().toISOString()),
+    collectDailyCityActivityR370(db, window),
     collectCalendarDayCityActivityR530(db).catch(()=>[])
   ]);
   const ytBaseline = ytBaselineBefore || ytBaselineAfter;
@@ -15359,7 +15394,10 @@ async function handleControlGoogleAnalytics(request, env) {
     }catch(error){refreshError=cleanPlainText(error?.message||error,300);}
   }
 
-  const [liveResult,firstPartyResult]=await Promise.allSettled([getSiteLiveMetrics(db),getSiteFirstParty30dR530(db,{force:forceRefresh})]);
+  // R1212: a normal/manual GA4 refresh must not also rescan 30 days of raw D1 rows.
+  // Explicit D1 rebuild remains available only through d1_refresh=1 for maintenance.
+  const forceD1Refresh=url.searchParams.get('d1_refresh')==='1';
+  const [liveResult,firstPartyResult]=await Promise.allSettled([getSiteLiveMetrics(db),getSiteFirstParty30dR530(db,{force:forceD1Refresh})]);
   const live=liveResult.status==='fulfilled'?liveResult.value:{configured:false,today:{},realtime:{}};
   const firstParty=firstPartyResult.status==='fulfilled'?firstPartyResult.value:{configured:false,trend:[],countries:[],pages:[]};
   const hasSnapshot=Boolean(latestRow)||Boolean(latest?.configured);
@@ -20208,6 +20246,69 @@ async function serveVideoObjectR559(request,env,key,{download=false,filename='AN
 }
 // === End R559 hardened MP4 serving ===
 
+
+// === R1211: static album backgrounds for normal MP3 radio tracks ===
+const RADIO_ALBUM_BG_R1211 = Object.freeze({
+  illusion:'radio/album-backgrounds/illusion-of-life.img',
+  ocean:'radio/album-backgrounds/ocean.img',
+  trika:'radio/album-backgrounds/trika.img',
+  beyond:'radio/album-backgrounds/beyond.img',
+  silent:'radio/album-backgrounds/silent.img',
+  extras:'radio/album-backgrounds/covers-extended-singles.img'
+});
+function radioAlbumBgSlotR1211(request){
+  const slot=String(new URL(request.url).searchParams.get('slot')||'').trim().toLowerCase();
+  return Object.prototype.hasOwnProperty.call(RADIO_ALBUM_BG_R1211,slot)?slot:'';
+}
+function radioAlbumBgContentTypeR1211(value){
+  const type=String(value||'').toLowerCase().split(';')[0].trim();
+  return ['image/jpeg','image/png','image/webp'].includes(type)?type:'';
+}
+async function handleRadioAlbumBgR1211(request,env){
+  if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
+  const bucket=getMusicBucketR314(env);if(!bucket)return json({ok:false,error:'music-bucket-not-configured'},503);
+  const slot=radioAlbumBgSlotR1211(request);if(!slot)return json({ok:false,error:'invalid-slot',allowed:Object.keys(RADIO_ALBUM_BG_R1211)},400);
+  const key=RADIO_ALBUM_BG_R1211[slot];
+  if(request.method==='GET'){
+    const head=await bucket.head(key).catch(()=>null);
+    return json({ok:true,slot,key,exists:Boolean(head),size:Number(head?.size||0),uploaded:head?.uploaded||null,contentType:head?.httpMetadata?.contentType||'',etag:head?.httpEtag||head?.etag||''});
+  }
+  if(request.method==='DELETE'){
+    await bucket.delete(key).catch(()=>{});
+    return json({ok:true,slot,key,deleted:true});
+  }
+  if(request.method==='PUT'){
+    const type=radioAlbumBgContentTypeR1211(request.headers.get('content-type'));
+    if(!type)return json({ok:false,error:'invalid-content-type',message:'Нужен JPG, PNG или WebP.'},415);
+    const len=Number(request.headers.get('content-length')||0);
+    if(len>20*1024*1024)return json({ok:false,error:'file-too-large',message:'Максимум 20 МБ.'},413);
+    const body=await request.arrayBuffer();
+    if(body.byteLength<4096)return json({ok:false,error:'file-too-small'},400);
+    if(body.byteLength>20*1024*1024)return json({ok:false,error:'file-too-large',message:'Максимум 20 МБ.'},413);
+    await bucket.put(key,body,{httpMetadata:{contentType:type,cacheControl:'public, max-age=60, must-revalidate'},customMetadata:{source:'ANDRIK R1211 album background',slot,uploadedAt:new Date().toISOString()}});
+    const head=await bucket.head(key);
+    return json({ok:true,slot,key,size:Number(head?.size||body.byteLength),uploaded:head?.uploaded||null,contentType:type,etag:head?.httpEtag||head?.etag||'',publicUrl:`/api/media/radio-background-r1211?slot=${encodeURIComponent(slot)}`});
+  }
+  return json({ok:false,error:'method-not-allowed'},405);
+}
+async function handleRadioAlbumBgPublicR1211(request,env){
+  const bucket=getMusicBucketR314(env);if(!bucket)return new Response('R2 unavailable',{status:503,headers:{'cache-control':'no-store'}});
+  const slot=radioAlbumBgSlotR1211(request);if(!slot)return new Response('Not found',{status:404,headers:{'cache-control':'no-store'}});
+  const key=RADIO_ALBUM_BG_R1211[slot];
+  const head=await bucket.head(key).catch(()=>null);if(!head)return new Response('Not found',{status:404,headers:{'cache-control':'no-store'}});
+  const headers=new Headers();
+  headers.set('content-type',head?.httpMetadata?.contentType||'image/jpeg');
+  headers.set('content-length',String(Number(head.size||0)));
+  headers.set('cache-control','public, max-age=60, must-revalidate');
+  const etag=String(head.httpEtag||head.etag||'');if(etag)headers.set('etag',etag);
+  if(head.uploaded)headers.set('last-modified',new Date(head.uploaded).toUTCString());
+  headers.set('x-andrik-radio-background-slot',slot);
+  if(request.method==='HEAD')return new Response(null,{status:200,headers});
+  const object=await bucket.get(key);if(!object)return new Response('Not found',{status:404,headers:{'cache-control':'no-store'}});
+  return new Response(object.body,{status:200,headers});
+}
+// === End R1211 ===
+
 // === R620: 1080p master visuals for ANDRIK Metal Radio in R2 ===
 const RADIO_VISUAL_KEYS_R620 = Object.freeze({
   morning:'radio/stream-morning-master-r703.mp4',
@@ -21476,6 +21577,8 @@ async function routeApi(request, env, ctx) {
     if (path === '/api/control/vps-backup-r1030/status' && request.method === 'GET') return await handleVpsBackupStatusR1030(request, env);
     if ((path === '/api/control/vps-backup-r1033/set' || path === '/api/control/vps-backup-r1034/set') && request.method === 'GET') return await handleVpsBackupSetR1033(request, env);
 
+    if (path === '/api/control/radio-backgrounds-r1211' && ['GET','PUT','DELETE'].includes(request.method)) return await handleRadioAlbumBgR1211(request, env);
+    if (path === '/api/media/radio-background-r1211' && (request.method === 'GET' || request.method === 'HEAD')) return await handleRadioAlbumBgPublicR1211(request, env);
     if (path === '/api/control/radio-visuals-r620' && request.method === 'PUT') return await handleRadioVisualPutR620(request, env);
     if (path === '/api/control/radio-visuals-r662/mpu/start' && request.method === 'POST') return await handleRadioVisualMpuStartR662(request, env);
     if (path === '/api/control/radio-visuals-r662/mpu/part' && request.method === 'PUT') return await handleRadioVisualMpuPartR662(request, env);

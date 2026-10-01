@@ -2755,7 +2755,7 @@ body.analytics-admin-page.is-country-returning #worldMap .world-map-dot.is-selec
   const cachedAudience=readAudienceCache();
   if(cachedAudience?.data){try{renderSearchConsole(cachedAudience.data.searchEngines||[],cachedAudience.data.searchConsole||{});emitAudienceData(cachedAudience.data)}catch(error){console.warn('R540 cached audience render skipped:',error)}}
   setTimeout(load,20);
-  refreshTimer=setInterval(()=>{if(!document.hidden)load()},120000);
+  refreshTimer=setInterval(()=>{if(!document.hidden)load()},600000);
   window.addEventListener('beforeunload',()=>{clearTimeout(startupWatchdog);clearTimeout(deviceWatchdog);if(refreshTimer)clearInterval(refreshTimer)});
 })();
 

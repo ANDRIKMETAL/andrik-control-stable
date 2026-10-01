@@ -1,6 +1,6 @@
 'use strict';
 
-const VERSION = '55.00-r1205-hero-bar-bike-level';
+const VERSION = '55.00-r1212-d1-limit-guard';
 const IS_CONTROL_HOST = self.location.hostname.toLowerCase() === 'control.andrikmetal.com';
 
 async function deleteControlCaches(){
