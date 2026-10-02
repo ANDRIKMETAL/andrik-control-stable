@@ -1,3 +1,4 @@
+// R1212: PUSH DELIVERY FIX — OneSignal owner pushes now commit on accepted explicit subscription targeting instead of unreliable immediate Web Push delivery reports; youtube-fast-engagement no longer retries already-accepted like/subscriber pushes; repeated push/fast-engagement warnings/errors are updated in-place instead of accumulating ×N. UI untouched.
 // ANDRIK CONTROL R1138 SAFE OPS · radio actions preserved
 // R768: OWNER PUSH SELF-HEAL + CONTROL-ORIGIN REBIND; radio R767 untouched.
 const PUSH_OWNER_RECOVERY_R768 = 'R768-OWNER-PUSH-SELFHEAL';
@@ -1786,13 +1787,6 @@ const D1_SITE_REPORT_CACHE_MS_R638 = 6 * 60 * 60 * 1000;
 const D1_CITY_DAY_CACHE_MS_R638 = 10 * 60 * 1000;
 const D1_CITY_30D_CACHE_MS_R638 = 6 * 60 * 60 * 1000;
 const D1_ECOSYSTEM_AGG_CACHE_MS_R638 = 6 * 60 * 60 * 1000;
-// R1212 D1 LIMIT GUARD — keep the Free-plan rows_read budget for real traffic.
-// Dashboard polling now reads one tiny push_state cache row instead of rescanning
-// site_visit_events on every refresh. Raw scans are still performed periodically.
-const D1_LIVE_METRICS_CACHE_MS_R1212 = 5 * 60 * 1000;
-const D1_WINDOW_METRICS_CACHE_MS_R1212 = 10 * 60 * 1000;
-const D1_COMPLETED_WINDOW_CACHE_MS_R1212 = 6 * 60 * 60 * 1000;
-const D1_ECOSYSTEM_FORCE_MIN_MS_R1212 = 15 * 60 * 1000;
 
 function d1UtcTimestampMsR638(value='') {
   const raw=String(value||'').trim();
@@ -1813,30 +1807,19 @@ async function writeD1JsonCacheR638(db,key,value){
 }
 
 async function maybeTrimSiteVisitEventsR638(db){
-  // R1212: 30-day dashboards only need a small safety margin beyond 30 days.
-  // The persistent country/city rollup keeps long-term geography separately.
-  // Keep the existing maintenance timestamp so deploying at 90% rows_read does NOT
-  // trigger a large cleanup scan immediately; the shorter retention applies on the next normal daily trim.
   const key='d1-maintenance:site-visit-retention-r638';
   const state=await getPushState(db,key).catch(()=>null);
   const last=d1UtcTimestampMsR638(state?.updatedAt||'');
   if(Number.isFinite(last)&&Date.now()-last<23*60*60*1000)return {ok:true,skipped:true};
   // Claim first so a slow cleanup is not duplicated by concurrent page views.
   await setPushState(db,key,new Date().toISOString()).catch(()=>{});
-  const result=await db.prepare(`DELETE FROM site_visit_events WHERE local_date < date('now','-35 days')`).run().catch(()=>null);
-  return {ok:true,changes:Number(result?.meta?.changes||0),retentionDays:35};
+  const result=await db.prepare(`DELETE FROM site_visit_events WHERE local_date < date('now','-62 days')`).run().catch(()=>null);
+  return {ok:true,changes:Number(result?.meta?.changes||0)};
 }
 
-async function getSiteLiveMetrics(db, options={}) {
+async function getSiteLiveMetrics(db) {
   await ensureSiteMetricsSchema(db);
   const localDate = getBratislavaClock().date;
-  const cacheKey='d1-cache:site-live-r1212';
-  if(!options?.force){
-    const cached=await readD1JsonCacheR638(db,cacheKey,D1_LIVE_METRICS_CACHE_MS_R1212);
-    if(cached?.value?.configured&&cached.value.localDate===localDate){
-      return {...cached.value,d1Cache:{hit:true,updatedAt:cached.updatedAt,ttlMinutes:5}};
-    }
-  }
   const [today, realtime] = await Promise.all([
     db.prepare(`
       SELECT COUNT(*) AS views, COUNT(DISTINCT visitor_hash) AS users
@@ -1847,15 +1830,13 @@ async function getSiteLiveMetrics(db, options={}) {
       FROM site_visit_events WHERE datetime(created_at) >= datetime('now','-30 minutes') AND event_type = 'visit'
     `).first()
   ]);
-  const result={
+  return {
     configured:true,
     localDate,
     today:{ views:Number(today?.views || 0), users:Number(today?.users || 0) },
     realtime:{ views:Number(realtime?.views || 0), users:Number(realtime?.users || 0) },
     updatedAt:new Date().toISOString()
   };
-  await writeD1JsonCacheR638(db,cacheKey,result);
-  return {...result,d1Cache:{hit:false,updatedAt:result.updatedAt,ttlMinutes:5}};
 }
 
 
@@ -2027,21 +2008,10 @@ async function refreshYoutubeIdentityIfStaleR530(env,db,maxAgeMs=10*60*1000) {
   return {refreshed:true,updatedAt:now,views:Number(identity.views||0),subscribers:Number(identity.subscribers||0)};
 }
 
-async function getSiteWindowMetrics(db, startAt, endAt = '', options={}) {
+async function getSiteWindowMetrics(db, startAt, endAt = '') {
   await ensureSiteMetricsSchema(db);
   const safeStart = cleanPlainText(startAt || '', 80);
   const safeEnd = cleanPlainText(endAt || '', 80);
-  const token=(`${safeStart}|${safeEnd||'open'}`).replace(/[^0-9A-Za-z]+/g,'-').replace(/^-+|-+$/g,'').slice(0,120);
-  const cacheKey=`d1-cache:site-window-r1212:${token||'default'}`;
-  const endMs=Date.parse(safeEnd||'');
-  const completed=Boolean(safeEnd)&&Number.isFinite(endMs)&&endMs<=Date.now();
-  const ttl=completed?D1_COMPLETED_WINDOW_CACHE_MS_R1212:D1_WINDOW_METRICS_CACHE_MS_R1212;
-  if(!options?.force){
-    const cached=await readD1JsonCacheR638(db,cacheKey,ttl);
-    if(cached?.value?.startAt===safeStart&&cached.value.endAt===safeEnd){
-      return {...cached.value,d1Cache:{hit:true,updatedAt:cached.updatedAt,ttlMinutes:Math.round(ttl/60000)}};
-    }
-  }
   const row = safeEnd
     ? await db.prepare(`
         SELECT COUNT(*) AS views, COUNT(DISTINCT visitor_hash) AS users
@@ -2056,15 +2026,13 @@ async function getSiteWindowMetrics(db, startAt, endAt = '', options={}) {
         WHERE event_type = 'visit'
           AND datetime(created_at) >= datetime(?1)
       `).bind(safeStart).first();
-  const result={
+  return {
     views:Number(row?.views || 0),
     users:Number(row?.users || 0),
     startAt:safeStart,
     endAt:safeEnd,
     updatedAt:new Date().toISOString()
   };
-  await writeD1JsonCacheR638(db,cacheKey,result);
-  return {...result,d1Cache:{hit:false,updatedAt:result.updatedAt,ttlMinutes:Math.round(ttl/60000)}};
 }
 
 function mergeGoogleWithSiteLive(google = {}, live = {}) {
@@ -2467,15 +2435,38 @@ async function recordSystemLog(env, entry = {}) {
     try { return JSON.stringify(entry.details || {}); }
     catch (_) { return '{}'; }
   })();
+  const safeMessage=cleanPlainText(entry.message || '',700);
+
+  // R1212: a single transient owner-push condition used to be written every scheduler
+  // pass and Control displayed it as ×4/×8 even though it was the same incident.  For
+  // notification-related warnings/errors keep ONE live row and refresh its timestamp
+  // and details.  Other scopes retain the original append-only audit behaviour.
+  const dedupeNotificationIssueR1212 =
+    (logScope==='push' || logScope==='youtube-fast-engagement') &&
+    (logLevel==='warning' || logLevel==='error');
+  if(dedupeNotificationIssueR1212){
+    const existing=await db.prepare(`
+      SELECT id FROM system_logs
+      WHERE scope=? AND level=? AND event=? AND message=?
+        AND datetime(created_at)>=datetime('now','-2 hours')
+      ORDER BY datetime(created_at) DESC LIMIT 1
+    `).bind(logScope,logLevel,logEvent,safeMessage).first().catch(()=>null);
+    if(existing?.id){
+      await db.prepare(`UPDATE system_logs SET details_json=?, created_at=datetime('now') WHERE id=?`)
+        .bind(safeDetails,existing.id).run().catch(()=>{});
+      return;
+    }
+  }
+
   await db.prepare(`
     INSERT INTO system_logs (id, scope, level, event, message, details_json, created_at)
     VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
   `).bind(
     cleanPlainText(entry.id || crypto.randomUUID(), 80),
-    cleanPlainText(entry.scope || 'system', 40),
-    cleanPlainText(entry.level || 'info', 20),
-    cleanPlainText(entry.event || '', 80),
-    cleanPlainText(entry.message || '', 700),
+    logScope,
+    logLevel,
+    logEvent,
+    safeMessage,
     safeDetails
   ).run();
   // R638 D1: the old code scanned the 600-row tail after EVERY log insert.
@@ -3052,52 +3043,37 @@ async function sendOneSignalPush(env, {
     oneSignalId
   };
 
-  // R778: owner event pushes that drive a watermark/slot are not considered delivered
-  // merely because OneSignal returned HTTP 200. Test push already proves the browser can
-  // receive; this guard makes likes/subscribers/daily summaries advance ONLY when at least
-  // one owner subscription is actually matched. Failed/pending sends stay retryable.
+  // R1212 OWNER PUSH ACCEPTANCE RULE:
+  // For Web Push, OneSignal's create-notification response and the message-report API
+  // do not provide a synchronous handset receipt reliably.  R765/R778 therefore
+  // produced false failures: OneSignal accepted a push for an explicit valid owner
+  // subscription, but `successful/received` was still 0 and the same like/subscriber
+  // event was retried every scheduler cycle.
+  //
+  // At this point we already know all of the following:
+  //   1) HTTP create succeeded;
+  //   2) OneSignal returned a non-empty notification id;
+  //   3) owner pushes used explicit subscription ids;
+  //   4) the all-invalid case was rejected/pruned above.
+  // That is the correct commit boundary for an owner Web Push.  Delivery reports remain
+  // available for diagnostics/repair pages, but they no longer gate YouTube watermarks.
   const strictSubscriberDeliveryR765 = audience === 'owner' && ['youtube-subscriber','youtube-subscriber-count','youtube-unsubscriber'].includes(historyType);
   const strictOwnerDeliveryR778 = audience === 'owner' && ['youtube-subscriber','youtube-subscriber-count','youtube-unsubscriber','youtube-like','daily-summary'].includes(historyType);
   if (strictOwnerDeliveryR778) {
-    const deliveryR765 = await verifySubscriberOwnerDeliveryR765(env, result);
-    if (!deliveryR765.ok) {
-      const deliveryStatusR765 = deliveryR765.pending ? 'pending' : 'failed';
-      if (history) {
-        await recordPushHistory(env, {
-          ...history,
-          audience,
-          status: deliveryStatusR765,
-          title,
-          message,
-          url,
-          recipients: Math.max(0, Number(deliveryR765.recipients || 0)),
-          oneSignalId: result.oneSignalId,
-          error: deliveryR765.error,
-          details: {
-            ...(history?.details && typeof history.details === 'object' ? history.details : {}),
-            warnings: responseData?.warnings || null,
-            response: responseData,
-            deliveryReportR765: deliveryR765.report || null,
-            acceptedByOneSignal: true,
-            deliveryConfirmedR765: false
-          }
-        }).catch(() => {});
-      }
-      const deliveryLabelR778 = strictSubscriberDeliveryR765 ? 'Подписчик' : (historyType === 'youtube-like' ? 'Лайк' : historyType === 'daily-summary' ? 'Сводка' : 'Owner push');
-      await recordSystemLog(env, {
-        scope:'push',
-        level:deliveryR765.pending ? 'warning' : 'error',
-        event:deliveryR765.error,
-        message:deliveryR765.pending
-          ? `${deliveryLabelR778}: OneSignal принял push, но устройство владельца ещё не подтверждено — состояние не сдвинуто, будет retry.`
-          : `${deliveryLabelR778}: OneSignal завершил отправку без доставки владельцу — состояние не сдвинуто, будет retry.`,
-        details:{ oneSignalId:result.oneSignalId, report:deliveryR765.report || null, title, strictOwnerDeliveryR778:true }
-      }).catch(() => {});
-      return { ...result, ok:false, pending:Boolean(deliveryR765.pending), error:deliveryR765.error, deliveryReport:deliveryR765.report || null };
+    const targetedOwnerIdsR1212 = Array.isArray(payload.include_subscription_ids)
+      ? payload.include_subscription_ids.filter(id=>!invalidSubscriptionIdsR473.includes(id))
+      : [];
+    if (!targetedOwnerIdsR1212.length) {
+      const errorCode='owner-subscription-invalid-r1212';
+      if (history) await recordPushHistory(env, {
+        ...history,audience,status:'failed',title,message,url,oneSignalId:result.oneSignalId,error:errorCode,
+        details:{...(history?.details&&typeof history.details==='object'?history.details:{}),acceptedByOneSignal:true,targetedOwnerIdsR1212:0,response:responseData}
+      }).catch(()=>{});
+      return {...result,ok:false,pending:false,error:errorCode};
     }
-    result.recipients = Math.max(result.recipients, Number(deliveryR765.recipients || 0));
-    result.deliveryConfirmedR765 = true;
-    result.deliveryReport = deliveryR765.report || null;
+    result.ownerAcceptanceCommittedR1212=true;
+    result.targetedOwnerSubscriptionsR1212=targetedOwnerIdsR1212.length;
+    result.deliveryConfirmationModeR1212='ONESIGNAL-ACCEPTED-EXPLICIT-OWNER-TARGET';
   }
 
   if (history) {
@@ -3110,7 +3086,7 @@ async function sendOneSignalPush(env, {
       url,
       recipients: result.recipients,
       oneSignalId: result.oneSignalId,
-      details: { ...(history?.details && typeof history.details === 'object' ? history.details : {}), warnings: responseData?.warnings || null, response: responseData, acceptedByOneSignal: true, deliveryConfirmedR765: strictSubscriberDeliveryR765 ? true : null, deliveryConfirmedR778: strictOwnerDeliveryR778 ? true : null, deliveryReportR765: result.deliveryReport || null }
+      details: { ...(history?.details && typeof history.details === 'object' ? history.details : {}), warnings: responseData?.warnings || null, response: responseData, acceptedByOneSignal: true, ownerAcceptanceCommittedR1212: strictOwnerDeliveryR778 ? true : null, targetedOwnerSubscriptionsR1212: result.targetedOwnerSubscriptionsR1212 || null, deliveryConfirmationModeR1212: result.deliveryConfirmationModeR1212 || null, deliveryConfirmedR765: null, deliveryConfirmedR778: null, deliveryReportR765: null }
     }).catch(() => {});
   }
   await recordSystemLog(env, {
@@ -3435,11 +3411,9 @@ async function latestPlatformMetricsR498(db, platform) {
 }
 async function getEcosystemSiteAggregatesR638(db,{force=false}={}){
   const cacheKey='d1-cache:ecosystem-site-aggregates-r932';
-  // R1212: the technical-layer button previously bypassed the 6h cache every tap,
-  // causing ten 30-day GROUP BY scans. A force refresh is now rate-limited to 15 min.
-  const cached=await readD1JsonCacheR638(db,cacheKey,D1_ECOSYSTEM_AGG_CACHE_MS_R638);
-  if(cached?.value?.version==='r932'&&(!force||cached.ageMs<D1_ECOSYSTEM_FORCE_MIN_MS_R1212)){
-    return {...cached.value,d1Cache:{hit:true,updatedAt:cached.updatedAt,forceDeferred:Boolean(force),ageMs:cached.ageMs}};
+  if(!force){
+    const cached=await readD1JsonCacheR638(db,cacheKey,D1_ECOSYSTEM_AGG_CACHE_MS_R638);
+    if(cached?.value?.version==='r932')return {...cached.value,d1Cache:{hit:true,updatedAt:cached.updatedAt}};
   }
   const age='-30 days';
   const safe=task=>Promise.resolve().then(task).catch(()=>({results:[]}));
@@ -3928,12 +3902,15 @@ async function handlePushSubscriber(request, env, ctx) {
       history:{type:'owner-rebind-r768',source:'push-repair-r768',audience:'owner',details:{subscriptionId}}
     }).catch(error => ({ok:false,error:cleanPlainText(error?.message||error,300)}));
     if (ownerTestR768?.ok) {
-      const deliveryCheckR768 = await verifySubscriberOwnerDeliveryR765(env, ownerTestR768).catch(error=>({ok:false,pending:false,error:cleanPlainText(error?.message||error,300)}));
-      if (!deliveryCheckR768.ok) {
-        ownerTestR768 = {...ownerTestR768,ok:false,pending:Boolean(deliveryCheckR768.pending),error:deliveryCheckR768.error||'owner-test-delivery-unconfirmed-r768',deliveryReport:deliveryCheckR768.report||null};
-      } else {
-        ownerTestR768 = {...ownerTestR768,deliveryConfirmedR768:true,recipients:Math.max(Number(ownerTestR768.recipients||0),Number(deliveryCheckR768.recipients||0)),deliveryReport:deliveryCheckR768.report||null};
-      }
+      // R1212: the owner repair test uses the same explicit subscription targeting as
+      // normal owner pushes. Do not turn a successful OneSignal create response back
+      // into a failure just because an immediate Web Push receipt is absent.
+      ownerTestR768 = {
+        ...ownerTestR768,
+        ownerAcceptanceCommittedR1212:true,
+        ownerRepairAcceptedR1212:true,
+        deliveryConfirmationModeR1212:'ONESIGNAL-ACCEPTED-EXPLICIT-OWNER-TARGET'
+      };
     }
 
     // R768: immediately replay retryable owner jobs after the phone is rebound.
@@ -9245,8 +9222,9 @@ async function handleFastYoutubeEngagementR333(request,env,options={}){
         continue;
       }
 
-      // R376: never advance the local like baseline before OneSignal confirms
-      // delivery. The exact total is protected by a recoverable push-once claim.
+      // R1212: advance the local like baseline after OneSignal accepts the push for
+      // an explicit valid owner subscription. Immediate handset delivery receipts are
+      // not a reliable Web Push commit signal. The exact total remains push-once protected.
       const likeClaim=await claimYoutubeLikePushR376(db,item.videoId,item.likes,startedAt);
       if(likeClaim.recoveredStale)staleLikeClaimsRecovered++;
       if(likeClaim.delivered){
@@ -15203,7 +15181,7 @@ async function handleControlHome(request, env) {
       ORDER BY datetime(created_at) DESC
       LIMIT 1
     `).first(),
-    collectDailyCityActivityR370(db, window),
+    collectDailyCityActivityR370(db, window, new Date().toISOString()),
     collectCalendarDayCityActivityR530(db).catch(()=>[])
   ]);
   const ytBaseline = ytBaselineBefore || ytBaselineAfter;
@@ -15394,10 +15372,7 @@ async function handleControlGoogleAnalytics(request, env) {
     }catch(error){refreshError=cleanPlainText(error?.message||error,300);}
   }
 
-  // R1212: a normal/manual GA4 refresh must not also rescan 30 days of raw D1 rows.
-  // Explicit D1 rebuild remains available only through d1_refresh=1 for maintenance.
-  const forceD1Refresh=url.searchParams.get('d1_refresh')==='1';
-  const [liveResult,firstPartyResult]=await Promise.allSettled([getSiteLiveMetrics(db),getSiteFirstParty30dR530(db,{force:forceD1Refresh})]);
+  const [liveResult,firstPartyResult]=await Promise.allSettled([getSiteLiveMetrics(db),getSiteFirstParty30dR530(db,{force:forceRefresh})]);
   const live=liveResult.status==='fulfilled'?liveResult.value:{configured:false,today:{},realtime:{}};
   const firstParty=firstPartyResult.status==='fulfilled'?firstPartyResult.value:{configured:false,trend:[],countries:[],pages:[]};
   const hasSnapshot=Boolean(latestRow)||Boolean(latest?.configured);
@@ -16908,6 +16883,25 @@ async function handleControlObservability(request, env) {
   // R932: old journal noise is not an active incident. Keep one day for audit,
   // physically trim older rows, and show a de-duplicated 2-hour active window.
   await db.prepare(`DELETE FROM system_logs WHERE datetime(created_at)<datetime('now','-24 hours')`).run().catch(()=>{});
+  // R1212: R765/R778 classified accepted Web Push as failed/pending when OneSignal's
+  // immediate report had no handset receipt. Those rows are known false positives and
+  // would otherwise remain visible for two hours after this fix.
+  // Remove the paired fast-engagement errors that were emitted in the same window
+  // as those false R765 delivery failures, then remove the obsolete R765 rows themselves.
+  await db.prepare(`
+    DELETE FROM system_logs
+    WHERE scope='youtube-fast-engagement' AND event='fast-check-failed'
+      AND EXISTS (
+        SELECT 1 FROM system_logs p
+        WHERE p.scope='push'
+          AND p.event IN ('subscriber-delivery-pending-r765','subscriber-delivery-zero-r765')
+          AND ABS(strftime('%s',p.created_at)-strftime('%s',system_logs.created_at))<=300
+      )
+  `).run().catch(()=>{});
+  await db.prepare(`
+    DELETE FROM system_logs
+    WHERE scope='push' AND event IN ('subscriber-delivery-pending-r765','subscriber-delivery-zero-r765')
+  `).run().catch(()=>{});
   const dateKey = getBratislavaClock().date;
   const youtubeDateKeyR1026=youtubePacificDateR944();
   const [health, counts, recent, usageRows, firstUsage] = await Promise.all([

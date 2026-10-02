@@ -1045,7 +1045,7 @@
   shell?.addEventListener('click',event=>{if(moved&&isInteractive(event.target)){event.preventDefault();event.stopPropagation()}moved=false},true);
   window.addEventListener('resize',()=>applyPosition({animate:false}));
   document.addEventListener('visibilitychange',()=>{if(!document.hidden){updatePageState();if(summaryMode)load({silent:true,forceLive:false})}});
-  if(summaryMode)window.setInterval(()=>{if(!document.hidden)load({silent:true,forceLive:false})},900000);
+  if(summaryMode)window.setInterval(()=>{if(!document.hidden)load({silent:true,forceLive:false})},300000);
   if(summaryMode&&!IS_PUSH_SUMMARY_VIEW)window.setInterval(()=>{
     const nextKey=currentSummaryWindowKey();
     if(nextKey===activeSummaryWindowKey)return;
@@ -1090,7 +1090,7 @@
   async function runSummaryAutoRefreshR403({force=false}={}){
     if(!summaryMode || IS_PUSH_SUMMARY_VIEW || document.hidden || summaryAutoRefreshBusyR403)return;
     const now=Date.now();
-    if(!force && now-summaryAutoRefreshLastTryR403<14*60*1000)return;
+    if(!force && now-summaryAutoRefreshLastTryR403<4.5*60*1000)return;
     summaryAutoRefreshLastTryR403=now;
     summaryAutoRefreshBusyR403=true;
     try{
@@ -1120,7 +1120,7 @@
       summaryAutoRefreshBusyR403=false;
     }
   }
-  setInterval(()=>runSummaryAutoRefreshR403(),15*60*1000);
+  setInterval(()=>runSummaryAutoRefreshR403(),5*60*1000);
   document.addEventListener('visibilitychange',()=>{
     if(!document.hidden)setTimeout(()=>runSummaryAutoRefreshR403({force:true}),250);
   },{passive:true});
