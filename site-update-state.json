@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r357-deploy-retrigger",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1790936676306-9654a8a52a",
-  "release": "R1212",
-  "archiveName": "R1212-PUSH-NOTIFICATIONS-FIX-INSTALLER-SAFE.zip",
-  "sourceHead": "7f1c7fb7a3db58b0583e45ea47f59cb75b3e6e5b",
-  "backupSha": "7f1c7fb7a3db58b0583e45ea47f59cb75b3e6e5b",
+  "operationId": "publish-1790972988095-ae21fd005c",
+  "release": "R1213",
+  "archiveName": "R1213-LOUDNESS-FUNCTION-FIX-INSTALLER-SAFE.zip",
+  "sourceHead": "7dd3b56ed748e51914575c91758508c8898932f9",
+  "backupSha": "7dd3b56ed748e51914575c91758508c8898932f9",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-10-02T10:24:36.306Z"
+  "generatedAt": "2026-10-02T20:29:49.764Z"
 }

@@ -6,7 +6,7 @@ import {Readable} from 'node:stream';
 import {pipeline} from 'node:stream/promises';
 
 const CONFIG='/etc/andrik-radio-web-r627.json';
-const AGENT_VERSION_R803='R1183';
+const AGENT_VERSION_R803='R1184';
 const DIAG_DIR_R803='/var/cache/andrik-radio-r622/diagnostics';
 const DIAG_AGENT_LOG_R803=DIAG_DIR_R803+'/r803-agent-events.ndjson';
 const DIAG_AGENT_MAX_BYTES_R803=1024*1024;
@@ -233,18 +233,42 @@ function loudnessStatusR1137(){
       }catch(_){ }
     }
     const total=names.length,missing=Math.max(0,total-valid);
-    const active=run('systemctl',['is-active',LOUDNESS_UNIT_R1137],3000).output.trim()==='active';
+    const unitState=run('systemctl',['is-active',LOUDNESS_UNIT_R1137],3000).output.trim().toLowerCase();
+    const active=['active','activating','reloading'].includes(unitState);
     const tail=loudnessTailR1137();const lines=tail.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
     const lastLine=lines.at(-1)||'';
+
+    // R1184/R1139: only the current run may describe the current file.
+    // A historical ANALYZE line must never appear as "Сейчас" while READY.
+    let runStart=-1;
+    for(let i=lines.length-1;i>=0;i--){
+      if(/\] R11(?:37|39) START\b/i.test(lines[i])){runStart=i;break}
+    }
+    const runLines=runStart>=0?lines.slice(runStart):lines;
     let currentTrack='';
-    for(let i=lines.length-1;i>=0;i--){const m=lines[i].match(/\] ANALYZE (.+)$/);if(m){currentTrack=m[1];break}}
-    const recent=lines.slice(-8).join('\n');
+    if(active){
+      for(let i=runLines.length-1;i>=0;i--){
+        const line=runLines[i];
+        const m=line.match(/\] \[\d+\/\d+\] ANALYZE (.+)$/);
+        if(m){currentTrack=m[1];break}
+        if(/\] \[\d+\/\d+\] (?:SAVED|DEFERRED|FAILED)\b|\] COOLDOWN\b|\] R11(?:37|39) DONE\b/i.test(line))break;
+      }
+    }
+
+    let lastPause=-1,lastHealthOk=-1;
+    for(let i=0;i<runLines.length;i++){
+      if(/PAUSE health guard/i.test(runLines[i]))lastPause=i;
+      if(/HEALTH OK/i.test(runLines[i]))lastHealthOk=i;
+    }
+    const genuinelyPaused=active&&lastPause>lastHealthOk;
+
     let state='READY';
     if(!installed)state='NOT_INSTALLED';
     else if(missing===0)state='COMPLETE';
-    else if(active&&/PAUSE health guard/i.test(recent))state='PAUSED';
+    else if(genuinelyPaused)state='PAUSED';
     else if(active)state='RUNNING';
-    const value={profile:'R1137-SAFE-LOUDNESS',installed,safeProfile,state,total,valid,missing,currentTrack,lastLine,updatedAt:new Date().toISOString()};
+
+    const value={profile:'R1139-SAFE-LOUDNESS',installed,safeProfile,state,unitState,total,valid,missing,currentTrack,lastLine,updatedAt:new Date().toISOString()};
     loudnessStatusCacheR1137={at:now,value};return value;
   }catch(error){
     const value={profile:'R1137-SAFE-LOUDNESS',installed:false,safeProfile:false,state:'ERROR',total:0,valid:0,missing:0,currentTrack:'',lastLine:clean(error?.message||error),updatedAt:new Date().toISOString()};

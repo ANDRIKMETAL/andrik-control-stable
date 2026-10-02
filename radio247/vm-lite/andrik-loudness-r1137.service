@@ -1,9 +1,9 @@
 [Unit]
-Description=ANDRIK R1137 safe background loudness analysis
+Description=ANDRIK R1139 safe background loudness analysis
 After=andrik-radio.service network.target
 
 [Service]
-Type=oneshot
+Type=simple
 ExecStart=/usr/bin/python3 /usr/local/lib/andrik-radio-loudness-scan-r1098.py
 Nice=19
 IOSchedulingClass=idle

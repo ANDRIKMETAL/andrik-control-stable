@@ -13,7 +13,7 @@ NEW_HELPER="$HERE/andrik-radio-loudness-new-r1137"
 NEW_UNIT="$HERE/andrik-loudness-r1137.service"
 
 echo '=========================================================='
-echo ' ANDRIK R1137 · SAFE LOUDNESS COMPLETION'
+echo ' ANDRIK R1139 · SAFE LOUDNESS FIX'
 echo ' NO RADIO RESTART · NO MP3 REWRITE'
 echo '=========================================================='
 
@@ -24,8 +24,9 @@ done
 python3 -m py_compile "$NEW_SCANNER"
 bash -n "$NEW_HELPER"
 grep -Fq 'CPUQuota=8%' "$NEW_UNIT"
-grep -Fq 'R1137-SAFE-BACKGROUND' "$NEW_SCANNER"
+grep -Fq 'R1139-SAFE-BACKGROUND' "$NEW_SCANNER"
 grep -Fq 'COOLDOWN_AFTER_TRACK_SEC = 45' "$NEW_SCANNER"
+grep -Fq 'Type=simple' "$NEW_UNIT"
 
 mkdir -p "$SAFE"
 RADIO_PID_BEFORE="$(systemctl show andrik-radio.service -p MainPID --value 2>/dev/null || true)"
@@ -33,7 +34,7 @@ RADIO_PID_BEFORE="$(systemctl show andrik-radio.service -p MainPID --value 2>/de
 echo '=== BACKUP CURRENT LOUDNESS TOOLS ==='
 for f in "$SCANNER" "$HELPER" "$UNITFILE"; do
   if [ -e "$f" ]; then
-    b="$SAFE/$(basename "$f").PRE-R1137-$STAMP"
+    b="$SAFE/$(basename "$f").PRE-R1139-$STAMP"
     cp -a "$f" "$b"
     echo "✅ $f -> $b"
   fi
@@ -70,7 +71,7 @@ fi
 
 echo
 echo '=========================================================='
-echo ' ✅ R1137 SAFE LOUDNESS INSTALLED'
+echo ' ✅ R1139 SAFE LOUDNESS FIX INSTALLED'
 echo ' Button remains the same: ВЫРОВНЯТЬ ГРОМКОСТЬ НОВЫХ ТРЕКОВ'
 echo ' Existing valid analyses are preserved and skipped.'
 echo ' No scan started automatically.'

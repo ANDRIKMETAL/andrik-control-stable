@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import json, math, os, re, signal, subprocess, sys, time, urllib.request
+import json, math, os, re, signal, subprocess, sys, time, urllib.request, tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -82,7 +82,9 @@ def local_status():
             transport = est >= exp
         last_error = str(s.get('lastError', '') or '').strip()
         return {
-            'ok': bool(transport) and est >= exp and not last_error,
+            # R1139: lastError is historical telemetry and may remain populated after
+            # the transport has fully recovered. Current health is 2/2 + transportHealthy.
+            'ok': bool(transport) and est >= exp,
             'est': est, 'exp': exp, 'transport': bool(transport), 'lastError': last_error,
             'current': str((s.get('current') or {}).get('title', '') if isinstance(s.get('current'), dict) else s.get('current', '') or '')
         }
@@ -158,63 +160,81 @@ def analyze_one(mp3: Path):
         '-af', f'loudnorm=I={TARGET_I}:LRA={TARGET_LRA}:TP={TARGET_TP}:print_format=json',
         '-f', 'null', '-'
     ]
-    child = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True, errors='replace')
-    err_chunks = []
-    cpu_prev = cpu_snapshot()
-    high_cpu = 0
-    aborted = ''
 
-    while child.poll() is None and not stop_requested:
-        time.sleep(POLL_SEC)
-        try:
-            # drain available stderr without blocking using communicate only after exit; keep kernel pipe safe
-            pass
-        except Exception:
-            pass
-
-        ok, reason = healthy_now()
-        cpu_prev, busy = cpu_busy(cpu_prev)
-        if busy >= CPU_ABORT_PCT:
-            high_cpu += 1
-        else:
-            high_cpu = 0
-
-        if not ok:
-            aborted = f'health-guard:{reason}'
-        elif high_cpu >= CPU_ABORT_CONSECUTIVE:
-            aborted = f'cpu-guard:{busy:.1f}% x{high_cpu}'
-
-        if aborted:
-            log(f'ABORT current analysis {mp3.name}: {aborted}')
-            try:
-                child.terminate()
-                child.wait(timeout=5)
-            except Exception:
-                try:
-                    child.kill()
-                except Exception:
-                    pass
-            break
-
-    if stop_requested:
-        aborted = aborted or 'service-stop'
-        try:
-            if child.poll() is None:
-                child.terminate()
-        except Exception:
-            pass
-
+    # R1139: never leave ffmpeg stderr on an unread PIPE. The old implementation
+    # waited until process exit before reading stderr; a long track could fill the
+    # kernel pipe and block ffmpeg forever. A temporary file is unbounded for this
+    # tiny log stream and still lets us parse loudnorm JSON after ffmpeg exits.
+    errfile = tempfile.TemporaryFile(mode='w+t', encoding='utf-8', errors='replace')
     try:
-        _, stderr = child.communicate(timeout=10)
-    except Exception:
+        child = subprocess.Popen(
+            cmd,
+            stdout=subprocess.DEVNULL,
+            stderr=errfile,
+            text=True,
+            errors='replace'
+        )
+        cpu_prev = cpu_snapshot()
+        high_cpu = 0
+        aborted = ''
+
+        while child.poll() is None and not stop_requested:
+            time.sleep(POLL_SEC)
+
+            ok, reason = healthy_now()
+            cpu_prev, busy = cpu_busy(cpu_prev)
+            if busy >= CPU_ABORT_PCT:
+                high_cpu += 1
+            else:
+                high_cpu = 0
+
+            if not ok:
+                aborted = f'health-guard:{reason}'
+            elif high_cpu >= CPU_ABORT_CONSECUTIVE:
+                aborted = f'cpu-guard:{busy:.1f}% x{high_cpu}'
+
+            if aborted:
+                log(f'ABORT current analysis {mp3.name}: {aborted}')
+                try:
+                    child.terminate()
+                    child.wait(timeout=5)
+                except Exception:
+                    try:
+                        child.kill()
+                        child.wait(timeout=5)
+                    except Exception:
+                        pass
+                break
+
+        if stop_requested:
+            aborted = aborted or 'service-stop'
+            try:
+                if child.poll() is None:
+                    child.terminate()
+            except Exception:
+                pass
+
         try:
-            child.kill()
+            rc = child.wait(timeout=10)
+        except Exception:
+            try:
+                child.kill()
+            except Exception:
+                pass
+            try:
+                rc = child.wait(timeout=5)
+            except Exception:
+                rc = child.returncode if child.returncode is not None else -9
+
+        errfile.flush()
+        errfile.seek(0)
+        stderr = errfile.read()
+    finally:
+        child = None
+        try:
+            errfile.close()
         except Exception:
             pass
-        _, stderr = child.communicate()
-    finally:
-        rc = child.returncode
-        child = None
 
     if aborted:
         return None, aborted
@@ -232,14 +252,14 @@ def analyze_one(mp3: Path):
         'input_thresh': float(raw['input_thresh']),
         'target_offset': float(raw['target_offset']),
         'analyzedAt': utcnow(),
-        'profile': 'R1137-SAFE-BACKGROUND'
+        'profile': 'R1139-SAFE-BACKGROUND'
     }
     for k in ('input_i', 'input_lra', 'input_tp', 'input_thresh', 'target_offset'):
         if not math.isfinite(row[k]):
             raise RuntimeError(f'invalid {k}')
 
     sidecar = Path(str(mp3) + '.r747-loudnorm.json')
-    tmp = Path(str(sidecar) + f'.tmp-r1137-{os.getpid()}')
+    tmp = Path(str(sidecar) + f'.tmp-r1139-{os.getpid()}')
     tmp.write_text(json.dumps(row, ensure_ascii=False, separators=(',', ':')), encoding='utf-8')
     os.replace(tmp, sidecar)
     return row, ''
@@ -253,7 +273,7 @@ def main():
     files = sorted(DIR.glob('*.mp3'))
     valid_before = sum(valid_cache(p, Path(str(p) + '.r747-loudnorm.json')) for p in files)
     todo = [p for p in files if not valid_cache(p, Path(str(p) + '.r747-loudnorm.json'))]
-    log(f'R1137 START total={len(files)} valid={valid_before} missing={len(todo)} target={TARGET_I}LUFS TP={TARGET_TP}dBTP')
+    log(f'R1139 START total={len(files)} valid={valid_before} missing={len(todo)} target={TARGET_I}LUFS TP={TARGET_TP}dBTP')
     log('SOURCE MP3 ARE READ-ONLY; only atomic .r747-loudnorm.json sidecars are written')
 
     ok_count = 0
@@ -297,7 +317,7 @@ def main():
     files2 = sorted(DIR.glob('*.mp3'))
     valid_after = sum(valid_cache(p, Path(str(p) + '.r747-loudnorm.json')) for p in files2)
     missing_after = len(files2) - valid_after
-    log(f'R1137 DONE total={len(files2)} valid={valid_after} missing={missing_after} new_ok={ok_count} failed={failed} deferred={deferred}')
+    log(f'R1139 DONE total={len(files2)} valid={valid_after} missing={missing_after} new_ok={ok_count} failed={failed} deferred={deferred}')
     return 0 if failed == 0 else 3
 
 
