@@ -1,14 +1,13 @@
 {
   "schema": 1,
   "updaterVersion": "55.00-r357-deploy-retrigger",
-  "operation": "publish",
-  "reinstall": false,
-  "operationId": "publish-1791069773870-d2a279d685",
+  "operation": "retrigger",
+  "reinstall": true,
+  "operationId": "retrigger-1791069842969-e526ef1504",
   "release": "R1233",
-  "archiveName": "R1233-D1-ROWS-READ-SHIELD.zip",
-  "sourceHead": "e2aa54baf3ee780e83fa14135ba23d914621275a",
-  "backupSha": "e2aa54baf3ee780e83fa14135ba23d914621275a",
-  "backupTag": "",
+  "sourceHead": "85a5fbf728d7bbbb57859b5017c166d665a53292",
+  "previousOperationId": "publish-1791069773870-d2a279d685",
+  "reason": "manual-check",
   "autoRecovery": true,
-  "generatedAt": "2026-10-03T23:22:55.244Z"
+  "generatedAt": "2026-10-03T23:24:02.969Z"
 }
