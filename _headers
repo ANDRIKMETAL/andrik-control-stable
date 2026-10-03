@@ -50,6 +50,21 @@
   Pragma: no-cache
   Expires: 0
 
+/assets/radio-observability-r1232.js
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+  Pragma: no-cache
+  Expires: 0
+
+/assets/radio-audience-r1232.js
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+  Pragma: no-cache
+  Expires: 0
+
+/assets/radio-audience-r1232.css
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+  Pragma: no-cache
+  Expires: 0
+
 /service-worker.js
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
   Pragma: no-cache
