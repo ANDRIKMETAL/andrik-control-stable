@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r357-deploy-retrigger",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1791065774106-ae233a019d",
-  "release": "R1229",
-  "archiveName": "R1229-WATCHDOG-3D-GRAPH-CLEANUP.zip",
-  "sourceHead": "b35f913648b61bcc2dd10fbf7eaaf3399885ced7",
-  "backupSha": "b35f913648b61bcc2dd10fbf7eaaf3399885ced7",
+  "operationId": "publish-1791066523204-342c6d3d0b",
+  "release": "R1230",
+  "archiveName": "R1230-BIGGER-3D-AUDIENCE-GRAPH.zip",
+  "sourceHead": "60a52b37932f9e104c8af77ddaaeb80a39e4d2f0",
+  "backupSha": "60a52b37932f9e104c8af77ddaaeb80a39e4d2f0",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-10-03T22:16:14.106Z"
+  "generatedAt": "2026-10-03T22:28:43.204Z"
 }
