@@ -1,7 +1,0 @@
-R1225 — WATCHDOG CACHE-BUST + RU PANEL
-- Русская Watchdog/самовосстановление панель из R1224 сохранена.
-- Исправлена причина, почему телефон продолжал показывать старый R1222 UI.
-- Старый radio-observability-r1183.js был под /assets/* с Cache-Control: immutable на 1 год.
-- Панель теперь грузит новый файл assets/radio-observability-r1225.js.
-- Для него установлен no-store/no-cache, чтобы будущие правки панели не зависали в старом кэше.
-- cache-reset.html обновлён на R1225.

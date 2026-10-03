@@ -98,13 +98,8 @@
       .r908-diag-spoiler .r813-diag-actions button{width:100%}
       .r1293-watch-title{margin:14px 0 7px;font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:#f0c75a;font-weight:900}
       .r1293-watch-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
-      .r1293-watch-grid .youtube-radio-stat-r565{min-height:96px;align-content:start}
-      .r1293-watch-grid .youtube-radio-stat-r565 small{font-size:.54rem!important;line-height:1.18!important;word-break:break-word}
-      .r1293-watch-grid .youtube-radio-stat-r565 strong{display:block;font-size:.76rem!important;line-height:1.28!important;white-space:pre-line!important;overflow:visible!important;text-overflow:clip!important;word-break:break-word}
-      .r1293-watch-help{margin:8px 0 0;padding:10px 12px;border:1px solid rgba(145,208,255,.09);border-radius:14px;background:rgba(255,255,255,.025);color:#aebbd0;font-size:12px;line-height:1.45}
-      .r1293-watch-help b{color:#eef8ff}
+      .r1293-watch-grid .youtube-radio-stat-r565 strong{font-size:.73rem!important;line-height:1.2!important;word-break:break-word}
       .r1293-watch-ok{color:#66df8a!important}.r1293-watch-warn{color:#f5c84b!important}.r1293-watch-bad{color:#ff8080!important}
-      @media(max-width:700px){.r1293-watch-grid{grid-template-columns:1fr!important}}
       @media(max-width:560px){.r813-profile{grid-template-columns:repeat(2,minmax(0,1fr))!important}.r813-diag-actions{grid-template-columns:1fr 1fr}.r813-diag-copy{grid-column:1/-1}}
     `;
     document.head.appendChild(s);
@@ -176,22 +171,16 @@
 
     const profile=document.getElementById('r813Profile');
     if(profile&&!document.getElementById('r1293WatchGrid')){
-      const wt=document.createElement('div');wt.className='r1293-watch-title';wt.id='r1293WatchTitle';wt.textContent='Ватчдог / самовосстановление';
+      const wt=document.createElement('div');wt.className='r1293-watch-title';wt.id='r1293WatchTitle';wt.textContent='Watchdog / Self-Heal';
       const wg=document.createElement('div');wg.id='r1293WatchGrid';wg.className='youtube-radio-stats-r565 r1293-watch-grid';
       wg.innerHTML=`
-        <div class="youtube-radio-stat-r565"><small>КОНТРОЛЬ RTMPS</small><strong id="r1293WatchTransport">ждём данные</strong></div>
-        <div class="youtube-radio-stat-r565"><small>ОСНОВНОЙ / РЕЗЕРВ</small><strong id="r1293WatchLanes">—</strong></div>
-        <div class="youtube-radio-stat-r565"><small>МАСТЕР-ПОТОК</small><strong id="r1293WatchMaster">—</strong></div>
-        <div class="youtube-radio-stat-r565"><small>САМОИСПРАВЛЕНИЕ</small><strong id="r1293WatchHeal">—</strong></div>
-        <div class="youtube-radio-stat-r565"><small>MP3 БУФЕР PCM</small><strong id="r1293WatchReservoir">—</strong></div>
-        <div class="youtube-radio-stat-r565"><small>БЕЗОПАСНОЕ УДЕРЖАНИЕ</small><strong id="r1293WatchHold">—</strong></div>`;
+        <div class="youtube-radio-stat-r565"><small>RTMPS WATCHDOG</small><strong id="r1293WatchTransport">ждём данные</strong></div>
+        <div class="youtube-radio-stat-r565"><small>PRIMARY / BACKUP</small><strong id="r1293WatchLanes">—</strong></div>
+        <div class="youtube-radio-stat-r565"><small>MASTER PIPE</small><strong id="r1293WatchMaster">—</strong></div>
+        <div class="youtube-radio-stat-r565"><small>SELF-HEAL</small><strong id="r1293WatchHeal">—</strong></div>
+        <div class="youtube-radio-stat-r565"><small>MP3 PCM RESERVOIR</small><strong id="r1293WatchReservoir">—</strong></div>
+        <div class="youtube-radio-stat-r565"><small>SAFE HOLD</small><strong id="r1293WatchHold">—</strong></div>`;
       profile.insertAdjacentElement('afterend',wt);wt.insertAdjacentElement('afterend',wg);
-      if(!document.getElementById('r1293WatchHelp')){
-        const help=document.createElement('div');
-        help.id='r1293WatchHelp';help.className='r1293-watch-help';
-        help.innerHTML='<b>Что это значит:</b><br>Контроль RTMPS — общее состояние двух потоков в YouTube.<br>Основной / резерв — когда каждый поток в последний раз реально двигался.<br>Мастер-поток — нет ли внутреннего затора перед отправкой в RTMPS.<br>MP3 буфер PCM — запас звука в режиме MP3; если есть просадка (underrun), возможны заикания.<br>Безопасное удержание — включается только во время безопасной замены server.mjs.';
-        wg.insertAdjacentElement('afterend',help);
-      }
     }
 
     if(!document.getElementById('r813Diagnostics')){
@@ -239,13 +228,13 @@
     const rt=n(s?.rtmpsEstablishedConnectionsR792)||n(rr.lanes),exp=n(s?.rtmpsExpectedConnectionsR792)||n(rr.expected)||2;
     const pSock=p.socket===true,bSock=b.socket===true;
     const transportOk=s?.transportHealthy!==false&&rt>=exp&&(pSock||!p.pid)&&(bSock||!b.pid);
-    const tEl=document.getElementById('r1293WatchTransport');if(tEl){tEl.textContent=w?.mode?`${transportOk?'НОРМА':'ПРОВЕРЬ'} · ${w.mode.replace('R1125-LANE-ACK-WATCHDOG','R1125 ACK')}`:(s?.transportHealthy!==false?`Норма · RTMPS ${rt}/${exp}`:'Проверь RTMPS');setWatchClassR1293('r1293WatchTransport',transportOk?'ok':'warn')}
-    const laneText=`Осн.: ${pSock?'● есть сигнал':'○ нет сигнала'}\nобновление ${ageTextR1293(p.lastProgressAt)}\nРезерв: ${bSock?'● есть сигнал':'○ нет сигнала'}\nобновление ${ageTextR1293(b.lastProgressAt)}`;set('r1293WatchLanes',laneText);setWatchClassR1293('r1293WatchLanes',transportOk?'ok':'warn');
-    const bp=Boolean(m.backpressureSince||s?.publisherBackpressureSince);const rec=n(m.recoveries)||n(s?.publisherBackpressureRecoveries);set('r1293WatchMaster',bp?`Есть backpressure\nвосстановлений: ${rec}`:`Норма\nвосстановлений: ${rec}`);setWatchClassR1293('r1293WatchMaster',bp?'warn':'ok');
-    const pending=Boolean(h.pending||s?.transportSelfHealPending),healCount=n(h.count)||n(s?.transportSelfHealCount);set('r1293WatchHeal',pending?`Ожидает восстановления\nциклов: ${healCount}`:`Норма\nциклов: ${healCount}`);setWatchClassR1293('r1293WatchHeal',pending?'warn':'ok');
+    const tEl=document.getElementById('r1293WatchTransport');if(tEl){tEl.textContent=w?.mode?`${transportOk?'OK':'CHECK'} · ${w.mode.replace('R1125-LANE-ACK-WATCHDOG','R1125 ACK')}`:(s?.transportHealthy!==false?`RTMPS ${rt}/${exp}`:'CHECK');setWatchClassR1293('r1293WatchTransport',transportOk?'ok':'warn')}
+    const laneText=`P ${pSock?'●':'○'} ${ageTextR1293(p.lastProgressAt)} · B ${bSock?'●':'○'} ${ageTextR1293(b.lastProgressAt)}`;set('r1293WatchLanes',laneText);setWatchClassR1293('r1293WatchLanes',transportOk?'ok':'warn');
+    const bp=Boolean(m.backpressureSince||s?.publisherBackpressureSince);const rec=n(m.recoveries)||n(s?.publisherBackpressureRecoveries);set('r1293WatchMaster',bp?`BACKPRESSURE · recovery ${rec}`:`OK · recovery ${rec}`);setWatchClassR1293('r1293WatchMaster',bp?'warn':'ok');
+    const pending=Boolean(h.pending||s?.transportSelfHealPending),healCount=n(h.count)||n(s?.transportSelfHealCount);set('r1293WatchHeal',pending?`PENDING · ${healCount}`:`OK · ${healCount}`);setWatchClassR1293('r1293WatchHeal',pending?'warn':'ok');
     const rm=s?.runtimeMetricsR1160K||{},buf=n(rm.mp3AudioReservoirBufferedBytesR1293),hi=n(rm.mp3AudioReservoirHighWaterBytesR1293),und=n(rm.mp3PcmLastTrueUnderrunMsR1293),maxUnd=n(rm.mp3PcmMaxTrueUnderrunMsR1293);
-    const pct=hi>0?Math.round(buf/hi*100):0;set('r1293WatchReservoir',hi>0?`Буфер ${humanBytesR1015(buf)}/${humanBytesR1015(hi)} · ${pct}%\nпросадка ${und} мс · максимум ${maxUnd} мс`:'Телеметрия R1293 —');setWatchClassR1293('r1293WatchReservoir',maxUnd>=120?'warn':'ok');
-    const hold=Boolean(s?.safeRestartBackupHoldActiveR1287);set('r1293WatchHold',hold?'Включено\nрезерв удерживается':'Выключено\nобычный режим 2/2');setWatchClassR1293('r1293WatchHold',hold?'warn':'ok');
+    const pct=hi>0?Math.round(buf/hi*100):0;set('r1293WatchReservoir',hi>0?`${humanBytesR1015(buf)}/${humanBytesR1015(hi)} · ${pct}% · underrun ${und}ms (max ${maxUnd})`:'R1293 telemetry —');setWatchClassR1293('r1293WatchReservoir',maxUnd>=120?'warn':'ok');
+    const hold=Boolean(s?.safeRestartBackupHoldActiveR1287);set('r1293WatchHold',hold?'ACTIVE · backup удерживается':'OFF · normal 2/2');setWatchClassR1293('r1293WatchHold',hold?'warn':'ok');
   }
 
   function oneLine(v,max=900){return txt(v).replace(/\s+/g,' ').slice(0,max)}
