@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r357-deploy-retrigger",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1791061035978-edac16f40d",
-  "release": "R1226",
-  "archiveName": "R1226-WATCHDOG-SPOILER.zip",
-  "sourceHead": "ad2902cadaedebe350ea8f7a3bae98a0933295b2",
-  "backupSha": "ad2902cadaedebe350ea8f7a3bae98a0933295b2",
+  "operationId": "publish-1791061400650-e2d51808f6",
+  "release": "R1227",
+  "archiveName": "R1227-COMPACT-WATCHDOG-FPS-EVENT.zip",
+  "sourceHead": "e19e6a96b67baae8b2fe0fe11c4007f5e3c15311",
+  "backupSha": "e19e6a96b67baae8b2fe0fe11c4007f5e3c15311",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-10-03T20:57:15.978Z"
+  "generatedAt": "2026-10-03T21:03:20.650Z"
 }
