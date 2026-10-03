@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r357-deploy-retrigger",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1791068274997-0ef4f59918",
-  "release": "R1232",
-  "archiveName": "R1232-VPS-SPOILER-PCM-GRAPH-FIX.zip",
-  "sourceHead": "42e44ad62d1903800219d55b777bed0c114946b0",
-  "backupSha": "42e44ad62d1903800219d55b777bed0c114946b0",
+  "operationId": "publish-1791069773870-d2a279d685",
+  "release": "R1233",
+  "archiveName": "R1233-D1-ROWS-READ-SHIELD.zip",
+  "sourceHead": "e2aa54baf3ee780e83fa14135ba23d914621275a",
+  "backupSha": "e2aa54baf3ee780e83fa14135ba23d914621275a",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-10-03T22:57:54.997Z"
+  "generatedAt": "2026-10-03T23:22:55.244Z"
 }

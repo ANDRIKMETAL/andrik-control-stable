@@ -1,3 +1,5 @@
+// R1233 D1 ROWS_READ SHIELD: radio audience cleanup is once/day and index-friendly;
+latest-sample / daily graph queries no longer wrap sampled_at in datetime(), avoiding repeated full-table scans.
 // R1223 INSTALLER FAST MANIFEST: Preview/Publish avoid Worker CPU 503 on full-site ZIPs.
 // R1222: watchdog telemetry fallback + R1221 one-button LIVE + R1220 updater/503 fixes preserved.
 // R1220 HOTFIX: site updater CPU/503 + Git Tree protection; R1219 radio/data/journal fixes preserved.
@@ -8533,10 +8535,21 @@ async function recordRadioAudienceSampleR1156(db,video={},source='youtube-r669')
       concurrent_viewers=COALESCE(excluded.concurrent_viewers,radio_audience_samples.concurrent_viewers),
       source=excluded.source
   `).bind(id,videoId,sampledAt,clock.date,minute,views,concurrent,cleanPlainText(source||'youtube-r669',120)).run();
-  // Retain enough history for month comparison without turning a 24/7 sampler into
-  // unbounded storage. Cleanup only twice an hour to keep the hot write path cheap.
-  if(clock.minute===0||clock.minute===30){
-    await db.prepare(`DELETE FROM radio_audience_samples WHERE datetime(sampled_at)<datetime('now','-35 days')`).run().catch(()=>{});
+  // R1233 D1 rows_read shield:
+  // the old cleanup ran ~48 times/day and wrapped sampled_at in datetime(), which
+  // prevented the existing index from helping and could scan the whole history.
+  // Run retention once per Bratislava day and delete by indexed local_date instead.
+  if(clock.hour===3 && clock.minute<5){
+    const maintenanceKey='d1-maintenance:radio-audience-retention-r1233';
+    const lastMaintenance=await getPushState(db,maintenanceKey).catch(()=>null);
+    if(String(lastMaintenance?.value||'')!==clock.date){
+      const cutoffDate=shiftIsoCalendarDate(clock.date,-35);
+      // Claim first so concurrent cron/control wakes do not duplicate the cleanup.
+      await setPushState(db,maintenanceKey,clock.date).catch(()=>{});
+      if(cutoffDate){
+        await db.prepare(`DELETE FROM radio_audience_samples WHERE local_date < ?`).bind(cutoffDate).run().catch(()=>{});
+      }
+    }
   }
   return {ok:true,videoId,sampledAt,localDate:clock.date,localMinute:minute,views,concurrentViewers:concurrent};
 }
@@ -8582,8 +8595,9 @@ async function handleControlRadioAudienceR1156(request,env){
   if(date===today){
     const latestBefore=await db.prepare(`
       SELECT sampled_at AS sampledAt FROM radio_audience_samples
-      ORDER BY datetime(sampled_at) DESC LIMIT 1
-    `).first().catch(()=>null);
+      WHERE local_date=?
+      ORDER BY sampled_at DESC LIMIT 1
+    `).bind(today).first().catch(()=>null);
     collector.latestSampleAt=cleanPlainText(latestBefore?.sampledAt||'',80);
     const latestMs=Date.parse(collector.latestSampleAt||'');
     const stale=!Number.isFinite(latestMs) || Date.now()-latestMs>3*60*1000;
@@ -8606,7 +8620,7 @@ async function handleControlRadioAudienceR1156(request,env){
            views,concurrent_viewers AS concurrentViewers
     FROM radio_audience_samples
     WHERE local_date=?
-    ORDER BY datetime(sampled_at) ASC
+    ORDER BY sampled_at ASC
     LIMIT 900
   `).bind(date).all();
   const rows=Array.isArray(rowsResult?.results)?rowsResult.results:[];
@@ -8617,7 +8631,7 @@ async function handleControlRadioAudienceR1156(request,env){
       SELECT views
       FROM radio_audience_samples
       WHERE video_id=? AND local_date<? AND views IS NOT NULL
-      ORDER BY datetime(sampled_at) DESC LIMIT 1
+      ORDER BY sampled_at DESC LIMIT 1
     `).bind(videoId,date).first().catch(()=>null);
     const n=Number(before?.views);
     if(Number.isFinite(n))previousByVideo[videoId]=Math.max(0,Math.trunc(n));
