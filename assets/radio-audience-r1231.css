@@ -1,0 +1,37 @@
+/* ANDRIK RADIO · R1231 audience graph · no dead space + lifted labels + stronger live point */
+.radio-audience-r1156{overflow:hidden}
+.radio-audience-r1156 .top{align-items:flex-start}
+.r1156-sub{margin:4px 0 0;color:var(--muted);font-size:13px}
+.r1156-datebar{display:grid;grid-template-columns:auto minmax(150px,1fr) auto auto;gap:8px;align-items:center;margin-top:14px}
+.r1156-datebar button,.r1156-datebar input{min-height:42px;border:1px solid #34445a;border-radius:12px;background:#0a1018;color:#eef6ff;font:800 13px/1 system-ui;padding:0 12px}
+.r1156-datebar button{cursor:pointer}
+.r1156-datebar button:disabled{opacity:.35;cursor:not-allowed}
+.r1156-datebar input{width:100%;color-scheme:dark}
+.r1156-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}
+.r1156-kpi{padding:11px 9px;border:1px solid #2d394b;border-radius:14px;background:#090d13;text-align:center;min-width:0}
+.r1156-kpi strong{display:block;font-size:24px;line-height:1.05;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.r1156-kpi span{display:block;margin-top:4px;font-size:10px;line-height:1.25;color:var(--muted)}
+.r1156-chart-shell{position:relative;margin-top:12px;padding:12px 10px 10px;border:1px solid #2d394b;border-radius:16px;background:radial-gradient(circle at 50% 0,rgba(37,71,95,.16),transparent 52%),linear-gradient(180deg,#09111a,#070b11);overflow:hidden;box-shadow:inset 0 1px 0 rgba(255,255,255,.025),0 10px 26px rgba(0,0,0,.18)}
+.r1230-chart-metrics{display:flex;justify-content:space-between;align-items:center;gap:18px;padding:2px 8px 8px;color:#f3f7fb;font:950 16px/1.25 system-ui;letter-spacing:.01em}
+.r1230-chart-metrics span{display:block;white-space:nowrap}
+.r1230-chart-metrics span:last-child{text-align:right}
+.r1231-axis-heads{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;padding:0 14px 5px 58px;color:#dce6f0;font:950 14px/1.05 system-ui;letter-spacing:.02em;text-transform:uppercase}
+.r1231-axis-heads span:last-child{text-align:right;color:#f7dc7a;padding-right:42px}
+.r1156-chart{display:block;width:100%;height:auto;aspect-ratio:auto}
+.r1156-chart .grid{stroke:#263448;stroke-width:1}.r1156-chart .grid-h{stroke:#2d3a4b;stroke-opacity:.72}.r1156-chart .grid-v{stroke-opacity:.62}
+.r1156-chart .axis{fill:#aebdd0;font:900 16px system-ui}.r1156-chart .axis-y{fill:#e2e8f0;font-weight:950}.r1156-chart .axis-x{fill:#b6c3d2}.r1156-chart .axis-launch{fill:#f8d76b;font-weight:950}.r1156-chart .bar-value{fill:#fff0a2;font:950 15px system-ui;paint-order:stroke;stroke:#070b11;stroke-width:4px}.r1156-chart .online-value{fill:#ff9dad;font:950 17px system-ui;paint-order:stroke;stroke:#070b11;stroke-width:5px}.r1156-chart .online-value.is-last{fill:#ff4f68;font:1000 24px system-ui;stroke:#070b11;stroke-width:6px}
+.r1156-chart .bar{fill:url(#r1230LaunchFront);opacity:1;filter:url(#r1230BarShadow)}.r1156-chart .bar-side{fill:url(#r1230LaunchSide);opacity:1;filter:url(#r1230BarShadow)}.r1156-chart .bar-top{fill:#fff3a9;opacity:1;filter:url(#r1230BarShadow)}.r1156-chart .bar-highlight{fill:rgba(255,255,255,.32);pointer-events:none}
+.r1156-chart .line{fill:none;stroke:#ff6278;stroke-width:4.4;stroke-linejoin:round;stroke-linecap:round;filter:drop-shadow(0 0 4px rgba(255,95,117,.48))}
+.r1156-chart .point{fill:#ff4f68;stroke:#ff9cac;stroke-width:1.8;filter:drop-shadow(0 0 6px rgba(255,79,104,.92))}.r1156-chart .point-last{fill:#ff284b;stroke:#ffd0d7;stroke-width:2.6;filter:drop-shadow(0 0 8px rgba(255,40,75,1))}.r1156-chart .point-ring{fill:#ff284b;opacity:.28;stroke:#ff5f75;stroke-width:2;filter:drop-shadow(0 0 8px rgba(255,40,75,.8))}
+.r1156-chart .area{fill:url(#r1230OnlineArea);opacity:1}
+.r1156-chart .baseline{stroke:#8a9db2;stroke-width:2.2}.r1156-chart .axis-main{stroke:#9aabba;stroke-width:2.6;stroke-linecap:round}.r1156-chart .axis-right{stroke:#c39a2d;stroke-width:1.6;stroke-opacity:.75}
+.r1156-chart-empty{display:grid;place-items:center;min-height:340px;padding:24px;text-align:center;color:#9ba8ba;font-size:13px;line-height:1.5}
+.r1156-legend{display:none!important}
+.r1156-legend span{display:inline-flex;align-items:center;gap:6px}.r1156-legend i{display:inline-block;width:12px;height:5px;border-radius:99px}.r1156-legend .launches{background:#f5c84b}.r1156-legend .online{background:#ff5f75}
+.r1156-note{margin:10px 0 0;color:#8fa0b5;font-size:11px;line-height:1.45}
+.r1156-events{margin-top:12px;border:1px solid #2a3647;border-radius:15px;background:#090d13;overflow:hidden}
+.r1156-events>summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:13px 14px;cursor:pointer;font-weight:900}
+.r1156-events>summary::-webkit-details-marker{display:none}.r1156-events>summary::after{content:'▾';color:#8fa0b5;transition:transform .18s}.r1156-events[open]>summary::after{transform:rotate(180deg)}
+.r1156-event-list{display:grid;gap:7px;padding:0 10px 10px}.r1156-event{display:grid;grid-template-columns:64px minmax(0,1fr) auto;gap:9px;align-items:center;padding:9px 10px;border:1px solid #263446;border-radius:12px;background:#070c12}.r1156-event time{font:900 13px ui-monospace,monospace;color:#cfe7ff}.r1156-event div{min-width:0}.r1156-event strong{display:block;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.r1156-event small{display:block;margin-top:2px;color:#8493a6;font-size:10px}.r1156-event b{font-size:15px;color:#f5c84b;white-space:nowrap}.r1156-event.is-site b{color:#6fdfff}.r1156-event-empty{padding:12px;text-align:center;color:#8999ad;font-size:12px}
+.r1156-status[data-kind="ok"]{color:var(--ok);border-color:#285d3b}.r1156-status[data-kind="error"]{color:var(--bad);border-color:#67343c}.r1156-status[data-kind="loading"]{color:#f5c84b;border-color:#6e5b21}
+@media(max-width:620px){.r1156-kpis{grid-template-columns:1fr 1fr}.r1156-datebar{grid-template-columns:44px 1fr 44px}.r1156-datebar .r1156-today{grid-column:1/-1;min-height:40px}.r1230-chart-metrics{padding:2px 5px 7px;font-size:13px;gap:10px}.r1230-chart-metrics span{white-space:normal;max-width:48%}.r1230-chart-metrics span:last-child{text-align:right}.r1231-axis-heads{padding:0 9px 4px 46px;font-size:12px}.r1231-axis-heads span:last-child{padding-right:34px}.r1156-chart{aspect-ratio:auto;min-height:0}.r1156-legend{display:none!important}.r1156-event{grid-template-columns:56px minmax(0,1fr) auto}}

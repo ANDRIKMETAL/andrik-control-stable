@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r357-deploy-retrigger",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1791066523204-342c6d3d0b",
-  "release": "R1230",
-  "archiveName": "R1230-BIGGER-3D-AUDIENCE-GRAPH.zip",
-  "sourceHead": "60a52b37932f9e104c8af77ddaaeb80a39e4d2f0",
-  "backupSha": "60a52b37932f9e104c8af77ddaaeb80a39e4d2f0",
+  "operationId": "publish-1791067114068-909b17f9c4",
+  "release": "R1231",
+  "archiveName": "R1231-GRAPH-NO-DEAD-SPACE.zip",
+  "sourceHead": "ca0343091ca9b9a08ab754f98e953dab2389b642",
+  "backupSha": "ca0343091ca9b9a08ab754f98e953dab2389b642",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-10-03T22:28:43.204Z"
+  "generatedAt": "2026-10-03T22:38:34.068Z"
 }
