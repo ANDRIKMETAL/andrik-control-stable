@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r357-deploy-retrigger",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1791058730441-697f3fe5bb",
-  "release": "R1223",
-  "archiveName": "R1223-INSTALLER-FAST-MANIFEST-WATCHDOG.zip",
-  "sourceHead": "a435169eaee63025c233d94fc8b5c746379b3108",
-  "backupSha": "a435169eaee63025c233d94fc8b5c746379b3108",
+  "operationId": "publish-1791060222328-d81cf41959",
+  "release": "R1224",
+  "archiveName": "R1224-RU-WATCHDOG-PANEL.zip",
+  "sourceHead": "23bc5006f526e7dcccbb496e94681490145670b1",
+  "backupSha": "23bc5006f526e7dcccbb496e94681490145670b1",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-10-03T20:18:52.181Z"
+  "generatedAt": "2026-10-03T20:43:42.328Z"
 }
