@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r357-deploy-retrigger",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1791043444605-cf42c5531f",
-  "release": "R1221",
-  "archiveName": "R1221-ONE-BUTTON-LIVE.zip",
-  "sourceHead": "41bec53f8f7a641274e8529870d5db4c5c39600d",
-  "backupSha": "41bec53f8f7a641274e8529870d5db4c5c39600d",
+  "operationId": "publish-1791058730441-697f3fe5bb",
+  "release": "R1223",
+  "archiveName": "R1223-INSTALLER-FAST-MANIFEST-WATCHDOG.zip",
+  "sourceHead": "a435169eaee63025c233d94fc8b5c746379b3108",
+  "backupSha": "a435169eaee63025c233d94fc8b5c746379b3108",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-10-03T16:04:04.605Z"
+  "generatedAt": "2026-10-03T20:18:52.181Z"
 }

@@ -8,16 +8,16 @@ unit=andrik-radio-web-control.service
 source_file="$bundle_dir/andrik-radio-web-agent-r803.mjs"
 [[ -f "$target" && ! -L "$target" ]] || { echo 'Не найден установленный web-agent'; exit 1; }
 node --check "$source_file"
-grep -Fq "AGENT_VERSION_R803='R1184'" "$source_file"
+grep -Fq "AGENT_VERSION_R803='R1185-WATCHDOG-R1293'" "$source_file"
 systemctl show "$unit" -p ExecStart --value | grep -Fq "$target" || { echo 'ExecStart web-agent отличается; установка остановлена'; exit 1; }
-if cmp -s "$target" "$source_file"; then echo 'Агент R1184 уже установлен'; exit 0; fi
+if cmp -s "$target" "$source_file"; then echo 'Агент R1185-WATCHDOG-R1293 уже установлен'; exit 0; fi
 [[ "$mode" == --apply ]] || { echo 'Проверка пройдена. --apply обновит и перезапустит только web-agent.'; exit 0; }
 [[ "$EUID" == 0 ]] || { echo 'Нужен sudo'; exit 1; }
 mkdir -p /root/ANDRIK-SAFE
-backup_dir="$(mktemp -d /root/ANDRIK-SAFE/R1184-agent-XXXXXXXX)"
+backup_dir="$(mktemp -d /root/ANDRIK-SAFE/R1185-agent-XXXXXXXX)"
 chmod 700 "$backup_dir"
 cp -a "$target" "$backup_dir/agent.mjs"
-staged="$(mktemp "${target}.R1184.XXXXXXXX")"
+staged="$(mktemp "${target}.R1185.XXXXXXXX")"
 cp "$source_file" "$staged"
 chmod --reference="$target" "$staged"
 chown --reference="$target" "$staged"
@@ -34,6 +34,6 @@ if [[ "$healthy" != 1 ]]; then
  echo 'Новый агент не запустился, предыдущий файл возвращён'; exit 1
 fi
 after="$(systemctl show andrik-radio.service -p MainPID --value)"
-echo "Агент R1184 установлен. Резервная копия: $backup_dir/agent.mjs"
+echo "Агент R1185-WATCHDOG-R1293 установлен. Резервная копия: $backup_dir/agent.mjs"
 echo "PID радио до/после: $before / $after"
 [[ "$before" == "$after" ]] || { echo 'Во время установки изменился PID радио; проверь диагностику.'; exit 1; }

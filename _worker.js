@@ -1,3 +1,5 @@
+// R1223 INSTALLER FAST MANIFEST: Preview/Publish avoid Worker CPU 503 on full-site ZIPs.
+// R1222: watchdog telemetry fallback + R1221 one-button LIVE + R1220 updater/503 fixes preserved.
 // R1220 HOTFIX: site updater CPU/503 + Git Tree protection; R1219 radio/data/journal fixes preserved.
 // R1219: dual-safe start + exact telemetry/viewers + single journal source + installer hardening.
 // R1212: PUSH DELIVERY FIX — OneSignal owner pushes now commit on accepted explicit subscription targeting instead of unreliable immediate Web Push delivery reports; youtube-fast-engagement no longer retries already-accepted like/subscriber pushes; repeated push/fast-engagement warnings/errors are updated in-place instead of accumulating ×N. UI untouched.
@@ -17508,10 +17510,37 @@ async function siteUpdateGithubSnapshot(config) {
   return { headSha, treeSha, files, commit };
 }
 
+const SITE_UPDATE_FAST_MANIFEST_R1223 = 'site-update-manifest-r1223.json';
+
+function siteUpdateApplyFastManifestR1223(parsed) {
+  const manifestEntry = parsed?.entries?.find(entry => entry.path === SITE_UPDATE_FAST_MANIFEST_R1223);
+  if (!manifestEntry) return false;
+  let manifest = null;
+  try {
+    manifest = JSON.parse(new TextDecoder('utf-8', { fatal:true }).decode(manifestEntry.bytes));
+  } catch (_) { return false; }
+  if (!manifest || Number(manifest.schema) !== 1 || manifest.algorithm !== 'git-blob-sha1' || !manifest.files || typeof manifest.files !== 'object') return false;
+  const filtered = parsed.entries.filter(entry => entry.path !== SITE_UPDATE_FAST_MANIFEST_R1223);
+  for (const entry of filtered) {
+    const meta = manifest.files[entry.path];
+    const sha = String(meta?.sha || '').toLowerCase();
+    const size = Number(meta?.size);
+    if (!/^[0-9a-f]{40}$/.test(sha) || size !== entry.bytes.byteLength) return false;
+    entry.gitSha = sha;
+  }
+  parsed.entries = filtered;
+  parsed.totalBytes = filtered.reduce((sum, entry) => sum + entry.bytes.byteLength, 0);
+  parsed.fastManifestR1223 = true;
+  return true;
+}
+
 async function siteUpdatePrepareArchive(file) {
   const parsed = await siteUpdateReadZip(await file.arrayBuffer());
-  // R1219: cap parallel SHA work so archive validation stays below Worker CPU/memory spikes.
-  await siteUpdateMapLimit(parsed.entries, 3, async entry => {
+  // R1223: our full-site ZIPs carry precomputed Git blob SHA-1 values. This removes
+  // hundreds of Worker crypto operations from Preview/Publish and prevents CPU 503.
+  if (siteUpdateApplyFastManifestR1223(parsed)) return parsed;
+  // Backward-compatible fallback for old ZIPs without the fast manifest.
+  await siteUpdateMapLimit(parsed.entries, 2, async entry => {
     entry.gitSha = await siteUpdateGitBlobSha(entry.bytes);
     return entry.gitSha;
   });
@@ -21375,6 +21404,21 @@ async function handlePublicRadioDiagnosticsR802(request,env){
     publisher:Boolean(status.publisher),producer:Boolean(status.producer),
     transportHealthy:status.transportHealthy!==false,
     rtmpsEstablishedConnectionsR792:Math.max(0,Number(status.rtmpsEstablishedConnectionsR792||0)),
+    rtmpsExpectedConnectionsR792:Math.max(0,Number(status.rtmpsExpectedConnectionsR792||2)),
+    version:cleanPlainText(status.version||'',120),
+    streamProfileR814:status.streamProfileR814||status.streamProfileR813||null,
+    streamProfileR813:status.streamProfileR813||null,
+    runtimeMetricsR1160K:status.runtimeMetricsR1160K||null,
+    metricsR1183:status.metricsR1183||null,
+    watchdogR1293:status.watchdogR1293||null,
+    transportWatchdogMode:cleanPlainText(status.transportWatchdogMode||'',180),
+    transportSelfHealPending:Boolean(status.transportSelfHealPending),
+    transportSelfHealCount:Math.max(0,Number(status.transportSelfHealCount||0)),
+    lastTransportFatalAt:status.lastTransportFatalAt||null,
+    lastTransportFatalReason:cleanPlainText(status.lastTransportFatalReason||'',700),
+    publisherBackpressureRecoveries:Math.max(0,Number(status.publisherBackpressureRecoveries||0)),
+    lastPublisherBackpressureAt:status.lastPublisherBackpressureAt||null,
+    safeRestartBackupHoldActiveR1287:Boolean(status.safeRestartBackupHoldActiveR1287),
     current:cleanPlainText(status.current||'',120),next:cleanPlainText(status.next||'',120),upcoming,
     lastError:cleanPlainText(status.lastError||'',700),
     lastFfmpegLine:cleanPlainText(status.lastFfmpegLine||'',1000),

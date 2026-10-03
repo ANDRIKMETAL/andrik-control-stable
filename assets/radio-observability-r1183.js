@@ -3,6 +3,7 @@
 
   const STATUS_API='/api/control/radio-remote-r627/status';
   const COMMAND_API='/api/control/radio-remote-r627/command';
+  const PUBLIC_STATUS_API='/api/public/radio-diagnostics-r802';
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]||c));
   const txt=v=>String(v??'').trim();
   const n=v=>Number.isFinite(Number(v))?Number(v):0;
@@ -60,7 +61,7 @@
     const body=json?JSON.stringify({version:'R1183',exportedAt:new Date().toISOString(),agentLastSeen:lastData?.agent?.lastSeen,latest:ingest.latest,status:reportStatus(),...archive},null,2):lastFullText;
     const url=URL.createObjectURL(new Blob([body],{type:json?'application/json':'text/plain;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download='ANDRIK-RADIO-'+new Date().toISOString().replace(/[:.]/g,'-')+(json?'.json':'.txt');a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
   }
-  function reportStatus(){const s=lastData?.agent?.status||{};return redact({agent:lastData?.agent?.version,lastSeen:lastData?.agent?.lastSeen,service:s.service,revision:s.auditRevisionR1160L,radio:s.version,runtime:s.runtimeMetricsR1160K,metrics:s.metricsR1183,ffmpeg:s.ffmpegLogCountersR1160K,lastError:s.lastError,lastFfmpegLine:s.lastFfmpegLine,lastPostVideoPhase:s.lastPostVideoPhaseR1160L});}
+  function reportStatus(){const s=lastData?.agent?.status||{};return redact({agent:lastData?.agent?.version,lastSeen:lastData?.agent?.lastSeen,service:s.service,revision:s.auditRevisionR1160L,radio:s.version,runtime:s.runtimeMetricsR1160K,metrics:s.metricsR1183,watchdog:s.watchdogR1293,transportWatchdogMode:s.transportWatchdogMode,selfHeal:{pending:s.transportSelfHealPending,count:s.transportSelfHealCount,lastFatalAt:s.lastTransportFatalAt,lastFatalReason:s.lastTransportFatalReason},ffmpeg:s.ffmpegLogCountersR1160K,lastError:s.lastError,lastFfmpegLine:s.lastFfmpegLine,lastPostVideoPhase:s.lastPostVideoPhaseR1160L});}
   function markIncident(){archive.events.push({at:new Date().toISOString(),event:'viewer-video-slow-incident',current:lastData?.agent?.status?.current,metrics:ingest.latest||null,note:'Пользователь отметил торможение картинки'});persist();if(lastData)renderDiagnostics(lastData);}
 
 
@@ -95,6 +96,10 @@
       .r908-diag-spoiler .r813-diag-log{margin:0 10px 10px}
       .r908-diag-spoiler .r813-diag-actions{grid-template-columns:1fr 1fr;margin:0 10px 10px}
       .r908-diag-spoiler .r813-diag-actions button{width:100%}
+      .r1293-watch-title{margin:14px 0 7px;font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:#f0c75a;font-weight:900}
+      .r1293-watch-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+      .r1293-watch-grid .youtube-radio-stat-r565 strong{font-size:.73rem!important;line-height:1.2!important;word-break:break-word}
+      .r1293-watch-ok{color:#66df8a!important}.r1293-watch-warn{color:#f5c84b!important}.r1293-watch-bad{color:#ff8080!important}
       @media(max-width:560px){.r813-profile{grid-template-columns:repeat(2,minmax(0,1fr))!important}.r813-diag-actions{grid-template-columns:1fr 1fr}.r813-diag-copy{grid-column:1/-1}}
     `;
     document.head.appendChild(s);
@@ -164,6 +169,20 @@
       }
     }
 
+    const profile=document.getElementById('r813Profile');
+    if(profile&&!document.getElementById('r1293WatchGrid')){
+      const wt=document.createElement('div');wt.className='r1293-watch-title';wt.id='r1293WatchTitle';wt.textContent='Watchdog / Self-Heal';
+      const wg=document.createElement('div');wg.id='r1293WatchGrid';wg.className='youtube-radio-stats-r565 r1293-watch-grid';
+      wg.innerHTML=`
+        <div class="youtube-radio-stat-r565"><small>RTMPS WATCHDOG</small><strong id="r1293WatchTransport">ждём данные</strong></div>
+        <div class="youtube-radio-stat-r565"><small>PRIMARY / BACKUP</small><strong id="r1293WatchLanes">—</strong></div>
+        <div class="youtube-radio-stat-r565"><small>MASTER PIPE</small><strong id="r1293WatchMaster">—</strong></div>
+        <div class="youtube-radio-stat-r565"><small>SELF-HEAL</small><strong id="r1293WatchHeal">—</strong></div>
+        <div class="youtube-radio-stat-r565"><small>MP3 PCM RESERVOIR</small><strong id="r1293WatchReservoir">—</strong></div>
+        <div class="youtube-radio-stat-r565"><small>SAFE HOLD</small><strong id="r1293WatchHold">—</strong></div>`;
+      profile.insertAdjacentElement('afterend',wt);wt.insertAdjacentElement('afterend',wg);
+    }
+
     if(!document.getElementById('r813Diagnostics')){
       const main=document.querySelector('main.wrap');
       const card=document.createElement('section');card.id='r813Diagnostics';card.className='card r813-diag-card';
@@ -202,6 +221,22 @@
     set('r813Transport',`${txt(tr.container)||'FLV'} · ${txt(tr.protocol)||'RTMPS'} × ${lanes}/${expected}`);
   }
 
+  function ageTextR1293(value){const ms=Date.parse(value||'')||0;if(!ms)return '—';const age=Math.max(0,Date.now()-ms);return age<10000?`${Math.round(age/1000)}с`:`${Math.round(age/1000)}с назад`}
+  function setWatchClassR1293(id,kind=''){const el=document.getElementById(id);if(!el)return;el.classList.remove('r1293-watch-ok','r1293-watch-warn','r1293-watch-bad');if(kind)el.classList.add('r1293-watch-'+kind)}
+  function renderWatchdogR1293(s){
+    const w=s?.watchdogR1293||{},r=w?.r1125||{},p=r?.primary||{},b=r?.backup||{},rr=w?.r792||{},m=w?.r751||{},h=w?.selfHeal||{};
+    const rt=n(s?.rtmpsEstablishedConnectionsR792)||n(rr.lanes),exp=n(s?.rtmpsExpectedConnectionsR792)||n(rr.expected)||2;
+    const pSock=p.socket===true,bSock=b.socket===true;
+    const transportOk=s?.transportHealthy!==false&&rt>=exp&&(pSock||!p.pid)&&(bSock||!b.pid);
+    const tEl=document.getElementById('r1293WatchTransport');if(tEl){tEl.textContent=w?.mode?`${transportOk?'OK':'CHECK'} · ${w.mode.replace('R1125-LANE-ACK-WATCHDOG','R1125 ACK')}`:(s?.transportHealthy!==false?`RTMPS ${rt}/${exp}`:'CHECK');setWatchClassR1293('r1293WatchTransport',transportOk?'ok':'warn')}
+    const laneText=`P ${pSock?'●':'○'} ${ageTextR1293(p.lastProgressAt)} · B ${bSock?'●':'○'} ${ageTextR1293(b.lastProgressAt)}`;set('r1293WatchLanes',laneText);setWatchClassR1293('r1293WatchLanes',transportOk?'ok':'warn');
+    const bp=Boolean(m.backpressureSince||s?.publisherBackpressureSince);const rec=n(m.recoveries)||n(s?.publisherBackpressureRecoveries);set('r1293WatchMaster',bp?`BACKPRESSURE · recovery ${rec}`:`OK · recovery ${rec}`);setWatchClassR1293('r1293WatchMaster',bp?'warn':'ok');
+    const pending=Boolean(h.pending||s?.transportSelfHealPending),healCount=n(h.count)||n(s?.transportSelfHealCount);set('r1293WatchHeal',pending?`PENDING · ${healCount}`:`OK · ${healCount}`);setWatchClassR1293('r1293WatchHeal',pending?'warn':'ok');
+    const rm=s?.runtimeMetricsR1160K||{},buf=n(rm.mp3AudioReservoirBufferedBytesR1293),hi=n(rm.mp3AudioReservoirHighWaterBytesR1293),und=n(rm.mp3PcmLastTrueUnderrunMsR1293),maxUnd=n(rm.mp3PcmMaxTrueUnderrunMsR1293);
+    const pct=hi>0?Math.round(buf/hi*100):0;set('r1293WatchReservoir',hi>0?`${humanBytesR1015(buf)}/${humanBytesR1015(hi)} · ${pct}% · underrun ${und}ms (max ${maxUnd})`:'R1293 telemetry —');setWatchClassR1293('r1293WatchReservoir',maxUnd>=120?'warn':'ok');
+    const hold=Boolean(s?.safeRestartBackupHoldActiveR1287);set('r1293WatchHold',hold?'ACTIVE · backup удерживается':'OFF · normal 2/2');setWatchClassR1293('r1293WatchHold',hold?'warn':'ok');
+  }
+
   function oneLine(v,max=900){return txt(v).replace(/\s+/g,' ').slice(0,max)}
   function eventText(e,index){
     const safe=redact(e),parts=[`#${index+1}  ${txt(safe.at)||'—'}  ${txt(safe.event)||'event'}`];
@@ -233,7 +268,7 @@
     const stalled=Number.isFinite(m.inputFps)&&m.inputFps<20,transport=s.transportHealthy===true&&rt>=exp;
     const badge=document.getElementById('r813DiagBadge');if(badge){badge.textContent=stale?'Данные устарели':stalled?'Подача видео замедлена':recent?'Недавнее восстановление / ошибка':transport?'Транспорт подключён':'Проверь транспорт';badge.className='r813-diag-badge '+(stale||stalled||recent?'r813-warn':transport?'r813-ok':'r813-bad')}
     const summary=document.getElementById('r813DiagSummary');
-    if(summary)summary.innerHTML=`<b>R1183 · ${esc(s.auditRevisionR1160L||s.version||'версия не передана')}</b><br>RTMPS ${rt}/${exp} · путь видео: ${s.clipActive?'клип / заставка':s.videoFeederRunning?'MP3-фон':'не подтверждён'} · возраст данных: ${age===null?'неизвестен':Math.round(age/1000)+' с'}<br>Подача видео: <b>${esc(fmt(m.inputFps))}</b> кадров/с · CPU VPS: ${esc(fmt(m.hostCpuPercent))}${m.hostCpuPercent===null?'':'%'} · ядер: ${esc(fmt(m.cores))}<br>Очереди: audio ${esc(fmt(m.audioQueued))} B / video ${esc(fmt(m.videoQueued))} B · пропуски ${esc(fmt(m.drops))} / повторы ${esc(fmt(m.duplicates))}<br>PID кодировщика ${esc(fmt(m.publisherPid))} · PID фона ${esc(fmt(m.videoPid))} · память Node ${m.nodeRss===null?'нет данных':esc(humanBytesR1015(m.nodeRss))}<br>Load average ${esc(fmt(m.load))} · входная фаза ${esc(fmt(m.submittedLeadMs))} мс (это не задержка у зрителя)<br>${incident?'Последний инцидент: '+esc(incident.at)+' · '+esc(incident.event):'В доступной истории инцидентов нет.'}<br>${!s.runtimeMetricsR1160K?'Для очередей и счётчиков нужны server R1160L и агент R1183. ':''}RTMPS-соединение само по себе не подтверждает плавность картинки.${archiveWarning?'<br>'+esc(archiveWarning):''}`;
+    if(summary)summary.innerHTML=`<b>R1183 · ${esc(s.auditRevisionR1160L||s.version||'версия не передана')}</b><br>RTMPS ${rt}/${exp} · путь видео: ${s.clipActive?'клип / заставка':s.videoFeederRunning?'MP3-фон':'не подтверждён'} · возраст данных: ${age===null?'неизвестен':Math.round(age/1000)+' с'}<br>Подача видео: <b>${esc(fmt(m.inputFps))}</b> кадров/с · CPU VPS: ${esc(fmt(m.hostCpuPercent))}${m.hostCpuPercent===null?'':'%'} · ядер: ${esc(fmt(m.cores))}<br>Очереди: audio ${esc(fmt(m.audioQueued))} B / video ${esc(fmt(m.videoQueued))} B · пропуски ${esc(fmt(m.drops))} / повторы ${esc(fmt(m.duplicates))}<br>PID кодировщика ${esc(fmt(m.publisherPid))} · PID фона ${esc(fmt(m.videoPid))} · память Node ${m.nodeRss===null?'нет данных':esc(humanBytesR1015(m.nodeRss))}<br>Load average ${esc(fmt(m.load))} · входная фаза ${esc(fmt(m.submittedLeadMs))} мс (это не задержка у зрителя)<br>${incident?'Последний инцидент: '+esc(incident.at)+' · '+esc(incident.event):'В доступной истории инцидентов нет.'}<br>Watchdog: ${esc(txt(s?.watchdogR1293?.mode)||txt(s?.transportWatchdogMode)||'—')} · self-heal ${Boolean(s?.transportSelfHealPending||s?.watchdogR1293?.selfHeal?.pending)?'PENDING':'OK'} · recovery ${n(s?.transportSelfHealCount)||n(s?.watchdogR1293?.selfHeal?.count)}<br>MP3 reservoir: ${esc(fmt(s?.runtimeMetricsR1160K?.mp3AudioReservoirBufferedBytesR1293))}/${esc(fmt(s?.runtimeMetricsR1160K?.mp3AudioReservoirHighWaterBytesR1293))} B · true underrun ${esc(fmt(s?.runtimeMetricsR1160K?.mp3PcmLastTrueUnderrunMsR1293))} ms<br>${!s.runtimeMetricsR1160K?'Для очередей и счётчиков нужны server R1160L и агент R1183. ':''}RTMPS-соединение само по себе не подтверждает плавность картинки.${archiveWarning?'<br>'+esc(archiveWarning):''}`;
     lastFullText=buildText(data);
     const view=allEvents.filter(e=>(!hiddenBefore||eventMs(e)>=hiddenBefore)&&(!onlyProblems||critical(e)));
     const log=document.getElementById('r813DiagLog');if(log)log.textContent='Обновлено: '+new Date().toISOString()+'\n\n'+(view.length?view.map(eventText).join('\n\n'):'Нет событий по выбранному фильтру. Полная история доступна в TXT / JSON.');
@@ -274,8 +309,18 @@
 
   async function refresh(manual=false){
     ensureUi();const badge=document.getElementById('r813DiagBadge');if(manual&&badge)badge.textContent='R1183 · обновляю…';
-    try{const d=await api(STATUS_API);ingest(d);const s=lastData?.agent?.status||{};renderProfile(s);renderDiagnostics(lastData);tunePanelR870();return d}
-    catch(error){if(badge){badge.textContent='R1183 · нет данных';badge.className='r813-diag-badge r813-bad'}const log=document.getElementById('r813DiagLog');if(log)log.textContent=`Диагностика недоступна: ${error?.message||error}`;const summary=document.getElementById('r813DiagSummary');if(summary)summary.textContent='Свежий статус недоступен. Последний сохранённый лог можно скачать; его данные не подтверждают текущее состояние эфира.';return null}
+    try{const d=await api(STATUS_API);ingest(d);const s=lastData?.agent?.status||{};renderProfile(s);renderWatchdogR1293(s);renderDiagnostics(lastData);tunePanelR870();return d}
+    catch(error){
+      try{
+        const p=await api(PUBLIC_STATUS_API);
+        const d={ok:true,publicFallback:true,agent:{version:p.agentVersion||'PUBLIC',lastSeen:p.lastSeen||null,status:p}};
+        ingest(d);const s=lastData?.agent?.status||{};renderProfile(s);renderWatchdogR1293(s);renderDiagnostics(lastData);tunePanelR870();
+        if(badge){badge.textContent='R1293 · PUBLIC FALLBACK';badge.className='r813-diag-badge r813-warn'}
+        return d;
+      }catch(publicError){
+        if(badge){badge.textContent='R1293 · нет данных';badge.className='r813-diag-badge r813-bad'}const log=document.getElementById('r813DiagLog');if(log)log.textContent=`Диагностика недоступна: ${error?.message||error}; fallback: ${publicError?.message||publicError}`;const summary=document.getElementById('r813DiagSummary');if(summary)summary.textContent='Свежий статус недоступен. Последний сохранённый лог можно скачать; его данные не подтверждают текущее состояние эфира.';return null
+      }
+    }
   }
 
   function arm(){if(timer)clearInterval(timer);timer=null;if(document.hidden)return;timer=setInterval(()=>refresh(false),15000)}

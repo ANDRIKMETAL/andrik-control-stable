@@ -1,3 +1,59 @@
+// R1293: MP3 PCM RESERVOIR 8S + TRUE UNDERRUN DIAGNOSTICS + WATCHDOG TELEMETRY.
+// Normal MP3 decoding remains realtime (-re) and zero-delay in the steady state, but the producer may buffer up to 8 seconds when the persistent master audio pipe backpressures. Decoder source pauses caused by a full reservoir are no longer mislabeled as audible gaps. Explicit R1124/R792/R751 watchdog fields are exported for the control panel.
+// R1292: CLIP FULL-END / NO EARLY FADE. Normal music clips no longer darken 3.6s before EOF when the next item is MP3; the real final frame remains visible through the actual clip boundary and the existing black bridge starts only AFTER clip completion. Paced-video tail wait is sized from the real queued frame count with a generous 60s ceiling so a temporarily slow 2-vCPU relay cannot discard the final queued frames. R1291 smooth-25, R1287 safe hot restart, MP3 visuals, audio, RTMPS, bitrate/GOP and station inserts are preserved.
+// R1291: CLIP SMOOTH-25 + SAFE-HOLD FORMAT MATCH. Normal music clips keep the R1290 absolute 25fps wall-clock but bounded recovery is tightened from 32ms to 38ms and the extra 1ms two-stage timer wake is removed, reducing micro-judder while still correcting small timer drift. Safe-restart media/RTMPS logic in server remains unchanged.
+// R1290: MUSIC-CLIP EXACT-25FPS WALL-CLOCK PACER + FULL TAIL. Normal music clips no longer use the R1123 PCM deficit full-stop / 38↔24ms oscillating cadence. They keep the calibrated ~2s A/V lead but release real frames on an absolute 40ms timeline with bounded 32ms catch-up, preventing cumulative JS timer drift, queue backpressure, spinner/rush cycles and premature EOF tail cuts. Station inserts, MP3, RTMPS, codecs, bitrate/GOP and R1287 safe restart remain unchanged.
+// R1288: MP3 CURRENT-TITLE PAD NARROWER. Keeps R1287 safe live restart and all R1286 MP3 dark underlays; ONLY the upper MP3 current-track pad is reduced from x=210/w=1500/h=96 to centered x=340/w=1240/h=88. Bottom ticker pad, clips, station inserts, audio, timing, bitrate, GOP and RTMPS are unchanged.
+// R1287: SAFE LIVE SERVER RESTART. Adds a temporary YouTube BACKUP-ingest hold marker so the normal backup lane can be relinquished to an external HOLD service during server replacement. While HOLD is active the radio keeps PRIMARY live, skips its own backup relay, reports expected RTMPS=1, and restores backup automatically after the marker disappears. No media timing/codec/audio changes.
+// R1286: MP3 DARK SEMI-TRANSPARENT UNDERLAYS ONLY. Normal MP3 current-title gets a dark translucent top pad; MP3 ticker pad opacity is strengthened. Clips/station inserts, audio path, timing, buffers, bitrate, GOP and RTMPS transport are unchanged. Album/ticker cache signatures are bumped so the new underlays rebuild automatically after restart.
+// R1285: lifecycle-only maintenance of uploaded R1284. One RTMPS stdin error listener per stream; waitChildExit removes timed-out listeners and recognizes signal termination. Media pacing, FFmpeg arguments, buffers, bitrate and handoff code unchanged.
+// R1284: RESTORE PROVEN CLIP RELAY. Surgical rollback of ONLY attachAudioMasterPacedVideoRelayR1123 to the byte-identical R1278/R1280 implementation that previously played music clips cleanly. Removes R1281 phase-anchor/320ms escape changes and R1282 exact25/first-frame-drain changes from clip playback. Preserves R1281 dual reliable RTMPS 2/2, stale-prearm max-age/new-MP3 cleanup, R1280 station/cover safeguards, and all master audio/video settings.
+// R1282: MUSIC-CLIP EXACT-25FPS + CLEAN FIRST-FRAME DRAIN. Fix R1281 regression where the permanent clip phase bias plus a small submitted-lead deficit repeatedly held each music-video frame for up to 320ms, producing viewer play/spinner/play stutter. Normal music clips now preserve their own unified prepared A/V cadence at exact 25fps (40ms/frame), with no PCM deficit holds and no 24/38ms catch-up. Before the first clip frame, inherit no MP3 rawvideo backlog: if the persistent video pipe is still draining one old 3,110,400-byte frame, wait for its drain event before writing the first clip frame. Station timing, R1281 dual RTMPS, stale-prearm guard, R1279 covers and all audio parameters remain unchanged.
+// R1281: DUAL-RTMPS + STALE-PREARM/HANDOFF FIX. Restore primary+backup YouTube RTMPS without localhost UDP: master MPEG-TS is fanned out to TWO independent bounded Node reservoirs/pipe relays so one lane cannot backpressure or corrupt the other. Fix MP3->clip freeze proven by diagnostics: a clip prearm intended for T-4s was claimed 378s later after surviving an intervening MP3. Every new MP3 now clears any inherited video prearm; takeInsertPrearm rejects anything older than 15s. Normal music clips also use a local PCM-phase anchor at promotion so accumulated MP3 counter drift cannot hold video for seconds and starve RTMPS. R1280 station sync shield, R1279 cover hot-reload and R1278 no-UDP transport principle remain preserved.
+// R1280: STATION A/V SYNC SHIELD. Preserve the exact R1278/R1276 station timing; R1279 live album-bed rebuilds are now forbidden from competing with clip/station startup or playback. A live album ffmpeg builder is SIGSTOP'ed before video insert handoff and SIGCONT'ed only after the insert is fully detached. Pending rebuilds wait until clipActive/stationHandoffActive are false. Background cover polling also skips all insert windows. R1278 reliable encoded pipe/reservoir and audio/video timing values are untouched.
+// R1279: LIVE ALBUM COVER HOT-RELOAD. Fix R1277/R1278 cache-only bug that prevented all 5 official album covers from changing while publisher was LIVE. Changed covers are detected with cache-busted HEAD polling, rebuilt one-at-a-time at nice19/readrate0.35/thread1, atomically swapped only after a complete valid 16s prepared bed exists, and picked up on the next MP3 boundary. R1278 reliable encoded pipe/reservoir and all audio timing remain untouched.
+// R1278: RELIABLE ENCODED TRANSPORT. Keep R1277 prepared album beds/CPU shield, but remove localhost UDP from the encoded H264/AAC path. The persistent master now writes MPEG-TS to stdout -> a bounded 32 MiB Node PassThrough reservoir -> the copy-only RTMPS relay stdin. This prevents silent local UDP datagram loss from corrupting both AAC and H264 (rare audio stutter + colored lower-frame lines/blur). Relay restart can reconnect to the SAME encoded reservoir without touching MP3/video feeders. No realtime audio resampling/loudnorm changes: queue96, 44.1k, 2s MP3 PCM reservoir, 6000k/GOP50, x264 1-thread and single RTMPS stay unchanged.
+// R1276: AUDIO CLEAN + STATION A/V SYNC. Keep R1275 warmed real-video albums and clip-style CTA. Remove realtime loudnorm from normal-MP3 playback (static measured gain only, unity fallback), keep exact 44.1k sample clock, and fix station/bumper startup: 1050ms PCM prime + 950ms real-video prebuffer ~= the calibrated 2000ms master lead instead of the old 2000+950=2950ms. Adds lightweight PCM-gap diagnostics. queue96, 6000k/GOP50, x264 1-thread, reservoir and RTMPS 1/1 unchanged.
+// R1275: CLIP CTA ON MP3. Keep R1274 warmed real-video album source, but make normal MP3 use the SAME SUBSCRIBE/LIKE CTA assets, cadence and fades as prepared video clips: first SUBSCRIBE at 20s, then alternate LIKE/SUBSCRIBE every 120s, 8s each, 0.35s fade. Custom 60s album-like overlay is disabled to avoid duplicates. Audio path, queue96, 6000k/GOP50, reservoir, x264 1-thread and RTMPS 1/1 stay unchanged.
+// R1274: WARMED REAL-VIDEO ALBUMS. The five official album JPGs are NEVER used as a live timed source anymore. Each image is prebuilt once into a visually static lossless 1920x1080/25fps H.264 loop, warmed before the publisher starts, then fed with the exact same -re -stream_loop -1 real-video path used by the stable master MP4. R1273 audio reservoir/CPU headroom, queue96, 6000k/GOP50, ticker and RTMPS 1/1 stay unchanged. LIKE is made visible immediately and every 60s.
+// R1273: AUDIO CPU HEADROOM. Keep R1272 reservoir + R1271/R1270 stable visuals, but stop x264 from occupying both VPS cores. Persistent publisher video is forced to ONE encoder thread, and the normal MP3 visual feeder uses one codec thread. Goal: leave one core/scheduler headroom for AAC + Node + PCM plumbing. queue96, 6000k/GOP50, ticker, LIKE 60s and RTMPS 1/1 unchanged.
+// R1272: MP3 PCM RESERVOIR. Keep the proven R1271/R1270 visual/master profile exactly as-is, but insert a 2-second Node PassThrough reservoir ONLY between normal-MP3 decoder stdout and the persistent master audio pipe. This absorbs short publisher/backpressure stalls without touching FFmpeg audio queue96, AAC, timestamps, RTMPS or video.
+// R1271: restore MP3 ticker on top of the R1270/R1212 lightweight master profile. LIKE interval changed to 60 seconds. Audio path, queue96, RTMPS 1/1, 6000k/GOP50 master profile remain unchanged.
+// R1270: restore the PROVEN R1212 persistent master H.264 profile to remove encoder/output pressure from the audio path. MP3 ticker remains OFF (R1269). Audio decoder/master logic remains unchanged and queue96 stays 96. RTMPS stays 1/1. This intentionally rolls back R1265's heavy 8M/GOP25/deblock/fast-pskip=0 video encoder experiment.
+// R1269: MP3 TICKER OFF. Disable the changing/bottom ticker completely on ALL normal MP3 playback to isolate the user-observed stutter + color degradation trigger. Album LIKE every 120s stays. Current-track title stays. R1265 8M/GOP25/no-slices video stays. Audio path, queue96 and RTMPS 1/1 are untouched.
+const MP3_TICKER_DISABLED_R1269 = false; // R1271: ticker restored on MP3
+// R1268: DIRECT TICKER-STUTTER FIX. Based on visually stable R1265, NOT R1267. The 4 ticker pages are pre-rendered once into a tiny 1580x84 / 25fps / 16s true-alpha QTRLE video with 250ms text crossfades. LIVE MP3 no longer evaluates cropY or switches sprite rows every 4s. Ticker video is fed with -re -stream_loop -1. Audio path, queue96, RTMPS 1/1 and R1265 8M/GOP25/no-slices publisher stay unchanged. Red outline around current track title removed.
+// R1265: STATIC-MP3 COLOR-DRIFT FIX. Keep R1264 true-alpha ticker and no sliced threads, but refresh H.264 prediction twice as often (GOP25), raise video CBR to 8 Mbps, enable deblock, and disable fast-pskip so detailed static album art is corrected instead of carrying chroma/quantization error through long P-frame runs. Audio queue stays 96; RTMPS 1/1 and audio path unchanged.
+// R1264: TRUE-ALPHA ticker pad + YUVA overlays + no x264 sliced-threads. Fixes opaque-black ticker sprite and targets the horizontal mid-frame chroma/slice tear seen only on album MP3. Queue96, RTMPS 1/1 and audio path unchanged.
+// R1262: MP3 ticker hot-path fix kept from R1261, but restore the semi-transparent underlay and bring back the album LIKE icon every 120s. Live MP3 path still uses one pre-rendered 4-page sprite (crop+overlay only), so per-frame drawtext churn stays removed. RTMPS 1/1 and queue96 unchanged.
+// R1261: MP3 TICKER HOT-PATH FIX — pre-render four ticker pages once into one transparent sprite; live MP3 path uses only crop+overlay, NO per-frame drawtext and NO 0.28s blink. Opaque codec-safe strip isolates ticker macroblocks from album art. Audio path and queue96 restored/preserved; RTMPS 1/1 unchanged.
+// R1259: rollback R1258 album-LIKE hot-path overlay completely; restore R1255 MP3 visual/audio cadence. Audio queue stays 96, RTMPS 1/1, R1251 ticker preserved.
+// R1255: restore old-server smooth 25fps MP3 visual cadence for static album art without touching audio. Static JPG is decoded once, then looped/paced by FFmpeg realtime filter at 25fps; audio queue stays 96; R1251 ticker and R1250 single RTMPS preserved.
+// R1254: rollback R1253 mux/interleave experiment completely; restore proven A/V handoff timing so station-insert audio cannot run ahead during the black transition. Keep R1251 ticker, audio queue 96, and single RTMPS 1/1.
+// R1251: keep R1250 single RTMPS and proven global encoder; paged ticker uses a fixed semi-transparent pad plus a short text-clear gap to prevent old glyph residue.
+// R1250: force SINGLE YouTube RTMPS ingest. Backup lane disabled permanently; all media/audio/video behavior otherwise unchanged.
+// R1246: R1242 global encoder/picture is preserved exactly; five album slots use a codec-safe PAGED static ticker instead of continuously moving glyphs. No global x264 changes. Audio queue remains 96.
+// R1242: FULL GLOBAL ENCODER ROLLBACK — restore the proven pre-experiment x264 publisher: GOP50, CAVLC/cabac=0, no AQ, no ROI. Keep static album art and local white ticker layout; audio queue stays 96.
+// R1241: restore GOP50 inter prediction for the static album picture so 6000k is spent efficiently on image detail; keep CABAC/AQ and strengthen bottom ticker ROI. Audio queue stays 96.
+// R1240: restore static album art (no global motion) so image quality stays clean; keep the non-smearing publisher/ticker path from R1239.
+// R1239: persistent publisher is ALL-INTRA (GOP=1) to eliminate temporal prediction trails. Bottom ticker ROI remains active; album motion from R1237 remains; audio queue stays 96.
+// R1238: keep R1237 subtle full-frame motion, but give the bottom ticker band a true x264 ROI at the persistent publisher. AQ is enabled only so libx264 honors ROI. 6000k/GOP50/B0 and audio queue 96 remain unchanged.
+// R1226: prepared-clip ticker stays primary; live fallback is restored until the prepared album video is ready; one low-priority build at a time; audio queue stays 96.
+// R1221B: pre-rendered ticker raster + audio queue restored to 96; ticker optimization retained.
+// R1220: five album slots — CURRENT title at top; faster ticker; semi-transparent codec-safe ticker band.
+// R1216: ALBUM TICKER GHOST/BLUE-SEAM FIX + LOWER CURRENT TITLE.
+// R1218: five official album slots use codec-safe opaque neutral ticker band + integer white-text motion.
+// R1217: five official album slots render ticker on a fresh transparent 1920x72 layer.
+// R1217: removes direct full-frame moving drawtext that could leave chroma trails / blue smear in H.264.
+// R1217: ticker motion uses exact 100 px/s = 4 px/frame at 25fps; no shadow; extras unchanged.
+// R1216: CURRENT title is 24px lower on the five album slots only.
+// R1215: STATIC STABILITY FIX + EXACT 1920x1080 + LOWER FULL-WIDTH ALBUM TICKER.
+// R1215: static album input = 5fps decode -> 25fps render; 5 official albums use 1920px ticker at y=992; Extras unchanged.
+// R1213: FULL-WIDTH TICKER ON 5 ALBUMS + STATIC PREROLL/STARTUP FIX.
+// R1211: STATIC ALBUM BACKGROUNDS — 5 albums + extras; title-only CURRENT; legacy master-video fallback.
+// R1160P: bounded orphan-FFmpeg GC + hard prearm cleanup; protects long-run RAM/tasks without touching LIVE owners.
+// R1160N: station inserts use exact 25fps cadence with no PCM-phase full-stop; prevents short bumper freeze/catch-up.
+// R1160M: atomic local library fallback; R1160L media cadence preserved.
 // R1160L: MP3 real-frame cadence, monotonic frame/sample counters, incident telemetry.
 // R1026B-CLIP-MP3-SINGLE-FADE
 // R1025-FULLFRAME-BUMPER3-AV-SINGLE-PIPE
@@ -5,7 +61,7 @@
 // R1011B-PERMANENT-ZERO-VISUAL-SEEK
 // R1010-R906-FULLSCREEN-SINGLE-SLOT-LOCK
 import http from 'node:http';
-import { spawn, execFile } from 'node:child_process';
+import { spawn, execFile, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import {
   appendFileSync,
@@ -19,7 +75,7 @@ import {
   unlinkSync,
   writeFileSync
 } from 'node:fs';
-import { Readable } from 'node:stream';
+import { Readable, PassThrough } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 
 const PORT = Number(process.env.PORT || 8080);
@@ -40,7 +96,14 @@ const STREAM_URL = STREAM_URL_OVERRIDE || (STREAM_KEY ? `rtmps://a.rtmps.youtube
 // Custom STREAM_URL_OVERRIDE stays single-lane unless an explicit backup override is set.
 const STREAM_BACKUP_URL_OVERRIDE = String(process.env.STREAM_BACKUP_URL_OVERRIDE || '').trim();
 const STREAM_BACKUP_URL = STREAM_BACKUP_URL_OVERRIDE || (!STREAM_URL_OVERRIDE && STREAM_KEY ? `rtmps://b.rtmps.youtube.com:443/live2?backup=1/${STREAM_KEY}` : '');
-const DUAL_INGEST_ENABLED_R792 = String(process.env.YOUTUBE_DUAL_INGEST_R792 || '1').trim() !== '0' && Boolean(STREAM_BACKUP_URL);
+const DUAL_INGEST_ENABLED_R792 = true; // R1281: restore PRIMARY+BACKUP, each on an independent reliable pipe/reservoir
+const SAFE_RESTART_HOLD_MARKER_R1287 = '/run/andrik-radio-youtube-backup-hold';
+function safeRestartBackupHoldActiveR1287(){
+  try{return existsSync(SAFE_RESTART_HOLD_MARKER_R1287);}catch(_){return false;}
+}
+function expectedRtmpsConnectionsR1287(){
+  return DUAL_INGEST_ENABLED_R792 && STREAM_BACKUP_URL && !safeRestartBackupHoldActiveR1287() ? 2 : 1;
+}
 const YOUTUBE_LIVE_URL = process.env.YOUTUBE_LIVE_URL || 'https://www.youtube.com/@andrikmetal/live';
 const CACHE_DIR = process.env.RADIO_CACHE_DIR || '/var/cache/andrik-radio-r622';
 const AUDIO_CACHE_DIR = `${CACHE_DIR}/audio`;
@@ -66,6 +129,10 @@ const MORNING_VISUAL_URL = MORNING_VISUAL;
 const DAY_VISUAL_URL = DAY_VISUAL;
 const EVENING_VISUAL_URL = EVENING_VISUAL;
 const NIGHT_VISUAL_URL = NIGHT_VISUAL;
+const RADIO_BACKGROUND_BASE_URL_R1211 = String(process.env.RADIO_BACKGROUND_BASE_URL_R1211 || 'https://andrikmetal.com/api/media/radio-background-r1211').trim();
+const RADIO_BACKGROUND_REFRESH_MS_R1211 = Math.max(10000,Number(process.env.RADIO_BACKGROUND_REFRESH_MS_R1211||30000)); // R1279: cover changes visible without restart; HEAD only unless ETag changes
+const RADIO_BACKGROUND_SLOTS_R1211 = Object.freeze(['illusion','ocean','trika','beyond','silent','extras']);
+const radioBackgroundCheckR1211 = new Map();
 const R1130B_VISUAL_PATH_FIX = 'R1130B-AGENT-RADIO-SAME-VISUAL-SLOT-FILES';
 const EMERGENCY_VISUAL = process.env.EMERGENCY_VISUAL || new URL('../assets/live-eye-r223.mp4', import.meta.url).pathname;
 const QR_OVERLAY = process.env.QR_OVERLAY || new URL('../assets/andrik-qr-r794-160.png', import.meta.url).pathname; // R798 exact pre-scaled replacement
@@ -159,6 +226,10 @@ const R1125_RELAY_RESTART_MS = Math.max(250,Math.min(5000,Number(process.env.R11
 const R1125_RELAY_WATCH_INTERVAL_MS = Math.max(3000,Math.min(10000,Number(process.env.R1125_RELAY_WATCH_INTERVAL_MS || 5000)));
 const R1125_RELAY_ACK_STALL_MS = Math.max(15000,Math.min(60000,Number(process.env.R1125_RELAY_ACK_STALL_MS || 20000)));
 const R1125_RELAY_NO_SOCKET_MS = Math.max(20000,Math.min(90000,Number(process.env.R1125_RELAY_NO_SOCKET_MS || 30000)));
+const R1278_ENCODED_RESERVOIR_BYTES = Math.max(8*1024*1024,Math.min(64*1024*1024,Number(process.env.R1278_ENCODED_RESERVOIR_BYTES || 32*1024*1024))); // reliable ~40s cushion at ~6.2 Mbps; no packet dropping
+const R1281_ENCODED_LANE_MAX_BUFFER_BYTES = Math.max(8*1024*1024,Math.min(R1278_ENCODED_RESERVOIR_BYTES,Number(process.env.R1281_ENCODED_LANE_MAX_BUFFER_BYTES || 24*1024*1024)));
+const INSERT_PREARM_MAX_AGE_MS_R1281 = Math.max(8000,Math.min(30000,Number(process.env.INSERT_PREARM_MAX_AGE_MS_R1281 || 15000)));
+const CLIP_PHASE_HOLD_MAX_MS_R1281 = Math.max(120,Math.min(1000,Number(process.env.CLIP_PHASE_HOLD_MAX_MS_R1281 || 320)));
 const CPU_HEADROOM_PROFILE_R1129 = 'R1129-QUIET-RELAYS+NO-R1124-DUP-PROBE+THROTTLED-PREP';
 const CPU_ENCODER_PROFILE_R1131 = 'R1131-X264-ULTRAFAST-CAVLC-NO-CABAC';
 const LOUDNESS_CACHE_SUFFIX_R747 = '.r747-loudnorm.json';
@@ -225,9 +296,11 @@ const EQUALIZER_FILES_R721 = Object.freeze({
   night: new URL('../assets/equalizer-off-r890.mov', import.meta.url).pathname
 });
 const OUTPUT_TIMESHIFT_SECONDS = 1.5; // R887 short network cushion, no long replay buffer // R637: network recovery cushion; packets are NEVER dropped
-const VIDEO_BITRATE = '6000k'; // R762: safe 1080p25 quality lift; CBR only, encoder architecture/preset unchanged
+const VIDEO_BITRATE = '6000k'; // R1270: exact R1212 master bitrate
 const AUDIO_BITRATE = '160k'; // R762: modest stereo AAC quality lift; sample rate/queues unchanged
-const AUDIO_SAMPLE_RATE = 44100; // YouTube Live recommendation for stereo
+const AUDIO_SAMPLE_RATE = 44100;
+const MP3_PCM_RESERVOIR_SECONDS_R1293 = Math.max(4,Math.min(12,Number(process.env.MP3_PCM_RESERVOIR_SECONDS_R1293 || 8)));
+const MP3_PCM_RESERVOIR_BYTES_R1293 = Math.round(AUDIO_SAMPLE_RATE*4*MP3_PCM_RESERVOIR_SECONDS_R1293); // YouTube Live recommendation for stereo
 const AUDIO_GAP_BRIDGE_INTERVAL_MS_R824 = 20; // R824: fill only inter-item audio gaps; prevents persistent master starvation
 const AUDIO_GAP_BRIDGE_SAMPLES_R824 = Math.max(1,Math.round(AUDIO_SAMPLE_RATE*AUDIO_GAP_BRIDGE_INTERVAL_MS_R824/1000));
 const AUDIO_GAP_BRIDGE_CHUNK_R824 = Buffer.alloc(AUDIO_GAP_BRIDGE_SAMPLES_R824*2*2); // s16le stereo silence, 20 ms
@@ -237,8 +310,9 @@ const FULL_FRAME_FILTER_R787 = 'scale=1920:1080:force_original_aspect_ratio=decr
 const LIVE_FULL_FRAME_FILTER_R794 = 'scale=1920:1080:force_original_aspect_ratio=decrease:flags=fast_bilinear,pad=1920:1080:(ow-iw)/2:(oh-ih)/2,setsar=1'; // R1110 CPU-LIGHT: MP3 live feeder only; clips/station stay Lanczos
 const LIVE_FULL_FRAME_GEOMETRY_R819 = 'scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos,pad=1920:1080:(ow-iw)/2:(oh-ih)/2,setsar=1'; // R1012 HARD FULL FRAME
 const VIDEO_INPUT_QUEUE_PACKETS_R732 = 96; // R974B transition spike cushion // R887 absorb short rawvideo scheduling spikes // R858: bounded RAWVIDEO transition cushion
-const AUDIO_INPUT_QUEUE_PACKETS_R732 = 96; // R1160J value retained. Audio packets and video frames do NOT have equal durations.
-const VIDEO_GOP = 50; // exactly 2 seconds at 25 fps
+const AUDIO_INPUT_QUEUE_PACKETS_R732 = 96; // R1221B: restored to the proven 96-packet audio input queue.
+const VIDEO_GOP = 50; // R1270: exact R1212 2-second GOP at 25fps
+const PUBLISHER_GOP_R1239 = 1; // all-I publisher: every output frame is an IDR/I frame
 const LIVE_MP3_CPU_LIGHT_R1110 = true; // R1110: lighter MP3 visual path only; no A/V timing, queue or publisher changes
 const R1132_VISUAL_CPU_LOW = 'R1132-NATIVE-1080P25-DIRECT-NO-UNUSED-PNG';
 // R1160K: probe asynchronously BEFORE spawning a new normal feeder. Existing
@@ -305,6 +379,105 @@ async function primeVisualProfileR1160K(path){
 const VIDEO_FRAME_BYTES_R816 = 1920*1080*3/2; // R816 exact YUV420P frame; incomplete feeder tails are never forwarded
 const LIBRARY_REFRESH_MS = Math.max(60000, Number(process.env.LIBRARY_REFRESH_MS || 120000));
 const LIVE_TICKER_FILE = process.env.LIVE_TICKER_FILE || `${CACHE_DIR}/live-ticker.txt`;
+const TICKER_PAGE_FILES_R1246 = [0,1,2,3].map(i=>`${CACHE_DIR}/live-ticker-page-r1246-${i+1}.txt`);
+const TICKER_PAGE_SECONDS_R1246 = 4;
+const TICKER_SPRITE_R1261 = `${CACHE_DIR}/live-ticker-video-r1268.mov`;
+const TICKER_SPRITE_META_R1261 = `${CACHE_DIR}/live-ticker-video-r1268.meta.json`;
+const TICKER_SPRITE_W_R1261 = 1580;
+const TICKER_SPRITE_PAGE_H_R1261 = 84;
+const ALBUM_LIKE_OVERLAY_R1262 = `${CACHE_DIR}/album-like-r1262.png`;
+const ALBUM_LIKE_PERIOD_SECONDS_R1262 = 60; // R1271: show LIKE once per minute
+const ALBUM_LIKE_SHOW_SECONDS_R1262 = 10;
+const ALBUM_LIKE_WIDTH_R1262 = 240;
+const ALBUM_LIKE_BASE64_R1262 = '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';
+const TICKER_RASTER_FILE_R1221 = `${CACHE_DIR}/live-ticker-r1221.png`;
+const TICKER_RASTER_TEXT_FILE_R1221 = `${CACHE_DIR}/live-ticker-r1221.txt`;
+const TICKER_RASTER_WIDTH_R1221 = 8192;
+const TICKER_RASTER_HEIGHT_R1221 = 64;
+const TICKER_RASTER_SCROLL_CYCLE_R1221 = TICKER_RASTER_WIDTH_R1221 + 1920;
+const TICKER_MOTION_FILE_R1222 = `${CACHE_DIR}/live-ticker-r1223.mov`;
+const TICKER_MOTION_META_FILE_R1222 = `${CACHE_DIR}/live-ticker-r1223.meta.txt`;
+const TICKER_MOTION_SPEED_R1222 = 110; // R1224: exactly match prepared clip ticker speed
+const TICKER_MOTION_HEIGHT_R1222 = 64;
+const TICKER_MOTION_DURATION_R1222 = (TICKER_RASTER_WIDTH_R1221 + 1920) / TICKER_MOTION_SPEED_R1222;
+const TICKER_UNDERLAY_FILE_R1236 = `${CACHE_DIR}/ticker-underlay-r1236.mp4`;
+const TICKER_UNDERLAY_VERSION_R1236 = 'R1236-MOVING-DARK-UNDERLAY-25FPS';
+const TICKER_UNDERLAY_HEIGHT_R1236 = 76;
+const TICKER_UNDERLAY_Y_R1236 = 1004;
+const TICKER_UNDERLAY_ALPHA_R1236 = 0.58;
+const ALBUM_TICKER_VIDEO_PREFIX_R1224 = `${VISUAL_CACHE_DIR}/album-ticker-r1226-`;
+const ALBUM_TICKER_VIDEO_VERSION_R1224 = 'R1231-BOTTOM-BAND-MOVING-WHITE-BT709-TV';
+const ALBUM_BASE_VIDEO_PREFIX_R1227 = `${VISUAL_CACHE_DIR}/album-background-video-r1227-`;
+const ALBUM_BASE_VIDEO_VERSION_R1227 = 'R1286-PREPARED-ALBUM-BED-16S-AVC420-CLOSEDGOP-DARKPAD';
+const ALBUM_BED_SECONDS_R1277 = 16; // exactly one 4-page ticker cycle; loop always restarts on a clean IDR
+const ALBUM_BED_GOP_R1277 = 50; // 2s closed GOP at 25fps; 16s is an exact multiple
+const ALBUM_BED_LIVE_REBUILD_READRATE_R1279 = Math.max(0.20,Math.min(0.50,Number(process.env.ALBUM_BED_LIVE_REBUILD_READRATE_R1279||0.35)));
+const ALBUM_BACKGROUND_WATCH_MS_R1279 = Math.max(15000,Number(process.env.ALBUM_BACKGROUND_WATCH_MS_R1279||45000));
+const albumBedRebuildPendingR1279 = new Map();
+let albumBedRebuildChainR1279 = Promise.resolve();
+let albumBackgroundWatcherBusyR1279 = false;
+let albumBedBuilderChildR1280 = null;
+let albumBedBuilderPausedR1280 = false;
+let albumBedBuilderPauseReasonR1280 = '';
+
+function pauseAlbumBedBuilderR1280(reason='video-insert'){
+  const child=albumBedBuilderChildR1280;
+  if(!child||child.exitCode!==null||albumBedBuilderPausedR1280)return false;
+  try{
+    process.kill(child.pid,'SIGSTOP');
+    albumBedBuilderPausedR1280=true;
+    albumBedBuilderPauseReasonR1280=String(reason||'video-insert');
+    state.albumBedBuilderShieldR1280={
+      paused:true,
+      reason:albumBedBuilderPauseReasonR1280,
+      pid:Number(child.pid||0),
+      at:new Date().toISOString()
+    };
+    diagRecordR802('r1280-album-builder-paused-for-insert',{
+      reason:albumBedBuilderPauseReasonR1280,
+      pid:Number(child.pid||0)
+    });
+    return true;
+  }catch(_){ return false; }
+}
+
+function resumeAlbumBedBuilderR1280(reason='video-insert-ended'){
+  const child=albumBedBuilderChildR1280;
+  if(!child||child.exitCode!==null){
+    albumBedBuilderPausedR1280=false;
+    albumBedBuilderPauseReasonR1280='';
+    return false;
+  }
+  if(!albumBedBuilderPausedR1280)return false;
+  try{
+    process.kill(child.pid,'SIGCONT');
+    state.albumBedBuilderShieldR1280={
+      paused:false,
+      reason:String(reason||'video-insert-ended'),
+      pid:Number(child.pid||0),
+      at:new Date().toISOString()
+    };
+    diagRecordR802('r1280-album-builder-resumed-after-insert',{
+      reason:String(reason||'video-insert-ended'),
+      pid:Number(child.pid||0)
+    });
+  }catch(_){ }
+  albumBedBuilderPausedR1280=false;
+  albumBedBuilderPauseReasonR1280='';
+  return true;
+}
+
+async function waitAlbumBedSafeWindowR1280(){
+  while(!stopping && (clipActive || stationHandoffActiveR804)){
+    state.albumBedBuilderWaitingR1280={
+      at:new Date().toISOString(),
+      clipActive:Boolean(clipActive),
+      stationHandoffActive:Boolean(stationHandoffActiveR804)
+    };
+    await sleep(500);
+  }
+  return !stopping;
+}
 const LIVE_CURRENT_FILE = process.env.LIVE_CURRENT_FILE || `${CACHE_DIR}/current-live.txt`;
 const LIVE_PREVIOUS_FILE_R726 = process.env.LIVE_PREVIOUS_FILE_R726 || `${CACHE_DIR}/previous-live-r726.txt`;
 const LIVE_NEXT_FILE_R726 = process.env.LIVE_NEXT_FILE_R726 || `${CACHE_DIR}/next-live-r726.txt`;
@@ -334,9 +507,11 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([]);
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R821-FINAL-STABLE-R822-AUDIO-GAP-BRIDGE-R820-PRESERVED',
+  version: 'R1293-MP3-PCM-RESERVOIR8+TRUE-UNDERRUN+WATCHDOG-TELEMETRY',
   cpuHeadroomProfileR794:'R796-LIVE-FAST-SCALE-COMPACT-EQ-FINITE-FADE-PRESCALED-STATIC',
   cpuHeadroomProfileR1129:CPU_HEADROOM_PROFILE_R1129,
+  liveClipPrepThrottleR1277:'READRATE-0.35+NICE19+THREAD1',
+  stationAvSyncShieldR1280:'PAUSE-LIVE-ALBUM-BUILDER-DURING-VIDEO-INSERTS',
   visualPathFixR1130B:R1130B_VISUAL_PATH_FIX,
   cpuEncoderProfileR1131:CPU_ENCODER_PROFILE_R1131,
   visualCpuLowProfileR1132:R1132_VISUAL_CPU_LOW,
@@ -367,7 +542,7 @@ const state = {
   publisherRunning: false,
   producerRunning: false,
   overlayMode: 'R757 PREV/NEXT ON MP3 + NORMAL CLIPS @ INTRO 2-7s + FINAL 10s / R756 PRESERVED',
-  audioMode: `R793 NO BACKGROUND/PREFETCH LOUDNESS + LIVE FALLBACK + AUDIO QUEUE ${AUDIO_INPUT_QUEUE_PACKETS_R732} / SAME MASTER A/V TO PRIMARY+BACKUP RTMPS`,
+  audioMode: `R1281 SAME MASTER A/V TO PRIMARY+BACKUP INDEPENDENT RELIABLE RTMPS / AUDIO QUEUE ${AUDIO_INPUT_QUEUE_PACKETS_R732}`,
   mp3ToVideoFadeMode: 'R757-END-BLACK-HOLD-THEN-VIDEO-FADE-IN',
   clipPreviewMode: 'R757-NORMAL-CLIPS-PREVNEXT-INTRO-2-7S-PLUS-FINAL-10S',
   mp3BoundaryFadeMode: 'R854-R837-RAWVIDEO-FADE-3.10-HOLD-0.20-RECOVER-1.50',
@@ -472,7 +647,24 @@ let publisher = null;
 // H264/AAC encoder/master; these children only demux local TS and remux to FLV.
 let transportPrimaryR1125 = null;
 let transportBackupR1125 = null;
+// R1281: two independent reliable encoded branches. Legacy R1278 aliases below
+// continue to point at PRIMARY so existing status/cleanup code stays compatible.
+let encodedTransportReservoirR1278 = null;
+let encodedTransportPublisherSourceR1278 = null;
+let encodedTransportRelaySinkR1278 = null;
+const encodedTransportReservoirsR1281 = {primary:null,backup:null};
+const encodedTransportRelaySinksR1281 = {primary:null,backup:null};
+let encodedTransportPublisherDataHandlerR1281 = null;
+let encodedTransportPublisherErrorHandlerR1281 = null;
+const encodedTransportLaneStatsR1281 = {
+  primary:{recycles:0,maxBuffered:0,lastBuffered:0},
+  backup:{recycles:0,maxBuffered:0,lastBuffered:0}
+};
 let transportRelayWatchdogTimerR1125 = null;
+let orphanFfmpegGcTimerR1160P = null;
+const ORPHAN_FFMPEG_MIN_AGE_MS_R1160P = Math.max(10*60*1000, Number(process.env.ORPHAN_FFMPEG_MIN_AGE_MS_R1160P || 20*60*1000));
+const ORPHAN_FFMPEG_GC_INTERVAL_MS_R1160P = Math.max(30*1000, Number(process.env.ORPHAN_FFMPEG_GC_INTERVAL_MS_R1160P || 120*1000));
+const ORPHAN_RELAY_MIN_AGE_MS_R1160P = Math.max(60*1000, Number(process.env.ORPHAN_RELAY_MIN_AGE_MS_R1160P || 3*60*1000));
 const transportRelayRestartTimersR1125 = {primary:null,backup:null};
 const transportRelayHealthR1125 = {
   primary:{pid:0,lastAck:-1,lastProgressAt:0,noSocketSince:0,everSocket:false,recycles:0},
@@ -502,10 +694,11 @@ let stationHandoffActiveR804 = false;
 const normalClipRetryR814=new Map(); // R814: selected normal clips get transient retries before any defer
 const NORMAL_CLIP_RETRY_MAX_R814=2;
 const NORMAL_CLIP_RETRY_DELAY_MS_R814=900;
-const NORMAL_CLIP_EOF_MARGIN_MS_R1139=15000; // R1141: allow paced/no-drop video tail to drain and reach built-in fade before emergency soft-cut
+const NORMAL_CLIP_EOF_MARGIN_MS_R1139=30000; // R1290: emergency-only margin; exact-25fps relay should finish on time, but transient sink stalls must never cut the real clip tail
 const R1139_CLIP_STALL_GUARD='R1139-AUDIOQ160+POSTCOMMIT-SOFT-EOF-5S+NO-WHOLE-CLIP-REPLAY';
 let visualSwitching = false;
 let scheduleTimerR721 = null;
+let albumBackgroundWatcherTimerR1279 = null;
 let runtimeForceVisualSlot = FORCE_VISUAL_SLOT;
 let runtimeVisualAutoSchedule = VISUAL_AUTO_SCHEDULE_R658;
 // R1130: one-shot visual switch is armed by control and consumed only when
@@ -584,6 +777,124 @@ const shortText = (value, max = 52) => {
   const s = cleanText(value);
   return s.length <= max ? s : `${s.slice(0, Math.max(1, max - 1)).trim()}…`;
 };
+
+
+// R1160P LONG-RUN CHILD HYGIENE
+// Every intentionally long-lived ffmpeg child has a JS owner reference. A process
+// that survives a boundary/recovery but loses that reference is an orphan and can
+// accumulate RAM/tasks for hours. GC only targets DIRECT ffmpeg children of this
+// Node PID that are unowned and older than a wide safety window.
+function ownedFfmpegPidsR1160P(){
+  const out=new Set();
+  const add=child=>{const pid=Number(child?.pid||0);if(pid>1&&child?.exitCode===null)out.add(pid);};
+  add(publisher);
+  add(transportPrimaryR1125);
+  add(transportBackupR1125);
+  add(producer);
+  add(clipPublisher);
+  add(videoFeeder);
+  add(clipVideoPrerollR744);
+  add(nextMp3AudioPrearmR1156?.child);
+  add(insertPrearmR1069?.child);
+  add(stationBlackPrearmR1145?.child);
+  return out;
+}
+
+function procDirectFfmpegSnapshotR1160P(){
+  const rows=[];
+  let uptimeSec=0;
+  try{uptimeSec=Number(String(readFileSync('/proc/uptime','utf8')).trim().split(/\s+/)[0])||0;}catch(_){return rows;}
+  let names=[];
+  try{names=readdirSync('/proc');}catch(_){return rows;}
+  for(const name of names){
+    if(!/^\d+$/.test(name))continue;
+    const pid=Number(name);
+    try{
+      if(String(readFileSync(`/proc/${pid}/comm`,'utf8')).trim()!=='ffmpeg')continue;
+      const statLine=String(readFileSync(`/proc/${pid}/stat`,'utf8'));
+      const close=statLine.lastIndexOf(')');
+      if(close<0)continue;
+      const rest=statLine.slice(close+2).trim().split(/\s+/);
+      const procState=String(rest[0]||'');
+      const ppid=Number(rest[1]||0);
+      const startTicks=Number(rest[19]||0);
+      if(ppid!==process.pid||!Number.isFinite(startTicks)||startTicks<=0)continue;
+      // Ubuntu/Linux USER_HZ is 100; this is only a conservative age gate.
+      const ageMs=Math.max(0,(uptimeSec-(startTicks/100))*1000);
+      let cmd='';
+      try{cmd=String(readFileSync(`/proc/${pid}/cmdline`)).replace(/\0/g,' ').trim();}catch(_){}
+      const role=/udp:\/\/127\.0\.0\.1:32125/.test(cmd)
+        ? 'orphan-primary-relay'
+        : (/udp:\/\/127\.0\.0\.1:32126/.test(cmd)?'orphan-backup-relay':'orphan-ffmpeg');
+      rows.push({pid,ppid,state:procState,ageMs,role});
+    }catch(_){}
+  }
+  return rows;
+}
+
+async function terminateChildR1160P(child,reason='cleanup',graceMs=700){
+  if(!child||child.exitCode!==null)return true;
+  try{child.__r1160PIntentionalStop=true;}catch(_){}
+  try{child.kill('SIGCONT');}catch(_){}
+  try{child.kill('SIGTERM');}catch(_){}
+  if(await waitChildExit(child,graceMs))return true;
+  if(child.exitCode===null){
+    try{child.kill('SIGKILL');}catch(_){}
+    await waitChildExit(child,250);
+  }
+  try{diagRecordR802('r1160p-child-hard-cleanup',{pid:Number(child.pid||0),reason:shortText(reason,120),exited:child.exitCode!==null});}catch(_){}
+  return child.exitCode!==null;
+}
+
+async function orphanFfmpegGcTickR1160P(){
+  if(stopping)return;
+  const now=Date.now();
+
+  // Tracked prearms should live seconds/minutes, not tens of minutes. If a
+  // superseded boundary leaves one tracked, clear it through its normal owner.
+  if(nextMp3AudioPrearmR1156 && now-Number(nextMp3AudioPrearmR1156.startedAt||now)>20*60*1000){
+    await clearNextMp3AudioPrearmR1156('r1160p-stale-prearm').catch(()=>{});
+  }
+  if(insertPrearmR1069 && now-Number(insertPrearmR1069.startedAt||now)>30*1000){
+    await clearInsertPrearmR1069('r1160p-stale-prearm').catch(()=>{});
+  }
+  if(stationBlackPrearmR1145 && now-Number(stationBlackPrearmR1145.startedAt||now)>20*60*1000){
+    await clearStationBlackPrearmR1145('r1160p-stale-prearm').catch(()=>{});
+  }
+
+  const stale=procDirectFfmpegSnapshotR1160P().filter(row=>{
+    if(ownedFfmpegPidsR1160P().has(row.pid))return false;
+    const minAge=/relay/.test(String(row.role||''))
+      ? ORPHAN_RELAY_MIN_AGE_MS_R1160P
+      : ORPHAN_FFMPEG_MIN_AGE_MS_R1160P;
+    return row.ageMs>=minAge;
+  });
+
+  state.orphanFfmpegGcLastScanR1160P=new Date().toISOString();
+  state.orphanFfmpegGcLastFoundR1160P=stale.length;
+  if(!stale.length)return;
+
+  const killed=[];
+  for(const row of stale){
+    if(ownedFfmpegPidsR1160P().has(row.pid))continue;
+    try{process.kill(row.pid,'SIGCONT');}catch(_){}
+    try{process.kill(row.pid,'SIGTERM');}catch(_){continue;}
+    killed.push({pid:row.pid,ageSec:Math.round(row.ageMs/1000),state:row.state,role:row.role});
+    const pid=row.pid;
+    const hard=setTimeout(()=>{
+      try{
+        if(ownedFfmpegPidsR1160P().has(pid))return;
+        if(procDirectFfmpegSnapshotR1160P().some(x=>x.pid===pid))process.kill(pid,'SIGKILL');
+      }catch(_){}
+    },1200);
+    hard.unref?.();
+  }
+  if(killed.length){
+    state.orphanFfmpegGcKillsR1160P=Number(state.orphanFfmpegGcKillsR1160P||0)+killed.length;
+    state.lastOrphanFfmpegGcR1160P=killed.map(x=>({pid:x.pid,ageSec:x.ageSec,state:x.state}));
+    diagRecordR802('r1160p-orphan-ffmpeg-gc',{count:killed.length,total:Number(state.orphanFfmpegGcKillsR1160P||0),pids:killed.map(x=>x.pid).join(','),roles:killed.map(x=>x.role).join(',')});
+  }
+}
 
 function setLiveTitleR724(text,{delayMs=0}={}){
   liveTitleGenerationR724++;
@@ -1485,13 +1796,42 @@ async function loadLibrary(){
   const previousSignature=librarySignature([...library,...clipLibrary,...bumperLibrary,...(specialInsertR726?[specialInsertR726]:[]),...(specialHourlyInsertR727?[specialHourlyInsertR727]:[])]);
   const url=`${PLAYLIST_URL}${PLAYLIST_URL.includes('?')?'&':'?'}ts=${Date.now()}`;
   let data;
+  // R1160M-ATOMIC-LIBRARY-CACHE: every good remote catalog becomes the next safe fallback.
+  // A temporary R2/Worker 5xx must never stop the producer when the last good library exists.
   try{
     const response=await fetch(url,{headers:{'user-agent':'ANDRIK-Radio-24-7-R691'}});
     if(!response.ok)throw new Error(`R2 library HTTP ${response.status}`);
     data=await response.json();
+    if(!Array.isArray(data?.tracks)||!data.tracks.length)throw new Error('R2 library returned empty tracks');
+    try{
+      mkdirSync(CACHE_DIR,{recursive:true});
+      const tmp=`${LOCAL_LIBRARY_MANIFEST_R854}.tmp-${process.pid}`;
+      writeFileSync(tmp,JSON.stringify(data));
+      renameSync(tmp,LOCAL_LIBRARY_MANIFEST_R854);
+    }catch(cacheWriteError){
+      console.error('[R1160M-LIBRARY-CACHE-WRITE]',cleanText(cacheWriteError?.message||cacheWriteError));
+    }
   }catch(remoteError){
     console.error('[R854-LOCAL-FALLBACK-LIBRARY]',cleanText(remoteError?.message||remoteError));
-    data=JSON.parse(readFileSync(LOCAL_LIBRARY_MANIFEST_R854,'utf8'));
+    let localError=null;
+    if(existsSync(LOCAL_LIBRARY_MANIFEST_R854)){
+      try{
+        const fallback=JSON.parse(readFileSync(LOCAL_LIBRARY_MANIFEST_R854,'utf8'));
+        if(!Array.isArray(fallback?.tracks)||!fallback.tracks.length)throw new Error('local library cache is empty');
+        data=fallback;
+        console.warn('[R1160M-LOCAL-LIBRARY-HIT]',`${fallback.tracks.length} tracks`);
+      }catch(error){
+        localError=error;
+      }
+    }
+    if(!data&&Array.isArray(library)&&library.length){
+      data={tracks:library};
+      console.warn('[R1160M-MEMORY-LIBRARY-HIT]',`${library.length} tracks`);
+    }
+    if(!data){
+      if(localError)console.error('[R1160M-LOCAL-LIBRARY-BAD]',cleanText(localError?.message||localError));
+      throw remoteError;
+    }
   }
   const source=Array.isArray(data.tracks)?data.tracks:[];
   const validMp3=item=>{
@@ -1694,6 +2034,217 @@ function chooseTitleFont(){
   return candidates.find(existsSync)||chooseFont();
 }
 
+function ensureTickerRasterR1221(){
+  try{
+    mkdirSync(CACHE_DIR,{recursive:true});
+    let ticker=DEFAULT_LIVE_TICKER;
+    try{ticker=cleanText(readFileSync(LIVE_TICKER_FILE,'utf8'))||DEFAULT_LIVE_TICKER}catch(_){ }
+    // Repeat the message inside one wide transparent bitmap so the moving layer
+    // contains fully rasterized glyphs. LIVE FFmpeg only moves pixels; it no longer
+    // re-rasterizes text on every 25fps frame.
+    const repeated=`${ticker}   ${ticker}   ${ticker}`;
+    let regenerate=true;
+    try{
+      const oldText=readFileSync(TICKER_RASTER_TEXT_FILE_R1221,'utf8');
+      if(oldText===repeated && existsSync(TICKER_RASTER_FILE_R1221) && statSync(TICKER_RASTER_FILE_R1221).size>4000)regenerate=false;
+    }catch(_){ }
+    if(!regenerate)return true;
+    writeFileSync(TICKER_RASTER_TEXT_FILE_R1221,repeated,'utf8');
+    const font=chooseFont();
+    if(!font)return false;
+    const draw=`drawtext=fontfile='${ffFilterPath(font)}':textfile='${ffFilterPath(TICKER_RASTER_TEXT_FILE_R1221)}':fontcolor=white:fontsize=38:x=20:y=11:borderw=0`;
+    const r=spawnSync('ffmpeg',[
+      '-hide_banner','-loglevel','error','-y',
+      '-f','lavfi','-i',`color=c=black@0.0:s=${TICKER_RASTER_WIDTH_R1221}x${TICKER_RASTER_HEIGHT_R1221}:r=1:d=1,format=rgba`,
+      '-vf',draw,'-frames:v','1',TICKER_RASTER_FILE_R1221
+    ],{stdio:'ignore',timeout:15000});
+    return r.status===0 && existsSync(TICKER_RASTER_FILE_R1221) && statSync(TICKER_RASTER_FILE_R1221).size>4000;
+  }catch(_){return false;}
+}
+
+
+// R1222 ROOT FIX: clips/video look clean because their moving ticker is rendered OFFLINE
+// into a real 25fps video before live playback. The static-album branch was the only
+// branch moving a still/raster inside the live filtergraph. Pre-render that movement too.
+// Live playback now decodes a tiny 1920x64 alpha MOV and overlays it at fixed x=0.
+function ensureTickerMotionR1222(){
+  try{
+    if(!ensureTickerRasterR1221())return false;
+    mkdirSync(CACHE_DIR,{recursive:true});
+    let ticker=DEFAULT_LIVE_TICKER;
+    try{ticker=cleanText(readFileSync(LIVE_TICKER_FILE,'utf8'))||DEFAULT_LIVE_TICKER}catch(_){ }
+    const signature=`R1223|${ticker}|${TICKER_MOTION_SPEED_R1222}|${TICKER_RASTER_WIDTH_R1221}x${TICKER_MOTION_HEIGHT_R1222}|text-only`;
+    try{
+      if(readFileSync(TICKER_MOTION_META_FILE_R1222,'utf8')===signature &&
+         existsSync(TICKER_MOTION_FILE_R1222) && statSync(TICKER_MOTION_FILE_R1222).size>500000)return true;
+    }catch(_){ }
+    const tmp=TICKER_MOTION_FILE_R1222+`.part-${process.pid}-${Date.now()}.mov`;
+    const dur=TICKER_MOTION_DURATION_R1222.toFixed(3);
+    const graph=
+      `[0:v]format=rgba[raster];`+
+      `[1:v][raster]overlay=x='1920-t*${TICKER_MOTION_SPEED_R1222}':y=0:shortest=1:format=auto[out]`;
+    const r=spawnSync('ffmpeg',[
+      '-hide_banner','-loglevel','error','-y',
+      '-loop','1','-framerate','1','-i',TICKER_RASTER_FILE_R1221,
+      '-f','lavfi','-i',`color=c=black@0.0:s=1920x${TICKER_MOTION_HEIGHT_R1222}:r=${VIDEO_FPS}:d=${dur},format=rgba`,
+      '-filter_complex',graph,
+      '-map','[out]','-t',dur,'-r',String(VIDEO_FPS),
+      '-c:v','qtrle','-pix_fmt','argb',tmp
+    ],{stdio:'ignore',timeout:30000});
+    if(r.status!==0 || !existsSync(tmp) || statSync(tmp).size<500000){
+      try{if(existsSync(tmp))unlinkSync(tmp)}catch(_){ }
+      return false;
+    }
+    renameSync(tmp,TICKER_MOTION_FILE_R1222);
+    writeFileSync(TICKER_MOTION_META_FILE_R1222,signature,'utf8');
+    return true;
+  }catch(_){return false;}
+}
+
+
+// R1236: pre-render a tiny REAL moving video strip. This is intentionally not
+// transparency-only text and not random per-frame noise. It contains coherent horizontal
+// luminance motion, so x264/YouTube must refresh the ticker macroblocks like normal video.
+function ensureTickerUnderlayR1236(){
+  try{
+    mkdirSync(CACHE_DIR,{recursive:true});
+    const meta=`${TICKER_UNDERLAY_FILE_R1236}.meta`;
+    const signature=`${TICKER_UNDERLAY_VERSION_R1236}|1920x${TICKER_UNDERLAY_HEIGHT_R1236}|${VIDEO_FPS}`;
+    try{
+      if(readFileSync(meta,'utf8')===signature && existsSync(TICKER_UNDERLAY_FILE_R1236) && statSync(TICKER_UNDERLAY_FILE_R1236).size>20000)return true;
+    }catch(_){ }
+    const tmp=`${TICKER_UNDERLAY_FILE_R1236}.part-${process.pid}-${Date.now()}.mp4`;
+    // 4-second seamless-looking dark luma wave. Values stay deliberately near black.
+    // The coherent wave moves continuously; unlike temporal noise it compresses as ordinary video.
+    const lavfi=`nullsrc=s=1920x${TICKER_UNDERLAY_HEIGHT_R1236}:r=${VIDEO_FPS}:d=4,geq=lum='18+6*sin(2*PI*(X/420+T*0.55))+3*sin(2*PI*(X/170-T*0.35))':cb=128:cr=128,format=yuv420p`;
+    const r=spawnSync('ffmpeg',[
+      '-hide_banner','-loglevel','error','-y','-f','lavfi','-i',lavfi,
+      '-t','4','-an','-c:v','libx264','-preset','ultrafast','-tune','zerolatency',
+      '-pix_fmt','yuv420p','-r',String(VIDEO_FPS),'-g',String(VIDEO_FPS*2),'-keyint_min',String(VIDEO_FPS*2),'-sc_threshold','0','-bf','0',
+      '-b:v','500k','-maxrate','500k','-bufsize','1000k',tmp
+    ],{stdio:'ignore',timeout:15000});
+    if(r.status!==0 || !existsSync(tmp) || statSync(tmp).size<20000){
+      try{if(existsSync(tmp))unlinkSync(tmp)}catch(_){ }
+      return false;
+    }
+    renameSync(tmp,TICKER_UNDERLAY_FILE_R1236);
+    writeFileSync(meta,signature,'utf8');
+    return true;
+  }catch(_){return false;}
+}
+
+function fiveAlbumSlotR1224(path){
+  const m=String(path||'').match(/album-background-r1211-(illusion|ocean|trika|beyond|silent)\.jpg$/i);
+  return m?String(m[1]||'').toLowerCase():'';
+}
+
+// R1224 ROOT FIX: use the same principle as prepared clips/video. Background,
+// translucent ticker band and moving ticker are baked OFFLINE into one normal
+// 1920x1080/25fps H.264 stream. LIVE playback only decodes complete frames.
+const albumTickerBuildJobsR1224=new Map();
+
+function albumTickerSpecR1224(visualPath){
+  try{
+    const slot=fiveAlbumSlotR1224(visualPath);
+    if(!slot || !existsSync(visualPath) || statSync(visualPath).size<4096)return null;
+    mkdirSync(VISUAL_CACHE_DIR,{recursive:true});
+    const out=`${ALBUM_TICKER_VIDEO_PREFIX_R1224}${slot}.mp4`;
+    const meta=`${out}.meta.json`;
+    const bg=statSync(visualPath);
+    let tickerText=DEFAULT_LIVE_TICKER;
+    try{tickerText=cleanText(readFileSync(LIVE_TICKER_FILE,'utf8'))||DEFAULT_LIVE_TICKER}catch(_){ }
+    try{if(!existsSync(LIVE_TICKER_FILE))writeFileSync(LIVE_TICKER_FILE,tickerText,'utf8')}catch(_){ }
+    const signature=JSON.stringify({
+      version:ALBUM_TICKER_VIDEO_VERSION_R1224,
+      slot,
+      bgSize:Number(bg.size||0),
+      bgMtime:Number(bg.mtimeMs||0),
+      ticker:tickerText,
+      speed:TICKER_MOTION_SPEED_R1222,
+      fps:VIDEO_FPS,
+      duration:Number(TICKER_MOTION_DURATION_R1222.toFixed(3))
+    });
+    const valid=(()=>{try{return readFileSync(meta,'utf8')===signature && existsSync(out) && statSync(out).size>1000000}catch(_){return false}})();
+    return {slot,out,meta,signature,valid};
+  }catch(_){return null;}
+}
+
+function startAlbumTickerBuildR1224(visualPath,spec){
+  try{
+    // R1226: never let multiple 1080p preparation jobs compete with the live publisher.
+    // One job at a time is enough; tracks without a ready cache keep the visible fallback ticker.
+    if(!spec || spec.valid || albumTickerBuildJobsR1224.has(spec.slot) || albumTickerBuildJobsR1224.size>=1)return;
+    const tmp=spec.out+`.part-${process.pid}-${Date.now()}.mp4`;
+    const dur=TICKER_MOTION_DURATION_R1222.toFixed(3);
+    const font=chooseFont();
+    if(!font)return;
+    const tickerPath=ffFilterPath(LIVE_TICKER_FILE);
+    const fontPath=ffFilterPath(font);
+    // R1225: EXACT prepared-clip principle. No raster PNG and no alpha overlay.
+    // The moving text is drawn directly into the final 1920x1080 frames OFFLINE,
+    // just like preparedClipFilterComplexR742. The translucent band is baked too.
+    const graph=
+      `[0:v]scale=1920:1080:in_range=pc:out_range=tv:force_original_aspect_ratio=decrease:flags=lanczos,`+
+      `pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1,fps=${VIDEO_FPS},setpts=N/(${VIDEO_FPS}*TB),format=yuv420p,`+
+      `setparams=range=limited:color_primaries=bt709:color_trc=bt709:colorspace=bt709,`+
+      `drawbox=x=0:y=ih-72:w=iw:h=72:color=black@0.48:t=fill,`+
+      `drawtext=fontfile='${fontPath}':textfile='${tickerPath}':reload=0:fontcolor=white:fontsize=30:`+
+      `x='w-mod(t*${TICKER_MOTION_SPEED_R1222}\,text_w+w)':y=h-57:borderw=1:bordercolor=black@0.85,`+
+      `format=yuv420p,setparams=range=limited:color_primaries=bt709:color_trc=bt709:colorspace=bt709[outv]`;
+    const args=[
+      'ffmpeg','-hide_banner','-loglevel','error','-y','-filter_complex_threads','1',
+      '-loop','1','-framerate',String(VIDEO_FPS),'-i',visualPath,
+      '-filter_complex',graph,'-map','[outv]','-t',dur,
+      ...h264EncoderArgsR721(),
+      '-color_range','tv','-colorspace','bt709','-color_primaries','bt709','-color_trc','bt709',
+      '-threads','1','-an','-movflags','+faststart',tmp
+    ];
+    const child=spawn('nice',['-n','19',...args],{stdio:'ignore'});
+    albumTickerBuildJobsR1224.set(spec.slot,child);
+    child.on('exit',code=>{
+      try{
+        if(code===0 && existsSync(tmp) && statSync(tmp).size>1000000){
+          renameSync(tmp,spec.out);
+          writeFileSync(spec.meta,spec.signature,'utf8');
+          state.lastWarning=`R1224 prepared album video ready: ${spec.slot}`;
+        }else{
+          try{if(existsSync(tmp))unlinkSync(tmp)}catch(_){ }
+        }
+      }catch(_){try{if(existsSync(tmp))unlinkSync(tmp)}catch(__){ }}
+      finally{albumTickerBuildJobsR1224.delete(spec.slot)}
+    });
+    child.on('error',()=>{albumTickerBuildJobsR1224.delete(spec.slot);try{if(existsSync(tmp))unlinkSync(tmp)}catch(_){ }});
+  }catch(_){ }
+}
+
+function ensureAlbumTickerVideoR1224(visualPath){
+  const spec=albumTickerSpecR1224(visualPath);
+  if(!spec)return '';
+  if(spec.valid)return spec.out;
+  // Never block live playback while building the prepared visual. The first encounter
+  // starts a low-priority background render; subsequent tracks use the completed cache.
+  startAlbumTickerBuildR1224(visualPath,spec);
+  return '';
+}
+
+// Quietly pre-warm the remaining album loops one-by-one. Only one low-priority x264
+// cache job is allowed at a time, so the live publisher keeps priority on a 2-vCPU VPS.
+let albumTickerPrewarmIndexR1224=0;
+function prewarmAlbumTickerVideosR1224(){
+  try{
+    if(albumTickerBuildJobsR1224.size){setTimeout(prewarmAlbumTickerVideosR1224,15000).unref?.();return;}
+    const slots=['illusion','ocean','trika','beyond','silent'];
+    while(albumTickerPrewarmIndexR1224<slots.length){
+      const slot=slots[albumTickerPrewarmIndexR1224++];
+      const path=radioBackgroundLocalPathR1211(slot);
+      const spec=albumTickerSpecR1224(path);
+      if(spec && !spec.valid){startAlbumTickerBuildR1224(path,spec);setTimeout(prewarmAlbumTickerVideosR1224,15000).unref?.();return;}
+    }
+  }catch(_){ }
+}
+// R1227: heavy 92-second baked ticker prewarm disabled; album loops are tiny 2-second background-only videos.
+
+
 function ffFilterPath(path){
   return String(path).replace(/\\/g,'/').replace(/:/g,'\\:').replace(/'/g,"\\'");
 }
@@ -1765,7 +2316,7 @@ async function clearNextMp3AudioPrearmR1156(reason='clear'){
   if(child){
     child.__r1156IntentionalStop=true;
     try{child.stdout?.pause()}catch(_){ }
-    if(child.exitCode===null){try{child.kill('SIGTERM')}catch(_){ }}
+    await terminateChildR1160P(child,`r1156-prearm-${reason}`,700);
   }
   diagRecordR802('r1156-next-mp3-pcm-prearm-clear',{
     title:shortText(arm.title||'',52),
@@ -1831,7 +2382,7 @@ async function buildNextMp3AudioPrearmR1156(item){
     arm.timeout=setTimeout(()=>{
       if(nextMp3AudioPrearmR1156===arm)nextMp3AudioPrearmR1156=null;
       child.__r1156IntentionalStop=true;
-      if(child.exitCode===null){try{child.kill('SIGTERM')}catch(_){ }}
+      terminateChildR1160P(child,'r1156-prearm-timeout',700).catch(()=>{});
       state.lastWarning=`R1156 MP3 PCM prearm timeout: ${shortText(arm.title,52)}`;
       diagRecordR802('r1156-next-mp3-pcm-prearm-timeout',{
         title:shortText(arm.title||'',52),childPid:Number(child.pid||0),waitMs:Date.now()-arm.startedAt
@@ -2273,14 +2824,14 @@ async function buildPreparedClipR742(item,sourcePath){
   try{ticker=cleanText(readFileSync(LIVE_TICKER_FILE,'utf8'))||DEFAULT_LIVE_TICKER}catch(_){ }
   try{writeFileSync(tickerFile,ticker,'utf8')}catch(_){ }
   const tmp=readyPath+`.part-${process.pid}-${Date.now()}.mp4`;
-  // R1129 CPU HEADROOM: prepared clips are OFFLINE cache work. During LIVE,
-  // read normal music clips at realtime speed and force the source decoder to one
-  // thread so a cache rebuild cannot steal both vCPUs from the live visual/master.
+  // R1277 CPU SHIELD: prepared clips are OFFLINE cache work. During LIVE, normal
+  // music clips are intentionally read at only 0.35x and remain nice(19)/one-thread.
+  // They can become ready later and R764 will insert them later; live PCM must win.
   // Station inserts remain fast because they are only a few seconds long.
   const livePrepThrottleR1129=Boolean(!stationInsert && publisher && publisher.exitCode===null);
   const args=[
     '-hide_banner','-loglevel','warning','-y','-filter_complex_threads','1','-fflags','+genpts+discardcorrupt','-err_detect','ignore_err',
-    ...(livePrepThrottleR1129?['-re']:[]),'-threads','1','-i',sourcePath,
+    ...(livePrepThrottleR1129?['-readrate','0.35']:[]),'-threads','1','-i',sourcePath,
     '-loop','1','-framerate','1','-i',QR_OVERLAY
   ];
   // R783: both CTA stills are inputs only to OFFLINE preparation for NORMAL clips.
@@ -2565,8 +3116,12 @@ async function startPreparedVideoPrerollR744(item,readyPath,duration){
 }
 
 async function startNormalVideoPrerollR744(item,duration){
-  const visual=await ensureScheduledVisual();
-  const period=activeVisualPeriodR721();
+  // R1213: preroll must already use the incoming track's static album background.
+  // R1211 accidentally used the legacy scheduled/master MP4 here, which caused
+  // visible motion for a moment before an MP3 started.
+  const visual=await ensureTrackVisualR1211(item);
+  const slotR1213=radioBackgroundSlotForItemR1211(item);
+  const period=isStaticBackgroundR1211(visual)?`album-${slotR1213||'extras'}`:activeVisualPeriodR721();
   const identity=primaryIdentity(item);
   visualSwitching=true;
   try{
@@ -2779,6 +3334,23 @@ function takeInsertPrearmR1069(item){
     arm.child.exitCode!==null
   )return null;
 
+  const ageMsR1281=Date.now()-Number(arm.startedAt||Date.now());
+  if(ageMsR1281>INSERT_PREARM_MAX_AGE_MS_R1281){
+    insertPrearmR1069=null;
+    state.lastRejectedStaleInsertPrearmR1281={
+      at:new Date().toISOString(),
+      title:shortText(item?.title||'VIDEO',52),
+      childPid:Number(arm.child?.pid||0),
+      ageMs:Math.max(0,ageMsR1281),
+      maxAgeMs:INSERT_PREARM_MAX_AGE_MS_R1281
+    };
+    diagRecordR802('r1281-stale-insert-prearm-rejected',state.lastRejectedStaleInsertPrearmR1281);
+    try{arm.child.kill('SIGCONT')}catch(_){}
+    try{arm.child.kill('SIGTERM')}catch(_){}
+    setTimeout(()=>{try{if(arm.child.exitCode===null)arm.child.kill('SIGKILL')}catch(_){}},800).unref?.();
+    return null;
+  }
+
   insertPrearmR1069=null;
   arm.claimed=true;
 
@@ -2980,6 +3552,391 @@ async function sanitizeVisualR806(source,period='visual'){
   }
 }
 
+function radioBackgroundSlotForItemR1211(item){
+  if(!item||String(item.type||'track')!=='track')return '';
+  const key=String(item.key||'').toLowerCase();
+  const album=cleanText(item.album||'').toLowerCase();
+  const title=cleanTitleCoreR989(item.title||'','').toLowerCase();
+  if(/^monument to the great void$/iu.test(title.trim()))return 'silent';
+  if(/^albums\/silent\//i.test(key)||/^(?:silent|silent\s*\(\s*тишина\s*\)|тишина)$/iu.test(album))return 'silent';
+  if(/^albums\/beyond\//i.test(key)||/^beyond$/iu.test(album))return 'beyond';
+  if(/^albums\/trika\//i.test(key)||/^трика$/iu.test(album)||/^trika$/iu.test(album))return 'trika';
+  if(/^albums\/ocean\//i.test(key)||/^ocean$/iu.test(album))return 'ocean';
+  if(/^albums\/illusion-of-life\//i.test(key)||/^illusion of life$/iu.test(album))return 'illusion';
+  if(/^albums\/extended\//i.test(key)||/^(?:extended(?:\s+version)?|ex\.?\s*version)$/iu.test(album))return 'extras';
+  if(/^(?:covers?|cover-tracks?|singles)\//i.test(key))return 'extras';
+  if(['single','cover'].includes(String(item.sourceType||'').toLowerCase()))return 'extras';
+  return 'extras';
+}
+function radioBackgroundLocalPathR1211(slot){return `${VISUAL_CACHE_DIR}/album-background-r1211-${slot}.jpg`}
+function radioBackgroundMetaPathR1211(slot){return `${VISUAL_CACHE_DIR}/album-background-r1211-${slot}.meta.json`}
+function isStaticBackgroundR1211(path){return /album-background-r1211-[a-z-]+\.jpg$/i.test(String(path||''))}
+function isFiveAlbumBackgroundR1213(path){
+  // R1213: only the five official album slots get a full-width ticker.
+  // Extras (Singles/Covers/Extended) deliberately keeps the proven 1160px strip.
+  return /(?:album-background-r1211-(?:illusion|ocean|trika|beyond|silent)\.jpg|album-background-video-r1227-(?:illusion|ocean|trika|beyond|silent)\.mp4)$/i.test(String(path||''));
+}
+function isPreparedAlbumBedR1277(path){
+  return /album-background-video-r1227-(?:illusion|ocean|trika|beyond|silent)\.mp4$/i.test(String(path||''));
+}
+
+const RADIO_BACKGROUND_NORMALIZE_VERSION_R1214=1;
+const STATIC_BACKGROUND_INPUT_FPS_R1214=25; // R1255: static source timeline is paced at the real 25fps master cadence
+
+function normalizeRadioBackgroundFileR1214(path,slot){
+  return new Promise((resolve,reject)=>{
+    const tmp=`${path}.normalize-r1214-${process.pid}-${Date.now()}.jpg`;
+    execFile('ffmpeg',[
+      '-y','-hide_banner','-loglevel','error',
+      '-i',path,
+      '-vf','scale=1920:1080:flags=lanczos,setsar=1,format=yuv420p',
+      '-frames:v','1','-c:v','mjpeg','-q:v','3',
+      tmp
+    ],{encoding:'utf8',timeout:30000,killSignal:'SIGKILL',maxBuffer:512*1024},(error,_stdout,stderr)=>{
+      if(error){
+        try{if(existsSync(tmp))unlinkSync(tmp)}catch(_){}
+        reject(new Error(`R1214 ${slot} normalize failed: ${cleanText(stderr||error?.message||error)}`));
+        return;
+      }
+      try{
+        if(!existsSync(tmp)||statSync(tmp).size<4096)throw new Error('normalized image too small');
+        renameSync(tmp,path);
+        visualProbeCacheR1132.delete(path);
+        resolve(path);
+      }catch(e){
+        try{if(existsSync(tmp))unlinkSync(tmp)}catch(_){}
+        reject(e);
+      }
+    });
+  });
+}
+
+
+function albumBaseVideoPathR1227(slot){return `${ALBUM_BASE_VIDEO_PREFIX_R1227}${slot}.mp4`}
+function albumBaseVideoMetaPathR1227(slot){return `${ALBUM_BASE_VIDEO_PREFIX_R1227}${slot}.meta.json`}
+
+function albumBedSignatureR1279(imagePath,slot,tickerPath){
+  const st=statSync(imagePath);
+  const tickerSt=statSync(tickerPath);
+  return JSON.stringify({
+    version:ALBUM_BASE_VIDEO_VERSION_R1227,
+    hotReload:'R1279',
+    slot,
+    imageSize:Number(st.size||0),
+    imageMtime:Number(st.mtimeMs||0),
+    tickerSize:Number(tickerSt.size||0),
+    tickerMtime:Number(tickerSt.mtimeMs||0),
+    fps:VIDEO_FPS,
+    duration:ALBUM_BED_SECONDS_R1277,
+    gop:ALBUM_BED_GOP_R1277,
+    pixFmt:'yuv420p',
+    profile:'avc-yuv420p',
+    closedGop:true,
+    tickerBaked:true
+  });
+}
+
+async function buildAlbumBaseVideoR1279(imagePath,slot,out,metaPath,signature,tickerPath,{live=false}={}){
+  if(live){
+    const safe=await waitAlbumBedSafeWindowR1280();
+    if(!safe)throw new Error('R1280 stopping before live album build');
+  }
+  const tmp=`${out}.part-${process.pid}-${Date.now()}.mp4`;
+  state.albumBedBuildingR1277=slot;
+  state.albumBedBuildingR1279={slot,live,at:new Date().toISOString()};
+  const started=Date.now();
+  try{
+    await new Promise((resolve,reject)=>{
+      const graph=`[0:v]scale=1920:1080:in_range=pc:out_range=tv:flags=lanczos,setsar=1,fps=${VIDEO_FPS},format=yuv420p[base];`+
+        `[1:v]format=argb,setpts=PTS-STARTPTS[ticker];`+
+        `[base][ticker]overlay=x=170:y=996:shortest=1:eof_action=pass:eval=init:format=yuv420,format=yuv420p[outv]`;
+      const readrate=live?['-readrate',String(ALBUM_BED_LIVE_REBUILD_READRATE_R1279)]:[];
+      const args=[
+        '-n',live?'19':'15','ffmpeg','-hide_banner','-loglevel','error','-y',
+        '-filter_complex_threads','1',
+        ...readrate,'-loop','1','-framerate',String(VIDEO_FPS),'-i',imagePath,
+        ...readrate,'-stream_loop','-1','-i',tickerPath,
+        '-filter_complex',graph,
+        '-map','[outv]','-t',ALBUM_BED_SECONDS_R1277.toFixed(3),'-an','-sn','-dn',
+        '-c:v','libx264','-preset','ultrafast','-profile:v','high','-level:v','4.1','-qp','8',
+        '-x264-params',`open-gop=0:sliced-threads=0:scenecut=0:keyint=${ALBUM_BED_GOP_R1277}:min-keyint=${ALBUM_BED_GOP_R1277}:repeat-headers=1:aud=1`,
+        '-g',String(ALBUM_BED_GOP_R1277),'-keyint_min',String(ALBUM_BED_GOP_R1277),'-sc_threshold','0','-bf','0','-refs','1',
+        '-r',String(VIDEO_FPS),'-fps_mode','cfr','-pix_fmt','yuv420p',
+        '-color_range','tv','-colorspace','bt709','-color_primaries','bt709','-color_trc','bt709',
+        '-threads','1','-movflags','+faststart',tmp
+      ];
+      const child=spawn('nice',args,{stdio:['ignore','ignore','pipe']});
+      if(live){
+        albumBedBuilderChildR1280=child;
+        albumBedBuilderPausedR1280=false;
+        albumBedBuilderPauseReasonR1280='';
+        state.albumBedBuilderShieldR1280={
+          paused:false,
+          reason:'live-cover-build',
+          pid:Number(child.pid||0),
+          at:new Date().toISOString()
+        };
+      }
+      let err='';
+      child.stderr.on('data',d=>{if(err.length<5000)err+=String(d)});
+      child.once('error',reject);
+      child.once('exit',code=>{
+        if(albumBedBuilderChildR1280===child){
+          albumBedBuilderChildR1280=null;
+          albumBedBuilderPausedR1280=false;
+          albumBedBuilderPauseReasonR1280='';
+        }
+        code===0?resolve():reject(new Error(`R1279 album bed build exit ${code}: ${err.slice(-1200)}`));
+      });
+    });
+    if(!existsSync(tmp)||statSync(tmp).size<32000){
+      try{if(existsSync(tmp))unlinkSync(tmp)}catch(_){ }
+      throw new Error(`R1279 album bed too small: ${slot}`);
+    }
+
+    // Atomic swap: current feeder keeps its already-open old inode; next MP3 boundary
+    // opens this same path again and gets the new complete cover. No half-written live file.
+    renameSync(tmp,out);
+    writeFileSync(metaPath,signature,'utf8');
+    visualProbeCacheR1132.delete(out);
+    await primeVisualProfileR1160K(out);
+    state.albumBedLastBuiltR1277={slot,at:new Date().toISOString(),ms:Date.now()-started,bytes:statSync(out).size};
+    state.albumBedLastBuiltR1279={slot,live,at:new Date().toISOString(),ms:Date.now()-started,bytes:statSync(out).size};
+    state.albumBedHotReloadReadyR1279={
+      slot,
+      at:new Date().toISOString(),
+      apply:'NEXT-MP3-BOUNDARY',
+      liveBuild:Boolean(live)
+    };
+    return out;
+  }finally{
+    state.albumBedBuildingR1277='';
+    state.albumBedBuildingR1279=null;
+    if(albumBedBuilderChildR1280 && albumBedBuilderChildR1280.exitCode!==null){
+      albumBedBuilderChildR1280=null;
+      albumBedBuilderPausedR1280=false;
+      albumBedBuilderPauseReasonR1280='';
+    }
+    try{if(existsSync(tmp))unlinkSync(tmp)}catch(_){ }
+  }
+}
+
+function scheduleAlbumBedRebuildR1279(imagePath,slot,out,metaPath,signature,tickerPath){
+  if(albumBedRebuildPendingR1279.get(slot)===signature)return;
+  albumBedRebuildPendingR1279.set(slot,signature);
+  state.albumBedDeferredRebuildR1277={slot,at:new Date().toISOString(),reason:'R1279-live-safe-background-rebuild'};
+  state.albumBedHotReloadPendingR1279={
+    slot,
+    at:new Date().toISOString(),
+    readrate:ALBUM_BED_LIVE_REBUILD_READRATE_R1279,
+    nice:19,
+    threads:1
+  };
+
+  albumBedRebuildChainR1279=albumBedRebuildChainR1279.then(async()=>{
+    // If the user uploaded this slot again while it was waiting, an older queued job
+    // must not overwrite the newer requested cover.
+    if(albumBedRebuildPendingR1279.get(slot)!==signature)return;
+    try{
+      await buildAlbumBaseVideoR1279(imagePath,slot,out,metaPath,signature,tickerPath,{live:true});
+      diagRecordR802('r1279-album-cover-hot-reload-ready',{
+        slot,
+        readrate:ALBUM_BED_LIVE_REBUILD_READRATE_R1279,
+        bytes:existsSync(out)?statSync(out).size:0
+      });
+    }catch(error){
+      state.lastWarning=`R1279 cover rebuild ${slot}: ${cleanText(error?.message||error)}`;
+      diagRecordR802('r1279-album-cover-hot-reload-failed',{slot,error:cleanText(error?.message||error)});
+    }finally{
+      if(albumBedRebuildPendingR1279.get(slot)===signature)albumBedRebuildPendingR1279.delete(slot);
+    }
+  }).catch(error=>{
+    state.lastWarning=`R1279 cover rebuild queue: ${cleanText(error?.message||error)}`;
+  });
+}
+
+async function ensureAlbumBaseVideoR1227(imagePath,slot){
+  if(!['illusion','ocean','trika','beyond','silent'].includes(String(slot||'')))return imagePath;
+  const out=albumBaseVideoPathR1227(slot),metaPath=albumBaseVideoMetaPathR1227(slot);
+  const livePublisher=Boolean(publisher&&publisher.exitCode===null&&state.publisherRunning);
+
+  // Before LIVE we may generate the ticker sprite if needed. During LIVE never generate
+  // it here; use the already-prepared ticker so cover replacement cannot trigger a heavy
+  // extra QTRLE job beside the stream.
+  const tickerPath=livePublisher
+    ? (existsSync(TICKER_SPRITE_R1261)&&statSync(TICKER_SPRITE_R1261).size>100000?TICKER_SPRITE_R1261:'')
+    : ensureTickerSpriteR1261();
+
+  if(!tickerPath || !existsSync(tickerPath) || statSync(tickerPath).size<100000){
+    state.lastWarning=`R1279 ${slot} ticker bed unavailable; keeping previous prepared cover`;
+    try{
+      if(existsSync(out)&&statSync(out).size>32000)return out;
+    }catch(_){ }
+    return imagePath;
+  }
+
+  const signature=albumBedSignatureR1279(imagePath,slot,tickerPath);
+  let cacheMatches=false;
+  try{
+    cacheMatches=Boolean(
+      existsSync(out) &&
+      statSync(out).size>32000 &&
+      readFileSync(metaPath,'utf8')===signature
+    );
+  }catch(_){ }
+
+  if(cacheMatches){
+    await primeVisualProfileR1160K(out);
+    return out;
+  }
+
+  if(livePublisher){
+    // R1277 used to return the old cache forever here. R1279 instead rebuilds safely
+    // in the background while the old complete bed continues feeding LIVE.
+    scheduleAlbumBedRebuildR1279(imagePath,slot,out,metaPath,signature,tickerPath);
+    try{
+      if(existsSync(out)&&statSync(out).size>32000){
+        await primeVisualProfileR1160K(out);
+        return out;
+      }
+    }catch(_){ }
+    return imagePath;
+  }
+
+  return await buildAlbumBaseVideoR1279(imagePath,slot,out,metaPath,signature,tickerPath,{live:false});
+}
+
+async function ensureRadioBackgroundReadyR1214(path,metaPath,slot,meta={},etag='',forceNormalize=false){
+  const needsNormalize=forceNormalize || Number(meta?.normalizedVersionR1214||0)!==RADIO_BACKGROUND_NORMALIZE_VERSION_R1214 || Number(meta?.width||0)!==1920 || Number(meta?.height||0)!==1080;
+  if(needsNormalize)await normalizeRadioBackgroundFileR1214(path,slot);
+  await primeVisualProfileR1160K(path);
+  const nextMeta={
+    ...meta,slot,etag:String(etag||meta?.etag||''),
+    normalizedVersionR1214:RADIO_BACKGROUND_NORMALIZE_VERSION_R1214,
+    width:1920,height:1080,
+    normalizedAt:needsNormalize?new Date().toISOString():(meta?.normalizedAt||new Date().toISOString())
+  };
+  writeFileSync(metaPath,JSON.stringify(nextMeta,null,2),'utf8');
+  state.albumBackgroundSlotR1211=slot;
+  state.albumBackgroundPathR1211=path;
+  // R1240: restore pure static album art for all album slots.
+  // R1239 proved the ticker can stay clean; the remaining visible blockiness came from
+  // spending bitrate on whole-frame motion. Keep the prepared static JPEG and let only
+  // the overlays/ticker move.
+  state.albumBackgroundModeR1211='STATIC-IMAGE-R1240-1920X1080';
+  return path;
+}
+
+async function refreshRadioBackgroundR1211(slot,{force=false}={}){
+  if(!RADIO_BACKGROUND_SLOTS_R1211.includes(slot))throw new Error(`R1211 invalid background slot: ${slot}`);
+  prepareCacheDir();
+  const path=radioBackgroundLocalPathR1211(slot),metaPath=radioBackgroundMetaPathR1211(slot);
+  let oldMeta={};try{oldMeta=JSON.parse(readFileSync(metaPath,'utf8'))||{}}catch(_){}
+  const now=Date.now(),last=Number(radioBackgroundCheckR1211.get(slot)||0);
+  if(!force && now-last<RADIO_BACKGROUND_REFRESH_MS_R1211 && existsSync(path) && statSync(path).size>4096){
+    return await ensureRadioBackgroundReadyR1214(path,metaPath,slot,oldMeta,oldMeta.etag,false);
+  }
+  radioBackgroundCheckR1211.set(slot,now);
+  const url=`${RADIO_BACKGROUND_BASE_URL_R1211}${RADIO_BACKGROUND_BASE_URL_R1211.includes('?')?'&':'?'}slot=${encodeURIComponent(slot)}&_r1279=${now}`;
+  try{
+    const head=await fetch(url,{method:'HEAD',headers:{'user-agent':'ANDRIK-Radio-R1279-Background','cache-control':'no-cache, no-store','pragma':'no-cache'},signal:AbortSignal.timeout(12000)});
+    if(head.status===404){
+      if(existsSync(path)&&statSync(path).size>4096)return await ensureRadioBackgroundReadyR1214(path,metaPath,slot,oldMeta,oldMeta.etag,false);
+      throw new Error(`R1211 ${slot} background not uploaded`);
+    }
+    if(!head.ok)throw new Error(`R1211 ${slot} background HEAD HTTP ${head.status}`);
+    const etag=String(head.headers.get('etag')||'');
+    if(etag && oldMeta.etag===etag && existsSync(path)&&statSync(path).size>4096){
+      return await ensureRadioBackgroundReadyR1214(path,metaPath,slot,oldMeta,etag,false);
+    }
+    const response=await fetch(url,{headers:{'user-agent':'ANDRIK-Radio-R1279-Background','cache-control':'no-cache, no-store','pragma':'no-cache'},signal:AbortSignal.timeout(30000)});
+    if(!response.ok||!response.body)throw new Error(`R1211 ${slot} background GET HTTP ${response.status}`);
+    const tmp=`${path}.part-${process.pid}-${Date.now()}`;
+    await pipeline(Readable.fromWeb(response.body),createWriteStream(tmp,{flags:'w'}));
+    if(!existsSync(tmp)||statSync(tmp).size<4096){try{unlinkSync(tmp)}catch(_){};throw new Error(`R1211 ${slot} background too small`)}
+    renameSync(tmp,path);
+    oldMeta={slot,etag:etag||String(response.headers.get('etag')||''),updatedAt:new Date().toISOString()};
+    return await ensureRadioBackgroundReadyR1214(path,metaPath,slot,oldMeta,oldMeta.etag,true);
+  }catch(error){
+    if(existsSync(path)&&statSync(path).size>4096){
+      try{
+        const ready=await ensureRadioBackgroundReadyR1214(path,metaPath,slot,oldMeta,oldMeta.etag,false);
+        state.lastWarning=`R1214 stale ${slot} background fallback: ${cleanText(error?.message||error)}`;
+        return ready;
+      }catch(normalizeError){
+        state.lastWarning=`R1214 stale ${slot} background normalize fallback failed: ${cleanText(normalizeError?.message||normalizeError)}`;
+      }
+    }
+    throw error;
+  }
+}
+async function ensureTrackVisualR1211(item){
+  const slot=radioBackgroundSlotForItemR1211(item)||'extras';
+  if(slot){
+    try{
+      const imagePath=await refreshRadioBackgroundR1211(slot);
+      if(['illusion','ocean','trika','beyond','silent'].includes(String(slot))){
+        const videoPath=await ensureAlbumBaseVideoR1227(imagePath,slot);
+        state.albumBackgroundSlotR1211=slot;
+        state.albumBackgroundPathR1211=videoPath;
+        state.albumBackgroundModeR1211=isPreparedAlbumBedR1277(videoPath)?'R1277-PREPARED-ALBUM-BED-16S':'R1277-IMAGE-FALLBACK';
+        return videoPath;
+      }
+      return imagePath;
+    }catch(error){
+      state.lastWarning=`R1274 ${slot} background fallback to master: ${cleanText(error?.message||error)}`;
+    }
+  }
+  state.albumBackgroundSlotR1211=slot||'';
+  state.albumBackgroundModeR1211='MASTER-FALLBACK';
+  return await ensureScheduledVisual();
+}
+function prefetchAlbumBackgroundsR1211(){
+  let chain=Promise.resolve();
+  for(const slot of RADIO_BACKGROUND_SLOTS_R1211){
+    chain=chain.then(async()=>{
+      const imagePath=await refreshRadioBackgroundR1211(slot);
+      if(['illusion','ocean','trika','beyond','silent'].includes(String(slot))){
+        await ensureAlbumBaseVideoR1227(imagePath,slot);
+      }
+    }).catch(()=>{});
+  }
+  return chain;
+}
+
+async function pollAlbumBackgroundChangesR1279(){
+  if(albumBackgroundWatcherBusyR1279||stopping)return;
+  if(clipActive || stationHandoffActiveR804){
+    state.albumBackgroundWatcherSkippedR1280={
+      at:new Date().toISOString(),
+      reason:stationHandoffActiveR804?'station-handoff':'video-insert'
+    };
+    return;
+  }
+  albumBackgroundWatcherBusyR1279=true;
+  try{
+    await prefetchAlbumBackgroundsR1211();
+    state.albumBackgroundWatcherLastAtR1279=new Date().toISOString();
+  }catch(error){
+    state.lastWarning=`R1279 background watcher: ${cleanText(error?.message||error)}`;
+  }finally{
+    albumBackgroundWatcherBusyR1279=false;
+  }
+}
+
+async function prewarmExistingAlbumVideosR1274(){
+  for(const slot of ['illusion','ocean','trika','beyond','silent']){
+    try{
+      const imagePath=radioBackgroundLocalPathR1211(slot);
+      if(existsSync(imagePath)&&statSync(imagePath).size>4096){
+        await ensureAlbumBaseVideoR1227(imagePath,slot);
+      }
+    }catch(error){
+      state.lastWarning=`R1274 prewarm ${slot}: ${cleanText(error?.message||error)}`;
+    }
+  }
+}
+
 function visualSpecForPeriod(period){
   if(period==='morning')return {period,path:MORNING_VISUAL,url:MORNING_VISUAL_URL};
   if(period==='day')return {period,path:DAY_VISUAL,url:DAY_VISUAL_URL};
@@ -3103,20 +4060,29 @@ function radioDisplayTitleR1160(item,fallback='TRACK',maxTitle=48){
   const sourceType=String(item.sourceType||'').toLowerCase();
 
   const isCover=isCoverTrackR1160B({...item,title:rawTitle});
-  const isSingle=
+
+  // R1160O: album ownership wins over a stale legacy singles/ location.
+  // Monument to the Great Void is track 5 of Silent. During R2 migration an old
+  // singles/ object may still be returned, so sourceType/key must not override
+  // the canonical album identity. pickerAlbum/albumSlug are accepted when present.
+  const silentOwnerHintR1160O=cleanText(item.pickerAlbum||item.albumSlug||'').trim();
+  const isSilent=
+    /^silent$/iu.test(silentOwnerHintR1160O) ||
+    /^(?:silent|silent\s*\(\s*тишина\s*\)|тишина)$/iu.test(album) ||
+    /^albums\/silent\//i.test(key) ||
+    /^monument to the great void$/iu.test(rawTitle.trim());
+
+  const isSingle=!isSilent && (
     sourceType==='single' ||
     /^singles\//i.test(key) ||
-    /^(?:сингл|синглы|single|singles)(?:\s+andrik)?$/iu.test(album);
+    /^(?:сингл|синглы|single|singles)(?:\s+andrik)?$/iu.test(album)
+  );
 
   // CURRENT should show one clean owner label, not the old title annotation.
   let title=rawTitle
     .replace(/\s*[\[(]\s*(?:ai\s*)?cover\b[^\])]*[\])]\s*$/iu,'')
     .replace(/\s*[\[(]\s*кавер\b[^\])]*[\])]\s*$/iu,'')
     .trim();
-
-  const isSilent=
-    /^(?:silent|silent\s*\(\s*тишина\s*\)|тишина)$/iu.test(album) ||
-    /^albums\/silent\//i.test(key);
 
   title=shortText(title||fallback,maxTitle);
 
@@ -3139,6 +4105,18 @@ function radioDisplayTitleR1160(item,fallback='TRACK',maxTitle=48){
     : `${title} (Single)`;
 }
 
+function trackTitleOnlyR1211(item,fallback='TRACK'){
+  let title=cleanTitleCoreR989(item?.title||fallback,fallback);
+  // Strip only owner/album decorations. Keep semantic suffixes such as (Ex. Version).
+  title=title
+    .replace(/\s*\(\s*Альбом\s*[«“"]?[^)»”"]+[»”"]?\s*\)\s*$/iu,'')
+    .replace(/\s*\([«“"]?\s*(?:Silent|Silent\s*\(\s*Тишина\s*\)|BEYOND|ТРИКА|TRIKA|OCEAN|Illusion of Life)\s*[»”"]?\)\s*$/iu,'')
+    .replace(/\s*\(\s*(?:Single|Singles|Cover|Кавер)\s*\)\s*$/iu,'')
+    .replace(/\s*\(«[^»]+»\)\s*$/u,'')
+    .trim();
+  return shortText(title||fallback,48);
+}
+
 function currentDisplayTitleR989(item,fallback='TRACK'){
   if(!item)return fallback;
 
@@ -3149,14 +4127,20 @@ function currentDisplayTitleR989(item,fallback='TRACK'){
     normalizedItem={...item,album:''};
   }
 
+  if(String(normalizedItem.type||'track')==='track')return trackTitleOnlyR1211(normalizedItem,fallback);
   return radioDisplayTitleR1160(normalizedItem,fallback,48);
 }
 
 function previewDisplayTitleR989(value){
   let t=cleanTitleCoreR989(value,'TRACK');
 
-  // Previous/next = title only, never album in brackets.
-  t=t.replace(/\s*\([^()]+\)\s*$/,'').trim();
+  // Previous/next = title only, but preserve semantic suffixes such as (Ex. Version).
+  t=t
+    .replace(/\s*\(\s*Альбом\s*[«“"]?[^)»”"]+[»”"]?\s*\)\s*$/iu,'')
+    .replace(/\s*\([«“"]?\s*(?:Silent|Silent\s*\(\s*Тишина\s*\)|BEYOND|ТРИКА|TRIKA|OCEAN|Illusion of Life)\s*[»”"]?\)\s*$/iu,'')
+    .replace(/\s*\(\s*(?:Single|Singles|Cover|Кавер)\s*\)\s*$/iu,'')
+    .replace(/\s*\(«[^»]+»\)\s*$/u,'')
+    .trim();
 
   return shortText(t||'TRACK',38);
 }
@@ -3167,7 +4151,7 @@ function trackLabel(item,fallback='—'){
 }
 
 // R816/R787 NOCROP: source geometry is immutable FIT+PAD. Live feeders output full YUV420P frames; only the persistent master encodes H.264.
-function titleOverlayFiltersR721({dynamicTitle=false,showPreview=false,previewDuration=0,previewReload=false,boundaryTitleSwitchAt=0,liveCpuFastR794=false,fastProfileR1132=null}={}){
+function titleOverlayFiltersR721({dynamicTitle=false,showPreview=false,previewDuration=0,previewReload=false,boundaryTitleSwitchAt=0,liveCpuFastR794=false,fastProfileR1132=null,omitTickerR1233=false}={}){
   const font=chooseFont();
   const titleFont=chooseTitleFont();
   const fontPart=font?`fontfile='${ffFilterPath(font)}':`:'';
@@ -3200,7 +4184,7 @@ function titleOverlayFiltersR721({dynamicTitle=false,showPreview=false,previewDu
   const previewEnable=`:enable='${previewExpr}'`;
   const titlePair=(path,enable)=>[
     `drawtext=${titleFontPart}textfile='${path}'${titleReload}:fontcolor=white@0.01:fontsize=58:x=(w-text_w)/2:y=h-240:borderw=8:bordercolor=black@0.92${enable}`,
-    `drawtext=${titleFontPart}textfile='${path}'${titleReload}:fontcolor=0xF8F4EE:fontsize=58:x=(w-text_w)/2:y=h-240:borderw=4:bordercolor=0xD60024@1:shadowcolor=black@1:shadowx=4:shadowy=4${enable}`
+    `drawtext=${titleFontPart}textfile='${path}'${titleReload}:fontcolor=0xF8F4EE:fontsize=58:x=(w-text_w)/2:y=h-240:borderw=2:bordercolor=black@0.92:shadowcolor=black@0.85:shadowx=3:shadowy=3${enable}`
   ];
   const fastR1132=fastProfileR1132||{};
   const filters=[];
@@ -3213,19 +4197,20 @@ function titleOverlayFiltersR721({dynamicTitle=false,showPreview=false,previewDu
   if(sw>0)filters.push(...titlePair(boundaryPath,boundaryTitleEnable));
   filters.push(
     `drawtext=${fontPart}textfile='${prevPath}'${previewReloadPart}:fontcolor=white@1:fontsize=36:x=58:y=h-320:borderw=3:bordercolor=black@1:box=1:boxcolor=black@0.64:boxborderw=13${previewEnable}`,
-    `drawtext=${fontPart}textfile='${nextPath}'${previewReloadPart}:fontcolor=white@1:fontsize=36:x=w-text_w-58:y=h-320:borderw=3:bordercolor=black@1:box=1:boxcolor=black@0.64:boxborderw=13${previewEnable}`,
-    `drawtext=${fontPart}textfile='${tickerPath}':reload=${VIDEO_FPS*2}:fontcolor=yellow:fontsize=42:x='w-mod(t*105,text_w+w)':y=h-104:borderw=3:bordercolor=black@1:shadowcolor=black@1:shadowx=2:shadowy=2`
+    `drawtext=${fontPart}textfile='${nextPath}'${previewReloadPart}:fontcolor=white@1:fontsize=36:x=w-text_w-58:y=h-320:borderw=3:bordercolor=black@1:box=1:boxcolor=black@0.64:boxborderw=13${previewEnable}`
   );
+  // R1233: the five album slots must never inherit the legacy yellow 105px/s ticker.
+  // It is added exactly once later in normalVideoFilterComplexR721().
+  if(!omitTickerR1233){
+    filters.push(`drawtext=${fontPart}textfile='${tickerPath}':reload=${VIDEO_FPS*2}:fontcolor=yellow:fontsize=42:x='w-mod(t*105,text_w+w)':y=h-104:borderw=3:bordercolor=black@1:shadowcolor=black@1:shadowx=2:shadowy=2`);
+  }
   return filters.join(',');
 }
 
 
-function compactCtaChainR783(trackDuration){
-  // R1110 CPU-LIGHT:
-  // decorative SUBSCRIBE/LIKE full-frame overlays are disabled
-  // on normal MP3 visuals only.
-  // QR, CURRENT, PREV/NEXT, ticker and fades stay active.
-  if(LIVE_MP3_CPU_LIGHT_R1110)return {pre:'',chain:'',final:'qrbase',windows:[]};
+function compactCtaChainR783(trackDuration,{subscribeInputIndex=2,likeInputIndex=3}={}){
+  // R1275: use the exact same CTA cadence/assets on normal MP3 as on prepared clips.
+  // The sources are static 420px PNGs decoded at 1fps; only the 8s CTA windows are overlaid.
   const d=Math.max(0,Number(trackDuration)||0);
   const windows=[];
   // R783: first CTA stays at 20s. Every 120s after that alternate SUBSCRIBE -> LIKE.
@@ -3244,8 +4229,8 @@ function compactCtaChainR783(trackDuration){
     if(subset.length===1)pre+=`[${prefix}src]null${labels};`;
     else pre+=`[${prefix}src]split=${subset.length}${labels};`;
   };
-  addSource(2,'subscribe','ctasub');
-  addSource(3,'like','ctalike');
+  addSource(subscribeInputIndex,'subscribe','ctasub');
+  addSource(likeInputIndex,'like','ctalike');
   let chain='';
   let base='qrbase';
   windows.forEach((w,i)=>{
@@ -3259,7 +4244,112 @@ function compactCtaChainR783(trackDuration){
   return {pre,chain,final:base,windows};
 }
 
+function ensureAlbumLikeOverlayR1262(){
+  try{
+    mkdirSync(CACHE_DIR,{recursive:true});
+    if(!existsSync(ALBUM_LIKE_OVERLAY_R1262)||statSync(ALBUM_LIKE_OVERLAY_R1262).size<2048){
+      writeFileSync(ALBUM_LIKE_OVERLAY_R1262,Buffer.from(ALBUM_LIKE_BASE64_R1262,'base64'));
+    }
+    return ALBUM_LIKE_OVERLAY_R1262;
+  }catch(error){
+    state.lastWarning=`R1262 LIKE overlay unavailable: ${cleanText(error?.message||error)}`;
+    return '';
+  }
+}
+
 // R796 CPU-HEADROOM: keep R795 viewer-proven fade timing, but generate black alpha
+function prepareTickerPagesR1246(){
+  try{
+    mkdirSync(CACHE_DIR,{recursive:true});
+    let ticker=DEFAULT_LIVE_TICKER;
+    try{ticker=cleanText(readFileSync(LIVE_TICKER_FILE,'utf8'))||DEFAULT_LIVE_TICKER}catch(_){ }
+    const chunks=String(ticker).split('•').map(v=>cleanText(v)).filter(Boolean);
+    const pages=[];
+    let current='';
+    for(const chunk of chunks){
+      const candidate=current?`${current}  •  ${chunk}`:chunk;
+      if(current && candidate.length>58){pages.push(current); current=chunk;}
+      else current=candidate;
+    }
+    if(current)pages.push(current);
+    if(!pages.length)pages.push('ANDRIK METAL RADIO 24/7  •  ANDRIKMETAL.COM');
+    // Keep at most four readable pages. If the source produced more, fold the tail
+    // into page four rather than silently losing it.
+    if(pages.length>4){
+      pages[3]=pages.slice(3).join('  •  ');
+      pages.length=4;
+    }
+    while(pages.length<4)pages.push(pages[pages.length%Math.max(1,pages.length)]||pages[0]);
+    for(let i=0;i<4;i++)writeFileSync(TICKER_PAGE_FILES_R1246[i],pages[i]||pages[0],'utf8');
+    return 4;
+  }catch(error){
+    try{
+      const fallback=['ANDRIK METAL RADIO 24/7','ANDRIKMETAL.COM','НОВЫЕ СИНГЛЫ И АЛЬБОМЫ ANDRIK','ПОДПИСЫВАЙТЕСЬ  •  СТАВЬТЕ ЛАЙКИ  •  КОММЕНТИРУЙТЕ'];
+      for(let i=0;i<4;i++)writeFileSync(TICKER_PAGE_FILES_R1246[i],fallback[i],'utf8');
+      return 4;
+    }catch(_){return 0;}
+  }
+}
+
+
+function ensureTickerSpriteR1261(){
+  try{
+    prepareTickerPagesR1246();
+    mkdirSync(CACHE_DIR,{recursive:true});
+    const font=chooseFont();
+    if(!font)return '';
+    const pages=TICKER_PAGE_FILES_R1246.map(p=>{try{return readFileSync(p,'utf8')}catch(_){return ''}});
+    const signature=JSON.stringify({
+      version:'R1286-QTRLE-ALPHA-25FPS-16S-XFADE250MS-DARKPAD58',
+      pages,font,size:40,w:TICKER_SPRITE_W_R1261,h:TICKER_SPRITE_PAGE_H_R1261,
+      pageSeconds:TICKER_PAGE_SECONDS_R1246
+    });
+    try{
+      if(existsSync(TICKER_SPRITE_R1261) && statSync(TICKER_SPRITE_R1261).size>100000 &&
+         existsSync(TICKER_SPRITE_META_R1261) && readFileSync(TICKER_SPRITE_META_R1261,'utf8')===signature){
+        return TICKER_SPRITE_R1261;
+      }
+    }catch(_){}
+
+    const tmp=`${TICKER_SPRITE_R1261}.part-${process.pid}-${Date.now()}.mov`;
+    const fontPath=ffFilterPath(font);
+    const fadeR1268=0.25;
+    const draws=TICKER_PAGE_FILES_R1246.map((file,i)=>{
+      const a=i*TICKER_PAGE_SECONDS_R1246;
+      const b=(i+1)*TICKER_PAGE_SECONDS_R1246;
+      const a1=(a+fadeR1268).toFixed(3);
+      const b1=(b-fadeR1268).toFixed(3);
+      const alpha=`if(lt(t\\,${a.toFixed(3)})\\,0\\,if(lt(t\\,${a1})\\,(t-${a.toFixed(3)})/${fadeR1268}\\,if(lt(t\\,${b1})\\,1\\,if(lt(t\\,${b.toFixed(3)})\\,(${b.toFixed(3)}-t)/${fadeR1268}\\,0))))`;
+      return `drawtext=fontfile='${fontPath}':textfile='${ffFilterPath(file)}':reload=0:fontcolor=white:fontsize=40:x=(w-text_w)/2:y=20:borderw=1:bordercolor=black@0.9:alpha='${alpha}'`;
+    }).join(',');
+
+    // Constant true-alpha dark pad; only the pre-rendered text opacity changes.
+    // No live crop/page selector remains in the MP3 filter graph.
+    const graph=`format=rgba,colorchannelmixer=aa=0,drawbox=x=0:y=0:w=iw:h=ih:color=black@0.58:t=fill:replace=1,${draws}`;
+    const duration=(TICKER_PAGE_SECONDS_R1246*4).toFixed(3);
+    const r=spawnSync('ffmpeg',[
+      '-y','-hide_banner','-loglevel','error',
+      '-f','lavfi','-i',`color=c=black@0.0:s=${TICKER_SPRITE_W_R1261}x${TICKER_SPRITE_PAGE_H_R1261}:r=${VIDEO_FPS}:d=${duration}`,
+      '-vf',graph,
+      '-c:v','qtrle','-pix_fmt','argb',
+      '-r',String(VIDEO_FPS),
+      tmp
+    ],{encoding:'utf8',timeout:12000,maxBuffer:1024*1024});
+
+    if(r.status!==0 || !existsSync(tmp) || statSync(tmp).size<100000){
+      try{if(existsSync(tmp))unlinkSync(tmp)}catch(_){}
+      state.lastWarning=`R1268 ticker video build failed: ${cleanText(r.stderr||`ffmpeg exit ${r.status}`)}`;
+      return '';
+    }
+    renameSync(tmp,TICKER_SPRITE_R1261);
+    writeFileSync(TICKER_SPRITE_META_R1261,signature,'utf8');
+    return TICKER_SPRITE_R1261;
+  }catch(error){
+    state.lastWarning=`R1268 ticker video unavailable: ${cleanText(error?.message||error)}`;
+    return '';
+  }
+}
+
 // masks ONLY for the ~1.5-2.2 second transition window. This preserves the visible
 // 0.65s darken + 0.05s black + 0.80s recovery while avoiding a 1080p alpha source
 // and full-frame overlay for the entire MP3. Compact 1180px QTRLE EQ + larger ticker.
@@ -3268,9 +4358,9 @@ function compactCtaChainR783(trackDuration){
 // alpha-mask fade engine exactly. The R794 drawbox-step experiment is removed
 // because the visible transition could disappear in the live yuv420 pipeline.
 // R981C-STATIC-BAKED: QR + BAR + RED LINE
-function normalVideoFilterComplexR721({fadeIn=false,fadeInSeconds=CLIP_TO_TRACK_FADE_IN_SECONDS_R753,endFadeToBlack=false,trackDuration=0,previewReload=false,boundaryTitleSwitchAt=0,mp3Boundary=false,fastProfileR1132=null}={}){
-  const vf=titleOverlayFiltersR721({dynamicTitle:false,showPreview:true,previewDuration:trackDuration,previewReload,boundaryTitleSwitchAt,liveCpuFastR794:true,fastProfileR1132});
-  const cta=compactCtaChainR783(trackDuration);
+function normalVideoFilterComplexR721({fadeIn=false,fadeInSeconds=CLIP_TO_TRACK_FADE_IN_SECONDS_R753,endFadeToBlack=false,trackDuration=0,previewReload=false,boundaryTitleSwitchAt=0,mp3Boundary=false,fastProfileR1132=null,fullWidthTickerR1213=false,tickerRasterInputIndexR1221=-1,tickerBakedFullFrameR1224=false,tickerUnderlayInputIndexR1236=-1,staticFrameLoopR1255=false,tickerSpriteInputIndexR1261=-1,albumLikeInputIndexR1262=-1,preparedAlbumBedR1277=false,ctaSubscribeInputIndexR1277=2,ctaLikeInputIndexR1277=3}={}){
+  const vf=titleOverlayFiltersR721({dynamicTitle:false,showPreview:true,previewDuration:trackDuration,previewReload,boundaryTitleSwitchAt,liveCpuFastR794:true,fastProfileR1132,omitTickerR1233:MP3_TICKER_DISABLED_R1269?true:fullWidthTickerR1213});
+  const cta=compactCtaChainR783(trackDuration,{subscribeInputIndex:ctaSubscribeInputIndexR1277,likeInputIndex:ctaLikeInputIndexR1277});
   let maskChain='';
   let finalChain='[ctabase]format=yuv420p[outv]';
   let startupMaskChain='';
@@ -3320,6 +4410,91 @@ function normalVideoFilterComplexR721({fadeIn=false,fadeInSeconds=CLIP_TO_TRACK_
   let vfBaseR902=String(vf)
     .replace(/,drawtext=[^,]*fontcolor=white@0\.01[^,]*/, '');
 
+  // R1286: MP3-only current-title underlay. clipFilterComplexR721() never passes here,
+  // so music clips/station video remain byte-for-byte visually unchanged.
+  const mp3TitlePadY_R1286=fullWidthTickerR1213?'18':'h-282';
+  vfBaseR902=vfBaseR902.replace(
+    /,drawtext=/,
+    `,drawbox=x=340:y=${mp3TitlePadY_R1286}:w=1240:h=88:color=black@0.58:t=fill,drawtext=`
+  );
+
+  // R1255: a static JPEG must not arrive as 5fps packets that are expanded to 25fps
+  // in bursts. Decode the image once, clone that one frame forever, assign exact 25fps
+  // PTS, and throttle inside the filtergraph to realtime. This recreates the smooth
+  // cadence of the old 25fps master-video feeder without repeatedly decoding JPEG.
+  const sourceR1255=staticFrameLoopR1255
+    ? `[0:v]loop=loop=-1:size=1:start=0,setpts=N/(${VIDEO_FPS}*TB),realtime`
+    : `[0:v]setpts=PTS-STARTPTS`;
+
+  // R1261: the four ticker phrases are rendered ONCE into a tiny transparent sprite.
+  // The live MP3 filter no longer runs four drawtext engines every frame. It only crops
+  // the current 1580x84 row and overlays it over the constant dark pad. This removes the
+  // periodic drawtext/filter CPU spike that correlated with picture color shifts + audio stutter.
+  if(fullWidthTickerR1213){
+    vfBaseR902=vfBaseR902.replace(/:y=h-240(?=:)/g,':y=44');
+
+    // R1277: the album bed already contains the full 16s ticker cycle. LIVE keeps
+    // only track-dependent title/PREV/NEXT, compact CTA windows and short black masks.
+    // This removes the always-running QTRLE alpha decoder/overlay from the MP3 hot path.
+    if(preparedAlbumBedR1277){
+      return `${sourceR1255},${vfBaseR902},format=yuv420p[base];`+
+        `[base]null[qrbase];${cta.pre}${cta.chain}${maskChain}${startupMaskChain}${finalChain}`;
+    }
+
+    // R1269: user-observed fault isolation.
+    // No ticker, no ticker pad, no page/video switching on MP3.
+    // Keep only the album LIKE overlay every 120s.
+    if(MP3_TICKER_DISABLED_R1269){
+      const likeEnableR1269=`between(mod(t\,${ALBUM_LIKE_PERIOD_SECONDS_R1262})\,0\,${ALBUM_LIKE_SHOW_SECONDS_R1262})`;
+      if(albumLikeInputIndexR1262>=0){
+        return `${sourceR1255},${vfBaseR902},format=yuv420p[base1269];`+
+          `[${albumLikeInputIndexR1262}:v]scale=${ALBUM_LIKE_WIDTH_R1262}:-1:flags=lanczos,format=rgba,negate=components=r+g+b,format=yuva420p,setpts=PTS-STARTPTS[like1269];`+
+          `[base1269][like1269]overlay=x=W-w-34:y=H-h-110:shortest=0:eof_action=pass:eval=frame:format=yuv420:enable='${likeEnableR1269}'[base];`+
+          `[base]null[qrbase];${cta.pre}${cta.chain}${maskChain}${startupMaskChain}${finalChain}`;
+      }
+      return `${sourceR1255},${vfBaseR902},format=yuv420p[base];`+
+        `[base]null[qrbase];${cta.pre}${cta.chain}${maskChain}${startupMaskChain}${finalChain}`;
+    }
+
+    const tickerY_R1251=996;
+    const tickerH_R1251=84;
+    const tickerX_R1251=170;
+    const tickerW_R1251=1580;
+    const clearGapR1251=0.28; // fallback drawtext only; R1268 video path has NO live page switch
+    const cycleR1251=TICKER_PAGE_SECONDS_R1246*4;
+    const likeEnableR1262=`between(mod(t\,${ALBUM_LIKE_PERIOD_SECONDS_R1262})\,0\,${ALBUM_LIKE_SHOW_SECONDS_R1262})`;
+    if(tickerSpriteInputIndexR1261>=0){
+      if(albumLikeInputIndexR1262>=0){
+        return `${sourceR1255},${vfBaseR902},format=yuv420p[base1268];`+
+          `[${tickerSpriteInputIndexR1261}:v]format=argb,setpts=PTS-STARTPTS[tickervideo1268];`+
+          `[base1268][tickervideo1268]overlay=x=${tickerX_R1251}:y=${tickerY_R1251}:shortest=0:eof_action=pass:eval=init:format=yuv420[tickerout1268];`+
+          `[${albumLikeInputIndexR1262}:v]scale=${ALBUM_LIKE_WIDTH_R1262}:-1:flags=lanczos,format=rgba,negate=components=r+g+b,format=yuva420p,setpts=PTS-STARTPTS[like1262];`+
+          `[tickerout1268][like1262]overlay=x=W-w-34:y=H-h-110:shortest=0:eof_action=pass:eval=frame:format=yuv420:enable='${likeEnableR1262}'[base];`+
+          `[base]null[qrbase];${cta.pre}${cta.chain}${maskChain}${startupMaskChain}${finalChain}`;
+      }
+      return `${sourceR1255},${vfBaseR902},format=yuv420p[base1268];`+
+        `[${tickerSpriteInputIndexR1261}:v]format=argb,setpts=PTS-STARTPTS[tickervideo1268];`+
+        `[base1268][tickervideo1268]overlay=x=${tickerX_R1251}:y=${tickerY_R1251}:shortest=0:eof_action=pass:eval=init:format=yuv420[base];`+
+        `[base]null[qrbase];${cta.pre}${cta.chain}${maskChain}${startupMaskChain}${finalChain}`;
+    }
+    // Safe fallback if sprite generation ever fails: preserve R1251 behavior rather than lose ticker.
+    const tickerFontR1251=chooseFont();
+    const tickerFontPartR1251=tickerFontR1251?`fontfile='${ffFilterPath(tickerFontR1251)}':`:'';
+    const pageDrawsR1251=TICKER_PAGE_FILES_R1246.map((file,i)=>{
+      const a=i*TICKER_PAGE_SECONDS_R1246;
+      const b=(i+1)*TICKER_PAGE_SECONDS_R1246-clearGapR1251;
+      return `drawtext=${tickerFontPartR1251}textfile='${ffFilterPath(file)}':reload=0:fontcolor=white:fontsize=40:x=(w-text_w)/2:y=${tickerY_R1251+20}:borderw=1:bordercolor=black@0.9:enable='between(mod(t\\,${cycleR1251})\\,${a}\\,${b})'`;
+    }).join(',');
+    if(albumLikeInputIndexR1262>=0){
+      return `${sourceR1255},${vfBaseR902},drawbox=x=${tickerX_R1251}:y=${tickerY_R1251}:w=${tickerW_R1251}:h=${tickerH_R1251}:color=black@0.58:t=fill,${pageDrawsR1251},format=yuv420p[base1251];`+
+        `[${albumLikeInputIndexR1262}:v]scale=${ALBUM_LIKE_WIDTH_R1262}:-1:flags=lanczos,format=rgba,negate=components=r+g+b,format=yuva420p,setpts=PTS-STARTPTS[like1262];`+
+        `[base1251][like1262]overlay=x=W-w-34:y=H-h-110:shortest=0:eof_action=pass:eval=frame:format=yuv420:enable='${likeEnableR1262}'[base];`+
+        `[base]null[qrbase];${cta.pre}${cta.chain}${maskChain}${startupMaskChain}${finalChain}`;
+    }
+    return `${sourceR1255},${vfBaseR902},drawbox=x=${tickerX_R1251}:y=${tickerY_R1251}:w=${tickerW_R1251}:h=${tickerH_R1251}:color=black@0.58:t=fill,${pageDrawsR1251},format=yuv420p[base];`+
+      `[base]null[qrbase];${cta.pre}${cta.chain}${maskChain}${startupMaskChain}${finalChain}`;
+  }
+
   const tickerMatchR902=vfBaseR902.match(/,drawtext=fontfile='[^']+':textfile='[^']*live-ticker\.txt'[\s\S]*$/);
   let tickerChainR902='[base0]null[base]';
 
@@ -3331,13 +4506,16 @@ function normalVideoFilterComplexR721({fadeIn=false,fadeInSeconds=CLIP_TO_TRACK_
       .replace(/:y=h-62(?=:)/,':y=8')
       .replace(/:borderw=3:bordercolor=black@1:shadowcolor=black@1:shadowx=2:shadowy=2/,'');
 
+    const tickerCropWidthR1213=1160;
+    const tickerCropXR1213=410;
+    const tickerYR1214=968;
     tickerChainR902=
       `[base0]split=2[basekeep][tickerbg];`+
-      `[tickerbg]crop=1160:64:410:968,${tickerFilterR902}[tickerstrip];`+
-      `[basekeep][tickerstrip]overlay=x=410:y=968:shortest=0:eof_action=pass:eval=init:format=yuv420[base]`;
+      `[tickerbg]crop=${tickerCropWidthR1213}:64:${tickerCropXR1213}:${tickerYR1214},${tickerFilterR902}[tickerstrip];`+
+      `[basekeep][tickerstrip]overlay=x=${tickerCropXR1213}:y=${tickerYR1214}:shortest=0:eof_action=pass:eval=init:format=yuv420[base]`;
   }
 
-  return `[0:v]setpts=PTS-STARTPTS,${vfBaseR902}[base0];${tickerChainR902};[base]null[qrbase];${cta.pre}${cta.chain}${maskChain}${startupMaskChain}${finalChain}`;
+  return `${sourceR1255},${vfBaseR902}[base0];${tickerChainR902};[base]null[qrbase];${cta.pre}${cta.chain}${maskChain}${startupMaskChain}${finalChain}`;
 }
 
 function clipFilterComplexR721(){
@@ -3992,14 +5170,14 @@ function connectMasterAudioOwnerR1160H(source,sink,label='media'){
 }
 
 function h264EncoderArgsR721(){
-  // B-frames are deliberately disabled. The persistent relay assigns one exact 1/25s
-  // timestamp per H264 packet, so DTS=PTS remains valid across every feeder switch.
+  // R1270: exact proven R1212 publisher profile.
+  // B-frames are deliberately disabled. DTS=PTS stays valid across feeder switches.
   return [
     '-c:v','libx264','-preset','ultrafast','-tune','zerolatency',
     '-profile:v','high','-level:v','4.1',
     '-b:v',VIDEO_BITRATE,'-minrate',VIDEO_BITRATE,'-maxrate',VIDEO_BITRATE,'-bufsize','12000k',
-    '-x264-params',`nal-hrd=cbr:force-cfr=1:repeat-headers=1:aud=1:keyint=${VIDEO_GOP}:min-keyint=${VIDEO_GOP}:scenecut=0:cabac=0`,
-    '-g',String(VIDEO_GOP),'-keyint_min',String(VIDEO_GOP),'-sc_threshold','0','-bf','0','-refs','1','-coder','0', // R1131: restore true ultrafast CAVLC; CABAC was explicitly re-enabled
+    '-x264-params',`nal-hrd=cbr:force-cfr=1:repeat-headers=1:aud=1:keyint=${VIDEO_GOP}:min-keyint=${VIDEO_GOP}:scenecut=0:cabac=0:open-gop=0:sliced-threads=0`,
+    '-g',String(VIDEO_GOP),'-keyint_min',String(VIDEO_GOP),'-sc_threshold','0','-bf','0','-refs','1','-coder','0',
     '-r',String(VIDEO_FPS),'-pix_fmt','yuv420p'
   ];
 }
@@ -4021,6 +5199,204 @@ function h264EncoderArgsR721(){
 // video feeder or the other ingest lane.
 // ============================================================
 
+function encodedTransportLaneEnabledR1281(lane){
+  if(lane==='primary')return Boolean(STREAM_URL);
+  // R1287: during a safe server replacement an external HOLD process owns
+  // YouTube's backup ingest. Never compete with it from the radio process.
+  if(safeRestartBackupHoldActiveR1287())return false;
+  return Boolean(DUAL_INGEST_ENABLED_R792&&STREAM_BACKUP_URL);
+}
+
+function createEncodedTransportLaneReservoirR1281(lane){
+  const old=encodedTransportReservoirsR1281[lane];
+  const oldSink=encodedTransportRelaySinksR1281[lane];
+  if(old&&oldSink){
+    try{old.unpipe(oldSink)}catch(_){}
+  }
+  if(old){try{old.destroy()}catch(_){}}
+
+  const reservoir=new PassThrough({
+    writableHighWaterMark:R1278_ENCODED_RESERVOIR_BYTES,
+    readableHighWaterMark:R1278_ENCODED_RESERVOIR_BYTES
+  });
+  reservoir.on('error',error=>{
+    if(!stopping)state.lastWarning=`R1281 ${lane} encoded reservoir: ${cleanText(error?.message||error)}`;
+  });
+  encodedTransportReservoirsR1281[lane]=reservoir;
+  encodedTransportRelaySinksR1281[lane]=null;
+
+  if(lane==='primary'){
+    encodedTransportReservoirR1278=reservoir;
+    encodedTransportRelaySinkR1278=null;
+  }
+  return reservoir;
+}
+
+function resetEncodedTransportReservoirR1278(){
+  const source=encodedTransportPublisherSourceR1278;
+  if(source&&encodedTransportPublisherDataHandlerR1281){
+    try{source.off('data',encodedTransportPublisherDataHandlerR1281)}catch(_){}
+  }
+  if(source&&encodedTransportPublisherErrorHandlerR1281){
+    try{source.off('error',encodedTransportPublisherErrorHandlerR1281)}catch(_){}
+  }
+  encodedTransportPublisherSourceR1278=null;
+  encodedTransportPublisherDataHandlerR1281=null;
+  encodedTransportPublisherErrorHandlerR1281=null;
+
+  for(const lane of ['primary','backup']){
+    const old=encodedTransportReservoirsR1281[lane];
+    const sink=encodedTransportRelaySinksR1281[lane];
+    if(old&&sink){try{old.unpipe(sink)}catch(_){}}
+    if(old){try{old.destroy()}catch(_){}}
+    encodedTransportReservoirsR1281[lane]=null;
+    encodedTransportRelaySinksR1281[lane]=null;
+  }
+
+  createEncodedTransportLaneReservoirR1281('primary');
+  if(encodedTransportLaneEnabledR1281('backup')){
+    createEncodedTransportLaneReservoirR1281('backup');
+  }
+
+  encodedTransportReservoirR1278=encodedTransportReservoirsR1281.primary;
+  encodedTransportRelaySinkR1278=encodedTransportRelaySinksR1281.primary;
+  state.encodedTransportModeR1278='MASTER-TS-PIPE->DUAL-INDEPENDENT-RESERVOIRS->RTMPS-A+B';
+  state.encodedTransportReservoirBytesR1278=R1278_ENCODED_RESERVOIR_BYTES;
+  state.encodedTransportModeR1281='DUAL-RELIABLE-BRANCHES-NO-UDP-NO-CROSS-LANE-BACKPRESSURE';
+  return encodedTransportReservoirR1278;
+}
+
+function bindEncodedTransportRelayR1278(child,lane='primary'){
+  if(!child?.stdin||child.stdin.destroyed)return false;
+  let reservoir=encodedTransportReservoirsR1281[lane];
+  if(!reservoir||reservoir.destroyed){
+    reservoir=createEncodedTransportLaneReservoirR1281(lane);
+  }
+
+  const oldSink=encodedTransportRelaySinksR1281[lane];
+  if(oldSink&&oldSink!==child.stdin){
+    try{reservoir.unpipe(oldSink)}catch(_){}
+  }
+  try{reservoir.unpipe(child.stdin)}catch(_){}
+
+  // R1285: a surviving relay can be rebound after master recovery.
+  // Keep exactly one owned error listener on its stdin across all rebinds.
+  if(!child.stdin.__r1285EncodedErrorHandler){
+    child.stdin.__r1285EncodedErrorHandler=error=>{
+      if(!stopping&&!/EPIPE|ECONNRESET|ERR_STREAM_DESTROYED/i.test(String(error?.code||error?.message||error))){
+        state.lastWarning=`R1281 ${lane} relay stdin: ${cleanText(error?.message||error)}`;
+      }
+    };
+    child.stdin.on('error',child.stdin.__r1285EncodedErrorHandler);
+  }
+
+  reservoir.pipe(child.stdin,{end:false});
+  encodedTransportRelaySinksR1281[lane]=child.stdin;
+  child.__r1278EncodedReservoir=reservoir;
+  child.__r1281EncodedLane=lane;
+
+  if(lane==='primary'){
+    encodedTransportReservoirR1278=reservoir;
+    encodedTransportRelaySinkR1278=child.stdin;
+  }
+
+  state[`encodedTransportRelayPidR1281_${lane}`]=Number(child.pid||0);
+  return true;
+}
+
+function resetFailedEncodedLaneR1281(lane,reason='relay-reset'){
+  if(!encodedTransportLaneEnabledR1281(lane))return null;
+  const stats=encodedTransportLaneStatsR1281[lane];
+  stats.recycles=Number(stats.recycles||0)+1;
+  const reservoir=createEncodedTransportLaneReservoirR1281(lane);
+  state.lastEncodedLaneResetR1281={
+    at:new Date().toISOString(),
+    lane,
+    reason:shortText(reason,180),
+    count:Number(stats.recycles||0)
+  };
+  diagRecordR802('r1281-encoded-lane-reset',state.lastEncodedLaneResetR1281);
+  return reservoir;
+}
+
+function bindEncodedTransportPublisherR1278(thisPublisher){
+  const source=thisPublisher?.stdout;
+  if(!source||source.destroyed)return false;
+
+  if(encodedTransportPublisherSourceR1278&&encodedTransportPublisherDataHandlerR1281){
+    try{encodedTransportPublisherSourceR1278.off('data',encodedTransportPublisherDataHandlerR1281)}catch(_){}
+  }
+  if(encodedTransportPublisherSourceR1278&&encodedTransportPublisherErrorHandlerR1281){
+    try{encodedTransportPublisherSourceR1278.off('error',encodedTransportPublisherErrorHandlerR1281)}catch(_){}
+  }
+
+  encodedTransportPublisherDataHandlerR1281=chunk=>{
+    if(!chunk?.length||stopping)return;
+
+    for(const lane of ['primary','backup']){
+      if(!encodedTransportLaneEnabledR1281(lane))continue;
+      let reservoir=encodedTransportReservoirsR1281[lane];
+      if(!reservoir||reservoir.destroyed){
+        reservoir=createEncodedTransportLaneReservoirR1281(lane);
+        const relay=transportRelayChildR1125(lane);
+        if(relay&&relay.exitCode===null)bindEncodedTransportRelayR1278(relay,lane);
+      }
+
+      const bufferedBefore=Number(reservoir.readableLength||0)+Number(reservoir.writableLength||0);
+      const stats=encodedTransportLaneStatsR1281[lane];
+      stats.lastBuffered=bufferedBefore;
+      stats.maxBuffered=Math.max(Number(stats.maxBuffered||0),bufferedBefore);
+
+      // A sick lane may never stall the master or the other YouTube ingest.
+      // Recycle ONLY that lane before its bounded memory cushion is exhausted.
+      if(bufferedBefore>=R1281_ENCODED_LANE_MAX_BUFFER_BYTES){
+        const relay=transportRelayChildR1125(lane);
+        diagRecordR802('r1281-encoded-lane-congestion',{
+          lane,
+          bufferedBytes:bufferedBefore,
+          relayPid:Number(relay?.pid||0)
+        });
+        resetFailedEncodedLaneR1281(lane,`buffer ${bufferedBefore}`);
+        if(relay&&relay.exitCode===null){
+          relay.__r1125WatchdogRecycle=true;
+          try{relay.kill('SIGTERM')}catch(_){}
+        }else{
+          scheduleTransportRelayRestartR1125(lane,'r1281-buffer-reset');
+        }
+        continue;
+      }
+
+      try{
+        reservoir.write(chunk);
+      }catch(error){
+        state.lastWarning=`R1281 ${lane} encoded write: ${cleanText(error?.message||error)}`;
+        const relay=transportRelayChildR1125(lane);
+        resetFailedEncodedLaneR1281(lane,'write-error');
+        if(relay&&relay.exitCode===null){
+          relay.__r1125WatchdogRecycle=true;
+          try{relay.kill('SIGTERM')}catch(_){}
+        }else{
+          scheduleTransportRelayRestartR1125(lane,'r1281-write-error');
+        }
+      }
+    }
+  };
+
+  encodedTransportPublisherErrorHandlerR1281=error=>{
+    if(!stopping&&!/EPIPE|ECONNRESET|ERR_STREAM_DESTROYED/i.test(String(error?.code||error?.message||error))){
+      state.lastWarning=`R1281 master TS stdout: ${cleanText(error?.message||error)}`;
+    }
+  };
+
+  source.on('data',encodedTransportPublisherDataHandlerR1281);
+  source.on('error',encodedTransportPublisherErrorHandlerR1281);
+  encodedTransportPublisherSourceR1278=source;
+  state.encodedTransportPublisherPidR1278=Number(thisPublisher?.pid||0);
+  state.encodedTransportFanoutR1281='ONE-MASTER->PRIMARY-RESERVOIR+BACKUP-RESERVOIR';
+  try{source.resume()}catch(_){}
+  return true;
+}
+
 function transportRelayChildR1125(lane){
   return lane==='backup'?transportBackupR1125:transportPrimaryR1125;
 }
@@ -4036,7 +5412,7 @@ function transportRelaySpecR1125(lane){
       lane:'backup',
       url:STREAM_BACKUP_URL,
       port:R1125_BACKUP_UDP_PORT,
-      enabled:Boolean(DUAL_INGEST_ENABLED_R792&&STREAM_BACKUP_URL)
+      enabled:Boolean(DUAL_INGEST_ENABLED_R792&&STREAM_BACKUP_URL&&!safeRestartBackupHoldActiveR1287())
     };
   }
   return {
@@ -4058,18 +5434,16 @@ function resetTransportRelayHealthR1125(lane,pid=0){
 
 function transportRelayArgsR1125(url,port){
   return [
-    // R1129: watchdog owns relay health; warning-level MPEG-TS continuity noise
-    // must not flood Node diagnostics/journald on every harmless dropped TS packet.
-    '-hide_banner','-loglevel','error',
-    '-thread_queue_size','256',
-    '-fflags','+genpts+discardcorrupt',
-    '-err_detect','ignore_err',
+    // R1278: reliable local transport. The master TS arrives through stdin from a
+    // bounded Node reservoir, so no UDP datagram can disappear and damage AAC/H264.
+    '-hide_banner','-loglevel','warning',
+    '-thread_queue_size','512',
+    '-fflags','+genpts',
     '-probesize','1000000',
     '-analyzeduration','1000000',
-    '-i',`udp://127.0.0.1:${port}?fifo_size=65536&overrun_nonfatal=1`, // R1129: more localhost burst headroom; ~12 MB/lane max
+    '-f','mpegts','-i','pipe:0',
     '-map','0:v:0','-map','0:a:0',
     '-c','copy',
-    // MPEG-TS codec tags (27/15) must not leak into FLV.
     '-tag:v','7','-tag:a','10',
     '-max_muxing_queue_size','2048',
     '-flush_packets','1',
@@ -4112,7 +5486,7 @@ function spawnTransportRelayR1125(lane){
   const child=spawn(
     'ffmpeg',
     transportRelayArgsR1125(spec.url,spec.port),
-    {stdio:['ignore','ignore','pipe']}
+    {stdio:['pipe','ignore','pipe']}
   );
 
   child.__r1125Lane=lane;
@@ -4120,15 +5494,17 @@ function spawnTransportRelayR1125(lane){
   child.__r1125WatchdogRecycle=false;
   setTransportRelayChildR1125(lane,child);
   resetTransportRelayHealthR1125(lane,child.pid);
+  bindEncodedTransportRelayR1278(child,lane);
 
   state[`rtmps${lane==='backup'?'Backup':'Primary'}RelayPidR1125`]=Number(child.pid||0);
-  state.transportArchitectureR1125='R1125-LOCAL-UDP-MPEGTS-INDEPENDENT-RTMPS-RELAYS';
+  state.transportArchitectureR1125='R1281-DUAL-INDEPENDENT-TS-PIPE-RESERVOIRS->RTMPS-A+B';
 
   try{
     diagRecordR802('r1125-relay-spawn',{
       lane,
       pid:Number(child.pid||0),
-      udpPort:Number(spec.port||0)
+      transport:'pipe-reservoir-r1278',
+      reservoirBytes:R1278_ENCODED_RESERVOIR_BYTES
     });
   }catch(_){}
 
@@ -4143,6 +5519,12 @@ function spawnTransportRelayR1125(lane){
   });
 
   child.on('exit',(code,signal)=>{
+    const laneReservoirR1281=encodedTransportReservoirsR1281[lane];
+    if(laneReservoirR1281&&child.stdin){
+      try{laneReservoirR1281.unpipe(child.stdin)}catch(_){}
+      if(encodedTransportRelaySinksR1281[lane]===child.stdin)encodedTransportRelaySinksR1281[lane]=null;
+      if(lane==='primary'&&encodedTransportRelaySinkR1278===child.stdin)encodedTransportRelaySinkR1278=null;
+    }
     const current=transportRelayChildR1125(lane)===child;
     if(current){
       setTransportRelayChildR1125(lane,null);
@@ -4161,6 +5543,7 @@ function spawnTransportRelayR1125(lane){
     }catch(_){}
 
     if(current&&!stopping&&!child.__r1125IntentionalStop){
+      resetFailedEncodedLaneR1281(lane,child.__r1125WatchdogRecycle?'watchdog-exit':'unexpected-exit');
       scheduleTransportRelayRestartR1125(
         lane,
         child.__r1125WatchdogRecycle?'watchdog':'unexpected-exit'
@@ -4179,15 +5562,19 @@ function spawnTransportRelayR1125(lane){
 
 function ensureTransportRelaysR1125(){
   const primary=spawnTransportRelayR1125('primary');
+  if(primary&&primary.exitCode===null)bindEncodedTransportRelayR1278(primary,'primary');
   if(!primary||primary.exitCode!==null){
     throw new Error('R1125 primary RTMPS relay unavailable');
   }
 
-  if(DUAL_INGEST_ENABLED_R792){
+  if(encodedTransportLaneEnabledR1281('backup')){
     const backup=spawnTransportRelayR1125('backup');
+    if(backup&&backup.exitCode===null)bindEncodedTransportRelayR1278(backup,'backup');
     if(!backup||backup.exitCode!==null){
       throw new Error('R1125 backup RTMPS relay unavailable');
     }
+  }else if(safeRestartBackupHoldActiveR1287()){
+    state.lastWarning='R1287 safe restart HOLD owns YouTube backup ingest; radio backup relay intentionally paused';
   }
 
   return true;
@@ -4279,8 +5666,23 @@ async function transportRelayWatchdogTickR1125(){
 
   for(const lane of ['primary','backup']){
     const spec=transportRelaySpecR1125(lane);
-    if(!spec.enabled)continue;
+    if(!spec.enabled){
+      // R1287: marker can appear while LIVE. Relinquish ONLY backup ingest so an
+      // external hold service can connect before the radio process is restarted.
+      if(lane==='backup' && safeRestartBackupHoldActiveR1287()){
+        const heldChild=transportRelayChildR1125('backup');
+        if(heldChild&&heldChild.exitCode===null){
+          heldChild.__r1125IntentionalStop=true;
+          try{heldChild.kill('SIGTERM')}catch(_){}
+          const hard=setTimeout(()=>{try{if(heldChild.exitCode===null)heldChild.kill('SIGKILL')}catch(_){}},1200);
+          hard.unref?.();
+        }
+        state.r1287BackupHoldActive=true;
+      }
+      continue;
+    }
 
+    if(lane==='backup')state.r1287BackupHoldActive=false;
     let child=transportRelayChildR1125(lane);
     if(!child||child.exitCode!==null){
       scheduleTransportRelayRestartR1125(lane,'watchdog-missing');
@@ -4946,7 +6348,7 @@ async function rtmpsEgressWatchdogTickR792(){
   try{
     const count=await countEstablishedRtmpsR792();
     state.rtmpsEstablishedConnectionsR792=count;
-    state.rtmpsExpectedConnectionsR792=DUAL_INGEST_ENABLED_R792?2:1;
+    state.rtmpsExpectedConnectionsR792=expectedRtmpsConnectionsR1287();
     if(count>0){
       // R830D RTMPS RECOVERY HEALTH
       state.transportHealthy=true;
@@ -5233,23 +6635,18 @@ function startPublisher(){
   if(publisher&&publisher.exitCode===null)return true;
   prepareCacheDir();
   if(!existsSync(LIVE_TICKER_FILE))writeFileSync(LIVE_TICKER_FILE,DEFAULT_LIVE_TICKER,'utf8');
+  ensureTickerRasterR1221();
+  ensureTickerMotionR1222();
   if(!existsSync(LIVE_CURRENT_FILE))writeFileSync(LIVE_CURRENT_FILE,'ANDRIK','utf8');
 
   state.videoTimestampOffsetSecondsR787=0;
 
-  // R1125: start network workers first. They wait on localhost UDP until the one
-  // persistent encoder below starts sending. YouTube/TLS is no longer inside it.
+  // R1278: allocate a fresh reliable encoded reservoir for this publisher, then
+  // start/attach the RTMPS relay. No localhost UDP exists in the live A/V path.
+  resetEncodedTransportReservoirR1278();
   ensureTransportRelaysR1125();
 
-  const r1125LocalTargets=[
-    `[f=mpegts:onfail=ignore:mpegts_flags=+resend_headers]udp://127.0.0.1:${R1125_PRIMARY_UDP_PORT}?pkt_size=1316`
-  ];
-  if(DUAL_INGEST_ENABLED_R792&&STREAM_BACKUP_URL){
-    r1125LocalTargets.push(
-      `[f=mpegts:onfail=ignore:mpegts_flags=+resend_headers]udp://127.0.0.1:${R1125_BACKUP_UDP_PORT}?pkt_size=1316`
-    );
-  }
-  const outputArgsR792=['-f','tee',r1125LocalTargets.join('|')];
+  const outputArgsR792=['-f','mpegts','-mpegts_flags','+resend_headers','pipe:1'];
 
   // R816: the publisher is the ONLY live H.264 encoder. Its rawvideo demuxer owns a
   // single 25fps frame counter for the entire service lifetime. MP3/clip/station feeder
@@ -5264,14 +6661,21 @@ function startPublisher(){
     '-filter_complex',`[0:v]settb=expr=1/90000,setpts=N/(${VIDEO_FPS}*TB)[r820v];[1:a]asettb=expr=1/${AUDIO_SAMPLE_RATE},asetpts=N/SR/TB[r820a]`,
     '-map','[r820v]','-map','[r820a]',
     // R819 geometry/fade stays upstream untouched. R820 changes timestamps only.
-    ...h264EncoderArgsR721(),'-fps_mode:v','cfr','-enc_time_base:v',`1:${VIDEO_FPS}`,'-threads','2','-tag:v','7',
+    ...h264EncoderArgsR721(),'-fps_mode:v','cfr','-enc_time_base:v',`1:${VIDEO_FPS}`,'-threads:v','1','-tag:v','7',
     '-c:a','aac','-profile:a','aac_low','-b:a',AUDIO_BITRATE,'-ar',String(AUDIO_SAMPLE_RATE),'-ac','2','-tag:a','10',
     '-max_muxing_queue_size','4096','-flush_packets','1',
     ...outputArgsR792
   ];
 
-  const thisPublisher=spawn('ffmpeg',args,{stdio:['ignore','ignore','pipe','pipe','pipe']});
+  const thisPublisher=spawn('ffmpeg',args,{stdio:['ignore','pipe','pipe','pipe','pipe']});
   publisher=thisPublisher;
+  if(!bindEncodedTransportPublisherR1278(thisPublisher)){
+    try{thisPublisher.kill('SIGKILL')}catch(_){}
+    publisher=null;
+    state.publisherRunning=false;
+    state.lastError='R1278 encoded master pipe unavailable';
+    return false;
+  }
   state.publisherRunning=true;
   state.transportHealthy=true;
   state.transportSelfHealPending=false;
@@ -5280,8 +6684,13 @@ function startPublisher(){
   state.rtmpsEgressEverObservedR792=false;
   state.youtubeDualIngestEnabled=DUAL_INGEST_ENABLED_R792;
   state.youtubeBackupIngestArmed=Boolean(DUAL_INGEST_ENABLED_R792&&STREAM_BACKUP_URL);
-  state.transportArchitectureR1125='R1125-LOCAL-UDP-MPEGTS-INDEPENDENT-RTMPS-RELAYS';
-  state.masterVideoClockMode=`R820-DETERMINISTIC-PTS-FRAMECOUNT-${VIDEO_FPS}FPS-QUEUE${VIDEO_INPUT_QUEUE_PACKETS_R732}-SINGLE-X264`;
+  state.transportArchitectureR1125='R1281-DUAL-INDEPENDENT-TS-PIPE-RESERVOIRS->RTMPS-A+B';
+  state.masterVideoClockMode=`R1278-R1212-6M-GOP50-X264-1THREAD-NOSLICES-CLOSEDGOP-R820-PTS-${VIDEO_FPS}FPS-QUEUE${VIDEO_INPUT_QUEUE_PACKETS_R732}`;
+  state.audioCpuHeadroomR1273='R1277-PREPARED-ALBUM-BED+X264-1THREAD+MP3-FEEDER-1THREAD';
+  state.albumPreparedVisualModeR1277='16S-AVC420-CLOSEDGOP-TICKER-BAKED+NO-LIVE-CACHE-REBUILD';
+  state.localTransportShieldR1277='SUPERSEDED-BY-R1278-RELIABLE-PIPE';
+  state.localTransportR1278=`R1281-DUAL-PIPE+2x${Math.round(R1278_ENCODED_RESERVOIR_BYTES/1024/1024)}M-RESERVOIR+MPEGTS-RESEND-HEADERS`;
+  state.musicClipRelayR1284='RESTORED-BYTE-IDENTICAL-R1278-R1280-R1123-RELAY';
   if(!state.streamStartedAt)state.streamStartedAt=new Date().toISOString();
   const audioSink=thisPublisher.stdio[3];
   const videoSink=thisPublisher.stdio[4];
@@ -5323,7 +6732,7 @@ function startPublisher(){
     originalVideoWrite:videoSink.write.bind(videoSink)
   };
   thisPublisher.__r1085AudioMaster=r1085;
-  state.audioMasterMode='R1160L-REAL-COUNTERS-MP3-EXACT-25FPS+R1123-CLIP-PCM-PACER';
+  state.audioMasterMode='R1272-MP3-2S-PCM-RESERVOIR+R1160L-REAL-COUNTERS+R1123-CLIP-PCM-PACER';
   state.audioMasterTargetLeadMsR1085=2000;
   state.audioMasterDeadbandMsR1085=80;
   state.audioInputQueuePacketsR1160J=AUDIO_INPUT_QUEUE_PACKETS_R732;
@@ -5488,6 +6897,17 @@ function startPublisher(){
     }
   });
   thisPublisher.on('exit',(code,signal)=>{
+    if(encodedTransportPublisherSourceR1278===thisPublisher.stdout){
+      if(encodedTransportPublisherDataHandlerR1281){
+        try{thisPublisher.stdout.off('data',encodedTransportPublisherDataHandlerR1281)}catch(_){}
+      }
+      if(encodedTransportPublisherErrorHandlerR1281){
+        try{thisPublisher.stdout.off('error',encodedTransportPublisherErrorHandlerR1281)}catch(_){}
+      }
+      encodedTransportPublisherSourceR1278=null;
+      encodedTransportPublisherDataHandlerR1281=null;
+      encodedTransportPublisherErrorHandlerR1281=null;
+    }
     const isCurrent=publisher===thisPublisher;
     if(isCurrent){
       publisher=null;state.publisherRunning=false;state.transportHealthy=false;state.transportSelfHealPending=false;
@@ -5541,27 +6961,95 @@ async function visualLoopOffsetR735(visual){
 
 function normalVideoFeederArgsR721(visualPath,eqPath,{fadeIn=false,fadeInSeconds=CLIP_TO_TRACK_FADE_IN_SECONDS_R753,endFadeToBlack=false,trackDuration=0,visualOffsetSeconds=0,previewReload=false,boundaryTitleSwitchAt=0,mp3Boundary=false}={}){
   const visualSeek=Number(visualOffsetSeconds)>0.05?['-ss',Number(visualOffsetSeconds).toFixed(3)]:[];
-  const fastProfileR1132=visualFastProfileR1132(visualPath);
-  // R1110 already disables CTA composition on the normal MP3 path, and R981C has
-  // QR/BAR/RED LINE baked into the master. Do not decode three unused looped PNG inputs.
-  const decorativeInputsR1132=LIVE_MP3_CPU_LIGHT_R1110?[]:[
-    '-loop','1','-framerate','1','-i',QR_OVERLAY_LIVE_R794,
-    '-loop','1','-framerate','1','-i',CTA_OVERLAY_LIVE_R794,
-    '-loop','1','-framerate','1','-i',CTA_LIKE_OVERLAY_LIVE_R794
-  ];
+  const fullWidthTickerR1213=isFiveAlbumBackgroundR1213(visualPath);
+  const preparedAlbumBedR1277=isPreparedAlbumBedR1277(visualPath);
+  if(fullWidthTickerR1213 && !preparedAlbumBedR1277 && !MP3_TICKER_DISABLED_R1269)prepareTickerPagesR1246();
+
+  // R1277 overrides the historical R1232 live-ticker rule for the five albums:
+  // their 16s ticker cycle is now baked once into the prepared AVC/yuv420p bed.
+  // Fallback/static/extras paths retain the legacy final-stage ticker behavior.
+  const tickerBakedFullFrameR1224=false;
+  const effectiveVisualPathR1224=visualPath;
+  const staticBackgroundR1214=isStaticBackgroundR1211(effectiveVisualPathR1224);
+  const probedProfileR1214=visualFastProfileR1132(effectiveVisualPathR1224);
+  // R1255: normalized album JPGs are already exactly 1920x1080. Their one decoded
+  // frame is looped at exact 25fps by the realtime filter below, so do not add an
+  // fps conversion or geometry scaler that can reintroduce bursty frame delivery.
+  const fastProfileR1132=staticBackgroundR1214
+    ? {...probedProfileR1214,geometryExact:true,fpsExact:true}
+    : probedProfileR1214;
+
+  // R1277 prepared album bed already owns the ticker. The old QR input was not
+  // composited by the MP3 graph at all, so do not decode it needlessly. Keep only
+  // the two 420px CTA sources whose cadence is track-relative (20s, then 120s).
+  const decorativeInputsR1132=preparedAlbumBedR1277
+    ? [
+        '-loop','1','-framerate','1','-i',CTA_OVERLAY_LIVE_R794,
+        '-loop','1','-framerate','1','-i',CTA_LIKE_OVERLAY_LIVE_R794
+      ]
+    : [
+        '-loop','1','-framerate','1','-i',QR_OVERLAY_LIVE_R794,
+        '-loop','1','-framerate','1','-i',CTA_OVERLAY_LIVE_R794,
+        '-loop','1','-framerate','1','-i',CTA_LIKE_OVERLAY_LIVE_R794
+      ];
+  const ctaSubscribeInputIndexR1277=preparedAlbumBedR1277?1:2;
+  const ctaLikeInputIndexR1277=preparedAlbumBedR1277?2:3;
+
+  const tickerSpritePathR1261=(fullWidthTickerR1213 && !preparedAlbumBedR1277 && !MP3_TICKER_DISABLED_R1269)?ensureTickerSpriteR1261():'';
+  const tickerSpriteInputIndexR1261=tickerSpritePathR1261 ? (1+(preparedAlbumBedR1277?2:3)) : -1;
+  const tickerSpriteInputR1261=tickerSpritePathR1261
+    ? ['-thread_queue_size','64','-re','-stream_loop','-1','-i',tickerSpritePathR1261]
+    : [];
+  const albumLikePathR1262=''; // R1275: custom 60s LIKE disabled; use clip-style CTA instead
+  const albumLikeInputIndexR1262=albumLikePathR1262 ? (1+(decorativeInputsR1132.length?3:0)+(tickerSpritePathR1261?1:0)) : -1;
+  const albumLikeInputR1262=albumLikePathR1262
+    ? ['-loop','1','-framerate','1','-i',albumLikePathR1262]
+    : [];
+
+  // R1237: no separate ticker underlay. The album source itself is a subtle full-frame 25fps motion loop.
+  const tickerUnderlayReadyR1236=false;
+  const tickerUnderlayInputIndexR1236=-1;
+  const tickerUnderlayInputR1236=[];
+  const tickerRasterReadyR1221=false;
+  const tickerRasterInputIndexR1221=-1;
+  const tickerRasterInputR1221=[];
+
   state.visualCpuLowR1132={
     mode:R1132_VISUAL_CPU_LOW,
     geometryExact:Boolean(fastProfileR1132.geometryExact),
     fpsExact:Boolean(fastProfileR1132.fpsExact),
     pix420:Boolean(fastProfileR1132.pix420),
-    decorativeInputs:decorativeInputsR1132.length?3:0,
-    path:visualPath
+    decorativeInputs:preparedAlbumBedR1277?2:3,
+    clipCtaOnMp3R1275:'SUBSCRIBE@20S-THEN-ALTERNATE-EVERY-120S-8S-FADE035',
+    path:effectiveVisualPathR1224,
+    preparedAlbumBedR1277,
+    albumSourceModeR1274:preparedAlbumBedR1277?'R1277-PREPARED-BED-RE-STREAMLOOP':(fullWidthTickerR1213&&!staticBackgroundR1214?'WARMED-REALVIDEO-RE-STREAMLOOP':'OTHER'),
+    tickerBakedFullFrameR1224:preparedAlbumBedR1277?true:tickerBakedFullFrameR1224,
+    tickerModeR1246:preparedAlbumBedR1277?'R1277-OFFLINE-BAKED-IN-BED':(MP3_TICKER_DISABLED_R1269?'R1270-R1212-MASTER+R1269-TICKER-OFF':(fullWidthTickerR1213?'R1268-PRERENDERED-QTRLE-ALPHA-XFADE':'LEGACY')),
+    tickerSpriteR1261:preparedAlbumBedR1277?'OFFLINE-BAKED':(MP3_TICKER_DISABLED_R1269?'DISABLED':(tickerSpriteInputIndexR1261>=0?'R1268-QTRLE-25FPS-SMOOTH':'FALLBACK-DRAWTEXT')),
+    albumLikeR1262:'OFF-R1275-CLIP-CTA-OWNS-LIKE'
   };
+
+  const visualInputR1211=preparedAlbumBedR1277
+    // R1277 local prepared bed is deterministic and verified at build time. If its
+    // decoder ever reports corruption, fail the feeder instead of concealing it with
+    // ignore_err and painting damaged chroma/reference blocks into the live master.
+    ? ['-thread_queue_size','32','-fflags','+genpts+discardcorrupt','-err_detect','explode','-re','-stream_loop','-1',...visualSeek,'-i',effectiveVisualPathR1224]
+    : (tickerBakedFullFrameR1224
+      ? ['-thread_queue_size','64','-fflags','+genpts+discardcorrupt','-err_detect','ignore_err','-re','-stream_loop','-1','-i',effectiveVisualPathR1224]
+      : (staticBackgroundR1214
+        ? ['-thread_queue_size','8','-framerate',String(STATIC_BACKGROUND_INPUT_FPS_R1214),'-i',effectiveVisualPathR1224]
+        : ['-thread_queue_size','64','-fflags','+genpts+discardcorrupt','-err_detect','ignore_err','-re','-stream_loop','-1',...visualSeek,'-i',effectiveVisualPathR1224]));
+
   return [
-    '-hide_banner','-loglevel','warning',
-    '-thread_queue_size','64','-fflags','+genpts+discardcorrupt','-err_detect','ignore_err','-re','-stream_loop','-1',...visualSeek,'-i',visualPath,
+    '-hide_banner','-loglevel','warning','-threads','1','-filter_complex_threads','1',
+    ...visualInputR1211,
     ...decorativeInputsR1132,
-    '-filter_complex',normalVideoFilterComplexR721({fadeIn,fadeInSeconds,endFadeToBlack,trackDuration,previewReload,boundaryTitleSwitchAt,mp3Boundary,fastProfileR1132}),
+    ...tickerSpriteInputR1261,
+    ...albumLikeInputR1262,
+    ...tickerUnderlayInputR1236,
+    ...tickerRasterInputR1221,
+    '-filter_complex',normalVideoFilterComplexR721({fadeIn,fadeInSeconds,endFadeToBlack,trackDuration,previewReload,boundaryTitleSwitchAt,mp3Boundary,fastProfileR1132,fullWidthTickerR1213,tickerRasterInputIndexR1221,tickerBakedFullFrameR1224,tickerUnderlayInputIndexR1236,staticFrameLoopR1255:staticBackgroundR1214,tickerSpriteInputIndexR1261,albumLikeInputIndexR1262,preparedAlbumBedR1277,ctaSubscribeInputIndexR1277,ctaLikeInputIndexR1277}),
     '-map','[outv]','-an','-sn','-dn',
     ...rawVideoOutputArgsR816()
   ];
@@ -5569,12 +7057,10 @@ function normalVideoFeederArgsR721(visualPath,eqPath,{fadeIn=false,fadeInSeconds
 
 function spawnRawNormalVideoChildR816(visualPath,{fadeIn=false,fadeInSeconds=CLIP_TO_TRACK_FADE_IN_SECONDS_R753,endFadeToBlack=false,trackDuration=0,visualOffsetSeconds=0,previewReload=false,boundaryTitleSwitchAt=0,mp3Boundary=false}={}){
   const eq=equalizerSpecR721();
-  if(!existsSync(visualPath)||statSync(visualPath).size<300000)throw new Error(`visual missing: ${visualPath}`);
-  if(!LIVE_MP3_CPU_LIGHT_R1110){
-    if(!existsSync(QR_OVERLAY_LIVE_R794)||statSync(QR_OVERLAY_LIVE_R794).size<20000)throw new Error(`QR overlay missing: ${QR_OVERLAY_LIVE_R794}`);
-    if(!existsSync(CTA_OVERLAY_LIVE_R794)||statSync(CTA_OVERLAY_LIVE_R794).size<2500)throw new Error(`R767 CTA overlay missing: ${CTA_OVERLAY_LIVE_R794}`);
-    if(!existsSync(CTA_LIKE_OVERLAY_LIVE_R794)||statSync(CTA_LIKE_OVERLAY_LIVE_R794).size<2500)throw new Error(`R783 LIKE CTA overlay missing: ${CTA_LIKE_OVERLAY_LIVE_R794}`);
-  }
+  if(!existsSync(visualPath)||statSync(visualPath).size<(isStaticBackgroundR1211(visualPath)?4096:300000))throw new Error(`visual missing: ${visualPath}`);
+  if(!isPreparedAlbumBedR1277(visualPath) && (!existsSync(QR_OVERLAY_LIVE_R794)||statSync(QR_OVERLAY_LIVE_R794).size<20000))throw new Error(`QR overlay missing: ${QR_OVERLAY_LIVE_R794}`);
+  if(!existsSync(CTA_OVERLAY_LIVE_R794)||statSync(CTA_OVERLAY_LIVE_R794).size<2500)throw new Error(`R767 CTA overlay missing: ${CTA_OVERLAY_LIVE_R794}`);
+  if(!existsSync(CTA_LIKE_OVERLAY_LIVE_R794)||statSync(CTA_LIKE_OVERLAY_LIVE_R794).size<2500)throw new Error(`R783 LIKE CTA overlay missing: ${CTA_LIKE_OVERLAY_LIVE_R794}`);
   // R972B: unused equalizer-off decoder removed from normal feeder
   const child=spawn('ffmpeg',normalVideoFeederArgsR721(visualPath,eq.path,{fadeIn,fadeInSeconds,endFadeToBlack,trackDuration,visualOffsetSeconds,previewReload,boundaryTitleSwitchAt,mp3Boundary}),{stdio:['ignore','pipe','pipe']}); // R831 MICRO-LAG FIX: normal priority restored
   child.__r816EqPeriod=eq.period;
@@ -6165,7 +7651,7 @@ async function startFirstNormalVideoFeederR828(
 let normalVideoEnsurePromiseR1160E=null;
 let normalVideoOwnerGenerationR1160E=0;
 
-async function ensureNormalVideoFeederR721({force=false,fadeIn=false,fadeInSeconds=CLIP_TO_TRACK_FADE_IN_SECONDS_R753,endFadeToBlack=false,trackDuration=null,previewReload=false,boundaryTitleSwitchAt=null,mp3Boundary=false}={}){
+async function ensureNormalVideoFeederR721({force=false,fadeIn=false,fadeInSeconds=CLIP_TO_TRACK_FADE_IN_SECONDS_R753,endFadeToBlack=false,trackDuration=null,previewReload=false,boundaryTitleSwitchAt=null,mp3Boundary=false,visualItem=null}={}){
   if(stopping||clipActive)return true;
 
   // R1160E: if a station/clip tail, first-PCM gate and watchdog all ask for the
@@ -6180,8 +7666,9 @@ async function ensureNormalVideoFeederR721({force=false,fadeIn=false,fadeInSecon
   }
 
   const job=(async()=>{
-    const visual=await ensureScheduledVisual();
-    const period=activeVisualPeriodR721();
+    const visual=await ensureTrackVisualR1211(visualItem||state.current);
+    const slotR1211=radioBackgroundSlotForItemR1211(visualItem||state.current);
+    const period=isStaticBackgroundR1211(visual)?`album-${slotR1211||'extras'}`:activeVisualPeriodR721();
 
     if(!force&&videoFeeder&&videoFeeder.exitCode===null&&videoFeederPath===visual&&videoFeederPeriod===period){
       return true;
@@ -7109,7 +8596,7 @@ function attachAudioMasterPacedVideoRelayR1123(child,videoSink,label='video'){
 
   const relay={
     r1123:true,
-    mode:'R1123-R1085-PCM-PHASE-PACER-R1141-NODROP',
+    mode:smoothMusicClipR1135?'R1292-MUSIC-ABS25-FULL-END-NO-EARLY-FADE':'R1123-R1085-PCM-PHASE-PACER-R1141-NODROP',
     source,sink:videoSink,label,active:true,
     master,targetLeadSec,minCatchupMs,minCatchupNs,
     queue:initialFrames,
@@ -7118,6 +8605,10 @@ function attachAudioMasterPacedVideoRelayR1123(child,videoSink,label='video'){
     waitingDrain:false,onDrain:null,onData:null,onError:null,onEnd:null,
     paceTimer:null,sourceEnded:false,tailResolve:null,tailTimer:null,
     underflows:0,overflowDrops:0,firstFrame:true,lastWriteNs:0n,
+    // R1290: normal music clips use an absolute 25fps wall-clock deadline.
+    // This compensates setTimeout/event-loop overshoot instead of accumulating it.
+    musicNextDueNsR1290:0n,musicNominalFrameNsR1290:40000000n,musicMinCatchupNsR1290:38000000n,
+    musicLateMaxMsR1290:0,musicCadenceFramesR1290:0,
     sourcePausedForQueueR1141:false,queuePausesR1141:0,queueResumesR1141:0,
     stationStartFramesR1143:0,stationStartLockDoneR1143:false,
     maxLeadMs:0,minLeadMs:999999
@@ -7299,7 +8790,20 @@ function attachAudioMasterPacedVideoRelayR1123(child,videoSink,label='video'){
       // alive, but it is no longer allowed to accelerate the station picture tail.
       const exactStationTailR1142=Boolean(stationInsertRelayR1142 && relay.sourceEnded);
 
-      if(!exactStationTailR1142){
+      // R1160N STATION EXACT-CADENCE HOTFIX:
+      // For short station bumpers/specials, submitted PCM can advance in bursts
+      // when the master pipe drains. Treating that transient submitted-byte
+      // deficit as viewer timing used to schedule one large deficitMs sleep,
+      // visibly freezing an early/middle station frame and then letting the
+      // ending arrive abruptly. Station A/V already comes from ONE -re FFmpeg,
+      // so preserve its real 25fps picture cadence instead of phase-stopping it.
+      // Normal music clips keep the proven R1123 PCM-phase deficit wait.
+      // R1290 NORMAL MUSIC CLIP: never full-stop picture on a transient
+      // submitted-PCM deficit. The audio and video come from the same -re FFmpeg;
+      // stopping video here grows the rawvideo queue, eventually backpressures that
+      // unified child, stalls PCM too, then causes the old freeze -> rush cycle.
+      // Station behavior is preserved byte-for-byte below/around this branch.
+      if(!exactStationTailR1142 && !stationInsertRelayR1142 && !smoothMusicClipR1135){
         const deficitMs=(relay.targetLeadSec-leadSec)*1000;
         if(deficitMs>1){
           scheduleIn(deficitMs);
@@ -7308,27 +8812,20 @@ function attachAudioMasterPacedVideoRelayR1123(child,videoSink,label='video'){
       }
 
       // R1141 adaptive pacing remains unchanged for normal music clips.
-      // R1143 STATION START FRAME LOCK:
-      // a small PCM phase surplus at promotion used to let the short station
-      // insert fire early frames at 24ms. That looked like a tiny jump/restart
-      // at the beginning. Preserve normal R1085 deficit waiting, but never run
-      // the first 25 station frames faster than exact 25fps. After that, any
-      // station phase recovery is gentle (38ms). R1142 still owns EOF tail 40ms.
+      // R1160N: every station frame (start + middle + tail) is constrained to
+      // exact 25fps / 40ms minimum cadence. No 38ms station catch-up and no
+      // full PCM-phase hold are allowed. Sink backpressure is still respected.
       const debtMsR1141=Math.max(0,(leadSec-relay.targetLeadSec)*1000);
       const stationStartLockedR1143=Boolean(
         stationInsertRelayR1142 &&
         !relay.sourceEnded &&
         Number(relay.stationStartFramesR1143||0)<STATION_START_LOCK_FRAMES_R1143
       );
-      const effectiveMinMsR1141=exactStationTailR1142
+      const effectiveMinMsR1141=stationInsertRelayR1142
         ? STATION_TAIL_FRAME_MS_R1142
-        : (stationStartLockedR1143
-            ? STATION_TAIL_FRAME_MS_R1142
-            : (stationInsertRelayR1142
-                ? STATION_MID_MIN_FRAME_MS_R1143
-                : ((smoothMusicClipR1135 && debtMsR1141>MUSIC_CLIP_R1123_DEBT_THRESHOLD_MS_R1141)
-                    ? MUSIC_CLIP_R1123_DEBT_CATCHUP_MS_R1141
-                    : relay.minCatchupMs)));
+        : ((smoothMusicClipR1135 && debtMsR1141>MUSIC_CLIP_R1123_DEBT_THRESHOLD_MS_R1141)
+            ? MUSIC_CLIP_R1123_DEBT_CATCHUP_MS_R1141
+            : relay.minCatchupMs);
       const effectiveMinNsR1141=BigInt(Math.max(1,Math.round(effectiveMinMsR1141)))*1000000n;
       state.r1123EffectiveMinFrameMsR1141=Number(effectiveMinMsR1141);
       state.r1123PhaseDebtMsR1141=Math.round(debtMsR1141);
@@ -7351,7 +8848,39 @@ function attachAudioMasterPacedVideoRelayR1123(child,videoSink,label='video'){
           childPid:Number(child.pid||0)
         };
       }
-      if(relay.lastWriteNs>0n){
+      if(smoothMusicClipR1135){
+        // R1290 EXACT-25FPS WALL-CLOCK PACER.
+        // Deadline advances by exactly 40ms per REAL frame. A late JS wake-up is
+        // compensated on the following interval, so 235s can no longer drift to
+        // ~23fps. Catch-up is bounded to >=38ms between visible frames, preventing
+        // the user-visible fast-forward burst that the old 24ms phase recovery made.
+        if(relay.lastWriteNs>0n){
+          if(relay.musicNextDueNsR1290<=0n){
+            relay.musicNextDueNsR1290=relay.lastWriteNs+relay.musicNominalFrameNsR1290;
+          }
+          const sinceNsR1290=now-relay.lastWriteNs;
+          const untilDueNsR1290=relay.musicNextDueNsR1290>now
+            ? relay.musicNextDueNsR1290-now
+            : 0n;
+          const untilMinNsR1290=sinceNsR1290<relay.musicMinCatchupNsR1290
+            ? relay.musicMinCatchupNsR1290-sinceNsR1290
+            : 0n;
+          const waitNsR1290=untilDueNsR1290>untilMinNsR1290
+            ? untilDueNsR1290
+            : untilMinNsR1290;
+          if(waitNsR1290>0n){
+            scheduleIn(Number(waitNsR1290)/1_000_000);
+            return;
+          }
+          const lateNsR1290=now>relay.musicNextDueNsR1290
+            ? now-relay.musicNextDueNsR1290
+            : 0n;
+          relay.musicLateMaxMsR1290=Math.max(
+            Number(relay.musicLateMaxMsR1290||0),
+            Number(lateNsR1290)/1_000_000
+          );
+        }
+      }else if(relay.lastWriteNs>0n){
         const sinceNs=now-relay.lastWriteNs;
         if(sinceNs<effectiveMinNsR1141){
           scheduleIn(Number(effectiveMinNsR1141-sinceNs)/1_000_000);
@@ -7394,6 +8923,22 @@ function attachAudioMasterPacedVideoRelayR1123(child,videoSink,label='video'){
     }
     relay.firstFrame=false;
     relay.lastWriteNs=process.hrtime.bigint();
+    if(smoothMusicClipR1135){
+      relay.musicCadenceFramesR1290=Number(relay.musicCadenceFramesR1290||0)+1;
+      if(relay.musicNextDueNsR1290<=0n){
+        relay.musicNextDueNsR1290=relay.lastWriteNs+relay.musicNominalFrameNsR1290;
+      }else{
+        relay.musicNextDueNsR1290+=relay.musicNominalFrameNsR1290;
+        // If the event loop was blocked for a long time, do not burst dozens of
+        // queued frames. Re-anchor only after >1s lateness; normal late wakes are
+        // recovered smoothly by the 38ms bounded catch-up above.
+        const hardLateNsR1290=relay.lastWriteNs-relay.musicNextDueNsR1290;
+        if(hardLateNsR1290>1000000000n){
+          relay.musicNextDueNsR1290=relay.lastWriteNs+relay.musicNominalFrameNsR1290;
+          state.r1290MusicCadenceHardReanchors=Number(state.r1290MusicCadenceHardReanchors||0)+1;
+        }
+      }
+    }
 
     state.videoRelayFramesWritten=Number(state.videoRelayFramesWritten||0)+1;
     state.lastVideoFrameAtR816=new Date().toISOString();
@@ -7411,7 +8956,10 @@ function attachAudioMasterPacedVideoRelayR1123(child,videoSink,label='video'){
       leadMs:afterLeadMs,
       targetLeadMs:Math.round(relay.targetLeadSec*1000),
       sourceEnded:Boolean(relay.sourceEnded),
-      childPid:Number(child.pid||0)
+      childPid:Number(child.pid||0),
+      exact25WallClockR1290:Boolean(smoothMusicClipR1135),
+      cadenceFramesR1290:Number(relay.musicCadenceFramesR1290||0),
+      cadenceLateMaxMsR1290:Number(Number(relay.musicLateMaxMsR1290||0).toFixed(1))
     };
 
     if(!ok){
@@ -7423,9 +8971,27 @@ function attachAudioMasterPacedVideoRelayR1123(child,videoSink,label='video'){
 
     finishTail();
 
-    // Re-read the R1085 PCM phase every turn. There is deliberately no
-    // accumulating wall-clock nextDue timeline in R1123.
-    scheduleIn(1);
+    // R1291: music clips schedule the next absolute 25fps deadline directly.
+    // Avoid the old extra 1ms wake + second timer per frame; that extra wake could
+    // add visible micro-jitter on a busy 2-vCPU VPS. Recovery remains gentle: no
+    // visible interval is intentionally shortened below 38ms.
+    if(smoothMusicClipR1135){
+      const nowAfterR1291=process.hrtime.bigint();
+      const sinceNsR1291=nowAfterR1291-relay.lastWriteNs;
+      const untilDueNsR1291=relay.musicNextDueNsR1290>nowAfterR1291
+        ? relay.musicNextDueNsR1290-nowAfterR1291
+        : 0n;
+      const untilMinNsR1291=sinceNsR1291<relay.musicMinCatchupNsR1290
+        ? relay.musicMinCatchupNsR1290-sinceNsR1291
+        : 0n;
+      const waitNsR1291=untilDueNsR1291>untilMinNsR1291
+        ? untilDueNsR1291
+        : untilMinNsR1291;
+      scheduleIn(Math.max(1,Number(waitNsR1291)/1_000_000));
+    }else{
+      // Station/other insert behavior remains unchanged.
+      scheduleIn(1);
+    }
   }
 
   source.on('data',relay.onData);
@@ -7439,7 +9005,8 @@ function attachAudioMasterPacedVideoRelayR1123(child,videoSink,label='video'){
     catchupMinMs:minCatchupMs,
     startLeadMs:Math.round(masterLeadSec()*1000),
     stationStartLockFramesR1143:stationInsertRelayR1142?STATION_START_LOCK_FRAMES_R1143:0,
-    stationStartFrameMsR1143:stationInsertRelayR1142?STATION_TAIL_FRAME_MS_R1142:0
+    stationStartFrameMsR1143:stationInsertRelayR1142?STATION_TAIL_FRAME_MS_R1142:0,
+    stationCadenceR1160N:stationInsertRelayR1142?'EXACT-25FPS-NO-PCM-PHASE-HOLD':''
   });
 
   try{source.resume()}catch(_){ }
@@ -7516,6 +9083,10 @@ async function playVideoClipR691(previous,item,next,nextListenerPreviewR1135=nul
   }catch(error){return await abortInsertHandoffR749(item,next,`clip cache: ${cleanText(error?.message||error)}`);}
 
   const stationInsert=item.sourceType==='radio-bumper'||String(item.sourceType||'').startsWith('radio-special');
+  // R1280: a live cover transcode may use almost one whole vCPU even at nice19.
+  // Freeze it before clip/station preparation so the proven R1278 station A/V timing
+  // cannot be stretched by scheduler contention.
+  pauseAlbumBedBuilderR1280(stationInsert?'station-handoff':'music-clip-handoff');
   if(stationInsert){
     diagRecordR802('station-preplay',{title:item.title||'STATION',media:diagMediaR802(readyPath)});
 
@@ -7619,7 +9190,7 @@ async function playVideoClipR691(previous,item,next,nextListenerPreviewR1135=nul
     if(prearmR1069){
       child=prearmR1069.child;
     }else{
-      child=spawn('ffmpeg',clipPreparedFeederArgsR742(readyPath,{hasAudio:true,duration,showPreview:!stationInsert,fadeOutToBlack:Boolean(!stationInsert&&next&&next.type==='track'),fadeInSeconds:stationInsert?VIDEO_INSERT_FADE_IN_SECONDS_R757:MUSIC_CLIP_FADE_IN_SECONDS_R1136,stationAudioDelayMsR871:stationAudioDelayMsR1013(item)}),{stdio:['ignore','pipe','pipe','pipe','pipe']});
+      child=spawn('ffmpeg',clipPreparedFeederArgsR742(readyPath,{hasAudio:true,duration,showPreview:!stationInsert,fadeOutToBlack:false,fadeInSeconds:stationInsert?VIDEO_INSERT_FADE_IN_SECONDS_R757:MUSIC_CLIP_FADE_IN_SECONDS_R1136,stationAudioDelayMsR871:stationAudioDelayMsR1013(item)}),{stdio:['ignore','pipe','pipe','pipe','pipe']});
       child.__r752UnifiedAV=true;
       child.__r752Live=false;
     }
@@ -7649,7 +9220,19 @@ async function playVideoClipR691(previous,item,next,nextListenerPreviewR1135=nul
           childPid:Number(child.pid||0),
           queuedFrames:Number(child?.__r816VideoRelay?.queue?.length||0)
         });
-        await waitAudioMasterPacedVideoTailR1123(child,stationInsert?STATION_TAIL_WAIT_MS_R1142:4000);
+        const queuedTailFramesR1290=Number(child?.__r816VideoRelay?.queue?.length||0);
+        // R1292: NEVER cut a normal clip merely because the raw-video relay accumulated
+        // a long but valid tail.  The old 15s ceiling could expire while real final
+        // frames were still queued on a busy 2-vCPU VPS, making the clip appear to end
+        // early.  Size the wait from the exact queue and leave 8s scheduler/drain slack.
+        const normalTailWaitMsR1290=Math.max(
+          10000,
+          Math.min(60000,Math.ceil(queuedTailFramesR1290*(1000/VIDEO_FPS)+8000))
+        );
+        await waitAudioMasterPacedVideoTailR1123(
+          child,
+          stationInsert?STATION_TAIL_WAIT_MS_R1142:normalTailWaitMsR1290
+        );
       }
       if(stationBlackPrearmPromiseR1145){
         try{await stationBlackPrearmPromiseR1145}catch(_){ }
@@ -7741,7 +9324,11 @@ async function playVideoClipR691(previous,item,next,nextListenerPreviewR1135=nul
     // 1050 + 950 ~= 2000 ms. This removes the large phase surplus that R1123 previously
     // had to erase by visibly rushing through the first clip frames.
     // Station inserts retain the proven 2000 ms prime unchanged.
-    const insertAudioPrimeMsR1135=stationInsert?2000:MUSIC_CLIP_AUDIO_PRIME_MS_R1135;
+    // R1276: station inserts use the same calibrated math as normal music clips.
+    // 1050ms audio prime + 950ms real-video prebuffer ~= 2000ms master lead.
+    // The previous station value (2000+950 ~= 2950ms) is exactly why bumper audio
+    // could be heard in black before its first visible frame.
+    const insertAudioPrimeMsR1135=MUSIC_CLIP_AUDIO_PRIME_MS_R1135;
     await sleep(insertAudioPrimeMsR1135);
 
     // Keep the proven 950 ms REAL-frame prebuffer for both paths.
@@ -7796,7 +9383,7 @@ async function playVideoClipR691(previous,item,next,nextListenerPreviewR1135=nul
     // The persistent master intentionally keeps ~2000ms PCM lead. A 96-packet raw PCM
     // demux queue was almost the same size as that lead, so short encoder/CPU jitter could
     // fill input #1, back-pressure the unified clip child and prevent a clean EOF.
-    // AUDIO_INPUT_QUEUE_PACKETS_R732 is now 160; the R1085 target itself is UNCHANGED.
+    // R1221B: AUDIO_INPUT_QUEUE_PACKETS_R732 restored to 96; the R1085 target itself is UNCHANGED.
     //
     // Once a NORMAL music clip has already been promoted LIVE, an EOF timeout is no longer
     // treated as a reason to replay the entire 6-7 minute clip. We terminate the stuck child,
@@ -7924,6 +9511,7 @@ async function playVideoClipR691(previous,item,next,nextListenerPreviewR1135=nul
     if(producer===child)producer=null;
     state.producerRunning=false;
     clipActive=false;
+    resumeAlbumBedBuilderR1280(stationInsert?'station-finished':'music-clip-finished');
 
     // R1084: the insert is now completely detached. If R884 was requested
     // during pre-commit, rebuild the publisher HERE before any bridge/normal
@@ -8039,18 +9627,33 @@ function decoderArgs(localAudioPath,duration,loudness=null,startDelaySecondsR872
   const delayR872=Math.max(0,Number(startDelaySecondsR872)||0);
   const delayMsR872=Math.round(delayR872*1000);
   const outStart=Math.max(0,Number(duration||0)-TRACK_AUDIO_FADE_OUT_R726);
-  const loudnorm=loudness
-    ? `loudnorm=I=${TRACK_AUDIO_TARGET_I_R726}:LRA=${TRACK_AUDIO_LRA_R726}:TP=${TRACK_AUDIO_TRUE_PEAK_R726}:measured_I=${Number(loudness.input_i).toFixed(2)}:measured_LRA=${Number(loudness.input_lra).toFixed(2)}:measured_TP=${Number(loudness.input_tp).toFixed(2)}:measured_thresh=${Number(loudness.input_thresh).toFixed(2)}:offset=${Number(loudness.target_offset).toFixed(2)}:linear=true:print_format=summary`
-    : `loudnorm=I=${TRACK_AUDIO_TARGET_I_R726}:LRA=${TRACK_AUDIO_LRA_R726}:TP=${TRACK_AUDIO_TRUE_PEAK_R726}:print_format=summary`;
+
+  // R1276: never run loudnorm in realtime on the live MP3 decoder.
+  // Prepared clips/stations do not do this expensive analysis on their live path either.
+  // If an R747 measurement exists, preserve target loudness with one static gain.
+  let gainDbR1276=0;
+  if(loudness){
+    const inputI=Number(loudness.input_i);
+    const inputTp=Number(loudness.input_tp);
+    if(Number.isFinite(inputI)&&Number.isFinite(inputTp)){
+      const loudnessGain=TRACK_AUDIO_TARGET_I_R726-inputI;
+      const peakSafeGain=TRACK_AUDIO_TRUE_PEAK_R726-inputTp;
+      gainDbR1276=Math.max(-12,Math.min(12,loudnessGain,peakSafeGain));
+    }
+  }
+
   const af=[
-    loudnorm,
+    ...(Math.abs(gainDbR1276)>0.01?[`volume=${gainDbR1276.toFixed(3)}dB:precision=float`]:[]),
     ...(delayMsR872>0?[`adelay=${delayMsR872}:all=1`]:[]),
     `afade=t=in:st=${delayR872.toFixed(3)}:d=${TRACK_AUDIO_FADE_IN_R726}`,
     `afade=t=out:st=${outStart.toFixed(3)}:d=${TRACK_AUDIO_FADE_OUT_R726}`,
-    `aresample=${AUDIO_SAMPLE_RATE}`
+    `aresample=${AUDIO_SAMPLE_RATE}:async=0:first_pts=0`,
+    `asetpts=N/SR/TB`
   ].join(',');
+
   return [
     '-hide_banner','-loglevel','warning',
+    '-threads','1','-filter_threads','1',
     '-fflags','+genpts+discardcorrupt','-err_detect','ignore_err',
     '-re','-i',localAudioPath,
     '-map','0:a:0','-vn','-sn','-dn',
@@ -8233,6 +9836,12 @@ function scheduleActualNextPrearmR1154(child,owner,remainingMs){
 }
 
 async function playItem(previous,item,next,following,localAudioPath,nextTrackPreview=null){
+  // R1281: a video prearm belongs only to the boundary that created it.
+  // If a normal MP3 has started, any older stopped clip/station child is stale by definition.
+  // Diagnostics caught one being claimed 378 seconds later, which froze MP3->clip handoff.
+  if(insertPrearmR1069){
+    await clearInsertPrearmR1069('r1281-new-mp3-clears-inherited-video-prearm').catch(()=>{});
+  }
   const sourceDurationR872=await probeDuration(localAudioPath||item.url);
   const mp3StartDelaySecondsR872=Boolean(
     previous && String(previous.type||'track')==='track'
@@ -8309,7 +9918,7 @@ async function playItem(previous,item,next,following,localAudioPath,nextTrackPre
   // measurements when available; otherwise start immediately with the safe single-pass
   // loudnorm filter and analyze this file later at low priority for its next play.
   const loudnessR747=readLoudnessAnalysisR747(localAudioPath);
-  state.currentLoudnessMode=loudnessR747?'R747-TWO-PASS-MEASURED-LINEAR':'R750-SINGLE-PASS-INSTANT-FALLBACK';
+  state.currentLoudnessMode=loudnessR747?'R1276-MEASURED-STATIC-GAIN':'R1276-UNITY-NO-LIVE-LOUDNORM';
   state.currentMeasuredInputLufs=loudnessR747?Number(loudnessR747.input_i):null;
   if(!loudnessR747 && BACKGROUND_LOUDNESS_ENABLED_R791){const t=setTimeout(()=>scheduleLoudnessAnalysisR750(localAudioPath),5000);t.unref?.();}
 
@@ -8391,7 +10000,8 @@ async function playItem(previous,item,next,following,localAudioPath,nextTrackPre
             )
       ),
       previewReload:false,
-      boundaryTitleSwitchAt:boundaryTitleSwitchAtR790
+      boundaryTitleSwitchAt:boundaryTitleSwitchAtR790,
+      visualItem:item
     });
     if(feederChangedR816===false && videoFeeder && videoFeeder.exitCode===null){
       // Candidate failed BEFORE old was touched. Keep the proven old black/live raw feeder
@@ -8410,7 +10020,7 @@ async function playItem(previous,item,next,following,localAudioPath,nextTrackPre
   if(!publisher || publisher.exitCode!==null || !audioSink || audioSink.destroyed) throw new Error('master audio pipe unavailable');
 
   const mediaStartedAt=Date.now();
-  state.current={type:item.type||'track',title:item.title,album:item.album||'',url:item.url,startedAt:new Date(mediaStartedAt).toISOString(),duration};
+  state.current={type:item.type||'track',sourceType:item.sourceType||'',title:item.title,album:item.album||'',key:item.key||'',url:item.url,startedAt:new Date(mediaStartedAt).toISOString(),duration};
   const currentIdentity=primaryIdentity(state.current);
   setLiveTitleR724(currentDisplayTitleR989(item,'TRACK'),{delayMs:0});
   // R790: MP3→MP3 title switching is inside the FFmpeg filtergraph and uses the same
@@ -8452,6 +10062,79 @@ async function playItem(previous,item,next,following,localAudioPath,nextTrackPre
   try{
     await new Promise((resolve,reject)=>{
       const source=producer.stdout;
+
+      // R1293 MP3 PCM RESERVOIR:
+      // 44.1kHz stereo s16le = 176400 bytes/sec. PassThrough still forwards immediately
+      // in the steady state (zero intentional delay), but it can now absorb up to 8 s
+      // of short master/audio-pipe backpressure without pausing the realtime MP3 decoder.
+      // This does NOT change FFmpeg AUDIO_INPUT_QUEUE_PACKETS_R732, AAC, PTS or RTMPS.
+      const audioReservoirR1272=new PassThrough({
+        writableHighWaterMark:MP3_PCM_RESERVOIR_BYTES_R1293,
+        readableHighWaterMark:MP3_PCM_RESERVOIR_BYTES_R1293
+      });
+      state.mp3AudioReservoirModeR1272=`R1293-${MP3_PCM_RESERVOIR_SECONDS_R1293}S-PASSTHROUGH-ZERO-DELAY`;
+      state.mp3AudioReservoirHighWaterBytesR1272=MP3_PCM_RESERVOIR_BYTES_R1293;
+      state.mp3AudioReservoirSecondsR1293=MP3_PCM_RESERVOIR_SECONDS_R1293;
+      state.mp3AudioReservoirPauseCountR1272=0;
+
+      // R1293 TRUE UNDERRUN PROBE:
+      // The old R1276 probe measured gaps between decoder stdout chunks. A full reservoir
+      // intentionally pauses decoder stdout, so those pauses were often logged as
+      // "audible gaps" even while buffered PCM was still feeding the master. Subtract
+      // intentional backpressure-pause time and only report the unbuffered remainder.
+      let lastPcmChunkAtR1276=0;
+      let sourcePauseStartedAtR1293=0;
+      let sourcePausedMsSinceChunkR1293=0;
+      const reservoirBytesR1293=()=>Number(audioReservoirR1272.readableLength||0)+Number(audioReservoirR1272.writableLength||0);
+      const onSourcePauseR1272=()=>{
+        if(!sourcePauseStartedAtR1293)sourcePauseStartedAtR1293=Date.now();
+        state.mp3AudioReservoirPauseCountR1272=Number(state.mp3AudioReservoirPauseCountR1272||0)+1;
+        state.mp3AudioReservoirBufferedBytesR1272=reservoirBytesR1293();
+      };
+      const onSourceResumeR1272=()=>{
+        const now=Date.now();
+        if(sourcePauseStartedAtR1293){
+          sourcePausedMsSinceChunkR1293+=Math.max(0,now-sourcePauseStartedAtR1293);
+          sourcePauseStartedAtR1293=0;
+        }
+        state.mp3AudioReservoirBufferedBytesR1272=reservoirBytesR1293();
+      };
+      const onPcmGapProbeR1276=chunk=>{
+        const now=Date.now();
+        if(sourcePauseStartedAtR1293){
+          sourcePausedMsSinceChunkR1293+=Math.max(0,now-sourcePauseStartedAtR1293);
+          sourcePauseStartedAtR1293=now;
+        }
+        if(lastPcmChunkAtR1276>0){
+          const rawGap=now-lastPcmChunkAtR1276;
+          const intentionalPause=Math.min(rawGap,Math.max(0,sourcePausedMsSinceChunkR1293));
+          const trueGap=Math.max(0,rawGap-intentionalPause);
+          const buffered=reservoirBytesR1293();
+          state.mp3PcmLastGapMsR1276=rawGap;
+          state.mp3PcmLastTrueUnderrunMsR1293=trueGap;
+          state.mp3PcmMaxGapMsR1276=Math.max(Number(state.mp3PcmMaxGapMsR1276||0),rawGap);
+          state.mp3PcmMaxTrueUnderrunMsR1293=Math.max(Number(state.mp3PcmMaxTrueUnderrunMsR1293||0),trueGap);
+          state.mp3AudioReservoirBufferedBytesR1272=buffered;
+          if(trueGap>=120){
+            state.mp3PcmAudibleGapCountR1276=Number(state.mp3PcmAudibleGapCountR1276||0)+1;
+            state.mp3PcmLastAudibleGapR1276={
+              at:new Date().toISOString(),
+              gapMs:trueGap,rawDecoderGapMs:rawGap,backpressurePauseMs:intentionalPause,
+              reservoirBufferedBytes:buffered,reservoirSeconds:MP3_PCM_RESERVOIR_SECONDS_R1293,
+              bytes:Number(chunk?.length||0),track:shortText(item?.title||'',52),
+              producerPid:Number(producer?.pid||0),audioQueued:Number(audioSink?.writableLength||0),
+              audioNeedsDrain:Boolean(audioSink?.writableNeedDrain)
+            };
+            diagRecordR802('r1293-mp3-pcm-true-underrun',state.mp3PcmLastAudibleGapR1276);
+          }
+        }
+        sourcePausedMsSinceChunkR1293=0;
+        lastPcmChunkAtR1276=now;
+      };
+      source.on('data',onPcmGapProbeR1276);
+      source.on('pause',onSourcePauseR1272);
+      source.on('resume',onSourceResumeR1272);
+
       // R769: commit the promised normal NEXT only when THIS track has actually begun
       // producing PCM. On the same first PCM chunk, clear a checkpoint that belongs to
       // this item (recovered after a restart), then checkpoint the newly promised NEXT.
@@ -8510,7 +10193,8 @@ async function playItem(previous,item,next,following,localAudioPath,nextTrackPre
                   : tailExtraR975B
               ),
               previewReload:false,
-              boundaryTitleSwitchAt:boundaryTitleSwitchAtR790
+              boundaryTitleSwitchAt:boundaryTitleSwitchAtR790,
+              visualItem:item
             }).then(()=>{
 
               videoFeederTrackIdentityR744 =
@@ -8553,15 +10237,23 @@ async function playItem(previous,item,next,following,localAudioPath,nextTrackPre
 
       // Decoder/pipe begins immediately.
       // The callback above commits at the first real PCM chunk.
+      // Listener above is already armed; now start the zero-delay reservoir path.
+      source.pipe(audioReservoirR1272);
       connectMasterAudioOwnerR1160H(
-        source,
+        audioReservoirR1272,
         audioSink,
-        'normal-mp3'
+        'normal-mp3-r1272-reservoir'
       );
       producer.once('error',reject);
       producer.once('exit',(code,signal)=>{
-        try{source.unpipe(audioSink);}catch(_){}
-        if(masterAudioOwnerSourceR1160H===source){
+        state.mp3AudioReservoirBufferedBytesR1272=Number(audioReservoirR1272.readableLength||0)+Number(audioReservoirR1272.writableLength||0);
+        try{source.off('data',onPcmGapProbeR1276);}catch(_){}
+        try{source.off('pause',onSourcePauseR1272);}catch(_){}
+        try{source.off('resume',onSourceResumeR1272);}catch(_){}
+        try{source.unpipe(audioReservoirR1272);}catch(_){}
+        try{audioReservoirR1272.unpipe(audioSink);}catch(_){}
+        try{audioReservoirR1272.end();}catch(_){}
+        if(masterAudioOwnerSourceR1160H===audioReservoirR1272){
           masterAudioOwnerSourceR1160H=null;
           masterAudioOwnerSinkR1160H=null;
         }
@@ -8799,12 +10491,20 @@ async function radioLoop(){
 
   prepareCacheDir();
   prefetchAllVisuals();
+  // R1277: finish album image refresh + prepared-bed generation before the LIVE
+  // publisher exists. Once startPublisher() runs, album-bed code is strictly cache-only.
+  await prefetchAlbumBackgroundsR1211();
+  await prewarmExistingAlbumVideosR1274();
   await ensureScheduledVisual();
   if(!startPublisher())return;
   await ensureNormalVideoFeederR721({force:true});
   startMasterAudioGapBridgeR824('startup-before-first-media');
   scheduleTimerR721=setInterval(()=>{scheduleVisualTickR721().catch(error=>{state.lastError=`R721 schedule: ${cleanText(error?.message||error)}`;});},30000);
   scheduleTimerR721.unref?.();
+  albumBackgroundWatcherTimerR1279=setInterval(()=>{
+    pollAlbumBackgroundChangesR1279().catch(error=>{state.lastWarning=`R1279 background watcher tick: ${cleanText(error?.message||error)}`;});
+  },ALBUM_BACKGROUND_WATCH_MS_R1279);
+  albumBackgroundWatcherTimerR1279.unref?.();
   videoSourceWatchdogTimerR749=setInterval(()=>{videoSourceWatchdogTickR749().catch(error=>{state.lastError=`R749 watchdog tick: ${cleanText(error?.message||error)}`;});},VIDEO_SOURCE_WATCHDOG_INTERVAL_MS_R749);
   videoSourceWatchdogTimerR749.unref?.();
   masterBackpressureWatchdogTimerR750=setInterval(masterBackpressureWatchdogTickR750,MASTER_BACKPRESSURE_WATCHDOG_INTERVAL_MS_R750);
@@ -8812,11 +10512,10 @@ async function radioLoop(){
   rtmpsEgressWatchdogTimerR792=setInterval(()=>{rtmpsEgressWatchdogTickR792().catch(error=>{state.lastWarning=`R792 egress watchdog tick: ${cleanText(error?.message||error)}`;});},RTMPS_EGRESS_WATCH_INTERVAL_MS_R792);
   rtmpsEgressWatchdogTimerR792.unref?.();
 
-  // R1129 CPU HEADROOM: under R1125 the persistent publisher owns LOCAL UDP only,
-  // so the old R1124 publisher-:443 probe can never observe an RTMPS socket. Do not
-  // spawn a pointless `ss -tinp` process every 5 seconds. R1125 lane watchdogs below
-  // are the authoritative transport health checks.
-  if(!String(state.transportArchitectureR1125||'').startsWith('R1125-')){
+  // R1278/R1129 CPU HEADROOM: the persistent master owns only the LOCAL encoded
+  // pipe/reservoir, never the RTMPS socket. The relay watchdog is authoritative.
+  const isolatedRelayTransportR1278=/^(R1125-|R1278-)/.test(String(state.transportArchitectureR1125||''));
+  if(!isolatedRelayTransportR1278){
     rtmpsProgressWatchdogTimerR1124=setInterval(()=>{
       rtmpsProgressWatchdogTickR1124().catch(error=>{
         state.lastWarning=`R1124 progress watchdog tick: ${cleanText(error?.message||error)}`;
@@ -8835,6 +10534,15 @@ async function radioLoop(){
     });
   },R1125_RELAY_WATCH_INTERVAL_MS);
   transportRelayWatchdogTimerR1125.unref?.();
+
+  // R1160P: low-frequency orphan cleanup; current owned LIVE children are excluded.
+  orphanFfmpegGcTimerR1160P=setInterval(()=>{
+    orphanFfmpegGcTickR1160P().catch(error=>{
+      state.lastWarning=`R1160P child GC: ${cleanText(error?.message||error)}`;
+    });
+  },ORPHAN_FFMPEG_GC_INTERVAL_MS_R1160P);
+  orphanFfmpegGcTimerR1160P.unref?.();
+  setTimeout(()=>{orphanFfmpegGcTickR1160P().catch(()=>{});},15000).unref?.();
 
   while(!stopping){
     try{
@@ -9429,6 +11137,7 @@ function publicStatus(){
     service:state.service,
     auditRevisionR1160K:'R1160L-MP3-CADENCE-REAL-COUNTERS',
     auditRevisionR1160L:'R1160L-MP3-CADENCE-REAL-COUNTERS',
+    auditRevisionR1160N:'R1160N-STATION-EXACT-25FPS-NO-PHASE-HOLD',
     normalVisualFramesR1160L:Number(state.normalVisualFramesR1160L||0),
     audioMasterVideoDropsR1085:Number(masterR1160K?.dropped||0),
     audioMasterVideoDuplicatesR1085:Number(masterR1160K?.duplicated||0),
@@ -9445,6 +11154,24 @@ function publicStatus(){
       videoPipeQueuedBytes:Number(publisher?.stdio?.[4]?.writableLength||0),
       audioPipeNeedsDrain:Boolean(publisher?.stdio?.[3]?.writableNeedDrain),
       videoPipeNeedsDrain:Boolean(publisher?.stdio?.[4]?.writableNeedDrain),
+      mp3AudioReservoirBufferedBytesR1293:Number(state.mp3AudioReservoirBufferedBytesR1272||0),
+      mp3AudioReservoirHighWaterBytesR1293:Number(state.mp3AudioReservoirHighWaterBytesR1272||MP3_PCM_RESERVOIR_BYTES_R1293),
+      mp3AudioReservoirPauseCountR1293:Number(state.mp3AudioReservoirPauseCountR1272||0),
+      mp3PcmLastTrueUnderrunMsR1293:Number(state.mp3PcmLastTrueUnderrunMsR1293||0),
+      mp3PcmMaxTrueUnderrunMsR1293:Number(state.mp3PcmMaxTrueUnderrunMsR1293||0),
+      encodedTransportBufferedBytesR1278:Number(
+        ((encodedTransportReservoirsR1281.primary?.readableLength||0)+(encodedTransportReservoirsR1281.primary?.writableLength||0))+
+        ((encodedTransportReservoirsR1281.backup?.readableLength||0)+(encodedTransportReservoirsR1281.backup?.writableLength||0))
+      ),
+      encodedTransportHighWaterBytesR1278:R1278_ENCODED_RESERVOIR_BYTES,
+      encodedTransportRelayDrainR1278:Boolean(
+        encodedTransportRelaySinksR1281.primary?.writableNeedDrain||
+        encodedTransportRelaySinksR1281.backup?.writableNeedDrain
+      ),
+      encodedTransportPrimaryBufferedBytesR1281:Number((encodedTransportReservoirsR1281.primary?.readableLength||0)+(encodedTransportReservoirsR1281.primary?.writableLength||0)),
+      encodedTransportBackupBufferedBytesR1281:Number((encodedTransportReservoirsR1281.backup?.readableLength||0)+(encodedTransportReservoirsR1281.backup?.writableLength||0)),
+      encodedTransportPrimaryDrainR1281:Boolean(encodedTransportRelaySinksR1281.primary?.writableNeedDrain),
+      encodedTransportBackupDrainR1281:Boolean(encodedTransportRelaySinksR1281.backup?.writableNeedDrain),
       audioBytesSubmitted:Number(masterR1160K?.audioBytes||0),
       actualVideoFramesSubmitted:Number(masterR1160K?.actualVideoFramesR1160K||0),
       phaseVideoFrames:Number(masterR1160K?.videoFrames||0),
@@ -9458,19 +11185,20 @@ function publicStatus(){
     mode:state.mode,
     overlayMode:state.overlayMode,
     audioMode:state.audioMode,
-    engine:`R820 DETERMINISTIC MASTER PTS + R819 FULLFRAME GEOMETRY + RAWVIDEO QUEUE${VIDEO_INPUT_QUEUE_PACKETS_R732} + ONE X264 + R814 FADE + R792 DUAL RTMPS`,
+    engine:`R820 DETERMINISTIC MASTER PTS + R819 FULLFRAME GEOMETRY + RAWVIDEO QUEUE${VIDEO_INPUT_QUEUE_PACKETS_R732} + ONE X264 + R814 FADE + R1250 SINGLE RTMPS`,
     feederFilterChainGuard:'R769-SEMICOLON-ENDMASK-TO-STARTMASK',
     committedNextCheckpointFile:COMMITTED_NEXT_FILE_R769,
     committedNextTitle:state.committedNextTitle||'',
     committedNextRecovered:Boolean(state.committedNextRecovered),
     committedNextCommittedAt:state.committedNextCommittedAt||null,
-    videoPipeline:`R819 R784 FIT+PAD 1920x1080 -> RAW YUV420P -> QUEUE${VIDEO_INPUT_QUEUE_PACKETS_R732} FRAME RELAY -> ONE H264 ENCODE -> DUAL RTMPS`,
+    videoPipeline:`R1242 STATIC ALBUM ART -> RAW YUV420P -> QUEUE${VIDEO_INPUT_QUEUE_PACKETS_R732} FRAME RELAY -> PROVEN H264 GOP50 CAVLC ENCODE -> SINGLE RTMPS`,
     outputTimeshiftSeconds:OUTPUT_TIMESHIFT_SECONDS,
     youtubeDualIngestEnabled:Boolean(DUAL_INGEST_ENABLED_R792),
-    youtubeBackupIngestArmed:Boolean(DUAL_INGEST_ENABLED_R792 && STREAM_BACKUP_URL),
+    youtubeBackupIngestArmed:Boolean(DUAL_INGEST_ENABLED_R792 && STREAM_BACKUP_URL && !safeRestartBackupHoldActiveR1287()),
+    safeRestartBackupHoldActiveR1287:Boolean(safeRestartBackupHoldActiveR1287()),
     youtubeIngestMode:DUAL_INGEST_ENABLED_R792?'R792-PRIMARY+BACKUP-SAME-PACKETS-INDEPENDENT-FIFO':'SINGLE-RTMPS',
     rtmpsEstablishedConnectionsR792:Number(state.rtmpsEstablishedConnectionsR792||0),
-    rtmpsExpectedConnectionsR792:DUAL_INGEST_ENABLED_R792?2:1,
+    rtmpsExpectedConnectionsR792:expectedRtmpsConnectionsR1287(),
     rtmpsEgressEverObservedR792:Boolean(state.rtmpsEgressEverObservedR792),
     rtmpsEgressZeroGraceMsR792:RTMPS_EGRESS_ZERO_GRACE_MS_R792,
     rtmpsZeroSinceR792:state.rtmpsZeroSinceR792||null,
@@ -9482,6 +11210,7 @@ function publicStatus(){
     audioBitrate:AUDIO_BITRATE,
     audioSampleRate:AUDIO_SAMPLE_RATE,
       radioTitleLabelsR1160:'R1160L-MP3-CADENCE-REAL-COUNTERS+R1160K+R1160J+R1160H',
+      stationCadenceR1160N:'EXACT-25FPS-NO-PCM-PHASE-HOLD',
     videoFps:VIDEO_FPS,
     videoGop:VIDEO_GOP,
     streamProfileR819:{
@@ -9704,7 +11433,7 @@ function publicStatus(){
     equalizerStyle:state.equalizerStyle,
     equalizerEngine:state.equalizerEngine,
     publisherRunning:state.publisherRunning,
-    masterVideoMode:`R819-R784-GEOMETRY-PERSISTENT-RAWVIDEO-QUEUE${VIDEO_INPUT_QUEUE_PACKETS_R732}-SINGLE-X264-DUAL-RTMPS`,
+    masterVideoMode:`R819-R784-GEOMETRY-PERSISTENT-RAWVIDEO-QUEUE${VIDEO_INPUT_QUEUE_PACKETS_R732}-SINGLE-X264-SINGLE-RTMPS`,
     masterBitstreamFilter:'none-R816-rawvideo-input-before-encoding',
     masterAudioBytesWritten:Number(publisher?.stdio?.[3]?.bytesWritten||0),
     masterVideoBytesWritten:Number(publisher?.stdio?.[4]?.bytesWritten||0),
@@ -9738,7 +11467,58 @@ function publicStatus(){
     feederBoundaryMode:'R816-FULL-YUV-FRAMES-NO-FEEDER-CODEC-STATE',
     transportRecoveryMode:'R754-FFMPEG-FIFO-FIRST-NO-EARLY-SYSTEMD-EXIT',
     transportHealthy:state.transportHealthy!==false,
-    transportWatchdogMode:'R816-RAWVIDEO-MASTER+R824-AUDIO-GAP-BRIDGE+R751-REAL-NO-PROGRESS-30S',
+    transportWatchdogMode:'R1293-R1124-ACK+R792-LANES+R751-MASTER-NO-PROGRESS',
+    watchdogR1293:{
+      mode:'R1125-LANE-ACK-WATCHDOG',
+      r1125:{
+        intervalMs:R1125_RELAY_WATCH_INTERVAL_MS,
+        ackStallMs:R1125_RELAY_ACK_STALL_MS,
+        noSocketMs:R1125_RELAY_NO_SOCKET_MS,
+        primary:{
+          pid:Number(transportRelayHealthR1125.primary?.pid||0),
+          socket:Boolean(state.rtmpsPrimarySocketR1125),
+          ackedBytes:Number(state.rtmpsPrimaryAckedR1125||transportRelayHealthR1125.primary?.lastAck||0),
+          lastProgressAt:state.rtmpsPrimaryLastProgressR1125||null,
+          noSocketSince:Number(transportRelayHealthR1125.primary?.noSocketSince||0)||null,
+          recycles:Number(transportRelayHealthR1125.primary?.recycles||0)
+        },
+        backup:{
+          pid:Number(transportRelayHealthR1125.backup?.pid||0),
+          socket:Boolean(state.rtmpsBackupSocketR1125),
+          ackedBytes:Number(state.rtmpsBackupAckedR1125||transportRelayHealthR1125.backup?.lastAck||0),
+          lastProgressAt:state.rtmpsBackupLastProgressR1125||null,
+          noSocketSince:Number(transportRelayHealthR1125.backup?.noSocketSince||0)||null,
+          recycles:Number(transportRelayHealthR1125.backup?.recycles||0)
+        }
+      },
+      r1124Legacy:{
+        active:!/^R(?:1125|1278|1281)-/.test(String(state.transportArchitectureR1125||'')),
+        probeAvailable:Boolean(state.rtmpsProgressProbeAvailableR1124),
+        stallMs:Number(state.rtmpsProgressStallMsR1124||0),
+        stallThresholdMs:RTMPS_PROGRESS_STALL_MS_R1124
+      },
+      r792:{
+        lanes:Number(state.rtmpsEstablishedConnectionsR792||0),
+        expected:expectedRtmpsConnectionsR1287(),
+        zeroSince:state.rtmpsZeroSinceR792||null,
+        zeroGraceMs:RTMPS_EGRESS_ZERO_GRACE_MS_R792,
+        transientCount:Number(state.transportTransientCountR792||0),
+        lastTransientAt:state.lastTransportTransientAtR792||null,
+        lastTransientReason:state.lastTransportTransientReasonR792||''
+      },
+      r751:{
+        noProgressMs:MASTER_BACKPRESSURE_STUCK_MS_R750,
+        backpressureSince:state.publisherBackpressureSince||null,
+        recoveries:Number(state.publisherBackpressureRecoveries||0),
+        lastRecoveryAt:state.lastPublisherBackpressureAt||null
+      },
+      selfHeal:{
+        pending:Boolean(state.transportSelfHealPending),
+        count:Number(state.transportSelfHealCount||0),
+        lastFatalAt:state.lastTransportFatalAt||null,
+        lastFatalReason:state.lastTransportFatalReason||''
+      }
+    },
     outputFifoQueuePackets:OUTPUT_FIFO_QUEUE_PACKETS_R750,
     outputDropPacketsOnOverflow:true,
     masterBackpressureWatchdogMs:MASTER_BACKPRESSURE_STUCK_MS_R750,
@@ -9913,18 +11693,32 @@ const server=http.createServer((req,res)=>{
 });
 
 server.listen(PORT,'0.0.0.0',()=>{
-  console.log(`ANDRIK Radio R787 PERMANENT NOCROP + MONOTONIC TS + R784 STATION AUDIO listening on :${PORT}`);
+  console.log(`ANDRIK Radio R1278 RELIABLE ENCODED PIPE + AUDIO/CHROMA FIX listening on :${PORT}`);
   radioLoop();
+  // R1230: pre-build the five clean album ticker videos one-by-one at the lowest priority.
+  // R1232: baked 92s album ticker prewarm disabled; final-stage ticker renders once before publisher encode.
+  // setTimeout(()=>prewarmAlbumTickerVideosR1224(),30000).unref?.();
 });
 
 let shutdownStarted=false;
 function waitChildExit(child,timeoutMs){
   return new Promise(resolve=>{
-    if(!child || child.exitCode!==null)return resolve(true);
+    // A signal-terminated child has exitCode=null and signalCode set.
+    const exited=()=>!child||child.exitCode!=null||child.signalCode!=null;
+    if(exited())return resolve(true);
     let done=false;
-    const finish=value=>{if(done)return;done=true;clearTimeout(timer);resolve(value);};
-    const timer=setTimeout(()=>finish(false),timeoutMs);
-    child.once('exit',()=>finish(true));
+    let timer=null;
+    const onExit=()=>finish(true);
+    const finish=value=>{
+      if(done)return;
+      done=true;
+      if(timer!==null)clearTimeout(timer);
+      child.off('exit',onExit);
+      resolve(value);
+    };
+    child.once('exit',onExit);
+    timer=setTimeout(()=>finish(false),timeoutMs);
+    if(exited())finish(true);
   });
 }
 
@@ -9934,11 +11728,16 @@ async function shutdown(){
   stopping=true;stopMasterAudioGapBridgeR824('shutdown');if(transportFatalTimerR746){clearTimeout(transportFatalTimerR746);transportFatalTimerR746=null;}if(outputFatalTimerR780){clearTimeout(outputFatalTimerR780);outputFatalTimerR780=null;}
   if(liveTitleTimerR724){clearTimeout(liveTitleTimerR724);liveTitleTimerR724=null;}
   if(scheduleTimerR721)clearInterval(scheduleTimerR721);
+  if(albumBackgroundWatcherTimerR1279)clearInterval(albumBackgroundWatcherTimerR1279);
   if(videoSourceWatchdogTimerR749){clearInterval(videoSourceWatchdogTimerR749);videoSourceWatchdogTimerR749=null;}
   if(masterBackpressureWatchdogTimerR750){clearInterval(masterBackpressureWatchdogTimerR750);masterBackpressureWatchdogTimerR750=null;}
   if(rtmpsEgressWatchdogTimerR792){clearInterval(rtmpsEgressWatchdogTimerR792);rtmpsEgressWatchdogTimerR792=null;}
   if(rtmpsProgressWatchdogTimerR1124){clearInterval(rtmpsProgressWatchdogTimerR1124);rtmpsProgressWatchdogTimerR1124=null;}
   if(transportRelayWatchdogTimerR1125){clearInterval(transportRelayWatchdogTimerR1125);transportRelayWatchdogTimerR1125=null;}
+  if(orphanFfmpegGcTimerR1160P){clearInterval(orphanFfmpegGcTimerR1160P);orphanFfmpegGcTimerR1160P=null;}
+  await clearNextMp3AudioPrearmR1156('shutdown-r1160p').catch(()=>{});
+  await clearInsertPrearmR1069('shutdown-r1160p').catch(()=>{});
+  await clearStationBlackPrearmR1145('shutdown-r1160p').catch(()=>{});
   try{server.close();}catch(_){ }
 
   const activeClip=clipPublisher;

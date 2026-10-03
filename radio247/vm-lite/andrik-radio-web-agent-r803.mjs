@@ -6,7 +6,7 @@ import {Readable} from 'node:stream';
 import {pipeline} from 'node:stream/promises';
 
 const CONFIG='/etc/andrik-radio-web-r627.json';
-const AGENT_VERSION_R803='R1184';
+const AGENT_VERSION_R803='R1185-WATCHDOG-R1293';
 const DIAG_DIR_R803='/var/cache/andrik-radio-r622/diagnostics';
 const DIAG_AGENT_LOG_R803=DIAG_DIR_R803+'/r803-agent-events.ndjson';
 const DIAG_AGENT_MAX_BYTES_R803=1024*1024;
@@ -313,6 +313,16 @@ async function localStatus(){
         transport:{container:'FLV',protocol:'RTMPS',lanes:Number(d.rtmpsEstablishedConnectionsR792||0),expectedLanes:Number(d.rtmpsExpectedConnectionsR792||2),dualIngest:Boolean(d.youtubeDualIngestEnabled)}
       },
       runtimeMetricsR1160K:d.runtimeMetricsR1160K||null,
+      watchdogR1293:d.watchdogR1293||null,
+      transportWatchdogMode:d.transportWatchdogMode||null,
+      transportSelfHealPending:Boolean(d.transportSelfHealPending),
+      transportSelfHealCount:Number(d.transportSelfHealCount||0),
+      lastTransportFatalAt:d.lastTransportFatalAt||null,
+      lastTransportFatalReason:clean(d.lastTransportFatalReason||''),
+      publisherBackpressureSince:d.publisherBackpressureSince||null,
+      publisherBackpressureRecoveries:Number(d.publisherBackpressureRecoveries||0),
+      lastPublisherBackpressureAt:d.lastPublisherBackpressureAt||null,
+      safeRestartBackupHoldActiveR1287:Boolean(d.safeRestartBackupHoldActiveR1287),
       auditRevisionR1160L:d.auditRevisionR1160L||d.auditRevisionR1160K||null,
       audioMasterMode:d.audioMasterMode||null,
       audioMasterVideoDropsR1085:d.audioMasterVideoDropsR1085??null,
