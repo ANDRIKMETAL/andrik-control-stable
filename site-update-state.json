@@ -1,13 +1,14 @@
 {
   "schema": 1,
   "updaterVersion": "55.00-r357-deploy-retrigger",
-  "operation": "retrigger",
+  "operation": "reinstall",
   "reinstall": true,
-  "operationId": "retrigger-1791069940077-0d8859cf9d",
+  "operationId": "reinstall-1791069953815-5a10628536",
   "release": "R1233",
-  "sourceHead": "a9360298bbbb09389bc5434fbc5ca228c850bd16",
-  "previousOperationId": "retrigger-1791069842969-e526ef1504",
-  "reason": "resume-timeout",
+  "archiveName": "R1233-D1-ROWS-READ-SHIELD.zip",
+  "sourceHead": "1dcd7d29627ea175f348289dfd865b7ec1a99d53",
+  "backupSha": "1dcd7d29627ea175f348289dfd865b7ec1a99d53",
+  "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-10-03T23:25:40.077Z"
+  "generatedAt": "2026-10-03T23:25:53.815Z"
 }
