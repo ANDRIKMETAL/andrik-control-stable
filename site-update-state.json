@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r357-deploy-retrigger",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1791039841941-c70027ea38",
-  "release": "R1220",
-  "archiveName": "R1220-INSTALLER-LIVE-503-FIX.zip",
-  "sourceHead": "de40d706a10ba60c657f63c7b43b16616c938e76",
-  "backupSha": "de40d706a10ba60c657f63c7b43b16616c938e76",
+  "operationId": "publish-1791043444605-cf42c5531f",
+  "release": "R1221",
+  "archiveName": "R1221-ONE-BUTTON-LIVE.zip",
+  "sourceHead": "41bec53f8f7a641274e8529870d5db4c5c39600d",
+  "backupSha": "41bec53f8f7a641274e8529870d5db4c5c39600d",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-10-03T15:04:01.941Z"
+  "generatedAt": "2026-10-03T16:04:04.605Z"
 }

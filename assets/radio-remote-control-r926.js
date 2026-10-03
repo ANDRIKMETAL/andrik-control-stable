@@ -1,3 +1,4 @@
+// R1221 ONE BUTTON LIVE: single LIVE launch runs VPS restart action, waits 10 s, then verifies RADIO + RTMPS.
 // R926 AIR CONTROL · PROVEN SCREEN RESTORE RETURNED
 (()=>{
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -379,16 +380,27 @@
   }
 
 
-  async function softRestart(){
+  async function liveRestartR1221(){
     if(busy)return;busy=true;render(lastRemote||{});
     try{
-      if(!confirm('Мягко перезапустить radio service? YouTube RTMPS переподключится автоматически.'))return;
-      setMsg('Мягкий рестарт радио…','work');
-      const d=await agentAction('soft-restart');
-      setResult(String(d?.result?.output||'SOFT RESTART ✅'));
-      setMsg('Мягкий рестарт завершён ✅','ok');
-    }catch(e){setMsg(`Мягкий рестарт: ${e.message||e}`,'bad');setResult(`SOFT RESTART ERROR\n${e.message||e}`)}
-    finally{busy=false;await refresh()}
+      // Exact control flow requested for LIVE launch:
+      // systemctl restart andrik-radio.service -> sleep 10 -> verify RADIO + YouTube RTMPS.
+      setMsg('🚀 ЗАПУСК LIVE · sudo systemctl restart andrik-radio.service…','work');
+      const d=await agentAction('restart');
+      setMsg('Сервис перезапущен · жду 10 секунд перед проверкой…','work');
+      await sleep(10000);
+      const remote=await refresh().catch(()=>null);
+      const s=remote?.agent?.status||{};
+      const service=String(s.service||'—');
+      const rtmpsNow=Number(s.rtmpsEstablishedConnectionsR792 ?? s.rtmpsEstablishedConnections ?? 0);
+      const rtmpsExpected=Number(s.rtmpsExpectedConnectionsR792 ?? s.rtmpsExpectedConnections ?? 2);
+      const healthy=s.transportHealthy===true?'True':s.transportHealthy===false?'False':'—';
+      setResult(`=== RADIO ===\n${service}\n\n=== YOUTUBE ===\nRTMPS: ${rtmpsNow} / ${rtmpsExpected}\ntransportHealthy: ${healthy}\n\n${String(d?.result?.output||'systemctl restart andrik-radio.service завершён')}`);
+      setMsg(`LIVE запущен ✅ · RADIO ${service} · RTMPS ${rtmpsNow}/${rtmpsExpected}`,'ok');
+    }catch(e){
+      setMsg(`ЗАПУСК LIVE: ${e.message||e}`,'bad');
+      setResult(`ЗАПУСК LIVE ERROR\n${e.message||e}`);
+    }finally{busy=false;await refresh()}
   }
 
   async function cacheClean(){
@@ -483,7 +495,7 @@
   document.addEventListener('click',e=>{
     const oauth=e.target.closest('[data-radio-youtube-oauth-connect]');if(oauth){e.preventDefault();reconnectYoutube();return}
     const b=e.target.closest('[data-radio-action]');
-    if(b){e.preventDefault();const a=b.dataset.radioAction;if(a==='encoder-start')encoderStartOnlyR1214();else if(a==='youtube-start-bound')youtubeStartOnlyR1214();else if(a==='gold-restore')airRestore();else if(a==='screen-restore')screenRestore();else if(a==='cache-clean')cacheClean();else if(a==='soft-restart')softRestart();else if(a==='stop')stopSequence();else if(a==='status')statusSequence();else if(a==='auto-safe')autoSequence();else if(a==='loudness-new-r1098')loudnessNewR1098();return}
+    if(b){e.preventDefault();const a=b.dataset.radioAction;if(a==='restart')liveRestartR1221();else if(a==='encoder-start')encoderStartOnlyR1214();else if(a==='youtube-start-bound')youtubeStartOnlyR1214();else if(a==='gold-restore')airRestore();else if(a==='screen-restore')screenRestore();else if(a==='cache-clean')cacheClean();else if(a==='soft-restart')liveRestartR1221();else if(a==='stop')stopSequence();else if(a==='status')statusSequence();else if(a==='auto-safe')autoSequence();else if(a==='loudness-new-r1098')loudnessNewR1098();return}
     const t=e.target.closest('[data-radio-ticker-apply]');if(t){e.preventDefault();const input=document.querySelector('[data-radio-ticker-input]');if(input)saveTicker(input.value)}
   });
   document.addEventListener('input',e=>{
@@ -492,7 +504,7 @@
     clearTimeout(tickerTimer);tickerTimer=setTimeout(()=>saveTicker(input.value),850);
   });
 
-  window.AndrikRadioRemoteR926={refresh,start:()=>encoderStartOnlyR1214(),encoderStart:encoderStartOnlyR1214,youtubeStart:youtubeStartOnlyR1214,airRestore,goldRestore:airRestore,screenRestore,cacheClean,softRestart,stop:stopSequence,status:statusSequence,loudnessNewR1098,saveTicker};window.AndrikRadioRemoteR925=window.AndrikRadioRemoteR926;window.AndrikRadioRemoteR870=window.AndrikRadioRemoteR926;window.AndrikRadioRemoteR867=window.AndrikRadioRemoteR926;window.AndrikRadioRemoteR687=window.AndrikRadioRemoteR926;window.AndrikRadioRemoteR665=window.AndrikRadioRemoteR926;
+  window.AndrikRadioRemoteR926={refresh,start:()=>liveRestartR1221(),encoderStart:encoderStartOnlyR1214,youtubeStart:youtubeStartOnlyR1214,airRestore,goldRestore:airRestore,screenRestore,cacheClean,liveRestart:liveRestartR1221,stop:stopSequence,status:statusSequence,loudnessNewR1098,saveTicker};window.AndrikRadioRemoteR925=window.AndrikRadioRemoteR926;window.AndrikRadioRemoteR870=window.AndrikRadioRemoteR926;window.AndrikRadioRemoteR867=window.AndrikRadioRemoteR926;window.AndrikRadioRemoteR687=window.AndrikRadioRemoteR926;window.AndrikRadioRemoteR665=window.AndrikRadioRemoteR926;
   const arm=()=>{if(timer)clearInterval(timer);timer=null;if(document.hidden)return;timer=setInterval(refresh,15000)};
   const armInventoryR1219=()=>{if(inventoryCatalogTimer)clearInterval(inventoryCatalogTimer);inventoryCatalogTimer=null;if(document.hidden)return;inventoryCatalogTimer=setInterval(()=>refreshInventoryCatalogR1219(true).then(()=>lastRemote&&render(lastRemote)),300000)};
   const boot=()=>{if(!document.hidden){refreshInventoryCatalogR1219(true).finally(refresh)}arm();armInventoryR1219()};

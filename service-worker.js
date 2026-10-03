@@ -1,6 +1,6 @@
 'use strict';
 
-const VERSION = '55.00-r1219-data-journal-install-safe';
+const VERSION = '55.00-r1221-one-button-live';
 const IS_CONTROL_HOST = self.location.hostname.toLowerCase() === 'control.andrikmetal.com';
 
 async function deleteControlCaches(){
