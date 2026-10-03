@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r357-deploy-retrigger",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1791060592872-0b2d5265d8",
-  "release": "R1225",
-  "archiveName": "R1225-RU-WATCHDOG-CACHE-FIX.zip",
-  "sourceHead": "3514837e351f623799bf0f6b7e6d99727a4f463c",
-  "backupSha": "3514837e351f623799bf0f6b7e6d99727a4f463c",
+  "operationId": "publish-1791061035978-edac16f40d",
+  "release": "R1226",
+  "archiveName": "R1226-WATCHDOG-SPOILER.zip",
+  "sourceHead": "ad2902cadaedebe350ea8f7a3bae98a0933295b2",
+  "backupSha": "ad2902cadaedebe350ea8f7a3bae98a0933295b2",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-10-03T20:49:52.872Z"
+  "generatedAt": "2026-10-03T20:57:15.978Z"
 }
