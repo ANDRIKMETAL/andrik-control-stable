@@ -3,11 +3,11 @@
   "updaterVersion": "55.00-r357-deploy-retrigger",
   "operation": "retrigger",
   "reinstall": true,
-  "operationId": "retrigger-1791069842969-e526ef1504",
+  "operationId": "retrigger-1791069940077-0d8859cf9d",
   "release": "R1233",
-  "sourceHead": "85a5fbf728d7bbbb57859b5017c166d665a53292",
-  "previousOperationId": "publish-1791069773870-d2a279d685",
-  "reason": "manual-check",
+  "sourceHead": "a9360298bbbb09389bc5434fbc5ca228c850bd16",
+  "previousOperationId": "retrigger-1791069842969-e526ef1504",
+  "reason": "resume-timeout",
   "autoRecovery": true,
-  "generatedAt": "2026-10-03T23:24:02.969Z"
+  "generatedAt": "2026-10-03T23:25:40.077Z"
 }
