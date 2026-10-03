@@ -117,10 +117,11 @@ function observeStatusR803(status){
     }
   }
   previousObservedR803={publisherPid:status.runtimeMetricsR1160K?.publisherPid||0,service:status?.service||'',publisher:Boolean(status?.publisher),producer:Boolean(status?.producer),videoFeederRunning:Boolean(status?.videoFeederRunning),lastError:err,lastFfmpegLine:ff};
-  const merged=mergeDiagnosticsR803(status?.diagnosticsR802);
-  status.diagnosticsR813=merged;status.diagnosticsR814=merged;
+  const merged=mergeDiagnosticsR803(status?.diagnosticsR802||status?.diagnosticsR803);
+  // R1219: one canonical diagnostics ring. R802/R813/R814 were aliases of this exact
+  // object and made Control ingest the same journal four times.
+  delete status.diagnosticsR802;delete status.diagnosticsR813;delete status.diagnosticsR814;
   status.diagnosticsR803=merged;
-  status.diagnosticsR802=merged; // backward-compatible public R802 endpoint until site deploy catches up
   return status;
 }
 loadAgentDiagR803();
@@ -302,7 +303,7 @@ function sampleHistoryR1183(status){
 async function localStatus(){
   try{
     const r=await fetch('http://127.0.0.1:8080/status',{signal:AbortSignal.timeout(2500)});const d=await r.json();const c=d.current||{},n=d.next||{};
-    const status={service:run('systemctl',['is-active','andrik-radio.service'],8000).output.trim(),producer:Boolean(d.producerRunning),publisher:Boolean(d.publisherRunning),videoFeederRunning:Boolean(d.videoFeederRunning),clipActive:Boolean(d.clipActive),current:c.title||'',next:n.title||'',upcomingR943:Array.isArray(d.upcomingR943)?d.upcomingR943.slice(0,6):(Array.isArray(d.upcomingR942)?d.upcomingR942.slice(0,6):[]),upcomingR942:Array.isArray(d.upcomingR943)?d.upcomingR943.slice(0,6):(Array.isArray(d.upcomingR942)?d.upcomingR942.slice(0,6):[]),audio:d.audioMode||'',version:d.version||'',visualPeriod:d.visualPeriod||'',visualPath:d.visualPath||'',forceVisualSlot:d.forceVisualSlot||'',visualAutoSchedule:Boolean(d.visualAutoSchedule),visualProtected:visualsProtected(),lastError:clean(d.lastError||''),lastFfmpegLine:clean(d.lastFfmpegLine||''),lastExit:d.lastExit||null,diagnosticsR802:d.diagnosticsR802||null,diagnosticsR813:d.diagnosticsR802||null,diagnosticsR814:d.diagnosticsR802||null,
+    const status={service:run('systemctl',['is-active','andrik-radio.service'],8000).output.trim(),producer:Boolean(d.producerRunning),publisher:Boolean(d.publisherRunning),videoFeederRunning:Boolean(d.videoFeederRunning),clipActive:Boolean(d.clipActive),current:c.title||'',next:n.title||'',upcomingR943:Array.isArray(d.upcomingR943)?d.upcomingR943.slice(0,6):(Array.isArray(d.upcomingR942)?d.upcomingR942.slice(0,6):[]),upcomingR942:Array.isArray(d.upcomingR943)?d.upcomingR943.slice(0,6):(Array.isArray(d.upcomingR942)?d.upcomingR942.slice(0,6):[]),audio:d.audioMode||'',version:d.version||'',visualPeriod:d.visualPeriod||'',visualPath:d.visualPath||'',forceVisualSlot:d.forceVisualSlot||'',visualAutoSchedule:Boolean(d.visualAutoSchedule),visualProtected:visualsProtected(),lastError:clean(d.lastError||''),lastFfmpegLine:clean(d.lastFfmpegLine||''),lastExit:d.lastExit||null,diagnosticsR803:d.diagnosticsR803||d.diagnosticsR802||null,
       rtmpsEstablishedConnectionsR792:Number(d.rtmpsEstablishedConnectionsR792||0),
       rtmpsExpectedConnectionsR792:Number(d.rtmpsExpectedConnectionsR792||0),
       transportHealthy:d.transportHealthy!==false,
@@ -325,7 +326,7 @@ async function localStatus(){
     sampleHistoryR1183(status);status.metricsHistoryR1183=historyR1183.slice(-4);
     return observeStatusR803(status);
   }catch(error){
-    const status={service:run('systemctl',['is-active','andrik-radio.service'],8000).output.trim(),producer:false,publisher:false,videoFeederRunning:false,clipActive:false,current:'',next:'',libraryTracks:0,libraryAlbumTracks:0,librarySingleTracks:0,duplicateSinglesSkipped:0,libraryVideos:0,libraryBumpers:0,librarySpecial:0,librarySpecial30:0,librarySpecial60:0,lastLibraryRefresh:'',inventoryTelemetry:'R805-LIVE-LIBRARY-COUNTERS',ticker:currentTicker(),audioDelayMsR949:audioSyncStateR949().targetMs,audioDelayUpdatedAtR949:audioSyncStateR949().updatedAt,audioDelayFilesR949:audioSyncStateR949().files,diskRootR1015:diskRootR1015(),recoveryR1015:recoveryStateR1015(),loudnessR1137:loudnessStatusR1137(),busy:busy?{id:busy.id,action:busy.action,since:busy.since}:null,error:'local-status-unavailable',lastError:clean(error?.message||error),lastFfmpegLine:'',diagnosticsR802:null,diagnosticsR813:null,diagnosticsR814:null,rtmpsEstablishedConnectionsR792:0,rtmpsExpectedConnectionsR792:2,transportHealthy:false,
+    const status={service:run('systemctl',['is-active','andrik-radio.service'],8000).output.trim(),producer:false,publisher:false,videoFeederRunning:false,clipActive:false,current:'',next:'',libraryTracks:0,libraryAlbumTracks:0,librarySingleTracks:0,duplicateSinglesSkipped:0,libraryVideos:0,libraryBumpers:0,librarySpecial:0,librarySpecial30:0,librarySpecial60:0,lastLibraryRefresh:'',inventoryTelemetry:'R805-LIVE-LIBRARY-COUNTERS',ticker:currentTicker(),audioDelayMsR949:audioSyncStateR949().targetMs,audioDelayUpdatedAtR949:audioSyncStateR949().updatedAt,audioDelayFilesR949:audioSyncStateR949().files,diskRootR1015:diskRootR1015(),recoveryR1015:recoveryStateR1015(),loudnessR1137:loudnessStatusR1137(),busy:busy?{id:busy.id,action:busy.action,since:busy.since}:null,error:'local-status-unavailable',lastError:clean(error?.message||error),lastFfmpegLine:'',diagnosticsR803:null,rtmpsEstablishedConnectionsR792:0,rtmpsExpectedConnectionsR792:2,transportHealthy:false,
       streamProfileR814:null,streamProfileR813:{video:{codec:'H.264 / AVC',encoder:'libx264',profile:'High 4.1',width:1920,height:1080,fps:25,bitrate:'6000k',gopFrames:50,bFrames:0,pixelFormat:'yuv420p'},audio:{codec:'AAC-LC',sampleRate:44100,channels:2,channelLayout:'stereo',bitrate:'160k'},transport:{container:'FLV',protocol:'RTMPS',lanes:0,expectedLanes:2,dualIngest:true}},
       videoHandoffMode:'',lastR813Handoff:null,r813CleanHandoffCount:0};
     return observeStatusR803(status);

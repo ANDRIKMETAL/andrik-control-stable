@@ -1,3 +1,5 @@
+// R1220 HOTFIX: site updater CPU/503 + Git Tree protection; R1219 radio/data/journal fixes preserved.
+// R1219: dual-safe start + exact telemetry/viewers + single journal source + installer hardening.
 // R1212: PUSH DELIVERY FIX — OneSignal owner pushes now commit on accepted explicit subscription targeting instead of unreliable immediate Web Push delivery reports; youtube-fast-engagement no longer retries already-accepted like/subscriber pushes; repeated push/fast-engagement warnings/errors are updated in-place instead of accumulating ×N. UI untouched.
 // ANDRIK CONTROL R1138 SAFE OPS · radio actions preserved
 // R768: OWNER PUSH SELF-HEAL + CONTROL-ORIGIN REBIND; radio R767 untouched.
@@ -1787,6 +1789,13 @@ const D1_SITE_REPORT_CACHE_MS_R638 = 6 * 60 * 60 * 1000;
 const D1_CITY_DAY_CACHE_MS_R638 = 10 * 60 * 1000;
 const D1_CITY_30D_CACHE_MS_R638 = 6 * 60 * 60 * 1000;
 const D1_ECOSYSTEM_AGG_CACHE_MS_R638 = 6 * 60 * 60 * 1000;
+// R1212 D1 LIMIT GUARD — keep the Free-plan rows_read budget for real traffic.
+// Dashboard polling now reads one tiny push_state cache row instead of rescanning
+// site_visit_events on every refresh. Raw scans are still performed periodically.
+const D1_LIVE_METRICS_CACHE_MS_R1212 = 5 * 60 * 1000;
+const D1_WINDOW_METRICS_CACHE_MS_R1212 = 10 * 60 * 1000;
+const D1_COMPLETED_WINDOW_CACHE_MS_R1212 = 6 * 60 * 60 * 1000;
+const D1_ECOSYSTEM_FORCE_MIN_MS_R1212 = 15 * 60 * 1000;
 
 function d1UtcTimestampMsR638(value='') {
   const raw=String(value||'').trim();
@@ -1807,19 +1816,30 @@ async function writeD1JsonCacheR638(db,key,value){
 }
 
 async function maybeTrimSiteVisitEventsR638(db){
+  // R1212: 30-day dashboards only need a small safety margin beyond 30 days.
+  // The persistent country/city rollup keeps long-term geography separately.
+  // Keep the existing maintenance timestamp so deploying at 90% rows_read does NOT
+  // trigger a large cleanup scan immediately; the shorter retention applies on the next normal daily trim.
   const key='d1-maintenance:site-visit-retention-r638';
   const state=await getPushState(db,key).catch(()=>null);
   const last=d1UtcTimestampMsR638(state?.updatedAt||'');
   if(Number.isFinite(last)&&Date.now()-last<23*60*60*1000)return {ok:true,skipped:true};
   // Claim first so a slow cleanup is not duplicated by concurrent page views.
   await setPushState(db,key,new Date().toISOString()).catch(()=>{});
-  const result=await db.prepare(`DELETE FROM site_visit_events WHERE local_date < date('now','-62 days')`).run().catch(()=>null);
-  return {ok:true,changes:Number(result?.meta?.changes||0)};
+  const result=await db.prepare(`DELETE FROM site_visit_events WHERE local_date < date('now','-35 days')`).run().catch(()=>null);
+  return {ok:true,changes:Number(result?.meta?.changes||0),retentionDays:35};
 }
 
-async function getSiteLiveMetrics(db) {
+async function getSiteLiveMetrics(db, options={}) {
   await ensureSiteMetricsSchema(db);
   const localDate = getBratislavaClock().date;
+  const cacheKey='d1-cache:site-live-r1212';
+  if(!options?.force){
+    const cached=await readD1JsonCacheR638(db,cacheKey,D1_LIVE_METRICS_CACHE_MS_R1212);
+    if(cached?.value?.configured&&cached.value.localDate===localDate){
+      return {...cached.value,d1Cache:{hit:true,updatedAt:cached.updatedAt,ttlMinutes:5}};
+    }
+  }
   const [today, realtime] = await Promise.all([
     db.prepare(`
       SELECT COUNT(*) AS views, COUNT(DISTINCT visitor_hash) AS users
@@ -1830,13 +1850,15 @@ async function getSiteLiveMetrics(db) {
       FROM site_visit_events WHERE datetime(created_at) >= datetime('now','-30 minutes') AND event_type = 'visit'
     `).first()
   ]);
-  return {
+  const result={
     configured:true,
     localDate,
     today:{ views:Number(today?.views || 0), users:Number(today?.users || 0) },
     realtime:{ views:Number(realtime?.views || 0), users:Number(realtime?.users || 0) },
     updatedAt:new Date().toISOString()
   };
+  await writeD1JsonCacheR638(db,cacheKey,result);
+  return {...result,d1Cache:{hit:false,updatedAt:result.updatedAt,ttlMinutes:5}};
 }
 
 
@@ -2008,10 +2030,21 @@ async function refreshYoutubeIdentityIfStaleR530(env,db,maxAgeMs=10*60*1000) {
   return {refreshed:true,updatedAt:now,views:Number(identity.views||0),subscribers:Number(identity.subscribers||0)};
 }
 
-async function getSiteWindowMetrics(db, startAt, endAt = '') {
+async function getSiteWindowMetrics(db, startAt, endAt = '', options={}) {
   await ensureSiteMetricsSchema(db);
   const safeStart = cleanPlainText(startAt || '', 80);
   const safeEnd = cleanPlainText(endAt || '', 80);
+  const token=(`${safeStart}|${safeEnd||'open'}`).replace(/[^0-9A-Za-z]+/g,'-').replace(/^-+|-+$/g,'').slice(0,120);
+  const cacheKey=`d1-cache:site-window-r1212:${token||'default'}`;
+  const endMs=Date.parse(safeEnd||'');
+  const completed=Boolean(safeEnd)&&Number.isFinite(endMs)&&endMs<=Date.now();
+  const ttl=completed?D1_COMPLETED_WINDOW_CACHE_MS_R1212:D1_WINDOW_METRICS_CACHE_MS_R1212;
+  if(!options?.force){
+    const cached=await readD1JsonCacheR638(db,cacheKey,ttl);
+    if(cached?.value?.startAt===safeStart&&cached.value.endAt===safeEnd){
+      return {...cached.value,d1Cache:{hit:true,updatedAt:cached.updatedAt,ttlMinutes:Math.round(ttl/60000)}};
+    }
+  }
   const row = safeEnd
     ? await db.prepare(`
         SELECT COUNT(*) AS views, COUNT(DISTINCT visitor_hash) AS users
@@ -2026,13 +2059,15 @@ async function getSiteWindowMetrics(db, startAt, endAt = '') {
         WHERE event_type = 'visit'
           AND datetime(created_at) >= datetime(?1)
       `).bind(safeStart).first();
-  return {
+  const result={
     views:Number(row?.views || 0),
     users:Number(row?.users || 0),
     startAt:safeStart,
     endAt:safeEnd,
     updatedAt:new Date().toISOString()
   };
+  await writeD1JsonCacheR638(db,cacheKey,result);
+  return {...result,d1Cache:{hit:false,updatedAt:result.updatedAt,ttlMinutes:Math.round(ttl/60000)}};
 }
 
 function mergeGoogleWithSiteLive(google = {}, live = {}) {
@@ -3411,9 +3446,11 @@ async function latestPlatformMetricsR498(db, platform) {
 }
 async function getEcosystemSiteAggregatesR638(db,{force=false}={}){
   const cacheKey='d1-cache:ecosystem-site-aggregates-r932';
-  if(!force){
-    const cached=await readD1JsonCacheR638(db,cacheKey,D1_ECOSYSTEM_AGG_CACHE_MS_R638);
-    if(cached?.value?.version==='r932')return {...cached.value,d1Cache:{hit:true,updatedAt:cached.updatedAt}};
+  // R1212: the technical-layer button previously bypassed the 6h cache every tap,
+  // causing ten 30-day GROUP BY scans. A force refresh is now rate-limited to 15 min.
+  const cached=await readD1JsonCacheR638(db,cacheKey,D1_ECOSYSTEM_AGG_CACHE_MS_R638);
+  if(cached?.value?.version==='r932'&&(!force||cached.ageMs<D1_ECOSYSTEM_FORCE_MIN_MS_R1212)){
+    return {...cached.value,d1Cache:{hit:true,updatedAt:cached.updatedAt,forceDeferred:Boolean(force),ageMs:cached.ageMs}};
   }
   const age='-30 days';
   const safe=task=>Promise.resolve().then(task).catch(()=>({results:[]}));
@@ -15181,7 +15218,7 @@ async function handleControlHome(request, env) {
       ORDER BY datetime(created_at) DESC
       LIMIT 1
     `).first(),
-    collectDailyCityActivityR370(db, window, new Date().toISOString()),
+    collectDailyCityActivityR370(db, window),
     collectCalendarDayCityActivityR530(db).catch(()=>[])
   ]);
   const ytBaseline = ytBaselineBefore || ytBaselineAfter;
@@ -15372,7 +15409,10 @@ async function handleControlGoogleAnalytics(request, env) {
     }catch(error){refreshError=cleanPlainText(error?.message||error,300);}
   }
 
-  const [liveResult,firstPartyResult]=await Promise.allSettled([getSiteLiveMetrics(db),getSiteFirstParty30dR530(db,{force:forceRefresh})]);
+  // R1212: a normal/manual GA4 refresh must not also rescan 30 days of raw D1 rows.
+  // Explicit D1 rebuild remains available only through d1_refresh=1 for maintenance.
+  const forceD1Refresh=url.searchParams.get('d1_refresh')==='1';
+  const [liveResult,firstPartyResult]=await Promise.allSettled([getSiteLiveMetrics(db),getSiteFirstParty30dR530(db,{force:forceD1Refresh})]);
   const live=liveResult.status==='fulfilled'?liveResult.value:{configured:false,today:{},realtime:{}};
   const firstParty=firstPartyResult.status==='fulfilled'?firstPartyResult.value:{configured:false,trend:[],countries:[],pages:[]};
   const hasSnapshot=Boolean(latestRow)||Boolean(latest?.configured);
@@ -17232,7 +17272,9 @@ function siteUpdateCrc32(bytes) {
     }
   }
   let crc = 0xffffffff;
-  for (const byte of bytes) crc = siteUpdateCrcTable[(crc ^ byte) & 0xff] ^ (crc >>> 8);
+  // R1219: indexed loop is materially cheaper in Workers than iterator-based for..of
+  // when a full 17+ MB site archive is validated.
+  for (let i = 0; i < bytes.length; i++) crc = siteUpdateCrcTable[(crc ^ bytes[i]) & 0xff] ^ (crc >>> 8);
   return (crc ^ 0xffffffff) >>> 0;
 }
 
@@ -17310,7 +17352,9 @@ async function siteUpdateReadZip(arrayBuffer) {
     const compressed = bytes.subarray(dataStart, dataEnd);
     const content = method === 0 ? new Uint8Array(compressed) : await siteUpdateInflateRaw(compressed);
     if (content.byteLength !== uncompressedSize) throw new Error(`zip-size-mismatch:${path}`);
-    if (siteUpdateCrc32(content) !== crc) throw new Error(`zip-crc:${path}`);
+    // R1220 INSTALLER HOTFIX: STORED entries are already exact raw file bytes.
+    // Skip the expensive JS CRC pass for STORE archives; deflated entries still verify CRC.
+    if (method !== 0 && siteUpdateCrc32(content) !== crc) throw new Error(`zip-crc:${path}`);
     entries.push({ path, bytes:content, size:content.byteLength });
   }
   if (!entries.length) throw new Error('zip-empty');
@@ -17466,7 +17510,8 @@ async function siteUpdateGithubSnapshot(config) {
 
 async function siteUpdatePrepareArchive(file) {
   const parsed = await siteUpdateReadZip(await file.arrayBuffer());
-  await siteUpdateMapLimit(parsed.entries, 12, async entry => {
+  // R1219: cap parallel SHA work so archive validation stays below Worker CPU/memory spikes.
+  await siteUpdateMapLimit(parsed.entries, 3, async entry => {
     entry.gitSha = await siteUpdateGitBlobSha(entry.bytes);
     return entry.gitSha;
   });
@@ -17511,7 +17556,9 @@ function siteUpdateTextLikePath(path) {
 
 function siteUpdateInlineText(entry) {
   if (!entry || !siteUpdateTextLikePath(entry.path)) return null;
-  if (!entry.bytes || entry.bytes.byteLength > 2 * 1024 * 1024) return null;
+  // R1219: keep Git Tree requests small. Large text such as _worker.js is uploaded
+  // through the Git blob endpoint first; that endpoint already has transient retries.
+  if (!entry.bytes || entry.bytes.byteLength > 512 * 1024) return null;
   if (entry.bytes.includes(0)) return null;
   try {
     const text = new TextDecoder('utf-8', { fatal:true }).decode(entry.bytes);
@@ -17526,7 +17573,7 @@ function siteUpdateTreeEntrySize(entry) {
   return 240 + String(entry?.path || '').length * 2 + Math.ceil(content * 1.35);
 }
 
-function siteUpdateTreeBatches(entries, maxEntries = 70, maxEstimatedBytes = 2200000) {
+function siteUpdateTreeBatches(entries, maxEntries = 50, maxEstimatedBytes = 1000000) {
   const batches = [];
   let current = [];
   let size = 0;
@@ -18069,8 +18116,11 @@ async function handleSiteUpdatePreview(request, env) {
     const config = siteUpdateConfig(env);
     if (!config.token || !siteUpdateConfigValid(config)) throw new Error('github-token-missing');
     const { archive } = await siteUpdateReadArchiveForm(request);
-    const parsed = await siteUpdatePrepareArchive(archive);
-    const snapshot = await siteUpdateGithubSnapshot(config);
+    // R1220: overlap GitHub I/O with archive SHA preparation to cut total wall time.
+    const [parsed, snapshot] = await Promise.all([
+      siteUpdatePrepareArchive(archive),
+      siteUpdateGithubSnapshot(config)
+    ]);
     const diff = siteUpdateCompare(parsed, snapshot, config);
     return json({
       ok:true, version:SITE_UPDATE_VERSION, archiveName:cleanPlainText(archive.name || 'site.zip', 180),
@@ -18084,7 +18134,8 @@ async function handleSiteUpdatePreview(request, env) {
       repository:`${config.owner}/${config.repo}`, branch:config.branch
     });
   } catch (error) {
-    return json({ ok:false, error:'preview-failed', message:siteUpdateFriendlyError(error) }, 400);
+    const transient = [429,500,502,503,504].includes(Number(error?.status || 0)) || String(error?.message || '') === 'github-timeout';
+    return json({ ok:false, error:'preview-failed', retryable:transient, message:siteUpdateFriendlyError(error) }, transient ? 503 : 400);
   }
 }
 
@@ -18170,8 +18221,11 @@ async function handleSiteUpdatePublish(request, env) {
     const backupTag = cleanPlainText(form.get('backupTag') || '', 180);
     const autoRecovery = String(form.get('autoRecovery') || '') === 'yes';
     const forceReinstall = String(form.get('forceReinstall') || '') === 'yes';
-    const parsed = await siteUpdatePrepareArchive(archive);
-    const snapshot = await siteUpdateGithubSnapshot(config);
+    // R1220: same preparation path for publish.
+    const [parsed, snapshot] = await Promise.all([
+      siteUpdatePrepareArchive(archive),
+      siteUpdateGithubSnapshot(config)
+    ]);
     if (expectedHead && /^[0-9a-f]{40}$/i.test(expectedHead) && snapshot.headSha !== expectedHead) throw new Error('branch-changed');
     const diff = siteUpdateCompare(parsed, snapshot, config);
     const touched = [...diff.added, ...diff.changed];
@@ -21294,9 +21348,8 @@ async function handleRadioRemoteStatusR627(request,env){
   const result=parseStateValueR627(resultRow);
   const ticker=parseStateValueR627(tickerRow)||null;
   const lastSeenMs=Date.parse(agent.lastSeen||'')||0;
-  // R681 D1 economy: the OVH agent still polls every 4s for near-instant commands,
-  // but its persisted heartbeat is intentionally throttled to ~30s. Allow two
-  // missed persisted heartbeats before the UI calls the agent offline.
+  // R1219: R1183+ telemetry is persisted about every 10s; legacy agents remain slower.
+  // Keep a generous offline window so short network hiccups do not flash OVH OFFLINE.
   return json({ok:true,paired:Boolean(agent.tokenHash),online:Boolean(lastSeenMs&&Date.now()-lastSeenMs<75000),serverNow:new Date().toISOString(),agent:{pairedAt:agent.pairedAt||null,lastSeen:agent.lastSeen||null,version:agent.version||null,status:agent.status||null},command,result,ticker},200,{'cache-control':'no-store, no-cache, must-revalidate','pragma':'no-cache','expires':'0'});
 }
 async function handlePublicRadioDiagnosticsR802(request,env){
@@ -21417,11 +21470,12 @@ async function handleRadioAgentPollR627(request,env){
     };
     try{statusChanged=JSON.stringify(comparableR1183(incomingStatus))!==JSON.stringify(comparableR1183(agent.status||null))}catch(_){statusChanged=true}
   }
-  const heartbeatDue=!Number.isFinite(previousLastSeenMs)||nowMs-previousLastSeenMs>=30000;
+  // R1219: R1183+ carries live CPU/RAM/queues/library telemetry. Persist one snapshot
+  // per agent poll window (~10s) so Control does not display a 30-second-old VPS state.
+  // Legacy agents keep the old 30-second D1 economy interval.
+  const heartbeatIntervalMs=incomingAgentNumberR728>=1183?9000:30000;
+  const heartbeatDue=!Number.isFinite(previousLastSeenMs)||nowMs-previousLastSeenMs>=heartbeatIntervalMs;
   const versionChanged=incomingVersion!==String(agent.version||'');
-  // R681 D1 economy: command latency stays 4s because every poll is answered, but
-  // do not UPDATE push_state on every poll. Persist only a 30s heartbeat or a real
-  // status/version change. This removes ~18.7k needless D1 updates/day per agent.
   if(heartbeatDue||statusChanged||versionChanged){
     agent.lastSeen=nowIso;
     agent.version=incomingVersion;
@@ -21560,7 +21614,7 @@ async function routeApi(request, env, ctx) {
     if (path === '/api/control/radio-remote-r627/ticker' && request.method === 'POST') return await handleRadioRemoteTickerR629(request, env);
     if (path === '/api/radio-agent-r627/pair/consume' && request.method === 'POST') return await handleRadioAgentPairConsumeR627(request, env);
     if (path === '/api/radio-agent-r627/poll' && request.method === 'POST') return await handleRadioAgentPollR627(request, env);
-    if ((path === '/api/radio-agent-r715/youtube-ensure' || path === '/api/radio-agent-r721/youtube-ensure') && request.method === 'POST') return await handleRadioAgentYoutubeEnsureR715(request, env); // R831 control compat: R803 agent calls R721 alias
+    if ((path === '/api/radio-agent-r715/youtube-ensure' || path === '/api/radio-agent-r721/youtube-ensure') && request.method === 'POST') return await handleRadioAgentYoutubeObserveR1214(request, env); // R1214: observe-only, never create/bind/transition
     if (path === '/api/radio-agent-r627/result' && request.method === 'POST') return await handleRadioAgentResultR627(request, env);
     if (path === '/api/radio-agent-r650/visual' && (request.method === 'GET' || request.method === 'HEAD')) return await handleRadioAgentVisualR650(request, env);
 
@@ -21682,6 +21736,7 @@ async function routeApi(request, env, ctx) {
     if (path === '/api/control/youtube-live-r687/ensure' && request.method === 'POST') return await handleYoutubeLiveEnsureR687(request, env);
     if (path === '/api/control/youtube-live-r688/ensure' && request.method === 'POST') return await handleYoutubeLiveEnsureR688(request, env);
     if (path === '/api/control/youtube-live-r689/ensure' && request.method === 'POST') return await handleYoutubeLiveEnsureR689(request, env);
+    if (path === '/api/control/youtube-live-r1214/start-bound' && request.method === 'POST') return await handleYoutubeLiveStartBoundR1214(request, env);
     if (path === '/api/control/youtube-live-r665/stop' && request.method === 'POST') return await handleYoutubeLiveStopR665(request, env);
     if (path === '/api/control/search-console' && request.method === 'GET') return await handleControlSearchConsole(request, env);
     if (path === '/api/control/snapshots/refresh' && request.method === 'POST') return await handleControlSnapshotsRefresh(request, env);
@@ -22354,6 +22409,95 @@ async function youtubeKickExactBroadcastR689(accessToken,broadcast,streamStatus=
 
 
 
+// R1214 — manual Dual Stream safe start.
+// IMPORTANT: this endpoint NEVER creates a broadcast, NEVER binds/rebinds a stream,
+// and NEVER changes the reusable stream key. It may only transition the single
+// existing broadcast that is already bound to the currently ACTIVE ingest.
+async function handleYoutubeLiveStartBoundR1214(request, env) {
+  if (!adminAuthorized(request, env)) return json({ok:false,error:'unauthorized'},401);
+  try{
+    const accessToken=await getYoutubeOAuthAccessToken(env);
+    const [broadcasts,streams]=await Promise.all([
+      youtubeListBroadcastsR687(accessToken),
+      youtubeListStreamsR687(accessToken)
+    ]);
+    const activeStreams=streams.filter(item=>String(item?.status?.streamStatus||'').toLowerCase()==='active')
+      .sort((a,b)=>youtubeStreamTimeR687(b)-youtubeStreamTimeR687(a));
+    if(!activeStreams.length){
+      return json({ok:false,error:'youtube-active-stream-not-found',message:'YouTube ещё не видит ACTIVE сигнал. Сначала запусти сигнал VPS и дождись preview.'},409);
+    }
+    const activeIds=new Set(activeStreams.map(item=>cleanPlainText(item?.id||'',120)).filter(Boolean));
+    const nonComplete=broadcasts.filter(item=>!['complete','revoked'].includes(youtubeLifeKeyR609(item?.status?.lifeCycleStatus)));
+    let bound=nonComplete.filter(item=>activeIds.has(cleanPlainText(item?.contentDetails?.boundStreamId||'',120)));
+
+    // If several unfinished broadcasts share the same ACTIVE stream, doing anything
+    // automatically is exactly what caused duplicate LIVE rows before R1214.
+    if(bound.length>1){
+      const live=bound.filter(item=>youtubeLifeKeyR609(item?.status?.lifeCycleStatus)==='live');
+      if(live.length===1){
+        const b=live[0], sid=cleanPlainText(b?.contentDetails?.boundStreamId||'',120);
+        const stream=activeStreams.find(item=>cleanPlainText(item?.id||'',120)===sid)||activeStreams[0];
+        const id=cleanPlainText(b?.id||'',100);
+        return json({ok:true,pending:false,created:false,boundOnly:true,videoId:id,streamId:sid,streamStatus:cleanPlainText(stream?.status?.streamStatus||'',80),lifeCycleStatus:'live',watchUrl:`https://www.youtube.com/watch?v=${encodeURIComponent(id)}`});
+      }
+      return json({ok:false,error:'youtube-bound-broadcast-ambiguous',message:`YouTube видит ${bound.length} незавершённых трансляции на текущем ACTIVE stream. R1214 не выбирает и не создаёт эфир наугад. Заверши лишнюю в Studio и повтори.`,count:bound.length},409);
+    }
+    if(!bound.length){
+      return json({ok:false,error:'youtube-bound-broadcast-not-found',message:'На ACTIVE stream нет уже существующей привязанной трансляции. Назначь этот key нужному эфиру в YouTube Studio и включи Dual Stream; R1214 ничего создавать не будет.'},409);
+    }
+
+    const broadcast=bound[0];
+    const sid=cleanPlainText(broadcast?.contentDetails?.boundStreamId||'',120);
+    const stream=activeStreams.find(item=>cleanPlainText(item?.id||'',120)===sid)||null;
+    if(!stream)return json({ok:false,error:'youtube-bound-stream-not-active',message:'Привязанный stream пока не ACTIVE.'},409);
+    const id=cleanPlainText(broadcast?.id||'',100);
+    const streamStatus=cleanPlainText(stream?.status?.streamStatus||'',80);
+    const watchUrl=`https://www.youtube.com/watch?v=${encodeURIComponent(id)}`;
+    const fresh=await youtubeGetExactBroadcastR688(accessToken,id)||broadcast;
+    const life=youtubeLifeKeyR609(fresh?.status?.lifeCycleStatus);
+    if(life==='live')return json({ok:true,pending:false,created:false,boundOnly:true,videoId:id,streamId:sid,streamStatus,lifeCycleStatus:life,watchUrl});
+    if(['livestarting','teststarting','created'].includes(life))return json({ok:false,pending:true,created:false,boundOnly:true,videoId:id,streamId:sid,streamStatus,lifeCycleStatus:life,watchUrl});
+
+    const monitorEnabled=Boolean(fresh?.contentDetails?.monitorStream?.enableMonitorStream);
+    let target='';
+    if(life==='ready')target=monitorEnabled?'testing':'live';
+    else if(life==='testing')target='live';
+    else return json({ok:false,error:'youtube-bound-broadcast-state',message:`Существующий broadcast нельзя безопасно запустить из статуса ${life||'unknown'}.`,lifeCycleStatus:life,videoId:id,watchUrl},409);
+
+    try{
+      const transitioned=await youtubeTransitionR609(accessToken,id,target);
+      const after=youtubeLifeKeyR609(transitioned?.status?.lifeCycleStatus)||life;
+      return json({ok:after==='live',pending:after!=='live',created:false,boundOnly:true,videoId:id,streamId:sid,streamStatus,lifeCycleStatus:after,stage:target,watchUrl});
+    }catch(error){
+      if(youtubeTransitionPendingR689(error)){
+        return json({ok:false,pending:true,created:false,boundOnly:true,videoId:id,streamId:sid,streamStatus,lifeCycleStatus:life,stage:target,watchUrl,transitionReason:cleanPlainText(error?.reason||'',180)});
+      }
+      throw error;
+    }
+  }catch(error){
+    const reason=cleanPlainText(error?.reason||'',180);
+    const insufficient=/insufficient|scope|permission/i.test(`${reason} ${error?.message||''}`);
+    const status=Number(error?.httpStatus||0)===409?409:(insufficient?403:503);
+    return json({ok:false,error:insufficient?'youtube-oauth-write-scope-required':(reason||'youtube-live-r1214-bound-start-failed'),reason,message:cleanPlainText(error?.message||error,600)},status);
+  }
+}
+
+// R1214 — background agent is OBSERVE-ONLY for YouTube.
+// Older R803 agents may still call the R721 alias every two minutes; this handler
+// deliberately performs no insert/bind/transition, preventing duplicate broadcasts.
+async function handleRadioAgentYoutubeObserveR1214(request,env){
+  if(!await radioAgentAuthorizedR627(request,env))return json({ok:false,error:'unauthorized-agent'},401);
+  try{
+    const accessToken=await getYoutubeOAuthAccessToken(env);
+    const {broadcast,streamStatus}=await youtubeCurrentBroadcastR609(env,accessToken);
+    const life=youtubeLifeKeyR609(broadcast?.status?.lifeCycleStatus);
+    const id=cleanPlainText(broadcast?.id||'',100);
+    return json({ok:true,active:life==='live',pending:false,skipped:true,observeOnly:true,reason:'manual-youtube-mode-r1214',videoId:id,lifeCycleStatus:life,streamStatus,watchUrl:id?`https://www.youtube.com/watch?v=${encodeURIComponent(id)}`:''});
+  }catch(error){
+    return json({ok:true,active:false,pending:false,skipped:true,observeOnly:true,reason:'manual-youtube-mode-r1214',message:cleanPlainText(error?.message||error,400)});
+  }
+}
+
 // R715 — OVH-agent initiated YouTube LIVE self-heal.
 // The radio agent is already authenticated with its own bearer token. Every few minutes
 // it asks Control to verify that the reusable ACTIVE ingest is attached to a real LIVE
@@ -22861,7 +23005,9 @@ async function handleControlYoutubeLiveCachedR797(request,env){
   const response=await handleControlYoutubeLiveR565(request,env);
   if(!fresh && response.ok){
     const body=await response.clone().text();
-    youtubeControlLiveCacheR797={expiresAt:Date.now()+120*1000,status:response.status,body};
+    // R1219: Control statistics should track the current LIVE, not a two-minute-old snapshot.
+    // The cache is still shared across panels to avoid duplicate API calls.
+    youtubeControlLiveCacheR797={expiresAt:Date.now()+25*1000,status:response.status,body};
   }
   return response;
 }
@@ -23489,7 +23635,7 @@ async function handleControlYoutubeLiveR565(request, env) {
         type:cleanPlainText(item?.type||'',100),severity:cleanPlainText(item?.severity||'',80),
         reason:cleanPlainText(item?.reason||'',240),description:cleanPlainText(item?.description||'',360)
       })):[],
-      concurrentViewers:Math.max(0,Number(details?.concurrentViewers||0)),
+      concurrentViewers:(details?.concurrentViewers==null||details?.concurrentViewers==='')?null:Math.max(0,Number(details.concurrentViewers)||0),
       actualStartTime:cleanPlainText(details?.actualStartTime||broadcast?.snippet?.actualStartTime||'',80),
       scheduledStartTime:cleanPlainText(details?.scheduledStartTime||broadcast?.snippet?.scheduledStartTime||'',80),
       views:publicStartsR946,displayViews:displayViewsR946,visibleViews:visibleViewsR946?.value,visibleViewsSource:visibleViewsR946?.source||'',visibleViewsUpdatedAt:visibleViewsR946?.updatedAt||'',visibleViewsError:visibleViewsR946?.error||'',visibleViewsAttempts:Array.isArray(visibleViewsR946?.attempts)?visibleViewsR946.attempts:[],visibleViewsText:visibleViewsR946?.text||'',engagedViews:engagedViewsR938,studioViews:studioViewsR942.studioViews,studioViewsSource:studioViewsR942.source,studioViewsUpdatedAt:studioViewsR942.updatedAt||'',studioViewsProcessing:Boolean(studioViewsR942.processing),studioViewsError:studioViewsR942.error||'',likes:Math.max(0,Number(statistics?.likeCount||0)),
@@ -23537,7 +23683,7 @@ async function handleControlYoutubeLiveR565(request, env) {
           healthSource:cleanPlainText(liveHealthR1158?.source||'health-unavailable-r1158',120),
           healthUpdatedAt:cleanPlainText(liveHealthR1158?.updatedAt||'',80),
           healthCached:Boolean(liveHealthR1158?.cached),healthProbeError:cleanPlainText(liveHealthR1158?.error||'',260),
-          concurrentViewers:Math.max(0,Number(details?.concurrentViewers||0)),
+          concurrentViewers:(details?.concurrentViewers==null||details?.concurrentViewers==='')?null:Math.max(0,Number(details.concurrentViewers)||0),
           actualStartTime:cleanPlainText(details?.actualStartTime||'',80),
           scheduledStartTime:cleanPlainText(details?.scheduledStartTime||'',80),
           views:publicStartsR946,

@@ -6,7 +6,7 @@
   const q=s=>document.querySelector(s);
   const qa=s=>[...document.querySelectorAll(s)];
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const fmt=v=>new Intl.NumberFormat('ru-RU').format(Math.max(0,Number(v)||0));
+  const fmt=v=>v==null||v===''?'—':new Intl.NumberFormat('ru-RU').format(Math.max(0,Number(v)||0));
   const KEY_SESSION='andrik-comments-admin-key',KEY_LOCAL='andrik-comments-admin-key-persistent';
   const getKey=()=>{try{return localStorage.getItem(KEY_LOCAL)||sessionStorage.getItem(KEY_SESSION)||''}catch(_){return''}};
   const headers=()=>{const h={accept:'application/json'};const k=getKey();if(k)h.authorization=`Bearer ${k}`;return h};
@@ -212,7 +212,7 @@
     if(!r.ok)throw Object.assign(new Error(d.error||d.message||`HTTP ${r.status}`),{status:r.status});return d;
   }
   async function loadViewers(){
-    try{const d=await fetchJson(`/api/control/youtube-live-r565?active=1&ts=${Date.now()}`);set('[data-radio-live-viewers]',fmt(d?.concurrentViewers));return d}
+    try{const d=await fetchJson(`/api/control/youtube-live-r565?active=1&fresh=1&ts=${Date.now()}`);set('[data-radio-live-viewers]',fmt(d?.concurrentViewers));return d}
     catch(_){set('[data-radio-live-viewers]','—');return null}
   }
   async function loadMap(){

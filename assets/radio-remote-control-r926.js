@@ -5,7 +5,8 @@
   const num=v=>new Intl.NumberFormat('ru-RU').format(Math.max(0,Number(v)||0));
   const setText=(id,value)=>{const el=document.getElementById(id);if(el)el.textContent=value};
   const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-  let busy=false,timer=null,tickerTimer=null,tickerSaving=false,lastServerTicker='',lastRemote=null;
+  let busy=false,timer=null,tickerTimer=null,tickerSaving=false,lastServerTicker='',lastRemote=null,inventoryCatalogTimer=null;
+  let inventoryCatalogR1219={extended:null,officialFallback:null,singlesFallback:null,totalFallback:null,at:0};
 
   async function api(path,opts={}){
     let k='';try{k=localStorage.getItem('andrik-comments-admin-key-persistent')||sessionStorage.getItem('andrik-comments-admin-key')||''}catch(_){}
@@ -28,6 +29,44 @@
   function hasR926Agent(data=lastRemote){return agentNumber(data)>=926}
   function hasR1098Agent(data=lastRemote){return agentNumber(data)>=1098}
   function humanBytesR1015(v){const n=Math.max(0,Number(v)||0),g=1024**3,m=1024**2;if(n>=g)return `${Math.round(n/g)}G`;if(n>=m)return `${Math.round(n/m)}M`;return `${Math.round(n/1024)}K`}
+  const mp3R1219=x=>/\.mp3(?:$|\?)/i.test(String(x?.url||x?.key||''));
+  const slugR1219=x=>{const pa=String(x?.pickerAlbum||'').toLowerCase();if(pa)return pa;const m=String(x?.key||'').toLowerCase().match(/^albums\/([^/]+)\//);return m?m[1]:''};
+  async function refreshInventoryCatalogR1219(force=false){
+    if(!force&&Date.now()-Number(inventoryCatalogR1219.at||0)<240000)return inventoryCatalogR1219;
+    try{
+      const r=await fetch('/api/music/downloads?ts='+Date.now(),{credentials:'include',cache:'no-store',headers:{accept:'application/json'}});
+      if(!r.ok)throw new Error('HTTP '+r.status);
+      const d=await r.json();const all=(Array.isArray(d?.tracks)?d.tracks:[]).filter(mp3R1219);
+      const disabled=['albums/illusion-of-life/','albums/ocean/'];
+      const activeAlbums=all.filter(x=>{const k=String(x?.key||'').toLowerCase();return /^albums\//.test(k)&&!disabled.some(p=>k.startsWith(p))});
+      const extended=activeAlbums.filter(x=>slugR1219(x)==='extended').length;
+      const official=activeAlbums.length-extended;
+      const singles=all.filter(x=>/^singles\//i.test(String(x?.key||''))&&!/(?:^|[\s([{-])(?:ai\s*)?cover(?:[\s)\]}-]|$)|(?:^|[\s([{-])кавер(?:[\s)\]}-]|$)/iu.test(String(x?.title||x?.name||''))).length;
+      inventoryCatalogR1219={extended,officialFallback:official,singlesFallback:singles,totalFallback:official+extended+singles,at:Date.now()};
+    }catch(_){}
+    return inventoryCatalogR1219;
+  }
+  function renderInventoryR1219(s){
+    const ready=String(s?.inventoryTelemetry||'').startsWith('R805-')||Number(s?.libraryTracks||0)>0;
+    const ext=inventoryCatalogR1219.extended==null?null:(Number.isFinite(Number(inventoryCatalogR1219.extended))?Math.max(0,Number(inventoryCatalogR1219.extended)):null);
+    if(ready){
+      const total=Math.max(0,Number(s.libraryTracks)||0);
+      const albumTotal=Math.max(0,Number(s.libraryAlbumTracks)||0);
+      const singles=Math.max(0,Number(s.librarySingleTracks)||0);
+      const official=ext==null?null:Math.max(0,albumTotal-ext);
+      setText('youtubeRadioSongsR805',num(total));
+      setText('youtubeRadioVideosR805',num(s.libraryVideos));
+      setText('youtubeRadioStationR805',num(Number(s.libraryBumpers||0)+Number(s.librarySpecial||0)));
+      setText('youtubeRadioTracksR565',official==null?'—':num(official));
+      setText('youtubeRadioSinglesR805',`${num(singles)} / ${ext==null?'—':num(ext)}`);
+      return;
+    }
+    if(inventoryCatalogR1219.at){
+      setText('youtubeRadioSongsR805',num(inventoryCatalogR1219.totalFallback));
+      setText('youtubeRadioTracksR565',num(inventoryCatalogR1219.officialFallback));
+      setText('youtubeRadioSinglesR805',`${num(inventoryCatalogR1219.singlesFallback)} / ${num(inventoryCatalogR1219.extended)}`);
+    }
+  }
   function renderLoudnessR1137(s){
     const l=s?.loudnessR1137||{};
     const card=document.getElementById('loudnessStatusR1137');if(!card)return;
@@ -67,17 +106,9 @@
     document.querySelectorAll('[data-radio-remote-detail]').forEach(el=>{
       el.innerHTML=`<b>${online?'🟢':'⚪'} OVH:</b> ${online?'ONLINE':'OFFLINE'}${version?` · ${esc(version)}`:''}`;
     });
-    // R805: exact LIVE library counters come from the running radio itself via the single R803 agent.
-    // This avoids guessing from R2 and reflects duplicate-single suppression + disabled albums exactly.
-    const inventoryReady=String(s.inventoryTelemetry||'').startsWith('R805-') || Number(s.libraryTracks||0)>0;
-    if(inventoryReady){
-      // R1181: song/album counters are derived from the public catalog below,
-      // so Extended versions never inflate the official album count.
-      // Singles / Ex. Version counter comes from the public catalog view so
-      // title-based album remaps (for example Monument → Silent) stay correct.
-      setText('youtubeRadioVideosR805',num(s.libraryVideos));
-      setText('youtubeRadioStationR805',num(Number(s.libraryBumpers||0)+Number(s.librarySpecial||0)));
-    }
+    // R1219: ONE inventory writer. Rotation/video/station totals come from the live VPS;
+    // the public catalog is used only to split Extended from official album tracks.
+    renderInventoryR1219(s);
     const commandState=String(cmd?.state||'');
     const commandStarted=Date.parse(cmd?.claimedAt||cmd?.createdAt||'')||0;
     const commandAge=commandStarted?Date.now()-commandStarted:0;
@@ -194,6 +225,77 @@
     throw last||new Error(`YouTube не перешёл в LIVE. Последний статус: ${state}.`);
   }
 
+  async function startBoundLiveR1214(){
+    let last=null,lastData=null;
+    for(let i=0;i<30;i++){
+      try{
+        const d=await api('/api/control/youtube-live-r1214/start-bound',{method:'POST',headers:{'content-type':'application/json'},body:'{}'});
+        lastData=d;
+        if(d.watchUrl)setWatch(d.watchUrl);
+        const life=ytLife(d);
+        if(d.ok||life==='live')return d;
+        if(d.pending){
+          const label=life==='testing'?'TESTING готов · перевожу в LIVE…':
+            life==='teststarting'?'Перевожу READY → TESTING…':
+            life==='livestarting'?'YouTube переводит эфир в LIVE…':
+            life==='ready'?'Сигнал привязан · запускаю существующий эфир…':
+            life==='created'?'Существующий эфир найден · жду READY…':
+            'Жду готовность существующей трансляции…';
+          setMsg(`${label} ${i+1}/30`,'work');
+          await sleep(2500);
+          continue;
+        }
+        throw new Error(d.message||d.error||`YouTube не запустился. Статус: ${d.lifeCycleStatus||'unknown'}`);
+      }catch(e){
+        last=e;
+        const code=String(e.data?.error||'');
+        if(e.status===409&&code==='youtube-active-stream-not-found'){
+          setMsg(`Жду сигнал от VPS… ${i+1}/30`,'work');
+          await sleep(2500);
+          continue;
+        }
+        throw e;
+      }
+    }
+    const state=lastData?.lifeCycleStatus||last?.data?.lifeCycleStatus||'unknown';
+    throw last||new Error(`YouTube не перешёл в LIVE. Последний статус: ${state}.`);
+  }
+
+  async function encoderStartOnlyR1214(){
+    if(busy)return;busy=true;render(lastRemote||{});
+    try{
+      setMsg('Шаг 1/2 · запускаю ТОЛЬКО сигнал VPS на текущий YouTube key…','work');
+      if(hasR665Agent())await agentAction('encoder-start');
+      else await agentAction('start');
+      setResult(`R1214 SIGNAL ✅\nOVH encoder запущен.\nYouTube broadcast НЕ создавался и НЕ запускался.\nТеперь проверь оба preview в Studio и нажми «2 · НАЧАТЬ YOUTUBE LIVE».`);
+      setMsg('Сигнал VPS запущен ✅ · YouTube не трогал','ok');
+    }catch(e){
+      setResult(`R1214 SIGNAL ERROR\n${String(e.message||e)}`);
+      setMsg(`Ошибка запуска сигнала: ${e.message||e}`,'bad');
+    }finally{busy=false;await refresh()}
+  }
+
+  async function youtubeStartOnlyR1214(){
+    if(busy)return;busy=true;render(lastRemote||{});
+    try{
+      setMsg('Шаг 2/2 · запускаю ТОЛЬКО уже существующий broadcast YouTube…','work');
+      const live=await startBoundLiveR1214();
+      const url=live.watchUrl||'';if(url)setWatch(url);
+      setResult(`R1214 YOUTUBE LIVE ✅\nНовый broadcast НЕ создавался.\nYouTube: ${live.lifeCycleStatus||'LIVE'}\nStream: ${live.streamStatus||'active'}${live.videoId?`\nVideo ID: ${live.videoId}`:''}${url?`\n${url}`:''}`);
+      setMsg('YouTube LIVE ✅ · использована только существующая привязка','ok');
+    }catch(e){
+      const code=String(e.data?.error||'');
+      let hint='';
+      if(code==='youtube-bound-broadcast-not-found')hint='\nОткрой YouTube Studio: назначь текущий key нужной трансляции, включи Dual Stream и дождись preview.';
+      else if(code==='youtube-bound-broadcast-ambiguous')hint='\nYouTube видит несколько незавершённых трансляций на одном ACTIVE stream. Заверши лишнюю в Studio — контролька ничего создавать не будет.';
+      else if(code==='youtube-active-stream-not-found')hint='\nСначала нажми «1 · ЗАПУСТИТЬ СИГНАЛ VPS» и дождись preview.';
+      setResult(`R1214 YOUTUBE LIVE ERROR\n${String(e.message||e)}${hint}`);
+      setMsg(`YouTube LIVE не запущен: ${e.message||e}`,'bad');
+    }finally{busy=false;await refresh()}
+  }
+
+  // Legacy combined start is retained internally only for rollback/debug.
+  // R1214 UI never calls it, because it may create/rebind a broadcast.
   async function startSequence({recover=false}={}){
     if(busy)return;busy=true;render(lastRemote||{});
     try{
@@ -381,7 +483,7 @@
   document.addEventListener('click',e=>{
     const oauth=e.target.closest('[data-radio-youtube-oauth-connect]');if(oauth){e.preventDefault();reconnectYoutube();return}
     const b=e.target.closest('[data-radio-action]');
-    if(b){e.preventDefault();const a=b.dataset.radioAction;if(a==='start')startSequence();else if(a==='gold-restore')airRestore();else if(a==='screen-restore')screenRestore();else if(a==='cache-clean')cacheClean();else if(a==='soft-restart')softRestart();else if(a==='stop')stopSequence();else if(a==='status')statusSequence();else if(a==='auto-safe')autoSequence();else if(a==='loudness-new-r1098')loudnessNewR1098();return}
+    if(b){e.preventDefault();const a=b.dataset.radioAction;if(a==='encoder-start')encoderStartOnlyR1214();else if(a==='youtube-start-bound')youtubeStartOnlyR1214();else if(a==='gold-restore')airRestore();else if(a==='screen-restore')screenRestore();else if(a==='cache-clean')cacheClean();else if(a==='soft-restart')softRestart();else if(a==='stop')stopSequence();else if(a==='status')statusSequence();else if(a==='auto-safe')autoSequence();else if(a==='loudness-new-r1098')loudnessNewR1098();return}
     const t=e.target.closest('[data-radio-ticker-apply]');if(t){e.preventDefault();const input=document.querySelector('[data-radio-ticker-input]');if(input)saveTicker(input.value)}
   });
   document.addEventListener('input',e=>{
@@ -390,9 +492,10 @@
     clearTimeout(tickerTimer);tickerTimer=setTimeout(()=>saveTicker(input.value),850);
   });
 
-  window.AndrikRadioRemoteR926={refresh,start:()=>startSequence(),airRestore,goldRestore:airRestore,screenRestore,cacheClean,softRestart,stop:stopSequence,status:statusSequence,loudnessNewR1098,saveTicker};window.AndrikRadioRemoteR925=window.AndrikRadioRemoteR926;window.AndrikRadioRemoteR870=window.AndrikRadioRemoteR926;window.AndrikRadioRemoteR867=window.AndrikRadioRemoteR926;window.AndrikRadioRemoteR687=window.AndrikRadioRemoteR926;window.AndrikRadioRemoteR665=window.AndrikRadioRemoteR926;
+  window.AndrikRadioRemoteR926={refresh,start:()=>encoderStartOnlyR1214(),encoderStart:encoderStartOnlyR1214,youtubeStart:youtubeStartOnlyR1214,airRestore,goldRestore:airRestore,screenRestore,cacheClean,softRestart,stop:stopSequence,status:statusSequence,loudnessNewR1098,saveTicker};window.AndrikRadioRemoteR925=window.AndrikRadioRemoteR926;window.AndrikRadioRemoteR870=window.AndrikRadioRemoteR926;window.AndrikRadioRemoteR867=window.AndrikRadioRemoteR926;window.AndrikRadioRemoteR687=window.AndrikRadioRemoteR926;window.AndrikRadioRemoteR665=window.AndrikRadioRemoteR926;
   const arm=()=>{if(timer)clearInterval(timer);timer=null;if(document.hidden)return;timer=setInterval(refresh,15000)};
-  const boot=()=>{if(!document.hidden)refresh();arm()};
+  const armInventoryR1219=()=>{if(inventoryCatalogTimer)clearInterval(inventoryCatalogTimer);inventoryCatalogTimer=null;if(document.hidden)return;inventoryCatalogTimer=setInterval(()=>refreshInventoryCatalogR1219(true).then(()=>lastRemote&&render(lastRemote)),300000)};
+  const boot=()=>{if(!document.hidden){refreshInventoryCatalogR1219(true).finally(refresh)}arm();armInventoryR1219()};
   if(window.AndrikOwnerSession?.ready)window.AndrikOwnerSession.ready().finally(boot);else boot();
-  document.addEventListener('visibilitychange',()=>{if(document.hidden){if(timer)clearInterval(timer);timer=null;return}refresh();arm()});
+  document.addEventListener('visibilitychange',()=>{if(document.hidden){if(timer)clearInterval(timer);if(inventoryCatalogTimer)clearInterval(inventoryCatalogTimer);timer=null;inventoryCatalogTimer=null;return}refreshInventoryCatalogR1219(true).finally(refresh);arm();armInventoryR1219()});
 })();

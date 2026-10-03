@@ -1,6 +1,6 @@
 (() => {
   'use strict';
-  const SITE_UPDATE_UI_VERSION='55.00-r1198-deploy-retrigger';
+  const SITE_UPDATE_UI_VERSION='55.00-r1219-install-safe';
   const KEY_SESSION='andrik-comments-admin-key',KEY_LOCAL='andrik-comments-admin-key-persistent',AUTO_RECOVERY_KEY='andrik-site-update-auto-recovery',CACHE_REFRESH_PREFIX='andrik-site-update-cache-refresh:',PENDING_DEPLOY_KEY='andrik-site-update-pending-deploy-r247';
   const byId=id=>document.getElementById(id),keyInput=byId('siteUpdateAdminKey'),archiveInput=byId('siteUpdateArchive'),previewButton=byId('siteUpdatePreview'),publishButton=byId('siteUpdatePublish'),confirmInput=byId('siteUpdateConfirm'),autoRecoveryInput=byId('siteUpdateAutoRecovery');
   let previewData=null,lastRelease='',lastPublish=null,lastOperationId='',operation=false;
@@ -51,8 +51,8 @@
     return Boolean(raw);
   }
   function apiTimeout(path,method='GET'){
-    if(path.includes('/preview'))return 90000;
-    if(path.includes('/publish'))return 150000;
+    if(path.includes('/preview'))return 150000;
+    if(path.includes('/publish'))return 180000;
     if(path.includes('/release'))return 150000;
     if(path.includes('/rollback'))return 75000;
     if(path.includes('/finalize'))return 110000;
@@ -248,9 +248,20 @@
     resetStages();stage('check','running');setBusy(true);
     setText('siteUpdateFileState','Проверяем…');
     setText('siteUpdateUploadMessage','CRC, структура и сравнение с GitHub…');
-    const form=new FormData();form.append('archive',file,file.name);
     try{
-      const data=await api('/api/control/site-update/preview',{method:'POST',body:form});
+      let data=null,lastPreviewError=null;
+      for(let attempt=1;attempt<=3;attempt++){
+        const form=new FormData();form.append('archive',file,file.name);
+        try{data=await api('/api/control/site-update/preview',{method:'POST',body:form,timeoutMs:150000});break}
+        catch(error){
+          lastPreviewError=error;
+          const retryable=[408,429,500,502,503,504].includes(Number(error?.status||0));
+          if(!retryable||attempt===3)throw error;
+          setText('siteUpdateUploadMessage',`Проверка временно недоступна (HTTP ${error.status||'—'}). Повтор ${attempt+1}/3…`);
+          await sleep(attempt===1?1500:4000);
+        }
+      }
+      if(!data)throw lastPreviewError||new Error('Проверка ZIP не ответила');
       previewData=data;
       const reinstall=!data.hasChanges&&data.canReinstall;
       stage('check','done');

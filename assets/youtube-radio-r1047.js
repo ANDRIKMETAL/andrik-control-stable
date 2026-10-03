@@ -17,7 +17,11 @@ function uptimeLabel(value){const start=Date.parse(value||'');if(!Number.isFinit
 function refreshUptime(){text('youtubeRadioUptimeR565',liveStartedAt?uptimeLabel(liveStartedAt):'—')}
 function setLive(live,label){const pill=$('youtubeRadioLiveR565');if(!pill)return;pill.classList.toggle('is-live',Boolean(live));const span=pill.querySelector('span');if(span)span.textContent=label||(live?'ЭФИР ИДЁТ':'ОЖИДАЕТ СИГНАЛ')}
 function healthLabel(data){const health=safe(data?.healthStatus).toLowerCase();const stream=safe(data?.streamStatus).toLowerCase();const life=safe(data?.lifeCycleStatus).toLowerCase();if(['good','ok'].includes(health))return'ОТЛИЧНО';if(health)return health.toUpperCase();if(stream)return stream.toUpperCase();if(life)return life.toUpperCase();return'ЖДЁТ СИГНАЛ'}
-async function loadLibrary(){try{const res=await fetch(libraryUrl+'?ts='+Date.now(),{cache:'no-store'});if(!res.ok)throw new Error('HTTP '+res.status);const data=await res.json();const officialSlugs=new Set(['silent','beyond','trika','ocean','illusion-of-life']);const slugOf=item=>{const pa=safe(item?.pickerAlbum).toLowerCase();if(pa)return pa;const key=String(item?.key||'').toLowerCase();const m=key.match(/^albums\/([^/]+)\//);return m?m[1]:''};const tracks=(Array.isArray(data?.tracks)?data.tracks:[]).filter(item=>{const slug=slugOf(item),key=String(item?.key||'').toLowerCase();return officialSlugs.has(slug)&&!disabledAlbums.some(prefix=>key.startsWith(prefix))&&/\.mp3(?:$|\?)/i.test(String(item?.url||''))});text('youtubeRadioTracksR565',number(tracks.length));text('youtubeRadioModeR565','MP3 + КЛИП');text('youtubeRadioCycleR565','AUTO');refreshUptime()}catch(_){text('youtubeRadioTracksR565','—')}}
+async function loadLibrary(){
+ // R1219: inventory counters have one owner (radio-remote-control-r926.js).
+ // This module only maintains mode/cycle/uptime and YouTube statistics.
+ text('youtubeRadioModeR565','MP3 + КЛИП');text('youtubeRadioCycleR565','AUTO');refreshUptime();
+}
 function updateLinks(data){const opener=$('radioOpenLiveR943');const watch=safe(data?.watchUrl)||'https://www.youtube.com/@andrikmetal/live';if(opener){opener.href=watch;opener.setAttribute('data-force-app','youtube');opener.setAttribute('data-youtube-live-auto','1');opener.setAttribute('data-web-url',watch);opener.setAttribute('data-web-fallback','https://www.youtube.com/@andrikmetal/live');if(data?.videoId)opener.setAttribute('data-youtube-live-id',String(data.videoId));}const map=[['youtubeRadioStudioR576','studioUrl'],['youtubeRadioAnalyticsR576','analyticsUrl'],['youtubeRadioWatchR576','watchUrl']];for(const [id,key] of map){const el=$(id);if(el&&data?.[key]){el.href=data[key];if(id==='youtubeRadioWatchR576')el.setAttribute('data-web-url',data[key])}}}
 function renderYoutube(data){
  const life=safe(data?.lifeCycleStatus).toLowerCase();
@@ -27,7 +31,7 @@ function renderYoutube(data){
  liveStartedAt=live?safe(data?.actualStartTime):'';
  refreshUptime();
  setLive(live,live?'ЭФИР ИДЁТ':signal?'СИГНАЛ ЕСТЬ — НАЖМИ СТАРТ':'ОЖИДАЕТ СИГНАЛ');
- text('youtubeRadioViewersR565',number(data?.concurrentViewers));
+ text('youtubeRadioViewersR565',data?.concurrentViewers==null?'—':number(data.concurrentViewers));
  // R948: two counters stay separate. views = playback starts; visibleViews = lower public YouTube card counter.
  text('youtubeRadioStartsR947',data?.views==null?'—':number(data.views));
  // Visible/validated views are a separate lower counter. Never turn a missing value into 0.
@@ -59,7 +63,7 @@ function renderYoutube(data){
  }
  const startsCard=$('youtubeRadioStartsCardR947');
  if(startsCard)startsCard.title='YouTube Data API · playback starts / viewCount';
- text('youtubeRadioLikesR565',number(data?.likes));
+ text('youtubeRadioLikesR565',data?.likes==null?'—':number(data.likes));
  text('youtubeRadioHealthR565',live?healthLabel(data):signal?'СИГНАЛ ЕСТЬ':healthLabel(data));
  text('youtubeRadioNowTitleR565',(live||signal)?(safe(data?.title)||'ANDRIK METAL RADIO 24/7'):'Радио готово к запуску');
  text('youtubeRadioNowMetaR565',live?'R2 MP3 → OVH VPS → FFmpeg → YouTube Live':signal?'OVH уже передаёт видео и звук. Открой Studio и нажми «Начать трансляцию».':'Ищем текущую трансляцию YouTube');
@@ -72,7 +76,7 @@ function renderYoutube(data){
    note.textContent=issues.length?`YouTube: ${parts.join(' • ')} · ${issues.slice(0,2).map(x=>[safe(x?.type),safe(x?.reason),safe(x?.description)].filter(Boolean).join(' — ')).join(' · ')||'есть предупреждение'}`:`R1045 · ${live?'LIVE':signal?'СИГНАЛ ПРИНЯТ, ЭФИР ЕЩЁ НЕ НАЧАТ':'ЖДЁТ СИГНАЛ'} · YouTube: ${parts.join(' • ')||'—'} · ${new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}`;
  }
 }
-async function loadYoutube(){try{const k=getKey();const res=await fetch(`/api/control/youtube-live-r565?active=1&ts=${Date.now()}`,{credentials:'include',headers:{accept:'application/json',...(k?{'x-admin-key':k,'authorization':`Bearer ${k}`}:{})},cache:'no-store'});const data=await res.json().catch(()=>({}));if(!res.ok)throw new Error(data.error||'HTTP '+res.status);renderYoutube(data)}catch(error){try{const r=await fetch(`/api/public/youtube-live-target?ts=${Date.now()}`,{cache:'no-store',headers:{accept:'application/json'}});const d=await r.json().catch(()=>({}));if(r.ok&&d?.active){renderYoutube({...d,signalActive:Boolean(d?.signalActive||d?.active),healthStatus:d?.healthStatus||'LIVE'});text('youtubeRadioHealthR565',d?.streamStatus==='active'?'LIVE · YOUTUBE':'LIVE · PUBLIC');return}}catch(_){}text('youtubeRadioHealthR565','API ВРЕМЕННО НЕДОСТУПЕН');text('youtubeRadioNowMetaR565',safe(error?.message)||'YouTube API временно недоступен')}}
+async function loadYoutube(){try{const k=getKey();const res=await fetch(`/api/control/youtube-live-r565?active=1&fresh=1&ts=${Date.now()}`,{credentials:'include',headers:{accept:'application/json',...(k?{'x-admin-key':k,'authorization':`Bearer ${k}`}:{})},cache:'no-store'});const data=await res.json().catch(()=>({}));if(!res.ok)throw new Error(data.error||'HTTP '+res.status);renderYoutube(data)}catch(error){try{const r=await fetch(`/api/public/youtube-live-target?ts=${Date.now()}`,{cache:'no-store',headers:{accept:'application/json'}});const d=await r.json().catch(()=>({}));if(r.ok&&d?.active){renderYoutube({...d,signalActive:Boolean(d?.signalActive||d?.active),healthStatus:d?.healthStatus||'LIVE'});text('youtubeRadioHealthR565',d?.streamStatus==='active'?'LIVE · YOUTUBE':'LIVE · PUBLIC');return}}catch(_){}text('youtubeRadioHealthR565','API ВРЕМЕННО НЕДОСТУПЕН');text('youtubeRadioNowMetaR565',safe(error?.message)||'YouTube API временно недоступен')}}
 let youtubeTimer=null,libraryTimer=null;
 function armNetworkTimers(){
   if(youtubeTimer)clearInterval(youtubeTimer);if(libraryTimer)clearInterval(libraryTimer);

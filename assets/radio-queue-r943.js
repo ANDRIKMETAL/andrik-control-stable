@@ -36,14 +36,9 @@ function saveCacheR956(){try{localStorage.setItem(CACHE_KEY_R956,JSON.stringify(
 function loadCacheR956(){try{const d=JSON.parse(localStorage.getItem(CACHE_KEY_R956)||'null');if(d&&Array.isArray(d.rows)&&d.rows.length&&Date.now()-Number(d.at||0)<45000){rows=d.rows.slice(0,MAX_VISIBLE);render();if(msg)msg.textContent='Показываю последнюю очередь · обновляю с OVH…';return true}}catch(_){}return false}
 async function api(path,opts={}){const k=adminKeyR1038();const r=await fetch(path,{credentials:'include',cache:'no-store',headers:{accept:'application/json',...(k?{'x-admin-key':k}:{}),...(opts.headers||{})},...opts});const d=await r.json().catch(()=>({}));if(!r.ok)throw Object.assign(new Error(d.message||d.error||`HTTP ${r.status}`),{status:r.status,data:d});return d;}
 function applyInventory(s){
- const ready=String(s?.inventoryTelemetry||'').startsWith('R805-')||Number(s?.libraryTracks||0)>0;
- if(!ready)return;
- // R1196: song totals on the page come from the public catalog so that
- // 74 album tracks + Extended + Singles always match what the user sees in R2.
- // The live agent still provides clips and station insert counters.
- set('youtubeRadioVideosR805',s.libraryVideos);
- set('youtubeRadioStationR805',Number(s.libraryBumpers||0)+Number(s.librarySpecial||0));
- document.documentElement.dataset.radioLiveInventoryR943=String(Date.now());
+ // R1219: inventory is rendered only by radio-remote-control-r926.js.
+ // Queue refresh must never race it and overwrite exact VPS counters.
+ if(String(s?.inventoryTelemetry||'').startsWith('R805-')||Number(s?.libraryTracks||0)>0)document.documentElement.dataset.radioLiveInventoryR943=String(Date.now());
 }
 function render(){
  if(!rows.length){list.innerHTML='<div class="radio-queue-empty-r942">Получаю очередь с OVH…</div>';return;}

@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r357-deploy-retrigger",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1790972988095-ae21fd005c",
-  "release": "R1213",
-  "archiveName": "R1213-LOUDNESS-FUNCTION-FIX-INSTALLER-SAFE.zip",
-  "sourceHead": "7dd3b56ed748e51914575c91758508c8898932f9",
-  "backupSha": "7dd3b56ed748e51914575c91758508c8898932f9",
+  "operationId": "publish-1791039841941-c70027ea38",
+  "release": "R1220",
+  "archiveName": "R1220-INSTALLER-LIVE-503-FIX.zip",
+  "sourceHead": "de40d706a10ba60c657f63c7b43b16616c938e76",
+  "backupSha": "de40d706a10ba60c657f63c7b43b16616c938e76",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-10-02T20:29:49.764Z"
+  "generatedAt": "2026-10-03T15:04:01.941Z"
 }

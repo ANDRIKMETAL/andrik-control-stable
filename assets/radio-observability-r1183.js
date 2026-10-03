@@ -33,10 +33,20 @@
     archive.events=archive.events.slice(-500);archive.samples=archive.samples.slice(-960);
     try{localStorage.setItem(HISTORY_KEY,JSON.stringify(archive));archiveWarning=''}catch(_){archiveWarning='Браузер не сохранил историю на диск. Скачай JSON до закрытия страницы.'}
   }
+  function eventKeyR1219(e){
+    const snap=e?.snapshot||{};
+    return [e?.at||'',e?.event||'',e?.reason||snap?.reason||'',e?.current||snap?.current||'',e?.lastError||snap?.lastError||'',e?.lastFfmpegLine||snap?.lastFfmpegLine||''].map(txt).join('\u001f');
+  }
   function ingest(data){
     lastData=redact(data);const s=lastData?.agent?.status||{};
-    const events=[...archive.events];for(const key of ['diagnosticsR802','diagnosticsR803','diagnosticsR813','diagnosticsR814'])events.push(...(s[key]?.events||[]));
-    archive.events=[...new Map(events.filter(e=>e&&e.at).map(e=>[JSON.stringify(e),e])).values()].sort((a,b)=>eventMs(a)-eventMs(b)).slice(-500);
+    // R1219: R803 is canonical. Older names were aliases of the SAME ring and caused
+    // the journal to ingest up to four copies of every incident on every refresh.
+    const diag=s.diagnosticsR803||s.diagnosticsR802||s.diagnosticsR814||s.diagnosticsR813||{};
+    const incoming=Array.isArray(diag?.events)?diag.events:[];
+    const beforeCount=archive.events.length;
+    const merged=[...archive.events,...incoming].filter(e=>e&&e.at);
+    archive.events=[...new Map(merged.map(e=>[eventKeyR1219(e),e])).values()].sort((a,b)=>eventMs(a)-eventMs(b)).slice(-500);
+    const journalChanged=archive.events.length!==beforeCount||merged.length!==archive.events.length;
     const now=Date.now(),m=s.metricsR1183||{},r=s.runtimeMetricsR1160K||{};
     const sample={at:m.capturedAt||lastData?.agent?.lastSeen||new Date().toISOString(),receivedAt:new Date().toISOString(),current:s.current,clip:s.clipActive,publisherPid:r.publisherPid??null,videoPid:r.videoPid??null,nodePid:r.nodePid??null,nodeUptimeSeconds:r.nodeUptimeSeconds??null,hostCpuPercent:m.hostCpuPercent??null,cores:m.cores??null,load:m.load??null,availableMemoryBytes:m.availableMemoryBytes??null,nodeRss:r.memoryBytes?.rss??null,audioBytes:r.audioBytesSubmitted??null,videoFrames:r.actualVideoFramesSubmitted??null,audioQueued:r.audioPipeQueuedBytes??null,videoQueued:r.videoPipeQueuedBytes??null,audioNeedsDrain:r.audioPipeNeedsDrain??null,videoNeedsDrain:r.videoPipeNeedsDrain??null,submittedLeadMs:r.submittedLeadMs??null,phaseOffsetFrames:r.phaseOffsetFrames??null,drops:s.audioMasterVideoDropsR1085??null,duplicates:s.audioMasterVideoDuplicatesR1085??null,rtmps:s.rtmpsEstablishedConnectionsR792};
     const prev=ingest.previous,dt=prev?(Date.parse(sample.at)-Date.parse(prev.at))/1000:0;
@@ -44,7 +54,7 @@
     if(prev&&dt===0){sample.inputFps=prev.inputFps;sample.audioInputRate=prev.audioInputRate;}
     ingest.previous=sample;ingest.latest=sample;
     if(!archive.samples.length||now-Date.parse(archive.samples.at(-1).receivedAt||archive.samples.at(-1).at)>=60000){archive.samples.push(sample);persist()}
-    else if(events.length!==archive.events.length||critical(archive.events.at(-1)||{}))persist();
+    else if(journalChanged||critical(archive.events.at(-1)||{}))persist();
   }
   function downloadLog(json){
     const body=json?JSON.stringify({version:'R1183',exportedAt:new Date().toISOString(),agentLastSeen:lastData?.agent?.lastSeen,latest:ingest.latest,status:reportStatus(),...archive},null,2):lastFullText;
