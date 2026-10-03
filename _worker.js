@@ -1,5 +1,5 @@
 // R1233 D1 ROWS_READ SHIELD: radio audience cleanup is once/day and index-friendly;
-latest-sample / daily graph queries no longer wrap sampled_at in datetime(), avoiding repeated full-table scans.
+// latest-sample / daily graph queries no longer wrap sampled_at in datetime(), avoiding repeated full-table scans.
 // R1223 INSTALLER FAST MANIFEST: Preview/Publish avoid Worker CPU 503 on full-site ZIPs.
 // R1222: watchdog telemetry fallback + R1221 one-button LIVE + R1220 updater/503 fixes preserved.
 // R1220 HOTFIX: site updater CPU/503 + Git Tree protection; R1219 radio/data/journal fixes preserved.
@@ -8,7 +8,7 @@ latest-sample / daily graph queries no longer wrap sampled_at in datetime(), avo
 // ANDRIK CONTROL R1138 SAFE OPS · radio actions preserved
 // R768: OWNER PUSH SELF-HEAL + CONTROL-ORIGIN REBIND; radio R767 untouched.
 const PUSH_OWNER_RECOVERY_R768 = 'R768-OWNER-PUSH-SELFHEAL';
-const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R526', number:526, version:'55.00', full:'55.00 LIVE WEB AI FINAL R526 · PUSH DELIVERY CORRECTNESS', siteUpdater:'55.00-r357-deploy-retrigger' });
+const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R526', number:526, version:'55.00', full:'55.00 LIVE WEB AI FINAL R526 · PUSH DELIVERY CORRECTNESS', siteUpdater:'55.00-r358-deploy-nohang' });
 const PUSH_DELIVERY_CORRECTNESS_R526 = 'R526-ONESIGNAL-PLATFORM-DELIVERY+SUBSCRIBER-COUNT-GATE+HONEST-CADENCE';
 const YOUTUBE_SUBSCRIBER_PUSH_R1150 = 'R1150-YOUTUBE-SUBSCRIBER-GAIN+LOSS-5M-OWNER-DELIVERY';
 const PUSH_AUTOMATION_FIX_R778 = 'R778-CRON-UA-INDEPENDENT-HEALTH-RESCUE-STRICT-OWNER-DELIVERY';
@@ -18488,8 +18488,9 @@ async function handleSiteUpdateDeployment(request, env) {
   if (!adminAuthorized(request, env)) return json({ ok:false, error:'unauthorized' }, 401);
   const url = new URL(request.url);
   const operationId = cleanPlainText(url.searchParams.get('operationId') || '', 120);
-  const releaseRaw = cleanPlainText(url.searchParams.get('release') || '', 80);
-  let stateStatus = 0, state = null, markerMatched = false;
+  const releaseRaw = cleanPlainText(url.searchParams.get('release') || '', 80).toUpperCase();
+  const allowReleaseFallback = url.searchParams.get('releaseFallback') === '1';
+  let stateStatus = 0, state = null, markerMatched = false, releaseMatched = false;
   try {
     const stateUrl = new URL('/site-update-state.json', request.url);
     stateUrl.searchParams.set('deploy_probe', String(Date.now()));
@@ -18501,17 +18502,22 @@ async function handleSiteUpdateDeployment(request, env) {
     if (response.ok) state = await response.json().catch(() => null);
     else { try { await response.body?.cancel(); } catch (_) {} }
     markerMatched = Boolean(operationId && state && state.operationId === operationId);
+    releaseMatched = Boolean(allowReleaseFallback && releaseRaw && state?.release && String(state.release).toUpperCase() === releaseRaw);
   } catch (_) {}
 
   if (operationId) {
+    const deployed = markerMatched || releaseMatched;
     return json({
-      ok:true, deployed:markerMatched, operationId, stateStatus,
+      ok:true, deployed, operationId, stateStatus,
+      matchMode:markerMatched?'operation':releaseMatched?'release-recovery':'none',
       deployedOperationId:cleanPlainText(state?.operationId || '', 120),
       deployedRelease:cleanPlainText(state?.release || '', 80),
       checkedAt:new Date().toISOString(),
       message:markerMatched
         ? `Cloudflare опубликовал точную операцию ${operationId.split('-').slice(0,2).join('-')}.`
-        : `GitHub готов. Cloudflare ещё не опубликовал точный маркер операции.`
+        : releaseMatched
+          ? `Cloudflare уже опубликовал ${releaseRaw}. Продолжаем установку без нового Commit.`
+          : `GitHub готов. Cloudflare ещё не опубликовал нужный маркер.`
     });
   }
 
@@ -18543,15 +18549,20 @@ async function handleSiteUpdateFinalize(request, env) {
   try {
     const body = await readJsonBody(request, 12000).catch(() => ({}));
     const operationId = cleanPlainText(body.operationId || '', 120);
+    const release = cleanPlainText(body.release || '', 80).toUpperCase();
     const autoRecovery = Boolean(body.autoRecovery);
     const manual = Boolean(body.manual);
+    const allowReleaseFallback = Boolean(body.allowReleaseFallback);
     const deployed = await siteUpdateReadDeployedState(request);
+    const exactOperation = !operationId || deployed.state?.operationId === operationId;
+    const sameReleaseRecovery = Boolean(allowReleaseFallback && release && deployed.state?.release && String(deployed.state.release).toUpperCase() === release);
 
-    if (operationId && deployed.state?.operationId !== operationId) {
+    if (!exactOperation && !sameReleaseRecovery) {
       return json({
         ok:false, error:'deploy-marker-mismatch',
-        message:'Точная операция ещё не опубликована или уже заменена другой версией.',
-        deployedOperationId:cleanPlainText(deployed.state?.operationId || '', 120)
+        message:'Нужная версия ещё не опубликована. Ждём существующий Cloudflare Deploy без создания нового Commit.',
+        deployedOperationId:cleanPlainText(deployed.state?.operationId || '', 120),
+        deployedRelease:cleanPlainText(deployed.state?.release || '', 80)
       }, 409);
     }
 

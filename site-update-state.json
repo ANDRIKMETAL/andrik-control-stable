@@ -1,14 +1,14 @@
 {
   "schema": 1,
   "updaterVersion": "55.00-r357-deploy-retrigger",
-  "operation": "reinstall",
-  "reinstall": true,
-  "operationId": "reinstall-1791069953815-5a10628536",
-  "release": "R1233",
-  "archiveName": "R1233-D1-ROWS-READ-SHIELD.zip",
-  "sourceHead": "1dcd7d29627ea175f348289dfd865b7ec1a99d53",
-  "backupSha": "1dcd7d29627ea175f348289dfd865b7ec1a99d53",
+  "operation": "publish",
+  "reinstall": false,
+  "operationId": "publish-1791071825988-b6d6341261",
+  "release": "R1234",
+  "archiveName": "R1234-INSTALLER-NO-HANG-WORKER-FIX.zip",
+  "sourceHead": "902bd3726d78dac97d7ef7695b8ec5e9a68bdba6",
+  "backupSha": "902bd3726d78dac97d7ef7695b8ec5e9a68bdba6",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-10-03T23:25:53.815Z"
+  "generatedAt": "2026-10-03T23:57:07.279Z"
 }
