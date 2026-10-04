@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r358-deploy-nohang",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1791120126591-a87fd4689a",
-  "release": "R1240",
-  "archiveName": "ANDRIK-R1240-TIKTOK-STREAM-HUB.zip",
-  "sourceHead": "3ef3034bcadd1abc80b338e51d5ff1cfe7187ef2",
-  "backupSha": "3ef3034bcadd1abc80b338e51d5ff1cfe7187ef2",
+  "operationId": "publish-1791124812441-963c9a2621",
+  "release": "R1243",
+  "archiveName": "ANDRIK-R1243-TIKTOK-AUTO-SAFE-SITE.zip",
+  "sourceHead": "0c4840ca2d7194f4a69ea3b1cb2095facb716149",
+  "backupSha": "0c4840ca2d7194f4a69ea3b1cb2095facb716149",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-10-04T13:22:06.591Z"
+  "generatedAt": "2026-10-04T14:40:14.064Z"
 }

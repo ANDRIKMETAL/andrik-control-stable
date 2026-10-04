@@ -6,7 +6,7 @@ import {Readable} from 'node:stream';
 import {pipeline} from 'node:stream/promises';
 
 const CONFIG='/etc/andrik-radio-web-r627.json';
-const AGENT_VERSION_R803='R1185-WATCHDOG-R1293';
+const AGENT_VERSION_R803='R1305-TIKTOK-SCHEDULE+SAFE-TICKER+R1185-WATCHDOG-R1293';
 const DIAG_DIR_R803='/var/cache/andrik-radio-r622/diagnostics';
 const DIAG_AGENT_LOG_R803=DIAG_DIR_R803+'/r803-agent-events.ndjson';
 const DIAG_AGENT_MAX_BYTES_R803=1024*1024;
@@ -35,6 +35,9 @@ const AUDIO_SYNC_STATE_R949='/var/lib/andrik-radio/audio-sync-r949.json';
 const VISUAL_FILES=Object.freeze({morning:'stream-morning-master-r703.mp4',day:'stream-day-master-r620.mp4',evening:'stream-evening-master-r620.mp4',night:'stream-night-master-r620.mp4'});
 const DEFAULT_TICKER='ANDRIK METAL RADIO 24/7   •   ANDRIKMETAL.COM   •   НОВЫЕ СИНГЛЫ И АЛЬБОМЫ ANDRIK   •   ПОДПИСЫВАЙТЕСЬ • СТАВЬТЕ ЛАЙКИ • КОММЕНТИРУЙТЕ   •   ';
 const BASE=process.env.ANDRIK_CONTROL_BASE||'https://andrikmetal.com';
+const TIKTOK_ENV_R1304='/etc/andrik-radio-tiktok.env';
+let lastTikTokBootstrapAtR1304=0;
+
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const clean=v=>String(v??'').trim();
 let agentDiagRingR803=[];
@@ -160,6 +163,45 @@ function readConfig(){migrateConfig();try{return JSON.parse(fs.readFileSync(CONF
 function writeConfig(data){fs.writeFileSync(CONFIG,JSON.stringify(data,null,2)+'\n',{mode:0o600});try{fs.chmodSync(CONFIG,0o600)}catch(_){}}
 async function jsonFetch(url,options={}){const r=await fetch(url,options);const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(clean(d.error||d.message||`HTTP ${r.status}`));return d}
 async function localControlR721(path){return jsonFetch('http://127.0.0.1:8080'+path,{method:'POST',headers:{'content-type':'application/json','user-agent':'ANDRIK-Radio-Web-Agent-R803'}})}
+
+function localTikTokTargetPresentR1304(){
+  try{
+    if(!fs.existsSync(TIKTOK_ENV_R1304))return false;
+    const t=fs.readFileSync(TIKTOK_ENV_R1304,'utf8');
+    return /^\s*TIKTOK_STREAM_URL\s*=\s*rtmps?:\/\//mi.test(t) || (/^\s*TIKTOK_(?:RTMP_)?SERVER(?:_URL)?\s*=.+$/mi.test(t)&&/^\s*TIKTOK_(?:STREAM|LIVE|RTMP)?_?KEY\s*=.+$/mi.test(t));
+  }catch(_){return false}
+}
+function persistTikTokTargetR1304(target){
+  const value=clean(target);
+  if(!/^rtmps?:\/\//i.test(value))throw new Error('invalid TikTok ingest target');
+  fs.writeFileSync(TIKTOK_ENV_R1304,`# ANDRIK R1305 secure auto-import\nTIKTOK_STREAM_URL=${value}\n`,{mode:0o600});
+  try{fs.chmodSync(TIKTOK_ENV_R1304,0o600)}catch(_){}
+}
+async function maybeAutoBootstrapTikTokR1304(headers,status){
+  const now=Date.now();
+  const tt=status?.tiktokR1303||{};
+  if(tt?.running)return null;
+  if(now-lastTikTokBootstrapAtR1304<30000)return null;
+  lastTikTokBootstrapAtR1304=now;
+  try{
+    if(!localTikTokTargetPresentR1304()){
+      const d=await jsonFetch(BASE+'/api/radio-agent-r1305/tiktok-bootstrap',{method:'GET',headers});
+      if(!d?.configured||!d?.target)return null;
+      persistTikTokTargetR1304(d.target);
+      appendAgentDiagR803('tiktok-r1304-config-imported',{configured:true});
+    }
+    // R1305: the radio server owns the daily schedule. The agent only imports the
+    // secret ingest and asks the local scheduler to reconcile; it never forces 24/7 LIVE.
+    const d=await localControlR721('/control/tiktok-schedule-reconcile');
+    appendAgentDiagR803('tiktok-r1305-schedule-reconcile',{running:Boolean(d?.running||d?.tiktok?.running),inside:Boolean(d?.schedule?.inside||d?.tiktok?.schedule?.inside)});
+    return d;
+  }catch(error){
+    // Zero-touch bootstrap retries quietly; never log a target/key.
+    appendAgentDiagR803('tiktok-r1304-bootstrap-wait',{error:diagSanitizeR803(error?.message||error,240)});
+  }
+  return null;
+}
+
 function run(cmd,args=[],timeout=30000){const r=spawnSync(cmd,args,{encoding:'utf8',timeout,maxBuffer:1024*1024*2});const out=[r.stdout,r.stderr].filter(Boolean).join('\n').trim();return {ok:r.status===0,output:out||`${cmd} exit ${r.status}`,status:r.status};}
 function runAsync(cmd,args=[],timeout=240000){
   return new Promise(resolve=>{
@@ -307,6 +349,20 @@ async function localStatus(){
       rtmpsEstablishedConnectionsR792:Number(d.rtmpsEstablishedConnectionsR792||0),
       rtmpsExpectedConnectionsR792:Number(d.rtmpsExpectedConnectionsR792||0),
       transportHealthy:d.transportHealthy!==false,
+      tiktokR1305:d.tiktokR1305||d.tiktokR1303||null,
+      tiktokR1303:d.tiktokR1303||d.tiktokR1305||null,
+      tiktokScheduleR1305:d.tiktokScheduleR1305||d.tiktokR1305?.schedule||d.tiktokR1303?.schedule||null,
+      tiktokConfiguredR1305:Boolean(d.tiktokConfiguredR1305??d.tiktokConfiguredR1303),
+      tiktokConfiguredR1303:Boolean(d.tiktokConfiguredR1303??d.tiktokConfiguredR1305),
+      tiktokEnabledR1305:Boolean(d.tiktokEnabledR1305??d.tiktokEnabledR1303),
+      tiktokEnabledR1303:Boolean(d.tiktokEnabledR1303??d.tiktokEnabledR1305),
+      tiktokRunningR1305:Boolean(d.tiktokRunningR1305??d.tiktokRunningR1303),
+      tiktokRunningR1303:Boolean(d.tiktokRunningR1303??d.tiktokRunningR1305),
+      tiktokPidR1303:Number(d.tiktokPidR1303||0),
+      tiktokProfileR1305:clean(d.tiktokProfileR1305||d.tiktokProfileR1303||''),
+      tiktokProfileR1303:clean(d.tiktokProfileR1303||d.tiktokProfileR1305||''),
+      tiktokCropR1305:clean(d.tiktokCropR1305||d.tiktokCropR1303||''),
+      tiktokCropR1303:clean(d.tiktokCropR1303||d.tiktokCropR1305||''),
       streamProfileR814:d.streamProfileR814||d.streamProfileR813||null,streamProfileR813:d.streamProfileR813||{
         video:{codec:'H.264 / AVC',encoder:'libx264',profile:'High 4.1',width:1920,height:1080,fps:Number(d.videoFps||25),bitrate:String(d.videoBitrate||'6000k'),gopFrames:Number(d.videoGop||50),bFrames:0,pixelFormat:'yuv420p'},
         audio:{codec:'AAC-LC',sampleRate:Number(d.audioSampleRate||44100),channels:2,channelLayout:'stereo',bitrate:String(d.audioBitrate||'160k')},
@@ -492,6 +548,22 @@ ${e.message||e}`};}
       return {ok:Boolean(d?.ok),output:`R989_QUEUE ${JSON.stringify(d)}`};
     }catch(e){return {ok:false,output:`R989 QUEUE PICK ❌\n${e.message||e}`};}
   }
+  if(action==='tiktok-start-r1303'){
+    try{const d=await localControlR721('/control/tiktok-start');return {ok:Boolean(d?.running),output:`TIKTOK START R1303 ${d?.running?'✅':'❌'}\n${JSON.stringify(d)}`};}
+    catch(e){return {ok:false,output:`TIKTOK START R1303 ❌\n${e.message||e}`};}
+  }
+  if(action==='tiktok-stop-r1303'){
+    try{const d=await localControlR721('/control/tiktok-stop');return {ok:!Boolean(d?.running),output:`TIKTOK STOP R1303 ${!d?.running?'✅':'❌'}\n${JSON.stringify(d)}`};}
+    catch(e){return {ok:false,output:`TIKTOK STOP R1303 ❌\n${e.message||e}`};}
+  }
+  if(action==='tiktok-schedule-r1305'){
+    const start=clean(command.start||''),end=clean(command.end||''),enabled=Boolean(command.enabled);
+    if(!/^\d{2}:\d{2}$/.test(start)||!/^\d{2}:\d{2}$/.test(end)||start===end)return {ok:false,output:'TIKTOK SCHEDULE R1305 ❌ invalid start/end'};
+    try{
+      const d=await localControlR721(`/control/tiktok-schedule?enabled=${enabled?'1':'0'}&start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`);
+      return {ok:Boolean(d?.ok),output:`TIKTOK SCHEDULE R1305 ${d?.ok?'✅':'❌'}\n${JSON.stringify(d)}`};
+    }catch(e){return {ok:false,output:`TIKTOK SCHEDULE R1305 ❌\n${e.message||e}`};}
+  }
   if(action==='status'){
     const svc=run('systemctl',['is-active','andrik-radio.service'],10000);
     let local='';
@@ -549,6 +621,7 @@ async function daemon(){
       if(!cfg.token){console.error(new Date().toISOString(),'agent: paired token not found; waiting');await sleep(10000);continue;}
       const headers={'content-type':'application/json','authorization':'Bearer '+cfg.token,'user-agent':'ANDRIK-Radio-Web-Agent-R803'};
       const status=await localStatus();
+      await maybeAutoBootstrapTikTokR1304(headers,status);
       // Heartbeat always continues, even while start/recover is running.
       const d=await jsonFetch(BASE+'/api/radio-agent-r627/poll',{method:'POST',headers,body:JSON.stringify({version:AGENT_VERSION_R803,status})});
       if(d.ticker && typeof d.ticker.text==='string' && clean(d.ticker.text)!==clean(status.ticker))writeTicker(d.ticker.text);

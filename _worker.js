@@ -19335,6 +19335,38 @@ await setPushState(db,RADIO_REMOTE_R627.agentKey,JSON.stringify({tokenHash,paire
 await deletePushStateR627(db,key).catch(()=>{});
 return json({ok:true,token,pollUrl:'https://andrikmetal.com/api/radio-agent-r627/poll',resultUrl:'https://andrikmetal.com/api/radio-agent-r627/result'});
 }
+
+// R1305-TIKTOK-SCHEDULE: paired OVH agent may securely fetch an already-stored
+// TikTok ingest target from server-side Control environment. Never exposed to browser/UI.
+function resolveTikTokIngestFromControlEnvR1304(env){
+  const text=v=>typeof v==='string'?v.trim():'';
+  const exactFull=['TIKTOK_STREAM_URL','TIKTOK_RTMP_URL','TIKTOK_RTMPS_URL','TIKTOK_LIVE_URL','TIKTOK_INGEST_URL','TIKTOK_OUTPUT_URL','STREAM_TIKTOK_URL','TIKTOK_LIVE_STREAM_URL'];
+  const exactServer=['TIKTOK_SERVER_URL','TIKTOK_RTMP_SERVER','TIKTOK_INGEST_SERVER','TIKTOK_LIVE_SERVER','TIKTOK_SERVER','STREAM_TIKTOK_SERVER'];
+  const exactKey=['TIKTOK_STREAM_KEY','TIKTOK_LIVE_KEY','TIKTOK_RTMP_KEY','TIKTOK_BROADCAST_KEY','TIKTOK_INGEST_KEY','TIKTOK_KEY','STREAM_TIKTOK_KEY'];
+  let full=exactFull.map(k=>text(env?.[k])).find(Boolean)||'';
+  let server=exactServer.map(k=>text(env?.[k])).find(Boolean)||'';
+  let key=exactKey.map(k=>text(env?.[k])).find(Boolean)||'';
+  // Also accept equivalent server-side names already present in the Control environment.
+  for(const [name0,value0] of Object.entries(env||{})){
+    const name=String(name0||'').toUpperCase(), value=text(value0);
+    if(!value||!name.includes('TIKTOK'))continue;
+    if(!full && /^rtmps?:\/\//i.test(value) && /(STREAM|LIVE|RTMP|INGEST|OUTPUT).*URL|URL.*(STREAM|LIVE|RTMP|INGEST|OUTPUT)/.test(name)) full=value;
+    if(!server && /^rtmps?:\/\//i.test(value) && /(SERVER|INGEST|RTMP)/.test(name) && !/KEY|SECRET|TOKEN|CLIENT/.test(name)) server=value;
+    if(!key && /(STREAM|LIVE|RTMP|BROADCAST|INGEST).*KEY|KEY.*(STREAM|LIVE|RTMP|BROADCAST|INGEST)/.test(name) && !/CLIENT|SECRET|OAUTH|ACCESS|REFRESH/.test(name)) key=value;
+  }
+  let target=full;
+  if(!target && server && key) target=server.replace(/\/+$/,'')+'/'+key.replace(/^\/+/, '');
+  else if(target && key && !target.includes(key)) target=target.replace(/\/+$/,'')+'/'+key.replace(/^\/+/, '');
+  if(target && !/^rtmps?:\/\//i.test(target)) target='rtmp://'+target.replace(/^\/+/, '');
+  const configured=Boolean(target && /^rtmps?:\/\//i.test(target));
+  return {configured,target};
+}
+async function handleRadioAgentTikTokBootstrapR1304(request,env){
+  if(!await radioAgentAuthorizedR627(request,env))return json({ok:false,error:'unauthorized-agent'},401);
+  const cfg=resolveTikTokIngestFromControlEnvR1304(env);
+  return json({ok:true,configured:cfg.configured,target:cfg.configured?cfg.target:''},200,{'cache-control':'no-store, no-cache, must-revalidate','pragma':'no-cache','expires':'0'});
+}
+
 async function handleRadioRemoteStatusR627(request,env){
 if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
 const db=env.COMMENTS_DB;if(!db)return json({ok:false,error:'database-not-configured'},503);
@@ -19421,7 +19453,7 @@ if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401
 const db=env.COMMENTS_DB;if(!db)return json({ok:false,error:'database-not-configured'},503);
 const body=await request.json().catch(()=>({}));
 const action=String(body.action||'').trim().toLowerCase();
-const allowed=new Set(['start','recover','stop','restart','encoder-start','encoder-stop','soft-restart','gold-restore','screen-restore','cache-clean','status','auto-safe','full-fit','visual-sync','visual-now','visual-next','visual-auto','queue-move','audio-delay','track-remove','load-r988','queue-pick-r989','cleanup-r1026','loudness-new-r1098']);
+const allowed=new Set(['start','recover','stop','restart','encoder-start','encoder-stop','soft-restart','gold-restore','screen-restore','cache-clean','status','auto-safe','full-fit','visual-sync','visual-now','visual-next','visual-auto','queue-move','audio-delay','track-remove','load-r988','queue-pick-r989','cleanup-r1026','loudness-new-r1098','tiktok-start-r1303','tiktok-stop-r1303','tiktok-schedule-r1305']);
 if(!allowed.has(action))return json({ok:false,error:'invalid-action'},400);
 const slot=String(body.slot||'').trim().toLowerCase();
 const audioDelayMsR949=Number(body.delayMs);
@@ -19433,6 +19465,13 @@ const trackKeyR966=action==='track-remove'?musicObjectKeyR317(body.key||''):'';
 if(action==='track-remove'&&!trackKeyR966)return json({ok:false,error:'invalid-track-key'},400);
 const mediaTypeR989=action==='queue-pick-r989'?String(body.mediaType||'').trim().toLowerCase():'';
 const mediaKeyR989=action==='queue-pick-r989'?cleanPlainText(body.key||'',500).replace(/^\/+/, ''):'';
+const tiktokScheduleStartR1305=action==='tiktok-schedule-r1305'?String(body.start||'').trim():'';
+const tiktokScheduleEndR1305=action==='tiktok-schedule-r1305'?String(body.end||'').trim():'';
+const tiktokScheduleEnabledR1305=action==='tiktok-schedule-r1305'?Boolean(body.enabled):false;
+if(action==='tiktok-schedule-r1305'){
+  const okTime=v=>/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(v);
+  if(!okTime(tiktokScheduleStartR1305)||!okTime(tiktokScheduleEndR1305)||tiktokScheduleStartR1305===tiktokScheduleEndR1305)return json({ok:false,error:'invalid-tiktok-schedule'},400);
+}
 if(action==='queue-pick-r989' && !['track','clip'].includes(mediaTypeR989))return json({ok:false,error:'invalid-media-type'},400);
 if(action==='queue-pick-r989' && (!mediaKeyR989||mediaKeyR989.includes('..')||mediaKeyR989.includes('\\')||!/(?:\.mp3|\.mp4)$/i.test(mediaKeyR989)))return json({ok:false,error:'invalid-media-key'},400);
 const agent=parseStateValueR627(await getPushState(db,RADIO_REMOTE_R627.agentKey).catch(()=>null))||{};
@@ -19443,7 +19482,7 @@ const age=Date.now()-(Date.parse(existing.createdAt||'')||Date.now());
 if(age<180000)return json({ok:false,error:'command-busy',command:existing},409);
 }
 const id=crypto.randomUUID();
-const command={id,action,state:'queued',createdAt:new Date().toISOString(),requestedBy:'owner-control-r989',...((action==='visual-now'||action==='visual-next')?{slot}:{}),...(action==='queue-move'?{offset:Math.max(0,Math.min(5,Number(body.offset)||0)),direction:['up','down','next'].includes(String(body.direction||'').toLowerCase())?String(body.direction).toLowerCase():'up',itemId:cleanPlainText(body.itemId||'',220)}:{}),...(action==='track-remove'?{key:trackKeyR966,title:cleanPlainText(body.title||'',180)}:{}),...(action==='queue-pick-r989'?{mediaType:mediaTypeR989,key:mediaKeyR989,title:cleanPlainText(body.title||'',180)}:{}),...(action==='audio-delay'?{delayMs:audioDelayMsR949}:{})};
+const command={id,action,state:'queued',createdAt:new Date().toISOString(),requestedBy:'owner-control-r989',...((action==='visual-now'||action==='visual-next')?{slot}:{}),...(action==='queue-move'?{offset:Math.max(0,Math.min(5,Number(body.offset)||0)),direction:['up','down','next'].includes(String(body.direction||'').toLowerCase())?String(body.direction).toLowerCase():'up',itemId:cleanPlainText(body.itemId||'',220)}:{}),...(action==='track-remove'?{key:trackKeyR966,title:cleanPlainText(body.title||'',180)}:{}),...(action==='queue-pick-r989'?{mediaType:mediaTypeR989,key:mediaKeyR989,title:cleanPlainText(body.title||'',180)}:{}),...(action==='audio-delay'?{delayMs:audioDelayMsR949}:{}),...(action==='tiktok-schedule-r1305'?{enabled:tiktokScheduleEnabledR1305,start:tiktokScheduleStartR1305,end:tiktokScheduleEndR1305}:{})};
 await setPushState(db,RADIO_REMOTE_R627.commandKey,JSON.stringify(command));
 return json({ok:true,command});
 }
@@ -19607,6 +19646,7 @@ if (path === '/api/control/radio-remote-r627/command' && request.method === 'POS
 if (path === '/api/control/radio-remote-r627/ticker' && request.method === 'POST') return await handleRadioRemoteTickerR629(request, env);
 if (path === '/api/radio-agent-r627/pair/consume' && request.method === 'POST') return await handleRadioAgentPairConsumeR627(request, env);
 if (path === '/api/radio-agent-r627/poll' && request.method === 'POST') return await handleRadioAgentPollR627(request, env);
+if ((path === '/api/radio-agent-r1304/tiktok-bootstrap' || path === '/api/radio-agent-r1305/tiktok-bootstrap') && request.method === 'GET') return await handleRadioAgentTikTokBootstrapR1304(request, env);
 if ((path === '/api/radio-agent-r715/youtube-ensure' || path === '/api/radio-agent-r721/youtube-ensure') && request.method === 'POST') return await handleRadioAgentYoutubeObserveR1214(request, env);
 if (path === '/api/radio-agent-r627/result' && request.method === 'POST') return await handleRadioAgentResultR627(request, env);
 if (path === '/api/radio-agent-r650/visual' && (request.method === 'GET' || request.method === 'HEAD')) return await handleRadioAgentVisualR650(request, env);
