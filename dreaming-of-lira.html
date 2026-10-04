@@ -677,6 +677,8 @@ resolvePlayerHits();
 function playerAttackHitbox() {
 if (!player.attack) return null;
 const def = ATTACKS[player.attack.kind];
+// R1239: never let a visual/utility attack kind crash the whole game loop.
+if (!def) return null;
 if (player.attack.t < def.activeStart || player.attack.t > def.activeEnd) return null;
 const x = player.face === 1 ? player.x + 8 : player.x - def.range;
 return {
@@ -4946,6 +4948,13 @@ let propStandR1204=null;
 let bikeFallT_R1204=0,bikeFallDoneR1204=false;
 const BIKE_LOG_D_R1204=9200;
 ATTACKS.flyingKickR1204={duration:.56,activeStart:.10,activeEnd:.40,damage:34,range:68,depth:27,knock:92};
+ATTACKS.runKickR1239={duration:.42,activeStart:.07,activeEnd:.25,damage:30,range:66,depth:25,knock:82};
+function startOceanRunKickR1239(){
+if(currentLevel!==2||barModeR955||bikeMode||!player.runningR1204||player.dead||player.stun>0||player.z>=3)return false;
+const def=ATTACKS.runKickR1239;
+player.comboStep=0;player.attack={id:++attackSerial,kind:'runKickR1239',t:0,duration:def.duration};player.lastAttackTime=elapsed;
+player.vx=player.face*275;runBoostT_R1204=Math.max(runBoostT_R1204,.55);tone(205,.065,'square',.022,112);return true;
+}
 function beginBarDoorEntryR1204(){
 if(barDoorEntryActiveR1204||barModeR955||barDoneR955)return;
 barDoorEntryActiveR1204=true;barDoorEntryT_R1204=.01;
@@ -4970,12 +4979,15 @@ let best=null,dist=999;for(const pr of props){const dx=Math.abs(player.x-pr.x),d
 return best;
 }
 function updateRunAndParkourR1204(dt){
-if(currentLevel!==1||barModeR955||bikeMode)return;
+if((currentLevel!==1&&currentLevel!==2)||barModeR955||bikeMode)return;
+const oceanRunR1239=currentLevel===2;
 const dir=input.right?1:input.left?-1:0;
 if(input.right&&!runRightHeldR1204){if(runTapDirR1204===1&&elapsed-runTapTimeR1204<.34)runBoostT_R1204=1.25;runTapDirR1204=1;runTapTimeR1204=elapsed;}runRightHeldR1204=!!input.right;
 if(input.left&&!runLeftHeldR1204){if(runTapDirR1204===-1&&elapsed-runTapTimeR1204<.34)runBoostT_R1204=1.25;runTapDirR1204=-1;runTapTimeR1204=elapsed;}runLeftHeldR1204=!!input.left;
 runBoostT_R1204=Math.max(0,runBoostT_R1204-dt);player.runningR1204=runBoostT_R1204>0&&dir!==0;
-if(player.runningR1204)player.walkPhase+=dt*7;
+if(player.runningR1204)player.walkPhase+=dt*(oceanRunR1239?10:7);
+// Ocean gets the same double-tap run, but no city prop/parkour collision rules.
+if(oceanRunR1239)return;
 const pr=streetPropR1204();
 if(propStandR1204&&pressed.jump){player.vz=Math.max(player.vz,272);player.z=propStandR1204.h+.5;propStandR1204=null;tone(250,.05,'square',.014,360);}
 if(pr&&player.vz<=0&&(player.z>9||propStandR1204)&&player.z<=pr.h+8){player.z=pr.h;player.vz=0;propStandR1204=pr;}
@@ -4983,17 +4995,21 @@ else if(!pr&&propStandR1204){propStandR1204=null;}
 }
 const __r1204StartSwordPrev=startSwordR950;
 startSwordR950=function(){
+if(startOceanRunKickR1239())return;
 if(currentLevel===1&&!barModeR955&&!bikeMode&&player.runningR1204&&player.z<3){
 const def=ATTACKS.flyingKickR1204;player.attack={id:++attackSerial,kind:'flyingKickR1204',t:0,duration:def.duration};player.lastAttackTime=elapsed;player.vx=player.face*245;player.z=12;player.vz=54;runBoostT_R1204=Math.max(runBoostT_R1204,.38);tone(250,.07,'square',.022,120);return;
 }
 return __r1204StartSwordPrev();
 };
+const __r1239StartKickPrev=startKickR950;
+startKickR950=function(){if(startOceanRunKickR1239())return;return __r1239StartKickPrev();};
 const __r1204UpdatePlayerPrev=updatePlayer;
 updatePlayer=function(dt){
 if(barDoorEntryActiveR1204){updateBarDoorEntryR1204(dt);return;}
-const oldSpeed=player.speed;if(currentLevel===1&&!barModeR955&&!bikeMode&&runBoostT_R1204>0)player.speed=oldSpeed*1.72;
+const oldSpeed=player.speed;if((currentLevel===1||currentLevel===2)&&!barModeR955&&!bikeMode&&runBoostT_R1204>0)player.speed=oldSpeed*(currentLevel===2?1.62:1.72);
 __r1204UpdatePlayerPrev(dt);player.speed=oldSpeed;updateRunAndParkourR1204(dt);
 if(player.attack?.kind==='flyingKickR1204'){const q=clamp(player.attack.t/player.attack.duration,0,1);player.x+=player.face*150*dt;player.z=Math.max(player.z,8+Math.sin(q*Math.PI)*23);}
+if(player.attack?.kind==='runKickR1239'){player.x+=player.face*185*dt;player.vx=player.face*Math.max(180,Math.abs(player.vx));}
 };
 const __r1204EnterBarPrev=enterBarR955;
 enterBarR955=function(resume=false){barDoorEntryActiveR1204=false;barDoorEntryT_R1204=0;__r1204EnterBarPrev(resume);};
@@ -5115,6 +5131,9 @@ autoSaveClock+=dt;if(autoSaveClock>=2.5){autoSaveClock=0;saveProgress(false);}
 };
 const coversR1238=[{x:5415,y:187,w:30,d:18,h:85},{x:5500,y:229,w:30,d:18,h:85}];
 let combatR1238={shots:[],drops:[],blasts:[],ammo:0,dropT:0,serial:0};
+// R1239: grenade throw is a visual-only attack. The old unregistered kind='punch'
+// made playerAttackHitbox read ATTACKS.punch (undefined) and froze the game loop.
+ATTACKS.grenadeThrowR1239={duration:.50,activeStart:2,activeEnd:1,damage:0,range:1,depth:1,knock:0};
 function bossR1238(){return enemies.find(e=>e.alive&&e.r955Boss==='night-enforcer');}
 function weaponR1238(e){return e.type==='gang'?'bottle':e.type==='police'?'knife':e.type==='riot'?'stick':null;}
 const makeR1238=makeEnemy;
@@ -5171,12 +5190,12 @@ combatR1238.shots=combatR1238.shots.filter(q=>!q.dead);for(const b of combatR123
 }
 const swordR1238=triggerSwordR952;
 triggerSwordR952=function(){if(currentLevel===1&&!bikeMode&&!barModeR955&&bossR1238()&&started&&!paused&&!gameOver&&!cinematic&&!levelPosterR010){
-if(combatR1238.ammo&& !combatR1238.shots.some(q=>q.kind==='grenade')){const b=bossR1238();combatR1238.ammo--;launchR1238('grenade',player.x,player.y,b.x,b.y,1.1);player.attack={kind:'punch',t:0,duration:.45,id:++attackSerial};}else showMessage('СОБЕРИ ГРАНАТУ · УКРОЙСЯ ОТ ОЧЕРЕДИ',1.4);return;}return swordR1238();};
+if(combatR1238.ammo&& !combatR1238.shots.some(q=>q.kind==='grenade')){const b=bossR1238();combatR1238.ammo--;launchR1238('grenade',player.x,player.y,b.x,b.y,1.1);player.attack={kind:'grenadeThrowR1239',t:0,duration:ATTACKS.grenadeThrowR1239.duration,id:++attackSerial};showMessage('ГРАНАТА!',.55);tone(132,.05,'square',.017,78);}else showMessage('СОБЕРИ ГРАНАТУ · УКРОЙСЯ ОТ ОЧЕРЕДИ',1.4);return;}return swordR1238();};
 const tickR1238=update;
 update=function(dt){const active=started&&!paused&&!gameOver&&!victory&&!cinematic&&!levelPosterR010;tickR1238(dt);if(active&&currentLevel===1&&!bikeMode&&!barModeR955&&!gameOver)cityTickR1238(dt);};
 function resetCombatR1238(){combatR1238={shots:[],drops:[],blasts:[],ammo:0,dropT:0,serial:0};}
-const levelR1238=startLevel;startLevel=function(...args){resetCombatR1238();return levelR1238(...args);};
-const loadR1238=restoreSave;restoreSave=function(...args){resetCombatR1238();return loadR1238(...args);};
+const levelR1238=startLevel;startLevel=function(...args){resetCombatR1238();runBoostT_R1204=0;runTapDirR1204=0;runTapTimeR1204=-99;runRightHeldR1204=false;runLeftHeldR1204=false;return levelR1238(...args);};
+const loadR1238=restoreSave;restoreSave=function(...args){resetCombatR1238();runBoostT_R1204=0;runTapDirR1204=0;runTapTimeR1204=-99;runRightHeldR1204=false;runLeftHeldR1204=false;return loadR1238(...args);};
 const classicEnemyR1238=drawEnemy;
 drawEnemy=function(e){
 if(currentLevel!==1||e.r955Boss!=='night-enforcer')return classicEnemyR1238(e);
@@ -5234,7 +5253,7 @@ buildWaves();
 requestAnimationFrame(frame);
 })();
 </script>
-<script type="module" src="/assets/lira-3d-r1190.js?v=55.00-r1238"></script>
+<script type="module" src="/assets/lira-3d-r1239.js?v=55.00-r1239"></script>
 </body>
 </html>
 

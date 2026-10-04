@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r358-deploy-nohang",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1791117578746-d9be7d8c06",
-  "release": "R1238",
-  "archiveName": "ANDRIK-R1238-CITY-BIKE-CLEAN.zip",
-  "sourceHead": "0ee938b8e0f199dddc52a7132d8c2b20f4b69e93",
-  "backupSha": "0ee938b8e0f199dddc52a7132d8c2b20f4b69e93",
+  "operationId": "publish-1791118706048-404459639a",
+  "release": "R1239",
+  "archiveName": "ANDRIK-R1239-BOSS-GRENADE-OCEAN-RUN-KICK.zip",
+  "sourceHead": "a3d093e4c744bc3adaa4500118b3dc2b725ec3d5",
+  "backupSha": "a3d093e4c744bc3adaa4500118b3dc2b725ec3d5",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-10-04T12:39:38.746Z"
+  "generatedAt": "2026-10-04T12:58:26.048Z"
 }
