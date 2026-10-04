@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r358-deploy-nohang",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1791118706048-404459639a",
-  "release": "R1239",
-  "archiveName": "ANDRIK-R1239-BOSS-GRENADE-OCEAN-RUN-KICK.zip",
-  "sourceHead": "a3d093e4c744bc3adaa4500118b3dc2b725ec3d5",
-  "backupSha": "a3d093e4c744bc3adaa4500118b3dc2b725ec3d5",
+  "operationId": "publish-1791120126591-a87fd4689a",
+  "release": "R1240",
+  "archiveName": "ANDRIK-R1240-TIKTOK-STREAM-HUB.zip",
+  "sourceHead": "3ef3034bcadd1abc80b338e51d5ff1cfe7187ef2",
+  "backupSha": "3ef3034bcadd1abc80b338e51d5ff1cfe7187ef2",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-10-04T12:58:26.048Z"
+  "generatedAt": "2026-10-04T13:22:06.591Z"
 }
