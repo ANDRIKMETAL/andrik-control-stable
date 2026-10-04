@@ -1,6 +1,0 @@
-ANDRIK R1193 — RICH HOME RESTORE
-Base: R1192.
-- Restored the deeper cold-blue glass/contrast character from R1189 without reverting the new homepage structure.
-- Restored player-shell-bridge-r136 on all four home languages; floating resume button can return when resume state exists.
-- Reworked the Community card as Listener Voices / Community with glass-blue styling while keeping social links and TRIKA.
-- R1192 hero video/autoplay and top-centered Lira label are preserved.

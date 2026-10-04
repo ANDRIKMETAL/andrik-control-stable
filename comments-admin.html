@@ -11,10 +11,9 @@
 <meta content="noindex,nofollow,noarchive" name="robots"/>
 <link href="/assets/live-web-ai-green-eye-r97-192.png?v=55.00-final-r98" rel="icon" type="image/png"/>
 <link href="/assets/live-web-ai-green-eye-r97-192.png?v=55.00-final-r98" rel="apple-touch-icon"/>
-<script>
-if (location.hostname.toLowerCase() === 'control.andrikmetal.com') {
-  const manifest = document.createElement('link');
-  manifest.rel = 'manifest'; manifest.href = '/admin-manifest.webmanifest?v=55.00-final-r98'; document.head.appendChild(manifest);
+<script>if (location.hostname.toLowerCase() === 'control.andrikmetal.com') {
+const manifest = document.createElement('link');
+manifest.rel = 'manifest'; manifest.href = '/admin-manifest.webmanifest?v=55.00-final-r98'; document.head.appendChild(manifest);
 }
 </script>
 <script defer src="/assets/owner-session-r197.js?v=55.00-r197"></script>
@@ -67,7 +66,8 @@ if (location.hostname.toLowerCase() === 'control.andrikmetal.com') {
 
 
 <link href="/assets/admin-carousel-embed-v55-00-final.css?v=55.00-final-r31" rel="stylesheet"/>
-<script>(()=>{const q=new URLSearchParams(location.search);if(window.top===window.self&&q.get('embed')!=='1'){location.replace('/admin-sections.html?section=discussion&v=55.00-r387')}})();</script><link rel="stylesheet" href="/assets/unified-glow-r139.css?v=55.00-r142">
+<script>(()=>{const q=new URLSearchParams(location.search);if(window.top===window.self&&q.get('embed')!=='1'){location.replace('/admin-sections.html?section=discussion&v=55.00-r387')}})();
+</script><link rel="stylesheet" href="/assets/unified-glow-r139.css?v=55.00-r142">
 <link rel="stylesheet" href="/assets/control-mini-player-r141.css?v=55.00-r144">
 <link rel="stylesheet" href="/assets/control-hotfix-r155.css?v=55.00-r155">
 <link rel="stylesheet" href="/assets/admin-graphics-r181.css?v=55.00-r182">
@@ -143,25 +143,24 @@ if (location.hostname.toLowerCase() === 'control.andrikmetal.com') {
 <script defer src="/assets/control-mini-player-r141.js?v=55.00-r144"></script>
 <script defer src="/assets/control-version-sync-r482.js?v=55.00-r482"></script>
 
-<script>
-(()=>{
-  'use strict';
-  const bindSpoiler=(buttonId,panelId,textId)=>{
-    const btn=document.getElementById(buttonId);
-    const panel=document.getElementById(panelId);
-    const text=document.getElementById(textId);
-    if(!btn||!panel)return;
-    const setOpen=(open)=>{
-      panel.hidden=!open;
-      btn.setAttribute('aria-expanded',open?'true':'false');
-      if(text)text.textContent=open?'Скрыть':'Показать';
-    };
-    setOpen(false);
-    btn.addEventListener('click',()=>setOpen(panel.hidden));
-    window.addEventListener('pageshow',()=>setOpen(false),{passive:true});
-  };
-  bindSpoiler('controlReleaseHistoryToggle','controlReleaseHistoryPanel','controlReleaseHistoryToggleText');
-  bindSpoiler('adminPushHistoryToggle','adminPushHistoryPanel','adminPushHistoryToggleText');
+<script>(()=>{
+'use strict';
+const bindSpoiler=(buttonId,panelId,textId)=>{
+const btn=document.getElementById(buttonId);
+const panel=document.getElementById(panelId);
+const text=document.getElementById(textId);
+if(!btn||!panel)return;
+const setOpen=(open)=>{
+panel.hidden=!open;
+btn.setAttribute('aria-expanded',open?'true':'false');
+if(text)text.textContent=open?'Скрыть':'Показать';
+};
+setOpen(false);
+btn.addEventListener('click',()=>setOpen(panel.hidden));
+window.addEventListener('pageshow',()=>setOpen(false),{passive:true});
+};
+bindSpoiler('controlReleaseHistoryToggle','controlReleaseHistoryPanel','controlReleaseHistoryToggleText');
+bindSpoiler('adminPushHistoryToggle','adminPushHistoryPanel','adminPushHistoryToggleText');
 })();
 </script></script>
 <script defer src="/assets/control-version-sync-r482.js?v=55.00-r482"></script>

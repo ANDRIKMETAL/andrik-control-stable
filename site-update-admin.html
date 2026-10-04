@@ -386,59 +386,57 @@ GITHUB_RELEASE_REPO=andrik-control-stable</pre><p>Отдельный GITHUB_RELE
 </div></main>
 <script defer src="/assets/control-version-v55-00-r115.js?v=55.00-r115"></script><script defer src="/assets/control-status-eye-v55-00-r88.js?v=55.00-r857q"></script><script defer src="/assets/control-live-eye-v55-00-r265.js?v=55.00-r956"></script><script defer src="/assets/site-update-header-state-r265.js?v=55.00-r265"></script><script defer src="/assets/unified-glow-r139.js?v=55.00-r142"></script>
 <script defer src="/assets/control-mini-player-r141.js?v=55.00-r144"></script>
-<script id="r167-triad-swipe">
-(()=>{
-  const body=document.body;
-  if(!body) return;
-  const routes=[
-    '/protection-admin.html?v=55.00-r197',
-    '/attack-map.html?v=55.00-r197',
-    '/site-update-admin.html?v=55.00-r197'
-  ];
-  const current=body.classList.contains('protection-page')?0:(body.classList.contains('attack-page')?1:(body.classList.contains('site-update-page')?2:-1));
-  if(current<0) return;
-  let sx=0,sy=0,tracking=false;
-  const blocked='input,textarea,select,button,a,label,summary,[data-no-page-swipe],.protection-swipe,.attack-map,.attack-stage,.world-map-shell,.world-map-canvas';
-  const go=(dir)=>{ const next=(current + (dir==='left'?1:2))%routes.length; window.location.href=routes[next]; };
-  window.addEventListener('touchstart',e=>{
-    if(e.touches.length!==1) return;
-    if(e.target && e.target.closest && e.target.closest(blocked)) return;
-    const t=e.touches[0]; sx=t.clientX; sy=t.clientY; tracking=true;
-  },{passive:true});
-  window.addEventListener('touchend',e=>{
-    if(!tracking) return; tracking=false;
-    const t=e.changedTouches && e.changedTouches[0]; if(!t) return;
-    const dx=t.clientX-sx, dy=t.clientY-sy;
-    if(Math.abs(dx)<72) return;
-    if(Math.abs(dx)<Math.abs(dy)*1.25) return;
-    go(dx<0?'left':'right');
-  },{passive:true});
+<script id="r167-triad-swipe">(()=>{
+const body=document.body;
+if(!body) return;
+const routes=[
+'/protection-admin.html?v=55.00-r197',
+'/attack-map.html?v=55.00-r197',
+'/site-update-admin.html?v=55.00-r197'
+];
+const current=body.classList.contains('protection-page')?0:(body.classList.contains('attack-page')?1:(body.classList.contains('site-update-page')?2:-1));
+if(current<0) return;
+let sx=0,sy=0,tracking=false;
+const blocked='input,textarea,select,button,a,label,summary,[data-no-page-swipe],.protection-swipe,.attack-map,.attack-stage,.world-map-shell,.world-map-canvas';
+const go=(dir)=>{ const next=(current + (dir==='left'?1:2))%routes.length; window.location.href=routes[next]; };
+window.addEventListener('touchstart',e=>{
+if(e.touches.length!==1) return;
+if(e.target && e.target.closest && e.target.closest(blocked)) return;
+const t=e.touches[0]; sx=t.clientX; sy=t.clientY; tracking=true;
+},{passive:true});
+window.addEventListener('touchend',e=>{
+if(!tracking) return; tracking=false;
+const t=e.changedTouches && e.changedTouches[0]; if(!t) return;
+const dx=t.clientX-sx, dy=t.clientY-sy;
+if(Math.abs(dx)<72) return;
+if(Math.abs(dx)<Math.abs(dy)*1.25) return;
+go(dx<0?'left':'right');
+},{passive:true});
 })();
 </script>
-<script id="r188-restore-points-collapsed">
-(()=>{
-  const closeRestorePoints=()=>document.getElementById('siteUpdateRestorePoints')?.removeAttribute('open');
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',closeRestorePoints,{once:true});
-  else closeRestorePoints();
-  window.addEventListener('pageshow',closeRestorePoints,{passive:true});
+<script id="r188-restore-points-collapsed">(()=>{
+const closeRestorePoints=()=>document.getElementById('siteUpdateRestorePoints')?.removeAttribute('open');
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',closeRestorePoints,{once:true});
+else closeRestorePoints();
+window.addEventListener('pageshow',closeRestorePoints,{passive:true});
 })();
 </script>
-<script id="r195-one-button-fallback">(()=>{const b=document.getElementById('siteUpdatePublish');if(!b)return;const run=e=>{if(b.disabled)return;e.preventDefault();window.AndrikSiteUpdateR195?.start?.(e)};b.addEventListener('pointerup',run,{capture:true,passive:false});})();</script>
-<script id="r208-horizontal-lock">
-(()=>{
-  const reset=()=>{
-    try{window.scrollTo(0,window.scrollY)}catch(_){}
-    for(const el of [document.documentElement,document.body,document.querySelector('.admin-main'),document.querySelector('.update-wrap'),document.querySelector('.update-upload-card'),document.getElementById('siteUpdateStages'),document.getElementById('siteUpdateConsoleR195'),document.querySelector('.update-live-console-r184'),document.querySelector('.update-console-actions-r184')]){
-      if(el && el.scrollLeft) el.scrollLeft=0;
-    }
-  };
-  const stages=document.getElementById('siteUpdateStages');
-  const consoleBox=document.getElementById('siteUpdateConsoleR195');
-  if(stages) new MutationObserver(()=>requestAnimationFrame(reset)).observe(stages,{subtree:true,attributes:true,childList:true,characterData:true});
-  if(consoleBox) new MutationObserver(()=>requestAnimationFrame(reset)).observe(consoleBox,{subtree:true,attributes:true,childList:true,characterData:true});
-  window.addEventListener('resize',reset,{passive:true});
-  document.addEventListener('visibilitychange',()=>{if(!document.hidden)reset()});
-  reset();
+<script id="r195-one-button-fallback">(()=>{const b=document.getElementById('siteUpdatePublish');if(!b)return;const run=e=>{if(b.disabled)return;e.preventDefault();window.AndrikSiteUpdateR195?.start?.(e)};b.addEventListener('pointerup',run,{capture:true,passive:false});})();
+</script>
+<script id="r208-horizontal-lock">(()=>{
+const reset=()=>{
+try{window.scrollTo(0,window.scrollY)}catch(_){}
+for(const el of [document.documentElement,document.body,document.querySelector('.admin-main'),document.querySelector('.update-wrap'),document.querySelector('.update-upload-card'),document.getElementById('siteUpdateStages'),document.getElementById('siteUpdateConsoleR195'),document.querySelector('.update-live-console-r184'),document.querySelector('.update-console-actions-r184')]){
+if(el && el.scrollLeft) el.scrollLeft=0;
+}
+};
+const stages=document.getElementById('siteUpdateStages');
+const consoleBox=document.getElementById('siteUpdateConsoleR195');
+if(stages) new MutationObserver(()=>requestAnimationFrame(reset)).observe(stages,{subtree:true,attributes:true,childList:true,characterData:true});
+if(consoleBox) new MutationObserver(()=>requestAnimationFrame(reset)).observe(consoleBox,{subtree:true,attributes:true,childList:true,characterData:true});
+window.addEventListener('resize',reset,{passive:true});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)reset()});
+reset();
 })();
 </script>
 <script defer src="/assets/control-version-sync-r482.js?v=55.00-r482"></script>

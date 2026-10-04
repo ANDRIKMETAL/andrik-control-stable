@@ -15,25 +15,24 @@ a{display:inline-flex;margin-top:18px;padding:13px 18px;border-radius:10px;backg
 </style>
 </head>
 <body><main class="card"><small>ANDRIK · R1192</small><h1>Очистка кэша</h1><p id="s">Удаляю старые файлы сайта…</p><a id="open" href="/?v=55.00-r1192" hidden>Открыть новую главную</a></main>
-<script>
-(async()=>{
- const s=document.getElementById('s'),open=document.getElementById('open');
- try{
-  if('caches' in window){
-   const keys=await caches.keys();
-   await Promise.all(keys.filter(k=>/^andrik-(?:site|control)-/.test(k)).map(k=>caches.delete(k)));
-  }
-  if('serviceWorker' in navigator){
-   const regs=await navigator.serviceWorker.getRegistrations();
-   await Promise.allSettled(regs.map(async r=>{
-    try{await r.update()}catch(_){}
-    try{r.waiting?.postMessage({type:'SKIP_WAITING'})}catch(_){}
-   }));
-  }
-  s.className='ok'; s.textContent='Готово. Открой главную R1192 — видео Лиры должно двигаться.';
- }catch(e){
-  s.textContent='Очистка частично ограничена браузером. Всё равно открой новую главную.';
- }
- open.hidden=false;
+<script>(async()=>{
+const s=document.getElementById('s'),open=document.getElementById('open');
+try{
+if('caches' in window){
+const keys=await caches.keys();
+await Promise.all(keys.filter(k=>/^andrik-(?:site|control)-/.test(k)).map(k=>caches.delete(k)));
+}
+if('serviceWorker' in navigator){
+const regs=await navigator.serviceWorker.getRegistrations();
+await Promise.allSettled(regs.map(async r=>{
+try{await r.update()}catch(_){}
+try{r.waiting?.postMessage({type:'SKIP_WAITING'})}catch(_){}
+}));
+}
+s.className='ok'; s.textContent='Готово. Открой главную R1192 — видео Лиры должно двигаться.';
+}catch(e){
+s.textContent='Очистка частично ограничена браузером. Всё равно открой новую главную.';
+}
+open.hidden=false;
 })();
 </script></body></html>

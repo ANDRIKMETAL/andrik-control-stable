@@ -1,51 +1,47 @@
 (() => {
-  'use strict';
-  if(window.__ANDRIK_LIVE_EYE_R265__)return;
-  window.__ANDRIK_LIVE_EYE_R265__=true;
-  const VERSION='55.00-r265';
-  const logo=document.getElementById('controlCenterLogo')||document.querySelector('.control-center-logo');
-  if(!logo)return;
-
-  const root=document.documentElement;
-  const body=document.body;
-  const path=String(location.pathname||'').toLowerCase();
-  const allowed=new Set(['auto','green','blue','yellow','gold','red']);
-  let manual='auto';
-  let stage='auto';
-  let goldUntil=0;
-  let goldLatched=false;
-
-  logo.dataset.r265LiveEye='1';
-  logo.dataset.r263LiveEye='1';
-  logo.dataset.r260LiveEye='1';
-  logo.dataset.r256LiveEye='1';
-  logo.dataset.r255LiveEye='1';
-  logo.dataset.r254LiveEye='1';
-  logo.dataset.r247LiveEye='1';
-  logo.dataset.r244LiveEye='1';
-  logo.dataset.r3dLiveEye='1';
-  logo.setAttribute('role','button');
-  logo.setAttribute('tabindex','0');
-  logo.setAttribute('aria-label','Открыть живую анимацию ANDRIK');
-  logo.removeAttribute('href');
-
-  let motion=logo.querySelector('.andrik-live-eye-motion-r244');
-  if(!motion){
-    motion=document.createElement('span');
-    motion.className='andrik-live-eye-motion-r244 andrik-live-eye-motion-r3d';
-    [...logo.querySelectorAll(':scope > img')].forEach(img=>motion.appendChild(img));
-    logo.appendChild(motion);
-  }
-  let halo=logo.querySelector('.andrik-live-eye-halo-r244');
-  if(!halo){
-    halo=document.createElement('span');
-    halo.className='andrik-live-eye-halo-r244 andrik-live-eye-halo-r3d';
-    logo.insertBefore(halo,motion);
-  }
-
-  const style=document.createElement('style');
-  style.id='andrik-live-eye-style-r263';
-  style.textContent=`
+'use strict';
+if(window.__ANDRIK_LIVE_EYE_R265__)return;
+window.__ANDRIK_LIVE_EYE_R265__=true;
+const VERSION='55.00-r265';
+const logo=document.getElementById('controlCenterLogo')||document.querySelector('.control-center-logo');
+if(!logo)return;
+const root=document.documentElement;
+const body=document.body;
+const path=String(location.pathname||'').toLowerCase();
+const allowed=new Set(['auto','green','blue','yellow','gold','red']);
+let manual='auto';
+let stage='auto';
+let goldUntil=0;
+let goldLatched=false;
+logo.dataset.r265LiveEye='1';
+logo.dataset.r263LiveEye='1';
+logo.dataset.r260LiveEye='1';
+logo.dataset.r256LiveEye='1';
+logo.dataset.r255LiveEye='1';
+logo.dataset.r254LiveEye='1';
+logo.dataset.r247LiveEye='1';
+logo.dataset.r244LiveEye='1';
+logo.dataset.r3dLiveEye='1';
+logo.setAttribute('role','button');
+logo.setAttribute('tabindex','0');
+logo.setAttribute('aria-label','Открыть живую анимацию ANDRIK');
+logo.removeAttribute('href');
+let motion=logo.querySelector('.andrik-live-eye-motion-r244');
+if(!motion){
+motion=document.createElement('span');
+motion.className='andrik-live-eye-motion-r244 andrik-live-eye-motion-r3d';
+[...logo.querySelectorAll(':scope > img')].forEach(img=>motion.appendChild(img));
+logo.appendChild(motion);
+}
+let halo=logo.querySelector('.andrik-live-eye-halo-r244');
+if(!halo){
+halo=document.createElement('span');
+halo.className='andrik-live-eye-halo-r244 andrik-live-eye-halo-r3d';
+logo.insertBefore(halo,motion);
+}
+const style=document.createElement('style');
+style.id='andrik-live-eye-style-r263';
+style.textContent=`
     @keyframes andrikR244EyePulse{0%,100%{transform:translate(-50%,-50%) scale(.9)}50%{transform:translate(-50%,-50%) scale(1.16)}}
     @keyframes andrikR244HaloPulse{0%,100%{transform:translate(-50%,-50%) scale(.7);opacity:.42}50%{transform:translate(-50%,-50%) scale(1.62);opacity:1}}
     @keyframes andrikR244HeaderPulse{0%,100%{filter:brightness(.96)}50%{filter:brightness(1.18)}}
@@ -87,96 +83,87 @@
     @media(max-width:430px){.andrik-live-eye-stage-r247{width:100vw!important;height:100dvh!important;border-radius:0!important}}
     @media (prefers-reduced-motion:reduce){.andrik-live-eye-motion-r244,.andrik-live-eye-halo-r244{animation-duration:1.7s!important}.control-topbar{animation-duration:2.1s!important}}
   `;
-  document.head.appendChild(style);
-
-  const adminBluePage=(
-    body?.classList.contains('control-home-page')||
-    path.includes('control-home')||
-    path.includes('admin-sections')||
-    path.includes('service-admin')||
-    path.includes('observability-admin')||
-    path.includes('lyrics-admin')||
-    path.includes('comments-admin')||
-    path.includes('comment-collection')||
-    path.includes('youtube-admin')||
-    path.includes('youtube-comment-reply')
-  );
-  const pageLock=body?.classList.contains('protection-page')||path.includes('protection-admin')
-    ? 'blue'
-    : ((body?.classList.contains('attack-page')||path.includes('attack-map'))
-      ? 'yellow'
-      : (adminBluePage?'blue':'auto'));
-
-  const readStage=()=>{
-    const stages=document.getElementById('siteUpdateStages');
-    if(!stages)return 'auto';
-    const items=[...stages.querySelectorAll('[data-stage]')];
-    const step=n=>stages.querySelector(`[data-stage="${n}"]`);
-    const check=step('check');
-    const backup=step('backup');
-    const commit=step('commit');
-    const release=step('release');
-    const deploy=step('deploy');
-    const protect=step('protect');
-    const result=document.getElementById('siteUpdateResultState');
-    const text=`${result?.textContent||''} ${document.getElementById('siteUpdateDeployMessage')?.textContent||''} ${document.getElementById('siteUpdateResultText')?.textContent||''} ${document.getElementById('siteUpdatePublishMessage')?.textContent||''}`;
-    const has=(node,status)=>Boolean(node?.classList.contains(`is-${status}`));
-    const touched=node=>Boolean(node)&&/\bis-(?:running|done|warn|error|skipped)\b/.test(node.className);
-    const error=items.some(x=>x.classList.contains('is-error'))||result?.classList.contains('is-error')||/ошиб|сбой|failed|failure|критичес|неуда/i.test(text);
-    if(error)return 'red';
-
-    if(has(protect,'running'))return 'blue';
-    if(has(protect,'warn'))return 'red';
-
-    const protectUntouched=protect && !touched(protect);
-    if(has(deploy,'running') || has(deploy,'warn') || (has(deploy,'done') && protectUntouched)) return 'yellow';
-
-    if([check,backup,commit,release].some(node=>has(node,'running')||has(node,'warn'))) return 'green';
-    if(has(protect,'done') && !result?.classList.contains('is-ready')) return 'blue';
-
-    const releaseComplete=has(release,'done') || has(release,'skipped');
-    const complete=releaseComplete && has(deploy,'done') && has(protect,'done') && result?.classList.contains('is-ready');
-    if(complete && !goldLatched){goldLatched=true;goldUntil=Date.now()+5200;}
-    if(complete && Date.now()<goldUntil)return 'gold';
-    if(!items.some(x=>/\bis-(?:running|done|warn|error|skipped)\b/.test(x.className))){goldLatched=false;goldUntil=0;}
-    if(items.some(x=>/\bis-(?:running|done|warn|error|skipped)\b/.test(x.className))) return 'green';
-    return 'auto';
-  };
-
-  const sync=()=>{
-    stage=readStage();
-    const critical=logo.classList.contains('is-error')||stage==='red'||manual==='red';
-    const state=critical?'red':(pageLock!=='auto'?pageLock:(stage!=='auto'?stage:(manual!=='auto'?manual:(logo.classList.contains('is-checking')?'blue':'green'))));
-    root.dataset.andrikHeaderState=state;
-    if(pageLock!=='auto')root.dataset.andrikSectionLock=pageLock;else delete root.dataset.andrikSectionLock;
-    logo.dataset.andrikGlowActive=state;
-  };
-
-  window.addEventListener('andrik:eye-glow',event=>{const next=String(event?.detail?.state||'auto').toLowerCase();manual=allowed.has(next)?next:'auto';sync();});
-  window.addEventListener('andrik:site-update-stage',sync);
-  const stages=document.getElementById('siteUpdateStages');
-  if(stages)new MutationObserver(sync).observe(stages,{subtree:true,attributes:true,childList:true,characterData:true});
-  new MutationObserver(sync).observe(logo,{attributes:true,attributeFilter:['class']});
-  sync();
-  setInterval(sync,900);
-
-  let overlay=document.querySelector('.andrik-live-eye-overlay-r244');
-  if(!overlay){
-    overlay=document.createElement('div');overlay.className='andrik-live-eye-overlay-r244';overlay.setAttribute('aria-hidden','true');
-    overlay.innerHTML='<div class="andrik-live-eye-stage-r247"><video muted playsinline preload="metadata" src="/assets/live-eye-r223.mp4?v=55.00-r223"></video></div>';
-    document.body.appendChild(overlay);
-  }
-  const video=overlay.querySelector('video');
-  const signalOverlayR956=open=>{try{if(parent&&parent!==window)parent.postMessage({channel:'andrik-live-eye-overlay-r956',open:Boolean(open)},location.origin)}catch(_){}};
-  const close=()=>{try{video.pause();video.currentTime=0}catch(_){}overlay.classList.remove('is-open');overlay.setAttribute('aria-hidden','true');signalOverlayR956(false);};
-  const open=e=>{e?.preventDefault?.();e?.stopPropagation?.();e?.stopImmediatePropagation?.();overlay.classList.add('is-open');overlay.setAttribute('aria-hidden','false');signalOverlayR956(true);try{video.currentTime=0;video.play().catch(()=>{})}catch(_){}};
-  let openedAt=0;
-  const openSafe=e=>{openedAt=Date.now();open(e);};
-  logo.addEventListener('click',openSafe,true);
-  logo.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){openedAt=Date.now();open(e)}});
-  video?.addEventListener('ended',close);
-  const closeByTap=e=>{if(Date.now()-openedAt<420){e?.preventDefault?.();e?.stopPropagation?.();return;}close();};
-  video?.addEventListener('click',closeByTap);
-  overlay.addEventListener('click',closeByTap);
-  document.addEventListener('keydown',e=>{if(e.key==='Escape')close()});
+document.head.appendChild(style);
+const adminBluePage=(
+body?.classList.contains('control-home-page')||
+path.includes('control-home')||
+path.includes('admin-sections')||
+path.includes('service-admin')||
+path.includes('observability-admin')||
+path.includes('lyrics-admin')||
+path.includes('comments-admin')||
+path.includes('comment-collection')||
+path.includes('youtube-admin')||
+path.includes('youtube-comment-reply')
+);
+const pageLock=body?.classList.contains('protection-page')||path.includes('protection-admin')
+? 'blue'
+: ((body?.classList.contains('attack-page')||path.includes('attack-map'))
+? 'yellow'
+: (adminBluePage?'blue':'auto'));
+const readStage=()=>{
+const stages=document.getElementById('siteUpdateStages');
+if(!stages)return 'auto';
+const items=[...stages.querySelectorAll('[data-stage]')];
+const step=n=>stages.querySelector(`[data-stage="${n}"]`);
+const check=step('check');
+const backup=step('backup');
+const commit=step('commit');
+const release=step('release');
+const deploy=step('deploy');
+const protect=step('protect');
+const result=document.getElementById('siteUpdateResultState');
+const text=`${result?.textContent||''} ${document.getElementById('siteUpdateDeployMessage')?.textContent||''} ${document.getElementById('siteUpdateResultText')?.textContent||''} ${document.getElementById('siteUpdatePublishMessage')?.textContent||''}`;
+const has=(node,status)=>Boolean(node?.classList.contains(`is-${status}`));
+const touched=node=>Boolean(node)&&/\bis-(?:running|done|warn|error|skipped)\b/.test(node.className);
+const error=items.some(x=>x.classList.contains('is-error'))||result?.classList.contains('is-error')||/ошиб|сбой|failed|failure|критичес|неуда/i.test(text);
+if(error)return 'red';
+if(has(protect,'running'))return 'blue';
+if(has(protect,'warn'))return 'red';
+const protectUntouched=protect && !touched(protect);
+if(has(deploy,'running') || has(deploy,'warn') || (has(deploy,'done') && protectUntouched)) return 'yellow';
+if([check,backup,commit,release].some(node=>has(node,'running')||has(node,'warn'))) return 'green';
+if(has(protect,'done') && !result?.classList.contains('is-ready')) return 'blue';
+const releaseComplete=has(release,'done') || has(release,'skipped');
+const complete=releaseComplete && has(deploy,'done') && has(protect,'done') && result?.classList.contains('is-ready');
+if(complete && !goldLatched){goldLatched=true;goldUntil=Date.now()+5200;}
+if(complete && Date.now()<goldUntil)return 'gold';
+if(!items.some(x=>/\bis-(?:running|done|warn|error|skipped)\b/.test(x.className))){goldLatched=false;goldUntil=0;}
+if(items.some(x=>/\bis-(?:running|done|warn|error|skipped)\b/.test(x.className))) return 'green';
+return 'auto';
+};
+const sync=()=>{
+stage=readStage();
+const critical=logo.classList.contains('is-error')||stage==='red'||manual==='red';
+const state=critical?'red':(pageLock!=='auto'?pageLock:(stage!=='auto'?stage:(manual!=='auto'?manual:(logo.classList.contains('is-checking')?'blue':'green'))));
+root.dataset.andrikHeaderState=state;
+if(pageLock!=='auto')root.dataset.andrikSectionLock=pageLock;else delete root.dataset.andrikSectionLock;
+logo.dataset.andrikGlowActive=state;
+};
+window.addEventListener('andrik:eye-glow',event=>{const next=String(event?.detail?.state||'auto').toLowerCase();manual=allowed.has(next)?next:'auto';sync();});
+window.addEventListener('andrik:site-update-stage',sync);
+const stages=document.getElementById('siteUpdateStages');
+if(stages)new MutationObserver(sync).observe(stages,{subtree:true,attributes:true,childList:true,characterData:true});
+new MutationObserver(sync).observe(logo,{attributes:true,attributeFilter:['class']});
+sync();
+setInterval(sync,900);
+let overlay=document.querySelector('.andrik-live-eye-overlay-r244');
+if(!overlay){
+overlay=document.createElement('div');overlay.className='andrik-live-eye-overlay-r244';overlay.setAttribute('aria-hidden','true');
+overlay.innerHTML='<div class="andrik-live-eye-stage-r247"><video muted playsinline preload="metadata" src="/assets/live-eye-r223.mp4?v=55.00-r223"></video></div>';
+document.body.appendChild(overlay);
+}
+const video=overlay.querySelector('video');
+const signalOverlayR956=open=>{try{if(parent&&parent!==window)parent.postMessage({channel:'andrik-live-eye-overlay-r956',open:Boolean(open)},location.origin)}catch(_){}};
+const close=()=>{try{video.pause();video.currentTime=0}catch(_){}overlay.classList.remove('is-open');overlay.setAttribute('aria-hidden','true');signalOverlayR956(false);};
+const open=e=>{e?.preventDefault?.();e?.stopPropagation?.();e?.stopImmediatePropagation?.();overlay.classList.add('is-open');overlay.setAttribute('aria-hidden','false');signalOverlayR956(true);try{video.currentTime=0;video.play().catch(()=>{})}catch(_){}};
+let openedAt=0;
+const openSafe=e=>{openedAt=Date.now();open(e);};
+logo.addEventListener('click',openSafe,true);
+logo.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){openedAt=Date.now();open(e)}});
+video?.addEventListener('ended',close);
+const closeByTap=e=>{if(Date.now()-openedAt<420){e?.preventDefault?.();e?.stopPropagation?.();return;}close();};
+video?.addEventListener('click',closeByTap);
+overlay.addEventListener('click',closeByTap);
+document.addEventListener('keydown',e=>{if(e.key==='Escape')close()});
 })();

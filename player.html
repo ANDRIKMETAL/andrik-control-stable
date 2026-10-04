@@ -3,66 +3,63 @@
 <html class="i18n-pending" lang="ru">
 <head>
 <meta charset="utf-8"/>
-<script>
-(()=>{try{
-  const supported=new Set(['ru','uk','sk','en']);
-  const routeLanguage=raw=>{
-    if(!raw)return'';
-    try{
-      const url=new URL(raw,location.origin);
-      if(url.origin!==location.origin)return'';
-      const match=url.pathname.match(/^\/(uk|sk|en)(?:\/|$)/);
-      return match?match[1]:'ru';
-    }catch(_){return''}
-  };
-  window.ANDRIK_RESOLVE_PLAYER_LANG=()=>{
-    const params=new URLSearchParams(location.search);
-    const explicit=(params.get('lang')||'').toLowerCase();
-    if(supported.has(explicit))return explicit;
-    const returnLang=routeLanguage(params.get('returnPath')||'');
-    if(returnLang)return returnLang;
-    const refLang=routeLanguage(document.referrer||'');
-    if(refLang)return refLang;
-    let manual='';try{manual=(sessionStorage.getItem('andrikManualLanguage')||'').toLowerCase()}catch(_){}
-    if(supported.has(manual))return manual;
-    return 'ru';
-  };
-  const root=document.documentElement;
-  const page=window.ANDRIK_RESOLVE_PLAYER_LANG();
-  root.lang=page;
-  let manual='';try{manual=(sessionStorage.getItem('andrikManualLanguage')||'').toLowerCase()}catch(_){}
-  if(supported.has(page)&&manual===page){
-    root.setAttribute('translate','no');root.classList.add('notranslate');
-    const meta=document.createElement('meta');meta.name='google';meta.content='notranslate';document.head.appendChild(meta);
-  }
+<script>(()=>{try{
+const supported=new Set(['ru','uk','sk','en']);
+const routeLanguage=raw=>{
+if(!raw)return'';
+try{
+const url=new URL(raw,location.origin);
+if(url.origin!==location.origin)return'';
+const match=url.pathname.match(/^\/(uk|sk|en)(?:\/|$)/);
+return match?match[1]:'ru';
+}catch(_){return''}
+};
+window.ANDRIK_RESOLVE_PLAYER_LANG=()=>{
+const params=new URLSearchParams(location.search);
+const explicit=(params.get('lang')||'').toLowerCase();
+if(supported.has(explicit))return explicit;
+const returnLang=routeLanguage(params.get('returnPath')||'');
+if(returnLang)return returnLang;
+const refLang=routeLanguage(document.referrer||'');
+if(refLang)return refLang;
+let manual='';try{manual=(sessionStorage.getItem('andrikManualLanguage')||'').toLowerCase()}catch(_){}
+if(supported.has(manual))return manual;
+return 'ru';
+};
+const root=document.documentElement;
+const page=window.ANDRIK_RESOLVE_PLAYER_LANG();
+root.lang=page;
+let manual='';try{manual=(sessionStorage.getItem('andrikManualLanguage')||'').toLowerCase()}catch(_){}
+if(supported.has(page)&&manual===page){
+root.setAttribute('translate','no');root.classList.add('notranslate');
+const meta=document.createElement('meta');meta.name='google';meta.content='notranslate';document.head.appendChild(meta);
+}
 }catch(_){}})();
 </script>
 <meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/>
 <meta content="#02060a" name="theme-color"/>
-<script>
-  (() => {
-    const supported = new Set(['ru','uk','sk','en']);
-    let lang = typeof window.ANDRIK_RESOLVE_PLAYER_LANG === 'function'
-      ? window.ANDRIK_RESOLVE_PLAYER_LANG()
-      : 'ru';
-    if (!supported.has(lang)) lang = 'ru';
-    window.ANDRIK_INITIAL_LANG = lang;
-    document.documentElement.lang = lang;
-    try { localStorage.setItem('andrikPreferredLanguage', lang); } catch (_) {}
-  })();
-  </script>
+<script>(() => {
+const supported = new Set(['ru','uk','sk','en']);
+let lang = typeof window.ANDRIK_RESOLVE_PLAYER_LANG === 'function'
+? window.ANDRIK_RESOLVE_PLAYER_LANG()
+: 'ru';
+if (!supported.has(lang)) lang = 'ru';
+window.ANDRIK_INITIAL_LANG = lang;
+document.documentElement.lang = lang;
+try { localStorage.setItem('andrikPreferredLanguage', lang); } catch (_) {}
+})();
+</script>
 <meta content="dark" name="color-scheme"/>
 <title>ANDRIK Player — официальные альбомы и Official Audio</title>
 <meta content="Официальный музыкальный плеер ANDRIK: BEYOND, ТРИКА, OCEAN, Illusion of Life и Official Audio." name="description"/>
 <link href="https://andrikmetal.com/player" rel="canonical"/>
 <link href="/manifest.webmanifest?v=55.00-r87" id="appManifest" rel="manifest"/>
-<script>
-    (() => {
-      const link = document.getElementById('appManifest');
-      const lang = window.ANDRIK_INITIAL_LANG || 'ru';
-      if (link && lang !== 'ru') link.href = `/manifest-${lang}.webmanifest`;
-    })();
-  </script>
+<script>(() => {
+const link = document.getElementById('appManifest');
+const lang = window.ANDRIK_INITIAL_LANG || 'ru';
+if (link && lang !== 'ru') link.href = `/manifest-${lang}.webmanifest`;
+})();
+</script>
 <link href="/favicon.ico" rel="icon"/>
 <link href="/assets/andrik-site-illusion-r87-180.png" rel="apple-touch-icon"/>
 <link href="https://www.youtube.com" rel="preconnect"/>

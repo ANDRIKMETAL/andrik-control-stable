@@ -1,4 +1,3 @@
-/* ANDRIK R317 — browser-side ID3v2.3 tag editor + R2 batch uploader. */
 (()=>{'use strict';
 const $=id=>document.getElementById(id); if(!$('mp3TagEditorCard'))return;
 const els={details:$('mp3TagEditorDetails'),folder:$('tagFolder'),album:$('tagAlbum'),artist:$('tagArtist'),year:$('tagYear'),genre:$('tagGenre'),cover:$('tagCover'),files:$('tagMp3Files'),choose:$('tagChooseFiles'),loadR2:$('tagLoadR2'),clear:$('tagClearQueue'),status:$('tagEditorStatus'),badge:$('tagEditorBadge'),queue:$('tagQueue'),uploadAll:$('tagUploadAll'),library:$('tagR2Library'),refresh:$('tagRefreshR2'),list:$('tagR2List')};
@@ -6,97 +5,96 @@ let queue=[],coverFile=null,busy=false,staging=false,cancelRequested=false,activ
 const OPFS_DIR='andrik-r325-wav-staging';
 function isAbort(e){return e?.name==='AbortError'||/операция отменена|aborted/i.test(String(e?.message||e))}
 async function opfsRoot(){
-  if(!navigator.storage?.getDirectory)return null;
-  try{try{await navigator.storage.persist?.()}catch(_){}
-    return await navigator.storage.getDirectory()
-  }catch(_){return null}
+if(!navigator.storage?.getDirectory)return null;
+try{try{await navigator.storage.persist?.()}catch(_){}
+return await navigator.storage.getDirectory()
+}catch(_){return null}
 }
 function opfsSafeName(q,file){
-  const ext=/\.wav$/i.test(file.name)?'.wav':'.mp3';
-  return String(q.id).replace(/[^a-zA-Z0-9_-]/g,'_')+ext
+const ext=/\.wav$/i.test(file.name)?'.wav':'.mp3';
+return String(q.id).replace(/[^a-zA-Z0-9_-]/g,'_')+ext
 }
 async function stageFileToOpfs(q,onProgress,signal){
-  if(!q?.file||!/\.wav$/i.test(q.originalName||q.file.name))return q.file;
-  if(signal?.aborted)throw new DOMException('Операция отменена','AbortError');
-  const root=await opfsRoot();if(!root)return q.file;
-  const dir=await root.getDirectoryHandle(OPFS_DIR,{create:true});
-  const name=opfsSafeName(q,q.file);
-  const handle=await dir.getFileHandle(name,{create:true});
-  const writable=await handle.createWritable();
-  const reader=q.file.stream().getReader();
-  let written=0,total=q.file.size||0,lastUi=0;
-  const onAbort=()=>reader.cancel().catch(()=>{});
-  signal?.addEventListener('abort',onAbort,{once:true});
-  try{
-    while(true){
-      if(signal?.aborted)throw new DOMException('Операция отменена','AbortError');
-      const {done,value}=await reader.read();if(done)break;
-      await writable.write(value);written+=value.byteLength||value.length||0;
-      const now=performance.now();
-      if(now-lastUi>350||written>=total){lastUi=now;onProgress?.(total?Math.round(written/total*100):0)}
-    }
-    await writable.close();
-  }catch(e){
-    try{await writable.abort()}catch(_){}
-    throw e
-  }finally{
-    signal?.removeEventListener('abort',onAbort);
-    try{reader.releaseLock()}catch(_){}
-  }
-  q.opfsName=name;
-  const staged=await handle.getFile();
-  q.file=staged;
-  return staged
+if(!q?.file||!/\.wav$/i.test(q.originalName||q.file.name))return q.file;
+if(signal?.aborted)throw new DOMException('Операция отменена','AbortError');
+const root=await opfsRoot();if(!root)return q.file;
+const dir=await root.getDirectoryHandle(OPFS_DIR,{create:true});
+const name=opfsSafeName(q,q.file);
+const handle=await dir.getFileHandle(name,{create:true});
+const writable=await handle.createWritable();
+const reader=q.file.stream().getReader();
+let written=0,total=q.file.size||0,lastUi=0;
+const onAbort=()=>reader.cancel().catch(()=>{});
+signal?.addEventListener('abort',onAbort,{once:true});
+try{
+while(true){
+if(signal?.aborted)throw new DOMException('Операция отменена','AbortError');
+const {done,value}=await reader.read();if(done)break;
+await writable.write(value);written+=value.byteLength||value.length||0;
+const now=performance.now();
+if(now-lastUi>350||written>=total){lastUi=now;onProgress?.(total?Math.round(written/total*100):0)}
+}
+await writable.close();
+}catch(e){
+try{await writable.abort()}catch(_){}
+throw e
+}finally{
+signal?.removeEventListener('abort',onAbort);
+try{reader.releaseLock()}catch(_){}
+}
+q.opfsName=name;
+const staged=await handle.getFile();
+q.file=staged;
+return staged
 }
 async function removeStaged(q){
-  if(!q?.opfsName)return;
-  const root=await opfsRoot();if(!root)return;
-  try{const dir=await root.getDirectoryHandle(OPFS_DIR);await dir.removeEntry(q.opfsName)}catch(_){}
-  q.opfsName=''
+if(!q?.opfsName)return;
+const root=await opfsRoot();if(!root)return;
+try{const dir=await root.getDirectoryHandle(OPFS_DIR);await dir.removeEntry(q.opfsName)}catch(_){}
+q.opfsName=''
 }
 async function clearStagingDir(){
-  const root=await opfsRoot();if(!root)return;
-  try{await root.removeEntry(OPFS_DIR,{recursive:true})}catch(_){}
+const root=await opfsRoot();if(!root)return;
+try{await root.removeEntry(OPFS_DIR,{recursive:true})}catch(_){}
 }
 function showCancel(show){
-  const b=document.getElementById('tagCancelAll');
-  if(b)b.hidden=!show
+const b=document.getElementById('tagCancelAll');
+if(b)b.hidden=!show
 }
 function cancelAll(){
-  if(!(busy||staging))return;
-  cancelRequested=true;
-  try{activeAbort?.abort()}catch(_){}
-  setStatus('Отмена… останавливаем текущий файл.');
-  showCancel(false)
+if(!(busy||staging))return;
+cancelRequested=true;
+try{activeAbort?.abort()}catch(_){}
+setStatus('Отмена… останавливаем текущий файл.');
+showCancel(false)
 }
 async function stageIncoming(files){
-  const incoming=[...files].filter(f=>/\.(?:mp3|wav)$/i.test(f.name));
-  if(!incoming.length)return;
-  staging=true;cancelRequested=false;activeAbort=new AbortController();showCancel(true);renderQueue();
-  try{
-    for(const f of incoming){
-      if(cancelRequested||activeAbort.signal.aborted)break;
-      const q={id:crypto.randomUUID?.()||String(Date.now()+Math.random()),file:f,key:'',folder:els.folder.value,title:humanName(f.name),track:parseTrack(f.name,queue.length),state:'',selected:true,opfsName:'',originalName:f.name};
-      queue.push(q);renderQueue();
-      if(/\.wav$/i.test(f.name)){
-        updateQueueState(q,'Сохраняем WAV локально для Android…');
-        try{
-          await stageFileToOpfs(q,pct=>updateQueueState(q,`Сохраняем WAV локально · ${pct}%`),activeAbort.signal);
-          if(cancelRequested)break;
-          updateQueueState(q,'WAV сохранён локально ✓ — готов к конвертации');
-        }catch(e){
-          if(isAbort(e)){updateQueueState(q,'Отменено');break}
-          updateQueueState(q,'Ошибка локального сохранения: '+e.message)
-        }
-      }else updateQueueState(q,'MP3 → ID3 → R2')
-    }
-    if(cancelRequested)setStatus('Подготовка файлов отменена.');
-    else setStatus(`Подготовлено ${incoming.length} файлов. WAV сохранены локально — Android больше не должен терять доступ.`,'ok');
-  }finally{
-    staging=false;activeAbort=null;showCancel(busy);renderQueue()
-  }
+const incoming=[...files].filter(f=>/\.(?:mp3|wav)$/i.test(f.name));
+if(!incoming.length)return;
+staging=true;cancelRequested=false;activeAbort=new AbortController();showCancel(true);renderQueue();
+try{
+for(const f of incoming){
+if(cancelRequested||activeAbort.signal.aborted)break;
+const q={id:crypto.randomUUID?.()||String(Date.now()+Math.random()),file:f,key:'',folder:els.folder.value,title:humanName(f.name),track:parseTrack(f.name,queue.length),state:'',selected:true,opfsName:'',originalName:f.name};
+queue.push(q);renderQueue();
+if(/\.wav$/i.test(f.name)){
+updateQueueState(q,'Сохраняем WAV локально для Android…');
+try{
+await stageFileToOpfs(q,pct=>updateQueueState(q,`Сохраняем WAV локально · ${pct}%`),activeAbort.signal);
+if(cancelRequested)break;
+updateQueueState(q,'WAV сохранён локально ✓ — готов к конвертации');
+}catch(e){
+if(isAbort(e)){updateQueueState(q,'Отменено');break}
+updateQueueState(q,'Ошибка локального сохранения: '+e.message)
 }
-
+}else updateQueueState(q,'MP3 → ID3 → R2')
+}
+if(cancelRequested)setStatus('Подготовка файлов отменена.');
+else setStatus(`Подготовлено ${incoming.length} файлов. WAV сохранены локально — Android больше не должен терять доступ.`,'ok');
+}finally{
+staging=false;activeAbort=null;showCancel(busy);renderQueue()
+}
+}
 const albumNames={'singles':'Синглы ANDRIK','covers':'Каверы ANDRIK','albums/extended':'Extended Version','albums/silent':'Silent (Тишина)','albums/beyond':'BEYOND','albums/illusion-of-life':'Illusion of Life','albums/ocean':'OCEAN','albums/trika':'ТРИКА'};
 const enc=new TextEncoder();
 function auth(extra={}){const h={...extra};const k=$('lyricsAdminKey')?.value?.trim();if(k)h['x-admin-key']=k;return h}
@@ -122,78 +120,77 @@ async function taggedBlob(file,meta){const original=new Uint8Array(await file.ar
 function addFiles(files){return stageIncoming(files)}
 function renderQueue(){if(!queue.length){els.queue.innerHTML='<div class="admin-empty">Файлы пока не выбраны.</div>';els.uploadAll.disabled=true;return}els.queue.innerHTML=queue.map((q,i)=>`<article class="mp3-tag-row ${q.state==='ok'?'is-ok':q.state==='error'?'is-error':''}" data-id="${esc(q.id)}"><div class="mp3-tag-row-head"><input class="tag-row-check" type="checkbox" ${q.selected?'checked':''} aria-label="Выбрать файл"><strong>${esc(q.originalName||q.file.name)}</strong><span class="mp3-tag-size">${esc(formatSize(q.file.size))}</span></div><div class="mp3-tag-row-grid"><label>Название<input class="tag-row-title" value="${esc(q.title)}"></label><label>№ трека<input class="tag-row-track" inputmode="numeric" value="${esc(q.track)}"></label></div><div class="mp3-tag-row-actions"><button class="btn tag-row-upload" type="button" ${busy?'disabled':''}>💾 Обработать только этот файл</button></div><div class="mp3-tag-row-state">${esc(q.state|| (q.key?'Файл из R2: '+q.key:(/\.wav$/i.test(q.file.name)?'WAV → быстрый MP3 320 → ID3 → R2':'MP3 → ID3 → R2')))}</div></article>`).join('');els.uploadAll.disabled=busy||staging||!queue.some(q=>q.selected)}
 function updateQueueState(q,state,force=false){
-  q.state=state;
-  let row=null;
-  for(const el of els.queue.querySelectorAll('.mp3-tag-row')){if(el.dataset.id===String(q.id)){row=el;break}}
-  const stateEl=row?.querySelector('.mp3-tag-row-state');
-  if(stateEl)stateEl.textContent=state;
-  else if(force)renderQueue();
+q.state=state;
+let row=null;
+for(const el of els.queue.querySelectorAll('.mp3-tag-row')){if(el.dataset.id===String(q.id)){row=el;break}}
+const stateEl=row?.querySelector('.mp3-tag-row-state');
+if(stateEl)stateEl.textContent=state;
+else if(force)renderQueue();
 }
 function metaFor(q){return{title:q.title.trim()||humanName(q.originalName||q.file.name),artist:els.artist.value.trim()||'ANDRIK',album:els.album.value.trim(),track:String(q.track||'').trim(),year:els.year.value.trim(),genre:els.genre.value.trim()}}
 async function uploadOne(q,signal){
-  if(signal?.aborted)throw new DOMException('Операция отменена','AbortError');
-  const meta=metaFor(q);
-  let source=q.file;
-  if(/\.wav$/i.test(q.originalName||source.name)){
-    if(typeof window.andrikWavToMp3R324!=='function')throw new Error('Модуль WAV → MP3 R324 не загружен');
-    updateQueueState(q,'WAV → MP3 320 kbps…',true);
-    let lastUi=0,lastText='';
-    source=await window.andrikWavToMp3R324(source,(pct,msg)=>{
-      const now=performance.now(),text=msg||(`WAV → MP3 · ${pct}%`);
-      q.state=text;
-      if(text!==lastText&&(now-lastUi>450||pct>=98)){lastUi=now;lastText=text;updateQueueState(q,text)}
-    },signal);
-  }
-  if(signal?.aborted)throw new DOMException('Операция отменена','AbortError');
-  updateQueueState(q,'Записываем ID3…');
-  const blob=await taggedBlob(source,meta);
-  if(signal?.aborted)throw new DOMException('Операция отменена','AbortError');
-  updateQueueState(q,'Загружаем в R2…');
-  let folder=q.key?q.key.split('/').slice(0,-1).join('/'):(els.folder.value||'singles');
-  let name=q.key?q.key.split('/').pop():safeName(q.originalName||source.name,meta.title);
-  const url='/api/control/music/mp3?name='+encodeURIComponent(name)+'&folder='+encodeURIComponent(folder);
-  const headers=auth({'content-type':'audio/mpeg','x-andrik-track-title':encodeURIComponent(meta.title),'x-andrik-track-artist':encodeURIComponent(meta.artist),'x-andrik-track-album':encodeURIComponent(meta.album),'x-andrik-track-number':encodeURIComponent(meta.track),'x-andrik-track-year':encodeURIComponent(meta.year),'x-andrik-track-genre':encodeURIComponent(meta.genre)});
-  const r=await fetch(url,{method:'PUT',headers,body:blob,signal});
-  const d=await r.json().catch(()=>({}));
-  if(!r.ok)throw new Error(d.message||d.error||('HTTP '+r.status));
-  q.key=d.key;q.folder=folder;
-  q.file=new File([blob],name,{type:'audio/mpeg'});
-  await removeStaged(q);
-  q.originalName=name;source=null;
-  updateQueueState(q,'Готово ✓ '+d.key);
-  return d
+if(signal?.aborted)throw new DOMException('Операция отменена','AbortError');
+const meta=metaFor(q);
+let source=q.file;
+if(/\.wav$/i.test(q.originalName||source.name)){
+if(typeof window.andrikWavToMp3R324!=='function')throw new Error('Модуль WAV → MP3 R324 не загружен');
+updateQueueState(q,'WAV → MP3 320 kbps…',true);
+let lastUi=0,lastText='';
+source=await window.andrikWavToMp3R324(source,(pct,msg)=>{
+const now=performance.now(),text=msg||(`WAV → MP3 · ${pct}%`);
+q.state=text;
+if(text!==lastText&&(now-lastUi>450||pct>=98)){lastUi=now;lastText=text;updateQueueState(q,text)}
+},signal);
+}
+if(signal?.aborted)throw new DOMException('Операция отменена','AbortError');
+updateQueueState(q,'Записываем ID3…');
+const blob=await taggedBlob(source,meta);
+if(signal?.aborted)throw new DOMException('Операция отменена','AbortError');
+updateQueueState(q,'Загружаем в R2…');
+let folder=q.key?q.key.split('/').slice(0,-1).join('/'):(els.folder.value||'singles');
+let name=q.key?q.key.split('/').pop():safeName(q.originalName||source.name,meta.title);
+const url='/api/control/music/mp3?name='+encodeURIComponent(name)+'&folder='+encodeURIComponent(folder);
+const headers=auth({'content-type':'audio/mpeg','x-andrik-track-title':encodeURIComponent(meta.title),'x-andrik-track-artist':encodeURIComponent(meta.artist),'x-andrik-track-album':encodeURIComponent(meta.album),'x-andrik-track-number':encodeURIComponent(meta.track),'x-andrik-track-year':encodeURIComponent(meta.year),'x-andrik-track-genre':encodeURIComponent(meta.genre)});
+const r=await fetch(url,{method:'PUT',headers,body:blob,signal});
+const d=await r.json().catch(()=>({}));
+if(!r.ok)throw new Error(d.message||d.error||('HTTP '+r.status));
+q.key=d.key;q.folder=folder;
+q.file=new File([blob],name,{type:'audio/mpeg'});
+await removeStaged(q);
+q.originalName=name;source=null;
+updateQueueState(q,'Готово ✓ '+d.key);
+return d
 }
 async function process(items){
-  if(busy||staging||!items.length)return;
-  busy=true;cancelRequested=false;activeAbort=new AbortController();showCancel(true);renderQueue();
-  let ok=0;
-  try{
-    for(let i=0;i<items.length;i++){
-      if(cancelRequested||activeAbort.signal.aborted)break;
-      setStatus(`Обработка ${i+1} из ${items.length}: ${items[i].title||items[i].originalName||items[i].file.name}`);
-      try{await uploadOne(items[i],activeAbort.signal);ok++}
-      catch(e){
-        if(isAbort(e)){updateQueueState(items[i],'Отменено');break}
-        const msg=String(e?.message||e);
-        const friendly=/requested file could not be read|permission problems|NotReadableError/i.test(msg)
-          ?'Android потерял доступ к исходному WAV. Выберите этот файл ещё раз — R325 сразу сохранит его локально.'
-          :msg;
-        updateQueueState(items[i],'Ошибка: '+friendly)
-      }
-    }
-    if(cancelRequested)setStatus(`Обработка отменена. Успело загрузиться: ${ok} файлов.`);
-    else setStatus(`Готово: ${ok} из ${items.length} файлов обработано и загружено.`,ok===items.length?'ok':'error');
-    if(!cancelRequested)await loadLibrary(false)
-  }finally{
-    busy=false;activeAbort=null;showCancel(false);renderQueue()
-  }
+if(busy||staging||!items.length)return;
+busy=true;cancelRequested=false;activeAbort=new AbortController();showCancel(true);renderQueue();
+let ok=0;
+try{
+for(let i=0;i<items.length;i++){
+if(cancelRequested||activeAbort.signal.aborted)break;
+setStatus(`Обработка ${i+1} из ${items.length}: ${items[i].title||items[i].originalName||items[i].file.name}`);
+try{await uploadOne(items[i],activeAbort.signal);ok++}
+catch(e){
+if(isAbort(e)){updateQueueState(items[i],'Отменено');break}
+const msg=String(e?.message||e);
+const friendly=/requested file could not be read|permission problems|NotReadableError/i.test(msg)
+?'Android потерял доступ к исходному WAV. Выберите этот файл ещё раз — R325 сразу сохранит его локально.'
+:msg;
+updateQueueState(items[i],'Ошибка: '+friendly)
+}
+}
+if(cancelRequested)setStatus(`Обработка отменена. Успело загрузиться: ${ok} файлов.`);
+else setStatus(`Готово: ${ok} из ${items.length} файлов обработано и загружено.`,ok===items.length?'ok':'error');
+if(!cancelRequested)await loadLibrary(false)
+}finally{
+busy=false;activeAbort=null;showCancel(false);renderQueue()
+}
 }
 async function loadLibrary(show=true){if(show){els.library.hidden=false;setStatus('Загружаем список MP3 из R2…')}try{const r=await fetch('/api/control/music/library',{headers:auth()});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.message||d.error||('HTTP '+r.status));const list=d.tracks||[];els.list.innerHTML=list.length?`<div class="mp3-tag-library-bulk"><label><input type="checkbox" class="tag-r2-select-all"> Выбрать все</label><button class="btn admin-danger tag-delete-selected-r2" type="button" disabled>Удалить выбранные</button></div><div class="mp3-tag-library-list">`+list.map((x,i)=>`<article class="mp3-tag-library-item"><label class="tag-r2-check"><input type="checkbox" class="tag-r2-select" data-index="${i}" aria-label="Выбрать ${esc(x.title||x.name||x.key)}"></label><div><strong>${esc(x.title||x.name||x.key)}</strong><small>${esc(x.key)} · ${esc(formatSize(x.size))}</small></div><div class="mp3-tag-library-actions"><button class="btn tag-edit-r2" type="button" data-index="${i}">Редактировать</button><button class="btn admin-danger tag-delete-r2" type="button" data-index="${i}">Удалить</button></div></article>`).join('')+'</div>':'<div class="admin-empty">MP3 в R2 пока нет.</div>';els.list._tracks=list;if(show)setStatus(`В R2 найдено ${list.length} MP3.`,'ok')}catch(e){els.list.innerHTML='<div class="admin-empty">Ошибка: '+esc(e.message)+'</div>';setStatus('Ошибка чтения R2: '+e.message,'error')}}
 async function editExisting(item){setStatus('Загружаем '+item.key+' из R2…');const r=await fetch('/api/control/music/file?key='+encodeURIComponent(item.key),{headers:auth()});if(!r.ok){let d={};try{d=await r.json()}catch(_){}throw new Error(d.message||d.error||('HTTP '+r.status))}const blob=await r.blob(),name=item.key.split('/').pop(),file=new File([blob],name,{type:'audio/mpeg'});const folder=item.key.split('/').slice(0,-1).join('/');if(albumNames[folder]){els.folder.value=folder;els.album.value=item.album||albumNames[folder]}els.artist.value=item.artist||els.artist.value;els.year.value=item.year||els.year.value;els.genre.value=item.genre||els.genre.value;queue=[{id:crypto.randomUUID?.()||String(Date.now()),file,key:item.key,folder,title:item.title||humanName(name),track:item.track||'',state:'Загружен из R2 — можно менять теги',selected:true}];els.details.open=true;renderQueue();setStatus('Файл готов к редактированию. Измените поля и нажмите «Обработать».','ok');persist()}
 async function deleteR2Item(item){if(!item?.key)return false;const title=item.title||item.name||item.key;if(!confirm(`Удалить MP3 «${title}» из R2?\n\n${item.key}`))return false;setStatus('Удаляем '+title+'…');const r=await fetch('/api/control/music/mp3?key='+encodeURIComponent(item.key),{method:'DELETE',headers:auth()});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.message||d.error||('HTTP '+r.status));setStatus('MP3 удалён: '+title,'ok');return true}
 async function deleteR2Selected(items){if(!items.length)return;if(!confirm(`Удалить выбранные MP3 из R2: ${items.length} шт.?\n\nЭто действие нельзя отменить.`))return;busy=true;let ok=0;try{for(const item of items){setStatus(`Удаляем ${ok+1} из ${items.length}: ${item.title||item.name||item.key}`);try{const r=await fetch('/api/control/music/mp3?key='+encodeURIComponent(item.key),{method:'DELETE',headers:auth()});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.message||d.error||('HTTP '+r.status));ok++}catch(e){console.warn('R2 delete failed',item.key,e)}}setStatus(`Удалено ${ok} из ${items.length} MP3.`,ok===items.length?'ok':'error');await loadLibrary(false)}finally{busy=false}}
 function syncR2DeleteState(){const boxes=[...els.list.querySelectorAll('.tag-r2-select')],all=els.list.querySelector('.tag-r2-select-all'),del=els.list.querySelector('.tag-delete-selected-r2');const checked=boxes.filter(b=>b.checked);if(del)del.disabled=!checked.length;if(all){all.checked=boxes.length>0&&checked.length===boxes.length;all.indeterminate=checked.length>0&&checked.length<boxes.length}}
-
 els.folder.addEventListener('change',syncAlbum);[els.album,els.artist,els.year,els.genre].forEach(e=>e.addEventListener('change',persist));restore();if(!els.album.value)syncAlbum();
 els.cover.addEventListener('change',()=>{coverFile=els.cover.files?.[0]||null;setStatus(coverFile?'Обложка выбрана: '+coverFile.name:'Обложка не выбрана.')});
 els.choose.addEventListener('click',()=>{if(busy||staging)return;els.files.click()});

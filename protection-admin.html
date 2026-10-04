@@ -224,33 +224,32 @@ body.protection-page .compact-actions .btn{min-width:0!important;max-width:100%!
 <section class="protection-panel" data-panel="backups"><div class="panel-stack"><article class="protection-card is-green"><div class="card-head"><div><span class="eyeline">БАЗА D1</span><h2>Резервные копии данных</h2><p id="backupD1Message">Комментарии, тексты, push, события и аналитика.</p></div><span class="state-pill" id="backupD1State">Ожидает</span></div><div class="backup-summary"><div class="kpi"><strong id="backupD1Count">0</strong><span>копий</span></div><div class="kpi"><strong id="backupD1Latest">—</strong><span>последняя</span></div><div class="kpi"><strong id="backupD1Storage">—</strong><span>хранилище</span></div></div><div class="compact-actions"><button class="btn btn-primary" id="backupD1Create" type="button">+ Создать D1</button><button class="btn" id="backupsRefresh" type="button">↻ Обновить</button></div><div class="backup-list" id="backupD1List"><div class="empty-box">Загрузка…</div></div></article><article class="protection-card"><div class="card-head"><div><span class="eyeline">КОД САЙТА</span><h2>Точки восстановления</h2><p id="backupSiteMessage">GitHub backup перед каждой публикацией и ручные метки.</p></div><span class="state-pill" id="backupSiteState">Ожидает</span></div><div class="compact-actions"><button class="btn btn-primary" id="backupSiteCreate" type="button">+ Backup сайта</button><a class="btn" href="/site-update-admin.html?v=55.00-r115">Полная история ↗</a></div><div class="backup-list" id="backupSiteList"><div class="empty-box">Загрузка…</div></div></article><p class="swipe-hint">← Свайп между разделами →</p></div></section>
 </div><footer class="control-version-footer"><strong>Live Web AI · ANDRIK · v55.00 LIVE WEB AI FINAL R418</strong><span>Turnstile Pages · быстрые спойлеры · Guard · карта атак · 02.08.2026</span></footer></div></main><script defer src="/assets/control-version-v55-00-r115.js?v=55.00-r115"></script><script defer src="/assets/control-status-eye-v55-00-r88.js?v=55.00-r857q"></script><script defer src="/assets/control-live-eye-v55-00-r265.js?v=55.00-r956"></script><script defer src="/assets/unified-glow-r139.js?v=55.00-r142"></script>
 <script defer src="/assets/control-mini-player-r141.js?v=55.00-r144"></script>
-<script id="r167-triad-swipe">
-(()=>{
-  const body=document.body;
-  if(!body) return;
-  const routes=[
-    '/protection-admin.html?v=55.00-r167',
-    '/attack-map.html?v=55.00-r167',
-    '/site-update-admin.html?v=55.00-r167'
-  ];
-  const current=body.classList.contains('protection-page')?0:(body.classList.contains('attack-page')?1:(body.classList.contains('site-update-page')?2:-1));
-  if(current<0) return;
-  let sx=0,sy=0,tracking=false;
-  const blocked='input,textarea,select,button,a,label,summary,[data-no-page-swipe],.protection-swipe,.attack-map,.attack-stage,.world-map-shell,.world-map-canvas';
-  const go=(dir)=>{ const next=(current + (dir==='left'?1:2))%routes.length; window.location.href=routes[next]; };
-  window.addEventListener('touchstart',e=>{
-    if(e.touches.length!==1) return;
-    if(e.target && e.target.closest && e.target.closest(blocked)) return;
-    const t=e.touches[0]; sx=t.clientX; sy=t.clientY; tracking=true;
-  },{passive:true});
-  window.addEventListener('touchend',e=>{
-    if(!tracking) return; tracking=false;
-    const t=e.changedTouches && e.changedTouches[0]; if(!t) return;
-    const dx=t.clientX-sx, dy=t.clientY-sy;
-    if(Math.abs(dx)<72) return;
-    if(Math.abs(dx)<Math.abs(dy)*1.25) return;
-    go(dx<0?'left':'right');
-  },{passive:true});
+<script id="r167-triad-swipe">(()=>{
+const body=document.body;
+if(!body) return;
+const routes=[
+'/protection-admin.html?v=55.00-r167',
+'/attack-map.html?v=55.00-r167',
+'/site-update-admin.html?v=55.00-r167'
+];
+const current=body.classList.contains('protection-page')?0:(body.classList.contains('attack-page')?1:(body.classList.contains('site-update-page')?2:-1));
+if(current<0) return;
+let sx=0,sy=0,tracking=false;
+const blocked='input,textarea,select,button,a,label,summary,[data-no-page-swipe],.protection-swipe,.attack-map,.attack-stage,.world-map-shell,.world-map-canvas';
+const go=(dir)=>{ const next=(current + (dir==='left'?1:2))%routes.length; window.location.href=routes[next]; };
+window.addEventListener('touchstart',e=>{
+if(e.touches.length!==1) return;
+if(e.target && e.target.closest && e.target.closest(blocked)) return;
+const t=e.touches[0]; sx=t.clientX; sy=t.clientY; tracking=true;
+},{passive:true});
+window.addEventListener('touchend',e=>{
+if(!tracking) return; tracking=false;
+const t=e.changedTouches && e.changedTouches[0]; if(!t) return;
+const dx=t.clientX-sx, dy=t.clientY-sy;
+if(Math.abs(dx)<72) return;
+if(Math.abs(dx)<Math.abs(dy)*1.25) return;
+go(dx<0?'left':'right');
+},{passive:true});
 })();
 </script>
 <script defer src="/assets/control-version-sync-r482.js?v=55.00-r482"></script>

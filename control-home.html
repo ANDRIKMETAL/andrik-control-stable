@@ -8,13 +8,15 @@
 <meta content="R524" name="andrik-control-release"/>
 <meta content="Live Web AI" name="apple-mobile-web-app-title"/>
 <meta content="dark" name="color-scheme"/>
-<meta content="noindex,nofollow,noarchive" name="robots"/><script>document.documentElement.dataset.controlInitialPage=(new URLSearchParams(location.search).get('page')||'menu').toLowerCase();</script>
+<meta content="noindex,nofollow,noarchive" name="robots"/><script>document.documentElement.dataset.controlInitialPage=(new URLSearchParams(location.search).get('page')||'menu').toLowerCase();
+</script>
 <link rel="prefetch" href="/analytics-admin.html?page=google&amp;source=admin-hub-swipe&amp;v=55.00-r420" as="document" fetchpriority="low"/>
 <link rel="prefetch" href="/youtube-admin.html?source=admin-hub-swipe&amp;v=55.00-r680" as="document" fetchpriority="low"/>
 <script type="speculationrules">{"prefetch":[{"source":"list","urls":["/analytics-admin.html?page=google&source=admin-hub-swipe&v=55.00-r420","/youtube-admin.html?source=admin-hub-swipe&v=55.00-r680"],"eagerness":"eager"}]}</script>
 <link href="/assets/live-web-ai-green-eye-r97-192.png?v=55.00-final-r98" rel="icon" type="image/png"/>
 <link href="/assets/live-web-ai-green-eye-r97-192.png?v=55.00-final-r98" rel="apple-touch-icon"/>
-<script>if(location.hostname.toLowerCase()==='control.andrikmetal.com'){const m=document.createElement('link');m.rel='manifest';m.href='/admin-manifest.webmanifest?v=55.00-final-r263';document.head.appendChild(m)}</script><script defer src="/assets/owner-session-r197.js?v=55.00-r197"></script>
+<script>if(location.hostname.toLowerCase()==='control.andrikmetal.com'){const m=document.createElement('link');m.rel='manifest';m.href='/admin-manifest.webmanifest?v=55.00-final-r263';document.head.appendChild(m)}
+</script><script defer src="/assets/owner-session-r197.js?v=55.00-r197"></script>
 <link href="/assets/v50-26.css?v=53.0" rel="stylesheet"/>
 <link href="/assets/control-v54-stable.css?v=54.02" rel="stylesheet"/>
 <link href="/assets/control-home-v54-01.css?v=54.02" rel="stylesheet"/>
@@ -748,7 +750,8 @@ body.control-push-summary-view .control-summary-source{display:block}
 <link rel="stylesheet" href="/assets/control-summary-polish-r446.css?v=55.00-r446">
 <link rel="stylesheet" href="/assets/control-summary-polish-r448.css?v=55.00-r448">
 <link rel="stylesheet" href="/assets/planet-map-transition-r450.css?v=55.00-r450">
-<script>try{if(Date.now()-Number(sessionStorage.getItem('andrik-portal-return-r450')||sessionStorage.getItem('andrik-portal-return-r449')||0)<8000)document.documentElement.classList.add('andrik-portal-return-pending-r450')}catch(_){}</script>
+<script>try{if(Date.now()-Number(sessionStorage.getItem('andrik-portal-return-r450')||sessionStorage.getItem('andrik-portal-return-r449')||0)<8000)document.documentElement.classList.add('andrik-portal-return-pending-r450')}catch(_){}
+</script>
 
 <style id="andrik-r459-admin-bottom-stable-glow-only">
 /* R459 — Admin panel only. Protection/Guard logic remains untouched. */
@@ -984,92 +987,83 @@ body.control-home-page.control-menu-visible .control-swipe-indicator{display:non
 
 
 
-<script id="r181-admin-menu-lock-script">
-(()=>{
-  'use strict';
-  const FALLBACK_VERSION=document.querySelector('meta[name="andrik-control-release"]')?.content?.trim()||'R524';
-  let VERSION=FALLBACK_VERSION;
-
-  const cleanVersion=value=>{
-    const match=String(value||'').toUpperCase().match(/\bR(\d{1,5})\b/);
-    return match?`R${match[1]}`:'';
-  };
-
-  const enforceVersion=()=>{
-    const oldFooter=document.querySelector('.control-menu-page .control-version-footer');
-    if(oldFooter){
-      const strong=oldFooter.querySelector('strong');
-      const span=oldFooter.querySelector('span');
-      if(strong)strong.textContent='Live Web AI';
-      if(span)span.textContent=VERSION;
-    }
-    const split=document.querySelector('.control-split-version-r181');
-    if(split){
-      const brand=split.querySelector('.control-split-brand-r181');
-      const number=split.querySelector('.control-split-number-r181');
-      if(brand)brand.textContent='Live Web AI';
-      if(number)number.textContent=VERSION;
-      split.setAttribute('aria-label',`Live Web AI, версия ${VERSION}`);
-    }
-  };
-
-  const lockPortraitMenu=()=>{
-    if(!matchMedia('(orientation:portrait)').matches)return;
-    const page=document.querySelector('.control-menu-page');
-    const inner=page?.querySelector('.control-swipe-page-inner');
-    if(page)page.scrollTop=0;
-    if(inner)inner.scrollTop=0;
-    document.documentElement.scrollTop=0;
-    document.body.scrollTop=0;
-    try{scrollTo(0,0)}catch(_){}
-  };
-
-  const apply=()=>{
-    enforceVersion();
-    if(document.body.classList.contains('control-menu-visible'))lockPortraitMenu();
-  };
-
-  const confirmInstalledVersion=async()=>{
-    try{
-      const response=await fetch(`/api/control/owner-status?version_check=${Date.now()}`,{
-        credentials:'include',cache:'no-store',headers:{accept:'application/json'}
-      });
-      if(!response.ok)return;
-      const data=await response.json().catch(()=>({}));
-      const detected=cleanVersion(data.version);
-      const num=v=>Number(String(v||'').replace(/\D+/g,''))||0;
-      if(detected&&num(detected)>num(VERSION)){
-        VERSION=detected;
-        enforceVersion();
-      }
-    }catch(_){}
-  };
-
-  if(document.readyState==='loading'){
-    document.addEventListener('DOMContentLoaded',()=>{apply();confirmInstalledVersion()},{once:true});
-  }else{
-    apply();
-    confirmInstalledVersion();
-  }
-
-  new MutationObserver(apply).observe(document.body,{attributes:true,attributeFilter:['class']});
-  window.addEventListener('load',apply);
-  window.addEventListener('resize',apply,{passive:true});
-  window.addEventListener('orientationchange',()=>setTimeout(apply,80),{passive:true});
-  window.addEventListener('andrik-control-version-ready',apply);
-  [100,350,800,1500].forEach(ms=>setTimeout(apply,ms));
-  [500,1800].forEach(ms=>setTimeout(confirmInstalledVersion,ms));
+<script id="r181-admin-menu-lock-script">(()=>{
+'use strict';
+const FALLBACK_VERSION=document.querySelector('meta[name="andrik-control-release"]')?.content?.trim()||'R524';
+let VERSION=FALLBACK_VERSION;
+const cleanVersion=value=>{
+const match=String(value||'').toUpperCase().match(/\bR(\d{1,5})\b/);
+return match?`R${match[1]}`:'';
+};
+const enforceVersion=()=>{
+const oldFooter=document.querySelector('.control-menu-page .control-version-footer');
+if(oldFooter){
+const strong=oldFooter.querySelector('strong');
+const span=oldFooter.querySelector('span');
+if(strong)strong.textContent='Live Web AI';
+if(span)span.textContent=VERSION;
+}
+const split=document.querySelector('.control-split-version-r181');
+if(split){
+const brand=split.querySelector('.control-split-brand-r181');
+const number=split.querySelector('.control-split-number-r181');
+if(brand)brand.textContent='Live Web AI';
+if(number)number.textContent=VERSION;
+split.setAttribute('aria-label',`Live Web AI, версия ${VERSION}`);
+}
+};
+const lockPortraitMenu=()=>{
+if(!matchMedia('(orientation:portrait)').matches)return;
+const page=document.querySelector('.control-menu-page');
+const inner=page?.querySelector('.control-swipe-page-inner');
+if(page)page.scrollTop=0;
+if(inner)inner.scrollTop=0;
+document.documentElement.scrollTop=0;
+document.body.scrollTop=0;
+try{scrollTo(0,0)}catch(_){}
+};
+const apply=()=>{
+enforceVersion();
+if(document.body.classList.contains('control-menu-visible'))lockPortraitMenu();
+};
+const confirmInstalledVersion=async()=>{
+try{
+const response=await fetch(`/api/control/owner-status?version_check=${Date.now()}`,{
+credentials:'include',cache:'no-store',headers:{accept:'application/json'}
+});
+if(!response.ok)return;
+const data=await response.json().catch(()=>({}));
+const detected=cleanVersion(data.version);
+const num=v=>Number(String(v||'').replace(/\D+/g,''))||0;
+if(detected&&num(detected)>num(VERSION)){
+VERSION=detected;
+enforceVersion();
+}
+}catch(_){}
+};
+if(document.readyState==='loading'){
+document.addEventListener('DOMContentLoaded',()=>{apply();confirmInstalledVersion()},{once:true});
+}else{
+apply();
+confirmInstalledVersion();
+}
+new MutationObserver(apply).observe(document.body,{attributes:true,attributeFilter:['class']});
+window.addEventListener('load',apply);
+window.addEventListener('resize',apply,{passive:true});
+window.addEventListener('orientationchange',()=>setTimeout(apply,80),{passive:true});
+window.addEventListener('andrik-control-version-ready',apply);
+[100,350,800,1500].forEach(ms=>setTimeout(apply,ms));
+[500,1800].forEach(ms=>setTimeout(confirmInstalledVersion,ms));
 })();
 </script>
 <script defer src="/assets/control-version-sync-r482.js?v=55.00-r482"></script>
-<script>
-(()=>{
-  const apply=()=>{
-    document.querySelectorAll('.control-version-footer span,.control-split-number-r181').forEach(el=>{el.textContent='R511';});
-    document.querySelectorAll('[aria-label*="версия R"]').forEach(el=>el.setAttribute('aria-label','Live Web AI, версия R511'));
-  };
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',apply,{once:true}); else apply();
-  window.addEventListener('pageshow',apply,{passive:true});
+<script>(()=>{
+const apply=()=>{
+document.querySelectorAll('.control-version-footer span,.control-split-number-r181').forEach(el=>{el.textContent='R511';});
+document.querySelectorAll('[aria-label*="версия R"]').forEach(el=>el.setAttribute('aria-label','Live Web AI, версия R511'));
+};
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',apply,{once:true}); else apply();
+window.addEventListener('pageshow',apply,{passive:true});
 })();
 </script>
 <script defer src="/assets/control-version-sync-r506.js?v=55.00-r506"></script>

@@ -1,12 +1,11 @@
-/* ANDRIK R1174 — Hot Asphalt is treated as the Covers track “Полные карманы”; Singles stays only true singles */
 (()=>{'use strict';
 const roots=[...document.querySelectorAll('[data-andrik-music-list],#andrikSinglesList')];if(!roots.length)return;
 const lang=String(document.documentElement.lang||'ru').toLowerCase().split('-')[0];
 const I={
- ru:{loading:'Загружаем…',emptySingles:'Синглы скоро появятся.',emptyCovers:'Каверы скоро появятся.',play:'▶ Слушать',pause:'❚❚ Пауза',download:'↓ Скачать MP3',share:'🔗 Поделиться ссылкой',copied:'✓ Ссылка скопирована',copyPrompt:'Скопируйте ссылку для браузера',error:'Не удалось загрузить музыку.'},
- uk:{loading:'Завантажуємо…',emptySingles:'Сингли скоро з’являться.',emptyCovers:'Кавери скоро з’являться.',play:'▶ Слухати',pause:'❚❚ Пауза',download:'↓ Завантажити MP3',share:'🔗 Поділитися посиланням',copied:'✓ Посилання скопійовано',copyPrompt:'Скопіюйте посилання для браузера',error:'Не вдалося завантажити музику.'},
- sk:{loading:'Načítavame…',emptySingles:'Single sa čoskoro objavia.',emptyCovers:'Covery sa čoskoro objavia.',play:'▶ Počúvať',pause:'❚❚ Pauza',download:'↓ Stiahnuť MP3',share:'🔗 Zdieľať odkaz',copied:'✓ Odkaz skopírovaný',copyPrompt:'Skopírujte odkaz pre prehliadač',error:'Hudbu sa nepodarilo načítať.'},
- en:{loading:'Loading…',emptySingles:'Singles are coming soon.',emptyCovers:'Covers are coming soon.',play:'▶ Listen',pause:'❚❚ Pause',download:'↓ Download MP3',share:'🔗 Share link',copied:'✓ Link copied',copyPrompt:'Copy this link for your browser',error:'Could not load music.'}
+ru:{loading:'Загружаем…',emptySingles:'Синглы скоро появятся.',emptyCovers:'Каверы скоро появятся.',play:'▶ Слушать',pause:'❚❚ Пауза',download:'↓ Скачать MP3',share:'🔗 Поделиться ссылкой',copied:'✓ Ссылка скопирована',copyPrompt:'Скопируйте ссылку для браузера',error:'Не удалось загрузить музыку.'},
+uk:{loading:'Завантажуємо…',emptySingles:'Сингли скоро з’являться.',emptyCovers:'Кавери скоро з’являться.',play:'▶ Слухати',pause:'❚❚ Пауза',download:'↓ Завантажити MP3',share:'🔗 Поділитися посиланням',copied:'✓ Посилання скопійовано',copyPrompt:'Скопіюйте посилання для браузера',error:'Не вдалося завантажити музику.'},
+sk:{loading:'Načítavame…',emptySingles:'Single sa čoskoro objavia.',emptyCovers:'Covery sa čoskoro objavia.',play:'▶ Počúvať',pause:'❚❚ Pauza',download:'↓ Stiahnuť MP3',share:'🔗 Zdieľať odkaz',copied:'✓ Odkaz skopírovaný',copyPrompt:'Skopírujte odkaz pre prehliadač',error:'Hudbu sa nepodarilo načítať.'},
+en:{loading:'Loading…',emptySingles:'Singles are coming soon.',emptyCovers:'Covers are coming soon.',play:'▶ Listen',pause:'❚❚ Pause',download:'↓ Download MP3',share:'🔗 Share link',copied:'✓ Link copied',copyPrompt:'Copy this link for your browser',error:'Could not load music.'}
 };const t=I[lang]||I.ru;
 const SILENT=['Dance of Deth','Mind Is A Trap','Выбора нет','Жизнь идёт сама','Monument to the Great Void','I Run Away','Вспышка Узнавания','Что есть Истина','No choice','Стирай','Верни меня','Дверь освобождения','Ты проснулся живой','Сила знает путь','You Are Already That','Всё есть Брахман','Ты уже то','You Are The Light','Вне времени','Заветная звезда'];
 const pretty=s=>{try{return decodeURIComponent(String(s||''))}catch(_){return String(s||'')}};

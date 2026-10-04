@@ -50,8 +50,7 @@
   <div class="r2-audio-hint">Нажми на MP3 — услышишь трек. Нажми на MP4 — увидишь и услышишь видео. Эфир радио не затрагивается.</div>
 </section>
 <div class="modal" id="modal"><div class="dialog"><h2 id="modalTitle"></h2><p id="modalText"></p><input id="renameInput" hidden><div class="note" id="modalNote"></div><div class="dialog-actions"><button class="cancel" id="cancel">Отмена</button><button class="confirm" id="confirm">Подтвердить</button></div></div></div><div class="toast" id="toast"></div>
-<script>
-(()=>{'use strict';
+<script>(()=>{'use strict';
 const API='/api/control/r2-storage-r922';const KEY_SESSION='andrik-r922-admin-key';const PUBLIC_MEDIA='https://music.andrikmetal.com/';let files=[],kind='all',busy=false,pending=null,timer=0,currentAudioKey='';
 const $=id=>document.getElementById(id),list=$('list'),state=$('state'),search=$('search'),keyEl=$('key'),modal=$('modal'),renameInput=$('renameInput'),confirmBtn=$('confirm'),audioMini=$('r2AudioMini'),audioEl=$('r2Audio'),videoEl=$('r2Video');
 try{keyEl.value=sessionStorage.getItem(KEY_SESSION)||''}catch(_){}

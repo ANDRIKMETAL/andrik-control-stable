@@ -1,5 +1,0 @@
-ANDRIK R1192
-- ЛИРА · ГОЛОС ANDRIK закреплено по центру у самого верха hero.
-- Hero MP4 получил новый URL r1192 и принудительный muted autoplay.
-- Data Saver / prefers-reduced-motion больше не оставляют hero статичным.
-- Service Worker cache version поднята до R1192.

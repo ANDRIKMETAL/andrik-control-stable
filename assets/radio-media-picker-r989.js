@@ -4,47 +4,42 @@ const title=document.getElementById('radioPickerTitleR989'),body=document.getEle
 let mode='all',view='all',tracks=[],clips=[],groups=[],activeGroup=null,busy=false;
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 async function api(path,opts={}){const r=await fetch(path,{credentials:'include',cache:'no-store',headers:{accept:'application/json',...(opts.headers||{})},...opts});const d=await r.json().catch(()=>({}));if(!r.ok)throw Object.assign(new Error(d.message||d.error||`HTTP ${r.status}`),{status:r.status,data:d});return d}
-// R1162: owner-requested library order for manual NEXT selection.
-// Covers now have their own covers/ catalog in R2. Legacy title detection remains
-// only as a compatibility fallback for older cover files still under singles/.
 const coverMap={
- singles:'/assets/singles-picker-cover-r1161.webp',
- covers:'/assets/lira-guitar.webp',
- extended:'/assets/extended-picker-cover-r1181.png',
- silent:'/assets/silent-picker-cover-r1161.webp',
- beyond:'/assets/beyond-cover-r601.webp',
- trika:'/assets/trika-third-album-cover-r479.webp',
- ocean:'/assets/ocean-cover-v51-crop.webp',
- 'illusion-of-life':'/assets/illusion-of-life-static-v52.jpg'
+singles:'/assets/singles-picker-cover-r1161.webp',
+covers:'/assets/lira-guitar.webp',
+extended:'/assets/extended-picker-cover-r1181.png',
+silent:'/assets/silent-picker-cover-r1161.webp',
+beyond:'/assets/beyond-cover-r601.webp',
+trika:'/assets/trika-third-album-cover-r479.webp',
+ocean:'/assets/ocean-cover-v51-crop.webp',
+'illusion-of-life':'/assets/illusion-of-life-static-v52.jpg'
 };
 const labelMap={singles:'Синглы',covers:'Каверы',silent:'Silent',beyond:'BEYOND',trika:'ТРИКА',ocean:'OCEAN','illusion-of-life':'Illusion of Life',extended:'Extended Version'};
 const normalizeTitleR1161=v=>String(v||'').replace(/\.[a-z0-9]{2,5}$/i,'').replace(/[_-]+/g,' ').replace(/\s+/g,' ').trim().toLocaleLowerCase('ru-RU');
 function isCoverTrackR1161(t){
- const raw=String(t?.title||t?.name||(t?.key||'').split('/').pop()||'');
- const n=normalizeTitleR1161(raw);
- if(n==='а я скажу нет')return true;
- return /(?:^|[\s(\[—–-])(?:ai\s*)?cover(?:$|[\s)\]—–-])|(?:^|[\s(\[—–-])кавер(?:$|[\s)\]—–-])/iu.test(raw);
+const raw=String(t?.title||t?.name||(t?.key||'').split('/').pop()||'');
+const n=normalizeTitleR1161(raw);
+if(n==='а я скажу нет')return true;
+return /(?:^|[\s(\[—–-])(?:ai\s*)?cover(?:$|[\s)\]—–-])|(?:^|[\s(\[—–-])кавер(?:$|[\s)\]—–-])/iu.test(raw);
 }
 function groupTracks(){
- const m=new Map();
- const ensure=slug=>{if(!m.has(slug))m.set(slug,{slug,label:labelMap[slug]||slug.replace(/[-_]+/g,' '),cover:coverMap[slug]||'/assets/lira-guitar.webp',tracks:[]});return m.get(slug)};
- for(const t of tracks){
-   const key=String(t.key||'');
-   let slug=String(t?.pickerAlbum||'').toLowerCase()||'singles';
-   const a=key.match(/^albums\/([^/]+)\//i);
-   if(t?.pickerAlbum)slug=String(t.pickerAlbum).toLowerCase();
-   else if(a)slug=a[1].toLowerCase();
-   else if(/^covers\//i.test(key))slug='covers';
-   else if(/^singles\//i.test(key)&&isCoverTrackR1161(t))slug='covers';
-   const g=ensure(slug);
-   // Official album names may arrive in metadata with different casing; keep the
-   // owner-defined card label above, while track rows retain their own title.
-   g.tracks.push(t);
- }
- groups=[...m.values()].filter(g=>g.tracks.length);
- const order=['singles','extended','silent','beyond','trika','ocean','illusion-of-life'];
- groups.sort((a,b)=>{const ai=order.indexOf(a.slug),bi=order.indexOf(b.slug);return (ai<0?99:ai)-(bi<0?99:bi)||a.label.localeCompare(b.label,'ru')});
- for(const g of groups)g.tracks.sort((a,b)=>(Number(a.track)||999)-(Number(b.track)||999)||String(a.title||'').localeCompare(String(b.title||''),'ru'));
+const m=new Map();
+const ensure=slug=>{if(!m.has(slug))m.set(slug,{slug,label:labelMap[slug]||slug.replace(/[-_]+/g,' '),cover:coverMap[slug]||'/assets/lira-guitar.webp',tracks:[]});return m.get(slug)};
+for(const t of tracks){
+const key=String(t.key||'');
+let slug=String(t?.pickerAlbum||'').toLowerCase()||'singles';
+const a=key.match(/^albums\/([^/]+)\//i);
+if(t?.pickerAlbum)slug=String(t.pickerAlbum).toLowerCase();
+else if(a)slug=a[1].toLowerCase();
+else if(/^covers\//i.test(key))slug='covers';
+else if(/^singles\//i.test(key)&&isCoverTrackR1161(t))slug='covers';
+const g=ensure(slug);
+g.tracks.push(t);
+}
+groups=[...m.values()].filter(g=>g.tracks.length);
+const order=['singles','extended','silent','beyond','trika','ocean','illusion-of-life'];
+groups.sort((a,b)=>{const ai=order.indexOf(a.slug),bi=order.indexOf(b.slug);return (ai<0?99:ai)-(bi<0?99:bi)||a.label.localeCompare(b.label,'ru')});
+for(const g of groups)g.tracks.sort((a,b)=>(Number(a.track)||999)-(Number(b.track)||999)||String(a.title||'').localeCompare(String(b.title||''),'ru'));
 }
 function videoMeta(c){if(Number(c?.bumperSlot||0))return {icon:'📻',label:`ЗАСТАВКА ${Number(c.bumperSlot)}`};if(c?.special60min)return {icon:'⚡',label:'СПЕЦЗАСТАВКА · 60 МИН'};if(c?.special30min)return {icon:'⚡',label:'СПЕЦЗАСТАВКА · 30 МИН'};return {icon:'🎬',label:'КЛИП · ANDRIK'}}
 function trackRow(t,groupLabel='ANDRIK'){const sub=groupLabel==='Каверы'?'Каверы':groupLabel==='Синглы'?'Синглы ANDRIK':(t.album||groupLabel);return `<button class="r989-media-row" type="button" data-r989-pick-track="${encodeURIComponent(t.key)}" data-r989-title="${esc(t.title||'')}"><i>♪</i><span class="r989-media-copy"><strong>${esc(t.title||t.key)}</strong><small>${esc(sub)}</small></span><em>СЛЕД.</em></button>`}

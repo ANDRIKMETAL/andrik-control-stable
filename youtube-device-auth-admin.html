@@ -14,47 +14,46 @@
 <section class="card" id="ytStudioCard"><div class="service-title"><div><div class="ey">YOUTUBE STUDIO</div><h2>Переподключить YouTube</h2></div><span class="service-state" id="ytStudioState">Проверяем…</span></div><p class="note">Если LIVE пишет, что токен истёк или отозван — переподключи YouTube здесь.</p><div class="actions"><button class="primary" id="ytStudioConnect" type="button">🔐 ПЕРЕПОДКЛЮЧИТЬ YOUTUBE</button></div><div class="service-note">Откроется Google. Выбери аккаунт, управляющий каналом ANDRIK Metal.</div><div class="status" id="ytStudioMsg">Проверяем подключение YouTube Studio…</div></section>
 <div class="footer-links"><a class="btn secondary" href="/radio-control-admin.html?v=55.00-r1228">← Радио</a></div>
 </main>
-<script>
-const $=id=>document.getElementById(id);let owner=false;
+<script>const $=id=>document.getElementById(id);let owner=false;
 function status(id,text,cls=''){const el=$(id);el.textContent=text;el.className='status '+cls}
 async function ownerStatus(){
-  try{
-    const r=await fetch('/api/control/owner-status?ts='+Date.now(),{credentials:'include',cache:'no-store'});
-    const d=await r.json();
-    owner=!!d.owner;
-    $('ownerState').textContent=owner?'Вход активен':'Нужен вход';
-    $('ownerState').style.color=owner?'#67df8c':'#ffcf6a';
-    $('loginBox').classList.toggle('hidden',owner);
-    status('accessMsg',owner?'✅ Owner-session активна.':'Введите ADMIN_KEY один раз.');
-  }catch(e){status('accessMsg','Ошибка проверки: '+e.message,'bad')}
+try{
+const r=await fetch('/api/control/owner-status?ts='+Date.now(),{credentials:'include',cache:'no-store'});
+const d=await r.json();
+owner=!!d.owner;
+$('ownerState').textContent=owner?'Вход активен':'Нужен вход';
+$('ownerState').style.color=owner?'#67df8c':'#ffcf6a';
+$('loginBox').classList.toggle('hidden',owner);
+status('accessMsg',owner?'✅ Owner-session активна.':'Введите ADMIN_KEY один раз.');
+}catch(e){status('accessMsg','Ошибка проверки: '+e.message,'bad')}
 }
 async function loadYoutubeOauthStatus(){
-  const stateEl=$('ytStudioState');
-  const msgEl=$('ytStudioMsg');
-  const btn=$('ytStudioConnect');
-  if(!owner){stateEl.textContent='Нужен вход';stateEl.className='service-state bad';msgEl.textContent='Сначала войди как владелец.';btn.disabled=false;return}
-  try{
-    const r=await fetch('/api/control/youtube-oauth/status?verify=1',{credentials:'include',cache:'no-store'});
-    const d=await r.json().catch(()=>({}));
-    if(!r.ok)throw new Error(d.details||d.error||d.message||('HTTP '+r.status));
-    if(d.connected){
-      const manage=Boolean(d.canManageLive);
-      stateEl.textContent=manage?'Подключено':'Нужно переподключить';
-      stateEl.className='service-state '+(manage?'ok':'bad');
-      btn.textContent='🔐 ПЕРЕПОДКЛЮЧИТЬ YOUTUBE';
-      msgEl.textContent=manage?'Готово: статистика и управление LIVE разрешены.':'Старый OAuth только для чтения. Нажми кнопку и подтверди доступ Google.';
-    }else{
-      stateEl.textContent=d.clientConfigured?'Не подключено':'OAuth не настроен';
-      stateEl.className='service-state bad';
-      btn.textContent=d.clientConfigured?'🔐 ПОДКЛЮЧИТЬ YOUTUBE':'OAuth не настроен';
-      btn.disabled=!d.clientConfigured;
-      msgEl.textContent=d.clientConfigured?'Нажми кнопку и подтверди доступ Google.':'На сайте не настроены секреты YouTube OAuth.';
-    }
-  }catch(e){
-    stateEl.textContent='Ошибка';
-    stateEl.className='service-state bad';
-    msgEl.textContent='YouTube Studio: '+e.message;
-  }
+const stateEl=$('ytStudioState');
+const msgEl=$('ytStudioMsg');
+const btn=$('ytStudioConnect');
+if(!owner){stateEl.textContent='Нужен вход';stateEl.className='service-state bad';msgEl.textContent='Сначала войди как владелец.';btn.disabled=false;return}
+try{
+const r=await fetch('/api/control/youtube-oauth/status?verify=1',{credentials:'include',cache:'no-store'});
+const d=await r.json().catch(()=>({}));
+if(!r.ok)throw new Error(d.details||d.error||d.message||('HTTP '+r.status));
+if(d.connected){
+const manage=Boolean(d.canManageLive);
+stateEl.textContent=manage?'Подключено':'Нужно переподключить';
+stateEl.className='service-state '+(manage?'ok':'bad');
+btn.textContent='🔐 ПЕРЕПОДКЛЮЧИТЬ YOUTUBE';
+msgEl.textContent=manage?'Готово: статистика и управление LIVE разрешены.':'Старый OAuth только для чтения. Нажми кнопку и подтверди доступ Google.';
+}else{
+stateEl.textContent=d.clientConfigured?'Не подключено':'OAuth не настроен';
+stateEl.className='service-state bad';
+btn.textContent=d.clientConfigured?'🔐 ПОДКЛЮЧИТЬ YOUTUBE':'OAuth не настроен';
+btn.disabled=!d.clientConfigured;
+msgEl.textContent=d.clientConfigured?'Нажми кнопку и подтверди доступ Google.':'На сайте не настроены секреты YouTube OAuth.';
+}
+}catch(e){
+stateEl.textContent='Ошибка';
+stateEl.className='service-state bad';
+msgEl.textContent='YouTube Studio: '+e.message;
+}
 }
 $('loginBtn').onclick=async()=>{const k=$('adminKey').value.trim();if(!k)return status('accessMsg','Введите ADMIN_KEY.','bad');status('accessMsg','Проверяю…');try{const r=await fetch('/api/control/owner-session',{method:'POST',credentials:'include',headers:{authorization:'Bearer '+k,'content-type':'application/json'},body:'{}'});const d=await r.json();$('adminKey').value='';if(!r.ok)throw new Error(d.error||'HTTP '+r.status);await ownerStatus();await loadYoutubeOauthStatus();}catch(e){status('accessMsg','Ошибка входа: '+e.message,'bad')}};
 $('ytStudioConnect').onclick=async()=>{if(!owner){await ownerStatus();if(!owner){$('ytStudioMsg').textContent='Сначала войди как владелец.';return}}const btn=$('ytStudioConnect');btn.disabled=true;btn.textContent='Открываем Google…';$('ytStudioMsg').textContent='Открываем Google для переподключения YouTube Studio…';try{const r=await fetch('/api/control/youtube-oauth/start',{credentials:'include',cache:'no-store'});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.details||d.error||d.message||('HTTP '+r.status));if(!d.url)throw new Error('Ссылка авторизации не получена');location.assign(d.url)}catch(e){$('ytStudioMsg').textContent='YouTube Studio: '+e.message;btn.disabled=false;btn.textContent='🔐 ПЕРЕПОДКЛЮЧИТЬ YOUTUBE';}};

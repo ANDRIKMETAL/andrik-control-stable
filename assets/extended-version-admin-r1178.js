@@ -1,4 +1,3 @@
-/* ANDRIK R1180 — Extended Version: ZIP or individual MP3 -> R2 */
 (()=>{'use strict';
 const root=document.getElementById('extendedVersionUploadR1178');if(!root)return;
 const input=document.getElementById('extendedZipR1178'),mp3Input=document.getElementById('extendedMp3R1180'),pick=document.getElementById('extendedPickR1178'),pickMp3=document.getElementById('extendedPickMp3R1180'),go=document.getElementById('extendedGoR1178'),status=document.getElementById('extendedStatusR1178'),list=document.getElementById('extendedPreviewR1178'),bar=document.getElementById('extendedBarR1178');

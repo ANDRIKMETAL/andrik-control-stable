@@ -74,7 +74,8 @@
 </style><link href="/assets/control-v54-99c7.css?v=54.99c7" rel="stylesheet"/><link href="/assets/control-v55-00l.css?v=55.00l" rel="stylesheet"/><link href="/assets/control-v55-00-final-r2.css?v=55.00-final-r2" rel="stylesheet"/><link href="/assets/control-v55-00-final-r21.css?v=55.00-final-r21" rel="stylesheet"/><link href="/assets/control-v55-00-r3a-live-eye.css?v=55.00-r3a" rel="stylesheet"/>
 
 <link href="/assets/admin-carousel-embed-v55-00-final.css?v=55.00-final-r31" rel="stylesheet"/>
-<script>(()=>{const q=new URLSearchParams(location.search);if(window.top===window.self&&q.get('embed')!=='1'){location.replace('/admin-sections.html?section=monitor&v=55.00-r412')}})();</script><link rel="stylesheet" href="/assets/unified-glow-r139.css?v=55.00-r143">
+<script>(()=>{const q=new URLSearchParams(location.search);if(window.top===window.self&&q.get('embed')!=='1'){location.replace('/admin-sections.html?section=monitor&v=55.00-r412')}})();
+</script><link rel="stylesheet" href="/assets/unified-glow-r139.css?v=55.00-r143">
 <link rel="stylesheet" href="/assets/r137-eye-motion.css?v=55.00-r144">
 <link rel="stylesheet" href="/assets/control-mini-player-r141.css?v=55.00-r144">
 <link rel="stylesheet" href="/assets/control-hotfix-r155.css?v=55.00-r155">
@@ -116,17 +117,16 @@
 <script defer src="/assets/control-mini-player-r141.js?v=55.00-r144"></script>
 <script defer src="/assets/control-version-sync-r482.js?v=55.00-r482"></script>
 
-<script>
-(()=>{
-  'use strict';
-  const btn=document.getElementById('observabilityErrorsToggle');
-  const panel=document.getElementById('observabilityErrorsPanel');
-  const label=document.getElementById('observabilityErrorsToggleText');
-  if(!btn||!panel)return;
-  const setOpen=open=>{panel.hidden=!open;btn.setAttribute('aria-expanded',open?'true':'false');if(label)label.textContent=open?'Скрыть':'Показать';};
-  setOpen(false);
-  btn.addEventListener('click',()=>setOpen(panel.hidden));
-  window.addEventListener('pageshow',()=>setOpen(false),{passive:true});
+<script>(()=>{
+'use strict';
+const btn=document.getElementById('observabilityErrorsToggle');
+const panel=document.getElementById('observabilityErrorsPanel');
+const label=document.getElementById('observabilityErrorsToggleText');
+if(!btn||!panel)return;
+const setOpen=open=>{panel.hidden=!open;btn.setAttribute('aria-expanded',open?'true':'false');if(label)label.textContent=open?'Скрыть':'Показать';};
+setOpen(false);
+btn.addEventListener('click',()=>setOpen(panel.hidden));
+window.addEventListener('pageshow',()=>setOpen(false),{passive:true});
 })();
 </script>
 <script defer src="/assets/network-globe-r415.js?v=55.00-r418"></script>

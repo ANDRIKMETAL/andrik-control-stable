@@ -8,23 +8,23 @@ async function api(path,opts={}){const r=await fetch(path,{credentials:'include'
 async function send(){return api('/api/control/radio-remote-r627/command',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action:'load-r988'})})}
 async function wait(id,timeoutMs=30000){const until=Date.now()+timeoutMs;while(Date.now()<until){await new Promise(r=>setTimeout(r,1800));const d=await api('/api/control/radio-remote-r627/status?ts='+Date.now());if(d?.result?.id===id&&d.result.finishedAt)return d.result;}throw new Error('VPS не успел вернуть результат')}
 function render(d){
-  const cpuPct=Number(d?.cpu?.totalPct||0);const level=cpuPct>=90?'critical':cpuPct>=70?'high':'normal';const label=level==='critical'?'КРИТИЧЕСКАЯ':level==='high'?'ВЫСОКАЯ':'НОРМА';
-  state.dataset.level=level;state.textContent=(level==='normal'?'🟢 ':level==='high'?'🟡 ':'🔴 ')+label;
-  cpuName.textContent=`${d?.cpu?.model||'CPU'} · ${Number(d?.cpu?.cores||0)} vCPU · замер ${Number(d?.cpu?.sampleMs||0)} мс`;
-  txt('radioLoadCpuR988',`${cpuPct.toFixed(1)}%`);
-  txt('radioLoadRamR988',`${Number(d?.memory?.ramUsedMB||0)} / ${Number(d?.memory?.ramTotalMB||0)} MB · ${Number(d?.memory?.ramPct||0).toFixed(1)}%`);
-  txt('radioLoadSwapR988',`${Number(d?.memory?.swapUsedMB||0)} / ${Number(d?.memory?.swapTotalMB||0)} MB`);
-  txt('radioLoadAvgR988',`${d?.load?.one??0} · ${d?.load?.five??0} · ${d?.load?.fifteen??0}`);
-  const p=d?.processes||{};
-  txt('radioLoadVisualR988',`${Number(p.visual||0).toFixed(1)}%`);
-  txt('radioLoadPublisherR988',`${Number(p.publisher||0).toFixed(1)}%`);
-  txt('radioLoadPrimaryRelayR1126',`${Number(p.primaryRelay||0).toFixed(1)}%`);
-  txt('radioLoadBackupRelayR1126',`${Number(p.backupRelay||0).toFixed(1)}%`);
-  txt('radioLoadNodeR988' ,`${Number(p.radioNode||0).toFixed(1)}%`);
-  txt('radioLoadMp3R988',`${Number(p.mp3Decoder||0).toFixed(1)}%`);
-  txt('radioLoadOtherR988',`${Number(p.otherFfmpeg||0).toFixed(1)}%`);
-  const ver=$('radioLoadVersionR988');if(ver)ver.textContent=String(d?.version||'R1126');
-  msg.textContent='R1126: Master Publisher и два R1125 RTMPS relay измеряются отдельно. Все значения — доля от 100% мощности VPS.';msg.dataset.kind='ok';
+const cpuPct=Number(d?.cpu?.totalPct||0);const level=cpuPct>=90?'critical':cpuPct>=70?'high':'normal';const label=level==='critical'?'КРИТИЧЕСКАЯ':level==='high'?'ВЫСОКАЯ':'НОРМА';
+state.dataset.level=level;state.textContent=(level==='normal'?'🟢 ':level==='high'?'🟡 ':'🔴 ')+label;
+cpuName.textContent=`${d?.cpu?.model||'CPU'} · ${Number(d?.cpu?.cores||0)} vCPU · замер ${Number(d?.cpu?.sampleMs||0)} мс`;
+txt('radioLoadCpuR988',`${cpuPct.toFixed(1)}%`);
+txt('radioLoadRamR988',`${Number(d?.memory?.ramUsedMB||0)} / ${Number(d?.memory?.ramTotalMB||0)} MB · ${Number(d?.memory?.ramPct||0).toFixed(1)}%`);
+txt('radioLoadSwapR988',`${Number(d?.memory?.swapUsedMB||0)} / ${Number(d?.memory?.swapTotalMB||0)} MB`);
+txt('radioLoadAvgR988',`${d?.load?.one??0} · ${d?.load?.five??0} · ${d?.load?.fifteen??0}`);
+const p=d?.processes||{};
+txt('radioLoadVisualR988',`${Number(p.visual||0).toFixed(1)}%`);
+txt('radioLoadPublisherR988',`${Number(p.publisher||0).toFixed(1)}%`);
+txt('radioLoadPrimaryRelayR1126',`${Number(p.primaryRelay||0).toFixed(1)}%`);
+txt('radioLoadBackupRelayR1126',`${Number(p.backupRelay||0).toFixed(1)}%`);
+txt('radioLoadNodeR988' ,`${Number(p.radioNode||0).toFixed(1)}%`);
+txt('radioLoadMp3R988',`${Number(p.mp3Decoder||0).toFixed(1)}%`);
+txt('radioLoadOtherR988',`${Number(p.otherFfmpeg||0).toFixed(1)}%`);
+const ver=$('radioLoadVersionR988');if(ver)ver.textContent=String(d?.version||'R1126');
+msg.textContent='R1126: Master Publisher и два R1125 RTMPS relay измеряются отдельно. Все значения — доля от 100% мощности VPS.';msg.dataset.kind='ok';
 }
 async function sample(){if(!open||busy||document.hidden)return;busy=true;msg.textContent='Измеряю CPU и процессы за один интервал…';msg.dataset.kind='';try{const s=await send();const r=await wait(s?.command?.id||'');const m=String(r.output||'').match(/R988_LOAD\s+(\{[\s\S]*\})/);if(!r.ok||!m)throw new Error(String(r.output||'R988 load failed'));render(JSON.parse(m[1]));}catch(e){msg.textContent=e?.data?.error==='command-busy'?'VPS выполняет другую команду · попробую позже.':`❌ ${e.message||e}`;msg.dataset.kind='bad'}finally{busy=false}}
 function start(){if(timer)clearInterval(timer);sample();timer=setInterval(sample,15000)}function stop(){if(timer){clearInterval(timer);timer=null}}

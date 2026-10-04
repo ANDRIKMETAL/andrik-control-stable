@@ -1,4 +1,3 @@
-/* ANDRIK R1028 — single release: R2 -> latest-two site -> title dedupe -> broadcast PUSH */
 (()=>{'use strict';
 const $=id=>document.getElementById(id),card=$('mp3R2Card');if(!card)return;
 const audio=$('singleR2AudioR560'),cover=$('singleR2CoverR560'),chooseAudio=$('singleR2ChooseAudioR560'),chooseCover=$('singleR2ChooseCoverR560'),audioName=$('singleR2AudioNameR560'),coverName=$('singleR2CoverNameR560'),title=$('singleR2TitleR560'),upload=$('singleR2UploadR560'),publish=$('singleR2PublishR616'),rename=$('singleR2RenameR560'),copy=$('mp3R2Copy'),del=$('mp3R2Delete'),status=$('mp3R2Status'),badge=$('mp3R2Badge'),bar=$('singleR2ProgressBarR560'),typeSingle=$('releaseTypeSingleR1162'),typeCover=$('releaseTypeCoverR1162'),eyeline=$('releaseEyelineR1162'),titleLabel=$('releaseTitleLabelR1162');
@@ -26,13 +25,13 @@ function releaseFolder(){return releaseType==='cover'?'covers':'singles'}
 function releaseAlbum(){return releaseType==='cover'?'Каверы ANDRIK':'Синглы ANDRIK'}
 function releaseLabel(){return releaseType==='cover'?'кавер':'сингл'}
 function syncReleaseType(){
-  typeSingle?.classList.toggle('is-active',releaseType==='single');
-  typeCover?.classList.toggle('is-active',releaseType==='cover');
-  if(eyeline)eyeline.textContent=releaseType==='cover'?'ANDRIK Music · COVER':'ANDRIK Music · SINGLE';
-  if(titleLabel)titleLabel.textContent=releaseType==='cover'?'Название кавера':'Название сингла';
-  if(title)title.placeholder=releaseType==='cover'?'Например: Ах эти розы':'Например: Падший ангел';
-  currentKey='';currentUrl='';latestKey='';latestUrl='';latestTitle='';latestUploaded='';
-  setProgress(0);syncUpload();loadLatest();
+typeSingle?.classList.toggle('is-active',releaseType==='single');
+typeCover?.classList.toggle('is-active',releaseType==='cover');
+if(eyeline)eyeline.textContent=releaseType==='cover'?'ANDRIK Music · COVER':'ANDRIK Music · SINGLE';
+if(titleLabel)titleLabel.textContent=releaseType==='cover'?'Название кавера':'Название сингла';
+if(title)title.placeholder=releaseType==='cover'?'Например: Ах эти розы':'Например: Падший ангел';
+currentKey='';currentUrl='';latestKey='';latestUrl='';latestTitle='';latestUploaded='';
+setProgress(0);syncUpload();loadLatest();
 }
 function pushLabel(p){if(!p)return 'PUSH: нет ответа';if(p.ok&&p.alreadyPublished)return 'PUSH всем уже был ✓';if(p.ok)return `PUSH всем ✓${p.recipients?` · ${p.recipients}`:''}`;return `PUSH не ушёл: ${p.error||'ошибка'}`}
 async function publishLatest({auto=false}={}){if(!latestKey||busy)return null;publish&&(publish.disabled=true);if(!auto)setStatus(`Публикуем ${releaseLabel()} и отправляем PUSH всем…`);try{const r=await fetch('/api/control/music/single/publish-latest',{method:'POST',headers:auth({'content-type':'application/json'}),body:JSON.stringify({key:latestKey})}),d=await r.json().catch(()=>({}));if(!r.ok&&!d.ok)throw new Error(d.error||('HTTP '+r.status));const visible=await verifyPublic(latestKey);setStatus(`${latestTitle||latestKey} · ${visible?'на главной ✓':'R2 ✓, главная обновится автоматически'} · ${pushLabel(d)}`,'ok');announceLocal({key:latestKey,title:latestTitle});return d}catch(e){if(!auto)setStatus('Ошибка публикации: '+e.message);return null}finally{publish&&(publish.disabled=!latestKey||busy)}}

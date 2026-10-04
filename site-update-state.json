@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r358-deploy-nohang",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1791093531737-d403b91596",
-  "release": "R1236",
-  "archiveName": "R1236-WATCHDOG-CLIP-STATUS-FIX.zip",
-  "sourceHead": "32c45b7f0b95e9983f9a73ec7e0d4d468840547e",
-  "backupSha": "32c45b7f0b95e9983f9a73ec7e0d4d468840547e",
+  "operationId": "publish-1791116268836-fd75a66fcb",
+  "release": "R1237",
+  "archiveName": "ANDRIK-R1237-OCEAN-CLEAN.zip",
+  "sourceHead": "49d182405283a9c5e899721c236d5a2fa6a4339c",
+  "backupSha": "49d182405283a9c5e899721c236d5a2fa6a4339c",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-10-04T05:58:51.737Z"
+  "generatedAt": "2026-10-04T12:17:50.756Z"
 }
