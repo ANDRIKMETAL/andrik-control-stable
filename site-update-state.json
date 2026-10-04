@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r358-deploy-nohang",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1791116268836-fd75a66fcb",
-  "release": "R1237",
-  "archiveName": "ANDRIK-R1237-OCEAN-CLEAN.zip",
-  "sourceHead": "49d182405283a9c5e899721c236d5a2fa6a4339c",
-  "backupSha": "49d182405283a9c5e899721c236d5a2fa6a4339c",
+  "operationId": "publish-1791117578746-d9be7d8c06",
+  "release": "R1238",
+  "archiveName": "ANDRIK-R1238-CITY-BIKE-CLEAN.zip",
+  "sourceHead": "0ee938b8e0f199dddc52a7132d8c2b20f4b69e93",
+  "backupSha": "0ee938b8e0f199dddc52a7132d8c2b20f4b69e93",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-10-04T12:17:50.756Z"
+  "generatedAt": "2026-10-04T12:39:38.746Z"
 }

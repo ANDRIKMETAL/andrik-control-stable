@@ -1,5 +1,5 @@
 import * as T from './vendor/three-r170.module.min.js';
-import {material,box,sphere,cylinder,cone,ring,sign,mesh,batch} from './lira-models-r1190.js?v=55.00-r1237';
+import {material,box,sphere,cylinder,cone,ring,sign,mesh,batch} from './lira-models-r1190.js?v=55.00-r1238';
 const stone=material('#607e92',.88,.08),road=material('#2b4155',.38,.35),iron=material('#27343e',.47,.65),warm=material('#d5aa6a',.45,.1,.5);
 export function buildWorld(mode){
 const group=new T.Group(),tiles=[],animated=[];
@@ -13,9 +13,9 @@ for(let i=0;i<16;i++){const puddle=sphere(group,i*93,.12,21+(i%3)*28,26+i%5*5,.1
 for(let i=0;i<20;i++){const stripe=box(group,i*95,-.02,95,38,.1,1.7,material('#b9b397',.6));stripe.userData.groundLoop=true;}
 }
 if(mode==='bar'){
-box(group,240,88,-104,560,176,12,'#211f26');box(group,240,41,-82,360,64,29,'#493a31');box(group,240,75,-79,380,6,40,'#786148');
-for(let j=0;j<3;j++){box(group,235,94+j*24,-95,300,3,15,iron);for(let i=0;i<17;i++){cylinder(group,105+i*16,103+j*24,-85,2.7,16,material(i%2?'#485a52':'#6d4942',.27,.4));}}
-sign(group,'NO CHOICE',240,177,-94,150,'#d4b47e',27);
+box(group,240,88,-145,560,176,12,'#211f26');box(group,240,41,-82,360,64,29,'#493a31');box(group,240,75,-79,380,6,40,'#786148');
+for(let j=0;j<3;j++){box(group,235,94+j*24,-135,300,3,15,iron);for(let i=0;i<17;i++){cylinder(group,105+i*16,103+j*24,-125,2.7,16,material(i%2?'#485a52':'#6d4942',.27,.4));}}
+sign(group,'NO CHOICE',240,177,-134,150,'#d4b47e',27);
 for(const x of [58,143,338,423]){cylinder(group,x,25,-37,2.5,50,iron);cylinder(group,x,51,-37,12,5,'#5d3440');}
 for(const x of [32,440]){box(group,x,60,-67,34,105,22,iron);for(const y of [31,65,92])sphere(group,x,y,-54,12,12,1,material('#0e1821'));}
 for(let i=0;i<10;i++)box(group,i*60,-.01,0,1,.1,225,'#807063');

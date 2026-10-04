@@ -3814,7 +3814,7 @@ if(!e.alive)return;e.hp-=amount;e.stun=.11;e.hitFlash=.12;e.vx=knockX*.28;e.atta
 if(e.hp<=0){
 if(e.r955Life===1){
 e.r955Life=2;e.hp=e.maxHp;e.bossPhase=2;e.stun=.85;e.specialCooldown=.55;e.rifleCd=.45;e.damage+=4;e.speed*=1.12;flash=Math.max(flash,.18);hitShake(10);
-showMessage(e.r955Boss==='night-enforcer'?'LIFE 2 · CLUB RAGE':'LIFE 2 · CHAINS AWAKEN',1.35);tone(48,.3,'sawtooth',.04,28);return;
+showMessage(e.r955Boss==='night-enforcer'?'LIFE 2 · BURST FIRE':'LIFE 2 · CHAINS AWAKEN',1.35);tone(48,.3,'sawtooth',.04,28);return;
 }
 e.hp=0;e.alive=false;e.deathTimer=.95;score+=3500;hitShake(12);flash=Math.max(flash,.2);tone(45,.38,'sawtooth',.04,24);
 }
@@ -5076,6 +5076,123 @@ else if(!cavernDoneR1237&&player.x>1850&&player.x<1905&&player.y>220&&player.z<8
 };
 const drawR1237=draw;
 draw=function(){drawR1237();if(currentLevel!==2||!started)return;ctx.save();if(!cavernR1237&&!cavernDoneR1237){ctx.fillStyle='#050b19';ctx.beginPath();ctx.ellipse(1878-cameraX,237,29,13,0,0,Math.PI*2);ctx.fill();ctx.fillStyle='#83e4f5';ctx.font='8px monospace';ctx.fillText('↓ ПЕЩЕРА',1850-cameraX,215);}if(cavernR1237){ctx.fillStyle='#83e4f5';ctx.fillRect(1020-cameraX,165,12,70);}ctx.restore();};
+let bikeSwingR1238=0;
+function bikeHurtR1238(amount){if(bikeInvuln>0||player.invuln>0)return;damagePlayer(amount,player.x+25);bikeInvuln=1;bikeCrashT=.28;}
+updateBike=function(dt){
+elapsed+=dt;shake=Math.max(0,shake-dt*24);flash=Math.max(0,flash-dt);messageTimer=Math.max(0,messageTimer-dt);
+for(const k of ['invuln','stun'])player[k]=Math.max(0,player[k]-dt);
+bikeInvuln=Math.max(0,bikeInvuln-dt);bikeAttackT=Math.max(0,bikeAttackT-dt);bikeSuperT=Math.max(0,bikeSuperT-dt);bikeCrashT=Math.max(0,bikeCrashT-dt);bikeFallT_R1204=0;
+if(!bikeIntroDone){bikeIntroT+=dt;bikeSpeed=0;bikeY=206;if(bikeIntroT>=BIKE_INTRO_DURATION){bikeIntroDone=true;bikeSpeed=245;showMessage('↑↓ ПОЛОСА · A ПРЫЖОК · B УДАР',3);}for(const k of Object.keys(pressed))pressed[k]=false;return;}
+const oldDistance=bikeDistance;bikeSpeed=Math.min(355,bikeSpeed+dt*4.6);bikeDistance+=bikeSpeed*dt;
+bikeY=clamp(bikeY+((input.down?1:0)-(input.up?1:0))*dt*104,174,238);
+if(pressed.jump&&bikeZ<=0){bikeVz=235;bikeZ=.01;}
+if(bikeZ>0||bikeVz>0){bikeZ+=bikeVz*dt;bikeVz-=610*dt;if(bikeZ<=0){bikeZ=0;bikeVz=0;}}
+if((pressed.attack||pressed.kick)&&bikeAttackT<=0){bikeAttackT=.36;bikeSwingR1238++;}
+if(pressed.super)triggerSuper();superMeter=Math.min(SUPER_MAX,superMeter+dt*.85);
+for(const p of bikePits){
+if(oldDistance<=p.d&&bikeDistance>=p.d&&Math.abs(bikeY-bikeLaneY(p.lane))<13){
+if(p.type==='ramp'&&bikeZ<10){bikeVz=275;bikeZ=.01;}
+else if(p.type!=='ramp'&&bikeZ<18){bikeHurtR1238(17);showMessage('ЯМА · A — ПРЫЖОК',.8);}
+}
+}
+for(const p of bikePostsR955)if(oldDistance<=p.d&&bikeDistance>=p.d&&Math.abs(bikeY-p.y)<8&&bikeZ<35)bikeHurtR1238(14);
+bikeRivals.forEach((r,i)=>{
+r.superKO_R1204=Math.max(0,(r.superKO_R1204||0)-dt);if(!r.alive)return;
+if(!Number.isFinite(r.d)){r.d=bikeDistance+550;r.engaged=false;}
+r.attackT=Math.max(0,(r.attackT||0)-dt);r.attackCooldown=Math.max(0,(r.attackCooldown||0)-dt);
+let rx=118+(r.d-bikeDistance)*.31;
+if(!r.engaged&&!r.duelDone&&rx<270&&rx>150){r.engaged=true;r.duelT=3.6+i%3*.25;r.attackCooldown=.8;}
+if(r.engaged){r.duelT-=dt;const target=bikeDistance+40/.31;r.d+=(target-r.d)*Math.min(1,dt*4);rx=118+(r.d-bikeDistance)*.31;
+if(r.attackCooldown<=0&&r.attackT<=0){r.attackT=.65;r.attackHit=false;r.attackCooldown=1.8;}
+if(r.attackT>0&&r.attackT<.2&&!r.attackHit){r.attackHit=true;if(Math.abs(rx-118)<49&&Math.abs(bikeLaneY(r.lane)-bikeY)<13&&bikeZ<18)bikeHurtR1238(9);}
+if(r.duelT<=0){r.engaged=false;r.duelDone=true;}
+}
+if(bikeAttackT>.08&&bikeAttackT<.27&&r.swingR1238!==bikeSwingR1238&&Math.abs(rx-118)<78&&Math.abs(bikeLaneY(r.lane)-bikeY)<17){r.swingR1238=bikeSwingR1238;r.hp-=18;hitShake(2);if(r.hp<=0){r.alive=false;r.superKO_R1204=.72;score+=300;}}
+});
+for(const k of Object.keys(pressed))pressed[k]=false;
+if(bikeDistance>=BIKE_END)leaveBikeMode();
+autoSaveClock+=dt;if(autoSaveClock>=2.5){autoSaveClock=0;saveProgress(false);}
+};
+const coversR1238=[{x:5415,y:187,w:30,d:18,h:85},{x:5500,y:229,w:30,d:18,h:85}];
+let combatR1238={shots:[],drops:[],blasts:[],ammo:0,dropT:0,serial:0};
+function bossR1238(){return enemies.find(e=>e.alive&&e.r955Boss==='night-enforcer');}
+function weaponR1238(e){return e.type==='gang'?'bottle':e.type==='police'?'knife':e.type==='riot'?'stick':null;}
+const makeR1238=makeEnemy;
+makeEnemy=function(...args){const e=makeR1238(...args);if(e?.r955Boss==='night-enforcer'){e.hp=e.maxHp=360;e.variant='rifle-truck-r1238';}return e;};
+const waveR1238=startWave;
+startWave=function(w){waveR1238(w);if(w?.spawns?.[0]?.[0]==='boss'&&currentLevel===1){for(const e of enemies)if(e.bossDog){e.alive=false;e.deathTimer=0;}combatR1238.dropT=0;showMessage('ЗА УКРЫТИЕ! · СОБЕРИ ГРАНАТУ · B — БРОСОК',4);}};
+const hurtEnemyR1238=damageEnemy;
+let grenadeHitR1238=false;
+damageEnemy=function(e,amount,knock){if(e?.r955Boss==='night-enforcer'&&!grenadeHitR1238)return;return hurtEnemyR1238(e,amount,knock);};
+function launchR1238(kind,x,y,tx,ty,duration,z=30){const q={id:++combatR1238.serial,kind,x,y,sx:x,sy:y,tx,ty,t:0,duration,z,startZ:z};combatR1238.shots.push(q);return q;}
+updateNightBossR955=function(e,dt){
+if(!e.alive){e.deathTimer=Math.max(0,e.deathTimer-dt);return;}
+e.x=5660;e.y=207;e.z=69;e.face=-1;e.vx=e.vy=0;e.hitFlash=Math.max(0,e.hitFlash-dt);e.stun=Math.max(0,e.stun-dt);e.attack=null;
+e.burstCd=(e.burstCd??1.5)-dt;e.muzzleR1238=Math.max(0,(e.muzzleR1238||0)-dt);
+if(e.burstCd<=0){e.burstR1238={warning:.85,left:e.r955Life===2?7:5,wait:0,tx:player.x,ty:player.y};e.burstCd=e.r955Life===2?3.1:3.8;}
+const b=e.burstR1238;if(!b)return;b.warning-=dt;if(b.warning>0)return;b.wait-=dt;
+if(b.left>0&&b.wait<=0){const dist=Math.hypot(b.tx-(e.x-52),b.ty-e.y);launchR1238('bullet',e.x-52,e.y,b.tx-90,b.ty,.4+dist/380,128);b.left--;b.wait=.14;e.muzzleR1238=.09;}
+};
+const aiR1238=updateEnemy;
+updateEnemy=function(e,dt){
+const weapon=weaponR1238(e);
+if(currentLevel!==1||barModeR955||bikeMode||!weapon||!e.alive)return aiR1238(e,dt);
+e.weaponR1238=weapon;e.hitFlash=Math.max(0,e.hitFlash-dt);e.stun=Math.max(0,e.stun-dt);e.attackCooldown=Math.max(0,(e.attackCooldown||0)-dt);e.vx=e.vy=0;
+if(e.stun>0||player.dead){e.attack=null;return;}
+const dx=player.x-e.x,dy=player.y-e.y;e.face=dx>=0?1:-1;if(Math.abs(dx)>430)return;
+if(e.attack){const a=e.attack;a.t+=dt;const hit=weapon==='bottle'?.65:weapon==='stick'?.48:.28;
+if(a.t>=hit&&!a.hit){a.hit=true;if(weapon==='bottle')launchR1238('bottle',e.x,e.y,a.tx,a.ty,.9,40);else if(Math.abs(dx)<(weapon==='stick'?56:34)&&Math.abs(dy)<17&&player.z<25)damagePlayer(weapon==='stick'?14:11,e.x);}
+if(a.t>=a.duration){e.attack=null;e.attackCooldown=weapon==='bottle'?2.4:weapon==='stick'?1.1:.8;}return;
+}
+const range=weapon==='bottle'?220:weapon==='stick'?49:29;
+if(Math.abs(dx)>range||Math.abs(dy)>(weapon==='bottle'?65:12)){e.x+=Math.sign(dx)*Math.min(Math.abs(dx),dt*(weapon==='knife'?88:60));e.y+=Math.sign(dy)*Math.min(Math.abs(dy),dt*36);e.walkPhase+=dt*9;}
+else if(e.attackCooldown<=0)e.attack={kind:weapon==='stick'?'clubSmashR1203':'punch',t:0,duration:weapon==='bottle'?1:weapon==='stick'?.8:.55,tx:player.x,ty:player.y,hit:false};
+};
+function coverHitR1238(q,oldX){return coversR1238.some(c=>Math.min(oldX,q.x)<=c.x+c.w/2&&Math.max(oldX,q.x)>=c.x-c.w/2&&Math.abs(q.y-c.y)<c.d/2+2&&q.z<=c.h);}
+function cityTickR1238(dt){
+const boss=bossR1238();
+if(boss){combatR1238.dropT-=dt;if(combatR1238.dropT<=0){combatR1238.dropT=3;if(combatR1238.drops.length<4)combatR1238.drops.push({id:++combatR1238.serial,x:clamp(player.x+45,5380,5540),y:combatR1238.serial%2?182:232,z:165});}
+for(const c of coversR1238)if(Math.abs(player.x-c.x)<c.w/2+8&&Math.abs(player.y-c.y)<c.d/2+7&&player.z<c.h)player.x=c.x+(player.x<c.x?-1:1)*(c.w/2+8);
+player.x=Math.min(player.x,5585);
+}
+for(const d of combatR1238.drops){d.z=Math.max(0,d.z-dt*95);if(d.z===0&&Math.hypot(player.x-d.x,player.y-d.y)<24&&combatR1238.ammo<3){d.taken=true;combatR1238.ammo++;showMessage('ГРАНАТЫ '+combatR1238.ammo+' · B — БРОСОК',2);}}
+combatR1238.drops=combatR1238.drops.filter(d=>!d.taken);
+for(const q of combatR1238.shots){const oldX=q.x;q.t+=dt;const u=Math.min(1,q.t/q.duration);q.x=q.sx+(q.tx-q.sx)*u;q.y=q.sy+(q.ty-q.sy)*u;
+q.z=q.kind==='bullet'?q.startZ+(8-q.startZ)*u:q.kind==='grenade'?30+39*u+Math.sin(Math.PI*u)*100:40*(1-u)+Math.sin(Math.PI*u)*55;
+if(q.kind==='bullet'){
+if(coverHitR1238(q,oldX))q.dead=true;
+else if(Math.min(oldX,q.x)-9<=player.x&&Math.max(oldX,q.x)+9>=player.x&&Math.abs(q.y-player.y)<9&&q.z>=player.z&&q.z<=player.z+52){q.dead=true;damagePlayer(12,q.sx);}
+}
+if(u>=1){q.dead=true;if(q.kind==='bottle'){if(Math.hypot(player.x-q.tx,player.y-q.ty)<20&&player.z<22)damagePlayer(12,q.sx);combatR1238.blasts.push({x:q.tx,y:q.ty,z:0,t:0,duration:.4,glass:true});}
+if(q.kind==='grenade'){combatR1238.blasts.push({x:q.tx,y:q.ty,z:70,t:0,duration:.8});if(boss){grenadeHitR1238=true;try{damageEnemy(boss,115,0);}finally{grenadeHitR1238=false;}}hitShake(7);}
+}
+}
+combatR1238.shots=combatR1238.shots.filter(q=>!q.dead);for(const b of combatR1238.blasts)b.t+=dt;combatR1238.blasts=combatR1238.blasts.filter(b=>b.t<b.duration);
+}
+const swordR1238=triggerSwordR952;
+triggerSwordR952=function(){if(currentLevel===1&&!bikeMode&&!barModeR955&&bossR1238()&&started&&!paused&&!gameOver&&!cinematic&&!levelPosterR010){
+if(combatR1238.ammo&& !combatR1238.shots.some(q=>q.kind==='grenade')){const b=bossR1238();combatR1238.ammo--;launchR1238('grenade',player.x,player.y,b.x,b.y,1.1);player.attack={kind:'punch',t:0,duration:.45,id:++attackSerial};}else showMessage('СОБЕРИ ГРАНАТУ · УКРОЙСЯ ОТ ОЧЕРЕДИ',1.4);return;}return swordR1238();};
+const tickR1238=update;
+update=function(dt){const active=started&&!paused&&!gameOver&&!victory&&!cinematic&&!levelPosterR010;tickR1238(dt);if(active&&currentLevel===1&&!bikeMode&&!barModeR955&&!gameOver)cityTickR1238(dt);};
+function resetCombatR1238(){combatR1238={shots:[],drops:[],blasts:[],ammo:0,dropT:0,serial:0};}
+const levelR1238=startLevel;startLevel=function(...args){resetCombatR1238();return levelR1238(...args);};
+const loadR1238=restoreSave;restoreSave=function(...args){resetCombatR1238();return loadR1238(...args);};
+const classicEnemyR1238=drawEnemy;
+drawEnemy=function(e){
+if(currentLevel!==1||e.r955Boss!=='night-enforcer')return classicEnemyR1238(e);
+if(!e.alive&&e.deathTimer<=0)return;const x=e.x-cameraX,y=e.y;
+ctx.save();ctx.fillStyle='#304451';ctx.fillRect(x-74,y-67,148,54);ctx.fillStyle='#719aaa';ctx.fillRect(x+18,y-64,43,17);
+ctx.fillStyle='#101823';for(const d of [-46,46]){ctx.beginPath();ctx.arc(x+d,y-10,14,0,Math.PI*2);ctx.fill();}
+ctx.fillStyle='#31485f';ctx.fillRect(x-16,y-148,32,72);ctx.fillStyle='#cda991';ctx.beginPath();ctx.arc(x,y-159,13,0,Math.PI*2);ctx.fill();ctx.fillStyle='#162539';ctx.fillRect(x-16,y-174,32,9);ctx.fillRect(x-69,y-126,59,7);
+if(e.muzzleR1238>0){ctx.fillStyle='#ffcd68';ctx.beginPath();ctx.arc(x-73,y-123,8,0,Math.PI*2);ctx.fill();}ctx.restore();
+};
+const classicR1238=draw;
+draw=function(){classicR1238();if(currentLevel!==1||bikeMode||barModeR955||!started)return;ctx.save();
+for(const c of coversR1238){ctx.fillStyle='#7b878d';ctx.fillRect(c.x-cameraX-c.w/2,c.y-c.h,c.w,c.h);ctx.fillStyle='#edbd59';ctx.fillRect(c.x-cameraX-c.w/2,c.y-c.h+18,c.w,6);}
+for(const d of combatR1238.drops){ctx.fillStyle='#b4dc7d';ctx.beginPath();ctx.arc(d.x-cameraX,d.y-d.z-7,5,0,Math.PI*2);ctx.fill();}
+for(const q of combatR1238.shots){ctx.fillStyle=q.kind==='bullet'?'#ffda75':'#96c46c';ctx.beginPath();ctx.arc(q.x-cameraX,q.y-q.z,q.kind==='bullet'?2:4,0,Math.PI*2);ctx.fill();}
+if(bossR1238()){ctx.fillStyle='#e9daac';ctx.font='10px monospace';ctx.fillText('B: ГРАНАТА ×'+combatR1238.ammo,170,58);}ctx.restore();
+};
 const drawClassicR1182 = draw;
 let rendererR1182 = null;
 window.LiraGame = {
@@ -5091,9 +5208,9 @@ gate:getActiveWave()?.gate, wave:getActiveWave()?.name,
 cinematic, poster:levelPosterR010,
 crates:recoveryCratesR950, hearts:recoveryHeartsR950, groundStars:groundStarsR952, lifeUps:groundLifeUpsR955,
 ocean:{cavern:!!cavernR1237,cavernDone:cavernDoneR1237,barrels:oceanBarrelsR942,pickups:oceanPickupsR942,chains:oceanChainsR955,explosions:oceanExplosionsR942},
-projectiles:cityBossBulletsR955,
+projectiles:cityBossBulletsR955,cityR1238:{...combatR1238,covers:coversR1238},
 bar:{active:barModeR955,done:barDoneR955,ready:currentLevel===1&&!barDoneR955&&!barModeR955&&!!waves[0]?.cleared,enemies:barEnemiesR955,items:barItemsR955,shots:barProjectilesR955,entry:{active:barDoorEntryActiveR1204,t:barDoorEntryT_R1204},exitT:barExitT_R955},
-bike:{active:bikeMode,distance:bikeDistance,y:bikeY,z:bikeZ,speed:bikeSpeed,attack:bikeAttackT,super:bikeSuperT,crash:bikeCrashT,fall:bikeFallT_R1204,logD:BIKE_LOG_D_R1204,rivals:bikeRivals,pits:bikePits,posts:bikePostsR955,intro:{active:bikeMode&&!bikeIntroDone,t:bikeIntroT,duration:BIKE_INTRO_DURATION}},
+bike:{active:bikeMode,distance:bikeDistance,y:bikeY,z:bikeZ,speed:bikeSpeed,attack:bikeAttackT,super:bikeSuperT,crash:bikeCrashT,fall:bikeFallT_R1204,logD:null,rivals:bikeRivals,pits:bikePits,posts:bikePostsR955,intro:{active:bikeMode&&!bikeIntroDone,t:bikeIntroT,duration:BIKE_INTRO_DURATION}},
 r1203:{rubies:rubiesR1203,skill:skillLevelR1203,weapon:streetWeaponR1203,charges:streetWeaponChargesR1203,loot:streetLootR1203,barrels:streetBarrelsR1203,throws:streetThrowsR1203,run:runBoostT_R1204,barDoorEntry:barDoorEntryActiveR1204},
 space:{x:spaceX_R950,y:spaceY_R950,distance:spaceDistanceR950,roll:spaceRollR950,enemies:spaceEnemiesR950,shots:spaceShotsR950,enemyShots:spaceEnemyShotsR950,pickups:spacePickupsR950,boss:spaceBossR950,stars:spaceCollectStarsR952,lifeUps:spaceLifeUpsR955,insert:spaceInsertR950,super:spaceSuperR1185},
 tower:{invuln:towerInvulnR952,face:player.face,move:(input.right?1:0)-(input.left?1:0),look:(input.up?1:0)-(input.down?1:0),bats:towerBatsR1190,x:towerX_R952,y:towerY_R952,camera:towerCameraR952,grounded:towerGroundedR952,sword:towerSwordT_R952,platforms:towerPlatformsR952,enemies:towerEnemiesR952,crates:towerCratesR952,hearts:towerHeartsR952,stars:towerStarsR952,hazards:towerFallingR952,lifeUps:towerLifeUpsR955},
@@ -5117,7 +5234,7 @@ buildWaves();
 requestAnimationFrame(frame);
 })();
 </script>
-<script type="module" src="/assets/lira-3d-r1190.js?v=55.00-r1237"></script>
+<script type="module" src="/assets/lira-3d-r1190.js?v=55.00-r1238"></script>
 </body>
 </html>
 

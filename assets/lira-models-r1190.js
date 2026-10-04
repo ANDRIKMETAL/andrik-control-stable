@@ -190,7 +190,7 @@ root.visible=!((p.invuln||0)>0&&Math.floor(time*15)%3===0);
 export function dog(){const g=new T.Group();sphere(g,0,16,0,15,8,6,material('#30313a'));sphere(g,14,22,0,7,7,5,material('#252630'));sphere(g,20,20,2,6,3,4,material('#44424a'));for(const x of [-9,9])for(const z of [-4,4])cylinder(g,x,7,z,2,14,'#202530');cone(g,12,31,-3,2.5,8,'#151921');cone(g,16,31,3,2.5,8,'#151921');sphere(g,18,24,4,1,.8,.5,material('#dfae6c',.3,0,1));const tail=cylinder(g,-19,18,0,1.5,16,'#202530');tail.rotation.z=-.8;return g;}
 export function motorcycle(police=false){const g=new T.Group(),rubber=material('#0b1017',.88),metal=material('#53626e',.32,.78),paint=material(police?'#d5d5cf':'#5e2834',.27,.52);
 for(const x of [-22,24]){const tire=ring(g,x,10,0,10,3,rubber);tire.scale.z=.8;ring(g,x,10,0,6.7,1.2,metal);cylinder(g,x,10,0,2,8,metal).rotation.x=Math.PI/2;}
-box(g,0,16,0,38,5,8,metal);sphere(g,4,24,0,7.3,4.3,4.4,paint);box(g,-12,26,0,20,3,9,rubber);const fork=box(g,22,22,0,3,28,4,metal);fork.rotation.z=.24;box(g,20,29,0,2.6,13,3,metal);box(g,21,33,0,9,2.4,20,metal);box(g,18,34,0,5,2.2,28,metal);cylinder(g,18,34,13.5,1.5,7,rubber).rotation.x=Math.PI/2;cylinder(g,18,34,-13.5,1.5,7,rubber).rotation.x=Math.PI/2;box(g,-5,9,-4,27,3,3,metal);sphere(g,29,28,0,3,4,5,material('#fbe4b0',.25,.2,2));
+box(g,0,16,0,38,5,8,metal);sphere(g,4,24,0,7.3,4.3,4.4,paint);box(g,-12,26,0,20,3,9,rubber);const fork=box(g,22,22,0,3,28,4,metal);fork.rotation.z=.24;box(g,20,29,0,2.6,13,3,metal);box(g,12,33,0,20,2.4,3,metal);box(g,2,34,0,3,2.2,18,metal);cylinder(g,2,34,8,1.5,5,rubber).rotation.x=Math.PI/2;cylinder(g,2,34,-8,1.5,5,rubber).rotation.x=Math.PI/2;box(g,-5,9,-4,27,3,3,metal);sphere(g,29,28,0,3,4,5,material('#fbe4b0',.25,.2,2));
 if(police){sphere(g,-20,32,4,3,2,3,material('#a53142',.25,.2,1));sphere(g,-20,32,-4,3,2,3,material('#417ba7',.25,.2,1));}return g;}
 export function ship(kind='lira'){const g=new T.Group(),friendly=kind==='lira',shell=material(friendly?'#809ca8':'#593d50',.32,.7);
 sphere(g,0,0,0,19,8,9,shell);sphere(g,2,4,5,8,4,4,material(friendly?'#264f63':'#983c46',.2,.4,.3));
@@ -252,4 +252,8 @@ const point=q=>new T.Vector3(Math.cos(angle)*q*88+Math.sin(time*2.4+i+q*3)*q*9,M
 joints.forEach((j,k)=>{const a=point(k/6),b=point((k+1)/6),delta=b.clone().sub(a);j.position.copy(a);j.quaternion.setFromUnitVectors(new T.Vector3(0,-1,0),delta.clone().normalize());j.scale.set(1,delta.length()/18,1);});
 });
 if(e.alive===false){const f=Math.max(.03,Math.min(1,(e.deathTimer||0)/.7));g.scale.setScalar(f);g.rotation.z=(1-f)*.5;}else g.scale.setScalar(1);
+}
+export function gripHandlebars(root,bike,attacking=false){
+const d=root.userData;root.updateMatrixWorld(true);bike.updateMatrixWorld(true);
+d.limbs.forEach((a,i)=>{if(attacking&&i===1)return;const target=bike.localToWorld(new T.Vector3(2,34,i===0?8:-8));d.body.worldToLocal(target);handAt(a,target,i===0?-1:1);});root.updateMatrixWorld(true);
 }
