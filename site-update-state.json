@@ -1,14 +1,14 @@
 {
   "schema": 1,
-  "updaterVersion": "55.00-r357-deploy-retrigger",
+  "updaterVersion": "55.00-r358-deploy-nohang",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1791071825988-b6d6341261",
-  "release": "R1234",
-  "archiveName": "R1234-INSTALLER-NO-HANG-WORKER-FIX.zip",
-  "sourceHead": "902bd3726d78dac97d7ef7695b8ec5e9a68bdba6",
-  "backupSha": "902bd3726d78dac97d7ef7695b8ec5e9a68bdba6",
+  "operationId": "publish-1791072449984-0316dc93b1",
+  "release": "R1235",
+  "archiveName": "R1235-SIMPLE-AUDIENCE-GRAPHS.zip",
+  "sourceHead": "cc98bee64886b0ba8039345cab61e1efababebca",
+  "backupSha": "cc98bee64886b0ba8039345cab61e1efababebca",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-10-03T23:57:07.279Z"
+  "generatedAt": "2026-10-04T00:07:29.984Z"
 }
