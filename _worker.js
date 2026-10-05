@@ -19361,10 +19361,56 @@ function resolveTikTokIngestFromControlEnvR1304(env){
   const configured=Boolean(target && /^rtmps?:\/\//i.test(target));
   return {configured,target};
 }
+const TIKTOK_INGEST_STATE_KEY_R1307='radio-tiktok-ingest-r1307';
+function bytesToBase64R1307(bytes){let s='';for(const b of bytes)s+=String.fromCharCode(b);return btoa(s)}
+function base64ToBytesR1307(text){const s=atob(String(text||''));const out=new Uint8Array(s.length);for(let i=0;i<s.length;i++)out[i]=s.charCodeAt(i);return out}
+async function tiktokSecretKeyR1307(env,usage){
+  const secret=String(env?.RADIO_TIKTOK_STORAGE_SECRET_R1307||configuredAdminKeys(env)[0]||'').trim();
+  if(!secret)throw new Error('tiktok-secret-storage-key-missing');
+  const material=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('ANDRIK-TIKTOK-R1307|'+secret));
+  return crypto.subtle.importKey('raw',material,{name:'AES-GCM'},false,[usage]);
+}
+async function encryptTikTokTargetR1307(env,target){
+  const key=await tiktokSecretKeyR1307(env,'encrypt'),iv=crypto.getRandomValues(new Uint8Array(12));
+  const data=await crypto.subtle.encrypt({name:'AES-GCM',iv},key,new TextEncoder().encode(target));
+  return {v:1,iv:bytesToBase64R1307(iv),data:bytesToBase64R1307(new Uint8Array(data)),updatedAt:new Date().toISOString()};
+}
+async function decryptTikTokTargetR1307(env,pack){
+  if(!pack||Number(pack.v)!==1||!pack.iv||!pack.data)return '';
+  const key=await tiktokSecretKeyR1307(env,'decrypt');
+  const plain=await crypto.subtle.decrypt({name:'AES-GCM',iv:base64ToBytesR1307(pack.iv)},key,base64ToBytesR1307(pack.data));
+  return new TextDecoder().decode(plain).trim();
+}
+async function storedTikTokTargetR1307(env){
+  const db=env.COMMENTS_DB;if(!db)return {configured:false,target:'',updatedAt:null,source:'none'};
+  const row=await getPushState(db,TIKTOK_INGEST_STATE_KEY_R1307).catch(()=>null);
+  if(!row?.value)return {configured:false,target:'',updatedAt:null,source:'none'};
+  try{
+    const pack=JSON.parse(row.value),target=await decryptTikTokTargetR1307(env,pack);
+    return {configured:/^rtmps?:\/\//i.test(target),target,updatedAt:pack.updatedAt||row.updatedAt||null,source:'secure-control-r1307'};
+  }catch(_){return {configured:false,target:'',updatedAt:row.updatedAt||null,source:'secure-control-r1307-error'}}
+}
+async function handleControlTikTokIngestR1307(request,env){
+  if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
+  const db=env.COMMENTS_DB;if(!db)return json({ok:false,error:'database-not-configured'},503);
+  if(request.method==='GET'){
+    const envCfg=resolveTikTokIngestFromControlEnvR1304(env),stored=await storedTikTokTargetR1307(env);
+    return json({ok:true,configured:Boolean(envCfg.configured||stored.configured),source:envCfg.configured?'control-env':stored.source,updatedAt:stored.updatedAt||null},200,{'cache-control':'no-store'});
+  }
+  const body=await request.json().catch(()=>({}));
+  const target=String(body.target||'').trim();
+  const hasControl=[...target].some(ch=>ch.charCodeAt(0)<32);
+  if(target.length<16||target.length>4096||!/^(?:rtmp|rtmps):\/\//i.test(target)||hasControl)return json({ok:false,error:'invalid-tiktok-rtmp-url'},400);
+  const pack=await encryptTikTokTargetR1307(env,target);
+  await setPushState(db,TIKTOK_INGEST_STATE_KEY_R1307,JSON.stringify(pack));
+  return json({ok:true,configured:true,stored:true,updatedAt:pack.updatedAt,message:'TikTok RTMP saved securely; secret is not returned to browser.'},200,{'cache-control':'no-store'});
+}
 async function handleRadioAgentTikTokBootstrapR1304(request,env){
   if(!await radioAgentAuthorizedR627(request,env))return json({ok:false,error:'unauthorized-agent'},401);
-  const cfg=resolveTikTokIngestFromControlEnvR1304(env);
-  return json({ok:true,configured:cfg.configured,target:cfg.configured?cfg.target:''},200,{'cache-control':'no-store, no-cache, must-revalidate','pragma':'no-cache','expires':'0'});
+  let cfg=resolveTikTokIngestFromControlEnvR1304(env);
+  let source='control-env';
+  if(!cfg.configured){const stored=await storedTikTokTargetR1307(env);cfg={configured:stored.configured,target:stored.target};source=stored.source;}
+  return json({ok:true,configured:cfg.configured,target:cfg.configured?cfg.target:'',source},200,{'cache-control':'no-store, no-cache, must-revalidate','pragma':'no-cache','expires':'0'});
 }
 
 async function handleRadioRemoteStatusR627(request,env){
@@ -19453,7 +19499,7 @@ if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401
 const db=env.COMMENTS_DB;if(!db)return json({ok:false,error:'database-not-configured'},503);
 const body=await request.json().catch(()=>({}));
 const action=String(body.action||'').trim().toLowerCase();
-const allowed=new Set(['start','recover','stop','restart','encoder-start','encoder-stop','soft-restart','gold-restore','screen-restore','cache-clean','status','auto-safe','full-fit','visual-sync','visual-now','visual-next','visual-auto','queue-move','audio-delay','track-remove','load-r988','queue-pick-r989','cleanup-r1026','loudness-new-r1098','tiktok-start-r1303','tiktok-stop-r1303','tiktok-schedule-r1305']);
+const allowed=new Set(['start','recover','stop','restart','encoder-start','encoder-stop','soft-restart','gold-restore','screen-restore','cache-clean','status','auto-safe','full-fit','visual-sync','visual-now','visual-next','visual-auto','queue-move','audio-delay','track-remove','load-r988','queue-pick-r989','cleanup-r1026','loudness-new-r1098','tiktok-start-r1303','tiktok-stop-r1303','tiktok-schedule-r1305','tiktok-ingest-refresh-r1307']);
 if(!allowed.has(action))return json({ok:false,error:'invalid-action'},400);
 const slot=String(body.slot||'').trim().toLowerCase();
 const audioDelayMsR949=Number(body.delayMs);
@@ -19646,6 +19692,7 @@ if (path === '/api/control/radio-remote-r627/command' && request.method === 'POS
 if (path === '/api/control/radio-remote-r627/ticker' && request.method === 'POST') return await handleRadioRemoteTickerR629(request, env);
 if (path === '/api/radio-agent-r627/pair/consume' && request.method === 'POST') return await handleRadioAgentPairConsumeR627(request, env);
 if (path === '/api/radio-agent-r627/poll' && request.method === 'POST') return await handleRadioAgentPollR627(request, env);
+if (path === '/api/control/radio-tiktok-r1307/ingest' && (request.method === 'GET' || request.method === 'POST')) return await handleControlTikTokIngestR1307(request, env);
 if ((path === '/api/radio-agent-r1304/tiktok-bootstrap' || path === '/api/radio-agent-r1305/tiktok-bootstrap') && request.method === 'GET') return await handleRadioAgentTikTokBootstrapR1304(request, env);
 if ((path === '/api/radio-agent-r715/youtube-ensure' || path === '/api/radio-agent-r721/youtube-ensure') && request.method === 'POST') return await handleRadioAgentYoutubeObserveR1214(request, env);
 if (path === '/api/radio-agent-r627/result' && request.method === 'POST') return await handleRadioAgentResultR627(request, env);

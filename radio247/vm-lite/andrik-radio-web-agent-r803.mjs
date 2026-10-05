@@ -6,7 +6,7 @@ import {Readable} from 'node:stream';
 import {pipeline} from 'node:stream/promises';
 
 const CONFIG='/etc/andrik-radio-web-r627.json';
-const AGENT_VERSION_R803='R1305-TIKTOK-SCHEDULE+SAFE-TICKER+R1185-WATCHDOG-R1293';
+const AGENT_VERSION_R803='R1307-TIKTOK-MANUAL-INGEST+R1305-SCHEDULE+SAFE-TICKER+R1185-WATCHDOG-R1293';
 const DIAG_DIR_R803='/var/cache/andrik-radio-r622/diagnostics';
 const DIAG_AGENT_LOG_R803=DIAG_DIR_R803+'/r803-agent-events.ndjson';
 const DIAG_AGENT_MAX_BYTES_R803=1024*1024;
@@ -563,6 +563,16 @@ ${e.message||e}`};}
       const d=await localControlR721(`/control/tiktok-schedule?enabled=${enabled?'1':'0'}&start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`);
       return {ok:Boolean(d?.ok),output:`TIKTOK SCHEDULE R1305 ${d?.ok?'✅':'❌'}\n${JSON.stringify(d)}`};
     }catch(e){return {ok:false,output:`TIKTOK SCHEDULE R1305 ❌\n${e.message||e}`};}
+  }
+  if(action==='tiktok-ingest-refresh-r1307'){
+    try{
+      const d=await jsonFetch(BASE+'/api/radio-agent-r1305/tiktok-bootstrap',{method:'GET',headers});
+      if(!d?.configured||!d?.target)return {ok:false,output:'TIKTOK INGEST R1307 ❌ no secure target available'};
+      persistTikTokTargetR1304(d.target);
+      const rec=await localControlR721('/control/tiktok-schedule-reconcile').catch(()=>null);
+      appendAgentDiagR803('tiktok-r1307-ingest-refreshed',{configured:true,source:d?.source||'secure-control-r1307',running:Boolean(rec?.running||rec?.tiktok?.running)});
+      return {ok:true,output:`TIKTOK INGEST R1307 ✅\nSecure RTMP imported to OVH (secret hidden).\n${JSON.stringify({configured:true,source:d?.source||'secure-control-r1307',running:Boolean(rec?.running||rec?.tiktok?.running)})}`};
+    }catch(e){return {ok:false,output:`TIKTOK INGEST R1307 ❌\n${diagSanitizeR803(e?.message||e,260)}`};}
   }
   if(action==='status'){
     const svc=run('systemctl',['is-active','andrik-radio.service'],10000);
