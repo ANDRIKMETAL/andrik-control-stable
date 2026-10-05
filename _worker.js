@@ -16447,15 +16447,23 @@ const message = cleanPlainText(form.get('message') || `ANDRIK Control site updat
 const release = cleanPlainText(form.get('release') || '', 80);
 const expectedHead = cleanPlainText(form.get('expectedHead') || '', 64);
 const backupShaRaw = cleanPlainText(form.get('backupSha') || '', 64);
-const backupSha = /^[0-9a-f]{40}$/i.test(backupShaRaw) ? backupShaRaw : '';
-const backupTag = cleanPlainText(form.get('backupTag') || '', 180);
+let backupSha = /^[0-9a-f]{40}$/i.test(backupShaRaw) ? backupShaRaw : '';
+let backupTag = cleanPlainText(form.get('backupTag') || '', 180);
 const autoRecovery = String(form.get('autoRecovery') || '') === 'yes';
 const forceReinstall = String(form.get('forceReinstall') || '') === 'yes';
 const [parsed, snapshot] = await Promise.all([
 siteUpdatePrepareArchive(archive),
 siteUpdateGithubSnapshot(config)
 ]);
-if (expectedHead && /^[0-9a-f]{40}$/i.test(expectedHead) && snapshot.headSha !== expectedHead) throw new Error('branch-changed');
+// R1256: the repository HEAD may legitimately move between ZIP preview/backup and Commit.
+// Do not abort step 3. Pin the NEW current HEAD as an extra recovery point and continue
+// against that exact snapshot. This keeps the update safe without forcing the user to
+// select the ZIP again.
+if (expectedHead && /^[0-9a-f]{40}$/i.test(expectedHead) && snapshot.headSha !== expectedHead) {
+  const refreshedBackup = await siteUpdateCreateBackup(config, snapshot, 'head-refresh-r1256');
+  backupSha = refreshedBackup.sha;
+  backupTag = refreshedBackup.tag;
+}
 const diff = siteUpdateCompare(parsed, snapshot, config);
 const touched = [...diff.added, ...diff.changed];
 const noFileChanges = !touched.length && !diff.deleted.length;
@@ -16544,9 +16552,12 @@ durationMs:Date.now()-startedAt, message:reinstall ? 'GitHub принял пов
 await recordSystemLog(env, { scope:'site-update', level:'error', event:'github-publish-failed',
 message:siteUpdateFriendlyError(error), details:{ raw:cleanPlainText(error?.message || error, 500) }
 }).catch(() => {});
-const transient = [429,500,502,503,504].includes(Number(error?.status || 0)) || String(error?.message || '') === 'github-timeout';
-const status = transient ? 503 : (error?.status === 422 || String(error?.message || '') === 'branch-changed' ? 409 : 400);
-return json({ ok:false, error:'publish-failed', retryable:transient, message:siteUpdateFriendlyError(error) }, status);
+// R1256: a 422 during the final non-forced branch ref update is commonly a HEAD race.
+// Mark it retryable so the UI re-runs the publish against the fresh HEAD.
+const headRace = Number(error?.status || 0) === 422 || String(error?.message || '') === 'branch-changed';
+const transient = headRace || [429,500,502,503,504].includes(Number(error?.status || 0)) || String(error?.message || '') === 'github-timeout';
+const status = transient ? 503 : 400;
+return json({ ok:false, error:'publish-failed', retryable:transient, headRace, message:siteUpdateFriendlyError(error) }, status);
 }
 }
 async function handleSiteUpdateRelease(request, env) {

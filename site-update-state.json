@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r358-deploy-nohang",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1791217189520-c6c7fb6f24",
-  "release": "R1255",
-  "archiveName": "ANDRIK-SITE-R1255-HOST-CAMERA-MIC-PERMISSIONS-FIX.zip",
-  "sourceHead": "40c583064fc67d9beb2d6f7f2297a9736e93b49d",
-  "backupSha": "40c583064fc67d9beb2d6f7f2297a9736e93b49d",
+  "operationId": "publish-1791218471399-68bbd3bf45",
+  "release": "R1256",
+  "archiveName": "ANDRIK-SITE-R1256-COMMIT-SELFHEAL-HOST-MEDIA-FIX.zip",
+  "sourceHead": "215647c0f76a2f3231994f7292269a5e538709c8",
+  "backupSha": "215647c0f76a2f3231994f7292269a5e538709c8",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-10-05T16:19:51.072Z"
+  "generatedAt": "2026-10-05T16:41:13.012Z"
 }
