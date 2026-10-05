@@ -20172,11 +20172,14 @@ const isPlayerShell = url.searchParams.get('player-shell') === '1'
 && path !== '/site-update-admin'
 && !path.startsWith('/cache-reset');
 const headers = new Headers(response.headers);
+const isHostModeR1255 = path === '/radio-host-admin.html' || path === '/radio-host-admin';
 headers.set('strict-transport-security', 'max-age=31536000; includeSubDomains');
 headers.set('x-content-type-options', 'nosniff');
 headers.set('referrer-policy', 'strict-origin-when-cross-origin');
-headers.set('permissions-policy', 'camera=(), microphone=(), geolocation=()');
-headers.set('x-andrik-security-headers', 'R190');
+// R1255: camera/microphone stay DENIED site-wide, except the authenticated Host Mode page.
+// The previous global camera=(), microphone=() policy made getUserMedia fail before Android could even ask permission.
+headers.set('permissions-policy', isHostModeR1255 ? 'camera=(self), microphone=(self), geolocation=()' : 'camera=(), microphone=(), geolocation=()');
+headers.set('x-andrik-security-headers', isHostModeR1255 ? 'R1255-HOST-MEDIA-ALLOW' : 'R190');
 if (isHtml) {
 if (isPlayerShell) {
 headers.delete('x-frame-options');

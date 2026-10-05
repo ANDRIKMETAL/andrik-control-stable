@@ -1,3 +1,12 @@
+
+/radio-host-admin.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+  Permissions-Policy: camera=(self), microphone=(self), geolocation=()
+
+/radio-host-admin
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+  Permissions-Policy: camera=(self), microphone=(self), geolocation=()
+
 /assets/lira-3d-r1239.js
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
   Pragma: no-cache

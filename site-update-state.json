@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r358-deploy-nohang",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1791206887033-b9b3208d25",
-  "release": "R1254",
-  "archiveName": "ANDRIK-SITE-R1254-HOST-FIRST-YOUTUBE-CLEAN-FB-METRICS.zip",
-  "sourceHead": "798eaf532e460f046353b9743d79f5f3c0f0d9a6",
-  "backupSha": "798eaf532e460f046353b9743d79f5f3c0f0d9a6",
+  "operationId": "publish-1791217189520-c6c7fb6f24",
+  "release": "R1255",
+  "archiveName": "ANDRIK-SITE-R1255-HOST-CAMERA-MIC-PERMISSIONS-FIX.zip",
+  "sourceHead": "40c583064fc67d9beb2d6f7f2297a9736e93b49d",
+  "backupSha": "40c583064fc67d9beb2d6f7f2297a9736e93b49d",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-10-05T13:28:08.551Z"
+  "generatedAt": "2026-10-05T16:19:51.072Z"
 }
