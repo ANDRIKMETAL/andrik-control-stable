@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r358-deploy-nohang",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1791197225455-300707e0f8",
-  "release": "R1251",
-  "archiveName": "ANDRIK-R1251-FACEBOOK-CONTROL-METRICS-SITE.zip",
-  "sourceHead": "41fe77015cb9be30870b3ada2039b9b513c1c574",
-  "backupSha": "41fe77015cb9be30870b3ada2039b9b513c1c574",
+  "operationId": "publish-1791202930276-f7823216d7",
+  "release": "R1252",
+  "archiveName": "ANDRIK-SITE-R1252-YOUTUBE-HOST-MODE.zip",
+  "sourceHead": "8332ecfc567132ca67bef5940437706875f0cad4",
+  "backupSha": "8332ecfc567132ca67bef5940437706875f0cad4",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-10-05T10:47:05.455Z"
+  "generatedAt": "2026-10-05T12:22:10.276Z"
 }
