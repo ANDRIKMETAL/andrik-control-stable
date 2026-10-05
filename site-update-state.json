@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r358-deploy-nohang",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1791176575512-489d6a1d80",
-  "release": "R1245",
-  "archiveName": "ANDRIK-R1245-TIKTOK-RTMP-BRIDGE-SITE-1.zip",
-  "sourceHead": "48c24dec08cf6cf97a4ecac85a1411956568011d",
-  "backupSha": "48c24dec08cf6cf97a4ecac85a1411956568011d",
+  "operationId": "publish-1791177227459-cd4b53c7f3",
+  "release": "R1246",
+  "archiveName": "ANDRIK-R1246-TIKTOK-AUDIENCE-GRAPH-SITE.zip",
+  "sourceHead": "6dc40d04e0d0cf04530747103164004b0ae1fa7a",
+  "backupSha": "6dc40d04e0d0cf04530747103164004b0ae1fa7a",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-10-05T05:02:56.996Z"
+  "generatedAt": "2026-10-05T05:13:48.911Z"
 }

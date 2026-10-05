@@ -19405,6 +19405,168 @@ async function handleControlTikTokIngestR1307(request,env){
   await setPushState(db,TIKTOK_INGEST_STATE_KEY_R1307,JSON.stringify(pack));
   return json({ok:true,configured:true,stored:true,updatedAt:pack.updatedAt,message:'TikTok RTMP saved securely; secret is not returned to browser.'},200,{'cache-control':'no-store'});
 }
+
+// R1308: TikTok LIVE audience monitor for the private Control page.
+// It uses TikTok's public web LIVE endpoints, never exposes cookies or the RTMP secret,
+// and stores one compact D1 sample about every 30 seconds for the viewer graph.
+const TIKTOK_AUDIENCE_USERNAME_R1308='andrikmetal';
+const TIKTOK_AUDIENCE_SAMPLE_MS_R1308=30000;
+const TIKTOK_AUDIENCE_REFRESH_MS_R1308=12000;
+let tiktokAudienceSchemaPromiseR1308=null;
+async function ensureTikTokAudienceSchemaR1308(db){
+  if(tiktokAudienceSchemaPromiseR1308)return tiktokAudienceSchemaPromiseR1308;
+  tiktokAudienceSchemaPromiseR1308=(async()=>{
+    await db.prepare(`CREATE TABLE IF NOT EXISTS tiktok_live_audience_state_r1308 (
+      id TEXT PRIMARY KEY,
+      unique_id TEXT NOT NULL DEFAULT '',
+      room_id TEXT NOT NULL DEFAULT '',
+      is_live INTEGER NOT NULL DEFAULT 0,
+      viewers INTEGER,
+      enter_count INTEGER,
+      title TEXT NOT NULL DEFAULT '',
+      source TEXT NOT NULL DEFAULT '',
+      last_error TEXT NOT NULL DEFAULT '',
+      sampled_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )`).run();
+    await db.prepare(`CREATE TABLE IF NOT EXISTS tiktok_live_audience_samples_r1308 (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      unique_id TEXT NOT NULL DEFAULT '',
+      room_id TEXT NOT NULL DEFAULT '',
+      is_live INTEGER NOT NULL DEFAULT 0,
+      viewers INTEGER NOT NULL DEFAULT 0,
+      enter_count INTEGER,
+      sampled_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )`).run();
+    await db.prepare(`CREATE INDEX IF NOT EXISTS idx_tt_aud_r1308_time ON tiktok_live_audience_samples_r1308(sampled_at DESC)`).run().catch(()=>{});
+    await db.prepare(`CREATE INDEX IF NOT EXISTS idx_tt_aud_r1308_room ON tiktok_live_audience_samples_r1308(room_id,sampled_at DESC)`).run().catch(()=>{});
+  })().catch(e=>{tiktokAudienceSchemaPromiseR1308=null;throw e});
+  return tiktokAudienceSchemaPromiseR1308;
+}
+function finiteIntOrNullR1308(value){
+  if(value===null||value===undefined||value==='')return null;
+  const n=Number(value);return Number.isFinite(n)?Math.max(0,Math.trunc(n)):null;
+}
+function firstIntR1308(values){for(const v of values){const n=finiteIntOrNullR1308(v);if(n!==null)return n}return null}
+function parseTikTokAudiencePayloadR1308(payload){
+  const root=payload&&typeof payload==='object'?payload:{};
+  const data=root.data&&typeof root.data==='object'?root.data:{};
+  const user=data.user&&typeof data.user==='object'?data.user:{};
+  const liveRoomInfo=data.liveRoomInfo||data.live_room_info||root.liveRoomInfo||root.LiveRoomInfo||{};
+  const stats=data.liveRoomStats||liveRoomInfo.liveRoomStats||liveRoomInfo.live_room_stats||data.stats||liveRoomInfo.stats||{};
+  const roomId=String(user.roomId||user.roomID||data.roomId||data.roomID||liveRoomInfo.roomId||liveRoomInfo.roomID||'').trim();
+  const status=firstIntR1308([liveRoomInfo.status,data.status,root.status]);
+  const viewers=firstIntR1308([
+    data.liveRoomStats?.userCount,data.liveRoomStats?.user_count,
+    liveRoomInfo.liveRoomStats?.userCount,liveRoomInfo.liveRoomStats?.user_count,
+    liveRoomInfo.user_count,liveRoomInfo.userCount,data.user_count,data.userCount,stats.userCount,stats.user_count
+  ]);
+  const enterCount=firstIntR1308([
+    data.liveRoomStats?.enterCount,data.liveRoomStats?.enter_count,
+    liveRoomInfo.liveRoomStats?.enterCount,liveRoomInfo.liveRoomStats?.enter_count,
+    liveRoomInfo.enter_count,liveRoomInfo.enterCount,data.enter_count,data.enterCount,stats.enterCount,stats.enter_count
+  ]);
+  const title=cleanPlainText(liveRoomInfo.title||data.title||root.title||'',180);
+  const live=Boolean(roomId && roomId!=='0' && status!==4);
+  return {roomId,isLive:live,viewers:live?(viewers??0):0,enterCount,title,status};
+}
+async function fetchTikTokAudienceR1308(){
+  const uniqueId=TIKTOK_AUDIENCE_USERNAME_R1308;
+  const headers={
+    'accept':'application/json,text/plain,*/*',
+    'accept-language':'en-US,en;q=0.9',
+    'user-agent':'Mozilla/5.0 (Linux; Android 15) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0 Mobile Safari/537.36',
+    'referer':`https://www.tiktok.com/@${uniqueId}/live`
+  };
+  const roomUrl=new URL('https://www.tiktok.com/api-live/user/room/');
+  roomUrl.searchParams.set('uniqueId',uniqueId);roomUrl.searchParams.set('sourceType','54');roomUrl.searchParams.set('aid','1988');
+  const r1=await fetchWithAbortTimeoutR409(roomUrl.toString(),{headers,redirect:'follow'},9000,'tiktok-live-room-r1308-timeout');
+  if(!r1.ok)throw new Error(`tiktok-room-http-${r1.status}`);
+  const p1=await r1.json().catch(()=>null);
+  if(!p1)throw new Error('tiktok-room-non-json');
+  let parsed=parseTikTokAudiencePayloadR1308(p1);
+  // TikTok often returns roomId in /api-live/user/room and the current user_count in webcast room/info.
+  if(parsed.roomId){
+    try{
+      const infoUrl=new URL('https://webcast.tiktok.com/webcast/room/info/');
+      infoUrl.searchParams.set('aid','1988');infoUrl.searchParams.set('room_id',parsed.roomId);
+      const r2=await fetchWithAbortTimeoutR409(infoUrl.toString(),{headers:{...headers,referer:`https://www.tiktok.com/@${uniqueId}/live`},redirect:'follow'},9000,'tiktok-webcast-room-r1308-timeout');
+      if(r2.ok){
+        const p2=await r2.json().catch(()=>null);
+        const q=p2?.data&&typeof p2.data==='object'?p2.data:p2;
+        const fromInfo=parseTikTokAudiencePayloadR1308({data:{...q,user:{roomId:parsed.roomId},liveRoomInfo:q}});
+        parsed={
+          roomId:parsed.roomId,
+          isLive:fromInfo.isLive||parsed.isLive,
+          viewers:fromInfo.viewers??parsed.viewers,
+          enterCount:fromInfo.enterCount??parsed.enterCount,
+          title:fromInfo.title||parsed.title,
+          status:fromInfo.status??parsed.status
+        };
+      }
+    }catch(_){}
+  }
+  return {...parsed,uniqueId,source:'tiktok-public-live-web-r1308'};
+}
+function tiktokAudienceRangeR1308(value){
+  const key=String(value||'8h').toLowerCase();
+  if(key==='30m')return {key:'30m',seconds:1800};
+  if(key==='2h')return {key:'2h',seconds:7200};
+  if(key==='24h')return {key:'24h',seconds:86400};
+  return {key:'8h',seconds:28800};
+}
+async function handleControlTikTokAudienceR1308(request,env){
+  if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
+  const db=env.COMMENTS_DB;if(!db)return json({ok:false,error:'database-not-configured'},503);
+  await ensureTikTokAudienceSchemaR1308(db);
+  const url=new URL(request.url),range=tiktokAudienceRangeR1308(url.searchParams.get('range'));
+  const force=url.searchParams.get('refresh')==='1';
+  let state=await db.prepare(`SELECT * FROM tiktok_live_audience_state_r1308 WHERE id='andrikmetal' LIMIT 1`).first().catch(()=>null);
+  const age=state?.sampled_at?Date.now()-Date.parse(state.sampled_at):Infinity;
+  if(force||!Number.isFinite(age)||age>TIKTOK_AUDIENCE_REFRESH_MS_R1308){
+    const sampledAt=new Date().toISOString();
+    try{
+      const fresh=await fetchTikTokAudienceR1308();
+      state={id:'andrikmetal',unique_id:fresh.uniqueId,room_id:fresh.roomId||'',is_live:fresh.isLive?1:0,viewers:fresh.viewers,enter_count:fresh.enterCount,title:fresh.title||'',source:fresh.source,last_error:'',sampled_at:sampledAt};
+      await db.prepare(`INSERT INTO tiktok_live_audience_state_r1308(id,unique_id,room_id,is_live,viewers,enter_count,title,source,last_error,sampled_at)
+        VALUES(?1,?2,?3,?4,?5,?6,?7,?8,'',?9)
+        ON CONFLICT(id) DO UPDATE SET unique_id=excluded.unique_id,room_id=excluded.room_id,is_live=excluded.is_live,viewers=excluded.viewers,enter_count=excluded.enter_count,title=excluded.title,source=excluded.source,last_error='',sampled_at=excluded.sampled_at`)
+        .bind('andrikmetal',fresh.uniqueId,fresh.roomId||'',fresh.isLive?1:0,fresh.viewers,fresh.enterCount,fresh.title||'',fresh.source,sampledAt).run();
+      const last=await db.prepare(`SELECT sampled_at,room_id FROM tiktok_live_audience_samples_r1308 ORDER BY datetime(sampled_at) DESC LIMIT 1`).first().catch(()=>null);
+      const gap=last?.sampled_at?Date.now()-Date.parse(last.sampled_at):Infinity;
+      if(!last||gap>=TIKTOK_AUDIENCE_SAMPLE_MS_R1308||String(last.room_id||'')!==String(fresh.roomId||'')){
+        await db.prepare(`INSERT INTO tiktok_live_audience_samples_r1308(unique_id,room_id,is_live,viewers,enter_count,sampled_at) VALUES(?1,?2,?3,?4,?5,?6)`)
+          .bind(fresh.uniqueId,fresh.roomId||'',fresh.isLive?1:0,Number(fresh.viewers||0),fresh.enterCount,sampledAt).run();
+        await db.prepare(`DELETE FROM tiktok_live_audience_samples_r1308 WHERE datetime(sampled_at) < datetime('now','-2 days')`).run().catch(()=>{});
+      }
+    }catch(error){
+      const message=cleanPlainText(error?.message||error,220);
+      if(state){
+        await db.prepare(`UPDATE tiktok_live_audience_state_r1308 SET last_error=?1 WHERE id='andrikmetal'`).bind(message).run().catch(()=>{});
+        state={...state,last_error:message};
+      }else{
+        state={id:'andrikmetal',unique_id:TIKTOK_AUDIENCE_USERNAME_R1308,room_id:'',is_live:0,viewers:null,enter_count:null,title:'',source:'tiktok-public-live-web-r1308',last_error:message,sampled_at:''};
+      }
+    }
+  }
+  const cutoff=new Date(Date.now()-range.seconds*1000).toISOString();
+  const historyRows=await db.prepare(`SELECT room_id,is_live,viewers,enter_count,sampled_at FROM tiktok_live_audience_samples_r1308 WHERE sampled_at>=?1 ORDER BY datetime(sampled_at) ASC LIMIT 3000`).bind(cutoff).all().catch(()=>({results:[]}));
+  const history=(historyRows.results||[]).map(row=>({at:row.sampled_at,viewers:Number(row.viewers||0),enterCount:row.enter_count===null?null:Number(row.enter_count||0),live:Boolean(row.is_live),roomId:String(row.room_id||'')}));
+  const currentRoom=String(state?.room_id||'');
+  const roomRows=currentRoom?history.filter(x=>x.roomId===currentRoom):history;
+  const peak=roomRows.reduce((m,x)=>Math.max(m,Number(x.viewers||0)),0);
+  const stateAge=state?.sampled_at?Date.now()-Date.parse(state.sampled_at):Infinity;
+  const sourceError=String(state?.last_error||'');
+  return json({
+    ok:true,version:'R1308',uniqueId:TIKTOK_AUDIENCE_USERNAME_R1308,
+    available:Boolean(state?.sampled_at)&&stateAge<5*60*1000,
+    stale:Boolean(state?.sampled_at)&&stateAge>=TIKTOK_AUDIENCE_REFRESH_MS_R1308*2,
+    live:Boolean(state?.is_live),viewers:state?.viewers===null||state?.viewers===undefined?null:Number(state.viewers),
+    enterCount:state?.enter_count===null||state?.enter_count===undefined?null:Number(state.enter_count),
+    peak,roomId:currentRoom,title:String(state?.title||''),sampledAt:state?.sampled_at||null,
+    source:String(state?.source||'tiktok-public-live-web-r1308'),error:sourceError||null,range:range.key,history
+  },200,{'cache-control':'no-store'});
+}
+
 async function handleRadioAgentTikTokBootstrapR1304(request,env){
   if(!await radioAgentAuthorizedR627(request,env))return json({ok:false,error:'unauthorized-agent'},401);
   let cfg=resolveTikTokIngestFromControlEnvR1304(env);
@@ -19693,6 +19855,7 @@ if (path === '/api/control/radio-remote-r627/ticker' && request.method === 'POST
 if (path === '/api/radio-agent-r627/pair/consume' && request.method === 'POST') return await handleRadioAgentPairConsumeR627(request, env);
 if (path === '/api/radio-agent-r627/poll' && request.method === 'POST') return await handleRadioAgentPollR627(request, env);
 if (path === '/api/control/radio-tiktok-r1307/ingest' && (request.method === 'GET' || request.method === 'POST')) return await handleControlTikTokIngestR1307(request, env);
+if (path === '/api/control/radio-tiktok-r1308/audience' && request.method === 'GET') return await handleControlTikTokAudienceR1308(request, env);
 if ((path === '/api/radio-agent-r1304/tiktok-bootstrap' || path === '/api/radio-agent-r1305/tiktok-bootstrap') && request.method === 'GET') return await handleRadioAgentTikTokBootstrapR1304(request, env);
 if ((path === '/api/radio-agent-r715/youtube-ensure' || path === '/api/radio-agent-r721/youtube-ensure') && request.method === 'POST') return await handleRadioAgentYoutubeObserveR1214(request, env);
 if (path === '/api/radio-agent-r627/result' && request.method === 'POST') return await handleRadioAgentResultR627(request, env);
