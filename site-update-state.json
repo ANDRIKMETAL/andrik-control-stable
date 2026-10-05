@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r358-deploy-nohang",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1791218471399-68bbd3bf45",
-  "release": "R1256",
-  "archiveName": "ANDRIK-SITE-R1256-COMMIT-SELFHEAL-HOST-MEDIA-FIX.zip",
-  "sourceHead": "215647c0f76a2f3231994f7292269a5e538709c8",
-  "backupSha": "215647c0f76a2f3231994f7292269a5e538709c8",
+  "operationId": "publish-1791218985651-86e1cbb33c",
+  "release": "R1257",
+  "archiveName": "ANDRIK-SITE-R1257-HOST-MEDIA-POLICY-REAL-FIX.zip",
+  "sourceHead": "e91dfef4ff3d50939d5cc76d539b201979b49a7d",
+  "backupSha": "e91dfef4ff3d50939d5cc76d539b201979b49a7d",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-10-05T16:41:13.012Z"
+  "generatedAt": "2026-10-05T16:49:47.419Z"
 }

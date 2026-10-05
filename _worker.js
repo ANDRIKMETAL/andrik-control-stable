@@ -20187,10 +20187,12 @@ const isHostModeR1255 = path === '/radio-host-admin.html' || path === '/radio-ho
 headers.set('strict-transport-security', 'max-age=31536000; includeSubDomains');
 headers.set('x-content-type-options', 'nosniff');
 headers.set('referrer-policy', 'strict-origin-when-cross-origin');
-// R1255: camera/microphone stay DENIED site-wide, except the authenticated Host Mode page.
-// The previous global camera=(), microphone=() policy made getUserMedia fail before Android could even ask permission.
-headers.set('permissions-policy', isHostModeR1255 ? 'camera=(self), microphone=(self), geolocation=()' : 'camera=(), microphone=(), geolocation=()');
-headers.set('x-andrik-security-headers', isHostModeR1255 ? 'R1255-HOST-MEDIA-ALLOW' : 'R190');
+// R1257: Host Mode must NOT inherit the site-wide camera/microphone deny policy.
+// For a top-level same-origin page, the browser default allowlist already permits camera/microphone.
+// Removing the header here also avoids duplicate/conflicting Permissions-Policy directives from static hosting.
+if (isHostModeR1255) headers.delete('permissions-policy');
+else headers.set('permissions-policy', 'camera=(), microphone=(), geolocation=()');
+headers.set('x-andrik-security-headers', isHostModeR1255 ? 'R1257-HOST-MEDIA-POLICY-REMOVED' : 'R190');
 if (isHtml) {
 if (isPlayerShell) {
 headers.delete('x-frame-options');
