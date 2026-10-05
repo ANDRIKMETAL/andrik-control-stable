@@ -19336,6 +19336,68 @@ await deletePushStateR627(db,key).catch(()=>{});
 return json({ok:true,token,pollUrl:'https://andrikmetal.com/api/radio-agent-r627/poll',resultUrl:'https://andrikmetal.com/api/radio-agent-r627/result'});
 }
 
+
+// R1250-FACEBOOK-LIVE: persistent Facebook Stream Key is stored encrypted in D1.
+// Browser GET never returns the key/target; only the paired OVH agent can fetch it.
+const FACEBOOK_DEFAULT_SERVER_URL_R1250='rtmps://live-api-s.facebook.com:443/rtmp/';
+const FACEBOOK_INGEST_STATE_KEY_R1250='radio-facebook-ingest-r1250';
+function facebookServerValidR1250(value){
+  try{
+    const u=new URL(String(value||''));
+    return u.protocol==='rtmps:' && u.hostname.toLowerCase()==='live-api-s.facebook.com' && /^\/rtmp\/?$/i.test(u.pathname||'/');
+  }catch(_){return false}
+}
+async function facebookSecretKeyR1250(env,usage){
+  const secret=String(env?.RADIO_FACEBOOK_STORAGE_SECRET_R1250||configuredAdminKeys(env)[0]||'').trim();
+  if(!secret)throw new Error('facebook-secret-storage-key-missing');
+  const material=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('ANDRIK-FACEBOOK-R1250|'+secret));
+  return crypto.subtle.importKey('raw',material,{name:'AES-GCM'},false,[usage]);
+}
+async function encryptFacebookTargetR1250(env,target){
+  const key=await facebookSecretKeyR1250(env,'encrypt'),iv=crypto.getRandomValues(new Uint8Array(12));
+  const data=await crypto.subtle.encrypt({name:'AES-GCM',iv},key,new TextEncoder().encode(target));
+  return {v:1,iv:bytesToBase64R1307(iv),data:bytesToBase64R1307(new Uint8Array(data)),updatedAt:new Date().toISOString()};
+}
+async function decryptFacebookTargetR1250(env,pack){
+  if(!pack||Number(pack.v)!==1||!pack.iv||!pack.data)return '';
+  const key=await facebookSecretKeyR1250(env,'decrypt');
+  const plain=await crypto.subtle.decrypt({name:'AES-GCM',iv:base64ToBytesR1307(pack.iv)},key,base64ToBytesR1307(pack.data));
+  return new TextDecoder().decode(plain).trim();
+}
+async function storedFacebookTargetR1250(env){
+  const db=env.COMMENTS_DB;if(!db)return {configured:false,target:'',updatedAt:null,source:'none'};
+  const row=await getPushState(db,FACEBOOK_INGEST_STATE_KEY_R1250).catch(()=>null);
+  if(!row?.value)return {configured:false,target:'',updatedAt:null,source:'none'};
+  try{
+    const pack=JSON.parse(row.value),target=await decryptFacebookTargetR1250(env,pack);
+    return {configured:/^rtmps:\/\//i.test(target),target,updatedAt:pack.updatedAt||row.updatedAt||null,source:'secure-control-r1250'};
+  }catch(_){return {configured:false,target:'',updatedAt:row.updatedAt||null,source:'secure-control-r1250-error'}}
+}
+async function handleControlFacebookIngestR1250(request,env){
+  if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
+  const db=env.COMMENTS_DB;if(!db)return json({ok:false,error:'database-not-configured'},503);
+  if(request.method==='GET'){
+    const stored=await storedFacebookTargetR1250(env);
+    return json({ok:true,configured:Boolean(stored.configured),source:stored.source,updatedAt:stored.updatedAt||null,serverUrl:FACEBOOK_DEFAULT_SERVER_URL_R1250},200,{'cache-control':'no-store'});
+  }
+  const body=await request.json().catch(()=>({}));
+  let server=String(body.serverUrl||FACEBOOK_DEFAULT_SERVER_URL_R1250).trim();
+  const key=String(body.key||'').trim();
+  if(!server.endsWith('/'))server+='/'
+  const hasControl=[...key].some(ch=>ch.charCodeAt(0)<32);
+  if(!facebookServerValidR1250(server))return json({ok:false,error:'invalid-facebook-server-url'},400);
+  if(key.length<12||key.length>2048||!/^FB-/i.test(key)||/\s/.test(key)||hasControl)return json({ok:false,error:'invalid-facebook-stream-key'},400);
+  const target=server+key.replace(/^\/+/, '');
+  const pack=await encryptFacebookTargetR1250(env,target);
+  await setPushState(db,FACEBOOK_INGEST_STATE_KEY_R1250,JSON.stringify(pack));
+  return json({ok:true,configured:true,stored:true,updatedAt:pack.updatedAt,serverUrl:FACEBOOK_DEFAULT_SERVER_URL_R1250,message:'Facebook persistent stream key saved securely; key is not returned to browser.'},200,{'cache-control':'no-store'});
+}
+async function handleRadioAgentFacebookBootstrapR1250(request,env){
+  if(!await radioAgentAuthorizedR627(request,env))return json({ok:false,error:'unauthorized-agent'},401);
+  const stored=await storedFacebookTargetR1250(env);
+  return json({ok:true,configured:Boolean(stored.configured),target:stored.configured?stored.target:'',source:stored.source},200,{'cache-control':'no-store, no-cache, must-revalidate','pragma':'no-cache','expires':'0'});
+}
+
 // R1305-TIKTOK-SCHEDULE: paired OVH agent may securely fetch an already-stored
 // TikTok ingest target from server-side Control environment. Never exposed to browser/UI.
 function resolveTikTokIngestFromControlEnvR1304(env){
@@ -19680,7 +19742,7 @@ if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401
 const db=env.COMMENTS_DB;if(!db)return json({ok:false,error:'database-not-configured'},503);
 const body=await request.json().catch(()=>({}));
 const action=String(body.action||'').trim().toLowerCase();
-const allowed=new Set(['start','recover','stop','restart','encoder-start','encoder-stop','soft-restart','gold-restore','screen-restore','cache-clean','status','auto-safe','full-fit','visual-sync','visual-now','visual-next','visual-auto','queue-move','audio-delay','track-remove','load-r988','queue-pick-r989','cleanup-r1026','loudness-new-r1098','tiktok-start-r1303','tiktok-stop-r1303','tiktok-schedule-r1305','tiktok-ingest-refresh-r1307']);
+const allowed=new Set(['start','recover','stop','restart','encoder-start','encoder-stop','soft-restart','gold-restore','screen-restore','cache-clean','status','auto-safe','full-fit','visual-sync','visual-now','visual-next','visual-auto','queue-move','audio-delay','track-remove','load-r988','queue-pick-r989','cleanup-r1026','loudness-new-r1098','tiktok-start-r1303','tiktok-stop-r1303','tiktok-schedule-r1305','tiktok-ingest-refresh-r1307','facebook-start-r1313','facebook-stop-r1313']);
 if(!allowed.has(action))return json({ok:false,error:'invalid-action'},400);
 const slot=String(body.slot||'').trim().toLowerCase();
 const audioDelayMsR949=Number(body.delayMs);
@@ -19873,6 +19935,8 @@ if (path === '/api/control/radio-remote-r627/command' && request.method === 'POS
 if (path === '/api/control/radio-remote-r627/ticker' && request.method === 'POST') return await handleRadioRemoteTickerR629(request, env);
 if (path === '/api/radio-agent-r627/pair/consume' && request.method === 'POST') return await handleRadioAgentPairConsumeR627(request, env);
 if (path === '/api/radio-agent-r627/poll' && request.method === 'POST') return await handleRadioAgentPollR627(request, env);
+if (path === '/api/control/radio-facebook-r1250/ingest' && (request.method === 'GET' || request.method === 'POST')) return await handleControlFacebookIngestR1250(request, env);
+if (path === '/api/radio-agent-r1250/facebook-bootstrap' && request.method === 'GET') return await handleRadioAgentFacebookBootstrapR1250(request, env);
 if (path === '/api/control/radio-tiktok-r1307/ingest' && (request.method === 'GET' || request.method === 'POST')) return await handleControlTikTokIngestR1307(request, env);
 if (path === '/api/control/radio-tiktok-r1308/audience' && request.method === 'GET') return await handleControlTikTokAudienceR1308(request, env);
 if ((path === '/api/radio-agent-r1304/tiktok-bootstrap' || path === '/api/radio-agent-r1305/tiktok-bootstrap') && request.method === 'GET') return await handleRadioAgentTikTokBootstrapR1304(request, env);

@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r358-deploy-nohang",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1791178675808-afcfc5c354",
-  "release": "R1249",
-  "archiveName": "ANDRIK-R1249-TIKTOK-CONTROL-AUDIENCE-FIX-SITE.zip",
-  "sourceHead": "485b2c4d1f5850aa2e8ae32debd8ab3b9fb877b1",
-  "backupSha": "485b2c4d1f5850aa2e8ae32debd8ab3b9fb877b1",
+  "operationId": "publish-1791193942185-51ddbd10f0",
+  "release": "R1250",
+  "archiveName": "ANDRIK-R1250-FACEBOOK-LIVE-CONTROL-SITE.zip",
+  "sourceHead": "608a03284a2a779a03d755269f1475b173c66442",
+  "backupSha": "608a03284a2a779a03d755269f1475b173c66442",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-10-05T05:37:57.306Z"
+  "generatedAt": "2026-10-05T09:52:23.554Z"
 }

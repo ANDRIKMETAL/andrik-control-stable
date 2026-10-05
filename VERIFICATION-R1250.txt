@@ -1,0 +1,5 @@
+R1250 verification
+- node --check _worker.js: OK
+- radio-facebook-admin inline JS syntax: OK
+- Persistent Stream Key is encrypted server-side and never returned by browser GET
+- Agent bootstrap endpoint requires paired OVH agent authorization

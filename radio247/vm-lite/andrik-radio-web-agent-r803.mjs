@@ -6,7 +6,7 @@ import {Readable} from 'node:stream';
 import {pipeline} from 'node:stream/promises';
 
 const CONFIG='/etc/andrik-radio-web-r627.json';
-const AGENT_VERSION_R803='R1307-TIKTOK-MANUAL-INGEST+R1305-SCHEDULE+SAFE-TICKER+R1185-WATCHDOG-R1293';
+const AGENT_VERSION_R803='R1313-FACEBOOK-COPY-RELAY+R1307-TIKTOK-MANUAL-INGEST+R1185-WATCHDOG-R1293';
 const DIAG_DIR_R803='/var/cache/andrik-radio-r622/diagnostics';
 const DIAG_AGENT_LOG_R803=DIAG_DIR_R803+'/r803-agent-events.ndjson';
 const DIAG_AGENT_MAX_BYTES_R803=1024*1024;
@@ -555,6 +555,14 @@ ${e.message||e}`};}
   if(action==='tiktok-stop-r1303'){
     try{const d=await localControlR721('/control/tiktok-stop');return {ok:!Boolean(d?.running),output:`TIKTOK STOP R1303 ${!d?.running?'✅':'❌'}\n${JSON.stringify(d)}`};}
     catch(e){return {ok:false,output:`TIKTOK STOP R1303 ❌\n${e.message||e}`};}
+  }
+  if(action==='facebook-start-r1313'){
+    try{const d=await localControlR721('/control/facebook-start');return {ok:Boolean(d?.running),output:`FACEBOOK START R1313 ${d?.running?'✅':'❌'}\n${JSON.stringify(d)}`};}
+    catch(e){return {ok:false,output:`FACEBOOK START R1313 ❌\n${e.message||e}`};}
+  }
+  if(action==='facebook-stop-r1313'){
+    try{const d=await localControlR721('/control/facebook-stop');return {ok:!Boolean(d?.running),output:`FACEBOOK STOP R1313 ${!d?.running?'✅':'❌'}\n${JSON.stringify(d)}`};}
+    catch(e){return {ok:false,output:`FACEBOOK STOP R1313 ❌\n${e.message||e}`};}
   }
   if(action==='tiktok-schedule-r1305'){
     const start=clean(command.start||''),end=clean(command.end||''),enabled=Boolean(command.enabled);
