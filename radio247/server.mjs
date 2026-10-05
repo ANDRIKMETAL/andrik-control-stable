@@ -1,4 +1,7 @@
-// R1313: FACEBOOK COPY-RELAY. Adds an isolated Facebook Live RTMPS branch that remuxes the already-encoded 1080p25 H264/AAC master without a second video encode. Manual START/STOP only; Facebook failure cannot restart YouTube or radio.
+// R1319: HOST MODE SERVER COMPOSITOR. Phone camera/mic ingress is mixed with the current encoded radio master; selectable TikTok/Facebook/YouTube routing, server-side voice ducking, isolated fail-safe restore.
+// R1318: FACEBOOK PERSISTENT DESIRED STATE. Manual START/STOP survives andrik-radio.service restarts; shutdown no longer turns persisted Facebook OFF. 7h rotation deadline is persisted so restarts cannot extend the Facebook session beyond the intended rotation window.
+// R1317: bounded mirror retry backoff, owned close cleanup, cancellable single-flight Facebook startup, cached hot-path marker/config reads. Media arguments unchanged.
+// R1316: FACEBOOK 7H AUTO-ROTATE + TELEMETRY + YOUTUBE RTMPS COUNT FIX. Preserves R1314 late-join prime and COPY audio/video; Facebook is isolated from YouTube/TikTok.
 // R1311: TIKTOK CLIP-SMOOTH. Keeps R1305/R1304 isolation, but hardens the TikTok transcoder for moving clips: continuous video PTS, async audio clock repair, two x264 worker threads, larger input queue, and less aggressive nice level. YouTube master/RTMPS lanes and radio timing remain untouched.
 // R1305: TIKTOK SAFE SCHEDULE + SAFE TICKER. Keeps the R1304 zero-touch ingest import and isolated portrait publisher, but adds a server-side daily scheduler (default 15:00-23:00 Europe/Bratislava), manual override semantics, and a TikTok-only safe bottom ticker that removes ANDRIKMETAL.COM/third-party links from the outgoing TikTok picture. YouTube master, YouTube ticker, RTMPS 2/2, audio, clips and MP3 timing remain untouched.
 // R1304: TIKTOK ZERO-TOUCH AUTO-IMPORT + AUTO-START. R1303 isolated portrait branch preserved. Adds a completely independent TikTok LIVE transcoder fed from the already-encoded master MPEG-TS. YouTube primary/backup transport, MP3/clip timing and master encoder are untouched. TikTok uses a bounded branch, center-crops 1920x1080 to 608x1080 (removing both side edges/QR), scales to 720x1280, encodes H.264 at 25fps with one low-priority thread, AAC 128k, and has independent START/STOP/reconnect/watchdog state.
@@ -73,7 +76,7 @@ const MP3_TICKER_DISABLED_R1269 = false; // R1271: ticker restored on MP3
 // R1010-R906-FULLSCREEN-SINGLE-SLOT-LOCK
 import http from 'node:http';
 import { spawn, execFile, spawnSync } from 'node:child_process';
-import { createHash } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import {
   appendFileSync,
   createWriteStream,
@@ -142,6 +145,17 @@ const TIKTOK_SCHEDULE_FILE_R1305 = String(process.env.TIKTOK_SCHEDULE_FILE_R1305
 const TIKTOK_SCHEDULE_TIME_ZONE_R1305 = String(process.env.TIKTOK_SCHEDULE_TIME_ZONE_R1305 || 'Europe/Bratislava').trim();
 const TIKTOK_SCHEDULE_DEFAULT_R1305 = Object.freeze({enabled:false,start:'15:00',end:'23:00',timeZone:TIKTOK_SCHEDULE_TIME_ZONE_R1305});
 const CACHE_DIR = process.env.RADIO_CACHE_DIR || '/var/cache/andrik-radio-r622';
+const FACEBOOK_DESIRED_STATE_FILE_R1318 = String(process.env.FACEBOOK_DESIRED_STATE_FILE_R1318 || `${CACHE_DIR}/facebook-desired-r1318.json`).trim();
+const FACEBOOK_RESTORE_DELAY_MS_R1318 = Math.max(1500,Math.min(15000,Number(process.env.FACEBOOK_RESTORE_DELAY_MS_R1318||6000)));
+// R1319 HOST MODE · browser camera/microphone compositor
+const HOST_INGEST_IDLE_MS_R1319 = Math.max(5000,Math.min(60000,Number(process.env.HOST_INGEST_IDLE_MS_R1319||45000)));
+const HOST_MAX_CHUNK_BYTES_R1319 = Math.max(256*1024,Math.min(4*1024*1024,Number(process.env.HOST_MAX_CHUNK_BYTES_R1319||2*1024*1024)));
+const HOST_VIDEO_BITRATE_R1319 = String(process.env.HOST_VIDEO_BITRATE_R1319||'4500k').trim();
+const HOST_AUDIO_BITRATE_R1319 = String(process.env.HOST_AUDIO_BITRATE_R1319||'160k').trim();
+const HOST_CAMERA_WIDTH_R1319 = Math.max(360,Math.min(960,Number(process.env.HOST_CAMERA_WIDTH_R1319||608)));
+const HOST_CAMERA_HEIGHT_R1319 = Math.max(202,Math.min(540,Number(process.env.HOST_CAMERA_HEIGHT_R1319||342)));
+const HOST_Y_R1319 = Math.max(0,Math.min(300,Number(process.env.HOST_Y_R1319||20)));
+const HOST_DEFAULT_DUCK_R1319 = Math.max(20,Math.min(65,Number(process.env.HOST_DEFAULT_DUCK_R1319||35)));
 const TIKTOK_SAFE_TICKER_FILE_R1305 = `${CACHE_DIR}/tiktok-safe-ticker-r1305.txt`;
 const TIKTOK_SAFE_TICKER_TEXT_R1305 = 'ANDRIK METAL RADIO   •   ORIGINAL MUSIC   •   @ANDRIKMETAL   •   LIVE MUSIC RADIO   •   ';
 
@@ -154,6 +168,13 @@ const FACEBOOK_CONFIG_FILES_R1313 = Object.freeze([
 const FACEBOOK_DEFAULT_SERVER_URL_R1313 = 'rtmps://live-api-s.facebook.com:443/rtmp/';
 const FACEBOOK_MAX_BUFFER_BYTES_R1313 = Math.max(4,Math.min(64,Number(process.env.FACEBOOK_MAX_BUFFER_MB_R1313||16)))*1024*1024;
 const FACEBOOK_RESTART_DELAY_MS_R1313 = Math.max(1500,Math.min(15000,Number(process.env.FACEBOOK_RESTART_DELAY_MS_R1313||3000)));
+const FACEBOOK_PRIME_MAX_BYTES_R1314 = Math.max(3,Math.min(12,Number(process.env.FACEBOOK_PRIME_MAX_MB_R1314||6)))*1024*1024;
+const FACEBOOK_PRIME_MIN_BYTES_R1314 = Math.max(1,Math.min(6,Number(process.env.FACEBOOK_PRIME_MIN_MB_R1314||3)))*1024*1024;
+const FACEBOOK_PRIME_WAIT_MS_R1314 = Math.max(1000,Math.min(8000,Number(process.env.FACEBOOK_PRIME_WAIT_MS_R1314||5000)));
+const FACEBOOK_AUTO_ROTATE_MS_R1316 = Math.max(60*60*1000,Math.min(7*60*60*1000,Number(process.env.FACEBOOK_AUTO_ROTATE_MS_R1316||7*60*60*1000)));
+const FACEBOOK_AUTO_ROTATE_GAP_MS_R1316 = Math.max(15000,Math.min(5*60*1000,Number(process.env.FACEBOOK_AUTO_ROTATE_GAP_MS_R1316||90000)));
+const FACEBOOK_TELEMETRY_INTERVAL_MS_R1316 = 10000;
+const FACEBOOK_TELEMETRY_LIMIT_R1316 = 420;
 
 const AUDIO_CACHE_DIR = `${CACHE_DIR}/audio`;
 const VISUAL_CACHE_DIR = `${CACHE_DIR}/visuals`;
@@ -558,7 +579,7 @@ const DISABLED_ALBUM_PREFIXES = Object.freeze([]);
 
 const state = {
   service: 'ANDRIK Metal Radio 24/7',
-  version: 'R1313-FACEBOOK-COPY-RELAY+R1311-TIKTOK-CLIP-SMOOTH+R1305-SAFE-SCHEDULE+R1304-ZEROTOUCH',
+  version: 'R1319-HOST-COMPOSITOR+R1318-FACEBOOK-PERSISTENT+R1317-CPU-FIX+R1316-7H+R1311-TIKTOK-SMOOTH',
   cpuHeadroomProfileR794:'R796-LIVE-FAST-SCALE-COMPACT-EQ-FINITE-FADE-PRESCALED-STATIC',
   cpuHeadroomProfileR1129:CPU_HEADROOM_PROFILE_R1129,
   liveClipPrepThrottleR1277:'READRATE-0.35+NICE19+THREAD1',
@@ -5706,6 +5727,37 @@ function resetFailedEncodedLaneR1281(lane,reason='relay-reset'){
   return reservoir;
 }
 
+function writeYouTubeEncodedChunkR1319(chunk,source='master'){
+  if(!chunk?.length||stopping)return false;
+  for(const lane of ['primary','backup']){
+    if(!encodedTransportLaneEnabledR1281(lane))continue;
+    let reservoir=encodedTransportReservoirsR1281[lane];
+    if(!reservoir||reservoir.destroyed){
+      reservoir=createEncodedTransportLaneReservoirR1281(lane);
+      const relay=transportRelayChildR1125(lane);
+      if(relay&&relay.exitCode===null)bindEncodedTransportRelayR1278(relay,lane);
+    }
+    const bufferedBefore=Number(reservoir.readableLength||0)+Number(reservoir.writableLength||0);
+    const stats=encodedTransportLaneStatsR1281[lane];
+    stats.lastBuffered=bufferedBefore;stats.maxBuffered=Math.max(Number(stats.maxBuffered||0),bufferedBefore);
+    if(bufferedBefore>=R1281_ENCODED_LANE_MAX_BUFFER_BYTES){
+      const relay=transportRelayChildR1125(lane);
+      diagRecordR802('r1281-encoded-lane-congestion',{lane,bufferedBytes:bufferedBefore,relayPid:Number(relay?.pid||0),source});
+      resetFailedEncodedLaneR1281(lane,`buffer ${bufferedBefore} source=${source}`);
+      if(relay&&relay.exitCode===null){relay.__r1125WatchdogRecycle=true;try{relay.kill('SIGTERM')}catch(_){}}
+      else scheduleTransportRelayRestartR1125(lane,'r1281-buffer-reset');
+      continue;
+    }
+    try{reservoir.write(chunk)}catch(error){
+      state.lastWarning=`R1281 ${lane} encoded write (${source}): ${cleanText(error?.message||error)}`;
+      const relay=transportRelayChildR1125(lane);resetFailedEncodedLaneR1281(lane,'write-error');
+      if(relay&&relay.exitCode===null){relay.__r1125WatchdogRecycle=true;try{relay.kill('SIGTERM')}catch(_){}}
+      else scheduleTransportRelayRestartR1125(lane,'r1281-write-error');
+    }
+  }
+  return true;
+}
+
 function bindEncodedTransportPublisherR1278(thisPublisher){
   const source=thisPublisher?.stdout;
   if(!source||source.destroyed)return false;
@@ -5720,60 +5772,17 @@ function bindEncodedTransportPublisherR1278(thisPublisher){
   encodedTransportPublisherDataHandlerR1281=chunk=>{
     if(!chunk?.length||stopping)return;
 
-    for(const lane of ['primary','backup']){
-      if(!encodedTransportLaneEnabledR1281(lane))continue;
-      let reservoir=encodedTransportReservoirsR1281[lane];
-      if(!reservoir||reservoir.destroyed){
-        reservoir=createEncodedTransportLaneReservoirR1281(lane);
-        const relay=transportRelayChildR1125(lane);
-        if(relay&&relay.exitCode===null)bindEncodedTransportRelayR1278(relay,lane);
-      }
-
-      const bufferedBefore=Number(reservoir.readableLength||0)+Number(reservoir.writableLength||0);
-      const stats=encodedTransportLaneStatsR1281[lane];
-      stats.lastBuffered=bufferedBefore;
-      stats.maxBuffered=Math.max(Number(stats.maxBuffered||0),bufferedBefore);
-
-      // A sick lane may never stall the master or the other YouTube ingest.
-      // Recycle ONLY that lane before its bounded memory cushion is exhausted.
-      if(bufferedBefore>=R1281_ENCODED_LANE_MAX_BUFFER_BYTES){
-        const relay=transportRelayChildR1125(lane);
-        diagRecordR802('r1281-encoded-lane-congestion',{
-          lane,
-          bufferedBytes:bufferedBefore,
-          relayPid:Number(relay?.pid||0)
-        });
-        resetFailedEncodedLaneR1281(lane,`buffer ${bufferedBefore}`);
-        if(relay&&relay.exitCode===null){
-          relay.__r1125WatchdogRecycle=true;
-          try{relay.kill('SIGTERM')}catch(_){}
-        }else{
-          scheduleTransportRelayRestartR1125(lane,'r1281-buffer-reset');
-        }
-        continue;
-      }
-
-      try{
-        reservoir.write(chunk);
-      }catch(error){
-        state.lastWarning=`R1281 ${lane} encoded write: ${cleanText(error?.message||error)}`;
-        const relay=transportRelayChildR1125(lane);
-        resetFailedEncodedLaneR1281(lane,'write-error');
-        if(relay&&relay.exitCode===null){
-          relay.__r1125WatchdogRecycle=true;
-          try{relay.kill('SIGTERM')}catch(_){}
-        }else{
-          scheduleTransportRelayRestartR1125(lane,'r1281-write-error');
-        }
-      }
-    }
+    // R1319: while HOST output is active for YouTube, keep the normal master out of
+    // the two YouTube reservoirs. Unselected destinations continue to receive master.
+    writeHostMasterChunkR1319(chunk);
+    if(!(hostDesiredR1319&&hostOutputReadyR1319&&hostTargetsR1319.youtube))writeYouTubeEncodedChunkR1319(chunk,'master');
 
     // R1303: optional TikTok branch is isolated from both YouTube lanes.
-    try{writeTikTokEncodedChunkR1303(chunk)}catch(error){
-      state.tiktokLastErrorR1303=redactTikTokSecretR1303(error?.message||error);
+    if(!(hostDesiredR1319&&hostOutputReadyR1319&&hostTargetsR1319.tiktok)){
+      try{writeTikTokEncodedChunkR1303(chunk)}catch(error){state.tiktokLastErrorR1303=redactTikTokSecretR1303(error?.message||error)}
     }
-    try{writeFacebookEncodedChunkR1313(chunk)}catch(error){
-      state.facebookLastErrorR1313=redactFacebookSecretR1313(error?.message||error);
+    if(!(hostDesiredR1319&&hostOutputReadyR1319&&hostTargetsR1319.facebook)){
+      try{writeFacebookEncodedChunkR1313(chunk)}catch(error){state.facebookLastErrorR1313=redactFacebookSecretR1313(error?.message||error)}
     }
   };
 
@@ -6171,8 +6180,9 @@ let tiktokScheduleLastInsideR1305=null;
 let tiktokScheduleManualOverrideR1305=null; // null | 'start' | 'stop'
 let tiktokScheduleBusyR1305=false;
 
-// R1313 Facebook branch state. Desired state is intentionally memory-only:
-// a radio/service restart never starts Facebook by itself.
+// R1318: Facebook desired state is persisted. Manual START stays START across
+// andrik-radio.service restarts; manual STOP stays OFF. Process shutdown itself
+// never overwrites the persisted user intent.
 let facebookPublisherR1313=null;
 let facebookReservoirR1313=null;
 let facebookReservoirSinkR1313=null;
@@ -6182,8 +6192,305 @@ let facebookDesiredR1313=false;
 let facebookGenerationR1313=0;
 let facebookRestartCountR1313=0;
 let facebookCongestionResetsR1313=0;
+// R1314: Facebook is normally started long after the persistent master.
+// Keep a small rolling copy of the encoded TS even while Facebook is OFF,
+// so the late-joining stream-copy demuxer is primed with PAT/PMT and at least
+// one complete H264 GOP containing repeated SPS/PPS/IDR headers.
+let facebookPrimeChunksR1314=[];
+let facebookPrimeBytesR1314=0;
+let facebookInputBytesR1314=0;
+let facebookInputChunksR1314=0;
+let facebookAutoRotateTimerR1316=null;
+let facebookAutoResumeTimerR1316=null;
+let facebookAutoRotateStartedAtR1316=0;
+let facebookAutoRotateDueAtR1316=0;
+let facebookAutoRotateCountR1316=0;
+let facebookAutoRotateInGapR1316=false;
+const facebookTelemetryR1316=[];
+let facebookTelemetryLastAtR1316=0;
+let facebookTelemetryLastBytesR1316=0;
+let facebookCurrentMbpsR1316=0;
 
+// ============================================================
+// R1319 HOST MODE · PHONE CAMERA/MIC + RADIO MASTER COMPOSITOR
+// Browser media arrives as one continuous MediaRecorder WebM byte stream via
+// the web-control agent. It is NEVER allowed to backpressure the 24/7 master.
+// The compositor emits a fresh H264/AAC MPEG-TS program. Selected destinations
+// temporarily consume that program; unselected destinations keep the normal
+// 24/7 radio master. On phone loss/STOP the normal source is restored.
+// ============================================================
+const HOST_FACEBOOK_TITLE_R1319='ANDRIK METAL — Стрим 24/7 🔴 Epic Heavy Metal Radio';
+const HOST_FACEBOOK_DESCRIPTION_R1319='Официальный эфир ANDRIK 24/7.\nModern Epic Heavy Metal • альбомы • синглы • клипы • extended versions.\n🎸 Женский мелодичный вокал • мощный бас • оркестр • атмосферный metal.';
+let hostDesiredR1319=false;
+let hostSessionIdR1319='';
+let hostTargetsR1319={tiktok:true,facebook:false,youtube:false};
+let hostDuckPercentR1319=HOST_DEFAULT_DUCK_R1319;
+let hostPublisherR1319=null;
+let hostCameraReservoirR1319=null;
+let hostMasterReservoirR1319=null;
+let hostOutputReadyR1319=false;
+let hostOutputPrimeChunksR1319=[];
+let hostOutputPrimeBytesR1319=0;
+let hostInputBytesR1319=0;
+let hostInputChunksR1319=0;
+let hostOutputBytesR1319=0;
+let hostLastChunkAtR1319=0;
+let hostLastSeqR1319=-1;
+let hostStartedAtR1319=0;
+let hostLastErrorR1319='';
+let hostLastFfmpegLineR1319='';
+let hostPrevTikTokDesiredR1319=false;
+let hostPrevFacebookDesiredR1319=false;
+let hostPrevFacebookRunningR1319=false;
+let hostRestoringR1319=false;
+let hostIdleTimerR1319=null;
+let hostYouTubeSourceR1319='master';
+const HOST_PIPE_MAX_BYTES_R1319=16*1024*1024;
+const HOST_OUTPUT_PRIME_MIN_BYTES_R1319=768*1024;
+const HOST_OUTPUT_PRIME_MAX_BYTES_R1319=3*1024*1024;
 
+function hostTargetsNormalizedR1319(value){
+  const raw=Array.isArray(value)?value:String(value||'').split(',');
+  const set=new Set(raw.map(x=>String(x||'').trim().toLowerCase()).filter(Boolean));
+  const out={tiktok:set.has('tiktok'),facebook:set.has('facebook'),youtube:set.has('youtube')};
+  if(!out.tiktok&&!out.facebook&&!out.youtube)out.tiktok=true;
+  return out;
+}
+function hostPublicTargetsR1319(){return Object.entries(hostTargetsR1319).filter(([,v])=>v).map(([k])=>k);}
+function hostFilterR1319(){
+  const ratio=Math.max(2,Math.min(16,1+(hostDuckPercentR1319/5)));
+  const camW=HOST_CAMERA_WIDTH_R1319,camH=HOST_CAMERA_HEIGHT_R1319;
+  // Camera is centered at the top. The existing TikTok center crop is 608 px wide,
+  // therefore the host stays fully visible in the portrait branch without touching
+  // the proven TikTok crop/encoder. YouTube/Facebook retain the normal 16:9 canvas.
+  return [
+    `[0:v]fps=${VIDEO_FPS}:round=near,scale=${camW}:${camH}:force_original_aspect_ratio=increase:flags=fast_bilinear,crop=${camW}:${camH},setsar=1[cam]`,
+    `[1:v]fps=${VIDEO_FPS}:round=near,scale=1920:1080:force_original_aspect_ratio=decrease:flags=fast_bilinear,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:black,setsar=1[radio]`,
+    `[radio]drawbox=x=(iw-${camW})/2-6:y=${Math.max(0,HOST_Y_R1319-6)}:w=${camW+12}:h=${camH+12}:color=black@0.68:t=fill[boxed]`,
+    `[boxed][cam]overlay=x=(W-w)/2:y=${HOST_Y_R1319}:eof_action=repeat:shortest=0[vout]`,
+    `[1:a]aresample=${AUDIO_SAMPLE_RATE}:async=1000:first_pts=0,asetpts=N/SR/TB[radioa]`,
+    `[0:a]highpass=f=80,lowpass=f=12000,aresample=${AUDIO_SAMPLE_RATE}:async=1000:first_pts=0,volume=1.15,asetpts=N/SR/TB[mic]`,
+    `[radioa][mic]sidechaincompress=threshold=0.018:ratio=${ratio.toFixed(2)}:attack=18:release=420:makeup=1[ducked]`,
+    `[ducked][mic]amix=inputs=2:weights='1 1':normalize=0,alimiter=limit=0.94[aout]`
+  ].join(';');
+}
+function hostArgsR1319(){
+  return [
+    '-hide_banner','-loglevel','warning','-filter_threads','2','-filter_complex_threads','2',
+    '-thread_queue_size','2048','-fflags','+genpts+discardcorrupt','-f','webm','-i','pipe:0',
+    '-thread_queue_size','2048','-fflags','+genpts+discardcorrupt','-probesize','4000000','-analyzeduration','4000000','-f','mpegts','-i','pipe:3',
+    '-filter_complex',hostFilterR1319(),'-map','[vout]','-map','[aout]',
+    '-c:v','libx264','-preset','ultrafast','-tune','zerolatency','-profile:v','high','-level:v','4.1',
+    '-b:v',HOST_VIDEO_BITRATE_R1319,'-minrate',HOST_VIDEO_BITRATE_R1319,'-maxrate',HOST_VIDEO_BITRATE_R1319,'-bufsize','8000k',
+    '-g',String(VIDEO_FPS*2),'-keyint_min',String(VIDEO_FPS*2),'-sc_threshold','0','-bf','0','-refs','1','-r',String(VIDEO_FPS),'-fps_mode:v','cfr','-pix_fmt','yuv420p','-threads:v','2',
+    '-c:a','aac','-profile:a','aac_low','-b:a',HOST_AUDIO_BITRATE_R1319,'-ar',String(AUDIO_SAMPLE_RATE),'-ac','2',
+    '-max_muxing_queue_size','4096','-f','mpegts','pipe:1'
+  ];
+}
+function destroyHostReservoirsR1319(){
+  for(const r of [hostCameraReservoirR1319,hostMasterReservoirR1319]){try{r?.destroy()}catch(_){}}
+  hostCameraReservoirR1319=null;hostMasterReservoirR1319=null;
+}
+function createHostReservoirR1319(kind){
+  const r=new PassThrough({writableHighWaterMark:HOST_PIPE_MAX_BYTES_R1319,readableHighWaterMark:HOST_PIPE_MAX_BYTES_R1319});
+  r.on('error',error=>{hostLastErrorR1319=cleanText(error?.message||error).slice(-600)});
+  if(kind==='camera')hostCameraReservoirR1319=r;else hostMasterReservoirR1319=r;
+  return r;
+}
+function hostReservoirBytesR1319(r){return Number((r?.readableLength||0)+(r?.writableLength||0));}
+function primeHostMasterR1319(r){
+  let bytes=0;
+  for(const chunk of facebookPrimeChunksR1314.slice()){
+    if(!chunk?.length)continue;
+    try{r.write(chunk);bytes+=chunk.length}catch(_){break}
+  }
+  return bytes;
+}
+function routeHostOutputChunkR1319(chunk){
+  if(!chunk?.length||!hostDesiredR1319||!hostOutputReadyR1319)return;
+  if(hostTargetsR1319.youtube)writeYouTubeEncodedChunkR1319(chunk,'host');
+  if(hostTargetsR1319.tiktok)try{writeTikTokEncodedChunkR1303(chunk)}catch(error){state.tiktokLastErrorR1303=redactTikTokSecretR1303(error?.message||error)}
+  if(hostTargetsR1319.facebook)try{writeFacebookEncodedChunkR1313(chunk,{skipPrime:true})}catch(error){state.facebookLastErrorR1313=redactFacebookSecretR1313(error?.message||error)}
+}
+function recycleYouTubeLanesForSourceSwitchR1319(reason){
+  for(const lane of ['primary','backup']){
+    if(!encodedTransportLaneEnabledR1281(lane))continue;
+    resetFailedEncodedLaneR1281(lane,reason);
+    const relay=transportRelayChildR1125(lane);
+    if(relay&&relay.exitCode===null){
+      relay.__r1125WatchdogRecycle=true;
+      try{relay.kill('SIGTERM')}catch(_){ }
+    }else scheduleTransportRelayRestartR1125(lane,reason);
+  }
+}
+function activateHostOutputR1319(){
+  if(hostOutputReadyR1319||!hostDesiredR1319)return false;
+  hostOutputReadyR1319=true;
+  state.hostOutputReadyR1319=true;
+  if(hostTargetsR1319.youtube){hostYouTubeSourceR1319='host';recycleYouTubeLanesForSourceSwitchR1319('r1319-host-source-on')}
+  // Flush the beginning of the new MPEG-TS so downstream decoders see PAT/PMT + SPS/PPS/IDR.
+  const prime=hostOutputPrimeChunksR1319.slice();
+  for(const chunk of prime)routeHostOutputChunkR1319(chunk);
+  hostOutputPrimeChunksR1319=[];hostOutputPrimeBytesR1319=0;
+  diagRecordR802('r1319-host-output-active',{targets:hostPublicTargetsR1319(),session:hostSessionIdR1319});
+  return true;
+}
+function onHostOutputR1319(chunk){
+  if(!chunk?.length||!hostDesiredR1319)return;
+  hostOutputBytesR1319+=chunk.length;state.hostOutputBytesR1319=hostOutputBytesR1319;
+  if(!hostOutputReadyR1319){
+    hostOutputPrimeChunksR1319.push(Buffer.from(chunk));hostOutputPrimeBytesR1319+=chunk.length;
+    while(hostOutputPrimeBytesR1319>HOST_OUTPUT_PRIME_MAX_BYTES_R1319&&hostOutputPrimeChunksR1319.length>1){const x=hostOutputPrimeChunksR1319.shift();hostOutputPrimeBytesR1319-=x.length}
+    if(hostOutputPrimeBytesR1319>=HOST_OUTPUT_PRIME_MIN_BYTES_R1319)activateHostOutputR1319();
+    return;
+  }
+  routeHostOutputChunkR1319(chunk);
+}
+function spawnHostCompositorR1319(){
+  if(!hostDesiredR1319)throw new Error('host mode is not armed');
+  if(hostPublisherR1319&&hostPublisherR1319.exitCode===null)return hostPublisherR1319;
+  if(!publisher||publisher.exitCode!==null||!state.publisherRunning)throw new Error('radio master is not ready');
+  destroyHostReservoirsR1319();
+  hostOutputReadyR1319=false;hostOutputPrimeChunksR1319=[];hostOutputPrimeBytesR1319=0;hostOutputBytesR1319=0;
+  const cam=createHostReservoirR1319('camera'),master=createHostReservoirR1319('master');
+  const child=spawn('ffmpeg',hostArgsR1319(),{stdio:['pipe','pipe','pipe','pipe']});
+  hostPublisherR1319=child;child.__r1319Intentional=false;child.__r1319Session=hostSessionIdR1319;
+  cam.pipe(child.stdin,{end:false});master.pipe(child.stdio[3],{end:false});
+  primeHostMasterR1319(master);
+  child.stdout?.on('data',onHostOutputR1319);
+  let stderr='';child.stderr?.on('data',buf=>{stderr=(stderr+String(buf||'')).slice(-12000);const lines=stderr.split(/\r?\n/);stderr=lines.pop()||'';const line=lines.at(-1);if(line){hostLastFfmpegLineR1319=cleanText(line).slice(-900);state.hostLastFfmpegLineR1319=hostLastFfmpegLineR1319}});
+  child.once('error',error=>{hostLastErrorR1319=cleanText(error?.message||error).slice(-600);state.hostLastErrorR1319=hostLastErrorR1319});
+  child.once('close',(code,signal)=>{
+    if(hostPublisherR1319!==child)return;
+    hostPublisherR1319=null;destroyHostReservoirsR1319();
+    state.hostPublisherPidR1319=0;state.hostLastExitR1319={at:new Date().toISOString(),code,signal,intentional:Boolean(child.__r1319Intentional)};
+    if(hostDesiredR1319&&!child.__r1319Intentional&&!stopping&&!hostRestoringR1319){
+      hostLastErrorR1319=`host compositor exit ${code??signal??'unknown'}`;state.hostLastErrorR1319=hostLastErrorR1319;
+      setTimeout(()=>stopHostModeR1319({reason:'compositor-exit'}).catch(()=>{}),0).unref?.();
+    }
+  });
+  state.hostPublisherPidR1319=Number(child.pid||0);state.hostLastStartR1319={at:new Date().toISOString(),session:hostSessionIdR1319,targets:hostPublicTargetsR1319()};
+  try{const nice=spawn('renice',['7','-p',String(child.pid)],{stdio:'ignore'});nice.unref?.()}catch(_){ }
+  return child;
+}
+function writeHostMasterChunkR1319(chunk){
+  if(!chunk?.length||!hostDesiredR1319||!hostPublisherR1319||hostPublisherR1319.exitCode!==null)return false;
+  const r=hostMasterReservoirR1319;if(!r||r.destroyed)return false;
+  const buffered=hostReservoirBytesR1319(r);
+  if(buffered>HOST_PIPE_MAX_BYTES_R1319*0.90){hostLastErrorR1319=`host master buffer ${buffered}`;state.hostLastErrorR1319=hostLastErrorR1319;return false}
+  try{r.write(chunk);return true}catch(error){hostLastErrorR1319=cleanText(error?.message||error).slice(-600);return false}
+}
+function writeHostCameraChunkR1319(session,seq,chunk){
+  if(!hostDesiredR1319||String(session)!==hostSessionIdR1319)return {ok:false,error:'host-session-mismatch'};
+  if(!chunk?.length)return {ok:false,error:'empty-host-chunk'};
+  if(chunk.length>HOST_MAX_CHUNK_BYTES_R1319)return {ok:false,error:'host-chunk-too-large',maxBytes:HOST_MAX_CHUNK_BYTES_R1319};
+  const n=Number(seq);
+  if(!Number.isInteger(n)||n<0)return {ok:false,error:'invalid-host-seq'};
+  if(n<=hostLastSeqR1319)return {ok:true,duplicate:true,seq:n};
+  if(n!==hostLastSeqR1319+1)return {ok:false,error:'host-seq-gap',expected:hostLastSeqR1319+1,got:n};
+  if(!hostPublisherR1319||hostPublisherR1319.exitCode!==null)spawnHostCompositorR1319();
+  const r=hostCameraReservoirR1319;if(!r||r.destroyed)return {ok:false,error:'host-camera-pipe-not-ready'};
+  const buffered=hostReservoirBytesR1319(r);
+  if(buffered>HOST_PIPE_MAX_BYTES_R1319*0.90)return {ok:false,error:'host-camera-backpressure',bufferedBytes:buffered};
+  r.write(chunk);hostLastSeqR1319=n;hostLastChunkAtR1319=Date.now();hostInputBytesR1319+=chunk.length;hostInputChunksR1319++;
+  state.hostLastChunkAtR1319=new Date(hostLastChunkAtR1319).toISOString();state.hostInputBytesR1319=hostInputBytesR1319;state.hostInputChunksR1319=hostInputChunksR1319;
+  return {ok:true,seq:n,bytes:chunk.length,bufferedBytes:hostReservoirBytesR1319(r),outputReady:hostOutputReadyR1319};
+}
+async function ensureHostTargetBranchesR1319(){
+  hostPrevTikTokDesiredR1319=tiktokDesiredR1303();
+  hostPrevFacebookDesiredR1319=Boolean(facebookDesiredR1313);
+  hostPrevFacebookRunningR1319=facebookRunningR1313();
+  if(hostTargetsR1319.tiktok){
+    setTikTokDesiredR1303(true);
+    if(!tiktokRunningR1303())await startTikTokPublisherR1303({persist:false,reason:'host-r1319'});
+  }
+  if(hostTargetsR1319.facebook){
+    facebookDesiredR1313=true;
+    if(!facebookRunningR1313())await startFacebookPublisherR1313({reason:'host-r1319'});
+  }
+}
+async function restoreHostTargetBranchesR1319(reason='host-stop'){
+  if(hostTargetsR1319.youtube&&hostYouTubeSourceR1319==='host'){
+    hostYouTubeSourceR1319='master';recycleYouTubeLanesForSourceSwitchR1319('r1319-host-source-off');
+  }
+  if(hostTargetsR1319.tiktok){
+    if(hostPrevTikTokDesiredR1319){
+      setTikTokDesiredR1303(true);recycleTikTokBranchR1303('r1319-host-source-off');
+    }else{
+      setTikTokDesiredR1303(false);await stopTikTokPublisherR1303({persist:false,reason:'host-r1319-restore'}).catch(()=>{});
+      // Return control to the normal scheduler after a host-only session.
+      tiktokScheduleManualOverrideR1305=null;setTimeout(()=>reconcileTikTokScheduleR1305('host-ended').catch(()=>{}),500).unref?.();
+    }
+  }
+  if(hostTargetsR1319.facebook){
+    if(hostPrevFacebookDesiredR1319){
+      facebookDesiredR1313=true;recycleFacebookBranchR1313('r1319-host-source-off');
+    }else{
+      await stopFacebookPublisherR1313({reason:'host-r1319-restore'}).catch(()=>{});facebookDesiredR1313=false;
+    }
+  }
+  diagRecordR802('r1319-host-routes-restored',{reason,targets:hostPublicTargetsR1319()});
+}
+async function startHostModeR1319({targets='tiktok',duck=HOST_DEFAULT_DUCK_R1319}={}){
+  if(stopping)throw new Error('radio shutting down');
+  if(hostDesiredR1319)await stopHostModeR1319({reason:'host-rearm'});
+  hostTargetsR1319=hostTargetsNormalizedR1319(targets);hostDuckPercentR1319=Math.max(20,Math.min(65,Number(duck)||HOST_DEFAULT_DUCK_R1319));
+  hostSessionIdR1319=randomBytes(12).toString('hex');hostDesiredR1319=true;hostStartedAtR1319=Date.now();hostLastChunkAtR1319=Date.now();hostLastSeqR1319=-1;hostInputBytesR1319=0;hostInputChunksR1319=0;hostOutputBytesR1319=0;hostLastErrorR1319='';hostLastFfmpegLineR1319='';hostOutputReadyR1319=false;hostYouTubeSourceR1319='master';
+  await ensureHostTargetBranchesR1319();
+  state.hostModeR1319='ARMED';state.hostSessionIdR1319=hostSessionIdR1319;
+  diagRecordR802('r1319-host-armed',{session:hostSessionIdR1319,targets:hostPublicTargetsR1319(),duck:hostDuckPercentR1319});
+  return hostStatusR1319();
+}
+async function stopHostModeR1319({reason='manual-stop',restore=true}={}){
+  if(hostRestoringR1319)return hostStatusR1319();
+  hostRestoringR1319=true;
+  const previousSession=hostSessionIdR1319;
+  try{
+    hostDesiredR1319=false;hostOutputReadyR1319=false;state.hostOutputReadyR1319=false;
+    const child=hostPublisherR1319;hostPublisherR1319=null;destroyHostReservoirsR1319();
+    if(child&&child.exitCode===null){child.__r1319Intentional=true;try{child.stdin?.end()}catch(_){ }try{child.stdio?.[3]?.end()}catch(_){ }try{child.kill('SIGTERM')}catch(_){ }await waitChildExit(child,1800);try{if(child.exitCode===null)child.kill('SIGKILL')}catch(_){ }}
+    if(restore&&!stopping)await restoreHostTargetBranchesR1319(reason);
+    hostSessionIdR1319='';hostLastSeqR1319=-1;state.hostModeR1319='OFF';state.hostSessionIdR1319='';state.hostLastStopR1319={at:new Date().toISOString(),reason,session:previousSession};
+    return hostStatusR1319();
+  }finally{hostRestoringR1319=false}
+}
+function hostStatusR1319(){
+  return {
+    ok:true,armed:Boolean(hostDesiredR1319),running:Boolean(hostPublisherR1319&&hostPublisherR1319.exitCode===null),outputReady:Boolean(hostOutputReadyR1319),sessionId:hostDesiredR1319?hostSessionIdR1319:'',
+    targets:{...hostTargetsR1319},duckPercent:Number(hostDuckPercentR1319),youtubeSource:hostYouTubeSourceR1319,
+    profile:{width:1920,height:1080,fps:VIDEO_FPS,videoCodec:'H264 libx264 ultrafast',audioCodec:'AAC-LC',videoBitrate:HOST_VIDEO_BITRATE_R1319,audioBitrate:HOST_AUDIO_BITRATE_R1319,camera:`${HOST_CAMERA_WIDTH_R1319}x${HOST_CAMERA_HEIGHT_R1319} center-top`},
+    inputBytes:Number(hostInputBytesR1319),inputChunks:Number(hostInputChunksR1319),outputBytes:Number(hostOutputBytesR1319),lastSeq:Number(hostLastSeqR1319),lastChunkAt:hostLastChunkAtR1319?new Date(hostLastChunkAtR1319).toISOString():null,
+    cameraBufferedBytes:hostReservoirBytesR1319(hostCameraReservoirR1319),masterBufferedBytes:hostReservoirBytesR1319(hostMasterReservoirR1319),uptimeSeconds:hostDesiredR1319&&hostStartedAtR1319?Math.max(0,Math.floor((Date.now()-hostStartedAtR1319)/1000)):0,
+    facebookPreset:{title:HOST_FACEBOOK_TITLE_R1319,description:HOST_FACEBOOK_DESCRIPTION_R1319},
+    lastError:hostLastErrorR1319,lastFfmpegLine:hostLastFfmpegLineR1319,lastStart:state.hostLastStartR1319||null,lastStop:state.hostLastStopR1319||null,lastExit:state.hostLastExitR1319||null
+  };
+}
+function startHostIdleWatchR1319(){
+  if(hostIdleTimerR1319)clearInterval(hostIdleTimerR1319);
+  hostIdleTimerR1319=setInterval(()=>{
+    if(!hostDesiredR1319||stopping)return;
+    if(Date.now()-hostLastChunkAtR1319>HOST_INGEST_IDLE_MS_R1319){hostLastErrorR1319=`phone media timeout ${Date.now()-hostLastChunkAtR1319}ms`;state.hostLastErrorR1319=hostLastErrorR1319;stopHostModeR1319({reason:'phone-timeout'}).catch(()=>{})}
+  },2000);hostIdleTimerR1319.unref?.();
+}
+
+// Short-lived caches never write or expose secure configuration.
+let mirrorMarkerCacheR1317={at:0,value:false};
+const mirrorConfigCacheR1317=new Map();
+const mirrorRetryR1317={tiktok:0,facebook:0};
+let facebookStartPendingR1317=null,facebookStartEpochR1317=0;
+let facebookPersistentLoadedR1318=false;
+let facebookPersistentUpdatedAtR1318=null;
+let facebookRestorePendingR1318=false;
+let facebookRestoreTimerR1318=null;
+let facebookRestoreAttemptsR1318=0;
+let facebookRestoredAfterRestartR1318=false;
+let facebookLastRestoreAtR1318=null;
+let facebookLastRestoreReasonR1318='';
+function mirrorRetryDelayR1317(kind,base){
+  const attempt=mirrorRetryR1317[kind]++;
+  return Math.min(60000,base*Math.pow(2,Math.min(attempt,5)));
+}
+function resetMirrorRetryR1317(kind){mirrorRetryR1317[kind]=0;}
 function validTikTokTimeR1305(value){
   const m=/^(\d{2}):(\d{2})$/.exec(String(value||''));
   if(!m)return false;
@@ -6247,6 +6554,8 @@ function parseEnvTextR1303(text){
   return out;
 }
 function secureTikTokConfigMapR1303(){
+  const cached=mirrorConfigCacheR1317.get('tiktok'),now=Date.now();
+  if(cached&&now-cached.at<1000)return cached.value;
   const merged={...process.env};
   for(const path of TIKTOK_CONFIG_FILES_R1303){
     try{
@@ -6255,6 +6564,7 @@ function secureTikTokConfigMapR1303(){
       for(const [k,v] of Object.entries(parsed))if(!String(merged[k]||'').trim())merged[k]=v;
     }catch(_){ }
   }
+  mirrorConfigCacheR1317.set('tiktok',{at:now,value:merged});
   return merged;
 }
 function resolveTikTokTargetR1303(){
@@ -6280,8 +6590,9 @@ function redactTikTokSecretR1303(value){
   text=text.replace(/(?:stream[_ -]?key|tiktok[_ -]?key)\s*[:=]\s*[^\s,;]+/gi,'stream_key=[redacted]');
   return cleanText(text).slice(-600);
 }
-function tiktokDesiredR1303(){try{return existsSync(TIKTOK_ENABLE_MARKER_R1303)}catch(_){return false}}
+function tiktokDesiredR1303(){const now=Date.now();if(mirrorMarkerCacheR1317.at&&now-mirrorMarkerCacheR1317.at<1000)return mirrorMarkerCacheR1317.value;let value=false;try{value=existsSync(TIKTOK_ENABLE_MARKER_R1303)}catch(_){}mirrorMarkerCacheR1317={at:now,value};return value;}
 function setTikTokDesiredR1303(enabled){
+  mirrorMarkerCacheR1317.at=0;
   try{
     prepareCacheDir();
     if(enabled){mkdirSync(CACHE_DIR,{recursive:true});writeFileSync(TIKTOK_ENABLE_MARKER_R1303,new Date().toISOString()+'\n',{mode:0o600})}
@@ -6289,7 +6600,7 @@ function setTikTokDesiredR1303(enabled){
     return true;
   }catch(error){state.tiktokLastErrorR1303=redactTikTokSecretR1303(error?.message||error);return false}
 }
-function tiktokRunningR1303(){return Boolean(tiktokPublisherR1303&&tiktokPublisherR1303.exitCode===null&&tiktokPublisherR1303.signalCode==null)}
+function tiktokRunningR1303(){return Boolean(tiktokPublisherR1303&&!tiktokPublisherR1303.__r1303Recycle&&tiktokPublisherR1303.exitCode===null&&tiktokPublisherR1303.signalCode==null)}
 function tiktokBufferedBytesR1303(){return Number((tiktokReservoirR1303?.readableLength||0)+(tiktokReservoirR1303?.writableLength||0))}
 function destroyTikTokReservoirR1303(){
   const old=tiktokReservoirR1303,sink=tiktokReservoirSinkR1303;
@@ -6323,19 +6634,20 @@ function tiktokArgsR1303(target){
 function scheduleTikTokRestartR1303(reason='restart'){
   if(stopping||!tiktokDesiredR1303())return false;
   if(tiktokRestartTimerR1303)return true;
-  state.tiktokRestartScheduledR1303={at:new Date().toISOString(),reason:shortText(reason,180)};
+  const delayMs=mirrorRetryDelayR1317('tiktok',TIKTOK_RESTART_DELAY_MS_R1303);
+  state.tiktokRestartScheduledR1303={at:new Date().toISOString(),reason:shortText(reason,180),delayMs};
   tiktokRestartTimerR1303=setTimeout(()=>{
     tiktokRestartTimerR1303=null;
     if(stopping||!tiktokDesiredR1303())return;
     startTikTokPublisherR1303({persist:false,reason:'watchdog'}).catch(error=>{state.tiktokLastErrorR1303=redactTikTokSecretR1303(error?.message||error);scheduleTikTokRestartR1303('retry-after-start-failure')});
-  },TIKTOK_RESTART_DELAY_MS_R1303);
+  },delayMs);
   tiktokRestartTimerR1303.unref?.();return true;
 }
 function recycleTikTokBranchR1303(reason='branch-recycle'){
   if(stopping)return false;
   tiktokCongestionResetsR1303++;state.tiktokCongestionResetsR1303=tiktokCongestionResetsR1303;state.tiktokLastRecycleR1303={at:new Date().toISOString(),reason:shortText(reason,180)};
   const child=tiktokPublisherR1303;destroyTikTokReservoirR1303();
-  if(child&&child.exitCode===null){if(tiktokPublisherR1303===child)tiktokPublisherR1303=null;state.tiktokRunningR1303=false;state.tiktokPidR1303=0;child.__r1303Recycle=true;try{child.kill('SIGTERM')}catch(_){}const hard=setTimeout(()=>{try{if(child.exitCode===null)child.kill('SIGKILL')}catch(_){}},1600);hard.unref?.()}
+  if(child&&child.exitCode===null){state.tiktokRunningR1303=false;state.tiktokPidR1303=0;child.__r1303Recycle=true;try{child.kill('SIGTERM')}catch(_){}const hard=setTimeout(()=>{try{if(child.exitCode===null)child.kill('SIGKILL')}catch(_){}},1600);hard.unref?.()}
   else scheduleTikTokRestartR1303(reason);
   return true;
 }
@@ -6346,7 +6658,7 @@ function writeTikTokEncodedChunkR1303(chunk){
   if(!r||r.destroyed){r=createTikTokReservoirR1303();if(tiktokPublisherR1303?.stdin&&!tiktokPublisherR1303.stdin.destroyed){r.pipe(tiktokPublisherR1303.stdin,{end:false});tiktokReservoirSinkR1303=tiktokPublisherR1303.stdin}}
   const buffered=tiktokBufferedBytesR1303();state.tiktokBufferedBytesR1303=buffered;
   if(buffered>=TIKTOK_MAX_BUFFER_BYTES_R1303){recycleTikTokBranchR1303(`buffer ${buffered}`);return false}
-  try{r.write(chunk);state.tiktokLastInputAtR1303=new Date().toISOString();return true}catch(error){state.tiktokLastErrorR1303=redactTikTokSecretR1303(error?.message||error);recycleTikTokBranchR1303('reservoir-write-error');return false}
+  try{r.write(chunk);const now=Date.now();if(now-(state.tiktokLastInputStampR1317||0)>=250){state.tiktokLastInputStampR1317=now;state.tiktokLastInputAtR1303=new Date(now).toISOString();}return true}catch(error){state.tiktokLastErrorR1303=redactTikTokSecretR1303(error?.message||error);recycleTikTokBranchR1303('reservoir-write-error');return false}
 }
 async function stopTikTokPublisherR1303({persist=true,reason='manual-stop'}={}){
   if(persist)setTikTokDesiredR1303(false);
@@ -6356,6 +6668,7 @@ async function stopTikTokPublisherR1303({persist=true,reason='manual-stop'}={}){
   if(tiktokPublisherR1303===child)tiktokPublisherR1303=null;tiktokIntentionalStopR1303=false;state.tiktokRunningR1303=false;state.tiktokPidR1303=0;state.tiktokLastStopR1303={at:new Date().toISOString(),reason};return tiktokStatusR1303();
 }
 async function startTikTokPublisherR1303({persist=true,reason='manual-start'}={}){
+  if(reason==='manual-start'){resetMirrorRetryR1317('tiktok');mirrorConfigCacheR1317.delete('tiktok');}
   if(stopping)throw new Error('radio shutting down');
   const cfg=resolveTikTokTargetR1303();
   if(!cfg.configured)throw new Error('TikTok RTMP server/key not found in secure VPS config');
@@ -6364,13 +6677,13 @@ async function startTikTokPublisherR1303({persist=true,reason='manual-start'}={}
   if(persist&&!setTikTokDesiredR1303(true))throw new Error('cannot persist TikTok enabled marker');
   if(tiktokRestartTimerR1303){clearTimeout(tiktokRestartTimerR1303);tiktokRestartTimerR1303=null}
   const r=createTikTokReservoirR1303();tiktokGenerationR1303++;tiktokIntentionalStopR1303=false;
-  const child=spawn('ffmpeg',tiktokArgsR1303(cfg.target),{stdio:['pipe','ignore','pipe']});tiktokPublisherR1303=child;child.__r1303Generation=tiktokGenerationR1303;
+  const child=spawn('ffmpeg',tiktokArgsR1303(cfg.target),{stdio:['pipe','ignore','pipe']});tiktokPublisherR1303=child;child.__startedAtR1317=Date.now();child.__r1303Generation=tiktokGenerationR1303;
   child.stdin?.on('error',error=>{if(!stopping&&!child.__r1303IntentionalStop)state.tiktokLastErrorR1303=redactTikTokSecretR1303(error?.message||error)});
   r.pipe(child.stdin,{end:false});tiktokReservoirSinkR1303=child.stdin;
   try{const nice=spawn('renice',[String(TIKTOK_NICE_R1311),'-p',String(child.pid)],{stdio:'ignore'});nice.unref?.()}catch(_){}
   let stderr='';child.stderr?.on('data',buf=>{stderr=(stderr+String(buf||'')).slice(-8000);const lines=stderr.split(/\r?\n/);stderr=lines.pop()||'';const line=lines.at(-1);if(line)state.tiktokLastFfmpegLineR1303=redactTikTokSecretR1303(line)});
   child.once('error',error=>{state.tiktokLastErrorR1303=redactTikTokSecretR1303(error?.message||error)});
-  child.once('exit',(code,signal)=>{if(tiktokPublisherR1303===child)tiktokPublisherR1303=null;destroyTikTokReservoirR1303();state.tiktokRunningR1303=false;state.tiktokPidR1303=0;state.tiktokLastExitR1303={at:new Date().toISOString(),code,signal,intentional:Boolean(child.__r1303IntentionalStop||tiktokIntentionalStopR1303)};if(!stopping&&!child.__r1303IntentionalStop&&!tiktokIntentionalStopR1303&&tiktokDesiredR1303()){tiktokRestartCountR1303++;state.tiktokRestartCountR1303=tiktokRestartCountR1303;scheduleTikTokRestartR1303(`exit ${code??signal??'unknown'}`)}});
+  child.once('close',(code,signal)=>{if(tiktokPublisherR1303!==child)return;if(Date.now()-child.__startedAtR1317>=60000)resetMirrorRetryR1317('tiktok');tiktokPublisherR1303=null;destroyTikTokReservoirR1303();state.tiktokRunningR1303=false;state.tiktokPidR1303=0;state.tiktokLastExitR1303={at:new Date().toISOString(),code,signal,intentional:Boolean(child.__r1303IntentionalStop||tiktokIntentionalStopR1303)};if(!stopping&&!child.__r1303IntentionalStop&&!tiktokIntentionalStopR1303&&tiktokDesiredR1303()){tiktokRestartCountR1303++;state.tiktokRestartCountR1303=tiktokRestartCountR1303;scheduleTikTokRestartR1303(`exit ${code??signal??'unknown'}`)}});
   state.tiktokRunningR1303=true;state.tiktokPidR1303=Number(child.pid||0);state.tiktokConfiguredR1303=true;state.tiktokLastStartR1303={at:new Date().toISOString(),reason,generation:tiktokGenerationR1303};state.tiktokTargetR1303=publicTikTokTargetR1303(cfg.target);
   diagRecordR802('r1303-tiktok-start',{pid:Number(child.pid||0),profile:`${TIKTOK_WIDTH_R1303}x${TIKTOK_HEIGHT_R1303}@${TIKTOK_FPS_R1303}`,crop:`${TIKTOK_CROP_WIDTH_R1303}x${TIKTOK_CROP_HEIGHT_R1303}+${TIKTOK_CROP_X_R1303}+${TIKTOK_CROP_Y_R1303}`,target:state.tiktokTargetR1303});return tiktokStatusR1303();
 }
@@ -6452,6 +6765,8 @@ async function manualStopTikTokR1305(){
 // No second H264 encode. Facebook failure/reconnect never touches YouTube.
 // ============================================================
 function secureFacebookConfigMapR1313(){
+  const cached=mirrorConfigCacheR1317.get('facebook'),now=Date.now();
+  if(cached&&now-cached.at<1000)return cached.value;
   const merged={...process.env};
   for(const path of FACEBOOK_CONFIG_FILES_R1313){
     try{
@@ -6460,6 +6775,7 @@ function secureFacebookConfigMapR1313(){
       for(const [k,v] of Object.entries(parsed))if(!String(merged[k]||'').trim())merged[k]=v;
     }catch(_){ }
   }
+  mirrorConfigCacheR1317.set('facebook',{at:now,value:merged});
   return merged;
 }
 function resolveFacebookTargetR1313(){
@@ -6485,8 +6801,218 @@ function redactFacebookSecretR1313(value){
   text=text.replace(/(?:stream[_ -]?key|facebook[_ -]?key)\s*[:=]\s*[^\s,;]+/gi,'stream_key=[redacted]');
   return cleanText(text).slice(-600);
 }
-function facebookRunningR1313(){return Boolean(facebookPublisherR1313&&facebookPublisherR1313.exitCode===null&&facebookPublisherR1313.signalCode==null)}
+function facebookRunningR1313(){return Boolean(facebookPublisherR1313&&!facebookPublisherR1313.__r1313Recycle&&facebookPublisherR1313.exitCode===null&&facebookPublisherR1313.signalCode==null)}
 function facebookBufferedBytesR1313(){return Number((facebookReservoirR1313?.readableLength||0)+(facebookReservoirR1313?.writableLength||0))}
+function cacheFacebookPrimeR1314(chunk){
+  if(!chunk?.length||stopping)return false;
+  // Buffer.from detaches this rolling cache from Node/FFmpeg stdout chunk reuse.
+  const copy=Buffer.from(chunk);
+  facebookPrimeChunksR1314.push(copy);facebookPrimeBytesR1314+=copy.length;
+  while(facebookPrimeBytesR1314>FACEBOOK_PRIME_MAX_BYTES_R1314&&facebookPrimeChunksR1314.length>1){
+    const old=facebookPrimeChunksR1314.shift();facebookPrimeBytesR1314-=Number(old?.length||0);
+  }
+  state.facebookPrimeBytesR1314=facebookPrimeBytesR1314;
+  state.facebookPrimeChunksR1314=facebookPrimeChunksR1314.length;
+  return true;
+}
+function primeFacebookReservoirR1314(r){
+  if(!r||r.destroyed)return 0;
+  const snapshot=facebookPrimeChunksR1314.slice();
+  let bytes=0,chunks=0;
+  for(const chunk of snapshot){
+    if(!chunk?.length)continue;
+    try{r.write(chunk);bytes+=chunk.length;chunks++}catch(_){break}
+  }
+  state.facebookPrimedBytesR1314=bytes;
+  state.facebookPrimedChunksR1314=chunks;
+  state.facebookPrimedAtR1314=new Date().toISOString();
+  return bytes;
+}
+
+function readFacebookDesiredStateR1318(){
+  const fallback={desired:false,autoRotateStartedAt:0,autoRotateDueAt:0,updatedAt:null,reason:'default-off'};
+  try{
+    if(!FACEBOOK_DESIRED_STATE_FILE_R1318||!existsSync(FACEBOOK_DESIRED_STATE_FILE_R1318))return fallback;
+    const raw=JSON.parse(readFileSync(FACEBOOK_DESIRED_STATE_FILE_R1318,'utf8'));
+    return {
+      desired:raw?.desired===true,
+      autoRotateStartedAt:Math.max(0,Number(raw?.autoRotateStartedAt||0)),
+      autoRotateDueAt:Math.max(0,Number(raw?.autoRotateDueAt||0)),
+      updatedAt:raw?.updatedAt||null,
+      reason:String(raw?.reason||'loaded')
+    };
+  }catch(error){
+    state.facebookPersistentStateErrorR1318=cleanText(error?.message||error).slice(-240);
+    return fallback;
+  }
+}
+function persistFacebookDesiredStateR1318(reason='state-change'){
+  try{
+    mkdirSync(CACHE_DIR,{recursive:true});
+    const payload={
+      version:'R1318',
+      desired:Boolean(facebookDesiredR1313),
+      autoRotateStartedAt:Number(facebookAutoRotateStartedAtR1316||0),
+      autoRotateDueAt:Number(facebookAutoRotateDueAtR1316||0),
+      updatedAt:new Date().toISOString(),
+      reason:shortText(reason,120)
+    };
+    const tmp=`${FACEBOOK_DESIRED_STATE_FILE_R1318}.tmp-${process.pid}`;
+    writeFileSync(tmp,JSON.stringify(payload,null,2),'utf8');
+    renameSync(tmp,FACEBOOK_DESIRED_STATE_FILE_R1318);
+    facebookPersistentUpdatedAtR1318=payload.updatedAt;
+    state.facebookPersistentStateErrorR1318='';
+    return true;
+  }catch(error){
+    state.facebookPersistentStateErrorR1318=cleanText(error?.message||error).slice(-240);
+    return false;
+  }
+}
+function loadFacebookDesiredStateR1318(){
+  const saved=readFacebookDesiredStateR1318();
+  facebookPersistentLoadedR1318=true;
+  facebookPersistentUpdatedAtR1318=saved.updatedAt||null;
+  facebookDesiredR1313=Boolean(saved.desired);
+  if(facebookDesiredR1313){
+    const now=Date.now();
+    const due=Number(saved.autoRotateDueAt||0);
+    const started=Number(saved.autoRotateStartedAt||0);
+    if(due>0&&started>0&&due>=started){
+      facebookAutoRotateStartedAtR1316=started;
+      facebookAutoRotateDueAtR1316=due;
+    }else{
+      facebookAutoRotateStartedAtR1316=now;
+      facebookAutoRotateDueAtR1316=now+FACEBOOK_AUTO_ROTATE_MS_R1316;
+    }
+    facebookRestorePendingR1318=true;
+  }else{
+    facebookAutoRotateStartedAtR1316=0;
+    facebookAutoRotateDueAtR1316=0;
+    facebookRestorePendingR1318=false;
+  }
+  state.facebookPersistentDesiredR1318=Boolean(facebookDesiredR1313);
+  state.facebookPersistentLoadedR1318=true;
+  state.facebookPersistentUpdatedAtR1318=facebookPersistentUpdatedAtR1318;
+  return saved;
+}
+function cancelFacebookRestoreR1318(reason='cancel'){
+  if(facebookRestoreTimerR1318){clearTimeout(facebookRestoreTimerR1318);facebookRestoreTimerR1318=null}
+  facebookRestorePendingR1318=false;
+  state.facebookRestorePendingR1318=false;
+  state.facebookLastRestoreCancelR1318={at:new Date().toISOString(),reason:shortText(reason,120)};
+}
+function scheduleFacebookRestoreR1318(reason='service-start',delayMs=FACEBOOK_RESTORE_DELAY_MS_R1318){
+  if(stopping||!facebookDesiredR1313)return false;
+  facebookRestorePendingR1318=true;
+  state.facebookRestorePendingR1318=true;
+  if(facebookRestoreTimerR1318)return true;
+  const delay=Math.max(1000,Math.min(30000,Number(delayMs)||FACEBOOK_RESTORE_DELAY_MS_R1318));
+  state.facebookRestoreScheduledR1318={at:new Date().toISOString(),reason:shortText(reason,120),delayMs:delay};
+  facebookRestoreTimerR1318=setTimeout(()=>{
+    facebookRestoreTimerR1318=null;
+    restoreFacebookAfterRestartR1318(reason).catch(error=>{
+      state.facebookLastErrorR1313=redactFacebookSecretR1313(error?.message||error);
+      if(!stopping&&facebookDesiredR1313)scheduleFacebookRestoreR1318('restore-retry',Math.min(30000,3000*Math.max(1,facebookRestoreAttemptsR1318)));
+    });
+  },delay);
+  facebookRestoreTimerR1318.unref?.();
+  return true;
+}
+async function restoreFacebookAfterRestartR1318(reason='service-start'){
+  if(stopping||!facebookDesiredR1313){cancelFacebookRestoreR1318('not-desired');return false}
+  facebookRestoreAttemptsR1318++;
+  state.facebookRestoreAttemptsR1318=facebookRestoreAttemptsR1318;
+  const cfg=resolveFacebookTargetR1313();
+  if(!cfg.configured)throw new Error('Facebook persistent START saved, but RTMPS config is not ready');
+  if(!publisher||publisher.exitCode!==null||!state.publisherRunning||facebookPrimeBytesR1314<FACEBOOK_PRIME_MIN_BYTES_R1314){
+    scheduleFacebookRestoreR1318('master-not-ready',2500);
+    return false;
+  }
+  facebookRestorePendingR1318=false;
+  state.facebookRestorePendingR1318=false;
+  const result=await startFacebookPublisherR1313({reason:'restore-after-service-restart-r1318'});
+  if(!facebookRunningR1313()){
+    facebookRestorePendingR1318=true;
+    state.facebookRestorePendingR1318=true;
+    throw new Error('Facebook restore start did not reach running state');
+  }
+  facebookRestoredAfterRestartR1318=true;
+  facebookLastRestoreAtR1318=new Date().toISOString();
+  facebookLastRestoreReasonR1318=reason;
+  state.facebookRestoredAfterRestartR1318=true;
+  state.facebookLastRestoreAtR1318=facebookLastRestoreAtR1318;
+  state.facebookLastRestoreReasonR1318=facebookLastRestoreReasonR1318;
+  persistFacebookDesiredStateR1318('restore-confirmed');
+  diagRecordR802('r1318-facebook-restored',{reason,attempt:facebookRestoreAttemptsR1318,pid:Number(facebookPublisherR1313?.pid||0)});
+  return result;
+}
+
+function clearFacebookAutoRotateTimersR1316(){
+  if(facebookAutoRotateTimerR1316){clearTimeout(facebookAutoRotateTimerR1316);facebookAutoRotateTimerR1316=null}
+  if(facebookAutoResumeTimerR1316){clearTimeout(facebookAutoResumeTimerR1316);facebookAutoResumeTimerR1316=null}
+  facebookAutoRotateInGapR1316=false;
+}
+function scheduleFacebookAutoRotateR1316({reset=false}={}){
+  if(!facebookDesiredR1313||stopping)return false;
+  if(reset||!facebookAutoRotateStartedAtR1316)facebookAutoRotateStartedAtR1316=Date.now();
+  if(facebookAutoRotateTimerR1316){clearTimeout(facebookAutoRotateTimerR1316);facebookAutoRotateTimerR1316=null}
+  facebookAutoRotateDueAtR1316=facebookAutoRotateStartedAtR1316+FACEBOOK_AUTO_ROTATE_MS_R1316;
+  const delay=Math.max(1000,facebookAutoRotateDueAtR1316-Date.now());
+  state.facebookAutoRotateDueAtR1316=new Date(facebookAutoRotateDueAtR1316).toISOString();
+  facebookAutoRotateTimerR1316=setTimeout(()=>{facebookAutoRotateTimerR1316=null;autoRotateFacebookR1316().catch(error=>{state.facebookLastErrorR1313=redactFacebookSecretR1313(error?.message||error);scheduleFacebookRestartR1313('r1316-auto-rotate-failure')})},delay);
+  facebookAutoRotateTimerR1316.unref?.();return true;
+}
+async function autoRotateFacebookR1316(){
+  if(stopping||!facebookDesiredR1313)return false;
+  facebookStartEpochR1317++;
+  if(facebookRestartTimerR1313){clearTimeout(facebookRestartTimerR1313);facebookRestartTimerR1313=null}
+  facebookAutoRotateCountR1316++;
+  facebookAutoRotateInGapR1316=true;
+  state.facebookAutoRotateCountR1316=facebookAutoRotateCountR1316;
+  state.facebookLastAutoRotateR1316={at:new Date().toISOString(),count:facebookAutoRotateCountR1316,gapMs:FACEBOOK_AUTO_ROTATE_GAP_MS_R1316};
+  const child=facebookPublisherR1313;
+  destroyFacebookReservoirR1313();
+  if(child&&child.exitCode===null){
+    child.__r1313IntentionalStop=true;
+    if(facebookPublisherR1313===child)facebookPublisherR1313=null;
+    state.facebookRunningR1313=false;state.facebookPidR1313=0;
+    try{child.kill('SIGTERM')}catch(_){}
+    const hard=setTimeout(()=>{try{if(child.exitCode===null)child.kill('SIGKILL')}catch(_){}},1600);hard.unref?.();
+  }
+  diagRecordR802('r1316-facebook-auto-rotate-stop',{count:facebookAutoRotateCountR1316,gapMs:FACEBOOK_AUTO_ROTATE_GAP_MS_R1316});
+  facebookAutoResumeTimerR1316=setTimeout(()=>{
+    facebookAutoResumeTimerR1316=null;
+    if(stopping||!facebookDesiredR1313)return;
+    facebookAutoRotateInGapR1316=false;
+    facebookAutoRotateStartedAtR1316=Date.now();
+    startFacebookPublisherR1313({reason:'auto-rotate-r1316'}).then(()=>{
+      scheduleFacebookAutoRotateR1316({reset:false});
+      persistFacebookDesiredStateR1318('auto-rotate-resume');
+      diagRecordR802('r1316-facebook-auto-rotate-resume',{count:facebookAutoRotateCountR1316});
+    }).catch(error=>{
+      state.facebookLastErrorR1313=redactFacebookSecretR1313(error?.message||error);
+      scheduleFacebookRestartR1313('r1316-auto-resume-failure');
+    });
+  },FACEBOOK_AUTO_ROTATE_GAP_MS_R1316);
+  facebookAutoResumeTimerR1316.unref?.();
+  return true;
+}
+function sampleFacebookTelemetryR1316(){
+  const now=Date.now();
+  const bytes=Number(facebookInputBytesR1314||0);
+  if(facebookTelemetryLastAtR1316>0){
+    const dt=(now-facebookTelemetryLastAtR1316)/1000;
+    const delta=bytes>=facebookTelemetryLastBytesR1316?bytes-facebookTelemetryLastBytesR1316:0;
+    facebookCurrentMbpsR1316=dt>0?(delta*8/1e6/dt):0;
+  }else facebookCurrentMbpsR1316=0;
+  facebookTelemetryLastAtR1316=now;
+  facebookTelemetryLastBytesR1316=bytes;
+  const point={at:new Date(now).toISOString(),running:Boolean(facebookRunningR1313()),mbps:Number(facebookCurrentMbpsR1316.toFixed(3)),bufferedBytes:facebookBufferedBytesR1313(),inputBytes:bytes};
+  facebookTelemetryR1316.push(point);
+  if(facebookTelemetryR1316.length>FACEBOOK_TELEMETRY_LIMIT_R1316)facebookTelemetryR1316.splice(0,facebookTelemetryR1316.length-FACEBOOK_TELEMETRY_LIMIT_R1316);
+  state.facebookCurrentMbpsR1316=facebookCurrentMbpsR1316;
+}
+
 function destroyFacebookReservoirR1313(){
   const old=facebookReservoirR1313,sink=facebookReservoirSinkR1313;
   if(old&&sink){try{old.unpipe(sink)}catch(_){}}
@@ -6512,41 +7038,66 @@ function facebookArgsR1313(target){
   ];
 }
 function scheduleFacebookRestartR1313(reason='restart'){
+  if(facebookRestorePendingR1318)return false;
+  if(facebookAutoRotateInGapR1316)return false;
+  if(facebookStartPendingR1317)return true;
   if(stopping||!facebookDesiredR1313)return false;
   if(facebookRestartTimerR1313)return true;
-  state.facebookRestartScheduledR1313={at:new Date().toISOString(),reason:shortText(reason,180)};
+  const delayMs=mirrorRetryDelayR1317('facebook',FACEBOOK_RESTART_DELAY_MS_R1313);
+  state.facebookRestartScheduledR1313={at:new Date().toISOString(),reason:shortText(reason,180),delayMs};
   facebookRestartTimerR1313=setTimeout(()=>{
     facebookRestartTimerR1313=null;
     if(stopping||!facebookDesiredR1313)return;
     startFacebookPublisherR1313({reason:'watchdog'}).catch(error=>{state.facebookLastErrorR1313=redactFacebookSecretR1313(error?.message||error);scheduleFacebookRestartR1313('retry-after-start-failure')});
-  },FACEBOOK_RESTART_DELAY_MS_R1313);
+  },delayMs);
   facebookRestartTimerR1313.unref?.();return true;
 }
 function recycleFacebookBranchR1313(reason='branch-recycle'){
   if(stopping)return false;
   facebookCongestionResetsR1313++;state.facebookCongestionResetsR1313=facebookCongestionResetsR1313;state.facebookLastRecycleR1313={at:new Date().toISOString(),reason:shortText(reason,180)};
   const child=facebookPublisherR1313;destroyFacebookReservoirR1313();
-  if(child&&child.exitCode===null){if(facebookPublisherR1313===child)facebookPublisherR1313=null;state.facebookRunningR1313=false;state.facebookPidR1313=0;child.__r1313Recycle=true;try{child.kill('SIGTERM')}catch(_){}const hard=setTimeout(()=>{try{if(child.exitCode===null)child.kill('SIGKILL')}catch(_){}},1600);hard.unref?.()}
+  if(child&&child.exitCode===null){state.facebookRunningR1313=false;state.facebookPidR1313=0;child.__r1313Recycle=true;try{child.kill('SIGTERM')}catch(_){}const hard=setTimeout(()=>{try{if(child.exitCode===null)child.kill('SIGKILL')}catch(_){}},1600);hard.unref?.()}
   else scheduleFacebookRestartR1313(reason);
   return true;
 }
-function writeFacebookEncodedChunkR1313(chunk){
-  if(!chunk?.length||stopping||!facebookDesiredR1313)return false;
-  if(!facebookRunningR1313()){scheduleFacebookRestartR1313('master-data-without-facebook-publisher');return false}
+function writeFacebookEncodedChunkR1313(chunk,{skipPrime=false}={}){
+  if(!chunk?.length||stopping)return false;
+  // R1314: cache ONLY the real 24/7 master. R1319 host-composite packets must not
+  // replace this cache or a host compositor restart could recursively use itself.
+  if(!skipPrime)cacheFacebookPrimeR1314(chunk);
+  if(!facebookDesiredR1313||facebookAutoRotateInGapR1316)return false;
+  facebookInputBytesR1314+=chunk.length;facebookInputChunksR1314++;
+  state.facebookInputBytesR1314=facebookInputBytesR1314;state.facebookInputChunksR1314=facebookInputChunksR1314;
+  if(!facebookRunningR1313()){if(!facebookRestorePendingR1318)scheduleFacebookRestartR1313('master-data-without-facebook-publisher');return false}
   let r=facebookReservoirR1313;
   if(!r||r.destroyed){r=createFacebookReservoirR1313();if(facebookPublisherR1313?.stdin&&!facebookPublisherR1313.stdin.destroyed){r.pipe(facebookPublisherR1313.stdin,{end:false});facebookReservoirSinkR1313=facebookPublisherR1313.stdin}}
   const buffered=facebookBufferedBytesR1313();state.facebookBufferedBytesR1313=buffered;
   if(buffered>=FACEBOOK_MAX_BUFFER_BYTES_R1313){recycleFacebookBranchR1313(`buffer ${buffered}`);return false}
-  try{r.write(chunk);state.facebookLastInputAtR1313=new Date().toISOString();return true}catch(error){state.facebookLastErrorR1313=redactFacebookSecretR1313(error?.message||error);recycleFacebookBranchR1313('reservoir-write-error');return false}
+  try{r.write(chunk);const now=Date.now();if(now-(state.facebookLastInputStampR1317||0)>=250){state.facebookLastInputStampR1317=now;state.facebookLastInputAtR1313=new Date(now).toISOString();}return true}catch(error){state.facebookLastErrorR1313=redactFacebookSecretR1313(error?.message||error);recycleFacebookBranchR1313('reservoir-write-error');return false}
 }
 async function stopFacebookPublisherR1313({reason='manual-stop'}={}){
+  facebookStartEpochR1317++;
+  cancelFacebookRestoreR1318(reason);
   facebookDesiredR1313=false;facebookIntentionalStopR1313=true;
+  clearFacebookAutoRotateTimersR1316();facebookAutoRotateStartedAtR1316=0;facebookAutoRotateDueAtR1316=0;
+  if(reason==='manual-stop')persistFacebookDesiredStateR1318('manual-stop');
   if(facebookRestartTimerR1313){clearTimeout(facebookRestartTimerR1313);facebookRestartTimerR1313=null}
   const child=facebookPublisherR1313;destroyFacebookReservoirR1313();
   if(child&&child.exitCode===null){child.__r1313IntentionalStop=true;try{child.stdin?.end()}catch(_){}try{child.kill('SIGTERM')}catch(_){}await waitChildExit(child,2200);try{if(child.exitCode===null)child.kill('SIGKILL')}catch(_){}}
   if(facebookPublisherR1313===child)facebookPublisherR1313=null;facebookIntentionalStopR1313=false;state.facebookRunningR1313=false;state.facebookPidR1313=0;state.facebookLastStopR1313={at:new Date().toISOString(),reason};return facebookStatusR1313();
 }
-async function startFacebookPublisherR1313({reason='manual-start'}={}){
+function startFacebookPublisherR1313(options={}){
+  if(facebookStartPendingR1317)return facebookStartPendingR1317;
+  const epoch=facebookStartEpochR1317;
+  const pending=startFacebookPublisherImplR1317(options,epoch);
+  facebookStartPendingR1317=pending;
+  pending.finally(()=>{if(facebookStartPendingR1317===pending)facebookStartPendingR1317=null;}).catch(()=>{});
+  return pending;
+}
+async function startFacebookPublisherImplR1317({reason='manual-start'}={},epoch=facebookStartEpochR1317){
+  if(reason==='manual-start'){cancelFacebookRestoreR1318('manual-start');resetMirrorRetryR1317('facebook');mirrorConfigCacheR1317.delete('facebook');if(facebookAutoRotateInGapR1316)clearFacebookAutoRotateTimersR1316();}
+  else if(facebookAutoRotateInGapR1316)return facebookStatusR1313();
+
   if(stopping)throw new Error('radio shutting down');
   const cfg=resolveFacebookTargetR1313();
   if(!cfg.configured)throw new Error('Facebook RTMPS server/key not found in secure VPS config');
@@ -6554,19 +7105,52 @@ async function startFacebookPublisherR1313({reason='manual-start'}={}){
   facebookDesiredR1313=true;
   if(facebookRunningR1313())return facebookStatusR1313();
   if(facebookRestartTimerR1313){clearTimeout(facebookRestartTimerR1313);facebookRestartTimerR1313=null}
-  const r=createFacebookReservoirR1313();facebookGenerationR1313++;facebookIntentionalStopR1313=false;
-  const child=spawn('ffmpeg',facebookArgsR1313(cfg.target),{stdio:['pipe','ignore','pipe']});facebookPublisherR1313=child;child.__r1313Generation=facebookGenerationR1313;
+  // R1314 late-join guard: wait briefly for a few MB of the current master so
+  // stream-copy never starts on a naked P/B slice without codec headers.
+  const primeDeadline=Date.now()+FACEBOOK_PRIME_WAIT_MS_R1314;
+  while(facebookPrimeBytesR1314<FACEBOOK_PRIME_MIN_BYTES_R1314&&Date.now()<primeDeadline&&!stopping&&epoch===facebookStartEpochR1317&&facebookDesiredR1313){await sleep(200)}
+  if(stopping||epoch!==facebookStartEpochR1317||!facebookDesiredR1313)return facebookStatusR1313();
+  if(!publisher||publisher.exitCode!==null||!state.publisherRunning)throw new Error('master publisher stopped during Facebook prime');
+  const r=createFacebookReservoirR1313();
+  const primedBytes=primeFacebookReservoirR1314(r);
+  facebookGenerationR1313++;facebookIntentionalStopR1313=false;
+  state.facebookLastFfmpegLineR1313='';state.facebookLastErrorR1313='';
+  facebookInputBytesR1314=0;facebookInputChunksR1314=0;
+  const child=spawn('ffmpeg',facebookArgsR1313(cfg.target),{stdio:['pipe','ignore','pipe']});facebookPublisherR1313=child;child.__startedAtR1317=Date.now();child.__r1313Generation=facebookGenerationR1313;child.__r1314PrimedBytes=primedBytes;
   child.stdin?.on('error',error=>{if(!stopping&&!child.__r1313IntentionalStop)state.facebookLastErrorR1313=redactFacebookSecretR1313(error?.message||error)});
   r.pipe(child.stdin,{end:false});facebookReservoirSinkR1313=child.stdin;
   try{const nice=spawn('renice',['10','-p',String(child.pid)],{stdio:'ignore'});nice.unref?.()}catch(_){}
   let stderr='';child.stderr?.on('data',buf=>{stderr=(stderr+String(buf||'')).slice(-8000);const lines=stderr.split(/\r?\n/);stderr=lines.pop()||'';const line=lines.at(-1);if(line)state.facebookLastFfmpegLineR1313=redactFacebookSecretR1313(line)});
   child.once('error',error=>{state.facebookLastErrorR1313=redactFacebookSecretR1313(error?.message||error)});
-  child.once('exit',(code,signal)=>{if(facebookPublisherR1313===child)facebookPublisherR1313=null;destroyFacebookReservoirR1313();state.facebookRunningR1313=false;state.facebookPidR1313=0;state.facebookLastExitR1313={at:new Date().toISOString(),code,signal,intentional:Boolean(child.__r1313IntentionalStop||facebookIntentionalStopR1313)};if(!stopping&&!child.__r1313IntentionalStop&&!facebookIntentionalStopR1313&&facebookDesiredR1313){facebookRestartCountR1313++;state.facebookRestartCountR1313=facebookRestartCountR1313;scheduleFacebookRestartR1313(`exit ${code??signal??'unknown'}`)}});
+  child.once('close',(code,signal)=>{if(facebookPublisherR1313!==child)return;if(Date.now()-child.__startedAtR1317>=60000)resetMirrorRetryR1317('facebook');facebookPublisherR1313=null;destroyFacebookReservoirR1313();state.facebookRunningR1313=false;state.facebookPidR1313=0;state.facebookLastExitR1313={at:new Date().toISOString(),code,signal,intentional:Boolean(child.__r1313IntentionalStop||facebookIntentionalStopR1313)};if(!stopping&&!child.__r1313IntentionalStop&&!facebookIntentionalStopR1313&&facebookDesiredR1313){facebookRestartCountR1313++;state.facebookRestartCountR1313=facebookRestartCountR1313;scheduleFacebookRestartR1313(`exit ${code??signal??'unknown'}`)}});
   state.facebookRunningR1313=true;state.facebookPidR1313=Number(child.pid||0);state.facebookConfiguredR1313=true;state.facebookLastStartR1313={at:new Date().toISOString(),reason,generation:facebookGenerationR1313};state.facebookTargetR1313=publicFacebookTargetR1313(cfg.target);
-  diagRecordR802('r1313-facebook-start',{pid:Number(child.pid||0),mode:'COPY-ONLY-1080P25-H264-AAC',target:state.facebookTargetR1313});return facebookStatusR1313();
+  if(reason==='manual-start'){facebookAutoRotateStartedAtR1316=Date.now();scheduleFacebookAutoRotateR1316({reset:false});persistFacebookDesiredStateR1318('manual-start')}
+  else if(reason==='auto-rotate-r1316'){scheduleFacebookAutoRotateR1316({reset:false});persistFacebookDesiredStateR1318('auto-rotate-r1316')}
+  else if(reason==='restore-after-service-restart-r1318'){if(!facebookAutoRotateStartedAtR1316)facebookAutoRotateStartedAtR1316=Date.now();scheduleFacebookAutoRotateR1316({reset:false})}
+  diagRecordR802('r1313-facebook-start',{pid:Number(child.pid||0),mode:'R1316-R1314-PRIMED-COPY-ONLY-1080P25-H264-AAC',target:state.facebookTargetR1313});return facebookStatusR1313();
 }
 function facebookStatusR1313(){
-  const cfg=resolveFacebookTargetR1313();return {ok:true,configured:Boolean(cfg.configured),enabled:Boolean(facebookDesiredR1313),running:Boolean(facebookRunningR1313()),pid:Number(facebookPublisherR1313?.pid||0),target:cfg.configured?publicFacebookTargetR1313(cfg.target):'—',source:cfg.source,serverUrl:FACEBOOK_DEFAULT_SERVER_URL_R1313,profile:{width:1920,height:1080,fps:VIDEO_FPS,videoCodec:'H264 COPY',audioCodec:'AAC COPY',videoBitrate:VIDEO_BITRATE,audioBitrate:AUDIO_BITRATE},relayMode:'MASTER-MPEGTS -> COPY -> FLV/RTMPS',bufferedBytes:facebookBufferedBytesR1313(),maxBufferBytes:FACEBOOK_MAX_BUFFER_BYTES_R1313,restartCount:Number(facebookRestartCountR1313),congestionResets:Number(facebookCongestionResetsR1313),lastStart:state.facebookLastStartR1313||null,lastStop:state.facebookLastStopR1313||null,lastExit:state.facebookLastExitR1313||null,lastError:state.facebookLastErrorR1313||'',lastFfmpegLine:state.facebookLastFfmpegLineR1313||''};
+  const cfg=resolveFacebookTargetR1313();
+  const now=Date.now();
+  const lastStartMs=Date.parse(state.facebookLastStartR1313?.at||'')||0;
+  const remaining=facebookAutoRotateDueAtR1316?Math.max(0,Math.ceil((facebookAutoRotateDueAtR1316-now)/1000)):0;
+  return {
+    ok:true,configured:Boolean(cfg.configured),enabled:Boolean(facebookDesiredR1313),running:Boolean(facebookRunningR1313()),pid:Number(facebookPublisherR1313?.pid||0),
+    persistentR1318:{loaded:Boolean(facebookPersistentLoadedR1318),desired:Boolean(facebookDesiredR1313),updatedAt:facebookPersistentUpdatedAtR1318||null,restorePending:Boolean(facebookRestorePendingR1318),restoreAttempts:Number(facebookRestoreAttemptsR1318),restoredAfterRestart:Boolean(facebookRestoredAfterRestartR1318),lastRestoreAt:facebookLastRestoreAtR1318||null,lastRestoreReason:facebookLastRestoreReasonR1318||'',error:state.facebookPersistentStateErrorR1318||''},
+    target:cfg.configured?publicFacebookTargetR1313(cfg.target):'—',source:cfg.source,serverUrl:FACEBOOK_DEFAULT_SERVER_URL_R1313,
+    profile:{width:1920,height:1080,fps:VIDEO_FPS,videoCodec:'H264 COPY',audioCodec:'AAC COPY',videoBitrate:VIDEO_BITRATE,audioBitrate:AUDIO_BITRATE},
+    relayMode:'MASTER-MPEGTS -> R1314 PRIME -> COPY -> FLV/RTMPS',
+    bufferedBytes:facebookBufferedBytesR1313(),maxBufferBytes:FACEBOOK_MAX_BUFFER_BYTES_R1313,
+    primeCachedBytes:Number(facebookPrimeBytesR1314||0),primeCachedChunks:Number(facebookPrimeChunksR1314.length||0),
+    primedBytes:Number(state.facebookPrimedBytesR1314||0),primedChunks:Number(state.facebookPrimedChunksR1314||0),primedAt:state.facebookPrimedAtR1314||null,
+    inputBytes:Number(facebookInputBytesR1314||0),inputChunks:Number(facebookInputChunksR1314||0),lastInputAt:state.facebookLastInputAtR1313||null,
+    currentMbpsR1316:Number(facebookCurrentMbpsR1316||0),telemetryR1316:facebookTelemetryR1316.slice(-360),
+    uptimeSeconds:facebookRunningR1313()&&lastStartMs?Math.max(0,Math.floor((now-lastStartMs)/1000)):0,
+    autoRotateR1316:{enabled:true,everySeconds:Math.round(FACEBOOK_AUTO_ROTATE_MS_R1316/1000),gapSeconds:Math.round(FACEBOOK_AUTO_ROTATE_GAP_MS_R1316/1000),dueAt:facebookAutoRotateDueAtR1316?new Date(facebookAutoRotateDueAtR1316).toISOString():null,remainingSeconds:remaining,count:Number(facebookAutoRotateCountR1316),inGap:Boolean(facebookAutoRotateInGapR1316)},
+    restartCount:Number(facebookRestartCountR1313),congestionResets:Number(facebookCongestionResetsR1313),
+    lastStart:state.facebookLastStartR1313||null,lastStop:state.facebookLastStopR1313||null,lastExit:state.facebookLastExitR1313||null,lastAutoRotateR1316:state.facebookLastAutoRotateR1316||null,
+    lastError:state.facebookLastErrorR1313||'',lastFfmpegLine:state.facebookLastFfmpegLineR1313||''
+  };
 }
 
 // R884-PUBLISHER-ONLY-TRANSPORT-RECOVERY
@@ -7149,18 +7733,14 @@ function masterBackpressureWatchdogTickR750(){
 }
 
 function countEstablishedRtmpsR792(){
-  return new Promise(resolve=>{
-    let out='';let done=false;
-    const child=spawn('ss',['-tnp'],{stdio:['ignore','pipe','ignore']});
-    const finish=value=>{if(done)return;done=true;clearTimeout(timer);resolve(Number(value)||0);};
-    const timer=setTimeout(()=>{try{child.kill('SIGKILL')}catch(_){ }finish(0);},2500);
-    child.stdout?.on('data',d=>{out+=String(d||'');if(out.length>300000)out=out.slice(-300000);});
-    child.once('error',()=>finish(0));
-    child.once('exit',()=>{
-      const count=out.split(/\n/).filter(line=>/^ESTAB\s/.test(line)&&/:443\b/.test(line)&&/ffmpeg/.test(line)).length;
-      finish(count);
-    });
-  });
+  // R1316: count ONLY the two YouTube R1125 relay sockets.
+  // Facebook/TikTok also use ffmpeg:443 and must never inflate YouTube 2/2 to 3/2 or 4/2.
+  let count=0;
+  const primary=transportRelayChildR1125('primary');
+  const backup=transportRelayChildR1125('backup');
+  if(primary&&primary.exitCode===null&&Boolean(state.rtmpsPrimarySocketR1125))count++;
+  if(encodedTransportLaneEnabledR1281('backup')&&backup&&backup.exitCode===null&&Boolean(state.rtmpsBackupSocketR1125))count++;
+  return Promise.resolve(count);
 }
 
 async function rtmpsEgressWatchdogTickR792(){
@@ -12322,6 +12902,10 @@ function publicStatus(){
     facebookRunningR1313:Boolean(facebookRunningR1313()),
     facebookPidR1313:Number(facebookPublisherR1313?.pid||0),
     facebookProfileR1313:`1920x1080@${VIDEO_FPS} COPY`,
+    hostR1319:hostStatusR1319(),
+    hostModeR1319:Boolean(hostDesiredR1319),
+    hostRunningR1319:Boolean(hostPublisherR1319&&hostPublisherR1319.exitCode===null),
+    hostOutputReadyR1319:Boolean(hostOutputReadyR1319),
     rtmpsEstablishedConnectionsR792:Number(state.rtmpsEstablishedConnectionsR792||0),
     rtmpsExpectedConnectionsR792:expectedRtmpsConnectionsR1287(),
     rtmpsEgressEverObservedR792:Boolean(state.rtmpsEgressEverObservedR792),
@@ -12766,6 +13350,26 @@ const server=http.createServer((req,res)=>{
     return;
   }
 
+  if(req.method==='POST' && url.pathname==='/control/host-chunk-r1319'){
+    const remote=String(req.socket?.remoteAddress||'');
+    const loopback=remote==='127.0.0.1'||remote==='::1'||remote==='::ffff:127.0.0.1';
+    if(!loopback){res.writeHead(403,headers);res.end(JSON.stringify({ok:false,error:'local-control-only'}));return;}
+    const session=String(url.searchParams.get('session')||'');
+    const seq=Number(url.searchParams.get('seq'));
+    const chunks=[];let total=0,finished=false;
+    const fail=(code,error)=>{if(finished)return;finished=true;try{req.destroy()}catch(_){ }res.writeHead(code,headers);res.end(JSON.stringify({ok:false,error}))};
+    req.on('data',chunk=>{if(finished)return;total+=chunk.length;if(total>HOST_MAX_CHUNK_BYTES_R1319)return fail(413,'host-chunk-too-large');chunks.push(chunk)});
+    req.on('error',error=>fail(400,cleanText(error?.message||error)));
+    req.on('end',()=>{
+      if(finished)return;finished=true;
+      try{
+        const result=writeHostCameraChunkR1319(session,seq,Buffer.concat(chunks,total));
+        res.writeHead(result.ok?200:(result.error==='host-camera-backpressure'?429:409),headers);res.end(JSON.stringify(result));
+      }catch(error){res.writeHead(500,headers);res.end(JSON.stringify({ok:false,error:cleanText(error?.message||error)}));}
+    });
+    return;
+  }
+
   if(req.method==='POST' && url.pathname.startsWith('/control/')){
     const remote=String(req.socket?.remoteAddress||'');
     const loopback=remote==='127.0.0.1'||remote==='::1'||remote==='::ffff:127.0.0.1';
@@ -12782,6 +13386,9 @@ const server=http.createServer((req,res)=>{
       else if(url.pathname==='/control/facebook-start')result=await startFacebookPublisherR1313({reason:'manual-start'});
       else if(url.pathname==='/control/facebook-stop')result=await stopFacebookPublisherR1313({reason:'manual-stop'});
       else if(url.pathname==='/control/facebook-status')result=facebookStatusR1313();
+      else if(url.pathname==='/control/host-start-r1319')result=await startHostModeR1319({targets:url.searchParams.get('targets')||'tiktok',duck:url.searchParams.get('duck')||HOST_DEFAULT_DUCK_R1319});
+      else if(url.pathname==='/control/host-stop-r1319')result=await stopHostModeR1319({reason:'manual-stop'});
+      else if(url.pathname==='/control/host-status-r1319')result=hostStatusR1319();
       else if(url.pathname==='/control/tiktok-schedule')result=await setTikTokScheduleR1305({enabled:['1','true','on'].includes(String(url.searchParams.get('enabled')||'').toLowerCase()),start:url.searchParams.get('start')||'',end:url.searchParams.get('end')||''});
       else if(url.pathname==='/control/tiktok-schedule-reconcile')result=await reconcileTikTokScheduleR1305('local-reconcile');
       else if(url.pathname==='/control/timeline-offset')result=await setTimelineCompensationR739(url.searchParams.get('seconds'));
@@ -12836,8 +13443,13 @@ const server=http.createServer((req,res)=>{
 });
 
 server.listen(PORT,'0.0.0.0',()=>{
-  console.log(`ANDRIK Radio R1311 TikTok clip-smooth branch + R1305/R1302 stable base listening on :${PORT}`);
+  console.log(`ANDRIK Radio R1319 Host compositor + R1318 Facebook persistent state listening on :${PORT}`);
+  const persistedFacebookR1318=loadFacebookDesiredStateR1318();
   radioLoop();
+  if(persistedFacebookR1318.desired)scheduleFacebookRestoreR1318('service-start',FACEBOOK_RESTORE_DELAY_MS_R1318);
+  startHostIdleWatchR1319();
+  sampleFacebookTelemetryR1316();
+  const fbTelemetryTimer=setInterval(sampleFacebookTelemetryR1316,FACEBOOK_TELEMETRY_INTERVAL_MS_R1316);fbTelemetryTimer.unref?.();
   // R1230: pre-build the five clean album ticker videos one-by-one at the lowest priority.
   // R1232: baked 92s album ticker prewarm disabled; final-stage ticker renders once before publisher encode.
   // setTimeout(()=>prewarmAlbumTickerVideosR1224(),30000).unref?.();
@@ -12889,7 +13501,11 @@ async function shutdown(){
 
   await stopPreparedVideoPrerollR744().catch(()=>{});
   await stopNormalVideoFeederR721();
+  if(hostIdleTimerR1319){clearInterval(hostIdleTimerR1319);hostIdleTimerR1319=null;}
+  await stopHostModeR1319({reason:'radio-shutdown',restore:false}).catch(()=>{});
   await stopTikTokPublisherR1303({persist:false,reason:'radio-shutdown'}).catch(()=>{});
+  cancelFacebookRestoreR1318('radio-shutdown');
+  clearFacebookAutoRotateTimersR1316();
   await stopFacebookPublisherR1313({reason:'radio-shutdown'}).catch(()=>{});
 
   const activeDecoder=producer;

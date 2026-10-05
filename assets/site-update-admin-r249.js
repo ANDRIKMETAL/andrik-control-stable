@@ -1,6 +1,6 @@
 (() => {
 'use strict';
-const SITE_UPDATE_UI_VERSION='55.00-r1219-install-safe';
+const SITE_UPDATE_UI_VERSION='55.00-r1254-install-retry';
 const KEY_SESSION='andrik-comments-admin-key',KEY_LOCAL='andrik-comments-admin-key-persistent',AUTO_RECOVERY_KEY='andrik-site-update-auto-recovery',CACHE_REFRESH_PREFIX='andrik-site-update-cache-refresh:',PENDING_DEPLOY_KEY='andrik-site-update-pending-deploy-r247';
 const byId=id=>document.getElementById(id),keyInput=byId('siteUpdateAdminKey'),archiveInput=byId('siteUpdateArchive'),previewButton=byId('siteUpdatePreview'),publishButton=byId('siteUpdatePublish'),confirmInput=byId('siteUpdateConfirm'),autoRecoveryInput=byId('siteUpdateAutoRecovery');
 let previewData=null,lastRelease='',lastPublish=null,lastOperationId='',operation=false;
@@ -676,7 +676,7 @@ const retryable=error?.status===503||error?.data?.retryable===true||[429,500,502
 if(!retryable||attempt>=maxAttempts)throw error;
 stage('commit','running');
 setResultState('warn','GitHub повтор');
-setText('siteUpdateResultText',`GitHub временно не ответил. Повтор Commit ${attempt+1}/${maxAttempts} выполняется автоматически…`);
+setText('siteUpdateResultText',`Временный HTTP ${error?.status||503} на этапе Commit. Повтор ${attempt+1}/${maxAttempts} выполняется автоматически — ZIP выбирать заново не нужно.`);
 await sleep([0,1800,4200,8000][attempt]||8000);
 }
 }
@@ -729,7 +729,7 @@ form.append('forceReinstall',reinstall?'yes':'no');
 form.append('confirm','yes');
 return form;
 };
-publishData=await publishCommitWithRetry(buildPublishForm,1);
+publishData=await publishCommitWithRetry(buildPublishForm,3);
 if(publishData.noChanges){
 stage('commit','done');stage('release','skipped');stage('deploy','skipped');
 setResultState('done','Без изменений');setText('siteUpdateResultTitle','Изменений нет');setText('siteUpdateResultText',publishData.message);return

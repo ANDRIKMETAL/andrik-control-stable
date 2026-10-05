@@ -1,0 +1,5 @@
+ANDRIK SITE R1253
+worker: host R2 chunk bridge + R1319 commands
+host: phone camera/mic MediaRecorder -> Control/R2 -> OVH agent -> R1319 compositor
+facebook: R1319 START/STOP aliases + prepared title/description
+cache reset: /cache-reset-r1253.html
