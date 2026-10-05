@@ -19467,7 +19467,9 @@ function parseTikTokAudiencePayloadR1308(payload){
   ]);
   const title=cleanPlainText(liveRoomInfo.title||data.title||root.title||'',180);
   const live=Boolean(roomId && roomId!=='0' && status!==4);
-  return {roomId,isLive:live,viewers:live?(viewers??0):0,enterCount,title,status};
+  // IMPORTANT: missing viewer statistics are NOT the same thing as zero viewers.
+  // Keep null when TikTok omits the counter so Control never paints a fake 0.
+  return {roomId,isLive:live,viewers:live?viewers:0,enterCount,title,status,viewerCountKnown:live&&viewers!==null};
 }
 async function fetchTikTokAudienceR1308(){
   const uniqueId=TIKTOK_AUDIENCE_USERNAME_R1308;
@@ -19484,7 +19486,12 @@ async function fetchTikTokAudienceR1308(){
   const p1=await r1.json().catch(()=>null);
   if(!p1)throw new Error('tiktok-room-non-json');
   let parsed=parseTikTokAudiencePayloadR1308(p1);
-  // TikTok often returns roomId in /api-live/user/room and the current user_count in webcast room/info.
+  const viewerReadings=[];
+  const enterReadings=[];
+  if(parsed.viewerCountKnown&&parsed.viewers!==null)viewerReadings.push(parsed.viewers);
+  if(parsed.enterCount!==null&&parsed.enterCount!==undefined)enterReadings.push(parsed.enterCount);
+  // TikTok often returns roomId in /api-live/user/room while viewer statistics can live
+  // in one of two room-info responses. Query both and use only explicit numeric counters.
   if(parsed.roomId){
     try{
       const infoUrl=new URL('https://webcast.tiktok.com/webcast/room/info/');
@@ -19494,18 +19501,28 @@ async function fetchTikTokAudienceR1308(){
         const p2=await r2.json().catch(()=>null);
         const q=p2?.data&&typeof p2.data==='object'?p2.data:p2;
         const fromInfo=parseTikTokAudiencePayloadR1308({data:{...q,user:{roomId:parsed.roomId},liveRoomInfo:q}});
-        parsed={
-          roomId:parsed.roomId,
-          isLive:fromInfo.isLive||parsed.isLive,
-          viewers:fromInfo.viewers??parsed.viewers,
-          enterCount:fromInfo.enterCount??parsed.enterCount,
-          title:fromInfo.title||parsed.title,
-          status:fromInfo.status??parsed.status
-        };
+        if(fromInfo.viewerCountKnown&&fromInfo.viewers!==null)viewerReadings.push(fromInfo.viewers);
+        if(fromInfo.enterCount!==null&&fromInfo.enterCount!==undefined)enterReadings.push(fromInfo.enterCount);
+        parsed={...parsed,isLive:fromInfo.isLive||parsed.isLive,title:fromInfo.title||parsed.title,status:fromInfo.status??parsed.status};
+      }
+    }catch(_){}
+    try{
+      const detailUrl=new URL('https://www.tiktok.com/api/live/detail/');
+      detailUrl.searchParams.set('roomID',parsed.roomId);detailUrl.searchParams.set('aid','1988');
+      const r3=await fetchWithAbortTimeoutR409(detailUrl.toString(),{headers:{...headers,referer:`https://www.tiktok.com/@${uniqueId}/live`},redirect:'follow'},9000,'tiktok-live-detail-r1309-timeout');
+      if(r3.ok){
+        const p3=await r3.json().catch(()=>null);
+        const q3=p3?.LiveRoomInfo||p3?.data?.LiveRoomInfo||p3?.data||p3;
+        const fromDetail=parseTikTokAudiencePayloadR1308({data:{user:{roomId:parsed.roomId},liveRoomInfo:q3}});
+        if(fromDetail.viewerCountKnown&&fromDetail.viewers!==null)viewerReadings.push(fromDetail.viewers);
+        if(fromDetail.enterCount!==null&&fromDetail.enterCount!==undefined)enterReadings.push(fromDetail.enterCount);
+        parsed={...parsed,isLive:fromDetail.isLive||parsed.isLive,title:fromDetail.title||parsed.title,status:fromDetail.status??parsed.status};
       }
     }catch(_){}
   }
-  return {...parsed,uniqueId,source:'tiktok-public-live-web-r1308'};
+  const viewers=viewerReadings.length?Math.max(...viewerReadings):null;
+  const enterCount=enterReadings.length?Math.max(...enterReadings):null;
+  return {...parsed,viewers,enterCount,viewerCountKnown:viewers!==null,uniqueId,source:'tiktok-public-live-web-r1309'};
 }
 function tiktokAudienceRangeR1308(value){
   const key=String(value||'8h').toLowerCase();
@@ -19533,9 +19550,11 @@ async function handleControlTikTokAudienceR1308(request,env){
         .bind('andrikmetal',fresh.uniqueId,fresh.roomId||'',fresh.isLive?1:0,fresh.viewers,fresh.enterCount,fresh.title||'',fresh.source,sampledAt).run();
       const last=await db.prepare(`SELECT sampled_at,room_id FROM tiktok_live_audience_samples_r1308 ORDER BY datetime(sampled_at) DESC LIMIT 1`).first().catch(()=>null);
       const gap=last?.sampled_at?Date.now()-Date.parse(last.sampled_at):Infinity;
-      if(!last||gap>=TIKTOK_AUDIENCE_SAMPLE_MS_R1308||String(last.room_id||'')!==String(fresh.roomId||'')){
+      // Never write a synthetic zero when TikTok omitted the viewer counter.
+      // Unknown samples are skipped; the graph contains only real numeric readings.
+      if(fresh.viewers!==null&&fresh.viewers!==undefined&&(!last||gap>=TIKTOK_AUDIENCE_SAMPLE_MS_R1308||String(last.room_id||'')!==String(fresh.roomId||''))){
         await db.prepare(`INSERT INTO tiktok_live_audience_samples_r1308(unique_id,room_id,is_live,viewers,enter_count,sampled_at) VALUES(?1,?2,?3,?4,?5,?6)`)
-          .bind(fresh.uniqueId,fresh.roomId||'',fresh.isLive?1:0,Number(fresh.viewers||0),fresh.enterCount,sampledAt).run();
+          .bind(fresh.uniqueId,fresh.roomId||'',fresh.isLive?1:0,Number(fresh.viewers),fresh.enterCount,sampledAt).run();
         await db.prepare(`DELETE FROM tiktok_live_audience_samples_r1308 WHERE datetime(sampled_at) < datetime('now','-2 days')`).run().catch(()=>{});
       }
     }catch(error){
