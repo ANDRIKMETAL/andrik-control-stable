@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r358-deploy-nohang",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1791275808872-d90b81579a",
-  "release": "R1261",
-  "archiveName": "ANDRIK-SITE-R1261-HIDE-SERVER-ZIP-FROM-MAIN-ADMIN.zip",
-  "sourceHead": "a24c1a8fe048d405b3a8cba6c3f0b77863d03e5c",
-  "backupSha": "a24c1a8fe048d405b3a8cba6c3f0b77863d03e5c",
+  "operationId": "publish-1791284273251-cf8af0c84e",
+  "release": "R1262",
+  "archiveName": "ANDRIK-SITE-R1262-STUDIO-MENU-SERVER-VAULT-SPOILER.zip",
+  "sourceHead": "f1d216a22c4d75cef94f64bec7cb7046419a66bf",
+  "backupSha": "f1d216a22c4d75cef94f64bec7cb7046419a66bf",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-10-06T08:36:48.872Z"
+  "generatedAt": "2026-10-06T10:57:54.928Z"
 }

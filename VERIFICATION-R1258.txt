@@ -1,6 +1,0 @@
-R1258 validation:
-- _worker.js node --check: PASS
-- radio-control-admin.html server-zip JS node --check: PASS
-- private Backup R2 server ZIP API added
-- token download endpoint added
-- radio control upload/list/copy VPS command/delete UI added
