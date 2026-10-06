@@ -18072,6 +18072,106 @@ const object=await bucket.get(key); if(!object)return json({ok:false,error:'not-
 const h=new Headers(); h.set('content-type','audio/mpeg'); h.set('cache-control','no-store'); h.set('content-disposition',`attachment; filename="${key.split('/').pop()}"`); if(object.size)h.set('content-length',String(object.size));
 return new Response(object.body,{status:200,headers:h});
 }
+// R1258 — Radio server ZIP vault in private Backup R2.
+const RADIO_SERVER_ZIP_VERSION_R1258='R1258-RADIO-SERVER-ZIP-R2';
+const RADIO_SERVER_ZIP_PREFIX_R1258='radio/server-zips/';
+const RADIO_SERVER_ZIP_MAX_BYTES_R1258=96*1024*1024;
+function radioServerZipSafeNameR1258(value){
+let raw=cleanPlainText(value,240).trim();
+try{raw=decodeURIComponent(raw)}catch(_){ }
+raw=raw.split(/[\\/]/).pop()||'';
+if(!/\.zip$/i.test(raw))return '';
+const stem=raw.replace(/\.zip$/i,'').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[^A-Za-z0-9._-]+/g,'-').replace(/-+/g,'-').replace(/^[-_.]+|[-_.]+$/g,'').slice(0,180)||'ANDRIK-RADIO-SERVER';
+return `${stem}.zip`;
+}
+function radioServerZipKeyR1258(name){const safe=radioServerZipSafeNameR1258(name);return safe?`${RADIO_SERVER_ZIP_PREFIX_R1258}${safe}`:''}
+function radioServerZipTokenR1258(){const bytes=new Uint8Array(18);crypto.getRandomValues(bytes);return Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('')}
+function radioServerZipDownloadPathR1258(key,token){return `/api/radio-server-zip-r1258/download?key=${encodeURIComponent(key)}&token=${encodeURIComponent(token)}`}
+async function radioServerZipListR1258(bucket){
+const rows=[];let cursor=undefined,rounds=0;
+do{
+const page=await bucket.list({prefix:RADIO_SERVER_ZIP_PREFIX_R1258,limit:1000,...(cursor?{cursor}:{}),include:['customMetadata']});
+for(const o of (page.objects||[])){
+if(!String(o.key||'').toLowerCase().endsWith('.zip'))continue;
+const token=cleanPlainText(o.customMetadata?.downloadToken||'',100);
+rows.push({
+key:o.key,
+name:String(o.key||'').slice(RADIO_SERVER_ZIP_PREFIX_R1258.length),
+size:Number(o.size||0),
+uploaded:o.uploaded||null,
+etag:String(o.etag||''),
+sha256:cleanPlainText(o.customMetadata?.sha256||'',100),
+downloadUrl:token?radioServerZipDownloadPathR1258(o.key,token):''
+});
+}
+cursor=page.truncated?page.cursor:undefined;rounds++;
+}while(cursor&&rounds<8);
+rows.sort((a,b)=>(Date.parse(b.uploaded||0)||0)-(Date.parse(a.uploaded||0)||0)||b.name.localeCompare(a.name,undefined,{numeric:true,sensitivity:'base'}));
+return rows;
+}
+async function handleRadioServerZipsR1258(request,env){
+if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
+const bucket=getBackupBucket(env);
+if(!bucket)return json({ok:false,error:'backup-bucket-not-bound',message:'Private Backup R2 не подключён.'},503);
+try{
+if(request.method==='GET'){
+const files=await radioServerZipListR1258(bucket);
+return json({ok:true,version:RADIO_SERVER_ZIP_VERSION_R1258,count:files.length,totalBytes:files.reduce((n,x)=>n+Number(x.size||0),0),files});
+}
+if(request.method==='PUT'){
+if(!request.body)return json({ok:false,error:'missing-file-body'},400);
+let sourceName=String(request.headers.get('x-andrik-file-name')||'ANDRIK-RADIO-SERVER.zip');
+const name=radioServerZipSafeNameR1258(sourceName);
+if(!name)return json({ok:false,error:'zip-required',message:'Нужен файл .zip.'},400);
+const expectedSize=Math.max(0,Number(request.headers.get('x-andrik-file-size')||request.headers.get('content-length')||0)||0);
+if(!expectedSize)return json({ok:false,error:'empty-file'},400);
+if(expectedSize>RADIO_SERVER_ZIP_MAX_BYTES_R1258)return json({ok:false,error:'file-too-large',message:'Сервер ZIP больше 96 МБ.'},413);
+const key=radioServerZipKeyR1258(name);
+const token=radioServerZipTokenR1258();
+const sha256=cleanPlainText(request.headers.get('x-andrik-sha256')||'',100).toLowerCase();
+await bucket.put(key,request.body,{
+httpMetadata:{contentType:'application/zip',cacheControl:'private, no-store'},
+customMetadata:{source:'ANDRIK Radio Control R1258',sourceName:name,expectedSize:String(expectedSize),downloadToken:token,uploadedBy:'radio-control-admin-r1258',uploadedAt:new Date().toISOString(),...(sha256?{sha256}:{})}
+});
+const head=await bucket.head(key).catch(()=>null);
+const actualSize=Number(head?.size||0);
+if(!head||actualSize!==expectedSize){if(head)await bucket.delete(key).catch(()=>{});return json({ok:false,error:'size-mismatch',message:`R2 получил ${actualSize} байт вместо ${expectedSize}. Архив удалён.`,size:actualSize,expectedSize},409);}
+return json({ok:true,version:RADIO_SERVER_ZIP_VERSION_R1258,key,name,size:actualSize,uploaded:head.uploaded||null,downloadUrl:radioServerZipDownloadPathR1258(key,token),message:'Сервер ZIP сохранён в private R2.'});
+}
+if(request.method==='DELETE'){
+const key=cleanPlainText(new URL(request.url).searchParams.get('key')||'',500);
+if(!key.startsWith(RADIO_SERVER_ZIP_PREFIX_R1258)||!key.toLowerCase().endsWith('.zip')||key.includes('..')||key.includes('\\'))return json({ok:false,error:'invalid-key'},400);
+const head=await bucket.head(key).catch(()=>null);
+if(!head)return json({ok:false,error:'not-found'},404);
+await bucket.delete(key);
+return json({ok:true,key,deleted:true,size:Number(head.size||0),message:'Сервер ZIP удалён из private R2.'});
+}
+return json({ok:false,error:'method-not-allowed'},405);
+}catch(error){return json({ok:false,error:'radio-server-zip-failed',message:cleanPlainText(error?.message||error,500)},500);}
+}
+async function handleRadioServerZipDownloadR1258(request,env){
+const bucket=getBackupBucket(env);
+if(!bucket)return new Response('R2 unavailable',{status:503});
+const url=new URL(request.url);
+const key=cleanPlainText(url.searchParams.get('key')||'',500);
+const token=cleanPlainText(url.searchParams.get('token')||'',100);
+if(!key.startsWith(RADIO_SERVER_ZIP_PREFIX_R1258)||!key.toLowerCase().endsWith('.zip')||key.includes('..')||key.includes('\\')||token.length<20)return new Response('Invalid link',{status:400});
+const head=await bucket.head(key).catch(()=>null);
+if(!head)return new Response('Not found',{status:404});
+const expected=cleanPlainText(head.customMetadata?.downloadToken||'',100);
+if(!expected||token!==expected)return new Response('Forbidden',{status:403});
+const object=await bucket.get(key);
+if(!object)return new Response('Not found',{status:404});
+const name=radioServerZipSafeNameR1258(String(head.customMetadata?.sourceName||key.split('/').pop()||'ANDRIK-RADIO-SERVER.zip'))||'ANDRIK-RADIO-SERVER.zip';
+const headers=new Headers();
+headers.set('content-type','application/zip');
+headers.set('content-disposition',`attachment; filename="${name.replace(/["\\]/g,'_')}"`);
+headers.set('cache-control','private, no-store');
+headers.set('x-content-type-options','nosniff');
+if(object.size)headers.set('content-length',String(object.size));
+return new Response(object.body,{status:200,headers});
+}
+
 const R2_STORAGE_MANAGER_R922 = 'R925-R2-STORAGE-MANAGER-3D-BARREL';
 const R2_AUDIO_EXT_R922 = new Set(['mp3','wav','flac','m4a','aac','ogg']);
 const R2_VIDEO_EXT_R922 = new Set(['mp4','m4v','mov','webm']);
@@ -18465,52 +18565,6 @@ if(head.uploaded)headers.set('last-modified',new Date(head.uploaded).toUTCString
 headers.set('x-andrik-radio-background-slot',slot);
 if(request.method==='HEAD')return new Response(null,{status:200,headers});
 const object=await bucket.get(key);if(!object)return new Response('Not found',{status:404,headers:{'cache-control':'no-store'}});
-return new Response(object.body,{status:200,headers});
-}
-
-// R1258 / R1321: one owner-selected 8s studio loop for the five official albums.
-// The radio server composites the square album cover + CURRENT / PREVIOUS / NEXT
-// inside the studio monitor. Extras keep the existing background path.
-const RADIO_STUDIO_LOOP_KEY_R1321='radio/studio/andrik-studio-loop-r1321.mp4';
-async function handleRadioStudioR1321(request,env){
-if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
-const bucket=getMusicBucketR314(env);if(!bucket)return json({ok:false,error:'music-bucket-not-configured'},503);
-const key=RADIO_STUDIO_LOOP_KEY_R1321;
-if(request.method==='GET'){
-const head=await bucket.head(key).catch(()=>null);
-return json({ok:true,key,exists:Boolean(head),size:Number(head?.size||0),uploaded:head?.uploaded||null,contentType:head?.httpMetadata?.contentType||'',etag:head?.httpEtag||head?.etag||'',publicUrl:'/api/media/radio-studio-r1321'});
-}
-if(request.method==='DELETE'){
-await bucket.delete(key).catch(()=>{});
-return json({ok:true,key,deleted:true});
-}
-if(request.method==='PUT'){
-const type=String(request.headers.get('content-type')||'').toLowerCase().split(';')[0].trim();
-if(type!=='video/mp4')return json({ok:false,error:'invalid-content-type',message:'Нужен MP4.'},415);
-const len=Number(request.headers.get('content-length')||0);
-if(len>100*1024*1024)return json({ok:false,error:'file-too-large',message:'Максимум 100 МБ.'},413);
-const body=await request.arrayBuffer();
-if(body.byteLength<200000)return json({ok:false,error:'file-too-small',message:'Видео слишком маленькое.'},400);
-if(body.byteLength>100*1024*1024)return json({ok:false,error:'file-too-large',message:'Максимум 100 МБ.'},413);
-await bucket.put(key,body,{httpMetadata:{contentType:'video/mp4',cacheControl:'public, max-age=60, must-revalidate'},customMetadata:{source:'ANDRIK R1321 studio loop',uploadedAt:new Date().toISOString(),purpose:'five-album-monitor'}});
-const head=await bucket.head(key);
-return json({ok:true,key,size:Number(head?.size||body.byteLength),uploaded:head?.uploaded||null,contentType:'video/mp4',etag:head?.httpEtag||head?.etag||'',publicUrl:'/api/media/radio-studio-r1321'});
-}
-return json({ok:false,error:'method-not-allowed'},405);
-}
-async function handleRadioStudioPublicR1321(request,env){
-const bucket=getMusicBucketR314(env);if(!bucket)return new Response('R2 unavailable',{status:503,headers:{'cache-control':'no-store'}});
-const head=await bucket.head(RADIO_STUDIO_LOOP_KEY_R1321).catch(()=>null);if(!head)return new Response('Not found',{status:404,headers:{'cache-control':'no-store'}});
-const headers=new Headers();
-headers.set('content-type','video/mp4');
-headers.set('content-length',String(Number(head.size||0)));
-headers.set('cache-control','public, max-age=60, must-revalidate');
-headers.set('accept-ranges','bytes');
-const etag=String(head.httpEtag||head.etag||'');if(etag)headers.set('etag',etag);
-if(head.uploaded)headers.set('last-modified',new Date(head.uploaded).toUTCString());
-headers.set('x-andrik-radio-studio','R1321');
-if(request.method==='HEAD')return new Response(null,{status:200,headers});
-const object=await bucket.get(RADIO_STUDIO_LOOP_KEY_R1321);if(!object)return new Response('Not found',{status:404,headers:{'cache-control':'no-store'}});
 return new Response(object.body,{status:200,headers});
 }
 const RADIO_VISUAL_KEYS_R620 = Object.freeze({
@@ -20049,10 +20103,10 @@ if (path === '/api/control/vps-backup-r1030/mpu/complete' && request.method === 
 if (path === '/api/control/vps-backup-r1030/mpu/abort' && request.method === 'DELETE') return await handleVpsBackupAbortR1030(request, env);
 if (path === '/api/control/vps-backup-r1030/status' && request.method === 'GET') return await handleVpsBackupStatusR1030(request, env);
 if ((path === '/api/control/vps-backup-r1033/set' || path === '/api/control/vps-backup-r1034/set') && request.method === 'GET') return await handleVpsBackupSetR1033(request, env);
+if (path === '/api/control/radio-server-zips-r1258' && ['GET','PUT','DELETE'].includes(request.method)) return await handleRadioServerZipsR1258(request, env);
+if (path === '/api/radio-server-zip-r1258/download' && request.method === 'GET') return await handleRadioServerZipDownloadR1258(request, env);
 if (path === '/api/control/radio-backgrounds-r1211' && ['GET','PUT','DELETE'].includes(request.method)) return await handleRadioAlbumBgR1211(request, env);
 if (path === '/api/media/radio-background-r1211' && (request.method === 'GET' || request.method === 'HEAD')) return await handleRadioAlbumBgPublicR1211(request, env);
-if (path === '/api/control/radio-studio-r1321' && ['GET','PUT','DELETE'].includes(request.method)) return await handleRadioStudioR1321(request, env);
-if (path === '/api/media/radio-studio-r1321' && (request.method === 'GET' || request.method === 'HEAD')) return await handleRadioStudioPublicR1321(request, env);
 if (path === '/api/control/radio-visuals-r620' && request.method === 'PUT') return await handleRadioVisualPutR620(request, env);
 if (path === '/api/control/radio-visuals-r662/mpu/start' && request.method === 'POST') return await handleRadioVisualMpuStartR662(request, env);
 if (path === '/api/control/radio-visuals-r662/mpu/part' && request.method === 'PUT') return await handleRadioVisualMpuPartR662(request, env);

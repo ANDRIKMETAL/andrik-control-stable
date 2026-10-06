@@ -1,0 +1,5 @@
+R1259 UI visibility patch
+- control-home.html: server ZIP menu card added
+- radio-control-admin.html: top server ZIP shortcut added
+- cache-reset-r1259.html: added
+- R1258 server ZIP API preserved
