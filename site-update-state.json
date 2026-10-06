@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r358-deploy-nohang",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1791252909068-87e42c6c7c",
-  "release": "R1258",
-  "archiveName": "ANDRIK-SITE-R1258-RADIO-STUDIO-MONITOR.zip",
-  "sourceHead": "d1bef4cd261e21282045a2114676e78a9e1cca8c",
-  "backupSha": "d1bef4cd261e21282045a2114676e78a9e1cca8c",
+  "operationId": "publish-1791255768969-34e52eebbb",
+  "release": "R1259",
+  "archiveName": "ANDRIK-SITE-R1259-FACEBOOK-CONTINUOUS.zip",
+  "sourceHead": "b8da16b401e62636a5e3ed089e760220b848c9eb",
+  "backupSha": "b8da16b401e62636a5e3ed089e760220b848c9eb",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-10-06T02:15:10.165Z"
+  "generatedAt": "2026-10-06T03:02:48.969Z"
 }
