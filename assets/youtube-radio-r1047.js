@@ -15,7 +15,7 @@ let liveStartedAt='';
 function uptimeLabel(value){const start=Date.parse(value||'');if(!Number.isFinite(start))return '—';const sec=Math.max(0,Math.floor((Date.now()-start)/1000));const d=Math.floor(sec/86400),h=Math.floor((sec%86400)/3600),m=Math.floor((sec%3600)/60);if(d>0)return `${d} д ${h} ч ${m} мин`;if(h>0)return `${h} ч ${m} мин`;return `${m} мин`;}
 function refreshUptime(){text('youtubeRadioUptimeR565',liveStartedAt?uptimeLabel(liveStartedAt):'—')}
 function setLive(live,label){const pill=$('youtubeRadioLiveR565');if(!pill)return;pill.classList.toggle('is-live',Boolean(live));const span=pill.querySelector('span');if(span)span.textContent=label||(live?'ЭФИР ИДЁТ':'ОЖИДАЕТ СИГНАЛ')}
-function healthLabel(data){const health=safe(data?.healthStatus).toLowerCase();const stream=safe(data?.streamStatus).toLowerCase();const life=safe(data?.lifeCycleStatus).toLowerCase();if(['good','ok'].includes(health))return'ОТЛИЧНО';if(health)return health.toUpperCase();if(stream)return stream.toUpperCase();if(life)return life.toUpperCase();return'ЖДЁТ СИГНАЛ'}
+function healthLabel(data){const health=safe(data?.healthStatus).toLowerCase();const stream=safe(data?.streamStatus).toLowerCase();const life=safe(data?.lifeCycleStatus).toLowerCase();const issues=Array.isArray(data?.healthIssues)?data.healthIssues:[];if(['good','ok','live','excellent'].includes(health))return'ОТЛИЧНО';if(['bad','error','poor','critical','failed'].includes(health))return'ПЛОХО';if(life==='live'&&stream==='active'&&!issues.length)return'ОТЛИЧНО';if(issues.length)return'ПЛОХО';if(stream==='active')return'ОТЛИЧНО';if(life==='live')return'ОТЛИЧНО';return'ЖДЁТ СИГНАЛ'}
 async function loadLibrary(){
 text('youtubeRadioModeR565','MP3 + КЛИП');text('youtubeRadioCycleR565','AUTO');refreshUptime();
 }
@@ -70,7 +70,36 @@ const issues=Array.isArray(data?.healthIssues)?data.healthIssues:[];
 note.textContent=issues.length?`YouTube: ${parts.join(' • ')} · ${issues.slice(0,2).map(x=>[safe(x?.type),safe(x?.reason),safe(x?.description)].filter(Boolean).join(' — ')).join(' · ')||'есть предупреждение'}`:`R1045 · ${live?'LIVE':signal?'СИГНАЛ ПРИНЯТ, ЭФИР ЕЩЁ НЕ НАЧАТ':'ЖДЁТ СИГНАЛ'} · YouTube: ${parts.join(' • ')||'—'} · ${new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}`;
 }
 }
-async function loadYoutube(){try{const k=getKey();const res=await fetch(`/api/control/youtube-live-r565?active=1&fresh=1&ts=${Date.now()}`,{credentials:'include',headers:{accept:'application/json',...(k?{'x-admin-key':k,'authorization':`Bearer ${k}`}:{})},cache:'no-store'});const data=await res.json().catch(()=>({}));if(!res.ok)throw new Error(data.error||'HTTP '+res.status);renderYoutube(data)}catch(error){try{const r=await fetch(`/api/public/youtube-live-target?ts=${Date.now()}`,{cache:'no-store',headers:{accept:'application/json'}});const d=await r.json().catch(()=>({}));if(r.ok&&d?.active){renderYoutube({...d,signalActive:Boolean(d?.signalActive||d?.active),healthStatus:d?.healthStatus||'LIVE'});text('youtubeRadioHealthR565',d?.streamStatus==='active'?'LIVE · YOUTUBE':'LIVE · PUBLIC');return}}catch(_){}text('youtubeRadioHealthR565','API ВРЕМЕННО НЕДОСТУПЕН');text('youtubeRadioNowMetaR565',safe(error?.message)||'YouTube API временно недоступен')}}
+async function loadAudienceFallbackR1264(){
+try{
+const k=getKey();const r=await fetch(`/api/control/radio-audience-r1157?ts=${Date.now()}`,{credentials:'include',cache:'no-store',headers:{accept:'application/json',...(k?{'x-admin-key':k,'authorization':`Bearer ${k}`}:{})}});const d=await r.json().catch(()=>({}));if(!r.ok||!d?.ok)return false;const q=d.summary||{};
+if(q.currentConcurrent!=null)text('youtubeRadioViewersR565',number(q.currentConcurrent));
+if(q.launches!=null)text('youtubeRadioStartsR947',number(q.launches));
+if(q.lastCumulativeViews!=null&&Number(q.lastCumulativeViews)>=0)text('youtubeRadioViewsR565',number(q.lastCumulativeViews));
+const a=$('youtubeRadioStartsCardR947');if(a)a.title='Fallback: локальная статистика эфира из двухминутных YouTube-сэмплов';
+const v=$('youtubeRadioViewsCardR947');if(v)v.title='Fallback: последнее сохранённое cumulative viewCount текущего LIVE';
+return true;
+}catch(_){return false}
+}
+async function loadTransportFallbackR1264(reason=''){
+try{
+const k=getKey();const r=await fetch(`/api/control/radio-remote-r627/status?ts=${Date.now()}`,{credentials:'include',cache:'no-store',headers:{accept:'application/json',...(k?{'x-admin-key':k,'authorization':`Bearer ${k}`}:{})}});const d=await r.json().catch(()=>({}));if(!r.ok)return false;const s=d?.agent?.status||{};const service=['active','running'].includes(safe(s.service).toLowerCase());const publisher=Boolean(s.publisher);const video=Boolean(s.videoFeederRunning);const transport=s.transportHealthy!==false;const expected=Math.max(1,Number(s.rtmpsExpectedConnectionsR792||2)||2);const lanes=Math.max(0,Number(s.rtmpsEstablishedConnectionsR792||0));const online=Boolean(d?.online)||service;const good=online&&service&&publisher&&video&&transport&&lanes>=expected;
+text('youtubeRadioHealthR565',good?'ОТЛИЧНО':'ПЛОХО');
+const h=$('youtubeRadioHealthR565');if(h)h.title=`OVH master: service=${service?'OK':'OFF'} · publisher=${publisher?'OK':'OFF'} · video=${video?'OK':'OFF'} · transport=${transport?'OK':'BAD'} · RTMPS ${lanes}/${expected}${reason?' · YouTube API: '+safe(reason):''}`;
+return true;
+}catch(_){return false}
+}
+async function loadYoutube(){
+try{
+const k=getKey();const res=await fetch(`/api/control/youtube-live-r565?active=1&fresh=1&ts=${Date.now()}`,{credentials:'include',headers:{accept:'application/json',...(k?{'x-admin-key':k,'authorization':`Bearer ${k}`}:{})},cache:'no-store'});const data=await res.json().catch(()=>({}));if(!res.ok)throw new Error(data.error||'HTTP '+res.status);renderYoutube(data);await loadAudienceFallbackR1264();return;
+}catch(error){
+let publicRendered=false;
+try{const r=await fetch(`/api/public/youtube-live-target?ts=${Date.now()}`,{cache:'no-store',headers:{accept:'application/json'}});const d=await r.json().catch(()=>({}));if(r.ok&&d?.active){renderYoutube({...d,signalActive:Boolean(d?.signalActive||d?.active),healthStatus:d?.healthStatus||'LIVE'});publicRendered=true}}catch(_){}
+const [audience,transport]=await Promise.all([loadAudienceFallbackR1264(),loadTransportFallbackR1264(error?.message||'')]);
+if(!transport){text('youtubeRadioHealthR565',publicRendered?'ОТЛИЧНО':'ПЛОХО');const h=$('youtubeRadioHealthR565');if(h)h.title=publicRendered?'Public LIVE доступен; Control YouTube API временно недоступен':safe(error?.message)||'YouTube API недоступен'}
+if(!publicRendered)text('youtubeRadioNowMetaR565',safe(error?.message)||'YouTube Data API временно недоступен; показаны локальные данные OVH/аудитории');
+}
+}
 let youtubeTimer=null,libraryTimer=null;
 function armNetworkTimers(){
 if(youtubeTimer)clearInterval(youtubeTimer);if(libraryTimer)clearInterval(libraryTimer);

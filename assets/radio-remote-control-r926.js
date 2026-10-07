@@ -26,6 +26,7 @@ function hasR665Agent(data=lastRemote){return agentNumber(data)>=665}
 function hasR867Agent(data=lastRemote){return agentNumber(data)>=867}
 function hasR926Agent(data=lastRemote){return agentNumber(data)>=926}
 function hasR1098Agent(data=lastRemote){return agentNumber(data)>=1098}
+function hasR1264Agent(data=lastRemote){return agentNumber(data)>=1264}
 function humanBytesR1015(v){const n=Math.max(0,Number(v)||0),g=1024**3,m=1024**2;if(n>=g)return `${Math.round(n/g)}G`;if(n>=m)return `${Math.round(n/m)}M`;return `${Math.round(n/1024)}K`}
 const mp3R1219=x=>/\.mp3(?:$|\?)/i.test(String(x?.url||x?.key||''));
 const slugR1219=x=>{const pa=String(x?.pickerAlbum||'').toLowerCase();if(pa)return pa;const m=String(x?.key||'').toLowerCase().match(/^albums\/([^/]+)\//);return m?m[1]:''};
@@ -112,11 +113,12 @@ const stale=activeRaw&&commandAge>=185000;
 const r867Only=new Set(['gold-restore','cache-clean','soft-restart']);
 const r926Only=new Set(['screen-restore']);
 const r1098Only=new Set(['loudness-new-r1098']);
+const r1264Only=new Set(['fullscreen-r1383']);
 document.querySelectorAll('[data-radio-action]').forEach(b=>{
 const action=String(b.dataset.radioAction||'');
-const needsR867=r867Only.has(action),needsR926=r926Only.has(action),needsR1098=r1098Only.has(action);
-b.disabled=busy||active||!online||(needsR867&&!hasR867Agent(data))||(needsR926&&!hasR926Agent(data))||(needsR1098&&!hasR1098Agent(data));
-b.title=!online?'OVH Agent offline':needsR1098&&!hasR1098Agent(data)?'Нужен OVH Agent R1098+ (R1138 рекомендуется)':needsR926&&!hasR926Agent(data)?'Нужен OVH Agent R926+':needsR867&&!hasR867Agent(data)?'Нужен OVH Agent R867+':' ';
+const needsR867=r867Only.has(action),needsR926=r926Only.has(action),needsR1098=r1098Only.has(action),needsR1264=r1264Only.has(action);
+b.disabled=busy||active||!online||(needsR867&&!hasR867Agent(data))||(needsR926&&!hasR926Agent(data))||(needsR1098&&!hasR1098Agent(data))||(needsR1264&&!hasR1264Agent(data));
+b.title=!online?'OVH Agent offline':needsR1264&&!hasR1264Agent(data)?'Нужен OVH Agent R1264+':needsR1098&&!hasR1098Agent(data)?'Нужен OVH Agent R1098+ (R1138 рекомендуется)':needsR926&&!hasR926Agent(data)?'Нужен OVH Agent R926+':needsR867&&!hasR867Agent(data)?'Нужен OVH Agent R867+':' ';
 });
 document.querySelectorAll('[data-radio-command-state]').forEach(el=>{
 el.textContent=stale?`⚠ ${cmd.action||'команда'} зависла — управление разблокировано`:active?`OVH: ${cmd.action} · ${cmd.state==='queued'?'в очереди':'выполняется…'}`:res?.finishedAt?`${res.ok?'✅':'❌'} ${res.action||''} · ${fmt(res.finishedAt)}`:'Готов к команде';
@@ -409,6 +411,20 @@ await refresh();
 }catch(e){setMsg(`Video feeder recovery: ${e.message||e}`,'bad');setResult(`SCREEN RESTORE ERROR\n${e.message||e}`)}
 finally{busy=false;await refresh()}
 }
+async function forceFullscreenR1383(){
+if(busy)return;
+if(!confirm('🖥 НА ВЕСЬ ЭКРАН? Будет применён проверенный R1383 Global Hard Fullscreen ко ВСЕМУ видеоряду: 1920×1080, без crop/pad. Радио перезапустится один раз. Queue 96, MP3 и Facebook-код не переписываются.'))return;
+busy=true;render(lastRemote||{});
+try{
+setMsg('🖥 Применяю R1383 Global Hard Fullscreen ко всему video feeder…','work');
+const d=await agentAction('fullscreen-r1383');
+setResult(String(d?.result?.output||'GLOBAL FULLSCREEN R1383 ✅'));
+setMsg('✅ Весь видеоряд принудительно 1920×1080 · проверяю сигнал…','ok');
+await sleep(5000);
+await refresh();
+}catch(e){setMsg(`Global fullscreen R1383: ${e.message||e}`,'bad');setResult(`R1383 FULLSCREEN ERROR\n${e.message||e}`)}
+finally{busy=false;await refresh()}
+}
 async function loudnessNewR1098(){
 if(busy)return;
 busy=true;render(lastRemote||{});
@@ -454,7 +470,7 @@ if(button){button.disabled=false;button.textContent='🔐 ПЕРЕПОДКЛЮЧ
 document.addEventListener('click',e=>{
 const oauth=e.target.closest('[data-radio-youtube-oauth-connect]');if(oauth){e.preventDefault();reconnectYoutube();return}
 const b=e.target.closest('[data-radio-action]');
-if(b){e.preventDefault();const a=b.dataset.radioAction;if(a==='restart')liveRestartR1221();else if(a==='encoder-start')encoderStartOnlyR1214();else if(a==='youtube-start-bound')youtubeStartOnlyR1214();else if(a==='gold-restore')airRestore();else if(a==='screen-restore')screenRestore();else if(a==='cache-clean')cacheClean();else if(a==='soft-restart')liveRestartR1221();else if(a==='stop')stopSequence();else if(a==='status')statusSequence();else if(a==='auto-safe')autoSequence();else if(a==='loudness-new-r1098')loudnessNewR1098();return}
+if(b){e.preventDefault();const a=b.dataset.radioAction;if(a==='restart')liveRestartR1221();else if(a==='encoder-start')encoderStartOnlyR1214();else if(a==='youtube-start-bound')youtubeStartOnlyR1214();else if(a==='gold-restore')airRestore();else if(a==='screen-restore')screenRestore();else if(a==='fullscreen-r1383')forceFullscreenR1383();else if(a==='cache-clean')cacheClean();else if(a==='soft-restart')liveRestartR1221();else if(a==='stop')stopSequence();else if(a==='status')statusSequence();else if(a==='auto-safe')autoSequence();else if(a==='loudness-new-r1098')loudnessNewR1098();return}
 const t=e.target.closest('[data-radio-ticker-apply]');if(t){e.preventDefault();const input=document.querySelector('[data-radio-ticker-input]');if(input)saveTicker(input.value)}
 });
 document.addEventListener('input',e=>{
@@ -462,7 +478,7 @@ const input=e.target.closest?.('[data-radio-ticker-input]');if(!input)return;
 document.querySelectorAll('[data-radio-ticker-live]').forEach(el=>el.textContent=input.value||'—');
 clearTimeout(tickerTimer);tickerTimer=setTimeout(()=>saveTicker(input.value),850);
 });
-window.AndrikRadioRemoteR926={refresh,start:()=>liveRestartR1221(),encoderStart:encoderStartOnlyR1214,youtubeStart:youtubeStartOnlyR1214,airRestore,goldRestore:airRestore,screenRestore,cacheClean,liveRestart:liveRestartR1221,stop:stopSequence,status:statusSequence,loudnessNewR1098,saveTicker};window.AndrikRadioRemoteR925=window.AndrikRadioRemoteR926;window.AndrikRadioRemoteR870=window.AndrikRadioRemoteR926;window.AndrikRadioRemoteR867=window.AndrikRadioRemoteR926;window.AndrikRadioRemoteR687=window.AndrikRadioRemoteR926;window.AndrikRadioRemoteR665=window.AndrikRadioRemoteR926;
+window.AndrikRadioRemoteR926={refresh,start:()=>liveRestartR1221(),encoderStart:encoderStartOnlyR1214,youtubeStart:youtubeStartOnlyR1214,airRestore,goldRestore:airRestore,screenRestore,forceFullscreenR1383,cacheClean,liveRestart:liveRestartR1221,stop:stopSequence,status:statusSequence,loudnessNewR1098,saveTicker};window.AndrikRadioRemoteR925=window.AndrikRadioRemoteR926;window.AndrikRadioRemoteR870=window.AndrikRadioRemoteR926;window.AndrikRadioRemoteR867=window.AndrikRadioRemoteR926;window.AndrikRadioRemoteR687=window.AndrikRadioRemoteR926;window.AndrikRadioRemoteR665=window.AndrikRadioRemoteR926;
 const arm=()=>{if(timer)clearInterval(timer);timer=null;if(document.hidden)return;timer=setInterval(refresh,15000)};
 const armInventoryR1219=()=>{if(inventoryCatalogTimer)clearInterval(inventoryCatalogTimer);inventoryCatalogTimer=null;if(document.hidden)return;inventoryCatalogTimer=setInterval(()=>refreshInventoryCatalogR1219(true).then(()=>lastRemote&&render(lastRemote)),300000)};
 const boot=()=>{if(!document.hidden){refreshInventoryCatalogR1219(true).finally(refresh)}arm();armInventoryR1219()};

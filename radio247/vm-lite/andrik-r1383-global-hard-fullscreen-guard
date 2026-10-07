@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+SERVER="/opt/andrik-radio/radio247/server.mjs"
+[ -s "$SERVER" ] || { echo "❌ server.mjs missing"; exit 10; }
+python3 - <<'PY'
+from pathlib import Path
+import re
+p=Path('/opt/andrik-radio/radio247/server.mjs')
+s=p.read_text(encoding='utf-8')
+before=s
+replacement='scale=1920:1080:flags=lanczos,setsar=1,setdar=16/9'
+patterns=[
+    r"scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos,pad=1920:1080:\(ow-iw\)/2:\(oh-ih\)/2(?::(?:black|color=black))?,setsar=1",
+    r"scale=1920:1080:force_original_aspect_ratio=increase:flags=lanczos,crop=1920:1080,setsar=1",
+    r"scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:\(ow-iw\)/2:\(oh-ih\)/2(?::(?:black|color=black))?,setsar=1",
+    r"scale=1920:1080:force_original_aspect_ratio=increase,crop=1920:1080,setsar=1",
+]
+count=0
+for pat in patterns:
+    s,n=re.subn(pat,replacement,s)
+    count+=n
+s=s.replace(
+    'R819 exact R784/R814 viewer-proven scale=decrease + pad 1920x1080 + setsar=1 at feeder; master has NO geometry filter',
+    'R1383 GLOBAL HARD STRETCH 1920x1080 + setsar=1 + setdar=16/9 at feeder; master has NO geometry filter'
+)
+if s!=before:
+    p.write_text(s,encoding='utf-8')
+print(f'R1383_REPLACEMENTS={count}')
+check=p.read_text(encoding='utf-8')
+if replacement not in check:
+    raise SystemExit('❌ R1383 hard fullscreen filter not found after guard')
+print('✅ R1383 HARD FULLSCREEN PRESENT')
+print('✅ 1920x1080 · SAR 1:1 · DAR 16:9 · NO CROP · NO PAD')
+PY
+node --check "$SERVER"

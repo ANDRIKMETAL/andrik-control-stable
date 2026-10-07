@@ -6,7 +6,7 @@ import {Readable} from 'node:stream';
 import {pipeline} from 'node:stream/promises';
 
 const CONFIG='/etc/andrik-radio-web-r627.json';
-const AGENT_VERSION_R803='R1263-FACEBOOK-CONTROL-SYNC+R1356-RELAY-AWARE+R1319-HOST-PUMP+R1307-TIKTOK-INGEST';
+const AGENT_VERSION_R803='R1264-FULLSCREEN-CONTROL+R1263-FACEBOOK-SYNC+R1356-RELAY-AWARE+R1319-HOST-PUMP+R1307-TIKTOK-INGEST';
 const DIAG_DIR_R803='/var/cache/andrik-radio-r622/diagnostics';
 const DIAG_AGENT_LOG_R803=DIAG_DIR_R803+'/r803-agent-events.ndjson';
 const DIAG_AGENT_MAX_BYTES_R803=1024*1024;
@@ -21,6 +21,7 @@ const VISUAL_MANUAL_MARKER='/var/cache/andrik-radio-r622/visuals/.manual-visual-
 const VISUAL_AUTO_R658='/usr/local/sbin/andrik-visual-auto-r703';
 const AIR_RESTORE_R925='/usr/local/sbin/andrik-radio-air-restore-r925';
 const SCREEN_RESTORE_R926='/usr/local/sbin/andrik-radio-screen-restore-r926';
+const FULLSCREEN_R1383='/usr/local/sbin/andrik-radio-fullscreen-r1383';
 const SAFE_CACHE_CLEAN_R867='/usr/local/sbin/andrik-radio-safe-cache-clean-r867';
 const SAFE_PROCESS_CLEAN_R1026='/usr/local/sbin/andrik-radio-safe-cleanup-r1026';
 const LOUDNESS_NEW_R1098='/usr/local/sbin/andrik-radio-loudness-new-r1098';
@@ -583,6 +584,11 @@ async function execute(action,command={},headers={}){
     if(!fs.existsSync(SCREEN_RESTORE_R926))return {ok:false,output:`ВОССТАНОВИТЬ ЭКРАН ❌\nMissing ${SCREEN_RESTORE_R926}`};
     const r=await runAsync(SCREEN_RESTORE_R926,[],210000);
     return {ok:r.ok,output:`ВОССТАНОВИТЬ ЭКРАН ${r.ok?'✅':'❌'}\n${r.output}`};
+  }
+  if(action==='fullscreen-r1383'){
+    if(!fs.existsSync(FULLSCREEN_R1383))return {ok:false,output:`R1383 GLOBAL FULLSCREEN ❌\nMissing ${FULLSCREEN_R1383}`};
+    const r=await runAsync(FULLSCREEN_R1383,[],210000);
+    return {ok:r.ok,output:`R1383 GLOBAL FULLSCREEN ${r.ok?'✅':'❌'}\n${r.output}`};
   }
   if(action==='cache-clean'){
     if(!fs.existsSync(SAFE_CACHE_CLEAN_R867))return {ok:false,output:`SAFE CACHE CLEAN ❌\nMissing ${SAFE_CACHE_CLEAN_R867}`};

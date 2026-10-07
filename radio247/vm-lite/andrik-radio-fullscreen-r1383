@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+SERVICE="andrik-radio.service"
+SERVER="/opt/andrik-radio/radio247/server.mjs"
+GUARD="/usr/local/sbin/andrik-r1383-global-hard-fullscreen-guard"
+DROPIN="/etc/systemd/system/andrik-radio.service.d/zzzz-r1383-global-hard-fullscreen.conf"
+STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
+BACK="/opt/andrik-radio/radio247/backups/PRE-R1383-BUTTON-$STAMP"
+
+echo "======================================================"
+echo " ANDRIK R1383 · GLOBAL HARD FULLSCREEN"
+echo " ALL VIDEO -> 1920x1080 · NO CROP · NO PAD"
+echo "======================================================"
+[ -x "$GUARD" ] || { echo "❌ Missing $GUARD"; exit 11; }
+[ -s "$SERVER" ] || { echo "❌ Missing $SERVER"; exit 12; }
+mkdir -p "$BACK" "$(dirname "$DROPIN")"
+cp -a "$SERVER" "$BACK/server.before-r1383.mjs"
+cat > "$DROPIN" <<EOF
+[Service]
+ExecStartPre=$GUARD
+EOF
+"$GUARD"
+systemctl daemon-reload
+
+echo "=== ONE CONTROLLED RADIO RESTART ==="
+systemctl restart "$SERVICE"
+GOOD=0
+for i in $(seq 1 50); do
+  sleep 1
+  systemctl is-active --quiet "$SERVICE" || continue
+  STATUS="$(curl -fsS --max-time 3 http://127.0.0.1:8080/status 2>/dev/null || true)"
+  [ -n "$STATUS" ] || continue
+  GOOD="$(printf '%s' "$STATUS" | python3 -c 'import json,sys
+try:
+ d=json.load(sys.stdin)
+ print(1 if d.get("publisherRunning") and d.get("videoFeederRunning") else 0)
+except Exception:
+ print(0)')"
+  [ "$GOOD" = "1" ] && break
+done
+if [ "$GOOD" != "1" ]; then
+  echo "❌ Radio health not confirmed after R1383"
+  echo "Backup: $BACK"
+  exit 30
+fi
+curl -fsS --max-time 5 http://127.0.0.1:8080/status | python3 -c 'import json,sys
+d=json.load(sys.stdin)
+print("publisher :",d.get("publisherRunning"))
+print("video     :",d.get("videoFeederRunning"))
+print("transport :",d.get("transportHealthy"))
+print("RTMPS     :",str(d.get("rtmpsEstablishedConnectionsR792"))+"/"+str(d.get("rtmpsExpectedConnectionsR792")))
+print("visual    :",d.get("visualPath",""))
+print("error     :",d.get("lastError") or "—")'
+echo "✅ GLOBAL FULLSCREEN R1383 ACTIVE"
+echo "✅ queue 96 / MP3 / Facebook code untouched"
+echo "Backup: $BACK"

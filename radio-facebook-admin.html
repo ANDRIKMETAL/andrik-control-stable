@@ -39,9 +39,22 @@ body{padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}a{color:inhe
 
 <section class="card"><div class="card-head"><div><h2>Persistent Stream Key</h2><p>Ключ хранится зашифрованно в Secure Control. После «СОХРАНИТЬ» контролька сама синхронизирует его в защищённый VPS-конфиг — без restart радио.</p></div><span class="badge">SECURE</span></div><div class="secretbox"><div class="field"><label for="fbServerUrl">Server URL</label><input id="fbServerUrl" type="url" value="rtmps://live-api-s.facebook.com:443/rtmp/" autocomplete="off" spellcheck="false"></div><div class="field"><label for="fbStreamKey">Persistent Stream Key</label><input id="fbStreamKey" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="FB-…"></div><button class="btn blue" id="fbSave" type="button" style="width:100%;margin-top:12px">🔐 СОХРАНИТЬ FACEBOOK</button><div class="note"><b>https://www.facebook.com/live/ingests/</b> — тестовая веб-страница. Для VPS используется RTMPS Server URL выше + Persistent Stream Key.</div></div><div class="msg" id="fbIngestMsg">Текущий сохранённый ключ менять не нужно, если Facebook уже работает.</div></section>
 
-<section class="card"><div class="card-head"><div><h2>Название и описание Facebook LIVE</h2><p>Подготовлено заранее. Перед первым Go Live вставь эти поля в Facebook Live Producer.</p></div><span class="badge">READY</span></div><div class="secretbox"><div class="field"><label for="fbPreparedTitle">Название</label><input id="fbPreparedTitle" type="text" readonly value="ANDRIK METAL — Стрим 24/7 🔴 Epic Heavy Metal Radio"></div><button class="btn" id="fbCopyTitle" type="button" style="width:100%;margin-top:8px">📋 КОПИРОВАТЬ НАЗВАНИЕ</button><div class="field"><label for="fbPreparedDescription">Описание</label><textarea id="fbPreparedDescription" readonly style="width:100%;min-height:132px;border:1px solid #38556f;border-radius:13px;background:#0d1924;color:#fff;padding:12px;font:inherit;font-size:13px;resize:vertical">Официальный эфир ANDRIK 24/7.
-Modern Epic Heavy Metal • альбомы • синглы • клипы • extended versions.
-🎸 Женский мелодичный вокал • мощный бас • оркестр • атмосферный metal.</textarea></div><button class="btn" id="fbCopyDescription" type="button" style="width:100%;margin-top:8px">📋 КОПИРОВАТЬ ОПИСАНИЕ</button></div><div class="msg" id="fbMetaMsg">ℹ️ Ключ RTMPS передаёт видео и звук, но сам по себе не заполняет поля публикации Facebook. Поэтому здесь сделал готовое копирование в один тап.</div></section>
+<section class="card"><div class="card-head"><div><h2>Название и описание Facebook LIVE</h2><p>Подготовлено заранее. Перед первым Go Live вставь эти поля в Facebook Live Producer.</p></div><span class="badge">READY</span></div><div class="secretbox"><div class="field"><label for="fbPreparedTitle">Название</label><input id="fbPreparedTitle" type="text" readonly value="🔴 HEAVY METAL RADIO — LIVE 24/7 🔥 | Epic Metal • Female Vocals | ANDRIK"></div><button class="btn" id="fbCopyTitle" type="button" style="width:100%;margin-top:8px">📋 КОПИРОВАТЬ НАЗВАНИЕ</button><div class="field"><label for="fbPreparedDescription">Описание</label><textarea id="fbPreparedDescription" readonly style="width:100%;min-height:132px;border:1px solid #38556f;border-radius:13px;background:#0d1924;color:#fff;padding:12px;font:inherit;font-size:13px;resize:vertical">8 часов музыки ANDRIK — Modern Epic Heavy Metal, Heavy Metal, Thrash Metal, атмосферный рок и экспериментальный metal sound.
+
+В эфире: ⚡ официальные альбомы ANDRIK
+🔥 тяжёлые гитарные риффы и мощный бас
+🎸 мелодичные соло
+🎤 женский вокал, growl и scream
+🌌 атмосферные синты и оркестровые элементы
+🎬 клипы, специальные вставки и редкие версии треков
+Музыка о сознании, свободе, жизни, внутренней тишине, иллюзиях и поиске себя.
+
+🌐 Official website: https://andrikmetal.com
+
+Если музыка зацепила — поставь 👍, подпишись и заходи в эфир снова.
+ANDRIK METAL RADIO — музыка без остановки.
+
+#ANDRIK #ANDRIKMETAL #HeavyMetal #MetalRadio #EpicMetal #FemaleMetal #MetalMusic #LiveRadio</textarea></div><button class="btn" id="fbCopyDescription" type="button" style="width:100%;margin-top:8px">📋 КОПИРОВАТЬ ОПИСАНИЕ</button></div><div class="msg" id="fbMetaMsg">ℹ️ Ключ RTMPS передаёт видео и звук, но сам по себе не заполняет поля публикации Facebook. Поэтому здесь сделал готовое копирование в один тап.</div></section>
 
 <section class="card"><div class="card-head"><div><h2>Ручное управление</h2><p>START сначала подтягивает последний сохранённый ключ на VPS, проверяет независимый R1356 relay и только затем запускает Facebook. STOP выключает только Facebook FFmpeg.</p></div><span class="badge">ISOLATED</span></div><div class="actions"><button class="btn primary" id="fbStart" type="button">▶ ЗАПУСТИТЬ FACEBOOK</button><button class="btn stop" id="fbStop" type="button">■ ОСТАНОВИТЬ FACEBOOK</button></div><a class="btn" href="https://www.facebook.com/live/producer/" target="_blank" rel="noopener" style="margin-top:10px">Открыть Facebook Live Producer ↗</a><div class="msg" id="fbActionMsg">Facebook branch по умолчанию OFF после перезапуска радио.</div></section>
 
