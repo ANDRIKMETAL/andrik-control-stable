@@ -19278,6 +19278,26 @@ const VPS_DR_KEYS_R1033 = [
 {key:'DR/ANDRIK-BOOTSTRAP-FINAL.sh',kind:'bootstrap',label:'BOOTSTRAP · CLEAN UBUNTU'},
 {key:'vps-backups/ANDRIK-TRANSFER-2026-09-17.tar.gz',kind:'transfer',label:'TRANSFER'}
 ];
+const RADIO_R2_GOLD_R1265 = Object.freeze({
+archiveKey:'DR/ANDRIK-GOLD-COMPACT-20261007T193449Z.tar.gz',
+shaKey:'DR/ANDRIK-GOLD-COMPACT-20261007T193449Z.tar.gz.sha256',
+sha256:'3f9fa3ae4835929bd91373df4739feabef5d1791328f7ab2ffd4ea432861184d',
+size:220778994
+});
+async function handleRadioAgentGoldR1265(request,env){
+if(!await radioAgentAuthorizedR627(request,env))return json({ok:false,error:'unauthorized-agent'},401);
+const bucket=env.BACKUP_BUCKET||env.BACKUPS||env.ANDRIK_BACKUPS||null;
+if(!bucket)return json({ok:false,error:'backup-bucket-not-configured'},503);
+const part=String(new URL(request.url).searchParams.get('part')||'archive').trim().toLowerCase();
+const key=part==='sha256'?RADIO_R2_GOLD_R1265.shaKey:part==='archive'?RADIO_R2_GOLD_R1265.archiveKey:'';
+if(!key)return json({ok:false,error:'invalid-gold-part',allowed:['archive','sha256']},400);
+const head=await bucket.head(key).catch(()=>null);
+if(!head)return json({ok:false,error:'r2-gold-not-found',key},404);
+if(part==='archive'&&Number(head.size||0)!==RADIO_R2_GOLD_R1265.size)return json({ok:false,error:'r2-gold-size-mismatch',expected:RADIO_R2_GOLD_R1265.size,actual:Number(head.size||0)},409);
+if(request.method==='HEAD')return new Response(null,{status:200,headers:{'content-length':String(head.size||0),'cache-control':'private, no-store','x-andrik-gold-sha256':RADIO_R2_GOLD_R1265.sha256,'x-andrik-gold-key':key}});
+const object=await bucket.get(key).catch(()=>null);if(!object)return json({ok:false,error:'r2-gold-not-found',key},404);
+return new Response(object.body,{status:200,headers:{'content-type':part==='sha256'?'text/plain; charset=utf-8':'application/gzip','content-length':String(object.size||head.size||0),'content-disposition':`attachment; filename="${key.split('/').pop()}"`,'cache-control':'private, no-store','x-content-type-options':'nosniff','x-andrik-gold-sha256':RADIO_R2_GOLD_R1265.sha256,'x-andrik-gold-key':key}});
+}
 async function handleVpsBackupSetR1033(request,env){
 if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
 const musicBucket=getMusicBucketR314(env);
@@ -19866,7 +19886,8 @@ if(!agent.tokenHash)return json({ok:false,error:'aws-agent-not-paired'},409);
 const existing=parseStateValueR627(await getPushState(db,RADIO_REMOTE_R627.commandKey).catch(()=>null));
 if(existing&&['queued','running'].includes(String(existing.state||''))){
 const age=Date.now()-(Date.parse(existing.createdAt||'')||Date.now());
-if(age<180000)return json({ok:false,error:'command-busy',command:existing},409);
+const busyLimit=String(existing.action||'')==='gold-restore'?900000:180000;
+if(age<busyLimit)return json({ok:false,error:'command-busy',command:existing},409);
 }
 const id=crypto.randomUUID();
 const command={id,action,state:'queued',createdAt:new Date().toISOString(),requestedBy:'owner-control-r989',...((action==='visual-now'||action==='visual-next')?{slot}:{}),...(action==='queue-move'?{offset:Math.max(0,Math.min(5,Number(body.offset)||0)),direction:['up','down','next'].includes(String(body.direction||'').toLowerCase())?String(body.direction).toLowerCase():'up',itemId:cleanPlainText(body.itemId||'',220)}:{}),...(action==='track-remove'?{key:trackKeyR966,title:cleanPlainText(body.title||'',180)}:{}),...(action==='queue-pick-r989'?{mediaType:mediaTypeR989,key:mediaKeyR989,title:cleanPlainText(body.title||'',180)}:{}),...(action==='audio-delay'?{delayMs:audioDelayMsR949}:{}),...(action==='tiktok-schedule-r1305'?{enabled:tiktokScheduleEnabledR1305,start:tiktokScheduleStartR1305,end:tiktokScheduleEndR1305}:{}),...(action==='host-start-r1319'?{targets:hostTargetsR1319,duck:hostDuckR1319}:{})};
@@ -20070,6 +20091,7 @@ if (path === '/api/control/radio-remote-r627/command' && request.method === 'POS
 if (path === '/api/control/radio-remote-r627/ticker' && request.method === 'POST') return await handleRadioRemoteTickerR629(request, env);
 if (path === '/api/radio-agent-r627/pair/consume' && request.method === 'POST') return await handleRadioAgentPairConsumeR627(request, env);
 if (path === '/api/radio-agent-r627/poll' && request.method === 'POST') return await handleRadioAgentPollR627(request, env);
+if (path === '/api/radio-agent-r1265/gold' && (request.method === 'GET' || request.method === 'HEAD')) return await handleRadioAgentGoldR1265(request, env);
 if (path === '/api/control/radio-host-r1253/chunk' && request.method === 'POST') return await handleControlHostChunkR1253(request, env);
 if (path === '/api/radio-agent-r1253/host-chunk' && (request.method === 'GET' || request.method === 'DELETE')) return await handleAgentHostChunkR1253(request, env);
 if (path === '/api/radio-agent-r1253/host-cleanup' && request.method === 'DELETE') return await handleAgentHostCleanupR1253(request, env);

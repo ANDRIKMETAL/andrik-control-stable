@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r358-deploy-nohang",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1791400796413-60ee621008",
-  "release": "R1264",
-  "archiveName": "ANDRIK-SITE-R1264-FULLSCREEN-YOUTUBE-FACEBOOK-HOST.zip",
-  "sourceHead": "08f09c99b39e5eb25c79dd07cd97dbd6d23b92c8",
-  "backupSha": "08f09c99b39e5eb25c79dd07cd97dbd6d23b92c8",
+  "operationId": "publish-1791404769587-10802082f8",
+  "release": "R1265",
+  "archiveName": "ANDRIK-SITE-R1265-R2-GOLD-RESTORE-2.zip",
+  "sourceHead": "68a067f2cd8e3c3dbf83108f93d55985c4efd8d7",
+  "backupSha": "68a067f2cd8e3c3dbf83108f93d55985c4efd8d7",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-10-07T19:19:58.512Z"
+  "generatedAt": "2026-10-07T20:26:11.040Z"
 }

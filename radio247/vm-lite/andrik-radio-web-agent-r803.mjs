@@ -6,7 +6,7 @@ import {Readable} from 'node:stream';
 import {pipeline} from 'node:stream/promises';
 
 const CONFIG='/etc/andrik-radio-web-r627.json';
-const AGENT_VERSION_R803='R1264-FULLSCREEN-CONTROL+R1263-FACEBOOK-SYNC+R1356-RELAY-AWARE+R1319-HOST-PUMP+R1307-TIKTOK-INGEST';
+const AGENT_VERSION_R803='R1265-R2-GOLD-RESTORE+R1264-FULLSCREEN-CONTROL+R1263-FACEBOOK-SYNC+R1356-RELAY-AWARE+R1319-HOST-PUMP+R1307-TIKTOK-INGEST';
 const DIAG_DIR_R803='/var/cache/andrik-radio-r622/diagnostics';
 const DIAG_AGENT_LOG_R803=DIAG_DIR_R803+'/r803-agent-events.ndjson';
 const DIAG_AGENT_MAX_BYTES_R803=1024*1024;
@@ -20,6 +20,10 @@ const RADIO_ENV='/etc/andrik-radio.env';
 const VISUAL_MANUAL_MARKER='/var/cache/andrik-radio-r622/visuals/.manual-visual-r658';
 const VISUAL_AUTO_R658='/usr/local/sbin/andrik-visual-auto-r703';
 const AIR_RESTORE_R925='/usr/local/sbin/andrik-radio-air-restore-r925';
+const R2_GOLD_RESTORE_R1265='/usr/local/sbin/andrik-radio-r2-gold-restore-r1265';
+const R2_GOLD_ARCHIVE_R1265='ANDRIK-GOLD-COMPACT-20261007T193449Z.tar.gz';
+const R2_GOLD_SHA256_R1265='3f9fa3ae4835929bd91373df4739feabef5d1791328f7ab2ffd4ea432861184d';
+const R2_GOLD_WORKDIR_R1265='/var/cache/andrik-radio-r622/gold-restore-r1265';
 const SCREEN_RESTORE_R926='/usr/local/sbin/andrik-radio-screen-restore-r926';
 const FULLSCREEN_R1383='/usr/local/sbin/andrik-radio-fullscreen-r1383';
 const SAFE_CACHE_CLEAN_R867='/usr/local/sbin/andrik-radio-safe-cache-clean-r867';
@@ -565,6 +569,34 @@ async function downloadVisualR650(slot,headers,{force=false}={}){
   }catch(e){try{fs.unlinkSync(tmp)}catch(_){}throw e;}
 }
 async function syncVisualsR650(headers){const out=[];for(const slot of ['morning','day','evening','night'])out.push(await downloadVisualR650(slot,headers,{force:false}));return out;}
+async function downloadR2GoldR1265(headers){
+  fs.mkdirSync(R2_GOLD_WORKDIR_R1265,{recursive:true});
+  const archive=`${R2_GOLD_WORKDIR_R1265}/${R2_GOLD_ARCHIVE_R1265}`;
+  const tmp=`${archive}.part-${process.pid}-${Date.now()}`;
+  const shaUrl=`${BASE}/api/radio-agent-r1265/gold?part=sha256`;
+  const archiveUrl=`${BASE}/api/radio-agent-r1265/gold?part=archive`;
+  const common={authorization:headers.authorization,'user-agent':'ANDRIK-Radio-Web-Agent-R1265'};
+  let remoteSha='';
+  try{
+    const sr=await fetch(shaUrl,{headers:common,signal:AbortSignal.timeout(30000)});
+    if(!sr.ok)throw new Error(`R2 GOLD SHA HTTP ${sr.status}`);
+    const shaText=await sr.text();
+    remoteSha=(shaText.match(/\b[0-9a-f]{64}\b/i)||[])[0]?.toLowerCase()||'';
+    if(remoteSha!==R2_GOLD_SHA256_R1265)throw new Error(`R2 GOLD SHA unexpected: ${remoteSha||'missing'}`);
+    const r=await fetch(archiveUrl,{headers:common,signal:AbortSignal.timeout(420000)});
+    if(!r.ok)throw new Error(`R2 GOLD archive HTTP ${r.status}`);
+    if(!r.body)throw new Error('R2 GOLD archive empty body');
+    await pipeline(Readable.fromWeb(r.body),fs.createWriteStream(tmp,{mode:0o600}));
+    const st=fs.statSync(tmp);
+    if(st.size<100*1024*1024)throw new Error(`R2 GOLD archive too small (${st.size})`);
+    const vr=run('sha256sum',[tmp],120000);
+    if(!vr.ok)throw new Error(`sha256sum failed: ${vr.output}`);
+    const localSha=String(vr.output||'').trim().split(/\s+/)[0]?.toLowerCase()||'';
+    if(localSha!==R2_GOLD_SHA256_R1265)throw new Error(`downloaded GOLD SHA mismatch: ${localSha||'missing'}`);
+    fs.renameSync(tmp,archive);
+    return {archive,sha256:localSha,size:st.size};
+  }catch(e){try{fs.unlinkSync(tmp)}catch(_){}throw e;}
+}
 async function execute(action,command={},headers={}){
   // R665 OVH-native control. No /usr/local/sbin/andrik-youtube dependency.
   if(action==='encoder-stop'||action==='stop'){
@@ -576,9 +608,14 @@ async function execute(action,command={},headers={}){
     return {ok:r.ok,output:`OVH ENCODER START ${r.ok?'✅':'❌'}\n${r.output}`};
   }
   if(action==='gold-restore'){
-    if(!fs.existsSync(AIR_RESTORE_R925))return {ok:false,output:`ВОССТАНОВИТЬ ЭФИР ❌\nMissing ${AIR_RESTORE_R925}`};
-    const r=await runAsync(AIR_RESTORE_R925,[],210000);
-    return {ok:r.ok,output:`ВОССТАНОВИТЬ ЭФИР ${r.ok?'✅':'❌'}\n${r.output}`};
+    if(!fs.existsSync(R2_GOLD_RESTORE_R1265))return {ok:false,output:`R2 GOLD RESTORE ❌\nMissing ${R2_GOLD_RESTORE_R1265}`};
+    let pack=null;
+    try{
+      pack=await downloadR2GoldR1265(headers);
+      const r=await runAsync(R2_GOLD_RESTORE_R1265,[pack.archive,pack.sha256],720000);
+      return {ok:r.ok,output:`R2 COMPACT GOLD ${r.ok?'✅':'❌'}\n${R2_GOLD_ARCHIVE_R1265}\nSHA256 ${pack.sha256}\n${r.output}`};
+    }catch(e){return {ok:false,output:`R2 COMPACT GOLD ❌\n${e?.message||e}`};}
+    finally{if(pack?.archive){try{fs.unlinkSync(pack.archive)}catch(_){}}}
   }
   if(action==='screen-restore'){
     if(!fs.existsSync(SCREEN_RESTORE_R926))return {ok:false,output:`ВОССТАНОВИТЬ ЭКРАН ❌\nMissing ${SCREEN_RESTORE_R926}`};

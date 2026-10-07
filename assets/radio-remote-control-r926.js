@@ -27,6 +27,7 @@ function hasR867Agent(data=lastRemote){return agentNumber(data)>=867}
 function hasR926Agent(data=lastRemote){return agentNumber(data)>=926}
 function hasR1098Agent(data=lastRemote){return agentNumber(data)>=1098}
 function hasR1264Agent(data=lastRemote){return agentNumber(data)>=1264}
+function hasR1265Agent(data=lastRemote){return agentNumber(data)>=1265}
 function humanBytesR1015(v){const n=Math.max(0,Number(v)||0),g=1024**3,m=1024**2;if(n>=g)return `${Math.round(n/g)}G`;if(n>=m)return `${Math.round(n/m)}M`;return `${Math.round(n/1024)}K`}
 const mp3R1219=x=>/\.mp3(?:$|\?)/i.test(String(x?.url||x?.key||''));
 const slugR1219=x=>{const pa=String(x?.pickerAlbum||'').toLowerCase();if(pa)return pa;const m=String(x?.key||'').toLowerCase().match(/^albums\/([^/]+)\//);return m?m[1]:''};
@@ -108,17 +109,19 @@ const commandState=String(cmd?.state||'');
 const commandStarted=Date.parse(cmd?.claimedAt||cmd?.createdAt||'')||0;
 const commandAge=commandStarted?Date.now()-commandStarted:0;
 const activeRaw=!legacyFullFit&&['queued','running'].includes(commandState);
-const active=activeRaw&&commandAge<185000;
-const stale=activeRaw&&commandAge>=185000;
-const r867Only=new Set(['gold-restore','cache-clean','soft-restart']);
+const activeLimit=String(cmd?.action||'')==='gold-restore'?780000:185000;
+const active=activeRaw&&commandAge<activeLimit;
+const stale=activeRaw&&commandAge>=activeLimit;
+const r867Only=new Set(['cache-clean','soft-restart']);
 const r926Only=new Set(['screen-restore']);
 const r1098Only=new Set(['loudness-new-r1098']);
 const r1264Only=new Set(['fullscreen-r1383']);
+const r1265Only=new Set(['gold-restore']);
 document.querySelectorAll('[data-radio-action]').forEach(b=>{
 const action=String(b.dataset.radioAction||'');
-const needsR867=r867Only.has(action),needsR926=r926Only.has(action),needsR1098=r1098Only.has(action),needsR1264=r1264Only.has(action);
-b.disabled=busy||active||!online||(needsR867&&!hasR867Agent(data))||(needsR926&&!hasR926Agent(data))||(needsR1098&&!hasR1098Agent(data))||(needsR1264&&!hasR1264Agent(data));
-b.title=!online?'OVH Agent offline':needsR1264&&!hasR1264Agent(data)?'Нужен OVH Agent R1264+':needsR1098&&!hasR1098Agent(data)?'Нужен OVH Agent R1098+ (R1138 рекомендуется)':needsR926&&!hasR926Agent(data)?'Нужен OVH Agent R926+':needsR867&&!hasR867Agent(data)?'Нужен OVH Agent R867+':' ';
+const needsR867=r867Only.has(action),needsR926=r926Only.has(action),needsR1098=r1098Only.has(action),needsR1264=r1264Only.has(action),needsR1265=r1265Only.has(action);
+b.disabled=busy||active||!online||(needsR867&&!hasR867Agent(data))||(needsR926&&!hasR926Agent(data))||(needsR1098&&!hasR1098Agent(data))||(needsR1264&&!hasR1264Agent(data))||(needsR1265&&!hasR1265Agent(data));
+b.title=!online?'OVH Agent offline':needsR1265&&!hasR1265Agent(data)?'Нужен OVH Agent R1265+ для R2 Compact GOLD':needsR1264&&!hasR1264Agent(data)?'Нужен OVH Agent R1264+':needsR1098&&!hasR1098Agent(data)?'Нужен OVH Agent R1098+ (R1138 рекомендуется)':needsR926&&!hasR926Agent(data)?'Нужен OVH Agent R926+':needsR867&&!hasR867Agent(data)?'Нужен OVH Agent R867+':' ';
 });
 document.querySelectorAll('[data-radio-command-state]').forEach(el=>{
 el.textContent=stale?`⚠ ${cmd.action||'команда'} зависла — управление разблокировано`:active?`OVH: ${cmd.action} · ${cmd.state==='queued'?'в очереди':'выполняется…'}`:res?.finishedAt?`${res.ok?'✅':'❌'} ${res.action||''} · ${fmt(res.finishedAt)}`:'Готов к команде';
@@ -138,7 +141,8 @@ catch(e){setMsg(e.status===401?'Нужен вход владельца.':`OVH с
 }
 async function waitAgent(action,createdAt,id){
 const createdMs=Date.parse(createdAt||'')||Date.now();
-const until=Date.now()+105000;
+const timeoutMs=action==='gold-restore'?720000:105000;
+const until=Date.now()+timeoutMs;
 while(Date.now()<until){
 await sleep(1700);
 const d=await refresh();if(!d)continue;
@@ -150,7 +154,7 @@ return d;
 }
 if(c.id===id&&['queued','running'].includes(String(c.state||'')))continue;
 }
-throw new Error(`OVH не завершил ${action} за 105 сек.`);
+throw new Error(`OVH не завершил ${action} за ${Math.round(timeoutMs/1000)} сек.`);
 }
 async function agentAction(action){
 const d=await api('/api/control/radio-remote-r627/command',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action})});
@@ -386,13 +390,13 @@ setMsg('Кэш заставок очищен ✅ · эфир не перезап
 finally{busy=false;await refresh()}
 }
 async function airRestore(){
-if(busy)return;if(!confirm('🚑 GOLD CORE: восстановить server.mjs из /opt/andrik-radio/GOLD/GOLD-CURRENT? Текущий server.mjs будет сохранён; radio service перезапустится один раз. Control/Agent/Loudness не откатываются.'))return;
+if(busy)return;if(!confirm('🚑 R2 COMPACT GOLD: восстановить рабочий ANDRIK из Cloudflare R2?\n\nБудет использован ANDRIK-GOLD-COMPACT-20261007T193449Z.tar.gz. SHA256 проверяется ДО распаковки. /var/cache/andrik-radio-r622 с музыкой, клипами и визуалами НЕ удаляется. Radio service будет остановлен и поднят снова.'))return;
 busy=true;render(lastRemote||{});
 try{
-setMsg('🚑 Восстанавливаю radio core из GOLD-CURRENT…','work');
+setMsg('🚑 Скачиваю и проверяю Compact GOLD из R2…','work');
 const d=await agentAction('gold-restore');
-setResult(String(d?.result?.output||'ЭФИР ВОССТАНОВЛЕН ✅'));
-setMsg('Эфир восстановлен ✅ · жду стабильный сигнал…','ok');
+setResult(String(d?.result?.output||'R2 COMPACT GOLD ВОССТАНОВЛЕН ✅'));
+setMsg('R2 Compact GOLD восстановлен ✅ · жду стабильный сигнал…','ok');
 await sleep(5000);
 await refresh();
 }catch(e){setMsg(`Восстановление эфира: ${e.message||e}`,'bad');setResult(`AIR RESTORE ERROR\n${e.message||e}`)}

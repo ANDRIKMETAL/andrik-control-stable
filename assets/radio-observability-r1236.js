@@ -129,7 +129,7 @@ if(ey)ey.textContent='ANDRIK RADIO CONTROL · R1138 SAFE OPS · RTMPS 2/2';
 const gold=document.querySelector('[data-radio-action="gold-restore"]');
 if(gold){
 gold.textContent='🚑 GOLD CORE · ВОССТАНОВИТЬ';
-gold.title='Восстанавливает только radio server.mjs из /opt/andrik-radio/GOLD/GOLD-CURRENT. Текущий server.mjs сохраняется, radio service перезапускается один раз.';
+gold.title='R1265: скачивает Compact GOLD 07.10.2026 из приватного Cloudflare R2, сверяет SHA256 и восстанавливает /opt/andrik-radio + systemd + /usr/local/sbin. Рабочий media cache /var/cache не трогается.';
 }
 const start=document.querySelector('[data-radio-action="start"]');
 if(start)start.title='Ручной запуск. Использовать только когда эфир действительно остановлен.';
@@ -324,15 +324,15 @@ if(!r.ok){const e=new Error(d.message||d.error||`HTTP ${r.status}`);e.data=d;e.s
 function setRemoteMessage(text,kind=''){document.querySelectorAll('[data-radio-remote-message]').forEach(el=>{el.textContent=text;el.dataset.kind=kind})}
 function setRemoteResult(text){document.querySelectorAll('[data-radio-result]').forEach(el=>el.textContent=String(text||'').trim())}
 async function runAgentActionR870(action){
-const d=await api(COMMAND_API,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action})});const c=d.command||{};const createdMs=Date.parse(c.createdAt||'')||Date.now();const until=Date.now()+140000;
+const d=await api(COMMAND_API,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action})});const c=d.command||{};const createdMs=Date.parse(c.createdAt||'')||Date.now();const timeoutMs=action==='gold-restore'?720000:140000;const until=Date.now()+timeoutMs;
 while(Date.now()<until){await sleep(1700);const st=await api(STATUS_API);const r=st.result||{},cmd=st.command||{};const done=Date.parse(r.finishedAt||'')||0;if(r.action===action&&done>=createdMs-1500){if(!r.ok)throw new Error(String(r.output||`${action} failed`).trim());return {status:st,result:r}};if(cmd.id===c.id&&['queued','running'].includes(String(cmd.state||'')))continue}
-throw new Error(`OVH не завершил ${action} за 140 секунд.`);
+throw new Error(`OVH не завершил ${action} за ${Math.round(timeoutMs/1000)} секунд.`);
 }
 async function safeGoldRestoreR870(){
 if(safeGoldBusy)return;
-if(!confirm('🚑 GOLD CORE: восстановить server.mjs из /opt/andrik-radio/GOLD/GOLD-CURRENT?\n\nТекущий server.mjs будет сохранён. Control/Agent/Loudness не откатываются. Radio service перезапустится один раз.'))return;
-safeGoldBusy=true;const b=document.querySelector('[data-radio-action="gold-restore"]');const old=b?.textContent||'';if(b){b.disabled=true;b.textContent='🚑 ВОССТАНАВЛИВАЮ…'};setRemoteMessage('🚑 Восстанавливаю radio core из GOLD-CURRENT…','work');
-try{const d=await runAgentActionR870('gold-restore');setRemoteResult(`${String(d.result?.output||'GOLD CORE RESTORE ✅')}\n\nR1138 SAFE OPS: control-agent и loudness не откатываются; при ошибке helper возвращает предыдущий server.mjs.`);setRemoteMessage('GOLD восстановлен ✅ · проверяю статус OVH','ok');await sleep(3500);await window.AndrikRadioRemoteR867?.refresh?.().catch?.(()=>{});await refresh(false)}
+if(!confirm('🚑 R2 COMPACT GOLD: восстановить рабочий ANDRIK из Cloudflare R2?\n\nФайл: ANDRIK-GOLD-COMPACT-20261007T193449Z.tar.gz\nSHA256 проверяется до распаковки.\n\nВосстанавливаются /opt/andrik-radio, systemd и /usr/local/sbin. Рабочий /var/cache/andrik-radio-r622 с MP3, клипами и визуалами НЕ трогается. Radio service будет перезапущен.'))return;
+safeGoldBusy=true;const b=document.querySelector('[data-radio-action="gold-restore"]');const old=b?.textContent||'';if(b){b.disabled=true;b.textContent='🚑 R2 GOLD…'};setRemoteMessage('🚑 Скачиваю Compact GOLD из R2 · проверяю SHA256…','work');
+try{const d=await runAgentActionR870('gold-restore');setRemoteResult(`${String(d.result?.output||'R2 COMPACT GOLD RESTORE ✅')}\n\nR1265 SAFE: media cache /var/cache сохранён; web-agent остаётся вне GOLD; helper делает preflight и защитный снимок перед распаковкой.`);setRemoteMessage('R2 Compact GOLD восстановлен ✅ · проверяю статус OVH','ok');await sleep(3500);await window.AndrikRadioRemoteR867?.refresh?.().catch?.(()=>{});await refresh(false)}
 catch(e){setRemoteResult(`GOLD RESTORE ERROR\n${e.message||e}`);setRemoteMessage(`GOLD restore: ${e.message||e}`,'bad')}
 finally{safeGoldBusy=false;if(b){b.disabled=false;b.textContent=old||'🚑 GOLD CORE · ВОССТАНОВИТЬ'}}
 }

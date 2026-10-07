@@ -1,0 +1,91 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+ARCHIVE="${1:-}"
+EXPECTED_SHA="${2:-}"
+SERVICE='andrik-radio.service'
+SAFE='/root/ANDRIK-SAFE'
+STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
+BACK="$SAFE/BEFORE-R1265-R2-GOLD-$STAMP"
+LIVE='/opt/andrik-radio/radio247/server.mjs'
+UNIT='/etc/systemd/system/andrik-radio.service'
+
+fail(){ echo "❌ $*" >&2; exit 1; }
+
+[ "$EUID" -eq 0 ] || fail 'R1265 restore helper must run as root'
+[ -n "$ARCHIVE" ] && [ -s "$ARCHIVE" ] || fail "GOLD archive missing: $ARCHIVE"
+[[ "$EXPECTED_SHA" =~ ^[0-9a-fA-F]{64}$ ]] || fail 'invalid expected SHA256'
+
+ACTUAL_SHA="$(sha256sum "$ARCHIVE" | awk '{print $1}')"
+[ "${ACTUAL_SHA,,}" = "${EXPECTED_SHA,,}" ] || fail "SHA256 mismatch: expected $EXPECTED_SHA got $ACTUAL_SHA"
+
+echo '=========================================================='
+echo ' ANDRIK R1265 · R2 COMPACT GOLD RESTORE'
+echo ' R2 archive verified · media cache preserved'
+echo '=========================================================='
+echo "✅ SHA256: $ACTUAL_SHA"
+
+LIST="$(mktemp /tmp/andrik-r1265-list.XXXXXX)"
+CHECK_SERVER="$(mktemp /tmp/andrik-r1265-server.XXXXXX.mjs)"
+cleanup(){ rm -f "$LIST" "$CHECK_SERVER"; }
+trap cleanup EXIT
+
+tar -tzf "$ARCHIVE" > "$LIST"
+[ -s "$LIST" ] || fail 'archive is empty'
+
+# Refuse absolute paths, traversal, or anything outside the three intentionally backed-up trees.
+if grep -Eq '(^/|(^|/)\.\.(/|$))' "$LIST"; then fail 'unsafe path found in archive'; fi
+if grep -Ev '^(opt/andrik-radio(/|$)|etc/systemd/system(/|$)|usr/local/sbin(/|$))' "$LIST" | grep -q .; then
+  echo '❌ Archive contains paths outside the approved GOLD scope:' >&2
+  grep -Ev '^(opt/andrik-radio(/|$)|etc/systemd/system(/|$)|usr/local/sbin(/|$))' "$LIST" | head -n 20 >&2
+  exit 2
+fi
+
+grep -Fxq 'opt/andrik-radio/radio247/server.mjs' "$LIST" || fail 'radio247/server.mjs absent from GOLD'
+tar -xOf "$ARCHIVE" opt/andrik-radio/radio247/server.mjs > "$CHECK_SERVER"
+node --check "$CHECK_SERVER" >/dev/null
+
+echo '✅ Archive scope + server syntax verified'
+mkdir -p "$BACK"
+[ -s "$LIVE" ] && cp -a "$LIVE" "$BACK/server.mjs.before" || true
+[ -e "$UNIT" ] && cp -a "$UNIT" "$BACK/andrik-radio.service.before" || true
+for f in /usr/local/sbin/andrik-fullscreen-visual-r974 /usr/local/sbin/andrik-r1383-global-hard-fullscreen /usr/local/sbin/andrik-radio-fullscreen-r1383; do
+  [ -e "$f" ] && cp -a "$f" "$BACK/$(basename "$f").before" || true
+done
+
+echo "✅ Safety snapshot: $BACK"
+echo '⏹ Stopping radio service…'
+systemctl stop "$SERVICE" || true
+
+rollback(){
+  echo '↩️ R1265 rollback: restoring pre-restore radio core'
+  [ -s "$BACK/server.mjs.before" ] && install -o root -g root -m0644 "$BACK/server.mjs.before" "$LIVE" || true
+  [ -e "$BACK/andrik-radio.service.before" ] && cp -a "$BACK/andrik-radio.service.before" "$UNIT" || true
+  systemctl daemon-reload || true
+  systemctl restart "$SERVICE" || true
+}
+trap 'rc=$?; if [ $rc -ne 0 ]; then rollback; fi; cleanup; exit $rc' EXIT
+
+echo '📦 Restoring compact GOLD into / …'
+tar -xzf "$ARCHIVE" -C / --no-same-owner
+
+node --check "$LIVE" >/dev/null
+systemctl daemon-reload
+systemctl restart "$SERVICE"
+sleep 12
+
+STATE="$(systemctl is-active "$SERVICE" 2>/dev/null || true)"
+[ "$STATE" = 'active' ] || fail "radio service did not return active (state=$STATE)"
+PID="$(systemctl show "$SERVICE" -p MainPID --value 2>/dev/null || true)"
+[ -n "$PID" ] && [ "$PID" != '0' ] || fail 'radio MainPID is empty after restore'
+
+trap - EXIT
+cleanup
+
+echo '=========================================================='
+echo '✅ R2 COMPACT GOLD RESTORED'
+echo "✅ radio: active · PID $PID"
+echo '✅ /var/cache/andrik-radio-r622 was NOT touched'
+echo '✅ web-agent remains outside GOLD archive and stays online'
+echo "✅ rollback snapshot: $BACK"
+echo '=========================================================='
