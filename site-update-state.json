@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r358-deploy-nohang",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1791284273251-cf8af0c84e",
-  "release": "R1262",
-  "archiveName": "ANDRIK-SITE-R1262-STUDIO-MENU-SERVER-VAULT-SPOILER.zip",
-  "sourceHead": "f1d216a22c4d75cef94f64bec7cb7046419a66bf",
-  "backupSha": "f1d216a22c4d75cef94f64bec7cb7046419a66bf",
+  "operationId": "publish-1791366212552-30021b4d57",
+  "release": "R1263",
+  "archiveName": "ANDRIK-SITE-R1263-FACEBOOK-CONTROL-SYNC-R1356.zip",
+  "sourceHead": "697555934b4ce9fd749925c24b4441ad81be7780",
+  "backupSha": "697555934b4ce9fd749925c24b4441ad81be7780",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-10-06T10:57:54.928Z"
+  "generatedAt": "2026-10-07T09:43:34.360Z"
 }

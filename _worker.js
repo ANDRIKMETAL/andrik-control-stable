@@ -19490,7 +19490,7 @@ async function handleControlFacebookIngestR1250(request,env){
 async function handleRadioAgentFacebookBootstrapR1250(request,env){
   if(!await radioAgentAuthorizedR627(request,env))return json({ok:false,error:'unauthorized-agent'},401);
   const stored=await storedFacebookTargetR1250(env);
-  return json({ok:true,configured:Boolean(stored.configured),target:stored.configured?stored.target:'',source:stored.source},200,{'cache-control':'no-store, no-cache, must-revalidate','pragma':'no-cache','expires':'0'});
+  return json({ok:true,configured:Boolean(stored.configured),target:stored.configured?stored.target:'',source:stored.source,updatedAt:stored.updatedAt||null},200,{'cache-control':'no-store, no-cache, must-revalidate','pragma':'no-cache','expires':'0'});
 }
 
 // R1305-TIKTOK-SCHEDULE: paired OVH agent may securely fetch an already-stored
@@ -19837,7 +19837,7 @@ if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401
 const db=env.COMMENTS_DB;if(!db)return json({ok:false,error:'database-not-configured'},503);
 const body=await request.json().catch(()=>({}));
 const action=String(body.action||'').trim().toLowerCase();
-const allowed=new Set(['start','recover','stop','restart','encoder-start','encoder-stop','soft-restart','gold-restore','screen-restore','cache-clean','status','auto-safe','full-fit','visual-sync','visual-now','visual-next','visual-auto','queue-move','audio-delay','track-remove','load-r988','queue-pick-r989','cleanup-r1026','loudness-new-r1098','tiktok-start-r1303','tiktok-stop-r1303','tiktok-schedule-r1305','tiktok-ingest-refresh-r1307','facebook-start-r1313','facebook-stop-r1313','facebook-start-r1319','facebook-stop-r1319','host-start-r1319','host-stop-r1319','host-status-r1319']);
+const allowed=new Set(['start','recover','stop','restart','encoder-start','encoder-stop','soft-restart','gold-restore','screen-restore','cache-clean','status','auto-safe','full-fit','visual-sync','visual-now','visual-next','visual-auto','queue-move','audio-delay','track-remove','load-r988','queue-pick-r989','cleanup-r1026','loudness-new-r1098','tiktok-start-r1303','tiktok-stop-r1303','tiktok-schedule-r1305','tiktok-ingest-refresh-r1307','facebook-start-r1313','facebook-stop-r1313','facebook-start-r1319','facebook-stop-r1319','facebook-sync-r1263','host-start-r1319','host-stop-r1319','host-status-r1319']);
 if(!allowed.has(action))return json({ok:false,error:'invalid-action'},400);
 const slot=String(body.slot||'').trim().toLowerCase();
 const audioDelayMsR949=Number(body.delayMs);

@@ -6,7 +6,7 @@ import {Readable} from 'node:stream';
 import {pipeline} from 'node:stream/promises';
 
 const CONFIG='/etc/andrik-radio-web-r627.json';
-const AGENT_VERSION_R803='R1319-HOST-PUMP+R1318-FACEBOOK-PERSISTENT+R1307-TIKTOK-INGEST+R1185-WATCHDOG-R1293';
+const AGENT_VERSION_R803='R1263-FACEBOOK-CONTROL-SYNC+R1356-RELAY-AWARE+R1319-HOST-PUMP+R1307-TIKTOK-INGEST';
 const DIAG_DIR_R803='/var/cache/andrik-radio-r622/diagnostics';
 const DIAG_AGENT_LOG_R803=DIAG_DIR_R803+'/r803-agent-events.ndjson';
 const DIAG_AGENT_MAX_BYTES_R803=1024*1024;
@@ -37,6 +37,10 @@ const DEFAULT_TICKER='ANDRIK METAL RADIO 24/7   •   ANDRIKMETAL.COM   •   Н
 const BASE=process.env.ANDRIK_CONTROL_BASE||'https://andrikmetal.com';
 const TIKTOK_ENV_R1304='/etc/andrik-radio-tiktok.env';
 let lastTikTokBootstrapAtR1304=0;
+const FACEBOOK_ENV_R1263='/etc/andrik-radio-facebook.env';
+const FACEBOOK_RELAY_UNIT_R1263='andrik-facebook-relay-r1356.service';
+const FACEBOOK_RELAY_STATUS_R1263='/run/andrik-facebook-relay-r1356.json';
+const FACEBOOK_RELAY_CONSUMER_PORT_R1263=19362;
 
 let hostPumpR1319={active:false,sessionId:'',nextSeq:0,authorization:'',startedAt:0,lastChunkAt:0,bytes:0,chunks:0,lastError:''};
 function stopHostPumpR1319(reason='stop'){
@@ -214,6 +218,56 @@ function readConfig(){migrateConfig();try{return JSON.parse(fs.readFileSync(CONF
 function writeConfig(data){fs.writeFileSync(CONFIG,JSON.stringify(data,null,2)+'\n',{mode:0o600});try{fs.chmodSync(CONFIG,0o600)}catch(_){}}
 async function jsonFetch(url,options={}){const r=await fetch(url,options);const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(clean(d.error||d.message||`HTTP ${r.status}`));return d}
 async function localControlR721(path){return jsonFetch('http://127.0.0.1:8080'+path,{method:'POST',headers:{'content-type':'application/json','user-agent':'ANDRIK-Radio-Web-Agent-R803'}})}
+
+function validateFacebookTargetR1263(value){
+  try{
+    const v=clean(value),u=new URL(v);
+    if(u.protocol!=='rtmps:'||u.hostname.toLowerCase()!=='live-api-s.facebook.com')return false;
+    if(!/^\/rtmp\/FB-/i.test(u.pathname||''))return false;
+    return !/\s/.test(v);
+  }catch(_){return false}
+}
+function persistFacebookTargetR1263(target){
+  const value=clean(target);
+  if(!validateFacebookTargetR1263(value))throw new Error('invalid-facebook-target-from-secure-control');
+  const tmp=FACEBOOK_ENV_R1263+'.tmp-'+process.pid+'-'+Date.now();
+  fs.writeFileSync(tmp,`# ANDRIK R1263 secure Control sync\nFACEBOOK_STREAM_URL=${value}\n`,{mode:0o600});
+  try{
+    if(fs.existsSync(FACEBOOK_ENV_R1263)){
+      const st=fs.statSync(FACEBOOK_ENV_R1263);
+      try{fs.chownSync(tmp,st.uid,st.gid)}catch(_){}
+    }
+    fs.chmodSync(tmp,0o600);
+    fs.renameSync(tmp,FACEBOOK_ENV_R1263);
+    fs.chmodSync(FACEBOOK_ENV_R1263,0o600);
+  }catch(e){try{fs.unlinkSync(tmp)}catch(_){};throw e}
+  return true;
+}
+async function syncFacebookTargetR1263(headers){
+  const d=await jsonFetch(BASE+'/api/radio-agent-r1250/facebook-bootstrap',{method:'GET',headers});
+  if(!d?.configured||!d?.target)throw new Error('Facebook Persistent Stream Key не сохранён в Secure Control');
+  persistFacebookTargetR1263(d.target);
+  appendAgentDiagR803('facebook-r1263-config-synced',{configured:true,source:d.source||'',updatedAt:d.updatedAt||null});
+  return {configured:true,source:d.source||'',updatedAt:d.updatedAt||null};
+}
+function facebookRelayStatusR1263(){
+  let status=null;
+  try{status=JSON.parse(fs.readFileSync(FACEBOOK_RELAY_STATUS_R1263,'utf8'))}catch(_){}
+  const unit=run('systemctl',['is-active',FACEBOOK_RELAY_UNIT_R1263],8000);
+  const sockets=run('ss',['-ltn'],8000).output||'';
+  return {installed:fs.existsSync('/etc/systemd/system/'+FACEBOOK_RELAY_UNIT_R1263),active:unit.ok&&/^active\b/.test(unit.output),consumerListening:sockets.includes('127.0.0.1:'+FACEBOOK_RELAY_CONSUMER_PORT_R1263),producer:Boolean(status?.producer),consumer:Boolean(status?.consumer)};
+}
+async function ensureFacebookRelayR1263(){
+  let r=facebookRelayStatusR1263();
+  if(!r.installed)return r;
+  if(!r.active||!r.consumerListening){
+    const start=await runAsync('systemctl',['start',FACEBOOK_RELAY_UNIT_R1263],20000);
+    if(!start.ok)throw new Error('R1356 relay не запускается: '+start.output);
+    for(let i=0;i<15;i++){await sleep(200);r=facebookRelayStatusR1263();if(r.active&&r.consumerListening)break}
+  }
+  if(!r.active||!r.consumerListening)throw new Error('R1356 relay не готов на 127.0.0.1:19362');
+  return r;
+}
 
 function localTikTokTargetPresentR1304(){
   try{
@@ -615,13 +669,24 @@ ${e.message||e}`};}
     try{const d=await localControlR721('/control/tiktok-stop');return {ok:!Boolean(d?.running),output:`TIKTOK STOP R1303 ${!d?.running?'✅':'❌'}\n${JSON.stringify(d)}`};}
     catch(e){return {ok:false,output:`TIKTOK STOP R1303 ❌\n${e.message||e}`};}
   }
+  if(action==='facebook-sync-r1263'){
+    try{
+      await syncFacebookTargetR1263(headers);
+      const relay=await ensureFacebookRelayR1263();
+      return {ok:true,output:`FACEBOOK CONFIG SYNC R1263 ✅\nVPS env updated · R1356 relay ${relay.installed?(relay.active&&relay.consumerListening?'READY':'CHECK'):'N/A'} · radio NOT restarted · key hidden`};
+    }catch(e){return {ok:false,output:`FACEBOOK CONFIG SYNC R1263 ❌\n${e.message||e}`};}
+  }
   if(['facebook-start-r1313','facebook-start-r1319','facebook-start'].includes(action)){
-    try{const d=await localControlR721('/control/facebook-start');return {ok:Boolean(d?.running),output:`FACEBOOK START R1313 ${d?.running?'✅':'❌'}\n${JSON.stringify(d)}`};}
-    catch(e){return {ok:false,output:`FACEBOOK START R1313 ❌\n${e.message||e}`};}
+    try{
+      await syncFacebookTargetR1263(headers);
+      const relay=await ensureFacebookRelayR1263();
+      const d=await localControlR721('/control/facebook-start');
+      return {ok:Boolean(d?.running),output:`FACEBOOK START R1263 ${d?.running?'✅':'❌'}\nKEY SYNC ✅ · R1356 ${relay.installed?'READY':'N/A'} · RADIO RESTART: NO\n${JSON.stringify(d)}`};
+    }catch(e){return {ok:false,output:`FACEBOOK START R1263 ❌\n${e.message||e}`};}
   }
   if(['facebook-stop-r1313','facebook-stop-r1319','facebook-stop'].includes(action)){
-    try{const d=await localControlR721('/control/facebook-stop');return {ok:!Boolean(d?.running),output:`FACEBOOK STOP R1313 ${!d?.running?'✅':'❌'}\n${JSON.stringify(d)}`};}
-    catch(e){return {ok:false,output:`FACEBOOK STOP R1313 ❌\n${e.message||e}`};}
+    try{const d=await localControlR721('/control/facebook-stop');return {ok:!Boolean(d?.running),output:`FACEBOOK STOP R1263 ${!d?.running?'✅':'❌'}\nR1356 relay remains isolated · YouTube untouched\n${JSON.stringify(d)}`};}
+    catch(e){return {ok:false,output:`FACEBOOK STOP R1263 ❌\n${e.message||e}`};}
   }
   if(action==='host-start-r1319'){
     const targets=Array.isArray(command.targets)?command.targets.join(','):clean(command.targets||'tiktok');
