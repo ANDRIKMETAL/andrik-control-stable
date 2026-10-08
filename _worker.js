@@ -7789,19 +7789,22 @@ const prev=new Map(Object.entries(previousByVideo||{}).map(([id,value])=>[String
 const out=[];
 for(const row of Array.isArray(rows)?rows:[]){
 const videoId=cleanPlainText(row?.videoId||'',80);
-const views=row?.views==null?null:Number(row.views);
-const concurrent=row?.concurrentViewers==null?null:Math.max(0,Number(row.concurrentViewers)||0);
+const parsedViews=row?.views==null?null:Number(row.views);
+const views=parsedViews!=null&&Number.isFinite(parsedViews)?Math.max(0,Math.trunc(parsedViews)):null;
+const parsedOnline=row?.concurrentViewers==null?null:Number(row.concurrentViewers);
+const concurrent=parsedOnline!=null&&Number.isFinite(parsedOnline)?Math.max(0,Math.trunc(parsedOnline)):null;
 const previous=prev.get(videoId);
 let launches=0;
-if(Number.isFinite(views)&&Number.isFinite(previous))launches=Math.max(0,Math.trunc(views-previous));
-if(Number.isFinite(views))prev.set(videoId,views);
+// The first observed value is a baseline, NOT new views today.
+if(views!=null&&Number.isFinite(previous))launches=Math.max(0,Math.trunc(views-previous));
+if(views!=null)prev.set(videoId,views);
 out.push({
 sampledAt:cleanPlainText(row?.sampledAt||'',80),
 minute:cleanPlainText(row?.localMinute||'',8),
 videoId,
-views:Number.isFinite(views)?Math.max(0,Math.trunc(views)):null,
+views,
 launches,
-concurrentViewers:concurrent==null?null:Math.trunc(concurrent)
+concurrentViewers:concurrent
 });
 }
 return out;
@@ -7855,20 +7858,31 @@ const before=await db.prepare(`
       WHERE video_id=? AND local_date<? AND views IS NOT NULL
       ORDER BY sampled_at DESC LIMIT 1
     `).bind(videoId,date).first().catch(()=>null);
-const n=Number(before?.views);
-if(Number.isFinite(n))previousByVideo[videoId]=Math.max(0,Math.trunc(n));
+const n=before?.views==null?null:Number(before.views);
+if(n!=null&&Number.isFinite(n))previousByVideo[videoId]=Math.max(0,Math.trunc(n));
 }
 const series=radioAudienceBuildSeriesR1156(rows,previousByVideo);
 const totals=series.reduce((acc,row)=>{
 acc.launches+=Math.max(0,Number(row.launches)||0);
-const online=Number(row.concurrentViewers);
-if(Number.isFinite(online)){
-acc.peak=Math.max(acc.peak,online);
+const online=row.concurrentViewers==null?null:Number(row.concurrentViewers);
+if(online!=null&&Number.isFinite(online)){
+acc.peak=Math.max(acc.peak==null?0:acc.peak,online);
 acc.current=online;
+acc.lastViewerSampleAt=row.sampledAt;
+acc.viewerSamples++;
 }
-if(Number.isFinite(Number(row.views)))acc.lastViews=Math.max(acc.lastViews,Number(row.views));
+if(row.views!=null&&Number.isFinite(Number(row.views))){
+acc.lastViews=Math.max(0,Number(row.views));
+acc.lastViewsVideoId=row.videoId;
+acc.viewSamples++;
+}
 return acc;
-},{launches:0,peak:0,current:0,lastViews:0});
+},{launches:0,peak:null,current:null,lastViews:null,lastViewsVideoId:'',lastViewerSampleAt:'',viewerSamples:0,viewSamples:0});
+// Never present an old online sample as a live concurrent viewer count.
+if(date===today){
+const lastViewerMs=Date.parse(totals.lastViewerSampleAt||'');
+if(!Number.isFinite(lastViewerMs)||Date.now()-lastViewerMs>5*60*1000)totals.current=null;
+}
 const siteWhere=`local_date=? AND traffic_class<>'technical' AND (
     event_type='radio-open' OR
     (event_type='youtube-open' AND (target LIKE '%youtube.com/live/%' OR target LIKE '%youtube.com/@andrikmetal/live%'))
@@ -7890,9 +7904,10 @@ return json({
 ok:true,version:'R1157',date,today,timezone:'Europe/Bratislava',
 collectionStarted:series[0]?.sampledAt||'',samples:series.length,series,
 summary:{launches:totals.launches,peakConcurrent:totals.peak,currentConcurrent:totals.current,lastCumulativeViews:totals.lastViews,
+lastViewsVideoId:totals.lastViewsVideoId,viewerSamples:totals.viewerSamples,viewSamples:totals.viewSamples,lastViewerSampleAt:totals.lastViewerSampleAt,
 siteOpens:Math.max(0,Number(siteSummary?.opens)||0),siteVisitors:Math.max(0,Number(siteSummary?.visitors)||0)},
 exactOpens,collector:{...collector,latestSampleAt:series[series.length-1]?.sampledAt||collector.latestSampleAt||''},updatedAt:new Date().toISOString(),
-note:'YouTube arrivals are reconstructed from cumulative playback-start deltas between two-minute samples; first-party radio clicks have exact timestamps.'
+note:'YouTube API viewCount deltas are counted only after a baseline sample. Missing concurrentViewers remains null (not zero). Public/visible views can differ from Data API viewCount. Site clicks use exact timestamps.'
 });
 }
 async function fetchYoutubeActiveLiveEngagementR669(env,db){

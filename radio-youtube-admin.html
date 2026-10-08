@@ -161,7 +161,7 @@ button,a.btn{min-height:52px;border-radius:14px;padding:11px 12px}
 }
 </style>
 
-</head><body><main class="wrap"><header class="head"><div class="ey">ANDRIK RADIO · YOUTUBE STREAM · R1264</div><h1 style="margin:8px 0 4px">📺 Стрим YouTube</h1><p>Здесь вынесены метрики основного 24/7 эфира: посещения, запуски, карта стран и города аудитории. Управление эфиром остаётся в разделе «Радио».</p></header><section class="card radio-stats-r942" id="youtubeRadioR565"><h2>Статистика и платформы</h2><div class="youtube-radio-stats-r565 youtube-radio-youtube-stats-r565 r947-youtube-stats"><div class="youtube-radio-stat-r565"><small>Сейчас смотрят</small><strong id="youtubeRadioViewersR565">—</strong></div><div class="youtube-radio-stat-r565" id="youtubeRadioStartsCardR947"><small>Запуски YouTube</small><strong id="youtubeRadioStartsR947">—</strong></div><div class="youtube-radio-stat-r565" id="youtubeRadioViewsCardR947"><small>Просмотры</small><strong id="youtubeRadioViewsR565">—</strong></div><div class="youtube-radio-stat-r565"><small>Лайки</small><strong id="youtubeRadioLikesR565">—</strong></div><div class="youtube-radio-stat-r565"><small>YouTube</small><strong id="youtubeRadioHealthR565">—</strong></div></div></section>
+</head><body><main class="wrap"><header class="head"><div class="ey">ANDRIK RADIO · YOUTUBE STREAM · R1267</div><h1 style="margin:8px 0 4px">📺 Стрим YouTube</h1><p>Два источника YouTube: публичные просмотры LIVE и прирост viewCount API за выбранный день. Они могут отличаться. Управление эфиром остаётся в разделе «Радио».</p></header><section class="card radio-stats-r942" id="youtubeRadioR565"><h2>Статистика и платформы</h2><div class="youtube-radio-stats-r565 youtube-radio-youtube-stats-r565 r947-youtube-stats"><div class="youtube-radio-stat-r565"><small>Сейчас смотрят</small><strong id="youtubeRadioViewersR565">—</strong></div><div class="youtube-radio-stat-r565" id="youtubeRadioStartsCardR947"><small>Новые по API · сегодня</small><strong id="youtubeRadioStartsR947">—</strong></div><div class="youtube-radio-stat-r565" id="youtubeRadioViewsCardR947"><small>Просмотры LIVE · YouTube</small><strong id="youtubeRadioViewsR565">—</strong></div><div class="youtube-radio-stat-r565"><small>Лайки</small><strong id="youtubeRadioLikesR565">—</strong></div><div class="youtube-radio-stat-r565"><small>YouTube</small><strong id="youtubeRadioHealthR565">—</strong></div></div></section>
 <section class="card radio-audience-r1156" id="radioAudienceR1156">
   <div class="top">
     <div><h2 style="margin:0">📈 Посещения эфира · день</h2></div>
@@ -174,7 +174,7 @@ button,a.btn{min-height:52px;border-radius:14px;padding:11px 12px}
     <button type="button" class="r1156-today" id="radioAudienceTodayR1156">Сегодня</button>
   </div>
   <div class="r1156-kpis">
-    <div class="r1156-kpi"><strong id="radioAudienceLaunchesR1156">—</strong><span>новых запусков · день</span></div>
+    <div class="r1156-kpi"><strong id="radioAudienceLaunchesR1156">—</strong><span>новых просмотров по API · день</span></div>
     <div class="r1156-kpi"><strong id="radioAudiencePeakR1156">—</strong><span>пик смотрят одновременно</span></div>
     <div class="r1156-kpi"><strong id="radioAudienceCurrentR1156">—</strong><span>смотрят сейчас</span></div>
     <div class="r1156-kpi"><strong id="radioAudienceSiteR1156">—</strong><span>перешли в LIVE с сайта</span></div>
@@ -184,13 +184,13 @@ button,a.btn{min-height:52px;border-radius:14px;padding:11px 12px}
     <article class="r1235-chart-card r1235-viewers-card">
       <div class="r1235-chart-title-row">
         <div>
-          <h3>👁 Зрители по времени</h3>
-          <p>Красная линия показывает, сколько людей смотрели одновременно.</p>
+          <h3 id="r1267AudienceGraphTitle">👁 Зрители по времени</h3>
+          <p id="r1267AudienceGraphDescription">Красная линия показывает только реальные замеры одновременных зрителей.</p>
         </div>
         <div class="r1235-chart-stats r1235-red-stats">
-          <span>Сейчас <b id="r1235ViewerCurrent">—</b></span>
-          <span>Пик <b id="r1235ViewerPeak">—</b></span>
-          <span>Среднее <b id="r1235ViewerAverage">—</b></span>
+          <span><i id="r1267ViewerCurrentLabel" style="font-style:normal">Сейчас</i> <b id="r1235ViewerCurrent">—</b></span>
+          <span><i id="r1267ViewerPeakLabel" style="font-style:normal">Пик</i> <b id="r1235ViewerPeak">—</b></span>
+          <span><i id="r1267ViewerAverageLabel" style="font-style:normal">Среднее</i> <b id="r1235ViewerAverage">—</b></span>
         </div>
       </div>
       <div id="radioAudienceViewersChartR1235" class="r1235-svg-wrap"><div class="r1156-chart-empty">Получаю зрителей…</div></div>
@@ -199,8 +199,8 @@ button,a.btn{min-height:52px;border-radius:14px;padding:11px 12px}
     <article class="r1235-chart-card r1235-launches-card">
       <div class="r1235-chart-title-row">
         <div>
-          <h3>▶ Новые запуски по времени</h3>
-          <p>Столбик = сколько новых запусков накопилось за один интервал.</p>
+          <h3>▶ Новые просмотры по времени</h3>
+          <p>Столбики = прирост viewCount YouTube API между замерами; первый замер считается базой.</p>
         </div>
         <div class="r1235-chart-stats r1235-gold-stats">
           <span>Всего <b id="r1235LaunchTotal">—</b></span>
@@ -213,8 +213,8 @@ button,a.btn{min-height:52px;border-radius:14px;padding:11px 12px}
   </div>
 
   <p class="r1156-note"><b id="radioAudienceDayLabelR1156">—</b> · <span id="radioAudienceCollectionR1156">—</span></p>
-  <details class="r1156-events"><summary><span>🕒 Когда заходили в YouTube</span><span class="small">точность ≈ 2 мин</span></summary><div class="r1156-event-list" id="radioAudienceEventsR1156"><div class="r1156-event-empty">Загрузка…</div></div></details>
+  <details class="r1156-events"><summary><span>🕒 Новые просмотры по YouTube API</span><span class="small">интервал ≈ 2 мин</span></summary><div class="r1156-event-list" id="radioAudienceEventsR1156"><div class="r1156-event-empty">Загрузка…</div></div></details>
   <details class="r1156-events"><summary><span>🌐 Переходы в LIVE через andrikmetal.com</span><span class="small">точное время клика</span></summary><div class="r1156-event-list" id="radioAudienceSiteEventsR1156"><div class="r1156-event-empty">Загрузка…</div></div></details>
 </section>
 <section class="card" id="radioCountriesCardR662"><div class="top"><div><h2 style="margin:0">🌍 Карта стран и городов эфира</h2></div><span class="state" data-radio-city-state>Загрузка…</span></div><div class="radio-kpis"><div class="radio-kpi"><strong data-radio-live-viewers>—</strong><span>смотрят сейчас</span></div><div class="radio-kpi"><strong data-radio-country-count>—</strong><span>стран аудитории</span></div><div class="radio-kpi"><strong data-radio-city-count>—</strong><span>городов · 24 ч</span></div><div class="radio-kpi"><strong data-radio-event-count>—</strong><span>LIVE-переходов · 60 мин</span></div></div><div class="radio-map"><img src="/assets/world-map-control-v52.webp?v=52.14" alt="Карта стран и городов аудитории радио"><div class="radio-map-layer" data-radio-city-map></div><div class="radio-map-empty" data-radio-city-empty hidden></div></div><details class="radio-country-details"><summary><span>Страны YouTube</span><span class="radio-list-title" data-radio-country-period>—</span></summary><div class="radio-city-list" data-radio-country-list></div></details><div class="radio-list-title"><strong data-radio-city-title>Города аудитории</strong><span data-radio-city-period>24 часа</span></div><div class="radio-city-list" data-radio-city-list></div></section>
-<section class="card" id="youtubeActionsBottomR1264"><h2 style="margin:0 0 10px">YouTube · действия</h2><div class="grid" style="margin-top:0"><a class="btn secondary" href="/radio-control-admin.html?v=55.00-r1264">← НАЗАД В РАДИО</a><a class="btn secondary" href="https://www.youtube.com/live/eN3ljx6_6dA" data-force-app="youtube" data-youtube-live-auto="1" data-youtube-live-id="eN3ljx6_6dA" data-web-url="https://www.youtube.com/live/eN3ljx6_6dA">▶ ОТКРЫТЬ LIVE</a><a class="btn secondary" href="/youtube-device-auth-admin.html?v=55.00-r1264">🔐 YOUTUBE АВТОРИЗАЦИЯ</a></div></section></main><script defer src="/assets/app-links-r1048.js?v=55.00-r1266"></script><script defer src="/assets/youtube-radio-r1047.js?v=55.00-r1266"></script><script defer src="/assets/radio-audience-r1235.js?v=55.00-r1266"></script><script defer src="/assets/radio-live-countries-r907.js?v=55.00-r1266"></script></body></html>
+<section class="card" id="youtubeActionsBottomR1264"><h2 style="margin:0 0 10px">YouTube · действия</h2><div class="grid" style="margin-top:0"><a class="btn secondary" href="/radio-control-admin.html?v=55.00-r1264">← НАЗАД В РАДИО</a><a class="btn secondary" href="https://www.youtube.com/live/eN3ljx6_6dA" data-force-app="youtube" data-youtube-live-auto="1" data-youtube-live-id="eN3ljx6_6dA" data-web-url="https://www.youtube.com/live/eN3ljx6_6dA">▶ ОТКРЫТЬ LIVE</a><a class="btn secondary" href="/youtube-device-auth-admin.html?v=55.00-r1264">🔐 YOUTUBE АВТОРИЗАЦИЯ</a></div></section></main><script defer src="/assets/app-links-r1048.js?v=55.00-r1266"></script><script defer src="/assets/youtube-radio-r1047.js?v=55.00-r1267"></script><script defer src="/assets/radio-audience-r1235.js?v=55.00-r1267"></script><script defer src="/assets/radio-live-countries-r907.js?v=55.00-r1266"></script></body></html>
