@@ -7921,7 +7921,7 @@ getPushState(db,discoveryKey).catch(()=>null)
 const candidateIds=[...new Set([
 cleanPlainText(currentState?.value||'',80),
 cleanPlainText(radioState?.value||'',80),
-'' // R1266: owner-supplied candidate; probeVideo MUST confirm still live.
+'E-Hf8ciUhrU' // R1277: owner LIVE candidate; probeVideo MUST confirm still live.
 ].filter(Boolean))];
 const probeVideo=async ids=>{
 const list=[...new Set((Array.isArray(ids)?ids:[ids]).map(id=>cleanPlainText(id||'',80)).filter(Boolean))].slice(0,5);
@@ -21296,7 +21296,7 @@ if(found)result={...found,lifeCycleStatus:'live',streamStatus:'active'};
 // never declared LIVE without checking Google's video status.
 if(!result){
 try{
-const seedId='';
+const seedId='E-Hf8ciUhrU'; // R1277: current owner LIVE seed, always verified live by YouTube API before use
 const {data}=await youtubeApiJson(env,'videos',{
 part:'snippet,liveStreamingDetails',id:seedId,maxResults:1
 },{oauth:false,timeoutMs:6500});
