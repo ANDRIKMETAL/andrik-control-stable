@@ -12,6 +12,7 @@ const text=(id,value)=>{const el=$(id);if(el)el.textContent=value};
 const safe=v=>String(v??'').trim();
 const number=v=>new Intl.NumberFormat('ru-RU').format(Math.max(0,Number(v)||0));
 let liveStartedAt='';
+let directConcurrentR1274=null,directLikesR1274=null,directVideoIdR1274='';
 function uptimeLabel(value){const start=Date.parse(value||'');if(!Number.isFinite(start))return '—';const sec=Math.max(0,Math.floor((Date.now()-start)/1000));const d=Math.floor(sec/86400),h=Math.floor((sec%86400)/3600),m=Math.floor((sec%3600)/60);if(d>0)return `${d} д ${h} ч ${m} мин`;if(h>0)return `${h} ч ${m} мин`;return `${m} мин`;}
 function refreshUptime(){text('youtubeRadioUptimeR565',liveStartedAt?uptimeLabel(liveStartedAt):'—')}
 function setLive(live,label){const pill=$('youtubeRadioLiveR565');if(!pill)return;pill.classList.toggle('is-live',Boolean(live));const span=pill.querySelector('span');if(span)span.textContent=label||(live?'ЭФИР ИДЁТ':'ОЖИДАЕТ СИГНАЛ')}
@@ -28,7 +29,10 @@ const signal=Boolean(data?.signalActive)||stream==='active';
 liveStartedAt=live?safe(data?.actualStartTime):'';
 refreshUptime();
 setLive(live,live?'ЭФИР ИДЁТ':signal?'СИГНАЛ ЕСТЬ — НАЖМИ СТАРТ':'ОЖИДАЕТ СИГНАЛ');
-text('youtubeRadioViewersR565',data?.concurrentViewers==null?'0':number(data.concurrentViewers));
+directConcurrentR1274=data?.concurrentViewers==null?null:Math.max(0,Number(data.concurrentViewers)||0);
+directLikesR1274=data?.likes==null?null:Math.max(0,Number(data.likes)||0);
+directVideoIdR1274=safe(data?.videoId);
+text('youtubeRadioViewersR565',directConcurrentR1274==null?'0':number(directConcurrentR1274));
 // The day's observed delta is loaded independently. Raw API viewCount is NOT daily activity.
 text('youtubeRadioStartsR947','—');
 const visibleCandidates=[data?.visibleViews,data?.displayViews,data?.studioViews,data?.engagedViews]
@@ -58,7 +62,7 @@ viewsCard.title=bits.join(' · ');
 }
 const startsCard=$('youtubeRadioStartsCardR947');
 if(startsCard)startsCard.title='Изменение YouTube Data API viewCount между замерами за текущий день. Первый замер задаёт базу; это не одновременные зрители и не общий счётчик.';
-text('youtubeRadioLikesR565',data?.likes==null?'0':number(data.likes));
+text('youtubeRadioLikesR565',directLikesR1274==null?'0':number(directLikesR1274));
 text('youtubeRadioHealthR565',live?healthLabel(data):signal?'СИГНАЛ ЕСТЬ':healthLabel(data));
 text('youtubeRadioNowTitleR565',(live||signal)?(safe(data?.title)||'ANDRIK METAL RADIO 24/7'):'Радио готово к запуску');
 text('youtubeRadioNowMetaR565',live?'R2 MP3 → OVH VPS → FFmpeg → YouTube Live':signal?'OVH уже передаёт видео и звук. Открой Studio и нажми «Начать трансляцию».':'Ищем текущую трансляцию YouTube');
@@ -74,7 +78,8 @@ note.textContent=issues.length?`YouTube: ${parts.join(' • ')} · ${issues.slic
 async function loadAudienceFallbackR1264(){
 try{
 const k=getKey();const r=await fetch(`/api/control/radio-audience-r1157?ts=${Date.now()}`,{credentials:'include',cache:'no-store',headers:{accept:'application/json',...(k?{'x-admin-key':k,'authorization':`Bearer ${k}`}:{})}});const d=await r.json().catch(()=>({}));if(!r.ok||!d?.ok)return false;const q=d.summary||{};
-if(q.currentConcurrent!=null)text('youtubeRadioViewersR565',number(q.currentConcurrent));
+// R1274: the exact fresh LIVE API value wins. Collector is only a fallback.
+if(directConcurrentR1274==null&&q.currentConcurrent!=null)text('youtubeRadioViewersR565',number(q.currentConcurrent));
 // Daily totals come only from the audience collector, never from lifetime API viewCount.
 if(q.launches!=null)text('youtubeRadioStartsR947',number(q.launches));
 // Do NOT overwrite YouTube's visible view count with the collector's API counter.

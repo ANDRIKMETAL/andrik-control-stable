@@ -7960,7 +7960,12 @@ await recordRadioAudienceSampleR1156(db,known.video,'pinned-live-r669').catch(()
 return {...known,source:'pinned-live-r669'};
 }
 let found=null;
+// R1274: first use the same exact LIVE resolver as the control page/app link.
+// This repairs audience sampling immediately after a new broadcast replaces the old one.
+try{found=await resolvePublicYoutubeLiveR623(env,{fresh:true});}catch(_){found=null;}
+if(!found?.videoId){
 try{found=await youtubePublicLiveByUploadsR623(env,{fresh:true});}catch(_){found=null;}
+}
 if(!found?.videoId){
 const lastDiscoveryMs=Date.parse(String(discoveryState?.value||discoveryState?.updatedAt||''));
 const staleKnown=Boolean(cleanPlainText(currentState?.value||'',80));
@@ -21858,6 +21863,18 @@ if(videoId)break;
 }
 }
 }
+}
+// R1274: stats must follow the exact public LIVE that the site/app opens.
+// liveBroadcasts(mine=true) can temporarily expose another ready/testing broadcast;
+// resolvePublicYoutubeLiveR623 verifies the actually live video.
+if(followActive){
+try{
+const publicLive=await resolvePublicYoutubeLiveR623(env,{fresh:true});
+const exactId=cleanPlainText(publicLive?.videoId||'',80);
+if(publicLive?.active&&/^[A-Za-z0-9_-]{11}$/.test(exactId) && exactId!==videoId){
+videoId=exactId;broadcast=null;
+}
+}catch(_){}
 }
 if(!videoId){
 try{
