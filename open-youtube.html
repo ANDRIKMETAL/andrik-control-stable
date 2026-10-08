@@ -1,1 +1,48 @@
-<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow,noarchive"><title>ANDRIK — YouTube</title><style>html,body{margin:0;min-height:100%;background:#05070a;color:#fff;font-family:system-ui}main{min-height:100vh;display:grid;place-items:center;padding:22px;box-sizing:border-box}.card{width:min(520px,100%);text-align:center}h1{font-size:24px;margin:0 0 10px}p{opacity:.72;margin:0 0 18px}a{display:flex;align-items:center;justify-content:center;min-height:62px;border-radius:18px;background:#e62117;color:#fff;text-decoration:none;font-size:20px;font-weight:900;padding:0 18px}.small{display:block;margin-top:15px;color:#adb5c2;font-size:13px}</style></head><body><main><div class="card"><h1>ANDRIK METAL RADIO</h1><p>Открыть актуальный эфир в YouTube / ReVanced / RVX</p><a id="go" href="https://www.youtube.com/@andrikmetal/live">Ищу текущий LIVE…</a><span class="small">Актуальный ID подгружается заранее, чтобы Android открыл приложение прямо по нажатию.</span></div></main><script>(()=>{const api='/api/public/youtube-live-target',go=document.getElementById('go');let live=null;function videoId(raw){try{const u=new URL(raw,location.href),h=u.hostname.toLowerCase();if(h==='youtu.be')return u.pathname.split('/').filter(Boolean)[0]||'';if(h.endsWith('youtube.com')){const v=u.searchParams.get('v');if(v)return v;const p=u.pathname.split('/').filter(Boolean);if(['live','shorts','embed'].includes(p[0]))return p[1]||''}}catch(_){}return ''}async function resolve(){try{const r=await fetch(`${api}?fresh=1&ts=${Date.now()}`,{cache:'no-store'}),d=await r.json().catch(()=>({})),id=String(d?.videoId||videoId(d?.watchUrl)||'').trim();if(r.ok&&d?.active===true&&/^[A-Za-z0-9_-]{11}$/.test(id)){live={id,url:String(d?.watchUrl||`https://www.youtube.com/watch?v=${id}`)};go.textContent='▶ Открыть актуальный эфир';go.href=live.url;return}}catch(_){}go.textContent='▶ Открыть YouTube LIVE'}resolve();setInterval(resolve,15000);go.addEventListener('click',e=>{if(!/Android/i.test(navigator.userAgent||''))return;e.preventDefault();const x=live;if(x?.id){try{location.href=`vnd.youtube:${x.id}`}catch(_){};setTimeout(()=>{if(!document.hidden){const f=encodeURIComponent(x.url);location.href=`intent://www.youtube.com/watch?v=${x.id}#Intent;scheme=https;package=com.google.android.youtube;S.browser_fallback_url=${f};end`}},1300);return}location.href='intent://www.youtube.com/@andrikmetal/live#Intent;scheme=https;package=com.google.android.youtube;S.browser_fallback_url=https%3A%2F%2Fwww.youtube.com%2F%40andrikmetal%2Flive;end'})})();</script></body></html>
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<title>ANDRIK — YouTube</title>
+<style>
+html,body{margin:0;min-height:100%;background:#05070a;color:#fff;font-family:system-ui}
+main{min-height:100vh;display:grid;place-items:center;padding:22px;box-sizing:border-box}
+.card{width:min(520px,100%);text-align:center}
+h1{font-size:24px;margin:0 0 10px}
+p{opacity:.72;margin:0 0 18px}
+a{display:flex;align-items:center;justify-content:center;min-height:62px;border-radius:18px;
+background:#e62117;color:#fff;text-decoration:none;font-size:20px;font-weight:900;padding:0 18px}
+.small{display:block;margin-top:15px;color:#adb5c2;font-size:13px}
+</style>
+</head>
+<body>
+<main>
+  <div class="card">
+    <h1>ANDRIK METAL RADIO</h1>
+    <p>Открыть эфир в YouTube / ReVanced / RVX</p>
+    <a id="go" href="https://www.youtube.com/@andrikmetal/live">▶ Открыть эфир</a>
+    <span class="small">Если YouTube-клиента нет — откроется веб-версия.</span>
+  </div>
+</main>
+<script>(()=>{
+const api='/api/public/youtube-live-target';
+const fallback='https://www.youtube.com/@andrikmetal/live';
+const fallbackId='';
+const go=document.getElementById('go');
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+function videoId(rawUrl){
+try{const u=new URL(rawUrl,location.href),h=u.hostname.toLowerCase();if(h==='youtu.be')return u.pathname.split('/').filter(Boolean)[0]||'';if(h.endsWith('youtube.com')){const v=u.searchParams.get('v');if(v)return v;const p=u.pathname.split('/').filter(Boolean);if(['live','shorts','embed'].includes(p[0]))return p[1]||''}}catch(_){}return '';
+}
+async function resolveLive(retry=false){
+for(const wait of retry?[0,450,900]:[0]){if(wait)await sleep(wait);try{const r=await fetch(`${api}?fresh=1&ts=${Date.now()}`,{cache:'no-store',headers:{accept:'application/json'}});const d=await r.json().catch(()=>({}));const id=String(d?.videoId||videoId(d?.watchUrl)||'').trim();if(r.ok&&d?.active===true&&id)return {id,url:`https://www.youtube.com/watch?v=${encodeURIComponent(id)}`}}catch(_){}}
+return null;
+}
+function appUri(x){return `vnd.youtube:${encodeURIComponent(x.id)}`}
+go.href=fallback;
+go.addEventListener('click',async e=>{e.preventDefault();go.textContent='Ищу текущий LIVE…';const x=await resolveLive(true);go.textContent='▶ Открыть эфир';if(x){if(/Android/i.test(navigator.userAgent||'')){location.href=appUri(x);return}location.href=x.url;return}if(/Android/i.test(navigator.userAgent||'')){location.href=appUri({id:fallbackId});return}location.href=fallback});
+resolveLive(false).then(x=>{if(x)go.href=x.url});
+})();
+</script>
+</body>
+</html>

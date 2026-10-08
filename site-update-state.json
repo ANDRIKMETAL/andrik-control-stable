@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r358-deploy-nohang",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1791470544578-b9146433b4",
-  "release": "R1274",
-  "archiveName": "ANDRIK-SITE-R1274-YOUTUBE-STATS-LIVE-TRUTH-FIX.zip",
-  "sourceHead": "7cc3d3cb091db0869b158dbb1e924f7fa2b1901e",
-  "backupSha": "7cc3d3cb091db0869b158dbb1e924f7fa2b1901e",
+  "operationId": "publish-1791471407515-bd358fe7bb",
+  "release": "R1275",
+  "archiveName": "ANDRIK-SITE-R1275-RESTORE-APP-LAUNCH-LIVE-STATS.zip",
+  "sourceHead": "c158379ca73e2b124d36131d98899da545e3fe1c",
+  "backupSha": "c158379ca73e2b124d36131d98899da545e3fe1c",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-10-08T14:42:26.105Z"
+  "generatedAt": "2026-10-08T14:56:49.479Z"
 }

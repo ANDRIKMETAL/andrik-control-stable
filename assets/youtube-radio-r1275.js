@@ -95,7 +95,21 @@ return true;
 }
 async function loadYoutube(){
 try{
-const k=getKey();const res=await fetch(`/api/control/youtube-live-r565?active=1&fresh=1&ts=${Date.now()}`,{credentials:'include',headers:{accept:'application/json',...(k?{'x-admin-key':k,'authorization':`Bearer ${k}`}:{})},cache:'no-store'});const data=await res.json().catch(()=>({}));if(!res.ok)throw new Error(data.error||'HTTP '+res.status);renderYoutube(data);await loadAudienceFallbackR1264();return;
+const k=getKey();
+const [res,pubRes]=await Promise.all([
+fetch(`/api/control/youtube-live-r565?active=1&fresh=1&ts=${Date.now()}`,{credentials:'include',headers:{accept:'application/json',...(k?{'x-admin-key':k,'authorization':`Bearer ${k}`}:{})},cache:'no-store'}),
+fetch(`/api/public/youtube-live-target?fresh=1&ts=${Date.now()}`,{cache:'no-store',headers:{accept:'application/json'}}).catch(()=>null)
+]);
+const data=await res.json().catch(()=>({}));if(!res.ok)throw new Error(data.error||'HTTP '+res.status);
+let pub={};try{pub=pubRes&&pubRes.ok?await pubRes.json():{}}catch(_){}
+const same=!pub?.videoId||!data?.videoId||String(pub.videoId)===String(data.videoId);
+const merged=same?{...data,
+ videoId:pub?.videoId||data?.videoId,watchUrl:pub?.watchUrl||data?.watchUrl,title:pub?.title||data?.title,
+ actualStartTime:pub?.actualStartTime||data?.actualStartTime,active:pub?.active===true||data?.active,
+ concurrentViewers:pub?.concurrentViewers!=null?pub.concurrentViewers:data?.concurrentViewers,
+ likes:pub?.likes!=null?pub.likes:data?.likes,views:pub?.views!=null?pub.views:data?.views
+}:data;
+renderYoutube(merged);await loadAudienceFallbackR1264();return;
 }catch(error){
 let publicRendered=false;
 try{const r=await fetch(`/api/public/youtube-live-target?ts=${Date.now()}`,{cache:'no-store',headers:{accept:'application/json'}});const d=await r.json().catch(()=>({}));if(r.ok&&d?.active){renderYoutube({...d,signalActive:Boolean(d?.signalActive||d?.active),healthStatus:d?.healthStatus||'LIVE'});publicRendered=true}}catch(_){}
