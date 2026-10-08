@@ -48,7 +48,7 @@ catch (_) { window.location.href = webUrl; }
 }, 1500);
 }
 async function fetchCurrentLiveTarget() {
-if (cachedLive?.id && Date.now() - cachedLive.at < 60000) return cachedLive;
+if (cachedLive?.id && Date.now() - cachedLive.at < 8000) return cachedLive;
 if (liveFetch) return liveFetch;
 liveFetch = (async () => {
 try {
@@ -128,6 +128,15 @@ boot();
 document.addEventListener('click', event => {
 const link = event.target.closest?.(selector);
 if (!link) return;
+if (isAndroid && link.dataset.youtubeLiveAuto === '1') {
+  event.preventDefault(); event.stopPropagation();
+  fetchCurrentLiveTarget().then(live=>{
+    if(live?.id){ applyLive(link,live); launchAppFirst(live.url,live.id); return; }
+    const fallback=link.getAttribute('data-web-url')||link.href||'https://www.youtube.com/@andrikmetal/live';
+    try{window.location.href=genericYoutubeIntent(fallback)}catch(_){window.location.href=fallback}
+  });
+  return;
+}
 openYoutubeFromRealTap(event, link);
 }, true);
 })();

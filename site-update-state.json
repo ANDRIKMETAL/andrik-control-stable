@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r358-deploy-nohang",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1791466668834-35574fb2f2",
-  "release": "R1270",
-  "archiveName": "ANDRIK-SITE-R1270-SAFE-CAMERA-BOTTOM-LEFT.zip",
-  "sourceHead": "87727f00ac52a435e968d132871c1a6055c62cac",
-  "backupSha": "87727f00ac52a435e968d132871c1a6055c62cac",
+  "operationId": "publish-1791468579303-cf3f5faf4b",
+  "release": "R1271",
+  "archiveName": "ANDRIK-SITE-R1271-HOST-ACTION-LIVE-LINK-FIX.zip",
+  "sourceHead": "4dfc3234ff147895a75e014f7e44bfa97b25d48c",
+  "backupSha": "4dfc3234ff147895a75e014f7e44bfa97b25d48c",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-10-08T13:37:48.834Z"
+  "generatedAt": "2026-10-08T14:09:40.836Z"
 }

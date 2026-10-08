@@ -21,14 +21,14 @@ background:#e62117;color:#fff;text-decoration:none;font-size:20px;font-weight:90
   <div class="card">
     <h1>ANDRIK METAL RADIO</h1>
     <p>Открыть эфир в YouTube / ReVanced / RVX</p>
-    <a id="go" href="https://www.youtube.com/live/eN3ljx6_6dA">▶ Открыть эфир</a>
+    <a id="go" href="https://www.youtube.com/@andrikmetal/live">▶ Открыть эфир</a>
     <span class="small">Если YouTube-клиента нет — откроется веб-версия.</span>
   </div>
 </main>
 <script>(()=>{
 const api='/api/public/youtube-live-target';
-const fallback='https://www.youtube.com/live/eN3ljx6_6dA';
-const fallbackId='eN3ljx6_6dA';
+const fallback='https://www.youtube.com/@andrikmetal/live';
+const fallbackId='';
 const go=document.getElementById('go');
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 function videoId(rawUrl){

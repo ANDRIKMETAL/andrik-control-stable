@@ -1,7 +1,7 @@
 ANDRIK SITE R1266 — LIVE LINKS + AUDIENCE SAFE FIX
 
 Исходная база: R1265 R2 GOLD RESTORE 2.
-Актуальный LIVE на 08.10.2026: https://www.youtube.com/live/eN3ljx6_6dA
+Актуальный LIVE на 08.10.2026: https://www.youtube.com/@andrikmetal/live
 
 ИЗМЕНЕНО:
 - Главная сайта (RU/SK/EN/UA): «Слушать радио», «Открыть эфир», меню и SEO URL.
