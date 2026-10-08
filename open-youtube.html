@@ -21,13 +21,14 @@ background:#e62117;color:#fff;text-decoration:none;font-size:20px;font-weight:90
   <div class="card">
     <h1>ANDRIK METAL RADIO</h1>
     <p>Открыть эфир в YouTube / ReVanced / RVX</p>
-    <a id="go" href="https://www.youtube.com/live/llul4kXpwsc">▶ Открыть эфир</a>
+    <a id="go" href="https://www.youtube.com/live/eN3ljx6_6dA">▶ Открыть эфир</a>
     <span class="small">Если YouTube-клиента нет — откроется веб-версия.</span>
   </div>
 </main>
 <script>(()=>{
 const api='/api/public/youtube-live-target';
-const fallback='/radio-live';
+const fallback='https://www.youtube.com/live/eN3ljx6_6dA';
+const fallbackId='eN3ljx6_6dA';
 const go=document.getElementById('go');
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 function videoId(rawUrl){
@@ -39,7 +40,7 @@ return null;
 }
 function appUri(x){return `vnd.youtube:${encodeURIComponent(x.id)}`}
 go.href=fallback;
-go.addEventListener('click',async e=>{e.preventDefault();go.textContent='Ищу текущий LIVE…';const x=await resolveLive(true);go.textContent='▶ Открыть эфир';if(x){if(/Android/i.test(navigator.userAgent||'')){location.href=appUri(x);return}location.href=x.url;return}location.href=fallback});
+go.addEventListener('click',async e=>{e.preventDefault();go.textContent='Ищу текущий LIVE…';const x=await resolveLive(true);go.textContent='▶ Открыть эфир';if(x){if(/Android/i.test(navigator.userAgent||'')){location.href=appUri(x);return}location.href=x.url;return}if(/Android/i.test(navigator.userAgent||'')){location.href=appUri({id:fallbackId});return}location.href=fallback});
 resolveLive(false).then(x=>{if(x)go.href=x.url});
 })();
 </script>

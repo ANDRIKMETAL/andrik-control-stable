@@ -202,8 +202,22 @@ const r=await fetch(path,{credentials:'include',cache:'no-store',headers:headers
 if(!r.ok)throw Object.assign(new Error(d.error||d.message||`HTTP ${r.status}`),{status:r.status});return d;
 }
 async function loadViewers(){
-try{const d=await fetchJson(`/api/control/youtube-live-r565?active=1&fresh=1&ts=${Date.now()}`);set('[data-radio-live-viewers]',fmt(d?.concurrentViewers));return d}
-catch(_){set('[data-radio-live-viewers]','—');return null}
+let live=null;
+try{
+  live=await fetchJson(`/api/control/youtube-live-r565?active=1&fresh=1&ts=${Date.now()}`);
+  if(live?.active===true&&live.concurrentViewers!=null){set('[data-radio-live-viewers]',fmt(live.concurrentViewers));return live;}
+}catch(_){}
+try{
+  const a=await fetchJson(`/api/control/radio-audience-r1157?ts=${Date.now()}`);
+  const series=Array.isArray(a?.series)?a.series:[];
+  const last=[...series].reverse().find(x=>x?.concurrentViewers!=null);
+  const ms=Date.parse(String(last?.sampledAt||'').replace(' ','T'));
+  if(last&&Number.isFinite(ms)&&Date.now()-ms<5*60*1000){
+    set('[data-radio-live-viewers]',fmt(last.concurrentViewers));return live;
+  }
+}catch(_){}
+set('[data-radio-live-viewers]','—');
+return live;
 }
 async function loadMap(){
 const state=q('[data-radio-city-state]');if(state)state.textContent='Обновляем…';

@@ -3,6 +3,7 @@
 const isAndroid = /Android/i.test(navigator.userAgent || '');
 const selector = 'a[data-force-app="youtube"][data-web-url]';
 const LIVE_TARGET_API = '/api/public/youtube-live-target';
+// R1266: fresh check on each revalidation; markup contains a working seed until discovery succeeds.
 let cachedLive = null;
 let liveFetch = null;
 function youtubeVideoId(rawUrl) {
@@ -51,7 +52,7 @@ if (cachedLive?.id && Date.now() - cachedLive.at < 60000) return cachedLive;
 if (liveFetch) return liveFetch;
 liveFetch = (async () => {
 try {
-const res = await fetch(`${LIVE_TARGET_API}?ts=${Date.now()}`, {
+const res = await fetch(`${LIVE_TARGET_API}?fresh=1&ts=${Date.now()}`, {
 cache:'no-store',
 credentials:'include',
 headers:{accept:'application/json','cache-control':'no-cache'}
@@ -59,7 +60,7 @@ headers:{accept:'application/json','cache-control':'no-cache'}
 const data = await res.json().catch(() => ({}));
 const direct = String(data?.watchUrl || '');
 const id = String(data?.videoId || '') || youtubeVideoId(direct);
-if (res.ok && id && data?.active !== false) {
+if (res.ok && /^[A-Za-z0-9_-]{11}$/.test(id) && data?.active === true) {
 cachedLive = {
 id,
 url: direct || `https://www.youtube.com/live/${encodeURIComponent(id)}`,

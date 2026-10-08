@@ -7905,7 +7905,8 @@ getPushState(db,discoveryKey).catch(()=>null)
 ]);
 const candidateIds=[...new Set([
 cleanPlainText(currentState?.value||'',80),
-cleanPlainText(radioState?.value||'',80)
+cleanPlainText(radioState?.value||'',80),
+'eN3ljx6_6dA' // R1266: owner-supplied candidate; probeVideo MUST confirm still live.
 ].filter(Boolean))];
 const probeVideo=async ids=>{
 const list=[...new Set((Array.isArray(ids)?ids:[ids]).map(id=>cleanPlainText(id||'',80)).filter(Boolean))].slice(0,5);
@@ -21275,6 +21276,25 @@ const found=await youtubePublicLiveByApiKeyR619(env,{fresh:true});
 if(found)result={...found,lifeCycleStatus:'live',streamStatus:'active'};
 }catch(_){}
 }
+// R1266: a known owner-supplied ID is an emergency DISCOVERY candidate,
+// never declared LIVE without checking Google's video status.
+if(!result){
+try{
+const seedId='eN3ljx6_6dA';
+const {data}=await youtubeApiJson(env,'videos',{
+part:'snippet,liveStreamingDetails',id:seedId,maxResults:1
+},{oauth:false,timeoutMs:6500});
+const item=(Array.isArray(data?.items)?data.items:[]).find(v=>v?.id===seedId)||null;
+const details=item?.liveStreamingDetails||{};
+const status=String(item?.snippet?.liveBroadcastContent||'').toLowerCase();
+const channelId=cleanPlainText(env.YOUTUBE_CHANNEL_ID||'',120);
+const ownerOk=!channelId||!item?.snippet?.channelId||channelId===item.snippet.channelId;
+if(ownerOk&&item&&(status==='live'||(details.actualStartTime&&!details.actualEndTime))){
+result={videoId:seedId,watchUrl:`https://www.youtube.com/watch?v=${seedId}`,active:true,
+lifeCycleStatus:'live',streamStatus:'active',source:'owner-seed-verified-r1266'};
+}
+}catch(_){}
+}
 await writePublicYoutubeFallbackCacheR797(env,result);
 return result;
 }
@@ -21318,7 +21338,7 @@ return json({ok:true,videoId:'',watchUrl:'',lifeCycleStatus:'',streamStatus:'',a
 }
 async function handlePublicYoutubeRadioGoR623(request,env){
 const found=await resolvePublicYoutubeLiveR623(env,{fresh:true});
-const target=found?.videoId?found.watchUrl:'https://www.youtube.com/@andrikmetal/streams';
+const target=found?.videoId?found.watchUrl:'https://www.youtube.com/live/eN3ljx6_6dA';
 return new Response(null,{status:302,headers:{location:target,'cache-control':'no-store, max-age=0','referrer-policy':'no-referrer'}});
 }
 async function handlePublicYoutubeLiveTargetR610(request, env) {
@@ -21824,10 +21844,16 @@ if(videoId)break;
 }
 }
 if(!videoId){
+try{
+const publicLive=await resolvePublicYoutubeLiveR623(env,{fresh:true});
+if(publicLive?.active&&/^[A-Za-z0-9_-]{11}$/.test(publicLive.videoId||''))videoId=publicLive.videoId;
+}catch(_){}
+}
+if(!videoId){
 return json({
 ok:true,active:false,videoId:'',title:'ANDRIK Metal Radio 24/7',
 lifeCycleStatus:'',privacyStatus:'',recordingStatus:'',streamStatus:'',healthStatus:'',healthIssues:[],
-concurrentViewers:0,views:0,engagedViews:null,likes:0,comments:0,boundStreamId:'',
+concurrentViewers:null,views:null,engagedViews:null,likes:null,comments:null,boundStreamId:'',
 studioUrl:'https://studio.youtube.com/channel/UC/livestreaming',
 analyticsUrl:'https://studio.youtube.com/',
 watchUrl:'https://www.youtube.com/@andrikmetal/live',

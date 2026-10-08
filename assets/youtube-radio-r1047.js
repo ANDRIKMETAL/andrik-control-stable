@@ -19,7 +19,7 @@ function healthLabel(data){const health=safe(data?.healthStatus).toLowerCase();c
 async function loadLibrary(){
 text('youtubeRadioModeR565','MP3 + КЛИП');text('youtubeRadioCycleR565','AUTO');refreshUptime();
 }
-function updateLinks(data){const opener=$('radioOpenLiveR943');const watch=safe(data?.watchUrl)||'https://www.youtube.com/@andrikmetal/live';if(opener){opener.href=watch;opener.setAttribute('data-force-app','youtube');opener.setAttribute('data-youtube-live-auto','1');opener.setAttribute('data-web-url',watch);opener.setAttribute('data-web-fallback','https://www.youtube.com/@andrikmetal/live');if(data?.videoId)opener.setAttribute('data-youtube-live-id',String(data.videoId));}const map=[['youtubeRadioStudioR576','studioUrl'],['youtubeRadioAnalyticsR576','analyticsUrl'],['youtubeRadioWatchR576','watchUrl']];for(const [id,key] of map){const el=$(id);if(el&&data?.[key]){el.href=data[key];if(id==='youtubeRadioWatchR576')el.setAttribute('data-web-url',data[key])}}}
+function updateLinks(data){const opener=$('radioOpenLiveR943');const validId=/^[A-Za-z0-9_-]{11}$/.test(safe(data?.videoId))&&data?.active===true?safe(data.videoId):'';const watch=validId?`https://www.youtube.com/live/${validId}`:'';if(opener){if(watch){opener.href=watch;opener.setAttribute('data-web-url',watch);opener.setAttribute('data-youtube-live-id',validId);}opener.setAttribute('data-force-app','youtube');opener.setAttribute('data-youtube-live-auto','1');opener.setAttribute('data-web-fallback','https://www.youtube.com/live/eN3ljx6_6dA');}const map=[['youtubeRadioStudioR576','studioUrl'],['youtubeRadioAnalyticsR576','analyticsUrl'],['youtubeRadioWatchR576','watchUrl']];for(const [id,key] of map){const el=$(id);if(el&&data?.[key]){el.href=data[key];if(id==='youtubeRadioWatchR576')el.setAttribute('data-web-url',data[key])}}}
 function renderYoutube(data){
 const life=safe(data?.lifeCycleStatus).toLowerCase();
 const stream=safe(data?.streamStatus).toLowerCase();
@@ -84,7 +84,7 @@ return true;
 async function loadTransportFallbackR1264(reason=''){
 try{
 const k=getKey();const r=await fetch(`/api/control/radio-remote-r627/status?ts=${Date.now()}`,{credentials:'include',cache:'no-store',headers:{accept:'application/json',...(k?{'x-admin-key':k,'authorization':`Bearer ${k}`}:{})}});const d=await r.json().catch(()=>({}));if(!r.ok)return false;const s=d?.agent?.status||{};const service=['active','running'].includes(safe(s.service).toLowerCase());const publisher=Boolean(s.publisher);const video=Boolean(s.videoFeederRunning);const transport=s.transportHealthy!==false;const expected=Math.max(1,Number(s.rtmpsExpectedConnectionsR792||2)||2);const lanes=Math.max(0,Number(s.rtmpsEstablishedConnectionsR792||0));const online=Boolean(d?.online)||service;const good=online&&service&&publisher&&video&&transport&&lanes>=expected;
-text('youtubeRadioHealthR565',good?'ОТЛИЧНО':'ПЛОХО');
+text('youtubeRadioHealthR565',good?'СИГНАЛ OK':'СИГНАЛ ПЛОХО');
 const h=$('youtubeRadioHealthR565');if(h)h.title=`OVH master: service=${service?'OK':'OFF'} · publisher=${publisher?'OK':'OFF'} · video=${video?'OK':'OFF'} · transport=${transport?'OK':'BAD'} · RTMPS ${lanes}/${expected}${reason?' · YouTube API: '+safe(reason):''}`;
 return true;
 }catch(_){return false}
