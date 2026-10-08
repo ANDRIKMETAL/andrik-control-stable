@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r358-deploy-nohang",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1791471407515-bd358fe7bb",
-  "release": "R1275",
-  "archiveName": "ANDRIK-SITE-R1275-RESTORE-APP-LAUNCH-LIVE-STATS.zip",
-  "sourceHead": "c158379ca73e2b124d36131d98899da545e3fe1c",
-  "backupSha": "c158379ca73e2b124d36131d98899da545e3fe1c",
+  "operationId": "publish-1791471825739-6536671e00",
+  "release": "R1276",
+  "archiveName": "ANDRIK-SITE-R1276-DIRECT-APP-LIVE-E-Hf8ciUhrU.zip",
+  "sourceHead": "2e84df8d40155fffe4a0f1f4b2bd210caf8ba845",
+  "backupSha": "2e84df8d40155fffe4a0f1f4b2bd210caf8ba845",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-10-08T14:56:49.479Z"
+  "generatedAt": "2026-10-08T15:03:45.739Z"
 }
