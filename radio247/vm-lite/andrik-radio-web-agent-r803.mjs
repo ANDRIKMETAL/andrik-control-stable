@@ -6,7 +6,7 @@ import {Readable} from 'node:stream';
 import {pipeline} from 'node:stream/promises';
 
 const CONFIG='/etc/andrik-radio-web-r627.json';
-const AGENT_VERSION_R803='R1265-R2-GOLD-RESTORE+R1264-FULLSCREEN-CONTROL+R1263-FACEBOOK-SYNC+R1356-RELAY-AWARE+R1319-HOST-PUMP+R1307-TIKTOK-INGEST';
+const AGENT_VERSION_R803='R1269-HOST-MIC-R1396+R1265-R2-GOLD-RESTORE+R1264-FULLSCREEN-CONTROL+R1263-FACEBOOK-SYNC+R1356-RELAY-AWARE+R1319-HOST-PUMP+R1307-TIKTOK-INGEST';
 const DIAG_DIR_R803='/var/cache/andrik-radio-r622/diagnostics';
 const DIAG_AGENT_LOG_R803=DIAG_DIR_R803+'/r803-agent-events.ndjson';
 const DIAG_AGENT_MAX_BYTES_R803=1024*1024;
@@ -47,15 +47,17 @@ const FACEBOOK_RELAY_UNIT_R1263='andrik-facebook-relay-r1356.service';
 const FACEBOOK_RELAY_STATUS_R1263='/run/andrik-facebook-relay-r1356.json';
 const FACEBOOK_RELAY_CONSUMER_PORT_R1263=19362;
 
-let hostPumpR1319={active:false,sessionId:'',nextSeq:0,authorization:'',startedAt:0,lastChunkAt:0,bytes:0,chunks:0,lastError:''};
+let hostPumpR1319={active:false,mode:'camera',sessionId:'',nextSeq:0,authorization:'',startedAt:0,lastChunkAt:0,bytes:0,chunks:0,lastError:''};
 function stopHostPumpR1319(reason='stop'){
   const previous={...hostPumpR1319};
-  hostPumpR1319={active:false,sessionId:'',nextSeq:0,authorization:'',startedAt:0,lastChunkAt:0,bytes:0,chunks:0,lastError:reason};
+  hostPumpR1319={active:false,mode:'camera',sessionId:'',nextSeq:0,authorization:'',startedAt:0,lastChunkAt:0,bytes:0,chunks:0,lastError:reason};
   return previous;
 }
 async function localHostChunkR1319(sessionId,seq,bytes){
-  const r=await fetch(`http://127.0.0.1:8080/control/host-chunk-r1319?session=${encodeURIComponent(sessionId)}&seq=${encodeURIComponent(seq)}`,{
-    method:'POST',headers:{'content-type':'application/octet-stream','user-agent':'ANDRIK-Radio-Web-Agent-R1319'},body:bytes,signal:AbortSignal.timeout(8000)
+  const micOnly=hostPumpR1319.mode==='mic';
+  const localPath=micOnly?'/control/host-mic-chunk-r1396':'/control/host-chunk-r1319';
+  const r=await fetch(`http://127.0.0.1:8080${localPath}?session=${encodeURIComponent(sessionId)}&seq=${encodeURIComponent(seq)}`,{
+    method:'POST',headers:{'content-type':'application/octet-stream','user-agent':micOnly?'ANDRIK-Radio-Web-Agent-R1396':'ANDRIK-Radio-Web-Agent-R1319'},body:bytes,signal:AbortSignal.timeout(8000)
   });
   const text=await r.text();let data={};try{data=JSON.parse(text)}catch(_){data={ok:false,error:text||`HTTP ${r.status}`}}
   if(!r.ok||!data.ok){const e=new Error(data.error||`host-local-http-${r.status}`);e.data=data;throw e}
@@ -65,9 +67,9 @@ async function ackHostChunkR1319(headers,sessionId,seq){
   const r=await fetch(`${BASE}/api/radio-agent-r1253/host-chunk?session=${encodeURIComponent(sessionId)}&seq=${encodeURIComponent(seq)}`,{method:'DELETE',headers:{authorization:headers.authorization,'user-agent':'ANDRIK-Radio-Web-Agent-R1319'},signal:AbortSignal.timeout(8000)});
   if(!r.ok&&r.status!==404)throw new Error(`host-ack-http-${r.status}`);
 }
-async function hostPumpLoopR1319(headers,sessionId){
+async function hostPumpLoopR1319(headers,sessionId,mode='camera'){
   const auth=headers.authorization||'';
-  hostPumpR1319={active:true,sessionId,nextSeq:0,authorization:auth,startedAt:Date.now(),lastChunkAt:0,bytes:0,chunks:0,lastError:''};
+  hostPumpR1319={active:true,mode:mode==='mic'?'mic':'camera',sessionId,nextSeq:0,authorization:auth,startedAt:Date.now(),lastChunkAt:0,bytes:0,chunks:0,lastError:''};
   while(hostPumpR1319.active&&hostPumpR1319.sessionId===sessionId){
     const seq=hostPumpR1319.nextSeq;
     try{
@@ -82,7 +84,7 @@ async function hostPumpLoopR1319(headers,sessionId){
       hostPumpR1319.nextSeq=seq+1;hostPumpR1319.lastChunkAt=Date.now();hostPumpR1319.bytes+=bytes.byteLength;hostPumpR1319.chunks++;
     }catch(error){
       hostPumpR1319.lastError=diagSanitizeR803(error?.message||error,300);
-      if(/host-session-mismatch|host mode is not armed/i.test(String(error?.message||error))){
+      if(/host-session-mismatch|host mode is not armed|host-mic-session-mismatch/i.test(String(error?.message||error))){
         hostPumpR1319.active=false;
         fetch(`${BASE}/api/radio-agent-r1253/host-cleanup?session=${encodeURIComponent(sessionId)}`,{method:'DELETE',headers:{authorization:auth,'user-agent':'ANDRIK-Radio-Web-Agent-R1319'},signal:AbortSignal.timeout(12000)}).catch(()=>{});
         break;
@@ -92,9 +94,9 @@ async function hostPumpLoopR1319(headers,sessionId){
     }
   }
 }
-function startHostPumpR1319(headers,sessionId){
+function startHostPumpR1319(headers,sessionId,mode='camera'){
   stopHostPumpR1319('restart');
-  hostPumpLoopR1319(headers,sessionId).catch(error=>{hostPumpR1319.lastError=diagSanitizeR803(error?.message||error,300);hostPumpR1319.active=false});
+  hostPumpLoopR1319(headers,sessionId,mode).catch(error=>{hostPumpR1319.lastError=diagSanitizeR803(error?.message||error,300);hostPumpR1319.active=false});
   return true;
 }
 
@@ -480,7 +482,7 @@ async function localStatus(){
       facebookPidR1313:Number(d.facebookPidR1313||d.facebookR1313?.pid||0),
       facebookProfileR1313:clean(d.facebookProfileR1313||''),
       hostR1319:d.hostR1319||null,hostModeR1319:Boolean(d.hostModeR1319??d.hostR1319?.armed),hostRunningR1319:Boolean(d.hostRunningR1319??d.hostR1319?.running),hostOutputReadyR1319:Boolean(d.hostOutputReadyR1319??d.hostR1319?.outputReady),
-      hostPumpR1319:{active:Boolean(hostPumpR1319.active),sessionId:hostPumpR1319.sessionId,nextSeq:hostPumpR1319.nextSeq,bytes:hostPumpR1319.bytes,chunks:hostPumpR1319.chunks,lastChunkAt:hostPumpR1319.lastChunkAt?new Date(hostPumpR1319.lastChunkAt).toISOString():null,lastError:hostPumpR1319.lastError},
+      hostPumpR1319:{active:Boolean(hostPumpR1319.active),mode:hostPumpR1319.mode,sessionId:hostPumpR1319.sessionId,nextSeq:hostPumpR1319.nextSeq,bytes:hostPumpR1319.bytes,chunks:hostPumpR1319.chunks,lastChunkAt:hostPumpR1319.lastChunkAt?new Date(hostPumpR1319.lastChunkAt).toISOString():null,lastError:hostPumpR1319.lastError},
       streamProfileR814:d.streamProfileR814||d.streamProfileR813||null,streamProfileR813:d.streamProfileR813||{
         video:{codec:'H.264 / AVC',encoder:'libx264',profile:'High 4.1',width:1920,height:1080,fps:Number(d.videoFps||25),bitrate:String(d.videoBitrate||'6000k'),gopFrames:Number(d.videoGop||50),bFrames:0,pixelFormat:'yuv420p'},
         audio:{codec:'AAC-LC',sampleRate:Number(d.audioSampleRate||44100),channels:2,channelLayout:'stereo',bitrate:String(d.audioBitrate||'160k')},
@@ -731,13 +733,38 @@ ${e.message||e}`};}
     try{const d=await localControlR721('/control/facebook-stop');return {ok:!Boolean(d?.running),output:`FACEBOOK STOP R1263 ${!d?.running?'✅':'❌'}\nR1356 relay remains isolated · YouTube untouched\n${JSON.stringify(d)}`};}
     catch(e){return {ok:false,output:`FACEBOOK STOP R1263 ❌\n${e.message||e}`};}
   }
+  if(action==='host-mic-start-r1396'){
+    const duck=Math.max(20,Math.min(65,Number(command.duck)||35));
+    try{
+      const d=await localControlR721(`/control/host-mic-start-r1396?duck=${encodeURIComponent(duck)}`);
+      if(!d?.sessionId)return {ok:false,output:`HOST MIC START R1396 ❌\nNo sessionId\n${JSON.stringify(d)}`};
+      startHostPumpR1319(headers,d.sessionId,'mic');
+      return {ok:true,output:`HOST MIC START R1396 ✅\n${JSON.stringify(d)}`};
+    }catch(e){return {ok:false,output:`HOST MIC START R1396 ❌\n${e.message||e}`};}
+  }
+  if(action==='host-mic-stop-r1396'){
+    const previous=stopHostPumpR1319('mic-manual-stop');
+    try{
+      const d=await localControlR721('/control/host-mic-stop-r1396');
+      if(previous.sessionId)fetch(`${BASE}/api/radio-agent-r1253/host-cleanup?session=${encodeURIComponent(previous.sessionId)}`,{method:'DELETE',headers:{authorization:headers.authorization,'user-agent':'ANDRIK-Radio-Web-Agent-R1396'},signal:AbortSignal.timeout(12000)}).catch(()=>{});
+      return {ok:true,output:`HOST MIC STOP R1396 ✅\n${JSON.stringify(d)}`};
+    }catch(e){return {ok:false,output:`HOST MIC STOP R1396 ❌\n${e.message||e}`};}
+  }
+  if(action==='host-mic-enable-r1396'){
+    try{const d=await localControlR721(`/control/host-mic-enable-r1396?enabled=${command.enabled?'1':'0'}`);return {ok:true,output:`HOST MIC ENABLE R1396 ✅\n${JSON.stringify(d)}`};}
+    catch(e){return {ok:false,output:`HOST MIC ENABLE R1396 ❌\n${e.message||e}`};}
+  }
+  if(action==='host-mic-status-r1396'){
+    try{const d=await localControlR721('/control/host-mic-status-r1396');return {ok:true,output:`HOST MIC STATUS R1396\n${JSON.stringify({...d,pump:{active:hostPumpR1319.active,mode:hostPumpR1319.mode,nextSeq:hostPumpR1319.nextSeq,bytes:hostPumpR1319.bytes,chunks:hostPumpR1319.chunks,lastError:hostPumpR1319.lastError}})}`};}
+    catch(e){return {ok:false,output:`HOST MIC STATUS R1396 ❌\n${e.message||e}`};}
+  }
   if(action==='host-start-r1319'){
     const targets=Array.isArray(command.targets)?command.targets.join(','):clean(command.targets||'tiktok');
     const duck=Math.max(20,Math.min(65,Number(command.duck)||35));
     try{
       const d=await localControlR721(`/control/host-start-r1319?targets=${encodeURIComponent(targets)}&duck=${encodeURIComponent(duck)}`);
       if(!d?.sessionId)return {ok:false,output:`HOST START R1319 ❌\nNo sessionId\n${JSON.stringify(d)}`};
-      startHostPumpR1319(headers,d.sessionId);
+      startHostPumpR1319(headers,d.sessionId,'camera');
       return {ok:true,output:`HOST START R1319 ✅\n${JSON.stringify(d)}`};
     }catch(e){return {ok:false,output:`HOST START R1319 ❌\n${e.message||e}`};}
   }

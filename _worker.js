@@ -19873,7 +19873,7 @@ if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401
 const db=env.COMMENTS_DB;if(!db)return json({ok:false,error:'database-not-configured'},503);
 const body=await request.json().catch(()=>({}));
 const action=String(body.action||'').trim().toLowerCase();
-const allowed=new Set(['start','recover','stop','restart','encoder-start','encoder-stop','soft-restart','gold-restore','screen-restore','fullscreen-r1383','cache-clean','status','auto-safe','full-fit','visual-sync','visual-now','visual-next','visual-auto','queue-move','audio-delay','track-remove','load-r988','queue-pick-r989','cleanup-r1026','loudness-new-r1098','tiktok-start-r1303','tiktok-stop-r1303','tiktok-schedule-r1305','tiktok-ingest-refresh-r1307','facebook-start-r1313','facebook-stop-r1313','facebook-start-r1319','facebook-stop-r1319','facebook-sync-r1263','host-start-r1319','host-stop-r1319','host-status-r1319']);
+const allowed=new Set(['start','recover','stop','restart','encoder-start','encoder-stop','soft-restart','gold-restore','screen-restore','fullscreen-r1383','cache-clean','status','auto-safe','full-fit','visual-sync','visual-now','visual-next','visual-auto','queue-move','audio-delay','track-remove','load-r988','queue-pick-r989','cleanup-r1026','loudness-new-r1098','tiktok-start-r1303','tiktok-stop-r1303','tiktok-schedule-r1305','tiktok-ingest-refresh-r1307','facebook-start-r1313','facebook-stop-r1313','facebook-start-r1319','facebook-stop-r1319','facebook-sync-r1263','host-start-r1319','host-stop-r1319','host-status-r1319','host-mic-start-r1396','host-mic-stop-r1396','host-mic-status-r1396','host-mic-enable-r1396']);
 if(!allowed.has(action))return json({ok:false,error:'invalid-action'},400);
 const slot=String(body.slot||'').trim().toLowerCase();
 const audioDelayMsR949=Number(body.delayMs);
@@ -19889,7 +19889,8 @@ const tiktokScheduleStartR1305=action==='tiktok-schedule-r1305'?String(body.star
 const tiktokScheduleEndR1305=action==='tiktok-schedule-r1305'?String(body.end||'').trim():'';
 const tiktokScheduleEnabledR1305=action==='tiktok-schedule-r1305'?Boolean(body.enabled):false;
 const hostTargetsR1319=action==='host-start-r1319'?(Array.isArray(body.targets)?body.targets.map(x=>String(x||'').trim().toLowerCase()).filter(x=>['tiktok','facebook','youtube'].includes(x)).slice(0,3):String(body.targets||'tiktok').split(',').map(x=>x.trim().toLowerCase()).filter(x=>['tiktok','facebook','youtube'].includes(x)).slice(0,3)):[];
-const hostDuckR1319=action==='host-start-r1319'?Math.max(20,Math.min(65,Number(body.duck)||35)):35;
+const hostDuckR1319=(action==='host-start-r1319'||action==='host-mic-start-r1396')?Math.max(20,Math.min(65,Number(body.duck)||35)):35;
+const hostMicEnabledR1396=action==='host-mic-enable-r1396'?Boolean(body.enabled):false;
 if(action==='tiktok-schedule-r1305'){
   const okTime=v=>/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(v);
   if(!okTime(tiktokScheduleStartR1305)||!okTime(tiktokScheduleEndR1305)||tiktokScheduleStartR1305===tiktokScheduleEndR1305)return json({ok:false,error:'invalid-tiktok-schedule'},400);
@@ -19906,7 +19907,7 @@ const busyLimit=String(existing.action||'')==='gold-restore'?900000:180000;
 if(age<busyLimit)return json({ok:false,error:'command-busy',command:existing},409);
 }
 const id=crypto.randomUUID();
-const command={id,action,state:'queued',createdAt:new Date().toISOString(),requestedBy:'owner-control-r989',...((action==='visual-now'||action==='visual-next')?{slot}:{}),...(action==='queue-move'?{offset:Math.max(0,Math.min(5,Number(body.offset)||0)),direction:['up','down','next'].includes(String(body.direction||'').toLowerCase())?String(body.direction).toLowerCase():'up',itemId:cleanPlainText(body.itemId||'',220)}:{}),...(action==='track-remove'?{key:trackKeyR966,title:cleanPlainText(body.title||'',180)}:{}),...(action==='queue-pick-r989'?{mediaType:mediaTypeR989,key:mediaKeyR989,title:cleanPlainText(body.title||'',180)}:{}),...(action==='audio-delay'?{delayMs:audioDelayMsR949}:{}),...(action==='tiktok-schedule-r1305'?{enabled:tiktokScheduleEnabledR1305,start:tiktokScheduleStartR1305,end:tiktokScheduleEndR1305}:{}),...(action==='host-start-r1319'?{targets:hostTargetsR1319,duck:hostDuckR1319}:{})};
+const command={id,action,state:'queued',createdAt:new Date().toISOString(),requestedBy:'owner-control-r989',...((action==='visual-now'||action==='visual-next')?{slot}:{}),...(action==='queue-move'?{offset:Math.max(0,Math.min(5,Number(body.offset)||0)),direction:['up','down','next'].includes(String(body.direction||'').toLowerCase())?String(body.direction).toLowerCase():'up',itemId:cleanPlainText(body.itemId||'',220)}:{}),...(action==='track-remove'?{key:trackKeyR966,title:cleanPlainText(body.title||'',180)}:{}),...(action==='queue-pick-r989'?{mediaType:mediaTypeR989,key:mediaKeyR989,title:cleanPlainText(body.title||'',180)}:{}),...(action==='audio-delay'?{delayMs:audioDelayMsR949}:{}),...(action==='tiktok-schedule-r1305'?{enabled:tiktokScheduleEnabledR1305,start:tiktokScheduleStartR1305,end:tiktokScheduleEndR1305}:{}),...(action==='host-start-r1319'?{targets:hostTargetsR1319,duck:hostDuckR1319}:{}),...(action==='host-mic-start-r1396'?{duck:hostDuckR1319}:{}),...(action==='host-mic-enable-r1396'?{enabled:hostMicEnabledR1396}:{})};
 await setPushState(db,RADIO_REMOTE_R627.commandKey,JSON.stringify(command));
 return json({ok:true,command});
 }
