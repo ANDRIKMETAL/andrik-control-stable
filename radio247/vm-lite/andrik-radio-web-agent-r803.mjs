@@ -6,7 +6,7 @@ import {Readable} from 'node:stream';
 import {pipeline} from 'node:stream/promises';
 
 const CONFIG='/etc/andrik-radio-web-r627.json';
-const AGENT_VERSION_R803='R1269-HOST-MIC-R1396+R1265-R2-GOLD-RESTORE+R1264-FULLSCREEN-CONTROL+R1263-FACEBOOK-SYNC+R1356-RELAY-AWARE+R1319-HOST-PUMP+R1307-TIKTOK-INGEST';
+const AGENT_VERSION_R803='R1279-FB-GUARD+R1278-TCP+R1269-HOST-MIC-R1396+R1265-R2-GOLD-RESTORE+R1264-FULLSCREEN-CONTROL+R1263-FACEBOOK-SYNC+R1356-RELAY-AWARE+R1319-HOST-PUMP+R1307-TIKTOK-INGEST';
 const DIAG_DIR_R803='/var/cache/andrik-radio-r622/diagnostics';
 const DIAG_AGENT_LOG_R803=DIAG_DIR_R803+'/r803-agent-events.ndjson';
 const DIAG_AGENT_MAX_BYTES_R803=1024*1024;
@@ -454,6 +454,139 @@ function sampleHistoryR1183(status){
  historyR1183.push(row);historyR1183=historyR1183.filter(x=>Date.parse(x.capturedAt)>now-16*3600000).slice(-960);
  try{fs.mkdirSync(DIAG_DIR_R803,{recursive:true});fs.writeFileSync(HISTORY_R1183+'.tmp',JSON.stringify(historyR1183));fs.renameSync(HISTORY_R1183+'.tmp',HISTORY_R1183)}catch(_){}
 }
+
+// ANDRIK R1279 FACEBOOK RETRY GUARD — WEB-AGENT ONLY, no radio source edits.
+const FACEBOOK_GUARD_FILE_R1279='/var/lib/andrik-radio-web-agent/facebook-retry-guard-r1279.json';
+const FACEBOOK_GUARD_WINDOW_R1279=600000;
+const FACEBOOK_GUARD_MAX_RESTARTS_R1279=3;
+let facebookGuardR1279={enabled:false,updatedAt:null,lastStopAt:null,lastStopReason:'',lastError:''};
+let facebookGuardSeenRestartsR1279=null;
+let facebookGuardBurstR1279=[];
+let facebookGuardStoppingR1279=false;
+try {
+  const saved=JSON.parse(fs.readFileSync(FACEBOOK_GUARD_FILE_R1279,'utf8'));
+  if(saved && typeof saved==='object') {
+    facebookGuardR1279={enabled:saved.enabled===true,updatedAt:saved.updatedAt||null,lastStopAt:saved.lastStopAt||null,lastStopReason:String(saved.lastStopReason||''),lastError:''};
+  }
+} catch(_){}
+function facebookGuardSaveR1279(){
+  const dir='/var/lib/andrik-radio-web-agent';
+  fs.mkdirSync(dir,{recursive:true,mode:0o700});
+  const tmp=FACEBOOK_GUARD_FILE_R1279+'.'+process.pid+'.tmp';
+  try {
+    fs.writeFileSync(tmp,JSON.stringify({enabled:facebookGuardR1279.enabled,updatedAt:facebookGuardR1279.updatedAt,lastStopAt:facebookGuardR1279.lastStopAt,lastStopReason:facebookGuardR1279.lastStopReason}),{mode:0o600});
+    fs.renameSync(tmp,FACEBOOK_GUARD_FILE_R1279);
+    fs.chmodSync(FACEBOOK_GUARD_FILE_R1279,0o600);
+  } finally {try{fs.unlinkSync(tmp)}catch(_){}}
+}
+function facebookGuardPublicR1279(){
+  return {...facebookGuardR1279,version:'R1279',mode:'three-unexpected-restarts-in-600s',recentRestarts:facebookGuardBurstR1279.length,threshold:FACEBOOK_GUARD_MAX_RESTARTS_R1279,windowSeconds:600,stopping:facebookGuardStoppingR1279};
+}
+function facebookGuardSetR1279(enabled,fb){
+  facebookGuardR1279.enabled=Boolean(enabled);
+  facebookGuardR1279.updatedAt=new Date().toISOString();
+  facebookGuardR1279.lastError='';
+  facebookGuardSeenRestartsR1279=Number.isFinite(Number(fb?.restartCount))?Number(fb.restartCount):null;
+  facebookGuardBurstR1279=[];
+  facebookGuardSaveR1279();
+  appendAgentDiagR803('facebook-r1279-guard-switch',{enabled:facebookGuardR1279.enabled});
+  return facebookGuardPublicR1279();
+}
+async function facebookGuardTickR1279(status){
+  const fb=status?.facebookR1313;
+  if(!fb || !Number.isFinite(Number(fb.restartCount)))return;
+  const count=Number(fb.restartCount), now=Date.now();
+  if(facebookGuardSeenRestartsR1279===null || count<facebookGuardSeenRestartsR1279){
+    facebookGuardSeenRestartsR1279=count;
+    facebookGuardBurstR1279=[];
+    return;
+  }
+  const delta=Math.min(5,Math.max(0,count-facebookGuardSeenRestartsR1279));
+  facebookGuardSeenRestartsR1279=count;
+  facebookGuardBurstR1279=facebookGuardBurstR1279.filter(t=>now-t<FACEBOOK_GUARD_WINDOW_R1279);
+  if(!facebookGuardR1279.enabled || facebookGuardStoppingR1279)return;
+  if(!fb.enabled){facebookGuardBurstR1279=[];return;}
+  const uptime=Number(fb.uptimeSeconds||0);
+  // Count unexpected short-lived failures only, never intentionally stopped sessions.
+  if(delta && fb.lastExit?.intentional!==true && (!fb.running || uptime<120)){
+    for(let i=0;i<delta;i++)facebookGuardBurstR1279.push(now);
+  }
+  // A live stream with >2 minutes uptime is healthy enough to clear old failures.
+  if(fb.running && uptime>=120)facebookGuardBurstR1279=[];
+  if(facebookGuardBurstR1279.length<FACEBOOK_GUARD_MAX_RESTARTS_R1279)return;
+  facebookGuardStoppingR1279=true;
+  try{
+    const answer=await localControlR721('/control/facebook-stop');
+    // If the stop endpoint did not disable desired state, do not pretend success.
+    if(answer?.enabled!==false)throw new Error('facebook-stop did not confirm enabled=false');
+    facebookGuardR1279.lastStopAt=new Date().toISOString();
+    facebookGuardR1279.lastStopReason='3 неожиданных перезапуска за 10 минут';
+    facebookGuardR1279.lastError='';
+    facebookGuardR1279.updatedAt=facebookGuardR1279.lastStopAt;
+    facebookGuardBurstR1279=[];
+    facebookGuardSaveR1279();
+    appendAgentDiagR803('facebook-r1279-guard-stop',{restartCount:count,reason:facebookGuardR1279.lastStopReason});
+  }catch(error){
+    facebookGuardR1279.lastError=diagSanitizeR803(error?.message||error,300);
+    appendAgentDiagR803('facebook-r1279-guard-stop-failed',{error:facebookGuardR1279.lastError});
+  }finally{facebookGuardStoppingR1279=false;}
+}
+
+// R1278 FACEBOOK TCP EGRESS TELEMETRY — read-only OS sampling; no FFmpeg/server changes.
+const facebookTcpHistoryR1278=[];
+let facebookTcpPreviousR1278=null;
+let facebookTcpLastR1278=null;
+function facebookTcpEgressR1278(fb){
+  const now=Date.now(), at=new Date(now).toISOString(), pid=Number(fb?.pid||0);
+  if(!fb?.running||!Number.isInteger(pid)||pid<=0){
+    facebookTcpPreviousR1278=null;
+    facebookTcpLastR1278={available:false,source:'tcp-acked',pid:0,at,reason:'facebook-not-running',history:facebookTcpHistoryR1278.slice(-360)};
+    return facebookTcpLastR1278;
+  }
+  if(facebookTcpLastR1278?.pid===pid && now-Date.parse(facebookTcpLastR1278.at||'')<8000)return facebookTcpLastR1278;
+  let output='';
+  try{
+    const result=spawnSync('ss',['-tinpH'],{encoding:'utf8',timeout:1400,maxBuffer:2*1024*1024});
+    if(result.status!==0||result.error)throw new Error('ss-unavailable');
+    output=String(result.stdout||'');
+  }catch(_){
+    facebookTcpPreviousR1278=null;
+    facebookTcpLastR1278={available:false,source:'tcp-acked',pid,at,reason:'ss-unavailable',history:facebookTcpHistoryR1278.slice(-360)};
+    return facebookTcpLastR1278;
+  }
+  let total=0,connections=0;const signatures=[];
+  const blocks=output.split(/\n(?=\S)/);
+  const pidPattern=new RegExp('\\bpid='+pid+'\\b');
+  for(const block of blocks){
+    const head=block.split('\n',1)[0]||'';
+    if(!/^ESTAB\s/.test(head)||!pidPattern.test(head)||!/:443(?:\s|$)/.test(head))continue;
+    const match=block.match(/\bbytes_acked:(\d+)\b/)||block.match(/\bbytes_sent:(\d+)\b/);
+    if(!match)continue;
+    const bytes=Number(match[1]);if(!Number.isSafeInteger(bytes)||bytes<0)continue;
+    total+=bytes;connections++;
+    signatures.push(head.split(' users:')[0]);
+  }
+  if(!connections){
+    facebookTcpPreviousR1278=null;
+    facebookTcpLastR1278={available:false,source:'tcp-acked',pid,at,reason:'tcp-connection-not-found',history:facebookTcpHistoryR1278.slice(-360)};
+    return facebookTcpLastR1278;
+  }
+  const signature=signatures.sort().join('|');
+  let mbps=null;
+  const prior=facebookTcpPreviousR1278;
+  if(prior&&prior.pid===pid&&prior.signature===signature&&total>=prior.total&&now>prior.now){
+    mbps=(total-prior.total)*8/1000000/((now-prior.now)/1000);
+    if(!Number.isFinite(mbps)||mbps<0||mbps>200)mbps=null;
+  }
+  facebookTcpPreviousR1278={pid,signature,total,now};
+  if(mbps!==null){
+    facebookTcpHistoryR1278.push({at,mbps:Math.round(mbps*1000)/1000});
+    if(facebookTcpHistoryR1278.length>360)facebookTcpHistoryR1278.splice(0,facebookTcpHistoryR1278.length-360);
+  }
+  facebookTcpLastR1278={available:true,source:'tcp-acked',pid,at,mbps,connectionCount:connections,socketBytes:total,history:facebookTcpHistoryR1278.slice(-360)};
+  return facebookTcpLastR1278;
+}
+
 async function localStatus(){
   try{
     const r=await fetch('http://127.0.0.1:8080/status',{signal:AbortSignal.timeout(2500)});const d=await r.json();const c=d.current||{},n=d.next||{};
@@ -509,6 +642,8 @@ async function localStatus(){
       videoHandoffMode:d.videoHandoffMode||'',
       lastR813Handoff:d.lastR813Handoff||null,
       r813CleanHandoffCount:Number(d.r813CleanHandoffCount||d.streamProfileR813?.handoff?.cleanCount||0),streamStartedAt:d.streamStartedAt||'',libraryTracks:Number(d.libraryTracks||0),libraryAlbumTracks:Number(d.libraryAlbumTracks||0),librarySingleTracks:Number(d.librarySingleTracks||0),duplicateSinglesSkipped:Number(d.duplicateSinglesSkipped||0),libraryVideos:Number(d.libraryVideos||0),libraryBumpers:Number(d.libraryBumpers||0),librarySpecial:Number(d.librarySpecial||0),librarySpecial30:Number(d.librarySpecial30||0),librarySpecial60:Number(d.librarySpecial60||0),lastLibraryRefresh:d.lastLibraryRefresh||'',inventoryTelemetry:'R805-LIVE-LIBRARY-COUNTERS',ticker:currentTicker(),audioDelayMsR949:audioSyncStateR949().targetMs,audioDelayUpdatedAtR949:audioSyncStateR949().updatedAt,audioDelayFilesR949:audioSyncStateR949().files,diskRootR1015:diskRootR1015(),recoveryR1015:recoveryStateR1015(),loudnessR1137:loudnessStatusR1137(),busy:busy?{id:busy.id,action:busy.action,since:busy.since}:null};
+    status.facebookTcpEgressR1278=facebookTcpEgressR1278(status.facebookR1313);
+    status.facebookRetryGuardR1279=facebookGuardPublicR1279();
     sampleHistoryR1183(status);status.metricsHistoryR1183=historyR1183.slice(-4);
     return observeStatusR803(status);
   }catch(error){
@@ -729,6 +864,13 @@ ${e.message||e}`};}
       return {ok:Boolean(d?.running),output:`FACEBOOK START R1263 ${d?.running?'✅':'❌'}\nKEY SYNC ✅ · R1356 ${relay.installed?'READY':'N/A'} · RADIO RESTART: NO\n${JSON.stringify(d)}`};
     }catch(e){return {ok:false,output:`FACEBOOK START R1263 ❌\n${e.message||e}`};}
   }
+  if(action==='facebook-guard-on-r1279'||action==='facebook-guard-off-r1279'){
+    try{
+      const currentStatus=await localStatus();
+      const guard=facebookGuardSetR1279(action==='facebook-guard-on-r1279',currentStatus.facebookR1313);
+      return {ok:true,output:`FACEBOOK GUARD R1279 ${guard.enabled?'ON':'OFF'} ✅\n${JSON.stringify(guard)}`};
+    }catch(e){return {ok:false,output:'FACEBOOK GUARD R1279 ERROR: '+String(e?.message||e)};}
+  }
   if(['facebook-stop-r1313','facebook-stop-r1319','facebook-stop'].includes(action)){
     try{const d=await localControlR721('/control/facebook-stop');return {ok:!Boolean(d?.running),output:`FACEBOOK STOP R1263 ${!d?.running?'✅':'❌'}\nR1356 relay remains isolated · YouTube untouched\n${JSON.stringify(d)}`};}
     catch(e){return {ok:false,output:`FACEBOOK STOP R1263 ❌\n${e.message||e}`};}
@@ -857,6 +999,8 @@ async function daemon(){
       if(!cfg.token){console.error(new Date().toISOString(),'agent: paired token not found; waiting');await sleep(10000);continue;}
       const headers={'content-type':'application/json','authorization':'Bearer '+cfg.token,'user-agent':'ANDRIK-Radio-Web-Agent-R803'};
       const status=await localStatus();
+      await facebookGuardTickR1279(status);
+      status.facebookRetryGuardR1279=facebookGuardPublicR1279();
       await maybeAutoBootstrapTikTokR1304(headers,status);
       // Heartbeat always continues, even while start/recover is running.
       const d=await jsonFetch(BASE+'/api/radio-agent-r627/poll',{method:'POST',headers,body:JSON.stringify({version:AGENT_VERSION_R803,status})});
