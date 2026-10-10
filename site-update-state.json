@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r358-deploy-nohang",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1791652621851-3580ef63da",
-  "release": "R1277",
-  "archiveName": "SITE-R1277-FB-CONTROL-FIX.zip",
-  "sourceHead": "5ef7c062f6e037165dd1ece1a76f14f46cf60ab3",
-  "backupSha": "5ef7c062f6e037165dd1ece1a76f14f46cf60ab3",
+  "operationId": "publish-1791653568720-c7d69b5bd4",
+  "release": "R1278",
+  "archiveName": "SITE-R1278-FACEBOOK-TCP-METRICS.zip",
+  "sourceHead": "59189360cdf85b6066331d3db0fb9f91f5bcfaad",
+  "backupSha": "59189360cdf85b6066331d3db0fb9f91f5bcfaad",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-10-10T17:17:01.851Z"
+  "generatedAt": "2026-10-10T17:32:48.720Z"
 }
