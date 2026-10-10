@@ -24,18 +24,16 @@ body{padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}a{color:inhe
 <body><main class="wrap">
 <div class="topbar"><a class="back" href="/radio-control-admin.html">‹</a><div class="title"><small>ANDRIK RADIO</small><strong>Facebook Live</strong></div><button class="refresh" id="fbRefresh" type="button">↻</button></div>
 
-<section class="hero"><div class="ey">FACEBOOK LIVE · ПРОФИЛЬ АНДРИК ГВОЗДЬ</div><h1>Стрим Facebook</h1><p>Facebook работает через независимый R1356 relay. Ключ перед START синхронизируется с VPS автоматически; YouTube и Studio не перезапускаются. Для Facebook работают отдельные START / STOP и 7-часовая ротация сигнала.</p><div class="status-strip"><span class="pill" id="fbOvhPill"><i></i><span>OVH: проверяем…</span></span><span class="pill" id="fbMasterPill"><i></i><span>MASTER: проверяем…</span></span><span class="pill warn" id="fbEgressPill"><i></i><span>Facebook: проверяем…</span></span></div></section>
+<section class="hero"><div class="ey">FACEBOOK LIVE · ПРОФИЛЬ АНДРИК ГВОЗДЬ</div><h1>Стрим Facebook</h1><p>Facebook работает через независимый R1356 relay. Ключ перед START синхронизируется с VPS автоматически; YouTube и Studio не перезапускаются. Для Facebook работают отдельные START / STOP без лишних служебных блоков о ротации сигнала.</p><div class="status-strip"><span class="pill" id="fbOvhPill"><i></i><span>OVH: проверяем…</span></span><span class="pill" id="fbMasterPill"><i></i><span>MASTER: проверяем…</span></span><span class="pill warn" id="fbEgressPill"><i></i><span>Facebook: проверяем…</span></span></div></section>
 
 <section class="card"><div class="card-head"><div><h2>Состояние</h2><p>YouTube считается только по двум своим ingest-линиям — Facebook больше не попадает в счётчик RTMPS.</p></div><span class="badge">R1263 / R1356</span></div>
 <div class="metrics"><div class="metric"><strong id="fbService">—</strong><small>RADIO SERVICE</small></div><div class="metric"><strong id="fbRtmps">—</strong><small>YOUTUBE RTMPS</small></div><div class="metric"><strong id="fbCpu">—</strong><small>CPU</small></div><div class="metric"><strong id="fbTrack">—</strong><small>СЕЙЧАС ИГРАЕТ</small></div><div class="metric"><strong id="fbProfile">—</strong><small>FACEBOOK VIDEO</small></div><div class="metric"><strong id="fbState">OFF</strong><small>FACEBOOK EGRESS</small></div></div>
-<div class="submetrics"><div class="submetric"><b id="fbMbps">—</b><span>ИСХОДЯЩИЙ МБИТ/С</span></div><div class="submetric"><b id="fbUptime">—</b><span>ВРЕМЯ РАБОТЫ</span></div><div class="submetric"><b id="fbRotate">—</b><span>ДО РОТАЦИИ 7 Ч</span></div><div class="submetric"><b id="fbRestarts">0</b><span>RESTART / ROTATE</span></div></div>
+<div class="submetrics"><div class="submetric"><b id="fbMbps">—</b><span>ИСХОДЯЩИЙ МБИТ/С</span></div><div class="submetric"><b id="fbUptime">—</b><span>ВРЕМЯ РАБОТЫ</span></div><div class="submetric"><b id="fbInputMb">—</b><span>ВХОД МБ</span></div><div class="submetric"><b id="fbRestarts">0</b><span>RESTART</span></div></div>
 <div class="msg" id="fbStatusMsg">Проверяем Facebook-ветку…</div>
 <div class="viewer-note"><b>Зрители Facebook:</b> RTMP-сервер не передаёт число зрителей обратно на VPS. Точный current viewers остаётся в Live Producer. В контрольке ниже мы показываем всё, что действительно измеряет сервер: сигнал, Mbps, буфер, вход, рестарты, ротацию и историю.</div>
 </section>
 
 <section class="card"><div class="card-head"><div><h2>График Facebook</h2><p>Фактическая скорость подачи master в Facebook за последний час. История собирается на VPS даже когда эта страница закрыта.</p></div><span class="badge">LIVE TELEMETRY</span></div><div class="chart-wrap"><div class="chart-head"><b>Исходящий поток</b><span id="fbChartCaption">ждём данные</span></div><div id="fbChart"></div></div><div class="activity" id="fbEvents"></div></section>
-
-<section class="card"><div class="card-head"><div><h2>Авто-ротация</h2><p>Через 7 часов Facebook RTMP-ветка автоматически размыкается, выдерживает паузу и подключается снова, чтобы не упираться в 8-часовой предел.</p></div><span class="badge">7H AUTO</span></div><div class="submetrics"><div class="submetric"><b id="fbRotateMode">ON</b><span>АВТО-РЕЖИМ</span></div><div class="submetric"><b id="fbRotateGap">90 сек</b><span>ПАУЗА</span></div><div class="submetric"><b id="fbRotateCount">0</b><span>РОТАЦИЙ</span></div><div class="submetric"><b id="fbNextAt">—</b><span>СЛЕДУЮЩАЯ</span></div></div><div class="msg warn">Важно: R1316 автоматически перезапускает именно RTMP-сигнал. Если Facebook после разрыва не создаёт новый публичный LIVE автоматически, потребуется включить соответствующий режим в Live Producer или позже подключить Meta API; один Persistent Stream Key не даёт VPS права нажать веб-кнопку «Выйти в эфир».</div></section>
 
 <section class="card"><div class="card-head"><div><h2>Persistent Stream Key</h2><p>Ключ хранится зашифрованно в Secure Control. После «СОХРАНИТЬ» контролька сама синхронизирует его в защищённый VPS-конфиг — без restart радио.</p></div><span class="badge">SECURE</span></div><div class="secretbox"><div class="field"><label for="fbServerUrl">Server URL</label><input id="fbServerUrl" type="url" value="rtmps://live-api-s.facebook.com:443/rtmp/" autocomplete="off" spellcheck="false"></div><div class="field"><label for="fbStreamKey">Persistent Stream Key</label><input id="fbStreamKey" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="FB-…"></div><button class="btn blue" id="fbSave" type="button" style="width:100%;margin-top:12px">🔐 СОХРАНИТЬ FACEBOOK</button><div class="note"><b>https://www.facebook.com/live/ingests/</b> — тестовая веб-страница. Для VPS используется RTMPS Server URL выше + Persistent Stream Key.</div></div><div class="msg" id="fbIngestMsg">Текущий сохранённый ключ менять не нужно, если Facebook уже работает.</div></section>
 
@@ -71,9 +69,36 @@ const cpu=s=>{const v=Number(s?.metricsR1183?.hostCpuPercent??s?.cpuPercentR988?
 const short=v=>String(v??'').trim()||'—';
 const fmtDuration=sec=>{sec=Math.max(0,Number(sec)||0);const h=Math.floor(sec/3600),m=Math.floor((sec%3600)/60);return h?`${h}ч ${String(m).padStart(2,'0')}м`:`${m}м`};
 const fmtClock=iso=>{const d=new Date(iso);return Number.isFinite(d.getTime())?d.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'}):'—'};
-function drawChart(hist){
-  const box=$('fbChart');const rows=(Array.isArray(hist)?hist:[]).filter(x=>Number.isFinite(Number(x?.mbps))).slice(-360);
-  if(!rows.length){box.innerHTML='<div class="msg">Пока нет точек графика.</div>';return}
+function normalizeTelemetry(hist,currentMbps=0){
+  const src=Array.isArray(hist)?hist.slice(-360):[];
+  let prev=null;
+  const rows=[];
+  for(const row of src){
+    const at=row?.at;
+    const t=Date.parse(at||'');
+    if(!Number.isFinite(t)) continue;
+    let mbps=Number(row?.mbps);
+    const bytes=Number(row?.inputBytes);
+    if((!Number.isFinite(mbps)||mbps<=0) && prev && Number.isFinite(bytes) && Number.isFinite(prev.inputBytes)){
+      const dt=(t-prev.t)/1000;
+      const delta=bytes>=prev.inputBytes?bytes-prev.inputBytes:0;
+      if(dt>0 && delta>0) mbps=delta*8/1e6/dt;
+    }
+    if(!Number.isFinite(mbps) || mbps<0) mbps=0;
+    rows.push({at:new Date(t).toISOString(),mbps,inputBytes:Number.isFinite(bytes)?bytes:NaN,t});
+    prev={t,inputBytes:Number.isFinite(bytes)?bytes:NaN};
+  }
+  if(rows.length && Number(currentMbps)>0) rows[rows.length-1].mbps=Number(currentMbps);
+  return rows;
+}
+function lastDerivedMbps(hist,currentMbps=0){
+  if(Number.isFinite(Number(currentMbps)) && Number(currentMbps)>0) return Number(currentMbps);
+  const rows=normalizeTelemetry(hist,0);
+  return rows.length?Number(rows[rows.length-1].mbps||0):0;
+}
+function drawChart(hist,currentMbps=0){
+  const box=$('fbChart');const rows=normalizeTelemetry(hist,currentMbps).filter(x=>Number.isFinite(Number(x?.mbps)));
+  if(!rows.length){box.innerHTML='<div class="msg">Пока нет точек графика от сервера.</div>';$('fbChartCaption').textContent='ждём данные';return}
   const W=720,H=180,L=42,R=12,T=10,B=26,pw=W-L-R,ph=H-T-B,max=Math.max(1,Math.ceil(Math.max(...rows.map(x=>Number(x.mbps)||0))*1.15));
   const pts=rows.map((x,i)=>{const xx=L+(rows.length===1?pw:pw*i/(rows.length-1));const yy=T+ph-(Math.max(0,Number(x.mbps)||0)/max)*ph;return [xx,yy]});
   const line=pts.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' ');
@@ -99,11 +124,11 @@ function render(d){
   $('fbService').textContent=live?'ACTIVE':short(s.service).toUpperCase();$('fbRtmps').textContent=lanes+'/'+expected;$('fbCpu').textContent=cpu(s);$('fbTrack').textContent=short(s.current?.title||s.currentTitle||s.current);$('fbProfile').textContent=profile;$('fbState').textContent=running?'LIVE':enabled?'RECONNECT':'OFF';
   setPill('fbOvhPill',online?'OVH: ONLINE':'OVH: OFFLINE',online?'ok':'bad');setPill('fbMasterPill',master?'MASTER: ГОТОВ':'MASTER: НУЖНА ПРОВЕРКА',master?'ok':'warn');setPill('fbEgressPill',running?'Facebook: СИГНАЛ ИДЁТ':effective?'Facebook: ГОТОВ':'Facebook: ЖДЁТ КЛЮЧ',running?'ok':effective?'ok':'warn');
   $('fbStart').disabled=busy||!master||!effective||running;$('fbStop').disabled=busy||!effective||(!running&&!enabled);
-  const telemetry=Array.isArray(fb.telemetryR1316)?fb.telemetryR1316:[];const lastPoint=telemetry.length?telemetry[telemetry.length-1]:null;const mbpsRaw=Number.isFinite(Number(fb.currentMbpsR1316))?Number(fb.currentMbpsR1316):Number(lastPoint?.mbps||0);$('fbMbps').textContent=running?mbpsRaw.toFixed(1):'0.0';
+  const telemetry=Array.isArray(fb.telemetryR1316)?fb.telemetryR1316:[];const mbpsRaw=lastDerivedMbps(telemetry,fb.currentMbpsR1316);$('fbMbps').textContent=running?mbpsRaw.toFixed(1):'0.0';
   let uptime=Number(fb.uptimeSeconds||0);if(running&&!uptime&&fb.lastStart?.at){uptime=Math.max(0,Math.floor((Date.now()-Date.parse(fb.lastStart.at))/1000)||0)}$('fbUptime').textContent=running?fmtDuration(uptime):'OFF';
-  const ar=fb.autoRotateR1316||s.facebookAutoRotateR1316||a.facebookAutoRotateR1316||{};const arEnabled=Boolean(ar.enabled);$('fbRotate').textContent=arEnabled?(ar.inGap?'ПАУЗА':fmtDuration(Number(ar.remainingSeconds||0))):running?'СЧИТАЕМ':'OFF';$('fbRotateMode').textContent=arEnabled?'ON':'OFF';$('fbRotateGap').textContent=`${Number(ar.gapSeconds||90)} сек`;$('fbRotateCount').textContent=String(Number(ar.count||0));$('fbNextAt').textContent=ar.dueAt?fmtClock(ar.dueAt):(arEnabled&&running?'СЧИТАЕМ':'—');$('fbRestarts').textContent=String((Number(fb.restartCount)||0)+(Number(ar.count)||0));
-  drawChart(telemetry);renderEvents(fb);
-  const m=$('fbStatusMsg');if(running){m.className='msg ok';m.textContent=`✅ Facebook relay идёт. Буфер ${(Number(fb.bufferedBytes||0)/1048576).toFixed(2)} МБ · вход ${(Number(fb.inputBytes||0)/1048576).toFixed(1)} МБ · последний пакет ${fb.lastInputAt?fmtClock(fb.lastInputAt):'—'}.`}else if(ar.inGap){m.className='msg warn';m.textContent='⏱ Авто-ротация: выдерживается пауза перед новым подключением.'}else if(!effective){m.className='msg warn';m.textContent='Сохрани Persistent Stream Key.'}else if(master){m.className='msg ok';m.textContent='✅ Facebook настроен. Можно запускать сигнал.'}else{m.className='msg warn';m.textContent='Нужен здоровый master / YouTube RTMPS.'}
+  $('fbInputMb').textContent=running?(Number(fb.inputBytes||0)/1048576).toFixed(1):'0.0';$('fbRestarts').textContent=String(Number(fb.restartCount)||0);
+  drawChart(telemetry,mbpsRaw);renderEvents(fb);
+  const m=$('fbStatusMsg');if(running){m.className='msg ok';m.textContent=`✅ Facebook relay идёт. Буфер ${(Number(fb.bufferedBytes||0)/1048576).toFixed(2)} МБ · вход ${(Number(fb.inputBytes||0)/1048576).toFixed(1)} МБ · последний пакет ${fb.lastInputAt?fmtClock(fb.lastInputAt):'—'}.`}else if(!effective){m.className='msg warn';m.textContent='Сохрани Persistent Stream Key.'}else if(master){m.className='msg ok';m.textContent='✅ Facebook настроен. Можно запускать сигнал.'}else{m.className='msg warn';m.textContent='Нужен здоровый master / YouTube RTMPS.'}
 }
 async function refresh(){if(busy)return;const b=$('fbRefresh');b.classList.add('spin');try{const [d,m]=await Promise.all([api('/api/control/radio-remote-r627/status?ts='+Date.now()),api('/api/control/radio-facebook-r1250/ingest?ts='+Date.now()).catch(()=>null)]);if(m)store={configured:Boolean(m.configured),updatedAt:m.updatedAt||null};render(d)}catch(e){setPill('fbOvhPill','OVH: НЕТ ДАННЫХ','bad');$('fbStatusMsg').className='msg bad';$('fbStatusMsg').textContent='Не удалось получить состояние: '+String(e.message||e)}finally{b.classList.remove('spin')}}
 async function waitCommand(id){const until=Date.now()+50000;while(Date.now()<until){await sleep(1400);const d=await api('/api/control/radio-remote-r627/status?ts='+Date.now());const r=d.result||{};if(r.id===id&&r.finishedAt){if(!r.ok)throw new Error(String(r.output||'command failed'));render(d);return r}}throw new Error('OVH не подтвердил команду за 50 секунд')}

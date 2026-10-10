@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r358-deploy-nohang",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1791474870225-68b915b46d",
+  "operationId": "publish-1791652621851-3580ef63da",
   "release": "R1277",
-  "archiveName": "ANDRIK-SITE-R1277-RESTORE-R1264-YOUTUBE-STATS-COLLECTOR-1.zip",
-  "sourceHead": "d81bf42d6176a9053cc6972c18c64228ae52d689",
-  "backupSha": "d81bf42d6176a9053cc6972c18c64228ae52d689",
+  "archiveName": "SITE-R1277-FB-CONTROL-FIX.zip",
+  "sourceHead": "5ef7c062f6e037165dd1ece1a76f14f46cf60ab3",
+  "backupSha": "5ef7c062f6e037165dd1ece1a76f14f46cf60ab3",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-10-08T15:54:31.883Z"
+  "generatedAt": "2026-10-10T17:17:01.851Z"
 }
