@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r358-deploy-nohang",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1791694844362-eace8bf742",
-  "release": "R1282",
-  "archiveName": "SITE-R1282-RUINS-OF-EPOCHS-TEST.zip",
-  "sourceHead": "669fe27af5f113ed2ec593dce121ec6f7b816026",
-  "backupSha": "669fe27af5f113ed2ec593dce121ec6f7b816026",
+  "operationId": "publish-1791697783185-7190b8b7ea",
+  "release": "R1283",
+  "archiveName": "SITE-R1283-PORTRAIT-RUINS-GAMEPLAY-TEST.zip",
+  "sourceHead": "a64e772943a675aac2bcfbcb8b55a71fd3fffc2d",
+  "backupSha": "a64e772943a675aac2bcfbcb8b55a71fd3fffc2d",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-10-11T05:00:44.888Z"
+  "generatedAt": "2026-10-11T05:49:43.595Z"
 }

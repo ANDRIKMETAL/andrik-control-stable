@@ -4273,6 +4273,17 @@ if (towerY_R952 >= TOWER_TOP_R952 - 3) { victory = true; unlockedLevel = Math.ma
 autoSaveClock += dt; if (autoSaveClock >= 2.5) { autoSaveClock = 0; saveProgress(false); }
 };
 const RUINS_END_R010 = 3920;
+// R1283: holes are physical in 2.5D collision AND cut out of visible Three.js planks.
+const RUINS_GAPS_R1283=[[1024,1088],[1536,1600],[2048,2112],[2624,2688],[3104,3168]];
+let ruinsSprintT_R1283=0,ruinsLastTapT_R1283=-99,ruinsTapDirR1283=0,ruinsHeldLeftR1283=false,ruinsHeldRightR1283=false;
+let ruinsFallT_R1283=0;
+ATTACKS.ruinsKneeR1283={duration:.46,activeStart:.08,activeEnd:.31,damage:32,range:64,depth:27,knock:78};
+function ruinsGapAtR1283(x){return RUINS_GAPS_R1283.find(([a,b])=>x>=a&&x<=b);}
+function ruinsResetMotionR1283(){ruinsSprintT_R1283=0;ruinsLastTapT_R1283=-99;ruinsTapDirR1283=0;ruinsHeldLeftR1283=false;ruinsHeldRightR1283=false;ruinsFallT_R1283=0;}
+function ruinsDoubleTapR1283(dt){const dir=input.right?1:input.left?-1:0;const start=(dir===1&&!ruinsHeldRightR1283)||(dir===-1&&!ruinsHeldLeftR1283);if(start){if(dir===ruinsTapDirR1283&&elapsed-ruinsLastTapT_R1283<.34)ruinsSprintT_R1283=1.65;ruinsTapDirR1283=dir;ruinsLastTapT_R1283=elapsed;}ruinsHeldRightR1283=!!input.right;ruinsHeldLeftR1283=!!input.left;ruinsSprintT_R1283=Math.max(0,ruinsSprintT_R1283-dt);player.runningR1204=!!dir&&ruinsSprintT_R1283>0;}
+function ruinsKneeR1283(){if(!player.runningR1204||player.z>4||player.stun>0)return false;player.attack={id:++attackSerial,kind:'ruinsKneeR1283',t:0,duration:ATTACKS.ruinsKneeR1283.duration};player.lastAttackTime=elapsed;ruinsSprintT_R1283=Math.max(.55,ruinsSprintT_R1283);tone(230,.08,'square',.022,100);return true;}
+function ruinsCheckGapR1283(dt){const gap=ruinsGapAtR1283(player.x);if(ruinsFallT_R1283>0||(gap&&player.z<7&&player.vz<=0)){ruinsFallT_R1283+=dt;ruinsSprintT_R1283=0;player.vx=0;player.vy=0;player.attack=null;player.z=-Math.min(56,ruinsFallT_R1283*102);if(ruinsFallT_R1283>=.55){ruinsFallT_R1283=0;const wasLow=player.hp<=28;player.x=ruinsCheckpointXR010;player.y=214;player.z=0;player.vz=0;player.vx=0;player.stun=0;player.invuln=1.45;player.hp=wasLow?Math.max(1,player.hp-28):player.hp-28;if(wasLow&&livesR955>1){livesR955--;player.hp=100;}hitShake(5);showMessage('ПРОПАСТЬ · ПРЫГАЙ ЧЕРЕЗ РАЗРЫВЫ',1.7);tone(65,.22,'sawtooth',.022,42);}}}
+
 let ruinsEnemiesR010 = [], ruinsCrowsR010 = [], ruinsObstaclesR010 = [], ruinsDecoR010 = [], ruinsBossR010 = null;
 let ruinsCheckpointXR010 = 72, ruinsEyeBlinkR010 = 0, ruinsEyeOpenR010 = 1, ruinsBossStartedR010 = false;
 let ruinsPosterShownR010 = false, ruinsSummonClockR010 = 3.2;
@@ -4341,7 +4352,7 @@ ruinsDecoR010 = [
 { x: 2420, h: 78, kind: 'head' }, { x: 2970, h: 98, kind: 'statue' }, { x: 3470, h: 130, kind: 'head' }
 ];
 ruinsBossR010 = makeBossR010();
-cameraX = 0;resetRuinsBossCombatR1282();
+cameraX = 0;resetRuinsBossCombatR1282();ruinsResetMotionR1283();
 }
 function damageRuinsPlayerR010(amount, fromX = player.x) {
 if (player.invuln > 0 || player.dead) return;
@@ -4421,7 +4432,7 @@ if (player.z > 3) startAirSwordR010(); else startSwordR950();
 }
 swordComboLatchR950 = true; pressed.attack = false; pressed.jump = false;
 } else swordComboLatchR950 = false;
-if (pressed.kick && (!player.attack || player.attack.t > player.attack.duration * .70)) startKickR950();
+if (pressed.kick && (!player.attack || player.attack.t > player.attack.duration * .70)) {if(!ruinsKneeR1283())startKickR950();}
 if (pressed.attack && !specialCharging && (!player.attack || player.attack.t > player.attack.duration * .72)) {
 if (player.z > 3) startAirPunchR010(); else startPlayerAttack();
 }
@@ -4434,8 +4445,8 @@ hitShake(8); flash = Math.max(flash, .10); tone(58, .15, 'sawtooth', .036, 34);
 }
 if (player.attack.t >= player.attack.duration) player.attack = null;
 }
-const attackingOnGround = player.attack && player.z < 2;
-let movementScale = player.stun > 0 ? 0 : specialCharging ? .08 : attackingOnGround ? (player.attack.kind === 'guitarSmash' ? .06 : .42) : 1;
+ruinsDoubleTapR1283(dt);const attackingOnGround = player.attack && player.z < 2;
+let movementScale = player.stun > 0 ? 0 : specialCharging ? .08 : attackingOnGround ? (player.attack.kind === 'guitarSmash' ? .06 : player.attack.kind==='ruinsKneeR1283'?.88:.42) : 1;
 if(effects.some(f=>f.kind==='r1282-slow'&&f.t>.18&&f.t<1.7&&Math.abs(f.x-player.x)<38&&Math.abs(f.y-player.y)<26))movementScale*=.72;
 let mx = 0, my = 0;
 if (input.left) mx -= 1; if (input.right) mx += 1; if (input.up) my -= 1; if (input.down) my += 1;
@@ -4444,12 +4455,12 @@ const len = Math.hypot(mx, my) || 1; mx /= len; my /= len;
 if (mx !== 0) player.face = mx > 0 ? 1 : -1;
 player.walkPhase += dt * 10 * movementScale;
 }
-player.vx = approach(player.vx, mx * player.speed * movementScale, dt * 720);
+player.vx = approach(player.vx, mx * player.speed * (player.runningR1204?1.72:1) * movementScale, dt * 720);
 player.vy = approach(player.vy, my * player.speed * .76 * movementScale, dt * 720);
-player.x += player.vx * dt; player.y += player.vy * dt;
+player.x += player.vx * dt + (player.attack?.kind==='ruinsKneeR1283' && player.attack.t<.30?player.face*70*dt:0); player.y += player.vy * dt;
 player.x = clamp(player.x, 18, RUINS_END_R010 - 18); player.y = clamp(player.y, 180, 232);
 if (player.z > 0 || player.vz > 0) { player.z += player.vz * dt; player.vz -= GRAVITY * dt; if (player.z <= 0) { player.z = 0; player.vz = 0; tone(78, .045, 'triangle', .012, 55); } }
-resolveRuinsPlayerHitsR010();
+resolveRuinsPlayerHitsR010();ruinsCheckGapR1283(dt);
 }
 function updateRuinsEnemiesR010(dt) {
  // Distinct threat silhouettes and tactics, in original two-coordinate collision system.
@@ -4463,7 +4474,7 @@ function updateRuinsEnemiesR010(dt) {
    simultaneous++;const a=e.attackAnimR1185;a.t+=dt;
    if(!a.hit && a.t>=(kind==='colossus'?.39:.25)){
     a.hit=true;
-    if(kind==='watcher')effects.push({kind:'r1282-bolt',x:e.x,y:e.y-12,vx:e.face*99,t:0,duration:2.8,hit:false});
+    if(kind==='watcher')effects.push({kind:'r1282-bolt',owner:e.id,x:e.x,y:e.y-12,vx:e.face*105,t:0,duration:4.5,hit:false,reflected:false});
     else if(kind==='colossus')effects.push({kind:'r1282-wave',x:e.x,y:e.y,t:0,duration:.68,phase:1,hit:false});
     else if(Math.abs(player.x-e.x)<(kind==='stone'?46:35)&&Math.abs(player.y-e.y)<22&&player.z<20) damageRuinsPlayerR010(e.damage,e.x);
    }
@@ -4519,7 +4530,7 @@ function updateRuinsEnemiesR010(dt) {
      const range=e.attackKind==='sweep'?110:77;
      if(Math.abs(player.x-e.x)<=range&&Math.abs(player.y-e.y)<30&&player.z<20)damageRuinsPlayerR010(e.phase===3?22:18,e.x);
     }else if(e.attackKind==='pulse')effects.push({kind:'r1282-wave',x:e.x,y:e.y,t:0,duration:.9,hit:false,phase:e.phase});
-    else if(e.attackKind==='bolts')for(let j=-1;j<=1;j++)effects.push({kind:'r1282-bolt',x:e.x,y:e.y-11+j*12,vx:e.face*115,t:0,duration:3,hit:false});
+    else if(e.attackKind==='bolts')for(let j=-1;j<=1;j++)effects.push({kind:'r1282-bolt',owner:e.id,x:e.x,y:e.y-11+j*12,vx:e.face*115,t:0,duration:4.5,hit:false,reflected:false});
     else if(e.attackKind==='slow')effects.push({kind:'r1282-slow',x:player.x+e.face*35,y:player.y,t:0,duration:1.9,hit:false});
     else if(e.attackKind==='fracture')effects.push({kind:'r1282-fracture',x:Math.max(3330,Math.min(3760,player.x+e.face*66)),y:player.y,t:0,duration:1.48,hit:false});
    }
@@ -4542,7 +4553,16 @@ function updateRuinsEffectsR010(dt) {
   if(fx.hit)continue;
   if(fx.kind==='r1282-bolt'){
    fx.x+=fx.vx*dt;
-   if(Math.abs(player.x-fx.x)<15&&Math.abs(player.y-fx.y)<22&&player.z<25){fx.hit=true;damageRuinsPlayerR010(10,fx.x);}
+   if(fx.reflected){
+    const target=fx.owner==='RBOSS'?ruinsBossR010:ruinsEnemiesR010.find(e=>e.id===fx.owner);
+    if(target?.alive&&Math.abs(fx.x-target.x)<(target.width||25)*.65&&Math.abs(fx.y-target.y)<32){fx.hit=true;fx.duration=fx.t+.08;damageRomanR010(target,fx.owner==='RBOSS'?42:Math.max(42,target.maxHp*.65));score+=70;showMessage('ОТРАЖЕНИЕ · +70',.85);}
+   }else{
+    const hb=playerAttackHitbox();
+    if(hb&&player.attack?.kind==='swordSlashR950'&&rectsOverlap(hb,{x:fx.x-8,y:fx.y-8,w:16,h:16})&&fx.vx*player.face<0){
+     fx.reflected=true;fx.vx=-fx.vx*2.15;fx.t=0;fx.duration=4.5;fx.x=player.x+player.face*38;
+     effects.push({kind:'r010-spark',x:fx.x,y:fx.y,t:0,duration:.30});tone(940,.09,'sawtooth',.025,520);showMessage('B — ОТРАЖЕНИЕ ПУЛИ',.75);
+    }else if(Math.abs(player.x-fx.x)<15&&Math.abs(player.y-fx.y)<22&&player.z<25){fx.hit=true;damageRuinsPlayerR010(10,fx.x);}
+   }
   }else if(fx.kind==='r1282-wave' && fx.t>.24){
    const dist=(fx.t-.24)*225;
    if(Math.abs(Math.abs(player.x-fx.x)-dist)<27&&Math.abs(player.y-fx.y)<40&&player.z<19){fx.hit=true;damageRuinsPlayerR010(12+fx.phase*2,fx.x);}
@@ -4817,7 +4837,7 @@ triggerSwordR952 = function(){
 if (!started || paused || gameOver || victory || bikeMode) return;
 if (currentLevel <= 2) { startSwordR950(); return; }
 if (currentLevel === 4) { if(towerSwordT_R952>.08)return; towerSwordT_R952 = .48; towerMeleeR952(60); tone(420, .07, 'sawtooth', .020, 155); return; }
-if (currentLevel === 6) { if (player.z > 3) startAirSwordR010(); else startSwordR950(); return; }
+if (currentLevel === 6) { if(ruinsKneeR1283())return; if (player.z > 3) startAirSwordR010(); else startSwordR950(); return; }
 };
 window.addEventListener('keydown', (e) => {
 if (!started && e.code === 'Digit6') { e.preventDefault(); unlockedLevel = Math.max(unlockedLevel, 6); startLevel(6, false); begin(); }
@@ -5298,7 +5318,7 @@ r1203:{rubies:rubiesR1203,skill:skillLevelR1203,weapon:streetWeaponR1203,charges
 space:{x:spaceX_R950,y:spaceY_R950,distance:spaceDistanceR950,roll:spaceRollR950,enemies:spaceEnemiesR950,shots:spaceShotsR950,enemyShots:spaceEnemyShotsR950,pickups:spacePickupsR950,boss:spaceBossR950,stars:spaceCollectStarsR952,lifeUps:spaceLifeUpsR955,insert:spaceInsertR950,super:spaceSuperR1185},
 tower:{invuln:towerInvulnR952,face:player.face,move:(input.right?1:0)-(input.left?1:0),look:(input.up?1:0)-(input.down?1:0),bats:towerBatsR1190,x:towerX_R952,y:towerY_R952,camera:towerCameraR952,grounded:towerGroundedR952,sword:towerSwordT_R952,platforms:towerPlatformsR952,enemies:towerEnemiesR952,crates:towerCratesR952,hearts:towerHeartsR952,stars:towerStarsR952,hazards:towerFallingR952,lifeUps:towerLifeUpsR955},
 tetris:{grid:tetGridR952,cells:tetPieceR952?tetCellsR952():[],piece:tetPieceR952,stage:tetStageR952,lines:tetTotalLinesR952},
-ruins:{enemies:ruinsEnemiesR010,crows:ruinsCrowsR010,obstacles:ruinsObstaclesR010,boss:ruinsBossStartedR010?ruinsBossR010:null,mechanisms:ruinsMechanismsR1282}
+ruins:{enemies:ruinsEnemiesR010,crows:ruinsCrowsR010,obstacles:ruinsObstaclesR010,boss:ruinsBossStartedR010?ruinsBossR010:null,mechanisms:ruinsMechanismsR1282,gaps:RUINS_GAPS_R1283,sprint:ruinsSprintT_R1283}
 };
 },
 start(fresh=false) { if(fresh) startNewGame(); else if(!started) {titleChoice=hasSave()?0:1;confirmTitleChoice();} else {levelSelectOpenR950=false;handleStartPause();} },
@@ -5317,7 +5337,7 @@ buildWaves();
 requestAnimationFrame(frame);
 })();
 </script>
-<script type="module" src="/assets/lira-3d-r1282.js?v=55.00-r1282"></script>
+<script type="module" src="/assets/lira-3d-r1283.js?v=55.00-r1283"></script>
 </body>
 </html>
 
