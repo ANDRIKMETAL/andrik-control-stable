@@ -5215,6 +5215,9 @@ if(bossR1238()){ctx.fillStyle='#e9daac';ctx.font='10px monospace';ctx.fillText('
 const drawClassicR1182 = draw;
 let rendererR1182 = null;
 window.LiraGame = {
+leaveLevels() {levelSelectOpenR950=false;paused=true;},
+hold() {paused=true;levelSelectOpenR950=false;},
+campaignLevel(n) {if(Number.isInteger(n)&&n>=1&&n<=6){unlockedLevel=Math.max(unlockedLevel,n);levelSelectOpenR950=false;startLevel(n,false);begin();saveProgress(false);}},
 attachRenderer(fn) { rendererR1182 = fn; if(fn)bootSplashUntil=0; },
 snapshot() {
 return {started, paused, gameOver, victory, elapsed, cameraX, score, shake, flash,
@@ -5253,7 +5256,7 @@ buildWaves();
 requestAnimationFrame(frame);
 })();
 </script>
-<script type="module" src="/assets/lira-3d-r1239.js?v=55.00-r1239"></script>
+<script type="module" src="/assets/lira-3d-r1280.js?v=55.00-r1280"></script>
 </body>
 </html>
 

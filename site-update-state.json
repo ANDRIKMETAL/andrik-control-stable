@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r358-deploy-nohang",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1791656836327-4324a63481",
-  "release": "R1279",
-  "archiveName": "SITE-R1279-FB-RETRY-GUARD.zip",
-  "sourceHead": "2ba07dc83baebed601a44e681e0f778d14957c95",
-  "backupSha": "2ba07dc83baebed601a44e681e0f778d14957c95",
+  "operationId": "publish-1791692179931-687c9124b4",
+  "release": "R1280",
+  "archiveName": "SITE-R1280-PORTRAIT-BETA.zip",
+  "sourceHead": "7dc25af8dcce6e350c8cbaf97233f66a4c5bb0e9",
+  "backupSha": "7dc25af8dcce6e350c8cbaf97233f66a4c5bb0e9",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-10-10T18:27:17.873Z"
+  "generatedAt": "2026-10-11T04:16:20.420Z"
 }
