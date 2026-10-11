@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r358-deploy-nohang",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1791692179931-687c9124b4",
-  "release": "R1280",
-  "archiveName": "SITE-R1280-PORTRAIT-BETA.zip",
-  "sourceHead": "7dc25af8dcce6e350c8cbaf97233f66a4c5bb0e9",
-  "backupSha": "7dc25af8dcce6e350c8cbaf97233f66a4c5bb0e9",
+  "operationId": "publish-1791693200296-7ef9881f48",
+  "release": "R1281",
+  "archiveName": "SITE-R1281-PORTRAIT-FIX.zip",
+  "sourceHead": "760a4c97f348d41f4d8695b5f78bf7cac1d63fb6",
+  "backupSha": "760a4c97f348d41f4d8695b5f78bf7cac1d63fb6",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-10-11T04:16:20.420Z"
+  "generatedAt": "2026-10-11T04:33:20.790Z"
 }

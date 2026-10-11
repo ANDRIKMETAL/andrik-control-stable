@@ -1,0 +1,15 @@
+{
+  "required": {
+    "assets/portrait-r1280.js": "02f7e81d2da17f994033c6bdc2b12268643da3029a8e1d694b26b94bb1f283b3",
+    "assets/portrait-core-r1280.js": "183a693f546230ec4086852651ef7536ccc1efd12cc1198cb177bc6dfd2e5758",
+    "assets/lira-3d-r1280.js": "e62608ee063c6d3bd0b26d3794d5bf27c96182cebb7131d9bdf4f65bc04cb478",
+    "assets/portrait-r1280.css": "de70125efe4edc1d0abd8a6b176237c31e877449a314c617db910d1b4bd64d6d",
+    "dreaming-of-lira.html": "4a95d717c760913f690f72599099c29cd71cfc3c3d4fb95671f13b46f765a7fb"
+  },
+  "patch": {
+    "assets/portrait-core-r1281.js": "acef82ae27cd39e19768a202f8b6abbbbc63240d8cf071907c5a2efe6377f920",
+    "assets/portrait-r1281.js": "c4ec73b5e73ac4d7a4e7bfa6919d99cb3baf4e8eb06ac64cd91255de78181145",
+    "assets/lira-3d-r1281.js": "2c72e9623dfe4e218a4fec5b1ca25a68525c50ed97c39614f1cc110104c36220",
+    "dreaming-of-lira.html": "7c3eb213eb279dcf7d1144d5af322ae4dcfe8d4ff2dc65fbe4d8e3c851fea60d"
+  }
+}
