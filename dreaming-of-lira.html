@@ -5401,14 +5401,14 @@ clearInput() {for(const k of Object.keys(input))input[k]=false;for(const k of Ob
 sound(enabled) {mutedR1182=!enabled;if(enabled){unlockAudio();audioCtx?.resume();}else audioCtx?.suspend();},
 save() {saveProgress(false);}
 };
-draw = function(){if(rendererR1182){try{rendererR1182(window.LiraGame.snapshot());return;}catch(e){rendererR1182=null;document.body.classList.remove('lira3d');document.getElementById('lira3dRoot')?.remove();console.error('Lira 3D fallback',e);}}drawClassicR1182();};
+draw = function(){if(rendererR1182){try{rendererR1182(window.LiraGame.snapshot());return;}catch(e){rendererR1182=null;paused=true;console.error('Lira 3D render failed',e);window.dispatchEvent(new CustomEvent('lira3d-error',{detail:e.message||String(e)}));return;}}drawClassicR1182();};
 window.addEventListener('blur',()=>{window.LiraGame.clearInput();window.LiraGame.pause();});
 titleChoice = hasSave() ? 0 : 1;
 buildWaves();
 requestAnimationFrame(frame);
 })();
 </script>
-<script type="module" src="/assets/lira-3d-r1285.js?v=55.00-r1285"></script>
+<script src="/assets/lira-boot-r1286.js?v=r1286" defer></script>
 </body>
 </html>
 
