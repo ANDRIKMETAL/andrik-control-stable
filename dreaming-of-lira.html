@@ -4047,7 +4047,7 @@ return true;
 };
 const GAME_R010 = 'R010-R963';
 LEVEL_WORLD_W[6] = 3920;
-LEVEL_NAMES_R950[6] = 'RUINS OF EPOCHS';
+LEVEL_NAMES_R950[6] = 'РУИНЫ ЭПОХ';
 const SAVE_VERSION_R010 = 6;
 const levelPosterSourcesR010 = {
 3: 'assets/level3-star-runner-r1194.webp',
@@ -4790,7 +4790,7 @@ for (const a of actors) a.draw();
 for (const c of ruinsCrowsR010) drawCrowR010(c);
 drawRuinsEffectsR010();
 drawLivesR955(12, 53);
-ctx.fillStyle = '#f0f2f9'; ctx.font = 'bold 8px monospace'; ctx.fillText('LEVEL 6 · RUINS OF EPOCHS', 12, 18);
+ctx.fillStyle = '#f0f2f9'; ctx.font = 'bold 8px monospace'; ctx.fillText('LEVEL 6 · РУИНЫ ЭПОХ', 12, 18);
 ctx.fillStyle = '#d9a78a'; ctx.font = '6px monospace'; ctx.fillText('ROMANS · CROWS · VOLCANO · BRAHMAN STATUE', 12, 29);
 ctx.fillStyle = '#ffd45b'; ctx.fillText(`★ ${levelStarsR952}`, 12, 42);
 ctx.fillStyle = '#d9e8ef'; ctx.fillText(`SCORE ${String(levelRunScoreR952()).padStart(6, '0')}`, 12, 53);
@@ -4837,7 +4837,7 @@ return;
 const oldScore = score;
 currentLevel = 6; WORLD_W = RUINS_END_R010; enemies = []; waves = []; effects = [];
 elapsed = 0; cameraX = 0; score = keepScore ? oldScore : 0; levelScoreStartR952 = score; levelStarsR952 = 0; shake = 0; flash = 0; message = ''; messageTimer = 0; gameOver = false; victory = false; paused = false; cinematic = null; autoSaveClock = 0; attackPressStarted = -99; attackTapCount = 0; attackTapDeadline = 0; specialCharging = false; specialHoldStart = -99; guitarSpecialCooldown = 0; unlockedLevel = Math.max(unlockedLevel, 6); for (const k of Object.keys(input)) input[k] = false; pressed.attack = false; pressed.jump = false; pressed.kick = false; pressed.super = false;
-resetRuinsR010(); updateActionLabelsR952(6); startLevelPosterR010(6, 2.2); showMessage('LEVEL 6 — RUINS OF EPOCHS', 1.9);
+resetRuinsR010(); updateActionLabelsR952(6); startLevelPosterR010(6, 2.2); showMessage('LEVEL 6 — РУИНЫ ЭПОХ', 1.9);
 };
 handleStartPause = (function(prev){ return function(){
 if (levelSelectOpenR950) { confirmLevelSelectR950(); return; }
@@ -4902,7 +4902,7 @@ draw = (function(prev){ return function(){
 if (currentLevel === 6) { drawRuinsR010(); drawLevelPosterR010(); if (flash > 0) { ctx.fillStyle = `rgba(255,255,255,${Math.min(.18, flash * 2.6)})`; ctx.fillRect(0,0,W,H); } return; }
 prev(); drawLevelPosterR010();
 if (currentLevel === 4 && victory) overlayPanel('TOWER — CLEAR', [`SCORE ${String(levelRunScoreR952()).padStart(6,'0')} · BEST ${String(bestForLevelR952(4)).padStart(6,'0')}`, `★ ${levelStarsR952}`, '', 'TETRIS IS OPEN', '', 'START — LEVEL 5: TETRIS']);
-if (currentLevel === 5 && victory) overlayPanel('BLOCK LABYRINTH — CLEAR', [`SCORE ${String(levelRunScoreR952()).padStart(6,'0')} · BEST ${String(bestForLevelR952(5)).padStart(6,'0')}`, `★ ${levelStarsR952}`, '', 'RUINS OF EPOCHS ARE OPEN', '', 'START — LEVEL 6: RUINS']);
+if (currentLevel === 5 && victory) overlayPanel('BLOCK LABYRINTH — CLEAR', [`SCORE ${String(levelRunScoreR952()).padStart(6,'0')} · BEST ${String(bestForLevelR952(5)).padStart(6,'0')}`, `★ ${levelStarsR952}`, '', 'РУИНЫ ЭПОХ ARE OPEN', '', 'START — LEVEL 6: RUINS']);
 }; })(draw);
 triggerSwordR952 = function(){
 if (!started || paused || gameOver || victory || bikeMode) return;
@@ -5408,7 +5408,7 @@ buildWaves();
 requestAnimationFrame(frame);
 })();
 </script>
-<script type="module" src="/assets/lira-3d-r1284.js?v=55.00-r1284"></script>
+<script type="module" src="/assets/lira-3d-r1285.js?v=55.00-r1285"></script>
 </body>
 </html>
 
