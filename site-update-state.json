@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r358-deploy-nohang",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1791700302977-1c2d3e35ee",
-  "release": "R1284",
-  "archiveName": "SITE-R1284-RUINS-DOUBLE-JUMP-TEST.zip",
-  "sourceHead": "a567785c1366b4f38dcb83109533909fde9abdeb",
-  "backupSha": "a567785c1366b4f38dcb83109533909fde9abdeb",
+  "operationId": "publish-1791703510349-847b59dad3",
+  "release": "R1285",
+  "archiveName": "SITE-R1285-RUINS-PUNCH-COMBO-TEST.zip",
+  "sourceHead": "01e57903409b135c9a591769aa7374f06df0d9dc",
+  "backupSha": "01e57903409b135c9a591769aa7374f06df0d9dc",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-10-11T06:31:42.977Z"
+  "generatedAt": "2026-10-11T07:25:10.767Z"
 }
