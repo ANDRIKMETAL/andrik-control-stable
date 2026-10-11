@@ -285,6 +285,40 @@
 .actionsR1201 [data-action="super"]{left:auto!important;right:clamp(48px,7.2vw,63px)!important;top:50%!important;transform:translateY(-50%)!important}
 .actionsR1201 [data-action="super"].active{transform:translateY(-50%) scale(.93)!important}
 </style>
+
+<style id="r1286-mobile-launch-fix">
+/* R1286: portrait is no longer a blocking overlay. Rotate the whole interactive stage,
+   including controls; the actual game viewport remains 16:9 for correct coordinates. */
+#orientationHint, #portrait .pt-rotate, .lira3d .lira3d-rotate {display:none!important;pointer-events:none!important}
+@media (orientation:portrait) and (max-width:900px) {
+  html,body{width:100%!important;height:100%!important;overflow:hidden!important}
+  #gameShell, .lira3d #gameShell{
+    position:fixed!important;left:50%!important;top:50%!important;
+    width:min(100dvh,177.7778vw)!important;
+    height:min(56.25dvh,100vw)!important;
+    aspect-ratio:16/9!important;
+    transform:translate(-50%,-50%) rotate(90deg)!important;
+    transform-origin:center center!important;
+    border:0!important;
+    margin:0!important;
+    max-width:none!important;
+    box-shadow:none!important;
+  }
+  .lira3d #lira3dRoot{position:absolute;inset:0}
+  .lira3d .lira3d-menu{padding:5% 7%!important;align-items:center!important;background:linear-gradient(90deg,#050910f5,#050910c0 54%,#05091038)!important}
+  .lira3d .lira3d-menu-content{width:min(460px,65%)!important}
+  .lira3d .lira3d-menu h1{font-size:clamp(29px,7vw,48px)!important}
+  .lira3d .lira3d-menu p{font-size:12px!important;margin-bottom:11px!important}
+  .lira3d .lira3d-menu-actions{gap:5px!important}
+  .lira3d .lira3d-button{padding:7px 10px!important;font-size:11px!important;min-height:32px!important}
+  .lira3d .lira3d-level{display:block!important}
+  .lira3d .lira3d-status{width:155px!important}
+  .lira3d .lira3d-top{inset:8px 10px auto!important}
+  .lira3d .lira3d-rotate{display:none!important}
+  .lira3d .lira3d-help{display:none!important}
+  .lira3d .lira3d-edition{display:none!important}
+}
+</style>
 </head>
 <body>
   <div id="gameShell">
@@ -898,6 +932,7 @@ screen.orientation.lock("landscape").catch(() => {});
 };
 try {
 const coarse = matchMedia && matchMedia("(pointer: coarse)").matches;
+if (innerHeight > innerWidth) return; // R1286: keep playable rotated stage when OS orientation lock is denied.
 const shell = document.getElementById("gameShell");
 if (coarse && !document.fullscreenElement && shell && shell.requestFullscreen) {
 const result = shell.requestFullscreen({ navigationUI: "hide" });
@@ -5427,7 +5462,7 @@ buildWaves();
 requestAnimationFrame(frame);
 })();
 </script>
-<script type="module" src="/assets/lira-3d-r1285.js?v=55.00-r1285"></script>
+<script type="module" src="/assets/lira-3d-r1286.js?v=55.00-r1286"></script>
 </body>
 </html>
 
