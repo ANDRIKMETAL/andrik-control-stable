@@ -285,40 +285,6 @@
 .actionsR1201 [data-action="super"]{left:auto!important;right:clamp(48px,7.2vw,63px)!important;top:50%!important;transform:translateY(-50%)!important}
 .actionsR1201 [data-action="super"].active{transform:translateY(-50%) scale(.93)!important}
 </style>
-
-<style id="r1286-mobile-launch-fix">
-/* R1286: portrait is no longer a blocking overlay. Rotate the whole interactive stage,
-   including controls; the actual game viewport remains 16:9 for correct coordinates. */
-#orientationHint, #portrait .pt-rotate, .lira3d .lira3d-rotate {display:none!important;pointer-events:none!important}
-@media (orientation:portrait) and (max-width:900px) {
-  html,body{width:100%!important;height:100%!important;overflow:hidden!important}
-  #gameShell, .lira3d #gameShell{
-    position:fixed!important;left:50%!important;top:50%!important;
-    width:min(100dvh,177.7778vw)!important;
-    height:min(56.25dvh,100vw)!important;
-    aspect-ratio:16/9!important;
-    transform:translate(-50%,-50%) rotate(90deg)!important;
-    transform-origin:center center!important;
-    border:0!important;
-    margin:0!important;
-    max-width:none!important;
-    box-shadow:none!important;
-  }
-  .lira3d #lira3dRoot{position:absolute;inset:0}
-  .lira3d .lira3d-menu{padding:5% 7%!important;align-items:center!important;background:linear-gradient(90deg,#050910f5,#050910c0 54%,#05091038)!important}
-  .lira3d .lira3d-menu-content{width:min(460px,65%)!important}
-  .lira3d .lira3d-menu h1{font-size:clamp(29px,7vw,48px)!important}
-  .lira3d .lira3d-menu p{font-size:12px!important;margin-bottom:11px!important}
-  .lira3d .lira3d-menu-actions{gap:5px!important}
-  .lira3d .lira3d-button{padding:7px 10px!important;font-size:11px!important;min-height:32px!important}
-  .lira3d .lira3d-level{display:block!important}
-  .lira3d .lira3d-status{width:155px!important}
-  .lira3d .lira3d-top{inset:8px 10px auto!important}
-  .lira3d .lira3d-rotate{display:none!important}
-  .lira3d .lira3d-help{display:none!important}
-  .lira3d .lira3d-edition{display:none!important}
-}
-</style>
 </head>
 <body>
   <div id="gameShell">
@@ -932,7 +898,6 @@ screen.orientation.lock("landscape").catch(() => {});
 };
 try {
 const coarse = matchMedia && matchMedia("(pointer: coarse)").matches;
-if (innerHeight > innerWidth) return; // R1286: keep playable rotated stage when OS orientation lock is denied.
 const shell = document.getElementById("gameShell");
 if (coarse && !document.fullscreenElement && shell && shell.requestFullscreen) {
 const result = shell.requestFullscreen({ navigationUI: "hide" });
@@ -4379,7 +4344,6 @@ function resetRuinsBossCombatR1282() {
   if (!ruinsBossR010) return;
   ruinsBossR010.state='idle'; ruinsBossR010.stateTime=0; ruinsBossR010.stateDuration=.65;
   ruinsBossR010.attackKind=''; ruinsBossR010.attacksInCycle=0;
-  ruinsBossR010.comboHand='right'; ruinsBossR010.comboStep=0;
   ruinsBossR010.hitDone=false; ruinsBossR010.phase=ruinsBossR010.hp < ruinsBossR010.maxHp*.35?3:ruinsBossR010.hp < ruinsBossR010.maxHp*.70?2:1;
   effects=effects.filter(f=>!/^r1282-|^r010-boss-pulse/.test(f.kind||''));
 }
@@ -4406,7 +4370,7 @@ return {
 id: 'RBOSS', type: 'boss', x: 3600, y: 208, face: -1,
 width: 74, depth: 42, hp: 820, maxHp: 820, alive: true, cooldown: 1.2,
 stomp: 0, swing: 0, summon: 2.8, phase: 1, hitByAttack: -1,
-state: 'idle', stateTime: 0, stateDuration: .7, attackKind: '', hitDone: false, attacksInCycle:0, comboHand:'right', comboStep:0
+state: 'idle', stateTime: 0, stateDuration: .7, attackKind: '', hitDone: false, attacksInCycle:0
 };
 }
 function resetRuinsR010() {
@@ -4577,22 +4541,11 @@ function updateRuinsEnemiesR010(dt) {
   if(ruinsGapAtR1283(e.x)){e.fallingR1284=true;continue;}
   if(e.attackAnimR1185){
    simultaneous++;const a=e.attackAnimR1185;a.t+=dt;
-   if(kind==='watcher'){
-    if(!a.hit&&a.t>=a.duration*.35){a.hit=true;effects.push({kind:'r1282-bolt',owner:e.id,x:e.x,y:e.y-12,vx:e.face*105,t:0,duration:4.5,hit:false,reflected:false});}
-   }else{
-    // Two actual strikes per combo: first model-right (-X), then model-left (+X).
-    // Both hit events fall INSIDE their corresponding animated downswing.
-    if(!Array.isArray(a.hits))a.hits=[false,false];
-    for(const [i,point] of [[0,.30],[1,.74]]){
-     if(a.hits[i]||a.t<a.duration*point)continue;
-     a.hits[i]=true;
-     const reach=kind==='colossus'?70:kind==='stone'?47:36;
-     if(kind==='colossus'){
-      effects.push({kind:'r1282-wave',x:e.x,y:e.y,t:0,duration:.68,phase:1,hit:false});
-     }else if(Math.abs(player.x-e.x)<reach&&Math.abs(player.y-e.y)<22&&Math.abs((e.z||0)-player.z)<20){
-      damageRuinsPlayerR010(e.damage,e.x);
-     }
-    }
+   if(!a.hit && a.t>=(kind==='colossus'?.39:.25)){
+    a.hit=true;
+    if(kind==='watcher')effects.push({kind:'r1282-bolt',owner:e.id,x:e.x,y:e.y-12,vx:e.face*105,t:0,duration:4.5,hit:false,reflected:false});
+    else if(kind==='colossus')effects.push({kind:'r1282-wave',x:e.x,y:e.y,t:0,duration:.68,phase:1,hit:false});
+    else if(Math.abs(player.x-e.x)<(kind==='stone'?46:35)&&Math.abs(player.y-e.y)<22&&Math.abs((e.z||0)-player.z)<20) damageRuinsPlayerR010(e.damage,e.x);
    }
    if(a.t>=a.duration){e.attackAnimR1185=null;e.retreatT=kind==='sand'?.26:.18;}
    continue;
@@ -4606,7 +4559,7 @@ function updateRuinsEnemiesR010(dt) {
   }else{
    const reach=kind==='colossus'?64:kind==='stone'?43:31;
    if(Math.abs(dx)>reach||Math.abs(dy)>14){ruinsEnemyWalkR1284(e,e.face,(kind==='sand'?103:kind==='colossus'?28:50),dt);e.y+=Math.sign(dy)*Math.min(20,Math.abs(dy))*dt*.75;}
-   else if(!e.jumpDirR1284&&e.attack<=0&&simultaneous<2){e.attack=kind==='colossus'?1.8:kind==='stone'?1.1:.88;e.attackAnimR1185={kind:'r1285-punch-combo-'+kind,t:0,duration:kind==='colossus'?1.30:kind==='stone'?1.04:.94,hits:[false,false]};simultaneous++;}
+   else if(!e.jumpDirR1284&&e.attack<=0&&simultaneous<2){e.attack=kind==='colossus'?1.8:kind==='stone'?1.1:.88;e.attackAnimR1185={kind:'r1282-'+kind,t:0,duration:kind==='colossus'?.86:.53,hit:false};simultaneous++;}
   }
   e.x=clamp(e.x,25,RUINS_END_R010-25);e.y=clamp(e.y,182,230);
   if(player.attack&&player.attack.kind==='guitarSmash'&&Math.abs(player.x-e.x)<96&&Math.abs(player.y-e.y)<34&&e.hitByAttack!==player.attack.id){e.hitByAttack=player.attack.id;damageRomanR010(e,58,player.face*78);}
@@ -4635,31 +4588,24 @@ function updateRuinsEnemiesR010(dt) {
    if(end){
     const pool=e.phase===1?['smash','sweep']:e.phase===2?['smash','pulse','bolts','slow']:['smash','sweep','pulse','bolts','slow','fracture'];
     e.attackKind=pool[(e.attacksInCycle++)%pool.length];
-    e.comboHand='right';e.comboStep=0;
-    const fists=e.attackKind==='smash'||e.attackKind==='sweep';
-    ruinsBossStateR1282(e,'telegraph',fists?(e.phase===3?.38:.50):(e.phase===3?.43:.65));
+    ruinsBossStateR1282(e,'telegraph',e.phase===3?.43:.65);
    }
  }else if(e.state==='telegraph'){
-   if(end){ruinsBossStateR1282(e,'active',e.attackKind==='bolts'?.58:(e.attackKind==='smash'||e.attackKind==='sweep')?.27:.31);}
+   if(end){ruinsBossStateR1282(e,'active',e.attackKind==='bolts'?.58:.31);}
  }else if(e.state==='active'){
-   if(!e.hitDone && e.stateTime>=(e.attackKind==='bolts'?.16:(e.attackKind==='smash'||e.attackKind==='sweep')?e.stateDuration*.56:.09)){
+   if(!e.hitDone && e.stateTime>=(e.attackKind==='bolts'?.16:.09)){
     e.hitDone=true;
     if(e.attackKind==='smash'||e.attackKind==='sweep'){
      const range=e.attackKind==='sweep'?110:77;
-     if(Math.abs(player.x-e.x)<=range&&Math.abs(player.y-e.y)<30&&player.z<20)damageRuinsPlayerR010(e.phase===3?17:14,e.x);
+     if(Math.abs(player.x-e.x)<=range&&Math.abs(player.y-e.y)<30&&player.z<20)damageRuinsPlayerR010(e.phase===3?22:18,e.x);
     }else if(e.attackKind==='pulse')effects.push({kind:'r1282-wave',x:e.x,y:e.y,t:0,duration:.9,hit:false,phase:e.phase});
     else if(e.attackKind==='bolts')for(let j=-1;j<=1;j++)effects.push({kind:'r1282-bolt',owner:e.id,x:e.x,y:e.y-11+j*12,vx:e.face*115,t:0,duration:4.5,hit:false,reflected:false});
     else if(e.attackKind==='slow')effects.push({kind:'r1282-slow',x:player.x+e.face*35,y:player.y,t:0,duration:1.9,hit:false});
     else if(e.attackKind==='fracture')effects.push({kind:'r1282-fracture',x:Math.max(3330,Math.min(3760,player.x+e.face*66)),y:player.y,t:0,duration:1.48,hit:false});
    }
-   if(end)ruinsBossStateR1282(e,'recover',(e.attackKind==='smash'||e.attackKind==='sweep')?(e.comboStep===0?.18:.34):(e.phase===3?.36:.54));
+   if(end)ruinsBossStateR1282(e,'recover',e.phase===3?.36:.54);
  }else if(e.state==='recover'){
    if(end){
-    if((e.attackKind==='smash'||e.attackKind==='sweep')&&e.comboStep===0){
-     e.comboStep=1;e.comboHand='left';
-     ruinsBossStateR1282(e,'telegraph',e.phase===3?.37:.46);
-     return;
-    }
     if(phase>e.phase){e.phase=phase;ruinsBossStateR1282(e,'phase',.95);}
     else if(e.attacksInCycle%2===0)ruinsBossStateR1282(e,'vulnerable',e.phase===3?.80:1.13);
     else ruinsBossStateR1282(e,'idle',e.phase===3?.31:.57);
@@ -5462,7 +5408,7 @@ buildWaves();
 requestAnimationFrame(frame);
 })();
 </script>
-<script type="module" src="/assets/lira-3d-r1286.js?v=55.00-r1286"></script>
+<script type="module" src="/assets/lira-3d-r1284.js?v=55.00-r1284"></script>
 </body>
 </html>
 
