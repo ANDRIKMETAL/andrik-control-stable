@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r358-deploy-nohang",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1791697783185-7190b8b7ea",
-  "release": "R1283",
-  "archiveName": "SITE-R1283-PORTRAIT-RUINS-GAMEPLAY-TEST.zip",
-  "sourceHead": "a64e772943a675aac2bcfbcb8b55a71fd3fffc2d",
-  "backupSha": "a64e772943a675aac2bcfbcb8b55a71fd3fffc2d",
+  "operationId": "publish-1791700302977-1c2d3e35ee",
+  "release": "R1284",
+  "archiveName": "SITE-R1284-RUINS-DOUBLE-JUMP-TEST.zip",
+  "sourceHead": "a567785c1366b4f38dcb83109533909fde9abdeb",
+  "backupSha": "a567785c1366b4f38dcb83109533909fde9abdeb",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-10-11T05:49:43.595Z"
+  "generatedAt": "2026-10-11T06:31:42.977Z"
 }
