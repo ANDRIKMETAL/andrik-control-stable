@@ -1,14 +1,14 @@
 {
   "schema": 1,
   "updaterVersion": "55.00-r358-deploy-nohang",
-  "operation": "publish",
-  "reinstall": false,
-  "operationId": "publish-1791805831403-db04b96624",
+  "operation": "reinstall",
+  "reinstall": true,
+  "operationId": "reinstall-1791808437612-e181ed856c",
   "release": "R1295",
   "archiveName": "SITE-R1295-LYRA-MICROPHONE-CAMERA-FULL.zip",
-  "sourceHead": "4c67cf3116059a2ae2736881a0f9928c79dbbdf5",
-  "backupSha": "4c67cf3116059a2ae2736881a0f9928c79dbbdf5",
+  "sourceHead": "03734cddfa70ea5af1ef981635470af50b729598",
+  "backupSha": "03734cddfa70ea5af1ef981635470af50b729598",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-10-12T11:50:31.403Z"
+  "generatedAt": "2026-10-12T12:33:57.612Z"
 }
