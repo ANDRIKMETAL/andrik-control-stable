@@ -10,10 +10,16 @@ export function createLyra(){
  function profile(p,m,rows,x=0,y=0,z=0,depth=1){const curve=new T.SplineCurve([...rows].sort((a,b)=>a[1]-b[1]).map(([r,h])=>new T.Vector2(r,h)));const g=new T.LatheGeometry(curve.getPoints(40),24);g.computeVertexNormals();return put(p,g,m,x,y,z,1,1,depth);}
  function strand(p,points,r,m){return put(p,new T.TubeGeometry(new T.CatmullRomCurve3(points.map(q=>new T.Vector3(...q))),20,r,6,false),m,0,0,0);}
  // Continuous tapered waist, abdomen and upper torso instead of stacked blocks.
- profile(body,denim,[[0,.83],[.12,.85],[.18,.94],[.17,1.02],[.145,1.075],[0,1.08]],0,0,0,.72);
+ profile(body,denim,[[0,.83],[.14,.85],[.215,.94],[.195,1.02],[.145,1.075],[0,1.08]],0,0,0,.72);
  profile(body,skin,[[0,1.015],[.145,1.04],[.138,1.10],[.142,1.17],[.166,1.225],[0,1.23]],0,0,0,.72);
  ell(body,lip,0,1.09,.102,.009,.014,.004);
- profile(body,leather,[[0,1.19],[.155,1.20],[.178,1.29],[.202,1.39],[.218,1.46],[.183,1.49],[.09,1.52],[0,1.53]],0,0,0,.66);
+ profile(body,leather,[[0,1.19],[.155,1.20],[.19,1.29],[.218,1.39],[.226,1.46],[.183,1.49],[.09,1.52],[0,1.53]],0,0,0,.66);
+ // Anatomically softer adult silhouette: subtle independent bust volume and fuller hips.
+ for(const side of [-1,1]){
+  const bust=ell(body,leather,side*.102,1.385,.105,.116,.107,.102);
+  bust.rotation.z=-side*.12;
+  ell(body,denim,side*.112,.922,-.005,.112,.145,.128);
+ }
  profile(body,leather,[[.16,1.005],[.167,1.013],[.163,1.04],[.152,1.045]],0,0,0,.75);
  put(body,box,silver,0,1.025,.123,.045,.036,.009);
  profile(body,skin,[[0,1.47],[.062,1.49],[.053,1.55],[.051,1.61],[.065,1.65],[0,1.66]],0,0,0,.92);
@@ -63,8 +69,8 @@ export function createLyra(){
   ell(hand,skin,0,0,0,.031,.047,.021);
   for(let j=0;j<4;j++)ell(hand,skin,(j-1.5)*.012,-.032,.01,.007,.023,.009);
   ell(hand,skin,-s*.026,.005,.02,.010,.026,.011).rotation.z=s*.4;
-  const leg=new T.Group();leg.position.set(s*.098,.94,0);body.add(leg);
-  profile(leg,denim,[[0,.051],[.08,.025],[.087,-.07],[.077,-.19],[.055,-.34],[.048,-.42],[0,-.446]],0,0,0,.89);
+  const leg=new T.Group();leg.position.set(s*.113,.94,0);body.add(leg);
+  profile(leg,denim,[[0,.051],[.092,.025],[.097,-.07],[.083,-.19],[.055,-.34],[.048,-.42],[0,-.446]],0,0,0,.89);
   const shin=new T.Group();shin.position.y=-.42;leg.add(shin);
   profile(shin,denim,[[0,.029],[.047,.02],[.056,-.07],[.048,-.17],[.035,-.29],[0,-.345]],0,0,0,.90);
   profile(shin,boot,[[0,-.14],[.053,-.145],[.052,-.21],[.043,-.31],[.046,-.385],[0,-.405]],0,0,0,.93);
@@ -98,14 +104,18 @@ function handAt(limb,target,side){
 export function poseGuitar(root,attack,combo,time,running){
  const u=root.userData,g=u.guitar,active=attack?.kind==='attack';
  // Grip pose returns smoothly after both attacks. Body and legs remain free to move.
- const rest=new T.Vector3(.25,.87,.09),p=active?T.MathUtils.clamp(attack.t/attack.duration,0,1):0;
- g.position.copy(rest);g.rotation.set(.10,0,-.18);
+ const rest=new T.Vector3(.16,1.34,-.17),p=active?T.MathUtils.clamp(attack.t/attack.duration,0,1):0;
+ g.position.copy(rest);g.rotation.set(.10,0,-.48);
  if(active){
   const enter=smooth(p/.22),swing=smooth((p-.28)/.36),recover=smooth((p-.73)/.27),weight=enter*(1-recover);
   if(combo===0){
    g.position.lerp(new T.Vector3(.16-.32*swing,1.64-.49*swing,.24+.12*Math.sin(swing*Math.PI)),weight);
    g.rotation.set((2.35-3.20*swing)*weight,.18*weight,(-.28+.56*swing)*weight);
    u.body.rotation.y=(-.28+.56*swing)*weight;u.body.rotation.x=.10*weight*swing;
+  }else if(combo===2){
+   g.position.lerp(new T.Vector3(.04,1.02+.62*swing,.33),weight);
+   g.rotation.set((-.45+2.4*swing)*weight,.16*weight,(-.6+.3*swing)*weight);
+   u.body.rotation.x=-.18*weight;
   }else{
    g.position.lerp(new T.Vector3(.34-.44*swing,1.35-.18*swing,.27+.12*Math.sin(swing*Math.PI)),weight);
    g.rotation.set((1.0-2.1*swing)*weight,(-.8+1.6*swing)*weight,(-1.1+2.0*swing)*weight);
@@ -113,7 +123,7 @@ export function poseGuitar(root,attack,combo,time,running){
   }
   g.updateMatrix();
   const right=new T.Vector3(0,0,0).applyMatrix4(g.matrix);handAt(u.limbs[1],right,1);
-  if(combo===0){const left=new T.Vector3(0,-.105,.005).applyMatrix4(g.matrix);left.lerp(new T.Vector3(-.25,.86,.08),1-weight);handAt(u.limbs[0],left,-1);}
+  if(true){const left=new T.Vector3(0,-.105,.005).applyMatrix4(g.matrix);left.lerp(new T.Vector3(-.25,.86,.08),1-weight);handAt(u.limbs[0],left,-1);}
   else {u.limbs[0].arm.rotation.set(-.55,0,-.55*weight);u.limbs[0].fore.rotation.x=-.75;}
  }else{
   if(running){g.position.y+=Math.sin(time*15)*.025;if(!attack)u.body.rotation.x=.12;}

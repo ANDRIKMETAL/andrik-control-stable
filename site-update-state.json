@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r358-deploy-nohang",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1791786369559-ca84b66232",
-  "release": "R1289",
-  "archiveName": "SITE-R1289-CITY-3D-BAR-BIKE-FULL.zip",
-  "sourceHead": "f9fbf7540a392bbed3c4236d865c5669ca1a506a",
-  "backupSha": "f9fbf7540a392bbed3c4236d865c5669ca1a506a",
+  "operationId": "publish-1791792274687-7d209a2995",
+  "release": "R1291",
+  "archiveName": "SITE-R1291-LIRA-3D-FACEBOOK-FULL.zip",
+  "sourceHead": "17a4653b89a2e4a842ea23bef75d4daf78165a0c",
+  "backupSha": "17a4653b89a2e4a842ea23bef75d4daf78165a0c",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-10-12T06:26:09.559Z"
+  "generatedAt": "2026-10-12T08:04:34.687Z"
 }

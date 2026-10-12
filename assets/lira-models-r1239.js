@@ -15,8 +15,8 @@ const root=new T.Group(),body=new T.Group();root.add(body);
 const lira=kind==='lira',boss=kind==='boss',roman=kind==='roman',police=kind==='police'||kind==='riot';
 const suit=lira?leather:material(roman?'#73645b':police?'#27364c':boss?'#354454':'#39252d',.55,.25);
 const headSkin=roman?material('#88786b'):skin;
-const waist=sphere(body,0,29,0,lira?6.4:8,5,4.4,suit);
-sphere(body,0,40,0,lira?8.5:10.3,11.3,4.9,suit);
+const waist=sphere(body,0,29,0,lira?7.5:8,5,5.0,suit);
+sphere(body,0,40,0,lira?8.8:10.3,11.3,5.2,suit);if(lira){for(const side of [-1,1]){sphere(body,side*4.1,41,4.0,4.7,5.2,3.6,suit);sphere(body,side*4.0,29,-.6,5.3,5.8,5.3,denim);}}
 if(lira){sphere(body,0,31,1,5.8,2.7,4.5,skin);box(body,0,27,0,13,2,9,leather);box(body,0,27,4.7,3,2.2,.7,silver);}
 cylinder(body,0,52,0,2.2,6,headSkin);
 const head=new T.Group();head.position.y=60;head.scale.setScalar(.86);body.add(head);
@@ -123,7 +123,7 @@ if(wave){const right=d.limbs[1];right.arm.rotation.set(-.16,0,2.35+Math.sin(time
 if(opts.look)d.head.rotation.x=-opts.look*.24;
 const cue=opts.guitarCue,atk=cue||p.attack,kind=cue?'guitarSuper':(atk?.kind||opts.attack);
 const t=atk?T.MathUtils.clamp(atk.t/(atk.duration||1),0,1):.45,q=Math.sin(t*Math.PI),arm=d.limbs[1];
-d.sword.visible=!!kind&&/sword/i.test(kind);d.stick.visible=!!kind&&/stick/i.test(kind);d.guitar.position.set(0,36,-8);d.guitar.rotation.set(0,0,-.45);d.guitarFx.visible=false;d.flashMaterial.opacity=0;
+d.sword.visible=!!kind&&/sword/i.test(kind);d.stick.visible=!!kind&&/stick/i.test(kind);d.guitar.position.set(0,41,-10);d.guitar.rotation.set(0,0,-.45);d.guitarFx.visible=false;d.flashMaterial.opacity=0;
 if(kind){
 if(/kick|sweep/i.test(kind)){
 arm.leg.rotation.set(-q*1.53,0,0);arm.shin.rotation.x=.12*q;d.body.rotation.x=-q*.12;
