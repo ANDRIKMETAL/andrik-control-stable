@@ -1,14 +1,14 @@
 {
   "schema": 1,
   "updaterVersion": "55.00-r358-deploy-nohang",
-  "operation": "reinstall",
-  "reinstall": true,
-  "operationId": "reinstall-1791808437612-e181ed856c",
-  "release": "R1295",
-  "archiveName": "SITE-R1295-LYRA-MICROPHONE-CAMERA-FULL.zip",
-  "sourceHead": "03734cddfa70ea5af1ef981635470af50b729598",
-  "backupSha": "03734cddfa70ea5af1ef981635470af50b729598",
+  "operation": "publish",
+  "reinstall": false,
+  "operationId": "publish-1791811204833-0bd1225cb6",
+  "release": "R1297",
+  "archiveName": "SITE-R1297-FACEBOOK-GUARD-1355-START-1400-FULL.zip",
+  "sourceHead": "1c7edbbfb87fbd3991cd92f691731c86be4e9055",
+  "backupSha": "1c7edbbfb87fbd3991cd92f691731c86be4e9055",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-10-12T12:33:57.612Z"
+  "generatedAt": "2026-10-12T13:20:06.184Z"
 }

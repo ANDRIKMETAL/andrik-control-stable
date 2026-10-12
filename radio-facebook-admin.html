@@ -35,7 +35,7 @@ body{padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}a{color:inhe
 .fb-accordion>.card{margin:0;border:0;border-top:1px solid #295671;border-radius:0;box-shadow:none}
 @media(max-width:490px){.fb-audience{gap:7px}.fb-accordion>summary{font-size:17px}}
 
-/* R1293 · Facebook 14:00 START-only + volumetric verified views chart */
+/* R1297 · Facebook R1279 rearm 13:55 + START 14:00 + verified chart */
 .schedule-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:13px}
 .schedule-grid label{display:block;color:#a5d2da;font-size:12px;font-weight:800}
 .schedule-grid input[type=time]{width:100%;margin-top:7px;background:#0b1924;border:1px solid #2c6b75;border-radius:12px;color:#f2fffb;padding:12px;font-size:17px;color-scheme:dark}
@@ -61,14 +61,14 @@ body{padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}a{color:inhe
 <section class="card" id="fbAudiencePanel"><div class="card-head"><div><h2>📈 Facebook · объёмный график просмотров</h2><p>Бирюзовая линия — накопленные <code>video.views</code>. Объёмные столбики — прирост между фактическими замерами. Без вымышленных значений.</p></div><select id="fbPeriod" class="fb-period" aria-label="Период графика"><option value="60">1 час</option><option value="360">6 часов</option><option value="1440">24 часа</option><option value="all">Весь эфир</option></select></div><div class="chart-wrap"><div class="chart-head"><b>Meta Graph API · проверенные данные</b><span id="fbViewsLastSample">Ждём замер</span></div><div id="fbAudienceChart" class="fb-chart" role="img" aria-label="График просмотров и прироста Facebook"></div><p class="note" id="fbAudienceHint">График строится только по ответам Meta API и хранит историю на сервере.</p></div></section>
 
 <section class="card" id="fbDailySchedule">
-<div class="card-head"><div><h2>🕒 Автоматический запуск Facebook</h2><p>Ежедневно запускается <b>только Facebook RTMPS-ветка</b> по Братиславе. Никакого автоматического окончания: прекращением публичного эфира управляет Meta, ручной STOP остаётся доступным.</p></div><span class="schedule-tag">R1293 · START ONLY</span></div>
-<div class="schedule-grid"><div class="field"><label>Начало · Europe/Bratislava</label><div style="padding:10px 0;font-size:28px;font-weight:900;color:#79ffe0">14:00 <span class="note">каждый день</span></div></div><div class="field"><label>Окончание</label><div style="padding:13px 0;font-size:14px;font-weight:800;color:#9be9d9">Не планируется · решает Meta</div></div></div>
+<div class="card-head"><div><h2>🕒 Автоматический запуск Facebook</h2><p>В 13:55 сбрасывается счётчик аварийных рестартов R1279, если защита включена и Facebook остановлен; в 14:00 запускается только Facebook RTMPS-ветка по Братиславе. Защита остаётся включённой, таймера STOP нет. Ручные кнопки отдельно.</p></div><span class="schedule-tag">R1297 · 13:55 / 14:00</span></div>
+<div class="schedule-grid"><div class="field"><label>Начало · Europe/Bratislava</label><div style="padding:10px 0;font-size:28px;font-weight:900;color:#79ffe0">14:00 <span class="note">каждый день</span></div></div><div class="field"><label>Подготовка / сброс R1279</label><div style="padding:10px 0;font-size:28px;font-weight:900;color:#79ffe0">13:55 <span class="note">каждый день</span></div></div></div><div class="msg" style="margin-top:12px">🛡️ R1279 остаётся включённым: сбрасывается лишь память об аварийных рестартах. <b>Автоматического STOP нет — завершение решает Meta.</b> Достаточно Cron каждые 5 минут, если он срабатывает в :55.</div>
 <div class="field" style="margin-top:14px"><label for="fbVideoIdR1292">Meta Live Video ID для статистики (без токена)</label><input id="fbVideoIdR1292" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="2633855860405878" autocomplete="off"><div class="note">Для нового эфира Meta может выдать новый ID — укажи его здесь. График хранит историю конкретного видео; на новое видео начинает её заново.</div></div>
-<label class="schedule-switch"><input type="checkbox" id="fbDailyEnabled"><span><b>Включить ежедневное расписание</b><br><span style="color:#a2bcbf;font-size:12px">Один автоматический START в 14:00 · без автоматического STOP · ручные кнопки отдельно</span></span></label>
+<label class="schedule-switch"><input type="checkbox" id="fbDailyEnabled"><span><b>Включить ежедневное расписание</b><br><span style="color:#a2bcbf;font-size:12px">13:55 подготовка защиты R1279 · 14:00 один START · без авто-STOP · ручные кнопки отдельно</span></span></label>
 <label class="schedule-switch"><input type="checkbox" id="fbMetaPrepared"><span><b>Эфир подготовлен в Meta Live Producer</b><br><span style="color:#a2bcbf;font-size:12px">Название и описание заполнены; трансляция создана или запланирована. Только ваша отметка — API это не проверяет.</span></span></label>
 <button class="btn primary" type="button" id="fbDailySave" style="margin-top:12px;width:100%">💾 СОХРАНИТЬ РАСПИСАНИЕ</button>
-<div id="fbDailyStatus" class="msg">Автозапуск по умолчанию выключен. После включения Cron запускает RTMPS сигнал в 14:00. Автоматического STOP нет.</div>
-<div class="viewer-note">⚠️ <b>Важно для профессионального профиля:</b> по расписанию запускается передача RTMPS-сигнала на Facebook, но <b>не создаётся публикация, не подставляются название/описание и не нажимается Go Live</b>. Создай действие с готовыми текстами в Live Producer и отдельно проверь автопубликацию со стороны Meta. Если Meta завершит эфир, планировщик не будет принудительно останавливать FFmpeg. Сработает только при наличии активного Cron gateway.</div>
+<div id="fbDailyStatus" class="msg">Автозапуск по умолчанию выключен. Cron в 13:55 сбрасывает счётчик R1279, в 14:00 запускает RTMPS. Автоматического STOP нет.</div>
+<div class="viewer-note">⚠️ <b>Важно для профессионального профиля:</b> достаточно Cron каждые 5 минут с проверкой в :55. По расписанию запускается передача RTMPS-сигнала на Facebook, но <b>не создаётся публикация, не подставляются название/описание и не нажимается Go Live</b>. Создай действие с готовыми текстами в Live Producer и отдельно проверь автопубликацию со стороны Meta. Если Meta завершит эфир, планировщик не будет принудительно останавливать FFmpeg. Сработает только при наличии активного Cron gateway.</div>
 </section>
 
 <section class="card"><div class="card-head"><div><h2>График Facebook</h2><p>Скорость отправки Facebook по подтверждениям TCP (ACK). История собирается веб-агентом VPS, даже когда эта страница закрыта. Данные не равны показателю зрителей.</p></div><span class="badge">LIVE TELEMETRY</span></div><div class="chart-wrap"><div class="chart-head"><b>Facebook TCP исходящий поток</b><span id="fbChartCaption">ждём данные</span></div><div id="fbChart"></div></div><div class="activity" id="fbEvents"></div></section>
@@ -96,7 +96,7 @@ ANDRIK METAL RADIO — музыка без остановки.
 
 <section class="card"><div class="card-head"><div><h2>Ручное управление</h2><p>START сначала подтягивает последний сохранённый ключ на VPS, проверяет независимый R1356 relay и только затем запускает Facebook. STOP выключает только Facebook FFmpeg.</p></div><span class="badge">ISOLATED</span></div><div class="actions"><button class="btn primary" id="fbStart" type="button">▶ ЗАПУСТИТЬ FACEBOOK</button><button class="btn stop" id="fbStop" type="button">■ ОСТАНОВИТЬ FACEBOOK</button></div><a class="btn" href="https://www.facebook.com/live/producer/" target="_blank" rel="noopener" style="margin-top:10px">Открыть Facebook Live Producer ↗</a><div class="msg" id="fbActionMsg">Facebook branch по умолчанию OFF после перезапуска радио.</div></section>
 
-<div class="foot">ANDRIK · SITE R1292 / FACEBOOK DAILY 475M · <a href="/radio-control-admin.html">вернуться в Радио</a></div>
+<div class="foot">ANDRIK · SITE R1297 / FACEBOOK DAILY 13:55+14:00 · <a href="/radio-control-admin.html">вернуться в Радио</a></div>
 </main>
 <script>
 (()=>{'use strict';
@@ -267,7 +267,10 @@ function fbScheduleRenderR1292(d,updateFields=true){
  const beatAge=d.schedulerHeartbeatAt?Date.now()-Date.parse(d.schedulerHeartbeatAt):Infinity;
  const cronOk=Number.isFinite(beatAge)&&beatAge<12*60000;
  let status=c.enabled?'🟢 Ежедневный START в 14:00 (Братислава) включён. Автоматического STOP нет.':'⚪ Ежедневный START выключен · ручной START/STOP работает независимо.';
- status+='\n'+(cronOk?'✅ Cron работает · последняя проверка '+fmtClock(d.schedulerHeartbeatAt):'⚠️ Cron не подтверждён за последние 12 минут. Проверь триггер до включения.');
+ status+='\n'+(cronOk?'✅ Cron активен · последняя проверка '+fmtClock(d.schedulerHeartbeatAt):'⚠️ Cron не подтверждён за последние 12 минут. Проверь триггер до включения.');
+ status+='\nДля сброса в 13:55 достаточно Cron раз в 5 минут (на :00, :05, …, :55).';
+ if(q.guardRearmAction)status+='\n🛡️ R1279 13:55: '+q.guardRearmAction+(q.guardRearmAt?' · '+fmtClock(q.guardRearmAt):'');
+ if(q.guardRearmError)status+='\n⚠️ Сброс R1279: '+q.guardRearmError;
  if(q.lastAction)status+='\nПоследнее событие: '+q.lastAction+(q.date?' · '+q.date:'');
  if(q.error)status+='\n⚠️ '+q.error;
  if(c.enabled&&!c.preparedOnMeta)status+='\n⚠️ Не отмечена подготовка события Meta: START будет заблокирован.';
@@ -276,7 +279,7 @@ function fbScheduleRenderR1292(d,updateFields=true){
 async function fbScheduleReadR1292(updateFields=true){try{const d=await api('/api/control/facebook-schedule-r1292?ts='+Date.now());fbScheduleRenderR1292(d,updateFields);}catch(e){$('fbDailyStatus').className='msg bad';$('fbDailyStatus').textContent='Расписание: '+e.message;}}
 async function fbScheduleSaveR1292(){if(busy)return;const enabled=$('fbDailyEnabled').checked,preparedOnMeta=$('fbMetaPrepared').checked,liveVideoId=$('fbVideoIdR1292').value.trim();
  if(enabled&&!preparedOnMeta){$('fbDailyStatus').className='msg bad';$('fbDailyStatus').textContent='Сначала создай/подготовь эфир в Meta и отметь флажок.';return;}
- if(enabled&&!confirm('Включить ежедневную подачу Facebook RTMPS-сигнала в 14:00 по Братиславе БЕЗ автоматического STOP? Публикация и название/описание требуют подготовки Meta.'))return;
+ if(enabled&&!confirm('Включить ежедневный сброс R1279 в 13:55 и Facebook RTMPS START в 14:00 по Братиславе БЕЗ автоматического STOP? Публикация и название/описание требуют подготовки Meta.'))return;
  busy=true;$('fbDailySave').disabled=true;
  try{const d=await api('/api/control/facebook-schedule-r1292',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({enabled,preparedOnMeta,liveVideoId})});fbScheduleRenderR1292(d);}
  catch(e){$('fbDailyStatus').className='msg bad';$('fbDailyStatus').textContent='❌ '+e.message;}

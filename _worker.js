@@ -12610,7 +12610,7 @@ await recordSystemLog(env,{scope:'automation',level:errors.length?'warning':'inf
 return {ok:true,healthy:errors.length===0,degraded:errors.length>0,...summary};
 }
 
-// R1293 · ONE DAILY START AT 14:00 EUROPE/BRATISLAVA. NEVER QUEUE A SCHEDULED STOP.
+// R1297 · 13:55 SAFE R1279 GUARD REARM + 14:00 DAILY FACEBOOK START. NEVER QUEUE STOP.
 // It transmits an RTMPS signal using the existing independent Facebook branch only.
 // Meta publication, title and description need a separately authorized Facebook event.
 const FB_SCHEDULE_KEY_R1292='facebook-schedule-r1292';
@@ -12626,13 +12626,13 @@ async function fbScheduleReadR1292(db){
 }
 async function fbScheduleStateR1292(db){return parseStateValueR627(await getPushState(db,FB_SCHEDULE_STATE_KEY_R1292).catch(()=>null))||{};}
 async function fbScheduleQueueR1292(db,action,reason){
- // Hard allowlist: daily scheduler can only ever enqueue Facebook START.
- if(action!=='facebook-start-r1319')return {ok:false,error:'schedule-start-only'};
+ // Only reset the existing R1279 guard counter or start Facebook. No scheduled STOP.
+ if(!['facebook-start-r1319','facebook-guard-on-r1279'].includes(action))return {ok:false,error:'schedule-action-not-allowed'};
  const agent=parseStateValueR627(await getPushState(db,RADIO_REMOTE_R627.agentKey).catch(()=>null))||{};
  if(!agent.tokenHash || Date.now()-(Date.parse(agent.lastSeen||'')||0)>75000)return {ok:false,error:'VPS-agent-offline'};
  const prior=parseStateValueR627(await getPushState(db,RADIO_REMOTE_R627.commandKey).catch(()=>null));
  if(prior&&['queued','running'].includes(prior.state)&&Date.now()-(Date.parse(prior.createdAt||'')||0)<180000)return {ok:false,error:'command-busy'};
- const command={id:crypto.randomUUID(),action:'facebook-start-r1319',state:'queued',createdAt:new Date().toISOString(),requestedBy:'facebook-daily-start-r1293',reason};
+ const command={id:crypto.randomUUID(),action,state:'queued',createdAt:new Date().toISOString(),requestedBy:action==='facebook-guard-on-r1279'?'facebook-daily-rearm-r1296':'facebook-daily-start-r1296',reason};
  await setPushState(db,RADIO_REMOTE_R627.commandKey,JSON.stringify(command));return {ok:true,id:command.id};
 }
 async function fbScheduleTickR1292(env){
@@ -12648,13 +12648,31 @@ async function fbScheduleTickR1292(env){
  const fbEnabled=Boolean(s.facebookEnabledR1313??f.enabled);
  const fbConfigured=Boolean(s.facebookConfiguredR1313??f.configured);
  const radioHealthy=['active','running'].includes(String(s.service||'').toLowerCase())&&s.transportHealthy!==false;
+ const guard=s.facebookRetryGuardR1279||agent.facebookRetryGuardR1279||null;
+ const manualHardOff=Boolean(f.hardOff?.locked||f.hardOffR1417?.locked||s.facebookHardOffR1417?.locked);
  let changed=false,decision=cfg.enabled?'waiting-for-14:00':'disabled';
- // A new day means one new launch opportunity, not an automatic reset/STOP of FFmpeg.
- if(state.date!==date){state={date,attempted:false,startedBySchedule:false,startedAt:null,lastAction:null,error:null};changed=true;}
- // Cron may run every 1–5 minutes; allow a 15-minute recovery window after 14:00.
+ // The guard is NOT disabled, and the Facebook publisher is NOT started at 13:55.
+ // R1279 'guard-on' resets the 10-minute restart burst and retains protection.
+ // The actual R1279 trip has already set Facebook enabled=false via /control/facebook-stop.
+ if(state.date!==date){state={date,attempted:false,startedBySchedule:false,startedAt:null,lastAction:null,error:null,guardRearmAttempted:false,guardRearmAction:null,guardRearmAt:null,guardRearmError:null};changed=true;}
+ // 13:55 local aligns with an every-5-minute Cron (at :00/:05/.../:55).
+ // If this minute is missed, do not delay START or silently disable guard at 14:00.
+ if(cfg.enabled&&cfg.preparedOnMeta&&minute===13*60+55&&!state.guardRearmAttempted){
+   if(manualHardOff){state.guardRearmAction='manual-hard-off-preserved';state.guardRearmAttempted=true;changed=true;}
+   else if(fbRunning||fbEnabled){state.guardRearmAction='already-running-or-enabled';state.guardRearmAttempted=true;changed=true;}
+   else if(!guard){state.guardRearmAction='guard-status-unavailable';state.guardRearmAttempted=true;changed=true;}
+   else if(guard.enabled!==true){state.guardRearmAction='guard-disabled-by-owner';state.guardRearmAttempted=true;changed=true;}
+   else {
+     const rearm=await fbScheduleQueueR1292(db,'facebook-guard-on-r1279',`daily ${date} 13:55 reset retry burst, keep R1279 ON`);
+     if(rearm.ok){state.guardRearmAttempted=true;state.guardRearmAction='guard-rearm-queued';state.guardRearmAt=lastTickAt;state.guardRearmCommandId=rearm.id;state.guardRearmError=null;changed=true;decision=state.guardRearmAction;}
+     else{state.guardRearmAction='guard-rearm-waiting';state.guardRearmError=rearm.error;changed=true;decision=rearm.error;}
+   }
+ }
+ // A 15-minute grace period accommodates delayed cron ticks after 14:00.
  // A missed window is not caught up hours later (avoid surprise broadcasts).
  if(cfg.enabled&&minute>=start&&minute<start+15&&!state.attempted){
-   if(fbRunning||fbEnabled){state.attempted=true;state.lastAction='facebook-already-running';state.error=null;decision=state.lastAction;changed=true;}
+   if(manualHardOff){state.lastAction='manual-hard-off-preserved';state.error='The manual hard-off lock must be reviewed on the VPS';decision=state.lastAction;changed=true;}
+   else if(fbRunning||fbEnabled){state.attempted=true;state.lastAction='facebook-already-running';state.error=null;decision=state.lastAction;changed=true;}
    else if(!cfg.preparedOnMeta){decision='meta-event-not-prepared';state.lastAction=decision;changed=true;}
    else if(!fbConfigured||!radioHealthy){decision='radio-or-key-not-ready';state.lastAction=decision;changed=true;}
    else{
@@ -12667,7 +12685,7 @@ async function fbScheduleTickR1292(env){
  // Existing manual STOP and independent R1279 failure guard remain available to owner.
  if(changed)await setPushState(db,FB_SCHEDULE_STATE_KEY_R1292,JSON.stringify(state));
  await setPushState(db,'facebook-schedule-heartbeat-r1292',lastTickAt);
- return {ok:true,decision,enabled:cfg.enabled,localDate:date,localTime:`${String(clock.hour).padStart(2,'0')}:${String(clock.minute).padStart(2,'0')}`,startedBySchedule:Boolean(state.startedBySchedule),scheduledStop:false};
+ return {ok:true,decision,enabled:cfg.enabled,localDate:date,localTime:`${String(clock.hour).padStart(2,'0')}:${String(clock.minute).padStart(2,'0')}`,guardRearm:state.guardRearmAction||null,startedBySchedule:Boolean(state.startedBySchedule),scheduledStop:false};
 }
 async function handleFbScheduleR1292(request,env){
  if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
@@ -12682,7 +12700,7 @@ async function handleFbScheduleR1292(request,env){
  }
  const [schedule,state,beat]=await Promise.all([fbScheduleReadR1292(db),fbScheduleStateR1292(db),getPushState(db,'facebook-schedule-heartbeat-r1292').catch(()=>null)]);
  const local=getBratislavaClock();
- return json({ok:true,schedule,state,schedulerHeartbeatAt:beat?.value||null,localClock:{date:local.date,hour:local.hour,minute:local.minute},caution:'14:00 starts Facebook RTMPS signal only. No scheduled STOP. The professional-profile publication, title, description and Go Live require Meta-side preparation/authorization.',readyToPublish:false,scheduledStop:false},200,{'cache-control':'no-store'});
+ return json({ok:true,schedule,state,schedulerHeartbeatAt:beat?.value||null,localClock:{date:local.date,hour:local.hour,minute:local.minute},caution:'At 13:55 local, the scheduler queues existing R1279 guard-on (counter reset only, and only if guard is already enabled and Facebook is stopped). At 14:00 it queues Facebook RTMPS START. No scheduled STOP. Cron should run at :55 for the 13:55 rearm; a 5-minute trigger aligned to :00/:05/.../:55 is sufficient. Meta publication/auto-Go-Live remains separate.',readyToPublish:false,scheduledStop:false},200,{'cache-control':'no-store'});
 }
 async function fbMetaReadR1292(env,force=false){
  const db=env.COMMENTS_DB;if(!db)return {ok:false,error:'no-d1'};
