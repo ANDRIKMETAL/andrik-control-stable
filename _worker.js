@@ -12609,9 +12609,113 @@ setPushState(db,'automation-last-check-summary',JSON.stringify(summary)).catch((
 await recordSystemLog(env,{scope:'automation',level:errors.length?'warning':'info',event:'split-maintenance-r416',message:`Cron R416: лёгкий 15-мин. сектор ${quarter+1}/4 завершён.`,details:summary}).catch(()=>{});
 return {ok:true,healthy:errors.length===0,degraded:errors.length>0,...summary};
 }
+
+// R1293 · ONE DAILY START AT 14:00 EUROPE/BRATISLAVA. NEVER QUEUE A SCHEDULED STOP.
+// It transmits an RTMPS signal using the existing independent Facebook branch only.
+// Meta publication, title and description need a separately authorized Facebook event.
+const FB_SCHEDULE_KEY_R1292='facebook-schedule-r1292';
+const FB_SCHEDULE_STATE_KEY_R1292='facebook-schedule-state-r1292';
+const FB_META_SAMPLE_KEY_R1292='facebook-meta-samples-r1292';
+const FB_START_FIXED_R1293='14:00';
+function fbScheduleDefaultsR1292(){return {enabled:false,start:FB_START_FIXED_R1293,timezone:'Europe/Bratislava',preparedOnMeta:false,liveVideoId:'2633855860405878',updatedAt:null};}
+async function fbScheduleReadR1292(db){
+ const row=await getPushState(db,FB_SCHEDULE_KEY_R1292).catch(()=>null);
+ const v=parseStateValueR627(row)||{};
+ // No duration or end fields survive migration from R1292: old STOP logic is gone.
+ return {...fbScheduleDefaultsR1292(),enabled:v.enabled===true,preparedOnMeta:v.preparedOnMeta===true,liveVideoId:String(v.liveVideoId||'2633855860405878'),updatedAt:v.updatedAt||null};
+}
+async function fbScheduleStateR1292(db){return parseStateValueR627(await getPushState(db,FB_SCHEDULE_STATE_KEY_R1292).catch(()=>null))||{};}
+async function fbScheduleQueueR1292(db,action,reason){
+ // Hard allowlist: daily scheduler can only ever enqueue Facebook START.
+ if(action!=='facebook-start-r1319')return {ok:false,error:'schedule-start-only'};
+ const agent=parseStateValueR627(await getPushState(db,RADIO_REMOTE_R627.agentKey).catch(()=>null))||{};
+ if(!agent.tokenHash || Date.now()-(Date.parse(agent.lastSeen||'')||0)>75000)return {ok:false,error:'VPS-agent-offline'};
+ const prior=parseStateValueR627(await getPushState(db,RADIO_REMOTE_R627.commandKey).catch(()=>null));
+ if(prior&&['queued','running'].includes(prior.state)&&Date.now()-(Date.parse(prior.createdAt||'')||0)<180000)return {ok:false,error:'command-busy'};
+ const command={id:crypto.randomUUID(),action:'facebook-start-r1319',state:'queued',createdAt:new Date().toISOString(),requestedBy:'facebook-daily-start-r1293',reason};
+ await setPushState(db,RADIO_REMOTE_R627.commandKey,JSON.stringify(command));return {ok:true,id:command.id};
+}
+async function fbScheduleTickR1292(env){
+ const db=env.COMMENTS_DB;if(!db)return {ok:false,error:'no-d1'};
+ const cfg=await fbScheduleReadR1292(db);const now=new Date(),clock=getBratislavaClock(now),date=clock.date;
+ let state=await fbScheduleStateR1292(db);
+ const minute=clock.hour*60+clock.minute;
+ const start=14*60; // fixed local time, including automatic CET/CEST transitions
+ const lastTickAt=now.toISOString();
+ const agent=parseStateValueR627(await getPushState(db,RADIO_REMOTE_R627.agentKey).catch(()=>null))||{};
+ const s=agent.status||{},f=s.facebookR1313||{};
+ const fbRunning=Boolean(s.facebookRunningR1313??f.running);
+ const fbEnabled=Boolean(s.facebookEnabledR1313??f.enabled);
+ const fbConfigured=Boolean(s.facebookConfiguredR1313??f.configured);
+ const radioHealthy=['active','running'].includes(String(s.service||'').toLowerCase())&&s.transportHealthy!==false;
+ let changed=false,decision=cfg.enabled?'waiting-for-14:00':'disabled';
+ // A new day means one new launch opportunity, not an automatic reset/STOP of FFmpeg.
+ if(state.date!==date){state={date,attempted:false,startedBySchedule:false,startedAt:null,lastAction:null,error:null};changed=true;}
+ // Cron may run every 1–5 minutes; allow a 15-minute recovery window after 14:00.
+ // A missed window is not caught up hours later (avoid surprise broadcasts).
+ if(cfg.enabled&&minute>=start&&minute<start+15&&!state.attempted){
+   if(fbRunning||fbEnabled){state.attempted=true;state.lastAction='facebook-already-running';state.error=null;decision=state.lastAction;changed=true;}
+   else if(!cfg.preparedOnMeta){decision='meta-event-not-prepared';state.lastAction=decision;changed=true;}
+   else if(!fbConfigured||!radioHealthy){decision='radio-or-key-not-ready';state.lastAction=decision;changed=true;}
+   else{
+     const sent=await fbScheduleQueueR1292(db,'facebook-start-r1319',`daily ${date} 14:00 Europe/Bratislava`);
+     if(sent.ok){state.attempted=true;state.startedBySchedule=true;state.startedAt=lastTickAt;state.startCommandId=sent.id;state.lastAction='auto-start-queued';state.error=null;decision=state.lastAction;changed=true;}
+     else{state.error=sent.error;state.lastAction='auto-start-waiting';changed=true;decision=sent.error;}
+   }
+ }
+ // Deliberately NO timed STOP and NO stop triggered by a Meta status transition.
+ // Existing manual STOP and independent R1279 failure guard remain available to owner.
+ if(changed)await setPushState(db,FB_SCHEDULE_STATE_KEY_R1292,JSON.stringify(state));
+ await setPushState(db,'facebook-schedule-heartbeat-r1292',lastTickAt);
+ return {ok:true,decision,enabled:cfg.enabled,localDate:date,localTime:`${String(clock.hour).padStart(2,'0')}:${String(clock.minute).padStart(2,'0')}`,startedBySchedule:Boolean(state.startedBySchedule),scheduledStop:false};
+}
+async function handleFbScheduleR1292(request,env){
+ if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
+ const db=env.COMMENTS_DB;if(!db)return json({ok:false,error:'no-d1'},503);
+ if(request.method==='POST'){
+   const b=await request.json().catch(()=>({}));
+   const old=await fbScheduleReadR1292(db);
+   const liveVideoId=String(b.liveVideoId||old.liveVideoId||'').trim();
+   if(liveVideoId&&!/^\d{10,25}$/.test(liveVideoId))return json({ok:false,error:'invalid-live-video-id'},400);
+   const cfg={enabled:b.enabled===true,start:FB_START_FIXED_R1293,timezone:'Europe/Bratislava',preparedOnMeta:b.preparedOnMeta===true,liveVideoId,updatedAt:new Date().toISOString()};
+   await setPushState(db,FB_SCHEDULE_KEY_R1292,JSON.stringify(cfg));
+ }
+ const [schedule,state,beat]=await Promise.all([fbScheduleReadR1292(db),fbScheduleStateR1292(db),getPushState(db,'facebook-schedule-heartbeat-r1292').catch(()=>null)]);
+ const local=getBratislavaClock();
+ return json({ok:true,schedule,state,schedulerHeartbeatAt:beat?.value||null,localClock:{date:local.date,hour:local.hour,minute:local.minute},caution:'14:00 starts Facebook RTMPS signal only. No scheduled STOP. The professional-profile publication, title, description and Go Live require Meta-side preparation/authorization.',readyToPublish:false,scheduledStop:false},200,{'cache-control':'no-store'});
+}
+async function fbMetaReadR1292(env,force=false){
+ const db=env.COMMENTS_DB;if(!db)return {ok:false,error:'no-d1'};
+ const token=String(env.META_USER_ACCESS_TOKEN_R1292||'').trim();
+ const cfg=await fbScheduleReadR1292(db);
+ const videoId=String(cfg.liveVideoId||env.META_LIVE_VIDEO_ID_R1292||'2633855860405878').trim();
+ const row=await getPushState(db,FB_META_SAMPLE_KEY_R1292).catch(()=>null);
+ const previous=parseStateValueR627(row)||{};
+ if(!token)return {ok:true,configured:false,source:'meta-graph-api',liveViewers:null,totalViews:null,history:[],error:'META_USER_ACCESS_TOKEN_R1292 is not configured'};
+ if(!force&&Date.now()-(Date.parse(previous.sampledAt||'')||0)<65000)return {...previous,configured:true,source:'meta-graph-api'};
+ if(!/^\d{10,25}$/.test(videoId))return {ok:false,error:'invalid-video-id'};
+ try{
+   const u=`https://graph.facebook.com/v26.0/${encodeURIComponent(videoId)}?fields=id,views,live_status`;
+   const r=await fetch(u,{headers:{authorization:'Bearer '+token},signal:AbortSignal.timeout(8500)});
+   const d=await r.json().catch(()=>({}));
+   if(!r.ok||d.error)throw Error(String(d?.error?.message||`Meta HTTP ${r.status}`).slice(0,180));
+   const views=Number(d.views),liveStatus=String(d.live_status||'').toUpperCase();
+   const history=Array.isArray(previous.history)&&previous.videoId===videoId?previous.history.slice(-1600):[];
+   if(Number.isFinite(views)&&views>=0)history.push({at:new Date().toISOString(),views,videoId});
+   const sample={ok:true,configured:true,videoId,source:'meta-graph-api',liveStatus,totalViews:Number.isFinite(views)?views:null,liveViewers:null,history:history.slice(-1600),sampledAt:new Date().toISOString(),error:null};
+   await setPushState(db,FB_META_SAMPLE_KEY_R1292,JSON.stringify(sample));return sample;
+ }catch(e){return {...previous,ok:false,configured:true,source:'meta-graph-api',error:String(e.message||e).slice(0,240),stale:true};}
+}
+async function handleFbMetaR1292(request,env){
+ if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
+ const r=await fbMetaReadR1292(env,false);return json(r,200,{'cache-control':'no-store'});
+}
 async function handleExternalCronGatewayR334(request, env, ctx) {
 if(!adminAuthorized(request,env) && !cronAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
 const db=requireDb(env);
+// R1292 independent Facebook scheduler. Failure cannot block YouTube jobs.
+const fbScheduleResultR1292=await fbScheduleTickR1292(env).catch(e=>({ok:false,error:String(e.message||e).slice(0,180)}));
+if(env.META_USER_ACCESS_TOKEN_R1292)ctx?.waitUntil?.(fbMetaReadR1292(env,false).catch(()=>{}));
 const gatewayUrl=new URL(request.url);
 const cron=cleanPlainText(gatewayUrl.searchParams.get('cron') || request.headers.get('x-andrik-cron') || '',80);
 const clock=cronGatewayClockR394(new Date(),cron);
@@ -12676,6 +12780,7 @@ value={ok:false,error:cleanPlainText(error?.message || error,500)};
 const failed=value?.ok===false || value?.httpOk===false;
 const result={
 ok:true,
+facebookSchedule:fbScheduleResultR1292,
 healthy:!failed,
 degraded:failed,
 mode:'external-cron-gateway-r416-one-duty',
@@ -19909,6 +20014,7 @@ if(age<busyLimit)return json({ok:false,error:'command-busy',command:existing},40
 const id=crypto.randomUUID();
 const command={id,action,state:'queued',createdAt:new Date().toISOString(),requestedBy:'owner-control-r989',...((action==='visual-now'||action==='visual-next')?{slot}:{}),...(action==='queue-move'?{offset:Math.max(0,Math.min(5,Number(body.offset)||0)),direction:['up','down','next'].includes(String(body.direction||'').toLowerCase())?String(body.direction).toLowerCase():'up',itemId:cleanPlainText(body.itemId||'',220)}:{}),...(action==='track-remove'?{key:trackKeyR966,title:cleanPlainText(body.title||'',180)}:{}),...(action==='queue-pick-r989'?{mediaType:mediaTypeR989,key:mediaKeyR989,title:cleanPlainText(body.title||'',180)}:{}),...(action==='audio-delay'?{delayMs:audioDelayMsR949}:{}),...(action==='tiktok-schedule-r1305'?{enabled:tiktokScheduleEnabledR1305,start:tiktokScheduleStartR1305,end:tiktokScheduleEndR1305}:{}),...(action==='host-start-r1319'?{targets:hostTargetsR1319,duck:hostDuckR1319}:{}),...(action==='host-mic-start-r1396'?{duck:hostDuckR1319}:{}),...(action==='host-av-start-r1397'?{duck:hostDuckR1319}:{}),...(action==='host-mic-enable-r1396'?{enabled:hostMicEnabledR1396}:{})};
 await setPushState(db,RADIO_REMOTE_R627.commandKey,JSON.stringify(command));
+// Manual Facebook START/STOP remain independent of the daily start-only scheduler.
 return json({ok:true,command});
 }
 function radioAgentVersionNumberR728(value){const m=String(value||'').match(/R(\d{3,})/i);return m?Number(m[1]):0;}
@@ -20036,6 +20142,8 @@ request = new Request(request, { headers });
 if (path === '/api/health' && request.method === 'GET') return await handlePublicHealth(request, env, ctx);
 if (path === '/api/youtube/websub' && request.method === 'GET') return await handleYoutubeWebSubVerifyR332(request, env, ctx);
 if (path === '/api/youtube/websub' && request.method === 'POST') return await handleYoutubeWebSubNotifyR332(request, env, ctx);
+if (path === '/api/control/facebook-schedule-r1292' && (request.method === 'GET'||request.method === 'POST')) return await handleFbScheduleR1292(request,env);
+if (path === '/api/control/facebook-meta-r1292' && request.method === 'GET') return await handleFbMetaR1292(request,env);
 if (path === '/api/control/protection/status' && request.method === 'GET') return await handleControlProtectionStatus(request, env);
 if (path === '/api/control/protection/guard-status' && request.method === 'GET') return await handleControlProtectionGuardStatus(request, env);
 if (path === '/api/control/guard/event' && request.method === 'POST') return await handleGuardEvent(request, env);

@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r358-deploy-nohang",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1791792274687-7d209a2995",
-  "release": "R1291",
-  "archiveName": "SITE-R1291-LIRA-3D-FACEBOOK-FULL.zip",
-  "sourceHead": "17a4653b89a2e4a842ea23bef75d4daf78165a0c",
-  "backupSha": "17a4653b89a2e4a842ea23bef75d4daf78165a0c",
+  "operationId": "publish-1791804730036-6690eefda7",
+  "release": "R1294",
+  "archiveName": "SITE-R1294-LYRA-BOXING-CAMERA-FULL.zip",
+  "sourceHead": "89efea488b992420405680754629fc8e535cfcc1",
+  "backupSha": "89efea488b992420405680754629fc8e535cfcc1",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-10-12T08:04:34.687Z"
+  "generatedAt": "2026-10-12T11:32:11.916Z"
 }

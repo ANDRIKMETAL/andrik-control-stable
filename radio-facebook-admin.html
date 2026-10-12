@@ -27,13 +27,23 @@ body{padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}a{color:inhe
 .fb-audience .tile strong{font:800 clamp(23px,5vw,35px)/1.1 system-ui;color:#75f8dc;display:block}
 .fb-audience .tile small{font-size:11px;color:#b9d6d4;display:block;margin-top:5px}
 .fb-chart{min-height:205px;background:linear-gradient(165deg,#041c21,#07111b);border:1px solid #1c756c;border-radius:14px;overflow:hidden;padding:8px}
-.fb-chart svg{display:block;width:100%;height:auto;min-height:160px;max-height:250px}
+.fb-chart svg{display:block;width:100%;height:auto;min-height:185px;max-height:350px;filter:drop-shadow(0 9px 14px rgba(0,170,150,.10))}
 .fb-period{color:#d7fff6;background:#0b2630;border:1px solid #24887c;border-radius:9px;padding:7px;font:12px system-ui}
 .fb-accordion{border:1px solid #295671;border-radius:23px;background:linear-gradient(145deg,#0d1d2c,#080e16);margin-top:14px;overflow:hidden}
 .fb-accordion>summary{cursor:pointer;list-style:none;padding:19px;font-weight:800;font-size:19px;display:flex;align-items:center;justify-content:space-between;gap:10px}
 .fb-accordion>summary::-webkit-details-marker{display:none}.fb-accordion>summary:after{content:'⌄';font-size:25px;color:#83ebd6}.fb-accordion[open]>summary:after{content:'⌃'}
 .fb-accordion>.card{margin:0;border:0;border-top:1px solid #295671;border-radius:0;box-shadow:none}
 @media(max-width:490px){.fb-audience{gap:7px}.fb-accordion>summary{font-size:17px}}
+
+/* R1293 · Facebook 14:00 START-only + volumetric verified views chart */
+.schedule-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:13px}
+.schedule-grid label{display:block;color:#a5d2da;font-size:12px;font-weight:800}
+.schedule-grid input[type=time]{width:100%;margin-top:7px;background:#0b1924;border:1px solid #2c6b75;border-radius:12px;color:#f2fffb;padding:12px;font-size:17px;color-scheme:dark}
+.schedule-switch{display:flex;align-items:center;gap:12px;padding:13px;border:1px solid #225d64;border-radius:13px;background:#081d27;margin-top:12px}
+.schedule-switch input{width:23px;height:23px;accent-color:#33dbbb;flex-shrink:0}
+.schedule-switch span{line-height:1.4;font-size:13px}
+.schedule-tag{font-size:11px;color:#9be9d9;border:1px solid #206d6b;padding:7px 10px;border-radius:12px;white-space:nowrap}
+@media(max-width:480px){.schedule-grid{grid-template-columns:1fr}}
 </style></head>
 <body><main class="wrap">
 <div class="topbar"><a class="back" href="/radio-control-admin.html">‹</a><div class="title"><small>ANDRIK RADIO</small><strong>Facebook Live</strong></div><button class="refresh" id="fbRefresh" type="button">↻</button></div>
@@ -43,12 +53,23 @@ body{padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}a{color:inhe
 <section class="card"><div class="card-head"><div><h2>Состояние</h2><p>YouTube считается только по двум своим ingest-линиям — Facebook больше не попадает в счётчик RTMPS.</p></div><span class="badge">R1263 / R1356</span></div>
 <div class="metrics"><div class="metric"><strong id="fbService">—</strong><small>RADIO SERVICE</small></div><div class="metric"><strong id="fbRtmps">—</strong><small>YOUTUBE RTMPS</small></div><div class="metric"><strong id="fbCpu">—</strong><small>CPU</small></div><div class="metric"><strong id="fbTrack">—</strong><small>СЕЙЧАС ИГРАЕТ</small></div><div class="metric"><strong id="fbProfile">—</strong><small>FACEBOOK VIDEO</small></div><div class="metric"><strong id="fbState">OFF</strong><small>FACEBOOK EGRESS</small></div></div>
 <div class="submetrics"><div class="submetric"><b id="fbMbps">—</b><span>TCP МБИТ/С*</span></div><div class="submetric"><b id="fbUptime">—</b><span>ВРЕМЯ РАБОТЫ</span></div><div class="submetric"><b id="fbInputMb">—</b><span>ОТПРАВЛЕНО МБ*</span></div><div class="submetric"><b id="fbRestarts">0</b><span>RESTART</span></div></div>
-<div class="fb-audience" aria-label="Зрительская статистика Meta"><div class="tile"><strong id="fbNow">—</strong><small>👁 СМОТРЯТ СЕЙЧАС</small></div><div class="tile"><strong id="fbTotalViews">—</strong><small>📊 ПРОСМОТРЫ ЭФИРА</small></div></div>
+<div class="fb-audience" aria-label="Подтверждённые просмотры Meta"><div class="tile"><strong id="fbTotalViews">—</strong><small>📊 ПРОСМОТРЫ META</small></div><div class="tile"><strong id="fbViewDelta">—</strong><small>↗ ПРИРОСТ ЗА ПЕРИОД</small></div></div>
 <div class="msg" id="fbStatusMsg">Проверяем Facebook-ветку…</div>
-<div class="viewer-note"><b>Зрители Facebook:</b> RTMP-сервер не сообщает число зрителей VPS. Точное количество — в Live Producer. Звёздочка (*) означает измерения TCP ACK веб-агентом, а не медиаскорость, подтверждённую Meta. При отсутствии измерения выводится прочерк, не ложный ноль.</div>
+<div class="viewer-note"><b>Источник:</b> Facebook Graph API, поле <code>video.views</code>. График показывает реальные последовательные замеры и их прирост, а не количество уникальных людей. Звёздочка (*) — технические измерения TCP ACK веб-агентом.</div>
 </section>
 
-<section class="card" id="fbAudiencePanel"><div class="card-head"><div><h2>Зрители Facebook · история заходов</h2><p>Объёмная бирюзовая кривая по данным Meta. При отсутствии подключения к зрительской статистике показывается прочерк.</p></div><select id="fbPeriod" class="fb-period" aria-label="Период графика"><option value="60">1 час</option><option value="360">6 часов</option><option value="1440">24 часа</option><option value="all">Весь эфир</option></select></div><div class="chart-wrap"><div id="fbAudienceChart" class="fb-chart" role="img" aria-label="История зрителей из Meta"></div><p class="note" id="fbAudienceHint">Ожидание данных Meta · TCP не используется для подсчёта зрителей.</p></div></section>
+<section class="card" id="fbAudiencePanel"><div class="card-head"><div><h2>📈 Facebook · объёмный график просмотров</h2><p>Бирюзовая линия — накопленные <code>video.views</code>. Объёмные столбики — прирост между фактическими замерами. Без вымышленных значений.</p></div><select id="fbPeriod" class="fb-period" aria-label="Период графика"><option value="60">1 час</option><option value="360">6 часов</option><option value="1440">24 часа</option><option value="all">Весь эфир</option></select></div><div class="chart-wrap"><div class="chart-head"><b>Meta Graph API · проверенные данные</b><span id="fbViewsLastSample">Ждём замер</span></div><div id="fbAudienceChart" class="fb-chart" role="img" aria-label="График просмотров и прироста Facebook"></div><p class="note" id="fbAudienceHint">График строится только по ответам Meta API и хранит историю на сервере.</p></div></section>
+
+<section class="card" id="fbDailySchedule">
+<div class="card-head"><div><h2>🕒 Автоматический запуск Facebook</h2><p>Ежедневно запускается <b>только Facebook RTMPS-ветка</b> по Братиславе. Никакого автоматического окончания: прекращением публичного эфира управляет Meta, ручной STOP остаётся доступным.</p></div><span class="schedule-tag">R1293 · START ONLY</span></div>
+<div class="schedule-grid"><div class="field"><label>Начало · Europe/Bratislava</label><div style="padding:10px 0;font-size:28px;font-weight:900;color:#79ffe0">14:00 <span class="note">каждый день</span></div></div><div class="field"><label>Окончание</label><div style="padding:13px 0;font-size:14px;font-weight:800;color:#9be9d9">Не планируется · решает Meta</div></div></div>
+<div class="field" style="margin-top:14px"><label for="fbVideoIdR1292">Meta Live Video ID для статистики (без токена)</label><input id="fbVideoIdR1292" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="2633855860405878" autocomplete="off"><div class="note">Для нового эфира Meta может выдать новый ID — укажи его здесь. График хранит историю конкретного видео; на новое видео начинает её заново.</div></div>
+<label class="schedule-switch"><input type="checkbox" id="fbDailyEnabled"><span><b>Включить ежедневное расписание</b><br><span style="color:#a2bcbf;font-size:12px">Один автоматический START в 14:00 · без автоматического STOP · ручные кнопки отдельно</span></span></label>
+<label class="schedule-switch"><input type="checkbox" id="fbMetaPrepared"><span><b>Эфир подготовлен в Meta Live Producer</b><br><span style="color:#a2bcbf;font-size:12px">Название и описание заполнены; трансляция создана или запланирована. Только ваша отметка — API это не проверяет.</span></span></label>
+<button class="btn primary" type="button" id="fbDailySave" style="margin-top:12px;width:100%">💾 СОХРАНИТЬ РАСПИСАНИЕ</button>
+<div id="fbDailyStatus" class="msg">Автозапуск по умолчанию выключен. После включения Cron запускает RTMPS сигнал в 14:00. Автоматического STOP нет.</div>
+<div class="viewer-note">⚠️ <b>Важно для профессионального профиля:</b> по расписанию запускается передача RTMPS-сигнала на Facebook, но <b>не создаётся публикация, не подставляются название/описание и не нажимается Go Live</b>. Создай действие с готовыми текстами в Live Producer и отдельно проверь автопубликацию со стороны Meta. Если Meta завершит эфир, планировщик не будет принудительно останавливать FFmpeg. Сработает только при наличии активного Cron gateway.</div>
+</section>
 
 <section class="card"><div class="card-head"><div><h2>График Facebook</h2><p>Скорость отправки Facebook по подтверждениям TCP (ACK). История собирается веб-агентом VPS, даже когда эта страница закрыта. Данные не равны показателю зрителей.</p></div><span class="badge">LIVE TELEMETRY</span></div><div class="chart-wrap"><div class="chart-head"><b>Facebook TCP исходящий поток</b><span id="fbChartCaption">ждём данные</span></div><div id="fbChart"></div></div><div class="activity" id="fbEvents"></div></section>
 
@@ -75,11 +96,11 @@ ANDRIK METAL RADIO — музыка без остановки.
 
 <section class="card"><div class="card-head"><div><h2>Ручное управление</h2><p>START сначала подтягивает последний сохранённый ключ на VPS, проверяет независимый R1356 relay и только затем запускает Facebook. STOP выключает только Facebook FFmpeg.</p></div><span class="badge">ISOLATED</span></div><div class="actions"><button class="btn primary" id="fbStart" type="button">▶ ЗАПУСТИТЬ FACEBOOK</button><button class="btn stop" id="fbStop" type="button">■ ОСТАНОВИТЬ FACEBOOK</button></div><a class="btn" href="https://www.facebook.com/live/producer/" target="_blank" rel="noopener" style="margin-top:10px">Открыть Facebook Live Producer ↗</a><div class="msg" id="fbActionMsg">Facebook branch по умолчанию OFF после перезапуска радио.</div></section>
 
-<div class="foot">ANDRIK · SITE R1263 / FACEBOOK R1356 · <a href="/radio-control-admin.html">вернуться в Радио</a></div>
+<div class="foot">ANDRIK · SITE R1292 / FACEBOOK DAILY 475M · <a href="/radio-control-admin.html">вернуться в Радио</a></div>
 </main>
 <script>
 (()=>{'use strict';
-const $=id=>document.getElementById(id);let busy=false,last=null,store={configured:false};
+const $=id=>document.getElementById(id);let busy=false,last=null,store={configured:false},fbMetaCache=null,fbScheduleCache=null,fbMetaLastFetch=0;
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const adminHeaders=()=>{let k='';try{k=localStorage.getItem('andrik-comments-admin-key-persistent')||sessionStorage.getItem('andrik-comments-admin-key')||''}catch(_){}return {accept:'application/json','cache-control':'no-cache',...(k?{'x-admin-key':k}:{})}};
 async function api(path,opts={}){const r=await fetch(path,{credentials:'include',cache:'no-store',headers:{...adminHeaders(),...(opts.headers||{})},...opts});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.message||d.error||('HTTP '+r.status));return d}
@@ -139,25 +160,65 @@ function renderEvents(fb){
 
 let audiencePeriod='60',lastAudienceData=null;
 function renderAudience(d){
- const a=d?.agent||{},s=a.status||{},fb=s.facebookR1313||{};
- // Future read-only Meta-audience endpoint may expose this object.
- const obj=s.facebookAudienceR1291||a.facebookAudienceR1291||d.facebookAudienceR1291||fb.metaAudience||null;
+ const a=d?.agent||{},st=a.status||{},fb=st.facebookR1313||{};
+ const obj=fbMetaCache||st.facebookAudienceR1291||a.facebookAudienceR1291||d.facebookAudienceR1291||fb.metaAudience||null;
  lastAudienceData=obj;
- const current=Number(obj?.liveViewers),total=Number(obj?.totalViews);
- const verified=Boolean(obj?.source==='meta' || obj?.source==='meta-graph-api');
- $('fbNow').textContent=verified&&Number.isFinite(current)&&current>=0?current.toLocaleString('ru-RU'):'—';
+ const verified=Boolean(obj?.source==='meta'||obj?.source==='meta-graph-api');
+ const total=obj?.totalViews==null?NaN:Number(obj.totalViews);
  $('fbTotalViews').textContent=verified&&Number.isFinite(total)&&total>=0?total.toLocaleString('ru-RU'):'—';
+ const lastSampleTime=Date.parse(obj?.sampledAt||'');
+ const age=Date.now()-lastSampleTime;
+ $('fbViewsLastSample').textContent=verified&&Number.isFinite(age)?'Замер '+fmtClock(lastSampleTime)+(age>180000?' · устарел':''):'Нет подтверждённого замера';
  const raw=verified&&Array.isArray(obj?.history)?obj.history:[];
- const now=Date.now(),limit=audiencePeriod==='all'?Infinity:Number(audiencePeriod)*60000;
- const rows=raw.map(x=>({t:Date.parse(x.at||x.time),n:Number(x.viewers??x.views??x.value)})).filter(x=>Number.isFinite(x.t)&&Number.isFinite(x.n)&&x.n>=0&&now-x.t<=limit).sort((x,y)=>x.t-y.t).slice(-500);
+ const limit=audiencePeriod==='all'?Infinity:Number(audiencePeriod)*60000;
+ const currentTime=Date.now();
+ // Only valid observed points from Graph API, never estimated audience.
+ const history=raw.map(x=>({t:Date.parse(x.at||x.time),n:Number(x.views)})).filter(x=>Number.isFinite(x.t)&&Number.isFinite(x.n)&&x.n>=0&&x.t<=currentTime+120000).sort((x,y)=>x.t-y.t);
+ const rows=history.filter(x=>currentTime-x.t<=limit).slice(-700);
  const target=$('fbAudienceChart');
- if(rows.length<2){target.innerHTML='<svg viewBox="0 0 700 210" role="img" aria-label="Нет подтверждённых данных Meta"><defs><linearGradient id="fbg" x2="0" y2="1"><stop offset="0%" stop-color="#21d6b0" stop-opacity=".2"/><stop offset="100%" stop-color="#21d6b0" stop-opacity="0"/></linearGradient></defs>'+[45,85,125,165].map(y=>'<line x1="36" y1="'+y+'" x2="685" y2="'+y+'" stroke="#1c5660" stroke-dasharray="5,8"/>').join('')+'<text x="350" y="103" fill="#9dbbb7" font-size="19" font-family="system-ui" text-anchor="middle">Нет данных зрителей от Meta</text><text x="350" y="131" fill="#698c8c" font-size="13" font-family="system-ui" text-anchor="middle">График заполнится после подключения API</text></svg>';
- $('fbAudienceHint').textContent='VPS передаёт поток, но не получает аудиторию из Meta. Для точного графика потребуется разрешённый доступ Meta Graph API.';return;}
- const W=700,H=210,left=38,right=16,top=15,bottom=32,max=Math.max(1,...rows.map(x=>x.n)),start=rows[0].t,end=rows[rows.length-1].t;
- const pts=rows.map(r=>[left+(r.t-start)/Math.max(1,end-start)*(W-left-right),top+(H-top-bottom)*(1-r.n/max)]);
- const line=pts.map((q,i)=>(i?'L':'M')+q[0].toFixed(1)+','+q[1].toFixed(1)).join(' '),area=line+' L'+(W-right)+','+(H-bottom)+' L'+left+','+(H-bottom)+' Z',last=pts.at(-1);
- target.innerHTML='<svg viewBox="0 0 700 210" role="img" aria-label="Смотрят Facebook Live"><defs><linearGradient id="fbViewFill" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="#16e3b2" stop-opacity=".52"/><stop offset="100%" stop-color="#16e3b2" stop-opacity=".01"/></linearGradient><filter id="fbViewGlow"><feGaussianBlur stdDeviation="4"/></filter></defs>'+[.25,.5,.75,1].map(k=>'<line x1="38" y1="'+(top+(1-k)*(H-top-bottom))+'" x2="684" y2="'+(top+(1-k)*(H-top-bottom))+'" stroke="#27666a" stroke-dasharray="4,7"/><text x="3" y="'+(top+(1-k)*(H-top-bottom)+3)+'" font-size="11" fill="#8acdc1">'+Math.round(k*max)+'</text>').join('')+'<path d="'+area+'" fill="url(#fbViewFill)"/><path d="'+line+'" stroke="#09b99b" stroke-width="10" opacity=".6" filter="url(#fbViewGlow)" fill="none"/><path d="'+line+'" stroke="#79ffe0" stroke-width="3" fill="none"/><circle cx="'+last[0]+'" cy="'+last[1]+'" r="5" fill="#fff" stroke="#2cefc8" stroke-width="2"/><text x="38" y="201" fill="#93b4b0" font-size="12">'+fmtClock(start)+'</text><text x="622" y="201" fill="#93b4b0" font-size="12">'+fmtClock(end)+'</text></svg>';
- $('fbAudienceHint').textContent='Источник: Meta · подтверждённые значения, точек: '+rows.length;
+ const delta=rows.length>=2?rows.at(-1).n-rows[0].n:NaN;
+ $('fbViewDelta').textContent=Number.isFinite(delta)&&delta>=0?'+'+delta.toLocaleString('ru-RU'):'—';
+ if(!rows.length){
+  target.innerHTML='<svg viewBox="0 0 760 300" role="img" aria-label="Ожидание данных Meta"><defs><linearGradient id="emptyGraphGrad" x2="0" y2="1"><stop offset="0" stop-color="#16e3b2" stop-opacity=".17"/><stop offset="1" stop-color="#16e3b2" stop-opacity="0"/></linearGradient></defs><path d="M48 230L48 78Q350 55 710 225L710 230Z" fill="url(#emptyGraphGrad)"/><path d="M48 230H725" stroke="#22545b"/><text x="380" y="144" fill="#b6d5d3" font-size="20" font-family="system-ui" text-anchor="middle">Нет замеров Meta за этот период</text><text x="380" y="174" fill="#779f9d" font-size="14" font-family="system-ui" text-anchor="middle">Выбери другой период или подключи API</text></svg>';
+  $('fbAudienceHint').textContent=obj?.error?'Meta API: '+String(obj.error):verified?'В выбранном периоде нет сохранённых замеров.':'Для графика нужен секрет META_USER_ACCESS_TOKEN_R1292 в Cloudflare. Нет данных — нет подставных чисел.';
+  return;
+ }
+ if(rows.length===1){
+  target.innerHTML='<svg viewBox="0 0 760 300" role="img" aria-label="Первый замер Meta"><path d="M48 230H725" stroke="#22545b"/><circle cx="380" cy="127" r="10" fill="#53ffe0"/><circle cx="380" cy="127" r="25" fill="#33d9bf" opacity=".13"/><text x="380" y="85" fill="#d2fff8" font-size="28" font-weight="800" font-family="system-ui" text-anchor="middle">'+rows[0].n+'</text><text x="380" y="182" fill="#a4bcbc" font-size="15" font-family="system-ui" text-anchor="middle">Первый подтверждённый замер · ожидаем следующий</text></svg>';
+  $('fbAudienceHint').textContent='Замер '+fmtClock(rows[0].t)+' · следующий опрос Meta добавит точку графика. Никаких искусственных значений.';
+  return;
+ }
+ const W=760,H=330,L=50,R=26,T=22,BASE=205,BAR_BASE=295;
+ const minVal=Math.min(...rows.map(x=>x.n)),maxVal=Math.max(...rows.map(x=>x.n)),topVal=Math.max(1,maxVal),range=topVal;
+ const first=rows[0].t,last=rows.at(-1).t,span=Math.max(1,last-first),usable=W-L-R;
+ const pts=rows.map(x=>[L+(x.t-first)/span*usable,BASE-(x.n/range)*(BASE-T)]);
+ const path=pts.map((p,i)=>(i?'L':'M')+p[0].toFixed(2)+' '+p[1].toFixed(2)).join(' ');
+ const endPt=pts.at(-1);
+ const area=path+' L'+endPt[0].toFixed(2)+' '+BASE+' L'+pts[0][0].toFixed(2)+' '+BASE+' Z';
+ const grids=[0,.25,.5,.75,1].map(k=>{const y=BASE-k*(BASE-T);return '<line x1="'+L+'" y1="'+y+'" x2="'+(W-R)+'" y2="'+y+'" stroke="#26535c" stroke-width="1" stroke-dasharray="5 8"/><text x="4" y="'+(y+4)+'" fill="#89bcb5" font-size="12" font-family="system-ui">'+Math.round(topVal*k)+'</text>';}).join('');
+ // The lower panel is real positive change between consecutive measurements.
+ // A missing measurement is never counted as an invented zero viewer.
+ const bucketCount=Math.min(22,Math.max(6,Math.ceil(rows.length/3)));
+ const buckets=Array(bucketCount).fill(null).map(()=>({rise:0,seen:0}));
+ for(let i=1;i<rows.length;i++){
+  const prev=rows[i-1],cur=rows[i],diff=cur.n-prev.n;
+  const j=Math.min(bucketCount-1,Math.floor((cur.t-first)/span*bucketCount));
+  if(diff>=0){buckets[j].rise+=diff;buckets[j].seen++;}
+ }
+ const maxRise=Math.max(1,...buckets.map(q=>q.rise));
+ const gap=usable/bucketCount,bw=Math.max(5,Math.min(26,gap*.65)),DEPTH=6;
+ let columns='';
+ for(let i=0;i<bucketCount;i++){
+  const b=buckets[i];if(!b.seen)continue;
+  const height=b.rise>0?Math.max(3,(b.rise/maxRise)*49):2;
+  const x=L+(i+.5)*gap-bw/2,y=BAR_BASE-height;
+  columns+='<g><rect x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+height.toFixed(1)+'" rx="2" fill="url(#fbVolFace)"/>';
+  if(b.rise>0)columns+='<path d="M'+(x+bw).toFixed(1)+' '+y.toFixed(1)+' l'+DEPTH+' -'+DEPTH+' v'+height.toFixed(1)+' l-'+DEPTH+' '+DEPTH+' Z" fill="#087b70" opacity=".9"/><path d="M'+x.toFixed(1)+' '+y.toFixed(1)+' l'+DEPTH+' -'+DEPTH+' h'+bw.toFixed(1)+' l-'+DEPTH+' '+DEPTH+' Z" fill="#a5fff0" opacity=".7"/>';
+  columns+='<title>Прирост по фактическим замерам: +'+b.rise+' просмотров</title></g>';
+ }
+ const lastDot='<circle cx="'+endPt[0].toFixed(1)+'" cy="'+endPt[1].toFixed(1)+'" r="6" fill="#fff" stroke="#14e6c7" stroke-width="3"/>';
+ target.innerHTML='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Фактические замеры просмотров и их прироста Facebook Meta" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="fbVolArea" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="#12d9ba" stop-opacity=".52"/><stop offset="100%" stop-color="#072a35" stop-opacity=".06"/></linearGradient><linearGradient id="fbVolFace" x1="0" x2="1" y1="0" y2="0"><stop offset="0" stop-color="#087469"/><stop offset=".42" stop-color="#41ffdd"/><stop offset="1" stop-color="#0bb69c"/></linearGradient><filter id="fbVolGlow"><feGaussianBlur stdDeviation="4"/></filter></defs><text x="'+L+'" y="16" fill="#83e8cf" font-size="13" font-weight="750" font-family="system-ui">Накопленные просмотры</text>'+grids+'<path d="'+area+'" fill="url(#fbVolArea)"/><path d="'+path+'" stroke="#0fd4b2" stroke-width="12" opacity=".35" filter="url(#fbVolGlow)" fill="none"/><path d="'+path+'" stroke="#7dffe4" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>'+lastDot+'<text x="'+(W-R-2)+'" y="16" fill="#d2fff8" text-anchor="end" font-size="16" font-family="system-ui" font-weight="800">'+rows.at(-1).n+'</text><line x1="'+L+'" y1="'+BAR_BASE+'" x2="'+(W-R)+'" y2="'+BAR_BASE+'" stroke="#1c655f"/><text x="'+L+'" y="226" fill="#83e8cf" font-size="13" font-weight="750" font-family="system-ui">Прирост между замерами</text>'+columns+'<text x="'+L+'" y="320" fill="#8fbab4" font-size="12" font-family="system-ui">'+fmtClock(first)+'</text><text x="'+(W-R)+'" y="320" text-anchor="end" fill="#8fbab4" font-size="12" font-family="system-ui">'+fmtClock(last)+'</text></svg>';
+ $('fbAudienceHint').textContent='Meta video.views · '+rows.length+' реальных точек · '+fmtClock(first)+'–'+fmtClock(last)+' · прирост '+(Number.isFinite(delta)&&delta>=0?'+'+delta:'не определён')+'. Обновление по API примерно раз в минуту при работающем Cron или открытой контрольке.';
 }
 
 function render(d){
@@ -195,6 +256,34 @@ $('fbGuardToggle').addEventListener('change',async()=>{
   }catch(e){busy=false;await refresh().catch(()=>{});$('fbGuardMsg').className='msg bad';$('fbGuardMsg').textContent='Не удалось сохранить защиту: '+String(e?.message||e);}
 });
 $('fbCopyTitle').addEventListener('click',()=>copyPrepared('fbPreparedTitle','Название'));$('fbCopyDescription').addEventListener('click',()=>copyPrepared('fbPreparedDescription','Описание'));
+// R1292 Meta read-only + daily schedule config; neither action touches master radio.
+async function fbReadMetaR1292(){
+ try{const d=await api('/api/control/facebook-meta-r1292?ts='+Date.now());fbMetaCache=d;fbMetaLastFetch=Date.now();if(last)renderAudience(last);}
+ catch(e){fbMetaCache={configured:false,error:String(e.message||e)};if(last)renderAudience(last);}
+}
+function fbScheduleRenderR1292(d,updateFields=true){
+ fbScheduleCache=d;const c=d.schedule||{},q=d.state||{};
+ if(updateFields){$('fbVideoIdR1292').value=c.liveVideoId||'';$('fbDailyEnabled').checked=Boolean(c.enabled);$('fbMetaPrepared').checked=Boolean(c.preparedOnMeta);}
+ const beatAge=d.schedulerHeartbeatAt?Date.now()-Date.parse(d.schedulerHeartbeatAt):Infinity;
+ const cronOk=Number.isFinite(beatAge)&&beatAge<12*60000;
+ let status=c.enabled?'🟢 Ежедневный START в 14:00 (Братислава) включён. Автоматического STOP нет.':'⚪ Ежедневный START выключен · ручной START/STOP работает независимо.';
+ status+='\n'+(cronOk?'✅ Cron работает · последняя проверка '+fmtClock(d.schedulerHeartbeatAt):'⚠️ Cron не подтверждён за последние 12 минут. Проверь триггер до включения.');
+ if(q.lastAction)status+='\nПоследнее событие: '+q.lastAction+(q.date?' · '+q.date:'');
+ if(q.error)status+='\n⚠️ '+q.error;
+ if(c.enabled&&!c.preparedOnMeta)status+='\n⚠️ Не отмечена подготовка события Meta: START будет заблокирован.';
+ $('fbDailyStatus').className=c.enabled&&cronOk?'msg ok':'msg warn';$('fbDailyStatus').textContent=status;
+}
+async function fbScheduleReadR1292(updateFields=true){try{const d=await api('/api/control/facebook-schedule-r1292?ts='+Date.now());fbScheduleRenderR1292(d,updateFields);}catch(e){$('fbDailyStatus').className='msg bad';$('fbDailyStatus').textContent='Расписание: '+e.message;}}
+async function fbScheduleSaveR1292(){if(busy)return;const enabled=$('fbDailyEnabled').checked,preparedOnMeta=$('fbMetaPrepared').checked,liveVideoId=$('fbVideoIdR1292').value.trim();
+ if(enabled&&!preparedOnMeta){$('fbDailyStatus').className='msg bad';$('fbDailyStatus').textContent='Сначала создай/подготовь эфир в Meta и отметь флажок.';return;}
+ if(enabled&&!confirm('Включить ежедневную подачу Facebook RTMPS-сигнала в 14:00 по Братиславе БЕЗ автоматического STOP? Публикация и название/описание требуют подготовки Meta.'))return;
+ busy=true;$('fbDailySave').disabled=true;
+ try{const d=await api('/api/control/facebook-schedule-r1292',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({enabled,preparedOnMeta,liveVideoId})});fbScheduleRenderR1292(d);}
+ catch(e){$('fbDailyStatus').className='msg bad';$('fbDailyStatus').textContent='❌ '+e.message;}
+ finally{busy=false;$('fbDailySave').disabled=false;}
+}
+$('fbDailySave').addEventListener('click',fbScheduleSaveR1292);
+fbScheduleReadR1292();fbReadMetaR1292();setInterval(()=>{if(!document.hidden){fbScheduleReadR1292(false);fbReadMetaR1292()}},65000);
 $('fbSave').addEventListener('click',save);$('fbStart').addEventListener('click',()=>act('facebook-start-r1319'));$('fbStop').addEventListener('click',()=>act('facebook-stop-r1319'));$('fbPeriod').addEventListener('change',e=>{audiencePeriod=e.target.value;if(last)renderAudience(last)});$('fbRefresh').addEventListener('click',refresh);refresh();setInterval(()=>{if(!document.hidden)refresh()},5000)
 })();
 </script></body></html>
