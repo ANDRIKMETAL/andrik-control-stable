@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r358-deploy-nohang",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1791804730036-6690eefda7",
-  "release": "R1294",
-  "archiveName": "SITE-R1294-LYRA-BOXING-CAMERA-FULL.zip",
-  "sourceHead": "89efea488b992420405680754629fc8e535cfcc1",
-  "backupSha": "89efea488b992420405680754629fc8e535cfcc1",
+  "operationId": "publish-1791805831403-db04b96624",
+  "release": "R1295",
+  "archiveName": "SITE-R1295-LYRA-MICROPHONE-CAMERA-FULL.zip",
+  "sourceHead": "4c67cf3116059a2ae2736881a0f9928c79dbbdf5",
+  "backupSha": "4c67cf3116059a2ae2736881a0f9928c79dbbdf5",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-10-12T11:32:11.916Z"
+  "generatedAt": "2026-10-12T11:50:31.403Z"
 }
