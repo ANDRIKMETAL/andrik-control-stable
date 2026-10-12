@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r358-deploy-nohang",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1791762987180-e700c8ebd9",
-  "release": "R1287",
-  "archiveName": "SITE-R1287-LYRA-SPACE-BRIDGES.zip",
-  "sourceHead": "13881709ef9b7b32686ab834ce15266a1637d3a4",
-  "backupSha": "13881709ef9b7b32686ab834ce15266a1637d3a4",
+  "operationId": "publish-1791786369559-ca84b66232",
+  "release": "R1289",
+  "archiveName": "SITE-R1289-CITY-3D-BAR-BIKE-FULL.zip",
+  "sourceHead": "f9fbf7540a392bbed3c4236d865c5669ca1a506a",
+  "backupSha": "f9fbf7540a392bbed3c4236d865c5669ca1a506a",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-10-11T23:56:27.180Z"
+  "generatedAt": "2026-10-12T06:26:09.559Z"
 }
