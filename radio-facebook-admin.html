@@ -44,34 +44,66 @@ body{padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}a{color:inhe
 .schedule-switch span{line-height:1.4;font-size:13px}
 .schedule-tag{font-size:11px;color:#9be9d9;border:1px solid #206d6b;padding:7px 10px;border-radius:12px;white-space:nowrap}
 @media(max-width:480px){.schedule-grid{grid-template-columns:1fr}}
+/* R1298 · condensed Facebook mobile control; panels are native details with controls intact. */
+.fb-schedule-compact{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.fb-time-tile{padding:12px 14px;background:#081d27;border:1px solid #225d64;border-radius:14px;min-width:0}
+.fb-time-tile small{display:block;color:#a5d2da;font-size:12px;font-weight:700}
+.fb-time-tile strong{display:block;font-size:clamp(26px,7vw,35px);color:#79ffe0;line-height:1.35}
+.fb-inline-note{font-size:12px;color:#9dbcb8;margin:10px 0 0}
+.fb-brief{margin-top:12px;border:1px solid #27545a;background:#071b24;color:#a0decf;border-radius:13px;padding:11px 13px;font-size:13px;font-weight:650}
+.fb-brief.warn{color:#ffe092;border-color:#65552a}.fb-brief.bad{color:#ffb0ba;border-color:#67333e}
+.fb-inside-spoiler{margin-top:12px;border:1px solid #295671;border-radius:15px;background:#08141f;overflow:hidden}
+.fb-inside-spoiler>summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;justify-content:space-between;padding:16px;font-weight:800;font-size:15px}
+.fb-inside-spoiler>summary::-webkit-details-marker{display:none}
+.fb-inside-spoiler>summary:after{content:'⌄';font-size:23px;color:#83ebd6}
+.fb-inside-spoiler[open]>summary:after{content:'⌃'}
+.fb-inside-body{padding:0 13px 14px;border-top:1px solid #20394a}
+.fb-small-tag{margin-left:auto;color:#8fcaba;font-size:11px;font-weight:650;white-space:nowrap}
+.fb-sub-spoiler,.fb-note-details{margin-top:12px;color:#9db7bb;font-size:12px}
+.fb-sub-spoiler>summary,.fb-note-details>summary{cursor:pointer;line-height:1.5}
+.fb-accordion>summary .fb-small-tag{font-size:11px}
+@media(max-width:480px){.fb-schedule-compact{grid-template-columns:1fr 1fr}.fb-accordion>summary{font-size:17px}.fb-time-tile{padding:11px}}
+
 </style></head>
 <body><main class="wrap">
 <div class="topbar"><a class="back" href="/radio-control-admin.html">‹</a><div class="title"><small>ANDRIK RADIO</small><strong>Facebook Live</strong></div><button class="refresh" id="fbRefresh" type="button">↻</button></div>
 
-<section class="hero"><div class="ey">FACEBOOK LIVE · ПРОФИЛЬ АНДРИК ГВОЗДЬ</div><h1>Стрим Facebook</h1><p>Facebook работает через независимый R1356 relay. Ключ перед START синхронизируется с VPS автоматически; YouTube и Studio не перезапускаются. Для Facebook работают отдельные START / STOP без лишних служебных блоков о ротации сигнала.</p><div class="status-strip"><span class="pill" id="fbOvhPill"><i></i><span>OVH: проверяем…</span></span><span class="pill" id="fbMasterPill"><i></i><span>MASTER: проверяем…</span></span><span class="pill warn" id="fbEgressPill"><i></i><span>Facebook: проверяем…</span></span></div></section>
+<section class="hero"><div class="ey">FACEBOOK LIVE · ПРОФИЛЬ АНДРИК ГВОЗДЬ</div><h1>Стрим Facebook</h1><div class="status-strip"><span class="pill" id="fbOvhPill"><i></i><span>OVH: проверяем…</span></span><span class="pill" id="fbMasterPill"><i></i><span>MASTER: проверяем…</span></span><span class="pill warn" id="fbEgressPill"><i></i><span>Facebook: проверяем…</span></span></div></section>
 
-<section class="card"><div class="card-head"><div><h2>Состояние</h2><p>YouTube считается только по двум своим ingest-линиям — Facebook больше не попадает в счётчик RTMPS.</p></div><span class="badge">R1263 / R1356</span></div>
+<section class="card"><div class="card-head"><div><h2>Состояние</h2></div><span class="badge">R1263 / R1356</span></div>
 <div class="metrics"><div class="metric"><strong id="fbService">—</strong><small>RADIO SERVICE</small></div><div class="metric"><strong id="fbRtmps">—</strong><small>YOUTUBE RTMPS</small></div><div class="metric"><strong id="fbCpu">—</strong><small>CPU</small></div><div class="metric"><strong id="fbTrack">—</strong><small>СЕЙЧАС ИГРАЕТ</small></div><div class="metric"><strong id="fbProfile">—</strong><small>FACEBOOK VIDEO</small></div><div class="metric"><strong id="fbState">OFF</strong><small>FACEBOOK EGRESS</small></div></div>
 <div class="submetrics"><div class="submetric"><b id="fbMbps">—</b><span>TCP МБИТ/С*</span></div><div class="submetric"><b id="fbUptime">—</b><span>ВРЕМЯ РАБОТЫ</span></div><div class="submetric"><b id="fbInputMb">—</b><span>ОТПРАВЛЕНО МБ*</span></div><div class="submetric"><b id="fbRestarts">0</b><span>RESTART</span></div></div>
 <div class="fb-audience" aria-label="Подтверждённые просмотры Meta"><div class="tile"><strong id="fbTotalViews">—</strong><small>📊 ПРОСМОТРЫ META</small></div><div class="tile"><strong id="fbViewDelta">—</strong><small>↗ ПРИРОСТ ЗА ПЕРИОД</small></div></div>
 <div class="msg" id="fbStatusMsg">Проверяем Facebook-ветку…</div>
-<div class="viewer-note"><b>Источник:</b> Facebook Graph API, поле <code>video.views</code>. График показывает реальные последовательные замеры и их прирост, а не количество уникальных людей. Звёздочка (*) — технические измерения TCP ACK веб-агентом.</div>
+<details class="fb-note-details"><summary>ℹ️ Источник данных</summary><div class="viewer-note">Просмотры: Meta Graph API (<code>video.views</code>), не уникальные зрители. Звёздочка (*) — технические замеры TCP.</div></details>
 </section>
 
 <section class="card" id="fbAudiencePanel"><div class="card-head"><div><h2>📈 Facebook · объёмный график просмотров</h2><p>Бирюзовая линия — накопленные <code>video.views</code>. Объёмные столбики — прирост между фактическими замерами. Без вымышленных значений.</p></div><select id="fbPeriod" class="fb-period" aria-label="Период графика"><option value="60">1 час</option><option value="360">6 часов</option><option value="1440">24 часа</option><option value="all">Весь эфир</option></select></div><div class="chart-wrap"><div class="chart-head"><b>Meta Graph API · проверенные данные</b><span id="fbViewsLastSample">Ждём замер</span></div><div id="fbAudienceChart" class="fb-chart" role="img" aria-label="График просмотров и прироста Facebook"></div><p class="note" id="fbAudienceHint">График строится только по ответам Meta API и хранит историю на сервере.</p></div></section>
 
 <section class="card" id="fbDailySchedule">
-<div class="card-head"><div><h2>🕒 Автоматический запуск Facebook</h2><p>В 13:55 сбрасывается счётчик аварийных рестартов R1279, если защита включена и Facebook остановлен; в 14:00 запускается только Facebook RTMPS-ветка по Братиславе. Защита остаётся включённой, таймера STOP нет. Ручные кнопки отдельно.</p></div><span class="schedule-tag">R1297 · 13:55 / 14:00</span></div>
-<div class="schedule-grid"><div class="field"><label>Начало · Europe/Bratislava</label><div style="padding:10px 0;font-size:28px;font-weight:900;color:#79ffe0">14:00 <span class="note">каждый день</span></div></div><div class="field"><label>Подготовка / сброс R1279</label><div style="padding:10px 0;font-size:28px;font-weight:900;color:#79ffe0">13:55 <span class="note">каждый день</span></div></div></div><div class="msg" style="margin-top:12px">🛡️ R1279 остаётся включённым: сбрасывается лишь память об аварийных рестартах. <b>Автоматического STOP нет — завершение решает Meta.</b> Достаточно Cron каждые 5 минут, если он срабатывает в :55.</div>
-<div class="field" style="margin-top:14px"><label for="fbVideoIdR1292">Meta Live Video ID для статистики (без токена)</label><input id="fbVideoIdR1292" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="2633855860405878" autocomplete="off"><div class="note">Для нового эфира Meta может выдать новый ID — укажи его здесь. График хранит историю конкретного видео; на новое видео начинает её заново.</div></div>
-<label class="schedule-switch"><input type="checkbox" id="fbDailyEnabled"><span><b>Включить ежедневное расписание</b><br><span style="color:#a2bcbf;font-size:12px">13:55 подготовка защиты R1279 · 14:00 один START · без авто-STOP · ручные кнопки отдельно</span></span></label>
-<label class="schedule-switch"><input type="checkbox" id="fbMetaPrepared"><span><b>Эфир подготовлен в Meta Live Producer</b><br><span style="color:#a2bcbf;font-size:12px">Название и описание заполнены; трансляция создана или запланирована. Только ваша отметка — API это не проверяет.</span></span></label>
-<button class="btn primary" type="button" id="fbDailySave" style="margin-top:12px;width:100%">💾 СОХРАНИТЬ РАСПИСАНИЕ</button>
-<div id="fbDailyStatus" class="msg">Автозапуск по умолчанию выключен. Cron в 13:55 сбрасывает счётчик R1279, в 14:00 запускает RTMPS. Автоматического STOP нет.</div>
-<div class="viewer-note">⚠️ <b>Важно для профессионального профиля:</b> достаточно Cron каждые 5 минут с проверкой в :55. По расписанию запускается передача RTMPS-сигнала на Facebook, но <b>не создаётся публикация, не подставляются название/описание и не нажимается Go Live</b>. Создай действие с готовыми текстами в Live Producer и отдельно проверь автопубликацию со стороны Meta. Если Meta завершит эфир, планировщик не будет принудительно останавливать FFmpeg. Сработает только при наличии активного Cron gateway.</div>
+<div class="card-head"><div><h2>🕒 Автозапуск Facebook</h2></div><span class="schedule-tag">R1298</span></div>
+<div class="schedule-grid fb-schedule-compact">
+  <div class="fb-time-tile"><small>🛡️ Сброс R1279</small><strong>13:55</strong></div>
+  <div class="fb-time-tile"><small>🔴 START Facebook</small><strong>14:00</strong></div>
+</div>
+<div class="fb-inline-note">Каждый день · Europe/Bratislava · без автоматического STOP</div>
+<div id="fbDailyBrief" class="fb-brief">Проверяем расписание…</div>
+<details class="fb-inside-spoiler" id="fbDailyOptions">
+ <summary>⚙️ Настройки расписания <span class="fb-small-tag">2 галочки</span></summary>
+ <div class="fb-inside-body">
+  <label class="schedule-switch"><input type="checkbox" id="fbDailyEnabled"><span><b>Включить ежедневный запуск</b></span></label>
+  <label class="schedule-switch"><input type="checkbox" id="fbMetaPrepared"><span><b>Эфир подготовлен в Meta</b></span></label>
+  <details class="fb-sub-spoiler"><summary>Дополнительно · ID видео для статистики</summary>
+   <div class="field" style="margin-top:12px"><label for="fbVideoIdR1292">Meta Live Video ID</label><input id="fbVideoIdR1292" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="2633855860405878" autocomplete="off"></div>
+  </details>
+  <button class="btn primary" type="button" id="fbDailySave" style="margin-top:12px;width:100%">💾 СОХРАНИТЬ РАСПИСАНИЕ</button>
+  <div id="fbDailyStatus" class="msg">Загружаем состояние…</div>
+ </div>
+</details>
 </section>
 
-<section class="card"><div class="card-head"><div><h2>График Facebook</h2><p>Скорость отправки Facebook по подтверждениям TCP (ACK). История собирается веб-агентом VPS, даже когда эта страница закрыта. Данные не равны показателю зрителей.</p></div><span class="badge">LIVE TELEMETRY</span></div><div class="chart-wrap"><div class="chart-head"><b>Facebook TCP исходящий поток</b><span id="fbChartCaption">ждём данные</span></div><div id="fbChart"></div></div><div class="activity" id="fbEvents"></div></section>
+<details class="fb-accordion" id="fbTcpAccordion"><summary>📡 TCP-график и события <span class="fb-small-tag">Диагностика</span></summary>
+<section class="card"><div class="chart-wrap"><div class="chart-head"><b>Исходящий Facebook TCP</b><span id="fbChartCaption">ждём данные</span></div><div id="fbChart"></div></div><div class="activity" id="fbEvents"></div></section></details>
 
 <details class="fb-accordion"><summary>🔐 Persistent Stream Key · RTMPS</summary><section class="card"><div class="card-head"><div><h2>Persistent Stream Key</h2><p>Ключ хранится зашифрованно в Secure Control. После «СОХРАНИТЬ» контролька сама синхронизирует его в защищённый VPS-конфиг — без restart радио.</p></div><span class="badge">SECURE</span></div><div class="secretbox"><div class="field"><label for="fbServerUrl">Server URL</label><input id="fbServerUrl" type="url" value="rtmps://live-api-s.facebook.com:443/rtmp/" autocomplete="off" spellcheck="false"></div><div class="field"><label for="fbStreamKey">Persistent Stream Key</label><input id="fbStreamKey" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="FB-…"></div><button class="btn blue" id="fbSave" type="button" style="width:100%;margin-top:12px">🔐 СОХРАНИТЬ FACEBOOK</button><div class="note"><b>https://www.facebook.com/live/ingests/</b> — тестовая веб-страница. Для VPS используется RTMPS Server URL выше + Persistent Stream Key.</div></div><div class="msg" id="fbIngestMsg">Текущий сохранённый ключ менять не нужно, если Facebook уже работает.</div></section></details>
 
@@ -92,11 +124,17 @@ ANDRIK METAL RADIO — музыка без остановки.
 
 #ANDRIK #ANDRIKMETAL #HeavyMetal #MetalRadio #EpicMetal #FemaleMetal #MetalMusic #LiveRadio</textarea></div><button class="btn" id="fbCopyDescription" type="button" style="width:100%;margin-top:8px">📋 КОПИРОВАТЬ ОПИСАНИЕ</button></div><div class="msg" id="fbMetaMsg">ℹ️ Ключ RTMPS передаёт видео и звук, но сам по себе не заполняет поля публикации Facebook. Поэтому здесь сделал готовое копирование в один тап.</div></section></details>
 
-<section class="card" id="fbRetryGuardCard"><div class="card-head"><div><h2>Защита от повторных запусков Facebook</h2><p>Если Meta завершит эфир и Facebook FFmpeg начнёт снова и снова подключаться, агент остановит только Facebook после 3 неожиданных рестартов за 10 минут. YouTube и радио не перезапускаются.</p></div><span class="badge">R1279</span></div><label style="display:flex;align-items:center;gap:14px;border:1px solid var(--line);border-radius:15px;padding:16px;cursor:pointer"><input type="checkbox" id="fbGuardToggle" style="width:24px;height:24px;accent-color:#70efad;flex:none"/><span style="font-weight:800;flex:1" id="fbGuardLabel">Защита отключена</span></label><div class="msg" id="fbGuardMsg">Настройка сохраняется на VPS и работает без открытой контрольки. Включение не остановит действующий эфир.</div></section>
+<details class="fb-accordion" id="fbRetryGuardAccordion">
+ <summary>🛡️ Защита R1279 <span class="fb-small-tag" id="fbGuardSummaryState">Проверяем…</span></summary>
+ <section class="card" id="fbRetryGuardCard">
+  <label style="display:flex;align-items:center;gap:14px;border:1px solid var(--line);border-radius:15px;padding:16px;cursor:pointer"><input type="checkbox" id="fbGuardToggle" style="width:24px;height:24px;accent-color:#70efad;flex:none"/><span style="font-weight:800;flex:1" id="fbGuardLabel">Проверяем защиту…</span></label>
+  <div class="msg" id="fbGuardMsg">При 3 аварийных рестартах за 10 минут остановится только Facebook.</div>
+ </section>
+</details>
 
 <section class="card"><div class="card-head"><div><h2>Ручное управление</h2><p>START сначала подтягивает последний сохранённый ключ на VPS, проверяет независимый R1356 relay и только затем запускает Facebook. STOP выключает только Facebook FFmpeg.</p></div><span class="badge">ISOLATED</span></div><div class="actions"><button class="btn primary" id="fbStart" type="button">▶ ЗАПУСТИТЬ FACEBOOK</button><button class="btn stop" id="fbStop" type="button">■ ОСТАНОВИТЬ FACEBOOK</button></div><a class="btn" href="https://www.facebook.com/live/producer/" target="_blank" rel="noopener" style="margin-top:10px">Открыть Facebook Live Producer ↗</a><div class="msg" id="fbActionMsg">Facebook branch по умолчанию OFF после перезапуска радио.</div></section>
 
-<div class="foot">ANDRIK · SITE R1297 / FACEBOOK DAILY 13:55+14:00 · <a href="/radio-control-admin.html">вернуться в Радио</a></div>
+<div class="foot">ANDRIK · SITE R1298 / FACEBOOK COMPACT · 13:55+14:00 · <a href="/radio-control-admin.html">вернуться в Радио</a></div>
 </main>
 <script>
 (()=>{'use strict';
@@ -228,7 +266,7 @@ function render(d){
   renderAudience(d);$('fbService').textContent=live?'ACTIVE':short(s.service).toUpperCase();$('fbRtmps').textContent=lanes+'/'+expected;$('fbCpu').textContent=cpu(s);$('fbTrack').textContent=short(s.current?.title||s.currentTitle||s.current);$('fbProfile').textContent=profile;$('fbState').textContent=running?'LIVE':enabled?'RECONNECT':'OFF';
   setPill('fbOvhPill',online?'OVH: ONLINE':'OVH: OFFLINE',online?'ok':'bad');setPill('fbMasterPill',master?'MASTER: ГОТОВ':'MASTER: НУЖНА ПРОВЕРКА',master?'ok':'warn');setPill('fbEgressPill',running?'Facebook: СИГНАЛ ИДЁТ':effective?'Facebook: ГОТОВ':'Facebook: ЖДЁТ КЛЮЧ',running?'ok':effective?'ok':'warn');
   $('fbStart').disabled=busy||!master||!effective||running;$('fbStop').disabled=busy||!effective||(!running&&!enabled);
-  const guard=s.facebookRetryGuardR1279||a.facebookRetryGuardR1279||null;const toggle=$('fbGuardToggle');toggle.disabled=busy||!guard; if(guard){toggle.checked=Boolean(guard.enabled);$('fbGuardLabel').textContent=guard.enabled?'Защита включена':'Защита отключена';const lastStop=guard.lastStopAt?' · STOP '+fmtClock(guard.lastStopAt):'';$('fbGuardMsg').className=guard.lastError?'msg warn':'msg';$('fbGuardMsg').textContent=(guard.enabled?'🛡️ 3 аварийных рестарта за 10 минут → Facebook STOP.':'Защита выключена. Переподключения контролирует радио.')+lastStop+(guard.lastError?' · Ошибка: '+guard.lastError:'');}else{toggle.checked=false;$('fbGuardLabel').textContent='Ожидаем веб-агент R1279';$('fbGuardMsg').textContent='Для тумблера сначала установи веб-агент R1279.';}
+  const guard=s.facebookRetryGuardR1279||a.facebookRetryGuardR1279||null;const toggle=$('fbGuardToggle');toggle.disabled=busy||!guard;$('fbGuardSummaryState').textContent=guard?(guard.enabled?'Включена':'Выключена'):'Нет данных'; if(guard){toggle.checked=Boolean(guard.enabled);$('fbGuardLabel').textContent=guard.enabled?'Защита включена':'Защита отключена';const lastStop=guard.lastStopAt?' · STOP '+fmtClock(guard.lastStopAt):'';$('fbGuardMsg').className=guard.lastError?'msg warn':'msg';$('fbGuardMsg').textContent=(guard.enabled?'🛡️ 3 аварийных рестарта за 10 минут → Facebook STOP.':'Защита выключена. Переподключения контролирует радио.')+lastStop+(guard.lastError?' · Ошибка: '+guard.lastError:'');}else{toggle.checked=false;$('fbGuardLabel').textContent='Ожидаем веб-агент R1279';$('fbGuardMsg').textContent='Для тумблера сначала установи веб-агент R1279.';}
 
   const independent=/R1405|R1377|R1356|LOCAL UDP|FIRE-AND-FORGET/i.test(String(fb.relayMode||''))||Boolean(fb.localRelayInputR1356);
   const tcp=s.facebookTcpEgressR1278||a.facebookTcpEgressR1278||{};const freshTcp=Boolean(tcp.available&&tcp.source==='tcp-acked'&&Date.now()-Date.parse(tcp.at||'')<65000);
@@ -275,14 +313,18 @@ function fbScheduleRenderR1292(d,updateFields=true){
  if(q.error)status+='\n⚠️ '+q.error;
  if(c.enabled&&!c.preparedOnMeta)status+='\n⚠️ Не отмечена подготовка события Meta: START будет заблокирован.';
  $('fbDailyStatus').className=c.enabled&&cronOk?'msg ok':'msg warn';$('fbDailyStatus').textContent=status;
+ const brief=$('fbDailyBrief');
+ const healthy=Boolean(c.enabled&&c.preparedOnMeta&&cronOk&&!q.error&&!q.guardRearmError);
+ brief.className='fb-brief'+(!cronOk||q.error||q.guardRearmError?' warn':'');
+ brief.textContent=healthy?'✅ Ежедневный START включён · Cron работает':c.enabled?(c.preparedOnMeta?'⚠️ START включён · проверь Cron/ошибки':'⚠️ Отметь подготовку эфира Meta'):'⚪ Автозапуск выключен · Cron '+(cronOk?'работает':'не подтверждён');
 }
-async function fbScheduleReadR1292(updateFields=true){try{const d=await api('/api/control/facebook-schedule-r1292?ts='+Date.now());fbScheduleRenderR1292(d,updateFields);}catch(e){$('fbDailyStatus').className='msg bad';$('fbDailyStatus').textContent='Расписание: '+e.message;}}
+async function fbScheduleReadR1292(updateFields=true){try{const d=await api('/api/control/facebook-schedule-r1292?ts='+Date.now());fbScheduleRenderR1292(d,updateFields);}catch(e){$('fbDailyStatus').className='msg bad';$('fbDailyStatus').textContent='Расписание: '+e.message;$('fbDailyBrief').className='fb-brief bad';$('fbDailyBrief').textContent='⚠️ Не удалось проверить расписание';}}
 async function fbScheduleSaveR1292(){if(busy)return;const enabled=$('fbDailyEnabled').checked,preparedOnMeta=$('fbMetaPrepared').checked,liveVideoId=$('fbVideoIdR1292').value.trim();
- if(enabled&&!preparedOnMeta){$('fbDailyStatus').className='msg bad';$('fbDailyStatus').textContent='Сначала создай/подготовь эфир в Meta и отметь флажок.';return;}
+ if(enabled&&!preparedOnMeta){$('fbDailyStatus').className='msg bad';$('fbDailyStatus').textContent='Сначала создай/подготовь эфир в Meta и отметь флажок.';$('fbDailyBrief').className='fb-brief warn';$('fbDailyBrief').textContent='⚠️ Отметь подготовку эфира Meta';return;}
  if(enabled&&!confirm('Включить ежедневный сброс R1279 в 13:55 и Facebook RTMPS START в 14:00 по Братиславе БЕЗ автоматического STOP? Публикация и название/описание требуют подготовки Meta.'))return;
  busy=true;$('fbDailySave').disabled=true;
  try{const d=await api('/api/control/facebook-schedule-r1292',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({enabled,preparedOnMeta,liveVideoId})});fbScheduleRenderR1292(d);}
- catch(e){$('fbDailyStatus').className='msg bad';$('fbDailyStatus').textContent='❌ '+e.message;}
+ catch(e){$('fbDailyStatus').className='msg bad';$('fbDailyStatus').textContent='❌ '+e.message;$('fbDailyBrief').className='fb-brief bad';$('fbDailyBrief').textContent='❌ Не удалось сохранить расписание';}
  finally{busy=false;$('fbDailySave').disabled=false;}
 }
 $('fbDailySave').addEventListener('click',fbScheduleSaveR1292);
