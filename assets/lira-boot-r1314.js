@@ -7,5 +7,5 @@
  document.getElementById('liraLaunchRetry').onclick=()=>{const url=new URL(location.href);url.searchParams.set('graphics','3d');url.searchParams.set('boot',Date.now());location.replace(url.href);};
  window.addEventListener('lira3d-error',e=>error(String(e.detail||'Ошибка рендеринга')));
  const timer=setTimeout(()=>{if(!document.body.classList.contains('lira3d'))error('Загрузка занимает слишком долго. Проверь соединение и нажми повторный запуск.');},25000);
- import('./lira-3d-r1314.js?v=r1310').then(()=>window.lira3DBootPromise).then(()=>{clearTimeout(timer);if(!document.body.classList.contains('lira3d'))throw Error('3D-модуль не создал главное меню');failed=false;document.body.classList.remove('lira-loading');panel.hidden=true;window.AndrikI18n?.refresh?.();window.dispatchEvent(new Event('resize'));}).catch(e=>{clearTimeout(timer);console.error(e);error(e.message||String(e));});
+ import('./lira-3d-r1314.js?v=r1314').then(()=>window.lira3DBootPromise).then(()=>{clearTimeout(timer);if(!document.body.classList.contains('lira3d'))throw Error('3D-модуль не создал главное меню');failed=false;document.body.classList.remove('lira-loading');panel.hidden=true;window.AndrikI18n?.refresh?.();window.dispatchEvent(new Event('resize'));}).catch(e=>{clearTimeout(timer);console.error(e);error(e.message||String(e));});
 })();

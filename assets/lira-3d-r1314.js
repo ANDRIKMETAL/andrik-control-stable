@@ -78,7 +78,7 @@ async function launch3DChapter(id,fresh=false){
  game.hold();game.clearInput();game.sound(false);
  portraitActive=true;activeBonus=false;document.body.classList.remove('menu-open');
  try{
-  const url=[2,3,4,5].includes(id)?'./worlds-3d-r1314.js?v=r1308':id===1?'./city-3d-r1314.js?v=r1310':'./portrait-r1314.js?v=r1310';
+  const url=[2,3,4,5].includes(id)?'./worlds-3d-r1308.js?v=r1308':id===1?'./city-3d-r1314.js?v=r1314':'./portrait-r1314.js?v=r1314';
   const {launchPortrait}=await import(url);
   launchPortrait({world:id,fresh,ruins:id===6,onWin:()=>completeCampaign(id),
     onExit(){returnToChapters();},
