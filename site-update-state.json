@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r358-deploy-nohang",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1791946027329-79f7170531",
-  "release": "R1299",
-  "archiveName": "SITE-R1299-YOUTUBE-LIVE-16X9-FULL.zip",
-  "sourceHead": "a38e26c32ab76958fb9b0bc7fb1171eb5cdd6097",
-  "backupSha": "a38e26c32ab76958fb9b0bc7fb1171eb5cdd6097",
+  "operationId": "publish-1791949212486-48a82dc098",
+  "release": "R1301",
+  "archiveName": "SITE-R1301-GAME-3D-FULL.zip",
+  "sourceHead": "c49fc270f4f282cb7db62a346952d1fe90c4ea8a",
+  "backupSha": "c49fc270f4f282cb7db62a346952d1fe90c4ea8a",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-10-14T02:47:08.887Z"
+  "generatedAt": "2026-10-14T03:40:12.486Z"
 }

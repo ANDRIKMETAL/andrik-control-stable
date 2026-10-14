@@ -4,8 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
   <meta name="theme-color" content="#080b12" />
-  <title>Dreaming of Líra 3D — ANDRIK</title>
-  <meta name="description" content="Dreaming of Líra: браузерная 3D-аркада ANDRIK. Шесть миров, битвы, мотоцикл и космос. Играй на телефоне или компьютере." />
+  <title>Dreaming of Líra · Streets / Portrait / Ruins · 3D — ANDRIK</title>
+  <meta name="description" content="Dreaming of Líra: браузерная 3D-аркада ANDRIK. Три мира: Streets, Portrait и Ruins. Битвы, головоломки и двойной прыжок. Играй на телефоне или компьютере." />
   <link rel="stylesheet" href="/assets/lira-3d-r1190.css?v=55.00-r1201" />
   <style>
     :root {
@@ -49,6 +49,7 @@
       contain: layout paint size;
     }
 
+    #game { display: none !important; } /* Legacy 2D state engine, never a public renderer. */
     canvas {
       width: 100%;
       height: 100%;
@@ -5408,7 +5409,8 @@ buildWaves();
 requestAnimationFrame(frame);
 })();
 </script>
-<script src="/assets/lira-boot-r1295.js?v=r1295" defer></script>
+<script src="/assets/lira-i18n-r1301.js?v=r1301" defer></script>
+<script src="/assets/lira-boot-r1301.js?v=r1301" defer></script>
 </body>
 </html>
 
