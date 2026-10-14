@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
   <meta name="theme-color" content="#080b12" />
-  <title>Dreaming of Líra · Streets / Portrait / Ruins / Ocean / Space / Tower · 6 Worlds · ANDRIK · R1304</title>
+  <title>Dreaming of Líra · Streets / Portrait / Ruins / Ocean / Space / Tower · 6 Worlds · ANDRIK · R1305</title>
   <meta name="description" content="Dreaming of Líra: браузерная 3D-аркада ANDRIK. Шесть миров: Streets, Portrait, Ruins, Ocean, Space и Tower. Битвы, головоломки, двойной прыжок и кульминационная мотоциклетная погоня. Играй на телефоне или компьютере." />
   <link rel="stylesheet" href="/assets/lira-3d-r1190.css?v=55.00-r1201" />
   <style>
@@ -1586,55 +1586,59 @@ pxRect(-5, -1, 10, 2, "#565d62");
 pxRect(-1, 1, 2, 3, "#c5b678");
 ctx.restore();
 }
-poly([[-9,-53+bob],[-2,-58+bob],[7,-55+bob],[12,-46+bob],[11+hairWave,-30+bob],[8+hairWave,-20+bob],[3,-28+bob],[-1,-22+bob],[-7-hairWave,-27+bob],[-12-hairWave,-39+bob]], "#07080b");
-poly([[-11,-48+bob],[-14-hairWave,-28+bob],[-9-hairWave,-18+bob],[-6,-31+bob]], "#0b0c10");
-poly([[8,-49+bob],[13+hairWave,-33+bob],[11+hairWave,-20+bob],[6,-30+bob]], "#0c0d11");
+// hair with visible forehead
+poly([[-9,-55+bob],[-1,-59+bob],[7,-56+bob],[12,-49+bob],[10+hairWave*.45,-31+bob],[7+hairWave*.35,-18+bob],[3,-16+bob],[1,-28+bob],[-1,-24+bob],[-3,-15+bob],[-8-hairWave*.35,-18+bob],[-12-hairWave*.45,-33+bob],[-13,-46+bob]], "#07080b");
+poly([[-10,-47+bob],[-12-hairWave*.4,-27+bob],[-10,-15+bob],[-6,-29+bob]], "#0b0c10");
+poly([[8,-47+bob],[12+hairWave*.4,-28+bob],[10,-15+bob],[6,-28+bob]], "#0b0c10");
 if (specialCharging) {
 ctx.globalAlpha = 0.30 + charge * 0.70;
 drawGuitar(-8 + charge * 4, -34 - charge * 4, -0.48 + charge * 0.14, 0.78 + charge * 0.14, charge);
 ctx.globalAlpha = 1;
 }
 const lStep = step * 2.2;
-poly([[-8,-25+bob],[-2,-25+bob],[-2,-9+bob+lStep],[-4,-2+bob+lStep],[-9,-2+bob+lStep],[-7,-12+bob+lStep]], "#111318");
-poly([[2,-25+bob],[8,-24+bob],[7,-11+bob-lStep],[9,-2+bob-lStep],[2,-2+bob-lStep],[1,-12+bob-lStep]], "#171a1f");
-pxRect(-7, -19 + bob, 5, 2, "#a97865");
-pxRect(-8, -13 + bob + lStep, 6, 2, "#c29478");
-pxRect(2, -17 + bob, 5, 2, "#9f705f");
-pxRect(2, -10 + bob - lStep, 6, 2, "#c29478");
+// legs / jeans
+poly([[-8,-24+bob],[-2,-24+bob],[-2,-9+bob+lStep],[-4,-2+bob+lStep],[-9,-2+bob+lStep],[-7,-11+bob+lStep]], "#121419");
+poly([[2,-24+bob],[8,-23+bob],[7,-10+bob-lStep],[9,-2+bob-lStep],[2,-2+bob-lStep],[1,-11+bob-lStep]], "#171a1f");
 pxRect(-9, -5 + bob + lStep, 8, 5, "#050609");
 pxRect(-10, -1 + bob + lStep, 10, 2, "#020305");
 pxRect(1, -5 + bob - lStep, 8, 5, "#06070a");
 pxRect(1, -1 + bob - lStep, 10, 2, "#020305");
 pxRect(-7, -5 + bob + lStep, 1, 4, "#64686b");
 pxRect(5, -5 + bob - lStep, 1, 4, "#64686b");
-pxRect(-9, -29 + bob, 18, 6, "#15171b");
-pxRect(-8, -28 + bob, 16, 2, "#090b0e");
-pxRect(-1, -29 + bob, 3, 3, "#a6a19a");
+// waist / belt
+pxRect(-8, -28 + bob, 16, 4, "#14161b");
+pxRect(-1, -28 + bob, 3, 3, "#a6a19a");
 ctx.strokeStyle = "#73777c";
 ctx.lineWidth = 1;
 ctx.beginPath();
 ctx.moveTo(5, -26 + bob); ctx.lineTo(10, -20 + bob); ctx.lineTo(7, -15 + bob);
 ctx.stroke();
-poly([[-8,-43+bob],[8,-43+bob],[10,-29+bob],[-8,-29+bob],[-10,-35+bob]], "#121419");
-pxRect(-6, -40 + bob, 12, 8, "#171a20");
-pxRect(-4, -37 + bob, 3, 1, "#b88770");
-pxRect(2, -35 + bob, 4, 1, "#a87664");
-pxRect(-8, -42 + bob, 2, 10, "#2b2d32");
-pxRect(6, -42 + bob, 2, 9, "#282a2f");
+// torso with more visible chest line
+poly([[-8,-42+bob],[8,-42+bob],[10,-30+bob],[-8,-30+bob],[-10,-35+bob]], "#121419");
+pxRect(-6, -40 + bob, 12, 9, "#171a20");
+ctx.fillStyle = "#20242a";
+ctx.beginPath(); ctx.moveTo(-5,-40+bob); ctx.lineTo(0,-33+bob); ctx.lineTo(5,-40+bob); ctx.lineTo(5,-36+bob); ctx.lineTo(0,-30+bob); ctx.lineTo(-5,-36+bob); ctx.closePath(); ctx.fill();
+ctx.fillStyle = "#d7b39a";
+ctx.beginPath(); ctx.ellipse(-2.2, -33.8 + bob, 2.2, 1.6, 0.18, 0, Math.PI * 2); ctx.fill();
+ctx.beginPath(); ctx.ellipse(2.2, -33.8 + bob, 2.2, 1.6, -0.18, 0, Math.PI * 2); ctx.fill();
 ctx.fillStyle = "#c7c1ae";
-ctx.beginPath(); ctx.ellipse(0, -32 + bob, 4.2, 2.3, 0, 0, Math.PI * 2); ctx.fill();
+ctx.beginPath(); ctx.ellipse(0, -31.4 + bob, 4.2, 2.3, 0, 0, Math.PI * 2); ctx.fill();
 ctx.fillStyle = "#0a1117";
-ctx.beginPath(); ctx.arc(0, -32 + bob, 1.2, 0, Math.PI * 2); ctx.fill();
-pxRect(0, -30 + bob, 1, 3, "#8a8579");
-pxRect(-3, -46 + bob, 6, 5, "#b77f68");
-poly([[-6,-55+bob],[5,-55+bob],[7,-48+bob],[4,-44+bob],[-4,-44+bob],[-7,-49+bob]], "#d2a080");
+ctx.beginPath(); ctx.arc(0, -31.4 + bob, 1.2, 0, Math.PI * 2); ctx.fill();
+pxRect(0, -29 + bob, 1, 3, "#8a8579");
+// neck
+pxRect(-3, -46 + bob, 6, 6, "#b77f68");
+// face with visible forehead
+poly([[-6,-55+bob],[5,-55+bob],[7,-48+bob],[5,-42+bob],[-5,-42+bob],[-7,-48+bob]], "#d2a080");
+pxRect(-4, -54 + bob, 8, 2, "#d9ab8f");
 pxRect(-5, -50 + bob, 11, 1, "#b47c6c");
-pxRect(-5, -52 + bob, 4, 2, "#242125");
-pxRect(1, -52 + bob, 4, 2, "#242125");
+pxRect(-4, -52 + bob, 2, 2, "#242125");
+pxRect(2, -52 + bob, 2, 2, "#242125");
 pxRect(-3, -51 + bob, 1, 1, "#d9e8ea");
 pxRect(3, -51 + bob, 1, 1, "#d9e8ea");
-pxRect(-2, -46 + bob, 5, 1, "#3a1b22");
-pxRect(-4, -44 + bob, 8, 2, "#08090c");
+pxRect(-1, -48 + bob, 2, 2, "#b97c68");
+pxRect(-3, -46 + bob, 7, 2, "#3a1b22");
+pxRect(-4, -44 + bob, 8, 1, "#08090c");
 pxRect(-2, -44 + bob, 1, 1, "#8f9293");
 pxRect(2, -44 + bob, 1, 1, "#8f9293");
 if (atk === "guitarSmash") {
@@ -1696,20 +1700,22 @@ pxRect(7, -40, 5, 11, "#c99578");
 pxRect(-11, -32, 5, 4, "#090a0d");
 pxRect(7, -32, 5, 4, "#090a0d");
 } else {
-const armSwing = walking ? step * 2 : Math.sin(elapsed * 2.2) * .4;
-pxRect(-12, -40 + bob - armSwing, 5, 12, "#c99578");
-pxRect(7, -40 + bob + armSwing, 5, 12, "#c99578");
-pxRect(-12, -39 + bob - armSwing, 2, 4, "#3a3030");
-pxRect(10, -38 + bob + armSwing, 2, 4, "#3a3030");
-pxRect(-12, -31 + bob - armSwing, 5, 5, "#08090c");
-pxRect(7, -31 + bob + armSwing, 5, 5, "#08090c");
-pxRect(-11, -30 + bob - armSwing, 1, 1, "#868889");
-pxRect(10, -30 + bob + armSwing, 1, 1, "#868889");
+const armSwing = walking ? step * 1.4 : Math.sin(elapsed * 2.2) * .25;
+// arms slightly forward and down, not twisted behind the body
+poly([[-10,-40+bob-armSwing],[-6,-40+bob-armSwing],[-5,-30+bob-armSwing],[-9,-29+bob-armSwing],[-11,-35+bob-armSwing]], "#c99578");
+poly([[6,-40+bob+armSwing],[10,-39+bob+armSwing],[11,-29+bob+armSwing],[7,-29+bob+armSwing],[5,-35+bob+armSwing]], "#c99578");
+pxRect(-10, -39 + bob - armSwing, 2, 4, "#3a3030");
+pxRect(8, -38 + bob + armSwing, 2, 4, "#3a3030");
+pxRect(-10, -31 + bob - armSwing, 4, 4, "#08090c");
+pxRect(6, -30 + bob + armSwing, 4, 4, "#08090c");
+pxRect(-8, -30 + bob - armSwing, 1, 1, "#868889");
+pxRect(8, -29 + bob + armSwing, 1, 1, "#868889");
 }
-pxRect(-7, -56 + bob, 13, 4, "#050609");
-poly([[-7,-54+bob],[-4,-54+bob],[-5+hairWave*.3,-40+bob],[-8,-34+bob]], "#07080b");
-poly([[4,-54+bob],[7,-52+bob],[8+hairWave*.35,-36+bob],[5,-32+bob]], "#090a0d");
-pxRect(-1, -55 + bob, 2, 9, "#0a0b0e");
+// back hair ribbons, smaller center strip so forehead stays open
+pxRect(-7, -56 + bob, 13, 3, "#050609");
+poly([[-7,-54+bob],[-4,-54+bob],[-4.5+hairWave*.2,-39+bob],[-7,-33+bob]], "#07080b");
+poly([[4,-54+bob],[7,-53+bob],[7.5+hairWave*.2,-37+bob],[5,-31+bob]], "#090a0d");
+pxRect(-1, -55 + bob, 2, 5, "#0a0b0e");
 ctx.globalAlpha = .45;
 pxRect(-9, -42 + bob, 1, 10, currentLevel === 2 ? "#75c8d8" : "#8d3038");
 pxRect(8, -27 + bob, 1, 10, currentLevel === 2 ? "#75c8d8" : "#8d3038");
@@ -5409,8 +5415,8 @@ buildWaves();
 requestAnimationFrame(frame);
 })();
 </script>
-<script src="/assets/lira-i18n-r1304.js?v=r1304" defer></script>
-<script src="/assets/lira-boot-r1304.js?v=r1304" defer></script>
+<script src="/assets/lira-i18n-r1304.js?v=r1305" defer></script>
+<script src="/assets/lira-boot-r1304.js?v=r1305" defer></script>
 </body>
 </html>
 

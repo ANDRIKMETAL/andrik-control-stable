@@ -1,0 +1,42 @@
+from playwright.sync_api import sync_playwright
+import json, time
+url='http://127.0.0.1:8871/dreaming-of-lira.html?v=r1304'
+with sync_playwright() as p:
+ browser=p.chromium.launch(headless=True,executable_path='/usr/bin/chromium',args=['--no-sandbox','--use-gl=angle','--use-angle=swiftshader','--enable-webgl','--enable-unsafe-swiftshader','--disable-dev-shm-usage','--no-proxy-server','--proxy-bypass-list=*','--disable-features=BlockInsecurePrivateNetworkRequests'])
+ context=browser.new_context(viewport={'width':1280,'height':720},device_scale_factor=1)
+ page=context.new_page()
+ errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
+ page.goto(url,wait_until='domcontentloaded',timeout=30000)
+ try:page.wait_for_selector('#liraMenu',timeout=22000)
+ except: print('MENU TIMEOUT',page.locator('body').inner_text()[:600])
+ print('TITLE',page.title())
+ print('BOOT',page.evaluate("({body:document.body.className,menu:!!document.getElementById('liraMenu'),boot:document.getElementById('liraLaunch')?.innerText.slice(0,150)})"))
+ print('INIT MENU',page.locator('#liraMenuTitle').inner_text())
+ page.screenshot(path='/mnt/data/work_r1304/smoke-title.png')
+ if page.locator('#liraStart').count():
+  page.locator('#liraStart').click(timeout=4000,force=True)
+  page.wait_for_timeout(2200)
+  print('CITY ENTRY',page.locator('#portrait').count(),page.locator('#pt-zone').inner_text() if page.locator('#pt-zone').count() else '')
+  print('PAGE ERRORS CITY',errors[-12:])
+  page.screenshot(path='/mnt/data/work_r1304/smoke-city.png')
+  if page.locator('#pt-exit').count():
+   page.locator('#pt-exit').click(force=True)
+   page.wait_for_timeout(500)
+   print('EXIT', page.locator('#liraMenu').get_attribute('hidden'),page.locator('#liraMenuTitle').inner_text())
+ page.evaluate("localStorage.setItem('andrik-campaign-r1304',JSON.stringify({unlocked:[1,'portrait',6,2,3,4],completed:[1,'portrait',6],last:1}))")
+ page.reload(wait_until='domcontentloaded')
+ page.wait_for_selector('#liraMenu')
+ page.wait_for_timeout(600)
+ page.locator('#liraLevels').click(force=True)
+ page.wait_for_timeout(500)
+ print('SIX BUTTONS',page.locator('#liraLevelList button').all_inner_texts())
+ page.screenshot(path='/mnt/data/work_r1304/smoke-levels.png')
+ for num,key in [(3,'Ocean'),(4,'Space'),(5,'Tower')]:
+  page.locator('#liraLevelList button').nth(num).click(force=True)
+  page.wait_for_timeout(1250)
+  print('OPEN',key,page.evaluate("({level:window.LiraGame?.snapshot()?.level,scene:document.querySelector('#lira3dCanvas')?.dataset?.scene,overlay:!!document.querySelector('#portrait'),hidden:document.querySelector('#liraMenu')?.hidden})"))
+  page.screenshot(path=f'/mnt/data/work_r1304/smoke-{key.lower()}.png')
+  page.evaluate('window.LiraGame.levels()')
+  page.wait_for_timeout(350)
+ print('ERRORS',errors[-20:])
+ browser.close()
