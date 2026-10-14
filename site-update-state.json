@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r358-deploy-nohang",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1791985650897-c5881c3cd8",
-  "release": "R1311",
-  "archiveName": "SITE-R1311-LYRA-RIG-PREVIEW-FULL.zip",
-  "sourceHead": "89b6786a07257ef7e44f149cd790346c3ae45cf8",
-  "backupSha": "89b6786a07257ef7e44f149cd790346c3ae45cf8",
+  "operationId": "publish-1791989522283-2226e4aad5",
+  "release": "R1313",
+  "archiveName": "SITE-R1313-LYRA-STAGE2-IN-GAME-FULL.zip",
+  "sourceHead": "29c2202156383589e6156c9f20bebabf3bb334fd",
+  "backupSha": "29c2202156383589e6156c9f20bebabf3bb334fd",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-10-14T13:47:32.765Z"
+  "generatedAt": "2026-10-14T14:52:04.121Z"
 }

@@ -1,8 +1,10 @@
 <!doctype html>
 <html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>ANDRIK · Лира — тест GLB R1311</title>
+<title>ANDRIK · Лира — тест GLB R1312</title>
 <meta name="description" content="Проверка 3D-скелета Лиры и боевых анимаций в браузере без установки редактора">
 <style>
+#shockwave{position:absolute;left:50%;top:34%;border:3px solid rgba(102,223,255,.8);box-shadow:0 0 22px #9aefff;opacity:0;border-radius:50%;height:8px;width:8px;pointer-events:none;transform:translate(-50%,-50%) scale(1)}
+#shockwave.is-on{animation:micwave 900ms ease-out 1}@keyframes micwave{0%{opacity:.95;transform:translate(-50%,-50%) scale(.3)}100%{opacity:0;transform:translate(-50%,-50%) scale(35)}}
 :root{color-scheme:dark;font-family:system-ui,Arial,sans-serif;background:#080d17;color:#e9eef8}
 *{box-sizing:border-box}html,body{margin:0;height:100%;overflow:hidden}main{height:100dvh;display:flex;flex-direction:column}
 header{z-index:2;display:flex;gap:12px;justify-content:space-between;align-items:center;padding:12px 16px;background:#0e1420e8;border-bottom:1px solid #324057}
@@ -15,13 +17,13 @@ select,button{background:#1a2636;color:#fff;border:1px solid #53647a;border-radi
 .notice{font-size:12px;color:#b6c0cf;max-width:330px;line-height:1.35}.notice strong{color:#f2c5a2}
 @media(max-width:650px){header{padding:10px 12px}h1{font-size:14px}.notice{max-width:100%;order:2}footer{gap:7px}select{flex:1}}
 </style></head><body><main>
-<header><div><a href="/dreaming-of-lira.html">← К игре</a> <h1>ANDRIK · LYRA 3D / R1311</h1></div><small>GLB · 19 костей · 9 анимаций</small></header>
-<div id="stage"><div id="status">Загрузка модели Лиры…</div><div id="version">Тестовая 3D-модель · не финальный фотореализм</div></div>
-<footer><label for="motion" class="muted">Движение</label><select id="motion" aria-label="Выберите анимацию"><option value="Idle">Стоять</option><option value="Walk">Ходьба</option><option value="Run">Бег</option><option value="Jump">Прыжок</option><option value="Punch_Right">Удар правой</option><option value="Punch_Left">Удар левой</option><option value="Kick_Right">Удар ногой</option><option value="Guitar_Overhead">Удар гитарой</option><option value="Dodge">Уклонение</option></select><button id="reset">Сбросить камеру</button><div class="notice"><strong>Пробная модель:</strong> проведи пальцем, чтобы повернуть Лиру. Это технологический образец скелета, не замена героини в основной игре.</div></footer>
+<header><div><a href="/dreaming-of-lira.html">← К игре</a> <h1>ANDRIK · LYRA 3D / R1312</h1></div><small>GLB · 19 костей · 17 анимаций</small></header>
+<div id="stage"><div id="status">Загрузка модели Лиры…</div><div id="version">GLB R1312 · улучшенная кинематика · не AAA-фотореализм</div><div id="shockwave" aria-hidden="true"></div></div>
+<footer><label for="motion" class="muted">Движение</label><select id="motion" aria-label="Выберите анимацию"><option value="Idle">Стоять</option><option value="Walk">Ходьба</option><option value="Run">Бег</option><option value="Jump">Прыжок</option><option value="Boxing_Guard">Боксёрская стойка</option><option value="Jab_Left">Джеб слева</option><option value="Cross_Right">Кросс справа</option><option value="Hook_Left">Левый хук</option><option value="Hook_Right">Правый хук</option><option value="Uppercut_Right">Апперкот</option><option value="Spin_Kick">Удар ногой с разворота</option><option value="Guitar_Overhead">Гитара — удар сверху вниз</option><option value="Mic_Shout_Strike">🎤 Крик и удар микрофоном</option><option value="Dodge">Уклонение</option></select><button id="replay">▶ Повторить</button><button id="sound" aria-pressed="false" title="Синтетический эффект, не записанный голос">🔇 Звук</button><button id="reset">Сбросить камеру</button><div class="notice"><strong>Боевой GLB R1312:</strong> проведи пальцем для вращения, выбери движение и нажми «Повторить». 🎤 Крик — синтетический эффект, не настоящая голосовая запись. Основная игра пока использует прежнюю Лиру.</div></footer>
 </main>
 <script type="module">
 import * as T from './assets/vendor/three-r170.module.min.js';
-import {loadLyraGlb} from './assets/lyra-glb-loader-r1311.js';
+import {loadLyraGlb} from './assets/lyra-glb-loader-r1312.js';
 const stage=document.getElementById('stage'),status=document.getElementById('status');
 const renderer=new T.WebGLRenderer({antialias:true,alpha:true,powerPreference:'high-performance'});
 renderer.setPixelRatio(Math.min(2,window.devicePixelRatio||1));renderer.shadowMap.enabled=true;renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.25;stage.append(renderer.domElement);
@@ -42,7 +44,29 @@ stage.addEventListener('pointermove',e=>{if(!pointer||pointer.id!==e.pointerId)r
 stage.addEventListener('pointerup',()=>{pointer=null});stage.addEventListener('pointercancel',()=>{pointer=null});
 stage.addEventListener('wheel',e=>{dist=Math.max(2.2,Math.min(6,dist+Math.sign(e.deltaY)*.22));look();e.preventDefault()},{passive:false});
 document.getElementById('reset').onclick=()=>{yaw=.35;pitch=.05;dist=3.65;look()};
-document.getElementById('motion').onchange=e=>rig?.play(e.target.value,.10);
-try{rig=await loadLyraGlb('./assets/lyra-rig-r1311.glb');scene.add(rig.root);status.textContent='Модель загружена. Вращай пальцем.';setTimeout(()=>{if(status)status.style.opacity=.1},3200)}catch(e){status.textContent='Ошибка: '+e.message;console.error(e)}
-function tick(now){requestAnimationFrame(tick);const dt=Math.min(.05,(now-last)/1000);last=now;rig?.mixer.update(dt);renderer.render(scene,camera)}requestAnimationFrame(tick);
+let soundEnabled=false,audio=null;
+const sounds=document.getElementById('sound');
+sounds.onclick=()=>{soundEnabled=!soundEnabled;sounds.textContent=soundEnabled?'🔊 Звук':'🔇 Звук';sounds.setAttribute('aria-pressed',String(soundEnabled));};
+function shout(){
+ if(!soundEnabled)return;
+ try{
+  audio??=new(window.AudioContext||window.webkitAudioContext)();audio.resume();
+  const t=audio.currentTime,osc=audio.createOscillator(),filter=audio.createBiquadFilter(),gain=audio.createGain();
+  // Intentionally SYNTHETIC yell effect; human vocal recording has not been used.
+  osc.type='sawtooth';osc.frequency.setValueAtTime(128,t);osc.frequency.exponentialRampToValueAtTime(220,t+.20);osc.frequency.exponentialRampToValueAtTime(100,t+.67);
+  filter.type='bandpass';filter.frequency.value=800;filter.Q.value=.6;
+  gain.gain.setValueAtTime(.001,t);gain.gain.exponentialRampToValueAtTime(.08,t+.08);gain.gain.setValueAtTime(.08,t+.43);gain.gain.exponentialRampToValueAtTime(.001,t+.70);
+  osc.connect(filter);filter.connect(gain);gain.connect(audio.destination);osc.start(t);osc.stop(t+.72);
+ }catch(e){console.warn('Audio demo unavailable',e);}
+}
+function chooseMotion(name){
+ rig?.play(name,.12);
+ if(name==='Mic_Shout_Strike'){
+  const wave=document.getElementById('shockwave');wave.classList.remove('is-on');void wave.offsetWidth;wave.classList.add('is-on');shout();
+ }
+}
+document.getElementById('motion').onchange=e=>chooseMotion(e.target.value);
+document.getElementById('replay').onclick=()=>{const name=document.getElementById('motion').value;rig?.play('Idle',.01);rig?.mixer.update(.02);chooseMotion(name);};
+try{rig=await loadLyraGlb('./assets/lyra-rig-r1312.glb');scene.add(rig.root);status.textContent='Модель загружена. Вращай пальцем.';setTimeout(()=>{if(status)status.style.opacity=.1},3200)}catch(e){status.textContent='Ошибка: '+e.message;console.error(e)}
+function tick(now){requestAnimationFrame(tick);const dt=Math.min(.05,(now-last)/1000);last=now;rig?.update(dt);renderer.render(scene,camera)}requestAnimationFrame(tick);
 </script></body></html>

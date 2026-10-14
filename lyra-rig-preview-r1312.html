@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>ANDRIK · Лира — тест GLB R1312</title>
+<meta name="description" content="Проверка 3D-скелета Лиры и боевых анимаций в браузере без установки редактора">
+<style>
+#shockwave{position:absolute;left:50%;top:34%;border:3px solid rgba(102,223,255,.8);box-shadow:0 0 22px #9aefff;opacity:0;border-radius:50%;height:8px;width:8px;pointer-events:none;transform:translate(-50%,-50%) scale(1)}
+#shockwave.is-on{animation:micwave 900ms ease-out 1}@keyframes micwave{0%{opacity:.95;transform:translate(-50%,-50%) scale(.3)}100%{opacity:0;transform:translate(-50%,-50%) scale(35)}}
+:root{color-scheme:dark;font-family:system-ui,Arial,sans-serif;background:#080d17;color:#e9eef8}
+*{box-sizing:border-box}html,body{margin:0;height:100%;overflow:hidden}main{height:100dvh;display:flex;flex-direction:column}
+header{z-index:2;display:flex;gap:12px;justify-content:space-between;align-items:center;padding:12px 16px;background:#0e1420e8;border-bottom:1px solid #324057}
+a{color:#f3bfb7;text-decoration:none}h1{font-size:16px;margin:0}small,.muted{color:#a5afc1;font-size:12px}
+#stage{flex:1;min-height:0;position:relative;background:radial-gradient(ellipse at 52% 28%,#263041,#090e19 65%);touch-action:none}
+#stage canvas{height:100%;width:100%;display:block}#status{position:absolute;left:14px;top:16px;padding:8px 12px;border:1px solid #526072;background:#09111bd4;border-radius:10px;font-size:13px}
+#version{position:absolute;right:14px;top:14px;color:#a7adb9;font-size:11px}
+footer{background:#101723;display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;padding:12px max(16px,env(safe-area-inset-right)) calc(12px + env(safe-area-inset-bottom));border-top:1px solid #29364a}
+select,button{background:#1a2636;color:#fff;border:1px solid #53647a;border-radius:9px;padding:11px 12px;font-size:14px}select{max-width:220px;min-width:172px}button:active{background:#36465c}
+.notice{font-size:12px;color:#b6c0cf;max-width:330px;line-height:1.35}.notice strong{color:#f2c5a2}
+@media(max-width:650px){header{padding:10px 12px}h1{font-size:14px}.notice{max-width:100%;order:2}footer{gap:7px}select{flex:1}}
+</style></head><body><main>
+<header><div><a href="/dreaming-of-lira.html">← К игре</a> <h1>ANDRIK · LYRA 3D / R1312</h1></div><small>GLB · 19 костей · 17 анимаций</small></header>
+<div id="stage"><div id="status">Загрузка модели Лиры…</div><div id="version">GLB R1312 · улучшенная кинематика · не AAA-фотореализм</div><div id="shockwave" aria-hidden="true"></div></div>
+<footer><label for="motion" class="muted">Движение</label><select id="motion" aria-label="Выберите анимацию"><option value="Idle">Стоять</option><option value="Walk">Ходьба</option><option value="Run">Бег</option><option value="Jump">Прыжок</option><option value="Boxing_Guard">Боксёрская стойка</option><option value="Jab_Left">Джеб слева</option><option value="Cross_Right">Кросс справа</option><option value="Hook_Left">Левый хук</option><option value="Hook_Right">Правый хук</option><option value="Uppercut_Right">Апперкот</option><option value="Spin_Kick">Удар ногой с разворота</option><option value="Guitar_Overhead">Гитара — удар сверху вниз</option><option value="Mic_Shout_Strike">🎤 Крик и удар микрофоном</option><option value="Dodge">Уклонение</option></select><button id="replay">▶ Повторить</button><button id="sound" aria-pressed="false" title="Синтетический эффект, не записанный голос">🔇 Звук</button><button id="reset">Сбросить камеру</button><div class="notice"><strong>Боевой GLB R1312:</strong> проведи пальцем для вращения, выбери движение и нажми «Повторить». 🎤 Крик — синтетический эффект, не настоящая голосовая запись. Основная игра пока использует прежнюю Лиру.</div></footer>
+</main>
+<script type="module">
+import * as T from './assets/vendor/three-r170.module.min.js';
+import {loadLyraGlb} from './assets/lyra-glb-loader-r1312.js';
+const stage=document.getElementById('stage'),status=document.getElementById('status');
+const renderer=new T.WebGLRenderer({antialias:true,alpha:true,powerPreference:'high-performance'});
+renderer.setPixelRatio(Math.min(2,window.devicePixelRatio||1));renderer.shadowMap.enabled=true;renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.25;stage.append(renderer.domElement);
+const scene=new T.Scene(),camera=new T.PerspectiveCamera(40,1,.08,80);
+scene.add(new T.HemisphereLight(0xc8d7ff,0x322838,3.2));
+const key=new T.DirectionalLight(0xffdfca,4);key.position.set(-3,5,4);key.castShadow=true;scene.add(key);
+const back=new T.DirectionalLight(0xe7496c,2.2);back.position.set(3,4,-3);scene.add(back);
+const fill=new T.DirectionalLight(0x63b0ff,1.8);fill.position.set(1,2,3);scene.add(fill);
+const floor=new T.Mesh(new T.CircleGeometry(1.5,64),new T.MeshStandardMaterial({color:0x1b2633,roughness:.9}));floor.rotation.x=-Math.PI/2;floor.position.y=-.004;floor.receiveShadow=true;scene.add(floor);
+const grid=new T.GridHelper(5,20,0x283444,0x202c3b);grid.position.y=-.002;scene.add(grid);
+let rig=null,yaw=.35,pitch=.05,dist=3.65,last=performance.now(),pointer=null;
+const target=new T.Vector3(0,1,0);
+function look(){const x=Math.sin(yaw)*Math.cos(pitch)*dist,y=Math.sin(pitch)*dist+target.y,z=Math.cos(yaw)*Math.cos(pitch)*dist;camera.position.set(x,y,z);camera.lookAt(target);}
+function size(){const w=stage.clientWidth,h=stage.clientHeight;camera.aspect=w/Math.max(1,h);camera.updateProjectionMatrix();renderer.setSize(w,h,false);}
+new ResizeObserver(size).observe(stage);size();look();
+stage.addEventListener('pointerdown',e=>{pointer={id:e.pointerId,x:e.clientX,y:e.clientY};stage.setPointerCapture(e.pointerId)});
+stage.addEventListener('pointermove',e=>{if(!pointer||pointer.id!==e.pointerId)return; yaw-=(e.clientX-pointer.x)*.007;pitch=Math.max(-.32,Math.min(.73,pitch+(e.clientY-pointer.y)*.005));pointer.x=e.clientX;pointer.y=e.clientY;look()});
+stage.addEventListener('pointerup',()=>{pointer=null});stage.addEventListener('pointercancel',()=>{pointer=null});
+stage.addEventListener('wheel',e=>{dist=Math.max(2.2,Math.min(6,dist+Math.sign(e.deltaY)*.22));look();e.preventDefault()},{passive:false});
+document.getElementById('reset').onclick=()=>{yaw=.35;pitch=.05;dist=3.65;look()};
+let soundEnabled=false,audio=null;
+const sounds=document.getElementById('sound');
+sounds.onclick=()=>{soundEnabled=!soundEnabled;sounds.textContent=soundEnabled?'🔊 Звук':'🔇 Звук';sounds.setAttribute('aria-pressed',String(soundEnabled));};
+function shout(){
+ if(!soundEnabled)return;
+ try{
+  audio??=new(window.AudioContext||window.webkitAudioContext)();audio.resume();
+  const t=audio.currentTime,osc=audio.createOscillator(),filter=audio.createBiquadFilter(),gain=audio.createGain();
+  // Intentionally SYNTHETIC yell effect; human vocal recording has not been used.
+  osc.type='sawtooth';osc.frequency.setValueAtTime(128,t);osc.frequency.exponentialRampToValueAtTime(220,t+.20);osc.frequency.exponentialRampToValueAtTime(100,t+.67);
+  filter.type='bandpass';filter.frequency.value=800;filter.Q.value=.6;
+  gain.gain.setValueAtTime(.001,t);gain.gain.exponentialRampToValueAtTime(.08,t+.08);gain.gain.setValueAtTime(.08,t+.43);gain.gain.exponentialRampToValueAtTime(.001,t+.70);
+  osc.connect(filter);filter.connect(gain);gain.connect(audio.destination);osc.start(t);osc.stop(t+.72);
+ }catch(e){console.warn('Audio demo unavailable',e);}
+}
+function chooseMotion(name){
+ rig?.play(name,.12);
+ if(name==='Mic_Shout_Strike'){
+  const wave=document.getElementById('shockwave');wave.classList.remove('is-on');void wave.offsetWidth;wave.classList.add('is-on');shout();
+ }
+}
+document.getElementById('motion').onchange=e=>chooseMotion(e.target.value);
+document.getElementById('replay').onclick=()=>{const name=document.getElementById('motion').value;rig?.play('Idle',.01);rig?.mixer.update(.02);chooseMotion(name);};
+try{rig=await loadLyraGlb('./assets/lyra-rig-r1312.glb');scene.add(rig.root);status.textContent='Модель загружена. Вращай пальцем.';setTimeout(()=>{if(status)status.style.opacity=.1},3200)}catch(e){status.textContent='Ошибка: '+e.message;console.error(e)}
+function tick(now){requestAnimationFrame(tick);const dt=Math.min(.05,(now-last)/1000);last=now;rig?.update(dt);renderer.render(scene,camera)}requestAnimationFrame(tick);
+</script></body></html>
