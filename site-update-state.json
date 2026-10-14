@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r358-deploy-nohang",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1791989522283-2226e4aad5",
-  "release": "R1313",
-  "archiveName": "SITE-R1313-LYRA-STAGE2-IN-GAME-FULL.zip",
-  "sourceHead": "29c2202156383589e6156c9f20bebabf3bb334fd",
-  "backupSha": "29c2202156383589e6156c9f20bebabf3bb334fd",
+  "operationId": "publish-1791990064651-71bee61f77",
+  "release": "R1312",
+  "archiveName": "SITE-R1312-LYRA-BOXING-MIC-GLB-FULL.zip",
+  "sourceHead": "9a5ca173fba65fec8576df25c7702618f1e08867",
+  "backupSha": "9a5ca173fba65fec8576df25c7702618f1e08867",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-10-14T14:52:04.121Z"
+  "generatedAt": "2026-10-14T15:01:04.651Z"
 }
