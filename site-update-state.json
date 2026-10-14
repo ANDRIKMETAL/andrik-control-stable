@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r358-deploy-nohang",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1791863555213-4677b04f4d",
-  "release": "R1298",
-  "archiveName": "SITE-R1298-FACEBOOK-COMPACT-FULL.zip",
-  "sourceHead": "35e25c93895e3aa8482c35fa87f6ce67c4d684e3",
-  "backupSha": "35e25c93895e3aa8482c35fa87f6ce67c4d684e3",
+  "operationId": "publish-1791946027329-79f7170531",
+  "release": "R1299",
+  "archiveName": "SITE-R1299-YOUTUBE-LIVE-16X9-FULL.zip",
+  "sourceHead": "a38e26c32ab76958fb9b0bc7fb1171eb5cdd6097",
+  "backupSha": "a38e26c32ab76958fb9b0bc7fb1171eb5cdd6097",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-10-13T03:52:35.213Z"
+  "generatedAt": "2026-10-14T02:47:08.887Z"
 }

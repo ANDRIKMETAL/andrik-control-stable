@@ -7848,7 +7848,17 @@ const rowsResult=await db.prepare(`
     ORDER BY sampled_at ASC
     LIMIT 900
   `).bind(date).all();
-const rows=Array.isArray(rowsResult?.results)?rowsResult.results:[];
+const allRows=Array.isArray(rowsResult?.results)?rowsResult.results:[];
+let currentRadioVideoIdR1299='';
+if(date===today){
+ const state=await getPushState(db,'youtube-live-current-video-r669').catch(()=>null);
+ const saved=cleanPlainText(state?.value||'',80);
+ const verifiedAt=Date.parse(String(state?.updatedAt||''));
+ const savedFresh=Number.isFinite(verifiedAt)&&Date.now()-verifiedAt<10*60*1000;
+ // Never mix the old horizontal/dual session with today's new-radio KPI.
+ currentRadioVideoIdR1299=(savedFresh&&saved&&!['E-Hf8ciUhrU','eN3ljx6_6dA'].includes(saved))?saved:'ZmMyMwX_FrM';
+}
+const rows=currentRadioVideoIdR1299?allRows.filter(row=>cleanPlainText(row?.videoId||'',80)===currentRadioVideoIdR1299):allRows;
 const videoIds=[...new Set(rows.map(row=>cleanPlainText(row?.videoId||'',80)).filter(Boolean))];
 const previousByVideo={};
 for(const videoId of videoIds){
@@ -7919,9 +7929,9 @@ getPushState(db,'radio-live-last-push-video-r585').catch(()=>null),
 getPushState(db,discoveryKey).catch(()=>null)
 ]);
 const candidateIds=[...new Set([
+'ZmMyMwX_FrM', // R1299: new owner 16:9 LIVE, verify active before displaying data
 cleanPlainText(currentState?.value||'',80),
-cleanPlainText(radioState?.value||'',80),
-'E-Hf8ciUhrU' // R1277: owner LIVE candidate; probeVideo MUST confirm still live.
+cleanPlainText(radioState?.value||'',80)
 ].filter(Boolean))];
 const probeVideo=async ids=>{
 const list=[...new Set((Array.isArray(ids)?ids:[ids]).map(id=>cleanPlainText(id||'',80)).filter(Boolean))].slice(0,5);
@@ -7930,10 +7940,11 @@ const {data,mode}=await youtubeApiJson(env,'videos',{
 part:'snippet,statistics,liveStreamingDetails',id:list.join(','),maxResults:list.length
 });
 const items=Array.isArray(data?.items)?data.items:[];
-const item=items.find(row=>{
+const isLiveRowR1299=row=>{
 const details=row?.liveStreamingDetails||{};
 return String(row?.snippet?.liveBroadcastContent||'').toLowerCase()==='live' || Boolean(details?.actualStartTime&&!details?.actualEndTime);
-})||null;
+};
+const item=items.find(row=>row?.id==='ZmMyMwX_FrM'&&isLiveRowR1299(row))||items.find(isLiveRowR1299)||null;
 if(!item)return null;
 const details=item?.liveStreamingDetails||{};
 const stats=item?.statistics||{};
@@ -21397,6 +21408,23 @@ const cached=await readPublicYoutubeFallbackCacheR797(env);
 if(cached.hit)return cached.data;
 }
 let result=null;
+// R1299: prefer the newly launched horizontal radio, but NEVER declare it
+// active without YouTube live status verification. This also bypasses old D1 IDs.
+try{
+const pinnedId='ZmMyMwX_FrM';
+const {data}=await youtubeApiJson(env,'videos',{
+part:'snippet,liveStreamingDetails',id:pinnedId,maxResults:1
+},{oauth:false,timeoutMs:6500});
+const item=(Array.isArray(data?.items)?data.items:[]).find(v=>v?.id===pinnedId)||null;
+const details=item?.liveStreamingDetails||{};
+const live=String(item?.snippet?.liveBroadcastContent||'').toLowerCase()==='live'||Boolean(details?.actualStartTime&&!details?.actualEndTime);
+const configuredChannel=cleanPlainText(env.YOUTUBE_CHANNEL_ID||'',120);
+const ownerOk=!configuredChannel||!item?.snippet?.channelId||configuredChannel===item.snippet.channelId;
+if(item&&live&&ownerOk){
+result={videoId:pinnedId,watchUrl:`https://www.youtube.com/watch?v=${pinnedId}`,active:true,lifeCycleStatus:'live',streamStatus:'active',source:'owner-new-live-verified-r1299'};
+}
+}catch(_){}
+if(!result){
 try{
 const accessToken=await getYoutubeOAuthAccessToken(env);
 const {broadcast,streamStatus}=await youtubeCurrentBroadcastR609(env,accessToken);
@@ -21406,6 +21434,7 @@ if(videoId&&lifeCycleStatus==='live'){
 result={videoId,watchUrl:`https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`,lifeCycleStatus,streamStatus:cleanPlainText(streamStatus||'',80),active:true,source:'oauth-live-r797'};
 }
 }catch(_){}
+}
 if(!result){
 try{
 const found=await youtubePublicLiveByUploadsR623(env,{fresh:true});
@@ -21422,7 +21451,7 @@ if(found)result={...found,lifeCycleStatus:'live',streamStatus:'active'};
 // never declared LIVE without checking Google's video status.
 if(!result){
 try{
-const seedId='E-Hf8ciUhrU'; // R1277: current owner LIVE seed, always verified live by YouTube API before use
+const seedId='ZmMyMwX_FrM'; // R1299: new owner LIVE fallback, verified before use
 const {data}=await youtubeApiJson(env,'videos',{
 part:'snippet,liveStreamingDetails',id:seedId,maxResults:1
 },{oauth:false,timeoutMs:6500});
@@ -21960,7 +21989,7 @@ const at=Date.parse(a?.snippet?.scheduledStartTime||a?.snippet?.actualStartTime|
 const bt=Date.parse(b?.snippet?.scheduledStartTime||b?.snippet?.actualStartTime||0)||0;
 return bt-at;
 });
-broadcast=candidates[0] || null;
+broadcast=candidates.find(item=>String(item?.id||'')==='ZmMyMwX_FrM') || candidates[0] || null;
 videoId=cleanPlainText(broadcast?.id||'',80);
 if(!videoId){
 const channelUrl=new URL('https://www.googleapis.com/youtube/v3/channels');
