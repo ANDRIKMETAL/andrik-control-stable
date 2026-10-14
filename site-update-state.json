@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r358-deploy-nohang",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1791996963817-c236f5aeae",
-  "release": "R1314",
-  "archiveName": "SITE-R1314-LYRA-VISUAL-FIX-FULL.zip",
-  "sourceHead": "2e57ad7ad1b6cfd9235910f475a7ae261085c95c",
-  "backupSha": "2e57ad7ad1b6cfd9235910f475a7ae261085c95c",
+  "operationId": "publish-1791997158334-dd0718e2e7",
+  "release": "R1312",
+  "archiveName": "SITE-R1312-LYRA-BOXING-MIC-GLB-FULL.zip",
+  "sourceHead": "1c2a87e77930ed52aab9a28f0041e682f99d1ae6",
+  "backupSha": "1c2a87e77930ed52aab9a28f0041e682f99d1ae6",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-10-14T16:56:04.923Z"
+  "generatedAt": "2026-10-14T16:59:18.334Z"
 }
