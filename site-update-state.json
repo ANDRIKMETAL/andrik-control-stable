@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r358-deploy-nohang",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1791956527372-942c0ded46",
-  "release": "R1305",
-  "archiveName": "SITE-R1305-GRAPHICS-FULL.zip",
-  "sourceHead": "56730aa21a8813bc2d3493ed808eb56547ebf918",
-  "backupSha": "56730aa21a8813bc2d3493ed808eb56547ebf918",
+  "operationId": "publish-1791957492559-567753a9a7",
+  "release": "R1306",
+  "archiveName": "SITE-R1306-SEVEN-3D-WORLDS-FULL.zip",
+  "sourceHead": "b1523d4d1bdd1b11a1eeb05f4f0ae1c2856978b5",
+  "backupSha": "b1523d4d1bdd1b11a1eeb05f4f0ae1c2856978b5",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-10-14T05:42:08.731Z"
+  "generatedAt": "2026-10-14T05:58:12.559Z"
 }
