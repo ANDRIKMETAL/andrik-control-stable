@@ -6796,7 +6796,7 @@ return `tiktok-${normalizeTikTokModeR503(mode)}`;
 }
 async function getTikTokDailyTrendR503(db, startDate, endDate, mode = 'sandbox') {
 const platform=tiktokSnapshotPlatformR503(mode);
-const result = await db.prepare(`SELECT metrics_json, created_at FROM platform_snapshots WHERE platform=?1 ORDER BY datetime(created_at) DESC LIMIT 1000`).bind(platform).all().catch(()=>({results:[]}));
+const result = await db.prepare(`SELECT metrics_json, created_at FROM (SELECT metrics_json,created_at,ROW_NUMBER() OVER(PARTITION BY substr(created_at,1,13) ORDER BY created_at ASC) AS first_row,ROW_NUMBER() OVER(PARTITION BY substr(created_at,1,13) ORDER BY created_at DESC) AS last_row FROM platform_snapshots WHERE platform=?1 AND datetime(created_at)>=datetime('now','-35 days')) WHERE first_row=1 OR last_row=1 ORDER BY created_at DESC`).bind(platform).all().catch(()=>({results:[]}));
 const sourceRows=(result?.results || []).slice().sort((a,b)=>String(a?.created_at||'').localeCompare(String(b?.created_at||'')));
 const byDay = new Map();
 let usableSnapshots=0;
@@ -6807,13 +6807,14 @@ let metrics = {};
 try { metrics = JSON.parse(row?.metrics_json || '{}'); } catch (_) {}
 if (!metrics?.connected || metrics?.summary?.allVideosFetched === false) continue;
 const summary=metrics?.summary||{};
+const count=v=>v===null||v===undefined||v===''?null:Number(v);
 const totals={
-views:Number(metrics?.counters?.totalViews ?? summary?.totalVideoViews),
-likes:Number(summary?.profileLikes ?? metrics?.counters?.totalLikes ?? summary?.totalVideoLikes),
-comments:Number(metrics?.counters?.totalComments ?? summary?.totalVideoComments),
-shares:Number(metrics?.counters?.totalShares ?? summary?.totalVideoShares),
-followers:Number(summary?.followerCount),
-videos:Number(summary?.videoCount)
+views:count(metrics?.counters?.totalViews ?? summary?.totalVideoViews),
+likes:count(summary?.profileLikes ?? metrics?.counters?.totalLikes ?? summary?.totalVideoLikes),
+comments:count(metrics?.counters?.totalComments ?? summary?.totalVideoComments),
+shares:count(metrics?.counters?.totalShares ?? summary?.totalVideoShares),
+followers:count(summary?.followerCount),
+videos:count(summary?.videoCount)
 };
 if (!Number.isFinite(totals.views)) continue;
 Object.keys(totals).forEach(key=>{ if (!Number.isFinite(totals[key])) totals[key]=null; else totals[key]=Math.max(0,totals[key]); });
@@ -6829,7 +6830,7 @@ if (String(point.createdAt) > String(bucket.last.createdAt)) bucket.last=point;
 }
 const dayKeys=[...byDay.keys()].sort();
 const output=[];
-const delta=(a,b)=>Number.isFinite(Number(a))&&Number.isFinite(Number(b))?Math.max(0,Number(a)-Number(b)):null;
+const delta=(a,b)=>a!==null&&a!==undefined&&b!==null&&b!==undefined&&Number.isFinite(Number(a))&&Number.isFinite(Number(b))?Math.max(0,Number(a)-Number(b)):null;
 let bootstrapDays=0;
 for (const day of dayKeys) {
 if (day < startDate || day > endDate) continue;
@@ -10517,7 +10518,8 @@ return [day, field ? Math.max(0,Number(row[field])) : null];
 const tiktokTrendPackR516 = await getTikTokDailyTrendR503(db,startDate,today,tiktokModeR503);
 const tiktokDailyDetailR516 = Array.isArray(tiktokTrendPackR516?.rows) ? tiktokTrendPackR516.rows : [];
 const tiktokDailyR503 = tiktokDailyDetailR516.filter(row=>row?.day && row.day <= endDate);
-const ttMapR498 = new Map(tiktokDailyR503.map(row=>[row.day,Math.max(0,Number(row.views||0))]));
+const ttMapR498 = new Map(tiktokDailyR503.filter(row=>!row.bootstrap&&row.views!==null&&Number.isFinite(row.views)).map(row=>[row.day,row.views]));
+const tiktokCoverageR1308=ttMapR498.size;
 const tiktokConnectedR503 = Boolean(tiktokAuthR503.connected && tiktok?.connected);
 const tiktokTrendReadyR503 = Boolean(tiktokConnectedR503 && ttMapR498.size);
 const trend = [];
@@ -10527,7 +10529,7 @@ day,
 site:siteReady ? Number(siteMap.get(day) || 0) : null,
 youtube:youtubeReady ? Number(ytMap.get(day) || 0) : null,
 instagram:instagramSeriesReady ? Number(igMap.get(day) || 0) : null,
-tiktok:tiktokTrendReadyR503 ? Number(ttMapR498.get(day) || 0) : null
+tiktok:tiktokTrendReadyR503 && ttMapR498.has(day) ? ttMapR498.get(day) : null
 });
 }
 const sum = key => trend.reduce((total, row) => total + (Number.isFinite(Number(row[key])) ? Math.max(0, Number(row[key])) : 0), 0);
@@ -10542,7 +10544,7 @@ else if (instagramSeriesReady) instagramTotal = sum('instagram');
 return json({
 ok:true,
 period:{ startDate, endDate, days:28, label:'28 завершённых дней' },
-totals:{ site:siteReady ? sum('site') : null, youtube:youtubeReady ? sum('youtube') : null, instagram:instagramTotal, tiktok:tiktokTrendReadyR503 ? sum('tiktok') : null },
+totals:{ site:siteReady ? sum('site') : null, youtube:youtubeReady ? sum('youtube') : null, instagram:instagramTotal, tiktok:tiktokTrendReadyR503 && tiktokCoverageR1308===28 ? sum('tiktok') : null },
 trend,
 platforms:{
 site:{ configured:siteReady, connected:siteReady, name:'Сайт', source:'GA4 + Live Web AI', updatedAt:gaRow?.created_at || google?.updatedAt || '', firstPartyDays:siteFirstPartyTrend.length, firstPartyViews:siteFirstPartyTrend.reduce((sum,row)=>sum+Math.max(0,Number(row?.views||0)),0), firstPartyUsers:Math.max(0,...siteFirstPartyTrend.map(row=>Number(row?.users||0))), error:liveErrors.site },
@@ -10556,6 +10558,7 @@ summary:instagram?.summary || {}, summaryAvailability:instagram?.summaryAvailabi
 tiktok:{
 mode:tiktokModeR503, availableModes:tiktokAuthR503.availableModes || tiktokAvailableModesR503(env),
 configured:Boolean(tiktokAuthR503.configured), connected:tiktokConnectedR503, oauthConnected:Boolean(tiktokAuthR503.connected), trendConnected:tiktokTrendReadyR503,
+coverageDays:tiktokCoverageR1308, observedViews:tiktokTrendReadyR503?sum('tiktok'):null,
 name:'TikTok', handle:cleanPlainText(tiktok?.handle || '@andrikmetal',120), displayName:cleanPlainText(tiktok?.displayName || 'ANDRIK',120), profileUrl:cleanPlainText(tiktok?.profileUrl || 'https://www.tiktok.com/@andrikmetal',700),
 metricLabel:tiktokTrendReadyR503?'прирост просмотров':'текущий срез видео', source:`TikTok Display API · ${tiktokModeR503}`, updatedAt:ttRow?.created_at || tiktok?.updatedAt || '',
 summary:tiktok?.summary || {}, dailyTrend:tiktokDailyDetailR516, topVideos:Array.isArray(tiktok?.topVideos)?tiktok.topVideos:[], recentVideos:Array.isArray(tiktok?.recentVideos)?tiktok.recentVideos:[], grantedScopes:cleanPlainText(tiktokAuthR503.scope || tiktok?.scope || '',1200),
@@ -10658,7 +10661,11 @@ await db.prepare(`
 crypto.randomUUID(), cleanPlainText(platform, 40), '', new Date().toISOString(),
 JSON.stringify(metrics || {}), cleanPlainText(source, 120)
 ).run();
-const retention=/^tiktok-(sandbox|production)$/i.test(String(platform||'')) ? 1000 : 240;
+if(/^tiktok-(sandbox|production)$/i.test(String(platform||''))){
+await db.prepare(`DELETE FROM platform_snapshots WHERE platform=?1 AND datetime(created_at)<datetime('now','-35 days')`).bind(platform).run().catch(()=>{});
+return;
+}
+const retention=240;
 await db.prepare(`
     DELETE FROM platform_snapshots
     WHERE id IN (
@@ -12743,7 +12750,9 @@ async function handleExternalCronGatewayR334(request, env, ctx) {
 if(!adminAuthorized(request,env) && !cronAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
 const db=requireDb(env);
 // R1292 independent Facebook scheduler. Failure cannot block YouTube jobs.
-const fbScheduleResultR1292=await fbScheduleTickR1292(env).catch(e=>({ok:false,error:String(e.message||e).slice(0,180)}));
+let fbScheduleResultR1292={queued:true};
+const fbTaskR1308=fbScheduleTickR1292(env).catch(e=>({ok:false,error:String(e.message||e).slice(0,180)}));
+if(ctx?.waitUntil)ctx.waitUntil(fbTaskR1308);else fbScheduleResultR1292=await fbTaskR1308;
 if(env.META_USER_ACCESS_TOKEN_R1292)ctx?.waitUntil?.(fbMetaReadR1292(env,false).catch(()=>{}));
 const gatewayUrl=new URL(request.url);
 const cron=cleanPlainText(gatewayUrl.searchParams.get('cron') || request.headers.get('x-andrik-cron') || '',80);
@@ -12756,8 +12765,8 @@ try{
 if(clock.due2){
 claimed=await claimCronGatewaySlotR334(db,'engagement-2m-r416',clock.slot2);
 if(claimed){
-const engagement=await responseData(await handleFastYoutubeEngagementR333(request,env,{skipCheckpoint:true}));
-const subscriber=await handleFastYoutubeSubscriberCountR416(request,env,{source:'gateway-2m-r756'});
+const engagement=await Promise.resolve().then(async()=>responseData(await handleFastYoutubeEngagementR333(request,env,{skipCheckpoint:true}))).catch(error=>({ok:false,error:cleanPlainText(error?.message||error,300)}));
+const subscriber=await handleFastYoutubeSubscriberCountR416(request,env,{source:'gateway-2m-r756'}).catch(error=>({ok:false,error:cleanPlainText(error?.message||error,300)}));
 task='engagement+subscriber';
 value={
 ok:engagement?.ok!==false && subscriber?.ok!==false,
@@ -12767,6 +12776,9 @@ subscribersSent:subscriber?.sent && subscriber?.direction!=='down' ? Math.max(1,
 unsubscribersSent:subscriber?.sent && subscriber?.direction==='down' ? Math.max(1,Number(subscriber?.loss||1)) : 0
 };
 }else value={ok:true,skipped:true,reason:'slot-already-claimed'};
+if(clock.due5 && await claimCronGatewaySlotR334(db,'comments-overlap-r1308',clock.slot5)){
+try{const channel=await resolveYoutubeWebSubChannelIdR332(env,db);if(channel)value.commentSweepR1308=await checkYoutubeRecentCommentsEvery5mR953(env,db,channel,new Date().toISOString());}catch(error){value.commentSweepR1308={ok:false,error:cleanPlainText(error?.message||error,300)};}
+}
 }else if(clock.due5){
 claimed=await claimCronGatewaySlotR334(db,'five-minute-slice-r416',clock.slot5);
 if(claimed){
