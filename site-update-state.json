@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r358-deploy-nohang",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1791949212486-48a82dc098",
-  "release": "R1301",
-  "archiveName": "SITE-R1301-GAME-3D-FULL.zip",
-  "sourceHead": "c49fc270f4f282cb7db62a346952d1fe90c4ea8a",
-  "backupSha": "c49fc270f4f282cb7db62a346952d1fe90c4ea8a",
+  "operationId": "publish-1791951291892-62b1fa0fc2",
+  "release": "R1303",
+  "archiveName": "SITE-R1303-COMPACT-FULL.zip",
+  "sourceHead": "357aa8a1174508d26dce3e823ec50207c6fa7fea",
+  "backupSha": "357aa8a1174508d26dce3e823ec50207c6fa7fea",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-10-14T03:40:12.486Z"
+  "generatedAt": "2026-10-14T04:14:53.469Z"
 }
