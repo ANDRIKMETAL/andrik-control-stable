@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r358-deploy-nohang",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1791998189122-69a08eb2ae",
-  "release": "R1310",
-  "archiveName": "SITE-R1310-LYRA-3D-CAMERA-FULL.zip",
-  "sourceHead": "042cb59f6bf407e4cd4fd775130f2df885602eeb",
-  "backupSha": "042cb59f6bf407e4cd4fd775130f2df885602eeb",
+  "operationId": "publish-1791998420739-683e458d5b",
+  "release": "R1308",
+  "archiveName": "SITE-R1308-LYRA-ABC-STORY-SOCIAL-FULL.zip",
+  "sourceHead": "f47d671db55f4b85262aaa3aab57eb5fad939c2a",
+  "backupSha": "f47d671db55f4b85262aaa3aab57eb5fad939c2a",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-10-14T17:16:29.122Z"
+  "generatedAt": "2026-10-14T17:20:20.739Z"
 }
