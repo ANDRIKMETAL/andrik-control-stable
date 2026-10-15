@@ -8431,11 +8431,112 @@ async function sweepYoutubeReleaseCommentsR1309(env,db,videos=[],identity={}){
   await setPushState(db,'youtube-release-comments-last-r1309',JSON.stringify(result)).catch(()=>{});
   return result;
 }
+// ANDRIK R1312 — explicit one-time, quota-conscious distributed-release comment backfill.
+// Page-triggered only; does not schedule server jobs or send historical push alerts.
+const YOUTUBE_RELEASE_BACKFILL_KEY_R1312='youtube-release-backfill-r1312';
+function youtubeReleaseBackfillStateR1312(raw=''){
+  try{
+    const state=JSON.parse(String(raw||'{}'))||{};
+    return {
+      processedIds:[...new Set((Array.isArray(state.processedIds)?state.processedIds:[]).filter(youtubeReleaseVideoIdR1309))].slice(0,200),
+      added:Math.max(0,Number(state.added||0)),
+      seen:Math.max(0,Number(state.seen||0)),
+      denied:Math.max(0,Number(state.denied||0)),
+      errors:Math.max(0,Number(state.errors||0)),
+      lastResults:(Array.isArray(state.lastResults)?state.lastResults:[]).slice(-30),
+      updatedAt:cleanPlainText(state.updatedAt||'',60),
+      startedAt:cleanPlainText(state.startedAt||'',60)
+    };
+  }catch(_){return {processedIds:[],added:0,seen:0,denied:0,errors:0,lastResults:[],updatedAt:'',startedAt:''};}
+}
+function youtubeReleaseBackfillPublicR1312(state={},catalogue=[]){
+ const ids=new Set((Array.isArray(catalogue)?catalogue:[]).map(x=>x.videoId));
+ const processed=state.processedIds||[];
+ const done=processed.filter(id=>ids.has(id)).length;
+ return {total:ids.size,processed:done,remaining:Math.max(0,ids.size-done),completed:ids.size>0&&done>=ids.size,
+   added:Number(state.added||0),seen:Number(state.seen||0),denied:Number(state.denied||0),errors:Number(state.errors||0),
+   updatedAt:state.updatedAt||'',startedAt:state.startedAt||'',lastResults:(state.lastResults||[]).slice(-12)};
+}
+async function importYoutubeReleaseCommentBatchR1312(env,db,body={}){
+ const cat=await loadYoutubeReleaseCatalogueR1309(env,db,{force:false});
+ const videos=Array.isArray(cat.videos)?cat.videos.filter(x=>youtubeReleaseVideoIdR1309(x.videoId)):[];
+ const row=await getPushState(db,YOUTUBE_RELEASE_BACKFILL_KEY_R1312).catch(()=>null);
+ let state=youtubeReleaseBackfillStateR1312(row?.value||'');
+ if(body.reset===true){state=youtubeReleaseBackfillStateR1312('');state.startedAt=new Date().toISOString();}
+ if(!state.startedAt)state.startedAt=new Date().toISOString();
+ const done=new Set(state.processedIds||[]);
+ const next=videos.filter(v=>!done.has(v.videoId)).slice(0,5);
+ if(!next.length){
+  state.updatedAt=new Date().toISOString();
+  await setPushState(db,YOUTUBE_RELEASE_BACKFILL_KEY_R1312,JSON.stringify(state));
+  return youtubeReleaseBackfillPublicR1312(state,videos);
+ }
+ // Do not rely on commentCount: a Topic video's public counters can omit comment details.
+ const ownerState=await getPushState(db,'youtube-websub-channel-id-r332').catch(()=>null);
+ const channelId=cleanPlainText(env.YOUTUBE_CHANNEL_ID||ownerState?.value||'',120);
+ const identity={channelId,handle:cleanPlainText(env.YOUTUBE_CHANNEL_HANDLE||'@andrikmetal',100)};
+ const results=await Promise.all(next.map(async video=>{
+  const result={videoId:video.videoId,album:cleanPlainText(video.album||'',60),title:cleanPlainText(video.title||'Релиз ANDRIK',150),status:'ok',seen:0,added:0,error:''};
+  try{
+   // Up to two commentThreads pages (200 top-level comments); no repeated full searches.
+   let page='',pages=0;
+   const comments=[];
+   do{
+    const {data}=await youtubeApiJson(env,'commentThreads',{
+      part:'snippet,replies',videoId:video.videoId,maxResults:100,order:'time',textFormat:'plainText',...(page?{pageToken:page}:{})
+    },{timeoutMs:9500});
+    const incomplete=[];
+    for(const thread of data?.items||[]){
+      const top=parseYoutubeCommentItem(thread?.snippet?.topLevelComment||{},video);
+      if(top.id)comments.push(top);
+      const embedded=thread?.replies?.comments||[];
+      for(const reply of embedded){const c=parseYoutubeCommentItem(reply,video);if(c.id)comments.push(c);}
+      const total=Math.max(0,Number(thread?.snippet?.totalReplyCount||0));
+      if(top.id&&total>embedded.length)incomplete.push(top.id);
+    }
+    if(incomplete.length){
+      const extra=await fetchYoutubeThreadReplies(env,incomplete,new Map([[video.videoId,video]])).catch(()=>({items:[]}));
+      comments.push(...(extra.items||[]));
+    }
+    pages++;
+    page=cleanPlainText(data?.nextPageToken||'',300);
+   }while(page&&pages<2);
+   // Write only listener comments. Existing IDs remain unchanged, preserving notification state.
+   for(const comment of uniqueYoutubeComments(comments).filter(c=>!isYoutubeOwnerComment(c,identity))){
+     result.seen++;
+     const key=`comment:${comment.id}`;
+     if(await getYoutubeEventRow(db,key).catch(()=>null))continue;
+     const enriched={...comment,album:video.album||'',videoTitle:video.title||comment.videoTitle||'Релиз ANDRIK',
+       seededSilently:true,mode:'release-backfill-r1312'};
+     await saveYoutubeEventRow(db,{key,type:'comment',resourceId:comment.id,videoId:video.videoId,
+       author:comment.author,title:comment.text,url:comment.url,payload:enriched});
+     result.added++;
+   }
+   if(page){result.status='partial';result.error='Больше 200 веток; остальные доступны при расширенном импорте';}
+   else result.status=result.seen>0?'comments':'empty';
+  }catch(error){
+   result.error=cleanPlainText(error?.message||error,210);
+   result.status=/comments?disabled|has disabled comments|disabled comments|not available|forbidden|permission/i.test(result.error)?'unavailable':'error';
+  }
+  return result;
+ }));
+ state.processedIds=[...new Set([...(state.processedIds||[]),...next.map(x=>x.videoId)])].slice(0,200);
+ state.seen+=results.reduce((n,r)=>n+r.seen,0);
+ state.added+=results.reduce((n,r)=>n+r.added,0);
+ state.denied+=results.filter(r=>r.status==='unavailable').length;
+ state.errors+=results.filter(r=>r.status==='error'||r.status==='partial').length;
+ state.lastResults=[...(state.lastResults||[]),...results].slice(-30);
+ state.updatedAt=new Date().toISOString();
+ await setPushState(db,YOUTUBE_RELEASE_BACKFILL_KEY_R1312,JSON.stringify(state));
+ return {...youtubeReleaseBackfillPublicR1312(state,videos),batch:results};
+}
+
 async function handleYoutubeReleaseMonitorR1309(request,env){
   if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
   const db=requireDb(env);await Promise.all([ensurePushAutomationSchema(db),ensurePlatformAnalyticsSchema(db)]);
   if(request.method==='POST'){
     const body=await request.json().catch(()=>({}));
+    if(body.action==='backfill-comments')return json({ok:true,backfill:await importYoutubeReleaseCommentBatchR1312(env,db,body)});
     if(body.action==='set-video-ids'){
       const ids=youtubeReleaseManualIdsR1309(Array.isArray(body.ids)?JSON.stringify(body.ids):String(body.ids||''));
       await setPushState(db,YOUTUBE_RELEASE_MANUAL_KEY_R1309,JSON.stringify(ids));
@@ -8451,10 +8552,11 @@ async function handleYoutubeReleaseMonitorR1309(request,env){
   const sweep=await getPushState(db,'youtube-release-comments-last-r1309').catch(()=>null);
   const stats=await getPushState(db,'youtube-release-stats-last-r1309').catch(()=>null);
   const manual=await getPushState(db,YOUTUBE_RELEASE_MANUAL_KEY_R1309).catch(()=>null);
+  const backfillRow=await getPushState(db,YOUTUBE_RELEASE_BACKFILL_KEY_R1312).catch(()=>null);
   const parse=x=>{try{return JSON.parse(String(x?.value||'{}'))||{}}catch(_){return {}}};
   const a=parse(row),b=parse(sweep),c=parse(stats);
   return json({ok:true,catalogue:{count:(a.videos||[]).length,albums:a.albums||[],updatedAt:a.at||''},
-    stats:c,sweep:b,manualVideoIds:youtubeReleaseManualIdsR1309(manual?.value||''),
+    stats:c,sweep:b,backfill:youtubeReleaseBackfillPublicR1312(youtubeReleaseBackfillStateR1312(backfillRow?.value||''),[...(a.videos||[]),...youtubeReleaseManualIdsR1309(manual?.value||'').map(videoId=>({videoId,album:'MANUAL'}))]),manualVideoIds:youtubeReleaseManualIdsR1309(manual?.value||''),
     note:'Only tracks returned by the YouTube Data API or explicitly listed by video ID are monitored. Likes are aggregate counter changes; Topic-channel comments may be disabled or inaccessible.'});
 }
 
