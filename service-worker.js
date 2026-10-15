@@ -1,5 +1,5 @@
 'use strict';
-const VERSION = '55.00-r1299-youtube-16x9-link';
+const VERSION = '55.00-r1309-silent-release';
 const IS_CONTROL_HOST = self.location.hostname.toLowerCase() === 'control.andrikmetal.com';
 async function deleteControlCaches(){
 if(!self.caches) return;

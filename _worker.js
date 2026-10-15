@@ -8322,6 +8322,142 @@ warnings,
 checkedAt:startedAt
 };
 }
+
+// ANDRIK R1309 — catalogue of distributed YouTube Music albums / Topic videos.
+// Does not alter R1308 streams, game, OneSignal setup, or existing YouTube jobs.
+const YOUTUBE_RELEASE_PLAYLISTS_R1309 = Object.freeze([
+  {album:'SILENT',playlistId:'OLAK5uy_kmzUPliQduZ4MMVT0vOQU52JYI1dKgG-4'},
+  {album:'BEYOND',playlistId:'OLAK5uy_lhSLqnftrXxdsLohdu9AQ7W9300_dvU9Y'},
+  {album:'TRIKA',playlistId:'OLAK5uy_kwBXo5kmbLBvDgSO7Cnd-9BJBezQkV2bo'},
+  {album:'OCEAN',playlistId:'PLOWKqAipKxhk'},
+  {album:'ILLUSION OF LIFE',playlistId:'PLf3D55CqULs8'}
+]);
+const YOUTUBE_RELEASE_CATALOG_KEY_R1309='youtube-release-catalog-r1309';
+const YOUTUBE_RELEASE_MANUAL_KEY_R1309='youtube-release-extra-ids-r1309';
+const youtubeReleaseVideoIdR1309=id=>/^[\w-]{11}$/.test(String(id||''))?String(id):'';
+function youtubeReleaseManualIdsR1309(value){
+  const raw=String(value||'').trim();
+  let array=[];
+  try { const parsed=JSON.parse(raw); array=Array.isArray(parsed)?parsed:[]; } catch(_) {array=raw.split(/[\s,;]+/);}
+  return [...new Set(array.map(x=>youtubeReleaseVideoIdR1309(x)).filter(Boolean))].slice(0,200);
+}
+async function loadYoutubeReleaseCatalogueR1309(env,db,{force=false}={}){
+  const row=await getPushState(db,YOUTUBE_RELEASE_CATALOG_KEY_R1309).catch(()=>null);
+  let prior={};try{prior=JSON.parse(String(row?.value||'{}'))||{}}catch(_){}
+  const last=Date.parse(String(prior.at||''));
+  const age=Number.isFinite(last)?Date.now()-last:Infinity;
+  const manualState=await getPushState(db,YOUTUBE_RELEASE_MANUAL_KEY_R1309).catch(()=>null);
+  const extras=[...new Set([...youtubeReleaseManualIdsR1309(env.YOUTUBE_RELEASE_EXTRA_VIDEO_IDS_R1309),...youtubeReleaseManualIdsR1309(manualState?.value)])].slice(0,200);
+  const cachedItems=Array.isArray(prior.videos)?prior.videos:[];
+  if(!force && age>=0 && age<12*60*60*1000){
+    const all=[...cachedItems,...extras.map(videoId=>({videoId,album:'MANUAL',title:'Релиз ANDRIK'}))];
+    return {...prior,videos:[...new Map(all.filter(x=>youtubeReleaseVideoIdR1309(x.videoId)).map(x=>[x.videoId,x])).values()],fromCache:true};
+  }
+  const albums=[];const found=[];
+  // A YouTube Music OLAK playlist may be invisible to Data API; surface the warning.
+  const fetched=await Promise.allSettled(YOUTUBE_RELEASE_PLAYLISTS_R1309.map(async config=>{
+    const list=[];let page='';let pages=0;
+    do {
+      const {data}=await youtubeApiJson(env,'playlistItems',{part:'snippet,contentDetails',playlistId:config.playlistId,maxResults:50,...(page?{pageToken:page}:{})});
+      for(const item of data?.items||[]){
+        const videoId=youtubeReleaseVideoIdR1309(item?.contentDetails?.videoId||item?.snippet?.resourceId?.videoId||'');
+        const title=cleanPlainText(item?.snippet?.title||'Релиз ANDRIK',180);
+        if(videoId&&!/^(deleted|private) video$/i.test(title)) list.push({videoId,album:config.album,title});
+      }
+      page=cleanPlainText(data?.nextPageToken||'',240);
+      pages++;
+    }while(page&&pages<3);
+    return list;
+  }));
+  fetched.forEach((result,index)=>{
+    const config=YOUTUBE_RELEASE_PLAYLISTS_R1309[index];
+    const rows=result.status==='fulfilled'?result.value:[];
+    const error=result.status==='rejected'?cleanPlainText(result.reason?.message||result.reason,250):'';
+    albums.push({album:config.album,playlistId:config.playlistId,count:rows.length,status:error?'api-error':rows.length?'ok':'empty',error});
+    found.push(...rows);
+  });
+  found.push(...extras.map(videoId=>({videoId,album:'MANUAL',title:'Релиз ANDRIK'})));
+  // Preserve already discovered tracks if a previously working playlist becomes temporarily inaccessible.
+  if(found.length<cachedItems.length){
+    const known=new Set(found.map(x=>x.videoId));
+    for(const video of cachedItems){
+      if(youtubeReleaseVideoIdR1309(video.videoId)&&!known.has(video.videoId)) {found.push(video);known.add(video.videoId);}
+    }
+  }
+  const data={at:new Date().toISOString(),videos:[...new Map(found.filter(x=>youtubeReleaseVideoIdR1309(x.videoId)).map(x=>[x.videoId,x])).values()].slice(0,200),albums};
+  await setPushState(db,YOUTUBE_RELEASE_CATALOG_KEY_R1309,JSON.stringify(data)).catch(()=>{});
+  return {...data,fromCache:false};
+}
+async function fetchYoutubeReleaseVideosR1309(env,db,config={}){
+  const catalogue=await loadYoutubeReleaseCatalogueR1309(env,db,config);
+  const videos=[];const warnings=[];
+  const ids=catalogue.videos.map(x=>x.videoId);
+  const byId=new Map(catalogue.videos.map(x=>[x.videoId,x]));
+  // All tracked releases are checked for public counters; no individual liker identity is obtainable.
+  for(let i=0;i<ids.length;i+=50){
+    try {
+      const {data}=await youtubeApiJson(env,'videos',{part:'snippet,statistics',id:ids.slice(i,i+50).join(','),maxResults:50});
+      for(const row of data?.items||[]){
+        const videoId=youtubeReleaseVideoIdR1309(row.id);if(!videoId)continue;
+        const meta=byId.get(videoId)||{};
+        videos.push({videoId,album:meta.album,isRelease:true,
+          title:cleanPlainText(row?.snippet?.title||meta.title||'Релиз ANDRIK',180),
+          publishedAt:cleanPlainText(row?.snippet?.publishedAt||'',50),
+          thumbnail:row?.snippet?.thumbnails?.high?.url||row?.snippet?.thumbnails?.medium?.url||'',
+          likes:Number(row?.statistics?.likeCount||0),comments:Number(row?.statistics?.commentCount||0),
+          url:`https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`});
+      }
+    }catch(error){warnings.push(`videos: ${cleanPlainText(error?.message||error,200)}`);}
+  }
+  return {videos,catalogue,warnings,unavailable:Math.max(0,ids.length-videos.length)};
+}
+async function sweepYoutubeReleaseCommentsR1309(env,db,videos=[],identity={}){
+  if(!videos.length)return {targets:0,seen:0,sent:0,warnings:[]};
+  const sorted=[...videos].sort((a,b)=>String(a.album||'').localeCompare(String(b.album||''))||String(a.videoId).localeCompare(String(b.videoId)));
+  const cursorRow=await getPushState(db,'youtube-release-comment-sweep-offset-r1309').catch(()=>null);
+  const offset=Math.max(0,Number(cursorRow?.value||0))%sorted.length;
+  const targets=Array.from({length:Math.min(4,sorted.length)},(_,i)=>sorted[(offset+i)%sorted.length]);
+  const direct=await fetchYoutubeCommentsForVideos(env,targets,identity.channelId).catch(error=>({items:[],warnings:[String(error?.message||error)]}));
+  const map=new Map(targets.map(x=>[x.videoId,x]));
+  const enriched=(direct.items||[]).map(item=>{
+    const v=map.get(item.videoId)||{};
+    return {...item,videoTitle:item.videoTitle||v.title||'Релиз ANDRIK',thumbnail:item.thumbnail||v.thumbnail||'',album:v.album||''};
+  });
+  const delivery=await sendYoutubeCommentItemsR953(env,db,enriched,identity,new Date().toISOString(),'release-catalog-r1309');
+  await setPushState(db,'youtube-release-comment-sweep-offset-r1309',String((offset+targets.length)%sorted.length)).catch(()=>{});
+  const warnings=(direct.warnings||[]).filter(x=>!isBenignYoutubeCommentWarningR473(x)).slice(0,10);
+  const result={targets:targets.length,seen:enriched.length,sent:(delivery.notifications||[]).filter(n=>n.ok).length,
+    warnings,checkedAt:new Date().toISOString(),progress:`${(offset+targets.length)%sorted.length}/${sorted.length}`};
+  await setPushState(db,'youtube-release-comments-last-r1309',JSON.stringify(result)).catch(()=>{});
+  return result;
+}
+async function handleYoutubeReleaseMonitorR1309(request,env){
+  if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
+  const db=requireDb(env);await Promise.all([ensurePushAutomationSchema(db),ensurePlatformAnalyticsSchema(db)]);
+  if(request.method==='POST'){
+    const body=await request.json().catch(()=>({}));
+    if(body.action==='set-video-ids'){
+      const ids=youtubeReleaseManualIdsR1309(Array.isArray(body.ids)?JSON.stringify(body.ids):String(body.ids||''));
+      await setPushState(db,YOUTUBE_RELEASE_MANUAL_KEY_R1309,JSON.stringify(ids));
+      return json({ok:true,manualVideoIds:ids});
+    }
+    if(body.action==='refresh-catalog'){
+      const catalogue=await loadYoutubeReleaseCatalogueR1309(env,db,{force:true});
+      return json({ok:true,catalogue:{count:catalogue.videos.length,albums:catalogue.albums,updatedAt:catalogue.at}});
+    }
+    return json({ok:false,error:'invalid-action'},400);
+  }
+  const row=await getPushState(db,YOUTUBE_RELEASE_CATALOG_KEY_R1309).catch(()=>null);
+  const sweep=await getPushState(db,'youtube-release-comments-last-r1309').catch(()=>null);
+  const stats=await getPushState(db,'youtube-release-stats-last-r1309').catch(()=>null);
+  const manual=await getPushState(db,YOUTUBE_RELEASE_MANUAL_KEY_R1309).catch(()=>null);
+  const parse=x=>{try{return JSON.parse(String(x?.value||'{}'))||{}}catch(_){return {}}};
+  const a=parse(row),b=parse(sweep),c=parse(stats);
+  return json({ok:true,catalogue:{count:(a.videos||[]).length,albums:a.albums||[],updatedAt:a.at||''},
+    stats:c,sweep:b,manualVideoIds:youtubeReleaseManualIdsR1309(manual?.value||''),
+    note:'Only tracks returned by the YouTube Data API or explicitly listed by video ID are monitored. Likes are aggregate counter changes; Topic-channel comments may be disabled or inaccessible.'});
+}
+
 async function handleFastYoutubeEngagementR333(request,env,options={}){
 if(!adminAuthorized(request,env) && !cronAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
 const db=requireDb(env);
@@ -8369,7 +8505,10 @@ if(!channelId)throw new Error('youtube-channel-id-unavailable');
 const videoSettled=await Promise.allSettled([fetchFastYoutubeLikesR333(env,db),fetchYoutubeActiveLiveEngagementR669(env,db)]);
 const catalogueVideos=videoSettled[0].status==='fulfilled'?videoSettled[0].value:[];
 const liveProbe=videoSettled[1].status==='fulfilled'?videoSettled[1].value:{video:null,liveChatId:'',warning:cleanPlainText(videoSettled[1].reason?.message||videoSettled[1].reason||'',260),source:'probe-rejected-r669'};
+const releaseProbe=await fetchYoutubeReleaseVideosR1309(env,db).catch(error=>({videos:[],catalogue:{videos:[],albums:[]},warnings:[cleanPlainText(error?.message||error,240)],unavailable:0}));
 const videos=[...catalogueVideos];
+const existingVideoIdsR1309=new Set(videos.map(x=>x.videoId));
+for(const video of releaseProbe.videos||[]){if(!existingVideoIdsR1309.has(video.videoId)){videos.push(video);existingVideoIdsR1309.add(video.videoId);}}
 if(liveProbe?.video){
 const index=videos.findIndex(row=>row.videoId===liveProbe.video.videoId);
 if(index>=0)videos[index]={...videos[index],...liveProbe.video,isLive:true};
@@ -8379,8 +8518,14 @@ const directComments=videos.length
 ? await fetchFastYoutubeCommentsDirectR473(env,db,videos,channelId)
 : {items:[],warnings:[cleanPlainText(videoSettled[0].reason?.message||'youtube-videos-unavailable',240)],targets:[]};
 const comments=directComments.items||[];
+const releaseSweepR1309=await sweepYoutubeReleaseCommentsR1309(env,db,releaseProbe.videos||[],{channelId,handle:cleanPlainText(env.YOUTUBE_CHANNEL_HANDLE||'@andrikmetal',100)})
+  .catch(error=>({targets:0,seen:0,sent:0,warnings:[cleanPlainText(error?.message||error,240)]}));
+await setPushState(db,'youtube-release-stats-last-r1309',JSON.stringify({
+  checkedAt:startedAt,tracked:(releaseProbe.videos||[]).length,discovered:(releaseProbe.catalogue?.videos||[]).length,
+  unavailable:releaseProbe.unavailable||0,warnings:releaseProbe.warnings||[]
+})).catch(()=>{});
 if (videoSettled[0].status==='fulfilled' || liveProbe?.video) {
-await recordYoutubeObservedLikeBatchR469(db,videos,startedAt).catch(()=>{});
+await recordYoutubeObservedLikeBatchR469(db,[...catalogueVideos,...(liveProbe?.video?[liveProbe.video]:[])],startedAt).catch(()=>{});
 }
 const videoMap=new Map(videos.map(v=>[v.videoId,v]));
 const identity={channelId,handle:cleanPlainText(env.YOUTUBE_CHANNEL_HANDLE || '@andrikmetal',100)};
@@ -8495,6 +8640,7 @@ const summary={
 ok:warnings.length===0 && failed===0,
 commentsSeen:comments.length+Math.max(0,Number(liveChat?.seen||0)),
 commentMode:'direct-video+livechat-r669',
+releaseMonitor:{tracked:(releaseProbe.videos||[]).length,discovered:(releaseProbe.catalogue?.videos||[]).length,unavailable:releaseProbe.unavailable||0,commentSweep:releaseSweepR1309},
 commentTargets:(directComments.targets||[]).length,
 videosChecked:videos.length,
 liveVideoId:cleanPlainText(liveProbe?.video?.videoId||'',80),
@@ -20208,6 +20354,7 @@ return await handleCheckYoutubeEvents(request, env);
 }
 if (path === '/api/youtube/websub/subscribe' && request.method === 'POST') return await handleYoutubeWebSubSubscribeR332(request, env);
 if (path === '/api/youtube/websub/status' && request.method === 'GET') return await handleYoutubeWebSubStatusR332(request, env);
+if (path === '/api/control/youtube-release-monitor' && (request.method==='GET'||request.method==='POST')) return await handleYoutubeReleaseMonitorR1309(request,env);
 if (path === '/api/automation/youtube-fast' && request.method === 'POST') return await handleFastYoutubeReleaseCheckR332(request, env);
 if (path === '/api/automation/youtube-engagement-fast' && request.method === 'POST') return await handleFastYoutubeEngagementR333(request, env);
 if (path === '/api/automation/summary-checkpoint' && (request.method === 'GET' || request.method === 'POST')) return await handleExternalSummaryCheckpointR399(request, env);

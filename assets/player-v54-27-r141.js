@@ -1,5 +1,15 @@
 const tr = key => (window.andrikPlayerT ? window.andrikPlayerT(key) : key);
 const COLLECTIONS = {
+silent: {
+type: 'playlist',
+id: 'OLAK5uy_kmzUPliQduZ4MMVT0vOQU52JYI1dKgG-4',
+label: 'SILENT · ОФИЦИАЛЬНЫЙ АЛЬБОМ',
+name: 'SILENT (Тишина)',
+note: '20 треков · 2026',
+placeholder: '/assets/silent-cover-r1159.webp',
+url: 'https://youtube.com/playlist?list=OLAK5uy_kmzUPliQduZ4MMVT0vOQU52JYI1dKgG-4',
+positionLabel: 'ALBUM'
+},
 beyond: {
 type: 'playlist',
 id: 'OLAK5uy_lhSLqnftrXxdsLohdu9AQ7W9300_dvU9Y',
