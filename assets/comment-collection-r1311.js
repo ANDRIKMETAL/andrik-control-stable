@@ -6,6 +6,10 @@ const owner=window.AndrikOwnerSession;
 const MONTHS=['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
 const esc=value=>String(value??'').replace(/[&<>\'\"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));
 let year=new Date().getFullYear(), selectedMonth=0, data=null, yearSeq=0, monthSeq=0;
+const ARCHIVE_CACHE_PREFIX_R1313='andrik-archive-session-r1313:';
+const cacheKey=(y,m)=>ARCHIVE_CACHE_PREFIX_R1313+y+':'+m;
+function saveArchiveCache(y,m,value){try{sessionStorage.setItem(cacheKey(y,m),JSON.stringify({at:Date.now(),value}))}catch(_){}}
+function readArchiveCache(y,m){try{const d=JSON.parse(sessionStorage.getItem(cacheKey(y,m))||'null');return d?.value?.ok&&Date.now()-d.at<24*3600*1000?d:null}catch(_){return null}}
 const isOwnerComment=item=>String(item?.author||'').trim().toLowerCase().replace(/^@+/,'').replace(/\s+/g,' ')==='andrikmetal';
 function text(id,message){if($(id))$(id).textContent=message;}
 function status(label,kind='loading'){
@@ -68,6 +72,16 @@ function commentCard(item){
  const safeUrl=/^https:\/\//i.test(link)?link:'#';
  return `<article class="comment ${source}"><div class="comment-top"><span class="source">${source==='youtube'?'▶️ YouTube':'🌐 Сайт'}</span><span class="comment-like-count">👍 ${Number(item.likeCount||0)}</span><time class="time">${dateLine}</time></div><div class="author">${esc(item.author||'Слушатель')}</div><div class="message">${esc(item.message||'')}</div><div class="target"><span>${source==='youtube'?'🎬':'📄'} ${esc(item.targetTitle||'ANDRIK')}</span><a href="${esc(safeUrl)}" target="_blank" rel="noopener noreferrer">Открыть</a></div></article>`;
 }
+function renderMonthResultR1313(result,thisMonth,thisYear){
+ const comments=(result.comments||[]).filter(x=>!isOwnerComment(x));
+ const site=comments.filter(x=>x.source==='site').length;
+ const youtube=comments.filter(x=>x.source==='youtube').length;
+ const meta=(result.months||[]).find(x=>Number(x.month)===thisMonth)||{};
+ const likes=Math.max(Number(meta.likes||0),comments.reduce((sum,x)=>sum+Number(x.likeCount||0),0));
+ text('monthTitle',`${MONTHS[thisMonth-1]} ${thisYear}`);
+ text('monthCounts',`Слушатели: ${comments.length} · Сайт: ${site} · YouTube: ${youtube} · Лайков за месяц: ${likes}`);
+ $('comments').innerHTML=comments.length?comments.map(commentCard).join(''):'<div class="empty-state">За этот месяц комментариев слушателей пока нет.</div>';
+}
 async function loadMonth(){
  const thisSeq=++monthSeq, thisYear=year, thisMonth=selectedMonth;
  if(!thisMonth){text('monthTitle','Нет месяцев с комментариями');text('monthCounts','');$('comments').innerHTML='<div class="empty-state">В этом году пока нет комментариев слушателей.</div>';return;}
@@ -77,16 +91,13 @@ async function loadMonth(){
  try{
   const result=await api(`/api/control/comment-collection?year=${thisYear}&month=${thisMonth}&v=r1311&t=${Date.now()}`);
   if(thisSeq!==monthSeq)return;
-  const comments=(result.comments||[]).filter(x=>!isOwnerComment(x));
-  const site=comments.filter(x=>x.source==='site').length;
-  const youtube=comments.filter(x=>x.source==='youtube').length;
-  const meta=(result.months||[]).find(x=>Number(x.month)===thisMonth)||{};
-  const likes=Math.max(Number(meta.likes||0),comments.reduce((sum,x)=>sum+Number(x.likeCount||0),0));
-  text('monthCounts',`Слушатели: ${comments.length} · Сайт: ${site} · YouTube: ${youtube} · Лайков за месяц: ${likes}`);
-  $('comments').innerHTML=comments.length?comments.map(commentCard).join(''):'<div class="empty-state">За этот месяц комментариев слушателей пока нет.</div>';
+  saveArchiveCache(thisYear,thisMonth,result);
+  renderMonthResultR1313(result,thisMonth,thisYear);
  }catch(err){
   if(thisSeq!==monthSeq)return;
   const message=friendlyError(err);
+  const prior=readArchiveCache(thisYear,thisMonth);
+  if(prior){renderMonthResultR1313(prior.value,thisMonth,thisYear);text('monthCounts',`⚠️ Последняя сохранённая копия · ${new Date(prior.at).toLocaleString('ru-RU')} · сервер: ${message}`);return;}
   text('monthCounts','Не удалось получить комментарии за месяц');
   $('comments').innerHTML=`<div class="empty-state">${esc(message)} <button type="button" id="archiveRetryMonth" class="archive-retry">↻ Повторить</button></div>`;
   $('archiveRetryMonth')?.addEventListener('click',loadMonth);
@@ -105,7 +116,7 @@ function renderMonths(){
   $('monthsSpoiler').open=false;
   renderMonths();
  }));
- if(selectedMonth)loadMonth();else{
+ if(selectedMonth){if(Number(data?.selectedMonth)===selectedMonth)renderMonthResultR1313(data,selectedMonth,year);else loadMonth();}else{
   ++monthSeq;
   text('monthTitle','Пока нет комментариев');
   text('monthCounts','');
@@ -120,14 +131,18 @@ async function loadYear(){
  text('monthTitle','Загружаем…');
  text('monthCounts','');
  try{
-  const result=await api(`/api/control/comment-collection?year=${year}&v=r1311&t=${Date.now()}`);
+  const initialMonth=selectedMonth||new Date().getMonth()+1;
+  const result=await api(`/api/control/comment-collection?year=${year}&month=${initialMonth}&v=r1313&t=${Date.now()}`);
   if(thisSeq!==yearSeq)return;
   data=result;
+  saveArchiveCache(year,initialMonth,result);
   status('✅ Доступ подтверждён','ok');clearError();
   renderMonths();
  }catch(err){
   if(thisSeq!==yearSeq)return;
   const message=friendlyError(err),auth=Number(err.status)===401||Number(err.status)===403||/unauthorized|owner-session/i.test(String(err.message||''));
+  const prior=readArchiveCache(year,selectedMonth||new Date().getMonth()+1);
+  if(prior&&!auth){data=prior.value;status('⚠️ Последняя сохранённая копия');clearError();renderMonths();text('yearSummary',`⚠️ Данные из сохранённой копии от ${new Date(prior.at).toLocaleString('ru-RU')} · ${message}`);return;}
   status(auth?'🔒 Нужен вход владельца':'⚠️ Ошибка загрузки');
   text('yearSummary','Не удалось загрузить архив.');
   text('monthTitle','Ошибка загрузки');

@@ -202,7 +202,7 @@ const r=await fetch(path,{credentials:'include',cache:'no-store',headers:headers
 if(!r.ok)throw Object.assign(new Error(d.error||d.message||`HTTP ${r.status}`),{status:r.status});return d;
 }
 async function loadViewers(){
-try{const d=await fetchJson(`/api/control/youtube-live-r565?active=1&fresh=1&ts=${Date.now()}`);set('[data-radio-live-viewers]',fmt(d?.concurrentViewers));return d}
+try{const d=await fetchJson(`/api/control/youtube-live-r565?active=1&ts=${Date.now()}`);set('[data-radio-live-viewers]',fmt(d?.concurrentViewers));return d}
 catch(_){set('[data-radio-live-viewers]','—');return null}
 }
 async function loadMap(){

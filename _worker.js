@@ -7829,16 +7829,11 @@ collector.latestSampleAt=cleanPlainText(latestBefore?.sampledAt||'',80);
 const latestMs=Date.parse(collector.latestSampleAt||'');
 const stale=!Number.isFinite(latestMs) || Date.now()-latestMs>3*60*1000;
 if(stale){
-collector.selfHealAttempted=true;
-try{
-const probe=await fetchYoutubeActiveLiveEngagementR669(env,db);
-collector.selfHealOk=Boolean(probe?.video);
-collector.source=cleanPlainText(probe?.source||'control-self-heal-r1157',120);
-collector.liveVideoId=cleanPlainText(probe?.video?.videoId||'',80);
-collector.warning=cleanPlainText(probe?.warning||(!probe?.video?'active-live-not-found':''),260);
-}catch(error){
-collector.warning=cleanPlainText(error?.message||error,260);
-}
+ // Background cron owns the refresh. An archive/graph read must not wait for
+ // remote YouTube API and must not misreport old concurrent viewers as current.
+ collector.selfHealAttempted=false;
+ collector.source='stored-samples-r1313';
+ collector.warning='Нет свежих сэмплов; показаны последние сохранённые данные.';
 }
 }
 const rowsResult=await db.prepare(`
@@ -7857,7 +7852,8 @@ if(date===today){
  const verifiedAt=Date.parse(String(state?.updatedAt||''));
  const savedFresh=Number.isFinite(verifiedAt)&&Date.now()-verifiedAt<10*60*1000;
  // Never mix the old horizontal/dual session with today's new-radio KPI.
- currentRadioVideoIdR1299=(savedFresh&&saved&&!['E-Hf8ciUhrU','eN3ljx6_6dA'].includes(saved))?saved:'ZmMyMwX_FrM';
+ const recentSampleVideo=cleanPlainText(allRows.length?allRows[allRows.length-1]?.videoId||'':'',80);
+ currentRadioVideoIdR1299=(savedFresh&&saved)?saved:(recentSampleVideo||'ZmMyMwX_FrM');
 }
 const rows=currentRadioVideoIdR1299?allRows.filter(row=>cleanPlainText(row?.videoId||'',80)===currentRadioVideoIdR1299):allRows;
 const videoIds=[...new Set(rows.map(row=>cleanPlainText(row?.videoId||'',80)).filter(Boolean))];
@@ -15750,7 +15746,9 @@ try { return JSON.parse(value || '{}') || {}; }
 catch (_) { return {}; }
 }
 async function loadUnifiedCommentCollection(db) {
-await Promise.all([ensureCommentsV4Schema(db), ensureControlV1Schema(db)]);
+// R1313: reading the comment archive does not require the unrelated OAuth/backup/release
+// schema. Avoid its many D1 CREATE INDEX/CREATE TABLE operations on a read-only request.
+await ensureCommentsV4Schema(db);
 const [siteResult, youtubeResult] = await Promise.all([
 db.prepare(`
       SELECT id, name, message, locale, status,
@@ -21802,7 +21800,7 @@ return new Response(youtubeControlLiveCacheR797.body,{status:youtubeControlLiveC
 const response=await handleControlYoutubeLiveR565(request,env);
 if(!fresh && response.ok){
 const body=await response.clone().text();
-youtubeControlLiveCacheR797={expiresAt:Date.now()+25*1000,status:response.status,body};
+youtubeControlLiveCacheR797={expiresAt:Date.now()+55*1000,status:response.status,body};
 }
 return response;
 }
@@ -22214,6 +22212,21 @@ if(cached)return {...cached,error:cleanPlainText(error?.message||error,260)};
 return {healthStatus:'',streamStatus:'',healthIssues:[],boundStreamId:'',updatedAt:'',cached:false,source:'health-unavailable-r1158',error:cleanPlainText(error?.message||error,260)};
 }
 }
+// R1313: read-only fast-path cached display counters. Missing cache stays null,
+// rather than presenting video viewCount as a different YouTube Studio metric.
+async function readYoutubeFastCountersR1313(env,videoId){
+ const [studio,visible]=await Promise.all([
+   readYoutubeStudioViewsCacheR944(env,videoId).catch(()=>null),
+   readYoutubeVisibleViewsCacheR948(env,videoId).catch(()=>null)
+ ]);
+ return [
+   {studioViews:studio?.value??null,engagedViews:studio?.value??null,
+    source:studio?.source||'no-studio-cache-r1313',updatedAt:studio?.updatedAt||'',
+    processing:!studio,cached:Boolean(studio)},
+   {value:visible?.value??null,source:visible?.source||'no-visible-cache-r1313',
+    updatedAt:visible?.updatedAt||'',cached:Boolean(visible)}
+ ];
+}
 async function handleControlYoutubeLiveR565(request, env) {
 if (!adminAuthorized(request, env)) return json({ok:false,error:'unauthorized'},401);
 const requestUrl=new URL(request.url);
@@ -22322,8 +22335,15 @@ const broadcastLive=lifeCycleStatus.toLowerCase()==='live' || Boolean(details?.a
 const signalActive=streamStatus.toLowerCase()==='active';
 const active=broadcastLive;
 const publicStartsR946=Math.max(0,Number(statistics?.viewCount||0));
-const studioViewsR942=await fetchYoutubeStudioViewsR942(env,videoId,details?.actualStartTime||broadcast?.snippet?.actualStartTime||'',publicStartsR946);
-const visibleViewsR946=await fetchYoutubeVisibleViewsR946(env,videoId,publicStartsR946);
+// R1313: normal status must never await slow HTML scraping or 10+ Analytics
+// queries. Retrieve only previously verified counters, keeping provenance.
+const deepR1313=requestUrl.searchParams.get('deep')==='1';
+const [studioViewsR942,visibleViewsR946]=deepR1313
+ ? await Promise.all([
+   fetchYoutubeStudioViewsR942(env,videoId,details?.actualStartTime||broadcast?.snippet?.actualStartTime||'',publicStartsR946),
+   fetchYoutubeVisibleViewsR946(env,videoId,publicStartsR946)
+ ])
+ : await readYoutubeFastCountersR1313(env,videoId);
 const displayViewsR946=(Number(visibleViewsR946?.value)>0)?Math.max(0,Number(visibleViewsR946.value)):((Number(studioViewsR942?.studioViews)>0)?Math.max(0,Number(studioViewsR942.studioViews)):null);
 const engagedViewsR938=studioViewsR942.engagedViews;
 await writeYoutubeLiveHealthCacheR1158(env,videoId,{
@@ -22373,8 +22393,12 @@ video=Array.isArray(data?.items)?data.items[0]||null:null;
 const details=video?.liveStreamingDetails||{};
 const statistics=video?.statistics||{};
 const publicStartsR946=Math.max(0,Number(statistics?.viewCount||0));
-const studioViewsR942=await fetchYoutubeStudioViewsR942(env,videoId,details?.actualStartTime||'',publicStartsR946);
-const visibleViewsR946=await fetchYoutubeVisibleViewsR946(env,videoId,publicStartsR946);
+const [studioViewsR942,visibleViewsR946]=requestUrl.searchParams.get('deep')==='1'
+ ? await Promise.all([
+   fetchYoutubeStudioViewsR942(env,videoId,details?.actualStartTime||'',publicStartsR946),
+   fetchYoutubeVisibleViewsR946(env,videoId,publicStartsR946)
+ ])
+ : await readYoutubeFastCountersR1313(env,videoId);
 const displayViewsR946=(Number(visibleViewsR946?.value)>0)?Math.max(0,Number(visibleViewsR946.value)):((Number(studioViewsR942?.studioViews)>0)?Math.max(0,Number(studioViewsR942.studioViews)):null);
 const engagedViewsR938=studioViewsR942.engagedViews;
 const liveHealthR1158=await probeYoutubeLiveHealthR1158(env,videoId);
