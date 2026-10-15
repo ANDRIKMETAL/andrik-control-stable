@@ -1,14 +1,14 @@
 {
   "schema": 1,
   "updaterVersion": "55.00-r358-deploy-nohang",
-  "operation": "reinstall",
-  "reinstall": true,
-  "operationId": "reinstall-1792050477202-3fa1c2c98a",
-  "release": "R1313",
-  "archiveName": "SITE-R1313-LIVE-STATS-ARCHIVE-SAFE-FULL.zip",
-  "sourceHead": "5b3a47f9c646d7eafe12fe5dc9481f64ccaff36c",
-  "backupSha": "5b3a47f9c646d7eafe12fe5dc9481f64ccaff36c",
+  "operation": "publish",
+  "reinstall": false,
+  "operationId": "publish-1792050904766-f9e8f7160c",
+  "release": "R1308",
+  "archiveName": "SITE-R1308-LYRA-ABC-STORY-SOCIAL-FULL.zip",
+  "sourceHead": "6b80cf09452a40a8c280bc26c26793b53918d909",
+  "backupSha": "6b80cf09452a40a8c280bc26c26793b53918d909",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-10-15T07:47:57.202Z"
+  "generatedAt": "2026-10-15T07:55:07.005Z"
 }

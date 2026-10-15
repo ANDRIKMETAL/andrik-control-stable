@@ -12,10 +12,6 @@ const text=(id,value)=>{const el=$(id);if(el)el.textContent=value};
 const safe=v=>String(v??'').trim();
 const number=v=>new Intl.NumberFormat('ru-RU').format(Math.max(0,Number(v)||0));
 let liveStartedAt='';
-let liveRequestInFlightR1313=false;
-const LAST_LIVE_CACHE_R1313='andrik-last-live-status-session-r1313';
-function saveLastLiveR1313(d){try{sessionStorage.setItem(LAST_LIVE_CACHE_R1313,JSON.stringify({at:Date.now(),data:d}))}catch(_){}}
-function readLastLiveR1313(){try{const x=JSON.parse(sessionStorage.getItem(LAST_LIVE_CACHE_R1313)||'null');return x?.data?.ok&&Date.now()-x.at<10*60*1000?x:null}catch(_){return null}}
 function uptimeLabel(value){const start=Date.parse(value||'');if(!Number.isFinite(start))return '—';const sec=Math.max(0,Math.floor((Date.now()-start)/1000));const d=Math.floor(sec/86400),h=Math.floor((sec%86400)/3600),m=Math.floor((sec%3600)/60);if(d>0)return `${d} д ${h} ч ${m} мин`;if(h>0)return `${h} ч ${m} мин`;return `${m} мин`;}
 function refreshUptime(){text('youtubeRadioUptimeR565',liveStartedAt?uptimeLabel(liveStartedAt):'—')}
 function setLive(live,label){const pill=$('youtubeRadioLiveR565');if(!pill)return;pill.classList.toggle('is-live',Boolean(live));const span=pill.querySelector('span');if(span)span.textContent=label||(live?'ЭФИР ИДЁТ':'ОЖИДАЕТ СИГНАЛ')}
@@ -94,31 +90,15 @@ return true;
 }catch(_){return false}
 }
 async function loadYoutube(){
-if(liveRequestInFlightR1313)return;
-liveRequestInFlightR1313=true;
 try{
-const k=getKey();
-const ctl=new AbortController();const t=setTimeout(()=>ctl.abort(),14000);
-let res;
-try{res=await fetch(`/api/control/youtube-live-r565?active=1&ts=${Date.now()}`,{credentials:'include',headers:{accept:'application/json',...(k?{'x-admin-key':k,'authorization':`Bearer ${k}`}:{})},cache:'no-store',signal:ctl.signal});}
-finally{clearTimeout(t)}
-const data=await res.json().catch(()=>({}));if(!res.ok||!data.ok)throw new Error(data.error||'HTTP '+res.status);
-renderYoutube(data);saveLastLiveR1313(data);
-// Read audience history independently; never delay the primary live metrics.
-void loadAudienceFallbackR1264();return;
+const k=getKey();const res=await fetch(`/api/control/youtube-live-r565?active=1&fresh=1&ts=${Date.now()}`,{credentials:'include',headers:{accept:'application/json',...(k?{'x-admin-key':k,'authorization':`Bearer ${k}`}:{})},cache:'no-store'});const data=await res.json().catch(()=>({}));if(!res.ok)throw new Error(data.error||'HTTP '+res.status);renderYoutube(data);await loadAudienceFallbackR1264();return;
 }catch(error){
 let publicRendered=false;
 try{const r=await fetch(`/api/public/youtube-live-target?ts=${Date.now()}`,{cache:'no-store',headers:{accept:'application/json'}});const d=await r.json().catch(()=>({}));if(r.ok&&d?.active){renderYoutube({...d,signalActive:Boolean(d?.signalActive||d?.active),healthStatus:d?.healthStatus||'LIVE'});publicRendered=true}}catch(_){}
-const prior=readLastLiveR1313();
-if(!publicRendered&&prior){
-renderYoutube({...prior.data,active:false,signalActive:false,lifeCycleStatus:'',streamStatus:'',concurrentViewers:null});
-text('youtubeRadioHealthR565','ДАННЫЕ УСТАРЕЛИ');
-text('youtubeRadioNowMetaR565',`Последние доступные данные: ${new Date(prior.at).toLocaleString('ru-RU')} · ожидание API`);
-}
 const [audience,transport]=await Promise.all([loadAudienceFallbackR1264(),loadTransportFallbackR1264(error?.message||'')]);
 if(!transport){text('youtubeRadioHealthR565',publicRendered?'ОТЛИЧНО':'ПЛОХО');const h=$('youtubeRadioHealthR565');if(h)h.title=publicRendered?'Public LIVE доступен; Control YouTube API временно недоступен':safe(error?.message)||'YouTube API недоступен'}
-if(!publicRendered&&!prior)text('youtubeRadioNowMetaR565',safe(error?.message)||'YouTube Data API временно недоступен; показаны локальные данные OVH/аудитории');
-}finally{liveRequestInFlightR1313=false;}
+if(!publicRendered)text('youtubeRadioNowMetaR565',safe(error?.message)||'YouTube Data API временно недоступен; показаны локальные данные OVH/аудитории');
+}
 }
 let youtubeTimer=null,libraryTimer=null;
 function armNetworkTimers(){
@@ -128,7 +108,7 @@ if(document.hidden)return;
 youtubeTimer=setInterval(()=>{if(!document.hidden)loadYoutube()},30000);
 libraryTimer=setInterval(()=>{if(!document.hidden)loadLibrary()},300000);
 }
-loadLibrary();loadYoutube();armNetworkTimers();
+loadLibrary();loadYoutube();setTimeout(()=>{if(!document.hidden)loadYoutube()},2500);armNetworkTimers();
 document.addEventListener('visibilitychange',()=>{
 if(document.hidden){if(youtubeTimer)clearInterval(youtubeTimer);if(libraryTimer)clearInterval(libraryTimer);youtubeTimer=libraryTimer=null;return;}
 loadLibrary();loadYoutube();armNetworkTimers();

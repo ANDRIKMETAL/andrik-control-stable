@@ -7829,11 +7829,16 @@ collector.latestSampleAt=cleanPlainText(latestBefore?.sampledAt||'',80);
 const latestMs=Date.parse(collector.latestSampleAt||'');
 const stale=!Number.isFinite(latestMs) || Date.now()-latestMs>3*60*1000;
 if(stale){
- // Background cron owns the refresh. An archive/graph read must not wait for
- // remote YouTube API and must not misreport old concurrent viewers as current.
- collector.selfHealAttempted=false;
- collector.source='stored-samples-r1313';
- collector.warning='Нет свежих сэмплов; показаны последние сохранённые данные.';
+collector.selfHealAttempted=true;
+try{
+const probe=await fetchYoutubeActiveLiveEngagementR669(env,db);
+collector.selfHealOk=Boolean(probe?.video);
+collector.source=cleanPlainText(probe?.source||'control-self-heal-r1157',120);
+collector.liveVideoId=cleanPlainText(probe?.video?.videoId||'',80);
+collector.warning=cleanPlainText(probe?.warning||(!probe?.video?'active-live-not-found':''),260);
+}catch(error){
+collector.warning=cleanPlainText(error?.message||error,260);
+}
 }
 }
 const rowsResult=await db.prepare(`
@@ -7852,8 +7857,7 @@ if(date===today){
  const verifiedAt=Date.parse(String(state?.updatedAt||''));
  const savedFresh=Number.isFinite(verifiedAt)&&Date.now()-verifiedAt<10*60*1000;
  // Never mix the old horizontal/dual session with today's new-radio KPI.
- const recentSampleVideo=cleanPlainText(allRows.length?allRows[allRows.length-1]?.videoId||'':'',80);
- currentRadioVideoIdR1299=(savedFresh&&saved)?saved:(recentSampleVideo||'ZmMyMwX_FrM');
+ currentRadioVideoIdR1299=(savedFresh&&saved&&!['E-Hf8ciUhrU','eN3ljx6_6dA'].includes(saved))?saved:'ZmMyMwX_FrM';
 }
 const rows=currentRadioVideoIdR1299?allRows.filter(row=>cleanPlainText(row?.videoId||'',80)===currentRadioVideoIdR1299):allRows;
 const videoIds=[...new Set(rows.map(row=>cleanPlainText(row?.videoId||'',80)).filter(Boolean))];
@@ -8318,244 +8322,6 @@ warnings,
 checkedAt:startedAt
 };
 }
-
-// ANDRIK R1309 — catalogue of distributed YouTube Music albums / Topic videos.
-// Does not alter R1308 streams, game, OneSignal setup, or existing YouTube jobs.
-const YOUTUBE_RELEASE_PLAYLISTS_R1309 = Object.freeze([
-  {album:'SILENT',playlistId:'OLAK5uy_kmzUPliQduZ4MMVT0vOQU52JYI1dKgG-4'},
-  {album:'BEYOND',playlistId:'OLAK5uy_lhSLqnftrXxdsLohdu9AQ7W9300_dvU9Y'},
-  {album:'TRIKA',playlistId:'OLAK5uy_kwBXo5kmbLBvDgSO7Cnd-9BJBezQkV2bo'},
-  {album:'OCEAN',playlistId:'PLOWKqAipKxhk'},
-  {album:'ILLUSION OF LIFE',playlistId:'PLf3D55CqULs8'}
-]);
-const YOUTUBE_RELEASE_CATALOG_KEY_R1309='youtube-release-catalog-r1309';
-const YOUTUBE_RELEASE_MANUAL_KEY_R1309='youtube-release-extra-ids-r1309';
-const youtubeReleaseVideoIdR1309=id=>/^[\w-]{11}$/.test(String(id||''))?String(id):'';
-function youtubeReleaseManualIdsR1309(value){
-  const raw=String(value||'').trim();
-  let array=[];
-  try { const parsed=JSON.parse(raw); array=Array.isArray(parsed)?parsed:[]; } catch(_) {array=raw.split(/[\s,;]+/);}
-  return [...new Set(array.map(x=>youtubeReleaseVideoIdR1309(x)).filter(Boolean))].slice(0,200);
-}
-async function loadYoutubeReleaseCatalogueR1309(env,db,{force=false}={}){
-  const row=await getPushState(db,YOUTUBE_RELEASE_CATALOG_KEY_R1309).catch(()=>null);
-  let prior={};try{prior=JSON.parse(String(row?.value||'{}'))||{}}catch(_){}
-  const last=Date.parse(String(prior.at||''));
-  const age=Number.isFinite(last)?Date.now()-last:Infinity;
-  const manualState=await getPushState(db,YOUTUBE_RELEASE_MANUAL_KEY_R1309).catch(()=>null);
-  const extras=[...new Set([...youtubeReleaseManualIdsR1309(env.YOUTUBE_RELEASE_EXTRA_VIDEO_IDS_R1309),...youtubeReleaseManualIdsR1309(manualState?.value)])].slice(0,200);
-  const cachedItems=Array.isArray(prior.videos)?prior.videos:[];
-  if(!force && age>=0 && age<12*60*60*1000){
-    const all=[...cachedItems,...extras.map(videoId=>({videoId,album:'MANUAL',title:'Релиз ANDRIK'}))];
-    return {...prior,videos:[...new Map(all.filter(x=>youtubeReleaseVideoIdR1309(x.videoId)).map(x=>[x.videoId,x])).values()],fromCache:true};
-  }
-  const albums=[];const found=[];
-  // A YouTube Music OLAK playlist may be invisible to Data API; surface the warning.
-  const fetched=await Promise.allSettled(YOUTUBE_RELEASE_PLAYLISTS_R1309.map(async config=>{
-    const list=[];let page='';let pages=0;
-    do {
-      const {data}=await youtubeApiJson(env,'playlistItems',{part:'snippet,contentDetails',playlistId:config.playlistId,maxResults:50,...(page?{pageToken:page}:{})});
-      for(const item of data?.items||[]){
-        const videoId=youtubeReleaseVideoIdR1309(item?.contentDetails?.videoId||item?.snippet?.resourceId?.videoId||'');
-        const title=cleanPlainText(item?.snippet?.title||'Релиз ANDRIK',180);
-        if(videoId&&!/^(deleted|private) video$/i.test(title)) list.push({videoId,album:config.album,title});
-      }
-      page=cleanPlainText(data?.nextPageToken||'',240);
-      pages++;
-    }while(page&&pages<3);
-    return list;
-  }));
-  fetched.forEach((result,index)=>{
-    const config=YOUTUBE_RELEASE_PLAYLISTS_R1309[index];
-    const rows=result.status==='fulfilled'?result.value:[];
-    const error=result.status==='rejected'?cleanPlainText(result.reason?.message||result.reason,250):'';
-    albums.push({album:config.album,playlistId:config.playlistId,count:rows.length,status:error?'api-error':rows.length?'ok':'empty',error});
-    found.push(...rows);
-  });
-  found.push(...extras.map(videoId=>({videoId,album:'MANUAL',title:'Релиз ANDRIK'})));
-  // Preserve already discovered tracks if a previously working playlist becomes temporarily inaccessible.
-  if(found.length<cachedItems.length){
-    const known=new Set(found.map(x=>x.videoId));
-    for(const video of cachedItems){
-      if(youtubeReleaseVideoIdR1309(video.videoId)&&!known.has(video.videoId)) {found.push(video);known.add(video.videoId);}
-    }
-  }
-  const data={at:new Date().toISOString(),videos:[...new Map(found.filter(x=>youtubeReleaseVideoIdR1309(x.videoId)).map(x=>[x.videoId,x])).values()].slice(0,200),albums};
-  await setPushState(db,YOUTUBE_RELEASE_CATALOG_KEY_R1309,JSON.stringify(data)).catch(()=>{});
-  return {...data,fromCache:false};
-}
-async function fetchYoutubeReleaseVideosR1309(env,db,config={}){
-  const catalogue=await loadYoutubeReleaseCatalogueR1309(env,db,config);
-  const videos=[];const warnings=[];
-  const ids=catalogue.videos.map(x=>x.videoId);
-  const byId=new Map(catalogue.videos.map(x=>[x.videoId,x]));
-  // All tracked releases are checked for public counters; no individual liker identity is obtainable.
-  for(let i=0;i<ids.length;i+=50){
-    try {
-      const {data}=await youtubeApiJson(env,'videos',{part:'snippet,statistics',id:ids.slice(i,i+50).join(','),maxResults:50});
-      for(const row of data?.items||[]){
-        const videoId=youtubeReleaseVideoIdR1309(row.id);if(!videoId)continue;
-        const meta=byId.get(videoId)||{};
-        videos.push({videoId,album:meta.album,isRelease:true,
-          title:cleanPlainText(row?.snippet?.title||meta.title||'Релиз ANDRIK',180),
-          publishedAt:cleanPlainText(row?.snippet?.publishedAt||'',50),
-          thumbnail:row?.snippet?.thumbnails?.high?.url||row?.snippet?.thumbnails?.medium?.url||'',
-          likes:Number(row?.statistics?.likeCount||0),comments:Number(row?.statistics?.commentCount||0),
-          url:`https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`});
-      }
-    }catch(error){warnings.push(`videos: ${cleanPlainText(error?.message||error,200)}`);}
-  }
-  return {videos,catalogue,warnings,unavailable:Math.max(0,ids.length-videos.length)};
-}
-async function sweepYoutubeReleaseCommentsR1309(env,db,videos=[],identity={}){
-  if(!videos.length)return {targets:0,seen:0,sent:0,warnings:[]};
-  const sorted=[...videos].sort((a,b)=>String(a.album||'').localeCompare(String(b.album||''))||String(a.videoId).localeCompare(String(b.videoId)));
-  const cursorRow=await getPushState(db,'youtube-release-comment-sweep-offset-r1309').catch(()=>null);
-  const offset=Math.max(0,Number(cursorRow?.value||0))%sorted.length;
-  const targets=Array.from({length:Math.min(4,sorted.length)},(_,i)=>sorted[(offset+i)%sorted.length]);
-  const direct=await fetchYoutubeCommentsForVideos(env,targets,identity.channelId).catch(error=>({items:[],warnings:[String(error?.message||error)]}));
-  const map=new Map(targets.map(x=>[x.videoId,x]));
-  const enriched=(direct.items||[]).map(item=>{
-    const v=map.get(item.videoId)||{};
-    return {...item,videoTitle:item.videoTitle||v.title||'Релиз ANDRIK',thumbnail:item.thumbnail||v.thumbnail||'',album:v.album||''};
-  });
-  const delivery=await sendYoutubeCommentItemsR953(env,db,enriched,identity,new Date().toISOString(),'release-catalog-r1309');
-  await setPushState(db,'youtube-release-comment-sweep-offset-r1309',String((offset+targets.length)%sorted.length)).catch(()=>{});
-  const warnings=(direct.warnings||[]).filter(x=>!isBenignYoutubeCommentWarningR473(x)).slice(0,10);
-  const result={targets:targets.length,seen:enriched.length,sent:(delivery.notifications||[]).filter(n=>n.ok).length,
-    warnings,checkedAt:new Date().toISOString(),progress:`${(offset+targets.length)%sorted.length}/${sorted.length}`};
-  await setPushState(db,'youtube-release-comments-last-r1309',JSON.stringify(result)).catch(()=>{});
-  return result;
-}
-// ANDRIK R1312 — explicit one-time, quota-conscious distributed-release comment backfill.
-// Page-triggered only; does not schedule server jobs or send historical push alerts.
-const YOUTUBE_RELEASE_BACKFILL_KEY_R1312='youtube-release-backfill-r1312';
-function youtubeReleaseBackfillStateR1312(raw=''){
-  try{
-    const state=JSON.parse(String(raw||'{}'))||{};
-    return {
-      processedIds:[...new Set((Array.isArray(state.processedIds)?state.processedIds:[]).filter(youtubeReleaseVideoIdR1309))].slice(0,200),
-      added:Math.max(0,Number(state.added||0)),
-      seen:Math.max(0,Number(state.seen||0)),
-      denied:Math.max(0,Number(state.denied||0)),
-      errors:Math.max(0,Number(state.errors||0)),
-      lastResults:(Array.isArray(state.lastResults)?state.lastResults:[]).slice(-30),
-      updatedAt:cleanPlainText(state.updatedAt||'',60),
-      startedAt:cleanPlainText(state.startedAt||'',60)
-    };
-  }catch(_){return {processedIds:[],added:0,seen:0,denied:0,errors:0,lastResults:[],updatedAt:'',startedAt:''};}
-}
-function youtubeReleaseBackfillPublicR1312(state={},catalogue=[]){
- const ids=new Set((Array.isArray(catalogue)?catalogue:[]).map(x=>x.videoId));
- const processed=state.processedIds||[];
- const done=processed.filter(id=>ids.has(id)).length;
- return {total:ids.size,processed:done,remaining:Math.max(0,ids.size-done),completed:ids.size>0&&done>=ids.size,
-   added:Number(state.added||0),seen:Number(state.seen||0),denied:Number(state.denied||0),errors:Number(state.errors||0),
-   updatedAt:state.updatedAt||'',startedAt:state.startedAt||'',lastResults:(state.lastResults||[]).slice(-12)};
-}
-async function importYoutubeReleaseCommentBatchR1312(env,db,body={}){
- const cat=await loadYoutubeReleaseCatalogueR1309(env,db,{force:false});
- const videos=Array.isArray(cat.videos)?cat.videos.filter(x=>youtubeReleaseVideoIdR1309(x.videoId)):[];
- const row=await getPushState(db,YOUTUBE_RELEASE_BACKFILL_KEY_R1312).catch(()=>null);
- let state=youtubeReleaseBackfillStateR1312(row?.value||'');
- if(body.reset===true){state=youtubeReleaseBackfillStateR1312('');state.startedAt=new Date().toISOString();}
- if(!state.startedAt)state.startedAt=new Date().toISOString();
- const done=new Set(state.processedIds||[]);
- const next=videos.filter(v=>!done.has(v.videoId)).slice(0,5);
- if(!next.length){
-  state.updatedAt=new Date().toISOString();
-  await setPushState(db,YOUTUBE_RELEASE_BACKFILL_KEY_R1312,JSON.stringify(state));
-  return youtubeReleaseBackfillPublicR1312(state,videos);
- }
- // Do not rely on commentCount: a Topic video's public counters can omit comment details.
- const ownerState=await getPushState(db,'youtube-websub-channel-id-r332').catch(()=>null);
- const channelId=cleanPlainText(env.YOUTUBE_CHANNEL_ID||ownerState?.value||'',120);
- const identity={channelId,handle:cleanPlainText(env.YOUTUBE_CHANNEL_HANDLE||'@andrikmetal',100)};
- const results=await Promise.all(next.map(async video=>{
-  const result={videoId:video.videoId,album:cleanPlainText(video.album||'',60),title:cleanPlainText(video.title||'Релиз ANDRIK',150),status:'ok',seen:0,added:0,error:''};
-  try{
-   // Up to two commentThreads pages (200 top-level comments); no repeated full searches.
-   let page='',pages=0;
-   const comments=[];
-   do{
-    const {data}=await youtubeApiJson(env,'commentThreads',{
-      part:'snippet,replies',videoId:video.videoId,maxResults:100,order:'time',textFormat:'plainText',...(page?{pageToken:page}:{})
-    },{timeoutMs:9500});
-    const incomplete=[];
-    for(const thread of data?.items||[]){
-      const top=parseYoutubeCommentItem(thread?.snippet?.topLevelComment||{},video);
-      if(top.id)comments.push(top);
-      const embedded=thread?.replies?.comments||[];
-      for(const reply of embedded){const c=parseYoutubeCommentItem(reply,video);if(c.id)comments.push(c);}
-      const total=Math.max(0,Number(thread?.snippet?.totalReplyCount||0));
-      if(top.id&&total>embedded.length)incomplete.push(top.id);
-    }
-    if(incomplete.length){
-      const extra=await fetchYoutubeThreadReplies(env,incomplete,new Map([[video.videoId,video]])).catch(()=>({items:[]}));
-      comments.push(...(extra.items||[]));
-    }
-    pages++;
-    page=cleanPlainText(data?.nextPageToken||'',300);
-   }while(page&&pages<2);
-   // Write only listener comments. Existing IDs remain unchanged, preserving notification state.
-   for(const comment of uniqueYoutubeComments(comments).filter(c=>!isYoutubeOwnerComment(c,identity))){
-     result.seen++;
-     const key=`comment:${comment.id}`;
-     if(await getYoutubeEventRow(db,key).catch(()=>null))continue;
-     const enriched={...comment,album:video.album||'',videoTitle:video.title||comment.videoTitle||'Релиз ANDRIK',
-       seededSilently:true,mode:'release-backfill-r1312'};
-     await saveYoutubeEventRow(db,{key,type:'comment',resourceId:comment.id,videoId:video.videoId,
-       author:comment.author,title:comment.text,url:comment.url,payload:enriched});
-     result.added++;
-   }
-   if(page){result.status='partial';result.error='Больше 200 веток; остальные доступны при расширенном импорте';}
-   else result.status=result.seen>0?'comments':'empty';
-  }catch(error){
-   result.error=cleanPlainText(error?.message||error,210);
-   result.status=/comments?disabled|has disabled comments|disabled comments|not available|forbidden|permission/i.test(result.error)?'unavailable':'error';
-  }
-  return result;
- }));
- state.processedIds=[...new Set([...(state.processedIds||[]),...next.map(x=>x.videoId)])].slice(0,200);
- state.seen+=results.reduce((n,r)=>n+r.seen,0);
- state.added+=results.reduce((n,r)=>n+r.added,0);
- state.denied+=results.filter(r=>r.status==='unavailable').length;
- state.errors+=results.filter(r=>r.status==='error'||r.status==='partial').length;
- state.lastResults=[...(state.lastResults||[]),...results].slice(-30);
- state.updatedAt=new Date().toISOString();
- await setPushState(db,YOUTUBE_RELEASE_BACKFILL_KEY_R1312,JSON.stringify(state));
- return {...youtubeReleaseBackfillPublicR1312(state,videos),batch:results};
-}
-
-async function handleYoutubeReleaseMonitorR1309(request,env){
-  if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
-  const db=requireDb(env);await Promise.all([ensurePushAutomationSchema(db),ensurePlatformAnalyticsSchema(db)]);
-  if(request.method==='POST'){
-    const body=await request.json().catch(()=>({}));
-    if(body.action==='backfill-comments')return json({ok:true,backfill:await importYoutubeReleaseCommentBatchR1312(env,db,body)});
-    if(body.action==='set-video-ids'){
-      const ids=youtubeReleaseManualIdsR1309(Array.isArray(body.ids)?JSON.stringify(body.ids):String(body.ids||''));
-      await setPushState(db,YOUTUBE_RELEASE_MANUAL_KEY_R1309,JSON.stringify(ids));
-      return json({ok:true,manualVideoIds:ids});
-    }
-    if(body.action==='refresh-catalog'){
-      const catalogue=await loadYoutubeReleaseCatalogueR1309(env,db,{force:true});
-      return json({ok:true,catalogue:{count:catalogue.videos.length,albums:catalogue.albums,updatedAt:catalogue.at}});
-    }
-    return json({ok:false,error:'invalid-action'},400);
-  }
-  const row=await getPushState(db,YOUTUBE_RELEASE_CATALOG_KEY_R1309).catch(()=>null);
-  const sweep=await getPushState(db,'youtube-release-comments-last-r1309').catch(()=>null);
-  const stats=await getPushState(db,'youtube-release-stats-last-r1309').catch(()=>null);
-  const manual=await getPushState(db,YOUTUBE_RELEASE_MANUAL_KEY_R1309).catch(()=>null);
-  const backfillRow=await getPushState(db,YOUTUBE_RELEASE_BACKFILL_KEY_R1312).catch(()=>null);
-  const parse=x=>{try{return JSON.parse(String(x?.value||'{}'))||{}}catch(_){return {}}};
-  const a=parse(row),b=parse(sweep),c=parse(stats);
-  return json({ok:true,catalogue:{count:(a.videos||[]).length,albums:a.albums||[],updatedAt:a.at||''},
-    stats:c,sweep:b,backfill:youtubeReleaseBackfillPublicR1312(youtubeReleaseBackfillStateR1312(backfillRow?.value||''),[...(a.videos||[]),...youtubeReleaseManualIdsR1309(manual?.value||'').map(videoId=>({videoId,album:'MANUAL'}))]),manualVideoIds:youtubeReleaseManualIdsR1309(manual?.value||''),
-    note:'Only tracks returned by the YouTube Data API or explicitly listed by video ID are monitored. Likes are aggregate counter changes; Topic-channel comments may be disabled or inaccessible.'});
-}
-
 async function handleFastYoutubeEngagementR333(request,env,options={}){
 if(!adminAuthorized(request,env) && !cronAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
 const db=requireDb(env);
@@ -8603,10 +8369,7 @@ if(!channelId)throw new Error('youtube-channel-id-unavailable');
 const videoSettled=await Promise.allSettled([fetchFastYoutubeLikesR333(env,db),fetchYoutubeActiveLiveEngagementR669(env,db)]);
 const catalogueVideos=videoSettled[0].status==='fulfilled'?videoSettled[0].value:[];
 const liveProbe=videoSettled[1].status==='fulfilled'?videoSettled[1].value:{video:null,liveChatId:'',warning:cleanPlainText(videoSettled[1].reason?.message||videoSettled[1].reason||'',260),source:'probe-rejected-r669'};
-const releaseProbe=await fetchYoutubeReleaseVideosR1309(env,db).catch(error=>({videos:[],catalogue:{videos:[],albums:[]},warnings:[cleanPlainText(error?.message||error,240)],unavailable:0}));
 const videos=[...catalogueVideos];
-const existingVideoIdsR1309=new Set(videos.map(x=>x.videoId));
-for(const video of releaseProbe.videos||[]){if(!existingVideoIdsR1309.has(video.videoId)){videos.push(video);existingVideoIdsR1309.add(video.videoId);}}
 if(liveProbe?.video){
 const index=videos.findIndex(row=>row.videoId===liveProbe.video.videoId);
 if(index>=0)videos[index]={...videos[index],...liveProbe.video,isLive:true};
@@ -8616,14 +8379,8 @@ const directComments=videos.length
 ? await fetchFastYoutubeCommentsDirectR473(env,db,videos,channelId)
 : {items:[],warnings:[cleanPlainText(videoSettled[0].reason?.message||'youtube-videos-unavailable',240)],targets:[]};
 const comments=directComments.items||[];
-const releaseSweepR1309=await sweepYoutubeReleaseCommentsR1309(env,db,releaseProbe.videos||[],{channelId,handle:cleanPlainText(env.YOUTUBE_CHANNEL_HANDLE||'@andrikmetal',100)})
-  .catch(error=>({targets:0,seen:0,sent:0,warnings:[cleanPlainText(error?.message||error,240)]}));
-await setPushState(db,'youtube-release-stats-last-r1309',JSON.stringify({
-  checkedAt:startedAt,tracked:(releaseProbe.videos||[]).length,discovered:(releaseProbe.catalogue?.videos||[]).length,
-  unavailable:releaseProbe.unavailable||0,warnings:releaseProbe.warnings||[]
-})).catch(()=>{});
 if (videoSettled[0].status==='fulfilled' || liveProbe?.video) {
-await recordYoutubeObservedLikeBatchR469(db,[...catalogueVideos,...(liveProbe?.video?[liveProbe.video]:[])],startedAt).catch(()=>{});
+await recordYoutubeObservedLikeBatchR469(db,videos,startedAt).catch(()=>{});
 }
 const videoMap=new Map(videos.map(v=>[v.videoId,v]));
 const identity={channelId,handle:cleanPlainText(env.YOUTUBE_CHANNEL_HANDLE || '@andrikmetal',100)};
@@ -8738,7 +8495,6 @@ const summary={
 ok:warnings.length===0 && failed===0,
 commentsSeen:comments.length+Math.max(0,Number(liveChat?.seen||0)),
 commentMode:'direct-video+livechat-r669',
-releaseMonitor:{tracked:(releaseProbe.videos||[]).length,discovered:(releaseProbe.catalogue?.videos||[]).length,unavailable:releaseProbe.unavailable||0,commentSweep:releaseSweepR1309},
 commentTargets:(directComments.targets||[]).length,
 videosChecked:videos.length,
 liveVideoId:cleanPlainText(liveProbe?.video?.videoId||'',80),
@@ -15746,9 +15502,7 @@ try { return JSON.parse(value || '{}') || {}; }
 catch (_) { return {}; }
 }
 async function loadUnifiedCommentCollection(db) {
-// R1313: reading the comment archive does not require the unrelated OAuth/backup/release
-// schema. Avoid its many D1 CREATE INDEX/CREATE TABLE operations on a read-only request.
-await ensureCommentsV4Schema(db);
+await Promise.all([ensureCommentsV4Schema(db), ensureControlV1Schema(db)]);
 const [siteResult, youtubeResult] = await Promise.all([
 db.prepare(`
       SELECT id, name, message, locale, status,
@@ -20454,7 +20208,6 @@ return await handleCheckYoutubeEvents(request, env);
 }
 if (path === '/api/youtube/websub/subscribe' && request.method === 'POST') return await handleYoutubeWebSubSubscribeR332(request, env);
 if (path === '/api/youtube/websub/status' && request.method === 'GET') return await handleYoutubeWebSubStatusR332(request, env);
-if (path === '/api/control/youtube-release-monitor' && (request.method==='GET'||request.method==='POST')) return await handleYoutubeReleaseMonitorR1309(request,env);
 if (path === '/api/automation/youtube-fast' && request.method === 'POST') return await handleFastYoutubeReleaseCheckR332(request, env);
 if (path === '/api/automation/youtube-engagement-fast' && request.method === 'POST') return await handleFastYoutubeEngagementR333(request, env);
 if (path === '/api/automation/summary-checkpoint' && (request.method === 'GET' || request.method === 'POST')) return await handleExternalSummaryCheckpointR399(request, env);
@@ -21800,7 +21553,7 @@ return new Response(youtubeControlLiveCacheR797.body,{status:youtubeControlLiveC
 const response=await handleControlYoutubeLiveR565(request,env);
 if(!fresh && response.ok){
 const body=await response.clone().text();
-youtubeControlLiveCacheR797={expiresAt:Date.now()+55*1000,status:response.status,body};
+youtubeControlLiveCacheR797={expiresAt:Date.now()+25*1000,status:response.status,body};
 }
 return response;
 }
@@ -22212,21 +21965,6 @@ if(cached)return {...cached,error:cleanPlainText(error?.message||error,260)};
 return {healthStatus:'',streamStatus:'',healthIssues:[],boundStreamId:'',updatedAt:'',cached:false,source:'health-unavailable-r1158',error:cleanPlainText(error?.message||error,260)};
 }
 }
-// R1313: read-only fast-path cached display counters. Missing cache stays null,
-// rather than presenting video viewCount as a different YouTube Studio metric.
-async function readYoutubeFastCountersR1313(env,videoId){
- const [studio,visible]=await Promise.all([
-   readYoutubeStudioViewsCacheR944(env,videoId).catch(()=>null),
-   readYoutubeVisibleViewsCacheR948(env,videoId).catch(()=>null)
- ]);
- return [
-   {studioViews:studio?.value??null,engagedViews:studio?.value??null,
-    source:studio?.source||'no-studio-cache-r1313',updatedAt:studio?.updatedAt||'',
-    processing:!studio,cached:Boolean(studio)},
-   {value:visible?.value??null,source:visible?.source||'no-visible-cache-r1313',
-    updatedAt:visible?.updatedAt||'',cached:Boolean(visible)}
- ];
-}
 async function handleControlYoutubeLiveR565(request, env) {
 if (!adminAuthorized(request, env)) return json({ok:false,error:'unauthorized'},401);
 const requestUrl=new URL(request.url);
@@ -22335,15 +22073,8 @@ const broadcastLive=lifeCycleStatus.toLowerCase()==='live' || Boolean(details?.a
 const signalActive=streamStatus.toLowerCase()==='active';
 const active=broadcastLive;
 const publicStartsR946=Math.max(0,Number(statistics?.viewCount||0));
-// R1313: normal status must never await slow HTML scraping or 10+ Analytics
-// queries. Retrieve only previously verified counters, keeping provenance.
-const deepR1313=requestUrl.searchParams.get('deep')==='1';
-const [studioViewsR942,visibleViewsR946]=deepR1313
- ? await Promise.all([
-   fetchYoutubeStudioViewsR942(env,videoId,details?.actualStartTime||broadcast?.snippet?.actualStartTime||'',publicStartsR946),
-   fetchYoutubeVisibleViewsR946(env,videoId,publicStartsR946)
- ])
- : await readYoutubeFastCountersR1313(env,videoId);
+const studioViewsR942=await fetchYoutubeStudioViewsR942(env,videoId,details?.actualStartTime||broadcast?.snippet?.actualStartTime||'',publicStartsR946);
+const visibleViewsR946=await fetchYoutubeVisibleViewsR946(env,videoId,publicStartsR946);
 const displayViewsR946=(Number(visibleViewsR946?.value)>0)?Math.max(0,Number(visibleViewsR946.value)):((Number(studioViewsR942?.studioViews)>0)?Math.max(0,Number(studioViewsR942.studioViews)):null);
 const engagedViewsR938=studioViewsR942.engagedViews;
 await writeYoutubeLiveHealthCacheR1158(env,videoId,{
@@ -22393,12 +22124,8 @@ video=Array.isArray(data?.items)?data.items[0]||null:null;
 const details=video?.liveStreamingDetails||{};
 const statistics=video?.statistics||{};
 const publicStartsR946=Math.max(0,Number(statistics?.viewCount||0));
-const [studioViewsR942,visibleViewsR946]=requestUrl.searchParams.get('deep')==='1'
- ? await Promise.all([
-   fetchYoutubeStudioViewsR942(env,videoId,details?.actualStartTime||'',publicStartsR946),
-   fetchYoutubeVisibleViewsR946(env,videoId,publicStartsR946)
- ])
- : await readYoutubeFastCountersR1313(env,videoId);
+const studioViewsR942=await fetchYoutubeStudioViewsR942(env,videoId,details?.actualStartTime||'',publicStartsR946);
+const visibleViewsR946=await fetchYoutubeVisibleViewsR946(env,videoId,publicStartsR946);
 const displayViewsR946=(Number(visibleViewsR946?.value)>0)?Math.max(0,Number(visibleViewsR946.value)):((Number(studioViewsR942?.studioViews)>0)?Math.max(0,Number(studioViewsR942.studioViews)):null);
 const engagedViewsR938=studioViewsR942.engagedViews;
 const liveHealthR1158=await probeYoutubeLiveHealthR1158(env,videoId);
