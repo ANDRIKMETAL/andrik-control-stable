@@ -1,14 +1,14 @@
 {
   "schema": 1,
   "updaterVersion": "55.00-r358-deploy-nohang",
-  "operation": "publish",
-  "reinstall": false,
-  "operationId": "publish-1792050258924-e4942b479a",
+  "operation": "reinstall",
+  "reinstall": true,
+  "operationId": "reinstall-1792050477202-3fa1c2c98a",
   "release": "R1313",
   "archiveName": "SITE-R1313-LIVE-STATS-ARCHIVE-SAFE-FULL.zip",
-  "sourceHead": "b9bb16d88050492906cb5f7b156e8088ea3b3467",
-  "backupSha": "b9bb16d88050492906cb5f7b156e8088ea3b3467",
+  "sourceHead": "5b3a47f9c646d7eafe12fe5dc9481f64ccaff36c",
+  "backupSha": "5b3a47f9c646d7eafe12fe5dc9481f64ccaff36c",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-10-15T07:44:20.780Z"
+  "generatedAt": "2026-10-15T07:47:57.202Z"
 }
