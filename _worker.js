@@ -18693,6 +18693,27 @@ return new Response(object.body,{status:200,headers});
 // R1258 / R1321: one owner-selected 8s studio loop for the five official albums.
 // The radio server composites the square album cover + CURRENT / PREVIOUS / NEXT
 // inside the studio monitor. Extras keep the existing background path.
+
+// R1430: selectable five-album visual mode. R2 is the single source of truth.
+const RADIO_ALBUM_MODE_KEY_R1430='radio/settings/album-visual-mode-r1430.json';
+async function handleAlbumModeR1430(request,env){
+  const bucket=getMusicBucketR314(env);
+  if(!bucket)return json({ok:false,error:'music-bucket-not-configured'},503);
+  if(request.method==='GET'){
+    const object=await bucket.get(RADIO_ALBUM_MODE_KEY_R1430).catch(()=>null);
+    let mode='studio';
+    if(object){try{const data=await object.json();if(data.mode==='static'||data.mode==='studio')mode=data.mode}catch(_){}}
+    return json({ok:true,mode,ticker:mode==='static'?'R1277-BAKED':'OFF-STUDIO'});
+  }
+  if(request.method==='PUT'){
+    if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
+    let data;try{data=await request.json()}catch(_){return json({ok:false,error:'invalid-json'},400)}
+    if(data?.mode!=='static'&&data?.mode!=='studio')return json({ok:false,error:'invalid-mode'},400);
+    await bucket.put(RADIO_ALBUM_MODE_KEY_R1430,JSON.stringify({mode:data.mode,updatedAt:new Date().toISOString()}),{httpMetadata:{contentType:'application/json'}});
+    return json({ok:true,mode:data.mode,applies:'next-track'});
+  }
+  return json({ok:false,error:'method-not-allowed'},405);
+}
 const RADIO_STUDIO_LOOP_KEY_R1321='radio/studio/andrik-studio-loop-r1321.mp4';
 async function handleRadioStudioR1321(request,env){
 if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
@@ -20277,6 +20298,7 @@ if (path === '/api/control/vps-backup-r1030/status' && request.method === 'GET')
 if ((path === '/api/control/vps-backup-r1033/set' || path === '/api/control/vps-backup-r1034/set') && request.method === 'GET') return await handleVpsBackupSetR1033(request, env);
 if (path === '/api/control/radio-server-zips-r1258' && ['GET','PUT','DELETE'].includes(request.method)) return await handleRadioServerZipsR1258(request, env);
 if (path === '/api/radio-server-zip-r1258/download' && request.method === 'GET') return await handleRadioServerZipDownloadR1258(request, env);
+if (path === '/api/radio/album-mode-r1430' && ['GET','PUT'].includes(request.method)) return await handleAlbumModeR1430(request, env);
 if (path === '/api/control/radio-studio-r1321' && ['GET','PUT','DELETE'].includes(request.method)) return await handleRadioStudioR1321(request, env);
 if (path === '/api/media/radio-studio-r1321' && (request.method === 'GET' || request.method === 'HEAD')) return await handleRadioStudioPublicR1321(request, env);
 if (path === '/api/control/radio-backgrounds-r1211' && ['GET','PUT','DELETE'].includes(request.method)) return await handleRadioAlbumBgR1211(request, env);

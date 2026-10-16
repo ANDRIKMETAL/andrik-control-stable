@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r358-deploy-nohang",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1792050904766-f9e8f7160c",
-  "release": "R1308",
-  "archiveName": "SITE-R1308-LYRA-ABC-STORY-SOCIAL-FULL.zip",
-  "sourceHead": "6b80cf09452a40a8c280bc26c26793b53918d909",
-  "backupSha": "6b80cf09452a40a8c280bc26c26793b53918d909",
+  "operationId": "publish-1792145410979-fa1adbef4a",
+  "release": "R1430",
+  "archiveName": "SITE-R1430-ALBUM-MODE-FULL.zip",
+  "sourceHead": "19940c1ba820e49cf80ac1b34bf85d51ce1fd5b8",
+  "backupSha": "19940c1ba820e49cf80ac1b34bf85d51ce1fd5b8",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-10-15T07:55:07.005Z"
+  "generatedAt": "2026-10-16T10:10:12.624Z"
 }
