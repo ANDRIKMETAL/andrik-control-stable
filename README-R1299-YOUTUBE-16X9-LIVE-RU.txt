@@ -3,8 +3,8 @@ DATE: 2026-10-14
 BASE: SITE-R1298-FACEBOOK-COMPACT-FULL.zip (full archive)
 
 NEW OWNER RADIO LIVE:
-https://www.youtube.com/live/ZmMyMwX_FrM
-YouTube videoId: ZmMyMwX_FrM
+https://www.youtube.com/live/QajCKMBDasA
+YouTube videoId: QajCKMBDasA
 
 CHANGES:
 - Exact static fallback LIVE references replaced in home, radio control,
@@ -31,7 +31,7 @@ HOW TO DEPLOY:
 2. Visit https://andrikmetal.com/cache-reset.html
 3. Close/reopen site Control PWA if installed.
 4. Test https://andrikmetal.com/api/public/youtube-live-target?fresh=1
-   Expected videoId=ZmMyMwX_FrM, active=true while live; if no verified LIVE,
+   Expected videoId=QajCKMBDasA, active=true while live; if no verified LIVE,
    API may report inactive (DO NOT fabricate counters).
 5. Verify homepage 'Слушать радио' launches native YouTube app;
    verify /radio-youtube-admin.html and /radio-control-admin.html.
