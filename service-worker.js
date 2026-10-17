@@ -1,5 +1,5 @@
 'use strict';
-const VERSION = '55.00-r1451-home-restore';
+const VERSION = '55.00-r1453-live-singles';
 const IS_CONTROL_HOST = self.location.hostname.toLowerCase() === 'control.andrikmetal.com';
 async function deleteControlCaches(){
 if(!self.caches) return;
@@ -36,6 +36,8 @@ const CORE = [
 "/assets/home-r1194.css?v=55.00-r1205v2",
 "/assets/home-compact-r1308.css",
 "/assets/home-r1308.js?v=r1308",
+"/assets/andrik-home-r1453.css?v=1453",
+"/assets/home-links-r1453.js?v=1453",
 "/assets/andrik-radio-mini-r1199.webp",
 "/assets/lyra-hero-r1192.mp4",
 "/assets/lyra-hero-r1192.webp",

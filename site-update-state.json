@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r358-deploy-nohang",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1792263850154-ebe0f2952b",
-  "release": "R1452",
-  "archiveName": "SITE-R1452-AMOLED-RED-METAL-HOME-FULL.zip",
-  "sourceHead": "706292bc25152e4271ec062c4c6a6be860683dc6",
-  "backupSha": "706292bc25152e4271ec062c4c6a6be860683dc6",
+  "operationId": "publish-1792265740968-f42229fd4e",
+  "release": "R1453",
+  "archiveName": "SITE-R1453-LIVE-SINGLES-AMOLED-FULL.zip",
+  "sourceHead": "3402c61a110aa00c99b729c7c60c5bbd04d04031",
+  "backupSha": "3402c61a110aa00c99b729c7c60c5bbd04d04031",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-10-17T19:04:10.154Z"
+  "generatedAt": "2026-10-17T19:35:40.968Z"
 }
