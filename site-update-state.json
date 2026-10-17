@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r358-deploy-nohang",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1792259561025-3617a0c7e7",
-  "release": "R1450",
-  "archiveName": "SITE-R1450-HOME-MUSIC-FULL.zip",
-  "sourceHead": "e88205181b8789e403f0d0244c0e5e7b8e5c0eac",
-  "backupSha": "e88205181b8789e403f0d0244c0e5e7b8e5c0eac",
+  "operationId": "publish-1792262217294-db1bca0d49",
+  "release": "R1451",
+  "archiveName": "SITE-R1451-HOME-R1446-GAME-R1450-FULL.zip",
+  "sourceHead": "1d046c7d1f98719049075e4b07035ea03941c983",
+  "backupSha": "1d046c7d1f98719049075e4b07035ea03941c983",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-10-17T17:52:41.025Z"
+  "generatedAt": "2026-10-17T18:36:57.294Z"
 }
