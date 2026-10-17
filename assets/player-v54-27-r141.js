@@ -2122,6 +2122,16 @@ embeddedSiteReady = true;
 siteView?.classList.add('ready');
 syncEmbeddedSitePadding();
 }
+if (event.data.type === 'andrik-home-audio-start' && event.origin === location.origin && event.source === siteFrame?.contentWindow) {
+pendingAutoplay = false;
+if (ready && player) player.pauseVideo?.();
+setPlaying(false);
+if (siteModeActive) {
+miniPlayerDismissed = true;
+document.body.classList.add('player-dismissed');
+syncEmbeddedSitePadding();
+}
+}
 if (event.data.type === 'andrik-open-player') {
 requestFullPlayer(event.data.collection || null, event.data);
 }

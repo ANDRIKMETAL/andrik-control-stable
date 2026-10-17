@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r358-deploy-nohang",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1792258342984-7cd17a49c2",
-  "release": "R1449",
-  "archiveName": "SITE-R1449-LYRA-AIM-UPGRADES-FULL.zip",
-  "sourceHead": "b592ab37651aa2f0b44f8d0d04b430a95fa748b7",
-  "backupSha": "b592ab37651aa2f0b44f8d0d04b430a95fa748b7",
+  "operationId": "publish-1792259561025-3617a0c7e7",
+  "release": "R1450",
+  "archiveName": "SITE-R1450-HOME-MUSIC-FULL.zip",
+  "sourceHead": "e88205181b8789e403f0d0244c0e5e7b8e5c0eac",
+  "backupSha": "e88205181b8789e403f0d0244c0e5e7b8e5c0eac",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-10-17T17:32:22.984Z"
+  "generatedAt": "2026-10-17T17:52:41.025Z"
 }
