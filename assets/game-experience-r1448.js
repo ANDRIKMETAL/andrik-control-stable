@@ -1,5 +1,5 @@
-import {createGrowthUI} from './growth-ui-r1449.js?v=r1455';
-import {createGameSound} from './game-sound-r1448.js?v=r1455';
+import {createGrowthUI} from './growth-ui-r1449.js?v=r1457';
+import {createGameSound} from './game-sound-r1448.js?v=r1457';
 const KEY='andrik-game-settings-r1448',LEARN='andrik-game-learned-r1448';
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 export const DEFAULTS={quality:'auto',fps:60,buttonScale:1,stickScale:1,opacity:.38,horizontal:16,vertical:16,follow:true,aimAssist:true,guidance:'auto',tutorial:true,motion:.5,flashes:.65};

@@ -1,5 +1,5 @@
 import * as T from './vendor/three-r170.module.min.js';
-import {addBlade,poseBlade} from './lyra-blade-r1455.js?v=r1455';
+import {addBlade,poseBlade} from './lyra-blade-r1455.js?v=r1457';
 // Metre-scale articulated mesh. Geometry belongs to the scene and is disposed on exit.
 export function createLyra(){
  const root=new T.Group(),body=new T.Group();root.name='Lyra-unmasked';root.add(body);

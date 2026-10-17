@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r358-deploy-nohang",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1792276185085-7d485f927f",
-  "release": "R1456",
-  "archiveName": "SITE-R1456-EXTRAS-LOOP-AUTH-FULL.zip",
-  "sourceHead": "7c3b56da35aac36819aff3a2c4a0f15658b4e889",
-  "backupSha": "7c3b56da35aac36819aff3a2c4a0f15658b4e889",
+  "operationId": "publish-1792278919763-e5c7247862",
+  "release": "R1457",
+  "archiveName": "SITE-R1457-LYRA-WORLDS-BOSSES-FULL.zip",
+  "sourceHead": "79d5ec7c247e96a036b7e2b02adaf37691221c65",
+  "backupSha": "79d5ec7c247e96a036b7e2b02adaf37691221c65",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-10-17T22:29:46.349Z"
+  "generatedAt": "2026-10-17T23:15:19.763Z"
 }

@@ -1,5 +1,5 @@
-import {beginAim,updateAim} from './aim-assist-r1449.js?v=r1455';
-import {isBladeAction,beginBlade,bladeHit} from './blade-r1455.js?v=r1455';
+import {beginAim,updateAim} from './aim-assist-r1449.js?v=r1457';
+import {isBladeAction,beginBlade,bladeHit} from './blade-r1455.js?v=r1457';
 import {attackSlot,facesTarget,waitForAttack,modernBoss,bossDamage} from './encounters-r1448.js?v=r1448';
 /* State-only combat additions. No renderer, assets, timers or save-key changes. */
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
@@ -63,7 +63,7 @@ export function installCombatR1447(State,{move,blocked,clamp,enemyRouteDirection
   if(a.kind==='attack'&&a.spin){
    if(!(a.victims instanceof Set))a.victims=new Set();
    for(const e of this.living){
-    if(a.victims.has(e.id)||distance(e,this.p)>(this.growthStats?.guitarRange??3.55)||Math.abs((e.y||0)-this.p.y)>1.8||blocked(this.p,e,this.geo.walls))continue;
+    if(a.victims.has(e.id)||distance(e,this.p)>(this.growthStats?.guitarRange??3.55)+(e.hurtRadius||0)||Math.abs((e.y||0)-this.p.y)>1.8||blocked(this.p,e,this.geo.walls))continue;
     if(e.kind==='boss'&&!modernBoss(this)&&this.bossOpen<=0){if(!a.blocked){a.blocked=true;this.emit('blocked');}continue;}
     a.victims.add(e.id);this.hit(e,bossDamage(this,e,Math.round(26*(this.growthStats?.guitarDamage??1))),e.kind==='boss'?0:3.25);
    }
