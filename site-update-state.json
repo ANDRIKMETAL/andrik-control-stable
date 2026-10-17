@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r358-deploy-nohang",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1792262217294-db1bca0d49",
-  "release": "R1451",
-  "archiveName": "SITE-R1451-HOME-R1446-GAME-R1450-FULL.zip",
-  "sourceHead": "1d046c7d1f98719049075e4b07035ea03941c983",
-  "backupSha": "1d046c7d1f98719049075e4b07035ea03941c983",
+  "operationId": "publish-1792263850154-ebe0f2952b",
+  "release": "R1452",
+  "archiveName": "SITE-R1452-AMOLED-RED-METAL-HOME-FULL.zip",
+  "sourceHead": "706292bc25152e4271ec062c4c6a6be860683dc6",
+  "backupSha": "706292bc25152e4271ec062c4c6a6be860683dc6",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-10-17T18:36:57.294Z"
+  "generatedAt": "2026-10-17T19:04:10.154Z"
 }
