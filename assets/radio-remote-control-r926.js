@@ -450,7 +450,7 @@ if(tickerSaving)return;
 text=String(text??'').replace(/[\r\n\t]+/g,' ').replace(/\s+/g,' ').trim().slice(0,240);
 if(text===lastServerTicker)return;
 tickerSaving=true;setTickerMsg('Передаю текст на OVH…','work');
-try{const d=await api('/api/control/radio-remote-r627/ticker',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({text})});lastServerTicker=String(d?.ticker?.text||text);setTickerMsg('✅ Обновлено. На экране эфира появится в течение ~5 секунд.','ok');document.querySelectorAll('[data-radio-ticker-live]').forEach(el=>el.textContent=lastServerTicker||'—')}
+try{const d=await api('/api/control/radio-remote-r627/ticker',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({text})});lastServerTicker=String(d?.ticker?.text||text);setTickerMsg('✅ Текст сохранён. Появится с начала следующей песни или клипа.','ok');document.querySelectorAll('[data-radio-ticker-live]').forEach(el=>el.textContent=lastServerTicker||'—')}
 catch(e){setTickerMsg(`Ошибка строки: ${e.message}`,'bad')}
 finally{tickerSaving=false}
 }

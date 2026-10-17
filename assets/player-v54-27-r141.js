@@ -1,5 +1,21 @@
 const tr = key => (window.andrikPlayerT ? window.andrikPlayerT(key) : key);
+const silentAlbumText = ({
+ru: ['SILENT · ОФИЦИАЛЬНЫЙ АЛЬБОМ', '20 треков · 2026'],
+uk: ['SILENT · ОФІЦІЙНИЙ АЛЬБОМ', '20 треків · 2026'],
+sk: ['SILENT · OFICIÁLNY ALBUM', '20 skladieb · 2026'],
+en: ['SILENT · OFFICIAL ALBUM', '20 tracks · 2026']
+})[document.documentElement.lang] || ['SILENT · ОФИЦИАЛЬНЫЙ АЛЬБОМ', '20 треков · 2026'];
 const COLLECTIONS = {
+silent: {
+type: 'playlist',
+id: 'OLAK5uy_kmzUPliQduZ4MMVT0vOQU52JYI1dKgG-4',
+label: silentAlbumText[0],
+name: 'Silent (Тишина)',
+note: silentAlbumText[1],
+placeholder: '/assets/silent-cover-r1159.webp',
+url: 'https://youtube.com/playlist?list=OLAK5uy_kmzUPliQduZ4MMVT0vOQU52JYI1dKgG-4',
+positionLabel: 'ALBUM'
+},
 beyond: {
 type: 'playlist',
 id: 'OLAK5uy_lhSLqnftrXxdsLohdu9AQ7W9300_dvU9Y',
@@ -336,8 +352,8 @@ const standaloneMode = playerParams.get('standalone') === '1';
 const requestedReturnTarget = playerParams.get('return');
 const requestedReturnPathRaw = playerParams.get('returnPath') || '';
 const requestedReturnHashRaw = playerParams.has('returnHash') ? (playerParams.get('returnHash') || '') : '';
-const RETURN_TARGETS = new Set(['video','prosnis','album-beyond','album-trika','album-ocean','album-illusion','discography']);
-const DEFAULT_RETURN_TARGETS = { videos:'video', prosnis:'prosnis', beyond:'album-beyond', trika:'album-trika', ocean:'album-ocean', illusion:'album-illusion' };
+const RETURN_TARGETS = new Set(['video','prosnis','album-silent','album-beyond','album-trika','album-ocean','album-illusion','discography']);
+const DEFAULT_RETURN_TARGETS = { videos:'video', prosnis:'prosnis', silent:'album-silent', beyond:'album-beyond', trika:'album-trika', ocean:'album-ocean', illusion:'album-illusion' };
 const returnTarget = RETURN_TARGETS.has(requestedReturnTarget) ? requestedReturnTarget : (DEFAULT_RETURN_TARGETS[requestedCollection] || 'discography');
 const requestedReturnScroll = Number.parseInt(playerParams.get('scroll') || '', 10);
 const returnScroll = Number.isFinite(requestedReturnScroll) && requestedReturnScroll >= 0 ? requestedReturnScroll : null;

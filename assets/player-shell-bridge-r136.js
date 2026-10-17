@@ -297,7 +297,7 @@ button.title = label;
 const currentReturnContext = anchor => {
 const cleanCurrent = new URL(location.href);
 ['player-shell','returnScroll','_updated','v'].forEach(key => cleanCurrent.searchParams.delete(key));
-const source = anchor?.closest?.('#video, #prosnis, #album-ocean, #album-illusion');
+const source = anchor?.closest?.('#video, #prosnis, #album-silent, #album-beyond, #album-trika, #album-ocean, #album-illusion');
 const target = source?.id || null;
 return {
 returnPath: `${cleanCurrent.pathname}${cleanCurrent.search}`,

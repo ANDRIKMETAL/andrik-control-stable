@@ -133,6 +133,14 @@ if(items.some(x=>/\bis-(?:running|done|warn|error|skipped)\b/.test(x.className))
 return 'auto';
 };
 const sync=()=>{
+// This page owns its installation state; do not infer errors from message text.
+const installation=body?.classList.contains('site-update-page')&&window.AndrikSiteUpdateProgress?.state;
+if(installation){
+root.dataset.andrikHeaderState=installation.headerState;
+delete root.dataset.andrikSectionLock;
+logo.dataset.andrikGlowActive=installation.headerState;
+return;
+}
 stage=readStage();
 const critical=logo.classList.contains('is-error')||stage==='red'||manual==='red';
 const state=critical?'red':(pageLock!=='auto'?pageLock:(stage!=='auto'?stage:(manual!=='auto'?manual:(logo.classList.contains('is-checking')?'blue':'green'))));

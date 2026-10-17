@@ -13,6 +13,7 @@
 @media(max-width:520px){.album-track-row-r1159{grid-template-columns:1fr}.album-track-download-r1159{justify-self:start}.album-track-spoiler-r1159>summary{padding:13px}.album-track-list-r1159{padding-left:9px;padding-right:9px}}
 
 /* R1162: every blue built-in-player button uses the original compact OCEAN width. */
+#discography #album-silent .album-player-link,
 #discography #album-beyond .album-player-link,
 #discography #album-trika .album-player-link,
 #discography #album-ocean .album-player-link,
@@ -27,6 +28,7 @@
   text-align:center!important;
 }
 @media(max-width:560px){
+  #discography #album-silent .album-player-link,
   #discography #album-beyond .album-player-link,
   #discography #album-trika .album-player-link,
   #discography #album-ocean .album-player-link,

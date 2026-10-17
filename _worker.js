@@ -7850,14 +7850,16 @@ const rowsResult=await db.prepare(`
     LIMIT 900
   `).bind(date).all();
 const allRows=Array.isArray(rowsResult?.results)?rowsResult.results:[];
-// R1437: The 16 Oct daily chart spans two real broadcasts. Count each video's
-// API viewCount delta against its own prior sample; never subtract one stream
-// from another or erase earlier sessions when the current LIVE ID changes.
-// For historical dates retain every archived sample unchanged.
-const allowedTodayR1437=new Set(['QajCKMBDasA','lpc9HfVs0NY']);
-const rows=date===today
- ? allRows.filter(row=>allowedTodayR1437.has(cleanPlainText(row?.videoId||'',80)))
- : allRows;
+let currentRadioVideoIdR1299='';
+if(date===today){
+ const state=await getPushState(db,'youtube-live-current-video-r669').catch(()=>null);
+ const saved=cleanPlainText(state?.value||'',80);
+ const verifiedAt=Date.parse(String(state?.updatedAt||''));
+ const savedFresh=Number.isFinite(verifiedAt)&&Date.now()-verifiedAt<10*60*1000;
+ // Never mix the old horizontal/dual session with today's new-radio KPI.
+ currentRadioVideoIdR1299=(savedFresh&&saved&&!['E-Hf8ciUhrU','eN3ljx6_6dA'].includes(saved))?saved:'QajCKMBDasA';
+}
+const rows=currentRadioVideoIdR1299?allRows.filter(row=>cleanPlainText(row?.videoId||'',80)===currentRadioVideoIdR1299):allRows;
 const videoIds=[...new Set(rows.map(row=>cleanPlainText(row?.videoId||'',80)).filter(Boolean))];
 const previousByVideo={};
 for(const videoId of videoIds){
@@ -7928,7 +7930,7 @@ getPushState(db,'radio-live-last-push-video-r585').catch(()=>null),
 getPushState(db,discoveryKey).catch(()=>null)
 ]);
 const candidateIds=[...new Set([
-'lpc9HfVs0NY', // R1299: new owner 16:9 LIVE, verify active before displaying data
+'QajCKMBDasA', // R1299: new owner 16:9 LIVE, verify active before displaying data
 cleanPlainText(currentState?.value||'',80),
 cleanPlainText(radioState?.value||'',80)
 ].filter(Boolean))];
@@ -7943,7 +7945,7 @@ const isLiveRowR1299=row=>{
 const details=row?.liveStreamingDetails||{};
 return String(row?.snippet?.liveBroadcastContent||'').toLowerCase()==='live' || Boolean(details?.actualStartTime&&!details?.actualEndTime);
 };
-const item=items.find(row=>row?.id==='lpc9HfVs0NY'&&isLiveRowR1299(row))||items.find(isLiveRowR1299)||null;
+const item=items.find(row=>row?.id==='QajCKMBDasA'&&isLiveRowR1299(row))||items.find(isLiveRowR1299)||null;
 if(!item)return null;
 const details=item?.liveStreamingDetails||{};
 const stats=item?.statistics||{};
@@ -18693,6 +18695,114 @@ return new Response(object.body,{status:200,headers});
 // inside the studio monitor. Extras keep the existing background path.
 
 // R1430: selectable five-album visual mode. R2 is the single source of truth.
+// R1442: independent rows prevent a ticker toggle overwriting an album choice.
+const RADIO_VISUAL_SLOTS_R1442=['illusion','ocean','trika','beyond','silent'];
+const RADIO_VISUAL_PREFIX_R1442='radio-visual-r1442:';
+const RADIO_ALBUM_LOOP_LIMIT_R1442=32*1024*1024;
+const radioLoopKeyR1442=slot=>`radio/album-loops-r1442/${slot}.mp4`;
+const radioLoopUrlR1442=slot=>`/api/media/radio-album-loop-r1442?slot=${encodeURIComponent(slot)}`;
+function radioLoopSlotR1442(request){
+ const slot=new URL(request.url).searchParams.get('slot')||'';
+ return RADIO_VISUAL_SLOTS_R1442.includes(slot)?slot:'';
+}
+async function radioVisualSettingsR1442(env){
+ const db=env.COMMENTS_DB;
+ if(!db)throw new Error('database-not-configured');
+ const keys=['enabled','style',...RADIO_VISUAL_SLOTS_R1442.flatMap(s=>['kind:'+s,'media:'+s])];
+ const rows=await db.prepare(`SELECT key,value FROM push_state WHERE key IN (${keys.map(()=>'?').join(',')})`)
+  .bind(...keys.map(k=>RADIO_VISUAL_PREFIX_R1442+k)).all();
+ const values=new Map((rows.results||[]).map(r=>[r.key.slice(RADIO_VISUAL_PREFIX_R1442.length),r.value]));
+ const albums={};
+ for(const slot of RADIO_VISUAL_SLOTS_R1442){
+  let media={};try{media=JSON.parse(values.get('media:'+slot)||'{}')}catch(_){}
+  albums[slot]={kind:values.get('kind:'+slot)==='video'?'video':'image',
+   video:{exists:media.exists===true,etag:String(media.etag||''),size:Number(media.size||0),uploaded:media.uploaded||null,url:radioLoopUrlR1442(slot)}};
+ }
+ let albumMode='studio';
+ const bucket=getMusicBucketR314(env);
+ if(bucket){const object=await bucket.get(RADIO_ALBUM_MODE_KEY_R1430);if(object){try{const data=await object.json();if(['studio','static'].includes(data.mode))albumMode=data.mode}catch(_){}}}
+ return {ok:true,revision:'R1442',ticker:{enabled:values.get('enabled')!=='false',albumStyle:values.get('style')==='scroll'?'scroll':'pages'},albumMode,albums,applies:'next-track'};
+}
+async function handleVisualSettingsR1442(request,env){
+ if(request.method!=='GET'&&!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
+ const db=env.COMMENTS_DB;if(!db)return json({ok:false,error:'database-not-configured'},503);
+ if(request.method==='PUT'){
+  let data;try{data=await request.json()}catch(_){return json({ok:false,error:'invalid-json'},400)}
+  if(!data||typeof data!=='object')return json({ok:false,error:'invalid-settings'},400);
+  const fields=['tickerEnabled','albumTicker','album'].filter(k=>Object.hasOwn(data,k));
+  if(fields.length!==1)return json({ok:false,error:'one-setting-required'},400);
+  let key,value;
+  if(fields[0]==='tickerEnabled'){
+   if(typeof data.tickerEnabled!=='boolean')return json({ok:false,error:'invalid-enabled'},400);
+   key='enabled';value=String(data.tickerEnabled);
+  }else if(fields[0]==='albumTicker'){
+   if(!['pages','scroll'].includes(data.albumTicker))return json({ok:false,error:'invalid-ticker-style'},400);
+   key='style';value=data.albumTicker;
+  }else{
+   const slot=data.album?.slot,kind=data.album?.kind;
+   if(!RADIO_VISUAL_SLOTS_R1442.includes(slot)||!['image','video'].includes(kind))return json({ok:false,error:'invalid-album-choice'},400);
+   if(kind==='video'){
+    const bucket=getMusicBucketR314(env);
+    const head=bucket?await bucket.head(radioLoopKeyR1442(slot)):null;
+    if(!head)return json({ok:false,error:'video-not-uploaded',message:'Сначала загрузи видео этого альбома.'},409);
+   }
+   key='kind:'+slot;value=kind;
+  }
+  await setPushState(db,RADIO_VISUAL_PREFIX_R1442+key,value);
+ }
+ return json(await radioVisualSettingsR1442(env),200,{'cache-control':'no-store'});
+}
+async function handleAlbumLoopR1442(request,env){
+ if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
+ const bucket=getMusicBucketR314(env),db=env.COMMENTS_DB;
+ if(!bucket||!db)return json({ok:false,error:'storage-not-configured'},503);
+ const slot=radioLoopSlotR1442(request);if(!slot)return json({ok:false,error:'invalid-slot'},400);
+ const key=radioLoopKeyR1442(slot);
+ if(request.method==='DELETE'){
+  await bucket.delete(key);
+  await setPushState(db,RADIO_VISUAL_PREFIX_R1442+'media:'+slot,JSON.stringify({exists:false}));
+  await setPushState(db,RADIO_VISUAL_PREFIX_R1442+'kind:'+slot,'image');
+  return json({ok:true,slot,deleted:true,applies:'next-track'});
+ }
+ if(request.method==='PUT'){
+  const type=String(request.headers.get('content-type')||'').split(';')[0].toLowerCase();
+  if(type!=='video/mp4')return json({ok:false,error:'invalid-content-type',message:'Нужен MP4.'},415);
+  if(Number(request.headers.get('content-length')||0)>RADIO_ALBUM_LOOP_LIMIT_R1442)return json({ok:false,error:'file-too-large',message:'Максимум 32 МБ.'},413);
+  const body=await request.arrayBuffer();
+  if(body.byteLength<1024||body.byteLength>RADIO_ALBUM_LOOP_LIMIT_R1442)return json({ok:false,error:'invalid-size',message:'Нужен MP4 размером до 32 МБ.'},400);
+  const bytes=new Uint8Array(body);
+  if(String.fromCharCode(...bytes.slice(4,8))!=='ftyp')return json({ok:false,error:'invalid-mp4',message:'Файл не похож на MP4.'},415);
+  await bucket.put(key,body,{httpMetadata:{contentType:'video/mp4',cacheControl:'no-cache'},customMetadata:{slot,source:'ANDRIK R1442',uploadedAt:new Date().toISOString()}});
+ }
+ const head=await bucket.head(key);
+ const media={exists:Boolean(head),etag:String(head?.httpEtag||head?.etag||''),size:Number(head?.size||0),uploaded:head?.uploaded||null};
+ if(request.method==='PUT')await setPushState(db,RADIO_VISUAL_PREFIX_R1442+'media:'+slot,JSON.stringify(media));
+ return json({ok:true,slot,...media,url:radioLoopUrlR1442(slot),applies:'next-track'},200,{'cache-control':'no-store'});
+}
+async function handleAlbumLoopPublicR1442(request,env){
+ const bucket=getMusicBucketR314(env);if(!bucket)return new Response('Unavailable',{status:503});
+ const slot=radioLoopSlotR1442(request);if(!slot)return new Response('Not found',{status:404});
+ const key=radioLoopKeyR1442(slot),head=await bucket.head(key);
+ if(!head)return new Response('Not found',{status:404,headers:{'cache-control':'no-store'}});
+ const size=Number(head.size),etag=String(head.httpEtag||head.etag||'');
+ const headers=new Headers({'content-type':'video/mp4','cache-control':'no-cache','accept-ranges':'bytes','content-length':String(size)});
+ if(etag)headers.set('etag',etag);
+ if(etag&&request.headers.get('if-none-match')===etag)return new Response(null,{status:304,headers});
+ if(request.method==='HEAD')return new Response(null,{status:200,headers});
+ const range=request.headers.get('range');let offset=0,length=size,status=200;
+ if(range){
+  const match=/^bytes=(\d*)-(\d*)$/.exec(range);
+  if(!match||(!match[1]&&!match[2]))return new Response(null,{status:416,headers:{'content-range':`bytes */${size}`}});
+  if(!match[1]){length=Math.min(size,Number(match[2]));offset=size-length}
+  else{offset=Number(match[1]);const end=match[2]?Math.min(size-1,Number(match[2])):size-1;length=end-offset+1}
+  if(offset>=size||length<=0)return new Response(null,{status:416,headers:{'content-range':`bytes */${size}`}});
+  headers.set('content-range',`bytes ${offset}-${offset+length-1}/${size}`);headers.set('content-length',String(length));status=206;
+ }
+ const object=await bucket.get(key,status===206?{range:{offset,length}}:undefined);
+ if(!object)return new Response('Not found',{status:404});
+ return new Response(object.body,{status,headers});
+}
+
 const RADIO_ALBUM_MODE_KEY_R1430='radio/settings/album-visual-mode-r1430.json';
 async function handleAlbumModeR1430(request,env){
   const bucket=getMusicBucketR314(env);
@@ -20296,6 +20406,10 @@ if (path === '/api/control/vps-backup-r1030/status' && request.method === 'GET')
 if ((path === '/api/control/vps-backup-r1033/set' || path === '/api/control/vps-backup-r1034/set') && request.method === 'GET') return await handleVpsBackupSetR1033(request, env);
 if (path === '/api/control/radio-server-zips-r1258' && ['GET','PUT','DELETE'].includes(request.method)) return await handleRadioServerZipsR1258(request, env);
 if (path === '/api/radio-server-zip-r1258/download' && request.method === 'GET') return await handleRadioServerZipDownloadR1258(request, env);
+if (path === '/api/radio/visual-settings-r1442' && request.method === 'GET') return await handleVisualSettingsR1442(request, env);
+if (path === '/api/control/radio-visual-settings-r1442' && ['GET','PUT'].includes(request.method)) return await handleVisualSettingsR1442(request, env);
+if (path === '/api/control/radio-album-loops-r1442' && ['GET','PUT','DELETE'].includes(request.method)) return await handleAlbumLoopR1442(request, env);
+if (path === '/api/media/radio-album-loop-r1442' && ['GET','HEAD'].includes(request.method)) return await handleAlbumLoopPublicR1442(request, env);
 if (path === '/api/radio/album-mode-r1430' && ['GET','PUT'].includes(request.method)) return await handleAlbumModeR1430(request, env);
 if (path === '/api/control/radio-studio-r1321' && ['GET','PUT','DELETE'].includes(request.method)) return await handleRadioStudioR1321(request, env);
 if (path === '/api/media/radio-studio-r1321' && (request.method === 'GET' || request.method === 'HEAD')) return await handleRadioStudioPublicR1321(request, env);
@@ -21443,7 +21557,7 @@ let result=null;
 // R1299: prefer the newly launched horizontal radio, but NEVER declare it
 // active without YouTube live status verification. This also bypasses old D1 IDs.
 try{
-const pinnedId='lpc9HfVs0NY';
+const pinnedId='QajCKMBDasA';
 const {data}=await youtubeApiJson(env,'videos',{
 part:'snippet,liveStreamingDetails',id:pinnedId,maxResults:1
 },{oauth:false,timeoutMs:6500});
@@ -21483,7 +21597,7 @@ if(found)result={...found,lifeCycleStatus:'live',streamStatus:'active'};
 // never declared LIVE without checking Google's video status.
 if(!result){
 try{
-const seedId='lpc9HfVs0NY'; // R1299: new owner LIVE fallback, verified before use
+const seedId='QajCKMBDasA'; // R1299: new owner LIVE fallback, verified before use
 const {data}=await youtubeApiJson(env,'videos',{
 part:'snippet,liveStreamingDetails',id:seedId,maxResults:1
 },{oauth:false,timeoutMs:6500});
@@ -22021,7 +22135,7 @@ const at=Date.parse(a?.snippet?.scheduledStartTime||a?.snippet?.actualStartTime|
 const bt=Date.parse(b?.snippet?.scheduledStartTime||b?.snippet?.actualStartTime||0)||0;
 return bt-at;
 });
-broadcast=candidates.find(item=>String(item?.id||'')==='lpc9HfVs0NY') || candidates[0] || null;
+broadcast=candidates.find(item=>String(item?.id||'')==='QajCKMBDasA') || candidates[0] || null;
 videoId=cleanPlainText(broadcast?.id||'',80);
 if(!videoId){
 const channelUrl=new URL('https://www.googleapis.com/youtube/v3/channels');

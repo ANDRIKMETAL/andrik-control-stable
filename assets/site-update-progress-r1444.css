@@ -1,0 +1,83 @@
+/* R1444: a single installation indicator and one semantic color palette. */
+html[data-andrik-install-state]{
+  --install-accent:#a0b5c2;--install-fill:#435e6d;--install-glow:rgba(137,170,189,.16);
+}
+html[data-andrik-install-state="running"],html[data-andrik-install-state="ready"]{
+  --install-accent:#96e3ff;--install-fill:#16658c;--install-glow:rgba(78,197,249,.18);
+}
+html[data-andrik-install-state="success"]{
+  --install-accent:#9af1be;--install-fill:#168250;--install-glow:rgba(69,223,143,.18);
+}
+html[data-andrik-install-state="waiting"],html[data-andrik-install-state="warning"],
+html[data-andrik-install-state="recovering"]{
+  --install-accent:#ffe0a1;--install-fill:#8a5b18;--install-glow:rgba(245,187,74,.17);
+}
+html[data-andrik-install-state="error"]{
+  --install-accent:#ffb4bf;--install-fill:#923d4f;--install-glow:rgba(245,96,124,.18);
+}
+body.site-update-page #siteUpdateStages[hidden]{display:none!important}
+body.site-update-page #siteUpdateProgress{
+  display:grid;gap:10px;width:100%;min-width:0;box-sizing:border-box;
+  margin-top:16px;padding:14px;border:1px solid var(--install-accent,#a0b5c2);
+  border-radius:20px;background:linear-gradient(145deg,#0a1b25,#050e15);
+  box-shadow:0 0 22px var(--install-glow,transparent),inset 0 1px 0 rgba(255,255,255,.04);
+}
+body.site-update-page .update-progress-heading-r1444{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;min-width:0;
+}
+body.site-update-page #siteUpdateProgressTitle{
+  min-width:0;color:#eef8ff;font-size:.88rem;line-height:1.3;font-weight:750;
+}
+body.site-update-page #siteUpdateProgressBadge{
+  flex:0 0 auto;max-width:48%;padding:5px 8px;border-radius:999px;
+  border:1px solid var(--install-accent,#a0b5c2);background:rgba(0,0,0,.18);
+  color:var(--install-accent,#a0b5c2);font-size:.66rem;font-weight:750;line-height:1.25;text-align:center;
+}
+body.site-update-page #siteUpdateProgressBar{
+  position:relative;isolation:isolate;display:grid;place-items:center;overflow:hidden;
+  width:100%;height:44px;min-width:0;border:1px solid rgba(183,218,239,.22);
+  border-radius:999px;background:#030b11;box-shadow:inset 0 2px 8px rgba(0,0,0,.52);
+}
+body.site-update-page #siteUpdateProgressFill{
+  position:absolute;z-index:-1;inset:0 auto 0 0;width:0%;border-radius:inherit;
+  background:linear-gradient(90deg,#102c3c,var(--install-fill,#435e6d));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.2);
+  transition:width .45s ease,background .25s ease;
+}
+body.site-update-page #siteUpdateProgressPercent{
+  color:#fff!important;-webkit-text-fill-color:#fff!important;
+  font-size:1.15rem;font-weight:850;line-height:1;font-variant-numeric:tabular-nums;
+  letter-spacing:.02em;text-shadow:0 1px 3px #00121e,0 0 6px rgba(0,0,0,.8);
+}
+body.site-update-page #siteUpdateProgressNote{
+  margin:0!important;min-height:2.6em;color:#abc0cd;font-size:.72rem;line-height:1.4;
+  overflow-wrap:anywhere;
+}
+/* The installation bar, console status and header use the same state. */
+html[data-andrik-install-state] body.site-update-page #siteUpdateConsoleStateR195{
+  color:var(--install-accent)!important;-webkit-text-fill-color:var(--install-accent)!important;
+}
+html[data-andrik-install-state] body.site-update-page #siteUpdateConsoleR195{
+  border-color:var(--install-accent)!important;
+}
+html[data-andrik-install-state] body.site-update-page #siteUpdateResultState{
+  color:var(--install-accent)!important;-webkit-text-fill-color:var(--install-accent)!important;
+  border-color:var(--install-accent)!important;
+}
+/* Override old page-local green filters, including the general service eye. */
+html[data-andrik-install-state] body.site-update-page #controlCenterLogo[data-r3d-live-eye="1"] .andrik-live-eye-motion-r3d .logo-ok{
+  display:block!important;opacity:1!important;visibility:visible!important;
+  filter:var(--r244-eye-filter) drop-shadow(0 0 12px var(--r244-eye-a))
+    drop-shadow(0 0 28px var(--r244-eye-b)) drop-shadow(0 0 42px var(--r244-halo))!important;
+}
+html[data-andrik-install-state] body.site-update-page #controlCenterLogo .logo-error{
+  display:none!important;opacity:0!important;visibility:hidden!important;
+}
+@media(max-width:380px){
+  body.site-update-page #siteUpdateProgress{padding:11px;gap:9px;border-radius:17px}
+  body.site-update-page #siteUpdateProgressTitle{font-size:.8rem}
+  body.site-update-page #siteUpdateProgressBadge{font-size:.6rem;padding:4px 6px}
+}
+@media(prefers-reduced-motion:reduce){
+  body.site-update-page #siteUpdateProgressFill{transition:none}
+}
