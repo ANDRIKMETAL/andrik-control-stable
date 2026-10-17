@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r358-deploy-nohang",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1792234514851-9e4148f0b3",
-  "release": "R1444",
-  "archiveName": "SITE-R1444-PROGRESS-SILENT-FULL.zip",
-  "sourceHead": "c963e5ae30b24da16f3ff33b0f3f0ad1b8e198e4",
-  "backupSha": "c963e5ae30b24da16f3ff33b0f3f0ad1b8e198e4",
+  "operationId": "publish-1792237433390-12f1e4c9ba",
+  "release": "R1446",
+  "archiveName": "SITE-R1446-STREAM-STATS-GAME-FULL.zip",
+  "sourceHead": "c491fc81e8705091739fb00484ea5d8507323700",
+  "backupSha": "c491fc81e8705091739fb00484ea5d8507323700",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-10-17T10:55:16.219Z"
+  "generatedAt": "2026-10-17T11:43:55.301Z"
 }

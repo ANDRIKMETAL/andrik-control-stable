@@ -81,3 +81,56 @@ html[data-andrik-install-state] body.site-update-page #controlCenterLogo .logo-e
 @media(prefers-reduced-motion:reduce){
   body.site-update-page #siteUpdateProgressFill{transition:none}
 }
+
+/* R1445 — preparation above ZIP, installation console below Start. */
+body.site-update-page .update-command-center-r184>.update-header{padding:5px 2px 6px!important}
+body.site-update-page .update-command-center-r184>.update-header h1{
+  font-size:clamp(26px,5.8vw,38px)!important;line-height:1.08!important;margin:2px 0!important;
+}
+body.site-update-page .update-command-center-r184>.update-header>.eyeline{
+  font-size:.61rem!important;letter-spacing:.14em!important;line-height:1.2;
+}
+body.site-update-page .update-command-center-r184>.update-header>p{
+  margin:3px 0!important;font-size:.73rem!important;line-height:1.25!important;
+}
+body.site-update-page .update-status-card{padding:9px 11px!important}
+body.site-update-page .update-status-line{gap:8px}
+body.site-update-page .update-status-line strong{font-size:.78rem!important}
+body.site-update-page .update-status-line small{font-size:.64rem!important}
+body.site-update-page .update-status-card .update-advanced{margin-top:7px!important}
+body.site-update-page .update-upload-card{padding:10px!important}
+body.site-update-page .update-upload-card>.compact-title h2{font-size:1.06rem!important;line-height:1.15!important}
+body.site-update-page .update-upload-card>.compact-title .service-access-state{
+  font-size:.65rem!important;padding:6px 9px!important;
+}
+body.site-update-page #siteUpdateProgress{margin:8px 0!important;padding:10px!important;gap:6px!important;border-radius:15px}
+body.site-update-page #siteUpdateProgressTitle{font-size:.79rem}
+body.site-update-page #siteUpdateProgressBadge{font-size:.59rem;padding:4px 6px}
+body.site-update-page #siteUpdateProgressBar{height:32px}
+body.site-update-page #siteUpdateProgressPercent{font-size:1rem}
+body.site-update-page #siteUpdateProgressNote{min-height:0;font-size:.65rem;line-height:1.3}
+body.site-update-page #siteUpdateUploadMessage{font-size:.67rem;line-height:1.25;margin-top:5px}
+body.site-update-page .update-file-picker.update-file-picker-r263{
+  min-height:52px!important;margin-top:6px!important;padding:7px 11px!important;
+}
+body.site-update-page .update-file-picker.update-file-picker-r263 strong{font-size:.8rem!important}
+body.site-update-page .update-file-picker.update-file-picker-r263>#siteUpdateFileName{font-size:.63rem!important}
+body.site-update-page .winrar-books-r263{transform:scale(.62)!important;margin-right:-13px!important}
+body.site-update-page #siteUpdatePublish{min-height:44px!important;margin-top:8px!important;font-size:.94rem!important}
+body.site-update-page #siteUpdateConsoleR195{margin:8px 0 0!important;padding:9px!important;min-height:0!important}
+body.site-update-page #siteUpdateConsoleR195 .update-console-head-r184{gap:6px}
+body.site-update-page #siteUpdateConsoleR195 .update-console-head-r184 .eyeline{font-size:.61rem!important;letter-spacing:.12em!important}
+body.site-update-page #siteUpdateConsoleStateR195{font-size:.75rem!important}
+body.site-update-page #siteUpdateConsoleMetricsR195{margin-top:6px!important;gap:4px!important}
+body.site-update-page #siteUpdateConsoleMetricsR195>span,
+body.site-update-page #siteUpdateConsoleMetricsR195 .update-metric{padding:3px 7px!important;font-size:.63rem!important}
+body.site-update-page #siteUpdateConsoleMessageR195{margin-top:5px!important;font-size:.65rem!important;line-height:1.3!important}
+body.site-update-page #siteUpdateConsoleR195 .update-console-actions-r184{gap:5px!important;margin-top:6px!important}
+body.site-update-page #siteUpdateConsoleR195 .update-console-actions-r184 .btn{min-height:29px!important;padding:5px 7px!important;font-size:.68rem!important}
+body.site-update-page .update-backup-disclosure-r1445{margin:0!important}
+body.site-update-page .update-backup-disclosure-r1445 .zip-backup-panel-r243{border:0;margin:0;padding:5px 10px 10px}
+@media(orientation:portrait){
+  body.site-update-page.r136-standard-header-page .control-detail-topbar,
+  body.site-update-page.r136-standard-header-page .control-detail-topbar .nav-shell{height:78px!important;min-height:78px!important}
+  body.site-update-page #controlCenterLogo{width:62px!important;height:62px!important}
+}

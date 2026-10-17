@@ -7822,9 +7822,9 @@ let collector={selfHealAttempted:false,selfHealOk:false,warning:'',source:'backg
 if(date===today){
 const latestBefore=await db.prepare(`
       SELECT sampled_at AS sampledAt FROM radio_audience_samples
-      WHERE local_date=?
+      WHERE local_date=? AND video_id=?
       ORDER BY sampled_at DESC LIMIT 1
-    `).bind(today).first().catch(()=>null);
+    `).bind(today,'lpc9HfVs0NY').first().catch(()=>null);
 collector.latestSampleAt=cleanPlainText(latestBefore?.sampledAt||'',80);
 const latestMs=Date.parse(collector.latestSampleAt||'');
 const stale=!Number.isFinite(latestMs) || Date.now()-latestMs>3*60*1000;
@@ -7832,7 +7832,7 @@ if(stale){
 collector.selfHealAttempted=true;
 try{
 const probe=await fetchYoutubeActiveLiveEngagementR669(env,db);
-collector.selfHealOk=Boolean(probe?.video);
+collector.selfHealOk=Boolean(probe?.video)&&!probe?.warning;
 collector.source=cleanPlainText(probe?.source||'control-self-heal-r1157',120);
 collector.liveVideoId=cleanPlainText(probe?.video?.videoId||'',80);
 collector.warning=cleanPlainText(probe?.warning||(!probe?.video?'active-live-not-found':''),260);
@@ -7857,7 +7857,7 @@ if(date===today){
  const verifiedAt=Date.parse(String(state?.updatedAt||''));
  const savedFresh=Number.isFinite(verifiedAt)&&Date.now()-verifiedAt<10*60*1000;
  // Never mix the old horizontal/dual session with today's new-radio KPI.
- currentRadioVideoIdR1299=(savedFresh&&saved&&!['E-Hf8ciUhrU','eN3ljx6_6dA'].includes(saved))?saved:'QajCKMBDasA';
+ currentRadioVideoIdR1299=collector.liveVideoId||(savedFresh&&saved&&!['E-Hf8ciUhrU','eN3ljx6_6dA'].includes(saved)?saved:'lpc9HfVs0NY');
 }
 const rows=currentRadioVideoIdR1299?allRows.filter(row=>cleanPlainText(row?.videoId||'',80)===currentRadioVideoIdR1299):allRows;
 const videoIds=[...new Set(rows.map(row=>cleanPlainText(row?.videoId||'',80)).filter(Boolean))];
@@ -7912,7 +7912,7 @@ createdAt:cleanPlainText(row?.createdAt||'',80),type:cleanPlainText(row?.type||'
 country:cleanPlainText(row?.country||'',8).toUpperCase(),region:cleanPlainText(row?.region||'',120),city:cleanPlainText(row?.city||'',120)
 }));
 return json({
-ok:true,version:'R1157',date,today,timezone:'Europe/Bratislava',
+ok:true,version:'R1446',videoId:currentRadioVideoIdR1299,date,today,timezone:'Europe/Bratislava',
 collectionStarted:series[0]?.sampledAt||'',samples:series.length,series,
 summary:{launches:totals.launches,peakConcurrent:totals.peak,currentConcurrent:totals.current,lastCumulativeViews:totals.lastViews,
 lastViewsVideoId:totals.lastViewsVideoId,viewerSamples:totals.viewerSamples,viewSamples:totals.viewSamples,lastViewerSampleAt:totals.lastViewerSampleAt,
@@ -7920,6 +7920,15 @@ siteOpens:Math.max(0,Number(siteSummary?.opens)||0),siteVisitors:Math.max(0,Numb
 exactOpens,collector:{...collector,latestSampleAt:series[series.length-1]?.sampledAt||collector.latestSampleAt||''},updatedAt:new Date().toISOString(),
 note:'YouTube API viewCount deltas are counted only after a baseline sample. Missing concurrentViewers remains null (not zero). Public/visible views can differ from Data API viewCount. Site clicks use exact timestamps.'
 });
+}
+// R1446: successful Control probes also feed the durable audience history.
+async function persistRadioLiveMetricsR1446(env,video,source){
+try{
+ const db=requireDb(env);
+ const result=await recordRadioAudienceSampleR1156(db,video,source);
+ if(result.ok)await setPushState(db,'youtube-live-current-video-r669',video.videoId);
+ return {...result,warning:result.ok?'':result.reason||'sample-not-written'};
+}catch(error){return {ok:false,warning:cleanPlainText(error?.message||error,260)};}
 }
 async function fetchYoutubeActiveLiveEngagementR669(env,db){
 const currentKey='youtube-live-current-video-r669';
@@ -7930,7 +7939,7 @@ getPushState(db,'radio-live-last-push-video-r585').catch(()=>null),
 getPushState(db,discoveryKey).catch(()=>null)
 ]);
 const candidateIds=[...new Set([
-'QajCKMBDasA', // R1299: new owner 16:9 LIVE, verify active before displaying data
+'lpc9HfVs0NY', // R1299: new owner 16:9 LIVE, verify active before displaying data
 cleanPlainText(currentState?.value||'',80),
 cleanPlainText(radioState?.value||'',80)
 ].filter(Boolean))];
@@ -7945,7 +7954,7 @@ const isLiveRowR1299=row=>{
 const details=row?.liveStreamingDetails||{};
 return String(row?.snippet?.liveBroadcastContent||'').toLowerCase()==='live' || Boolean(details?.actualStartTime&&!details?.actualEndTime);
 };
-const item=items.find(row=>row?.id==='QajCKMBDasA'&&isLiveRowR1299(row))||items.find(isLiveRowR1299)||null;
+const item=items.find(row=>row?.id==='lpc9HfVs0NY'&&isLiveRowR1299(row))||items.find(isLiveRowR1299)||null;
 if(!item)return null;
 const details=item?.liveStreamingDetails||{};
 const stats=item?.statistics||{};
@@ -7967,9 +7976,9 @@ return {video,liveChatId:cleanPlainText(details.activeLiveChatId||'',180),warnin
 try{
 const known=await probeVideo(candidateIds);
 if(known?.video){
-if(cleanPlainText(currentState?.value||'',80)!==known.video.videoId)await setPushState(db,currentKey,known.video.videoId).catch(()=>{});
-await recordRadioAudienceSampleR1156(db,known.video,'pinned-live-r669').catch(()=>{});
-return {...known,source:'pinned-live-r669'};
+await setPushState(db,currentKey,known.video.videoId).catch(()=>{});
+const sample=await persistRadioLiveMetricsR1446(env,known.video,'pinned-live-r1446');
+return {...known,warning:sample.warning||known.warning,source:'pinned-live-r1446'};
 }
 let found=null;
 try{found=await youtubePublicLiveByUploadsR623(env,{fresh:true});}catch(_){found=null;}
@@ -7989,9 +7998,9 @@ return {video:null,liveChatId:'',warning:'',source:'no-live-r669'};
 }
 const discovered=await probeVideo([discoveredId]);
 if(discovered?.video){
-if(cleanPlainText(currentState?.value||'',80)!==discovered.video.videoId)await setPushState(db,currentKey,discovered.video.videoId).catch(()=>{});
-await recordRadioAudienceSampleR1156(db,discovered.video,cleanPlainText(found?.source||'discovered-live-r669',100)).catch(()=>{});
-return {...discovered,source:cleanPlainText(found?.source||'discovered-live-r669',100)};
+await setPushState(db,currentKey,discovered.video.videoId).catch(()=>{});
+const sample=await persistRadioLiveMetricsR1446(env,discovered.video,'discovered-live-r1446');
+return {...discovered,warning:sample.warning||discovered.warning,source:cleanPlainText(found?.source||'discovered-live-r1446',100)};
 }
 return {video:null,liveChatId:'',warning:'',source:'discovery-not-live-r669'};
 }catch(error){
@@ -21557,7 +21566,7 @@ let result=null;
 // R1299: prefer the newly launched horizontal radio, but NEVER declare it
 // active without YouTube live status verification. This also bypasses old D1 IDs.
 try{
-const pinnedId='QajCKMBDasA';
+const pinnedId='lpc9HfVs0NY';
 const {data}=await youtubeApiJson(env,'videos',{
 part:'snippet,liveStreamingDetails',id:pinnedId,maxResults:1
 },{oauth:false,timeoutMs:6500});
@@ -21597,7 +21606,7 @@ if(found)result={...found,lifeCycleStatus:'live',streamStatus:'active'};
 // never declared LIVE without checking Google's video status.
 if(!result){
 try{
-const seedId='QajCKMBDasA'; // R1299: new owner LIVE fallback, verified before use
+const seedId='lpc9HfVs0NY'; // R1299: new owner LIVE fallback, verified before use
 const {data}=await youtubeApiJson(env,'videos',{
 part:'snippet,liveStreamingDetails',id:seedId,maxResults:1
 },{oauth:false,timeoutMs:6500});
@@ -22135,7 +22144,7 @@ const at=Date.parse(a?.snippet?.scheduledStartTime||a?.snippet?.actualStartTime|
 const bt=Date.parse(b?.snippet?.scheduledStartTime||b?.snippet?.actualStartTime||0)||0;
 return bt-at;
 });
-broadcast=candidates.find(item=>String(item?.id||'')==='QajCKMBDasA') || candidates[0] || null;
+broadcast=candidates.find(item=>String(item?.id||'')==='lpc9HfVs0NY') || candidates[0] || null;
 videoId=cleanPlainText(broadcast?.id||'',80);
 if(!videoId){
 const channelUrl=new URL('https://www.googleapis.com/youtube/v3/channels');
@@ -22206,7 +22215,7 @@ const streamStatus=cleanPlainText(liveStream?.status?.streamStatus||'',80);
 const broadcastLive=lifeCycleStatus.toLowerCase()==='live' || Boolean(details?.actualStartTime && !details?.actualEndTime);
 const signalActive=streamStatus.toLowerCase()==='active';
 const active=broadcastLive;
-const publicStartsR946=Math.max(0,Number(statistics?.viewCount||0));
+const publicStartsR946=statistics?.viewCount==null?null:Math.max(0,Number(statistics.viewCount)||0);
 const studioViewsR942=await fetchYoutubeStudioViewsR942(env,videoId,details?.actualStartTime||broadcast?.snippet?.actualStartTime||'',publicStartsR946);
 const visibleViewsR946=await fetchYoutubeVisibleViewsR946(env,videoId,publicStartsR946);
 const displayViewsR946=(Number(visibleViewsR946?.value)>0)?Math.max(0,Number(visibleViewsR946.value)):((Number(studioViewsR942?.studioViews)>0)?Math.max(0,Number(studioViewsR942.studioViews)):null);
@@ -22218,8 +22227,9 @@ type:cleanPlainText(item?.type||'',100),severity:cleanPlainText(item?.severity||
 reason:cleanPlainText(item?.reason||'',240),description:cleanPlainText(item?.description||'',360)
 })):[],boundStreamId
 }).catch(()=>{});
+const audienceSampleR1446=active?await persistRadioLiveMetricsR1446(env,{videoId,views:publicStartsR946,concurrentViewers:details.concurrentViewers},'control-oauth-r1446'):{ok:false,warning:''};
 return json({
-ok:true,active,signalActive,broadcastLive,videoId,
+ok:true,audienceSampleR1446,active,signalActive,broadcastLive,videoId,
 title:cleanPlainText(video?.snippet?.title||broadcast?.snippet?.title||'ANDRIK Metal Radio 24/7',220),
 lifeCycleStatus,
 privacyStatus:cleanPlainText(broadcast?.status?.privacyStatus||video?.status?.privacyStatus||'',80),
@@ -22234,8 +22244,8 @@ reason:cleanPlainText(item?.reason||'',240),description:cleanPlainText(item?.des
 concurrentViewers:(details?.concurrentViewers==null||details?.concurrentViewers==='')?null:Math.max(0,Number(details.concurrentViewers)||0),
 actualStartTime:cleanPlainText(details?.actualStartTime||broadcast?.snippet?.actualStartTime||'',80),
 scheduledStartTime:cleanPlainText(details?.scheduledStartTime||broadcast?.snippet?.scheduledStartTime||'',80),
-views:publicStartsR946,displayViews:displayViewsR946,visibleViews:visibleViewsR946?.value,visibleViewsSource:visibleViewsR946?.source||'',visibleViewsUpdatedAt:visibleViewsR946?.updatedAt||'',visibleViewsError:visibleViewsR946?.error||'',visibleViewsAttempts:Array.isArray(visibleViewsR946?.attempts)?visibleViewsR946.attempts:[],visibleViewsText:visibleViewsR946?.text||'',engagedViews:engagedViewsR938,studioViews:studioViewsR942.studioViews,studioViewsSource:studioViewsR942.source,studioViewsUpdatedAt:studioViewsR942.updatedAt||'',studioViewsProcessing:Boolean(studioViewsR942.processing),studioViewsError:studioViewsR942.error||'',likes:Math.max(0,Number(statistics?.likeCount||0)),
-comments:Math.max(0,Number(statistics?.commentCount||0)),boundStreamId,
+views:publicStartsR946,displayViews:displayViewsR946,visibleViews:visibleViewsR946?.value,visibleViewsSource:visibleViewsR946?.source||'',visibleViewsUpdatedAt:visibleViewsR946?.updatedAt||'',visibleViewsError:visibleViewsR946?.error||'',visibleViewsAttempts:Array.isArray(visibleViewsR946?.attempts)?visibleViewsR946.attempts:[],visibleViewsText:visibleViewsR946?.text||'',engagedViews:engagedViewsR938,studioViews:studioViewsR942.studioViews,studioViewsSource:studioViewsR942.source,studioViewsUpdatedAt:studioViewsR942.updatedAt||'',studioViewsProcessing:Boolean(studioViewsR942.processing),studioViewsError:studioViewsR942.error||'',likes:statistics?.likeCount==null?null:Math.max(0,Number(statistics.likeCount)||0),
+comments:statistics?.commentCount==null?null:Math.max(0,Number(statistics.commentCount)||0),boundStreamId,
 studioUrl:`https://studio.youtube.com/video/${encodeURIComponent(videoId)}/livestreaming`,
 analyticsUrl:`https://studio.youtube.com/video/${encodeURIComponent(videoId)}/analytics/tab-overview/period-default`,
 watchUrl:`https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`,
@@ -22257,14 +22267,15 @@ video=Array.isArray(data?.items)?data.items[0]||null:null;
 }catch(_){ }
 const details=video?.liveStreamingDetails||{};
 const statistics=video?.statistics||{};
-const publicStartsR946=Math.max(0,Number(statistics?.viewCount||0));
+const publicStartsR946=statistics?.viewCount==null?null:Math.max(0,Number(statistics.viewCount)||0);
 const studioViewsR942=await fetchYoutubeStudioViewsR942(env,videoId,details?.actualStartTime||'',publicStartsR946);
 const visibleViewsR946=await fetchYoutubeVisibleViewsR946(env,videoId,publicStartsR946);
 const displayViewsR946=(Number(visibleViewsR946?.value)>0)?Math.max(0,Number(visibleViewsR946.value)):((Number(studioViewsR942?.studioViews)>0)?Math.max(0,Number(studioViewsR942.studioViews)):null);
 const engagedViewsR938=studioViewsR942.engagedViews;
 const liveHealthR1158=await probeYoutubeLiveHealthR1158(env,videoId);
+const audienceSampleR1446=await persistRadioLiveMetricsR1446(env,{videoId,views:publicStartsR946,concurrentViewers:details.concurrentViewers},'control-public-r1446');
 return json({
-ok:true,active:true,signalActive:true,broadcastLive:true,videoId,
+ok:true,audienceSampleR1446,active:true,signalActive:true,broadcastLive:true,videoId,
 title:cleanPlainText(video?.snippet?.title||'ANDRIK Metal Radio 24/7',220),
 lifeCycleStatus:'live',
 privacyStatus:cleanPlainText(video?.status?.privacyStatus||'public',80),
@@ -22282,8 +22293,8 @@ views:publicStartsR946,
 displayViews:displayViewsR946,visibleViews:visibleViewsR946?.value,visibleViewsSource:visibleViewsR946?.source||'',visibleViewsUpdatedAt:visibleViewsR946?.updatedAt||'',visibleViewsError:visibleViewsR946?.error||'',visibleViewsAttempts:Array.isArray(visibleViewsR946?.attempts)?visibleViewsR946.attempts:[],visibleViewsText:visibleViewsR946?.text||'',
 engagedViews:engagedViewsR938,
 studioViews:studioViewsR942.studioViews,studioViewsSource:studioViewsR942.source,studioViewsUpdatedAt:studioViewsR942.updatedAt||'',studioViewsProcessing:Boolean(studioViewsR942.processing),studioViewsError:studioViewsR942.error||'',
-likes:Math.max(0,Number(statistics?.likeCount||0)),
-comments:Math.max(0,Number(statistics?.commentCount||0)),
+likes:statistics?.likeCount==null?null:Math.max(0,Number(statistics.likeCount)||0),
+comments:statistics?.commentCount==null?null:Math.max(0,Number(statistics.commentCount)||0),
 boundStreamId:'',
 studioUrl:`https://studio.youtube.com/video/${encodeURIComponent(videoId)}/livestreaming`,
 analyticsUrl:`https://studio.youtube.com/video/${encodeURIComponent(videoId)}/analytics/tab-overview/period-default`,

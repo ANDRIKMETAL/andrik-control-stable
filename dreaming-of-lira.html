@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
   <meta name="theme-color" content="#080b12" />
-  <title>Dreaming of Líra · Streets / Portrait / Ruins / Ocean / Space / Tower · 7 Worlds · ANDRIK · R1308</title>
+  <title>Dreaming of Líra · 7 Worlds · ANDRIK · R1445</title>
   <meta name="description" content="Dreaming of Líra: браузерная 3D-аркада ANDRIK. Шесть миров: Streets, Portrait, Ruins, Ocean, Space и Tower. Битвы, головоломки, двойной прыжок и кульминационная мотоциклетная погоня. Играй на телефоне или компьютере." />
   <link rel="stylesheet" href="/assets/lira-3d-r1190.css?v=55.00-r1201" />
   <style>
@@ -286,9 +286,22 @@
 .actionsR1201 [data-action="super"]{left:auto!important;right:clamp(48px,7.2vw,63px)!important;top:50%!important;transform:translateY(-50%)!important}
 .actionsR1201 [data-action="super"].active{transform:translateY(-50%) scale(.93)!important}
 </style>
+<link rel="preload" as="image" href="/assets/dreaming-lira-preview-r1303.webp">
+<link rel="stylesheet" href="/assets/lira-launch-r1445.css?v=r1445">
 </head>
-<body>
+<body class="lira-loading">
   <div id="gameShell">
+  <section id="liraLaunch" aria-label="Dreaming of Líra">
+    <img class="lira-launch-cover" src="/assets/dreaming-lira-preview-r1303.webp" alt="Dreaming of Líra" fetchpriority="high" decoding="async">
+    <a class="lira-launch-home" href="/">← ANDRIK METAL</a>
+    <div class="lira-launch-status">
+      <p id="liraLaunchText" role="status" aria-live="polite">Открываем миры Лиры…</p>
+      <p id="liraLaunchError" hidden></p>
+      <button id="liraLaunchRotate" type="button">Горизонтальный экран ⛶</button>
+      <button id="liraLaunchRetry" type="button" hidden>Повторить запуск</button>
+      <noscript>Для запуска игры включи JavaScript в браузере.</noscript>
+    </div>
+  </section>
     <canvas id="game" width="480" height="270" aria-label="Dreaming of Líra game"></canvas>
 
     <div id="mobileControls" aria-label="Игровое управление">
@@ -5416,7 +5429,7 @@ requestAnimationFrame(frame);
 })();
 </script>
 <script src="/assets/lira-i18n-r1304.js?v=r1305" defer></script>
-<script src="/assets/lira-boot-r1308.js?v=r1308" defer></script>
+<script src="/assets/lira-boot-r1445.js?v=r1446" defer></script>
 </body>
 </html>
 

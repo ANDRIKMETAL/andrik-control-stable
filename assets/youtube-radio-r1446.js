@@ -11,7 +11,7 @@ const $=id=>document.getElementById(id);
 const text=(id,value)=>{const el=$(id);if(el)el.textContent=value};
 const safe=v=>String(v??'').trim();
 const number=v=>new Intl.NumberFormat('ru-RU').format(Math.max(0,Number(v)||0));
-let liveStartedAt='';
+let liveStartedAt='',currentLiveIdR1446='',hasVisibleViewsR1446=false,currentOnlineR1446=null;
 function uptimeLabel(value){const start=Date.parse(value||'');if(!Number.isFinite(start))return '—';const sec=Math.max(0,Math.floor((Date.now()-start)/1000));const d=Math.floor(sec/86400),h=Math.floor((sec%86400)/3600),m=Math.floor((sec%3600)/60);if(d>0)return `${d} д ${h} ч ${m} мин`;if(h>0)return `${h} ч ${m} мин`;return `${m} мин`;}
 function refreshUptime(){text('youtubeRadioUptimeR565',liveStartedAt?uptimeLabel(liveStartedAt):'—')}
 function setLive(live,label){const pill=$('youtubeRadioLiveR565');if(!pill)return;pill.classList.toggle('is-live',Boolean(live));const span=pill.querySelector('span');if(span)span.textContent=label||(live?'ЭФИР ИДЁТ':'ОЖИДАЕТ СИГНАЛ')}
@@ -21,6 +21,8 @@ text('youtubeRadioModeR565','MP3 + КЛИП');text('youtubeRadioCycleR565','AUTO
 }
 function updateLinks(data){const opener=$('radioOpenLiveR943');const watch=safe(data?.watchUrl)||'https://www.youtube.com/@andrikmetal/live';if(opener){opener.href=watch;opener.setAttribute('data-force-app','youtube');opener.setAttribute('data-youtube-live-auto','1');opener.setAttribute('data-web-url',watch);opener.setAttribute('data-web-fallback','https://www.youtube.com/@andrikmetal/live');if(data?.videoId)opener.setAttribute('data-youtube-live-id',String(data.videoId));}const map=[['youtubeRadioStudioR576','studioUrl'],['youtubeRadioAnalyticsR576','analyticsUrl'],['youtubeRadioWatchR576','watchUrl']];for(const [id,key] of map){const el=$(id);if(el&&data?.[key]){el.href=data[key];if(id==='youtubeRadioWatchR576')el.setAttribute('data-web-url',data[key])}}}
 function renderYoutube(data){
+currentLiveIdR1446=safe(data?.videoId);
+currentOnlineR1446=data?.concurrentViewers??null;
 const life=safe(data?.lifeCycleStatus).toLowerCase();
 const stream=safe(data?.streamStatus).toLowerCase();
 const live=Boolean(data?.active)||life==='live';
@@ -29,7 +31,8 @@ liveStartedAt=live?safe(data?.actualStartTime):'';
 refreshUptime();
 setLive(live,live?'ЭФИР ИДЁТ':signal?'СИГНАЛ ЕСТЬ — НАЖМИ СТАРТ':'ОЖИДАЕТ СИГНАЛ');
 text('youtubeRadioViewersR565',data?.concurrentViewers==null?'—':number(data.concurrentViewers));
-text('youtubeRadioStartsR947',data?.views==null?'—':number(data.views));
+// Daily starts come from dated D1 deltas, never from lifetime viewCount.
+text('youtubeRadioStartsR947','—');
 const visibleCandidates=[data?.visibleViews,data?.displayViews,data?.studioViews,data?.engagedViews]
 .map(v=>v==null?null:Number(v))
 .filter(v=>Number.isFinite(v)&&v>0);
@@ -43,6 +46,7 @@ const keep=Math.max(visible,Number.isFinite(old)?old:0);
 if(!Number.isFinite(starts)||starts<=0||keep<=starts){visible=keep;localStorage.setItem(visibleKey,String(keep));}
 }else if(Number.isFinite(old)&&old>0&&(!Number.isFinite(starts)||starts<=0||old<=starts))visible=old;
 }catch(_){}
+hasVisibleViewsR1446=visible!=null;
 text('youtubeRadioViewsR565',visible==null?'—':number(visible));
 const viewsCard=$('youtubeRadioViewsCardR947');
 if(viewsCard){
@@ -73,11 +77,13 @@ note.textContent=issues.length?`YouTube: ${parts.join(' • ')} · ${issues.slic
 async function loadAudienceFallbackR1264(){
 try{
 const k=getKey();const r=await fetch(`/api/control/radio-audience-r1157?ts=${Date.now()}`,{credentials:'include',cache:'no-store',headers:{accept:'application/json',...(k?{'x-admin-key':k,'authorization':`Bearer ${k}`}:{})}});const d=await r.json().catch(()=>({}));if(!r.ok||!d?.ok)return false;const q=d.summary||{};
-if(q.currentConcurrent!=null)text('youtubeRadioViewersR565',number(q.currentConcurrent));
-if(q.launches!=null)text('youtubeRadioStartsR947',number(q.launches));
-if(q.lastCumulativeViews!=null&&Number(q.lastCumulativeViews)>=0)text('youtubeRadioViewsR565',number(q.lastCumulativeViews));
+const sameLive=!currentLiveIdR1446||d.videoId===currentLiveIdR1446||q.lastViewsVideoId===currentLiveIdR1446;
+if(sameLive&&currentOnlineR1446==null)text('youtubeRadioViewersR565',q.currentConcurrent==null?'—':number(q.currentConcurrent));
+if(sameLive)text('youtubeRadioStartsR947',q.viewSamples?number(q.launches):'—');
+if(sameLive&&!hasVisibleViewsR1446&&q.lastCumulativeViews!=null)text('youtubeRadioViewsR565',number(q.lastCumulativeViews));
+window.dispatchEvent(new CustomEvent('andrik:radio-audience-r1446',{detail:d}));
 const a=$('youtubeRadioStartsCardR947');if(a)a.title='Fallback: локальная статистика эфира из двухминутных YouTube-сэмплов';
-const v=$('youtubeRadioViewsCardR947');if(v)v.title='Fallback: последнее сохранённое cumulative viewCount текущего LIVE';
+const v=$('youtubeRadioViewsCardR947');if(v&&!hasVisibleViewsR1446)v.title='YouTube API: последнее сохранённое суммарное viewCount текущего LIVE';
 return true;
 }catch(_){return false}
 }

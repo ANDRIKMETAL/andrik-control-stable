@@ -280,7 +280,7 @@ body.site-update-page .update-file-picker.update-file-picker-r263>#siteUpdateFil
 body.site-update-page .winrar-books-r263{transform:scale(.76)!important;transform-origin:left center!important;margin-right:-8px!important}
 @media(max-width:420px){body.site-update-page .update-file-picker.update-file-picker-r263{min-height:64px!important;flex-direction:row!important;align-items:center!important}}
 </style>
-<link rel="stylesheet" href="/assets/site-update-progress-r1444.css?v=55.00-r1444">
+<link rel="stylesheet" href="/assets/site-update-progress-r1444.css?v=55.00-r1445">
 </head>
 <body class="control-page site-update-page r136-standard-header-page r137-eye-motion-page">
 <nav class="topbar control-topbar control-detail-topbar"><div class="wrap nav-shell"><a class="control-center-logo" id="controlCenterLogo" href="https://andrikmetal.com/" aria-label="Открыть главный сайт ANDRIK"><img class="logo-ok" src="/assets/control-topbar-eye-triangle.jpg?v=55.00-r136" alt=""><img class="logo-error" src="/assets/andrik-control-red-triangle-192.png?v=55.00-r136" alt=""></a><div class="nav-links control-nav-links control-detail-nav"><a href="/admin-sections.html?section=service&v=55.00-r412">← Служебное</a></div></div></nav>
@@ -308,6 +308,21 @@ body.site-update-page .winrar-books-r263{transform:scale(.76)!important;transfor
 </div>
 <article class="admin-control-card admin-control-card-wide update-upload-card">
 <div class="admin-card-title-row compact-title"><div><span class="eyeline">Новая версия</span><h2>Полный ZIP сайта</h2></div><span class="service-access-state" id="siteUpdateFileState">Не выбран</span></div>
+<section class="update-progress-r1444" id="siteUpdateProgress" data-state="idle" aria-label="Ход обновления сайта">
+  <div class="update-progress-heading-r1444">
+    <strong id="siteUpdateProgressTitle">Подготовка обновления</strong>
+    <span id="siteUpdateProgressBadge">Не начато</span>
+  </div>
+  <div id="siteUpdateProgressBar" role="progressbar" aria-label="Установка сайта" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-valuetext="0% · Подготовка обновления" aria-describedby="siteUpdateProgressNote">
+    <div id="siteUpdateProgressFill" aria-hidden="true"></div>
+    <strong id="siteUpdateProgressPercent" aria-hidden="true">0%</strong>
+  </div>
+  <p id="siteUpdateProgressNote" role="status" aria-live="polite" aria-atomic="true">Выбери полный ZIP сайта.</p>
+</section>
+<div class="update-auto-note" id="siteUpdateUploadMessage">После выбора ZIP проверка запустится автоматически.</div>
+<label class="update-file-picker update-file-picker-r263" for="siteUpdateArchive"><strong><span class="update-file-picker-icon winrar-books-r263" aria-hidden="true"><i class="winrar-book-r263 is-purple"></i><i class="winrar-book-r263 is-blue"></i><i class="winrar-book-r263 is-green"></i><i class="winrar-belt-r263"></i></span><span>Выбрать ZIP</span></strong><span id="siteUpdateFileName">до 25 МБ</span></label><input id="siteUpdateArchive" type="file" accept=".zip,application/zip" hidden>
+
+<button class="btn btn-primary update-main-button" id="siteUpdatePublish" type="button" disabled>ОБНОВИТЬ САЙТ</button>
 <div class="update-live-console-r184" id="siteUpdateConsoleR195" aria-live="polite">
   <div class="update-console-head-r184">
     <span class="eyeline">Процесс установки</span>
@@ -324,21 +339,6 @@ body.site-update-page .winrar-books-r263{transform:scale(.76)!important;transfor
     <a class="btn" href="https://andrikmetal.com/" target="_blank" rel="noopener">Сайт ↗</a>
   </div>
 </div>
-<div class="update-auto-note" id="siteUpdateUploadMessage">После выбора ZIP проверка запустится автоматически.</div>
-<label class="update-file-picker update-file-picker-r263" for="siteUpdateArchive"><strong><span class="update-file-picker-icon winrar-books-r263" aria-hidden="true"><i class="winrar-book-r263 is-purple"></i><i class="winrar-book-r263 is-blue"></i><i class="winrar-book-r263 is-green"></i><i class="winrar-belt-r263"></i></span><span>Выбрать ZIP</span></strong><span id="siteUpdateFileName">до 25 МБ</span></label><input id="siteUpdateArchive" type="file" accept=".zip,application/zip" hidden>
-
-<button class="btn btn-primary update-main-button" id="siteUpdatePublish" type="button" disabled>ОБНОВИТЬ САЙТ</button>
-<section class="update-progress-r1444" id="siteUpdateProgress" data-state="idle" aria-label="Ход обновления сайта">
-  <div class="update-progress-heading-r1444">
-    <strong id="siteUpdateProgressTitle">Подготовка обновления</strong>
-    <span id="siteUpdateProgressBadge">Не начато</span>
-  </div>
-  <div id="siteUpdateProgressBar" role="progressbar" aria-label="Установка сайта" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-valuetext="0% · Подготовка обновления" aria-describedby="siteUpdateProgressNote">
-    <div id="siteUpdateProgressFill" aria-hidden="true"></div>
-    <strong id="siteUpdateProgressPercent" aria-hidden="true">0%</strong>
-  </div>
-  <p id="siteUpdateProgressNote" role="status" aria-live="polite" aria-atomic="true">Выбери полный ZIP сайта.</p>
-</section>
 <div id="siteUpdateStages" data-progress-mode="install" hidden aria-hidden="true">
   <div data-stage="check"></div><div data-stage="backup"></div><div data-stage="commit"></div><div data-stage="release"></div><div data-stage="deploy"></div><div data-stage="protect"></div>
 </div>
@@ -351,11 +351,13 @@ body.site-update-page .winrar-books-r263{transform:scale(.76)!important;transfor
 </article>
 
 <article class="admin-control-card admin-control-card-wide zip-backup-visible-r247">
+<details class="update-advanced update-backup-disclosure-r1445"><summary>Резервная ZIP-копия сайта</summary>
 <div class="zip-backup-panel-r243">
 <div class="zip-backup-title-r243"><strong>📦 Сохранить текущий сайт в ZIP</strong><span>Создать · скачать · поделиться · восстановить</span></div>
 <div class="update-actions compact zip-backup-actions-r243"><button class="btn" id="siteUpdateBackupZipCreate" type="button">Создать ZIP текущего сайта</button><button class="btn" id="siteUpdateBackupZipDownload" type="button" disabled hidden>Скачать ZIP</button><button class="btn" id="siteUpdateBackupZipShare" type="button" disabled hidden>Поделиться</button></div>
 <div class="update-message zip-backup-state-r243" id="siteUpdateBackupZipState">Создаёт точную копию текущего сайта. После создания архив можно скачать, отправить через приложения Android и позже выбрать выше для полного восстановления.</div>
 </div>
+</details>
 </article>
 </section>
 </section>
@@ -374,7 +376,7 @@ body.site-update-page .winrar-books-r263{transform:scale(.76)!important;transfor
 </article>
 
 <article class="admin-control-card admin-control-card-wide update-history-card">
-<details class="update-history-shell" open><summary><span><b>История и откат</b><small id="siteUpdateHistoryMessage"></small></span><button class="btn" id="siteUpdateHistoryRefresh" type="button">↻</button></summary>
+<details class="update-history-shell"><summary><span><b>История и откат</b><small id="siteUpdateHistoryMessage"></small></span><button class="btn" id="siteUpdateHistoryRefresh" type="button">↻</button></summary>
 <div class="update-history-layout">
 <details id="siteUpdateRestorePoints"><summary>Точки восстановления</summary><div class="update-history" id="siteUpdateHistory"><div class="admin-empty">Загрузка…</div></div></details>
 <details><summary>Технические коммиты</summary><div class="update-history" id="siteUpdateTechnicalHistory"><div class="admin-empty">Загрузка…</div></div></details>

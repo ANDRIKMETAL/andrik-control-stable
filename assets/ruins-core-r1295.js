@@ -1,4 +1,4 @@
-import {State,clamp,blocked,move} from './portrait-core-r1295.js';
+import {State,clamp,blocked,move} from './portrait-core-r1295.js?v=r1446';
 export const RUINS_ZONES=['Врата забытого времени','Стражи песков','Три механизма эпох','Мосты над бездной','Хранитель эпох'];
 export const EPOCH_RELAYS=[{x:-6,z:10},{x:6,z:19},{x:-5,z:29}];
 export const EPOCH_SOURCE={x:-6,z:3},EPOCH_RECEIVER={x:0,z:37};

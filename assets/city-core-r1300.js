@@ -1,4 +1,5 @@
-import {State,move,blocked,clamp} from './portrait-core-r1295.js';
+import {enemyRouteDirection} from './enemy-navigation-r1446.js';
+import {State,move,blocked,clamp} from './portrait-core-r1295.js?v=r1446';
 export const CITY_SAVE='andrik-city-3d-r1289';
 export const CITY_ZONES=['Улица пробуждения','Неоновый перекрёсток','NO CHOICE BAR','Мотоциклетная погоня','Ночной надзиратель'];
 export const roadCenter=z=>Math.sin(z/43)*3.3+Math.sin(z/91)*2;
@@ -48,7 +49,7 @@ export class CityState extends State {
  if(e.mode==='stagger'){if(e.t>.35){e.mode='chase';e.t=0;}return;}
  if(e.mode==='windup'){if(e.t>.9){if(!blocked(e,this.p,this.geo.walls))this.shots.push({x:e.x,z:e.z,vx:Math.sin(e.yaw)*8,vz:Math.cos(e.yaw)*8,life:4,reflectable:true});e.mode='retreat';e.t=0;e.cd=2;}return;}
  if(e.mode==='retreat'&&e.t<.5){move(e,-Math.sin(e.yaw)*dt*2,-Math.cos(e.yaw)*dt*2,this.geo.walls);return;}
- e.mode='chase';if(d<16&&!blocked(e,this.p,this.geo.walls)&&e.cd<=0){e.mode='windup';e.t=0;}else if(d>7)move(e,Math.sin(e.yaw)*dt*2.7,Math.cos(e.yaw)*dt*2.7,this.geo.walls);
+ e.mode='chase';if(d<16&&!blocked(e,this.p,this.geo.walls)&&e.cd<=0){e.mode='windup';e.t=0;}else if(d>7||blocked(e,this.p,this.geo.walls)){const aim=enemyRouteDirection(e,this.p,this.geo,this.time);move(e,aim.x*dt*2.7,aim.z*dt*2.7,this.geo.walls,.48);}
  }
  boss(e,dt){this.phase=e.hp>400?1:e.hp>200?2:3;this.bossOpen=Math.max(0,this.bossOpen-dt);this.bossClock+=dt;e.yaw=Math.atan2(this.p.x-e.x,this.p.z-e.z);
  if(this.bossOpen>0){e.mode='open';return;}
