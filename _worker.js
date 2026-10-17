@@ -18705,7 +18705,7 @@ return new Response(object.body,{status:200,headers});
 
 // R1430: selectable five-album visual mode. R2 is the single source of truth.
 // R1442: independent rows prevent a ticker toggle overwriting an album choice.
-const RADIO_VISUAL_SLOTS_R1442=['illusion','ocean','trika','beyond','silent'];
+const RADIO_VISUAL_SLOTS_R1442=['illusion','ocean','trika','beyond','silent','extras'];
 const RADIO_VISUAL_PREFIX_R1442='radio-visual-r1442:';
 const RADIO_ALBUM_LOOP_LIMIT_R1442=32*1024*1024;
 const radioLoopKeyR1442=slot=>`radio/album-loops-r1442/${slot}.mp4`;
@@ -18753,7 +18753,7 @@ async function handleVisualSettingsR1442(request,env){
    if(kind==='video'){
     const bucket=getMusicBucketR314(env);
     const head=bucket?await bucket.head(radioLoopKeyR1442(slot)):null;
-    if(!head)return json({ok:false,error:'video-not-uploaded',message:'Сначала загрузи видео этого альбома.'},409);
+    if(!head)return json({ok:false,error:'video-not-uploaded',message:'Сначала загрузи видео этого раздела.'},409);
    }
    key='kind:'+slot;value=kind;
   }
@@ -20312,6 +20312,8 @@ if (ownerSessionOk) {
 const ownerKey = configuredAdminKeys(env)[0] || '';
 if (ownerKey) {
 const headers = new Headers(request.headers);
+// R1456: a verified owner session replaces stale legacy credentials.
+headers.delete('authorization');
 headers.set('x-admin-key', ownerKey);
 headers.set('x-andrik-owner-session', '1');
 request = new Request(request, { headers });

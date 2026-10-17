@@ -1,5 +1,5 @@
-import {createGrowthUI} from './growth-ui-r1449.js?v=r1449';
-import {createGameSound} from './game-sound-r1448.js?v=r1448';
+import {createGrowthUI} from './growth-ui-r1449.js?v=r1455';
+import {createGameSound} from './game-sound-r1448.js?v=r1455';
 const KEY='andrik-game-settings-r1448',LEARN='andrik-game-learned-r1448';
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 export const DEFAULTS={quality:'auto',fps:60,buttonScale:1,stickScale:1,opacity:.38,horizontal:16,vertical:16,follow:true,aimAssist:true,guidance:'auto',tutorial:true,motion:.5,flashes:.65};
@@ -14,6 +14,7 @@ export function navigationTarget(s){
  const p=s.p,nearest=list=>list.slice().sort((a,b)=>Math.hypot(a.x-p.x,a.z-p.z)-Math.hypot(b.x-p.x,b.z-p.z))[0];
  if(s.race?.mounted&&!s.race.finished)return null;
  if(s.isCity){const item=s.cityItems?.find(q=>!q.optional&&!s.cityFlags.includes(q.id));if(item)return {...item,label:item.label};}
+ if(s.navigationObjective)return s.navigationObjective;
  if(s.world){const q=s.switches?.find(q=>!q.active);if(q)return {...q,label:s.world===5?'Плита '+(q.id+1):'Маяк '+(q.id+1)};if(s.exitOpen)return {...s.exit,label:'Выход'};}
  else if(s.zone===2&&!s.exitOpen){
   if(s.relayAngles){const i=s.puzzle.lit.findIndex(v=>!v),q=[{x:-6,z:10},{x:6,z:19},{x:-5,z:29}][i];if(q)return {...q,label:'Отражатель '+(i+1)};}
@@ -84,14 +85,14 @@ export function createExperience(root,state,{signal,isPaused,onSettings,getAudio
   update(dt,yaw){
    refreshGrowth();const paused=isPaused();hint.hidden=nav.hidden=paused;if(paused)return;elapsed+=dt;shake=Math.max(0,shake-dt);
    if(zone!==state.zone){zone=state.zone;stalled=0;best=Infinity;targetKey='';elapsed=0;lastContext='';hintUntil=0;}
-   const p=state.p,moving=Math.hypot(p.vx||0,p.vz||0)>.2;if(moving)teach('move');if(state.attack?.spin)teach('guitar');if(['punch','kick','backfist'].includes(state.attack?.kind))teach('punch');if(!p.grounded&&state.jumps===0)teach('double');
+   const p=state.p,moving=Math.hypot(p.vx||0,p.vz||0)>.2;if(moving)teach('move');if(state.attack?.spin)teach('guitar');if(['slash','punch','kick','backfist'].includes(state.attack?.kind))teach('punch');if(!p.grounded&&state.jumps===0)teach('double');
    const finish=state.finisherTarget,interact=state.canInteract;
-   if(b){b.dataset.ready=finish?'finish':'';b.setAttribute('aria-label',finish?'B: добивание':'B: удары; удерживать для гитары');}
+   if(b){b.dataset.ready=finish?'finish':'';b.setAttribute('aria-label',finish?'B: добивание':'B: меч и удар ногой; удерживать для гитары');}
    if(c){c.dataset.ready=interact?'interact':'';c.setAttribute('aria-label',interact?'C: взаимодействовать':'C: крик');}
    const context=finish?'finish':interact?'interact':'';
    if(context&&context!==lastContext){hintUntil=elapsed+2.8;hintText=context==='finish'?'B — добить лежащего противника':'C — взаимодействовать';}lastContext=context;
    if(elapsed>=hintUntil&&settings.tutorial&&elapsed>2&&elapsed>=nextHint){
-    const lesson=!learned.move?['Левый круг — движение. До края — бег.',5]:!learned.double?['A, затем ещё A в воздухе — двойной прыжок.',6]:!learned.punch?['Короткие B — правый, левый, удар ногой.',6]:!learned.guitar?['Удерживай B — круговой удар гитарой.',6]:null;
+    const lesson=!learned.move?['Левый круг — движение. До края — бег.',5]:!learned.double?['A, затем ещё A в воздухе — двойной прыжок.',6]:!learned.punch?['Короткие B — две рубки мечом, затем удар ногой.',6]:!learned.guitar?['Удерживай B — круговой удар гитарой.',6]:null;
     if(lesson){hintText=lesson[0];hintUntil=elapsed+lesson[1];nextHint=elapsed+22;}
    }
    hint.hidden=!(settings.tutorial&&elapsed<hintUntil)||!!state.dead||!!state.finale||state.won;hint.textContent=hintText;

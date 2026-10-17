@@ -1,10 +1,10 @@
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const angle=(a,b)=>Math.atan2(Math.sin(a-b),Math.cos(a-b));
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
-const supported=kind=>['punch','kick','backfist'].includes(kind);
-function range(kind,foe){return foe.kind==='boss'?3.9:kind==='kick'?3.4:kind==='backfist'?2.75:2.35;}
+const supported=kind=>['slash','punch','kick','backfist'].includes(kind);
+function range(kind,foe,state){const blade=state.growthStats?.bladeRange??2.85;return foe.kind==='boss'?3.9+(kind==='slash'?blade-2.85:0):kind==='slash'?blade:kind==='kick'?3.4:kind==='backfist'?2.75:2.35;}
 function visible(state,e,kind,blocked,from){
- return e?.hp>0&&distance(state.p,e)<=range(kind,e)&&Math.abs((e.y||0)-state.p.y)<1.6&&Math.abs(angle(Math.atan2(e.x-state.p.x,e.z-state.p.z),from))<=Math.PI*55/180&&!blocked(state.p,e,state.geo.walls);
+ return e?.hp>0&&distance(state.p,e)<=range(kind,e,state)&&Math.abs((e.y||0)-state.p.y)<1.6&&Math.abs(angle(Math.atan2(e.x-state.p.x,e.z-state.p.z),from))<=Math.PI*55/180&&!blocked(state.p,e,state.geo.walls);
 }
 export function beginAim(state,blocked){
  const a=state.attack;if(!a||!supported(a.kind)||state.aimAssistEnabled===false||state.race?.mounted)return;

@@ -433,4 +433,4 @@ uploadBtn.onclick=async()=>{const file=fileEl.files?.[0];if(!file)return msg.tex
 list.addEventListener('click',async e=>{const cb=e.target.closest('[data-copy-r1258]');if(cb){const r=rows[Number(cb.dataset.copyR1258)];if(!r)return;const command=vpsCommand(r);cmdBox.textContent=command;cmdBox.classList.add('on');const ok=await copyText(command);msg.textContent=ok?'✅ Команда загрузки на VPS скопирована.':'Команда показана ниже — скопируй вручную.';return}const db=e.target.closest('[data-delete-r1258]');if(db){const r=rows[Number(db.dataset.deleteR1258)];if(!r||busy)return;if(!confirm(`Удалить ${r.name} из private R2?`))return;busy=true;db.disabled=true;try{await api(API+'?key='+encodeURIComponent(r.key),{method:'DELETE'});msg.textContent='✅ ZIP удалён из R2.';cmdBox.classList.remove('on');await load()}catch(err){msg.textContent='❌ '+err.message}finally{busy=false}}});load();
 })();</script>
 
-<script defer src="/assets/radio-visual-controls-r1442.js?v=r1442"></script></body></html>
+<script defer src="/assets/radio-visual-auth-r1456.js?v=r1456"></script><script defer src="/assets/radio-visual-controls-r1442.js?v=r1456"></script></body></html>

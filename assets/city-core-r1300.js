@@ -1,7 +1,7 @@
 import {attackSlot,facesTarget,waitForAttack,modernBoss,bossDamage,updateArenaBoss} from './encounters-r1448.js?v=r1448';
-import {downedEnemyR1447} from './combat-r1447.js?v=r1449';
+import {downedEnemyR1447} from './combat-r1447.js?v=r1455';
 import {enemyRouteDirection} from './enemy-navigation-r1446.js';
-import {State,move,blocked,clamp} from './portrait-core-r1295.js?v=r1449';
+import {State,move,blocked,clamp} from './portrait-core-r1295.js?v=r1455';
 export const CITY_SAVE='andrik-city-3d-r1289';
 export const CITY_ZONES=['Улица пробуждения','Неоновый перекрёсток','NO CHOICE BAR','Мотоциклетная погоня','Ночной надзиратель'];
 export const roadCenter=z=>Math.sin(z/43)*3.3+Math.sin(z/91)*2;

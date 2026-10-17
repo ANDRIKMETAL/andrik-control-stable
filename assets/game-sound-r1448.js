@@ -18,9 +18,10 @@ export function createGameSound(getContext,getVolume){
    const wood=!state.isCity&&(state.isRuins||state.world===2),metal=state.world===3||state.world===4;
    hiss(.055,wood?.12:.075,metal?3100:wood?1100:650);source(metal?460:wood?150:75,.075,.04,'triangle',metal?300:50);
   }else if(e.type==='hit'){
-   const kick=e.kind==='kick',guitar=e.kind==='attack';source(kick?85:guitar?165:120,kick?.17:.10,kick?.19:.13,'triangle',42);hiss(.075,.15,guitar?2900:1700);
+   const kick=e.kind==='kick',guitar=e.kind==='attack',blade=e.kind==='slash';source(blade?380:kick?85:guitar?165:120,kick?.17:.10,kick?.19:.13,'triangle',blade?190:42);hiss(.075,.15,blade?4200:guitar?2900:1700);
    if(guitar){source(220,.28,.065,'sawtooth',110);source(330,.24,.035,'triangle',165);}
-  }else if(e.type==='swing')hiss(e.kind==='kick'?.18:.12,.06,e.kind==='attack'?1900:900);
+  }else if(e.type==='swing')hiss(e.kind==='kick'?.18:.12,e.kind==='slash'?.085:.06,e.kind==='slash'?3100:e.kind==='attack'?1900:900);
+  else if(e.type==='bladeParry'){source(720,.2,.08,'triangle',330);hiss(.05,.08,5200);}
   else if(e.type==='finishImpact'){source(64,.23,.23,'sine',28);hiss(.13,.22,1800);}
   else if(e.type==='dogWarn'){source(130,.23,.08,'sawtooth',75);hiss(.14,.12,850);}
   else if(e.type==='dogBite'){source(205,.13,.1,'sawtooth',70);hiss(.09,.18,1300);}

@@ -1,4 +1,5 @@
 import * as T from './vendor/three-r170.module.min.js';
+import {addBlade,poseBlade} from './lyra-blade-r1455.js?v=r1455';
 // Metre-scale articulated mesh. Geometry belongs to the scene and is disposed on exit.
 export function createLyra(){
  const root=new T.Group(),body=new T.Group();root.name='Lyra-unmasked';root.add(body);
@@ -181,6 +182,7 @@ export function createLyra(){
  for(let i=0;i<5;i++)put(microphone,new T.TorusGeometry(.024*Math.sin((i+1)/6*Math.PI),.0012,4,16),dark,0,.039+i*.011,0).rotation.x=Math.PI/2;
  const face=new T.Group();face.visible=false;
  root.userData={body,head,hair,face,limbs,guitar,eye,microphone,vocalMouth,kind:'lira'};
+ addBlade(root.userData);
  return root;
 }
 const smooth=x=>{x=T.MathUtils.clamp(x,0,1);return x*x*(3-2*x);};
@@ -254,4 +256,5 @@ export function poseGuitar(root,attack,combo,time,running){
   if(running){g.position.y+=Math.sin(time*15)*.025;if(!attack)u.body.rotation.x=.12;}
   g.updateMatrix(); // both arms remain free while guitar stays attached to the back
  }
+ poseBlade(root,attack,time,running,handAt);
 }

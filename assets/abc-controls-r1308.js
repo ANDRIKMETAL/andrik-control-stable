@@ -24,14 +24,14 @@ export const abcMarkup=`<style>
 .pt-actions button[data-abc]:active,[id="world1306"] .actions button[data-abc]:active{background:rgba(81,130,159,.48)!important;border-color:rgba(222,248,255,.95)!important;transform:scale(.94);}
 .pt-actions button[data-abc]:focus-visible,[id="world1306"] .actions button[data-abc]:focus-visible{outline:2px solid #a4eaff;outline-offset:4px;}
 @media(max-height:450px){.pt-actions:has([data-abc]),[id="world1306"] .actions:has([data-abc]){--abc-size:calc(clamp(54px,15vh,66px) * var(--game-scale,1));right:max(12px,env(safe-area-inset-right))!important;bottom:max(12px,env(safe-area-inset-bottom))!important;}}
-</style><button data-abc="A" aria-label="A: прыжок, повторно двойной"><b>A</b></button><button data-abc="B" aria-label="B: удары, удерживать для гитары"><b>B</b></button><button data-abc="C" aria-label="C: действие рядом с целью, иначе крик"><b>C</b></button>`;
+</style><button data-abc="A" aria-label="A: прыжок, повторно двойной"><b>A</b></button><button data-abc="B" aria-label="B: меч и удар ногой, удерживать для гитары"><b>B</b></button><button data-abc="C" aria-label="C: действие рядом с целью, иначе крик"><b>C</b></button>`;
 export function createABC(state){
  let held=null,queue=[],step=0,lastTap=-Infinity,zone=state.zone;
  const reset=()=>{held=null;queue=[];step=0;lastTap=-Infinity;zone=state.zone;};
  const riding=()=>state.race?.mounted&&!state.race.finished;
  function submit(kind){if(state.dead||state.won||state.finale)return;if(!state.attack){state.action(kind);}else if(queue.length<2)queue.push(kind);}
  return {reset,down(button,now){if(button==='A')state.action('jump');else if(button==='C')state.action(state.canInteract?'interact':'scream');else if(button==='B'&&!held){held={at:now,fired:false};if(riding()){state.action('dash');held.fired=true;}}},
- up(button,now){if(button!=='B'||!held)return;const was=held;held=null;if(was.fired)return;if(now-was.at>=360){submit('attack');return;}if(now-lastTap>(state.growthStats?.comboWindow??1400)){step=0;if(!state.attack)state.nextUpper=false;}submit(step===2?'kick':step===3?'backfist':'punch');step=(step+1)%(state.growthStats?.comboLevel>0?4:3);lastTap=now;},
+ up(button,now){if(button!=='B'||!held)return;const was=held;held=null;if(was.fired)return;if(now-was.at>=360){submit('attack');return;}if(now-lastTap>(state.growthStats?.comboWindow??1400)){step=0;if(!state.attack)state.nextUpper=false;}submit(['slash','slashReverse','kick','slashSpin'][step]);step=(step+1)%(state.growthStats?.comboLevel>0?4:3);lastTap=now;},
  tick(now){if(zone!==state.zone){reset();return;}if(state.dead||state.won||state.finale){reset();return;}if(held&&!held.fired&&now-held.at>=360){held.fired=true;submit('attack');step=0;}if(!state.attack&&queue.length)state.action(queue.shift());}
  };
 }
