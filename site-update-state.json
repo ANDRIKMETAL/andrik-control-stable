@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r358-deploy-nohang",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1792268227809-fbd20b52aa",
-  "release": "R1455",
-  "archiveName": "SITE-R1455-CHROME-SECTION-TITLES-FULL.zip",
-  "sourceHead": "f9c58c48238ccb552c9811ec8ca4be0046f9fee9",
-  "backupSha": "f9c58c48238ccb552c9811ec8ca4be0046f9fee9",
+  "operationId": "publish-1792273021823-505f6f2727",
+  "release": "R1454",
+  "archiveName": "SITE-R1454-ALBUM-VIDEO-16S-FULL.zip",
+  "sourceHead": "c6743df2225ecf6090bd522bb7003123f46bd697",
+  "backupSha": "c6743df2225ecf6090bd522bb7003123f46bd697",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-10-17T20:17:07.809Z"
+  "generatedAt": "2026-10-17T21:37:01.823Z"
 }
