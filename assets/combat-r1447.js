@@ -1,3 +1,5 @@
+import {beginAim,updateAim} from './aim-assist-r1449.js?v=r1449';
+import {attackSlot,facesTarget,waitForAttack,modernBoss,bossDamage} from './encounters-r1448.js?v=r1448';
 /* State-only combat additions. No renderer, assets, timers or save-key changes. */
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 export function downedEnemyR1447(state,e,dt){
@@ -17,7 +19,7 @@ export function installCombatR1447(State,{move,blocked,clamp,enemyRouteDirection
   return this.living.filter(e=>e.kind!=='boss'&&e.down>.42&&distance(e,this.p)<1.9&&Math.abs((e.y||0)-this.p.y)<1.2&&!blocked(this.p,e,this.geo.walls)).sort((a,b)=>distance(a,this.p)-distance(b,this.p))[0]||null;
  }});
  State.prototype.action=function(kind){
-  if(!this.dead&&!this.won&&!this.finale&&!this.attack&&kind==='punch'){
+  if(!this.dead&&!this.won&&!this.finale&&!this.attack&&['punch','kick','backfist'].includes(kind)){
    const foe=this.finisherTarget;
    if(foe){this.p.yaw=Math.atan2(foe.x-this.p.x,foe.z-this.p.z);this.p.vx=this.p.vz=0;
     this.attack={kind:'finish',target:foe.id,t:0,duration:.92,hitAt:.55,hit:false};
@@ -27,7 +29,11 @@ export function installCombatR1447(State,{move,blocked,clamp,enemyRouteDirection
    this.attack={kind:'attack',t:0,duration:1.24,hitAt:.34,hit:false,spin:true,victims:new Set()};
    this.lastAttack=this.time;this.combo=0;this.emit('spinStart');return true;
   }
-  return original.action.call(this,kind);
+  if(kind==='backfist'){
+   if(this.dead||this.won||this.finale||this.attack||!(this.growthStats?.comboLevel>0))return false;
+   this.attack={kind,t:0,duration:.82,hitAt:.40,hit:false};this.lastAttack=this.time;beginAim(this,blocked);return true;
+  }
+  const before=this.attack,result=original.action.call(this,kind);if(result&&this.attack!==before)beginAim(this,blocked);return result;
  };
  State.prototype.hit=function(e,n,knock=.5){
   if(e.hp<=0)return;const wasDown=e.down>0;
@@ -40,7 +46,14 @@ export function installCombatR1447(State,{move,blocked,clamp,enemyRouteDirection
   }
  };
  State.prototype.attackHit=function(){
-  const a=this.attack;if(!a)return;
+  const a=this.attack;if(!a)return;updateAim(this,this.aimInput1449,blocked,true);
+  if(a.kind==='backfist'){
+   for(const e of this.living){const d=distance(e,this.p),dot=((e.x-this.p.x)*Math.sin(this.p.yaw)+(e.z-this.p.z)*Math.cos(this.p.yaw))/Math.max(.01,d);
+    if(d>(e.kind==='boss'?3.9:2.75)||dot<.45||Math.abs((e.y||0)-this.p.y)>1.6||blocked(this.p,e,this.geo.walls))continue;
+    if(e.kind==='boss'&&!modernBoss(this)&&this.bossOpen<=0){this.emit('blocked');continue;}
+    this.hit(e,bossDamage(this,e,this.growthStats?.backfistDamage??28),e.kind==='boss'?0:2.8);
+   }this.emit('swing',{kind:'backfist'});return;
+  }
   if(a.kind==='finish'){
    const target=this.enemies.find(e=>e.id===a.target);
    if(target?.hp>0&&target.down>0&&distance(target,this.p)<2.55&&Math.abs((target.y||0)-this.p.y)<1.2&&!blocked(this.p,target,this.geo.walls)){
@@ -50,12 +63,12 @@ export function installCombatR1447(State,{move,blocked,clamp,enemyRouteDirection
   if(a.kind==='attack'&&a.spin){
    if(!(a.victims instanceof Set))a.victims=new Set();
    for(const e of this.living){
-    if(a.victims.has(e.id)||distance(e,this.p)>3.55||Math.abs((e.y||0)-this.p.y)>1.8||blocked(this.p,e,this.geo.walls))continue;
-    if(e.kind==='boss'&&this.bossOpen<=0){if(!a.blocked){a.blocked=true;this.emit('blocked');}continue;}
-    a.victims.add(e.id);this.hit(e,26,e.kind==='boss'?0:3.25);
+    if(a.victims.has(e.id)||distance(e,this.p)>(this.growthStats?.guitarRange??3.55)||Math.abs((e.y||0)-this.p.y)>1.8||blocked(this.p,e,this.geo.walls))continue;
+    if(e.kind==='boss'&&!modernBoss(this)&&this.bossOpen<=0){if(!a.blocked){a.blocked=true;this.emit('blocked');}continue;}
+    a.victims.add(e.id);this.hit(e,bossDamage(this,e,Math.round(26*(this.growthStats?.guitarDamage??1))),e.kind==='boss'?0:3.25);
    }
    for(const shot of this.shots){
-    if(!shot.reflectable||shot.friendly||distance(shot,this.p)>3.55)continue;
+    if(!shot.reflectable||shot.friendly||distance(shot,this.p)>(this.growthStats?.guitarRange??3.55))continue;
     const foe=this.living.find(e=>e.id===shot.source)||this.living.find(e=>!blocked(shot,e,this.geo.walls));
     if(foe){const d=Math.max(.01,distance(foe,shot));shot.vx=(foe.x-shot.x)/d*12;shot.vz=(foe.z-shot.z)/d*12;shot.friendly=true;shot.life=Math.min(shot.life,2);}
    }
@@ -67,15 +80,15 @@ export function installCombatR1447(State,{move,blocked,clamp,enemyRouteDirection
   if(downedEnemyR1447(this,e,dt))return;
   if(e.kind==='dog'&&e.hp>0){
    e.hit=Math.max(0,e.hit-dt);e.cd-=dt;e.t+=dt;
-   const d=distance(e,this.p),los=!blocked(e,this.p,this.geo.walls);e.yaw=Math.atan2(this.p.x-e.x,this.p.z-e.z);
+   const d=distance(e,this.p),los=!blocked(e,this.p,this.geo.walls);if(!['windup','strike'].includes(e.mode))e.yaw=Math.atan2(this.p.x-e.x,this.p.z-e.z);
    if(e.mode==='stagger'){if(e.t>.3){e.mode='chase';e.t=0;}return;}
    if(e.mode==='windup'){if(e.t>.38){e.mode='strike';e.t=0;e.contact=false;}return;}
    if(e.mode==='strike'){
-    if(!e.contact&&e.t>.13){e.contact=true;if(d<1.8&&los&&this.p.y-(e.y||0)<.95)this.damage(9);}
+    if(!e.contact&&e.t>.13){e.contact=true;this.emit('dogBite',{x:e.x,z:e.z,enemy:e.id});if(d<1.8&&los&&this.p.y-(e.y||0)<.95&&facesTarget(e,this.p,.6))this.damage(9);}
     if(e.t>.38){e.mode='retreat';e.t=0;e.cd=1.2;}return;
    }
    if(e.mode==='retreat'&&e.t<.4){if(d>.01)move(e,(e.x-this.p.x)/d*dt*2.5,(e.z-this.p.z)/d*dt*2.5,this.geo.walls,.38);return;}
-   if(d<1.65&&los&&e.cd<=0){e.mode='windup';e.attackKind='bite';e.t=0;return;}
+   if(d<3.6&&los&&!attackSlot(this,e)){waitForAttack(this,e,dt,move);return;}if(d<1.65&&los&&e.cd<=0&&attackSlot(this,e)){e.mode='windup';e.attackKind='bite';e.t=0;this.emit('dogWarn',{x:e.x,z:e.z,enemy:e.id});return;}
    const goal=d<20?this.p:{x:e.homeX,z:e.homeZ};const dir=enemyRouteDirection(e,goal,this.geo,this.time);
    e.mode=d<20?'chase':'patrol';if(d>1.15)move(e,dir.x*dt*4.45,dir.z*dt*4.45,this.geo.walls,.4);return;
   }
@@ -93,7 +106,7 @@ export function installCombatR1447(State,{move,blocked,clamp,enemyRouteDirection
    this.p.vx=this.p.vz=0;
   }
   else if(this.attack?.spin)controls={...input,x:(input.x||0)*.55,z:(input.z||0)*.55};
-  const current=this.attack;original.update.call(this,dt,controls);
+  const current=this.attack;this.aimInput1449=controls;updateAim(this,controls,blocked);original.update.call(this,dt,controls);updateAim(this,controls,blocked);
   // Continuous 360-degree contact window; each enemy is struck at most once.
   if(this.attack===current&&current?.spin&&current.t>=.34&&current.t<=1.02)this.attackHit();
  };

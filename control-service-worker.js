@@ -1,5 +1,5 @@
 'use strict';
-const VERSION = '55.00-r1447-game-combat';
+const VERSION = '55.00-r1449-aim-growth';
 async function clearControlCaches(){
 if(!self.caches) return;
 const keys = await caches.keys();

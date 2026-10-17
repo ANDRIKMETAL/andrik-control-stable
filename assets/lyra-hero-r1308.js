@@ -195,7 +195,7 @@ function handAt(limb,target,side){
 }
 export function poseGuitar(root,attack,combo,time,running){
  const u=root.userData,g=u.guitar,active=attack?.kind==='attack',punch=attack?.kind==='punch';
- for(const l of u.limbs){l.hand.scale.setScalar(1);l.foot.scale.setScalar(1);const closed=active||punch||attack?.kind==='finish';for(const f of l.hand.userData.fingers){f.position.y=closed?-.021:-.032;f.position.z=closed?.028:.01;f.scale.y=closed?.011:.023;}}
+ for(const l of u.limbs){l.hand.scale.setScalar(1);l.foot.scale.setScalar(1);const closed=active||punch||attack?.kind==='backfist'||attack?.kind==='finish';for(const f of l.hand.userData.fingers){f.position.y=closed?-.021:-.032;f.position.z=closed?.028:.01;f.scale.y=closed?.011:.023;}}
  // Grip pose returns smoothly after both attacks. Body and legs remain free to move.
  const rest=new T.Vector3(.16,1.34,-.19),p=active?T.MathUtils.clamp(attack.t/attack.duration,0,1):0;
  g.position.copy(rest);g.rotation.set(.10,0,-.48);
@@ -220,6 +220,14 @@ export function poseGuitar(root,attack,combo,time,running){
    const impact=Math.exp(-Math.pow((q-(upper?.50:.50))/.15,2));u.limbs[index].hand.scale.setScalar(1+1.05*impact);
    handAt(u.limbs[index],goal,side);u.body.rotation.y=side*.22*Math.sin(q*Math.PI);u.body.rotation.x=upper?-.045*Math.sin(q*Math.PI):.06*Math.sin(q*Math.PI);
   }
+ }
+ if(attack?.kind==='backfist'){
+  const q=T.MathUtils.clamp(attack.t/attack.duration,0,1),turn=smooth(q/.55),reach=smooth((q-.22)/.26)*(1-smooth((q-.59)/.34));
+  u.body.rotation.y=Math.PI*2*turn;u.body.rotation.x=.08*reach;u.body.position.y-=.035*Math.sin(Math.PI*q);
+  handAt(u.limbs[0],new T.Vector3(-.12,1.64,.24),-1);
+  handAt(u.limbs[1],new T.Vector3(.13-.05*reach,1.61,.23+.36*reach),1);
+  u.limbs[1].hand.scale.setScalar(1+1.1*Math.exp(-Math.pow((q-.49)/.14,2)));
+  for(const [i,l]of u.limbs.entries()){l.leg.rotation.x+=(i?.10:-.16)*reach;l.shin.rotation.x+=.22*reach;}
  }
  if(attack?.kind==='kick'){
   const t=attack.t/attack.duration,pulse=Math.exp(-Math.pow((t-.63)/.15,2));u.limbs[1].foot.scale.setScalar(1+.78*pulse);u.body.rotation.y=Math.PI*2*smooth(t/.64);

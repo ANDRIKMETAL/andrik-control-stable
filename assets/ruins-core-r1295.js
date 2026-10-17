@@ -1,5 +1,6 @@
-import {downedEnemyR1447} from './combat-r1447.js';
-import {State,clamp,blocked,move} from './portrait-core-r1295.js?v=r1447';
+import {attackSlot} from './encounters-r1448.js?v=r1448';
+import {downedEnemyR1447} from './combat-r1447.js?v=r1449';
+import {State,clamp,blocked,move} from './portrait-core-r1295.js?v=r1449';
 export const RUINS_ZONES=['Врата забытого времени','Стражи песков','Три механизма эпох','Мосты над бездной','Хранитель эпох'];
 export const EPOCH_RELAYS=[{x:-6,z:10},{x:6,z:19},{x:-5,z:29}];
 export const EPOCH_SOURCE={x:-6,z:3},EPOCH_RECEIVER={x:0,z:37};
@@ -40,11 +41,11 @@ export class RuinsState extends State {
    e.x=ox;e.z=oz;if(landing)e.hop={x:ox,z:oz,tx:landing.x,tz:landing.z,t:0};
   }return;
  }
- if(e.kind!=='double'||e.hp<=0){super.enemy(e,dt);return;}e.cd-=dt;e.t+=dt;e.yaw=Math.atan2(this.p.x-e.x,this.p.z-e.z);const d=Math.hypot(this.p.x-e.x,this.p.z-e.z);
+ if(e.kind!=='double'||e.hp<=0){super.enemy(e,dt);return;}e.cd-=dt;e.t+=dt;if(e.mode!=='windup')e.yaw=Math.atan2(this.p.x-e.x,this.p.z-e.z);const d=Math.hypot(this.p.x-e.x,this.p.z-e.z);
  if(e.mode==='stagger'){if(e.t>.35)e.mode='chase';return;}
  if(e.mode==='windup'){if(e.t>.9){this.shots.push({x:e.x,z:e.z,vx:Math.sin(e.yaw)*6,vz:Math.cos(e.yaw)*6,life:6,reflectable:true});e.mode='retreat';e.t=0;e.cd=2.0;}return;}
  if(e.mode==='retreat'){if(e.t<.8&&d>0.1)move(e,-Math.sin(e.yaw)*dt*2,-Math.cos(e.yaw)*dt*2,this.geo.walls);else e.mode='chase';return;}
- if(d<16&&!blocked(e,this.p,this.geo.walls)&&e.cd<=0){e.mode='windup';e.t=0;return;}
+ if(d<16&&!blocked(e,this.p,this.geo.walls)&&e.cd<=0&&attackSlot(this,e)){e.mode='windup';e.t=0;return;}
  if(d>9)move(e,Math.sin(e.yaw)*dt*2.4,Math.cos(e.yaw)*dt*2.4,this.geo.walls);
  }
  attackHit(){super.attackHit();if(this.attack?.kind==='attack')for(const s of this.shots){if(!s.reflectable||s.friendly||Math.hypot(s.x-this.p.x,s.z-this.p.z)>3.1)continue;const target=this.living.filter(e=>e.kind!=='boss').sort((a,b)=>Math.hypot(a.x-s.x,a.z-s.z)-Math.hypot(b.x-s.x,b.z-s.z))[0];if(target&&!blocked(this.p,target,this.geo.walls)){this.hit(target,35,1);s.life=0;this.emit('notice',{text:'Снаряд отражён · 35 урона'});}}}

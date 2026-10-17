@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r358-deploy-nohang",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1792255008477-71e4f3399c",
-  "release": "R1447",
-  "archiveName": "SITE-R1447-LYRA-COMBAT-DOGS-FULL.zip",
-  "sourceHead": "2ff91b4702bd40f0bc24035027ce089085930cb2",
-  "backupSha": "2ff91b4702bd40f0bc24035027ce089085930cb2",
+  "operationId": "publish-1792258342984-7cd17a49c2",
+  "release": "R1449",
+  "archiveName": "SITE-R1449-LYRA-AIM-UPGRADES-FULL.zip",
+  "sourceHead": "b592ab37651aa2f0b44f8d0d04b430a95fa748b7",
+  "backupSha": "b592ab37651aa2f0b44f8d0d04b430a95fa748b7",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-10-17T16:36:48.477Z"
+  "generatedAt": "2026-10-17T17:32:22.984Z"
 }

@@ -1,7 +1,7 @@
 // Shared three-button input. Combat queue is bounded; holds never also punch.
 export const abcMarkup=`<style>
 .pt-actions:has([data-abc]),[id="world1306"] .actions:has([data-abc]){
- --abc-size:clamp(64px,9vh,80px);position:absolute!important;
+ --abc-size:calc(clamp(64px,9vh,80px) * var(--game-scale,1));position:absolute!important;
  right:max(16px,env(safe-area-inset-right))!important;bottom:max(16px,env(safe-area-inset-bottom))!important;
  display:grid!important;grid-template-columns:repeat(2,var(--abc-size))!important;
  grid-template-rows:repeat(2,var(--abc-size))!important;column-gap:18px!important;row-gap:6px!important;
@@ -23,7 +23,7 @@ export const abcMarkup=`<style>
 .pt-actions [data-abc="A"],[id="world1306"] .actions [data-abc="A"]{grid-column:2!important;grid-row:2!important;}
 .pt-actions button[data-abc]:active,[id="world1306"] .actions button[data-abc]:active{background:rgba(81,130,159,.48)!important;border-color:rgba(222,248,255,.95)!important;transform:scale(.94);}
 .pt-actions button[data-abc]:focus-visible,[id="world1306"] .actions button[data-abc]:focus-visible{outline:2px solid #a4eaff;outline-offset:4px;}
-@media(max-height:450px){.pt-actions:has([data-abc]),[id="world1306"] .actions:has([data-abc]){--abc-size:clamp(54px,15vh,66px);right:max(12px,env(safe-area-inset-right))!important;bottom:max(12px,env(safe-area-inset-bottom))!important;}}
+@media(max-height:450px){.pt-actions:has([data-abc]),[id="world1306"] .actions:has([data-abc]){--abc-size:calc(clamp(54px,15vh,66px) * var(--game-scale,1));right:max(12px,env(safe-area-inset-right))!important;bottom:max(12px,env(safe-area-inset-bottom))!important;}}
 </style><button data-abc="A" aria-label="A: прыжок, повторно двойной"><b>A</b></button><button data-abc="B" aria-label="B: удары, удерживать для гитары"><b>B</b></button><button data-abc="C" aria-label="C: действие рядом с целью, иначе крик"><b>C</b></button>`;
 export function createABC(state){
  let held=null,queue=[],step=0,lastTap=-Infinity,zone=state.zone;
@@ -31,7 +31,7 @@ export function createABC(state){
  const riding=()=>state.race?.mounted&&!state.race.finished;
  function submit(kind){if(state.dead||state.won||state.finale)return;if(!state.attack){state.action(kind);}else if(queue.length<2)queue.push(kind);}
  return {reset,down(button,now){if(button==='A')state.action('jump');else if(button==='C')state.action(state.canInteract?'interact':'scream');else if(button==='B'&&!held){held={at:now,fired:false};if(riding()){state.action('dash');held.fired=true;}}},
- up(button,now){if(button!=='B'||!held)return;const was=held;held=null;if(was.fired)return;if(now-was.at>=360){submit('attack');return;}if(now-lastTap>1400){step=0;if(!state.attack)state.nextUpper=false;}submit(step===2?'kick':'punch');step=(step+1)%3;lastTap=now;},
+ up(button,now){if(button!=='B'||!held)return;const was=held;held=null;if(was.fired)return;if(now-was.at>=360){submit('attack');return;}if(now-lastTap>(state.growthStats?.comboWindow??1400)){step=0;if(!state.attack)state.nextUpper=false;}submit(step===2?'kick':step===3?'backfist':'punch');step=(step+1)%(state.growthStats?.comboLevel>0?4:3);lastTap=now;},
  tick(now){if(zone!==state.zone){reset();return;}if(state.dead||state.won||state.finale){reset();return;}if(held&&!held.fired&&now-held.at>=360){held.fired=true;submit('attack');step=0;}if(!state.attack&&queue.length)state.action(queue.shift());}
  };
 }

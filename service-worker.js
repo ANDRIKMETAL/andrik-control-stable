@@ -1,5 +1,5 @@
 'use strict';
-const VERSION = '55.00-r1447-game-combat';
+const VERSION = '55.00-r1449-aim-growth';
 const IS_CONTROL_HOST = self.location.hostname.toLowerCase() === 'control.andrikmetal.com';
 async function deleteControlCaches(){
 if(!self.caches) return;

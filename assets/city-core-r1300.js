@@ -1,6 +1,7 @@
-import {downedEnemyR1447} from './combat-r1447.js';
+import {attackSlot,facesTarget,waitForAttack,modernBoss,bossDamage,updateArenaBoss} from './encounters-r1448.js?v=r1448';
+import {downedEnemyR1447} from './combat-r1447.js?v=r1449';
 import {enemyRouteDirection} from './enemy-navigation-r1446.js';
-import {State,move,blocked,clamp} from './portrait-core-r1295.js?v=r1447';
+import {State,move,blocked,clamp} from './portrait-core-r1295.js?v=r1449';
 export const CITY_SAVE='andrik-city-3d-r1289';
 export const CITY_ZONES=['Улица пробуждения','Неоновый перекрёсток','NO CHOICE BAR','Мотоциклетная погоня','Ночной надзиратель'];
 export const roadCenter=z=>Math.sin(z/43)*3.3+Math.sin(z/91)*2;
@@ -25,11 +26,11 @@ export class CityState extends State {
  if(zone===3){this.cityItems=[{id:'bike',x:0,z:9,label:'Сесть на мотоцикл'}];this.race={mounted:false,finished:false,countdown:3,speed:0,impacts:0};this.rivals=[{x:-2,z:20,speed:12.5},{x:2,z:32,speed:13.2}];}
  if(zone===0){this.spawn('dog',7,25);this.spawn('dog',-7,51);}
  if(zone===1){this.spawn('dog',7,18);this.spawn('dog',-4,42);}
- if(zone===4){const b=this.spawn('boss',0,33);b.hp=b.max=600;this.bossStep=0;}
+ if(zone===4){const b=this.spawn('boss',0,33);b.hp=b.max=480;this.bossStep=0;}
  }
  get exitOpen(){if(this.zone===3)return !!this.race.finished;return this.zone<4&&!this.living.length&&this.cityItems.every(q=>q.optional||this.cityFlags.includes(q.id));}
  get nearbyItem(){return this.cityItems.find(q=>!this.cityFlags.includes(q.id)&&Math.hypot(q.x-this.p.x,q.z-this.p.z)<2.5&&Math.abs(this.p.y)<1);}
- get objective(){if(this.zone===3&&this.race.mounted)return this.race.finished?'Финиш! ДЕЙСТВИЕ — слезть и продолжить':this.race.countdown>0?'СТАРТ ЧЕРЕЗ '+Math.ceil(this.race.countdown):'Погоня · '+Math.round(this.p.z/420*100)+'% · БЕГ / Shift: ускорение · назад: тормоз';const q=this.nearbyItem;if(q)return q.label+' · ДЕЙСТВИЕ';if(this.zone===4)return this.bossOpen>0?'Надзиратель устал — атакуй!':'Укрывайся от выстрелов. Крик прерывает замах.';if(this.exitOpen)return 'К светящемуся выходу · ДЕЙСТВИЕ';const missing=this.cityItems.filter(q=>!q.optional&&!this.cityFlags.includes(q.id));return this.zone===3?'Подойди к мотоциклу · ДЕЙСТВИЕ':missing.length?(this.zone===1?'Включи питание: '+this.cityFlags.length+'/2':this.zone===2?'Найди и включи музыкальный автомат':'Найди ключ в боковом переулке')+' · врагов '+this.living.length:'Победи противников: '+this.living.length;}
+ get objective(){if(this.zone===3&&this.race.mounted)return this.race.finished?'Финиш! ДЕЙСТВИЕ — слезть и продолжить':this.race.countdown>0?'СТАРТ ЧЕРЕЗ '+Math.ceil(this.race.countdown):'Погоня · '+Math.round(this.p.z/420*100)+'% · БЕГ / Shift: ускорение · назад: тормоз';const q=this.nearbyItem;if(q)return q.label+' · ДЕЙСТВИЕ';if(this.zone===4)return this.bossOpen>0?'Надзиратель устал — атакуй!':'Уходи от рывка. Голубое кольцо — усиленный урон.';if(this.exitOpen)return 'К светящемуся выходу · ДЕЙСТВИЕ';const missing=this.cityItems.filter(q=>!q.optional&&!this.cityFlags.includes(q.id));return this.zone===3?'Подойди к мотоциклу · ДЕЙСТВИЕ':missing.length?(this.zone===1?'Включи питание: '+this.cityFlags.length+'/2':this.zone===2?'Найди и включи музыкальный автомат':'Найди ключ в боковом переулке')+' · врагов '+this.living.length:'Победи противников: '+this.living.length;}
  get canInteract(){return !!this.nearbyItem||(this.p.z>this.geo.length-7&&Math.abs(this.p.x)<4);}
  interact(){const q=this.nearbyItem;if(q){this.cityFlags.push(q.id);if(q.id==='bike'){this.race.mounted=true;this.p.x=roadCenter(9);this.p.z=9;this.emit('notice',{text:'Погоня: влево / вправо — руль, назад — тормоз'});this.emit('puzzle');return;}this.crystals+=q.optional?5:2;this.p.hp=Math.min(100,this.p.hp+15);this.emit('notice',{text:q.label+' · готово · +'+(q.optional?5:2)+' кристалла'});this.emit('puzzle');return;}if(this.exitOpen&&this.p.z>this.geo.length-7&&Math.abs(this.p.x)<4){this.checkpoint=this.zone+1;this.load(this.checkpoint);this.emit('checkpoint');}else if(this.p.z>this.geo.length-7)this.emit('notice',{text:this.objective});}
  action(kind){if(this.dead||this.finale||this.won)return false;if(this.zone===3&&this.race?.mounted&&!this.race.finished&&kind!=='interact'){
@@ -50,18 +51,14 @@ export class CityState extends State {
  this.shots=this.shots.filter(s=>!blocked(s,{x:s.x+s.vx*dt,z:s.z+s.vz*dt},this.geo.walls));
  super.update(dt,input);this.laser=null;
  }
- enemy(e,dt){if(e.kind==='double'&&downedEnemyR1447(this,e,dt))return;if(e.kind!=='double'||e.hp<=0){super.enemy(e,dt);return;}e.hit=Math.max(0,e.hit-dt);e.cd-=dt;e.t+=dt;const d=Math.hypot(this.p.x-e.x,this.p.z-e.z);e.yaw=Math.atan2(this.p.x-e.x,this.p.z-e.z);
+ enemy(e,dt){if(e.kind==='double'&&downedEnemyR1447(this,e,dt))return;if(e.kind!=='double'||e.hp<=0){super.enemy(e,dt);return;}e.hit=Math.max(0,e.hit-dt);e.cd-=dt;e.t+=dt;const d=Math.hypot(this.p.x-e.x,this.p.z-e.z);if(e.mode!=='windup')e.yaw=Math.atan2(this.p.x-e.x,this.p.z-e.z);
  if(e.mode==='stagger'){if(e.t>.35){e.mode='chase';e.t=0;}return;}
  if(e.mode==='windup'){if(e.t>.9){if(!blocked(e,this.p,this.geo.walls))this.shots.push({x:e.x,z:e.z,vx:Math.sin(e.yaw)*8,vz:Math.cos(e.yaw)*8,life:4,reflectable:true});e.mode='retreat';e.t=0;e.cd=2;}return;}
  if(e.mode==='retreat'&&e.t<.5){move(e,-Math.sin(e.yaw)*dt*2,-Math.cos(e.yaw)*dt*2,this.geo.walls);return;}
- e.mode='chase';if(d<16&&!blocked(e,this.p,this.geo.walls)&&e.cd<=0){e.mode='windup';e.t=0;}else if(d>7||blocked(e,this.p,this.geo.walls)){const aim=enemyRouteDirection(e,this.p,this.geo,this.time);move(e,aim.x*dt*2.7,aim.z*dt*2.7,this.geo.walls,.48);}
+ e.mode='chase';if(d<16&&!blocked(e,this.p,this.geo.walls)&&e.cd<=0&&attackSlot(this,e)){e.mode='windup';e.t=0;}else if(d>7||blocked(e,this.p,this.geo.walls)){const aim=enemyRouteDirection(e,this.p,this.geo,this.time);move(e,aim.x*dt*2.7,aim.z*dt*2.7,this.geo.walls,.48);}
  }
- boss(e,dt){this.phase=e.hp>400?1:e.hp>200?2:3;this.bossOpen=Math.max(0,this.bossOpen-dt);this.bossClock+=dt;e.yaw=Math.atan2(this.p.x-e.x,this.p.z-e.z);
- if(this.bossOpen>0){e.mode='open';return;}
- if(!this.bossAction){e.mode='chase';const d=Math.hypot(e.x-this.p.x,e.z-this.p.z);if(d>3)move(e,Math.sin(e.yaw)*dt*2,Math.cos(e.yaw)*dt*2,this.geo.walls,.6);if(this.bossClock<2)return;const kind=(this.bossStep++%2)?'volley':'slam';this.bossAction={kind,t:0,x:this.p.x,z:this.p.z,yaw:e.yaw,hit:false};}
- const a=this.bossAction;a.t+=dt;e.mode='windup';if(a.t>1.15&&!a.hit){a.hit=true;this.emit('bossStrike');if(a.kind==='volley'){for(let i=0;i<1+this.phase*2;i++){const angle=a.yaw+(i-this.phase)*.13;this.shots.push({x:e.x,z:e.z,vx:Math.sin(angle)*8,vz:Math.cos(angle)*8,life:5});}}else if(Math.hypot(this.p.x-a.x,this.p.z-a.z)<2.6&&this.p.y<.8&&!blocked(e,this.p,this.geo.walls))this.damage(22);}
- if(a.t>1.9){this.bossAction=null;this.bossClock=0;this.bossOpen=3.6;}
- }
+ boss(e,dt){updateArenaBoss(this,e,dt,{move,blocked,enemyRouteDirection});}
+
  attackHit(){super.attackHit();if(this.attack?.kind!=='attack')return;for(const s of this.shots){if(!s.reflectable||s.friendly||Math.hypot(s.x-this.p.x,s.z-this.p.z)>2.7)continue;const e=this.living.find(e=>e.kind==='double'&&!blocked(this.p,e,this.geo.walls));if(e){this.hit(e,30,0);s.life=0;this.emit('notice',{text:'Выстрел отражён!'});}}}
  snapshot(){return {...super.snapshot(),cityVersion:1,cityFlags:[...this.cityFlags],race:this.race?{...this.race}:null,rivals:this.rivals?.map(r=>({...r}))};}
  restore(s){super.restore(s);this.cityFlags=Array.isArray(s.cityFlags)?s.cityFlags.filter(id=>this.cityItems.some(q=>q.id===id)):[];this.wave=3;if(this.zone===3&&s.race){this.race={...this.race,mounted:!!s.race.mounted,finished:!!s.race.finished,countdown:clamp(Number(s.race.countdown)||0,0,3),speed:0};if(Array.isArray(s.rivals)&&s.rivals.length===2&&s.rivals.every(r=>Number.isFinite(r.z)))this.rivals=s.rivals.map((r,i)=>({x:0,z:r.z,speed:i?13.2:12.5}));}}

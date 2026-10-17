@@ -1,6 +1,7 @@
+import {poseArenaBoss} from './boss-poses-r1448.js?v=r1448';
 /* Animation operates in each actor's existing local scale. */
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
-export function poseEnemyCombat(root,e){
+export function poseEnemyCombat(root,e,state){
  const u=root.userData;if(!u?.limbs||u.isDog)return;
  const metres=Math.max(.001,root.scale.x),unit=root.scale.x<.1?1/metres:1;
  if(e.hp>0&&e.down>0){
@@ -8,7 +9,7 @@ export function poseEnemyCombat(root,e){
   u.body.rotation.set(0,0,side*1.46*fall);u.body.position.y=.40*unit*fall;u.head.rotation.x=.15*fall;
   for(const [i,l]of u.limbs.entries()){l.leg.rotation.x=(i?-.24:.38)*fall;l.shin.rotation.x=.5*fall;l.arm.rotation.x=-.5*fall;l.fore.rotation.x=-.8*fall;}return;
  }
- if(e.hp<=0||e.kind==='boss')return;
+ if(e.kind==='boss'){if(state)poseArenaBoss(root,e,state);return;}if(e.hp<=0)return;
  const wind=e.mode==='windup',strike=e.mode==='strike';if(!wind&&!strike)return;
  const progress=clamp(e.t/(wind?.7:.34),0,1),pulse=wind?progress:Math.sin(Math.PI*progress);
  if(e.attackKind==='kick'){

@@ -1,8 +1,8 @@
 /* ANDRIK R1304 — Boss first, motorcycle escape last.
    Retains the proven R1300 city mechanics and only redirects chapter transitions.
 */
-import {CityState as PreviousCityState} from './city-core-r1300.js?v=r1447';
-export {CITY_SAVE,CITY_ZONES,roadCenter,RACE_HAZARDS,cityGeometry} from './city-core-r1300.js?v=r1447';
+import {CityState as PreviousCityState} from './city-core-r1300.js?v=r1449';
+export {CITY_SAVE,CITY_ZONES,roadCenter,RACE_HAZARDS,cityGeometry} from './city-core-r1300.js?v=r1449';
 export class CityState extends PreviousCityState {
   constructor(saved){
     super(saved);
