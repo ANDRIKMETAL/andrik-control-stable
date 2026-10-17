@@ -1,0 +1,66 @@
+/* ANDRIK SITE R1455 — CHROME SECTION HEADINGS ONLY.
+   Original design inspired by heavy-metal chrome lettering; no copied stock image or font.
+   Titles INSIDE panels/cards remain unchanged (blood-red Rubik Wet Paint).
+   One static gradient, no per-frame effects, no additional JS and no GPU animation. */
+:root { --andrik-chrome-outline: #8198ab; }
+
+/* Homepage: headings outside cards only. Do not target .h-feature, .h-game,
+   .h-community-card or the album/track titles: these stay red. */
+body.home-r1190.am1452 .h-section-head h2,
+body.home-r1190.am1452 #about-title,
+body.home-r1190.am1452 #support-title,
+/* Catalogue pages: their outer, top-level page title only. */
+body.albums-page-r446 .albums-page-hero-r446 h1,
+body.clips-page-r483 .clips-hero-r483 h1 {
+  font-family: 'Russo One', 'Arial Black', Impact, system-ui, sans-serif !important;
+  font-weight: 900 !important;
+  text-transform: uppercase !important;
+  letter-spacing: .018em !important;
+  line-height: 1.17 !important;
+  color: #dceaf4 !important; /* fallback if text clip is unsupported */
+  background: linear-gradient(180deg,
+    #ffffff 0%, #fbffff 10%,
+    #d6e7f3 21%, #6a8092 36%,
+    #263341 43%, #eefaff 49%,
+    #fbffff 54%, #9bb3c4 62%,
+    #e8f4fb 74%, #788d9d 83%,
+    #2b3947 100%) !important;
+  background-clip: text !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  -webkit-text-stroke: .48px rgba(189,211,228,.86) !important;
+  text-shadow: none !important;
+  filter: drop-shadow(0 1px 0 #182633)
+          drop-shadow(0 2px 0 #465867)
+          drop-shadow(0 3px 0 #080e15)
+          drop-shadow(0 5px 7px rgba(119,172,204,.23)) !important;
+  overflow-wrap: break-word;
+  -webkit-font-smoothing: antialiased;
+}
+/* Keep this moderate, so long localizations never clip on narrow phones. */
+@media (max-width: 720px) {
+  body.home-r1190.am1452 .h-section-head h2,
+  body.home-r1190.am1452 #about-title,
+  body.home-r1190.am1452 #support-title {
+    font-size: clamp(22px, 5.6vw, 32px) !important;
+    letter-spacing: .005em !important;
+  }
+  body.albums-page-r446 .albums-page-hero-r446 h1,
+  body.clips-page-r483 .clips-hero-r483 h1 {
+    font-size: clamp(29px, 9vw, 53px) !important;
+  }
+}
+/* Accessibility: flat light silver fallback when forced colors are enabled. */
+@media (forced-colors: active) {
+  body.home-r1190.am1452 .h-section-head h2,
+  body.home-r1190.am1452 #about-title,
+  body.home-r1190.am1452 #support-title,
+  body.albums-page-r446 .albums-page-hero-r446 h1,
+  body.clips-page-r483 .clips-hero-r483 h1 {
+    background: none !important;
+    color: CanvasText !important;
+    -webkit-text-fill-color: CanvasText !important;
+    -webkit-text-stroke: 0 !important;
+    filter: none !important;
+  }
+}
