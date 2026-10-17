@@ -1,5 +1,6 @@
+import {downedEnemyR1447} from './combat-r1447.js';
 import {enemyRouteDirection} from './enemy-navigation-r1446.js';
-import {State,move,blocked,clamp} from './portrait-core-r1295.js?v=r1446';
+import {State,move,blocked,clamp} from './portrait-core-r1295.js?v=r1447';
 export const CITY_SAVE='andrik-city-3d-r1289';
 export const CITY_ZONES=['Улица пробуждения','Неоновый перекрёсток','NO CHOICE BAR','Мотоциклетная погоня','Ночной надзиратель'];
 export const roadCenter=z=>Math.sin(z/43)*3.3+Math.sin(z/91)*2;
@@ -8,10 +9,12 @@ export function cityGeometry(zone){
  const length=[64,62,40,420,48][zone];
  const walls=zone===3?[]:[{x:-17,z:length/2,w:2,d:length+4,h:14},{x:17,z:length/2,w:2,d:length+4,h:14},{x:0,z:-2,w:36,d:2,h:12},{x:-10,z:length,w:14,d:2,h:9},{x:10,z:length,w:14,d:2,h:9},{x:0,z:length+2,w:8,d:1,h:9}];
  const props=[];
- if(zone===0||zone===1){for(const [i,q]of [[-6,18],[6,32],[-5,46]].entries()){props.push({type:'car',x:q[0],z:q[1],variant:i});walls.push({x:q[0],z:q[1],w:2.2,d:4.4,h:1.35});}for(const side of [-1,1])for(const z of [12,38]){props.push({type:'crate',x:side*12,z});walls.push({x:side*12,z,w:1.8,d:1.8,h:1.3});}}
+ if(zone===0||zone===1){for(const [i,q]of [[-6,18],[6,32],[-5,46]].entries()){props.push({type:'car',x:q[0],z:q[1],variant:i});walls.push({x:q[0],z:q[1],w:2.14,d:4.42,h:.955,carBase:true},{x:q[0],z:q[1]-.39,w:1.90,d:2.25,h:1.665,carRoof:true});}for(const side of [-1,1])for(const z of [12,38]){props.push({type:'crate',x:side*12,z});walls.push({x:side*12,z,w:1.8,d:1.8,h:1.3});}}
  if(zone===2){walls.push({x:-9,z:23,w:3,d:17,h:1.2});props.push({type:'counter',x:-9,z:23});for(const x of [3,10])for(const z of [12,22]){walls.push({x,z,w:1.5,d:1.5,h:1});props.push({type:'table',x,z});}}
  if(zone===4)for(const x of [-7,7]){walls.push({x,z:24,w:3,d:2,h:1.2});props.push({type:'cover',x,z:24});}
  const platforms=[{x:0,z:length/2,w:34,d:length+4,h:0}];
+ for(const w of walls)if(w.h>0&&w.h<=2.2&&!w.carBase)platforms.push({x:w.x,z:w.z,w:w.w,d:w.d,h:w.h,objectTop:true});
+ for(const q of props)if(q.type==='car')platforms.push({x:q.x,z:q.z+1.26,w:2.02,d:1.35,h:1.075,objectTop:true},{x:q.x,z:q.z-1.88,w:2.02,d:.65,h:.98,objectTop:true});
  return{length,walls,props,platforms};
 }
 export class CityState extends State {
@@ -20,6 +23,8 @@ export class CityState extends State {
  if(zone===1){this.cityItems=[{id:'power-left',x:-11,z:22,label:'Щит питания A'},{id:'power-right',x:11,z:43,label:'Щит питания B'}];this.spawn('double',-6,28);this.spawn('mask',4,38);this.spawn('statue',0,49);this.spawn('shadow',-8,47);this.spawn('mask',8,53);}
  if(zone===2){this.cityItems=[{id:'jukebox',x:10,z:31,label:'Музыкальный автомат'}];this.spawn('shadow',-3,16);this.spawn('mask',6,24);this.spawn('statue',-3,29);this.spawn('shadow',7,35);}
  if(zone===3){this.cityItems=[{id:'bike',x:0,z:9,label:'Сесть на мотоцикл'}];this.race={mounted:false,finished:false,countdown:3,speed:0,impacts:0};this.rivals=[{x:-2,z:20,speed:12.5},{x:2,z:32,speed:13.2}];}
+ if(zone===0){this.spawn('dog',7,25);this.spawn('dog',-7,51);}
+ if(zone===1){this.spawn('dog',7,18);this.spawn('dog',-4,42);}
  if(zone===4){const b=this.spawn('boss',0,33);b.hp=b.max=600;this.bossStep=0;}
  }
  get exitOpen(){if(this.zone===3)return !!this.race.finished;return this.zone<4&&!this.living.length&&this.cityItems.every(q=>q.optional||this.cityFlags.includes(q.id));}
@@ -45,7 +50,7 @@ export class CityState extends State {
  this.shots=this.shots.filter(s=>!blocked(s,{x:s.x+s.vx*dt,z:s.z+s.vz*dt},this.geo.walls));
  super.update(dt,input);this.laser=null;
  }
- enemy(e,dt){if(e.kind!=='double'||e.hp<=0){super.enemy(e,dt);return;}e.hit=Math.max(0,e.hit-dt);e.cd-=dt;e.t+=dt;const d=Math.hypot(this.p.x-e.x,this.p.z-e.z);e.yaw=Math.atan2(this.p.x-e.x,this.p.z-e.z);
+ enemy(e,dt){if(e.kind==='double'&&downedEnemyR1447(this,e,dt))return;if(e.kind!=='double'||e.hp<=0){super.enemy(e,dt);return;}e.hit=Math.max(0,e.hit-dt);e.cd-=dt;e.t+=dt;const d=Math.hypot(this.p.x-e.x,this.p.z-e.z);e.yaw=Math.atan2(this.p.x-e.x,this.p.z-e.z);
  if(e.mode==='stagger'){if(e.t>.35){e.mode='chase';e.t=0;}return;}
  if(e.mode==='windup'){if(e.t>.9){if(!blocked(e,this.p,this.geo.walls))this.shots.push({x:e.x,z:e.z,vx:Math.sin(e.yaw)*8,vz:Math.cos(e.yaw)*8,life:4,reflectable:true});e.mode='retreat';e.t=0;e.cd=2;}return;}
  if(e.mode==='retreat'&&e.t<.5){move(e,-Math.sin(e.yaw)*dt*2,-Math.cos(e.yaw)*dt*2,this.geo.walls);return;}

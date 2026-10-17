@@ -23,11 +23,12 @@ export function attachProgressR1301(state,saved,chapter){
  let secrets=secretsForZone(state.zone), opened=new Set(Array.isArray(previous.opened)&&saved?.zone===state.zone?previous.opened:[]);
  const nearSecret=()=>hasSecret()?secrets.find(q=>!opened.has(q.id)&&distance(q,state.p)<2.8&&state.p.y<1.3):undefined;
  const crates=()=>chapter==='city'?state.geo.props.filter(q=>q.type==='crate'):[];
+ const removeBrokenTopsR1447=()=>{for(const f of state.geo.platforms)if(f.objectTop&&crates().some(q=>q.destroyed&&Math.abs(f.x-q.x)<.01&&Math.abs(f.z-q.z)<.01))f.gone=true;};
  if(chapter==='city'){
   // Restore previously smashed crates and their collision geometry.
   const prior=Array.isArray(previous.smashed)&&saved?.zone===state.zone?previous.smashed:[];
   for(const q of crates())if(prior.includes(q.x+':'+q.z))q.destroyed=true;
-  state.geo.walls=state.geo.walls.filter(w=>!crates().some(q=>q.destroyed&&Math.abs(w.x-q.x)<.01&&Math.abs(w.z-q.z)<.01));
+  state.geo.walls=state.geo.walls.filter(w=>!crates().some(q=>q.destroyed&&Math.abs(w.x-q.x)<.01&&Math.abs(w.z-q.z)<.01));removeBrokenTopsR1447();
  }
  const originalCan=Object.getOwnPropertyDescriptor(Object.getPrototypeOf(state),'canInteract')?.get||getter?.get;
  if(chapter==='portrait'&&originalCan){Object.defineProperty(state,'canInteract',{configurable:true,get(){return !!nearSecret()||originalCan.call(this);}});}
@@ -54,7 +55,7 @@ export function attachProgressR1301(state,saved,chapter){
    if(lastZone!==zone){checkpointBackup=null;lastZone=zone;}
    progress.combo=0;progress.lastHit=-20;progress.checkpoint=zone;
    secrets=secretsForZone(zone);opened=new Set(backup?.r1301Checkpoint?.opened||[]);
-   if(backup?.r1301Checkpoint?.smashed&&chapter==='city'){for(const q of crates())q.destroyed=backup.r1301Checkpoint.smashed.includes(q.x+':'+q.z);this.geo.walls=this.geo.walls.filter(w=>!crates().some(q=>q.destroyed&&Math.abs(w.x-q.x)<.01&&Math.abs(w.z-q.z)<.01));}
+   if(backup?.r1301Checkpoint?.smashed&&chapter==='city'){for(const q of crates())q.destroyed=backup.r1301Checkpoint.smashed.includes(q.x+':'+q.z);this.geo.walls=this.geo.walls.filter(w=>!crates().some(q=>q.destroyed&&Math.abs(w.x-q.x)<.01&&Math.abs(w.z-q.z)<.01));removeBrokenTopsR1447();}
   }
  };
  if(chapter==='ruins')state.enemy=function(e,dt){
@@ -113,7 +114,7 @@ export function attachProgressR1301(state,saved,chapter){
     const dx=q.x-this.p.x,dz=q.z-this.p.z,d=Math.hypot(dx,dz)||1;
     if((dx*Math.sin(this.p.yaw)+dz*Math.cos(this.p.yaw))/d<-.1)continue;
     q.destroyed=true;
-    this.geo.walls=this.geo.walls.filter(w=>!(Math.abs(w.x-q.x)<.01&&Math.abs(w.z-q.z)<.01&&w.h<2));
+    this.geo.walls=this.geo.walls.filter(w=>!(Math.abs(w.x-q.x)<.01&&Math.abs(w.z-q.z)<.01&&w.h<2));removeBrokenTopsR1447();
     this.drops.push({id:'r1301-crate-'+this.zone+'-'+q.x+'-'+q.z,kind:'crystal',x:q.x,z:q.z,age:0});
     this.drops.push({id:'r1301-crate2-'+this.zone+'-'+q.x+'-'+q.z,kind:'crystal',x:q.x+.5,z:q.z+.4,age:0});
     progress.objects++;progress.score+=120;

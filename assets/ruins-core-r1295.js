@@ -1,4 +1,5 @@
-import {State,clamp,blocked,move} from './portrait-core-r1295.js?v=r1446';
+import {downedEnemyR1447} from './combat-r1447.js';
+import {State,clamp,blocked,move} from './portrait-core-r1295.js?v=r1447';
 export const RUINS_ZONES=['Врата забытого времени','Стражи песков','Три механизма эпох','Мосты над бездной','Хранитель эпох'];
 export const EPOCH_RELAYS=[{x:-6,z:10},{x:6,z:19},{x:-5,z:29}];
 export const EPOCH_SOURCE={x:-6,z:3},EPOCH_RECEIVER={x:0,z:37};
@@ -29,6 +30,7 @@ export class RuinsState extends State {
  if(this.exitOpen&&this.p.z>this.geo.length-7&&Math.abs(this.p.x)<4){this.checkpoint=this.zone+1;this.load(this.checkpoint);this.emit('checkpoint');}}
  update(dt,input){super.update(dt,input);this.laser=null;}
  enemy(e,dt){
+ if(e.kind==='double'&&downedEnemyR1447(this,e,dt))return;
  if(e.hp>0&&e.kind!=='boss'&&e.kind!=='double'){
   if(e.hop){e.hop.t+=dt;const u=Math.min(1,e.hop.t/.7);e.x=e.hop.x+(e.hop.tx-e.hop.x)*u;e.z=e.hop.z+(e.hop.tz-e.hop.z)*u;e.y=Math.sin(u*Math.PI)*1.7;if(u===1){e.hop=null;e.y=0;}return;}
   const ox=e.x,oz=e.z;super.enemy(e,dt);

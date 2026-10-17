@@ -1,5 +1,5 @@
 'use strict';
-const VERSION = '55.00-r1446-stream-game';
+const VERSION = '55.00-r1447-game-combat';
 async function clearControlCaches(){
 if(!self.caches) return;
 const keys = await caches.keys();

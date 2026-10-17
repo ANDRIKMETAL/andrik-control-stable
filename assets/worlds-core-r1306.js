@@ -1,4 +1,4 @@
-import {State,clamp,move} from './portrait-core-r1295.js?v=r1446';
+import {State,clamp,move} from './portrait-core-r1295.js?v=r1447';
 export const WORLDS={2:{name:'ОКЕАН',stages:['Затопленные причалы','Острова прилива','Маяк глубины'],color:0x4de4cd},3:{name:'КОСМОС',stages:['Обломки орбитальной станции','Пояс безмолвия','Сердце звезды'],color:0x60dfff},4:{name:'БАШНЯ',stages:['Винтовой подъём','Часовой механизм','Над облаками'],color:0xffcc82},5:{name:'БЛОКИ',stages:['Код архитектора','Падающие фигуры','Последняя комбинация'],color:0xd18aff}};
 const dist=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 export class WorldState extends State{

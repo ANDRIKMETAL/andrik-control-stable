@@ -18,9 +18,9 @@ export const abcMarkup=`<style>
  transition:background .1s,border-color .1s,transform .1s;
 }
 .pt-actions button[data-abc] b,[id="world1306"] .actions button[data-abc] b{font:700 clamp(24px,3.5vh,32px)/1 system-ui!important;}
-.pt-actions [data-abc="A"],[id="world1306"] .actions [data-abc="A"]{grid-column:1/3!important;grid-row:1!important;}
+.pt-actions [data-abc="C"],[id="world1306"] .actions [data-abc="C"]{grid-column:1/3!important;grid-row:1!important;}
 .pt-actions [data-abc="B"],[id="world1306"] .actions [data-abc="B"]{grid-column:1!important;grid-row:2!important;}
-.pt-actions [data-abc="C"],[id="world1306"] .actions [data-abc="C"]{grid-column:2!important;grid-row:2!important;}
+.pt-actions [data-abc="A"],[id="world1306"] .actions [data-abc="A"]{grid-column:2!important;grid-row:2!important;}
 .pt-actions button[data-abc]:active,[id="world1306"] .actions button[data-abc]:active{background:rgba(81,130,159,.48)!important;border-color:rgba(222,248,255,.95)!important;transform:scale(.94);}
 .pt-actions button[data-abc]:focus-visible,[id="world1306"] .actions button[data-abc]:focus-visible{outline:2px solid #a4eaff;outline-offset:4px;}
 @media(max-height:450px){.pt-actions:has([data-abc]),[id="world1306"] .actions:has([data-abc]){--abc-size:clamp(54px,15vh,66px);right:max(12px,env(safe-area-inset-right))!important;bottom:max(12px,env(safe-area-inset-bottom))!important;}}
