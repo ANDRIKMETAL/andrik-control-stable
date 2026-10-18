@@ -1,0 +1,49 @@
+/* Section titles: solid chrome lettering. Red hero and music-card titles retain
+   the existing hand-drawn treatment. The font is local and covers Cyrillic. */
+@font-face {
+  font-family:'Andrik Chrome';
+  src:url('/assets/fonts/RussoOne-Regular-r1459.ttf') format('truetype');
+  font-style:normal;
+  font-weight:400;
+  font-display:swap;
+}
+body.home-r1190.am1452 :is(#new-title,#albums-title,#clips-title,#covers-title,#game-title,#platform-title,#about-title,#support-title) {
+  font-family:'Andrik Chrome','Arial Black',Impact,sans-serif!important;
+  font-weight:400!important;
+  font-style:normal!important;
+  text-transform:uppercase!important;
+  letter-spacing:.025em!important;
+  line-height:1.24!important;
+  width:fit-content;
+  max-width:100%;
+  overflow-wrap:normal;
+  text-wrap:balance;
+  color:#dce6ec!important;
+  -webkit-text-fill-color:currentColor;
+  -webkit-text-stroke:.35px #c4d2dc;
+  text-shadow:0 2px 1px #000,0 4px 0 #091018!important;
+}
+@supports ((background-clip:text) or (-webkit-background-clip:text)) {
+  body.home-r1190.am1452 :is(#new-title,#albums-title,#clips-title,#covers-title,#game-title,#platform-title,#about-title,#support-title) {
+    background:linear-gradient(180deg,#fff 0%,#c1d0dc 19%,#7e94a5 36%,#f5fafc 46%,#fff 49%,#344957 51%,#5b7486 61%,#d5e1e8 79%,#fff 88%,#91a6b4 100%)!important;
+    background-clip:text!important;
+    -webkit-background-clip:text!important;
+    color:transparent!important;
+    -webkit-text-fill-color:transparent!important;
+    text-shadow:none!important;
+    filter:drop-shadow(0 2px 0 #070d13) drop-shadow(0 1px 0 #8c9fa9)!important;
+  }
+}
+body.home-r1190.am1452 #game-title em {
+  font-family:inherit!important;
+  font-size:inherit!important;
+  font-style:normal!important;
+  color:inherit!important;
+  -webkit-text-fill-color:inherit!important;
+}
+@media(max-width:720px) {
+  body.home-r1190.am1452 :is(#new-title,#albums-title,#clips-title,#covers-title,#platform-title,#about-title,#support-title) {
+    font-size:clamp(23px,5.9vw,34px)!important;
+    letter-spacing:.018em!important;
+  }
+}

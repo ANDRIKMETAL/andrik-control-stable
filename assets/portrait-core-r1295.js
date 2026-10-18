@@ -1,19 +1,21 @@
+import {towerRayHit,resolveTowerWall} from './tower-entry-r1459.js?v=r1459';
 import {attackSlot,facesTarget,waitForAttack,modernBoss,bossDamage,updateArenaBoss,legacyArenaBoss} from './encounters-r1448.js?v=r1448';
-import {installCombatR1447} from './combat-r1447.js?v=r1458';
+import {installCombatR1447} from './combat-r1447.js?v=r1459';
 import {enemyRouteDirection} from './enemy-navigation-r1446.js';
 export const ORDER=[1,2,'portrait',3,4,6,5],SAVE='andrik-portrait-r1280';
 export const ZONES=['Коридор портретов','Зал масок','Зеркальный лабиринт','Разрушенная башня','Пустой портрет'];
 export const HP={mask:50,shadow:35,statue:110,double:100,dog:34,diver:46,robot:58,astronaut:44,drone:28,boss:1000};
 export const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
-export function blocked(a,b,walls){for(const w of walls){if(Number.isFinite(w.base)&&Math.max(a.y||0,b.y||0)+1.78<w.base)continue;if(Math.min(a.y||0,b.y||0)>=w.h-.025)continue;let lo=0,hi=1;for(const k of ['x','z']){const d=b[k]-a[k],min=w[k]-w[k==='x'?'w':'d']/2,max=w[k]+w[k==='x'?'w':'d']/2;if(Math.abs(d)<1e-8){if(a[k]<min||a[k]>max){lo=2;break;}}else{let t=(min-a[k])/d,u=(max-a[k])/d;if(t>u)[t,u]=[u,t];lo=Math.max(lo,t);hi=Math.min(hi,u);}}if(lo<=hi&&hi>=0&&lo<=1)return true;}return false;}
+export function blocked(a,b,walls){for(const w of walls){if(w.towerRing){if(towerRayHit({x:a.x,y:(a.y||0)+1.05,z:a.z},{x:b.x,y:(b.y||0)+1.05,z:b.z},w)!==null)return true;continue;}if(Number.isFinite(w.base)&&Math.max(a.y||0,b.y||0)+1.78<w.base)continue;if(Math.min(a.y||0,b.y||0)>=w.h-.025)continue;let lo=0,hi=1;for(const k of ['x','z']){const d=b[k]-a[k],min=w[k]-w[k==='x'?'w':'d']/2,max=w[k]+w[k==='x'?'w':'d']/2;if(Math.abs(d)<1e-8){if(a[k]<min||a[k]>max){lo=2;break;}}else{let t=(min-a[k])/d,u=(max-a[k])/d;if(t>u)[t,u]=[u,t];lo=Math.max(lo,t);hi=Math.min(hi,u);}}if(lo<=hi&&hi>=0&&lo<=1)return true;}return false;}
 export function move(p,dx,dz,walls,r=.4){
- const eps=1e-6;
+ const eps=1e-6,old={x:p.x,y:p.y||0,z:p.z};
  if(!Number.isFinite(p.x)||!Number.isFinite(p.z))return;
  // Resolve an existing overlap along its nearest face, never the far end of a long wall.
  for(let pass=0;pass<4;pass++){
   let corrected=false;
   for(const w of walls){
+  if(w.towerRing)continue;
   if(Number.isFinite(w.base)&&(p.y||0)+1.78<w.base)continue;
    if((p.y||0)>=w.h-.025)continue;
    const lx=w.x-w.w/2,hx=w.x+w.w/2,lz=w.z-w.d/2,hz=w.z+w.d/2;
@@ -35,6 +37,7 @@ export function move(p,dx,dz,walls,r=.4){
   const other=key==='x'?'z':'x',size=key==='x'?'w':'d',crossSize=key==='x'?'d':'w';
   const start=p[key];let end=start+delta;
   for(const w of walls){
+  if(w.towerRing)continue;
   if(Number.isFinite(w.base)&&(p.y||0)+1.78<w.base)continue;
    if((p.y||0)>=w.h-.025)continue;
    const gap=Math.max(w[other]-w[crossSize]/2-p[other],0,p[other]-w[other]-w[crossSize]/2);
@@ -46,6 +49,7 @@ export function move(p,dx,dz,walls,r=.4){
   }
   p[key]=end;
  }
+ for(const w of walls)if(w.towerRing)resolveTowerWall(p,old,w,r);
 }
 export const MIRRORS=[{x:-6,z:10},{x:4,z:10},{x:4,z:20}];
 export function trace(angles){let p={x:-6,z:2},d={x:0,z:1},used=new Set(),segments=[];const goal={x:-8,z:20};for(let b=0;b<4;b++){let n=null,tmin=35;MIRRORS.forEach((m,i)=>{if(used.has(i))return;const dx=m.x-p.x,dz=m.z-p.z,t=dx*d.x+dz*d.z;if(t>.1&&Math.abs(dx*d.z-dz*d.x)<.65&&t<tmin){n=i;tmin=t;}});const t=(goal.x-p.x)*d.x+(goal.z-p.z)*d.z,err=Math.abs((goal.x-p.x)*d.z-(goal.z-p.z)*d.x);if(t>.1&&t<tmin&&err<.7){segments.push([p,goal]);return{segments,solved:used.size===3};}segments.push([p,{x:p.x+d.x*tmin,z:p.z+d.z*tmin}]);if(n===null)break;used.add(n);const nx=Math.cos(angles[n]*Math.PI/4),nz=Math.sin(angles[n]*Math.PI/4),dot=d.x*nx+d.z*nz;d={x:d.x-2*dot*nx,z:d.z-2*dot*nz};p={...MIRRORS[n]};}return{segments,solved:false};}

@@ -1,4 +1,4 @@
-import {attachWeaponry} from './weaponry-r1458.js?v=r1458';
+import {attachWeaponry} from './weaponry-r1458.js?v=r1459';
 export const GROWTH_KEY='andrik-lyra-growth-r1449';
 export const SAVE_KEYS=['andrik-city-3d-r1289','andrik-portrait-r1280','andrik-ruins-3d-r1285',...['2','3','4','5'].map(id=>'andrik-world-'+id+'-r1306')];
 const number=(v,a,b)=>Math.max(a,Math.min(b,Math.floor(Number(v)||0)));

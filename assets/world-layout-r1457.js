@@ -1,3 +1,4 @@
+import {addTowerEntry} from './tower-entry-r1459.js?v=r1459';
 export function buildRouteWorld(s,world,zone){
  const platforms=[],links=[],main=[];const add=(x,z,w,d,h=0,extra={})=>{const f={x,z,w,d,h,node:platforms.length,...extra};platforms.push(f);return f};const link=(a,b,jump=true)=>links.push({a:a.node,b:b.node,jump});
  let count=world===3?[19,23,21][zone]:world===4?[27,30,25][zone]:[20,24,22][zone];
@@ -14,7 +15,7 @@ export function buildRouteWorld(s,world,zone){
  // Wide, visible steps break up the route; the main nodes keep a unique route order.
  for(let i=2;i<count-1;i+=4){const a=main[i-1],b=main[i],dx=b.x-a.x,dz=b.z-a.z,sep=Math.hypot(dx,dz);
   if(world!==4&&sep<9.5&&Math.abs(b.h-a.h)<1.2){const step=add((a.x+b.x)/2,(a.z+b.z)/2,world===4?2.0:4.2,world===4?2.0:3.3,(a.h+b.h)/2,{stair:true,route:i-.5});const index=links.findIndex(e=>e.a===a.node&&e.b===b.node);if(index>=0)links.splice(index,1);link(a,step,Math.abs(step.h-a.h)>.36);link(step,b,Math.abs(b.h-step.h)>.36);}}
- s.geo={length:Math.max(...main.map(f=>f.z))+18,walls:[],platforms};s.routeLinks=links;s.routeMain=main.map(f=>f.node);s.layoutR1457=1;
+ s.geo={length:Math.max(...main.map(f=>f.z))+18,walls:[],platforms};s.routeLinks=links;s.routeMain=main.map(f=>f.node);s.layoutR1457=1;if(world===4)addTowerEntry(s,main);
  const indices=zone===2?[Math.floor(count*.25),Math.floor(count*.53),count-1]:[Math.floor(count*.22),Math.floor(count*.54),count-3];
  const labels=world===3?(zone===0?['Кислород','Питание шлюза','Шлюз']:zone===1?['Капсула экипажа 1','Капсула экипажа 2','Капсула экипажа 3']:['Охлаждение','Щит ангара','Ядро станции']):world===4?['Шестерня рассвета','Маятник','Сердце часов']:['Код 1','Код 2','Код 3'];
  s.switches=indices.map((i,id)=>({...main[i],x:main[i].x-1.2,id,active:false,label:labels[id]}));const last=main.at(-1);s.exit={x:last.x,z:last.z+(zone===2?7:1.5),y:last.h};

@@ -1,11 +1,12 @@
-import {collidePlatforms} from './platform-collision-r1458.js?v=r1458';
-import {buildOcean,oceanEnemy,oceanInteract,oceanObjective,oceanTarget,updateOcean,strikeOceanObjects,restoreOcean,oceanSnapshot} from './ocean-r1457.js?v=r1458';
-import {State,clamp} from './portrait-core-r1295.js?v=r1458';
-import {buildRouteWorld} from './world-layout-r1457.js?v=r1458';
-import {routeFloor} from './world-route-r1457.js?v=r1458';
-import {spaceEnemy,worldBoss} from './world-combat-r1457.js?v=r1458';
-import {updatePlayerImpact} from './player-impact-r1457.js?v=r1458';
-import {makeVoyage,startVoyage,voyageMounted,voyageAction,updateVoyage,voyageObjective,voyageSnapshot,restoreVoyage} from './voyage-core-r1458.js?v=r1458';
+import {resolveTowerWall} from './tower-entry-r1459.js?v=r1459';
+import {collidePlatforms} from './platform-collision-r1458.js?v=r1459';
+import {buildOcean,oceanEnemy,oceanInteract,oceanObjective,oceanTarget,updateOcean,strikeOceanObjects,restoreOcean,oceanSnapshot} from './ocean-r1457.js?v=r1459';
+import {State,clamp} from './portrait-core-r1295.js?v=r1459';
+import {buildRouteWorld} from './world-layout-r1457.js?v=r1459';
+import {routeFloor} from './world-route-r1457.js?v=r1459';
+import {spaceEnemy,worldBoss} from './world-combat-r1457.js?v=r1459';
+import {updatePlayerImpact} from './player-impact-r1457.js?v=r1459';
+import {makeVoyage,startVoyage,voyageMounted,voyageAction,updateVoyage,voyageObjective,voyageSnapshot,restoreVoyage} from './voyage-core-r1458.js?v=r1459';
 export const WORLDS={2:{name:'ОКЕАН',stages:['Затопленные причалы','Острова прилива','Логово Восьмирукого'],color:0x4de4cd},3:{name:'КОСМОС',stages:['Разгерметизация','Капсулы в поясе обломков','Протокол АРЕС'],color:0x60dfff},4:{name:'БАШНЯ',stages:['Лестница маятника','Ход против времени','Над облаками'],color:0xffcc82},5:{name:'БЛОКИ',stages:['Код архитектора','Ломаный маршрут','За пределами сетки'],color:0xd18aff}};
 const dist=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 export class WorldState extends State{
@@ -13,7 +14,7 @@ export class WorldState extends State{
  load(zone){
   super.load(clamp(zone,0,2));this.world=this.world||3;this.isRuins=true;this.enemies=[];this.shrines=[];this.wave=3;this.laser=null;this.flags=[];this.hazards=[];this.hazardClock=0;this.finale=0;this.won=false;this.loot=[];this.layoutR1457=1;this.routeLinks=[];
   const main=this.world===2?buildOcean(this,zone):buildRouteWorld(this,this.world,zone);
-  this.switches.forEach(q=>q.active=false);const start=this.geo.platforms[0];Object.assign(this.p,{x:start.x,z:start.z,y:start.h,vy:0,vx:0,vz:0,yaw:0,hp:100,energy:100,grounded:true,down:0,knockT:0});this.safe={x:start.x,z:start.z,y:start.h};this.safeIndex=0;this.safeRoute=0;
+  this.switches.forEach(q=>q.active=false);const start=this.geo.platforms[0];Object.assign(this.p,{x:start.x,z:start.z,y:start.h,vy:0,vx:0,vz:0,yaw:this.world===4?this.towerEntry.yaw:0,hp:100,energy:100,grounded:true,down:0,knockT:0});this.safe={x:start.x,z:start.z,y:start.h};this.safeIndex=0;this.safeRoute=0;
   const choices=[main[Math.floor(main.length*.36)],main[Math.floor(main.length*.72)]];
   this.loot=choices.map((f,i)=>({x:f.x+1.7,z:f.z-1,y:f.h,id:'cache-'+i,taken:false}));this.voyage=zone===1&&[2,3].includes(this.world)?makeVoyage(this.world===3?'space':'water'):null;this.events=[];this.emit('zone');
  }
@@ -64,7 +65,7 @@ export class WorldState extends State{
   if(updateVoyage(this,dt,input))return;
   dt=clamp(dt,0,.035);const oldPosition={x:this.p.x,y:this.p.y,z:this.p.z,grounded:this.p.grounded},oldZone=this.zone,oldY=this.p.y,grounded=this.p.grounded,down=updatePlayerImpact(this,dt);
   if(this.world===3&&!this.p.grounded)this.p.vy+=dt*9;
-  super.update(dt,down?{x:0,z:0,run:false}:input);this.laser=null;if(this.dead||this.won||this.zone!==oldZone)return;collidePlatforms(this,oldPosition);
+  super.update(dt,down?{x:0,z:0,run:false}:input);this.laser=null;if(this.dead||this.won||this.zone!==oldZone)return;collidePlatforms(this,oldPosition);if(this.geo.tower)resolveTowerWall(this.p,oldPosition,this.geo.tower,.27);
   if(grounded&&!(this.p.vy>0)&&!down){const step=this.geo.platforms.filter(f=>Math.abs(this.p.x-f.x)<f.w/2&&Math.abs(this.p.z-f.z)<f.d/2&&f.h>=oldY-.08&&f.h<=oldY+.36).sort((a,b)=>b.h-a.h)[0];if(step){this.p.y=step.h;this.p.vy=0;this.p.grounded=true;}}
   if(this.p.grounded){const f=routeFloor(this,this.p);if(f&&(f.route||0)>=this.safeRoute){this.safeRoute=f.route||0;this.safeIndex=f.node;this.safe={x:this.p.x,y:this.p.y,z:this.p.z};}}
   if(this.p.y<Math.min(...this.geo.platforms.map(f=>f.h))-4||this.world===4&&this.p.y<this.safe.y-5){this.damage(20);Object.assign(this.p,this.safe,{vy:0,vx:0,vz:0,grounded:true,inv:1.5,down:0,knockT:0});this.emit('notice',{text:'Возврат на последний уступ · −20 HP'});}
@@ -80,7 +81,7 @@ export class WorldState extends State{
   const legacy=s.worldLayoutR1457!==1||(this.world===4&&s.worldLayoutR1458!==1),oldBoss=s.enemies?.find(e=>e.kind==='boss'),input={...s,p:s.p?{...s.p,y:Math.max(0,s.p.y)}:s.p};super.restore(legacy?{...input,enemies:undefined,platforms:[]}:input);
   this.flags=[...new Set((s.flags||[]).filter(n=>[0,1,2].includes(n)))];this.switches.forEach(q=>q.active=this.flags.includes(q.id));
   if(legacy){for(const e of this.enemies)if(e.objectiveId>=0&&this.flags.includes(e.objectiveId)){e.hp=0;e.dead=0;}const boss=this.enemies.find(e=>e.kind==='boss');if(boss&&oldBoss)boss.hp=Math.max(0,Math.round(clamp(oldBoss.hp/Math.max(1,oldBoss.max||320),0,1)*boss.max));}
-  this.safeRoute=0;const floor=routeFloor(this,this.p)||this.geo.platforms[0];if(!this.p.grounded||Math.abs(floor.h-this.p.y)>.3||legacy)Object.assign(this.p,{x:floor.x,z:floor.z,y:floor.h,vy:0,vx:0,vz:0,grounded:true,down:0,knockT:0});this.safe={x:this.p.x,y:this.p.y,z:this.p.z};this.safeIndex=floor.node;this.safeRoute=floor.route||0;
+  this.safeRoute=0;const floor=routeFloor(this,this.p)||this.geo.platforms[0];if(!this.p.grounded||Math.abs(floor.h-this.p.y)>.3||legacy)Object.assign(this.p,{x:floor.x,z:floor.z,y:floor.h,vy:0,vx:0,vz:0,grounded:true,down:0,knockT:0});if(this.geo.tower){resolveTowerWall(this.p,{...this.p},this.geo.tower,.4);if(Math.hypot(this.p.x,this.p.z)<2.2)this.p.yaw=this.geo.tower.yaw;}this.safe={x:this.p.x,y:this.p.y,z:this.p.z};this.safeIndex=floor.node;this.safeRoute=floor.route||0;
   for(const e of this.enemies){e.navJump=null;e.routeUntil=0;e.worldAction=null;delete e.anchor;const f=routeFloor(this,e)||this.geo.platforms[e.navPlatform]||floor;e.y=e.homeY=f.h;e.navPlatform=f.node;if(e.kind==='boss')e.arena=this.geo.platforms.find(q=>q.arena)||this.geo.platforms.at(-1);}
   if(Array.isArray(s.loot))for(const q of this.loot)q.taken=!!s.loot.find(v=>v.id===q.id)?.taken;this.finale=0;this.won=!!s.won;
   if(this.world===2)restoreOcean(this,s);

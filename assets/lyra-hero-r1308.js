@@ -1,6 +1,6 @@
-import {createBat,poseBat} from './weapon-view-r1458.js?v=r1458';
+import {createBat,poseBat} from './weapon-view-r1458.js?v=r1459';
 import * as T from './vendor/three-r170.module.min.js';
-import {addBlade,poseBlade} from './lyra-blade-r1455.js?v=r1458';
+import {addBlade,poseBlade} from './lyra-blade-r1455.js?v=r1459';
 // Metre-scale articulated mesh. Geometry belongs to the scene and is disposed on exit.
 export function createLyra(){
  const root=new T.Group(),body=new T.Group();root.name='Lyra-unmasked';root.add(body);
@@ -198,7 +198,7 @@ function handAt(limb,target,side){
 }
 export function poseGuitar(root,attack,combo,time,running,weapon=null){
  const u=root.userData,g=u.guitar,active=attack?.kind==='attack',punch=attack?.kind==='punch';
- for(const l of u.limbs){l.hand.scale.setScalar(1);l.foot.scale.setScalar(1);const closed=active||punch||attack?.kind==='backfist'||attack?.kind==='finish';for(const f of l.hand.userData.fingers){f.position.y=closed?-.021:-.032;f.position.z=closed?.028:.01;f.scale.y=closed?.011:.023;}}
+ for(const l of u.limbs){l.hand.scale.setScalar(1);l.foot.scale.setScalar(1);const closed=active||attack?.kind==='slash'||weapon?.selected==='bat'&&!['attack','scream','finish'].includes(attack?.kind)||punch||attack?.kind==='backfist'||attack?.kind==='finish';for(const f of l.hand.userData.fingers){f.position.y=closed?-.021:-.032;f.position.z=closed?.028:.01;f.scale.y=closed?.011:.023;}}
  // Grip pose returns smoothly after both attacks. Body and legs remain free to move.
  const rest=new T.Vector3(.16,1.34,-.19),p=active?T.MathUtils.clamp(attack.t/attack.duration,0,1):0;
  g.position.copy(rest);g.rotation.set(.10,0,-.48);
@@ -257,5 +257,5 @@ export function poseGuitar(root,attack,combo,time,running,weapon=null){
   if(running){g.position.y+=Math.sin(time*15)*.025;if(!attack)u.body.rotation.x=.12;}
   g.updateMatrix(); // both arms remain free while guitar stays attached to the back
  }
- poseBlade(root,attack,time,running,handAt);poseBat(root,attack,time,running,weapon,handAt);
+ if(weapon?.selected==='bat'){u.blade.visible=false;u.bladeTrace.visible=false;}else poseBlade(root,attack,time,running,handAt);poseBat(root,attack,time,running,weapon,handAt);
 }

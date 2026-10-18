@@ -1,20 +1,22 @@
-import {weaponCrateKit} from './weapon-view-r1458.js?v=r1458';
-import {worldLifeKit} from './world-life-r1458.js?v=r1458';
-import {createVoyageView} from './voyage-view-r1458.js?v=r1458';
-import {voyageStory,startVoyage} from './voyage-core-r1458.js?v=r1458';
-import {worldActors,poseWorldActor} from './world-actors-r1457.js?v=r1458';
-import {posePlayerImpact} from './player-impact-r1457.js?v=r1458';
-import {lyraCamera,CAMERA_R1457} from './lyra-camera-r1457.js?v=r1458';
-import {storyFor} from './world-story-r1457.js?v=r1458';
-import {attachGrowth} from './lyra-growth-r1449.js?v=r1458';
-import {createExperience,graphicsBudget,followYaw} from './game-experience-r1448.js?v=r1458';
-import {createEnemyReadability} from './enemy-readability-r1448.js?v=r1458';
-import {poseEnemyCombat} from './combat-poses-r1447.js?v=r1458';
-import {abcMarkup,bindABC} from './abc-controls-r1308.js?v=r1458';
+import {towerViewKit} from './tower-view-r1459.js?v=r1459';
+import {clipCamera} from './phone-camera-r1459.js?v=r1459';
+import {weaponCrateKit} from './weapon-view-r1458.js?v=r1459';
+import {worldLifeKit} from './world-life-r1458.js?v=r1459';
+import {createVoyageView} from './voyage-view-r1458.js?v=r1459';
+import {voyageStory,startVoyage} from './voyage-core-r1458.js?v=r1459';
+import {worldActors,poseWorldActor} from './world-actors-r1457.js?v=r1459';
+import {posePlayerImpact} from './player-impact-r1457.js?v=r1459';
+import {lyraCamera,CAMERA_R1457} from './lyra-camera-r1457.js?v=r1459';
+import {storyFor} from './world-story-r1457.js?v=r1459';
+import {attachGrowth} from './lyra-growth-r1449.js?v=r1459';
+import {createExperience,graphicsBudget,followYaw} from './game-experience-r1448.js?v=r1459';
+import {createEnemyReadability} from './enemy-readability-r1448.js?v=r1459';
+import {poseEnemyCombat} from './combat-poses-r1447.js?v=r1459';
+import {abcMarkup,bindABC} from './abc-controls-r1308.js?v=r1459';
 import {detailKit} from './detail-kit-r1307.js';
 import * as T from './vendor/three-r170.module.min.js';
-import {createLyra,poseGuitar} from './lyra-hero-r1308.js?v=r1458';
-import {WorldState,WORLDS} from './worlds-core-r1306.js?v=r1458';
+import {createLyra,poseGuitar} from './lyra-hero-r1308.js?v=r1459';
+import {WorldState,WORLDS} from './worlds-core-r1306.js?v=r1459';
 export function launchPortrait({world=3,fresh=false,onExit,onWin,onContinue}={}){
  const key='andrik-world-'+world+'-r1306';let saved;try{saved=JSON.parse(localStorage.getItem(key));}catch{}
  const state=attachGrowth(new WorldState(world,fresh?null:saved),{saveKey:key,saved:fresh?null:saved}),info=WORLDS[world];
@@ -26,7 +28,7 @@ export function launchPortrait({world=3,fresh=false,onExit,onWin,onContinue}={})
  const scene=new T.Scene();scene.background=new T.Color(world===2?0x19445c:world===4?0x293348:0x050b1c);scene.fog=new T.Fog(scene.background,45,145);const camera=new T.PerspectiveCamera(55,1,.08,260);
  scene.add(new T.HemisphereLight(0xd9efff,0x303043,2.2));const sun=new T.DirectionalLight(0xffe2b7,3);sun.position.set(-14,26,14);scene.add(sun);const rim=new T.DirectionalLight(info.color,1.3);rim.position.set(12,8,-16);scene.add(rim);
  const faceLight=new T.PointLight(0xe2edff,.9,5,1.5);scene.add(faceLight);
- const geometry=new Set(),materials=new Set(),textures=new Set();const livingKit=worldLifeKit(geometry,materials,textures);const transport=createVoyageView(scene,livingKit.assets,livingKit);let life=null;const crateKit=weaponCrateKit(geometry,materials);let crateView=null;const actors=worldActors(geometry,materials);const details=detailKit({geometries:geometry,materials,textures});const readability=createEnemyReadability(geometry,materials);let detailBatches=[];const box=new T.BoxGeometry(1,1,1),sphere=new T.SphereGeometry(1,16,12),cyl=new T.CylinderGeometry(1,1,1,20),torus=new T.TorusGeometry(1,.055,6,32);[box,sphere,cyl,torus].forEach(x=>geometry.add(x));const cache=new Map();function mat(color,glow=0){const k=color+':'+glow;if(!cache.has(k)){const m=new T.MeshStandardMaterial({color,roughness:.55,metalness:.25,emissive:color,emissiveIntensity:glow});cache.set(k,m);materials.add(m);}return cache.get(k);}
+ const geometry=new Set(),materials=new Set(),textures=new Set();const towerKit=world===4?towerViewKit(geometry,materials):null;const livingKit=worldLifeKit(geometry,materials,textures);const transport=createVoyageView(scene,livingKit.assets,livingKit);let life=null;const crateKit=weaponCrateKit(geometry,materials);let crateView=null;const actors=worldActors(geometry,materials);const details=detailKit({geometries:geometry,materials,textures});const readability=createEnemyReadability(geometry,materials);let detailBatches=[];const box=new T.BoxGeometry(1,1,1),sphere=new T.SphereGeometry(1,16,12),cyl=new T.CylinderGeometry(1,1,1,20),torus=new T.TorusGeometry(1,.055,6,32);[box,sphere,cyl,torus].forEach(x=>geometry.add(x));const cache=new Map();function mat(color,glow=0){const k=color+':'+glow;if(!cache.has(k)){const m=new T.MeshStandardMaterial({color,roughness:.55,metalness:.25,emissive:color,emissiveIntensity:glow});cache.set(k,m);materials.add(m);}return cache.get(k);}
  function mesh(parent,g,color,x,y,z,sx=1,sy=sx,sz=sx,glow=0){const o=new T.Mesh(g,mat(color,glow));o.position.set(x,y,z);o.scale.set(sx,sy,sz);parent.add(o);return o;}
  const hero=createLyra();scene.add(hero);hero.traverse(o=>{if(o.geometry)geometry.add(o.geometry);if(o.material){materials.add(o.material);if(o.material.bumpMap)textures.add(o.material.bumpMap);}});
  let environment=new T.Group();scene.add(environment);let foeMeshes=new Map(),switchMeshes=[],lootMeshes=[],hazardMeshes=[],dropMeshes=[],shotMeshes=[],waveMeshes=[],exitMesh,oceanWave,oceanGate,rescueBoat,zone=-1,layout=null;
@@ -48,7 +50,7 @@ export function launchPortrait({world=3,fresh=false,onExit,onWin,onContinue}={})
  rescueBoat=new T.Group();rescueBoat.position.set(state.switches[2].x-7,state.switches[2].h,state.switches[2].z-75);rescueBoat.userData.baseZ=rescueBoat.position.z;environment.add(rescueBoat);mesh(rescueBoat,box,0x536677,7,-.1,75,2,.7,4);mesh(rescueBoat,box,0xb4b7a5,7,.6,75,1.2,.9,1.4);mesh(rescueBoat,cyl,0xffd19b,7,1.3,75,.1,.2,.1,.6);
  }
  if(world===3){for(let i=0;i<80;i++)mesh(environment,sphere,i%3?0xa9c5e8:info.color,Math.sin(i*13)*60,Math.cos(i*5)*35+14,(i*17)%140-25,.07,.07,.07,1);for(let i=0;i<12;i++){const q=mesh(environment,box,0x273b50,Math.sin(i)*18,-3-i%4,6+i*5,2,3,2);q.rotation.set(i*.7,i*.4,i*.3);}mesh(environment,sphere,0x235f8c,-42,20,100,22);}
- if(world===4){mesh(environment,cyl,0x393d4a,0,8,0,2.8,42,2.8);for(let i=0;i<8;i++){const r=mesh(environment,torus,0xa79878,0,i*2,0,2.92);r.rotation.x=Math.PI/2;}for(let i=0;i<16;i++)mesh(environment,sphere,0x9daabe,Math.sin(i*7)*30,-7,Math.cos(i*11)*30,8,2,5);}
+ if(world===4){towerKit.build(environment,state.geo.tower);for(let i=0;i<16;i++)mesh(environment,sphere,0x9daabe,Math.sin(i*7)*30,-7,Math.cos(i*11)*30,8,2,5);}
  if(world===5){for(let i=0;i<32;i++){const q=mesh(environment,box,i%2?0x344360:0x536182,Math.sin(i*2)*23,-5-i%3,i*6,2.2,2.2,2.2);q.rotation.set(i*.3,i*.4,0);}for(const w of state.geo.walls)mesh(environment,box,0x31425d,w.x,1.4,w.z,w.w,2.8,w.d);}
  batchScenery();life=livingKit.build(environment,{world,zone:state.zone,geo:state.geo,coarse:matchMedia('(pointer:coarse)').matches});
  for(const q of state.switches){const g=new T.Group();g.position.set(q.x,q.h,q.z);environment.add(g);if(world===3&&state.zone===1){mesh(g,sphere,0xd6e0d9,0,.85,0,.65,1.15,.65);mesh(g,sphere,0x214652,0,1,.43,.43,.68,.26);mesh(g,sphere,0x6ee6d2,0,1,.64,.16,.21,.035,.8);}
@@ -61,7 +63,7 @@ export function launchPortrait({world=3,fresh=false,onExit,onWin,onContinue}={})
  for(const e of state.enemies){const o=enemyModel(e);environment.add(o);foeMeshes.set(e.id,o);}
  crateView=crateKit.build(environment,state);for(const q of state.loot){const o=mesh(environment,sphere,0xffcc6f,q.x,q.y+.5,q.z,.25,.35,.25,1);lootMeshes.push({o,q});}
  }
- let paused=true,closed=false,wonSent=false,yaw=0,pitch=CAMERA_R1457.pitch,distance=CAMERA_R1457.distance,viewMode=0,manual=0,last=performance.now(),raf,saveTime=0,noticeUntil=0;const keys=new Set();let stick={x:0,z:0},stickId=null,look=null;
+ let paused=true,closed=false,wonSent=false,yaw=state.p.yaw,pitch=CAMERA_R1457.pitch,distance=CAMERA_R1457.distance,viewMode=0,manual=0,last=performance.now(),raf,saveTime=0,noticeUntil=0;const keys=new Set();let stick={x:0,z:0},stickId=null,look=null;
  let ac=null,sound=true;function tone(freq){if(!sound||!ac)return;try{const o=ac.createOscillator(),g=ac.createGain();o.type='triangle';o.frequency.setValueAtTime(freq,ac.currentTime);o.frequency.exponentialRampToValueAtTime(freq*.6,ac.currentTime+.15);g.gain.setValueAtTime(.04,ac.currentTime);g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+.18);o.connect(g);g.connect(ac.destination);o.start();o.stop(ac.currentTime+.2);}catch{}}
  function save(){try{localStorage.setItem(key,JSON.stringify(state.snapshot()));}catch{}}
  function pause(v){abc.reset();$('#retry-vehicle').hidden=!state.voyage||state.voyage.status==='dormant';if(!v&&sound)try{ac=ac||new (window.AudioContext||window.webkitAudioContext)();ac.resume();}catch{}paused=v;$('.panel').hidden=!v;keys.clear();stick={x:0,z:0};look=null;$('.stick i').style.transform='';if(v){save();ac?.suspend?.();}}
@@ -89,11 +91,9 @@ export function launchPortrait({world=3,fresh=false,onExit,onWin,onContinue}={})
  if(oceanWave){oceanWave.visible=world===2&&(state.surge?.warn||state.surge?.active);if(state.surge){const deck=state.geo.platforms.filter(f=>f.dock!==undefined).sort((a,b)=>Math.abs(a.z-state.surge.z)-Math.abs(b.z-state.surge.z))[0];oceanWave.position.set(deck.x,deck.h+.45,state.surge.z);oceanWave.scale.y=state.surge.active?.8:.05;}}
  for(let i=0;i<voice.length;i++){const age=(state.attack?.t||0)-.25-i*.10,o=voice[i];o.visible=state.attack?.kind==='scream'&&age>0&&age<.8;const d=age*10;o.position.set(p.x+Math.sin(p.yaw)*d,p.y+1.65,p.z+Math.cos(p.yaw)*d);o.rotation.y=p.yaw;o.scale.setScalar(.1+Math.max(0,d)*.22);}
  const boss=state.enemies.find(e=>e.kind==='boss'&&e.hp>0);bossMark.visible=!!boss?.mark;if(boss?.mark)bossMark.position.set(boss.mark.x,boss.mark.y+.05,boss.mark.z);if(boss?.mark)bossMark.scale.setScalar(boss.mark.r||2.7);
- if(!state.vehicleActive){if(experience.settings.follow&&!look&&!viewMode&&state.time-manual>1.3)yaw=followYaw(yaw,p.yaw,dt);
+ if(!state.vehicleActive){if(experience.settings.follow&&!look&&!viewMode&&state.time-manual>.95)yaw=followYaw(yaw,p.yaw,dt);
  const view=lyraCamera(p,{yaw,mode:viewMode,distance,pitch});const target=new T.Vector3(view.target.x,view.target.y,view.target.z),desired=new T.Vector3(view.position.x,view.position.y,view.position.z);
- // Camera avoids the central tower shaft.
- if(world===4){const ray=new T.Raycaster(target,desired.clone().sub(target).normalize(),0,desired.distanceTo(target));const hits=ray.intersectObjects(environment.children.filter(o=>o.geometry===cyl&&o.scale.x===2.8),false);if(hits.length)desired.copy(target).addScaledVector(ray.ray.direction,Math.max(.7,hits[0].distance-.3));}
- camera.position.lerp(desired,1-Math.exp(-dt*10));camera.lookAt(target);faceLight.position.copy(camera.position);camera.rotation.z+=experience.cameraRoll(state.time);}crateView?.update(state.time);life.update(state.time,p,camera,experience.settings.quality);if(state.vehicleActive)transport.draw(state,hero,camera,experience.settings.quality);else transport.sync(state.voyage);faceLight.position.copy(camera.position);experience.update(paused?0:dt,state.vehicleActive?0:yaw);renderer.render(scene,camera);
+ target.copy(clipCamera(state.geo,{x:p.x,y:target.y,z:p.z},target,.12));desired.copy(clipCamera(state.geo,target,desired));camera.position.lerp(desired,1-Math.exp(-dt*10));camera.position.copy(clipCamera(state.geo,target,camera.position));camera.lookAt(target);faceLight.position.copy(camera.position);camera.rotation.z+=experience.cameraRoll(state.time);}crateView?.update(state.time);life.update(state.time,p,camera,experience.settings.quality);if(state.vehicleActive)transport.draw(state,hero,camera,experience.settings.quality);else transport.sync(state.voyage);faceLight.position.copy(camera.position);experience.update(paused?0:dt,state.vehicleActive?0:yaw);renderer.render(scene,camera);
  $('#stats').textContent='♥ '+Math.ceil(p.hp)+' · Энергия '+Math.floor(p.energy)+' · ◆ '+state.crystals;$('#stage').textContent=(state.zone+1)+'/3 · '+info.stages[state.zone];$('#goal').textContent=state.objective;const next=state.navigationObjective||state.switches.find(q=>!q.active)||state.exit;$('#hint').textContent=(state.nearby?(world===2&&state.zone===2?'B: разрубить печать':'C: действие'):'До цели '+Math.round(Math.hypot(next.x-p.x,next.z-p.z))+' м · высота '+Math.round((next.h??next.y??0)-p.y)+' м')+(boss?' · '+boss.name+' '+Math.ceil(boss.hp)+'/'+boss.max:'')+(world===2&&state.surge?.warn?' · Прилив: прыгай или займи голубой помост':'');$('.world-boss').hidden=!boss||Math.hypot(boss.x-p.x,boss.z-p.z)>29;if(boss){$('#ocean-boss-name').textContent=boss.name+' · '+Math.ceil(boss.hp)+'/'+boss.max;$('#ocean-boss-fill').style.width=Math.max(0,boss.hp/boss.max*100)+'%';}if(state.vehicleActive){const v=state.voyage,g=v.gates[v.nextGate],dx=g?g.x-v.p.x:0,dy=g?g.y-v.p.y:0;$('#stats').textContent='♥ '+Math.ceil(p.hp)+' · ◆ '+state.crystals+(v.kind==='space'?' · Пушка '+v.weapon+' · Ракеты '+v.rockets+' · Щит '+Math.ceil(v.shield)+' с':' · Место '+v.rank+'/5 · Прыжки '+v.jumps);$('#hint').textContent=(g?(dx>1?'← ':dx< -1?'→ ':'↑ ')+(v.kind==='space'?(dy>1?'ВЫШЕ · ':dy< -1?'НИЖЕ · ':''):'')+'Ворота '+(g.id+1)+' · '+Math.max(0,Math.round(g.z-v.p.z))+' м':'ФИНИШ ВПЕРЕДИ');canvas.dataset.vehicle=v.kind;}else canvas.dataset.vehicle='';if(performance.now()>noticeUntil)$('.notice').textContent='';canvas.dataset.zone=String(state.zone);
  }
  function frame(now){if(closed)return;if(!experience.frameDue(now)){raf=requestAnimationFrame(frame);return;}const dt=Math.min(.1,Math.max(0,(now-last)/1000));last=now;if(!paused){slowFrames=dt>.05?slowFrames+dt:Math.max(0,slowFrames-dt*.2);if(experience.settings.quality==='auto'&&slowFrames>3&&worldRatio>.65){worldRatio=Math.max(.65,worldRatio-.2);renderer.setPixelRatio(worldRatio);renderer.shadowMap.enabled=false;slowFrames=0;resize();}abc.tick(now);const x=stick.x+(keys.has('KeyD')||keys.has('ArrowRight')?1:0)-(keys.has('KeyA')||keys.has('ArrowLeft')?1:0),z=stick.z+(keys.has('KeyW')||keys.has('ArrowUp')?1:0)-(keys.has('KeyS')||keys.has('ArrowDown')?1:0);const input=state.vehicleActive?{steer:x,lift:z}:{x:-Math.cos(yaw)*x+Math.sin(yaw)*z,z:Math.sin(yaw)*x+Math.cos(yaw)*z,run:Math.hypot(stick.x,stick.z)>.82||keys.has('ShiftLeft')};let remaining=dt;while(remaining>0){const step=Math.min(1/60,remaining);state.update(step,input);remaining-=step;}saveTime+=dt;if(saveTime>5){save();saveTime=0;}}

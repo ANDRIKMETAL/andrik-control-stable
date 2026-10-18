@@ -1,6 +1,6 @@
-import {createWeaponUI} from './weapon-ui-r1458.js?v=r1458';
-import {createGrowthUI} from './growth-ui-r1449.js?v=r1458';
-import {createGameSound} from './game-sound-r1448.js?v=r1458';
+import {createWeaponUI} from './weapon-ui-r1458.js?v=r1459';
+import {createGrowthUI} from './growth-ui-r1449.js?v=r1459';
+import {createGameSound} from './game-sound-r1448.js?v=r1459';
 const KEY='andrik-game-settings-r1448',LEARN='andrik-game-learned-r1448';
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 export const DEFAULTS={quality:'auto',fps:60,buttonScale:1,stickScale:1,opacity:.38,horizontal:16,vertical:16,follow:true,aimAssist:true,guidance:'auto',tutorial:true,motion:.5,flashes:.65};
@@ -10,7 +10,7 @@ export function normalizeSettings(raw={}){
  if(['auto','low','high'].includes(raw.quality))v.quality=raw.quality;if(['auto','on','off'].includes(raw.guidance))v.guidance=raw.guidance;v.fps=Number(raw.fps)===30?30:60;return v;
 }
 export function graphicsBudget(settings,coarse,dpr=1){return {ratio:Math.min(dpr,settings.quality==='low'?.75:settings.quality==='high'?(coarse?1.25:1.6):(coarse?1:1.5)),shadows:settings.quality==='high'||settings.quality==='auto'&&!coarse};}
-export function followYaw(yaw,facing,dt){const delta=Math.atan2(Math.sin(facing-yaw),Math.cos(facing-yaw));return yaw+delta*(1-Math.exp(-Math.min(.05,dt)*2.2));}
+export function followYaw(yaw,facing,dt){const delta=Math.atan2(Math.sin(facing-yaw),Math.cos(facing-yaw));return yaw+delta*(1-Math.exp(-Math.min(.05,dt)*3.2));}
 export function navigationTarget(s){
  const p=s.p,nearest=list=>list.slice().sort((a,b)=>Math.hypot(a.x-p.x,a.z-p.z)-Math.hypot(b.x-p.x,b.z-p.z))[0];
  if(s.race?.mounted&&!s.race.finished)return null;
