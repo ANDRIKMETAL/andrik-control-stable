@@ -21,9 +21,24 @@ function clear(a,b,geo,height,r=.52){
  for(let i=0;i<=steps;i++)if(!floorAt({x:a.x+(b.x-a.x)*i/steps,z:a.z+(b.z-a.z)*i/steps},geo,height))return false;
  return true;
 }
+function freePoint(p,geo,height){return floorAt(p,geo,height)&&!geo.walls.some(w=>(w.h??10)>=height+.1&&intersects(p,p,w,.52));}
+function outsidePadding(p,geo,height,towards){
+ if(freePoint(p,geo,height))return p;
+ const choices=[];
+ if(!floorAt(p,geo,height))for(const f of geo.platforms||[]){
+  if(f.gone||Math.abs((f.h||0)-height)>.36||f.w<.5||f.d<.5)continue;
+  choices.push({x:Math.max(f.x-f.w/2+.20,Math.min(f.x+f.w/2-.20,p.x)),z:Math.max(f.z-f.d/2+.20,Math.min(f.z+f.d/2-.20,p.z))});
+ }
+ for(const w of geo.walls)if((w.h??10)>=height+.1&&intersects(p,p,w,.52)){
+  choices.push({x:w.x-w.w/2-.56,z:p.z},{x:w.x+w.w/2+.56,z:p.z},{x:p.x,z:w.z-w.d/2-.56},{x:p.x,z:w.z+w.d/2+.56});
+ }
+ const valid=choices.filter(q=>distance(p,q)<2.5&&freePoint(q,geo,height));
+ valid.sort((a,b)=>(distance(p,a)+distance(a,towards)*.015)-(distance(p,b)+distance(b,towards)*.015));
+ return valid[0]||null;
+}
 function graph(geo,height){
  const key=(Math.round(height*4)/4)+'|'+geo.walls.map(w=>[w.x,w.z,w.w,w.d,w.h].join(',')).join(';')+'|'+(geo.platforms||[]).map(f=>f.gone?'0':'1').join('');
- let cache=maps.get(geo);if(cache?.key===key)return cache;
+ let bank=maps.get(geo);if(!bank){bank=new Map();maps.set(geo,bank);}let cache=bank.get(key);if(cache)return cache;
  const points=[];
  for(const w of geo.walls){
   if((w.h??10)<height+.1)continue;
@@ -36,7 +51,7 @@ function graph(geo,height){
  for(let i=0;i<nodes.length;i++)for(let j=0;j<i;j++)if(clear(nodes[i],nodes[j],geo,height)){
   const d=distance(nodes[i],nodes[j]);edges[i].push([j,d]);edges[j].push([i,d]);
  }
- cache={key,nodes,edges};maps.set(geo,cache);return cache;
+ cache={key,nodes,edges};bank.set(key,cache);if(bank.size>8)bank.delete(bank.keys().next().value);return cache;
 }
 function plan(start,goal,geo,height){
  const base=graph(geo,height),nodes=[...base.nodes,{x:start.x,z:start.z},{x:goal.x,z:goal.z}],n=nodes.length,s=n-2,t=n-1;
@@ -56,6 +71,11 @@ function plan(start,goal,geo,height){
 }
 export function enemyRouteDirection(entity,goal,geo,time=0){
  const height=Number(entity.homeY??entity.y)||0;
+ // Physical bodies use a .4 m radius; the route graph reserves .52 m.
+ // A hit, spawn or rounded corner can leave a valid body inside that padding.
+ const escape=outsidePadding(entity,geo,height,goal);
+ if(escape&&escape!==entity){routes.delete(entity);const d=distance(entity,escape)||1;return{x:(escape.x-entity.x)/d*Math.min(1,d/.1),z:(escape.z-entity.z)/d*Math.min(1,d/.1)};}
+ goal=outsidePadding(goal,geo,height,entity)||goal;
  if(clear(entity,goal,geo,height)){routes.delete(entity);const d=distance(entity,goal)||1;return{x:(goal.x-entity.x)/d,z:(goal.z-entity.z)/d};}
  let route=routes.get(entity);
  const map=graph(geo,height);

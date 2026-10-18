@@ -1,5 +1,5 @@
 import {poseArenaBoss} from './boss-poses-r1448.js?v=r1448';
-import {poseOceanBoss} from './ocean-poses-r1455.js?v=r1462';
+import {poseOceanBoss} from './ocean-poses-r1455.js?v=r1463';
 /* Animation operates in each actor's existing local scale. */
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 export function poseEnemyCombat(root,e,state){
@@ -10,6 +10,7 @@ export function poseEnemyCombat(root,e,state){
   u.body.rotation.set(0,0,side*1.46*fall);u.body.position.y=.40*unit*fall;u.head.rotation.x=.15*fall;
   for(const [i,l]of u.limbs.entries()){l.leg.rotation.x=(i?-.24:.38)*fall;l.shin.rotation.x=.5*fall;l.arm.rotation.x=-.5*fall;l.fore.rotation.x=-.8*fall;}return;
  }
+ if(e.cityHopPhase!==null&&Number.isFinite(e.cityHopPhase)){const k=Math.sin(Math.PI*e.cityHopPhase);u.body.rotation.x=.18*k;for(const l of u.limbs){l.leg.rotation.x=-.65*k;l.shin.rotation.x=1.1*k;l.arm.rotation.x=-.9*k;l.fore.rotation.x=-.8;}return;}
  if(e.kind==='boss'){if(state){if(e.oceanRevision)poseOceanBoss(root,e,state);else poseArenaBoss(root,e,state);}return;}if(e.hp<=0)return;
  const wind=e.mode==='windup',strike=e.mode==='strike';if(!wind&&!strike)return;
  const progress=clamp(e.t/(wind?.7:.34),0,1),pulse=wind?progress:Math.sin(Math.PI*progress);

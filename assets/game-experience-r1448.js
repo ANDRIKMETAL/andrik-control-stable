@@ -1,6 +1,6 @@
-import {createWeaponUI} from './weapon-ui-r1458.js?v=r1462';
-import {createGrowthUI} from './growth-ui-r1449.js?v=r1462';
-import {createGameSound} from './game-sound-r1448.js?v=r1462';
+import {createWeaponUI} from './weapon-ui-r1458.js?v=r1463';
+import {createGrowthUI} from './growth-ui-r1449.js?v=r1463';
+import {createGameSound} from './game-sound-r1448.js?v=r1463';
 const KEY='andrik-game-settings-r1448',LEARN='andrik-game-learned-r1448';
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 export const DEFAULTS={quality:'auto',fps:60,buttonScale:1,stickScale:1,opacity:.38,horizontal:16,vertical:16,follow:false,aimAssist:true,guidance:'auto',tutorial:true,motion:.5,flashes:.65};
@@ -38,6 +38,10 @@ const markup=`<style>
  #portrait[data-pause-menu=true] .pt-panel,#world1306[data-pause-menu=true] .panel{padding:12px max(84px,calc(env(safe-area-inset-right) + 72px)) 12px max(12px,env(safe-area-inset-left))}
  [data-game1448] .game1462-actions{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0}
  [data-game1448] .game1462-actions>button{min-height:44px}
+ [data-game1448] .game1463-exit-pair{display:flex;flex-wrap:wrap;gap:8px;max-width:100%}
+ [data-game1448] .game1463-exit{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:10px 16px;border:1px solid #ad9160;border-radius:6px;background:#172130dd;color:inherit;font:inherit;text-decoration:none;touch-action:manipulation}
+ [data-game1448] .game1463-exit:hover{background:#4a3343}
+ [data-game1448] .game1463-exit:focus-visible{outline:2px solid #a4eaff;outline-offset:3px}
  [data-game1448] .game1448-settings{border:1px solid #8fa5b64d;border-radius:14px;margin:12px 0;padding:12px;color:#dce8f2;background:#07111c80}
  [data-game1448] .game1448-settings summary{cursor:pointer;font-weight:700;min-height:32px;display:flex;align-items:center}
  [data-game1448] .game1448-settings label{display:flex!important;align-items:center;justify-content:space-between;gap:12px;min-height:36px;font:13px/1.3 system-ui;margin:7px 0}
@@ -72,11 +76,13 @@ const markup=`<style>
  <label>Встряска камеры<input data-setting=motion type=range min=0 max=1 step=.1></label>
  <label>Яркость вспышек<input data-setting=flashes type=range min=0 max=1 step=.1></label>
  <button type=button data-reset-settings>Сбросить настройки</button><button type=button data-replay-help>Повторить подсказки</button>`;
-export function createExperience(root,state,{signal,isPaused,onSettings,getAudioContext=()=>null,getFxVolume=()=>0,onSave=()=>{}}={}){
+export function createExperience(root,state,{signal,isPaused,onSettings,getAudioContext=()=>null,getFxVolume=()=>0,onSave=()=>{},onLeave=()=>{}}={}){
  let raw={},learned={};try{raw=JSON.parse(localStorage.getItem(KEY))||{};if(!raw.quality)raw.quality=localStorage.getItem('lira-3d-quality')||'auto';learned=JSON.parse(localStorage.getItem(LEARN))||{};}catch{}
  if(matchMedia('(prefers-reduced-motion: reduce)').matches&&raw.motion===undefined)raw.motion=0;
  let settings=normalizeSettings(raw),lastFrame=-Infinity,zone=state.zone,elapsed=0,stalled=0,best=Infinity,targetKey='',shake=0,nextHint=0,lastContext='',hintUntil=0,hintText='';
  const sound=createGameSound(getAudioContext,getFxVolume);root.dataset.game1448='';root.dataset.pauseMenu=String(isPaused());const refreshGrowth=createGrowthUI(root,state,{signal,isPaused,onSave});const refreshWeapons=createWeaponUI(root,state,{signal,onSave});
+ const actions=root.querySelector('.pt-row'),worldButton=root.querySelector('#pt-exit')||root.querySelector('#exit');
+ if(actions&&worldButton){const pair=document.createElement('div'),leave=document.createElement('a');pair.className='game1463-exit-pair';leave.className='game1463-exit';leave.href='/';leave.textContent='Выйти из игры';leave.setAttribute('data-game-home','');leave.addEventListener('click',()=>{onSave();onLeave();},{signal});actions.insertBefore(pair,worldButton);pair.append(worldButton,leave);}
  const panel=document.createElement('details');panel.className='game1448-settings';panel.innerHTML=markup;(root.querySelector('.pt-card')||root.querySelector('.card')).append(panel);
  const hint=document.createElement('div');hint.className='game1448-hint';hint.setAttribute('role','status');hint.hidden=true;root.append(hint);
  const nav=document.createElement('div');nav.className='game1448-nav';nav.hidden=true;const arrow=document.createElement('b'),label=document.createElement('span');arrow.textContent='↑';arrow.setAttribute('aria-hidden','true');nav.append(arrow,label);root.append(nav);

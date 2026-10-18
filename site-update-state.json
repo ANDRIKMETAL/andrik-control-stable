@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r358-deploy-nohang",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1792312858491-3b9be62caa",
-  "release": "R1462",
-  "archiveName": "SITE-R1462-LYRA-PAUSE-MENU-FULL.zip",
-  "sourceHead": "be687b6f618fd90aeebc839d06699cd5f3cd1349",
-  "backupSha": "be687b6f618fd90aeebc839d06699cd5f3cd1349",
+  "operationId": "publish-1792315955429-d7f49c1f82",
+  "release": "R1463",
+  "archiveName": "SITE-R1463-LYRA-DUEL-PURSUIT-FULL.zip",
+  "sourceHead": "28955e789888fd10220c4a573be1cfa1dcdd861c",
+  "backupSha": "28955e789888fd10220c4a573be1cfa1dcdd861c",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-10-18T08:40:58.491Z"
+  "generatedAt": "2026-10-18T09:32:35.429Z"
 }
