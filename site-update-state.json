@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r358-deploy-nohang",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1792315955429-d7f49c1f82",
-  "release": "R1463",
-  "archiveName": "SITE-R1463-LYRA-DUEL-PURSUIT-FULL.zip",
-  "sourceHead": "28955e789888fd10220c4a573be1cfa1dcdd861c",
-  "backupSha": "28955e789888fd10220c4a573be1cfa1dcdd861c",
+  "operationId": "publish-1792319418099-d4e231a514",
+  "release": "R1465",
+  "archiveName": "SITE-R1465-LYRA-LEATHER-CHARACTER-FULL.zip",
+  "sourceHead": "4a6873f0797df8411604e5ea5c41183715cd11df",
+  "backupSha": "4a6873f0797df8411604e5ea5c41183715cd11df",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-10-18T09:32:35.429Z"
+  "generatedAt": "2026-10-18T10:30:18.099Z"
 }

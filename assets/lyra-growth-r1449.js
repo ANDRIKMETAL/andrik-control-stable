@@ -1,6 +1,6 @@
-import {attachNarration} from './story-lines-r1461.js?v=r1463';
-import {attachWeaponry} from './weaponry-r1458.js?v=r1463';
-import {attachTactics} from './tactics-core-r1460.js?v=r1463';
+import {attachNarration} from './story-lines-r1461.js?v=r1465';
+import {attachWeaponry} from './weaponry-r1458.js?v=r1465';
+import {attachTactics} from './tactics-core-r1460.js?v=r1465';
 export const GROWTH_KEY='andrik-lyra-growth-r1449';
 export const SAVE_KEYS=['andrik-city-3d-r1289','andrik-portrait-r1280','andrik-ruins-3d-r1285',...['2','3','4','5'].map(id=>'andrik-world-'+id+'-r1306')];
 const number=(v,a,b)=>Math.max(a,Math.min(b,Math.floor(Number(v)||0)));

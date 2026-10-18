@@ -1,6 +1,7 @@
-import {createWeaponUI} from './weapon-ui-r1458.js?v=r1463';
-import {createGrowthUI} from './growth-ui-r1449.js?v=r1463';
-import {createGameSound} from './game-sound-r1448.js?v=r1463';
+import {chaseCue} from './bike-chase-r1464.js?v=r1465';
+import {createWeaponUI} from './weapon-ui-r1458.js?v=r1465';
+import {createGrowthUI} from './growth-ui-r1449.js?v=r1465';
+import {createGameSound} from './game-sound-r1448.js?v=r1465';
 const KEY='andrik-game-settings-r1448',LEARN='andrik-game-learned-r1448';
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 export const DEFAULTS={quality:'auto',fps:60,buttonScale:1,stickScale:1,opacity:.38,horizontal:16,vertical:16,follow:false,aimAssist:true,guidance:'auto',tutorial:true,motion:.5,flashes:.65};
@@ -59,6 +60,7 @@ const markup=`<style>
  [data-game1448] .game1448-hint{position:absolute;z-index:6;pointer-events:none;left:50%;bottom:calc(var(--game-y) + 2 * clamp(64px,9vh,80px) * var(--game-scale) + 20px);transform:translateX(-50%);max-width:min(44%,400px);padding:7px 12px;border-radius:10px;background:#08131ddd;border:1px solid #8cb0c14d;color:#e2f5fa;text-align:center;font:12px/1.4 system-ui;text-shadow:0 1px 2px #000}
  [data-game1448] .game1448-nav{position:absolute;z-index:6;pointer-events:none;top:32%;left:50%;transform:translateX(-50%);padding:7px 11px;border-radius:14px;border:1px solid #76dbd580;background:#07141bd9;color:#bcf7ed;font:12px/1.4 system-ui;display:flex;align-items:center;gap:8px}
  [data-game1448] .game1448-nav b{display:inline-block;font-size:23px;line-height:1}
+ [data-game1448] .game1464-chase{top:26%;bottom:auto;white-space:pre-line;line-height:1.5;border-color:#7bdfc980}
  [data-game1448] .game1448-hint[hidden],[data-game1448] .game1448-nav[hidden]{display:none!important}
  @media(max-height:450px){[data-game1448] .game1448-hint{bottom:calc(var(--game-y) + 2 * clamp(54px,15vh,66px) * var(--game-scale) + 20px)}}
  </style><summary>Управление, камера и графика</summary>
@@ -109,7 +111,7 @@ export function createExperience(root,state,{signal,isPaused,onSettings,getAudio
    const p=state.p,moving=Math.hypot(p.vx||0,p.vz||0)>.2;if(moving)teach('move');if(state.attack?.spin)teach('guitar');if(['slash','punch','kick','backfist'].includes(state.attack?.kind))teach('punch');if(!p.grounded&&state.jumps===0)teach('double');
    if(state.vehicleActive){const space=state.voyage.kind==='space';if(a)a.setAttribute('aria-label',space?'A: защитный щит':'A: прыжок на скутере');if(b)b.setAttribute('aria-label',space?'B: удерживать — стрельба':'B: удар по соседнему гонщику');if(c)c.setAttribute('aria-label',space?'C: ракета; после аварии — повтор':'C: ускорение; после аварии — повтор');hint.hidden=false;hint.textContent=space?'Крестовина: ← → ↑ ↓ · B: огонь · C: ракета · A: щит':'Между буйками · A: прыжок · B: удар · C: ускорение';nav.hidden=true;return;}if(a)a.setAttribute('aria-label','A: прыжок, повторно — двойной; A+B вместе: уклонение');const finish=state.finisherTarget,interact=state.canInteract;
    if(b){b.dataset.ready=finish?'finish':'';b.setAttribute('aria-label',finish?'B: добивание':state.weaponStats?.selected==='bat'?'B: бита двумя руками и удар ногой; удерживать для гитары':'B: меч и удар ногой; удерживать для гитары');}
-   if(state.race?.mounted&&!state.race.finished){if(c)c.setAttribute('aria-label','C: ускорение на мотоцикле');if(b)b.setAttribute('aria-label','B: сбить соперника ногой');hint.hidden=false;hint.textContent='B — удар ногой · C — ускорение · A — прыжок';nav.hidden=true;return;}if(c){c.dataset.ready=interact?'interact':'';c.setAttribute('aria-label',interact?'C: взаимодействовать':'C: крик');}
+   if(state.race?.mounted&&!state.race.finished){if(c)c.setAttribute('aria-label','C: ускорение на мотоцикле');if(b)b.setAttribute('aria-label','B: сбить преследователя ногой');if(a)a.setAttribute('aria-label','A: на заднее колесо и перелёт через препятствие');const cue=chaseCue(state);hint.className='game1448-hint game1464-chase';hint.hidden=false;hint.textContent=cue?cue.arrow+' '+cue.text+'\n'+Math.round(state.race.speed*3.6)+' км/ч · '+Math.round(state.p.z/1260*100)+'%\n'+cue.detail:'B — удар ногой · C — ускорение · A — на заднее колесо';nav.hidden=true;return;}hint.className='game1448-hint';if(c){c.dataset.ready=interact?'interact':'';c.setAttribute('aria-label',interact?'C: взаимодействовать':'C: крик');}
    const context=finish?'finish':interact?'interact':'';
    if(context&&context!==lastContext){hintUntil=elapsed+2.8;hintText=context==='finish'?'B — добить лежащего противника':'C — взаимодействовать';}lastContext=context;
    if(elapsed>=hintUntil&&settings.tutorial&&elapsed>2&&elapsed>=nextHint){

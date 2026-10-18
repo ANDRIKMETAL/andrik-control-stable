@@ -35,7 +35,7 @@ window.addEventListener('resize',handoff,{passive:true});
 window.addEventListener('orientationchange',handoff,{passive:true});
 if(cover){for(const event of ['load','error'])cover.addEventListener(event,()=>{coverReady=true;handoff();},{once:true});}
 const timer=setTimeout(()=>error('Загрузка занимает слишком долго. Проверь соединение и повтори запуск.'),25000);
-import('./lira-3d-r1308.js?v=r1463').then(()=>window.lira3DBootPromise).then(()=>{
+import('./lira-3d-r1308.js?v=r1465').then(()=>window.lira3DBootPromise).then(()=>{
  clearTimeout(timer);
  if(!document.body.classList.contains('lira3d'))throw Error('Игровое меню не загрузилось.');
  ready=true;failed=false;reason.hidden=true;retry.hidden=true;handoff();
