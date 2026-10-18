@@ -1,4 +1,4 @@
-import {UPGRADES} from './lyra-growth-r1449.js?v=r1461';
+import {UPGRADES} from './lyra-growth-r1449.js?v=r1462';
 export function createGrowthUI(root,state,{signal,isPaused,onSave=()=>{}}){
  if(!state.growth)return ()=>{};state.growth.bindPause(isPaused);
  const card=root.querySelector('.pt-card')||root.querySelector('.card'),panel=document.createElement('details');panel.className='growth1449';panel.open=true;
@@ -14,7 +14,7 @@ export function createGrowthUI(root,state,{signal,isPaused,onSave=()=>{}}){
  [data-game1448] .growth1449 article button:disabled{opacity:.5;background:#243440!important;cursor:default}
  [data-game1448] .growth1449-status{margin-top:9px;color:#c6d9df;font:12px/1.4 system-ui;min-height:18px}
  </style><summary>Прокачка Лиры · <span data-growth-balance></span></summary><small>5 веток по 3 уровня. Общие кристаллы для всех семи миров.</small><div class="growth1449-grid">${UPGRADES.map(q=>`<article><strong>${q.name}<span data-growth-level="${q.id}"></span></strong><p data-growth-effect="${q.id}"></p><button type="button" data-upgrade="${q.id}"></button></article>`).join('')}</div><div class="growth1449-status" role="status"></div>`;
- const row=card.querySelector('.pt-row')||card.querySelector('#resume');if(row)card.insertBefore(panel,row);else card.append(panel);
+ const row=card.querySelector('.pt-row')||card.querySelector('#resume');if(row)card.insertBefore(panel,row.nextSibling||null);else card.append(panel);
  const balance=panel.querySelector('[data-growth-balance]'),status=panel.querySelector('.growth1449-status');
  const rows=UPGRADES.map(item=>({item,level:panel.querySelector(`[data-growth-level="${item.id}"]`),effect:panel.querySelector(`[data-growth-effect="${item.id}"]`),button:panel.querySelector(`[data-upgrade="${item.id}"]`)}));
  let signature='',message='';

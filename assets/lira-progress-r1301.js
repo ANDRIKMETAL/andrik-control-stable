@@ -156,7 +156,7 @@ export function createProgressUiR1301(root,state,chapter){
  const row=card.querySelector('.pt-row');card.insertBefore(label,row||null);
  const select=label.querySelector('select');select.value=state.r1301.difficulty;
  select.addEventListener('change',()=>{state.setDifficulty(select.value);root.querySelector('.pt-panel').hidden=false;});
- const results=document.createElement('section');results.className='r1301-results';results.hidden=true;card.insertBefore(results,row||null);
+ const results=document.createElement('section');results.className='r1301-results';results.hidden=true;card.insertBefore(results,row?.nextSibling||null);
  const score=hud.querySelector('[data-r1301="score"]'),combo=hud.querySelector('[data-r1301="combo"]'),cp=hud.querySelector('[data-r1301="checkpoint"]');
  let lastCombo=0,finished=false;
  function refresh(){const p=state.r1301;

@@ -1,5 +1,5 @@
-import {beginAim,updateAim} from './aim-assist-r1449.js?v=r1461';
-import {isBladeAction,beginBlade,bladeHit} from './blade-r1455.js?v=r1461';
+import {beginAim,updateAim} from './aim-assist-r1449.js?v=r1462';
+import {isBladeAction,beginBlade,bladeHit} from './blade-r1455.js?v=r1462';
 import {attackSlot,facesTarget,waitForAttack,modernBoss,bossDamage} from './encounters-r1448.js?v=r1448';
 /* State-only combat additions. No renderer, assets, timers or save-key changes. */
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);

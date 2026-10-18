@@ -1,12 +1,12 @@
-import {resolveTowerWall} from './tower-entry-r1459.js?v=r1461';
-import {collidePlatforms} from './platform-collision-r1458.js?v=r1461';
-import {buildOcean,oceanEnemy,oceanInteract,oceanObjective,oceanTarget,updateOcean,strikeOceanObjects,restoreOcean,oceanSnapshot} from './ocean-r1457.js?v=r1461';
-import {State,clamp} from './portrait-core-r1295.js?v=r1461';
-import {buildRouteWorld} from './world-layout-r1457.js?v=r1461';
-import {routeFloor} from './world-route-r1457.js?v=r1461';
-import {spaceEnemy,worldBoss} from './world-combat-r1457.js?v=r1461';
-import {updatePlayerImpact} from './player-impact-r1457.js?v=r1461';
-import {makeVoyage,startVoyage,voyageMounted,voyageAction,updateVoyage,voyageObjective,voyageSnapshot,restoreVoyage} from './voyage-core-r1458.js?v=r1461';
+import {resolveTowerWall} from './tower-entry-r1459.js?v=r1462';
+import {collidePlatforms} from './platform-collision-r1458.js?v=r1462';
+import {buildOcean,oceanEnemy,oceanInteract,oceanObjective,oceanTarget,updateOcean,strikeOceanObjects,restoreOcean,oceanSnapshot} from './ocean-r1457.js?v=r1462';
+import {State,clamp} from './portrait-core-r1295.js?v=r1462';
+import {buildRouteWorld} from './world-layout-r1457.js?v=r1462';
+import {routeFloor} from './world-route-r1457.js?v=r1462';
+import {spaceEnemy,worldBoss} from './world-combat-r1457.js?v=r1462';
+import {updatePlayerImpact} from './player-impact-r1457.js?v=r1462';
+import {makeVoyage,startVoyage,voyageMounted,voyageAction,updateVoyage,voyageObjective,voyageSnapshot,restoreVoyage} from './voyage-core-r1458.js?v=r1462';
 export const WORLDS={2:{name:'ОКЕАН',stages:['Затопленные причалы','Острова прилива','Логово Восьмирукого'],color:0x4de4cd},3:{name:'КОСМОС',stages:['Разгерметизация','Капсулы в поясе обломков','Протокол АРЕС'],color:0x60dfff},4:{name:'БАШНЯ',stages:['Лестница маятника','Ход против времени','Над облаками'],color:0xffcc82},5:{name:'БЛОКИ',stages:['Код архитектора','Ломаный маршрут','За пределами сетки'],color:0xd18aff}};
 const dist=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 export class WorldState extends State{

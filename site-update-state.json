@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r358-deploy-nohang",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1792310898996-c7d2971a54",
-  "release": "R1461",
-  "archiveName": "SITE-R1461-LYRA-STORY-MIRROR-MENU-FULL.zip",
-  "sourceHead": "6f7d9df63a4a05328880520c324cff0a5f51a8ae",
-  "backupSha": "6f7d9df63a4a05328880520c324cff0a5f51a8ae",
+  "operationId": "publish-1792312858491-3b9be62caa",
+  "release": "R1462",
+  "archiveName": "SITE-R1462-LYRA-PAUSE-MENU-FULL.zip",
+  "sourceHead": "be687b6f618fd90aeebc839d06699cd5f3cd1349",
+  "backupSha": "be687b6f618fd90aeebc839d06699cd5f3cd1349",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-10-18T08:08:22.684Z"
+  "generatedAt": "2026-10-18T08:40:58.491Z"
 }

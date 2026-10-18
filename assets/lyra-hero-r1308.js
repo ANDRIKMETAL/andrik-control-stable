@@ -1,6 +1,6 @@
-import {createBat,poseBat} from './weapon-view-r1458.js?v=r1461';
+import {createBat,poseBat} from './weapon-view-r1458.js?v=r1462';
 import * as T from './vendor/three-r170.module.min.js';
-import {addBlade,poseBlade} from './lyra-blade-r1455.js?v=r1461';
+import {addBlade,poseBlade} from './lyra-blade-r1455.js?v=r1462';
 // Metre-scale articulated mesh. Geometry belongs to the scene and is disposed on exit.
 export function createLyra({mirror=false}={}){
  const root=new T.Group(),body=new T.Group();root.name=mirror?'Lyra-mirror-red-eyes':'Lyra-unmasked';root.add(body);
