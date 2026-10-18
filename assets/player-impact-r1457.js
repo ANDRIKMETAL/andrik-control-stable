@@ -1,4 +1,4 @@
-import {move} from './portrait-core-r1295.js?v=r1460';
+import {move} from './portrait-core-r1295.js?v=r1461';
 export function knockPlayer(state,source,damage=20,power=5){
  const p=state.p,before=p.hp;state.damage(damage);if(p.hp>=before||state.dead)return false;
  const gap=Math.hypot(p.x-source.x,p.z-source.z),dx=gap>.01?p.x-source.x:Math.sin(source.yaw||0),dz=gap>.01?p.z-source.z:Math.cos(source.yaw||0),d=Math.hypot(dx,dz)||1;

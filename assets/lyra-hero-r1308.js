@@ -1,11 +1,12 @@
-import {createBat,poseBat} from './weapon-view-r1458.js?v=r1460';
+import {createBat,poseBat} from './weapon-view-r1458.js?v=r1461';
 import * as T from './vendor/three-r170.module.min.js';
-import {addBlade,poseBlade} from './lyra-blade-r1455.js?v=r1460';
+import {addBlade,poseBlade} from './lyra-blade-r1455.js?v=r1461';
 // Metre-scale articulated mesh. Geometry belongs to the scene and is disposed on exit.
-export function createLyra(){
- const root=new T.Group(),body=new T.Group();root.name='Lyra-unmasked';root.add(body);
+export function createLyra({mirror=false}={}){
+ const root=new T.Group(),body=new T.Group();root.name=mirror?'Lyra-mirror-red-eyes':'Lyra-unmasked';root.add(body);
  const mat=(color,roughness=.65,metalness=0)=>new T.MeshStandardMaterial({color,roughness,metalness});
  const skin=mat('#bd9587',.72),lip=mat('#94616a',.82),leather=mat('#151923',.48,.08),denim=mat('#202632',.88),boot=mat('#10141c',.42,.12),hairMat=mat('#1b171f',.88),red=mat('#4a2432',.90),silver=mat('#a9adb8',.3,.7),white=mat('#dfd9ce',.72),iris=mat('#657e77',.5),dark=mat('#17151b',.7);
+ const eyeWhite=mirror?mat('#ff172a',.35):white,eyeIris=mirror?mat('#ff051a',.35):iris;if(mirror)for(const m of [eyeWhite,eyeIris]){m.emissive.set('#ff071b');m.emissiveIntensity=2.8;m.toneMapped=false;}
  // Fine material relief, generated once; no downloaded texture dependencies.
  const grain=new Uint8Array(128*128*4);let seed=195;
  for(let i=0;i<128*128;i++){seed=(Math.imul(seed,1664525)+1013904223)>>>0;const value=115+(seed>>>27);grain.set([value,value,value,255],i*4);}
@@ -67,8 +68,8 @@ export function createLyra(){
  for(const s of [-1,1]){
   ell(head,skin,s*.105,-.012,-.004,.018,.035,.019);
   ell(head,skin,s*.044,.020,.089,.025,.012,.006);
-  ell(head,white,s*.044,.020,.094,.018,.0060,.0035);
-  ell(head,iris,s*.044,.020,.100,.0056,.0057,.0022);
+  ell(head,eyeWhite,s*.044,.020,.094,.018,.0060,.0035).name='Lyra-eye-white-'+s;
+  ell(head,eyeIris,s*.044,.020,.100,.0056,.0057,.0022).name='Lyra-eye-iris-'+s;
   ell(head,dark,s*.044,.020,.103,.0028,.0041,.0016);
   ell(head,white,s*.042,.022,.105,.0013,.0013,.0008);
   strand(head,[[s*.018,.048,.098],[s*.043,.052,.100],[s*.071,.046,.084]],.0023,hairMat);
@@ -182,7 +183,7 @@ export function createLyra(){
  ell(microphone,silver,0,.061,0,.026,.034,.026);
  for(let i=0;i<5;i++)put(microphone,new T.TorusGeometry(.024*Math.sin((i+1)/6*Math.PI),.0012,4,16),dark,0,.039+i*.011,0).rotation.x=Math.PI/2;
  const face=new T.Group();face.visible=false;
- root.userData={body,head,hair,face,limbs,guitar,eye,microphone,vocalMouth,kind:'lira'};
+ root.userData={body,head,hair,face,limbs,guitar,eye,microphone,vocalMouth,kind:'lira',mirrorLyra:mirror};
  addBlade(root.userData);
  createBat(root);return root;
 }

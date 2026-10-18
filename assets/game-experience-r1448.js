@@ -1,6 +1,6 @@
-import {createWeaponUI} from './weapon-ui-r1458.js?v=r1460';
-import {createGrowthUI} from './growth-ui-r1449.js?v=r1460';
-import {createGameSound} from './game-sound-r1448.js?v=r1460';
+import {createWeaponUI} from './weapon-ui-r1458.js?v=r1461';
+import {createGrowthUI} from './growth-ui-r1449.js?v=r1461';
+import {createGameSound} from './game-sound-r1448.js?v=r1461';
 const KEY='andrik-game-settings-r1448',LEARN='andrik-game-learned-r1448';
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 export const DEFAULTS={quality:'auto',fps:60,buttonScale:1,stickScale:1,opacity:.38,horizontal:16,vertical:16,follow:false,aimAssist:true,guidance:'auto',tutorial:true,motion:.5,flashes:.65};
@@ -39,6 +39,7 @@ const markup=`<style>
  [data-game1448] button[data-abc][data-ready=finish]{border-color:#ffd686!important;box-shadow:0 0 16px #ffd68677,inset 0 0 15px #ffd68622!important;color:#ffdf9d!important}
  [data-game1448] button[data-abc][data-ready=interact]{border-color:#79e8df!important;box-shadow:0 0 14px #79e8df55,inset 0 0 15px #79e8df22!important}
  [data-game1448] .pt-damage{filter:opacity(var(--game-flash))}
+ [data-game1448] .game1461-dialogue{position:absolute;z-index:10;left:22%;right:22%;bottom:24%;padding:10px 14px;border:1px solid #d8ba7a70;border-radius:12px;background:#07101eeb;color:#f5e6c8;text-align:center;font:600 14px/1.5 system-ui;white-space:pre-line;pointer-events:none;text-shadow:0 1px 3px #000}[data-game1448] .game1461-dialogue[hidden]{display:none!important}
  [data-game1448] .game1448-hint{position:absolute;z-index:6;pointer-events:none;left:50%;bottom:calc(var(--game-y) + 2 * clamp(64px,9vh,80px) * var(--game-scale) + 20px);transform:translateX(-50%);max-width:min(44%,400px);padding:7px 12px;border-radius:10px;background:#08131ddd;border:1px solid #8cb0c14d;color:#e2f5fa;text-align:center;font:12px/1.4 system-ui;text-shadow:0 1px 2px #000}
  [data-game1448] .game1448-nav{position:absolute;z-index:6;pointer-events:none;top:32%;left:50%;transform:translateX(-50%);padding:7px 11px;border-radius:14px;border:1px solid #76dbd580;background:#07141bd9;color:#bcf7ed;font:12px/1.4 system-ui;display:flex;align-items:center;gap:8px}
  [data-game1448] .game1448-nav b{display:inline-block;font-size:23px;line-height:1}
@@ -67,6 +68,7 @@ export function createExperience(root,state,{signal,isPaused,onSettings,getAudio
  const panel=document.createElement('details');panel.className='game1448-settings';panel.innerHTML=markup;(root.querySelector('.pt-card')||root.querySelector('.card')).append(panel);
  const hint=document.createElement('div');hint.className='game1448-hint';hint.setAttribute('role','status');hint.hidden=true;root.append(hint);
  const nav=document.createElement('div');nav.className='game1448-nav';nav.hidden=true;const arrow=document.createElement('b'),label=document.createElement('span');arrow.textContent='↑';arrow.setAttribute('aria-hidden','true');nav.append(arrow,label);root.append(nav);
+ const dialogue=document.createElement('div');dialogue.className='game1461-dialogue';dialogue.hidden=true;dialogue.setAttribute('role','status');root.append(dialogue);let dialogueLeft=0;
  const a=root.querySelector('[data-abc="A"]'),b=root.querySelector('[data-abc="B"]'),c=root.querySelector('[data-abc="C"]');
  const inputs=Array.from(panel.querySelectorAll('[data-setting]'));
  function save(){try{localStorage.setItem(KEY,JSON.stringify(settings));localStorage.setItem('lira-3d-quality',settings.quality);}catch{}}
@@ -81,10 +83,10 @@ export function createExperience(root,state,{signal,isPaused,onSettings,getAudio
  function teach(key){if(learned[key])return;learned[key]=true;try{localStorage.setItem(LEARN,JSON.stringify(learned));}catch{}}
  apply();
  return {get settings(){return settings;},frameDue(now){if(now-lastFrame<1000/settings.fps-.5)return false;lastFrame=now;return true;},
-  event(e){if(isPaused())return;sound.event(e,state);if(['hit','hurt','finishImpact'].includes(e.type))shake=.22;if(e.type==='puzzle')teach('interact');if(e.type==='finishImpact')teach('finish');if(e.type==='dodge'){teach('dodge');hintText='УКЛОНЕНИЕ';hintUntil=elapsed+.65;}if(e.type==='counterHit'){hintText='КОНТРАТАКА · +50%';hintUntil=elapsed+1.3;}if(e.type==='shieldBreak'||e.type==='armorBreak'){hintText=e.type==='shieldBreak'?'ЩИТ РАЗБИТ':'БРОНЯ РАЗБИТА';hintUntil=elapsed+1.3;}},
+  event(e){if(e.type==='storyLine'){dialogue.textContent=e.text;dialogueLeft=e.duration||4;return;}if(isPaused())return;sound.event(e,state);if(['hit','hurt','finishImpact'].includes(e.type))shake=.22;if(e.type==='puzzle')teach('interact');if(e.type==='finishImpact')teach('finish');if(e.type==='dodge'){teach('dodge');hintText='УКЛОНЕНИЕ';hintUntil=elapsed+.65;}if(e.type==='counterHit'){hintText='КОНТРАТАКА · +50%';hintUntil=elapsed+1.3;}if(e.type==='shieldBreak'||e.type==='armorBreak'){hintText=e.type==='shieldBreak'?'ЩИТ РАЗБИТ':'БРОНЯ РАЗБИТА';hintUntil=elapsed+1.3;}},
   cameraRoll(time){return shake>0?Math.sin(time*47)*.012*settings.motion*(shake/.22):0;},
   update(dt,yaw){
-   refreshGrowth();refreshWeapons();const paused=isPaused();hint.hidden=nav.hidden=paused;if(paused)return;elapsed+=dt;shake=Math.max(0,shake-dt);
+   refreshGrowth();refreshWeapons();const paused=isPaused();if(!paused)dialogueLeft=Math.max(0,dialogueLeft-dt);dialogue.hidden=paused||dialogueLeft<=0||!dialogue.textContent;hint.hidden=nav.hidden=paused;if(paused)return;elapsed+=dt;shake=Math.max(0,shake-dt);
    if(zone!==state.zone){zone=state.zone;stalled=0;best=Infinity;targetKey='';elapsed=0;lastContext='';hintUntil=0;}
    const p=state.p,moving=Math.hypot(p.vx||0,p.vz||0)>.2;if(moving)teach('move');if(state.attack?.spin)teach('guitar');if(['slash','punch','kick','backfist'].includes(state.attack?.kind))teach('punch');if(!p.grounded&&state.jumps===0)teach('double');
    if(state.vehicleActive){const space=state.voyage.kind==='space';if(a)a.setAttribute('aria-label',space?'A: защитный щит':'A: прыжок на скутере');if(b)b.setAttribute('aria-label',space?'B: удерживать — стрельба':'B: удар по соседнему гонщику');if(c)c.setAttribute('aria-label',space?'C: ракета; после аварии — повтор':'C: ускорение; после аварии — повтор');hint.hidden=false;hint.textContent=space?'Крестовина: ← → ↑ ↓ · B: огонь · C: ракета · A: щит':'Между буйками · A: прыжок · B: удар · C: ускорение';nav.hidden=true;return;}if(a)a.setAttribute('aria-label','A: прыжок, повторно — двойной; A+B вместе: уклонение');const finish=state.finisherTarget,interact=state.canInteract;

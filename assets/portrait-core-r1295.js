@@ -1,6 +1,6 @@
-import {towerRayHit,resolveTowerWall} from './tower-entry-r1459.js?v=r1460';
+import {towerRayHit,resolveTowerWall} from './tower-entry-r1459.js?v=r1461';
 import {attackSlot,facesTarget,waitForAttack,modernBoss,bossDamage,updateArenaBoss,legacyArenaBoss} from './encounters-r1448.js?v=r1448';
-import {installCombatR1447} from './combat-r1447.js?v=r1460';
+import {installCombatR1447} from './combat-r1447.js?v=r1461';
 import {enemyRouteDirection} from './enemy-navigation-r1446.js';
 export const ORDER=[1,2,'portrait',3,4,6,5],SAVE='andrik-portrait-r1280';
 export const ZONES=['Коридор портретов','Зал масок','Зеркальный лабиринт','Разрушенная башня','Пустой портрет'];

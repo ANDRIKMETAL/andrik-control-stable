@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r358-deploy-nohang",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1792307481248-1074d8a2ad",
-  "release": "R1460",
-  "archiveName": "SITE-R1460-LYRA-TACTICAL-COMBAT-FULL.zip",
-  "sourceHead": "7ecd2f52bea0e3754e2537a0d5d11c4764119beb",
-  "backupSha": "7ecd2f52bea0e3754e2537a0d5d11c4764119beb",
+  "operationId": "publish-1792310898996-c7d2971a54",
+  "release": "R1461",
+  "archiveName": "SITE-R1461-LYRA-STORY-MIRROR-MENU-FULL.zip",
+  "sourceHead": "6f7d9df63a4a05328880520c324cff0a5f51a8ae",
+  "backupSha": "6f7d9df63a4a05328880520c324cff0a5f51a8ae",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-10-18T07:11:21.248Z"
+  "generatedAt": "2026-10-18T08:08:22.684Z"
 }

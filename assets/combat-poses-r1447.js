@@ -1,5 +1,5 @@
 import {poseArenaBoss} from './boss-poses-r1448.js?v=r1448';
-import {poseOceanBoss} from './ocean-poses-r1455.js?v=r1460';
+import {poseOceanBoss} from './ocean-poses-r1455.js?v=r1461';
 /* Animation operates in each actor's existing local scale. */
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 export function poseEnemyCombat(root,e,state){

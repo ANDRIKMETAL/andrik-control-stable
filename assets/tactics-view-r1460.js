@@ -44,7 +44,7 @@ export function tacticalViewKit(geometries,materials){
   root.userData.tactical1460=g;return g;
  }
  function enemy(root,e,state){
-  if(!e.tactic)return;let g=root.userData.tactical1460;if(!g)g=make(root,e);const t=e.tactic,u=root.userData,alive=e.hp>0,down=e.down>0,wind=t.phase==='windup',strike=t.phase==='strike',warn=clamp(t.t/Math.max(.01,t.wind||1),0,1),impact=strike?Math.sin(Math.PI*clamp(t.t/Math.max(.01,t.active||.34),0,1)):0;
+  if(!e.tactic||root.userData.mirrorLyra)return;let g=root.userData.tactical1460;if(!g)g=make(root,e);const t=e.tactic,u=root.userData,alive=e.hp>0,down=e.down>0,wind=t.phase==='windup',strike=t.phase==='strike',warn=clamp(t.t/Math.max(.01,t.wind||1),0,1),impact=strike?Math.sin(Math.PI*clamp(t.t/Math.max(.01,t.active||.34),0,1)):0;
   g.gear.visible=alive||e.dead>0;if(g.shield){g.shield.visible=t.shield>0;g.shield.rotation.y=t.flash>0?Math.sin(state.time*50)*.12:Math.sin(state.time*2)*.025;g.shield.position.z=t.flash>0?.37:.45;const lowered=['windup','strike','recover'].includes(t.phase);g.shield.position.y=lowered?.84:1.16;g.shield.rotation.z=lowered?-.24:0;}
   for(const o of g.armor)o.visible=t.armor>0;
   for(const [i,o]of g.fins.entries())o.rotation.x=Math.sin(state.time*8+i)*.12;

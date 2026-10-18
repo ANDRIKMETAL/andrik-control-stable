@@ -1,5 +1,5 @@
 import * as T from './vendor/three-r170.module.min.js';
-import {transportAssets} from './transport-models-r1458.js?v=r1460';
+import {transportAssets} from './transport-models-r1458.js?v=r1461';
 export function worldLifeKit(geometries,materials,textures){
  const assets=transportAssets(geometries,materials),{put,shape,mat}=assets,weatherGeometry=new T.BufferGeometry(),positions=new Float32Array(500*3),phases=new Float32Array(500);for(let i=0;i<500;i++){positions.set([Math.sin(i*67.3)*100,Math.cos(i*4.17)*65,(i*41)%220-110],i*3);phases[i]=i*1.618;}
  weatherGeometry.setAttribute('position',new T.BufferAttribute(positions,3));weatherGeometry.setAttribute('phase',new T.BufferAttribute(phases,1));geometries.add(weatherGeometry);

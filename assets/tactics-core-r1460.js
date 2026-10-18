@@ -1,8 +1,8 @@
-import {blocked,move} from './portrait-core-r1295.js?v=r1460';
+import {blocked,move} from './portrait-core-r1295.js?v=r1461';
 import {attackSlot} from './encounters-r1448.js?v=r1448';
-import {downedEnemyR1447} from './combat-r1447.js?v=r1460';
+import {downedEnemyR1447} from './combat-r1447.js?v=r1461';
 import {enemyRouteDirection} from './enemy-navigation-r1446.js';
-import {routeFloor,navigateRoute,tickRouteJump} from './world-route-r1457.js?v=r1460';
+import {routeFloor,navigateRoute,tickRouteJump} from './world-route-r1457.js?v=r1461';
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z),roles=['guard','fast','shooter','heavy'];
 const angle=(a,b)=>Math.atan2(b.x-a.x,b.z-a.z),turn=(a,b,n)=>a+clamp(Math.atan2(Math.sin(b-a),Math.cos(b-a)),-n,n);
 export const TACTIC_NAMES={guard:'Щитоносец',fast:'Обходчик',shooter:'Стрелок',heavy:'Тяжёлый'};
