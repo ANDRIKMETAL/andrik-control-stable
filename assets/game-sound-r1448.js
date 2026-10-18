@@ -31,6 +31,8 @@ export function createGameSound(getContext,getVolume){
   else if(e.type==='dogWarn'){source(130,.23,.08,'sawtooth',75);hiss(.14,.12,850);}
   else if(e.type==='dogBite'){source(205,.13,.1,'sawtooth',70);hiss(.09,.18,1300);}
   else if(e.type==='bossWindup'){source(e.kind==='charge'?95:140,.18,.06,'triangle',55);}
+  else if(e.type==='battleRank'){source(e.rank==='S'?880:e.rank==='A'?660:520,.24,.045,'sine',e.rank==='S'?1320:780);}
+  else if(e.type==='won'){source(440,.38,.04,'sine',880);source(660,.45,.025,'triangle',990);}
   else if(e.type==='bossOpen'){source(440,.20,.055,'sine',660);}
   else if(e.type==='mechanicalBurst'){source(70,.35,.15,'triangle',30);hiss(.25,.12,1800);}
   else if(e.type==='rageStart'){source(100,.32,.07,'sawtooth',220);hiss(.22,.08,1200);}

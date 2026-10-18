@@ -1,9 +1,9 @@
-import {routeFloor as oceanFloor,navigateRoute as pursue,walkRoute as walk,tickRouteJump as jumpEnemy} from './world-route-r1457.js?v=r1467';
-import {worldBoss} from './world-combat-r1457.js?v=r1467';
-export {routeFloor as oceanFloor} from './world-route-r1457.js?v=r1467';
-import {move,blocked} from './portrait-core-r1295.js?v=r1467';
+import {routeFloor as oceanFloor,navigateRoute as pursue,walkRoute as walk,tickRouteJump as jumpEnemy} from './world-route-r1457.js?v=r1468';
+import {worldBoss} from './world-combat-r1457.js?v=r1468';
+export {routeFloor as oceanFloor} from './world-route-r1457.js?v=r1468';
+import {move,blocked} from './portrait-core-r1295.js?v=r1468';
 import {attackSlot,facesTarget} from './encounters-r1448.js?v=r1448';
-import {downedEnemyR1447} from './combat-r1447.js?v=r1467';
+import {downedEnemyR1447} from './combat-r1447.js?v=r1468';
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n)),distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 const inside=(f,p,margin=.05)=>Math.abs(p.x-f.x)<f.w/2-margin&&Math.abs(p.z-f.z)<f.d/2-margin;
 const nearest=(list,p)=>list.slice().sort((a,b)=>distance(a,p)-distance(b,p))[0];

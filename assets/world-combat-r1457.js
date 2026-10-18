@@ -1,8 +1,8 @@
-import {blocked} from './portrait-core-r1295.js?v=r1467';
-import {attackSlot,facesTarget} from './encounters-r1448.js?v=r1467';
-import {downedEnemyR1447} from './combat-r1447.js?v=r1467';
-import {routeFloor,navigateRoute,tickRouteJump,walkRoute} from './world-route-r1457.js?v=r1467';
-import {knockPlayer} from './player-impact-r1457.js?v=r1467';
+import {blocked} from './portrait-core-r1295.js?v=r1468';
+import {attackSlot,facesTarget} from './encounters-r1448.js?v=r1468';
+import {downedEnemyR1447} from './combat-r1447.js?v=r1468';
+import {routeFloor,navigateRoute,tickRouteJump,walkRoute} from './world-route-r1457.js?v=r1468';
+import {knockPlayer} from './player-impact-r1457.js?v=r1468';
 const dist=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z),clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 function shot(state,e,target,{speed=10,damage=7,spread=0,laser=false}={}){
  const dx=target.x-e.x,dz=target.z-e.z,d=Math.hypot(dx,dz)||1,y=e.y||0,angle=Math.atan2(dx,dz)+spread;

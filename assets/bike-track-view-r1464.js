@@ -1,5 +1,5 @@
 import * as T from './vendor/three-r170.module.min.js';
-import {CHASE_LENGTH,CHASE_FENCE,CHASE_RAMPS,CHASE_POINTS,CHASE_HAZARDS,chaseCenter,chaseHeading} from './bike-chase-r1464.js?v=r1467';
+import {CHASE_LENGTH,CHASE_FENCE,CHASE_RAMPS,CHASE_POINTS,CHASE_HAZARDS,chaseCenter,chaseHeading} from './bike-chase-r1464.js?v=r1468';
 export function buildChaseTrack({group,mesh,material,geometries,materials,cityText,cityCar}){
  const asphalt=material('#172532',.65,.12),curb=material('#526e7a',.65,.35),gold=material('#f0c56c',.45,.3,.3),cyan=material('#69e8de',.3,.3,.65),dark=material('#101c29');
  function ribbon(name,left,right,y,mat){

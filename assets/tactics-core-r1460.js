@@ -1,11 +1,11 @@
-import {crowdApproach} from './combat-feel-r1467.js?v=r1467';
-import {blocked,move} from './portrait-core-r1295.js?v=r1467';
+import {crowdApproach} from './combat-feel-r1467.js?v=r1468';
+import {blocked,move} from './portrait-core-r1295.js?v=r1468';
 import {attackSlot} from './encounters-r1448.js?v=r1448';
-import {downedEnemyR1447} from './combat-r1447.js?v=r1467';
-import {enemyRouteDirection} from './enemy-navigation-r1446.js?v=r1467';
-import {routeFloor,navigateRoute,tickRouteJump} from './world-route-r1457.js?v=r1467';
-import {isMirrorDuel,updateMirrorDuel,mirrorParry} from './mirror-duel-r1463.js?v=r1467';
-import {navigateCityEnemy,tickCityJump,settleCityEnemy,keepCitySupport} from './city-pursuit-r1463.js?v=r1467';
+import {downedEnemyR1447} from './combat-r1447.js?v=r1468';
+import {enemyRouteDirection} from './enemy-navigation-r1446.js?v=r1468';
+import {routeFloor,navigateRoute,tickRouteJump} from './world-route-r1457.js?v=r1468';
+import {isMirrorDuel,updateMirrorDuel,mirrorParry} from './mirror-duel-r1463.js?v=r1468';
+import {navigateCityEnemy,tickCityJump,settleCityEnemy,keepCitySupport} from './city-pursuit-r1463.js?v=r1468';
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z),roles=['guard','fast','shooter','heavy','duelist'];
 const angle=(a,b)=>Math.atan2(b.x-a.x,b.z-a.z),turn=(a,b,n)=>a+clamp(Math.atan2(Math.sin(b-a),Math.cos(b-a)),-n,n);
 export const TACTIC_NAMES={guard:'Щитоносец',fast:'Обходчик',shooter:'Стрелок',heavy:'Тяжёлый',duelist:'Зеркальная Лира'};
@@ -30,7 +30,7 @@ function travel(s,e,target,speed,dt){
  e.vx=(e.x-old.x)/Math.max(.001,dt);e.vz=(e.z-old.z)/Math.max(.001,dt);
 }
 function coverFor(s,e,role){const t=e.tactic;if(s.time<t.coverAt)return s.living.find(q=>q.id===t.cover)||null;t.coverAt=s.time+.45;const candidates=s.living.filter(q=>q!==e&&q.tactic?.role===role&&(!q.tactic.shieldMax||q.tactic.shield>0)&&Math.abs((q.y||0)-(e.y||0))<1.2&&distance(e,q)<10);candidates.sort((a,b)=>distance(e,a)-distance(e,b));t.cover=candidates[0]?.id??null;return candidates[0]||null;}
-function beginAttack(s,e,kind){const t=e.tactic;t.phase='windup';t.t=0;t.kind=kind;t.wind=kind==='shot'?.9:t.role==='heavy'?1.25:t.role==='fast'?.60:.82;t.active=kind==='shot'?.48:.34;t.recovery=t.role==='heavy'?1.25:t.role==='fast'?.9:.85;t.yaw=e.yaw;t.lock={x:s.p.x,y:s.p.y,z:s.p.z};t.contact=false;t.round=0;t.missed=false;e.t=0;e.mode=kind==='shot'?'aim':'windup';e.attackStep=(e.attackStep||0)+1;e.attackKind=t.role==='heavy'?'heavy':['right','left','kick'][(e.attackStep-1)%3];e.hand=e.attackKind==='left'?1:0;s.emit('tacticWarn',{enemy:e.id,role:t.role,x:e.x,y:e.y||0,z:e.z});}
+function beginAttack(s,e,kind){const t=e.tactic;t.attackSerial1468=(t.attackSerial1468||0)+1;t.phase='windup';t.t=0;t.kind=kind;t.wind=kind==='shot'?.9:t.role==='heavy'?1.25:t.role==='fast'?.60:.82;t.active=kind==='shot'?.48:.34;t.recovery=t.role==='heavy'?1.25:t.role==='fast'?.9:.85;t.yaw=e.yaw;t.lock={x:s.p.x,y:s.p.y,z:s.p.z};t.contact=false;t.round=0;t.missed=false;e.t=0;e.mode=kind==='shot'?'aim':'windup';e.attackStep=(e.attackStep||0)+1;e.attackKind=t.role==='heavy'?'heavy':['right','left','kick'][(e.attackStep-1)%3];e.hand=e.attackKind==='left'?1:0;s.emit('tacticWarn',{enemy:e.id,role:t.role,x:e.x,y:e.y||0,z:e.z});}
 function fire(s,e){const t=e.tactic;if(s.shots.length>=64||blocked(e,t.lock,s.geo.walls))return;const yaw=angle(e,t.lock),d=distance(e,t.lock)||1,speed=t.world===3?11:8.5;s.shots.push({x:e.x+Math.sin(yaw)*.7,z:e.z+Math.cos(yaw)*.7,y:e.y||0,vx:Math.sin(yaw)*speed,vz:Math.cos(yaw)*speed,vy:((t.lock.y||0)-(e.y||0))/Math.max(.25,d/speed),life:2.8,damage:6,tactical:true,reflectable:true,source:e.id,kind:t.world===3?'laser':t.world===2?'water':'plasma'});s.emit('tacticShot',{x:e.x,y:e.y||0,z:e.z,enemy:e.id});}
 function strike(s,e){const t=e.tactic,p=s.p,range=t.role==='heavy'?3.2:t.role==='fast'?2.6:2.65,d=distance(e,p),facing=d<.1||((p.x-e.x)*Math.sin(t.yaw)+(p.z-e.z)*Math.cos(t.yaw))/d>.52,height=p.y-(e.y||0),hp=p.hp;
  if(d<range&&Math.abs(height)<1.3&&!(t.role==='heavy'&&height>.72)&&facing&&!blocked(e,p,s.geo.walls)){s.damage(t.role==='heavy'?16:t.role==='fast'?8:10);if(p.hp<hp&&t.role==='heavy')move(p,Math.sin(t.yaw)*.65,Math.cos(t.yaw)*.65,s.geo.walls,.4);}

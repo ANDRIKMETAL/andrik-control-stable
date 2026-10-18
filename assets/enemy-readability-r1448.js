@@ -16,7 +16,7 @@ export function createEnemyReadability(geometries,materials){
    const fill=new T.Mesh(box,red);fill.position.z=.025;hp.add(fill);
    fx={marker,halo,aim,hp,fill,expiry:0};root.userData.readability1448=fx;
   }
-  const targeted=state.attack?.aim?.target===e.id,weak=e.tactic?.exposed>0||e.kind==='boss'&&(e.oceanRevision||e.worldRevision===1457?e.mode==='recover':state.bossOpen>0),warning=['windup','strike','aim'].includes(e.mode)&&!(e.down>0);
+  const targeted=state.attack?.aim?.target===e.id,weak=e.tactic?.exposed>0||e.kind==='boss'&&(e.boss1468?state.bossOpen>0:e.oceanRevision||e.worldRevision===1457?e.mode==='recover':state.bossOpen>0),warning=['windup','strike','aim'].includes(e.mode)&&!(e.down>0);
   fx.marker.visible=e.hp>0&&(weak||warning||targeted);fx.halo.material=weak||targeted&&!warning?blue:amber;fx.aim.visible=warning&&!weak;
   if(e.hit>0)fx.expiry=state.time+2.2;
   fx.hp.visible=e.hp>0&&e.kind!=='boss'&&state.time<fx.expiry;

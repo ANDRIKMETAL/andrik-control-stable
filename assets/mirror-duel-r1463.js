@@ -4,7 +4,7 @@ const angle=(a,b)=>Math.atan2(b.x-a.x,b.z-a.z);
 export const isMirrorDuel=(s,e)=>e.kind==='double'&&!s.isCity&&!s.isRuins&&!s.world;
 
 function beginSlash(s,e,second=false){
- const t=e.tactic;t.duelStep=((t.duelStep??-1)+1)%3;t.phase='windup';t.kind='melee';t.t=0;
+ const t=e.tactic;t.attackSerial1468=(t.attackSerial1468||0)+1;t.duelStep=((t.duelStep??-1)+1)%3;t.phase='windup';t.kind='melee';t.t=0;
  t.wind=t.duelStep===2?.62:second?.30:.46;t.active=.20;t.recovery=t.duelStep===2?.70:.38;
  t.contact=false;t.missed=false;t.yaw=angle(e,s.p);t.chainLeft=second?0:t.duelStep===2?0:1;
  e.yaw=t.yaw;e.mode='windup';e.attackKind='sword';e.t=0;

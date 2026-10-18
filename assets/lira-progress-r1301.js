@@ -164,7 +164,7 @@ export function createProgressUiR1301(root,state,chapter){
   combo.textContent=p.combo>1?'⚡ КОМБО x'+p.combo:'';
   if(lastCombo!==p.combo){combo.classList.remove('pulse');void combo.offsetWidth;combo.classList.add('pulse');lastCombo=p.combo;}
   cp.textContent='⚑ '+(state.zone+1)+'/5'+(state.r1301HasCheckpoint()?' ✓':'');
-  if(state.won&&!finished){finished=true;const r=state.r1301Result();results.hidden=false;
+  if(state.won&&!finished&&!state.battle){finished=true;const r=state.r1301Result();results.hidden=false;
    const phrases=[['ГЛАВА ПРОЙДЕНА','CHAPTER COMPLETE'],['Ранг','Rank'],['Очки','Score'],['Победы','Defeats'],['Лучшее комбо','Best combo'],['Падения','Deaths'],['Секреты','Secrets'],['Отбитые снаряды','Deflections'],['Время','Time'],['Сложность','Difficulty']];
    // Use Russian source text; global i18n translates this section live.
    results.innerHTML='<h2>ГЛАВА ПРОЙДЕНА · '+r.grade+'</h2><div><span>Очки</span><b>'+r.score+'</b><span>Победы</span><b>'+r.kills+'</b><span>Лучшее комбо</span><b>x'+r.maxCombo+'</b><span>Падения</span><b>'+r.deaths+'</b><span>Секреты</span><b>'+r.secrets+'</b><span>Отбитые снаряды</span><b>'+r.parries+'</b><span>Время</span><b>'+Math.floor(r.seconds/60)+':'+String(r.seconds%60).padStart(2,'0')+'</b></div>';
