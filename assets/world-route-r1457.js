@@ -1,4 +1,4 @@
-import {move,blocked} from './portrait-core-r1295.js?v=r1457';
+import {move,blocked} from './portrait-core-r1295.js?v=r1458';
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n)),distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 const inside=(f,p,margin=.05)=>Math.abs(p.x-f.x)<f.w/2-margin&&Math.abs(p.z-f.z)<f.d/2-margin;
 const nearest=(list,p)=>list.slice().sort((a,b)=>distance(a,p)-distance(b,p))[0];
@@ -10,7 +10,7 @@ function route(state,start,goal){
  for(let index=0;index<queue.length;index++){
   const node=queue[index];if(node===goal)break;
   for(const edge of state.routeLinks){const next=edge.a===node?edge.b:edge.b===node?edge.a:null;if(next===null||previous.has(next))continue;
-   const af=state.geo.platforms[node],bf=state.geo.platforms[next],a={...af,y:af.h},b={...bf,y:bf.h},walls=state.geo.walls.filter(w=>w.refugeNode!==node&&w.refugeNode!==next&&!(w.oceanGate&&(node===goal||next===goal)));if(blocked(a,b,walls))continue;
+   const af=state.geo.platforms[node],bf=state.geo.platforms[next],a={...af,y:af.h},b={...bf,y:bf.h},walls=state.geo.walls.filter(w=>!w.weaponCrate&&w.refugeNode!==node&&w.refugeNode!==next&&!(w.oceanGate&&(node===goal||next===goal)));if(blocked(a,b,walls))continue;
    previous.set(next,node);queue.push(next);
   }
  }
@@ -25,13 +25,13 @@ function jumpPoints(from,to){
  if(sourceReach<entry)return{from:a,to:b};
  // Overlapping decks need a short jump across their shared edge, not two
  // reversed edge points on opposite sides of the arena.
- const start=Math.max(0,Math.min(sourceReach-.65,len*.45,entry-.9)),end=Math.min(len+reach-.65,Math.max(len*.55,entry+.7,to.h<=from.h+.31?sourceReach+.65:0));
+ const start=Math.max(0,Math.min(sourceReach-.65,len*.45,entry-.9)),end=Math.min(len+reach-.65,Math.max(entry+.7,to.h<=from.h+.36?sourceReach+.65:0));
  return{from:{x:from.x+ux*start,z:from.z+uz*start,y:from.h},to:{x:from.x+ux*end,z:from.z+uz*end,y:to.h}};
 }
 export function walkRoute(state,e,target,speed,dt){
  const d=distance(e,target);if(d<.04)return;
  const old={x:e.x,z:e.z};move(e,(target.x-e.x)/d*Math.min(d,speed*dt),(target.z-e.z)/d*Math.min(d,speed*dt),state.geo.walls,.4);
- const floor=routeFloor(state,e);if(!floor||Math.abs(floor.h-(e.y||0))>.31){e.x=old.x;e.z=old.z;}else{e.y=floor.h;e.navPlatform=floor.node;}
+ const floor=routeFloor(state,e);if(!floor||Math.abs(floor.h-(e.y||0))>.36){e.x=old.x;e.z=old.z;}else{e.y=floor.h;e.navPlatform=floor.node;}
 }
 export function navigateRoute(state,e,target,dt,speed=3.1){
  const current=routeFloor(state,e)||state.geo.platforms[e.navPlatform],goal=routeFloor(state,target)||nearest(state.geo.platforms.filter(f=>!f.refuge),target);
@@ -45,7 +45,7 @@ export function navigateRoute(state,e,target,dt,speed=3.1){
  if(edge?.jump){
   const points=jumpPoints(current,next);
   if(distance(e,points.from)>.28){walkRoute(state,e,points.from,speed,dt);return;}
-  const gap=distance(points.from,points.to),walls=state.geo.walls.filter(w=>w.refugeNode!==current.node&&w.refugeNode!==next.node);if(gap>5.3||Math.abs(points.to.y-points.from.y)>2.1||blocked(points.from,points.to,walls))return;
+  const gap=distance(points.from,points.to),walls=state.geo.walls.filter(w=>w.refugeNode!==current.node&&w.refugeNode!==next.node&&!(w.weaponCrateId&&w.weaponCrateId===next.weaponCrateId));if(gap>5.3||Math.abs(points.to.y-points.from.y)>2.1||blocked(points.from,points.to,walls))return;
   e.navJump={from:{x:e.x,z:e.z,y:e.y||0},to:points.to,node:next.node,t:0,duration:.52+gap/8};e.mode='leap';e.t=0;
  }else walkRoute(state,e,next.node===goal.node?target:jumpPoints(current,next).to,speed,dt);
 }

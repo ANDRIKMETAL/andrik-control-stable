@@ -1,3 +1,4 @@
+import {attachWeaponry} from './weaponry-r1458.js?v=r1458';
 export const GROWTH_KEY='andrik-lyra-growth-r1449';
 export const SAVE_KEYS=['andrik-city-3d-r1289','andrik-portrait-r1280','andrik-ruins-3d-r1285',...['2','3','4','5'].map(id=>'andrik-world-'+id+'-r1306')];
 const number=(v,a,b)=>Math.max(a,Math.min(b,Math.floor(Number(v)||0)));
@@ -22,7 +23,7 @@ function storageDefault(){try{return localStorage;}catch{return null;}}
 function newRecord(balance=0){return {version:1,run:Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10),revision:0,balance:number(balance,0,9999),updatedAt:Date.now(),levels:Object.fromEntries(UPGRADES.map(q=>[q.id,0]))};}
 export function safeToUpgrade(s){
  if(s.dead)return false;if(s.won)return true;
- if(s.finale||s.attack||!s.p.grounded||s.race?.mounted&&!s.race.finished)return false;
+ if(s.finale||s.attack||!s.p.grounded||s.vehicleActive||s.race?.mounted&&!s.race.finished)return false;
  if(s.ocean?.pump?.started&&!s.ocean.pump.done)return false;
  if(s.living.some(e=>e.kind==='boss'||distance(e,s.p)<13))return false;
  if(s.shots.some(q=>q.life>0&&distance(q,s.p)<15)||s.waves.some(q=>q.life>0&&Math.abs(distance(q,s.p)-q.r)<6))return false;
@@ -68,5 +69,5 @@ export function attachGrowth(state,{saveKey,saved=null,storage=storageDefault()}
    if(!ok)return {ok:false,message:error||'Не удалось сохранить покупку.'};
    state.emit('upgradeBought',{upgrade:id,level:level+1});return {ok:true,message:item.name+' · уровень '+(level+1)+' сохранён.'};
   }};
- return state;
+ return attachWeaponry(state,{storage,saved,saveKey});
 }

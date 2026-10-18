@@ -1,5 +1,6 @@
-import {createGrowthUI} from './growth-ui-r1449.js?v=r1457';
-import {createGameSound} from './game-sound-r1448.js?v=r1457';
+import {createWeaponUI} from './weapon-ui-r1458.js?v=r1458';
+import {createGrowthUI} from './growth-ui-r1449.js?v=r1458';
+import {createGameSound} from './game-sound-r1448.js?v=r1458';
 const KEY='andrik-game-settings-r1448',LEARN='andrik-game-learned-r1448';
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 export const DEFAULTS={quality:'auto',fps:60,buttonScale:1,stickScale:1,opacity:.38,horizontal:16,vertical:16,follow:true,aimAssist:true,guidance:'auto',tutorial:true,motion:.5,flashes:.65};
@@ -62,11 +63,11 @@ export function createExperience(root,state,{signal,isPaused,onSettings,getAudio
  let raw={},learned={};try{raw=JSON.parse(localStorage.getItem(KEY))||{};if(!raw.quality)raw.quality=localStorage.getItem('lira-3d-quality')||'auto';learned=JSON.parse(localStorage.getItem(LEARN))||{};}catch{}
  if(matchMedia('(prefers-reduced-motion: reduce)').matches&&raw.motion===undefined)raw.motion=0;
  let settings=normalizeSettings(raw),lastFrame=-Infinity,zone=state.zone,elapsed=0,stalled=0,best=Infinity,targetKey='',shake=0,nextHint=0,lastContext='',hintUntil=0,hintText='';
- const sound=createGameSound(getAudioContext,getFxVolume);root.dataset.game1448='';const refreshGrowth=createGrowthUI(root,state,{signal,isPaused,onSave});
+ const sound=createGameSound(getAudioContext,getFxVolume);root.dataset.game1448='';const refreshGrowth=createGrowthUI(root,state,{signal,isPaused,onSave});const refreshWeapons=createWeaponUI(root,state,{signal,onSave});
  const panel=document.createElement('details');panel.className='game1448-settings';panel.innerHTML=markup;(root.querySelector('.pt-card')||root.querySelector('.card')).append(panel);
  const hint=document.createElement('div');hint.className='game1448-hint';hint.setAttribute('role','status');hint.hidden=true;root.append(hint);
  const nav=document.createElement('div');nav.className='game1448-nav';nav.hidden=true;const arrow=document.createElement('b'),label=document.createElement('span');arrow.textContent='↑';arrow.setAttribute('aria-hidden','true');nav.append(arrow,label);root.append(nav);
- const b=root.querySelector('[data-abc="B"]'),c=root.querySelector('[data-abc="C"]');
+ const a=root.querySelector('[data-abc="A"]'),b=root.querySelector('[data-abc="B"]'),c=root.querySelector('[data-abc="C"]');
  const inputs=Array.from(panel.querySelectorAll('[data-setting]'));
  function save(){try{localStorage.setItem(KEY,JSON.stringify(settings));localStorage.setItem('lira-3d-quality',settings.quality);}catch{}}
  function apply(){state.aimAssistEnabled=settings.aimAssist;
@@ -83,16 +84,16 @@ export function createExperience(root,state,{signal,isPaused,onSettings,getAudio
   event(e){if(isPaused())return;sound.event(e,state);if(['hit','hurt','finishImpact'].includes(e.type))shake=.22;if(e.type==='puzzle')teach('interact');if(e.type==='finishImpact')teach('finish');},
   cameraRoll(time){return shake>0?Math.sin(time*47)*.012*settings.motion*(shake/.22):0;},
   update(dt,yaw){
-   refreshGrowth();const paused=isPaused();hint.hidden=nav.hidden=paused;if(paused)return;elapsed+=dt;shake=Math.max(0,shake-dt);
+   refreshGrowth();refreshWeapons();const paused=isPaused();hint.hidden=nav.hidden=paused;if(paused)return;elapsed+=dt;shake=Math.max(0,shake-dt);
    if(zone!==state.zone){zone=state.zone;stalled=0;best=Infinity;targetKey='';elapsed=0;lastContext='';hintUntil=0;}
    const p=state.p,moving=Math.hypot(p.vx||0,p.vz||0)>.2;if(moving)teach('move');if(state.attack?.spin)teach('guitar');if(['slash','punch','kick','backfist'].includes(state.attack?.kind))teach('punch');if(!p.grounded&&state.jumps===0)teach('double');
-   const finish=state.finisherTarget,interact=state.canInteract;
-   if(b){b.dataset.ready=finish?'finish':'';b.setAttribute('aria-label',finish?'B: добивание':'B: меч и удар ногой; удерживать для гитары');}
-   if(c){c.dataset.ready=interact?'interact':'';c.setAttribute('aria-label',interact?'C: взаимодействовать':'C: крик');}
+   if(state.vehicleActive){const space=state.voyage.kind==='space';if(a)a.setAttribute('aria-label',space?'A: защитный щит':'A: прыжок на скутере');if(b)b.setAttribute('aria-label',space?'B: удерживать — стрельба':'B: удар по соседнему гонщику');if(c)c.setAttribute('aria-label',space?'C: ракета; после аварии — повтор':'C: ускорение; после аварии — повтор');hint.hidden=false;hint.textContent=space?'Джойстик: ← → ↑ ↓ · B: огонь · C: ракета · A: щит':'Между буйками · A: прыжок · B: удар · C: ускорение';nav.hidden=true;return;}if(a)a.setAttribute('aria-label','A: прыжок, повторно — двойной прыжок');const finish=state.finisherTarget,interact=state.canInteract;
+   if(b){b.dataset.ready=finish?'finish':'';b.setAttribute('aria-label',finish?'B: добивание':state.weaponStats?.selected==='bat'?'B: бита двумя руками и удар ногой; удерживать для гитары':'B: меч и удар ногой; удерживать для гитары');}
+   if(state.race?.mounted&&!state.race.finished){if(c)c.setAttribute('aria-label','C: ускорение на мотоцикле');if(b)b.setAttribute('aria-label','B: сбить соперника ногой');hint.hidden=false;hint.textContent='B — удар ногой · C — ускорение · A — прыжок';nav.hidden=true;return;}if(c){c.dataset.ready=interact?'interact':'';c.setAttribute('aria-label',interact?'C: взаимодействовать':'C: крик');}
    const context=finish?'finish':interact?'interact':'';
    if(context&&context!==lastContext){hintUntil=elapsed+2.8;hintText=context==='finish'?'B — добить лежащего противника':'C — взаимодействовать';}lastContext=context;
    if(elapsed>=hintUntil&&settings.tutorial&&elapsed>2&&elapsed>=nextHint){
-    const lesson=!learned.move?['Левый круг — движение. До края — бег.',5]:!learned.double?['A, затем ещё A в воздухе — двойной прыжок.',6]:!learned.punch?['Короткие B — две рубки мечом, затем удар ногой.',6]:!learned.guitar?['Удерживай B — круговой удар гитарой.',6]:null;
+    const lesson=!learned.move?['Левый круг — движение. До края — бег.',5]:!learned.double?['A, затем ещё A в воздухе — двойной прыжок.',6]:!learned.punch?[state.weaponStats?.selected==='bat'?'Короткие B — удары битой двумя руками, затем ногой.':'Короткие B — две рубки мечом, затем удар ногой.',6]:!learned.guitar?['Удерживай B — круговой удар гитарой.',6]:null;
     if(lesson){hintText=lesson[0];hintUntil=elapsed+lesson[1];nextHint=elapsed+22;}
    }
    hint.hidden=!(settings.tutorial&&elapsed<hintUntil)||!!state.dead||!!state.finale||state.won;hint.textContent=hintText;

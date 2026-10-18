@@ -7,14 +7,14 @@ export function beginBlade(state,kind){
  if(kind==='punch'){step=state.nextUpper?1:0;state.nextUpper=!state.nextUpper;}
  if(!state.p.grounded&&step<2)step=2;
  if(step===3&&!(state.growthStats?.comboLevel>0))return false;
- const duration=[.58,.62,.78,1.04][step],hitAt=[.25,.28,.36,.33][step];
+ const bat=state.weaponStats?.selected==='bat',duration=(bat?[.72,.76,.92,1.12]:[.58,.62,.78,1.04])[step],hitAt=(bat?[.34,.36,.45,.42]:[.25,.28,.36,.33])[step];
  state.attack={kind:'slash',step,t:0,duration,hitAt,hit:false,bladeSpin:step===3,victims:new Set()};state.lastAttack=state.time;
  state.emit('bladeStart',{step});return true;
 }
 export function bladeHit(state,blocked){
  const a=state.attack;if(a?.kind!=='slash')return;
- a.victims??=new Set();const stats=state.growthStats,range=stats?.bladeRange??2.85;
- const base=a.step===3?(stats?.bladeSpinDamage||36):[18,20,27][a.step],damage=Math.round(base*(stats?.bladeDamage??1));let connected=false;
+ a.victims??=new Set();const stats=state.growthStats,weapon=state.weaponStats,bat=weapon?.selected==='bat',range=(stats?.bladeRange??2.85)+(weapon?.rangeBonus||0)+(bat?.20:0);
+ const base=a.step===3?(stats?.bladeSpinDamage||36)+(bat?8:0):(bat?[23,25,33]:[18,20,27])[a.step],damage=Math.round(base*(stats?.bladeDamage??1)*(weapon?.damage||1));let connected=false;
  for(const e of state.living){
   const d=distance(e,state.p),dot=((e.x-state.p.x)*Math.sin(state.p.yaw)+(e.z-state.p.z)*Math.cos(state.p.yaw))/Math.max(.01,d);
   if(a.victims.has(e.id)||d>(e.kind==='boss'?3.9+range-2.85+(e.hurtRadius||0):range)||!a.bladeSpin&&dot<.12||Math.abs((e.y||0)-state.p.y)>1.6||blocked(state.p,e,state.geo.walls))continue;

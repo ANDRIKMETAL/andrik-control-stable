@@ -1,5 +1,6 @@
+import {createBat,poseBat} from './weapon-view-r1458.js?v=r1458';
 import * as T from './vendor/three-r170.module.min.js';
-import {addBlade,poseBlade} from './lyra-blade-r1455.js?v=r1457';
+import {addBlade,poseBlade} from './lyra-blade-r1455.js?v=r1458';
 // Metre-scale articulated mesh. Geometry belongs to the scene and is disposed on exit.
 export function createLyra(){
  const root=new T.Group(),body=new T.Group();root.name='Lyra-unmasked';root.add(body);
@@ -183,7 +184,7 @@ export function createLyra(){
  const face=new T.Group();face.visible=false;
  root.userData={body,head,hair,face,limbs,guitar,eye,microphone,vocalMouth,kind:'lira'};
  addBlade(root.userData);
- return root;
+ createBat(root);return root;
 }
 const smooth=x=>{x=T.MathUtils.clamp(x,0,1);return x*x*(3-2*x);};
 const down=new T.Vector3(0,-1,0);
@@ -195,7 +196,7 @@ function handAt(limb,target,side){
  limb.arm.quaternion.setFromUnitVectors(down,elbow.clone().sub(start).normalize());
  const inverse=limb.arm.quaternion.clone().invert();limb.fore.quaternion.setFromUnitVectors(down,end.sub(elbow).applyQuaternion(inverse).normalize());
 }
-export function poseGuitar(root,attack,combo,time,running){
+export function poseGuitar(root,attack,combo,time,running,weapon=null){
  const u=root.userData,g=u.guitar,active=attack?.kind==='attack',punch=attack?.kind==='punch';
  for(const l of u.limbs){l.hand.scale.setScalar(1);l.foot.scale.setScalar(1);const closed=active||punch||attack?.kind==='backfist'||attack?.kind==='finish';for(const f of l.hand.userData.fingers){f.position.y=closed?-.021:-.032;f.position.z=closed?.028:.01;f.scale.y=closed?.011:.023;}}
  // Grip pose returns smoothly after both attacks. Body and legs remain free to move.
@@ -256,5 +257,5 @@ export function poseGuitar(root,attack,combo,time,running){
   if(running){g.position.y+=Math.sin(time*15)*.025;if(!attack)u.body.rotation.x=.12;}
   g.updateMatrix(); // both arms remain free while guitar stays attached to the back
  }
- poseBlade(root,attack,time,running,handAt);
+ poseBlade(root,attack,time,running,handAt);poseBat(root,attack,time,running,weapon,handAt);
 }

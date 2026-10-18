@@ -1,7 +1,8 @@
+import {bikeKick,updateBikeCombat} from './bike-combat-r1458.js?v=r1458';
 import {attackSlot,facesTarget,waitForAttack,modernBoss,bossDamage,updateArenaBoss} from './encounters-r1448.js?v=r1448';
-import {downedEnemyR1447} from './combat-r1447.js?v=r1457';
+import {downedEnemyR1447} from './combat-r1447.js?v=r1458';
 import {enemyRouteDirection} from './enemy-navigation-r1446.js';
-import {State,move,blocked,clamp} from './portrait-core-r1295.js?v=r1457';
+import {State,move,blocked,clamp} from './portrait-core-r1295.js?v=r1458';
 export const CITY_SAVE='andrik-city-3d-r1289';
 export const CITY_ZONES=['Улица пробуждения','Неоновый перекрёсток','NO CHOICE BAR','Мотоциклетная погоня','Ночной надзиратель'];
 export const roadCenter=z=>Math.sin(z/43)*3.3+Math.sin(z/91)*2;
@@ -30,22 +31,23 @@ export class CityState extends State {
  }
  get exitOpen(){if(this.zone===3)return !!this.race.finished;return this.zone<4&&!this.living.length&&this.cityItems.every(q=>q.optional||this.cityFlags.includes(q.id));}
  get nearbyItem(){return this.cityItems.find(q=>!this.cityFlags.includes(q.id)&&Math.hypot(q.x-this.p.x,q.z-this.p.z)<2.5&&Math.abs(this.p.y)<1);}
- get objective(){if(this.zone===3&&this.race.mounted)return this.race.finished?'Финиш! ДЕЙСТВИЕ — слезть и продолжить':this.race.countdown>0?'СТАРТ ЧЕРЕЗ '+Math.ceil(this.race.countdown):'Погоня · '+Math.round(this.p.z/420*100)+'% · БЕГ / Shift: ускорение · назад: тормоз';const q=this.nearbyItem;if(q)return q.label+' · ДЕЙСТВИЕ';if(this.zone===4)return this.bossOpen>0?'Надзиратель устал — атакуй!':'Уходи от рывка. Голубое кольцо — усиленный урон.';if(this.exitOpen)return 'К светящемуся выходу · ДЕЙСТВИЕ';const missing=this.cityItems.filter(q=>!q.optional&&!this.cityFlags.includes(q.id));return this.zone===3?'Подойди к мотоциклу · ДЕЙСТВИЕ':missing.length?(this.zone===1?'Включи питание: '+this.cityFlags.length+'/2':this.zone===2?'Найди и включи музыкальный автомат':'Найди ключ в боковом переулке')+' · врагов '+this.living.length:'Победи противников: '+this.living.length;}
+ get objective(){if(this.zone===3&&this.race.mounted)return this.race.finished?'Финиш! ДЕЙСТВИЕ — слезть и продолжить':this.race.countdown>0?'СТАРТ ЧЕРЕЗ '+Math.ceil(this.race.countdown):'Погоня · '+Math.round(this.p.z/420*100)+'% · B: удар ногой · C: ускорение · вниз: тормоз';const q=this.nearbyItem;if(q)return q.label+' · ДЕЙСТВИЕ';if(this.zone===4)return this.bossOpen>0?'Надзиратель устал — атакуй!':'Уходи от рывка. Голубое кольцо — усиленный урон.';if(this.exitOpen)return 'К светящемуся выходу · ДЕЙСТВИЕ';const missing=this.cityItems.filter(q=>!q.optional&&!this.cityFlags.includes(q.id));return this.zone===3?'Подойди к мотоциклу · ДЕЙСТВИЕ':missing.length?(this.zone===1?'Включи питание: '+this.cityFlags.length+'/2':this.zone===2?'Найди и включи музыкальный автомат':'Найди ключ в боковом переулке')+' · врагов '+this.living.length:'Победи противников: '+this.living.length;}
  get canInteract(){return !!this.nearbyItem||(this.p.z>this.geo.length-7&&Math.abs(this.p.x)<4);}
- interact(){const q=this.nearbyItem;if(q){this.cityFlags.push(q.id);if(q.id==='bike'){this.race.mounted=true;this.p.x=roadCenter(9);this.p.z=9;this.emit('notice',{text:'Погоня: влево / вправо — руль, назад — тормоз'});this.emit('puzzle');return;}this.crystals+=q.optional?5:2;this.p.hp=Math.min(100,this.p.hp+15);this.emit('notice',{text:q.label+' · готово · +'+(q.optional?5:2)+' кристалла'});this.emit('puzzle');return;}if(this.exitOpen&&this.p.z>this.geo.length-7&&Math.abs(this.p.x)<4){this.checkpoint=this.zone+1;this.load(this.checkpoint);this.emit('checkpoint');}else if(this.p.z>this.geo.length-7)this.emit('notice',{text:this.objective});}
+ interact(){const q=this.nearbyItem;if(q){this.cityFlags.push(q.id);if(q.id==='bike'){this.race.mounted=true;this.p.x=roadCenter(9);this.p.z=9;this.emit('notice',{text:'Погоня: влево / вправо — руль, B — сбить ногой, C — ускорение, A — прыжок'});this.emit('puzzle');return;}this.crystals+=q.optional?5:2;this.p.hp=Math.min(100,this.p.hp+15);this.emit('notice',{text:q.label+' · готово · +'+(q.optional?5:2)+' кристалла'});this.emit('puzzle');return;}if(this.exitOpen&&this.p.z>this.geo.length-7&&Math.abs(this.p.x)<4){this.checkpoint=this.zone+1;this.load(this.checkpoint);this.emit('checkpoint');}else if(this.p.z>this.geo.length-7)this.emit('notice',{text:this.objective});}
  action(kind){if(this.dead||this.finale||this.won)return false;if(this.zone===3&&this.race?.mounted&&!this.race.finished&&kind!=='interact'){
  if(kind==='jump'&&this.p.grounded&&!this.race.countdown){this.p.vy=6.5;this.p.grounded=false;return true;}
- if(kind==='dash'&&this.p.energy>=20){this.p.energy-=20;this.race.boost=1.4;return true;}return false;}return super.action(kind);}
+ if(['rideKick','kick','attack','slash','punch'].includes(kind))return bikeKick(this);
+ if(['scream','dash'].includes(kind)&&this.p.energy>=20){this.p.energy-=20;this.race.boost=1.4;return true;}return false;}return super.action(kind);}
 
  update(dt,input={}){
  dt=clamp(dt,0,.035);if(this.zone<3){this.geo.walls=this.geo.walls.filter(w=>!w.gate);if(!this.exitOpen)this.geo.walls.push(this.gateWall);}
  if(this.zone===3&&this.race.mounted&&!this.race.finished&&!this.dead){
  this.time+=dt;this.elapsed+=dt;this.p.inv=Math.max(0,this.p.inv-dt);this.race.countdown=Math.max(0,this.race.countdown-dt);if(this.race.countdown)return;
- this.race.boost=Math.max(0,(this.race.boost||0)-dt);const boost=(input.run||this.race.boost>0)&&this.p.energy>0,desired=input.z<-.3?6:boost?20:14;this.p.energy=clamp(this.p.energy+dt*(boost?-13:6),0,100);
+ updateBikeCombat(this,dt);this.race.boost=Math.max(0,(this.race.boost||0)-dt);const boost=(input.run||this.race.boost>0)&&this.p.energy>0,desired=input.z<-.3?6:boost?20:14;this.p.energy=clamp(this.p.energy+dt*(boost?-13:6),0,100);
  this.race.speed+=(desired-this.race.speed)*Math.min(1,dt*2.8);this.p.vx=(input.x||0)*6;this.p.vz=this.race.speed;this.p.x+=this.p.vx*dt;this.p.z+=this.p.vz*dt;this.p.yaw=Math.atan2(this.p.vx,this.p.vz);this.p.vy-=20*dt;this.p.y+=this.p.vy*dt;if(this.p.y<=0){this.p.y=0;this.p.vy=0;this.p.grounded=true;}
  const center=roadCenter(this.p.z);if(Math.abs(this.p.x-center)>5.7){this.p.x=clamp(this.p.x,center-5.7,center+5.7);this.race.speed*=.93;this.damage(8);}
  for(const q of RACE_HAZARDS)if(Math.abs(this.p.z-q.z)<(q.type==='van'?2.5:1)&&Math.abs(this.p.x-q.x)<1.15&&this.p.inv<=0&&(q.type==='van'||this.p.y<.8)){this.damage(16);this.race.impacts++;this.race.speed=5;this.p.x=clamp(q.x+(this.p.x<q.x?-1.7:1.7),center-5.5,center+5.5);}
- for(const [i,r] of this.rivals.entries()){r.z+=dt*r.speed;r.x=roadCenter(r.z)+(i?2.8:-2.8)+Math.sin(this.time*.8+i)*.4;if(Math.hypot(r.x-this.p.x,r.z-this.p.z)<1.3&&this.p.y<.8){this.damage(10);this.race.speed*=.95;}}
+ for(const [i,r] of this.rivals.entries()){if(r.disabled>0){r.z+=dt*3;continue;}r.z+=dt*r.speed;r.x=roadCenter(r.z)+(i?2.8:-2.8)+Math.sin(this.time*.8+i)*.4;if(Math.hypot(r.x-this.p.x,r.z-this.p.z)<1.3&&this.p.y<.8){this.damage(10);this.race.speed*=.95;}}
  if(this.p.z>=this.geo.length-4){this.p.z=this.geo.length-4;this.p.x=0;this.race.finished=true;this.race.speed=0;this.p.vx=this.p.vz=0;this.crystals+=8;this.emit('notice',{text:'Финиш! +8 кристаллов · ДЕЙСТВИЕ — продолжить'});this.emit('puzzle');}return;
  }
  this.shots=this.shots.filter(s=>!blocked(s,{x:s.x+s.vx*dt,z:s.z+s.vz*dt},this.geo.walls));
@@ -61,5 +63,5 @@ export class CityState extends State {
 
  attackHit(){super.attackHit();if(this.attack?.kind!=='attack')return;for(const s of this.shots){if(!s.reflectable||s.friendly||Math.hypot(s.x-this.p.x,s.z-this.p.z)>2.7)continue;const e=this.living.find(e=>e.kind==='double'&&!blocked(this.p,e,this.geo.walls));if(e){this.hit(e,30,0);s.life=0;this.emit('notice',{text:'Выстрел отражён!'});}}}
  snapshot(){return {...super.snapshot(),cityVersion:1,cityFlags:[...this.cityFlags],race:this.race?{...this.race}:null,rivals:this.rivals?.map(r=>({...r}))};}
- restore(s){super.restore(s);this.cityFlags=Array.isArray(s.cityFlags)?s.cityFlags.filter(id=>this.cityItems.some(q=>q.id===id)):[];this.wave=3;if(this.zone===3&&s.race){this.race={...this.race,mounted:!!s.race.mounted,finished:!!s.race.finished,countdown:clamp(Number(s.race.countdown)||0,0,3),speed:0};if(Array.isArray(s.rivals)&&s.rivals.length===2&&s.rivals.every(r=>Number.isFinite(r.z)))this.rivals=s.rivals.map((r,i)=>({x:0,z:r.z,speed:i?13.2:12.5}));}}
+ restore(s){super.restore(s);this.cityFlags=Array.isArray(s.cityFlags)?s.cityFlags.filter(id=>this.cityItems.some(q=>q.id===id)):[];this.wave=3;if(this.zone===3&&s.race){this.race={...this.race,mounted:!!s.race.mounted,finished:!!s.race.finished,countdown:clamp(Number(s.race.countdown)||0,0,3),speed:0};if(Array.isArray(s.rivals)&&s.rivals.length===2&&s.rivals.every(r=>Number.isFinite(r.z)))this.rivals=s.rivals.map((r,i)=>({x:Number.isFinite(r.x)?r.x:roadCenter(r.z)+(i?2.8:-2.8),z:r.z,speed:i?13.2:12.5,disabled:clamp(Number(r.disabled)||0,0,4),fallen:clamp(Number(r.fallen)||0,0,1.4),fallSide:r.fallSide<0?-1:1,kickRewarded:!!r.kickRewarded}));}}
 }
