@@ -1,6 +1,6 @@
 import {attackSlot} from './encounters-r1448.js?v=r1448';
-import {downedEnemyR1447} from './combat-r1447.js?v=r1465';
-import {State,clamp,blocked,move} from './portrait-core-r1295.js?v=r1465';
+import {downedEnemyR1447} from './combat-r1447.js?v=r1466';
+import {State,clamp,blocked,move} from './portrait-core-r1295.js?v=r1466';
 export const RUINS_ZONES=['Врата забытого времени','Стражи песков','Три механизма эпох','Мосты над бездной','Хранитель эпох'];
 export const EPOCH_RELAYS=[{x:-6,z:10},{x:6,z:19},{x:-5,z:29}];
 export const EPOCH_SOURCE={x:-6,z:3},EPOCH_RECEIVER={x:0,z:37};

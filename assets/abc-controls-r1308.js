@@ -1,3 +1,4 @@
+import {comboSequence} from './power-combat-r1466.js?v=r1466';
 // Shared three-button input. Combat queue is bounded; holds never also punch.
 export const abcMarkup=`<style>
 .pt-actions:has([data-abc]),[id="world1306"] .actions:has([data-abc]){
@@ -26,25 +27,29 @@ export const abcMarkup=`<style>
 @media(max-height:450px){.pt-actions:has([data-abc]),[id="world1306"] .actions:has([data-abc]){--abc-size:calc(clamp(54px,15vh,66px) * var(--game-scale,1));right:max(12px,env(safe-area-inset-right))!important;bottom:max(12px,env(safe-area-inset-bottom))!important;}}
 </style><button data-abc="A" aria-label="A: прыжок, повторно двойной"><b>A</b></button><button data-abc="B" aria-label="B: меч и удар ногой, удерживать для гитары"><b>B</b></button><button data-abc="C" aria-label="C: действие рядом с целью, иначе крик"><b>C</b></button>`;
 export function createABC(state){
- let held=null,pressA=null,chord=false,queue=[],step=0,lastTap=-Infinity,zone=state.zone;
- const reset=()=>{if(state.vehicleActive)state.action('vehicleFireStop');held=pressA=null;chord=false;queue=[];step=0;lastTap=-Infinity;zone=state.zone;};
+ let held=null,pressA=null,pressC=null,chord=false,queue=[],step=0,lastTap=-Infinity,zone=state.zone;
+ const reset=()=>{if(state.vehicleActive)state.action('vehicleFireStop');held=pressA=pressC=null;chord=false;queue=[];step=0;lastTap=-Infinity;zone=state.zone;};
  const riding=()=>state.race?.mounted&&!state.race.finished;
  const onFoot=()=>!state.vehicleActive&&!riding();
  function submit(kind){if(state.dead||state.won||state.finale)return;if(!state.attack){state.action(kind);}else if(queue.length<2)queue.push(kind);}
+ function rage(){if(!onFoot()||!state.action('rage'))return false;chord=true;queue=[];step=0;if(held)held.fired=true;if(pressC)pressC.fired=true;return true;}
+ function fireC(){if(pressC&&!pressC.fired){pressC.fired=true;state.action(state.canInteract?'interact':'scream');}}
  function dodge(){chord=true;queue=[];step=0;if(held)held.fired=true;if(pressA)pressA.fired=true;state.action('dodge');}
  return {reset,down(button,now){
   if(button==='A'){
    // Brief chord window prevents A+B from also starting a jump or a weapon swing.
    if(!onFoot()){state.action('jump');return;}if(pressA)return;
    pressA={at:now,fired:false};if(held&&!held.fired&&now-held.at<=100)dodge();
-  }else if(button==='C')state.action(state.canInteract?'interact':'scream');
-  else if(button==='B'&&!held){held={at:now,fired:false};if(state.vehicleActive){state.action('vehicleFireStart');held.fired=true;}else if(riding()){state.action('rideKick');held.fired=true;}else if(pressA&&!pressA.fired&&now-pressA.at<=100)dodge();}
+  }else if(button==='C'){if(!onFoot()||!state.powerCombat?.rageReady){state.action(state.canInteract?'interact':'scream');return;}if(pressC)return;pressC={at:now,fired:false};if(held&&!held.fired&&now-held.at<=120)rage();}
+  else if(button==='B'&&!held){held={at:now,fired:false};if(state.vehicleActive){state.action('vehicleFireStart');held.fired=true;}else if(riding()){state.action('rideKick');held.fired=true;}else if(pressC&&!pressC.fired&&now-pressC.at<=120&&rage()){}else if(pressA&&!pressA.fired&&now-pressA.at<=100)dodge();}
  },up(button,now){
+  if(button==='C'){if(pressC&&!chord)fireC();pressC=null;if(!held)chord=false;return;}
   if(button==='A'){if(pressA&&!pressA.fired&&!chord)state.action('jump');pressA=null;if(!held)chord=false;return;}
   if(button!=='B'||!held)return;const was=held;held=null;if(state.vehicleActive)state.action('vehicleFireStop');if(!pressA)chord=false;if(was.fired)return;
-  if(now-was.at>=360){submit('attack');return;}if(now-lastTap>(state.growthStats?.comboWindow??1400)){step=0;if(!state.attack)state.nextUpper=false;}submit(['slash','slashReverse','kick','slashSpin'][step]);step=(step+1)%(state.growthStats?.comboLevel>0?4:3);lastTap=now;
+  if(now-was.at>=360){submit('attack');return;}if(now-lastTap>(state.growthStats?.comboWindow??1400)){step=0;if(!state.attack)state.nextUpper=false;}const sequence=comboSequence(state);submit(sequence[step%sequence.length]);step=(step+1)%sequence.length;lastTap=now;
  },tick(now){
   if(zone!==state.zone){reset();return;}if(state.dead||state.won||state.finale){reset();return;}
+  if(pressC&&!pressC.fired&&!chord&&now-pressC.at>=100)fireC();
   if(pressA&&!pressA.fired&&!chord&&now-pressA.at>=100){pressA.fired=true;state.action('jump');}
   if(held&&!held.fired&&now-held.at>=360){held.fired=true;submit('attack');step=0;}
   if(!state.attack&&queue.length)state.action(queue.shift());

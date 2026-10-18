@@ -1,5 +1,5 @@
-import {beginAim,updateAim} from './aim-assist-r1449.js?v=r1465';
-import {isBladeAction,beginBlade,bladeHit} from './blade-r1455.js?v=r1465';
+import {beginAim,updateAim} from './aim-assist-r1449.js?v=r1466';
+import {isBladeAction,beginBlade,bladeHit} from './blade-r1455.js?v=r1466';
 import {attackSlot,facesTarget,waitForAttack,modernBoss,bossDamage} from './encounters-r1448.js?v=r1448';
 /* State-only combat additions. No renderer, assets, timers or save-key changes. */
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
@@ -24,7 +24,7 @@ export function installCombatR1447(State,{move,blocked,clamp,enemyRouteDirection
   if(!this.dead&&!this.won&&!this.finale&&!this.attack&&(isBladeAction(kind)||kind==='kick')){
    const foe=this.finisherTarget;
    if(foe){this.p.yaw=Math.atan2(foe.x-this.p.x,foe.z-this.p.z);this.p.vx=this.p.vz=0;
-    this.attack={kind:'finish',target:foe.id,t:0,duration:.92,hitAt:.55,hit:false};
+    const bat=this.weaponStats?.selected==='bat';this.attack={kind:'finish',target:foe.id,t:0,duration:bat?1.22:1.10,hitAt:bat?.72:.63,hit:false,finishWeapon:bat?'bat':'sword'};
     this.p.inv=Math.max(this.p.inv,.65);this.emit('finishStart',{enemy:foe.id});return true;}
   }
   if(isBladeAction(kind)){if(this.attack){if(this.attack.t>.08)this.queued=kind;return false;}const result=beginBlade(this,kind);if(result)beginAim(this,blocked);return result;}
@@ -57,7 +57,7 @@ export function installCombatR1447(State,{move,blocked,clamp,enemyRouteDirection
   if(a.kind==='finish'){
    const target=this.enemies.find(e=>e.id===a.target);
    if(target?.hp>0&&target.down>0&&distance(target,this.p)<2.55&&Math.abs((target.y||0)-this.p.y)<1.2&&!blocked(this.p,target,this.geo.walls)){
-    this.hit(target,Math.max(120,target.hp*2),0);this.emit('finishImpact',{x:target.x,z:target.z});
+    this.hit(target,Math.max(120,target.hp*2),0);this.emit('finishImpact',{x:target.x,y:target.y||0,z:target.z,weapon:a.finishWeapon||'sword'});
    }return;
   }
   if(a.kind==='attack'&&a.spin){

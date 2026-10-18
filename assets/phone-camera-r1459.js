@@ -1,4 +1,4 @@
-import {towerRayHit} from './tower-entry-r1459.js?v=r1465';
+import {towerRayHit} from './tower-entry-r1459.js?v=r1466';
 function boxHit(a,b,box,r){let lo=0,hi=1;for(const k of ['x','y','z']){const d=b[k]-a[k],min=box.min[k]-r,max=box.max[k]+r;if(Math.abs(d)<1e-9){if(a[k]<min||a[k]>max)return null;}else{let u=(min-a[k])/d,v=(max-a[k])/d;if(u>v)[u,v]=[v,u];lo=Math.max(lo,u);hi=Math.min(hi,v);if(lo>hi)return null;}}return lo>=0&&lo<=1?lo:null;}
 // A small camera sphere checks walls, raised decks, undersides and the curved
 // Tower doorway. Run again after interpolation to avoid cutting through corners.

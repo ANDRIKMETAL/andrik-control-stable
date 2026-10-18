@@ -1,28 +1,30 @@
-import {attachNarration} from './story-lines-r1461.js?v=r1465';
-import {attachWeaponry} from './weaponry-r1458.js?v=r1465';
-import {attachTactics} from './tactics-core-r1460.js?v=r1465';
+import {attachWorldMoments} from './world-moments-r1466.js?v=r1466';
+import {attachPowerCombat} from './power-combat-r1466.js?v=r1466';
+import {attachNarration} from './story-lines-r1461.js?v=r1466';
+import {attachWeaponry} from './weaponry-r1458.js?v=r1466';
+import {attachTactics} from './tactics-core-r1460.js?v=r1466';
 export const GROWTH_KEY='andrik-lyra-growth-r1449';
 export const SAVE_KEYS=['andrik-city-3d-r1289','andrik-portrait-r1280','andrik-ruins-3d-r1285',...['2','3','4','5'].map(id=>'andrik-world-'+id+'-r1306')];
 const number=(v,a,b)=>Math.max(a,Math.min(b,Math.floor(Number(v)||0)));
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 export const UPGRADES=Object.freeze([
- {id:'energy',name:'Дыхание',base:'Восстановление энергии: 5/с.',costs:[8,16,28],effects:['Восстановление энергии: 6/с.','Восстановление энергии: 7/с.','Восстановление энергии: 8/с.']},
- {id:'guitar',name:'Резонанс',base:'Гитара: 26 урона, радиус 3,55 м.',costs:[10,20,32],effects:['Гитара: 29 урона, радиус 3,70 м.','Гитара: 31 урон, радиус 3,85 м.','Гитара: 35 урона, радиус 4,05 м.']},
- {id:'combo',name:'Связка',base:'Две рубки мечом, затем удар ногой.',costs:[12,24,36],effects:['Четвёртое короткое B: круговая рубка, 36 базового урона.','Круговая рубка: 44 базового урона; связка до 1,8 с.','Круговая рубка: 52 базового урона; попадание возвращает 5 энергии.']},
- {id:'blade',name:'Клинок',base:'Меч: 18 / 20 урона, радиус 2,85 м.',costs:[10,20,34],effects:['Урон меча +12%, радиус 3,00 м.','Урон меча +24%, радиус 3,15 м.','Урон меча +36%, радиус 3,30 м.']},
- {id:'armor',name:'Стойкость',base:'Обычный входящий урон.',costs:[10,18,30],effects:['Входящий урон снижен на 8%.','Входящий урон снижен на 14%.','Входящий урон снижен на 20%.']}
+ {id:'energy',name:'Дыхание',base:'Восстановление энергии: 5/с.',costs:[8,16,28,40,54,70],effects:['Восстановление энергии: 6/с.','Восстановление энергии: 7/с.','Восстановление энергии: 8/с.','Восстановление энергии: 9/с.','Восстановление энергии: 10/с.','Восстановление энергии: 11/с.']},
+ {id:'guitar',name:'Резонанс',base:'Гитара: 26 урона, радиус 3,55 м.',costs:[10,20,32,44,58,74],effects:['Гитара: 29 урона, радиус 3,70 м.','Гитара: 31 урон, радиус 3,85 м.','Гитара: 35 урона, радиус 4,05 м.','Гитара: 42 урона, радиус 4,20 м.','Гитара: 47 урона, радиус 4,40 м.','Гитара: 53 урона, радиус 4,60 м.']},
+ {id:'combo',name:'Связка',base:'Две рубки мечом, затем удар ногой.',costs:[12,24,36,48,64,82],effects:['Четвёртое короткое B: круговая рубка, 36 базового урона.','Круговая рубка: 44 базового урона; связка до 1,8 с.','Круговая рубка: 52 базового урона; попадание возвращает 5 энергии.','Пятое B — удар ладонью. У босса B+C — яростная серия (45 энергии).','Шестое B — удар ногой в прыжке; серия ярости сильнее.','Седьмое B — рубка в прыжке; полная серия ярости с ударом сверху.']},
+ {id:'blade',name:'Клинок',base:'Меч: 18 / 20 урона, радиус 2,85 м.',costs:[10,20,34,46,60,78],effects:['Урон меча +12%, радиус 3,00 м.','Урон меча +24%, радиус 3,15 м.','Урон оружия +36%, радиус 3,30 м.','Урон оружия +48%, радиус 3,40 м.','Урон оружия +60%, радиус 3,50 м.','Урон оружия +72%, радиус 3,60 м.']},
+ {id:'armor',name:'Стойкость',base:'Обычный входящий урон.',costs:[10,18,30,42,56,72],effects:['Входящий урон снижен на 8%.','Входящий урон снижен на 14%.','Входящий урон снижен на 20%.','Входящий урон снижен на 25%.','Входящий урон снижен на 30%.','Входящий урон снижен на 35%.']}
 ]);
 export function statsFor(levels={}){
- const e=number(levels.energy,0,3),g=number(levels.guitar,0,3),c=number(levels.combo,0,3),b=number(levels.blade,0,3),a=number(levels.armor,0,3);
- return {energyRegen:5+e,guitarDamage:[1,1.1,1.2,1.35][g],guitarRange:[3.55,3.70,3.85,4.05][g],comboLevel:c,comboWindow:c>=2?1800:1400,backfistDamage:c>=2?34:28,bladeSpinDamage:[0,36,44,52][c],bladeEnergyReturn:c===3?5:0,bladeDamage:1+b*.12,bladeRange:(285+b*15)/100,armor:[0,.08,.14,.20][a]};
+ const e=number(levels.energy,0,6),g=number(levels.guitar,0,6),c=number(levels.combo,0,6),b=number(levels.blade,0,6),a=number(levels.armor,0,6);
+ return {energyRegen:5+e,guitarDamage:[1,1.1,1.2,1.35,1.6,1.8,2.05][g],guitarRange:[3.55,3.70,3.85,4.05,4.2,4.4,4.6][g],comboLevel:c,comboWindow:c>=2?1800:1400,backfistDamage:c>=2?34:28,bladeSpinDamage:[0,36,44,52,56,60,64][c],bladeEnergyReturn:c>=3?5+(c-3):0,bladeDamage:1+b*.12,bladeRange:[2.85,3,3.15,3.3,3.4,3.5,3.6][b],armor:[0,.08,.14,.20,.25,.30,.35][a]};
 }
 export function validRecord(raw){
  if(raw?.version!==1||typeof raw.run!=='string'||raw.run.length<4||raw.run.length>96||!Number.isSafeInteger(raw.revision)||raw.revision<0||raw.revision>1e9||!Number.isSafeInteger(raw.balance)||raw.balance<0||raw.balance>9999)return null;
- return {version:1,run:raw.run,revision:raw.revision,balance:raw.balance,updatedAt:number(raw.updatedAt,0,1e15),levels:Object.fromEntries(UPGRADES.map(q=>[q.id,number(raw.levels?.[q.id],0,q.costs.length)]))};
+ return {version:1,run:raw.run,revision:raw.revision,balance:raw.balance,updatedAt:number(raw.updatedAt,0,1e15),momentClaims:Array.isArray(raw.momentClaims)?[...new Set(raw.momentClaims.filter(x=>['city','portrait','ruins','2','3','4','5'].includes(x)))]:[],levels:Object.fromEntries(UPGRADES.map(q=>[q.id,number(raw.levels?.[q.id],0,q.costs.length)]))};
 }
 function readJson(storage,key){try{return JSON.parse(storage.getItem(key));}catch{return null;}}
 function storageDefault(){try{return localStorage;}catch{return null;}}
-function newRecord(balance=0){return {version:1,run:Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10),revision:0,balance:number(balance,0,9999),updatedAt:Date.now(),levels:Object.fromEntries(UPGRADES.map(q=>[q.id,0]))};}
+function newRecord(balance=0){return {version:1,run:Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10),revision:0,balance:number(balance,0,9999),updatedAt:Date.now(),momentClaims:[],levels:Object.fromEntries(UPGRADES.map(q=>[q.id,0]))};}
 export function safeToUpgrade(s){
  if(s.dead)return false;if(s.won)return true;
  if(s.finale||s.attack||!s.p.grounded||s.vehicleActive||s.race?.mounted&&!s.race.finished)return false;
@@ -60,7 +62,7 @@ export function attachGrowth(state,{saveKey,saved=null,storage=storageDefault()}
  state.restore=function(...args){restoring++;try{return base.restore(...args);}finally{restoring--;}};
  state.snapshot=function(){return {...base.snapshot(),growthR1449:{...account,levels:{...account.levels}}};};
  state.update=function(dt,input){const active=!this.dead&&!this.won&&!this.finale&&!this.race?.mounted,zone=this.zone;base.update(dt,input);if(active&&this.zone===zone&&!this.dead&&!this.finale)this.p.energy=Math.min(100,this.p.energy+Math.max(0,Math.min(.035,dt))*(stats.energyRegen-5));};
- state.growth={bindPause(fn){paused=fn;},read(){refresh();return {balance:account.balance,levels:{...account.levels},safe:safeToUpgrade(state),paused:paused(),error,stale};},
+ state.growth={momentClaimed(id){refresh();return account.momentClaims.includes(String(id));},claimMoment(id){id=String(id);refresh();if(stale)return {ok:false,message:'Начата новая игра в другой вкладке. Перезагрузи игру.'};if(account.momentClaims.includes(id))return {ok:true,claimed:false};if(!['city','portrait','ruins','2','3','4','5'].includes(id))return {ok:false};const ok=commit(r=>{r.balance=Math.min(9999,r.balance+4);r.momentClaims=[...r.momentClaims,id];},true);return {ok,claimed:ok,message:error};},bindPause(fn){paused=fn;},read(){refresh();return {balance:account.balance,levels:{...account.levels},safe:safeToUpgrade(state),paused:paused(),error,stale};},
   purchase(id){
    refresh();const item=UPGRADES.find(q=>q.id===id),level=item?account.levels[id]:3;
    if(stale)return {ok:false,message:'В другой вкладке начата новая игра. Перезагрузи эту вкладку.'};
@@ -71,5 +73,5 @@ export function attachGrowth(state,{saveKey,saved=null,storage=storageDefault()}
    if(!ok)return {ok:false,message:error||'Не удалось сохранить покупку.'};
    state.emit('upgradeBought',{upgrade:id,level:level+1});return {ok:true,message:item.name+' · уровень '+(level+1)+' сохранён.'};
   }};
- return attachNarration(attachTactics(attachWeaponry(state,{storage,saved,saveKey}),{saved}),{saved});
+ return attachPowerCombat(attachWorldMoments(attachNarration(attachTactics(attachWeaponry(state,{storage,saved,saveKey}),{saved}),{saved}),{saved}),{saved});
 }

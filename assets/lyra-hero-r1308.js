@@ -1,7 +1,8 @@
-import {poseBat} from './weapon-view-r1458.js?v=r1465';
+import {posePowerCombat} from './power-poses-r1466.js?v=r1466';
+import {poseBat} from './weapon-view-r1458.js?v=r1466';
 import * as T from './vendor/three-r170.module.min.js';
-import {poseBlade} from './lyra-blade-r1455.js?v=r1465';
-import {createCharacter,poseCharacterSurface,trackCharacter} from './lyra-character-r1465.js?v=r1465';
+import {poseBlade} from './lyra-blade-r1455.js?v=r1466';
+import {createCharacter,poseCharacterSurface,trackCharacter} from './lyra-character-r1465.js?v=r1466';
 export const createLyra=createCharacter;
 export const trackLyra=trackCharacter;
 const smooth=x=>{x=T.MathUtils.clamp(x,0,1);return x*x*(3-2*x);};
@@ -53,12 +54,6 @@ export function poseGuitar(root,attack,combo,time,running,weapon=null){
  if(attack?.kind==='kick'){
   const t=attack.t/attack.duration,pulse=Math.exp(-Math.pow((t-.63)/.15,2));u.limbs[1].foot.scale.setScalar(1+.78*pulse);u.body.rotation.y=Math.PI*2*smooth(t/.64);
  }
- if(attack?.kind==='finish'){
-  const q=attack.t/attack.duration,lift=smooth(q/.32)*(1-smooth((q-.48)/.20)),slam=smooth((q-.45)/.18)*(1-smooth((q-.72)/.28));
-  const right=u.limbs[1];right.leg.rotation.set(-1.35*lift,0,.09*lift);right.shin.rotation.x=1.75*lift;
-  right.foot.scale.setScalar(1+.65*slam);u.body.position.y+=.10*lift-.11*slam;u.body.rotation.x=.22*slam;u.body.rotation.y=0;
-  handAt(u.limbs[0],new T.Vector3(-.17,1.53,.20),-1);handAt(u.limbs[1],new T.Vector3(.16,1.56,.22),1);
- }
  if(active){
   const enter=smooth(p/.18),recover=smooth((p-.83)/.17),weight=enter*(1-recover),turn=smooth((p-.16)/.70);
   g.position.lerp(new T.Vector3(.10,1.25,.36),weight);
@@ -75,5 +70,5 @@ export function poseGuitar(root,attack,combo,time,running,weapon=null){
   if(running){g.position.y+=Math.sin(time*15)*.025;if(!attack)u.body.rotation.x=.12;}
   g.updateMatrix(); // both arms remain free while guitar stays attached to the back
  }
- if(weapon?.selected==='bat'){u.blade.visible=false;u.bladeTrace.visible=false;}else poseBlade(root,attack,time,running,handAt);poseBat(root,attack,time,running,weapon,handAt);poseCharacterSurface(root,attack,time,running);
+ if(weapon?.selected==='bat'){u.blade.visible=false;u.bladeTrace.visible=false;}else poseBlade(root,attack,time,running,handAt);poseBat(root,attack,time,running,weapon,handAt);poseCharacterSurface(root,attack,time,running);posePowerCombat(root,attack,time,weapon,handAt);
 }
