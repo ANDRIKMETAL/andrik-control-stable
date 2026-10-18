@@ -1,10 +1,11 @@
-import {blocked,move} from './portrait-core-r1295.js?v=r1466';
+import {crowdApproach} from './combat-feel-r1467.js?v=r1467';
+import {blocked,move} from './portrait-core-r1295.js?v=r1467';
 import {attackSlot} from './encounters-r1448.js?v=r1448';
-import {downedEnemyR1447} from './combat-r1447.js?v=r1466';
-import {enemyRouteDirection} from './enemy-navigation-r1446.js?v=r1466';
-import {routeFloor,navigateRoute,tickRouteJump} from './world-route-r1457.js?v=r1466';
-import {isMirrorDuel,updateMirrorDuel,mirrorParry} from './mirror-duel-r1463.js?v=r1466';
-import {navigateCityEnemy,tickCityJump,settleCityEnemy,keepCitySupport} from './city-pursuit-r1463.js?v=r1466';
+import {downedEnemyR1447} from './combat-r1447.js?v=r1467';
+import {enemyRouteDirection} from './enemy-navigation-r1446.js?v=r1467';
+import {routeFloor,navigateRoute,tickRouteJump} from './world-route-r1457.js?v=r1467';
+import {isMirrorDuel,updateMirrorDuel,mirrorParry} from './mirror-duel-r1463.js?v=r1467';
+import {navigateCityEnemy,tickCityJump,settleCityEnemy,keepCitySupport} from './city-pursuit-r1463.js?v=r1467';
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z),roles=['guard','fast','shooter','heavy','duelist'];
 const angle=(a,b)=>Math.atan2(b.x-a.x,b.z-a.z),turn=(a,b,n)=>a+clamp(Math.atan2(Math.sin(b-a),Math.cos(b-a)),-n,n);
 export const TACTIC_NAMES={guard:'Щитоносец',fast:'Обходчик',shooter:'Стрелок',heavy:'Тяжёлый',duelist:'Зеркальная Лира'};
@@ -19,6 +20,7 @@ export function assignTactic(s,e,index=0,saved=null){
 }
 function supported(s,p,margin=.12){return s.geo.platforms.some(f=>!f.gone&&!f.weaponCrate&&Math.abs(p.x-f.x)<f.w/2-margin&&Math.abs(p.z-f.z)<f.d/2-margin&&Math.abs((p.y||0)-f.h)<.45);}
 function travel(s,e,target,speed,dt){
+ target=crowdApproach(s,e,target);
  if(s.isCity){navigateCityEnemy(s,e,target,speed,dt);return;}
  const old={x:e.x,y:e.y||0,z:e.z};
  if(s.routeLinks?.length){let goal=target;const f=routeFloor(s,{...target,y:target.y??s.p.y});if(!f||f.weaponCrate){const floor=routeFloor(s,s.p);if(floor)goal={x:clamp(target.x,floor.x-floor.w/2+.6,floor.x+floor.w/2-.6),z:clamp(target.z,floor.z-floor.d/2+.6,floor.z+floor.d/2-.6),y:floor.h};}navigateRoute(s,e,goal,dt,speed);}
@@ -91,7 +93,7 @@ export function attachTactics(s,{saved=null}={}){
   base.hit(e,n,bat?Math.max(knock,a.step===2?2.05:.85):knock);
   if(e.hp>0&&e.down>0){t.phase='ready';t.t=0;t.contact=false;t.exposed=0;}
   if(e.hp>0&&bat){t.stun=Math.max(t.stun,a.step===2?.85:.55);t.phase='ready';this.emit('batStun',{x:e.x,y:e.y||0,z:e.z,enemy:e.id});}
-  else if(e.hp>0&&blade&&t.armor<=0){t.stun=Math.max(t.stun,counter?.45:.16);if(counter){t.phase='ready';t.t=0;}}
+  else if(e.hp>0&&blade&&t.armor<=0){t.stun=Math.max(t.stun,counter?.45:.16);t.phase='ready';t.t=0;t.contact=false;e.cd=Math.max(e.cd||0,.38);}
  };
  s.action=function(kind){
   if(!['dodge','dash'].includes(kind))return base.action(kind);

@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r358-deploy-nohang",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1792321896538-9997aaa684",
-  "release": "R1466",
-  "archiveName": "SITE-R1466-LYRA-LIVING-WORLDS-COMBAT-FULL.zip",
-  "sourceHead": "801af39ea5d538ff30e64e0f93f0a6e977c1ea4e",
-  "backupSha": "801af39ea5d538ff30e64e0f93f0a6e977c1ea4e",
+  "operationId": "publish-1792334582944-018fc25160",
+  "release": "R1467",
+  "archiveName": "SITE-R1467-FIX.zip",
+  "sourceHead": "27ca4b5cebd7cad99ab7cda8936dcdcddb5cf944",
+  "backupSha": "27ca4b5cebd7cad99ab7cda8936dcdcddb5cf944",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-10-18T11:11:36.538Z"
+  "generatedAt": "2026-10-18T14:43:02.944Z"
 }

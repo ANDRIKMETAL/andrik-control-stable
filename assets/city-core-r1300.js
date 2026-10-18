@@ -1,9 +1,10 @@
-import {CHASE_LENGTH,CHASE_HAZARDS,chaseCenter,initBikeChase,restoreBikeChase,updateBikeChase,bikeWheelie} from './bike-chase-r1464.js?v=r1466';
-import {bikeKick} from './bike-combat-r1458.js?v=r1466';
+import {addStartBoundary} from './start-boundaries-r1467.js?v=r1467';
+import {CHASE_LENGTH,CHASE_HAZARDS,chaseCenter,initBikeChase,restoreBikeChase,updateBikeChase,bikeWheelie} from './bike-chase-r1464.js?v=r1467';
+import {bikeKick} from './bike-combat-r1458.js?v=r1467';
 import {attackSlot,facesTarget,waitForAttack,modernBoss,bossDamage,updateArenaBoss} from './encounters-r1448.js?v=r1448';
-import {downedEnemyR1447} from './combat-r1447.js?v=r1466';
-import {enemyRouteDirection} from './enemy-navigation-r1446.js?v=r1466';
-import {State,move,blocked,clamp} from './portrait-core-r1295.js?v=r1466';
+import {downedEnemyR1447} from './combat-r1447.js?v=r1467';
+import {enemyRouteDirection} from './enemy-navigation-r1446.js?v=r1467';
+import {State,move,blocked,clamp} from './portrait-core-r1295.js?v=r1467';
 export const CITY_SAVE='andrik-city-3d-r1289';
 export const CITY_ZONES=['Улица пробуждения','Неоновый перекрёсток','NO CHOICE BAR','Мотоциклетная погоня','Ночной надзиратель'];
 export const roadCenter=chaseCenter;
@@ -18,7 +19,7 @@ export function cityGeometry(zone){
  const platforms=[{x:0,z:length/2,w:34,d:length+4,h:0}];
  for(const w of walls)if(w.h>0&&w.h<=2.2&&!w.carBase)platforms.push({x:w.x,z:w.z,w:w.w,d:w.d,h:w.h,objectTop:true});
  for(const q of props)if(q.type==='car')platforms.push({x:q.x,z:q.z+1.26,w:2.02,d:1.35,h:1.075,objectTop:true},{x:q.x,z:q.z-1.88,w:2.02,d:.65,h:.98,objectTop:true});
- return{length,walls,props,platforms};
+ const geo={length,walls,props,platforms};return zone===3?addStartBoundary(geo,'city'):geo;
 }
 export class CityState extends State {
  load(zone){super.load(zone);this.events=this.events.filter(e=>e.type!=='wave');this.isCity=true;this.isRuins=true;this.geo=cityGeometry(zone);this.enemies=[];this.shrines=[];this.wave=3;this.laser=null;this.cityItems=[];this.cityFlags=[];this.race=null;this.rivals=[];this.gateWall={x:0,z:this.geo.length-1,w:6.2,d:.4,h:6,gate:true};if(zone<3)this.geo.walls.push(this.gateWall);

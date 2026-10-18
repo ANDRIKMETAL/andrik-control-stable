@@ -1,5 +1,5 @@
 import * as T from './vendor/three-r170.module.min.js';
-import {momentSpec,streetLamps} from './world-moments-r1466.js?v=r1466';
+import {momentSpec,streetLamps} from './world-moments-r1466.js?v=r1467';
 const clamp=T.MathUtils.clamp,smooth=x=>{x=clamp(x,0,1);return x*x*(3-2*x);};
 export function atmosphereKit(geometries,materials,textures,assets){
  const {shape}=assets,box=shape.box,ball=shape.ball;
@@ -38,6 +38,11 @@ export function atmosphereKit(geometries,materials,textures,assets){
  };
  function build(parent,{world,zone=0,geo,state=null,coarse=false}={}){
   const root=new T.Group();root.name='World-atmosphere-R1466';root.userData.dynamic=true;parent.add(root);let closed=false,last=null,doneAt=null,previousDone=!!state?.worldMoments?.data.done;
+  if(geo?.startBoundary1467){const enclosure=new T.Group();enclosure.name='Start-enclosure-R1467';root.add(enclosure);const b=geo.startBoundary1467,city=b.kind==='city';
+   if(city){for(const w of b.walls){const o=put(enclosure,box,metal,w.x,w.h/2,w.z,w.w,w.h,w.d);o.name='Solid-start-wall';}put(enclosure,box,metal,0,-.20,-1.4,29,.4,3);}
+   const back=b.walls[0],face=back.z+back.d/2+.035;for(const x of city?[-9,0,9]:[-3.9,3.9]){put(enclosure,box,gold,x,3.2,face,.16,6.4,.12);put(enclosure,box,cyan,x,5.6,face+.09,.12,.55,.025);}put(enclosure,box,gold,0,6.4,face,back.w-.4,.15,.12);
+   if(city)for(let x=-12;x<=12;x+=3)put(enclosure,box,dark,x,2.8,face,2.75,5.4,.06);
+  }
   const q=state?momentSpec(state):null,marker=new T.Group();marker.name='Optional-world-moment';root.add(marker);const pieces={},lampsHere=state?streetLamps(state).filter(x=>x.breakable):[];
   if(q){marker.position.set(q.x,q.y,q.z);const theme=world==='portrait'?gold:world==='ruins'||world===4?gold:metal;
    put(marker,box,theme,0,.45,0,.64,.90,.44);pieces.screen=put(marker,box,cyan,0,.66,.235,.40,.24,.025);pieces.c=put(marker,cGlyph,cyan,0,1.25,0);pieces.c.rotation.z=.38;pieces.c.name='Moment-C-marker';

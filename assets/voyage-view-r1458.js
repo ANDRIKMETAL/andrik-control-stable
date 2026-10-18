@@ -1,6 +1,6 @@
 import * as T from './vendor/three-r170.module.min.js';
-import {courseX,courseY,voyageMounted} from './voyage-core-r1458.js?v=r1466';
-import {poseRidingKick} from './bike-combat-r1458.js?v=r1466';
+import {courseX,courseY,voyageMounted} from './voyage-core-r1458.js?v=r1467';
+import {poseRidingKick} from './bike-combat-r1458.js?v=r1467';
 export function createVoyageView(scene,assets,lifeKit){
  const root=new T.Group();root.name='Vehicle-episode';scene.add(root);const {put,shape,mat}=assets;let voyage=null,life=null,player,foes=[],hazards=[],gates=[],pickups=[],bullets=[],bots=[],shield,trail=[],owned=[];
  function clear(){life?.dispose();life=null;for(const o of owned)o.dispose();owned=[];root.clear();foes=[];hazards=[];gates=[];pickups=[];bullets=[];bots=[];trail=[];}

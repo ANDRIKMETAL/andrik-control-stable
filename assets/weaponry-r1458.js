@@ -1,4 +1,4 @@
-import {blocked} from './portrait-core-r1295.js?v=r1466';
+import {blocked} from './portrait-core-r1295.js?v=r1467';
 export const WEAPON_KEY='andrik-lyra-weapons-r1458';
 export const WEAPONS={sword:{name:'Меч',costs:[3,5,8,11,14,18]},bat:{name:'Бейсбольная бита',costs:[3,5,8,11,14,18]}};
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,Math.floor(Number(v)||0))),d=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);

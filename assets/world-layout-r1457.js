@@ -1,4 +1,4 @@
-import {addTowerEntry} from './tower-entry-r1459.js?v=r1466';
+import {addTowerEntry} from './tower-entry-r1459.js?v=r1467';
 export function buildRouteWorld(s,world,zone){
  const platforms=[],links=[],main=[];const add=(x,z,w,d,h=0,extra={})=>{const f={x,z,w,d,h,node:platforms.length,...extra};platforms.push(f);return f};const link=(a,b,jump=true)=>links.push({a:a.node,b:b.node,jump});
  let count=world===3?[19,23,21][zone]:world===4?[27,30,25][zone]:[20,24,22][zone];

@@ -1,8 +1,8 @@
-import {posePowerCombat} from './power-poses-r1466.js?v=r1466';
-import {poseBat} from './weapon-view-r1458.js?v=r1466';
+import {posePowerCombat} from './power-poses-r1466.js?v=r1467';
+import {poseBat} from './weapon-view-r1458.js?v=r1467';
 import * as T from './vendor/three-r170.module.min.js';
-import {poseBlade} from './lyra-blade-r1455.js?v=r1466';
-import {createCharacter,poseCharacterSurface,trackCharacter} from './lyra-character-r1465.js?v=r1466';
+import {poseBlade} from './lyra-blade-r1455.js?v=r1467';
+import {createCharacter,poseCharacterSurface,trackCharacter} from './lyra-character-r1465.js?v=r1467';
 export const createLyra=createCharacter;
 export const trackLyra=trackCharacter;
 const smooth=x=>{x=T.MathUtils.clamp(x,0,1);return x*x*(3-2*x);};

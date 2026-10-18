@@ -1,7 +1,8 @@
-import {towerRayHit,resolveTowerWall} from './tower-entry-r1459.js?v=r1466';
+import {addStartBoundary} from './start-boundaries-r1467.js?v=r1467';
+import {towerRayHit,resolveTowerWall} from './tower-entry-r1459.js?v=r1467';
 import {attackSlot,facesTarget,waitForAttack,modernBoss,bossDamage,updateArenaBoss,legacyArenaBoss} from './encounters-r1448.js?v=r1448';
-import {installCombatR1447} from './combat-r1447.js?v=r1466';
-import {enemyRouteDirection} from './enemy-navigation-r1446.js?v=r1466';
+import {installCombatR1447} from './combat-r1447.js?v=r1467';
+import {enemyRouteDirection} from './enemy-navigation-r1446.js?v=r1467';
 export const ORDER=[1,2,'portrait',3,4,6,5],SAVE='andrik-portrait-r1280';
 export const ZONES=['Коридор портретов','Зал масок','Зеркальный лабиринт','Разрушенная башня','Пустой портрет'];
 export const HP={mask:50,shadow:35,statue:110,double:100,dog:34,diver:46,robot:58,astronaut:44,drone:28,boss:1000};
@@ -53,7 +54,7 @@ export function move(p,dx,dz,walls,r=.4){
 }
 export const MIRRORS=[{x:-6,z:10},{x:4,z:10},{x:4,z:20}];
 export function trace(angles){let p={x:-6,z:2},d={x:0,z:1},used=new Set(),segments=[];const goal={x:-8,z:20};for(let b=0;b<4;b++){let n=null,tmin=35;MIRRORS.forEach((m,i)=>{if(used.has(i))return;const dx=m.x-p.x,dz=m.z-p.z,t=dx*d.x+dz*d.z;if(t>.1&&Math.abs(dx*d.z-dz*d.x)<.65&&t<tmin){n=i;tmin=t;}});const t=(goal.x-p.x)*d.x+(goal.z-p.z)*d.z,err=Math.abs((goal.x-p.x)*d.z-(goal.z-p.z)*d.x);if(t>.1&&t<tmin&&err<.7){segments.push([p,goal]);return{segments,solved:used.size===3};}segments.push([p,{x:p.x+d.x*tmin,z:p.z+d.z*tmin}]);if(n===null)break;used.add(n);const nx=Math.cos(angles[n]*Math.PI/4),nz=Math.sin(angles[n]*Math.PI/4),dot=d.x*nx+d.z*nz;d={x:d.x-2*dot*nx,z:d.z-2*dot*nz};p={...MIRRORS[n]};}return{segments,solved:false};}
-export function geometry(zone){const length=[60,44,38,78,48][zone],walls=zone===3?[]:[{x:-10.5,z:length/2,w:1,d:length+4,h:9},{x:10.5,z:length/2,w:1,d:length+4,h:9},{x:0,z:-1,w:22,d:1,h:9},{x:0,z:length+1,w:22,d:1,h:9}];if(zone===2)walls.push({x:-1,z:7,w:1,d:7,h:3},{x:1,z:17,w:1,d:6,h:3},{x:-4,z:28,w:8,d:1,h:3});const platforms=zone===3?[{x:0,z:3,w:10,d:8,h:0},...Array.from({length:10},(_,i)=>({x:(i%3-1)*2,z:12+i*6.3,w:5.5,d:4.6,h:i%3*.35,fragile:[2,5,7].includes(i),age:0})),{x:0,z:75,w:14,d:10,h:0}]:zone===4?Array.from({length:48},(_,i)=>({x:-7.5+i%4*5,z:2+Math.floor(i/4)*4,w:5,d:4,h:0})): [{x:0,z:length/2,w:20,d:length+2,h:0}];return{length,walls,platforms};}
+export function geometry(zone){const length=[60,44,38,78,48][zone],walls=zone===3?[]:[{x:-10.5,z:length/2,w:1,d:length+4,h:9},{x:10.5,z:length/2,w:1,d:length+4,h:9},{x:0,z:-1,w:22,d:1,h:9},{x:0,z:length+1,w:22,d:1,h:9}];if(zone===2)walls.push({x:-1,z:7,w:1,d:7,h:3},{x:1,z:17,w:1,d:6,h:3},{x:-4,z:28,w:8,d:1,h:3});const platforms=zone===3?[{x:0,z:3,w:10,d:8,h:0},...Array.from({length:10},(_,i)=>({x:(i%3-1)*2,z:12+i*6.3,w:5.5,d:4.6,h:i%3*.35,fragile:[2,5,7].includes(i),age:0})),{x:0,z:75,w:14,d:10,h:0}]:zone===4?Array.from({length:48},(_,i)=>({x:-7.5+i%4*5,z:2+Math.floor(i/4)*4,w:5,d:4,h:0})): [{x:0,z:length/2,w:20,d:length+2,h:0}];const geo={length,walls,platforms};return zone===3?addStartBoundary(geo,'portrait'):geo;}
 export class State{
  constructor(saved){this.p={x:0,y:0,z:3,vy:0,yaw:0,hp:100,energy:100,grounded:true,inv:0,coyote:.12};this.events=[];this.id=0;this.crystals=0;this.echoes=[];this.shrines=[];this.drops=[];this.checkpoint=0;this.elapsed=0;this.finale=0;this.won=false;this.load(0);if(saved)this.restore(saved);}
  emit(type,data={}){this.events.push({type,...data});}

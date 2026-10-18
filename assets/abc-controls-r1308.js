@@ -1,4 +1,4 @@
-import {comboSequence} from './power-combat-r1466.js?v=r1466';
+import {comboSequence} from './power-combat-r1466.js?v=r1467';
 // Shared three-button input. Combat queue is bounded; holds never also punch.
 export const abcMarkup=`<style>
 .pt-actions:has([data-abc]),[id="world1306"] .actions:has([data-abc]){
@@ -31,7 +31,7 @@ export function createABC(state){
  const reset=()=>{if(state.vehicleActive)state.action('vehicleFireStop');held=pressA=pressC=null;chord=false;queue=[];step=0;lastTap=-Infinity;zone=state.zone;};
  const riding=()=>state.race?.mounted&&!state.race.finished;
  const onFoot=()=>!state.vehicleActive&&!riding();
- function submit(kind){if(state.dead||state.won||state.finale)return;if(!state.attack){state.action(kind);}else if(queue.length<2)queue.push(kind);}
+ function submit(kind,now){if(state.dead||state.won||state.finale)return;if(!state.attack){state.action(kind);}else if(queue.length<2)queue.push({kind,expires:now+650});}
  function rage(){if(!onFoot()||!state.action('rage'))return false;chord=true;queue=[];step=0;if(held)held.fired=true;if(pressC)pressC.fired=true;return true;}
  function fireC(){if(pressC&&!pressC.fired){pressC.fired=true;state.action(state.canInteract?'interact':'scream');}}
  function dodge(){chord=true;queue=[];step=0;if(held)held.fired=true;if(pressA)pressA.fired=true;state.action('dodge');}
@@ -46,13 +46,16 @@ export function createABC(state){
   if(button==='C'){if(pressC&&!chord)fireC();pressC=null;if(!held)chord=false;return;}
   if(button==='A'){if(pressA&&!pressA.fired&&!chord)state.action('jump');pressA=null;if(!held)chord=false;return;}
   if(button!=='B'||!held)return;const was=held;held=null;if(state.vehicleActive)state.action('vehicleFireStop');if(!pressA)chord=false;if(was.fired)return;
-  if(now-was.at>=360){submit('attack');return;}if(now-lastTap>(state.growthStats?.comboWindow??1400)){step=0;if(!state.attack)state.nextUpper=false;}const sequence=comboSequence(state);submit(sequence[step%sequence.length]);step=(step+1)%sequence.length;lastTap=now;
+  if(now-was.at>=360){submit('attack',now);return;}if(now-lastTap>(state.growthStats?.comboWindow??1400)){step=0;if(!state.attack)state.nextUpper=false;}const sequence=comboSequence(state);submit(sequence[step%sequence.length],now);step=(step+1)%sequence.length;lastTap=now;
  },tick(now){
   if(zone!==state.zone){reset();return;}if(state.dead||state.won||state.finale){reset();return;}
+  if(state.p?.down>0||state.dodge1460){queue=[];step=0;if(held)held.fired=true;return;}
+  const kept=queue.filter(q=>q.expires>=now);if(kept.length<queue.length&&!kept.length){step=0;lastTap=-Infinity;}queue=kept;
   if(pressC&&!pressC.fired&&!chord&&now-pressC.at>=100)fireC();
   if(pressA&&!pressA.fired&&!chord&&now-pressA.at>=100){pressA.fired=true;state.action('jump');}
-  if(held&&!held.fired&&now-held.at>=360){held.fired=true;submit('attack');step=0;}
-  if(!state.attack&&queue.length)state.action(queue.shift());
+  if(held&&!held.fired&&now-held.at>=360){held.fired=true;submit('attack',now);step=0;}
+  if(queue.length&&state.combatFeel?.canChain){if(state.combatFeel.chain(queue[0].kind))queue.shift();}
+  else if(!state.attack&&queue.length)state.action(queue.shift().kind);
  }};
 }
 export function bindABC(root,state,signal,isPaused){

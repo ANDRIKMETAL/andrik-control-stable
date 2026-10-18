@@ -1,13 +1,14 @@
-import {createLocalAmbience} from './local-ambience-r1466.js?v=r1466';
-import {chaseCue} from './bike-chase-r1464.js?v=r1466';
-import {createWeaponUI} from './weapon-ui-r1458.js?v=r1466';
-import {createGrowthUI} from './growth-ui-r1449.js?v=r1466';
-import {createGameSound} from './game-sound-r1448.js?v=r1466';
+import {incomingThreat} from './combat-feel-r1467.js?v=r1467';
+import {createLocalAmbience} from './local-ambience-r1466.js?v=r1467';
+import {chaseCue} from './bike-chase-r1464.js?v=r1467';
+import {createWeaponUI} from './weapon-ui-r1458.js?v=r1467';
+import {createGrowthUI} from './growth-ui-r1449.js?v=r1467';
+import {createGameSound} from './game-sound-r1448.js?v=r1467';
 const KEY='andrik-game-settings-r1448',LEARN='andrik-game-learned-r1448';
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
-export const DEFAULTS={quality:'auto',fps:60,buttonScale:1,stickScale:1,opacity:.38,horizontal:16,vertical:16,follow:false,aimAssist:true,guidance:'auto',tutorial:true,motion:.5,flashes:.65};
+export const DEFAULTS={quality:'auto',fps:60,lookSensitivity:1,buttonScale:1,stickScale:1,opacity:.38,horizontal:16,vertical:16,follow:false,aimAssist:true,guidance:'auto',tutorial:true,motion:.5,flashes:.65};
 export function normalizeSettings(raw={}){
- const v={...DEFAULTS};for(const [key,min,max]of [['buttonScale',.8,1.15],['stickScale',.8,1.2],['opacity',.2,.8],['horizontal',8,64],['vertical',8,56],['motion',0,1],['flashes',0,1]])if(Number.isFinite(Number(raw[key])))v[key]=clamp(Number(raw[key]),min,max);
+ const v={...DEFAULTS};for(const [key,min,max]of [['lookSensitivity',.5,1.5],['buttonScale',.8,1.15],['stickScale',.8,1.2],['opacity',.2,.8],['horizontal',8,64],['vertical',8,56],['motion',0,1],['flashes',0,1]])if(Number.isFinite(Number(raw[key])))v[key]=clamp(Number(raw[key]),min,max);
  for(const key of ['follow','tutorial','aimAssist'])if(typeof raw[key]==='boolean')v[key]=raw[key];
  if(['auto','low','high'].includes(raw.quality))v.quality=raw.quality;if(['auto','on','off'].includes(raw.guidance))v.guidance=raw.guidance;v.fps=Number(raw.fps)===30?30:60;return v;
 }
@@ -67,6 +68,7 @@ const markup=`<style>
  </style><summary>Управление, камера и графика</summary>
  <label>Качество<select data-setting=quality><option value=auto>Авто</option><option value=low>Экономное</option><option value=high>Высокое</option></select></label>
  <label>Частота кадров<select data-setting=fps><option value=60>60 кадров/с</option><option value=30>30 кадров/с</option></select></label>
+ <label>Чувствительность камеры<input data-setting=lookSensitivity type=range min=.5 max=1.5 step=.05></label>
  <label>Размер A/B/C<input data-setting=buttonScale type=range min=.8 max=1.15 step=.05></label>
  <label>Размер крестовины<input data-setting=stickScale type=range min=.8 max=1.2 step=.05></label>
  <label>Непрозрачность кнопок<input data-setting=opacity type=range min=.2 max=.8 step=.05></label>
@@ -89,6 +91,7 @@ export function createExperience(root,state,{signal,isPaused,onSettings,getAudio
  const panel=document.createElement('details');panel.className='game1448-settings';panel.innerHTML=markup;(root.querySelector('.pt-card')||root.querySelector('.card')).append(panel);
  const hint=document.createElement('div');hint.className='game1448-hint';hint.setAttribute('role','status');hint.hidden=true;root.append(hint);
  const nav=document.createElement('div');nav.className='game1448-nav';nav.hidden=true;const arrow=document.createElement('b'),label=document.createElement('span');arrow.textContent='↑';arrow.setAttribute('aria-hidden','true');nav.append(arrow,label);root.append(nav);
+ const threat=document.createElement('div');threat.className='game1467-threat';threat.hidden=true;threat.setAttribute('role','status');root.append(threat);
  const dialogue=document.createElement('div');dialogue.className='game1461-dialogue';dialogue.hidden=true;dialogue.setAttribute('role','status');root.append(dialogue);let dialogueLeft=0;
  const a=root.querySelector('[data-abc="A"]'),b=root.querySelector('[data-abc="B"]'),c=root.querySelector('[data-abc="C"]');
  const inputs=Array.from(panel.querySelectorAll('[data-setting]'));
@@ -107,7 +110,7 @@ export function createExperience(root,state,{signal,isPaused,onSettings,getAudio
   event(e){if(e.type==='storyLine'){dialogue.textContent=e.text;dialogueLeft=e.duration||4;return;}if(isPaused())return;sound.event(e,state);ambience.event(e,state);if(['momentDone','decorBreak','momentBegin'].includes(e.type))onSave();if(['hit','hurt','finishImpact'].includes(e.type))shake=.22;if(e.type==='puzzle')teach('interact');if(e.type==='finishImpact')teach('finish');if(e.type==='rageStart'){hintText='ЯРОСТЬ';hintUntil=elapsed+1.8;}if(e.type==='dodge'){teach('dodge');hintText='УКЛОНЕНИЕ';hintUntil=elapsed+.65;}if(e.type==='counterHit'){hintText='КОНТРАТАКА · +50%';hintUntil=elapsed+1.3;}if(e.type==='shieldBreak'||e.type==='armorBreak'){hintText=e.type==='shieldBreak'?'ЩИТ РАЗБИТ':'БРОНЯ РАЗБИТА';hintUntil=elapsed+1.3;}},
   cameraRoll(time){return shake>0?Math.sin(time*47)*.012*settings.motion*(shake/.22):0;},
   update(dt,yaw){
-   refreshGrowth();refreshWeapons();const paused=isPaused();if(!paused)dialogueLeft=Math.max(0,dialogueLeft-dt);dialogue.hidden=paused||dialogueLeft<=0||!dialogue.textContent;hint.hidden=nav.hidden=paused;if(paused)return;elapsed+=dt;shake=Math.max(0,shake-dt);ambience.update(dt,state,yaw);
+   refreshGrowth();refreshWeapons();const paused=isPaused();if(!paused)dialogueLeft=Math.max(0,dialogueLeft-dt);dialogue.hidden=paused||dialogueLeft<=0||!dialogue.textContent;hint.hidden=nav.hidden=paused;if(paused){threat.hidden=true;return;}const warning=incomingThreat(state,yaw);threat.hidden=!warning;if(warning){const text=warning.arrow+' '+warning.text;if(threat.textContent!==text)threat.textContent=text;threat.dataset.active=String(warning.active);}elapsed+=dt;shake=Math.max(0,shake-dt);ambience.update(dt,state,yaw);
    if(zone!==state.zone){zone=state.zone;stalled=0;best=Infinity;targetKey='';elapsed=0;lastContext='';hintUntil=0;}
    const p=state.p,moving=Math.hypot(p.vx||0,p.vz||0)>.2;if(moving)teach('move');if(state.attack?.spin)teach('guitar');if(['slash','punch','kick','backfist'].includes(state.attack?.kind))teach('punch');if(!p.grounded&&state.jumps===0)teach('double');
    if(state.vehicleActive){const space=state.voyage.kind==='space';if(a)a.setAttribute('aria-label',space?'A: защитный щит':'A: прыжок на скутере');if(b)b.setAttribute('aria-label',space?'B: удерживать — стрельба':'B: удар по соседнему гонщику');if(c)c.setAttribute('aria-label',space?'C: ракета; после аварии — повтор':'C: ускорение; после аварии — повтор');hint.hidden=false;hint.textContent=space?'Крестовина: ← → ↑ ↓ · B: огонь · C: ракета · A: щит':'Между буйками · A: прыжок · B: удар · C: ускорение';nav.hidden=true;return;}if(a)a.setAttribute('aria-label','A: прыжок, повторно — двойной; A+B вместе: уклонение');const finish=state.finisherTarget,interact=state.canInteract;
