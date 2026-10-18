@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r358-deploy-nohang",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1792305400038-9bcbd16340",
-  "release": "R1459",
-  "archiveName": "SITE-R1459-LYRA-BAT-TOWER-CHROME-FULL.zip",
-  "sourceHead": "e7aa1f4d119357ef2431d6cd6ddbc1b4937cb1b2",
-  "backupSha": "e7aa1f4d119357ef2431d6cd6ddbc1b4937cb1b2",
+  "operationId": "publish-1792307481248-1074d8a2ad",
+  "release": "R1460",
+  "archiveName": "SITE-R1460-LYRA-TACTICAL-COMBAT-FULL.zip",
+  "sourceHead": "7ecd2f52bea0e3754e2537a0d5d11c4764119beb",
+  "backupSha": "7ecd2f52bea0e3754e2537a0d5d11c4764119beb",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-10-18T06:36:40.716Z"
+  "generatedAt": "2026-10-18T07:11:21.248Z"
 }

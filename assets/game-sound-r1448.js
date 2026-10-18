@@ -21,6 +21,11 @@ export function createGameSound(getContext,getVolume){
    const kick=e.kind==='kick',guitar=e.kind==='attack',blade=e.kind==='slash',bat=blade&&state.weaponStats?.selected==='bat';source(bat?95:blade?380:kick?85:guitar?165:120,kick?.17:.10,kick?.19:.13,'triangle',bat?45:blade?190:42);hiss(bat?.12:.075,bat?.20:.15,bat?1200:blade?4200:guitar?2900:1700);
    if(guitar){source(220,.28,.065,'sawtooth',110);source(330,.24,.035,'triangle',165);}
   }else if(e.type==='swing')hiss(e.kind==='kick'?.18:state.weaponStats?.selected==='bat'?.18:.12,e.kind==='slash'?.085:.06,e.kind==='slash'&&state.weaponStats?.selected==='bat'?1700:e.kind==='slash'?3100:e.kind==='attack'?1900:900);
+  else if(e.type==='dodge'){hiss(.18,.10,2300);source(190,.15,.04,'triangle',80);}
+  else if(e.type==='shieldHit'){source(530,.12,.10,'triangle',220);hiss(.06,.1,4800);}
+  else if(e.type==='shieldBreak'||e.type==='armorBreak'){hiss(.24,.18,3800);source(170,.25,.13,'triangle',45);}
+  else if(e.type==='counterHit'){source(610,.18,.09,'triangle',980);}
+  else if(e.type==='tacticShot'){source(810,.09,.05,'sawtooth',290);}
   else if(e.type==='bladeParry'){source(720,.2,.08,'triangle',330);hiss(.05,.08,5200);}
   else if(e.type==='finishImpact'){source(64,.23,.23,'sine',28);hiss(.13,.22,1800);}
   else if(e.type==='dogWarn'){source(130,.23,.08,'sawtooth',75);hiss(.14,.12,850);}

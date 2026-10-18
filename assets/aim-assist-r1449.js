@@ -7,7 +7,7 @@ function visible(state,e,kind,blocked,from){
  return e?.hp>0&&distance(state.p,e)<=range(kind,e,state)&&Math.abs((e.y||0)-state.p.y)<1.6&&Math.abs(angle(Math.atan2(e.x-state.p.x,e.z-state.p.z),from))<=Math.PI*55/180&&!blocked(state.p,e,state.geo.walls);
 }
 export function beginAim(state,blocked){
- const a=state.attack;if(!a||!supported(a.kind)||state.aimAssistEnabled===false||state.race?.mounted)return;
+ const a=state.attack;if(!a||!supported(a.kind)||state.aimAssistEnabled===false||state.facingLocked||state.race?.mounted)return;
  const from=state.p.yaw,candidates=state.living.filter(e=>visible(state,e,a.kind,blocked,from));
  candidates.sort((x,y)=>{const score=e=>distance(state.p,e)+Math.abs(angle(Math.atan2(e.x-state.p.x,e.z-state.p.z),from))*1.7+(e.down>0?.8:0);return score(x)-score(y);});
  // Keep the previous combo target only while it is still in the same forward cone.
@@ -18,7 +18,7 @@ export function beginAim(state,blocked){
 export function updateAim(state,input,blocked,impact=false){
  const a=state.attack,aim=a?.aim;if(!aim)return;
  const e=state.enemies.find(e=>e.id===aim.target);
- if(state.aimAssistEnabled===false||!visible(state,e,a.kind,blocked,aim.from)){delete a.aim;return;}
+ if(state.aimAssistEnabled===false||state.facingLocked||!visible(state,e,a.kind,blocked,aim.from)){delete a.aim;return;}
  const x=input?.x||0,z=input?.z||0,l=Math.hypot(x,z);
  if(l>.35&&(x*Math.sin(aim.to)+z*Math.cos(aim.to))/Math.max(.001,l)<-.45){delete a.aim;return;}
  if(a.hit&&!impact)return;

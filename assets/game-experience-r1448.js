@@ -1,9 +1,9 @@
-import {createWeaponUI} from './weapon-ui-r1458.js?v=r1459';
-import {createGrowthUI} from './growth-ui-r1449.js?v=r1459';
-import {createGameSound} from './game-sound-r1448.js?v=r1459';
+import {createWeaponUI} from './weapon-ui-r1458.js?v=r1460';
+import {createGrowthUI} from './growth-ui-r1449.js?v=r1460';
+import {createGameSound} from './game-sound-r1448.js?v=r1460';
 const KEY='andrik-game-settings-r1448',LEARN='andrik-game-learned-r1448';
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
-export const DEFAULTS={quality:'auto',fps:60,buttonScale:1,stickScale:1,opacity:.38,horizontal:16,vertical:16,follow:true,aimAssist:true,guidance:'auto',tutorial:true,motion:.5,flashes:.65};
+export const DEFAULTS={quality:'auto',fps:60,buttonScale:1,stickScale:1,opacity:.38,horizontal:16,vertical:16,follow:false,aimAssist:true,guidance:'auto',tutorial:true,motion:.5,flashes:.65};
 export function normalizeSettings(raw={}){
  const v={...DEFAULTS};for(const [key,min,max]of [['buttonScale',.8,1.15],['stickScale',.8,1.2],['opacity',.2,.8],['horizontal',8,64],['vertical',8,56],['motion',0,1],['flashes',0,1]])if(Number.isFinite(Number(raw[key])))v[key]=clamp(Number(raw[key]),min,max);
  for(const key of ['follow','tutorial','aimAssist'])if(typeof raw[key]==='boolean')v[key]=raw[key];
@@ -48,12 +48,12 @@ const markup=`<style>
  <label>Качество<select data-setting=quality><option value=auto>Авто</option><option value=low>Экономное</option><option value=high>Высокое</option></select></label>
  <label>Частота кадров<select data-setting=fps><option value=60>60 кадров/с</option><option value=30>30 кадров/с</option></select></label>
  <label>Размер A/B/C<input data-setting=buttonScale type=range min=.8 max=1.15 step=.05></label>
- <label>Размер джойстика<input data-setting=stickScale type=range min=.8 max=1.2 step=.05></label>
+ <label>Размер крестовины<input data-setting=stickScale type=range min=.8 max=1.2 step=.05></label>
  <label>Непрозрачность кнопок<input data-setting=opacity type=range min=.2 max=.8 step=.05></label>
  <label>Отступ от боков<input data-setting=horizontal type=range min=8 max=64 step=4></label>
  <label>Отступ снизу<input data-setting=vertical type=range min=8 max=56 step=4></label>
- <label>Мягкое наведение ударов<input data-setting=aimAssist type=checkbox></label>
- <label>Камера возвращается за плечо<input data-setting=follow type=checkbox></label>
+ 
+ <p>Крестовина перемещает Лиру без разворота. Камера поворачивается только при движении пальцем справа.</p>
  <label>Указатель цели<select data-setting=guidance><option value=auto>Если заблудился</option><option value=on>Всегда</option><option value=off>Выключен</option></select></label>
  <label>Обучающие подсказки<input data-setting=tutorial type=checkbox></label>
  <label>Встряска камеры<input data-setting=motion type=range min=0 max=1 step=.1></label>
@@ -70,7 +70,7 @@ export function createExperience(root,state,{signal,isPaused,onSettings,getAudio
  const a=root.querySelector('[data-abc="A"]'),b=root.querySelector('[data-abc="B"]'),c=root.querySelector('[data-abc="C"]');
  const inputs=Array.from(panel.querySelectorAll('[data-setting]'));
  function save(){try{localStorage.setItem(KEY,JSON.stringify(settings));localStorage.setItem('lira-3d-quality',settings.quality);}catch{}}
- function apply(){state.aimAssistEnabled=settings.aimAssist;
+ function apply(){state.aimAssistEnabled=settings.aimAssist&&!state.facingLocked;settings.follow=false;
   for(const [k,v]of Object.entries({'--game-scale':settings.buttonScale,'--game-stick':settings.stickScale,'--game-opacity':settings.opacity,'--game-x':settings.horizontal+'px','--game-y':settings.vertical+'px','--game-flash':settings.flashes}))root.style.setProperty(k,String(v));
   for(const input of inputs){const v=settings[input.dataset.setting];if(input.type==='checkbox')input.checked=v;else input.value=String(v);}
   onSettings?.(settings);
@@ -81,19 +81,19 @@ export function createExperience(root,state,{signal,isPaused,onSettings,getAudio
  function teach(key){if(learned[key])return;learned[key]=true;try{localStorage.setItem(LEARN,JSON.stringify(learned));}catch{}}
  apply();
  return {get settings(){return settings;},frameDue(now){if(now-lastFrame<1000/settings.fps-.5)return false;lastFrame=now;return true;},
-  event(e){if(isPaused())return;sound.event(e,state);if(['hit','hurt','finishImpact'].includes(e.type))shake=.22;if(e.type==='puzzle')teach('interact');if(e.type==='finishImpact')teach('finish');},
+  event(e){if(isPaused())return;sound.event(e,state);if(['hit','hurt','finishImpact'].includes(e.type))shake=.22;if(e.type==='puzzle')teach('interact');if(e.type==='finishImpact')teach('finish');if(e.type==='dodge'){teach('dodge');hintText='УКЛОНЕНИЕ';hintUntil=elapsed+.65;}if(e.type==='counterHit'){hintText='КОНТРАТАКА · +50%';hintUntil=elapsed+1.3;}if(e.type==='shieldBreak'||e.type==='armorBreak'){hintText=e.type==='shieldBreak'?'ЩИТ РАЗБИТ':'БРОНЯ РАЗБИТА';hintUntil=elapsed+1.3;}},
   cameraRoll(time){return shake>0?Math.sin(time*47)*.012*settings.motion*(shake/.22):0;},
   update(dt,yaw){
    refreshGrowth();refreshWeapons();const paused=isPaused();hint.hidden=nav.hidden=paused;if(paused)return;elapsed+=dt;shake=Math.max(0,shake-dt);
    if(zone!==state.zone){zone=state.zone;stalled=0;best=Infinity;targetKey='';elapsed=0;lastContext='';hintUntil=0;}
    const p=state.p,moving=Math.hypot(p.vx||0,p.vz||0)>.2;if(moving)teach('move');if(state.attack?.spin)teach('guitar');if(['slash','punch','kick','backfist'].includes(state.attack?.kind))teach('punch');if(!p.grounded&&state.jumps===0)teach('double');
-   if(state.vehicleActive){const space=state.voyage.kind==='space';if(a)a.setAttribute('aria-label',space?'A: защитный щит':'A: прыжок на скутере');if(b)b.setAttribute('aria-label',space?'B: удерживать — стрельба':'B: удар по соседнему гонщику');if(c)c.setAttribute('aria-label',space?'C: ракета; после аварии — повтор':'C: ускорение; после аварии — повтор');hint.hidden=false;hint.textContent=space?'Джойстик: ← → ↑ ↓ · B: огонь · C: ракета · A: щит':'Между буйками · A: прыжок · B: удар · C: ускорение';nav.hidden=true;return;}if(a)a.setAttribute('aria-label','A: прыжок, повторно — двойной прыжок');const finish=state.finisherTarget,interact=state.canInteract;
+   if(state.vehicleActive){const space=state.voyage.kind==='space';if(a)a.setAttribute('aria-label',space?'A: защитный щит':'A: прыжок на скутере');if(b)b.setAttribute('aria-label',space?'B: удерживать — стрельба':'B: удар по соседнему гонщику');if(c)c.setAttribute('aria-label',space?'C: ракета; после аварии — повтор':'C: ускорение; после аварии — повтор');hint.hidden=false;hint.textContent=space?'Крестовина: ← → ↑ ↓ · B: огонь · C: ракета · A: щит':'Между буйками · A: прыжок · B: удар · C: ускорение';nav.hidden=true;return;}if(a)a.setAttribute('aria-label','A: прыжок, повторно — двойной; A+B вместе: уклонение');const finish=state.finisherTarget,interact=state.canInteract;
    if(b){b.dataset.ready=finish?'finish':'';b.setAttribute('aria-label',finish?'B: добивание':state.weaponStats?.selected==='bat'?'B: бита двумя руками и удар ногой; удерживать для гитары':'B: меч и удар ногой; удерживать для гитары');}
    if(state.race?.mounted&&!state.race.finished){if(c)c.setAttribute('aria-label','C: ускорение на мотоцикле');if(b)b.setAttribute('aria-label','B: сбить соперника ногой');hint.hidden=false;hint.textContent='B — удар ногой · C — ускорение · A — прыжок';nav.hidden=true;return;}if(c){c.dataset.ready=interact?'interact':'';c.setAttribute('aria-label',interact?'C: взаимодействовать':'C: крик');}
    const context=finish?'finish':interact?'interact':'';
    if(context&&context!==lastContext){hintUntil=elapsed+2.8;hintText=context==='finish'?'B — добить лежащего противника':'C — взаимодействовать';}lastContext=context;
    if(elapsed>=hintUntil&&settings.tutorial&&elapsed>2&&elapsed>=nextHint){
-    const lesson=!learned.move?['Левый круг — движение. До края — бег.',5]:!learned.double?['A, затем ещё A в воздухе — двойной прыжок.',6]:!learned.punch?[state.weaponStats?.selected==='bat'?'Короткие B — удары битой двумя руками, затем ногой.':'Короткие B — две рубки мечом, затем удар ногой.',6]:!learned.guitar?['Удерживай B — круговой удар гитарой.',6]:null;
+    const lesson=!learned.move?['Крестовина слева — движение. Справа — поворот камеры.',5]:!learned.double?['A, затем ещё A в воздухе — двойной прыжок.',6]:!learned.punch?[state.weaponStats?.selected==='bat'?'Короткие B — удары битой двумя руками, затем ногой.':'Короткие B — две рубки мечом, затем удар ногой.',6]:!learned.dodge?['A+B вместе — уклонение. Крестовина задаёт направление; без неё — назад.',7]:!learned.guitar?['Удерживай B — круговой удар гитарой.',6]:null;
     if(lesson){hintText=lesson[0];hintUntil=elapsed+lesson[1];nextHint=elapsed+22;}
    }
    hint.hidden=!(settings.tutorial&&elapsed<hintUntil)||!!state.dead||!!state.finale||state.won;hint.textContent=hintText;

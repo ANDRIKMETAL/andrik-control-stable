@@ -1,4 +1,4 @@
-import {blocked} from './portrait-core-r1295.js?v=r1459';
+import {blocked} from './portrait-core-r1295.js?v=r1460';
 export const WEAPON_KEY='andrik-lyra-weapons-r1458';
 export const WEAPONS={sword:{name:'Меч',costs:[3,5,8]},bat:{name:'Бейсбольная бита',costs:[3,5,8]}};
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,Math.floor(Number(v)||0))),d=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
@@ -23,9 +23,14 @@ export function attachWeaponry(s,{storage,saved,saveKey}={}){
  s.emit=function(type,data={}){base.emit(type,data);if(type==='smashR1301')dropCore('city-crate-'+data.x+':'+data.z,data);};
  s.load=function(...args){const result=base.load(...args);buildCrates();return result;};
  s.restore=function(data){restoring=true;try{const result=base.restore(data);buildCrates(data?.weaponCratesR1458||[]);if(Array.isArray(data?.weaponDropsR1458))for(const q of data.weaponDropsR1458.slice(0,30)){if(typeof q.id==='string'&&['x','y','z'].every(k=>Number.isFinite(q[k]))&&!record.claims.includes(claimKey(q.id))&&!s.weaponDrops.some(d=>d.id===q.id))s.weaponDrops.push({...q,taken:false});}return result;}finally{restoring=false;}};
+ s.damageWeaponCrate=function(id,damage,source='player'){
+  const q=s.weaponCrates.find(q=>q.id===id);if(!q||q.broken||!Number.isFinite(damage)||damage<=0)return false;
+  q.hp=Math.max(0,q.hp-damage);q.flash=.16;s.emit('weaponCacheHit',{x:q.x,y:q.y,z:q.z,source});
+  if(!q.hp){q.broken=true;s.geo.walls=s.geo.walls.filter(w=>w.weaponCrateId!==q.id);for(const f of s.geo.platforms)if(f.weaponCrateId===q.id){f.gone=true;for(const e of s.enemies){if(e.navJump?.node===f.node){e.navJump.to.y=q.y;e.navJump.node=f.supportNode;}if(e.navPlatform===f.node&&Math.abs((e.y||0)-f.h)<.25&&d(e,q)<1.6){e.y=e.homeY=q.y;e.navPlatform=f.supportNode;e.routeUntil=0;}}}if(s.routeLinks)s.routeLinks=s.routeLinks.filter(e=>!e.weaponCrate||s.geo.platforms[e.b]?.weaponCrateId!==q.id);dropCore(q.id,q);}return true;
+ };
  function strikeCrates(){const a=s.attack;if(!a||!['slash','attack','kick','punch','backfist'].includes(a.kind))return;const range=(s.growthStats?.bladeRange||2.85)+(stats.rangeBonus||0)+(stats.selected==='bat'?.25:0);a.weaponCrates??=new Set();
-  for(const q of s.weaponCrates){const len=d(q,s.p),dot=((q.x-s.p.x)*Math.sin(s.p.yaw)+(q.z-s.p.z)*Math.cos(s.p.yaw))/Math.max(.01,len);if(q.broken||a.weaponCrates.has(q.id)||len>range||Math.abs(q.y-s.p.y)>1.5||!a.bladeSpin&&dot<.05||blocked(s.p,q,s.geo.walls.filter(w=>w.weaponCrateId!==q.id)))continue;a.weaponCrates.add(q.id);q.hp=Math.max(0,q.hp-Math.round((stats.selected==='bat'?26:20)*stats.damage));q.flash=.16;s.emit('weaponCacheHit',{x:q.x,y:q.y,z:q.z});
-   if(!q.hp){q.broken=true;s.geo.walls=s.geo.walls.filter(w=>w.weaponCrateId!==q.id);for(const f of s.geo.platforms)if(f.weaponCrateId===q.id){f.gone=true;for(const e of s.enemies){if(e.navJump?.node===f.node){e.navJump.to.y=q.y;e.navJump.node=f.supportNode;}if(e.navPlatform===f.node&&Math.abs((e.y||0)-f.h)<.25&&d(e,q)<1.6){e.y=e.homeY=q.y;e.navPlatform=f.supportNode;e.routeUntil=0;}}}if(s.routeLinks)s.routeLinks=s.routeLinks.filter(e=>!e.weaponCrate||s.geo.platforms[e.b]?.weaponCrateId!==q.id);dropCore(q.id,q);}}
+  for(const q of s.weaponCrates){const len=d(q,s.p),dot=((q.x-s.p.x)*Math.sin(s.p.yaw)+(q.z-s.p.z)*Math.cos(s.p.yaw))/Math.max(.01,len);if(q.broken||a.weaponCrates.has(q.id)||len>range||Math.abs(q.y-s.p.y)>1.5||!a.bladeSpin&&dot<.05||blocked(s.p,q,s.geo.walls.filter(w=>w.weaponCrateId!==q.id)))continue;a.weaponCrates.add(q.id);s.damageWeaponCrate(q.id,Math.round((stats.selected==='bat'?26:20)*stats.damage));}
+
  }
  s.attackHit=function(){base.attackHit();strikeCrates();};
  s.update=function(dt,input){base.update(dt,input);if(s.dead||s.vehicleActive)return;for(const q of s.weaponCrates)q.flash=Math.max(0,q.flash-dt);for(const q of s.weaponDrops){if(q.taken||d(q,s.p)>1.5||Math.abs(q.y-s.p.y)>1.5)continue;const key=claimKey(q.id);q.taken=true;if(!record.claims.includes(key)){persist({...record,balance:Math.min(9999,record.balance+1),claims:[...record.claims,key].slice(-1000),revision:record.revision+1});s.emit('weaponBonus',{x:q.x,y:q.y,z:q.z});s.emit('notice',{text:'Оружейный бонус +1 · улучшения оружия доступны в паузе'});}}s.weaponDrops=s.weaponDrops.filter(q=>!q.taken);};
