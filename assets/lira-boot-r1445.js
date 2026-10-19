@@ -20,7 +20,7 @@ function handoff(){
  else if(!ready)text.textContent='Открываем миры Лиры…';
  if(!ready||!coverReady||portrait())return;
  panel.hidden=true;document.body.classList.remove('lira-loading');
- window.dispatchEvent(new Event('resize'));
+ window.dispatchEvent(new Event('resize'));window.dispatchEvent(new Event('lira-ready-r1471'));
 }
 function error(message){
  failed=true;panel.hidden=false;panel.dataset.phase='error';document.body.classList.add('lira-loading');
@@ -35,7 +35,7 @@ window.addEventListener('resize',handoff,{passive:true});
 window.addEventListener('orientationchange',handoff,{passive:true});
 if(cover){for(const event of ['load','error'])cover.addEventListener(event,()=>{coverReady=true;handoff();},{once:true});}
 const timer=setTimeout(()=>error('Загрузка занимает слишком долго. Проверь соединение и повтори запуск.'),25000);
-import('./lira-3d-r1308.js?v=r1468').then(()=>window.lira3DBootPromise).then(()=>{
+import('./lira-3d-r1308.js?v=r1471').then(()=>window.lira3DBootPromise).then(()=>{
  clearTimeout(timer);
  if(!document.body.classList.contains('lira3d'))throw Error('Игровое меню не загрузилось.');
  ready=true;failed=false;reason.hidden=true;retry.hidden=true;handoff();

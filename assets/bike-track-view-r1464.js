@@ -1,16 +1,21 @@
 import * as T from './vendor/three-r170.module.min.js';
-import {CHASE_LENGTH,CHASE_FENCE,CHASE_RAMPS,CHASE_POINTS,CHASE_HAZARDS,chaseCenter,chaseHeading} from './bike-chase-r1464.js?v=r1468';
+import {CHASE_LENGTH,CHASE_FENCE,CHASE_RAMPS,CHASE_POINTS,CHASE_HAZARDS,chaseCenter,chaseHeading} from './bike-chase-r1464.js?v=r1471';
+export function chaseBuildingX(z,side,width=10,depth=20){
+ // Axis-aligned facades must clear the WHOLE bend under their footprint.
+ const samples=[];for(let k=z-depth/2-5;k<=z+depth/2+5;k+=1)samples.push(chaseCenter(k));
+ return (side<0?Math.min(...samples):Math.max(...samples))+side*(9+width/2);
+}
 export function buildChaseTrack({group,mesh,material,geometries,materials,cityText,cityCar}){
  const asphalt=material('#172532',.65,.12),curb=material('#526e7a',.65,.35),gold=material('#f0c56c',.45,.3,.3),cyan=material('#69e8de',.3,.3,.65),dark=material('#101c29');
  function ribbon(name,left,right,y,mat){
-  const positions=[];for(let z=0;z<CHASE_LENGTH;z+=4){const next=Math.min(CHASE_LENGTH,z+4),a=chaseCenter(z),b=chaseCenter(next);positions.push(a+left,y,z,b+left,y,next,a+right,y,z,a+right,y,z,b+left,y,next,b+right,y,next);}
+  const positions=[];for(let z=0;z<CHASE_LENGTH+180;z+=4){const next=Math.min(CHASE_LENGTH+180,z+4),a=chaseCenter(z),b=chaseCenter(next);positions.push(a+left,y,z,b+left,y,next,a+right,y,z,a+right,y,z,b+left,y,next,b+right,y,next);}
   const geometry=new T.BufferGeometry();geometry.setAttribute('position',new T.Float32BufferAttribute(positions,3));geometry.computeVertexNormals();geometries.add(geometry);const road=new T.Mesh(geometry,mat);road.name=name;road.receiveShadow=true;road.userData.dynamic=true;group.add(road);return road;
  }
  ribbon('Chase-road',-6.5,6.5,0,asphalt);ribbon('Chase-left-edge',-6.6,-6.25,.025,gold);ribbon('Chase-right-edge',6.25,6.6,.025,gold);
  for(let z=0;z<CHASE_LENGTH;z+=8){const x=chaseCenter(z),yaw=chaseHeading(z);for(const side of [-1,1]){const rail=mesh(group,'box',curb,x+side*6.7,.43,z,.20,.76,8.2);rail.rotation.y=yaw;mesh(group,'box',cyan,x+side*6.84,.85,z,.05,.05,1.6);}const line=mesh(group,'box',gold,x,.025,z,.12,.025,2.8);line.rotation.y=yaw;}
  for(let z=24;z<1160;z+=32)for(const side of [-1,1]){
-  const x=chaseCenter(z),h=10+(z%5)*2;mesh(group,'box',material(side<0?'#263e50':'#303948'),x+side*19,h/2-1,z,10,h,20);
-  for(let y=2;y<h-2;y+=4)for(const dz of [-6,0,6])mesh(group,'box',material((z+y+dz)%3?'#1b3044':'#dbbc86',.7,.1,(z+y+dz)%3?0:.5),x+side*13.95,y,z+dz,.03,1.6,1.8);
+  const x=chaseCenter(z),bx=chaseBuildingX(z,side),h=10+(z%5)*2;const building=mesh(group,'box',material(side<0?'#263e50':'#303948'),bx,h/2-1,z,10,h,20);building.name='Chase-facade';building.userData.chaseFacade={z,side,x:bx,width:10,depth:20};
+  for(let y=2;y<h-2;y+=4)for(const dz of [-6,0,6])mesh(group,'box',material((z+y+dz)%3?'#1b3044':'#dbbc86',.7,.1,(z+y+dz)%3?0:.5),bx-side*5.04,y,z+dz,.03,1.6,1.8);
   const lamp=mesh(group,'cylinder',curb,x+side*7.6,3.2,z,.06,6.4,.06);const arm=mesh(group,'box',curb,x+side*7,6.3,z,1.2,.08,.1);mesh(group,'ball',cyan,x+side*6.45,6.18,z,.2,.06,.15);
  }
  for(const [i,[at,x]]of CHASE_POINTS.entries()){
@@ -30,7 +35,22 @@ export function buildChaseTrack({group,mesh,material,geometries,materials,cityTe
  for(let x=-10;x<10;x+=.23){const phase=x*8;lines.push(x,4.14+Math.sin(phase)*.22,.20*Math.cos(phase),x+.23,4.14+Math.sin(phase+1.84)*.22,.20*Math.cos(phase+1.84));if(Math.round(x*100)%3===0)lines.push(x-.1,4.4,0,x+.1,4.0,0);}
  const wireGeometry=new T.BufferGeometry();wireGeometry.setAttribute('position',new T.Float32BufferAttribute(lines,3));geometries.add(wireGeometry);const wireMat=new T.LineBasicMaterial({color:0xc0d3d9,transparent:true,opacity:.85});materials.add(wireMat);fence.add(new T.LineSegments(wireGeometry,wireMat));
  for(let x=-10;x<=10;x+=5){mesh(fence,'cylinder',curb,x,2.15,0,.07,4.3,.07);mesh(fence,'box',gold,x,3.8,0,.18,.13,.2);}
- cityText('NO WAY BACK',0,5.2,CHASE_FENCE,8,'#e9c682');cityText('FREEDOM',0,4.3,1248,7,'#7ef5de');
+ cityText('NO WAY BACK',0,5.2,CHASE_FENCE,8,'#e9c682');cityText('FREEDOM',0,5.7,1248,7,'#7ef5de');
  for(const side of [-1,1]){mesh(group,'box',dark,side*17,4,1238,15,8,38);for(let z=1226;z<1255;z+=7)mesh(group,'ball',cyan,side*7.2,.24,z,.10,.10,.10);}
+ for(let z=1260;z<1440;z+=8){
+  mesh(group,'box',gold,0,.025,z,.12,.025,2.8);
+  for(const side of [-1,1]){mesh(group,'box',curb,side*6.7,.43,z,.2,.76,8.2);if(z%24===12){mesh(group,'cylinder',curb,side*7.4,3.2,z,.06,6.4,.06);mesh(group,'ball',cyan,side*6.8,6.1,z,.18,.08,.18);}}
+ }
+ for(let z=1272;z<1440;z+=28)for(const side of [-1,1]){
+  const facade=mesh(group,'box',material(side<0?'#263e50':'#303948'),side*16,7,z,12,14,24);facade.name='Escape-street-facade';
+  for(const y of [3,6,9,12])for(const dz of [-7,0,7])mesh(group,'box',gold,side*9.98,y,z+dz,.025,1.25,1.2);
+ }
+ // Ground and sidewalks below every camera angle, rather than a floating slab.
+ const ground=mesh(group,'box',dark,0,-.65,1320,150,1.2,270);ground.name='Escape-city-ground';
+ for(const side of [-1,1])mesh(group,'box',curb,side*8.4,.06,1320,3.1,.12,240);
+ const gallery=1380;for(const side of [-1,1])mesh(group,'box',material('#293448'),side*12,5,gallery,16,10,3);
+ mesh(group,'box',material('#293448'),0,8,gallery,8,4,3);mesh(group,'box',cyan,0,5.9,gallery-1.56,6.8,.12,.08);
+ for(const side of [-1,1])mesh(group,'box',cyan,side*3.4,2.9,gallery-1.56,.12,5.8,.08);
+ cityText('GALLERY · PORTRAIT',0,7.4,gallery-1.6,9,'#d9d0ec');
  return fence;
 }

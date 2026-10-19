@@ -1,11 +1,11 @@
-import {crowdApproach} from './combat-feel-r1467.js?v=r1468';
-import {blocked,move} from './portrait-core-r1295.js?v=r1468';
+import {crowdApproach} from './combat-feel-r1467.js?v=r1471';
+import {blocked,move} from './portrait-core-r1295.js?v=r1471';
 import {attackSlot} from './encounters-r1448.js?v=r1448';
-import {downedEnemyR1447} from './combat-r1447.js?v=r1468';
-import {enemyRouteDirection} from './enemy-navigation-r1446.js?v=r1468';
-import {routeFloor,navigateRoute,tickRouteJump} from './world-route-r1457.js?v=r1468';
-import {isMirrorDuel,updateMirrorDuel,mirrorParry} from './mirror-duel-r1463.js?v=r1468';
-import {navigateCityEnemy,tickCityJump,settleCityEnemy,keepCitySupport} from './city-pursuit-r1463.js?v=r1468';
+import {downedEnemyR1447} from './combat-r1447.js?v=r1471';
+import {enemyRouteDirection} from './enemy-navigation-r1446.js?v=r1471';
+import {routeFloor,navigateRoute,tickRouteJump} from './world-route-r1457.js?v=r1471';
+import {isMirrorDuel,updateMirrorDuel,mirrorParry} from './mirror-duel-r1463.js?v=r1471';
+import {navigateCityEnemy,tickCityJump,settleCityEnemy,keepCitySupport} from './city-pursuit-r1463.js?v=r1471';
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z),roles=['guard','fast','shooter','heavy','duelist'];
 const angle=(a,b)=>Math.atan2(b.x-a.x,b.z-a.z),turn=(a,b,n)=>a+clamp(Math.atan2(Math.sin(b-a),Math.cos(b-a)),-n,n);
 export const TACTIC_NAMES={guard:'Щитоносец',fast:'Обходчик',shooter:'Стрелок',heavy:'Тяжёлый',duelist:'Зеркальная Лира'};

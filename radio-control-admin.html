@@ -418,7 +418,7 @@ finally{busy=false;mp3Btn.disabled=false}
 })();
 </script>
 
-<!-- R1219: inventory has one canonical writer in radio-remote-control-r926.js --><script defer src="/assets/radio-load-r988.js?v=55.00-r1126"></script><script defer src="/assets/radio-media-picker-r989.js?v=55.00-r1181"></script><script defer src="/assets/radio-queue-r943.js?v=55.00-r1219"></script><script defer src="/assets/radio-audio-sync-r973.js?v=55.00-r973"></script>
+<!-- R1219: inventory has one canonical writer in radio-remote-control-r926.js --><script defer src="/assets/radio-load-r988.js?v=55.00-r1126"></script><script defer src="/assets/radio-media-picker-r989.js?v=55.00-r1181"></script><script defer src="/assets/radio-queue-r943.js?v=55.00-r1470"></script><script defer src="/assets/radio-audio-sync-r973.js?v=55.00-r973"></script>
 <script id="server-zip-r1262">(()=>{'use strict';
 const $=id=>document.getElementById(id),fileEl=$('serverZipFileR1258'),uploadBtn=$('serverZipUploadR1258'),bar=$('serverZipBarR1258'),msg=$('serverZipMsgR1258'),list=$('serverZipListR1258'),state=$('serverZipStateR1258'),cmdBox=$('serverZipCmdR1258'),archiveCount=$('serverZipArchiveCountR1262');if(!fileEl||!uploadBtn)return;
 const API='/api/control/radio-server-zips-r1258';let rows=[],busy=false;const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));const fmt=n=>{n=Number(n)||0;if(n<1024)return n+' Б';if(n<1024**2)return(n/1024).toFixed(1)+' КБ';return(n/1024**2).toFixed(n>=100*1024**2?0:1)+' МБ'};const date=v=>{try{return new Intl.DateTimeFormat('ru-RU',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}).format(new Date(v))}catch(_){return String(v||'')}};

@@ -1,4 +1,4 @@
-import {updateBikeCombat} from './bike-combat-r1458.js?v=r1468';
+import {updateBikeCombat} from './bike-combat-r1458.js?v=r1471';
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),smooth=t=>t*t*(3-2*t);
 export const CHASE_LENGTH=1260,CHASE_FENCE=1218,CHASE_FINISH=1256;
 export const CHASE_POINTS=[[0,0],[90,0],[125,28],[200,28],[242,-26],[320,-26],[358,32],[445,32],[490,-30],[585,-30],[630,26],[715,26],[757,-32],[850,-32],[900,24],[990,24],[1040,-16],[1128,-16],[1162,0],[1260,0]];

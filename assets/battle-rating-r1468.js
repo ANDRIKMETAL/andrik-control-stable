@@ -1,5 +1,5 @@
 // Local battle style and world records. Never grants currency or changes old score/save keys.
-import {blocked} from './portrait-core-r1295.js?v=r1468';
+import {blocked} from './portrait-core-r1295.js?v=r1471';
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),num=(v,max=9999999)=>clamp(Number(v)||0,0,max),dist=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 export const RANKS=['C','B','A','S'];
 export const RANK_COLORS={C:'#a9bfd2',B:'#6ce6d3',A:'#bb9bff',S:'#f8d68b'};
@@ -12,7 +12,7 @@ function normalize(raw){const q=empty();if(raw?.version!==1)return q;for(const k
 function attackTag(s,a){
  if(!a)return{key:'reflection',label:'Отражение',gain:13};
  if(a.kind==='slash')return{key:(s.weaponStats?.selected||'sword')+':'+(a.step||0),label:a.step===2?'Круговая рубка':s.weaponStats?.selected==='bat'?'Размашистый удар':'Рубка мечом',gain:13};
- const labels={kick:'Удар ногой',palm:'Ладонь',airKick:'Нога в прыжке',meteor:'Рубка в прыжке',attack:'Круговая гитара',scream:'Голос Лиры',rage:'Яростная серия',finish:'Добивание',punch:'Удар рукой',backfist:'С разворота'};
+ const labels={throw:'Меткий бросок',kick:'Удар ногой',palm:'Ладонь',airKick:'Нога в прыжке',meteor:'Рубка в прыжке',attack:'Круговая гитара',scream:'Голос Лиры',rage:'Яростная серия',finish:'Добивание',punch:'Удар рукой',backfist:'С разворота'};
  return{key:a.kind,label:labels[a.kind]||'Попадание',gain:a.kind==='finish'?23:a.kind==='rage'?16:14};
 }
 export function attachBattleRating(s,{storage=memoryDefault(),saved=null}={}){
@@ -52,7 +52,7 @@ export function attachBattleRating(s,{storage=memoryDefault(),saved=null}={}){
     const targeted=['leap','tentacle','tentaclePair','lattice'].includes(a.kind),d=dist(targeted?a.target:e,s.p);if(d<(targeted?a.range>9?3.5:a.range:Math.min(5,a.range+1)))list.push({ref:a,wind:a.wind,t:a.t});
    }
   }
-  for(const q of s.shots){if(q.life<=0||q.friendly||dist(q,s.p)>4||Math.abs((q.y||0)-s.p.y)>1.5)continue;const vx=q.vx||0,vz=q.vz||0,dot=(s.p.x-q.x)*vx+(s.p.z-q.z)*vz;if(dot<=0)continue;const hit=dot/Math.max(1,vx*vx+vz*vz),cross=Math.hypot(q.x+vx*hit-s.p.x,q.z+vz*hit-s.p.z);if(hit<.35&&cross<.9)list.push({ref:q,shot:true});}
+  for(const q of [...s.shots,...(s.throwables?.flights||[])]){if(q.life<=0||q.friendly||dist(q,s.p)>4||Math.abs((q.y||0)-s.p.y)>1.5)continue;const vx=q.vx||0,vz=q.vz||0,dot=(s.p.x-q.x)*vx+(s.p.z-q.z)*vz;if(dot<=0)continue;const hit=dot/Math.max(1,vx*vx+vz*vz),cross=Math.hypot(q.x+vx*hit-s.p.x,q.z+vz*hit-s.p.z);if(hit<.35&&cross<.9)list.push({ref:q,shot:true});}
   return list.filter(q=>dodged.get(q.ref)!==(q.stamp||0));
  }
  s.action=function(kind){const risks=['dodge','dash'].includes(kind)&&eligible()?danger():[],before=s.dodge1460,hp=s.p.hp,p={x:s.p.x,z:s.p.z};const result=base.action(kind);

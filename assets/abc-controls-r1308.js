@@ -1,4 +1,4 @@
-import {comboSequence} from './power-combat-r1466.js?v=r1468';
+import {comboSequence} from './power-combat-r1466.js?v=r1471';
 // Shared three-button input. Combat queue is bounded; holds never also punch.
 export const abcMarkup=`<style>
 .pt-actions:has([data-abc]),[id="world1306"] .actions:has([data-abc]){
@@ -33,14 +33,14 @@ export function createABC(state){
  const onFoot=()=>!state.vehicleActive&&!riding();
  function submit(kind,now){if(state.dead||state.won||state.finale)return;if(!state.attack){state.action(kind);}else if(queue.length<2)queue.push({kind,expires:now+650});}
  function rage(){if(!onFoot()||!state.action('rage'))return false;chord=true;queue=[];step=0;if(held)held.fired=true;if(pressC)pressC.fired=true;return true;}
- function fireC(){if(pressC&&!pressC.fired){pressC.fired=true;state.action(state.canInteract?'interact':'scream');}}
+ function fireC(){if(pressC&&!pressC.fired){pressC.fired=true;state.action(state.throwables?'contextC':state.canInteract?'interact':'scream');}}
  function dodge(){chord=true;queue=[];step=0;if(held)held.fired=true;if(pressA)pressA.fired=true;state.action('dodge');}
  return {reset,down(button,now){
   if(button==='A'){
    // Brief chord window prevents A+B from also starting a jump or a weapon swing.
    if(!onFoot()){state.action('jump');return;}if(pressA)return;
    pressA={at:now,fired:false};if(held&&!held.fired&&now-held.at<=100)dodge();
-  }else if(button==='C'){if(!onFoot()||!state.powerCombat?.rageReady){state.action(state.canInteract?'interact':'scream');return;}if(pressC)return;pressC={at:now,fired:false};if(held&&!held.fired&&now-held.at<=120)rage();}
+  }else if(button==='C'){if(!onFoot()||!state.powerCombat?.rageReady){state.action(state.throwables?'contextC':state.canInteract?'interact':'scream');return;}if(pressC)return;pressC={at:now,fired:false};if(held&&!held.fired&&now-held.at<=120)rage();}
   else if(button==='B'&&!held){held={at:now,fired:false};if(state.vehicleActive){state.action('vehicleFireStart');held.fired=true;}else if(riding()){state.action('rideKick');held.fired=true;}else if(pressC&&!pressC.fired&&now-pressC.at<=120&&rage()){}else if(pressA&&!pressA.fired&&now-pressA.at<=100)dodge();}
  },up(button,now){
   if(button==='C'){if(pressC&&!chord)fireC();pressC=null;if(!held)chord=false;return;}

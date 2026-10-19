@@ -1,7 +1,7 @@
-import {constrainBikeChase} from './bike-chase-r1464.js?v=r1468';
+import {constrainBikeChase} from './bike-chase-r1464.js?v=r1471';
 /* R1445 — keep the streets inside their visible play area, including old saves. */
-import {CityState as PreviousCityState,roadCenter} from './city-core-r1308.js?v=r1468';
-export {CITY_SAVE,CITY_ZONES,roadCenter,RACE_HAZARDS,cityGeometry} from './city-core-r1308.js?v=r1468';
+import {CityState as PreviousCityState,roadCenter} from './city-core-r1308.js?v=r1471';
+export {CITY_SAVE,CITY_ZONES,roadCenter,RACE_HAZARDS,cityGeometry} from './city-core-r1308.js?v=r1471';
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 export function cityPlayBounds(zone,length,z=3,mounted=false){
  const minZ=.65,maxZ=length-1.65,safeZ=clamp(Number.isFinite(z)?z:3,minZ,maxZ);

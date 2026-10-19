@@ -1,5 +1,5 @@
 import * as T from './vendor/three-r170.module.min.js';
-import {momentSpec,streetLamps} from './world-moments-r1466.js?v=r1468';
+import {momentSpec,streetLamps} from './world-moments-r1466.js?v=r1471';
 const clamp=T.MathUtils.clamp,smooth=x=>{x=clamp(x,0,1);return x*x*(3-2*x);};
 export function atmosphereKit(geometries,materials,textures,assets){
  const {shape}=assets,box=shape.box,ball=shape.ball;

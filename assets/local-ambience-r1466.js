@@ -1,4 +1,4 @@
-import {worldKey,momentSpec} from './world-moments-r1466.js?v=r1468';
+import {worldKey,momentSpec} from './world-moments-r1466.js?v=r1471';
 // Short, distance-attenuated local sounds. No audio downloads or endless loops.
 export function createLocalAmbience(getContext,getVolume,signal){
  const playing=new Set();let owner=null,buffer=null,clock=0,next=2.8,serial=0,dead=false,lastYaw=0;
