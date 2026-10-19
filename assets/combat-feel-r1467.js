@@ -1,4 +1,4 @@
-import {blocked,move} from './portrait-core-r1295.js?v=r1471';
+import {blocked,move} from './portrait-core-r1295.js?v=r1472';
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n)),dist=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z),wrap=a=>Math.atan2(Math.sin(a),Math.cos(a));
 const linkable=new Set(['slash','kick','palm','airKick','meteor']);
 function floor(s,p,margin=.42){return s.geo.platforms.find(f=>!f.gone&&!f.objectTop&&!f.weaponCrate&&Math.abs(p.x-f.x)<f.w/2-margin&&Math.abs(p.z-f.z)<f.d/2-margin&&Math.abs((p.y||0)-f.h)<.32);}

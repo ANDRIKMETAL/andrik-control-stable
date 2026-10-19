@@ -1,13 +1,14 @@
-import {attachLedgeGrab} from './ledge-grab-r1471.js?v=r1471';
-import {attachThrowables} from './throwables-r1471.js?v=r1471';
-import {attachBossStyles} from './boss-styles-r1468.js?v=r1471';
-import {attachBattleRating} from './battle-rating-r1468.js?v=r1471';
-import {attachCombatFeel} from './combat-feel-r1467.js?v=r1471';
-import {attachWorldMoments} from './world-moments-r1466.js?v=r1471';
-import {attachPowerCombat} from './power-combat-r1466.js?v=r1471';
-import {attachNarration} from './story-lines-r1461.js?v=r1471';
-import {attachWeaponry} from './weaponry-r1458.js?v=r1471';
-import {attachTactics} from './tactics-core-r1460.js?v=r1471';
+import {attachAirMobility} from './air-mobility-r1472.js?v=r1472';
+import {attachLedgeGrab} from './ledge-grab-r1471.js?v=r1472';
+import {attachThrowables} from './throwables-r1471.js?v=r1472';
+import {attachBossStyles} from './boss-styles-r1468.js?v=r1472';
+import {attachBattleRating} from './battle-rating-r1468.js?v=r1472';
+import {attachCombatFeel} from './combat-feel-r1467.js?v=r1472';
+import {attachWorldMoments} from './world-moments-r1466.js?v=r1472';
+import {attachPowerCombat} from './power-combat-r1466.js?v=r1472';
+import {attachNarration} from './story-lines-r1461.js?v=r1472';
+import {attachWeaponry} from './weaponry-r1458.js?v=r1472';
+import {attachTactics} from './tactics-core-r1460.js?v=r1472';
 export const GROWTH_KEY='andrik-lyra-growth-r1449';
 export const SAVE_KEYS=['andrik-city-3d-r1289','andrik-portrait-r1280','andrik-ruins-3d-r1285',...['2','3','4','5'].map(id=>'andrik-world-'+id+'-r1306')];
 const number=(v,a,b)=>Math.max(a,Math.min(b,Math.floor(Number(v)||0)));
@@ -79,5 +80,5 @@ export function attachGrowth(state,{saveKey,saved=null,storage=storageDefault()}
    state.emit('upgradeBought',{upgrade:id,level:level+1});return {ok:true,message:item.name+' · уровень '+(level+1)+' сохранён.'};
   }};
  const combat=attachCombatFeel(attachPowerCombat(attachWorldMoments(attachNarration(attachTactics(attachWeaponry(state,{storage,saved,saveKey}),{saved}),{saved}),{saved}),{saved}));
- return attachLedgeGrab(attachThrowables(attachBattleRating(attachBossStyles(combat),{storage,saved}),{saved}));
+ return attachAirMobility(attachLedgeGrab(attachThrowables(attachBattleRating(attachBossStyles(combat),{storage,saved}),{saved})));
 }

@@ -1,8 +1,8 @@
-import {posePowerCombat} from './power-poses-r1466.js?v=r1471';
-import {poseBat} from './weapon-view-r1458.js?v=r1471';
+import {posePowerCombat} from './power-poses-r1466.js?v=r1472';
+import {poseBat} from './weapon-view-r1458.js?v=r1472';
 import * as T from './vendor/three-r170.module.min.js';
-import {poseBlade} from './lyra-blade-r1455.js?v=r1471';
-import {createCharacter,poseCharacterSurface,trackCharacter} from './lyra-character-r1465.js?v=r1471';
+import {poseBlade} from './lyra-blade-r1455.js?v=r1472';
+import {createCharacter,poseCharacterSurface,trackCharacter} from './lyra-character-r1465.js?v=r1472';
 export const createLyra=createCharacter;
 export const trackLyra=trackCharacter;
 const smooth=x=>{x=T.MathUtils.clamp(x,0,1);return x*x*(3-2*x);};
@@ -17,7 +17,7 @@ function handAt(limb,target,side){
 }
 export function poseGuitar(root,attack,combo,time,running,weapon=null){
  const u=root.userData,g=u.guitar,active=attack?.kind==='attack',punch=attack?.kind==='punch';
- for(const l of u.limbs){l.hand.scale.setScalar(1);l.foot.scale.setScalar(1);const closed=active||attack?.kind==='slash'||weapon?.selected==='bat'&&!['attack','scream','finish'].includes(attack?.kind)||punch||attack?.kind==='backfist'||attack?.kind==='finish';for(const f of l.hand.userData.fingers){f.position.y=closed?-.021:-.032;f.position.z=closed?.028:.01;f.scale.y=closed?.011:.023;}}
+ for(const l of u.limbs){l.hand.scale.setScalar(1);l.foot.scale.setScalar(1);const closed=active||['slash','airCleave'].includes(attack?.kind)||weapon?.selected==='bat'&&!['attack','scream','finish'].includes(attack?.kind)||punch||attack?.kind==='backfist'||attack?.kind==='finish';for(const f of l.hand.userData.fingers){f.position.y=closed?-.021:-.032;f.position.z=closed?.028:.01;f.scale.y=closed?.011:.023;}}
  // Grip pose returns smoothly after both attacks. Body and legs remain free to move.
  const rest=new T.Vector3(.10,1.46,-.175),p=active?T.MathUtils.clamp(attack.t/attack.duration,0,1):0;
  g.position.copy(rest);g.rotation.set(.10,0,-.38);

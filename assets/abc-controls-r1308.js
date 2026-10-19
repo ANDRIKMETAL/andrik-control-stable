@@ -1,4 +1,4 @@
-import {comboSequence} from './power-combat-r1466.js?v=r1471';
+import {comboSequence} from './power-combat-r1466.js?v=r1472';
 // Shared three-button input. Combat queue is bounded; holds never also punch.
 export const abcMarkup=`<style>
 .pt-actions:has([data-abc]),[id="world1306"] .actions:has([data-abc]){

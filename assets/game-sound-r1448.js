@@ -18,7 +18,7 @@ export function createGameSound(getContext,getVolume){
    const wood=!state.isCity&&(state.isRuins||state.world===2),metal=state.world===3||state.world===4;
    hiss(.055,wood?.12:.075,metal?3100:wood?1100:650);source(metal?460:wood?150:75,.075,.04,'triangle',metal?300:50);
   }else if(e.type==='hit'){
-   const kick=e.kind==='kick',guitar=e.kind==='attack',blade=e.kind==='slash',bat=blade&&state.weaponStats?.selected==='bat';source(bat?95:blade?380:kick?85:guitar?165:120,kick?.17:.10,kick?.19:.13,'triangle',bat?45:blade?190:42);hiss(bat?.12:.075,bat?.20:.15,bat?1200:blade?4200:guitar?2900:1700);
+   const kick=e.kind==='kick',guitar=e.kind==='attack',blade=['slash','airCleave'].includes(e.kind),bat=blade&&state.weaponStats?.selected==='bat';source(bat?95:blade?380:kick?85:guitar?165:120,kick?.17:.10,kick?.19:.13,'triangle',bat?45:blade?190:42);hiss(bat?.12:.075,bat?.20:.15,bat?1200:blade?4200:guitar?2900:1700);
    if(guitar){source(220,.28,.065,'sawtooth',110);source(330,.24,.035,'triangle',165);}
   }else if(e.type==='swing')hiss(e.kind==='kick'?.18:state.weaponStats?.selected==='bat'?.18:.12,e.kind==='slash'?.085:.06,e.kind==='slash'&&state.weaponStats?.selected==='bat'?1700:e.kind==='slash'?3100:e.kind==='attack'?1900:900);
   else if(e.type==='dodge'){hiss(.18,.10,2300);source(190,.15,.04,'triangle',80);}

@@ -13,8 +13,8 @@ const css=`
 #liraMenu .game1471-share{top:0;right:0}
 #liraMenu .lira3d-menu-panel>.lira3d-brand{padding-right:52px;box-sizing:border-box}
 `;
-export function createGameShare(host,{signal,origin,nav=globalThis.navigator}={}){
- if(!host||host.querySelector('.game1471-share'))return;host.classList.add('game1471-share-host');
+export function createGameShare(host,{signal,origin,nav=globalThis.navigator,screen=false}={}){
+ if(!host||host.querySelector('.game1471-share'))return;if(!screen)host.classList.add('game1471-share-host');
  const style=document.createElement('style');style.textContent=css;host.append(style);
  const wrap=document.createElement('div');wrap.className='game1471-share';const button=document.createElement('button');button.type='button';button.title='Поделиться игрой';button.setAttribute('aria-label','Поделиться игрой');button.setAttribute('aria-expanded','false');button.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="3"/><circle cx="18" cy="5" r="3"/><circle cx="18" cy="19" r="3"/><path d="M7.7 10.5l7.6-4M7.7 13.5l7.6 4"/></svg>';
  const menu=document.createElement('div');menu.className='game1471-share-menu';menu.hidden=true;menu.setAttribute('aria-label','Поделиться прямой ссылкой');

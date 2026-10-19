@@ -1,4 +1,4 @@
-import {UPGRADES} from './lyra-growth-r1449.js?v=r1471';
+import {UPGRADES} from './lyra-growth-r1449.js?v=r1472';
 export function createGrowthUI(root,state,{signal,isPaused,onSave=()=>{}}){
  if(!state.growth)return ()=>{};state.growth.bindPause(isPaused);
  const card=root.querySelector('.pt-card')||root.querySelector('.card'),panel=document.createElement('details');panel.className='growth1449';panel.open=true;

@@ -1,4 +1,4 @@
-import {move} from './portrait-core-r1295.js?v=r1471';
+import {move} from './portrait-core-r1295.js?v=r1472';
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),smooth=t=>{t=clamp(t,0,1);return t*t*(3-2*t);};
 function usable(f){return !f.gone&&!f.weaponCrate&&!f.objectTop&&f.w>1.3&&f.d>1.3;}
 function clearTop(s,f,x,z){const probe={x,y:f.h+.04,z};move(probe,0,0,s.geo.walls,.28);return Math.hypot(probe.x-x,probe.z-z)<.035;}

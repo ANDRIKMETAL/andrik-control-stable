@@ -1,5 +1,5 @@
 import * as T from './vendor/three-r170.module.min.js';
-import {CHASE_LENGTH,CHASE_FENCE,CHASE_RAMPS,CHASE_POINTS,CHASE_HAZARDS,chaseCenter,chaseHeading} from './bike-chase-r1464.js?v=r1471';
+import {CHASE_LENGTH,CHASE_FENCE,CHASE_RAMPS,CHASE_POINTS,CHASE_HAZARDS,chaseCenter,chaseHeading} from './bike-chase-r1464.js?v=r1472';
 export function chaseBuildingX(z,side,width=10,depth=20){
  // Axis-aligned facades must clear the WHOLE bend under their footprint.
  const samples=[];for(let k=z-depth/2-5;k<=z+depth/2+5;k+=1)samples.push(chaseCenter(k));

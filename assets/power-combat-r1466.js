@@ -1,4 +1,4 @@
-import {blocked} from './portrait-core-r1295.js?v=r1471';
+import {blocked} from './portrait-core-r1295.js?v=r1472';
 import {bossDamage,modernBoss} from './encounters-r1448.js?v=r1448';
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z),clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 export function comboSequence(s){const n=s.growthStats?.comboLevel||0;return ['slash','slashReverse','kick','slashSpin','palm','airKick','meteor'].slice(0,n>=6?7:n>=5?6:n>=4?5:n>0?4:3);}

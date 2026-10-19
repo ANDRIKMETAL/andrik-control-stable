@@ -1,6 +1,6 @@
 import * as T from './vendor/three-r170.module.min.js';
-import {addBlade} from './lyra-blade-r1455.js?v=r1471';
-import {createBat} from './weapon-view-r1458.js?v=r1471';
+import {addBlade} from './lyra-blade-r1455.js?v=r1472';
+import {createBat} from './weapon-view-r1458.js?v=r1472';
 
 const clamp=T.MathUtils.clamp;
 const smooth=x=>{x=clamp(x,0,1);return x*x*(3-2*x);};

@@ -9,6 +9,11 @@ function handAt(l,target,side){
 }
 export function poseTraversalAndThrow(hero,s){
  const u=hero.userData,h=s.traversal?.ledge,a=s.throwables?.pose,held=s.throwables?.held;if(!u?.limbs)return;
+ const kick=s.airMobility?.kick;if(kick&&!h&&!s.attack){
+  const q=clamp(kick.t/kick.duration,0,1),push=Math.sin(q*Math.PI),side=kick.x*Math.cos(s.p.yaw)-kick.z*Math.sin(s.p.yaw),forward=kick.x*Math.sin(s.p.yaw)+kick.z*Math.cos(s.p.yaw);
+  u.body.rotation.z=-side*.22*push;u.body.rotation.x=-forward*.20*push;
+  const leg=u.limbs[side>0?0:1],other=u.limbs[side>0?1:0];leg.leg.rotation.set(-forward*.65*push,0,-side*.55*push);leg.shin.rotation.x=.55*(1-q);other.leg.rotation.x=-.40*push;other.shin.rotation.x=.85*push;
+ }
  if(!h&&!a&&(!held||s.attack))return;
  for(const key of ['bat','batTrail','blade','bladeTrace','microphone'])if(u[key])u[key].visible=false;
  if(h){

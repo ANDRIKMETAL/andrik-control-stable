@@ -1,5 +1,5 @@
-import {move} from './portrait-core-r1295.js?v=r1471';
-import {enemyRouteDirection} from './enemy-navigation-r1446.js?v=r1471';
+import {move} from './portrait-core-r1295.js?v=r1472';
+import {enemyRouteDirection} from './enemy-navigation-r1446.js?v=r1472';
 const plans=new WeakMap(),jumps=new WeakMap();
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 const inside=(f,p,m=.12)=>!f.gone&&Math.abs(p.x-f.x)<f.w/2-m&&Math.abs(p.z-f.z)<f.d/2-m;

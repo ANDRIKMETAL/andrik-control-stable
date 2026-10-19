@@ -1,14 +1,14 @@
-import {addStartBoundary} from './start-boundaries-r1467.js?v=r1471';
-import {towerRayHit,resolveTowerWall} from './tower-entry-r1459.js?v=r1471';
+import {addStartBoundary} from './start-boundaries-r1467.js?v=r1472';
+import {towerRayHit,resolveTowerWall} from './tower-entry-r1459.js?v=r1472';
 import {attackSlot,facesTarget,waitForAttack,modernBoss,bossDamage,updateArenaBoss,legacyArenaBoss} from './encounters-r1448.js?v=r1448';
-import {installCombatR1447} from './combat-r1447.js?v=r1471';
-import {enemyRouteDirection} from './enemy-navigation-r1446.js?v=r1471';
+import {installCombatR1447} from './combat-r1447.js?v=r1472';
+import {enemyRouteDirection} from './enemy-navigation-r1446.js?v=r1472';
 export const ORDER=[1,2,'portrait',3,4,6,5],SAVE='andrik-portrait-r1280';
 export const ZONES=['Коридор портретов','Зал масок','Зеркальный лабиринт','Разрушенная башня','Пустой портрет'];
 export const HP={mask:50,shadow:35,statue:110,double:100,dog:34,diver:46,robot:58,astronaut:44,drone:28,boss:1000};
 export const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
-export function blocked(a,b,walls){for(const w of walls){if(w.towerRing){if(towerRayHit({x:a.x,y:(a.y||0)+1.05,z:a.z},{x:b.x,y:(b.y||0)+1.05,z:b.z},w)!==null)return true;continue;}if(Number.isFinite(w.base)&&Math.max(a.y||0,b.y||0)+1.78<w.base)continue;if(Math.min(a.y||0,b.y||0)>=w.h-.025)continue;let lo=0,hi=1;for(const k of ['x','z']){const d=b[k]-a[k],min=w[k]-w[k==='x'?'w':'d']/2,max=w[k]+w[k==='x'?'w':'d']/2;if(Math.abs(d)<1e-8){if(a[k]<min||a[k]>max){lo=2;break;}}else{let t=(min-a[k])/d,u=(max-a[k])/d;if(t>u)[t,u]=[u,t];lo=Math.max(lo,t);hi=Math.min(hi,u);}}if(lo<=hi&&hi>=0&&lo<=1)return true;}return false;}
+export function blocked(a,b,walls){for(const w of walls){if(w.towerRing){if(towerRayHit({x:a.x,y:(a.y||0)+1.05,z:a.z},{x:b.x,y:(b.y||0)+1.05,z:b.z},w)!==null)return true;continue;}if(Number.isFinite(w.base)&&Math.max(a.y||0,b.y||0)+1.78<w.base)continue;if(Math.min(a.y||0,b.y||0)>=w.h-.025)continue;if(w.roundSolid){const dx=b.x-a.x,dz=b.z-a.z,t=clamp(((w.x-a.x)*dx+(w.z-a.z)*dz)/Math.max(1e-12,dx*dx+dz*dz),0,1);if(Math.hypot(a.x+dx*t-w.x,a.z+dz*t-w.z)<=w.radius)return true;continue;}let lo=0,hi=1;for(const k of ['x','z']){const d=b[k]-a[k],min=w[k]-w[k==='x'?'w':'d']/2,max=w[k]+w[k==='x'?'w':'d']/2;if(Math.abs(d)<1e-8){if(a[k]<min||a[k]>max){lo=2;break;}}else{let t=(min-a[k])/d,u=(max-a[k])/d;if(t>u)[t,u]=[u,t];lo=Math.max(lo,t);hi=Math.min(hi,u);}}if(lo<=hi&&hi>=0&&lo<=1)return true;}return false;}
 export function move(p,dx,dz,walls,r=.4){
  const eps=1e-6,old={x:p.x,y:p.y||0,z:p.z};
  if(!Number.isFinite(p.x)||!Number.isFinite(p.z))return;
@@ -19,6 +19,7 @@ export function move(p,dx,dz,walls,r=.4){
   if(w.towerRing)continue;
   if(Number.isFinite(w.base)&&(p.y||0)+1.78<w.base)continue;
    if((p.y||0)>=w.h-.025)continue;
+   if(w.roundSolid){const x=p.x-w.x,z=p.z-w.z,len=Math.hypot(x,z),limit=w.radius+r;if(len<limit-eps){const nx=len>eps?x/len:1,nz=len>eps?z/len:0;p.x=w.x+nx*(limit+eps);p.z=w.z+nz*(limit+eps);corrected=true;}continue;}
    const lx=w.x-w.w/2,hx=w.x+w.w/2,lz=w.z-w.d/2,hz=w.z+w.d/2;
    const x=p.x-clamp(p.x,lx,hx),z=p.z-clamp(p.z,lz,hz),length=Math.hypot(x,z);
    if(length>=r-eps)continue;
@@ -41,6 +42,7 @@ export function move(p,dx,dz,walls,r=.4){
   if(w.towerRing)continue;
   if(Number.isFinite(w.base)&&(p.y||0)+1.78<w.base)continue;
    if((p.y||0)>=w.h-.025)continue;
+   if(w.roundSolid){const gap=Math.abs(p[other]-w[other]),radius=w.radius+r;if(gap>=radius-eps)continue;const edge=Math.sqrt(Math.max(0,radius*radius-gap*gap)),lo=w[key]-edge,hi=w[key]+edge;if(delta>0&&start<=lo+eps&&end>lo)end=Math.min(end,lo);else if(delta<0&&start>=hi-eps&&end<hi)end=Math.max(end,hi);continue;}
    const gap=Math.max(w[other]-w[crossSize]/2-p[other],0,p[other]-w[other]-w[crossSize]/2);
    if(gap>=r-eps)continue;
    const edge=Math.sqrt(Math.max(0,r*r-gap*gap));

@@ -1,7 +1,7 @@
 // Seven encounter personalities. Simulation time only; no timers, random rolls or new summons.
-import {enemyRouteDirection} from './enemy-navigation-r1446.js?v=r1471';
-import {move,blocked} from './portrait-core-r1295.js?v=r1471';
-import {knockPlayer,updatePlayerImpact} from './player-impact-r1457.js?v=r1471';
+import {enemyRouteDirection} from './enemy-navigation-r1446.js?v=r1472';
+import {move,blocked} from './portrait-core-r1295.js?v=r1472';
+import {knockPlayer,updatePlayerImpact} from './player-impact-r1457.js?v=r1472';
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),dist=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z),angle=(a,b)=>Math.atan2(b.x-a.x,b.z-a.z);
 export const BOSS_STYLES={
  city:{name:'Ночной надзиратель',speed:3.5,range:2.8,evade:5.4,patterns:['combo','charge','kick','leap','cross','spin']},

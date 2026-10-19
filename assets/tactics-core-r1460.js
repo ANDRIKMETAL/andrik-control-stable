@@ -1,11 +1,11 @@
-import {crowdApproach} from './combat-feel-r1467.js?v=r1471';
-import {blocked,move} from './portrait-core-r1295.js?v=r1471';
+import {crowdApproach} from './combat-feel-r1467.js?v=r1472';
+import {blocked,move} from './portrait-core-r1295.js?v=r1472';
 import {attackSlot} from './encounters-r1448.js?v=r1448';
-import {downedEnemyR1447} from './combat-r1447.js?v=r1471';
-import {enemyRouteDirection} from './enemy-navigation-r1446.js?v=r1471';
-import {routeFloor,navigateRoute,tickRouteJump} from './world-route-r1457.js?v=r1471';
-import {isMirrorDuel,updateMirrorDuel,mirrorParry} from './mirror-duel-r1463.js?v=r1471';
-import {navigateCityEnemy,tickCityJump,settleCityEnemy,keepCitySupport} from './city-pursuit-r1463.js?v=r1471';
+import {downedEnemyR1447} from './combat-r1447.js?v=r1472';
+import {enemyRouteDirection} from './enemy-navigation-r1446.js?v=r1472';
+import {routeFloor,navigateRoute,tickRouteJump} from './world-route-r1457.js?v=r1472';
+import {isMirrorDuel,updateMirrorDuel,mirrorParry} from './mirror-duel-r1463.js?v=r1472';
+import {navigateCityEnemy,tickCityJump,settleCityEnemy,keepCitySupport} from './city-pursuit-r1463.js?v=r1472';
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z),roles=['guard','fast','shooter','heavy','duelist'];
 const angle=(a,b)=>Math.atan2(b.x-a.x,b.z-a.z),turn=(a,b,n)=>a+clamp(Math.atan2(Math.sin(b-a),Math.cos(b-a)),-n,n);
 export const TACTIC_NAMES={guard:'Щитоносец',fast:'Обходчик',shooter:'Стрелок',heavy:'Тяжёлый',duelist:'Зеркальная Лира'};
@@ -83,7 +83,7 @@ export function attachTactics(s,{saved=null}={}){
  }if(!e.tactic)assignTactic(this,e,this.enemies.filter(q=>q.kind!=='boss'&&q.kind!=='dog').indexOf(e));if(tacticalEnemy(this,e,dt))return;return base.enemy(e,dt);};
  s.hit=function(e,n,knock=.5){
   if(mirrorParry(this,e)){base.hit(e,Math.max(1,Math.round(n*.20)),0);e.mode='recover';e.t=0;return;}
-  const t=e.tactic;if(!t||e.hp<=0)return base.hit(e,n,knock);const a=this.attack,blade=a?.kind==='slash',bat=blade&&this.weaponStats?.selected==='bat',counter=blade&&!bat&&t.exposed>0&&!t.counterUsed,front=distance(e,this.p)<.1||Math.cos(angle(e,this.p)-(e.yaw||0))>.42,shielded=t.shield>0&&front&&!['windup','strike','recover'].includes(t.phase)&&t.stun<=0&&!(e.down>0)&&a?.kind!=='finish';
+  const t=e.tactic;if(!t||e.hp<=0)return base.hit(e,n,knock);const a=this.attack,blade=['slash','airCleave'].includes(a?.kind),bat=blade&&this.weaponStats?.selected==='bat',counter=blade&&!bat&&t.exposed>0&&!t.counterUsed,front=distance(e,this.p)<.1||Math.cos(angle(e,this.p)-(e.yaw||0))>.42,shielded=t.shield>0&&front&&!['windup','strike','recover'].includes(t.phase)&&t.stun<=0&&!(e.down>0)&&a?.kind!=='finish';
   if(shielded){const oldMode=e.mode,oldT=e.t,oldDown=e.down||0,airT=e.airT||0,airHeight=e.airHeight||0,cost=bat?28+(this.weaponStats?.level||0)*4:a?.kind==='attack'?24:a?.kind==='scream'?40:a?.kind==='kick'?14:6+(this.weaponStats?.level||0)*2;t.shield=Math.max(0,t.shield-cost);t.flash=.2;this.emit('shieldHit',{x:e.x,y:e.y||0,z:e.z,enemy:e.id,broken:!t.shield});base.hit(e,Math.max(1,Math.round(n*(t.shield>0?.12:.5))),0);
    if(e.hp>0&&t.shield>0){e.mode=oldMode;e.t=oldT;e.down=oldDown;e.airT=airT;e.airHeight=airHeight;}else if(e.hp>0){t.stun=1.15;t.phase='ready';e.down=0;e.mode='stagger';this.emit('shieldBreak',{x:e.x,y:e.y||0,z:e.z,enemy:e.id});}
    if(this.time>t.hintAt){t.hintAt=this.time+7;this.emit('notice',{text:t.shield?'Щит спереди · обойди сбоку или разбей битой':'Щит разбит · атакуй!'});}return;

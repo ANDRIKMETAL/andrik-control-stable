@@ -1,28 +1,28 @@
-import {createActionView,poseTraversalAndThrow} from './action-view-r1471.js?v=r1471';
-import {poseBossStyle,createBossTelegraphs} from './boss-style-view-r1468.js?v=r1471';
-import {lookDelta,combatDistance} from './phone-look-r1467.js?v=r1471';
-import {poseLocomotion,poseCombatFlinch} from './combat-motion-r1467.js?v=r1471';
-import {tacticalViewKit,poseDodge} from './tactics-view-r1460.js?v=r1471';
-import {dpadMarkup,bindDpad,movementInput} from './dpad-r1460.js?v=r1471';
-import {towerViewKit} from './tower-view-r1459.js?v=r1471';
-import {clipCamera} from './phone-camera-r1459.js?v=r1471';
-import {weaponCrateKit} from './weapon-view-r1458.js?v=r1471';
-import {worldLifeKit} from './world-life-r1458.js?v=r1471';
-import {createVoyageView} from './voyage-view-r1458.js?v=r1471';
-import {voyageStory,startVoyage} from './voyage-core-r1458.js?v=r1471';
-import {worldActors,poseWorldActor} from './world-actors-r1457.js?v=r1471';
-import {posePlayerImpact} from './player-impact-r1457.js?v=r1471';
-import {lyraCamera,CAMERA_R1457} from './lyra-camera-r1457.js?v=r1471';
-import {storyFor} from './world-story-r1457.js?v=r1471';
-import {attachGrowth} from './lyra-growth-r1449.js?v=r1471';
-import {createExperience,graphicsBudget} from './game-experience-r1448.js?v=r1471';
-import {createEnemyReadability} from './enemy-readability-r1448.js?v=r1471';
-import {poseEnemyCombat} from './combat-poses-r1447.js?v=r1471';
-import {abcMarkup,bindABC} from './abc-controls-r1308.js?v=r1471';
+import {createActionView,poseTraversalAndThrow} from './action-view-r1471.js?v=r1472';
+import {poseBossStyle,createBossTelegraphs} from './boss-style-view-r1468.js?v=r1472';
+import {lookDelta,combatDistance} from './phone-look-r1467.js?v=r1472';
+import {poseLocomotion,poseCombatFlinch} from './combat-motion-r1467.js?v=r1472';
+import {tacticalViewKit,poseDodge} from './tactics-view-r1460.js?v=r1472';
+import {dpadMarkup,bindDpad,movementInput} from './dpad-r1460.js?v=r1472';
+import {towerViewKit} from './tower-view-r1459.js?v=r1472';
+import {clipCamera} from './phone-camera-r1459.js?v=r1472';
+import {weaponCrateKit} from './weapon-view-r1458.js?v=r1472';
+import {worldLifeKit} from './world-life-r1458.js?v=r1472';
+import {createVoyageView} from './voyage-view-r1458.js?v=r1472';
+import {voyageStory,startVoyage} from './voyage-core-r1458.js?v=r1472';
+import {worldActors,poseWorldActor} from './world-actors-r1457.js?v=r1472';
+import {posePlayerImpact} from './player-impact-r1457.js?v=r1472';
+import {lyraCamera,CAMERA_R1457} from './lyra-camera-r1457.js?v=r1472';
+import {storyFor} from './world-story-r1457.js?v=r1472';
+import {attachGrowth} from './lyra-growth-r1449.js?v=r1472';
+import {createExperience,graphicsBudget} from './game-experience-r1448.js?v=r1472';
+import {createEnemyReadability} from './enemy-readability-r1448.js?v=r1472';
+import {poseEnemyCombat} from './combat-poses-r1447.js?v=r1472';
+import {abcMarkup,bindABC} from './abc-controls-r1308.js?v=r1472';
 import {detailKit} from './detail-kit-r1307.js';
 import * as T from './vendor/three-r170.module.min.js';
-import {createLyra,poseGuitar,trackLyra} from './lyra-hero-r1308.js?v=r1471';
-import {WorldState,WORLDS} from './worlds-core-r1306.js?v=r1471';
+import {createLyra,poseGuitar,trackLyra} from './lyra-hero-r1308.js?v=r1472';
+import {WorldState,WORLDS} from './worlds-core-r1306.js?v=r1472';
 export function launchPortrait({world=3,fresh=false,onExit,onWin,onContinue}={}){
  const key='andrik-world-'+world+'-r1306';let saved;try{saved=JSON.parse(localStorage.getItem(key));}catch{}
  const state=attachGrowth(new WorldState(world,fresh?null:saved),{saveKey:key,saved:fresh?null:saved}),info=WORLDS[world];
@@ -58,7 +58,7 @@ export function launchPortrait({world=3,fresh=false,onExit,onWin,onContinue}={})
  }
  if(world===3){for(let i=0;i<80;i++)mesh(environment,sphere,i%3?0xa9c5e8:info.color,Math.sin(i*13)*60,Math.cos(i*5)*35+14,(i*17)%140-25,.07,.07,.07,1);for(let i=0;i<12;i++){const q=mesh(environment,box,0x273b50,Math.sin(i)*18,-3-i%4,6+i*5,2,3,2);q.rotation.set(i*.7,i*.4,i*.3);}mesh(environment,sphere,0x235f8c,-42,20,100,22);}
  if(world===4){towerKit.build(environment,state.geo.tower);for(let i=0;i<16;i++)mesh(environment,sphere,0x9daabe,Math.sin(i*7)*30,-7,Math.cos(i*11)*30,8,2,5);}
- if(world===5){for(let i=0;i<32;i++){const q=mesh(environment,box,i%2?0x344360:0x536182,Math.sin(i*2)*23,-5-i%3,i*6,2.2,2.2,2.2);q.rotation.set(i*.3,i*.4,0);}for(const w of state.geo.walls)mesh(environment,box,0x31425d,w.x,1.4,w.z,w.w,2.8,w.d);}
+ if(world===5){for(let i=0;i<32;i++){const q=mesh(environment,box,i%2?0x344360:0x536182,Math.sin(i*2)*23,-5-i%3,i*6,2.2,2.2,2.2);q.rotation.set(i*.3,i*.4,0);}for(const w of state.geo.walls.filter(w=>!w.weaponCrate&&!w.jumpDecor))mesh(environment,box,0x31425d,w.x,1.4,w.z,w.w,2.8,w.d);}
  batchScenery();life=livingKit.build(environment,{world,zone:state.zone,geo:state.geo,coarse:matchMedia('(pointer:coarse)').matches,state});
  for(const q of state.switches){const g=new T.Group();g.position.set(q.x,q.h,q.z);environment.add(g);if(world===3&&state.zone===1){mesh(g,sphere,0xd6e0d9,0,.85,0,.65,1.15,.65);mesh(g,sphere,0x214652,0,1,.43,.43,.68,.26);mesh(g,sphere,0x6ee6d2,0,1,.64,.16,.21,.035,.8);}
  else if(world===3){mesh(g,box,0x364d63,0,.65,0,.95,1.3,.7);mesh(g,box,info.color,0,.8,.36,.6,.4,.025,.5);}
@@ -76,7 +76,7 @@ export function launchPortrait({world=3,fresh=false,onExit,onWin,onContinue}={})
  function pause(v){abc.reset();$('#retry-vehicle').hidden=!state.voyage||state.voyage.status==='dormant';if(!v&&sound)try{ac=ac||new (window.AudioContext||window.webkitAudioContext)();ac.resume();}catch{}paused=v;root.dataset.pauseMenu=String(v);$('.panel').hidden=!v;keys.clear();pad.reset();look=null;$('.stick i').style.transform='';if(v){save();ac?.suspend?.();}}
  function close(next=false){if(closed)return;save();closed=true;actionView.dispose();cancelAnimationFrame(raf);abort.abort();ac?.close();observer.disconnect();crateView?.dispose();life?.dispose();transport.dispose();detailBatches.forEach(b=>b.dispose());skeletons.forEach(s=>s.dispose());geometry.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());textures.forEach(t=>t.dispose());renderer.dispose();renderer.forceContextLoss();root.remove();next?onContinue?.():onExit?.();}
  $('#full').onclick=async()=>{try{await (document.getElementById('gameShell')||root).requestFullscreen();}catch{}};$('#sound').onclick=()=>{sound=!sound;$('#sound').textContent=sound?'♪':'♪ ×';};$('#resume').onclick=()=>state.won?close(true):pause(false);$('#exit').onclick=()=>close();$('#retry-vehicle').onclick=()=>{startVoyage(state,true);};$('#restart').onclick=()=>{state.checkpoint=0;state.load(0);wonSent=false;save();showStory(false,true);};$('#pause').onclick=()=>pause(true);$('#zoom').onclick=()=>{viewMode=(viewMode+1)%3;$('#zoom').textContent=['ВИД','ЛИЦО','СЗАДИ'][viewMode];manual=state.time;};
- function showStory(won=false,automatic=false){const q=storyFor(world,state.zone,won);$('#chapter').textContent=info.name+' · '+(state.zone+1)+'/3';$('#story-title').textContent=q.title;$('#intro').textContent=q.text;$('#story-goal').textContent=q.goal;$('#resume').textContent=won?'СЛЕДУЮЩАЯ ГЛАВА':'ПРОДОЛЖИТЬ';if(automatic){experience.transition();pause(false);}else pause(true);}
+ function showStory(won=false,automatic=false,quiet=false){const q=storyFor(world,state.zone,won);$('#chapter').textContent=info.name+' · '+(state.zone+1)+'/3';$('#story-title').textContent=q.title;$('#intro').textContent=q.text;$('#story-goal').textContent=q.goal;$('#resume').textContent=won?'СЛЕДУЮЩАЯ ГЛАВА':'ПРОДОЛЖИТЬ';if(automatic){experience.transition();pause(false);}else if(!quiet)pause(true);}
  function showTransportStory(){const q=voyageStory(state.voyage.kind);$('#chapter').textContent=info.name+' · ТРАНСПОРТ';$('#story-title').textContent=q.title;$('#intro').textContent=q.text;$('#story-goal').textContent=q.goal;$('#resume').textContent='ПРОДОЛЖИТЬ';pause(true);}
  const abc=bindABC(root,state,signal,()=>paused||!!state.finale||!!state.won||experience.transitioning);state.facingLocked=true;const pad=bindDpad($('.stick'),{signal,isPaused:()=>paused});
  window.addEventListener('keydown',e=>{if(closed||['INPUT','SELECT','BUTTON','SUMMARY'].includes(e.target?.tagName))return;e.stopImmediatePropagation();if(e.code==='Escape'){pause(!paused);return;}if(paused||experience.transitioning||state.finale||state.won)return;e.preventDefault();keys.add(e.code);if(!e.repeat){if(e.code==='KeyF')abc.down('B',performance.now());if(e.code==='Space')abc.down('A',performance.now());const a={KeyE:'contextC',KeyQ:'scream',KeyV:'rage',KeyR:'dash',KeyG:'attack',KeyC:'contextC'}[e.code];if(a)state.action(a);}},{signal,capture:true});window.addEventListener('keyup',e=>{keys.delete(e.code);if(e.code==='KeyF')abc.up('B',performance.now());if(e.code==='Space')abc.up('A',performance.now());},{signal});window.addEventListener('blur',()=>pause(true),{signal});document.addEventListener('visibilitychange',()=>{if(document.hidden)pause(true);},{signal});window.addEventListener('pagehide',save,{signal});
@@ -105,5 +105,5 @@ export function launchPortrait({world=3,fresh=false,onExit,onWin,onContinue}={})
  function frame(now){if(closed)return;if(!experience.frameDue(now)){raf=requestAnimationFrame(frame);return;}const dt=Math.min(.1,Math.max(0,(now-last)/1000));last=now;if(!paused&&!experience.transitioning){slowFrames=dt>.05?slowFrames+dt:Math.max(0,slowFrames-dt*.2);if(experience.settings.quality==='auto'&&slowFrames>3&&worldRatio>.65){worldRatio=Math.max(.65,worldRatio-.2);renderer.setPixelRatio(worldRatio);renderer.shadowMap.enabled=false;slowFrames=0;resize();}abc.tick(now);const x=pad.x+(keys.has('KeyD')||keys.has('ArrowRight')?1:0)-(keys.has('KeyA')||keys.has('ArrowLeft')?1:0),z=pad.z+(keys.has('KeyW')||keys.has('ArrowUp')?1:0)-(keys.has('KeyS')||keys.has('ArrowDown')?1:0);const input=state.vehicleActive?{steer:x,lift:z}:movementInput(x,z,yaw,Math.hypot(pad.x,pad.z)>.82||keys.has('ShiftLeft'),viewMode?state.p.yaw:yaw);let remaining=dt;while(remaining>0){const step=Math.min(1/60,remaining);state.update(step,input);remaining-=step;}saveTime+=dt;if(saveTime>5){save();saveTime=0;}}
  for(const event of state.events.splice(0)){experience.event(event);if(event.type==='vehicleBegin'){save();experience.transition();pause(false);}if(['vehicleFinish','vehicleCheckpoint','vehicleCrash','vehicleLost'].includes(event.type))save();if(event.type==='vehicleShot')tone(event.rocket?160:750);if(event.type==='vehiclePickup'||event.type==='weaponBonus'||event.type==='weaponUpgrade')tone(680);if(['vehicleHit','vehicleKick','vehicleRamp','weaponCacheHit','weaponCacheBreak'].includes(event.type))tone(event.type==='vehicleRamp'?340:80);if(['hit','finishImpact','shieldHit','shieldBreak','armorBreak','counterHit'].includes(event.type))hitSparksR1447(event);if(['jump','puzzle','pickup'].includes(event.type))tone(event.type==='puzzle'?660:event.type==='jump'?320:120);if(['checkpoint','puzzle','respawn'].includes(event.type))save();if(event.type==='checkpoint')showStory(false,true);if(event.type==='laserShot')tone(850);if(event.type==='bossStrike'||event.type==='playerKnockdown')tone(70);if(event.type==='notice'){$('.notice').textContent=event.text;noticeUntil=performance.now()+3000;}if(event.type==='won'&&!wonSent){wonSent=true;save();onWin?.();showStory(true);}}
  if(state.won&&!wonSent){wonSent=true;onWin?.();showStory(true);}if(experience.renderReady)draw(dt);raf=requestAnimationFrame(frame);}
- root.worldDebug={state,pause,camera,get viewMode(){return viewMode;}};build();showStory(state.won);raf=requestAnimationFrame(frame);return {state,close};
+ root.worldDebug={state,pause,camera,get viewMode(){return viewMode;}};build();showStory(state.won,false,!state.won);if(!state.won){pause(false);experience.worldTitle(info.name);}raf=requestAnimationFrame(frame);return {state,close};
 }

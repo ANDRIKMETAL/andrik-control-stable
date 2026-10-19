@@ -17,7 +17,21 @@ function overhead(root,weapon,q,hit,handAt){
  if(weapon==='bat'&&q>hit*.55&&q<hit+.16){u.batTrail.visible=false;}
 }
 export function posePowerCombat(root,a,time,weapon,handAt){
- if(!a)return;const u=root.userData,q=T.MathUtils.clamp(a.t/a.duration,0,1),selected=a.finishWeapon||weapon?.selected||'sword';
+ const u=root.userData;if(a?.kind!=='airCleave')u.airSamples=null;
+ if(!a)return;const q=T.MathUtils.clamp(a.t/a.duration,0,1),selected=a.finishWeapon||weapon?.selected||'sword';
+ if(a.kind==='airCleave'){
+  const pose=a.phase==='load'?Math.min(.27,a.phaseT/.18*.27):a.phase==='cut'?.27+Math.min(1,a.phaseT/.16)*.40:.67+Math.min(1,a.phaseT/.32)*.33;
+  overhead(root,selected,pose,.46,handAt);
+  if(a.phase!=='recover'){u.limbs[0].leg.rotation.x-=.40;u.limbs[0].shin.rotation.x+=.72;u.limbs[1].leg.rotation.x+=.18;u.limbs[1].shin.rotation.x+=.45;}
+  if(u.airAttack!==a||!u.airSamples){u.airAttack=a;u.airSamples=[];u.airSampleAt=-1;}
+  const trace=a.phase==='cut'&&a.phaseT<.24;
+  if(selected==='bat'&&trace){
+   u.body.updateMatrix();u.bat.updateMatrix();const matrix=u.body.matrix.clone().multiply(u.bat.matrix);
+   if(u.airSampleAt!==a.t){u.airSamples.push([new T.Vector3(0,.48,0).applyMatrix4(matrix),new T.Vector3(0,1.13,0).applyMatrix4(matrix)]);if(u.airSamples.length>9)u.airSamples.shift();u.airSampleAt=a.t;}
+   const attr=u.batTrail.geometry.attributes.position;for(let i=0;i<u.airSamples.length;i++)for(let j=0;j<2;j++){const p=u.airSamples[i][j];attr.setXYZ(i*2+j,p.x,p.y,p.z);}attr.needsUpdate=true;u.batTrail.geometry.setDrawRange(0,Math.max(0,u.airSamples.length-1)*6);u.batTrail.visible=u.airSamples.length>1;
+  }
+  return;
+ }
  if(a.kind==='finish'){overhead(root,selected,q,(a.hitAt??.63)/a.duration,handAt);return;}
  if(a.kind==='meteor'){overhead(root,selected,q,(a.hitAt??.46)/a.duration,handAt);u.limbs[0].leg.rotation.x-=Math.sin(q*Math.PI)*.45;u.limbs[1].shin.rotation.x+=Math.sin(q*Math.PI)*.55;return;}
  if(a.kind==='palm'){

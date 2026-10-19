@@ -1,4 +1,4 @@
-import {blocked} from './portrait-core-r1295.js?v=r1471';
+import {blocked} from './portrait-core-r1295.js?v=r1472';
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z),types=['knife','bottle','brick'];
 export const THROWABLE_NAMES={knife:'Нож',bottle:'Бутылка',brick:'Обломок'};
 const finite=p=>p&&['x','y','z'].every(k=>Number.isFinite(p[k]));

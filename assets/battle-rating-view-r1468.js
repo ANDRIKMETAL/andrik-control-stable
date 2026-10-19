@@ -1,5 +1,5 @@
-import {RANK_COLORS} from './battle-rating-r1468.js?v=r1471';
-import {bossAction} from './boss-styles-r1468.js?v=r1471';
+import {RANK_COLORS} from './battle-rating-r1468.js?v=r1472';
+import {bossAction} from './boss-styles-r1468.js?v=r1472';
 const css=`
 @media(max-height:430px) and (orientation:landscape){
  [data-game1448] .battle1471-screen .battle1468-result{display:grid;grid-template-columns:minmax(135px,.9fr) 2fr;grid-template-areas:"head stats" "skip stats" "record stats" "actions actions";gap:6px 18px;padding:12px 16px}
