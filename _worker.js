@@ -7824,7 +7824,7 @@ const latestBefore=await db.prepare(`
       SELECT sampled_at AS sampledAt FROM radio_audience_samples
       WHERE local_date=? AND video_id=?
       ORDER BY sampled_at DESC LIMIT 1
-    `).bind(today,'lpc9HfVs0NY').first().catch(()=>null);
+    `).bind(today,'-cEMOdUUAYg').first().catch(()=>null);
 collector.latestSampleAt=cleanPlainText(latestBefore?.sampledAt||'',80);
 const latestMs=Date.parse(collector.latestSampleAt||'');
 const stale=!Number.isFinite(latestMs) || Date.now()-latestMs>3*60*1000;
@@ -7857,7 +7857,7 @@ if(date===today){
  const verifiedAt=Date.parse(String(state?.updatedAt||''));
  const savedFresh=Number.isFinite(verifiedAt)&&Date.now()-verifiedAt<10*60*1000;
  // Never mix the old horizontal/dual session with today's new-radio KPI.
- currentRadioVideoIdR1299=collector.liveVideoId||(savedFresh&&saved&&!['E-Hf8ciUhrU','eN3ljx6_6dA'].includes(saved)?saved:'lpc9HfVs0NY');
+ currentRadioVideoIdR1299=collector.liveVideoId||(savedFresh&&saved&&!['E-Hf8ciUhrU','eN3ljx6_6dA','lpc9HfVs0NY'].includes(saved)?saved:'-cEMOdUUAYg');
 }
 const rows=currentRadioVideoIdR1299?allRows.filter(row=>cleanPlainText(row?.videoId||'',80)===currentRadioVideoIdR1299):allRows;
 const videoIds=[...new Set(rows.map(row=>cleanPlainText(row?.videoId||'',80)).filter(Boolean))];
@@ -7939,7 +7939,7 @@ getPushState(db,'radio-live-last-push-video-r585').catch(()=>null),
 getPushState(db,discoveryKey).catch(()=>null)
 ]);
 const candidateIds=[...new Set([
-'lpc9HfVs0NY', // R1299: new owner 16:9 LIVE, verify active before displaying data
+'-cEMOdUUAYg', // R1299: new owner 16:9 LIVE, verify active before displaying data
 cleanPlainText(currentState?.value||'',80),
 cleanPlainText(radioState?.value||'',80)
 ].filter(Boolean))];
@@ -7954,7 +7954,7 @@ const isLiveRowR1299=row=>{
 const details=row?.liveStreamingDetails||{};
 return String(row?.snippet?.liveBroadcastContent||'').toLowerCase()==='live' || Boolean(details?.actualStartTime&&!details?.actualEndTime);
 };
-const item=items.find(row=>row?.id==='lpc9HfVs0NY'&&isLiveRowR1299(row))||items.find(isLiveRowR1299)||null;
+const item=items.find(row=>row?.id==='-cEMOdUUAYg'&&isLiveRowR1299(row))||items.find(isLiveRowR1299)||null;
 if(!item)return null;
 const details=item?.liveStreamingDetails||{};
 const stats=item?.statistics||{};
@@ -21530,12 +21530,14 @@ getPushState(db,'youtube-fast-engagement-last-status-r376').catch(()=>null)
 const fastMs=Date.parse(String(fastAt?.value||fastAt?.updatedAt||''));
 if(String(fastStatus?.value||'').toLowerCase()==='failed' || !Number.isFinite(fastMs) || Date.now()-fastMs>12*60*1000)return {hit:false,data:null};
 const videoId=cleanPlainText(current?.value||'',80);
+// R1481: revalidate the previous broadcast after the owner changes the live URL.
+if(videoId==='lpc9HfVs0NY')return {hit:false,data:null};
 return {hit:true,data:videoId?{videoId,watchUrl:`https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`,lifeCycleStatus:'live',streamStatus:'active',active:true,source:'engagement-state-r797'}:null};
 }catch(_){return {hit:false,data:null};}
 }
 async function readPublicYoutubeFallbackCacheR797(env){
 const now=Date.now();
-if(youtubePublicResolvedCacheR797.known && youtubePublicResolvedCacheR797.expiresAt>now){
+if(youtubePublicResolvedCacheR797.known && youtubePublicResolvedCacheR797.expiresAt>now && youtubePublicResolvedCacheR797.data?.videoId!=='lpc9HfVs0NY'){
 return {hit:true,data:youtubePublicResolvedCacheR797.data};
 }
 if(!env.COMMENTS_DB)return {hit:false,data:null};
@@ -21543,6 +21545,7 @@ try{
 const state=await getPushState(requireDb(env),'youtube-public-live-resolved-cache-r797').catch(()=>null);
 if(!state?.value)return {hit:false,data:null};
 const payload=JSON.parse(state.value);
+if(payload?.videoId==='lpc9HfVs0NY')return {hit:false,data:null};
 const ms=Date.parse(String(payload?.cachedAt||state?.updatedAt||''));
 if(!Number.isFinite(ms) || now-ms>5*60*1000)return {hit:false,data:null};
 const data=payload?.active&&payload?.videoId?payload:null;
@@ -21568,7 +21571,7 @@ let result=null;
 // R1299: prefer the newly launched horizontal radio, but NEVER declare it
 // active without YouTube live status verification. This also bypasses old D1 IDs.
 try{
-const pinnedId='lpc9HfVs0NY';
+const pinnedId='-cEMOdUUAYg';
 const {data}=await youtubeApiJson(env,'videos',{
 part:'snippet,liveStreamingDetails',id:pinnedId,maxResults:1
 },{oauth:false,timeoutMs:6500});
@@ -21608,7 +21611,7 @@ if(found)result={...found,lifeCycleStatus:'live',streamStatus:'active'};
 // never declared LIVE without checking Google's video status.
 if(!result){
 try{
-const seedId='lpc9HfVs0NY'; // R1299: new owner LIVE fallback, verified before use
+const seedId='-cEMOdUUAYg'; // R1299: new owner LIVE fallback, verified before use
 const {data}=await youtubeApiJson(env,'videos',{
 part:'snippet,liveStreamingDetails',id:seedId,maxResults:1
 },{oauth:false,timeoutMs:6500});
@@ -22146,7 +22149,7 @@ const at=Date.parse(a?.snippet?.scheduledStartTime||a?.snippet?.actualStartTime|
 const bt=Date.parse(b?.snippet?.scheduledStartTime||b?.snippet?.actualStartTime||0)||0;
 return bt-at;
 });
-broadcast=candidates.find(item=>String(item?.id||'')==='lpc9HfVs0NY') || candidates[0] || null;
+broadcast=candidates.find(item=>String(item?.id||'')==='-cEMOdUUAYg') || candidates[0] || null;
 videoId=cleanPlainText(broadcast?.id||'',80);
 if(!videoId){
 const channelUrl=new URL('https://www.googleapis.com/youtube/v3/channels');
