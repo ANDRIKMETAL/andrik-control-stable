@@ -1,5 +1,5 @@
 'use strict';
-const VERSION = '55.00-r1454-album-video-16s';
+const VERSION = '55.00-r1474-lyra-portrait';
 const IS_CONTROL_HOST = self.location.hostname.toLowerCase() === 'control.andrikmetal.com';
 async function deleteControlCaches(){
 if(!self.caches) return;
@@ -35,12 +35,13 @@ const CORE = [
 "/assets/pwa-install.js",
 "/assets/home-r1194.css?v=55.00-r1205v2",
 "/assets/home-compact-r1308.css",
+"/assets/home-hero-r1474.css",
 "/assets/home-r1308.js?v=r1308",
 "/assets/andrik-home-r1453.css?v=1453",
 "/assets/home-links-r1453.js?v=1453",
 "/assets/andrik-radio-mini-r1199.webp",
-"/assets/lyra-hero-r1192.mp4",
-"/assets/lyra-hero-r1192.webp",
+"/assets/lyra-hero-r1474.mp4",
+"/assets/lyra-hero-r1474.webp",
 "/assets/player-shell-bridge-r136.js",
 "/assets/home-app-links-r1275.js?v=55.00-r1275",
 "/assets/andrik-site-illusion-r87-192.png",

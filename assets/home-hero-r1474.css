@@ -1,0 +1,144 @@
+/* R1474: the new portrait, compact copy and a short step to live radio.
+   Keep the local chrome typeface and the existing video/player behaviour. */
+body.home-r1190.am1452[data-home-build="R1474"] .h-hero {
+  height:min(780px,calc(100vh - 92px))!important;
+  height:min(780px,calc(100svh - 92px))!important;
+  min-height:560px!important;
+  max-height:none!important;
+}
+body.home-r1190.am1452[data-home-build="R1474"] .h-hero-inner {
+  min-height:100%!important;
+  height:100%!important;
+  padding-top:76px!important;
+  padding-bottom:max(26px,calc(env(safe-area-inset-bottom) + 18px))!important;
+  gap:0!important;
+}
+body.home-r1190.am1452[data-home-build="R1474"] .h-hero-media {
+  inset:0 0 0 39%;
+}
+body.home-r1190.am1452[data-home-build="R1474"] .h-hero-media :is(img,video) {
+  object-position:50% 34%!important;
+}
+body.home-r1190.am1452[data-home-build="R1474"] .h-hero-media::after {
+  background:radial-gradient(ellipse at 50% 42%,transparent 35%,rgba(0,0,0,.28) 100%);
+}
+body.home-r1190.am1452[data-home-build="R1474"] .h-hero::after {
+  background:linear-gradient(90deg,#000 0%,rgba(0,0,0,.94) 24%,rgba(0,0,0,.5) 49%,transparent 76%),linear-gradient(0deg,#000,rgba(0,0,0,.12) 48%,transparent 72%)!important;
+}
+body.home-r1190.am1452[data-home-build="R1474"] .h-hero-tag {
+  top:18px!important;
+  padding:6px 11px!important;
+  font-size:9px!important;
+  line-height:1.4!important;
+  letter-spacing:.12em;
+  border:1px solid rgba(210,220,231,.16)!important;
+  border-radius:8px!important;
+  background:rgba(5,7,10,.65)!important;
+}
+body.home-r1190.am1452[data-home-build="R1474"] .h-hero-copy {
+  width:600px;
+  max-width:55%;
+  margin:0!important;
+  transform:none!important;
+}
+body.home-r1190.am1452[data-home-build="R1474"] .h-hero-copy>.h-eyebrow {
+  font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:10px;
+  line-height:1.4;
+  letter-spacing:.12em;
+}
+body.home-r1190.am1452[data-home-build="R1474"] #home-title {
+  font-size:clamp(34px,4.65vw,60px)!important;
+  line-height:1.1!important;
+  letter-spacing:.012em!important;
+  margin:9px 0 13px!important;
+}
+body.home-r1190.am1452[data-home-build="R1474"] .h-hero-copy>p {
+  font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:15px!important;
+  line-height:1.55;
+  max-width:38ch!important;
+  margin:0 0 18px!important;
+  color:#d9dce2!important;
+}
+body.home-r1190.am1452[data-home-build="R1474"] .h-actions {
+  gap:9px!important;
+  margin:0!important;
+}
+body.home-r1190.am1452[data-home-build="R1474"] .h-actions .h-button {
+  font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  min-height:46px;
+  padding:11px 18px;
+  font-size:13px;
+  line-height:1.35;
+  border-radius:11px;
+  gap:10px;
+}
+body.home-r1190.am1452[data-home-build="R1474"] #radio {
+  margin-top:12px!important;
+}
+@media(max-width:820px) {
+  body.home-r1190.am1452[data-home-build="R1474"] #home-title {
+    font-size:clamp(29px,4.35vw,38px)!important;
+  }
+}
+@media(max-width:640px) {
+  body.home-r1190.am1452[data-home-build="R1474"] .h-hero {
+    height:min(780px,calc(100vh - 128px))!important;
+    height:min(780px,calc(100svh - 128px))!important;
+    min-height:440px!important;
+  }
+  body.home-r1190.am1452[data-home-build="R1474"] .h-hero-inner {
+    width:calc(100% - 32px);
+    padding-top:62px!important;
+    padding-bottom:max(20px,calc(env(safe-area-inset-bottom) + 14px))!important;
+  }
+  body.home-r1190.am1452[data-home-build="R1474"] .h-hero-media {
+    inset:0;
+  }
+  body.home-r1190.am1452[data-home-build="R1474"] .h-hero-media :is(img,video) {
+    object-position:50% 29%!important;
+  }
+  body.home-r1190.am1452[data-home-build="R1474"] .h-hero::after {
+    background:linear-gradient(0deg,#000 0%,rgba(0,0,0,.92) 12%,rgba(0,0,0,.65) 28%,rgba(0,0,0,.08) 55%,rgba(0,0,0,.04) 78%,rgba(0,0,0,.14) 100%)!important;
+  }
+  body.home-r1190.am1452[data-home-build="R1474"] .h-hero-tag {
+    top:14px!important;
+    max-width:100%!important;
+  }
+  body.home-r1190.am1452[data-home-build="R1474"] .h-hero-copy {
+    max-width:none;
+    width:100%;
+  }
+  body.home-r1190.am1452[data-home-build="R1474"] .h-hero-copy>.h-eyebrow {
+    font-size:9px;
+    letter-spacing:.1em;
+  }
+  body.home-r1190.am1452[data-home-build="R1474"] #home-title {
+    font-size:clamp(25px,7.2vw,38px)!important;
+    line-height:1.09!important;
+    letter-spacing:.009em!important;
+    margin:7px 0 10px!important;
+  }
+  body.home-r1190.am1452[data-home-build="R1474"] .h-hero-copy>p {
+    font-size:13px!important;
+    line-height:1.5;
+    max-width:39ch!important;
+    margin-bottom:14px!important;
+  }
+  body.home-r1190.am1452[data-home-build="R1474"] .h-actions {
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:8px!important;
+  }
+  body.home-r1190.am1452[data-home-build="R1474"] .h-actions .h-button {
+    min-width:0;
+    min-height:46px;
+    padding:11px 8px;
+    font-size:12px;
+    gap:7px;
+  }
+  body.home-r1190.am1452[data-home-build="R1474"] #radio {
+    margin-top:10px!important;
+  }
+}
