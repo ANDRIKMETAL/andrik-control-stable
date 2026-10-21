@@ -2266,9 +2266,19 @@ safeDetails
 ).run();
 await maybeTrimSystemLogsR638(db).catch(() => {});
 }
+// R1482: release discovery is independent of push delivery and live radio.
+function isPublicYoutubeReleaseR1482(item) {
+if (!/^[A-Za-z0-9_-]{11}$/.test(String(item?.videoId || ''))) return false;
+if (!item?.title || /^(?:private video|deleted video)$/i.test(String(item.title).trim())) return false;
+if (isAndrikRadioLiveR576(item.title)) return false;
+if (item.privacyStatus && item.privacyStatus !== 'public') return false;
+if (item.liveBroadcastContent === 'upcoming') return false;
+const published = Date.parse(item.publishedAt || '');
+return !Number.isFinite(published) || published <= Date.now() + 60000;
+}
 async function cacheLatestYoutubeItem(db, item, meta = {}) {
-if (!item?.videoId) return;
-await setPushState(db, 'youtube-latest-public', JSON.stringify({
+if (!isPublicYoutubeReleaseR1482(item)) return null;
+const latest = {
 videoId: cleanPlainText(item.videoId, 80),
 title: normalizeReleaseTitle(item.title),
 publishedAt: cleanPlainText(item.publishedAt || '', 80),
@@ -2277,7 +2287,25 @@ source: cleanPlainText(item.source || meta.source || 'YouTube', 120),
 url: `https://www.youtube.com/watch?v=${encodeURIComponent(item.videoId)}`,
 mode: cleanPlainText(meta.mode || '', 40),
 updatedAt: new Date().toISOString()
-}));
+};
+// Compare-and-swap also protects against an older WebSub callback arriving
+// while a newer upload is being discovered by Cron or the public endpoint.
+for (let attempt = 0; attempt < 3; attempt += 1) {
+const state = await getPushState(db, 'youtube-latest-public');
+const previous = parsePushSummary(state?.value);
+if (isPublicYoutubeReleaseR1482(previous) && previous.videoId !== latest.videoId) {
+const before = Date.parse(previous.publishedAt || '');
+const after = Date.parse(latest.publishedAt || '');
+if (Number.isFinite(before) && (!Number.isFinite(after) || before > after)) return previous;
+}
+const result = await db.prepare(`
+  INSERT INTO push_state (key,value,updated_at) VALUES ('youtube-latest-public',?,datetime('now'))
+  ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_at=datetime('now')
+  WHERE push_state.value IS ?
+`).bind(JSON.stringify(latest), state?.value ?? null).run();
+if (Number(result?.meta?.changes || 0) > 0) return latest;
+}
+return parsePushSummary((await getPushState(db, 'youtube-latest-public'))?.value);
 }
 function oneSignalPlatformDeliveryR526(stats = {}) {
 let successful = 0;
@@ -3931,7 +3959,7 @@ const keys = [
 ];
 const states = {};
 for (const key of keys) states[key] = (await getPushState(db,key).catch(() => null))?.value || '';
-return json({ok:true,websub:states,fastCronExpression:YOUTUBE_FAST_CRON_R332,engagementCronExpression:YOUTUBE_ENGAGEMENT_CRON_R333,releaseMode:'WebSub + ~15m quota-economy fallback',engagementMode:'R797 heartbeat 2m / YouTube sample ~6m',subscriberMode:'R797 cumulative subscriber sample ~10m + delivery-confirmed retry lane'});
+return json({ok:true,websub:states,fastCronExpression:YOUTUBE_FAST_CRON_R332,engagementCronExpression:YOUTUBE_ENGAGEMENT_CRON_R333,releaseMode:'R1482 WebSub + ~5m uploads fallback; public discovery independent of push',engagementMode:'R797 heartbeat 2m / YouTube sample ~6m',subscriberMode:'R797 cumulative subscriber sample ~10m + delivery-confirmed retry lane'});
 }
 async function handleYoutubeWebSubVerifyR332(request, env, ctx) {
 const db = requireDb(env);
@@ -3993,6 +4021,15 @@ source:'YouTube WebSub'
 async function pushYoutubeReleaseItemR332(env, db, item, origin='websub') {
 const videoId = cleanPlainText(item?.videoId || '',80);
 if (!videoId) return {ok:false,error:'video-id-required'};
+await cacheLatestYoutubeItem(db, item, {mode:origin}).catch(() => {});
+const publishedMsR1482 = Date.parse(item.publishedAt || '');
+if (Number.isFinite(publishedMsR1482) && publishedMsR1482 > Date.now() + 60000) {
+return {ok:true,skipped:true,reason:'not-published-yet',videoId};
+}
+// Initial seeding remembers the existing catalogue without announcing it.
+// Do not turn that catalogue into new releases on the next fast poll.
+const seenR1482 = await db.prepare('SELECT 1 AS found FROM push_playlist_seen WHERE video_id=? LIMIT 1').bind(videoId).first();
+if (seenR1482?.found) return {ok:true,skipped:true,reason:'already-seen',videoId};
 const claim = await claimYoutubeReleaseOnceR332(db, videoId, `${origin}:${new Date().toISOString()}`);
 if (!claim.ok) {
 if (claim.reason === 'already-sent') {
@@ -4003,7 +4040,9 @@ return {ok:true,skipped:true,reason:claim.reason,videoId};
 const releaseTitle = normalizeReleaseTitle(item.title);
 const releaseUrl = `https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`;
 const pushMeta=youtubePushMetaR576(releaseTitle,releaseUrl);
-const result = await sendOneSignalPush(env, {
+let result;
+try {
+result = await sendOneSignalPush(env, {
 title:pushMeta.title,
 message:pushMeta.message,
 url:pushMeta.url,
@@ -4013,6 +4052,9 @@ audience:'all',
 name:`${pushMeta.name}-${videoId}`,
 history:{type:'auto-release',source:item.source || 'YouTube',videoId,videoTitle:releaseTitle,details:{origin,liveBroadcast:pushMeta.live}}
 });
+} catch (error) {
+result = {ok:false,error:cleanPlainText(error?.message || error,400)};
+}
 await upsertReleaseHistory(db, {
 videoId,
 title:releaseTitle,
@@ -4032,7 +4074,6 @@ await db.prepare(`
     INSERT OR IGNORE INTO push_playlist_seen (video_id,title,published_at,first_seen_at)
     VALUES (?,?,?,datetime('now'))
   `).bind(videoId,item.title || releaseTitle,item.publishedAt || '').run();
-await cacheLatestYoutubeItem(db, item, {mode:origin}).catch(() => {});
 await recordSystemLog(env, {
 scope:'push',level:'info',event:'auto-release-websub-sent',
 message:`WebSub: уведомление о «${releaseTitle}» отправлено.`,
@@ -4105,12 +4146,13 @@ const apiKey = String(env.YOUTUBE_API_KEY || '').trim();
 const source = `Канал ${cleanPlainText(env.YOUTUBE_CHANNEL_HANDLE || '@andrikmetal',100)}`;
 if (!apiKey) {
 const items = await fetchYoutubePlaylistFeed(playlistId, source);
-return {items:items.slice(0,3),mode:'youtube-feed-fast',playlistId};
+return {items:items.slice(0,10),mode:'youtube-feed-fast',playlistId};
 }
+try {
 const url = new URL('https://www.googleapis.com/youtube/v3/playlistItems');
 url.searchParams.set('part','snippet,contentDetails');
 url.searchParams.set('playlistId',playlistId);
-url.searchParams.set('maxResults','3');
+url.searchParams.set('maxResults','10');
 url.searchParams.set('key',apiKey);
 await trackObservabilityUsage(env,'youtube-data-api',observabilityQuotaCost('playlistItems'),1,{endpoint:'playlistItems',playlistId:cleanPlainText(playlistId,80),source:'fast-release-r332'}).catch(() => {});
 const response = await fetchWithAbortTimeoutR409(url.toString(),{headers:{accept:'application/json'}},8000,'youtube-fast-playlist-timeout');
@@ -4128,6 +4170,47 @@ source,playlistId
 };
 }).filter(Boolean);
 return {items,mode:'youtube-data-api-fast',playlistId};
+} catch (error) {
+// A quota/API outage must not disable discovery while the public feed works.
+try {
+const items = await fetchYoutubePlaylistFeed(playlistId, source);
+if (items.length) return {items:items.slice(0,10),mode:'youtube-feed-fallback-r1482',playlistId,warning:cleanPlainText(error?.message || error,300)};
+} catch (_) {}
+throw error;
+}
+}
+async function getYoutubeUploadsSnapshotR1482(env, db, {force=false} = {}) {
+const now = Date.now();
+const snapshotKey = 'youtube-release-uploads-r1482';
+const attemptKey = 'youtube-release-fetch-attempt-r1482';
+const lockKey = 'youtube-release-fetch-lock-r1482';
+const saved = parsePushSummary((await getPushState(db, snapshotKey))?.value);
+const age = now - Date.parse(saved?.checkedAt || '');
+if (!force && Array.isArray(saved?.items) && age >= 0 && age < 5*60*1000) return {...saved,cached:true};
+const lastAttempt = parsePushSummary((await getPushState(db, attemptKey))?.value);
+if (!force && now - Date.parse(lastAttempt?.at || '') < 60000) {
+if (Array.isArray(saved?.items)) return {...saved,cached:true,stale:true};
+return {items:[],skipped:true,reason:'discovery-retry-cooldown',checkedAt:lastAttempt.at};
+}
+await db.prepare("DELETE FROM push_state WHERE key=? AND updated_at < datetime('now','-90 seconds')").bind(lockKey).run();
+if (!await claimPushOnce(db,lockKey,new Date(now).toISOString())) {
+return Array.isArray(saved?.items) ? {...saved,cached:true,stale:true} : {items:[],skipped:true,reason:'discovery-in-progress'};
+}
+try {
+// Re-read after acquiring the lock: a concurrent poll may just have finished.
+const current = parsePushSummary((await getPushState(db,snapshotKey))?.value);
+const currentAge = now - Date.parse(current?.checkedAt || '');
+if (!force && Array.isArray(current?.items) && currentAge >= 0 && currentAge < 5*60*1000) return {...current,cached:true};
+await setPushState(db,attemptKey,JSON.stringify({at:new Date(now).toISOString()}));
+const fetched = await fetchLatestUploadsR332(env,db);
+const snapshot = {...fetched,checkedAt:new Date().toISOString()};
+await setPushState(db,snapshotKey,JSON.stringify(snapshot));
+const latest = snapshot.items.filter(isPublicYoutubeReleaseR1482).sort((a,b)=>(Date.parse(b.publishedAt)||0)-(Date.parse(a.publishedAt)||0))[0];
+if (latest) await cacheLatestYoutubeItem(db,latest,{mode:snapshot.mode});
+return snapshot;
+} finally {
+await releasePushOnceClaim(db,lockKey);
+}
 }
 async function handleFastYoutubeReleaseCheckR332(request, env) {
 if (!adminAuthorized(request, env) && !cronAuthorized(request, env)) return json({ok:false,error:'unauthorized'},401);
@@ -4139,9 +4222,9 @@ if(!forceQuotaPollR797){
 const lastR797=await getPushState(db,'youtube-fast-last-check-at-r332').catch(()=>null);
 const lastMsR797=Date.parse(String(lastR797?.value||lastR797?.updatedAt||''));
 const ageMsR797=Number.isFinite(lastMsR797)?Math.max(0,Date.now()-lastMsR797):Infinity;
-const minGapMsR797=29.5*60*1000;
+const minGapMsR797=4.5*60*1000;
 if(ageMsR797<minGapMsR797){
-return json({ok:true,skipped:true,reason:'websub-primary-quota-eco-r797',fallbackCadenceMinutes:30,ageMinutes:Math.round(ageMsR797/6000)/10,checkedAt:new Date().toISOString()},200);
+return json({ok:true,skipped:true,reason:'release-poll-not-due-r1482',fallbackCadenceMinutes:5,ageMinutes:Math.round(ageMsR797/6000)/10,checkedAt:new Date().toISOString()},200);
 }
 }
 const startedAt=new Date().toISOString();
@@ -4154,7 +4237,8 @@ const full=await responseData(await handleCheckPlaylist(request,env));
 return json({ok:Boolean(full.httpOk),mode:'seed-via-full',websub,full},full.httpOk?200:502);
 }
 try{
-const fetched=await fetchLatestUploadsR332(env,db);
+const fetched=await getYoutubeUploadsSnapshotR1482(env,db,{force:forceQuotaPollR797});
+if (fetched.skipped) return json({ok:true,...fetched},200);
 const results=[];
 for(const item of fetched.items.slice().reverse()) results.push(await pushYoutubeReleaseItemR332(env,db,item,'fast-cron-r332'));
 const sent=results.filter(x=>x?.sent).length;
@@ -4184,7 +4268,8 @@ details: { startedAt, caller: adminAuthorized(request, env) ? 'control' : 'cron'
 try {
 const fetched = await fetchOfficialPlaylist(env, db);
 const items = fetched.items;
-if (items[0]) await cacheLatestYoutubeItem(db, items[0], { mode: fetched.mode }).catch(() => {});
+const latestReleaseR1482 = items.find(isPublicYoutubeReleaseR1482);
+if (latestReleaseR1482) await cacheLatestYoutubeItem(db, latestReleaseR1482, { mode: fetched.mode }).catch(() => {});
 await recordSystemLog(env, {
 scope: 'youtube', level: fetched.errors.length ? 'warning' : 'info', event: 'playlist-fetched',
 message: `YouTube вернул ${items.length} видео.`,
@@ -4216,9 +4301,6 @@ await db.batch(items.map(item => db.prepare(`
 await setPushState(db, 'playlist-seeded', '1');
 await setPushState(db, 'playlist-seeded-at', startedAt);
 await setPushState(db, 'playlist-last-check-status', 'seeded');
-await setPushState(db, 'youtube-visible-subscriber-snapshot-r677', JSON.stringify({
-at:startedAt, count:identity.subscribers, items:currentVisibleSubscribersR677
-})).catch(()=>{});
 const summary = {
 checked: items.length,
 newCount: 0,
@@ -4413,7 +4495,8 @@ history
 }
 async function inspectYoutubePlaylist(env, db) {
 const fetched = await fetchOfficialPlaylist(env, db);
-if (fetched.items[0]) await cacheLatestYoutubeItem(db, fetched.items[0], { mode: fetched.mode }).catch(() => {});
+const latestReleaseR1482 = fetched.items.find(isPublicYoutubeReleaseR1482);
+if (latestReleaseR1482) await cacheLatestYoutubeItem(db, latestReleaseR1482, { mode: fetched.mode }).catch(() => {});
 const [seenResult, sentHistoryResult, lastSeen, latestPushAttempt] = await Promise.all([
 db.prepare('SELECT video_id FROM push_playlist_seen').all(),
 db.prepare(`
@@ -4534,17 +4617,18 @@ const db = env.COMMENTS_DB;
 await ensurePushAutomationSchema(db);
 let state = await getPushState(db, 'youtube-latest-public');
 let latest = parsePushSummary(state?.value);
-if (!latest?.videoId) {
+let discovery = null;
+let discoveryError = '';
 try {
-const fetched = await fetchOfficialPlaylist(env, db);
-if (fetched.items[0]) {
-await cacheLatestYoutubeItem(db, fetched.items[0], { mode: fetched.mode });
+discovery = await getYoutubeUploadsSnapshotR1482(env, db);
 state = await getPushState(db, 'youtube-latest-public');
 latest = parsePushSummary(state?.value);
+} catch (error) {
+discoveryError = cleanPlainText(error?.message || error,300);
+await setPushState(db,'youtube-release-discovery-error-r1482',JSON.stringify({at:new Date().toISOString(),error:discoveryError})).catch(()=>{});
 }
-} catch (_) {}
-}
-return json({ ok: Boolean(latest?.videoId), latest: latest?.videoId ? latest : null, updatedAt: state?.updatedAt || latest?.updatedAt || '' }, 200, PUBLIC_CACHE_HEADERS);
+const valid = isPublicYoutubeReleaseR1482(latest);
+return json({ok:valid,latest:valid ? latest : null,updatedAt:state?.updatedAt || latest?.updatedAt || '',checkedAt:discovery?.checkedAt || '',stale:Boolean(discoveryError || discovery?.stale),release:'R1482'},200,PUBLIC_CACHE_HEADERS);
 }
 function formatDiagnosticDate(value) {
 if (!value) return '—';
@@ -12767,6 +12851,11 @@ const gatewayUrl=new URL(request.url);
 const cron=cleanPlainText(gatewayUrl.searchParams.get('cron') || request.headers.get('x-andrik-cron') || '',80);
 const clock=cronGatewayClockR394(new Date(),cron);
 const schedulerHeartbeatAt=await touchCronSchedulerHeartbeatR394(db,`gateway-r416:${cron || 'unknown'}`).catch(()=>new Date().toISOString());
+// R1482: releases must run even with only a */2 trigger or when a daily
+// summary / LIVE check consumes the five-minute task slot. The fast handler
+// has its own five-minute gate and shares its upstream snapshot with the site.
+const releaseTaskR1482=Promise.resolve().then(async()=>responseData(await handleFastYoutubeReleaseCheckR332(request,env))).catch(error=>({ok:false,error:cleanPlainText(error?.message||error,300)}));
+if(ctx?.waitUntil)ctx.waitUntil(releaseTaskR1482);else await releaseTaskR1482;
 let task='heartbeat';
 let value={ok:true,skipped:true,reason:'no-due-class'};
 let claimed=false;
@@ -15366,8 +15455,19 @@ return result;
 await releasePushOnceClaim(db,lockKey).catch(()=>{});
 }
 }
+async function runYoutubeReleaseWakeupR1482(env) {
+if (!env.COMMENTS_DB || !String(env.CRON_SECRET || '').trim()) return {ok:true,skipped:true,reason:'release-rescue-not-configured'};
+const request=new Request('https://control.andrikmetal.com/api/automation/youtube-fast',{
+method:'POST',headers:{'x-cron-key':String(env.CRON_SECRET),accept:'application/json'}
+});
+return responseData(await handleFastYoutubeReleaseCheckR332(request,env));
+}
 async function runPushAutomationRescueWithHeartbeatR924(env, source='health-r924') {
-const result=await runPushAutomationRescueR778(env,source);
+const [result,releaseR1482]=await Promise.all([
+runPushAutomationRescueR778(env,source),
+runYoutubeReleaseWakeupR1482(env).catch(error=>({ok:false,error:cleanPlainText(error?.message||error,300)}))
+]);
+result.releaseR1482=releaseR1482;
 if(result?.ok && env.COMMENTS_DB){
 const db=requireDb(env);
 const at=await touchCronSchedulerHeartbeatR394(db,`fallback-r924:${source}`).catch(()=>new Date().toISOString());
