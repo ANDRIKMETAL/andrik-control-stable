@@ -19017,24 +19017,55 @@ async function handleAlbumLoopPublicR1442(request,env){
  return new Response(object.body,{status,headers});
 }
 
+// R1487: Time-based visual scheduler; no Cloudflare Cron required, no media restart.
+// All computation is based on wall-clock Europe/Bratislava at each GET.
+const RADIO_VISUAL_SCHEDULE_HOURS_R1487=[1,3,6,12];
+function normalizedAlbumVisualSettingsR1487(raw){
+  const d=raw&&typeof raw==='object'?raw:{};
+  return {
+    mode:d.mode==='static'?'static':'studio',
+    autoEnabled:d.autoEnabled===true,
+    intervalHours:RADIO_VISUAL_SCHEDULE_HOURS_R1487.includes(Number(d.intervalHours))?Number(d.intervalHours):12,
+    smartEnabled:d.smartEnabled===true
+  };
+}
+function effectiveAlbumVisualSettingsR1487(raw,now=new Date()){
+ const s=normalizedAlbumVisualSettingsR1487(raw);
+ const hour=Number(new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Bratislava',hour:'2-digit',hourCycle:'h23'}).format(now));
+ const scheduledMode=Math.floor(hour/s.intervalHours)%2===0?'studio':'static';
+ const mode=s.smartEnabled?'static':(s.autoEnabled?scheduledMode:s.mode);
+ return {...s,mode,manualMode:s.mode,scheduledMode,localHour:hour,timeZone:'Europe/Bratislava',
+   priority:s.smartEnabled?'smart':s.autoEnabled?'auto':'manual',
+   extrasMode:s.smartEnabled||mode==='studio'?'master':'extras',applies:'next-mp3'};
+}
 const RADIO_ALBUM_MODE_KEY_R1430='radio/settings/album-visual-mode-r1430.json';
 async function handleAlbumModeR1430(request,env){
-  const bucket=getMusicBucketR314(env);
-  if(!bucket)return json({ok:false,error:'music-bucket-not-configured'},503);
-  if(request.method==='GET'){
-    const object=await bucket.get(RADIO_ALBUM_MODE_KEY_R1430).catch(()=>null);
-    let mode='studio';
-    if(object){try{const data=await object.json();if(data.mode==='static'||data.mode==='studio')mode=data.mode}catch(_){}}
-    return json({ok:true,mode,ticker:mode==='static'?'R1277-BAKED':'OFF-STUDIO'});
-  }
-  if(request.method==='PUT'){
-    if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
-    let data;try{data=await request.json()}catch(_){return json({ok:false,error:'invalid-json'},400)}
-    if(data?.mode!=='static'&&data?.mode!=='studio')return json({ok:false,error:'invalid-mode'},400);
-    await bucket.put(RADIO_ALBUM_MODE_KEY_R1430,JSON.stringify({mode:data.mode,updatedAt:new Date().toISOString()}),{httpMetadata:{contentType:'application/json'}});
-    return json({ok:true,mode:data.mode,applies:'next-track'});
-  }
-  return json({ok:false,error:'method-not-allowed'},405);
+ const bucket=getMusicBucketR314(env);
+ if(!bucket)return json({ok:false,error:'music-bucket-not-configured'},503);
+ let settings=normalizedAlbumVisualSettingsR1487({});
+ const current=await bucket.get(RADIO_ALBUM_MODE_KEY_R1430).catch(()=>null);
+ if(current){try{settings=normalizedAlbumVisualSettingsR1487(await current.json())}catch(_){}}
+ if(request.method==='PUT'){
+   if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
+   let data;try{data=await request.json()}catch(_){return json({ok:false,error:'invalid-json'},400)}
+   if(!data||typeof data!=='object'||Array.isArray(data))return json({ok:false,error:'invalid-settings'},400);
+   // Accept legacy {mode} PUT; preserve the user's auto and smart choices.
+   if(Object.hasOwn(data,'mode')&&!['studio','static'].includes(data.mode))return json({ok:false,error:'invalid-mode'},400);
+   if(Object.hasOwn(data,'autoEnabled')&&typeof data.autoEnabled!=='boolean')return json({ok:false,error:'invalid-auto-enabled'},400);
+   if(Object.hasOwn(data,'smartEnabled')&&typeof data.smartEnabled!=='boolean')return json({ok:false,error:'invalid-smart-enabled'},400);
+   if(Object.hasOwn(data,'intervalHours')&&!RADIO_VISUAL_SCHEDULE_HOURS_R1487.includes(Number(data.intervalHours)))return json({ok:false,error:'invalid-interval'},400);
+   const next={...settings};
+   for(const key of ['mode','autoEnabled','smartEnabled','intervalHours']){
+     if(Object.hasOwn(data,key))next[key]=data[key];
+   }
+   settings=normalizedAlbumVisualSettingsR1487(next);
+   await bucket.put(RADIO_ALBUM_MODE_KEY_R1430,JSON.stringify({...settings,updatedAt:new Date().toISOString(),revision:'R1487'}),{httpMetadata:{contentType:'application/json'}});
+ }
+ if(request.method==='GET'||request.method==='PUT'){
+   const resolved=effectiveAlbumVisualSettingsR1487(settings);
+   return json({ok:true,...resolved,ticker:resolved.mode==='static'?'R1277-BAKED':'OFF-STUDIO',revision:'R1487'},200,{'cache-control':'no-store'});
+ }
+ return json({ok:false,error:'method-not-allowed'},405);
 }
 const RADIO_STUDIO_LOOP_KEY_R1321='radio/studio/andrik-studio-loop-r1321.mp4';
 async function handleRadioStudioR1321(request,env){
