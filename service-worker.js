@@ -1,5 +1,5 @@
 'use strict';
-const VERSION = '55.00-r1483-live-charts-zip';
+const VERSION = '55.00-r1484-radio-stats';
 const IS_CONTROL_HOST = self.location.hostname.toLowerCase() === 'control.andrikmetal.com';
 async function deleteControlCaches(){
 if(!self.caches) return;

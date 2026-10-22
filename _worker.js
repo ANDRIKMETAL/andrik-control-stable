@@ -7929,6 +7929,18 @@ collector.warning=cleanPlainText(error?.message||error,260);
 }
 }
 }
+
+if(date===today&&!collector.selfHealAttempted){
+ try{
+  const stored=await getPushState(db,'radio-audience-collector-r1484');
+  const last=stored?.value?JSON.parse(stored.value):null;
+  const age=Date.now()-Date.parse(last?.checkedAt||'');
+  if(last?.videoId===ANDRIK_RADIO_LIVE_ID_R1483&&Number.isFinite(age)&&age<5*60*1000){
+   collector.source=last.source||collector.source;collector.warning=last.warning||'';
+   collector.liveVideoId=last.videoId;collector.selfHealOk=Boolean(last.ok);
+  }
+ }catch(_){}
+}
 let currentRadioVideoIdR1299='';
 if(date===today){
  // Today's counters belong to the owner-selected stream; archived dates retain all sessions.
@@ -7996,7 +8008,7 @@ createdAt:cleanPlainText(row?.createdAt||'',80),type:cleanPlainText(row?.type||'
 country:cleanPlainText(row?.country||'',8).toUpperCase(),region:cleanPlainText(row?.region||'',120),city:cleanPlainText(row?.city||'',120)
 }));
 return json({
-ok:true,version:'R1483',videoId:currentRadioVideoIdR1299,date,today,timezone:'Europe/Bratislava',
+ok:true,version:'R1484',videoId:currentRadioVideoIdR1299,date,today,timezone:'Europe/Bratislava',
 collectionStarted:series[0]?.sampledAt||'',samples:series.length,series,
 summary:{launches:totals.launches,peakConcurrent:totals.peak,currentConcurrent:totals.current,lastCumulativeViews:totals.lastViews,
 lastViewsVideoId:totals.lastViewsVideoId,viewerSamples:totals.viewerSamples,viewSamples:totals.viewSamples,lastViewerSampleAt:totals.lastViewerSampleAt,
@@ -8014,84 +8026,108 @@ try{
  return {...result,warning:result.ok?'':result.reason||'sample-not-written'};
 }catch(error){return {ok:false,warning:cleanPlainText(error?.message||error,260)};}
 }
+// R1484: collect official metrics independently of stream controls and Studio reports.
+let radioMetricsCacheR1484={expiresAt:0,data:null,pending:null};
+function radioMetricNumberR1484(value){
+ if(value==null||value==='')return null;
+ const n=Number(value);return Number.isFinite(n)&&n>=0?Math.trunc(n):null;
+}
+function radioMetricsErrorR1484(error){return cleanPlainText(error?.message||error||'youtube-statistics-unavailable',320);}
+function radioMetricVideoR1484(item){
+ const details=item?.liveStreamingDetails||{},stats=item?.statistics||{},snippet=item?.snippet||{};
+ const live=!details.actualEndTime&&(String(snippet.liveBroadcastContent||'').toLowerCase()==='live'||Boolean(details.actualStartTime));
+ return {videoId:ANDRIK_RADIO_LIVE_ID_R1483,title:cleanPlainText(snippet.title||'ANDRIK METAL RADIO 24/7',220),
+  views:radioMetricNumberR1484(stats.viewCount),concurrentViewers:live?radioMetricNumberR1484(details.concurrentViewers):null,
+  likes:radioMetricNumberR1484(stats.likeCount),comments:radioMetricNumberR1484(stats.commentCount),isLive:live,
+  publishedAt:cleanPlainText(details.actualStartTime||snippet.publishedAt||'',80),
+  actualStartTime:cleanPlainText(details.actualStartTime||'',80),actualEndTime:cleanPlainText(details.actualEndTime||'',80),
+  scheduledStartTime:cleanPlainText(details.scheduledStartTime||'',80),privacyStatus:cleanPlainText(item?.status?.privacyStatus||'',40),
+  thumbnail:snippet.thumbnails?.high?.url||snippet.thumbnails?.medium?.url||'',url:'https://www.youtube.com/watch?v='+ANDRIK_RADIO_LIVE_ID_R1483};
+}
+async function saveRadioCollectorStateR1484(env,result){
+ if(!env.COMMENTS_DB)return;
+ try{await setPushState(requireDb(env),'radio-audience-collector-r1484',JSON.stringify({
+  ok:Boolean(result.video?.isLive&&result.sample?.ok),partial:Boolean(result.warning&&result.sample?.ok),
+  videoId:ANDRIK_RADIO_LIVE_ID_R1483,source:result.source,warning:result.warning,
+  sampledAt:result.sample?.sampledAt||'',checkedAt:result.checkedAt
+ }));}catch(_){}
+}
+async function fetchRadioMetricsR1484(env){
+ if(radioMetricsCacheR1484.data&&radioMetricsCacheR1484.expiresAt>Date.now())return radioMetricsCacheR1484.data;
+ if(radioMetricsCacheR1484.pending)return radioMetricsCacheR1484.pending;
+ const work=(async()=>{
+  const id=ANDRIK_RADIO_LIVE_ID_R1483,attempts=[];
+  const modes=String(env.YOUTUBE_API_KEY||'').trim()?[false,true]:[true];
+  let item=null,source='',sample={ok:false,warning:'video-not-returned'};
+  const merge=(before,after)=>{
+   const out={...(before||{})};
+   for(const [key,value] of Object.entries(after||{}))if(value!=null&&value!=='')out[key]=value;
+   return out;
+  };
+  for(const oauth of modes){
+   try{
+    const answer=await youtubeApiJson(env,'videos',{part:'snippet,status,statistics,liveStreamingDetails',id,maxResults:1},{oauth,timeoutMs:6500});
+    const candidate=(Array.isArray(answer?.data?.items)?answer.data.items:[]).find(row=>row?.id===id);
+    if(!candidate)throw new Error('video-not-returned:'+id);
+    item=item?{...item,...candidate,snippet:merge(item.snippet,candidate.snippet),statistics:merge(item.statistics,candidate.statistics),liveStreamingDetails:merge(item.liveStreamingDetails,candidate.liveStreamingDetails)}:candidate;
+    source=oauth?'youtube-videos-oauth-r1484':'youtube-videos-key-r1484';
+    const video=radioMetricVideoR1484(item);
+    // Save available counters before a second authentication attempt or any optional service.
+    if(video.isLive){
+     try{sample=await persistRadioLiveMetricsR1446(env,video,source);}
+     catch(error){sample={ok:false,warning:radioMetricsErrorR1484(error)};}
+    }else sample={ok:false,warning:'video-not-live'};
+    if(!video.isLive||video.concurrentViewers!=null)break;
+   }catch(error){attempts.push({mode:oauth?'oauth':'key',error:radioMetricsErrorR1484(error)});}
+  }
+  const video=item?radioMetricVideoR1484(item):null,warnings=[];
+  if(!video)warnings.push(attempts.map(row=>row.mode+': '+row.error).join(' | ')||'video-not-returned');
+  if(video?.isLive&&video.views==null)warnings.push('viewCount-missing-in-youtube-response');
+  if(video?.isLive&&video.concurrentViewers==null)warnings.push('concurrentViewers-missing-in-youtube-response');
+  if(video?.isLive&&!sample.ok)warnings.push('sample-not-saved: '+(sample.warning||sample.reason||'unknown'));
+  const result={video,liveChatId:video?.isLive?cleanPlainText(item?.liveStreamingDetails?.activeLiveChatId||'',180):'',
+   source:source||'youtube-statistics-unavailable-r1484',warning:warnings.join(' | '),attempts,sample,checkedAt:new Date().toISOString()};
+  await saveRadioCollectorStateR1484(env,result);
+  radioMetricsCacheR1484.data=result;radioMetricsCacheR1484.expiresAt=Date.now()+(video?45000:10000);
+  return result;
+ })();
+ radioMetricsCacheR1484.pending=work;
+ try{return await work;}finally{if(radioMetricsCacheR1484.pending===work)radioMetricsCacheR1484.pending=null;}
+}
+async function handleControlRadioMetricsR1484(request,env){
+ if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
+ try{
+  const metrics=await fetchRadioMetricsR1484(env),video=metrics.video;
+  if(!video)return json({ok:false,error:'youtube-statistics-unavailable',message:metrics.warning,videoId:ANDRIK_RADIO_LIVE_ID_R1483,source:metrics.source,attempts:metrics.attempts,updatedAt:metrics.checkedAt},503);
+  let health=null;
+  try{health=await readYoutubeLiveHealthCacheR1158(env,video.videoId);}catch(_){}
+  return json({ok:true,version:'R1484',active:video.isLive,broadcastLive:video.isLive,signalActive:health?.streamStatus==='active',
+   videoId:video.videoId,title:video.title,views:video.views,concurrentViewers:video.concurrentViewers,likes:video.likes,comments:video.comments,
+   actualStartTime:video.actualStartTime,actualEndTime:video.actualEndTime,scheduledStartTime:video.scheduledStartTime,privacyStatus:video.privacyStatus,
+   lifeCycleStatus:video.isLive?'live':video.actualEndTime?'complete':'',streamStatus:cleanPlainText(health?.streamStatus||'',80),
+   healthStatus:cleanPlainText(health?.healthStatus||'',80),healthIssues:Array.isArray(health?.healthIssues)?health.healthIssues:[],
+   healthSource:health?'saved-exact-health-r1484':'not-probed-in-metrics-lane-r1484',healthUpdatedAt:health?.updatedAt||'',
+   statisticsAvailable:video.views!=null||video.concurrentViewers!=null||video.likes!=null,
+   statisticsWarning:metrics.warning,statisticsSource:metrics.source,statisticsAttempts:metrics.attempts,
+   audienceSampleR1446:metrics.sample,audienceSampleR1484:metrics.sample,
+   studioUrl:'https://studio.youtube.com/video/'+video.videoId+'/livestreaming',
+   analyticsUrl:'https://studio.youtube.com/video/'+video.videoId+'/analytics/tab-overview/period-default',
+   watchUrl:video.url,source:metrics.source,updatedAt:metrics.checkedAt});
+ }catch(error){return json({ok:false,error:'youtube-statistics-unavailable',message:radioMetricsErrorR1484(error),videoId:ANDRIK_RADIO_LIVE_ID_R1483},503);}
+}
+async function collectRadioAudienceCronR1484(env,clock){
+ if(!clock?.due2&&!clock?.due5&&!clock?.due15)return {ok:true,skipped:true,reason:'no-due-class'};
+ const db=requireDb(env);await ensurePushAutomationSchema(db);
+ if(!await claimCronGatewaySlotR334(db,'radio-audience-2m-r1484',clock.slot2))return {ok:true,skipped:true,reason:'slot-already-claimed'};
+ const metrics=await fetchRadioMetricsR1484(env);
+ return {ok:Boolean(metrics.video?.isLive&&metrics.sample?.ok),videoId:ANDRIK_RADIO_LIVE_ID_R1483,source:metrics.source,
+  warning:metrics.warning,sampledAt:metrics.sample?.sampledAt||'',views:metrics.video?.views??null,
+  concurrentViewers:metrics.video?.concurrentViewers??null,checkedAt:metrics.checkedAt};
+}
+
 async function fetchYoutubeActiveLiveEngagementR669(env,db){
-const currentKey='youtube-live-current-video-r669';
-const discoveryKey='youtube-live-discovery-last-at-r669';
-const [currentState,radioState,discoveryState]=await Promise.all([
-getPushState(db,currentKey).catch(()=>null),
-getPushState(db,'radio-live-last-push-video-r585').catch(()=>null),
-getPushState(db,discoveryKey).catch(()=>null)
-]);
-const candidateIds=[...new Set([
-ANDRIK_RADIO_LIVE_ID_R1483, // R1299: new owner 16:9 LIVE, verify active before displaying data
-cleanPlainText(currentState?.value||'',80),
-cleanPlainText(radioState?.value||'',80)
-].filter(id=>id&&!ANDRIK_RADIO_RETIRED_IDS_R1483.has(id)))];
-const probeVideo=async ids=>{
-const list=[...new Set((Array.isArray(ids)?ids:[ids]).map(id=>cleanPlainText(id||'',80)).filter(Boolean))].slice(0,5);
-if(!list.length)return null;
-const {data,mode}=await youtubeApiJson(env,'videos',{
-part:'snippet,statistics,liveStreamingDetails',id:list.join(','),maxResults:list.length
-});
-const items=Array.isArray(data?.items)?data.items:[];
-const isLiveRowR1299=row=>{
-const details=row?.liveStreamingDetails||{};
-const channel=cleanPlainText(env.YOUTUBE_CHANNEL_ID||'',120);
-if(channel&&row?.snippet?.channelId!==channel)return false;
-return !details.actualEndTime&&(String(row?.snippet?.liveBroadcastContent||'').toLowerCase()==='live'||Boolean(details.actualStartTime));
-};
-const item=items.find(row=>row?.id===ANDRIK_RADIO_LIVE_ID_R1483&&isLiveRowR1299(row))||items.find(isLiveRowR1299)||null;
-if(!item)return null;
-const details=item?.liveStreamingDetails||{};
-const stats=item?.statistics||{};
-const snippet=item?.snippet||{};
-const video={
-videoId:cleanPlainText(item.id||'',40),
-title:cleanPlainText(snippet.title||'ANDRIK METAL RADIO 24/7',180),
-publishedAt:cleanPlainText(details.actualStartTime||snippet.publishedAt||'',50),
-thumbnail:snippet?.thumbnails?.high?.url||snippet?.thumbnails?.medium?.url||'',
-likes:Math.max(0,Number(stats.likeCount||0)),
-comments:Math.max(0,Number(stats.commentCount||0)),
-views:stats.viewCount==null?null:Math.max(0,Number(stats.viewCount)||0),
-concurrentViewers:details.concurrentViewers==null?null:Math.max(0,Number(details.concurrentViewers)||0),
-url:`https://www.youtube.com/watch?v=${encodeURIComponent(item.id||'')}`,
-isLive:true
-};
-return {video,liveChatId:cleanPlainText(details.activeLiveChatId||'',180),warning:'',source:cleanPlainText(mode||'key',80)};
-};
-try{
-const known=await probeVideo(candidateIds);
-if(known?.video){
-await setPushState(db,currentKey,known.video.videoId).catch(()=>{});
-const sample=await persistRadioLiveMetricsR1446(env,known.video,'pinned-live-r1446');
-return {...known,warning:sample.warning||known.warning,source:'pinned-live-r1446'};
-}
-let found=null;
-try{found=await youtubePublicLiveByUploadsR623(env,{fresh:true});}catch(_){found=null;}
-if(!found?.videoId){
-const lastDiscoveryMs=Date.parse(String(discoveryState?.value||discoveryState?.updatedAt||''));
-const staleKnown=Boolean(cleanPlainText(currentState?.value||'',80));
-const discoveryDue=staleKnown || !Number.isFinite(lastDiscoveryMs) || Date.now()-lastDiscoveryMs>=30*60*1000;
-if(discoveryDue){
-await setPushState(db,discoveryKey,new Date().toISOString()).catch(()=>{});
-try{found=await youtubePublicLiveByApiKeyR619(env,{fresh:true});}catch(_){found=null;}
-}
-}
-const discoveredId=cleanPlainText(found?.videoId||'',80);
-if(!discoveredId){
-if(cleanPlainText(currentState?.value||'',80))await setPushState(db,currentKey,'').catch(()=>{});
-return {video:null,liveChatId:'',warning:'',source:'no-live-r669'};
-}
-const discovered=await probeVideo([discoveredId]);
-if(discovered?.video){
-await setPushState(db,currentKey,discovered.video.videoId).catch(()=>{});
-const sample=await persistRadioLiveMetricsR1446(env,discovered.video,'discovered-live-r1446');
-return {...discovered,warning:sample.warning||discovered.warning,source:cleanPlainText(found?.source||'discovered-live-r1446',100)};
-}
-return {video:null,liveChatId:'',warning:'',source:'discovery-not-live-r669'};
-}catch(error){
-return {video:null,liveChatId:'',warning:cleanPlainText(error?.message||error,260),source:'live-probe-error-r669'};
-}
+ const metrics=await fetchRadioMetricsR1484(env);
+ return {video:metrics.video?.isLive?metrics.video:null,liveChatId:metrics.liveChatId,warning:metrics.warning,source:metrics.source};
 }
 const YOUTUBE_LIVE_EMOJI_R686=Object.freeze({
 'hand-pink-waving':'👋',
@@ -12852,6 +12888,11 @@ if(env.META_USER_ACCESS_TOKEN_R1292)ctx?.waitUntil?.(fbMetaReadR1292(env,false).
 const gatewayUrl=new URL(request.url);
 const cron=cleanPlainText(gatewayUrl.searchParams.get('cron') || request.headers.get('x-andrik-cron') || '',80);
 const clock=cronGatewayClockR394(new Date(),cron);
+// R1484: collect before and independently of channel discovery and notification jobs.
+let radioAudienceResultR1484={queued:true};
+const radioAudienceTaskR1484=Promise.resolve().then(()=>collectRadioAudienceCronR1484(env,clock)).catch(error=>({ok:false,warning:radioMetricsErrorR1484(error)}));
+if(ctx?.waitUntil)ctx.waitUntil(radioAudienceTaskR1484);else radioAudienceResultR1484=await radioAudienceTaskR1484;
+
 const schedulerHeartbeatAt=await touchCronSchedulerHeartbeatR394(db,`gateway-r416:${cron || 'unknown'}`).catch(()=>new Date().toISOString());
 // R1482: releases must run even with only a */2 trigger or when a daily
 // summary / LIVE check consumes the five-minute task slot. The fast handler
@@ -12922,6 +12963,7 @@ const failed=value?.ok===false || value?.httpOk===false;
 const result={
 ok:true,
 facebookSchedule:fbScheduleResultR1292,
+radioAudience:radioAudienceResultR1484,
 healthy:!failed,
 degraded:failed,
 mode:'external-cron-gateway-r416-one-duty',
@@ -20632,6 +20674,7 @@ if ((path === '/api/control/radio-audience-r1157' || path === '/api/control/radi
 if (path === '/api/control/audience' && request.method === 'GET') return await handleControlAudience(request, env);
 if (path === '/api/control/youtube-top-content' && request.method === 'GET') return await handleControlYoutubeTopContentR552(request, env);
 if (path === '/api/control/youtube-oac-shelf' && request.method === 'GET') return await handleControlYoutubeOacShelfR910(request, env);
+if (path === '/api/control/radio-metrics-r1484' && request.method === 'GET') return await handleControlRadioMetricsR1484(request, env);
 if (path === '/api/control/youtube-live-r565' && request.method === 'GET') return await handleControlYoutubeLiveCachedR797(request, env);
 if (path === '/api/control/youtube-live-r609/auto' && request.method === 'POST') return await handleYoutubeLiveAutoR609(request, env);
 if (path === '/api/control/youtube-live-r609/start' && request.method === 'POST') return await handleYoutubeLiveStartR609(request, env);
