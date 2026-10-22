@@ -1,3 +1,6 @@
+// R1483: one owner-pinned stream for links, discovery and today's metrics.
+const ANDRIK_RADIO_LIVE_ID_R1483 = 'U0bzXBNBs2Y';
+const ANDRIK_RADIO_RETIRED_IDS_R1483 = new Set(['E-Hf8ciUhrU','eN3ljx6_6dA','lpc9HfVs0NY','-cEMOdUUAYg']);
 const PUSH_OWNER_RECOVERY_R768 = 'R768-OWNER-PUSH-SELFHEAL';
 const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R526', number:526, version:'55.00', full:'55.00 LIVE WEB AI FINAL R526 · PUSH DELIVERY CORRECTNESS', siteUpdater:'55.00-r358-deploy-nohang' });
 const PUSH_DELIVERY_CORRECTNESS_R526 = 'R526-ONESIGNAL-PLATFORM-DELIVERY+SUBSCRIBER-COUNT-GATE+HONEST-CADENCE';
@@ -7821,6 +7824,7 @@ await db.prepare(`
       )
     `).run();
 await db.prepare(`CREATE INDEX IF NOT EXISTS idx_radio_audience_date_time_r1156 ON radio_audience_samples(local_date, sampled_at ASC)`).run().catch(()=>{});
+await db.prepare(`CREATE INDEX IF NOT EXISTS idx_radio_audience_date_video_time_r1483 ON radio_audience_samples(local_date, video_id, sampled_at ASC)`).run().catch(()=>{});
 await db.prepare(`CREATE INDEX IF NOT EXISTS idx_radio_audience_video_time_r1156 ON radio_audience_samples(video_id, sampled_at DESC)`).run().catch(()=>{});
 })();
 try{await radioAudienceSchemaPromiseR1156;}
@@ -7882,7 +7886,7 @@ const previous=prev.get(videoId);
 let launches=0;
 // The first observed value is a baseline, NOT new views today.
 if(views!=null&&Number.isFinite(previous))launches=Math.max(0,Math.trunc(views-previous));
-if(views!=null)prev.set(videoId,views);
+if(views!=null)prev.set(videoId,Number.isFinite(previous)?Math.max(previous,views):views);
 out.push({
 sampledAt:cleanPlainText(row?.sampledAt||'',80),
 minute:cleanPlainText(row?.localMinute||'',8),
@@ -7908,7 +7912,7 @@ const latestBefore=await db.prepare(`
       SELECT sampled_at AS sampledAt FROM radio_audience_samples
       WHERE local_date=? AND video_id=?
       ORDER BY sampled_at DESC LIMIT 1
-    `).bind(today,'-cEMOdUUAYg').first().catch(()=>null);
+    `).bind(today,ANDRIK_RADIO_LIVE_ID_R1483).first().catch(()=>null);
 collector.latestSampleAt=cleanPlainText(latestBefore?.sampledAt||'',80);
 const latestMs=Date.parse(collector.latestSampleAt||'');
 const stale=!Number.isFinite(latestMs) || Date.now()-latestMs>3*60*1000;
@@ -7925,25 +7929,21 @@ collector.warning=cleanPlainText(error?.message||error,260);
 }
 }
 }
-const rowsResult=await db.prepare(`
+let currentRadioVideoIdR1299='';
+if(date===today){
+ // Today's counters belong to the owner-selected stream; archived dates retain all sessions.
+ currentRadioVideoIdR1299=ANDRIK_RADIO_LIVE_ID_R1483;
+}
+// Filter before LIMIT: an earlier session must not crowd out the current stream.
+const rowsQuery=db.prepare(`
     SELECT video_id AS videoId,sampled_at AS sampledAt,local_minute AS localMinute,
            views,concurrent_viewers AS concurrentViewers
     FROM radio_audience_samples
-    WHERE local_date=?
-    ORDER BY sampled_at ASC
-    LIMIT 900
-  `).bind(date).all();
-const allRows=Array.isArray(rowsResult?.results)?rowsResult.results:[];
-let currentRadioVideoIdR1299='';
-if(date===today){
- const state=await getPushState(db,'youtube-live-current-video-r669').catch(()=>null);
- const saved=cleanPlainText(state?.value||'',80);
- const verifiedAt=Date.parse(String(state?.updatedAt||''));
- const savedFresh=Number.isFinite(verifiedAt)&&Date.now()-verifiedAt<10*60*1000;
- // Never mix the old horizontal/dual session with today's new-radio KPI.
- currentRadioVideoIdR1299=collector.liveVideoId||(savedFresh&&saved&&!['E-Hf8ciUhrU','eN3ljx6_6dA','lpc9HfVs0NY'].includes(saved)?saved:'-cEMOdUUAYg');
-}
-const rows=currentRadioVideoIdR1299?allRows.filter(row=>cleanPlainText(row?.videoId||'',80)===currentRadioVideoIdR1299):allRows;
+    WHERE local_date=?${currentRadioVideoIdR1299?' AND video_id=?':''}
+    ORDER BY sampled_at ASC LIMIT 1600
+  `);
+const rowsResult=await (currentRadioVideoIdR1299?rowsQuery.bind(date,currentRadioVideoIdR1299):rowsQuery.bind(date)).all();
+const rows=Array.isArray(rowsResult?.results)?rowsResult.results:[];
 const videoIds=[...new Set(rows.map(row=>cleanPlainText(row?.videoId||'',80)).filter(Boolean))];
 const previousByVideo={};
 for(const videoId of videoIds){
@@ -7996,7 +7996,7 @@ createdAt:cleanPlainText(row?.createdAt||'',80),type:cleanPlainText(row?.type||'
 country:cleanPlainText(row?.country||'',8).toUpperCase(),region:cleanPlainText(row?.region||'',120),city:cleanPlainText(row?.city||'',120)
 }));
 return json({
-ok:true,version:'R1446',videoId:currentRadioVideoIdR1299,date,today,timezone:'Europe/Bratislava',
+ok:true,version:'R1483',videoId:currentRadioVideoIdR1299,date,today,timezone:'Europe/Bratislava',
 collectionStarted:series[0]?.sampledAt||'',samples:series.length,series,
 summary:{launches:totals.launches,peakConcurrent:totals.peak,currentConcurrent:totals.current,lastCumulativeViews:totals.lastViews,
 lastViewsVideoId:totals.lastViewsVideoId,viewerSamples:totals.viewerSamples,viewSamples:totals.viewSamples,lastViewerSampleAt:totals.lastViewerSampleAt,
@@ -8023,10 +8023,10 @@ getPushState(db,'radio-live-last-push-video-r585').catch(()=>null),
 getPushState(db,discoveryKey).catch(()=>null)
 ]);
 const candidateIds=[...new Set([
-'-cEMOdUUAYg', // R1299: new owner 16:9 LIVE, verify active before displaying data
+ANDRIK_RADIO_LIVE_ID_R1483, // R1299: new owner 16:9 LIVE, verify active before displaying data
 cleanPlainText(currentState?.value||'',80),
 cleanPlainText(radioState?.value||'',80)
-].filter(Boolean))];
+].filter(id=>id&&!ANDRIK_RADIO_RETIRED_IDS_R1483.has(id)))];
 const probeVideo=async ids=>{
 const list=[...new Set((Array.isArray(ids)?ids:[ids]).map(id=>cleanPlainText(id||'',80)).filter(Boolean))].slice(0,5);
 if(!list.length)return null;
@@ -8036,9 +8036,11 @@ part:'snippet,statistics,liveStreamingDetails',id:list.join(','),maxResults:list
 const items=Array.isArray(data?.items)?data.items:[];
 const isLiveRowR1299=row=>{
 const details=row?.liveStreamingDetails||{};
-return String(row?.snippet?.liveBroadcastContent||'').toLowerCase()==='live' || Boolean(details?.actualStartTime&&!details?.actualEndTime);
+const channel=cleanPlainText(env.YOUTUBE_CHANNEL_ID||'',120);
+if(channel&&row?.snippet?.channelId!==channel)return false;
+return !details.actualEndTime&&(String(row?.snippet?.liveBroadcastContent||'').toLowerCase()==='live'||Boolean(details.actualStartTime));
 };
-const item=items.find(row=>row?.id==='-cEMOdUUAYg'&&isLiveRowR1299(row))||items.find(isLiveRowR1299)||null;
+const item=items.find(row=>row?.id===ANDRIK_RADIO_LIVE_ID_R1483&&isLiveRowR1299(row))||items.find(isLiveRowR1299)||null;
 if(!item)return null;
 const details=item?.liveStreamingDetails||{};
 const stats=item?.statistics||{};
@@ -15896,7 +15898,8 @@ const dataStart = localOffset + 30 + localNameLength + localExtraLength;
 const dataEnd = dataStart + compressedSize;
 if (dataEnd > bytes.byteLength) throw new Error('zip-data');
 const compressed = bytes.subarray(dataStart, dataEnd);
-const content = method === 0 ? new Uint8Array(compressed) : await siteUpdateInflateRaw(compressed);
+// R1483: STORE content is already a view of the archive; avoid copying the whole site.
+const content = method === 0 ? compressed : await siteUpdateInflateRaw(compressed);
 if (content.byteLength !== uncompressedSize) throw new Error(`zip-size-mismatch:${path}`);
 if (method !== 0 && siteUpdateCrc32(content) !== crc) throw new Error(`zip-crc:${path}`);
 entries.push({ path, bytes:content, size:content.byteLength });
@@ -21630,14 +21633,14 @@ getPushState(db,'youtube-fast-engagement-last-status-r376').catch(()=>null)
 const fastMs=Date.parse(String(fastAt?.value||fastAt?.updatedAt||''));
 if(String(fastStatus?.value||'').toLowerCase()==='failed' || !Number.isFinite(fastMs) || Date.now()-fastMs>12*60*1000)return {hit:false,data:null};
 const videoId=cleanPlainText(current?.value||'',80);
-// R1481: revalidate the previous broadcast after the owner changes the live URL.
-if(videoId==='lpc9HfVs0NY')return {hit:false,data:null};
+// R1483: retired broadcasts cannot override the new owner-pinned stream.
+if(ANDRIK_RADIO_RETIRED_IDS_R1483.has(videoId))return {hit:false,data:null};
 return {hit:true,data:videoId?{videoId,watchUrl:`https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`,lifeCycleStatus:'live',streamStatus:'active',active:true,source:'engagement-state-r797'}:null};
 }catch(_){return {hit:false,data:null};}
 }
 async function readPublicYoutubeFallbackCacheR797(env){
 const now=Date.now();
-if(youtubePublicResolvedCacheR797.known && youtubePublicResolvedCacheR797.expiresAt>now && youtubePublicResolvedCacheR797.data?.videoId!=='lpc9HfVs0NY'){
+if(youtubePublicResolvedCacheR797.known && youtubePublicResolvedCacheR797.expiresAt>now && !ANDRIK_RADIO_RETIRED_IDS_R1483.has(youtubePublicResolvedCacheR797.data?.videoId)){
 return {hit:true,data:youtubePublicResolvedCacheR797.data};
 }
 if(!env.COMMENTS_DB)return {hit:false,data:null};
@@ -21645,7 +21648,7 @@ try{
 const state=await getPushState(requireDb(env),'youtube-public-live-resolved-cache-r797').catch(()=>null);
 if(!state?.value)return {hit:false,data:null};
 const payload=JSON.parse(state.value);
-if(payload?.videoId==='lpc9HfVs0NY')return {hit:false,data:null};
+if(ANDRIK_RADIO_RETIRED_IDS_R1483.has(payload?.videoId))return {hit:false,data:null};
 const ms=Date.parse(String(payload?.cachedAt||state?.updatedAt||''));
 if(!Number.isFinite(ms) || now-ms>5*60*1000)return {hit:false,data:null};
 const data=payload?.active&&payload?.videoId?payload:null;
@@ -21671,7 +21674,7 @@ let result=null;
 // R1299: prefer the newly launched horizontal radio, but NEVER declare it
 // active without YouTube live status verification. This also bypasses old D1 IDs.
 try{
-const pinnedId='-cEMOdUUAYg';
+const pinnedId=ANDRIK_RADIO_LIVE_ID_R1483;
 const {data}=await youtubeApiJson(env,'videos',{
 part:'snippet,liveStreamingDetails',id:pinnedId,maxResults:1
 },{oauth:false,timeoutMs:6500});
@@ -21711,7 +21714,7 @@ if(found)result={...found,lifeCycleStatus:'live',streamStatus:'active'};
 // never declared LIVE without checking Google's video status.
 if(!result){
 try{
-const seedId='-cEMOdUUAYg'; // R1299: new owner LIVE fallback, verified before use
+const seedId=ANDRIK_RADIO_LIVE_ID_R1483; // R1299: new owner LIVE fallback, verified before use
 const {data}=await youtubeApiJson(env,'videos',{
 part:'snippet,liveStreamingDetails',id:seedId,maxResults:1
 },{oauth:false,timeoutMs:6500});
@@ -22249,7 +22252,7 @@ const at=Date.parse(a?.snippet?.scheduledStartTime||a?.snippet?.actualStartTime|
 const bt=Date.parse(b?.snippet?.scheduledStartTime||b?.snippet?.actualStartTime||0)||0;
 return bt-at;
 });
-broadcast=candidates.find(item=>String(item?.id||'')==='-cEMOdUUAYg') || candidates[0] || null;
+broadcast=candidates.find(item=>String(item?.id||'')===ANDRIK_RADIO_LIVE_ID_R1483) || candidates[0] || null;
 videoId=cleanPlainText(broadcast?.id||'',80);
 if(!videoId){
 const channelUrl=new URL('https://www.googleapis.com/youtube/v3/channels');

@@ -1,0 +1,59 @@
+/* R1483: compact summary, large touch-readable time plots. */
+#radioAudienceR1156{padding:12px!important;overflow:hidden}
+#radioAudienceR1156>.top{align-items:center;gap:8px}
+#radioAudienceR1156>.top h2{font-size:19px;line-height:1.2}
+#radioAudienceR1156 .r1156-status{font-size:10px;padding:5px 8px;white-space:nowrap}
+#radioAudienceR1156 .r1156-datebar{grid-template-columns:36px minmax(0,1fr) 36px 68px;gap:5px;margin-top:10px}
+#radioAudienceR1156 .r1156-datebar button,#radioAudienceR1156 .r1156-datebar input{min-width:0;min-height:36px!important;height:36px;padding:0 7px!important;border-radius:9px;font-size:12px!important}
+#radioAudienceR1156 .r1156-datebar .r1156-today{grid-column:auto}
+#radioAudienceR1156 .r1156-kpis{grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;margin-top:8px}
+#radioAudienceR1156 .r1156-kpi{padding:8px 3px;border-radius:11px;min-height:62px}
+#radioAudienceR1156 .r1156-kpi strong{font-size:23px}
+#radioAudienceR1156 .r1156-kpi span{font-size:9px;line-height:1.2;margin-top:4px}
+.r1483-time-controls{margin-top:12px;display:grid;gap:7px;min-width:0}
+.r1483-range-presets{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}
+#radioAudienceR1156 .r1483-time-controls button,#r1483ChartDialog button{min-height:36px!important;padding:6px 9px!important;border:1px solid #34445a;border-radius:10px;background:#101925;color:#dce8f7;font:800 12px/1.1 system-ui;cursor:pointer;min-width:0}
+#radioAudienceR1156 .r1483-time-controls button[aria-pressed=true],#r1483ChartDialog button[aria-pressed=true]{border-color:#ff526e;color:#fff;background:#502030;box-shadow:inset 0 0 0 1px #ff526e33}
+.r1483-time-navigation{display:grid;grid-template-columns:36px minmax(0,1fr) 36px 36px 36px;align-items:center;gap:5px}
+.r1483-time-navigation output{color:#d5e3f6;text-align:center;font:800 13px/1.2 ui-monospace,monospace;white-space:nowrap}
+.r1483-time-controls input[type=range]{width:100%;min-width:0;margin:2px 0;height:26px;accent-color:#ff526e;cursor:ew-resize;touch-action:pan-y}
+.r1483-time-controls input[type=range]:disabled{opacity:.3;cursor:default}
+.r1483-insights{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;margin-top:7px}
+.r1483-insights>span{min-width:0;padding:6px 4px;border-radius:9px;background:#080e16;text-align:center;color:#93a6be;font:700 9px/1.2 system-ui}
+.r1483-insights b{display:block;margin-top:3px;color:#d8e9ff;font:850 13px/1.1 ui-monospace,monospace}
+#radioAudienceR1156 .r1235-chart-stack{gap:12px;margin-top:9px}
+#radioAudienceR1156 .r1235-chart-card{padding:11px 5px 6px;border-radius:15px}
+#radioAudienceR1156 .r1235-chart-title-row{display:block;margin:0 6px 7px}
+#radioAudienceR1156 .r1235-chart-title-row h3{font-size:17px;line-height:1.2}
+#radioAudienceR1156 .r1235-chart-title-row p{font-size:10px;font-weight:500;max-width:none;line-height:1.4}
+#radioAudienceR1156 .r1235-chart-stats{justify-content:flex-start;max-width:none;margin-top:7px;gap:5px}
+#radioAudienceR1156 .r1235-chart-stats span{min-height:25px;font-size:10px;padding:4px 7px}
+#radioAudienceR1156 .r1235-chart-stats b{font-size:13px}
+#radioAudienceR1156 .r1483-expand{margin:0 6px 4px auto;min-height:30px!important;padding:5px 9px!important;border:1px solid #3a475b;border-radius:8px;background:#152030;color:#bcd3ee;font:750 11px/1 system-ui;display:flex;cursor:pointer}
+.r1483-chart{width:100%;height:auto;display:block;touch-action:pan-y;user-select:none}
+.r1483-chart .axis-text{font:700 12px ui-monospace,monospace!important;fill:#c0d2e9}
+.r1483-chart .axis-y{font-size:12px!important;fill:#e5edf9}
+.r1483-chart .axis-caption{font:600 10px system-ui;fill:#90a5c0}
+.r1483-chart .grid{stroke:#25364a;stroke-width:1;opacity:.8;display:inline}
+.r1483-chart .axis-line{stroke:#91a9c7;stroke-width:1.3}
+.r1483-chart .viewer-line{fill:none;stroke:#ff526e;stroke-width:2.8;stroke-linecap:round;stroke-linejoin:round}
+.r1483-chart .viewer-point{fill:#ff526e;stroke:#ffe4eb;stroke-width:1.1}
+.r1483-chart .viewer-point.current{stroke-width:2;fill:#ff3154}
+.r1483-chart .sample-hit{fill:transparent;pointer-events:all;cursor:crosshair}
+.r1483-chart .selected-line{stroke:#f0f5fc;stroke-width:1;stroke-dasharray:4 4;pointer-events:none}
+.r1483-chart .selected-dot{fill:#fff;stroke:#ff526e;stroke-width:2;pointer-events:none}
+.r1483-chart .launch-value{font:800 11px system-ui;fill:#ffe29d;paint-order:stroke;stroke:#070c13;stroke-width:3}
+.r1483-chart .viewer-label{font:850 14px system-ui;fill:#ff7c92;paint-order:stroke;stroke:#070c13;stroke-width:3}
+.r1483-point-readout{margin:9px 0 0;padding:9px;border:1px solid #33415a;border-radius:10px;background:#080e16;font:700 12px/1.4 system-ui;color:#c7d9f2;min-height:36px}
+#radioAudienceR1156 .r1156-chart-empty{min-height:260px}
+#radioAudienceR1156 .r1156-note{font-size:10px}
+#radioAudienceR1156 .r1156-events>summary{padding:10px;font-size:12px}
+#r1483ChartDialog{width:calc(100vw - 16px);max-width:1500px;max-height:96dvh;padding:12px;border:1px solid #465775;border-radius:18px;background:#090e17;color:#f5f7fb;overflow:auto;color-scheme:dark}
+#r1483ChartDialog::backdrop{background:#000d;backdrop-filter:blur(4px)}
+.r1483-dialog-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.r1483-dialog-head h2{margin:0;font:850 18px/1.2 system-ui}
+#r1483ChartDialog .r1483-time-controls{margin:10px 0 2px}
+#r1483ChartDialog .r1483-chart{width:100%;height:auto}
+#r1483ChartDialog .r1483-point-readout{margin-top:6px}
+@media(min-width:760px){body:has(#radioAudienceR1156) .wrap{max-width:1100px!important}#radioAudienceR1156 .r1156-datebar{max-width:480px}#radioAudienceR1156 .r1156-kpis{max-width:650px}#radioAudienceR1156 .r1483-time-controls{max-width:650px}.r1483-insights{max-width:650px}#radioAudienceR1156 .r1235-chart-title-row h3{font-size:20px}}
+@media(max-width:360px){#radioAudienceR1156{padding:9px!important}#radioAudienceR1156>.top h2{font-size:17px}#radioAudienceR1156 .r1156-datebar{grid-template-columns:32px minmax(0,1fr) 32px 58px}#radioAudienceR1156 .r1156-kpi strong{font-size:21px}.r1483-time-navigation{grid-template-columns:32px minmax(0,1fr) 32px 32px 32px}.r1483-time-navigation output{font-size:12px}}

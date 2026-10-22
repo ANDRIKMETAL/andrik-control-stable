@@ -1,6 +1,6 @@
 /* R1453: current radio URL and independent automatic last-video discovery. */
 (()=>{'use strict';
-const LIVE_ID='-cEMOdUUAYg';
+const LIVE_ID='U0bzXBNBs2Y';
 const LIVE_URL='https://www.youtube.com/live/'+LIVE_ID;
 const SINGLE_URL='/singles?view=all&v=1453';
 // The main page uses the existing /api/public/youtube-latest discovery. Do not

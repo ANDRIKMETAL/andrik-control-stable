@@ -1,5 +1,5 @@
 'use strict';
-const VERSION = '55.00-r1454-album-video-16s';
+const VERSION = '55.00-r1483-live-charts-zip';
 async function clearControlCaches(){
 if(!self.caches) return;
 const keys = await caches.keys();
