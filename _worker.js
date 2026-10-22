@@ -7883,8 +7883,8 @@ const views=parsedViews!=null&&Number.isFinite(parsedViews)?Math.max(0,Math.trun
 const parsedOnline=row?.concurrentViewers==null?null:Number(row.concurrentViewers);
 const concurrent=parsedOnline!=null&&Number.isFinite(parsedOnline)?Math.max(0,Math.trunc(parsedOnline)):null;
 const previous=prev.get(videoId);
-let launches=0;
-// The first observed value is a baseline, NOT new views today.
+let launches=null;
+// A baseline is unknown until a prior valid measurement exists; never fabricate zero.
 if(views!=null&&Number.isFinite(previous))launches=Math.max(0,Math.trunc(views-previous));
 if(views!=null)prev.set(videoId,Number.isFinite(previous)?Math.max(previous,views):views);
 out.push({
@@ -7970,7 +7970,7 @@ if(n!=null&&Number.isFinite(n))previousByVideo[videoId]=Math.max(0,Math.trunc(n)
 }
 const series=radioAudienceBuildSeriesR1156(rows,previousByVideo);
 const totals=series.reduce((acc,row)=>{
-acc.launches+=Math.max(0,Number(row.launches)||0);
+if(row.launches!=null){acc.launches+=Math.max(0,Number(row.launches)||0);acc.deltaSamples++;}
 const online=row.concurrentViewers==null?null:Number(row.concurrentViewers);
 if(online!=null&&Number.isFinite(online)){
 acc.peak=Math.max(acc.peak==null?0:acc.peak,online);
@@ -7984,7 +7984,7 @@ acc.lastViewsVideoId=row.videoId;
 acc.viewSamples++;
 }
 return acc;
-},{launches:0,peak:null,current:null,lastViews:null,lastViewsVideoId:'',lastViewerSampleAt:'',viewerSamples:0,viewSamples:0});
+},{launches:0,deltaSamples:0,peak:null,current:null,lastViews:null,lastViewsVideoId:'',lastViewerSampleAt:'',viewerSamples:0,viewSamples:0});
 // Never present an old online sample as a live concurrent viewer count.
 if(date===today){
 const lastViewerMs=Date.parse(totals.lastViewerSampleAt||'');
@@ -8008,9 +8008,9 @@ createdAt:cleanPlainText(row?.createdAt||'',80),type:cleanPlainText(row?.type||'
 country:cleanPlainText(row?.country||'',8).toUpperCase(),region:cleanPlainText(row?.region||'',120),city:cleanPlainText(row?.city||'',120)
 }));
 return json({
-ok:true,version:'R1484',videoId:currentRadioVideoIdR1299,date,today,timezone:'Europe/Bratislava',
+ok:true,version:'R1485',videoId:currentRadioVideoIdR1299,date,today,timezone:'Europe/Bratislava',
 collectionStarted:series[0]?.sampledAt||'',samples:series.length,series,
-summary:{launches:totals.launches,peakConcurrent:totals.peak,currentConcurrent:totals.current,lastCumulativeViews:totals.lastViews,
+summary:{launches:totals.deltaSamples?totals.launches:null,deltaSamples:totals.deltaSamples,peakConcurrent:totals.peak,currentConcurrent:totals.current,lastCumulativeViews:totals.lastViews,
 lastViewsVideoId:totals.lastViewsVideoId,viewerSamples:totals.viewerSamples,viewSamples:totals.viewSamples,lastViewerSampleAt:totals.lastViewerSampleAt,
 siteOpens:Math.max(0,Number(siteSummary?.opens)||0),siteVisitors:Math.max(0,Number(siteSummary?.visitors)||0)},
 exactOpens,collector:{...collector,latestSampleAt:series[series.length-1]?.sampledAt||collector.latestSampleAt||''},updatedAt:new Date().toISOString(),
@@ -8080,6 +8080,25 @@ async function fetchRadioMetricsR1484(env){
     if(!video.isLive||video.concurrentViewers!=null)break;
    }catch(error){attempts.push({mode:oauth?'oauth':'key',error:radioMetricsErrorR1484(error)});}
   }
+  // R1485: owner-only official LiveBroadcasts.statistics fallback. Never use another event ID.
+  // An omitted count stays UNKNOWN; YouTube may omit it when there are no viewers.
+  if(item){
+   const before=radioMetricVideoR1484(item);
+   if(before.isLive&&before.concurrentViewers==null){
+    try{
+     const extra=await youtubeApiJson(env,'liveBroadcasts',
+      {part:'id,status,statistics',id,maxResults:1},{oauth:true,timeoutMs:6000});
+     const broadcast=(Array.isArray(extra?.data?.items)?extra.data.items:[]).find(entry=>entry?.id===id);
+     if(!broadcast)throw new Error('owner-broadcast-not-returned');
+     const count=radioMetricNumberR1484(broadcast.statistics?.concurrentViewers);
+     if(count!=null){
+      item.liveStreamingDetails={...(item.liveStreamingDetails||{}),concurrentViewers:count};
+      source+=' + liveBroadcasts-owner-r1485';
+      sample=await persistRadioLiveMetricsR1446(env,radioMetricVideoR1484(item),'youtube-liveBroadcasts-owner-r1485');
+     }
+    }catch(error){attempts.push({mode:'owner-broadcast',error:radioMetricsErrorR1484(error)});}
+   }
+  }
   const video=item?radioMetricVideoR1484(item):null,warnings=[];
   if(!video)warnings.push(attempts.map(row=>row.mode+': '+row.error).join(' | ')||'video-not-returned');
   if(video?.isLive&&video.views==null)warnings.push('viewCount-missing-in-youtube-response');
@@ -8101,7 +8120,7 @@ async function handleControlRadioMetricsR1484(request,env){
   if(!video)return json({ok:false,error:'youtube-statistics-unavailable',message:metrics.warning,videoId:ANDRIK_RADIO_LIVE_ID_R1483,source:metrics.source,attempts:metrics.attempts,updatedAt:metrics.checkedAt},503);
   let health=null;
   try{health=await readYoutubeLiveHealthCacheR1158(env,video.videoId);}catch(_){}
-  return json({ok:true,version:'R1484',active:video.isLive,broadcastLive:video.isLive,signalActive:health?.streamStatus==='active',
+  return json({ok:true,version:'R1485',active:video.isLive,broadcastLive:video.isLive,signalActive:health?.streamStatus==='active',
    videoId:video.videoId,title:video.title,views:video.views,concurrentViewers:video.concurrentViewers,likes:video.likes,comments:video.comments,
    actualStartTime:video.actualStartTime,actualEndTime:video.actualEndTime,scheduledStartTime:video.scheduledStartTime,privacyStatus:video.privacyStatus,
    lifeCycleStatus:video.isLive?'live':video.actualEndTime?'complete':'',streamStatus:cleanPlainText(health?.streamStatus||'',80),
@@ -16660,6 +16679,47 @@ headMessage:cleanPlainText(snapshot.commit?.message || '', 240) });
 return json({ ...base, connected:false, error:'github', message:siteUpdateFriendlyError(error) }, 502);
 }
 }
+// R1486: lightweight preview; user device verified full ZIP against SHA and CRC.
+// Only the commit operation may apply files, and the publish handler reads and verifies their bytes again.
+async function handleSiteUpdatePreviewManifestR1486(request, env) {
+if (!adminAuthorized(request, env)) return json({ok:false,error:'unauthorized'},401);
+if (!isSameOrigin(request)) return json({ok:false,error:'origin'},403);
+try {
+const config=siteUpdateConfig(env);
+if (!config.token || !siteUpdateConfigValid(config)) throw new Error('github-token-missing');
+const body=await readJsonBody(request,200000);
+const files=body?.files;
+if (!files || typeof files!=='object' || Array.isArray(files)) throw new Error('manifest-invalid');
+const paths=Object.keys(files);
+if (!paths.length || paths.length>SITE_UPDATE_MAX_FILES) throw new Error('manifest-files');
+const entries=[];
+let totalBytes=0;
+for (const raw of paths) {
+const path=siteUpdateNormalizePath(raw);
+if (siteUpdateIgnoredPath(path)||siteUpdateForbiddenPath(path)||path===SITE_UPDATE_FAST_MANIFEST_R1223) throw new Error('manifest-path');
+const row=files[path];const size=Number(row?.size), sha=String(row?.sha||'').toLowerCase();
+if (!Number.isSafeInteger(size)||size<0||size>SITE_UPDATE_MAX_FILE_BYTES||!/^[0-9a-f]{40}$/.test(sha)) throw new Error('manifest-entry');
+totalBytes+=size;
+if (totalBytes>SITE_UPDATE_MAX_TOTAL_BYTES) throw new Error('manifest-size');
+entries.push({path,size,gitSha:sha});
+}
+if (SITE_UPDATE_REQUIRED_FILES.some(path=>!files[path])) throw new Error('required-files');
+const snapshot=await siteUpdateGithubSnapshot(config);
+const diff=siteUpdateCompare({entries},snapshot,config);
+return json({ok:true,version:SITE_UPDATE_VERSION,previewMode:'r1486-hashes',
+archiveName:cleanPlainText(body.archiveName||'site.zip',180),
+zipBytes:Number(body.zipBytes||0),totalBytes,fileCount:entries.length,
+added:diff.added.length,changed:diff.changed.length,deleted:diff.deleted.length,unchanged:diff.unchanged.length,
+hasChanges:Boolean(diff.added.length||diff.changed.length||diff.deleted.length),
+sameAsMain:!Boolean(diff.added.length||diff.changed.length||diff.deleted.length),canReinstall:true,
+paths:{added:diff.added.slice(0,100),changed:diff.changed.slice(0,100),deleted:diff.deleted.slice(0,100)},
+headSha:snapshot.headSha,headShort:snapshot.headSha.slice(0,7),
+repository:`${config.owner}/${config.repo}`,branch:config.branch});
+} catch(error){
+const transient=[429,500,502,503,504].includes(Number(error?.status||0))||String(error?.message||'')==='github-timeout';
+return json({ok:false,error:'manifest-preview-failed',retryable:transient,message:siteUpdateFriendlyError(error)},transient?503:400);
+}
+}
 async function handleSiteUpdatePreview(request, env) {
 if (!adminAuthorized(request, env)) return json({ ok:false, error:'unauthorized' }, 401);
 if (!isSameOrigin(request)) return json({ ok:false, error:'origin' }, 403);
@@ -20649,6 +20709,7 @@ if (path === '/api/releases/publish' && request.method === 'POST') return await 
 if (path === '/api/releases/history' && request.method === 'GET') return await handleReleaseHistory(request, env);
 if (path === '/api/control/site-update/status' && request.method === 'GET') return await handleSiteUpdateStatus(request, env);
 if (path === '/api/control/site-update/preview' && request.method === 'POST') return await handleSiteUpdatePreview(request, env);
+if (path === '/api/control/site-update/preview-manifest' && request.method === 'POST') return await handleSiteUpdatePreviewManifestR1486(request, env);
 if (path === '/api/control/site-update/backup' && request.method === 'POST') return await handleSiteUpdateBackup(request, env);
 if (path === '/api/control/site-update/backup-zip' && request.method === 'GET') return await handleSiteUpdateBackupZip(request, env);
 if (path === '/api/control/site-update/publish' && request.method === 'POST') return await handleSiteUpdatePublish(request, env);

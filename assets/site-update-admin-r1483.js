@@ -1,6 +1,6 @@
 (() => {
 'use strict';
-const SITE_UPDATE_UI_VERSION='55.00-r1483-browser-zip';
+const SITE_UPDATE_UI_VERSION='55.00-r1486-manifest-preview';
 const KEY_SESSION='andrik-comments-admin-key',KEY_LOCAL='andrik-comments-admin-key-persistent',AUTO_RECOVERY_KEY='andrik-site-update-auto-recovery',CACHE_REFRESH_PREFIX='andrik-site-update-cache-refresh:',PENDING_DEPLOY_KEY='andrik-site-update-pending-deploy-r247';
 const byId=id=>document.getElementById(id),keyInput=byId('siteUpdateAdminKey'),archiveInput=byId('siteUpdateArchive'),previewButton=byId('siteUpdatePreview'),publishButton=byId('siteUpdatePublish'),confirmInput=byId('siteUpdateConfirm'),autoRecoveryInput=byId('siteUpdateAutoRecovery');
 let preparedArchiveR1483=null,preparingArchiveR1483=null;
@@ -268,19 +268,23 @@ setText('siteUpdateFileState','Проверяем…');
 setText('siteUpdateUploadMessage','Проверяем архив на устройстве…');
 try{
 const readyFile=await prepareArchiveR1483();
+const checked=window.AndrikZipPreflightR1483?.lastVerified;
+if(!checked?.files)throw new Error('ZIP не прошёл локальную проверку контрольных сумм.');
+const payload={archiveName:readyFile.name,zipBytes:readyFile.size,files:checked.files};
 let data=null,lastPreviewError=null;
-for(let attempt=1;attempt<=3;attempt++){
-const form=new FormData();form.append('archive',readyFile,readyFile.name);
-try{data=await api('/api/control/site-update/preview',{method:'POST',body:form,timeoutMs:150000});break}
-catch(error){
+for(let attempt=1;attempt<=2;attempt++){
+try {
+setText('siteUpdateUploadMessage',`Сравниваем ${Object.keys(checked.files).length} хешей с GitHub (без отправки ZIP)…`);
+data=await api('/api/control/site-update/preview-manifest',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload),timeoutMs:35000});
+break;
+} catch(error){
 lastPreviewError=error;
-const retryable=[408,429,500,502,503,504].includes(Number(error?.status||0));
-if(!retryable||attempt===3)throw error;
-setText('siteUpdateUploadMessage',`Проверка временно недоступна (HTTP ${error.status||'—'}). Повтор ${attempt+1}/3…`);
-await sleep(attempt===1?1500:4000);
+if(attempt===2||![408,429,500,502,503,504].includes(Number(error?.status||0)))throw error;
+setText('siteUpdateUploadMessage','GitHub временно не ответил. Повторяем короткую проверку метаданных…');
+await sleep(1800);
 }
 }
-if(!data)throw lastPreviewError||new Error('Проверка ZIP не ответила');
+if(!data)throw lastPreviewError||new Error('Не удалось сравнить метаданные ZIP с GitHub');
 previewData=data;
 const reinstall=!data.hasChanges&&data.canReinstall;
 stage('check','done');

@@ -1,4 +1,4 @@
-/* R1483: validate ZIP/CRC/SHA on the device; send STORE entries to the Worker. */
+/* R1486: verify CRC/SHA locally, upload compact ZIP unchanged, preview using hashes only. */
 (() => {
   'use strict';
   const MAX_ZIP = 25*1024*1024, MAX_TOTAL = 40*1024*1024, MAX_FILE = 10*1024*1024, MAX_FILES = 1200;
@@ -106,9 +106,9 @@
       files[item.path]={size:item.bytes.length,sha};
       if(i%32===0){onProgress(`Контрольные суммы: ${i+1}/${ordinary.length} файлов…`);await new Promise(resolve=>setTimeout(resolve,0));}
     }
-    if(entry)return false;
+    if(entry)return {added:false,files};
     const bytes=encoder.encode(JSON.stringify({schema:1,algorithm:'git-blob-sha1',files}));
-    entries.push({path:MANIFEST,bytes,crc:crc32(bytes)});return true;
+    entries.push({path:MANIFEST,bytes,crc:crc32(bytes)});return {added:true,files};
   }
   function packStore(entries, filename) {
     const parts=[],central=[];let offset=0,centralSize=0;
@@ -128,8 +128,10 @@
   async function prepare(file,{onProgress=()=>{}}={}) {
     onProgress('Распаковка и проверка ZIP на устройстве…');
     const parsed=await readZip(file,onProgress);
-    const added=await verifyManifest(parsed.entries,onProgress);
-    const output=parsed.compressed||parsed.changed||added?packStore(parsed.entries,file.name):file;
+    const checked=await verifyManifest(parsed.entries,onProgress);
+    const output=parsed.changed||checked.added?packStore(parsed.entries,file.name):file;
+    // The server will compare only verified SHA metadata during preview. Publish verifies the actual ZIP.
+    window.AndrikZipPreflightR1483.lastVerified={name:file.name,zipBytes:output.size,files:checked.files};
     onProgress(`CRC и SHA-1 проверены · ${parsed.entries.length} файлов. Сравниваем с GitHub…`);
     return output;
   }
