@@ -44,7 +44,7 @@ if(!r.ok||!d.repairUrl)throw new Error(r.status===401?'Сначала откро
 set('s1','1/5 · Защищённый мост создан ✅','ok');
 set('s2','2/5 · Перехожу на основной домен OneSignal…');
 await sleep(450);
-location.replace(d.repairUrl+'&v=55.00-r768');
+location.replace(d.repairUrl);
 }
 async function repairOnMain(){
 const ownerToken=getOwnerToken();
@@ -99,19 +99,41 @@ clearTimeout(timeout);done('');
 if(!subscriptionId)throw new Error('OneSignal не выдал Subscription ID.');
 set('s4','4/5 · Актуальная push-подписка получена ✅','ok');
 set('s5','5/5 · Привязываю этот телефон как ВЛАДЕЛЬЦА и отправляю тест…');
-const bindRes=await fetch('/api/push/subscriber',{method:'POST',headers:{'content-type':'application/json',accept:'application/json'},body:JSON.stringify({subscriptionId,active:true,source:'owner',label:'ANDRIK owner R768 · '+navigator.userAgent.slice(0,80),ownerBindToken:ownerToken}),cache:'no-store'});
+const controllerR1488=new AbortController();
+const timerR1488=setTimeout(()=>controllerR1488.abort(),15000);
+let bindRes;
+try{
+  bindRes=await fetch('/api/push/subscriber',{method:'POST',headers:{'content-type':'application/json',accept:'application/json'},body:JSON.stringify({subscriptionId,active:true,source:'owner',label:'ANDRIK owner R1488 · '+navigator.userAgent.slice(0,80),ownerBindToken:ownerToken}),cache:'no-store',signal:controllerR1488.signal});
+}finally{clearTimeout(timerR1488)}
 const bind=await bindRes.json().catch(()=>({}));
-if(!bindRes.ok||!bind.ownerBound)throw new Error(bind.error||'Телефон не привязался владельцем.');
-const test=bind.ownerTestR768||{};
-if(!test.ok)throw new Error('Телефон привязан, но тестовый push не доставлен: '+(test.error||'OneSignal error'));
-set('s5','5/5 · ГОТОВО ✅ Телефон владельца восстановлен. Тестовый push отправлен.','ok');
+if(!bindRes.ok||!bind.ownerBound)throw new Error(bind.error||'Телефон не привязался владельцем. HTTP '+bindRes.status);
+set('s5','5/5 · Телефон ВЛАДЕЛЬЦА привязан ✅ Проверяю приём тестового push…','ok');
 back.hidden=false;
-setTimeout(()=>location.replace(CONTROL+'/service-admin.html?push-repair=done&r768=1&v=55.00-r768&t='+Date.now()),3500);
+let testStatus='pending';
+for(let i=0;i<8;i++){
+  await sleep(1600);
+  try{
+    const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),4000);
+    let response;
+    try{response=await fetch('/api/push/owner-bind-test-status-r1488?subscriptionId='+encodeURIComponent(subscriptionId),{headers:{'x-owner-bind-token':ownerToken,accept:'application/json'},cache:'no-store',signal:controller.signal})}
+    finally{clearTimeout(timer)}
+    const value=await response.json().catch(()=>({}));
+    if(response.ok&&(value.status==='accepted'||value.status==='failed')){
+      testStatus=value.status;
+      set('s5',value.status==='accepted'
+        ?'5/5 · ГОТОВО ✅ Телефон привязан. OneSignal принял тест (это не гарантия отображения на Android).'
+        :'5/5 · Телефон привязан ✅ Но тест OneSignal не принят: '+String(value.error||'см. журнал'),value.status==='accepted'?'ok':'warn');
+      break;
+    }
+  }catch(_){}
+}
+if(testStatus==='pending')set('s5','5/5 · Телефон привязан ✅ Тест пока без ответа. Проверьте уведомления и журнал в Служебном.','warn');
+back.hidden=false;
 }
 (async()=>{
 try{
 if(location.hostname.toLowerCase()==='control.andrikmetal.com')return await requestBridgeOnControl();
-if(location.hostname.toLowerCase()!=='andrikmetal.com')return location.replace(CONTROL+'/push-repair-r768.html?v=55.00-r768&t='+Date.now());
+if(location.hostname.toLowerCase()!=='andrikmetal.com')return location.replace(CONTROL+'/push-repair-r768.html?v=55.00-r1488&t='+Date.now());
 await repairOnMain();
 }catch(e){fail(String(e?.message||e))}
 })();

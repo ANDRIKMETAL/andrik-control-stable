@@ -2975,7 +2975,7 @@ return timingSafeTextEqual(suppliedSignature, expectedSignature);
 async function handlePushOwnerBindTokenR768(request, env) {
 if (!adminAuthorized(request, env)) return json({ok:false,error:'unauthorized'},401);
 const issued = await createPushOwnerBindTokenR768(env);
-const repairUrl = `https://andrikmetal.com/push-repair-r768.html#owner=${encodeURIComponent(issued.token)}`;
+const repairUrl = `https://andrikmetal.com/push-repair-r768.html?v=55.00-r1488&t=${Date.now()}#owner=${encodeURIComponent(issued.token)}`;
 return json({ok:true,version:'R768',expiresAt:new Date(issued.expiresAt).toISOString(),repairUrl},200,{...JSON_HEADERS,'cache-control':'no-store'});
 }
 function ownerSessionCookie(name, token, maxAge = 7776000, domain = '') {
@@ -3553,42 +3553,47 @@ history: { type: 'site-subscriber', source: 'andrikmetal.com', audience: 'owner'
 });
 if (ctx?.waitUntil) ctx.waitUntil(ownerNotice); else await ownerNotice;
 }
+// R1488: Owner binding must be confirmed before waiting for OneSignal's external API.
+// Keep Cloudflare HTTP request short: OneSignal acceptance is checked in waitUntil and
+// the result is stored for a separate authenticated poll. Never claim actual delivery.
 let ownerTestR768 = null;
 let ownerRecoveryQueuedR768 = false;
 if (active && ownerAuthorized && ownerBindTokenR768) {
-ownerTestR768 = await sendOwnerPush(env, {
-title:'✅ ANDRIK Push восстановлен',
-message:'Утренние/вечерние сводки, лайки, комментарии и новые подписчики снова подключены к этому телефону.',
-url:'https://control.andrikmetal.com/service-admin.html',
-name:`owner-rebind-r768-${subscriptionId}`,
-ttl:3600,
-history:{type:'owner-rebind-r768',source:'push-repair-r768',audience:'owner',details:{subscriptionId}}
-}).catch(error => ({ok:false,error:cleanPlainText(error?.message||error,300)}));
-if (ownerTestR768?.ok) {
-ownerTestR768 = {
-...ownerTestR768,
-ownerAcceptanceCommittedR1212:true,
-ownerRepairAcceptedR1212:true,
-deliveryConfirmationModeR1212:'ONESIGNAL-ACCEPTED-EXPLICIT-OWNER-TARGET'
-};
+  const statusKeyR1488 = `owner-bind-test-r1488:${subscriptionId}`;
+  const queuedAtR1488 = new Date().toISOString();
+  await setPushState(db, statusKeyR1488, JSON.stringify({status:'queued',updatedAt:queuedAtR1488}));
+  const testJobR1488 = (async () => {
+    let result;
+    try {
+      result = await sendOwnerPush(env, {
+        title:'✅ ANDRIK Push восстановлен',
+        message:'Тест уведомлений владельца: подписка телефона зарегистрирована.',
+        url:'https://control.andrikmetal.com/service-admin.html',
+        // Unique per attempt; do not reuse the OneSignal idempotency key forever.
+        name:`owner-rebind-r1488-${subscriptionId}-${Date.now()}`,
+        ttl:3600,
+        history:{type:'owner-rebind-r768',source:'push-repair-r768',audience:'owner',details:{subscriptionId}}
+      });
+    } catch (error) {
+      result = {ok:false,error:cleanPlainText(error?.message||error,300)};
+    }
+    const stateR1488={
+      status:result?.ok?'accepted':'failed',
+      // 'accepted' means API accepted the request, not Android notification delivered.
+      oneSignalId:cleanPlainText(result?.oneSignalId||'',130),
+      error:result?.ok?'':cleanPlainText(typeof result?.error==='string'?result.error:JSON.stringify(result?.error||'onesignal-error'),300),
+      updatedAt:new Date().toISOString()
+    };
+    await setPushState(db,statusKeyR1488,JSON.stringify(stateR1488)).catch(()=>{});
+    return stateR1488;
+  })();
+  if (ctx?.waitUntil) ctx.waitUntil(testJobR1488);
+  else testJobR1488.catch(()=>{});
+  ownerTestR768={queued:true,accepted:false};
+  // Deliberately avoid a second heavyweight YouTube + summary scan during device pairing.
+  // The dedicated scheduled checks remain responsible for those jobs.
 }
-if (ownerTestR768?.ok) {
-const ownerKeyR768 = configuredAdminKeys(env)[0] || '';
-const recoveryR768 = (async()=>{
-const jobs = [maybeSendDailyOwnerSummary(env).catch(error=>({ok:false,error:cleanPlainText(error?.message||error,300)}))];
-if (ownerKeyR768) {
-const internalRequestR768 = new Request('https://control.andrikmetal.com/api/automation/youtube-engagement-fast-r768', {
-method:'POST', headers:{'x-admin-key':ownerKeyR768}
-});
-jobs.push(handleFastYoutubeEngagementR333(internalRequestR768,env,{skipCheckpoint:false}).catch(error=>({ok:false,error:cleanPlainText(error?.message||error,300)})));
-}
-const settled = await Promise.allSettled(jobs);
-await recordSystemLog(env,{scope:'push',level:'info',event:'owner-recovery-r768',message:'После перепривязки телефона запущен retry сводки и реакций YouTube.',details:{settled:settled.map(x=>x.status)}}).catch(()=>{});
-})();
-ownerRecoveryQueuedR768 = true;
-if (ctx?.waitUntil) ctx.waitUntil(recoveryR768); else recoveryR768.catch(()=>{});
-}
-}
+
 return json({ ok: true, subscriptionId, active, counts, transition, ownerBound:ownerAuthorized && active, ownerTestR768, ownerRecoveryQueuedR768 });
 }
 async function handleAdminPushDevice(request, env) {
@@ -20534,6 +20539,57 @@ do{
 return json({ok:true,session,deleted});
 }
 
+// R1488: Low-cost Cron diagnosis without triggering ten heavyweight jobs.
+async function handleCronDiagnosticR1488(request, env) {
+  if (!adminAuthorized(request,env)) return json({ok:false,error:'unauthorized'},401);
+  if (!env.COMMENTS_DB) return json({ok:false,error:'COMMENTS_DB binding is missing',configured:false},503);
+  const db=env.COMMENTS_DB;
+  const names={
+    heartbeat:'cron-scheduler-heartbeat-at-r394',
+    source:'cron-scheduler-heartbeat-source-r394',
+    status:'cron-scheduler-last-status-r394',
+    gateway:'cron-gateway-r334-last-result',
+    fast:'youtube-fast-engagement-last-at-r333',
+    subscriber:'youtube-subscriber-poll-last-at-r653',
+    full:'automation-last-check-at',
+    fullStatus:'automation-last-check-status'
+  };
+  const entries=await Promise.all(Object.entries(names).map(async ([key,name])=>[key,await getPushState(db,name).catch(()=>null)]));
+  const row=Object.fromEntries(entries);
+  const read=key=>String(row[key]?.value||'').trim();
+  const age=key=>{const t=Date.parse(read(key));return Number.isFinite(t)?Math.max(0,Math.round((Date.now()-t)/60000)):null};
+  const gateway=(()=>{try{return JSON.parse(read('gateway')||'{}')}catch(_){return {}}})();
+  const heartbeatAge=age('heartbeat'),fastAge=age('fast'),subscriberAge=age('subscriber');
+  const warnings=[];
+  if(!String(env.CRON_SECRET||'').trim() && !String(env.CENTRAL_CRON_SECRET_R462||'').trim())warnings.push('CRON_SECRET / CENTRAL_CRON_SECRET_R462 не настроен');
+  if(heartbeatAge===null)warnings.push('Не найдено ни одного heartbeat: внешний Cron Trigger не подтверждён');
+  else if(heartbeatAge>12)warnings.push(`Последний heartbeat ${heartbeatAge} мин назад (ожидается каждые 2–5 мин)`);
+  if(fastAge===null||fastAge>10)warnings.push('Проверка комментариев и лайков не обновлялась более 10 мин');
+  if(subscriberAge===null||subscriberAge>15)warnings.push('Проверка подписчиков не обновлялась более 15 мин');
+  return json({ok:true,healthy:warnings.length===0,warnings,
+    triggerConfiguredInEnvironment:Boolean(String(env.CRON_SECRET||env.CENTRAL_CRON_SECRET_R462||'').trim()),
+    // A Pages bundle containing scheduled() does not confirm a separately configured trigger.
+    triggerConfirmed:heartbeatAge!==null&&heartbeatAge<=12,
+    heartbeatAt:read('heartbeat'),heartbeatSource:read('source'),heartbeatAgeMinutes:heartbeatAge,
+    schedulerStatus:read('status'),gatewayTask:cleanPlainText(gateway?.task||'',80),
+    gatewayAt:cleanPlainText(gateway?.checkedAt||'',80),
+    fastAt:read('fast'),fastAgeMinutes:fastAge,
+    subscriberAt:read('subscriber'),subscriberAgeMinutes:subscriberAge,
+    lastFullAt:read('full'),lastFullStatus:read('fullStatus'),
+    checkedAt:new Date().toISOString()
+  },200,{...JSON_HEADERS,'cache-control':'no-store'});
+}
+async function handleOwnerBindTestStatusR1488(request,env) {
+  if(!isSameOrigin(request))return json({ok:false,error:'origin'},403);
+  const token=String(request.headers.get('x-owner-bind-token')||'').trim();
+  if(!await verifyPushOwnerBindTokenR768(token,env))return json({ok:false,error:'owner-token-expired'},401);
+  const subscriptionId=cleanPlainText(new URL(request.url).searchParams.get('subscriptionId')||'',80);
+  if(!/^[0-9a-f-]{30,80}$/i.test(subscriptionId))return json({ok:false,error:'invalid-subscription-id'},400);
+  const state=await getPushState(requireDb(env),`owner-bind-test-r1488:${subscriptionId}`).catch(()=>null);
+  let value={status:'pending'};
+  try{if(state?.value)value=JSON.parse(state.value)}catch(_){value={status:'unknown'}}
+  return json({ok:true,...value},200,{...JSON_HEADERS,'cache-control':'no-store'});
+}
 async function routeApi(request, env, ctx) {
 const url = new URL(request.url);
 const path = url.pathname.replace(/\/+$/, '') || '/';
@@ -20574,6 +20630,7 @@ if (path === '/api/site/visit' && request.method === 'POST') return await handle
 if (path === '/api/push/config' && request.method === 'GET') return await handlePushConfig(request, env);
 if (path === '/api/control/push-owner-bind-token-r768' && request.method === 'POST') return await handlePushOwnerBindTokenR768(request, env);
 if (path === '/api/push/subscriber' && request.method === 'POST') return await handlePushSubscriber(request, env, ctx);
+if (path === '/api/push/owner-bind-test-status-r1488' && request.method === 'GET') return await handleOwnerBindTestStatusR1488(request, env);
 if (path === '/api/push/admin-device' && request.method === 'POST') return await handleAdminPushDevice(request, env);
 if (path === '/api/push/send' && request.method === 'POST') return await handleAdminPushSend(request, env);
 if (path === '/api/push/inspect-playlist' && request.method === 'POST') return await handleInspectPlaylist(request, env);
@@ -20588,6 +20645,7 @@ if (path === '/api/automation/youtube-fast' && request.method === 'POST') return
 if (path === '/api/automation/youtube-engagement-fast' && request.method === 'POST') return await handleFastYoutubeEngagementR333(request, env);
 if (path === '/api/automation/summary-checkpoint' && (request.method === 'GET' || request.method === 'POST')) return await handleExternalSummaryCheckpointR399(request, env);
 if (path === '/api/automation/cron-gateway' && (request.method === 'GET' || request.method === 'POST')) return await handleExternalCronGatewayR334(request, env, ctx);
+if (path === '/api/control/cron-diagnostic-r1488' && request.method === 'GET') return await handleCronDiagnosticR1488(request, env);
 if (path === '/api/automation/run' && request.method === 'POST') {
 const ua=String(request.headers.get('user-agent')||'');
 if((cronAuthorized(request,env) && !adminAuthorized(request,env)) || /ANDRIK-Central-Cron\/1\.0/i.test(ua)) {

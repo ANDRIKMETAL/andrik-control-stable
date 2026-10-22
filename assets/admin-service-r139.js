@@ -6,7 +6,7 @@ const remember=document.getElementById('serviceRemember');
 const state=document.getElementById('serviceAccessState');
 const msg=document.getElementById('serviceAccessMessage');
 const IS_CONTROL_HOST=location.hostname.toLowerCase()==='control.andrikmetal.com';
-const MAIN_PUSH_ADMIN_URL='https://control.andrikmetal.com/push-repair-r768.html?v=55.00-r768';
+const MAIN_PUSH_ADMIN_URL='https://control.andrikmetal.com/push-repair-r768.html?v=55.00-r1488';
 let installPrompt=null;
 let lastDiagnosticText='';
 let lastSystemText='';
@@ -119,7 +119,7 @@ saveKey();
 set('adminPushStatus','Создаю безопасный мост на основной домен OneSignal…');
 const data=await api('/api/control/push-owner-bind-token-r768',{method:'POST'});
 if(!data?.repairUrl)throw new Error('owner-bridge-url-missing');
-location.replace(data.repairUrl+'&v=55.00-r768');
+location.replace(data.repairUrl);
 }catch(error){
 set('adminPushStatus',`Ошибка подключения телефона: ${translatePushError(error.message)}`);
 }finally{
@@ -158,8 +158,30 @@ return `<article class="service-system-item ${ok?'is-good':'is-error'}"><span cl
 });
 box.hidden=false;box.innerHTML=rows.join('');
 }
+async function diagnoseCentralCronR1488(){
+if(!getKey()){set('serviceCronMessage','Сначала подтверди доступ владельца.');return}
+const button=document.getElementById('serviceCronDiagnose');if(button)button.disabled=true;
+set('serviceCronMessage','Читаю последние отметки работы Cron без запуска тяжёлых задач…');
+try{
+const d=await api('/api/control/cron-diagnostic-r1488');
+const stateEl=document.getElementById('serviceCronState');
+if(stateEl){stateEl.className=`service-access-state ${d.healthy?'is-ready':'is-error'}`;stateEl.textContent=d.healthy?'Cron и YouTube активны':'Проверить автоматизацию'}
+const age=v=>v==null?'не запускался':v+' мин. назад';
+const list=[
+['🕒 Scheduler heartbeat',age(d.heartbeatAgeMinutes),d.heartbeatAgeMinutes!=null&&d.heartbeatAgeMinutes<=12],
+['👍💬 YouTube лайки/комментарии',age(d.fastAgeMinutes),d.fastAgeMinutes!=null&&d.fastAgeMinutes<=10],
+['👤 YouTube подписчики',age(d.subscriberAgeMinutes),d.subscriberAgeMinutes!=null&&d.subscriberAgeMinutes<=15],
+['⚙️ Секрет Cron',d.triggerConfiguredInEnvironment?'Настроен':'Не настроен',d.triggerConfiguredInEnvironment]
+];
+const box=document.getElementById('serviceCronResult');
+if(box){box.hidden=false;box.innerHTML=list.map(([label,note,ok])=>`<article class="service-system-item ${ok?'is-good':'is-error'}"><span class="system-service-icon">${ok?'✅':'⚠️'}</span><div><strong>${escapeHtml(label)}</strong><small>${escapeHtml(note)}</small></div></article>`).join('')}
+set('serviceCronMessage',d.healthy?'✅ Проверки Cron и YouTube свежие.':`⚠ ${d.warnings.join(' · ')}. Проверь Cloudflare Worker Cron Trigger или внешний вызов /api/automation/cron-gateway.`);
+}catch(error){set('serviceCronMessage',`Диагностика: ${error.message}. Проверь COMMENTS_DB и журналы Cloudflare.`)}
+finally{if(button)button.disabled=false}
+}
 async function runCentralCron(){
 if(!getKey()){set('serviceCronMessage','Сначала сохраните ключ владельца.');return}
+if(!confirm('Полный запуск выполняет сразу несколько тяжёлых задач и может дать HTTP 503. Для простой проверки используйте «Проверить Cron безопасно». Продолжить?'))return;
 saveKey();
 const button=document.getElementById('serviceCronRun');const stateEl=document.getElementById('serviceCronState');
 if(button)button.disabled=true;if(stateEl){stateEl.className='service-access-state';stateEl.textContent='Выполняется…'}
@@ -203,6 +225,7 @@ document.getElementById('adminDiagnosticLogCopy')?.addEventListener('click',copy
 document.getElementById('adminDiagnosticLogDownload')?.addEventListener('click',downloadDiagnosticLog);
 document.getElementById('serviceSystemRefresh')?.addEventListener('click',loadSystem);
 document.getElementById('serviceSystemCopy')?.addEventListener('click',copySystemStatus);
+document.getElementById('serviceCronDiagnose')?.addEventListener('click',diagnoseCentralCronR1488);
 document.getElementById('serviceCronRun')?.addEventListener('click',runCentralCron);
 document.getElementById('serviceCronRefresh')?.addEventListener('click',loadSystem);
 document.getElementById('serviceCacheReset')?.addEventListener('click',()=>{
