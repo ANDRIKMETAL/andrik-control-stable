@@ -1,5 +1,5 @@
 'use strict';
-const VERSION = '55.00-r1484-radio-stats';
+const VERSION = '55.00-r1488-retention-geo';
 async function clearControlCaches(){
 if(!self.caches) return;
 const keys = await caches.keys();
