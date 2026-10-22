@@ -6398,7 +6398,6 @@ url.searchParams.set('access_type','offline');
 url.searchParams.set('prompt','consent select_account');
 url.searchParams.set('scope',[
 'https://www.googleapis.com/auth/yt-analytics.readonly',
-'https://www.googleapis.com/auth/youtube.readonly',
 'https://www.googleapis.com/auth/youtube.force-ssl'
 ].join(' '));
 const loginHint = String(env.YOUTUBE_OAUTH_LOGIN_HINT || '').trim();
@@ -8114,152 +8113,6 @@ async function fetchRadioMetricsR1484(env){
  radioMetricsCacheR1484.pending=work;
  try{return await work;}finally{if(radioMetricsCacheR1484.pending===work)radioMetricsCacheR1484.pending=null;}
 }
-// R1488: owner-only watch-time reports for the pinned radio video.
-// Analytics days use Pacific time; live online counts remain in the existing fast lane.
-const radioRetentionMemoryR1488=new Map(),radioRetentionPendingR1488=new Map();
-function radioRetentionDayR1488(now=new Date()){
- const parts=Object.fromEntries(new Intl.DateTimeFormat('en-CA',{timeZone:'America/Los_Angeles',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(now).map(p=>[p.type,p.value]));
- return `${parts.year}-${parts.month}-${parts.day}`;
-}
-function radioRetentionShiftR1488(day,delta){return new Date(Date.parse(day+'T12:00:00Z')+delta*86400000).toISOString().slice(0,10);}
-function radioRetentionValidDayR1488(value){return /^\d{4}-\d{2}-\d{2}$/.test(value)&&Number.isFinite(Date.parse(value+'T12:00:00Z'))&&new Date(value+'T12:00:00Z').toISOString().slice(0,10)===value;}
-function radioRetentionRangeR1488(url){
- const today=radioRetentionDayR1488(),end=url.searchParams.get('end')||today;
- if(!radioRetentionValidDayR1488(end)||end>today)throw new Error('retention-invalid-range');
- const start=url.searchParams.get('start')||radioRetentionShiftR1488(end,-27);
- if(!radioRetentionValidDayR1488(start)||start>end)throw new Error('retention-invalid-range');
- const days=Math.round((Date.parse(end+'T12:00:00Z')-Date.parse(start+'T12:00:00Z'))/86400000)+1;
- if(days>366)throw new Error('retention-range-too-long');
- return {start,end,today,days};
-}
-function radioRetentionNumberR1488(value){
- if(value==null||value==='')return null;
- const n=Number(value);return Number.isFinite(n)&&n>=0?n:null;
-}
-function radioRetentionMetricsR1488(row={}){
- const views=radioRetentionNumberR1488(row.views),minutes=radioRetentionNumberR1488(row.estimatedMinutesWatched);
- return {views:views==null?null:Math.trunc(views),watchMinutes:minutes,watchHours:minutes==null?null:minutes/60,
-  averageViewDurationSeconds:views===0?null:radioRetentionNumberR1488(row.averageViewDuration)};
-}
-function radioRetentionCauseR1488(error){
- const raw=cleanPlainText(error?.message||error||'youtube-analytics-unavailable',500);
- const reconnect=/invalid_grant|insufficient.*scope|insufficient.*permission|ACCESS_TOKEN_SCOPE_INSUFFICIENT|oauth-not-connected|oauth-client-not-configured|unauthorized|UNAUTHENTICATED|YouTube Analytics 401/i.test(raw);
- const message=/invalid_grant|oauth-not-connected|oauth-client-not-configured/i.test(raw)?'Нужно проверить подключение YouTube Analytics.'
-  :/insufficient.*scope|insufficient.*permission|ACCESS_TOKEN_SCOPE_INSUFFICIENT/i.test(raw)?'YouTube не разрешил чтение аналитики. Обнови разрешения подключения.'
-  :/quota|rate.limit|RESOURCE_EXHAUSTED/i.test(raw)?'YouTube временно ограничил запросы аналитики.'
-  :/timeout|timed.out/i.test(raw)?'YouTube Analytics не ответил вовремя.'
-  :/retention-invalid-range/.test(raw)?'Выбери корректный период не позднее сегодняшнего дня YouTube.'
-  :/retention-range-too-long/.test(raw)?'Можно выбрать не более 366 дней.'
-  :'Не удалось получить отчёт YouTube Analytics.';
- return {message,detail:raw,reconnectSuggested:reconnect};
-}
-function rememberRadioRetentionR1488(key,data){
- radioRetentionMemoryR1488.delete(key);radioRetentionMemoryR1488.set(key,data);
- while(radioRetentionMemoryR1488.size>12)radioRetentionMemoryR1488.delete(radioRetentionMemoryR1488.keys().next().value);
-}
-async function readRadioRetentionR1488(env,range,refresh=false){
- const id=ANDRIK_RADIO_LIVE_ID_R1483,key=`radio-retention-r1488:${id}:${range.start}:${range.end}`;
- const db=env.COMMENTS_DB?requireDb(env):null;
- let cached=radioRetentionMemoryR1488.get(key)||null;
- if(!cached&&db){
-  const entry=await readD1JsonCacheR638(db,key,7*86400000).catch(()=>null);
-  if(entry?.value?.videoId===id&&entry.value.requestedStart===range.start&&entry.value.requestedEnd===range.end)cached=entry.value;
- }
- const age=cached?Date.now()-Date.parse(cached.fetchedAt||''):Infinity;
- const ttl=cached?.status==='empty'?5*60000:cached?.status==='partial'?2*60000:15*60000;
- if(cached&&age>=0&&age<(refresh?60000:ttl))return {...cached,cached:true,today:range.today,stale:false};
- if(radioRetentionPendingR1488.has(key))return radioRetentionPendingR1488.get(key);
- const pending=(async()=>{
-  try{
-   const token=await getYoutubeOAuthAccessToken(env);
-   const base={ids:'channel==MINE',startDate:range.start,endDate:range.end,filters:'video=='+id};
-   const metrics='views,estimatedMinutesWatched,averageViewDuration';
-   const rawDays=await youtubeAnalyticsQuery(env,token,{...base,dimensions:'day',metrics,sort:'day',maxResults:366});
-   if(!Array.isArray(rawDays))throw new Error('retention-invalid-daily-response');
-   const dates=new Set();
-   const series=rawDays.map(row=>{
-    const day=String(row.day||'');
-    if(!radioRetentionValidDayR1488(day)||day<range.start||day>range.end||dates.has(day))throw new Error('retention-invalid-daily-date');
-    dates.add(day);return {day,...radioRetentionMetricsR1488(row)};
-   }).sort((a,b)=>a.day.localeCompare(b.day));
-   const lastAvailableDate=series[series.length-1]?.day||'',warnings=[];
-   let totals={views:null,watchMinutes:null,watchHours:null,averageViewDurationSeconds:null},countries=[],cities=[];
-   let countriesState='empty',citiesState='empty',countriesError='',citiesError='',totalsSource='youtube-analytics';
-   if(series.length){
-    // Totals and geography stop at the last returned daily row, not at an unprocessed day.
-    const common={...base,endDate:lastAvailableDate};
-    const results=await Promise.allSettled([
-     youtubeAnalyticsQuery(env,token,{...common,metrics}),
-     youtubeAnalyticsQuery(env,token,{...common,dimensions:'country',metrics,sort:'-views',maxResults:200}),
-     // The city report does not support liveOrOnDemand; all queries use the exact video filter.
-     youtubeAnalyticsQuery(env,token,{...common,dimensions:'city,country',metrics,sort:'-views',maxResults:100})
-    ]);
-    if(results[0].status==='fulfilled'&&results[0].value?.[0])totals=radioRetentionMetricsR1488(results[0].value[0]);
-    else{
-     const complete=name=>series.every(row=>row[name]!=null);
-     const sum=name=>series.reduce((n,row)=>n+row[name],0);
-     totals={views:complete('views')?sum('views'):null,watchMinutes:complete('watchMinutes')?sum('watchMinutes'):null,
-      watchHours:complete('watchMinutes')?sum('watchMinutes')/60:null,averageViewDurationSeconds:null};
-     totalsSource='daily-sum';warnings.push({section:'totals',...radioRetentionCauseR1488(results[0].reason||'retention-summary-not-returned')});
-    }
-    if(results[1].status==='fulfilled'){
-     countries=(results[1].value||[]).map(row=>({country:/^[A-Z]{2}$/.test(String(row.country||''))?String(row.country):'ZZ',...radioRetentionMetricsR1488(row)}));
-     countriesState=countries.length?'ready':'empty';
-    }else{countriesState='error';countriesError=radioRetentionCauseR1488(results[1].reason).detail;warnings.push({section:'countries',...radioRetentionCauseR1488(results[1].reason)});}
-    if(results[2].status==='fulfilled'){
-     cities=(results[2].value||[]).map(row=>({city:cleanPlainText(row.city||'',140),country:/^[A-Z]{2}$/.test(String(row.country||''))?String(row.country):'ZZ',...radioRetentionMetricsR1488(row)}));
-     citiesState=cities.length?'ready':'empty';
-    }else{citiesState='error';citiesError=radioRetentionCauseR1488(results[2].reason).detail;warnings.push({section:'cities',...radioRetentionCauseR1488(results[2].reason)});}
-   }
-   const fetchedAt=new Date().toISOString();
-   const result={ok:true,version:'R1488',videoId:id,source:'youtube-analytics-video',status:!series.length?'empty':warnings.length?'partial':'ready',
-    requestedStart:range.start,requestedEnd:range.end,today:range.today,timeZone:'America/Los_Angeles',
-    lastAvailableDate,firstAvailableDate:series[0]?.day||'',reportedDays:series.length,lagging:Boolean(!lastAvailableDate||lastAvailableDate<range.end),
-    totals,totalsSource,series,geography:{countries,cities,countriesState,citiesState,countriesError,citiesError,throughDate:lastAvailableDate,cityLimit:100,liveGeographyAvailable:false},
-    warnings,fetchedAt,cached:false,stale:false,
-    note:'YouTube Analytics days use Pacific time. Values are per playback, not per identified person. Missing days are not zero. City/country reports are delayed aggregates, not current online locations.'};
-   rememberRadioRetentionR1488(key,result);
-   if(db)await writeD1JsonCacheR638(db,key,result).catch(()=>false);
-   return result;
-  }catch(error){
-   if(cached&&age>=0&&age<=7*86400000)return {...cached,today:range.today,cached:true,stale:true,refreshError:radioRetentionCauseR1488(error)};
-   throw error;
-  }
- })();
- radioRetentionPendingR1488.set(key,pending);
- try{return await pending;}finally{if(radioRetentionPendingR1488.get(key)===pending)radioRetentionPendingR1488.delete(key);}
-}
-async function handleRadioRetentionR1488(request,env){
- if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized',message:'Нужен вход владельца в контрольку.'},401);
- try{
-  const url=new URL(request.url),range=radioRetentionRangeR1488(url);
-  return json(await readRadioRetentionR1488(env,range,url.searchParams.get('refresh')==='1'));
- }catch(error){const cause=radioRetentionCauseR1488(error),invalid=/retention-invalid-range|retention-range-too-long/.test(cause.detail);
-  return json({ok:false,version:'R1488',videoId:ANDRIK_RADIO_LIVE_ID_R1483,error:invalid?'invalid-range':'youtube-analytics-unavailable',...cause},invalid?400:503);
- }
-}
-async function handleRadioCityClicksR1488(request,env){
- if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized',message:'Нужен вход владельца в контрольку.'},401);
- try{
-  const url=new URL(request.url),minutes=Number(url.searchParams.get('minutes')||60);
-  if(![60,1440].includes(minutes))return json({ok:false,error:'invalid-window',message:'Выбери 60 минут или 24 часа.'},400);
-  const db=requireDb(env);await ensureSiteMetricsSchema(db);
-  const end=new Date().toISOString(),start=new Date(Date.now()-minutes*60000).toISOString(),id=ANDRIK_RADIO_LIVE_ID_R1483;
-  const result=await db.prepare(`SELECT country,city,region,COUNT(*) AS opens,COUNT(DISTINCT visitor_hash) AS visitors,
-      MAX(created_at) AS lastClickAt
-    FROM site_visit_events
-    WHERE event_type IN ('radio-open','youtube-open') AND traffic_class<>'technical'
-      AND datetime(created_at)>=datetime(?) AND datetime(created_at)<=datetime(?)
-      AND (target LIKE ? OR target LIKE ? OR target LIKE ? OR target LIKE ?)
-    GROUP BY country,city,region ORDER BY visitors DESC,opens DESC LIMIT 100`).bind(start,end,
-     '%youtube.com/live/'+id+'%','%youtube.com/watch?v='+id+'%','%youtu.be/'+id+'%','%youtube.com/@andrikmetal/live%').all();
-  return json({ok:true,version:'R1488',source:'site-radio-clicks',videoId:id,windowMinutes:minutes,startsAt:start,endsAt:end,
-   cities:(result.results||[]).map(row=>({country:cleanPlainText(row.country||'',8).toUpperCase(),city:cleanPlainText(row.city||'',140),region:cleanPlainText(row.region||'',140),
-    visitors:Math.max(0,Number(row.visitors)||0),opens:Math.max(0,Number(row.opens)||0),lastClickAt:cleanPlainText(row.lastClickAt||'',80)})),
-   note:'Cities of site visitors who clicked the current LIVE, not locations of current YouTube viewers. No raw IP addresses or visitor IDs are returned.'});
- }catch(error){return json({ok:false,error:'site-radio-cities-unavailable',message:'Не удалось получить города переходов с сайта.',detail:cleanPlainText(error?.message||error,300)},503);}
-}
-
 async function handleControlRadioMetricsR1484(request,env){
  if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
  try{
@@ -20914,8 +20767,6 @@ if (path === '/api/control/audience' && request.method === 'GET') return await h
 if (path === '/api/control/youtube-top-content' && request.method === 'GET') return await handleControlYoutubeTopContentR552(request, env);
 if (path === '/api/control/youtube-oac-shelf' && request.method === 'GET') return await handleControlYoutubeOacShelfR910(request, env);
 if (path === '/api/control/radio-metrics-r1484' && request.method === 'GET') return await handleControlRadioMetricsR1484(request, env);
-if (path === '/api/control/radio-retention-r1488' && request.method === 'GET') return await handleRadioRetentionR1488(request, env);
-if (path === '/api/control/radio-city-clicks-r1488' && request.method === 'GET') return await handleRadioCityClicksR1488(request, env);
 if (path === '/api/control/youtube-live-r565' && request.method === 'GET') return await handleControlYoutubeLiveCachedR797(request, env);
 if (path === '/api/control/youtube-live-r609/auto' && request.method === 'POST') return await handleYoutubeLiveAutoR609(request, env);
 if (path === '/api/control/youtube-live-r609/start' && request.method === 'POST') return await handleYoutubeLiveStartR609(request, env);
