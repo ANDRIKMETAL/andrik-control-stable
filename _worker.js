@@ -8605,7 +8605,7 @@ notifications.push({type:'comment',id:item.id,ok:Boolean(result.ok),error:result
 // R1498: keep the synchronous cron gateway responsive. Rotate a small bounded
 // subset of videos each 2-minute slot; counters are monotonic, so changes on
 // skipped videos are picked up when their slot returns (no like delta is lost).
-const likesBatchSizeR1498=4;
+const likesBatchSizeR1498=2;
 const likesBatchCountR1498=Math.max(1,Math.ceil(videos.length/likesBatchSizeR1498));
 const likesSlotR1498=Math.floor(Date.now()/120000);
 const likesStartR1498=(likesSlotR1498%likesBatchCountR1498)*likesBatchSizeR1498;
