@@ -12951,8 +12951,21 @@ subscribersSent:subscriber?.sent && subscriber?.direction!=='down' ? Math.max(1,
 unsubscribersSent:subscriber?.sent && subscriber?.direction==='down' ? Math.max(1,Number(subscriber?.loss||1)) : 0
 };
 }else value={ok:true,skipped:true,reason:'slot-already-claimed'};
-if(clock.due5 && await claimCronGatewaySlotR334(db,'comments-overlap-r1308',clock.slot5)){
-try{const channel=await resolveYoutubeWebSubChannelIdR332(env,db);if(channel)value.commentSweepR1308=await checkYoutubeRecentCommentsEvery5mR953(env,db,channel,new Date().toISOString());}catch(error){value.commentSweepR1308={ok:false,error:cleanPlainText(error?.message||error,300)};}
+// R1492: The overlapping five-minute comments sweep is optional work.
+// Do not hold the two-minute gateway HTTP response while awaiting YouTube.
+// Claim the same dedupe slot and run in waitUntil; never fire-and-forget.
+if(clock.due5){
+  const commentSweepTaskR1492=Promise.resolve().then(async()=>{
+    if(!await claimCronGatewaySlotR334(db,'comments-overlap-r1308',clock.slot5))return;
+    try{
+      const channel=await resolveYoutubeWebSubChannelIdR332(env,db);
+      if(channel)await checkYoutubeRecentCommentsEvery5mR953(env,db,channel,new Date().toISOString());
+    }catch(error){
+      await setPushState(db,'cron-r1492-comments-overlap-error',cleanPlainText(error?.message||error,300)).catch(()=>{});
+    }
+  }).catch(()=>{});
+  if(ctx?.waitUntil){ctx.waitUntil(commentSweepTaskR1492);value.commentSweepR1308={queued:true,mode:'background-r1492'};}
+  else {await commentSweepTaskR1492;value.commentSweepR1308={completed:true,mode:'fallback-r1492'};}
 }
 }else if(clock.due5){
 claimed=await claimCronGatewaySlotR334(db,'five-minute-slice-r416',clock.slot5);
