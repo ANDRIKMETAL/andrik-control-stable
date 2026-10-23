@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r358-deploy-nohang",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1792730556916-47f093ae64",
-  "release": "R1492",
-  "archiveName": "SITE-R1492-CRON-GATEWAY-LATENCY-FULL.zip",
-  "sourceHead": "02dd244502b18b7144a691c096236e164fcfdb17",
-  "backupSha": "02dd244502b18b7144a691c096236e164fcfdb17",
+  "operationId": "publish-1792732903602-ad8e7ffbde",
+  "release": "R1493",
+  "archiveName": "SITE-R1493-CRON-TASK-SWITCHES-MANIFEST-FIX-FULL.zip",
+  "sourceHead": "eec5ab5e473bc08864ac23ca15f48dfdd94bf5c7",
+  "backupSha": "eec5ab5e473bc08864ac23ca15f48dfdd94bf5c7",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-10-23T04:42:38.270Z"
+  "generatedAt": "2026-10-23T05:21:45.420Z"
 }

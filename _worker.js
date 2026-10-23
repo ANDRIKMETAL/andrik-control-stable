@@ -12901,6 +12901,37 @@ async function handleFbMetaR1292(request,env){
  if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
  const r=await fbMetaReadR1292(env,false);return json(r,200,{'cache-control':'no-store'});
 }
+// R1493: owner-controlled diagnostic gates. All tasks default ON.
+const CRON_TASKS_R1493=Object.freeze([
+ {id:'audience',title:'Статистика радио: зрители и просмотры',frequency:'2 мин'},
+ {id:'engagement',title:'Реакции YouTube: лайки, комментарии и LIVE-чат',frequency:'2 мин'},
+ {id:'subscribers',title:'Подписчики и отписки YouTube',frequency:'2 мин'},
+ {id:'releases',title:'Новые видео и релизы: уведомления',frequency:'2 мин (внутренний интервал 5 мин)'},
+ {id:'comments5',title:'Дополнительный поиск комментариев',frequency:'5 мин'},
+ {id:'facebook',title:'Проверка расписания Facebook',frequency:'каждый вызов'},
+ {id:'facebookMetrics',title:'Метрики Facebook',frequency:'каждый вызов при наличии токена'},
+ {id:'fiveMinute',title:'Резервная 5-минутная проверка и сводка',frequency:'5 мин (резерв)'},
+ {id:'checkpoint15',title:'Проверка ежедневной сводки',frequency:'15 мин (резерв)'}
+]);
+async function cronTaskSettingsR1493(db){
+ const row=await getPushState(db,'cron-task-switches-r1493').catch(()=>null);
+ let saved={};try{saved=JSON.parse(row?.value||'{}');}catch(_){saved={};}
+ const enabled={};for(const task of CRON_TASKS_R1493)enabled[task.id]=saved[task.id]!==false;
+ return enabled;
+}
+async function handleCronTaskSettingsR1493(request,env){
+ if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
+ const db=requireDb(env);await ensurePushAutomationSchema(db);
+ if(request.method==='POST'){
+  let body;try{body=await request.json();}catch(_){return json({ok:false,error:'invalid-json'},400);}
+  const id=String(body?.id||'');if(!CRON_TASKS_R1493.some(x=>x.id===id)||typeof body?.enabled!=='boolean')return json({ok:false,error:'invalid-task'},400);
+  const current=await cronTaskSettingsR1493(db);current[id]=body.enabled;
+  await setPushState(db,'cron-task-switches-r1493',JSON.stringify(current));
+  await setPushState(db,'cron-task-switches-r1493-last-change',JSON.stringify({id,enabled:body.enabled,at:new Date().toISOString()}));
+ }
+ const enabled=await cronTaskSettingsR1493(db);
+ return json({ok:true,version:'R1493',tasks:CRON_TASKS_R1493.map(t=>({...t,enabled:enabled[t.id]})),note:'Изменения вступают в силу при следующем запуске Cron. Планировщик и радио не отключаются.'},200,{'cache-control':'no-store'});
+}
 async function handleExternalCronGatewayR334(request, env, ctx) {
 if(!adminAuthorized(request,env) && !cronAuthorized(request,env)){
   // R1490: never log credentials; a rejected cron must be distinguishable from a CPU failure.
@@ -12914,24 +12945,25 @@ if(!adminAuthorized(request,env) && !cronAuthorized(request,env)){
   return json({ok:false,error:'unauthorized',code:'CRON_AUTH_REJECTED'},401);
 }
 const db=requireDb(env);
+const switchesR1493=await cronTaskSettingsR1493(db);
 // R1292 independent Facebook scheduler. Failure cannot block YouTube jobs.
 let fbScheduleResultR1292={queued:true};
-const fbTaskR1308=fbScheduleTickR1292(env).catch(e=>({ok:false,error:String(e.message||e).slice(0,180)}));
+const fbTaskR1308=(switchesR1493.facebook?fbScheduleTickR1292(env):Promise.resolve({skipped:true,reason:"disabled-r1493"})).catch(e=>({ok:false,error:String(e.message||e).slice(0,180)}));
 if(ctx?.waitUntil)ctx.waitUntil(fbTaskR1308);else fbScheduleResultR1292=await fbTaskR1308;
-if(env.META_USER_ACCESS_TOKEN_R1292)ctx?.waitUntil?.(fbMetaReadR1292(env,false).catch(()=>{}));
+if(switchesR1493.facebookMetrics&&env.META_USER_ACCESS_TOKEN_R1292)ctx?.waitUntil?.(fbMetaReadR1292(env,false).catch(()=>{}));
 const gatewayUrl=new URL(request.url);
 const cron=cleanPlainText(gatewayUrl.searchParams.get('cron') || request.headers.get('x-andrik-cron') || '',80);
 const clock=cronGatewayClockR394(new Date(),cron);
 // R1484: collect before and independently of channel discovery and notification jobs.
 let radioAudienceResultR1484={queued:true};
-const radioAudienceTaskR1484=Promise.resolve().then(()=>collectRadioAudienceCronR1484(env,clock)).catch(error=>({ok:false,warning:radioMetricsErrorR1484(error)}));
+const radioAudienceTaskR1484=Promise.resolve().then(()=>switchesR1493.audience?collectRadioAudienceCronR1484(env,clock):{ok:true,skipped:true,reason:"disabled-r1493"}).catch(error=>({ok:false,warning:radioMetricsErrorR1484(error)}));
 if(ctx?.waitUntil)ctx.waitUntil(radioAudienceTaskR1484);else radioAudienceResultR1484=await radioAudienceTaskR1484;
 
 const schedulerHeartbeatAt=await touchCronSchedulerHeartbeatR394(db,`gateway-r416:${cron || 'unknown'}`).catch(()=>new Date().toISOString());
 // R1482: releases must run even with only a */2 trigger or when a daily
 // summary / LIVE check consumes the five-minute task slot. The fast handler
 // has its own five-minute gate and shares its upstream snapshot with the site.
-const releaseTaskR1482=Promise.resolve().then(async()=>responseData(await handleFastYoutubeReleaseCheckR332(request,env))).catch(error=>({ok:false,error:cleanPlainText(error?.message||error,300)}));
+const releaseTaskR1482=Promise.resolve().then(async()=>switchesR1493.releases?responseData(await handleFastYoutubeReleaseCheckR332(request,env)):{ok:true,skipped:true,reason:"disabled-r1493"}).catch(error=>({ok:false,error:cleanPlainText(error?.message||error,300)}));
 if(ctx?.waitUntil)ctx.waitUntil(releaseTaskR1482);else await releaseTaskR1482;
 let task='heartbeat';
 let value={ok:true,skipped:true,reason:'no-due-class'};
@@ -12940,8 +12972,8 @@ try{
 if(clock.due2){
 claimed=await claimCronGatewaySlotR334(db,'engagement-2m-r416',clock.slot2);
 if(claimed){
-const engagement=await Promise.resolve().then(async()=>responseData(await handleFastYoutubeEngagementR333(request,env,{skipCheckpoint:true}))).catch(error=>({ok:false,error:cleanPlainText(error?.message||error,300)}));
-const subscriber=await handleFastYoutubeSubscriberCountR416(request,env,{source:'gateway-2m-r756'}).catch(error=>({ok:false,error:cleanPlainText(error?.message||error,300)}));
+const engagement=await Promise.resolve().then(async()=>switchesR1493.engagement?responseData(await handleFastYoutubeEngagementR333(request,env,{skipCheckpoint:true})):{ok:true,skipped:true,reason:"disabled-r1493"}).catch(error=>({ok:false,error:cleanPlainText(error?.message||error,300)}));
+const subscriber=await (switchesR1493.subscribers?handleFastYoutubeSubscriberCountR416(request,env,{source:'gateway-2m-r756'}):Promise.resolve({ok:true,skipped:true,reason:'disabled-r1493'})).catch(error=>({ok:false,error:cleanPlainText(error?.message||error,300)}));
 task='engagement+subscriber';
 value={
 ok:engagement?.ok!==false && subscriber?.ok!==false,
@@ -12954,7 +12986,7 @@ unsubscribersSent:subscriber?.sent && subscriber?.direction==='down' ? Math.max(
 // R1492: The overlapping five-minute comments sweep is optional work.
 // Do not hold the two-minute gateway HTTP response while awaiting YouTube.
 // Claim the same dedupe slot and run in waitUntil; never fire-and-forget.
-if(clock.due5){
+if(clock.due5&&switchesR1493.comments5){
   const commentSweepTaskR1492=Promise.resolve().then(async()=>{
     if(!await claimCronGatewaySlotR334(db,'comments-overlap-r1308',clock.slot5))return;
     try{
@@ -12967,7 +12999,7 @@ if(clock.due5){
   if(ctx?.waitUntil){ctx.waitUntil(commentSweepTaskR1492);value.commentSweepR1308={queued:true,mode:'background-r1492'};}
   else {await commentSweepTaskR1492;value.commentSweepR1308={completed:true,mode:'fallback-r1492'};}
 }
-}else if(clock.due5){
+}else if(clock.due5&&switchesR1493.fiveMinute){
 claimed=await claimCronGatewaySlotR334(db,'five-minute-slice-r416',clock.slot5);
 if(claimed){
 let commentSweepR953={ok:true,skipped:true,reason:'channel-id-unavailable'};
@@ -12983,7 +13015,7 @@ task=slice.task;
 const baseValue=slice?.value&&typeof slice.value==='object'?slice.value:{value:slice?.value};
 value={...baseValue,commentSweepR953};
 }else value={ok:true,skipped:true,reason:'slot-already-claimed'};
-}else if(clock.due15){
+}else if(clock.due15&&switchesR1493.checkpoint15){
 claimed=await claimCronGatewaySlotR334(db,'checkpoint-15m-r416',clock.slot15);
 if(claimed){
 const local15=getBratislavaClock();
@@ -20684,6 +20716,7 @@ if (path === '/api/youtube/websub/status' && request.method === 'GET') return aw
 if (path === '/api/automation/youtube-fast' && request.method === 'POST') return await handleFastYoutubeReleaseCheckR332(request, env);
 if (path === '/api/automation/youtube-engagement-fast' && request.method === 'POST') return await handleFastYoutubeEngagementR333(request, env);
 if (path === '/api/automation/summary-checkpoint' && (request.method === 'GET' || request.method === 'POST')) return await handleExternalSummaryCheckpointR399(request, env);
+if (path === '/api/control/cron-tasks-r1493' && (request.method === 'GET' || request.method === 'POST')) return await handleCronTaskSettingsR1493(request,env);
 if (path === '/api/automation/cron-gateway' && (request.method === 'GET' || request.method === 'POST')) return await handleExternalCronGatewayR334(request, env, ctx);
 if (path === '/api/control/cron-diagnostic-r1488' && request.method === 'GET') return await handleCronDiagnosticR1488(request, env);
 if (path === '/api/automation/run' && request.method === 'POST') {
