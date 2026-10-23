@@ -8602,21 +8602,22 @@ notifications.push({type:'comment',id:item.id,ok:Boolean(result.ok),error:result
 }
 });
 await timedR1495('process-likes-and-push',async()=>{for(const item of videos){
-if(!item.isLive)await ensureYoutubeReleaseLikeZeroBaselineR434(db,item,'engagement-2m-r434',{force:false}).catch(()=>{});
+
+if(!item.isLive)await timedR1495('like-baseline:'+String(item.videoId||'').slice(0,40),()=>ensureYoutubeReleaseLikeZeroBaselineR434(db,item,'engagement-2m-r434',{force:false})).catch(()=>{});
 const key=`like-count:${item.videoId}`;
-const previous=await getYoutubeEventRow(db,key);
+const previous=await timedR1495('like-read-state:'+String(item.videoId||'').slice(0,40),()=>getYoutubeEventRow(db,key));
 if(!previous){
 await saveYoutubeEventRow(db,{key,type:'like-count',resourceId:item.videoId,videoId:item.videoId,title:item.title,countValue:item.likes,url:item.url,payload:item});
 continue;
 }
 const before=Number(previous.countValue || 0);
 if(item.likes<=before)continue;
-const duplicate=await hasSentYoutubeLikeTotalR376(db,item.videoId,item.likes);
+const duplicate=await timedR1495('like-dedup:'+String(item.videoId||'').slice(0,40),()=>hasSentYoutubeLikeTotalR376(db,item.videoId,item.likes));
 if(duplicate){
 await db.prepare(`UPDATE youtube_event_seen SET count_value=MAX(count_value,?),last_seen_at=datetime('now') WHERE event_key=?`).bind(item.likes,key).run().catch(()=>{});
 continue;
 }
-const likeClaim=await claimYoutubeLikePushR376(db,item.videoId,item.likes,startedAt);
+const likeClaim=await timedR1495('like-claim:'+String(item.videoId||'').slice(0,40),()=>claimYoutubeLikePushR376(db,item.videoId,item.likes,startedAt));
 if(likeClaim.recoveredStale)staleLikeClaimsRecovered++;
 if(likeClaim.delivered){
 await db.prepare(`UPDATE youtube_event_seen SET count_value=MAX(count_value,?),last_seen_at=datetime('now') WHERE event_key=?`).bind(item.likes,key).run().catch(()=>{});
@@ -8628,12 +8629,12 @@ continue;
 }
 const onceKey=likeClaim.onceKey;
 const delta=item.likes-before;
-const burst=await resolveYoutubeLikeBurst(db,{...item,before,delta},startedAt);
+const burst=await timedR1495('like-burst:'+String(item.videoId||'').slice(0,40),()=>resolveYoutubeLikeBurst(db,{...item,before,delta},startedAt));
 const cumulativeDelta=burst.cumulativeDelta;
 const glowTheme=youtubeLikeGlowTheme(cumulativeDelta);
 const likeTopic=pushTopicToken(`youtube-like-${item.videoId}`);
 const videoAppUrl=youtubeAppLauncherUrl(item.url);
-const result=await timedR1495("send-owner-push",()=>sendOwnerPush(env,{
+const result=await timedR1495('like-send-owner-push:'+String(item.videoId||'').slice(0,40),()=>sendOwnerPush(env,{
 title:`👍 ${compactYoutubePushTitle(item.title,'YouTube')}`,
 message:`+${cumulativeDelta} ${russianLikeWord(cumulativeDelta)} на YouTube · всего ${item.likes}`,
 url:videoAppUrl,image:youtubeLikeGlowImageUrl(item.videoId,cumulativeDelta),icon:glowTheme.icon,
