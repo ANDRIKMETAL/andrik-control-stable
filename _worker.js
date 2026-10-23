@@ -8482,18 +8482,27 @@ async function handleCronReactionsTimingR1495(request,env){
  if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
  const row=await getPushState(requireDb(env),'cron-r1495-reactions-timing').catch(()=>null);
  let trace=null;try{trace=JSON.parse(String(row?.value||''));}catch(_){}
- return json({ok:true,trace});
+ const progressRow=await getPushState(requireDb(env),'cron-r1496-reactions-progress').catch(()=>null);
+ let progress=null;try{progress=JSON.parse(String(progressRow?.value||''));}catch(_){}
+ return json({ok:true,trace,progress});
 }
 async function handleFastYoutubeEngagementCoreR1495(request,env,options={}){
 if(!adminAuthorized(request,env) && !cronAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
 const db=requireDb(env);
 const traceR1495=options.__traceR1495;
-const timedR1495=async(name,fn)=>{const started=Date.now();try{return await fn();}finally{if(traceR1495)traceR1495.phases.push({name,ms:Date.now()-started});}};
-await Promise.all([ensurePushAutomationSchema(db),ensureControlV1Schema(db)]);
+const checkpointR1496=async()=>{if(traceR1495)try{await setPushState(db,'cron-r1496-reactions-progress',JSON.stringify(traceR1495).slice(0,6500));}catch(_){}};
+const timedR1495=async(name,fn)=>{
+const started=Date.now();
+if(traceR1495){traceR1495.active={name,startedAt:new Date(started).toISOString()};await checkpointR1496();}
+try{return await fn();}
+catch(error){if(traceR1495)traceR1495.lastError={phase:name,message:cleanPlainText(error?.message||error,240)};throw error;}
+finally{if(traceR1495){traceR1495.phases.push({name,ms:Date.now()-started});traceR1495.active=null;await checkpointR1496();}}
+};
+await timedR1495('ensure-db-schemas',()=>Promise.all([ensurePushAutomationSchema(db),ensureControlV1Schema(db)]));
 const requestUrlR797=new URL(request.url);
 const forceQuotaPollR797=options.force===true || requestUrlR797.searchParams.get('fresh')==='1' || (adminAuthorized(request,env) && !cronAuthorized(request,env));
 const invokedAtR938=new Date().toISOString();
-const quotaStateR938=await getPushState(db,'youtube-fast-quota-last-at-r938').catch(()=>null);
+const quotaStateR938=await timedR1495('read-quota-state',()=>getPushState(db,'youtube-fast-quota-last-at-r938').catch(()=>null));
 const quotaMsR938=Date.parse(String(quotaStateR938?.value||quotaStateR938?.updatedAt||''));
 const quotaAgeMsR938=Number.isFinite(quotaMsR938)?Math.max(0,Date.now()-quotaMsR938):Infinity;
 const minGapMsR797=1.55*60*1000;
@@ -8556,7 +8565,7 @@ const v=videoMap.get(item.videoId)||{};
 return {...item,videoTitle:item.videoTitle||v.title||'Новое событие YouTube',thumbnail:item.thumbnail||v.thumbnail||''};
 }).filter(item=>!isYoutubeOwnerComment(item,identity));
 const cutoff=Date.now()-24*60*60*1000;
-for(const item of external.slice().reverse().slice(-30)){
+await timedR1495('process-comments-and-push',async()=>{for(const item of external.slice().reverse().slice(-30)){
 const key=`comment:${item.id}`;
 if(await getYoutubeEventRow(db,key))continue;
 const published=Date.parse(item.publishedAt || '');
@@ -8591,7 +8600,8 @@ if(result.ok)await saveYoutubeEventRow(db,{key,type:'comment',resourceId:item.id
 else await releasePushOnceClaim(db,onceKey);
 notifications.push({type:'comment',id:item.id,ok:Boolean(result.ok),error:result.error || ''});
 }
-for(const item of videos){
+});
+await timedR1495('process-likes-and-push',async()=>{for(const item of videos){
 if(!item.isLive)await ensureYoutubeReleaseLikeZeroBaselineR434(db,item,'engagement-2m-r434',{force:false}).catch(()=>{});
 const key=`like-count:${item.videoId}`;
 const previous=await getYoutubeEventRow(db,key);
@@ -8642,7 +8652,8 @@ else await db.prepare(`DELETE FROM push_state WHERE key=?`).bind(burstKey).run()
 }
 notifications.push({type:'like',videoId:item.videoId,ok:Boolean(result.ok),pending:Boolean(result.pending),delta,total:item.likes,error:result.error || ''});
 }
-const liveChat=await checkYoutubeLiveChatPushR669(env,db,liveProbe).catch(error=>({
+});
+const liveChat=await timedR1495('live-chat-processing',()=>checkYoutubeLiveChatPushR669(env,db,liveProbe)).catch(error=>({
 ok:false,active:Boolean(liveProbe?.video),seen:0,sent:0,failed:0,seeded:false,
 warning:cleanPlainText(error?.message||error,260),videoId:liveProbe?.video?.videoId||'',liveChatId:liveProbe?.liveChatId||'',notifications:[]
 }));
@@ -8702,6 +8713,7 @@ async function handleFastYoutubeEngagementR333(request,env,options={}){
   const trace={at:new Date().toISOString(),phases:[],mode:'',totalMs:0,ok:false};
   const started=Date.now();
   try{
+    if(env.COMMENTS_DB)await setPushState(env.COMMENTS_DB,'cron-r1496-reactions-progress',JSON.stringify({...trace,active:{name:'start',startedAt:trace.at}})).catch(()=>{});
     const response=await handleFastYoutubeEngagementCoreR1495(request,env,{...options,__traceR1495:trace});
     trace.ok=Boolean(response?.ok);
     trace.httpStatus=Number(response?.status||0);
@@ -8713,7 +8725,10 @@ async function handleFastYoutubeEngagementR333(request,env,options={}){
     trace.totalMs=Date.now()-started;
     trace.mode=trace.phases.some(p=>p.name==='fetch-likes')?'full-quota':'eco-live';
     try{
-      if(env.COMMENTS_DB)await setPushState(env.COMMENTS_DB,'cron-r1495-reactions-timing',JSON.stringify(trace).slice(0,4000));
+      if(env.COMMENTS_DB){
+        await setPushState(env.COMMENTS_DB,'cron-r1495-reactions-timing',JSON.stringify(trace).slice(0,6500));
+        await setPushState(env.COMMENTS_DB,'cron-r1496-reactions-progress',JSON.stringify({...trace,completed:true,active:null}).slice(0,6500));
+      }
     }catch(_){}
   }
 }
