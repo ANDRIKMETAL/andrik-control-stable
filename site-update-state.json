@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r358-deploy-nohang",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1792749961096-206b12b42d",
-  "release": "R1493",
-  "archiveName": "SITE-R1493-CRON-TASK-SWITCHES-MANIFEST-FIX-FULL.zip",
-  "sourceHead": "031d0c7d175dbcf3bd18bcff2cac1191459289cd",
-  "backupSha": "031d0c7d175dbcf3bd18bcff2cac1191459289cd",
+  "operationId": "publish-1792752946731-9dbbce691a",
+  "release": "R1494",
+  "archiveName": "SITE-R1494-YOUTUBE-REACTIONS-FULL-VERIFIED.zip",
+  "sourceHead": "b3e1759283ba059e634c49474089cc3a4ba1f0b0",
+  "backupSha": "b3e1759283ba059e634c49474089cc3a4ba1f0b0",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-10-23T10:06:02.624Z"
+  "generatedAt": "2026-10-23T10:55:48.143Z"
 }

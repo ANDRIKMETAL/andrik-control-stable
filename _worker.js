@@ -936,6 +936,11 @@ catch (error) { observabilitySchemaPromise = null; throw error; }
 }
 async function trackObservabilityUsage(env, service, units = 0, requests = 1, details = {}) {
 if (!env.COMMENTS_DB) return;
+if(env.__youtubeUsageR1494){
+ const key=cleanPlainText(service||'unknown',80),old=env.__youtubeUsageR1494.get(key)||{units:0,requests:0};
+ env.__youtubeUsageR1494.set(key,{units:old.units+Math.max(0,Number(units||0)),requests:old.requests+Math.max(0,Number(requests||0)),details});
+ return;
+}
 const db = env.COMMENTS_DB;
 await ensureObservabilitySchema(db);
 const rawService=cleanPlainText(service || 'unknown',80);
@@ -973,6 +978,7 @@ return 50;
 if (key === 'captions-list') return 50;
 if (key === 'captions-download') return 200;
 if (key === 'search') return 1;
+if (key === 'livechat/messages') return 5;
 return 1;
 }
 async function maybeSendYoutubeQuota50AlertR333(env, db, dateKey='') {
@@ -993,6 +999,7 @@ if(!claimed)return {ok:true,sent:false,duplicate:true,units,limit};
 const percent=Math.min(100,Math.round((units/limit)*1000)/10);
 const remaining=Math.max(0,limit-units);
 const result=await sendOwnerPush(env,{
+deadlineAtR1494:env.__youtubeReactionDeadlineAtR1494||0,
 title:'⚠️ YouTube API — 50% основной квоты',
 message:`Использовано ${units.toLocaleString('ru-RU')} из ${limit.toLocaleString('ru-RU')} units · ${percent}% · осталось ${remaining.toLocaleString('ru-RU')} · сброс 00:00 PT`,
 url:'https://control.andrikmetal.com/youtube-admin.html',
@@ -2229,6 +2236,7 @@ const logScope=cleanPlainText(entry.scope || 'system',40);
 const logLevel=cleanPlainText(entry.level || 'info',20);
 const logEvent=cleanPlainText(entry.event || '',80);
 const routineHealthyLog = logLevel==='info' && (
+(Boolean(env.__youtubeReactionDeadlineAtR1494) && logScope==='push' && logEvent==='onesignal-accepted') ||
 (logScope==='youtube-fast-engagement' && logEvent==='fast-check-success') ||
 (logScope==='automation' && logEvent==='legacy-reserve-r648')
 );
@@ -2595,7 +2603,8 @@ threadId = '',
 collapseId = '',
 webPushTopic = '',
 ttl = null,
-data = null
+data = null,
+deadlineAtR1494 = 0
 }) {
 if (!oneSignalConfigured(env)) {
 if (history) {
@@ -2698,10 +2707,10 @@ payload.included_segments = ['Subscribed Users'];
 }
 }
 let response = null;
-let oneSignalFetchError = null;
-for (let attempt = 0; attempt < 2 && !response; attempt += 1) {
+let oneSignalFetchError = null,oneSignalResponseDataR1494=null;
+for (let attempt = 0; attempt < (deadlineAtR1494?1:2) && !response; attempt += 1) {
 const controller = new AbortController();
-const timer = setTimeout(() => controller.abort('onesignal-timeout'), 12000);
+const timer = setTimeout(() => controller.abort('onesignal-timeout'), deadlineAtR1494?Math.max(100,Math.min(6000,deadlineAtR1494-Date.now()-1000)):12000);
 try {
 response = await fetch('https://api.onesignal.com/notifications?c=push', {
 method: 'POST',
@@ -2712,9 +2721,11 @@ authorization: `Key ${getOneSignalApiKey(env)}`
 body: JSON.stringify(payload),
 signal: controller.signal
 });
+if(deadlineAtR1494)oneSignalResponseDataR1494=await response.json();
 } catch (error) {
+response=null;
 oneSignalFetchError = error;
-if (attempt === 0) await new Promise(resolve => setTimeout(resolve, 650));
+if (attempt === 0 && !deadlineAtR1494) await new Promise(resolve => setTimeout(resolve, 650));
 } finally {
 clearTimeout(timer);
 }
@@ -2741,7 +2752,7 @@ details:{ audience, title, url, errorMessage }
 }).catch(() => {});
 return { ok:false, error:errorCode, message:errorMessage };
 }
-const responseData = await response.json().catch(() => ({}));
+const responseData = oneSignalResponseDataR1494 ?? await response.json().catch(() => ({}));
 const invalidSubscriptionIdsR473 = oneSignalInvalidSubscriptionIdsR473(responseData);
 if (invalidSubscriptionIdsR473.length) {
 await pruneInvalidOneSignalSubscriptionsR473(env, invalidSubscriptionIdsR473, `${audience}:${history?.type || name || title}`).catch(()=>{});
@@ -3790,12 +3801,13 @@ async function ensureYoutubeReleaseLikeZeroBaselineR434(db, item = {}, origin = 
 const videoId = cleanPlainText(item?.videoId || item?.id || '', 40);
 if (!videoId) return {ok:false,skipped:true,reason:'video-id-required'};
 const markerKey = `youtube-like-zero-baseline-r434:${videoId}`;
-const marker = await getPushState(db, markerKey).catch(() => null);
-if (marker?.value) return {ok:true,skipped:true,reason:'already-initialized'};
 const force = Boolean(options.force);
 const publishedAt = cleanPlainText(item?.publishedAt || '', 60);
 const publishedMs = Date.parse(publishedAt || '');
 const freshWindowMs = 6 * 60 * 60 * 1000;
+if(!force&&(!Number.isFinite(publishedMs)||publishedMs>Date.now()+10*60*1000||Date.now()-publishedMs>freshWindowMs))return {ok:true,skipped:true,reason:'not-fresh-release'};
+const marker = await getPushState(db, markerKey).catch(() => null);
+if (marker?.value) return {ok:true,skipped:true,reason:'already-initialized'};
 if (!force) {
 if (!Number.isFinite(publishedMs) || publishedMs > Date.now() + 10 * 60 * 1000 || Date.now() - publishedMs > freshWindowMs) {
 return {ok:true,skipped:true,reason:'not-fresh-release'};
@@ -7206,10 +7218,22 @@ mode = 'oauth';
 const endpointKeyR1026=cleanPlainText(endpoint,80).toLowerCase();
 const quotaServiceR1026=endpointKeyR1026==='search'?'youtube-search-api':'youtube-data-api';
 await trackObservabilityUsage(env, quotaServiceR1026, observabilityQuotaCost(endpoint), 1, { endpoint:cleanPlainText(endpoint,80), mode }).catch(() => {});
-const response = await fetchWithAbortTimeoutR409(url.toString(), { headers }, Number(options.timeoutMs || 8000), `youtube-${endpoint}-timeout`);
-const data = await response.json().catch(() => ({}));
-if (!response.ok) throw new Error(data?.error?.message || `youtube-${endpoint}-${response.status}`);
-return { data, mode };
+const controller=new AbortController();
+const timeoutMs=Math.max(100,Math.min(15000,Number(options.timeoutMs||8000)));
+const timer=setTimeout(()=>controller.abort(),timeoutMs);
+try{
+ const response=await fetch(url.toString(),{headers,signal:controller.signal});
+ const data=await response.json();
+ if(!response.ok){
+  const error=new Error(data?.error?.message||`youtube-${endpoint}-${response.status}`);
+  error.status=response.status;error.reason=String(data?.error?.errors?.[0]?.reason||'');
+  throw error;
+ }
+ return {data,mode};
+}catch(error){
+ if(controller.signal.aborted){const timeout=new Error(`youtube-${endpoint}-timeout`);timeout.reason='timeout';throw timeout;}
+ throw error;
+}finally{clearTimeout(timer);}
 }
 async function youtubeApiMutation(env, endpoint, params = {}, body = {}) {
 const url = new URL(`https://www.googleapis.com/youtube/v3/${endpoint}`);
@@ -7398,40 +7422,74 @@ const fullReplies=await fetchYoutubeThreadReplies(env,incompleteParents).catch((
 comments.push(...(fullReplies.items || []).filter(item=>item.authorChannelId !== channelId));
 return uniqueYoutubeComments(comments);
 }
-async function fetchYoutubeCommentsForVideos(env, videos = [], ownerChannelId = '') {
-const targets=(Array.isArray(videos)?videos:[]).slice(0,12);
-if(!targets.length)return {items:[],warnings:[]};
-const settled=await Promise.allSettled(targets.map(async video=>{
-const {data}=await youtubeApiJson(env,'commentThreads',{
-part:'snippet,replies', videoId:video.videoId, maxResults:100, order:'time', textFormat:'plainText'
-});
-const rows=[]; const incompleteParents=[];
-for(const thread of data.items||[]){
-const top=parseYoutubeCommentItem(thread?.snippet?.topLevelComment||{},video);
-if(top.id&&top.authorChannelId!==ownerChannelId)rows.push(top);
-const embedded=thread?.replies?.comments||[];
-for(const reply of embedded){
-const item=parseYoutubeCommentItem(reply,video);
-if(item.id&&item.authorChannelId!==ownerChannelId)rows.push(item);
+
+async function fetchYoutubeCommentsForVideos(env,videos=[],ownerChannelId='',options={}){
+ const targets=(Array.isArray(videos)?videos:[]).slice(0,options.maxTargets||12);
+ if(!targets.length)return {items:[],warnings:[],completedVideoIds:[]};
+ const db=options.db||env.COMMENTS_DB,items=[],warnings=[],completed=new Set(),parents=[];
+ // At most three base requests and two reply requests can be in flight, in separate phases.
+ for(let offset=0;offset<targets.length;offset+=3){
+  const chunk=targets.slice(offset,offset+3);
+  const settled=await Promise.allSettled(chunk.map(async video=>{
+   const {data}=await youtubeApiJson(env,'commentThreads',{
+    part:'snippet,replies',videoId:video.videoId,maxResults:100,order:'time',textFormat:'plainText',
+    fields:'items(snippet(videoId,totalReplyCount,topLevelComment(id,snippet)),replies/comments(id,snippet))'
+   },{timeoutMs:5000});
+   const rows=[],incomplete=[];
+   for(const thread of data.items||[]){
+    const top=parseYoutubeCommentItem(thread?.snippet?.topLevelComment||{},video);
+    if(top.id&&top.authorChannelId!==ownerChannelId)rows.push(top);
+    const embedded=thread?.replies?.comments||[];
+    for(const reply of embedded){const item=parseYoutubeCommentItem(reply,video);if(item.id&&item.authorChannelId!==ownerChannelId)rows.push(item);}
+    const total=Math.max(0,Number(thread?.snippet?.totalReplyCount||0));
+    if(top.id&&total>embedded.length)incomplete.push({id:top.id,video,total});
+   }
+   return {video,rows,incomplete};
+  }));
+  for(let i=0;i<settled.length;i++){
+   const result=settled[i];
+   if(result.status==='fulfilled'){items.push(...result.value.rows);parents.push(...result.value.incomplete);completed.add(result.value.video.videoId);}
+   else if(isBenignYoutubeCommentWarningR473(result.reason?.message)||result.reason?.reason==='commentsDisabled')completed.add(chunk[i].videoId);
+   else warnings.push(`${chunk[i].title||'Видео'}: ${cleanPlainText(result.reason?.message||result.reason,220)}`);
+  }
+ }
+ if(parents.length){
+  const previous=db?await youtubeEventRowsR1494(db,parents.map(row=>'reply-count:'+row.id)):new Map();
+  const due=parents.filter(row=>Number(previous.get('reply-count:'+row.id)?.countValue||0)<row.total);
+  const selected=due.slice(0,Math.max(1,options.maxReplyRequests||2));
+  for(const row of due)completed.delete(row.video.videoId);
+  const cursorKeys=selected.map(row=>'youtube-reply-page-r1494:'+row.id);
+  const cursors=db?await pushStatesR1494(db,cursorKeys):new Map(),writes={},countRows=[];
+  const settled=await Promise.allSettled(selected.map(async row=>{
+   const cursor=parsePushSummary(cursors.get('youtube-reply-page-r1494:'+row.id)?.value);
+   const params={part:'snippet',parentId:row.id,maxResults:100,textFormat:'plainText',fields:'nextPageToken,items(id,snippet)'};
+   if(cursor?.token&&cursor.total===row.total)params.pageToken=cursor.token;
+   let data;
+   try{({data}=await youtubeApiJson(env,'comments',params,{timeoutMs:5000}));}
+   catch(error){
+    if(params.pageToken&&(/invalidPageToken|pageTokenInvalid/i.test(error.reason)||/invalid.*page.?token/i.test(error.message)))writes['youtube-reply-page-r1494:'+row.id]=JSON.stringify({total:row.total,token:''});
+    throw error;
+   }
+   return {row,data};
+  }));
+  const done=new Set();
+  for(let i=0;i<settled.length;i++){
+   const result=settled[i],row=selected[i];
+   if(result.status==='rejected'){warnings.push(cleanPlainText(result.reason?.message||result.reason,240));continue;}
+   const data=result.value.data;
+   items.push(...(data.items||[]).map(reply=>parseYoutubeCommentItem(reply,row.video)).filter(item=>item.id&&item.authorChannelId!==ownerChannelId));
+   const next=cleanPlainText(data.nextPageToken||'',2000);
+   writes['youtube-reply-page-r1494:'+row.id]=JSON.stringify({total:row.total,token:next});
+   if(!next){done.add(row.id);countRows.push({key:'reply-count:'+row.id,type:'reply-count',resourceId:row.id,videoId:row.video.videoId,countValue:row.total,payload:{totalReplies:row.total}});}
+  }
+  for(const row of selected)if(due.filter(other=>other.video.videoId===row.video.videoId).every(other=>done.has(other.id)))completed.add(row.video.videoId);
+  if(db){await queueYoutubeItemsR1494(db,items,'comment');await saveYoutubeEventRowsR1494(db,countRows);await setPushStatesR1494(db,writes);}
+ }
+ // Persist before advancing reply-page cursors or comment-count baselines.
+ await queueYoutubeItemsR1494(db,items,'comment');
+ return {items:uniqueYoutubeComments(items),warnings,completedVideoIds:[...completed]};
 }
-const totalReplies=Math.max(0,Number(thread?.snippet?.totalReplyCount||0));
-if(top.id&&totalReplies>embedded.length)incompleteParents.push(top.id);
-}
-const fallback=new Map([[video.videoId,video]]);
-const fullReplies=await fetchYoutubeThreadReplies(env,incompleteParents,fallback).catch(()=>({items:[],warnings:[]}));
-rows.push(...(fullReplies.items||[]).filter(item=>item.authorChannelId!==ownerChannelId));
-return rows;
-}));
-const items=[]; const warnings=[];
-settled.forEach((result,index)=>{
-if(result.status==='fulfilled')items.push(...result.value);
-else{
-const message=cleanPlainText(result.reason?.message||result.reason,220);
-if(message&&!/commentsDisabled|disabled comments/i.test(message))warnings.push(`${targets[index]?.title||'Видео'}: ${message}`);
-}
-});
-return {items:uniqueYoutubeComments(items),warnings};
-}
+
 async function fetchYoutubeRecentSubscribers(env) {
 try {
 const { data } = await youtubeApiJson(env, 'subscriptions', {
@@ -7568,15 +7626,14 @@ return safe;
 }
 async function loadFastYoutubeVideoIdsR333(db,limit=50){
 const rows=await db.prepare(`
-    SELECT video_id AS videoId,payload_json AS payloadJson,last_seen_at AS lastSeenAt
+    SELECT video_id AS videoId,json_extract(CASE WHEN json_valid(payload_json) THEN payload_json ELSE '{}' END,'$.publishedAt') AS publishedAt,last_seen_at AS lastSeenAt
     FROM youtube_event_seen
     WHERE event_type='like-count' AND video_id IS NOT NULL AND video_id!=''
     ORDER BY datetime(last_seen_at) DESC LIMIT 200
   `).all();
 const items=[];
 for(const row of rows.results || []){
-let payload={};try{payload=JSON.parse(row.payloadJson || '{}') || {}}catch(_){}
-items.push({videoId:cleanPlainText(row.videoId || '',40),publishedAt:cleanPlainText(payload.publishedAt || '',50)});
+items.push({videoId:cleanPlainText(row.videoId || '',40),publishedAt:cleanPlainText(row.publishedAt || '',50)});
 }
 return items.filter(x=>x.videoId)
 .sort((a,b)=>String(b.publishedAt || '').localeCompare(String(a.publishedAt || '')))
@@ -7665,7 +7722,7 @@ const ids=[...pinned];
 for(let i=0;i<rotatingTake;i++)ids.push(rotatingPool[(offset+i)%rotatingPool.length]);
 const nextOffset=rotatingPool.length ? (offset+rotatingTake)%rotatingPool.length : 0;
 await setPushState(db,'youtube-fast-like-offset-r416',String(nextOffset)).catch(()=>{});
-const {data}=await youtubeApiJson(env,'videos',{part:'snippet,statistics',id:ids.join(','),maxResults:24});
+const {data}=await youtubeApiJson(env,'videos',{part:'snippet,statistics',id:ids.join(','),maxResults:24,fields:'items(id,snippet(title,publishedAt,thumbnails/medium),statistics(likeCount,commentCount))'});
 const order=new Map(ids.map((id,index)=>[id,index]));
 return (data.items || []).map(video=>({
 videoId:cleanPlainText(video.id || '',40),
@@ -7715,21 +7772,24 @@ const nextOffset=olderPool.length?(offset+1)%olderPool.length:0;
 await setPushState(db,'youtube-comment-older-offset-r953',String(nextOffset)).catch(()=>{});
 return {targets,recentIds:recent.map(row=>row.videoId),olderId:older?.videoId||'',nextOffset};
 }
-async function sendYoutubeCommentItemsR953(env,db,items=[],identity={},startedAt=new Date().toISOString(),mode='recent6-5m-r953'){
-const external=uniqueYoutubeComments(items||[]).filter(item=>!isYoutubeOwnerComment(item,identity));
-const notifications=[];
+async function sendYoutubeCommentItemsR953(env,db,items=[],identity={},startedAt=new Date().toISOString(),mode='recent6-5m-r953',options={}){
+await queueYoutubeItemsR1494(db,(items||[]).filter(item=>!isYoutubeOwnerComment(item,identity)),'comment');
+const external=uniqueYoutubeComments([...(await pendingYoutubeItemsR1494(db,'comment')),...(items||[])]).filter(item=>!isYoutubeOwnerComment(item,identity));
+const notifications=[],seedRows=[],done=[];let deferred=0,attempts=0;
+const seen=await youtubeEventRowsR1494(db,external.map(item=>'comment:'+item.id));
+await removePendingYoutubeItemsR1494(db,external.filter(item=>seen.has('comment:'+item.id)),'comment');
 const cutoff=Date.now()-24*60*60*1000;
-for(const item of external.slice().reverse().slice(-20)){
+for(const item of external.filter(item=>!seen.has('comment:'+item.id)).slice(0,100).reverse()){
 const key=`comment:${item.id}`;
-if(await getYoutubeEventRow(db,key))continue;
 const published=Date.parse(item.publishedAt||'');
 if(Number.isFinite(published)&&published<cutoff){
-await saveYoutubeEventRow(db,{
+seedRows.push({
 key,type:'comment',resourceId:item.id,videoId:item.videoId,author:item.author,
 title:item.text,url:item.url,payload:{...item,seededSilently:true,mode}
-}).catch(()=>{});
+});
 continue;
 }
+if(attempts>=(options.maxSends||2)||!reactionBudgetAllowsR1494(options.budget)){deferred++;continue;}
 const onceKey=`push-once:youtube-comment:${item.id}`;
 let claimed=await claimPushOnce(db,onceKey,startedAt);
 if(!claimed){
@@ -7746,7 +7806,9 @@ await db.prepare(`DELETE FROM push_state WHERE key=? AND updated_at < datetime('
 claimed=await claimPushOnce(db,onceKey,startedAt);
 }
 if(!claimed)continue;
+attempts++;if(options.budget)options.budget.remaining--;
 const result=await sendOwnerPush(env,{
+deadlineAtR1494:options.budget?.deadlineAt||0,
 title:`💬 ${compactYoutubePushTitle(item.videoTitle||'Новый комментарий','YouTube')}`,
 message:`${item.author}: ${String(item.text||'').slice(0,160)}`,
 url:item.url,image:item.thumbnail||'',name:`youtube-comment-${item.id}`,ttl:86400,
@@ -7766,9 +7828,12 @@ await saveYoutubeEventRow(db,{key,type:'comment',resourceId:item.id,videoId:item
 }else if(!result.pending){
 await releasePushOnceClaim(db,onceKey).catch(()=>{});
 }
+if(result.ok)done.push(item);
 notifications.push({type:'comment',id:item.id,ok:Boolean(result.ok),pending:Boolean(result.pending),error:result.error||''});
 }
-return {seen:external.length,notifications};
+await saveYoutubeEventRowsR1494(db,seedRows);
+await removePendingYoutubeItemsR1494(db,[...done,...seedRows.map(row=>({id:row.resourceId}))],'comment');
+return {seen:external.length,notifications,deferred};
 }
 async function checkYoutubeRecentCommentsEvery5mR953(env,db,channelId,startedAt=new Date().toISOString()){
 const gateKeyR1026='youtube-comment-sweep-quota-last-at-r1026';
@@ -8149,10 +8214,19 @@ async function collectRadioAudienceCronR1484(env,clock){
   concurrentViewers:metrics.video?.concurrentViewers??null,checkedAt:metrics.checkedAt};
 }
 
+
 async function fetchYoutubeActiveLiveEngagementR669(env,db){
- const metrics=await fetchRadioMetricsR1484(env);
- return {video:metrics.video?.isLive?metrics.video:null,liveChatId:metrics.liveChatId,warning:metrics.warning,source:metrics.source};
+ const cached=radioMetricsCacheR1484.data;
+ if(cached?.video&&radioMetricsCacheR1484.expiresAt>Date.now())return {video:cached.video.isLive?cached.video:null,liveChatId:cached.liveChatId||'',warning:'',source:'radio-metrics-cache-r1494'};
+ const answer=await youtubeApiJson(env,'videos',{part:'snippet,statistics,liveStreamingDetails',id:ANDRIK_RADIO_LIVE_ID_R1483,maxResults:1,
+  fields:'items(id,snippet(title,publishedAt,thumbnails/medium,liveBroadcastContent),statistics(viewCount,likeCount,commentCount),liveStreamingDetails(activeLiveChatId,actualStartTime,actualEndTime,scheduledStartTime))'
+ },{timeoutMs:5000});
+ const item=(answer.data.items||[]).find(row=>row.id===ANDRIK_RADIO_LIVE_ID_R1483);
+ if(!item)return {video:null,liveChatId:'',warning:'',source:'reaction-live-not-found-r1494'};
+ const video=radioMetricVideoR1484(item);
+ return {video:video.isLive?video:null,liveChatId:video.isLive?cleanPlainText(item.liveStreamingDetails?.activeLiveChatId||'',180):'',warning:'',source:'reaction-videos-only-r1494'};
 }
+
 const YOUTUBE_LIVE_EMOJI_R686=Object.freeze({
 'hand-pink-waving':'👋',
 'thumbs-up-pink':'👍',
@@ -8259,87 +8333,83 @@ publishedAt:cleanPlainText(snippet.publishedAt||'',60),
 url:live?.video?.url||'https://www.youtube.com/@andrikmetal/live'
 };
 }
-async function checkYoutubeLiveChatPushR669(env,db,live={}){
-const liveChatId=cleanPlainText(live?.liveChatId||'',180);
-const videoId=cleanPlainText(live?.video?.videoId||'',80);
-if(!liveChatId||!videoId)return {ok:true,active:Boolean(videoId),seen:0,sent:0,failed:0,seeded:false,warning:'',videoId,liveChatId};
-const tokenKey=`youtube-livechat-page-r669:${liveChatId}`;
-const seededKey=`youtube-livechat-seeded-r669:${liveChatId}`;
-const globalCheckKey='youtube-livechat-last-check-at-r669';
-const [tokenState,seededState,globalState]=await Promise.all([
-getPushState(db,tokenKey).catch(()=>null),
-getPushState(db,seededKey).catch(()=>null),
-getPushState(db,globalCheckKey).catch(()=>null)
-]);
-const params={liveChatId,part:'id,snippet,authorDetails',maxResults:200};
-const pageToken=cleanPlainText(tokenState?.value||'',500);
-if(pageToken)params.pageToken=pageToken;
-let data={};
-try{
-({data}=await youtubeApiJson(env,'liveChat/messages',params,{timeoutMs:8000}));
-}catch(error){
-if(pageToken){
-try{({data}=await youtubeApiJson(env,'liveChat/messages',{liveChatId,part:'id,snippet,authorDetails',maxResults:200},{timeoutMs:8000}));}
-catch(second){
-await setPushState(db,globalCheckKey,new Date().toISOString()).catch(()=>{});
-return {ok:false,active:true,seen:0,sent:0,failed:0,seeded:Boolean(seededState),warning:cleanPlainText(second?.message||second,260),videoId,liveChatId};
+
+async function checkYoutubeLiveChatPushR669(env,db,live={},options={}){
+ const liveChatId=cleanPlainText(live.liveChatId||'',180),videoId=cleanPlainText(live.video?.videoId||'',80);
+ const empty={ok:true,active:Boolean(liveChatId&&videoId),seen:0,sent:0,failed:0,seeded:false,warning:'',videoId,liveChatId,notifications:[],deferred:0};
+ if(!liveChatId||!videoId)return empty;
+ const tokenKey=`youtube-livechat-page-r669:${liveChatId}`,seededKey=`youtube-livechat-seeded-r669:${liveChatId}`;
+ const globalKey='youtube-livechat-last-check-at-r669',nextKey=`youtube-livechat-next-at-r1494:${liveChatId}`,errorKey=`youtube-livechat-error-r1494:${liveChatId}`;
+ const state=await pushStatesR1494(db,[tokenKey,seededKey,globalKey,nextKey,errorKey]);
+ const nextAt=Date.parse(state.get(nextKey)?.value||'');
+ if(Number.isFinite(nextAt)&&nextAt>Date.now()){
+  const previous=parsePushSummary(state.get(errorKey)?.value);
+  return {...empty,ok:!previous?.warning,active:!previous?.inactive,warning:previous?.warning||'',skipped:true,reason:previous?.reason||'youtube-chat-polling-interval-r1494'};
+ }
+ if(options.budget&&Date.now()>=options.budget.deadlineAt-1500)return {...empty,deferred:1};
+ const pageToken=cleanPlainText(state.get(tokenKey)?.value||'',2000),nowIso=new Date().toISOString();
+ const params={liveChatId,part:'id,snippet,authorDetails',maxResults:200,
+  fields:'nextPageToken,pollingIntervalMillis,offlineAt,items(id,snippet,authorDetails(channelId,displayName,isChatOwner,isChatModerator))'};
+ if(pageToken)params.pageToken=pageToken;
+ let data;
+ try{
+  try{({data}=await youtubeApiJson(env,'liveChat/messages',params,{timeoutMs:5000}));}
+  catch(error){
+   // Invalid cursors can be reset. Quota/permission/timeouts must not be retried immediately.
+   if(pageToken&&(/invalidPageToken|pageTokenInvalid/i.test(error.reason)||/page.?token.*invalid|invalid.*page.?token/i.test(error.message))){
+    delete params.pageToken;({data}=await youtubeApiJson(env,'liveChat/messages',params,{timeoutMs:5000}));
+   }else throw error;
+  }
+ }catch(error){
+  const reason=cleanPlainText(error.reason||'',100),inactive=/liveChatDisabled|liveChatEnded|liveChatNotFound/.test(reason);
+  const cooldown=/quotaExceeded|dailyLimitExceeded/.test(reason)?15*60*1000:/rateLimitExceeded/.test(reason)?120000:inactive?300000:30000;
+  await setPushStatesR1494(db,{[globalKey]:nowIso,[nextKey]:new Date(Date.now()+cooldown).toISOString(),[errorKey]:JSON.stringify({reason,inactive,warning:inactive?'':cleanPlainText(error.message||error,260)})});
+  return {...empty,ok:inactive,active:!inactive,reason:reason||'youtube-chat-unavailable',warning:inactive?'':cleanPlainText(error.message||error,260)};
+ }
+ const fetched=(data.items||[]).map(item=>parseYoutubeLiveChatMessageR669(item,live)).filter(item=>item.id);
+ const firstSeed=!state.get(seededKey)?.value,prior=Date.parse(state.get(globalKey)?.value||'');
+ const cutoff=Number.isFinite(prior)&&Date.now()-prior<30*60*1000?prior:Date.now();
+ await queueYoutubeItemsR1494(db,fetched.filter(item=>!item.authorIsOwner&&!(firstSeed&&(!Number.isFinite(Date.parse(item.publishedAt||''))||Date.parse(item.publishedAt||'')<=cutoff))),'live-chat');
+ const rows=[...new Map([...fetched,...(await pendingYoutubeItemsR1494(db,'live-chat',videoId))].filter(item=>item.liveChatId===liveChatId).map(item=>[item.id,item])).values()];
+ const seen=await youtubeEventRowsR1494(db,rows.map(item=>'livechat:'+item.id));
+ await removePendingYoutubeItemsR1494(db,rows.filter(item=>seen.has('livechat:'+item.id)),'live-chat');
+ const notifications=[],seedRows=[],done=[];let deferred=0,attempts=0;
+ for(const item of rows){
+  const key='livechat:'+item.id;if(seen.has(key))continue;
+  const published=Date.parse(item.publishedAt||'');
+  const silent=firstSeed&&(!Number.isFinite(published)||published<=cutoff)&&!String(item.pendingR1494||'');
+  if(item.authorIsOwner||silent){seedRows.push({key,type:'live-chat',resourceId:item.id,videoId:item.videoId,author:item.author,title:item.text,url:item.url,payload:{...item,seededSilently:silent,mode:'livechat-r1494'}});continue;}
+  if(attempts>=1||!reactionBudgetAllowsR1494(options.budget)){deferred++;continue;}
+  const onceKey='push-once:youtube-livechat:'+item.id;
+  let claimed=await claimPushOnce(db,onceKey,nowIso);
+  if(!claimed){
+   await db.prepare("DELETE FROM push_state WHERE key=? AND updated_at<datetime('now','-8 minutes')").bind(onceKey).run();
+   claimed=await claimPushOnce(db,onceKey,nowIso);
+  }
+  if(!claimed){deferred++;continue;}
+  attempts++;if(options.budget)options.budget.remaining--;
+  const special=item.type==='superChatEvent'?'💰':item.type==='superStickerEvent'?'✨':'💬';
+  const result=await sendOwnerPush(env,{
+   deadlineAtR1494:options.budget?.deadlineAt||0,title:`${special} LIVE · ${item.author}`,message:item.text.slice(0,180),
+   url:youtubeAppLauncherUrl(item.url),image:item.thumbnail||'',name:`youtube-livechat-${item.id}`,ttl:7200,
+   data:{liveChatMessageId:item.id,liveChatId:item.liveChatId,videoId:item.videoId,type:item.type},
+   webButtons:[{id:'open-youtube-live',text:'🔴 Открыть эфир',url:youtubeAppLauncherUrl(item.url)}],
+   history:{type:'youtube-live-chat',source:'YouTube Live Chat',videoId:item.videoId,videoTitle:item.videoTitle,details:{messageId:item.id,liveChatId:item.liveChatId,author:item.author,publishedAt:item.publishedAt,messageType:item.type,deliveryMode:'livechat-r1494'}}
+  });
+  if(result.ok){done.push(item);seedRows.push({key,type:'live-chat',resourceId:item.id,videoId:item.videoId,author:item.author,title:item.text,url:item.url,payload:item});}
+  else if(!result.pending)await releasePushOnceClaim(db,onceKey);
+  notifications.push({type:'live-chat',id:item.id,ok:Boolean(result.ok),pending:Boolean(result.pending),error:cleanPlainText(result.error||'',260)});
+ }
+ await saveYoutubeEventRowsR1494(db,seedRows);
+ await removePendingYoutubeItemsR1494(db,[...done,...seedRows.map(row=>({id:row.resourceId}))],'live-chat');
+ const writes={[globalKey]:nowIso,[seededKey]:'1',[errorKey]:'{}',[nextKey]:new Date(Date.now()+Math.max(0,Number(data.pollingIntervalMillis)||0)).toISOString()};
+ // Every unseen message is durable before the input cursor advances. Failed pushes stay queued.
+ if(data.nextPageToken)writes[tokenKey]=String(data.nextPageToken);
+ await setPushStatesR1494(db,writes);
+ return {...empty,ok:notifications.every(item=>item.ok||item.pending),active:!data.offlineAt,seen:rows.length,sent:notifications.filter(item=>item.ok).length,
+  failed:notifications.filter(item=>!item.ok&&!item.pending).length,seeded:firstSeed,notifications,deferred};
 }
-}else{
-await setPushState(db,globalCheckKey,new Date().toISOString()).catch(()=>{});
-return {ok:false,active:true,seen:0,sent:0,failed:0,seeded:Boolean(seededState),warning:cleanPlainText(error?.message||error,260),videoId,liveChatId};
-}
-}
-const rows=(Array.isArray(data?.items)?data.items:[]).map(item=>parseYoutubeLiveChatMessageR669(item,live)).filter(item=>item.id);
-const nowIso=new Date().toISOString();
-const priorGlobalMs=Date.parse(String(globalState?.value||globalState?.updatedAt||''));
-const firstSeed=Boolean(!seededState?.value);
-const recentFirstSeedCutoff=Number.isFinite(priorGlobalMs)&&Date.now()-priorGlobalMs<30*60*1000?priorGlobalMs:Date.now();
-const notifications=[];
-for(const item of rows){
-const key=`livechat:${item.id}`;
-if(await getYoutubeEventRow(db,key))continue;
-const publishedMs=Date.parse(item.publishedAt||'');
-const shouldSilentlySeed=firstSeed && (!Number.isFinite(publishedMs)||publishedMs<=recentFirstSeedCutoff);
-if(item.authorIsOwner || shouldSilentlySeed){
-await saveYoutubeEventRow(db,{key,type:'live-chat',resourceId:item.id,videoId:item.videoId,author:item.author,title:item.text,url:item.url,payload:{...item,seededSilently:shouldSilentlySeed,mode:'livechat-r669'}}).catch(()=>{});
-continue;
-}
-const onceKey=`push-once:youtube-livechat:${item.id}`;
-let claimed=await claimPushOnce(db,onceKey,nowIso);
-if(!claimed){
-await db.prepare(`DELETE FROM push_state WHERE key=? AND updated_at < datetime('now','-8 minutes')`).bind(onceKey).run().catch(()=>{});
-claimed=await claimPushOnce(db,onceKey,nowIso);
-}
-if(!claimed)continue;
-const special=item.type==='superChatEvent'?'💰':item.type==='superStickerEvent'?'✨':'💬';
-const result=await sendOwnerPush(env,{
-title:`${special} LIVE · ${item.author}`,
-message:String(item.text||'Сообщение в LIVE-чате').slice(0,180),
-url:youtubeAppLauncherUrl(item.url),
-image:item.thumbnail||'',
-name:`youtube-livechat-${item.id}`,
-ttl:7200,
-data:{liveChatMessageId:item.id,liveChatId:item.liveChatId,videoId:item.videoId,type:item.type},
-webButtons:[{id:'open-youtube-live',text:'🔴 Открыть эфир',url:youtubeAppLauncherUrl(item.url)}],
-history:{type:'youtube-live-chat',source:'YouTube Live Chat',videoId:item.videoId,videoTitle:item.videoTitle,details:{messageId:item.id,liveChatId:item.liveChatId,author:item.author,publishedAt:item.publishedAt,messageType:item.type,deliveryMode:'livechat-r669'}}
-});
-if(result.ok){
-await saveYoutubeEventRow(db,{key,type:'live-chat',resourceId:item.id,videoId:item.videoId,author:item.author,title:item.text,url:item.url,payload:item}).catch(()=>{});
-}else await releasePushOnceClaim(db,onceKey).catch(()=>{});
-notifications.push({type:'live-chat',id:item.id,ok:Boolean(result.ok),error:cleanPlainText(result.error||'',260)});
-}
-const stateWrites=[setPushState(db,globalCheckKey,nowIso).catch(()=>{})];
-if(firstSeed)stateWrites.push(setPushState(db,seededKey,'1').catch(()=>{}));
-const nextPageToken=cleanPlainText(data?.nextPageToken||'',500);
-if(nextPageToken&&nextPageToken!==pageToken)stateWrites.push(setPushState(db,tokenKey,nextPageToken).catch(()=>{}));
-await Promise.all(stateWrites);
-return {
-ok:!notifications.some(item=>!item.ok),active:true,seen:rows.length,
-sent:notifications.filter(item=>item.ok).length,
-failed:notifications.filter(item=>!item.ok).length,
-seeded:firstSeed,warning:'',videoId,liveChatId,notifications
-};
-}
+
 async function selectFastYoutubeCommentTargetsR473(db,videos=[]){
 const list=Array.isArray(videos)?videos.filter(v=>v?.videoId):[];
 const sweepStateR797=await getPushState(db,'youtube-comment-reply-sweep-last-at-r797').catch(()=>null);
@@ -8372,24 +8442,26 @@ if((before===null && current>0) || (before!==null && current>before)){
 if(!targets.some(row=>row.videoId===video.videoId) && targets.length<8)targets.push(video);
 }
 }
-return {targets,state,replySweepDueR797};
+return {targets:targets.slice(0,3),state,replySweepDueR797};
 }
 function isBenignYoutubeCommentWarningR473(value=''){
 return /comments? (?:are )?disabled|disabled comments|has disabled comments/i.test(String(value||''));
 }
 async function fetchFastYoutubeCommentsDirectR473(env,db,videos=[],ownerChannelId=''){
 const plan=await selectFastYoutubeCommentTargetsR473(db,videos);
-const direct=await fetchYoutubeCommentsForVideos(env,plan.targets,ownerChannelId).catch(error=>({items:[],warnings:[cleanPlainText(error?.message||error,260)]}));
+const direct=await fetchYoutubeCommentsForVideos(env,plan.targets,ownerChannelId,{db,maxTargets:3,maxReplyRequests:2}).catch(error=>({items:[],warnings:[cleanPlainText(error?.message||error,260)],completedVideoIds:[]}));
+const completedR1494=new Set(direct.completedVideoIds||[]),counterRowsR1494=[];
 for(const row of plan.state){
 const current=Math.max(0,Number(row.video.comments||0));
-if(row.before===null || current>row.before){
-await saveYoutubeEventRow(db,{
+if((row.before===null || current>row.before)&&completedR1494.has(row.video.videoId)){
+counterRowsR1494.push({
 key:row.key,type:'comment-count',resourceId:row.video.videoId,videoId:row.video.videoId,
 title:row.video.title,countValue:current,url:row.video.url,
 payload:{videoId:row.video.videoId,title:row.video.title,comments:current,mode:'fast-direct-r473'}
-}).catch(()=>{});
+});
 }
 }
+await saveYoutubeEventRowsR1494(db,counterRowsR1494);
 if(plan.replySweepDueR797){
 await setPushState(db,'youtube-comment-reply-sweep-last-at-r797',new Date().toISOString()).catch(()=>{});
 }
@@ -8477,46 +8549,140 @@ warnings,
 checkedAt:startedAt
 };
 }
+
+// R1494: bounded reaction polling; bulk D1 access instead of a query per video/message.
+const YOUTUBE_REACTIONS_FIX_R1494='R1494-YOUTUBE-REACTIONS-BOUNDED-D1';
+const engagementSchemaReadyR1494=new WeakMap();
+async function ensureEngagementReadyR1494(db){
+ if(engagementSchemaReadyR1494.has(db))return engagementSchemaReadyR1494.get(db);
+ const work=(async()=>{
+  const groups=[
+   {ready:()=>pushAutomationSchemaPromise,set:p=>{pushAutomationSchemaPromise=p;},tables:{push_history:['details_json','onesignal_id'],system_logs:['details_json'],push_subscribers:['country','region','city','latitude','longitude']}},
+   {ready:()=>controlV1SchemaPromise,set:p=>{controlV1SchemaPromise=p;},tables:{release_history:['details_json'],backup_history:['checksum'],backup_snapshots:['payload_json'],youtube_oauth_tokens:['refresh_token_enc'],tiktok_oauth_tokens:['access_expires_at','refresh_expires_at']}},
+   {ready:()=>platformAnalyticsSchemaPromise,set:p=>{platformAnalyticsSchemaPromise=p;},tables:{youtube_event_seen:['count_value','payload_json'],platform_accounts:['config_json'],platform_snapshots:['metrics_json']}},
+   {ready:()=>observabilitySchemaPromise,set:p=>{observabilitySchemaPromise=p;},tables:{observability_usage:['date_key','service','units']}},
+   {ready:()=>radioAudienceSchemaPromiseR1156,set:p=>{radioAudienceSchemaPromiseR1156=p;},tables:{radio_audience_samples:['sampled_at','local_date','local_minute','concurrent_viewers']}}
+  ];
+  const pending=groups.filter(group=>!group.ready());
+  if(pending.length){
+   const names=[...new Set(pending.flatMap(group=>Object.keys(group.tables)))];
+   const result=await db.prepare("SELECT name,sql FROM sqlite_master WHERE type='table' AND name IN (SELECT value FROM json_each(?))").bind(JSON.stringify(names)).all();
+   const schemas=new Map((result.results||[]).map(row=>[row.name,String(row.sql||'').toLowerCase()]));
+   for(const group of pending){
+    if(Object.entries(group.tables).every(([name,columns])=>schemas.has(name)&&columns.every(column=>new RegExp('\\b'+column+'\\b').test(schemas.get(name)))))group.set(Promise.resolve());
+   }
+  }
+  await Promise.all([ensurePushAutomationSchema(db),ensureControlV1Schema(db),ensurePlatformAnalyticsSchema(db)]);
+ })();
+ engagementSchemaReadyR1494.set(db,work);
+ try{return await work;}catch(error){engagementSchemaReadyR1494.delete(db);throw error;}
+}
+async function youtubeEventRowsR1494(db,keys=[]){
+ const unique=[...new Set(keys.filter(Boolean))];
+ if(!unique.length)return new Map();
+ const result=await db.prepare(`SELECT event_key AS eventKey,count_value AS countValue,payload_json AS payloadJson
+  FROM youtube_event_seen WHERE event_key IN (SELECT value FROM json_each(?))`).bind(JSON.stringify(unique)).all();
+ return new Map((result.results||[]).map(row=>[row.eventKey,row]));
+}
+async function freshLikeCandidatesR1494(db,videos){
+ const now=Date.now(),fresh=videos.filter(item=>!item.isLive&&Number.isFinite(Date.parse(item.publishedAt||''))&&now-Date.parse(item.publishedAt)<=6*60*60*1000&&Date.parse(item.publishedAt)<=now+600000);
+ if(!fresh.length)return new Set();
+ const markers=await pushStatesR1494(db,fresh.map(item=>'youtube-like-zero-baseline-r434:'+item.videoId));
+ const ids=fresh.filter(item=>!markers.get('youtube-like-zero-baseline-r434:'+item.videoId)?.value).map(item=>item.videoId);
+ if(!ids.length)return new Set();
+ const result=await db.prepare(`SELECT video_id AS videoId,
+  MAX(CASE WHEN type='auto-release' AND onesignal_id<>'' THEN 1 ELSE 0 END) AS releaseSent,
+  MAX(CASE WHEN type='youtube-like' THEN 1 ELSE 0 END) AS likeSent FROM push_history
+  WHERE status='sent' AND type IN ('auto-release','youtube-like') AND video_id IN (SELECT value FROM json_each(?)) GROUP BY video_id`).bind(JSON.stringify(ids)).all();
+ return new Set((result.results||[]).filter(row=>row.releaseSent&&!row.likeSent).map(row=>row.videoId));
+}
+async function saveYoutubeEventRowsR1494(db,events=[]){
+ if(!events.length)return;
+ const rows=events.map(event=>({key:cleanPlainText(event.key,220),type:cleanPlainText(event.type,50),
+  resourceId:cleanPlainText(event.resourceId||'',180),videoId:cleanPlainText(event.videoId||'',60),
+  title:cleanPlainText(event.title||'',220),author:cleanPlainText(event.author||'',160),
+  countValue:Math.max(0,Number(event.countValue||0)),url:cleanPlainText(event.url||'',700),payloadJson:JSON.stringify(event.payload||{})}));
+ await db.prepare(`INSERT INTO youtube_event_seen(event_key,event_type,resource_id,video_id,title,author,count_value,url,payload_json,first_seen_at,last_seen_at)
+ SELECT json_extract(value,'$.key'),json_extract(value,'$.type'),json_extract(value,'$.resourceId'),json_extract(value,'$.videoId'),
+  json_extract(value,'$.title'),json_extract(value,'$.author'),json_extract(value,'$.countValue'),json_extract(value,'$.url'),
+  json_extract(value,'$.payloadJson'),datetime('now'),datetime('now') FROM json_each(?) WHERE 1
+ ON CONFLICT(event_key) DO UPDATE SET resource_id=excluded.resource_id,video_id=excluded.video_id,title=excluded.title,
+  author=excluded.author,count_value=CASE WHEN youtube_event_seen.event_type='subscriber-count' OR excluded.event_type='subscriber-count' THEN excluded.count_value
+  WHEN youtube_event_seen.event_type IN ('like-count','comment-count','reply-count') OR excluded.event_type IN ('like-count','comment-count','reply-count')
+  THEN MAX(youtube_event_seen.count_value,excluded.count_value) ELSE excluded.count_value END,
+  url=excluded.url,payload_json=excluded.payload_json,last_seen_at=datetime('now')`).bind(JSON.stringify(rows)).run();
+}
+async function pushStatesR1494(db,keys=[]){
+ if(!keys.length)return new Map();
+ const result=await db.prepare('SELECT key,value,updated_at AS updatedAt FROM push_state WHERE key IN (SELECT value FROM json_each(?))').bind(JSON.stringify(keys)).all();
+ return new Map((result.results||[]).map(row=>[row.key,row]));
+}
+async function setPushStatesR1494(db,values){
+ const rows=Object.entries(values).map(([key,value])=>({key,value:String(value??'')}));
+ if(!rows.length)return;
+ await db.prepare(`INSERT INTO push_state(key,value,updated_at)
+  SELECT json_extract(value,'$.key'),json_extract(value,'$.value'),datetime('now') FROM json_each(?) WHERE 1
+  ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_at=datetime('now') WHERE push_state.value IS NOT excluded.value`).bind(JSON.stringify(rows)).run();
+}
+async function queueYoutubeItemsR1494(db,items,kind){
+ if(!items.length)return;
+ const prefix=kind==='comment'?'comment:':'livechat:',pending=kind==='comment'?'pending-comment:':'pending-livechat:';
+ const rows=items.map(item=>({key:pending+item.id,canonical:prefix+item.id,id:item.id,videoId:item.videoId||'',payload:JSON.stringify(item)}));
+ await db.prepare(`INSERT INTO youtube_event_seen(event_key,event_type,resource_id,video_id,payload_json)
+  SELECT json_extract(value,'$.key'),?,json_extract(value,'$.id'),json_extract(value,'$.videoId'),json_extract(value,'$.payload')
+  FROM json_each(?) AS incoming WHERE NOT EXISTS(SELECT 1 FROM youtube_event_seen WHERE event_key=json_extract(incoming.value,'$.canonical'))
+  ON CONFLICT(event_key) DO NOTHING`).bind(kind+'-pending-r1494',JSON.stringify(rows)).run();
+}
+async function pendingYoutubeItemsR1494(db,kind,videoId=''){
+ const result=await db.prepare(`SELECT payload_json AS payloadJson FROM youtube_event_seen WHERE event_type=?
+  ${videoId?'AND video_id=?':''} ORDER BY first_seen_at,event_key LIMIT 100`).bind(kind+'-pending-r1494',...(videoId?[videoId]:[])).all();
+ return (result.results||[]).map(row=>({...parsePushSummary(row.payloadJson),pendingR1494:true})).filter(item=>item?.id);
+}
+async function removePendingYoutubeItemsR1494(db,items,kind){
+ if(!items.length)return;
+ const prefix=kind==='comment'?'pending-comment:':'pending-livechat:';
+ await db.prepare('DELETE FROM youtube_event_seen WHERE event_key IN (SELECT value FROM json_each(?))').bind(JSON.stringify(items.map(item=>prefix+item.id))).run();
+}
+async function flushYoutubeUsageR1494(env){
+ const usage=env.__youtubeUsageR1494;
+ if(!usage)return;
+ const plain=Object.create(env);plain.__youtubeUsageR1494=null;
+ for(const [service,entry] of usage){
+  await trackObservabilityUsage(plain,service,entry.units,entry.requests,{...entry.details,source:'reaction-cycle-r1494'});
+  usage.delete(service);
+ }
+ usage.clear();
+}
+function reactionBudgetAllowsR1494(budget){return !budget || (budget.remaining>0 && (budget.queries||0)<=25 && Date.now()<budget.deadlineAt-1500);}
+function reactionDatabaseR1494(db,budget){
+ const statements=new WeakMap();
+ const wrap=raw=>{
+  const result={bind:(...args)=>wrap(raw.bind(...args))};
+  for(const name of ['first','all','run','raw'])result[name]=(...args)=>{budget.queries++;return raw[name](...args);};
+  statements.set(result,raw);return result;
+ };
+ return {prepare:sql=>wrap(db.prepare(sql)),batch:items=>{budget.queries+=items.length;return db.batch(items.map(item=>statements.get(item)||item));}};
+}
+
 async function handleFastYoutubeEngagementR333(request,env,options={}){
 if(!adminAuthorized(request,env) && !cronAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
-const db=requireDb(env);
-await Promise.all([ensurePushAutomationSchema(db),ensureControlV1Schema(db)]);
+let db=requireDb(env);
+await ensureEngagementReadyR1494(db);
 const requestUrlR797=new URL(request.url);
 const forceQuotaPollR797=options.force===true || requestUrlR797.searchParams.get('fresh')==='1' || (adminAuthorized(request,env) && !cronAuthorized(request,env));
 const invokedAtR938=new Date().toISOString();
-const quotaStateR938=await getPushState(db,'youtube-fast-quota-last-at-r938').catch(()=>null);
-const quotaMsR938=Date.parse(String(quotaStateR938?.value||quotaStateR938?.updatedAt||''));
-const quotaAgeMsR938=Number.isFinite(quotaMsR938)?Math.max(0,Date.now()-quotaMsR938):Infinity;
-const minGapMsR797=1.55*60*1000;
-await setPushState(db,'youtube-fast-engagement-last-at-r333',invokedAtR938).catch(()=>{});
-if(!forceQuotaPollR797 && quotaAgeMsR938<minGapMsR797){
-try{
-let channelId=(await getPushState(db,'youtube-websub-channel-id-r332').catch(()=>null))?.value||'';
-if(!channelId)channelId=await resolveYoutubeWebSubChannelIdR332(env,db);
-if(!channelId)throw new Error('youtube-channel-id-unavailable');
-const live2m=await checkYoutubeLiveCommentsEvery2mR938(env,db,channelId,invokedAtR938);
-const summary={...live2m,skippedQuota:true,quotaCadenceMinutes:5,likesSent:0,videosChecked:live2m.liveVideoPinned?1:0};
-const fastStatus=summary.failed>0?'failed':(summary.warnings.length||summary.pending>0)?'warning':'success';
-await setPushState(db,'youtube-fast-engagement-last-result-r333',JSON.stringify(summary)).catch(()=>{});
-await setPushState(db,'youtube-fast-engagement-last-status-r376',fastStatus).catch(()=>{});
-if(summary.ok)await setPushState(db,'youtube-fast-engagement-last-success-at-r376',invokedAtR938).catch(()=>{});
-return json({...summary,reason:'quota-eco-live-comments-r938',cadenceMinutes:2,nextQuotaInSeconds:Math.max(1,Math.ceil((minGapMsR797-quotaAgeMsR938)/1000))},summary.failed>0?502:summary.warnings.length?206:200);
-}catch(error){
-const msg=cleanPlainText(error?.message||error,300);
-const summary={ok:false,commentMode:'direct-live-2m-r938',commentTargets:0,commentsSent:0,liveChatSent:0,sent:0,failed:1,pending:0,warnings:[msg],checkedAt:invokedAtR938,skippedQuota:true};
-await setPushState(db,'youtube-fast-engagement-last-result-r333',JSON.stringify(summary)).catch(()=>{});
-await setPushState(db,'youtube-fast-engagement-last-status-r376','failed').catch(()=>{});
-return json(summary,502);
-}
-}
+const cycleClaim=await db.prepare(`INSERT INTO push_state(key,value,updated_at) VALUES ('youtube-engagement-cycle-r1494',?,datetime('now'))
+ ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_at=excluded.updated_at
+ WHERE (julianday('now')-julianday(push_state.updated_at))*86400>=?`).bind(invokedAtR938,forceQuotaPollR797?30:110).run();
+if(!Number(cycleClaim?.meta?.changes||0))return json({ok:true,skipped:true,reason:'reaction-poll-not-due-r1494',cadenceMinutes:2,checkedAt:invokedAtR938},200);
+env=Object.create(env);env.__youtubeUsageR1494=new Map();
+const reactionBudgetR1494={remaining:3,queries:2,deadlineAt:Date.now()+18000};env.__youtubeReactionDeadlineAtR1494=reactionBudgetR1494.deadlineAt;
+db=reactionDatabaseR1494(db,reactionBudgetR1494);Object.defineProperty(env,'COMMENTS_DB',{value:db});
 const autoCheckpointR398=options.skipCheckpoint
 ? {ok:true,skipped:true,reason:'checkpoint-owned-by-caller-r416'}
 : await checkpointDailySummaryAutoR398(env,'youtube-fast-5m-r526').catch(error=>({ok:false,error:cleanPlainText(error?.message||error,300)}));
 const startedAt=new Date().toISOString();
-await Promise.all([
-setPushState(db,'youtube-fast-engagement-last-at-r333',startedAt),
-setPushState(db,'youtube-fast-quota-last-at-r938',startedAt)
-]).catch(()=>{});
+await setPushStatesR1494(db,{'youtube-fast-engagement-last-at-r333':startedAt,'youtube-fast-quota-last-at-r938':startedAt});
 try{
 let channelId=(await getPushState(db,'youtube-websub-channel-id-r332').catch(()=>null))?.value || '';
 if(!channelId)channelId=await resolveYoutubeWebSubChannelIdR332(env,db);
@@ -8540,58 +8706,38 @@ await recordYoutubeObservedLikeBatchR469(db,videos,startedAt).catch(()=>{});
 const videoMap=new Map(videos.map(v=>[v.videoId,v]));
 const identity={channelId,handle:cleanPlainText(env.YOUTUBE_CHANNEL_HANDLE || '@andrikmetal',100)};
 const notifications=[];
+const likeRowsR1494=await youtubeEventRowsR1494(db,videos.map(item=>`like-count:${item.videoId}`));
+const freshLikesR1494=await freshLikeCandidatesR1494(db,videos);let initializedFreshR1494=0;
+const newLikeBaselinesR1494=[];
+let deferredLikesR1494=0,likeAttemptsR1494=0;
 let staleLikeClaimsRecovered=0;
 let busyLikeClaims=0;
 const external=comments.map(item=>{
 const v=videoMap.get(item.videoId)||{};
 return {...item,videoTitle:item.videoTitle||v.title||'Новое событие YouTube',thumbnail:item.thumbnail||v.thumbnail||''};
-}).filter(item=>!isYoutubeOwnerComment(item,identity));
-const cutoff=Date.now()-24*60*60*1000;
-for(const item of external.slice().reverse().slice(-30)){
-const key=`comment:${item.id}`;
-if(await getYoutubeEventRow(db,key))continue;
-const published=Date.parse(item.publishedAt || '');
-if(Number.isFinite(published) && published<cutoff){
-await saveYoutubeEventRow(db,{key,type:'comment',resourceId:item.id,videoId:item.videoId,author:item.author,title:item.text,url:item.url,payload:{...item,seededSilently:true,mode:'fast-r333'}});
-continue;
-}
-const onceKey=`push-once:youtube-comment:${item.id}`;
-let claimed=await claimPushOnce(db,onceKey,startedAt);
-if(!claimed){
-const delivered=await db.prepare(`SELECT 1 AS found FROM push_history WHERE type='youtube-comment' AND status='sent' AND details_json LIKE ? ORDER BY created_at DESC LIMIT 1`).bind(`%${item.id}%`).first().catch(()=>null);
-if(delivered?.found){
-await saveYoutubeEventRow(db,{key,type:'comment',resourceId:item.id,videoId:item.videoId,author:item.author,title:item.text,url:item.url,payload:item});
-continue;
-}
-await db.prepare(`DELETE FROM push_state WHERE key=? AND updated_at < datetime('now','-8 minutes')`).bind(onceKey).run().catch(()=>{});
-claimed=await claimPushOnce(db,onceKey,startedAt);
-}
-if(!claimed)continue;
-const result=await sendOwnerPush(env,{
-title:`💬 ${compactYoutubePushTitle(item.videoTitle || 'Новый комментарий','YouTube')}`,
-message:`${item.author}: ${String(item.text || '').slice(0,160)}`,
-url:item.url,image:item.thumbnail || '',name:`youtube-comment-${item.id}`,ttl:86400,
-data:{commentId:item.id,parentId:item.parentId || item.id,videoId:item.videoId || ''},
-webButtons:[
-{id:'reply-comment',text:'↩️ Ответить',url:`https://control.andrikmetal.com/youtube-comment-reply.html?commentId=${encodeURIComponent(item.id)}&videoId=${encodeURIComponent(item.videoId || '')}`},
-{id:'open-youtube',text:'▶️ YouTube',url:item.url}
-],
-history:{type:'youtube-comment',source:'YouTube',videoId:item.videoId,videoTitle:item.videoTitle || item.text,details:{commentId:item.id,parentId:item.parentId || item.id,author:item.author,publishedAt:item.publishedAt,deliveryMode:'fast-r333'}}
 });
-if(result.ok)await saveYoutubeEventRow(db,{key,type:'comment',resourceId:item.id,videoId:item.videoId,author:item.author,title:item.text,url:item.url,payload:item});
-else await releasePushOnceClaim(db,onceKey);
-notifications.push({type:'comment',id:item.id,ok:Boolean(result.ok),error:result.error || ''});
-}
+let commentDeliveryR1494={notifications:[],deferred:0},liveChat={notifications:[],deferred:0};
+const deliveryLanesR1494=[
+ async()=>{commentDeliveryR1494=await sendYoutubeCommentItemsR953(env,db,external,identity,startedAt,'fast-r1494',{budget:reactionBudgetR1494,maxSends:1});
+notifications.push(...commentDeliveryR1494.notifications);
+},
+ async()=>{
 for(const item of videos){
-if(!item.isLive)await ensureYoutubeReleaseLikeZeroBaselineR434(db,item,'engagement-2m-r434',{force:false}).catch(()=>{});
+if(freshLikesR1494.has(item.videoId)){
+ if(initializedFreshR1494>=1){deferredLikesR1494++;continue;}
+ initializedFreshR1494++;
+ const zero=await ensureYoutubeReleaseLikeZeroBaselineR434(db,item,'engagement-2m-r434',{force:false});
+ if(zero?.reset)likeRowsR1494.set(`like-count:${item.videoId}`,{countValue:0});
+}
 const key=`like-count:${item.videoId}`;
-const previous=await getYoutubeEventRow(db,key);
+const previous=likeRowsR1494.get(key);
 if(!previous){
-await saveYoutubeEventRow(db,{key,type:'like-count',resourceId:item.videoId,videoId:item.videoId,title:item.title,countValue:item.likes,url:item.url,payload:item});
+newLikeBaselinesR1494.push({key,type:'like-count',resourceId:item.videoId,videoId:item.videoId,title:item.title,countValue:item.likes,url:item.url,payload:item});
 continue;
 }
 const before=Number(previous.countValue || 0);
 if(item.likes<=before)continue;
+if(likeAttemptsR1494>=1||!reactionBudgetAllowsR1494(reactionBudgetR1494)){deferredLikesR1494++;continue;}
 const duplicate=await hasSentYoutubeLikeTotalR376(db,item.videoId,item.likes);
 if(duplicate){
 await db.prepare(`UPDATE youtube_event_seen SET count_value=MAX(count_value,?),last_seen_at=datetime('now') WHERE event_key=?`).bind(item.likes,key).run().catch(()=>{});
@@ -8614,7 +8760,9 @@ const cumulativeDelta=burst.cumulativeDelta;
 const glowTheme=youtubeLikeGlowTheme(cumulativeDelta);
 const likeTopic=pushTopicToken(`youtube-like-${item.videoId}`);
 const videoAppUrl=youtubeAppLauncherUrl(item.url);
+likeAttemptsR1494++;reactionBudgetR1494.remaining--;
 const result=await sendOwnerPush(env,{
+deadlineAtR1494:reactionBudgetR1494.deadlineAt,
 title:`👍 ${compactYoutubePushTitle(item.title,'YouTube')}`,
 message:`+${cumulativeDelta} ${russianLikeWord(cumulativeDelta)} на YouTube · всего ${item.likes}`,
 url:videoAppUrl,image:youtubeLikeGlowImageUrl(item.videoId,cumulativeDelta),icon:glowTheme.icon,
@@ -8633,11 +8781,17 @@ else await db.prepare(`DELETE FROM push_state WHERE key=?`).bind(burstKey).run()
 }
 notifications.push({type:'like',videoId:item.videoId,ok:Boolean(result.ok),pending:Boolean(result.pending),delta,total:item.likes,error:result.error || ''});
 }
-const liveChat=await checkYoutubeLiveChatPushR669(env,db,liveProbe).catch(error=>({
+await saveYoutubeEventRowsR1494(db,newLikeBaselinesR1494);},
+ async()=>{
+liveChat=await checkYoutubeLiveChatPushR669(env,db,liveProbe,{budget:reactionBudgetR1494}).catch(error=>({
 ok:false,active:Boolean(liveProbe?.video),seen:0,sent:0,failed:0,seeded:false,
 warning:cleanPlainText(error?.message||error,260),videoId:liveProbe?.video?.videoId||'',liveChatId:liveProbe?.liveChatId||'',notifications:[]
 }));
-if(Array.isArray(liveChat.notifications))notifications.push(...liveChat.notifications);
+if(Array.isArray(liveChat.notifications))notifications.push(...liveChat.notifications);}
+];
+const firstLaneR1494=Math.floor(Date.parse(startedAt)/120000)%deliveryLanesR1494.length;
+for(let lane=0;lane<deliveryLanesR1494.length;lane++)await deliveryLanesR1494[(firstLaneR1494+lane)%deliveryLanesR1494.length]();
+
 const warnings=[
 ...(videoSettled.map(r=>r.status==='rejected'?cleanPlainText(r.reason?.message || r.reason,240):'').filter(Boolean)),
 ...((directComments.warnings||[]).map(item=>cleanPlainText(item,240)).filter(Boolean)),
@@ -8664,13 +8818,15 @@ failed,
 pending,
 busyLikeClaims,
 staleLikeClaimsRecovered,
+release:YOUTUBE_REACTIONS_FIX_R1494,
+deferredLikes:deferredLikesR1494,deferredComments:commentDeliveryR1494.deferred||0,deferredChat:liveChat.deferred||0,
+durationMs:Date.now()-Date.parse(startedAt),
 warnings,
 checkedAt:new Date().toISOString()
 };
 const fastStatus=failed>0?'failed':(warnings.length||pending>0)?'warning':'success';
-await setPushState(db,'youtube-fast-engagement-last-result-r333',JSON.stringify(summary)).catch(()=>{});
-await setPushState(db,'youtube-fast-engagement-last-status-r376',fastStatus).catch(()=>{});
-if(summary.ok)await setPushState(db,'youtube-fast-engagement-last-success-at-r376',startedAt).catch(()=>{});
+await flushYoutubeUsageR1494(env);
+await setPushStatesR1494(db,{'youtube-fast-engagement-last-result-r333':JSON.stringify(summary),'youtube-fast-engagement-last-status-r376':fastStatus,...(summary.ok?{'youtube-fast-engagement-last-success-at-r376':startedAt}:{})});
 await recordSystemLog(env,{
 scope:'youtube-fast-engagement',
 level:failed>0?'error':'info',
@@ -8680,6 +8836,7 @@ details:summary
 }).catch(()=>{});
 return json(summary,failed>0?502:warnings.length?206:200);
 }catch(error){
+await flushYoutubeUsageR1494(env).catch(()=>{});
 const msg=cleanPlainText(error?.message || error,400);
 const failedSummary={ok:false,error:msg,checkedAt:new Date().toISOString()};
 await setPushState(db,'youtube-fast-engagement-last-result-r333',JSON.stringify(failedSummary)).catch(()=>{});
@@ -11090,13 +11247,11 @@ async function responseData(response) {
 const data = await response.json().catch(() => ({}));
 return { httpOk:response.ok, status:response.status, ...data };
 }
+let bratislavaClockFormatterR1494=null;
 function getBratislavaClock(date = new Date()) {
 const values = {};
-for (const part of new Intl.DateTimeFormat('en-CA', {
-timeZone: 'Europe/Bratislava',
-year: 'numeric', month: '2-digit', day: '2-digit',
-hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
-}).formatToParts(date)) {
+bratislavaClockFormatterR1494 ||= new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Bratislava',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'});
+for (const part of bratislavaClockFormatterR1494.formatToParts(date)) {
 if (part.type !== 'literal') values[part.type] = part.value;
 }
 return {
@@ -11111,6 +11266,7 @@ if (!match) return '';
 const date = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]) + Number(days || 0)));
 return date.toISOString().slice(0, 10);
 }
+let bratislavaIsoFormatterR1494=null;
 function bratislavaLocalDateTimeToIso(dateText, hour = 0, minute = 0) {
 const match = String(dateText || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
 if (!match) return new Date().toISOString();
@@ -11119,11 +11275,7 @@ const month = Number(match[2]);
 const day = Number(match[3]);
 const targetAsUtc = Date.UTC(year, month - 1, day, Number(hour || 0), Number(minute || 0), 0, 0);
 let guess = targetAsUtc;
-const formatter = new Intl.DateTimeFormat('en-CA', {
-timeZone: 'Europe/Bratislava',
-year: 'numeric', month: '2-digit', day: '2-digit',
-hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23'
-});
+const formatter = bratislavaIsoFormatterR1494 ||= new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Bratislava',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'});
 for (let index = 0; index < 3; index += 1) {
 const parts = {};
 for (const part of formatter.formatToParts(new Date(guess))) {
@@ -12930,7 +13082,12 @@ async function handleCronTaskSettingsR1493(request,env){
   await setPushState(db,'cron-task-switches-r1493-last-change',JSON.stringify({id,enabled:body.enabled,at:new Date().toISOString()}));
  }
  const enabled=await cronTaskSettingsR1493(db);
- return json({ok:true,version:'R1493',tasks:CRON_TASKS_R1493.map(t=>({...t,enabled:enabled[t.id]})),note:'Изменения вступают в силу при следующем запуске Cron. Планировщик и радио не отключаются.'},200,{'cache-control':'no-store'});
+ const savedReaction=await pushStatesR1494(db,['youtube-fast-engagement-last-result-r333','youtube-fast-engagement-last-status-r376']);
+ const reaction=parsePushSummary(savedReaction.get('youtube-fast-engagement-last-result-r333')?.value)||{};
+ const reactionCheck={release:YOUTUBE_REACTIONS_FIX_R1494,enabled:enabled.engagement,status:savedReaction.get('youtube-fast-engagement-last-status-r376')?.value||'unknown',
+  checkedAt:reaction.checkedAt||'',durationMs:reaction.durationMs??null,warnings:reaction.warnings||[],error:reaction.error||'',
+  queued:Math.max(0,Number(reaction.deferredComments||0))+Math.max(0,Number(reaction.deferredLikes||0))+Math.max(0,Number(reaction.deferredChat||0))};
+ return json({ok:true,version:'R1494',reactionCheck,tasks:CRON_TASKS_R1493.map(t=>({...t,enabled:enabled[t.id]})),note:'Изменения вступают в силу при следующем запуске Cron. Планировщик и радио не отключаются.'},200,{'cache-control':'no-store'});
 }
 async function handleExternalCronGatewayR334(request, env, ctx) {
 if(!adminAuthorized(request,env) && !cronAuthorized(request,env)){
@@ -12946,6 +13103,7 @@ if(!adminAuthorized(request,env) && !cronAuthorized(request,env)){
 }
 const db=requireDb(env);
 const switchesR1493=await cronTaskSettingsR1493(db);
+if(switchesR1493.engagement)await ensureEngagementReadyR1494(db);
 // R1292 independent Facebook scheduler. Failure cannot block YouTube jobs.
 let fbScheduleResultR1292={queued:true};
 const fbTaskR1308=(switchesR1493.facebook?fbScheduleTickR1292(env):Promise.resolve({skipped:true,reason:"disabled-r1493"})).catch(e=>({ok:false,error:String(e.message||e).slice(0,180)}));
@@ -22074,10 +22232,11 @@ youtubeControlLiveCacheR797={expiresAt:Date.now()+25*1000,status:response.status
 }
 return response;
 }
+let youtubePacificFormatterR1494=null;
 function youtubePacificDateR944(value=Date.now()){
 const d=value instanceof Date?value:new Date(value);
 if(!Number.isFinite(d.getTime()))return '';
-const parts=new Intl.DateTimeFormat('en-US',{timeZone:'America/Los_Angeles',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(d);
+const parts=(youtubePacificFormatterR1494 ||= new Intl.DateTimeFormat('en-US',{timeZone:'America/Los_Angeles',year:'numeric',month:'2-digit',day:'2-digit'})).formatToParts(d);
 const get=t=>parts.find(p=>p.type===t)?.value||'';
 return `${get('year')}-${get('month')}-${get('day')}`;
 }
