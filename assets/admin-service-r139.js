@@ -179,6 +179,19 @@ set('serviceCronMessage',d.healthy?'✅ Проверки Cron и YouTube све�
 }catch(error){set('serviceCronMessage',`Диагностика: ${error.message}. Проверь COMMENTS_DB и журналы Cloudflare.`)}
 finally{if(button)button.disabled=false}
 }
+let cron1491Report='';
+async function cron1491Refresh(){
+ const b=document.getElementById('cron1491Refresh');if(b)b.disabled=true;
+ set('cron1491State','Получаем данные без запуска задач…');
+ try{const d=await api('/api/control/cron-diagnostic-r1488');
+ const fields=[['Проверено',d.checkedAt],['Состояние',d.healthy?'OK':'ВНИМАНИЕ'],['Heartbeat подтверждён',d.triggerConfirmed],['Источник heartbeat',d.heartbeatSource],['Heartbeat время',d.heartbeatAt],['Heartbeat возраст (мин)',d.heartbeatAgeMinutes],['Статус планировщика',d.schedulerStatus],['Gateway задача',d.gatewayTask],['Gateway время',d.gatewayAt],['Gateway healthy',d.gatewayHealthy],['Gateway degraded',d.gatewayDegraded],['Gateway ошибка',d.gatewayError],['Ошибка авторизации: время',d.lastAuthErrorAt],['Ошибка авторизации',d.lastAuthError],['Ошибка scheduled: время',d.lastScheduledErrorAt],['Ошибка scheduled',d.lastScheduledError],['Лайки и комментарии',d.fastAt],['Возраст лайков (мин)',d.fastAgeMinutes],['Подписчики',d.subscriberAt],['Возраст подписчиков (мин)',d.subscriberAgeMinutes],['Полный запуск',d.lastFullAt],['Результат полного запуска',d.lastFullStatus],['Секрет на сайте настроен',d.triggerConfiguredInEnvironment],['Предупреждения',(d.warnings||[]).join(' | ')||'нет']];
+ cron1491Report='ANDRIK R1491 — CRON DIAGNOSTICS\n'+fields.map(([k,v])=>k+': '+(v===null||v===undefined||v===''?'—':String(v))).join('\n')+'\n\nОтдельный Worker andrik-central-cron-r461 требует проверки его логов.';
+ set('cron1491Text',cron1491Report);set('cron1491State',d.healthy?'✅ Данные получены':'⚠️ Есть предупреждения — смотри отчёт');
+ }catch(e){cron1491Report='Ошибка диагностики: '+e.message+(e.status?' HTTP '+e.status:'');set('cron1491Text',cron1491Report);set('cron1491State','⚠️ Ошибка запроса');}
+ finally{if(b)b.disabled=false;}
+}
+async function cron1491Copy(){if(!cron1491Report)await cron1491Refresh();try{await navigator.clipboard.writeText(cron1491Report);set('cron1491State','Скопировано')}catch(_){set('cron1491State','Копирование недоступно — скачай TXT')}}
+async function cron1491Download(){if(!cron1491Report)await cron1491Refresh();const u=URL.createObjectURL(new Blob([cron1491Report],{type:'text/plain;charset=utf-8'}));const a=document.createElement('a');a.href=u;a.download='ANDRIK-R1491-CRON.txt';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),1000)}
 async function runCentralCron(){
 if(!getKey()){set('serviceCronMessage','Сначала сохраните ключ владельца.');return}
 if(!confirm('Полный запуск выполняет сразу несколько тяжёлых задач и может дать HTTP 503. Для простой проверки используйте «Проверить Cron безопасно». Продолжить?'))return;
@@ -226,6 +239,9 @@ document.getElementById('adminDiagnosticLogDownload')?.addEventListener('click',
 document.getElementById('serviceSystemRefresh')?.addEventListener('click',loadSystem);
 document.getElementById('serviceSystemCopy')?.addEventListener('click',copySystemStatus);
 document.getElementById('serviceCronDiagnose')?.addEventListener('click',diagnoseCentralCronR1488);
+document.getElementById('cron1491Refresh')?.addEventListener('click',cron1491Refresh);
+document.getElementById('cron1491Copy')?.addEventListener('click',cron1491Copy);
+document.getElementById('cron1491Download')?.addEventListener('click',cron1491Download);
 document.getElementById('serviceCronRun')?.addEventListener('click',runCentralCron);
 document.getElementById('serviceCronRefresh')?.addEventListener('click',loadSystem);
 document.getElementById('serviceCacheReset')?.addEventListener('click',()=>{
