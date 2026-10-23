@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r358-deploy-nohang",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1792772776098-1d60f199e2",
+  "operationId": "publish-1792773145067-d6494e06ce",
   "release": "R1496",
-  "archiveName": "SITE-R1496-REACTIONS-DEEP-DIAGNOSTICS-FULL.zip",
-  "sourceHead": "f276420fc85226d64691059be411bf2572de6551",
-  "backupSha": "f276420fc85226d64691059be411bf2572de6551",
+  "archiveName": "SITE-R1496-HOTFIX-CHECKBOXES-FULL.zip",
+  "sourceHead": "9e1cdebe9c61f176cc329f44f8db8d6b6b85cdee",
+  "backupSha": "9e1cdebe9c61f176cc329f44f8db8d6b6b85cdee",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-10-23T16:26:17.675Z"
+  "generatedAt": "2026-10-23T16:32:25.067Z"
 }
