@@ -8490,7 +8490,8 @@ async function handleFastYoutubeEngagementCoreR1495(request,env,options={}){
 if(!adminAuthorized(request,env) && !cronAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
 const db=requireDb(env);
 const traceR1495=options.__traceR1495;
-const checkpointR1496=async()=>{if(traceR1495)try{await setPushState(db,'cron-r1496-reactions-progress',JSON.stringify(traceR1495).slice(0,6500));}catch(_){}};
+// R1499: D1 write rescue. Per-phase checkpoints disabled (they generated writes for every video).
+const checkpointR1496=async()=>{};
 const timedR1495=async(name,fn)=>{
 const started=Date.now();
 if(traceR1495){traceR1495.active={name,startedAt:new Date(started).toISOString()};await checkpointR1496();}
@@ -8726,7 +8727,7 @@ async function handleFastYoutubeEngagementR333(request,env,options={}){
   const trace={at:new Date().toISOString(),phases:[],mode:'',totalMs:0,ok:false};
   const started=Date.now();
   try{
-    if(env.COMMENTS_DB)await setPushState(env.COMMENTS_DB,'cron-r1496-reactions-progress',JSON.stringify({...trace,active:{name:'start',startedAt:trace.at}})).catch(()=>{});
+    // R1499: no per-invocation progress writes to D1.
     const response=await handleFastYoutubeEngagementCoreR1495(request,env,{...options,__traceR1495:trace});
     trace.ok=Boolean(response?.ok);
     trace.httpStatus=Number(response?.status||0);
@@ -8738,9 +8739,10 @@ async function handleFastYoutubeEngagementR333(request,env,options={}){
     trace.totalMs=Date.now()-started;
     trace.mode=trace.phases.some(p=>p.name==='fetch-likes')?'full-quota':'eco-live';
     try{
-      if(env.COMMENTS_DB){
+      // R1499: retain only one completed diagnostic snapshot per 30-minute window.
+      // Successful checks are not persisted on every two-minute invocation.
+      if(env.COMMENTS_DB && (trace.error || Math.floor(started/120000)%15===0)){
         await setPushState(env.COMMENTS_DB,'cron-r1495-reactions-timing',JSON.stringify(trace).slice(0,6500));
-        await setPushState(env.COMMENTS_DB,'cron-r1496-reactions-progress',JSON.stringify({...trace,completed:true,active:null}).slice(0,6500));
       }
     }catch(_){}
   }
