@@ -12972,7 +12972,34 @@ try{
 if(clock.due2){
 claimed=await claimCronGatewaySlotR334(db,'engagement-2m-r416',clock.slot2);
 if(claimed){
-const engagement=await Promise.resolve().then(async()=>switchesR1493.engagement?responseData(await handleFastYoutubeEngagementR333(request,env,{skipCheckpoint:true})):{ok:true,skipped:true,reason:"disabled-r1493"}).catch(error=>({ok:false,error:cleanPlainText(error?.message||error,300)}));
+// R1494: YouTube engagement can take tens of seconds (API + comment scans + push).
+// Run it in the Cloudflare request lifetime using waitUntil, not in the HTTP
+// critical path of the central cron gateway. Catch *all* background failures.
+let engagement={ok:true,queued:Boolean(switchesR1493.engagement),skipped:!switchesR1493.engagement,reason:switchesR1493.engagement?'background-r1494':'disabled-r1493'};
+if(switchesR1493.engagement){
+  const engagementTaskR1494=Promise.resolve().then(async()=>{
+    const started=Date.now();
+    let result;
+    try{
+      result=await responseData(await handleFastYoutubeEngagementR333(request,env,{skipCheckpoint:true}));
+    }catch(error){
+      result={ok:false,error:cleanPlainText(error?.message||error,300)};
+    }
+    try{
+      await Promise.all([
+        setPushState(db,'cron-r1494-engagement-last-result',JSON.stringify({
+          ok:result?.ok!==false,elapsedMs:Date.now()-started,
+          failed:Number(result?.failed||0),warnings:result?.warnings||[],
+          error:result?.error||'',checkedAt:new Date().toISOString()
+        }).slice(0,5000)),
+        setPushState(db,'cron-r1494-engagement-last-at',new Date().toISOString())
+      ]);
+    }catch(_){}
+    return result;
+  }).catch(error=>({ok:false,error:cleanPlainText(error?.message||error,300)}));
+  if(ctx?.waitUntil)ctx.waitUntil(engagementTaskR1494);
+  else engagement=await engagementTaskR1494;
+}
 const subscriber=await (switchesR1493.subscribers?handleFastYoutubeSubscriberCountR416(request,env,{source:'gateway-2m-r756'}):Promise.resolve({ok:true,skipped:true,reason:'disabled-r1493'})).catch(error=>({ok:false,error:cleanPlainText(error?.message||error,300)}));
 task='engagement+subscriber';
 value={
