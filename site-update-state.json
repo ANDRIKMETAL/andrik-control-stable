@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r358-deploy-nohang",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1792773559193-3983716a49",
-  "release": "R1497",
-  "archiveName": "SITE-R1497-LIKES-DEEP-TRACE-FULL.zip",
-  "sourceHead": "21ac2afd61a953da857e31db73be260630df705c",
-  "backupSha": "21ac2afd61a953da857e31db73be260630df705c",
+  "operationId": "publish-1792773986539-4142b3ddd1",
+  "release": "R1498",
+  "archiveName": "SITE-R1498-BOUNDED-LIKES-FULL.zip",
+  "sourceHead": "db49398e19298bc74b7957133acd1189495fd201",
+  "backupSha": "db49398e19298bc74b7957133acd1189495fd201",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-10-23T16:39:20.820Z"
+  "generatedAt": "2026-10-23T16:46:28.235Z"
 }

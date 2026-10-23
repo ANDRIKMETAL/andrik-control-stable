@@ -8601,7 +8601,15 @@ else await releasePushOnceClaim(db,onceKey);
 notifications.push({type:'comment',id:item.id,ok:Boolean(result.ok),error:result.error || ''});
 }
 });
-await timedR1495('process-likes-and-push',async()=>{for(const item of videos){
+// R1498: keep the synchronous cron gateway responsive. Rotate a small bounded
+// subset of videos each 2-minute slot; counters are monotonic, so changes on
+// skipped videos are picked up when their slot returns (no like delta is lost).
+const likesBatchSizeR1498=4;
+const likesBatchCountR1498=Math.max(1,Math.ceil(videos.length/likesBatchSizeR1498));
+const likesSlotR1498=Math.floor(Date.now()/120000);
+const likesStartR1498=(likesSlotR1498%likesBatchCountR1498)*likesBatchSizeR1498;
+const likesBatchR1498=videos.slice(likesStartR1498,likesStartR1498+likesBatchSizeR1498);
+await timedR1495('process-likes-and-push',async()=>{for(const item of likesBatchR1498){
 
 if(!item.isLive)await timedR1495('like-baseline:'+String(item.videoId||'').slice(0,40),()=>ensureYoutubeReleaseLikeZeroBaselineR434(db,item,'engagement-2m-r434',{force:false})).catch(()=>{});
 const key=`like-count:${item.videoId}`;
@@ -8673,6 +8681,10 @@ commentsSeen:comments.length+Math.max(0,Number(liveChat?.seen||0)),
 commentMode:'direct-video+livechat-r669',
 commentTargets:(directComments.targets||[]).length,
 videosChecked:videos.length,
+likesVideosChecked:likesBatchR1498.length,
+likesVideosTotal:videos.length,
+likesBatchNumber:Math.floor(likesStartR1498/likesBatchSizeR1498)+1,
+likesBatchCount:likesBatchCountR1498,
 liveVideoId:cleanPlainText(liveProbe?.video?.videoId||'',80),
 liveVideoPinned:Boolean(liveProbe?.video),
 liveChatActive:Boolean(liveProbe?.liveChatId),
