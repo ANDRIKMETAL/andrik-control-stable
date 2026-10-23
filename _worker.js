@@ -12902,7 +12902,17 @@ async function handleFbMetaR1292(request,env){
  const r=await fbMetaReadR1292(env,false);return json(r,200,{'cache-control':'no-store'});
 }
 async function handleExternalCronGatewayR334(request, env, ctx) {
-if(!adminAuthorized(request,env) && !cronAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
+if(!adminAuthorized(request,env) && !cronAuthorized(request,env)){
+  // R1490: never log credentials; a rejected cron must be distinguishable from a CPU failure.
+  if(env.COMMENTS_DB){
+    const at=new Date().toISOString();
+    ctx?.waitUntil?.(Promise.all([
+      setPushState(env.COMMENTS_DB,'cron-r1490-last-auth-error-at',at),
+      setPushState(env.COMMENTS_DB,'cron-r1490-last-auth-error','HTTP 401: gateway credential rejected')
+    ]).catch(()=>{}));
+  }
+  return json({ok:false,error:'unauthorized',code:'CRON_AUTH_REJECTED'},401);
+}
 const db=requireDb(env);
 // R1292 independent Facebook scheduler. Failure cannot block YouTube jobs.
 let fbScheduleResultR1292={queued:true};
@@ -20559,8 +20569,20 @@ async function handleCronDiagnosticR1488(request, env) {
   const read=key=>String(row[key]?.value||'').trim();
   const age=key=>{const t=Date.parse(read(key));return Number.isFinite(t)?Math.max(0,Math.round((Date.now()-t)/60000)):null};
   const gateway=(()=>{try{return JSON.parse(read('gateway')||'{}')}catch(_){return {}}})();
+  const [authAtRow,authErrorRow,scheduledAtRow,scheduledErrorRow]=await Promise.all([
+    getPushState(db,'cron-r1490-last-auth-error-at').catch(()=>null),
+    getPushState(db,'cron-r1490-last-auth-error').catch(()=>null),
+    getPushState(db,'cron-r1490-last-scheduled-error-at').catch(()=>null),
+    getPushState(db,'cron-r1490-last-scheduled-error').catch(()=>null)
+  ]);
+  const authErrorAt=String(authAtRow?.value||'');
+  const authError=String(authErrorRow?.value||'');
+  const scheduledErrorAt=String(scheduledAtRow?.value||'');
+  const scheduledError=String(scheduledErrorRow?.value||'');
   const heartbeatAge=age('heartbeat'),fastAge=age('fast'),subscriberAge=age('subscriber');
   const warnings=[];
+  if(authErrorAt && (!read('heartbeat') || Date.parse(authErrorAt)>Date.parse(read('heartbeat'))))warnings.push('Cron Gateway отклонил авторизацию: проверьте секрет центрального Worker');
+  if(scheduledErrorAt && (!read('heartbeat') || Date.parse(scheduledErrorAt)>Date.parse(read('heartbeat'))))warnings.push('Внутренний scheduled() завершился ошибкой: смотрите lastScheduledError');
   if(!String(env.CRON_SECRET||'').trim() && !String(env.CENTRAL_CRON_SECRET_R462||'').trim())warnings.push('CRON_SECRET / CENTRAL_CRON_SECRET_R462 не настроен');
   if(heartbeatAge===null)warnings.push('Не найдено ни одного heartbeat: внешний Cron Trigger не подтверждён');
   else if(heartbeatAge>12)warnings.push(`Последний heartbeat ${heartbeatAge} мин назад (ожидается каждые 2–5 мин)`);
@@ -20573,6 +20595,11 @@ async function handleCronDiagnosticR1488(request, env) {
     heartbeatAt:read('heartbeat'),heartbeatSource:read('source'),heartbeatAgeMinutes:heartbeatAge,
     schedulerStatus:read('status'),gatewayTask:cleanPlainText(gateway?.task||'',80),
     gatewayAt:cleanPlainText(gateway?.checkedAt||'',80),
+    gatewayHealthy:gateway?.healthy??null,
+    gatewayDegraded:gateway?.degraded??null,
+    gatewayError:cleanPlainText(gateway?.value?.error||gateway?.value?.engagement?.error||gateway?.value?.subscriber?.error||'',300),
+    lastAuthErrorAt:authErrorAt,lastAuthError:authError,
+    lastScheduledErrorAt:scheduledErrorAt,lastScheduledError:scheduledError,
     fastAt:read('fast'),fastAgeMinutes:fastAge,
     subscriberAt:read('subscriber'),subscriberAgeMinutes:subscriberAge,
     lastFullAt:read('full'),lastFullStatus:read('fullStatus'),
@@ -22611,7 +22638,7 @@ return json({ok:false,error:cleanPlainText(error?.message||error,500)},503);
 }
 export default {
 async scheduled(controller, env, ctx) {
-const cronKey=String(env.CRON_SECRET || '');
+const cronKey=String(env.CRON_SECRET || env.CENTRAL_CRON_SECRET_R462 || '');
 const cron=String(controller?.cron || '');
 const request=new Request(`https://control.andrikmetal.com/api/automation/cron-gateway?cron=${encodeURIComponent(cron)}`,{method:'POST',headers:cronKey?{'x-cron-key':cronKey}:{}});
 ctx.waitUntil((async()=>{
@@ -22624,7 +22651,14 @@ if(!response.ok){
 const body=await response.text().catch(()=>'');
 throw new Error(`scheduled-gateway-${response.status}: ${body.slice(0,300)}`);
 }
-})().catch(error=>recordSystemLog(env,{scope:'automation',level:'error',event:'scheduled-run-failed',message:cleanPlainText(error?.message || error,500)}).catch(()=>{})));
+})().catch(async error=>{
+  const message=cleanPlainText(error?.message || error,500);
+  await Promise.all([
+    recordSystemLog(env,{scope:'automation',level:'error',event:'scheduled-run-failed',message}).catch(()=>{}),
+    env.COMMENTS_DB ? setPushState(env.COMMENTS_DB,'cron-r1490-last-scheduled-error-at',new Date().toISOString()).catch(()=>{}) : Promise.resolve(),
+    env.COMMENTS_DB ? setPushState(env.COMMENTS_DB,'cron-r1490-last-scheduled-error',message).catch(()=>{}) : Promise.resolve()
+  ]);
+}));
 },
 async fetch(request, env, ctx) {
 const url = new URL(request.url);
