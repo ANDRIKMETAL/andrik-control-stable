@@ -934,22 +934,18 @@ await db.prepare(`CREATE INDEX IF NOT EXISTS idx_observability_usage_updated ON 
 try { await observabilitySchemaPromise; }
 catch (error) { observabilitySchemaPromise = null; throw error; }
 }
-async function trackObservabilityUsage(env, service, units = 0, requests = 1, details = {}, fixedDateR1501='') {
+async function trackObservabilityUsage(env, service, units = 0, requests = 1, details = {}) {
 if (!env.COMMENTS_DB) return;
 const db = env.COMMENTS_DB;
+await ensureObservabilitySchema(db);
 const rawService=cleanPlainText(service || 'unknown',80);
 const isYoutubeCore=rawService==='youtube-data-api';
 const isYoutubeSearch=rawService==='youtube-search-api';
-const dateKey=fixedDateR1501||((isYoutubeCore||isYoutubeSearch)?youtubePacificDateR944():getBratislavaClock().date);
+const dateKey=(isYoutubeCore||isYoutubeSearch)?youtubePacificDateR944():getBratislavaClock().date;
 const storedService=isYoutubeCore?'youtube-data-api-r1026':(isYoutubeSearch?'youtube-search-api-r1026':rawService);
-if(env.__d1UsageR1501&&!fixedDateR1501){
- const key=dateKey+':'+storedService,old=env.__d1UsageR1501.get(key)||{service:rawService,dateKey,units:0,requests:0};
- env.__d1UsageR1501.set(key,{...old,units:old.units+Math.max(0,Number(units||0)),requests:old.requests+Math.max(0,Number(requests||0)),details});return;
-}
-await ensureObservabilitySchema(db);
 let detailsJson = '{}';
 try { detailsJson = JSON.stringify(details || {}); } catch (_) {}
-const usageR1501=await db.prepare(`
+await db.prepare(`
     INSERT INTO observability_usage (date_key, service, units, requests, details_json, updated_at)
     VALUES (?, ?, ?, ?, ?, datetime('now'))
     ON CONFLICT(date_key, service) DO UPDATE SET
@@ -957,16 +953,15 @@ const usageR1501=await db.prepare(`
       requests = observability_usage.requests + excluded.requests,
       details_json = excluded.details_json,
       updated_at = datetime('now')
-    RETURNING units,requests
   `).bind(
 dateKey,
 storedService,
 Math.max(0, Number(units || 0)),
 Math.max(0, Number(requests || 0)),
 detailsJson
-).first();
+).run();
 if (isYoutubeCore) {
-await maybeSendYoutubeQuota50AlertR333(env, db, dateKey,usageR1501).catch(()=>{});
+await maybeSendYoutubeQuota50AlertR333(env, db, dateKey).catch(()=>{});
 }
 }
 function observabilityQuotaCost(endpoint, method = 'GET') {
@@ -980,10 +975,10 @@ if (key === 'captions-download') return 200;
 if (key === 'search') return 1;
 return 1;
 }
-async function maybeSendYoutubeQuota50AlertR333(env, db, dateKey='',usageR1501=null) {
+async function maybeSendYoutubeQuota50AlertR333(env, db, dateKey='') {
 try {
 const keyDate=cleanPlainText(dateKey || youtubePacificDateR944(),20);
-const row=usageR1501||await db.prepare(`
+const row=await db.prepare(`
       SELECT units,requests FROM observability_usage
       WHERE date_key=? AND service='youtube-data-api-r1026' LIMIT 1
     `).bind(keyDate).first();
@@ -1235,8 +1230,6 @@ await db.prepare(`
         status=excluded.status, http_status=excluded.http_status,
         response_time_ms=excluded.response_time_ms, detail=excluded.detail,
         checked_at=excluded.checked_at, source=excluded.source
-      WHERE control_monitor_samples.status IS NOT excluded.status
-         OR control_monitor_samples.http_status IS NOT excluded.http_status
     `).bind(
 nativeMonitorSampleId(result.id, checkedAt, source), result.id, result.name, result.url,
 result.status, result.httpStatus, result.responseTimeMs, result.detail, checkedAt, source
@@ -2040,114 +2033,6 @@ cleanPlainText(row.createdAt || '', 50)
 ));
 for (let i = 0; i < statements.length; i += 80) await db.batch(statements.slice(i, i + 80));
 }
-// R1501: reduce actual D1 writes. Do not pace claims, user events or notification watermarks.
-const D1_WRITE_ECONOMY_R1501='R1501-DURABLE-HEALTH-GATE+30S-AGENT+NOOP-COUNTERS';
-async function getPushStatesR1501(db,keys) {
- const result=await db.prepare(`SELECT key,value,updated_at AS updatedAt FROM push_state WHERE key IN (SELECT value FROM json_each(?))`).bind(JSON.stringify(keys)).all();
- return new Map((result.results||[]).map(row=>[row.key,row]));
-}
-async function setPushStatesR1501(db,values,minSeconds=0) {
- const rows=Object.entries(values).map(([key,value])=>[key,String(value??'')]);if(!rows.length)return;
- const seconds=Math.max(0,Math.min(3600,Math.trunc(Number(minSeconds)||0)));
- return db.prepare(`INSERT INTO push_state(key,value,updated_at)
-  SELECT json_extract(value,'$[0]'),json_extract(value,'$[1]'),datetime('now') FROM json_each(?) WHERE 1
-  ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_at=excluded.updated_at
-  WHERE push_state.value IS NOT excluded.value AND (?=0 OR push_state.updated_at IS NULL OR push_state.updated_at<=datetime('now',?))`)
-  .bind(JSON.stringify(rows),seconds,'-'+seconds+' seconds').run();
-}
-async function setPushStatePacedR1501(db,key,value,minSeconds=60,healthFields=[]) {
- const safeSeconds=Math.max(1,Math.min(3600,Math.trunc(Number(minSeconds)||60)));
- const changes=healthFields.filter(field=>['ok','warning'].includes(field)).map(field=>
-  `(CASE WHEN json_valid(push_state.value) THEN json_extract(push_state.value,'$.${field}') END) IS NOT (CASE WHEN json_valid(excluded.value) THEN json_extract(excluded.value,'$.${field}') END)`);
- return db.prepare(`INSERT INTO push_state(key,value,updated_at) VALUES (?,?,datetime('now'))
-  ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_at=excluded.updated_at
-  WHERE push_state.value IS NOT excluded.value AND
-   (push_state.updated_at IS NULL OR push_state.updated_at<=datetime('now',?)${changes.length?' OR '+changes.join(' OR '):''})`)
-  .bind(key,String(value??''),'-'+safeSeconds+' seconds').run();
-}
-async function claimHealthWakeupR1501(db) {
- const at=new Date().toISOString();
- const result=await db.prepare(`INSERT INTO push_state(key,value,updated_at) VALUES ('guard-health-last-wakeup-r637',?,datetime('now'))
-  ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_at=excluded.updated_at
-  WHERE push_state.updated_at IS NULL OR push_state.updated_at<=datetime('now','-120 seconds')`).bind(at).run();
- return Number(result?.meta?.changes||0)>0;
-}
-async function youtubeDutyStateR1501(db) {
- const local=getBratislavaClock();
- const slot=local.hour>=17?'17':local.hour>=5?'05':'';
- const summaryKey=slot?`daily-owner-summary-auto-slot:${local.date}:${slot}`:'daily-owner-summary-no-slot-r1501';
- const result=await db.prepare(`SELECT key,value,updated_at AS updatedAt FROM push_state WHERE key IN
-  ('cron-task-switches-r1493','youtube-fast-engagement-last-at-r333','youtube-subscriber-poll-last-at-r653',?)`).bind(summaryKey).all();
- const rows=new Map((result.results||[]).map(row=>[row.key,row]));
- let switches={};try{switches=JSON.parse(rows.get('cron-task-switches-r1493')?.value||'{}')||{};}catch(_){}
- const age=key=>{const row=rows.get(key),ms=d1UtcTimestampMsR638(row?.value||row?.updatedAt||'');return Number.isFinite(ms)?Math.max(0,(Date.now()-ms)/60000):999;};
- return {switches,local,slot,summaryDue:Boolean(slot&&!rows.get(summaryKey)?.value),
-  fastAge:age('youtube-fast-engagement-last-at-r333'),subscriberAge:age('youtube-subscriber-poll-last-at-r653')};
-}
-function radioAgentMeaningfulStateR1501(value={}) {
- const out={};
- // Progress timestamps, CPU/bytes/frames/disk samples and diagnostic rings are periodic telemetry.
- // Controls, the playing track, process identity and real failures bypass the 30s telemetry interval.
- const keys=['service','producer','publisher','videoFeederRunning','clipActive','current','next','audio','version',
-  'visualPeriod','visualPath','forceVisualSlot','visualAutoSchedule','visualProtected','lastError','error','lastExit',
-  'rtmpsEstablishedConnectionsR792','rtmpsExpectedConnectionsR792','transportHealthy','transportWatchdogMode',
-  'transportSelfHealPending','transportSelfHealCount','lastTransportFatalAt','lastTransportFatalReason',
-  'publisherBackpressureRecoveries','safeRestartBackupHoldActiveR1287','ticker','audioDelayMsR949','audioDelayUpdatedAtR949',
-  'streamStartedAt','lastLibraryRefresh','libraryTracks','libraryAlbumTracks','librarySingleTracks','duplicateSinglesSkipped',
-  'libraryVideos','libraryBumpers','librarySpecial','librarySpecial30','librarySpecial60','videoHandoffMode','r813CleanHandoffCount',
-  'tiktokConfiguredR1305','tiktokConfiguredR1303','tiktokEnabledR1305','tiktokEnabledR1303','tiktokRunningR1305','tiktokRunningR1303','tiktokPidR1303',
-  'tiktokProfileR1305','tiktokProfileR1303','tiktokCropR1305','tiktokCropR1303',
-  'facebookConfiguredR1313','facebookEnabledR1313','facebookRunningR1313','facebookPidR1313','facebookProfileR1313',
-  'hostModeR1319','hostRunningR1319','hostOutputReadyR1319','auditRevisionR1160L','audioMasterMode'];
- for(const key of keys)out[key]=value?.[key]??null;
- const runtime=value?.runtimeMetricsR1160K||{};
- out.pids={node:runtime.nodePid??null,publisher:runtime.publisherPid??null,producer:runtime.producerPid??null,video:runtime.videoPid??null};
- const nested=['facebookR1313','facebookRetryGuardR1279','facebookTcpEgressR1278','tiktokR1303','tiktokR1305','tiktokScheduleR1305',
-  'hostR1319','hostPumpR1319','watchdogR1293','streamProfileR814','streamProfileR813','busy'];
- const nestedKeys=['configured','enabled','running','armed','active','outputReady','pid','producer','consumer','consumerListening',
-  'state','status','mode','targets','error','lastError','id','action','sessionId','locked','tripped','start','end','startTime','endTime','duck'];
- for(const name of nested){const source=value?.[name];if(!source||typeof source!=='object'){out[name]=source??null;continue;}
-  const pick={};for(const key of nestedKeys)if(source[key]!==undefined)pick[key]=source[key];
-  for(const lock of ['hardOff','hardOffR1417'])if(source[lock])pick[lock]={locked:Boolean(source[lock].locked)};
-  out[name]=pick;
- }
- const ff=String(value?.lastFfmpegLine||'');out.ffmpegFailure=/error|failed|timed? ?out|broken pipe|connection|invalid|corrupt|refused/i.test(ff)?ff:'';
- return JSON.stringify(out);
-}
-const d1KnownSchemaInventoryR1501=new WeakMap();
-async function primeExistingD1SchemasR1501(db) {
- if(pushAutomationSchemaPromise&&controlV1SchemaPromise&&platformAnalyticsSchemaPromise&&observabilitySchemaPromise&&radioAudienceSchemaPromiseR1156)return;
- let work=d1KnownSchemaInventoryR1501.get(db);
- if(!work){work=(async()=>{
-  const result=await db.prepare(`SELECT name FROM sqlite_master WHERE type IN ('table','index')`).all();
-  const names=new Set((result.results||[]).map(row=>row.name));
-  const has=list=>list.every(name=>names.has(name));
-  if(has(['push_history','system_logs','push_subscribers','idx_push_subscribers_geo','idx_push_history_type_created_dt_r638','idx_system_logs_scope_created_dt_r638']))pushAutomationSchemaPromise=Promise.resolve();
-  if(has(['release_history','backup_history','backup_snapshots','youtube_oauth_tokens','tiktok_oauth_tokens','idx_release_history_published_dt_r638','idx_backup_history_created_dt_r638','idx_backup_snapshots_created_dt_r638']))controlV1SchemaPromise=Promise.resolve();
-  if(has(['youtube_event_seen','platform_accounts','platform_snapshots','idx_youtube_event_type_last_dt_r638','idx_platform_snapshots_platform_created_dt_r638']))platformAnalyticsSchemaPromise=Promise.resolve();
-  if(has(['observability_usage','idx_observability_usage_updated']))observabilitySchemaPromise=Promise.resolve();
-  if(has(['radio_audience_samples','idx_radio_audience_date_video_time_r1483','idx_radio_audience_video_time_r1156']))radioAudienceSchemaPromiseR1156=Promise.resolve();
- })();d1KnownSchemaInventoryR1501.set(db,work);}
- try{await work;}catch(_){d1KnownSchemaInventoryR1501.delete(db);}
-}
-// End R1501 D1 write helpers.
-async function flushUsageR1501(env) {
- const buffer=env.__d1UsageR1501;if(!buffer)return;
- for(const [key,item] of buffer) {
-  await trackObservabilityUsage(env,item.service,item.units,item.requests,item.details,item.dateKey);
-  buffer.delete(key);
- }
-}
-async function saveYoutubeEventRowsR1501(db,events=[]) {
- const rows=events.map(event=>{
-  let payload='{}';try{payload=JSON.stringify(event.payload||{});}catch(_){}
-  return [cleanPlainText(event.key,220),cleanPlainText(event.type,50),cleanPlainText(event.resourceId||'',180),
-   cleanPlainText(event.videoId||'',60),cleanPlainText(event.title||'',220),cleanPlainText(event.author||'',160),
-   Math.max(0,Number(event.countValue||0)),cleanPlainText(event.url||'',700),payload];
- });
- for(let i=0;i<rows.length;i+=40)await db.prepare(YOUTUBE_EVENT_BULK_SQL_R1501).bind(JSON.stringify(rows.slice(i,i+40))).run();
-}
-
 async function setPushState(db, key, value) {
 await db.prepare(`
     INSERT INTO push_state (key, value, updated_at)
@@ -2333,7 +2218,7 @@ await setPushState(db,key,new Date().toISOString()).catch(()=>{});
 const result=await db.prepare(`
     DELETE FROM system_logs
     WHERE id IN (
-      SELECT id FROM system_logs ORDER BY created_at DESC LIMIT 100 OFFSET 600
+      SELECT id FROM system_logs ORDER BY created_at DESC LIMIT -1 OFFSET 600
     )
   `).run().catch(()=>null);
 return {ok:true,changes:Number(result?.meta?.changes||0)};
@@ -2356,6 +2241,7 @@ catch (_) { return '{}'; }
 })();
 const safeMessage=cleanPlainText(entry.message || '',700);
 const dedupeNotificationIssueR1212 =
+(logScope==='push' || logScope==='youtube-fast-engagement') &&
 (logLevel==='warning' || logLevel==='error');
 if(dedupeNotificationIssueR1212){
 const existing=await db.prepare(`
@@ -2365,8 +2251,7 @@ const existing=await db.prepare(`
       ORDER BY datetime(created_at) DESC LIMIT 1
     `).bind(logScope,logLevel,logEvent,safeMessage).first().catch(()=>null);
 if(existing?.id){
-// R1501: an identical warning is refreshed at most once per 15 minutes, across isolates.
-await db.prepare(`UPDATE system_logs SET details_json=?, created_at=datetime('now') WHERE id=? AND created_at<=datetime('now','-15 minutes')`)
+await db.prepare(`UPDATE system_logs SET details_json=?, created_at=datetime('now') WHERE id=?`)
 .bind(safeDetails,existing.id).run().catch(()=>{});
 return;
 }
@@ -3905,7 +3790,8 @@ async function ensureYoutubeReleaseLikeZeroBaselineR434(db, item = {}, origin = 
 const videoId = cleanPlainText(item?.videoId || item?.id || '', 40);
 if (!videoId) return {ok:false,skipped:true,reason:'video-id-required'};
 const markerKey = `youtube-like-zero-baseline-r434:${videoId}`;
-
+const marker = await getPushState(db, markerKey).catch(() => null);
+if (marker?.value) return {ok:true,skipped:true,reason:'already-initialized'};
 const force = Boolean(options.force);
 const publishedAt = cleanPlainText(item?.publishedAt || '', 60);
 const publishedMs = Date.parse(publishedAt || '');
@@ -3914,10 +3800,6 @@ if (!force) {
 if (!Number.isFinite(publishedMs) || publishedMs > Date.now() + 10 * 60 * 1000 || Date.now() - publishedMs > freshWindowMs) {
 return {ok:true,skipped:true,reason:'not-fresh-release'};
 }
-}
-const marker = await getPushState(db, markerKey).catch(() => null);
-if (marker?.value) return {ok:true,skipped:true,reason:'already-initialized'};
-if (!force) {
 const releaseDelivered = await db.prepare(`
       SELECT 1 AS found FROM push_history
       WHERE type='auto-release' AND status='sent' AND video_id=?
@@ -4341,7 +4223,7 @@ await releasePushOnceClaim(db,lockKey);
 async function handleFastYoutubeReleaseCheckR332(request, env) {
 if (!adminAuthorized(request, env) && !cronAuthorized(request, env)) return json({ok:false,error:'unauthorized'},401);
 const db = requireDb(env);
-await ensurePushAutomationSchema(db);
+await Promise.all([ensurePushAutomationSchema(db),ensureLyricsV2Schema(db),ensureControlV1Schema(db)]);
 const requestUrlR797=new URL(request.url);
 const forceQuotaPollR797=requestUrlR797.searchParams.get('fresh')==='1' || (adminAuthorized(request,env) && !cronAuthorized(request,env));
 if(!forceQuotaPollR797){
@@ -4353,7 +4235,6 @@ if(ageMsR797<minGapMsR797){
 return json({ok:true,skipped:true,reason:'release-poll-not-due-r1482',fallbackCadenceMinutes:5,ageMinutes:Math.round(ageMsR797/6000)/10,checkedAt:new Date().toISOString()},200);
 }
 }
-await Promise.all([ensureLyricsV2Schema(db),ensureControlV1Schema(db)]);
 const startedAt=new Date().toISOString();
 await setPushState(db,'youtube-fast-last-check-at-r332',startedAt).catch(() => {});
 let websub={ok:true,skipped:true};
@@ -7625,7 +7506,9 @@ url: `https://www.youtube.com/watch?v=${encodeURIComponent(video.id)}`
 async function getYoutubeEventRow(db, key) {
 return db.prepare(`SELECT event_key AS eventKey, count_value AS countValue, payload_json AS payloadJson FROM youtube_event_seen WHERE event_key = ? LIMIT 1`).bind(key).first();
 }
-const YOUTUBE_EVENT_SQL_R1501=`
+async function saveYoutubeEventRow(db, event = {}) {
+const payload = (() => { try { return JSON.stringify(event.payload || {}); } catch (_) { return '{}'; } })();
+await db.prepare(`
     INSERT INTO youtube_event_seen (
       event_key, event_type, resource_id, video_id, title, author, count_value, url,
       payload_json, first_seen_at, last_seen_at
@@ -7650,54 +7533,7 @@ const YOUTUBE_EVENT_SQL_R1501=`
       url = excluded.url,
       payload_json = excluded.payload_json,
       last_seen_at = datetime('now')
-    WHERE youtube_event_seen.resource_id IS NOT excluded.resource_id
-       OR youtube_event_seen.video_id IS NOT excluded.video_id
-       OR youtube_event_seen.title IS NOT excluded.title
-       OR youtube_event_seen.author IS NOT excluded.author
-       OR youtube_event_seen.url IS NOT excluded.url
-       OR (excluded.event_type='subscriber-count' AND youtube_event_seen.count_value IS NOT excluded.count_value)
-       OR (excluded.event_type IN ('like-count','comment-count') AND excluded.count_value>youtube_event_seen.count_value)
-       OR (excluded.event_type NOT IN ('subscriber-count','like-count','comment-count')
-           AND (youtube_event_seen.count_value IS NOT excluded.count_value OR youtube_event_seen.payload_json IS NOT excluded.payload_json))
-  `;
-const YOUTUBE_EVENT_BULK_SQL_R1501=`
-    INSERT INTO youtube_event_seen (
-      event_key, event_type, resource_id, video_id, title, author, count_value, url,
-      payload_json, first_seen_at, last_seen_at
-    ) SELECT json_extract(value,'$[0]'), json_extract(value,'$[1]'), json_extract(value,'$[2]'), json_extract(value,'$[3]'), json_extract(value,'$[4]'), json_extract(value,'$[5]'), json_extract(value,'$[6]'), json_extract(value,'$[7]'), json_extract(value,'$[8]'), datetime('now'), datetime('now') FROM json_each(?) WHERE 1
-    ON CONFLICT(event_key) DO UPDATE SET
-      resource_id = excluded.resource_id,
-      video_id = excluded.video_id,
-      title = excluded.title,
-      author = excluded.author,
-      count_value = CASE
-        /* R309: subscriber totals are a CURRENT baseline, not a historical high-water mark.
-           If YouTube drops from 150 to 148, we must remember 148 so the next 149 can
-           generate a real +1 subscriber notification. Likes/comments remain high-water. */
-        WHEN youtube_event_seen.event_type = 'subscriber-count'
-          OR excluded.event_type = 'subscriber-count'
-        THEN excluded.count_value
-        WHEN youtube_event_seen.event_type IN ('like-count','comment-count')
-          OR excluded.event_type IN ('like-count','comment-count')
-        THEN MAX(youtube_event_seen.count_value, excluded.count_value)
-        ELSE excluded.count_value
-      END,
-      url = excluded.url,
-      payload_json = excluded.payload_json,
-      last_seen_at = datetime('now')
-    WHERE youtube_event_seen.resource_id IS NOT excluded.resource_id
-       OR youtube_event_seen.video_id IS NOT excluded.video_id
-       OR youtube_event_seen.title IS NOT excluded.title
-       OR youtube_event_seen.author IS NOT excluded.author
-       OR youtube_event_seen.url IS NOT excluded.url
-       OR (excluded.event_type='subscriber-count' AND youtube_event_seen.count_value IS NOT excluded.count_value)
-       OR (excluded.event_type IN ('like-count','comment-count') AND excluded.count_value>youtube_event_seen.count_value)
-       OR (excluded.event_type NOT IN ('subscriber-count','like-count','comment-count')
-           AND (youtube_event_seen.count_value IS NOT excluded.count_value OR youtube_event_seen.payload_json IS NOT excluded.payload_json))
-  `;
-async function saveYoutubeEventRow(db, event = {}) {
-const payload = (() => { try { return JSON.stringify(event.payload || {}); } catch (_) { return '{}'; } })();
-await db.prepare(YOUTUBE_EVENT_SQL_R1501).bind(
+  `).bind(
 cleanPlainText(event.key, 220),
 cleanPlainText(event.type, 50),
 cleanPlainText(event.resourceId || '', 180),
@@ -8028,8 +7864,6 @@ await db.prepare(`
       END,
       concurrent_viewers=COALESCE(excluded.concurrent_viewers,radio_audience_samples.concurrent_viewers),
       source=excluded.source
-    WHERE (excluded.views IS NOT NULL AND (radio_audience_samples.views IS NULL OR excluded.views>radio_audience_samples.views))
-       OR (excluded.concurrent_viewers IS NOT NULL AND radio_audience_samples.concurrent_viewers IS NOT excluded.concurrent_viewers)
   `).bind(id,videoId,sampledAt,clock.date,minute,views,concurrent,cleanPlainText(source||'youtube-r669',120)).run();
 if(clock.hour===3 && clock.minute<5){
 const maintenanceKey='d1-maintenance:radio-audience-retention-r1233';
@@ -8217,11 +8051,11 @@ function radioMetricVideoR1484(item){
 }
 async function saveRadioCollectorStateR1484(env,result){
  if(!env.COMMENTS_DB)return;
- try{await setPushStatePacedR1501(requireDb(env),'radio-audience-collector-r1484',JSON.stringify({
+ try{await setPushState(requireDb(env),'radio-audience-collector-r1484',JSON.stringify({
   ok:Boolean(result.video?.isLive&&result.sample?.ok),partial:Boolean(result.warning&&result.sample?.ok),
   videoId:ANDRIK_RADIO_LIVE_ID_R1483,source:result.source,warning:result.warning,
   sampledAt:result.sample?.sampledAt||'',checkedAt:result.checkedAt
- }),60,['ok','warning']);}catch(_){}
+ }));}catch(_){}
 }
 async function fetchRadioMetricsR1484(env){
  if(radioMetricsCacheR1484.data&&radioMetricsCacheR1484.expiresAt>Date.now())return radioMetricsCacheR1484.data;
@@ -8432,8 +8266,11 @@ if(!liveChatId||!videoId)return {ok:true,active:Boolean(videoId),seen:0,sent:0,f
 const tokenKey=`youtube-livechat-page-r669:${liveChatId}`;
 const seededKey=`youtube-livechat-seeded-r669:${liveChatId}`;
 const globalCheckKey='youtube-livechat-last-check-at-r669';
-const chatStatesR1501=await getPushStatesR1501(db,[tokenKey,seededKey,globalCheckKey]);
-const tokenState=chatStatesR1501.get(tokenKey),seededState=chatStatesR1501.get(seededKey),globalState=chatStatesR1501.get(globalCheckKey);
+const [tokenState,seededState,globalState]=await Promise.all([
+getPushState(db,tokenKey).catch(()=>null),
+getPushState(db,seededKey).catch(()=>null),
+getPushState(db,globalCheckKey).catch(()=>null)
+]);
 const params={liveChatId,part:'id,snippet,authorDetails',maxResults:200};
 const pageToken=cleanPlainText(tokenState?.value||'',500);
 if(pageToken)params.pageToken=pageToken;
@@ -8491,11 +8328,11 @@ await saveYoutubeEventRow(db,{key,type:'live-chat',resourceId:item.id,videoId:it
 }else await releasePushOnceClaim(db,onceKey).catch(()=>{});
 notifications.push({type:'live-chat',id:item.id,ok:Boolean(result.ok),error:cleanPlainText(result.error||'',260)});
 }
-const stateWritesR1501={[globalCheckKey]:nowIso};
-if(firstSeed)stateWritesR1501[seededKey]='1';
+const stateWrites=[setPushState(db,globalCheckKey,nowIso).catch(()=>{})];
+if(firstSeed)stateWrites.push(setPushState(db,seededKey,'1').catch(()=>{}));
 const nextPageToken=cleanPlainText(data?.nextPageToken||'',500);
-if(nextPageToken&&nextPageToken!==pageToken)stateWritesR1501[tokenKey]=nextPageToken;
-await setPushStatesR1501(db,stateWritesR1501).catch(()=>{});
+if(nextPageToken&&nextPageToken!==pageToken)stateWrites.push(setPushState(db,tokenKey,nextPageToken).catch(()=>{}));
+await Promise.all(stateWrites);
 return {
 ok:!notifications.some(item=>!item.ok),active:true,seen:rows.length,
 sent:notifications.filter(item=>item.ok).length,
@@ -8543,18 +8380,16 @@ return /comments? (?:are )?disabled|disabled comments|has disabled comments/i.te
 async function fetchFastYoutubeCommentsDirectR473(env,db,videos=[],ownerChannelId=''){
 const plan=await selectFastYoutubeCommentTargetsR473(db,videos);
 const direct=await fetchYoutubeCommentsForVideos(env,plan.targets,ownerChannelId).catch(error=>({items:[],warnings:[cleanPlainText(error?.message||error,260)]}));
-const countersR1501=[];
 for(const row of plan.state){
 const current=Math.max(0,Number(row.video.comments||0));
 if(row.before===null || current>row.before){
-countersR1501.push({
+await saveYoutubeEventRow(db,{
 key:row.key,type:'comment-count',resourceId:row.video.videoId,videoId:row.video.videoId,
 title:row.video.title,countValue:current,url:row.video.url,
 payload:{videoId:row.video.videoId,title:row.video.title,comments:current,mode:'fast-direct-r473'}
-});
+}).catch(()=>{});
 }
 }
-await saveYoutubeEventRowsR1501(db,countersR1501).catch(()=>{});
 if(plan.replySweepDueR797){
 await setPushState(db,'youtube-comment-reply-sweep-last-at-r797',new Date().toISOString()).catch(()=>{});
 }
@@ -8672,8 +8507,8 @@ const quotaStateR938=await timedR1495('read-quota-state',()=>getPushState(db,'yo
 const quotaMsR938=Date.parse(String(quotaStateR938?.value||quotaStateR938?.updatedAt||''));
 const quotaAgeMsR938=Number.isFinite(quotaMsR938)?Math.max(0,Date.now()-quotaMsR938):Infinity;
 const minGapMsR797=1.55*60*1000;
-if(!forceQuotaPollR797 && quotaAgeMsR938<minGapMsR797){
 await setPushState(db,'youtube-fast-engagement-last-at-r333',invokedAtR938).catch(()=>{});
+if(!forceQuotaPollR797 && quotaAgeMsR938<minGapMsR797){
 try{
 let channelId=(await getPushState(db,'youtube-websub-channel-id-r332').catch(()=>null))?.value||'';
 if(!channelId)channelId=await resolveYoutubeWebSubChannelIdR332(env,db);
@@ -8697,7 +8532,10 @@ const autoCheckpointR398=options.skipCheckpoint
 ? {ok:true,skipped:true,reason:'checkpoint-owned-by-caller-r416'}
 : await checkpointDailySummaryAutoR398(env,'youtube-fast-5m-r526').catch(error=>({ok:false,error:cleanPlainText(error?.message||error,300)}));
 const startedAt=new Date().toISOString();
-await setPushStatesR1501(db,{'youtube-fast-engagement-last-at-r333':startedAt,'youtube-fast-quota-last-at-r938':startedAt}).catch(()=>{});
+await Promise.all([
+setPushState(db,'youtube-fast-engagement-last-at-r333',startedAt),
+setPushState(db,'youtube-fast-quota-last-at-r938',startedAt)
+]).catch(()=>{});
 try{
 let channelId=(await getPushState(db,'youtube-websub-channel-id-r332').catch(()=>null))?.value || '';
 if(!channelId)channelId=await resolveYoutubeWebSubChannelIdR332(env,db);
@@ -8864,7 +8702,9 @@ warnings,
 checkedAt:new Date().toISOString()
 };
 const fastStatus=failed>0?'failed':(warnings.length||pending>0)?'warning':'success';
-await setPushStatesR1501(db,{'youtube-fast-engagement-last-result-r333':JSON.stringify(summary),'youtube-fast-engagement-last-status-r376':fastStatus,...(summary.ok?{'youtube-fast-engagement-last-success-at-r376':startedAt}:{})}).catch(()=>{});
+await setPushState(db,'youtube-fast-engagement-last-result-r333',JSON.stringify(summary)).catch(()=>{});
+await setPushState(db,'youtube-fast-engagement-last-status-r376',fastStatus).catch(()=>{});
+if(summary.ok)await setPushState(db,'youtube-fast-engagement-last-success-at-r376',startedAt).catch(()=>{});
 await recordSystemLog(env,{
 scope:'youtube-fast-engagement',
 level:failed>0?'error':'info',
@@ -8884,13 +8724,6 @@ return json(failedSummary,502);
 }
 // R1495: measurement only. The existing synchronous gateway behaviour is preserved.
 async function handleFastYoutubeEngagementR333(request,env,options={}){
-  if(!adminAuthorized(request,env)&&!cronAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
-  const gateDbR1501=requireDb(env);
-  let flagsR1501=options.taskSettingsR1501;
-  if(!flagsR1501){const gateRowR1501=await getPushState(gateDbR1501,'cron-task-switches-r1493');try{flagsR1501=JSON.parse(gateRowR1501?.value||'{}');}catch(_){flagsR1501={};}}
-  if(flagsR1501?.engagement===false)return json({ok:true,skipped:true,reason:'disabled-r1493'});
-  await primeExistingD1SchemasR1501(gateDbR1501);
-  env=Object.create(env);env.__d1UsageR1501=new Map();
   const trace={at:new Date().toISOString(),phases:[],mode:'',totalMs:0,ok:false};
   const started=Date.now();
   try{
@@ -8903,7 +8736,6 @@ async function handleFastYoutubeEngagementR333(request,env,options={}){
     trace.error=cleanPlainText(error?.message||error,260);
     throw error;
   }finally{
-    try{await flushUsageR1501(env);}catch(_){}
     trace.totalMs=Date.now()-started;
     trace.mode=trace.phases.some(p=>p.name==='fetch-likes')?'full-quota':'eco-live';
     try{
@@ -9022,13 +8854,11 @@ return {ok:failed.length===0,delivered,pending,failed,sent:delivered.length};
 async function handleFastYoutubeSubscriberCountR416(request, env, options = {}) {
 if (!adminAuthorized(request, env) && !cronAuthorized(request, env)) return { ok:false, error:'unauthorized' };
 const db = requireDb(env);
-await primeExistingD1SchemasR1501(db);
 await Promise.all([ensurePushAutomationSchema(db), ensureControlV1Schema(db), ensurePlatformAnalyticsSchema(db)]);
-const stateR1501=await getPushStatesR1501(db,['youtube-subscriber-poll-last-at-r653','youtube-subscriber-visible-credit-r1203','youtube-subscriber-last-notified-total-r658','youtube-counts-last-summary']);
 const requestUrlR797=new URL(request.url);
 const forceQuotaPollR797=options.force===true || requestUrlR797.searchParams.get('fresh')==='1' || (adminAuthorized(request,env) && !cronAuthorized(request,env));
 if(!forceQuotaPollR797){
-const lastR797=stateR1501.get('youtube-subscriber-poll-last-at-r653');
+const lastR797=await getPushState(db,'youtube-subscriber-poll-last-at-r653').catch(()=>null);
 const lastMsR797=Date.parse(String(lastR797?.value||lastR797?.updatedAt||''));
 const ageMsR797=Number.isFinite(lastMsR797)?Math.max(0,Date.now()-lastMsR797):Infinity;
 const minGapMsR797=1.55*60*1000;
@@ -9053,7 +8883,7 @@ let fastVisibleDeliveryR1203={ok:true,delivered:[],pending:[],failed:[],sent:0};
 const visibleCreditKeyR1203='youtube-subscriber-visible-credit-r1203';
 let visibleCreditR1203=0;
 try{
-const creditState=stateR1501.get(visibleCreditKeyR1203);
+const creditState=await getPushState(db,visibleCreditKeyR1203);
 const credit=JSON.parse(String(creditState?.value||'{}'));
 const age=Date.now()-Date.parse(String(credit.updatedAt||''));
 if(Number.isFinite(age)&&age>=0&&age<6*60*60*1000)visibleCreditR1203=Math.max(0,Number(credit.count)||0);
@@ -9067,7 +8897,7 @@ fastVisibleDeliveryR1203=await deliverFastVisibleSubscribersR1203(env,db,identit
 if(current<before&&visibleCreditR1203>0){visibleCreditR1203=0;await setPushState(db,visibleCreditKeyR1203,JSON.stringify({count:0,updatedAt:startedAt})).catch(()=>{});}
 if(current<=before&&Number(fastVisibleDeliveryR1203.sent||0)>0){visibleCreditR1203+=Number(fastVisibleDeliveryR1203.sent||0);await setPushState(db,visibleCreditKeyR1203,JSON.stringify({count:visibleCreditR1203,updatedAt:startedAt})).catch(()=>{});}
 const notifiedKeyR658='youtube-subscriber-last-notified-total-r658';
-const notifiedStateR658=stateR1501.get(notifiedKeyR658);
+const notifiedStateR658=await getPushState(db,notifiedKeyR658).catch(()=>null);
 let notifiedTotalR658=Number(notifiedStateR658?.value);
 if(!Number.isFinite(notifiedTotalR658) || notifiedTotalR658<0){
 let historyTotalR658=NaN;
@@ -9167,15 +8997,17 @@ await releasePushOnceClaim(db,onceKey).catch(()=>{});
 }else if(current!==before){
 await saveYoutubeEventRow(db,{key,type:'subscriber-count',resourceId:identity.channelId,title:identity.title,countValue:current,url:identity.channelUrl,payload:{...identity,baselineSync:true,deliveryMode:'cron-lite-r1150'}});
 }
-const previousCountsR469=parseYoutubeCountsCheckpointR440(stateR1501.get('youtube-counts-last-summary'));
-await setPushStatesR1501(db,{'youtube-subscriber-poll-last-at-r653':startedAt,'youtube-counts-last-at':startedAt,'youtube-counts-last-summary':JSON.stringify({
+const previousCountsR469=parseYoutubeCountsCheckpointR440(await getPushState(db,'youtube-counts-last-summary').catch(()=>null));
+await setPushState(db,'youtube-subscriber-poll-last-at-r653',startedAt).catch(()=>{});
+await setPushState(db,'youtube-counts-last-at',startedAt).catch(()=>{});
+await setPushState(db,'youtube-counts-last-summary',JSON.stringify({
 subscribers:current,
 views:Number(identity.views||0),
 likesTotal:previousCountsR469?.likesTotal ?? null,
 commentsTotal:previousCountsR469?.commentsTotal ?? null,
 mode:'cron-lite-r469',
 updatedAt:startedAt
-})}).catch(()=>{});
+})).catch(()=>{});
 return {ok:!pushError,subscribers:current,previousSubscribers:before,lastNotifiedSubscribers:notifiedTotalR658,delta:Math.max(0,current-before),loss:Math.max(0,before-current),signedDelta:current-before,direction:current>before?'up':current<before?'down':'same',sent,error:pushError,checkedAt:startedAt,mode:'subscriber-r1203-2m-visible+count',subscriberPushR1150:YOUTUBE_SUBSCRIBER_PUSH_R1150,fastVisibleR1203:{ok:fastVisibleR1203.ok,available:fastVisibleR1203.available,seeded:fastVisibleR1203.seeded,observed:fastVisibleR1203.observed,candidates:fastVisibleR1203.candidates?.length||0,sent:fastVisibleDeliveryR1203.sent||0,pending:fastVisibleDeliveryR1203.pending?.length||0,failed:fastVisibleDeliveryR1203.failed?.length||0,error:fastVisibleR1203.error||'',credit:visibleCreditR1203},deliveryRepairR765:deliveryRepairR765 || null};
 } catch(error) {
 return {ok:false,error:cleanPlainText(error?.message || error,400),checkedAt:startedAt};
@@ -11061,7 +10893,7 @@ await ensurePlatformAnalyticsSchema(db);
 const row = await db.prepare(`SELECT metrics_json FROM platform_snapshots WHERE platform='youtube' ORDER BY datetime(created_at) DESC LIMIT 1`).first();
 const previous = parseSnapshotMetrics(row);
 let safeStudioR1026=previous.studio||{};
-if(row&&!youtubeStudioMeaningfulR1026(safeStudioR1026)){
+if(!youtubeStudioMeaningfulR1026(safeStudioR1026)){
 const historyR1026=await db.prepare(`SELECT metrics_json,created_at FROM platform_snapshots WHERE platform='youtube' ORDER BY datetime(created_at) DESC LIMIT 72`).all().catch(()=>({results:[]}));
 for(const item of (historyR1026?.results||[])){
 const candidate=parseSnapshotMetrics(item)?.studio||{};
@@ -12616,10 +12448,17 @@ collectionError
 async function claimCronGatewaySlotR334(db, task, slot) {
 const key=`cron-gateway-r334:${cleanPlainText(task || 'task',80)}`;
 const value=cleanPlainText(slot || '',80);
-const result=await db.prepare(`INSERT INTO push_state(key,value,updated_at) VALUES (?,?,datetime('now'))
- ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_at=excluded.updated_at
- WHERE push_state.value<>excluded.value`).bind(key,value).run();
-return Number(result?.meta?.changes||0)>0;
+const inserted=await db.prepare(`
+    INSERT OR IGNORE INTO push_state (key,value,updated_at)
+    VALUES (?,?,datetime('now'))
+  `).bind(key,value).run();
+if(Number(inserted?.meta?.changes || 0)>0)return true;
+const updated=await db.prepare(`
+    UPDATE push_state
+    SET value=?,updated_at=datetime('now')
+    WHERE key=? AND value<>?
+  `).bind(value,key,value).run();
+return Number(updated?.meta?.changes || 0)>0;
 }
 function cronGatewayClockR394(date=new Date(), cronExpression='') {
 const minute=date.getUTCMinutes();
@@ -12647,7 +12486,10 @@ slot15:`${hourKey}:${String(minute - (minute % 15)).padStart(2,'0')}`
 }
 async function touchCronSchedulerHeartbeatR394(db, source='cron') {
 const at=new Date().toISOString();
-await setPushStatesR1501(db,{'cron-scheduler-heartbeat-at-r394':at,'cron-scheduler-heartbeat-source-r394':cleanPlainText(source||'cron',120)},60).catch(()=>{});
+await Promise.all([
+setPushState(db,'cron-scheduler-heartbeat-at-r394',at).catch(()=>{}),
+setPushState(db,'cron-scheduler-heartbeat-source-r394',cleanPlainText(source || 'cron',120)).catch(()=>{})
+]);
 return at;
 }
 function cronAgeMinutesR394(value) {
@@ -13075,7 +12917,7 @@ async function fbScheduleTickR1292(env){
  // Deliberately NO timed STOP and NO stop triggered by a Meta status transition.
  // Existing manual STOP and independent R1279 failure guard remain available to owner.
  if(changed)await setPushState(db,FB_SCHEDULE_STATE_KEY_R1292,JSON.stringify(state));
- await setPushStatePacedR1501(db,'facebook-schedule-heartbeat-r1292',lastTickAt,300);
+ await setPushState(db,'facebook-schedule-heartbeat-r1292',lastTickAt);
  return {ok:true,decision,enabled:cfg.enabled,localDate:date,localTime:`${String(clock.hour).padStart(2,'0')}:${String(clock.minute).padStart(2,'0')}`,guardRearm:state.guardRearmAction||null,startedBySchedule:Boolean(state.startedBySchedule),scheduledStop:false};
 }
 async function handleFbScheduleR1292(request,env){
@@ -13163,7 +13005,6 @@ if(!adminAuthorized(request,env) && !cronAuthorized(request,env)){
   return json({ok:false,error:'unauthorized',code:'CRON_AUTH_REJECTED'},401);
 }
 const db=requireDb(env);
-await primeExistingD1SchemasR1501(db);
 const switchesR1493=await cronTaskSettingsR1493(db);
 // R1292 independent Facebook scheduler. Failure cannot block YouTube jobs.
 let fbScheduleResultR1292={queued:true};
@@ -13191,7 +13032,7 @@ try{
 if(clock.due2){
 claimed=await claimCronGatewaySlotR334(db,'engagement-2m-r416',clock.slot2);
 if(claimed){
-const engagement=await Promise.resolve().then(async()=>switchesR1493.engagement?responseData(await handleFastYoutubeEngagementR333(request,env,{skipCheckpoint:true,taskSettingsR1501:switchesR1493})):{ok:true,skipped:true,reason:"disabled-r1493"}).catch(error=>({ok:false,error:cleanPlainText(error?.message||error,300)}));
+const engagement=await Promise.resolve().then(async()=>switchesR1493.engagement?responseData(await handleFastYoutubeEngagementR333(request,env,{skipCheckpoint:true})):{ok:true,skipped:true,reason:"disabled-r1493"}).catch(error=>({ok:false,error:cleanPlainText(error?.message||error,300)}));
 const subscriber=await (switchesR1493.subscribers?handleFastYoutubeSubscriberCountR416(request,env,{source:'gateway-2m-r756'}):Promise.resolve({ok:true,skipped:true,reason:'disabled-r1493'})).catch(error=>({ok:false,error:cleanPlainText(error?.message||error,300)}));
 task='engagement+subscriber';
 value={
@@ -13274,7 +13115,10 @@ claimed,
 value,
 checkedAt:new Date().toISOString()
 };
-await setPushStatesR1501(db,{'cron-gateway-r334-last-result':JSON.stringify(result).slice(0,12000),'cron-scheduler-last-status-r394':failed?'partial':'ok'}).catch(()=>{});
+await Promise.all([
+setPushState(db,'cron-gateway-r334-last-result',JSON.stringify(result).slice(0,12000)).catch(()=>{}),
+setPushState(db,'cron-scheduler-last-status-r394',failed?'partial':'ok').catch(()=>{})
+]);
 return json(result,200);
 }
 async function handleAutomationRun(request, env, options = {}) {
@@ -15740,18 +15584,14 @@ await releasePushOnceClaim(db,lockKey).catch(()=>{});
 async function runPushAutomationRescueR778(env, source='health-r778') {
 if (!env.COMMENTS_DB || !String(env.CRON_SECRET || '').trim()) return {ok:false,skipped:true,reason:'rescue-not-configured'};
 const db=requireDb(env);
-const dutyR1501=await youtubeDutyStateR1501(db);
-if(!dutyR1501.summaryDue && (dutyR1501.switches.engagement===false || dutyR1501.fastAge<=12) && (dutyR1501.switches.subscribers===false || dutyR1501.subscriberAge<=18))
- return {ok:true,skipped:true,reason:'youtube-polls-fresh',fastAgeMinutes:Math.round(dutyR1501.fastAge),subscriberAgeMinutes:Math.round(dutyR1501.subscriberAge)};
-await primeExistingD1SchemasR1501(db);
 await Promise.all([ensurePushAutomationSchema(db),ensureControlV1Schema(db),ensurePlatformAnalyticsSchema(db)]);
 const lockKey='push-automation-rescue-lock-r778';
 await db.prepare(`DELETE FROM push_state WHERE key=? AND updated_at < datetime('now','-6 minutes')`).bind(lockKey).run().catch(()=>{});
 if(!await claimPushOnce(db,lockKey,new Date().toISOString())) return {ok:true,skipped:true,reason:'rescue-already-running'};
 const startedAt=new Date().toISOString();
 try{
-const local=dutyR1501.local;
-const slot=dutyR1501.slot;
+const local=getBratislavaClock();
+const slot=local.hour>=17?'17':(local.hour>=5?'05':'');
 if(slot){
 const sent=await getPushState(db,`daily-owner-summary-auto-slot:${local.date}:${slot}`).catch(()=>null);
 if(!sent?.value){
@@ -15764,15 +15604,23 @@ setPushState(db,'push-automation-rescue-last-result-r778',JSON.stringify(result)
 return result;
 }
 }
-const fastAge=dutyR1501.fastAge, subscriberAge=dutyR1501.subscriberAge;
+const [fastState,subscriberState]=await Promise.all([
+getPushState(db,'youtube-fast-engagement-last-at-r333').catch(()=>null),
+getPushState(db,'youtube-subscriber-poll-last-at-r653').catch(()=>null)
+]);
+const age=value=>{
+const ms=Date.parse(String(value?.value||value?.updatedAt||''));
+return Number.isFinite(ms)?Math.max(0,(Date.now()-ms)/60000):999;
+};
+const fastAge=age(fastState), subscriberAge=age(subscriberState);
 const synthetic=new Request('https://control.andrikmetal.com/api/automation/push-rescue-r778',{
 method:'POST',headers:{'x-cron-key':String(env.CRON_SECRET||''),'user-agent':'ANDRIK-Push-Rescue/R778',accept:'application/json'}
 });
 let task='fresh', value={ok:true,skipped:true,reason:'youtube-polls-fresh'};
-if(dutyR1501.switches.engagement!==false&&fastAge>12){
+if(fastAge>12){
 task='engagement-rescue-r778';
 value=await responseData(await handleFastYoutubeEngagementR333(synthetic,env,{skipCheckpoint:true}));
-}else if(dutyR1501.switches.subscribers!==false&&subscriberAge>18){
+}else if(subscriberAge>18){
 task='subscriber-rescue-r778';
 value=await handleFastYoutubeSubscriberCountR416(synthetic,env,{source:'rescue-r778'});
 }
@@ -15792,9 +15640,6 @@ await releasePushOnceClaim(db,lockKey).catch(()=>{});
 }
 async function runYoutubeReleaseWakeupR1482(env) {
 if (!env.COMMENTS_DB || !String(env.CRON_SECRET || '').trim()) return {ok:true,skipped:true,reason:'release-rescue-not-configured'};
-const savedR1501=await getPushState(env.COMMENTS_DB,'cron-task-switches-r1493');
-let flagsR1501={};try{flagsR1501=JSON.parse(savedR1501?.value||'{}');}catch(_){}
-if(flagsR1501?.releases===false)return {ok:true,skipped:true,reason:'disabled-r1493'};
 const request=new Request('https://control.andrikmetal.com/api/automation/youtube-fast',{
 method:'POST',headers:{'x-cron-key':String(env.CRON_SECRET),accept:'application/json'}
 });
@@ -15806,7 +15651,7 @@ runPushAutomationRescueR778(env,source),
 runYoutubeReleaseWakeupR1482(env).catch(error=>({ok:false,error:cleanPlainText(error?.message||error,300)}))
 ]);
 result.releaseR1482=releaseR1482;
-if(result?.ok && !result.skipped && env.COMMENTS_DB){
+if(result?.ok && env.COMMENTS_DB){
 const db=requireDb(env);
 const at=await touchCronSchedulerHeartbeatR394(db,`fallback-r924:${source}`).catch(()=>new Date().toISOString());
 await Promise.all([
@@ -15821,10 +15666,10 @@ async function handlePublicHealth(request, env, ctx) {
 if (ctx?.waitUntil && env.COMMENTS_DB && String(env.CRON_SECRET || '').trim()) {
 const db=requireDb(env);
 const sourceR778=isAndrikGuardHealthProbe(request)?'guard-health-r778':'health-wakeup-r778';
-ctx.waitUntil((async()=>{
- if(!await claimHealthWakeupR1501(db))return;
- await runPushAutomationRescueWithHeartbeatR924(env,sourceR778);
-})().catch(()=>({ok:false})));
+ctx.waitUntil(Promise.all([
+setPushState(db,'guard-health-last-wakeup-r637',new Date().toISOString()).catch(()=>{}),
+runPushAutomationRescueWithHeartbeatR924(env,sourceR778).catch(()=>({ok:false}))
+]));
 }
 const health = await buildAndrikHealthSnapshot(env, { checkSite:true });
 const statusCode = health.status === 'down' ? 503 : 200;
@@ -15837,8 +15682,21 @@ async function handleControlObservability(request, env) {
 if (!adminAuthorized(request, env)) return json({ ok:false, error:'unauthorized' }, 401);
 const db = requireDb(env);
 await Promise.all([ensurePushAutomationSchema(db), ensureObservabilitySchema(db), ensureNativeMonitorSchema(db)]);
-// R1501: opening a report must not trigger an unbounded indexed DELETE.
-await maybeTrimSystemLogsR638(db).catch(()=>{});
+await db.prepare(`DELETE FROM system_logs WHERE datetime(created_at)<datetime('now','-24 hours')`).run().catch(()=>{});
+await db.prepare(`
+    DELETE FROM system_logs
+    WHERE scope='youtube-fast-engagement' AND event='fast-check-failed'
+      AND EXISTS (
+        SELECT 1 FROM system_logs p
+        WHERE p.scope='push'
+          AND p.event IN ('subscriber-delivery-pending-r765','subscriber-delivery-zero-r765')
+          AND ABS(strftime('%s',p.created_at)-strftime('%s',system_logs.created_at))<=300
+      )
+  `).run().catch(()=>{});
+await db.prepare(`
+    DELETE FROM system_logs
+    WHERE scope='push' AND event IN ('subscriber-delivery-pending-r765','subscriber-delivery-zero-r765')
+  `).run().catch(()=>{});
 const dateKey = getBratislavaClock().date;
 const youtubeDateKeyR1026=youtubePacificDateR944();
 const [health, counts, recent, usageRows, firstUsage] = await Promise.all([
@@ -20715,9 +20573,15 @@ return json({ok:true,command:null,ticker:parseStateValueR627(tickerRow)||null,ig
 }
 let statusChanged=false;
 if(incomingStatus){
- try{statusChanged=radioAgentMeaningfulStateR1501(incomingStatus)!==radioAgentMeaningfulStateR1501(agent.status||{});}catch(_){statusChanged=true;}
+const comparableR1183=value=>{
+if(!value||incomingAgentNumberR728<1183)return value;
+const {metricsR1183,metricsHistoryR1183,runtimeMetricsR1160K,ffmpegLogCountersR1160K,audioMasterVideoDropsR1085,audioMasterVideoDuplicatesR1085,...stable}=value;
+const r=runtimeMetricsR1160K||{};
+return {...stable,runtimePidsR1183:{node:r.nodePid,publisher:r.publisherPid,producer:r.producerPid,video:r.videoPid}};
+};
+try{statusChanged=JSON.stringify(comparableR1183(incomingStatus))!==JSON.stringify(comparableR1183(agent.status||null))}catch(_){statusChanged=true}
 }
-const heartbeatIntervalMs=30000;
+const heartbeatIntervalMs=incomingAgentNumberR728>=1183?9000:30000;
 const heartbeatDue=!Number.isFinite(previousLastSeenMs)||nowMs-previousLastSeenMs>=heartbeatIntervalMs;
 const versionChanged=incomingVersion!==String(agent.version||'');
 if(heartbeatDue||statusChanged||versionChanged){
