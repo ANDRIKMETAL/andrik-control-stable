@@ -7533,6 +7533,13 @@ await db.prepare(`
       url = excluded.url,
       payload_json = excluded.payload_json,
       last_seen_at = datetime('now')
+    WHERE excluded.event_type NOT IN ('like-count','comment-count','subscriber-count')
+       OR youtube_event_seen.count_value != excluded.count_value
+       OR youtube_event_seen.title != excluded.title
+       OR youtube_event_seen.url != excluded.url
+       OR youtube_event_seen.resource_id != excluded.resource_id
+       OR youtube_event_seen.payload_json != excluded.payload_json
+       OR datetime(youtube_event_seen.last_seen_at) < datetime('now','-15 minutes')
   `).bind(
 cleanPlainText(event.key, 220),
 cleanPlainText(event.type, 50),
@@ -10919,6 +10926,17 @@ channelUrl:cleanPlainText(identity.channelUrl || previous.channelUrl || '', 700)
 studio:safeStudioR1026,
 updatedAt:new Date().toISOString()
 };
+// R1501: identical cron identity must not create another snapshot every 2 minutes.
+// Keep full snapshots for Studio and meaningful metric changes; refresh at least every 10m.
+if(source==='youtube-cron-lite-r447'){
+  const stableKeys=['channelId','handle','title','views','subscribers','hiddenSubscribers','videos','likesTotal','commentsTotal','trackedVideos','channelUrl'];
+  const unchanged=stableKeys.every(key=>JSON.stringify(previous[key]??null)===JSON.stringify(merged[key]??null));
+  if(unchanged){
+    const latest=await db.prepare(`SELECT created_at FROM platform_snapshots WHERE platform='youtube' ORDER BY datetime(created_at) DESC LIMIT 1`).first().catch(()=>null);
+    const age=Date.now()-Date.parse(String(latest?.created_at||''));
+    if(Number.isFinite(age)&&age>=0&&age<10*60*1000)return merged;
+  }
+}
 await savePlatformSnapshot(db, 'youtube', merged, source);
 return merged;
 }
