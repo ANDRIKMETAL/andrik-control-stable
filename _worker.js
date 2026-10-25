@@ -7957,7 +7957,7 @@ const gateKeyR1026='youtube-comment-sweep-quota-last-at-r1026';
 const gateStateR1026=await getPushState(db,gateKeyR1026).catch(()=>null);
 const gateMsR1026=Date.parse(String(gateStateR1026?.value||gateStateR1026?.updatedAt||''));
 const gateAgeR1026=Number.isFinite(gateMsR1026)?Math.max(0,Date.now()-gateMsR1026):Infinity;
-const gateGapR1026=9.5*60*1000;
+const gateGapR1026=4.5*60*1000;
 if(gateAgeR1026<gateGapR1026){
 return {ok:true,skipped:true,reason:'quota-eco-10m-r1026',mode:'recent6-plus-old1-10m-r1026',targets:0,recentTargets:0,olderTarget:'',seen:0,sent:0,failed:0,pending:0,warnings:[],checkedAt:startedAt,nextInSeconds:Math.max(1,Math.ceil((gateGapR1026-gateAgeR1026)/1000))};
 }
@@ -8675,6 +8675,7 @@ async function handleFastYoutubeEngagementCoreR1495(request,env,options={}){
 if(!adminAuthorized(request,env) && !cronAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
 const db=requireDb(env);
 const traceR1495=options.__traceR1495;
+const isolatedLikesR1504=options.mode==='likes-only-r1504';
 // R1499: D1 write rescue. Per-phase checkpoints disabled (they generated writes for every video).
 const checkpointR1496=async()=>{};
 const timedR1495=async(name,fn)=>{
@@ -8694,6 +8695,7 @@ const quotaAgeMsR938=Number.isFinite(quotaMsR938)?Math.max(0,Date.now()-quotaMsR
 const minGapMsR797=1.55*60*1000;
 if(!forceQuotaPollR797 && quotaAgeMsR938<minGapMsR797){
 await setPushState(db,'youtube-fast-engagement-last-at-r333',invokedAtR938).catch(()=>{});
+if(isolatedLikesR1504)return json({ok:true,skipped:true,reason:'likes-quota-eco-r1504',checkedAt:invokedAtR938,nextInSeconds:Math.ceil((minGapMsR797-quotaAgeMsR938)/1000)},200);
 try{
 let channelId=(await getPushState(db,'youtube-websub-channel-id-r332').catch(()=>null))?.value||'';
 if(!channelId)channelId=await resolveYoutubeWebSubChannelIdR332(env,db);
@@ -8719,10 +8721,10 @@ const autoCheckpointR398=options.skipCheckpoint
 const startedAt=new Date().toISOString();
 await setPushStatesR1501(db,{'youtube-fast-engagement-last-at-r333':startedAt,'youtube-fast-quota-last-at-r938':startedAt}).catch(()=>{});
 try{
-let channelId=(await getPushState(db,'youtube-websub-channel-id-r332').catch(()=>null))?.value || '';
-if(!channelId)channelId=await resolveYoutubeWebSubChannelIdR332(env,db);
-if(!channelId)throw new Error('youtube-channel-id-unavailable');
-const videoSettled=await Promise.allSettled([timedR1495("fetch-likes",()=>fetchFastYoutubeLikesR333(env,db)),timedR1495("live-probe",()=>fetchYoutubeActiveLiveEngagementR669(env,db))]);
+let channelId=isolatedLikesR1504?'':((await getPushState(db,'youtube-websub-channel-id-r332').catch(()=>null))?.value || '');
+if(!channelId&&!isolatedLikesR1504)channelId=await resolveYoutubeWebSubChannelIdR332(env,db);
+if(!channelId&&!isolatedLikesR1504)throw new Error('youtube-channel-id-unavailable');
+const videoSettled=await Promise.allSettled([timedR1495("fetch-likes",()=>fetchFastYoutubeLikesR333(env,db)),isolatedLikesR1504?Promise.resolve({video:null,liveChatId:'',source:'disabled-in-likes-lane-r1504'}):timedR1495("live-probe",()=>fetchYoutubeActiveLiveEngagementR669(env,db))]);
 const catalogueVideos=videoSettled[0].status==='fulfilled'?videoSettled[0].value:[];
 const liveProbe=videoSettled[1].status==='fulfilled'?videoSettled[1].value:{video:null,liveChatId:'',warning:cleanPlainText(videoSettled[1].reason?.message||videoSettled[1].reason||'',260),source:'probe-rejected-r669'};
 const videos=[...catalogueVideos];
@@ -8731,9 +8733,9 @@ const index=videos.findIndex(row=>row.videoId===liveProbe.video.videoId);
 if(index>=0)videos[index]={...videos[index],...liveProbe.video,isLive:true};
 else videos.unshift(liveProbe.video);
 }
-const directComments=videos.length
+const directComments=videos.length&&!isolatedLikesR1504
 ? await timedR1495("fetch-direct-comments",()=>fetchFastYoutubeCommentsDirectR473(env,db,videos,channelId))
-: {items:[],warnings:[cleanPlainText(videoSettled[0].reason?.message||'youtube-videos-unavailable',240)],targets:[]};
+: {items:[],warnings:isolatedLikesR1504?[]:[cleanPlainText(videoSettled[0].reason?.message||'youtube-videos-unavailable',240)],targets:[]};
 const comments=directComments.items||[];
 if (videoSettled[0].status==='fulfilled' || liveProbe?.video) {
 await recordYoutubeObservedLikeBatchR469(db,videos,startedAt).catch(()=>{});
@@ -8845,7 +8847,7 @@ else await db.prepare(`DELETE FROM push_state WHERE key=?`).bind(burstKey).run()
 notifications.push({type:'like',videoId:item.videoId,ok:Boolean(result.ok),pending:Boolean(result.pending),delta,total:item.likes,error:result.error || ''});
 }
 });
-const liveChat=await timedR1495('live-chat-processing',()=>checkYoutubeLiveChatPushR669(env,db,liveProbe)).catch(error=>({
+const liveChat=isolatedLikesR1504?{ok:true,seen:0,sent:0,failed:0,notifications:[],warning:''}:await timedR1495('live-chat-processing',()=>checkYoutubeLiveChatPushR669(env,db,liveProbe)).catch(error=>({
 ok:false,active:Boolean(liveProbe?.video),seen:0,sent:0,failed:0,seeded:false,
 warning:cleanPlainText(error?.message||error,260),videoId:liveProbe?.video?.videoId||'',liveChatId:liveProbe?.liveChatId||'',notifications:[]
 }));
@@ -13141,11 +13143,11 @@ async function handleFbMetaR1292(request,env){
 }
 // R1493: owner-controlled diagnostic gates. All tasks default ON.
 const CRON_TASKS_R1493=Object.freeze([
- {id:'audience',title:'Статистика радио: зрители и просмотры',frequency:'2 мин'},
- {id:'engagement',title:'Реакции YouTube: лайки, комментарии и LIVE-чат',frequency:'2 мин'},
- {id:'subscribers',title:'Подписчики и отписки YouTube',frequency:'10 мин, отдельный запуск'},
- {id:'releases',title:'Новые видео и релизы: уведомления',frequency:'2 мин (внутренний интервал 5 мин)'},
- {id:'comments5',title:'Дополнительный поиск комментариев',frequency:'5–10 мин, фоновый запуск'},
+ {id:'audience',title:'Статистика радио: зрители и просмотры',frequency:'15 мин (раздельный Cron) / 2 мин (старый)'},
+ {id:'engagement',title:'Лайки YouTube (отдельный цикл R1504)',frequency:'2 мин'},
+ {id:'subscribers',title:'Подписчики и отписки YouTube (R1504)',frequency:'15 мин'},
+ {id:'releases',title:'Новые видео и релизы: уведомления (R1504)',frequency:'5 мин'},
+ {id:'comments5',title:'Комментарии и LIVE-чат (отдельный цикл R1504)',frequency:'5 мин'},
  {id:'facebook',title:'Проверка расписания Facebook',frequency:'каждый вызов'},
  {id:'facebookMetrics',title:'Метрики Facebook',frequency:'каждый вызов при наличии токена'},
  {id:'fiveMinute',title:'Резервная 5-минутная проверка и сводка',frequency:'5 мин (резерв)'},
@@ -13168,9 +13170,106 @@ async function handleCronTaskSettingsR1493(request,env){
   await setPushState(db,'cron-task-switches-r1493-last-change',JSON.stringify({id,enabled:body.enabled,at:new Date().toISOString()}));
  }
  const enabled=await cronTaskSettingsR1493(db);
- return json({ok:true,version:'R1493',tasks:CRON_TASKS_R1493.map(t=>({...t,enabled:enabled[t.id]})),note:'Изменения вступают в силу при следующем запуске Cron. Планировщик и радио не отключаются.'},200,{'cache-control':'no-store'});
+ const jobsR1504=['likes','comments','subscribers','releases','maintenance'];
+ const keysR1504=jobsR1504.flatMap(job=>[`cron-r1504-${job}-attempt-at`,`cron-r1504-${job}-finish-at`,`cron-r1504-${job}-status`]);
+ const splitRowsR1504=await getPushStatesR1501(db,keysR1504).catch(()=>new Map());
+ const splitJobsR1504=jobsR1504.map(job=>({job,attemptAt:splitRowsR1504.get(`cron-r1504-${job}-attempt-at`)?.value||'',finishAt:splitRowsR1504.get(`cron-r1504-${job}-finish-at`)?.value||'',status:splitRowsR1504.get(`cron-r1504-${job}-status`)?.value||'not-started'}));
+ return json({ok:true,version:'R1504',tasks:CRON_TASKS_R1493.map(t=>({...t,enabled:enabled[t.id]})),splitJobsR1504,note:'Настройки действуют при следующем цикле. При новом Cron задания разделяются; старый режим сохраняется до переключения.'},200,{'cache-control':'no-store'});
 }
+// R1504 - independent server-side Cron job lanes. Active only for requests with ?job=.
+// Never run the old combined engagement path alongside the split lanes.
+const SPLIT_JOBS_R1504=new Set(['likes','comments','subscribers','releases','maintenance']);
+async function handleSplitCronGatewayR1504(request,env,ctx,job){
+ if(!adminAuthorized(request,env)&&!cronAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
+ if(!SPLIT_JOBS_R1504.has(job))return json({ok:false,error:'unknown-cron-job'},400);
+ const db=requireDb(env);
+ await primeExistingD1SchemasR1501(db);
+ const now=new Date(),startMs=Date.now(),nowIso=now.toISOString();
+ const period={likes:2,comments:5,subscribers:15,releases:5,maintenance:15}[job];
+ const slot=new Date(Math.floor(startMs/(period*60000))*period*60000).toISOString();
+ const label=`split-r1504-${job}`;
+ const claimed=await claimCronGatewaySlotR334(db,label,slot);
+ const heartbeat=await touchCronSchedulerHeartbeatR394(db,`external-r1504:${job}`);
+ // Refresh the migration marker on every successful new trigger. Legacy requests
+ // are skipped while this marker is recent; they resume if the new worker stops.
+ await setPushState(db,'cron-r1504-split-last-trigger-at',nowIso).catch(()=>{});
+ if(!claimed)return json({ok:true,healthy:true,mode:'split-r1504',task:job,claimed:false,skipped:true,reason:'slot-claimed',schedulerHeartbeatAt:heartbeat,checkedAt:nowIso});
+ const switches=await cronTaskSettingsR1493(db);
+ const switchKey={likes:'engagement',comments:'comments5',subscribers:'subscribers',releases:'releases',maintenance:'checkpoint15'}[job];
+ if(switches[switchKey]===false)return json({ok:true,healthy:true,mode:'split-r1504',task:job,claimed:true,skipped:true,reason:'disabled-by-owner',schedulerHeartbeatAt:heartbeat,checkedAt:nowIso});
+ const statusKey=`cron-r1504-${job}`;
+ // Mark attempts separately from successes. An interrupted waitUntil stays 'running'
+ // and a subsequent slot can still proceed without suppression.
+ await setPushStatesR1501(db,{[statusKey+'-attempt-at']:nowIso,[statusKey+'-status']:'running'}).catch(()=>{});
+ const run=(async()=>{
+  let result=null;
+  try{
+   if(job==='likes'){
+    // Radio audience retains its original two-minute sampling, independently
+    // of the YouTube likes work. Stagger to reduce simultaneous D1 demand.
+    if(switches.audience){
+      const radioTaskR1504=(async()=>{
+        await new Promise(resolve=>setTimeout(resolve,6000));
+        return collectRadioAudienceCronR1484(env,cronGatewayClockR394(new Date(),'*/2 * * * *'));
+      })().catch(error=>({ok:false,error:cleanPlainText(error?.message||error,300)}));
+      if(ctx?.waitUntil)ctx.waitUntil(radioTaskR1504);else await radioTaskR1504;
+    }
+    result=responseData(await handleFastYoutubeEngagementR333(request,env,{skipCheckpoint:true,mode:'likes-only-r1504',taskSettingsR1501:switches}));
+   }else if(job==='comments'){
+    let channelId=(await getPushState(db,'youtube-websub-channel-id-r332').catch(()=>null))?.value||'';
+    if(!channelId)channelId=await resolveYoutubeWebSubChannelIdR332(env,db);
+    if(!channelId)throw new Error('youtube-channel-id-unavailable');
+    const sweep=await checkYoutubeRecentCommentsEvery5mR953(env,db,channelId,nowIso);
+    const live=await checkYoutubeLiveCommentsEvery2mR938(env,db,channelId,nowIso);
+    result={ok:sweep?.ok!==false&&live?.ok!==false,sweep,live};
+   }else if(job==='subscribers'){
+    await setPushState(db,'cron-subscriber-attempt-at-r1503',nowIso).catch(()=>{});
+    result=await handleFastYoutubeSubscriberCountR416(request,env,{source:'split-r1504-15m'});
+    await setPushStatesR1501(db,{
+      'cron-subscriber-last-status-r1503':result?.skipped?'skipped':result?.ok===false?'failed':'ok',
+      'cron-subscriber-last-error-r1503':result?.ok===false?cleanPlainText(result?.error||'unknown',300):''
+    }).catch(()=>{});
+   }else if(job==='releases'){
+    // Preserve existing scheduled rollover and near-immediate radio LIVE push.
+    const localR1504=getBratislavaClock();
+    if(localR1504.hour===6&&localR1504.minute===5)
+      await captureYoutubeDailyRolloverR469(env).catch(error=>({ok:false,error:cleanPlainText(error?.message||error,300)}));
+    await maybeSendRadioLiveStartPushR585(env).catch(error=>({ok:false,error:cleanPlainText(error?.message||error,300)}));
+    const [releaseR1504,facebookR1504]=await Promise.allSettled([
+      handleFastYoutubeReleaseCheckR332(request,env).then(responseData),
+      switches.facebook?fbScheduleTickR1292(env):Promise.resolve({ok:true,skipped:true})
+    ]);
+    const release=releaseR1504.status==='fulfilled'?releaseR1504.value:{ok:false,error:cleanPlainText(releaseR1504.reason?.message||releaseR1504.reason,260)};
+    const facebook=facebookR1504.status==='fulfilled'?facebookR1504.value:{ok:false,error:cleanPlainText(facebookR1504.reason?.message||facebookR1504.reason,260)};
+    result={ok:release?.ok!==false&&release?.httpOk!==false&&facebook?.ok!==false,release,facebook};
+   }else if(job==='maintenance'){
+    const tasks={};
+    // Preserve original 15-minute rotating tasks: snapshots/countries,
+    // native monitor, YouTube WebSub and daily backup (once per hour each).
+    tasks.system=await runCronMaintenanceSliceR416(env,cronGatewayClockR394(now,'*/15 * * * *')).catch(e=>({ok:false,error:cleanPlainText(e?.message||e,260)}));
+    tasks.checkpoint=await checkpointDailySummaryAutoR398(env,'split-r1504-maintenance').catch(e=>({ok:false,error:cleanPlainText(e?.message||e,260)}));
+    const local=getBratislavaClock();
+    if(local.hour===5||local.hour===17)tasks.dailySummary=await maybeSendDailyOwnerSummary(env).catch(e=>({ok:false,error:cleanPlainText(e?.message||e,260)}));
+    if(switches.facebookMetrics&&env.META_USER_ACCESS_TOKEN_R1292)tasks.facebookMetrics=await fbMetaReadR1292(env,false).catch(e=>({ok:false,error:cleanPlainText(e?.message||e,260)}));
+    result={ok:!Object.values(tasks).some(v=>v?.ok===false),tasks};
+   }
+   const failed=result?.ok===false||result?.httpOk===false;
+   const done=new Date().toISOString();
+   await setPushStatesR1501(db,{[statusKey+'-finish-at']:done,[statusKey+'-status']:failed?'failed':'ok',[statusKey+'-last-result']:JSON.stringify({at:done,ms:Date.now()-startMs,ok:!failed,result}).slice(0,5500)}).catch(()=>{});
+   if(failed)await recordSystemLog(env,{scope:'automation',level:'warning',event:'split-job-failed-r1504',message:`Cron R1504 ${job} сообщил об ошибке`,details:{job,result}}).catch(()=>{});
+  }catch(error){
+   const err=cleanPlainText(error?.message||error,300),done=new Date().toISOString();
+   await setPushStatesR1501(db,{[statusKey+'-finish-at']:done,[statusKey+'-status']:'failed',[statusKey+'-last-result']:JSON.stringify({at:done,ms:Date.now()-startMs,ok:false,error:err})}).catch(()=>{});
+   await recordSystemLog(env,{scope:'automation',level:'error',event:'split-job-exception-r1504',message:`Cron R1504 ${job}: ${err}`,details:{job,error:err}}).catch(()=>{});
+  }
+ })();
+ if(ctx?.waitUntil)ctx.waitUntil(run);else await run;
+ return json({ok:true,healthy:true,mode:'split-r1504',task:job,claimed:true,queued:Boolean(ctx?.waitUntil),schedulerHeartbeatAt:heartbeat,checkedAt:nowIso},200,{'cache-control':'no-store'});
+}
+
 async function handleExternalCronGatewayR334(request, env, ctx) {
+const splitJobR1504=new URL(request.url).searchParams.get('job')||'';
+if(splitJobR1504)return handleSplitCronGatewayR1504(request,env,ctx,splitJobR1504);
 if(!adminAuthorized(request,env) && !cronAuthorized(request,env)){
   // R1490: never log credentials; a rejected cron must be distinguishable from a CPU failure.
   if(env.COMMENTS_DB){
@@ -13184,6 +13283,12 @@ if(!adminAuthorized(request,env) && !cronAuthorized(request,env)){
 }
 const db=requireDb(env);
 await primeExistingD1SchemasR1501(db);
+const markerR1504=await getPushState(db,'cron-r1504-split-last-trigger-at').catch(()=>null);
+const markerMsR1504=Date.parse(String(markerR1504?.value||''));
+if(Number.isFinite(markerMsR1504)&&Date.now()-markerMsR1504<25*60*1000){
+ const heartbeat=await touchCronSchedulerHeartbeatR394(db,'legacy-skipped-split-r1504');
+ return json({ok:true,healthy:true,mode:'legacy-disabled-while-split-active-r1504',task:'skipped',schedulerHeartbeatAt:heartbeat,checkedAt:new Date().toISOString()});
+}
 const switchesR1493=await cronTaskSettingsR1493(db);
 // R1292 independent Facebook scheduler. Failure cannot block YouTube jobs.
 let fbScheduleResultR1292={queued:true};
@@ -20839,7 +20944,8 @@ async function handleCronDiagnosticR1488(request, env) {
     fullStatus:'automation-last-check-status',
     subscriberAttempt:'cron-subscriber-attempt-at-r1503',
     subscriberStatus:'cron-subscriber-last-status-r1503',
-    subscriberError:'cron-subscriber-last-error-r1503'
+    subscriberError:'cron-subscriber-last-error-r1503',
+    splitMarker:'cron-r1504-split-last-trigger-at'
   };
   const entries=await Promise.all(Object.entries(names).map(async ([key,name])=>[key,await getPushState(db,name).catch(()=>null)]));
   const row=Object.fromEntries(entries);
@@ -20859,24 +20965,49 @@ async function handleCronDiagnosticR1488(request, env) {
   const heartbeatAge=age('heartbeat'),fastAge=age('fast'),subscriberAge=age('subscriber');
   const gatewayMs=Date.parse(String(gateway?.checkedAt||''));
   const gatewayAge=Number.isFinite(gatewayMs)?Math.max(0,Math.round((Date.now()-gatewayMs)/60000)):null;
+  const splitMarkerMs=Date.parse(read('splitMarker'));
+  const splitActive=Number.isFinite(splitMarkerMs)&&Date.now()-splitMarkerMs<25*60*1000;
+  const splitPeriods={likes:2,comments:5,subscribers:15,releases:5,maintenance:15};
+  let splitJobs=[];
+  if(splitActive){
+    const splitKeys=Object.keys(splitPeriods).flatMap(job=>[
+      `cron-r1504-${job}-attempt-at`,`cron-r1504-${job}-finish-at`,`cron-r1504-${job}-status`
+    ]);
+    const splitRows=await getPushStatesR1501(db,splitKeys).catch(()=>new Map());
+    splitJobs=Object.entries(splitPeriods).map(([job,interval])=>{
+      const attemptAt=splitRows.get(`cron-r1504-${job}-attempt-at`)?.value||'';
+      const finishAt=splitRows.get(`cron-r1504-${job}-finish-at`)?.value||'';
+      const status=splitRows.get(`cron-r1504-${job}-status`)?.value||'not-started';
+      const lastMs=Date.parse(finishAt||attemptAt);
+      const ageMinutes=Number.isFinite(lastMs)?Math.round((Date.now()-lastMs)/60000):null;
+      return {job,intervalMinutes:interval,status,attemptAt,finishAt,ageMinutes};
+    });
+  }
   const warnings=[];
   if(authErrorAt && (!read('heartbeat') || Date.parse(authErrorAt)>Date.parse(read('heartbeat'))))warnings.push('Cron Gateway отклонил авторизацию: проверьте секрет центрального Worker');
   if(scheduledErrorAt && (!read('heartbeat') || Date.parse(scheduledErrorAt)>Date.parse(read('heartbeat'))))warnings.push('Внутренний scheduled() завершился ошибкой: смотрите lastScheduledError');
   if(!String(env.CRON_SECRET||'').trim() && !String(env.CENTRAL_CRON_SECRET_R462||'').trim())warnings.push('CRON_SECRET / CENTRAL_CRON_SECRET_R462 не настроен');
-  if(gatewayAge!==null&&gatewayAge>12)warnings.push(`Последнее завершение Gateway ${gatewayAge} мин назад при продолжающемся heartbeat: вероятно, задача прерывается до конца`);
+  if(!splitActive&&gatewayAge!==null&&gatewayAge>12)warnings.push(`Последнее завершение Gateway ${gatewayAge} мин назад при продолжающемся heartbeat: вероятно, задача прерывается до конца`);
   if(heartbeatAge===null)warnings.push('Не найдено ни одного heartbeat: внешний Cron Trigger не подтверждён');
   else if(heartbeatAge>12)warnings.push(`Последний heartbeat ${heartbeatAge} мин назад (ожидается каждые 2–5 мин)`);
-  if(fastAge===null||fastAge>10)warnings.push('Проверка комментариев и лайков не обновлялась более 10 мин');
-  if(subscriberAge===null||subscriberAge>15)warnings.push('Проверка подписчиков не обновлялась более 15 мин');
+  if(!splitActive&& (fastAge===null||fastAge>10))warnings.push('Проверка комментариев и лайков не обновлялась более 10 мин');
+  if(!splitActive&& (subscriberAge===null||subscriberAge>15))warnings.push('Проверка подписчиков не обновлялась более 15 мин');
+  if(splitActive)for(const item of splitJobs){
+    if(item.ageMinutes===null||item.ageMinutes>item.intervalMinutes+7)warnings.push(`R1504 ${item.job}: завершение старше ${item.intervalMinutes+7} минут`);
+    else if(item.status==='failed')warnings.push(`R1504 ${item.job}: предыдущая проверка завершилась ошибкой`);
+  }
+  const latestSplit=splitJobs.slice().sort((a,b)=>Date.parse(b.finishAt||b.attemptAt||'')-Date.parse(a.finishAt||a.attemptAt||''))[0];
+  const latestSplitAt=latestSplit?.finishAt||latestSplit?.attemptAt||'';
+  const latestSplitAge=Number.isFinite(Date.parse(latestSplitAt))?Math.max(0,Math.round((Date.now()-Date.parse(latestSplitAt))/60000)):null;
   return json({ok:true,healthy:warnings.length===0,warnings,
     triggerConfiguredInEnvironment:Boolean(String(env.CRON_SECRET||env.CENTRAL_CRON_SECRET_R462||'').trim()),
     // A Pages bundle containing scheduled() does not confirm a separately configured trigger.
     triggerConfirmed:heartbeatAge!==null&&heartbeatAge<=12,
     heartbeatAt:read('heartbeat'),heartbeatSource:read('source'),heartbeatAgeMinutes:heartbeatAge,
-    schedulerStatus:read('status'),gatewayTask:cleanPlainText(gateway?.task||'',80),
-    gatewayAt:cleanPlainText(gateway?.checkedAt||'',80),gatewayAgeMinutes:gatewayAge,
-    gatewayHealthy:gateway?.healthy??null,
-    gatewayDegraded:gateway?.degraded??null,
+    schedulerStatus:splitActive?'split-r1504':read('status'),gatewayTask:splitActive?cleanPlainText(latestSplit?.job||'',80):cleanPlainText(gateway?.task||'',80),
+    gatewayAt:splitActive?latestSplitAt:cleanPlainText(gateway?.checkedAt||'',80),gatewayAgeMinutes:splitActive?latestSplitAge:gatewayAge,
+    gatewayHealthy:splitActive?!warnings.length:(gateway?.healthy??null),
+    gatewayDegraded:splitActive?Boolean(warnings.length):(gateway?.degraded??null),
     gatewayError:cleanPlainText(gateway?.value?.error||gateway?.value?.engagement?.error||gateway?.value?.subscriber?.error||'',300),
     lastAuthErrorAt:authErrorAt,lastAuthError:authError,
     lastScheduledErrorAt:scheduledErrorAt,lastScheduledError:scheduledError,
@@ -20885,6 +21016,7 @@ async function handleCronDiagnosticR1488(request, env) {
     subscriberAttemptAt:read('subscriberAttempt'),subscriberAttemptAgeMinutes:age('subscriberAttempt'),
     subscriberLastStatus:read('subscriberStatus'),subscriberLastError:read('subscriberError'),
     lastFullAt:read('full'),lastFullStatus:read('fullStatus'),
+    splitModeR1504:splitActive,splitJobsR1504:splitJobs,
     checkedAt:new Date().toISOString()
   },200,{...JSON_HEADERS,'cache-control':'no-store'});
 }
