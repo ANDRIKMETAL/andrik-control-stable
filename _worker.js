@@ -2694,6 +2694,119 @@ return `👁 ANDRIK · +${n} ${word}`;
 async function nextOwnerPushStack(env, history = null) {
 return { enabled:false, count:1, windowMinutes:0, key:'andrik-single-eye' };
 }
+// R1505: durable, bounded retry for transient OneSignal outages. No new tables.
+// Reuses OneSignal's existing idempotency_key: retrying cannot create duplicate
+// notifications even if the first HTTP response was lost in transit.
+const PUSH_RETRY_PREFIX_R1505 = 'onesignal-retry-r1505:';
+async function queueOneSignalRetryR1505(env, payload, history, audience, error) {
+  if (!env.COMMENTS_DB || !payload?.idempotency_key) return false;
+  try {
+    const db = env.COMMENTS_DB;
+    const key = PUSH_RETRY_PREFIX_R1505 + payload.idempotency_key;
+    const existing = await getPushState(db, key).catch(() => null);
+    if (existing?.value) return true; // preserve original retry budget
+    const item = {
+      payload, audience, history: history || null,
+      createdAt: Date.now(), nextAt: Date.now() + 4 * 60000,
+      attempts: 0, lastError: String(error || 'onesignal-network-error').slice(0, 240)
+    };
+    await setPushState(db, key, JSON.stringify(item));
+    return true;
+  } catch (err) {
+    console.error('OneSignal retry enqueue failed', String(err?.message || err));
+    return false;
+  }
+}
+async function recoverOneSignalRetriesR1505(env) {
+  if (!env.COMMENTS_DB || !oneSignalConfigured(env)) return {ok:true,skipped:true};
+  const db = env.COMMENTS_DB;
+  const now = Date.now();
+  // At most one HTTP retry each five-minute release tick: bounded D1/API cost.
+  const rows = await db.prepare(`
+    SELECT key, value FROM push_state
+    WHERE key LIKE 'onesignal-retry-r1505:%'
+    ORDER BY updated_at ASC LIMIT 12
+  `).all();
+  let attempted = 0, recovered = 0, pending = 0;
+  for (const row of rows.results || []) {
+    let item;
+    try { item = JSON.parse(row.value); } catch (_) { item = null; }
+    if (!item?.payload?.idempotency_key) {
+      await db.prepare('DELETE FROM push_state WHERE key=?').bind(row.key).run().catch(()=>{});
+      continue;
+    }
+    if (now - Number(item.createdAt || 0) > 24 * 3600000 || Number(item.attempts || 0) >= 12) {
+      await db.prepare('DELETE FROM push_state WHERE key=?').bind(row.key).run().catch(()=>{});
+      await recordSystemLog(env, {scope:'push',level:'warning',event:'onesignal-retry-expired-r1505',
+        message:'Отложенный push исчерпал окно повторов',details:{type:item.history?.type||'',error:item.lastError||''}}).catch(()=>{});
+      continue;
+    }
+    if (now < Number(item.nextAt || 0)) { pending++; continue; }
+    // If a normal Cron cycle already succeeded while this retry was pending,
+    // clear the queued copy instead of writing another successful history row.
+    const alreadySent = await db.prepare(`
+      SELECT 1 AS found FROM push_history
+      WHERE type=? AND video_id=? AND message=? AND status='sent' LIMIT 1
+    `).bind(item.history?.type||'system',item.history?.videoId||'',item.payload.contents?.en||'').first().catch(()=>null);
+    if (alreadySent?.found) {
+      await db.prepare('DELETE FROM push_state WHERE key=?').bind(row.key).run().catch(()=>{});
+      continue;
+    }
+    const claimKey = 'onesignal-retry-lock-r1505:' + item.payload.idempotency_key;
+    await db.prepare(`DELETE FROM push_state WHERE key=? AND updated_at < datetime('now','-3 minutes')`).bind(claimKey).run().catch(()=>{});
+    if (!await claimPushOnce(db, claimKey, new Date().toISOString())) continue;
+    attempted++;
+    try {
+      const response = await fetch('https://api.onesignal.com/notifications?c=push', {
+        method:'POST', headers:{'content-type':'application/json',authorization:`Key ${getOneSignalApiKey(env)}`},
+        body:JSON.stringify(item.payload), signal:AbortSignal.timeout(8000)
+      });
+      const data = await response.json().catch(()=>({}));
+      const id = cleanPlainText(data?.id || data?.external_id || '',120);
+      if (response.ok && id) {
+        const hist = item.history || {};
+        await recordPushHistory(env, {...hist,audience:item.audience||'all',status:'sent',
+          title:item.payload.headings?.en||'',message:item.payload.contents?.en||'',
+          url:item.payload.web_url||'',oneSignalId:id,recipients:Number(data?.recipients||0),
+          details:{...(hist.details||{}),recoveredBy:'onesignal-retry-r1505',acceptedByOneSignal:true}});
+        if (['auto-release','auto-release-retry','release-publish'].includes(hist.type) && hist.videoId) {
+          await db.prepare(`INSERT OR IGNORE INTO push_playlist_seen (video_id,title,published_at,first_seen_at)
+            VALUES (?,?,datetime('now'),datetime('now'))`).bind(hist.videoId,hist.videoTitle||'').run().catch(()=>{});
+        }
+        if (hist.type === 'youtube-comment' && hist.details?.commentId) {
+          await saveYoutubeEventRow(db,{key:`comment:${hist.details.commentId}`,type:'comment',
+            resourceId:hist.details.commentId,videoId:hist.videoId||'',title:hist.videoTitle||'',
+            url:item.payload.web_url||'',payload:{recoveredBy:'onesignal-retry-r1505'}}).catch(()=>{});
+        }
+        await db.prepare('DELETE FROM push_state WHERE key=?').bind(row.key).run();
+        recovered++;
+        await recordSystemLog(env,{scope:'push',level:'info',event:'onesignal-retry-recovered-r1505',
+          message:'Отложенный push принят OneSignal',details:{type:hist.type||'',videoId:hist.videoId||'',oneSignalId:id}}).catch(()=>{});
+      } else {
+        const permanent = response.status >= 400 && response.status < 500 && response.status !== 429;
+        if (permanent) {
+          await db.prepare('DELETE FROM push_state WHERE key=?').bind(row.key).run().catch(()=>{});
+          await recordSystemLog(env,{scope:'push',level:'error',event:'onesignal-retry-permanent-r1505',
+            message:`OneSignal HTTP ${response.status}: запрос отклонён`,details:{type:item.history?.type||''}}).catch(()=>{});
+        } else {
+          item.attempts = Number(item.attempts||0) + 1;
+          item.nextAt = Date.now() + Math.min(30, 5 * Math.pow(2, Math.min(item.attempts,3))) * 60000;
+          item.lastError = `HTTP ${response.status}`;
+          await setPushState(db,row.key,JSON.stringify(item));
+        }
+      }
+    } catch (error) {
+      item.attempts = Number(item.attempts||0) + 1;
+      item.nextAt = Date.now() + Math.min(30, 5 * Math.pow(2, Math.min(item.attempts,3))) * 60000;
+      item.lastError = cleanPlainText(error?.message || error,200);
+      await setPushState(db,row.key,JSON.stringify(item)).catch(()=>{});
+    } finally {
+      await releasePushOnceClaim(db,claimKey);
+    }
+    break; // only one outbound retry per invocation
+  }
+  return {ok:true,attempted,recovered,pending};
+}
 async function sendOneSignalPush(env, {
 title,
 message,
@@ -2812,11 +2925,10 @@ payload.include_subscription_ids = registeredIds;
 payload.included_segments = ['Subscribed Users'];
 }
 }
+// Avoid two 12-second waits per message inside Cloudflare's 30-second waitUntil.
+// Failed transport requests enter the persistent retry lane instead.
 let response = null;
 let oneSignalFetchError = null;
-for (let attempt = 0; attempt < 2 && !response; attempt += 1) {
-const controller = new AbortController();
-const timer = setTimeout(() => controller.abort('onesignal-timeout'), 12000);
 try {
 response = await fetch('https://api.onesignal.com/notifications?c=push', {
 method: 'POST',
@@ -2825,18 +2937,15 @@ headers: {
 authorization: `Key ${getOneSignalApiKey(env)}`
 },
 body: JSON.stringify(payload),
-signal: controller.signal
+signal: AbortSignal.timeout(8000)
 });
 } catch (error) {
 oneSignalFetchError = error;
-if (attempt === 0) await new Promise(resolve => setTimeout(resolve, 650));
-} finally {
-clearTimeout(timer);
-}
 }
 if (!response) {
-const errorCode = oneSignalFetchError?.name === 'AbortError' ? 'onesignal-timeout' : 'onesignal-network-error';
+const errorCode = ['AbortError','TimeoutError'].includes(oneSignalFetchError?.name) ? 'onesignal-timeout' : 'onesignal-network-error';
 const errorMessage = cleanPlainText(oneSignalFetchError?.message || errorCode, 500);
+const queuedR1505 = await queueOneSignalRetryR1505(env,payload,history,audience,errorCode);
 if (history) {
 await recordPushHistory(env, {
 ...history,
@@ -2854,7 +2963,7 @@ scope:'push', level:'error', event:errorCode,
 message:`OneSignal не ответил: ${errorMessage}`,
 details:{ audience, title, url, errorMessage }
 }).catch(() => {});
-return { ok:false, error:errorCode, message:errorMessage };
+return { ok:false, error:errorCode, message:errorMessage, queuedForRetryR1505:queuedR1505 };
 }
 const responseData = await response.json().catch(() => ({}));
 const invalidSubscriptionIdsR473 = oneSignalInvalidSubscriptionIdsR473(responseData);
@@ -2864,6 +2973,8 @@ await pruneInvalidOneSignalSubscriptionsR473(env, invalidSubscriptionIdsR473, `$
 if (!response.ok) {
 console.error('OneSignal push failed', response.status, responseData);
 const errorText = JSON.stringify(responseData?.errors || responseData || 'onesignal-error');
+const queuedR1505 = (response.status===429 || response.status>=500)
+  ? await queueOneSignalRetryR1505(env,payload,history,audience,`HTTP ${response.status}`) : false;
 if (history) {
 await recordPushHistory(env, {
 ...history,
@@ -2881,7 +2992,7 @@ scope: 'push', level: 'error', event: 'onesignal-http-error',
 message: `OneSignal отклонил запрос: HTTP ${response.status}`,
 details: { audience, httpStatus: response.status, response: responseData, title, url }
 }).catch(() => {});
-return { ok: false, status: response.status, error: responseData?.errors || 'onesignal-error', data: responseData };
+return { ok: false, status: response.status, error: responseData?.errors || 'onesignal-error', data: responseData, queuedForRetryR1505:queuedR1505 };
 }
 if (audience === 'owner' && Array.isArray(payload.include_subscription_ids) && payload.include_subscription_ids.length &&
 payload.include_subscription_ids.every(id => invalidSubscriptionIdsR473.includes(id))) {
@@ -13241,7 +13352,8 @@ async function handleSplitCronGatewayR1504(request,env,ctx,job){
     ]);
     const release=releaseR1504.status==='fulfilled'?releaseR1504.value:{ok:false,error:cleanPlainText(releaseR1504.reason?.message||releaseR1504.reason,260)};
     const facebook=facebookR1504.status==='fulfilled'?facebookR1504.value:{ok:false,error:cleanPlainText(facebookR1504.reason?.message||facebookR1504.reason,260)};
-    result={ok:release?.ok!==false&&release?.httpOk!==false&&facebook?.ok!==false,release,facebook};
+    const pushRecoveryR1505=await recoverOneSignalRetriesR1505(env).catch(e=>({ok:false,error:cleanPlainText(e?.message||e,260)}));
+    result={ok:release?.ok!==false&&release?.httpOk!==false&&facebook?.ok!==false,release,facebook,pushRecoveryR1505};
    }else if(job==='maintenance'){
     const tasks={};
     // Preserve original 15-minute rotating tasks: snapshots/countries,
