@@ -2672,18 +2672,16 @@ const token = String(value || fallback)
 .slice(0, 64);
 return token || fallback;
 }
+// R1506: owner notifications must remain separate in Android/Control PWA.
+// Do not assign a shared collapse_id or web_push_topic to unrelated events.
+// Individual values are derived from the existing stable idempotency key below.
 function ownerPushPresentation(history = null, name = '') {
 const type = cleanPlainText(history?.type || '', 80).toLowerCase();
 const subscriberEvent = type === 'youtube-subscriber' || type === 'youtube-subscriber-count';
-const commentEvent = type === 'youtube-comment' || type === 'youtube-comment-count' || type === 'youtube-live-chat';
-const topic = subscriberEvent ? 'andrik-subscriber-eye' : (commentEvent ? 'andrik-comment-eye' : 'andrik-single-eye');
-return {
-androidGroup: topic,
-threadId: topic,
-collapseId: topic,
-webPushTopic: topic,
-ttl: type === 'daily-summary' ? 3600 : (subscriberEvent ? 21600 : 300)
-};
+return { ttl: type === 'daily-summary' ? 3600 : (subscriberEvent ? 21600 : 300) };
+}
+function distinctPushTopicR1506(idempotencyKey) {
+return 'andrik-' + String(idempotencyKey || '').replace(/[^a-f0-9]/gi, '').slice(0, 24);
 }
 function ownerPushStackLabel(count) {
 const n = Math.max(1, Number(count || 1));
@@ -2846,10 +2844,15 @@ const displayTitle = ownerStack.enabled && stackCount > 1 ? ownerPushStackLabel(
 const displayMessage = ownerStack.enabled && stackCount > 1
 ? `Последнее: ${cleanPlainText(title, 120)}\n${cleanPlainText(message, 260)}`
 : message;
-const resolvedAndroidGroup = cleanPlainText(audience === 'owner' ? presentation.androidGroup : (androidGroup || presentation.androidGroup || ''), 64);
-const resolvedThreadId = cleanPlainText(audience === 'owner' ? presentation.threadId : (threadId || presentation.threadId || ''), 64);
-const resolvedCollapseId = cleanPlainText(audience === 'owner' ? presentation.collapseId : (collapseId || presentation.collapseId || ''), 64);
-const resolvedWebPushTopic = cleanPlainText(audience === 'owner' ? presentation.webPushTopic : (webPushTopic || presentation.webPushTopic || ''), 64);
+// This is also the OneSignal idempotency key: an event may be retried
+// without displaying duplicate push, while DISTINCT events do not replace
+// one another in the Android notification shade or Control web push UI.
+const eventPushId = await stablePushUuid(`${audience}|${name || title}|${history?.type || ''}|${history?.source || ''}`);
+const distinctTopic = distinctPushTopicR1506(eventPushId);
+const resolvedAndroidGroup = cleanPlainText(audience === 'owner' ? '' : (androidGroup || presentation.androidGroup || ''), 64);
+const resolvedThreadId = cleanPlainText(audience === 'owner' ? '' : (threadId || presentation.threadId || ''), 64);
+const resolvedCollapseId = cleanPlainText(audience === 'owner' ? distinctTopic : (collapseId || presentation.collapseId || distinctTopic), 64);
+const resolvedWebPushTopic = cleanPlainText(audience === 'owner' ? distinctTopic : (webPushTopic || presentation.webPushTopic || distinctTopic), 64);
 const resolvedTtl = Number.isFinite(Number(ttl ?? presentation.ttl)) ? Math.max(0, Math.min(2419200, Number(ttl ?? presentation.ttl))) : null;
 const notificationIcon = cleanPlainText(icon || 'https://andrikmetal.com/assets/andrik-eye-v22-192.png', 700);
 const payload = {
@@ -2865,7 +2868,7 @@ chrome_web_badge: 'https://andrikmetal.com/assets/andrik-eye-notification-badge-
 large_icon: notificationIcon,
 huawei_large_icon: notificationIcon,
 adm_large_icon: notificationIcon,
-idempotency_key: await stablePushUuid(`${audience}|${name || title}|${history?.type || ''}|${history?.source || ''}`)
+idempotency_key: eventPushId
 };
 if (resolvedAndroidGroup) payload.android_group = resolvedAndroidGroup;
 if (resolvedThreadId) payload.thread_id = resolvedThreadId;
