@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r358-deploy-nohang",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1793021965047-fcbf4653ff",
-  "release": "R1506",
-  "archiveName": "SITE-R1506-OWNER-PUSH-SEPARATE-FULL.zip",
-  "sourceHead": "6fb9f694ade1aafb091d499b84a609c54b8aaf42",
-  "backupSha": "6fb9f694ade1aafb091d499b84a609c54b8aaf42",
+  "operationId": "publish-1793211766139-b55dcefaf8",
+  "release": "R1507",
+  "archiveName": "SITE-R1507-YOUTUBE-UNSUBSCRIBERS-FIX-FULL.zip",
+  "sourceHead": "00a4da9fa994800f95dc2ef351b840d811b8f81f",
+  "backupSha": "00a4da9fa994800f95dc2ef351b840d811b8f81f",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-10-26T13:39:26.630Z"
+  "generatedAt": "2026-10-28T18:22:47.771Z"
 }

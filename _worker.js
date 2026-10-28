@@ -5,6 +5,7 @@ const PUSH_OWNER_RECOVERY_R768 = 'R768-OWNER-PUSH-SELFHEAL';
 const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R526', number:526, version:'55.00', full:'55.00 LIVE WEB AI FINAL R526 · PUSH DELIVERY CORRECTNESS', siteUpdater:'55.00-r358-deploy-nohang' });
 const PUSH_DELIVERY_CORRECTNESS_R526 = 'R526-ONESIGNAL-PLATFORM-DELIVERY+SUBSCRIBER-COUNT-GATE+HONEST-CADENCE';
 const YOUTUBE_SUBSCRIBER_PUSH_R1150 = 'R1150-YOUTUBE-SUBSCRIBER-GAIN+LOSS-5M-OWNER-DELIVERY';
+const YOUTUBE_UNSUBSCRIBER_CORRECTION_R1507 = 'R1507-SUBSCRIBER-LOSS-PREVIOUS-SAMPLE-GUARD';
 const PUSH_AUTOMATION_FIX_R778 = 'R778-CRON-UA-INDEPENDENT-HEALTH-RESCUE-STRICT-OWNER-DELIVERY';
 const YOUTUBE_COMMENT_PUSH_RELIABLE_R953 = 'R953-LIVE-2M-RECENT6-5M-OLDER1-SEPARATE-COMMENT-LANE';
 const RADIO_AUDIENCE_GRAPH_R1156 = 'R1156-RADIO-AUDIENCE-DAY-GRAPH+D1-2M-SAMPLING';
@@ -9226,7 +9227,8 @@ if(!previous){
 await saveYoutubeEventRow(db,{key,type:'subscriber-count',resourceId:identity.channelId,title:identity.title,countValue:current,url:identity.channelUrl,payload:{...identity,seededBy:'cron-lite-r416'}});
 if(!notifiedStateR658) await setPushState(db,notifiedKeyR658,String(current)).catch(()=>{});
 notifiedTotalR658=current;
-}else if(!identity.hiddenSubscribers && current>Math.min(before,notifiedTotalR658)){
+// R1507: a falling count must never fall through the recovery-for-gains branch.
+}else if(!identity.hiddenSubscribers && current>=before && current>Math.min(before,notifiedTotalR658)){
 const deliveryBaseR658=Math.min(before,notifiedTotalR658);
 const fullDeltaR1203=current-deliveryBaseR658;
 const newSampleDeltaR1203=Math.max(0,current-before);
@@ -9271,8 +9273,11 @@ await releasePushOnceClaim(db,onceKey).catch(()=>{});
 }
 }
 }
-}else if(!identity.hiddenSubscribers && current<notifiedTotalR658){
-const deliveryBaseR1150=Math.max(0,Number(notifiedTotalR658||0));
+}else if(!identity.hiddenSubscribers && before>0 && current<before){
+// R1507: always detect a genuine decrease since the last sampled channel count.
+// The last-notified watermark can be below or above the last sample and must
+// never turn a loss into a gain or suppress an observable unsubscribe.
+const deliveryBaseR1150=before;
 const lossR1150=Math.max(1,deliveryBaseR1150-current);
 const onceKey=`push-once:youtube-unsubscriber-r1150:${deliveryBaseR1150}:${current}`;
 const claimed=await claimPushOnce(db,onceKey,startedAt);
