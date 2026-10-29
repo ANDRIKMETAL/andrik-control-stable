@@ -2773,6 +2773,11 @@ async function recoverOneSignalRetriesR1505(env) {
           await db.prepare(`INSERT OR IGNORE INTO push_playlist_seen (video_id,title,published_at,first_seen_at)
             VALUES (?,?,datetime('now'),datetime('now'))`).bind(hist.videoId,hist.videoTitle||'').run().catch(()=>{});
         }
+        if (hist.type === 'country-new' && hist.details?.weekKey && hist.details?.countryCode) {
+          const week=cleanPlainText(hist.details.weekKey,30);
+          const country=cleanPlainText(hist.details.countryCode,80);
+          await setPushState(db,`youtube-weekly-new-country-r679:${week}:${country}`,new Date().toISOString()).catch(()=>{});
+        }
         if (hist.type === 'youtube-comment' && hist.details?.commentId) {
           await saveYoutubeEventRow(db,{key:`comment:${hist.details.commentId}`,type:'comment',
             resourceId:hist.details.commentId,videoId:hist.videoId||'',title:hist.videoTitle||'',
@@ -8697,13 +8702,28 @@ await setPushState(db,'youtube-comment-reply-sweep-last-at-r797',new Date().toIS
 const warnings=(direct.warnings||[]).filter(w=>!isBenignYoutubeCommentWarningR473(w));
 return {items:uniqueYoutubeComments(direct.items||[]),warnings,targets:plan.targets.map(v=>v.videoId),replySweep:Boolean(plan.replySweepDueR797)};
 }
+// R1510: YouTube may omit optional live-audience counters even while the stream
+// and its chat endpoints are fully functional. Do not make a comments Cron fail.
+function classifyLiveProbeWarningsR1510(raw){
+ const actionable=[],metrics=[];
+ for(const item of String(raw||'').split(/\s*\|\s*/).map(v=>v.trim()).filter(Boolean)){
+  if(item==='concurrentViewers-missing-in-youtube-response'||item==='viewCount-missing-in-youtube-response')metrics.push(item);
+  else actionable.push(`LIVE: ${item}`);
+ }
+ return {actionable,metrics};
+}
 async function checkYoutubeLiveCommentsEvery2mR938(env,db,channelId,startedAt){
 const liveProbe=await fetchYoutubeActiveLiveEngagementR669(env,db).catch(error=>({
 video:null,liveChatId:'',warning:cleanPlainText(error?.message||error,260),source:'live-probe-error-r938'
 }));
 const notifications=[];
 const warnings=[];
-if(liveProbe?.warning)warnings.push(`LIVE: ${cleanPlainText(liveProbe.warning,240)}`);
+const metricWarningsR1510=[];
+if(liveProbe?.warning){
+ const probeWarningsR1510=classifyLiveProbeWarningsR1510(liveProbe.warning);
+ warnings.push(...probeWarningsR1510.actionable.map(item=>cleanPlainText(item,240)));
+ metricWarningsR1510.push(...probeWarningsR1510.metrics);
+}
 let direct={items:[],warnings:[]};
 if(liveProbe?.video){
 direct=await fetchYoutubeCommentsForVideos(env,[liveProbe.video],channelId).catch(error=>({items:[],warnings:[cleanPlainText(error?.message||error,260)]}));
@@ -8775,6 +8795,7 @@ sent:notifications.filter(item=>item.ok).length,
 failed:hardFailed,
 pending,
 warnings,
+metricWarningsR1510,
 checkedAt:startedAt
 };
 }
@@ -11720,10 +11741,17 @@ current.length
 );
 const delivered = [];
 const failed = [];
+const retryPendingR1510=[];
 for (const item of fresh.slice(0, 8)) {
 const stateKey = `youtube-weekly-new-country-r679:${weekKey}:${item.key}`;
 const already = await getPushState(db, stateKey).catch(() => null);
 if (already?.value) continue;
+// If the previous attempt was queued after a network timeout, let the
+// release lane recover it instead of re-sending the same push every hour.
+const nameR1510=`new-country-week-r679-${weekKey}-${item.key}`;
+const retryIdR1510=await stablePushUuid(`owner|${nameR1510}|country-new|youtube-studio-weekly`);
+const waitingR1510=await getPushState(db,PUSH_RETRY_PREFIX_R1505+retryIdR1510).catch(()=>null);
+if(waitingR1510?.value){retryPendingR1510.push(item.country);continue;}
 const title = `🌍 ↑ Новая страна · ${item.country}`;
 const message = `${item.flag} ${item.country} появилась в аудитории ANDRIK за эту неделю · ${item.views} просмотров${totalCountries ? ` · всего стран ${totalCountries}` : ''}`;
 const result = await sendOwnerPush(env, {
@@ -11754,6 +11782,7 @@ failed:failed.length,
 totalCountries,
 countries:fresh.map(item => item.country),
 delivered,
+retryPendingR1510,
 failures:failed,
 weekKey,
 mode:'weekly-growth-r679'
@@ -13334,6 +13363,20 @@ function splitCronErrorSummaryR1509(job, record){
 }
 // R1504 - independent server-side Cron job lanes. Active only for requests with ?job=.
 // Never run the old combined engagement path alongside the split lanes.
+// R1510: runtime state gate. An expired Facebook token for an inactive
+// broadcaster must not fail unrelated maintenance/checkpoint/backup jobs.
+async function facebookMetricsGateR1510(db){
+ const cfg=await fbScheduleReadR1292(db).catch(()=>({enabled:false}));
+ const agent=parseStateValueR627(await getPushState(db,RADIO_REMOTE_R627.agentKey).catch(()=>null))||{};
+ const state=agent.status||{},fb=state.facebookR1313||{};
+ const hardOff=Boolean(fb.hardOff?.locked||fb.hardOffR1417?.locked||state.facebookHardOffR1417?.locked);
+ const ageMs=Date.now()-Date.parse(agent.lastSeen||'');
+ const agentFresh=Number.isFinite(ageMs)&&ageMs>=0&&ageMs<180000;
+ const running=agentFresh&&Boolean(state.facebookRunningR1313??fb.running);
+ const enabled=agentFresh&&Boolean(state.facebookEnabledR1313??fb.enabled);
+ const scheduled=Boolean(cfg.enabled);
+ return {active:!hardOff&&(running||enabled||scheduled),reason:hardOff?'facebook-hard-off':(!running&&!enabled&&!scheduled?'facebook-inactive':'facebook-active'),hardOff,agentFresh};
+}
 const SPLIT_JOBS_R1504=new Set(['likes','comments','subscribers','releases','maintenance']);
 async function handleSplitCronGatewayR1504(request,env,ctx,job){
  if(!adminAuthorized(request,env)&&!cronAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
@@ -13411,7 +13454,12 @@ async function handleSplitCronGatewayR1504(request,env,ctx,job){
     tasks.checkpoint=await checkpointDailySummaryAutoR398(env,'split-r1504-maintenance').catch(e=>({ok:false,error:cleanPlainText(e?.message||e,260)}));
     const local=getBratislavaClock();
     if(local.hour===5||local.hour===17)tasks.dailySummary=await maybeSendDailyOwnerSummary(env).catch(e=>({ok:false,error:cleanPlainText(e?.message||e,260)}));
-    if(switches.facebookMetrics&&env.META_USER_ACCESS_TOKEN_R1292)tasks.facebookMetrics=await fbMetaReadR1292(env,false).catch(e=>({ok:false,error:cleanPlainText(e?.message||e,260)}));
+    if(switches.facebookMetrics&&env.META_USER_ACCESS_TOKEN_R1292){
+      const gateR1510=await facebookMetricsGateR1510(db).catch(e=>({active:true,reason:'state-unavailable',error:cleanPlainText(e?.message||e,180)}));
+      tasks.facebookMetrics=gateR1510.active
+        ? await fbMetaReadR1292(env,false).catch(e=>({ok:false,error:cleanPlainText(e?.message||e,260)}))
+        : {ok:true,skipped:true,reason:gateR1510.reason,tokenConfigured:true,metricsNotRefreshed:true};
+    }
     // R1509: runCronMaintenanceSliceR416 returns ok:true even when degraded and status=partial.
     // Propagate actual degradation, otherwise system failures are marked green.
     result={ok:!Object.values(tasks).some(v=>v?.ok===false||v?.degraded===true||v?.status==='partial'),tasks};
