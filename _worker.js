@@ -6,6 +6,7 @@ const ANDRIK_CONTROL_RELEASE = Object.freeze({ short:'R526', number:526, version
 const PUSH_DELIVERY_CORRECTNESS_R526 = 'R526-ONESIGNAL-PLATFORM-DELIVERY+SUBSCRIBER-COUNT-GATE+HONEST-CADENCE';
 const YOUTUBE_SUBSCRIBER_PUSH_R1150 = 'R1150-YOUTUBE-SUBSCRIBER-GAIN+LOSS-5M-OWNER-DELIVERY';
 const YOUTUBE_UNSUBSCRIBER_CORRECTION_R1507 = 'R1507-SUBSCRIBER-LOSS-PREVIOUS-SAMPLE-GUARD';
+const YOUTUBE_SUBSCRIBER_GAIN_RELIABILITY_R1508 = 'R1508-COUNT-GAIN-CANONICAL-PUSH+VISIBLE-COVERAGE-RESYNC';
 const PUSH_AUTOMATION_FIX_R778 = 'R778-CRON-UA-INDEPENDENT-HEALTH-RESCUE-STRICT-OWNER-DELIVERY';
 const YOUTUBE_COMMENT_PUSH_RELIABLE_R953 = 'R953-LIVE-2M-RECENT6-5M-OLDER1-SEPARATE-COMMENT-LANE';
 const RADIO_AUDIENCE_GRAPH_R1156 = 'R1156-RADIO-AUDIENCE-DAY-GRAPH+D1-2M-SAMPLING';
@@ -9197,7 +9198,12 @@ if(Number.isFinite(age)&&age>=0&&age<6*60*60*1000)visibleCreditR1203=Math.max(0,
 }catch(_){visibleCreditR1203=0;}
 if(previous){
 fastVisibleR1203=await fetchFastVisibleSubscriberCandidatesR1203(env,db,current-before,startedAt).catch(error=>({ok:false,available:false,error:cleanPlainText(error?.message||error,260),candidates:[],observed:0}));
-if(fastVisibleR1203.candidates?.length){
+// R1508: on an observed rise, send ONE authoritative total-count notification.
+// Do not send a named subscriber first and then 'cover' the count event with it:
+// OneSignal acceptance of the named message does not prove Android displayed it.
+// Public profiles observed in this poll are silently marked after count-push success.
+// On a flat/down count, named public events remain eligible for immediate alert.
+if(fastVisibleR1203.candidates?.length && current<=before){
 fastVisibleDeliveryR1203=await deliverFastVisibleSubscribersR1203(env,db,identity,fastVisibleR1203.candidates,startedAt).catch(error=>({ok:false,delivered:[],pending:[],failed:[{error:cleanPlainText(error?.message||error,260)}],sent:0}));
 }
 }
@@ -9231,21 +9237,13 @@ notifiedTotalR658=current;
 }else if(!identity.hiddenSubscribers && current>=before && current>Math.min(before,notifiedTotalR658)){
 const deliveryBaseR658=Math.min(before,notifiedTotalR658);
 const fullDeltaR1203=current-deliveryBaseR658;
-const newSampleDeltaR1203=Math.max(0,current-before);
-const visibleNowR1203=Math.max(0,Number(fastVisibleDeliveryR1203.sent||0));
-const visibleCoverageR1203=Math.min(fullDeltaR1203,visibleNowR1203+visibleCreditR1203);
-const creditUsedR1203=Math.min(visibleCreditR1203,Math.max(0,visibleCoverageR1203-visibleNowR1203));
-if(creditUsedR1203>0){visibleCreditR1203=Math.max(0,visibleCreditR1203-creditUsedR1203);await setPushState(db,visibleCreditKeyR1203,JSON.stringify({count:visibleCreditR1203,updatedAt:startedAt})).catch(()=>{});}
-const delta=Math.max(0,fullDeltaR1203-visibleCoverageR1203);
-const deliveryModeR658=current>before?'cron-lite-r1203':'catchup-r1203';
-if(delta<=0 && visibleCoverageR1203>0){
-sent=true;
-await Promise.all([
-saveYoutubeEventRow(db,{key,type:'subscriber-count',resourceId:identity.channelId,title:identity.title,countValue:current,url:identity.channelUrl,payload:{...identity,deliveryMode:'fast-visible-covered-r1203',visibleCoverageR1203}}),
-setPushState(db,notifiedKeyR658,String(current))
-]);
-notifiedTotalR658=current;
-}else if(delta>0){
+// R1508: an old 'visible credit' must never erase a confirmed numerical rise.
+// Each observed gain receives its own total-count push; the same gain's public
+// identity is stored silently, not dispatched again in this polling cycle.
+const visibleCoverageR1203=0;
+const delta=Math.max(0,fullDeltaR1203);
+const deliveryModeR658=current>before?'cron-count-authoritative-r1508':'catchup-count-r1508';
+if(delta>0){
 const effectiveBaseR1203=current-delta;
 const onceKey=`push-once:youtube-subscriber-r1203:${effectiveBaseR1203}:${current}`;
 const claimed=await claimPushOnce(db,onceKey,startedAt);
@@ -9268,6 +9266,12 @@ saveYoutubeEventRow(db,{key,type:'subscriber-count',resourceId:identity.channelI
 setPushState(db,notifiedKeyR658,String(current))
 ]);
 notifiedTotalR658=current;
+// Once the aggregate rise has been accepted, mark visible profiles already
+// observed in the same poll to avoid a duplicate named push in 15 minutes.
+for(const item of fastVisibleR1203.candidates||[]){
+await saveYoutubeEventRow(db,{key:`subscriber:${item.id}`,type:'subscriber',resourceId:item.id,author:item.title,title:item.title,url:item.url,payload:{...item,coveredBy:'youtube-subscriber-count-r1508',countAt:current,seenAt:startedAt}}).catch(()=>{});
+}
+if(visibleCreditR1203>0){visibleCreditR1203=0;await setPushState(db,visibleCreditKeyR1203,JSON.stringify({count:0,updatedAt:startedAt})).catch(()=>{});}
 }else{
 await releasePushOnceClaim(db,onceKey).catch(()=>{});
 }
@@ -9317,7 +9321,7 @@ commentsTotal:previousCountsR469?.commentsTotal ?? null,
 mode:'cron-lite-r469',
 updatedAt:startedAt
 })}).catch(()=>{});
-return {ok:!pushError,subscribers:current,previousSubscribers:before,lastNotifiedSubscribers:notifiedTotalR658,delta:Math.max(0,current-before),loss:Math.max(0,before-current),signedDelta:current-before,direction:current>before?'up':current<before?'down':'same',sent,error:pushError,checkedAt:startedAt,mode:'subscriber-r1203-2m-visible+count',subscriberPushR1150:YOUTUBE_SUBSCRIBER_PUSH_R1150,fastVisibleR1203:{ok:fastVisibleR1203.ok,available:fastVisibleR1203.available,seeded:fastVisibleR1203.seeded,observed:fastVisibleR1203.observed,candidates:fastVisibleR1203.candidates?.length||0,sent:fastVisibleDeliveryR1203.sent||0,pending:fastVisibleDeliveryR1203.pending?.length||0,failed:fastVisibleDeliveryR1203.failed?.length||0,error:fastVisibleR1203.error||'',credit:visibleCreditR1203},deliveryRepairR765:deliveryRepairR765 || null};
+return {ok:!pushError,subscribers:current,previousSubscribers:before,lastNotifiedSubscribers:notifiedTotalR658,delta:Math.max(0,current-before),loss:Math.max(0,before-current),signedDelta:current-before,direction:current>before?'up':current<before?'down':'same',sent,error:pushError,checkedAt:startedAt,mode:'subscriber-r1508-15m-canonical-gain+visible-fallback',subscriberGainFixR1508:YOUTUBE_SUBSCRIBER_GAIN_RELIABILITY_R1508,subscriberPushR1150:YOUTUBE_SUBSCRIBER_PUSH_R1150,fastVisibleR1203:{ok:fastVisibleR1203.ok,available:fastVisibleR1203.available,seeded:fastVisibleR1203.seeded,observed:fastVisibleR1203.observed,candidates:fastVisibleR1203.candidates?.length||0,sent:fastVisibleDeliveryR1203.sent||0,pending:fastVisibleDeliveryR1203.pending?.length||0,failed:fastVisibleDeliveryR1203.failed?.length||0,error:fastVisibleR1203.error||'',credit:visibleCreditR1203},deliveryRepairR765:deliveryRepairR765 || null};
 } catch(error) {
 return {ok:false,error:cleanPlainText(error?.message || error,400),checkedAt:startedAt};
 }
