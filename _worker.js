@@ -13294,10 +13294,43 @@ async function handleCronTaskSettingsR1493(request,env){
  }
  const enabled=await cronTaskSettingsR1493(db);
  const jobsR1504=['likes','comments','subscribers','releases','maintenance'];
- const keysR1504=jobsR1504.flatMap(job=>[`cron-r1504-${job}-attempt-at`,`cron-r1504-${job}-finish-at`,`cron-r1504-${job}-status`]);
+ const keysR1504=jobsR1504.flatMap(job=>[`cron-r1504-${job}-attempt-at`,`cron-r1504-${job}-finish-at`,`cron-r1504-${job}-status`,`cron-r1504-${job}-last-result`]);
  const splitRowsR1504=await getPushStatesR1501(db,keysR1504).catch(()=>new Map());
- const splitJobsR1504=jobsR1504.map(job=>({job,attemptAt:splitRowsR1504.get(`cron-r1504-${job}-attempt-at`)?.value||'',finishAt:splitRowsR1504.get(`cron-r1504-${job}-finish-at`)?.value||'',status:splitRowsR1504.get(`cron-r1504-${job}-status`)?.value||'not-started'}));
+ const splitJobsR1504=jobsR1504.map(job=>{
+  let last={};try{last=JSON.parse(splitRowsR1504.get(`cron-r1504-${job}-last-result`)?.value||'{}');}catch(_){}
+  return {job,attemptAt:splitRowsR1504.get(`cron-r1504-${job}-attempt-at`)?.value||'',finishAt:splitRowsR1504.get(`cron-r1504-${job}-finish-at`)?.value||'',status:splitRowsR1504.get(`cron-r1504-${job}-status`)?.value||'not-started',durationMs:Number(last.ms||0),error:splitCronErrorSummaryR1509(job,last)};
+ });
  return json({ok:true,version:'R1504',tasks:CRON_TASKS_R1493.map(t=>({...t,enabled:enabled[t.id]})),splitJobsR1504,note:'Настройки действуют при следующем цикле. При новом Cron задания разделяются; старый режим сохраняется до переключения.'},200,{'cache-control':'no-store'});
+}
+// R1509: derive a concise, non-sensitive explanation from each persisted split result.
+// Never turn an upstream failure into success; show the stage and error in diagnostics.
+function splitCronErrorSummaryR1509(job, record){
+ const info=record?.result&&typeof record.result==='object'?record.result:record||{};
+ const out=[];
+ const add=(stage,value)=>{
+  if(out.length>=6||value==null||value==='')return;
+  const msg=cleanPlainText(Array.isArray(value)?value.join(' | '):value,240);
+  if(msg)out.push(`${stage}: ${msg}`);
+ };
+ add('exception',record?.error||info.error);
+ if(job==='comments'){
+  for(const part of ['sweep','live']){
+   const r=info[part]||{};
+   add(part,r.error);
+   if(Array.isArray(r.warnings)&&r.warnings.length)add(part,r.warnings.slice(0,3));
+   if(r.failed>0)add(part,`${r.failed} push failed`);
+  }
+ }
+ if(job==='maintenance'){
+  for(const [part,r] of Object.entries(info.tasks||{})){
+   if(r?.ok===false||r?.degraded||r?.status==='partial'){
+    add(part,r.error||(Array.isArray(r.errors)?r.errors.join(' | '):'')||r.reason||'partial');
+   }
+  }
+ }
+ if(!out.length&&info.ok===false)add('job','returned ok=false without detail');
+ if(!out.length&&record?.ok===false)add('job','failed without detail');
+ return out.join(' ; ').slice(0,850);
 }
 // R1504 - independent server-side Cron job lanes. Active only for requests with ?job=.
 // Never run the old combined engagement path alongside the split lanes.
@@ -13342,8 +13375,12 @@ async function handleSplitCronGatewayR1504(request,env,ctx,job){
     let channelId=(await getPushState(db,'youtube-websub-channel-id-r332').catch(()=>null))?.value||'';
     if(!channelId)channelId=await resolveYoutubeWebSubChannelIdR332(env,db);
     if(!channelId)throw new Error('youtube-channel-id-unavailable');
-    const sweep=await checkYoutubeRecentCommentsEvery5mR953(env,db,channelId,nowIso);
-    const live=await checkYoutubeLiveCommentsEvery2mR938(env,db,channelId,nowIso);
+    // R1509: an error in the multi-video sweep must not suppress the LIVE comments/chat check.
+    // Keep execution sequential to avoid doubling concurrent YouTube API load.
+    const sweep=await checkYoutubeRecentCommentsEvery5mR953(env,db,channelId,nowIso)
+      .catch(error=>({ok:false,error:cleanPlainText(error?.message||error,300),phase:'recent-video-comments'}));
+    const live=await checkYoutubeLiveCommentsEvery2mR938(env,db,channelId,nowIso)
+      .catch(error=>({ok:false,error:cleanPlainText(error?.message||error,300),phase:'live-comments-and-chat'}));
     result={ok:sweep?.ok!==false&&live?.ok!==false,sweep,live};
    }else if(job==='subscribers'){
     await setPushState(db,'cron-subscriber-attempt-at-r1503',nowIso).catch(()=>{});
@@ -13375,11 +13412,20 @@ async function handleSplitCronGatewayR1504(request,env,ctx,job){
     const local=getBratislavaClock();
     if(local.hour===5||local.hour===17)tasks.dailySummary=await maybeSendDailyOwnerSummary(env).catch(e=>({ok:false,error:cleanPlainText(e?.message||e,260)}));
     if(switches.facebookMetrics&&env.META_USER_ACCESS_TOKEN_R1292)tasks.facebookMetrics=await fbMetaReadR1292(env,false).catch(e=>({ok:false,error:cleanPlainText(e?.message||e,260)}));
-    result={ok:!Object.values(tasks).some(v=>v?.ok===false),tasks};
+    // R1509: runCronMaintenanceSliceR416 returns ok:true even when degraded and status=partial.
+    // Propagate actual degradation, otherwise system failures are marked green.
+    result={ok:!Object.values(tasks).some(v=>v?.ok===false||v?.degraded===true||v?.status==='partial'),tasks};
    }
    const failed=result?.ok===false||result?.httpOk===false;
    const done=new Date().toISOString();
-   await setPushStatesR1501(db,{[statusKey+'-finish-at']:done,[statusKey+'-status']:failed?'failed':'ok',[statusKey+'-last-result']:JSON.stringify({at:done,ms:Date.now()-startMs,ok:!failed,result}).slice(0,5500)}).catch(()=>{});
+   const errorR1509=failed?splitCronErrorSummaryR1509(job,{result}):'';
+   const durationR1509=Date.now()-startMs;
+   const fullResultR1509={at:done,ms:durationR1509,ok:!failed,error:errorR1509,result};
+   // R1509: do not truncate JSON mid-token; the previous 5500-char slice could
+   // make the diagnostic result unparsable just when it was needed most.
+   const serializedR1509=JSON.stringify(fullResultR1509);
+   const savedR1509=serializedR1509.length<=5500?serializedR1509:JSON.stringify({at:done,ms:durationR1509,ok:!failed,error:errorR1509,detailsOmitted:true});
+   await setPushStatesR1501(db,{[statusKey+'-finish-at']:done,[statusKey+'-status']:failed?'failed':'ok',[statusKey+'-last-result']:savedR1509}).catch(()=>{});
    if(failed)await recordSystemLog(env,{scope:'automation',level:'warning',event:'split-job-failed-r1504',message:`Cron R1504 ${job} сообщил об ошибке`,details:{job,result}}).catch(()=>{});
   }catch(error){
    const err=cleanPlainText(error?.message||error,300),done=new Date().toISOString();
@@ -21095,16 +21141,17 @@ async function handleCronDiagnosticR1488(request, env) {
   let splitJobs=[];
   if(splitActive){
     const splitKeys=Object.keys(splitPeriods).flatMap(job=>[
-      `cron-r1504-${job}-attempt-at`,`cron-r1504-${job}-finish-at`,`cron-r1504-${job}-status`
+      `cron-r1504-${job}-attempt-at`,`cron-r1504-${job}-finish-at`,`cron-r1504-${job}-status`,`cron-r1504-${job}-last-result`
     ]);
     const splitRows=await getPushStatesR1501(db,splitKeys).catch(()=>new Map());
     splitJobs=Object.entries(splitPeriods).map(([job,interval])=>{
       const attemptAt=splitRows.get(`cron-r1504-${job}-attempt-at`)?.value||'';
       const finishAt=splitRows.get(`cron-r1504-${job}-finish-at`)?.value||'';
       const status=splitRows.get(`cron-r1504-${job}-status`)?.value||'not-started';
+      let last={};try{last=JSON.parse(splitRows.get(`cron-r1504-${job}-last-result`)?.value||'{}');}catch(_){}
       const lastMs=Date.parse(finishAt||attemptAt);
       const ageMinutes=Number.isFinite(lastMs)?Math.round((Date.now()-lastMs)/60000):null;
-      return {job,intervalMinutes:interval,status,attemptAt,finishAt,ageMinutes};
+      return {job,intervalMinutes:interval,status,attemptAt,finishAt,ageMinutes,durationMs:Number(last.ms||0),error:splitCronErrorSummaryR1509(job,last)};
     });
   }
   const warnings=[];
@@ -21120,6 +21167,14 @@ async function handleCronDiagnosticR1488(request, env) {
     if(item.ageMinutes===null||item.ageMinutes>item.intervalMinutes+7)warnings.push(`R1504 ${item.job}: завершение старше ${item.intervalMinutes+7} минут`);
     else if(item.status==='failed')warnings.push(`R1504 ${item.job}: предыдущая проверка завершилась ошибкой`);
   }
+  // R1509: diagnose whether a subscriber notification was actually attempted,
+  // accepted by OneSignal, or merely absent. Never claim delivery to Android.
+  const subscriberPushHistoryR1509=await db.prepare(`
+    SELECT type,status,recipients,error,created_at AS createdAt,onesignal_id AS oneSignalId
+    FROM push_history
+    WHERE type IN ('youtube-subscriber-count','youtube-subscriber','youtube-unsubscriber')
+    ORDER BY created_at DESC LIMIT 5
+  `).all().then(r=>(r.results||[]).map(row=>({type:row.type,status:row.status,recipients:Number(row.recipients||0),error:cleanPlainText(row.error||'',240),createdAt:row.createdAt,oneSignalAccepted:!!row.oneSignalId}))).catch(()=>[]);
   const latestSplit=splitJobs.slice().sort((a,b)=>Date.parse(b.finishAt||b.attemptAt||'')-Date.parse(a.finishAt||a.attemptAt||''))[0];
   const latestSplitAt=latestSplit?.finishAt||latestSplit?.attemptAt||'';
   const latestSplitAge=Number.isFinite(Date.parse(latestSplitAt))?Math.max(0,Math.round((Date.now()-Date.parse(latestSplitAt))/60000)):null;
@@ -21140,7 +21195,7 @@ async function handleCronDiagnosticR1488(request, env) {
     subscriberAttemptAt:read('subscriberAttempt'),subscriberAttemptAgeMinutes:age('subscriberAttempt'),
     subscriberLastStatus:read('subscriberStatus'),subscriberLastError:read('subscriberError'),
     lastFullAt:read('full'),lastFullStatus:read('fullStatus'),
-    splitModeR1504:splitActive,splitJobsR1504:splitJobs,
+    splitModeR1504:splitActive,splitJobsR1504:splitJobs,subscriberPushHistoryR1509,
     checkedAt:new Date().toISOString()
   },200,{...JSON_HEADERS,'cache-control':'no-store'});
 }
