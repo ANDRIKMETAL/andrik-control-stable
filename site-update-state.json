@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r358-deploy-nohang",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1793289755210-9223542865",
+  "operationId": "publish-1793611371836-4c5a907755",
   "release": "R1510",
-  "archiveName": "SITE-R1510-CRON-PUSH-STABILITY-FULL.zip",
-  "sourceHead": "7329ed6e4299cd7a450cc7de657a69da886af521",
-  "backupSha": "7329ed6e4299cd7a450cc7de657a69da886af521",
+  "archiveName": "SITE-R1510-YOUTUBE-QUOTA-QUIET-PUSH-VERIFIED.zip",
+  "sourceHead": "926e5c297125f90eeddb704e84f0b3afe6c5e4b7",
+  "backupSha": "926e5c297125f90eeddb704e84f0b3afe6c5e4b7",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-10-29T16:02:37.145Z"
+  "generatedAt": "2026-11-02T09:22:54.101Z"
 }

@@ -1,1 +1,2 @@
-ANDRIK SITE R1510 FULL | comments, Facebook metrics, country retry stability
+# andrik-control-stable
+Stable source code and releases of ANDRIK Control
