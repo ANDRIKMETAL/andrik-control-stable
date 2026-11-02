@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r358-deploy-nohang",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1793617150796-621b754cc1",
-  "release": "R1511",
-  "archiveName": "SITE-R1511-MASK-HERO-SILENT-COMPRESSED-VERIFIED.zip",
-  "sourceHead": "39e78e430448f3beb87f1934c4f63b59dd533ed1",
-  "backupSha": "39e78e430448f3beb87f1934c4f63b59dd533ed1",
+  "operationId": "publish-1793618624894-5bb51f08c7",
+  "release": "R1512",
+  "archiveName": "SITE-R1512-MASK-HERO-AUTOPLAY-FIX-VERIFIED.zip",
+  "sourceHead": "4a4b685ae2057b2e56c39469aeaeba50f22514f3",
+  "backupSha": "4a4b685ae2057b2e56c39469aeaeba50f22514f3",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-11-02T10:59:12.030Z"
+  "generatedAt": "2026-11-02T11:23:46.110Z"
 }
