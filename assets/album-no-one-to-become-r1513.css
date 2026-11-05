@@ -2,7 +2,7 @@
 #album-no-one-to-become{grid-column:1/-1!important;grid-template-columns:minmax(260px,42%) minmax(0,1fr)!important;border-color:rgba(207,171,111,.38);background:linear-gradient(160deg,#14120f,#050b10 58%);scroll-margin-top:86px}
 #album-no-one-to-become .album-year{color:#e1c798}
 #album-no-one-to-become .album-name{font-size:clamp(2rem,5vw,3.5rem);line-height:1.08;overflow-wrap:normal}
-#album-no-one-to-become .album-art{width:100%;min-width:0;aspect-ratio:auto;overflow:hidden;background:#eeeae2}
+#album-no-one-to-become .album-art{width:100%;min-width:0;align-self:start;aspect-ratio:1;height:auto!important;overflow:hidden;background:#eeeae2}
 #album-no-one-to-become .album-info{min-width:0}
 #album-no-one-to-become .album-art img{display:block;width:100%;height:100%;object-fit:contain}
 #discography .discography-grid #album-no-one-to-become.album-card .album-art img.discography-breathe{object-fit:contain!important}

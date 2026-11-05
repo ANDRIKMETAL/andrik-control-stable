@@ -1,5 +1,5 @@
 (()=>{'use strict';
-const slots=['illusion','ocean','trika','beyond','silent','extras'];
+const slots=['illusion','ocean','trika','beyond','silent','no-one-to-become','extras'];
 const fmt=n=>(Number(n||0)/1048576).toFixed(1)+' МБ';
 let settings=null,busy=false,loading=false;let pingPong=null,pingPongFresh=false;
 function auth(){return window.AndrikRadioVisualAuth?.headers()||{}}

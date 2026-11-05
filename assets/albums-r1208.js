@@ -27,7 +27,7 @@ b.setAttribute('aria-disabled','true');b.textContent=copy.wait;
 };
 buttons.forEach(b=>{
 const slug=String(b.dataset.albumDownload||'');
-if(slug==='trika')setReady(b,slug,null); else setMissing(b);
+if(slug==='trika'||b.dataset.albumReady==='true')setReady(b,slug,null); else setMissing(b);
 });
 fetch('/api/music/albums/status',{cache:'no-store'}).then(r=>r.ok?r.json():Promise.reject(new Error('HTTP '+r.status))).then(d=>{
 const map=new Map((d.albums||[]).map(a=>[a.slug,a]));

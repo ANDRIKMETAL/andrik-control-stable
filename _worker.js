@@ -19441,8 +19441,10 @@ ocean:'radio/album-backgrounds/ocean.img',
 trika:'radio/album-backgrounds/trika.img',
 beyond:'radio/album-backgrounds/beyond.img',
 silent:'radio/album-backgrounds/silent.img',
+'no-one-to-become':'radio/album-backgrounds/no-one-to-become.img',
 extras:'radio/album-backgrounds/covers-extended-singles.img'
 });
+const RADIO_NO_ONE_DEFAULT_ART_R1514 = {"url":"/assets/no-one-to-become-cover-r1513.webp","size":232492,"etag":"\"no-one-cover-r1514-a16f91b25c8c\""};
 function radioAlbumBgSlotR1211(request){
 const slot=String(new URL(request.url).searchParams.get('slot')||'').trim().toLowerCase();
 return Object.prototype.hasOwnProperty.call(RADIO_ALBUM_BG_R1211,slot)?slot:'';
@@ -19458,6 +19460,7 @@ const slot=radioAlbumBgSlotR1211(request);if(!slot)return json({ok:false,error:'
 const key=RADIO_ALBUM_BG_R1211[slot];
 if(request.method==='GET'){
 const head=await bucket.head(key).catch(()=>null);
+if(!head&&slot==='no-one-to-become')return json({ok:true,slot,key,exists:true,size:RADIO_NO_ONE_DEFAULT_ART_R1514.size,contentType:'image/webp',etag:RADIO_NO_ONE_DEFAULT_ART_R1514.etag,source:'album-cover',publicUrl:RADIO_NO_ONE_DEFAULT_ART_R1514.url});
 return json({ok:true,slot,key,exists:Boolean(head),size:Number(head?.size||0),uploaded:head?.uploaded||null,contentType:head?.httpMetadata?.contentType||'',etag:head?.httpEtag||head?.etag||''});
 }
 if(request.method==='DELETE'){
@@ -19482,7 +19485,14 @@ async function handleRadioAlbumBgPublicR1211(request,env){
 const bucket=getMusicBucketR314(env);if(!bucket)return new Response('R2 unavailable',{status:503,headers:{'cache-control':'no-store'}});
 const slot=radioAlbumBgSlotR1211(request);if(!slot)return new Response('Not found',{status:404,headers:{'cache-control':'no-store'}});
 const key=RADIO_ALBUM_BG_R1211[slot];
-const head=await bucket.head(key).catch(()=>null);if(!head)return new Response('Not found',{status:404,headers:{'cache-control':'no-store'}});
+const head=await bucket.head(key).catch(()=>null);
+if(!head&&slot==='no-one-to-become'&&env.ASSETS){
+ const response=await env.ASSETS.fetch(new Request(new URL(RADIO_NO_ONE_DEFAULT_ART_R1514.url,request.url),{method:request.method==='HEAD'?'HEAD':'GET'}));
+ if(!response.ok)return new Response('Cover unavailable',{status:404,headers:{'cache-control':'no-store'}});
+ const headers=new Headers(response.headers);headers.set('content-type','image/webp');headers.set('content-length',String(RADIO_NO_ONE_DEFAULT_ART_R1514.size));headers.set('etag',RADIO_NO_ONE_DEFAULT_ART_R1514.etag);headers.set('cache-control','public, max-age=60, must-revalidate');headers.set('x-andrik-radio-background-slot',slot);
+ return new Response(request.method==='HEAD'?null:response.body,{status:200,headers});
+}
+if(!head)return new Response('Not found',{status:404,headers:{'cache-control':'no-store'}});
 const headers=new Headers();
 headers.set('content-type',head?.httpMetadata?.contentType||'image/jpeg');
 headers.set('content-length',String(Number(head.size||0)));
@@ -19500,7 +19510,7 @@ return new Response(object.body,{status:200,headers});
 
 // R1430: selectable five-album visual mode. R2 is the single source of truth.
 // R1442: independent rows prevent a ticker toggle overwriting an album choice.
-const RADIO_VISUAL_SLOTS_R1442=['illusion','ocean','trika','beyond','silent','extras'];
+const RADIO_VISUAL_SLOTS_R1442=['illusion','ocean','trika','beyond','silent','no-one-to-become','extras'];
 const RADIO_VISUAL_PREFIX_R1442='radio-visual-r1442:';
 const RADIO_ALBUM_LOOP_LIMIT_R1442=32*1024*1024;
 const radioLoopKeyR1442=slot=>`radio/album-loops-r1442/${slot}.mp4`;
