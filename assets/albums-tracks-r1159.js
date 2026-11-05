@@ -1,10 +1,10 @@
 (()=>{'use strict';
 const LANG=String(document.documentElement.lang||'ru').toLowerCase().split('-')[0];
 const C={
-ru:{summary:'Треки альбома · слушать / скачать',loading:'Загружаем треки из R2…',empty:'MP3 этого альбома ещё не загружены в R2.',download:'↓ MP3'},
-uk:{summary:'Треки альбому · слухати / завантажити',loading:'Завантажуємо треки з R2…',empty:'MP3 цього альбому ще не завантажені в R2.',download:'↓ MP3'},
-sk:{summary:'Skladby albumu · počúvať / stiahnuť',loading:'Načítavam skladby z R2…',empty:'MP3 tohto albumu ešte nie sú v R2.',download:'↓ MP3'},
-en:{summary:'Album tracks · listen / download',loading:'Loading tracks from R2…',empty:'This album has no MP3 files in R2 yet.',download:'↓ MP3'}
+ru:{summary:'Треки альбома · слушать / скачать',loading:'Загружаем треки…',empty:'Треки доступны во встроенном плеере. MP3 появятся после загрузки альбома.',download:'↓ MP3'},
+uk:{summary:'Треки альбому · слухати / завантажити',loading:'Завантажуємо треки…',empty:'Треки доступні у вбудованому плеєрі. MP3 з’являться після завантаження альбому.',download:'↓ MP3'},
+sk:{summary:'Skladby albumu · počúvať / stiahnuť',loading:'Načítavam skladby…',empty:'Skladby sú dostupné vo vstavanom prehrávači. MP3 sa zobrazia po nahratí albumu.',download:'↓ MP3'},
+en:{summary:'Album tracks · listen / download',loading:'Loading tracks…',empty:'Listen in the built-in player. MP3 files will appear after the album is uploaded.',download:'↓ MP3'}
 }[LANG]||null;
 const slugFor=id=>id==='album-illusion'?'illusion-of-life':String(id||'').replace(/^album-/,'');
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));

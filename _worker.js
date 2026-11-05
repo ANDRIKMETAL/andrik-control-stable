@@ -18105,6 +18105,11 @@ releasePush=await publishCoverReleaseR1162(env,{key,title:metadata.title||name,u
 return json({ok:true,key,url:`https://music.andrikmetal.com/${key}`,size:body.byteLength,metadata,releaseType:folder==='covers'?'cover':folder==='singles'?'single':'album',releasePush,singleCleanup,coverCleanup,radioQuickUpload});
 }
 const MUSIC_ALBUMS_R446 = Object.freeze({
+'no-one-to-become': Object.freeze({
+slug:'no-one-to-become', label:'No One to Become', prefix:'albums/no-one-to-become/',
+zipKey:'albums/no-one-to-become/ANDRIK-NO-ONE-TO-BECOME-MP3.zip',
+zipName:'ANDRIK-NO-ONE-TO-BECOME-MP3.zip', expectedTracks:12
+}),
 'silent': Object.freeze({
 slug:'silent', label:'Silent (Тишина)', prefix:'albums/silent/',
 zipKey:'albums/silent/ANDRIK-SILENT-MP3-320kbps.zip',
@@ -18151,6 +18156,7 @@ const key=String(object?.key||'');
 const m=object?.customMetadata||{};
 const base=key.split('/').pop()?.replace(/\.mp3$/i,'').replace(/[_-]+/g,' ')||'';
 const rawTitle=musicSingleTitleR616(m.title||base);
+if(/^albums\/no-one-to-become\//i.test(key))return {pickerAlbum:'no-one-to-become',album:'No One to Become',track:musicHeaderTrackR1207(m.track||''),title:rawTitle};
 const silentNo=silentCanonicalNumberR1159(rawTitle);
 if(silentNo)return {pickerAlbum:'silent',album:'Silent (Тишина)',track:String(silentNo),title:SILENT_TRACKS_R1159[silentNo]||rawTitle};
 const folder=String((key.match(/^albums\/([^/]+)\//i)||[])[1]||'').toLowerCase();

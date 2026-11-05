@@ -10,7 +10,9 @@ en:{ready:'⬇ Download ZIP archive',wait:'ZIP not created yet',size:'ZIP'}
 const fmt=n=>{n=Number(n||0);if(!n)return '';const mb=n/1024/1024;return mb>=1024?(mb/1024).toFixed(1)+' GB':mb.toFixed(mb>=100?0:1)+' MB'};
 const endpoint=slug=>'/api/music/album-download?album='+encodeURIComponent(slug);
 const setReady=(b,slug,z)=>{
+b.hidden=false;
 b.classList.remove('is-disabled');
+document.querySelectorAll('[data-album-archive-note]').forEach(n=>{if(n.dataset.albumArchiveNote===slug)n.hidden=false});
 b.href=(z&&z.downloadUrl)||endpoint(slug);
 b.textContent=copy.ready;
 b.setAttribute('aria-disabled','false');
@@ -18,6 +20,8 @@ if(slug==='trika')b.setAttribute('download','ANDRIK-TRIKA-MP3-320kbps.zip');
 if(z?.size)b.title=`${copy.size}: ${fmt(z.size)}`;else b.title=copy.ready;
 };
 const setMissing=b=>{
+if(b.dataset.hideUntilReady==='true')b.hidden=true;
+document.querySelectorAll('[data-album-archive-note]').forEach(n=>{if(n.dataset.albumArchiveNote===b.dataset.albumDownload)n.hidden=true});
 b.classList.add('is-disabled');b.removeAttribute('href');b.removeAttribute('download');
 b.setAttribute('aria-disabled','true');b.textContent=copy.wait;
 };

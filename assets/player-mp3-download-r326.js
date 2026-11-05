@@ -10,6 +10,7 @@ function currentTrackNumber(){const m=String(posEl?.textContent||'').match(/^\s*
 function folderAlbumScore(t,currentAlbum){
 const a=norm(t.album),f=String(t.folder||'').toLowerCase(),c=norm(currentAlbum);
 if(!c)return 0;
+if(c.includes('no one to become')&&(a.includes('no one to become')||f==='albums/no-one-to-become'))return 4;
 if(a&&a===c)return 5;
 if((c.includes('silent')||c.includes('тишина'))&&(a.includes('silent')||a.includes('тишина')||f==='albums/silent'))return 4;
 if(c.includes('beyond')&&(a.includes('beyond')||f==='albums/beyond'))return 4;

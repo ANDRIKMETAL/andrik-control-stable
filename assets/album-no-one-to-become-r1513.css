@@ -1,0 +1,17 @@
+/* R1513 — sixth album; keep the established cover animation and platform buttons. */
+#album-no-one-to-become{grid-column:1/-1!important;grid-template-columns:minmax(260px,42%) minmax(0,1fr)!important;border-color:rgba(207,171,111,.38);background:linear-gradient(160deg,#14120f,#050b10 58%);scroll-margin-top:86px}
+#album-no-one-to-become .album-year{color:#e1c798}
+#album-no-one-to-become .album-name{font-size:clamp(2rem,5vw,3.5rem);line-height:1.08;overflow-wrap:normal}
+#album-no-one-to-become .album-art{width:100%;min-width:0;aspect-ratio:auto;overflow:hidden;background:#eeeae2}
+#album-no-one-to-become .album-info{min-width:0}
+#album-no-one-to-become .album-art img{display:block;width:100%;height:100%;object-fit:contain}
+#discography .discography-grid #album-no-one-to-become.album-card .album-art img.discography-breathe{object-fit:contain!important}
+#album-no-one-to-become .no-one-release-actions-r1513{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important;width:100%!important}
+#album-no-one-to-become .no-one-release-actions-r1513>a{min-width:0!important;width:100%!important;max-width:none!important;justify-content:center!important;text-align:center}
+#album-no-one-to-become .no-one-release-actions-r1513 .album-player-link,#album-no-one-to-become .no-one-release-actions-r1513 .album-download-r446{grid-column:1/-1!important}
+#album-no-one-to-become .youtube-music-btn-r602{border-color:rgba(255,74,74,.42)!important;background:linear-gradient(145deg,rgba(82,16,20,.88),rgba(35,8,12,.94))!important}
+.album-download-r446[hidden],[data-album-archive-note][hidden]{display:none!important}
+@media(min-width:1001px){body.home-r1190 .h-albums{grid-template-columns:repeat(6,minmax(0,1fr))}}
+@media(min-width:641px) and (max-width:1000px){body.home-r1190 .h-albums{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:760px){#album-no-one-to-become{grid-template-columns:1fr!important}#album-no-one-to-become .album-art{aspect-ratio:1;height:auto!important}}
+@media(max-width:560px){#album-no-one-to-become .no-one-release-actions-r1513{gap:7px!important}#album-no-one-to-become .album-platform-link{padding-inline:6px!important}#album-no-one-to-become .album-platform-label{font-size:.76rem!important;line-height:1.15!important}}
