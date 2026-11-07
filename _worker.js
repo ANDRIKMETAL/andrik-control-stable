@@ -8268,7 +8268,12 @@ if(date===today&&activeRadioIdR1518&&!waitingBetweenSessionsR1518&&!collector.se
 // All broadcasts from the selected day are included by default. Optional
 // videoId filters allow inspecting a single archived daytime/evening session.
 const wantedRadioIdR1518=cleanPlainText(url.searchParams.get('videoId')||'',80);
-const currentRadioVideoIdR1299=/^[A-Za-z0-9_-]{11}$/.test(wantedRadioIdR1518)?wantedRadioIdR1518:'';
+const isAllRadioHistoryR1519=wantedRadioIdR1518==='all';
+const isTimedRadioR1519=scheduleModeR1518==='timed';
+const autoRadioIdR1519=/^[A-Za-z0-9_-]{11}$/.test(String(activeRadioIdR1518||''))&&activeRadioIdR1518!==ANDRIK_RADIO_LIVE_ID_R1483?activeRadioIdR1518:'';
+const currentRadioVideoIdR1299=/^[A-Za-z0-9_-]{11}$/.test(wantedRadioIdR1518)?wantedRadioIdR1518:
+  (!isAllRadioHistoryR1519&&isTimedRadioR1519&&date===today?autoRadioIdR1519:'');
+const emptyAutoRadioR1519=!isAllRadioHistoryR1519&&isTimedRadioR1519&&date===today&&!currentRadioVideoIdR1299;
 const sessionsQueryR1518=await db.prepare(`SELECT video_id AS videoId,MIN(sampled_at) AS firstSampleAt,MAX(sampled_at) AS lastSampleAt,
     COUNT(*) AS samples,MAX(views) AS latestViews FROM radio_audience_samples WHERE local_date=?
     GROUP BY video_id ORDER BY MIN(sampled_at) ASC LIMIT 40`).bind(date).all();
@@ -8278,7 +8283,7 @@ const rowsQuery=db.prepare(`
     SELECT video_id AS videoId,sampled_at AS sampledAt,local_minute AS localMinute,
            views,concurrent_viewers AS concurrentViewers
     FROM radio_audience_samples
-    WHERE local_date=?${currentRadioVideoIdR1299?' AND video_id=?':''}
+    WHERE local_date=?${currentRadioVideoIdR1299?' AND video_id=?':emptyAutoRadioR1519?' AND 1=0':''}
     ORDER BY sampled_at ASC LIMIT 1600
   `);
 const rowsResult=await (currentRadioVideoIdR1299?rowsQuery.bind(date,currentRadioVideoIdR1299):rowsQuery.bind(date)).all();
@@ -8335,8 +8340,8 @@ createdAt:cleanPlainText(row?.createdAt||'',80),type:cleanPlainText(row?.type||'
 country:cleanPlainText(row?.country||'',8).toUpperCase(),region:cleanPlainText(row?.region||'',120),city:cleanPlainText(row?.city||'',120)
 }));
 return json({
-ok:true,version:'R1518',videoId:currentRadioVideoIdR1299,activeVideoId:activeRadioIdR1518||'',
-sessions:sessionsR1518,date,today,timezone:'Europe/Bratislava',
+ok:true,version:'R1519',videoId:currentRadioVideoIdR1299,activeVideoId:autoRadioIdR1519,
+sessions:sessionsR1518,selection:isAllRadioHistoryR1519?'all':currentRadioVideoIdR1299?'single':'waiting',date,today,timezone:'Europe/Bratislava',
 collectionStarted:series[0]?.sampledAt||'',samples:series.length,series,
 summary:{launches:totals.deltaSamples?totals.launches:null,deltaSamples:totals.deltaSamples,peakConcurrent:totals.peak,currentConcurrent:totals.current,lastCumulativeViews:totals.lastViews,
 lastViewsVideoId:totals.lastViewsVideoId,viewerSamples:totals.viewerSamples,viewSamples:totals.viewSamples,lastViewerSampleAt:totals.lastViewerSampleAt,
@@ -19597,10 +19602,20 @@ async function radioMetricsCurrentIdR1517(env){
   const [schedule,latest]=await Promise.all([radioScheduleReadR1517(env),radioSessionReadR1517(env)]);
   const sessionId=/^[A-Za-z0-9_-]{11}$/.test(String(latest?.videoId||''))?String(latest.videoId):'';
   // A just-created/preparing session may not appear LIVE in YouTube yet.
-  if(schedule.mode==='timed'&&sessionId&&['live','preparing'].includes(latest?.status))return sessionId;
+  if(schedule.mode==='timed'&&sessionId&&latest?.id?.startsWith(getBratislavaClock().date+'-')&&['live','preparing'].includes(latest?.status))return sessionId;
   const ownerLive=await radioOwnerLiveIdR1518(env);
   if(ownerLive)return ownerLive;
-  if(schedule.mode==='timed')return sessionId; // show completed archive if it exists
+  if(schedule.mode==='timed'){
+    // If the R1517 session record is missing (e.g. a manually started broadcast),
+    // discover the verified public LIVE. Never revive the old 24/7 recording.
+    if(sessionId&&sessionId!==ANDRIK_RADIO_LIVE_ID_R1483)return sessionId;
+    try{
+      const discovered=await resolvePublicYoutubeLiveR623(env,{fresh:true});
+      const candidate=String(discovered?.videoId||'');
+      if(discovered?.active&&/^[A-Za-z0-9_-]{11}$/.test(candidate)&&candidate!==ANDRIK_RADIO_LIVE_ID_R1483)return candidate;
+    }catch(_){}
+    return '';
+  }
   return ANDRIK_RADIO_LIVE_ID_R1483;
 }
 async function handleRadioScheduleControlR1517(request,env){

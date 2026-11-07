@@ -1,5 +1,5 @@
 'use strict';
-const VERSION = '55.00-r1484-radio-stats';
+const VERSION = '55.00-r1519-radio-current-native';
 async function clearControlCaches(){
 if(!self.caches) return;
 const keys = await caches.keys();

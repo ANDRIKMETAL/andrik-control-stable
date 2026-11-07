@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r358-deploy-nohang",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1794043490622-c20033112f",
-  "release": "R1518",
-  "archiveName": "SITE-R1518-RADIO-SPOILER-DYNAMIC-STATS-VALIDATED.zip",
-  "sourceHead": "ea1b194e900d0b8ce64cceed6b96e77a4d40130f",
-  "backupSha": "ea1b194e900d0b8ce64cceed6b96e77a4d40130f",
+  "operationId": "publish-1794046149481-e10576b074",
+  "release": "R1519",
+  "archiveName": "SITE-R1519-RADIO-CURRENT-LIVE-ANDROID-FIX.zip",
+  "sourceHead": "71ac2a4cc4c80769171d4572cc7298a71383667a",
+  "backupSha": "71ac2a4cc4c80769171d4572cc7298a71383667a",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-11-07T09:24:51.971Z"
+  "generatedAt": "2026-11-07T10:09:11.298Z"
 }

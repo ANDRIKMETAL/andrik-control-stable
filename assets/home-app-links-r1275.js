@@ -28,27 +28,21 @@ window.addEventListener('pagehide', mark, {once:true});
 window.addEventListener('blur', mark, {once:true});
 return () => left || document.hidden;
 }
-function genericYoutubeIntent(webUrl) {
+function genericYoutubeIntent(webUrl, id='') {
 try {
-const u = new URL(webUrl, location.href);
+// A direct Android intent with the official YouTube package preserves the
+// actual tap gesture. The earlier delayed generic intent opened a webview.
+const u = new URL(id ? `https://www.youtube.com/watch?v=${id}` : webUrl,location.href);
 const path = `${u.pathname || '/'}${u.search || ''}${u.hash || ''}`.replace(/^\//,'');
-return `intent://${u.host}/${path}#Intent;scheme=https;S.browser_fallback_url=${encodeURIComponent(u.href)};end`;
-} catch (_) {
-return webUrl;
+return `intent://${u.host}/${path}#Intent;scheme=https;package=com.google.android.youtube;S.browser_fallback_url=${encodeURIComponent(u.href)};end`;
+} catch (_) { return webUrl; }
 }
-}
-function launchAppFirst(webUrl, id) {
-const didLeave = navigationWatch();
-try { window.location.href = `vnd.youtube:${id}`; } catch (_) {}
-setTimeout(() => {
-if (!didLeave()) {
-try { window.location.href = genericYoutubeIntent(webUrl); }
-catch (_) { window.location.href = webUrl; }
-}
-}, 1500);
+function launchAppFirst(webUrl,id) {
+const intent=genericYoutubeIntent(webUrl,id);
+try { window.location.assign(intent); } catch (_) { window.location.assign(webUrl); }
 }
 async function fetchCurrentLiveTarget() {
-if (cachedLive?.id && Date.now() - cachedLive.at < 60000) return cachedLive;
+if (cachedLive?.id && Date.now() - cachedLive.at < 20000) return cachedLive;
 if (liveFetch) return liveFetch;
 liveFetch = (async () => {
 try {
@@ -69,6 +63,7 @@ at: Date.now()
 return cachedLive;
 }
 } catch (_) {}
+cachedLive=null;
 return null;
 })().finally(() => { liveFetch = null; });
 return liveFetch;
@@ -94,7 +89,7 @@ const links = [...document.querySelectorAll(selector)]
 .filter(link => link.dataset.youtubeLiveAuto === '1');
 if (!links.length) return;
 const live = await fetchCurrentLiveTarget();
-if (!live?.id) return;
+if (!live?.id){links.forEach(link=>{link.href='https://www.youtube.com/@andrikmetal/live';link.dataset.webUrl=link.href;delete link.dataset.youtubeLiveId;});return;}
 links.forEach(link => applyLive(link, live));
 }
 function openYoutubeFromRealTap(event, link) {
@@ -103,7 +98,6 @@ const webUrl = link.getAttribute('data-web-url') || link.href || '';
 const knownId =
 link.getAttribute('data-youtube-live-id') ||
 youtubeVideoId(webUrl) ||
-cachedLive?.id ||
 '';
 if (knownId) {
 event.preventDefault();
@@ -113,8 +107,8 @@ return;
 }
 event.preventDefault();
 event.stopPropagation();
-try { window.location.href = genericYoutubeIntent(webUrl); }
-catch (_) { window.location.href = webUrl; }
+try { window.location.assign(genericYoutubeIntent(webUrl)); }
+catch (_) { window.location.assign(webUrl); }
 }
 const boot = () => {
 prepare();

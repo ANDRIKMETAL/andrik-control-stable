@@ -47,7 +47,7 @@
     const day=today(),selected=date&&date!==day?String(date):'';
     const qs=new URLSearchParams({ts:String(Date.now())});
     if(selected)qs.set('date',selected);
-    if(/^[A-Za-z0-9_-]{11}$/.test(videoId))qs.set('videoId',videoId);
+    if(videoId==='all'||/^[A-Za-z0-9_-]{11}$/.test(videoId))qs.set('videoId',videoId);
     return shared('day:'+(selected||day)+':'+videoId,`/api/control/radio-audience-r1157?${qs}`,{force,timeoutMs:25000});
   }
   function metrics({force=false}={}){

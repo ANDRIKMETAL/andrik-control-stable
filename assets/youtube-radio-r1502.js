@@ -100,7 +100,7 @@ note.textContent=issues.length?`YouTube: ${parts.join(' • ')} · ${issues.slic
 async function loadAudienceFallbackR1264(){
 try{
 const d=await window.AndrikRadioDataR1483.load('');if(!d?.ok)return false;lastAudienceDataR1484=d;const q=d.summary||{};
-const sameLive=!currentLiveIdR1446||d.videoId===currentLiveIdR1446||q.lastViewsVideoId===currentLiveIdR1446;
+const sameLive=/^[A-Za-z0-9_-]{11}$/.test(currentLiveIdR1446)&&d.videoId===currentLiveIdR1446&&q.lastViewsVideoId===currentLiveIdR1446;
 if(sameLive&&!freshMetricsR1484&&currentOnlineR1446==null)text('youtubeRadioViewersR565',q.currentConcurrent==null?'—':number(q.currentConcurrent));
 if(sameLive)text('youtubeRadioStartsR947',q.launches==null?'—':number(q.launches));
 if(sameLive&&currentViewsR1484==null&&!hasVisibleViewsR1446&&q.lastCumulativeViews!=null)text('youtubeRadioViewsR565',number(q.lastCumulativeViews));
