@@ -8456,7 +8456,10 @@ async function handleControlRadioMetricsR1484(request,env){
   const metrics=await fetchRadioMetricsR1484(env),video=metrics.video;
   if(!video){
     const target=await radioMetricsCurrentIdR1517(env);
-    if(!target)return json({ok:true,version:'R1518',status:'waiting',active:false,videoId:'',title:'',views:null,concurrentViewers:null,likes:null,updatedAt:metrics.checkedAt,source:'waiting-for-next-session-r1518'},200,{'cache-control':'no-store'});
+    if(!target){
+      const [schedule,session,owner]=await Promise.all([radioScheduleReadR1517(env),radioSessionReadR1517(env),radioActiveBroadcastR1521(env)]);
+      return json({ok:true,version:'R1521',status:'unresolved',active:false,videoId:'',title:'',views:null,concurrentViewers:null,likes:null,updatedAt:metrics.checkedAt,source:'no-verified-video-id-r1521',diagnostic:{scheduleMode:schedule.mode,sessionStatus:cleanPlainText(session?.status||'',32),hasSessionId:Boolean(session?.videoId),ownerProbe:owner.reason||''}},200,{'cache-control':'no-store'});
+    }
     return json({ok:false,error:'youtube-statistics-unavailable',message:metrics.warning,videoId:target,source:metrics.source,attempts:metrics.attempts,updatedAt:metrics.checkedAt},503);
   }
   let health=null;
@@ -19576,6 +19579,34 @@ async function radioSessionReadR1517(env){
   const row=await getPushState(env.COMMENTS_DB,RADIO_SESSION_KEY_R1517).catch(()=>null);
   try{return JSON.parse(row?.value||'null')}catch(_){return null}
 }
+// R1521: independent read-only owner probe. `mine=true` with maxResults 25
+// can miss an active broadcast when numerous scheduled events exist.
+// The `broadcastStatus=active` API filters first; no stream is created/modified.
+let radioActiveProbeR1521={expiresAt:0,id:'',pending:null,reason:''};
+async function radioActiveBroadcastR1521(env){
+  if(radioActiveProbeR1521.expiresAt>Date.now())return {id:radioActiveProbeR1521.id,reason:radioActiveProbeR1521.reason};
+  if(radioActiveProbeR1521.pending)return radioActiveProbeR1521.pending;
+  const task=(async()=>{
+    let id='',reason='';
+    try{
+      const token=await getYoutubeOAuthAccessToken(env);
+      const u=new URL('https://www.googleapis.com/youtube/v3/liveBroadcasts');
+      u.searchParams.set('part','id,snippet,status');
+      u.searchParams.set('broadcastStatus','active');
+      u.searchParams.set('maxResults','50');
+      const data=await youtubeFetchR609(token,u.toString(),{},'radio-owner-active-r1521');
+      const rows=(Array.isArray(data?.items)?data.items:[]).filter(row=>
+        youtubeLifeKeyR609(row?.status?.lifeCycleStatus)==='live'&&/^[A-Za-z0-9_-]{11}$/.test(String(row?.id||''))
+      ).sort((a,b)=>(Date.parse(b?.snippet?.actualStartTime||b?.snippet?.scheduledStartTime||0)||0)-(Date.parse(a?.snippet?.actualStartTime||a?.snippet?.scheduledStartTime||0)||0));
+      id=String(rows[0]?.id||'');reason=id?'owner-active-broadcast-r1521':'owner-reports-no-active-broadcast';
+    }catch(error){reason='owner-probe-error:'+cleanPlainText(error?.message||error,200)}
+    radioActiveProbeR1521.id=id;radioActiveProbeR1521.reason=reason;
+    radioActiveProbeR1521.expiresAt=Date.now()+(id?30000:12000);
+    return {id,reason};
+  })();
+  radioActiveProbeR1521.pending=task;
+  try{return await task}finally{if(radioActiveProbeR1521.pending===task)radioActiveProbeR1521.pending=null}
+}
 // R1518: choose a real owner LIVE first (including manually created streams),
 // then the most recent scheduled recording. Never silently recycle the old
 // 24/7 ID when no timed session has ever been created.
@@ -19605,6 +19636,8 @@ async function radioMetricsCurrentIdR1517(env){
   if(schedule.mode==='timed'&&sessionId&&latest?.id?.startsWith(getBratislavaClock().date+'-')&&['live','preparing'].includes(latest?.status))return sessionId;
   const ownerLive=await radioOwnerLiveIdR1518(env);
   if(ownerLive)return ownerLive;
+  const explicitActive=await radioActiveBroadcastR1521(env);
+  if(explicitActive.id)return explicitActive.id;
   if(schedule.mode==='timed'){
     // If the R1517 session record is missing (e.g. a manually started broadcast),
     // discover the verified public LIVE. Never revive the old 24/7 recording.
@@ -21676,6 +21709,7 @@ if (path === '/api/control/audience' && request.method === 'GET') return await h
 if (path === '/api/control/youtube-top-content' && request.method === 'GET') return await handleControlYoutubeTopContentR552(request, env);
 if (path === '/api/control/youtube-oac-shelf' && request.method === 'GET') return await handleControlYoutubeOacShelfR910(request, env);
 if (path === '/api/control/radio-metrics-r1484' && request.method === 'GET') return await handleControlRadioMetricsR1484(request, env);
+if (path === '/api/control/radio-live-debug-r1521' && request.method === 'GET') return await handleRadioLiveDebugR1521(request, env);
 if (path === '/api/control/youtube-live-r565' && request.method === 'GET') return await handleControlYoutubeLiveCachedR797(request, env);
 if (path === '/api/control/youtube-live-r609/auto' && request.method === 'POST') return await handleYoutubeLiveAutoR609(request, env);
 if (path === '/api/control/youtube-live-r609/start' && request.method === 'POST') return await handleYoutubeLiveStartR609(request, env);
@@ -22759,6 +22793,12 @@ result={videoId:pinnedId,watchUrl:`https://www.youtube.com/watch?v=${pinnedId}`,
 }catch(_){}
 if(!result){
 try{
+const owner=await radioActiveBroadcastR1521(env);
+if(owner?.id)result={videoId:owner.id,watchUrl:`https://www.youtube.com/watch?v=${owner.id}`,active:true,lifeCycleStatus:'live',streamStatus:'',source:'owner-active-r1521'};
+}catch(_){}
+}
+if(!result){
+try{
 const found=await youtubePublicLiveByUploadsR623(env,{fresh:true});
 if(found)result={...found,lifeCycleStatus:'live',streamStatus:'active'};
 }catch(_){}
@@ -23274,6 +23314,17 @@ const cached=await readYoutubeLiveHealthCacheR1158(env,id);
 if(cached)return {...cached,error:cleanPlainText(error?.message||error,260)};
 return {healthStatus:'',streamStatus:'',healthIssues:[],boundStreamId:'',updatedAt:'',cached:false,source:'health-unavailable-r1158',error:cleanPlainText(error?.message||error,260)};
 }
+}
+async function handleRadioLiveDebugR1521(request,env){
+  if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
+  const [schedule,session,owner]=await Promise.all([radioScheduleReadR1517(env),radioSessionReadR1517(env),radioActiveBroadcastR1521(env)]);
+  let publicResult=null;
+  try{publicResult=await resolvePublicYoutubeLiveR623(env,{fresh:true})}catch(error){publicResult={error:cleanPlainText(error?.message||error,200)}}
+  const id=await radioMetricsCurrentIdR1517(env);
+  return json({ok:true,version:'R1521',at:new Date().toISOString(),mode:schedule.mode,
+    session:{id:cleanPlainText(session?.id||'',50),status:cleanPlainText(session?.status||'',32),videoId:cleanPlainText(session?.videoId||'',30)},
+    owner:{videoId:owner.id,reason:owner.reason},publicLive:{videoId:cleanPlainText(publicResult?.videoId||'',30),active:publicResult?.active===true,source:cleanPlainText(publicResult?.source||publicResult?.error||'',120)},
+    metricsVideoId:id},200,{'cache-control':'no-store'});
 }
 async function handleControlYoutubeLiveR565(request, env) {
 if (!adminAuthorized(request, env)) return json({ok:false,error:'unauthorized'},401);

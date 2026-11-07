@@ -40,6 +40,17 @@ function statsDiagnosticR1484(kind,message,details=''){
  if(kind!=='ok'&&/oauth|invalid_grant|token|expired|revoked/i.test(details)){
   const link=document.createElement('a');link.href='/youtube-device-auth-admin.html';link.textContent='Проверить подключение YouTube';link.style.color='#b8dfff';box.appendChild(link);
  }
+ const diagnostic=document.createElement('button');diagnostic.type='button';diagnostic.textContent='🔎 Проверить ID эфира';
+ Object.assign(diagnostic.style,{marginTop:'8px',border:'1px solid #3c637b',borderRadius:'9px',padding:'7px 10px',background:'#182637',color:'#b9e6ff'});
+ const result=document.createElement('pre');Object.assign(result.style,{whiteSpace:'pre-wrap',fontSize:'11px',maxHeight:'200px',overflow:'auto',wordBreak:'break-word',margin:'7px 0 0'});
+ diagnostic.addEventListener('click',async()=>{
+  diagnostic.disabled=true;result.textContent='Проверка идентификаторов…';
+  try{const data=await window.AndrikRadioDataR1483.requestJson(`/api/control/radio-live-debug-r1521?ts=${Date.now()}`,{timeoutMs:20000});
+   result.textContent=JSON.stringify(data,null,2);
+  }catch(error){result.textContent='Ошибка диагностики: '+String(error?.message||error)}
+  finally{diagnostic.disabled=false}
+ });
+ box.append(diagnostic,result);
 }
 let lastAudienceDataR1484=null,currentViewsR1484=null,freshMetricsR1484=false;
 
@@ -71,7 +82,7 @@ const visibleCandidates=[data?.visibleViews,data?.displayViews,data?.studioViews
 const visible=visibleCandidates.length?visibleCandidates[0]:null;
 hasVisibleViewsR1446=visible!=null;
 text('youtubeRadioViewsR565',visible==null?(data?.views==null?'—':number(data.views)):number(visible));
-const streamCaption=$('radioCurrentStreamR1518');if(streamCaption){streamCaption.replaceChildren();const id=/^[A-Za-z0-9_-]{11}$/.test(currentLiveIdR1446)?currentLiveIdR1446:'';const label=document.createElement('span');label.textContent=id?(live?'🔴 Идёт сейчас: ':life==='complete'?'🎞️ Последний архив: ':'📺 Выбранный эфир: ')+(safe(data?.title)||id)+' · '+id:'⏳ Новый эфир появится здесь после запуска.';streamCaption.append(label);if(id){const link=document.createElement('a');link.href='https://www.youtube.com/watch?v='+id;link.textContent=live?' · Открыть LIVE':' · Открыть запись';link.target='_blank';link.rel='noopener noreferrer';streamCaption.append(link)}}
+const streamCaption=$('radioCurrentStreamR1518');if(streamCaption){streamCaption.replaceChildren();const id=/^[A-Za-z0-9_-]{11}$/.test(currentLiveIdR1446)?currentLiveIdR1446:'';const label=document.createElement('span');label.textContent=id?(live?'🔴 Идёт сейчас: ':life==='complete'?'🎞️ Последний архив: ':'📺 Выбранный эфир: ')+(safe(data?.title)||id)+' · '+id:'⏳ Новый эфир появится здесь после запуска.';streamCaption.append(label);if(id){const link=document.createElement('a');link.href='https://www.youtube.com/watch?v='+id;link.textContent=live?' · Открыть LIVE':' · Открыть запись';link.dataset.forceApp='youtube';link.dataset.webUrl=link.href;link.dataset.youtubeLiveId=id;link.rel='noopener noreferrer';streamCaption.append(link)}}
 const viewsCard=$('youtubeRadioViewsCardR947');
 if(viewsCard)viewsCard.title=visible!=null?'Просмотры текущего LIVE · YouTube':'YouTube Data API · viewCount текущего LIVE; возможна задержка YouTube';
 const startsCard=$('youtubeRadioStartsCardR947');
@@ -120,7 +131,18 @@ return true;
 }
 async function loadYoutubeCoreR1502(){
 try{
-const data=await window.AndrikRadioDataR1483.metrics();renderYoutube(data);await loadAudienceFallbackR1264();return;
+const data=await window.AndrikRadioDataR1483.metrics();
+if(!data?.videoId){
+  let fallback=null;
+  try{fallback=await window.AndrikRadioDataR1483.requestJson(`/api/public/youtube-live-target?fresh=1&ts=${Date.now()}`,{timeoutMs:12000,authenticated:false})}catch(_){}
+  if(fallback?.active&&/^[A-Za-z0-9_-]{11}$/.test(safe(fallback?.videoId))){renderYoutube({...fallback,source:fallback.source||'public-live-r1521'});await loadAudienceFallbackR1264();return;}
+  renderYoutube({...data,status:'unresolved',source:data?.source||'unresolved-r1521'});
+  const reason=[data?.diagnostic?.ownerProbe,data?.diagnostic?.sessionStatus].filter(Boolean).join(' · ');
+  text('youtubeRadioHealthR565','ID НЕ ОПРЕДЕЛЁН');
+  statsDiagnosticR1484('warn','YouTube LIVE не найден автоматически; проверь диагностический ответ R1521.',reason);
+  return;
+}
+renderYoutube(data);await loadAudienceFallbackR1264();return;
 }catch(error){
 freshMetricsR1484=false;currentLiveIdR1446='';currentOnlineR1446=null;currentViewsR1484=null;hasVisibleViewsR1446=false;
 statsDiagnosticR1484('error',explainRadioStatsR1484(error?.message),safe(error?.message));

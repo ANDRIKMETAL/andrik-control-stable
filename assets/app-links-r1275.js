@@ -32,7 +32,7 @@ function genericYoutubeIntent(webUrl, id='') {
 try {
 // A direct Android intent with the official YouTube package preserves the
 // actual tap gesture. The earlier delayed generic intent opened a webview.
-const u = new URL(id ? `https://www.youtube.com/watch?v=${id}` : webUrl,location.href);
+const u = new URL(id ? `https://www.youtube.com/watch?v=${encodeURIComponent(id)}` : webUrl,location.href);
 const path = `${u.pathname || '/'}${u.search || ''}${u.hash || ''}`.replace(/^\//,'');
 return `intent://${u.host}/${path}#Intent;scheme=https;package=com.google.android.youtube;S.browser_fallback_url=${encodeURIComponent(u.href)};end`;
 } catch (_) { return webUrl; }
@@ -72,13 +72,13 @@ function applyLive(link, live) {
 if (!link || !live?.id) return;
 link.dataset.youtubeLiveId = live.id;
 link.dataset.webUrl = live.url;
-link.href = live.url;
+link.href = isAndroid ? genericYoutubeIntent(live.url,live.id) : live.url;
 }
 function prepare(root = document) {
 root.querySelectorAll(selector).forEach(link => {
 const webUrl = link.getAttribute('data-web-url') || link.getAttribute('href');
 if (!webUrl) return;
-link.setAttribute('href', webUrl);
+link.setAttribute('href', isAndroid ? genericYoutubeIntent(webUrl, youtubeVideoId(webUrl)) : webUrl);
 link.setAttribute('rel', 'noopener noreferrer external');
 if (isAndroid) link.removeAttribute('target');
 });
@@ -88,26 +88,17 @@ const links = [...document.querySelectorAll(selector)]
 .filter(link => link.dataset.youtubeLiveAuto === '1');
 if (!links.length) return;
 const live = await fetchCurrentLiveTarget();
-if (!live?.id){links.forEach(link=>{link.href='https://www.youtube.com/@andrikmetal/live';link.dataset.webUrl=link.href;delete link.dataset.youtubeLiveId;});return;}
+if (!live?.id){links.forEach(link=>{const web='https://www.youtube.com/@andrikmetal/live';link.href=isAndroid?genericYoutubeIntent(web):web;link.dataset.webUrl=web;delete link.dataset.youtubeLiveId;});return;}
 links.forEach(link => applyLive(link, live));
 }
 function openYoutubeFromRealTap(event, link) {
-if (!isAndroid) return;
-const webUrl = link.getAttribute('data-web-url') || link.href || '';
-const knownId =
-link.getAttribute('data-youtube-live-id') ||
-youtubeVideoId(webUrl) ||
-'';
-if (knownId) {
-event.preventDefault();
-event.stopPropagation();
-launchAppFirst(webUrl, knownId);
-return;
-}
-event.preventDefault();
-event.stopPropagation();
-try { window.location.assign(genericYoutubeIntent(webUrl)); }
-catch (_) { window.location.assign(webUrl); }
+if (!isAndroid || event.defaultPrevented) return;
+const webUrl = link.getAttribute('data-web-url') || 'https://www.youtube.com/@andrikmetal/live';
+const id = link.getAttribute('data-youtube-live-id') || youtubeVideoId(webUrl);
+const target=genericYoutubeIntent(webUrl,id);
+// The real <a> href, not window.location.assign(), keeps Android's user gesture.
+// Do not preventDefault or trigger a same-page Chrome webview.
+if(link.getAttribute('href')!==target)link.setAttribute('href',target);
 }
 const boot = () => {
 prepare();
