@@ -93,7 +93,7 @@ const links = [...document.querySelectorAll(selector)]
 .filter(link => link.dataset.youtubeLiveAuto === '1');
 if (!links.length) return;
 const live = await fetchCurrentLiveTarget();
-if (!live?.id) return;
+if (!live?.id){links.forEach(link=>{link.href='https://www.youtube.com/@andrikmetal/live';link.dataset.webUrl=link.href;delete link.dataset.youtubeLiveId;});return;}
 links.forEach(link => applyLive(link, live));
 }
 function openYoutubeFromRealTap(event, link) {

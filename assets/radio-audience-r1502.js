@@ -7,6 +7,7 @@
   const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const number = value => new Intl.NumberFormat('ru-RU', {maximumFractionDigits:1}).format(Math.max(0, Number(value) || 0));
   const text = (id, value) => { const el = $(id); if (el) el.textContent = value; };
+  const streamInput=$('radioAudienceStreamR1518');let chosenVideoId='';
   const dateInput = $('radioAudienceDateR1156'), previous = $('radioAudiencePrevR1156'), next = $('radioAudienceNextR1156'), todayButton = $('radioAudienceTodayR1156');
   const containers = {viewers:$('radioAudienceViewersChartR1235'), launches:$('radioAudienceLaunchesChartR1235'), views:$('radioAudienceCumulativeChartR1485')};
   const timeFormatter = new Intl.DateTimeFormat('ru-RU', {timeZone:'Europe/Bratislava', hour:'2-digit', minute:'2-digit', hourCycle:'h23'});
@@ -176,9 +177,24 @@
     const site = (data.exactOpens || []).slice().reverse().slice(0, 120);
     $('radioAudienceSiteEventsR1156').innerHTML = site.length ? site.map(row => `<article class="r1156-event is-site"><time>${esc(Number.isFinite(parsedTime(row.createdAt))?timeFormatter.format(new Date(parsedTime(row.createdAt))):'—')}</time><div><strong>Переход в LIVE через сайт</strong><small>${esc([row.city,row.country].filter(Boolean).join(' · ')||'Город не определён')}</small></div><b>+1</b></article>`).join('') : '<div class="r1156-event-empty">Переходов с сайта за выбранный день пока нет.</div>';
   }
+  function showSessionChoices(nextData){
+    if(!streamInput)return;
+    const rows=Array.isArray(nextData?.sessions)?nextData.sessions:[];
+    if(chosenVideoId&&!rows.some(x=>x.videoId===chosenVideoId))chosenVideoId='';
+    const values=[{id:'',label:'Все эфиры за день ('+rows.length+')'},...rows.map((x,i)=>{
+      const start=parsedTime(x.firstSampleAt),end=parsedTime(x.lastSampleAt);
+      const first=Number.isFinite(start)?timeFormatter.format(new Date(start)):'—';
+      const last=Number.isFinite(end)?timeFormatter.format(new Date(end)):'—';
+      const active=x.videoId===nextData.activeVideoId?' · LIVE':'';
+      return {id:x.videoId,label:(i+1)+'. '+first+'–'+last+active+' · '+x.videoId};
+    })];
+    streamInput.replaceChildren(...values.map(item=>{const opt=document.createElement('option');opt.value=item.id;opt.textContent=item.label;return opt}));
+    streamInput.value=chosenVideoId;
+    const caption=$('radioAudienceStreamNoteR1518');if(caption)caption.textContent=chosenVideoId?'Показаны только замеры выбранного YouTube LIVE. Переходы с сайта считаются за весь день.':'Показаны все эфиры за этот день. График накопленных просмотров разделён по ID, а приросты складываются без смешивания трансляций.';
+  }
   function render(nextData) {
     const changed = data?.date && data.date !== nextData.date;
-    data = nextData; serverToday = data.today || serverToday;
+    data = nextData; serverToday = data.today || serverToday;showSessionChoices(data);
     dateInput.value = data.date; dateButtons();
     if (changed) { windowMinutes = isToday() ? 360 : 0; followLatest = true; selected = null; }
     const ctx = context(), summary = data.summary || {}, online = ctx.points.filter(point => point.online != null), last = ctx.points[ctx.points.length-1];
@@ -210,7 +226,7 @@
   async function load(date = '') {
     const mine = ++generation; setState('Загрузка…', 'loading');
     root.setAttribute('aria-busy','true');
-    try { const result = await window.AndrikRadioDataR1483.load(date); if (mine === generation) render(result); }
+    try { const result = await window.AndrikRadioDataR1483.load(date,{videoId:chosenVideoId}); if (mine === generation) render(result); }
     catch (error) {
       if (mine !== generation) return;
       setState('Ошибка', 'error');
@@ -220,6 +236,7 @@
   function chooseDate(date) {
     const value = date > currentDay() ? currentDay() : date;
     dateInput.value = value; dateButtons();
+    if(data?.date!==value)chosenVideoId='';
     if (data?.date !== value) {
       selected = null; followLatest = true; windowMinutes = value === currentDay() ? 360 : 0;
       for (const id of ['radioAudienceLaunchesR1156','radioAudiencePeakR1156','radioAudienceCurrentR1156','radioAudienceSiteR1156']) text(id,'—');
@@ -281,6 +298,7 @@
       group?.insertAdjacentHTML('beforeend',`<line class="selected-line" x1="${a.x(selected.minute)}" y1="${a.top}" x2="${a.x(selected.minute)}" y2="${a.top+a.plotH}"/><circle class="selected-dot" cx="${a.x(selected.minute)}" cy="${a.y(selected.online)}" r="5"/>`);
     });
   }
+  streamInput?.addEventListener('change',()=>{chosenVideoId=/^[A-Za-z0-9_-]{11}$/.test(streamInput.value)?streamInput.value:'';followLatest=true;selected=null;load(dateInput.value||'')});
   dateInput.addEventListener('change', () => chooseDate(dateInput.value || currentDay()));
   previous?.addEventListener('click', () => chooseDate(shiftDate(dateInput.value || currentDay(), -1)));
   next?.addEventListener('click', () => chooseDate(shiftDate(dateInput.value || currentDay(), 1)));
@@ -296,7 +314,7 @@
   window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(renderGraphs, 120); });
   window.addEventListener('andrik:radio-audience-r1446', event => {
     const incoming = event.detail;
-    if (incoming?.ok && incoming.date === incoming.today && (!dateInput.value || dateInput.value === incoming.today)) render(incoming);
+    if (!chosenVideoId && incoming?.ok && incoming.date === incoming.today && (!dateInput.value || dateInput.value === incoming.today)) render(incoming);
   });
   setInterval(() => { if (!document.hidden && dateInput.value === currentDay()) load(dateInput.value); }, 120000);
   window.AndrikRadioAudienceR1485 = window.AndrikRadioAudienceR1483 = window.AndrikRadioAudienceR1235 = {refresh:()=>load(dateInput.value||''),get data(){return data;},get range(){return data?{...range(),windowMinutes}:null;}};

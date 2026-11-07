@@ -24,3 +24,17 @@
 .r1517-ytlink{color:#8ed2fc;text-decoration:underline;text-underline-offset:2px}
 .r1517-session[aria-disabled=true]{opacity:.5}
 @media(max-width:410px){.r1517-modes{grid-template-columns:1fr}.r1517-clock{grid-template-columns:1fr 1fr}}
+
+/* R1518: schedule is a native collapsed spoiler, still safe for mobile and touch. */
+.r1518-schedule-card{padding:0!important;overflow:hidden!important}
+.r1518-schedule-fold>summary{cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:17px 15px;min-height:69px;user-select:none}
+.r1518-schedule-fold>summary::-webkit-details-marker{display:none}
+.r1518-schedule-caption{display:flex;flex-direction:column;gap:4px;font-weight:850;font-size:18px;line-height:1.2;min-width:0}
+.r1518-schedule-caption small{font-size:11px;color:#9cb5c4;font-weight:500;line-height:1.4}
+.r1518-schedule-action{border:1px solid #344f63;border-radius:999px;padding:8px 10px;font-weight:800;font-size:10px;color:#d4e1ee;white-space:nowrap}
+.r1518-hide{display:none}
+.r1518-schedule-fold[open] .r1518-show{display:none}
+.r1518-schedule-fold[open] .r1518-hide{display:inline}
+.r1518-schedule-inner{padding:3px 13px 15px;border-top:1px solid #304658}
+.r1518-schedule-inner p:first-child{margin-top:12px}
+@media(max-width:390px){.r1518-schedule-caption{font-size:16px}.r1518-schedule-action{font-size:9px;padding:7px}}

@@ -5,7 +5,7 @@ const slots=[['illusion','1 · ILLUSION'],['ocean','2 · OCEAN'],['trika','3 · 
 let model=null;
 const ui={};
 function html(){
- root.innerHTML=`<h2>📅 Автоматизация YouTube-радио</h2><p>Сервер в Словакии будет запускать и завершать эфиры без телефона. Время — Europe/Bratislava (летнее и зимнее автоматически).</p>
+ root.innerHTML=`<p>Сервер в Словакии будет запускать и завершать эфиры без телефона. Время — Europe/Bratislava (летнее и зимнее автоматически).</p>
  <div class="r1517-modes"><label class="r1517-mode"><input name="r1517-mode" value="always" type="radio">♾️ Круглосуточный эфир</label><label class="r1517-mode"><input name="r1517-mode" value="timed" type="radio">⏰ Автоматический по часам</label></div>
  <div class="r1517-sessions" data-r1517="sessions"></div>
  <p>📱 <b>16:9 + 9:16:</b> в YouTube Studio → Начать эфир → Dual Stream установи вертикальный режим «Auto». YouTube сам сделает вертикальную версию из горизонтальной без второго кодировщика на VPS. Эта настройка YouTube не переключается данным расписанием. <a class="r1517-ytlink" href="https://studio.youtube.com/" target="_blank" rel="noopener">Открыть YouTube Studio</a>.</p>

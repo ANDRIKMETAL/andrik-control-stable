@@ -43,14 +43,15 @@
     pending.set(key,work);
     try{return await work;}finally{if(pending.get(key)===work)pending.delete(key);}
   }
-  function load(date='',{force=false}={}){
+  function load(date='',{force=false,videoId=''}={}){
     const day=today(),selected=date&&date!==day?String(date):'';
     const qs=new URLSearchParams({ts:String(Date.now())});
     if(selected)qs.set('date',selected);
-    return shared('day:'+(selected||day),`/api/control/radio-audience-r1157?${qs}`,{force,timeoutMs:25000});
+    if(/^[A-Za-z0-9_-]{11}$/.test(videoId))qs.set('videoId',videoId);
+    return shared('day:'+(selected||day)+':'+videoId,`/api/control/radio-audience-r1157?${qs}`,{force,timeoutMs:25000});
   }
   function metrics({force=false}={}){
-    return shared('metrics:U0bzXBNBs2Y',`/api/control/radio-metrics-r1484?id=U0bzXBNBs2Y&ts=${Date.now()}`,{force,maxAgeMs:45000,timeoutMs:25000});
+    return shared('metrics:auto',`/api/control/radio-metrics-r1484?ts=${Date.now()}`,{force,maxAgeMs:45000,timeoutMs:25000});
   }
   window.AndrikRadioDataR1502=window.AndrikRadioDataR1483={load,metrics,requestJson,invalidate:()=>cache.clear()};
 })();

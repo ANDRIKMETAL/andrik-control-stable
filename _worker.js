@@ -8227,12 +8227,16 @@ const today=getBratislavaClock().date;
 const requested=cleanPlainText(url.searchParams.get('date')||today,20);
 const date=/^\d{4}-\d{2}-\d{2}$/.test(requested)?requested:today;
 let collector={selfHealAttempted:false,selfHealOk:false,warning:'',source:'background-r669',liveVideoId:'',latestSampleAt:''};
-if(date===today){
+const scheduleModeR1518=(await radioScheduleReadR1517(env)).mode;
+const activeRadioIdR1518=date===today?await radioMetricsCurrentIdR1517(env):'';
+const latestSessionR1518=date===today?await radioSessionReadR1517(env):null;
+const waitingBetweenSessionsR1518=scheduleModeR1518==='timed'&&latestSessionR1518?.status==='complete'&&activeRadioIdR1518===latestSessionR1518.videoId;
+if(date===today&&activeRadioIdR1518&&!waitingBetweenSessionsR1518){
 const latestBefore=await db.prepare(`
       SELECT sampled_at AS sampledAt FROM radio_audience_samples
       WHERE local_date=? AND video_id=?
       ORDER BY sampled_at DESC LIMIT 1
-    `).bind(today,ANDRIK_RADIO_LIVE_ID_R1483).first().catch(()=>null);
+    `).bind(today,activeRadioIdR1518).first().catch(()=>null);
 collector.latestSampleAt=cleanPlainText(latestBefore?.sampledAt||'',80);
 const latestMs=Date.parse(collector.latestSampleAt||'');
 const stale=!Number.isFinite(latestMs) || Date.now()-latestMs>3*60*1000;
@@ -8250,23 +8254,26 @@ collector.warning=cleanPlainText(error?.message||error,260);
 }
 }
 
-if(date===today&&!collector.selfHealAttempted){
+if(date===today&&activeRadioIdR1518&&!waitingBetweenSessionsR1518&&!collector.selfHealAttempted){
  try{
   const stored=await getPushState(db,'radio-audience-collector-r1484');
   const last=stored?.value?JSON.parse(stored.value):null;
   const age=Date.now()-Date.parse(last?.checkedAt||'');
-  if(last?.videoId===ANDRIK_RADIO_LIVE_ID_R1483&&Number.isFinite(age)&&age<5*60*1000){
+  if(last?.videoId===activeRadioIdR1518&&Number.isFinite(age)&&age<5*60*1000){
    collector.source=last.source||collector.source;collector.warning=last.warning||'';
    collector.liveVideoId=last.videoId;collector.selfHealOk=Boolean(last.ok);
   }
  }catch(_){}
 }
-let currentRadioVideoIdR1299='';
-if(date===today){
- // Today's counters belong to the owner-selected stream; archived dates retain all sessions.
- currentRadioVideoIdR1299=(await radioScheduleReadR1517(env)).mode==='timed'?'':ANDRIK_RADIO_LIVE_ID_R1483;
-}
-// Filter before LIMIT: an earlier session must not crowd out the current stream.
+// All broadcasts from the selected day are included by default. Optional
+// videoId filters allow inspecting a single archived daytime/evening session.
+const wantedRadioIdR1518=cleanPlainText(url.searchParams.get('videoId')||'',80);
+const currentRadioVideoIdR1299=/^[A-Za-z0-9_-]{11}$/.test(wantedRadioIdR1518)?wantedRadioIdR1518:'';
+const sessionsQueryR1518=await db.prepare(`SELECT video_id AS videoId,MIN(sampled_at) AS firstSampleAt,MAX(sampled_at) AS lastSampleAt,
+    COUNT(*) AS samples,MAX(views) AS latestViews FROM radio_audience_samples WHERE local_date=?
+    GROUP BY video_id ORDER BY MIN(sampled_at) ASC LIMIT 40`).bind(date).all();
+const sessionsR1518=(sessionsQueryR1518?.results||[]).filter(row=>/^[A-Za-z0-9_-]{11}$/.test(String(row?.videoId||'')));
+// Filter before LIMIT: a previous session must never crowd out the selected one.
 const rowsQuery=db.prepare(`
     SELECT video_id AS videoId,sampled_at AS sampledAt,local_minute AS localMinute,
            views,concurrent_viewers AS concurrentViewers
@@ -8308,7 +8315,7 @@ return acc;
 // Never present an old online sample as a live concurrent viewer count.
 if(date===today){
 const lastViewerMs=Date.parse(totals.lastViewerSampleAt||'');
-if(!Number.isFinite(lastViewerMs)||Date.now()-lastViewerMs>5*60*1000)totals.current=null;
+if(waitingBetweenSessionsR1518||(currentRadioVideoIdR1299&&currentRadioVideoIdR1299!==activeRadioIdR1518)||!Number.isFinite(lastViewerMs)||Date.now()-lastViewerMs>5*60*1000)totals.current=null;
 }
 const siteWhere=`local_date=? AND traffic_class<>'technical' AND (
     event_type='radio-open' OR
@@ -8328,7 +8335,8 @@ createdAt:cleanPlainText(row?.createdAt||'',80),type:cleanPlainText(row?.type||'
 country:cleanPlainText(row?.country||'',8).toUpperCase(),region:cleanPlainText(row?.region||'',120),city:cleanPlainText(row?.city||'',120)
 }));
 return json({
-ok:true,version:'R1485',videoId:currentRadioVideoIdR1299,date,today,timezone:'Europe/Bratislava',
+ok:true,version:'R1518',videoId:currentRadioVideoIdR1299,activeVideoId:activeRadioIdR1518||'',
+sessions:sessionsR1518,date,today,timezone:'Europe/Bratislava',
 collectionStarted:series[0]?.sampledAt||'',samples:series.length,series,
 summary:{launches:totals.deltaSamples?totals.launches:null,deltaSamples:totals.deltaSamples,peakConcurrent:totals.peak,currentConcurrent:totals.current,lastCumulativeViews:totals.lastViews,
 lastViewsVideoId:totals.lastViewsVideoId,viewerSamples:totals.viewerSamples,viewSamples:totals.viewSamples,lastViewerSampleAt:totals.lastViewerSampleAt,
@@ -8375,10 +8383,12 @@ async function saveRadioCollectorStateR1484(env,result){
 async function fetchRadioMetricsR1484(env){
  const targetIdR1517=await radioMetricsCurrentIdR1517(env);
  if(radioMetricsCacheR1484.id===targetIdR1517&&radioMetricsCacheR1484.data&&radioMetricsCacheR1484.expiresAt>Date.now())return radioMetricsCacheR1484.data;
- if(radioMetricsCacheR1484.pending)return radioMetricsCacheR1484.pending;
+ if(radioMetricsCacheR1484.pending&&radioMetricsCacheR1484.pendingId===targetIdR1517)return radioMetricsCacheR1484.pending;
  const work=(async()=>{
   await primeExistingD1SchemasR1501(requireDb(env));
   const id=targetIdR1517,attempts=[];
+  if(!id){const result={video:null,source:'waiting-next-session-r1518',warning:'',attempts:[],sample:{ok:false,warning:''},checkedAt:new Date().toISOString()};
+    radioMetricsCacheR1484.data=result;radioMetricsCacheR1484.id='';radioMetricsCacheR1484.expiresAt=Date.now()+12000;return result;}
   const modes=String(env.YOUTUBE_API_KEY||'').trim()?[false,true]:[true];
   let item=null,source='',sample={ok:false,warning:'video-not-returned'};
   const merge=(before,after)=>{
@@ -8432,14 +8442,18 @@ async function fetchRadioMetricsR1484(env){
   radioMetricsCacheR1484.data=result;radioMetricsCacheR1484.id=targetIdR1517;radioMetricsCacheR1484.expiresAt=Date.now()+(video?45000:10000);
   return result;
  })();
- radioMetricsCacheR1484.pending=work;
- try{return await work;}finally{if(radioMetricsCacheR1484.pending===work)radioMetricsCacheR1484.pending=null;}
+ radioMetricsCacheR1484.pending=work;radioMetricsCacheR1484.pendingId=targetIdR1517;
+ try{return await work;}finally{if(radioMetricsCacheR1484.pending===work){radioMetricsCacheR1484.pending=null;radioMetricsCacheR1484.pendingId='';}}
 }
 async function handleControlRadioMetricsR1484(request,env){
  if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
  try{
   const metrics=await fetchRadioMetricsR1484(env),video=metrics.video;
-  if(!video)return json({ok:false,error:'youtube-statistics-unavailable',message:metrics.warning,videoId:await radioMetricsCurrentIdR1517(env),source:metrics.source,attempts:metrics.attempts,updatedAt:metrics.checkedAt},503);
+  if(!video){
+    const target=await radioMetricsCurrentIdR1517(env);
+    if(!target)return json({ok:true,version:'R1518',status:'waiting',active:false,videoId:'',title:'',views:null,concurrentViewers:null,likes:null,updatedAt:metrics.checkedAt,source:'waiting-for-next-session-r1518'},200,{'cache-control':'no-store'});
+    return json({ok:false,error:'youtube-statistics-unavailable',message:metrics.warning,videoId:target,source:metrics.source,attempts:metrics.attempts,updatedAt:metrics.checkedAt},503);
+  }
   let health=null;
   try{health=await readYoutubeLiveHealthCacheR1158(env,video.videoId);}catch(_){}
   return json({ok:true,version:'R1485',active:video.isLive,broadcastLive:video.isLive,signalActive:health?.streamStatus==='active',
@@ -19557,11 +19571,37 @@ async function radioSessionReadR1517(env){
   const row=await getPushState(env.COMMENTS_DB,RADIO_SESSION_KEY_R1517).catch(()=>null);
   try{return JSON.parse(row?.value||'null')}catch(_){return null}
 }
+// R1518: choose a real owner LIVE first (including manually created streams),
+// then the most recent scheduled recording. Never silently recycle the old
+// 24/7 ID when no timed session has ever been created.
+let radioOwnerProbeR1518={until:0,id:'',pending:null};
+async function radioOwnerLiveIdR1518(env){
+  if(Date.now()<radioOwnerProbeR1518.until)return radioOwnerProbeR1518.id;
+  if(radioOwnerProbeR1518.pending)return radioOwnerProbeR1518.pending;
+  const task=(async()=>{
+    let id='';
+    try{
+      const token=await getYoutubeOAuthAccessToken(env);
+      const {broadcast}=await youtubeCurrentBroadcastR609(env,token);
+      if(youtubeLifeKeyR609(broadcast?.status?.lifeCycleStatus)==='live'){
+        const candidate=String(broadcast?.id||'');
+        if(/^[A-Za-z0-9_-]{11}$/.test(candidate))id=candidate;
+      }
+    }catch(_){}
+    radioOwnerProbeR1518.id=id;radioOwnerProbeR1518.until=Date.now()+(id?40000:20000);
+    return id;
+  })();radioOwnerProbeR1518.pending=task;
+  try{return await task}finally{if(radioOwnerProbeR1518.pending===task)radioOwnerProbeR1518.pending=null}
+}
 async function radioMetricsCurrentIdR1517(env){
-  const schedule=await radioScheduleReadR1517(env);
-  if(schedule.mode!=='timed')return ANDRIK_RADIO_LIVE_ID_R1483;
-  const latest=await radioSessionReadR1517(env);
-  return /^[A-Za-z0-9_-]{11}$/.test(String(latest?.videoId||''))?latest.videoId:ANDRIK_RADIO_LIVE_ID_R1483;
+  const [schedule,latest]=await Promise.all([radioScheduleReadR1517(env),radioSessionReadR1517(env)]);
+  const sessionId=/^[A-Za-z0-9_-]{11}$/.test(String(latest?.videoId||''))?String(latest.videoId):'';
+  // A just-created/preparing session may not appear LIVE in YouTube yet.
+  if(schedule.mode==='timed'&&sessionId&&['live','preparing'].includes(latest?.status))return sessionId;
+  const ownerLive=await radioOwnerLiveIdR1518(env);
+  if(ownerLive)return ownerLive;
+  if(schedule.mode==='timed')return sessionId; // show completed archive if it exists
+  return ANDRIK_RADIO_LIVE_ID_R1483;
 }
 async function handleRadioScheduleControlR1517(request,env){
   if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
@@ -22654,15 +22694,41 @@ await setPushState(requireDb(env),'youtube-public-live-resolved-cache-r797',JSON
 }
 async function resolvePublicYoutubeLiveR623(env,{fresh=false}={}){
 if(!fresh){
+const schedule=await radioScheduleReadR1517(env);
+const latest=schedule.mode==='timed'?await radioSessionReadR1517(env):null;
+const allowCached=(candidate)=>schedule.mode!=='timed'||Boolean(latest?.videoId&&latest?.status!=='complete'&&candidate?.videoId===latest.videoId);
 const state=await readPublicYoutubeLiveStateR797(env);
-if(state.hit)return state.data;
+if(state.hit&&allowCached(state.data))return state.data;
 const cached=await readPublicYoutubeFallbackCacheR797(env);
-if(cached.hit)return cached.data;
+if(cached.hit&&allowCached(cached.data))return cached.data;
 }
 let result=null;
-// R1299: prefer the newly launched horizontal radio, but NEVER declare it
-// active without YouTube live status verification. This also bypasses old D1 IDs.
+const scheduleR1518=await radioScheduleReadR1517(env);
+const sessionR1518=await radioSessionReadR1517(env);
+// R1518: verify the new scheduled broadcast *before* considering the old 24/7 seed.
+if(scheduleR1518.mode==='timed'&&/^[A-Za-z0-9_-]{11}$/.test(String(sessionR1518?.videoId||''))&&sessionR1518?.status!=='complete'){
+ try{
+  const id=String(sessionR1518.videoId);
+  const {data}=await youtubeApiJson(env,'videos',{part:'snippet,liveStreamingDetails',id,maxResults:1},{oauth:false,timeoutMs:6500});
+  const video=(data?.items||[]).find(row=>row?.id===id);
+  const d=video?.liveStreamingDetails||{};
+  if(video&&(String(video?.snippet?.liveBroadcastContent||'').toLowerCase()==='live'||Boolean(d.actualStartTime&&!d.actualEndTime)))
+   result={videoId:id,watchUrl:`https://www.youtube.com/watch?v=${id}`,active:true,lifeCycleStatus:'live',streamStatus:'active',source:'scheduled-live-r1518'};
+ }catch(_){}
+}
+if(!result){
 try{
+const accessToken=await getYoutubeOAuthAccessToken(env);
+const {broadcast,streamStatus}=await youtubeCurrentBroadcastR609(env,accessToken);
+const videoId=cleanPlainText(broadcast?.id||'',80);
+const lifeCycleStatus=youtubeLifeKeyR609(broadcast?.status?.lifeCycleStatus);
+if(videoId&&lifeCycleStatus==='live'){
+result={videoId,watchUrl:`https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`,lifeCycleStatus,streamStatus:cleanPlainText(streamStatus||'',80),active:true,source:'oauth-live-r797'};
+}
+}catch(_){}
+}
+// Legacy pinned ID is a fallback only for explicitly continuous radio mode.
+if(!result&&scheduleR1518.mode!=='timed')try{
 const pinnedId=ANDRIK_RADIO_LIVE_ID_R1483;
 const {data}=await youtubeApiJson(env,'videos',{
 part:'snippet,liveStreamingDetails',id:pinnedId,maxResults:1
@@ -22678,17 +22744,6 @@ result={videoId:pinnedId,watchUrl:`https://www.youtube.com/watch?v=${pinnedId}`,
 }catch(_){}
 if(!result){
 try{
-const accessToken=await getYoutubeOAuthAccessToken(env);
-const {broadcast,streamStatus}=await youtubeCurrentBroadcastR609(env,accessToken);
-const videoId=cleanPlainText(broadcast?.id||'',80);
-const lifeCycleStatus=youtubeLifeKeyR609(broadcast?.status?.lifeCycleStatus);
-if(videoId&&lifeCycleStatus==='live'){
-result={videoId,watchUrl:`https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`,lifeCycleStatus,streamStatus:cleanPlainText(streamStatus||'',80),active:true,source:'oauth-live-r797'};
-}
-}catch(_){}
-}
-if(!result){
-try{
 const found=await youtubePublicLiveByUploadsR623(env,{fresh:true});
 if(found)result={...found,lifeCycleStatus:'live',streamStatus:'active'};
 }catch(_){}
@@ -22701,9 +22756,9 @@ if(found)result={...found,lifeCycleStatus:'live',streamStatus:'active'};
 }
 // R1266: a known owner-supplied ID is an emergency DISCOVERY candidate,
 // never declared LIVE without checking Google's video status.
-if(!result){
+if(!result&&scheduleR1518.mode!=='timed'){
 try{
-const seedId=ANDRIK_RADIO_LIVE_ID_R1483; // R1299: new owner LIVE fallback, verified before use
+const seedId=ANDRIK_RADIO_LIVE_ID_R1483; // legacy continuous-only fallback, verified before use
 const {data}=await youtubeApiJson(env,'videos',{
 part:'snippet,liveStreamingDetails',id:seedId,maxResults:1
 },{oauth:false,timeoutMs:6500});
@@ -23241,7 +23296,8 @@ const at=Date.parse(a?.snippet?.scheduledStartTime||a?.snippet?.actualStartTime|
 const bt=Date.parse(b?.snippet?.scheduledStartTime||b?.snippet?.actualStartTime||0)||0;
 return bt-at;
 });
-broadcast=candidates.find(item=>String(item?.id||'')===ANDRIK_RADIO_LIVE_ID_R1483) || candidates[0] || null;
+const scheduledIdR1518=await radioMetricsCurrentIdR1517(env);
+broadcast=candidates.find(item=>String(item?.id||'')===scheduledIdR1518) || candidates[0] || null;
 videoId=cleanPlainText(broadcast?.id||'',80);
 if(!videoId){
 const channelUrl=new URL('https://www.googleapis.com/youtube/v3/channels');

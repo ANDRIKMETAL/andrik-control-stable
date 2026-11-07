@@ -10,7 +10,6 @@ const getKey=()=>{try{return localStorage.getItem(KEY_LOCAL)||sessionStorage.get
 const $=id=>document.getElementById(id);
 const text=(id,value)=>{const el=$(id);if(el)el.textContent=value};
 const safe=v=>String(v??'').trim();
-const LIVE_ID_R1483='U0bzXBNBs2Y';
 const number=v=>new Intl.NumberFormat('ru-RU').format(Math.max(0,Number(v)||0));
 function explainRadioStatsR1484(value){
  const raw=safe(value);
@@ -52,7 +51,7 @@ function healthLabel(data){const health=safe(data?.healthStatus).toLowerCase();c
 async function loadLibrary(){
 text('youtubeRadioModeR565','MP3 + КЛИП');text('youtubeRadioCycleR565','AUTO');refreshUptime();
 }
-function updateLinks(data){const opener=$('radioOpenLiveR943');const validId=/^[A-Za-z0-9_-]{11}$/.test(safe(data?.videoId))&&data?.active===true?safe(data.videoId):'';const watch=validId?`https://www.youtube.com/live/${validId}`:'';if(opener){if(watch){opener.href=watch;opener.setAttribute('data-web-url',watch);opener.setAttribute('data-youtube-live-id',validId);}opener.setAttribute('data-force-app','youtube');opener.setAttribute('data-youtube-live-auto','1');opener.setAttribute('data-web-fallback','https://www.youtube.com/@andrikmetal/live');}const map=[['youtubeRadioStudioR576','studioUrl'],['youtubeRadioAnalyticsR576','analyticsUrl'],['youtubeRadioWatchR576','watchUrl']];for(const [id,key] of map){const el=$(id);if(el&&data?.[key]){el.href=data[key];if(id==='youtubeRadioWatchR576')el.setAttribute('data-web-url',data[key])}}}
+function updateLinks(data){const opener=$('radioOpenLiveR943');const validId=/^[A-Za-z0-9_-]{11}$/.test(safe(data?.videoId))&&data?.active===true?safe(data.videoId):'';const watch=validId?`https://www.youtube.com/live/${validId}`:'';if(opener){opener.href=watch||'https://www.youtube.com/@andrikmetal/live';opener.setAttribute('data-web-url',opener.href);if(validId)opener.setAttribute('data-youtube-live-id',validId);else opener.removeAttribute('data-youtube-live-id');opener.setAttribute('data-force-app','youtube');opener.setAttribute('data-youtube-live-auto','1');opener.setAttribute('data-web-fallback','https://www.youtube.com/@andrikmetal/live');}const actionLink=document.querySelector('#youtubeActionsBottomR1264 a[data-youtube-live-auto]');if(actionLink){actionLink.href=watch||'https://www.youtube.com/@andrikmetal/live';actionLink.setAttribute('data-web-url',actionLink.href);if(validId)actionLink.setAttribute('data-youtube-live-id',validId);else actionLink.removeAttribute('data-youtube-live-id');}const map=[['youtubeRadioStudioR576','studioUrl'],['youtubeRadioAnalyticsR576','analyticsUrl'],['youtubeRadioWatchR576','watchUrl']];for(const [id,key] of map){const el=$(id);if(el){const target=data?.[key]||(id==='youtubeRadioWatchR576'?'https://www.youtube.com/@andrikmetal/live':'https://studio.youtube.com/');el.href=target;if(id==='youtubeRadioWatchR576')el.setAttribute('data-web-url',target)}}}
 function renderYoutube(data){
 currentLiveIdR1446=safe(data?.videoId);
 currentOnlineR1446=data?.concurrentViewers??null;
@@ -63,8 +62,8 @@ const live=Boolean(data?.active)||life==='live';
 const signal=Boolean(data?.signalActive)||stream==='active';
 liveStartedAt=live?safe(data?.actualStartTime):'';
 refreshUptime();
-setLive(live,live?'ЭФИР ИДЁТ':signal?'СИГНАЛ ЕСТЬ — НАЖМИ СТАРТ':'ОЖИДАЕТ СИГНАЛ');
-text('youtubeRadioViewersR565',data?.concurrentViewers==null?'—':number(data.concurrentViewers));
+setLive(live,live?'ЭФИР ИДЁТ':life==='complete'?'ЗАПИСЬ · АРХИВ':signal?'СИГНАЛ ЕСТЬ — НАЖМИ СТАРТ':'ОЖИДАЕТ НОВЫЙ ЭФИР');
+text('youtubeRadioViewersR565',!live||data?.concurrentViewers==null?'—':number(data.concurrentViewers));
 // Daily starts come from dated D1 deltas, never from lifetime viewCount.
 text('youtubeRadioStartsR947','—');
 // An old browser cache must not override a current API response.
@@ -72,23 +71,24 @@ const visibleCandidates=[data?.visibleViews,data?.displayViews,data?.studioViews
 const visible=visibleCandidates.length?visibleCandidates[0]:null;
 hasVisibleViewsR1446=visible!=null;
 text('youtubeRadioViewsR565',visible==null?(data?.views==null?'—':number(data.views)):number(visible));
+const streamCaption=$('radioCurrentStreamR1518');if(streamCaption){streamCaption.replaceChildren();const id=/^[A-Za-z0-9_-]{11}$/.test(currentLiveIdR1446)?currentLiveIdR1446:'';const label=document.createElement('span');label.textContent=id?(live?'🔴 Идёт сейчас: ':life==='complete'?'🎞️ Последний архив: ':'📺 Выбранный эфир: ')+(safe(data?.title)||id)+' · '+id:'⏳ Новый эфир появится здесь после запуска.';streamCaption.append(label);if(id){const link=document.createElement('a');link.href='https://www.youtube.com/watch?v='+id;link.textContent=live?' · Открыть LIVE':' · Открыть запись';link.target='_blank';link.rel='noopener noreferrer';streamCaption.append(link)}}
 const viewsCard=$('youtubeRadioViewsCardR947');
 if(viewsCard)viewsCard.title=visible!=null?'Просмотры текущего LIVE · YouTube':'YouTube Data API · viewCount текущего LIVE; возможна задержка YouTube';
 const startsCard=$('youtubeRadioStartsCardR947');
 if(startsCard)startsCard.title='YouTube Data API · playback starts / viewCount';
 text('youtubeRadioLikesR565',data?.likes==null?'—':number(data.likes));
-text('youtubeRadioHealthR565',live?healthLabel(data):signal?'СИГНАЛ ЕСТЬ':healthLabel(data));
-text('youtubeRadioNowTitleR565',(live||signal)?(safe(data?.title)||'ANDRIK METAL RADIO 24/7'):'Радио готово к запуску');
-text('youtubeRadioNowMetaR565',live?'R2 MP3 → OVH VPS → FFmpeg → YouTube Live':signal?'OVH уже передаёт видео и звук. Открой Studio и нажми «Начать трансляцию».':'Ищем текущую трансляцию YouTube');
-text('youtubeRadioNextR565','В эфире: активные MP3 · OCEAN и Illusion of Life выключены');
+text('youtubeRadioHealthR565',live?healthLabel(data):life==='complete'?'ЗАВЕРШЁН':signal?'СИГНАЛ ЕСТЬ':'ОЖИДАНИЕ');
+text('youtubeRadioNowTitleR565',live||signal||life==='complete'?(safe(data?.title)||'ANDRIK RADIO'):'Ожидаем новую трансляцию');
+text('youtubeRadioNowMetaR565',live?'R2 MP3 → VPS → YouTube LIVE':life==='complete'?'Эфир завершён · доступен архив YouTube':signal?'YouTube получает видеосигнал':'Новый сеанс появится автоматически по расписанию');
+text('youtubeRadioNextR565',live?'Воспроизведение идёт по настройкам текущего сеанса':'Следующий сеанс — по расписанию');
 updateLinks(data);
 const numericStatsR1484=[data?.views,data?.concurrentViewers,data?.likes].some(v=>v!=null&&Number.isFinite(Number(v)));
 const sampleR1484=data?.audienceSampleR1484||data?.audienceSampleR1446;
 const warningR1484=safe(data?.statisticsWarning||(sampleR1484?.ok===false?sampleR1484.warning:''));
 const attemptsR1484=(data?.statisticsAttempts||[]).map(a=>safe(a.mode)+': '+safe(a.error)).join(' | ');
 const stampR1484=data?.updatedAt?new Date(data.updatedAt).toLocaleTimeString('ru-RU',{timeZone:'Europe/Bratislava',hour:'2-digit',minute:'2-digit',second:'2-digit'}):'—';
-statsDiagnosticR1484(numericStatsR1484?(warningR1484?'warn':'ok'):'error',
- numericStatsR1484?(warningR1484?explainRadioStatsR1484(warningR1484):'Статистика получена · '+stampR1484):'Нет данных статистики YouTube',
+statsDiagnosticR1484(numericStatsR1484?(warningR1484?'warn':'ok'):(safe(data?.status)==='waiting'?'ok':'warn'),
+ numericStatsR1484?(warningR1484?explainRadioStatsR1484(warningR1484):'Статистика текущего/последнего эфира · '+stampR1484):safe(data?.status)==='waiting'?'Следующий эфир по расписанию · статистика появится после запуска':'Нет данных статистики YouTube',
  [data?.statisticsSource||data?.source,warningR1484,attemptsR1484,sampleR1484?.sampledAt?'Сохранён замер: '+sampleR1484.sampledAt:''].filter(Boolean).join(' · '));
 const note=$('youtubeRadioNoteR565');
 if(note){
@@ -120,13 +120,13 @@ return true;
 }
 async function loadYoutubeCoreR1502(){
 try{
-const data=await window.AndrikRadioDataR1483.metrics();if(data?.videoId&&data.videoId!==LIVE_ID_R1483)throw new Error('Статистика другого эфира отклонена');renderYoutube(data);await loadAudienceFallbackR1264();return;
+const data=await window.AndrikRadioDataR1483.metrics();renderYoutube(data);await loadAudienceFallbackR1264();return;
 }catch(error){
-freshMetricsR1484=false;currentOnlineR1446=null;currentViewsR1484=null;hasVisibleViewsR1446=false;
+freshMetricsR1484=false;currentLiveIdR1446='';currentOnlineR1446=null;currentViewsR1484=null;hasVisibleViewsR1446=false;
 statsDiagnosticR1484('error',explainRadioStatsR1484(error?.message),safe(error?.message));
 for(const id of ['youtubeRadioViewersR565','youtubeRadioViewsR565','youtubeRadioLikesR565','youtubeRadioStartsR947'])text(id,'—');
 let publicRendered=false;
-try{const d=await window.AndrikRadioDataR1483.requestJson(`/api/public/youtube-live-target?ts=${Date.now()}`,{timeoutMs:8000,authenticated:false});if(d?.active&&d.videoId===LIVE_ID_R1483){renderYoutube({...d,signalActive:Boolean(d?.signalActive||d?.active),healthStatus:d?.healthStatus||'LIVE'});publicRendered=true}}catch(_){}
+try{const d=await window.AndrikRadioDataR1483.requestJson(`/api/public/youtube-live-target?ts=${Date.now()}`,{timeoutMs:8000,authenticated:false});if(d?.active&&/^[A-Za-z0-9_-]{11}$/.test(safe(d?.videoId))){renderYoutube({...d,signalActive:Boolean(d?.signalActive||d?.active),healthStatus:d?.healthStatus||'LIVE'});publicRendered=true}}catch(_){}
 const [audience,transport]=await Promise.all([loadAudienceFallbackR1264(),loadTransportFallbackR1264(error?.message||'')]);
 if(!transport){text('youtubeRadioHealthR565',publicRendered?'ЭФИР ИДЁТ':'НЕТ ДАННЫХ');const h=$('youtubeRadioHealthR565');if(h)h.title=publicRendered?'Public LIVE доступен; Control YouTube API временно недоступен':safe(error?.message)||'YouTube API недоступен'}
 if(!publicRendered)text('youtubeRadioNowMetaR565',safe(error?.message)||'YouTube Data API временно недоступен; показаны локальные данные OVH/аудитории');

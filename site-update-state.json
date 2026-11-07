@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r358-deploy-nohang",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1794039398444-a25e8e07d0",
-  "release": "R1517",
-  "archiveName": "SITE-R1517-RADIO-SCHEDULE-FIX-VALIDATED.zip",
-  "sourceHead": "dd76df698c788aad5e79827e76e40c5b2f18442e",
-  "backupSha": "dd76df698c788aad5e79827e76e40c5b2f18442e",
+  "operationId": "publish-1794043490622-c20033112f",
+  "release": "R1518",
+  "archiveName": "SITE-R1518-RADIO-SPOILER-DYNAMIC-STATS-VALIDATED.zip",
+  "sourceHead": "ea1b194e900d0b8ce64cceed6b96e77a4d40130f",
+  "backupSha": "ea1b194e900d0b8ce64cceed6b96e77a4d40130f",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-11-07T08:16:40.022Z"
+  "generatedAt": "2026-11-07T09:24:51.971Z"
 }

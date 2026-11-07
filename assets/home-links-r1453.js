@@ -1,7 +1,8 @@
 /* R1453: current radio URL and independent automatic last-video discovery. */
 (()=>{'use strict';
-const LIVE_ID='U0bzXBNBs2Y';
-const LIVE_URL='https://www.youtube.com/live/'+LIVE_ID;
+const LIVE_URL='https://www.youtube.com/@andrikmetal/live';
+let currentRadioUrl=LIVE_URL;
+async function refreshRadioUrl(){try{const response=await fetch('/api/public/youtube-live-target?fresh=1&ts='+Date.now(),{cache:'no-store'});const data=await response.json();const id=String(data?.videoId||'');currentRadioUrl=response.ok&&data?.active===true&&/^[A-Za-z0-9_-]{11}$/.test(id)?'https://www.youtube.com/watch?v='+id:LIVE_URL;fixRadioCard()}catch(_){currentRadioUrl=LIVE_URL;fixRadioCard()}}
 const SINGLE_URL='/singles?view=all&v=1453';
 // The main page uses the existing /api/public/youtube-latest discovery. Do not
 // replace it: a NEW non-radio upload must automatically become the latest card.
@@ -10,8 +11,10 @@ function fixRadioCard(){
   const a=document.getElementById('homeLatestVideo');
   const h=document.getElementById('homeVideoTitle');
   if(!a||!h||!isRadioTitle(h.textContent))return;
-  if(a.getAttribute('href')!==LIVE_URL)a.setAttribute('href',LIVE_URL);
-  if(a.dataset.webUrl!==LIVE_URL)a.dataset.webUrl=LIVE_URL;
+  if(a.getAttribute('href')!==currentRadioUrl)a.setAttribute('href',currentRadioUrl);
+  if(a.dataset.webUrl!==currentRadioUrl)a.dataset.webUrl=currentRadioUrl;
+  const id=/[?&]v=([A-Za-z0-9_-]{11})/.exec(currentRadioUrl)?.[1]||'';
+  if(id)a.dataset.youtubeLiveId=id;else delete a.dataset.youtubeLiveId;
   // This card opens the YouTube app on Android, exactly like before.
   a.setAttribute('data-force-app','youtube');
 }
@@ -23,7 +26,8 @@ function boot(){
     const obs=new MutationObserver(fixRadioCard);
     obs.observe(latest,{attributes:true,attributeFilter:['href','data-web-url']});
     obs.observe(title,{characterData:true,childList:true,subtree:true});
-    fixRadioCard();
+    fixRadioCard();refreshRadioUrl();
+    window.setInterval(()=>{if(!document.hidden)refreshRadioUrl()},60000);
     window.addEventListener('pagehide',()=>obs.disconnect(),{once:true});
   }
   // Keep the catalogue button above native audio chrome and other visual layers.
