@@ -1,0 +1,26 @@
+/* R1517: compact radio schedule editor, isolated from the streaming UI. */
+.r1517-schedule{border:1px solid #36566d!important;background:linear-gradient(140deg,#0a1823,#10131e)!important;color:#edf5fa!important}
+.r1517-schedule h2{font-size:20px;margin:0 0 7px;font-weight:850;line-height:1.2}
+.r1517-schedule p{font-size:12px;line-height:1.55;color:#b7c8d6;margin:6px 0 12px}
+.r1517-modes{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}
+.r1517-mode{display:flex;align-items:center;gap:8px;background:#121f2a;border:1px solid #385264;border-radius:12px;padding:12px;font-size:12px;cursor:pointer;min-height:56px}
+.r1517-mode:has(input:checked){border-color:#8df2bf;background:#123125}
+.r1517-mode input{accent-color:#7de0a2;width:18px;height:18px;flex:none}
+.r1517-sessions{display:grid;gap:11px}
+.r1517-session{padding:12px;border:1px solid #394655;border-radius:15px;background:#0b131d}
+.r1517-session h3{font-size:15px;margin:0;color:#f9f4da}
+.r1517-on{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px}
+.r1517-on input,.r1517-album input{accent-color:#8df2bf;width:17px;height:17px}
+.r1517-clock{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:10px 0}
+.r1517-clock label,.r1517-meta label{display:grid;gap:5px;font-size:12px;color:#a8c0d3}
+.r1517-clock input,.r1517-meta input,.r1517-meta textarea{width:100%;max-width:100%;border-radius:10px;border:1px solid #425467;background:#0c1821;color:#fff;padding:10px;font-size:14px;min-height:42px;box-sizing:border-box}
+.r1517-meta textarea{resize:vertical;min-height:76px;font:12px/1.5 system-ui,sans-serif}
+.r1517-albums{display:flex;flex-wrap:wrap;gap:7px;margin:9px 0}
+.r1517-album{display:inline-flex;align-items:center;gap:6px;border:1px solid #344d5a;background:#14212b;border-radius:10px;padding:7px 9px;font-size:12px;cursor:pointer;min-height:38px}
+.r1517-hint{font-size:11px;color:#97adbb;line-height:1.45}
+.r1517-save{width:100%;min-height:51px!important;font-size:14px!important;margin-top:13px;background:#176d4b!important;color:#fff!important;border-color:#339f74!important}
+.r1517-status{padding:9px 10px;border-radius:9px;background:#101d29;border:1px solid #314859;min-height:32px;margin-top:10px;font-size:12px;line-height:1.5;color:#cfe5f0}
+.r1517-status[data-kind=error]{color:#ffa1a5;border-color:#883e43}.r1517-status[data-kind=ok]{color:#9df2bb;border-color:#326a54}
+.r1517-ytlink{color:#8ed2fc;text-decoration:underline;text-underline-offset:2px}
+.r1517-session[aria-disabled=true]{opacity:.5}
+@media(max-width:410px){.r1517-modes{grid-template-columns:1fr}.r1517-clock{grid-template-columns:1fr 1fr}}

@@ -8264,7 +8264,7 @@ if(date===today&&!collector.selfHealAttempted){
 let currentRadioVideoIdR1299='';
 if(date===today){
  // Today's counters belong to the owner-selected stream; archived dates retain all sessions.
- currentRadioVideoIdR1299=ANDRIK_RADIO_LIVE_ID_R1483;
+ currentRadioVideoIdR1299=(await radioScheduleReadR1517(env)).mode==='timed'?'':ANDRIK_RADIO_LIVE_ID_R1483;
 }
 // Filter before LIMIT: an earlier session must not crowd out the current stream.
 const rowsQuery=db.prepare(`
@@ -8356,28 +8356,29 @@ function radioMetricsErrorR1484(error){return cleanPlainText(error?.message||err
 function radioMetricVideoR1484(item){
  const details=item?.liveStreamingDetails||{},stats=item?.statistics||{},snippet=item?.snippet||{};
  const live=!details.actualEndTime&&(String(snippet.liveBroadcastContent||'').toLowerCase()==='live'||Boolean(details.actualStartTime));
- return {videoId:ANDRIK_RADIO_LIVE_ID_R1483,title:cleanPlainText(snippet.title||'ANDRIK METAL RADIO 24/7',220),
+ return {videoId:cleanPlainText(item?.id||'',80),title:cleanPlainText(snippet.title||'ANDRIK METAL RADIO 24/7',220),
   views:radioMetricNumberR1484(stats.viewCount),concurrentViewers:live?radioMetricNumberR1484(details.concurrentViewers):null,
   likes:radioMetricNumberR1484(stats.likeCount),comments:radioMetricNumberR1484(stats.commentCount),isLive:live,
   publishedAt:cleanPlainText(details.actualStartTime||snippet.publishedAt||'',80),
   actualStartTime:cleanPlainText(details.actualStartTime||'',80),actualEndTime:cleanPlainText(details.actualEndTime||'',80),
   scheduledStartTime:cleanPlainText(details.scheduledStartTime||'',80),privacyStatus:cleanPlainText(item?.status?.privacyStatus||'',40),
-  thumbnail:snippet.thumbnails?.high?.url||snippet.thumbnails?.medium?.url||'',url:'https://www.youtube.com/watch?v='+ANDRIK_RADIO_LIVE_ID_R1483};
+  thumbnail:snippet.thumbnails?.high?.url||snippet.thumbnails?.medium?.url||'',url:'https://www.youtube.com/watch?v='+cleanPlainText(item?.id||'',80)};
 }
 async function saveRadioCollectorStateR1484(env,result){
  if(!env.COMMENTS_DB)return;
  try{await setPushStatePacedR1501(requireDb(env),'radio-audience-collector-r1484',JSON.stringify({
   ok:Boolean(result.video?.isLive&&result.sample?.ok),partial:Boolean(result.warning&&result.sample?.ok),
-  videoId:ANDRIK_RADIO_LIVE_ID_R1483,source:result.source,warning:result.warning,
+  videoId:result?.video?.videoId||ANDRIK_RADIO_LIVE_ID_R1483,source:result.source,warning:result.warning,
   sampledAt:result.sample?.sampledAt||'',checkedAt:result.checkedAt
  }),60,['ok','warning']);}catch(_){}
 }
 async function fetchRadioMetricsR1484(env){
- if(radioMetricsCacheR1484.data&&radioMetricsCacheR1484.expiresAt>Date.now())return radioMetricsCacheR1484.data;
+ const targetIdR1517=await radioMetricsCurrentIdR1517(env);
+ if(radioMetricsCacheR1484.id===targetIdR1517&&radioMetricsCacheR1484.data&&radioMetricsCacheR1484.expiresAt>Date.now())return radioMetricsCacheR1484.data;
  if(radioMetricsCacheR1484.pending)return radioMetricsCacheR1484.pending;
  const work=(async()=>{
   await primeExistingD1SchemasR1501(requireDb(env));
-  const id=ANDRIK_RADIO_LIVE_ID_R1483,attempts=[];
+  const id=targetIdR1517,attempts=[];
   const modes=String(env.YOUTUBE_API_KEY||'').trim()?[false,true]:[true];
   let item=null,source='',sample={ok:false,warning:'video-not-returned'};
   const merge=(before,after)=>{
@@ -8428,7 +8429,7 @@ async function fetchRadioMetricsR1484(env){
   const result={video,liveChatId:video?.isLive?cleanPlainText(item?.liveStreamingDetails?.activeLiveChatId||'',180):'',
    source:source||'youtube-statistics-unavailable-r1484',warning:warnings.join(' | '),attempts,sample,checkedAt:new Date().toISOString()};
   await saveRadioCollectorStateR1484(env,result);
-  radioMetricsCacheR1484.data=result;radioMetricsCacheR1484.expiresAt=Date.now()+(video?45000:10000);
+  radioMetricsCacheR1484.data=result;radioMetricsCacheR1484.id=targetIdR1517;radioMetricsCacheR1484.expiresAt=Date.now()+(video?45000:10000);
   return result;
  })();
  radioMetricsCacheR1484.pending=work;
@@ -8438,7 +8439,7 @@ async function handleControlRadioMetricsR1484(request,env){
  if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
  try{
   const metrics=await fetchRadioMetricsR1484(env),video=metrics.video;
-  if(!video)return json({ok:false,error:'youtube-statistics-unavailable',message:metrics.warning,videoId:ANDRIK_RADIO_LIVE_ID_R1483,source:metrics.source,attempts:metrics.attempts,updatedAt:metrics.checkedAt},503);
+  if(!video)return json({ok:false,error:'youtube-statistics-unavailable',message:metrics.warning,videoId:await radioMetricsCurrentIdR1517(env),source:metrics.source,attempts:metrics.attempts,updatedAt:metrics.checkedAt},503);
   let health=null;
   try{health=await readYoutubeLiveHealthCacheR1158(env,video.videoId);}catch(_){}
   return json({ok:true,version:'R1485',active:video.isLive,broadcastLive:video.isLive,signalActive:health?.streamStatus==='active',
@@ -8453,14 +8454,14 @@ async function handleControlRadioMetricsR1484(request,env){
    studioUrl:'https://studio.youtube.com/video/'+video.videoId+'/livestreaming',
    analyticsUrl:'https://studio.youtube.com/video/'+video.videoId+'/analytics/tab-overview/period-default',
    watchUrl:video.url,source:metrics.source,updatedAt:metrics.checkedAt});
- }catch(error){return json({ok:false,error:'youtube-statistics-unavailable',message:radioMetricsErrorR1484(error),videoId:ANDRIK_RADIO_LIVE_ID_R1483},503);}
+ }catch(error){return json({ok:false,error:'youtube-statistics-unavailable',message:radioMetricsErrorR1484(error),videoId:await radioMetricsCurrentIdR1517(env)},503);}
 }
 async function collectRadioAudienceCronR1484(env,clock){
  if(!clock?.due2&&!clock?.due5&&!clock?.due15)return {ok:true,skipped:true,reason:'no-due-class'};
  const db=requireDb(env);await ensurePushAutomationSchema(db);
  if(!await claimCronGatewaySlotR334(db,'radio-audience-2m-r1484',clock.slot2))return {ok:true,skipped:true,reason:'slot-already-claimed'};
  const metrics=await fetchRadioMetricsR1484(env);
- return {ok:Boolean(metrics.video?.isLive&&metrics.sample?.ok),videoId:ANDRIK_RADIO_LIVE_ID_R1483,source:metrics.source,
+ return {ok:Boolean(metrics.video?.isLive&&metrics.sample?.ok),videoId:metrics.video?.videoId||'',source:metrics.source,
   warning:metrics.warning,sampledAt:metrics.sample?.sampledAt||'',views:metrics.video?.views??null,
   concurrentViewers:metrics.video?.concurrentViewers??null,checkedAt:metrics.checkedAt};
 }
@@ -19510,6 +19511,145 @@ return new Response(object.body,{status:200,headers});
 
 // R1430: selectable five-album visual mode. R2 is the single source of truth.
 // R1442: independent rows prevent a ticker toggle overwriting an album choice.
+// R1517 — scheduled YouTube radio. D1 is source of truth; paired VPS agent runs the clock.
+const RADIO_SCHEDULE_KEY_R1517='radio-schedule-r1517';
+const RADIO_SESSION_KEY_R1517='radio-schedule-active-session-r1517';
+const RADIO_SLOTS_R1517=['illusion','ocean','trika','beyond','silent','no-one-to-become'];
+const RADIO_SCHEDULE_DEFAULT_R1517=Object.freeze({
+  mode:'always',timeZone:'Europe/Bratislava',portrait:'auto',
+  sessions:[
+    {id:'day',enabled:true,start:'10:00',end:'14:00',albums:['silent','no-one-to-become'],clips:true,
+      title:'ANDRIK METAL RADIO ☀️ SILENT + NO ONE TO BECOME | Female Vocals • Heavy Metal',
+      description:'ANDRIK METAL — MUSIC OF AWAKENING. Daytime radio: SILENT and NO ONE TO BECOME, plus official music videos. Original cinematic metal with female vocals. https://andrikmetal.com'},
+    {id:'evening',enabled:true,start:'18:00',end:'22:00',albums:['illusion','ocean','trika','beyond'],clips:true,
+      title:'ANDRIK METAL RADIO 🌙 ILLUSION • OCEAN • TRIKA • BEYOND | Metal Live',
+      description:'ANDRIK METAL — MUSIC OF AWAKENING. Evening radio: ILLUSION OF LIFE, OCEAN, TRIKA and BEYOND, plus official music videos. https://andrikmetal.com'}
+  ]
+});
+function radioCopyR1517(value){return JSON.parse(JSON.stringify(value))}
+function radioMinutesR1517(v){if(!/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(String(v)))return -1;return +v.slice(0,2)*60 + +v.slice(3,5)}
+function normalizeRadioScheduleR1517(input){
+  if(!input||typeof input!=='object'||!['always','timed'].includes(input.mode))throw Error('invalid-mode');
+  if(input.portrait!==undefined&&!['auto','off'].includes(input.portrait))throw Error('invalid-portrait');
+  if(!Array.isArray(input.sessions)||input.sessions.length!==2)throw Error('invalid-session-count');
+  const sessions=[];
+  for(const id of ['day','evening']){
+    const raw=input.sessions.find(x=>x&&x.id===id);if(!raw)throw Error('missing-session-'+id);
+    const start=String(raw.start||''),end=String(raw.end||'');
+    const sm=radioMinutesR1517(start),em=radioMinutesR1517(end);
+    if(sm<0||em<0||em<=sm||em-sm>600)throw Error('session-time-invalid-'+id);
+    const albums=[...new Set((Array.isArray(raw.albums)?raw.albums:[]).map(String))];
+    if(!albums.length||albums.some(a=>!RADIO_SLOTS_R1517.includes(a)))throw Error('albums-invalid-'+id);
+    const title=String(raw.title||'').trim(),description=String(raw.description||'').trim();
+    if(title.length<8||title.length>100||description.length>5000)throw Error('metadata-invalid-'+id);
+    sessions.push({id,enabled:raw.enabled===true,start,end,albums,clips:raw.clips!==false,title,description});
+  }
+  if(input.mode==='timed'&&sessions[0].enabled&&sessions[1].enabled){
+    if(radioMinutesR1517(sessions[0].start)<radioMinutesR1517(sessions[1].end)&&radioMinutesR1517(sessions[1].start)<radioMinutesR1517(sessions[0].end))throw Error('sessions-overlap');
+  }
+  return {mode:input.mode,timeZone:'Europe/Bratislava',portrait:input.portrait==='off'?'off':'auto',sessions};
+}
+async function radioScheduleReadR1517(env){
+  const row=await getPushState(env.COMMENTS_DB,RADIO_SCHEDULE_KEY_R1517).catch(()=>null);
+  try{return normalizeRadioScheduleR1517(JSON.parse(row?.value||'null'))}catch(_){return radioCopyR1517(RADIO_SCHEDULE_DEFAULT_R1517)}
+}
+async function radioSessionReadR1517(env){
+  const row=await getPushState(env.COMMENTS_DB,RADIO_SESSION_KEY_R1517).catch(()=>null);
+  try{return JSON.parse(row?.value||'null')}catch(_){return null}
+}
+async function radioMetricsCurrentIdR1517(env){
+  const schedule=await radioScheduleReadR1517(env);
+  if(schedule.mode!=='timed')return ANDRIK_RADIO_LIVE_ID_R1483;
+  const latest=await radioSessionReadR1517(env);
+  return /^[A-Za-z0-9_-]{11}$/.test(String(latest?.videoId||''))?latest.videoId:ANDRIK_RADIO_LIVE_ID_R1483;
+}
+async function handleRadioScheduleControlR1517(request,env){
+  if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
+  if(!env.COMMENTS_DB)return json({ok:false,error:'database-not-configured'},503);
+  if(request.method==='GET')return json({ok:true,schedule:await radioScheduleReadR1517(env),session:await radioSessionReadR1517(env)},200,{'cache-control':'no-store'});
+  try{
+    const schedule=normalizeRadioScheduleR1517(await request.json());
+    await setPushState(env.COMMENTS_DB,RADIO_SCHEDULE_KEY_R1517,JSON.stringify(schedule));
+    return json({ok:true,schedule,session:await radioSessionReadR1517(env),note:'Параметры сохранены. VPS проверяет расписание ежеминутно.'},200,{'cache-control':'no-store'});
+  }catch(e){return json({ok:false,error:String(e?.message||e)},400)}
+}
+function radioScheduleClockR1517(){
+  const values=Object.fromEntries(new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Bratislava',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date()).map(x=>[x.type,x.value]));
+  return {date:`${values.year}-${values.month}-${values.day}`,minutes:Number(values.hour)*60+Number(values.minute)};
+}
+async function handleRadioScheduleAgentR1517(request,env){
+  if(!await radioAgentAuthorizedR627(request,env))return json({ok:false,error:'unauthorized-agent'},401);
+  if(!env.COMMENTS_DB)return json({ok:false,error:'database-not-configured'},503);
+  return json({ok:true,schedule:await radioScheduleReadR1517(env),session:await radioSessionReadR1517(env)},200,{'cache-control':'no-store'});
+}
+async function handleRadioSessionStartR1517(request,env){
+  if(!await radioAgentAuthorizedR627(request,env))return json({ok:false,error:'unauthorized-agent'},401);
+  if(!env.COMMENTS_DB)return json({ok:false,error:'database-not-configured'},503);
+  try{
+    const body=await request.json().catch(()=>({}));
+    const config=await radioScheduleReadR1517(env);
+    if(config.mode!=='timed')return json({ok:false,error:'timed-mode-not-enabled'},409);
+    const clock=radioScheduleClockR1517();
+    const session=config.sessions.find(x=>x.id===body.slot&&x.enabled);
+    if(!session||body.sessionId!==clock.date+'-'+session.id)return json({ok:false,error:'invalid-session-id'},409);
+    if(clock.minutes<radioMinutesR1517(session.start)||clock.minutes>=radioMinutesR1517(session.end))return json({ok:false,error:'outside-session-window'},409);
+    const prev=await radioSessionReadR1517(env);
+    const accessToken=await getYoutubeOAuthAccessToken(env);
+    if(prev?.id===body.sessionId&&prev.videoId){
+      const b=await youtubeGetExactBroadcastR688(accessToken,prev.videoId);
+      const life=youtubeLifeKeyR609(b?.status?.lifeCycleStatus);
+      if(life==='complete')return json({ok:false,error:'session-already-completed',videoId:prev.videoId},409);
+      if(life==='live'||life==='livestarting')return json({ok:true,existing:true,session:prev,lifeCycleStatus:life});
+      if(!b)return json({ok:false,error:'saved-broadcast-unavailable',session:prev},503);
+      const kicked=await youtubeStartExactBroadcastR687(accessToken,b,'active');
+      return json({ok:Boolean(kicked.ok),existing:true,session:prev,lifeCycleStatus:kicked.lifeCycleStatus},200);
+    }
+    if(prev?.id&&prev.id!==body.sessionId&&prev?.status==='live')return json({ok:false,error:'previous-session-not-completed',session:prev},409);
+    const [broadcasts,streams]=await Promise.all([youtubeListBroadcastsR687(accessToken),youtubeListStreamsR687(accessToken)]);
+    // Never take over another encoder or an unrelated live stream.
+    const streamActive=streams.filter(x=>String(x?.status?.streamStatus||'').toLowerCase()==='active');
+    if(streamActive.length!==1)return json({ok:false,error:'youtube-active-stream-not-unique',count:streamActive.length},409);
+    const streamId=String(streamActive[0].id||'');
+    const live=broadcasts.filter(x=>['live','livestarting'].includes(youtubeLifeKeyR609(x?.status?.lifeCycleStatus)));
+    if(live.length)return json({ok:false,error:'other-youtube-live-in-progress',videoIds:live.map(x=>x.id)},409);
+    const created=await youtubeCreateBroadcastR1517(accessToken,session);
+    const videoId=String(created?.id||'');if(!videoId)throw Error('youtube-did-not-return-video-id');
+    // Save ID *before* binding so retries do not create duplicate broadcasts.
+    const record={id:body.sessionId,slot:session.id,videoId,streamId,status:'preparing',createdAt:new Date().toISOString()};
+    await setPushState(env.COMMENTS_DB,RADIO_SESSION_KEY_R1517,JSON.stringify(record));
+    const bound=await youtubeBindR687(accessToken,videoId,streamId);
+    const started=await youtubeStartExactBroadcastR687(accessToken,bound,'active');
+    record.status=started.ok?'live':'preparing';record.startedAt=new Date().toISOString();
+    await setPushState(env.COMMENTS_DB,RADIO_SESSION_KEY_R1517,JSON.stringify(record));
+    return json({ok:Boolean(started.ok),session:record,lifeCycleStatus:started.lifeCycleStatus,watchUrl:`https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`});
+  }catch(error){return json({ok:false,error:String(error?.reason||error?.message||error).slice(0,300)},503)}
+}
+async function youtubeCreateBroadcastR1517(token,session){
+  const u=new URL('https://www.googleapis.com/youtube/v3/liveBroadcasts');u.searchParams.set('part','snippet,status,contentDetails');
+  const body={snippet:{title:session.title,description:session.description,scheduledStartTime:new Date(Date.now()+3000).toISOString()},
+    status:{privacyStatus:'public',selfDeclaredMadeForKids:false},
+    contentDetails:{monitorStream:{enableMonitorStream:false},enableAutoStart:false,enableAutoStop:true,enableDvr:true,enableEmbed:true,recordFromStart:true}};
+  return youtubeFetchR609(token,u.toString(),{method:'POST',body:JSON.stringify(body)},'radio-schedule-r1517-create');
+}
+async function handleRadioSessionCompleteR1517(request,env){
+  if(!await radioAgentAuthorizedR627(request,env))return json({ok:false,error:'unauthorized-agent'},401);
+  try{
+    const body=await request.json().catch(()=>({}));
+    const record=await radioSessionReadR1517(env);
+    if(!record?.id||!record?.videoId||body.sessionId!==record.id)return json({ok:false,error:'session-id-mismatch'},409);
+    if(record.status==='complete')return json({ok:true,alreadyComplete:true,session:record});
+    const token=await getYoutubeOAuthAccessToken(env);
+    const b=await youtubeGetExactBroadcastR688(token,record.videoId);
+    const life=youtubeLifeKeyR609(b?.status?.lifeCycleStatus);
+    if(life==='complete')record.status='complete';
+    else if(['live','livestarting','testing','ready'].includes(life)){
+      const transitioned=await youtubeTransitionR609(token,record.videoId,'complete');
+      record.status='complete';record.completedAt=new Date().toISOString();record.lastYouTubeStatus=youtubeLifeKeyR609(transitioned?.status?.lifeCycleStatus);
+    }else return json({ok:false,error:'unexpected-youtube-status',lifeCycleStatus:life},409);
+    await setPushState(env.COMMENTS_DB,RADIO_SESSION_KEY_R1517,JSON.stringify(record));
+    return json({ok:true,session:record,watchUrl:`https://www.youtube.com/watch?v=${encodeURIComponent(record.videoId)}`});
+  }catch(error){return json({ok:false,error:String(error?.reason||error?.message||error).slice(0,300)},503)}
+}
 const RADIO_VISUAL_SLOTS_R1442=['illusion','ocean','trika','beyond','silent','no-one-to-become','extras'];
 const RADIO_VISUAL_PREFIX_R1442='radio-visual-r1442:';
 const RADIO_ALBUM_LOOP_LIMIT_R1442=32*1024*1024;
@@ -21363,6 +21503,10 @@ if (path === '/api/control/vps-backup-r1030/status' && request.method === 'GET')
 if ((path === '/api/control/vps-backup-r1033/set' || path === '/api/control/vps-backup-r1034/set') && request.method === 'GET') return await handleVpsBackupSetR1033(request, env);
 if (path === '/api/control/radio-server-zips-r1258' && ['GET','PUT','DELETE'].includes(request.method)) return await handleRadioServerZipsR1258(request, env);
 if (path === '/api/radio-server-zip-r1258/download' && request.method === 'GET') return await handleRadioServerZipDownloadR1258(request, env);
+if (path === '/api/control/radio-schedule-r1517' && ['GET','PUT'].includes(request.method)) return await handleRadioScheduleControlR1517(request,env);
+if (path === '/api/radio-agent-r1517/schedule' && request.method === 'GET') return await handleRadioScheduleAgentR1517(request,env);
+if (path === '/api/radio-agent-r1517/session/start' && request.method === 'POST') return await handleRadioSessionStartR1517(request,env);
+if (path === '/api/radio-agent-r1517/session/complete' && request.method === 'POST') return await handleRadioSessionCompleteR1517(request,env);
 if (path === '/api/radio/visual-settings-r1442' && request.method === 'GET') return await handleVisualSettingsR1442(request, env);
 if (path === '/api/control/radio-visual-settings-r1442' && ['GET','PUT'].includes(request.method)) return await handleVisualSettingsR1442(request, env);
 if (path === '/api/control/radio-album-loops-r1442' && ['GET','PUT','DELETE'].includes(request.method)) return await handleAlbumLoopR1442(request, env);
