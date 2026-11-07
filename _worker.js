@@ -19699,7 +19699,34 @@ async function handleRadioSessionStartR1517(request,env){
     if(streamActive.length!==1)return json({ok:false,error:'youtube-active-stream-not-unique',count:streamActive.length},409);
     const streamId=String(streamActive[0].id||'');
     const live=broadcasts.filter(x=>['live','livestarting'].includes(youtubeLifeKeyR609(x?.status?.lifeCycleStatus)));
-    if(live.length)return json({ok:false,error:'other-youtube-live-in-progress',videoIds:live.map(x=>x.id)},409);
+    if(live.length){
+      // R1522: recover a manually started broadcast for the CURRENT timed slot.
+      // Never seize a different live event: require exactly one LIVE, bound to our
+      // active ingest stream, public, and titled like this exact scheduled session.
+      const candidate=live.length===1?live[0]:null;
+      const cleanTitle=x=>String(x||'').normalize('NFKC').replace(/\s+/g,' ').trim().toLocaleLowerCase('en');
+      const actualTitle=cleanTitle(candidate?.snippet?.title);
+      const expectedTitle=cleanTitle(session.title);
+      const correctStream=String(candidate?.contentDetails?.boundStreamId||'')===streamId;
+      // Allow the public HITS RADIO branding when the control-panel schedule
+      // still holds the original R1517 default title. Slot + featured albums
+      // must still be recognizable; matching a generic ANDRIK video is NOT enough.
+      const branded=/andrik/.test(actualTitle)&&/radio/.test(actualTitle);
+      const slotSignature=session.id==='day'
+        ? /day|днев|денн/.test(actualTitle)&&/silent/.test(actualTitle)&&/no one to become/.test(actualTitle)
+        : /evening|вечер|вечір/.test(actualTitle)&&/illusion/.test(actualTitle)&&/ocean/.test(actualTitle)&&/trika/.test(actualTitle)&&/beyond/.test(actualTitle);
+      const correctTitle=actualTitle.length>=12&&(actualTitle===expectedTitle||(branded&&slotSignature));
+      const isPublic=String(candidate?.status?.privacyStatus||'').toLowerCase()==='public';
+      if(candidate&&correctStream&&correctTitle&&isPublic){
+        const record={id:body.sessionId,slot:session.id,videoId:String(candidate.id),streamId,
+          status:'live',adopted:true,createdAt:new Date().toISOString(),startedAt:new Date().toISOString()};
+        await setPushState(env.COMMENTS_DB,RADIO_SESSION_KEY_R1517,JSON.stringify(record));
+        return json({ok:true,existing:true,adopted:true,session:record,
+          watchUrl:`https://www.youtube.com/watch?v=${encodeURIComponent(record.videoId)}`},200,{'cache-control':'no-store'});
+      }
+      return json({ok:false,error:'other-youtube-live-in-progress',
+        videoIds:live.map(x=>x.id),adoptionCheck:{count:live.length,correctStream,correctTitle,isPublic}},409);
+    }
     const created=await youtubeCreateBroadcastR1517(accessToken,session);
     const videoId=String(created?.id||'');if(!videoId)throw Error('youtube-did-not-return-video-id');
     // Save ID *before* binding so retries do not create duplicate broadcasts.

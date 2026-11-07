@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r358-deploy-nohang",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1794047456540-d143e1976a",
-  "release": "R1521",
-  "archiveName": "SITE-R1521-AUTO-LIVE-STATS-ANDROID-APP-FIX.zip",
-  "sourceHead": "6c7c03090951c27ba54425229f564e94bbfb4bd0",
-  "backupSha": "6c7c03090951c27ba54425229f564e94bbfb4bd0",
+  "operationId": "publish-1794048263808-d097bbafd1",
+  "release": "R1522",
+  "archiveName": "SITE-R1522-SAFE-ADOPT-EXISTING-LIVE.zip",
+  "sourceHead": "ae345d38c7d56b6158fbd18c569148a401d49ebb",
+  "backupSha": "ae345d38c7d56b6158fbd18c569148a401d49ebb",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-11-07T10:30:58.005Z"
+  "generatedAt": "2026-11-07T10:44:25.987Z"
 }
