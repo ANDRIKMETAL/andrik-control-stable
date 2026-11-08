@@ -1,118 +1,101 @@
 (() => {
-'use strict';
-const isAndroid = /Android/i.test(navigator.userAgent || '');
-const selector = 'a[data-force-app="youtube"][data-web-url]';
-const LIVE_TARGET_API = '/api/public/youtube-live-target';
-// R1266: fresh check on each revalidation; markup contains a working seed until discovery succeeds.
-let cachedLive = null;
-let liveFetch = null;
-function youtubeVideoId(rawUrl) {
-try {
-const u = new URL(rawUrl, location.href);
-const host = u.hostname.toLowerCase();
-if (host === 'youtu.be') return u.pathname.split('/').filter(Boolean)[0] || '';
-if (host.endsWith('youtube.com')) {
-const watch = u.searchParams.get('v');
-if (watch) return watch;
-const parts = u.pathname.split('/').filter(Boolean);
-if (parts[0] === 'live' || parts[0] === 'shorts' || parts[0] === 'embed') return parts[1] || '';
-}
-} catch (_) {}
-return '';
-}
-function navigationWatch() {
-let left = false;
-const mark = () => { left = true; };
-document.addEventListener('visibilitychange', () => { if (document.hidden) mark(); }, {once:true});
-window.addEventListener('pagehide', mark, {once:true});
-window.addEventListener('blur', mark, {once:true});
-return () => left || document.hidden;
-}
-function genericYoutubeIntent(webUrl, id='') {
-try {
-// A direct Android intent with the official YouTube package preserves the
-// actual tap gesture. The earlier delayed generic intent opened a webview.
-const u = new URL(id ? `https://www.youtube.com/watch?v=${encodeURIComponent(id)}` : webUrl,location.href);
-const path = `${u.pathname || '/'}${u.search || ''}${u.hash || ''}`.replace(/^\//,'');
-return `intent://${u.host}/${path}#Intent;scheme=https;package=com.google.android.youtube;S.browser_fallback_url=${encodeURIComponent(u.href)};end`;
-} catch (_) { return webUrl; }
-}
-function launchAppFirst(webUrl,id) {
-const intent=genericYoutubeIntent(webUrl,id);
-try { window.location.assign(intent); } catch (_) { window.location.assign(webUrl); }
-}
-async function fetchCurrentLiveTarget() {
-if (cachedLive?.id && Date.now() - cachedLive.at < 20000) return cachedLive;
-if (liveFetch) return liveFetch;
-liveFetch = (async () => {
-try {
-const res = await fetch(`${LIVE_TARGET_API}?fresh=1&ts=${Date.now()}`, {
-cache:'no-store',
-credentials:'include',
-headers:{accept:'application/json','cache-control':'no-cache'}
-});
-const data = await res.json().catch(() => ({}));
-const direct = String(data?.watchUrl || '');
-const id = String(data?.videoId || '') || youtubeVideoId(direct);
-if (res.ok && /^[A-Za-z0-9_-]{11}$/.test(id) && data?.active === true) {
-cachedLive = {
-id,
-url: direct || `https://www.youtube.com/live/${encodeURIComponent(id)}`,
-at: Date.now()
-};
-return cachedLive;
-}
-} catch (_) {}
-cachedLive=null;
-return null;
-})().finally(() => { liveFetch = null; });
-return liveFetch;
-}
-function applyLive(link, live) {
-if (!link || !live?.id) return;
-link.dataset.youtubeLiveId = live.id;
-link.dataset.webUrl = live.url;
-link.href = isAndroid ? genericYoutubeIntent(live.url,live.id) : live.url;
-}
-function prepare(root = document) {
-root.querySelectorAll(selector).forEach(link => {
-const webUrl = link.getAttribute('data-web-url') || link.getAttribute('href');
-if (!webUrl) return;
-link.setAttribute('href', isAndroid ? genericYoutubeIntent(webUrl, youtubeVideoId(webUrl)) : webUrl);
-link.setAttribute('rel', 'noopener noreferrer external');
-if (isAndroid) link.removeAttribute('target');
-});
-}
-async function preloadLive() {
-const links = [...document.querySelectorAll(selector)]
-.filter(link => link.dataset.youtubeLiveAuto === '1');
-if (!links.length) return;
-const live = await fetchCurrentLiveTarget();
-if (!live?.id){links.forEach(link=>{const web='https://www.youtube.com/@andrikmetal/live';link.href=isAndroid?genericYoutubeIntent(web):web;link.dataset.webUrl=web;delete link.dataset.youtubeLiveId;});return;}
-links.forEach(link => applyLive(link, live));
-}
-function openYoutubeFromRealTap(event, link) {
-if (!isAndroid || event.defaultPrevented) return;
-const webUrl = link.getAttribute('data-web-url') || 'https://www.youtube.com/@andrikmetal/live';
-const id = link.getAttribute('data-youtube-live-id') || youtubeVideoId(webUrl);
-const target=genericYoutubeIntent(webUrl,id);
-// The real <a> href, not window.location.assign(), keeps Android's user gesture.
-// Do not preventDefault or trigger a same-page Chrome webview.
-if(link.getAttribute('href')!==target)link.setAttribute('href',target);
-}
-const boot = () => {
-prepare();
-preloadLive();
-setInterval(preloadLive, 60000);
-};
-if (document.readyState === 'loading') {
-document.addEventListener('DOMContentLoaded', boot, {once:true});
-} else {
-boot();
-}
-document.addEventListener('click', event => {
-const link = event.target.closest?.(selector);
-if (!link) return;
-openYoutubeFromRealTap(event, link);
-}, true);
+  'use strict';
+
+  const isAndroid = /Android/i.test(navigator.userAgent || '');
+  const youtubeLinks = 'a[data-force-app="youtube"][data-web-url]';
+  const publicLiveLinks = `${youtubeLinks}[data-youtube-live-auto="1"]`;
+  const channelLiveUrl = 'https://www.youtube.com/@andrikmetal/live';
+  const videoIdPattern = /^[A-Za-z0-9_-]{11}$/;
+  let currentLiveUrl = channelLiveUrl;
+  let liveRequest = null;
+  let lastCheckAt = -Infinity;
+
+  function youtubeVideoId(url) {
+    const [, first, second] = url.pathname.split('/');
+    let id = '';
+    if (url.hostname === 'youtu.be') id = first;
+    else if (first === 'watch') id = url.searchParams.get('v');
+    else if (['live', 'shorts', 'embed'].includes(first)) id = second;
+    return videoIdPattern.test(id || '') ? id : '';
+  }
+
+  function androidYoutubeHref(webUrl) {
+    let url;
+    try { url = new URL(webUrl, location.href); }
+    catch (_) { return webUrl; }
+    const host = url.hostname;
+    if (url.protocol !== 'https:' || !(host === 'youtu.be' || host === 'youtube.com' || host.endsWith('.youtube.com'))) {
+      return webUrl;
+    }
+    const fallback = `S.browser_fallback_url=${encodeURIComponent(url.href)};end`;
+    const id = youtubeVideoId(url);
+    // Keep the native URI used by R1515 and let Android resolve its handler.
+    if (id) return `intent:${id}#Intent;scheme=vnd.youtube;${fallback}`;
+    return `intent://${url.host}${url.pathname}${url.search}${url.hash}#Intent;scheme=https;${fallback}`;
+  }
+
+  function setTarget(link, webUrl) {
+    if (!webUrl) return;
+    if (link.dataset.webUrl !== webUrl) link.dataset.webUrl = webUrl;
+    const href = isAndroid ? androidYoutubeHref(webUrl) : webUrl;
+    if (link.getAttribute('href') !== href) link.setAttribute('href', href);
+    if (isAndroid) link.removeAttribute('target');
+  }
+
+  function followCurrentLive(link) {
+    link.dataset.youtubeLiveAuto = '1';
+    setTarget(link, currentLiveUrl);
+  }
+
+  async function fetchLiveUrl() {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 25000);
+    try {
+      const response = await fetch(`/api/public/youtube-live-target?fresh=1&ts=${Date.now()}`, {
+        cache: 'no-store',
+        headers: { accept: 'application/json' },
+        signal: controller.signal
+      });
+      if (response.ok) {
+        const data = await response.json();
+        const id = String(data?.videoId || '');
+        if (data?.active === true && videoIdPattern.test(id)) {
+          return `https://www.youtube.com/watch?v=${id}`;
+        }
+      }
+    } catch (_) {
+      // The channel remains available while the live ID is being resolved.
+    } finally {
+      clearTimeout(timeout);
+    }
+    return channelLiveUrl;
+  }
+
+  function refreshCurrentLive() {
+    if (document.hidden || liveRequest || Date.now() - lastCheckAt < 20000) return;
+    lastCheckAt = Date.now();
+    liveRequest = fetchLiveUrl().then(url => {
+      currentLiveUrl = url;
+      document.querySelectorAll(publicLiveLinks).forEach(link => setTarget(link, url));
+    }).finally(() => { liveRequest = null; });
+  }
+
+  function boot() {
+    document.querySelectorAll(youtubeLinks).forEach(link => {
+      setTarget(link, link.dataset.webUrl);
+      link.rel = 'noopener noreferrer external';
+    });
+    if (!document.querySelector(publicLiveLinks)) return;
+    refreshCurrentLive();
+    setInterval(refreshCurrentLive, 60000);
+    document.addEventListener('visibilitychange', refreshCurrentLive);
+    window.addEventListener('pageshow', refreshCurrentLive);
+  }
+
+  window.AndrikYoutubeLinks = { setTarget, followCurrentLive };
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot, { once: true });
+  } else {
+    boot();
+  }
 })();

@@ -1238,6 +1238,12 @@ img.always-breathe.breath-4{--breath-delay:-5.25s}
   font-size:1.55rem;
   text-shadow:0 0 18px rgba(117,200,248,.45);
 }
+.trika-path-arrow-break{
+  grid-column:1/-1;
+  justify-self:center;
+  transform:rotate(90deg);
+  line-height:1;
+}
 .trika-sources{
   margin-top:20px;
   padding:30px;
