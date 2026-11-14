@@ -186,8 +186,43 @@ def radio_signal(state):
     return "unknown"
 
 
+CPU_HISTORY_FILE = Path("/var/lib/andrik-guard-r1531/cpu-history.json")
+
+
+def cpu_history(cpu, now_ms):
+    """Rolling 60-minute history, bounded and atomically stored; no network/API calls."""
+    try:
+        points = json.loads(CPU_HISTORY_FILE.read_text())
+        if not isinstance(points, list):
+            points = []
+    except (OSError, ValueError):
+        points = []
+    points = [[t, v] for t, v in points if isinstance(t, int) and
+              isinstance(v, (int, float)) and 0 <= v <= 100 and
+              now_ms - 3600000 <= t <= now_ms]
+    if cpu is not None:
+        points.append([now_ms, cpu])
+    points = points[-120:]
+    try:
+        import tempfile
+        CPU_HISTORY_FILE.parent.mkdir(parents=True, exist_ok=True)
+        with tempfile.NamedTemporaryFile(mode="w", dir=CPU_HISTORY_FILE.parent, delete=False) as f:
+            staged = Path(f.name)
+            json.dump(points, f, separators=(",", ":"))
+        os.replace(staged, CPU_HISTORY_FILE)
+    except OSError:
+        pass
+    def window(minutes):
+        recent = [v for t, v in points if t >= now_ms - minutes * 60000]
+        return {"average": round(sum(recent) / len(recent), 1),
+                "peak": round(max(recent), 1), "samples": len(recent)} if recent else None
+    return {"5m": window(5), "15m": window(15), "60m": window(60)}
+
+
 def collect():
     cpu = cpu_usage()
+    now_ms = time.time_ns() // 1_000_000
+    history = cpu_history(cpu, now_ms)
     services = service_states()
     radio_disk = None
     try:
@@ -205,6 +240,7 @@ def collect():
         "radioDisk": radio_disk,
         "ram": memory_usage(),
         "cpuPercent": cpu,
+        "cpuHistory": history,
         "services": services,
         "radioSignal": signal,
         "ffmpeg": ffmpeg,

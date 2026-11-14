@@ -5,12 +5,13 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="robots" content="noindex,nofollow">
   <meta name="theme-color" content="#06101c">
-  <meta name="andrik-control-release" content="R1532">
+  <meta name="andrik-control-release" content="R1534">
   <title>AI Агенты · ANDRIK</title>
-  <link rel="stylesheet" href="/assets/ai-agents-r1531.css?v=r1532">
+  <link rel="stylesheet" href="/assets/ai-agents-r1531.css?v=r1534">
   <script defer src="/assets/owner-session-r197.js?v=55.00-r197"></script>
   <script defer src="/assets/ai-agents-r1531.js"></script>
   <script defer src="/assets/ai-agents-watch-r1532.js"></script>
+  <script defer src="/assets/ai-agents-manager-r1534.js"></script>
 </head>
 <body>
   <main class="control">
@@ -19,6 +20,51 @@
       <span>ANDRIK</span>
     </header>
     <h1>AI Агенты</h1>
+    <nav class="agent-links" aria-label="Агенты">
+      <a href="#manager">MANAGER</a><a href="#guard">GUARD</a><a href="#watch">WATCH</a>
+    </nav>
+    <section class="panel guard manager" id="manager" aria-labelledby="manager-title">
+      <div class="guard-head">
+        <div class="guard-identity">
+          <span class="guard-icon manager-icon" aria-hidden="true">🧠</span>
+          <div><h2 id="manager-title">ANDRIK MANAGER</h2><div class="muted">Сводка и задачи</div></div>
+        </div>
+        <button id="manager-refresh" type="button">Обновить</button>
+      </div>
+      <p id="manager-connection" class="connection" role="status">Получаю отчёты…</p>
+      <div id="manager-content" hidden>
+        <div class="manager-sources">
+          <a href="#guard"><strong>GUARD</strong><span id="manager-guard"></span></a>
+          <a href="#watch"><strong>WATCH</strong><span id="manager-watch"></span></a>
+        </div>
+        <div class="manager-toolbar">
+          <h3 id="manager-open-title">Открытые задачи</h3>
+          <button id="manager-copy" type="button">Скопировать сводку</button>
+        </div>
+        <p id="manager-feedback" class="muted manager-feedback" role="status"></p>
+        <textarea id="manager-copy-fallback" aria-label="Сводка MANAGER для копирования" rows="6" readonly hidden></textarea>
+        <ol id="manager-tasks" class="manager-tasks" aria-labelledby="manager-open-title"></ol>
+        <p id="manager-empty" class="muted" hidden></p>
+        <details id="manager-history" class="services" hidden>
+          <summary id="manager-history-title">История решений и закрытые задачи</summary>
+          <ol id="manager-closed" class="manager-tasks manager-closed"></ol>
+        </details>
+      </div>
+      <a id="manager-login" href="#login" hidden>Войти как владелец ↓</a>
+      <template id="manager-task-template">
+        <li class="manager-task">
+          <div class="manager-task-top"><span class="manager-priority"></span><span class="manager-task-state"></span></div>
+          <h4 class="manager-task-title"></h4>
+          <p class="manager-task-evidence"></p>
+          <p class="manager-task-action"></p>
+          <details class="manager-command"><summary>Команда для VPS</summary><pre></pre></details>
+          <div class="manager-task-controls">
+            <div class="manager-task-sources"></div>
+            <div class="manager-decisions"><button class="manager-task-accept" type="button">Принять</button><button class="manager-task-reject" type="button">Отклонить</button><button class="manager-task-reopen" type="button">Вернуть</button></div>
+          </div>
+        </li>
+      </template>
+    </section>
     <section class="panel guard" id="guard" aria-labelledby="guard-title">
       <div class="guard-head">
         <div class="guard-identity">
@@ -124,7 +170,6 @@ sudo bash INSTALL.sh --apply</pre>
       </div>
     </section>
     <div class="other-agents" aria-label="Следующие агенты">
-      <section><span aria-hidden="true">🧠</span><h2>MANAGER</h2><p>Отчёты и задачи</p><small>В плане</small></section>
       <section><span aria-hidden="true">🎵</span><h2>MUSIC</h2><p>Релизы и контент</p><small>В плане</small></section>
     </div>
     <details class="panel report">

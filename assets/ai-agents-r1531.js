@@ -88,7 +88,7 @@
     if (report.disk?.usedPct >= 85) issues.push('Корневой диск заполнен на 85% или больше. Проверь размер журналов, архивов и кэша.');
     if (report.radioDisk?.usedPct >= 85) issues.push('Диск с кэшем радио заполнен на 85% или больше. Проверь объём кэша и временных файлов.');
     if (report.ram?.usedPct >= 85) issues.push('Занято 85% RAM или больше. Проверь процессы по потреблению памяти.');
-    if (report.cpuPercent >= 90) issues.push('CPU выше порога 90% в этом замере. Если нагрузка повторяется, проверь самые активные процессы.');
+    if (report.cpuHistory?.['15m']?.samples >= 4 && report.cpuHistory['15m'].average >= 90) issues.push('Средняя загрузка CPU за 15 минут выше 90%. Проверь самые активные процессы.');
     for (const [unit, state] of Object.entries(report.services)) {
       if (state === 'failed') issues.push(`Сбой службы «${units[unit]}». Посмотри журнал командой sudo journalctl -u ${unit} -n 30 --no-pager`);
     }
@@ -126,7 +126,7 @@
     metric('disk', percent(report.disk?.usedPct), diskDetail,
       fresh && (report.disk?.usedPct >= 85 || report.radioDisk?.usedPct >= 85) ? 'warn' : '');
     metric('ram', percent(report.ram?.usedPct), capacity(report.ram), fresh && report.ram?.usedPct >= 85 ? 'warn' : '');
-    metric('cpu', percent(report.cpuPercent), report.cpuPercent === null ? 'Нет данных' : 'Замер за 0,8 с',
+    metric('cpu', percent(report.cpuPercent), report.cpuPercent === null ? 'Нет данных' : ('5/15/60 мин: ' + ['5m','15m','60m'].map(k => report.cpuHistory?.[k] ? percent(report.cpuHistory[k].average) : '—').join(' / ')),
       fresh && report.cpuPercent >= 90 ? 'warn' : '');
     showRadio(report, fresh);
     const ffmpeg = report.ffmpeg;

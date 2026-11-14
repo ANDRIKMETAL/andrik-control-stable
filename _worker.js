@@ -21509,7 +21509,8 @@ const WATCH_ISSUES_R1532 = {
   'video-stalled':'Перестали продвигаться кадры видео',
   'transport-stalled':'Данные RTMPS перестали продвигаться',
   'ffmpeg-error':'FFmpeg сообщил об ошибке эфира',
-  'clip-handoff':'Сбой воспроизведения клипа или перехода между записями'
+  'clip-handoff':'Сбой воспроизведения клипа или перехода между записями',
+  'audio-silent':'Подтверждена длительная тишина в аудиопотоке (3 проверки)'
 };
 const GUARD_UNITS_R1531 = [
   'andrik-radio.service', 'andrik-radio-web-control.service', 'andrik-radio-web-agent.service',
@@ -21619,6 +21620,12 @@ function normalizeGuardReportR1531(body) {
     radioDisk:guardCapacityR1531(body.radioDisk),
     ram:guardCapacityR1531(body.ram),
     cpuPercent:guardPercentR1531(body.cpuPercent),
+    cpuHistory:Object.fromEntries(['5m','15m','60m'].map(k => {
+      const v=body.cpuHistory?.[k];
+      return [k, v && guardPercentR1531(v.average) !== null &&
+        guardPercentR1531(v.peak) !== null && Number.isSafeInteger(v.samples) && v.samples >= 1 && v.samples <= 120
+        ? {average:v.average,peak:v.peak,samples:v.samples} : null];
+    })),
     services,
     radioSignal:GUARD_SIGNAL_STATES_R1531.has(body.radioSignal) ? body.radioSignal : 'unknown',
     ffmpeg:running !== null && zombies !== null
@@ -21649,6 +21656,9 @@ function normalizeWatchReportR1532(body, now) {
     changedAt:changedAt <= now + 60000 ? changedAt : null,
     frameAgeMs:guardIntegerR1531(body.frameAgeMs),
     ffmpegErrors:guardIntegerR1531(body.ffmpegErrors),
+    audioProbe:['not-configured','not-checked','invalid-url','probe-failed','silent','audible'].includes(body.audioProbe?.state)
+      ? {state:body.audioProbe.state, checkedAt:guardIntegerR1531(body.audioProbe.checkedAt),
+         consecutive:Math.min(100,guardIntegerR1531(body.audioProbe.consecutive) || 0)} : {state:'not-configured'},
     issue:validIssue ? issue : null,
     incidentAt:validIssue ? incidentAt : null
   };
@@ -21724,6 +21734,310 @@ async function testWatchPushR1532(env) {
   return json({ ok:false, error }, 503);
 }
 
+const AGENT_FRESH_MS_R1533 = { guard:GUARD_STALE_MS_R1531, watch:WATCH_STALE_MS_R1532 };
+const MANAGER_TABLE_R1533 = 'andrik_manager_r1533';
+const MANAGER_RADIO_UNIT_R1533 = 'andrik-radio.service';
+const MANAGER_CHECK_RADIO_R1533 = 'sudo journalctl -u andrik-radio.service --since "15 min ago" -n 80 --no-pager';
+const MANAGER_CHECK_STATUS_R1533 = 'curl -sS --max-time 3 -o /dev/null -w "HTTP %{http_code}\\n" http://127.0.0.1:8080/status';
+const MANAGER_AGENT_CHECK_R1533 = {
+  guard:'sudo journalctl -u andrik-guard-r1531.service -n 30 --no-pager',
+  watch:'sudo journalctl -u andrik-watch-r1532.service -n 30 --no-pager'
+};
+const MANAGER_WATCH_ACTION_R1533 = {
+  'status-unreachable':'Проверь, отвечает ли /status на VPS, и посмотри журнал службы радио.',
+  'service-failed':'Посмотри код завершения и последние ошибки службы радио в журнале.',
+  'signal-lost':'Если эфир должен идти, сравни локальный сигнал с состоянием потока в YouTube Studio и посмотри журнал.',
+  'video-stalled':'Проверь, движется ли картинка в эфире. Сверь время зависания с последними записями FFmpeg.',
+  'transport-stalled':'Сверь состояние входящего потока в YouTube Studio с ошибками RTMPS в журнале.',
+  'ffmpeg-error':'Найди первую ошибку FFmpeg рядом со временем инцидента. Проверь, продолжает ли идти эфир.',
+  'clip-handoff':'Сверь текущую и следующую записи в «WATCH» с журналом в момент перехода.'
+};
+
+function agentSnapshotR1533(row, agent, now) {
+  if (!row?.paired) return { state:'unpaired', report:null };
+  if (!row.report_json) return { state:'waiting', report:null };
+  const ageMs = Math.max(0, now - Math.min(row.sampled_at, row.received_at));
+  return { state:ageMs >= AGENT_FRESH_MS_R1533[agent] ? 'stale' : 'fresh',
+    ageMs, report:JSON.parse(row.report_json) };
+}
+
+async function readManagerSourcesR1533(db, now) {
+  const sources = await Promise.all(Object.keys(AGENT_FRESH_MS_R1533).map(async agent => {
+    const row = await readAgentRowR1532(db.prepare(`SELECT token_hash IS NOT NULL AS paired,
+      report_json, sampled_at, received_at FROM ${agentTableR1532(agent)} WHERE id = 1`));
+    return [agent, agentSnapshotR1533(row, agent, now)];
+  }));
+  return Object.fromEntries(sources);
+}
+
+function managerTasksR1533(sources) {
+  const tasks = {};
+  function add(id, priority, agents, title, evidence, action, command = '', eventAt = null) {
+    tasks[id] = { id, priority, agents, title, evidence, action, command, eventAt };
+  }
+  for (const [agent, source] of Object.entries(sources)) {
+    const name = agent.toUpperCase();
+    if (source.state === 'unpaired') {
+      add(`agent-${agent}`, 'setup', [agent], `Подключить ${name}`, 'Контролька ещё не получила данные агента.',
+        `Открой карточку ${name} и выполни команды из раздела подключения VPS.`);
+    }
+    if (source.state === 'waiting') {
+      add(`agent-${agent}`, 'setup', [agent], `Получить первый отчёт ${name}`, 'Агент привязан. Первый отчёт ещё не поступил.',
+        'Обнови сводку через минуту. Если отчёта всё ещё нет, посмотри журнал агента.', MANAGER_AGENT_CHECK_R1533[agent]);
+    }
+    if (source.state === 'stale') {
+      add(`agent-${agent}`, 'attention', [agent], `Проверить связь с ${name}`,
+        `Последний отчёт старше ${AGENT_FRESH_MS_R1533[agent] / 60000} мин.`,
+        'Посмотри журнал агента и проверь, запущен ли его таймер на VPS.', MANAGER_AGENT_CHECK_R1533[agent]);
+    }
+  }
+  const guard = sources.guard.state === 'fresh' ? sources.guard.report : null;
+  if (guard) {
+    for (const [id, title, reading, path] of [
+      ['disk', 'Освободить место на диске VPS', guard.disk, '/'],
+      ['radio-disk', 'Освободить место на диске радио', guard.radioDisk, '/var/cache/andrik-radio-r622']
+    ]) {
+      if (reading?.usedPct >= 85) {
+        add(id, reading.usedPct >= 95 ? 'urgent' : 'attention', ['guard'], title,
+          `Занято ${reading.usedPct}% диска. Доступно ${managerBytesR1533(reading.availableBytes)}.`,
+          'Найди самые объёмные каталоги. Проверь журналы, архивы и кэш, чтобы решить, что можно освободить.',
+          `df -h ${path}\nsudo du -xhd1 ${path} | sort -h`);
+      }
+    }
+    if (guard.ram?.usedPct >= 85) {
+      add('ram', guard.ram.usedPct >= 95 ? 'urgent' : 'attention', ['guard'], 'Проверить расход памяти',
+        `Занято ${guard.ram.usedPct}% RAM.`, 'Сверь верхние процессы со временем замера и проверь, растёт ли потребление.',
+        'free -h\nps -eo pid,comm,%mem,rss --sort=-rss | head -12');
+    }
+    if ((guard.cpuHistory?.['15m']?.samples >= 4 && guard.cpuHistory['15m'].average >= 90) || (!guard.cpuHistory?.['15m'] && guard.cpuPercent >= 90)) {
+      add('cpu', 'attention', ['guard'], 'Перепроверить нагрузку CPU', `CPU: текущий ${guard.cpuPercent}%, средний за 15 минут ${guard.cpuHistory?.['15m']?.average ?? 'нет данных'}%.`,
+        'Сними несколько замеров подряд. Если нагрузка держится, проверь, какой процесс занимает CPU.', 'top -b -d 2 -n 3');
+    }
+    for (const [unit, state] of Object.entries(guard.services || {})) {
+      if (unit === MANAGER_RADIO_UNIT_R1533 || state !== 'failed' || !GUARD_UNITS_R1531.includes(unit)) continue;
+      add(`service-${unit}`, 'attention', ['guard'], `Проверить службу ${unit}`, 'systemd сообщил о сбое службы.',
+        'Посмотри код выхода и первые сообщения об ошибке.', `sudo journalctl -u ${unit} -n 40 --no-pager`);
+    }
+    if (guard.ffmpeg?.zombies > 0) {
+      add('ffmpeg-processes', 'attention', ['guard'], 'Проверить завершившиеся процессы FFmpeg',
+        `Процессов FFmpeg в состоянии zombie: ${guard.ffmpeg.zombies}.`,
+        'Проверь PPID завершившихся процессов и журнал родительской службы.', 'ps -eo pid,ppid,stat,comm | awk \'$4 == "ffmpeg"\'');
+    }
+    if (guard.temporary?.files > 0) {
+      add('temp', 'planned', ['guard'], 'Проверить старые временные файлы',
+        `Файлов старше 24 ч — ${guard.temporary.files}. Общий объём — ${managerBytesR1533(guard.temporary.bytes)}.`,
+        'Начни с каталога кэша радио. Проверь возраст и использование файлов перед ручной очисткой.',
+        'sudo du -h -d 1 /var/cache/andrik-radio-r622 | sort -h');
+    }
+    if (!guard.disk || !guard.ram || !Number.isFinite(guard.cpuPercent) || !guard.ffmpeg || !guard.temporary ||
+        guard.ffmpeg.partial || guard.temporary.partial || GUARD_UNITS_R1531.some(unit => !guard.services?.[unit] || guard.services[unit] === 'unknown')) {
+      add('guard-metrics', 'planned', ['guard'], 'Проверить полноту замеров GUARD',
+        'Часть показателей VPS недоступна или получена частично.',
+        'Посмотри, какие показатели отсутствуют в карточке GUARD, и проверь журнал агента.', MANAGER_AGENT_CHECK_R1533.guard);
+    }
+  }
+  const watch = sources.watch.state === 'fresh' ? sources.watch.report : null;
+  const guardRadio = guard?.services?.[MANAGER_RADIO_UNIT_R1533];
+  const newerGuard = guard && watch && guard.sampledAt > watch.sampledAt;
+  const guardOff = ['inactive', 'deactivating', 'missing'].includes(guardRadio);
+  if (watch?.state === 'unavailable' && !watch.issue && !(newerGuard && (guardOff || guard.radioSignal === 'ok'))) {
+    add('watch-metrics', 'attention', ['watch'], 'Проверить доступ к статусу радио',
+      'WATCH присылает замеры. Состояние радио пока определить не удалось.',
+      'Проверь состояние службы на VPS. Если радио запущено, проверь доступность /status.',
+      `systemctl is-active andrik-radio.service\n${MANAGER_CHECK_STATUS_R1533}`);
+  }
+  const guardLost = guardRadio === 'failed' || (guardRadio === 'active' && ['not-ready', 'unavailable'].includes(guard.radioSignal));
+  const watchIssue = watch?.state !== 'off' && Object.hasOwn(MANAGER_WATCH_ACTION_R1533, watch?.issue) ? watch.issue : null;
+  const useWatch = Boolean(watchIssue && !(newerGuard && guardOff));
+  const watchSettled = watch && !newerGuard && ['off', 'starting', 'on-air'].includes(watch.state);
+  const useGuard = guardLost && !watchSettled;
+  if (!useWatch && !useGuard) return tasks;
+  const fromWatch = useWatch && !(useGuard && newerGuard && watch.state === 'on-air');
+  const issue = fromWatch ? watchIssue : (guardRadio === 'failed' ? 'service-failed' : 'signal-lost');
+  const healthy = fromWatch && watch.state === 'on-air' && !useGuard;
+  const watchCanBeVerifiedByGuard = ['signal-lost', 'status-unreachable', 'service-failed'].includes(issue);
+  const urgent = (fromWatch && !healthy && !(newerGuard && guard.radioSignal === 'ok' && watchCanBeVerifiedByGuard)) ||
+    (useGuard && guardRadio === 'failed');
+  const agents = useGuard && useWatch ? ['guard', 'watch'] : [fromWatch ? 'watch' : 'guard'];
+  let evidence = WATCH_ISSUES_R1532[issue] + '.';
+  if (fromWatch && watch.current) evidence += ` Текущий материал по WATCH — «${watch.current.title}».`;
+  if (healthy) evidence += ' По WATCH локальный сигнал сейчас есть.';
+  if (useGuard && useWatch) evidence += guardRadio === 'failed' ? ' GUARD также видит сбой службы.'
+    : ' GUARD также сообщает о проблеме с локальным сигналом.';
+  if (fromWatch && newerGuard && guard.radioSignal === 'ok' && watch.state !== 'on-air') {
+    evidence += ' В более новом замере GUARD локальный /status отвечает.';
+  }
+  const title = issue === 'clip-handoff' ? 'Проверить переход между записями' : issue === 'ffmpeg-error'
+    ? 'Проверить ошибку FFmpeg' : 'Проверить сигнал радио';
+  add('radio', urgent ? 'urgent' : 'attention', agents, title, evidence, MANAGER_WATCH_ACTION_R1533[issue],
+    issue === 'status-unreachable' ? `${MANAGER_CHECK_STATUS_R1533}\n${MANAGER_CHECK_RADIO_R1533}` : MANAGER_CHECK_RADIO_R1533,
+    fromWatch ? watch.incidentAt : null);
+  return tasks;
+}
+
+function managerBytesR1533(bytes) {
+  if (bytes >= 1024 ** 3) return `${Math.round(bytes / 1024 ** 3 * 10) / 10} ГБ`;
+  if (bytes >= 1024 ** 2) return `${Math.round(bytes / 1024 ** 2)} МБ`;
+  return `${Math.ceil(bytes / 1024)} КБ`;
+}
+
+function managerTaskStateR1533(task, sources) {
+  if (task.id === 'radio') {
+    const { guard, watch } = sources;
+    const freshGuard = guard.state === 'fresh' && guard.report;
+    const freshWatch = watch.state === 'fresh' && watch.report;
+    const service = freshGuard && freshGuard.services?.[MANAGER_RADIO_UNIT_R1533];
+    const guardStillBad = service === 'failed' || (service === 'active' && ['not-ready', 'unavailable'].includes(freshGuard.radioSignal));
+    const watchRecovered = freshWatch && freshWatch.sampledAt > task.observedAt &&
+      !freshWatch.issue && ['on-air', 'off'].includes(freshWatch.state) &&
+      (!guardStillBad || freshWatch.sampledAt >= freshGuard.sampledAt);
+    const guardRecovered = freshGuard && freshGuard.sampledAt > task.observedAt &&
+      (freshGuard.radioSignal === 'ok' || service === 'inactive');
+    const watchWasSource = task.agents.includes('watch');
+    const intentionallyOff = service === 'inactive' && freshGuard.sampledAt > task.observedAt &&
+      freshGuard.sampledAt >= (freshWatch?.sampledAt || 0);
+    return watchRecovered || intentionallyOff || (!watchWasSource && guardRecovered) ? 'resolved' : 'awaiting';
+  }
+  if (task.id === 'agent-guard' || task.id === 'agent-watch') return 'resolved';
+  if (task.id === 'watch-metrics' && !['on-air', 'off'].includes(sources.watch.report?.state)) return 'awaiting';
+  const guard = sources.guard.report;
+  if ((task.id === 'disk' && !guard?.disk) || (task.id === 'ram' && !guard?.ram) ||
+      (task.id === 'cpu' && !Number.isFinite(guard?.cpuPercent)) ||
+      (task.id === 'ffmpeg-processes' && (!guard?.ffmpeg || guard.ffmpeg.partial)) ||
+      (task.id === 'temp' && (!guard?.temporary || guard.temporary.partial)) ||
+      (task.id === 'radio-disk' && (!guard?.disk || (!guard.radioDisk && guard.temporary?.partial))) ||
+      (task.id.startsWith('service-') && guard?.services?.[task.id.slice(8)] === 'unknown')) return 'awaiting';
+  return task.agents.every(agent => sources[agent].state === 'fresh') ? 'resolved' : 'awaiting';
+}
+
+function mergeManagerTasksR1533(previous, sources, now) {
+  const live = managerTasksR1533(sources);
+  const next = { ...previous };
+  for (const [id, reading] of Object.entries(live)) {
+    const old = previous[id];
+    const reopening = !old || old.state === 'resolved' || (old.eventAt && reading.eventAt && reading.eventAt > old.eventAt);
+    const escalated = reading.priority === 'urgent' && old?.priority !== 'urgent';
+    const inProgress = old?.state === 'working' || (old?.state === 'awaiting' && old.wasWorking);
+    const rejected = old?.state === 'rejected';
+    const urgentSince = reading.priority === 'urgent' ? (reopening || escalated ? now : old.urgentSince) : null;
+    const observedAt = id === 'radio' ? Math.max(...reading.agents.map(agent => sources[agent].report.sampledAt)) : null;
+    next[id] = {
+      ...reading,
+      state:rejected && !escalated && !reopening ? 'rejected' : inProgress && !escalated && !reopening ? 'working' : 'open',
+      openedAt:reopening ? now : old.openedAt,
+      observedAt,
+      urgentSince,
+      // Repeated reports keep the card and workflow status.
+      updatedAt:old?.updatedAt ?? now
+    };
+    if (!old || JSON.stringify(next[id]) !== JSON.stringify(old)) next[id].updatedAt = now;
+  }
+  for (const [id, task] of Object.entries(previous)) {
+    if (Object.hasOwn(live, id) || task.state === 'resolved') continue;
+    const state = managerTaskStateR1533(task, sources);
+    if (state !== task.state) {
+      const { wasWorking, ...details } = task;
+      next[id] = { ...details, state, updatedAt:now, ...(state === 'awaiting' ? { wasWorking:task.state === 'working' } : {}) };
+    }
+  }
+  return next;
+}
+
+async function reconcileManagerR1533(env, change = null) {
+  const db = requireDb(env);
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    let row;
+    let createTable = false;
+    try {
+      row = await db.prepare(`SELECT tasks_json FROM ${MANAGER_TABLE_R1533} WHERE id = 1`).first();
+    } catch (error) {
+      if (!/no such table: (?:main\.)?andrik_manager_r1533\b/i.test(String(error?.message || ''))) throw error;
+      createTable = true;
+    }
+    const now = Date.now();
+    const sources = await readManagerSourcesR1533(db, now);
+    const previous = row ? JSON.parse(row.tasks_json) : {};
+    const tasks = mergeManagerTasksR1533(previous, sources, now);
+    if (change) {
+      const task = tasks[change.id];
+      if (!task || task.openedAt !== change.openedAt || !['open', 'working', 'rejected'].includes(task.state)) return { conflict:true };
+      if (!({open:['working','rejected'], working:['open','rejected'], rejected:['open']}[task.state] || []).includes(change.state)) return { conflict:true };
+      if (task.state !== change.state) tasks[change.id] = { ...task, state:change.state, updatedAt:now };
+    }
+    const value = JSON.stringify(tasks);
+    if (value === row?.tasks_json || (!change && !row && !Object.keys(tasks).length)) return { sources, tasks, updatedAt:now };
+    if (createTable) await db.prepare(`CREATE TABLE IF NOT EXISTS ${MANAGER_TABLE_R1533} (
+      id INTEGER PRIMARY KEY CHECK (id = 1), tasks_json TEXT NOT NULL,
+      pushed_json TEXT NOT NULL DEFAULT '{}', pushed_at INTEGER, push_lease INTEGER
+    )`).run();
+    const result = row ? await db.prepare(`UPDATE ${MANAGER_TABLE_R1533} SET tasks_json = ?
+      WHERE id = 1 AND tasks_json = ?`).bind(value, row.tasks_json).run()
+      : await db.prepare(`INSERT OR IGNORE INTO ${MANAGER_TABLE_R1533} (id, tasks_json) VALUES (1, ?)`).bind(value).run();
+    if (result.meta.changes === 1) return { sources, tasks, updatedAt:now };
+  }
+  return { retry:true };
+}
+
+async function sendManagerUrgentR1533(env, tasks) {
+  const urgent = Object.values(tasks).filter(task => task.urgentSince && ['open', 'working'].includes(task.state));
+  if (!urgent.length || !oneSignalConfigured(env)) return;
+  const db = requireDb(env);
+  const row = await db.prepare(`SELECT pushed_json, pushed_at FROM ${MANAGER_TABLE_R1533} WHERE id = 1`).first();
+  const now = Date.now();
+  if (!row || (row.pushed_at && now - row.pushed_at < AGENT_PUSH_INTERVAL_MS_R1532)) return;
+  const pushed = JSON.parse(row.pushed_json);
+  const pending = urgent.filter(task => task.urgentSince !== pushed[task.id]).sort((a, b) => a.id.localeCompare(b.id));
+  if (!pending.length) return;
+  const claim = await db.prepare(`UPDATE ${MANAGER_TABLE_R1533} SET push_lease = ?
+    WHERE id = 1 AND tasks_json = ? AND pushed_json = ? AND (push_lease IS NULL OR push_lease < ?)`)
+    .bind(now, JSON.stringify(tasks), row.pushed_json, now - 90000).run();
+  if (!claim.meta.changes) return;
+  const key = await sha256Hex(pending.map(task => `${task.id}:${task.urgentSince}`).join('|'));
+  const message = pending.map(task => task.title).join(' · ') + '. Шаги проверки в MANAGER.';
+  let accepted = false;
+  try {
+    const result = await sendAgentPushR1532(env, 'manager', key, message);
+    accepted = result.ok || result.queuedForRetryR1505;
+  } finally {
+    if (accepted) {
+      for (const task of pending) pushed[task.id] = task.urgentSince;
+    }
+    await db.prepare(`UPDATE ${MANAGER_TABLE_R1533} SET pushed_json = ?,
+      pushed_at = CASE WHEN ? THEN ? ELSE pushed_at END, push_lease = NULL WHERE id = 1 AND push_lease = ?`)
+      .bind(JSON.stringify(pushed), accepted ? 1 : 0, now, now).run();
+  }
+}
+
+function managerResponseR1533(manager) {
+  const sources = Object.fromEntries(Object.entries(manager.sources).map(([agent, source]) => [
+    agent, { state:source.state, sampledAt:source.report?.sampledAt ?? null, ageMs:source.ageMs ?? null,
+      ...(agent === 'watch' && source.state === 'fresh' ? { radio:source.report.state } : {}) }
+  ]));
+  return json({ ok:true, version:'R1534', updatedAt:manager.updatedAt, sources, tasks:Object.values(manager.tasks) });
+}
+
+async function handleManagerR1533(request, env, action) {
+  if (!adminAuthorized(request, env)) return json({ ok:false, error:'unauthorized' }, 401);
+  if (action === 'status' && request.method === 'GET') {
+    const manager = await reconcileManagerR1533(env);
+    if (manager.retry) return json({ ok:false, error:'tasks-busy' }, 503);
+    return managerResponseR1533(manager);
+  }
+  if (action !== 'task' || request.method !== 'POST') return json({ ok:false, error:'method-not-allowed' }, 405);
+  if (!isSameOrigin(request)) return json({ ok:false, error:'origin' }, 403);
+  let body;
+  try { body = await readJsonBody(request, 512); }
+  catch (_) { return json({ ok:false, error:'invalid-task' }, 400); }
+  if (typeof body?.id !== 'string' || !/^[a-z0-9.-]{1,80}$/.test(body.id) || !['working', 'open', 'rejected'].includes(body.state) ||
+      !Number.isSafeInteger(body.openedAt)) {
+    return json({ ok:false, error:'invalid-task' }, 400);
+  }
+  const manager = await reconcileManagerR1533(env, { id:body.id, state:body.state, openedAt:body.openedAt });
+  if (manager.conflict) return json({ ok:false, error:'task-changed' }, 409);
+  if (manager.retry) return json({ ok:false, error:'tasks-busy' }, 503);
+  return managerResponseR1533(manager);
+}
+
 async function receiveAgentReportR1532(request, env, agent, ctx) {
   const token = /^Bearer ([a-f0-9]{64})$/.exec(request.headers.get('authorization') || '')?.[1];
   if (!token) return json({ ok:false, error:'unauthorized' }, 401);
@@ -21749,8 +22063,11 @@ async function receiveAgentReportR1532(request, env, agent, ctx) {
     const current = await db.prepare(`SELECT token_hash FROM ${table} WHERE id = 1`).first();
     if (!timingSafeTextEqual(current?.token_hash, tokenHash)) return json({ ok:false, error:'unauthorized' }, 401);
   } else {
-    const task = checkAgentAlertR1532(env, agent, report, now, tokenHash, row)
+    const alerts = checkAgentAlertR1532(env, agent, report, now, tokenHash, row)
       .catch(error => console.warn('ANDRIK agent push:', cleanPlainText(error?.message, 180)));
+    const manager = reconcileManagerR1533(env).then(result => result.tasks && sendManagerUrgentR1533(env, result.tasks))
+      .catch(error => console.warn('ANDRIK MANAGER:', cleanPlainText(error?.message, 180)));
+    const task = Promise.all([alerts, manager]);
     if (ctx?.waitUntil) ctx.waitUntil(task);
     else await task;
   }
@@ -21777,12 +22094,7 @@ async function handleAgentControlR1532(request, env, agent, action) {
   const version = agent === 'watch' ? 'R1532' : 'R1531';
   const row = await readAgentRowR1532(requireDb(env).prepare(`SELECT token_hash IS NOT NULL AS paired,
     report_json, sampled_at, received_at FROM ${table} WHERE id = 1`));
-  if (!row?.paired) return json({ ok:true, version, state:'unpaired', report:null });
-  if (!row.report_json) return json({ ok:true, version, state:'waiting', report:null });
-  const age = Date.now() - Math.min(row.sampled_at, row.received_at);
-  const staleMs = agent === 'watch' ? WATCH_STALE_MS_R1532 : GUARD_STALE_MS_R1531;
-  return json({ ok:true, version, state:age >= staleMs ? 'stale' : 'fresh',
-    ageMs:Math.max(0, age), report:JSON.parse(row.report_json) });
+  return json({ ok:true, version, ...agentSnapshotR1533(row, agent, Date.now()) });
 }
 
 async function routeApi(request, env, ctx) {
@@ -21811,6 +22123,8 @@ request = new Request(request, { headers });
 }
 const agentControl = /^\/api\/control\/agents\/(guard|watch)\/(status|pair|test)$/.exec(path);
 if (agentControl) return await handleAgentControlR1532(request, env, agentControl[1], agentControl[2]);
+const managerAction = /^\/api\/control\/agents\/manager\/(status|task)$/.exec(path);
+if (managerAction) return await handleManagerR1533(request, env, managerAction[1]);
 if (path === '/api/health' && request.method === 'GET') return await handlePublicHealth(request, env, ctx);
 if (path === '/api/youtube/websub' && request.method === 'GET') return await handleYoutubeWebSubVerifyR332(request, env, ctx);
 if (path === '/api/youtube/websub' && request.method === 'POST') return await handleYoutubeWebSubNotifyR332(request, env, ctx);

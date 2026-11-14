@@ -19,7 +19,8 @@
     'video-stalled':'Перестали продвигаться кадры видео.',
     'transport-stalled':'Данные RTMPS перестали продвигаться.',
     'ffmpeg-error':'FFmpeg сообщил об ошибке эфира.',
-    'clip-handoff':'Сбой воспроизведения клипа или перехода между записями.'
+    'clip-handoff':'Сбой воспроизведения клипа или перехода между записями.',
+    'audio-silent':'Три последовательные проверки обнаружили тишину в аудиопотоке.'
   };
   let last = null;
   let codeTimer;
@@ -51,7 +52,7 @@
     text('state', label);
     byId('state').dataset.tone = fresh ? tone : '';
     const frame = Number.isFinite(report.frameAgeMs) ? ` · Кадр ${(report.frameAgeMs / 1000).toLocaleString('ru-RU', {maximumFractionDigits:1})} с назад` : '';
-    text('detail', detail + frame);
+    text('detail', detail + frame + (report.audioProbe?.state === 'audible' ? ' · Звук обнаружен' : report.audioProbe?.state === 'silent' ? ' · Проверка: тишина' : report.audioProbe?.state === 'not-configured' ? ' · Аудиопроверка не настроена' : '')); 
     text('sample', 'Последний замер · ' + date.format(report.sampledAt));
     text('current', report.current?.title || '—');
     const change = report.current && report.changedAt ? ' · с ' + date.format(report.changedAt) : '';

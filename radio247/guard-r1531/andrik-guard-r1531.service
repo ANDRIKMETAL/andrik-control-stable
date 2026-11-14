@@ -5,6 +5,8 @@ After=network-online.target
 
 [Service]
 Type=oneshot
+StateDirectory=andrik-guard-r1531
+StateDirectoryMode=0700
 User=andrik-guard
 Group=andrik-guard
 ExecStart=/usr/bin/python3 -I /usr/local/share/andrik-guard-r1531/guard.py publish

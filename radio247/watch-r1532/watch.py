@@ -22,7 +22,7 @@ STALL_MS = 35000
 MAX_OVERDUE_MS = 60000
 PRIORITY = (
     "service-failed", "status-unreachable", "transport-stalled", "video-stalled",
-    "signal-lost", "clip-handoff", "ffmpeg-error",
+    "signal-lost", "audio-silent", "clip-handoff", "ffmpeg-error",
 )
 FFMPEG_SCOPES = {"master-r816", "normal-rawvideo", "clip-av-r816", "station-av-r816"}
 FFMPEG_FAILURE = re.compile(
@@ -111,6 +111,39 @@ def save_sample(sample):
 
 def recent(at, now):
     return at is not None and now - RECENT_MS <= at <= now + 1000
+
+
+def audio_probe(previous, now):
+    """Optional low-frequency local-only audio probe. Never probes public streams."""
+    url = os.environ.get("ANDRIK_WATCH_AUDIO_URL", "").strip()
+    if not url:
+        return {"state": "not-configured"}, {}
+    from urllib.parse import urlsplit
+    parsed = urlsplit(url)
+    if parsed.scheme not in ("http", "https") or parsed.hostname not in ("127.0.0.1", "localhost", "::1"):
+        return {"state": "invalid-url"}, {}
+    old = as_dict(previous.get("audioProbe"))
+    last = number(old.get("checkedAt")) or 0
+    if 0 <= now - last < 120000:
+        return {"state": old.get("state", "unknown"), "checkedAt": last}, old
+    try:
+        # Analyze 4 s of decoded audio only. No transcoding or output file.
+        result = subprocess.run(["/usr/bin/ffmpeg", "-nostdin", "-hide_banner", "-nostats", "-loglevel", "info",
+            "-rw_timeout", "5000000", "-i", url, "-map", "0:a:0", "-t", "4", "-af",
+            "silencedetect=noise=-48dB:d=3", "-f", "null", "-"],
+            capture_output=True, text=True, timeout=12, check=False)
+        logs = result.stderr[-12000:]
+        if result.returncode != 0:
+            state = "probe-failed"
+        elif "silence_start:" in logs and "silence_end:" not in logs:
+            state = "silent"
+        else:
+            state = "audible"
+    except (OSError, subprocess.TimeoutExpired, ValueError):
+        state = "probe-failed"
+    consecutive = (int(old.get("consecutive", 0)) + 1) if state == "silent" else 0
+    record = {"state": state, "checkedAt": now, "consecutive": min(100, consecutive)}
+    return {"state": state, "checkedAt": now, "consecutive": record["consecutive"]}, record
 
 
 def classify(service, status, prior, now):
@@ -220,7 +253,17 @@ def classify(service, status, prior, now):
             if issue in conditions and report["state"] == "on-air":
                 report["state"] = "degraded"
             break
-    return report, {"sampledAt": now, "conditions": conditions}
+    if active and status is not None and status.get("ok"):
+        audio, saved_audio = audio_probe(prior, now)
+    else:
+        audio, saved_audio = {"state": "not-checked"}, as_dict(prior.get("audioProbe"))
+    report["audioProbe"] = audio
+    if audio.get("state") == "silent" and audio.get("consecutive", 0) >= 3 and not report["issue"]:
+        report["issue"] = "audio-silent"
+        report["incidentAt"] = number(saved_audio.get("checkedAt")) or now
+        report["persistent"] = True
+        report["state"] = "degraded"
+    return report, {"sampledAt": now, "conditions": conditions, "audioProbe": saved_audio}
 
 
 def collect(previous, now):
