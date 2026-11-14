@@ -220,9 +220,20 @@ def classify(service, status, prior, now):
             reason = str(status.get("lastTransportFatalReason") or "").lower()
             if any(text in reason for text in ("no-progress", "zero rtmps", "rtmps ack")):
                 event["transport-stalled"] = fatal_at
+        # R1544: explicit skip evidence from radio status, not heuristic ffmpeg warnings.
+        candidates = []
+        for field, kind in (("lastUnreadyClipR1469", "not-ready"),
+                            ("lastNormalClipDeferred", "handoff-failed")):
+            raw = as_dict(status.get(field))
+            at = millis(raw.get("at"))
+            title = " ".join(str(raw.get("title") or "").split())[:110]
+            if at is not None and title and 0 <= now - at < 24 * 3600 * 1000 and                     not re.search(r"://|\bbearer\s|[?&](?:token|key)=", title, re.I):
+                candidates.append({"at": at, "title": title, "kind": kind,
+                                   "reason": " ".join(str(raw.get("reason") or
+                                      ("Видео не было готово к переходу" if kind == "not-ready" else "Переход не удался после повторов")).split())[:150]})
+        report["clipEvent"] = max(candidates, key=lambda x: x["at"]) if candidates else None
         clip_events = [
             millis(as_dict(status.get("lastClipGuardRecovery")).get("at")),
-            millis(as_dict(status.get("lastNormalClipDeferred")).get("at")),
             millis(status.get("lastInsertRecoveryAt")),
             millis(as_dict(status.get("lastNormalClipSoftEofR1139")).get("at")),
         ]

@@ -21461,6 +21461,32 @@ async function handleCronDiagnosticR1488(request, env) {
     WHERE type IN ('youtube-subscriber-count','youtube-subscriber','youtube-unsubscriber')
     ORDER BY created_at DESC LIMIT 5
   `).all().then(r=>(r.results||[]).map(row=>({type:row.type,status:row.status,recipients:Number(row.recipients||0),error:cleanPlainText(row.error||'',240),createdAt:row.createdAt,oneSignalAccepted:!!row.oneSignalId}))).catch(()=>[]);
+  // R1545: read-only audit of likes, subscribers and push transport. A OneSignal
+  // acceptance is not proof that Android displayed a notification.
+  const engagementPushHistoryR1545=await db.prepare(`
+    SELECT type,status,recipients,error,created_at AS createdAt,onesignal_id AS oneSignalId,
+           video_title AS videoTitle
+    FROM push_history
+    WHERE type IN ('youtube-like','youtube-subscriber-count','youtube-subscriber',
+                   'youtube-unsubscriber','youtube-comment','youtube-comment-count')
+    ORDER BY created_at DESC LIMIT 24
+  `).all().then(r=>(r.results||[]).map(x=>({
+    type:x.type,status:x.status,recipients:Number(x.recipients||0),
+    error:cleanPlainText(x.error||'',220),createdAt:x.createdAt,
+    videoTitle:cleanPlainText(x.videoTitle||'',120),oneSignalAccepted:!!x.oneSignalId
+  }))).catch(()=>[]);
+  const recentFailedPushR1545=engagementPushHistoryR1545.filter(x=>
+    x.status!=='sent' && Number.isFinite(Date.parse(x.createdAt)) &&
+    Date.now()-Date.parse(x.createdAt)<2*60*60*1000);
+  if(recentFailedPushR1545.length)warnings.push(`YouTube push: ${recentFailedPushR1545.length} неуспешных/отложенных попыток за 2 часа (смотри журнал R1545)`);
+  const recentSentPushR1545=engagementPushHistoryR1545.filter(x=>x.status==='sent');
+  const pushTransportR1545={configured:oneSignalConfigured(env),
+    latestAttemptAt:engagementPushHistoryR1545[0]?.createdAt||null,
+    lastAcceptedAt:recentSentPushR1545[0]?.createdAt||null,
+    recentFailedAttempts:recentFailedPushR1545.length,
+    status:!oneSignalConfigured(env)?'not-configured':recentFailedPushR1545.length?'attention':'no-recent-failure',
+    note:'OneSignal accepted does not confirm delivery to Android; absence of new events is not a transport failure.'};
+  if(!pushTransportR1545.configured)warnings.push('OneSignal не настроен: уведомления не могут отправляться');
   const latestSplit=splitJobs.slice().sort((a,b)=>Date.parse(b.finishAt||b.attemptAt||'')-Date.parse(a.finishAt||a.attemptAt||''))[0];
   const latestSplitAt=latestSplit?.finishAt||latestSplit?.attemptAt||'';
   const latestSplitAge=Number.isFinite(Date.parse(latestSplitAt))?Math.max(0,Math.round((Date.now()-Date.parse(latestSplitAt))/60000)):null;
@@ -21481,7 +21507,7 @@ async function handleCronDiagnosticR1488(request, env) {
     subscriberAttemptAt:read('subscriberAttempt'),subscriberAttemptAgeMinutes:age('subscriberAttempt'),
     subscriberLastStatus:read('subscriberStatus'),subscriberLastError:read('subscriberError'),
     lastFullAt:read('full'),lastFullStatus:read('fullStatus'),
-    splitModeR1504:splitActive,splitJobsR1504:splitJobs,subscriberPushHistoryR1509,
+    splitModeR1504:splitActive,splitJobsR1504:splitJobs,subscriberPushHistoryR1509,engagementPushHistoryR1545,pushTransportR1545,
     checkedAt:new Date().toISOString()
   },200,{...JSON_HEADERS,'cache-control':'no-store'});
 }
@@ -21672,6 +21698,13 @@ function normalizeWatchReportR1532(body, now) {
     audioProbe:['not-configured','not-checked','invalid-url','probe-failed','silent','audible'].includes(body.audioProbe?.state)
       ? {state:body.audioProbe.state, checkedAt:guardIntegerR1531(body.audioProbe.checkedAt),
          consecutive:Math.min(100,guardIntegerR1531(body.audioProbe.consecutive) || 0)} : {state:'not-configured'},
+    clipEvent:(() => {
+      const e=body.clipEvent, at=guardIntegerR1531(e?.at);
+      const title=cleanPlainText(e?.title,110).replace(/\s+/g,' ');
+      if (!at || at>now+60000 || at<now-24*3600000 || !title || /:\/\/|\bbearer\s|[?&](?:token|key)=/i.test(title)) return null;
+      if (!['not-ready','handoff-failed'].includes(e?.kind)) return null;
+      return {at,title,kind:e.kind,reason:cleanPlainText(e.reason,150)};
+    })(),
     issue:validIssue ? issue : null,
     incidentAt:validIssue ? incidentAt : null
   };
@@ -21735,6 +21768,33 @@ async function checkAgentAlertR1532(env, agent, report, now, tokenHash, prior) {
       WHERE id = 1 AND token_hash = ? AND notifying_key = ? AND notifying_at = ?`)
       .bind(sent ? 1 : 0, alert.key, ...(rememberIncident ? [now, report.incidentAt] : []), tokenHash, alert.key, now);
     await finish.run();
+  }
+}
+
+// R1544: persist every observed skip; one push per unique event, independent of CPU alerts.
+async function notifyClipSkipR1544(env, report) {
+  const e=report?.clipEvent;
+  if (!e || !env.COMMENTS_DB) return;
+  const db=env.COMMENTS_DB;
+  await db.prepare(`CREATE TABLE IF NOT EXISTS andrik_watch_clip_events_r1544 (
+    event_key TEXT PRIMARY KEY, happened_at INTEGER NOT NULL, title TEXT NOT NULL,
+    kind TEXT NOT NULL, reason TEXT, created_at INTEGER NOT NULL,
+    push_status TEXT NOT NULL DEFAULT 'pending')`).run();
+  const key=await sha256Hex(`${e.at}|${e.title}|${e.kind}`);
+  const claim=await db.prepare(`INSERT OR IGNORE INTO andrik_watch_clip_events_r1544
+    (event_key,happened_at,title,kind,reason,created_at) VALUES (?,?,?,?,?,?)`)
+    .bind(key,e.at,e.title,e.kind,e.reason||'',Date.now()).run();
+  if (!claim.meta.changes) return;
+  const reason=e.kind==='not-ready'?'видео не подготовилось':'ошибка перехода после повторов';
+  const message=`🎬 Клип «${e.title}» пропущен: ${reason}. Радио продолжает эфир; проверь WATCH.`;
+  if (!oneSignalConfigured(env)) return;
+  try {
+    const result=await sendAgentPushR1532(env,'watch',`clip-skip:${key}`,message);
+    await db.prepare(`UPDATE andrik_watch_clip_events_r1544 SET push_status=? WHERE event_key=?`)
+      .bind(result.ok||result.queuedForRetryR1505?'sent':'failed',key).run();
+  } catch(error) {
+    console.warn('WATCH clip skip push:',cleanPlainText(error?.message,150));
+    await db.prepare(`UPDATE andrik_watch_clip_events_r1544 SET push_status='failed' WHERE event_key=?`).bind(key).run();
   }
 }
 
@@ -22156,11 +22216,13 @@ async function receiveAgentReportR1532(request, env, agent, ctx) {
     const current = await db.prepare(`SELECT token_hash FROM ${table} WHERE id = 1`).first();
     if (!timingSafeTextEqual(current?.token_hash, tokenHash)) return json({ ok:false, error:'unauthorized' }, 401);
   } else {
+    const clipSkip = agent === 'watch' ? notifyClipSkipR1544(env, report)
+      .catch(error => console.warn('WATCH clip skip:', cleanPlainText(error?.message, 150))) : Promise.resolve();
     const alerts = checkAgentAlertR1532(env, agent, report, now, tokenHash, row)
       .catch(error => console.warn('ANDRIK agent push:', cleanPlainText(error?.message, 180)));
     const manager = reconcileManagerR1533(env).then(result => result.tasks && sendManagerUrgentR1533(env, result.tasks))
       .catch(error => console.warn('ANDRIK MANAGER:', cleanPlainText(error?.message, 180)));
-    const task = Promise.all([alerts, manager]);
+    const task = Promise.all([alerts, manager, clipSkip]);
     if (ctx?.waitUntil) ctx.waitUntil(task);
     else await task;
   }

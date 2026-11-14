@@ -60,6 +60,14 @@
     text('next', report.next?.title || '—');
     text('next-detail', media[report.next?.type] || '');
     text('ffmpeg', report.ffmpegErrors ?? '—');
+    const clipEvent = report.clipEvent;
+    byId('clip-event-box').hidden = !clipEvent;
+    if (clipEvent) {
+      text('clip-event-title', clipEvent.title);
+      text('clip-event-detail', (clipEvent.kind === 'not-ready' ? 'Не подготовился' : 'Сбой перехода') +
+        ' · ' + date.format(clipEvent.at) + (clipEvent.reason ? ' · ' + clipEvent.reason : ''));
+    }
+
     byId('issue').hidden = !report.issue;
     byId('issue').dataset.tone = fresh ? 'warn' : '';
     text('issue', report.issue ? `${fresh ? '' : 'В последнем отчёте · '}${issues[report.issue]}` : '');

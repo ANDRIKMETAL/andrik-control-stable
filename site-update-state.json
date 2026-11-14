@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r358-deploy-nohang",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1794650319197-664dbd3046",
-  "release": "R1543",
-  "archiveName": "ANDRIK-R1543-MANAGER-NO-CPU-TASK-SHA1-FIXED.zip",
-  "sourceHead": "d07f1bfa59bfc54586f91887fb7c1948fae9e883",
-  "backupSha": "d07f1bfa59bfc54586f91887fb7c1948fae9e883",
+  "operationId": "publish-1794652016508-d1b1a07721",
+  "release": "R1545",
+  "archiveName": "ANDRIK-R1545-PUSH-AUDIT-SITE-SHA1-FIXED.zip",
+  "sourceHead": "2992a316f6d7370842bae08b7d9038015d96cc07",
+  "backupSha": "2992a316f6d7370842bae08b7d9038015d96cc07",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-11-14T09:58:41.295Z"
+  "generatedAt": "2026-11-14T10:26:58.394Z"
 }
