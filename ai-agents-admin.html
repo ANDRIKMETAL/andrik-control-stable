@@ -5,14 +5,15 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="robots" content="noindex,nofollow">
   <meta name="theme-color" content="#06101c">
-  <meta name="andrik-control-release" content="R1534">
+  <meta name="andrik-control-release" content="R1538">
   <title>AI Агенты · ANDRIK</title>
   <link rel="stylesheet" href="/assets/ai-agents-r1531.css?v=r1534">
   <script defer src="/assets/owner-session-r197.js?v=55.00-r197"></script>
   <script defer src="/assets/ai-agents-r1531.js"></script>
   <script defer src="/assets/ai-agents-watch-r1532.js"></script>
   <script defer src="/assets/ai-agents-manager-r1534.js"></script>
-</head>
+  <script defer src="/assets/ai-agents-music-social-r1538.js"></script>
+<style id="r1538-agent-cards">#music-results,#social-results{display:grid;gap:8px;margin:12px 0}.agent-check-item{background:#0c2030;border:1px solid #24445a;border-radius:12px;padding:10px 12px;overflow-wrap:anywhere}.agent-check-item strong{display:block;margin-bottom:4px}.agent-check-item small{color:#a5bacb}.agent-check-warning{border-color:#ad7c36}.agent-check-error{border-color:#b84c57}#music .actions a,#social .actions a{color:#b9e7ff;padding:8px}</style></head>
 <body>
   <main class="control">
     <header class="top">
@@ -21,7 +22,7 @@
     </header>
     <h1>AI Агенты</h1>
     <nav class="agent-links" aria-label="Агенты">
-      <a href="#manager">MANAGER</a><a href="#guard">GUARD</a><a href="#watch">WATCH</a>
+      <a href="#manager">MANAGER</a><a href="#guard">GUARD</a><a href="#watch">WATCH</a><a href="#music">MUSIC</a><a href="#social">SOCIAL</a>
     </nav>
     <section class="panel guard manager" id="manager" aria-labelledby="manager-title">
       <div class="guard-head">
@@ -169,9 +170,18 @@ sudo bash INSTALL.sh --apply</pre>
         <span id="watch-push-message" class="muted" role="status"></span>
       </div>
     </section>
-    <div class="other-agents" aria-label="Следующие агенты">
-      <section><span aria-hidden="true">🎵</span><h2>MUSIC</h2><p>Релизы и контент</p><small>В плане</small></section>
-    </div>
+    <section class="panel guard" id="music" aria-labelledby="music-title">
+      <div class="guard-head"><div class="guard-identity"><span class="guard-icon" aria-hidden="true">🎵</span><div><h2 id="music-title">ANDRIK MUSIC</h2><div class="muted">Агент №4 · Проверка альбомов и каталога R2</div></div></div><button type="button" id="music-refresh">Проверить</button></div>
+      <p id="music-background" class="muted">Фоновый MUSIC: ожидает первого запуска</p><p id="music-state" class="connection" role="status">Ожидает проверки</p><div id="music-results"></div>
+      <p class="muted">Только чтение. Проверяет наличие треков и ZIP-архивов в подключённом хранилище; не загружает и не удаляет музыку.</p>
+      <div class="actions"><button type="button" id="music-copy">Скопировать отчёт</button><a href="/albums.html">Открыть альбомы</a><a href="/r2-storage-admin.html">Хранилище R2</a></div>
+    </section>
+    <section class="panel guard" id="social" aria-labelledby="social-title">
+      <div class="guard-head"><div class="guard-identity"><span class="guard-icon" aria-hidden="true">📣</span><div><h2 id="social-title">ANDRIK SOCIAL</h2><div class="muted">Агент №5 · YouTube, TikTok, Instagram, сайт</div></div></div><button type="button" id="social-refresh">Проверить</button></div>
+      <p id="social-background" class="muted">Фоновый SOCIAL: ожидает первого запуска</p><p id="social-state" class="connection" role="status">Ожидает проверки</p><div id="social-results"></div>
+      <p class="muted">Использует уже сохранённые данные аналитики, не выполняет платных API-запросов и не публикует посты.</p>
+      <div class="actions"><button type="button" id="social-copy">Скопировать отчёт</button><a href="/social-center-admin.html">Соцсети</a><a href="/youtube-admin.html">YouTube</a></div>
+    </section>
     <details class="panel report">
       <summary>Отчёт для ChatGPT</summary>
       <label for="report">Используй последний замер или вставь вывод из терминала.</label>
@@ -184,5 +194,5 @@ sudo bash INSTALL.sh --apply</pre>
       <p id="report-message" class="muted" role="status"></p>
     </details>
   </main>
-</body>
+<script defer src="/assets/ai-agents-background-r1539.js"></script></body>
 </html>

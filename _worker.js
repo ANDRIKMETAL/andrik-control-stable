@@ -21747,6 +21747,80 @@ async function testWatchPushR1532(env) {
   return json({ ok:false, error }, 503);
 }
 
+
+// R1539: background MUSIC/SOCIAL monitoring, read-only, throttled and D1-persistent.
+const AGENT_BG_TABLE_R1539='andrik_background_agents_r1539';
+async function ensureBackgroundR1539(db){
+ await db.prepare(`CREATE TABLE IF NOT EXISTS ${AGENT_BG_TABLE_R1539} (agent TEXT PRIMARY KEY, checked_at INTEGER NOT NULL, status TEXT NOT NULL, report_json TEXT NOT NULL)`).run();
+}
+async function backgroundSnapshotR1539(db){
+ await ensureBackgroundR1539(db);
+ const rows=await db.prepare(`SELECT agent,checked_at,status,report_json FROM ${AGENT_BG_TABLE_R1539}`).all();
+ return Object.fromEntries((rows.results||[]).map(r=>[r.agent,{checkedAt:r.checked_at,status:r.status,report:JSON.parse(r.report_json)}]));
+}
+async function runBackgroundR1539(env,force=false){
+ if(!env.COMMENTS_DB)return;
+ const db=env.COMMENTS_DB,now=Date.now();
+ await ensureBackgroundR1539(db);
+ const existing=await backgroundSnapshotR1539(db);
+ const jobs=[['music',async()=>{
+   const bucket=getMusicBucketR314(env);
+   if(!bucket)return {error:'R2 bucket not configured',issues:[]};
+   const albums=[];
+   for(const def of Object.values(MUSIC_ALBUMS_R446)){
+     const a=await musicAlbumStatusOneR446(bucket,def,false);
+     albums.push({slug:a.slug,label:a.label,trackCount:a.trackCount,zipExists:Boolean(a.zip?.exists),duplicates:a.duplicateCount});
+   }
+   const issues=albums.filter(a=>a.trackCount===0).map(a=>({id:'music-empty-'+a.slug,title:'Нет треков: '+a.label,detail:'Каталог R2 сообщает 0 треков для альбома '+a.label}));
+   // Missing ZIP is informational unless tracks exist; ZIP creation remains manual.
+   issues.push(...albums.filter(a=>a.trackCount>0&&!a.zipExists).map(a=>({id:'music-zip-'+a.slug,title:'Проверить ZIP: '+a.label,detail:'Треки есть, ZIP не найден в R2'})));
+   return {albums,issues};
+ }],['social',async()=>{
+   await ensurePlatformAnalyticsSchema(db);
+   const platforms=[['youtube','youtube'],['instagram','instagram'],['tiktok','tiktok'],['site','google-analytics']];
+   const records=[];const issues=[];
+   for(const [label,key] of platforms){
+     const row=await db.prepare(`SELECT created_at FROM platform_snapshots WHERE platform=? ORDER BY datetime(created_at) DESC LIMIT 1`).bind(key).first();
+     const timestamp=Date.parse(row?.created_at||'');
+     const ageHours=Number.isFinite(timestamp)?Math.max(0,(now-timestamp)/3600000):null;
+     records.push({platform:label,updatedAt:row?.created_at||null,ageHours});
+     if(ageHours===null||ageHours>48)issues.push({id:'social-stale-'+label,title:'Проверить аналитику '+label,detail:ageHours===null?'Сохранённых данных нет':'Последний снимок старше 48 часов'});
+   }
+   return {platforms:records,issues};
+ }]];
+ for(const [agent,job] of jobs){
+   if(!force&&existing[agent]&&now-existing[agent].checkedAt<6*3600000)continue;
+   // D1 lease: only one invocation per 6h; failed runs retried after 15 min.
+   const claim=await db.prepare(`INSERT INTO ${AGENT_BG_TABLE_R1539} (agent,checked_at,status,report_json) VALUES (?,?,'running','{}') ON CONFLICT(agent) DO UPDATE SET checked_at=excluded.checked_at,status='running' WHERE checked_at<?`).bind(agent,now,now-(force?0:6*3600000)).run();
+   if(!claim.meta.changes)continue;
+   try{
+     const report=await job();const status=report.error?'unavailable':'ok';
+     await db.prepare(`UPDATE ${AGENT_BG_TABLE_R1539} SET checked_at=?,status=?,report_json=? WHERE agent=? AND checked_at=?`).bind(now,status,JSON.stringify(report),agent,now).run();
+   }catch(e){
+     await db.prepare(`UPDATE ${AGENT_BG_TABLE_R1539} SET checked_at=?,status='error',report_json=? WHERE agent=? AND checked_at=?`).bind(now-6*3600000+15*60000,JSON.stringify({error:String(e?.message||e).slice(0,250),issues:[]}),agent,now).run();
+   }
+ }
+ await reconcileManagerR1533(env).catch(()=>{});
+}
+async function backgroundTasksR1539(db,now){
+ const rows=await backgroundSnapshotR1539(db),tasks={};
+ for(const agent of ['music','social']){
+   const r=rows[agent];
+   if(!r)continue; // no false alarm until first background scan
+   if(r.status!=='ok'){
+     tasks['bg-'+agent+'-unavailable']={id:'bg-'+agent+'-unavailable',priority:'attention',agents:[agent],title:'Проверить фоновый агент '+agent.toUpperCase(),evidence:r.report.error||'Нет успешного отчёта',action:'Проверь привязки Cloudflare и журнал выполнения Cron Trigger.',command:'',eventAt:null};
+   }
+   if(now-r.checkedAt>8*3600000){
+     tasks['bg-'+agent+'-stale']={id:'bg-'+agent+'-stale',priority:'attention',agents:[agent],title:'Фоновая проверка '+agent.toUpperCase()+' задерживается',evidence:'Последняя попытка проверки старше 8 часов',action:'Проверь расписание Cloudflare Cron Triggers.',command:'',eventAt:null};
+   }
+   if(r.status==='ok')for(const issue of r.report.issues||[]){
+     if(!/^[a-z0-9-]{1,80}$/.test(issue.id))continue;
+     tasks[issue.id]={id:issue.id,priority:'attention',agents:[agent],title:issue.title,evidence:issue.detail,action:'Проверь данные в контрольке. Исправления выполняются вручную после подтверждения.',command:'',eventAt:null};
+   }
+ }
+ return tasks;
+}
+
 const AGENT_FRESH_MS_R1533 = { guard:GUARD_STALE_MS_R1531, watch:WATCH_STALE_MS_R1532 };
 const MANAGER_TABLE_R1533 = 'andrik_manager_r1533';
 const MANAGER_RADIO_UNIT_R1533 = 'andrik-radio.service';
@@ -21928,6 +22002,7 @@ function managerTaskStateR1533(task, sources) {
     return watchRecovered || intentionallyOff || (!watchWasSource && guardRecovered) ? 'resolved' : 'awaiting';
   }
   if (task.id === 'agent-guard' || task.id === 'agent-watch') return 'resolved';
+  if (task.agents.some(a=>a==='music'||a==='social')) return 'resolved';
   if (task.id === 'watch-metrics' && !['on-air', 'off'].includes(sources.watch.report?.state)) return 'awaiting';
   const guard = sources.guard.report;
   if ((task.id === 'disk' && !guard?.disk) || (task.id === 'ram' && !guard?.ram) ||
@@ -21939,8 +22014,8 @@ function managerTaskStateR1533(task, sources) {
   return task.agents.every(agent => sources[agent].state === 'fresh') ? 'resolved' : 'awaiting';
 }
 
-function mergeManagerTasksR1533(previous, sources, now) {
-  const live = managerTasksR1533(sources);
+function mergeManagerTasksR1533(previous, sources, now, extra = {}) {
+  const live = { ...managerTasksR1533(sources), ...extra };
   const next = { ...previous };
   for (const [id, reading] of Object.entries(live)) {
     const old = previous[id];
@@ -21986,7 +22061,9 @@ async function reconcileManagerR1533(env, change = null) {
     const now = Date.now();
     const sources = await readManagerSourcesR1533(db, now);
     const previous = row ? JSON.parse(row.tasks_json) : {};
-    const tasks = mergeManagerTasksR1533(previous, sources, now);
+    const background = await backgroundTasksR1539(db,now);
+    const backgroundSources={...sources,music:{state:'fresh',report:{}},social:{state:'fresh',report:{}}};
+    const tasks = mergeManagerTasksR1533(previous, backgroundSources, now, background);
     if (change) {
       const task = tasks[change.id];
       if (!task || task.openedAt !== change.openedAt || !['open', 'working', 'rejected'].includes(task.state)) return { conflict:true };
@@ -22154,6 +22231,16 @@ const agentControl = /^\/api\/control\/agents\/(guard|watch)\/(status|pair|test)
 if (agentControl) return await handleAgentControlR1532(request, env, agentControl[1], agentControl[2]);
 const managerAction = /^\/api\/control\/agents\/manager\/(status|task)$/.exec(path);
 if (managerAction) return await handleManagerR1533(request, env, managerAction[1]);
+if(path==='/api/control/agents/background/status' && request.method==='GET'){
+ if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
+ return json({ok:true,agents:await backgroundSnapshotR1539(requireDb(env))});
+}
+if(path==='/api/control/agents/background/run' && request.method==='POST'){
+ if(!adminAuthorized(request,env))return json({ok:false,error:'unauthorized'},401);
+ if(!isSameOrigin(request))return json({ok:false,error:'origin'},403);
+ await runBackgroundR1539(env,true);
+ return json({ok:true,agents:await backgroundSnapshotR1539(requireDb(env))});
+}
 if (path === '/api/health' && request.method === 'GET') return await handlePublicHealth(request, env, ctx);
 if (path === '/api/youtube/websub' && request.method === 'GET') return await handleYoutubeWebSubVerifyR332(request, env, ctx);
 if (path === '/api/youtube/websub' && request.method === 'POST') return await handleYoutubeWebSubNotifyR332(request, env, ctx);
@@ -24193,6 +24280,7 @@ return json({ok:false,error:cleanPlainText(error?.message||error,500)},503);
 }
 export default {
 async scheduled(controller, env, ctx) {
+ctx.waitUntil(runBackgroundR1539(env).catch(e=>console.error("R1539 background agents",e)));
 const cronKey=String(env.CRON_SECRET || env.CENTRAL_CRON_SECRET_R462 || '');
 const cron=String(controller?.cron || '');
 const request=new Request(`https://control.andrikmetal.com/api/automation/cron-gateway?cron=${encodeURIComponent(cron)}`,{method:'POST',headers:cronKey?{'x-cron-key':cronKey}:{}});
