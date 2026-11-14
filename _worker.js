@@ -21626,6 +21626,19 @@ function normalizeGuardReportR1531(body) {
         guardPercentR1531(v.peak) !== null && Number.isSafeInteger(v.samples) && v.samples >= 1 && v.samples <= 120
         ? {average:v.average,peak:v.peak,samples:v.samples} : null];
     })),
+    cpuDiagnosis:(() => {
+      const d=body.cpuDiagnosis;
+      const states=['insufficient-history','sustained-critical','sustained-high','transient-spike','normal'];
+      if (!d || !states.includes(d.state)) return null;
+      return {state:d.state,average5m:guardPercentR1531(d.average5m),average15m:guardPercentR1531(d.average15m)};
+    })(),
+    systemLoad:(() => {
+      const d=body.systemLoad;
+      if (!d || !Number.isSafeInteger(d.cores) || d.cores<1 || d.cores>256) return null;
+      const keys=['load1m','load5m','load15m','load5mPerCore','load15mPerCore'];
+      if (!keys.every(k=>typeof d[k]==='number' && Number.isFinite(d[k]) && d[k]>=0 && d[k]<10000)) return null;
+      return {cores:d.cores,...Object.fromEntries(keys.map(k=>[k,d[k]]))};
+    })(),
     services,
     radioSignal:GUARD_SIGNAL_STATES_R1531.has(body.radioSignal) ? body.radioSignal : 'unknown',
     ffmpeg:running !== null && zombies !== null
@@ -21809,9 +21822,25 @@ function managerTasksR1533(sources) {
         `Занято ${guard.ram.usedPct}% RAM.`, 'Сверь верхние процессы со временем замера и проверь, растёт ли потребление.',
         'free -h\nps -eo pid,comm,%mem,rss --sort=-rss | head -12');
     }
-    if ((guard.cpuHistory?.['15m']?.samples >= 4 && guard.cpuHistory['15m'].average >= 90) || (!guard.cpuHistory?.['15m'] && guard.cpuPercent >= 90)) {
-      add('cpu', 'attention', ['guard'], 'Перепроверить нагрузку CPU', `CPU: текущий ${guard.cpuPercent}%, средний за 15 минут ${guard.cpuHistory?.['15m']?.average ?? 'нет данных'}%.`,
-        'Сними несколько замеров подряд. Если нагрузка держится, проверь, какой процесс занимает CPU.', 'top -b -d 2 -n 3');
+    // R1537: confirmed sustained CPU only. A single peak never opens a task.
+    const diagnosis=guard.cpuDiagnosis;
+    const five=guard.cpuHistory?.['5m'];
+    const fifteen=guard.cpuHistory?.['15m'];
+    const confirmed=diagnosis?.state === 'sustained-critical' || diagnosis?.state === 'sustained-high';
+    // Legacy GUARD compatibility: require adequate history, never current-only fallback.
+    const legacyConfirmed=!diagnosis && five?.samples>=3 && fifteen?.samples>=7 &&
+      ((five.average>=90 && fifteen.average>=85) || (five.average>=80 && fifteen.average>=75));
+    if (confirmed || legacyConfirmed) {
+      const critical=diagnosis ? diagnosis.state==='sustained-critical' : five.average>=90 && fifteen.average>=85;
+      const load=guard.systemLoad;
+      const loadNote=load ? ` Load 5 мин: ${load.load5m} на ${load.cores} ядра (${load.load5mPerCore} на ядро).` : '';
+      const radioHealthy=sources.watch.state==='fresh' && sources.watch.report?.state==='on-air' && !sources.watch.report?.issue;
+      add('cpu', critical ? 'urgent' : 'attention', ['guard'],
+        critical ? 'Устойчивая высокая нагрузка CPU' : 'Проверить длительную нагрузку CPU',
+        `Средний CPU за 5 мин: ${five?.average ?? diagnosis?.average5m}%; за 15 мин: ${fifteen?.average ?? diagnosis?.average15m}%.${loadNote}`,
+        radioHealthy ? 'Эфир работает: проверь самые нагруженные процессы без перезапуска радио.' :
+          'Проверь процессы и сопоставь с WATCH. Не перезапускай радио только из-за CPU.',
+        'uptime\nps -eo pid,ppid,%cpu,%mem,etime,comm --sort=-%cpu | head -15');
     }
     for (const [unit, state] of Object.entries(guard.services || {})) {
       if (unit === MANAGER_RADIO_UNIT_R1533 || state !== 'failed' || !GUARD_UNITS_R1531.includes(unit)) continue;
