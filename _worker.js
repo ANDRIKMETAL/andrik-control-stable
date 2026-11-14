@@ -21896,26 +21896,9 @@ function managerTasksR1533(sources) {
         `Занято ${guard.ram.usedPct}% RAM.`, 'Сверь верхние процессы со временем замера и проверь, растёт ли потребление.',
         'free -h\nps -eo pid,comm,%mem,rss --sort=-rss | head -12');
     }
-    // R1537: confirmed sustained CPU only. A single peak never opens a task.
-    const diagnosis=guard.cpuDiagnosis;
-    const five=guard.cpuHistory?.['5m'];
-    const fifteen=guard.cpuHistory?.['15m'];
-    const confirmed=diagnosis?.state === 'sustained-critical' || diagnosis?.state === 'sustained-high';
-    // Legacy GUARD compatibility: require adequate history, never current-only fallback.
-    const legacyConfirmed=!diagnosis && five?.samples>=3 && fifteen?.samples>=7 &&
-      ((five.average>=90 && fifteen.average>=85) || (five.average>=80 && fifteen.average>=75));
-    if (confirmed || legacyConfirmed) {
-      const critical=diagnosis ? diagnosis.state==='sustained-critical' : five.average>=90 && fifteen.average>=85;
-      const load=guard.systemLoad;
-      const loadNote=load ? ` Load 5 мин: ${load.load5m} на ${load.cores} ядра (${load.load5mPerCore} на ядро).` : '';
-      const radioHealthy=sources.watch.state==='fresh' && sources.watch.report?.state==='on-air' && !sources.watch.report?.issue;
-      add('cpu', critical ? 'urgent' : 'attention', ['guard'],
-        critical ? 'Устойчивая высокая нагрузка CPU' : 'Проверить длительную нагрузку CPU',
-        `Средний CPU за 5 мин: ${five?.average ?? diagnosis?.average5m}%; за 15 мин: ${fifteen?.average ?? diagnosis?.average15m}%.${loadNote}`,
-        radioHealthy ? 'Эфир работает: проверь самые нагруженные процессы без перезапуска радио.' :
-          'Проверь процессы и сопоставь с WATCH. Не перезапускай радио только из-за CPU.',
-        'uptime\nps -eo pid,ppid,%cpu,%mem,etime,comm --sort=-%cpu | head -15');
-    }
+    // R1543: CPU saturation is expected for this 2-vCPU live video encoder.
+    // GUARD continues to collect CPU telemetry, but MANAGER does not create CPU-only tasks.
+    // WATCH and systemd still detect genuine radio outages independently.
     for (const [unit, state] of Object.entries(guard.services || {})) {
       if (unit === MANAGER_RADIO_UNIT_R1533 || state !== 'failed' || !GUARD_UNITS_R1531.includes(unit)) continue;
       add(`service-${unit}`, 'attention', ['guard'], `Проверить службу ${unit}`, 'systemd сообщил о сбое службы.',
@@ -22017,6 +22000,9 @@ function managerTaskStateR1533(task, sources) {
 function mergeManagerTasksR1533(previous, sources, now, extra = {}) {
   const live = { ...managerTasksR1533(sources), ...extra };
   const next = { ...previous };
+  // R1543: retire the historical CPU task, including accepted/in-progress ones.
+  // Removing it from persisted tasks prevents a stale card from surviving reconciliation.
+  delete next.cpu;
   for (const [id, reading] of Object.entries(live)) {
     const old = previous[id];
     const reopening = !old || old.state === 'resolved' || (old.eventAt && reading.eventAt && reading.eventAt > old.eventAt);
@@ -22037,7 +22023,7 @@ function mergeManagerTasksR1533(previous, sources, now, extra = {}) {
     if (!old || JSON.stringify(next[id]) !== JSON.stringify(old)) next[id].updatedAt = now;
   }
   for (const [id, task] of Object.entries(previous)) {
-    if (Object.hasOwn(live, id) || task.state === 'resolved') continue;
+    if (id === 'cpu' || Object.hasOwn(live, id) || task.state === 'resolved') continue;
     const state = managerTaskStateR1533(task, sources);
     if (state !== task.state) {
       const { wasWorking, ...details } = task;
@@ -22085,7 +22071,8 @@ async function reconcileManagerR1533(env, change = null) {
 }
 
 async function sendManagerUrgentR1533(env, tasks) {
-  const urgent = Object.values(tasks).filter(task => task.urgentSince && ['open', 'working'].includes(task.state));
+  // R1543: CPU-only tasks are disabled and historical CPU tasks are retired; keep push filtering as defense in depth.
+  const urgent = Object.values(tasks).filter(task => task.id !== 'cpu' && task.urgentSince && ['open', 'working'].includes(task.state));
   if (!urgent.length || !oneSignalConfigured(env)) return;
   const db = requireDb(env);
   const row = await db.prepare(`SELECT pushed_json, pushed_at FROM ${MANAGER_TABLE_R1533} WHERE id = 1`).first();
