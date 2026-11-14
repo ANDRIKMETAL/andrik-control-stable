@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r358-deploy-nohang",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1794638294113-d90da827c8",
-  "release": "R1530",
-  "archiveName": "SITE-R1530-RESTORED-GLOBE-COMPACT-HEADER.zip",
-  "sourceHead": "c9ad33eec4cf59a57152d17e1487826b02b95232",
-  "backupSha": "c9ad33eec4cf59a57152d17e1487826b02b95232",
+  "operationId": "publish-1794642876212-592752b7f5",
+  "release": "R1532",
+  "archiveName": "ANDRIK-R1532.zip",
+  "sourceHead": "4db5dc2556ed8cf75a1bf89bb498f9f22db42664",
+  "backupSha": "4db5dc2556ed8cf75a1bf89bb498f9f22db42664",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-11-14T06:38:14.113Z"
+  "generatedAt": "2026-11-14T07:54:39.766Z"
 }

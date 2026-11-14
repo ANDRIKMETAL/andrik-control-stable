@@ -1,0 +1,11 @@
+[Unit]
+Description=Check the ANDRIK radio twice per minute
+
+[Timer]
+OnBootSec=30s
+OnUnitActiveSec=30s
+AccuracySec=2s
+Unit=andrik-watch-r1532.service
+
+[Install]
+WantedBy=timers.target

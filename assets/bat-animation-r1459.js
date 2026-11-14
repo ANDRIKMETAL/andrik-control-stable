@@ -1,13 +1,20 @@
 import * as T from './vendor/three-r170.module.min.js';
 const smooth=x=>{x=T.MathUtils.clamp(x,0,1);return x*x*(3-2*x);},up=new T.Vector3(0,1,0);
+const backGrip=new T.Vector3(.22,.71,-.225),backAxis=new T.Vector3(.09,.99,-.10).normalize();
 export function createBatTrail(hero){
  const geometry=new T.BufferGeometry(),positions=new Float32Array(9*2*3),indices=[];geometry.setAttribute('position',new T.BufferAttribute(positions,3).setUsage(T.DynamicDrawUsage));
  for(let i=0;i<8;i++){const j=i*2;indices.push(j,j+1,j+2,j+1,j+3,j+2);}geometry.setIndex(indices);geometry.setDrawRange(0,0);
  const trail=new T.Mesh(geometry,new T.MeshBasicMaterial({color:0xe6d4b1,transparent:true,opacity:.17,side:T.DoubleSide,depthWrite:false,blending:T.AdditiveBlending}));trail.name='Lyra-bat-swing-trail';trail.frustumCulled=false;trail.visible=false;hero.add(trail);hero.userData.batTrail=trail;hero.userData.batSamples=[];
 }
-export function animateBat(hero,attack,time,running,weapon,handAt){
- const u=hero.userData,g=u.bat;if(!g)return;g.visible=weapon?.selected==='bat'&&!['attack','scream','finish'].includes(attack?.kind);u.batTrail.visible=false;
- if(!g.visible){u.batSamples.length=0;u.batAttack=null;return;}if(u.blade)u.blade.visible=false;if(u.bladeTrace)u.bladeTrace.visible=false;
+export function animateBat(hero,attack,time,running,weapon,handAt,carry=0){
+ const u=hero.userData,g=u.bat;if(!g)return;
+ g.visible=weapon?.selected==='bat';u.batTrail.visible=false;
+ if(!g.visible||carry===0){
+  u.batSamples.length=0;u.batAttack=null;
+  if(g.visible){g.position.copy(backGrip);g.quaternion.setFromUnitVectors(up,backAxis);}
+  return;
+ }
+ if(u.blade)u.blade.visible=false;if(u.bladeTrace)u.bladeTrace.visible=false;
  const active=attack?.kind==='slash',step=attack?.step||0,side=step===1?-1:1,q=active?T.MathUtils.clamp(attack.t/attack.duration,0,1):0,hit=active?(attack.hitAt??attack.duration*.48)/attack.duration:.48;
  const rest={grip:new T.Vector3(.13,1.21,.27),axis:new T.Vector3(-.13,.96,.25),yaw:0,lean:0,bend:0};
  let wind={grip:new T.Vector3(side*.24,1.47,-.10),axis:new T.Vector3(side*.88,.35,-.30),yaw:-side*.65,lean:-.035,bend:.12},strike={grip:new T.Vector3(-side*.13,1.24,.40),axis:new T.Vector3(-side*.24,.05,.97),yaw:side*.16,lean:.09,bend:.22},follow={grip:new T.Vector3(-side*.26,1.22,.08),axis:new T.Vector3(-side*.94,.12,-.30),yaw:side*.95,lean:.07,bend:.13};
@@ -19,10 +26,20 @@ export function animateBat(hero,attack,time,running,weapon,handAt){
  // Project the two actual grip points into both arms' reach, preserving a broad
  // hand path instead of pinning the hands to the centre of the chest.
  for(let pass=0;pass<20;pass++)for(const [index,offset]of [[1,-.08],[0,.08]]){const hand=grip.clone().addScaledVector(axis,offset),delta=hand.clone().sub(u.limbs[index].arm.position),length=delta.length();if(length>.60)grip.addScaledVector(delta,-(length-.60)/length);else if(length<.095)grip.addScaledVector(length>1e-6?delta:new T.Vector3(0,0,1),(.095-length)/(length||1));}
- g.position.copy(grip).addScaledVector(axis,-.165);g.quaternion.setFromUnitVectors(up,axis);g.updateMatrix();
- if(active||!attack){u.body.rotation.y=active&&step===3?Math.PI*2*smooth((q-hit*.35)/(.92-hit*.35)):T.MathUtils.lerp(a.yaw,b.yaw,t);u.body.rotation.x=active?lean:running?.12:0;u.body.rotation.z=active?-side*.055*Math.sin(Math.PI*q):0;}if(active)u.body.position.y-=bend*.12;
+ const blend=smooth(carry);
+ g.position.copy(grip).addScaledVector(axis,-.165);
+ if(blend<1){
+  const arc=Math.sin(blend*Math.PI);
+  g.position.lerp(backGrip,1-blend);
+  g.position.x+=.34*arc;g.position.y+=.18*arc;
+  axis.lerp(backAxis,1-blend).normalize();
+ }
+ g.quaternion.setFromUnitVectors(up,axis);g.updateMatrix();
+ if(active||!attack&&carry===1){u.body.rotation.y=active&&step===3?Math.PI*2*smooth((q-hit*.35)/(.92-hit*.35)):T.MathUtils.lerp(a.yaw,b.yaw,t);u.body.rotation.x=active?lean:running?.12:0;u.body.rotation.z=active?-side*.055*Math.sin(Math.PI*q):0;}if(active)u.body.position.y-=bend*.12;
  for(const [i,l]of u.limbs.entries()){if(active){l.leg.rotation.x-=(i?.32:.16)*bend;l.shin.rotation.x+=bend;l.leg.rotation.y+=(i?1:-1)*Math.sin(Math.PI*q)*.12;}l.hand.scale.setScalar(1);}
+ const oldArm=blend<1?u.limbs.map(l=>[l.arm.quaternion.clone(),l.fore.quaternion.clone()]):null;
  handAt(u.limbs[1],new T.Vector3(0,.085,0).applyMatrix4(g.matrix),1);handAt(u.limbs[0],new T.Vector3(0,.245,0).applyMatrix4(g.matrix),-1);
+ if(oldArm)u.limbs.forEach((l,i)=>{l.arm.quaternion.slerp(oldArm[i][0],1-blend);l.fore.quaternion.slerp(oldArm[i][1],1-blend);});
  const trace=active&&q>hit*.55&&q<Math.min(.84,hit+.22);
  if(u.batAttack!==attack||!trace){u.batSamples.length=0;u.batAttack=attack;u.batSampleAt=-1;}
  if(trace){u.body.updateMatrix();const matrix=u.body.matrix.clone().multiply(g.matrix);if(u.batSampleAt!==attack.t){u.batSamples.push([new T.Vector3(0,.48,0).applyMatrix4(matrix),new T.Vector3(0,1.13,0).applyMatrix4(matrix)]);if(u.batSamples.length>9)u.batSamples.shift();u.batSampleAt=attack.t;}

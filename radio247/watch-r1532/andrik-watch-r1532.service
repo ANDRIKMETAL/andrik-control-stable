@@ -1,0 +1,22 @@
+[Unit]
+Description=ANDRIK WATCH radio diagnostics
+
+[Service]
+Type=oneshot
+User=andrik-watch
+Group=andrik-watch
+StateDirectory=andrik-watch-r1532
+StateDirectoryMode=0700
+ExecStart=/usr/bin/python3 -I /usr/local/share/andrik-watch-r1532/watch.py publish
+TimeoutStartSec=20s
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+CapabilityBoundingSet=
+RestrictSUIDSGID=yes
+UMask=0077
+Nice=10

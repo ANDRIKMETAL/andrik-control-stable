@@ -107,6 +107,20 @@
 /control-home.html
   Cache-Control: no-cache, must-revalidate
 
+/ai-agents-admin.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+  X-Robots-Tag: noindex, nofollow
+
+/ai-agents-admin
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+  X-Robots-Tag: noindex, nofollow
+
+/radio247/guard-r1531/*
+  Cache-Control: no-cache, must-revalidate
+
+/radio247/watch-r1532/*
+  Cache-Control: no-cache, must-revalidate
+
 /social-center-admin.html
   Cache-Control: no-cache, must-revalidate
 

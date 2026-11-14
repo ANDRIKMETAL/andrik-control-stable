@@ -1,12 +1,44 @@
 import {posePowerCombat} from './power-poses-r1466.js?v=r1472';
-import {poseBat} from './weapon-view-r1458.js?v=r1472';
+import {poseBat} from './weapon-view-r1458.js?v=r1532';
 import * as T from './vendor/three-r170.module.min.js';
 import {poseBlade} from './lyra-blade-r1455.js?v=r1472';
 import {createCharacter,poseCharacterSurface,trackCharacter} from './lyra-character-r1465.js?v=r1472';
+import {blocked} from './portrait-core-r1295.js?v=r1472';
 export const createLyra=createCharacter;
 export const trackLyra=trackCharacter;
 const smooth=x=>{x=T.MathUtils.clamp(x,0,1);return x*x*(3-2*x);};
 const down=new T.Vector3(0,-1,0);
+const batAttacks=new Set(['slash','airCleave','finish','meteor','rage']);
+const freeHands=new Set(['attack','scream','punch','backfist','palm','airKick']);
+function batCarry(hero,state,time,attack,weapon){
+ const u=hero.userData;
+ if(weapon?.selected!=='bat'||!state||state.vehicleActive||state.race?.mounted||state.dead||state.won||state.finale){
+  u.batCarry=null;
+  return 0;
+ }
+ if(!u.batCarry||u.batCarry.layout!==state.geo||time<u.batCarry.at){
+  u.batCarry={layout:state.geo,at:time,until:-1,blend:0};
+ }
+ const carry=u.batCarry,dt=Math.min(.1,time-carry.at);
+ carry.at=time;
+ if(freeHands.has(attack?.kind)||state.throwables?.held||state.traversal?.ledge){
+  carry.blend=0;
+  return 0;
+ }
+ const {p}=state,forwardX=Math.sin(p.yaw),forwardZ=Math.cos(p.yaw);
+ const threat=state.enemies.some(enemy=>{
+  if(!(enemy.hp>0))return false;
+  const dx=enemy.x-p.x,dz=enemy.z-p.z,d=Math.hypot(dx,dz);
+  const range=enemy.kind==='boss'?62:46;
+  return d<range&&Math.abs((enemy.y||0)-p.y)<Math.max(3,d*.35)&&
+   (d<5||dx*forwardX+dz*forwardZ>d*.78)&&!blocked(p,enemy,state.geo.walls);
+ });
+ if(threat)carry.until=time+1;
+ if(batAttacks.has(attack?.kind)){carry.blend=1;return 1;}
+ const step=dt/.23;
+ carry.blend=threat||time<carry.until?Math.min(1,carry.blend+step):Math.max(0,carry.blend-step);
+ return carry.blend;
+}
 function handAt(limb,target,side){
  const start=limb.arm.position,L1=.32,L2=.30,d=target.clone().sub(start),len=T.MathUtils.clamp(d.length(),.035,L1+L2-.001);d.normalize();
  const along=(L1*L1-L2*L2+len*len)/(2*len),height=Math.sqrt(Math.max(0,L1*L1-along*along));
@@ -15,12 +47,13 @@ function handAt(limb,target,side){
  limb.arm.quaternion.setFromUnitVectors(down,elbow.clone().sub(start).normalize());
  const inverse=limb.arm.quaternion.clone().invert();limb.fore.quaternion.setFromUnitVectors(down,end.sub(elbow).applyQuaternion(inverse).normalize());
 }
-export function poseGuitar(root,attack,combo,time,running,weapon=null){
+export function poseGuitar(root,attack,combo,time,running,weapon=null,state=null){
  const u=root.userData,g=u.guitar,active=attack?.kind==='attack',punch=attack?.kind==='punch';
- for(const l of u.limbs){l.hand.scale.setScalar(1);l.foot.scale.setScalar(1);const closed=active||['slash','airCleave'].includes(attack?.kind)||weapon?.selected==='bat'&&!['attack','scream','finish'].includes(attack?.kind)||punch||attack?.kind==='backfist'||attack?.kind==='finish';for(const f of l.hand.userData.fingers){f.position.y=closed?-.021:-.032;f.position.z=closed?.028:.01;f.scale.y=closed?.011:.023;}}
+ const carry=batCarry(root,state,time,attack,weapon);
+ for(const l of u.limbs){l.hand.scale.setScalar(1);l.foot.scale.setScalar(1);const closed=active||['slash','airCleave'].includes(attack?.kind)||carry>.5||punch||attack?.kind==='backfist'||attack?.kind==='finish';for(const f of l.hand.userData.fingers){f.position.y=closed?-.021:-.032;f.position.z=closed?.028:.01;f.scale.y=closed?.011:.023;}}
  // Grip pose returns smoothly after both attacks. Body and legs remain free to move.
  const rest=new T.Vector3(.10,1.46,-.175),p=active?T.MathUtils.clamp(attack.t/attack.duration,0,1):0;
- g.position.copy(rest);g.rotation.set(.10,0,-.38);
+ g.visible=true;g.position.copy(rest);g.rotation.set(.10,0,-.38);
  u.microphone.visible=attack?.kind==='scream';u.vocalMouth.visible=u.microphone.visible&&attack.t>.27&&attack.t<1.2;
  if(u.microphone.visible){
   const t=attack.t/attack.duration,w=smooth(t/.22)*(1-smooth((t-.80)/.20));
@@ -70,5 +103,5 @@ export function poseGuitar(root,attack,combo,time,running,weapon=null){
   if(running){g.position.y+=Math.sin(time*15)*.025;if(!attack)u.body.rotation.x=.12;}
   g.updateMatrix(); // both arms remain free while guitar stays attached to the back
  }
- if(weapon?.selected==='bat'){u.blade.visible=false;u.bladeTrace.visible=false;}else poseBlade(root,attack,time,running,handAt);poseBat(root,attack,time,running,weapon,handAt);poseCharacterSurface(root,attack,time,running);posePowerCombat(root,attack,time,weapon,handAt);
+ if(weapon?.selected==='bat'){u.blade.visible=false;u.bladeTrace.visible=false;}else poseBlade(root,attack,time,running,handAt);poseBat(root,attack,time,running,weapon,handAt,carry);poseCharacterSurface(root,attack,time,running);posePowerCombat(root,attack,time,weapon,handAt);
 }

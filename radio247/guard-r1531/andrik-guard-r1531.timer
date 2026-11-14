@@ -1,0 +1,11 @@
+[Unit]
+Description=Send an ANDRIK GUARD report every two minutes
+
+[Timer]
+OnBootSec=30s
+OnUnitActiveSec=2min
+AccuracySec=5s
+Unit=andrik-guard-r1531.service
+
+[Install]
+WantedBy=timers.target

@@ -2827,6 +2827,7 @@ message,
 url,
 image = '',
 icon = '',
+badge = '',
 audience = 'all',
 subscriptionIds = [],
 name = '',
@@ -2880,7 +2881,7 @@ name: cleanPlainText(name || title, 128),
 web_url: url || 'https://andrikmetal.com/',
 chrome_web_icon: notificationIcon,
 firefox_icon: notificationIcon,
-chrome_web_badge: 'https://andrikmetal.com/assets/andrik-eye-notification-badge-192.png',
+chrome_web_badge: badge || 'https://andrikmetal.com/assets/andrik-eye-notification-badge-192.png',
 large_icon: notificationIcon,
 huawei_large_icon: notificationIcon,
 adm_large_icon: notificationIcon,
@@ -21495,10 +21496,301 @@ async function handleOwnerBindTestStatusR1488(request,env) {
   try{if(state?.value)value=JSON.parse(state.value)}catch(_){value={status:'unknown'}}
   return json({ok:true,...value},200,{...JSON_HEADERS,'cache-control':'no-store'});
 }
+const GUARD_STALE_MS_R1531 = 5 * 60 * 1000;
+const WATCH_STALE_MS_R1532 = 2 * 60 * 1000;
+const AGENT_PUSH_INTERVAL_MS_R1532 = 5 * 60 * 1000;
+const AGENT_NOTIFICATION_URL_R1532 = 'https://control.andrikmetal.com/ai-agents-admin.html';
+const AGENT_ICON_R1532 = 'https://andrikmetal.com/assets/andrik-agent-blue-eye-r1532.png';
+const AGENT_BADGE_R1532 = 'https://andrikmetal.com/assets/andrik-agent-eye-badge-r1532.png';
+const WATCH_ISSUES_R1532 = {
+  'status-unreachable':'Не отвечает локальный статус радио',
+  'service-failed':'Служба радио завершилась со сбоем',
+  'signal-lost':'Пропал локальный сигнал радио',
+  'video-stalled':'Перестали продвигаться кадры видео',
+  'transport-stalled':'Данные RTMPS перестали продвигаться',
+  'ffmpeg-error':'FFmpeg сообщил об ошибке эфира',
+  'clip-handoff':'Сбой воспроизведения клипа или перехода между записями'
+};
+const GUARD_UNITS_R1531 = [
+  'andrik-radio.service', 'andrik-radio-web-control.service', 'andrik-radio-web-agent.service',
+  'andrik-radio-schedule-r1517.service', 'ssh.service', 'ssh.socket'
+];
+const GUARD_UNIT_STATES_R1531 = new Set([
+  'active', 'inactive', 'failed', 'activating', 'deactivating', 'reloading', 'maintenance', 'missing', 'unknown'
+]);
+const GUARD_SIGNAL_STATES_R1531 = new Set(['ok', 'not-ready', 'unavailable', 'unknown', 'unchecked']);
+
+async function readAgentRowR1532(statement) {
+  try { return await statement.first(); }
+  catch (error) {
+    if (/no such table: (?:main\.)?andrik_(?:guard_r1531|watch_r1532)\b/i.test(String(error?.message || ''))) return null;
+    throw error;
+  }
+}
+
+function agentTableR1532(agent) {
+  return agent === 'watch' ? 'andrik_watch_r1532' : 'andrik_guard_r1531';
+}
+
+async function ensureGuardDeliveryR1532(db, row) {
+  for (const [column, type] of [['notified_key', 'TEXT'], ['notifying_key', 'TEXT'], ['notifying_at', 'INTEGER']]) {
+    if (!row || !Object.hasOwn(row, column)) {
+      await db.prepare(`ALTER TABLE andrik_guard_r1531 ADD COLUMN ${column} ${type}`).run().catch(error => {
+        if (!/duplicate column/i.test(String(error?.message || ''))) throw error;
+      });
+    }
+  }
+}
+
+async function createAgentPairR1532(env, agent) {
+  const db = requireDb(env);
+  const table = agentTableR1532(agent);
+  const watchColumns = agent === 'watch' ? ', notified_at INTEGER, notified_incident_at INTEGER' : '';
+  await db.prepare(`CREATE TABLE IF NOT EXISTS ${table} (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    pair_hash TEXT,
+    pair_expires_at INTEGER,
+    token_hash TEXT,
+    report_json TEXT,
+    sampled_at INTEGER,
+    received_at INTEGER,
+    notified_key TEXT,
+    notifying_key TEXT,
+    notifying_at INTEGER${watchColumns}
+  )`).run();
+  const code = crypto.randomUUID().replaceAll('-', '');
+  const expiresAt = Date.now() + 10 * 60 * 1000;
+  await db.prepare(`INSERT INTO ${table} (id, pair_hash, pair_expires_at) VALUES (1, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET pair_hash = excluded.pair_hash, pair_expires_at = excluded.pair_expires_at`)
+    .bind(await sha256Hex(code), expiresAt).run();
+  return json({ ok:true, code, expiresAt });
+}
+
+async function enrollAgentR1532(request, env, agent) {
+  const code = /^Bearer ([a-f0-9]{32})$/.exec(request.headers.get('authorization') || '')?.[1];
+  if (!code) return json({ ok:false, error:'invalid-code' }, 400);
+  const db = requireDb(env);
+  const table = agentTableR1532(agent);
+  const codeHash = await sha256Hex(code);
+  const pair = await readAgentRowR1532(db.prepare(`SELECT * FROM ${table} WHERE id = 1`));
+  if (!pair || pair.pair_expires_at <= Date.now() || !timingSafeTextEqual(pair.pair_hash, codeHash)) {
+    return json({ ok:false, error:'code-expired-or-used' }, 403);
+  }
+  if (agent === 'guard') await ensureGuardDeliveryR1532(db, pair);
+  const token = radioAgentTokenR627();
+  const result = await db.prepare(`UPDATE ${table} SET token_hash = ?, pair_hash = NULL,
+    pair_expires_at = NULL, report_json = NULL, sampled_at = NULL, received_at = NULL,
+    notified_key = NULL, notifying_key = NULL, notifying_at = NULL${agent === 'watch' ? ', notified_at = NULL, notified_incident_at = NULL' : ''}
+    WHERE id = 1 AND pair_hash = ? AND pair_expires_at > ?`)
+    .bind(await sha256Hex(token), codeHash, Date.now()).run();
+  if (result.meta.changes !== 1) return json({ ok:false, error:'code-expired-or-used' }, 403);
+  return json({ ok:true, token });
+}
+
+function guardPercentR1531(value) {
+  return Number.isFinite(value) && value >= 0 && value <= 100 ? value : null;
+}
+
+function guardIntegerR1531(value) {
+  return Number.isSafeInteger(value) && value >= 0 ? value : null;
+}
+
+function guardCapacityR1531(value) {
+  const usedPct = guardPercentR1531(value?.usedPct);
+  const totalBytes = guardIntegerR1531(value?.totalBytes);
+  const availableBytes = guardIntegerR1531(value?.availableBytes);
+  return usedPct !== null && totalBytes > 0 && availableBytes !== null && availableBytes <= totalBytes
+    ? { usedPct, totalBytes, availableBytes } : null;
+}
+
+function normalizeGuardReportR1531(body) {
+  const services = Object.fromEntries(GUARD_UNITS_R1531.map(unit => {
+    const state = body.services?.[unit];
+    return [unit, GUARD_UNIT_STATES_R1531.has(state) ? state : 'unknown'];
+  }));
+  const running = guardIntegerR1531(body.ffmpeg?.running);
+  const zombies = guardIntegerR1531(body.ffmpeg?.zombies);
+  const radioProcesses = guardIntegerR1531(body.ffmpeg?.radio);
+  const files = guardIntegerR1531(body.temporary?.files);
+  const bytes = guardIntegerR1531(body.temporary?.bytes);
+  return {
+    sampledAt:body.sampledAt,
+    disk:guardCapacityR1531(body.disk),
+    radioDisk:guardCapacityR1531(body.radioDisk),
+    ram:guardCapacityR1531(body.ram),
+    cpuPercent:guardPercentR1531(body.cpuPercent),
+    services,
+    radioSignal:GUARD_SIGNAL_STATES_R1531.has(body.radioSignal) ? body.radioSignal : 'unknown',
+    ffmpeg:running !== null && zombies !== null
+      ? { running, zombies, radio:radioProcesses !== null && radioProcesses <= running ? radioProcesses : null,
+          partial:body.ffmpeg.partial !== false } : null,
+    temporary:files !== null && bytes !== null ? { files, bytes, partial:body.temporary.partial !== false } : null
+  };
+}
+
+function normalizeWatchReportR1532(body, now) {
+  const state = ['on-air', 'off', 'starting', 'degraded', 'unavailable'].includes(body.state) ? body.state : 'unavailable';
+  const mediaTypes = ['track', 'clip', 'bumper', 'special'];
+  function item(input) {
+    const title = cleanPlainText(input?.title, 110).replace(/\s+/g, ' ');
+    if (!title || /(?:[a-z][a-z0-9+.-]*:\/\/|\bbearer\s|[?&](?:token|key)=)/i.test(title)) return null;
+    return { title, type:mediaTypes.includes(input.type) ? input.type : 'track' };
+  }
+  const issue = Object.hasOwn(WATCH_ISSUES_R1532, body.issue) ? body.issue : null;
+  const incidentAt = guardIntegerR1531(body.incidentAt);
+  const changedAt = guardIntegerR1531(body.changedAt);
+  const validIssue = issue && incidentAt && incidentAt <= now + 60000 && state !== 'off' &&
+    (body.persistent === true || incidentAt >= now - 10 * 60 * 1000);
+  return {
+    sampledAt:body.sampledAt,
+    state,
+    current:item(body.current),
+    next:item(body.next),
+    changedAt:changedAt <= now + 60000 ? changedAt : null,
+    frameAgeMs:guardIntegerR1531(body.frameAgeMs),
+    ffmpegErrors:guardIntegerR1531(body.ffmpegErrors),
+    issue:validIssue ? issue : null,
+    incidentAt:validIssue ? incidentAt : null
+  };
+}
+
+async function sendAgentPushR1532(env, agent, key, message, test = false) {
+  const url = `${AGENT_NOTIFICATION_URL_R1532}#${agent}`;
+  const title = `ANDRIK ${agent.toUpperCase()}${test ? ' · Проверка уведомлений' : ''}`;
+  return sendOwnerPush(env, {
+    title, message, url, icon:AGENT_ICON_R1532, badge:AGENT_BADGE_R1532, ttl:test ? 300 : 1800,
+    name:`agent-${agent}:${key}`,
+    history:{ type:`agent-${agent}`, source:test ? 'test-r1532' : 'monitor-r1532' }
+  });
+}
+
+function agentAlertR1532(agent, report) {
+  if (agent === 'watch') {
+    return report.issue && {
+      key:`${report.issue}:${report.incidentAt}`,
+      message:WATCH_ISSUES_R1532[report.issue] + '. Открой WATCH для проверки.'
+    };
+  }
+  const readings = [];
+  if (report.disk?.usedPct >= 85) readings.push(['disk', `Диск VPS заполнен на ${report.disk.usedPct}%`]);
+  if (report.radioDisk?.usedPct >= 85) readings.push(['radio-disk', `Диск радио заполнен на ${report.radioDisk.usedPct}%`]);
+  if (report.ram?.usedPct >= 90) readings.push(['ram', `Занято ${report.ram.usedPct}% RAM`]);
+  const failed = Object.entries(report.services).filter(([unit, state]) => unit !== 'andrik-radio.service' && state === 'failed');
+  for (const [unit] of failed) readings.push([unit, `Сбой службы ${unit}`]);
+  if (!readings.length) return null;
+  return { key:readings.map(([key]) => key).join(','), message:readings.slice(0, 3).map(([, text]) => text).join(' · ') };
+}
+
+async function checkAgentAlertR1532(env, agent, report, now, tokenHash, prior) {
+  const alert = agentAlertR1532(agent, report);
+  const db = requireDb(env), table = agentTableR1532(agent);
+  if (agent === 'guard' && !Object.hasOwn(prior, 'notifying_at')) await ensureGuardDeliveryR1532(db, prior);
+  if (!alert) {
+    if (agent === 'guard' && (prior.notified_key || prior.notifying_key)) await db.prepare(`UPDATE ${table}
+      SET notified_key = NULL, notifying_key = NULL, notifying_at = NULL
+      WHERE id = 1 AND token_hash = ? AND sampled_at = ?`).bind(tokenHash, report.sampledAt).run();
+    return;
+  }
+  if (alert.key === prior.notified_key ||
+      (agent === 'watch' && (report.incidentAt <= prior.notified_incident_at ||
+        (prior.notified_at && now - prior.notified_at < AGENT_PUSH_INTERVAL_MS_R1532))) || !oneSignalConfigured(env)) return;
+  const claim = await db.prepare(`UPDATE ${table} SET notifying_key = ?, notifying_at = ?
+    WHERE id = 1 AND token_hash = ? AND sampled_at = ? AND notified_key IS ?
+      AND (notifying_at IS NULL OR notifying_at < ?)`)
+    .bind(alert.key, now, tokenHash, report.sampledAt, prior.notified_key ?? null, now - 90000).run();
+  if (!claim.meta.changes) return;
+  const key = agent === 'watch' ? alert.key : `${alert.key}:${Math.floor(now / 600000)}`;
+  let sent = false;
+  try {
+    const result = await sendAgentPushR1532(env, agent, key, alert.message);
+    sent = result.ok || result.queuedForRetryR1505;
+  } finally {
+    const rememberIncident = agent === 'watch' && sent;
+    const finish = db.prepare(`UPDATE ${table}
+      SET notified_key = CASE WHEN ? THEN ? ELSE notified_key END, notifying_key = NULL, notifying_at = NULL
+      ${rememberIncident ? ', notified_at = ?, notified_incident_at = ?' : ''}
+      WHERE id = 1 AND token_hash = ? AND notifying_key = ? AND notifying_at = ?`)
+      .bind(sent ? 1 : 0, alert.key, ...(rememberIncident ? [now, report.incidentAt] : []), tokenHash, alert.key, now);
+    await finish.run();
+  }
+}
+
+async function testWatchPushR1532(env) {
+  if (!oneSignalConfigured(env)) return json({ ok:false, error:'push-not-configured' }, 503);
+  const result = await sendAgentPushR1532(env, 'watch', `test:${Math.floor(Date.now() / 60000)}`,
+    'Тест WATCH. Нажми, чтобы открыть наблюдение за радио.', true);
+  if (result.ok || result.queuedForRetryR1505) return json({ ok:true, queued:!result.ok });
+  const error = typeof result.error === 'string' ? result.error : 'push-failed';
+  return json({ ok:false, error }, 503);
+}
+
+async function receiveAgentReportR1532(request, env, agent, ctx) {
+  const token = /^Bearer ([a-f0-9]{64})$/.exec(request.headers.get('authorization') || '')?.[1];
+  if (!token) return json({ ok:false, error:'unauthorized' }, 401);
+  const db = requireDb(env);
+  const table = agentTableR1532(agent);
+  const tokenHash = await sha256Hex(token);
+  const row = await readAgentRowR1532(db.prepare(`SELECT * FROM ${table} WHERE id = 1`));
+  if (!row || !timingSafeTextEqual(row.token_hash, tokenHash)) return json({ ok:false, error:'unauthorized' }, 401);
+  let body;
+  try { body = await readJsonBody(request, 8192); }
+  catch (error) { return json({ ok:false, error:error.message === 'payload-too-large' ? 'payload-too-large' : 'invalid-json' }, 400); }
+  const now = Date.now();
+  if (body?.version !== (agent === 'watch' ? 'R1532' : 'R1531') || !Number.isSafeInteger(body.sampledAt) ||
+      body.sampledAt < now - 10 * 60 * 1000 || body.sampledAt > now + 60 * 1000) {
+    return json({ ok:false, error:'invalid-report-or-vps-clock' }, 400);
+  }
+  const report = agent === 'watch' ? normalizeWatchReportR1532(body, now) : normalizeGuardReportR1531(body);
+  const result = await db.prepare(`UPDATE ${table} SET report_json = ?, sampled_at = ?, received_at = ?
+    WHERE id = 1 AND token_hash = ? AND (sampled_at IS NULL OR sampled_at < ?)`)
+    .bind(JSON.stringify(report), report.sampledAt, now, tokenHash, report.sampledAt).run();
+  if (result.meta.changes !== 1) {
+    // A delayed duplicate is harmless. A token rotated during upload is no longer valid.
+    const current = await db.prepare(`SELECT token_hash FROM ${table} WHERE id = 1`).first();
+    if (!timingSafeTextEqual(current?.token_hash, tokenHash)) return json({ ok:false, error:'unauthorized' }, 401);
+  } else {
+    const task = checkAgentAlertR1532(env, agent, report, now, tokenHash, row)
+      .catch(error => console.warn('ANDRIK agent push:', cleanPlainText(error?.message, 180)));
+    if (ctx?.waitUntil) ctx.waitUntil(task);
+    else await task;
+  }
+  return json({ ok:true });
+}
+
+async function handleAgentReportRouteR1532(request, env, ctx, agent, action) {
+  if (request.method !== 'POST') return json({ ok:false, error:'method-not-allowed' }, 405);
+  if (action === 'report') return receiveAgentReportR1532(request, env, agent, ctx);
+  return enrollAgentR1532(request, env, agent);
+}
+
+async function handleAgentControlR1532(request, env, agent, action) {
+  if (!adminAuthorized(request, env)) return json({ ok:false, error:'unauthorized' }, 401);
+  if ((action === 'pair' || action === 'test') && request.method === 'POST') {
+    if (!isSameOrigin(request)) return json({ ok:false, error:'origin' }, 403);
+    if (action === 'pair') return createAgentPairR1532(env, agent);
+    if (agent === 'watch') return testWatchPushR1532(env);
+  }
+  if (action !== 'status' || request.method !== 'GET') {
+    return json({ ok:false, error:'method-not-allowed' }, 405);
+  }
+  const table = agentTableR1532(agent);
+  const version = agent === 'watch' ? 'R1532' : 'R1531';
+  const row = await readAgentRowR1532(requireDb(env).prepare(`SELECT token_hash IS NOT NULL AS paired,
+    report_json, sampled_at, received_at FROM ${table} WHERE id = 1`));
+  if (!row?.paired) return json({ ok:true, version, state:'unpaired', report:null });
+  if (!row.report_json) return json({ ok:true, version, state:'waiting', report:null });
+  const age = Date.now() - Math.min(row.sampled_at, row.received_at);
+  const staleMs = agent === 'watch' ? WATCH_STALE_MS_R1532 : GUARD_STALE_MS_R1531;
+  return json({ ok:true, version, state:age >= staleMs ? 'stale' : 'fresh',
+    ageMs:Math.max(0, age), report:JSON.parse(row.report_json) });
+}
+
 async function routeApi(request, env, ctx) {
 const url = new URL(request.url);
 const path = url.pathname.replace(/\/+$/, '') || '/';
 try {
+const agentRoute = /^\/api\/agents\/(guard|watch)\/(report|enroll)$/.exec(path);
+if (agentRoute) return await handleAgentReportRouteR1532(request, env, ctx, agentRoute[1], agentRoute[2]);
 if (!adminAuthorized(request, env)) {
 const ownerTokens = readOwnerSessionTokens(request);
 let ownerSessionOk = false;
@@ -21517,6 +21809,8 @@ request = new Request(request, { headers });
 }
 }
 }
+const agentControl = /^\/api\/control\/agents\/(guard|watch)\/(status|pair|test)$/.exec(path);
+if (agentControl) return await handleAgentControlR1532(request, env, agentControl[1], agentControl[2]);
 if (path === '/api/health' && request.method === 'GET') return await handlePublicHealth(request, env, ctx);
 if (path === '/api/youtube/websub' && request.method === 'GET') return await handleYoutubeWebSubVerifyR332(request, env, ctx);
 if (path === '/api/youtube/websub' && request.method === 'POST') return await handleYoutubeWebSubNotifyR332(request, env, ctx);

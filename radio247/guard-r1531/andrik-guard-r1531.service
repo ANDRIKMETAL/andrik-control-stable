@@ -1,0 +1,22 @@
+[Unit]
+Description=ANDRIK GUARD R1531 VPS monitoring
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=andrik-guard
+Group=andrik-guard
+ExecStart=/usr/bin/python3 -I /usr/local/share/andrik-guard-r1531/guard.py publish
+TimeoutStartSec=30s
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+CapabilityBoundingSet=
+RestrictSUIDSGID=yes
+UMask=0077
+Nice=10
