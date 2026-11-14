@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r358-deploy-nohang",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1794646343958-2f4cc09551",
-  "release": "R1539",
-  "archiveName": "ANDRIK-R1539-BACKGROUND-AGENTS-SHA1-FIXED.zip",
-  "sourceHead": "504bb0f913e54f8d2e55196893fa0cc56138fd8e",
-  "backupSha": "504bb0f913e54f8d2e55196893fa0cc56138fd8e",
+  "operationId": "publish-1794646774953-f96e87d549",
+  "release": "R1540",
+  "archiveName": "ANDRIK-R1540-AGENTS-CONTROL-SHA1-FIXED.zip",
+  "sourceHead": "3e8b5ab75929271d884031fb50fdf742b4624778",
+  "backupSha": "3e8b5ab75929271d884031fb50fdf742b4624778",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-11-14T08:52:25.627Z"
+  "generatedAt": "2026-11-14T08:59:34.953Z"
 }
