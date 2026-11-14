@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r358-deploy-nohang",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1794637801538-47528b5ded",
-  "release": "R1528",
-  "archiveName": "SITE-R1528-AI-CONTROL-SHA1-FIXED.zip",
-  "sourceHead": "92b33e517d9afeba9142dc395cab4c856a80f0ef",
-  "backupSha": "92b33e517d9afeba9142dc395cab4c856a80f0ef",
+  "operationId": "publish-1794638114740-09bfd22f2e",
+  "release": "R1529",
+  "archiveName": "SITE-R1529-ORIGINAL-HOME-AI-BUTTON.zip",
+  "sourceHead": "ee99b6bb9c9ad85f18f182c30a3a288fd41df580",
+  "backupSha": "ee99b6bb9c9ad85f18f182c30a3a288fd41df580",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-11-14T06:30:01.538Z"
+  "generatedAt": "2026-11-14T06:35:14.740Z"
 }

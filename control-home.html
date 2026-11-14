@@ -868,25 +868,24 @@ body.control-home-page.control-menu-visible .control-swipe-indicator{display:non
   }
 }
 </style>
+
 <style>
-/* ANDRIK R1528: compact home, scoped to menu page only */
-.control-home-page .control-menu-page .control-menu-heading{margin-bottom:12px!important}
-.control-home-page .control-menu-page .control-menu-heading h1{font-size:clamp(1.55rem,5.6vw,2.4rem)!important}
-.andrik-r1528-live{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:8px 0 14px;padding:10px 14px;border:1px solid #23556d;border-radius:15px;background:linear-gradient(90deg,#071d2b,#0b1123);color:#d5f6ff;font-size:13px}
-.andrik-r1528-live small{color:#80adbf;margin-left:auto;font-size:11px}.andrik-r1528-live-dot{width:9px;height:9px;border-radius:50%;background:#55c8e7;box-shadow:0 0 12px #3ad7ff}
-.control-home-page .control-menu-page .andrik-r1528-menu{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important;margin:0 0 14px!important}
-.control-home-page .control-menu-page .andrik-r1528-menu .control-home-menu-card{min-height:92px!important;height:auto!important;padding:11px!important;display:flex!important;gap:8px!important;border-radius:18px!important;align-items:center!important}
-.control-home-page .control-menu-page .andrik-r1528-menu .control-home-menu-card>span{width:35px!important;height:35px!important;min-width:35px!important;font-size:1.3rem!important}
-.control-home-page .control-menu-page .andrik-r1528-menu .control-home-menu-card strong{font-size:clamp(.92rem,3.6vw,1.28rem)!important;line-height:1.2!important}
-.control-home-page .control-menu-page .andrik-r1528-menu .control-home-menu-card small{font-size:.62rem!important;letter-spacing:.04em}
-.control-home-page .control-menu-page .andrik-r1528-menu .control-home-menu-card p{display:none!important}
-.control-home-page .control-menu-page .andrik-r1528-menu .control-home-menu-card b{font-size:1.1rem!important;margin-left:auto}
-.control-home-page .control-menu-page .andrik-r1528-menu .andrik-r1528-radio{grid-column:1/-1;min-height:72px!important}
-.andrik-r1528-agents{margin:14px 0;padding:14px;border:1px solid rgba(148,89,255,.65);border-radius:22px;background:linear-gradient(125deg,rgba(11,49,82,.96),rgba(33,15,65,.97));box-shadow:0 0 20px rgba(97,51,182,.2)}
-.andrik-r1528-agents-head{display:flex;align-items:center;gap:12px;text-decoration:none!important;color:#eef5ff!important;margin-bottom:13px}.andrik-r1528-agents-head>span:first-child{font-size:2rem}.andrik-r1528-agents-head strong{display:block;font-size:1.35rem}.andrik-r1528-agents-head small{display:block;color:#b5b4d9;font-size:.76rem}.andrik-r1528-agents-head b{margin-left:auto;font-size:1.7rem}
-.andrik-r1528-agent-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}.andrik-r1528-agent-grid a{min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;padding:10px 2px;border-radius:12px;border:1px solid #35678a;background:#082238;color:#e7f4ff;text-decoration:none!important}.andrik-r1528-agent-grid a:nth-child(3),.andrik-r1528-agent-grid a:nth-child(4){border-color:#7454aa;background:#201a42}.andrik-r1528-agent-grid span{font-size:1.5rem}.andrik-r1528-agent-grid strong{font-size:clamp(.58rem,2.4vw,.83rem)}.andrik-r1528-agent-grid small{font-size:.65rem;color:#b7cce0}
-.andrik-r1528-secondary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:12px 0}.andrik-r1528-secondary a{padding:13px 5px;text-align:center;border:1px solid #274659;border-radius:13px;background:#071a28;color:#d7f1ff;text-decoration:none!important;font-weight:700;font-size:clamp(.72rem,2.8vw,.95rem)}
-@media(max-width:350px){.andrik-r1528-agent-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+/* R1529: only the AI shortcut; original menu, globe and navigation stay intact */
+.control-home-page .control-menu-heading{position:relative}
+.control-home-page .andrik-ai-shortcut{
+  display:inline-flex;align-items:center;gap:7px;
+  width:max-content;max-width:100%;padding:5px 12px 5px 5px;
+  margin:0 0 12px 0;border:1px solid rgba(82,195,242,.65);
+  border-radius:999px;background:linear-gradient(110deg,#092a40,#142142);
+  color:#e3f7ff!important;text-decoration:none!important;
+  font-size:13px;font-weight:800;box-shadow:0 0 14px rgba(46,159,222,.18)
+}
+.control-home-page .andrik-ai-face{
+  display:grid;place-items:center;width:34px;height:34px;
+  border-radius:50%;background:radial-gradient(circle at 35% 30%,#235a85,#102138);
+  font-size:20px;box-shadow:inset 0 0 0 1px #448cb2
+}
+.control-home-page .andrik-ai-shortcut:focus-visible{outline:2px solid #83e0ff;outline-offset:3px}
 </style>
 </head>
 <body class="trika-standalone-page comments-admin-page control-page control-home-page r137-eye-motion-page">
@@ -916,27 +915,15 @@ body.control-home-page.control-menu-visible .control-swipe-indicator{display:non
 
       <section class="control-swipe-page control-menu-page control-admin-menu-page" data-page="menu" data-logical-page="1" aria-label="Разделы Live Web AI">
         <div class="control-swipe-page-inner">
-          <header class="control-page-heading control-menu-heading"><div class="control-admin-heading-copy"><span class="eyeline">УПРАВЛЕНИЕ ПРОЕКТОМ</span><h1>Админ панель</h1></div></header>
-          <div class="andrik-r1528-live"><span class="andrik-r1528-live-dot"></span><strong>ANDRIK • Центр управления</strong><small>Радио и агенты — в одной панели</small></div>
-          <section class="control-home-menu andrik-r1528-menu" aria-label="Главное меню ANDRIK">
-            <a class="control-home-menu-card is-radio andrik-r1528-radio" href="/radio-control-admin.html?v=55.00-r1262"><span>🔴</span><div><small>24/7 ЭФИР</small><strong>Радио</strong><p>Трансляция и управление</p></div><b>›</b></a>
-            <a class="control-home-menu-card is-r2" href="/r2-storage-admin.html?v=55.00-r925"><span>☁️</span><div><small>CLOUDFLARE</small><strong>Хранилище</strong></div><b>›</b></a>
-            <a class="control-home-menu-card is-releases" href="/admin-sections.html?section=releases&amp;v=55.00-r420"><span>🚀</span><div><small>МУЗЫКА</small><strong>Релизы</strong></div><b>›</b></a>
-            <a class="control-home-menu-card is-observability" href="/admin-sections.html?section=monitor&amp;v=55.00-r420"><span>📡</span><div><small>НАДЁЖНОСТЬ</small><strong>Мониторинг</strong></div><b>›</b></a>
-          </section>
-          <section class="andrik-r1528-agents" aria-label="AI Агенты">
-            <a class="andrik-r1528-agents-head" href="/ai-agents-admin.html"><span>🤖</span><span><strong>AI Агенты</strong><small>Контроль · Диагностика · Отчёты</small></span><b>›</b></a>
-            <div class="andrik-r1528-agent-grid">
-              <a href="/ai-agents-admin.html#guard"><span>🛡️</span><strong>GUARD</strong><small>VPS</small></a>
-              <a href="/ai-agents-admin.html#watch"><span>📡</span><strong>WATCH</strong><small>Эфир</small></a>
-              <a href="/ai-agents-admin.html#manager"><span>🧠</span><strong>MANAGER</strong><small>Задачи</small></a>
-              <a href="/ai-agents-admin.html#music"><span>🎵</span><strong>MUSIC</strong><small>Контент</small></a>
-            </div>
-          </section>
-          <section class="andrik-r1528-secondary" aria-label="Дополнительные разделы">
-            <a href="/admin-sections.html?section=service&amp;v=55.00-r420">⚙️ Система</a>
-            <a href="/admin-sections.html?section=discussion&amp;v=55.00-r420">💬 Обсуждение</a>
-            <a href="/social-center-admin.html?source=admin-menu&amp;v=55.00-r513">🌐 Соцсети</a>
+          <header class="control-page-heading control-menu-heading"><a class="andrik-ai-shortcut" href="/ai-agents-admin.html" aria-label="Открыть AI Агенты"><span class="andrik-ai-face">🤖</span><span>AI Агенты</span></a><div class="control-admin-heading-copy"><span class="eyeline">УПРАВЛЕНИЕ ПРОЕКТОМ</span><h1>Админ панель</h1></div></header>
+          <section class="control-home-menu" aria-label="Главное меню Live Web AI">
+            <a class="control-home-menu-card is-radio" href="/radio-control-admin.html?v=55.00-r1262"><span>🔴</span><div><small>24/7 эфир</small><strong>Радио</strong><p>Запуск, остановка, YouTube Stream, TikTok, Facebook, режим ведущего и живая строка.</p></div><b>›</b></a>
+            <a class="control-home-menu-card is-r2" href="/r2-storage-admin.html?v=55.00-r925"><span>☁️</span><div><small>Cloudflare R2</small><strong>Хранилище</strong><p>3D-индикатор заполнения R2, музыка и видео, переименование и безопасное удаление.</p></div><b>›</b></a>
+            <a class="control-home-menu-card is-service" href="/admin-sections.html?section=service&v=55.00-r420"><span>⚙️</span><div><small>Система</small><strong>Служебное</strong><p>Cron, диагностика и push проекта.</p></div><b>›</b></a>
+            <a class="control-home-menu-card is-observability" href="/admin-sections.html?section=monitor&v=55.00-r420"><span>📡</span><div><small>Надёжность</small><strong>Мониторинг</strong><p>Встроенная проверка сайта, Control, Worker и график времени ответа.</p></div><b>›</b></a>
+            <a class="control-home-menu-card is-releases" href="/admin-sections.html?section=releases&v=55.00-r420"><span>🚀</span><div><small>Музыка и тексты</small><strong>Релизы</strong><p>Тексты песен, публикации и история релизов.</p></div><b>›</b></a>
+            <a class="control-home-menu-card is-discussion" href="/admin-sections.html?section=discussion&v=55.00-r420"><span>💬</span><div><small>Сообщество</small><strong>Обсуждение</strong><p>Комментарии, модерация и ответы слушателям.</p></div><b>›</b></a>
+            <a class="control-home-menu-card is-social" href="/social-center-admin.html?source=admin-menu&v=55.00-r513"><span>🌐</span><div><small>Аудитория</small><strong>Центр соцсетей</strong><p>Сайт, YouTube, Instagram, TikTok на одном графике.</p></div><b>›</b></a>
           </section>
           <div class="admin-hub-quick-r418" aria-label="Быстрые отчёты">
             <a href="/control-home.html?page=summary&amp;source=admin-quick-r423&amp;v=55.00-r423">📊 <span>Сводка</span></a>
