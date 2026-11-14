@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r358-deploy-nohang",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1794130224461-88ab8a6334",
-  "release": "R1523",
-  "archiveName": "SITE-R1523-ANDROID-LIVE-SIX-ALBUMS.zip",
-  "sourceHead": "f49ab2984703466acbcc844f57d3bf6a86f23ceb",
-  "backupSha": "f49ab2984703466acbcc844f57d3bf6a86f23ceb",
+  "operationId": "publish-1794637801538-47528b5ded",
+  "release": "R1528",
+  "archiveName": "SITE-R1528-AI-CONTROL-SHA1-FIXED.zip",
+  "sourceHead": "92b33e517d9afeba9142dc395cab4c856a80f0ef",
+  "backupSha": "92b33e517d9afeba9142dc395cab4c856a80f0ef",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-11-08T09:30:24.461Z"
+  "generatedAt": "2026-11-14T06:30:01.538Z"
 }
