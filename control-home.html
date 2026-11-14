@@ -887,6 +887,39 @@ body.control-home-page.control-menu-visible .control-swipe-indicator{display:non
 }
 .control-home-page .andrik-ai-shortcut:focus-visible{outline:2px solid #83e0ff;outline-offset:3px}
 </style>
+
+<style id="andrik-r1530-header-space">
+/* R1530: original home and rotating globe preserved; only header/vertical spacing */
+@media (orientation:portrait) {
+ body.control-home-page.control-menu-visible .control-menu-page .control-swipe-page-inner {
+   padding-top:2px!important;
+ }
+ body.control-home-page.control-menu-visible .control-menu-page .control-menu-heading {
+   display:flex!important; flex-direction:column!important;
+   align-items:center!important; gap:3px!important;
+   margin:0 0 5px!important; padding:0!important;
+ }
+ body.control-home-page.control-menu-visible .control-menu-page .andrik-ai-shortcut {
+   margin:0!important; padding:3px 10px 3px 4px!important;
+   font-size:12px!important; gap:6px!important;
+ }
+ body.control-home-page.control-menu-visible .control-menu-page .andrik-ai-face {
+   width:29px!important;height:29px!important;font-size:17px!important;
+ }
+ body.control-home-page.control-menu-visible .control-menu-page .control-admin-heading-copy {
+   margin:0!important;padding:0!important;
+ }
+ body.control-home-page.control-menu-visible .control-menu-page .control-admin-heading-copy .eyeline {
+   margin:0!important;line-height:1.1!important;font-size:11px!important;
+ }
+ body.control-home-page.control-menu-visible .control-menu-page .control-home-menu {
+   gap:6px!important;
+ }
+ body.control-home-page.control-menu-visible .control-menu-page .control-home-menu-card {
+   padding-top:7px!important;padding-bottom:7px!important;
+ }
+}
+</style>
 </head>
 <body class="trika-standalone-page comments-admin-page control-page control-home-page r137-eye-motion-page">
 <nav class="topbar control-topbar control-home-topbar"><div class="wrap nav-shell control-home-topbar-minimal"><a class="control-center-logo" id="controlCenterLogo" href="https://andrikmetal.com/" aria-label="Открыть главный сайт ANDRIK"><img class="logo-ok" src="/assets/control-topbar-eye-triangle.jpg?v=55.00-r129" alt=""/><img class="logo-error" src="/assets/andrik-control-red-triangle-192.png" alt=""/></a></div></nav>
@@ -915,7 +948,7 @@ body.control-home-page.control-menu-visible .control-swipe-indicator{display:non
 
       <section class="control-swipe-page control-menu-page control-admin-menu-page" data-page="menu" data-logical-page="1" aria-label="Разделы Live Web AI">
         <div class="control-swipe-page-inner">
-          <header class="control-page-heading control-menu-heading"><a class="andrik-ai-shortcut" href="/ai-agents-admin.html" aria-label="Открыть AI Агенты"><span class="andrik-ai-face">🤖</span><span>AI Агенты</span></a><div class="control-admin-heading-copy"><span class="eyeline">УПРАВЛЕНИЕ ПРОЕКТОМ</span><h1>Админ панель</h1></div></header>
+          <header class="control-page-heading control-menu-heading"><a class="andrik-ai-shortcut" href="/ai-agents-admin.html" aria-label="Открыть AI Агенты"><span class="andrik-ai-face">🤖</span><span>AI Агенты</span></a><div class="control-admin-heading-copy"><span class="eyeline">УПРАВЛЕНИЕ ПРОЕКТОМ</span></div></header>
           <section class="control-home-menu" aria-label="Главное меню Live Web AI">
             <a class="control-home-menu-card is-radio" href="/radio-control-admin.html?v=55.00-r1262"><span>🔴</span><div><small>24/7 эфир</small><strong>Радио</strong><p>Запуск, остановка, YouTube Stream, TikTok, Facebook, режим ведущего и живая строка.</p></div><b>›</b></a>
             <a class="control-home-menu-card is-r2" href="/r2-storage-admin.html?v=55.00-r925"><span>☁️</span><div><small>Cloudflare R2</small><strong>Хранилище</strong><p>3D-индикатор заполнения R2, музыка и видео, переименование и безопасное удаление.</p></div><b>›</b></a>
