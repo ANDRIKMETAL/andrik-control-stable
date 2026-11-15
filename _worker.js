@@ -21814,15 +21814,31 @@ async function ensureBackgroundR1539(db){
  await db.prepare(`CREATE TABLE IF NOT EXISTS ${AGENT_BG_TABLE_R1539} (agent TEXT PRIMARY KEY, checked_at INTEGER NOT NULL, status TEXT NOT NULL, report_json TEXT NOT NULL)`).run();
 }
 async function backgroundSnapshotR1539(db){
- await ensureBackgroundR1539(db);
- const rows=await db.prepare(`SELECT agent,checked_at,status,report_json FROM ${AGENT_BG_TABLE_R1539}`).all();
+ let rows;
+ try { rows=await db.prepare(`SELECT agent,checked_at,status,report_json FROM ${AGENT_BG_TABLE_R1539}`).all(); }
+ catch(error){
+   if(!/no such table/i.test(String(error?.message||'')))throw error;
+   await ensureBackgroundR1539(db);
+   return {};
+ }
  return Object.fromEntries((rows.results||[]).map(r=>[r.agent,{checkedAt:r.checked_at,status:r.status,report:JSON.parse(r.report_json)}]));
 }
 async function runBackgroundR1539(env,force=false){
  if(!env.COMMENTS_DB)return;
  const db=env.COMMENTS_DB,now=Date.now();
- await ensureBackgroundR1539(db);
- const existing=await backgroundSnapshotR1539(db);
+ // R1546: avoid DDL and duplicate snapshot reads on every Cron invocation.
+ // Only the first run needs to create the table; normal reads use its PK index.
+ let existing;
+ try {
+   const rows=await db.prepare(`SELECT agent,checked_at,status,report_json FROM ${AGENT_BG_TABLE_R1539}`).all();
+   existing=Object.fromEntries((rows.results||[]).map(r=>[r.agent,{checkedAt:r.checked_at,status:r.status,report:JSON.parse(r.report_json)}]));
+ } catch(error) {
+   if(!/no such table/i.test(String(error?.message||'')))throw error;
+   await ensureBackgroundR1539(db);
+   existing={};
+ }
+ // No jobs due: do not reconcile MANAGER on the Cron path; VPS reports already do that.
+ if(!force && ['music','social'].every(agent=>existing[agent] && now-existing[agent].checkedAt<6*3600000))return;
  const jobs=[['music',async()=>{
    const bucket=getMusicBucketR314(env);
    if(!bucket)return {error:'R2 bucket not configured',issues:[]};
@@ -21840,7 +21856,7 @@ async function runBackgroundR1539(env,force=false){
    const platforms=[['youtube','youtube'],['instagram','instagram'],['tiktok','tiktok'],['site','google-analytics']];
    const records=[];const issues=[];
    for(const [label,key] of platforms){
-     const row=await db.prepare(`SELECT created_at FROM platform_snapshots WHERE platform=? ORDER BY datetime(created_at) DESC LIMIT 1`).bind(key).first();
+     const row=await db.prepare(`SELECT created_at FROM platform_snapshots WHERE platform=? ORDER BY created_at DESC LIMIT 1`).bind(key).first();
      const timestamp=Date.parse(row?.created_at||'');
      const ageHours=Number.isFinite(timestamp)?Math.max(0,(now-timestamp)/3600000):null;
      records.push({platform:label,updatedAt:row?.created_at||null,ageHours});
