@@ -1,5 +1,5 @@
 import {createGameShare} from './game-share-r1471.js?v=r1472';
-import {createStoryArt,transitionArt,STORY_KEY} from './story-art-r1461.js?v=r1472';
+import {createStoryArt,transitionArt,STORY_KEY} from './story-art-r1461.js?v=r1550';
 
 import {buildRuinsWorld,animateRuinsWorld,makeRuinsEnemy,poseRuinsEnemy,makeRuinsBoss,poseRuinsBoss} from './lira-ruins-r1284.js';
 import * as T from './vendor/three-r170.module.min.js';
@@ -82,7 +82,7 @@ async function launch3DChapter(id,fresh=false){
  game.hold();game.clearInput();game.sound(false);
  portraitActive=true;activeBonus=false;document.body.classList.remove('menu-open');
  try{
-  const url=[2,3,4,5].includes(id)?'./worlds-3d-r1308.js?v=r1548':id===1?'./city-3d-r1308.js?v=r1548':'./portrait-r1308.js?v=r1548';
+  const url=[2,3,4,5].includes(id)?'./worlds-3d-r1308.js?v=r1548':id===1?'./city-3d-r1308.js?v=r1549':'./portrait-r1308.js?v=r1550';
   const {launchPortrait}=await import(url);
   activeChapter=launchPortrait({world:id,fresh,ruins:id===6,onWin:()=>completeCampaign(id),
     onExit(){returnToChapters();},
