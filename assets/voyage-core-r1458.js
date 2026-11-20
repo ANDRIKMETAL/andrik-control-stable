@@ -10,7 +10,7 @@ export function makeVoyage(kind){
  const pickups=space?Array.from({length:19},(_,i)=>{const z=55+i*45,gate=gates.find(g=>Math.abs(g.z-z)<30);return{id:i,x:gate?.x??courseX(kind,z),y:gate?.y??courseY(z),z,type:i%5===0?'weapon':i%5===1?'rocket':i%5===2?'shield':i%5===3?'repair':'crystal',taken:false};}):gates.flatMap((g,i)=>[{id:i*2,x:g.x,y:0,z:g.z-8,type:i%3===0?'repair':'boost',taken:false},{id:i*2+1,x:g.x,y:0,z:g.z+7,type:'crystal',taken:false}]);
  const enemies=space?Array.from({length:18},(_,i)=>{const z=100+i*42;return{id:i,x:courseX(kind,z)+(i%3-1)*5,y:courseY(z)+(i%2?2:-2),z,baseX:courseX(kind,z)+(i%3-1)*5,baseY:courseY(z)+(i%2?2:-2),hp:i%4===0?52:30,max:i%4===0?52:30,cd:1+i%3*.3,wind:0,dead:0,lock:null};}):[];
  const bots=space?[]:Array.from({length:4},(_,i)=>({id:i,name:['Капитан Клешня','Алый Рак','Железный Ус','Бирюзовый Панцирь'][i],x:(i%2?1:-1)*(3+i%2),y:0,z:6+i*5,vy:0,speed:19+i*.25,stun:0,down:0,wind:0,cd:3+i*.8,nextGate:0,finished:false,rewarded:false}));
- return{version:1,kind,status:'dormant',length,p:{x:0,y:space?courseY(0):0,z:0,vx:0,vy:0,vz:0,yaw:0},time:0,countdown:3,speed:0,gates,obstacles,pickups,enemies,bots,shots:[],weapon:1,rockets:3,shield:0,shieldCD:0,boost:0,boostCD:0,attackCD:0,fireCD:0,firing:false,kick:null,nextGate:0,checkpoint:0,kills:0,points:0,impacts:0,jumps:0,rank:5,rewarded:false,started:false,inv:0};
+ return{version:1,kind,status:'dormant',length,p:{x:0,y:space?courseY(0):0,z:0,vx:0,vy:0,vz:0,yaw:0},time:0,countdown:3,speed:0,gates,obstacles,pickups,enemies,bots,shots:[],weapon:1,rockets:3,shield:0,shieldCD:0,boost:0,boostCD:0,preciseGates:0,dragTime:0,attackCD:0,fireCD:0,firing:false,kick:null,nextGate:0,checkpoint:0,kills:0,points:0,impacts:0,jumps:0,rank:5,rewarded:false,started:false,inv:0};
 }
 export function startVoyage(s,retry=false){
  let v=s.voyage;if(!v)return false;
@@ -82,9 +82,9 @@ function updateBots(s,v,dt){
 }
 export function updateVoyage(s,dt,input={}){
  const v=s.voyage;if(!voyageMounted(v))return false;if(v.status!=='active')return true;dt=clamp(dt,0,.035);s.time+=dt;s.elapsed+=dt;v.time+=dt;s.p.inv=Math.max(0,s.p.inv-dt);v.inv=Math.max(0,v.inv-dt);
- for(const key of ['shield','shieldCD','boost','boostCD','attackCD','fireCD'])v[key]=Math.max(0,v[key]-dt);s.p.energy=Math.min(100,s.p.energy+dt*5);
+ for(const key of ['shield','shieldCD','boost','boostCD','attackCD','fireCD','dragTime'])v[key]=Math.max(0,v[key]-dt);s.p.energy=Math.min(100,s.p.energy+dt*5);
  if(v.countdown>0){v.countdown=Math.max(0,v.countdown-dt);return true;}
- const p=v.p,space=v.kind==='space',steer=clamp(finite(input.steer),-1,1),lift=clamp(finite(input.lift),-1,1),desired=space?25:v.boost>0?29:lift<-.45?13:22;
+ const p=v.p,space=v.kind==='space',steer=clamp(finite(input.steer),-1,1),lift=clamp(finite(input.lift),-1,1),desired=space?25:v.dragTime>0?10:v.boost>0?29:lift<-.45?13:22;
  v.speed+=(desired-v.speed)*Math.min(1,dt*2.5);p.vx+=(-steer*(space?10:9)-p.vx)*Math.min(1,dt*6);p.x+=p.vx*dt;p.z=Math.min(v.length,p.z+v.speed*dt);p.vz=v.speed;
  if(space){p.vy+=(lift*7.5-p.vy)*Math.min(1,dt*6);p.y=clamp(p.y+p.vy*dt,1,16);}else{p.vy-=dt*14;p.y=Math.max(0,p.y+p.vy*dt);if(!p.y)p.vy=0;}
  const cx=courseX(v.kind,p.z),bound=space?18:14;if(Math.abs(p.x-cx)>bound){p.x=clamp(p.x,cx-bound,cx+bound);hurt(s,v,6);}p.yaw=Math.atan2(p.vx,Math.max(1,p.vz));
@@ -94,21 +94,31 @@ export function updateVoyage(s,dt,input={}){
   else if(Math.hypot(o.x-p.x,o.z-p.z)<o.r+1&&p.y<(o.type==='vortex'?1.5:1.2)&&!o.hit){o.hit=true;hurt(s,v,o.type==='vortex'?18:14);if(o.type==='vortex'){v.speed=8;p.x+=p.x<o.x?-2:2;}}
  }
  for(const q of v.pickups)if(!q.taken&&Math.abs(q.z-p.z)<3&&Math.hypot(q.x-p.x,(space?q.y-p.y:0))<2.7)pickup(s,v,q);
- const next=v.gates[v.nextGate];if(next&&p.z>=next.z){if(Math.hypot(p.x-next.x,space?p.y-next.y:0)<next.r){next.passed=true;v.points+=50;v.checkpoint=Math.max(0,next.z-15);v.nextGate++;s.emit('vehicleCheckpoint',{gate:next.id});}
+ const next=v.gates[v.nextGate];if(next&&p.z>=next.z){if(Math.hypot(p.x-next.x,space?p.y-next.y:0)<next.r){next.passed=true;v.points+=50;v.checkpoint=Math.max(0,next.z-15);v.nextGate++;s.emit('vehicleCheckpoint',{gate:next.id});
+   if(!space){
+    v.preciseGates=Math.abs(p.x-next.x)<=next.r*.45?v.preciseGates+1:0;
+    if(v.preciseGates===3){
+     v.preciseGates=0;v.boost+=1;
+     s.emit('vehicleBoost');s.emit('notice',{text:'Три точных прохода · форсаж!'});
+    }else if(v.preciseGates>0){
+     s.emit('notice',{text:v.preciseGates===1?'Точно · 1/3':'Точно · 2/3'});
+    }
+   }}
   else if(space){next.missed=true;v.nextGate++;s.emit('notice',{text:'Навигационный маяк пропущен · держись стрелки'});}
-  else{p.z=next.z-22;p.x=courseX('water',p.z);p.vx=0;v.speed=10;v.inv=Math.max(v.inv,1);s.emit('notice',{text:'Пройди между буйками · стрелка указывает ворота'});}}
+  else{next.missed=true;v.nextGate++;v.preciseGates=0;v.dragTime=1.1;s.emit('notice',{text:'Мимо ворот · потеря тяги'});}}
  if(space){if(v.firing)shoot(s,v);updateSpace(s,v,dt);}else updateBots(s,v,dt);
  if(v.status==='active'&&p.z>=v.length){v.firing=false;if(!space&&v.rank>3){v.status='lost';s.emit('vehicleLost');s.emit('notice',{text:'Финиш: '+v.rank+'/5. Для прохода нужно место в тройке. C — повторить гонку.'});}
   else{v.status='finished';if(!v.rewarded){v.rewarded=true;s.crystals+=space?12:16;s.p.hp=Math.min(100,s.p.hp+20);}s.emit('vehicleFinish',{kind:v.kind,rank:v.rank});s.emit('notice',{text:space?'Ангар достигнут! +12 кристаллов · C — к АРЕС':'Гонка выиграна! Место '+v.rank+'/5 · +16 кристаллов · C — к маяку'});}}
  return true;
 }
 export function voyageObjective(v){if(!v)return'';if(v.status==='crashed')return 'Транспорт повреждён · C — повторить с контрольной точки';if(v.status==='lost')return 'Финиш '+v.rank+'/5 · C — повторить, нужно попасть в тройку';if(v.countdown>0)return 'СТАРТ ЧЕРЕЗ '+Math.ceil(v.countdown);return v.kind==='space'?'ПРОРЫВ К АНГАРУ · '+Math.floor(v.p.z/v.length*100)+'% · сбито '+v.kills:'ГОНКА К МАЯКУ · место '+v.rank+'/5 · ворота '+Math.min(10,v.nextGate+1)+'/10';}
-export function voyageStory(kind){return kind==='space'?{title:'Маленький корабль · большой прорыв',text:'Капсулы спасены. До ангара АРЕС ведёт пояс метеоритов. Лира садится в разведчик: впереди истребители, оружейные контейнеры и навигационные кольца.',goal:'Джойстик / WASD — влево, вправо, вверх и вниз. Удерживай B / F — огонь. C / E — ракета. A / пробел — щит. Собирай оружие, ремонт и ракеты; лети по указателям.'}:{title:'Клешни на полном газу',text:'Катер выходит в открытое море. Дорогу к маяку перекрыли огромные раки на водных скутерах. Лира принимает вызов: между буйками, через трамплины, над воронками и акулами.',goal:'Джойстик / WASD — руль; вниз — тормоз. A / пробел — прыжок, трамплины подбрасывают сами. B / F — удар по соседнему гонщику. C / E — ускорение. Пройди все ворота и финишируй в тройке.'};}
-export function voyageSnapshot(v){if(!v)return null;return{version:1,kind:v.kind,status:v.status,p:{...v.p},time:v.time,countdown:v.countdown,weapon:v.weapon,rockets:v.rockets,shield:v.shield,nextGate:v.nextGate,checkpoint:v.checkpoint,kills:v.kills,points:v.points,impacts:v.impacts,jumps:v.jumps,rank:v.rank,started:v.started,rewarded:v.rewarded,gates:v.gates.map(q=>({passed:q.passed,missed:q.missed})),taken:v.pickups.filter(q=>q.taken).map(q=>q.id),destroyed:v.enemies.filter(e=>e.hp<=0).map(e=>e.id),rocks:v.obstacles.filter(e=>e.type==='meteor'&&e.hp<=0).map(e=>e.id),hazards:v.obstacles.filter(e=>e.hit).map(e=>e.id),bots:v.bots.map(b=>({...b}))};}
+export function voyageStory(kind){return kind==='space'?{title:'Маленький корабль · большой прорыв',text:'Капсулы спасены. До ангара АРЕС ведёт пояс метеоритов. Лира садится в разведчик: впереди истребители, оружейные контейнеры и навигационные кольца.',goal:'Джойстик / WASD — влево, вправо, вверх и вниз. Удерживай B / F — огонь. C / E — ракета. A / пробел — щит. Собирай оружие, ремонт и ракеты; лети по указателям.'}:{title:'Клешни на полном газу',text:'Катер выходит в открытое море. Дорогу к маяку перекрыли огромные раки на водных скутерах. Лира принимает вызов: между буйками, через трамплины, над воронками и акулами.',goal:'Джойстик / WASD — руль; вниз — тормоз. A / пробел — прыжок, трамплины подбрасывают сами. B / F — удар по соседнему гонщику. C / E — ускорение. Три прохода подряд по центру — секунда форсажа. За промах теряешь тягу. Финишируй в тройке.'};}
+export function voyageSnapshot(v){if(!v)return null;return{version:1,kind:v.kind,status:v.status,p:{...v.p},time:v.time,countdown:v.countdown,weapon:v.weapon,rockets:v.rockets,shield:v.shield,preciseGates:v.preciseGates,dragTime:v.dragTime,boost:v.boost,nextGate:v.nextGate,checkpoint:v.checkpoint,kills:v.kills,points:v.points,impacts:v.impacts,jumps:v.jumps,rank:v.rank,started:v.started,rewarded:v.rewarded,gates:v.gates.map(q=>({passed:q.passed,missed:q.missed})),taken:v.pickups.filter(q=>q.taken).map(q=>q.id),destroyed:v.enemies.filter(e=>e.hp<=0).map(e=>e.id),rocks:v.obstacles.filter(e=>e.type==='meteor'&&e.hp<=0).map(e=>e.id),hazards:v.obstacles.filter(e=>e.hit).map(e=>e.id),bots:v.bots.map(b=>({...b}))};}
 export function restoreVoyage(kind,data){const v=makeVoyage(kind);if(data?.version!==1||data.kind!==kind)return v;
  if(['dormant','active','finished','crashed','lost'].includes(data.status))v.status=data.status;v.started=!!data.started;v.rewarded=!!data.rewarded;
  if(data.p&&['x','y','z'].every(k=>Number.isFinite(data.p[k]))){v.p.z=clamp(data.p.z,0,v.length);v.p.x=clamp(data.p.x,courseX(kind,v.p.z)-18,courseX(kind,v.p.z)+18);v.p.y=clamp(data.p.y,kind==='space'?1:0,kind==='space'?16:12);}
  for(const [key,max]of [['time',100000],['countdown',3],['weapon',3],['rockets',9],['shield',6],['nextGate',10],['checkpoint',v.length-25],['kills',100],['points',100000],['impacts',10000],['jumps',10000],['rank',5]])v[key]=clamp(finite(data[key],v[key]),0,max);v.weapon=Math.max(1,Math.floor(v.weapon));v.nextGate=Math.floor(v.nextGate);v.inv=2;
+ if(kind==='water'){v.preciseGates=Math.floor(clamp(finite(data.preciseGates),0,2));v.dragTime=clamp(finite(data.dragTime),0,1.1);v.boost=clamp(finite(data.boost),0,3.1);}
  v.gates.forEach((g,i)=>{g.passed=!!data.gates?.[i]?.passed;g.missed=!!data.gates?.[i]?.missed;});v.pickups.forEach(q=>q.taken=Array.isArray(data.taken)&&data.taken.includes(q.id));v.enemies.forEach(e=>{if(data.destroyed?.includes(e.id))e.hp=0;});v.obstacles.forEach(e=>{if(data.rocks?.includes(e.id))e.hp=0;if(data.hazards?.includes(e.id))e.hit=true;});
  if(Array.isArray(data.bots))for(const b of v.bots){const old=data.bots.find(q=>q.id===b.id);if(old&&['x','y','z'].every(k=>Number.isFinite(old[k]))){b.z=clamp(old.z,0,v.length);b.x=clamp(old.x,courseX('water',b.z)-14,courseX('water',b.z)+14);b.y=clamp(old.y,0,12);b.finished=!!old.finished;b.nextGate=clamp(Math.floor(finite(old.nextGate)),0,10);b.rewarded=!!old.rewarded;}}
  return v;

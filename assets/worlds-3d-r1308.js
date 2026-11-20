@@ -8,21 +8,21 @@ import {towerViewKit} from './tower-view-r1459.js?v=r1472';
 import {clipCamera} from './phone-camera-r1459.js?v=r1472';
 import {weaponCrateKit} from './weapon-view-r1458.js?v=r1532';
 import {worldLifeKit} from './world-life-r1458.js?v=r1472';
-import {createVoyageView} from './voyage-view-r1458.js?v=r1472';
-import {voyageStory,startVoyage} from './voyage-core-r1458.js?v=r1472';
+import {createVoyageView} from './voyage-view-r1458.js?v=r1548';
+import {voyageStory,startVoyage} from './voyage-core-r1458.js?v=r1548';
 import {worldActors,poseWorldActor} from './world-actors-r1457.js?v=r1472';
 import {posePlayerImpact} from './player-impact-r1457.js?v=r1472';
 import {lyraCamera,CAMERA_R1457} from './lyra-camera-r1457.js?v=r1472';
 import {storyFor} from './world-story-r1457.js?v=r1472';
 import {attachGrowth} from './lyra-growth-r1449.js?v=r1472';
-import {createExperience,graphicsBudget} from './game-experience-r1448.js?v=r1532';
+import {createExperience,graphicsBudget} from './game-experience-r1448.js?v=r1548';
 import {createEnemyReadability} from './enemy-readability-r1448.js?v=r1472';
 import {poseEnemyCombat} from './combat-poses-r1447.js?v=r1472';
 import {abcMarkup,bindABC} from './abc-controls-r1308.js?v=r1472';
 import {detailKit} from './detail-kit-r1307.js';
 import * as T from './vendor/three-r170.module.min.js';
 import {createLyra,poseGuitar,trackLyra} from './lyra-hero-r1308.js?v=r1532';
-import {WorldState,WORLDS} from './worlds-core-r1306.js?v=r1472';
+import {WorldState,WORLDS} from './worlds-core-r1306.js?v=r1548';
 export function launchPortrait({world=3,fresh=false,onExit,onWin,onContinue}={}){
  const key='andrik-world-'+world+'-r1306';let saved;try{saved=JSON.parse(localStorage.getItem(key));}catch{}
  const state=attachGrowth(new WorldState(world,fresh?null:saved),{saveKey:key,saved:fresh?null:saved}),info=WORLDS[world];

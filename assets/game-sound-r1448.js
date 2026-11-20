@@ -7,6 +7,21 @@ export function createGameSound(getContext,getVolume){
    g.gain.setValueAtTime(Math.max(.0001,volume*level),t);g.gain.exponentialRampToValueAtTime(.0001,t+duration);o.connect(g);g.connect(c.destination);live++;o.onended=()=>{live--;o.disconnect();g.disconnect();};o.start();o.stop(t+duration);
   }catch{}
  }
+ function rankRiff(){
+  const c=getContext(),level=getVolume();if(!c||c.state==='suspended'||level<=0||live>=limit)return;
+  const osc=c.createOscillator(),gain=c.createGain(),filter=c.createBiquadFilter();
+  osc.type='sawtooth';filter.type='lowpass';filter.frequency.value=1600;
+  const start=c.currentTime,notes=[164.81,196,185,164.81];
+  notes.forEach((frequency,i)=>{
+   const t=start+i*.105,end=t+(i===3?.185:.095);
+   osc.frequency.setValueAtTime(frequency,t);gain.gain.setValueAtTime(.0001,t);
+   gain.gain.linearRampToValueAtTime(Math.max(.0001,.085*level),t+.006);
+   gain.gain.exponentialRampToValueAtTime(.0001,end);
+  });
+  osc.connect(filter);filter.connect(gain);gain.connect(c.destination);live++;
+  osc.onended=()=>{live--;osc.disconnect();filter.disconnect();gain.disconnect();};
+  osc.start(start);osc.stop(start+.5);
+ }
  function hiss(duration,volume,cutoff){
   const c=getContext(),level=getVolume();if(!c||c.state==='suspended'||level<=0||live>=limit)return;
   try{if(owner!==c){owner=c;noise=null;}if(!noise){noise=c.createBuffer(1,Math.ceil(c.sampleRate*.4),c.sampleRate);const data=noise.getChannelData(0);let seed=59137;for(let i=0;i<data.length;i++){seed=(seed*16807)%2147483647;data[i]=(seed/2147483647)*2-1;}}
@@ -31,7 +46,7 @@ export function createGameSound(getContext,getVolume){
   else if(e.type==='dogWarn'){source(130,.23,.08,'sawtooth',75);hiss(.14,.12,850);}
   else if(e.type==='dogBite'){source(205,.13,.1,'sawtooth',70);hiss(.09,.18,1300);}
   else if(e.type==='bossWindup'){source(e.kind==='charge'?95:140,.18,.06,'triangle',55);}
-  else if(e.type==='battleRank'){source(e.rank==='S'?880:e.rank==='A'?660:520,.24,.045,'sine',e.rank==='S'?1320:780);}
+  else if(e.type==='battleRank'){if(e.rank==='S')rankRiff();else source(e.rank==='A'?660:520,.24,.045,'sine',780);}
   else if(e.type==='won'){source(440,.38,.04,'sine',880);source(660,.45,.025,'triangle',990);}
   else if(e.type==='bossOpen'){source(440,.20,.055,'sine',660);}
   else if(e.type==='mechanicalBurst'){source(70,.35,.15,'triangle',30);hiss(.25,.12,1800);}

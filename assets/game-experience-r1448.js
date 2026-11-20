@@ -6,7 +6,7 @@ import {createLocalAmbience} from './local-ambience-r1466.js?v=r1472';
 import {chaseCue} from './bike-chase-r1464.js?v=r1472';
 import {createWeaponUI} from './weapon-ui-r1458.js?v=r1472';
 import {createGrowthUI} from './growth-ui-r1449.js?v=r1472';
-import {createGameSound} from './game-sound-r1448.js?v=r1472';
+import {createGameSound} from './game-sound-r1448.js?v=r1548';
 const KEY='andrik-game-settings-r1448',LEARN='andrik-game-learned-r1448';
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 export const DEFAULTS={quality:'auto',fps:60,lookSensitivity:1,buttonScale:1,stickScale:1,opacity:.38,horizontal:16,vertical:16,follow:false,aimAssist:true,guidance:'auto',tutorial:true,motion:.5,flashes:.65};

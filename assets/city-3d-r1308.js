@@ -12,7 +12,7 @@ import {worldLifeKit} from './world-life-r1458.js?v=r1472';
 import {poseRidingKick} from './bike-combat-r1458.js?v=r1472';
 import {storyFor} from './world-story-r1457.js?v=r1472';
 import {attachGrowth} from './lyra-growth-r1449.js?v=r1472';
-import {createExperience,graphicsBudget} from './game-experience-r1448.js?v=r1532';
+import {createExperience,graphicsBudget} from './game-experience-r1448.js?v=r1548';
 import {createEnemyReadability} from './enemy-readability-r1448.js?v=r1472';
 import {createHound,poseHound} from './hound-r1447.js';
 import {poseEnemyCombat} from './combat-poses-r1447.js?v=r1472';
