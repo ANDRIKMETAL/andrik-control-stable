@@ -2738,7 +2738,7 @@ async function recoverOneSignalRetriesR1505(env) {
   // At most one HTTP retry each five-minute release tick: bounded D1/API cost.
   const rows = await db.prepare(`
     SELECT key, value FROM push_state
-    WHERE key LIKE 'onesignal-retry-r1505:%'
+    WHERE key GLOB 'onesignal-retry-r1505:*'
     ORDER BY updated_at ASC LIMIT 12
   `).all();
   let attempted = 0, recovered = 0, pending = 0;
@@ -4552,15 +4552,13 @@ message: `YouTube вернул ${items.length} видео.`,
 details: { mode: fetched.mode, sources: fetched.sources, warnings: fetched.errors, latest: items[0] || null }
 }).catch(() => {});
 const seeded = await db.prepare(`SELECT value FROM push_state WHERE key = 'playlist-seeded' LIMIT 1`).first();
+const candidateIds = JSON.stringify(items.map(item => item.videoId));
 const [seenResult, sentHistoryResult] = await Promise.all([
-db.prepare('SELECT video_id FROM push_playlist_seen').all(),
-db.prepare(`
-        SELECT DISTINCT video_id
-        FROM push_history
-        WHERE type = 'auto-release' AND status = 'sent'
-          AND onesignal_id IS NOT NULL AND onesignal_id != ''
-          AND video_id IS NOT NULL AND video_id != ''
-      `).all()
+db.prepare(`SELECT video_id FROM push_playlist_seen
+    WHERE video_id IN (SELECT value FROM json_each(?))`).bind(candidateIds).all(),
+db.prepare(`SELECT j.value AS video_id FROM json_each(?) AS j
+    WHERE EXISTS (SELECT 1 FROM push_history AS h INDEXED BY idx_push_history_video
+      WHERE h.video_id=j.value AND h.type='auto-release' AND h.status='sent' AND h.onesignal_id IS NOT NULL AND h.onesignal_id != '')`).bind(candidateIds).all()
 ]);
 const seen = new Set([
 ...(seenResult.results || []).map(row => row.video_id),
@@ -4773,13 +4771,13 @@ async function inspectYoutubePlaylist(env, db) {
 const fetched = await fetchOfficialPlaylist(env, db);
 const latestReleaseR1482 = fetched.items.find(isPublicYoutubeReleaseR1482);
 if (latestReleaseR1482) await cacheLatestYoutubeItem(db, latestReleaseR1482, { mode: fetched.mode }).catch(() => {});
+const candidateIds = JSON.stringify(fetched.items.map(item => item.videoId));
 const [seenResult, sentHistoryResult, lastSeen, latestPushAttempt] = await Promise.all([
-db.prepare('SELECT video_id FROM push_playlist_seen').all(),
-db.prepare(`
-      SELECT DISTINCT video_id
-      FROM push_history
-      WHERE type = 'auto-release' AND status = 'sent' AND video_id IS NOT NULL AND video_id != ''
-    `).all(),
+db.prepare(`SELECT video_id FROM push_playlist_seen
+    WHERE video_id IN (SELECT value FROM json_each(?))`).bind(candidateIds).all(),
+db.prepare(`SELECT j.value AS video_id FROM json_each(?) AS j
+    WHERE EXISTS (SELECT 1 FROM push_history AS h INDEXED BY idx_push_history_video
+      WHERE h.video_id=j.value AND h.type='auto-release' AND h.status='sent')`).bind(candidateIds).all(),
 db.prepare(`
       SELECT video_id AS videoId, title, published_at AS publishedAt, first_seen_at AS firstSeenAt
       FROM push_playlist_seen
