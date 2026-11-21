@@ -37,8 +37,17 @@
     return details.join(' · ');
   }
 
+  // Routine housekeeping and missing third-party snapshots are informational,
+  // not actionable incidents. Keep them accessible without crowding open tasks.
+  function informationalTask(task) {
+    const title = String(task.title || '').toLowerCase();
+    const evidence = String(task.evidence || '').toLowerCase();
+    return /старые временные файлы/.test(title) ||
+      (/аналитику tiktok/.test(title) && /сохранённых данных нет|сохраненных данных нет/.test(evidence));
+  }
+
   function activeTasks(data) {
-    return data.tasks.filter(task => !['resolved', 'rejected'].includes(task.state)).sort((a, b) =>
+    return data.tasks.filter(task => !['resolved', 'rejected'].includes(task.state) && !informationalTask(task)).sort((a, b) =>
       Number(a.state === 'awaiting') - Number(b.state === 'awaiting') ||
       priorityOrder.indexOf(a.priority) - priorityOrder.indexOf(b.priority) || b.updatedAt - a.updatedAt);
   }
@@ -115,7 +124,7 @@
     byId('copy').disabled = false;
     for (const [agent, source] of Object.entries(data.sources)) byId(agent).textContent = sourceLine(agent, source);
     const open = activeTasks(data);
-    const closed = data.tasks.filter(task => ['resolved','rejected'].includes(task.state)).sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 8);
+    const closed = data.tasks.filter(task => ['resolved','rejected'].includes(task.state) || informationalTask(task)).sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 8);
     const allFresh = Object.values(data.sources).every(source => source.state === 'fresh');
     setConnection(allFresh ? `Сводка обновлена · ${date.format(data.updatedAt)}`
       : `Ожидаю свежие отчёты · ${date.format(data.updatedAt)}`, allFresh ? 'good' : 'warn');
@@ -125,7 +134,7 @@
     byId('empty').hidden = open.length !== 0;
     byId('empty').textContent = 'Открытых задач нет.';
     byId('history').hidden = closed.length === 0;
-    byId('history-title').textContent = `История · ${closed.length}`;
+    byId('history-title').textContent = `История и некритичные замечания · ${closed.length}`;
   }
 
   function showError(error) {
