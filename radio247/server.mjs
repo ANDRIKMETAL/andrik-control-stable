@@ -856,9 +856,11 @@ const shortText = (value, max = 52) => {
 // that survives a boundary/recovery but loses that reference is an orphan and can
 // accumulate RAM/tasks for hours. GC only targets DIRECT ffmpeg children of this
 // Node PID that are unowned and older than a wide safety window.
+const captureChildren = new Set();
 function ownedFfmpegPidsR1160P(){
   const out=new Set();
   const add=child=>{const pid=Number(child?.pid||0);if(pid>1&&child?.exitCode===null)out.add(pid);};
+  for(const child of captureChildren)add(child);
   add(publisher);
   add(transportPrimaryR1125);
   add(transportBackupR1125);
@@ -2038,6 +2040,8 @@ function buildQueue(){
 function runCapture(command,args,{timeoutMs=20000}={}){
   return new Promise((resolve,reject)=>{
     const child=spawn(command,args,{stdio:['ignore','pipe','pipe']});
+    // nice execs FFmpeg in the same PID. Long-running clip builds have their own deadline.
+    captureChildren.add(child);
     let out='',err='';
     const timer=setTimeout(()=>{
       child.kill('SIGKILL');
@@ -2047,12 +2051,14 @@ function runCapture(command,args,{timeoutMs=20000}={}){
     child.stdout.on('data',d=>out+=String(d));
     child.stderr.on('data',d=>err+=String(d));
     child.once('error',e=>{
+      captureChildren.delete(child);
       clearTimeout(timer);
       reject(e);
     });
-    child.once('exit',code=>{
+    child.once('close',(code,signal)=>{
+      captureChildren.delete(child);
       clearTimeout(timer);
-      code===0 ? resolve(out) : reject(new Error(`${command} exit ${code}: ${err.slice(-900)}`));
+      code===0 ? resolve(out) : reject(new Error(`${command} exit ${signal||code}: ${err.slice(-900)}`));
     });
   });
 }
