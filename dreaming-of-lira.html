@@ -4716,7 +4716,7 @@ for(const m of ruinsMechanismsR1282){
 }
 if(player.x>3260&&((shadowDuelR1609&&!shadowDefeatedR1611)||!ruinsMechanismsR1282.every(m=>m.active))){
  player.x=3260;player.vx=Math.min(0,player.vx);ruinsGateNoticeR1282-=dt;
- if(ruinsGateNoticeR1282<=0){ruinsGateNoticeR1282=2.6;showMessage('АКТИВИРУЙ ТРИ ХРОНОПЕЧАТИ · УДАР ВБЛИЗИ',1.9);}
+ if(ruinsGateNoticeR1282<=0){ruinsGateNoticeR1282=2.6;showMessage(shadowDuelR1609&&!shadowDefeatedR1611?'ПОБЕДИ ТЁМНУЮ ЛИРУ':'АКТИВИРУЙ ТРИ ХРОНОПЕЧАТИ · УДАР ВБЛИЗИ',1.9);}
 }
 updateRuinsEnemiesR010(dt);
 updateRuinsCrowsR010(dt);
@@ -5700,7 +5700,7 @@ requestAnimationFrame(frame);
 })();
 </script>
 <script src="/assets/lira-i18n-r1304.js?v=r1550" defer></script>
-<script src="/assets/lira-boot-r1445.js?v=r1608" defer></script>
+<script src="/assets/lira-boot-r1445.js?v=r1612" defer></script>
 </body>
 </html>
 
