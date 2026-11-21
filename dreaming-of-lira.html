@@ -5520,6 +5520,45 @@ draw=function(){
  ctx.strokeStyle='#f9e8d6';ctx.strokeRect(x,y,w,h);
  ctx.restore();
 };
+// R1615: three optional hidden chambers, each with a timed memory challenge.
+let secretRoomR1615=null,secretRoomsDoneR1615=[false,false,false];
+const secretRoomDoorsR1615=[{x:1095,name:'ГЛАЗ'},{x:2205,name:'ЭХО'},{x:3030,name:'ИСТИНА'}];
+const resetSecretRoomsR1615=resetRuinsR010;
+resetRuinsR010=function(...args){secretRoomR1615=null;secretRoomsDoneR1615=[false,false,false];return resetSecretRoomsR1615(...args);};
+const updateSecretRoomsR1615=updateRuinsR010;
+updateRuinsR010=function(dt){
+ if(secretRoomR1615){
+  const room=secretRoomR1615;
+  if(pressed.jump){pressed.jump=false;room.step++;tone(360+room.step*95,.07,'sine',.018,600);}
+  if(pressed.attack){pressed.attack=false;room.step=Math.max(0,room.step-1);tone(170,.05,'triangle',.013,100);}
+  if(room.step>=3){secretRoomsDoneR1615[room.index]=true;score+=900;player.hp=Math.min(player.maxHp,player.hp+30);superMeter=clamp(superMeter+25,0,SUPER_MAX);showMessage('ТАЙНА РАСКРЫТА · +900',1.7);secretRoomR1615=null;saveProgress(false);}
+  else if(room.t>=14){secretRoomR1615=null;showMessage('ДВЕРЬ ЗАКРЫЛАСЬ · ПОПРОБУЙ СНОВА',1.4);}
+  else room.t+=dt;
+  return;
+ }
+ if(started&&!paused&&!gameOver&&!victory&&currentLevel===6&&pressed.jump&&input.up){
+  const index=secretRoomDoorsR1615.findIndex((d,i)=>!secretRoomsDoneR1615[i]&&Math.abs(player.x-d.x)<33&&Math.abs(player.y-205)<40&&player.z<22);
+  if(index>=0){pressed.jump=false;secretRoomR1615={index,t:0,step:0};showMessage('ТАЙНАЯ КОМНАТА · A ×3 · B НАЗАД',1.3);return;}
+ }
+ return updateSecretRoomsR1615(dt);
+};
+const drawSecretRoomsR1615=draw;
+draw=function(){
+ drawSecretRoomsR1615();
+ if(currentLevel!==6||!secretRoomR1615)return;
+ const room=secretRoomR1615;
+ ctx.save();ctx.fillStyle='rgba(3,5,15,.94)';ctx.fillRect(0,0,W,H);
+ const glow=ctx.createRadialGradient(W/2,H/2,4,W/2,H/2,140);glow.addColorStop(0,'#2e3a60');glow.addColorStop(1,'#050711');ctx.fillStyle=glow;ctx.fillRect(0,0,W,H);
+ ctx.textAlign='center';ctx.fillStyle='#c2f0ff';ctx.font='bold 16px monospace';ctx.fillText('ТАЙНАЯ КОМНАТА · '+secretRoomDoorsR1615[room.index].name,W/2,65);
+ ctx.font='bold 11px monospace';ctx.fillText('ПРОБУДИ ТРИ ПЕЧАТИ',W/2,105);
+ for(let i=0;i<3;i++){ctx.beginPath();ctx.arc(W/2+(i-1)*54,145,16,0,Math.PI*2);ctx.fillStyle=i<room.step?'#9ef5d6':'#24364b';ctx.fill();ctx.strokeStyle='#a4cce4';ctx.stroke();}
+ ctx.font='10px monospace';ctx.fillStyle='#fff0c4';ctx.fillText('A · АКТИВИРОВАТЬ    B · ОТМЕНИТЬ',W/2,196);
+ ctx.fillText('ОСТАЛОСЬ '+Math.max(0,Math.ceil(14-room.t))+' СЕК.',W/2,220);ctx.restore();
+};
+const saveSecretRoomsR1615=buildSaveData;
+buildSaveData=function(){const d=saveSecretRoomsR1615();if(currentLevel===6&&d.ruinsR010)d.ruinsR010.secretRoomsDoneR1615=secretRoomsDoneR1615.slice();return d;};
+const restoreSecretRoomsR1615=restoreSave;
+restoreSave=function(data){const ok=restoreSecretRoomsR1615(data);if(ok&&currentLevel===6&&Array.isArray(data?.ruinsR010?.secretRoomsDoneR1615))secretRoomsDoneR1615=data.ruinsR010.secretRoomsDoneR1615.slice(0,3).map(Boolean);return ok;};
 // R1614: high-speed pursuit in space with evasive corridors and warning HUD.
 let spacePursuitR1614={active:false,t:0,next:0,phase:0,warning:0};
 const resetSpacePursuitR1614=resetSpaceR950;
