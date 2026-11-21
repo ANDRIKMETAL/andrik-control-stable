@@ -315,7 +315,21 @@ if(s.level===6){
    glass.scale.y=1.55;group.add(glass);return group;
   },Math.min(3070,e.x+46),60,floorZ(e.y)-12);
   mirror.rotation.y=Math.PI*.12;
-  mirror.visible=e.alive&&e.shadowPhaseR1609===1;
+  mirror.visible=e.alive&&((e.shadowIntroR1611||0)>0||e.shadowPhaseR1609===1);
+  if(e.shadowIntroR1611>0){const progress=1-e.shadowIntroR1611/1.8;g.position.x+=Math.max(0,1-progress)*28;g.scale.setScalar(Math.max(.05,progress));mirror.scale.setScalar(1+Math.sin(s.elapsed*9)*.045);}
+  else g.scale.setScalar(1);
+  if(e.shadowAttackT_R1611>0){
+   const swing=Math.sin((1-e.shadowAttackT_R1611/.55)*Math.PI);
+   g.rotation.z=(e.face||1)*swing*(e.shadowAttackKindR1611==='guitar'?.24:.34);
+   const weapon=located('shadow-weapon-r1611',()=>{const group=new T.Group();
+    const neck=new T.Mesh(new T.BoxGeometry(2,37,3),new T.MeshStandardMaterial({color:'#6e1126',metalness:.55,roughness:.3}));
+    neck.position.y=15;group.add(neck);
+    const body=new T.Mesh(new T.BoxGeometry(13,17,4),new T.MeshStandardMaterial({color:'#aa1237',metalness:.65,roughness:.25,emissive:'#42071a'}));
+    body.position.y=-4;group.add(body);return group;
+   },e.x+(e.face||1)*12,47,floorZ(e.y)+6);
+   weapon.visible=true;weapon.rotation.z=(e.face||1)*(.65+swing*1.5);weapon.scale.setScalar(e.shadowAttackKindR1611==='bat'?.72:1);
+  }
+  if(e.shadowVictoryR1611>0)g.rotation.z+=Math.sin(s.elapsed*10)*.08;
   // Same silhouette and equipment as Lyra; blackened outfit, glowing red eyes and sinister motion.
   if(!g.userData.shadowStyledR1609){
    g.userData.shadowStyledR1609=true;
