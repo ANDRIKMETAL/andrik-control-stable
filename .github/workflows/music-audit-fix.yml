@@ -1,0 +1,53 @@
+name: Apply MUSIC audit exclusions
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/music-audit-fix.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  patch-worker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Patch MUSIC background audit safely
+        shell: python
+        run: |
+          from pathlib import Path
+          p = Path("_worker.js")
+          s = p.read_text(encoding="utf-8")
+          edits = [
+            (
+              "   for(const def of Object.values(MUSIC_ALBUMS_R446)){\n     const a=await musicAlbumStatusOneR446(bucket,def,false);",
+              "   // Exclude separate Covers and Extended playback catalogs from the studio-album R2 audit.\n   for(const def of Object.values(MUSIC_ALBUMS_R446).filter(def=>!['covers','extended'].includes(def.slug))){\n     const a=await musicAlbumStatusOneR446(bucket,def,false);"
+            ),
+            (
+              "   if(r.status==='ok')for(const issue of r.report.issues||[]){\n     if(!/^[a-z0-9-]{1,80}$/.test(issue.id))continue;",
+              "   if(r.status==='ok')for(const issue of r.report.issues||[]){\n     if(/^(?:music-empty|music-zip)-(?:covers|extended)$/.test(String(issue.id||'')))continue;\n     if(!/^[a-z0-9-]{1,80}$/.test(issue.id))continue;"
+            ),
+            (
+              "  delete next.cpu;",
+              "  delete next.cpu;\n  for (const id of ['music-empty-covers','music-zip-covers','music-empty-extended','music-zip-extended']) delete next[id];"
+            )
+          ]
+          for old, new in edits:
+              if s.count(new) == 1:
+                  continue
+              if s.count(old) != 1:
+                  raise SystemExit("Expected source not found uniquely; refusing unsafe patch")
+              s = s.replace(old, new, 1)
+          p.write_text(s, encoding="utf-8")
+      - name: Verify JavaScript syntax
+        run: node --check _worker.js
+      - name: Commit server fix to main
+        run: |
+          git config user.name "andrik-automation"
+          git config user.email "actions@users.noreply.github.com"
+          git add _worker.js
+          if git diff --cached --quiet; then echo "Already patched"; exit 0; fi
+          git commit -m "Fix MUSIC background audit: exclude Covers and Extended Version"
+          git push origin HEAD:main
