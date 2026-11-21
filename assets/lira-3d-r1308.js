@@ -301,6 +301,17 @@ const allGone=(s.bar.enemies||[]).every(e=>!e.alive),allLoot=(s.bar.items||[]).e
 if(allGone&&allLoot){const door=solid('r1204-bar-exit-door',468,42,floorZ(205),30,84,5,'#25405b');const halo=object('r1204-bar-exit-light',()=>new T.PointLight('#82e7ff',0,180,2));halo.position.set(468,44,floorZ(205)+8);halo.intensity=5000+Math.sin(s.elapsed*9)*850;}
 }
 }
+if(s.level===6){
+ for(const secret of s.ruins.secrets||[]){if(secret.taken||!near(secret.x,cam))continue;
+  const relic=located('secret-r1613-'+secret.id,()=>{const group=new T.Group();const core=new T.Mesh(new T.OctahedronGeometry(9),new T.MeshStandardMaterial({color:'#9adff4',emissive:'#146e9c',emissiveIntensity:1.8,metalness:.5,roughness:.2}));group.add(core);const halo=new T.Mesh(new T.TorusGeometry(14,1.3,6,24),new T.MeshBasicMaterial({color:'#7feaff'}));group.add(halo);return group;},secret.x,35,floorZ(secret.y));
+  relic.rotation.y=s.elapsed*.9;relic.position.y=35+Math.sin(s.elapsed*3)*4;
+ }
+ for(const shrine of s.ruins.shrines||[]){if(!near(shrine.x,cam))continue;
+  const base=solid('shrine-r1613-'+shrine.x,shrine.x,7,floorZ(212),25,14,20,shrine.used?'#364b4d':'#2c5366');
+  const flame=located('shrine-eye-r1613-'+shrine.x,()=>new T.Mesh(new T.SphereGeometry(6,10,8),new T.MeshBasicMaterial({color:'#6ee9ff'})),shrine.x,26,floorZ(212));
+  flame.visible=!shrine.used;flame.scale.setScalar(.85+Math.sin(s.elapsed*4)*.15);
+ }
+}
 const enemies=s.bar.active?s.bar.enemies:s.level===6?[...s.ruins.enemies,...(s.ruins.boss?[s.ruins.boss]:[])]:s.enemies;
 for(const e of enemies){if(e.x<cam-90||e.x>cam+620||e.alive===false&&(e.deathTimer||0)<=0)continue;
 if(s.level===6){
