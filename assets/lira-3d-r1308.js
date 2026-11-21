@@ -305,8 +305,24 @@ const enemies=s.bar.active?s.bar.enemies:s.level===6?[...s.ruins.enemies,...(s.r
 for(const e of enemies){if(e.x<cam-90||e.x>cam+620||e.alive===false&&(e.deathTimer||0)<=0)continue;
 if(s.level===6){
  const boss=e.type==='boss'||e===s.ruins.boss;
- const g=located('epoch-r1282-'+e.id,()=>boss?makeRuinsBoss():makeRuinsEnemy(e.kindR1282||'stone'),e.x,e.z||0,floorZ(e.y));
- if(boss)poseRuinsBoss(g,e,s.elapsed);else poseRuinsEnemy(g,e,s.elapsed);
+ const g=located('epoch-r1282-'+e.id,()=>e.shadowDoubleR1609?character('lira'):boss?makeRuinsBoss():makeRuinsEnemy(e.kindR1282||'stone'),e.x,e.z||0,floorZ(e.y));
+ if(e.shadowDoubleR1609){
+  // Same silhouette and equipment as Lyra; blackened outfit, glowing red eyes and sinister motion.
+  if(!g.userData.shadowStyledR1609){
+   g.userData.shadowStyledR1609=true;
+   g.traverse(o=>{if(!o.isMesh||!o.material)return;const mat=o.material.clone();o.material=mat;
+    if(mat.color){const n=o.name.toLowerCase();if(/eye/.test(n)){mat.color.set('#ff1838');if(mat.emissive)mat.emissive.set('#ed0928');}
+    else if(!/skin|face|hair/.test(n))mat.color.lerp(new T.Color('#100d1b'),.76);}
+   });
+   const eyes=new T.Group();
+   for(const x of [-3.1,3.1]){const glow=new T.Mesh(new T.SphereGeometry(1.15,8,8),new T.MeshBasicMaterial({color:'#ff123b'}));glow.position.set(x,57,9.8);eyes.add(glow);}
+   g.add(eyes);g.userData.shadowEyesR1609=eyes;
+  }
+  animateCharacter(g,{...e,vx:e.shadowDodgeR1609>0?110:0,walkPhase:s.elapsed*8,attack:e.attackAnimR1185||null},s.elapsed,{walking:true,running:e.shadowPhaseR1609===3});
+  g.userData.shadowEyesR1609.visible=e.alive!==false;
+  g.userData.shadowEyesR1609.position.y=Math.sin(s.elapsed*5)*.35;
+  if(e.shadowDodgeR1609>0)g.rotation.z=Math.sin(s.elapsed*22)*.11;
+ }else if(boss)poseRuinsBoss(g,e,s.elapsed);else poseRuinsEnemy(g,e,s.elapsed);
  if(!boss&&e.alive!==false&&e.hp<e.maxHp){solid('epoch-hp-bg-'+e.id,e.x,118,floorZ(e.y),34,2,1,'#372822');solid('epoch-hp-'+e.id,e.x-17+17*e.hp/e.maxHp,118,floorZ(e.y)+1,34*e.hp/e.maxHp,2,1,'#e1a64d');}
  continue;
  }
