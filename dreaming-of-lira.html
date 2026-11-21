@@ -5529,6 +5529,10 @@ resetRuinsR010=function(...args){
  ruinsShrinesR1613=[{x:900,used:false},{x:1810,used:false},{x:2720,used:false}];
  return result;
 };
+const saveSecretsR1613=buildSaveData;
+buildSaveData=function(){const d=saveSecretsR1613();if(currentLevel===6&&d.ruinsR010){d.ruinsR010.secretsR1613=ruinsSecretsR1613.map(x=>!!x.taken);d.ruinsR010.shrinesR1613=ruinsShrinesR1613.map(x=>!!x.used);d.ruinsR010.shadowDefeatedR1611=shadowDefeatedR1611;}return d;};
+const restoreSecretsR1613=restoreSave;
+restoreSave=function(data){const ok=restoreSecretsR1613(data);if(ok&&currentLevel===6){const z=data?.ruinsR010;if(Array.isArray(z?.secretsR1613))ruinsSecretsR1613.forEach((x,i)=>x.taken=!!z.secretsR1613[i]);if(Array.isArray(z?.shrinesR1613))ruinsShrinesR1613.forEach((x,i)=>x.used=!!z.shrinesR1613[i]);if(z?.shadowDefeatedR1611){shadowDefeatedR1611=true;shadowDuelR1609=null;}}return ok;};
 const ruinsSecretsTickR1613=updateRuinsR010;
 updateRuinsR010=function(dt){
  const active=started&&!paused&&!gameOver&&!victory&&currentLevel===6;
