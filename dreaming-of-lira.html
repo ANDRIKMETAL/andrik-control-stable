@@ -5520,6 +5520,74 @@ draw=function(){
  ctx.strokeStyle='#f9e8d6';ctx.strokeRect(x,y,w,h);
  ctx.restore();
 };
+// R1607: Ruins coordinated ambush waves, rear hold and six-tap escape.
+let ruinsGrabR1607=null,ruinsGrabCooldownR1607=0,ruinsAmbushZoneR1607=-1;
+const ruinsUpdateR1607=updateRuinsR010;
+updateRuinsR010=function(dt){
+ const active=started&&!paused&&!gameOver&&!victory&&!levelPosterR010&&currentLevel===6;
+ if(!active){ruinsGrabR1607=null;return ruinsUpdateR1607(dt);}
+ ruinsGrabCooldownR1607=Math.max(0,ruinsGrabCooldownR1607-dt);
+ const zone=Math.floor(Math.max(0,player.x-350)/550);
+ if(zone>ruinsAmbushZoneR1607&&player.x<3150){
+  ruinsAmbushZoneR1607=zone;
+  const nearby=ruinsEnemiesR010.filter(e=>e.alive&&Math.abs(e.x-player.x)<270);
+  if(nearby.length>=2){
+   const rear=nearby.find(e=>e.kindR1282!=='watcher'&&e.kindR1282!=='colossus')||nearby[0];
+   rear.grabberR1607=true;
+   // A coordinated second fighter closes from ahead; no extra enemies or save-state changes.
+   const front=nearby.find(e=>e!==rear);
+   if(front){front.x=clamp(player.x+(player.face||1)*100,30,RUINS_END_R010-30);front.y=player.y;}
+   rear.x=clamp(player.x-(player.face||1)*88,30,RUINS_END_R010-30);rear.y=player.y;
+   showMessage('AMBUSH! · WATCH YOUR BACK',1.15);
+  }
+ }
+ if(ruinsGrabR1607){
+  const g=ruinsGrabR1607;g.time+=dt;
+  if(!g.holder.alive||player.dead){ruinsGrabR1607=null;ruinsGrabCooldownR1607=3;}
+  else if(pressed.attack){
+   g.taps++;pressed.attack=false;input.attack=false;tone(220+g.taps*48,.035,'square',.016,130);
+   if(g.taps>=6){g.holder.attack=0;g.holder.retreatT=.85;g.holder.x-=player.face*38;ruinsGrabR1607=null;ruinsGrabCooldownR1607=5;player.stun=0;player.invuln=Math.max(player.invuln,.85);showMessage('ESCAPED! · COUNTER!',.9);}
+  }
+  if(ruinsGrabR1607&&g.time>=4.2){ruinsGrabR1607=null;ruinsGrabCooldownR1607=5;player.stun=0;damageRuinsPlayerR010(14,g.holder.x);}
+ }
+ if(!ruinsGrabR1607&&ruinsGrabCooldownR1607===0&&player.z<2&&player.stun<=0&&!player.dead){
+  const back=ruinsEnemiesR010.find(e=>e.alive&&e.grabberR1607&&Math.abs(e.x-player.x)<26&&Math.abs(e.y-player.y)<20&&(e.x-player.x)*(player.face||1)<0);
+  const front=ruinsEnemiesR010.find(e=>e.alive&&e!==back&&Math.abs(e.x-player.x)<110&&Math.abs(e.y-player.y)<26&&(e.x-player.x)*(player.face||1)>0);
+  if(back&&front){ruinsGrabR1607={holder:back,front,taps:0,time:0};player.attack=null;showMessage('GRABBED! · TAP B ×6',1);tone(110,.15,'sawtooth',.025,65);}
+ }
+ const held=!!ruinsGrabR1607;
+ const movement=held?[input.left,input.right,input.up,input.down,input.jump,input.attack]:null;
+ if(held){input.left=input.right=input.up=input.down=input.jump=input.attack=false;player.vx=player.vy=0;player.stun=Math.max(player.stun,.09);player.grabbedR1605=true;}
+ else player.grabbedR1605=false;
+ ruinsUpdateR1607(dt);
+ if(movement){[input.left,input.right,input.up,input.down,input.jump,input.attack]=movement;player.vx=player.vy=0;}
+ if(ruinsGrabR1607){const e=ruinsGrabR1607.holder;e.x=player.x-(player.face||1)*13;e.y=player.y;e.attackAnimR1185=null;e.grabbingR1605=true;showMessage('GRABBED! · TAP B '+ruinsGrabR1607.taps+'/6',.14);}
+ for(const e of ruinsEnemiesR010)if(e!==ruinsGrabR1607?.holder)e.grabbingR1605=false;
+};
+const ruinsResetR1607=resetRuinsR010;
+resetRuinsR010=function(...args){ruinsGrabR1607=null;ruinsGrabCooldownR1607=0;ruinsAmbushZoneR1607=-1;return ruinsResetR1607(...args);};
+// R1608: Combo streak rewards clean consecutive hits across all melee worlds.
+let comboCountR1608=0,comboTimerR1608=0,comboBestR1608=0;
+const damageEnemyR1608=damageEnemy;
+damageEnemy=function(e,amount,knockX){
+ if(e?.alive&&amount>0&&currentLevel<=2){comboCountR1608=comboTimerR1608>0?comboCountR1608+1:1;comboTimerR1608=3.2;comboBestR1608=Math.max(comboBestR1608,comboCountR1608);if(comboCountR1608===5||comboCountR1608===10){score+=comboCountR1608*20;showMessage('COMBO ×'+comboCountR1608+' · BONUS!',.85);}}
+ return damageEnemyR1608(e,amount,knockX);
+};
+const damageRomanR1608=damageRomanR010;
+damageRomanR010=function(e,amount,knockX){
+ if(e?.alive&&amount>0){comboCountR1608=comboTimerR1608>0?comboCountR1608+1:1;comboTimerR1608=3.2;comboBestR1608=Math.max(comboBestR1608,comboCountR1608);if(comboCountR1608===5||comboCountR1608===10){score+=comboCountR1608*20;showMessage('COMBO ×'+comboCountR1608+' · BONUS!',.85);}}
+ return damageRomanR1608(e,amount,knockX);
+};
+const updateComboR1608=update;
+update=function(dt){if(started&&!paused&&!gameOver&&!victory){comboTimerR1608=Math.max(0,comboTimerR1608-dt);if(comboTimerR1608===0)comboCountR1608=0;}return updateComboR1608(dt);};
+const levelComboR1608=startLevel;
+startLevel=function(...args){comboCountR1608=0;comboTimerR1608=0;return levelComboR1608(...args);};
+const drawComboR1608=draw;
+draw=function(){
+ drawComboR1608();
+ if(!started||paused||comboCountR1608<2||comboTimerR1608<=0)return;
+ ctx.save();ctx.textAlign='center';ctx.fillStyle='#ffe2a1';ctx.font='bold 12px monospace';ctx.fillText('COMBO ×'+comboCountR1608,W/2,40);ctx.restore();
+};
 const drawClassicR1182 = draw;
 let rendererR1182 = null;
 window.LiraGame = {
@@ -5532,7 +5600,7 @@ return {started, paused, gameOver, victory, elapsed, cameraX, score, shake, flas
 level: currentLevel, worldWidth: WORLD_W, player, enemies, effects, lives:livesR955,
 superMeter, superCost:SUPER_COST,
 guitarCue:guitarCueR1183&&guitarCueR1183.level===currentLevel&&elapsed>=guitarCueR1183.start&&elapsed-guitarCueR1183.start<guitarCueR1183.duration?{t:elapsed-guitarCueR1183.start,duration:guitarCueR1183.duration}:null,
-message:messageTimer > 0 ? message : '', grab:grabR1604?{active:true,taps:grabR1604.taps,required:6,remaining:Math.max(0,4.2-grabR1604.time)}:{active:false,taps:0,required:6,remaining:0}, unlocked:unlockedLevel,
+message:messageTimer > 0 ? message : '', combo:{count:comboCountR1608,best:comboBestR1608,time:comboTimerR1608}, grab:(grabR1604||ruinsGrabR1607)?{active:true,taps:(grabR1604||ruinsGrabR1607).taps,required:6,remaining:Math.max(0,4.2-(grabR1604||ruinsGrabR1607).time)}:{active:false,taps:0,required:6,remaining:0}, unlocked:unlockedLevel,
 stars:levelStarsR952, saved:hasSave(), levelSelect:levelSelectOpenR950, levelChoice:levelSelectChoiceR950,
 gate:getActiveWave()?.gate, wave:getActiveWave()?.name,
 cinematic, poster:levelPosterR010,
