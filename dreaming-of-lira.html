@@ -5180,7 +5180,11 @@ startKickR950=function(){if(startOceanRunKickR1239())return;return __r1239StartK
 const __r1204UpdatePlayerPrev=updatePlayer;
 updatePlayer=function(dt){
 if(barDoorEntryActiveR1204){updateBarDoorEntryR1204(dt);return;}
-const oldSpeed=player.speed;if((currentLevel===1||currentLevel===2)&&!barModeR955&&!bikeMode&&runBoostT_R1204>0)player.speed=oldSpeed*(currentLevel===2?1.62:1.72);
+const oldSpeed=player.speed;
+// Comfortable GTA-style default jog, preserving the existing double-tap sprint boost.
+const movingOnFoot=!bikeMode&&!barModeR955&&(input.left||input.right||input.up||input.down);
+if(movingOnFoot)player.speed=oldSpeed*1.18;
+if((currentLevel===1||currentLevel===2)&&!barModeR955&&!bikeMode&&runBoostT_R1204>0)player.speed=oldSpeed*(currentLevel===2?1.62:1.72);
 __r1204UpdatePlayerPrev(dt);player.speed=oldSpeed;updateRunAndParkourR1204(dt);
 if(player.attack?.kind==='flyingKickR1204'){const q=clamp(player.attack.t/player.attack.duration,0,1);player.x+=player.face*150*dt;player.z=Math.max(player.z,8+Math.sin(q*Math.PI)*23);}
 if(player.attack?.kind==='runKickR1239'){player.x+=player.face*185*dt;player.vx=player.face*Math.max(180,Math.abs(player.vx));}
