@@ -315,7 +315,9 @@ if(s.level===6){
    glass.scale.y=1.55;group.add(glass);return group;
   },Math.min(3070,e.x+46),60,floorZ(e.y)-12);
   mirror.rotation.y=Math.PI*.12;
-  mirror.visible=e.alive&&((e.shadowIntroR1611||0)>0||e.shadowPhaseR1609===1);
+  mirror.visible=(e.alive&&((e.shadowIntroR1611||0)>0||e.shadowPhaseR1609===1))||(s.ruins.shadowFinale>0);
+  if(s.ruins.shadowFinale>0){mirror.rotation.z=s.elapsed*1.4;mirror.scale.setScalar(1+s.ruins.shadowFinale*.2);mirror.traverse(o=>{if(o.material?.opacity!==undefined&&o.material.transparent)o.material.opacity=Math.max(0,.21*(s.ruins.shadowFinale/3.4));});}
+  if(!e.alive&&s.ruins.shadowFinale>0){const burst=located('shadow-shards-r1612',()=>{const group=new T.Group();for(let i=0;i<12;i++){const shard=new T.Mesh(new T.TetrahedronGeometry(3+i%3,0),new T.MeshBasicMaterial({color:i%2?'#e13761':'#a2c4e9',transparent:true,opacity:.8}));shard.userData.i=i;group.add(shard);}return group;},e.x,58,floorZ(e.y));burst.visible=true;for(const shard of burst.children){const i=shard.userData.i,progress=1-s.ruins.shadowFinale/3.4,angle=i*Math.PI/6;shard.position.set(Math.cos(angle)*progress*85,Math.sin(angle)*progress*60,Math.sin(angle*2)*progress*25);shard.rotation.set(progress*8,progress*5,progress*11);shard.material.opacity=Math.max(0,1-progress);}}
   if(e.shadowIntroR1611>0){const progress=1-e.shadowIntroR1611/1.8;g.position.x+=Math.max(0,1-progress)*28;g.scale.setScalar(Math.max(.05,progress));mirror.scale.setScalar(1+Math.sin(s.elapsed*9)*.045);}
   else g.scale.setScalar(1);
   if(e.shadowAttackT_R1611>0){
