@@ -98,14 +98,16 @@ limb.arm.quaternion.setFromUnitVectors(down,ikElbow.clone().sub(shoulder).normal
 ikInv.copy(limb.arm.quaternion).invert();
 limb.fore.quaternion.setFromUnitVectors(down,ikTarget.sub(ikElbow).applyQuaternion(ikInv).normalize());
 }
+function kindIsLyra(root){return root.userData?.kind==='lira'||root.userData?.kind==='lyra';}
 export function animateCharacter(root,p,time,opts={}){
 const d=root.userData,walking=opts.walking??(Math.abs(p.vx||0)+Math.abs(p.vy||0)>8),running=!!opts.running,phase=p.walkPhase||time*9;
-const stride=walking?Math.sin(phase)*(running?.80:.53):0,air=(p.z||0)>2||opts.air,face=(p.face??p.dir??1)<0?-1:1;
+const jog=kindIsLyra(root)&&walking&&!running&&!opts.ride&&!opts.dance&&!opts.retreat;
+const stride=walking?Math.sin(phase)*(running?.80:jog?.68:.53):0,air=(p.z||0)>2||opts.air,face=(p.face??p.dir??1)<0?-1:1;
 root.rotation.y=opts.presentationYaw??face*1.12;
-d.body.position.set(0,walking?Math.abs(Math.sin(phase))*(running?1.45:.9):Math.sin(time*2)*.4,0);
+d.body.position.set(0,walking?Math.abs(Math.sin(phase))*(running?1.45:jog?1.12:.9):Math.sin(time*2)*.4,0);
 d.body.rotation.set(0,0,0);d.head.rotation.set(0,Math.sin(time*.7)*.035,0);
 d.limbs.forEach((a,i)=>{a.arm.rotation.set(i?stride:-stride,0,i?-.1:.1);a.fore.rotation.set(-.18,0,0);a.leg.rotation.set(i?-stride:stride,0,0);a.shin.rotation.set(air?.55:Math.max(0,(i?stride:-stride)*.7),0,0);if(air)a.leg.rotation.x=i?-.75:.45;});
-if(running&&!p.attack&&!air){d.body.rotation.x=.12;d.head.rotation.x=-.05;}
+if((running||jog)&&!p.attack&&!air){d.body.rotation.x=running?.12:.075;d.head.rotation.x=running?-.05:-.025;if(jog){d.limbs.forEach((l,i)=>{l.arm.rotation.x+=(i?-.16:.16);l.fore.rotation.x=-.42+Math.max(0,(i?-stride:stride))*.18;});}}
 const mount=opts.ride?1:T.MathUtils.clamp(Number(opts.mount)||0,0,1);
 if(mount>0){d.limbs.forEach(a=>{a.leg.rotation.x=T.MathUtils.lerp(a.leg.rotation.x,-1.3,mount);a.shin.rotation.x=T.MathUtils.lerp(a.shin.rotation.x,1.4,mount);a.arm.rotation.x=T.MathUtils.lerp(a.arm.rotation.x,-1.08,mount);a.fore.rotation.x=-.36-.60*mount;});d.body.rotation.x=.18*mount;if(mount>.72){const q=smooth((mount-.72)/.28);const lh=new T.Vector3(-8.4,33.4,18.2),rh=new T.Vector3(8.4,33.4,18.2);handAt(d.limbs[0],lh,-1);handAt(d.limbs[1],rh,1);d.body.rotation.x=.22*q;}}
 if(opts.retreat&&!p.attack){
