@@ -1,6 +1,7 @@
 import * as T from './vendor/three-r170.module.min.js';
 const smooth=x=>{x=T.MathUtils.clamp(x,0,1);return x*x*(3-2*x);},up=new T.Vector3(0,1,0);
-const backGrip=new T.Vector3(.22,.71,-.225),backAxis=new T.Vector3(.09,.99,-.10).normalize();
+// Sheathed bat crosses the guitar diagonally on Lyra's back, below the shoulder line.
+const backGrip=new T.Vector3(-.25,.49,-.175),backAxis=new T.Vector3(.52,.84,-.12).normalize();
 export function createBatTrail(hero){
  const geometry=new T.BufferGeometry(),positions=new Float32Array(9*2*3),indices=[];geometry.setAttribute('position',new T.BufferAttribute(positions,3).setUsage(T.DynamicDrawUsage));
  for(let i=0;i<8;i++){const j=i*2;indices.push(j,j+1,j+2,j+1,j+3,j+2);}geometry.setIndex(indices);geometry.setDrawRange(0,0);
@@ -8,10 +9,11 @@ export function createBatTrail(hero){
 }
 export function animateBat(hero,attack,time,running,weapon,handAt,carry=0){
  const u=hero.userData,g=u.bat;if(!g)return;
- g.visible=weapon?.selected==='bat';u.batTrail.visible=false;
- if(!g.visible||carry===0){
+ // Keep the bat on the back even when another weapon is selected.
+ g.visible=true;u.batTrail.visible=false;
+ if(weapon?.selected!=='bat'||carry===0){
   u.batSamples.length=0;u.batAttack=null;
-  if(g.visible){g.position.copy(backGrip);g.quaternion.setFromUnitVectors(up,backAxis);}
+  g.position.copy(backGrip);g.quaternion.setFromUnitVectors(up,backAxis);
   return;
  }
  if(u.blade)u.blade.visible=false;if(u.bladeTrace)u.bladeTrace.visible=false;
@@ -31,7 +33,8 @@ export function animateBat(hero,attack,time,running,weapon,handAt,carry=0){
  if(blend<1){
   const arc=Math.sin(blend*Math.PI);
   g.position.lerp(backGrip,1-blend);
-  g.position.x+=.34*arc;g.position.y+=.18*arc;
+  // Short, snappy draw/holster arc from the back into both hands.
+  g.position.x+=.24*arc;g.position.y+=.13*arc;
   axis.lerp(backAxis,1-blend).normalize();
  }
  g.quaternion.setFromUnitVectors(up,axis);g.updateMatrix();
