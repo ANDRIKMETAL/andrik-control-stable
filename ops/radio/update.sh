@@ -21,7 +21,9 @@ sha=$(sed -n 's/^SHA256=//p' "$tmp/release.env")
 url=$(sed -n 's/^SOURCE_URL=//p' "$tmp/release.env")
 [[ "$version" =~ ^[A-Za-z0-9._-]{1,60}$ ]] || { echo "Invalid version"; exit 1; }
 [[ "$sha" =~ ^[a-f0-9]{64}$ ]] || { echo "Invalid SHA256"; exit 1; }
-[[ "$url" =~ ^https://raw.githubusercontent.com/ANDRIKMETAL/andrik-control-stable/[a-f0-9]{40}/radio247/server.mjs$ ]] || { echo "Source must be pinned to a commit"; exit 1; }
+if [[ -n "$url" ]]; then
+  [[ "$url" =~ ^https://raw.githubusercontent.com/ANDRIKMETAL/andrik-control-stable/[a-f0-9]{40}/radio247/server.mjs$ ]] || { echo "Source must be pinned to a commit"; exit 1; }
+fi
 [[ -f "$TARGET" ]] || { echo "Target absent"; exit 1; }
 current=$(sha256sum "$TARGET" | awk '{print $1}')
 [[ "$current" != "$sha" ]] || exit 0
