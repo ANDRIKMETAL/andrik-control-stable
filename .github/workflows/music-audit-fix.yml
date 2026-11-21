@@ -23,12 +23,8 @@ jobs:
           s = p.read_text(encoding="utf-8")
           edits = [
             (
-              " if(!SPLIT_JOBS_R1504.has(job))return",
-              " if(!SPLIT_JOBS_R1504.has(job))return"
-            ),
-            (
               "   for(const def of Object.values(MUSIC_ALBUMS_R446)){\n     const a=await musicAlbumStatusOneR446(bucket,def,false);",
-              "   // Exclude separate Covers and Extended playback catalogs from the studio-album R2 audit.\n   for(const def of Object.values(MUSIC_ALBUMS_R446).filter(def=>!['covers','extended'].includes(def.slug))){\n     const a=await musicAlbumStatusOneR446(bucket,def,false);"
+              "   for(const def of Object.values(MUSIC_ALBUMS_R446).filter(def=>!['covers','extended'].includes(def.slug))){\n     const a=await musicAlbumStatusOneR446(bucket,def,false);"
             ),
             (
               "   if(r.status==='ok')for(const issue of r.report.issues||[]){\n     if(!/^[a-z0-9-]{1,80}$/.test(issue.id))continue;",
@@ -37,26 +33,16 @@ jobs:
             (
               "  delete next.cpu;",
               "  delete next.cpu;\n  for (const id of ['music-empty-covers','music-zip-covers','music-empty-extended','music-zip-extended']) delete next[id];"
+            ),
+            (
+              "   await ensurePlatformAnalyticsSchema(db);\n   const platforms=[['youtube','youtube'],['instagram','instagram'],['tiktok','tiktok'],['site','google-analytics']];",
+              "   // Read-only SOCIAL scan: do not run DDL on every background check.\n   const platforms=[['youtube','youtube'],['instagram','instagram'],['tiktok','tiktok'],['site','google-analytics']];"
+            ),
+            (
+              "     const row=await db.prepare(`SELECT created_at FROM platform_snapshots WHERE platform=? ORDER BY created_at DESC LIMIT 1`).bind(key).first();",
+              "     let row=null;\n     try { row=await db.prepare(`SELECT created_at FROM platform_snapshots WHERE platform=? ORDER BY created_at DESC LIMIT 1`).bind(key).first(); }\n     catch(error) { if(!/no such table|no such column/i.test(String(error?.message||'')))throw error; }"
             )
           ]
-          edits.extend([
-            (
-              " for(const def of Object.values(MUSIC_ALBUMS_R446)){",
-              " for(const def of Object.values(MUSIC_ALBUMS_R446).filter(def=>!['covers','extended'].includes(def.slug))){"
-            ),
-            (
-              "   await ensurePlatformAnalyticsSchema(db);\n   const platforms=",
-              "   const platforms="
-            ),
-            (
-              "   for(const [label,key] of platforms){\n     const row=await db.prepare(",
-              "   for(const [label,key] of platforms){\n     const row=await db.prepare("
-            ),
-            (
-              " const db=requireDb(env);\n await primeExistingD1SchemasR1501(db);",
-              " const db=requireDb(env);\n await primeExistingD1SchemasR1501(db);"
-            )
-          ])
           for old, new in edits:
               if old == new: continue
               if s.count(new) == 1:
