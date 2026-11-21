@@ -1,3 +1,4 @@
+// R1530: GitHub deploy smoke test; no functional changes to radio pipeline.
 // R1529: validate clip source bytes and MP4 structure; recover bad caches with bounded retries.
 // R1528: bounded MP3 fade work and live background CPU admission for the two-vCPU VPS.
 // R1526: honor the selected ticker style on album backgrounds.
