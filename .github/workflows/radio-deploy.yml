@@ -5,6 +5,11 @@ on:
     paths:
       - ops/radio/release.env
   workflow_dispatch:
+    inputs:
+      connection_only:
+        description: 'Test SSH only, do not deploy or restart radio'
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -36,7 +41,15 @@ jobs:
           printf '%s\n' "$HOST_KEY" > "$HOME/.ssh/known_hosts"
           chmod 600 "$HOME/.ssh/known_hosts"
           ssh-keygen -y -f "$HOME/.ssh/id_ed25519" >/dev/null
+      - name: Test SSH connection (no radio changes)
+        if: github.event_name == 'workflow_dispatch' && inputs.connection_only
+        env:
+          HOST: ${{ secrets.RADIO_SSH_HOST }}
+          USER: ${{ secrets.RADIO_SSH_USER }}
+        run: |
+          ssh -i "$HOME/.ssh/id_ed25519" -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=15 "$USER@$HOST" 'echo ANDRIK_SSH_CONNECTION_OK && sudo -n /usr/bin/systemctl is-active --quiet andrik-radio.service'
       - name: Apply approved release on VPS
+        if: github.event_name != 'workflow_dispatch' || !inputs.connection_only
         env:
           HOST: ${{ secrets.RADIO_SSH_HOST }}
           USER: ${{ secrets.RADIO_SSH_USER }}
