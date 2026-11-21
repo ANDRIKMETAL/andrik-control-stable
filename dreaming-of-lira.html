@@ -5232,7 +5232,12 @@ const oldSpeed=player.speed;
 const movingOnFoot=!bikeMode&&!barModeR955&&(input.left||input.right||input.up||input.down);
 if(movingOnFoot)player.speed=oldSpeed*1.18;
 if((currentLevel===1||currentLevel===2)&&!barModeR955&&!bikeMode&&runBoostT_R1204>0)player.speed=oldSpeed*(currentLevel===2?1.62:1.72);
-__r1204UpdatePlayerPrev(dt);player.speed=oldSpeed;updateRunAndParkourR1204(dt);
+const grabbedNowR1605=!!grabR1604;
+const savedMoveR1605=grabbedNowR1605?[input.left,input.right,input.up,input.down]:null;
+if(grabbedNowR1605){input.left=false;input.right=false;input.up=false;input.down=false;player.speed=0;player.vx=0;player.vy=0;}
+__r1204UpdatePlayerPrev(dt);player.speed=oldSpeed;
+if(savedMoveR1605){[input.left,input.right,input.up,input.down]=savedMoveR1605;player.vx=0;player.vy=0;player.grabbedR1605=true;}else player.grabbedR1605=false;
+if(!grabbedNowR1605)updateRunAndParkourR1204(dt);
 if(dodgeTimeR1600>0){const dash=225*dt*dodgeDirR1600;player.x=clamp(player.x+dash,Math.max(18,cameraX-35),getCurrentGateX());player.vx=dodgeDirR1600*225;}
 if(slideTimeR1602>0){
  const nextX=clamp(player.x+player.face*240*dt,Math.max(18,cameraX-35),getCurrentGateX());player.x=nextX;player.vx=player.face*240;
@@ -5257,6 +5262,7 @@ startWave=function(w){
 };
 const oldUpdateEnemyR1604=updateEnemy;
 updateEnemy=function(e,dt){
+ e.grabbingR1605=!!(grabR1604?.holder===e);
  if(grabR1604?.holder===e){
   if(!e.alive){grabR1604=null;return;}
   e.x=player.x-(player.face||1)*13;e.y=player.y;e.vx=0;e.vy=0;e.attack=null;e.face=player.face||1;
