@@ -5520,6 +5520,38 @@ draw=function(){
  ctx.strokeStyle='#f9e8d6';ctx.strokeRect(x,y,w,h);
  ctx.restore();
 };
+// R1614: high-speed pursuit in space with evasive corridors and warning HUD.
+let spacePursuitR1614={active:false,t:0,next:0,phase:0,warning:0};
+const resetSpacePursuitR1614=resetSpaceR950;
+resetSpaceR950=function(...args){spacePursuitR1614={active:false,t:0,next:0,phase:0,warning:0};return resetSpacePursuitR1614(...args);};
+const spacePursuitTickR1614=updateSpaceR950;
+updateSpaceR950=function(dt){
+ const chase=spacePursuitR1614;
+ const active=started&&!paused&&!gameOver&&!victory&&currentLevel===3&&!spaceBossStartedR950&&!spaceInsertR950&&spaceDistanceR950>1600;
+ if(active){
+  if(!chase.active){chase.active=true;chase.next=2.3;chase.t=0;showMessage('ПОГОНЯ! · УКЛОНЯЙСЯ ОТ ЗАЛПОВ',1.6);}
+  chase.t+=dt;chase.next-=dt;chase.warning=Math.max(0,chase.warning-dt);
+  if(chase.next<=0){
+   chase.phase++;chase.next=3.1;
+   const gapY=55+Math.random()*(H-110);
+   chase.warning=.75;chase.gapY=gapY;
+   // Two laser corridors leave a fair 86px gap for the player's ship.
+   for(let y=30;y<H-20;y+=23){if(Math.abs(y-gapY)<43)continue;spaceEnemyShotsR950.push({x:W+25,y,vx:-170,vy:0,r:5,chaseR1614:true});}
+   if(chase.phase%3===0)spawnSpaceEnemyR950('interceptor');
+  }
+ }else if(chase.active&&!spaceBossStartedR950){chase.active=false;}
+ spacePursuitTickR1614(dt);
+};
+const drawSpacePursuitR1614=drawSpaceR950;
+drawSpaceR950=function(){
+ drawSpacePursuitR1614();
+ const chase=spacePursuitR1614;
+ if(!chase.active||paused||gameOver||victory||spaceInsertR950)return;
+ ctx.save();ctx.fillStyle='rgba(8,16,29,.82)';ctx.fillRect(W/2-68,H-26,136,18);
+ ctx.textAlign='center';ctx.font='bold 8px monospace';ctx.fillStyle='#ffbe79';ctx.fillText('PURSUIT · WAVE '+chase.phase,W/2,H-15);
+ if(chase.warning>0){ctx.strokeStyle='#ff5476';ctx.setLineDash([5,5]);ctx.strokeRect(W-65,chase.gapY-43,55,86);ctx.setLineDash([]);}
+ ctx.restore();
+};
 // R1613: secret alcoves and checkpoint shrines in the ruins.
 let ruinsSecretsR1613=[],ruinsShrinesR1613=[];
 const resetRuinsSecretsR1613=resetRuinsR010;
