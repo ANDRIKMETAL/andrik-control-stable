@@ -15,12 +15,17 @@ jobs:
         with:
           persist-credentials: true
       - name: Patch MUSIC background audit safely
-        shell: python
+        shell: bash
         run: |
+          python3 - <<'PY'
           from pathlib import Path
           p = Path("_worker.js")
           s = p.read_text(encoding="utf-8")
           edits = [
+            (
+              " if(!SPLIT_JOBS_R1504.has(job))return",
+              " if(!SPLIT_JOBS_R1504.has(job))return"
+            ),
             (
               "   for(const def of Object.values(MUSIC_ALBUMS_R446)){\n     const a=await musicAlbumStatusOneR446(bucket,def,false);",
               "   // Exclude separate Covers and Extended playback catalogs from the studio-album R2 audit.\n   for(const def of Object.values(MUSIC_ALBUMS_R446).filter(def=>!['covers','extended'].includes(def.slug))){\n     const a=await musicAlbumStatusOneR446(bucket,def,false);"
@@ -34,13 +39,33 @@ jobs:
               "  delete next.cpu;\n  for (const id of ['music-empty-covers','music-zip-covers','music-empty-extended','music-zip-extended']) delete next[id];"
             )
           ]
+          edits.extend([
+            (
+              " for(const def of Object.values(MUSIC_ALBUMS_R446)){",
+              " for(const def of Object.values(MUSIC_ALBUMS_R446).filter(def=>!['covers','extended'].includes(def.slug))){"
+            ),
+            (
+              "   await ensurePlatformAnalyticsSchema(db);\n   const platforms=",
+              "   const platforms="
+            ),
+            (
+              "   for(const [label,key] of platforms){\n     const row=await db.prepare(",
+              "   for(const [label,key] of platforms){\n     const row=await db.prepare("
+            ),
+            (
+              " const db=requireDb(env);\n await primeExistingD1SchemasR1501(db);",
+              " const db=requireDb(env);\n await primeExistingD1SchemasR1501(db);"
+            )
+          ])
           for old, new in edits:
+              if old == new: continue
               if s.count(new) == 1:
                   continue
               if s.count(old) != 1:
                   raise SystemExit("Expected source not found uniquely; refusing unsafe patch")
               s = s.replace(old, new, 1)
           p.write_text(s, encoding="utf-8")
+          PY
       - name: Verify JavaScript syntax
         run: node --check _worker.js
       - name: Commit server fix to main
