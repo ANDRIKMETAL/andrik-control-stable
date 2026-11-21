@@ -212,6 +212,15 @@ def classify(service, status, prior, now):
             failures = [millis(entry.get("lastAt")) for scope, entry in counters.items()
                         if scope in FFMPEG_SCOPES and isinstance(entry, dict) and
                         FFMPEG_FAILURE.search(str(entry.get("lastLine", "")))]
+            # Diagnostic only: queue pressure is not proof that the stream failed.
+            warnings = [
+                {"scope": scope, "at": entry.get("lastAt"), "message": str(entry.get("lastLine", ""))[:240]}
+                for scope, entry in counters.items()
+                if scope in FFMPEG_SCOPES and isinstance(entry, dict)
+                and "thread message queue blocking" in str(entry.get("lastLine", "")).lower()
+            ]
+            if warnings:
+                report["ffmpegQueueWarning"] = warnings[-1]
             times = [at for at in failures if recent(at, now)]
             if times and not warming:
                 event["ffmpeg-error"] = max(times)
