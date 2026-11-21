@@ -111,6 +111,9 @@ if((running||jog)&&!p.attack&&!air){d.body.rotation.x=running?.12:.075;d.head.ro
 // Evasive sidestep: compact silhouette, lowered centre of gravity and guarded arms.
 if(d.kind==='lira'&&p.dodgeT_R1600>0&&!air){d.body.position.y-=3.2;d.body.rotation.z=(p.face<0?-1:1)*.22;d.body.rotation.x=.20;d.limbs.forEach((l,i)=>{l.leg.rotation.x=i?-.62:.52;l.shin.rotation.x=.72;l.arm.rotation.x=-.85;l.fore.rotation.x=-.65;});}
 if(d.kind==='lira'&&p.slideT_R1602>0&&!air){d.body.position.y-=7;d.body.rotation.x=.36;d.body.rotation.z=(p.face<0?-.12:.12);d.limbs.forEach((l,i)=>{l.leg.rotation.x=i?-1.05:.9;l.shin.rotation.x=i?1.32:.35;l.arm.rotation.x=-.7;l.fore.rotation.x=-.6;});}
+// R1605: struggle while held from behind; grabber locks both arms around Lyra.
+if(p.grabbedR1605&&kindIsLyra(root)&&!air){const struggle=Math.sin(time*21)*.14;d.body.position.y-=2;d.body.rotation.z=struggle*.45;d.head.rotation.y=struggle;d.limbs.forEach((l,i)=>{l.arm.rotation.x=-1.18+struggle*(i?1:-1);l.fore.rotation.x=-1.05;l.leg.rotation.x=struggle*(i?1:-1);l.shin.rotation.x=.25;});}
+if(p.grabbingR1605&&!air){d.body.rotation.x=.15;d.limbs.forEach((l,i)=>{l.arm.rotation.x=-1.35;l.arm.rotation.z=i?-.55:.55;l.fore.rotation.x=-1.1;l.leg.rotation.x=0;});}
 const mount=opts.ride?1:T.MathUtils.clamp(Number(opts.mount)||0,0,1);
 if(mount>0){d.limbs.forEach(a=>{a.leg.rotation.x=T.MathUtils.lerp(a.leg.rotation.x,-1.3,mount);a.shin.rotation.x=T.MathUtils.lerp(a.shin.rotation.x,1.4,mount);a.arm.rotation.x=T.MathUtils.lerp(a.arm.rotation.x,-1.08,mount);a.fore.rotation.x=-.36-.60*mount;});d.body.rotation.x=.18*mount;if(mount>.72){const q=smooth((mount-.72)/.28);const lh=new T.Vector3(-8.4,33.4,18.2),rh=new T.Vector3(8.4,33.4,18.2);handAt(d.limbs[0],lh,-1);handAt(d.limbs[1],rh,1);d.body.rotation.x=.22*q;}}
 if(opts.retreat&&!p.attack){
