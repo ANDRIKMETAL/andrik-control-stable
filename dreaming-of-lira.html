@@ -1272,6 +1272,26 @@ const absY = Math.abs(dy);
 e.face = dx >= 0 ? 1 : -1;
 if (absX < 360) e.aggro = true;
 if (!e.aggro) return;
+// R1603: Grunts occasionally flank instead of lining up for a frontal hit.
+// Telegraph with a brief sidestep; never override bosses, hit reactions or active attacks.
+if((currentLevel===1||currentLevel===2)&&e.type==='grunt'&&!e.attack){
+ e.flankCooldownR1603=Math.max(0,(e.flankCooldownR1603??(1.5+(e.id%5)*.4))-dt);
+ if((e.flankTimeR1603||0)>0){
+  e.flankTimeR1603=Math.max(0,e.flankTimeR1603-dt);
+  e.vx=(e.flankDirR1603||1)*e.speed*1.22;
+  e.vy=approach(e.vy,Math.sign(dy)*e.speed*.3,dt*280);
+  e.walkPhase+=dt*12;
+  e.x=clamp(e.x,cameraX-20,cameraX+W+40);
+  e.y=clamp(e.y,FLOOR_TOP+17,FLOOR_BOTTOM);
+  return;
+ }
+ if(e.flankCooldownR1603<=0&&absX>65&&absX<175&&absY<35){
+  e.flankTimeR1603=.32;e.flankDirR1603=dx>=0?1:-1;
+  e.flankCooldownR1603=3.2+(e.id%4)*.35;
+  e.hitFlash=Math.max(e.hitFlash,.075);
+  return;
+ }
+}
 if ((e.retreatT || 0) > 0) {
 e.retreatT = Math.max(0, e.retreatT - dt);
 const back = e.retreatDir || -e.face || -1;
@@ -5216,7 +5236,7 @@ __r1204UpdatePlayerPrev(dt);player.speed=oldSpeed;updateRunAndParkourR1204(dt);
 if(dodgeTimeR1600>0){const dash=225*dt*dodgeDirR1600;player.x=clamp(player.x+dash,Math.max(18,cameraX-35),getCurrentGateX());player.vx=dodgeDirR1600*225;}
 if(slideTimeR1602>0){
  const nextX=clamp(player.x+player.face*240*dt,Math.max(18,cameraX-35),getCurrentGateX());player.x=nextX;player.vx=player.face*240;
- for(const e of enemies){if(!e.alive||slideHitR1602.has(e.id)||Math.abs(e.x-player.x)>29||Math.abs(e.y-player.y)>23)continue;slideHitR1602.add(e.id);damageEnemy(e,14,player.face*115);tone(105,.06,'square',.019,65);}
+ for(const e of enemies){if(!e.alive||slideHitR1602.has(e)||Math.abs(e.x-player.x)>29||Math.abs(e.y-player.y)>23)continue;slideHitR1602.add(e);damageEnemy(e,14,player.face*115);tone(105,.06,'square',.019,65);}
 }
 if(player.attack?.kind==='flyingKickR1204'){const q=clamp(player.attack.t/player.attack.duration,0,1);player.x+=player.face*150*dt;player.z=Math.max(player.z,8+Math.sin(q*Math.PI)*23);}
 if(player.attack?.kind==='runKickR1239'){player.x+=player.face*185*dt;player.vx=player.face*Math.max(180,Math.abs(player.vx));}
