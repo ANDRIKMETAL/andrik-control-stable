@@ -108,6 +108,8 @@ d.body.position.set(0,walking?Math.abs(Math.sin(phase))*(running?1.45:jog?1.12:.
 d.body.rotation.set(0,0,0);d.head.rotation.set(0,Math.sin(time*.7)*.035,0);
 d.limbs.forEach((a,i)=>{a.arm.rotation.set(i?stride:-stride,0,i?-.1:.1);a.fore.rotation.set(-.18,0,0);a.leg.rotation.set(i?-stride:stride,0,0);a.shin.rotation.set(air?.55:Math.max(0,(i?stride:-stride)*.7),0,0);if(air)a.leg.rotation.x=i?-.75:.45;});
 if((running||jog)&&!p.attack&&!air){d.body.rotation.x=running?.12:.075;d.head.rotation.x=running?-.05:-.025;if(jog){d.limbs.forEach((l,i)=>{l.arm.rotation.x+=(i?-.16:.16);l.fore.rotation.x=-.42+Math.max(0,(i?-stride:stride))*.18;});}}
+// Evasive sidestep: compact silhouette, lowered centre of gravity and guarded arms.
+if(d.kind==='lira'&&p.dodgeT_R1600>0&&!air){d.body.position.y-=3.2;d.body.rotation.z=(p.face<0?-1:1)*.22;d.body.rotation.x=.20;d.limbs.forEach((l,i)=>{l.leg.rotation.x=i?-.62:.52;l.shin.rotation.x=.72;l.arm.rotation.x=-.85;l.fore.rotation.x=-.65;});}
 const mount=opts.ride?1:T.MathUtils.clamp(Number(opts.mount)||0,0,1);
 if(mount>0){d.limbs.forEach(a=>{a.leg.rotation.x=T.MathUtils.lerp(a.leg.rotation.x,-1.3,mount);a.shin.rotation.x=T.MathUtils.lerp(a.shin.rotation.x,1.4,mount);a.arm.rotation.x=T.MathUtils.lerp(a.arm.rotation.x,-1.08,mount);a.fore.rotation.x=-.36-.60*mount;});d.body.rotation.x=.18*mount;if(mount>.72){const q=smooth((mount-.72)/.28);const lh=new T.Vector3(-8.4,33.4,18.2),rh=new T.Vector3(8.4,33.4,18.2);handAt(d.limbs[0],lh,-1);handAt(d.limbs[1],rh,1);d.body.rotation.x=.22*q;}}
 if(opts.retreat&&!p.attack){
