@@ -5520,6 +5520,49 @@ draw=function(){
  ctx.strokeStyle='#f9e8d6';ctx.strokeRect(x,y,w,h);
  ctx.restore();
 };
+// R1609: adaptive shadow-duelist encounter in the ruins, using the existing humanoid enemy pipeline.
+let shadowDuelR1609=null,shadowLastAttackR1609='',shadowRepeatsR1609=0;
+const resetRuinsShadowR1609=resetRuinsR010;
+resetRuinsR010=function(...args){shadowDuelR1609=null;shadowLastAttackR1609='';shadowRepeatsR1609=0;return resetRuinsShadowR1609(...args);};
+const ruinsShadowTickR1609=updateRuinsEnemiesR010;
+updateRuinsEnemiesR010=function(dt){
+ // A distinct optional elite appears before the guardian arena; never respawns after defeat.
+ if(!shadowDuelR1609&&player.x>2850&&player.x<3240&&!ruinsBossStartedR010){
+  const d=makeRomanR010('SHADOW-LYRA',Math.min(player.x+170,3220),player.y,false);
+  d.kindR1282='sand';d.hp=d.maxHp=290;d.damage=14;d.speed=92;d.shadowDoubleR1609=true;d.shadowPhaseR1609=1;d.shadowDodgeR1609=0;d.shadowCooldownR1609=1.1;
+  ruinsEnemiesR010.push(d);shadowDuelR1609=d;
+  showMessage('ТЁМНАЯ ЛИРА · ЗЕРКАЛЬНЫЙ ПОЕДИНОК',2);
+  tone(78,.22,'sawtooth',.035,40);
+ }
+ const d=shadowDuelR1609;
+ if(d?.alive){
+  d.shadowPhaseR1609=d.hp>d.maxHp*.65?1:d.hp>d.maxHp*.30?2:3;
+  d.shadowCooldownR1609=Math.max(0,d.shadowCooldownR1609-dt);
+  d.shadowDodgeR1609=Math.max(0,d.shadowDodgeR1609-dt);
+  const attackKind=player.attack?.kind||'';
+  if(attackKind&&attackKind!==shadowLastAttackR1609){shadowRepeatsR1609=attackKind===d.lastObservedAttackR1609?shadowRepeatsR1609+1:1;d.lastObservedAttackR1609=attackKind;shadowLastAttackR1609=attackKind;}
+  if(!attackKind)shadowLastAttackR1609='';
+  if(player.attack&&d.shadowCooldownR1609<=0&&Math.abs(player.x-d.x)<125&&Math.abs(player.y-d.y)<28){
+   const repeats=shadowRepeatsR1609>=2;
+   if(d.shadowPhaseR1609>=2||repeats){
+    d.shadowDodgeR1609=.28;d.shadowCooldownR1609=d.shadowPhaseR1609===3?.85:1.5;
+    d.x=clamp(d.x+(d.x>player.x?1:-1)*(d.shadowPhaseR1609===3?54:38),22,RUINS_END_R010-22);
+    d.retreatT=.23;d.attackAnimR1185=null;d.attack=.25;
+    if(repeats)showMessage('ДВОЙНИК ПРЕДУГАДАЛ УДАР!',.65);
+   }
+  }
+  if(d.shadowPhaseR1609===3&&d.attack<=0&&Math.abs(d.x-player.x)<78&&Math.abs(d.y-player.y)<25){d.attackAnimR1185={kind:'r1282-sand',t:0,duration:.42,hit:false};d.attack=.75;}
+ }
+ ruinsShadowTickR1609(dt);
+};
+const damageShadowR1609=damageRomanR010;
+damageRomanR010=function(e,amount,knock){
+ if(e?.shadowDoubleR1609&&e.alive){
+  if(e.shadowDodgeR1609>0){tone(320,.05,'triangle',.016,200);return;}
+  amount=Math.max(1,Math.round(amount*(e.shadowPhaseR1609===3?.82:1)));
+ }
+ return damageShadowR1609(e,amount,knock);
+};
 // R1607: Ruins coordinated ambush waves, rear hold and six-tap escape.
 let ruinsGrabR1607=null,ruinsGrabCooldownR1607=0,ruinsAmbushZoneR1607=-1;
 const ruinsUpdateR1607=updateRuinsR010;
