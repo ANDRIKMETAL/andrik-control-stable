@@ -5505,6 +5505,21 @@ for(const d of combatR1238.drops){ctx.fillStyle='#b4dc7d';ctx.beginPath();ctx.ar
 for(const q of combatR1238.shots){ctx.fillStyle=q.kind==='bullet'?'#ffda75':'#96c46c';ctx.beginPath();ctx.arc(q.x-cameraX,q.y-q.z,q.kind==='bullet'?2:4,0,Math.PI*2);ctx.fill();}
 if(bossR1238()){ctx.fillStyle='#e9daac';ctx.font='10px monospace';ctx.fillText('B: ГРАНАТА ×'+combatR1238.ammo,170,58);}ctx.restore();
 };
+// R1606: readable grapple progress HUD for the 2D fallback renderer.
+const drawBeforeGrabR1606=draw;
+draw=function(){
+ drawBeforeGrabR1606();
+ if(!grabR1604||currentLevel>2||paused||gameOver)return;
+ const w=170,h=12,x=(W-w)/2,y=52,p=Math.max(0,Math.min(1,grabR1604.taps/6));
+ ctx.save();
+ ctx.fillStyle='rgba(8,12,24,.88)';ctx.fillRect(x-8,y-24,w+16,53);
+ ctx.strokeStyle='#d9b7a2';ctx.strokeRect(x-8,y-24,w+16,53);
+ ctx.fillStyle='#fff0d8';ctx.textAlign='center';ctx.font='bold 11px monospace';ctx.fillText('TAP B TO ESCAPE  '+grabR1604.taps+'/6',W/2,y-8);
+ ctx.fillStyle='#4c2532';ctx.fillRect(x,y,w,h);
+ ctx.fillStyle=p>=.67?'#8ce4b3':'#f4b36b';ctx.fillRect(x,y,w*p,h);
+ ctx.strokeStyle='#f9e8d6';ctx.strokeRect(x,y,w,h);
+ ctx.restore();
+};
 const drawClassicR1182 = draw;
 let rendererR1182 = null;
 window.LiraGame = {
@@ -5517,7 +5532,7 @@ return {started, paused, gameOver, victory, elapsed, cameraX, score, shake, flas
 level: currentLevel, worldWidth: WORLD_W, player, enemies, effects, lives:livesR955,
 superMeter, superCost:SUPER_COST,
 guitarCue:guitarCueR1183&&guitarCueR1183.level===currentLevel&&elapsed>=guitarCueR1183.start&&elapsed-guitarCueR1183.start<guitarCueR1183.duration?{t:elapsed-guitarCueR1183.start,duration:guitarCueR1183.duration}:null,
-message:messageTimer > 0 ? message : '', unlocked:unlockedLevel,
+message:messageTimer > 0 ? message : '', grab:grabR1604?{active:true,taps:grabR1604.taps,required:6,remaining:Math.max(0,4.2-grabR1604.time)}:{active:false,taps:0,required:6,remaining:0}, unlocked:unlockedLevel,
 stars:levelStarsR952, saved:hasSave(), levelSelect:levelSelectOpenR950, levelChoice:levelSelectChoiceR950,
 gate:getActiveWave()?.gate, wave:getActiveWave()?.name,
 cinematic, poster:levelPosterR010,
