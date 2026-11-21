@@ -43,7 +43,9 @@
     const title = String(task.title || '').toLowerCase();
     const evidence = String(task.evidence || '').toLowerCase();
     return /старые временные файлы/.test(title) ||
-      (/аналитику tiktok/.test(title) && /сохранённых данных нет|сохраненных данных нет/.test(evidence));
+      (/аналитику tiktok/.test(title) && /сохранённых данных нет|сохраненных данных нет/.test(evidence)) ||
+      (/нет треков|проверить zip|zip не найден/.test(title) &&
+        /каверы|covers|extended version/.test(title + ' ' + evidence));
   }
 
   function activeTasks(data) {
