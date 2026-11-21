@@ -5241,6 +5241,63 @@ if(slideTimeR1602>0){
 if(player.attack?.kind==='flyingKickR1204'){const q=clamp(player.attack.t/player.attack.duration,0,1);player.x+=player.face*150*dt;player.z=Math.max(player.z,8+Math.sin(q*Math.PI)*23);}
 if(player.attack?.kind==='runKickR1239'){player.x+=player.face*185*dt;player.vx=player.face*Math.max(180,Math.abs(player.vx));}
 };
+// R1604: coordinated wave ambush and escape-by-mashing-B, for humanoid street/ocean encounters.
+let grabR1604=null,grabCooldownR1604=0,ambushWaveR1604=0;
+const oldStartWaveR1604=startWave;
+startWave=function(w){
+ oldStartWaveR1604(w);
+ if((currentLevel!==1&&currentLevel!==2)||!w||w.spawns?.[0]?.[0]==='boss')return;
+ const living=w.ids.map(id=>enemies.find(e=>e.id===id)).filter(e=>e&&e.alive);
+ // Extra rear attacker, tied to the existing wave so the gate cannot open prematurely.
+ if(living.length>=2){
+  const x=clamp(player.x-95,24,WORLD_W-24),y=clamp(player.y+((ambushWaveR1604++%2)?18:-18),FLOOR_TOP+18,FLOOR_BOTTOM-4);
+  const ambusher=makeEnemy('grunt',x,y);ambusher.aggro=true;ambusher.grabberR1604=true;
+  enemies.push(ambusher);w.ids.push(ambusher.id);
+ }
+};
+const oldUpdateEnemyR1604=updateEnemy;
+updateEnemy=function(e,dt){
+ if(grabR1604?.holder===e){
+  if(!e.alive){grabR1604=null;return;}
+  e.x=player.x-(player.face||1)*13;e.y=player.y;e.vx=0;e.vy=0;e.attack=null;e.face=player.face||1;
+  return;
+ }
+ oldUpdateEnemyR1604(e,dt);
+};
+const oldUpdateR1604=update;
+update=function(dt){
+ grabCooldownR1604=Math.max(0,grabCooldownR1604-dt);
+ const active=started&&!paused&&!gameOver&&!victory&&!cinematic&&!levelPosterR010&&(currentLevel===1||currentLevel===2)&&!bikeMode&&!barModeR955;
+ if(active){
+  if(grabR1604){
+   const g=grabR1604;
+   if(!g.holder.alive||player.dead){grabR1604=null;grabCooldownR1604=2;}
+   else{
+    g.time+=dt;
+    if(pressed.attack){g.taps++;pressed.attack=false;input.attack=false;tone(270+g.taps*55,.035,'square',.015,160);}
+    player.vx=0;player.vy=0;player.stun=Math.max(player.stun,.09);
+    if(g.taps>=6){
+     g.holder.stun=.9;g.holder.vx=-(player.face||1)*160;
+     grabR1604=null;grabCooldownR1604=4;player.stun=0;player.invuln=Math.max(player.invuln,.9);
+     showMessage('ESCAPED! · COUNTER!',.8);tone(480,.12,'sawtooth',.028,220);
+    }else if(g.time>=4.2){
+     grabR1604=null;grabCooldownR1604=5;player.stun=0;damagePlayer(15,g.holder.x);showMessage('BREAK FREE: TAP B!',1.2);
+    }else{
+     if(g.time-g.lastPrompt>.38){showMessage('GRABBED! · TAP B '+g.taps+'/6',.48);g.lastPrompt=g.time;}
+     // The second enemy can still attack while Lyra is held.
+    }
+   }
+  }
+  if(!grabR1604&&grabCooldownR1604===0&&player.z<2&&player.stun<=0){
+   const holder=enemies.find(e=>e.alive&&e.grabberR1604&&e.stun<=0&&!e.attack&&Math.abs(e.x-player.x)<24&&Math.abs(e.y-player.y)<17&&((player.face||1)*(e.x-player.x)<0));
+   const front=enemies.find(e=>e!==holder&&e.alive&&e.stun<=0&&Math.abs(e.x-player.x)<105&&Math.abs(e.y-player.y)<26&&((player.face||1)*(e.x-player.x)>0));
+   if(holder&&front){grabR1604={holder,front,taps:0,time:0,lastPrompt:-1};holder.attack=null;player.attack=null;showMessage('GRABBED! · TAP B ×6',1);tone(110,.15,'sawtooth',.024,70);}
+  }
+ }else if(grabR1604){grabR1604=null;grabCooldownR1604=3;}
+ oldUpdateR1604(dt);
+};
+const oldStartLevelR1604=startLevel;
+startLevel=function(...args){grabR1604=null;grabCooldownR1604=0;ambushWaveR1604=0;return oldStartLevelR1604(...args);};
 const __r1204EnterBarPrev=enterBarR955;
 enterBarR955=function(resume=false){barDoorEntryActiveR1204=false;barDoorEntryT_R1204=0;__r1204EnterBarPrev(resume);};
 const __r1204ExitBarPrev=exitBarR955;
