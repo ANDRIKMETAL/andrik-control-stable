@@ -5520,6 +5520,35 @@ draw=function(){
  ctx.strokeStyle='#f9e8d6';ctx.strokeRect(x,y,w,h);
  ctx.restore();
 };
+// R1613: secret alcoves and checkpoint shrines in the ruins.
+let ruinsSecretsR1613=[],ruinsShrinesR1613=[];
+const resetRuinsSecretsR1613=resetRuinsR010;
+resetRuinsR010=function(...args){
+ const result=resetRuinsSecretsR1613(...args);
+ ruinsSecretsR1613=[{id:'eye',x:1095,y:195,taken:false},{id:'echo',x:2205,y:225,taken:false},{id:'truth',x:3030,y:190,taken:false}];
+ ruinsShrinesR1613=[{x:900,used:false},{x:1810,used:false},{x:2720,used:false}];
+ return result;
+};
+const ruinsSecretsTickR1613=updateRuinsR010;
+updateRuinsR010=function(dt){
+ const active=started&&!paused&&!gameOver&&!victory&&currentLevel===6;
+ if(active){
+  for(const secret of ruinsSecretsR1613){
+   if(secret.taken||Math.abs(player.x-secret.x)>24||Math.abs(player.y-secret.y)>25||player.z>30)continue;
+   secret.taken=true;score+=450;superMeter=clamp(superMeter+16,0,SUPER_MAX);
+   player.hp=Math.min(player.maxHp,player.hp+18);
+   showMessage('ТАЙНИК · '+secret.id.toUpperCase()+' · +450',1.6);
+   tone(520,.15,'sine',.025,900);
+  }
+  for(const shrine of ruinsShrinesR1613){
+   if(shrine.used||player.x<shrine.x||Math.abs(player.x-shrine.x)>40)continue;
+   shrine.used=true;player.hp=Math.min(player.maxHp,player.hp+24);
+   showMessage('ТОЧКА СОХРАНЕНИЯ · ЗДОРОВЬЕ +24',1.4);
+   saveProgress(false);tone(420,.17,'sine',.024,720);
+  }
+ }
+ return ruinsSecretsTickR1613(dt);
+};
 // R1609: adaptive shadow-duelist encounter in the ruins, using the existing humanoid enemy pipeline.
 let shadowDuelR1609=null,shadowLastAttackR1609='',shadowRepeatsR1609=0,shadowDefeatedR1611=false,shadowFinaleR1611=0;
 const resetRuinsShadowR1609=resetRuinsR010;
@@ -5680,7 +5709,7 @@ r1203:{rubies:rubiesR1203,skill:skillLevelR1203,weapon:streetWeaponR1203,charges
 space:{x:spaceX_R950,y:spaceY_R950,distance:spaceDistanceR950,roll:spaceRollR950,enemies:spaceEnemiesR950,shots:spaceShotsR950,enemyShots:spaceEnemyShotsR950,pickups:spacePickupsR950,boss:spaceBossR950,stars:spaceCollectStarsR952,lifeUps:spaceLifeUpsR955,insert:spaceInsertR950,super:spaceSuperR1185},
 tower:{invuln:towerInvulnR952,face:player.face,move:(input.right?1:0)-(input.left?1:0),look:(input.up?1:0)-(input.down?1:0),bats:towerBatsR1190,x:towerX_R952,y:towerY_R952,camera:towerCameraR952,grounded:towerGroundedR952,sword:towerSwordT_R952,platforms:towerPlatformsR952,enemies:towerEnemiesR952,crates:towerCratesR952,hearts:towerHeartsR952,stars:towerStarsR952,hazards:towerFallingR952,lifeUps:towerLifeUpsR955},
 tetris:{grid:tetGridR952,cells:tetPieceR952?tetCellsR952():[],piece:tetPieceR952,stage:tetStageR952,lines:tetTotalLinesR952},
-ruins:{shadowFinale:shadowFinaleR1611,shadowDefeated:shadowDefeatedR1611,enemies:ruinsEnemiesR010,crows:ruinsCrowsR010,obstacles:ruinsObstaclesR010,boss:ruinsBossStartedR010?ruinsBossR010:null,mechanisms:ruinsMechanismsR1282,gaps:RUINS_GAPS_R1283,sprint:ruinsSprintT_R1283}
+ruins:{secrets:ruinsSecretsR1613,shrines:ruinsShrinesR1613,shadowFinale:shadowFinaleR1611,shadowDefeated:shadowDefeatedR1611,enemies:ruinsEnemiesR010,crows:ruinsCrowsR010,obstacles:ruinsObstaclesR010,boss:ruinsBossStartedR010?ruinsBossR010:null,mechanisms:ruinsMechanismsR1282,gaps:RUINS_GAPS_R1283,sprint:ruinsSprintT_R1283}
 };
 },
 start(fresh=false) { if(fresh) startNewGame(); else if(!started) {titleChoice=hasSave()?0:1;confirmTitleChoice();} else {levelSelectOpenR950=false;handleStartPause();} },
