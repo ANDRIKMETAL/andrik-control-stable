@@ -307,6 +307,15 @@ if(s.level===6){
  const boss=e.type==='boss'||e===s.ruins.boss;
  const g=located('epoch-r1282-'+e.id,()=>e.shadowDoubleR1609?character('lira'):boss?makeRuinsBoss():makeRuinsEnemy(e.kindR1282||'stone'),e.x,e.z||0,floorZ(e.y));
  if(e.shadowDoubleR1609){
+  // A cracked spectral mirror frames the arrival; fragments fade as the duel progresses.
+  const mirror=located('shadow-mirror-r1610',()=>{const group=new T.Group();
+   const frame=new T.Mesh(new T.TorusGeometry(32,2.1,8,32),new T.MeshStandardMaterial({color:'#2b182b',metalness:.75,roughness:.28,emissive:'#5a0924',emissiveIntensity:.8}));
+   frame.scale.y=1.55;group.add(frame);
+   const glass=new T.Mesh(new T.CircleGeometry(30,32),new T.MeshBasicMaterial({color:'#7c153d',transparent:true,opacity:.21,side:T.DoubleSide,depthWrite:false}));
+   glass.scale.y=1.55;group.add(glass);return group;
+  },Math.min(3070,e.x+46),60,floorZ(e.y)-12);
+  mirror.rotation.y=Math.PI*.12;
+  mirror.visible=e.alive&&e.shadowPhaseR1609===1;
   // Same silhouette and equipment as Lyra; blackened outfit, glowing red eyes and sinister motion.
   if(!g.userData.shadowStyledR1609){
    g.userData.shadowStyledR1609=true;
