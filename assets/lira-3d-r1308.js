@@ -22,6 +22,9 @@ root.append(grappleMeter);
 const comboBadge=document.createElement('div');comboBadge.id='liraComboBadge';
 comboBadge.style.cssText='position:absolute;right:18px;top:25%;z-index:11;padding:8px 13px;border:1px solid #e3bb78;border-radius:10px;background:rgba(10,14,24,.8);color:#ffe5ac;font:bold 16px Arial,sans-serif;pointer-events:none;display:none;text-shadow:0 2px 6px #000';
 root.append(comboBadge);
+const chamberHUD=document.createElement('div');chamberHUD.id='liraSecretChamber';
+chamberHUD.style.cssText='position:absolute;inset:9% 8%;z-index:18;display:none;align-items:center;justify-content:center;flex-direction:column;text-align:center;pointer-events:none;border:2px solid #85cde0;border-radius:18px;background:radial-gradient(circle,#263452 0%,#050713 85%);color:#e5f6ff;font:700 18px Arial,sans-serif;box-shadow:0 0 50px #000c';
+root.append(chamberHUD);
 document.getElementById('gameShell').append(root);createGameShare(root.querySelector('#liraMenu'),{screen:true});
 window.addEventListener('lira-ready-r1472',()=>{if(new URL(location.href).searchParams.get('play')==='1')primaryAction();},{once:true});
 const legacyControls=document.getElementById('mobileControls');if(legacyControls){legacyControls.hidden=true;legacyControls.inert=true;legacyControls.setAttribute('aria-hidden','true');legacyControls.style.setProperty('display','none','important');for(const b of legacyControls.querySelectorAll('button'))b.disabled=true;}
@@ -543,6 +546,9 @@ let notice=s.message;
   if(enabled&&!dbg){dbg=document.createElement('pre');dbg.id='liraRuinsR1282Debug';dbg.style.cssText='position:absolute;bottom:12%;right:2%;z-index:20;padding:7px 10px;color:#f3d8a6;background:#161006dd;font:11px/1.4 monospace;pointer-events:none';root.append(dbg);}
   if(dbg){dbg.hidden=!enabled;const b=s.ruins.boss;dbg.textContent=enabled?`EPOCHS R1282\nBOSS: ${b?.state||'INACTIVE'}\nPHASE: ${b?.phase||'-'}\nATTACK: ${b?.attackKind||'-'}\nTIMER: ${(b?.stateTime||0).toFixed(2)} / ${(b?.stateDuration||0).toFixed(2)}\nSEALS: ${(s.ruins.mechanisms||[]).filter(m=>m.active).length}/3`:'';}
  }if(s.cinematic?.t>0)notice=s.cinematic.title+' · '+(s.cinematic.subtitle||'');if(s.space.insert?.t>0&&s.level===3)notice=s.space.insert.title+' · '+s.space.insert.sub;
+const chamber=s.ruins?.secretRoom;
+chamberHUD.style.display=chamber?'flex':'none';
+if(chamber)chamberHUD.innerHTML='<div style="font-size:24px;margin-bottom:20px">ТАЙНАЯ КОМНАТА</div><div style="font-size:16px">ПРОБУДИ ТРИ ПЕЧАТИ</div><div style="font-size:36px;margin:18px 0;color:#9ef5d6">'+('● '.repeat(chamber.step))+('○ '.repeat(3-chamber.step))+'</div><div style="font-size:14px">A · АКТИВИРОВАТЬ &nbsp; B · ОТМЕНИТЬ</div><div style="font-size:14px;margin-top:12px">'+Math.ceil(14-chamber.time)+' СЕК.</div>';
 comboBadge.style.display=s.combo?.count>=2&&s.combo?.time>0&&!s.paused?'block':'none';if(s.combo?.count>=2)comboBadge.textContent='COMBO ×'+s.combo.count;
 const gm=s.grab;grappleMeter.style.display=gm?.active&&!s.paused?'block':'none';
 if(gm?.active){root.querySelector('#liraGrappleLabel').textContent='TAP B TO ESCAPE  '+gm.taps+'/'+gm.required+' · '+gm.remaining.toFixed(1)+'s';root.querySelector('#liraGrappleFill').style.width=(100*gm.taps/gm.required)+'%';}
