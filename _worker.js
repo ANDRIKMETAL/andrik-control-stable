@@ -21841,7 +21841,8 @@ async function runBackgroundR1539(env,force=false){
    const bucket=getMusicBucketR314(env);
    if(!bucket)return {error:'R2 bucket not configured',issues:[]};
    const albums=[];
-   for(const def of Object.values(MUSIC_ALBUMS_R446)){
+   // Exclude separate Covers and Extended playback catalogs from the studio-album R2 audit.
+   for(const def of Object.values(MUSIC_ALBUMS_R446).filter(def=>!['covers','extended'].includes(def.slug))){
      const a=await musicAlbumStatusOneR446(bucket,def,false);
      albums.push({slug:a.slug,label:a.label,trackCount:a.trackCount,zipExists:Boolean(a.zip?.exists),duplicates:a.duplicateCount});
    }
@@ -21888,6 +21889,7 @@ async function backgroundTasksR1539(db,now){
      tasks['bg-'+agent+'-stale']={id:'bg-'+agent+'-stale',priority:'attention',agents:[agent],title:'Фоновая проверка '+agent.toUpperCase()+' задерживается',evidence:'Последняя попытка проверки старше 8 часов',action:'Проверь расписание Cloudflare Cron Triggers.',command:'',eventAt:null};
    }
    if(r.status==='ok')for(const issue of r.report.issues||[]){
+     if(/^(?:music-empty|music-zip)-(?:covers|extended)$/.test(String(issue.id||'')))continue;
      if(!/^[a-z0-9-]{1,80}$/.test(issue.id))continue;
      tasks[issue.id]={id:issue.id,priority:'attention',agents:[agent],title:issue.title,evidence:issue.detail,action:'Проверь данные в контрольке. Исправления выполняются вручную после подтверждения.',command:'',eventAt:null};
    }
@@ -22077,6 +22079,7 @@ function mergeManagerTasksR1533(previous, sources, now, extra = {}) {
   // R1543: retire the historical CPU task, including accepted/in-progress ones.
   // Removing it from persisted tasks prevents a stale card from surviving reconciliation.
   delete next.cpu;
+  for (const id of ['music-empty-covers','music-zip-covers','music-empty-extended','music-zip-extended']) delete next[id];
   for (const [id, reading] of Object.entries(live)) {
     const old = previous[id];
     const reopening = !old || old.state === 'resolved' || (old.eventAt && reading.eventAt && reading.eventAt > old.eventAt);
