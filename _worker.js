@@ -21851,11 +21851,13 @@ async function runBackgroundR1539(env,force=false){
    issues.push(...albums.filter(a=>a.trackCount>0&&!a.zipExists).map(a=>({id:'music-zip-'+a.slug,title:'Проверить ZIP: '+a.label,detail:'Треки есть, ZIP не найден в R2'})));
    return {albums,issues};
  }],['social',async()=>{
-   await ensurePlatformAnalyticsSchema(db);
+   // Read-only SOCIAL scan: do not run DDL on every background check.
    const platforms=[['youtube','youtube'],['instagram','instagram'],['tiktok','tiktok'],['site','google-analytics']];
    const records=[];const issues=[];
    for(const [label,key] of platforms){
-     const row=await db.prepare(`SELECT created_at FROM platform_snapshots WHERE platform=? ORDER BY created_at DESC LIMIT 1`).bind(key).first();
+     let row=null;
+     try { row=await db.prepare(`SELECT created_at FROM platform_snapshots WHERE platform=? ORDER BY created_at DESC LIMIT 1`).bind(key).first(); }
+     catch(error) { if(!/no such table|no such column/i.test(String(error?.message||'')))throw error; }
      const timestamp=Date.parse(row?.created_at||'');
      const ageHours=Number.isFinite(timestamp)?Math.max(0,(now-timestamp)/3600000):null;
      records.push({platform:label,updatedAt:row?.created_at||null,ageHours});
