@@ -3,12 +3,12 @@
   "updaterVersion": "55.00-r358-deploy-nohang",
   "operation": "publish",
   "reinstall": false,
-  "operationId": "publish-1795193297662-e34813a745",
-  "release": "R1550",
-  "archiveName": "ANDRIK-R1550-Install.zip",
-  "sourceHead": "523f79d065b45cde22e635de2a1239f0a51fa7c2",
-  "backupSha": "523f79d065b45cde22e635de2a1239f0a51fa7c2",
+  "operationId": "publish-1795236915378-b92383913c",
+  "release": "R1551",
+  "archiveName": "ANDRIK-R1551-METRICOOL-VERIFIED.zip",
+  "sourceHead": "9d8c6699f1f4f65d52abda579bb996c8eed10d73",
+  "backupSha": "9d8c6699f1f4f65d52abda579bb996c8eed10d73",
   "backupTag": "",
   "autoRecovery": true,
-  "generatedAt": "2026-11-20T16:48:18.710Z"
+  "generatedAt": "2026-11-21T04:55:15.378Z"
 }
