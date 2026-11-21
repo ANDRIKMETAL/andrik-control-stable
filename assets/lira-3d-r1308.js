@@ -305,6 +305,16 @@ if(allGone&&allLoot){const door=solid('r1204-bar-exit-door',468,42,floorZ(205),3
 }
 }
 if(s.level===6){
+ for(const [i,doorX] of [1095,2205,3030].entries()){
+  if(!near(doorX,cam)||s.ruins.secretRoomsDone?.[i])continue;
+  const portal=located('secret-portal-r1615-'+i,()=>{const group=new T.Group();
+   const ring=new T.Mesh(new T.TorusGeometry(24,2.2,8,28),new T.MeshStandardMaterial({color:'#71d9f3',emissive:'#17677e',emissiveIntensity:1.3,metalness:.7}));
+   ring.scale.y=1.4;group.add(ring);
+   const veil=new T.Mesh(new T.CircleGeometry(22,28),new T.MeshBasicMaterial({color:'#4a83b4',transparent:true,opacity:.18,side:T.DoubleSide,depthWrite:false}));
+   veil.scale.y=1.4;group.add(veil);return group;
+  },doorX,42,floorZ(205));
+  portal.rotation.y=Math.sin(s.elapsed*1.4)*.1;portal.scale.setScalar(.95+Math.sin(s.elapsed*3)*.035);
+ }
  for(const secret of s.ruins.secrets||[]){if(secret.taken||!near(secret.x,cam))continue;
   const relic=located('secret-r1613-'+secret.id,()=>{const group=new T.Group();const core=new T.Mesh(new T.OctahedronGeometry(9),new T.MeshStandardMaterial({color:'#9adff4',emissive:'#146e9c',emissiveIntensity:1.8,metalness:.5,roughness:.2}));group.add(core);const halo=new T.Mesh(new T.TorusGeometry(14,1.3,6,24),new T.MeshBasicMaterial({color:'#7feaff'}));group.add(halo);return group;},secret.x,35,floorZ(secret.y));
   relic.rotation.y=s.elapsed*.9;relic.position.y=35+Math.sin(s.elapsed*3)*4;
