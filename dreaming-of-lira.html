@@ -5177,8 +5177,18 @@ return __r1204StartSwordPrev();
 };
 const __r1239StartKickPrev=startKickR950;
 startKickR950=function(){if(startOceanRunKickR1239())return;return __r1239StartKickPrev();};
+let dodgeTimeR1600=0,dodgeCooldownR1600=0,dodgeDirR1600=1;
 const __r1204UpdatePlayerPrev=updatePlayer;
 updatePlayer=function(dt){
+// A+B together: short evasive dash with brief invulnerability (city and ocean only).
+dodgeCooldownR1600=Math.max(0,dodgeCooldownR1600-dt);
+if((currentLevel===1||currentLevel===2)&&!bikeMode&&!barModeR955&&!player.dead&&player.z<2&&player.stun<=0&&dodgeCooldownR1600===0&&input.jump&&input.attack&&(pressed.jump||pressed.attack)){
+ dodgeTimeR1600=.25;dodgeCooldownR1600=.85;dodgeDirR1600=input.left?-1:input.right?1:-player.face;
+ pressed.jump=false;pressed.attack=false;player.attack=null;player.invuln=Math.max(player.invuln||0,.34);
+ tone(350,.065,'triangle',.018,130);
+}
+if(dodgeTimeR1600>0){dodgeTimeR1600=Math.max(0,dodgeTimeR1600-dt);player.invuln=Math.max(player.invuln||0,.09);player.dodgeT_R1600=dodgeTimeR1600;}
+else player.dodgeT_R1600=0;
 if(barDoorEntryActiveR1204){updateBarDoorEntryR1204(dt);return;}
 const oldSpeed=player.speed;
 // Comfortable GTA-style default jog, preserving the existing double-tap sprint boost.
@@ -5186,6 +5196,7 @@ const movingOnFoot=!bikeMode&&!barModeR955&&(input.left||input.right||input.up||
 if(movingOnFoot)player.speed=oldSpeed*1.18;
 if((currentLevel===1||currentLevel===2)&&!barModeR955&&!bikeMode&&runBoostT_R1204>0)player.speed=oldSpeed*(currentLevel===2?1.62:1.72);
 __r1204UpdatePlayerPrev(dt);player.speed=oldSpeed;updateRunAndParkourR1204(dt);
+if(dodgeTimeR1600>0){const dash=225*dt*dodgeDirR1600;player.x=clamp(player.x+dash,Math.max(18,cameraX-35),getCurrentGateX());player.vx=dodgeDirR1600*225;}
 if(player.attack?.kind==='flyingKickR1204'){const q=clamp(player.attack.t/player.attack.duration,0,1);player.x+=player.face*150*dt;player.z=Math.max(player.z,8+Math.sin(q*Math.PI)*23);}
 if(player.attack?.kind==='runKickR1239'){player.x+=player.face*185*dt;player.vx=player.face*Math.max(180,Math.abs(player.vx));}
 };
