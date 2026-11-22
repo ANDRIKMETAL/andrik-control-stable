@@ -5759,6 +5759,61 @@ draw=function(){
  if(!started||paused||comboCountR1608<2||comboTimerR1608<=0)return;
  ctx.save();ctx.textAlign='center';ctx.fillStyle='#ffe2a1';ctx.font='bold 12px monospace';ctx.fillText('COMBO ×'+comboCountR1608,W/2,40);ctx.restore();
 };
+// R1616: automatic post-boss results -> comic -> next chapter (all six levels).
+const chapterComicR1616=[
+ null,
+ {name:'НОЧНОЙ ГОРОД',boss:'НОЧНОЙ ПАЛАЧ',image:'city',text:'Последний удар стихает в мокром асфальте. За поверженным стражем открывается арка. Лира слышит зов из глубин — следующий ответ скрыт под водой.'},
+ {name:'ОКЕАН',boss:'ГИГАНТСКИЙ СПРУТ',image:'ocean',text:'Древний храм освобождён от чудовища. В его сердце пробуждается звёздный портал. Лира понимает: океан был лишь отражением бесконечного космоса.'},
+ {name:'КОСМОС',boss:'BEYOND MAN',image:'space',text:'Вражеский корабль распадается на искры. Среди обломков появляется башня над облаками. Теперь путь лежит вверх, туда, где время теряет власть.'},
+ {name:'БАШНЯ',boss:'ИСПЫТАНИЕ ВЫСОТОЙ',image:'tower',text:'Лира достигает вершины и видит мир как узор из света. Чтобы пройти дальше, ей предстоит разрушить саму форму этого узора.'},
+ {name:'РАЗЛОМ',boss:'ПОСЛЕДНИЙ УЗОР',image:'tetris',text:'Последний блок исчезает, и реальность трескается. За разломом ждут руины и маски забытых эпох. Но самая опасная встреча ещё впереди.'},
+ {name:'РУИНЫ',boss:'ХРАНИТЕЛЬ ЭПОХ',image:'ruins',text:'Хранитель пал, а отражение Лиры рассыпалось вместе с зеркалом. Она смотрит на рассвет и понимает: врагом была не тьма, а страх перед собой. ПРОДОЛЖЕНИЕ СЛЕДУЕТ.'}
+];
+let chapterStageR1616=null,chapterSeenR1616=0,chapterScoreStartR1616=0;
+const chapterShellR1616=document.getElementById('gameShell');
+const chapterOverlayR1616=document.createElement('section');
+chapterOverlayR1616.id='liraChapterOverlayR1616';
+chapterOverlayR1616.setAttribute('aria-label','Итоги уровня и комикс');
+chapterOverlayR1616.style.cssText='position:absolute;inset:0;z-index:200;display:none;align-items:center;justify-content:center;flex-direction:column;padding:clamp(8px,2vw,18px);box-sizing:border-box;background:rgba(2,4,12,.97);color:#f8f0e3;text-align:center;font-family:Arial,sans-serif;overflow:auto';
+chapterOverlayR1616.innerHTML='<div id="chapterContentR1616" style="width:min(680px,100%);max-height:calc(100% - 54px);overflow:auto"></div><button id="chapterNextR1616" type="button" style="margin-top:8px;padding:11px 28px;min-height:42px;border:1px solid #eac997;border-radius:9px;background:#bd3652;color:white;font:bold 16px Arial,sans-serif;cursor:pointer">ДАЛЕЕ</button>';
+if(chapterShellR1616){if(getComputedStyle(chapterShellR1616).position==='static')chapterShellR1616.style.position='relative';chapterShellR1616.appendChild(chapterOverlayR1616);}
+const chapterContentR1616=chapterOverlayR1616.querySelector('#chapterContentR1616');
+const chapterButtonR1616=chapterOverlayR1616.querySelector('#chapterNextR1616');
+function chapterShowR1616(){
+ const c=chapterComicR1616[currentLevel]||chapterComicR1616[6];if(!chapterStageR1616)return;
+ chapterOverlayR1616.style.display='flex';
+ if(chapterStageR1616==='results'){
+  const gained=Math.max(0,score-chapterScoreStartR1616);
+  chapterContentR1616.innerHTML='<div style="font-size:13px;letter-spacing:3px;color:#e9bf91">ANDRIK · DREAMING OF LÍRA</div><h2 style="font-size:clamp(21px,5vw,32px);margin:12px 0">УРОВЕНЬ ПРОЙДЕН</h2><div style="font-size:15px;color:#f0c7a5">'+c.name+' · '+c.boss+'</div><div style="font-size:clamp(30px,8vw,54px);font-weight:900;margin:12px 0;color:#ffe1a0">'+gained.toLocaleString('ru-RU')+'</div><div style="font-size:13px">ОЧКОВ ЗА УРОВЕНЬ</div><div style="margin-top:12px;color:#c2d9e5">ОБЩИЙ СЧЁТ: '+score.toLocaleString('ru-RU')+'</div><div style="margin-top:10px;color:#c2d9e5">ЛУЧШЕЕ КОМБО: ×'+comboBestR1608+'</div>';
+  chapterButtonR1616.textContent='ДАЛЕЕ · КОМИКС';
+ }else{
+  const img='/assets/comic-r1616-'+c.image+'.svg';
+  chapterContentR1616.innerHTML='<div style="font-size:12px;letter-spacing:2px;color:#e8c7a1;margin-bottom:6px">ГЛАВА '+currentLevel+' · '+c.name+'</div><img alt="Иллюстрация комикса: '+c.name+'" src="'+img+'" style="display:block;width:100%;max-height:min(52vh,360px);object-fit:contain;border:2px solid #caa879;border-radius:8px;background:#12172a"><p style="font-size:clamp(13px,2.7vw,17px);line-height:1.45;margin:10px auto 0;max-width:600px">'+c.text+'</p>';
+  chapterButtonR1616.textContent=currentLevel===6?'ЗАВЕРШИТЬ ИСТОРИЮ':'ДАЛЕЕ · УРОВЕНЬ '+(currentLevel+1);
+ }
+}
+function chapterAdvanceR1616(){
+ if(!chapterStageR1616)return false;
+ if(chapterStageR1616==='results'){chapterStageR1616='comic';chapterShowR1616();return true;}
+ chapterStageR1616=null;chapterOverlayR1616.style.display='none';
+ if(currentLevel<6){startLevel(currentLevel+1,true);begin();saveProgress(false);}
+ else {victory=true;saveProgress(false);}
+ return true;
+}
+chapterButtonR1616.addEventListener('click',chapterAdvanceR1616);
+const chapterStartR1616=startLevel;
+startLevel=function(...args){chapterStageR1616=null;chapterOverlayR1616.style.display='none';const v=chapterStartR1616(...args);chapterScoreStartR1616=score;comboBestR1608=0;return v;};
+const chapterUpdateR1616=update;
+update=function(dt){
+ chapterUpdateR1616(dt);
+ if(victory&&started&&!chapterStageR1616&&chapterSeenR1616!==currentLevel){
+  chapterSeenR1616=currentLevel;chapterStageR1616='results';chapterShowR1616();saveProgress(false);
+ }
+};
+const chapterHandleStartR1616=handleStartPause;
+handleStartPause=function(){if(chapterAdvanceR1616())return;return chapterHandleStartR1616();};
+const chapterHandleSelectR1616=handleSelect;
+handleSelect=function(){if(chapterAdvanceR1616())return;return chapterHandleSelectR1616();};
 const drawClassicR1182 = draw;
 let rendererR1182 = null;
 window.LiraGame = {
