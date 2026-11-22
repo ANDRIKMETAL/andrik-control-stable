@@ -5790,6 +5790,66 @@ draw=function(){
  if(!started||paused||comboCountR1608<2||comboTimerR1608<=0)return;
  ctx.save();ctx.textAlign='center';ctx.fillStyle='#ffe2a1';ctx.font='bold 12px monospace';ctx.fillText('COMBO ×'+comboCountR1608,W/2,40);ctx.restore();
 };
+// R1619: level-specific boss encounters, avoiding shared punch AI.
+let towerGuardianR1619={hp:650,maxHp:650,active:false,charge:1.8,beam:0,target:0,phase:1,hit:false};
+let mindCoreR1619={hp:480,maxHp:480,active:false,clock:3.2,warning:0,row:0,phase:1};
+function resetUniqueBossesR1619(){
+ towerGuardianR1619={hp:650,maxHp:650,active:false,charge:1.8,beam:0,target:0,phase:1,hit:false};
+ mindCoreR1619={hp:480,maxHp:480,active:false,clock:3.2,warning:0,row:0,phase:1};
+}
+const oldTowerMeleeR1619=towerMeleeR952;
+towerMeleeR952=function(dmg){const r=oldTowerMeleeR1619(dmg);const b=towerGuardianR1619;
+ if(currentLevel===4&&b.active&&b.hp>0&&towerY_R952>TOWER_TOP_R952-180&&Math.abs(towerX_R952-W/2)<90){
+  b.hp=Math.max(0,b.hp-dmg);score+=30;hitShake(3);if(b.hp===0){score+=4000;showMessage('ХРАНИТЕЛЬ ГРАВИТАЦИИ ПОВЕРЖЕН',2);}
+ }return r;};
+const oldTowerUpdateR1619=updateTowerR952;
+updateTowerR952=function(dt){
+ const b=towerGuardianR1619;
+ if(started&&!paused&&!gameOver&&!victory&&towerY_R952>TOWER_TOP_R952-180&&b.hp>0){
+  if(!b.active){b.active=true;showMessage('ХРАНИТЕЛЬ ГРАВИТАЦИИ · УДАРЬ В ЯДРО',1.6);}
+  b.phase=b.hp>b.maxHp*.5?1:2;b.charge-=dt;b.beam=Math.max(0,b.beam-dt);
+  if(b.charge<=0){b.target=towerX_R952;b.beam=1.05;b.hit=false;b.charge=b.phase===2?2.2:3.3;showMessage('ГРАВИТАЦИОННЫЙ ЛУЧ · УХОДИ!',.7);}
+  if(b.beam>0&&b.beam<.42&&!b.hit&&Math.abs(towerX_R952-b.target)<25){b.hit=true;damageTowerR952(b.phase===2?22:15);}
+  // The summit cannot be cleared until the guardian is defeated.
+  if(towerY_R952>=TOWER_TOP_R952-3&&b.hp>0){towerY_R952=TOWER_TOP_R952-9;towerVy_R952=Math.min(0,towerVy_R952);}
+ }
+ return oldTowerUpdateR1619(dt);
+};
+const oldTowerDrawR1619=drawTowerR952;
+drawTowerR952=function(){
+ oldTowerDrawR1619();const b=towerGuardianR1619;if(!b.active||b.hp<=0)return;
+ ctx.save();const x=W/2,y=towerScreenYR952(TOWER_TOP_R952+20);if(y>-100&&y<H+100){
+ ctx.translate(x,y);ctx.strokeStyle='#8feaff';ctx.lineWidth=5;ctx.beginPath();ctx.arc(0,0,39,0,Math.PI*2);ctx.stroke();
+ ctx.rotate(elapsed*.7);for(let i=0;i<4;i++){ctx.rotate(Math.PI/2);ctx.fillStyle='#405d78';ctx.fillRect(23,-9,38,18);}
+ ctx.fillStyle='#f9c26b';ctx.beginPath();ctx.arc(0,0,15,0,Math.PI*2);ctx.fill();
+ ctx.restore();ctx.save();ctx.fillStyle='#e8c69b';ctx.fillRect(150,10,180*b.hp/b.maxHp,5);
+ if(b.beam>0){ctx.fillStyle=b.beam>.42?'rgba(255,75,110,.18)':'rgba(255,70,105,.65)';ctx.fillRect(b.target-20,0,40,H);}
+ }else ctx.restore();ctx.restore();
+};
+const oldTetUpdateR1619=updateTetrisR952;
+updateTetrisR952=function(dt){
+ const b=mindCoreR1619;
+ if(started&&!paused&&!gameOver&&!victory&&tetStageR952>=4&&b.hp>0){
+  if(!b.active){b.active=true;showMessage('ЯДРО РАЗЛОМА · ОЧИЩАЙ ЛИНИИ!',1.5);}
+  b.phase=b.hp>b.maxHp*.5?1:2;b.clock-=dt;b.warning=Math.max(0,b.warning-dt);
+  if(b.clock<=0){b.clock=b.phase===2?4:6;b.warning=1.25;b.row=Math.floor(TET_ROWS_R952*.45+Math.random()*TET_ROWS_R952*.4);showMessage('РАЗЛОМ МЕНЯЕТ УЗОР!',.9);}
+  if(b.warning>0&&b.warning<.12){const y=b.row;tetGridR952[y]=Array.from({length:TET_COLS_R952},(_,x)=>x===Math.floor(TET_COLS_R952/2)?null:{color:'#703953',star:false});}
+ }
+ return oldTetUpdateR1619(dt);
+};
+const oldTetClearR1619=clearTetLinesR952;
+clearTetLinesR952=function(...args){
+ const before=tetLinesStageR952,ret=oldTetClearR1619(...args),delta=Math.max(0,tetLinesStageR952-before);
+ if(currentLevel===5&&mindCoreR1619.active&&mindCoreR1619.hp>0&&delta>0){mindCoreR1619.hp=Math.max(0,mindCoreR1619.hp-delta*80);if(mindCoreR1619.hp===0){score+=3500;showMessage('ЯДРО РАЗЛОМА РАЗРУШЕНО',1.5);}}
+ return ret;
+};
+const oldTetDrawR1619=drawTetrisR952;
+drawTetrisR952=function(){oldTetDrawR1619();const b=mindCoreR1619;if(!b.active||b.hp<=0)return;
+ ctx.save();ctx.fillStyle='#321b35';ctx.fillRect(155,8,155,6);ctx.fillStyle='#f15e9a';ctx.fillRect(155,8,155*b.hp/b.maxHp,6);
+ if(b.warning>0){ctx.fillStyle='rgba(255,62,114,.3)';ctx.fillRect(TET_X_R952,TET_Y_R952+b.row*TET_CELL_R952,TET_COLS_R952*TET_CELL_R952,TET_CELL_R952);}ctx.restore();
+};
+const oldStartUniqueR1619=startLevel;
+startLevel=function(...args){resetUniqueBossesR1619();return oldStartUniqueR1619(...args);};
 // R1617: measured level statistics and skill ranking.
 let statsR1617={time:0,kills:0,damage:0,collectibles:0};
 let deadSeenR1617=new WeakSet(),itemSeenR1617=new WeakSet();
