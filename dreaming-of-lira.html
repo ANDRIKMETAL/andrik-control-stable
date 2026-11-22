@@ -5802,7 +5802,7 @@ function chapterAdvanceR1616(){
 }
 chapterButtonR1616.addEventListener('click',chapterAdvanceR1616);
 const chapterStartR1616=startLevel;
-startLevel=function(...args){chapterStageR1616=null;chapterOverlayR1616.style.display='none';const v=chapterStartR1616(...args);chapterScoreStartR1616=score;comboBestR1608=0;return v;};
+startLevel=function(...args){chapterStageR1616=null;chapterSeenR1616=0;chapterOverlayR1616.style.display='none';const v=chapterStartR1616(...args);chapterScoreStartR1616=score;comboBestR1608=0;return v;};
 const chapterUpdateR1616=update;
 update=function(dt){
  chapterUpdateR1616(dt);
