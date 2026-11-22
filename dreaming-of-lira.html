@@ -3529,7 +3529,7 @@ const target=TET_STAGE_TARGETS_R952[tetStageR952-1];
 if(tetLinesStageR952>=target){
 if(tetStageR952<5){tetStageR952++;tetLinesStageR952=0;score+=1000;showMessage(`BLOCK STAGE ${tetStageR952} / 5`,1.2);tone(196,.18,'triangle',.03,620);
 if(tetStageR952>=3){const hole=Math.floor(Math.random()*TET_COLS_R952);tetGridR952.shift();tetGridR952.push(Array.from({length:TET_COLS_R952},(_,x)=>x===hole?null:{color:'#283848',star:false}));}
-}else{tetFinishedR952=true;tetWakeAtR952=performance.now();victory=true;score+=5000;unlockedLevel=Math.max(unlockedLevel,5);commitHighScoreR952(5);writeSave({...buildSaveData(),completed:true,unlockedLevel:5});tone(330,.42,'triangle',.035,990);}
+}else if(mindCoreR1619.active&&mindCoreR1619.hp>0){tetLinesStageR952=0;showMessage('РАЗРУШЬ ЯДРО · ЕЩЁ ЛИНИИ!',1.2);}else{tetFinishedR952=true;tetWakeAtR952=performance.now();victory=true;score+=5000;unlockedLevel=Math.max(unlockedLevel,5);commitHighScoreR952(5);writeSave({...buildSaveData(),completed:true,unlockedLevel:5});tone(330,.42,'triangle',.035,990);}
 }
 }
 function lockTetPieceR952(){
