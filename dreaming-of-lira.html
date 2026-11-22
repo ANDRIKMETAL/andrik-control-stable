@@ -5759,6 +5759,27 @@ draw=function(){
  if(!started||paused||comboCountR1608<2||comboTimerR1608<=0)return;
  ctx.save();ctx.textAlign='center';ctx.fillStyle='#ffe2a1';ctx.font='bold 12px monospace';ctx.fillText('COMBO ×'+comboCountR1608,W/2,40);ctx.restore();
 };
+// R1617: measured level statistics and skill ranking.
+let statsR1617={time:0,kills:0,damage:0,collectibles:0};
+let deadSeenR1617=new WeakSet(),itemSeenR1617=new WeakSet();
+function resetStatsR1617(){statsR1617={time:0,kills:0,damage:0,collectibles:0};deadSeenR1617=new WeakSet();itemSeenR1617=new WeakSet();}
+function scanDeadR1617(arr){if(!Array.isArray(arr))return;for(const e of arr)if(e&&e.alive===false&&!deadSeenR1617.has(e)){deadSeenR1617.add(e);statsR1617.kills++;}}
+function rankR1617(){const limit=[0,150,175,190,190,180,270][currentLevel]||180;if(statsR1617.damage===0&&statsR1617.time<=limit&&statsR1617.kills>=3)return 'S';if(statsR1617.damage<=35&&statsR1617.time<=limit)return 'A';if(statsR1617.damage<=90&&statsR1617.time<=limit*1.5)return 'B';return 'C';}
+const oldDamagePlayerR1617=damagePlayer;
+damagePlayer=function(...a){const hp=player.hp;const result=oldDamagePlayerR1617(...a);statsR1617.damage+=Math.max(0,hp-player.hp);return result;};
+const oldDamageRuinsR1617=damageRuinsPlayerR010;
+damageRuinsPlayerR010=function(...a){const hp=player.hp;const result=oldDamageRuinsR1617(...a);statsR1617.damage+=Math.max(0,hp-player.hp);return result;};
+const oldDamageTowerR1617=damageTowerR952;
+damageTowerR952=function(...a){const hp=player.hp;const result=oldDamageTowerR1617(...a);statsR1617.damage+=Math.max(0,hp-player.hp);return result;};
+const oldStatsUpdateR1617=update;
+update=function(dt){
+ if(started&&!paused&&!victory&&!gameOver&&!chapterStageR1616&&Number.isFinite(dt))statsR1617.time+=Math.max(0,dt);
+ const result=oldStatsUpdateR1617(dt);
+ scanDeadR1617(enemies);
+ if(currentLevel===4)scanDeadR1617(towerEnemiesR952);
+ if(currentLevel===6){scanDeadR1617(ruinsEnemiesR010);scanDeadR1617(ruinsBossR010?[ruinsBossR010]:[]);for(const e of ruinsSecretsR1613)if(e.taken&&!itemSeenR1617.has(e)){itemSeenR1617.add(e);statsR1617.collectibles++;}}
+ return result;
+};
 // R1616: automatic post-boss results -> comic -> next chapter (all six levels).
 const chapterComicR1616=[
  null,
@@ -5784,7 +5805,7 @@ function chapterShowR1616(){
  chapterOverlayR1616.style.display='flex';
  if(chapterStageR1616==='results'){
   const gained=Math.max(0,score-chapterScoreStartR1616);
-  chapterContentR1616.innerHTML='<div style="font-size:13px;letter-spacing:3px;color:#e9bf91">ANDRIK · DREAMING OF LÍRA</div><h2 style="font-size:clamp(21px,5vw,32px);margin:12px 0">УРОВЕНЬ ПРОЙДЕН</h2><div style="font-size:15px;color:#f0c7a5">'+c.name+' · '+c.boss+'</div><div style="font-size:clamp(30px,8vw,54px);font-weight:900;margin:12px 0;color:#ffe1a0">'+gained.toLocaleString('ru-RU')+'</div><div style="font-size:13px">ОЧКОВ ЗА УРОВЕНЬ</div><div style="margin-top:12px;color:#c2d9e5">ОБЩИЙ СЧЁТ: '+score.toLocaleString('ru-RU')+'</div><div style="margin-top:10px;color:#c2d9e5">ЛУЧШЕЕ КОМБО: ×'+comboBestR1608+'</div>';
+  chapterContentR1616.innerHTML='<div style="font-size:13px;letter-spacing:3px;color:#e9bf91">ANDRIK · DREAMING OF LÍRA</div><h2 style="font-size:clamp(21px,5vw,32px);margin:12px 0">УРОВЕНЬ ПРОЙДЕН</h2><div style="font-size:15px;color:#f0c7a5">'+c.name+' · '+c.boss+'</div><div style="font-size:clamp(30px,8vw,54px);font-weight:900;margin:12px 0;color:#ffe1a0">'+gained.toLocaleString('ru-RU')+'</div><div style="font-size:13px">ОЧКОВ ЗА УРОВЕНЬ</div><div style="margin-top:12px;color:#c2d9e5">ОБЩИЙ СЧЁТ: '+score.toLocaleString('ru-RU')+'</div><div style="margin-top:10px;color:#c2d9e5">ЛУЧШЕЕ КОМБО: ×'+comboBestR1608+'</div>'+'<div style="margin:12px auto 0;max-width:430px;display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:clamp(12px,2.5vw,15px)"><div>ПОБЕЖДЕНО ВРАГОВ<br><b>'+statsR1617.kills+'</b></div><div>ВРЕМЯ<br><b>'+Math.floor(statsR1617.time/60)+':'+String(Math.floor(statsR1617.time%60)).padStart(2,'0')+'</b></div><div>ПОЛУЧЕНО УРОНА<br><b>'+Math.round(statsR1617.damage)+'</b></div><div>НАЙДЕНО ТАЙНИКОВ<br><b>'+statsR1617.collectibles+'</b></div></div><div style="margin-top:12px;font-size:27px;font-weight:900;color:#ffe2a1">РАНГ '+rankR1617()+'</div>';
   chapterButtonR1616.textContent='ДАЛЕЕ · КОМИКС';
  }else{
   const img='/assets/comic-r1616-'+c.image+'.svg';
@@ -5802,7 +5823,7 @@ function chapterAdvanceR1616(){
 }
 chapterButtonR1616.addEventListener('click',chapterAdvanceR1616);
 const chapterStartR1616=startLevel;
-startLevel=function(...args){chapterStageR1616=null;chapterSeenR1616=0;chapterOverlayR1616.style.display='none';const v=chapterStartR1616(...args);chapterScoreStartR1616=score;comboBestR1608=0;return v;};
+startLevel=function(...args){chapterStageR1616=null;chapterSeenR1616=0;chapterOverlayR1616.style.display='none';const v=chapterStartR1616(...args);chapterScoreStartR1616=score;comboBestR1608=0;resetStatsR1617();return v;};
 const chapterUpdateR1616=update;
 update=function(dt){
  chapterUpdateR1616(dt);
