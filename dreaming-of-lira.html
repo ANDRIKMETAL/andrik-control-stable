@@ -3170,10 +3170,17 @@ if(spaceInvulnR950>0)return;player.hp=Math.max(0,player.hp-amount);spaceInvulnR9
 }
 function circleHitR950(ax,ay,ar,bx,by,br){const dx=ax-bx,dy=ay-by;return dx*dx+dy*dy<(ar+br)*(ar+br);}
 function startSpaceBossR950(){
-if(spaceBossStartedR950)return;spaceBossStartedR950=true;spaceEnemiesR950=[];spaceEnemyShotsR950=[];spaceBossR950={x:W+100,y:H/2,hp:1600,maxHp:1600,t:0,shoot:.8,phase:1};showMessage('BOSS — BEYOND MAN',2.0);tone(46,.36,'sawtooth',.04,28);
+if(spaceBossStartedR950)return;spaceBossStartedR950=true;spaceEnemiesR950=[];spaceEnemyShotsR950=[];spaceBossR950={x:W+100,y:H/2,hp:1600,maxHp:1600,t:0,shoot:.8,phase:1,laserCharge:2.7,laserFire:0,laserY:H/2,missileCooldown:3.8,weakOpen:0,weakCooldown:2.2};showMessage('BOSS — BEYOND MAN',2.0);tone(46,.36,'sawtooth',.04,28);
 }
 function updateSpaceBossR950(dt){
-const b=spaceBossR950;if(!b)return;b.t+=dt;b.phase=b.hp>b.maxHp*.66?1:b.hp>b.maxHp*.33?2:3;b.x=approach(b.x,390,dt*48);b.y=135+Math.sin(b.t*(.75+b.phase*.16))*55;b.shoot-=dt;
+const b=spaceBossR950;if(!b)return;b.t+=dt;b.phase=b.hp>b.maxHp*.66?1:b.hp>b.maxHp*.33?2:3;b.x=approach(b.x,390,dt*48);b.y=135+Math.sin(b.t*(.42+b.phase*.1))*28;b.shoot-=dt;
+b.weakCooldown-=dt;b.weakOpen=Math.max(0,b.weakOpen-dt);
+if(b.weakCooldown<=0){b.weakOpen=b.phase===3?2.3:1.55;b.weakCooldown=b.phase===3?3.2:4.6;showMessage('ЯДРО ОТКРЫТО · СТРЕЛЯЙ В ЛОБ',.8);}
+b.laserCharge-=dt;b.laserFire=Math.max(0,b.laserFire-dt);
+if(b.laserCharge<=0){b.laserCharge=b.phase===3?3.4:5.1;b.laserY=clamp(spaceY_R950,55,H-55);b.laserFire=.85;showMessage('ЛАЗЕР ИЗ ГЛАЗ · СМЕНИ ВЫСОТУ!',.9);}
+if(b.laserFire>0&&b.laserFire<.30&&Math.abs(spaceY_R950-b.laserY)<16&&spaceX_R950<b.x-45)hurtSpaceR950(18);
+b.missileCooldown-=dt;
+if(b.phase>=2&&b.missileCooldown<=0){b.missileCooldown=b.phase===3?2.4:3.6;for(const side of [-1,1]){const dy=spaceY_R950-(b.y+side*47);spaceEnemyShotsR950.push({x:b.x-75,y:b.y+side*47,vx:-150,vy:clamp(dy*.55,-75,75),r:6});}}
 if(b.shoot<=0){b.shoot=b.phase===1?.85:b.phase===2?.58:.38;const dx=spaceX_R950-b.x,dy=spaceY_R950-b.y,mag=Math.hypot(dx,dy)||1;const base=Math.atan2(dy,dx);const count=b.phase===1?3:b.phase===2?5:7;for(let i=0;i<count;i++){const a=base+(i-(count-1)/2)*(.09+b.phase*.018);spaceEnemyShotsR950.push({x:b.x-62,y:b.y,vx:Math.cos(a)*(120+b.phase*18),vy:Math.sin(a)*(120+b.phase*18),r:b.phase===3?4:3});}}
 if(circleHitR950(spaceX_R950,spaceY_R950,13,b.x-45,b.y,52))hurtSpaceR950(24);
 if(b.hp<=0){score+=6000;spaceBossR950=null;victory=true;unlockedLevel=Math.max(unlockedLevel,3);writeSave({...buildSaveData(),completed:true,unlockedLevel:3});showMessage('BEYOND MAN — DEFEATED',2.5);tone(196,.38,'sawtooth',.04,55);}
@@ -3192,7 +3199,7 @@ else{if(input.attack&&spaceFireR950<=0){spaceFireR950=spaceWeaponR950==='LASER'?
 if(!spaceBossStartedR950){spaceDistanceR950+=spaceSpeedR950*dt;spaceSpawnR950-=dt;if(spaceSpawnR950<=0){spaceSpawnR950=clamp(.95-spaceDistanceR950/16000,.36,.95);spawnSpaceEnemyR950();if(spaceDistanceR950>3300&&Math.random()<.22)spawnSpaceEnemyR950('interceptor');if(spaceDistanceR950>SPACE_BOSS_AT_R950)startSpaceBossR950();}}
 for(const sh of spaceShotsR950){sh.x+=sh.vx*dt;sh.y+=sh.vy*dt;}
 for(const e of spaceEnemiesR950){e.t+=dt;e.x+=e.vx*dt;if(e.kind==='drone'||e.kind==='eye')e.y=e.baseY+Math.sin(e.t*(e.kind==='eye'?2.6:1.8))*22;e.shoot-=dt;if(e.kind!=='asteroid'&&e.shoot<=0&&e.x<W-40){e.shoot=.9+Math.random()*1.3;const dx=spaceX_R950-e.x,dy=spaceY_R950-e.y,m=Math.hypot(dx,dy)||1;spaceEnemyShotsR950.push({x:e.x-12,y:e.y,vx:dx/m*118,vy:dy/m*118,r:3});}if(circleHitR950(spaceX_R950,spaceY_R950,12,e.x,e.y,e.kind==='asteroid'?16:11)){e.hp=0;hurtSpaceR950(e.kind==='asteroid'?20:13);}}
-for(const sh of spaceShotsR950){if(sh.dead)continue;for(const e of spaceEnemiesR950){if(e.hp<=0)continue;if(circleHitR950(sh.x,sh.y,sh.r,e.x,e.y,e.kind==='asteroid'?16:12)){e.hp-=sh.damage;sh.dead=true;score+=10;break;}}if(spaceBossR950&&!sh.dead&&circleHitR950(sh.x,sh.y,sh.r,spaceBossR950.x-40,spaceBossR950.y,54)){spaceBossR950.hp-=sh.damage;sh.dead=true;score+=12;}}
+for(const sh of spaceShotsR950){if(sh.dead)continue;for(const e of spaceEnemiesR950){if(e.hp<=0)continue;if(circleHitR950(sh.x,sh.y,sh.r,e.x,e.y,e.kind==='asteroid'?16:12)){e.hp-=sh.damage;sh.dead=true;score+=10;break;}}if(spaceBossR950&&!sh.dead&&circleHitR950(sh.x,sh.y,sh.r,spaceBossR950.x-40,spaceBossR950.y,54)){spaceBossR950.hp-=Math.max(1,Math.round(sh.damage*(spaceBossR950.weakOpen>0?1.65:.42)));sh.dead=true;score+=12;}}
 for(const e of spaceEnemiesR950){if(e.hp<=0&&e.alive){e.alive=false;score+=e.kind==='asteroid'?70:140;superMeter=clamp(superMeter+5,0,SUPER_MAX);if(e.kind==='eye'&&Math.random()<.30)dropSpacePickupR950(e.x,e.y);else if(Math.random()<.10)dropSpacePickupR950(e.x,e.y,'heart');tone(115,.045,'square',.013,60);}}
 for(const b of spaceEnemyShotsR950){b.x+=b.vx*dt;b.y+=b.vy*dt;if(circleHitR950(spaceX_R950,spaceY_R950,11,b.x,b.y,b.r)){b.dead=true;hurtSpaceR950(10);}}
 for(const p of spacePickupsR950){p.t+=dt;p.x-=58*dt;if(circleHitR950(spaceX_R950,spaceY_R950,13,p.x,p.y,10)){p.dead=true;if(p.kind==='heart'){const before=player.hp;player.hp=Math.min(player.maxHp,player.hp+25);showMessage(`♥ LIFE +${player.hp-before}`,.7);}else{spaceWeaponR950=p.kind;showMessage(`WEAPON · ${p.kind}`,.75);}tone(590,.08,'triangle',.02,880);}}
@@ -3211,7 +3218,29 @@ else if(e.kind==='eye'){ctx.strokeStyle='#c45870';ctx.lineWidth=2;ctx.beginPath(
 else{ctx.fillStyle=e.kind==='interceptor'?'#79343d':'#283843';ctx.beginPath();ctx.moveTo(-14,0);ctx.lineTo(9,-8);ctx.lineTo(15,0);ctx.lineTo(9,8);ctx.closePath();ctx.fill();ctx.fillStyle='#8fe7ff';ctx.fillRect(-2,-2,8,4);}ctx.restore();
 }
 function drawSpaceBossR950(){
-const b=spaceBossR950;if(!b)return;ctx.save();ctx.translate(Math.round(b.x),Math.round(b.y));const pulse=.5+.5*Math.sin(b.t*3);ctx.strokeStyle=b.phase===3?'#ff3155':'#7dcfe5';ctx.lineWidth=3;for(let r=0;r<3;r++){ctx.globalAlpha=.28+r*.18;ctx.beginPath();ctx.ellipse(-35,0,70+r*15,48+r*10,b.t*(.08+r*.04),0,Math.PI*2);ctx.stroke();}ctx.globalAlpha=1;ctx.fillStyle='#11141b';ctx.beginPath();ctx.moveTo(-94,-52);ctx.lineTo(-10,-74);ctx.lineTo(42,-48);ctx.lineTo(54,0);ctx.lineTo(40,51);ctx.lineTo(-10,75);ctx.lineTo(-94,52);ctx.closePath();ctx.fill();ctx.strokeStyle='#6b7781';ctx.stroke();ctx.shadowColor='#ff3155';ctx.shadowBlur=18;ctx.fillStyle='#f33b57';ctx.beginPath();ctx.ellipse(-28,0,31,15,0,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;ctx.fillStyle='#06090e';ctx.beginPath();ctx.arc(-28,0,8+pulse*2,0,Math.PI*2);ctx.fill();ctx.fillStyle='#c8edf5';ctx.fillRect(-31,-2,6,3);ctx.restore();
+ const b=spaceBossR950;if(!b)return;ctx.save();ctx.translate(Math.round(b.x),Math.round(b.y));
+ const phase=b.phase||1,pulse=.5+.5*Math.sin(b.t*5),open=b.weakOpen>0;
+ // Huge original arcade-inspired robotic face, with separate jaw, eyes and exposed core.
+ ctx.shadowColor='#000';ctx.shadowBlur=16;ctx.fillStyle='#090f1c';ctx.beginPath();
+ ctx.moveTo(-110,-85);ctx.lineTo(-42,-105);ctx.lineTo(35,-82);ctx.lineTo(67,-30);ctx.lineTo(62,43);ctx.lineTo(18,96);ctx.lineTo(-68,94);ctx.lineTo(-115,48);ctx.closePath();ctx.fill();ctx.shadowBlur=0;
+ ctx.strokeStyle='#7b8fa3';ctx.lineWidth=5;ctx.stroke();
+ for(const side of [-1,1]){
+  ctx.fillStyle='#36465a';ctx.fillRect(side<0?-127:48,-39,24,68);
+  ctx.fillStyle='#94a8b8';ctx.fillRect(side<0?-126:49,-24,22,7);
+  ctx.fillStyle='#293e54';ctx.beginPath();ctx.moveTo(side<0?-96:5,-58);ctx.lineTo(side<0?-28:52,-51);ctx.lineTo(side<0?-37:27,-14);ctx.lineTo(side<0?-91:8,-19);ctx.closePath();ctx.fill();
+  ctx.shadowColor=phase===3?'#ff2449':'#ff657a';ctx.shadowBlur=15;
+  ctx.fillStyle=phase===3?'#ff264e':'#ef627d';ctx.beginPath();ctx.ellipse(side<0?-64:22,-36,19,9,side*.13,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
+ }
+ ctx.fillStyle='#b7c8d3';ctx.beginPath();ctx.moveTo(-29,-13);ctx.lineTo(-4,-28);ctx.lineTo(19,-12);ctx.lineTo(7,15);ctx.lineTo(-18,15);ctx.closePath();ctx.fill();
+ ctx.fillStyle='#101725';ctx.fillRect(-61,31,90,37);ctx.strokeStyle='#91a3b3';ctx.lineWidth=3;ctx.strokeRect(-61,31,90,37);
+ for(let i=0;i<7;i++){ctx.fillStyle=i%2?'#44556a':'#9aa8b7';ctx.fillRect(-56+i*12,36,7,26);}
+ ctx.fillStyle=open?'#8efaff':'#7a1e36';ctx.shadowColor=open?'#76edff':'#e13e5b';ctx.shadowBlur=open?28:8;
+ ctx.beginPath();ctx.arc(-14,-81,open?13+pulse*3:8,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
+ if(b.laserFire>0){ctx.strokeStyle=b.laserFire>.3?'rgba(255,75,110,.45)':'#ff3559';ctx.lineWidth=b.laserFire>.3?4:24;
+  ctx.beginPath();ctx.moveTo(-70,-36);ctx.lineTo(-W-b.x,b.laserY-b.y);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(24,-36);ctx.lineTo(-W-b.x,b.laserY-b.y);ctx.stroke();}
+ ctx.strokeStyle=phase===3?'#e53b66':'#8e9cb4';ctx.lineWidth=2;ctx.strokeRect(-100,-87,150,165);
+ ctx.restore();
 }
 function drawSpaceInsertR950(){
 const c=spaceInsertR950;if(!c)return;const p=1-c.t/c.duration,edge=clamp(Math.min(p*6,(1-p)*6),0,1),img=liraArts[c.art];ctx.save();ctx.globalAlpha=edge;ctx.fillStyle='rgba(2,3,12,.96)';ctx.fillRect(0,0,W,H);drawCoverImage(img,0,0,170,H,.5,.38);const g=ctx.createLinearGradient(135,0,W,0);g.addColorStop(0,'rgba(2,3,12,0)');g.addColorStop(.18,'rgba(2,3,12,.94)');g.addColorStop(1,'rgba(3,4,18,.99)');ctx.fillStyle=g;ctx.fillRect(130,0,W-130,H);ctx.fillStyle='#8adff4';ctx.font='bold 8px monospace';ctx.fillText('LEVEL 3 — SPACE',193,92);ctx.fillStyle='#f2f5fb';ctx.font=c.title.length>22?'bold 12px monospace':'bold 16px monospace';ctx.fillText(c.title,193,113);ctx.fillStyle='#9aaed0';ctx.font='7px monospace';ctx.fillText(c.sub,193,138);ctx.strokeStyle='#3b5778';ctx.beginPath();ctx.moveTo(193,150);ctx.lineTo(395,150);ctx.stroke();ctx.fillStyle='#60789c';ctx.font='6px monospace';ctx.fillText('DREAMING OF LÍRA · ANDRIK',193,163);ctx.restore();
