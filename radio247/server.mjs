@@ -7875,6 +7875,7 @@ function readPublisherTcpAckProgressR1124(){
         let ackedTotal=0;
         let sentTotal=0;
         let haveAck=false;
+        const socketProgressR1554=[];
 
         for(let i=0;i<lines.length;i++){
           const line=String(lines[i]||'').trim();
@@ -7897,6 +7898,8 @@ function readPublisherTcpAckProgressR1124(){
             ackedTotal+=Number(ack[1])||0;
           }
           if(sent)sentTotal+=Number(sent[1])||0;
+          const fields=line.split(/\s+/);
+          socketProgressR1554.push({key:fields.slice(3,5).join(' '),acked:ack?Number(ack[1]):null});
         }
 
         finish({
@@ -7904,7 +7907,8 @@ function readPublisherTcpAckProgressR1124(){
           lanes,
           haveAck,
           ackedTotal,
-          sentTotal
+          sentTotal,
+          socketProgressR1554
         });
       }catch(_){
         finish(null);
@@ -7938,6 +7942,40 @@ async function rtmpsProgressWatchdogTickR1124(){
     const now=Date.now();
     const pubPid=Number(snap.publisherPid||0);
     const acked=Number(snap.ackedTotal||0);
+    // R1554: direct tee/fifo lanes share a publisher but not TCP counters.
+    // A healthy lane must not hide a stalled peer in aggregate diagnostics.
+    if(DIRECT_YOUTUBE_MASTER_R1335 && publisher?.pid===pubPid){
+      const previous=state.r1554DirectLaneProgress;
+      const prior=previous?.pid===pubPid?previous:null;
+      const sockets=(snap.socketProgressR1554||[]).map(socket=>{
+        const old=prior?.sockets?.find(x=>x.key===socket.key);
+        const known=socket.acked!==null;
+        const unchanged=known&&old?.acked===socket.acked;
+        return {...socket,lastProgressAt:unchanged?old.lastProgressAt:now};
+      });
+      const expected=expectedRtmpsConnectionsR1287();
+      const stalled=sockets.filter(x=>x.acked!==null&&now-x.lastProgressAt>=RTMPS_PROGRESS_STALL_MS_R1124).length;
+      const degraded=snap.lanes<expected||stalled>0;
+      const since=degraded?(prior?.degradedSince||now):0;
+      state.r1554DirectLaneProgress={pid:pubPid,sockets,expected,stalled,degradedSince:since};
+      if(degraded){
+        state.lastWarning='R1554 direct RTMPS degraded: '+snap.lanes+'/'+expected+', stalled='+stalled+'; FIFO recovery allowed';
+        if(!prior?.degradedSince)console.error('[r1554-direct-lane-degraded]',state.lastWarning);
+        // Recycle only after a sustained degradation, at a quiet media boundary.
+        // Never restart Node or interrupt an active clip to restore redundancy.
+        if(now-since>=120000 && !clipActive && !stationHandoffActiveR804 && !visualSwitching && !publisherRecoveryBusyR884 && !rtmpsProgressRecoveryBusyR1124){
+          rtmpsProgressRecoveryBusyR1124=true;
+          state.r1554DirectLaneProgress.degradedSince=now;
+          try{
+            await recyclePublisherR884('R1554 sustained direct RTMPS lane degradation',publisher,false);
+          }finally{rtmpsProgressRecoveryBusyR1124=false;}
+          return;
+        }
+      }else if(prior?.degradedSince){
+        console.error('[r1554-direct-lane-restored] RTMPS redundancy restored');
+      }
+    }
+
 
     // New publisher / new TCP counters => establish a fresh baseline.
     if(
